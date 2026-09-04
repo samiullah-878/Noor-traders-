@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noor Traders Ghaliana - Staff Management System</title>
+    <!-- Tailwind CSS & FontAwesome Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
+        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #f1f5f9; }
+        .urdu-text { font-family: 'Noto Nastaliq Urdu', serif; }
+    </style>
+</head>
+<body class="pb-12">
+
+    <!-- Top Header -->
+    <header class="bg-slate-900 text-white p-4 shadow-lg flex justify-between items-center sticky top-0 z-50">
+        <div>
+            <h1 class="text-xl font-bold text-amber-400">نور ٹریڈرز گلیانہ</h1>
+            <p class="text-xs text-slate-400">نیشنل بینک بدھر روڈ - اسٹاف و حاضری نظام</p>
+        </div>
+        <div>
+            <button onclick="toggleRole()" id="roleBtn" class="bg-amber-500 hover:bg-amber-600 text-slate-900 font-bold px-3 py-1.5 rounded-lg text-sm transition">
+                <i class="fa-solid fa-user-shield ml-1"></i> مالک موڈ (Owner)
+            </button>
+        </div>
+    </header>
+
+    <div class="max-w-4xl mx-auto p-4 space-y-6">
+
+        <!-- Role Banner -->
+        <div id="roleBanner" class="bg-blue-900 text-white p-3 rounded-xl shadow flex justify-between items-center text-sm">
+            <span>موجودہ ویو: <b id="currentRoleText" class="text-amber-300">ملازم (Staff Portal)</b></span>
+            <span id="gpsStatus" class="text-xs bg-slate-800 px-2.5 py-1 rounded-full text-slate-300">جی پی ایس چیکنگ...</span>
+        </div>
+
+        <!-- ==================== STAFF VIEW ==================== -->
+        <div id="staffSection" class="space-y-6">
+            
+            <!-- Attendance Card -->
+            <div class="bg-white rounded-2xl p-5 shadow-md border border-slate-200 space-y-4">
+                <h2 class="text-lg font-bold text-slate-800 border-b pb-2 flex items-center justify-between">
+                    <span><i class="fa-solid fa-location-dot text-red-500 ml-2"></i> روزانہ کی حاضری (Check-In)</span>
+                    <span class="text-xs text-slate-500 font-normal">حد: 200 میٹر</span>
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">اپنا نام منتخب کریں:</label>
+                        <select id="staffSelect" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-slate-50 focus:ring-2 focus:ring-blue-500">
+                            <option value="زیشان (منشی)">زیشان (منشی)</option>
+                            <option value="طیب (ڈرائیور)">طیب (ڈرائیور)</option>
+                            <option value="محمد بلال">محمد بلال</option>
+                            <option value="زوہیب (گودام)">زوہیب (گودام)</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">سیلفی / تصدیقی تصویر:</label>
+                        <input type="file" id="cameraInput" accept="image/*" capture="user" class="w-full text-sm text-slate-500 file:ml-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                    </div>
+                </div>
+
+                <div id="locationInfo" class="bg-slate-50 p-3 rounded-lg text-xs text-slate-600 space-y-1 border">
+                    <p><b>دکان سے فاصلہ:</b> <span id="distanceText">محاسبہ ہو رہا ہے...</span></p>
+                    <p id="geoNote" class="text-red-500">حاضری لگانے کے لیے نور ٹریڈرز گلیانہ کے 200 میٹر کے اندر ہونا لازمی ہے۔</p>
+                </div>
+
+                <button id="checkInBtn" disabled onclick="markAttendance()" class="w-full bg-slate-400 text-white font-bold py-3 rounded-xl shadow text-base transition cursor-not-allowed">
+                    <i class="fa-solid fa-camera ml-2"></i> حاضری لگائیں (Check-In)
+                </button>
+            </div>
+
+            <!-- Staff Personal Summary -->
+            <div class="bg-white rounded-2xl p-5 shadow-md border border-slate-200 space-y-4">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-user-clock text-blue-600 ml-2"></i> میرا ورکنگ ریکارڈ</h2>
+                    <button onclick="window.print()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs px-3 py-1.5 rounded-lg border">
+                        <i class="fa-solid fa-file-pdf text-red-600 ml-1"></i> PDF پورٹ
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                        <p class="text-xs text-blue-600 font-medium">کل حاضری ایام</p>
+                        <p id="staffTotalDays" class="text-xl font-bold text-blue-900 mt-1">0 دن</p>
+                    </div>
+                    <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                        <p class="text-xs text-emerald-600 font-medium">کل ڈیوٹی گھنٹے</p>
+                        <p id="staffTotalHours" class="text-xl font-bold text-emerald-900 mt-1">0 گھنٹے</p>
+                    </div>
+                    <div class="bg-amber-50 p-3 rounded-xl border border-amber-100">
+                        <p class="text-xs text-amber-600 font-medium">کل ایڈوانس رقم</p>
+                        <p id="staffAdvanceBalance" class="text-xl font-bold text-amber-900 mt-1">Rs 0</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ==================== OWNER DASHBOARD VIEW ==================== -->
+        <div id="ownerSection" class="hidden space-y-6">
+            
+            <!-- Owner Controls -->
+            <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-md space-y-4">
+                <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                    <h2 class="text-lg font-bold text-amber-400"><i class="fa-solid fa-sliders ml-2"></i> ایڈوانس اور کھاتہ مینجمنٹ</h2>
+                    <span class="text-xs bg-amber-400/20 text-amber-300 px-2.5 py-1 rounded-full">مالک کنٹرول پینل</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <select id="payStaffSelect" class="bg-slate-800 text-white border border-slate-700 rounded-lg p-2.5 text-sm">
+                        <option value="زیشان (منشی)">زیشان (منشی)</option>
+                        <option value="طیب (ڈرائیور)">طیب (ڈرائیور)</option>
+                        <option value="محمد بلال">محمد بلال</option>
+                        <option value="زوہیب (گودام)">زوہیب (گودام)</option>
+                    </select>
+                    <input type="number" id="payAmount" placeholder="رقم (روپے)" class="bg-slate-800 text-white border border-slate-700 rounded-lg p-2.5 text-sm">
+                    <input type="text" id="payNote" placeholder="تفصیل / وجہ" class="bg-slate-800 text-white border border-slate-700 rounded-lg p-2.5 text-sm">
+                </div>
+
+                <button onclick="addPaymentRecord()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm transition">
+                    <i class="fa-solid fa-plus-circle ml-1"></i> ایڈوانس / ادائی اینٹری محفوظ کریں
+                </button>
+            </div>
+
+            <!-- Attendance Log Table -->
+            <div class="bg-white rounded-2xl p-5 shadow-md border border-slate-200 space-y-4">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-list-check text-indigo-600 ml-2"></i> تمام ملازمین کی حاضری رپورٹ</h2>
+                    <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-3 py-1.5 rounded-lg">
+                        <i class="fa-solid fa-print ml-1"></i> فائنل PDF رپورٹ پرنٹ کریں
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-right border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700">
+                                <th class="p-2.5 border">تاریخ/وقت</th>
+                                <th class="p-2.5 border">نام ملازم</th>
+                                <th class="p-2.5 border">تصویر</th>
+                                <th class="p-2.5 border">فاصلہ (جی پی ایس)</th>
+                                <th class="p-2.5 border">حالت</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceLogTable">
+                            <!-- JS Will Insert Logs Here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Payments History Table -->
+            <div class="bg-white rounded-2xl p-5 shadow-md border border-slate-200 space-y-4">
+                <h2 class="text-lg font-bold text-slate-800 border-b pb-2"><i class="fa-solid fa-receipt text-amber-600 ml-2"></i> ایڈوانس اور ادائیگی کا کھاتہ</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-right border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700">
+                                <th class="p-2.5 border">تاریخ</th>
+                                <th class="p-2.5 border">نام ملازم</th>
+                                <th class="p-2.5 border">رقم (Rs)</th>
+                                <th class="p-2.5 border">تفصیل</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentLogTable">
+                            <!-- JS Will Insert Payments Here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // نور ٹریڈرز گلیانہ، نیشنل بینک بدھر روڈ جیو لوکیشن (Coordinates)
+        const SHOP_LAT = 32.8125;
+        const SHOP_LON = 73.9542;
+        const MAX_RADIUS_METERS = 200;
+
+        let isOwnerMode = false;
+        let userDistance = 9999;
+
+        // local storage data
+        let attendanceLogs = JSON.parse(localStorage.getItem('nt_attendance')) || [];
+        let paymentLogs = JSON.parse(localStorage.getItem('nt_payments')) || [];
+
+        // Calculate GPS distance (Haversine Formula)
+        function getDistanceInMeters(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI/180;
+            const φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180;
+            const Δλ = (lon2-lon1) * Math.PI/180;
+
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        function checkLocation() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition(position => {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    userDistance = Math.round(getDistanceInMeters(lat, lon, SHOP_LAT, SHOP_LON));
+
+                    document.getElementById('distanceText').innerText = userDistance + " میٹر";
+                    const btn = document.getElementById('checkInBtn');
+                    const note = document.getElementById('geoNote');
+                    const status = document.getElementById('gpsStatus');
+
+                    if (userDistance <= MAX_RADIUS_METERS) {
+                        btn.disabled = false;
+                        btn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow text-base transition cursor-pointer";
+                        note.innerText = "آپ نور ٹریڈرز کے 200 میٹر کے دائرے میں موجود ہیں! حاضری لگا سکتے ہیں۔";
+                        note.className = "text-emerald-600 font-semibold";
+                        status.innerText = "جی پی ایس: حد کے اندر (" + userDistance + "m)";
+                        status.className = "text-xs bg-emerald-800 text-emerald-200 px-2.5 py-1 rounded-full";
+                    } else {
+                        btn.disabled = true;
+                        btn.className = "w-full bg-slate-400 text-white font-bold py-3 rounded-xl shadow text-base transition cursor-not-allowed";
+                        note.innerText = "حاضری کے لیے دکان کے 200 میٹر کے اندر ہونا لازمی ہے۔ (موجودہ فاصلہ: " + userDistance + " میٹر)";
+                        note.className = "text-red-500 font-semibold";
+                        status.innerText = "جی پی ایس: حد سے باہر (" + userDistance + "m)";
+                        status.className = "text-xs bg-red-900 text-red-200 px-2.5 py-1 rounded-full";
+                    }
+                }, error => {
+                    document.getElementById('distanceText').innerText = "لوکیشن حاصل نہ ہو سکی";
+                }, { enableHighAccuracy: true });
+            }
+        }
+
+        function markAttendance() {
+            const staffName = document.getElementById('staffSelect').value;
+            const fileInput = document.getElementById('cameraInput');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert("براہ کرم حاضری سے پہلے اپنی سیلفی / تصویر اپ لوڈ کریں!");
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const photoData = e.target.result;
+                const newRecord = {
+                    time: new Date().toLocaleString('ur-PK'),
+                    name: staffName,
+                    photo: photoData,
+                    distance: userDistance + "m",
+                    status: "حاضر (Verified)"
+                };
+
+                attendanceLogs.push(newRecord);
+                localStorage.setItem('nt_attendance', JSON.stringify(attendanceLogs));
+                alert("ماشاءاللہ! " + staffName + " کی حاضری کامیابی سے لگ چکی ہے۔");
+                renderLogs();
+            };
+            reader.readAsDataURL(fileInput.files[0]);
+        }
+
+        function addPaymentRecord() {
+            const name = document.getElementById('payStaffSelect').value;
+            const amount = document.getElementById('payAmount').value;
+            const note = document.getElementById('payNote').value || "ایڈوانس کیش";
+
+            if (!amount) return alert("براہ کرم رقم درج کریں!");
+
+            const newPayment = {
+                date: new Date().toLocaleDateString('ur-PK'),
+                name: name,
+                amount: amount,
+                note: note
+            };
+
+            paymentLogs.push(newPayment);
+            localStorage.setItem('nt_payments', JSON.stringify(paymentLogs));
+            document.getElementById('payAmount').value = '';
+            document.getElementById('payNote').value = '';
+            renderLogs();
+            alert("کھاتہ اپ ڈیٹ ہو گیا ہے!");
+        }
+
+        function renderLogs() {
+            const attTable = document.getElementById('attendanceLogTable');
+            attTable.innerHTML = '';
+            attendanceLogs.forEach(log => {
+                attTable.innerHTML += `
+                    <tr class="border-b hover:bg-slate-50">
+                        <td class="p-2 border">${log.time}</td>
+                        <td class="p-2 border font-bold">${log.name}</td>
+                        <td class="p-2 border"><img src="${log.photo}" class="w-10 h-10 rounded-full object-cover border"></td>
+                        <td class="p-2 border text-xs">${log.distance}</td>
+                        <td class="p-2 border text-emerald-600 font-bold">${log.status}</td>
+                    </tr>
+                `;
+            });
+
+            const payTable = document.getElementById('paymentLogTable');
+            payTable.innerHTML = '';
+            let totalAdvance = 0;
+            paymentLogs.forEach(p => {
+                totalAdvance += parseInt(p.amount) || 0;
+                payTable.innerHTML += `
+                    <tr class="border-b hover:bg-slate-50">
+                        <td class="p-2 border">${p.date}</td>
+                        <td class="p-2 border font-bold">${p.name}</td>
+                        <td class="p-2 border text-red-600 font-bold">Rs ${p.amount}</td>
+                        <td class="p-2 border text-slate-600">${p.note}</td>
+                    </tr>
+                `;
+            });
+
+            document.getElementById('staffTotalDays').innerText = attendanceLogs.length + " دن";
+            document.getElementById('staffTotalHours').innerText = (attendanceLogs.length * 9) + " گھنٹے";
+            document.getElementById('staffAdvanceBalance').innerText = "Rs " + totalAdvance;
+        }
+
+        function toggleRole() {
+            if (!isOwnerMode) {
+                const pin = prompt("مالک موڈ کے لیے PIN کوڈ درج کریں:", "");
+                if (pin === "1234") { // Default PIN: 1234
+                    isOwnerMode = true;
+                    document.getElementById('staffSection').classList.add('hidden');
+                    document.getElementById('ownerSection').classList.remove('hidden');
+                    document.getElementById('roleBtn').innerHTML = `<i class="fa-solid fa-user ml-1"></i> ملازم موڈ (Staff View)`;
+                    document.getElementById('currentRoleText').innerText = "مالک (Owner Dashboard)";
+                } else {
+                    alert("غلط پاسورڈ!");
+                }
+            } else {
+                isOwnerMode = false;
+                document.getElementById('ownerSection').classList.add('hidden');
+                document.getElementById('staffSection').classList.remove('hidden');
+                document.getElementById('roleBtn').innerHTML = `<i class="fa-solid fa-user-shield ml-1"></i> مالک موڈ (Owner)`;
+                document.getElementById('currentRoleText').innerText = "ملازم (Staff Portal)";
+            }
+        }
+
+        window.onload = function() {
+            checkLocation();
+            renderLogs();
+        };
+    </script>
+</body>
+</html>
