@@ -1,39 +1,21 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ur" dir="rtl">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Noor Traders Ghaliana - Attendance System</title>
-    <!-- Tailwind CSS & FontAwesome Icons -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap');
-        body { font-family: 'Segoe UI', system-ui, sans-serif; background-color: #f8fafc; }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f766e">
+  <title>Noor Traders Hisab v79</title>
+  <link rel="stylesheet" href="assets/css/styles.css">
 </head>
-<body class="pb-12 min-h-screen">
+<body>
 
-    <!-- Header -->
-    <header id="mainHeader" class="bg-slate-900 text-white p-4 shadow-lg flex justify-between items-center sticky top-0 z-50">
-        <div>
-            <div class="flex items-center space-x-2 space-x-reverse">
-                <h1 class="text-xl font-bold text-amber-400">نور ٹریڈرز گلیانہ</h1>
-                <span class="bg-amber-400/20 text-amber-300 text-[10px] px-2 py-0.5 rounded-full border border-amber-400/30">v1.3.0</span>
-            </div>
-            <p class="text-xs text-slate-400">نیشنل بینک بدھر روڈ - پورٹل</p>
-        </div>
-        <div id="headerUserInfo" class="hidden flex items-center space-x-3 space-x-reverse">
-            <span id="loggedInName" class="text-xs bg-slate-800 text-amber-300 px-3 py-1.5 rounded-full border border-slate-700"></span>
-            <button onclick="logout()" class="bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs transition">
-                <i class="fa-solid fa-right-from-bracket ml-1"></i> لاگ آؤٹ
-            </button>
-        </div>
-    </header>
-
-    <div class="max-w-4xl mx-auto p-4 space-y-6">
-
-        <!-- SCREEN 1: LOGIN PAGE -->
+<div class="app">
+  <div class="top">
+    <div>
+      <h1>Noor Traders Hisab</h1>
+      <small>Gulyana • v79 Standalone HTML</small>
+    </div>
+  </div>
         <div id="loginScreen" class="max-w-md mx-auto my-6 bg-white p-6 rounded-2xl shadow-xl border border-slate-200 space-y-5">
             <div class="text-center space-y-2">
                 <div class="w-16 h-16 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto text-2xl shadow-inner">
