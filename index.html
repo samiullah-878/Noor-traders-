@@ -431,6 +431,333 @@
     </script>
 </body>
 </html>
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-3 gap-3 text-center">
+                    <div class="bg-blue-50 p-3 rounded-xl border border-blue-100">
+                        <p class="text-xs text-blue-600 font-medium">کل حاضری دن</p>
+                        <p id="staffTotalDays" class="text-xl font-bold text-blue-900 mt-1">0 دن</p>
+                    </div>
+                    <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100">
+                        <p class="text-xs text-emerald-600 font-medium">روزانہ کے گھنٹے</p>
+                        <p id="staffTotalHours" class="text-xl font-bold text-emerald-900 mt-1">9h / دن</p>
+                    </div>
+                    <div class="bg-amber-50 p-3 rounded-xl border border-amber-100">
+                        <p class="text-xs text-amber-600 font-medium">کل ایڈوانس رقم</p>
+                        <p id="staffAdvanceBalance" class="text-xl font-bold text-amber-900 mt-1">Rs 0</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- SCREEN 3: OWNER DASHBOARD -->
+        <div id="ownerScreen" class="hidden space-y-6">
+            
+            <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-md space-y-4">
+                <h2 class="text-lg font-bold text-amber-400 border-b border-slate-700 pb-2">
+                    <i class="fa-solid fa-user-plus ml-2"></i> نیا ملازم رجسٹر کریں (فون نمبر = پاسورڈ)
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <input type="text" id="newStaffName" placeholder="ملازم کا نام" class="bg-slate-800 text-white border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-amber-400">
+                    <input type="tel" id="newStaffPhone" placeholder="موبائل نمبر (پاسورڈ)" class="bg-slate-800 text-white border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-amber-400">
+                    <input type="text" id="newStaffRole" placeholder="عہدہ (مثلاً منشی / ڈرائیور)" class="bg-slate-800 text-white border border-slate-700 rounded-lg p-2.5 text-sm focus:outline-none focus:border-amber-400">
+                </div>
+                <button onclick="registerEmployee()" class="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold py-2.5 rounded-xl text-sm transition">
+                    <i class="fa-solid fa-check-circle ml-1"></i> نیا ملازم محفوظ کریں
+                </button>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 shadow-md border border-slate-200 space-y-4">
+                <h2 class="text-lg font-bold text-slate-800 border-b pb-2"><i class="fa-solid fa-wallet text-emerald-600 ml-2"></i> ایڈوانس اور ادائیگی کا کھاتہ</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <select id="payStaffSelect" class="border border-slate-300 rounded-lg p-2.5 text-sm bg-slate-50"></select>
+                    <input type="number" id="payAmount" placeholder="رقم (روپے)" class="border border-slate-300 rounded-lg p-2.5 text-sm">
+                    <input type="text" id="payNote" placeholder="تفصیل / وجہ" class="border border-slate-300 rounded-lg p-2.5 text-sm">
+                </div>
+                <button onclick="addPaymentRecord()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-sm transition">
+                    <i class="fa-solid fa-plus-circle ml-1"></i> کھاتہ میں اینٹری درج کریں
+                </button>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 shadow-md border border-slate-200 space-y-4">
+                <div class="flex justify-between items-center border-b pb-2">
+                    <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-list-check text-indigo-600 ml-2"></i> تمام ملازمین حاضری رپورٹ (بشمول فزیکل فاصلہ)</h2>
+                    <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs px-3 py-1.5 rounded-lg">
+                        <i class="fa-solid fa-file-pdf text-red-400 ml-1"></i> فائنل PDF رپورٹ پرنٹ کریں
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-right border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700">
+                                <th class="p-2.5 border">تاریخ/وقت</th>
+                                <th class="p-2.5 border">نام ملازم</th>
+                                <th class="p-2.5 border">تصویر</th>
+                                <th class="p-2.5 border">دکان سے فاصلہ (میٹر)</th>
+                                <th class="p-2.5 border">حالت</th>
+                            </tr>
+                        </thead>
+                        <tbody id="attendanceLogTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 shadow-md border border-slate-200 space-y-4">
+                <h2 class="text-lg font-bold text-slate-800 border-b pb-2"><i class="fa-solid fa-users text-blue-600 ml-2"></i> رجسٹرڈ ملازمین کی لسٹ</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-right border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700">
+                                <th class="p-2.5 border">نام</th>
+                                <th class="p-2.5 border">فون نمبر (پاسورڈ)</th>
+                                <th class="p-2.5 border">عہدہ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="staffListTable"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script>
+        const SHOP_LAT = 32.8125;
+        const SHOP_LON = 73.9542;
+        const MAX_RADIUS_METERS = 200;
+
+        let staffList = JSON.parse(localStorage.getItem('nt_staff_list')) || [
+            { name: "زیشان", phone: "03001111111", role: "منشی" },
+            { name: "طیب", phone: "03002222222", role: "ڈرائیور" },
+            { name: "محمد بلال", phone: "03003333333", role: "ڈرائیور" },
+            { name: "زوہیب", phone: "03004444444", role: "گودام انچارج" }
+        ];
+
+        let attendanceLogs = JSON.parse(localStorage.getItem('nt_attendance')) || [];
+        let paymentLogs = JSON.parse(localStorage.getItem('nt_payments')) || [];
+        
+        let currentUser = null;
+        let userDistance = 9999;
+
+        function forceSyncApp() {
+            if (confirm("کیا آپ ایپ کو تازہ ترین ورژن کے ساتھ سنک (Sync) کرنا چاہتے ہیں؟")) {
+                if ('caches' in window) {
+                    caches.keys().then(names => {
+                        names.forEach(name => caches.delete(name));
+                    });
+                }
+                window.location.reload(true);
+            }
+        }
+
+        function getDistanceInMeters(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI/180, φ2 = lat2 * Math.PI/180;
+            const Δφ = (lat2-lat1) * Math.PI/180, Δλ = (lon2-lon1) * Math.PI/180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+        }
+
+        function checkLocation() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition(updatePosition, handleError, { enableHighAccuracy: true });
+            }
+        }
+
+        function fetchPhysicalLocation() {
+            document.getElementById('distanceText').innerText = "فزیکل لوکیشن تلاش کی جا رہی ہے...";
+            if ("geolocation" in navigator) {
+                navigator.geolocation.getCurrentPosition(updatePosition, handleError, { enableHighAccuracy: true, timeout: 10000 });
+            } else {
+                alert("آپ کے ڈیوائس پر جی پی ایس لوکیشن دستیاب نہیں ہے۔");
+            }
+        }
+
+        function updatePosition(position) {
+            userDistance = Math.round(getDistanceInMeters(position.coords.latitude, position.coords.longitude, SHOP_LAT, SHOP_LON));
+            const btn = document.getElementById('checkInBtn');
+            const note = document.getElementById('geoNote');
+            const badge = document.getElementById('staffGpsBadge');
+
+            document.getElementById('distanceText').innerText = userDistance + " میٹر دوری پر";
+
+            if (userDistance <= MAX_RADIUS_METERS) {
+                btn.disabled = false;
+                btn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow transition cursor-pointer";
+                note.innerText = "آپ دکان سے " + userDistance + " میٹر کے فاصلے پر ہیں (حد کے اندر)۔ حاضری لگا سکتے ہیں۔";
+                note.className = "text-emerald-600 font-semibold";
+                badge.innerText = "GPS: " + userDistance + "m (حد کے اندر)";
+                badge.className = "text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full";
+            } else {
+                btn.disabled = true;
+                btn.className = "w-full bg-slate-400 text-white font-bold py-3 rounded-xl shadow transition cursor-not-allowed";
+                note.innerText = "آپ دکان سے " + userDistance + " میٹر دور ہیں! حاضری کے لیے 200 میٹر کے اندر ہونا لازمی ہے۔";
+                note.className = "text-red-500 font-semibold";
+                badge.innerText = "GPS: " + userDistance + "m (حد سے باہر)";
+                badge.className = "text-xs bg-red-100 text-red-800 font-bold px-2.5 py-1 rounded-full";
+            }
+        }
+
+        function handleError(error) {
+            document.getElementById('distanceText').innerText = "جی پی ایس سگنل موصول نہیں ہوا";
+        }
+
+        function handleLogin() {
+            const input = document.getElementById('loginInput').value.trim();
+            if (!input) return alert("براہ کرم اپنا موبائل نمبر یا PIN درج کریں!");
+
+            if (input === "1234") {
+                currentUser = { role: 'owner', name: 'مالک (سمیع اللہ)' };
+                showOwnerView();
+            } else {
+                const found = staffList.find(s => s.phone === input);
+                if (found) {
+                    currentUser = { role: 'staff', name: found.name, phone: found.phone };
+                    showStaffView();
+                } else {
+                    alert("یہ فون نمبر رجسٹرڈ نہیں ہے! مالکان سے رابطہ کریں۔");
+                }
+            }
+        }
+
+        function showOwnerView() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('staffScreen').classList.add('hidden');
+            document.getElementById('ownerScreen').classList.remove('hidden');
+            document.getElementById('headerUserInfo').classList.remove('hidden');
+            document.getElementById('loggedInName').innerText = currentUser.name;
+            renderOwnerTables();
+        }
+
+        function showStaffView() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('ownerScreen').classList.add('hidden');
+            document.getElementById('staffScreen').classList.remove('hidden');
+            document.getElementById('headerUserInfo').classList.remove('hidden');
+            document.getElementById('loggedInName').innerText = currentUser.name + " (ملازم)";
+            checkLocation();
+            renderStaffStats();
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('loginInput').value = '';
+            document.getElementById('ownerScreen').classList.add('hidden');
+            document.getElementById('staffScreen').classList.add('hidden');
+            document.getElementById('headerUserInfo').classList.add('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+        }
+
+        function registerEmployee() {
+            const name = document.getElementById('newStaffName').value.trim();
+            const phone = document.getElementById('newStaffPhone').value.trim();
+            const role = document.getElementById('newStaffRole').value.trim() || "ملازم";
+
+            if (!name || !phone) return alert("براہ کرم نام اور فون نمبر دونوں درج کریں!");
+
+            staffList.push({ name, phone, role });
+            localStorage.setItem('nt_staff_list', JSON.stringify(staffList));
+            document.getElementById('newStaffName').value = '';
+            document.getElementById('newStaffPhone').value = '';
+            document.getElementById('newStaffRole').value = '';
+            alert("نیا ملازم " + name + " رجسٹر ہو چکا ہے۔");
+            renderOwnerTables();
+        }
+
+        function markAttendance() {
+            const fileInput = document.getElementById('cameraInput');
+            if (!fileInput.files || fileInput.files.length === 0) return alert("تصویر اپ لوڈ کرنا لازمی ہے!");
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                attendanceLogs.push({
+                    time: new Date().toLocaleString('ur-PK'),
+                    name: currentUser.name,
+                    phone: currentUser.phone,
+                    photo: e.target.result,
+                    distance: userDistance + " میٹر دوری",
+                    status: "حاضر"
+                });
+                localStorage.setItem('nt_attendance', JSON.stringify(attendanceLogs));
+                alert("آپ کی حاضری کامیابی سے لگ چکی ہے! (دکان سے فاصلہ: " + userDistance + " میٹر)");
+                renderStaffStats();
+            };
+            reader.readAsDataURL(fileInput.files[0]);
+        }
+
+        function addPaymentRecord() {
+            const staffPhone = document.getElementById('payStaffSelect').value;
+            const amount = document.getElementById('payAmount').value;
+            const note = document.getElementById('payNote').value || "ایڈوانس کیش";
+
+            if (!amount) return alert("رقم درج کریں!");
+
+            const found = staffList.find(s => s.phone === staffPhone);
+            paymentLogs.push({
+                date: new Date().toLocaleDateString('ur-PK'),
+                name: found ? found.name : "ملازم",
+                phone: staffPhone,
+                amount: amount,
+                note: note
+            });
+
+            localStorage.setItem('nt_payments', JSON.stringify(paymentLogs));
+            document.getElementById('payAmount').value = '';
+            document.getElementById('payNote').value = '';
+            alert("کھاتہ اپ ڈیٹ ہو گیا!");
+            renderOwnerTables();
+        }
+
+        function renderOwnerTables() {
+            const select = document.getElementById('payStaffSelect');
+            select.innerHTML = '';
+            staffList.forEach(s => {
+                select.innerHTML += `<option value="${s.phone}">${s.name} (${s.role})</option>`;
+            });
+
+            const staffTable = document.getElementById('staffListTable');
+            staffTable.innerHTML = '';
+            staffList.forEach(s => {
+                staffTable.innerHTML += `
+                    <tr class="border-b">
+                        <td class="p-2 border font-bold">${s.name}</td>
+                        <td class="p-2 border text-slate-600">${s.phone}</td>
+                        <td class="p-2 border text-slate-600">${s.role}</td>
+                    </tr>
+                `;
+            });
+
+            const attTable = document.getElementById('attendanceLogTable');
+            attTable.innerHTML = '';
+            attendanceLogs.forEach(log => {
+                attTable.innerHTML += `
+                    <tr class="border-b hover:bg-slate-50">
+                        <td class="p-2 border text-xs">${log.time}</td>
+                        <td class="p-2 border font-bold">${log.name}</td>
+                        <td class="p-2 border"><img src="${log.photo}" class="w-10 h-10 rounded-full object-cover border"></td>
+                        <td class="p-2 border font-bold text-blue-700 bg-blue-50">${log.distance}</td>
+                        <td class="p-2 border text-emerald-600 font-bold">${log.status}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderStaffStats() {
+            const myAtt = attendanceLogs.filter(a => a.phone === currentUser.phone);
+            const myPay = paymentLogs.filter(p => p.phone === currentUser.phone);
+            
+            let totalAdv = myPay.reduce((sum, item) => sum + (parseInt(item.amount) || 0), 0);
+
+            document.getElementById('staffTotalDays').innerText = myAtt.length + " دن";
+            document.getElementById('staffAdvanceBalance').innerText = "Rs " + totalAdv;
+        }
+    </script>
+</body>
+</html>
         </div>
 
         <!-- ==================== STAFF VIEW ==================== -->
