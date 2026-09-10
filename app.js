@@ -3,10 +3,23 @@ const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Karachi'}).forma
 const defaults={entries:[],categories:['بجلی کا بل','گیس / پانی','کرایہ','تنخواہ','چائے / کھانا','ٹرانسپورٹ','مرمت','موبائل / انٹرنیٹ','گھر کا خرچ','قرض / ادائیگی','فیس / ٹیکس','پیکنگ','دیگر'],stockItems:['صوفی گھی','صوفی آئل','صوفی آئل کی بڑی بوتل','صوفی آئل کی چھوٹی بوتل','مومن آئل کی بوتل','مومن آئل','مجاہد آئل کا پیکٹ','چینی','چاول بابا','چاول سپر','چاول سٹیم','سیلا چاول','دال ماش','گڑ','شکر','مجاہد گھی','شفیع گھی','ڈالڈا گھی','ڈالڈا آئل','بادام','لپٹن پتی','سپرِیم پتی','لائف شیمپو'].map((name,i)=>({id:i+1,name,unit:['چینی','چاول بابا','چاول سپر','چاول سٹیم','سیلا چاول','دال ماش','گڑ','شکر','بادام'].includes(name)?'کلو':'عدد',rate:0})),stockRecords:{},staff:[],attendance:{},purchases:[],batches:[]};
 let db=load();
 function load(){try{return Object.assign(structuredClone(defaults),JSON.parse(localStorage.getItem(KEY)||'{}'))}catch{return structuredClone(defaults)}}
-function save(){localStorage.setItem(KEY,JSON.stringify(db));renderAll()}
+function save(){
+  localStorage.setItem(KEY,JSON.stringify(db));
+  renderAll();
+  if(window.noorFirebaseSync && window.noorFirebaseSync.ready){
+    window.noorFirebaseSync.saveState(structuredClone(db));
+  }
+}
+window.getNoorDb=()=>structuredClone(db);
+window.applyNoorDb=(next)=>{
+  db=Object.assign(structuredClone(defaults),next||{});
+  localStorage.setItem(KEY,JSON.stringify(db));
+  renderAll();
+};
+window.getNoorDefaults=()=>structuredClone(defaults);
 const money=n=>'Rs '+Number(n||0).toLocaleString('en-PK',{maximumFractionDigits:2});
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-const tabs=[['ledger','حساب کتاب'],['stock','Stock'],['attendance','Staff / حاضری'],['purchases','Purchase Pics'],['manufacturing','Batch Cost'],['reports','Reports'],['settings','Settings']];
+const tabs=[['ledger','🏠 حساب کتاب'],['stock','📦 Stock'],['attendance','👥 Staff / حاضری'],['purchases','🧾 Purchase Pics'],['manufacturing','🏭 Batch Cost'],['reports','📊 Reports'],['settings','⚙️ Settings']];
 nav.innerHTML=tabs.map(([id,l],i)=>`<button data-tab="${id}" class="${i?'':'active'}">${l}</button>`).join('');
 nav.onclick=e=>{if(!e.target.dataset.tab)return;document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('active'));document.getElementById(e.target.dataset.tab).classList.add('active');e.target.classList.add('active')};
 
@@ -50,7 +63,12 @@ function delBatch(id){db.batches=db.batches.filter(x=>x.id!==id);save()}
 
 function renderReport(){let m=reportMonth.value,es=db.entries.filter(x=>x.date.startsWith(m)),sales=sum(es,'sale'),coll=sum(es,'collection'),expense=sum(es,'expense'),goods=sum(es,'shop_goods'),pending=sum(es,'pending_bill'),acc=sum(es,'account');reportBox.innerHTML=`<h2>${m} Summary</h2><div class=grid><div class="card span3"><div class=kpi>Sales<strong>${money(sales)}</strong></div></div><div class="card span3"><div class=kpi>Wasooli<strong>${money(coll)}</strong></div></div><div class="card span3"><div class=kpi>Expenses<strong>${money(expense)}</strong></div></div><div class="card span3"><div class=kpi>Shop Goods<strong>${money(goods)}</strong></div></div></div><p>Pending Bills: <b>${money(pending)}</b> • Account incoming: <b>${money(acc)}</b></p>`}
 function backupAll(){let blob=new Blob([JSON.stringify({format:'noor-traders-business-backup-html',version:79,createdAt:new Date().toISOString(),data:db},null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`Noor-Traders-Full-Migration-Backup-${today()}.json`;a.click();URL.revokeObjectURL(a.href)}
-restoreFile.onchange=async()=>{try{let x=JSON.parse(await restoreFile.files[0].text());if(!x.data)throw Error();if(confirm('موجود Local data replace ہوگا۔ جاری رکھیں؟')){db=x.data;save()}}catch{alert('درست backup file نہیں')}};
-function resetAll(){if(confirm('تمام Local data delete ہوگا؟')){localStorage.removeItem(KEY);db=structuredClone(defaults);save()}}
+restoreFile.onchange=async()=>{try{let x=JSON.parse(await restoreFile.files[0].text());if(!x.data)throw Error();if(confirm('Backup restore ہونے سے موجود data replace ہوگا اور Firebase online data بھی sync ہو جائے گا۔ جاری رکھیں؟')){db=x.data;save()}}catch{alert('درست backup file نہیں')}};
+function resetAll(){
+  if(confirm('صرف اس browser کا local cache صاف ہوگا۔ Firebase online data delete نہیں ہوگا۔ جاری رکھیں؟')){
+    localStorage.removeItem(KEY);
+    location.reload();
+  }
+}
 function renderAll(){renderCategories();renderLedger();renderStock();renderAttendance();renderPurchases();renderBatches();renderReport()}
 setupDates();renderAll();
