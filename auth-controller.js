@@ -167,6 +167,11 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
 
 export function loginErrorMessage(error, role = 'owner') {
   switch (error.code) {
+    case 'login/staff-config-read': return 'S1: Mulazim login settings par ijazat nahi. Nayi firestore.rules nt-traders project mein publish karein.';
+    case 'login/staff-session-create': return 'S2: Password match nahi hua ya session rule publish nahi hui. Malik Settings mein Password check karein.';
+    case 'login/staff-session-read': return 'S3: Mulazim session parhne ki ijazat nahi. Nayi firestore.rules publish karein.';
+    case 'login/staff-account-read': return 'S4: Mulazim account ki ijazat nahi ya password badal chuka hai. Dobara login karein.';
+    case 'login/staff-not-configured': return 'S0: Malik pehle Settings mein Mulazim password Save karein.';
     case 'login/owner-username': return 'مالک کے لیے یوزر نیم admin درج کریں۔';
     case 'login/staff-credentials': return 'یوزر نیم admin اور مالک کا مقرر کردہ پاس ورڈ درج کریں۔';
     case 'login/password-required': return 'پاس ورڈ درج کریں۔';

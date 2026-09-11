@@ -42,16 +42,54 @@ service cloud.firestore {
       allow read, write: if isOwner();
     }
 
+    function padDay(n) { return n < 10 ? '0' + string(n) : string(n); }
+    function isToday(date) {
+      let local = request.time + duration.value(5, 'h');
+      return date == string(local.year()) + '-' + padDay(local.month()) + '-' + padDay(local.day());
+    }
+    function newBlueStaff() {
+      let session = get(/databases/$(database)/documents/businesses/noor-traders/blueStaffSessions/$(request.auth.uid)).data;
+      return get(/databases/$(database)/documents/businesses/noor-traders/blueStaffKeys/$(session.credentialId)).data.active == true;
+    }
+    function blueStaff() {
+      return isStaff() && (exists(/databases/$(database)/documents/businesses/noor-traders/blueAccess/config)
+        ? newBlueStaff() : validStaffSession());
+    }
+    match /businesses/noor-traders/blueAccess/{id} {
+      allow get: if isOwner() || (isStaff() && id == 'config');
+    }
+    match /businesses/noor-traders/blueStaffSessions/{uid} {
+      allow get: if isOwner() || (isStaff() && request.auth.uid == uid);
+      allow create: if isStaff() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['credentialId','createdAt'])
+        && request.resource.data.credentialId is string
+        && get(/databases/$(database)/documents/businesses/noor-traders/blueStaffKeys/$(request.resource.data.credentialId)).data.active == true;
+    }
+    match /businesses/noor-traders/blueStaffKeys/{key} {
+      allow get: if isOwner() || (isStaff()
+        && get(/databases/$(database)/documents/businesses/noor-traders/blueStaffSessions/$(request.auth.uid)).data.credentialId == key);
+    }
+
     // Blue Khata: existing verified employees can view/create ledger entries.
-    // Only owner can edit/delete, close days, import or restore.
+    // Staff may soft-delete any current-day entry; other edits remain owner-only.
     match /businesses/noor-traders/blueKhata/{recordId} {
-      allow read: if isOwner() || validStaffSession();
-      allow create: if validStaffSession()
+      allow read: if isOwner() || blueStaff();
+      allow update: if blueStaff()
+        && resource.data.type == 'entry'
+        && isToday(resource.data.date)
+        && (!('deleted' in resource.data) || resource.data.deleted == false)
+        && request.resource.data.deleted == true
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.rev == resource.data.rev + 1
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted','updatedAt','updatedBy','rev']);
+
+      allow create: if blueStaff()
         && request.resource.data.by == request.auth.uid
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.rev == 1
-        && request.resource.data.type in ['entry', 'party', 'expenseAccount']
+        && request.resource.data.type in ['entry', 'party', 'expenseAccount', 'dayPhoto']
         && !('deleted' in request.resource.data)
+        && (!(request.resource.data.type in ['entry','dayPhoto']) || isToday(request.resource.data.date))
         && (request.resource.data.type != 'entry' ||
           (request.resource.data.amount is int && request.resource.data.amount > 0
           && request.resource.data.kind in ['sale','collection','payment','expense','credit','borrow','purchaseCash']))
