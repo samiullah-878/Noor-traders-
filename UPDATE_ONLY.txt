@@ -1,3 +1,4 @@
-V1.12 ke upar update. Included files same repository folder mein replace karein.
-Firebase project note-traders-khata-7ccc1 > Firestore Database > Rules mein firestore.rules ka POORA CODE paste karke Publish karein. Staff wale nt-traders project mein nahi.
-Sync/Update aur reload ke baad v1.13.0 dekhein. Malik, username admin, email hp6235@gmail.com select karein. Isi Firebase user ka password dalein jo aapne user banate waqt rakha. Password is update ne nahi badla. Purana googel6235@gmail.com login bhi retained hai.
+V1.13 ke upar files replace karein, phir Sync / Update aur reload.
+Malik login > Settings > Backup file select karein > JSON backup choose karein > Restore / Save Backup button dabayein.
+File choose karne se restore shuru nahi hoga; pehle accounts/entries ki tadaad dikhegi. Success ya error isi screen par dikhega.
+Yeh update existing conflicting records overwrite nahi karta. Naye/khali project mein purana backup restore kar sakte hain. Firestore rules is update mein nahi badli.
