@@ -1,0 +1,10 @@
+V1.4 — Upload guide
+1. Extract ZIP and upload all files WITH vendor folder to your repository.
+2. Firebase Console > project nt-traders > Firestore Database > Rules: paste the complete firestore.rules supplied here and Publish. GitHub upload alone does not publish these rules.
+3. Open app > Sync / Update > reload. Footer must show v1.4.0.
+4. Owner Settings > Mulazim password: enter a shared staff password (at least 10 characters), confirm and Save. Username stays admin. This changes Blue Khata staff access only; old Staff app records/passwords are not edited.
+5. Employees can create entries only for today's Pakistan date. Past/future records remain viewable. Owner can backdate. Offline employee entries must sync the same Pakistan day; older queued writes will be rejected by the date rule and owner must review/re-enter them.
+6. Summary camera: take up to 3 pictures, save, then add more if needed. Pictures attach to the selected date, without affecting money totals.
+7. Purchase: take/select up to 3 goods + 3 bill pictures. Each image is compressed. Preview the bill to ensure its writing is readable.
+8. Daily PDF includes selected day's roznamcha and purchase photos on separate photo pages. Account PDF includes that account's purchase/entry photos; expense PDF includes cash purchase photos.
+Validation: UI scenarios, date rejection, password/session ordering and PDF Blob generation passed. Camera/canvas rendering on a physical Android phone and deployed Firestore rules have not been tested in this workspace. No live files or passwords were changed.

@@ -36,11 +36,8 @@ export function parseLogin({ role, username, password }) {
     return { role, emails: name === 'admin' ? OWNER_EMAILS : [name], password };
   }
   if (role !== 'staff') throw failure('login/role-required');
-  const phone = normalizePhone(password);
-  if (!phone || (name !== 'admin' && normalizePhone(name) !== phone)) {
-    throw failure('login/staff-credentials');
-  }
-  return { role, phone };
+  if(name !== 'admin') throw failure('login/staff-credentials');
+  return {role,password,phone:normalizePhone(password)};
 }
 
 // SDK and account reads are injected so real authentication ordering can be
@@ -64,7 +61,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       // from localStorage left behind by another staff member on this browser.
       const session = await accounts.getSession(user.uid);
       check(ticket, user);
-      const phone = normalizePhone(session?.phone);
+      const phone = session?.credentialId || normalizePhone(session?.phone);
       if (!phone) throw failure('login/staff-session');
       const account = await accounts.getAccount(phone);
       check(ticket, user);
@@ -129,7 +126,8 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
           credential = await sdk.signInAnonymously(auth);
           attemptUser = credential.user;
           check(ticket, credential.user);
-          await accounts.createSession(credential.user.uid, request.phone);
+          if(accounts.createPasswordSession) await accounts.createPasswordSession(credential.user.uid,request.password,request.phone);
+          else await accounts.createSession(credential.user.uid, request.phone);
         }
         check(ticket, credential.user);
         await activate(credential.user, ticket, request.role);
@@ -170,7 +168,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
 export function loginErrorMessage(error, role = 'owner') {
   switch (error.code) {
     case 'login/owner-username': return 'مالک کے لیے یوزر نیم admin درج کریں۔';
-    case 'login/staff-credentials': return 'اسٹاف کا یوزر نیم admin اور پاس ورڈ اس کا مکمل محفوظ شدہ موبائل نمبر ہے، مثلاً 03xxxxxxxxx۔';
+    case 'login/staff-credentials': return 'یوزر نیم admin اور مالک کا مقرر کردہ پاس ورڈ درج کریں۔';
     case 'login/password-required': return 'پاس ورڈ درج کریں۔';
     case 'login/staff-disabled': return 'اسٹاف اکاؤنٹ موجود نہیں یا مالک نے اس کا لاگ اِن بند کیا ہے۔';
     case 'login/staff-session': return 'پچھلا اسٹاف سیشن مکمل نہیں۔ دوبارہ لاگ اِن کریں۔';

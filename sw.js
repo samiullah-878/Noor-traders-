@@ -1,5 +1,5 @@
-const CACHE='sam-blue-khata-1.3.0';
-const ASSETS=['./','./index.html','./style.css','./app.js','./style.css?v=1.3.0','./app.js?v=1.3.0','./model.js','./cloud.js','./auth-controller.js','./config.js','./pdf-import.js','./pdf-export.js','./vendor/jspdf.js','./vendor/html2canvas.js','./vendor/pdf.mjs','./vendor/pdf.worker.mjs'];
+const CACHE='sam-blue-khata-1.4.0';
+const ASSETS=['./','./index.html','./style.css','./app.js','./style.css?v=1.4.0','./app.js?v=1.4.0','./model.js','./cloud.js','./auth-controller.js','./config.js','./pdf-import.js','./pdf-export.js','./vendor/jspdf.js','./vendor/html2canvas.js','./vendor/pdf.mjs','./vendor/pdf.worker.mjs'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('sam-blue-khata-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(e.request.method!=='GET'||u.pathname.endsWith('version.json'))return;if(u.origin!==location.origin&&u.hostname!=='www.gstatic.com')return;e.respondWith(fetch(e.request,{cache:'no-cache'}).then(r=>{if(r.ok){const copy=r.clone();caches.open(CACHE).then(c=>c.put(e.request,copy))}return r}).catch(()=>caches.match(e.request)))});
