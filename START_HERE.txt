@@ -1,4 +1,6 @@
-SAM / NOOR TRADERS — BLUE KHATA v1.0.0
+v1.1.0: Side-by-side given/received ledgers; six-column daily sheet with searchable account selectors; report preview and direct PDF download. Existing records/calculations preserved.
+
+SAM / NOOR TRADERS — BLUE KHATA v1.1.0
 
 GITHUB UPLOAD
 1. Is ZIP ko extract karein. Nayi repository / alag folder mein files upload karein.
@@ -38,7 +40,8 @@ Private PDF / party data ZIP mein bundled nahi: public repository mein PDF uploa
 
 PDF REPORTS
 Account, Daily Sale, Akhrajat ya Closing Cash screen par PDF dabayein.
-Browser Print dialog mein Save as PDF choose karein. Actual PDF export is via browser printing.
+Report preview khulegi. Download PDF dabayein; print dialog khud nahi khulega.
+PDF captures report pages as images to preserve Urdu/mobile text appearance.
 
 SYNC / OFFLINE
 First login and first load internet par karein. Website aur SDK cache hone ke baad

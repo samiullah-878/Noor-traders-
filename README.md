@@ -1,7 +1,7 @@
-# Noor Traders — Blue Khata
+# Sam Blue Khata v1.1.0
 
-Old application files were removed at the repository owner's request to prepare for the new Blue Khata upload.
+Mobile ledger with side-by-side given/received entries, a six-column daily cash sheet and report preview with direct PDF download.
 
-Extract sam-blue-khata-v1-github.zip and upload its contents here, keeping vendor/ and tests/ folders intact. index.html must be at the repository root.
+Read START_HERE.txt for login, Firebase rules, PDF import and backup instructions. Keep vendor/ intact when uploading.
 
-The previous application remains in Git history. No Firebase data or passwords were deleted.
+Existing data and passwords are unchanged. Never upload private account PDFs to this public repository; import them after signing in to the app.
