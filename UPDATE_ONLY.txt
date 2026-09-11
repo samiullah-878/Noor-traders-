@@ -1,7 +1,12 @@
-V1.8 login diagnostic update (v1.4 aur baad ke versions ke upar).
-Tamam included files replace/upload karein. auth-controller.js bhi zaroor upload karein. Purane vendor aur baqi folders rehne dein.
-Supplied firestore.rules ka CODE Firebase nt-traders > Firestore Database > Rules mein Publish karein.
-Sync/Update + reload ke baad v1.8.0 dekhein.
-Malik login > Settings > Mulazim password > apna set kiya password likhein > Password check. Yeh password change nahi karta.
-Agar match hota hai to Mulazim role/admin/naye password se login karein. Error S1/S2/S3/S4 aaye to screenshot bhejein. Password kisi ko na bhejein.
-Server/live diagnosis abhi verified nahi. Is ZIP ne koi live password ya data change nahi kiya.
+V1.12 — Hisaab/Sale Firebase connection correction
+
+ONLY project note-traders-khata-7ccc1. This is NOT the separate nt-traders Staff app.
+
+1. Before replacing files, use Backup Download on the currently used phone. Keep the JSON private. Existing data is not automatically moved between Firebase projects.
+2. Extract this update ZIP into the same repository folder as index.html. Upload/replace all included files. Preserve vendor and other existing folders. This patch applies over v1.9 through v1.11.
+3. Open Firebase project note-traders-khata-7ccc1 > Firestore Database > Rules. Replace rules with the COMPLETE firestore.rules code supplied here and Publish. Do NOT paste this guide. Do NOT apply these rules in nt-traders.
+4. Reload/Sync. Login footer v1.12.0. Select Malik; username admin; owner account googel6235@gmail.com. Use the Firebase password for this account in THIS project, not a Gmail password or another project's password.
+5. Staff: in this Khata Firebase project enable Authentication > Sign-in method > Anonymous if not enabled. Owner Settings > Mulazim password > Save password; then staff uses admin and that password. Old Staff app logins are independent.
+6. If this project has no ledger records, restore your private backup using owner Settings > Backup restore. Never upload financial JSON to a public repository. Conflicting existing records require review; restore does not overwrite them automatically.
+
+The config was transcribed from your screenshots. No live passwords, Firebase data, Staff app files, GitHub files or deployed rules were changed by this ZIP. Local tests passed; production login still needs checking after uploading and publishing Khata rules. Firebase temporary rate limits cannot be cleared by frontend code.

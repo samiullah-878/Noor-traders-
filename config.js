@@ -1,10 +1,10 @@
 export const firebaseConfig = {
-  apiKey: "AIzaSyDz9sNBaSblZQYEJPhoAZmyygcghmHSh_I",
-  authDomain: "nt-traders.firebaseapp.com",
-  projectId: "nt-traders",
-  storageBucket: "nt-traders.firebasestorage.app",
-  messagingSenderId: "312840988986",
-  appId: "1:312840988986:web:6b9e8030bfb2a596540803",
-  measurementId: "G-EVZKK3ZBJK"
+  "apiKey": "AIzaSyAex-DAr0PDQTZNYqA_K4aWadg6HLn_hLY",
+  "authDomain": "note-traders-khata-7ccc1.firebaseapp.com",
+  "projectId": "note-traders-khata-7ccc1",
+  "storageBucket": "note-traders-khata-7ccc1.firebasestorage.app",
+  "messagingSenderId": "1025935863786",
+  "appId": "1:1025935863786:web:496364390823c191644c93",
+  "measurementId": "G-NK7B8HDQBV"
 };
 export const BUSINESS_ID="noor-traders";

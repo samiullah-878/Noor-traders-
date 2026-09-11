@@ -1,72 +1,12 @@
-v1.8.0: Side-by-side given/received ledgers; six-column daily sheet with searchable account selectors; report preview and direct PDF download. Existing records/calculations preserved.
+V1.12 — Hisaab/Sale Firebase connection correction
 
-SAM / NOOR TRADERS — BLUE KHATA v1.8.0
+ONLY project note-traders-khata-7ccc1. This is NOT the separate nt-traders Staff app.
 
-GITHUB UPLOAD
-1. Is ZIP ko extract karein. Nayi repository / alag folder mein files upload karein.
-   index.html seedha website ke root mein ho, vendor folder bhi saath upload ho.
-   Purani Staff website ki files replace na karein: yeh alag Khata app hai.
-2. Repository mein GitHub Pages enable karein. Website HTTPS link se kholein.
-3. Firebase project nt-traders ka pehle wala malik login use hota hai.
-   Malik username admin + purana password. Mulazim username admin + saved mobile number password.
-   Koi purana password ya live data is ZIP ko banate waqt nahi badla gaya.
-4. Mulazim ledger access ke liye supplied firestore.rules ko SAME nt-traders
-   Firebase project ke Firestore Rules mein publish karein. File purane Staff rules bhi rakhti hai.
-   Agar aapne iske baad rules custom badle hain to full replacement ke bajaye sirf
-   blueKhata match block merge karein. Rules is session mein live publish nahi huay.
-   Employees can read the ledger and add entries / zero-opening accounts.
-   Owner alone edits/deletes, imports, restores and closes days.
+1. Before replacing files, use Backup Download on the currently used phone. Keep the JSON private. Existing data is not automatically moved between Firebase projects.
+2. Extract this update ZIP into the same repository folder as index.html. Upload/replace all included files. Preserve vendor and other existing folders. This patch applies over v1.9 through v1.11.
+3. Open Firebase project note-traders-khata-7ccc1 > Firestore Database > Rules. Replace rules with the COMPLETE firestore.rules code supplied here and Publish. Do NOT paste this guide. Do NOT apply these rules in nt-traders.
+4. Reload/Sync. Login footer v1.12.0. Select Malik; username admin; owner account googel6235@gmail.com. Use the Firebase password for this account in THIS project, not a Gmail password or another project's password.
+5. Staff: in this Khata Firebase project enable Authentication > Sign-in method > Anonymous if not enabled. Owner Settings > Mulazim password > Save password; then staff uses admin and that password. Old Staff app logins are independent.
+6. If this project has no ledger records, restore your private backup using owner Settings > Backup restore. Never upload financial JSON to a public repository. Conflicting existing records require review; restore does not overwrite them automatically.
 
-DAILY HISAB
-Sale + Wasooli + Kal ka Change - Akhrajat - Party payments - Aaj ka Change - Closing Cash = Farq.
-Aaj ka counted Change next calendar day ki opening hai. Closing Cash carry forward nahi hoti.
-Pichhle din ka record na ho to opening Change manually dein. Purani closing edit
-karne se uske agle din ka opening/farq bhi update hoga.
-Closing Cash screen mein har date ki cash ginti alag hai, cumulative balance nahi.
-Wasooli aur payments party aur daily report mein ek entry se update hote hain.
-Udhar diya / hum ne dena hai balance-only entries hain; daily cash mein shamil nahi.
-Akhrajat mein kharcha account banayein, select karein, raqam save karein.
-
-PDF IMPORT
-Owner > PDF Import. Apni original All Parties List PDF select karein.
-You'll Give = HUM NE LENE HAIN. You'll Get = HUM NE DENE HAIN.
-Supplied All Parties report format was tested against every name and both totals.
-Preview check karein, report ki tareekh set karein, Confirm Import dabayein.
-Names/details and column totals are validated; unsupported/scanned PDF is rejected.
-Same PDF is blocked by hash. Existing matching names/phones block the whole import;
-this version does not replace their balances. Opening balance daily sale/expense nahi hai.
-Original PDF saved in cloud with imported accounts; Settings > Saved PDF reports.
-Private PDF / party data ZIP mein bundled nahi: public repository mein PDF upload na karein.
-
-PDF REPORTS
-Account, Daily Sale, Akhrajat ya Closing Cash screen par PDF dabayein.
-Report preview khulegi. Download PDF dabayein; print dialog khud nahi khulega.
-PDF captures report pages as images to preserve Urdu/mobile text appearance.
-
-SYNC / OFFLINE
-First login and first load internet par karein. Website aur SDK cache hone ke baad
-existing cached session/data offline available ho sakti hai. New entries queue for sync.
-Login verification, edits, closing, PDF import and restore require internet.
-Cloud synced / cached / pending status ko dekhein. Pending entries device clear karne se kho sakti hain.
-Offline clients can't verify account revocation until reconnecting.
-Data same Firebase project ke separate blueKhata collection mein hai.
-Sync button login se pehle app version checks; login ke baad pending data sync bhi waits.
-New app update ke liye future ZIP same repository/path par replace karein. version.json
-and sw.js cache version future release mein update honge. Login data is not in the public repo.
-
-BACKUP
-Settings > Backup download. JSON includes accounts/entries/closings and stored PDF chunks.
-Restore owner-only online in batches. Matching records are skipped; conflicting
-records block further restore without overwriting. If a batch fails, earlier restored
-records remain; retry the same backup to resume.
-Browser storage is not a replacement for backups. This build is not an Android APK.
-
-VALIDATION
-Arithmetic/unit checks; PDF names/details and both totals compared against extracted
-source; DOM interaction tests use synthetic data. No production accounting records
-were imported or modified while building. Firebase Rules and real mobile print/offline
-behavior need deployment checks on your website. WebMCP browser validation unavailable.
-
-V1.2: Selected party stays selected when adding entries. Compact paired ledger. Daily sheet has multiple count rows for Change and Cash. Blank rows ignored; enter 0 for a zero count. Previous day Change carries automatically. Save both Change and Cash to complete closing.
-
-V1.3: Visible account search suggestions. Sale supports up to 3 compressed roznamcha photos. Purchase supports supplier selection, cash/credit, goods and bill camera photos. Cash purchase appears in Akhrajat without changing supplier debt; credit purchase increases payable without cash expense. For staff purchase access publish the supplied Firestore rules. Upload all extracted folders, then Sync/Update and reload. Confirm v1.8.0 in app footer.
+The config was transcribed from your screenshots. No live passwords, Firebase data, Staff app files, GitHub files or deployed rules were changed by this ZIP. Local tests passed; production login still needs checking after uploading and publishing Khata rules. Firebase temporary rate limits cannot be cleared by frontend code.

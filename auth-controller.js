@@ -1,10 +1,6 @@
 // Authentication decisions are independent of the login screen and job titles.
 // Keep the owner list in sync with isOwner() in firestore.rules.
-export const OWNER_EMAILS = Object.freeze([
-  'admin@nt-traders.firebaseapp.com',
-  'hp6235@gmail.com',
-  'owner@nttraders.local'
-]);
+export const OWNER_EMAILS = Object.freeze(['googel6235@gmail.com']);
 
 export function normalizePhone(value) {
   let phone = String(value ?? '').trim()
@@ -168,7 +164,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
 
 export function loginErrorMessage(error, role = 'owner') {
   switch (error.code) {
-    case 'login/staff-config-read': return 'S1: Mulazim login settings par ijazat nahi. Nayi firestore.rules nt-traders project mein publish karein.';
+    case 'login/staff-config-read': return 'S1: Mulazim login settings par ijazat nahi. Nayi firestore.rules note-traders-khata-7ccc1 project mein publish karein.';
     case 'login/staff-session-create': return 'S2: Password match nahi hua ya session rule publish nahi hui. Malik Settings mein Password check karein.';
     case 'login/staff-session-read': return 'S3: Mulazim session parhne ki ijazat nahi. Nayi firestore.rules publish karein.';
     case 'login/staff-account-read': return 'S4: Mulazim account ki ijazat nahi ya password badal chuka hai. Dobara login karein.';
