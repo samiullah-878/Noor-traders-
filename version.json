@@ -1,6 +1,0 @@
-{
-  "version": "v110",
-  "variant": "Production",
-  "buildDate": "2026-09-10",
-  "notes": "Atomic staff creation with retry-safe failure handling and named online duplicate messages; owner-editable daily opening and closing instructions on staff screen."
-}
