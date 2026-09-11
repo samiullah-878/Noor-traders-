@@ -1,6 +1,6 @@
 // Authentication decisions are independent of the login screen and job titles.
 // Keep the owner list in sync with isOwner() in firestore.rules.
-export const OWNER_EMAILS = Object.freeze(['googel6235@gmail.com']);
+export const OWNER_EMAILS = Object.freeze(['googel6235@gmail.com','hp6235@gmail.com']);
 
 export function normalizePhone(value) {
   let phone = String(value ?? '').trim()
