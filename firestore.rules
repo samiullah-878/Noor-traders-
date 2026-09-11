@@ -54,7 +54,7 @@ service cloud.firestore {
         && !('deleted' in request.resource.data)
         && (request.resource.data.type != 'entry' ||
           (request.resource.data.amount is int && request.resource.data.amount > 0
-          && request.resource.data.kind in ['sale','collection','payment','expense','credit','borrow']))
+          && request.resource.data.kind in ['sale','collection','payment','expense','credit','borrow','purchaseCash']))
         && (request.resource.data.type != 'party' || request.resource.data.opening == 0);
     }
 

@@ -1,6 +1,6 @@
-v1.1.0: Side-by-side given/received ledgers; six-column daily sheet with searchable account selectors; report preview and direct PDF download. Existing records/calculations preserved.
+v1.3.0: Side-by-side given/received ledgers; six-column daily sheet with searchable account selectors; report preview and direct PDF download. Existing records/calculations preserved.
 
-SAM / NOOR TRADERS — BLUE KHATA v1.1.0
+SAM / NOOR TRADERS — BLUE KHATA v1.3.0
 
 GITHUB UPLOAD
 1. Is ZIP ko extract karein. Nayi repository / alag folder mein files upload karein.
@@ -66,3 +66,7 @@ Arithmetic/unit checks; PDF names/details and both totals compared against extra
 source; DOM interaction tests use synthetic data. No production accounting records
 were imported or modified while building. Firebase Rules and real mobile print/offline
 behavior need deployment checks on your website. WebMCP browser validation unavailable.
+
+V1.2: Selected party stays selected when adding entries. Compact paired ledger. Daily sheet has multiple count rows for Change and Cash. Blank rows ignored; enter 0 for a zero count. Previous day Change carries automatically. Save both Change and Cash to complete closing.
+
+V1.3: Visible account search suggestions. Sale supports up to 3 compressed roznamcha photos. Purchase supports supplier selection, cash/credit, goods and bill camera photos. Cash purchase appears in Akhrajat without changing supplier debt; credit purchase increases payable without cash expense. For staff purchase access publish the supplied Firestore rules. Upload all extracted folders, then Sync/Update and reload. Confirm v1.3.0 in app footer.
