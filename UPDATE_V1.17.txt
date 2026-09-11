@@ -1,0 +1,17 @@
+V1.17 — Mulazim password login fix (sirf note-traders-khata-7ccc1)
+
+Kya theek hua:
+- Mulazim ka password ab Urdu keyboard ke hindson (۱۲۳) se bhi chalega — app khud unhein English 1 2 3 bana deta hai.
+- Password ke aage/peeche galti se lagi khali jagah (space) ab masla nahi karegi.
+- Login screen ab yaad rakhti hai ke is phone par "Malik" chuna tha ya "Mulazim". Mulazim ke phone par ek dafa "Mulazim" chun lein, agli dafa khud wahi rahega.
+- "Password dikhayein" ka dabba — tick karein to likha hua password nazar aayega.
+- Login ki galtiyon ke messages ab Roman Urdu mein hain, aur error ka code bhi dikhta hai.
+
+Kaise lagayein:
+1. ZIP extract karke saari files repository mein (index.html wale folder mein) upload/replace karein. vendor folder waisa hi rehne dein.
+2. Firestore rules mein koi tabdeeli NAHI. Dobara publish karne ki zaroorat nahi.
+3. Malik aur Mulazim dono phones par app kholein > "Sync / Update" > reload. Neeche "Blue Khata v1.17.0" likha hona chahiye.
+4. Malik: Settings > Mulazim password > wohi 10 hindson wala password dono khanon mein likh kar Save password dabayein (ek dafa, taake naye tareeqe se save ho jaye).
+5. Mulazim phone: Login mein "Mulazim" chunein, username admin, woh password likhein.
+
+Purana English hindson wala password waisa hi chalta rahega; koi data ya ledger record nahi badla.
