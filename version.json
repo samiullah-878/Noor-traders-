@@ -1,6 +1,1 @@
-{
-  "version": "v115",
-  "variant": "Production",
-  "buildDate": "2026-09-11",
-  "notes": "Owner attendance edit ab phone save karta hai (report mein Absent ka masla); ghalat Check-Out time ki warning; staff profile aur edit form ke dabbe chhote."
-}
+{"version":"1.17.0","name":"Sam Blue Khata","date":"2026-09-11"}
