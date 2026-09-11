@@ -1,4 +1,1 @@
-V1.13 ke upar files replace karein, phir Sync / Update aur reload.
-Malik login > Settings > Backup file select karein > JSON backup choose karein > Restore / Save Backup button dabayein.
-File choose karne se restore shuru nahi hoga; pehle accounts/entries ki tadaad dikhegi. Success ya error isi screen par dikhega.
-Yeh update existing conflicting records overwrite nahi karta. Naye/khali project mein purana backup restore kar sakte hain. Firestore rules is update mein nahi badli.
+Apply over v1.14. Replace included files, then Sync / Update. Import now shows persistent progress and errors inside the dialog. Firebase permission errors still require publishing the existing Hisaab firestore.rules in note-traders-khata-7ccc1. No data or Staff app changes.
