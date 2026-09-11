@@ -28,12 +28,13 @@ function failure(code) {
   return Object.assign(new Error(code), { code });
 }
 
-export function parseLogin({ role, username, password }) {
+export function parseLogin({ role, username, password, ownerEmail }) {
   const name = String(username || '').trim().toLowerCase();
   if (!password) throw failure('login/password-required');
   if (role === 'owner') {
     if (name !== 'admin' && !OWNER_EMAILS.includes(name)) throw failure('login/owner-username');
-    return { role, emails: name === 'admin' ? OWNER_EMAILS : [name], password };
+    if(ownerEmail&&!OWNER_EMAILS.includes(ownerEmail))throw failure('login/owner-username');
+    return { role, emails: [ownerEmail || (name === 'admin' ? OWNER_EMAILS[0] : name)], password };
   }
   if (role !== 'staff') throw failure('login/role-required');
   if(name !== 'admin') throw failure('login/staff-credentials');
