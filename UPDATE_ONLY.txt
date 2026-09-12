@@ -1,1 +1,3 @@
-Apply over Blue Khata v1.17, then Sync / Update. Newest created entries first in daily sheet, account ledger, expense list and corresponding PDF rows/photos. Editing retains creation order. No data migration or Staff app changes. Old entries without creation timestamps fall back to their date; their original within-day order cannot be recovered.
+Apply over Blue Khata v1.18. Upload app files to Hisaab repository. Firebase project note-traders-khata-7ccc1 > Firestore Database > Rules: paste entire firestore.rules code and Publish. Do not paste this guide into Rules. Do not change Staff app nt-traders. Then Sync / Update.
+Staff can save today closing count rows. Past/future date closing remains owner-only. Previous-day automatic opening remains read-only in the UI.
+Local tests: current-day staff closing create/update, past-date rejection, other entry edit protection. Deployed Firestore rules were not tested here.

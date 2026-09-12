@@ -52,6 +52,28 @@ service cloud.firestore {
     // Staff may soft-delete any current-day entry; other edits remain owner-only.
     match /businesses/noor-traders/blueKhata/{recordId} {
       allow read: if isOwner() || blueStaff();
+      // Staff may count today's cash; historical closing stays owner-only.
+      function validClosing() {
+        let d = request.resource.data;
+        return d.type == 'closing' && isToday(d.date)
+          && recordId == 'closing-' + d.date && d.id == recordId
+          && d.keys().hasOnly(['id','type','date','opening','change','cash','openingRows','changeRows','cashRows','by','createdAt','updatedBy','updatedAt','rev'])
+          && d.updatedBy == request.auth.uid
+          && (('cash' in d) || ('change' in d) || ('opening' in d))
+          && (!('cash' in d) || (d.cash is int && d.cash >= 0))
+          && (!('change' in d) || (d.change is int && d.change >= 0))
+          && (!('opening' in d) || (d.opening is int && d.opening >= 0))
+          && (!('cashRows' in d) || d.cashRows is list)
+          && (!('changeRows' in d) || d.changeRows is list)
+          && (!('openingRows' in d) || d.openingRows is list);
+      }
+      allow create: if blueStaff() && validClosing()
+        && request.resource.data.by == request.auth.uid && request.resource.data.rev == 1;
+      allow update: if blueStaff() && resource.data.type == 'closing'
+        && isToday(resource.data.date) && validClosing()
+        && request.resource.data.rev == resource.data.rev + 1
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['opening','change','cash','openingRows','changeRows','cashRows','updatedAt','updatedBy','rev']);
+
       allow update: if blueStaff()
         && resource.data.type == 'entry'
         && isToday(resource.data.date)
