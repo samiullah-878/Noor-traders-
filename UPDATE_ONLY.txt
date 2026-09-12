@@ -1,4 +1,1 @@
-BLUE KHATA / HISAAB ONLY. Apply over v1.16. Replace included files, then Sync / Update.
-New account: tick Akhrajat ki list mein shamil karein to create an expense-only account. Daily Akhrajat column also has Naya kharcha account. These entries have no party balance effect.
-Daily sheet retains chosen account after saving and across date/navigation changes during the session. Change it explicitly in the selector. Logout clears selections. Amount and note clear after successful submission.
-Tested with synthetic UI: expense creation, expense posting without party balance, repeated entries, manual selection and date change. Live Firebase not tested. No rules, passwords or Staff app changes.
+Apply over Blue Khata v1.17, then Sync / Update. Newest created entries first in daily sheet, account ledger, expense list and corresponding PDF rows/photos. Editing retains creation order. No data migration or Staff app changes. Old entries without creation timestamps fall back to their date; their original within-day order cannot be recovered.
