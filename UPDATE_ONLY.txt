@@ -1,1 +1,4 @@
-Apply over v1.15. Replace included files and use Sync / Update. Import verification reads now run concurrently, preserving revision and duplicate checks. Progress identifies reading, verification and saving. No live data, rules or Staff app changed. Production import speed depends on network and Firebase availability.
+BLUE KHATA / HISAAB ONLY. Apply over v1.16. Replace included files, then Sync / Update.
+New account: tick Akhrajat ki list mein shamil karein to create an expense-only account. Daily Akhrajat column also has Naya kharcha account. These entries have no party balance effect.
+Daily sheet retains chosen account after saving and across date/navigation changes during the session. Change it explicitly in the selector. Logout clears selections. Amount and note clear after successful submission.
+Tested with synthetic UI: expense creation, expense posting without party balance, repeated entries, manual selection and date change. Live Firebase not tested. No rules, passwords or Staff app changes.
