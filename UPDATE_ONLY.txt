@@ -1,3 +1,22 @@
+Blue Khata v1.26.0 — Cash Khata Edit / Delete
+Replace ZIP files then Sync / Update. No new Firestore rules needed if v1.22 rules already published.
+
+- Cash ledger rows now show Edit and Delete for Malik. Edit cash amount and cash movement notes, or confirm Delete.
+- Staff can edit today's Closing Cash amount only. Cash movement edit/delete and historical records remain Malik-only under existing rules.
+- Closing Cash edits affect the same daily Closing record. Removing Closing Cash preserves Change/opening values; a cash-only closing is soft-deleted.
+- Cash movement edits preserve its original timestamp, direction and position. Deletion removes just that movement from the day, retaining other movements.
+- Balances and PDFs recalculate without duplicate entries. Changes producing a negative running cash balance are rejected. Fresh server data and revision guard protect against concurrent cash changes.
+- Local DOM and cloud transaction mock checks passed. Live Firebase and Android tests were not performed.
+
+Blue Khata v1.25.0 — entry/search performance
+Replace ZIP files and Sync / Update on each phone. Existing v1.22 rules need no change.
+
+- Account lookup, notes lookup, entry sorting and party balance totals reuse a per-render index instead of repeatedly scanning all records.
+- Daily entry account dropdown is built once per form, not on every search character. Search suggestions show the first 40 matching accounts; refine the query for more. Full dropdown remains available.
+- Save/sync behavior, cash transactions, backups and access restrictions unchanged.
+- Local DOM checks passed for cash notes, Khata posting options, daily/PDF filters and Purchase access. Physical Android speed and production Firebase latency have not been measured.
+- Slow cloud acknowledgement can still occur on weak internet, especially cash edits which require a server transaction. These changes address verified client-side repeated work; they do not promise instant server sync.
+
 Blue Khata v1.24.0
 Replace ZIP files then Sync / Update. Existing v1.22 rules support this update; no new rules required if already published.
 
