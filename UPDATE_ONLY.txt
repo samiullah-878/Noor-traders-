@@ -1,3 +1,18 @@
+Blue Khata v1.29.0 — duplicate alert, Pending Sync and login reminder
+
+INSTALL: Replace all files from this ZIP in the Hisaab/Sale repository, including NEW entry-status.js and live-data.js. Keep config.js and vendor. Use Sync / Update and reload each phone; confirm version 1.29.0. Existing v1.22 Firestore rules apply; no new rules required.
+
+- Login reminder: Kaam shuru karne se pehle backup le lain. Use the existing manual Backup Download button.
+- New ledger/purchase entries warn when account, amount, date and entry kind match an existing or currently sending entry on this device. Cancel keeps the form; confirm allows a legitimate repeated entry. Different notes still warn. This is an alert, not cross-device duplicate prevention.
+- Pending Sync shows sending/pending, server-confirmed, local-only and failed writes with available error reasons. It is scoped to this device/login browser session, retains unresolved writes and the last 30 completed status receipts. Status refresh redraws the list; it does not blindly resubmit payments. Live cloud acknowledgements update it automatically.
+- Offline queued writes need internet to receive server confirmation. Transaction-based edits still require the server. Import/restore writes do not all have individual failure receipts in this list.
+- No edit/delete history feature and no scheduled automatic backup added. Existing offline persistence/recovery remains in place.
+- Saved PDFs from older imports without chunk-count metadata can download again; new imports record their chunk count.
+
+CHECKS: Duplicate cancel/confirm, pending/error display, login reminder, scope/date restrictions, direct Khata posting and manual cash actions passed local tests. Live Firebase and Android testing was not performed.
+
+Previous release notes follow; current behavior takes precedence.
+
 Blue Khata v1.28.0 — live data and startup performance
 
 INSTALL: Replace every file in this ZIP in Hisaab/Sale repository, including the NEW live-data.js. Keep config.js and vendor. Sync / Update, reload and confirm 1.28.0 on every phone. Existing v1.22 Firestore rules still apply; no database migration or rules update needed.
