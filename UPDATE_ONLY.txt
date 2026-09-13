@@ -1,3 +1,16 @@
+Blue Khata v1.30.0 — immediate edit/delete with background confirmation
+
+INSTALL: Replace all files in this ZIP in the Blue Khata Hisaab/Sale repository. Include NEW optimistic.js. Keep config.js/vendor. Sync / Update and reload; confirm 1.30.0. No Firestore rule change required.
+
+- Authorized edits and soft-deletes through the shared save flow update visible records, balances and connected reports immediately, while existing server transactions run in the background.
+- Pending Sync shows the write status and any failure. Rejection restores the latest authoritative snapshot, including other-device changes; it does not blindly restore a stale old balance.
+- Another edit of the same record is blocked until its first save/snapshot completes. Different records can proceed. Cash rows share their daily custody record, so that day's cash record must finish syncing before another change.
+- Existing role/date rules, revision checks, cash validation and the prohibition on editing/deleting automatic Closing rows from Cash Khata remain intact.
+- Keep the app open until Pending Sync confirms success. Transaction edits need internet; this release does not create a durable offline transaction queue. A browser leave warning is requested while transactions run, but mobile browsers may not show it. Sync / Update waits by asking you to check Pending Sync before reloading.
+- No automatic backup or edit/delete history was added. Existing login reminder and duplicate alerts remain.
+
+VERIFIED locally: immediate edit/delete balance changes, stale snapshots, repeated-edit lock, rollback to latest remote record, confirmed delete, old-date staff denial, and manual-only Cash Khata actions. No live Firebase or Android test performed.
+
 Blue Khata v1.29.0 — duplicate alert, Pending Sync and login reminder
 
 INSTALL: Replace all files from this ZIP in the Hisaab/Sale repository, including NEW entry-status.js and live-data.js. Keep config.js and vendor. Use Sync / Update and reload each phone; confirm version 1.29.0. Existing v1.22 Firestore rules apply; no new rules required.
