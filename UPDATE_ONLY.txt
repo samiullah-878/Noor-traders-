@@ -1,3 +1,43 @@
-Apply over Blue Khata v1.18. Upload app files to Hisaab repository. Firebase project note-traders-khata-7ccc1 > Firestore Database > Rules: paste entire firestore.rules code and Publish. Do not paste this guide into Rules. Do not change Staff app nt-traders. Then Sync / Update.
-Staff can save today closing count rows. Past/future date closing remains owner-only. Previous-day automatic opening remains read-only in the UI.
-Local tests: current-day staff closing create/update, past-date rejection, other entry edit protection. Deployed Firestore rules were not tested here.
+Blue Khata v1.20.0 — sirf changed files (v1.19 ke upar)
+
+1. ZIP extract karein. Tamam HTML/JS/CSS/JSON files usi Hisaab/Sale repository mein replace/add karein. Nayi finance-tools.js file bhi zaroor upload karein. Vendor folder dobara upload nahi karna.
+2. firestore.rules ka POORA code Firebase project note-traders-khata-7ccc1 > Firestore Database > Rules mein paste karke Publish karein. Second line BLUE KHATA v1.20 honi chahiye. Yeh nt-traders staff app ki rules nahi hain.
+3. App mein Sync / Update karke reload karein. Version 1.20.0 check karein.
+
+Closing Cash:
+- Tareekh choose karein, us din ki counted cash pehle Daily Sale mein save ho.
+- Cash kis ko diya / Transfer: kis se, kis ke paas, raqam aur note.
+- Dukan se customer/supplier, un se wapas Dukan, ya aik shakhs se doosre ko transfer record karein.
+- Yeh DAILY custody record hai. Har tareekh ka record alag hai; purani tareekh ka distribution agli tareekh mein automatic carry nahi hota.
+- Cash ka total, daily outflow aur party ka lena/dena is transfer se nahi badalta.
+- Raqam recorded available cash se zyada nahi de sakte. Cloud transfer transaction taza closing ko check karta hai. Cloud transfer/edit ko internet chahiye.
+- Mulazim aaj ka transfer add kar sakta hai. Purani dates aur aakhri transfer undo sirf Malik.
+
+Dasti Payment:
+- Naya tab; accounts main Khata mein bhi rehte hain.
+- Malik kisi bhi existing Khata account mein Dasti mein shamil karein / nikalein daba sakta hai. Dasti tab mein account search karke bhi shamil kar sakta hai.
+- Naye account mein Dasti checkbox hai. Dasti se nikalna account delete nahi karta.
+- Wasooli asal khate mein aik baar save hoti hai; Dasti list usi ka baqaya aur total Wasooli dikhati hai.
+
+Due Accounts:
+- Daily Sale mein Purchase ke bilkul saath red button; alag red screen.
+- Aaj due / Late aur Sab reminders / Agli tareekhein filters.
+- Malik account reminder setup, edit, remove ya next due date kar sakta hai; Mulazim dekh aur Wasooli kar sakta hai.
+- Aik dafa, daily, weekly, har 14 din, monthly. Agli due date button reminder ko advance karta hai. Wasooli karne se date khud advance nahi hoti.
+- Monthly Jan 31 -> Feb ki aakhri tareekh -> March 31 rehta hai.
+- Reminder hatane se khata ya entries delete nahi hotin. Reminders app ke andar hain, automatic phone notification/WhatsApp nahi bhejte.
+
+Akhrajat:
+- Chart button alag screen kholta hai. Din ya mahina select karein. Bari raqam wala account sab se upar. Party payments aur cash purchases included, alag qism ke labels ke saath.
+- Existing expense/payment edit mein Entry qism select karke party payment mein badal aur party naam/mobile se search kar sakte hain. Wahi entry ID rehti hai; amount double nahi hota.
+
+PDF:
+- Kharcha red, party/account green, samaan/purchase blue. App ke normal entries ke colours is setting se nahi badalte.
+- Cash custody, Dasti, Due Accounts aur Chart ranked totals ke PDF reports.
+- Purane photo PDF aur entry ordering retained.
+
+Validation:
+- Local DOM checks: Dasti shared records, due filters/removal/recurrence, custody forwarding/return and unchanged ledger/cash, staff date guard, chart ranking, payment conversion, report markup colours, backup record validation passed.
+- Existing accounting and import tests passed. Nested backup conflict comparison fixed to include transfer details.
+- Live Firebase rules deployment, physical Android layout and actual canvas-rendered PDF were not tested in this workspace. No live data/password/repository was changed.
+- Firestore list concatenation reference: https://firebase.google.com/docs/reference/rules/rules.List#concat

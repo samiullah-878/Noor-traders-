@@ -1,4 +1,5 @@
 rules_version = '2';
+// BLUE KHATA v1.20: staff today closing + cash custody
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -73,6 +74,31 @@ service cloud.firestore {
         && isToday(resource.data.date) && validClosing()
         && request.resource.data.rev == resource.data.rev + 1
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['opening','change','cash','openingRows','changeRows','cashRows','updatedAt','updatedBy','rev']);
+
+      function validCustody() {
+        let d = request.resource.data;
+        return d.type == 'cashCustody' && isToday(d.date)
+          && d.id == recordId && recordId == 'custody-' + d.date
+          && d.keys().hasOnly(['id','type','date','moves','by','createdAt','updatedBy','updatedAt','rev'])
+          && d.moves is list && d.moves.size() > 0 && d.moves.size() <= 200
+          && d.updatedBy == request.auth.uid;
+      }
+      function validLastMove() {
+        let d = request.resource.data;
+        let m = d.moves[d.moves.size() - 1];
+        return m.keys().hasOnly(['from','to','amount','note','at'])
+          && m.from is string && m.to is string && m.from != m.to
+          && m.amount is int && m.amount > 0
+          && m.note is string && m.note.size() <= 1000 && m.at is int;
+      }
+      allow create: if blueStaff() && validCustody() && validLastMove()
+        && request.resource.data.moves.size() == 1
+        && request.resource.data.by == request.auth.uid && request.resource.data.rev == 1;
+      allow update: if blueStaff() && resource.data.type == 'cashCustody'
+        && isToday(resource.data.date) && validCustody() && validLastMove()
+        && request.resource.data.moves == resource.data.moves.concat([request.resource.data.moves[resource.data.moves.size()]])
+        && request.resource.data.rev == resource.data.rev + 1
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['moves','updatedAt','updatedBy','rev']);
 
       allow update: if blueStaff()
         && resource.data.type == 'entry'
