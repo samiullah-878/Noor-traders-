@@ -1,3 +1,22 @@
+Blue Khata v1.28.0 — live data and startup performance
+
+INSTALL: Replace every file in this ZIP in Hisaab/Sale repository, including the NEW live-data.js. Keep config.js and vendor. Sync / Update, reload and confirm 1.28.0 on every phone. Existing v1.22 Firestore rules still apply; no database migration or rules update needed.
+
+WHAT CHANGED
+- Normal full-app listener requests ledger record types only. Existing pdfChunk documents remain in their original collection but are not subscribed to or downloaded for ordinary ledger use. Saved PDF download loads its chunks on demand.
+- Cash transactions query closing/cashCustody records only, retaining server validation and revision conflict checks. They no longer fetch unrelated entries, photos or PDF archives.
+- Firebase document changes update an in-memory map. A metadata-only acknowledgement changes sync status without rebuilding rows, balances, notes index or the whole screen.
+- Account/balance/notes indexes survive search and navigation and refresh when records change. Main search waits 150 ms after typing stops.
+- Secondary device recovery copy coalesces updates over two seconds, serializes writes and flushes on explicit recovery download, logout and page hide (page termination cannot guarantee async completion). Firebase's own IndexedDB persistence remains unchanged.
+- Secondary recovery uses its own ledger key, leaving the previous full device recovery copy intact. Recovery download merges available local copies/cache. A device copy may not contain original imported PDFs never downloaded on that device.
+- Settings Backup download now explicitly retrieves all records including PDF chunks from the server and requires internet. It reports failure rather than silently claiming an incomplete live-ledger copy is a full backup. Saved PDF downloaded before can use Firebase cache offline.
+- App assets use the current release cache first; HTML/update checks remain network-based with offline HTML fallback. Version-pinned Firebase SDK and vendor libraries reuse a separate cache across updates. PDF libraries remain available for offline use; they are reused instead of unnecessarily redownloaded. Future vendor binary changes must bump LIB_CACHE.
+
+CHECKS
+- Synthetic 10,000-record listener test: metadata acknowledgement decodes zero extra documents; one edit decodes one document. This is an operation-count test, not a measured Android speed multiplier.
+- Tests passed for buffered/explicit backup flush, cached JS and SDK avoiding fetch, HTML and update behavior, restricted Purchase login, Khata posting options, cash actions/permissions and cash revision checks.
+- No live Firebase deployment, real customer dataset or Android latency was measured. Photos stored within entry documents still form part of ledger loading; slow internet can still delay server-dependent operations.
+
 Blue Khata v1.27.0 — Cash Khata action correction
 Replace ZIP files and Sync / Update. No Firestore rules change required.
 
