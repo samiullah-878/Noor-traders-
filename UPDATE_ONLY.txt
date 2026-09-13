@@ -1,3 +1,10 @@
+Blue Khata v1.27.0 — Cash Khata action correction
+Replace ZIP files and Sync / Update. No Firestore rules change required.
+
+Cash Khata: automatic Daily Closing Cash rows no longer have Edit or Delete. The action handler also rejects those rows.
+Only manually entered Cash Add / Cash diya rows retain Malik Edit/Delete. Existing role permissions remain unchanged.
+Daily Sale closing/count controls remain in Daily Sale. Cash balances, notes, old records and PDFs are unchanged.
+
 Blue Khata v1.26.0 — Cash Khata Edit / Delete
 Replace ZIP files then Sync / Update. No new Firestore rules needed if v1.22 rules already published.
 
