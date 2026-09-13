@@ -48,7 +48,7 @@ export function cashLedger(records,through='9999-12-31'){
 }
 export function appendCashMove(records,day,previous,move){
  if(!Number.isSafeInteger(move.amount)||move.amount<=0||move.from===move.to)throw Error('Raqam durust likhein');
- if(!((move.from==='shop'&&move.to&& !['shop','external'].includes(move.to))||(move.to==='shop'&&move.from)))throw Error('Cash Add ya Cash diya select karein');
+ if(!((move.from==='shop'&&move.to&& move.to!=='shop')||(move.to==='shop'&&move.from)))throw Error('Cash Add ya Cash diya select karein');
  if((previous||[]).length>=200)throw Error('Is din ke 200 cash records ho chuke hain');
  if(move.from==='shop'&&move.amount>cashLedger(records,day).available)throw Error('Total Available Cash mein itni raqam nahi hai');
  const next=[...(previous||[]),move];

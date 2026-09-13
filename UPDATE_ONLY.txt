@@ -1,3 +1,28 @@
+Blue Khata v1.24.0
+Replace ZIP files then Sync / Update. Existing v1.22 rules support this update; no new rules required if already published.
+
+- Daily Closing Cash Khata shortcut is in main Khata (Sab accounts); existing Closing Cash navigation also opens it.
+- Same existing cash ledger, daily closing plus accumulated balance, incoming/outgoing, notes and running balance. No duplicate account or double counting.
+- Cash Add / Cash diya now require Notes / Tafseel instead of an account selection. Existing named-party cash records are preserved.
+- Name/mobile search also matches notes: party/account pickers match linked entry/reminder notes; Khata, Purchase, expense/chart, Due/Dasti and cash records are searchable by notes. Daily Sale lists and PDF rows now respect search; full-day totals stay full-day totals.
+- Cash PDF shows notes, incoming/outgoing and original running balances. Search does not recalculate the actual balance.
+- Employee current-day restrictions and Purchase-only access retained.
+- Local DOM/accounting tests passed. Live Firebase and Android rendering were not tested.
+
+Blue Khata v1.23.0 — Direct Khata posting choice
+
+Replace the ZIP files in the Hisaab/Sale repository, then Sync / Update on every phone. Keep config.js and vendor. Version should read 1.23.0.
+This ZIP includes the prior v1.22 updates. If v1.22 Firestore rules are already published, no new rules publication is required for this feature. If not, publish the included rules in note-traders-khata-7ccc1 only.
+
+Direct party Khata > Wasooli or Payment:
+- Checked: Daily Sale Wasooli/Akhrajat, totals and report include the entry.
+- Unchecked: only party Khata/balance and party PDF include it. Daily totals, closing calculation, Akhrajat/chart and their PDFs exclude it.
+- Existing entries keep their old behavior unless Malik edits the option. No duplicate entry is created.
+- Udhar diya / Hum ne dena hai already affect only Khata and remain unchanged.
+- Mulazim date/edit restrictions remain unchanged.
+
+Local model and DOM checks verified the option, ledger balance, daily totals, PDFs and owner editing without duplication. Live Firebase and Android rendering were not tested.
+
 Blue Khata v1.22.0 — cumulative changed files for v1.20/v1.21
 
 INSTALL:
