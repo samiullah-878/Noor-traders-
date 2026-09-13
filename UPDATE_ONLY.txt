@@ -1,43 +1,52 @@
-Blue Khata v1.20.0 — sirf changed files (v1.19 ke upar)
+Blue Khata v1.22.0 — cumulative changed files for v1.20/v1.21
 
-1. ZIP extract karein. Tamam HTML/JS/CSS/JSON files usi Hisaab/Sale repository mein replace/add karein. Nayi finance-tools.js file bhi zaroor upload karein. Vendor folder dobara upload nahi karna.
-2. firestore.rules ka POORA code Firebase project note-traders-khata-7ccc1 > Firestore Database > Rules mein paste karke Publish karein. Second line BLUE KHATA v1.20 honi chahiye. Yeh nt-traders staff app ki rules nahi hain.
-3. App mein Sync / Update karke reload karein. Version 1.20.0 check karein.
+INSTALL:
+1. Replace ZIP files in Hisaab/Sale repository. Keep existing config.js and vendor folder.
+2. Publish the complete firestore.rules in note-traders-khata-7ccc1 > Firestore > Rules. Do NOT use nt-traders (Staff attendance).
+3. Every device: Sync / Update, reload, check version 1.22.0.
+4. Malik login > Settings > Mulazim password > Sirf Purchase Mulazim. Set and confirm a separate password (minimum 10 characters). This also prepares supplier names for Purchase access.
+5. Employee login: Mulazim > Sirf Purchase > username admin > Purchase password.
+Full App employees select Full App and use their Full App password. Existing Full App password remains valid until changed. Use different passwords for the two scopes. Password changes revoke the replaced scope's credential; other scope remains unchanged.
 
-Closing Cash:
-- Tareekh choose karein, us din ki counted cash pehle Daily Sale mein save ho.
-- Cash kis ko diya / Transfer: kis se, kis ke paas, raqam aur note.
-- Dukan se customer/supplier, un se wapas Dukan, ya aik shakhs se doosre ko transfer record karein.
-- Yeh DAILY custody record hai. Har tareekh ka record alag hai; purani tareekh ka distribution agli tareekh mein automatic carry nahi hota.
-- Cash ka total, daily outflow aur party ka lena/dena is transfer se nahi badalta.
-- Raqam recorded available cash se zyada nahi de sakte. Cloud transfer transaction taza closing ko check karta hai. Cloud transfer/edit ko internet chahiye.
-- Mulazim aaj ka transfer add kar sakta hai. Purani dates aur aakhri transfer undo sirf Malik.
+CHANGES:
+- Due Accounts red button is now in top navigation; removed from Daily Sale footer.
+- Purchase has its own screen and restricted login. Restricted employees see purchase entries, supplier names/phones and purchase PDFs; no Khata balances, Daily Sale, Cash, reminders or full backup in their interface.
+- Purchase allows cash/credit purchases, photos and new supplier creation. A new supplier appears in the main Khata with zero opening balance; purchase creates its normal accounting entry.
+- Malik Settings > Purchase supplier list update refreshes names after supplier edits/imports. Run this after restoring a backup or adding suppliers outside Purchase.
+- Employees cannot create, edit or delete previous-date financial entries on any screen. Pakistan date is used. Current-day purchase edit/delete and existing current-day cash permissions remain available. Malik can handle previous dates.
+- Full device backup now asks for Malik login so restricted employees cannot download the entire business ledger. Click Backup Download then complete Malik login to download the saved device copy. Ordinary owner backup remains in Settings.
+- Restrictions are enforced by the supplied Firestore rules, not just hidden buttons. Publish those rules before sharing Purchase credentials.
+- Browser caches on a device previously used by Malik are not erased. Give restricted employees their own browser profile/device rather than sharing an owner's browser storage.
+- No production passwords, Firebase data or deployment were changed here.
 
-Dasti Payment:
-- Naya tab; accounts main Khata mein bhi rehte hain.
-- Malik kisi bhi existing Khata account mein Dasti mein shamil karein / nikalein daba sakta hai. Dasti tab mein account search karke bhi shamil kar sakta hai.
-- Naye account mein Dasti checkbox hai. Dasti se nikalna account delete nahi karta.
-- Wasooli asal khate mein aik baar save hoti hai; Dasti list usi ka baqaya aur total Wasooli dikhati hai.
+CHECKS:
+Local DOM tests passed for scoped navigation, current-day purchase edit, previous-date edit rejection, top Due button, cash balances and expense picker. Auth mocks passed for wrong-scope rejection, legacy Full App login and revoked-session revalidation. Accounting/import and cash-transaction regression tests passed. Live Firebase rules deployment and Android rendering were not tested here.
 
-Due Accounts:
-- Daily Sale mein Purchase ke bilkul saath red button; alag red screen.
-- Aaj due / Late aur Sab reminders / Agli tareekhein filters.
-- Malik account reminder setup, edit, remove ya next due date kar sakta hai; Mulazim dekh aur Wasooli kar sakta hai.
-- Aik dafa, daily, weekly, har 14 din, monthly. Agli due date button reminder ko advance karta hai. Wasooli karne se date khud advance nahi hoti.
-- Monthly Jan 31 -> Feb ki aakhri tareekh -> March 31 rehta hai.
-- Reminder hatane se khata ya entries delete nahi hotin. Reminders app ke andar hain, automatic phone notification/WhatsApp nahi bhejte.
-
-Akhrajat:
-- Chart button alag screen kholta hai. Din ya mahina select karein. Bari raqam wala account sab se upar. Party payments aur cash purchases included, alag qism ke labels ke saath.
-- Existing expense/payment edit mein Entry qism select karke party payment mein badal aur party naam/mobile se search kar sakte hain. Wahi entry ID rehti hai; amount double nahi hota.
-
-PDF:
-- Kharcha red, party/account green, samaan/purchase blue. App ke normal entries ke colours is setting se nahi badalte.
-- Cash custody, Dasti, Due Accounts aur Chart ranked totals ke PDF reports.
-- Purane photo PDF aur entry ordering retained.
+PREVIOUS CASH/EXPENSE CHANGES INCLUDED:
+Cash ka naya hisaab:
+- Upar selected din ki Closing Cash.
+- Saath aur neeche Total Available Cash: tamam pichhle dino ki Closing Cash + manual Cash Add + wapas aya cash - diya gaya cash, selected tareekh tak.
+- Har din ki Closing Cash is cash book mein us din ki fresh cash jama hai; aik closing record aik baar hi count hota hai.
+- Misal: pichhli bachi 2,280,000 + aaj closing 1,800,000 = 4,080,000. Kisi ko 100,000 diya -> 3,980,000.
+- Cash diya form mein SIRF aik account choose karein. Raqam available total se minus hogi. Pichla selected account agli payment ke liye selected rehta hai.
+- Cash Add / Aya se mazeed cash jama karein. Account optional: kisi se wapas mila to select karein, warna Khud se / Mazeed cash add.
+- Daily Closing mein jo cash likhi hai woh Cash Add mein dobara na likhein.
+- Purane v1.20 custody records apni asal IDs ke saath shamil hain. Dukan se diya cash minus, Dukan mein wapas aya plus. Purana shakhs-se-shakhs transfer total cash ko nahi badalta.
+- Cash ka khata newest date pehle dikhata hai; har row par tareekh, account, note, aayi, gayi aur us waqt ka baqi balance hai. PDF bhi isi tarteeb se.
+- Purani tareekh choose karne par us tareekh tak ka total dikhta hai; baad ki cash shamil nahi hoti.
+- Yeh cash book party ke udhar/Wasooli wale main balance ko nahi badalta.
+- Current-day cash Mulazim save kar sakta hai. Previous-date writes Malik karega.
+- Cash save/Closing cloud transactions ko internet chahiye. Doosre device par cash badle to dobara taza balance ke saath save karna hoga.
+- Closing ki purani raqam kam karne se agar cash book negative ho to screen warning dikhayegi; purani ginti ya cash records durust karein.
 
 Validation:
-- Local DOM checks: Dasti shared records, due filters/removal/recurrence, custody forwarding/return and unchanged ledger/cash, staff date guard, chart ranking, payment conversion, report markup colours, backup record validation passed.
-- Existing accounting and import tests passed. Nested backup conflict comparison fixed to include transfer details.
-- Live Firebase rules deployment, physical Android layout and actual canvas-rendered PDF were not tested in this workspace. No live data/password/repository was changed.
-- Firestore list concatenation reference: https://firebase.google.com/docs/reference/rules/rules.List#concat
+Local full cash-screen DOM checks and cloud transaction mocks passed: cumulative balance, one selector, payout/add/return, legacy records once, historical-date filter, PDF data parity, backup validation, cross-device revision conflict, overdraw protection and staff date guards.
+Existing accounting/import tests passed. Live Firebase rules and physical Android PDF rendering were not tested here. No live data, passwords or deployment changed.
+
+Akhrajat combined search (isi update mein):
+- Upar ka Kharcha account / Party payment selector hata diya.
+- Aik hi search aur account list mein Bijli, Kiraya, custom kharchay aur tamam parties.
+- List ke naam ke saath Kharcha / Party label pehchan ke liye hai; alag qism select nahi karni.
+- Kharcha account select -> Akhrajat entry; Party select -> payment aur asal party khata update aik baar.
+- Selected account repeat entries ke baad selected rehta hai. Edit modal mein bhi wahi combined picker hai.
+- Local DOM tests passed for combined search, correct posting kind, retained selection and converting same entry between party payment and expense without duplicates.

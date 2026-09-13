@@ -15,15 +15,6 @@ export function normalizePhone(value) {
   return /^03\d{9}$/.test(phone) ? phone : '';
 }
 
-// Mulazim password: Urdu/Arabic keyboard ke hindse (۰-۹ / ٠-٩) English 0-9 ban jate hain
-// aur aage/peeche ki khali jagah hat jati hai. English hindson wala purana password waisa hi rehta hai.
-export function normalizeSecret(value) {
-  return String(value ?? '')
-    .replace(/[۰-۹]/g, digit => String(digit.charCodeAt(0) - 0x6f0))
-    .replace(/[٠-٩]/g, digit => String(digit.charCodeAt(0) - 0x660))
-    .trim();
-}
-
 export function isOwnerUser(user) {
   return !!user && !user.isAnonymous &&
     OWNER_EMAILS.includes(String(user.email || '').toLowerCase());
@@ -33,7 +24,7 @@ function failure(code) {
   return Object.assign(new Error(code), { code });
 }
 
-export function parseLogin({ role, username, password, ownerEmail }) {
+export function parseLogin({ role, username, password, ownerEmail, scope = 'full' }) {
   const name = String(username || '').trim().toLowerCase();
   if (!password) throw failure('login/password-required');
   if (role === 'owner') {
@@ -43,9 +34,8 @@ export function parseLogin({ role, username, password, ownerEmail }) {
   }
   if (role !== 'staff') throw failure('login/role-required');
   if(name !== 'admin') throw failure('login/staff-credentials');
-  const secret = normalizeSecret(password);
-  if (!secret) throw failure('login/password-required');
-  return {role,password:secret,phone:normalizePhone(secret)};
+  if(!['full','purchase'].includes(scope))throw failure('login/scope-required');
+  return {role,password,scope,phone:normalizePhone(password)};
 }
 
 // SDK and account reads are injected so real authentication ordering can be
@@ -61,7 +51,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
     activeUid = null;
     onReset();
   }
-  async function activate(user, ticket, expectedRole) {
+  async function activate(user, ticket, expectedRole, expectedScope) {
     check(ticket, user);
     if (user.isAnonymous) {
       if (expectedRole === 'owner') throw failure('login/owner-required');
@@ -76,7 +66,9 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       if (!account || account.active === false || account.loginEnabled === false) {
         throw failure('login/staff-disabled');
       }
-      onSession({ role: 'staff', user, phone, account });
+      const scope=account.scope||'full';
+      if(!['full','purchase'].includes(scope)||(expectedScope&&scope!==expectedScope))throw failure('login/scope-required');
+      onSession({ role: 'staff', scope, user, phone, account });
     } else {
       if (expectedRole === 'staff' || !isOwnerUser(user)) throw failure('login/owner-required');
       onSession({ role: 'owner', user });
@@ -105,7 +97,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
   });
 
   return {
-    resume() { return restore(auth.currentUser); },
+    resume() { activeUid = null; return restore(auth.currentUser); },
     async login(input) {
       if (pending) throw failure('login/busy');
       const request = parseLogin(input);
@@ -134,11 +126,11 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
           credential = await sdk.signInAnonymously(auth);
           attemptUser = credential.user;
           check(ticket, credential.user);
-          if(accounts.createPasswordSession) await accounts.createPasswordSession(credential.user.uid,request.password,request.phone);
+          if(accounts.createPasswordSession) await accounts.createPasswordSession(credential.user.uid,request.password,request.phone,request.scope);
           else await accounts.createSession(credential.user.uid, request.phone);
         }
         check(ticket, credential.user);
-        await activate(credential.user, ticket, request.role);
+        await activate(credential.user, ticket, request.role, request.scope);
       } catch (error) {
         if (ticket === epoch) {
           reset();
@@ -175,34 +167,35 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
 
 export function loginErrorMessage(error, role = 'owner') {
   switch (error.code) {
+    case 'login/scope-required': return 'Full App / Sirf Purchase durust select karein aur us ka password likhein.';
     case 'login/staff-config-read': return 'S1: Mulazim login settings par ijazat nahi. Nayi firestore.rules note-traders-khata-7ccc1 project mein publish karein.';
     case 'login/staff-session-create': return 'S2: Password match nahi hua ya session rule publish nahi hui. Malik Settings mein Password check karein.';
     case 'login/staff-session-read': return 'S3: Mulazim session parhne ki ijazat nahi. Nayi firestore.rules publish karein.';
     case 'login/staff-account-read': return 'S4: Mulazim account ki ijazat nahi ya password badal chuka hai. Dobara login karein.';
     case 'login/staff-not-configured': return 'S0: Malik pehle Settings mein Mulazim password Save karein.';
-    case 'login/owner-username': return 'Malik ke liye username admin likhein.';
-    case 'login/staff-credentials': return 'Username admin aur Malik ka rakha hua Mulazim password likhein.';
-    case 'login/password-required': return 'Password likhein.';
-    case 'login/staff-disabled': return 'Mulazim login band hai ya password badal chuka hai. Malik Settings mein Mulazim password dobara Save karein.';
-    case 'login/staff-session': return 'Pichla Mulazim session mukammal nahi hua. Dobara login karein.';
-    case 'login/owner-required': return 'Is account ko Malik panel ki ijazat nahi. Mulazim hain to upar Login mein "Mulazim" chunein.';
-    case 'login/busy': return 'Login check ho raha hai, thora intezar karein.';
-    case 'login/cancelled': return 'Account badal gaya hai. Dobara login karein.';
+    case 'login/owner-username': return 'مالک کے لیے یوزر نیم admin درج کریں۔';
+    case 'login/staff-credentials': return 'یوزر نیم admin اور مالک کا مقرر کردہ پاس ورڈ درج کریں۔';
+    case 'login/password-required': return 'پاس ورڈ درج کریں۔';
+    case 'login/staff-disabled': return 'اسٹاف اکاؤنٹ موجود نہیں یا مالک نے اس کا لاگ اِن بند کیا ہے۔';
+    case 'login/staff-session': return 'پچھلا اسٹاف سیشن مکمل نہیں۔ دوبارہ لاگ اِن کریں۔';
+    case 'login/owner-required': return 'اس اکاؤنٹ کو مالک کے پینل کی اجازت نہیں ہے۔';
+    case 'login/busy': return 'لاگ اِن کی جانچ ہو رہی ہے، ایک لمحہ انتظار کریں۔';
+    case 'login/cancelled': return 'اکاؤنٹ تبدیل ہو گیا ہے۔ دوبارہ لاگ اِن کریں۔';
     case 'auth/invalid-credential':
     case 'auth/invalid-login-credentials':
     case 'auth/wrong-password':
-    case 'auth/user-not-found': return 'Malik ka password ghalat hai. Agar aap MULAZIM hain to upar Login mein "Mulazim" chunein, phir password likhein.';
+    case 'auth/user-not-found': return 'مالک کا پاس ورڈ درست نہیں، یا مالک کا اکاؤنٹ ابھی ترتیب نہیں دیا گیا۔';
     case 'auth/operation-not-allowed': return role === 'staff'
-      ? 'Mulazim login service band hai. Firebase > Authentication > Sign-in method mein Anonymous ON karein.'
-      : 'Malik login service band hai. Firebase mein Email/Password sign-in ON karein.';
-    case 'auth/user-disabled': return 'Yeh account band hai. Malik se rabta karein.';
-    case 'auth/too-many-requests': return 'Bohat zyada koshishein ho gayin. Kuch der (15-30 minute) baad dobara try karein.';
+      ? 'اسٹاف لاگ اِن کی سروس بند ہے۔ Firebase میں Anonymous sign-in فعال کرنا ضروری ہے۔'
+      : 'مالک کی لاگ اِن سروس بند ہے۔ Firebase میں Email/Password sign-in فعال کرنا ضروری ہے۔';
+    case 'auth/user-disabled': return 'یہ اکاؤنٹ بند ہے۔ مالک سے رابطہ کریں۔';
+    case 'auth/too-many-requests': return 'کوششیں زیادہ ہو گئی ہیں۔ کچھ دیر بعد دوبارہ کوشش کریں۔';
     case 'auth/network-request-failed':
-    case 'unavailable': return 'Internet check karke dobara try karein.';
-    case 'permission-denied': return 'Ijazat nahi mili. Malik note-traders-khata-7ccc1 mein nayi firestore.rules Publish karein.';
+    case 'unavailable': return 'انٹرنیٹ کنکشن چیک کرکے دوبارہ کوشش کریں۔';
+    case 'permission-denied': return 'اکاؤنٹ یا اس کی اجازت کی تصدیق نہیں ہوئی۔ مالک سے اکاؤنٹ کی حالت اور نئی Firestore Rules چیک کروائیں۔';
     case 'auth/weak-password':
-    case 'auth/password-does-not-meet-requirements': return 'Naya password kam az kam 6 haroof ka ho.';
-    case 'auth/requires-recent-login': return 'Dobara login karke password badlein.';
-    default: return 'Login mukammal nahi hua (' + (error.code || 'unknown') + '). Internet aur settings check karein.';
+    case 'auth/password-does-not-meet-requirements': return 'نیا پاس ورڈ کم از کم 6 حروف کا ہو اور اکاؤنٹ کی پاس ورڈ شرائط پوری کرے۔';
+    case 'auth/requires-recent-login': return 'دوبارہ لاگ اِن کرکے پاس ورڈ تبدیل کریں۔';
+    default: return 'لاگ اِن مکمل نہیں ہوا۔ انٹرنیٹ اور اکاؤنٹ کی ترتیب چیک کریں۔';
   }
 }

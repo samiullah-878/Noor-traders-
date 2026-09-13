@@ -33,3 +33,28 @@ export function validateExtraRecord(r){
 }
 
 export function stableRecord(value){if(Array.isArray(value))return '['+value.map(stableRecord).join(',')+']';if(value&&typeof value==='object')return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+stableRecord(value[k])).join(',')+'}';return JSON.stringify(value)}
+
+// Each day's counted closing is fresh cash received into the cumulative cash book.
+// Legacy custody moves are projected, never copied into additional entries.
+export function cashLedger(records,through='9999-12-31'){
+ const rows=[];
+ for(const r of records){if(r.deleted||!r.date||r.date>through)continue;
+  if(r.type==='closing'&&r.cash!=null)rows.push({id:r.id,date:r.date,at:0,label:'Din ki Closing Cash',partyId:'',incoming:r.cash,outgoing:0,note:'Closing se jama',source:'closing'});
+  if(r.type==='cashCustody')for(const [i,m] of (r.moves||[]).entries())rows.push({id:r.id+':'+i,date:r.date,at:m.at||0,label:m.from==='external'?'Cash Add':m.to==='shop'?'Cash wapas aya':m.from==='shop'?'Cash diya':'Purana shakhs se shakhs transfer',partyId:m.from==='shop'?m.to:m.to==='shop'&&m.from!=='external'?m.from:'',from:m.from,to:m.to,incoming:m.to==='shop'?m.amount:0,outgoing:m.from==='shop'?m.amount:0,amount:m.amount,note:m.note||'',source:'move'});
+ }
+ rows.sort((a,b)=>a.date.localeCompare(b.date)||a.at-b.at||a.id.localeCompare(b.id));
+ let available=0,incoming=0,outgoing=0;for(const r of rows){incoming+=r.incoming;outgoing+=r.outgoing;available+=r.incoming-r.outgoing;r.balance=available}
+ return {rows,available,incoming,outgoing};
+}
+export function appendCashMove(records,day,previous,move){
+ if(!Number.isSafeInteger(move.amount)||move.amount<=0||move.from===move.to)throw Error('Raqam durust likhein');
+ if(!((move.from==='shop'&&move.to&& !['shop','external'].includes(move.to))||(move.to==='shop'&&move.from)))throw Error('Cash Add ya Cash diya select karein');
+ if((previous||[]).length>=200)throw Error('Is din ke 200 cash records ho chuke hain');
+ if(move.from==='shop'&&move.amount>cashLedger(records,day).available)throw Error('Total Available Cash mein itni raqam nahi hai');
+ const next=[...(previous||[]),move];
+ if(move.from==='shop'){
+  const id='custody-'+day,updated=[...records.filter(r=>r.id!==id),{id,type:'cashCustody',date:day,moves:next}];
+  if(cashLedger(updated).rows.some(r=>r.date>=day&&r.balance<0))throw Error('Is raqam se baad ki tareekh ka cash balance manfi ho jayega');
+ }
+ return next;
+}

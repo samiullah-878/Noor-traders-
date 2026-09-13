@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v1.20: staff today closing + cash custody
+// BLUE KHATA v1.22: full/purchase access and current-day staff writes
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -26,16 +26,25 @@ service cloud.firestore {
       let local = request.time + duration.value(5, 'h');
       return date == string(local.year()) + '-' + padDay(local.month()) + '-' + padDay(local.day());
     }
-    function newBlueStaff() {
+    function staffAccount() {
       let session = get(/databases/$(database)/documents/businesses/noor-traders/blueStaffSessions/$(request.auth.uid)).data;
-      return get(/databases/$(database)/documents/businesses/noor-traders/blueStaffKeys/$(session.credentialId)).data.active == true;
+      return get(/databases/$(database)/documents/businesses/noor-traders/blueStaffKeys/$(session.credentialId)).data;
     }
-    function blueStaff() { return isStaff() && newBlueStaff(); }
+    function blueStaff() { return isStaff() && staffAccount().active == true && (!('scope' in staffAccount()) || staffAccount().scope == 'full'); }
+    function purchaseStaff() { return isStaff() && staffAccount().active == true && staffAccount().scope == 'purchase'; }
     match /businesses/noor-traders/{collectionName}/{docId} {
-      allow read, write: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys'];
+      allow read, write: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers'];
+    }
+    // Serializes cash changes across dates/devices; contains no money or login settings.
+    match /businesses/noor-traders/blueAccess/cashRevision {
+      allow get: if blueStaff();
+      allow create: if blueStaff() && request.resource.data.keys().hasOnly(['rev'])
+        && request.resource.data.rev == 1;
+      allow update: if blueStaff() && request.resource.data.keys().hasOnly(['rev'])
+        && request.resource.data.rev is int && request.resource.data.rev == resource.data.rev + 1;
     }
     match /businesses/noor-traders/blueAccess/{id} {
-      allow get: if isOwner() || (isStaff() && id == 'config');
+      allow get: if isOwner() || (isStaff() && id in ['config','purchaseConfig']);
     }
     match /businesses/noor-traders/blueStaffSessions/{uid} {
       allow get: if isOwner() || (isStaff() && request.auth.uid == uid);
@@ -49,10 +58,45 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/businesses/noor-traders/blueStaffSessions/$(request.auth.uid)).data.credentialId == key);
     }
 
+    match /businesses/noor-traders/purchaseSuppliers/{id} {
+      allow read: if blueStaff() || purchaseStaff();
+      allow create: if (blueStaff() || purchaseStaff())
+        && request.resource.data.keys().hasOnly(['id','name','phone'])
+        && request.resource.data.id == id && request.resource.data.name is string && request.resource.data.phone is string
+        && getAfter(/databases/$(database)/documents/businesses/noor-traders/blueKhata/$(id)).data.type == 'party'
+        && getAfter(/databases/$(database)/documents/businesses/noor-traders/blueKhata/$(id)).data.by == request.auth.uid
+        && getAfter(/databases/$(database)/documents/businesses/noor-traders/blueKhata/$(id)).data.name == request.resource.data.name
+        && getAfter(/databases/$(database)/documents/businesses/noor-traders/blueKhata/$(id)).data.phone == request.resource.data.phone;
+    }
+
     // Blue Khata: existing verified employees can view/create ledger entries.
     // Staff may soft-delete any current-day entry; other edits remain owner-only.
     match /businesses/noor-traders/blueKhata/{recordId} {
-      allow read: if isOwner() || blueStaff();
+      allow read: if isOwner() || blueStaff() || (purchaseStaff() && resource.data.type == 'entry' && resource.data.purchase == true);
+      function validPurchase() {
+        let d = request.resource.data;
+        return d.type == 'entry' && d.purchase == true && d.id == recordId
+          && d.kind in ['purchaseCash','borrow'] && isToday(d.date)
+          && d.amount is int && d.amount > 0 && d.partyId is string
+          && (blueStaff() || exists(/databases/$(database)/documents/businesses/noor-traders/purchaseSuppliers/$(d.partyId)))
+          && d.updatedBy == request.auth.uid
+          && d.keys().hasOnly(['id','type','kind','purchase','partyId','amount','date','note','goodsPhotos','billPhotos','photos','account','by','createdAt','updatedBy','updatedAt','rev','deleted']);
+      }
+      allow create: if purchaseStaff() && validPurchase() && request.resource.data.by == request.auth.uid
+        && request.resource.data.rev == 1 && !('deleted' in request.resource.data);
+      allow update: if (blueStaff() || purchaseStaff()) && resource.data.type == 'entry'
+        && resource.data.purchase == true && isToday(resource.data.date) && validPurchase()
+        && (!('deleted' in resource.data) || resource.data.deleted == false)
+        && request.resource.data.date == resource.data.date
+        && request.resource.data.rev == resource.data.rev + 1
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['kind','partyId','amount','note','goodsPhotos','billPhotos','photos','account','deleted','updatedAt','updatedBy','rev']);
+      allow create: if purchaseStaff() && request.resource.data.type == 'party'
+        && request.resource.data.id == recordId && request.resource.data.category == 'Supplier'
+        && request.resource.data.opening == 0 && request.resource.data.rev == 1
+        && request.resource.data.by == request.auth.uid && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.name is string && request.resource.data.phone is string
+        && request.resource.data.keys().hasOnly(['id','type','name','phone','category','opening','by','createdAt','updatedAt','updatedBy','rev']);
+
       // Staff may count today's cash; historical closing stays owner-only.
       function validClosing() {
         let d = request.resource.data;
@@ -100,7 +144,7 @@ service cloud.firestore {
         && request.resource.data.rev == resource.data.rev + 1
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['moves','updatedAt','updatedBy','rev']);
 
-      allow update: if blueStaff()
+      allow update: if (blueStaff() || (purchaseStaff() && resource.data.purchase == true))
         && resource.data.type == 'entry'
         && isToday(resource.data.date)
         && (!('deleted' in resource.data) || resource.data.deleted == false)
