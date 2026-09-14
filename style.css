@@ -24,3 +24,9 @@ body{font-size:14px}.workspace{padding:12px}header{padding:14px 12px;border-radi
 
 /* Linked account transfers keep a distinct appearance and a text marker. */
 .ledger-item.transfer-entry{background:#f3edff;border-left:4px solid #7650a9}.transfer-entry>strong,.transfer-entry>b{color:#644093}.transfer-entry button{background:#e5d8fa;color:#51317a}.transfer-entry button.danger{background:#fff0f1;color:#a22b34}.transfer-preview{padding:12px;background:#f3edff;border-radius:10px;color:#51317a}[data-account-transfer]{background:#e7d9fa;color:#51317a}
+
+.receipt-preview .report-document{min-width:0;padding:16px}.receipt-preview th:first-child{width:34%}#dailyBackupReminder{margin-bottom:16px}#dailyBackupReminder p{margin:6px 0 12px}
+
+.workspace.search-room{min-height:var(--search-room-height,100dvh)}
+dialog.search-dialog{position:fixed;top:var(--search-viewport-top,8px);bottom:auto;margin:0 auto;max-height:var(--search-viewport-height,90dvh)}
+dialog.search-dialog #dialogBody{max-height:calc(var(--search-viewport-height,90dvh) - 80px)}
