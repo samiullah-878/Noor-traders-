@@ -33,7 +33,7 @@ service cloud.firestore {
     function blueStaff() { return isStaff() && staffAccount().active == true && (!('scope' in staffAccount()) || staffAccount().scope == 'full'); }
     function purchaseStaff() { return isStaff() && staffAccount().active == true && staffAccount().scope == 'purchase'; }
     match /businesses/noor-traders/{collectionName}/{docId} {
-      allow read, write: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers'];
+      allow read, write: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger'];
     }
     // Serializes cash changes across dates/devices; contains no money or login settings.
     match /businesses/noor-traders/blueAccess/cashRevision {
