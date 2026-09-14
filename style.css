@@ -21,3 +21,6 @@ body{font-size:14px}.workspace{padding:12px}header{padding:14px 12px;border-radi
 .pos-dates label{display:flex;flex-direction:column;font-size:.78rem;gap:4px}
 .pos-dates input{padding:8px;border:1px solid #ccd6e6;border-radius:8px}
 [data-pos-open]{cursor:pointer}
+
+/* Linked account transfers keep a distinct appearance and a text marker. */
+.ledger-item.transfer-entry{background:#f3edff;border-left:4px solid #7650a9}.transfer-entry>strong,.transfer-entry>b{color:#644093}.transfer-entry button{background:#e5d8fa;color:#51317a}.transfer-entry button.danger{background:#fff0f1;color:#a22b34}.transfer-preview{padding:12px;background:#f3edff;border-radius:10px;color:#51317a}[data-account-transfer]{background:#e7d9fa;color:#51317a}

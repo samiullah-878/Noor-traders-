@@ -33,7 +33,14 @@ service cloud.firestore {
     function blueStaff() { return isStaff() && staffAccount().active == true && (!('scope' in staffAccount()) || staffAccount().scope == 'full'); }
     function purchaseStaff() { return isStaff() && staffAccount().active == true && staffAccount().scope == 'purchase'; }
     match /businesses/noor-traders/{collectionName}/{docId} {
-      allow read, write: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger'];
+      allow read: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger'];
+      // Linked transfers have a paired-write rule below, including for older app versions.
+      allow create: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger']
+        && (collectionName != 'blueKhata' || !('transferId' in request.resource.data));
+      allow update: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger']
+        && (collectionName != 'blueKhata' || (!('transferId' in resource.data) && !('transferId' in request.resource.data)));
+      allow delete: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger']
+        && (collectionName != 'blueKhata' || !('transferId' in resource.data));
     }
     // Serializes cash changes across dates/devices; contains no money or login settings.
     match /businesses/noor-traders/blueAccess/cashRevision {
@@ -72,6 +79,35 @@ service cloud.firestore {
     // Blue Khata: existing verified employees can view/create ledger entries.
     // Staff may soft-delete any current-day entry; other edits remain owner-only.
     match /businesses/noor-traders/blueKhata/{recordId} {
+      function validTransfer() {
+        let d = request.resource.data;
+        let mateId = 'transfer-' + d.transferId + (d.transferRole == 'out' ? '-in' : '-out');
+        let mate = getAfter(/databases/$(database)/documents/businesses/noor-traders/blueKhata/$(mateId)).data;
+        return d.type == 'entry' && d.transferId is string && d.transferId.matches('^[a-zA-Z0-9_-]{1,100}$')
+          && d.transferRole in ['out','in']
+          && recordId == 'transfer-' + d.transferId + '-' + d.transferRole && d.id == recordId
+          && d.kind == (d.transferRole == 'out' ? 'collection' : 'payment')
+          && d.partyId == (d.transferRole == 'out' ? d.fromPartyId : d.toPartyId)
+          && d.fromPartyId is string && d.toPartyId is string && d.fromPartyId != d.toPartyId
+          && d.amount is int && d.amount > 0 && d.amount <= 10000000000000
+          && d.dailyIncluded == false && d.date is string && d.note is string && d.note.size() <= 1000
+          && d.rev is int && d.rev > 0
+          && mate.id == mateId && mate.type == 'entry' && mate.transferId == d.transferId
+          && mate.transferRole == (d.transferRole == 'out' ? 'in' : 'out')
+          && mate.kind == (d.transferRole == 'out' ? 'payment' : 'collection')
+          && mate.partyId == (d.transferRole == 'out' ? d.toPartyId : d.fromPartyId)
+          && mate.dailyIncluded == false && mate.fromPartyId == d.fromPartyId && mate.toPartyId == d.toPartyId
+          && mate.amount == d.amount && mate.date == d.date && mate.note == d.note && mate.rev == d.rev
+          && d.get('deleted', false) is bool && d.get('deleted', false) == mate.get('deleted', false);
+      }
+      allow create: if isOwner() && validTransfer();
+      allow update: if isOwner() && 'transferId' in resource.data && validTransfer()
+        && request.resource.data.transferId == resource.data.transferId
+        && request.resource.data.transferRole == resource.data.transferRole
+        && request.resource.data.fromPartyId == resource.data.fromPartyId
+        && request.resource.data.rev == resource.data.rev + 1
+        && !resource.data.get('deleted', false);
+
       allow read: if isOwner() || blueStaff() || (purchaseStaff() && resource.data.type == 'entry' && resource.data.purchase == true);
       function validPurchase() {
         let d = request.resource.data;
@@ -146,6 +182,7 @@ service cloud.firestore {
 
       allow update: if (blueStaff() || (purchaseStaff() && resource.data.purchase == true))
         && resource.data.type == 'entry'
+        && !('transferId' in resource.data)
         && isToday(resource.data.date)
         && (!('deleted' in resource.data) || resource.data.deleted == false)
         && request.resource.data.deleted == true
@@ -157,6 +194,7 @@ service cloud.firestore {
         && request.resource.data.by == request.auth.uid
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.rev == 1
+        && !('transferId' in request.resource.data)
         && request.resource.data.type in ['entry', 'party', 'expenseAccount', 'dayPhoto']
         && !('deleted' in request.resource.data)
         && (!(request.resource.data.type in ['entry','dayPhoto']) || isToday(request.resource.data.date))
