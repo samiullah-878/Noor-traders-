@@ -45,10 +45,12 @@ function collect() {
     .sort((a, b) => (a.order || 0) - (b.order || 0))
     .flatMap(c => c.items);
   const meta = rows.find(r => r.meta && r.branch === pick) || null;
-  return { branches, pick, items, meta };
+  const names = {};
+  rows.forEach(r => { if (r.branch != null && r.name) names[r.branch] = r.name; });
+  return { branches, pick, items, meta, names };
 }
 
-const branchName = b => (b === 9 ? 'Godam 1' : 'Branch ' + b);
+const branchName = (b, names) => (names && names[b]) || (b === 9 ? 'Godam 1' : 'Branch ' + b);
 
 function since(stamp) {
   if (!stamp) return '';
@@ -66,10 +68,10 @@ export function renderStock() {
   start();
 
   const q = norm($('search')?.value || '');
-  const { branches, pick, items, meta } = collect();
+  const { branches, pick, items, meta, names } = collect();
 
   $('actions').innerHTML = '';
-  $('summary').innerHTML = summaryHTML(branches, pick, items, meta);
+  $('summary').innerHTML = summaryHTML(branches, pick, items, meta, names);
 
   if (failed) {
     $('list').innerHTML = `<div class="empty"><strong>Stock nahi mila</strong><p>${esc(failed)}</p></div>`;
@@ -98,19 +100,19 @@ export function renderStock() {
     (extra > 0 ? `<p class="stat-note">…aur ${num(extra)} items. Naam ya code search karein.</p>` : '');
 }
 
-function summaryHTML(branches, pick, items, meta) {
+function summaryHTML(branches, pick, items, meta, names) {
   const totalPcs = meta?.totalPcs ?? items.reduce((s, r) => s + (r.stock || 0), 0);
   const stamp = meta?.syncedAt;
 
   const branchBar = branches.length > 1
     ? `<div class="account-tools">${branches.map(b =>
-        `<button data-stock-branch="${b}"${b === pick ? ' class="selected"' : ''}>${esc(branchName(b))}</button>`
+        `<button data-stock-branch="${b}"${b === pick ? ' class="selected"' : ''}>${esc(branchName(b, names))}</button>`
       ).join('')}</div>`
     : '';
 
   return `<div>
       <strong>${num(items.length)} items</strong>
-      <small>${esc(branchName(pick))} · kul ${num(totalPcs)} pcs${stamp ? ' · ' + esc(since(stamp)) : ''}</small>
+      <small>${esc(branchName(pick, names))} · kul ${num(totalPcs)} pcs${stamp ? ' · ' + esc(since(stamp)) : ''}</small>
     </div>
     ${branchBar}
     <div class="account-tools">
