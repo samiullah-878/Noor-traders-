@@ -136,7 +136,7 @@ service cloud.firestore {
         && (!('deleted' in resource.data) || resource.data.deleted == false)
         && request.resource.data.date == resource.data.date
         && request.resource.data.rev == resource.data.rev + 1
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['kind','partyId','amount','note','goodsPhotos','billPhotos','photos','account','deleted','updatedAt','updatedBy','rev']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['kind','partyId','amount','note','goodsPhotos','billPhotos','photos','account','deleted','posPending','posVoucher','updatedAt','updatedBy','rev']);
       allow create: if purchaseStaff() && request.resource.data.type == 'party'
         && request.resource.data.id == recordId && request.resource.data.category == 'Supplier'
         && request.resource.data.opening == 0 && request.resource.data.rev == 1

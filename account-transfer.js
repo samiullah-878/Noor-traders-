@@ -24,7 +24,7 @@ export function buildTransfer(request,previous,accounts,uid,stamp){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date||'')||new Date(date+'T12:00:00Z').toISOString().slice(0,10)!==date)throw Error('Tareekh durust likhein');
  const note=String(request.note||'').trim();if(note.length>1000)throw Error('Note bohat lamba hai');
  const ids=transferIds(id);
- return ['out','in'].map((role,i)=>({...previous[i],id:ids[i],type:'entry',transferId:id,transferRole:role,fromPartyId,toPartyId,fromName:source.name,toName:target.name,partyId:i?toPartyId:fromPartyId,kind:i?'payment':'collection',dailyIncluded:false,amount,date,note,rev:expected+1,createdAt:previous[i]?.createdAt??stamp,by:previous[i]?.by||uid,updatedAt:stamp,updatedBy:uid}));
+ return ['out','in'].map((role,i)=>({...previous[i],id:ids[i],type:'entry',transferId:id,transferRole:role,fromPartyId,toPartyId,fromName:source.name,toName:target.name,partyId:i?toPartyId:fromPartyId,kind:i?'payment':'collection',dailyIncluded:false,amount,date,note,posPending:role==='out'?!!request.posPending:false,posVoucher:String(request.posVoucher||'').trim().slice(0,60),rev:expected+1,createdAt:previous[i]?.createdAt??stamp,by:previous[i]?.by||uid,updatedAt:stamp,updatedBy:uid}));
 }
 export async function transactTransfer(tx,ref,request,uid,stamp){
  const ids=transferIds(request.id),snaps=await Promise.all(ids.map(id=>tx.get(ref(id)))),previous=snaps.map(s=>s.exists()?s.data():null);
