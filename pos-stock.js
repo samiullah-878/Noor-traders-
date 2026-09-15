@@ -10,7 +10,7 @@ const MAX_ROWS = 300;   // itni se zyada rows par search karne ka kehta hai
 
 let cloud = null, rerender = () => {}, notice = () => {};
 let stop = null, rows = [], loaded = false, failed = '';
-let branch = null, sort = 'name';
+let branch = null, sort = 'name', filter = 'all';
 
 export function stockSetup(opts) {
   cloud = opts.cloud;
@@ -50,6 +50,7 @@ function collect() {
   return { branches, pick, items, meta, names };
 }
 
+const passes = r => filter === 'zero' ? r.stock === 0 : filter === 'minus' ? r.stock < 0 : true;
 const branchName = (b, names) => (names && names[b]) || (b === 9 ? 'Godam 1' : 'Branch ' + b);
 
 function since(stamp) {
@@ -84,9 +85,8 @@ export function renderStock() {
     return;
   }
 
-  let shown = q
-    ? items.filter(r => norm(r.name).includes(q) || norm(r.code).includes(q))
-    : items.slice();
+  let shown = items.filter(passes);
+  if (q) shown = shown.filter(r => norm(r.name).includes(q) || norm(r.code).includes(q));
 
   if (sort === 'stock') shown.sort((a, b) => b.stock - a.stock);
   else shown.sort((a, b) => String(a.name).localeCompare(String(b.name)));
@@ -110,11 +110,17 @@ function summaryHTML(branches, pick, items, meta, names) {
       ).join('')}</div>`
     : '';
 
+  const minus = items.filter(r => r.stock < 0).length;
+  const shownCount = items.filter(passes).length;
   return `<div>
-      <strong>${num(items.length)} items</strong>
+      <strong>${num(shownCount)} items</strong>
       <small>${esc(branchName(pick, names))} · kul ${num(totalPcs)} pcs${stamp ? ' · ' + esc(since(stamp)) : ''}</small>
     </div>
     ${branchBar}
+    <div class="account-tools">
+      <button data-stock-filter="all"${filter === 'all' ? ' class="selected"' : ''}>Sab</button>
+      <button data-stock-filter="minus"${filter === 'minus' ? ' class="selected"' : ''}>Minus stock (${num(minus)})</button>
+    </div>
     <div class="account-tools">
       <button data-stock-sort="name"${sort === 'name' ? ' class="selected"' : ''}>Naam se</button>
       <button data-stock-sort="stock"${sort === 'stock' ? ' class="selected"' : ''}>Zyada stock pehle</button>
@@ -144,5 +150,7 @@ document.addEventListener('click', e => {
   const b = e.target.closest?.('[data-stock-branch]');
   if (b) { branch = Number(b.dataset.stockBranch); rerender(); return; }
   const s = e.target.closest?.('[data-stock-sort]');
-  if (s) { sort = s.dataset.stockSort; rerender(); }
+  if (s) { sort = s.dataset.stockSort; rerender(); return; }
+  const f = e.target.closest?.('[data-stock-filter]');
+  if (f) { filter = f.dataset.stockFilter; rerender(); }
 });
