@@ -34,13 +34,13 @@ service cloud.firestore {
     function purchaseStaff() { return isStaff() && staffAccount().active == true && staffAccount().scope == 'purchase'; }
     function stockStaff() { return isStaff() && staffAccount().active == true && staffAccount().scope == 'stock'; }
     match /businesses/noor-traders/{collectionName}/{docId} {
-      allow read: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock'];
+      allow read: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills'];
       // Linked transfers have a paired-write rule below, including for older app versions.
-      allow create: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock']
+      allow create: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills']
         && (collectionName != 'blueKhata' || !('transferId' in request.resource.data));
-      allow update: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock']
+      allow update: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills']
         && (collectionName != 'blueKhata' || (!('transferId' in resource.data) && !('transferId' in request.resource.data)));
-      allow delete: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock']
+      allow delete: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills']
         && (collectionName != 'blueKhata' || !('transferId' in resource.data));
     }
     // Serializes cash changes across dates/devices; contains no money or login settings.
@@ -69,6 +69,11 @@ service cloud.firestore {
     // POS ka stock: sirf parhne ke liye. Likhta sirf PC wala sync-stock.js hai (admin key).
     match /businesses/noor-traders/posStock/{docId} {
       allow read: if isOwner() || stockStaff();
+    }
+
+    // POS ke purchase bill ki tafseel: sirf parhne ke liye.
+    match /businesses/noor-traders/posBills/{docId} {
+      allow read: if isOwner() || blueStaff() || purchaseStaff();
     }
 
     match /businesses/noor-traders/purchaseSuppliers/{id} {
