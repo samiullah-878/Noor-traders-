@@ -34,7 +34,7 @@ export function parseLogin({ role, username, password, ownerEmail, scope = 'full
   }
   if (role !== 'staff') throw failure('login/role-required');
   if(name !== 'admin') throw failure('login/staff-credentials');
-  if(!['full','purchase'].includes(scope))throw failure('login/scope-required');
+  if(!['full','purchase','stock'].includes(scope))throw failure('login/scope-required');
   return {role,password,scope,phone:normalizePhone(password)};
 }
 
@@ -67,7 +67,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
         throw failure('login/staff-disabled');
       }
       const scope=account.scope||'full';
-      if(!['full','purchase'].includes(scope)||(expectedScope&&scope!==expectedScope))throw failure('login/scope-required');
+      if(!['full','purchase','stock'].includes(scope)||(expectedScope&&scope!==expectedScope))throw failure('login/scope-required');
       onSession({ role: 'staff', scope, user, phone, account });
     } else {
       if (expectedRole === 'staff' || !isOwnerUser(user)) throw failure('login/owner-required');
@@ -167,7 +167,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
 
 export function loginErrorMessage(error, role = 'owner') {
   switch (error.code) {
-    case 'login/scope-required': return 'Full App / Sirf Purchase durust select karein aur us ka password likhein.';
+    case 'login/scope-required': return 'Full App / Sirf Purchase / Sirf Stock durust select karein aur us ka password likhein.';
     case 'login/staff-config-read': return 'S1: Mulazim login settings par ijazat nahi. Nayi firestore.rules note-traders-khata-7ccc1 project mein publish karein.';
     case 'login/staff-session-create': return 'S2: Password match nahi hua ya session rule publish nahi hui. Malik Settings mein Password check karein.';
     case 'login/staff-session-read': return 'S3: Mulazim session parhne ki ijazat nahi. Nayi firestore.rules publish karein.';
