@@ -184,8 +184,9 @@ function historyHTML(r, c) {
   const list = Array.isArray(c?.history) ? c.history.slice().reverse() : [];
   if (!list.length) return '';
   return `<div class="stat-note" style="margin:0 4px 12px">${list.map(h => {
-    const d = Number(h.total) - Number(h.sys);
-    return `${esc(stampText(h.at))} — ${num(h.total)} ${esc(r.uName || 'Pcs')} · System ${num(h.sys)} · Farq ${d > 0 ? '+' : ''}${num(d)}${
+    const d = Math.round((Number(h.total) - Number(h.sys)) * 100) / 100;
+    const ctn = esc(r.cName || 'Ctn'), pcs = esc(r.uName || 'Pcs');
+    return `${esc(stampText(h.at))} — <b>${num(h.ctn)} ${ctn} + ${num(h.pcs)} ${pcs}</b> · ${num(h.total)} ${pcs} · System ${num(h.sys)} · Farq ${d > 0 ? '+' : ''}${num(d)}${
       isOwner() && r.prate ? ' · Rs ' + (d > 0 ? '+' : '') + num(d * r.prate) : ''}`;
   }).join('<br>')}</div>`;
 }
