@@ -43,6 +43,11 @@ const countOf = (b, r) => {
   return c && c.round === round && round ? c : null;
 };
 const countedPcs = c => Number(c?.total) || 0;
+const stampText = t => {
+  const d = new Date(t);
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + ' ' +
+         d.toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' });
+};
 
 export function stockStop() {
   if (stop) { stop(); stop = null; }
@@ -169,8 +174,20 @@ function countHTML(r) {
     <label>${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-pcs="${esc(r.id)}" value="${c ? esc(String(c.pcs ?? '')) : ''}"></label>
     <label>Kul ${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:5.6em" data-count-tot="${esc(r.id)}" value=""></label>
     <button type="button" data-count-save="${esc(r.id)}">Save</button>
-    ${c ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Farq ${diff > 0 ? '+' : ''}${num(diff)}</small>` : ''}
-  </div>`;
+    ${c ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Farq ${diff > 0 ? '+' : ''}${num(diff)}${
+      isOwner() && r.prate ? ' · Rs ' + (diff > 0 ? '+' : '') + num(diff * r.prate) : ''}</small>` : ''}
+  </div>
+  ${historyHTML(r, c)}`;
+}
+
+function historyHTML(r, c) {
+  const list = Array.isArray(c?.history) ? c.history.slice().reverse() : [];
+  if (!list.length) return '';
+  return `<div class="stat-note" style="margin:0 4px 12px">${list.map(h => {
+    const d = Number(h.total) - Number(h.sys);
+    return `${esc(stampText(h.at))} — ${num(h.total)} ${esc(r.uName || 'Pcs')} · System ${num(h.sys)} · Farq ${d > 0 ? '+' : ''}${num(d)}${
+      isOwner() && r.prate ? ' · Rs ' + (d > 0 ? '+' : '') + num(d * r.prate) : ''}`;
+  }).join('<br>')}</div>`;
 }
 
 function rowHTML(r) {
@@ -240,13 +257,18 @@ async function saveCount(itemId, button) {
     total = Math.round((ctn * (per > 0 ? per : 1) + pcs) * 100) / 100;
   }
 
+  const at = Date.now();
+  const old = counts.get(countId(pickedBranch, item.id));
+  const past = Array.isArray(old?.history) ? old.history : [];
+  const history = [...past, { at, ctn, pcs, total, sys: item.stock }].slice(-20);
+
   button.disabled = true;
   try {
     await cloud.saveStockCount({
       id: countId(pickedBranch, item.id),
       round, branch: pickedBranch, itemId: item.id,
       name: item.name, sys: item.stock,
-      ctn, pcs, total, at: Date.now()
+      ctn, pcs, total, at, history
     });
     notice(item.name + ' — ginti mehfooz');
   } catch (e) {
