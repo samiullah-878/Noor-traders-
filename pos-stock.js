@@ -49,8 +49,27 @@ const stampText = t => {
          d.toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' });
 };
 
-export function stockReport() {
-  const { pick, items, names } = collect();
+// Bill se cost: POS ke purchase bills (posBills) mein har item ka aakhri khareed bhao.
+export function billRates(bills) {
+  const byCode = new Map(), byName = new Map();
+  const when = b => Number(b.at || b.createdAt) || Date.parse(b.date || '') || 0;
+  const packOf = l => {
+    const r = rows.find(x => (l.code && x.code === l.code) || norm(x.name) === norm(l.name));
+    return Number(r?.pack) || 0;
+  };
+  bills.slice().sort((a, b) => when(a) - when(b)).forEach(b => (b.lines || []).forEach(l => {
+    let c = Number(l.pcs) || 0;
+    if (!c && Number(l.ctn)) { const p = packOf(l); c = p > 0 ? Number(l.ctn) / p : Number(l.ctn); }
+    if (!c) return;
+    if (l.code) byCode.set(String(l.code), c);
+    if (l.name) byName.set(norm(l.name), c);
+  }));
+  return r => (r.code && byCode.get(String(r.code))) || byName.get(norm(r.name)) || 0;
+}
+
+export function stockReport(fallback) {
+  const { pick, items: raw, names } = collect();
+  const items = raw.map(r => r.prate || !fallback ? r : { ...r, prate: fallback(r) });
   const line = r => {
     const c = countOf(pick, r);
     if (!c) return null;
@@ -75,7 +94,13 @@ export function stockReport() {
   };
   const rows = items.map(line).filter(Boolean).filter(r => filter !== 'farq' || Math.abs(r.d) > 0.001);
   const netRs = rows.reduce((n, x) => n + x.rs, 0);
+  const kamRs = rows.reduce((n, x) => n + (x.rs < 0 ? x.rs : 0), 0);
+  const zyadaRs = rows.reduce((n, x) => n + (x.rs > 0 ? x.rs : 0), 0);
+  const noCost = rows.filter(x => Math.abs(x.d) > 0.001 && !x.cost).length;
   return {
+    kamRs: Math.round(kamRs * 100) / 100,
+    zyadaRs: Math.round(zyadaRs * 100) / 100,
+    noCost,
     branch: branchName(pick, names),
     round,
     counted: rows.length,
@@ -199,7 +224,7 @@ function summaryHTML(branches, pick, items, meta, names) {
     </div>
     <div class="account-tools">
       <small style="align-self:center">${round ? 'Ginti ' + esc(round) + ' — ' + num(done) + ' / ' + num(items.length) + ' hue' : 'Ginti shuru nahi hui'}${
-        isOwner() && Math.abs(netRs) > 0.5 ? `<br><b>Kul farq: Rs ${netRs > 0 ? '+' : ''}${num(netRs)}</b> ${netRs < 0 ? '(nuqsan)' : '(zyada nikla)'}` : ''}</small>
+        Math.abs(netRs) > 0.5 ? `<br><b>Kul farq: Rs ${netRs > 0 ? '+' : ''}${num(netRs)}</b> ${netRs < 0 ? '(nuqsan)' : '(zyada nikla)'}` : ''}</small>
       ${isOwner() ? '<button data-stock-round="new">Nayi ginti shuru</button>' : ''}
     </div>
     <div class="account-tools">
@@ -217,7 +242,7 @@ function countHTML(r) {
     <label>Kul ${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:5.6em" data-count-tot="${esc(r.id)}" value=""></label>
     <button type="button" data-count-save="${esc(r.id)}">Save</button>
     ${c ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Us waqt system ${num(c.sys ?? r.stock)} · Farq ${diff > 0 ? '+' : ''}${num(diff)}${
-      isOwner() && r.prate ? ' · Rs ' + (diff > 0 ? '+' : '') + num(diff * r.prate) : ''}</small>` : ''}
+      r.prate ? ' · Rs ' + (diff > 0 ? '+' : '') + num(diff * r.prate) : ''}</small>` : ''}
   </div>
   ${historyHTML(r, c)}`;
 }
@@ -229,7 +254,7 @@ function historyHTML(r, c) {
     const d = Math.round((Number(h.total) - Number(h.sys)) * 100) / 100;
     const ctn = esc(r.cName || 'Ctn'), pcs = esc(r.uName || 'Pcs');
     return `${esc(stampText(h.at))} — <b>${num(h.ctn)} ${ctn} + ${num(h.pcs)} ${pcs}</b> · ${num(h.total)} ${pcs} · System ${num(h.sys)} · Farq ${d > 0 ? '+' : ''}${num(d)}${
-      isOwner() && r.prate ? ' · Rs ' + (d > 0 ? '+' : '') + num(d * r.prate) : ''}`;
+      r.prate ? ' · Rs ' + (d > 0 ? '+' : '') + num(d * r.prate) : ''}`;
   }).join('<br>')}</div>`;
 }
 
@@ -243,7 +268,7 @@ function rowHTML(r) {
     <div class="party" style="border-bottom:0">
     <div class="name">
       <b>${esc(r.name)}</b>
-      <small>${esc(r.code || '')}${pack > 0 ? ` · 1 ${esc(r.cName || 'Ctn')} = ${num(pack)}` : ''}${r.rate ? ' · Rate ' + num(r.rate) : ''}${isOwner() && r.prate ? ' · Khareed ' + num(r.prate) : ''}</small>
+      <small>${esc(r.code || '')}${pack > 0 ? ` · 1 ${esc(r.cName || 'Ctn')} = ${num(pack)}` : ''}${r.rate ? ' · Rate ' + num(r.rate) : ''}${r.prate ? ' · Khareed ' + num(r.prate) : ''}</small>
     </div>
     <div class="amount">
       <strong>${big}</strong>
