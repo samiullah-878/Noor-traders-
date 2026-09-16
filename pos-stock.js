@@ -165,8 +165,9 @@ function countHTML(r) {
   const c = countOf(pickedBranch, r);
   const diff = c ? countedPcs(c) - r.stock : 0;
   return `<div class="pos-dates" style="margin:0 4px 14px">
-    <label>Ctn<input type="number" step="any" inputmode="decimal" style="width:5.5em" data-count-ctn="${esc(r.id)}" value="${c ? esc(String(c.ctn ?? '')) : ''}"></label>
-    <label>${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:5.5em" data-count-pcs="${esc(r.id)}" value="${c ? esc(String(c.pcs ?? '')) : ''}"></label>
+    <label>Ctn<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-ctn="${esc(r.id)}" value="${c ? esc(String(c.ctn ?? '')) : ''}"></label>
+    <label>${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-pcs="${esc(r.id)}" value="${c ? esc(String(c.pcs ?? '')) : ''}"></label>
+    <label>Kul ${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:5.6em" data-count-tot="${esc(r.id)}" value=""></label>
     <button type="button" data-count-save="${esc(r.id)}">Save</button>
     ${c ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Farq ${diff > 0 ? '+' : ''}${num(diff)}</small>` : ''}
   </div>`;
@@ -224,10 +225,20 @@ async function saveCount(itemId, button) {
   if (!item) return;
 
   const box = sel => $('list').querySelector(`[data-count-${sel}="${CSS.escape(String(itemId))}"]`);
-  const ctn = Number(box('ctn')?.value || 0);
-  const pcs = Number(box('pcs')?.value || 0);
   const per = Number(item.pack) || 0;
-  const total = Math.round((ctn * (per > 0 ? per : 1) + pcs) * 100) / 100;
+  const rawTot = (box('tot')?.value ?? '').trim();
+  let ctn, pcs, total;
+
+  if (rawTot !== '') {
+    // Sirf kul pieces likhe gaye — carton khud ban jayega
+    total = Math.round(Number(rawTot) * 100) / 100;
+    ctn = per > 1 ? Math.floor(total / per) : 0;
+    pcs = Math.round((total - ctn * (per > 1 ? per : 0)) * 100) / 100;
+  } else {
+    ctn = Number(box('ctn')?.value || 0);
+    pcs = Number(box('pcs')?.value || 0);
+    total = Math.round((ctn * (per > 0 ? per : 1) + pcs) * 100) / 100;
+  }
 
   button.disabled = true;
   try {
