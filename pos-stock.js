@@ -320,6 +320,8 @@ document.addEventListener('click', e => {
   const nr = e.target.closest?.('[data-stock-round]');
   if (nr) { startNewRound(); return; }
   if (e.target.closest?.('[data-stock-post]')) { requestPost(); return; }
+  if (e.target.closest?.('[data-stock-approve]')) { answerPost(true); return; }
+  if (e.target.closest?.('[data-stock-cancelpost]')) { answerPost(false); return; }
 
   const sv = e.target.closest?.('[data-count-save]');
   if (sv) saveCount(sv.dataset.countSave, sv);
@@ -328,16 +330,53 @@ document.addEventListener('click', e => {
 function postLine(pick) {
   const p = postReq;
   if (!p || p.round !== round || p.branch !== pick) return '';
-  const when = p.doneAt || p.at;
+  const when = p.doneAt || p.previewAt || p.at;
   const t = when ? new Date(when).toLocaleString('en-PK') : '';
+  if (p.status === 'preview' && p.preview) {
+    const v = p.preview;
+    const rows = (list, sign) => list.map(x => `<tr><td>${esc(x.name)}</td><td>${sign}${num(x.qty)}</td><td>${num(x.rate)}</td><td>${sign}${num(x.amount)}</td></tr>`).join('');
+    const table = (title, list, sign) => list.length ? `<p><b>${esc(title)}</b></p>
+      <div style="overflow-x:auto"><table><thead><tr><th>Item</th><th>Qty</th><th>Bhao</th><th>Rs</th></tr></thead>
+      <tbody>${rows(list, sign)}</tbody></table></div>` : '';
+    const skipped = (v.skipped || []).length
+      ? `<p><small>Chhor diye: ${esc(v.skipped.map(x => x.name).join(', '))}</small></p>` : '';
+    return `<div style="margin:8px 0;padding:10px;border:1px solid #9bb7e8;border-radius:10px">
+      <p><b>PC ne bill ki list bheji hai — account ${esc(v.party || '')}</b></p>
+      ${p.note ? `<p><small><b>${esc(p.note)}</b></small></p>` : ''}
+      ${table('Kam nikle — Sale (stock kam hoga)', v.kam || [], '-')}
+      ${table('Zyada nikle — Return (stock barhega)', v.zyada || [], '+')}
+      ${skipped}
+      <p>Kam: Rs ${num(v.kamRs)} · Zyada: Rs ${num(v.zyadaRs)}<br><b>Kul farq: Rs ${num(v.total)}</b></p>
+      ${isOwner() ? `<div class="account-tools">
+        <button data-stock-approve="1" class="selected">Bill banao</button>
+        <button data-stock-cancelpost="1">Cancel</button></div>`
+        : '<p><small>Bill sirf malik bana sakta hai</small></p>'}
+      <small>${esc(t)}</small></div>`;
+  }
   const msg = {
-    pending: 'PC ko bheja gaya — PC par list dekh kar OK karein',
+    pending: 'PC ko bheja gaya — PC list tayyar kar raha hai (PC chalu hona chahiye)',
+    approved: 'OK ho gaya — PC bill bana raha hai…',
+    posting: 'PC bill bana raha hai…',
     done: `PC par bill ban gaya: Sale No ${p.saleNo || ''}${p.returnNo ? ' · Return No ' + p.returnNo : ''} · Kul farq Rs ${num(p.total)} · ${num(p.lines)} items`,
     nothing: 'PC ne dekha: bill banane ke liye koi naya farq wala item nahi',
-    cancelled: 'PC par bill cancel kar diya gaya',
+    cancelled: 'Bill cancel kar diya gaya',
     failed: 'PC par bill nahi bana: ' + (p.error || '')
   }[p.status] || '';
   return msg ? `<div class="account-tools"><small><b>${esc(msg)}</b>${t ? ' · ' + esc(t) : ''}</small></div>` : '';
+}
+
+async function answerPost(ok) {
+  const p = postReq;
+  if (!cloud?.requestFarqPost || !p || p.status !== 'preview') return;
+  const v = p.preview || {};
+  if (ok && !confirm(`POS mein bill ban jayega.\nKul farq: Rs ${num(v.total)}\nPakka?`)) return;
+  const { id, ...rest } = p;
+  try {
+    await cloud.requestFarqPost(ok
+      ? { ...rest, status: 'approved', approvedAt: Date.now() }
+      : { round: p.round, branch: p.branch, at: p.at, status: 'cancelled', doneAt: Date.now() });
+    notice(ok ? 'PC ko OK bhej diya' : 'Cancel kar diya');
+  } catch (e) { notice(e?.message || 'Nahi hua'); }
 }
 
 async function requestPost() {
@@ -346,10 +385,10 @@ async function requestPost() {
   const kam = r.rows.filter(x => x.d < -0.001);
   const zyada = r.rows.filter(x => x.d > 0.001);
   if (!kam.length && !zyada.length) { notice('Koi farq wala item nahi'); return; }
-  if (!confirm(`PC par bill banana hai?\nKam nikle: ${kam.length} items (Rs ${num(-r.kamRs)}) — Sale\nZyada nikle: ${zyada.length} items (Rs ${num(r.zyadaRs)}) — Return\nPC par list dekh kar "haan" likhna hoga.`)) return;
+  if (!confirm(`PC par bill banana hai?\nKam nikle: ${kam.length} items (Rs ${num(-r.kamRs)}) — Sale\nZyada nikle: ${zyada.length} items (Rs ${num(r.zyadaRs)}) — Return\nList thori der mein yahin aa jayegi.`)) return;
   try {
     await cloud.requestFarqPost({ round, branch: pickedBranch, status: 'pending', at: Date.now() });
-    notice('PC ko bhej diya');
+    notice('PC ko bhej diya — list thori der mein yahin aayegi');
   } catch (e) { notice(e?.message || 'Nahi bheja ja saka'); }
 }
 
