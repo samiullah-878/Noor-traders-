@@ -110,7 +110,8 @@ export function stockReport(fallback) {
       count: `${num(c.ctn)} ${r.cName || 'Ctn'} + ${num(c.pcs)} ${r.uName || 'Pcs'} = ${num(c.total)}`,
       diff: (d > 0 ? '+' : '') + num(d),
       value: r.prate ? (d > 0 ? '+' : '') + num(d * r.prate) : '',
-      rs: r.prate ? d * r.prate : 0,
+      rs: r.prate ? Math.round(d * r.prate * 100) / 100 : 0,
+      calc: r.prate ? `${(d > 0 ? '+' : '') + num(d)} × ${num(r.prate)} = ${(d > 0 ? '+' : '') + num(Math.round(d * r.prate * 100) / 100)}` : '',
       hist, d
     };
   };
