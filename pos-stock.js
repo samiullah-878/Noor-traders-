@@ -11,11 +11,13 @@ const MAX_ROWS = 300;   // itni se zyada rows par search karne ka kehta hai
 let cloud = null, rerender = () => {}, notice = () => {};
 let stop = null, rows = [], loaded = false, failed = '';
 let branch = null, sort = 'name', filter = 'all';
+let counts = new Map(), round = '', stopCount = null, isOwner = () => false;
 
 export function stockSetup(opts) {
   cloud = opts.cloud;
   rerender = opts.rerender || (() => {});
   notice = opts.notice || (() => {});
+  isOwner = opts.owner || (() => false);
 }
 
 function start() {
@@ -25,10 +27,27 @@ function start() {
     list => { rows = list; loaded = true; failed = ''; rerender(); },
     e => { failed = e?.message || 'Stock load nahi hua'; loaded = true; rerender(); }
   );
+  if (cloud.listenStockCount) {
+    stopCount = cloud.listenStockCount(list => {
+      counts = new Map();
+      round = list.find(r => r.id === '_round')?.round || '';
+      list.forEach(r => { if (r.id !== '_round') counts.set(r.id, r); });
+      rerender();
+    }, () => {});
+  }
 }
+
+const countId = (b, itemId) => `c-${b}-${itemId}`;
+const countOf = (b, r) => {
+  const c = counts.get(countId(b, r.id));
+  return c && c.round === round && round ? c : null;
+};
+const countedPcs = c => Number(c?.total) || 0;
 
 export function stockStop() {
   if (stop) { stop(); stop = null; }
+  if (stopCount) { stopCount(); stopCount = null; }
+  counts = new Map(); round = '';
   rows = []; loaded = false; failed = '';
 }
 
@@ -50,7 +69,13 @@ function collect() {
   return { branches, pick, items, meta, names };
 }
 
-const passes = r => filter === 'zero' ? r.stock === 0 : filter === 'minus' ? r.stock < 0 : true;
+const passes = r => {
+  if (filter === 'minus') return r.stock < 0;
+  if (filter === 'baqi') return !countOf(pickedBranch, r);
+  if (filter === 'farq') { const c = countOf(pickedBranch, r); return c && Math.abs(countedPcs(c) - r.stock) > 0.001; }
+  return true;
+};
+let pickedBranch = null;
 const branchName = (b, names) => (names && names[b]) || (b === 9 ? 'Godam 1' : 'Branch ' + b);
 
 function since(stamp) {
@@ -70,6 +95,7 @@ export function renderStock() {
 
   const q = norm($('search')?.value || '');
   const { branches, pick, items, meta, names } = collect();
+  pickedBranch = pick;
 
   $('actions').innerHTML = '';
   $('summary').innerHTML = summaryHTML(branches, pick, items, meta, names);
@@ -111,6 +137,8 @@ function summaryHTML(branches, pick, items, meta, names) {
     : '';
 
   const minus = items.filter(r => r.stock < 0).length;
+  const done = items.filter(r => countOf(pick, r)).length;
+  const gap = items.filter(r => { const c = countOf(pick, r); return c && Math.abs(countedPcs(c) - r.stock) > 0.001; }).length;
   const shownCount = items.filter(passes).length;
   return `<div>
       <strong>${num(shownCount)} items</strong>
@@ -120,11 +148,28 @@ function summaryHTML(branches, pick, items, meta, names) {
     <div class="account-tools">
       <button data-stock-filter="all"${filter === 'all' ? ' class="selected"' : ''}>Sab</button>
       <button data-stock-filter="minus"${filter === 'minus' ? ' class="selected"' : ''}>Minus stock (${num(minus)})</button>
+      <button data-stock-filter="baqi"${filter === 'baqi' ? ' class="selected"' : ''}>Ginti baqi (${num(items.length - done)})</button>
+      <button data-stock-filter="farq"${filter === 'farq' ? ' class="selected"' : ''}>Farq wale (${num(gap)})</button>
+    </div>
+    <div class="account-tools">
+      <small style="align-self:center">${round ? 'Ginti ' + esc(round) + ' — ' + num(done) + ' / ' + num(items.length) + ' hue' : 'Ginti shuru nahi hui'}</small>
+      ${isOwner() ? '<button data-stock-round="new">Nayi ginti shuru</button>' : ''}
     </div>
     <div class="account-tools">
       <button data-stock-sort="name"${sort === 'name' ? ' class="selected"' : ''}>Naam se</button>
       <button data-stock-sort="stock"${sort === 'stock' ? ' class="selected"' : ''}>Zyada stock pehle</button>
     </div>`;
+}
+
+function countHTML(r) {
+  const c = countOf(pickedBranch, r);
+  const diff = c ? countedPcs(c) - r.stock : 0;
+  return `<div class="pos-dates" style="margin:6px 0 0">
+    <label>Ctn<input type="number" step="any" inputmode="decimal" style="width:5.5em" data-count-ctn="${esc(r.id)}" value="${c ? esc(String(c.ctn ?? '')) : ''}"></label>
+    <label>${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:5.5em" data-count-pcs="${esc(r.id)}" value="${c ? esc(String(c.pcs ?? '')) : ''}"></label>
+    <button type="button" data-count-save="${esc(r.id)}">Save</button>
+    ${c ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Farq ${diff > 0 ? '+' : ''}${num(diff)}</small>` : ''}
+  </div>`;
 }
 
 function rowHTML(r) {
@@ -142,6 +187,7 @@ function rowHTML(r) {
       <strong>${big}</strong>
       <small>${num(r.stock)} ${esc(r.uName || 'Pcs')}</small>
     </div>
+    ${countHTML(r)}
   </div>`;
 }
 
@@ -152,5 +198,47 @@ document.addEventListener('click', e => {
   const s = e.target.closest?.('[data-stock-sort]');
   if (s) { sort = s.dataset.stockSort; rerender(); return; }
   const f = e.target.closest?.('[data-stock-filter]');
-  if (f) { filter = f.dataset.stockFilter; rerender(); }
+  if (f) { filter = f.dataset.stockFilter; rerender(); return; }
+
+  const nr = e.target.closest?.('[data-stock-round]');
+  if (nr) { startNewRound(); return; }
+
+  const sv = e.target.closest?.('[data-count-save]');
+  if (sv) saveCount(sv.dataset.countSave, sv);
 });
+
+async function startNewRound() {
+  if (!cloud?.setStockRound) return;
+  const label = new Date().toISOString().slice(0, 10);
+  if (!confirm('Nayi ginti shuru karein? Purani ginti hat jayegi.')) return;
+  try { await cloud.setStockRound(label); notice('Nayi ginti shuru — ' + label); }
+  catch (e) { notice(e?.message || 'Nahi hua'); }
+}
+
+async function saveCount(itemId, button) {
+  if (!round) { notice('Pehle "Nayi ginti shuru" dabayein'); return; }
+  const { items } = collect();
+  const item = items.find(r => String(r.id) === String(itemId));
+  if (!item) return;
+
+  const box = sel => $('list').querySelector(`[data-count-${sel}="${CSS.escape(String(itemId))}"]`);
+  const ctn = Number(box('ctn')?.value || 0);
+  const pcs = Number(box('pcs')?.value || 0);
+  const per = Number(item.pack) || 0;
+  const total = Math.round((ctn * (per > 0 ? per : 1) + pcs) * 100) / 100;
+
+  button.disabled = true;
+  try {
+    await cloud.saveStockCount({
+      id: countId(pickedBranch, item.id),
+      round, branch: pickedBranch, itemId: item.id,
+      name: item.name, sys: item.stock,
+      ctn, pcs, total, at: Date.now()
+    });
+    notice(item.name + ' — ginti mehfooz');
+  } catch (e) {
+    notice(e?.message || 'Ginti save nahi hui');
+  } finally {
+    button.disabled = false;
+  }
+}
