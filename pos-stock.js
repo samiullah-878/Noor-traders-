@@ -63,6 +63,8 @@ export function stockReport() {
     return {
       name: r.name, code: r.code || '',
       sys: num(c.sys ?? r.stock),
+      now: num(r.stock),
+      now: num(r.stock),
       count: `${num(c.ctn)} ${r.cName || 'Ctn'} + ${num(c.pcs)} ${r.uName || 'Pcs'} = ${num(c.total)}`,
       diff: (d > 0 ? '+' : '') + num(d),
       value: r.prate ? (d > 0 ? '+' : '') + num(d * r.prate) : '',
