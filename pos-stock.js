@@ -49,6 +49,36 @@ const stampText = t => {
          d.toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' });
 };
 
+export function stockReport() {
+  const { pick, items, names } = collect();
+  const line = r => {
+    const c = countOf(pick, r);
+    if (!c) return null;
+    const d = Math.round((countedPcs(c) - r.stock) * 100) / 100;
+    const past = Array.isArray(c.history) ? c.history.slice().reverse() : [];
+    const hist = past.map(h => {
+      const hd = Math.round((Number(h.total) - Number(h.sys)) * 100) / 100;
+      return `${stampText(h.at)}: ${num(h.ctn)}+${num(h.pcs)} = ${num(h.total)} · Farq ${hd > 0 ? '+' : ''}${num(hd)}`;
+    }).join('\n');
+    return {
+      name: r.name, code: r.code || '',
+      sys: num(r.stock),
+      count: `${num(c.ctn)} ${r.cName || 'Ctn'} + ${num(c.pcs)} ${r.uName || 'Pcs'} = ${num(c.total)}`,
+      diff: (d > 0 ? '+' : '') + num(d),
+      value: r.prate ? (d > 0 ? '+' : '') + num(d * r.prate) : '',
+      hist, d
+    };
+  };
+  const rows = items.map(line).filter(Boolean).filter(r => filter !== 'farq' || Math.abs(r.d) > 0.001);
+  return {
+    branch: branchName(pick, names),
+    round,
+    counted: rows.length,
+    total: items.length,
+    rows
+  };
+}
+
 export function stockStop() {
   if (stop) { stop(); stop = null; }
   if (stopCount) { stopCount(); stopCount = null; }
