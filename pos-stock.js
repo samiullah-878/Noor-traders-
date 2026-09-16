@@ -332,8 +332,8 @@ function postLine(pick) {
   const t = when ? new Date(when).toLocaleString('en-PK') : '';
   const msg = {
     pending: 'PC ko bheja gaya — PC par list dekh kar OK karein',
-    done: `PC par bill ban gaya: Sale No ${p.saleNo || ''} · Rs ${num(p.total)} · ${num(p.lines)} items`,
-    nothing: 'PC ne dekha: bill banane ke liye koi naya kam nikla item nahi',
+    done: `PC par bill ban gaya: Sale No ${p.saleNo || ''}${p.returnNo ? ' · Return No ' + p.returnNo : ''} · Kul farq Rs ${num(p.total)} · ${num(p.lines)} items`,
+    nothing: 'PC ne dekha: bill banane ke liye koi naya farq wala item nahi',
     cancelled: 'PC par bill cancel kar diya gaya',
     failed: 'PC par bill nahi bana: ' + (p.error || '')
   }[p.status] || '';
@@ -344,8 +344,9 @@ async function requestPost() {
   if (!cloud?.requestFarqPost || !round) return;
   const r = stockReport();
   const kam = r.rows.filter(x => x.d < -0.001);
-  if (!kam.length) { notice('Koi kam nikla item nahi'); return; }
-  if (!confirm(`${kam.length} kam nikle items (Rs ${num(-r.kamRs)}) ka udhaar bill PC par banana hai?\nPC par list dekh kar OK karna hoga.`)) return;
+  const zyada = r.rows.filter(x => x.d > 0.001);
+  if (!kam.length && !zyada.length) { notice('Koi farq wala item nahi'); return; }
+  if (!confirm(`PC par bill banana hai?\nKam nikle: ${kam.length} items (Rs ${num(-r.kamRs)}) — Sale\nZyada nikle: ${zyada.length} items (Rs ${num(r.zyadaRs)}) — Return\nPC par list dekh kar "haan" likhna hoga.`)) return;
   try {
     await cloud.requestFarqPost({ round, branch: pickedBranch, status: 'pending', at: Date.now() });
     notice('PC ko bhej diya');
