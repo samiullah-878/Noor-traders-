@@ -56,6 +56,10 @@ function fixCost(r) {
   return c === r.prate ? r : { ...r, prate: c };
 }
 
+// Ginti ke waqt ka stock: PC ne POS ledger se nikaal kar likha ho to wahi (sahi), warna app ka dekha hua
+const sysOf = (c, r) => (c && c.sysPos != null && c.sysPosAt === c.at) ? Number(c.sysPos) : Number(c?.sys ?? r?.stock ?? 0);
+const sysSure = c => !!(c && c.sysPos != null && c.sysPosAt === c.at);
+
 const countId = (b, itemId) => `c-${b}-${itemId}`;
 const countOf = (b, r) => {
   const c = counts.get(countId(b, r.id));
@@ -97,7 +101,7 @@ export function stockReport(fallback) {
   const line = r => {
     const c = countOf(pick, r);
     if (!c) return null;
-    const d = Math.round((countedPcs(c) - Number(c.sys ?? r.stock)) * 100) / 100;
+    const d = Math.round((countedPcs(c) - Number(sysOf(c, r))) * 100) / 100;
     const past = Array.isArray(c.history) ? c.history.slice().reverse() : [];
     const hist = past.map(h => {
       const hd = Math.round((Number(h.total) - Number(h.sys)) * 100) / 100;
@@ -105,7 +109,7 @@ export function stockReport(fallback) {
     }).join('\n');
     return {
       name: r.name, code: r.code || '',
-      sys: num(c.sys ?? r.stock),
+      sys: num(sysOf(c, r)),
       now: num(r.stock),
       nowDiff: (() => { const nd = Math.round((r.stock - countedPcs(c)) * 100) / 100; return (nd > 0 ? '+' : '') + num(nd); })(),
       cost: r.prate ? (Number(r.pack) > 1
@@ -116,7 +120,7 @@ export function stockReport(fallback) {
       value: r.prate ? (d > 0 ? '+' : '') + num(d * r.prate) : '',
       rs: r.prate ? Math.round(d * r.prate * 100) / 100 : 0,
       calc: r.prate ? `${(d > 0 ? '+' : '') + num(d)} × ${num(r.prate)} = ${(d > 0 ? '+' : '') + num(Math.round(d * r.prate * 100) / 100)}` : '',
-      hist, d
+      hist, d, sure: sysSure(c)
     };
   };
   const rows = items.map(line).filter(Boolean).filter(r => filter !== 'farq' || Math.abs(r.d) > 0.001);
@@ -128,6 +132,7 @@ export function stockReport(fallback) {
     kamRs: Math.round(kamRs * 100) / 100,
     zyadaRs: Math.round(zyadaRs * 100) / 100,
     noCost,
+    unsure: rows.filter(x => !x.sure).length,
     branch: branchName(pick, names),
     round,
     counted: rows.length,
@@ -165,7 +170,7 @@ function collect() {
 const passes = r => {
   if (filter === 'minus') return r.stock < 0;
   if (filter === 'baqi') return !countOf(pickedBranch, r);
-  if (filter === 'farq') { const c = countOf(pickedBranch, r); return c && Math.abs(countedPcs(c) - Number(c.sys ?? r.stock)) > 0.001; }
+  if (filter === 'farq') { const c = countOf(pickedBranch, r); return c && Math.abs(countedPcs(c) - Number(sysOf(c, r))) > 0.001; }
   return true;
 };
 let pickedBranch = null;
@@ -231,11 +236,11 @@ function summaryHTML(branches, pick, items, meta, names) {
 
   const minus = items.filter(r => r.stock < 0).length;
   const done = items.filter(r => countOf(pick, r)).length;
-  const gap = items.filter(r => { const c = countOf(pick, r); return c && Math.abs(countedPcs(c) - Number(c.sys ?? r.stock)) > 0.001; }).length;
+  const gap = items.filter(r => { const c = countOf(pick, r); return c && Math.abs(countedPcs(c) - Number(sysOf(c, r))) > 0.001; }).length;
   const netRs = items.reduce((n, r) => {
     const c = countOf(pick, r);
     if (!c || !r.prate) return n;
-    return n + (countedPcs(c) - Number(c.sys ?? r.stock)) * r.prate;
+    return n + (countedPcs(c) - Number(sysOf(c, r))) * r.prate;
   }, 0);
   const shownCount = items.filter(passes).length;
   return `<div>
@@ -264,13 +269,13 @@ function summaryHTML(branches, pick, items, meta, names) {
 
 function countHTML(r) {
   const c = countOf(pickedBranch, r);
-  const diff = c ? Math.round((countedPcs(c) - Number(c.sys ?? r.stock)) * 100) / 100 : 0;
+  const diff = c ? Math.round((countedPcs(c) - Number(sysOf(c, r))) * 100) / 100 : 0;
   return `<div class="pos-dates" style="margin:0 4px 14px">
     <label>Ctn<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-ctn="${esc(r.id)}" value="${c ? esc(String(c.ctn ?? '')) : ''}"></label>
     <label>${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-pcs="${esc(r.id)}" value="${c ? esc(String(c.pcs ?? '')) : ''}"></label>
     <label>Kul ${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:5.6em" data-count-tot="${esc(r.id)}" value=""></label>
     <button type="button" data-count-save="${esc(r.id)}">Save</button>
-    ${c ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Us waqt system ${num(c.sys ?? r.stock)} · Farq ${diff > 0 ? '+' : ''}${num(diff)}${
+    ${c ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Us waqt system ${num(sysOf(c, r))}${sysSure(c) ? ' ✓' : ' (PC tasdeeq baqi)'} · Farq ${diff > 0 ? '+' : ''}${num(diff)}${
       r.prate ? ' · Rs ' + (diff > 0 ? '+' : '') + num(diff * r.prate) : ''}</small>` : ''}
   </div>
   ${historyHTML(r, c)}`;
