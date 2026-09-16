@@ -164,7 +164,7 @@ function summaryHTML(branches, pick, items, meta, names) {
 function countHTML(r) {
   const c = countOf(pickedBranch, r);
   const diff = c ? countedPcs(c) - r.stock : 0;
-  return `<div class="pos-dates" style="margin:6px 0 0">
+  return `<div class="pos-dates" style="margin:0 4px 14px">
     <label>Ctn<input type="number" step="any" inputmode="decimal" style="width:5.5em" data-count-ctn="${esc(r.id)}" value="${c ? esc(String(c.ctn ?? '')) : ''}"></label>
     <label>${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:5.5em" data-count-pcs="${esc(r.id)}" value="${c ? esc(String(c.pcs ?? '')) : ''}"></label>
     <button type="button" data-count-save="${esc(r.id)}">Save</button>
@@ -178,7 +178,8 @@ function rowHTML(r) {
     ? `${num(r.ctn)} ${esc(r.cName || 'Ctn')} + ${num(r.pcs)} ${esc(r.uName || 'Pcs')}`
     : `${num(r.stock)} ${esc(r.uName || 'Pcs')}`;
 
-  return `<div class="party">
+  return `<div style="border-bottom:1px solid #edf1f7">
+    <div class="party" style="border-bottom:0">
     <div class="name">
       <b>${esc(r.name)}</b>
       <small>${esc(r.code || '')}${pack > 0 ? ` · 1 ${esc(r.cName || 'Ctn')} = ${num(pack)}` : ''}${r.rate ? ' · Rate ' + num(r.rate) : ''}</small>
@@ -186,6 +187,7 @@ function rowHTML(r) {
     <div class="amount">
       <strong>${big}</strong>
       <small>${num(r.stock)} ${esc(r.uName || 'Pcs')}</small>
+    </div>
     </div>
     ${countHTML(r)}
   </div>`;
