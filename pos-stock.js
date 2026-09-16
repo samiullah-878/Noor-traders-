@@ -54,7 +54,7 @@ export function stockReport() {
   const line = r => {
     const c = countOf(pick, r);
     if (!c) return null;
-    const d = Math.round((countedPcs(c) - r.stock) * 100) / 100;
+    const d = Math.round((countedPcs(c) - Number(c.sys ?? r.stock)) * 100) / 100;
     const past = Array.isArray(c.history) ? c.history.slice().reverse() : [];
     const hist = past.map(h => {
       const hd = Math.round((Number(h.total) - Number(h.sys)) * 100) / 100;
@@ -62,19 +62,22 @@ export function stockReport() {
     }).join('\n');
     return {
       name: r.name, code: r.code || '',
-      sys: num(r.stock),
+      sys: num(c.sys ?? r.stock),
       count: `${num(c.ctn)} ${r.cName || 'Ctn'} + ${num(c.pcs)} ${r.uName || 'Pcs'} = ${num(c.total)}`,
       diff: (d > 0 ? '+' : '') + num(d),
       value: r.prate ? (d > 0 ? '+' : '') + num(d * r.prate) : '',
+      rs: r.prate ? d * r.prate : 0,
       hist, d
     };
   };
   const rows = items.map(line).filter(Boolean).filter(r => filter !== 'farq' || Math.abs(r.d) > 0.001);
+  const netRs = rows.reduce((n, x) => n + x.rs, 0);
   return {
     branch: branchName(pick, names),
     round,
     counted: rows.length,
     total: items.length,
+    netRs: Math.round(netRs * 100) / 100,
     rows
   };
 }
@@ -107,7 +110,7 @@ function collect() {
 const passes = r => {
   if (filter === 'minus') return r.stock < 0;
   if (filter === 'baqi') return !countOf(pickedBranch, r);
-  if (filter === 'farq') { const c = countOf(pickedBranch, r); return c && Math.abs(countedPcs(c) - r.stock) > 0.001; }
+  if (filter === 'farq') { const c = countOf(pickedBranch, r); return c && Math.abs(countedPcs(c) - Number(c.sys ?? r.stock)) > 0.001; }
   return true;
 };
 let pickedBranch = null;
@@ -173,7 +176,12 @@ function summaryHTML(branches, pick, items, meta, names) {
 
   const minus = items.filter(r => r.stock < 0).length;
   const done = items.filter(r => countOf(pick, r)).length;
-  const gap = items.filter(r => { const c = countOf(pick, r); return c && Math.abs(countedPcs(c) - r.stock) > 0.001; }).length;
+  const gap = items.filter(r => { const c = countOf(pick, r); return c && Math.abs(countedPcs(c) - Number(c.sys ?? r.stock)) > 0.001; }).length;
+  const netRs = items.reduce((n, r) => {
+    const c = countOf(pick, r);
+    if (!c || !r.prate) return n;
+    return n + (countedPcs(c) - Number(c.sys ?? r.stock)) * r.prate;
+  }, 0);
   const shownCount = items.filter(passes).length;
   return `<div>
       <strong>${num(shownCount)} items</strong>
@@ -187,7 +195,8 @@ function summaryHTML(branches, pick, items, meta, names) {
       <button data-stock-filter="farq"${filter === 'farq' ? ' class="selected"' : ''}>Farq wale (${num(gap)})</button>
     </div>
     <div class="account-tools">
-      <small style="align-self:center">${round ? 'Ginti ' + esc(round) + ' — ' + num(done) + ' / ' + num(items.length) + ' hue' : 'Ginti shuru nahi hui'}</small>
+      <small style="align-self:center">${round ? 'Ginti ' + esc(round) + ' — ' + num(done) + ' / ' + num(items.length) + ' hue' : 'Ginti shuru nahi hui'}${
+        isOwner() && Math.abs(netRs) > 0.5 ? `<br><b>Kul farq: Rs ${netRs > 0 ? '+' : ''}${num(netRs)}</b> ${netRs < 0 ? '(nuqsan)' : '(zyada nikla)'}` : ''}</small>
       ${isOwner() ? '<button data-stock-round="new">Nayi ginti shuru</button>' : ''}
     </div>
     <div class="account-tools">
@@ -198,13 +207,13 @@ function summaryHTML(branches, pick, items, meta, names) {
 
 function countHTML(r) {
   const c = countOf(pickedBranch, r);
-  const diff = c ? countedPcs(c) - r.stock : 0;
+  const diff = c ? Math.round((countedPcs(c) - Number(c.sys ?? r.stock)) * 100) / 100 : 0;
   return `<div class="pos-dates" style="margin:0 4px 14px">
     <label>Ctn<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-ctn="${esc(r.id)}" value="${c ? esc(String(c.ctn ?? '')) : ''}"></label>
     <label>${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-pcs="${esc(r.id)}" value="${c ? esc(String(c.pcs ?? '')) : ''}"></label>
     <label>Kul ${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:5.6em" data-count-tot="${esc(r.id)}" value=""></label>
     <button type="button" data-count-save="${esc(r.id)}">Save</button>
-    ${c ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Farq ${diff > 0 ? '+' : ''}${num(diff)}${
+    ${c ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Us waqt system ${num(c.sys ?? r.stock)} · Farq ${diff > 0 ? '+' : ''}${num(diff)}${
       isOwner() && r.prate ? ' · Rs ' + (diff > 0 ? '+' : '') + num(diff * r.prate) : ''}</small>` : ''}
   </div>
   ${historyHTML(r, c)}`;
