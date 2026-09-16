@@ -24,7 +24,7 @@ function start() {
   if (stop || !cloud) return;
   loaded = false; failed = '';
   stop = cloud.listenStock(
-    list => { rows = list; loaded = true; failed = ''; rerender(); },
+    list => { rows = list.map(fixCost); loaded = true; failed = ''; rerender(); },
     e => { failed = e?.message || 'Stock load nahi hua'; loaded = true; rerender(); }
   );
   if (cloud.listenStockCount) {
@@ -35,6 +35,23 @@ function start() {
       rerender();
     }, () => {});
   }
+}
+
+// POS mein kisi item ka Purchase Rate carton ka hota hai, kisi ka ek piece ka.
+// sync-stock.js har dafa pack se taqseem karta hai, jis se piece wale items ka cost
+// pack guna kam ho jata hai (ghee pouch: 590.4 / 5 = 118.08).
+// Is liye dono imkaan dekhe jate hain aur jo sale Rate ke qareeb ho woh liya jata hai.
+export function pieceCost(cost, pack, rate) {
+  cost = Number(cost) || 0; pack = Number(pack) || 0; rate = Number(rate) || 0;
+  if (!cost || pack <= 1 || !rate) return cost;
+  const gap = v => Math.abs(Math.log(v / rate));
+  const whole = cost * pack;
+  return gap(whole) < gap(cost) ? Math.round(whole * 100) / 100 : cost;
+}
+function fixCost(r) {
+  if (!r || !r.prate) return r;
+  const c = pieceCost(r.prate, r.pack, r.rate);
+  return c === r.prate ? r : { ...r, prate: c };
 }
 
 const countId = (b, itemId) => `c-${b}-${itemId}`;
@@ -59,7 +76,12 @@ export function billRates(bills) {
   };
   bills.slice().sort((a, b) => when(a) - when(b)).forEach(b => (b.lines || []).forEach(l => {
     let c = Number(l.pcs) || 0;
+    const item = rows.find(x => (l.code && x.code === l.code) || norm(x.name) === norm(l.name));
     if (!c && Number(l.ctn)) { const p = packOf(l); c = p > 0 ? Number(l.ctn) / p : Number(l.ctn); }
+    if (!Number(l.pcs) && item && Number(l.ctn) && Number(item.pack) > 1 && Number(item.rate)) {
+      const p = Number(item.pack), ctnPc = Number(l.ctn) / p;
+      c = Math.abs(Math.log(ctnPc / item.rate)) < Math.abs(Math.log(Number(l.ctn) / item.rate)) ? ctnPc : Number(l.ctn);
+    }
     if (!c) return;
     if (l.code) byCode.set(String(l.code), c);
     if (l.name) byName.set(norm(l.name), c);
