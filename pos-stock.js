@@ -182,7 +182,7 @@ function rowHTML(r) {
     <div class="party" style="border-bottom:0">
     <div class="name">
       <b>${esc(r.name)}</b>
-      <small>${esc(r.code || '')}${pack > 0 ? ` · 1 ${esc(r.cName || 'Ctn')} = ${num(pack)}` : ''}${r.rate ? ' · Rate ' + num(r.rate) : ''}</small>
+      <small>${esc(r.code || '')}${pack > 0 ? ` · 1 ${esc(r.cName || 'Ctn')} = ${num(pack)}` : ''}${r.rate ? ' · Rate ' + num(r.rate) : ''}${isOwner() && r.prate ? ' · Khareed ' + num(r.prate) : ''}</small>
     </div>
     <div class="amount">
       <strong>${big}</strong>
