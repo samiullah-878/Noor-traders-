@@ -13,6 +13,7 @@ let cloud = null, rerender = () => {}, notice = () => {};
 let stop = null, rows = [], loaded = false, failed = '';
 let branch = null, sort = 'name', filter = 'has', showBills = false, bills = [];
 let postReq = null;
+let hidden = {};   // item id -> true (Band kiye hue items, sab branches mein chhupe)
 let counts = new Map(), round = '', stopCount = null, isOwner = () => false;
 
 export function stockSetup(opts) {
@@ -49,6 +50,7 @@ function start() {
       counts = new Map();
       round = list.find(r => r.id === '_round')?.round || '';
       postReq = list.find(r => r.id === '_post') || null;
+      hidden = list.find(r => r.id === '_hidden')?.items || {};
       bills = list.filter(r => String(r.id).startsWith('_bill-')).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
       list.forEach(r => { if (!String(r.id).startsWith('_')) counts.set(r.id, r); });
       soft();
@@ -184,7 +186,10 @@ function collect() {
   return { branches, pick, items, meta, names };
 }
 
+const isHidden = r => !!hidden[String(r.id)];
 const passes = r => {
+  if (filter === 'hidden') return isHidden(r);
+  if (isHidden(r)) return false;
   if (filter === 'has') return Math.abs(Number(r.stock) || 0) > 0.001 || !!countOf(pickedBranch, r);
   if (filter === 'minus') return r.stock < 0;
   if (filter === 'baqi') return !countOf(pickedBranch, r);
@@ -253,8 +258,10 @@ function summaryHTML(branches, pick, items, meta, names) {
       ).join('')}</div>`
     : '';
 
-  const minus = items.filter(r => r.stock < 0).length;
-  const hasN = items.filter(r => Math.abs(Number(r.stock) || 0) > 0.001 || countOf(pick, r)).length;
+  const minus = items.filter(r => r.stock < 0 && !isHidden(r)).length;
+  const live = items.filter(r => !isHidden(r));
+  const hasN = live.filter(r => Math.abs(Number(r.stock) || 0) > 0.001 || countOf(pick, r)).length;
+  const hiddenN = items.length - live.length;
   const done = items.filter(r => countOf(pick, r)).length;
   const gap = items.filter(r => { const c = countOf(pick, r); return c && Math.abs(countedPcs(c) - Number(sysOf(c, r))) > 0.001; }).length;
   const netRs = items.reduce((n, r) => {
@@ -270,10 +277,11 @@ function summaryHTML(branches, pick, items, meta, names) {
     ${branchBar}
     <div class="account-tools">
       <button data-stock-filter="has"${filter === 'has' ? ' class="selected"' : ''}>Stock wale (${num(hasN)})</button>
-      <button data-stock-filter="all"${filter === 'all' ? ' class="selected"' : ''}>Sab (${num(items.length)})</button>
+      <button data-stock-filter="all"${filter === 'all' ? ' class="selected"' : ''}>Sab (${num(live.length)})</button>
       <button data-stock-filter="minus"${filter === 'minus' ? ' class="selected"' : ''}>Minus stock (${num(minus)})</button>
       <button data-stock-filter="baqi"${filter === 'baqi' ? ' class="selected"' : ''}>Ginti baqi (${num(items.length - done)})</button>
       <button data-stock-filter="farq"${filter === 'farq' ? ' class="selected"' : ''}>Farq wale (${num(gap)})</button>
+      ${hiddenN ? `<button data-stock-filter="hidden"${filter === 'hidden' ? ' class="selected"' : ''}>Band items (${num(hiddenN)})</button>` : ''}
     </div>
     <div class="account-tools">
       <small style="align-self:center">${round ? 'Ginti ' + esc(round) + ' — ' + num(done) + ' / ' + num(items.length) + ' hue' : 'Ginti shuru nahi hui'}${
@@ -346,6 +354,7 @@ function rowHTML(r) {
     <div class="amount">
       <strong>${big}</strong>
       <small>${num(r.stock)} ${esc(r.uName || 'Pcs')}</small>
+      ${isOwner() ? `<label style="display:block;font-size:.85em;white-space:nowrap"><input type="checkbox" style="width:auto" data-stock-hide="${esc(r.id)}"${isHidden(r) ? ' checked' : ''}> Band</label>` : ''}
     </div>
     </div>
     ${countHTML(r)}
@@ -356,6 +365,8 @@ function rowHTML(r) {
 document.addEventListener('click', e => {
   const b = e.target.closest?.('[data-stock-branch]');
   if (b) { branch = Number(b.dataset.stockBranch); limit = PAGE; rerender(); return; }
+  const hb = e.target.closest?.('[data-stock-hide]');
+  if (hb) { toggleHidden(hb.dataset.stockHide, hb.checked, hb); return; }
   if (e.target.closest?.('[data-stock-more]')) { limit += PAGE; rerender(); return; }
   if (e.target.closest?.('[data-stock-bills]')) { showBills = !showBills; rerender(); return; }
   const s = e.target.closest?.('[data-stock-sort]');
@@ -436,6 +447,20 @@ async function requestPost() {
     await cloud.requestFarqPost({ round, branch: pickedBranch, status: 'pending', at: Date.now() });
     notice('PC ko bhej diya — list thori der mein yahin aayegi');
   } catch (e) { notice(e?.message || 'Nahi bheja ja saka'); }
+}
+
+async function toggleHidden(id, on, box) {
+  if (!cloud?.setStockHidden || !isOwner()) return;
+  const next = { ...hidden };
+  if (on) next[String(id)] = true; else delete next[String(id)];
+  box.disabled = true;
+  try {
+    await cloud.setStockHidden(next);
+    hidden = next;
+    notice(on ? 'Item band — list se hat gaya ("Band items" mein milega)' : 'Item wapas list mein');
+    rerender();
+  } catch (e) { box.checked = !on; notice(e?.message || 'Nahi hua'); }
+  finally { box.disabled = false; }
 }
 
 async function startNewRound() {
