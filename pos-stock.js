@@ -11,6 +11,7 @@ const MAX_ROWS = 300;   // itni se zyada rows par search karne ka kehta hai
 let cloud = null, rerender = () => {}, notice = () => {};
 let stop = null, rows = [], loaded = false, failed = '';
 let branch = null, sort = 'name', filter = 'all';
+let postReq = null;
 let counts = new Map(), round = '', stopCount = null, isOwner = () => false;
 
 export function stockSetup(opts) {
@@ -31,7 +32,8 @@ function start() {
     stopCount = cloud.listenStockCount(list => {
       counts = new Map();
       round = list.find(r => r.id === '_round')?.round || '';
-      list.forEach(r => { if (r.id !== '_round') counts.set(r.id, r); });
+      postReq = list.find(r => r.id === '_post') || null;
+      list.forEach(r => { if (!String(r.id).startsWith('_')) counts.set(r.id, r); });
       rerender();
     }, () => {});
   }
@@ -106,7 +108,9 @@ export function stockReport(fallback) {
       sys: num(c.sys ?? r.stock),
       now: num(r.stock),
       nowDiff: (() => { const nd = Math.round((r.stock - countedPcs(c)) * 100) / 100; return (nd > 0 ? '+' : '') + num(nd); })(),
-      cost: r.prate ? num(r.prate) : '',
+      cost: r.prate ? (Number(r.pack) > 1
+        ? `${num(r.prate)} / ${r.uName || 'Pcs'}\n${num(r.prate)} × ${num(r.pack)} = ${num(Math.round(r.prate * r.pack * 100) / 100)} / ${r.cName || 'Ctn'}`
+        : num(r.prate)) : '',
       count: `${num(c.ctn)} ${r.cName || 'Ctn'} + ${num(c.pcs)} ${r.uName || 'Pcs'} = ${num(c.total)}`,
       diff: (d > 0 ? '+' : '') + num(d),
       value: r.prate ? (d > 0 ? '+' : '') + num(d * r.prate) : '',
@@ -249,7 +253,9 @@ function summaryHTML(branches, pick, items, meta, names) {
       <small style="align-self:center">${round ? 'Ginti ' + esc(round) + ' — ' + num(done) + ' / ' + num(items.length) + ' hue' : 'Ginti shuru nahi hui'}${
         Math.abs(netRs) > 0.5 ? `<br><b>Kul farq: Rs ${netRs > 0 ? '+' : ''}${num(netRs)}</b> ${netRs < 0 ? '(nuqsan)' : '(zyada nikla)'}` : ''}</small>
       ${isOwner() ? '<button data-stock-round="new">Nayi ginti shuru</button>' : ''}
+      ${isOwner() && round ? '<button data-stock-post="1">Farq ka bill PC par banao</button>' : ''}
     </div>
+    ${postLine(pick)}
     <div class="account-tools">
       <button data-stock-sort="name"${sort === 'name' ? ' class="selected"' : ''}>Naam se</button>
       <button data-stock-sort="stock"${sort === 'stock' ? ' class="selected"' : ''}>Zyada stock pehle</button>
@@ -313,10 +319,38 @@ document.addEventListener('click', e => {
 
   const nr = e.target.closest?.('[data-stock-round]');
   if (nr) { startNewRound(); return; }
+  if (e.target.closest?.('[data-stock-post]')) { requestPost(); return; }
 
   const sv = e.target.closest?.('[data-count-save]');
   if (sv) saveCount(sv.dataset.countSave, sv);
 });
+
+function postLine(pick) {
+  const p = postReq;
+  if (!p || p.round !== round || p.branch !== pick) return '';
+  const when = p.doneAt || p.at;
+  const t = when ? new Date(when).toLocaleString('en-PK') : '';
+  const msg = {
+    pending: 'PC ko bheja gaya — PC par list dekh kar OK karein',
+    done: `PC par bill ban gaya: Sale No ${p.saleNo || ''} · Rs ${num(p.total)} · ${num(p.lines)} items`,
+    nothing: 'PC ne dekha: bill banane ke liye koi naya kam nikla item nahi',
+    cancelled: 'PC par bill cancel kar diya gaya',
+    failed: 'PC par bill nahi bana: ' + (p.error || '')
+  }[p.status] || '';
+  return msg ? `<div class="account-tools"><small><b>${esc(msg)}</b>${t ? ' · ' + esc(t) : ''}</small></div>` : '';
+}
+
+async function requestPost() {
+  if (!cloud?.requestFarqPost || !round) return;
+  const r = stockReport();
+  const kam = r.rows.filter(x => x.d < -0.001);
+  if (!kam.length) { notice('Koi kam nikla item nahi'); return; }
+  if (!confirm(`${kam.length} kam nikle items (Rs ${num(-r.kamRs)}) ka udhaar bill PC par banana hai?\nPC par list dekh kar OK karna hoga.`)) return;
+  try {
+    await cloud.requestFarqPost({ round, branch: pickedBranch, status: 'pending', at: Date.now() });
+    notice('PC ko bhej diya');
+  } catch (e) { notice(e?.message || 'Nahi bheja ja saka'); }
+}
 
 async function startNewRound() {
   if (!cloud?.setStockRound) return;
