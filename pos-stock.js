@@ -6,11 +6,12 @@ const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
 
-const MAX_ROWS = 300;   // itni se zyada rows par search karne ka kehta hai
+const PAGE = 60;        // ek dafa itni rows — baqi "Aur dikhao" se (phone tez rahe)
+let limit = PAGE;
 
 let cloud = null, rerender = () => {}, notice = () => {};
 let stop = null, rows = [], loaded = false, failed = '';
-let branch = null, sort = 'name', filter = 'all';
+let branch = null, sort = 'name', filter = 'has', showBills = false, bills = [];
 let postReq = null;
 let counts = new Map(), round = '', stopCount = null, isOwner = () => false;
 
@@ -21,11 +22,26 @@ export function stockSetup(opts) {
   isOwner = opts.owner || (() => false);
 }
 
+// Snapshot par poori screen foran na banao: thora ruko, aur jab koi ginti likh raha ho to us ke baad
+let softTimer = null, softWaiting = false;
+function soft() {
+  clearTimeout(softTimer);
+  softTimer = setTimeout(() => {
+    const a = document.activeElement;
+    if (a && a.matches?.('input') && a.closest?.('#list')) { softWaiting = true; return; }
+    softWaiting = false;
+    rerender();
+  }, 300);
+}
+document.addEventListener('focusout', e => {
+  if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
+});
+
 function start() {
   if (stop || !cloud) return;
   loaded = false; failed = '';
   stop = cloud.listenStock(
-    list => { rows = list.map(fixCost); loaded = true; failed = ''; rerender(); },
+    list => { rows = list.map(fixCost); loaded = true; failed = ''; soft(); },
     e => { failed = e?.message || 'Stock load nahi hua'; loaded = true; rerender(); }
   );
   if (cloud.listenStockCount) {
@@ -33,8 +49,9 @@ function start() {
       counts = new Map();
       round = list.find(r => r.id === '_round')?.round || '';
       postReq = list.find(r => r.id === '_post') || null;
+      bills = list.filter(r => String(r.id).startsWith('_bill-')).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
       list.forEach(r => { if (!String(r.id).startsWith('_')) counts.set(r.id, r); });
-      rerender();
+      soft();
     }, () => {});
   }
 }
@@ -168,6 +185,7 @@ function collect() {
 }
 
 const passes = r => {
+  if (filter === 'has') return Math.abs(Number(r.stock) || 0) > 0.001 || !!countOf(pickedBranch, r);
   if (filter === 'minus') return r.stock < 0;
   if (filter === 'baqi') return !countOf(pickedBranch, r);
   if (filter === 'farq') { const c = countOf(pickedBranch, r); return c && Math.abs(countedPcs(c) - Number(sysOf(c, r))) > 0.001; }
@@ -215,13 +233,14 @@ export function renderStock() {
   if (sort === 'stock') shown.sort((a, b) => b.stock - a.stock);
   else shown.sort((a, b) => String(a.name).localeCompare(String(b.name)));
 
-  const extra = shown.length - MAX_ROWS;
-  const list = shown.slice(0, MAX_ROWS);
+  const extra = shown.length - limit;
+  const list = shown.slice(0, limit);
 
   $('list').innerHTML =
     (q ? `<p class="stat-note">${shown.length} item mile</p>` : '') +
     list.map(rowHTML).join('') +
-    (extra > 0 ? `<p class="stat-note">…aur ${num(extra)} items. Naam ya code search karein.</p>` : '');
+    (extra > 0 ? `<div class="account-tools"><button data-stock-more="1">Aur ${num(Math.min(extra, PAGE))} dikhao (${num(extra)} baqi)</button></div>
+      <p class="stat-note">Ya naam / code search karein.</p>` : '');
 }
 
 function summaryHTML(branches, pick, items, meta, names) {
@@ -235,6 +254,7 @@ function summaryHTML(branches, pick, items, meta, names) {
     : '';
 
   const minus = items.filter(r => r.stock < 0).length;
+  const hasN = items.filter(r => Math.abs(Number(r.stock) || 0) > 0.001 || countOf(pick, r)).length;
   const done = items.filter(r => countOf(pick, r)).length;
   const gap = items.filter(r => { const c = countOf(pick, r); return c && Math.abs(countedPcs(c) - Number(sysOf(c, r))) > 0.001; }).length;
   const netRs = items.reduce((n, r) => {
@@ -249,7 +269,8 @@ function summaryHTML(branches, pick, items, meta, names) {
     </div>
     ${branchBar}
     <div class="account-tools">
-      <button data-stock-filter="all"${filter === 'all' ? ' class="selected"' : ''}>Sab</button>
+      <button data-stock-filter="has"${filter === 'has' ? ' class="selected"' : ''}>Stock wale (${num(hasN)})</button>
+      <button data-stock-filter="all"${filter === 'all' ? ' class="selected"' : ''}>Sab (${num(items.length)})</button>
       <button data-stock-filter="minus"${filter === 'minus' ? ' class="selected"' : ''}>Minus stock (${num(minus)})</button>
       <button data-stock-filter="baqi"${filter === 'baqi' ? ' class="selected"' : ''}>Ginti baqi (${num(items.length - done)})</button>
       <button data-stock-filter="farq"${filter === 'farq' ? ' class="selected"' : ''}>Farq wale (${num(gap)})</button>
@@ -261,10 +282,28 @@ function summaryHTML(branches, pick, items, meta, names) {
       ${isOwner() && round ? '<button data-stock-post="1">Farq ka bill PC par banao</button>' : ''}
     </div>
     ${postLine(pick)}
+    ${bills.length ? `<div class="account-tools"><button data-stock-bills="1"${showBills ? ' class="selected"' : ''}>Farq bills ki history (${num(bills.length)})</button></div>` : ''}
+    ${showBills ? billsHTML(names) : ''}
     <div class="account-tools">
       <button data-stock-sort="name"${sort === 'name' ? ' class="selected"' : ''}>Naam se</button>
       <button data-stock-sort="stock"${sort === 'stock' ? ' class="selected"' : ''}>Zyada stock pehle</button>
     </div>`;
+}
+
+function billsHTML(names) {
+  const rows = (list, sign) => (list || []).map(x => `<tr><td>${esc(x.name)}</td><td>${num(x.sys)}</td><td>${num(x.count)}</td><td>${sign}${num(x.qty)}</td><td>${num(x.rate)}</td><td>${sign}${num(x.amount)}</td></tr>`).join('');
+  const table = (title, list, sign) => (list || []).length ? `<p><b>${esc(title)}</b></p>
+    <div style="overflow-x:auto"><table><thead><tr><th>Item</th><th>System</th><th>Ginti</th><th>Farq</th><th>Bhao</th><th>Rs</th></tr></thead>
+    <tbody>${rows(list, sign)}</tbody></table></div>` : '';
+  return bills.map(b => `<details style="margin:6px 0;padding:8px;border:1px solid #d5e0f2;border-radius:10px">
+    <summary><b>Sale ${esc(b.saleNo || '')}${b.returnNo ? ' · Return ' + esc(b.returnNo) : ''}</b>
+      · Rs ${num(b.total)} · ${esc(b.doneAt ? new Date(b.doneAt).toLocaleString('en-PK') : '')}
+      <small>· Ginti ${esc(b.round || '')} · ${esc(branchName(b.branch, names))}</small></summary>
+    ${b.party ? `<p><small>Account: ${esc(b.party)}</small></p>` : ''}
+    ${table('Kam nikle — Sale', b.kam, '-')}
+    ${table('Zyada nikle — Return', b.zyada, '+')}
+    <p>Kam: Rs ${num(b.kamRs)} · Zyada: Rs ${num(b.zyadaRs)} · <b>Kul farq: Rs ${num(b.total)}</b></p>
+  </details>`).join('');
 }
 
 function countHTML(r) {
@@ -316,11 +355,13 @@ function rowHTML(r) {
 // branch aur sort ke buttons
 document.addEventListener('click', e => {
   const b = e.target.closest?.('[data-stock-branch]');
-  if (b) { branch = Number(b.dataset.stockBranch); rerender(); return; }
+  if (b) { branch = Number(b.dataset.stockBranch); limit = PAGE; rerender(); return; }
+  if (e.target.closest?.('[data-stock-more]')) { limit += PAGE; rerender(); return; }
+  if (e.target.closest?.('[data-stock-bills]')) { showBills = !showBills; rerender(); return; }
   const s = e.target.closest?.('[data-stock-sort]');
   if (s) { sort = s.dataset.stockSort; rerender(); return; }
   const f = e.target.closest?.('[data-stock-filter]');
-  if (f) { filter = f.dataset.stockFilter; rerender(); return; }
+  if (f) { filter = f.dataset.stockFilter; limit = PAGE; rerender(); return; }
 
   const nr = e.target.closest?.('[data-stock-round]');
   if (nr) { startNewRound(); return; }
