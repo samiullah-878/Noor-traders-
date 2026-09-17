@@ -99,3 +99,17 @@ Baqi / yaad rakhein
 - "✕ Saaf karein" -> scanList khali, search khali, wapas poori list. Phir "📷" se naya scan.
 - Purana "save ke baad agla scan khud khule" option hata diya (is naye tareeqe ki wajah se).
 - Code: pos-stock.js — readCount / writeCount / saveCount / saveAll / addScanned / findByCode / finishScan / clearScan.
+
+==============================================================
+2026-09-17 — v1.45.7: USB / Bluetooth barcode scanner
+==============================================================
+- Hardware scanner keyboard ki tarah likhta hai. pos-stock.js keydown (capture) par tez akshar pakadta hai:
+  kam az kam 6 akshar, ausat faasla < 35ms, phir Enter/Tab (ya 120ms khamoshi) = barcode.
+  Jo akshar kisi khane (ginti/search) mein chale gaye woh wapas hata diye jate hain.
+- Barcode -> addScanned() -> scan list -> screen dobara -> us item ke ginti khane par cursor.
+- Insaan ka likhna (dheema) is se mutassir nahi hota. Camera khula ho to yeh band rehta hai.
+- Screen dobara banne par likhi hui (unsaved) ginti ab gum nahi hoti (captureTyped/restoreTyped).
+  "Saaf karein" likhi hui ginti bhi saaf karta hai.
+- Mobile par: USB-C OTG adapter (USB-C male -> USB-A female) se scanner lagta hai. Kuch bare
+  (omni/table) scanner ko zyada bijli chahiye; na chale to powered OTG hub.
+- PC browser mein bhi yahi scanner isi tarah kaam karta hai.

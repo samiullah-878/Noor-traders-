@@ -164,6 +164,7 @@ export function stockReport(fallback) {
 }
 
 export function stockStop() {
+  stockActive = false;
   if (stop) { stop(); stop = null; }
   if (stopCount) { stopCount(); stopCount = null; }
   counts = new Map(); round = '';
@@ -213,7 +214,39 @@ function since(stamp) {
 
 // ---------- screen ----------
 
+// Screen dobara banne par likhi hui (abhi save nahi hui) ginti gum na ho
+const COUNT_SEL = '[data-count-ctn],[data-count-pcs],[data-count-tot]';
+let stockActive = false;
+function captureTyped() {
+  const keep = new Map();
+  const lst = $('list');
+  if (!lst?.querySelectorAll) return keep;
+  lst.querySelectorAll(COUNT_SEL).forEach(el => {
+    if (el.value === el.defaultValue) return;
+    const [name, id] = Object.entries(el.dataset)[0] || [];
+    if (name) keep.set(`${pickedBranch}|${name}|${id}`, el.value);
+  });
+  return keep;
+}
+function restoreTyped(keep) {
+  if (!keep.size) return;
+  const lst = $('list');
+  if (!lst?.querySelectorAll) return;
+  lst.querySelectorAll(COUNT_SEL).forEach(el => {
+    const [name, id] = Object.entries(el.dataset)[0] || [];
+    const k = `${pickedBranch}|${name}|${id}`;
+    if (keep.has(k)) el.value = keep.get(k);
+  });
+}
+
 export function renderStock() {
+  stockActive = true;
+  const typed = captureTyped();
+  renderStockInner();
+  restoreTyped(typed);
+}
+
+function renderStockInner() {
   start();
 
   const q = norm($('search')?.value || '');
@@ -631,6 +664,7 @@ let scanStream = null, scanTimer = null, scanBox = null, scanBusy = false;
 let lastCode = '', lastCodeAt = 0;
 
 function clearScan() {
+  $('list')?.querySelectorAll?.(COUNT_SEL).forEach(el => { el.value = el.defaultValue; });
   scanList = []; scanHit = null;
   const si = $('search'); if (si) si.value = '';
   limit = PAGE;
@@ -768,4 +802,62 @@ function focusItem(item) {
     ? row.querySelector(`[data-count-ctn="${id}"]`)
     : row.querySelector(`[data-count-tot="${id}"]`);
   if (box) { box.focus({ preventScroll: true }); try { box.select(); } catch {} }
+}
+
+
+// ============================================================
+//  USB / Bluetooth BARCODE SCANNER (keyboard ki tarah likhta hai)
+//  Mobile (OTG) ya PC — bohat tez aane wale akshar + Enter/Tab = barcode.
+//  Kisi bhi khane mein cursor ho, barcode wahan nahi likha jata; item scan list mein judta hai.
+// ============================================================
+let kbBuf = '', kbFirst = 0, kbLast = 0, kbTarget = null, kbStartVal = null, kbTimer = null;
+const KB_GAP = 50;          // is se zyada ms ka faasla = insaan likh raha hai
+function kbReset() { kbBuf = ''; kbTarget = null; kbStartVal = null; clearTimeout(kbTimer); kbTimer = null; }
+function kbIsScan(now) {
+  const n = kbBuf.length;
+  return n >= 6 && (kbLast - kbFirst) / Math.max(1, n - 1) < 35 && now - kbLast < 150;
+}
+function kbFinish() {
+  const code = kbBuf.trim();
+  const target = kbTarget, startVal = kbStartVal;
+  kbReset();
+  // jo akshar kisi khane mein chale gaye, hata do
+  if (target && startVal !== null && 'value' in target) {
+    target.value = startVal;
+    if (target === $('search')) target.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  hardScan(code);
+}
+document.addEventListener('keydown', e => {
+  if (!stockActive || scanBox || e.ctrlKey || e.altKey || e.metaKey) return;
+  const now = performance.now();
+  if (e.key.length === 1) {
+    if (!kbBuf || now - kbLast > KB_GAP) {
+      kbBuf = ''; kbFirst = now;
+      kbTarget = e.target;
+      kbStartVal = e.target && 'value' in e.target ? e.target.value : null;
+    }
+    kbBuf += e.key; kbLast = now;
+    clearTimeout(kbTimer);
+    kbTimer = setTimeout(() => { if (kbIsScan(performance.now() - 60)) kbFinish(); else kbReset(); }, 120);   // scanner jo Enter na bheje
+    return;
+  }
+  if ((e.key === 'Enter' || e.key === 'Tab') && kbBuf) {
+    if (kbIsScan(now)) { e.preventDefault(); e.stopImmediatePropagation(); kbFinish(); }
+    else kbReset();
+  }
+}, true);
+
+function hardScan(code) {
+  if (!code) return;
+  const r = addScanned(code);
+  if (!r.state) {
+    notice(`"${code}" stock mein nahi mila`);
+    if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
+    return;
+  }
+  if (navigator.vibrate) navigator.vibrate(r.state === 'added' ? 80 : [40, 40, 40]);
+  notice(r.state === 'added' ? `✓ ${r.item.name} (list mein ${scanList.length})` : `${r.item.name} pehle se list mein hai`);
+  rerender();
+  setTimeout(() => focusItem(r.item), 80);
 }
