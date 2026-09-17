@@ -52,3 +52,15 @@ dialog.search-dialog #dialogBody{max-height:calc(var(--search-viewport-height,90
 .stock-head .sh-note{font-size:13px;margin-top:4px}
 .stock-row{border-bottom:1px solid #edf1f7;content-visibility:auto;contain-intrinsic-size:auto 170px}
 @media(max-width:460px){.summary>.stock-head{font-size:14px}}
+
+/* v1.45.4: barcode scan */
+.stock-head .account-tools button.sh-scan{background:#1258ce;color:#fff;font-size:15px;min-height:42px}
+.stock-hit{background:#fff8d6;outline:2px solid #f0b400;outline-offset:-2px}
+.scan-box{position:fixed;inset:0;background:#000d;z-index:50;display:flex;align-items:center;justify-content:center;padding:12px}
+.scan-inner{position:relative;width:min(480px,100%);background:#0b1a33;border-radius:16px;padding:10px;color:#fff;text-align:center}
+.scan-inner video{width:100%;max-height:60vh;border-radius:10px;background:#000;object-fit:cover;display:block}
+.scan-line{position:absolute;left:12%;right:12%;top:36%;height:2px;background:#ff3b3b;box-shadow:0 0 8px #ff3b3b}
+.scan-msg{margin:10px 4px 6px;font-size:15px}
+.scan-again{display:flex;gap:8px;align-items:center;justify-content:center;font-size:13px;margin:4px 0 10px}
+.scan-again input{width:auto}
+.scan-close{width:100%;background:#b32936;color:#fff}

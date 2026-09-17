@@ -283,6 +283,10 @@ function summaryHTML(branches, pick, items, meta, names) {
       <strong>${num(shownCount)} items</strong>
       <small>${esc(branchName(pick, names))} · kul ${num(totalPcs)} pcs${stamp ? ' · ' + esc(since(stamp)) : ''}</small>
     </div>
+    <div class="account-tools">
+      <button class="sh-wide sh-scan" data-stock-scan="1">📷 Barcode scan karein</button>
+      ${($('search')?.value || '').trim() ? '<button class="sh-wide" data-stock-clear="1">✕ Search saaf karein</button>' : ''}
+    </div>
     ${branchBar ? `<div class="sh-label">Branch</div>${branchBar}` : ''}
     <div class="sh-label">Dikhao</div>
     <div class="account-tools">
@@ -354,7 +358,7 @@ function rowHTML(r) {
     ? `${num(r.ctn)} ${esc(r.cName || 'Ctn')} + ${num(r.pcs)} ${esc(r.uName || 'Pcs')}`
     : `${num(r.stock)} ${esc(r.uName || 'Pcs')}`;
 
-  return `<div class="stock-row">
+  return `<div class="stock-row${String(r.id) === String(scanHit) ? ' stock-hit' : ''}" data-stock-row="${esc(r.id)}">
     <div class="party" style="border-bottom:0">
     <div class="name">
       <b>${esc(r.name)}</b>
@@ -374,6 +378,8 @@ function rowHTML(r) {
 document.addEventListener('click', e => {
   const b = e.target.closest?.('[data-stock-branch]');
   if (b) { branch = Number(b.dataset.stockBranch); limit = PAGE; rerender(); return; }
+  if (e.target.closest?.('[data-stock-scan]')) { openScanner(); return; }
+  if (e.target.closest?.('[data-stock-clear]')) { const si = $('search'); if (si) si.value = ''; scanHit = null; limit = PAGE; rerender(); return; }
   const hb = e.target.closest?.('[data-stock-hide]');
   if (hb) { toggleHidden(hb.dataset.stockHide, hb.checked, hb); return; }
   if (e.target.closest?.('[data-stock-more]')) { limit += PAGE; rerender(); return; }
@@ -530,9 +536,119 @@ async function saveCount(itemId, button) {
       ctn, pcs, total, at, history
     });
     notice(item.name + ' — ginti mehfooz');
+    if (String(scanHit) === String(item.id) && scanAgain()) setTimeout(openScanner, 400);
   } catch (e) {
     notice(e?.message || 'Ginti save nahi hui');
   } finally {
     button.disabled = false;
   }
+}
+
+// ============================================================
+//  BARCODE SCAN (mobile camera) — Chrome (Android) ka BarcodeDetector
+//  Scan hote hi item search mein aata hai aur us ki ginti wale khane par cursor chala jata hai
+// ============================================================
+let scanHit = null;
+const SCAN_AGAIN_KEY = 'stockScanAgain';
+const scanAgain = () => { try { return localStorage.getItem(SCAN_AGAIN_KEY) !== '0'; } catch { return true; } };
+let scanStream = null, scanTimer = null, scanBox = null, scanBusy = false;
+
+function closeScanner() {
+  clearTimeout(scanTimer); scanTimer = null;
+  if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+  if (scanBox) { scanBox.remove(); scanBox = null; }
+}
+
+async function openScanner() {
+  if (scanBox) return;
+  if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
+    notice('Is phone/browser mein camera scan nahi chalta. Android par Chrome istemal karein, ya code search mein likhein.');
+    return;
+  }
+  let formats = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'itf', 'codabar', 'qr_code'];
+  try { const sup = await BarcodeDetector.getSupportedFormats(); formats = formats.filter(f => sup.includes(f)); } catch {}
+  let detector;
+  try { detector = new BarcodeDetector({ formats }); } catch { detector = new BarcodeDetector(); }
+
+  scanBox = document.createElement('div');
+  scanBox.className = 'scan-box';
+  scanBox.innerHTML = `<div class="scan-inner">
+      <video playsinline muted autoplay></video>
+      <div class="scan-line"></div>
+      <p class="scan-msg">Barcode ko camera ke saamne rakhein…</p>
+      <label class="scan-again"><input type="checkbox"${scanAgain() ? ' checked' : ''}> Save ke baad agla scan khud khule</label>
+      <button type="button" class="scan-close">✕ Band karein</button>
+    </div>`;
+  document.body.appendChild(scanBox);
+  scanBox.querySelector('.scan-close').onclick = closeScanner;
+  scanBox.querySelector('.scan-again input').onchange = e => { try { localStorage.setItem(SCAN_AGAIN_KEY, e.target.checked ? '1' : '0'); } catch {} };
+  const video = scanBox.querySelector('video');
+  const msg = scanBox.querySelector('.scan-msg');
+
+  try {
+    scanStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+    });
+  } catch (e) {
+    closeScanner();
+    notice('Camera nahi khula: ' + (e?.name === 'NotAllowedError' ? 'camera ki ijazat dein (browser settings)' : (e?.message || e)));
+    return;
+  }
+  if (!scanBox) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; return; }
+  video.srcObject = scanStream;
+  try { await video.play(); } catch {}
+
+  const loop = async () => {
+    if (!scanBox) return;
+    if (!scanBusy && video.readyState >= 2) {
+      scanBusy = true;
+      try {
+        const found = await detector.detect(video);
+        const code = found.map(f => String(f.rawValue || '').trim()).find(Boolean);
+        if (code) {
+          if (goToCode(code)) { closeScanner(); scanBusy = false; return; }
+          msg.textContent = `"${code}" stock mein nahi mila — doosra scan karein`;
+          if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
+          scanBusy = false;
+          scanTimer = setTimeout(loop, 1500);
+          return;
+        }
+      } catch {}
+      scanBusy = false;
+    }
+    scanTimer = setTimeout(loop, 180);
+  };
+  loop();
+}
+
+// code se item dhoondo (is branch mein), search mein daalo, us ki ginti par cursor
+function goToCode(code) {
+  const clean = String(code).trim();
+  const bare = clean.replace(/^0+/, '');
+  const { items } = collect();
+  const item = items.find(r => String(r.code || '').trim() === clean)
+    || items.find(r => bare && String(r.code || '').trim().replace(/^0+/, '') === bare);
+  if (!item) return false;
+  if (navigator.vibrate) navigator.vibrate(80);
+  const si = $('search');
+  if (si) si.value = String(item.code).trim();
+  if (isHidden(item)) filter = 'hidden';
+  else if (!passes(item)) filter = 'all';
+  scanHit = item.id;
+  limit = PAGE;
+  rerender();
+  setTimeout(() => focusItem(item), 60);
+  return true;
+}
+
+function focusItem(item) {
+  const id = CSS.escape(String(item.id));
+  const row = document.querySelector(`[data-stock-row="${id}"]`);
+  if (!row) return;
+  row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  const box = Number(item.pack) > 1
+    ? row.querySelector(`[data-count-ctn="${id}"]`)
+    : row.querySelector(`[data-count-tot="${id}"]`);
+  if (box) { box.focus({ preventScroll: true }); try { box.select(); } catch {} }
+  notice(item.name + ' — ginti likhein');
 }
