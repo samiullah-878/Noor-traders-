@@ -234,6 +234,22 @@ export function renderStock() {
     return;
   }
 
+  if (scanList.length) {
+    // SCAN LIST: sirf scan kiye hue items, scan ki tarteeb mein (filter/search nahi lagta)
+    const byId = new Map(items.map(r => [String(r.id), r]));
+    const shownScan = scanList.map(id => byId.get(String(id))).filter(Boolean);
+    $('list').innerHTML = `<div class="scan-bar">
+        <b>Scan list: ${num(shownScan.length)} items</b>
+        <small>Har item ki ginti likhein (Enter = agla khana), phir neeche "Sab save karein"</small>
+      </div>` + shownScan.map(rowHTML).join('') +
+      `<div class="account-tools scan-foot">
+        <button class="sh-wide scan-save" data-scan-saveall="1">💾 Sab save karein (${num(shownScan.length)})</button>
+        <button class="sh-wide" data-stock-scan="1">📷 Aur scan karein</button>
+        <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>
+      </div>`;
+    return;
+  }
+
   let shown = items.filter(passes);
   if (q) shown = shown.filter(r => norm(r.name).includes(q) || norm(r.code).includes(q)
     || (Array.isArray(r.bc) && r.bc.some(b => norm(b).includes(q))));
@@ -285,8 +301,11 @@ function summaryHTML(branches, pick, items, meta, names) {
       <small>${esc(branchName(pick, names))} · kul ${num(totalPcs)} pcs${stamp ? ' · ' + esc(since(stamp)) : ''}</small>
     </div>
     <div class="account-tools">
-      <button class="sh-wide sh-scan" data-stock-scan="1">📷 Barcode scan karein</button>
-      ${($('search')?.value || '').trim() ? '<button class="sh-wide" data-stock-clear="1">✕ Search saaf karein</button>' : ''}
+      ${scanList.length
+        ? `<button class="sh-wide sh-scan" data-stock-scan="1">📷 Aur scan karein (${num(scanList.length)} list mein)</button>
+           <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>`
+        : `<button class="sh-wide sh-scan" data-stock-scan="1">📷 Barcode scan karein (ek ya kai items)</button>
+           ${($('search')?.value || '').trim() ? '<button class="sh-wide" data-stock-clear="1">✕ Search saaf karein</button>' : ''}`}
     </div>
     ${branchBar ? `<div class="sh-label">Branch</div>${branchBar}` : ''}
     <div class="sh-label">Dikhao</div>
@@ -380,7 +399,9 @@ document.addEventListener('click', e => {
   const b = e.target.closest?.('[data-stock-branch]');
   if (b) { branch = Number(b.dataset.stockBranch); limit = PAGE; rerender(); return; }
   if (e.target.closest?.('[data-stock-scan]')) { openScanner(); return; }
-  if (e.target.closest?.('[data-stock-clear]')) { const si = $('search'); if (si) si.value = ''; scanHit = null; limit = PAGE; rerender(); return; }
+  if (e.target.closest?.('[data-stock-clear]')) { clearScan(); return; }
+  const sa = e.target.closest?.('[data-scan-saveall]');
+  if (sa) { saveAll(sa); return; }
   const hb = e.target.closest?.('[data-stock-hide]');
   if (hb) { toggleHidden(hb.dataset.stockHide, hb.checked, hb); return; }
   if (e.target.closest?.('[data-stock-more]')) { limit += PAGE; rerender(); return; }
@@ -494,50 +515,60 @@ async function startNewRound() {
   catch (e) { notice(e?.message || 'Nahi hua'); }
 }
 
-async function saveCount(itemId, button) {
-  if (!round) { notice('Pehle "Nayi ginti shuru" dabayein'); return; }
-  const { items } = collect();
-  const item = items.find(r => String(r.id) === String(itemId));
-  if (!item) return;
-
-  const box = sel => $('list').querySelector(`[data-count-${sel}="${CSS.escape(String(itemId))}"]`);
+// Ek item ke khanon se ginti parho. skipBlank=true: teeno khane khali hon to null
+function readCount(item, skipBlank) {
+  const id = CSS.escape(String(item.id));
+  const box = sel => $('list').querySelector(`[data-count-${sel}="${id}"]`);
   const per = Number(item.pack) || 0;
   const rawTot = (box('tot')?.value ?? '').trim();
+  const rawCtn = (box('ctn')?.value ?? '').trim();
+  const rawPcs = (box('pcs')?.value ?? '').trim();
+  if (skipBlank && rawTot === '' && rawCtn === '' && rawPcs === '') return null;
   let ctn, pcs, total;
-
   if (rawTot !== '') {
     // Sirf kul pieces likhe gaye — carton khud ban jayega
     total = Math.round(Number(rawTot) * 100) / 100;
     ctn = per > 1 ? Math.floor(total / per) : 0;
     pcs = Math.round((total - ctn * (per > 1 ? per : 0)) * 100) / 100;
   } else {
-    ctn = Number(box('ctn')?.value || 0);
-    pcs = Number(box('pcs')?.value || 0);
+    ctn = Number(rawCtn || 0);
+    pcs = Number(rawPcs || 0);
     total = Math.round((ctn * (per > 0 ? per : 1) + pcs) * 100) / 100;
   }
+  return { ctn, pcs, total, bad: !Number.isFinite(total) || !Number.isFinite(ctn) || !Number.isFinite(pcs) };
+}
 
-  if (!Number.isFinite(total)) { notice('Ginti sahi likhein'); return; }
-  if (total === 0) {
-    const gap = -Number(item.stock || 0);
-    const rs = item.prate ? ` (Rs ${num(gap * item.prate)})` : '';
-    if (!confirm(`"${item.name}" ki ginti ZERO save karein?\n\nSystem mein: ${num(item.stock)} ${item.uName || 'Pcs'}\nFarq: ${gap > 0 ? '+' : ''}${num(gap)}${rs}`)) return;
-  }
-
+async function writeCount(item, v) {
   const at = Date.now();
   const old = counts.get(countId(pickedBranch, item.id));
   const past = Array.isArray(old?.history) ? old.history : [];
-  const history = [...past, { at, ctn, pcs, total, sys: item.stock }].slice(-20);
+  const history = [...past, { at, ctn: v.ctn, pcs: v.pcs, total: v.total, sys: item.stock }].slice(-20);
+  await cloud.saveStockCount({
+    id: countId(pickedBranch, item.id),
+    round, branch: pickedBranch, itemId: item.id,
+    name: item.name, sys: item.stock,
+    ctn: v.ctn, pcs: v.pcs, total: v.total, at, history
+  });
+}
 
+const zeroText = item => {
+  const gap = -Number(item.stock || 0);
+  const rs = item.prate ? ` (Rs ${num(gap * item.prate)})` : '';
+  return `System mein: ${num(item.stock)} ${item.uName || 'Pcs'} · Farq: ${gap > 0 ? '+' : ''}${num(gap)}${rs}`;
+};
+
+async function saveCount(itemId, button) {
+  if (!round) { notice('Pehle "Nayi ginti shuru" dabayein'); return; }
+  const { items } = collect();
+  const item = items.find(r => String(r.id) === String(itemId));
+  if (!item) return;
+  const v = readCount(item, false);
+  if (v.bad) { notice('Ginti sahi likhein'); return; }
+  if (v.total === 0 && !confirm(`"${item.name}" ki ginti ZERO save karein?\n\n${zeroText(item)}`)) return;
   button.disabled = true;
   try {
-    await cloud.saveStockCount({
-      id: countId(pickedBranch, item.id),
-      round, branch: pickedBranch, itemId: item.id,
-      name: item.name, sys: item.stock,
-      ctn, pcs, total, at, history
-    });
+    await writeCount(item, v);
     notice(item.name + ' — ginti mehfooz');
-    if (String(scanHit) === String(item.id) && scanAgain()) setTimeout(openScanner, 400);
   } catch (e) {
     notice(e?.message || 'Ginti save nahi hui');
   } finally {
@@ -545,19 +576,102 @@ async function saveCount(itemId, button) {
   }
 }
 
+// Scan list ke sab items ek dafa save (jin ki ginti likhi hai aur badli hai)
+async function saveAll(button) {
+  if (!round) { notice('Pehle "Nayi ginti shuru" dabayein'); return; }
+  const { items } = collect();
+  const byId = new Map(items.map(r => [String(r.id), r]));
+  const jobs = [], bad = [];
+  for (const id of scanList) {
+    const item = byId.get(String(id));
+    if (!item) continue;
+    const v = readCount(item, true);
+    if (!v) continue;
+    if (v.bad) { bad.push(item.name); continue; }
+    const old = countOf(pickedBranch, item);
+    if (old && Number(old.total) === v.total && Number(old.ctn) === v.ctn && Number(old.pcs) === v.pcs) continue;  // pehle se yahi save hai
+    jobs.push([item, v]);
+  }
+  if (bad.length) { notice('Ginti sahi likhein: ' + bad.join(', ')); return; }
+  if (!jobs.length) { notice('Koi nayi ginti nahi likhi (ya sab pehle se save hain)'); return; }
+  const zeros = jobs.filter(([, v]) => v.total === 0);
+  const lines = jobs.map(([it, v]) => `• ${it.name}: ${num(v.total)}${v.total === 0 ? '  ← ZERO (' + zeroText(it) + ')' : ''}`);
+  if (!confirm(`${jobs.length} items ki ginti save karein?${zeros.length ? `\n\n${zeros.length} item ZERO hain!` : ''}\n\n${lines.join('\n')}`)) return;
+  button.disabled = true;
+  let ok = 0;
+  const fail = [];
+  for (const [item, v] of jobs) {
+    try { await writeCount(item, v); ok++; }
+    catch (e) { fail.push(item.name); }
+  }
+  button.disabled = false;
+  notice(fail.length ? `${ok} save hue · NAHI hue: ${fail.join(', ')}` : `${ok} items ki ginti mehfooz ✓`);
+}
+
+// Enter dabane par agla ginti ka khana
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || !e.target.matches?.('[data-count-ctn],[data-count-pcs],[data-count-tot]')) return;
+  const all = [...($('list')?.querySelectorAll('[data-count-ctn],[data-count-pcs],[data-count-tot]') || [])];
+  const i = all.indexOf(e.target);
+  if (i < 0) return;
+  e.preventDefault();
+  const next = all[i + 1];
+  if (next) { next.focus(); try { next.select(); } catch {} next.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+  else e.target.blur();
+});
+
 // ============================================================
 //  BARCODE SCAN (mobile camera) — Chrome (Android) ka BarcodeDetector
-//  Scan hote hi item search mein aata hai aur us ki ginti wale khane par cursor chala jata hai
+//  Camera khula rehta hai: ek ke baad ek items scan karein -> "Ho gaya" -> sirf woh items ki list
+//  -> ginti likh kar "Sab save karein" -> "Saaf karein" se wapas poori list
 // ============================================================
 let scanHit = null;
-const SCAN_AGAIN_KEY = 'stockScanAgain';
-const scanAgain = () => { try { return localStorage.getItem(SCAN_AGAIN_KEY) !== '0'; } catch { return true; } };
+let scanList = [];        // scan kiye hue item ids (tarteeb se)
 let scanStream = null, scanTimer = null, scanBox = null, scanBusy = false;
+let lastCode = '', lastCodeAt = 0;
+
+function clearScan() {
+  scanList = []; scanHit = null;
+  const si = $('search'); if (si) si.value = '';
+  limit = PAGE;
+  rerender();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
 function closeScanner() {
   clearTimeout(scanTimer); scanTimer = null;
   if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
   if (scanBox) { scanBox.remove(); scanBox = null; }
+}
+
+function finishScan() {
+  closeScanner();
+  if (!scanList.length) return;
+  rerender();
+  const { items } = collect();
+  const first = items.find(r => String(r.id) === String(scanList[0]));
+  if (first) setTimeout(() => focusItem(first), 80);
+}
+
+// code se item dhoondo (is branch mein): ItemCode + POS ke baqi barcode
+function findByCode(code) {
+  const clean = String(code).trim();
+  const bare = clean.replace(/^0+/, '');
+  const { items } = collect();
+  const codesOf = r => [r.code, ...(Array.isArray(r.bc) ? r.bc : [])].map(x => String(x || '').trim()).filter(Boolean);
+  return items.find(r => codesOf(r).includes(clean))
+    || items.find(r => bare && codesOf(r).some(x => x.replace(/^0+/, '') === bare))
+    || null;
+}
+
+// scan list mein daalo. Wapas: 'added' | 'again' | null (nahi mila)
+function addScanned(code) {
+  const item = findByCode(code);
+  if (!item) return { state: null };
+  if (scanList.some(id => String(id) === String(item.id))) return { state: 'again', item };
+  scanList.push(item.id);
+  scanHit = item.id;
+  return { state: 'added', item };
 }
 
 async function openScanner() {
@@ -576,15 +690,26 @@ async function openScanner() {
   scanBox.innerHTML = `<div class="scan-inner">
       <video playsinline muted autoplay></video>
       <div class="scan-line"></div>
-      <p class="scan-msg">Barcode ko camera ke saamne rakhein…</p>
-      <label class="scan-again"><input type="checkbox"${scanAgain() ? ' checked' : ''}> Save ke baad agla scan khud khule</label>
+      <p class="scan-msg">Barcode camera ke saamne rakhein — ek ke baad ek scan karte jayein</p>
+      <ol class="scan-names"></ol>
+      <button type="button" class="scan-done">✓ Ho gaya — list dikhao (<span>0</span>)</button>
       <button type="button" class="scan-close">✕ Band karein</button>
     </div>`;
   document.body.appendChild(scanBox);
-  scanBox.querySelector('.scan-close').onclick = closeScanner;
-  scanBox.querySelector('.scan-again input').onchange = e => { try { localStorage.setItem(SCAN_AGAIN_KEY, e.target.checked ? '1' : '0'); } catch {} };
-  const video = scanBox.querySelector('video');
   const msg = scanBox.querySelector('.scan-msg');
+  const namesBox = scanBox.querySelector('.scan-names');
+  const countBox = scanBox.querySelector('.scan-done span');
+  const { items } = collect();
+  const byId = new Map(items.map(r => [String(r.id), r]));
+  const drawNames = () => {
+    countBox.textContent = scanList.length;
+    namesBox.innerHTML = scanList.slice(-4).map(id => `<li>${esc(byId.get(String(id))?.name || id)}</li>`).join('');
+    namesBox.start = Math.max(1, scanList.length - 3);
+  };
+  drawNames();
+  scanBox.querySelector('.scan-done').onclick = finishScan;
+  scanBox.querySelector('.scan-close').onclick = finishScan;
+  const video = scanBox.querySelector('video');
 
   try {
     scanStream = await navigator.mediaDevices.getUserMedia({
@@ -601,46 +726,37 @@ async function openScanner() {
 
   const loop = async () => {
     if (!scanBox) return;
+    let wait = 180;
     if (!scanBusy && video.readyState >= 2) {
       scanBusy = true;
       try {
         const found = await detector.detect(video);
         const code = found.map(f => String(f.rawValue || '').trim()).find(Boolean);
-        if (code) {
-          if (goToCode(code)) { closeScanner(); scanBusy = false; return; }
-          msg.textContent = `"${code}" stock mein nahi mila — doosra scan karein`;
-          if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
-          scanBusy = false;
-          scanTimer = setTimeout(loop, 1500);
-          return;
+        const now = Date.now();
+        if (code && !(code === lastCode && now - lastCodeAt < 2500)) {   // wahi barcode dobara foran na gine
+          lastCode = code; lastCodeAt = now;
+          const r = addScanned(code);
+          if (r.state === 'added') {
+            msg.textContent = `✓ ${r.item.name} — agla scan karein`;
+            if (navigator.vibrate) navigator.vibrate(80);
+            drawNames();
+            wait = 900;
+          } else if (r.state === 'again') {
+            msg.textContent = `"${r.item.name}" pehle se list mein hai`;
+            if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
+            wait = 900;
+          } else {
+            msg.textContent = `"${code}" stock mein nahi mila — doosra scan karein`;
+            if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
+            wait = 1200;
+          }
         }
       } catch {}
       scanBusy = false;
     }
-    scanTimer = setTimeout(loop, 180);
+    scanTimer = setTimeout(loop, wait);
   };
   loop();
-}
-
-// code se item dhoondo (is branch mein), search mein daalo, us ki ginti par cursor
-function goToCode(code) {
-  const clean = String(code).trim();
-  const bare = clean.replace(/^0+/, '');
-  const { items } = collect();
-  const codesOf = r => [r.code, ...(Array.isArray(r.bc) ? r.bc : [])].map(x => String(x || '').trim()).filter(Boolean);
-  const item = items.find(r => codesOf(r).includes(clean))
-    || items.find(r => bare && codesOf(r).some(x => x.replace(/^0+/, '') === bare));
-  if (!item) return false;
-  if (navigator.vibrate) navigator.vibrate(80);
-  const si = $('search');
-  if (si) si.value = clean;
-  if (isHidden(item)) filter = 'hidden';
-  else if (!passes(item)) filter = 'all';
-  scanHit = item.id;
-  limit = PAGE;
-  rerender();
-  setTimeout(() => focusItem(item), 60);
-  return true;
 }
 
 function focusItem(item) {
@@ -652,5 +768,4 @@ function focusItem(item) {
     ? row.querySelector(`[data-count-ctn="${id}"]`)
     : row.querySelector(`[data-count-tot="${id}"]`);
   if (box) { box.focus({ preventScroll: true }); try { box.select(); } catch {} }
-  notice(item.name + ' — ginti likhein');
 }

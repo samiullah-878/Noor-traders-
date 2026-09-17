@@ -85,3 +85,17 @@ Baqi / yaad rakhein
   Pehli run par log mein likhta hai: "Barcode khane: <table>.<khana>".
 - pos-stock.js: scan aur search dono ab `code` + `bc` mein dhoondte hain (shuru ke zero nazar-andaz).
 - Abhi barcode ki Qty (maslan carton barcode = 12) istemal nahi hoti; scan sirf item tak le jata hai.
+- POS mein barcode table: ItemSubCode, khana SBBarCode (1076 active items mein se 788 ka ItemCode khud barcode hai).
+  sync-stock.js ab "%subcode%" wali table bhi dekhta hai (stock-barcode-v4).
+
+==============================================================
+2026-09-17 — v1.45.6: kai items ek sath scan (scan list)
+==============================================================
+- Camera khula rehta hai; har scan item ko `scanList` mein daalta hai (vibrate, aakhri 4 naam nazar aate hain).
+  Wahi barcode 2.5 second tak dobara nahi gina jata; pehle se list wala item dobara nahi judta.
+- "✓ Ho gaya" -> screen par SIRF scan wale items (scan ki tarteeb mein), pehle item ke khane par cursor.
+- Enter = agla ginti khana. "💾 Sab save karein" -> jin items ki ginti likhi/badli hai sab ek confirm ke saath save
+  (ZERO walon ka alag zikr). Khali khanon wale items chhor diye jate hain.
+- "✕ Saaf karein" -> scanList khali, search khali, wapas poori list. Phir "📷" se naya scan.
+- Purana "save ke baad agla scan khud khule" option hata diya (is naye tareeqe ki wajah se).
+- Code: pos-stock.js — readCount / writeCount / saveCount / saveAll / addScanned / findByCode / finishScan / clearScan.

@@ -64,3 +64,15 @@ dialog.search-dialog #dialogBody{max-height:calc(var(--search-viewport-height,90
 .scan-again{display:flex;gap:8px;align-items:center;justify-content:center;font-size:13px;margin:4px 0 10px}
 .scan-again input{width:auto}
 .scan-close{width:100%;background:#b32936;color:#fff}
+
+/* v1.45.6: kai items scan */
+.stock-head .account-tools button.sh-clear{background:#fff0f1;color:#b32936}
+.scan-bar{background:#fff8d6;border:1px solid #f0d27a;border-radius:12px;padding:10px 12px;margin:0 0 8px}
+.scan-bar b{display:block;font-size:16px}
+.scan-bar small{color:#6b5a1e}
+.scan-foot{margin:14px 0 30px}
+.scan-foot button{flex:1 1 100%}
+.scan-foot button.scan-save{background:#138150;color:#fff;font-size:16px;min-height:48px}
+.scan-foot button.sh-clear{background:#fff0f1;color:#b32936}
+.scan-names{text-align:left;margin:4px 0 8px;padding-left:28px;font-size:14px;max-height:6.5em;overflow:hidden}
+.scan-done{width:100%;background:#138150;color:#fff;margin-bottom:8px}
