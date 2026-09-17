@@ -41,3 +41,14 @@ dialog.search-dialog #dialogBody{max-height:calc(var(--search-viewport-height,90
 .stock-head .account-tools button.sh-wide{flex-basis:100%}
 .stock-head .sh-note{font-size:14px;color:#44566f;margin-top:6px}
 .stock-head .account-tools small{flex-basis:100%}
+
+/* v1.45.2: chhote buttons + tez list */
+.stock-head .sh-title strong{font-size:20px}
+.stock-head .sh-title small{font-size:12px}
+.stock-head .sh-label{font-size:11px;margin:8px 0 0;padding-top:8px}
+.stock-head .account-tools{gap:6px;margin:6px 0}
+.stock-head .account-tools button{flex:1 1 calc(33.33% - 6px);padding:6px 6px;min-height:34px;font-size:13px;border-radius:9px}
+.stock-head .account-tools button.sh-wide{flex-basis:100%}
+.stock-head .sh-note{font-size:13px;margin-top:4px}
+.stock-row{border-bottom:1px solid #edf1f7;content-visibility:auto;contain-intrinsic-size:auto 170px}
+@media(max-width:460px){.summary>.stock-head{font-size:14px}}

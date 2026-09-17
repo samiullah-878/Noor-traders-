@@ -4,9 +4,11 @@
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
-const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
+const NUMF = new Intl.NumberFormat('en-PK');   // ek hi dafa banao (har number par naya banana bohat slow tha)
+const num = n => NUMF.format(Math.round((Number(n) || 0) * 100) / 100);
+const NAMEC = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
 
-const PAGE = 60;        // ek dafa itni rows — baqi "Aur dikhao" se (phone tez rahe)
+const PAGE = 30;        // ek dafa itni rows — baqi "Aur dikhao" se (phone tez rahe)
 let limit = PAGE;
 
 let cloud = null, rerender = () => {}, notice = () => {};
@@ -236,7 +238,7 @@ export function renderStock() {
   if (q) shown = shown.filter(r => norm(r.name).includes(q) || norm(r.code).includes(q));
 
   if (sort === 'stock') shown.sort((a, b) => b.stock - a.stock);
-  else shown.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  else shown.sort((a, b) => NAMEC.compare(String(a.name), String(b.name)));
 
   const extra = shown.length - limit;
   const list = shown.slice(0, limit);
@@ -352,7 +354,7 @@ function rowHTML(r) {
     ? `${num(r.ctn)} ${esc(r.cName || 'Ctn')} + ${num(r.pcs)} ${esc(r.uName || 'Pcs')}`
     : `${num(r.stock)} ${esc(r.uName || 'Pcs')}`;
 
-  return `<div style="border-bottom:1px solid #edf1f7">
+  return `<div class="stock-row">
     <div class="party" style="border-bottom:0">
     <div class="name">
       <b>${esc(r.name)}</b>
