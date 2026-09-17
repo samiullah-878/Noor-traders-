@@ -1,0 +1,87 @@
+AI_NOTES.txt — Sam Blue Khata / Noor Traders
+Kaam ka khulasa (doosre AI / developer ke liye). Har update ke saath is file mein naya hissa jorein.
+NOTE: Yeh repository PUBLIC hai. Is file mein koi password, key, account number ya ID na likhein.
+
+==============================================================
+SYSTEM KA NAQSHA
+==============================================================
+1) Mobile/Web app (yeh repository, GitHub Pages)
+   - Firebase project: note-traders-khata-7ccc1 (Blaze plan, $5 budget alert laga hai)
+   - Business id: noor-traders
+   - Stock tab ka code: pos-stock.js (+ style.css)
+   - Version badalne par yeh sab jagah version number badalta hai:
+     app.js, cloud.js, index.html, sw.js, version.json
+
+2) Shop PC (Windows, folder C:\khata-sync) — Node.js scripts, SQL Server Express (database POS)
+   Chaar loops hamesha chalte hain (har loop .bat se, band ho to khud dobara):
+   - khata-sync-auto.bat -> pos-khata-sync.js --auto  (app <-> POS accounts/vouchers, rasid print)
+   - farq-auto.bat       -> post-farq.js --auto       (stock ginti farq bill, "Band" items)
+   - stock-auto.bat      -> sync-stock.js             (POS stock -> app, har 2 minute)
+   - bills-auto.bat      -> sync-bills.js             (purchase bills -> app, har 2 minute)
+   - khata-auto.bat (purana sync.js) start-all mein BAND hai.
+   - SQL ki settings sirf sync-stock.js ke SQL_CONFIG mein; baqi scripts wahin se parhti hain.
+   - Firebase key: C:\khata-sync\firebase-key.json (repo mein kabhi na daalein)
+
+==============================================================
+2026-09-17 — KIYA GAYA KAAM
+==============================================================
+PC restart / auto start
+- SQL Server (MSSQL$SQLEXPRESS) Automatic + band ho to khud restart.
+- Task Scheduler: "KhataSync-StartAll" (Dell user login ke 1 minute baad) -> C:\khata-sync\start-all.ps1
+  start-all.ps1 SQL ka intezar karta hai aur har loop sirf tab chalata hai jab woh pehle se na chal raha ho
+  (double entry se bachao). Log: start-all-log.txt
+- Purana task "Khata Sync" Disabled hai. Startup folder mein purani .vbs files hain (masla nahi).
+- Printer: Windows ka "default printer khud badalna" band kiya (LegacyDefaultPrinterMode=1);
+  rasid default printer par jati hai (notepad /p).
+
+Firebase quota
+- 16 Sep ko reads 68K (free had 50K) -> "Quota exceeded". Wajah: post-farq har 20 second poori ginti list parhta tha.
+- Hal: post-farq ab listeners istemal karta hai (v10). Blaze plan on kiya.
+
+pos-khata-sync.js
+- App mein entry save hote hi 3 second mein POS voucher (pehle 60 second). 60 second loop ab bhi ehtiyat ke liye.
+- App se entry delete -> POS voucher delete + "ENTRY DELETE HO GAYI" rasid print + app doc par posDeletedAt.
+- "khata-sync.pause" file ho to sync ruka rehta hai (aaj yahi masla tha, file delete ki).
+
+post-farq.js (v10)
+- _post, _round, _hidden docs par listener: bill ki list/bill 2-5 second mein (pehle 20-40 second).
+- "Band" feature: app mein Band tick -> POS mein stock 0 (stock fraq ka sale/return bill, khareed bhao par)
+  + item INACTIVE + "ITEM BAND - STOCK 0" rasid. Tick hataya -> item dobara ACTIVE (stock wapas nahi).
+  Feature se pehle ke band items ko nahi chheda jata (band-state.json mein "old").
+  Purane band items: node post-farq.js --band-old  (list)  /  --band-old --yes  (karo)
+- Aaj band-old ke 2 "–" items ka kaam chalaya gaya.
+
+sync-stock.js
+- INCLUDE_ZERO = true  (zero stock items app mein aate hain)
+- SKIP_INACTIVE = true (POS mein inactive items aur jin ka naam sirf "-"/"–"/khali hai, app mein nahi aate)
+
+items-clean.js
+- "–" naam wale / inactive-magar-stock-wale items ka stock 0 + inactive. Aaj list khali thi (kaam pehle ho chuka).
+
+App (pos-stock.js) versions
+- v1.45.1: Stock tab ke buttons hisson mein (Branch / Dikhao / Ginti / Tarteeb).
+- v1.45.2: Tez: Intl.NumberFormat ek dafa banaya (pehle har number par naya — bohat slow),
+           Collator se sort, 30 rows ek dafa, content-visibility. Buttons chhote (3 ek qatar mein).
+- v1.45.3: Ginti 0 save karne par confirm; Band tick lagane/hatane par confirm (cancel par tick wapas).
+- v1.45.4: "📷 Barcode scan karein" (Android Chrome BarcodeDetector). Scan -> item search mein,
+           peeli highlight, cursor Ctn (carton wale) ya Kul Pcs par. Save ke baad agla scan khud (option,
+           localStorage "stockScanAgain"). Code ItemCode se milta hai, shuru ke zero nazar-andaz.
+
+Check karne ki commands (PC, CMD)
+- Loops:   powershell -c "gcim Win32_Process | ? Name -eq 'node.exe' | % CommandLine"
+- Logs:    powershell -c "gc C:\khata-sync\khata-sync-log.txt -Tail 10"   (farq-log.txt, stock-log.txt, bills-log.txt)
+- Printer: powershell -c "gcim Win32_Printer | ? Default | % Name"
+
+Baqi / yaad rakhein
+- Kal Firebase Usage and billing mein 17 Sep ki reads dekhni hain (50K se kam honi chahiyein).
+- Purani backup files PC par: post-farq.old.js, post-farq.v2old.js, pos-khata-sync.old.js, sync-stock.old.js, sync-stock.v2old.js
+
+==============================================================
+2026-09-17 (baad mein) — v1.45.5: POS ke saare barcode
+==============================================================
+- POS item screen mein "SB Barcode" grid hai: ek item ke kai barcode (Qty, Sale Rate ke saath).
+- sync-stock.js: table khud dhoondta hai (naam mein "barcode" + ItemID khana, ya Items ka barcode khana)
+  aur har item ke baqi barcode `bc: [...]` mein app ko bhejta hai (ItemCode `code` mein hi rehta hai).
+  Pehli run par log mein likhta hai: "Barcode khane: <table>.<khana>".
+- pos-stock.js: scan aur search dono ab `code` + `bc` mein dhoondte hain (shuru ke zero nazar-andaz).
+- Abhi barcode ki Qty (maslan carton barcode = 12) istemal nahi hoti; scan sirf item tak le jata hai.

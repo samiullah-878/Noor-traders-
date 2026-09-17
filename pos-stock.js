@@ -235,7 +235,8 @@ export function renderStock() {
   }
 
   let shown = items.filter(passes);
-  if (q) shown = shown.filter(r => norm(r.name).includes(q) || norm(r.code).includes(q));
+  if (q) shown = shown.filter(r => norm(r.name).includes(q) || norm(r.code).includes(q)
+    || (Array.isArray(r.bc) && r.bc.some(b => norm(b).includes(q))));
 
   if (sort === 'stock') shown.sort((a, b) => b.stock - a.stock);
   else shown.sort((a, b) => NAMEC.compare(String(a.name), String(b.name)));
@@ -626,12 +627,13 @@ function goToCode(code) {
   const clean = String(code).trim();
   const bare = clean.replace(/^0+/, '');
   const { items } = collect();
-  const item = items.find(r => String(r.code || '').trim() === clean)
-    || items.find(r => bare && String(r.code || '').trim().replace(/^0+/, '') === bare);
+  const codesOf = r => [r.code, ...(Array.isArray(r.bc) ? r.bc : [])].map(x => String(x || '').trim()).filter(Boolean);
+  const item = items.find(r => codesOf(r).includes(clean))
+    || items.find(r => bare && codesOf(r).some(x => x.replace(/^0+/, '') === bare));
   if (!item) return false;
   if (navigator.vibrate) navigator.vibrate(80);
   const si = $('search');
-  if (si) si.value = String(item.code).trim();
+  if (si) si.value = clean;
   if (isHidden(item)) filter = 'hidden';
   else if (!passes(item)) filter = 'all';
   scanHit = item.id;
