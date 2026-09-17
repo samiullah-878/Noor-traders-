@@ -459,7 +459,14 @@ async function requestPost() {
 }
 
 async function toggleHidden(id, on, box) {
-  if (!cloud?.setStockHidden || !isOwner()) return;
+  if (!cloud?.setStockHidden || !isOwner()) { box.checked = !on; return; }
+  const item = collect().items.find(r => String(r.id) === String(id));
+  const nm = item ? item.name : 'Yeh item';
+  const stk = item ? `\nAbhi stock: ${num(item.stock)} ${item.uName || 'Pcs'}` : '';
+  const msg = on
+    ? `"${nm}" BAND karein?${stk}\n\nPC par POS mein is ka stock 0 ho jayega (stock fraq ka bill banega) aur item INACTIVE ho jayega.`
+    : `"${nm}" ko wapas chalu karein?\n\nPOS mein item dobara ACTIVE ho jayega (stock 0 hi rahega).`;
+  if (!confirm(msg)) { box.checked = !on; return; }
   const next = { ...hidden };
   if (on) next[String(id)] = true; else delete next[String(id)];
   box.disabled = true;
@@ -500,6 +507,13 @@ async function saveCount(itemId, button) {
     ctn = Number(box('ctn')?.value || 0);
     pcs = Number(box('pcs')?.value || 0);
     total = Math.round((ctn * (per > 0 ? per : 1) + pcs) * 100) / 100;
+  }
+
+  if (!Number.isFinite(total)) { notice('Ginti sahi likhein'); return; }
+  if (total === 0) {
+    const gap = -Number(item.stock || 0);
+    const rs = item.prate ? ` (Rs ${num(gap * item.prate)})` : '';
+    if (!confirm(`"${item.name}" ki ginti ZERO save karein?\n\nSystem mein: ${num(item.stock)} ${item.uName || 'Pcs'}\nFarq: ${gap > 0 ? '+' : ''}${num(gap)}${rs}`)) return;
   }
 
   const at = Date.now();
