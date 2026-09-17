@@ -43,8 +43,9 @@ pos-khata-sync.js
 - App se entry delete -> POS voucher delete + "ENTRY DELETE HO GAYI" rasid print + app doc par posDeletedAt.
 - "khata-sync.pause" file ho to sync ruka rehta hai (aaj yahi masla tha, file delete ki).
 
-post-farq.js (v10)
-- _post, _round, _hidden docs par listener: bill ki list/bill 2-5 second mein (pehle 20-40 second).
+post-farq.js (v9 — NOTE: yahan pehle galti se v10 likha tha)
+- Is din sirf _hidden aur ginti (round) par listener laga; _round aur _post abhi get() se parhe jate the.
+  Asal v10 neeche 2026-09-17 (shaam) mein hai.
 - "Band" feature: app mein Band tick -> POS mein stock 0 (stock fraq ka sale/return bill, khareed bhao par)
   + item INACTIVE + "ITEM BAND - STOCK 0" rasid. Tick hataya -> item dobara ACTIVE (stock wapas nahi).
   Feature se pehle ke band items ko nahi chheda jata (band-state.json mein "old").
@@ -113,3 +114,81 @@ Baqi / yaad rakhein
 - Mobile par: USB-C OTG adapter (USB-C male -> USB-A female) se scanner lagta hai. Kuch bare
   (omni/table) scanner ko zyada bijli chahiye; na chale to powered OTG hub.
 - PC browser mein bhi yahi scanner isi tarah kaam karta hai.
+
+==============================================================
+2026-09-17 (shaam) — PC scripts ki jaanch aur 4 islahat (app files nahi badli)
+==============================================================
+Jaanch mein mila:
+- PC par post-farq v9 chal raha tha: _round aur _post har 20 second get() = roz ~8,600 Firebase reads.
+- pos-khata-sync ka listener shuru ke baad toote (maslan quota) to script purane data par chalti rehti thi,
+  app ki entries POS mein jaana chup chaap band ho jata.
+- sync-bills POS mein delete hue bill app se kabhi nahi hatata tha.
+- sync-stock / sync-bills: setInterval par koi rok nahi thi; lamba chakkar agle chakkar se SQL connection takra sakta tha.
+
+Islahat (C:\khata-sync, LAGAO.bat se lagi; purani files *.v3old.js):
+- post-farq.js v10: _round aur _post par onSnapshot (watchCtl). _post badalte hi 1.5 second mein tick (kickFarq).
+  SQL wala kaam (sysPos, Band) ab bhi har 20 second — us mein Firebase read nahi.
+  Tick ab "again" ke saath (beech mein hukam aaye to chakkar dobara). "posting" ka taala transaction mein taaza parhta hai.
+  _round/_post/_hidden listener toote -> process.exit(1) -> farq-auto.bat 30 second mein dobara.
+- pos-khata-sync.js v7: app aur links listener shuru ke baad toote -> process.exit(1) -> bat 60 second mein dobara.
+- sync-bills.js: jo "pos-" bill pehle likha tha aur ab SQL mein nahi -> Firestore se delete. Script shuru par ek dafa
+  posBills (date >= START_DATE, sirf id) se milaan. MAX_DELETE = 20: is se zyada ek sath gayab hon to kuch nahi mitata
+  (log: "KHABARDAR"). SQL se 0 bill aayen to kuch nahi mitata. Log mein ab "hataye N".
+- sync-stock.js / sync-bills.js: busy rok — pichla chakkar chal raha ho to naya chhor deta hai.
+- post-farq-NEW.js (post-farq.js ki bilkul copy) delete ki.
+
+Firebase ka andaza (roz):
+- sync-stock: poora milaan ghante mein 1 = ~430 reads; writes sirf badle chunk + meta.
+- sync-bills: reads sirf script shuru par (bill ginti ke barabar); writes sirf naya/badla bill.
+- pos-khata-sync: shuru par poora khata ek dafa, phir sirf tabdeeli.
+- post-farq: ab sirf tabdeeli ke reads (pehle ~8,600 fixed).
+- Yaad rahe: har PC write, har khule mobile ke liye 1 read bhi banta hai (app listeners).
+
+Baqi / yaad rakhein
+- SQL password kai one-time scripts mein seedha likha hai; asal jagah sirf sync-stock.js SQL_CONFIG honi chahiye.
+- Kal Firebase Usage mein reads dobara dekhein; post-farq wale ~8,600 kam nazar aane chahiyein.
+
+==============================================================
+2026-09-17 (shaam) — App se sale (counter + wholesale): tayyari
+==============================================================
+- Malik chahta hai app se sale daale: counter sale (cash, walk-in) aur wholesale (party ke khate mein udhaar).
+- Mansooba: app "Nayi Sale" -> Firestore -> PC script (post-farq wala usp_Sale_InsertUpdate tareeqa) -> POS bill + rasid.
+- Pehla qadam: C:\khata-sync\sale-dekho.js (sirf parhta hai) -> sale-dekho.json. Is se pata karna hai:
+  cash sale ka party/IsCreditSale/CashReceived, wholesale rate alag khana hai ya nahi, voucher kaise bante hain.
+- post-farq.js --print <SaleNo> se farq bill ki rasid dobara print hoti hai (pehle se mojood).
+
+==============================================================
+2026-09-17 — v1.45.8: Farq bills ki history alag khirki mein
+==============================================================
+- Masla: Stock tab mein "Farq bills ki history" khulti to header (summary) lamba ho jata aur search box bohat neeche chala jata.
+- Hal (pos-stock.js): history ab inline nahi, app ke #dialog mein khulti hai (openBills). Button: "📋 Farq bills ki history (N)".
+  showBills wala state hata diya. × se band.
+- Version 1.45.8: app.js, cloud.js, index.html, sw.js, version.json.
+
+==============================================================
+2026-09-17 — Stock rate ka farq (app vs POS item screen)
+==============================================================
+- Misal kala chana (000033, pack 25): POS screen Purchase 5685.05/ctn (=227.40/pc), R Peice 260, W Peice 237,
+  R Cotton 6500, W Cotton 5925, Average 199.974. App dikha raha tha Rate 235, Khareed 209.51.
+- Wajah: sync-stock.js rate Items.SaleRate / Items.PurchaseRate se leta hai (purane/alag khane).
+  POS screen ke rate shayad ItemBranchRate ya R/W ke alag khanon mein hain.
+- POS mein Retail (R) aur Wholesale (W) rate alag hain -> Nayi Sale: counter = R, wholesale = W.
+- Tasdeeq ke liye rate-dekho.js (sirf parhta hai): node rate-dekho.js 000033 -> rate-dekho.json.
+  Us ke baad sync-stock.js mein sahi khane lagane hain (app mein R aur W dono dikhane ka irada).
+
+==============================================================
+2026-09-17 — v1.45.9 + sync-stock rate v2: sahi R / W / Khareed rate
+==============================================================
+- rate-dekho.js se pakka hua: POS item screen ke rate dbo.ItemBranchRate mein hain (har branch ki row):
+  SaleRate = R Peice (260), SaleRate2 = 260, SaleRate3 = 237, SaleRateSize = 237 (W Peice),
+  SaleRate2Size = 0, PurchaseRate = 227.402 (khareed, pehle se FI PIECE), PackQty = 25.
+  (SaleRate3 aur SaleRateSize mein se asal W kaun sa hai, abhi pakka nahi — dono 237.)
+- sync-stock.js: Q_STOCK ab r.SaleRate (BRetail), r.SaleRate3 (BWhole), r.SaleRateSize (BWholeSize), r.PurchaseRate (BCost) bhi parhta hai.
+  rate = BRetail (warna Items.SaleRate), naya khana wrate = BWhole || BWholeSize,
+  prate = BCost agar > 0 (warna purana tareeqa: Items.PurchaseRate / aakhri bill).
+  Pehle Items.SaleRate/PurchaseRate se aata tha (kala chana: 235 / 209.51 — galat).
+  LAGAO-RATE.bat: backup sync-stock.v4old.js, last-stock.json delete (saara stock dobara jata hai, ek dafa ~20 writes).
+- App pos-stock.js: item line mein "R 260 · W 237 · Khareed 227.4" (pehle "Rate · Khareed").
+- post-farq.js pehle se ItemBranchRate.PurchaseRate istemal karta hai (theek).
+- Nayi Sale ke liye: counter = rate (R), wholesale = wrate (W).
+- Nazar aaya: kala chana branch 10 mein +3,941, doosri branch mein -3,333 (maal ek godam, bikri doosre se).

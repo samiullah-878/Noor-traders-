@@ -13,7 +13,7 @@ let limit = PAGE;
 
 let cloud = null, rerender = () => {}, notice = () => {};
 let stop = null, rows = [], loaded = false, failed = '';
-let branch = null, sort = 'name', filter = 'has', showBills = false, bills = [];
+let branch = null, sort = 'name', filter = 'has', bills = [];
 let postReq = null;
 let hidden = {};   // item id -> true (Band kiye hue items, sab branches mein chhupe)
 let counts = new Map(), round = '', stopCount = null, isOwner = () => false;
@@ -354,14 +354,23 @@ function summaryHTML(branches, pick, items, meta, names) {
     <div class="sh-note">${roundText}${farqText}</div>
     ${roundBtns ? `<div class="account-tools">${roundBtns}</div>` : ''}
     ${postLine(pick)}
-    ${bills.length ? `<div class="account-tools"><button class="sh-wide${showBills ? ' selected' : ''}" data-stock-bills="1">Farq bills ki history (${num(bills.length)})</button></div>` : ''}
-    ${showBills ? billsHTML(names) : ''}
+    ${bills.length ? `<div class="account-tools"><button class="sh-wide" data-stock-bills="1">📋 Farq bills ki history (${num(bills.length)})</button></div>` : ''}
     <div class="sh-label">Tarteeb</div>
     <div class="account-tools">
       ${btn('data-stock-sort', 'name', sort, 'Naam se')}
       ${btn('data-stock-sort', 'stock', sort, 'Zyada stock pehle')}
     </div>
   </div>`;
+}
+
+// v1.45.8: history ab alag khirki (dialog) mein — pehle list ke upar khulti thi aur search bohat neeche chala jata tha
+function openBills() {
+  const d = $('dialog');
+  if (!d) return;
+  d.classList.remove('search-dialog');
+  $('dialogTitle').textContent = `Farq bills ki history (${num(bills.length)})`;
+  $('dialogBody').innerHTML = bills.length ? billsHTML(collect().names) : '<p>Abhi koi farq bill nahi.</p>';
+  if (!d.open) d.showModal();
 }
 
 function billsHTML(names) {
@@ -415,7 +424,7 @@ function rowHTML(r) {
     <div class="party" style="border-bottom:0">
     <div class="name">
       <b>${esc(r.name)}</b>
-      <small>${esc(r.code || '')}${pack > 0 ? ` · 1 ${esc(r.cName || 'Ctn')} = ${num(pack)}` : ''}${r.rate ? ' · Rate ' + num(r.rate) : ''}${r.prate ? ' · Khareed ' + num(r.prate) : ''}</small>
+      <small>${esc(r.code || '')}${pack > 0 ? ` · 1 ${esc(r.cName || 'Ctn')} = ${num(pack)}` : ''}${r.rate ? ' · R ' + num(r.rate) : ''}${r.wrate ? ' · W ' + num(r.wrate) : ''}${r.prate ? ' · Khareed ' + num(r.prate) : ''}</small>
     </div>
     <div class="amount">
       <strong>${big}</strong>
@@ -438,7 +447,7 @@ document.addEventListener('click', e => {
   const hb = e.target.closest?.('[data-stock-hide]');
   if (hb) { toggleHidden(hb.dataset.stockHide, hb.checked, hb); return; }
   if (e.target.closest?.('[data-stock-more]')) { limit += PAGE; rerender(); return; }
-  if (e.target.closest?.('[data-stock-bills]')) { showBills = !showBills; rerender(); return; }
+  if (e.target.closest?.('[data-stock-bills]')) { openBills(); return; }
   const s = e.target.closest?.('[data-stock-sort]');
   if (s) { sort = s.dataset.stockSort; rerender(); return; }
   const f = e.target.closest?.('[data-stock-filter]');
