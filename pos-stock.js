@@ -270,32 +270,39 @@ function summaryHTML(branches, pick, items, meta, names) {
     return n + (countedPcs(c) - Number(sysOf(c, r))) * r.prate;
   }, 0);
   const shownCount = items.filter(passes).length;
-  return `<div>
+  const btn = (attr, val, cur, label) => `<button ${attr}="${val}"${cur === val ? ' class="selected"' : ''}>${label}</button>`;
+  const roundText = round ? 'Ginti ' + esc(round) + ' — ' + num(done) + ' / ' + num(items.length) + ' hue' : 'Ginti shuru nahi hui';
+  const farqText = Math.abs(netRs) > 0.5
+    ? `<br><b>Kul farq: Rs ${netRs > 0 ? '+' : ''}${num(netRs)}</b> ${netRs < 0 ? '(nuqsan)' : '(zyada nikla)'}` : '';
+  const roundBtns = (isOwner() ? '<button data-stock-round="new">Nayi ginti shuru</button>' : '')
+    + (isOwner() && round ? '<button data-stock-post="1">Farq ka bill PC par banao</button>' : '');
+  return `<div class="stock-head">
+    <div class="sh-title">
       <strong>${num(shownCount)} items</strong>
       <small>${esc(branchName(pick, names))} · kul ${num(totalPcs)} pcs${stamp ? ' · ' + esc(since(stamp)) : ''}</small>
     </div>
-    ${branchBar}
+    ${branchBar ? `<div class="sh-label">Branch</div>${branchBar}` : ''}
+    <div class="sh-label">Dikhao</div>
     <div class="account-tools">
-      <button data-stock-filter="has"${filter === 'has' ? ' class="selected"' : ''}>Stock wale (${num(hasN)})</button>
-      <button data-stock-filter="all"${filter === 'all' ? ' class="selected"' : ''}>Sab (${num(live.length)})</button>
-      <button data-stock-filter="minus"${filter === 'minus' ? ' class="selected"' : ''}>Minus stock (${num(minus)})</button>
-      <button data-stock-filter="baqi"${filter === 'baqi' ? ' class="selected"' : ''}>Ginti baqi (${num(items.length - done)})</button>
-      <button data-stock-filter="farq"${filter === 'farq' ? ' class="selected"' : ''}>Farq wale (${num(gap)})</button>
-      ${hiddenN ? `<button data-stock-filter="hidden"${filter === 'hidden' ? ' class="selected"' : ''}>Band items (${num(hiddenN)})</button>` : ''}
+      ${btn('data-stock-filter', 'has', filter, `Stock wale (${num(hasN)})`)}
+      ${btn('data-stock-filter', 'all', filter, `Sab (${num(live.length)})`)}
+      ${btn('data-stock-filter', 'minus', filter, `Minus stock (${num(minus)})`)}
+      ${btn('data-stock-filter', 'baqi', filter, `Ginti baqi (${num(items.length - done)})`)}
+      ${btn('data-stock-filter', 'farq', filter, `Farq wale (${num(gap)})`)}
+      ${hiddenN ? btn('data-stock-filter', 'hidden', filter, `Band items (${num(hiddenN)})`) : ''}
     </div>
-    <div class="account-tools">
-      <small style="align-self:center">${round ? 'Ginti ' + esc(round) + ' — ' + num(done) + ' / ' + num(items.length) + ' hue' : 'Ginti shuru nahi hui'}${
-        Math.abs(netRs) > 0.5 ? `<br><b>Kul farq: Rs ${netRs > 0 ? '+' : ''}${num(netRs)}</b> ${netRs < 0 ? '(nuqsan)' : '(zyada nikla)'}` : ''}</small>
-      ${isOwner() ? '<button data-stock-round="new">Nayi ginti shuru</button>' : ''}
-      ${isOwner() && round ? '<button data-stock-post="1">Farq ka bill PC par banao</button>' : ''}
-    </div>
+    <div class="sh-label">Ginti</div>
+    <div class="sh-note">${roundText}${farqText}</div>
+    ${roundBtns ? `<div class="account-tools">${roundBtns}</div>` : ''}
     ${postLine(pick)}
-    ${bills.length ? `<div class="account-tools"><button data-stock-bills="1"${showBills ? ' class="selected"' : ''}>Farq bills ki history (${num(bills.length)})</button></div>` : ''}
+    ${bills.length ? `<div class="account-tools"><button class="sh-wide${showBills ? ' selected' : ''}" data-stock-bills="1">Farq bills ki history (${num(bills.length)})</button></div>` : ''}
     ${showBills ? billsHTML(names) : ''}
+    <div class="sh-label">Tarteeb</div>
     <div class="account-tools">
-      <button data-stock-sort="name"${sort === 'name' ? ' class="selected"' : ''}>Naam se</button>
-      <button data-stock-sort="stock"${sort === 'stock' ? ' class="selected"' : ''}>Zyada stock pehle</button>
-    </div>`;
+      ${btn('data-stock-sort', 'name', sort, 'Naam se')}
+      ${btn('data-stock-sort', 'stock', sort, 'Zyada stock pehle')}
+    </div>
+  </div>`;
 }
 
 function billsHTML(names) {

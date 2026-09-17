@@ -32,3 +32,12 @@ body{font-size:14px}.workspace{padding:12px}header{padding:14px 12px;border-radi
 .workspace.search-room{min-height:var(--search-room-height,100dvh)}
 dialog.search-dialog{position:fixed;top:var(--search-viewport-top,8px);bottom:auto;margin:0 auto;max-height:var(--search-viewport-height,90dvh)}
 dialog.search-dialog #dialogBody{max-height:calc(var(--search-viewport-height,90dvh) - 80px)}
+
+.summary>.stock-head{flex:1 1 100%;min-width:0;border-left:0;padding-left:0}
+.stock-head .sh-title strong{display:block}
+.stock-head .sh-label{font-size:12px;font-weight:700;letter-spacing:1px;color:#6b7c93;text-transform:uppercase;margin:14px 0 0;padding-top:12px;border-top:1px solid #e1e8f3}
+.stock-head .account-tools{margin:8px 0}
+.stock-head .account-tools button{flex:1 1 calc(50% - 8px);min-width:0;line-height:1.25}
+.stock-head .account-tools button.sh-wide{flex-basis:100%}
+.stock-head .sh-note{font-size:14px;color:#44566f;margin-top:6px}
+.stock-head .account-tools small{flex-basis:100%}
