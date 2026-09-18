@@ -5,11 +5,11 @@ import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecor
 import {planImport} from './import-plan.js';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import * as authSDK from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
-import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,query,where,doc,getDoc,getDocFromServer,getDocs,getDocsFromServer,getDocsFromCache,setDoc,deleteDoc,onSnapshot,runTransaction,writeBatch,waitForPendingWrites} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import {createAuthController,loginErrorMessage} from './auth-controller.js?v=1.50.1';
-import {firebaseConfig,BUSINESS_ID} from './config.js?v=1.50.1';
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,memoryLocalCache,collection,query,where,doc,getDoc,getDocFromServer,getDocs,getDocsFromServer,getDocsFromCache,setDoc,deleteDoc,onSnapshot,runTransaction,writeBatch,waitForPendingWrites} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
+import {createAuthController,loginErrorMessage} from './auth-controller.js?v=1.50.2';
+import {firebaseConfig,BUSINESS_ID} from './config.js?v=1.50.2';
 export {loginErrorMessage};
-export async function connect(callbacks){const app=initializeApp(firebaseConfig,'blue-khata'),auth=authSDK.getAuth(app);await authSDK.setPersistence(auth,authSDK.browserLocalPersistence);const db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});const col=collection(db,'businesses',BUSINESS_ID,'blueKhata'),ref=id=>doc(col,id),other=(name,id)=>doc(db,'businesses',BUSINESS_ID,name,id);
+export async function connect(callbacks){const app=initializeApp(firebaseConfig,'blue-khata'),auth=authSDK.getAuth(app);try{await authSDK.setPersistence(auth,authSDK.browserLocalPersistence)}catch(e){console.warn('Auth persistence nahi mili',e)}let db;try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})})}catch(e){console.warn('Offline storage nahi mili — memory mode',e);db=initializeFirestore(app,{localCache:memoryLocalCache()})}const col=collection(db,'businesses',BUSINESS_ID,'blueKhata'),ref=id=>doc(col,id),other=(name,id)=>doc(db,'businesses',BUSINESS_ID,name,id);
 const liveQuery=query(col,where('type','in',['party','entry','closing','expenseAccount','dayPhoto','import','cashCustody','reminder']));const cashQuery=query(col,where('type','in',['closing','cashCustody']));
 let accessScope='none',offCredential=null;const supplierCol=collection(db,'businesses',BUSINESS_ID,'purchaseSuppliers');
 async function loginStep(stage,fn){try{return await fn()}catch(e){if(e.code==='permission-denied')throw Object.assign(new Error(stage),{code:'login/'+stage});throw e}}
