@@ -391,3 +391,9 @@ kuch items sirf "check" karne hote hain; aur malik ek button se counting band ka
   data clear ke baad storage na mile to poora connect fail -> login screen par "Connection load nahi hua".
 - Fix: dono try/catch; storage na mile to memoryLocalCache() (app chalti hai, offline cache nahi).
 - v1.50.3: login screen par ab asal error bhi dikhta hai: "Connection load nahi hua: <code/message>" (masla dhoondne ke liye).
+
+2026-09-18 raat — v1.50.4: ASAL MASLA — "connected is not defined"
+- v1.47 se jo naye module-level functions likhe (watchDayLock, toggleDayLock, partyPhotoHTML/Form) un mein `connected`
+  istemal hua, jo sirf import('./cloud.js').then(...) ke andar ka const hai. Module scope mein alias `cloud` hai.
+  watchDayLock() boot par chalta tha -> ReferenceError -> catch -> "Connection load nahi hua" (sab ke liye).
+- Fix: module scope mein har `connected` -> `cloud`.
