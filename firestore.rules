@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v1.47: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -87,7 +87,15 @@ service cloud.firestore {
 
     // Stock taking ki ginti — malik aur mulazim dono likh sakte hain
     match /businesses/noor-traders/stockCount/{docId} {
-      allow read, write: if isOwner() || blueStaff() || stockStaff();
+      allow read: if isOwner() || blueStaff() || stockStaff();
+      allow write: if isOwner();
+      // Mulazim: sirf item ki ginti (docId "_" se shuru na ho) aur jab malik ne counting OFF na ki ho (_lock.off)
+      allow write: if (blueStaff() || stockStaff()) && !docId.matches('^_.*')
+        && (!exists(/databases/$(database)/documents/businesses/noor-traders/stockCount/_lock)
+            || get(/databases/$(database)/documents/businesses/noor-traders/stockCount/_lock).data.get('off', false) != true);
+      // Nishan (baqi / check) mulazim bhi laga sakta hai, counting OFF ho tab bhi
+      allow write: if (blueStaff() || stockStaff()) && docId == '_flags'
+        && request.resource.data.keys().hasOnly(['items','updatedAt']);
     }
 
     // App se sale (Counter / Wholesale). App sirf "new" sale likhta hai; POS bill PC ka sale-post.js banata hai
@@ -111,6 +119,15 @@ service cloud.firestore {
       allow update: if saleUser()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['printReq'])
         && request.resource.data.printReq is int;
+    }
+
+    // Khate ki picture (alag, sirf khata kholne par parhi jati hai). Malik aur full mulazim.
+    match /businesses/noor-traders/partyPhotos/{partyId} {
+      allow read: if isOwner() || blueStaff();
+      allow delete: if isOwner() || (blueStaff() && dayOpen());
+      allow create, update: if isOwner() || (blueStaff() && dayOpen()
+        && request.resource.data.keys().hasOnly(['photo','updatedAt','by'])
+        && request.resource.data.photo is string && request.resource.data.photo.size() <= 90000);
     }
 
     // POS ke purchase bill ki tafseel: sirf parhne ke liye.
@@ -263,7 +280,7 @@ service cloud.firestore {
         && request.resource.data.type == resource.data.type
         && request.resource.data.rev == resource.data.rev + 1
         && request.resource.data.updatedBy == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','category','note','updatedAt','updatedBy','rev']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','category','note','dasti','hasPhoto','updatedAt','updatedBy','rev']);
 
       allow create: if blueStaff() && dayOpen()
         && request.resource.data.by == request.auth.uid

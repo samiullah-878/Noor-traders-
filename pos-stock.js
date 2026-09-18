@@ -17,6 +17,10 @@ let branch = null, sort = 'name', filter = 'has', bills = [];
 let postReq = null;
 let hidden = {};   // item id -> true (Band kiye hue items, sab branches mein chhupe)
 let counts = new Map(), round = '', stopCount = null, isOwner = () => false;
+// v1.49: _flags (baqi / check nishan), _lock (malik ne ginti band ki)
+let flags = {}, countOff = false;
+const flagOf = id => flags[String(id)] || {};
+const countLocked = () => countOff && !isOwner();
 
 export function stockSetup(opts) {
   cloud = opts.cloud;
@@ -55,6 +59,8 @@ function start(withCounts = true) {
       round = list.find(r => r.id === '_round')?.round || '';
       postReq = list.find(r => r.id === '_post') || null;
       hidden = list.find(r => r.id === '_hidden')?.items || {};
+      flags = list.find(r => r.id === '_flags')?.items || {};
+      countOff = !!list.find(r => r.id === '_lock')?.off;
       bills = list.filter(r => String(r.id).startsWith('_bill-')).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
       list.forEach(r => { if (!String(r.id).startsWith('_')) counts.set(r.id, r); });
       soft();
@@ -215,6 +221,8 @@ const passes = r => {
   if (filter === 'minus') return r.stock < 0;
   if (filter === 'baqi') return !countOf(pickedBranch, r);
   if (filter === 'farq') { const c = countOf(pickedBranch, r); return c && Math.abs(countedPcs(c) - Number(sysOf(c, r))) > 0.001; }
+  if (filter === 'nishan') return !!flagOf(r.id).baqi;
+  if (filter === 'check') return !!flagOf(r.id).check;
   return true;
 };
 let pickedBranch = null;
@@ -345,7 +353,10 @@ function summaryHTML(branches, pick, items, meta, names) {
   const farqText = Math.abs(netRs) > 0.5
     ? `<br><b>Kul farq: Rs ${netRs > 0 ? '+' : ''}${num(netRs)}</b> ${netRs < 0 ? '(nuqsan)' : '(zyada nikla)'}` : '';
   const roundBtns = (isOwner() ? '<button data-stock-round="new">Nayi ginti shuru</button>' : '')
-    + (isOwner() && round ? '<button data-stock-post="1">Farq ka bill PC par banao</button>' : '');
+    + (isOwner() && round ? '<button data-stock-post="1">Farq ka bill PC par banao</button>' : '')
+    + (isOwner() ? `<button data-stock-lock="1" class="${countOff ? 'sh-lock off' : 'sh-lock'}">${countOff ? '🔴 Counting OFF — mulazim save nahi kar sakta' : '🟢 Counting ON'}</button>` : '')
+    + (countLocked() ? '<p class="stat-note sh-locked">🔴 Malik ne counting band ki hui hai — ginti save nahi ho sakti, sirf dekh sakte hain.</p>' : '');
+  const nishanN = items.filter(r => flagOf(r.id).baqi).length, checkN = items.filter(r => flagOf(r.id).check).length;
   return `<div class="stock-head">
     <div class="sh-title">
       <strong>${num(shownCount)} items</strong>
@@ -366,6 +377,8 @@ function summaryHTML(branches, pick, items, meta, names) {
       ${btn('data-stock-filter', 'minus', filter, `Minus stock (${num(minus)})`)}
       ${btn('data-stock-filter', 'baqi', filter, `Ginti baqi (${num(items.length - done)})`)}
       ${btn('data-stock-filter', 'farq', filter, `Farq wale (${num(gap)})`)}
+      ${btn('data-stock-filter', 'nishan', filter, `⏳ Baqi nishan (${num(nishanN)})`)}
+      ${btn('data-stock-filter', 'check', filter, `🔍 Check wale (${num(checkN)})`)}
       ${hiddenN ? btn('data-stock-filter', 'hidden', filter, `Band items (${num(hiddenN)})`) : ''}
     </div>
     <div class="sh-label">Ginti</div>
@@ -407,17 +420,29 @@ function billsHTML(names) {
   </details>`).join('');
 }
 
+function flagHTML(r) {
+  const f = flagOf(r.id);
+  const chk = f.checkedAt ? `<small class="stat-note">✓ Check hua ${esc(stampText(f.checkedAt))}${f.checkedNote ? ' · ' + esc(f.checkedNote) : ''}</small>` : '';
+  return `<div class="account-tools sc-flags">
+    <button type="button" data-flag-baqi="${esc(r.id)}"${f.baqi ? ' class="selected"' : ''}>⏳ ${f.baqi ? 'Baqi hai (nishan hatao)' : 'Baqi — aur ginna hai'}</button>
+    <button type="button" data-flag-check="${esc(r.id)}"${f.check ? ' class="selected"' : ''}>🔍 ${f.check ? 'Check karna hai' : 'Check karo'}</button>
+    ${f.check ? `<button type="button" data-flag-checked="${esc(r.id)}">✓ Check ho gaya</button>` : ''}
+  </div>${chk}`;
+}
 function countHTML(r) {
   const c = countOf(pickedBranch, r);
   const diff = c ? Math.round((countedPcs(c) - Number(sysOf(c, r))) * 100) / 100 : 0;
-  return `<div class="pos-dates" style="margin:0 4px 14px">
+  if (countLocked()) return `<div style="margin:0 4px 14px">${c ? `<small>Ginti ${num(countedPcs(c))} · Farq ${diff > 0 ? '+' : ''}${num(diff)}</small><br>` : ''}${flagHTML(r)}</div>${historyHTML(r, c)}`;
+  return `<div class="pos-dates" style="margin:0 4px 8px">
     <label>Ctn<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-ctn="${esc(r.id)}" value="${c ? esc(String(c.ctn ?? '')) : ''}"></label>
     <label>${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-pcs="${esc(r.id)}" value="${c ? esc(String(c.pcs ?? '')) : ''}"></label>
     <label>Kul ${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:5.6em" data-count-tot="${esc(r.id)}" value=""></label>
     <button type="button" data-count-save="${esc(r.id)}">Save</button>
+    ${c ? `<button type="button" class="sc-add" data-count-add="${esc(r.id)}" title="Jo likha hai woh pehli ginti mein jor do">+ Jama</button>` : ''}
     ${c ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Us waqt system ${num(sysOf(c, r))}${sysSure(c) ? ' ✓' : ' (PC tasdeeq baqi)'} · Farq ${diff > 0 ? '+' : ''}${num(diff)}${
       r.prate ? ' · Rs ' + (diff > 0 ? '+' : '') + num(diff * r.prate) : ''}</small>` : ''}
   </div>
+  ${flagHTML(r)}
   ${historyHTML(r, c)}`;
 }
 
@@ -427,7 +452,8 @@ function historyHTML(r, c) {
   return `<div class="stat-note" style="margin:0 4px 12px">${list.map(h => {
     const d = Math.round((Number(h.total) - Number(h.sys)) * 100) / 100;
     const ctn = esc(r.cName || 'Ctn'), pcs = esc(r.uName || 'Pcs');
-    return `${esc(stampText(h.at))} — <b>${num(h.ctn)} ${ctn} + ${num(h.pcs)} ${pcs}</b> · ${num(h.total)} ${pcs} · System ${num(h.sys)} · Farq ${d > 0 ? '+' : ''}${num(d)}${
+    const jama = h.add ? `<b style="color:#0b6b2e">+${num(h.add.ctn)} ${ctn} + ${num(h.add.pcs)} ${pcs}${h.note ? ' (' + esc(h.note) + ')' : ''}</b> → ` : (h.note ? `(${esc(h.note)}) ` : '');
+    return `${esc(stampText(h.at))} — ${jama}<b>${num(h.ctn)} ${ctn} + ${num(h.pcs)} ${pcs}</b> · ${num(h.total)} ${pcs} · System ${num(h.sys)} · Farq ${d > 0 ? '+' : ''}${num(d)}${
       r.prate ? ' · Rs ' + (d > 0 ? '+' : '') + num(d * r.prate) : ''}`;
   }).join('<br>')}</div>`;
 }
@@ -478,8 +504,30 @@ document.addEventListener('click', e => {
   if (e.target.closest?.('[data-stock-cancelpost]')) { answerPost(false); return; }
 
   const sv = e.target.closest?.('[data-count-save]');
-  if (sv) saveCount(sv.dataset.countSave, sv);
+  if (sv) { saveCount(sv.dataset.countSave, sv); return; }
+  const ad = e.target.closest?.('[data-count-add]');
+  if (ad) { saveCount(ad.dataset.countAdd, ad, true); return; }
+  const fb = e.target.closest?.('[data-flag-baqi]');
+  if (fb) { setFlag(fb.dataset.flagBaqi, { baqi: !flagOf(fb.dataset.flagBaqi).baqi }); return; }
+  const fc = e.target.closest?.('[data-flag-check]');
+  if (fc) { setFlag(fc.dataset.flagCheck, { check: !flagOf(fc.dataset.flagCheck).check }); return; }
+  const fd = e.target.closest?.('[data-flag-checked]');
+  if (fd) { const n = prompt('Check ho gaya — koi note? (ikhtiyari)', '') ; if (n === null) return; setFlag(fd.dataset.flagChecked, { check: false, checkedAt: Date.now(), checkedNote: String(n).trim().slice(0, 80) }); return; }
+  if (e.target.closest?.('[data-stock-lock]')) { toggleLock(); return; }
 });
+
+async function setFlag(id, patch) {
+  if (!cloud?.setStockFlag) return;
+  try { await cloud.setStockFlag(String(id), { ...flagOf(id), ...patch }); }
+  catch (e) { notice(e?.message || 'Nishan save nahi hua'); }
+}
+async function toggleLock() {
+  if (!isOwner() || !cloud?.setStockLock) return;
+  const off = !countOff;
+  if (!confirm(off ? 'Counting OFF karein? Mulazim koi ginti save nahi kar sakega (nishan laga sakega).' : 'Counting ON karein? Mulazim phir ginti save kar sakega.')) return;
+  try { await cloud.setStockLock(off); notice(off ? 'Counting OFF' : 'Counting ON'); }
+  catch (e) { notice(e?.message || 'Nahi hua'); }
+}
 
 function postLine(pick) {
   const p = postReq;
@@ -598,11 +646,13 @@ function readCount(item, skipBlank) {
   return { ctn, pcs, total, bad: !Number.isFinite(total) || !Number.isFinite(ctn) || !Number.isFinite(pcs) };
 }
 
-async function writeCount(item, v) {
+async function writeCount(item, v, add = null) {
   const at = Date.now();
   const old = counts.get(countId(pickedBranch, item.id));
   const past = Array.isArray(old?.history) ? old.history : [];
-  const history = [...past, { at, ctn: v.ctn, pcs: v.pcs, total: v.total, sys: item.stock }].slice(-20);
+  const h = { at, ctn: v.ctn, pcs: v.pcs, total: v.total, sys: item.stock };
+  if (add) { h.add = { ctn: add.ctn, pcs: add.pcs, total: add.total }; if (add.note) h.note = add.note; }
+  const history = [...past, h].slice(-20);
   await cloud.saveStockCount({
     id: countId(pickedBranch, item.id),
     round, branch: pickedBranch, itemId: item.id,
@@ -617,18 +667,33 @@ const zeroText = item => {
   return `System mein: ${num(item.stock)} ${item.uName || 'Pcs'} · Farq: ${gap > 0 ? '+' : ''}${num(gap)}${rs}`;
 };
 
-async function saveCount(itemId, button) {
+async function saveCount(itemId, button, jama = false) {
   if (!round) { notice('Pehle "Nayi ginti shuru" dabayein'); return; }
+  if (countLocked()) { notice('Malik ne counting band ki hui hai'); return; }
   const { items } = collect();
   const item = items.find(r => String(r.id) === String(itemId));
   if (!item) return;
-  const v = readCount(item, false);
+  let v = readCount(item, false), add = null;
   if (v.bad) { notice('Ginti sahi likhein'); return; }
+  if (jama) {
+    const old = countOf(pickedBranch, item);
+    if (!old) { notice('Pehle Save karein, phir + Jama'); return; }
+    if (v.total === 0) { notice('Jama karne ke liye qty likhein'); return; }
+    const note = prompt(`"${item.name}": ${num(v.total)} ${item.uName || 'Pcs'} pehli ginti (${num(countedPcs(old))}) mein jama honge.\nJagah ka note? (jaise: neeche, godam) — ikhtiyari`, '');
+    if (note === null) return;
+    const per = Number(item.pack) || 0;
+    const total = Math.round((countedPcs(old) + v.total) * 100) / 100;
+    const ctn = per > 1 ? Math.floor(total / per) : 0;
+    const pcs = Math.round((total - ctn * (per > 1 ? per : 0)) * 100) / 100;
+    add = { ...v, note: String(note).trim().slice(0, 60) };
+    v = { ctn, pcs, total, bad: false };
+  }
   if (v.total === 0 && !confirm(`"${item.name}" ki ginti ZERO save karein?\n\n${zeroText(item)}`)) return;
   button.disabled = true;
   try {
-    await writeCount(item, v);
-    notice(item.name + ' — ginti mehfooz');
+    await writeCount(item, v, add);
+    if (add && flagOf(item.id).baqi) setFlag(item.id, { baqi: false });
+    notice(item.name + (add ? ` — jama: ab ${num(v.total)} ${item.uName || 'Pcs'}` : ' — ginti mehfooz'));
   } catch (e) {
     notice(e?.message || 'Ginti save nahi hui');
   } finally {
@@ -638,6 +703,7 @@ async function saveCount(itemId, button) {
 
 // Scan list ke sab items ek dafa save (jin ki ginti likhi hai aur badli hai)
 async function saveAll(button) {
+  if (countLocked()) { notice('Malik ne counting band ki hui hai'); return; }
   if (!round) { notice('Pehle "Nayi ginti shuru" dabayein'); return; }
   const { items } = collect();
   const byId = new Map(items.map(r => [String(r.id), r]));

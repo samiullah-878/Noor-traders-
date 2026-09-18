@@ -333,3 +333,49 @@ App:
   (3 jagah: khata list, entry card, daily list).
 - Naya helper canEditEntry(e): malik hamesha; mulazim (full) tab jab entry aaj ki ho, deleted/transfer na ho, aur din band na ho.
 - Teenon jagah owner()? ki jagah canEditEntry(e)? laga diya. Edit ka click handler pehle se sab ke liye khula tha.
+
+==============================================================
+2026-09-18 — v1.48.0: Khata BAND (deactive) + Khata DELETE (sirf malik)
+==============================================================
+Malik ka faisla: baqaya 0 ho magar entries mojood hon to khata delete na ho — "band" (deactive) ho jaye,
+band khaton ka alag tab ho, un ki entries baad mein edit/delete na hon, aur delete sirf malik kar sake.
+- Party doc mein naya field: active:false (band). Sirf malik likh sakta hai (staff party-edit rule mein 'active' nahi hai).
+- app.js: parties() ab sirf active!==false; naya bandParties(). Khata list aur report mein tab 'band'.
+  index.html: nav tabs mein "Band khate".
+- accountForm (sirf malik): "🚫 Khata band karein" / "🔓 Khata chalu karein" aur "🗑 Khata delete".
+  Delete sirf jab baqaya 0 ho (warna alert: pehle wasool ya transfer karein); confirm mein entries ki ginti aur
+  POS wali baat batai jati hai. Delete = deleted:true (pos-khata-sync POS party hatane ki koshish karega).
+- Band khate ki entries: canEditEntry / canDeleteEntry ab false (malik ke ilawa) — bandParty(e) check.
+- Dialog ke buttons ke liye alag click listener (main wala handler #dialog tak nahi pohnchta).
+- Band khate entry ke har picker se bhi gayab (expenseChoices, partyChoices, supplier, dasti — sab parties() par hain).
+- Abhi baqi: POS taraf band karna (Account.IsActive=0) app se nahi hota — khata-chalu.js / POS se karna hoga.
+
+==============================================================
+2026-09-18 — v1.49.0: Stock ginti — "+ Jama", ⏳ Baqi / 🔍 Check nishan, Counting ON/OFF
+==============================================================
+Malik ka masla: ek item (dal chana) shop mein bhi, neeche bhi — do jagah ki ginti jama honi chahiye; larka bhoole nahi;
+kuch items sirf "check" karne hote hain; aur malik ek button se counting band kar sake.
+- "+ Jama" (Save ke saath, sirf jab pehli ginti ho): likhi qty PEHLI ginti mein jud jati hai. Prompt mein jagah ka note
+  (ikhtiyari). History line: "+2 CTN + 0 PCS (neeche) → 5 CTN + 0 PCS". Count doc same (ctn/pcs/total), history entry mein add:{ctn,pcs,total}, note.
+  Jama ke baad "baqi" nishan khud hat jata hai.
+- Nishan stockCount/_flags {items:{<itemId>:{baqi,check,checkedAt,checkedNote}}} (setDoc merge). Mulazim bhi laga sakta hai.
+  Row par buttons: "⏳ Baqi — aur ginna hai", "🔍 Check karo", aur check laga ho to "✓ Check ho gaya" (note prompt, checkedAt).
+  Filters: "⏳ Baqi nishan (N)", "🔍 Check wale (N)".
+- Counting ON/OFF: stockCount/_lock {off:true/false}, sirf malik (header button 🟢/🔴). OFF ho to mulazim ko ginti ke khane nahi
+  dikhte (sirf ginti/farq + nishan buttons), Save/+Jama/Sab save ruk jata hai; malik khud gin sakta hai.
+- Rules (v1.49) stockCount: read = owner/full/stock. write: owner sab; mulazim sirf non-"_" docs aur _lock.off != true;
+  mulazim _flags likh sakta hai (keys items, updatedAt) chahe OFF ho.
+- cloud.js: setStockFlag(id,f), setStockLock(off).
+- PC post-farq.js: counts where('round'==) se aate hain — _flags/_lock par asar nahi.
+
+==============================================================
+2026-09-18 — v1.50.0: Mulazim ko account edit + Dasti, aur khate ki picture
+==============================================================
+- canEditAccount() = malik, ya full mulazim (din khula ho). Account edit (naam/mobile/qism/dasti) ab mulazim bhi;
+  opening baqaya, POS sync, transfer, reminder, band/delete sirf malik.
+- Khata screen: "Dasti mein shamil karein" aur "📷 Picture lagayein" ab canEditAccount() par (pehle owner()).
+- Rules: staff party-edit keys mein 'dasti' aur 'hasPhoto' shamil.
+- Picture: alag collection partyPhotos/{partyId} {photo (jpeg data URL, 400px, <=60KB), updatedAt, by}.
+  Party doc par sirf hasPhoto:true/false. Picture sirf khata kholne par getDoc se aati hai (partyPhotoCache).
+  cloud.js: getPartyPhoto(id), setPartyPhoto(id, photo|null -> deleteDoc). packPhotos(files, maxPx, maxLen) params.
+  Rules partyPhotos: read owner/full; create/update keys photo/updatedAt/by, photo <= 90000 chars; delete owner/full (dayOpen).

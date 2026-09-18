@@ -108,3 +108,17 @@ dialog.search-dialog #dialogBody{max-height:calc(var(--search-viewport-height,90
 #dayLockBtn.day-lock.closed{background:#b3261e}
 #dayLockNote{margin:4px 0 8px;padding:8px 10px;background:#fdecea;color:#8b1a12;border-radius:10px;font-size:13px}
 body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actions{display:none}
+/* v1.48 Khata band / delete */
+.acct-danger{margin-top:14px;padding-top:10px;border-top:1px solid #e1e8f3;display:grid;gap:6px}
+.acct-danger button{min-height:42px}
+/* v1.49 Stock: jama, nishan, counting lock */
+.sc-flags{margin:0 4px 6px}
+.sc-flags button{font-size:13px;min-height:36px}
+.sc-flags button.selected{background:#fff3cd;border-color:#e0b400;color:#5a4600}
+.sc-add{background:#0b6b2e;color:#fff}
+.sh-lock{background:#0b6b2e;color:#fff}
+.sh-lock.off{background:#b3261e}
+.sh-locked{background:#fdecea;color:#8b1a12;padding:8px 10px;border-radius:10px;margin:6px 0}
+/* v1.50 Khate ki picture */
+.party-photo{margin:6px 0 10px}
+.party-photo img{max-width:160px;max-height:160px;border-radius:12px;border:1px solid #d5e0f2}
