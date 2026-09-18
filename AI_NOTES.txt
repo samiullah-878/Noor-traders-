@@ -438,3 +438,9 @@ kuch items sirf "check" karne hote hain; aur malik ek button se counting band ka
   Pehle ek dafa ijazat le kar labels lete hain. localStorage 'sam-scan-cam' mein chuna hua camera yaad.
 - "🔄 Camera (N)" button: agla lens, scanner dobara khulta hai. Message mein camera ka label.
 - Constraints mein advanced focusMode continuous bhi.
+
+2026-09-19 — v1.53.0: camera scanner par tadad ke buttons (keyboard ke baghair)
+- Scanner overlay mein .scan-pad: Pcs/Ctn switch + 1 2 3 6 12 24 + "+1". Aakhri scan hua item (lastScan) par lagti hai.
+  scanQty Map(itemId -> {pcs, ctn}); pehli scan par pcs 1.
+- Sale: setSaleQtyHook -> sale.js cart line ke pcs/ctn set (absolute), rerender (scanner khula rehta hai).
+- Stock ginti: "Ho gaya" par scanQty se Ctn/Pcs (ya Kul) ke khane bhar diye jate hain + liveCount; phir Save khud karna hai.

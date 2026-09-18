@@ -1,10 +1,10 @@
-// sale.js — Nayi Sale (Counter / Wholesale) — v1.52.2
+// sale.js — Nayi Sale (Counter / Wholesale) — v1.53.0
 // App sale ko Firestore "appSales" mein "new" likhta hai. POS bill PC ka sale-post.js banata hai
 // (POS ke apne procedures se), rasid print karta hai aur Sale No wapas likhta hai.
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, openSaleCamera } from './pos-stock.js?v=1.52.2';
+import { saleStock, setSaleScanHook, setSaleQtyHook, openSaleCamera } from './pos-stock.js?v=1.53.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -75,6 +75,13 @@ function addItem(it, qtyPcs = 1) {
   cash = null; keepDraft();
 }
 
+// camera par tadad ke buttons -> bill ki line
+setSaleQtyHook((it, q) => {
+  const l = cart.find(x => String(x.id) === String(it.id));
+  if (!l) return;
+  l.pcs = Number(q.pcs) || 0; l.ctn = Number(q.ctn) || 0;
+  cash = null; keepDraft(); rerender();
+});
 // scan (camera / USB scanner) — pos-stock.js yahan bhejta hai
 setSaleScanHook(code => {
   const { items } = stock();

@@ -192,7 +192,9 @@ export function saleStock() {
     .sort((x, y) => (x.order || 0) - (y.order || 0)).flatMap(c => c.items);
   return { loaded, failed, branches, names, itemsFor, hidden, branchName };
 }
-let saleHook = null, saleSeen = [];
+let saleHook = null, saleSeen = [], saleQtyHook = null;
+export function setSaleQtyHook(fn) { saleQtyHook = fn; }
+let lastScan = null, scanQty = new Map(), padUnit = 'pcs';   // camera par tadad ke buttons
 export function setSaleScanHook(fn) { saleHook = fn; }
 export function openSaleCamera() { saleSeen = []; openScanner(); }
 const saleRoot = () => !!document.querySelector('[data-sale-root]');
@@ -776,7 +778,7 @@ let lastCode = '', lastCodeAt = 0;
 
 function clearScan() {
   $('list')?.querySelectorAll?.(COUNT_SEL).forEach(el => { el.value = el.defaultValue; });
-  scanList = []; scanHit = null;
+  scanList = []; scanHit = null; scanQty = new Map(); lastScan = null;
   const si = $('search'); if (si) si.value = '';
   limit = PAGE;
   rerender();
@@ -795,6 +797,17 @@ function finishScan() {
   if (!scanList.length) return;
   rerender();
   const { items } = collect();
+  // camera par chuni hui tadad ginti ke khanon mein bhar do
+  setTimeout(() => {
+    for (const [id, q] of scanQty) {
+      const esc_ = CSS.escape(String(id));
+      const c = $('list')?.querySelector(`[data-count-ctn="${esc_}"]`), p = $('list')?.querySelector(`[data-count-pcs="${esc_}"]`), t = $('list')?.querySelector(`[data-count-tot="${esc_}"]`);
+      if (c && q.ctn) c.value = q.ctn;
+      if (p && q.pcs) p.value = q.pcs; else if (!p && t && q.pcs) t.value = q.pcs;
+      liveCount(id);
+    }
+    scanQty = new Map(); lastScan = null;
+  }, 60);
   const first = items.find(r => String(r.id) === String(scanList[0]));
   if (first) setTimeout(() => focusItem(first), 80);
 }
@@ -842,6 +855,11 @@ async function openScanner() {
       <video playsinline muted autoplay></video>
       <div class="scan-line"></div>
       <p class="scan-msg">Barcode camera ke saamne rakhein — ek ke baad ek scan karte jayein</p>
+      <div class="scan-pad" hidden>
+        <div class="scan-pad-name"></div>
+        <div class="scan-pad-row"><button type="button" data-unit="pcs" class="selected">Pcs</button><button type="button" data-unit="ctn">Ctn</button>
+          ${[1, 2, 3, 6, 12, 24].map(n => `<button type="button" data-qty="${n}">${n}</button>`).join('')}<button type="button" data-qty="+1">+1</button></div>
+      </div>
       <ol class="scan-names"></ol>
       <button type="button" class="scan-done">✓ Ho gaya — list dikhao (<span>0</span>)</button>
       <button type="button" class="scan-close">✕ Band karein</button>
@@ -861,6 +879,26 @@ async function openScanner() {
     namesBox.start = Math.max(1, n - 3);
   };
   drawNames();
+  const pad = scanBox.querySelector('.scan-pad'), padName = scanBox.querySelector('.scan-pad-name');
+  const showPad = () => {
+    if (!lastScan) { pad.hidden = true; return; }
+    pad.hidden = false;
+    const q = scanQty.get(String(lastScan.id)) || { pcs: 0, ctn: 0 };
+    padName.textContent = `${lastScan.name} — ${q.ctn ? q.ctn + ' ' + (lastScan.cName || 'Ctn') + ' + ' : ''}${q.pcs || 0} ${lastScan.uName || 'Pcs'}`;
+    pad.querySelectorAll('[data-unit]').forEach(b => b.classList.toggle('selected', b.dataset.unit === padUnit));
+    pad.querySelector('[data-unit="ctn"]').hidden = !(Number(lastScan.pack) > 1);
+  };
+  pad.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b || !lastScan) return;
+    if (b.dataset.unit) { padUnit = b.dataset.unit; showPad(); return; }
+    const id = String(lastScan.id), q = scanQty.get(id) || { pcs: 0, ctn: 0 };
+    const v = b.dataset.qty;
+    if (v === '+1') q[padUnit] = (Number(q[padUnit]) || 0) + 1; else q[padUnit] = Number(v);
+    scanQty.set(id, q);
+    if (saleRoot() && saleQtyHook) saleQtyHook(lastScan, q);
+    if (navigator.vibrate) navigator.vibrate(30);
+    showPad();
+  });
   scanBox.querySelector('.scan-done').onclick = finishScan;
   scanBox.querySelector('.scan-close').onclick = finishScan;
   const video = scanBox.querySelector('video');
@@ -954,8 +992,9 @@ async function openScanner() {
         if (code && !(code === lastCode && now - lastCodeAt < 1500)) {   // wahi barcode dobara foran na gine
           lastCode = code; lastCodeAt = now;
           const r = addScanned(code);
+          if (r.state === 'added' || r.state === 'again') { lastScan = r.item; if (!scanQty.has(String(r.item.id))) scanQty.set(String(r.item.id), { pcs: 1, ctn: 0 }); showPad(); }
           if (r.state === 'added') {
-            msg.textContent = `✓ ${r.item.name} — agla scan karein`;
+            msg.textContent = `✓ ${r.item.name} — tadad neeche se chunein ya agla scan karein`;
             if (navigator.vibrate) navigator.vibrate(80);
             drawNames();
             wait = 350;
