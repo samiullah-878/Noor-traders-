@@ -397,3 +397,11 @@ kuch items sirf "check" karne hote hain; aur malik ek button se counting band ka
   istemal hua, jo sirf import('./cloud.js').then(...) ke andar ka const hai. Module scope mein alias `cloud` hai.
   watchDayLock() boot par chalta tha -> ReferenceError -> catch -> "Connection load nahi hua" (sab ke liye).
 - Fix: module scope mein har `connected` -> `cloud`.
+
+2026-09-18 raat — v1.51.0: 🗑 Deleted entries (recycle bin)
+- Entries pehle se soft-delete hain (deleted:true, indexData unhein chhor deta hai).
+- Settings (⚙) mein malik ke liye naya button "🗑 Deleted entries (wapas layein)" -> trashView():
+  saari deleted entries (search naam/note/raqam, tareekh-se filter, 300 tak, delete ke waqt ke hisaab se),
+  har ek par "↩ Wapas layein" = save({...r, deleted:false}, r). Transfer entries par restore band (dono taraf ki hoti hain).
+- Rules mein tabdeeli nahi (owner generic update).
+- Yaad rahe: POS se jura entry wapas aane par pos-khata-sync POS mein voucher dobara bana dega.
