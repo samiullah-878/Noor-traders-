@@ -379,3 +379,8 @@ kuch items sirf "check" karne hote hain; aur malik ek button se counting band ka
   Party doc par sirf hasPhoto:true/false. Picture sirf khata kholne par getDoc se aati hai (partyPhotoCache).
   cloud.js: getPartyPhoto(id), setPartyPhoto(id, photo|null -> deleteDoc). packPhotos(files, maxPx, maxLen) params.
   Rules partyPhotos: read owner/full; create/update keys photo/updatedAt/by, photo <= 90000 chars; delete owner/full (dayOpen).
+
+2026-09-18 — v1.50.1: mulazim ke phone par khali screen (purani index.html cache)
+- Masla: naya app.js + purana cached index.html -> $('saleNav')/$('dayLockBtn') null -> TypeError -> app khali.
+- Fix: nav buttons ki wiring ab guard ke saath: if($('saleNav'))... (stockNav, dayLockBtn, saleNav aur baqi nav ids bhi).
+- Phone par purana cache hatane ke liye: app kholein -> ↻ Sync/Update, ya browser ka site data clear.
