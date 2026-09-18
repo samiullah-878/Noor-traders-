@@ -428,3 +428,5 @@ kuch items sirf "check" karne hote hain; aur malik ek button se counting band ka
 - Camera: header mein "📷 Barcode scan karein" pehle se tha; ab neeche actions bar mein bhi 📷 button (bill khula ho to).
 - PC sale-post.js v1.1: har line ka GBranchID = l.godam (warna bill ka godam); rate/cost bhi usi godam ki ItemBranchRate se.
   LAGAO: sale-post.js C:\khata-sync mein copy karke sale-post band/dobara (sale-auto.bat khud chala deta hai).
+- v1.52.1: scanner poori screen (portrait, video 62vh, object-fit cover), default zoom 1x (auto 2x hata), naya "🎯 Focus" button
+  (single-shot -> continuous) aur video par tap = focus. Hidayat msg: 12-15 cm door, seedha, light sirf andhere mein.

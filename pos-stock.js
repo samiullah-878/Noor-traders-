@@ -888,8 +888,20 @@ async function openScanner() {
     const zb = document.createElement('button'); zb.type = 'button'; zb.textContent = `🔍 ${z.toFixed(1)}x`;
     zb.onclick = () => setZ(z + 1 > caps.zoom.max ? caps.zoom.min : z + (caps.zoom.step || 1));
     tools.appendChild(zb);
-    if (caps.zoom.max >= 2 && z < 2) setZ(2);   // 2x se chhote barcode saaf aate hain
+    setZ(caps.zoom.min || 1);   // default 1x (zoom se tasveer dhundli ho sakti hai)
   }
+  // 🎯 Focus: camera ko dobara focus karne par majboor karo (single-shot -> continuous)
+  const refocus = async () => {
+    try {
+      if (caps.focusMode?.includes('single-shot')) { await track.applyConstraints({ advanced: [{ focusMode: 'single-shot' }] }); await new Promise(r => setTimeout(r, 400)); }
+      if (caps.focusMode?.includes('continuous')) await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] });
+      else if (caps.focusMode?.includes('auto')) await track.applyConstraints({ advanced: [{ focusMode: 'auto' }] });
+      msg.textContent = 'Focus ho raha hai… barcode ko 12-15 cm door, seedha rakhein';
+    } catch {}
+  };
+  const fb = document.createElement('button'); fb.type = 'button'; fb.textContent = '🎯 Focus'; fb.onclick = refocus;
+  tools.prepend(fb);
+  video.addEventListener('click', refocus);
   if (caps.torch) {
     let on = false; const tb = document.createElement('button'); tb.type = 'button'; tb.textContent = '🔦 Light';
     tb.onclick = async () => { on = !on; try { await track.applyConstraints({ advanced: [{ torch: on }] }); } catch {} tb.textContent = on ? '🔦 Light ON' : '🔦 Light'; };
