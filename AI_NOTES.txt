@@ -302,3 +302,34 @@ App:
 - cloud.js: listenDayLock(next,fail), setDayLock(day|'').
 - style.css: .day-lock button, #dayLockNote, body.day-locked.
 - Sale screen (appSales) par din band ka asar nahi — agar chahiye to rules mein appSales create par dayOpen() lagana hoga.
+
+==============================================================
+2026-09-17 raat — khata-dekho.js (CMD): POS chalu/band khate + app se milan
+==============================================================
+- Sirf parhta hai. node khata-dekho.js [--farq | --band | --chalu | --supplier | --sab | --dhoondo <naam>]
+- POS: Party (customer/supplier) + Account.IsActive (chalu/BAND) + baqaya (VoucherDetail Debit-Credit, status 3 chhor kar)
+  + sales ki ginti + aakhri voucher ki tareekh.
+- App: blueKhata parties + entries se baqaya (opening + credit/payment - borrow/collection) / 100.
+- Jora: id "pos-party-<id>" -> posLinks party:<appId> -> naam.
+- Farq = app - POS. Khulasa: chalu/BAND ginti, dono/sirf app/sirf POS, kul baqaye, farq wale khate,
+  aur KHABARDAR: BAND khaton mein app ka baqaya (purana band wala masla).
+- Har dafa khata-dekho.csv banti hai.
+
+==============================================================
+2026-09-17 raat — khata-chalu.js: BAND (deactive) khate chalu karna
+==============================================================
+- Default: sirf list + khata-chalu.csv (BAND khata, baqaya, sales, aur usi naam ka naya CHALU khata mojood hai ya nahi).
+- node khata-chalu.js --yes            -> saare BAND khate Account.IsActive = 1 (naam waisa hi, baqaya nahi chhoota)
+- node khata-chalu.js --yes --naam-bhi -> upar wala + naam/PartyName se " (purana)" hata deta hai
+- node khata-chalu.js --band-karo "naam" --yes -> wapas band
+- Khabardar: pos-milan ne purane customers ka baqaya JV se zero kiya tha aur app ke customers ke naye POS khate banaye.
+  Sirf chalu karne se POS list mein do khate (purana 0 + naya baqaya wala) nazar aayenge. Baqaya wapas karna (pos-milan --undo)
+  ka matlab dohra hisaab — malik ko mana kiya gaya.
+
+==============================================================
+2026-09-18 — v1.47.1: mulazim ko Edit ka button bhi
+==============================================================
+- v1.47.0 mein rules ne mulazim ko aaj ki entry edit karne di, lekin app mein "Edit" button sirf owner() ko dikhta tha
+  (3 jagah: khata list, entry card, daily list).
+- Naya helper canEditEntry(e): malik hamesha; mulazim (full) tab jab entry aaj ki ho, deleted/transfer na ho, aur din band na ho.
+- Teenon jagah owner()? ki jagah canEditEntry(e)? laga diya. Edit ka click handler pehle se sab ke liye khula tha.
