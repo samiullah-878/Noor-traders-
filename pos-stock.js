@@ -865,9 +865,26 @@ async function openScanner() {
   scanBox.querySelector('.scan-close').onclick = finishScan;
   const video = scanBox.querySelector('video');
 
+  // Sahi lens chunna: phone ke peeche kai camera hote hain (wide/macro mein focus nahi hota) — main camera dhoondo
+  const pickCamera = async () => {
+    let devs = [];
+    try { devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput'); } catch {}
+    const saved = localStorage.getItem('sam-scan-cam');
+    if (saved && devs.some(d => d.deviceId === saved)) return { deviceId: { exact: saved } };
+    const back = devs.filter(d => /back|rear|environment|پیچھے/i.test(d.label));
+    const main = back.find(d => !/wide|ultra|macro|tele|depth|bokeh/i.test(d.label)) || back[0];
+    return main ? { deviceId: { exact: main.deviceId } } : { facingMode: { ideal: 'environment' } };
+  };
   try {
+    // pehle ijazat (labels tabhi milte hain), phir sahi camera
+    let cam = await pickCamera();
+    if (!cam.deviceId) {
+      const tmp = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+      tmp.getTracks().forEach(t => t.stop());
+      cam = await pickCamera();
+    }
     scanStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } }, audio: false
+      video: { ...cam, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 }, advanced: [{ focusMode: 'continuous' }] }, audio: false
     });
   } catch (e) {
     closeScanner();
@@ -901,6 +918,22 @@ async function openScanner() {
   };
   const fb = document.createElement('button'); fb.type = 'button'; fb.textContent = '🎯 Focus'; fb.onclick = refocus;
   tools.prepend(fb);
+  // 🔄 Camera badlein: agla lens (jo theek chale woh yaad rahega)
+  try {
+    const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    if (devs.length > 1) {
+      const cb = document.createElement('button'); cb.type = 'button'; cb.textContent = `🔄 Camera (${devs.length})`;
+      cb.onclick = () => {
+        const cur = track.getSettings().deviceId;
+        const i = devs.findIndex(d => d.deviceId === cur);
+        const next = devs[(i + 1) % devs.length];
+        localStorage.setItem('sam-scan-cam', next.deviceId);
+        closeScanner(); openScanner();
+      };
+      tools.appendChild(cb);
+      msg.textContent = `Camera: ${track.label || 'main'} — dhundla ho to 🔄 se badlein`;
+    }
+  } catch {}
   video.addEventListener('click', refocus);
   if (caps.torch) {
     let on = false; const tb = document.createElement('button'); tb.type = 'button'; tb.textContent = '🔦 Light';
