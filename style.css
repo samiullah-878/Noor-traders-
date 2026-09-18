@@ -126,3 +126,9 @@ body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actio
 .trash{display:grid;gap:8px;max-height:60vh;overflow:auto}
 .trash-it{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 10px;border:1px solid #e1e8f3;border-radius:12px;background:#fff}
 .trash-it button{white-space:nowrap;min-height:38px}
+/* v1.51.1 live ginti */
+.count-live{flex:1 1 100%;font-size:13px;color:#44566f;margin-top:2px}
+.count-live b{font-size:14px}
+/* v1.51.3 scanner tools */
+.scan-tools{display:flex;gap:8px;justify-content:center;margin:6px 0}
+.scan-tools button{background:rgba(255,255,255,.9);min-height:38px}

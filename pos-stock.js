@@ -242,6 +242,24 @@ function since(stamp) {
 
 // Screen dobara banne par likhi hui (abhi save nahi hui) ginti gum na ho
 const COUNT_SEL = '[data-count-ctn],[data-count-pcs],[data-count-tot]';
+// Likhte hi neeche ginti / system / farq dikhao
+function liveCount(id) {
+  const box = $('list')?.querySelector(`[data-count-live="${CSS.escape(String(id))}"]`);
+  if (!box) return;
+  const { items } = collect();
+  const item = items.find(r => String(r.id) === String(id));
+  if (!item) return;
+  const v = readCount(item, true);
+  if (!v || v.bad) { box.innerHTML = ''; return; }
+  const sys = Number(item.stock) || 0, diff = Math.round((v.total - sys) * 100) / 100;
+  const u = item.uName || 'Pcs';
+  box.innerHTML = `<b>${num(v.total)} ${esc(u)}</b> · System ${num(sys)} · <b class="${diff < 0 ? 'red' : diff > 0 ? 'green' : ''}">Farq ${diff > 0 ? '+' : ''}${num(diff)} ${esc(u)}${diff < 0 ? ' (kam)' : diff > 0 ? ' (zyada)' : ' (barabar)'}</b>${item.prate && diff ? ' · Rs ' + (diff > 0 ? '+' : '') + num(diff * item.prate) : ''}`;
+}
+document.addEventListener('input', e => {
+  const t = e.target;
+  const id = t.dataset?.countCtn ?? t.dataset?.countPcs ?? t.dataset?.countTot;
+  if (id != null) liveCount(id);
+});
 let stockActive = false;
 function captureTyped() {
   const keep = new Map();
@@ -438,7 +456,7 @@ function countHTML(r) {
     <label>${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-pcs="${esc(r.id)}" value="${c ? esc(String(c.pcs ?? '')) : ''}"></label>
     <label>Kul ${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:5.6em" data-count-tot="${esc(r.id)}" value=""></label>
     <button type="button" data-count-save="${esc(r.id)}">Save</button>
-    ${c ? `<button type="button" class="sc-add" data-count-add="${esc(r.id)}" title="Jo likha hai woh pehli ginti mein jor do">+ Jama</button>` : ''}
+    <div class="count-live" data-count-live="${esc(r.id)}"></div>
     ${c ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Us waqt system ${num(sysOf(c, r))}${sysSure(c) ? ' ✓' : ' (PC tasdeeq baqi)'} · Farq ${diff > 0 ? '+' : ''}${num(diff)}${
       r.prate ? ' · Rs ' + (diff > 0 ? '+' : '') + num(diff * r.prate) : ''}</small>` : ''}
   </div>
@@ -512,7 +530,7 @@ document.addEventListener('click', e => {
   const fc = e.target.closest?.('[data-flag-check]');
   if (fc) { setFlag(fc.dataset.flagCheck, { check: !flagOf(fc.dataset.flagCheck).check }); return; }
   const fd = e.target.closest?.('[data-flag-checked]');
-  if (fd) { const n = prompt('Check ho gaya — koi note? (ikhtiyari)', '') ; if (n === null) return; setFlag(fd.dataset.flagChecked, { check: false, checkedAt: Date.now(), checkedNote: String(n).trim().slice(0, 80) }); return; }
+  if (fd) { setFlag(fd.dataset.flagChecked, { check: false, checkedAt: Date.now() }); notice('✓ Check ho gaya'); return; }
   if (e.target.closest?.('[data-stock-lock]')) { toggleLock(); return; }
 });
 
@@ -679,8 +697,8 @@ async function saveCount(itemId, button, jama = false) {
     const old = countOf(pickedBranch, item);
     if (!old) { notice('Pehle Save karein, phir + Jama'); return; }
     if (v.total === 0) { notice('Jama karne ke liye qty likhein'); return; }
-    const note = prompt(`"${item.name}": ${num(v.total)} ${item.uName || 'Pcs'} pehli ginti (${num(countedPcs(old))}) mein jama honge.\nJagah ka note? (jaise: neeche, godam) — ikhtiyari`, '');
-    if (note === null) return;
+    if (!confirm(`"${item.name}": ${num(v.total)} ${item.uName || 'Pcs'} pehli ginti (${num(countedPcs(old))}) mein jama honge — kul ${num(countedPcs(old) + v.total)}. Theek hai?`)) return;
+    const note = '';
     const per = Number(item.pack) || 0;
     const total = Math.round((countedPcs(old) + v.total) * 100) / 100;
     const ctn = per > 1 ? Math.floor(total / per) : 0;
@@ -766,7 +784,7 @@ function clearScan() {
 }
 
 function closeScanner() {
-  clearTimeout(scanTimer); scanTimer = null;
+  clearTimeout(scanTimer); try { cancelAnimationFrame(scanTimer); } catch {} scanTimer = null;
   if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
   if (scanBox) { scanBox.remove(); scanBox = null; }
 }
@@ -849,7 +867,7 @@ async function openScanner() {
 
   try {
     scanStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 } }, audio: false
     });
   } catch (e) {
     closeScanner();
@@ -859,38 +877,57 @@ async function openScanner() {
   if (!scanBox) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; return; }
   video.srcObject = scanStream;
   try { await video.play(); } catch {}
+  // Tez scan: continuous focus, aur zoom / torch ke buttons (chhote barcode ke liye)
+  const track = scanStream.getVideoTracks()[0];
+  const caps = track.getCapabilities?.() || {};
+  try { if (caps.focusMode?.includes('continuous')) await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch {}
+  const tools = document.createElement('div'); tools.className = 'scan-tools';
+  if (caps.zoom) {
+    let z = Math.min(caps.zoom.max, Math.max(caps.zoom.min, (track.getSettings().zoom || 1)));
+    const setZ = async v => { z = Math.min(caps.zoom.max, Math.max(caps.zoom.min, v)); try { await track.applyConstraints({ advanced: [{ zoom: z }] }); } catch {} zb.textContent = `🔍 ${z.toFixed(1)}x`; };
+    const zb = document.createElement('button'); zb.type = 'button'; zb.textContent = `🔍 ${z.toFixed(1)}x`;
+    zb.onclick = () => setZ(z + 1 > caps.zoom.max ? caps.zoom.min : z + (caps.zoom.step || 1));
+    tools.appendChild(zb);
+    if (caps.zoom.max >= 2 && z < 2) setZ(2);   // 2x se chhote barcode saaf aate hain
+  }
+  if (caps.torch) {
+    let on = false; const tb = document.createElement('button'); tb.type = 'button'; tb.textContent = '🔦 Light';
+    tb.onclick = async () => { on = !on; try { await track.applyConstraints({ advanced: [{ torch: on }] }); } catch {} tb.textContent = on ? '🔦 Light ON' : '🔦 Light'; };
+    tools.appendChild(tb);
+  }
+  if (tools.children.length) msg.after(tools);
 
   const loop = async () => {
     if (!scanBox) return;
-    let wait = 180;
+    let wait = 0;
     if (!scanBusy && video.readyState >= 2) {
       scanBusy = true;
       try {
         const found = await detector.detect(video);
         const code = found.map(f => String(f.rawValue || '').trim()).find(Boolean);
         const now = Date.now();
-        if (code && !(code === lastCode && now - lastCodeAt < 2500)) {   // wahi barcode dobara foran na gine
+        if (code && !(code === lastCode && now - lastCodeAt < 1500)) {   // wahi barcode dobara foran na gine
           lastCode = code; lastCodeAt = now;
           const r = addScanned(code);
           if (r.state === 'added') {
             msg.textContent = `✓ ${r.item.name} — agla scan karein`;
             if (navigator.vibrate) navigator.vibrate(80);
             drawNames();
-            wait = 900;
+            wait = 350;
           } else if (r.state === 'again') {
             msg.textContent = `"${r.item.name}" pehle se list mein hai`;
             if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
-            wait = 900;
+            wait = 350;
           } else {
             msg.textContent = `"${code}" stock mein nahi mila — doosra scan karein`;
             if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
-            wait = 1200;
+            wait = 700;
           }
         }
       } catch {}
       scanBusy = false;
     }
-    scanTimer = setTimeout(loop, wait);
+    scanTimer = wait ? setTimeout(loop, wait) : requestAnimationFrame(loop);
   };
   loop();
 }

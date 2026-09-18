@@ -1,10 +1,10 @@
-// sale.js — Nayi Sale (Counter / Wholesale) — v1.51.0
+// sale.js — Nayi Sale (Counter / Wholesale) — v1.52.0
 // App sale ko Firestore "appSales" mein "new" likhta hai. POS bill PC ka sale-post.js banata hai
 // (POS ke apne procedures se), rasid print karta hai aur Sale No wapas likhta hai.
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, openSaleCamera } from './pos-stock.js?v=1.51.0';
+import { saleStock, setSaleScanHook, openSaleCamera } from './pos-stock.js?v=1.52.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -47,6 +47,11 @@ const lineTotal = l => r2(linePcs(l) * (Number(l.rate) || 0));
 const cartTotal = () => r2(cart.reduce((n, l) => n + lineTotal(l), 0));
 const cashNow = () => cash == null ? cartTotal() : cash;
 
+// kisi bhi godam ka item (line ke godam ke hisaab se stock/rate)
+function itemIn(g, id) {
+  const st = saleStock();
+  return st.itemsFor(Number(g)).find(r => String(r.id) === String(id)) || null;
+}
 function findByCode(items, code) {
   const clean = String(code).trim(), bare = clean.replace(/^0+/, '');
   const codesOf = r => [r.code, ...(Array.isArray(r.bc) ? r.bc : [])].map(x => String(x || '').trim()).filter(Boolean);
@@ -63,7 +68,7 @@ function addItem(it, qtyPcs = 1) {
   } else {
     cart.push({
       id: it.id, code: it.code || '', name: it.name, pack: Number(it.pack) || 0,
-      cName: it.cName || 'Ctn', uName: it.uName || 'Pcs',
+      cName: it.cName || 'Ctn', uName: it.uName || 'Pcs', godam: Number(godam) || SALE_BRANCH,
       ctn: 0, pcs: qtyPcs, rate: rateFor(it), std: rateFor(it), edited: false
     });
   }
@@ -144,11 +149,11 @@ export function renderSale() {
     <div class="sale-total"><small>${mode === 'wholesale' ? 'Wholesale (W rate)' : 'Counter (R rate)'} · ${num(cart.length)} items</small>
       <strong id="saleTotal">Rs ${num(total)}</strong></div>
     <div class="account-tools">
-      <button class="sh-wide sh-scan" data-sale-camera="1">📷 Barcode scan</button>
+      <button class="sh-wide sh-scan" data-sale-camera="1">📷 Barcode scan karein</button>
       <button class="sh-wide" id="saleTodayBtn" data-sale-today="1">${todayLabel()}</button>
     </div>
   </div>`;
-  const si = $('search'); if (si) si.placeholder = 'Item ka naam / code likhein ya scan karein (Enter)';
+  const si = $('search'); if (si) si.placeholder = '📷 scan ya naam / code likhein (Enter)';
 
   if (s.failed) { $('list').innerHTML = `<div class="empty"><strong>Stock nahi mila</strong><p>${esc(s.failed)}</p></div>`; $('actions').innerHTML = ''; return; }
   if (!s.loaded) { $('list').innerHTML = '<p class="stat-note">Items load ho rahe hain…</p>'; $('actions').innerHTML = ''; return; }
@@ -164,15 +169,18 @@ export function renderSale() {
   }
 
   const rows = cart.map((l, i) => {
-    const it = s.items.find(r => String(r.id) === String(l.id));
+    const lg = Number(l.godam) || s.pick;
+    const it = itemIn(lg, l.id) || s.items.find(r => String(r.id) === String(l.id));
     const pcs = linePcs(l), short = it && pcs > Number(it.stock);
+    const gsel = s.branches.length > 1 ? `<label>Godam<select data-sale-lg="${i}">${s.branches.map(b => `<option value="${b}"${b === lg ? ' selected' : ''}>${esc(s.branchName(b, s.names))}</option>`).join('')}</select></label>` : '';
     return `<div class="sale-line" data-sale-line="${i}">
       <div class="sale-line-top"><b>${esc(l.name)}</b><button type="button" class="danger sale-x" data-sale-del="${i}" aria-label="Hatao">✕</button></div>
-      <small>${esc(l.code)}${it ? ' · stock ' + num(it.stock) : ''}${short ? ' · <span class="red">stock kam hai</span>' : ''}</small>
+      <small>${esc(l.code)}${it ? ' · stock ' + num(it.stock) + ' (' + esc(s.branchName(lg, s.names)) + ')' : ''}${short ? ' · <span class="red">stock kam hai</span>' : ''}</small>
       <div class="sale-inputs">
-        ${Number(l.pack) > 1 ? `<label>${esc(l.cName)} (${num(l.pack)})<input type="number" min="0" step="1" inputmode="numeric" data-sale-ctn="${i}" value="${l.ctn || ''}"></label>` : ''}
         <label>${esc(l.uName)}<input type="number" min="0" step="any" inputmode="decimal" data-sale-pcs="${i}" value="${l.pcs || ''}"></label>
+        ${Number(l.pack) > 1 ? `<label>${esc(l.cName)} (${num(l.pack)})<input type="number" min="0" step="1" inputmode="numeric" data-sale-ctn="${i}" value="${l.ctn || ''}"></label>` : ''}
         <label>Rate${l.edited ? ' ✎' : ''}<input type="number" min="0" step="any" inputmode="decimal" data-sale-rate="${i}" value="${l.rate}"${owner ? '' : ' readonly'}></label>
+        ${gsel}
         <div class="sale-amt"><small>${num(pcs)} ${esc(l.uName)}</small><b id="saleAmt${i}">${num(lineTotal(l))}</b></div>
       </div>
     </div>`;
@@ -188,7 +196,7 @@ export function renderSale() {
 
   $('list').innerHTML = found + (cart.length ? `<div class="sale-cart">${rows}</div>${pay}` :
     (q ? '' : `<div class="empty"><strong>Naya bill</strong><p>Upar item ka naam likhein ya 📷 se scan karein.</p></div>`));
-  $('actions').innerHTML = cart.length ? `<button class="give" data-sale-clear="1">✕ Naya bill</button>
+  $('actions').innerHTML = cart.length ? `<button class="give" data-sale-clear="1">✕ Naya bill</button><button data-sale-camera="1" title="Barcode scan">📷</button>
     <button class="got" data-sale-save="1"${saving ? ' disabled' : ''}>${saving ? 'Save ho raha hai…' : '💾 Save + Print · Rs ' + num(total)}</button>` : '';
 }
 function dueText(due) {
@@ -218,6 +226,14 @@ document.addEventListener('input', e => {
   keepDraft(); refreshTotals();
 });
 
+document.addEventListener('change', e => {
+  const t = e.target; if (t.dataset?.saleLg == null) return;
+  const l = cart[t.dataset.saleLg]; if (!l) return;
+  l.godam = Number(t.value);
+  const it = itemIn(l.godam, l.id);
+  if (it && !l.edited) { l.rate = rateFor(it); l.std = l.rate; }
+  cash = null; keepDraft(); rerender();
+});
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter' || e.target?.id !== 'search' || !document.querySelector('[data-sale-root]')) return;
   const v = e.target.value.trim(); if (!v) return;
@@ -269,14 +285,14 @@ document.addEventListener('click', async e => {
 });
 function focusLast() {
   const i = cart.length - 1;
-  const box = document.querySelector(`[data-sale-ctn="${i}"]`) || document.querySelector(`[data-sale-pcs="${i}"]`);
+  const box = document.querySelector(`[data-sale-pcs="${i}"]`) || document.querySelector(`[data-sale-ctn="${i}"]`);
   if (box) { box.scrollIntoView({ block: 'center' }); box.focus(); try { box.select(); } catch {} }
 }
 
 async function save() {
   if (saving) return;
   const lines = cart.map(l => ({ id: String(l.id), code: String(l.code || ''), name: String(l.name || ''), pack: Number(l.pack) || 0,
-    cName: l.cName, uName: l.uName, qty: linePcs(l), rate: r2(l.rate), std: r2(l.std) })).filter(l => l.qty > 0);
+    cName: l.cName, uName: l.uName, godam: Number(l.godam) || Number(godam) || SALE_BRANCH, qty: linePcs(l), rate: r2(l.rate), std: r2(l.std) })).filter(l => l.qty > 0);
   if (!lines.length) { notice('Kisi item ki qty likhein'); return; }
   if (lines.length !== cart.length && !confirm('Jin items ki qty khali hai woh bill mein nahi jayenge. Theek hai?')) return;
   if (lines.some(l => !(l.rate > 0)) && !confirm('Kisi item ka rate 0 hai. Phir bhi save karein?')) return;

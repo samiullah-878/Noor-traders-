@@ -405,3 +405,26 @@ kuch items sirf "check" karne hote hain; aur malik ek button se counting band ka
   har ek par "↩ Wapas layein" = save({...r, deleted:false}, r). Transfer entries par restore band (dono taraf ki hoti hain).
 - Rules mein tabdeeli nahi (owner generic update).
 - Yaad rahe: POS se jura entry wapas aane par pos-khata-sync POS mein voucher dobara bana dega.
+
+2026-09-18 raat — v1.51.1: Stock ginti — live farq, "Kul PCS" khana hata, Check ka masla
+- Masla 1: "✓ Check ho gaya" aur "+ Jama" prompt() istemal karte the — Android par installed PWA (home screen) mein
+  window.prompt() null deta hai, is liye kuch nahi hota tha. Ab Check bina note ke foran lagta hai (checkedAt);
+  + Jama confirm() se (note nahi).
+- Masla 2: Ctn/Pcs likhte hi neeche line: "250 PCS · System -1,904.71 · Farq +2,154.71 (zyada) · Rs …" (liveCount, input event).
+  Save waisa hi.
+- "Kul PCS" wala teesra khana hata diya (readCount abhi bhi data-count-tot ko sambhalta hai, bas input nahi hai).
+- v1.51.2: malik ne saaf kiya — "Kul PCS" khana WAPAS (rakhna hai), "+ Jama" button HATA diya (code saveCount(...,true) mein hai, button nahi).
+
+2026-09-18 raat — v1.51.3: camera barcode scan tez
+- Pehle: har 180ms ek detect, kamyabi par 900ms ruk, 720p, koi focus/zoom nahi.
+- Ab: requestAnimationFrame loop (detect khatam hote hi agla), kamyabi par 350ms, na milne par 700ms,
+  1080p@30, focusMode continuous, zoom ka button (default 2x agar mile) aur torch (🔦) ka button (.scan-tools).
+  Same code dobara 1.5s (pehle 2.5s). closeScanner cancelAnimationFrame bhi.
+
+2026-09-18 raat — v1.52.0: Nayi Sale — line par godam, Pcs pehle, camera button
+- sale.js: har line mein "Godam" select (data-sale-lg); line.godam default bill ka godam. Stock/rate us godam ke item se (itemIn).
+  Godam badalne par rate (agar edit na kiya ho) us godam ka. Save mein har line ke saath godam jata hai.
+- Inputs ki tarteeb ab: Pcs -> Ctn -> Rate -> Godam. focusLast Pcs par.
+- Camera: header mein "📷 Barcode scan karein" pehle se tha; ab neeche actions bar mein bhi 📷 button (bill khula ho to).
+- PC sale-post.js v1.1: har line ka GBranchID = l.godam (warna bill ka godam); rate/cost bhi usi godam ki ItemBranchRate se.
+  LAGAO: sale-post.js C:\khata-sync mein copy karke sale-post band/dobara (sale-auto.bat khud chala deta hai).
