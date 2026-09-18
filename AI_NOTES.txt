@@ -390,3 +390,4 @@ kuch items sirf "check" karne hote hain; aur malik ek button se counting band ka
 - Wajah: cloud.js connect() mein setPersistence + persistentLocalCache (IndexedDB) bina try/catch; Brave shields /
   data clear ke baad storage na mile to poora connect fail -> login screen par "Connection load nahi hua".
 - Fix: dono try/catch; storage na mile to memoryLocalCache() (app chalti hai, offline cache nahi).
+- v1.50.3: login screen par ab asal error bhi dikhta hai: "Connection load nahi hua: <code/message>" (masla dhoondne ke liye).
