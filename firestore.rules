@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v1.22: full/purchase access and current-day staff writes
+// BLUE KHATA v1.47: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -22,9 +22,15 @@ service cloud.firestore {
     }
 
     function padDay(n) { return n < 10 ? '0' + string(n) : string(n); }
-    function isToday(date) {
+    function todayStr() {
       let local = request.time + duration.value(5, 'h');
-      return date == string(local.year()) + '-' + padDay(local.month()) + '-' + padDay(local.day());
+      return string(local.year()) + '-' + padDay(local.month()) + '-' + padDay(local.day());
+    }
+    function isToday(date) { return date == todayStr(); }
+    // Din band (day closing): mulazim ka aaj ka kaam band. Malik par koi rok nahi.
+    function dayOpen() {
+      return !exists(/databases/$(database)/documents/businesses/noor-traders/blueAccess/dayLock)
+        || get(/databases/$(database)/documents/businesses/noor-traders/blueAccess/dayLock).data.get('closed', '') != todayStr();
     }
     function staffAccount() {
       let session = get(/databases/$(database)/documents/businesses/noor-traders/blueStaffSessions/$(request.auth.uid)).data;
@@ -33,14 +39,15 @@ service cloud.firestore {
     function blueStaff() { return isStaff() && staffAccount().active == true && (!('scope' in staffAccount()) || staffAccount().scope == 'full'); }
     function purchaseStaff() { return isStaff() && staffAccount().active == true && staffAccount().scope == 'purchase'; }
     function stockStaff() { return isStaff() && staffAccount().active == true && staffAccount().scope == 'stock'; }
+    function saleStaff() { return isStaff() && staffAccount().active == true && staffAccount().scope == 'sale'; }
     match /businesses/noor-traders/{collectionName}/{docId} {
-      allow read: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills'];
+      allow read: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount'];
       // Linked transfers have a paired-write rule below, including for older app versions.
-      allow create: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills']
+      allow create: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount']
         && (collectionName != 'blueKhata' || !('transferId' in request.resource.data));
-      allow update: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills']
+      allow update: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount']
         && (collectionName != 'blueKhata' || (!('transferId' in resource.data) && !('transferId' in request.resource.data)));
-      allow delete: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills']
+      allow delete: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount']
         && (collectionName != 'blueKhata' || !('transferId' in resource.data));
     }
     // Serializes cash changes across dates/devices; contains no money or login settings.
@@ -52,7 +59,14 @@ service cloud.firestore {
         && request.resource.data.rev is int && request.resource.data.rev == resource.data.rev + 1;
     }
     match /businesses/noor-traders/blueAccess/{id} {
-      allow get: if isOwner() || (isStaff() && id in ['config','purchaseConfig','stockConfig']);
+      allow get: if isOwner() || (isStaff() && id in ['config','purchaseConfig','stockConfig','saleConfig','dayLock']);
+    }
+    // Din band ka nishan: mulazim sirf AAJ ka din band kar sakta hai (khol nahi sakta). Malik upar wale rule se sab kuch.
+    match /businesses/noor-traders/blueAccess/dayLock {
+      allow create, update: if blueStaff()
+        && request.resource.data.keys().hasOnly(['closed','by','at'])
+        && request.resource.data.closed == todayStr()
+        && request.resource.data.by == request.auth.uid;
     }
     match /businesses/noor-traders/blueStaffSessions/{uid} {
       allow get: if isOwner() || (isStaff() && request.auth.uid == uid);
@@ -68,7 +82,35 @@ service cloud.firestore {
 
     // POS ka stock: sirf parhne ke liye. Likhta sirf PC wala sync-stock.js hai (admin key).
     match /businesses/noor-traders/posStock/{docId} {
-      allow read: if isOwner() || stockStaff();
+      allow read: if isOwner() || stockStaff() || saleStaff() || blueStaff();
+    }
+
+    // Stock taking ki ginti — malik aur mulazim dono likh sakte hain
+    match /businesses/noor-traders/stockCount/{docId} {
+      allow read, write: if isOwner() || blueStaff() || stockStaff();
+    }
+
+    // App se sale (Counter / Wholesale). App sirf "new" sale likhta hai; POS bill PC ka sale-post.js banata hai
+    // (admin key se status/saleNo likhta hai). Mulazim ki sale PC par POS ke rate se hi banti hai.
+    match /businesses/noor-traders/appSales/{saleId} {
+      function saleUser() { return isOwner() || blueStaff() || saleStaff(); }
+      function validSale() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['id','date','at','mode','branch','godam','lines','total','cash','note','role','by','status','createdAt','printReq'])
+          && d.id == saleId && saleId.matches('^[a-zA-Z0-9_-]{6,60}$')
+          && isToday(d.date) && d.mode in ['counter','wholesale']
+          && d.branch is int && d.godam is int
+          && d.lines is list && d.lines.size() > 0 && d.lines.size() <= 150
+          && d.total is number && d.total > 0 && d.cash is number && d.cash >= 0
+          && d.status == 'new' && d.by == request.auth.uid
+          && d.role == (isOwner() ? 'owner' : 'staff');
+      }
+      allow read: if saleUser();
+      allow create: if saleUser() && validSale();
+      // sirf "dobara print" ka hukam
+      allow update: if saleUser()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['printReq'])
+        && request.resource.data.printReq is int;
     }
 
     // POS ke purchase bill ki tafseel: sirf parhne ke liye.
@@ -131,7 +173,7 @@ service cloud.firestore {
       }
       allow create: if purchaseStaff() && validPurchase() && request.resource.data.by == request.auth.uid
         && request.resource.data.rev == 1 && !('deleted' in request.resource.data);
-      allow update: if (blueStaff() || purchaseStaff()) && resource.data.type == 'entry'
+      allow update: if ((blueStaff() && dayOpen()) || purchaseStaff()) && resource.data.type == 'entry'
         && resource.data.purchase == true && isToday(resource.data.date) && validPurchase()
         && (!('deleted' in resource.data) || resource.data.deleted == false)
         && request.resource.data.date == resource.data.date
@@ -159,9 +201,9 @@ service cloud.firestore {
           && (!('changeRows' in d) || d.changeRows is list)
           && (!('openingRows' in d) || d.openingRows is list);
       }
-      allow create: if blueStaff() && validClosing()
+      allow create: if blueStaff() && dayOpen() && validClosing()
         && request.resource.data.by == request.auth.uid && request.resource.data.rev == 1;
-      allow update: if blueStaff() && resource.data.type == 'closing'
+      allow update: if blueStaff() && dayOpen() && resource.data.type == 'closing'
         && isToday(resource.data.date) && validClosing()
         && request.resource.data.rev == resource.data.rev + 1
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['opening','change','cash','openingRows','changeRows','cashRows','updatedAt','updatedBy','rev']);
@@ -182,16 +224,16 @@ service cloud.firestore {
           && m.amount is int && m.amount > 0
           && m.note is string && m.note.size() <= 1000 && m.at is int;
       }
-      allow create: if blueStaff() && validCustody() && validLastMove()
+      allow create: if blueStaff() && dayOpen() && validCustody() && validLastMove()
         && request.resource.data.moves.size() == 1
         && request.resource.data.by == request.auth.uid && request.resource.data.rev == 1;
-      allow update: if blueStaff() && resource.data.type == 'cashCustody'
+      allow update: if blueStaff() && dayOpen() && resource.data.type == 'cashCustody'
         && isToday(resource.data.date) && validCustody() && validLastMove()
         && request.resource.data.moves == resource.data.moves.concat([request.resource.data.moves[resource.data.moves.size()]])
         && request.resource.data.rev == resource.data.rev + 1
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['moves','updatedAt','updatedBy','rev']);
 
-      allow update: if (blueStaff() || (purchaseStaff() && resource.data.purchase == true))
+      allow update: if ((blueStaff() && dayOpen()) || (purchaseStaff() && resource.data.purchase == true))
         && resource.data.type == 'entry'
         && !('transferId' in resource.data)
         && isToday(resource.data.date)
@@ -201,7 +243,29 @@ service cloud.firestore {
         && request.resource.data.rev == resource.data.rev + 1
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted','updatedAt','updatedBy','rev']);
 
-      allow create: if blueStaff()
+      // Mulazim (full): AAJ ki apni entry poori badal sakta hai (raqam, party, kind, note, account).
+      // Purani tareekh sirf malik — resource.data.date aur nayi date dono aaj ki honi chahiyein.
+      function staffEditEntry() {
+        let d = request.resource.data;
+        return d.type == 'entry' && resource.data.type == 'entry'
+          && !('transferId' in resource.data) && !('transferId' in d)
+          && isToday(resource.data.date) && isToday(d.date)
+          && d.amount is int && d.amount > 0
+          && d.kind in ['sale','collection','payment','expense','credit','borrow','purchaseCash']
+          && d.updatedBy == request.auth.uid && d.rev == resource.data.rev + 1
+          && d.diff(resource.data).affectedKeys().hasOnly(['kind','partyId','amount','date','note','account','dailyIncluded',
+              'photos','goodsPhotos','billPhotos','purchase','posPending','posVoucher','deleted','updatedAt','updatedBy','rev']);
+      }
+      allow update: if blueStaff() && dayOpen() && staffEditEntry();
+      // Khate ka naam / phone / category (baqaya nahi badalta — opening sirf malik)
+      allow update: if blueStaff() && dayOpen()
+        && resource.data.type in ['party','expenseAccount']
+        && request.resource.data.type == resource.data.type
+        && request.resource.data.rev == resource.data.rev + 1
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','category','note','updatedAt','updatedBy','rev']);
+
+      allow create: if blueStaff() && dayOpen()
         && request.resource.data.by == request.auth.uid
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.rev == 1

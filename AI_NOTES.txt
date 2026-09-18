@@ -192,3 +192,113 @@ Baqi / yaad rakhein
 - post-farq.js pehle se ItemBranchRate.PurchaseRate istemal karta hai (theek).
 - Nayi Sale ke liye: counter = rate (R), wholesale = wrate (W).
 - Nazar aaya: kala chana branch 10 mein +3,941, doosri branch mein -3,333 (maal ek godam, bikri doosre se).
+
+==============================================================
+2026-09-17 — Nayi Sale: malik ke faisle + purchase bill ke 2 masle
+==============================================================
+Nayi Sale (abhi bani nahi):
+- Taala (trg_SaleAllowedParty) RAHEGA. Sale sirf COUNTER SALE (PartyID 1) aur "whole sale (purana)" (PartyID 21629) par.
+- Default Counter (R = ItemBranchRate.SaleRate, cash, CashReceived = total).
+- Wholesale button: W rate (SaleRate3/SaleRateSize), udhaar sale + usi waqt cash ka CRV (POS jaisa; payment khud total, badal sakte hain).
+- Malik rate badal sakta hai, mulazim fix rate. Nayi login scope "sale" (Sirf Sale) jo sirf Sale screen khole.
+- POS dobara save (F5): usp_Sale_InsertUpdate CancelAndNew=1 -> purani sale DocStatusID 3 (cancel) + nayi SaleNo. Double nahi hota.
+- Rukawat: repo ki firestore.rules purani hai (stockCount ka zikr nahi) -> Firebase console ke asal rules chahiyein.
+
+Purchase bill (app "Bill dekhein"):
+- Entry "POS Purchase 00002446 Rs 3,780" par bill 00002443 bismillah traders Rs 465,499.99 khula (id pos-<PurchaseID> milta nahi).
+- Qty: Lifebuoy shampoo 50 ctn (= 600 pcs, pack 12) app mein "600 CTN = 7200 PCS" dikha.
+  Andaza: PurchaseDetail.Qty PIECES mein hai aur Rate FI PIECE (sync-bills.js ise carton samajhta hai).
+- sync-bills.js cancelled (DocStatusID 3) purchase bhi bhejta hai (sync.js SKIP_STATUS = [3] chhorta tha).
+- Tasdeeq: bill-dekho.js (sirf parhta hai): node bill-dekho.js 00002443 00002446 -> bill-dekho.json.
+
+==============================================================
+2026-09-17 — v1.46.0: NAYI SALE (Counter / Wholesale) + "Sirf Sale" login
+==============================================================
+Firebase rules (firestore.rules) — PEHLE console mein Publish karein:
+- Base: Firebase par lage asal rules (malik ne paste kiye; stockCount wali ijazat unhi mein thi, repo file purani thi).
+- Nayi: saleStaff() (scope 'sale'), blueAccess/saleConfig get, posStock read: + saleStaff + blueStaff,
+  stockCount match repo mein bhi, owner list mein stockCount.
+- appSales/{saleId}: read = malik / full mulazim / sale mulazim.
+  create sirf status 'new', aaj ki date, role == (malik ? 'owner' : 'staff'), by == uid, 1-150 lines, total > 0.
+  update sirf printReq (dobara print ka hukam). Status/saleNo sirf PC (admin key) likhta hai.
+
+App:
+- sale.js (naya): view 'sale' (nav "🧾 Sale"; malik, full mulazim, sale mulazim).
+  Counter (default) = R rate; Wholesale = W rate (wrate, warna R). Godam buttons (default branch 1).
+  Item: upar search box (naam/code; Enter = barcode/akela item), 📷 camera, USB scanner (pos-stock ka detector sale screen par
+  setSaleScanHook se yahan aata hai). Line: Ctn + Pcs + Rate. Rate sirf malik badal sakta hai (✎), mulazim readonly.
+  Cash khud total; counter mein kam cash par save nahi; wholesale mein baqi = udhaar ("whole sale" khate mein).
+  Draft localStorage 'sam-sale-draft' (aaj ka). Save -> appSales doc (id 's'+time+random), 4 sec baad bill saaf;
+  server mana kare to bill wapas screen par + alert.
+  "📋 Aaj ki app sales" dialog: status (intezar / Sale No / masla), line tafseel, "Dobara print" (printReq).
+- pos-stock.js: saleStock() export (posStock listener bina ginti ke), setSaleScanHook, openSaleCamera;
+  start(withCounts) — sale-only mulazim ke liye stockCount listener nahi lagta.
+  USB scanner ab sirf Stock screen (.stock-head) ya Sale screen ([data-sale-root]) par pakadta hai.
+- Login scope 'sale': auth-controller.js, cloud.js (saleConfig/salePrivate, salt 'noor-traders-blue-sale-v1', key 'sale-'),
+  index.html (Sirf Sale), app.js (saleOnly, route, nav, title "Nayi Sale", PDF button chhupa), mulazim password form.
+- cloud.js: listenAppSales(date), saveAppSale(doc), reprintAppSale(id).
+- style.css: .sale-* classes.
+
+PC (C:\khata-sync):
+- sale-post.js v1 (sale-auto.bat loop, sale-log.txt; Startup folder mein sale-chupa.vbs; port 47815 = ek hi chale, exit 3).
+  Listener: appSales status in [new, posting]; printReq > 0.
+  Transaction se 'posting' -> POS: usp_Sale_InsertUpdate (Description = "BK-APP <id>" nishan, DocStatusID 1, SPID 1,
+  CreatedBy 1, CCNo/BiltyNo = total, vNetAmount = total, COGS = qty x ItemBranchRate.PurchaseRate) + usp_SaleDetail_InsertUpdate
+  (Qty PIECES, GBranchID = godam). Counter: Defaults.DefCustomerID, IsCreditSale 0, CashReceived = total.
+  Wholesale: SaleAllowedParty mein "whole sale" party (PartyID 21629), IsCreditSale 1, CashReceived 0,
+  cash > 0 ho to CRV (usp_Voucher_InsertUpdate: VoucherType/DocumentType 'CRV', DocumentNo = SaleID; Cash a/c Dr, party a/c Cr,
+  "Sale No: X") — POS isi tarah CRV banata hai aur sale dobara save par usay mitata hai.
+  Staff role: rate hamesha POS ka (R ya SaleRate3/SaleRateSize). Owner: app ka rate.
+  Pehle "BK-APP <id>" wali sale mile to dobara nahi banti (done likh deti hai).
+  Done: saleNo, saleId, crvNo, total, cash, doneAt. Masla: status 'failed' + error.
+  Rasid: SQL se parh kar (notepad /p, 32 chaurai). node sale-post.js --print <SaleNo> = POS ki kisi bhi sale ki rasid.
+  Stock kam ho to sirf log ("Stock kam") — sale nahi rukti (POS ka IsLockSaleStock abhi app par nahi lagaya).
+- Taala (trg_SaleAllowedParty) waisa hi hai.
+
+Baqi / aage:
+- Sale date: abhi PC ka waqt (POS Defaults.SaleDate / IsUseSaleDate istemal nahi kiya).
+- Barcode ki qty (ItemSubCode.SBItemQty, maslan 0.5) abhi istemal nahi — scan par 1 pc judta hai.
+- 'failed' sale dobara bhejne ka button nahi (nayi sale banayein).
+- Purchase bill qty/rate (pieces) aur cancelled bill ka masla abhi baqi (bill-dekho.json ka intezar).
+
+==============================================================
+2026-09-17 raat — App mein "(purana)" khate (masla, abhi hal nahi)
+==============================================================
+- pos-milan.js --customers-new ne POS ke purane customer khate zero + band kiye aur naam ke aage " (purana)" lagaya.
+- Yeh naam app mein bhi aa gaye (pos-khata-sync POS->app naam sync, jab app account purane POS party se jura ho).
+  Malik ke mutabiq yeh khate app mein nahi aane chahiye the; baqi sab theek synced hain.
+- Kuch ke app baqaye bade hain: haseeb cus (purana) 2,593,012 lene; hbl noor traders (purana) 804,325 lene
+  (hbl noor traders cash/bank khane ki list mein bhi aata hai). Kai 0 wale: HAFIZ HOTEL, ijaz wald chowdry..., mia arif sahb...
+- Hidayat: app se DELETE na karein (pos-khata-sync POS party bhi hata deta hai).
+- Jaanch: purana-dekho.js (sirf parhta hai) -> purana-dekho.json/.csv: har "(purana)" app khata: app baqaya, entries,
+  posLinks, POS party (chalu/band, baqaya), aur isi naam ka doosra (asal) app khata.
+
+==============================================================
+2026-09-17 raat — v1.47.0: Din band (day closing) + mulazim ko poori ijazat (aaj ke din)
+==============================================================
+Malik ka faisla:
+- Mulazim (full) AAJ ke din sab kuch kar sakta hai: entry banana, edit, delete, khate ka naam/phone/category.
+- Purani tareekh: sirf malik (mulazim dekh sakta hai, badal nahi sakta — malik ne "dekhe, badal na sake" chuna).
+- "Din band" button: mulazim ya malik daba sakta hai. Band hote hi mulazim sirf dekh sakta hai.
+  Malik par koi rok nahi aur wahi dobara khol sakta hai (mulazim khol nahi sakta). Agla din khud khulta hai.
+- Purchase mulazim par din band ka koi asar nahi.
+
+Firestore rules (v1.47):
+- todayStr() + dayOpen(): blueAccess/dayLock doc ka closed == aaj ho to mulazim ke saare likhne wale rule band
+  (entry create/update/soft-delete, purchase entry ka blueStaff hissa, closing, custody, party/expenseAccount edit).
+  exists() pehle — doc na ho to din khula (extra read nahi).
+- blueAccess/dayLock: blueStaff sirf {closed: aaj, by, at} likh sakta hai (khol nahi sakta). Malik generic owner rule se sab.
+- blueAccess/{id} get mein 'dayLock' bhi.
+- NAYA: staffEditEntry() — mulazim aaj ki entry ke kind, partyId, amount, date(aaj), note, account, dailyIncluded,
+  photos, deleted waghera badal sakta hai (rev+1, updatedBy = uid). Transfer entries phir bhi sirf malik.
+- NAYA: party/expenseAccount ke name, phone, category, note mulazim badal sakta hai (opening sirf malik).
+
+App:
+- index.html: #dayLockBtn + #dayLockNote (syncDetails ke neeche).
+- app.js: dayLock state + watchDayLock() (cloud.listenDayLock), paintDayLock() har render par,
+  toggleDayLock() (confirm ke saath), lockedNow() = din band + staff full.
+  Rok: capture-phase 'submit' aur 'click' handlers (data-sheet/data-count forms, data-del/edit/remove,
+  transfer edit/delete, pos-done, edit-purchase, ready) + body.day-locked CSS se form chhup jate hain.
+- cloud.js: listenDayLock(next,fail), setDayLock(day|'').
+- style.css: .day-lock button, #dayLockNote, body.day-locked.
+- Sale screen (appSales) par din band ka asar nahi — agar chahiye to rules mein appSales create par dayOpen() lagana hoga.

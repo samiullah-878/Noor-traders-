@@ -40,14 +40,16 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-function start() {
-  if (stop || !cloud) return;
-  loaded = false; failed = '';
-  stop = cloud.listenStock(
-    list => { rows = list.map(fixCost); loaded = true; failed = ''; soft(); },
-    e => { failed = e?.message || 'Stock load nahi hua'; loaded = true; rerender(); }
-  );
-  if (cloud.listenStockCount) {
+function start(withCounts = true) {
+  if (!cloud) return;
+  if (!stop) {
+    loaded = false; failed = '';
+    stop = cloud.listenStock(
+      list => { rows = list.map(fixCost); loaded = true; failed = ''; soft(); },
+      e => { failed = e?.message || 'Stock load nahi hua'; loaded = true; stop = null; rerender(); }
+    );
+  }
+  if (withCounts && !stopCount && cloud.listenStockCount) {
     stopCount = cloud.listenStockCount(list => {
       counts = new Map();
       round = list.find(r => r.id === '_round')?.round || '';
@@ -172,6 +174,22 @@ export function stockStop() {
 }
 
 export function stockBack() { stockStop(); }
+
+// ---------- Nayi Sale (sale.js) ke liye: wahi posStock data, ginti ke baghair ----------
+export function saleStock() {
+  start(false);
+  const chunks = rows.filter(r => !r.meta && Array.isArray(r.items));
+  const branches = [...new Set(chunks.map(c => c.branch))].sort((a, b) => a - b);
+  const names = {};
+  rows.forEach(r => { if (r.branch != null && r.name) names[r.branch] = r.name; });
+  const itemsFor = b => chunks.filter(c => c.branch === b)
+    .sort((x, y) => (x.order || 0) - (y.order || 0)).flatMap(c => c.items);
+  return { loaded, failed, branches, names, itemsFor, hidden, branchName };
+}
+let saleHook = null, saleSeen = [];
+export function setSaleScanHook(fn) { saleHook = fn; }
+export function openSaleCamera() { saleSeen = []; openScanner(); }
+const saleRoot = () => !!document.querySelector('[data-sale-root]');
 
 // ---------- data ----------
 
@@ -689,6 +707,7 @@ function closeScanner() {
 
 function finishScan() {
   closeScanner();
+  if (saleRoot()) { saleSeen = []; rerender(); return; }
   if (!scanList.length) return;
   rerender();
   const { items } = collect();
@@ -709,6 +728,11 @@ function findByCode(code) {
 
 // scan list mein daalo. Wapas: 'added' | 'again' | null (nahi mila)
 function addScanned(code) {
+  if (saleRoot()) {
+    const r = saleHook ? saleHook(code) : { state: null };
+    if (r.state) saleSeen.push(r.item.name);
+    return r;
+  }
   const item = findByCode(code);
   if (!item) return { state: null };
   if (scanList.some(id => String(id) === String(item.id))) return { state: 'again', item };
@@ -745,9 +769,12 @@ async function openScanner() {
   const { items } = collect();
   const byId = new Map(items.map(r => [String(r.id), r]));
   const drawNames = () => {
-    countBox.textContent = scanList.length;
-    namesBox.innerHTML = scanList.slice(-4).map(id => `<li>${esc(byId.get(String(id))?.name || id)}</li>`).join('');
-    namesBox.start = Math.max(1, scanList.length - 3);
+    const sale = saleRoot();
+    const names = sale ? saleSeen.slice(-4) : scanList.slice(-4).map(id => byId.get(String(id))?.name || id);
+    const n = sale ? saleSeen.length : scanList.length;
+    countBox.textContent = n;
+    namesBox.innerHTML = names.map(x => `<li>${esc(x)}</li>`).join('');
+    namesBox.start = Math.max(1, n - 3);
   };
   drawNames();
   scanBox.querySelector('.scan-done').onclick = finishScan;
@@ -838,7 +865,8 @@ function kbFinish() {
   hardScan(code);
 }
 document.addEventListener('keydown', e => {
-  if (!stockActive || scanBox || e.ctrlKey || e.altKey || e.metaKey) return;
+  const onStock = stockActive && !saleRoot() && !!document.querySelector('.stock-head');
+  if ((!onStock && !saleRoot()) || scanBox || e.ctrlKey || e.altKey || e.metaKey) return;
   const now = performance.now();
   if (e.key.length === 1) {
     if (!kbBuf || now - kbLast > KB_GAP) {
@@ -859,6 +887,12 @@ document.addEventListener('keydown', e => {
 
 function hardScan(code) {
   if (!code) return;
+  if (saleRoot()) {
+    const r = saleHook ? saleHook(code) : { state: null };
+    if (!r.state) { notice(`"${code}" stock mein nahi mila`); if (navigator.vibrate) navigator.vibrate([60, 60, 60]); }
+    else if (navigator.vibrate) navigator.vibrate(80);
+    return;
+  }
   const r = addScanned(code);
   if (!r.state) {
     notice(`"${code}" stock mein nahi mila`);

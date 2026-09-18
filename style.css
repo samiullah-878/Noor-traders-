@@ -76,3 +76,35 @@ dialog.search-dialog #dialogBody{max-height:calc(var(--search-viewport-height,90
 .scan-foot button.sh-clear{background:#fff0f1;color:#b32936}
 .scan-names{text-align:left;margin:4px 0 8px;padding-left:28px;font-size:14px;max-height:6.5em;overflow:hidden}
 .scan-done{width:100%;background:#138150;color:#fff;margin-bottom:8px}
+/* v1.46 Nayi Sale */
+.sale-head .sale-mode{font-size:15px;min-height:44px}
+.sale-head .sale-mode.selected{background:#1258ce;color:#fff}
+.sale-total{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:10px 0 4px;padding:10px 12px;background:#eef4ff;border-radius:12px}
+.sale-total strong{font-size:26px;color:#0b3f9e}
+.sale-total small{color:#44566f}
+.sale-found{display:grid;gap:4px;margin-bottom:12px;max-height:55vh;overflow:auto}
+.sale-hit{display:block;width:100%;text-align:left;background:#fff;border:1px solid #dce5f2;border-radius:10px;padding:8px 10px;min-height:0}
+.sale-hit b{display:block;font-size:15px;color:#152747}
+.sale-hit small{color:#6b7c93;font-weight:400}
+.sale-cart{display:grid;gap:8px}
+.sale-line{background:#fff;border-radius:12px;padding:10px;border:1px solid #e1e8f3}
+.sale-line-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sale-line small{color:#6b7c93}
+.sale-x{min-height:32px;padding:4px 10px}
+.sale-inputs{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end;margin-top:6px}
+.sale-inputs label{display:grid;font-size:12px;color:#44566f;flex:1 1 70px;min-width:0}
+.sale-inputs input{padding:8px;font-size:16px}
+.sale-inputs input[readonly]{background:#f1f4f9;color:#44566f}
+.sale-amt{flex:1 1 80px;text-align:right}
+.sale-amt small{display:block;font-size:11px}
+.sale-amt b{font-size:18px}
+.sale-pay{display:grid;gap:6px;margin:14px 0;background:#fff;border-radius:12px;padding:12px;border:1px solid #e1e8f3}
+.sale-pay label{display:grid;font-size:13px;gap:4px}
+.sale-pay input{font-size:18px}
+.sale-hist{margin:6px 0;padding:8px;border:1px solid #d5e0f2;border-radius:10px}
+.sale-hist small{display:block}
+/* v1.47 Din band (day closing) */
+#dayLockBtn.day-lock{margin:6px 0;width:100%;background:#0b3f9e;color:#fff;min-height:44px;border-radius:12px}
+#dayLockBtn.day-lock.closed{background:#b3261e}
+#dayLockNote{margin:4px 0 8px;padding:8px 10px;background:#fdecea;color:#8b1a12;border-radius:10px;font-size:13px}
+body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actions{display:none}
