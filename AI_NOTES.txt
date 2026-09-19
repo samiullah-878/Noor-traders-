@@ -675,3 +675,14 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
 - Ginti "+ Jama" ki tadad ab 3 decimal tak (pehle 0.125 -> 0.13).
 - Malik ka sawal (ginti do dafa save): aam "Save" pichhli ginti ki JAGAH leta hai (bill aakhri save se), "+ Jama" pichhli
   mein jorta hai. Har save par system stock bhi usi waqt ka likha jata hai; har save history mein rehta hai.
+
+2026-09-19 raat — v1.69.0: iPhone par camera scan + "Sirf Sale" login khata load nahi karta
+- iPhone Safari / iPhone Chrome (WebKit) mein BarcodeDetector nahi. openScanner: BarcodeDetector ho to wohi (Android),
+  warna zxingDetector(): vendor/zxing.min.js (@zxing/library 0.21.3 UMD, global ZXing, ZXING-LICENSE) script tag se
+  load, MultiFormatReader + TRY_HARDER, video frame canvas par (max 1024 chaura) -> HTMLCanvasElementLuminanceSource
+  -> HybridBinarizer -> decodeWithState; { detect(video) -> [{rawValue}] } — baqi scan loop / filter / awaz waise hi.
+  sw.js isLibrary ('/vendor/') -> LIB_CACHE mein pehli dafa ke baad mehfooz. Headless Chromium (BarcodeDetector nahi)
+  par Code128 "1020334055636" / "badam atc" / "DS" decode test kiye (10-45 ms).
+  iPhone par Light / Zoom tabhi dikhte hain jab camera capabilities dein (aksar nahi).
+- cloud.js listen(): accessScope 'sale' par bhi 'stock' ki tarah khata (blueKhata) load NAHI — khali rows. Pehle
+  "permission-denied" aata tha (Firebase Denies) aur bekaar reads. Malik / full mulazim pehle jaisa poora data.

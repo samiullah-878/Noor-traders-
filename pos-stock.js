@@ -977,19 +977,60 @@ function addScanned(code) {
   return { state: 'added', item };
 }
 
+// ---------- v1.69: iPhone ke liye barcode parhna (ZXing, vendor/zxing.min.js — pehli dafa aa kar phone mein mehfooz) ----------
+let zxingP = null;
+function zxingDetector() {
+  if (!zxingP) zxingP = new Promise((res, rej) => {
+    if (window.ZXing) return res();
+    const s = document.createElement('script');
+    s.src = './vendor/zxing.min.js?v=0.21.3';
+    s.onload = () => res();
+    s.onerror = () => rej(new Error('zxing load'));
+    document.head.appendChild(s);
+  }).then(() => {
+    const Z = window.ZXing, F = Z.BarcodeFormat;
+    const hints = new Map();
+    hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39, F.CODE_93, F.ITF, F.CODABAR, F.QR_CODE]);
+    hints.set(Z.DecodeHintType.TRY_HARDER, true);
+    const reader = new Z.MultiFormatReader(); reader.setHints(hints);
+    const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true });
+    return {
+      detect: async video => {
+        const vw = video.videoWidth, vh = video.videoHeight;
+        if (!vw || !vh) return [];
+        const k = Math.min(1, 1024 / vw);
+        canvas.width = Math.round(vw * k); canvas.height = Math.round(vh * k);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        try {
+          const r = reader.decodeWithState(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(canvas))));
+          return [{ rawValue: r.getText() }];
+        } catch { return []; }
+        finally { try { reader.reset(); } catch {} }
+      }
+    };
+  }).catch(e => { zxingP = null; throw e; });
+  return zxingP;
+}
+
 async function openScanner() {
   if (scanBox) return;
   syncFromCart();
   // awaz: button dabane (user ke haath) par hi chalu ho sakti hai
   try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch {}
-  if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
-    notice('Is phone/browser mein camera scan nahi chalta. Android par Chrome istemal karein, ya code search mein likhein.');
+  if (!navigator.mediaDevices?.getUserMedia) {
+    notice('Is phone/browser mein camera nahi khulta — code search mein likhein.');
     return;
   }
-  let formats = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'itf', 'codabar', 'qr_code'];
-  try { const sup = await BarcodeDetector.getSupportedFormats(); formats = formats.filter(f => sup.includes(f)); } catch {}
   let detector;
-  try { detector = new BarcodeDetector({ formats }); } catch { detector = new BarcodeDetector(); }
+  if ('BarcodeDetector' in window) {   // Android Chrome: phone ka apna tez tareeqa
+    let formats = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'itf', 'codabar', 'qr_code'];
+    try { const sup = await BarcodeDetector.getSupportedFormats(); formats = formats.filter(f => sup.includes(f)); } catch {}
+    try { detector = new BarcodeDetector({ formats }); } catch { detector = new BarcodeDetector(); }
+  } else {                              // v1.69: iPhone (Safari / iPhone Chrome) — ZXing library se
+    try { detector = await zxingDetector(); }
+    catch { notice('Barcode parhne wali library load nahi hui (internet check karein) — code search mein likhein.'); return; }
+    if (scanBox) return;               // intezar ke dauran dobara na khul jaye
+  }
 
   scanBox = document.createElement('div');
   scanBox.className = 'scan-box';

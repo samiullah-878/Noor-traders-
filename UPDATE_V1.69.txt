@@ -1,0 +1,5 @@
+Blue Khata v1.69.0
+INSTALL: ZIP ki SAARI files GitHub par — naya: vendor/zxing.min.js (vendor folder ke andar). Rules v1.66 wali.
+Phone par Sync / Update, neeche 1.69.0.
+- iPhone par bhi camera se barcode scan (khud pehchanta hai: Android = purana tez tareeqa, iPhone = library).
+- "Sirf Sale" mulazim ke phone par sirf sale ka data; laal "permission-denied" khatam.

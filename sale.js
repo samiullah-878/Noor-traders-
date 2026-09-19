@@ -1,10 +1,10 @@
-// sale.js — Nayi Sale (Counter / Wholesale) — v1.68.0
+// sale.js — Nayi Sale (Counter / Wholesale) — v1.69.0
 // App sale ko Firestore "appSales" mein "new" likhta hai. POS bill PC ka sale-post.js banata hai
 // (POS ke apne procedures se), rasid print karta hai aur Sale No wapas likhta hai.
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.68.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.69.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
