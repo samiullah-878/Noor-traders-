@@ -699,3 +699,22 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
 - PC subcode-sync.js: status new -> 'working' -> POS ke procedures usp_ItemSubCode_InsertUpdate (@ItemSubCodeID 0 = naya)
   / usp_ItemSubCode_Delete; sirf dbo.ItemSubCode badalta hai. Duplicate: Items.ItemCode aur doosre sub-barcode.
   subcode-auto.bat (loop, exit 3) + subcode-auto.vbs (Startup, 70 sec). Lock port 47817.
+
+2026-09-20 — v1.71.0: POS purchase aur larke ki cash purchase = EK bill
+- Masla: saman aate hi mulazim daily/Purchase se cash purchase (tasveerein) daalta hai; baad mein PC (sync.js) wohi bill
+  'pos-<PurchaseID>' (kind borrow) laata hai -> Purchase list mein do cards, dobara payment ka khatra.
+- app.js: cash-purchase entry par field posBill = POS entry id (posDiffOk = malik ne farq manzoor kiya).
+  autoLinkPurchases(): POS bill ke liye usi party ki 3 din ke andar bilkul barabar raqam wali EK cash purchase ho to
+  khud jor deta hai (mulazim: sirf aaj wali; malik: sab). Farq / kai candidates -> "🔗 Milao (n)" -> linkForm radio.
+  Linked: cash card chhup jata hai, POS card "Credit bill · Cash ada ✓" + tasveerein + farq line + malik ke buttons
+  "Larke ki ghalti — POS wali raqam sahi" (cash amount = POS amount) / "Farq asal hai" (posDiffOk) / "Alag karein".
+  Upar "🔗 n POS bills abhi milane hain". Khata ka hisaab nahi badalta (dono entries apni raqam se rehti hain).
+- save(): nayi 'payment' par usi party ke linked cash-paid bill (same raqam, 7 din) ho to confirm.
+- firestore.rules: mulazim purchase update keys mein 'posBill'. PC scripts mein tabdeeli nahi (sync.js pos- entry par
+  posBill nahi rakhta; link cash entry par hai).
+
+2026-09-20 — v1.72.0: godam mein stock kam ho to sale nahi (POS ka qanoon), NOOR TRADERS par rok nahi
+- sale.js Save: har line ka godam branch 1 (SALE_BRANCH, NOOR TRADERS) ke ilawa ho aur us godam mein item ka stock
+  tadad se kam ho -> alert list ke saath, sale nahi banti. Line mein "⛔ godam mein stock nahi — godam badlein".
+  Dukaan (branch 1) minus stock par bhi sale banti hai (pehle jaisa). Malik/mulazim dono par barabar.
+- PC sale-post mein tabdeeli nahi (malik: PC par yeh rok pehle se hai).

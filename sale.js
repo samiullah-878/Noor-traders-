@@ -1,10 +1,10 @@
-// sale.js — Nayi Sale (Counter / Wholesale) — v1.70.0
+// sale.js — Nayi Sale (Counter / Wholesale) — v1.72.0
 // App sale ko Firestore "appSales" mein "new" likhta hai. POS bill PC ka sale-post.js banata hai
 // (POS ke apne procedures se), rasid print karta hai aur Sale No wapas likhta hai.
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.70.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.72.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -216,11 +216,11 @@ export function renderSale() {
   const rows = cart.map((l, i) => {
     const lg = Number(l.godam) || s.pick;
     const it = itemIn(lg, l.id) || s.items.find(r => String(r.id) === String(l.id));
-    const pcs = linePcs(l), short = it && pcs > Number(it.stock);
+    const pcs = linePcs(l), short = it && pcs > Number(it.stock), block = short && lg !== SALE_BRANCH;   // v1.72: godam mein rok
     const gsel = s.branches.length > 1 ? `<label>Godam<select data-sale-lg="${i}">${s.branches.map(b => `<option value="${b}"${b === lg ? ' selected' : ''}>${esc(s.branchName(b, s.names))}</option>`).join('')}</select></label>` : '';
     return `<div class="sale-line" data-sale-line="${i}">
       <div class="sale-line-top"><b>${esc(l.name)}</b><button type="button" class="danger sale-x" data-sale-del="${i}" aria-label="Hatao">✕</button></div>
-      <small>${esc(l.code)}${it ? ' · stock ' + num(it.stock) + ' (' + esc(s.branchName(lg, s.names)) + ')' : ''}${short ? ' · <span class="red">stock kam hai</span>' : ''}</small>
+      <small>${esc(l.code)}${it ? ' · stock ' + num(it.stock) + ' (' + esc(s.branchName(lg, s.names)) + ')' : ''}${block ? ' · <b class="red">⛔ godam mein stock nahi — godam badlein</b>' : short ? ' · <span class="red">stock kam hai</span>' : ''}</small>
       <div class="sale-inputs">
         <label>${esc(l.uName)}<input type="number" min="0" step="any" inputmode="decimal" data-sale-pcs="${i}" value="${l.pcs || ''}"></label>
         ${Number(l.pack) > 1 ? `<label>${esc(l.cName)} (${num(l.pack)})<input type="number" min="0" step="1" inputmode="numeric" data-sale-ctn="${i}" value="${l.ctn || ''}"></label>` : ''}
@@ -385,6 +385,18 @@ async function save() {
     else lines.push({ ...base, qty: r3(cq + pq), rate: pr, std: r2(l.std) });
   });
   if (!lines.length) { notice('Kisi item ki qty likhein'); return; }
+  // v1.72: POS ka qanoon — GODAM (branch 1 NOOR TRADERS ke ilawa) mein stock tadad se kam ho to sale nahi (dukaan par rok nahi)
+  const s2 = stock();
+  const shortG = [];
+  for (const l of cart) {
+    const g = Number(l.godam) || Number(godam) || SALE_BRANCH;
+    if (g === SALE_BRANCH) continue;
+    const need = linePcs(l); if (!(need > 0)) continue;
+    const it = itemIn(g, l.id);
+    const have = it ? Number(it.stock) || 0 : 0;
+    if (have < need - 0.0005) shortG.push(`${l.name}: ${s2.branchName(g, s2.names)} mein stock ${num(have)}, chahiye ${num(need)}`);
+  }
+  if (shortG.length) { alert('Godam mein stock kam hai — sale nahi ban sakti:\n\n' + shortG.join('\n') + '\n\nGodam badlein (NOOR TRADERS par rok nahi).'); return; }
   if (emptyLines && !confirm('Jin items ki qty khali hai woh bill mein nahi jayenge. Theek hai?')) return;
   if (lines.some(l => !(l.rate > 0)) && !confirm('Kisi item ka rate 0 hai. Phir bhi save karein?')) return;
   const total = r2(lines.reduce((n, l) => n + l.qty * l.rate, 0));
