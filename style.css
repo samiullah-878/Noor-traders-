@@ -204,3 +204,22 @@ body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actio
 
 /* v1.61: carton ka rate line mein */
 .sale-crate{display:block;width:100%;color:#6b7c93;font-size:13px;margin-top:-2px}
+
+/* v1.63: camera ke buttons LEFT, beech mein camera, tadad ke buttons RIGHT (patli patti) */
+.scan-inner > .scan-mid{display:flex;gap:6px;margin:0 8px;flex:1 1 0;min-height:240px}
+.scan-mid .scan-cam, .scan-inner > .scan-mid .scan-cam{flex:1 1 auto;margin:0;min-height:0;min-width:0}
+.scan-left{flex:0 0 60px;display:flex;flex-direction:column}
+.scan-left .scan-tools{display:flex;flex-direction:column;gap:6px;margin:0;justify-content:flex-start}
+.scan-left .scan-tools button{width:100%;min-height:46px;padding:4px 2px;font-size:11px;line-height:1.2;white-space:normal;border-radius:10px}
+.scan-mid .scan-pad{flex:0 0 94px;margin:0;padding:5px;display:flex;flex-direction:column;overflow-y:auto;border-radius:12px}
+.scan-mid .scan-pad[hidden]{display:none}
+.scan-mid .scan-pad-name{font-size:12px;font-weight:700;line-height:1.25;margin-bottom:5px;word-break:break-word}
+.scan-mid .scan-pad-row{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.scan-mid .scan-pad-row button{min-width:0;min-height:34px;padding:0;font-size:15px;border-radius:8px}
+.scan-mid .scan-pad-row button[data-unit]{font-size:12px;min-width:0}
+.scan-mid .scan-pad-row button[data-unit][hidden]{display:none}
+.scan-mid .scan-pad-row button[data-qty="+1"]{grid-column:span 2}
+
+/* v1.64: camera ki list mein har line ka laal ✕ */
+.scan-names li{position:relative;padding-right:46px}
+.scan-names .scan-del{position:absolute;right:2px;top:50%;transform:translateY(-50%);width:38px;height:38px;min-height:0;padding:0;border:0;border-radius:10px;background:#b32936;color:#fff;font-size:18px;font-weight:700;line-height:38px}

@@ -1,0 +1,3 @@
+Blue Khata v1.64.0
+INSTALL: ZIP ki files GitHub par (1.61-1.63 ki sab tabdeeliyan shamil). Phone par Sync / Update, neeche 1.64.0.
+- Camera ki list mein har line ke saath laal ✕ — dabane se line bill se bhi kat jati hai.

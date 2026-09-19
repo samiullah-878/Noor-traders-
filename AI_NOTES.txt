@@ -622,3 +622,18 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
 - Wahi barcode camera ke saamne ruka rahe to lastCodeAt har frame taaza — dobara tab ginta hai jab barcode 1.5 sec
   hat kar phir aaye (warna har 1.5 sec nayi line banti).
 - POS / sale-post par koi tabdeeli nahi: ek item ki kai lines pehle se alag SaleDetail banti hain.
+
+2026-09-19 raat — v1.63.0: camera screen teen hisson mein (malik ki farmaish)
+- .scan-mid (flex row): LEFT .scan-left = camera tools (Focus / zoom / Camera badlein / Light) upar se neeche
+  (tools ab msg.after ki jagah .scan-left mein append); BEECH .scan-cam; RIGHT .scan-pad = tadad ki patli patti
+  (upar item ka naam, Pcs/Ctn, 1-12 do columns grid, +1 poori chaurai). Pad hidden ho to camera poori jagah le leta hai.
+- Neeche message, items ki list, Kul, Ho gaya / Band karein pehle jaise. CSS: style.css ka v1.63 block.
+- Headless Chromium (390px) par mock render karke layout dekha gaya.
+
+2026-09-19 raat — v1.64.0: camera ki list mein har line ka laal ✕
+- pos-stock.js: drawNames (sale) har li mein button.scan-del data-del = line key; namesBox click -> saleDelHook(key),
+  scanOrder/scanItems/scanQty se bhi hataya; kati line par pad laga tha to lastKey = aakhri bachi line.
+  setSaleDelHook(fn) naya export. Stock-ginti mode mein scanList se bhi hat jata hai.
+- sale.js: setSaleDelHook(key) -> cart.findIndex(l.k === key) splice, rerender. Koi "pakka?" sawal nahi (malik: tez kaam).
+- style.css v1.64: li padding-right, .scan-del 38px laal, right par beech mein.
+- NOTE: pehle ke version-bump sed ne purane comments ke "v1.61.2" jaise nishan bhi badal diye the — code par asar nahi.

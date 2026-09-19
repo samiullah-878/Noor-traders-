@@ -5,7 +5,7 @@ const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 const NUMF = new Intl.NumberFormat('en-PK');   // ek hi dafa banao (har number par naya banana bohat slow tha)
-const num = n => NUMF.format(Math.round((Number(n) || 0) * 1000) / 1000);   // v1.62.0: tadad 3 decimal
+const num = n => NUMF.format(Math.round((Number(n) || 0) * 1000) / 1000);   // v1.64.0: tadad 3 decimal
 const r2 = n => Math.round((Number(n) || 0) * 100) / 100;   // v1.61: yeh maujood nahi tha — camera ki list banate waqt ruk jata tha (kaala camera)
 const NAMEC = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
 
@@ -195,8 +195,9 @@ export function saleStock() {
 }
 let saleHook = null, saleSeen = [], saleQtyHook = null, saleFindHook = null;
 export function setSaleFindHook(fn) { saleFindHook = fn; }
-// v1.62.0: camera khulte waqt apni list BILL se dobara banaye (Naya bill / item hatane ke baad purani list na dikhe)
-let saleCartHook = null;
+// v1.64.0: camera khulte waqt apni list BILL se dobara banaye (Naya bill / item hatane ke baad purani list na dikhe)
+let saleCartHook = null, saleDelHook = null;
+export function setSaleDelHook(fn) { saleDelHook = fn; }   // v1.64: camera ki list se line katna
 export function setSaleCartHook(fn) { saleCartHook = fn; }
 function syncFromCart() {
   if (!saleRoot() || !saleCartHook) return;
@@ -907,13 +908,16 @@ async function openScanner() {
   scanBox.className = 'scan-box';
   scanBox.innerHTML = `<div class="scan-inner">
       <div class="scan-find"><div class="scan-find-row"><input class="scan-q" type="search" enterkeyhint="next" placeholder="🔍 Naam ya code likhein" autocomplete="off"><input class="scan-n" type="text" inputmode="decimal" enterkeyhint="done" placeholder="Tadad" autocomplete="off"><button type="button" class="scan-u">Pcs</button></div><div class="scan-hits" hidden></div></div>
-      <div class="scan-cam"><video playsinline muted autoplay></video><div class="scan-line"></div></div>
-      <p class="scan-msg">Barcode camera ke saamne rakhein — ek ke baad ek scan karte jayein</p>
-      <div class="scan-pad" hidden>
-        <div class="scan-pad-name"></div>
-        <div class="scan-pad-row"><button type="button" data-unit="pcs" class="selected">Pcs</button><button type="button" data-unit="ctn">Ctn</button>
-          ${[1,2,3,4,5,6,7,8,9,10,11,12].map(n => `<button type="button" data-qty="${n}">${n}</button>`).join('')}<button type="button" data-qty="+1">+1</button></div>
+      <div class="scan-mid">
+        <div class="scan-left"></div>
+        <div class="scan-cam"><video playsinline muted autoplay></video><div class="scan-line"></div></div>
+        <div class="scan-pad" hidden>
+          <div class="scan-pad-name"></div>
+          <div class="scan-pad-row"><button type="button" data-unit="pcs" class="selected">Pcs</button><button type="button" data-unit="ctn">Ctn</button>
+            ${[1,2,3,4,5,6,7,8,9,10,11,12].map(n => `<button type="button" data-qty="${n}">${n}</button>`).join('')}<button type="button" data-qty="+1">+1</button></div>
+        </div>
       </div>
+      <p class="scan-msg">Barcode camera ke saamne rakhein — ek ke baad ek scan karte jayein</p>
       <ol class="scan-names"></ol>
       <div class="scan-sum"></div>
       <button type="button" class="scan-done">✓ Ho gaya — list dikhao (<span>0</span>)</button>
@@ -942,7 +946,7 @@ async function openScanner() {
       const list = scanOrder.map(k => [k, scanItems.get(k)]).filter(x => x[1]);
       countBox.textContent = list.length;
       namesBox.innerHTML = list.map(([k, it]) => { const L = lineOf(it, k);
-        return `<li${k === lastKey ? ' class="now"' : ''}><b>${esc(it.name)}</b><span>${esc(L.qtxt)} x ${num(L.rate)} = <b>${num(L.amt)}</b></span></li>`; }).join('');
+        return `<li${k === lastKey ? ' class="now"' : ''}><button type="button" class="scan-del" data-del="${esc(k)}" aria-label="Hatao">✕</button><b>${esc(it.name)}</b><span>${esc(L.qtxt)} x ${num(L.rate)} = <b>${num(L.amt)}</b></span></li>`; }).join('');
       namesBox.start = 1;
       const kul = list.reduce((n, [k, it]) => n + lineOf(it, k).amt, 0);
       sumBox.innerHTML = list.length ? `Kul: <b>Rs ${num(kul)}</b>` : '';
@@ -956,6 +960,18 @@ async function openScanner() {
     sumBox.innerHTML = '';
   };
   drawNames();
+  // v1.64: list ki line ka ✕ — bill se bhi kat jaye
+  namesBox.addEventListener('pointerdown', e => { if (e.target.closest('.scan-del')) e.preventDefault(); });
+  namesBox.addEventListener('click', e => {
+    const b = e.target.closest('.scan-del'); if (!b) return;
+    const k = b.dataset.del;
+    if (saleRoot() && saleDelHook) saleDelHook(k);
+    scanOrder = scanOrder.filter(x => x !== k); scanItems.delete(k); scanQty.delete(k);
+    if (!saleRoot()) scanList = scanList.filter(id => String(id) !== k);
+    if (lastKey === k || !scanItems.has(lastKey)) { lastKey = scanOrder[scanOrder.length - 1] || ''; lastScan = lastKey ? scanItems.get(lastKey) : null; }
+    if (navigator.vibrate) navigator.vibrate(30);
+    showPad(); drawNames();
+  });
   const pad = scanBox.querySelector('.scan-pad'), padName = scanBox.querySelector('.scan-pad-name');
   const showPad = () => {
     if (!lastScan) { pad.hidden = true; return; }
@@ -1132,7 +1148,7 @@ async function openScanner() {
     tb.onclick = async () => { on = !on; try { await track.applyConstraints({ advanced: [{ torch: on }] }); } catch {} tb.textContent = on ? '🔦 Light ON' : '🔦 Light'; };
     tools.appendChild(tb);
   }
-  if (tools.children.length) msg.after(tools);
+  if (tools.children.length) (scanBox.querySelector('.scan-left') || msg).append(tools);   // v1.63: camera ke buttons LEFT patti mein
 
   const loop = async () => {
     if (!scanBox) return;
