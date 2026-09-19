@@ -192,9 +192,11 @@ export function saleStock() {
     .sort((x, y) => (x.order || 0) - (y.order || 0)).flatMap(c => c.items);
   return { loaded, failed, branches, names, itemsFor, hidden, branchName };
 }
-let saleHook = null, saleSeen = [], saleQtyHook = null;
+let saleHook = null, saleSeen = [], saleQtyHook = null, saleFindHook = null;
+export function setSaleFindHook(fn) { saleFindHook = fn; }
 export function setSaleQtyHook(fn) { saleQtyHook = fn; }
 let lastScan = null, scanQty = new Map(), padUnit = 'pcs';   // camera par tadad ke buttons
+let scanOrder = [], scanItems = new Map();   // camera ki screen par bill ki lines
 export function setSaleScanHook(fn) { saleHook = fn; }
 export function openSaleCamera() { saleSeen = []; openScanner(); }
 const saleRoot = () => !!document.querySelector('[data-sale-root]');
@@ -778,7 +780,7 @@ let lastCode = '', lastCodeAt = 0;
 
 function clearScan() {
   $('list')?.querySelectorAll?.(COUNT_SEL).forEach(el => { el.value = el.defaultValue; });
-  scanList = []; scanHit = null; scanQty = new Map(); lastScan = null;
+  scanList = []; scanHit = null; scanQty = new Map(); lastScan = null; scanOrder = []; scanItems = new Map();
   const si = $('search'); if (si) si.value = '';
   limit = PAGE;
   rerender();
@@ -855,12 +857,14 @@ async function openScanner() {
       <video playsinline muted autoplay></video>
       <div class="scan-line"></div>
       <p class="scan-msg">Barcode camera ke saamne rakhein — ek ke baad ek scan karte jayein</p>
+      <div class="scan-find"><input class="scan-q" placeholder="Naam ya code likh kar item add karein" autocomplete="off"><div class="scan-hits" hidden></div></div>
       <div class="scan-pad" hidden>
         <div class="scan-pad-name"></div>
         <div class="scan-pad-row"><button type="button" data-unit="pcs" class="selected">Pcs</button><button type="button" data-unit="ctn">Ctn</button>
-          ${[1, 2, 3, 6, 12, 24].map(n => `<button type="button" data-qty="${n}">${n}</button>`).join('')}<button type="button" data-qty="+1">+1</button></div>
+          ${[1,2,3,4,5,6,7,8,9,10,11,12].map(n => `<button type="button" data-qty="${n}">${n}</button>`).join('')}<button type="button" data-qty="+1">+1</button></div>
       </div>
       <ol class="scan-names"></ol>
+      <div class="scan-sum"></div>
       <button type="button" class="scan-done">✓ Ho gaya — list dikhao (<span>0</span>)</button>
       <button type="button" class="scan-close">✕ Band karein</button>
     </div>`;
@@ -870,13 +874,33 @@ async function openScanner() {
   const countBox = scanBox.querySelector('.scan-done span');
   const { items } = collect();
   const byId = new Map(items.map(r => [String(r.id), r]));
+  const sumBox = scanBox.querySelector('.scan-sum');
+  const lineOf = it => {
+    const q = scanQty.get(String(it.id)) || { pcs: 0, ctn: 0 };
+    const pack = Number(it.pack) || 0;
+    const total = r2((Number(q.ctn) || 0) * (pack > 1 ? pack : 0) + (Number(q.pcs) || 0));
+    const rate = Number(it.rate) || 0;
+    const qtxt = `${q.ctn ? num(q.ctn) + ' ' + (it.cName || 'Ctn') + (q.pcs ? ' + ' : '') : ''}${q.pcs || !q.ctn ? num(q.pcs || 0) + ' ' + (it.uName || 'Pcs') : ''}`;
+    return { total, rate, amt: r2(total * rate), qtxt };
+  };
   const drawNames = () => {
     const sale = saleRoot();
-    const names = sale ? saleSeen.slice(-4) : scanList.slice(-4).map(id => byId.get(String(id))?.name || id);
-    const n = sale ? saleSeen.length : scanList.length;
-    countBox.textContent = n;
+    if (sale) {
+      const list = scanOrder.map(id => scanItems.get(id)).filter(Boolean);
+      countBox.textContent = list.length;
+      namesBox.innerHTML = list.map(it => { const L = lineOf(it);
+        return `<li${lastScan && String(lastScan.id) === String(it.id) ? ' class="now"' : ''}><b>${esc(it.name)}</b><span>${esc(L.qtxt)} x ${num(L.rate)} = <b>${num(L.amt)}</b></span></li>`; }).join('');
+      namesBox.start = 1;
+      const kul = list.reduce((n, it) => n + lineOf(it).amt, 0);
+      sumBox.innerHTML = list.length ? `Kul: <b>Rs ${num(kul)}</b>` : '';
+      try { namesBox.scrollTop = namesBox.scrollHeight; } catch {}
+      return;
+    }
+    const names = scanList.slice(-6).map(id => byId.get(String(id))?.name || id);
+    countBox.textContent = scanList.length;
     namesBox.innerHTML = names.map(x => `<li>${esc(x)}</li>`).join('');
-    namesBox.start = Math.max(1, n - 3);
+    namesBox.start = Math.max(1, scanList.length - 5);
+    sumBox.innerHTML = '';
   };
   drawNames();
   const pad = scanBox.querySelector('.scan-pad'), padName = scanBox.querySelector('.scan-pad-name');
@@ -897,8 +921,26 @@ async function openScanner() {
     scanQty.set(id, q);
     if (saleRoot() && saleQtyHook) saleQtyHook(lastScan, q);
     if (navigator.vibrate) navigator.vibrate(30);
-    showPad();
+    showPad(); drawNames();
   });
+  // camera ki screen par search: naam ya code se item add
+  const qBox = scanBox.querySelector('.scan-q'), hitBox = scanBox.querySelector('.scan-hits');
+  const scanSearch = () => {
+    const q = String(qBox.value || '').toLowerCase().trim();
+    if (!q) { hitBox.hidden = true; hitBox.innerHTML = ''; return; }
+    const src = saleRoot() && saleFindHook ? saleFindHook(q) : items.filter(r => String(r.name).toLowerCase().includes(q) || String(r.code || '').toLowerCase().includes(q)).slice(0, 12);
+    hitBox.hidden = false;
+    hitBox.innerHTML = src.length ? src.map((r, i) => `<button type="button" data-pick="${i}"><b>${esc(r.name)}</b><small>${esc(r.code || '')}${r.rate ? ' · ' + num(r.rate) : ''}${r.stock != null ? ' · stock ' + num(r.stock) : ''}</small></button>`).join('') : '<p class="stat-note">Nahi mila</p>';
+    hitBox._src = src;
+  };
+  qBox.oninput = scanSearch;
+  qBox.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const r = (hitBox._src || [])[0]; if (r) pickHit(r); } };
+  const pickHit = r => {
+    qBox.value = ''; hitBox.hidden = true;
+    if (saleRoot() && saleHook) { const res = saleHook(String(r.code || r.bc?.[0] || r.name), r); if (res && res.item) { lastScan = res.item; if (!scanQty.has(String(res.item.id))) scanQty.set(String(res.item.id), { pcs: 1, ctn: 0 }); if (!scanItems.has(String(res.item.id))) { scanItems.set(String(res.item.id), res.item); scanOrder.push(String(res.item.id)); } showPad(); drawNames(); } return; }
+    addScanned(String(r.code || r.id)); drawNames();
+  };
+  hitBox.addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (!b) return; const r = (hitBox._src || [])[Number(b.dataset.pick)]; if (r) pickHit(r); });
   scanBox.querySelector('.scan-done').onclick = finishScan;
   scanBox.querySelector('.scan-close').onclick = finishScan;
   const video = scanBox.querySelector('video');
@@ -992,7 +1034,10 @@ async function openScanner() {
         if (code && !(code === lastCode && now - lastCodeAt < 1500)) {   // wahi barcode dobara foran na gine
           lastCode = code; lastCodeAt = now;
           const r = addScanned(code);
-          if (r.state === 'added' || r.state === 'again') { lastScan = r.item; if (!scanQty.has(String(r.item.id))) scanQty.set(String(r.item.id), { pcs: 1, ctn: 0 }); showPad(); }
+          if (r.state === 'added' || r.state === 'again') { lastScan = r.item; const k = String(r.item.id);
+            if (!scanQty.has(k)) scanQty.set(k, { pcs: 1, ctn: 0 });
+            if (!scanItems.has(k)) { scanItems.set(k, r.item); scanOrder.push(k); }
+            showPad(); drawNames(); }
           if (r.state === 'added') {
             msg.textContent = `✓ ${r.item.name} — tadad neeche se chunein ya agla scan karein`;
             if (navigator.vibrate) navigator.vibrate(80);

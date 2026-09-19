@@ -149,3 +149,18 @@ body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actio
 .qtypad-lab{font-size:12px;color:#6b7c93;margin-top:4px}
 .qtypad-row{display:flex;flex-wrap:wrap;gap:6px}
 .qtypad-row button{flex:1 1 60px;min-height:46px;font-size:17px;font-weight:700}
+/* v1.55 scanner: chhote buttons, search, 1-12 pad, bill ki lines */
+.scan-tools button{min-height:32px;font-size:12px;padding:4px 8px}
+.scan-find{margin:6px 10px 0;position:relative}
+.scan-find input{padding:9px 10px;font-size:15px;border-radius:10px;border:0}
+.scan-hits{position:absolute;left:0;right:0;top:100%;z-index:6;background:#fff;border-radius:10px;max-height:38vh;overflow:auto;box-shadow:0 8px 20px rgba(0,0,0,.3)}
+.scan-hits button{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid #eee;border-radius:0;padding:8px 10px;min-height:0}
+.scan-hits b{display:block;font-size:14px;color:#152747}
+.scan-hits small{color:#6b7c93}
+.scan-pad-row button{min-width:40px;min-height:40px;font-size:16px}
+.scan-names{margin:4px 10px;padding-left:22px;max-height:26vh;overflow:auto;text-align:left}
+.scan-names li{color:#fff;font-size:13px;margin:2px 0;line-height:1.25}
+.scan-names li b{font-size:14px}
+.scan-names li span{display:block;opacity:.9}
+.scan-names li.now{background:rgba(255,255,255,.12);border-radius:8px;padding:2px 6px}
+.scan-sum{color:#fff;text-align:right;margin:2px 14px 6px;font-size:15px}

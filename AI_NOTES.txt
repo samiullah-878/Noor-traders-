@@ -494,3 +494,28 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
 - Item search se ya Enter se chunne par ab "tadad ka pad" khulta hai (saleModal): Pcs 1/2/3/6/12/24/+1,
   aur pack>1 ho to Ctn 1/2/3/5/10/+1, "✓ Theek hai" / "✕ Hatao". Keyboard kholne ki zaroorat nahi
   (scanner wale pad jaisa, jo pos-stock.js mein hai).
+
+==============================================================
+2026-09-19 shaam — Rasid: POS jaisi apni rasid (Crystal chhor diya)
+==============================================================
+- Crystal (rptSaleThermal.rpt) se print karne ki koshish chhor di (32-bit + dataset + purana SQL ke masle).
+  Malik ne kaha: bas isi shakal ki saadi rasid har sale/stock bill par nikal aaye.
+- sale-post.js: receiptFor() ab POS jaisi rasid banata hai — bara shop naam + phone, Sale No + CODE128 BARCODE,
+  tareekh/waqt, Customer + area, jadwal (Items/PCS/CTN/Rate/Amount), Total (PCS/CTN), bara Rs total,
+  Cash Received, Balance, aur neeche SHOP.lines (rabta, Bank HBL, IBAN, Accounts title, delivery time).
+  Labour ka khana malik ne chhorne ko kaha.
+- printText(): ab RAW ESC/POS — PowerShell + winspool (RawP class) se seedha printer ko bytes; is se barcode aur
+  bara text chhapta hai. Files: sale-print.bin / raw-print.ps1 (farq: farq-print.bin / farq-raw-print.ps1).
+- post-farq.js: farq bill ki rasid par bhi bara naam + Sale No ka barcode + paper cut.
+- SHOP object sale-post.js ke upar hai — naam/phone/lines wahan badal sakte hain.
+
+==============================================================
+2026-09-19 shaam — v1.55.0: camera ki screen se poora bill
+==============================================================
+- Scanner overlay ab bill banane ki screen: upar camera, phir chhoti tools qatar (Focus/zoom/Camera/Light),
+  us ke neeche SEARCH bar (naam/code se item add — saleFindHook), phir fix qty row: Pcs/Ctn + 1..12 + "+1"
+  (hamesha AAKHRI item par lagti hai), phir items ki list: naam + qty x rate = amount, aur neeche "Kul: Rs …".
+- pos-stock.js: scanOrder/scanItems (camera ki lines), lineOf()/drawNames() nayi shakal mein,
+  setSaleFindHook(fn) naya export; saleHook(code, direct) ab seedha item bhi le leta hai (search se chuna hua).
+- sale.js: setSaleFindHook lagaya (stock ke items mein naam/code/barcode se dhoondta hai), scan hook direct item leta hai.
+- style.css: .scan-find/.scan-hits/.scan-sum/.scan-names nayi lines, tools ke buttons chhote.

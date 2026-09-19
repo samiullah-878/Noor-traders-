@@ -1,10 +1,10 @@
-// sale.js — Nayi Sale (Counter / Wholesale) — v1.54.0
+// sale.js — Nayi Sale (Counter / Wholesale) — v1.55.0
 // App sale ko Firestore "appSales" mein "new" likhta hai. POS bill PC ka sale-post.js banata hai
 // (POS ke apne procedures se), rasid print karta hai aur Sale No wapas likhta hai.
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, openSaleCamera } from './pos-stock.js?v=1.54.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, openSaleCamera } from './pos-stock.js?v=1.55.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -75,6 +75,13 @@ function addItem(it, qtyPcs = 1) {
   cash = null; keepDraft();
 }
 
+// camera ki screen ka search
+setSaleFindHook(q => {
+  const { items } = stock();
+  const n = String(q || '').toLowerCase();
+  return items.filter(r => String(r.name).toLowerCase().includes(n) || String(r.code || '').toLowerCase().includes(n)
+    || (Array.isArray(r.bc) && r.bc.some(b => String(b).toLowerCase().includes(n)))).slice(0, 12);
+});
 // camera par tadad ke buttons -> bill ki line
 setSaleQtyHook((it, q) => {
   const l = cart.find(x => String(x.id) === String(it.id));
@@ -83,9 +90,9 @@ setSaleQtyHook((it, q) => {
   cash = null; keepDraft(); rerender();
 });
 // scan (camera / USB scanner) — pos-stock.js yahan bhejta hai
-setSaleScanHook(code => {
+setSaleScanHook((code, direct) => {
   const { items } = stock();
-  const it = findByCode(items, code);
+  const it = direct || findByCode(items, code);
   if (!it) return { state: null };
   addItem(it);
   notice(`✓ ${it.name}`);
