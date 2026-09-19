@@ -1,18 +1,18 @@
-// sale.js — Nayi Sale (Counter / Wholesale) — v1.64.0
+// sale.js — Nayi Sale (Counter / Wholesale) — v1.65.0
 // App sale ko Firestore "appSales" mein "new" likhta hai. POS bill PC ka sale-post.js banata hai
 // (POS ke apne procedures se), rasid print karta hai aur Sale No wapas likhta hai.
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.64.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.65.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 const NUMF = new Intl.NumberFormat('en-PK');
-const num = n => NUMF.format(Math.round((Number(n) || 0) * 1000) / 1000);   // v1.64.0: tadad 3 decimal (0.125) tak dikhe
+const num = n => NUMF.format(Math.round((Number(n) || 0) * 1000) / 1000);   // v1.61.1: tadad 3 decimal (0.125) tak dikhe
 const r2 = n => Math.round((Number(n) || 0) * 100) / 100;     // raqam / rate
-const r3 = n => Math.round((Number(n) || 0) * 1000) / 1000;   // v1.64.0: TADAD (0.125 -> 0.13 nahi)
+const r3 = n => Math.round((Number(n) || 0) * 1000) / 1000;   // v1.61.1: TADAD (0.125 -> 0.13 nahi)
 const todayStr = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
 
 const SALE_BRANCH = 1;          // POS bill hamesha NOOR TRADERS (branch 1) mein
@@ -93,7 +93,7 @@ function addItem(it, qtyPcs = 1) {
 }
 
 // camera ki screen ka search
-// v1.64.0: camera ki list bill se (rate bhi bill wala: khula piece l.rate, carton crate)
+// v1.61.2: camera ki list bill se (rate bhi bill wala: khula piece l.rate, carton crate)
 // v1.64: camera ki list ka ✕ -> bill ki wohi line (pehchan k se)
 setSaleDelHook(key => {
   const i = cart.findIndex(l => l.k === key);

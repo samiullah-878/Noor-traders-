@@ -1,0 +1,3 @@
+Blue Khata v1.65.0
+INSTALL: ZIP ki files GitHub par (1.61-1.64 ki sab tabdeeliyan shamil). Phone par Sync / Update, neeche 1.65.0.
+- Camera poori chaurai mein; left buttons aur right tadad patti camera ke upar aadhi shaffaf. +1 ab poora nazar aata hai.

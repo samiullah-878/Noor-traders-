@@ -637,3 +637,10 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
 - sale.js: setSaleDelHook(key) -> cart.findIndex(l.k === key) splice, rerender. Koi "pakka?" sawal nahi (malik: tez kaam).
 - style.css v1.64: li padding-right, .scan-del 38px laal, right par beech mein.
 - NOTE: pehle ke version-bump sed ne purane comments ke "v1.61.2" jaise nishan bhi badal diye the — code par asar nahi.
+
+2026-09-19 raat — v1.65.0: camera poori chaurai, buttons upar tairte hain
+- Malik ka sawal: chhota camera speed kam karta hai? Nahi — BarcodeDetector poora video frame parhta hai; screen par
+  sirf dikhne wala hissa (object-fit: cover) kata hota hai. Masla sirf nishana lagane ka tha.
+- style.css v1.65: .scan-mid position:relative (block); .scan-cam absolute inset 0 (poori chaurai); .scan-left
+  (4 tools, 54px) aur .scan-pad (tadad, 84px) absolute, z-index 3, aadhe shaffaf; pad height content jitni
+  (max 100%-10px, scroll) — pehle +1 neeche kat jata tha. Koi JS tabdeeli nahi.

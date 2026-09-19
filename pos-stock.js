@@ -5,7 +5,7 @@ const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 const NUMF = new Intl.NumberFormat('en-PK');   // ek hi dafa banao (har number par naya banana bohat slow tha)
-const num = n => NUMF.format(Math.round((Number(n) || 0) * 1000) / 1000);   // v1.64.0: tadad 3 decimal
+const num = n => NUMF.format(Math.round((Number(n) || 0) * 1000) / 1000);   // v1.61.1: tadad 3 decimal
 const r2 = n => Math.round((Number(n) || 0) * 100) / 100;   // v1.61: yeh maujood nahi tha — camera ki list banate waqt ruk jata tha (kaala camera)
 const NAMEC = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
 
@@ -195,7 +195,7 @@ export function saleStock() {
 }
 let saleHook = null, saleSeen = [], saleQtyHook = null, saleFindHook = null;
 export function setSaleFindHook(fn) { saleFindHook = fn; }
-// v1.64.0: camera khulte waqt apni list BILL se dobara banaye (Naya bill / item hatane ke baad purani list na dikhe)
+// v1.61.2: camera khulte waqt apni list BILL se dobara banaye (Naya bill / item hatane ke baad purani list na dikhe)
 let saleCartHook = null, saleDelHook = null;
 export function setSaleDelHook(fn) { saleDelHook = fn; }   // v1.64: camera ki list se line katna
 export function setSaleCartHook(fn) { saleCartHook = fn; }
