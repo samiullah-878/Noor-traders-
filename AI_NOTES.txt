@@ -558,3 +558,15 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
 - App sale.js: subQty(it, code) scan kiye code ko item.bq se milata hai (aage ke zero bhi), addItem(it, q). Search se chuna = 1.
   Scan hook ab { state, item, pcs, ctn } (bill line ki asal tadad) lautata hai; pos-stock.js camera ki scanQty isi se set
   karta hai. Pehle ek item dobara scan karne par bill mein 2 ho jata tha magar camera ki list 1 dikhati thi — theek.
+
+==============================================================
+2026-09-19 raat — v1.59.0: camera screen par search + "Tadad" khana, camera phansne ka hal
+==============================================================
+- Scanner ke upar ek line: .scan-q (search) + .scan-n (Tadad, inputmode decimal). SALE mein: item chunne (tap ya Enter =
+  pehla) par add NAHI hota — chosen = item, cursor Tadad mein; Tadad par Enter -> saleHook(code, item, qty) se us tadad
+  (Pcs) ke saath add (khali/0 = 1), beep, search khali, cursor wapas search (keyboard band nahi). Pehle se list wala item
+  jama hota hai (addItem). hitBox par pointerdown preventDefault (tap se keyboard band na ho). Stock ginti mode pehle jaisa.
+- sale.js scan hook: (code, direct, qty) — qty > 0 ho to wohi, warna direct = 1, warna sub-barcode ki tadad (v1.58).
+- Camera: gumT() getUserMedia par 4 sec timeout (der se mila stream foran band). Timeout par ek dafa khud dobara
+  (saved lens bhool kar), phir message "camera kahin aur khula hai". document visibilitychange (hidden) par finishScan()
+  — tab/app peeche jaye to camera chhor deta hai (6-7 tabs khule the, ek tab camera pakre rehta tha).

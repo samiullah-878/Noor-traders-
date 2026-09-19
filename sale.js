@@ -1,10 +1,10 @@
-// sale.js — Nayi Sale (Counter / Wholesale) — v1.58.0
+// sale.js — Nayi Sale (Counter / Wholesale) — v1.59.0
 // App sale ko Firestore "appSales" mein "new" likhta hai. POS bill PC ka sale-post.js banata hai
 // (POS ke apne procedures se), rasid print karta hai aur Sale No wapas likhta hai.
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, openSaleCamera } from './pos-stock.js?v=1.58.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, openSaleCamera } from './pos-stock.js?v=1.59.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -99,11 +99,11 @@ setSaleQtyHook((it, q) => {
   cash = null; keepDraft(); rerender();
 });
 // scan (camera / USB scanner) — pos-stock.js yahan bhejta hai
-setSaleScanHook((code, direct) => {
+setSaleScanHook((code, direct, qty) => {
   const { items } = stock();
   const it = direct || findByCode(items, code);
   if (!it) return { state: null };
-  const q = direct ? 1 : subQty(it, code);
+  const q = Number(qty) > 0 ? r2(Number(qty)) : (direct ? 1 : subQty(it, code));   // v1.59: search wale khane ki tadad
   addItem(it, q);
   notice(`✓ ${it.name}${q !== 1 ? ' — ' + q : ''}`);
   const s = $('search'); if (s && s.value) s.value = '';

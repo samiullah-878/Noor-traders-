@@ -1,0 +1,5 @@
+Blue Khata v1.59.0
+INSTALL: Is ZIP ki files GitHub repo (Noor-traders) mein purani ki jagah upload karein. Firestore rules nahi badle.
+Phone par Sync / Update, neeche 1.59.0 check karein.
+- Camera screen: search ke saath "Tadad" khana. Item chunein -> tadad likhein -> Enter -> agla item.
+- Camera kahin aur phansa ho to intezar nahi; tab peeche jane par camera khud chhor deta hai.

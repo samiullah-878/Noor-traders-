@@ -779,6 +779,19 @@ let scanStream = null, scanTimer = null, scanBox = null, scanBusy = false;
 let lastCode = '', lastCodeAt = 0;
 let badCode = '', badN = 0, lastGoodAt = 0;   // v1.56: ghalat parhai ka filter
 let camRetry = 0, audioCtx = null;            // v1.57: kaala camera dobara chalu, scan ki awaz
+// v1.59: camera ka jawab 4 sec mein na aaye to intezar khatam (baad mein mila stream foran band, taake camera na phanse)
+function gumT(c, ms = 4000) {
+  return new Promise((res, rej) => {
+    let done = false;
+    const t = setTimeout(() => { done = true; const e = new Error('Camera kahin aur khula hai'); e.name = 'Timeout'; rej(e); }, ms);
+    navigator.mediaDevices.getUserMedia(c).then(s => {
+      if (done) { s.getTracks().forEach(x => x.stop()); return; }
+      clearTimeout(t); done = true; res(s);
+    }, e => { if (!done) { clearTimeout(t); done = true; rej(e); } });
+  });
+}
+// v1.59: tab / app peeche jaye (doosra tab, call, doosri app) to camera chhor do — warna doosri jagah kaala camera
+if (typeof document !== 'undefined') document.addEventListener('visibilitychange', () => { if (document.hidden && scanBox) finishScan(); });
 function beep(ok) {
   try {
     if (!audioCtx) return;
@@ -872,7 +885,7 @@ async function openScanner() {
   scanBox = document.createElement('div');
   scanBox.className = 'scan-box';
   scanBox.innerHTML = `<div class="scan-inner">
-      <div class="scan-find"><input class="scan-q" type="search" placeholder="🔍 Naam ya code likh kar item add karein" autocomplete="off"><div class="scan-hits" hidden></div></div>
+      <div class="scan-find"><div class="scan-find-row"><input class="scan-q" type="search" enterkeyhint="next" placeholder="🔍 Naam ya code likhein" autocomplete="off"><input class="scan-n" type="text" inputmode="decimal" enterkeyhint="done" placeholder="Tadad" autocomplete="off"></div><div class="scan-hits" hidden></div></div>
       <div class="scan-cam"><video playsinline muted autoplay></video><div class="scan-line"></div></div>
       <p class="scan-msg">Barcode camera ke saamne rakhein — ek ke baad ek scan karte jayein</p>
       <div class="scan-pad" hidden>
@@ -941,8 +954,10 @@ async function openScanner() {
     showPad(); drawNames();
   });
   // camera ki screen par search: naam ya code se item add
-  const qBox = scanBox.querySelector('.scan-q'), hitBox = scanBox.querySelector('.scan-hits');
+  const qBox = scanBox.querySelector('.scan-q'), hitBox = scanBox.querySelector('.scan-hits'), nBox = scanBox.querySelector('.scan-n');
+  let chosen = null;   // v1.59: search se chuna hua item, tadad ka intezar
   const scanSearch = () => {
+    chosen = null;
     const q = String(qBox.value || '').toLowerCase().trim();
     if (!q) { hitBox.hidden = true; hitBox.innerHTML = ''; return; }
     const src = saleRoot() && saleFindHook ? saleFindHook(q) : items.filter(r => String(r.name).toLowerCase().includes(q) || String(r.code || '').toLowerCase().includes(q)).slice(0, 12);
@@ -952,12 +967,35 @@ async function openScanner() {
   };
   showPad();   // v1.57: dobara kholne par aakhri item ki tadad fauran nazar aaye
   qBox.oninput = scanSearch;
-  qBox.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const r = (hitBox._src || [])[0]; if (r) pickHit(r); } };
+  qBox.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); if (chosen) { nBox.focus(); return; } const r = (hitBox._src || [])[0]; if (r) pickHit(r); } };
+  // v1.59 (sale): item chunne par seedha add nahi — cursor "Tadad" mein; wahan Enter par add, phir cursor wapas search mein
   const pickHit = r => {
+    if (saleRoot() && saleHook) {
+      chosen = r; qBox.value = r.name; hitBox.hidden = true; nBox.value = '';
+      msg.textContent = `${r.name} — tadad likh kar Enter dabayein (khali = 1)`;
+      nBox.focus();
+      return;
+    }
+    addHit(r, 0);
+  };
+  const addHit = (r, qty) => {
     qBox.value = ''; hitBox.hidden = true;
-    if (saleRoot() && saleHook) { const res = saleHook(String(r.code || r.bc?.[0] || r.name), r); if (res && res.item) { lastScan = res.item; if (res.pcs != null) scanQty.set(String(res.item.id), { pcs: Number(res.pcs) || 0, ctn: Number(res.ctn) || 0 }); else if (!scanQty.has(String(res.item.id))) scanQty.set(String(res.item.id), { pcs: 1, ctn: 0 }); if (!scanItems.has(String(res.item.id))) { scanItems.set(String(res.item.id), res.item); scanOrder.push(String(res.item.id)); } showPad(); drawNames(); } return; }
+    if (saleRoot() && saleHook) { const res = saleHook(String(r.code || r.bc?.[0] || r.name), r, qty); if (res && res.item) { lastScan = res.item; if (res.pcs != null) scanQty.set(String(res.item.id), { pcs: Number(res.pcs) || 0, ctn: Number(res.ctn) || 0 }); else if (!scanQty.has(String(res.item.id))) scanQty.set(String(res.item.id), { pcs: 1, ctn: 0 }); if (!scanItems.has(String(res.item.id))) { scanItems.set(String(res.item.id), res.item); scanOrder.push(String(res.item.id)); } showPad(); drawNames(); } return; }
     addScanned(String(r.code || r.id)); drawNames();
   };
+  nBox.onkeydown = e => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (!chosen) { const r = (hitBox._src || [])[0]; if (!r) { qBox.focus(); return; } chosen = r; }
+    let q = Number(String(nBox.value || '').replace(',', '.').trim());
+    if (!(q > 0)) q = 1;
+    const r = chosen; chosen = null; nBox.value = '';
+    addHit(r, q);
+    beep(true);
+    msg.textContent = `✓ ${r.name} — ${num(q)} · agla item likhein`;
+    qBox.focus();
+  };
+  hitBox.addEventListener('pointerdown', e => e.preventDefault());   // list par tap se keyboard band na ho
   hitBox.addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (!b) return; const r = (hitBox._src || [])[Number(b.dataset.pick)]; if (r) pickHit(r); });
   scanBox.querySelector('.scan-done').onclick = finishScan;
   scanBox.querySelector('.scan-close').onclick = finishScan;
@@ -977,16 +1015,22 @@ async function openScanner() {
     // pehle ijazat (labels tabhi milte hain), phir sahi camera
     let cam = await pickCamera();
     if (!cam.deviceId) {
-      const tmp = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+      const tmp = await gumT({ video: { facingMode: { ideal: 'environment' } }, audio: false });
       tmp.getTracks().forEach(t => t.stop());
       cam = await pickCamera();
     }
-    scanStream = await navigator.mediaDevices.getUserMedia({
+    scanStream = await gumT({
       video: { ...cam, width: { ideal: 1920 }, height: { ideal: 1080 }, frameRate: { ideal: 30 }, advanced: [{ focusMode: 'continuous' }] }, audio: false
     });
   } catch (e) {
     closeScanner();
-    notice('Camera nahi khula: ' + (e?.name === 'NotAllowedError' ? 'camera ki ijazat dein (browser settings)' : (e?.message || e)));
+    if (e?.name === 'Timeout' && camRetry < 1) {   // ek dafa khud dobara (yaad kiya lens bhool kar)
+      camRetry++; try { localStorage.removeItem('sam-scan-cam'); } catch {}
+      setTimeout(openScanner, 600); return;
+    }
+    notice('Camera nahi khula: ' + (e?.name === 'NotAllowedError' ? 'camera ki ijazat dein (browser settings)'
+      : e?.name === 'Timeout' || e?.name === 'NotReadableError' ? 'camera kahin aur khula hai — Chrome ke doosre tabs / doosri apps (call, camera) band karke dobara kholein'
+      : (e?.message || e)));
     return;
   }
   if (!scanBox) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; return; }

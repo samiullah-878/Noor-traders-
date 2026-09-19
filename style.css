@@ -182,3 +182,8 @@ body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actio
 .scan-inner{overflow-y:auto}
 .scan-inner > *{flex-shrink:0}
 .scan-inner > .scan-cam{flex:1 1 0;min-height:140px}
+
+/* v1.59: search ke saath tadad ka khana */
+.scan-find-row{display:flex;gap:6px;align-items:stretch}
+.scan-find .scan-q{flex:1 1 auto;width:auto;min-width:0}
+.scan-find .scan-n{flex:0 0 78px;width:78px;text-align:center;font-size:17px;font-weight:700;padding:9px 4px;border-radius:10px;border:0}
