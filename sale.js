@@ -1,17 +1,18 @@
-// sale.js — Nayi Sale (Counter / Wholesale) — v1.61.0
+// sale.js — Nayi Sale (Counter / Wholesale) — v1.61.2
 // App sale ko Firestore "appSales" mein "new" likhta hai. POS bill PC ka sale-post.js banata hai
 // (POS ke apne procedures se), rasid print karta hai aur Sale No wapas likhta hai.
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, openSaleCamera } from './pos-stock.js?v=1.61.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, openSaleCamera } from './pos-stock.js?v=1.61.2';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 const NUMF = new Intl.NumberFormat('en-PK');
-const num = n => NUMF.format(Math.round((Number(n) || 0) * 100) / 100);
-const r2 = n => Math.round((Number(n) || 0) * 100) / 100;
+const num = n => NUMF.format(Math.round((Number(n) || 0) * 1000) / 1000);   // v1.61.2: tadad 3 decimal (0.125) tak dikhe
+const r2 = n => Math.round((Number(n) || 0) * 100) / 100;     // raqam / rate
+const r3 = n => Math.round((Number(n) || 0) * 1000) / 1000;   // v1.61.2: TADAD (0.125 -> 0.13 nahi)
 const todayStr = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
 
 const SALE_BRANCH = 1;          // POS bill hamesha NOOR TRADERS (branch 1) mein
@@ -46,8 +47,8 @@ function stock() {
 const rateFor = (it, m = mode) => r2(m === 'wholesale' ? (Number(it.wrate) || Number(it.rate) || 0) : (Number(it.rate2) || Number(it.rate) || 0));
 const crateFor = (it, m = mode) => r2(m === 'wholesale' ? (Number(it.wrate) || Number(it.rate) || 0) : (Number(it.rate) || 0));
 const setStd = (l, it) => { l.rate = rateFor(it); l.std = l.rate; l.crate = crateFor(it); l.cstd = l.crate; };
-const linePcs = l => r2((Number(l.ctn) || 0) * (Number(l.pack) > 1 ? Number(l.pack) : 0) + (Number(l.pcs) || 0));
-const ctnPcsOf = l => r2((Number(l.ctn) || 0) * (Number(l.pack) > 1 ? Number(l.pack) : 0));
+const linePcs = l => r3((Number(l.ctn) || 0) * (Number(l.pack) > 1 ? Number(l.pack) : 0) + (Number(l.pcs) || 0));
+const ctnPcsOf = l => r3((Number(l.ctn) || 0) * (Number(l.pack) > 1 ? Number(l.pack) : 0));
 const crateOf = l => Number(l.crate ?? l.rate) || 0;
 const lineTotal = l => r2(ctnPcsOf(l) * crateOf(l) + (Number(l.pcs) || 0) * (Number(l.rate) || 0));
 const cartTotal = () => r2(cart.reduce((n, l) => n + lineTotal(l), 0));
@@ -77,9 +78,9 @@ function subQty(it, code) {
 function addItem(it, qtyPcs = 1) {
   const old = cart.find(l => String(l.id) === String(it.id));
   if (old) {
-    old.pcs = r2((Number(old.pcs) || 0) + qtyPcs);
+    old.pcs = r3((Number(old.pcs) || 0) + qtyPcs);
     const pk = Number(old.pack) || 0;
-    if (pk > 1 && old.pcs >= pk) { old.ctn = (Number(old.ctn) || 0) + Math.floor(old.pcs / pk); old.pcs = r2(old.pcs % pk); }
+    if (pk > 1 && old.pcs >= pk) { old.ctn = (Number(old.ctn) || 0) + Math.floor(old.pcs / pk); old.pcs = r3(old.pcs % pk); }
   } else {
     cart.push({
       id: it.id, code: it.code || '', name: it.name, pack: Number(it.pack) || 0,
@@ -88,12 +89,16 @@ function addItem(it, qtyPcs = 1) {
     });
     // v1.60: nayi line par bhi poore carton alag (misal 2 Ctn likha = 24 pcs -> 2 Ctn)
     const nl = cart[cart.length - 1], pk = Number(nl.pack) || 0;
-    if (pk > 1 && nl.pcs >= pk) { nl.ctn = Math.floor(nl.pcs / pk); nl.pcs = r2(nl.pcs % pk); }
+    if (pk > 1 && nl.pcs >= pk) { nl.ctn = Math.floor(nl.pcs / pk); nl.pcs = r3(nl.pcs % pk); }
   }
   cash = null; keepDraft();
 }
 
 // camera ki screen ka search
+// v1.61.2: camera ki list bill se (rate bhi bill wala: khula piece l.rate, carton crate)
+setSaleCartHook(() => cart.map(l => ({
+  item: { id: l.id, code: l.code, name: l.name, pack: Number(l.pack) || 0, cName: l.cName, uName: l.uName, rate: crateOf(l), rate2: Number(l.rate) || 0 },
+  pcs: Number(l.pcs) || 0, ctn: Number(l.ctn) || 0 })));
 setSaleFindHook(q => {
   const { items } = stock();
   const n = String(q || '').toLowerCase();
@@ -160,7 +165,7 @@ function openToday() {
 }
 function qtyText(l) {
   const pk = Number(l.pack) || 0, q = Number(l.qty) || 0;
-  if (pk > 1 && q >= pk) { const c = Math.floor(q / pk), p = r2(q - c * pk); return `${num(c)} ${esc(l.cName || 'Ctn')}${p ? ' + ' + num(p) : ''} (${num(q)})`; }
+  if (pk > 1 && q >= pk) { const c = Math.floor(q / pk), p = r3(q - c * pk); return `${num(c)} ${esc(l.cName || 'Ctn')}${p ? ' + ' + num(p) : ''} (${num(q)})`; }
   return `${num(q)} ${esc(l.uName || 'Pcs')}`;
 }
 
@@ -366,14 +371,14 @@ async function save() {
   cart.forEach(l => {
     const base = { id: String(l.id), code: String(l.code || ''), name: String(l.name || ''), pack: Number(l.pack) || 0,
       cName: l.cName, uName: l.uName, godam: Number(l.godam) || Number(godam) || SALE_BRANCH };
-    const cq = ctnPcsOf(l), pq = r2(Number(l.pcs) || 0), cr = r2(crateOf(l)), pr = r2(l.rate);
+    const cq = ctnPcsOf(l), pq = r3(Number(l.pcs) || 0), cr = r2(crateOf(l)), pr = r2(l.rate);
     if (!(cq + pq > 0)) { emptyLines++; return; }
     if (cq > 0 && pq > 0 && Math.abs(cr - pr) > 0.004) {
       lines.push({ ...base, unit: 'ctn', qty: cq, rate: cr, std: r2(l.cstd ?? l.std) });
       lines.push({ ...base, unit: 'pcs', qty: pq, rate: pr, std: r2(l.std) });
     } else if (cq > 0 && !(pq > 0)) lines.push({ ...base, unit: 'ctn', qty: cq, rate: cr, std: r2(l.cstd ?? l.std) });
     else if (!(cq > 0)) lines.push({ ...base, unit: 'pcs', qty: pq, rate: pr, std: r2(l.std) });
-    else lines.push({ ...base, qty: r2(cq + pq), rate: pr, std: r2(l.std) });
+    else lines.push({ ...base, qty: r3(cq + pq), rate: pr, std: r2(l.std) });
   });
   if (!lines.length) { notice('Kisi item ki qty likhein'); return; }
   if (emptyLines && !confirm('Jin items ki qty khali hai woh bill mein nahi jayenge. Theek hai?')) return;

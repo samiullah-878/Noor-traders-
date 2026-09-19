@@ -5,7 +5,7 @@ const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 const NUMF = new Intl.NumberFormat('en-PK');   // ek hi dafa banao (har number par naya banana bohat slow tha)
-const num = n => NUMF.format(Math.round((Number(n) || 0) * 100) / 100);
+const num = n => NUMF.format(Math.round((Number(n) || 0) * 1000) / 1000);   // v1.61.2: tadad 3 decimal
 const r2 = n => Math.round((Number(n) || 0) * 100) / 100;   // v1.61: yeh maujood nahi tha — camera ki list banate waqt ruk jata tha (kaala camera)
 const NAMEC = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
 
@@ -195,6 +195,23 @@ export function saleStock() {
 }
 let saleHook = null, saleSeen = [], saleQtyHook = null, saleFindHook = null;
 export function setSaleFindHook(fn) { saleFindHook = fn; }
+// v1.61.2: camera khulte waqt apni list BILL se dobara banaye (Naya bill / item hatane ke baad purani list na dikhe)
+let saleCartHook = null;
+export function setSaleCartHook(fn) { saleCartHook = fn; }
+function syncFromCart() {
+  if (!saleRoot() || !saleCartHook) return;
+  try {
+    const cur = saleCartHook() || [];
+    scanOrder = []; scanItems = new Map(); scanQty = new Map();
+    for (const c of cur) {
+      const k = String(c.item.id);
+      if (!scanItems.has(k)) { scanItems.set(k, c.item); scanOrder.push(k); scanQty.set(k, { pcs: 0, ctn: 0 }); }
+      const q = scanQty.get(k); q.pcs = Math.round(((Number(q.pcs) || 0) + (Number(c.pcs) || 0)) * 1000) / 1000; q.ctn = (Number(q.ctn) || 0) + (Number(c.ctn) || 0);
+    }
+    if (lastScan && !scanItems.has(String(lastScan.id))) lastScan = null;
+    if (lastScan) lastScan = scanItems.get(String(lastScan.id)) || lastScan;
+  } catch {}
+}
 export function setSaleQtyHook(fn) { saleQtyHook = fn; }
 let lastScan = null, scanQty = new Map(), padUnit = 'pcs';   // camera par tadad ke buttons
 let scanOrder = [], scanItems = new Map();   // camera ki screen par bill ki lines
@@ -874,6 +891,7 @@ function addScanned(code) {
 
 async function openScanner() {
   if (scanBox) return;
+  syncFromCart();
   // awaz: button dabane (user ke haath) par hi chalu ho sakti hai
   try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch {}
   if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
@@ -911,11 +929,11 @@ async function openScanner() {
   const lineOf = it => {
     const q = scanQty.get(String(it.id)) || { pcs: 0, ctn: 0 };
     const pack = Number(it.pack) || 0;
-    const total = r2((Number(q.ctn) || 0) * (pack > 1 ? pack : 0) + (Number(q.pcs) || 0));
+    const total = Math.round(((Number(q.ctn) || 0) * (pack > 1 ? pack : 0) + (Number(q.pcs) || 0)) * 1000) / 1000;
     const rate = Number(it.rate2) || Number(it.rate) || 0;   // v1.61: khula piece POS "Peice Rate"
     const ctnRate = Number(it.rate) || rate;                  // carton fi piece
     const qtxt = `${q.ctn ? num(q.ctn) + ' ' + (it.cName || 'Ctn') + (q.pcs ? ' + ' : '') : ''}${q.pcs || !q.ctn ? num(q.pcs || 0) + ' ' + (it.uName || 'Pcs') : ''}`;
-    const ctnPcs = r2((Number(q.ctn) || 0) * (pack > 1 ? pack : 0));
+    const ctnPcs = Math.round((Number(q.ctn) || 0) * (pack > 1 ? pack : 0) * 1000) / 1000;
     return { total, rate, amt: r2(ctnPcs * ctnRate + (Number(q.pcs) || 0) * rate), qtxt };
   };
   const drawNames = () => {
