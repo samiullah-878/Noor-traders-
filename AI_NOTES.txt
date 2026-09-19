@@ -665,3 +665,13 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
 - Counting OFF ho (_lock.off) to malik ko sirf "🔴 Counting band hai — kholein" dikhta hai (warna mulazim phans jata).
 - startNewRound label ab "YYYY-MM-DD HH:MM" (ek din mein dobara shuru ho to purani ginti alag rahe). countId mein
   round nahi, PC post-farq round ko string ki tarah milata hai.
+
+2026-09-19 raat — v1.68.0 + PC sync-stock v8: label mein sirf POS "Show" ✓ wale sub-barcode
+- POS ItemSubCode.IsShowOnLookup = "Show" check (malik: check = chalu, bina check = band).
+- PC patch-show.js: sync-stock showMap() (sirf SELECT) -> jis item ke sub-barcode hain us par bs: [Show ✓ wale]
+  (khali array bhi). Backup sync-stock.v7old.js.
+- pos-stock.js labelRows: r.bs ho to sirf asal code + bs; na ho (purani sync) to asal code + sab bc.
+  SCAN par asar NAHI (bc waisa hi) — POS ke bohat se asal company barcode par Show nahi laga, wo scan hote rehne chahiye.
+- Ginti "+ Jama" ki tadad ab 3 decimal tak (pehle 0.125 -> 0.13).
+- Malik ka sawal (ginti do dafa save): aam "Save" pichhli ginti ki JAGAH leta hai (bill aakhri save se), "+ Jama" pichhli
+  mein jorta hai. Har save par system stock bhi usi waqt ka likha jata hai; har save history mein rehta hai.

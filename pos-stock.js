@@ -467,7 +467,9 @@ function summaryHTML(branches, pick, items, meta, names) {
 // ---------- v1.66: BARCODE LABEL — item ke saare barcode, har ek ki tadad; PC ka TSC printer chhapta hai ----------
 function labelRows(r) {
   const q = new Map((Array.isArray(r.bq) ? r.bq : []).map(x => [String(x.b || '').trim(), Number(x.q) || 1]));
-  const codes = [String(r.code || '').trim(), ...(Array.isArray(r.bc) ? r.bc.map(b => String(b).trim()) : [])].filter(Boolean);
+  // v1.68: POS mein sub-barcode ka "Show" ✓ (sync-stock v8 -> r.bs) — sirf asal code + Show wale. bs na ho (purani sync) to sab.
+  const subs = Array.isArray(r.bs) ? r.bs.map(b => String(b).trim()) : (Array.isArray(r.bc) ? r.bc.map(b => String(b).trim()) : []);
+  const codes = [String(r.code || '').trim(), ...subs].filter(Boolean);
   const seen = new Set(), out = [];
   for (const c of codes) { if (seen.has(c)) continue; seen.add(c); out.push({ code: c, qty: q.get(c) || 1 }); }
   const pr = Number(r.rate2) || Number(r.rate) || 0;   // khula piece rate (POS "Peice Rate")
@@ -808,9 +810,9 @@ async function saveCount(itemId, button, jama = false) {
     if (!confirm(`"${item.name}": ${num(v.total)} ${item.uName || 'Pcs'} pehli ginti (${num(countedPcs(old))}) mein jama honge — kul ${num(countedPcs(old) + v.total)}. Theek hai?`)) return;
     const note = '';
     const per = Number(item.pack) || 0;
-    const total = Math.round((countedPcs(old) + v.total) * 100) / 100;
+    const total = Math.round((countedPcs(old) + v.total) * 1000) / 1000;   // v1.68: 3 decimal (0.125 kg)
     const ctn = per > 1 ? Math.floor(total / per) : 0;
-    const pcs = Math.round((total - ctn * (per > 1 ? per : 0)) * 100) / 100;
+    const pcs = Math.round((total - ctn * (per > 1 ? per : 0)) * 1000) / 1000;
     add = { ...v, note: String(note).trim().slice(0, 60) };
     v = { ctn, pcs, total, bad: false };
   }
