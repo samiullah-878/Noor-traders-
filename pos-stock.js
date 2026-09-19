@@ -468,13 +468,120 @@ function summaryHTML(branches, pick, items, meta, names) {
 function labelRows(r) {
   const q = new Map((Array.isArray(r.bq) ? r.bq : []).map(x => [String(x.b || '').trim(), Number(x.q) || 1]));
   // v1.68: POS mein sub-barcode ka "Show" ✓ (sync-stock v8 -> r.bs) — sirf asal code + Show wale. bs na ho (purani sync) to sab.
-  const subs = Array.isArray(r.bs) ? r.bs.map(b => String(b).trim()) : (Array.isArray(r.bc) ? r.bc.map(b => String(b).trim()) : []);
-  const codes = [String(r.code || '').trim(), ...subs].filter(Boolean);
-  const seen = new Set(), out = [];
-  for (const c of codes) { if (seen.has(c)) continue; seen.add(c); out.push({ code: c, qty: q.get(c) || 1 }); }
   const pr = Number(r.rate2) || Number(r.rate) || 0;   // khula piece rate (POS "Peice Rate")
-  return out.map(x => ({ ...x, price: Math.round(x.qty * pr * 100) / 100 }));
+  const main = String(r.code || '').trim();
+  const out = main ? [{ code: main, qty: 1, main: true, show: true }] : [];
+  const seen = new Set(out.map(x => x.code));
+  const sbList = subOverride(r);   // v1.70: sync-stock v9 ka sb (id ke saath) + app ki taaza tabdeeli
+  if (sbList) {
+    for (const x of sbList) { const c = String(x.b || '').trim(); if (!c || seen.has(c)) continue; seen.add(c); out.push({ code: c, qty: Number(x.q) || 1, subId: x.id, show: x.s !== false, rate: Number(x.r) || 0 }); }
+  } else {
+    const subs = Array.isArray(r.bs) ? r.bs.map(b => String(b).trim()) : (Array.isArray(r.bc) ? r.bc.map(b => String(b).trim()) : []);
+    for (const c of subs) { if (!c || seen.has(c)) continue; seen.add(c); out.push({ code: c, qty: q.get(c) || 1, show: true }); }
+  }
+  return out.map(x => ({ ...x, price: x.rate > 0 ? x.rate : Math.round(x.qty * pr * 100) / 100 }));
 }
+// v1.70: app se banaya / badla / hataya barcode — sync-stock (2 min) se pehle bhi khirki mein sahi dikhe
+const subPatch = new Map();   // itemId -> [{id,b,q,r,s}]
+function subOverride(r) {
+  const k = String(r.id);
+  if (subPatch.has(k) && Date.now() - subPatch.get(k).at > 5 * 60000) subPatch.delete(k);   // 5 min baad sync-stock ka data hi sahi hai
+  if (subPatch.has(k)) return subPatch.get(k).list;
+  return Array.isArray(r.sb) ? r.sb : null;
+}
+function applySub(r, op, x) {
+  const k = String(r.id);
+  const list = (subOverride(r) || []).map(y => ({ ...y }));
+  if (op === 'delete') subPatch.set(k, { at: Date.now(), list: list.filter(y => Number(y.id) !== Number(x.subId)) });
+  else if (op === 'edit') subPatch.set(k, { at: Date.now(), list: list.map(y => Number(y.id) === Number(x.subId) ? { ...y, b: x.code, q: x.qty, r: x.rate, s: x.show } : y) });
+  else subPatch.set(k, { at: Date.now(), list: [...list, { id: x.subId, b: x.code, q: x.qty, r: x.rate, s: x.show }] });
+}
+function subForm(r, edit) {
+  const d = $('dialog');
+  $('dialogTitle').textContent = (edit ? '✏️ Barcode badlein — ' : '➕ Naya barcode — ') + r.name;
+  const q = edit ? edit.qty : 1, qs = [0.125, 0.25, 0.5, 1, 5];
+  $('dialogBody').innerHTML = `<form class="sub-form" data-sub-form="${esc(r.id)}"${edit ? ` data-sub-id="${edit.subId}"` : ''}>
+    <label>Barcode<div class="sub-code-row"><input name="code" required maxlength="50" autocomplete="off" value="${esc(edit?.code || '')}" placeholder="Likhein ya scan karein"><button type="button" data-sub-scan="1">📷</button></div></label>
+    <label>Tadad<input name="qty" type="text" inputmode="decimal" required value="${num(q)}"></label>
+    <div class="account-tools sub-qty">${qs.map(v => `<button type="button" data-sub-qty="${v}"${v === q ? ' class="selected"' : ''}>${num(v)}</button>`).join('')}</div>
+    <label>Rate (khali = item rate × tadad)<input name="rate" type="text" inputmode="decimal" value="${edit && edit.rate > 0 ? num(edit.rate) : ''}" placeholder="0"></label>
+    <label class="sub-show"><input type="checkbox" name="show"${!edit || edit.show ? ' checked' : ''}> Show ✓ (label mein dikhe)</label>
+    <div class="account-tools"><button type="submit" class="primary">${edit ? '💾 Save' : '➕ POS mein banao'}</button><button type="button" data-sub-back="${esc(r.id)}">Wapas</button></div>
+    <p class="muted sub-msg" style="font-size:.85em"></p></form>`;
+  if (!d.open) d.showModal();
+  setTimeout(() => $('dialogBody').querySelector('input[name=code]')?.focus(), 50);
+}
+function subDupe(r, code, skipSubId) {
+  const c = String(code).trim().toLowerCase();
+  for (const it of collect().items) {
+    if (String(it.code || '').trim().toLowerCase() === c) return `item "${it.name}" ka asal code`;
+    const sb = subOverride(it);
+    if (sb) { for (const x of sb) if (String(x.b || '').trim().toLowerCase() === c && Number(x.id) !== Number(skipSubId)) return `item "${it.name}" ka sub-barcode`; }
+    else if (Array.isArray(it.bc) && it.bc.some(b => String(b).trim().toLowerCase() === c) && String(it.id) !== String(r.id)) return `item "${it.name}" ka sub-barcode`;
+  }
+  return '';
+}
+async function subSend(r, op, x, msgEl, btn) {
+  if (!cloud?.requestSubcode) { notice('App update karein'); return; }
+  if (btn) btn.disabled = true;
+  const say = t => { if (msgEl) msgEl.textContent = t; };
+  say('🖥 PC ko ja raha hai…');
+  try {
+    const jid = await cloud.requestSubcode({ op, itemId: r.id, subId: x.subId, code: x.code, qty: x.qty, rate: x.rate, show: x.show });
+    let stop = null, done = false;
+    const end = (ok, t) => { if (done) return; done = true; try { stop && stop(); } catch {} if (btn) btn.disabled = false;
+      if (ok) { applySub(r, op, { ...x, subId: t.subId || x.subId, code: t.code || x.code }); notice(op === 'delete' ? '✓ Barcode POS se hat gaya' : '✓ POS mein ho gaya'); openLabels(r.id); }
+      else { say('⚠️ ' + t); notice('Nahi hua: ' + t); } };
+    stop = cloud.watchSubcode(jid, j => { if (!j) return; if (j.status === 'done') end(true, j); else if (j.status === 'failed') end(false, j.error || 'masla'); });
+    setTimeout(() => end(false, 'PC se jawab nahi aaya — PC on hai aur subcode-sync chal raha hai? (hukum mehfooz hai, PC on hote hi ho jayega)'), 45000);
+  } catch (e) { if (btn) btn.disabled = false; say('⚠️ ' + (e?.message || e)); }
+}
+// ek barcode scan karke wapas (chhota camera, sirf is form ke liye)
+async function scanOnce(input) {
+  if (!navigator.mediaDevices?.getUserMedia) { notice('Camera nahi khulta'); return; }
+  let det;
+  if ('BarcodeDetector' in window) { try { det = new BarcodeDetector(); } catch {} }
+  if (!det) { try { det = await zxingDetector(); } catch { notice('Barcode library load nahi hui'); return; } }
+  const box = document.createElement('div'); box.className = 'sub-scan';
+  box.innerHTML = '<video playsinline muted autoplay></video><div class="scan-line"></div><button type="button" class="sub-scan-x">✕ Band</button>';
+  document.body.appendChild(box);
+  const v = box.querySelector('video'); let stream = null, on = true;
+  const close = () => { on = false; try { stream?.getTracks().forEach(t => t.stop()); } catch {} box.remove(); };
+  box.querySelector('.sub-scan-x').onclick = close;
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false }); v.srcObject = stream; await v.play(); }
+  catch (e) { close(); notice('Camera nahi khula: ' + (e?.message || e)); return; }
+  const loop = async () => {
+    if (!on) return;
+    if (v.readyState >= 2) { try { const f = await det.detect(v); const c = f.map(x => String(x.rawValue || '').trim()).find(Boolean); if (c) { input.value = c; beep(true); if (navigator.vibrate) navigator.vibrate(60); close(); return; } } catch {} }
+    setTimeout(loop, 120);
+  };
+  loop();
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest?.('[data-sub-new],[data-sub-edit],[data-sub-del],[data-sub-back],[data-sub-scan],[data-sub-qty]');
+  if (!t) return;
+  if (t.dataset.subNew) { const r = rowCache.get(t.dataset.subNew); if (r) subForm(r, null); return; }
+  if (t.dataset.subBack) { openLabels(t.dataset.subBack); return; }
+  if (t.dataset.subQty) { const f = t.closest('form'); f.elements.qty.value = t.dataset.subQty; f.querySelectorAll('[data-sub-qty]').forEach(b => b.classList.toggle('selected', b === t)); return; }
+  if (t.dataset.subScan) { scanOnce(t.closest('form').elements.code); return; }
+  if (t.dataset.subEdit) { const r = rowCache.get(t.dataset.subItem), x = r && labelRows(r).find(y => String(y.subId) === t.dataset.subEdit); if (x) subForm(r, x); return; }
+  if (t.dataset.subDel) { const r = rowCache.get(t.dataset.subItem), x = r && labelRows(r).find(y => String(y.subId) === t.dataset.subDel);
+    if (!x) return; if (!confirm(`"${x.code}" (${r.name}) POS se hata dein?`)) return; subSend(r, 'delete', x, t.closest('.label-row')?.querySelector('small'), t); return; }
+});
+document.addEventListener('submit', e => {
+  const f = e.target.closest?.('[data-sub-form]'); if (!f) return;
+  e.preventDefault();
+  const r = rowCache.get(f.dataset.subForm); if (!r) return;
+  const code = String(f.elements.code.value || '').trim(), qty = Number(String(f.elements.qty.value).replace(',', '.')), rate = Number(f.elements.rate.value) || 0;
+  const msg = f.querySelector('.sub-msg');
+  if (!code) { msg.textContent = '⚠️ Barcode likhein'; return; }
+  if (!(qty > 0)) { msg.textContent = '⚠️ Tadad 0 se zyada likhein'; return; }
+  const subId = Number(f.dataset.subId) || 0;
+  const dupe = subDupe(r, code, subId);
+  if (dupe) { msg.textContent = `⚠️ "${code}" pehle se ${dupe} hai`; return; }
+  subSend(r, subId ? 'edit' : 'add', { subId, code, qty: Math.round(qty * 1000) / 1000, rate, show: f.elements.show.checked }, msg, f.querySelector('button[type=submit]'));
+});
+
 function openLabels(id) {
   const r = rowCache.get(String(id)), d = $('dialog');
   if (!r || !d) return;
@@ -484,11 +591,13 @@ function openLabels(id) {
   const pack = Number(r.pack) || 0;
   $('dialogBody').innerHTML = `<p style="margin:0 0 8px">${esc(r.code || '')} · Stock ${num(r.stock)} ${esc(r.uName || 'Pcs')}${pack > 1 ? ` · 1 ${esc(r.cName || 'Ctn')} = ${num(pack)}` : ''}
       <br>Piece rate <b>${num(Number(r.rate2) || Number(r.rate) || 0)}</b>${pack > 1 ? ` · ${esc(r.cName || 'Ctn')} rate <b>${num((Number(r.rate) || 0) * pack)}</b>` : ''}${r.wrate ? ` · Wholesale <b>${num(r.wrate)}</b>` : ''}</p>
-    <div class="label-list">${rows.map((x, i) => `<div class="label-row">
-      <div class="label-info"><b>${esc(x.code)}</b><small>${x.qty !== 1 ? 'Tadad ' + num(x.qty) + ' · ' : ''}Rs ${num(x.price)}</small></div>
-      <input type="number" min="1" max="200" value="1" inputmode="numeric" data-label-copies="${i}" aria-label="Kitne label">
-      <button type="button" class="primary" data-label-print="${i}" data-label-item="${esc(r.id)}">🖨️ Print</button>
+    <div class="label-list">${rows.map((x, i) => `<div class="label-row${x.show === false ? ' off' : ''}">
+      <div class="label-info"><b>${esc(x.code)}</b><small>${x.qty !== 1 ? 'Tadad ' + num(x.qty) + ' · ' : ''}Rs ${num(x.price)}${x.show === false ? ' · Show off' : ''}${x.main ? ' · asal code' : ''}</small></div>
+      ${x.show === false ? '' : `<input type="number" min="1" max="200" value="1" inputmode="numeric" data-label-copies="${i}" aria-label="Kitne label">
+      <button type="button" class="primary" data-label-print="${i}" data-label-item="${esc(r.id)}">🖨️</button>`}
+      ${x.subId ? `<button type="button" data-sub-edit="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Badlein">✏️</button><button type="button" class="danger" data-sub-del="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Hatao">🗑️</button>` : ''}
     </div>`).join('') || '<p>Is item ka koi barcode nahi.</p>'}</div>
+    <div class="account-tools" style="margin-top:8px"><button type="button" data-sub-new="${esc(r.id)}">➕ Naya barcode</button></div>
     <p class="muted" style="font-size:.85em;margin-top:8px">Label PC ke TSC printer par chhapta hai (PC par label-print chalna chahiye).</p>`;
   if (!d.open) d.showModal();
 }

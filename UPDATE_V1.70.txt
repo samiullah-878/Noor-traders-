@@ -1,0 +1,4 @@
+Blue Khata v1.70.0
+INSTALL: 1) ZIP GitHub par (vendor/zxing.min.js vendor folder mein — 1.69 mein aa chuki ho to dobara zaroori nahi).
+2) firestore.rules Firebase console mein Publish (subcodeJobs) — ZAROORI. 3) PC: subcode-install.bat double-click.
+- 🏷️ Label khirki: ➕ Naya barcode (scan / likhein, tadad, Show), har barcode par ✏️ edit aur 🗑️ delete — POS mein khud ho jata hai.

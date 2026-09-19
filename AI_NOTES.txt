@@ -686,3 +686,16 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
   iPhone par Light / Zoom tabhi dikhte hain jab camera capabilities dein (aksar nahi).
 - cloud.js listen(): accessScope 'sale' par bhi 'stock' ki tarah khata (blueKhata) load NAHI — khali rows. Pehle
   "permission-denied" aata tha (Firebase Denies) aur bekaar reads. Malik / full mulazim pehle jaisa poora data.
+
+2026-09-20 — v1.70.0 + PC sync-stock v9 + subcode-sync v1: app se POS SUB-BARCODE banana / badalna / hatana
+- sync-stock v9 (patch-subfull.js): item.sb = [{id: ItemSubCodeID, b, q, r: SBSaleRate, s: Show}] (bq/bs bhi rehte hain).
+- pos-stock.js labelRows: sb ho to usi se (main code + sab sub, Show off wale bhi dikhte hain magar print nahi);
+  subOverride/applySub: app ki taaza tabdeeli 5 min tak local patch (sync-stock 2 min mein asal data laata hai).
+- Khirki: ➕ Naya barcode (subForm: barcode likhein/📷 scanOnce, tadad + tez buttons 0.125/0.25/0.5/1/5, rate khali =
+  POS 0, Show ✓), har sub par ✏️ edit aur 🗑️ delete (confirm). Asal code (Items.ItemCode) app se nahi badalta.
+  subDupe: app ke stock data mein pehle se maujood barcode rok deta hai; PC bhi SQL mein check karta hai.
+- cloud.js requestSubcode/watchSubcode -> subcodeJobs/{id} {op add|edit|delete, itemId, subId, code, qty, rate, show,
+  status new, by, at}. Rules: read/create malik, full, stock mulazim. RULES PUBLISH KARNI HAIN.
+- PC subcode-sync.js: status new -> 'working' -> POS ke procedures usp_ItemSubCode_InsertUpdate (@ItemSubCodeID 0 = naya)
+  / usp_ItemSubCode_Delete; sirf dbo.ItemSubCode badalta hai. Duplicate: Items.ItemCode aur doosre sub-barcode.
+  subcode-auto.bat (loop, exit 3) + subcode-auto.vbs (Startup, 70 sec). Lock port 47817.
