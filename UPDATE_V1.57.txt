@@ -1,0 +1,6 @@
+Blue Khata v1.57.0
+INSTALL: Is ZIP ki files GitHub repo (Noor-traders) mein purani ki jagah upload karein. Firestore rules nahi badle.
+Phone par Sync / Update, neeche 1.57.0 check karein.
+- Scan par awaz (sahi = beep, nahi mila = do beep).
+- Dobara kholne par kaala camera khud dobara chalu hota hai.
+- Items ki list aur tadad ke buttons ab hamesha nazar aate hain.

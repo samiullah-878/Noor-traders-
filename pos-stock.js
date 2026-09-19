@@ -778,6 +778,20 @@ let scanList = [];        // scan kiye hue item ids (tarteeb se)
 let scanStream = null, scanTimer = null, scanBox = null, scanBusy = false;
 let lastCode = '', lastCodeAt = 0;
 let badCode = '', badN = 0, lastGoodAt = 0;   // v1.56: ghalat parhai ka filter
+let camRetry = 0, audioCtx = null;            // v1.57: kaala camera dobara chalu, scan ki awaz
+function beep(ok) {
+  try {
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const tones = ok ? [[1900, 0, 0.09]] : [[420, 0, 0.12], [420, 0.18, 0.12]];
+    for (const [f, s, d] of tones) {
+      const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+      o.type = 'square'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.15, t + s); g.gain.exponentialRampToValueAtTime(0.001, t + s + d);
+      o.connect(g); g.connect(audioCtx.destination); o.start(t + s); o.stop(t + s + d + 0.02);
+    }
+  } catch {}
+}
 
 function clearScan() {
   $('list')?.querySelectorAll?.(COUNT_SEL).forEach(el => { el.value = el.defaultValue; });
@@ -795,6 +809,7 @@ function closeScanner() {
 }
 
 function finishScan() {
+  camRetry = 0;
   closeScanner();
   if (saleRoot()) { saleSeen = []; rerender(); return; }
   if (!scanList.length) return;
@@ -843,6 +858,8 @@ function addScanned(code) {
 
 async function openScanner() {
   if (scanBox) return;
+  // awaz: button dabane (user ke haath) par hi chalu ho sakti hai
+  try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch {}
   if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
     notice('Is phone/browser mein camera scan nahi chalta. Android par Chrome istemal karein, ya code search mein likhein.');
     return;
@@ -933,6 +950,7 @@ async function openScanner() {
     hitBox.innerHTML = src.length ? src.map((r, i) => `<button type="button" data-pick="${i}"><b>${esc(r.name)}</b><small>${esc(r.code || '')}${r.rate ? ' · ' + num(r.rate) : ''}${r.stock != null ? ' · stock ' + num(r.stock) : ''}</small></button>`).join('') : '<p class="stat-note">Nahi mila</p>';
     hitBox._src = src;
   };
+  showPad();   // v1.57: dobara kholne par aakhri item ki tadad fauran nazar aaye
   qBox.oninput = scanSearch;
   qBox.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const r = (hitBox._src || [])[0]; if (r) pickHit(r); } };
   const pickHit = r => {
@@ -974,6 +992,17 @@ async function openScanner() {
   if (!scanBox) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; return; }
   video.srcObject = scanStream;
   try { await video.play(); } catch {}
+  // v1.57: kuch phones par band karke foran dobara kholne se camera kaala rehta hai.
+  // 1.5 sec mein tasveer na aaye to camera khud dobara chalu (doosri dafa mein yaad kiya hua lens bhi bhool jao).
+  setTimeout(() => {
+    if (!scanBox || scanBox.querySelector('video') !== video) return;
+    if (video.videoWidth > 0) { camRetry = 0; return; }
+    if (camRetry < 2) {
+      camRetry++;
+      if (camRetry === 2) { try { localStorage.removeItem('sam-scan-cam'); } catch {} }
+      closeScanner(); setTimeout(openScanner, 500);
+    } else msg.textContent = 'Camera ki tasveer nahi aa rahi — 🔄 Camera dabayein, ya band karke dobara kholein';
+  }, 1500);
   // Tez scan: continuous focus, aur zoom / torch ke buttons (chhote barcode ke liye)
   const track = scanStream.getVideoTracks()[0];
   const caps = track.getCapabilities?.() || {};
@@ -1047,15 +1076,18 @@ async function openScanner() {
             showPad(); drawNames(); }
           if (r.state === 'added') {
             msg.textContent = `✓ ${r.item.name} — tadad neeche se chunein ya agla scan karein`;
+            beep(true);
             if (navigator.vibrate) navigator.vibrate(80);
             drawNames();
             wait = 350;
           } else if (r.state === 'again') {
             msg.textContent = `"${r.item.name}" pehle se list mein hai`;
+            beep(true);
             if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
             wait = 350;
           } else {
             msg.textContent = `"${code}" stock mein nahi mila — doosra scan karein`;
+            beep(false);
             if (navigator.vibrate) navigator.vibrate([60, 60, 60]);
             wait = 700;
           }

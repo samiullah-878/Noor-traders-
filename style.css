@@ -177,3 +177,8 @@ body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actio
 .scan-pad-row{gap:4px}
 .scan-pad-row button{min-width:30px;min-height:32px;padding:0 5px;font-size:14px;border-radius:8px}
 .scan-pad-row button[data-unit]{min-width:40px;font-size:13px}
+
+/* v1.57: list aur tadad hamesha nazar aayein; camera baqi bachi jagah le */
+.scan-inner{overflow-y:auto}
+.scan-inner > *{flex-shrink:0}
+.scan-inner > .scan-cam{flex:1 1 0;min-height:140px}

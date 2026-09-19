@@ -533,3 +533,17 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
   aur "Dasti se nikalein" kar sakta hai. Reminder / payment transfer / naya account ab bhi sirf Malik.
   Firestore rules mein tabdeeli ki zaroorat nahi (staff pehle se party.dasti update kar sakta tha).
 - Version 1.56.0 (index.html, sw.js cache, imports, version.json).
+
+==============================================================
+2026-09-19 raat — v1.57.0: scanner — awaz, kaala camera, list gayab
+==============================================================
+- beep(ok): WebAudio (audioCtx openScanner ke click par banta/resume hota hai). Sahi/"pehle se" scan = ek patli beep,
+  "nahi mila" = do moti beep. Vibrate waisa hi.
+- Kaala camera: dobara kholne par kuch Android phones tasveer nahi dete. play() ke 1.5 sec baad video.videoWidth 0 ho to
+  closeScanner()+openScanner() khud (camRetry, 2 dafa tak; doosri dafa localStorage 'sam-scan-cam' bhi hata deta hai).
+  Phir bhi na chale to message. finishScan() par camRetry = 0.
+- List/tadad gayab (v1.56 layout ki ghalti): .scan-cam flex grow karta tha aur .scan-names (overflow:auto, min-height 0)
+  0 tak sukarr jata tha. Ab .scan-inner > * flex-shrink:0, sirf .scan-cam flex:1 1 0 (min 140px), .scan-inner scroll.
+  Dobara kholne par showPad() foran (aakhri item ki tadad).
+- Agla kaam (files ka intezar): POS sub-barcode (ItemSubCode) ki tadad, jaise garam masala 0.25 label — scan par wohi
+  tadad khud aaye. Chahiye: sync-stock.js + subcode-dekho.json.
