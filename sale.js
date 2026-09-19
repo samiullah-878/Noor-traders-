@@ -1,10 +1,10 @@
-// sale.js — Nayi Sale (Counter / Wholesale) — v1.60.0
+// sale.js — Nayi Sale (Counter / Wholesale) — v1.61.0
 // App sale ko Firestore "appSales" mein "new" likhta hai. POS bill PC ka sale-post.js banata hai
 // (POS ke apne procedures se), rasid print karta hai aur Sale No wapas likhta hai.
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, openSaleCamera } from './pos-stock.js?v=1.60.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, openSaleCamera } from './pos-stock.js?v=1.61.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -41,9 +41,15 @@ function stock() {
   const items = pick == null ? [] : s.itemsFor(pick).filter(r => !s.hidden[String(r.id)]);
   return { ...s, pick, items };
 }
-const rateFor = (it, m = mode) => r2(m === 'wholesale' ? (Number(it.wrate) || Number(it.rate) || 0) : (Number(it.rate) || 0));
+// v1.61: POS jaisa — counter mein KHULA PIECE "Peice Rate" (SaleRate2 -> item.rate2) se, POORA CARTON "Cotton Rate"
+// (SaleRate -> item.rate, fi piece) se. rate2 na ho (purana sync) to dono item.rate. Wholesale pehle jaisa (ek hi rate).
+const rateFor = (it, m = mode) => r2(m === 'wholesale' ? (Number(it.wrate) || Number(it.rate) || 0) : (Number(it.rate2) || Number(it.rate) || 0));
+const crateFor = (it, m = mode) => r2(m === 'wholesale' ? (Number(it.wrate) || Number(it.rate) || 0) : (Number(it.rate) || 0));
+const setStd = (l, it) => { l.rate = rateFor(it); l.std = l.rate; l.crate = crateFor(it); l.cstd = l.crate; };
 const linePcs = l => r2((Number(l.ctn) || 0) * (Number(l.pack) > 1 ? Number(l.pack) : 0) + (Number(l.pcs) || 0));
-const lineTotal = l => r2(linePcs(l) * (Number(l.rate) || 0));
+const ctnPcsOf = l => r2((Number(l.ctn) || 0) * (Number(l.pack) > 1 ? Number(l.pack) : 0));
+const crateOf = l => Number(l.crate ?? l.rate) || 0;
+const lineTotal = l => r2(ctnPcsOf(l) * crateOf(l) + (Number(l.pcs) || 0) * (Number(l.rate) || 0));
 const cartTotal = () => r2(cart.reduce((n, l) => n + lineTotal(l), 0));
 const cashNow = () => cash == null ? cartTotal() : cash;
 
@@ -78,7 +84,7 @@ function addItem(it, qtyPcs = 1) {
     cart.push({
       id: it.id, code: it.code || '', name: it.name, pack: Number(it.pack) || 0,
       cName: it.cName || 'Ctn', uName: it.uName || 'Pcs', godam: Number(godam) || SALE_BRANCH,
-      ctn: 0, pcs: qtyPcs, rate: rateFor(it), std: rateFor(it), edited: false
+      ctn: 0, pcs: qtyPcs, rate: rateFor(it), std: rateFor(it), crate: crateFor(it), cstd: crateFor(it), edited: false
     });
     // v1.60: nayi line par bhi poore carton alag (misal 2 Ctn likha = 24 pcs -> 2 Ctn)
     const nl = cart[cart.length - 1], pk = Number(nl.pack) || 0;
@@ -165,7 +171,7 @@ export function renderSale() {
   const owner = isOwner();
   const total = cartTotal();
   // rate: mulazim ke liye hamesha POS ka rate
-  if (!owner) cart.forEach(l => { const it = s.items.find(r => String(r.id) === String(l.id)); if (it) { l.rate = rateFor(it); l.std = l.rate; l.edited = false; } });
+  if (!owner) cart.forEach(l => { const it = s.items.find(r => String(r.id) === String(l.id)); if (it) { setStd(l, it); l.edited = false; } });
 
   // v1.54: godam ke buttons hata diye — bill hamesha main branch se; line ke andar godam badla ja sakta hai
   $('summary').innerHTML = `<div class="stock-head sale-head" data-sale-root="1">
@@ -211,6 +217,7 @@ export function renderSale() {
         ${Number(l.pack) > 1 ? `<label>${esc(l.cName)} (${num(l.pack)})<input type="number" min="0" step="1" inputmode="numeric" data-sale-ctn="${i}" value="${l.ctn || ''}"></label>` : ''}
         <label>Rate${l.edited ? ' ✎' : ''}<input type="number" min="0" step="any" inputmode="decimal" data-sale-rate="${i}" value="${l.rate}"${owner ? '' : ' readonly'}></label>
         ${gsel}
+        ${Number(l.pack) > 1 && Math.abs(crateOf(l) - (Number(l.rate) || 0)) > 0.004 ? `<small class="sale-crate">${esc(l.cName)} rate ${num(r2(crateOf(l) * Number(l.pack)))}</small>` : ''}
         <div class="sale-amt"><small>${num(pcs)} ${esc(l.uName)}</small><b id="saleAmt${i}">${num(lineTotal(l))}</b></div>
       </div>
     </div>`;
@@ -249,7 +256,7 @@ document.addEventListener('input', e => {
   let i;
   if ((i = t.dataset.saleCtn) != null) { cart[i].ctn = Math.max(0, Math.floor(Number(t.value) || 0)); cash = null; }
   else if ((i = t.dataset.salePcs) != null) { cart[i].pcs = Math.max(0, Number(t.value) || 0); cash = null; }
-  else if ((i = t.dataset.saleRate) != null) { if (!isOwner()) return; cart[i].rate = Math.max(0, Number(t.value) || 0); cart[i].edited = cart[i].rate !== cart[i].std; cash = null; }
+  else if ((i = t.dataset.saleRate) != null) { if (!isOwner()) return; cart[i].rate = Math.max(0, Number(t.value) || 0); cart[i].crate = cart[i].rate; cart[i].edited = cart[i].rate !== cart[i].std; cash = null; }   // malik ka apna rate: carton par bhi wohi
   else if (t.dataset.saleCash != null) { cash = t.value === '' ? 0 : Math.max(0, Number(t.value) || 0); }
   else if (t.dataset.saleNote != null) { note = t.value.slice(0, 100); }
   else return;
@@ -261,7 +268,7 @@ document.addEventListener('change', e => {
   const l = cart[t.dataset.saleLg]; if (!l) return;
   l.godam = Number(t.value);
   const it = itemIn(l.godam, l.id);
-  if (it && !l.edited) { l.rate = rateFor(it); l.std = l.rate; }
+  if (it && !l.edited) setStd(l, it);
   cash = null; keepDraft(); rerender();
 });
 document.addEventListener('keydown', e => {
@@ -287,7 +294,7 @@ document.addEventListener('click', async e => {
     if (mode === t.dataset.saleMode) return;
     mode = t.dataset.saleMode;
     const { items } = stock();
-    cart.forEach(l => { const it = items.find(r => String(r.id) === String(l.id)); if (it && (!l.edited || !isOwner())) { l.rate = rateFor(it); l.std = l.rate; l.edited = false; } });
+    cart.forEach(l => { const it = items.find(r => String(r.id) === String(l.id)); if (it && (!l.edited || !isOwner())) { setStd(l, it); l.edited = false; } });
     cash = null; keepDraft(); rerender(); return;
   }
   if (t.dataset.saleGodam) {
@@ -295,7 +302,7 @@ document.addEventListener('click', async e => {
     godam = Number(t.dataset.saleGodam);
     const { items } = stock();
     cart = cart.filter(l => items.some(r => String(r.id) === String(l.id)));
-    cart.forEach(l => { const it = items.find(r => String(r.id) === String(l.id)); if (!l.edited) { l.rate = rateFor(it); l.std = l.rate; } });
+    cart.forEach(l => { const it = items.find(r => String(r.id) === String(l.id)); if (!l.edited && it) setStd(l, it); });
     keepDraft(); rerender(); return;
   }
   if (t.dataset.saleAdd) {
@@ -353,10 +360,23 @@ function focusLast() {
 
 async function save() {
   if (saving) return;
-  const lines = cart.map(l => ({ id: String(l.id), code: String(l.code || ''), name: String(l.name || ''), pack: Number(l.pack) || 0,
-    cName: l.cName, uName: l.uName, godam: Number(l.godam) || Number(godam) || SALE_BRANCH, qty: linePcs(l), rate: r2(l.rate), std: r2(l.std) })).filter(l => l.qty > 0);
+  // v1.61: carton aur khule piece ke rate alag hon to POS ko DO lines (unit 'ctn' / 'pcs'), warna ek line
+  const lines = [];
+  let emptyLines = 0;
+  cart.forEach(l => {
+    const base = { id: String(l.id), code: String(l.code || ''), name: String(l.name || ''), pack: Number(l.pack) || 0,
+      cName: l.cName, uName: l.uName, godam: Number(l.godam) || Number(godam) || SALE_BRANCH };
+    const cq = ctnPcsOf(l), pq = r2(Number(l.pcs) || 0), cr = r2(crateOf(l)), pr = r2(l.rate);
+    if (!(cq + pq > 0)) { emptyLines++; return; }
+    if (cq > 0 && pq > 0 && Math.abs(cr - pr) > 0.004) {
+      lines.push({ ...base, unit: 'ctn', qty: cq, rate: cr, std: r2(l.cstd ?? l.std) });
+      lines.push({ ...base, unit: 'pcs', qty: pq, rate: pr, std: r2(l.std) });
+    } else if (cq > 0 && !(pq > 0)) lines.push({ ...base, unit: 'ctn', qty: cq, rate: cr, std: r2(l.cstd ?? l.std) });
+    else if (!(cq > 0)) lines.push({ ...base, unit: 'pcs', qty: pq, rate: pr, std: r2(l.std) });
+    else lines.push({ ...base, qty: r2(cq + pq), rate: pr, std: r2(l.std) });
+  });
   if (!lines.length) { notice('Kisi item ki qty likhein'); return; }
-  if (lines.length !== cart.length && !confirm('Jin items ki qty khali hai woh bill mein nahi jayenge. Theek hai?')) return;
+  if (emptyLines && !confirm('Jin items ki qty khali hai woh bill mein nahi jayenge. Theek hai?')) return;
   if (lines.some(l => !(l.rate > 0)) && !confirm('Kisi item ka rate 0 hai. Phir bhi save karein?')) return;
   const total = r2(lines.reduce((n, l) => n + l.qty * l.rate, 0));
   let paid = r2(cashNow());

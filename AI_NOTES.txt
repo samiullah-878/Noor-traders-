@@ -579,3 +579,23 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
 - beep: gain 0.6, 0.18 sec (nahi mila = 2 x 0.2 sec), har beep par audioCtx.resume(); scanBox par kisi bhi pointerdown
   (capture) se audioCtx bana/resume — kuch phones awaz tab tak nahi dete jab tak screen na chhui jaye.
 - style.css v1.60: scan-names naam 19px mote, line 16px, max-height 36vh; pad ka naam 17px; Kul 18px; message 16px.
+
+==============================================================
+2026-09-19 raat — v1.61.0: POS jaisa piece/carton rate, kaala camera ki asal wajah, mulazim ka payment transfer
+==============================================================
+- KAALA CAMERA / LIST GAYAB ki asal wajah: pos-stock.js mein r2() maujood hi nahi tha (v1.55 ki lineOf ise istemal
+  karti thi). Ek bhi item hone par drawNames() ReferenceError deta, openScanner wahin ruk jata -> camera kabhi chalu
+  nahi hota. Ab r2 top par defined.
+- RATE: POS Items/ItemBranchRate: SaleRate = carton ka rate fi piece ("Cotton Rate" = SaleRate x PackQty, olivia
+  233.333 x 12 = 2800), SaleRate2 = khule piece ka "Peice Rate" (olivia 260). App/sale-post pehle sirf SaleRate lete the.
+  * PC sync-stock v6 (patch-rate2.js): item.rate2 = ItemBranchRate.SaleRate2 (sirf > 0 ho to).
+  * sale.js: counter mein line.rate = rate2 || rate (piece), line.crate = rate (carton fi piece); lineTotal =
+    ctn*pack*crate + pcs*rate. Wholesale ek hi rate (wrate). Malik rate badle to crate bhi wohi. Line mein "CTN rate X".
+    Save: carton aur piece ke rate alag hon to do lines {unit:'ctn'} + {unit:'pcs'}; sirf ek ho to wohi unit.
+  * pos-stock lineOf (camera ki list) bhi isi hisaab se.
+  * PC sale-post.js v1.5 (v1.3 wali text rasid par bani, image rasid NAHI): mulazim ki counter line unit 'ctn' ->
+    SaleRate, 'pcs' -> SaleRate2||SaleRate, unit na ho (purani app) -> pack se taqseem. Malik ki line app ke rate se.
+- MULAZIM TRANSFER: party ke khate mein canEditAccount() par "⇄ Payment transfer" (sirf naya, tareekh aaj, readonly).
+  commitAccountTransfer / cloud.saveTransfer mulazim ko sirf rev 0 naya (edit/delete malik). firestore.rules: blueKhata
+  mein staff create: blueStaff && dayOpen && validTransfer && isToday(date) && rev == 1 && by/updatedBy == uid.
+  RULES FIREBASE CONSOLE MEIN PUBLISH KARNI HAIN (project note-traders-khata-7ccc1).

@@ -6,6 +6,7 @@ const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 const NUMF = new Intl.NumberFormat('en-PK');   // ek hi dafa banao (har number par naya banana bohat slow tha)
 const num = n => NUMF.format(Math.round((Number(n) || 0) * 100) / 100);
+const r2 = n => Math.round((Number(n) || 0) * 100) / 100;   // v1.61: yeh maujood nahi tha — camera ki list banate waqt ruk jata tha (kaala camera)
 const NAMEC = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
 
 const PAGE = 30;        // ek dafa itni rows — baqi "Aur dikhao" se (phone tez rahe)
@@ -911,9 +912,11 @@ async function openScanner() {
     const q = scanQty.get(String(it.id)) || { pcs: 0, ctn: 0 };
     const pack = Number(it.pack) || 0;
     const total = r2((Number(q.ctn) || 0) * (pack > 1 ? pack : 0) + (Number(q.pcs) || 0));
-    const rate = Number(it.rate) || 0;
+    const rate = Number(it.rate2) || Number(it.rate) || 0;   // v1.61: khula piece POS "Peice Rate"
+    const ctnRate = Number(it.rate) || rate;                  // carton fi piece
     const qtxt = `${q.ctn ? num(q.ctn) + ' ' + (it.cName || 'Ctn') + (q.pcs ? ' + ' : '') : ''}${q.pcs || !q.ctn ? num(q.pcs || 0) + ' ' + (it.uName || 'Pcs') : ''}`;
-    return { total, rate, amt: r2(total * rate), qtxt };
+    const ctnPcs = r2((Number(q.ctn) || 0) * (pack > 1 ? pack : 0));
+    return { total, rate, amt: r2(ctnPcs * ctnRate + (Number(q.pcs) || 0) * rate), qtxt };
   };
   const drawNames = () => {
     const sale = saleRoot();

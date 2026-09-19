@@ -1,0 +1,9 @@
+Blue Khata v1.61.0
+INSTALL:
+1) Is ZIP ki files GitHub repo (Noor-traders) mein purani ki jagah upload karein.
+2) firestore.rules: Firebase console > note-traders-khata-7ccc1 > Firestore > Rules mein poori file paste karke Publish.
+3) PC: patch-rate2.js chalayein (sync-stock) aur nayi sale-post.js (v1.5) lagayein; dono restart.
+Phone par Sync / Update, neeche 1.61.0.
+- Khula piece POS "Peice Rate" se, poora carton "Cotton Rate" se (olivia: 1 pc 260, 1 ctn 2800).
+- Kaala camera / list gayab ki asal ghalti theek.
+- Mulazim aaj ka payment transfer kar sakta hai (edit/delete sirf malik).

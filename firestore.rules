@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -171,6 +171,11 @@ service cloud.firestore {
           && d.get('deleted', false) is bool && d.get('deleted', false) == mate.get('deleted', false);
       }
       allow create: if isOwner() && validTransfer();
+      // v1.61: mulazim (full, din khula) sirf AAJ ka naya transfer bana sakta hai; edit/delete sirf malik
+      allow create: if blueStaff() && dayOpen() && validTransfer()
+        && isToday(request.resource.data.date) && request.resource.data.rev == 1
+        && request.resource.data.by == request.auth.uid && request.resource.data.updatedBy == request.auth.uid
+        && !request.resource.data.get('deleted', false);
       allow update: if isOwner() && 'transferId' in resource.data && validTransfer()
         && request.resource.data.transferId == resource.data.transferId
         && request.resource.data.transferRole == resource.data.transferRole

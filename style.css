@@ -201,3 +201,6 @@ body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actio
 .scan-pad-name{font-size:17px;font-weight:700}
 .scan-sum{font-size:18px}
 .scan-msg{font-size:16px;font-weight:600}
+
+/* v1.61: carton ka rate line mein */
+.sale-crate{display:block;width:100%;color:#6b7c93;font-size:13px;margin-top:-2px}
