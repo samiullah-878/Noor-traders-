@@ -1,10 +1,10 @@
-// sale.js — Nayi Sale (Counter / Wholesale) — v1.53.0
+// sale.js — Nayi Sale (Counter / Wholesale) — v1.54.0
 // App sale ko Firestore "appSales" mein "new" likhta hai. POS bill PC ka sale-post.js banata hai
 // (POS ke apne procedures se), rasid print karta hai aur Sale No wapas likhta hai.
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, openSaleCamera } from './pos-stock.js?v=1.53.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, openSaleCamera } from './pos-stock.js?v=1.54.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -145,18 +145,15 @@ export function renderSale() {
   // rate: mulazim ke liye hamesha POS ka rate
   if (!owner) cart.forEach(l => { const it = s.items.find(r => String(r.id) === String(l.id)); if (it) { l.rate = rateFor(it); l.std = l.rate; l.edited = false; } });
 
-  const godamBar = s.branches.length > 1 ? `<div class="sh-label">Maal kis godam se</div><div class="account-tools">${
-    s.branches.map(b => `<button data-sale-godam="${b}"${b === s.pick ? ' class="selected"' : ''}>${esc(s.branchName(b, s.names))}</button>`).join('')}</div>` : '';
+  // v1.54: godam ke buttons hata diye — bill hamesha main branch se; line ke andar godam badla ja sakta hai
   $('summary').innerHTML = `<div class="stock-head sale-head" data-sale-root="1">
     <div class="account-tools">
       <button class="sale-mode${mode === 'counter' ? ' selected' : ''}" data-sale-mode="counter">🛒 Counter Sale</button>
       <button class="sale-mode${mode === 'wholesale' ? ' selected' : ''}" data-sale-mode="wholesale">📦 Wholesale</button>
     </div>
-    ${godamBar}
     <div class="sale-total"><small>${mode === 'wholesale' ? 'Wholesale (W rate)' : 'Counter (R rate)'} · ${num(cart.length)} items</small>
       <strong id="saleTotal">Rs ${num(total)}</strong></div>
     <div class="account-tools">
-      <button class="sh-wide sh-scan" data-sale-camera="1">📷 Barcode scan karein</button>
       <button class="sh-wide" id="saleTodayBtn" data-sale-today="1">${todayLabel()}</button>
     </div>
   </div>`;
@@ -167,9 +164,13 @@ export function renderSale() {
 
   const q = norm(si?.value || '');
   let found = '';
+  const camRow = `<div class="sale-camrow"><button type="button" class="sale-cam" data-sale-camera="1">📷 Scan</button><span class="stat-note">Naam likhein ya scan karein</span></div>`;
   if (q) {
+    const codeKey = r => { const c = String(r.code || '').trim(); const n = Number(c); return Number.isFinite(n) && c !== '' ? String(n).padStart(20, '0') : c; };
     const hits = s.items.filter(r => norm(r.name).includes(q) || norm(r.code).includes(q)
-      || (Array.isArray(r.bc) && r.bc.some(b => norm(b).includes(q)))).slice(0, 25);
+      || (Array.isArray(r.bc) && r.bc.some(b => norm(b).includes(q))))
+      .sort((a, b) => codeKey(a).localeCompare(codeKey(b)))   // POS jaisi tarteeb (code ke hisaab se)
+      .slice(0, 25);
     found = `<div class="sale-found">${hits.length ? hits.map(r => `<button type="button" class="sale-hit" data-sale-add="${esc(r.id)}">
         <b>${esc(r.name)}</b><small>${esc(r.code || '')} · R ${num(r.rate)}${r.wrate ? ' · W ' + num(r.wrate) : ''} · stock ${num(r.stock)}${Number(r.pack) > 1 ? ' · 1 ' + esc(r.cName || 'Ctn') + ' = ' + num(r.pack) : ''}</small>
       </button>`).join('') : '<p class="stat-note">Koi item nahi mila</p>'}</div>`;
@@ -201,7 +202,7 @@ export function renderSale() {
       <label>Note (ikhtiyari)<input maxlength="100" data-sale-note="1" value="${esc(note)}"></label>
     </div>` : '';
 
-  $('list').innerHTML = found + (cart.length ? `<div class="sale-cart">${rows}</div>${pay}` :
+  $('list').innerHTML = camRow + found + (cart.length ? `<div class="sale-cart">${rows}</div>${pay}` :
     (q ? '' : `<div class="empty"><strong>Naya bill</strong><p>Upar item ka naam likhein ya 📷 se scan karein.</p></div>`));
   $('actions').innerHTML = cart.length ? `<button class="give" data-sale-clear="1">✕ Naya bill</button><button data-sale-camera="1" title="Barcode scan">📷</button>
     <button class="got" data-sale-save="1"${saving ? ' disabled' : ''}>${saving ? 'Save ho raha hai…' : '💾 Save + Print · Rs ' + num(total)}</button>` : '';
@@ -254,6 +255,7 @@ document.addEventListener('keydown', e => {
   }
   if (!it) { notice('Ek item nahi mila — list se chunein'); return; }
   addItem(it); e.target.value = ''; notice(`✓ ${it.name}`); rerender();
+  setTimeout(() => qtyPad(cart.findIndex(l => String(l.id) === String(it.id))), 60);
 });
 
 document.addEventListener('click', async e => {
@@ -276,7 +278,7 @@ document.addEventListener('click', async e => {
   }
   if (t.dataset.saleAdd) {
     const it = stock().items.find(r => String(r.id) === t.dataset.saleAdd);
-    if (it) { addItem(it); const s = $('search'); if (s) s.value = ''; rerender(); setTimeout(() => focusLast(), 60); }
+    if (it) { addItem(it); const s = $('search'); if (s) s.value = ''; rerender(); setTimeout(() => qtyPad(cart.findIndex(l => String(l.id) === String(it.id))), 60); }
     return;
   }
   if (t.dataset.saleDel != null) { cart.splice(Number(t.dataset.saleDel), 1); cash = null; keepDraft(); rerender(); return; }
@@ -290,6 +292,37 @@ document.addEventListener('click', async e => {
   }
   if (t.dataset.saleSave) save();
 });
+// chhota modal (app.js ka modal yahan nahi milta)
+function saleModal(title, html) {
+  const d = $('dialog'); if (!d) return null;
+  d.classList.remove('search-dialog');
+  $('dialogTitle').textContent = title;
+  $('dialogBody').innerHTML = html;
+  if (!d.open) d.showModal();
+  return d;
+}
+// Item chunne par tadad ka pad (keyboard ke baghair) — scanner wale pad jaisa
+function qtyPad(i) {
+  const l = cart[i]; if (!l) return;
+  const pack = Number(l.pack) || 0;
+  const row = (unit, vals) => vals.map(v => `<button type="button" data-qp="${unit}:${v}">${v === '+1' ? '+1' : v}</button>`).join('');
+  saleModal(`${l.name}${l.label ? ' · ' + l.label : ''}`, `<div class="qtypad">
+    <div class="qtypad-now" id="qpNow">${num(l.pcs || 0)} ${esc(l.uName)}${pack > 1 && l.ctn ? ' · ' + num(l.ctn) + ' ' + esc(l.cName) : ''}</div>
+    <div class="qtypad-lab">${esc(l.uName)}</div><div class="qtypad-row">${row('pcs', [1, 2, 3, 6, 12, 24, '+1'])}</div>
+    ${pack > 1 ? `<div class="qtypad-lab">${esc(l.cName)} (1 = ${num(pack)})</div><div class="qtypad-row">${row('ctn', [1, 2, 3, 5, 10, '+1'])}</div>` : ''}
+    <div class="qtypad-row"><button type="button" class="got" data-qp="done">✓ Theek hai</button><button type="button" class="danger" data-qp="del">✕ Hatao</button></div>
+  </div>`);
+  $('dialogBody').onclick = e => {
+    const b = e.target.closest('[data-qp]'); if (!b) return;
+    const v = b.dataset.qp;
+    if (v === 'done') { $('dialog').close(); rerender(); return; }
+    if (v === 'del') { cart.splice(i, 1); cash = null; keepDraft(); $('dialog').close(); rerender(); return; }
+    const [unit, val] = v.split(':');
+    if (val === '+1') l[unit] = (Number(l[unit]) || 0) + 1; else l[unit] = Number(val);
+    cash = null; keepDraft();
+    $('qpNow').textContent = `${num(l.pcs || 0)} ${l.uName}${pack > 1 && l.ctn ? ' · ' + num(l.ctn) + ' ' + l.cName : ''}`;
+  };
+}
 function focusLast() {
   const i = cart.length - 1;
   const box = document.querySelector(`[data-sale-pcs="${i}"]`) || document.querySelector(`[data-sale-ctn="${i}"]`);

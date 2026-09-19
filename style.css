@@ -141,3 +141,11 @@ body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actio
 .scan-pad-row button[data-unit]{font-size:14px;font-weight:600;background:#e6eeff;color:#0b3f9e;min-width:52px}
 .scan-pad-row button.selected{background:#0b3f9e;color:#fff}
 .scan-pad-row button[data-qty="+1"]{background:#0b6b2e;color:#fff}
+/* v1.54 Sale: camera row + tadad ka pad */
+.sale-camrow{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.sale-cam{background:#0b3f9e;color:#fff;min-height:44px;font-size:15px;padding:8px 16px}
+.qtypad{display:grid;gap:6px}
+.qtypad-now{font-size:18px;font-weight:700;text-align:center;background:#eef4ff;border-radius:10px;padding:8px}
+.qtypad-lab{font-size:12px;color:#6b7c93;margin-top:4px}
+.qtypad-row{display:flex;flex-wrap:wrap;gap:6px}
+.qtypad-row button{flex:1 1 60px;min-height:46px;font-size:17px;font-weight:700}

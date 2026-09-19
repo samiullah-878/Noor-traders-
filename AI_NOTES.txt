@@ -444,3 +444,53 @@ kuch items sirf "check" karne hote hain; aur malik ek button se counting band ka
   scanQty Map(itemId -> {pcs, ctn}); pehli scan par pcs 1.
 - Sale: setSaleQtyHook -> sale.js cart line ke pcs/ctn set (absolute), rerender (scanner khula rehta hai).
 - Stock ginti: "Ho gaya" par scanQty se Ctn/Pcs (ya Kul) ke khane bhar diye jate hain + liveCount; phir Save khud karna hai.
+
+==============================================================
+2026-09-19 subah — PC: sale-post v1.2, post-farq v11, tools, SETUP/BACKUP
+==============================================================
+- Malik ne bataya: POS ka print service naya bill khud chhapta hai (barcode wali asal rasid). Is liye
+  sale-post.js v1.2 aur post-farq.js v11 mein AUTO_PRINT = false (apni saadi rasid band). --print <SaleNo> ab bhi kaam karta hai.
+- sale-post v1.2: bill ke saare items EK query (ItemID IN ... AND BranchID IN ...) -> tez. Line ka godam (v1.1) shamil.
+- subcode-dekho.js: ItemSubCode ke khane/misalein/procs -> subcode-dekho.json (sub-barcode add feature ke liye).
+- reorder-data.js [YYYY-MM-DD]: 1 Dec se items/stock/sales/returns/purchases/ledger CSV -> reorder-data.zip (reorder level ke hisaab ke liye).
+  Har query alag try/catch; column naam ghalat hon to .error.txt banti hai + ledger-columns.csv se asal naam.
+- SETUP.bat (Run as admin): Node (folder ka node-*.msi / winget / nodejs.org), npm install, SQL server/password poochh kar
+  sync-stock.js mein likhna, SQL+Firebase test, *.vbs Startup mein, *-auto.bat chalu. Isi PC par bhi chala sakte hain.
+- BACKUP.bat: Desktop par khata-sync-backup-<date>.zip (node_modules/logs ke baghair; firebase-key.json shamil).
+- LAGAO.bat: sab kuch C:\khata-sync mein, backup *.v11old/v10old, sale-post/post-farq restart, logs.
+Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reorder report, Telegram din ka khulasa, WhatsApp ek-tap.
+
+2026-09-19 — Print: seedha printer ko, TM-T88IV
+- sale-post.js / post-farq.js: printText() ab notepad ki bajaye PowerShell Out-Printer -Name se seedha printer ko (koi window nahi).
+  PRINTER_NAME = 'TM-T88IV' (Devices and Printers mein jo naam hai; ghalat ho to top ki const badal dein).
+  AUTO_PRINT = true dono mein (yeh meri "saadi" rasid hai — POS ki Crystal Report wali nahi).
+- Malik chahta hai POS ki Crystal Report rasid (jo post-farq/stock bill par khud niklti hai) sale-post wale bill par bhi khud nikle.
+  Wajah: PC par POS ka apna print service chal raha hai jo naye SQL bills dekh kar khud print karta hai, lekin sale-post
+  wale bill (BK-APP marker) ko pakarta nahi lagta. Abhi tak maloom nahi kaunsa process/service yeh karta hai —
+  Task Manager > Details dekh kar pata karna hai, phir sale-post ka bill usi tareeqe se banana hai ke woh service use bhi pakre.
+
+==============================================================
+2026-09-19 (baad dopahar) — Print: printer ka naam seedha, Crystal Report ka mansooba
+==============================================================
+- sale-post.js / post-farq.js: PRINTER_NAME = 'TM-T88IV' (Devices and Printers ka naam). printText() ab notepad
+  ki jagah PowerShell "Get-Content | Out-Printer -Name" seedha printer ko — tez, koi window nahi khulti.
+  AUTO_PRINT = true dono mein (apni saadi rasid ab chalti hai; malik ne kaha stock ke bill par bhi asal mein
+  meri hi text-rasid nikalti thi, POS khud print nahi karta).
+- Malik chahta hai POS ki ASAL Crystal Report rasid (jo Thermal F5 se nikalti hai) khud-ba-khud chhape.
+  Yeh sirf UI Automation se mumkin hai: script POS ki Sale screen khud khole (bill number daal kar) aur
+  "Thermal F5" / Print button khud dabaye. Pehla qadam: pos-uia-dekho.ps1 (sirf dekhta hai, kuch nahi dabata) —
+  POS mein koi bill khol kar chalana hai, us se Sale window ke saare buttons/AutomationId milenge
+  (pos-uia-dekho.txt). Us ke baad asal "auto-print via POS" script banegi.
+  Khatra jo malik ko bataya: POS ki window thori der screen par khul/band hogi; POS update hone par ID badal sakte hain.
+- LAGAO2.bat: sale-post.js, post-farq.js, pos-uia-dekho.ps1 lagata hai (backup .v12old/.v11old).
+
+==============================================================
+2026-09-19 — v1.54.0: Sale screen — godam bar hata, camera search ke saath, tadad ka pad, POS jaisi tarteeb
+==============================================================
+- Godam ke buttons (Maal kis godam se) Sale screen se hata diye. Bill main branch (SALE_BRANCH) se; kisi line ka
+  godam line ke andar wale "Godam" select se badla ja sakta hai (v1.52 se).
+- Search results ab POS ki tarah CODE ke hisaab se tarteeb mein (adad wale code number ki tarah, warna harf ke hisaab se).
+- List ke upar chhoti qatar: "📷 Scan" button + hidayat (bara button hata). actions bar ka 📷 waise hi hai.
+- Item search se ya Enter se chunne par ab "tadad ka pad" khulta hai (saleModal): Pcs 1/2/3/6/12/24/+1,
+  aur pack>1 ho to Ctn 1/2/3/5/10/+1, "✓ Theek hai" / "✕ Hatao". Keyboard kholne ki zaroorat nahi
+  (scanner wale pad jaisa, jo pos-stock.js mein hai).
