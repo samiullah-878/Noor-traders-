@@ -1,0 +1,5 @@
+Blue Khata v1.58.0
+INSTALL: Is ZIP ki files GitHub repo (Noor-traders) mein purani ki jagah upload karein. Firestore rules nahi badle.
+Phone par Sync / Update, neeche 1.58.0 check karein.
+- POS sub-barcode wale label (jaise garam masala 0.25) scan karne par wohi tadad aati hai (PC par patch-subqty.js zaroori).
+- Ek item dobara scan karne par camera ki list mein bhi sahi tadad.

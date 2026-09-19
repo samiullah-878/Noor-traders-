@@ -1,10 +1,10 @@
-// sale.js — Nayi Sale (Counter / Wholesale) — v1.57.0
+// sale.js — Nayi Sale (Counter / Wholesale) — v1.58.0
 // App sale ko Firestore "appSales" mein "new" likhta hai. POS bill PC ka sale-post.js banata hai
 // (POS ke apne procedures se), rasid print karta hai aur Sale No wapas likhta hai.
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, openSaleCamera } from './pos-stock.js?v=1.57.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, openSaleCamera } from './pos-stock.js?v=1.58.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -59,6 +59,15 @@ function findByCode(items, code) {
     || items.find(r => bare && codesOf(r).some(x => x.replace(/^0+/, '') === bare)) || null;
 }
 
+// v1.58: POS sub-barcode ki tadad (sync-stock v5 -> item.bq [{b, q}]), misal garam masala label 0.25
+function subQty(it, code) {
+  const clean = String(code || '').trim(), bare = clean.replace(/^0+/, '');
+  if (!clean || !Array.isArray(it?.bq)) return 1;
+  const e = it.bq.find(x => { const b = String(x?.b || '').trim(); return b === clean || (bare && b.replace(/^0+/, '') === bare); });
+  const q = Number(e?.q);
+  return q > 0 ? q : 1;
+}
+
 function addItem(it, qtyPcs = 1) {
   const old = cart.find(l => String(l.id) === String(it.id));
   if (old) {
@@ -94,11 +103,14 @@ setSaleScanHook((code, direct) => {
   const { items } = stock();
   const it = direct || findByCode(items, code);
   if (!it) return { state: null };
-  addItem(it);
-  notice(`✓ ${it.name}`);
+  const q = direct ? 1 : subQty(it, code);
+  addItem(it, q);
+  notice(`✓ ${it.name}${q !== 1 ? ' — ' + q : ''}`);
   const s = $('search'); if (s && s.value) s.value = '';
   rerender();
-  return { state: 'added', item: it };
+  // v1.58: bill ki asal tadad wapas (camera ki list bhi wohi dikhaye — pehle dobara scan par list 1 hi dikhati thi)
+  const l = cart.find(x => String(x.id) === String(it.id));
+  return { state: 'added', item: it, pcs: l ? Number(l.pcs) || 0 : q, ctn: l ? Number(l.ctn) || 0 : 0 };
 });
 
 // ---------- aaj ki app sales ----------

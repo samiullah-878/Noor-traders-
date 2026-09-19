@@ -955,7 +955,7 @@ async function openScanner() {
   qBox.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const r = (hitBox._src || [])[0]; if (r) pickHit(r); } };
   const pickHit = r => {
     qBox.value = ''; hitBox.hidden = true;
-    if (saleRoot() && saleHook) { const res = saleHook(String(r.code || r.bc?.[0] || r.name), r); if (res && res.item) { lastScan = res.item; if (!scanQty.has(String(res.item.id))) scanQty.set(String(res.item.id), { pcs: 1, ctn: 0 }); if (!scanItems.has(String(res.item.id))) { scanItems.set(String(res.item.id), res.item); scanOrder.push(String(res.item.id)); } showPad(); drawNames(); } return; }
+    if (saleRoot() && saleHook) { const res = saleHook(String(r.code || r.bc?.[0] || r.name), r); if (res && res.item) { lastScan = res.item; if (res.pcs != null) scanQty.set(String(res.item.id), { pcs: Number(res.pcs) || 0, ctn: Number(res.ctn) || 0 }); else if (!scanQty.has(String(res.item.id))) scanQty.set(String(res.item.id), { pcs: 1, ctn: 0 }); if (!scanItems.has(String(res.item.id))) { scanItems.set(String(res.item.id), res.item); scanOrder.push(String(res.item.id)); } showPad(); drawNames(); } return; }
     addScanned(String(r.code || r.id)); drawNames();
   };
   hitBox.addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (!b) return; const r = (hitBox._src || [])[Number(b.dataset.pick)]; if (r) pickHit(r); });
@@ -1071,7 +1071,8 @@ async function openScanner() {
             badN = 0; lastCode = code; lastCodeAt = now;
           }
           if (r.state === 'added' || r.state === 'again') { lastScan = r.item; const k = String(r.item.id);
-            if (!scanQty.has(k)) scanQty.set(k, { pcs: 1, ctn: 0 });
+            if (r.pcs != null) scanQty.set(k, { pcs: Number(r.pcs) || 0, ctn: Number(r.ctn) || 0 });   // v1.58: bill wali asal tadad
+            else if (!scanQty.has(k)) scanQty.set(k, { pcs: 1, ctn: 0 });
             if (!scanItems.has(k)) { scanItems.set(k, r.item); scanOrder.push(k); }
             showPad(); drawNames(); }
           if (r.state === 'added') {

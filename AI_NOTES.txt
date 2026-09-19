@@ -547,3 +547,14 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
   Dobara kholne par showPad() foran (aakhri item ki tadad).
 - Agla kaam (files ka intezar): POS sub-barcode (ItemSubCode) ki tadad, jaise garam masala 0.25 label — scan par wohi
   tadad khud aaye. Chahiye: sync-stock.js + subcode-dekho.json.
+
+==============================================================
+2026-09-19 raat — v1.58.0 + PC sync-stock v5: sub-barcode ki tadad (garam masala 0.25 label)
+==============================================================
+- POS dbo.ItemSubCode (ItemSubCodeID, ItemID, SBBarCode, SBSaleRate, SBItemQty, IsShowOnLookup). 1885 rows, 142 ki
+  SBItemQty 1 nahi (0.5, 0.25, 0.125, 0.05, 5, 0.33, 0.1, 0.025, 2, 0.2). SBSaleRate taqreeban sab 0 — istemal nahi kiya.
+- PC: patch-subqty.js sync-stock.js mein subQtyMap() jorta hai (sirf SELECT) aur har item par bq: [{b, q}] bhejta hai
+  (sirf q != 1). Backup sync-stock.v4old.js. Password/SQL_CONFIG ko nahi chherta. Pehli dafa saare chunks dobara likhe jate hain.
+- App sale.js: subQty(it, code) scan kiye code ko item.bq se milata hai (aage ke zero bhi), addItem(it, q). Search se chuna = 1.
+  Scan hook ab { state, item, pcs, ctn } (bill line ki asal tadad) lautata hai; pos-stock.js camera ki scanQty isi se set
+  karta hai. Pehle ek item dobara scan karne par bill mein 2 ho jata tha magar camera ki list 1 dikhati thi — theek.
