@@ -653,3 +653,15 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
 - firestore.rules: match labelJobs — read + create malik / full / stock / sale mulazim (keys hasOnly, status new,
   by == uid, copies int 1-200). PC admin key se update karta hai. RULES PUBLISH KARNI HAIN.
 - PC: label-print.js v1 (alag script, SQL nahi), label-auto.bat + label-auto.vbs (Startup). Dekhein AI_NOTES_label.txt.
+
+2026-09-19 raat — v1.67.0: Stock screen saaf (malik ki farmaish)
+- Shuru mein filter 'all' (Sab items) aur branch NOOR TRADERS (1) — pehle 'has' / pehli branch.
+- Hataye: "Farq wale" aur "🔍 Check wale" filter, har item par "Check karo / Check ho gaya" buttons, samne se
+  "Nayi ginti shuru" aur "Counting ON/OFF", aur Kul farq ki bari raqam.
+- GINTI ab ek line (gintiLine): "DD-MM ki ginti: N items gine gaye · bill ban gaya / abhi nahi bana" + 📋 Dekhein +
+  (malik) Farq ka bill PC par banao. postLine (PC preview / Bill banao / Cancel) aur bills history pehle jaise.
+- 📋 Dekhein = openGinti(): is branch ke gine gaye items (naya pehle): gina (ctn+pcs), system, farq, Rs; kul farq.
+  Malik ke liye khirki ke andar hi "Nayi ginti shuru" (bill ke baad zaroori, warna purani ginti chalti rehti).
+- Counting OFF ho (_lock.off) to malik ko sirf "🔴 Counting band hai — kholein" dikhta hai (warna mulazim phans jata).
+- startNewRound label ab "YYYY-MM-DD HH:MM" (ek din mein dobara shuru ho to purani ginti alag rahe). countId mein
+  round nahi, PC post-farq round ko string ki tarah milata hai.

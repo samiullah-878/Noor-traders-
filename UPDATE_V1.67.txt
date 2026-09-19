@@ -1,0 +1,4 @@
+Blue Khata v1.67.0
+INSTALL: ZIP ki files GitHub par (1.61-1.66 ki sab tabdeeliyan shamil; rules v1.66 wali hi). Sync / Update, neeche 1.67.0.
+- Stock: shuru mein Sab items + NOOR TRADERS. Farq wale / Check wale / Counting ON-OFF / Nayi ginti samne se hataye.
+- Ginti ek line mein, "📋 Dekhein" se gine gaye items ki list.

@@ -14,7 +14,7 @@ let limit = PAGE;
 
 let cloud = null, rerender = () => {}, notice = () => {};
 let stop = null, rows = [], loaded = false, failed = '';
-let branch = null, sort = 'name', filter = 'has', bills = [];
+let branch = null, sort = 'name', filter = 'all', bills = [];   // v1.67: shuru mein SAB items
 let postReq = null;
 let hidden = {};   // item id -> true (Band kiye hue items, sab branches mein chhupe)
 let counts = new Map(), round = '', stopCount = null, isOwner = () => false;
@@ -225,7 +225,7 @@ const saleRoot = () => !!document.querySelector('[data-sale-root]');
 function collect() {
   const chunks = rows.filter(r => !r.meta && Array.isArray(r.items));
   const branches = [...new Set(chunks.map(c => c.branch))].sort((a, b) => a - b);
-  const pick = branches.includes(branch) ? branch : branches[0];
+  const pick = branches.includes(branch) ? branch : (branches.includes(1) ? 1 : branches[0]);   // v1.67: shuru mein NOOR TRADERS (branch 1)
   const items = chunks
     .filter(c => c.branch === pick)
     .sort((a, b) => (a.order || 0) - (b.order || 0))
@@ -367,6 +367,38 @@ function renderStockInner() {
       <p class="stat-note">Ya naam / code search karein.</p>` : '');
 }
 
+// v1.67: ginti ka sirf ek line ka khulasa; poori tafseel "📋 Dekhein" khirki mein. Counting ON/OFF, Nayi ginti,
+// Farq wale / Check wale ab samne nahi (malik ki farmaish). Nayi ginti sirf khirki ke andar (malik) — bill ke baad.
+function gintiLine(pick, done) {
+  if (!round) return '<div class="sh-note">Abhi koi ginti nahi hui</div>' + (isOwner() ? '<div class="account-tools"><button data-stock-ginti="1">📋 Ginti</button></div>' : '');
+  const billed = postReq && postReq.round === round && postReq.branch === pick && postReq.status === 'done';
+  const d = round.slice(8, 10) + '-' + round.slice(5, 7);
+  return `<div class="sh-note">${esc(d)} ki ginti: <b>${num(done)} items</b> gine gaye · ${billed ? 'bill ban gaya' : 'bill abhi nahi bana'}</div>
+    <div class="account-tools"><button data-stock-ginti="1">📋 Dekhein</button>${isOwner() ? '<button data-stock-post="1">Farq ka bill PC par banao</button>' : ''}</div>
+    ${isOwner() && countOff ? '<div class="account-tools"><button data-stock-lock="1" class="sh-lock off">🔴 Counting band hai — kholein</button></div>' : ''}
+    ${countLocked() ? '<p class="stat-note sh-locked">🔴 Malik ne counting band ki hui hai — ginti save nahi ho sakti.</p>' : ''}`;
+}
+function openGinti() {
+  const d = $('dialog'); if (!d) return;
+  const { pick, items, names } = collect();
+  const list = items.map(r => ({ r, c: countOf(pick, r) })).filter(x => x.c)
+    .sort((a, b) => (Number(b.c.at) || 0) - (Number(a.c.at) || 0));
+  let net = 0;
+  const rows = list.map(({ r, c }) => {
+    const f = countedPcs(c) - Number(sysOf(c, r)); const rs = r.prate ? f * r.prate : 0; net += rs;
+    return `<tr><td>${esc(r.name)}<br><small>${esc(stampText(c.at))}</small></td><td>${num(c.ctn)}+${num(c.pcs)}<br><small>${num(countedPcs(c))}</small></td><td>${num(sysOf(c, r))}</td><td>${f > 0 ? '+' : ''}${num(f)}${rs ? `<br><small>Rs ${rs > 0 ? '+' : ''}${num(rs)}</small>` : ''}</td></tr>`;
+  }).join('');
+  d.classList.remove('search-dialog');
+  $('dialogTitle').textContent = `📋 Ginti ${round || ''} — ${branchName(pick, names)}`;
+  $('dialogBody').innerHTML = (list.length
+    ? `<p>${num(list.length)} items gine gaye · Kul farq <b>Rs ${net > 0 ? '+' : ''}${num(net)}</b></p>
+       <div style="overflow-x:auto"><table><thead><tr><th>Item</th><th>Gina</th><th>System</th><th>Farq</th></tr></thead><tbody>${rows}</tbody></table></div>`
+    : '<p>Is branch mein abhi koi item nahi gina gaya.</p>')
+    + (isOwner() ? `<p class="muted" style="margin-top:12px;font-size:.85em">Farq ka bill banne ke baad nayi ginti shuru karein, taake purani ginti dobara na gine.</p>
+       <div class="account-tools"><button data-stock-round="new">Nayi ginti shuru</button></div>` : '');
+  if (!d.open) d.showModal();
+}
+
 function summaryHTML(branches, pick, items, meta, names) {
   const totalPcs = meta?.totalPcs ?? items.reduce((s, r) => s + (r.stock || 0), 0);
   const stamp = meta?.syncedAt;
@@ -417,14 +449,11 @@ function summaryHTML(branches, pick, items, meta, names) {
       ${btn('data-stock-filter', 'all', filter, `Sab (${num(live.length)})`)}
       ${btn('data-stock-filter', 'minus', filter, `Minus stock (${num(minus)})`)}
       ${btn('data-stock-filter', 'baqi', filter, `Ginti baqi (${num(items.length - done)})`)}
-      ${btn('data-stock-filter', 'farq', filter, `Farq wale (${num(gap)})`)}
       ${btn('data-stock-filter', 'nishan', filter, `⏳ Baqi nishan (${num(nishanN)})`)}
-      ${btn('data-stock-filter', 'check', filter, `🔍 Check wale (${num(checkN)})`)}
       ${hiddenN ? btn('data-stock-filter', 'hidden', filter, `Band items (${num(hiddenN)})`) : ''}
     </div>
     <div class="sh-label">Ginti</div>
-    <div class="sh-note">${roundText}${farqText}</div>
-    ${roundBtns ? `<div class="account-tools">${roundBtns}</div>` : ''}
+    ${gintiLine(pick, done)}
     ${postLine(pick)}
     ${bills.length ? `<div class="account-tools"><button class="sh-wide" data-stock-bills="1">📋 Farq bills ki history (${num(bills.length)})</button></div>` : ''}
     <div class="sh-label">Tarteeb</div>
@@ -513,8 +542,6 @@ function flagHTML(r) {
   const chk = f.checkedAt ? `<small class="stat-note">✓ Check hua ${esc(stampText(f.checkedAt))}${f.checkedNote ? ' · ' + esc(f.checkedNote) : ''}</small>` : '';
   return `<div class="account-tools sc-flags">
     <button type="button" data-flag-baqi="${esc(r.id)}"${f.baqi ? ' class="selected"' : ''}>⏳ ${f.baqi ? 'Baqi hai (nishan hatao)' : 'Baqi — aur ginna hai'}</button>
-    <button type="button" data-flag-check="${esc(r.id)}"${f.check ? ' class="selected"' : ''}>🔍 ${f.check ? 'Check karna hai' : 'Check karo'}</button>
-    ${f.check ? `<button type="button" data-flag-checked="${esc(r.id)}">✓ Check ho gaya</button>` : ''}
   </div>${chk}`;
 }
 function countHTML(r) {
@@ -583,6 +610,7 @@ document.addEventListener('click', e => {
   if (hb) { toggleHidden(hb.dataset.stockHide, hb.checked, hb); return; }
   if (e.target.closest?.('[data-stock-more]')) { limit += PAGE; rerender(); return; }
   if (e.target.closest?.('[data-stock-bills]')) { openBills(); return; }
+  if (e.target.closest?.('[data-stock-ginti]')) { openGinti(); return; }
   const lb = e.target.closest?.('[data-stock-label]');
   if (lb) { openLabels(lb.dataset.stockLabel); return; }
   const lp = e.target.closest?.('[data-label-print]');
@@ -712,8 +740,11 @@ async function toggleHidden(id, on, box) {
 
 async function startNewRound() {
   if (!cloud?.setStockRound) return;
-  const label = new Date().toISOString().slice(0, 10);
-  if (!confirm('Nayi ginti shuru karein? Purani ginti hat jayegi.')) return;
+  // v1.67: waqt bhi saath, taake ek hi din mein nayi ginti purani se alag rahe
+  const n = new Date(), p2 = x => String(x).padStart(2, '0');
+  const label = `${n.getFullYear()}-${p2(n.getMonth() + 1)}-${p2(n.getDate())} ${p2(n.getHours())}:${p2(n.getMinutes())}`;
+  if (!confirm('Nayi ginti shuru karein? Purani ginti ki list saaf ho jayegi (bills ki history rehti hai).')) return;
+  try { $('dialog')?.open && $('dialog').close(); } catch {}
   try { await cloud.setStockRound(label); notice('Nayi ginti shuru — ' + label); }
   catch (e) { notice(e?.message || 'Nahi hua'); }
 }
