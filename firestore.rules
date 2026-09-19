@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -81,6 +81,17 @@ service cloud.firestore {
     }
 
     // POS ka stock: sirf parhne ke liye. Likhta sirf PC wala sync-stock.js hai (admin key).
+    // v1.66: barcode label ka hukum (app likhti hai, PC ka label-print.js admin key se chhap kar status likhta hai)
+    match /businesses/noor-traders/labelJobs/{jobId} {
+      allow read: if isOwner() || blueStaff() || stockStaff() || saleStaff();
+      allow create: if (isOwner() || blueStaff() || stockStaff() || saleStaff())
+        && request.resource.data.keys().hasOnly(['itemId','code','name','qty','rate','copies','status','by','at'])
+        && request.resource.data.status == 'new' && request.resource.data.by == request.auth.uid
+        && request.resource.data.code is string && request.resource.data.code.size() > 0 && request.resource.data.code.size() <= 60
+        && request.resource.data.name is string && request.resource.data.name.size() <= 120
+        && request.resource.data.copies is int && request.resource.data.copies >= 1 && request.resource.data.copies <= 200;
+    }
+
     match /businesses/noor-traders/posStock/{docId} {
       allow read: if isOwner() || stockStaff() || saleStaff() || blueStaff();
     }

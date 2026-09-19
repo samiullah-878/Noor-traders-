@@ -240,3 +240,13 @@ body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actio
 .scan-mid .scan-pad-row button[data-unit]:not(.selected){background:rgba(230,238,255,.85)}
 .scan-mid .scan-pad-row button[data-qty="+1"]{background:#0b6b2e;color:#fff}
 .scan-mid .scan-pad{bottom:auto;max-height:calc(100% - 10px)}
+
+/* v1.66: barcode label */
+.stock-label-btn{display:block;margin:6px 0 0 auto;min-height:0;padding:5px 10px;font-size:.85em;border-radius:9px;background:#e6eeff;color:#0b3f9e;border:0;font-weight:700}
+.label-list{display:grid;gap:8px}
+.label-row{display:flex;gap:8px;align-items:center;background:#f3f6fc;border-radius:12px;padding:8px}
+.label-info{flex:1 1 auto;min-width:0}
+.label-info b{display:block;word-break:break-all}
+.label-info small{color:#4a5a73}
+.label-row input{width:64px;flex:0 0 64px;text-align:center}
+.label-row button{flex:0 0 auto;white-space:nowrap}

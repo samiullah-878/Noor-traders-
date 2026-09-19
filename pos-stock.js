@@ -435,6 +435,53 @@ function summaryHTML(branches, pick, items, meta, names) {
   </div>`;
 }
 
+// ---------- v1.66: BARCODE LABEL — item ke saare barcode, har ek ki tadad; PC ka TSC printer chhapta hai ----------
+function labelRows(r) {
+  const q = new Map((Array.isArray(r.bq) ? r.bq : []).map(x => [String(x.b || '').trim(), Number(x.q) || 1]));
+  const codes = [String(r.code || '').trim(), ...(Array.isArray(r.bc) ? r.bc.map(b => String(b).trim()) : [])].filter(Boolean);
+  const seen = new Set(), out = [];
+  for (const c of codes) { if (seen.has(c)) continue; seen.add(c); out.push({ code: c, qty: q.get(c) || 1 }); }
+  const pr = Number(r.rate2) || Number(r.rate) || 0;   // khula piece rate (POS "Peice Rate")
+  return out.map(x => ({ ...x, price: Math.round(x.qty * pr * 100) / 100 }));
+}
+function openLabels(id) {
+  const r = rowCache.get(String(id)), d = $('dialog');
+  if (!r || !d) return;
+  d.classList.remove('search-dialog');
+  $('dialogTitle').textContent = '🏷️ ' + r.name;
+  const rows = labelRows(r);
+  const pack = Number(r.pack) || 0;
+  $('dialogBody').innerHTML = `<p style="margin:0 0 8px">${esc(r.code || '')} · Stock ${num(r.stock)} ${esc(r.uName || 'Pcs')}${pack > 1 ? ` · 1 ${esc(r.cName || 'Ctn')} = ${num(pack)}` : ''}
+      <br>Piece rate <b>${num(Number(r.rate2) || Number(r.rate) || 0)}</b>${pack > 1 ? ` · ${esc(r.cName || 'Ctn')} rate <b>${num((Number(r.rate) || 0) * pack)}</b>` : ''}${r.wrate ? ` · Wholesale <b>${num(r.wrate)}</b>` : ''}</p>
+    <div class="label-list">${rows.map((x, i) => `<div class="label-row">
+      <div class="label-info"><b>${esc(x.code)}</b><small>${x.qty !== 1 ? 'Tadad ' + num(x.qty) + ' · ' : ''}Rs ${num(x.price)}</small></div>
+      <input type="number" min="1" max="200" value="1" inputmode="numeric" data-label-copies="${i}" aria-label="Kitne label">
+      <button type="button" class="primary" data-label-print="${i}" data-label-item="${esc(r.id)}">🖨️ Print</button>
+    </div>`).join('') || '<p>Is item ka koi barcode nahi.</p>'}</div>
+    <p class="muted" style="font-size:.85em;margin-top:8px">Label PC ke TSC printer par chhapta hai (PC par label-print chalna chahiye).</p>`;
+  if (!d.open) d.showModal();
+}
+async function printLabel(btn) {
+  const r = rowCache.get(String(btn.dataset.labelItem)); if (!r) return;
+  const i = Number(btn.dataset.labelPrint), x = labelRows(r)[i]; if (!x) return;
+  const inp = document.querySelector(`[data-label-copies="${i}"]`);
+  const copies = Math.max(1, Math.min(200, Math.floor(Number(inp?.value) || 1)));
+  if (!cloud?.requestLabel) { notice('Label ke liye app update karein'); return; }
+  btn.disabled = true; const old = btn.textContent; btn.textContent = '⏳ Bhej rahe...';
+  try {
+    const jid = await cloud.requestLabel({ itemId: r.id, code: x.code, name: r.name, qty: x.qty, rate: x.price, copies });
+    btn.textContent = '⏳ PC...';
+    let stop = null, done = false;
+    const end = (msg, ok) => { if (done) return; done = true; try { stop && stop(); } catch {} btn.disabled = false; btn.textContent = ok ? '✓ Chhap gaya' : old; notice(msg); setTimeout(() => { if (btn.isConnected) btn.textContent = old; }, 4000); };
+    stop = cloud.watchLabel ? cloud.watchLabel(jid, j => {
+      if (!j) return;
+      if (j.status === 'done') end(`✓ ${copies} label chhap gaye`, true);
+      else if (j.status === 'failed' || j.status === 'skipped') end('Label nahi chhapa: ' + (j.error || j.status), false);
+    }) : null;
+    setTimeout(() => end('PC se jawab nahi aaya — PC on hai aur label-print chal raha hai? (hukum mehfooz hai, PC on hote hi chhapega)', false), 45000);
+  } catch (e) { btn.disabled = false; btn.textContent = old; notice('Label nahi bheja: ' + (e?.message || e)); }
+}
+
 // v1.45.8: history ab alag khirki (dialog) mein — pehle list ke upar khulti thi aur search bohat neeche chala jata tha
 function openBills() {
   const d = $('dialog');
@@ -499,7 +546,9 @@ function historyHTML(r, c) {
   }).join('<br>')}</div>`;
 }
 
+const rowCache = new Map();   // v1.66: label ke liye item
 function rowHTML(r) {
+  rowCache.set(String(r.id), r);
   const pack = Number(r.pack) || 0;
   const big = pack > 0
     ? `${num(r.ctn)} ${esc(r.cName || 'Ctn')} + ${num(r.pcs)} ${esc(r.uName || 'Pcs')}`
@@ -514,6 +563,7 @@ function rowHTML(r) {
     <div class="amount">
       <strong>${big}</strong>
       <small>${num(r.stock)} ${esc(r.uName || 'Pcs')}</small>
+      <button type="button" class="stock-label-btn" data-stock-label="${esc(r.id)}">🏷️ Label</button>
       ${isOwner() ? `<label style="display:block;font-size:.85em;white-space:nowrap"><input type="checkbox" style="width:auto" data-stock-hide="${esc(r.id)}"${isHidden(r) ? ' checked' : ''}> Band</label>` : ''}
     </div>
     </div>
@@ -533,6 +583,10 @@ document.addEventListener('click', e => {
   if (hb) { toggleHidden(hb.dataset.stockHide, hb.checked, hb); return; }
   if (e.target.closest?.('[data-stock-more]')) { limit += PAGE; rerender(); return; }
   if (e.target.closest?.('[data-stock-bills]')) { openBills(); return; }
+  const lb = e.target.closest?.('[data-stock-label]');
+  if (lb) { openLabels(lb.dataset.stockLabel); return; }
+  const lp = e.target.closest?.('[data-label-print]');
+  if (lp) { printLabel(lp); return; }
   const s = e.target.closest?.('[data-stock-sort]');
   if (s) { sort = s.dataset.stockSort; rerender(); return; }
   const f = e.target.closest?.('[data-stock-filter]');

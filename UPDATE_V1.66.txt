@@ -1,0 +1,7 @@
+Blue Khata v1.66.0
+INSTALL:
+1) ZIP ki files GitHub par (1.61-1.65 ki sab tabdeeliyan shamil).
+2) firestore.rules Firebase console (note-traders-khata-7ccc1) mein paste karke Publish — labelJobs ke liye ZAROORI.
+3) PC: label-print.js, label-auto.bat khata-sync mein; label-auto.vbs Startup folder mein; test: node label-print.js --test
+Phone par Sync / Update, neeche 1.66.0.
+- Stock tab mein har item par 🏷️ Label: saare barcode, tadad, rate; kitne label; PC ke TSC printer par print.
