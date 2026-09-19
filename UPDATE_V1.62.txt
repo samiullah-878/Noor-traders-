@@ -1,0 +1,4 @@
+Blue Khata v1.62.0
+INSTALL: ZIP ki files GitHub par (1.61.x ki sab tabdeeliyan shamil). Phone par Sync / Update, neeche 1.62.0.
+- Har scan / add bill mein alag line (jama nahi hota). Tadad ke buttons aakhri line par.
+- Barcode camera ke saamne ruka rahe to baar baar add nahi hota — hata kar dobara dikhayein.

@@ -5,7 +5,7 @@ const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 const NUMF = new Intl.NumberFormat('en-PK');   // ek hi dafa banao (har number par naya banana bohat slow tha)
-const num = n => NUMF.format(Math.round((Number(n) || 0) * 1000) / 1000);   // v1.61.2: tadad 3 decimal
+const num = n => NUMF.format(Math.round((Number(n) || 0) * 1000) / 1000);   // v1.62.0: tadad 3 decimal
 const r2 = n => Math.round((Number(n) || 0) * 100) / 100;   // v1.61: yeh maujood nahi tha — camera ki list banate waqt ruk jata tha (kaala camera)
 const NAMEC = new Intl.Collator('en', { sensitivity: 'base', numeric: true });
 
@@ -195,7 +195,7 @@ export function saleStock() {
 }
 let saleHook = null, saleSeen = [], saleQtyHook = null, saleFindHook = null;
 export function setSaleFindHook(fn) { saleFindHook = fn; }
-// v1.61.2: camera khulte waqt apni list BILL se dobara banaye (Naya bill / item hatane ke baad purani list na dikhe)
+// v1.62.0: camera khulte waqt apni list BILL se dobara banaye (Naya bill / item hatane ke baad purani list na dikhe)
 let saleCartHook = null;
 export function setSaleCartHook(fn) { saleCartHook = fn; }
 function syncFromCart() {
@@ -204,16 +204,16 @@ function syncFromCart() {
     const cur = saleCartHook() || [];
     scanOrder = []; scanItems = new Map(); scanQty = new Map();
     for (const c of cur) {
-      const k = String(c.item.id);
+      const k = String(c.key || c.item.id);   // v1.62: har bill line alag
       if (!scanItems.has(k)) { scanItems.set(k, c.item); scanOrder.push(k); scanQty.set(k, { pcs: 0, ctn: 0 }); }
       const q = scanQty.get(k); q.pcs = Math.round(((Number(q.pcs) || 0) + (Number(c.pcs) || 0)) * 1000) / 1000; q.ctn = (Number(q.ctn) || 0) + (Number(c.ctn) || 0);
     }
-    if (lastScan && !scanItems.has(String(lastScan.id))) lastScan = null;
-    if (lastScan) lastScan = scanItems.get(String(lastScan.id)) || lastScan;
+    lastKey = scanOrder[scanOrder.length - 1] || '';
+    lastScan = lastKey ? scanItems.get(lastKey) : null;
   } catch {}
 }
 export function setSaleQtyHook(fn) { saleQtyHook = fn; }
-let lastScan = null, scanQty = new Map(), padUnit = 'pcs';   // camera par tadad ke buttons
+let lastScan = null, lastKey = '', scanQty = new Map(), padUnit = 'pcs';   // v1.62: lastKey = aakhri line ki pehchan   // camera par tadad ke buttons
 let scanOrder = [], scanItems = new Map();   // camera ki screen par bill ki lines
 export function setSaleScanHook(fn) { saleHook = fn; }
 export function openSaleCamera() { saleSeen = []; openScanner(); }
@@ -828,7 +828,7 @@ function beep(ok) {
 
 function clearScan() {
   $('list')?.querySelectorAll?.(COUNT_SEL).forEach(el => { el.value = el.defaultValue; });
-  scanList = []; scanHit = null; scanQty = new Map(); lastScan = null; scanOrder = []; scanItems = new Map();
+  scanList = []; scanHit = null; scanQty = new Map(); lastScan = null; lastKey = ''; scanOrder = []; scanItems = new Map();
   const si = $('search'); if (si) si.value = '';
   limit = PAGE;
   rerender();
@@ -857,7 +857,7 @@ function finishScan() {
       if (p && q.pcs) p.value = q.pcs; else if (!p && t && q.pcs) t.value = q.pcs;
       liveCount(id);
     }
-    scanQty = new Map(); lastScan = null;
+    scanQty = new Map(); lastScan = null; lastKey = '';
   }, 60);
   const first = items.find(r => String(r.id) === String(scanList[0]));
   if (first) setTimeout(() => focusItem(first), 80);
@@ -926,8 +926,8 @@ async function openScanner() {
   const { items } = collect();
   const byId = new Map(items.map(r => [String(r.id), r]));
   const sumBox = scanBox.querySelector('.scan-sum');
-  const lineOf = it => {
-    const q = scanQty.get(String(it.id)) || { pcs: 0, ctn: 0 };
+  const lineOf = (it, k) => {
+    const q = scanQty.get(k ?? String(it.id)) || { pcs: 0, ctn: 0 };
     const pack = Number(it.pack) || 0;
     const total = Math.round(((Number(q.ctn) || 0) * (pack > 1 ? pack : 0) + (Number(q.pcs) || 0)) * 1000) / 1000;
     const rate = Number(it.rate2) || Number(it.rate) || 0;   // v1.61: khula piece POS "Peice Rate"
@@ -939,12 +939,12 @@ async function openScanner() {
   const drawNames = () => {
     const sale = saleRoot();
     if (sale) {
-      const list = scanOrder.map(id => scanItems.get(id)).filter(Boolean);
+      const list = scanOrder.map(k => [k, scanItems.get(k)]).filter(x => x[1]);
       countBox.textContent = list.length;
-      namesBox.innerHTML = list.map(it => { const L = lineOf(it);
-        return `<li${lastScan && String(lastScan.id) === String(it.id) ? ' class="now"' : ''}><b>${esc(it.name)}</b><span>${esc(L.qtxt)} x ${num(L.rate)} = <b>${num(L.amt)}</b></span></li>`; }).join('');
+      namesBox.innerHTML = list.map(([k, it]) => { const L = lineOf(it, k);
+        return `<li${k === lastKey ? ' class="now"' : ''}><b>${esc(it.name)}</b><span>${esc(L.qtxt)} x ${num(L.rate)} = <b>${num(L.amt)}</b></span></li>`; }).join('');
       namesBox.start = 1;
-      const kul = list.reduce((n, it) => n + lineOf(it).amt, 0);
+      const kul = list.reduce((n, [k, it]) => n + lineOf(it, k).amt, 0);
       sumBox.innerHTML = list.length ? `Kul: <b>Rs ${num(kul)}</b>` : '';
       try { namesBox.scrollTop = namesBox.scrollHeight; } catch {}
       return;
@@ -960,7 +960,7 @@ async function openScanner() {
   const showPad = () => {
     if (!lastScan) { pad.hidden = true; return; }
     pad.hidden = false;
-    const q = scanQty.get(String(lastScan.id)) || { pcs: 0, ctn: 0 };
+    const q = scanQty.get(lastKey || String(lastScan.id)) || { pcs: 0, ctn: 0 };
     padName.textContent = `${lastScan.name} — ${q.ctn ? q.ctn + ' ' + (lastScan.cName || 'Ctn') + ' + ' : ''}${q.pcs || 0} ${lastScan.uName || 'Pcs'}`;
     pad.querySelectorAll('[data-unit]').forEach(b => b.classList.toggle('selected', b.dataset.unit === padUnit));
     pad.querySelector('[data-unit="ctn"]').hidden = !(Number(lastScan.pack) > 1);
@@ -968,11 +968,11 @@ async function openScanner() {
   pad.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b || !lastScan) return;
     if (b.dataset.unit) { padUnit = b.dataset.unit; showPad(); return; }
-    const id = String(lastScan.id), q = scanQty.get(id) || { pcs: 0, ctn: 0 };
+    const id = lastKey || String(lastScan.id), q = scanQty.get(id) || { pcs: 0, ctn: 0 };
     const v = b.dataset.qty;
     if (v === '+1') q[padUnit] = (Number(q[padUnit]) || 0) + 1; else q[padUnit] = Number(v);
     scanQty.set(id, q);
-    if (saleRoot() && saleQtyHook) saleQtyHook(lastScan, q);
+    if (saleRoot() && saleQtyHook) saleQtyHook(lastScan, q, lastKey);
     if (navigator.vibrate) navigator.vibrate(30);
     showPad(); drawNames();
   });
@@ -1017,7 +1017,7 @@ async function openScanner() {
   };
   const addHit = (r, qty) => {
     qBox.value = ''; hitBox.hidden = true;
-    if (saleRoot() && saleHook) { const res = saleHook(String(r.code || r.bc?.[0] || r.name), r, qty); if (res && res.item) { lastScan = res.item; if (res.pcs != null) scanQty.set(String(res.item.id), { pcs: Number(res.pcs) || 0, ctn: Number(res.ctn) || 0 }); else if (!scanQty.has(String(res.item.id))) scanQty.set(String(res.item.id), { pcs: 1, ctn: 0 }); if (!scanItems.has(String(res.item.id))) { scanItems.set(String(res.item.id), res.item); scanOrder.push(String(res.item.id)); } showPad(); drawNames(); } return; }
+    if (saleRoot() && saleHook) { const res = saleHook(String(r.code || r.bc?.[0] || r.name), r, qty); if (res && res.item) { const k = String(res.line || res.item.id); lastScan = res.item; lastKey = k; if (res.pcs != null) scanQty.set(k, { pcs: Number(res.pcs) || 0, ctn: Number(res.ctn) || 0 }); else if (!scanQty.has(k)) scanQty.set(k, { pcs: 1, ctn: 0 }); if (!scanItems.has(k)) { scanItems.set(k, res.item); scanOrder.push(k); } showPad(); drawNames(); } return; }
     addScanned(String(r.code || r.id)); drawNames();
   };
   nBox.onkeydown = e => {
@@ -1143,6 +1143,8 @@ async function openScanner() {
         const found = await detector.detect(video);
         const code = found.map(f => String(f.rawValue || '').trim()).find(Boolean);
         const now = Date.now();
+        // v1.62: jab tak wahi barcode camera ke saamne hai, dobara na gino (warna har 1.5 sec nayi line banti)
+        if (code && code === lastCode && now - lastCodeAt < 1500) lastCodeAt = now;
         if (code && !(code === lastCode && now - lastCodeAt < 1500)) {   // wahi barcode dobara foran na gine
           const r = addScanned(code);
           if (r.state) { lastCode = code; lastCodeAt = now; lastGoodAt = now; badCode = ''; badN = 0; }
@@ -1153,7 +1155,7 @@ async function openScanner() {
             if (badN < 3 || now - lastGoodAt < 2500) { scanBusy = false; scanTimer = setTimeout(loop, 60); return; }
             badN = 0; lastCode = code; lastCodeAt = now;
           }
-          if (r.state === 'added' || r.state === 'again') { lastScan = r.item; const k = String(r.item.id);
+          if (r.state === 'added' || r.state === 'again') { lastScan = r.item; const k = String(r.line || r.item.id); lastKey = k;   // v1.62: sale mein har scan nayi line
             if (r.pcs != null) scanQty.set(k, { pcs: Number(r.pcs) || 0, ctn: Number(r.ctn) || 0 });   // v1.58: bill wali asal tadad
             else if (!scanQty.has(k)) scanQty.set(k, { pcs: 1, ctn: 0 });
             if (!scanItems.has(k)) { scanItems.set(k, r.item); scanOrder.push(k); }

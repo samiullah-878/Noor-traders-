@@ -1,18 +1,18 @@
-// sale.js — Nayi Sale (Counter / Wholesale) — v1.61.2
+// sale.js — Nayi Sale (Counter / Wholesale) — v1.62.0
 // App sale ko Firestore "appSales" mein "new" likhta hai. POS bill PC ka sale-post.js banata hai
 // (POS ke apne procedures se), rasid print karta hai aur Sale No wapas likhta hai.
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, openSaleCamera } from './pos-stock.js?v=1.61.2';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, openSaleCamera } from './pos-stock.js?v=1.62.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 const NUMF = new Intl.NumberFormat('en-PK');
-const num = n => NUMF.format(Math.round((Number(n) || 0) * 1000) / 1000);   // v1.61.2: tadad 3 decimal (0.125) tak dikhe
+const num = n => NUMF.format(Math.round((Number(n) || 0) * 1000) / 1000);   // v1.62.0: tadad 3 decimal (0.125) tak dikhe
 const r2 = n => Math.round((Number(n) || 0) * 100) / 100;     // raqam / rate
-const r3 = n => Math.round((Number(n) || 0) * 1000) / 1000;   // v1.61.2: TADAD (0.125 -> 0.13 nahi)
+const r3 = n => Math.round((Number(n) || 0) * 1000) / 1000;   // v1.62.0: TADAD (0.125 -> 0.13 nahi)
 const todayStr = () => { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
 
 const SALE_BRANCH = 1;          // POS bill hamesha NOOR TRADERS (branch 1) mein
@@ -75,15 +75,12 @@ function subQty(it, code) {
   return q > 0 ? q : 1;
 }
 
+// v1.62: har add (scan / search) bill mein NAYI line — jama nahi hota. Har line ki apni pehchan (k).
+const newKey = () => 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 function addItem(it, qtyPcs = 1) {
-  const old = cart.find(l => String(l.id) === String(it.id));
-  if (old) {
-    old.pcs = r3((Number(old.pcs) || 0) + qtyPcs);
-    const pk = Number(old.pack) || 0;
-    if (pk > 1 && old.pcs >= pk) { old.ctn = (Number(old.ctn) || 0) + Math.floor(old.pcs / pk); old.pcs = r3(old.pcs % pk); }
-  } else {
+  {
     cart.push({
-      id: it.id, code: it.code || '', name: it.name, pack: Number(it.pack) || 0,
+      k: newKey(), id: it.id, code: it.code || '', name: it.name, pack: Number(it.pack) || 0,
       cName: it.cName || 'Ctn', uName: it.uName || 'Pcs', godam: Number(godam) || SALE_BRANCH,
       ctn: 0, pcs: qtyPcs, rate: rateFor(it), std: rateFor(it), crate: crateFor(it), cstd: crateFor(it), edited: false
     });
@@ -92,11 +89,12 @@ function addItem(it, qtyPcs = 1) {
     if (pk > 1 && nl.pcs >= pk) { nl.ctn = Math.floor(nl.pcs / pk); nl.pcs = r3(nl.pcs % pk); }
   }
   cash = null; keepDraft();
+  return cart[cart.length - 1];
 }
 
 // camera ki screen ka search
-// v1.61.2: camera ki list bill se (rate bhi bill wala: khula piece l.rate, carton crate)
-setSaleCartHook(() => cart.map(l => ({
+// v1.62.0: camera ki list bill se (rate bhi bill wala: khula piece l.rate, carton crate)
+setSaleCartHook(() => cart.map(l => ({ key: l.k || (l.k = newKey()),
   item: { id: l.id, code: l.code, name: l.name, pack: Number(l.pack) || 0, cName: l.cName, uName: l.uName, rate: crateOf(l), rate2: Number(l.rate) || 0 },
   pcs: Number(l.pcs) || 0, ctn: Number(l.ctn) || 0 })));
 setSaleFindHook(q => {
@@ -106,8 +104,9 @@ setSaleFindHook(q => {
     || (Array.isArray(r.bc) && r.bc.some(b => String(b).toLowerCase().includes(n)))).slice(0, 12);
 });
 // camera par tadad ke buttons -> bill ki line
-setSaleQtyHook((it, q) => {
-  const l = cart.find(x => String(x.id) === String(it.id));
+setSaleQtyHook((it, q, key) => {
+  // v1.62: camera ke buttons AAKHRI scan wali line par (line ki pehchan se), warna is item ki aakhri line
+  const l = (key && cart.find(x => x.k === key)) || [...cart].reverse().find(x => String(x.id) === String(it.id));
   if (!l) return;
   l.pcs = Number(q.pcs) || 0; l.ctn = Number(q.ctn) || 0;
   cash = null; keepDraft(); rerender();
@@ -118,13 +117,12 @@ setSaleScanHook((code, direct, qty) => {
   const it = direct || findByCode(items, code);
   if (!it) return { state: null };
   const q = Number(qty) > 0 ? Math.round(Number(qty) * 1000) / 1000 : (direct ? 1 : subQty(it, code));   // v1.59: search wale khane ki tadad
-  addItem(it, q);
+  const nl = addItem(it, q);
   notice(`✓ ${it.name}${q !== 1 ? ' — ' + q : ''}`);
   const s = $('search'); if (s && s.value) s.value = '';
   rerender();
   // v1.58: bill ki asal tadad wapas (camera ki list bhi wohi dikhaye — pehle dobara scan par list 1 hi dikhati thi)
-  const l = cart.find(x => String(x.id) === String(it.id));
-  return { state: 'added', item: it, pcs: l ? Number(l.pcs) || 0 : q, ctn: l ? Number(l.ctn) || 0 : 0 };
+  return { state: 'added', item: it, line: nl.k, pcs: Number(nl.pcs) || 0, ctn: Number(nl.ctn) || 0 };
 });
 
 // ---------- aaj ki app sales ----------
@@ -289,7 +287,7 @@ document.addEventListener('keydown', e => {
   }
   if (!it) { notice('Ek item nahi mila — list se chunein'); return; }
   addItem(it); e.target.value = ''; notice(`✓ ${it.name}`); rerender();
-  setTimeout(() => qtyPad(cart.findIndex(l => String(l.id) === String(it.id))), 60);
+  setTimeout(() => qtyPad(cart.length - 1), 60);
 });
 
 document.addEventListener('click', async e => {
@@ -312,7 +310,7 @@ document.addEventListener('click', async e => {
   }
   if (t.dataset.saleAdd) {
     const it = stock().items.find(r => String(r.id) === t.dataset.saleAdd);
-    if (it) { addItem(it); const s = $('search'); if (s) s.value = ''; rerender(); setTimeout(() => qtyPad(cart.findIndex(l => String(l.id) === String(it.id))), 60); }
+    if (it) { addItem(it); const s = $('search'); if (s) s.value = ''; rerender(); setTimeout(() => qtyPad(cart.length - 1), 60); }
     return;
   }
   if (t.dataset.saleDel != null) { cart.splice(Number(t.dataset.saleDel), 1); cash = null; keepDraft(); rerender(); return; }
