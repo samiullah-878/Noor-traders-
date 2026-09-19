@@ -164,3 +164,16 @@ body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actio
 .scan-names li span{display:block;opacity:.9}
 .scan-names li.now{background:rgba(255,255,255,.12);border-radius:8px;padding:2px 6px}
 .scan-sum{color:#fff;text-align:right;margin:2px 14px 6px;font-size:15px}
+
+/* v1.56 scanner: search sab se upar, camera ke beech laal line, chhote 1-12 buttons */
+.scan-find{margin:8px 10px 6px;z-index:7}
+.scan-find input{width:100%;box-sizing:border-box}
+.scan-hits{max-height:50vh}
+.scan-cam{position:relative;flex:1 1 30vh;min-height:150px;overflow:hidden;border-radius:14px;margin:0 10px;background:#000}
+.scan-cam video{position:absolute;inset:0;width:100%;height:100%;min-height:0;border-radius:0;object-fit:cover}
+.scan-cam .scan-line{top:50%;left:8%;right:8%}
+.scan-pad{margin:4px 10px;padding:6px}
+.scan-pad-name{font-size:13px;margin-bottom:4px}
+.scan-pad-row{gap:4px}
+.scan-pad-row button{min-width:30px;min-height:32px;padding:0 5px;font-size:14px;border-radius:8px}
+.scan-pad-row button[data-unit]{min-width:40px;font-size:13px}

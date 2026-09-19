@@ -777,6 +777,7 @@ let scanHit = null;
 let scanList = [];        // scan kiye hue item ids (tarteeb se)
 let scanStream = null, scanTimer = null, scanBox = null, scanBusy = false;
 let lastCode = '', lastCodeAt = 0;
+let badCode = '', badN = 0, lastGoodAt = 0;   // v1.56: ghalat parhai ka filter
 
 function clearScan() {
   $('list')?.querySelectorAll?.(COUNT_SEL).forEach(el => { el.value = el.defaultValue; });
@@ -854,10 +855,9 @@ async function openScanner() {
   scanBox = document.createElement('div');
   scanBox.className = 'scan-box';
   scanBox.innerHTML = `<div class="scan-inner">
-      <video playsinline muted autoplay></video>
-      <div class="scan-line"></div>
+      <div class="scan-find"><input class="scan-q" type="search" placeholder="🔍 Naam ya code likh kar item add karein" autocomplete="off"><div class="scan-hits" hidden></div></div>
+      <div class="scan-cam"><video playsinline muted autoplay></video><div class="scan-line"></div></div>
       <p class="scan-msg">Barcode camera ke saamne rakhein — ek ke baad ek scan karte jayein</p>
-      <div class="scan-find"><input class="scan-q" placeholder="Naam ya code likh kar item add karein" autocomplete="off"><div class="scan-hits" hidden></div></div>
       <div class="scan-pad" hidden>
         <div class="scan-pad-name"></div>
         <div class="scan-pad-row"><button type="button" data-unit="pcs" class="selected">Pcs</button><button type="button" data-unit="ctn">Ctn</button>
@@ -1032,8 +1032,15 @@ async function openScanner() {
         const code = found.map(f => String(f.rawValue || '').trim()).find(Boolean);
         const now = Date.now();
         if (code && !(code === lastCode && now - lastCodeAt < 1500)) {   // wahi barcode dobara foran na gine
-          lastCode = code; lastCodeAt = now;
           const r = addScanned(code);
+          if (r.state) { lastCode = code; lastCodeAt = now; lastGoodAt = now; badCode = ''; badN = 0; }
+          else {
+            // v1.56: camera kabhi ek-do frame ghalat parhta hai. "Nahi mila" tabhi jab wahi code 3 dafa lagataar aaye
+            // aur abhi (2.5 sec) koi sahi item add na hua ho — warna chupchaap agla frame dekho.
+            if (code === badCode) badN++; else { badCode = code; badN = 1; }
+            if (badN < 3 || now - lastGoodAt < 2500) { scanBusy = false; scanTimer = setTimeout(loop, 60); return; }
+            badN = 0; lastCode = code; lastCodeAt = now;
+          }
           if (r.state === 'added' || r.state === 'again') { lastScan = r.item; const k = String(r.item.id);
             if (!scanQty.has(k)) scanQty.set(k, { pcs: 1, ctn: 0 });
             if (!scanItems.has(k)) { scanItems.set(k, r.item); scanOrder.push(k); }

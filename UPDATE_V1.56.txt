@@ -1,0 +1,5 @@
+Blue Khata v1.56.0
+INSTALL: Is ZIP ki files GitHub repo (Noor-traders) mein purani files ki jagah upload karein. Firestore rules nahi badle.
+Phir phone par Sync / Update dabayein aur neeche version 1.56.0 check karein.
+- Scanner: ghalat parhai par "nahi mila" ab nahi aata, search sab se upar, chhote tadad buttons.
+- Mulazim Dasti Payment mein account shamil kar / nikal sakta hai.

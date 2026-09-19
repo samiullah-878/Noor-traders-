@@ -519,3 +519,17 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
   setSaleFindHook(fn) naya export; saleHook(code, direct) ab seedha item bhi le leta hai (search se chuna hua).
 - sale.js: setSaleFindHook lagaya (stock ke items mein naam/code/barcode se dhoondta hai), scan hook direct item leta hai.
 - style.css: .scan-find/.scan-hits/.scan-sum/.scan-names nayi lines, tools ke buttons chhote.
+
+==============================================================
+2026-09-19 raat — v1.56.0: scanner ki ghalat parhai, search upar, chhote buttons, mulazim Dasti
+==============================================================
+- pos-stock.js scan loop: camera kabhi ek frame mein ghalat code parhta tha (misal 6928738109038 ko 3908742709038),
+  item sahi add ho jata phir bhi upar "stock mein nahi mila" likha aa jata. Ab: mila hua code foran chalta hai;
+  NA mila code sirf tab "nahi mila" dikhata hai jab wahi code 3 dafa lagataar aaye AUR pichhle 2.5 sec mein koi
+  sahi item add na hua ho (badCode/badN/lastGoodAt). lastCode ab sirf sahi scan par set hota hai.
+- Scanner layout: search (.scan-find) ab sab se UPAR, results (.scan-hits) uske neeche; video ab .scan-cam ke andar
+  (laal line camera ke beech mein, pehle message ke upar aa jati thi); 1-12 / Pcs / Ctn buttons chhote (style.css v1.56 block).
+- app.js Dasti Payment screen: mulazim (full access, din khula — canEditAccount) ab "Account Dasti mein shamil karein"
+  aur "Dasti se nikalein" kar sakta hai. Reminder / payment transfer / naya account ab bhi sirf Malik.
+  Firestore rules mein tabdeeli ki zaroorat nahi (staff pehle se party.dasti update kar sakta tha).
+- Version 1.56.0 (index.html, sw.js cache, imports, version.json).
