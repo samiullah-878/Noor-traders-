@@ -718,3 +718,17 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
   tadad se kam ho -> alert list ke saath, sale nahi banti. Line mein "⛔ godam mein stock nahi — godam badlein".
   Dukaan (branch 1) minus stock par bhi sale banti hai (pehle jaisa). Malik/mulazim dono par barabar.
 - PC sale-post mein tabdeeli nahi (malik: PC par yeh rok pehle se hai).
+
+2026-09-20 — v1.73.0: STOCK TRANSFER NOTE (godam se godam) + purchase bill 🖨️ Print (PC transfer-sync.js)
+- Stock tab: "⇄ Transfer note" -> dialog openTransfer(): Se / Ko godam (branches), item search (naam/code/bc) ya 📷 scan
+  (scanOnce), lines [{id, name, qty}] (qty Pcs), "Se" godam (branch 1 ke ilawa) mein stock kam ho to laal + rok,
+  ✓ POS mein transfer note banao -> cloud.requestTransfer -> transferJobs/{id} {op create, from, to, lines, note...}.
+  watchTransfer: done -> "STN <no>"; failed -> wajah. Neeche 14 din ki history (listenTransfers): 🖨️ (printJobs kind
+  transfer), malik 24 ghante ke andar 🗑️ (op delete -> usp_StockTransfer_Delete, sirf app ke banaye [BK-APP]).
+- Purchase tab: har bill par 🖨️ Print -> printJobs {kind purchase, id} -> PC posBills (POS bill, lines) ya blueKhata
+  (larke ki cash purchase) se ESC/POS rasid TM-T88IV par.
+- PC transfer-sync.js v1: transferJobs -> usp_StockTransfer_InsertUpdate (TransferID 0, COGS = sum qty*PurchaseRate,
+  SystemNotes mein [BK-APP <jobId>] se TransferID wapas) + har line usp_StockTransferDetail_InsertUpdate (Rate=SaleRate,
+  TransferRate=PurchaseRate; procedure khud ledger + dono branch ka CurrStock badalta hai). SQL transaction. "Ko" godam
+  mein ItemBranchRate row na ho to bana deta hai (stock 0). Auto print STN thermal par. Lock 47818. transfer-auto.bat/vbs.
+- firestore.rules: transferJobs (malik/full/stock; delete sirf malik), printJobs (+ purchase mulazim). PUBLISH ZAROORI.

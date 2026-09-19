@@ -1,0 +1,5 @@
+Blue Khata v1.73.0
+INSTALL: 1) ZIP GitHub par (1.70-1.72 shamil). 2) firestore.rules Publish (transferJobs, printJobs) — ZAROORI.
+3) PC: transfer-install.bat double-click (transfer-sync.js, transfer-auto.bat/vbs).
+- Stock tab: ⇄ Transfer note — godam se godam, POS mein STN khud banta hai, printer par note bhi.
+- Purchase tab: har bill par 🖨️ Print (PC ke thermal printer par).

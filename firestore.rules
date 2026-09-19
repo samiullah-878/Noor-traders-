@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -99,6 +99,23 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['op','itemId','subId','code','qty','rate','show','status','by','at'])
         && request.resource.data.op in ['add','edit','delete'] && request.resource.data.status == 'new'
         && request.resource.data.by == request.auth.uid && request.resource.data.code is string && request.resource.data.code.size() <= 50;
+    }
+
+    // v1.73: stock transfer note (transferJobs) aur thermal print (printJobs) — PC transfer-sync.js admin key se
+    match /businesses/noor-traders/transferJobs/{jobId} {
+      allow read: if isOwner() || blueStaff() || stockStaff();
+      allow create: if (isOwner() || blueStaff() || stockStaff())
+        && request.resource.data.keys().hasOnly(['op','from','to','lines','note','transferId','byName','status','by','at'])
+        && request.resource.data.op in ['create','delete'] && request.resource.data.status == 'new'
+        && request.resource.data.by == request.auth.uid && request.resource.data.lines.size() <= 100
+        && (request.resource.data.op != 'delete' || isOwner());
+    }
+    match /businesses/noor-traders/printJobs/{jobId} {
+      allow read: if isOwner() || blueStaff() || stockStaff() || purchaseStaff();
+      allow create: if (isOwner() || blueStaff() || stockStaff() || purchaseStaff())
+        && request.resource.data.keys().hasOnly(['kind','id','partyName','status','by','at'])
+        && request.resource.data.kind in ['purchase','transfer'] && request.resource.data.status == 'new'
+        && request.resource.data.by == request.auth.uid;
     }
 
     match /businesses/noor-traders/posStock/{docId} {

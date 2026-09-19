@@ -440,6 +440,7 @@ function summaryHTML(branches, pick, items, meta, names) {
         ? `<button class="sh-wide sh-scan" data-stock-scan="1">📷 Aur scan karein (${num(scanList.length)} list mein)</button>
            <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>`
         : `<button class="sh-wide sh-scan" data-stock-scan="1">📷 Barcode scan karein (ek ya kai items)</button>
+           <button class="sh-wide" data-stock-transfer="1">⇄ Transfer note (godam se godam)</button>
            ${($('search')?.value || '').trim() ? '<button class="sh-wide" data-stock-clear="1">✕ Search saaf karein</button>' : ''}`}
     </div>
     ${branchBar ? `<div class="sh-label">Branch</div>${branchBar}` : ''}
@@ -622,6 +623,81 @@ async function printLabel(btn) {
   } catch (e) { btn.disabled = false; btn.textContent = old; notice('Label nahi bheja: ' + (e?.message || e)); }
 }
 
+// ---------- v1.73: STOCK TRANSFER NOTE (godam se godam) — PC transfer-sync.js POS mein STN banata hai ----------
+let trLines = [], trFrom = null, trTo = null, trStop = null, trList = [];
+function trBranches() { const { branches, names } = collect(); return branches.map(b => ({ id: b, name: branchName(b, names) })); }
+function trStockOf(b, id) { return Number(saleStockItem(b, id)?.stock || 0); }
+function saleStockItem(b, id) { const chunks = rows.filter(r => !r.meta && Array.isArray(r.items) && r.branch === Number(b)); for (const c of chunks) { const it = c.items.find(x => String(x.id) === String(id)); if (it) return it; } return null; }
+function openTransfer() {
+  const d = $('dialog'); if (!d) return;
+  const bs = trBranches();
+  if (trFrom == null) trFrom = bs.find(b => b.id !== 1)?.id ?? bs[0]?.id;
+  if (trTo == null) trTo = 1;
+  d.classList.remove('search-dialog');
+  $('dialogTitle').textContent = '⇄ Transfer note';
+  const sel = (name, val) => `<select data-tr-${name}>${bs.map(b => `<option value="${b.id}"${b.id === val ? ' selected' : ''}>${esc(b.name)}</option>`).join('')}</select>`;
+  const kul = trLines.reduce((s, l) => s + l.qty, 0);
+  $('dialogBody').innerHTML = `<div class="tr-head"><label>Se (nikle)${sel('from', trFrom)}</label><label>Ko (jaye)${sel('to', trTo)}</label></div>
+    <div class="scan-find" style="margin:8px 0"><input class="scan-q" data-tr-q type="search" placeholder="🔍 Item ka naam / code likhein" autocomplete="off"><div class="scan-hits" data-tr-hits hidden></div></div>
+    <div class="account-tools"><button type="button" data-tr-scan="1">📷 Scan</button></div>
+    <div class="tr-lines">${trLines.map((l, i) => { const have = trStockOf(trFrom, l.id); const short = trFrom !== 1 && have < l.qty - 0.0005;
+      return `<div class="tr-line${short ? ' short' : ''}"><div class="tr-name"><b>${esc(l.name)}</b><small>${esc(branchName(trFrom, collect().names))} mein stock ${num(have)}${short ? ' · <b class="red">⛔ kam hai</b>' : ''}</small></div>
+      <input type="text" inputmode="decimal" value="${num(l.qty)}" data-tr-qty="${i}" aria-label="Tadad"><button type="button" class="danger" data-tr-del="${i}">✕</button></div>`; }).join('') || '<p class="muted">Upar se item chunein ya scan karein.</p>'}</div>
+    ${trLines.length ? `<p class="tr-sum">${trLines.length} items · kul ${num(kul)}</p>` : ''}
+    <label>Note<input type="text" data-tr-note maxlength="150" placeholder="ikhtiyari"></label>
+    <div class="account-tools"><button type="button" class="primary" data-tr-save="1"${trLines.length ? '' : ' disabled'}>✓ POS mein transfer note banao</button>${trLines.length ? '<button type="button" data-tr-clear="1">Saaf</button>' : ''}</div>
+    <p class="muted tr-msg" style="font-size:.85em"></p>
+    <div class="tr-hist"><b>Pichhle 14 din ke transfer (app se)</b><div data-tr-hist>${trHistHTML()}</div></div>`;
+  if (!d.open) d.showModal();
+  if (!trStop && cloud?.listenTransfers) trStop = cloud.listenTransfers(list => { trList = list; const h = document.querySelector('[data-tr-hist]'); if (h) h.innerHTML = trHistHTML(); });
+  const q = $('dialogBody').querySelector('[data-tr-q]'), hits = $('dialogBody').querySelector('[data-tr-hits]');
+  q.oninput = () => { const t = norm(q.value); if (t.length < 2) { hits.hidden = true; return; } const { items } = collect();
+    const found = items.filter(r => norm(r.name).includes(t) || norm(r.code).includes(t) || (Array.isArray(r.bc) && r.bc.some(b => norm(b).includes(t)))).slice(0, 8);
+    hits._src = found; hits.innerHTML = found.map((r, i) => `<button type="button" data-tr-pick="${i}"><b>${esc(r.name)}</b><small>${esc(r.code || '')} · ${esc(branchName(trFrom, collect().names))} ${num(trStockOf(trFrom, r.id))}</small></button>`).join('') || '<p>Nahi mila</p>'; hits.hidden = false; };
+  hits.onclick = e => { const b = e.target.closest('[data-tr-pick]'); if (!b) return; trAdd(hits._src[Number(b.dataset.trPick)]); };
+  q.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const r = (hits._src || [])[0]; if (r) trAdd(r); } };
+}
+function trAdd(r, qty = 1) { if (!r) return; const old = trLines.find(l => String(l.id) === String(r.id)); if (old) old.qty = Math.round((old.qty + qty) * 1000) / 1000; else trLines.push({ id: r.id, name: r.name, qty }); openTransfer(); }
+function trHistHTML() {
+  if (!trList.length) return '<p class="muted">Koi nahi.</p>';
+  const names = collect().names;
+  return trList.slice(0, 20).map(j => `<div class="tr-hist-row"><div><b>${j.status === 'done' ? (j.op === 'delete' ? 'Hataya' : 'STN ' + esc(j.transferNo || '')) : j.status === 'failed' ? '⚠️ Nahi bana' : '⏳ PC...'}</b> · ${esc(branchName(j.from, names))} → ${esc(branchName(j.to, names))} · ${(j.lines || []).length} items<br><small>${esc(new Date(j.at).toLocaleString('en-PK'))}${j.error ? ' · <span class="red">' + esc(j.error) + '</span>' : ''}${(j.lines || []).slice(0, 4).map(l => ' · ' + esc(l.name) + ' ' + num(l.qty)).join('')}</small></div>
+    ${j.status === 'done' && j.op !== 'delete' ? `<button type="button" data-tr-print="${esc(j.id)}">🖨️</button>${isOwner() && Date.now() - j.at < 86400000 ? `<button type="button" class="danger" data-tr-undo="${esc(j.id)}">🗑️</button>` : ''}` : ''}</div>`).join('');
+}
+async function trSave(btn) {
+  const msg = $('dialogBody').querySelector('.tr-msg'), note = $('dialogBody').querySelector('[data-tr-note]')?.value || '';
+  if (trFrom === trTo) { msg.textContent = '⚠️ "Se" aur "Ko" alag godam chunein'; return; }
+  const short = trLines.filter(l => trFrom !== 1 && trStockOf(trFrom, l.id) < l.qty - 0.0005);
+  if (short.length) { msg.textContent = '⛔ Godam mein stock kam: ' + short.map(l => l.name).join(', '); return; }
+  if (!confirm(`${trLines.length} items · ${branchName(trFrom, collect().names)} → ${branchName(trTo, collect().names)}\nPOS mein transfer note banayein?`)) return;
+  btn.disabled = true; msg.textContent = '🖥 PC ko ja raha hai…';
+  try {
+    const jid = await cloud.requestTransfer({ op: 'create', from: trFrom, to: trTo, lines: trLines.map(l => ({ itemId: l.id, name: l.name, qty: l.qty })), note, byName: '' });
+    let stop = null, done = false;
+    const end = (ok, t) => { if (done) return; done = true; try { stop && stop(); } catch {} btn.disabled = false;
+      if (ok) { trLines = []; notice('✓ Transfer note ' + t + ' ban gaya'); openTransfer(); } else { msg.textContent = '⚠️ ' + t; notice('Transfer nahi bana: ' + t); } };
+    stop = cloud.watchTransfer(jid, j => { if (!j) return; if (j.status === 'done') end(true, j.transferNo || ''); else if (j.status === 'failed') end(false, j.error || 'masla'); });
+    setTimeout(() => end(false, 'PC se jawab nahi aaya — PC on hai aur transfer-sync chal raha hai? (hukum mehfooz hai)'), 45000);
+  } catch (e) { btn.disabled = false; msg.textContent = '⚠️ ' + (e?.message || e); }
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest?.('[data-tr-del],[data-tr-save],[data-tr-clear],[data-tr-scan],[data-tr-print],[data-tr-undo]');
+  if (!t) return;
+  if (t.dataset.trDel) { trLines.splice(Number(t.dataset.trDel), 1); openTransfer(); }
+  else if (t.dataset.trClear) { trLines = []; openTransfer(); }
+  else if (t.dataset.trSave) trSave(t);
+  else if (t.dataset.trScan) { const fake = { value: '' }; scanOnce({ set value(v) { const { items } = collect(); const c = String(v).trim(); const r = items.find(x => String(x.code).trim() === c || (Array.isArray(x.bc) && x.bc.some(b => String(b).trim() === c))); if (r) trAdd(r); else notice('"' + c + '" stock mein nahi mila'); }, get value() { return fake.value; } }); }
+  else if (t.dataset.trPrint) { t.disabled = true; cloud.requestPrint({ kind: 'transfer', id: t.dataset.trPrint }).then(() => notice('🖨️ Print PC ko bheja')).catch(er => notice(er?.message || 'Nahi hua')).finally(() => { t.disabled = false; }); }
+  else if (t.dataset.trUndo) { const j = trList.find(x => x.id === t.dataset.trUndo); if (!j || !confirm('Transfer note ' + (j.transferNo || '') + ' POS se hata dein? Dono godam ka stock wapas ho jayega.')) return; t.disabled = true;
+    cloud.requestTransfer({ op: 'delete', from: j.from, to: j.to, transferId: j.transferId, lines: j.lines }).then(() => notice('Hatane ka hukum PC ko bheja')).catch(er => notice(er?.message || 'Nahi hua')); }
+});
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.matches?.('[data-tr-from]')) { trFrom = Number(t.value); openTransfer(); }
+  else if (t.matches?.('[data-tr-to]')) { trTo = Number(t.value); openTransfer(); }
+  else if (t.matches?.('[data-tr-qty]')) { const q = Number(String(t.value).replace(',', '.')); const l = trLines[Number(t.dataset.trQty)]; if (l && q > 0) l.qty = Math.round(q * 1000) / 1000; openTransfer(); }
+});
+
 // v1.45.8: history ab alag khirki (dialog) mein — pehle list ke upar khulti thi aur search bohat neeche chala jata tha
 function openBills() {
   const d = $('dialog');
@@ -722,6 +798,7 @@ document.addEventListener('click', e => {
   if (e.target.closest?.('[data-stock-more]')) { limit += PAGE; rerender(); return; }
   if (e.target.closest?.('[data-stock-bills]')) { openBills(); return; }
   if (e.target.closest?.('[data-stock-ginti]')) { openGinti(); return; }
+  if (e.target.closest?.('[data-stock-transfer]')) { openTransfer(); return; }
   const lb = e.target.closest?.('[data-stock-label]');
   if (lb) { openLabels(lb.dataset.stockLabel); return; }
   const lp = e.target.closest?.('[data-label-print]');
