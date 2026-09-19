@@ -570,3 +570,12 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
 - Camera: gumT() getUserMedia par 4 sec timeout (der se mila stream foran band). Timeout par ek dafa khud dobara
   (saved lens bhool kar), phir message "camera kahin aur khula hai". document visibilitychange (hidden) par finishScan()
   — tab/app peeche jaye to camera chhor deta hai (6-7 tabs khule the, ek tab camera pakre rehta tha).
+
+==============================================================
+2026-09-19 raat — v1.60.0: Pcs/Ctn button, bari list, tez awaz
+==============================================================
+- Tadad khane ke saath .scan-u button: har naye item par Pcs; tap = Ctn (sirf pack > 1 wale item par, warna disabled).
+  Ctn par saleHook ko qty * pack pieces jate hain; sale.js addItem ab NAYI line par bhi poore carton alag karta hai.
+- beep: gain 0.6, 0.18 sec (nahi mila = 2 x 0.2 sec), har beep par audioCtx.resume(); scanBox par kisi bhi pointerdown
+  (capture) se audioCtx bana/resume — kuch phones awaz tab tak nahi dete jab tak screen na chhui jaye.
+- style.css v1.60: scan-names naam 19px mote, line 16px, max-height 36vh; pad ka naam 17px; Kul 18px; message 16px.

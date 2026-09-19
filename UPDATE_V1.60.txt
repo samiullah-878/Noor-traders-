@@ -1,0 +1,6 @@
+Blue Khata v1.60.0
+INSTALL: Is ZIP ki files GitHub repo (Noor-traders) mein purani ki jagah upload karein. Firestore rules nahi badle.
+Phone par Sync / Update, neeche 1.60.0 check karein.
+- Tadad ke saath Pcs/Ctn button (Pcs default).
+- Scan ke baad items ki list aur naam bare.
+- Scan ki awaz tez.

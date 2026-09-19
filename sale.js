@@ -1,10 +1,10 @@
-// sale.js — Nayi Sale (Counter / Wholesale) — v1.59.0
+// sale.js — Nayi Sale (Counter / Wholesale) — v1.60.0
 // App sale ko Firestore "appSales" mein "new" likhta hai. POS bill PC ka sale-post.js banata hai
 // (POS ke apne procedures se), rasid print karta hai aur Sale No wapas likhta hai.
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, openSaleCamera } from './pos-stock.js?v=1.59.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, openSaleCamera } from './pos-stock.js?v=1.60.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -80,6 +80,9 @@ function addItem(it, qtyPcs = 1) {
       cName: it.cName || 'Ctn', uName: it.uName || 'Pcs', godam: Number(godam) || SALE_BRANCH,
       ctn: 0, pcs: qtyPcs, rate: rateFor(it), std: rateFor(it), edited: false
     });
+    // v1.60: nayi line par bhi poore carton alag (misal 2 Ctn likha = 24 pcs -> 2 Ctn)
+    const nl = cart[cart.length - 1], pk = Number(nl.pack) || 0;
+    if (pk > 1 && nl.pcs >= pk) { nl.ctn = Math.floor(nl.pcs / pk); nl.pcs = r2(nl.pcs % pk); }
   }
   cash = null; keepDraft();
 }
@@ -103,7 +106,7 @@ setSaleScanHook((code, direct, qty) => {
   const { items } = stock();
   const it = direct || findByCode(items, code);
   if (!it) return { state: null };
-  const q = Number(qty) > 0 ? r2(Number(qty)) : (direct ? 1 : subQty(it, code));   // v1.59: search wale khane ki tadad
+  const q = Number(qty) > 0 ? Math.round(Number(qty) * 1000) / 1000 : (direct ? 1 : subQty(it, code));   // v1.59: search wale khane ki tadad
   addItem(it, q);
   notice(`✓ ${it.name}${q !== 1 ? ' — ' + q : ''}`);
   const s = $('search'); if (s && s.value) s.value = '';

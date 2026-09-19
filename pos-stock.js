@@ -795,12 +795,14 @@ if (typeof document !== 'undefined') document.addEventListener('visibilitychange
 function beep(ok) {
   try {
     if (!audioCtx) return;
-    const t = audioCtx.currentTime;
-    const tones = ok ? [[1900, 0, 0.09]] : [[420, 0, 0.12], [420, 0.18, 0.12]];
+    if (audioCtx.state !== 'running') audioCtx.resume();
+    const t = audioCtx.currentTime + 0.01;
+    // v1.60: zyada tez aur lambi awaz
+    const tones = ok ? [[2200, 0, 0.18]] : [[380, 0, 0.2], [380, 0.28, 0.2]];
     for (const [f, s, d] of tones) {
       const o = audioCtx.createOscillator(), g = audioCtx.createGain();
       o.type = 'square'; o.frequency.value = f;
-      g.gain.setValueAtTime(0.15, t + s); g.gain.exponentialRampToValueAtTime(0.001, t + s + d);
+      g.gain.setValueAtTime(0.6, t + s); g.gain.exponentialRampToValueAtTime(0.001, t + s + d);
       o.connect(g); g.connect(audioCtx.destination); o.start(t + s); o.stop(t + s + d + 0.02);
     }
   } catch {}
@@ -885,7 +887,7 @@ async function openScanner() {
   scanBox = document.createElement('div');
   scanBox.className = 'scan-box';
   scanBox.innerHTML = `<div class="scan-inner">
-      <div class="scan-find"><div class="scan-find-row"><input class="scan-q" type="search" enterkeyhint="next" placeholder="🔍 Naam ya code likhein" autocomplete="off"><input class="scan-n" type="text" inputmode="decimal" enterkeyhint="done" placeholder="Tadad" autocomplete="off"></div><div class="scan-hits" hidden></div></div>
+      <div class="scan-find"><div class="scan-find-row"><input class="scan-q" type="search" enterkeyhint="next" placeholder="🔍 Naam ya code likhein" autocomplete="off"><input class="scan-n" type="text" inputmode="decimal" enterkeyhint="done" placeholder="Tadad" autocomplete="off"><button type="button" class="scan-u">Pcs</button></div><div class="scan-hits" hidden></div></div>
       <div class="scan-cam"><video playsinline muted autoplay></video><div class="scan-line"></div></div>
       <p class="scan-msg">Barcode camera ke saamne rakhein — ek ke baad ek scan karte jayein</p>
       <div class="scan-pad" hidden>
@@ -956,6 +958,20 @@ async function openScanner() {
   // camera ki screen par search: naam ya code se item add
   const qBox = scanBox.querySelector('.scan-q'), hitBox = scanBox.querySelector('.scan-hits'), nBox = scanBox.querySelector('.scan-n');
   let chosen = null;   // v1.59: search se chuna hua item, tadad ka intezar
+  const uBtn = scanBox.querySelector('.scan-u');
+  let nUnit = 'pcs';   // v1.60: Tadad ki ikai — hamesha Pcs se shuru, tap par Ctn
+  const setUnit = (u, it) => {
+    const canCtn = Number((it || chosen)?.pack) > 1;
+    nUnit = canCtn ? u : 'pcs';
+    uBtn.textContent = nUnit === 'ctn' ? ((it || chosen)?.cName || 'Ctn') : ((it || chosen)?.uName || 'Pcs');
+    uBtn.classList.toggle('ctn', nUnit === 'ctn');
+    uBtn.disabled = !canCtn;
+  };
+  uBtn.addEventListener('pointerdown', e => e.preventDefault());   // keyboard band na ho
+  uBtn.onclick = () => { setUnit(nUnit === 'pcs' ? 'ctn' : 'pcs'); nBox.focus(); };
+  setUnit('pcs', null);
+  // v1.60: kuch phones par awaz tab chalu hoti hai jab screen chhui jaye
+  scanBox.addEventListener('pointerdown', () => { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state !== 'running') audioCtx.resume(); } catch {} }, true);
   const scanSearch = () => {
     chosen = null;
     const q = String(qBox.value || '').toLowerCase().trim();
@@ -971,7 +987,7 @@ async function openScanner() {
   // v1.59 (sale): item chunne par seedha add nahi — cursor "Tadad" mein; wahan Enter par add, phir cursor wapas search mein
   const pickHit = r => {
     if (saleRoot() && saleHook) {
-      chosen = r; qBox.value = r.name; hitBox.hidden = true; nBox.value = '';
+      chosen = r; qBox.value = r.name; hitBox.hidden = true; nBox.value = ''; setUnit('pcs', r);
       msg.textContent = `${r.name} — tadad likh kar Enter dabayein (khali = 1)`;
       nBox.focus();
       return;
@@ -986,13 +1002,15 @@ async function openScanner() {
   nBox.onkeydown = e => {
     if (e.key !== 'Enter') return;
     e.preventDefault();
-    if (!chosen) { const r = (hitBox._src || [])[0]; if (!r) { qBox.focus(); return; } chosen = r; }
+    if (!chosen) { const r = (hitBox._src || [])[0]; if (!r) { qBox.focus(); return; } chosen = r; setUnit('pcs', r); }
     let q = Number(String(nBox.value || '').replace(',', '.').trim());
     if (!(q > 0)) q = 1;
-    const r = chosen; chosen = null; nBox.value = '';
-    addHit(r, q);
+    const r = chosen, ctn = nUnit === 'ctn' && Number(r.pack) > 1;
+    chosen = null; nBox.value = '';
+    addHit(r, ctn ? q * Number(r.pack) : q);   // Ctn = pack se zarb (bill khud carton mein badal deta hai)
     beep(true);
-    msg.textContent = `✓ ${r.name} — ${num(q)} · agla item likhein`;
+    msg.textContent = `✓ ${r.name} — ${num(q)} ${ctn ? (r.cName || 'Ctn') : (r.uName || 'Pcs')} · agla item likhein`;
+    setUnit('pcs', null);
     qBox.focus();
   };
   hitBox.addEventListener('pointerdown', e => e.preventDefault());   // list par tap se keyboard band na ho
