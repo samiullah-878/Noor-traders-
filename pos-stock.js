@@ -499,15 +499,16 @@ function applySub(r, op, x) {
 }
 function subForm(r, edit) {
   const d = $('dialog');
-  $('dialogTitle').textContent = (edit ? '✏️ Barcode badlein — ' : '➕ Naya barcode — ') + r.name;
+  const isEdit = !!(edit && edit.subId);
+  $('dialogTitle').textContent = (isEdit ? '✏️ Barcode badlein — ' : '➕ Naya barcode — ') + r.name;
   const q = edit ? edit.qty : 1, qs = [0.125, 0.25, 0.5, 1, 5];
-  $('dialogBody').innerHTML = `<form class="sub-form" data-sub-form="${esc(r.id)}"${edit ? ` data-sub-id="${edit.subId}"` : ''}>
+  $('dialogBody').innerHTML = `<form class="sub-form" data-sub-form="${esc(r.id)}"${isEdit ? ` data-sub-id="${edit.subId}"` : ''}>
     <label>Barcode<div class="sub-code-row"><input name="code" required maxlength="50" autocomplete="off" value="${esc(edit?.code || '')}" placeholder="Likhein ya scan karein"><button type="button" data-sub-scan="1">📷</button></div></label>
     <label>Tadad<input name="qty" type="text" inputmode="decimal" required value="${num(q)}"></label>
     <div class="account-tools sub-qty">${qs.map(v => `<button type="button" data-sub-qty="${v}"${v === q ? ' class="selected"' : ''}>${num(v)}</button>`).join('')}</div>
     <label>Rate (khali = item rate × tadad)<input name="rate" type="text" inputmode="decimal" value="${edit && edit.rate > 0 ? num(edit.rate) : ''}" placeholder="0"></label>
     <label class="sub-show"><input type="checkbox" name="show"${!edit || edit.show ? ' checked' : ''}> Show ✓ (label mein dikhe)</label>
-    <div class="account-tools"><button type="submit" class="primary">${edit ? '💾 Save' : '➕ POS mein banao'}</button><button type="button" data-sub-back="${esc(r.id)}">Wapas</button></div>
+    <div class="account-tools"><button type="submit" class="primary">${isEdit ? '💾 Save' : '➕ POS mein banao'}</button><button type="button" data-sub-back="${esc(r.id)}">Wapas</button></div>
     <p class="muted sub-msg" style="font-size:.85em"></p></form>`;
   if (!d.open) d.showModal();
   setTimeout(() => $('dialogBody').querySelector('input[name=code]')?.focus(), 50);
@@ -564,7 +565,13 @@ document.addEventListener('click', e => {
   if (t.dataset.subNew) { const r = rowCache.get(t.dataset.subNew); if (r) subForm(r, null); return; }
   if (t.dataset.subBack) { openLabels(t.dataset.subBack); return; }
   if (t.dataset.subQty) { const f = t.closest('form'); f.elements.qty.value = t.dataset.subQty; f.querySelectorAll('[data-sub-qty]').forEach(b => b.classList.toggle('selected', b === t)); return; }
-  if (t.dataset.subScan) { scanOnce(t.closest('form').elements.code); return; }
+  if (t.dataset.subScan) {   // v1.74: sale wala bara scanner (Focus/Zoom/Camera/Light); dialog band karke, code milte hi form dobara
+    const f = t.closest('form'), r = rowCache.get(f.dataset.subForm); if (!r) return;
+    const st = { subId: Number(f.dataset.subId) || 0, code: f.elements.code.value, qty: Number(String(f.elements.qty.value).replace(',', '.')) || 1, rate: Number(f.elements.rate.value) || 0, show: f.elements.show.checked };
+    try { $('dialog').close(); } catch {}
+    scanPick(code => { subForm(r, { ...st, code }); });
+    return;
+  }
   if (t.dataset.subEdit) { const r = rowCache.get(t.dataset.subItem), x = r && labelRows(r).find(y => String(y.subId) === t.dataset.subEdit); if (x) subForm(r, x); return; }
   if (t.dataset.subDel) { const r = rowCache.get(t.dataset.subItem), x = r && labelRows(r).find(y => String(y.subId) === t.dataset.subDel);
     if (!x) return; if (!confirm(`"${x.code}" (${r.name}) POS se hata dein?`)) return; subSend(r, 'delete', x, t.closest('.label-row')?.querySelector('small'), t); return; }
@@ -686,7 +693,7 @@ document.addEventListener('click', e => {
   if (t.dataset.trDel) { trLines.splice(Number(t.dataset.trDel), 1); openTransfer(); }
   else if (t.dataset.trClear) { trLines = []; openTransfer(); }
   else if (t.dataset.trSave) trSave(t);
-  else if (t.dataset.trScan) { const fake = { value: '' }; scanOnce({ set value(v) { const { items } = collect(); const c = String(v).trim(); const r = items.find(x => String(x.code).trim() === c || (Array.isArray(x.bc) && x.bc.some(b => String(b).trim() === c))); if (r) trAdd(r); else notice('"' + c + '" stock mein nahi mila'); }, get value() { return fake.value; } }); }
+  else if (t.dataset.trScan) { try { $('dialog').close(); } catch {} scanPick(c => { const { items } = collect(); c = String(c).trim(); const r = items.find(x => String(x.code).trim() === c || (Array.isArray(x.bc) && x.bc.some(b => String(b).trim() === c))); if (r) trAdd(r); else { notice('"' + c + '" stock mein nahi mila'); openTransfer(); } }); }
   else if (t.dataset.trPrint) { t.disabled = true; cloud.requestPrint({ kind: 'transfer', id: t.dataset.trPrint }).then(() => notice('🖨️ Print PC ko bheja')).catch(er => notice(er?.message || 'Nahi hua')).finally(() => { t.disabled = false; }); }
   else if (t.dataset.trUndo) { const j = trList.find(x => x.id === t.dataset.trUndo); if (!j || !confirm('Transfer note ' + (j.transferNo || '') + ' POS se hata dein? Dono godam ka stock wapas ho jayega.')) return; t.disabled = true;
     cloud.requestTransfer({ op: 'delete', from: j.from, to: j.to, transferId: j.transferId, lines: j.lines }).then(() => notice('Hatane ka hukum PC ko bheja')).catch(er => notice(er?.message || 'Nahi hua')); }
@@ -1071,6 +1078,9 @@ let scanStream = null, scanTimer = null, scanBox = null, scanBusy = false;
 let lastCode = '', lastCodeAt = 0;
 let badCode = '', badN = 0, lastGoodAt = 0;   // v1.56: ghalat parhai ka filter
 let camRetry = 0, audioCtx = null;            // v1.57: kaala camera dobara chalu, scan ki awaz
+// v1.74: "ek barcode chuno" mode — wohi bara scanner (Focus/Zoom/Camera/Light) sirf ek code parh kar wapas
+let pickHook = null;
+export function scanPick(cb) { pickHook = cb; if (scanBox) finishScan(); openScanner(); }
 // v1.59: camera ka jawab 4 sec mein na aaye to intezar khatam (baad mein mila stream foran band, taake camera na phanse)
 function gumT(c, ms = 4000) {
   return new Promise((res, rej) => {
@@ -1117,7 +1127,9 @@ function closeScanner() {
 
 function finishScan() {
   camRetry = 0;
+  const wasPick = !!pickHook; pickHook = null;
   closeScanner();
+  if (wasPick) return;   // v1.74: sirf code chunna tha — sale/ginti ko haath na lagao
   if (saleRoot()) { saleSeen = []; rerender(); return; }
   if (!scanList.length) return;
   rerender();
@@ -1200,7 +1212,7 @@ function zxingDetector() {
 
 async function openScanner() {
   if (scanBox) return;
-  syncFromCart();
+  if (!pickHook) syncFromCart();
   // awaz: button dabane (user ke haath) par hi chalu ho sakti hai
   try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch {}
   if (!navigator.mediaDevices?.getUserMedia) {
@@ -1239,6 +1251,13 @@ async function openScanner() {
     </div>`;
   document.body.appendChild(scanBox);
   const msg = scanBox.querySelector('.scan-msg');
+  if (pickHook) {   // v1.74: sirf ek code chunna hai — search/tadad/list chhupa do
+    scanBox.classList.add('pick-mode');
+    scanBox.querySelector('.scan-find')?.setAttribute('hidden', '');
+    scanBox.querySelector('.scan-pad')?.setAttribute('hidden', '');
+    scanBox.querySelector('.scan-done')?.setAttribute('hidden', '');
+    msg.textContent = 'Barcode camera ke saamne rakhein — parhte hi wapas form khulega';
+  }
   const namesBox = scanBox.querySelector('.scan-names');
   const countBox = scanBox.querySelector('.scan-done span');
   const { items } = collect();
@@ -1475,6 +1494,7 @@ async function openScanner() {
         const now = Date.now();
         // v1.62: jab tak wahi barcode camera ke saamne hai, dobara na gino (warna har 1.5 sec nayi line banti)
         if (code && code === lastCode && now - lastCodeAt < 1500) lastCodeAt = now;
+        if (code && pickHook) { const cb = pickHook; pickHook = null; beep(true); if (navigator.vibrate) navigator.vibrate(60); finishScan(); try { cb(code); } catch {} return; }
         if (code && !(code === lastCode && now - lastCodeAt < 1500)) {   // wahi barcode dobara foran na gine
           const r = addScanned(code);
           if (r.state) { lastCode = code; lastCodeAt = now; lastGoodAt = now; badCode = ''; badN = 0; }

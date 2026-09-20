@@ -285,3 +285,6 @@ body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actio
 .tr-hist{margin-top:14px;border-top:1px solid #d5dfef;padding-top:8px}
 .tr-hist-row{display:flex;gap:6px;align-items:center;padding:6px 0;border-bottom:1px solid #eef2f9}
 .tr-hist-row>div{flex:1 1 auto;min-width:0}.tr-hist-row button{flex:0 0 auto;min-height:34px;padding:0 10px}
+
+/* v1.74: pick-mode scanner */
+.scan-box.pick-mode .scan-names,.scan-box.pick-mode .scan-sum{display:none}

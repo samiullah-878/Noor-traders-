@@ -732,3 +732,11 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
   TransferRate=PurchaseRate; procedure khud ledger + dono branch ka CurrStock badalta hai). SQL transaction. "Ko" godam
   mein ItemBranchRate row na ho to bana deta hai (stock 0). Auto print STN thermal par. Lock 47818. transfer-auto.bat/vbs.
 - firestore.rules: transferJobs (malik/full/stock; delete sirf malik), printJobs (+ purchase mulazim). PUBLISH ZAROORI.
+
+2026-09-20 — v1.74.0: naya barcode / transfer mein 📷 = sale wala bara scanner (pick mode)
+- Masla: subForm ka chhota scanOnce overlay <dialog showModal> ke peeche (top layer ke bahar) tha — click/band nahi hota,
+  code form mein nahi aata tha.
+- pos-stock.js scanPick(cb): pickHook set karke openScanner() — wohi scanner (Focus / Zoom / Camera / Light, iPhone ZXing
+  bhi); loop mein pehla code milte hi beep, finishScan (sale/ginti ko haath nahi), cb(code). pick-mode mein search/tadad/
+  list/"Ho gaya" chhupe. subForm ka 📷: dialog band, form ki halat (code/qty/rate/show) yaad, code milte hi subForm dobara
+  code ke saath. Transfer ka 📷 bhi scanPick se (item mile to trAdd, warna wapas openTransfer). scanOnce ab istemal nahi.

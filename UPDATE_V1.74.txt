@@ -1,0 +1,3 @@
+Blue Khata v1.74.0
+INSTALL: ZIP GitHub par (1.73 shamil; rules v1.73). Sync / Update, 1.74.0.
+- Naya barcode aur Transfer note mein 📷 ab sale wala bara scanner kholta hai; code parhte hi form wapas.
