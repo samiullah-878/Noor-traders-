@@ -103,3 +103,14 @@ SABAQ: app.js / sale.js / pos-stock.js waghera mein zara bhi tabdeeli ho to
 version.json + sw.js ka CACHE + index.html ke ?v= HAR DAFA barhana zaroori hai,
 warna update phone tak pahunchta hi nahi.
 1.79.3 = 1.79.2 ka poora kaam + naya tafseeli error message (failDetail).
+
+=== v1.79.4 — error ki tafseel (tashkhees jari hai) ===
+Malik ko 1.79.3 par paigham mila: "Ijazat nahi mili · record ka pata nahi
+(background write)". Matlab nakami aise raste se aayi jo error() ko payload
+deta hi nahi tha. 1.79.4 mein:
+ * save() ka create-path (cloud.add) ab error(e,payload) bhejta hai.
+ * sendPost (post / unpost / aaj ke bill) bhi context bhejta hai.
+ * error() Firestore ka asal message bhi (80 harf) sath dikhata hai.
+ * window 'unhandledrejection' par bhi permission-denied pakra jata hai.
+AGLI AI: malik se poora toast text mangein — usi se pata chalega ke kaunsa
+collection / field fail ho raha hai. Andaze se rules mat badlein.
