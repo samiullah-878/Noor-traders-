@@ -286,3 +286,31 @@ FIX: save() mein nayi istisna — existing.type==='entry' && canEditEntry(existi
 AGAR edit par "Ijazat nahi mili" aaye: rules ki update lines 251 / 311 / 334
 (blueKhata) par bhi sasti shart pehle lagani hogi (type=='entry', purchase,
 deleted) — wohi 1000-expression wala masla update par bhi ho sakta hai.
+
+=== v1.80.0 — AI ke BAGHAIR teen behtariyan (malik ke OK ke baad) ===
+Pas-e-manzar: malik ne poocha app mein AI se kya behtar ho sakta hai. 9 tajaweez
+di gayin; malik ne no.4 (WhatsApp wasooli paigham) aur no.8 (rozana khulasa)
+MANA kar diye. Tay shuda tarteeb:
+  v1.80  = no.6 + 7 + 9 (yeh version, AI nahi)
+  v1.81  = no.3 sham ka milan: kaapi ki "Sale + Roznamcha pictures" ko AI (Google
+           Gemini) se parhwa kar Daily Sale se milana. Malik ke faisle: key
+           Firestore ke doc mein (malik + Full App mulazim parh saken), dono chala
+           saken, natija din ke sath save ho, kuch khud na badle. Rules ki 2 nayi
+           lines + Publish chahiye. Malik ko Gemini key banani hai.
+  phir   = no.1 purchase bill ki photo se entry, no.2 bol kar entry, no.5 khate se sawal.
+IS VERSION MEIN (sirf app.js + style.css; rules NAHI chhue):
+ (6) oddAmountMessage(data,existing) — save() ke andar, duplicate check ke baad.
+     Usi party (ya kharche ke account) + usi kind ki pichhli 20 entries; kam az
+     kam 4 hon. median se 8x zyada aur range se bahar (ya 8x kam) ho to confirm().
+     Raqam na badli ho (link / POS / soft-delete) to check nahi chalta.
+ (7) similarParties(name,phone,skipId) + similarHTML() — accountForm ke Save par.
+     nameKey() = norm + harf/hindse ke siwa sab hata do. score 4 naam wohi,
+     3 mobile (aakhri 10 hindse) wohi, 2 ek naam doosre se shuru, 1 edit-distance<=2.
+     Pehli dafa Save par dabba dikhta hai aur button "Phir bhi naya banao" ban
+     jata hai; doosri dafa Save ho jata hai. MERGE KABHI NAHI (malik ka hukum:
+     Saim purchaser / SAIM purchaser / Saim default… sab ALAG suppliers hain).
+ (9) paintDueNudge() — renderSurface() ke shuru mein. #dueNudge section
+     #dailyBackupReminder se pehle JS se banta hai; all('reminder') se aaj due /
+     late ginta hai; sirf view==='khata' && !selected par; malik + full mulazim.
+Helpers ka unit test node se chalaya gaya (28,000 vs 2-3.5 hazaar -> tanbeeh;
+"saim purchaser" -> dono Saim khate; "Tarik bhawal" -> Tariq bhawal).

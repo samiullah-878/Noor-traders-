@@ -1,0 +1,6 @@
+Blue Khata v1.80.0
+INSTALL: ZIP GitHub par. Sync / Update, 1.80.0. (Rules wahi v1.79.12 — Publish ki zaroorat NAHI. Koi key / kharcha nahi.)
+- Ghalti pakarna: entry Save karte waqt agar raqam us khate ki aam raqam se 8 guna zyada ya kam ho to app poochta hai (misal 2,800 ki jagah 28,000). Sirf tanbeeh — rokta nahi.
+- Milte-julte khate: naya account banate waqt agar naam ya mobile kisi purane khate se milta ho to woh khate baqaya ke sath dikhte hain: "Yeh kholein" ya "Phir bhi naya banao". Koi khata khud merge nahi hota.
+- Due patti: Mera Khata ke upar "Aaj N wasooli due · M late" — dabane par Due Accounts. (Malik aur Full App mulazim.)
+- Shamil: v1.79.13 (full mulazim AAJ ki entry edit kar sakta hai).

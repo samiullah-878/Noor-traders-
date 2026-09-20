@@ -301,3 +301,10 @@ body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actio
 
 /* v1.79 remember password */
 .remember-row{display:flex;align-items:center;gap:8px;font-weight:600;margin:6px 0}.remember-row input{width:22px;height:22px;flex:0 0 auto}.forget-pw{margin-top:8px;background:#fff1f1;color:#b32936}
+
+/* v1.80: due patti (dabane par Due Accounts) + milte-julte khate ka dabba */
+.due-nudge{cursor:pointer;-webkit-tap-highlight-color:transparent}
+.due-nudge:active{transform:scale(.99)}
+#similarBox{margin:10px 0}
+#similarBox .source-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(0,0,0,.08)}
+#similarBox .source-row button{flex:0 0 auto}
