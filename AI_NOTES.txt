@@ -314,3 +314,41 @@ IS VERSION MEIN (sirf app.js + style.css; rules NAHI chhue):
      late ginta hai; sirf view==='khata' && !selected par; malik + full mulazim.
 Helpers ka unit test node se chalaya gaya (28,000 vs 2-3.5 hazaar -> tanbeeh;
 "saim purchaser" -> dono Saim khate; "Tarik bhawal" -> Tariq bhawal).
+
+=== v1.81.0 — SHAM KA MILAN (AI: Google Gemini) — malik ke OK ke baad ===
+Maqsad: malik sham ko haath ki kaapi (roznamcha) ko app ki Daily Sale se milata
+hai (pehle ChatGPT mein tasveerein daal kar karta tha). Ab app ke andar.
+FAISLE (malik ke): key Firestore doc mein; malik + Full App mulazim dono chala
+saken; natija save ho; kuch khud na badle. WhatsApp paigham aur rozana khulasa
+MANA hain.
+NAYI FILE ai-tally.js (pure, node se test shuda):
+ * shrinkForAI(file,1800px,q .85) — AI ke liye BARI tasveer (save nahi hoti;
+   dayPhoto wali 900px tasveerein hindson ke liye dhundli hain).
+ * pickModel(key) — GET /v1beta/models se behtareen "gemini-X-flash" chunta hai
+   (Google naam badalta rehta hai; model ka naam hard-code NA karein).
+ * readPages({key,model,images}) — POST /v1beta/models/{model}:generateContent,
+   header x-goog-api-key, parts: inline_data + TALLY_PROMPT,
+   generationConfig {temperature:0,responseMimeType:'application/json'}.
+ * parseItems(text) -> [{amount(rupay,int),text,struck,unsure}]
+ * matchTally(book,rows,totals): 1) bilkul barabar 2) kaapi mein likha total
+   (Sale/Wasooli/Akhrajat/change/cash) 3) milti-julti = ek hindsa badla / ek
+   hindsa zyada-kam (x10) / do hindse aage-peeche. Milan RAQAM par hota hai,
+   naam sirf dikhane ke liye (Urdu likhai mein naam kam parhe jate hain).
+   Test: kaapi 13330/11900/2800 vs app 13380/11800/28000 -> teeno "near".
+app.js: canTally(), aiKeyForm() (Settings > "AI key", sirf malik, Test button),
+ openTally()/runTally()/tallyHTML() — Daily Sale ke Sale column mein button
+ [data-ai-tally]. Edit button purane entryForm / purchaseForm kholta hai.
+cloud.js: getAiConfig/setAiConfig (blueAccess/aiConfig), getTally/setTally
+ (dayTally/{YYYY-MM-DD}).
+RULES (v1.81, PUBLISH ZAROORI): match blueAccess/aiConfig { allow get: if blueStaff() }
+ (malik generic block se likhta/parhta hai; 'aiConfig' jaan boojh kar staff ki
+ aam list mein NAHI). match dayTally/{day}: read malik+blueStaff; create/update
+ keys hasOnly [date,items,model,by,at], by==uid, malik ya (aaj + blueStaff +
+ dayOpen). Sasti shart pehle (1000-expression hadd yaad rahe).
+KHATRA: key Full App mulazim ke browser tak jati hai — malik Google console mein
+key par restriction / hadd lagaye; key Settings se badli ja sakti hai.
+AGLA (tay shuda tarteeb): no.1 purchase bill ki photo se entry (wohi key),
+phir no.2 bol kar entry, no.5 khate se sawal. Malik ne yeh bhi poocha hai ke AI
+se SALE BILL ban sakta hai ya nahi — jawab: haan (parchi ki photo / bol kar ->
+Sale cart bhar jaye, banda dekh kar Save kare; POS bill PC ka sale-post.js
+banata hai). Abhi sirf tajweez hai, plan + OK baqi.

@@ -37,6 +37,11 @@ function listenPurchase(next,fail){let ended=false;const stops=[];const stop=()=
 function valid(r){validateExtraRecord(r);if(!r||typeof r.id!=='string'||!/^[a-zA-Z0-9_-]{1,160}$/.test(r.id)||!['party','entry','closing','expenseAccount','dayPhoto','import','pdfChunk','cashCustody','reminder'].includes(r.type))throw Error('Invalid backup record');if(r.type==='party'&&(typeof r.name!=='string'||!Number.isSafeInteger(r.opening)))throw Error('Invalid account');if(r.type==='entry'&&(!Number.isSafeInteger(r.amount)||r.amount<=0||!['sale','collection','payment','expense','credit','borrow','purchaseCash'].includes(r.kind)))throw Error('Invalid entry');if(['closing','entry'].includes(r.type)&&!/^\d{4}-\d{2}-\d{2}$/.test(r.date||''))throw Error('Invalid date');if(r.type==='closing'&&(!['cash','change','opening'].some(k=>r[k]!=null)||['cash','change','opening'].some(k=>r[k]!=null&&(!Number.isSafeInteger(r[k])||r[k]<0))))throw Error('Invalid closing');return r}
 const authReady=new Promise(resolve=>{const off=authSDK.onAuthStateChanged(auth,()=>{off();resolve()})});
 return {authReady,currentUid:()=>auth.currentUser?.uid||'',
+ // v1.81: AI key (malik likhta hai; malik + Full App mulazim parhte hain) aur sham ke milan ka natija
+ async getAiConfig(){const d=await getDoc(other('blueAccess','aiConfig'));return d.exists()?d.data():null},
+ async setAiConfig(cfg){await setDoc(other('blueAccess','aiConfig'),{provider:'gemini',key:String(cfg.key||'').trim(),model:String(cfg.model||'').trim(),updatedAt:Date.now(),by:auth.currentUser?.uid||''})},
+ async getTally(day){const d=await getDoc(other('dayTally',day));return d.exists()?d.data():null},
+ async setTally(day,data){await setDoc(other('dayTally',day),{date:day,items:(data.items||[]).slice(0,300).map(x=>({amount:Math.round(Number(x.amount)||0),text:String(x.text||'').slice(0,80),struck:x.struck===true,unsure:x.unsure===true})),model:String(data.model||''),by:auth.currentUser?.uid||'',at:Date.now()})},
  // v1.79.11: rules ki sharton ko alag-alag azmao (bisect)
  async probe(){const u=auth.currentUser,uid=u?.uid||'',out={};
   try{await getDocFromServer(other('blueAccess','cashRevision'));out.staffRead='ok'}catch(e){out.staffRead='FAIL '+(e.code||e.message)}

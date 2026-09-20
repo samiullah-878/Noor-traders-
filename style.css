@@ -308,3 +308,19 @@ body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actio
 #similarBox{margin:10px 0}
 #similarBox .source-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(0,0,0,.08)}
 #similarBox .source-row button{flex:0 0 auto}
+
+/* v1.81: sham ka milan (AI) */
+.tally h4{margin:14px 0 4px;font-size:1rem}
+.tally h4.red{color:#b3261e}
+.tally .source-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-top:1px solid rgba(0,0,0,.08)}
+.tally .source-row>span{flex:1 1 0;min-width:0;overflow-wrap:anywhere}
+.tally .source-row button{flex:0 0 auto}
+.tally-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0}
+.tally-sum>div{background:#eef3fd;border-radius:12px;padding:8px 10px}
+.tally-sum small{display:block;opacity:.75}
+.tally-sum b.green{color:#1c7c43}.tally-sum b.red{color:#b3261e}
+.tally details{margin:12px 0;border-top:1px solid rgba(0,0,0,.08);padding-top:8px}
+.tally summary{font-weight:700;cursor:pointer;padding:6px 0}
+.tally-edit{display:grid;grid-template-columns:minmax(0,9rem) 1fr auto;gap:8px;align-items:center;margin:6px 0}
+.tally-edit small{overflow-wrap:anywhere}
+.tally-pick{display:block;text-align:center;padding:18px;border:2px dashed #9db7ea;border-radius:14px;font-weight:700;cursor:pointer;margin:10px 0}

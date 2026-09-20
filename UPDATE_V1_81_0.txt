@@ -1,0 +1,6 @@
+Blue Khata v1.81.0
+INSTALL: 1) firestore.rules Firebase console mein PUBLISH (copy page se). 2) ZIP GitHub par, Sync / Update 1.81.0. 3) Malik: Settings (⋮) > "AI key" mein Gemini key paste > Test > Save.
+- NAYA: "🤖 AI se milao (kaapi)" — Daily Sale ke Sale column mein. Kaapi ke pages ki 1-4 tasveerein do; AI sirf raqmein parhta hai; milan app ka code karta hai: milti-julti raqam (13,330/13,380 · 2,800/28,000), kaapi mein hai app mein nahi, app mein hai kaapi mein nahi, kaapi mein likhe total, dono ka jama aur farq.
+- AI ki parhi hui list theek ki ja sakti hai ("Dobara milao" — AI dobara nahi chalta). Natija din ke sath save hota hai. KOI ENTRY KHUD NAHI BADALTI.
+- Key: malik + Full App mulazim ko milti hai; Purchase / Stock / Sale logins ko nahi. GitHub par nahi jati.
+- Shamil: v1.80.0 (ghalti pakarna, milte-julte khate, due patti).
