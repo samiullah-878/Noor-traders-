@@ -1,6 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
+import { smartSearch, setAliases, aliasOf } from './smart-search.js?v=1.76.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -23,7 +24,9 @@ let flags = {}, countOff = false;
 const flagOf = id => flags[String(id)] || {};
 const countLocked = () => countOff && !isOwner();
 
+let aliasStop = null;
 export function stockSetup(opts) {
+  if (!aliasStop && opts?.cloud?.listenAliases) aliasStop = opts.cloud.listenAliases(m => setAliases(m));   // v1.75: doosre naam
   cloud = opts.cloud;
   rerender = opts.rerender || (() => {});
   notice = opts.notice || (() => {});
@@ -351,8 +354,7 @@ function renderStockInner() {
   }
 
   let shown = items.filter(passes);
-  if (q) shown = shown.filter(r => norm(r.name).includes(q) || norm(r.code).includes(q)
-    || (Array.isArray(r.bc) && r.bc.some(b => norm(b).includes(q))));
+  if (q) { const hit = new Set(smartSearch(shown, q, 500)); shown = shown.filter(r => hit.has(r)); }   // v1.75: smart search
 
   if (sort === 'stock') shown.sort((a, b) => b.stock - a.stock);
   else shown.sort((a, b) => NAMEC.compare(String(a.name), String(b.name)));
@@ -606,6 +608,7 @@ function openLabels(id) {
       ${x.subId ? `<button type="button" data-sub-edit="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Badlein">✏️</button><button type="button" class="danger" data-sub-del="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Hatao">🗑️</button>` : ''}
     </div>`).join('') || '<p>Is item ka koi barcode nahi.</p>'}</div>
     <div class="account-tools" style="margin-top:8px"><button type="button" data-sub-new="${esc(r.id)}">➕ Naya barcode</button></div>
+    ${isOwner() ? `<label style="display:block;margin-top:10px">Doosre naam (search ke liye, comma se alag)<input type="text" data-alias-item="${esc(r.id)}" value="${esc(aliasOf(r.id))}" placeholder="misal: surkh mirch, lal mirch, chilli" maxlength="120"></label>` : (aliasOf(r.id) ? `<p class="muted" style="font-size:.85em">Doosre naam: ${esc(aliasOf(r.id))}</p>` : '')}
     <p class="muted" style="font-size:.85em;margin-top:8px">Label PC ke TSC printer par chhapta hai (PC par label-print chalna chahiye).</p>`;
   if (!d.open) d.showModal();
 }
@@ -647,9 +650,10 @@ function openTransfer() {
   $('dialogBody').innerHTML = `<div class="tr-head"><label>Se (nikle)${sel('from', trFrom)}</label><label>Ko (jaye)${sel('to', trTo)}</label></div>
     <div class="scan-find" style="margin:8px 0"><input class="scan-q" data-tr-q type="search" placeholder="🔍 Item ka naam / code likhein" autocomplete="off"><div class="scan-hits" data-tr-hits hidden></div></div>
     <div class="account-tools"><button type="button" data-tr-scan="1">📷 Scan</button></div>
-    <div class="tr-lines">${trLines.map((l, i) => { const have = trStockOf(trFrom, l.id); const short = trFrom !== 1 && have < l.qty - 0.0005;
-      return `<div class="tr-line${short ? ' short' : ''}"><div class="tr-name"><b>${esc(l.name)}</b><small>${esc(branchName(trFrom, collect().names))} mein stock ${num(have)}${short ? ' · <b class="red">⛔ kam hai</b>' : ''}</small></div>
-      <input type="text" inputmode="decimal" value="${num(l.qty)}" data-tr-qty="${i}" aria-label="Tadad"><button type="button" class="danger" data-tr-del="${i}">✕</button></div>`; }).join('') || '<p class="muted">Upar se item chunein ya scan karein.</p>'}</div>
+    <div class="tr-lines">${trLines.map((l, i) => { const have = trStockOf(trFrom, l.id); const short = trFrom !== 1 && have < l.qty - 0.0005; const pk = Number(l.pack) || 0;
+      return `<div class="tr-line${short ? ' short' : ''}"><div class="tr-name"><b>${esc(l.name)}</b><small>${esc(branchName(trFrom, collect().names))} mein stock ${num(have)}${pk > 1 ? ' · 1 ' + esc(l.cName || 'Ctn') + ' = ' + num(pk) : ''}${short ? ' · <b class="red">⛔ kam hai</b>' : ''}</small>${pk > 1 ? `<small>= ${num(l.qty)} ${esc(l.uName || 'Pcs')}</small>` : ''}</div>
+      ${pk > 1 ? `<label class="tr-q"><span>${esc(l.cName || 'Ctn')}</span><input type="text" inputmode="decimal" value="${num(l.ctn || 0)}" data-tr-ctn="${i}"></label>` : ''}
+      <label class="tr-q"><span>${esc(l.uName || 'Pcs')}</span><input type="text" inputmode="decimal" value="${num(l.pcs ?? l.qty)}" data-tr-pcs="${i}"></label><button type="button" class="danger" data-tr-del="${i}">✕</button></div>`; }).join('') || '<p class="muted">Upar se item chunein ya scan karein.</p>'}</div>
     ${trLines.length ? `<p class="tr-sum">${trLines.length} items · kul ${num(kul)}</p>` : ''}
     <label>Note<input type="text" data-tr-note maxlength="150" placeholder="ikhtiyari"></label>
     <div class="account-tools"><button type="button" class="primary" data-tr-save="1"${trLines.length ? '' : ' disabled'}>✓ POS mein transfer note banao</button>${trLines.length ? '<button type="button" data-tr-clear="1">Saaf</button>' : ''}</div>
@@ -659,16 +663,17 @@ function openTransfer() {
   if (!trStop && cloud?.listenTransfers) trStop = cloud.listenTransfers(list => { trList = list; const h = document.querySelector('[data-tr-hist]'); if (h) h.innerHTML = trHistHTML(); });
   const q = $('dialogBody').querySelector('[data-tr-q]'), hits = $('dialogBody').querySelector('[data-tr-hits]');
   q.oninput = () => { const t = norm(q.value); if (t.length < 2) { hits.hidden = true; return; } const { items } = collect();
-    const found = items.filter(r => norm(r.name).includes(t) || norm(r.code).includes(t) || (Array.isArray(r.bc) && r.bc.some(b => norm(b).includes(t)))).slice(0, 8);
+    const found = smartSearch(items, q.value, 8);   // v1.75
     hits._src = found; hits.innerHTML = found.map((r, i) => `<button type="button" data-tr-pick="${i}"><b>${esc(r.name)}</b><small>${esc(r.code || '')} · ${esc(branchName(trFrom, collect().names))} ${num(trStockOf(trFrom, r.id))}</small></button>`).join('') || '<p>Nahi mila</p>'; hits.hidden = false; };
   hits.onclick = e => { const b = e.target.closest('[data-tr-pick]'); if (!b) return; trAdd(hits._src[Number(b.dataset.trPick)]); };
   q.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const r = (hits._src || [])[0]; if (r) trAdd(r); } };
 }
-function trAdd(r, qty = 1) { if (!r) return; const old = trLines.find(l => String(l.id) === String(r.id)); if (old) old.qty = Math.round((old.qty + qty) * 1000) / 1000; else trLines.push({ id: r.id, name: r.name, qty }); openTransfer(); }
+function trCalc(l) { const pk = Number(l.pack) || 0; l.qty = Math.round(((pk > 1 ? (Number(l.ctn) || 0) * pk : 0) + (Number(l.pcs) || 0)) * 1000) / 1000; return l; }
+function trAdd(r, qty = 1) { if (!r) return; const old = trLines.find(l => String(l.id) === String(r.id)); if (old) { old.pcs = Math.round(((Number(old.pcs) || 0) + qty) * 1000) / 1000; trCalc(old); } else trLines.push(trCalc({ id: r.id, name: r.name, pack: Number(r.pack) || 0, cName: r.cName || 'Ctn', uName: r.uName || 'Pcs', ctn: 0, pcs: qty, qty })); openTransfer(); }
 function trHistHTML() {
   if (!trList.length) return '<p class="muted">Koi nahi.</p>';
   const names = collect().names;
-  return trList.slice(0, 20).map(j => `<div class="tr-hist-row"><div><b>${j.status === 'done' ? (j.op === 'delete' ? 'Hataya' : 'STN ' + esc(j.transferNo || '')) : j.status === 'failed' ? '⚠️ Nahi bana' : '⏳ PC...'}</b> · ${esc(branchName(j.from, names))} → ${esc(branchName(j.to, names))} · ${(j.lines || []).length} items<br><small>${esc(new Date(j.at).toLocaleString('en-PK'))}${j.error ? ' · <span class="red">' + esc(j.error) + '</span>' : ''}${(j.lines || []).slice(0, 4).map(l => ' · ' + esc(l.name) + ' ' + num(l.qty)).join('')}</small></div>
+  return trList.slice(0, 20).map(j => `<div class="tr-hist-row"><div><b>${j.status === 'done' ? (j.op === 'delete' ? 'Hataya' : 'STN ' + esc(j.transferNo || '')) : j.status === 'failed' ? '⚠️ Nahi bana' : '⏳ PC...'}</b> · ${esc(branchName(j.from, names))} → ${esc(branchName(j.to, names))} · ${(j.lines || []).length} items<br><small>${esc(new Date(j.at).toLocaleString('en-PK'))}${j.error ? ' · <span class="red">' + esc(j.error) + '</span>' : ''}${(j.lines || []).slice(0, 4).map(l => ' · ' + esc(l.name) + ' ' + (Number(l.pack) > 1 && (l.ctn || l.pcs != null) ? num(l.ctn || 0) + ' ' + esc(l.cName || 'Ctn') + (l.pcs ? ' + ' + num(l.pcs) + ' ' + esc(l.uName || 'Pcs') : '') : num(l.qty))).join('')}${j.reprints?.length ? ` · <b>dobara print ${j.reprints.length}x</b>` : ''}</small></div>
     ${j.status === 'done' && j.op !== 'delete' ? `<button type="button" data-tr-print="${esc(j.id)}">🖨️</button>${isOwner() && Date.now() - j.at < 86400000 ? `<button type="button" class="danger" data-tr-undo="${esc(j.id)}">🗑️</button>` : ''}` : ''}</div>`).join('');
 }
 async function trSave(btn) {
@@ -679,7 +684,8 @@ async function trSave(btn) {
   if (!confirm(`${trLines.length} items · ${branchName(trFrom, collect().names)} → ${branchName(trTo, collect().names)}\nPOS mein transfer note banayein?`)) return;
   btn.disabled = true; msg.textContent = '🖥 PC ko ja raha hai…';
   try {
-    const jid = await cloud.requestTransfer({ op: 'create', from: trFrom, to: trTo, lines: trLines.map(l => ({ itemId: l.id, name: l.name, qty: l.qty })), note, byName: '' });
+    if (trLines.some(l => !(l.qty > 0))) { msg.textContent = '⚠️ Har item ki tadad 0 se zyada likhein'; return; }
+    const jid = await cloud.requestTransfer({ op: 'create', from: trFrom, to: trTo, lines: trLines.map(l => ({ itemId: l.id, name: l.name, qty: l.qty, ctn: Number(l.ctn) || 0, pcs: Number(l.pcs) || 0, pack: Number(l.pack) || 0, cName: l.cName || 'Ctn', uName: l.uName || 'Pcs' })), note, byName: '' });
     let stop = null, done = false;
     const end = (ok, t) => { if (done) return; done = true; try { stop && stop(); } catch {} btn.disabled = false;
       if (ok) { trLines = []; notice('✓ Transfer note ' + t + ' ban gaya'); openTransfer(); } else { msg.textContent = '⚠️ ' + t; notice('Transfer nahi bana: ' + t); } };
@@ -694,7 +700,10 @@ document.addEventListener('click', e => {
   else if (t.dataset.trClear) { trLines = []; openTransfer(); }
   else if (t.dataset.trSave) trSave(t);
   else if (t.dataset.trScan) { try { $('dialog').close(); } catch {} scanPick(c => { const { items } = collect(); c = String(c).trim(); const r = items.find(x => String(x.code).trim() === c || (Array.isArray(x.bc) && x.bc.some(b => String(b).trim() === c))); if (r) trAdd(r); else { notice('"' + c + '" stock mein nahi mila'); openTransfer(); } }); }
-  else if (t.dataset.trPrint) { t.disabled = true; cloud.requestPrint({ kind: 'transfer', id: t.dataset.trPrint }).then(() => notice('🖨️ Print PC ko bheja')).catch(er => notice(er?.message || 'Nahi hua')).finally(() => { t.disabled = false; }); }
+  else if (t.dataset.trPrint) {   // v1.75: dobara print — wajah zaroori, note par bara "DOBARA PRINT" chhapta hai
+    const j = trList.find(x => x.id === t.dataset.trPrint); const n = (j?.reprints?.length || 0) + 1;
+    const reason = prompt(`Dobara print (${n}) ki wajah likhein:`); if (reason == null) return; if (!reason.trim()) { notice('Wajah likhna zaroori hai'); return; }
+    t.disabled = true; cloud.requestPrint({ kind: 'transfer', id: t.dataset.trPrint, reason: reason.trim().slice(0, 100) }).then(() => notice('🖨️ Dobara print PC ko bheja')).catch(er => notice(er?.message || 'Nahi hua')).finally(() => { t.disabled = false; }); }
   else if (t.dataset.trUndo) { const j = trList.find(x => x.id === t.dataset.trUndo); if (!j || !confirm('Transfer note ' + (j.transferNo || '') + ' POS se hata dein? Dono godam ka stock wapas ho jayega.')) return; t.disabled = true;
     cloud.requestTransfer({ op: 'delete', from: j.from, to: j.to, transferId: j.transferId, lines: j.lines }).then(() => notice('Hatane ka hukum PC ko bheja')).catch(er => notice(er?.message || 'Nahi hua')); }
 });
@@ -702,7 +711,8 @@ document.addEventListener('change', e => {
   const t = e.target;
   if (t.matches?.('[data-tr-from]')) { trFrom = Number(t.value); openTransfer(); }
   else if (t.matches?.('[data-tr-to]')) { trTo = Number(t.value); openTransfer(); }
-  else if (t.matches?.('[data-tr-qty]')) { const q = Number(String(t.value).replace(',', '.')); const l = trLines[Number(t.dataset.trQty)]; if (l && q > 0) l.qty = Math.round(q * 1000) / 1000; openTransfer(); }
+  else if (t.matches?.('[data-tr-ctn]')) { const l = trLines[Number(t.dataset.trCtn)]; if (l) { l.ctn = Math.max(0, Math.floor(Number(t.value) || 0)); trCalc(l); } openTransfer(); }
+  else if (t.matches?.('[data-tr-pcs]')) { const l = trLines[Number(t.dataset.trPcs)]; if (l) { l.pcs = Math.max(0, Math.round((Number(String(t.value).replace(',', '.')) || 0) * 1000) / 1000); trCalc(l); } openTransfer(); }
 });
 
 // v1.45.8: history ab alag khirki (dialog) mein — pehle list ke upar khulti thi aur search bohat neeche chala jata tha
@@ -735,7 +745,7 @@ function flagHTML(r) {
   const f = flagOf(r.id);
   const chk = f.checkedAt ? `<small class="stat-note">✓ Check hua ${esc(stampText(f.checkedAt))}${f.checkedNote ? ' · ' + esc(f.checkedNote) : ''}</small>` : '';
   return `<div class="account-tools sc-flags">
-    <button type="button" data-flag-baqi="${esc(r.id)}"${f.baqi ? ' class="selected"' : ''}>⏳ ${f.baqi ? 'Baqi hai (nishan hatao)' : 'Baqi — aur ginna hai'}</button>
+    <button type="button" data-flag-baqi="${esc(r.id)}"${f.baqi ? ' class="selected"' : ''}>⏳ ${f.baqi ? 'Baqi hai — aur likh kar dabayein, ya nishan hatao' : 'Baqi — aur ginna hai (likha hua jama hoga)'}</button>
   </div>${chk}`;
 }
 function countHTML(r) {
@@ -824,9 +834,9 @@ document.addEventListener('click', e => {
   const sv = e.target.closest?.('[data-count-save]');
   if (sv) { saveCount(sv.dataset.countSave, sv); return; }
   const ad = e.target.closest?.('[data-count-add]');
-  if (ad) { saveCount(ad.dataset.countAdd, ad, true); return; }
+  if (ad) { saveCount(ad.dataset.countAdd, ad, 'baqi'); return; }
   const fb = e.target.closest?.('[data-flag-baqi]');
-  if (fb) { setFlag(fb.dataset.flagBaqi, { baqi: !flagOf(fb.dataset.flagBaqi).baqi }); return; }
+  if (fb) { const it = collect().items.find(r => String(r.id) === fb.dataset.flagBaqi); const v = it ? readCount(it, false) : null; if (v && !v.bad && v.total > 0) saveCount(fb.dataset.flagBaqi, fb, 'baqi'); else setFlag(fb.dataset.flagBaqi, { baqi: !flagOf(fb.dataset.flagBaqi).baqi }); return; }
   const fc = e.target.closest?.('[data-flag-check]');
   if (fc) { setFlag(fc.dataset.flagCheck, { check: !flagOf(fc.dataset.flagCheck).check }); return; }
   const fd = e.target.closest?.('[data-flag-checked]');
@@ -988,7 +998,9 @@ const zeroText = item => {
   return `System mein: ${num(item.stock)} ${item.uName || 'Pcs'} · Farq: ${gap > 0 ? '+' : ''}${num(gap)}${rs}`;
 };
 
-async function saveCount(itemId, button, jama = false) {
+// v1.76 (malik ki hidayat): "⏳ Baqi — aur ginna hai" = jo likha hai save + pichhli mein JAMA + nishan + khane saaf;
+// phir "Save" = likha hua pichhli (baqi) ginti mein jama karke FINAL, nishan hat jata hai. Nishan na ho to Save = pehle jaisa (badal deta hai).
+async function saveCount(itemId, button, mode = 'save') {
   if (!round) { notice('Pehle "Nayi ginti shuru" dabayein'); return; }
   if (countLocked()) { notice('Malik ne counting band ki hui hai'); return; }
   const { items } = collect();
@@ -996,25 +1008,27 @@ async function saveCount(itemId, button, jama = false) {
   if (!item) return;
   let v = readCount(item, false), add = null;
   if (v.bad) { notice('Ginti sahi likhein'); return; }
-  if (jama) {
-    const old = countOf(pickedBranch, item);
-    if (!old) { notice('Pehle Save karein, phir + Jama'); return; }
-    if (v.total === 0) { notice('Jama karne ke liye qty likhein'); return; }
-    if (!confirm(`"${item.name}": ${num(v.total)} ${item.uName || 'Pcs'} pehli ginti (${num(countedPcs(old))}) mein jama honge — kul ${num(countedPcs(old) + v.total)}. Theek hai?`)) return;
-    const note = '';
+  const old = countOf(pickedBranch, item);
+  const baqi = flagOf(item.id).baqi;
+  const jama = (mode === 'baqi' && old) || (mode === 'save' && baqi && old);
+  if (mode === 'baqi' && v.total === 0 && !old) { notice('Pehle ginti likhein, phir "Baqi"'); return; }
+  if (jama && v.total > 0) {
     const per = Number(item.pack) || 0;
-    const total = Math.round((countedPcs(old) + v.total) * 1000) / 1000;   // v1.68: 3 decimal (0.125 kg)
+    const total = Math.round((countedPcs(old) + v.total) * 1000) / 1000;
     const ctn = per > 1 ? Math.floor(total / per) : 0;
     const pcs = Math.round((total - ctn * (per > 1 ? per : 0)) * 1000) / 1000;
-    add = { ...v, note: String(note).trim().slice(0, 60) };
+    add = { ...v, note: '' };
     v = { ctn, pcs, total, bad: false };
+  } else if (jama && v.total === 0 && mode === 'save') {
+    v = { ctn: Number(old.ctn) || 0, pcs: Number(old.pcs) || 0, total: countedPcs(old), bad: false };   // kuch nahi likha: pichhli ginti hi final
   }
   if (v.total === 0 && !confirm(`"${item.name}" ki ginti ZERO save karein?\n\n${zeroText(item)}`)) return;
   button.disabled = true;
   try {
-    await writeCount(item, v, add);
-    if (add && flagOf(item.id).baqi) setFlag(item.id, { baqi: false });
-    notice(item.name + (add ? ` — jama: ab ${num(v.total)} ${item.uName || 'Pcs'}` : ' — ginti mehfooz'));
+    if (!(mode === 'save' && jama && v.total === countedPcs(old) && !add)) await writeCount(item, v, add);
+    if (mode === 'baqi') { if (!baqi) await setFlag(item.id, { baqi: true }); const id = CSS.escape(String(item.id)); ['ctn', 'pcs', 'tot'].forEach(k => { const b = $('list').querySelector(`[data-count-${k}="${id}"]`); if (b) b.value = ''; }); }
+    else if (baqi) await setFlag(item.id, { baqi: false });
+    notice(item.name + (mode === 'baqi' ? ` — ab tak ${num(v.total)} ${item.uName || 'Pcs'} (baqi ginna hai)` : add ? ` — jama: kul ${num(v.total)} ${item.uName || 'Pcs'} ✓` : ' — ginti mehfooz'));
   } catch (e) {
     notice(e?.message || 'Ginti save nahi hui');
   } finally {
@@ -1346,7 +1360,7 @@ async function openScanner() {
     chosen = null;
     const q = String(qBox.value || '').toLowerCase().trim();
     if (!q) { hitBox.hidden = true; hitBox.innerHTML = ''; return; }
-    const src = saleRoot() && saleFindHook ? saleFindHook(q) : items.filter(r => String(r.name).toLowerCase().includes(q) || String(r.code || '').toLowerCase().includes(q)).slice(0, 12);
+    const src = saleRoot() && saleFindHook ? saleFindHook(q) : smartSearch(items, q, 12);   // v1.75
     hitBox.hidden = false;
     hitBox.innerHTML = src.length ? src.map((r, i) => `<button type="button" data-pick="${i}"><b>${esc(r.name)}</b><small>${esc(r.code || '')}${r.rate ? ' · ' + num(r.rate) : ''}${r.stock != null ? ' · stock ' + num(r.stock) : ''}</small></button>`).join('') : '<p class="stat-note">Nahi mila</p>';
     hitBox._src = src;
@@ -1611,3 +1625,11 @@ function hardScan(code) {
   rerender();
   setTimeout(() => focusItem(r.item), 80);
 }
+
+// v1.75: alias save (malik) — likhne ke 1 sec baad
+let aliasT = null;
+document.addEventListener('input', e => {
+  const t = e.target; if (!t.matches?.('[data-alias-item]')) return;
+  clearTimeout(aliasT);
+  aliasT = setTimeout(() => { cloud?.setAlias?.(t.dataset.aliasItem, t.value).then(() => notice('✓ Doosre naam save')).catch(er => notice('Nahi hua: ' + (er?.message || er))); }, 1200);
+});

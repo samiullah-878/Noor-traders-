@@ -288,3 +288,7 @@ body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actio
 
 /* v1.74: pick-mode scanner */
 .scan-box.pick-mode .scan-names,.scan-box.pick-mode .scan-sum{display:none}
+
+/* v1.75 */
+.sale-mic{min-height:0;padding:6px 10px;font-size:18px;border:0;border-radius:10px;background:#e6eeff}
+.tr-q{display:flex;flex-direction:column;align-items:center;flex:0 0 auto}.tr-q span{font-size:11px;color:#4a5a73}.tr-q input{width:56px;text-align:center;font-weight:700;padding:6px 2px}

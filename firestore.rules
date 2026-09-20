@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -59,7 +59,7 @@ service cloud.firestore {
         && request.resource.data.rev is int && request.resource.data.rev == resource.data.rev + 1;
     }
     match /businesses/noor-traders/blueAccess/{id} {
-      allow get: if isOwner() || (isStaff() && id in ['config','purchaseConfig','stockConfig','saleConfig','dayLock']);
+      allow get: if isOwner() || (isStaff() && id in ['config','purchaseConfig','stockConfig','saleConfig','dayLock','itemAliases']);   // v1.75: itemAliases (items ke doosre naam)
     }
     // Din band ka nishan: mulazim sirf AAJ ka din band kar sakta hai (khol nahi sakta). Malik upar wale rule se sab kuch.
     match /businesses/noor-traders/blueAccess/dayLock {
@@ -113,7 +113,7 @@ service cloud.firestore {
     match /businesses/noor-traders/printJobs/{jobId} {
       allow read: if isOwner() || blueStaff() || stockStaff() || purchaseStaff();
       allow create: if (isOwner() || blueStaff() || stockStaff() || purchaseStaff())
-        && request.resource.data.keys().hasOnly(['kind','id','partyName','status','by','at'])
+        && request.resource.data.keys().hasOnly(['kind','id','partyName','reason','byName','status','by','at'])
         && request.resource.data.kind in ['purchase','transfer'] && request.resource.data.status == 'new'
         && request.resource.data.by == request.auth.uid;
     }

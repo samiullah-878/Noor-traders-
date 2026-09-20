@@ -740,3 +740,25 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
   bhi); loop mein pehla code milte hi beep, finishScan (sale/ginti ko haath nahi), cb(code). pick-mode mein search/tadad/
   list/"Ho gaya" chhupe. subForm ka 📷: dialog band, form ki halat (code/qty/rate/show) yaad, code milte hi subForm dobara
   code ke saath. Transfer ka 📷 bhi scanPick se (item mile to trAdd, warna wapas openTransfer). scanOnce ab istemal nahi.
+
+2026-09-20 — v1.75.0: SMART SEARCH + transfer Ctn/Pcs + dobara print wajah
+- smart-search.js (naya module): fold() Roman Urdu farq barabar (ph/f, c/q->k, z->j, w->v, ee->i, oo->u, aa->a, double
+  letters), tokens kisi bhi tarteeb (word-start 4, poora 5, hissa 2, 1-harf ghalti 1.5), barcode ka hissa (aakhri hindse),
+  alias (blueAccess/itemAliases {map:{itemId:'naam1, naam2'}}, malik label khirki mein likhta hai), ranking: naam-shuru +10,
+  phir is device par bikne ki ginti (localStorage sam-item-hits-v1, noteHit() addItem par, 30 din). STOCK ka koi asar nahi.
+  smartSearch() ab sale search, camera search, Stock tab filter, transfer search sab jagah. voiceSearch() (🎤, ur-PK->en-IN).
+  Sale search khali + focus -> "Aksar bikne wale" 10 (topItems). Enter par ek hi smart hit ho to seedha add.
+- Transfer: line mein Ctn + Pcs khane (pack > 1), qty = ctn*pack + pcs; job lines ctn/pcs/pack/cName/uName; PC note par
+  "2 CTN + 3 PCS (27)". History 🖨️ = dobara print: wajah prompt (zaroori) -> printJobs.reason; PC note ke neeche bara
+  "DOBARA PRINT (n)" + wajah + waqt, transferJobs.reprints[] (history "dobara print nx").
+- Rules: blueAccess itemAliases staff get; printJobs keys + reason, byName. PUBLISH. sw.js: smart-search.js cache.
+
+2026-09-20 — v1.76.0: ginti "Baqi" ka naya tareeqa (malik ki hidayat)
+- saveCount(itemId, btn, mode 'save'|'baqi'):
+  * "⏳ Baqi — aur ginna hai" (khane mein ginti likh kar): save + pichhli ginti mein JAMA + baqi nishan + khane saaf,
+    notice "ab tak N". Khali khane par sirf nishan on/off (pehle jaisa).
+  * "Save" jab baqi nishan laga ho: likha hua pichhli mein jama karke FINAL, nishan hat jata hai (khali chhora to pichhli
+    ginti hi final). Nishan na ho to Save pehle jaisa (badal deta hai). Har save history mein.
+- PC sync-bills: PurchaseDetail.Qty = PIECES (kg) aur Rate = fi piece (rice 2500 kg @ 320.2 = 800,500), pehle carton
+  samjha jata tha (app "2500 Ctn = 62500 Pcs"). patch-bills-qty.js: qty = floor(Qty/pack) ctn, loose = baqi pcs,
+  totalPcs = Qty, ctn rate = Rate x pack, pcs rate = Rate. App pehle se loose dikhati hai.

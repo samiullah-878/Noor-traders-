@@ -1,10 +1,11 @@
-// sale.js — Nayi Sale (Counter / Wholesale) — v1.74.0
+// sale.js — Nayi Sale (Counter / Wholesale) — v1.76.0
 // App sale ko Firestore "appSales" mein "new" likhta hai. POS bill PC ka sale-post.js banata hai
 // (POS ke apne procedures se), rasid print karta hai aur Sale No wapas likhta hai.
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.74.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.76.0';
+import { smartSearch, topItems, noteHit, voiceSearch } from './smart-search.js?v=1.76.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -21,6 +22,7 @@ const DRAFT_KEY = 'sam-sale-draft';
 let cloud = null, rerender = () => {}, notice = () => {}, isOwner = () => false, uidOf = () => '';
 let mode = 'counter', godam = null, cart = [], cash = null, note = '', saving = false;
 let sales = [], salesDay = '', stopSales = null, salesErr = '';
+let searchFocused = false;   // v1.75
 
 export function saleSetup(o) {
   cloud = o.cloud; rerender = o.rerender || rerender; notice = o.notice || notice;
@@ -78,6 +80,7 @@ function subQty(it, code) {
 // v1.62: har add (scan / search) bill mein NAYI line — jama nahi hota. Har line ki apni pehchan (k).
 const newKey = () => 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 function addItem(it, qtyPcs = 1) {
+  noteHit(it.id);   // v1.75: ranking ke liye
   {
     cart.push({
       k: newKey(), id: it.id, code: it.code || '', name: it.name, pack: Number(it.pack) || 0,
@@ -103,12 +106,7 @@ setSaleDelHook(key => {
 setSaleCartHook(() => cart.map(l => ({ key: l.k || (l.k = newKey()),
   item: { id: l.id, code: l.code, name: l.name, pack: Number(l.pack) || 0, cName: l.cName, uName: l.uName, rate: crateOf(l), rate2: Number(l.rate) || 0 },
   pcs: Number(l.pcs) || 0, ctn: Number(l.ctn) || 0 })));
-setSaleFindHook(q => {
-  const { items } = stock();
-  const n = String(q || '').toLowerCase();
-  return items.filter(r => String(r.name).toLowerCase().includes(n) || String(r.code || '').toLowerCase().includes(n)
-    || (Array.isArray(r.bc) && r.bc.some(b => String(b).toLowerCase().includes(n)))).slice(0, 12);
-});
+setSaleFindHook(q => smartSearch(stock().items, q, 12));   // v1.75: smart search
 // camera par tadad ke buttons -> bill ki line
 setSaleQtyHook((it, q, key) => {
   // v1.62: camera ke buttons AAKHRI scan wali line par (line ki pehchan se), warna is item ki aakhri line
@@ -201,13 +199,14 @@ export function renderSale() {
 
   const q = norm(si?.value || '');
   let found = '';
-  const camRow = `<div class="sale-camrow"><button type="button" class="sale-cam" data-sale-camera="1">📷 Scan</button><span class="stat-note">Naam likhein ya scan karein</span></div>`;
+  const camRow = `<div class="sale-camrow"><button type="button" class="sale-cam" data-sale-camera="1">📷 Scan</button><button type="button" class="sale-mic" data-sale-mic="1" title="Awaz se">🎤</button><span class="stat-note">Naam likhein ya scan karein</span></div>`;
+  if (!q && searchFocused) {   // v1.75: khali search par aksar bikne wale items
+    const top = topItems(s.items, 10);
+    if (top.length) found = `<div class="sale-found"><p class="stat-note" style="margin:0 0 4px">Aksar bikne wale</p>${top.map(r => `<button type="button" class="sale-hit" data-sale-add="${esc(r.id)}"><b>${esc(r.name)}</b><small>${esc(r.code || '')} · R ${num(r.rate)} · stock ${num(r.stock)}</small></button>`).join('')}</div>`;
+  }
   if (q) {
     const codeKey = r => { const c = String(r.code || '').trim(); const n = Number(c); return Number.isFinite(n) && c !== '' ? String(n).padStart(20, '0') : c; };
-    const hits = s.items.filter(r => norm(r.name).includes(q) || norm(r.code).includes(q)
-      || (Array.isArray(r.bc) && r.bc.some(b => norm(b).includes(q))))
-      .sort((a, b) => codeKey(a).localeCompare(codeKey(b)))   // POS jaisi tarteeb (code ke hisaab se)
-      .slice(0, 25);
+    const hits = smartSearch(s.items, q, 25);   // v1.75: smart search (spelling, tarteeb, alias, zyada bikne wale pehle)
     found = `<div class="sale-found">${hits.length ? hits.map(r => `<button type="button" class="sale-hit" data-sale-add="${esc(r.id)}">
         <b>${esc(r.name)}</b><small>${esc(r.code || '')} · R ${num(r.rate)}${r.wrate ? ' · W ' + num(r.wrate) : ''} · stock ${num(r.stock)}${Number(r.pack) > 1 ? ' · 1 ' + esc(r.cName || 'Ctn') + ' = ' + num(r.pack) : ''}</small>
       </button>`).join('') : '<p class="stat-note">Koi item nahi mila</p>'}</div>`;
@@ -286,6 +285,7 @@ document.addEventListener('keydown', e => {
   e.preventDefault();
   const { items } = stock();
   let it = findByCode(items, v);
+  if (!it) { const hs = smartSearch(items, v, 2); if (hs.length === 1) it = hs[0]; }
   if (!it) {
     const q = norm(v);
     const hits = items.filter(r => norm(r.name).includes(q) || norm(r.code).includes(q));
@@ -297,6 +297,8 @@ document.addEventListener('keydown', e => {
 });
 
 document.addEventListener('click', async e => {
+  const mic = e.target.closest?.('[data-sale-mic]');
+  if (mic) { const ok = voiceSearch(t => { const s = $('search'); if (s) { s.value = t; s.dispatchEvent(new Event('input', { bubbles: true })); } }); if (!ok) notice('Is phone/browser mein awaz se search nahi chalti'); return; }
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {
@@ -433,3 +435,7 @@ async function save() {
     saving = false; rerender();
   }
 }
+
+// v1.75: search khali ho aur focus mein aaye to "aksar bikne wale" dikhao
+document.addEventListener('focusin', e => { if (e.target?.id === 'search' && document.querySelector('[data-sale-root]') && !searchFocused) { searchFocused = true; if (!e.target.value.trim()) rerender(); } });
+document.addEventListener('focusout', e => { if (e.target?.id === 'search' && searchFocused) { searchFocused = false; setTimeout(() => { if (document.querySelector('[data-sale-root]') && !$('search')?.value.trim() && document.activeElement?.id !== 'search') rerender(); }, 250); } });

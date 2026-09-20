@@ -1,0 +1,3 @@
+Blue Khata v1.76.0
+INSTALL: ZIP GitHub par (1.75 shamil, rules v1.75). PC: bills-install.bat (purchase bill ki tadad theek).
+- Ginti: "Baqi — aur ginna hai" likha hua jama karke khana saaf; phir "Save" final.
