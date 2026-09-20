@@ -114,3 +114,25 @@ deta hi nahi tha. 1.79.4 mein:
  * window 'unhandledrejection' par bhi permission-denied pakra jata hai.
 AGLI AI: malik se poora toast text mangein — usi se pata chalega ke kaunsa
 collection / field fail ho raha hai. Andaze se rules mat badlein.
+
+=== v1.79.5 — ASAL MASLA MIL GAYA: "Din band" (dayLock) ===
+Malik ne naye tafseeli error ka screenshot bheja:
+ "Ijazat nahi mili · entry · collection · Rs 2 · 2026-09-20 · <party> · khula ·
+  mulazim login · badle: · Missing or insufficient permissions"
+Yani: POS / POSTED ka is se koi taalluq nahi tha. Mulazim (full scope) ki
+AAJ ki normal entry Firestore par reject ho rahi thi.
+WAJAH: rules ki har blueStaff line mein dayOpen() shart hai — din band ho to
+mulazim ka koi write nahi. App ki taraf watchDayLock() SIRF EK DAFA chalta tha,
+aur wo bhi cloud connect ke foran baad (login se pehle). Us waqt listen nakam
+ho jaye (auth nahi hui / rules) to fail callback stopDayLock=null kar deta tha
+aur dobara koshish kabhi nahi hoti thi. Natija: app samajhta raha ke din khula
+hai (dayLock={}), UI ne entry karne di, aur Firestore ne mana kar diya —
+wajah batae baghair.
+FIX (app.js):
+ * watchDayLock() ab onSession (login) par bhi chalta hai, aur nakami par
+   8 second baad khud dobara koshish karta hai.
+ * naya flag dayLockReady (aage kaam aayega).
+ * failDetail(): agar din band hai aur full mulazim login hai to seedha likhta
+   hai "AAJ KA DIN BAND HAI — malik Din wapas kholein dabaye".
+FORI HAL MALIK KE LIYE: apne login se "🔓 Din wapas kholein" dabayein, phir
+mulazim entry kar sakega.
