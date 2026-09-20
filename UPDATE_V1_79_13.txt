@@ -1,0 +1,4 @@
+Blue Khata v1.79.13
+INSTALL: ZIP GitHub par. Sync / Update, 1.79.13. (Rules wahi v1.79.12 — dobara publish ki zaroorat nahi.)
+- Full mulazim ab AAJ ki apni/khuli entry EDIT kar sakta hai (button pehle bhi dikhta tha, magar Save par "Sirf malik edit kar sakta hai" aa jata tha).
+- Pichhli tareekh, POSTED entry, transfer aur band khata — pehle ki tarah sirf malik.

@@ -36,7 +36,20 @@ async function addPurchaseSupplier(name,phone){const id=crypto.randomUUID(),uid=
 function listenPurchase(next,fail){let ended=false;const stops=[];const stop=()=>{ended=true;stops.forEach(f=>f())};const failed=e=>{stop();fail(e)};let purchases=[],suppliers=[],a=false,b=false,pendingA=false,pendingB=false,cachedA=true,cachedB=true,pendingIds=[];const emit=()=>{if(!ended&&a&&b)next({rows:[...purchases,...suppliers],pending:pendingA||pendingB,cached:cachedA||cachedB,pendingIds})};const off1=onSnapshot(query(col,where('type','==','entry'),where('purchase','==',true)),{includeMetadataChanges:true},s=>{purchases=s.docs.map(d=>({...d.data(),id:d.id}));pendingIds=s.docs.filter(d=>d.metadata.hasPendingWrites).map(d=>d.id);a=true;pendingA=s.metadata.hasPendingWrites;cachedA=s.metadata.fromCache;emit()},failed);const off2=onSnapshot(supplierCol,{includeMetadataChanges:true},s=>{suppliers=s.docs.map(d=>({...d.data(),id:d.id,type:'party',category:'Supplier',opening:0}));b=true;pendingB=s.metadata.hasPendingWrites;cachedB=s.metadata.fromCache;emit()},failed);stops.push(off1,off2);if(ended)stop();return stop}
 function valid(r){validateExtraRecord(r);if(!r||typeof r.id!=='string'||!/^[a-zA-Z0-9_-]{1,160}$/.test(r.id)||!['party','entry','closing','expenseAccount','dayPhoto','import','pdfChunk','cashCustody','reminder'].includes(r.type))throw Error('Invalid backup record');if(r.type==='party'&&(typeof r.name!=='string'||!Number.isSafeInteger(r.opening)))throw Error('Invalid account');if(r.type==='entry'&&(!Number.isSafeInteger(r.amount)||r.amount<=0||!['sale','collection','payment','expense','credit','borrow','purchaseCash'].includes(r.kind)))throw Error('Invalid entry');if(['closing','entry'].includes(r.type)&&!/^\d{4}-\d{2}-\d{2}$/.test(r.date||''))throw Error('Invalid date');if(r.type==='closing'&&(!['cash','change','opening'].some(k=>r[k]!=null)||['cash','change','opening'].some(k=>r[k]!=null&&(!Number.isSafeInteger(r[k])||r[k]<0))))throw Error('Invalid closing');return r}
 const authReady=new Promise(resolve=>{const off=authSDK.onAuthStateChanged(auth,()=>{off();resolve()})});
-return {authReady,currentUid:()=>auth.currentUser?.uid||'',async diagnose(){const u=auth.currentUser,out={uid:u?.uid||'(login nahi)',anon:!!u?.isAnonymous,email:u?.email||'',scope:accessScope};
+return {authReady,currentUid:()=>auth.currentUser?.uid||'',
+ // v1.79.11: rules ki sharton ko alag-alag azmao (bisect)
+ async probe(){const u=auth.currentUser,uid=u?.uid||'',out={};
+  try{await getDocFromServer(other('blueAccess','cashRevision'));out.staffRead='ok'}catch(e){out.staffRead='FAIL '+(e.code||e.message)}
+  try{await getDocFromServer(other('blueAccess','dayLock'));out.dayLockRead='ok'}catch(e){out.dayLockRead='FAIL '+(e.code||e.message)}
+  const now=Date.now(),base={createdAt:now,by:uid,updatedAt:now,updatedBy:uid,rev:1};
+  const id1='zz-test-acct-'+now;
+  try{await setDoc(ref(id1),{...base,id:id1,type:'expenseAccount',name:'ZZ TEST (hata dein)'});out.createNoDate='ok'}catch(e){out.createNoDate='FAIL '+(e.code||e.message)}
+  const pk=new Date(now+5*3600*1000).toISOString().slice(0,10),id2='zz-test-entry-'+now;
+  try{await setDoc(ref(id2),{...base,id:id2,type:'entry',kind:'expense',amount:1,date:pk,partyId:'',account:'ZZ TEST',note:'ZZ TEST (hata dein)'});out.createToday='ok ('+pk+')'}catch(e){out.createToday='FAIL ('+pk+') '+(e.code||e.message)}
+  try{const r=await fetch('version.json?ts='+now,{cache:'no-store'});const h=r.headers.get('date');out.serverDate=h?new Date(new Date(h).getTime()+5*3600*1000).toISOString().slice(0,16).replace('T',' ')+' PKT':'(header nahi mila)'}catch(e){out.serverDate='FAIL '+(e.message||'')}
+  out.deviceNow=new Date(now+5*3600*1000).toISOString().slice(0,16).replace('T',' ')+' PKT';
+  return out},
+ async diagnose(){const u=auth.currentUser,out={uid:u?.uid||'(login nahi)',anon:!!u?.isAnonymous,email:u?.email||'',scope:accessScope};
  try{const s=await getDoc(other('blueStaffSessions',out.uid));out.session=s.exists()?s.data():'(session doc nahi mila)'}catch(e){out.sessionErr=e.code||e.message}
  const cid=out.session&&out.session.credentialId;
  if(cid){try{const k=await getDoc(other('blueStaffKeys',cid));out.key=k.exists()?k.data():'(key doc nahi mila)'}catch(e){out.keyErr=e.code||e.message}}

@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -36,10 +36,16 @@ service cloud.firestore {
       let session = get(/databases/$(database)/documents/businesses/noor-traders/blueStaffSessions/$(request.auth.uid)).data;
       return get(/databases/$(database)/documents/businesses/noor-traders/blueStaffKeys/$(session.credentialId)).data;
     }
-    function blueStaff() { return isStaff() && staffAccount().active == true && (!('scope' in staffAccount()) || staffAccount().scope == 'full'); }
-    function purchaseStaff() { return isStaff() && staffAccount().active == true && staffAccount().scope == 'purchase'; }
-    function stockStaff() { return isStaff() && staffAccount().active == true && staffAccount().scope == 'stock'; }
-    function saleStaff() { return isStaff() && staffAccount().active == true && staffAccount().scope == 'sale'; }
+    // v1.79.12: Firestore ki hadd = 1000 expressions fi request. Pehle blueStaff() ke andar staffAccount()
+    // 3 dafa (har dafa 2 get) chalta tha aur blueKhata ki har allow line use dobara bulati thi — mulazim ki
+    // sada entry hadd paar kar ke "permission denied" ho jati thi. Ab account EK dafa parh kar acctIs() ko diya jata hai.
+    function acctIs(a, scope) {
+      return a.active == true && (scope == 'full' ? (!('scope' in a) || a.scope == 'full') : a.scope == scope);
+    }
+    function blueStaff() { return isStaff() && acctIs(staffAccount(), 'full'); }
+    function purchaseStaff() { return isStaff() && acctIs(staffAccount(), 'purchase'); }
+    function stockStaff() { return isStaff() && acctIs(staffAccount(), 'stock'); }
+    function saleStaff() { return isStaff() && acctIs(staffAccount(), 'sale'); }
     match /businesses/noor-traders/{collectionName}/{docId} {
       allow read: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount'];
       // Linked transfers have a paired-write rule below, including for older app versions.
@@ -225,7 +231,7 @@ service cloud.firestore {
       }
       allow create: if isOwner() && validTransfer();
       // v1.61: mulazim (full, din khula) sirf AAJ ka naya transfer bana sakta hai; edit/delete sirf malik
-      allow create: if blueStaff() && dayOpen() && validTransfer()
+      allow create: if ('transferId' in request.resource.data) && blueStaff() && dayOpen() && validTransfer()
         && isToday(request.resource.data.date) && request.resource.data.rev == 1
         && request.resource.data.by == request.auth.uid && request.resource.data.updatedBy == request.auth.uid
         && !request.resource.data.get('deleted', false);
@@ -246,7 +252,7 @@ service cloud.firestore {
           && d.updatedBy == request.auth.uid
           && d.keys().hasOnly(['id','type','kind','purchase','partyId','amount','date','note','goodsPhotos','billPhotos','photos','account','by','createdAt','updatedBy','updatedAt','rev','deleted']);
       }
-      allow create: if purchaseStaff() && validPurchase() && request.resource.data.by == request.auth.uid
+      allow create: if request.resource.data.get('purchase', false) == true && purchaseStaff() && validPurchase() && request.resource.data.by == request.auth.uid
         && request.resource.data.rev == 1 && !('deleted' in request.resource.data);
       allow update: if resource.data.get('posStatus', 1) != 2 && ((blueStaff() && dayOpen()) || purchaseStaff()) && resource.data.type == 'entry'
         && resource.data.purchase == true && isToday(resource.data.date) && validPurchase()
@@ -254,7 +260,7 @@ service cloud.firestore {
         && request.resource.data.date == resource.data.date
         && request.resource.data.rev == resource.data.rev + 1
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['kind','partyId','amount','note','goodsPhotos','billPhotos','photos','account','deleted','posPending','posVoucher','posBill','updatedAt','updatedBy','rev']);   // v1.71: posBill (mulazim aaj ki cash purchase ko POS bill se jor sakta hai)
-      allow create: if purchaseStaff() && request.resource.data.type == 'party'
+      allow create: if request.resource.data.type == 'party' && purchaseStaff()
         && request.resource.data.id == recordId && request.resource.data.category == 'Supplier'
         && request.resource.data.opening == 0 && request.resource.data.rev == 1
         && request.resource.data.by == request.auth.uid && request.resource.data.updatedBy == request.auth.uid
@@ -276,9 +282,9 @@ service cloud.firestore {
           && (!('changeRows' in d) || d.changeRows is list)
           && (!('openingRows' in d) || d.openingRows is list);
       }
-      allow create: if blueStaff() && dayOpen() && validClosing()
+      allow create: if request.resource.data.type == 'closing' && blueStaff() && dayOpen() && validClosing()
         && request.resource.data.by == request.auth.uid && request.resource.data.rev == 1;
-      allow update: if resource.data.get('posStatus', 1) != 2 && blueStaff() && dayOpen() && resource.data.type == 'closing'
+      allow update: if resource.data.type == 'closing' && resource.data.get('posStatus', 1) != 2 && blueStaff() && dayOpen()
         && isToday(resource.data.date) && validClosing()
         && request.resource.data.rev == resource.data.rev + 1
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['opening','change','cash','openingRows','changeRows','cashRows','updatedAt','updatedBy','rev']);
@@ -299,10 +305,10 @@ service cloud.firestore {
           && m.amount is int && m.amount > 0
           && m.note is string && m.note.size() <= 1000 && m.at is int;
       }
-      allow create: if blueStaff() && dayOpen() && validCustody() && validLastMove()
+      allow create: if request.resource.data.type == 'cashCustody' && blueStaff() && dayOpen() && validCustody() && validLastMove()
         && request.resource.data.moves.size() == 1
         && request.resource.data.by == request.auth.uid && request.resource.data.rev == 1;
-      allow update: if resource.data.get('posStatus', 1) != 2 && blueStaff() && dayOpen() && resource.data.type == 'cashCustody'
+      allow update: if resource.data.type == 'cashCustody' && resource.data.get('posStatus', 1) != 2 && blueStaff() && dayOpen()
         && isToday(resource.data.date) && validCustody() && validLastMove()
         && request.resource.data.moves == resource.data.moves.concat([request.resource.data.moves[resource.data.moves.size()]])
         && request.resource.data.rev == resource.data.rev + 1
@@ -333,19 +339,18 @@ service cloud.firestore {
       }
       allow update: if resource.data.get('posStatus', 1) != 2 && blueStaff() && dayOpen() && staffEditEntry();
       // Khate ka naam / phone / category (baqaya nahi badalta — opening sirf malik)
-      allow update: if resource.data.get('posStatus', 1) != 2 && blueStaff() && dayOpen()
-        && resource.data.type in ['party','expenseAccount']
+      allow update: if resource.data.type in ['party','expenseAccount'] && resource.data.get('posStatus', 1) != 2 && blueStaff() && dayOpen()
         && request.resource.data.type == resource.data.type
         && request.resource.data.rev == resource.data.rev + 1
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','category','note','dasti','hasPhoto','updatedAt','updatedBy','rev']);
 
-      allow create: if blueStaff() && dayOpen()
+      allow create: if request.resource.data.type in ['entry', 'party', 'expenseAccount', 'dayPhoto']
+        && !('transferId' in request.resource.data)
+        && blueStaff() && dayOpen()
         && request.resource.data.by == request.auth.uid
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.rev == 1
-        && !('transferId' in request.resource.data)
-        && request.resource.data.type in ['entry', 'party', 'expenseAccount', 'dayPhoto']
         && !('deleted' in request.resource.data)
         && (!(request.resource.data.type in ['entry','dayPhoto']) || isToday(request.resource.data.date))
         && (request.resource.data.type != 'entry' ||

@@ -193,3 +193,96 @@ AGLI AI: "Missing or insufficient permissions" par sab se pehle uid ka milan
 dekhein (Login check). Yeh ghalti dobara ho sakti hai agar kahin bhi
 session.user.uid ko write payload mein seedha istemal kiya jaye — hamesha
 cloud.currentUid() istemal karein.
+
+=== v1.79.10 — abhi bhi ruka hua (jaanch jari) ===
+1.79.9 (live uid) ke baad bhi mulazim ki entry par permission-denied.
+Nakam payload: by = updatedBy = WANM5DyRbxUb8gloVve9gDV33gm2 (yani live uid
+ab sahi likha ja raha hai). Matlab ab shak blueStaffSessions/{uid} par hai:
+har staff login signInAnonymously se NAYA uid banata hai (auth-controller.js
+line ~126) aur usi waqt createPasswordSession() session doc likhta hai. Agar
+kisi wajah se wo doc us naye uid ke liye maujood na ho (ya kisi doosri tab ne
+login badal diya ho), to rules ki staffAccount() = get(blueStaffSessions/{uid})
+fail kar jati hai aur har write ruk jata hai — sab kuch warna theek dikhta hai.
+NAYA is version mein:
+ * Login check ke neeche khulasa: uid abhi vs payload ka by (mel ✅/❌) aur
+   session doc mila ya nahi — scroll kiye baghair nazar aata hai.
+ * checkSessionDoc(): login ke 2.5 second baad khud chalta hai; session doc ya
+   active key na mile to foran saaf paigham deta hai.
+NOTE: malik ke phone par 5 browser tabs khuli hui thin. Firebase auth ek hi
+browser mein share hota hai — ek tab ka naya login doosri tab ka uid badal
+deta hai. Malik ko keh diya gaya hai ke sirf EK tab rakhein.
+
+=== 2026-09-20 sham — NATIJA: ghalti DEPLOYED rules mein hai, app mein nahi ===
+Mulazim ke phone ka Login check (v1.79.10) — sab ✅:
+  uid (auth)  = payload.by = payload.updatedBy   (mel khata hai)
+  session doc = {credentialId, createdAt} mojood
+  key doc     = {name:"Mulazim", scope:"full", active:true, loginEnabled:true}
+  dayLock     = khula;  payload: type entry, kind collection, amount 200 (int),
+  date aaj, rev 1, na 'deleted' na 'transferId'.
+Repo ki firestore.rules (blueKhata, "allow create: if blueStaff() && dayOpen()…")
+ki HAR shart is payload par poori hoti hai — phir bhi permission-denied.
+Is ka ek hi matlab: Firebase console mein jo rules PUBLISHED hain wo repo wali
+file jaise nahi (purana version / adhoora paste). Malik ko phone par rules
+file kholne/copy karne mein masla tha (.rules 0 KB dikhta tha).
+HAL: ek-button copy page banaya (rules-copy.html, claude.ai artifact) — malik
+wahan se poore rules copy kar ke console mein Publish kare. Publish ke baad
+Rules ki doosri line "BLUE KHATA v1.79.2 …" honi chahiye.
+AGLI AI: agar phir bhi masla ho to malik se console ke Rules tab ki pehli
+3 lines ka screenshot mangein — wohi bataega ke kaunsa version deployed hai.
+
+=== v1.79.11 — RULES BISECT PROBE (meri pichhli theory ghalat nikli) ===
+Malik ne Firebase console ke Rules tab ke screenshot bheje: rules v1.79.2
+PUBLISHED hain aur repo wali file se harf-ba-harf milte hain (project
+note-traders-khata, Database default). Yani "rules publish nahi hue" ghalat tha.
+Ab soorat: deployed rules = repo rules; payload har shart poori karta hai;
+login record theek; din khula — phir bhi mulazim ki create permission-denied.
+cloud.add() sada setDoc hai (koi batch / cashRevision sath nahi jata).
+Is liye sharton ko alag-alag azmane ka probe banaya (cloud.js probe()):
+ 1. getDocFromServer(blueAccess/cashRevision)  -> sirf blueStaff()
+ 2. getDocFromServer(blueAccess/dayLock)
+ 3. create expenseAccount "ZZ TEST" -> blueStaff+dayOpen+by/updatedBy/rev (tareekh ke baghair)
+ 4. create entry kind expense amount 1, date = aaj (PKT) -> + isToday + amount/kind
+ + server ka waqt (version.json ke Date header se) aur phone ka waqt.
+Login check -> "🧪 Rules test chalayein". Natije se pata chalega kaunsi shart
+tooti. Test "ZZ TEST" naam ke 1-2 record bana sakta hai — malik delete kar de.
+
+=== v1.79.12 — ★ GHALIB WAJAH: Firestore ki 1000-expression hadd ★ ===
+Sab kuch check ho chuka tha aur theek tha: deployed rules = repo rules (console
+ke screenshot), login record active+full, uid = by = updatedBy, din khula,
+payload har shart poori karta hai, cloud.add sada setDoc. Phir bhi mulazim ki
+create par permission-denied; malik ki entry theek.
+FARQ: malik ki request generic block ki pehli allow par pass ho jati hai (sasti).
+Mulazim ki request blueKhata ki SAATON allow-create lines chalwati hai (transfer,
+purchase x2, closing, custody, aam entry) aur har ek blueStaff()/purchaseStaff()
+bulati hai. Purana blueStaff() staffAccount() ko 3 dafa chalata tha (har dafa 2
+get + lambe path). Firestore: "max 1,000 expressions evaluated per request" —
+hadd paar ho to sirf permission-denied milta hai, wajah nahi. Lines har version
+ke sath barhti gayin (v1.61 transfer, cashCustody, v1.78 posStatus…), is liye
+"update ke baad" shuru hua.
+FIX (firestore.rules, matlab wahi):
+ * acctIs(a, scope) — staffAccount() ab fi helper EK dafa evaluate hota hai.
+ * create lines par sasti shart pehle: 'transferId' in data / purchase==true /
+   type=='party' / 'closing' / 'cashCustody'; aam entry wali line mein type aur
+   !transferId pehle, phir blueStaff().
+ * update lines (closing / cashCustody / party) par type ki shart pehle.
+NOTE: yeh natija mantiqi tor par nikala gaya hai (emulator yahan nahi chal
+sakta). Agar publish ke baad bhi masla rahe to Login check -> "Rules test
+chalayein" ka screenshot mangein — wo bataega kaunsi shart tooti.
+AGLI AI: rules mein nayi allow line daalte waqt SASTI shart pehle rakhein aur
+blueStaff()/purchaseStaff() ko kam se kam bulayein.
+
+=== v1.79.12 KA NATIJA + v1.79.13 ===
+v1.79.12 ke halke rules PUBLISH hote hi mulazim ki entry save hone lagi —
+yani 1000-expression hadd wali tashkhees DURUST thi. (Malik: "ho gayi hai".)
+v1.79.13: malik ne kaha "same day mein mulazim edit kar sakta hai, yahan nahi
+ho raha". Wajah app ke andar tazaad:
+ * canEditEntry(e) (button dikhata hai) aur rules ka staffEditEntry() dono
+   full mulazim ko AAJ ki entry edit karne dete hain,
+ * magar save() ke non-owner guard mein sirf purchase / cashCustody / closing /
+   soft-delete ki istisna thi — aam entry ka edit chhoot gaya tha, is liye
+   "Sirf malik edit kar sakta hai" aata tha.
+FIX: save() mein nayi istisna — existing.type==='entry' && canEditEntry(existing)
+&& existing.date===today() && data.date===today(). Rules nahi chhue.
+AGAR edit par "Ijazat nahi mili" aaye: rules ki update lines 251 / 311 / 334
+(blueKhata) par bhi sasti shart pehle lagani hogi (type=='entry', purchase,
+deleted) — wohi 1000-expression wala masla update par bhi ho sakta hai.
