@@ -779,3 +779,15 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
 - Rules: postJobs (sirf malik create/read); blueKhata ke har update/delete par posStatus != 2 (malik bhi) — unpost PC se.
 - Bill dekhein: status line (Posted / Cancelled / khula); munafa hata diya (malik ki hidayat).
 - PC: transfer-sync v3 (handlePost + har 5 min sweepStatus), patch-posting.js (sync.js posStatus, sync-bills status).
+
+2026-09-20 — v1.79.0: login par "Password aaj ke liye yaad rakhein" (malik: har roz naya)
+- index.html: #rememberPw checkbox, #forgetPw button. app.js (aakhir mein): localStorage 'sam-remember-pw-v1'
+  {day, items{'owner:<email>'|'staff:<scope>': XOR+base64}, last}; din badalte hi sab mit jata hai.
+- Kamyab login + tick = us combo ka password yaad (last = yeh). Role / Access / email badalne par yaad wala ho to
+  khud requestSubmit (auto login). App khulte (stopBooting) aakhri combo khud khulta hai, magar Logout ke baad
+  (sessionStorage sam-no-auto) nahi. Yaad wala fail ho to mita kar naya poochhta hai. Settings se staff password badla
+  to us scope ka yaad wala mit jata hai. "Yaad kiye passwords mitao" sab mitata hai. Rules mein tabdeeli nahi.
+
+2026-09-20 — v1.79.1: purchase bill mein sale rate ghalat item ka aa raha tha (rice 000146 -> doosre item ka Rs 3.6)
+- showBill findIt: pehle naam (+ code) se milan; naam se na mile to code sirf tab jab bilkul ek item ka asal code ho
+  (bc / sub-barcode se nahi). Na mile to "Sale rate nahi mila". Aage: sync-bills lines mein ItemID bhejna behtar.
