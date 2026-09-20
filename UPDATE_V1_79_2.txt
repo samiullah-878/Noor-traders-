@@ -1,0 +1,7 @@
+Blue Khata v1.79.2
+INSTALL: ZIP GitHub par. Sync / Update, 1.79.2.
+- POS bill aur cash purchase ka milan theek: "Milao" button ab har un-linked POS bill par hamesha.
+- Auto-milan nakam ho to wajah screen par dikhti hai (pehle khamoshi se gum ho jati thi).
+- Cash purchase 3 din ki bajaye 7 din tak dhoondi jati hai; party ke khate par bhi auto-milan chalta hai.
+- Malik ke liye: doosri party ki barabar raqam wali cash purchase bhi Milao list mein (confirm ke baad).
+- "Ijazat nahi mili" paigham ab wajah bataata hai (POS mein posted / naye rules).
