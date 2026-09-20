@@ -153,3 +153,14 @@ credentialId, phir blueStaffKeys/{credentialId}. Login ki apni sharayit narm hai
 (active !== false chalta hai), is liye login ho jata hai magar write ruk sakta hai.
 AGLI AI: pehle mulazim ke phone par Login check chalwayein aur uska screenshot
 mangein. Us ke baghair rules ya app mat badlein.
+
+=== v1.79.7 — mulazim ka Settings modal khamoshi se toot raha tha ===
+1.79.6 mein "Login check" button to dikha, magar dabane par kuch nahi hota tha.
+WAJAH: $('settings').onclick ke andar modal() ke foran baad MALIK-ONLY elements
+istemal hote hain (restore, restoreSave, imports, syncSuppliers, staffPass,
+changePass, trashBtn). Mulazim ke login par ye elements render hi nahi hote,
+to pehla hi `restoreFile.onchange=` null par TypeError phenk deta tha aur us ke
+baad ka saara code (button handlers samet) chalta hi nahi tha. Yeh purana bug
+hai — sirf ab zahir hua kyunki naya button us ke baad laga tha.
+FIX: (1) Login check ab document-level delegation se chalta hai (#loginCheck),
+(2) upar wale saat malik-only handlers ko if($('id')) se guard kar diya.
