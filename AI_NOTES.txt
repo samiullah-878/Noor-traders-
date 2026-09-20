@@ -85,3 +85,21 @@ Wajah: optimisticEdit() ka failure handler (app.js ~line 163) error() ko
 ASYNC call karta hai. Yani Milao / link ka nakam write jis bhi screen par
 banda us waqt khara ho, wahan toast dikha deta hai. Screen ka us error se
 koi taalluq nahi hota — agli dafa isi dhoke mein na aayein.
+
+=== v1.79.2 — TEESRA HISSA: full-mulazim ka link (malik ne kaha "problem mulazim ki entry par") ===
+Bug: firestore.rules ki staffEditEntry() (blueStaff = Full App mulazim) ki
+affectedKeys list mein 'posBill' aur 'posDiffOk' the hi nahi. purchaseStaff
+wali line (~250) mein yeh v1.71 se mojood thay. Natija: FULL login wale
+mulazim ke device par Milao / auto-milan hamesha permission-denied deta tha.
+Fix: staffEditEntry() ki list mein 'posBill','posDiffOk' shamil kiye.
+Baqi sab waise hi: aaj ki entry, dayOpen, rev+1, posStatus != 2.
+
+=== v1.79.3 — CACHE WALI GHALTI (zaroori sabaq) ===
+1.79.2 ke andar app.js DO dafa badla gaya, magar version number wahi raha.
+sw.js ka CACHE naam ('sam-blue-khata-1.79.2') aur index.html ke ?v=1.79.2
+bhi wahi rahe — is liye phone purana app.js hi cache se uthata raha aur malik
+ko purana error message dikhta raha (isi se pata chala ke naya code nahi chala).
+SABAQ: app.js / sale.js / pos-stock.js waghera mein zara bhi tabdeeli ho to
+version.json + sw.js ka CACHE + index.html ke ?v= HAR DAFA barhana zaroori hai,
+warna update phone tak pahunchta hi nahi.
+1.79.3 = 1.79.2 ka poora kaam + naya tafseeli error message (failDetail).

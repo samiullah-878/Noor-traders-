@@ -1,0 +1,5 @@
+Blue Khata v1.79.3
+INSTALL: ZIP GitHub par. Sync / Update, 1.79.3. + firestore.rules Firebase console mein PUBLISH karein.
+- 1.79.2 ka poora kaam (Milao / link fix) — version barha diya taake purana cache saaf ho.
+- "Ijazat nahi mili" ab poori tafseel deta hai: kaunsa record, raqam, party, POSTED hai ya nahi, kaunsa field.
+- rules: POSTED bill par sirf posBill / posDiffOk link; full mulazim bhi link kar sakta hai.

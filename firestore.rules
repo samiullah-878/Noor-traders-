@@ -329,7 +329,7 @@ service cloud.firestore {
           && d.kind in ['sale','collection','payment','expense','credit','borrow','purchaseCash']
           && d.updatedBy == request.auth.uid && d.rev == resource.data.rev + 1
           && d.diff(resource.data).affectedKeys().hasOnly(['kind','partyId','amount','date','note','account','dailyIncluded',
-              'photos','goodsPhotos','billPhotos','purchase','posPending','posVoucher','deleted','updatedAt','updatedBy','rev']);
+              'photos','goodsPhotos','billPhotos','purchase','posPending','posVoucher','posBill','posDiffOk','deleted','updatedAt','updatedBy','rev']);   // v1.79.2: posBill / posDiffOk (full mulazim bhi aaj ki cash purchase ko POS bill se jor sake — purchase-scope ko yeh ijazat pehle se thi)
       }
       allow update: if resource.data.get('posStatus', 1) != 2 && blueStaff() && dayOpen() && staffEditEntry();
       // Khate ka naam / phone / category (baqaya nahi badalta — opening sirf malik)
