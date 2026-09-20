@@ -393,3 +393,10 @@ RATE = FI CARTON jab ctn ho; sirf pcs hon to fi piece. autoTotal: ctn*rate +
  pack/cName/uName line par copy hote hain aur khano ke placeholder badal jate
  hain. RULES NAHI BADLE (items ke andar ke maps deep-validate nahi hote) —
  v1.82 publish kaafi hai. parseBill node-tested (ctn/pcs + purana qty).
+
+=== v1.82.2 — EDIT wale purchase par bhi AI (malik: "Edit wala bill bi ai mein ja ske") ===
+billAIFill(existing): nayi photo na lagi ho to existing.billPhotos (save shuda
+dataURL, ~1000px) se parhta hai — sath warning ke woh chhoti hoti hai, nayi
+photo behtar. Pehle se items hon to confirm() ke baad hi overwrite. Rules /
+cloud NAHI badle — sirf app.js. Yaad rahe: save shuda photos packPhotos
+(1000px/120KB) wali hain, shrinkForAI (1800px) sirf nayi file par chalta hai.

@@ -1,0 +1,5 @@
+Blue Khata v1.82.2 (= v1.82.1 + Edit par AI)
+INSTALL: sirf ZIP, Sync/Update 1.82.2. Rules wahi v1.82 (pehle publish ho chuke to kuch nahi karna).
+- Purchase entry EDIT karte waqt bhi "📷 Bill ki photo se bharo (AI)" chalta hai: nayi photo lagi ho to us se, warna SAVE SHUDA bill photo se (chhoti hoti hai — hindse kam saaf; behtar ke liye nayi photo lagayein).
+- Pehle se items hon to AI chalane se pehle poochta hai (list badal jayegi).
+- Ctn/Pcs, parchi print, rush-retry — sab v1.82.1 jaisa.
