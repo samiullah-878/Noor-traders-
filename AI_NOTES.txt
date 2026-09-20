@@ -172,3 +172,24 @@ phir bhi create reject ho raha hai. Is liye ab aakhri nakam write ka POORA
 payload (window.lastFail) Login check ke neeche JSON mein dikhaya jata hai
 (pictures chhupa kar). Usi se pata chalega ke kaun sa field rule tor raha hai
 (by / updatedBy / rev / type / kind / amount / date / koi extra field).
+
+=== v1.79.9 — ★ ASAL JAR (root cause) MIL GAYI ★ ===
+Login check ke "Aakhri nakam write" JSON se sab saaf ho gaya:
+  auth ka asal uid : UkPw3L1KfBff56F5sQAQuDZMQo73   (diagnose se)
+  entry par likha  : "by"/"updatedBy": "PtyC2G7Ol8X4bhmLMtQDV29TUF12"
+Rules ki shart (blueKhata staff create): request.resource.data.by == request.auth.uid
+Dono alag the -> permission-denied. POS / POSTED / dayLock / staff password —
+in mein se koi wajah nahi thi (sab check ho chuke thay, sab theek nikle).
+KYUN: app ka `session` object purane (khatam ho chuke) anonymous login ka uid
+pakde hue tha. Anonymous user dobara ban gaya (naya uid) magar session update
+nahi hua, aur save() payload mein session.user.uid hi likhta tha.
+FIX:
+ * cloud.js: naya currentUid() — auth.currentUser.uid seedha deta hai.
+ * app.js save(): payload ka by/updatedBy ab LIVE uid se (cloud.currentUid()),
+   aur agar session ka uid purana ho to session usi waqt naye uid par set ho
+   jata hai (console.warn ke sath).
+ * Login check ke natije mein uid ka farq bhi likha jata hai.
+AGLI AI: "Missing or insufficient permissions" par sab se pehle uid ka milan
+dekhein (Login check). Yeh ghalti dobara ho sakti hai agar kahin bhi
+session.user.uid ko write payload mein seedha istemal kiya jaye — hamesha
+cloud.currentUid() istemal karein.

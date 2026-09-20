@@ -1,0 +1,5 @@
+Blue Khata v1.79.9
+INSTALL: ZIP GitHub par. Sync / Update, 1.79.9.
+- ASAL MASLA HAL: mulazim ki entry "Ijazat nahi mili" deti thi kyunki entry par PURANE login ka uid (by / updatedBy) likha ja raha tha, jabke Firestore ke rules naye login ka uid maangte hain. Ab har entry par LIVE uid likha jata hai.
+- Login check ab uid ka farq bhi pakad kar batata hai.
+- 1.79.2-1.79.8 ka kaam bhi shamil: POS bill Milao, tafseeli error, mulazim ka Settings menu theek.
