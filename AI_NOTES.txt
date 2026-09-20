@@ -59,3 +59,29 @@ version.json / sw.js / index.html: 1.79.1 -> 1.79.2
   wajah bhi likhta hai — agli dafa malik se poochein ke paigham kya aaya.
 - Agar cross-party link zyada istemal hone lage to behtar hoga ke POS bill ka
   supplier badalne ka option (POS side par) banaya jaye, app mein nahi.
+
+=== v1.79.2 — DOOSRA HISSA: firestore.rules (usi chat mein baad mein) ===
+WAJAH: malik ko "Ijazat nahi mili" is liye aa raha tha ke rules ki generic
+owner-update line malik ka har update rok deti hai jab resource.data.posStatus
+== 2 (POS mein POSTED). Malik pehle "Aaj ke 10 bill post" dabata hai, phir
+Milao karta hai — Milao cash-purchase entry par posBill field likhta hai, aur
+POSTED hone ki wajah se wo write reject ho jata tha.
+BADLAV (tang aur mehfooz):
+ * firestore.rules: nayi function linkOnlyEdit() — POSTED blueKhata doc par
+   update sirf tab jayez jab badalne wale keys sirf
+   ['posBill','posDiffOk','updatedAt','updatedBy','rev'] hon.
+   Raqam / tareekh / party / kind / deleted POSTED ke baad ab bhi band hain.
+ * app.js save(): isPosted(existing) wali rok ab isLinkOnlyChange(data,existing)
+   ke sath — yani app bhi POSTED entry par sirf link jorne / alag karne deta hai.
+   Nayi helper: isLinkOnlyChange() (autoLinkTried ke bilkul upar).
+NOTE: rules mein aur kuch nahi chhua. Agar aage koi aur "Ijazat nahi mili"
+aaye to pehle app ka naya paigham parhein (wajah likhta hai), andaze se rules
+mat badlein.
+
+=== TOAST KAHAN SE AATA HAI (2026-09-20, poora repo dekhne ke baad) ===
+Malik ko "Ijazat nahi mili" Daily-sheet (Sale / Wasooli / Akhrajat) wali
+screen par dikh raha tha, halanke us screen par kuch save nahi kiya tha.
+Wajah: optimisticEdit() ka failure handler (app.js ~line 163) error() ko
+ASYNC call karta hai. Yani Milao / link ka nakam write jis bhi screen par
+banda us waqt khara ho, wahan toast dikha deta hai. Screen ka us error se
+koi taalluq nahi hota — agli dafa isi dhoke mein na aayein.

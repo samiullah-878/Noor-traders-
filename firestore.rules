@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -45,9 +45,15 @@ service cloud.firestore {
       // Linked transfers have a paired-write rule below, including for older app versions.
       allow create: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount']
         && (collectionName != 'blueKhata' || !('transferId' in request.resource.data));
+      // v1.79.2: POSTED record par sirf POS-link ke do field badal sakte hain (posBill / posDiffOk).
+      // Raqam, tareekh, party, kind, delete — sab POSTED ke baad band hi rehte hain.
+      function linkOnlyEdit() {
+        return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['posBill','posDiffOk','updatedAt','updatedBy','rev']);
+      }
       allow update: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount']
         && (collectionName != 'blueKhata' || (!('transferId' in resource.data) && !('transferId' in request.resource.data)))
-        && (collectionName != 'blueKhata' || resource.data.get('posStatus', 1) != 2);   // v1.78: POS mein posted = band
+        && (collectionName != 'blueKhata' || resource.data.get('posStatus', 1) != 2 || linkOnlyEdit());   // v1.78: POS mein posted = band · v1.79.2: sirf link ki ijazat
       allow delete: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount']
         && (collectionName != 'blueKhata' || !('transferId' in resource.data))
         && (collectionName != 'blueKhata' || resource.data.get('posStatus', 1) != 2);
