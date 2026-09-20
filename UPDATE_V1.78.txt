@@ -1,0 +1,4 @@
+Blue Khata v1.78.0
+INSTALL: 1) ZIP GitHub par. 2) firestore-v1.78.rules Publish (ZAROORI). 3) PC: posting-install.bat.
+- POS posting: purchase bill / CPV / CRV / JV par 📌 Post, ↩ Unpost (sirf malik); posted = Edit/Delete band.
+- Purchase tab: aaj ke sab khule bill ek saath post. Bill mein munafa hataya.

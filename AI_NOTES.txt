@@ -762,3 +762,20 @@ Aage: cashier "post" screen ka intezar (bill scan -> paid), sub-barcode add, reo
 - PC sync-bills: PurchaseDetail.Qty = PIECES (kg) aur Rate = fi piece (rice 2500 kg @ 320.2 = 800,500), pehle carton
   samjha jata tha (app "2500 Ctn = 62500 Pcs"). patch-bills-qty.js: qty = floor(Qty/pack) ctn, loose = baqi pcs,
   totalPcs = Qty, ctn rate = Rate x pack, pcs rate = Rate. App pehle se loose dikhati hai.
+
+2026-09-20 — v1.77.0: purchase "Bill dekhein" mein SALE rates + 🖨️ Print
+- showBill(): har line ke neeche POS ka maujooda sale rate (saleStock NOOR TRADERS items, code / bc / naam se milan):
+  Sale Cotton (rate x pack) · Piece (rate2 || rate) · Wholesale Cotton (wrate x pack) · Piece (wrate), aur
+  Munafa = piece sale - khareed fi piece (laal agar ghata). Rate column par "Khareed". Neeche 🖨️ Print (printJobs purchase).
+- Agla kaam: voucher/bill POSTING (POS jaisa, post ke baad edit band) — posting-dekho.js (sirf SELECT) se POS ke
+  Post wale khane / procedures dekh kar banega.
+
+2026-09-20 — v1.78.0: POS POSTING (malik) + purchase bill se munafa hataya
+- POS status: 1 UnPosted, 2 Posted, 3 Cancelled (VoucherStatus). Entry field posStatus (PC likhta hai), posBills.status.
+- postTarget(e): POS purchase ('pos-<PurchaseID>', kind borrow) -> {kind purchase}; posCode CPV/CRV/JV/BPV/BRV -> {kind voucher, code}.
+- postBadgeHTML: "📌 POS mein Posted" / "✖ Cancelled" + malik ke liye 📌 Post / ↩ Unpost (postJobs via cloud.requestPost,
+  watchPost se natija). Ledger (posStatusHTML) aur Purchase card dono mein. Purchase tab: "📌 Aaj ke n bill post" (bulk).
+- isPosted(e): canEditEntry / canDeleteEntry / canEditPurchase / transfer actions band, save() bhi rokta hai.
+- Rules: postJobs (sirf malik create/read); blueKhata ke har update/delete par posStatus != 2 (malik bhi) — unpost PC se.
+- Bill dekhein: status line (Posted / Cancelled / khula); munafa hata diya (malik ki hidayat).
+- PC: transfer-sync v3 (handlePost + har 5 min sweepStatus), patch-posting.js (sync.js posStatus, sync-bills status).

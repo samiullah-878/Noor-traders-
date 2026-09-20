@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -46,9 +46,11 @@ service cloud.firestore {
       allow create: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount']
         && (collectionName != 'blueKhata' || !('transferId' in request.resource.data));
       allow update: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount']
-        && (collectionName != 'blueKhata' || (!('transferId' in resource.data) && !('transferId' in request.resource.data)));
+        && (collectionName != 'blueKhata' || (!('transferId' in resource.data) && !('transferId' in request.resource.data)))
+        && (collectionName != 'blueKhata' || resource.data.get('posStatus', 1) != 2);   // v1.78: POS mein posted = band
       allow delete: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount']
-        && (collectionName != 'blueKhata' || !('transferId' in resource.data));
+        && (collectionName != 'blueKhata' || !('transferId' in resource.data))
+        && (collectionName != 'blueKhata' || resource.data.get('posStatus', 1) != 2);
     }
     // Serializes cash changes across dates/devices; contains no money or login settings.
     match /businesses/noor-traders/blueAccess/cashRevision {
@@ -116,6 +118,14 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['kind','id','partyName','reason','byName','status','by','at'])
         && request.resource.data.kind in ['purchase','transfer'] && request.resource.data.status == 'new'
         && request.resource.data.by == request.auth.uid;
+    }
+
+    // v1.78: POS posting ka hukum (sirf malik) — PC transfer-sync usp_Voucher_Post chalata hai
+    match /businesses/noor-traders/postJobs/{jobId} {
+      allow read: if isOwner();
+      allow create: if isOwner() && request.resource.data.keys().hasOnly(['op','items','status','by','at'])
+        && request.resource.data.op in ['post','unpost'] && request.resource.data.status == 'new'
+        && request.resource.data.by == request.auth.uid && request.resource.data.items.size() <= 100;
     }
 
     match /businesses/noor-traders/posStock/{docId} {
@@ -213,7 +223,7 @@ service cloud.firestore {
         && isToday(request.resource.data.date) && request.resource.data.rev == 1
         && request.resource.data.by == request.auth.uid && request.resource.data.updatedBy == request.auth.uid
         && !request.resource.data.get('deleted', false);
-      allow update: if isOwner() && 'transferId' in resource.data && validTransfer()
+      allow update: if resource.data.get('posStatus', 1) != 2 && isOwner() && 'transferId' in resource.data && validTransfer()
         && request.resource.data.transferId == resource.data.transferId
         && request.resource.data.transferRole == resource.data.transferRole
         && request.resource.data.fromPartyId == resource.data.fromPartyId
@@ -232,7 +242,7 @@ service cloud.firestore {
       }
       allow create: if purchaseStaff() && validPurchase() && request.resource.data.by == request.auth.uid
         && request.resource.data.rev == 1 && !('deleted' in request.resource.data);
-      allow update: if ((blueStaff() && dayOpen()) || purchaseStaff()) && resource.data.type == 'entry'
+      allow update: if resource.data.get('posStatus', 1) != 2 && ((blueStaff() && dayOpen()) || purchaseStaff()) && resource.data.type == 'entry'
         && resource.data.purchase == true && isToday(resource.data.date) && validPurchase()
         && (!('deleted' in resource.data) || resource.data.deleted == false)
         && request.resource.data.date == resource.data.date
@@ -262,7 +272,7 @@ service cloud.firestore {
       }
       allow create: if blueStaff() && dayOpen() && validClosing()
         && request.resource.data.by == request.auth.uid && request.resource.data.rev == 1;
-      allow update: if blueStaff() && dayOpen() && resource.data.type == 'closing'
+      allow update: if resource.data.get('posStatus', 1) != 2 && blueStaff() && dayOpen() && resource.data.type == 'closing'
         && isToday(resource.data.date) && validClosing()
         && request.resource.data.rev == resource.data.rev + 1
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['opening','change','cash','openingRows','changeRows','cashRows','updatedAt','updatedBy','rev']);
@@ -286,13 +296,13 @@ service cloud.firestore {
       allow create: if blueStaff() && dayOpen() && validCustody() && validLastMove()
         && request.resource.data.moves.size() == 1
         && request.resource.data.by == request.auth.uid && request.resource.data.rev == 1;
-      allow update: if blueStaff() && dayOpen() && resource.data.type == 'cashCustody'
+      allow update: if resource.data.get('posStatus', 1) != 2 && blueStaff() && dayOpen() && resource.data.type == 'cashCustody'
         && isToday(resource.data.date) && validCustody() && validLastMove()
         && request.resource.data.moves == resource.data.moves.concat([request.resource.data.moves[resource.data.moves.size()]])
         && request.resource.data.rev == resource.data.rev + 1
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['moves','updatedAt','updatedBy','rev']);
 
-      allow update: if ((blueStaff() && dayOpen()) || (purchaseStaff() && resource.data.purchase == true))
+      allow update: if resource.data.get('posStatus', 1) != 2 && ((blueStaff() && dayOpen()) || (purchaseStaff() && resource.data.purchase == true))
         && resource.data.type == 'entry'
         && !('transferId' in resource.data)
         && isToday(resource.data.date)
@@ -315,9 +325,9 @@ service cloud.firestore {
           && d.diff(resource.data).affectedKeys().hasOnly(['kind','partyId','amount','date','note','account','dailyIncluded',
               'photos','goodsPhotos','billPhotos','purchase','posPending','posVoucher','deleted','updatedAt','updatedBy','rev']);
       }
-      allow update: if blueStaff() && dayOpen() && staffEditEntry();
+      allow update: if resource.data.get('posStatus', 1) != 2 && blueStaff() && dayOpen() && staffEditEntry();
       // Khate ka naam / phone / category (baqaya nahi badalta — opening sirf malik)
-      allow update: if blueStaff() && dayOpen()
+      allow update: if resource.data.get('posStatus', 1) != 2 && blueStaff() && dayOpen()
         && resource.data.type in ['party','expenseAccount']
         && request.resource.data.type == resource.data.type
         && request.resource.data.rev == resource.data.rev + 1
