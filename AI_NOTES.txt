@@ -136,3 +136,20 @@ FIX (app.js):
    hai "AAJ KA DIN BAND HAI — malik Din wapas kholein dabaye".
 FORI HAL MALIK KE LIYE: apne login se "🔓 Din wapas kholein" dabayein, phir
 mulazim entry kar sakega.
+
+=== v1.79.6 — LOGIN CHECK (tashkhees ka auzaar) ===
+Mulazim ki entry par "Missing or insufficient permissions" jari raha,
+halanke: din KHULA tha (malik ke button par "Din band karein" likha tha),
+malik ne "Mulazim password" dobara Save bhi kiya, aur POSTED ka mamla bhi
+nahi tha. Andaze khatam — is liye app mein hi jaanch daali gayi.
+NAYA: Settings (⋮) mein "🔎 Login check" button (malik aur mulazim dono ko).
+ * cloud.js: naya diagnose() — blueStaffSessions/{uid}, blueStaffKeys/{credentialId}
+   aur blueAccess/dayLock parh kar wapas karta hai (har doc ka error alag).
+ * app.js: runLoginCheck() sab kuch modal mein dikhata hai + natija likhta hai
+   (key doc mila? active===true? scope=='full'? dayLock.closed aaj ka to nahi?).
+RULES KA ASOOL (yaad rahe): blueStaff() = isStaff() && staffAccount().active == true
+&& (scope na ho ya 'full'). staffAccount() DO get karta hai: session doc se
+credentialId, phir blueStaffKeys/{credentialId}. Login ki apni sharayit narm hain
+(active !== false chalta hai), is liye login ho jata hai magar write ruk sakta hai.
+AGLI AI: pehle mulazim ke phone par Login check chalwayein aur uska screenshot
+mangein. Us ke baghair rules ya app mat badlein.
