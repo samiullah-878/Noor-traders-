@@ -164,3 +164,11 @@ baad ka saara code (button handlers samet) chalta hi nahi tha. Yeh purana bug
 hai — sirf ab zahir hua kyunki naya button us ke baad laga tha.
 FIX: (1) Login check ab document-level delegation se chalta hai (#loginCheck),
 (2) upar wale saat malik-only handlers ko if($('id')) se guard kar diya.
+
+=== v1.79.8 — Login check mein nakam payload ===
+1.79.7 ka Login check chala. Natija: login record active:true + scope full,
+session doc theek, din KHULA. Yani blueStaff() aur dayOpen() dono theek hain —
+phir bhi create reject ho raha hai. Is liye ab aakhri nakam write ka POORA
+payload (window.lastFail) Login check ke neeche JSON mein dikhaya jata hai
+(pictures chhupa kar). Usi se pata chalega ke kaun sa field rule tor raha hai
+(by / updatedBy / rev / type / kind / amount / date / koi extra field).
