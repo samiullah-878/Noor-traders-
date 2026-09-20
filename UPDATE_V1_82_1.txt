@@ -1,0 +1,5 @@
+Blue Khata v1.82.1 (v1.82.0 + Ctn/Pcs)
+INSTALL: sirf ZIP GitHub par, Sync/Update 1.82.1. RULES WAHI v1.82 — agar v1.82 pehle Publish kar chuke hain to dobara Publish ki zaroorat NAHI.
+- Purchase items ki har line par ab Qty ki jagah CARTON aur PIECES ke alag khane (POS item select karne par us ke apne naam — Ctn/Pcs/Dzn — aur pack aa jata hai).
+- Rate = fi carton. Total auto: ctn x rate + khule pcs ka hisaab pack se (1 carton mein kitne). Sirf pieces hon to rate fi piece.
+- AI bill se bhi ctn / pcs alag parh kar laata hai ("5+3" = 5 carton + 3 pcs). Parchi print mein bhi "5 Ctn + 3 Pcs" dikhta hai.

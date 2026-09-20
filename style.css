@@ -326,8 +326,10 @@ body.day-locked [data-sheet],body.day-locked [data-count],body.day-locked #actio
 .tally-pick{display:block;text-align:center;padding:18px;border:2px dashed #9db7ea;border-radius:14px;font-weight:700;cursor:pointer;margin:10px 0}
 
 /* v1.82: purchase bill items editor */
-.bill-line{display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:center;border-top:1px solid rgba(0,0,0,.08);padding:8px 0}
+.bill-line{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;align-items:center;border-top:1px solid rgba(0,0,0,.08);padding:8px 0}
 .bill-line input[data-bl-name]{grid-column:1/-1}
+.bill-line select{grid-column:span 3}
+.bill-line [data-bl-total]{grid-column:span 2}
 .bill-line.unsure{background:#fff8dc;border-radius:8px;padding:8px 6px}
 .bill-line [data-bl-del]{justify-self:end}
 #billLinesBox h4{margin:12px 0 2px}

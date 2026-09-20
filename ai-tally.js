@@ -107,9 +107,10 @@ export const BILL_PROMPT = [
   '- supplier: bill dene wali dukaan / company ka naam (na mile to "").',
   '- date: bill ki tareekh YYYY-MM-DD (na mile ya samajh na aaye to "").',
   '- total: bill ka aakhri grand total, poore rupay, sirf hindse (na mile to 0).',
-  '- lines: HAR item ki line: {"name": item ka naam jaisa likha hai, "qty": ginti (number, na mile to 1), "rate": fi item qeemat rupay (na mile to 0), "total": us line ka total rupay (na mile to 0), "unsure": true agar hindsa saaf na ho}.',
+  '- lines: HAR item ki line: {"name": item ka naam jaisa likha hai, "ctn": carton / peti / bora ki ginti (na mile to 0), "pcs": khule pieces / dozen se bahar ginti (na mile to 0), "rate": fi carton qeemat rupay agar ctn hai warna fi piece (na mile to 0), "total": us line ka total rupay (na mile to 0), "unsure": true agar hindsa saaf na ho}.',
+  '- Agar bill par sirf ek ginti likhi hai aur pata nahi carton hai ya piece, to use "ctn" mein daal do. "5+3" ka matlab aksar 5 carton aur 3 pieces hota hai.',
   '- Tareekh, mobile number, address, "previous balance", tax number waghera ko LINES mein SHAMIL NA karo.',
-  'Sirf yeh JSON do, aur kuch nahi: {"supplier":"","date":"","total":0,"lines":[{"name":"","qty":1,"rate":0,"total":0,"unsure":false}]}'
+  'Sirf yeh JSON do, aur kuch nahi: {"supplier":"","date":"","total":0,"lines":[{"name":"","ctn":0,"pcs":0,"rate":0,"total":0,"unsure":false}]}'
 ].join('\n');
 
 export function parseBill(text) {
@@ -120,12 +121,13 @@ export function parseBill(text) {
   const num = v => { const n = Number(String(v ?? '').replace(/[^\d.]/g, '')); return isFinite(n) ? n : 0; };
   const lines = (Array.isArray(d.lines) ? d.lines : []).map(l => ({
     name: String(l?.name || '').slice(0, 120).trim(),
-    qty: Math.max(0, num(l?.qty)) || 1,
+    ctn: Math.max(0, num(l?.ctn)) || (Math.max(0, num(l?.qty)) || 0),   // purana "qty" bhi ctn ban jata hai
+    pcs: Math.max(0, num(l?.pcs)),
     rate: Math.max(0, num(l?.rate)),
     total: Math.round(Math.max(0, num(l?.total))),
     unsure: l?.unsure === true
   })).filter(l => l.name || l.total > 0).slice(0, 100);
-  for (const l of lines) if (!l.total && l.qty && l.rate) l.total = Math.round(l.qty * l.rate);
+  for (const l of lines) { if (!l.ctn && !l.pcs) l.ctn = 1; if (!l.total && l.ctn && l.rate) l.total = Math.round(l.ctn * l.rate); }
   return { supplier: String(d.supplier || '').slice(0, 120), date: /^\d{4}-\d{2}-\d{2}$/.test(String(d.date || '')) ? d.date : '', total: Math.round(num(d.total)), lines };
 }
 

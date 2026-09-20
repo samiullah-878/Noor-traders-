@@ -383,3 +383,13 @@ NOT TESTED: asal Gemini bill-call (sandbox mein key nahi). parseBill,
  matchTally, bundle syntax test shuda.
 AGLA: malik ke test ke baad — no.2 bol kar entry, no.5 khate se sawal; ya
  Rasta B (PC import). Har naye kaam se pehle plan + OK.
+
+=== v1.82.1 — purchase items mein CTN / PCS (malik: "Coton pieces wala nahi add kiya") ===
+Line ka dhancha ab: {name,ctn,pcs,rate,total,godam,pack?,cName,uName,itemId?,code?,unsure?}
+ (purana qty parseBill mein ctn ban jata hai; rupay hi hain, cents nahi).
+RATE = FI CARTON jab ctn ho; sirf pcs hon to fi piece. autoTotal: ctn*rate +
+ pcs*rate/pack (pack>1 ho to; pack POS item se aata hai — items ke fields
+ pack/cName/uName wahi hain jo sale.js cart mein hain). POS item select par
+ pack/cName/uName line par copy hote hain aur khano ke placeholder badal jate
+ hain. RULES NAHI BADLE (items ke andar ke maps deep-validate nahi hote) —
+ v1.82 publish kaafi hai. parseBill node-tested (ctn/pcs + purana qty).
