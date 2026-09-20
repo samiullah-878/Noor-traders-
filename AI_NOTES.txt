@@ -352,3 +352,34 @@ phir no.2 bol kar entry, no.5 khate se sawal. Malik ne yeh bhi poocha hai ke AI
 se SALE BILL ban sakta hai ya nahi — jawab: haan (parchi ki photo / bol kar ->
 Sale cart bhar jaye, banda dekh kar Save kare; POS bill PC ka sale-post.js
 banata hai). Abhi sirf tajweez hai, plan + OK baqi.
+
+=== v1.82.0 — PURCHASE BILL PHOTO -> ENTRY (AI) + AI RUSH RETRY (malik ke OK ke baad) ===
+Malik ki farmaish: bill ki pic se entry, items par edit/delete, POS item + GODAM
+select, mobile PRINT. "Saman ki picture se ginti" MANA kar di gayi (AI se
+qabil-e-bharosa nahi — carton ke dher mein pichhli qatarein nazar nahi aatin);
+malik ne qubool kiya. Rasta A chuna gaya: bill sirf app/khata mein; POS ka
+purchase bill ab bhi PC banata hai aur "Milao" se jurta hai (Rasta B = PC
+script mein import — alag bara project, abhi NAHI).
+ai-tally.js: generate() wrapper — 503/overload par 2 retry (2.5s/6s), phir
+ pickModel se doosra flash model 1 dafa (yeh v1.81 wale "high demand" error ka
+ ilaj hai jo malik ko pehli koshish par aaya). BILL_PROMPT + parseBill(text)
+ -> {supplier,date,total,lines:[{name,qty,rate,total,unsure}]} (rupay, cents
+ NAHI) + readPurchaseBill({key,model,images,onStatus}). parseBill node-tested.
+app.js: purchaseForm mein #billAI button (sirf canTally = malik/full staff;
+ purchase-scope ko key hi nahi milti is liye button nahi, magar woh items ki
+ line HAATH se add kar sakta hai). billLines[] editor (#billLinesBox):
+ [data-bl-name/-item/-qty/-rate/-total/-godam/-del/-add/-sum]. POS item match =
+ smartSearch(saleStock().itemsFor(branch)) — godam options saleStock().branches
+ + branchName (POS load na ho to godam TEXT input). qty*rate -> total auto.
+ items ENTRY KE ANDAR save hote hain: [{name,qty,rate,total(RUPAY int),godam,
+ itemId?,code?,unsure?}] — amount pehle ki tarah CENTS mein hai, mix na karein!
+ parchiHTML(x) + [data-parchi] -> window.open + print (mobile). PC-print
+ (requestPrint) alag / pehle jaisa.
+RULES v1.82 (PUBLISH ZAROORI): validPurchase mein 'items' key + cheap check
+ (!('items' in d) || (d.items is list && size<=100)); purchase update
+ affectedKeys + 'items'; staffEditEntry affectedKeys + 'items'. Andar ke maps
+ deep-validate NAHI kiye (1000-expression hadd!).
+NOT TESTED: asal Gemini bill-call (sandbox mein key nahi). parseBill,
+ matchTally, bundle syntax test shuda.
+AGLA: malik ke test ke baad — no.2 bol kar entry, no.5 khate se sawal; ya
+ Rasta B (PC import). Har naye kaam se pehle plan + OK.

@@ -1,0 +1,6 @@
+Blue Khata v1.82.0
+INSTALL: 1) firestore.rules PUBLISH (copy page — 2nd line "BLUE KHATA v1.82"). 2) ZIP GitHub par, Sync/Update 1.82.0.
+- NAYA: Purchase form mein "📷 Bill ki photo se bharo (AI)" — pehle "Bill ki live picture" mein photo lagayein, phir button. AI supplier / total / items (naam, qty, rate, total) parh kar bhar deta hai. Har line par: naam edit, POS item select, GODAM select, qty/rate/total, × delete, ＋ line. "Raqam = items ka jama" button. Peeli line = AI ko shak — zaroor check karein. KOI CHEEZ KHUD SAVE NAHI HOTI.
+- Items purchase entry ke sath save hote hain. Purchase list mein "📄 Parchi" — mobile se print (Android print dialog / PDF). PC wala 🖨️ POS-print pehle jaisa alag hai.
+- AI rush fix: Google par rush (overload) ho to app khud 3 dafa koshish karta hai, phir doosra flash model aazma leta hai. Yehi "AI se milao" par bhi lagta hai.
+- Rules: purchase entries mein 'items' ki ijazat (list, max 100) — is liye Publish zaroori.

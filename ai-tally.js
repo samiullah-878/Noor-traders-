@@ -58,19 +58,84 @@ export async function pickModel(key) {
   return { best: plain[0] || loose[0] || names[0] || '', all: names };
 }
 
-export async function readPages({ key, model, images }) {
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const busyError = e => /overloaded|high demand|try again later|temporar|unavailable|503/i.test(String(e?.message || ''));
+
+// v1.82: Google par rush (503) ho to khud 2 dafa ruk kar dobara koshish; phir bhi na chale to doosra flash model aazmao.
+async function generate({ key, model, parts, onStatus }) {
+  const call = m => api('/models/' + encodeURIComponent(m) + ':generateContent', key, {
+    method: 'POST',
+    body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } })
+  });
+  const delays = [2500, 6000];
+  let lastErr = null;
+  for (let i = 0; i <= delays.length; i++) {
+    try { return await call(model); }
+    catch (e) {
+      lastErr = e;
+      if (!busyError(e)) throw e;
+      if (i < delays.length) { onStatus?.('Google par rush hai — ' + (i + 2) + '/3 koshish, thora sabar…'); await wait(delays[i]); }
+    }
+  }
+  try {                                        // aakhri chara: doosra flash model
+    const m = await pickModel(key);
+    const alt = m.all.find(n => n !== model && /flash/.test(n) && !/(lite|tts|image|live|audio|embedding)/.test(n));
+    if (alt) { onStatus?.('Doosra model aazma raha hoon: ' + alt); return await call(alt); }
+  } catch { /* fallback bhi nakam */ }
+  throw Error('Google ke server par abhi bohat rush hai. 2-5 minute baad dobara koshish karein. (' + (lastErr?.message || '') + ')');
+}
+
+function textOf(out) {
+  const text = (out.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
+  if (!text) throw Error('AI ne khali jawab diya' + (out.promptFeedback?.blockReason ? ' (' + out.promptFeedback.blockReason + ')' : '') + ' — tasveer dobara saaf le kar koshish karein.');
+  return text;
+}
+
+export async function readPages({ key, model, images, onStatus }) {
   if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
   if (!model) throw Error('Model ka naam khali hai — Settings > AI key > Test dabayein.');
   if (!images?.length) throw Error('Kam az kam 1 picture chunein');
   const parts = images.map(im => ({ inline_data: { mime_type: im.mime, data: im.data } }));
   parts.push({ text: TALLY_PROMPT });
-  const out = await api('/models/' + encodeURIComponent(model) + ':generateContent', key, {
-    method: 'POST',
-    body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } })
-  });
-  const text = (out.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
-  if (!text) throw Error('AI ne khali jawab diya' + (out.promptFeedback?.blockReason ? ' (' + out.promptFeedback.blockReason + ')' : '') + ' — tasveer dobara saaf le kar koshish karein.');
-  return parseItems(text);
+  return parseItems(textOf(await generate({ key, model, parts, onStatus })));
+}
+
+// ---------- v1.82: PURCHASE BILL ki photo se form ----------
+export const BILL_PROMPT = [
+  'Yeh ek Pakistani supplier ke PURCHASE BILL / invoice ki tasveer hai (Urdu / Roman Urdu / English, hindse English).',
+  'Kaam: bill se yeh cheezein nikaal do. Hisaab mat karo, jo likha hai wohi do.',
+  '- supplier: bill dene wali dukaan / company ka naam (na mile to "").',
+  '- date: bill ki tareekh YYYY-MM-DD (na mile ya samajh na aaye to "").',
+  '- total: bill ka aakhri grand total, poore rupay, sirf hindse (na mile to 0).',
+  '- lines: HAR item ki line: {"name": item ka naam jaisa likha hai, "qty": ginti (number, na mile to 1), "rate": fi item qeemat rupay (na mile to 0), "total": us line ka total rupay (na mile to 0), "unsure": true agar hindsa saaf na ho}.',
+  '- Tareekh, mobile number, address, "previous balance", tax number waghera ko LINES mein SHAMIL NA karo.',
+  'Sirf yeh JSON do, aur kuch nahi: {"supplier":"","date":"","total":0,"lines":[{"name":"","qty":1,"rate":0,"total":0,"unsure":false}]}'
+].join('\n');
+
+export function parseBill(text) {
+  let raw = String(text || '').replace(/```json|```/g, '').trim();
+  const a = raw.indexOf('{'), b = raw.lastIndexOf('}');
+  if (a >= 0 && b > a) raw = raw.slice(a, b + 1);
+  let d; try { d = JSON.parse(raw); } catch { throw Error('AI ka jawab parha nahi gaya — dobara koshish karein.'); }
+  const num = v => { const n = Number(String(v ?? '').replace(/[^\d.]/g, '')); return isFinite(n) ? n : 0; };
+  const lines = (Array.isArray(d.lines) ? d.lines : []).map(l => ({
+    name: String(l?.name || '').slice(0, 120).trim(),
+    qty: Math.max(0, num(l?.qty)) || 1,
+    rate: Math.max(0, num(l?.rate)),
+    total: Math.round(Math.max(0, num(l?.total))),
+    unsure: l?.unsure === true
+  })).filter(l => l.name || l.total > 0).slice(0, 100);
+  for (const l of lines) if (!l.total && l.qty && l.rate) l.total = Math.round(l.qty * l.rate);
+  return { supplier: String(d.supplier || '').slice(0, 120), date: /^\d{4}-\d{2}-\d{2}$/.test(String(d.date || '')) ? d.date : '', total: Math.round(num(d.total)), lines };
+}
+
+export async function readPurchaseBill({ key, model, images, onStatus }) {
+  if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
+  if (!model) throw Error('Model ka naam khali hai — Settings > AI key > Test dabayein.');
+  if (!images?.length) throw Error('Bill ki kam az kam 1 picture chunein');
+  const parts = images.map(im => ({ inline_data: { mime_type: im.mime, data: im.data } }));
+  parts.push({ text: BILL_PROMPT });
+  return parseBill(textOf(await generate({ key, model, parts, onStatus })));
 }
 
 export function parseItems(text) {
