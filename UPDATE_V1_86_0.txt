@@ -1,0 +1,21 @@
+Blue Khata v1.86.0 — 🧾 POS PURCHASE screen + NOOR TRADERS logo
+INSTALL (is tarteeb se):
+ 1) firestore.rules PUBLISH (copy page — 2nd line "BLUE KHATA v1.86"). ZAROORI — warna bill "permission denied".
+ 2) Is ZIP ki SAB files GitHub par (nayi: purchase.js, manifest.webmanifest, icon-192.png, icon-512.png,
+    icon-maskable-512.png, apple-touch-icon.png, favicon-64.png). Sync/Update 1.86.0.
+ 3) PC par purchase-pc.zip > LAGAO-PURCHASE.bat (pehle POS procedures ki tasdeeq karta hai, phir loop).
+NAYA:
+- Purchase tab > "🧾 POS Purchase": Sale jaisi poori screen — supplier chunein, godam, tareekh (malik), supplier bill #.
+  📷 barcode scan / smart search / 🎤. Wohi item dobara = +1 Ctn. Har item: Ctn + Pcs, khareed fi Ctn / fi Pcs
+  (ek likhein doosra khud), purana khareed + purana nafa % nazar aata hai.
+- 4 naye rate har item par: Wholesale Ctn/Pcs + Parchoon Ctn/Pcs — PURANE NAFA se khud (khareed badalte hi), badla
+  hua khana sabz. Chips: "↺ Purana nafa", "W +1/+1.25/+1.5/+2%"; upar SAB items ke liye W % + apni % + "sab par purana".
+- 💾 POS mein bhejo: PC POS mein asli purchase bill banata hai (credit, open — baqi bills jaisa; post baad mein "📌")
+  aur naye rates POS items par lagata hai. "📋 Aaj ke app purchase" mein ✓ bill number / ✕ wajah.
+- "📑 Pichhla bill copy": isi supplier ka app se bana aakhri bill ek dabane par.
+- Draft phone par mehfooz (screen band ho jaye to bhi). Rate khareed se kam ho to warning.
+- Malik + Full + Purchase mulazim sab bana sakte hain.
+HATAYA: purani Purchase form se "📷 Bill photo (AI)", items ki list aur "Naye rates POS par lagao" (ab nayi screen mein).
+  Purani entries ke items/parchi mehfooz. Kaapi-tally aur "Tasveer se milao" wahi hain.
+LOGO: Noor Traders (NT) — app install par, home screen aur tab par. Install shuda app par naya logo aane ke liye
+  ek dafa app hata kar dobara "Add to Home screen" karna par sakta hai.

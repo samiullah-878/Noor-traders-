@@ -369,3 +369,26 @@ dialog.full-dialog #dialogBody{max-height:calc(100dvh - 64px)}
 .pc-row>span{font-size:1.1rem}
 .pc-total{border-radius:10px;padding:10px;margin-top:10px;background:#f0fdf4;border:1px solid #bbe7c8}
 .pc-total.warn{background:#fdecec;border-color:#e79a9a}
+
+/* v1.86: POS Purchase screen */
+.pp-sup{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;background:#fff;border:1px solid #d6e2f5;border-radius:12px}
+.pp-sup small{display:block;color:#64748b;font-size:12px}
+.pp-sup b{font-size:17px;color:#0b3f9e}
+.pp-sup-pick label{display:grid;gap:4px;font-size:13px;color:#44566f}
+.pp-sup-list{display:flex;gap:6px;overflow-x:auto;padding:6px 0 2px}
+.pp-sup-list button{flex:none;white-space:nowrap;padding:7px 12px;min-height:38px;background:#eef3fd;border:1px solid #c9d9f5}
+.pp-meta{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:8px}
+.pp-meta label{display:grid;gap:2px;font-size:12px;color:#44566f;min-width:0}
+.pp-meta input,.pp-meta select{min-width:0;width:100%}
+@media(max-width:460px){.pp-meta{grid-template-columns:1fr 1fr}.pp-meta label:last-child{grid-column:1/-1}}
+.pp-no{color:#1258ce}
+.pp-line{margin-bottom:10px}
+.pp-rates{margin-top:8px;padding:8px;background:#f6f8ff;border-radius:10px;display:grid;gap:6px}
+.pp-rates-h{color:#44566f;font-weight:600}
+.pp-rate-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.pp-rate-grid label{display:grid;gap:2px;font-size:11.5px;color:#44566f;min-width:0}
+.pp-rate-grid input{min-width:0;width:100%;padding:9px 6px}
+.pp-rate-grid input.changed{border-color:#16a34a;background:#f0fdf4;font-weight:700}
+.pp-rate-grid small{font-size:10.5px;color:#94a3b8}
+@media(max-width:460px){.pp-rate-grid{grid-template-columns:1fr 1fr}}
+.ws-chips input{width:5.5rem}

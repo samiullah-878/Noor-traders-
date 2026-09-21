@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf } from './smart-search.js?v=1.79.1';
+import { smartSearch, setAliases, aliasOf } from './smart-search.js?v=1.86.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -221,7 +221,7 @@ let lastScan = null, lastKey = '', scanQty = new Map(), padUnit = 'pcs';   // v1
 let scanOrder = [], scanItems = new Map();   // camera ki screen par bill ki lines
 export function setSaleScanHook(fn) { saleHook = fn; }
 export function openSaleCamera() { saleSeen = []; openScanner(); }
-const saleRoot = () => !!document.querySelector('[data-sale-root]');
+const saleRoot = () => !!document.querySelector('[data-sale-root],[data-pp-root]');   // v1.86: POS Purchase screen bhi
 
 // ---------- data ----------
 

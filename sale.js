@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.79.1';
-import { smartSearch, topItems, noteHit, voiceSearch } from './smart-search.js?v=1.79.1';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.86.0';
+import { smartSearch, topItems, noteHit, voiceSearch } from './smart-search.js?v=1.86.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -98,6 +98,8 @@ function addItem(it, qtyPcs = 1) {
 // camera ki screen ka search
 // v1.61.2: camera ki list bill se (rate bhi bill wala: khula piece l.rate, carton crate)
 // v1.64: camera ki list ka ✕ -> bill ki wohi line (pehchan k se)
+// v1.86: hooks function mein — POS Purchase screen bhi yahi hooks leti hai; jo screen khule woh apne laga leti hai
+function installSaleHooks() {
 setSaleDelHook(key => {
   const i = cart.findIndex(l => l.k === key);
   if (i < 0) return;
@@ -128,6 +130,8 @@ setSaleScanHook((code, direct, qty) => {
   // v1.58: bill ki asal tadad wapas (camera ki list bhi wohi dikhaye — pehle dobara scan par list 1 hi dikhati thi)
   return { state: 'added', item: it, line: nl.k, pcs: Number(nl.pcs) || 0, ctn: Number(nl.ctn) || 0 };
 });
+}
+installSaleHooks();
 
 // ---------- aaj ki app sales ----------
 function watchSales() {
@@ -173,7 +177,7 @@ function qtyText(l) {
 
 // ---------- screen ----------
 export function renderSale() {
-  watchSales();
+  installSaleHooks(); watchSales();
   const s = stock();
   const owner = isOwner();
   const total = cartTotal();

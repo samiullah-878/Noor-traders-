@@ -500,3 +500,36 @@ ctn,pcs=PAISA rates/total=PAISA; net PAISA) — is liye PC/rules ko haath NAHI l
   (kala chana Urdu->Roman->match; roman field aata hai).
 !!! showBill mein insert OUTER }catch se pehle — andar ek aur try/}catch{} hai
   (posItems), python patch mein pehli dafa wahin ja laga tha (build error).
+
+=== v1.86.0 — 🧾 POS PURCHASE SCREEN (purchase.js) + NOOR TRADERS LOGO + purani purchase se AI hataya ===
+Malik: sale jaisi purchase screen, 4 rate khane (W/R x Ctn/Pcs), purane nafa ke chips, W % chips, barcode/smart
+search, bill POS mein baqi bills jaisa save, mulazim bhi. AI bill-photo "bekar" — purani purchase form se HATAYA.
+APP:
+- NAYI FILE purchase.js (view 'ppurchase', root [data-pp-root]). Sale ke camera/scanner hooks (pos-stock.js) hi
+  istemal: sale.js ab installSaleHooks() renderSale par dobara lagata hai, purchase.js installHooks() renderPP par.
+  pos-stock saleRoot() = [data-sale-root],[data-pp-root].
+- !!! IMPORT VERSIONS: sale.js/pos-stock.js/smart-search.js/pos-ledger.js ke imports '?v=1.79.1' the — ab SAB
+  '?v=1.86.0'. Alag ?v = alag module instance (hooks/stock toot jate). AGLE VERSION BUMP MEIN sed in files par bhi:
+  app.js sale.js pos-stock.js purchase.js sw.js index.html (sirf '1.86.0' pattern).
+- Line: {k,id,code,name,pack,cName,uName,godam,ctn,pcs,costP (FI PIECE, 4 dec), oldCost=prate, oldW=wrate,
+  oldR=rate, oldR2=rate2||rate, wctn,wpcs,rctn,rpcs, wMode 'old'|%|'manual', rMode 'old'|'manual'}. recalc(): old
+  margin = oldX/oldCost x costP (ctn = round(x pack), pcs 2 dec); W% = costP x (1+p). Rate khana edit = manual.
+  Node test: colgate pack 48 prate 384.62 wrate 388.47 rate 435 rate2 440 -> cost 400: W 404/19392, R 457.59/21715.
+- Dobara scan/chunna = +1 Ctn (pack<=1 to +1 Pcs) usi line par. Draft localStorage 'sam-pp-draft' (aaj ka).
+- Supplier list = app parties() + accountMatches (Supplier pehle). Save doc appPurchases/{p...}: {id,date,at,
+  branch 1,godam,partyId,partyName,invoiceNo,note,lines[{id,code,name,pack,cName,uName,godam,qty PIECES,costP,
+  wctn,wpcs,rctn,rpcs}],total,role,by,status 'new',createdAt}. Pichhla bill copy = cloud.appPurchasesOf(partyId).
+- app.js: canPP (owner/full/purchase, !localMode); route/renderSurface/back/title; Purchase actions
+  "🧾 POS Purchase" (data-pp-open). purchaseForm se billAI button, #billLinesBox, rateJobBtn HATAYE (billLines
+  existing.items se bharte hain to save par purane items mehfooz; renderBillLines box na mile to return).
+- cloud.js: listenAppPurchases(date), saveAppPurchase, appPurchasesOf(partyId).
+- Logo: icon-192/512, icon-maskable-512, apple-touch-icon, favicon-64 (root par, flat zip) + manifest.webmanifest
+  (name "Noor Traders — Blue Khata", short "Noor Traders"). index.html links, sw ASSETS mein.
+RULES v1.86 (PUBLISH ZAROORI): appPurchases/{pid} read purUser (owner/blueStaff/purchaseStaff); create validPur
+  (sasti pehle: status new, by uid, keys hasOnly, id, lines 1-150, total>0, ints, partyId string; role owner ->
+  isOwner, staff -> isToday(date)). Update/delete koi nahi — status PC (admin) likhta hai.
+PC: purchase-pc.zip (purchase-post.js v1) — tafseel PC ke AI_NOTES mein. Procedure parameter sys.parameters se;
+  ANJAAN parameter par kuch nahi likhta (safe fail). --dekho tasdeeq. Qty PIECES, Rate FI PIECE (AI_NOTES 17-Sep:
+  Lifebuoy 50 ctn = DB Qty 600).
+UNTESTED on real POS: purchase-post (pehla test EK sasta item). rateJobs/rate-lagao ab app se istemal nahi hota
+  (purani jobs ke liye script rehne dein ya band kar dein — nuqsan nahi).
