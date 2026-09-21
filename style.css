@@ -436,3 +436,29 @@ body.geo-locked{overflow:hidden}
 .set-sub{margin:0;font-size:13px;color:#64748b}
 .set-lead{margin:0;color:#334155;line-height:1.5}
 .set-foot{margin:0;font-size:13.5px;color:#475569;line-height:1.5}
+
+/* v1.90: khata home — chips + ek line tafseel, baqaya alag, tarteeb patli chips */
+main.home-smart #syncStatus,main.home-smart #syncDetails,main.home-smart #dayLockBtn,main.home-smart #dayLockNote,main.home-smart #dueNudge,main.home-smart #dailyBackupReminder{display:none!important}
+.home-bar{margin:6px 0 12px}
+.hchips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none}
+.hchips::-webkit-scrollbar{display:none}
+.hchip{flex:none;min-height:36px;padding:6px 14px;border-radius:999px;font-size:13.5px;font-weight:700;white-space:nowrap;background:rgba(255,255,255,.16);color:#fff;border:1px solid rgba(255,255,255,.3)}
+.hchip.bad{background:#fdecec;color:#b42332;border-color:#f6c1c1}
+.hchip.warn{background:#fff4d6;color:#8a5a00;border-color:#f3dc9c}
+.hchip.ok{background:#e7f7ee;color:#147548;border-color:#bfe8d0}
+.hnarr{margin:6px 2px 0;font-size:13px;color:#dbe8ff;line-height:1.45}
+.summary>.bq-wrap{flex:1 1 100%;min-width:0;border-left:0;padding-left:0;display:grid;gap:8px}
+.bq-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.bq-grid.one{grid-template-columns:1fr}
+.bq-card{background:#f6f9ff;border:1px solid #e1e9f6;border-radius:14px;padding:10px 12px;display:grid;gap:1px;min-width:0}
+.bq-card strong{font-size:20px!important;line-height:1.25}
+.bq-h{font-weight:700;color:#44566f!important;margin-bottom:4px}
+.bq-sub{color:#8a97aa!important;font-size:12px!important}
+.bq-other{display:block;color:#6b7c93;font-size:12.5px}
+.sort-chips{display:flex;gap:6px;align-items:center;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}
+.sort-chips::-webkit-scrollbar{display:none}
+.sort-chips small{flex:none;color:#64748b;font-size:12px}
+.sort-chips button{flex:none;min-height:32px;padding:5px 12px;border-radius:999px;font-size:13px;white-space:nowrap;background:#eef3fd;border:1px solid #d6e2f5}
+.sort-chips button.on{background:#1258ce;color:#fff;border-color:#1258ce}
+.party-chips button{min-height:32px!important;padding:5px 11px!important;font-size:13px!important}
+@media(max-width:380px){.bq-card strong{font-size:17px!important}}

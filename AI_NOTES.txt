@@ -593,3 +593,17 @@ VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js 
   inhi se. HAR UPDATE PAR yeh do field sahi rakhein.
 - NOTE: purana sync code v.version !== '1.34.1' se compare karta hai (hamesha update path) — jaan boojh kar nahi chheda.
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.89.0') + version.json.
+
+=== v1.90.0 — KHATA HOME: CHIPS + SMART LINE · BAQAYA ALAG · TARTEEB CHIPS · POS LEDGER TAB HATAYA (rules wahi v1.88) ===
+- index.html header mein #homeBar (dayLockNote ke baad). paintHomeBar(): sirf khata home (view khata, !selected, na
+  purchase/stock/sale-only) -> main.home-smart class; CSS se #syncStatus #syncDetails #dayLockBtn #dayLockNote #dueNudge
+  #dailyBackupReminder chhupte hain (unka apna logic chalta rehta hai — chips unhi se parhti hain). Chips: due (dueCounts,
+  owner/full staff), backup (owner; backupDownloadDay()===today()), din (dayLockBtn dikhe to; dayIsClosed), sync
+  (#syncStatus text: baqi/pending/load -> warn, offline/cached -> neutral, warna ok). data-hb click: due -> route('due'),
+  backup -> downloadDailyBackup(null), day -> toggleDayLock(), sync -> #syncDetails click. Repaint: renderSurface +
+  MutationObserver (syncStatus, dayLockBtn, dailyBackupReminder, syncDetails).
+- baqayaHTML(es): Customer / Supplier / baqi (category na ho) — lene (b>0) / dene (b<0) alag; tab Customer/Supplier par
+  sirf woh card. .summary>.bq-wrap full width. Node test pass.
+- sortBar -> .sort-chips (on = chuni). party-chips patli.
+- posNav hamesha hidden (b.id==='posNav'); renderPOS code / data waisa hi. posList ("🖥 POS n") waisa hi.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.90.0') + version.json (rules/rulesChanged).

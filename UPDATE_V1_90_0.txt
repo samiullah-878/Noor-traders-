@@ -1,0 +1,13 @@
+Blue Khata v1.90.0 — Khata home nayi shakal: chips + smart line · baqaya Customers/Suppliers alag · tarteeb chips · POS Ledger hataya
+INSTALL: sirf ZIP GitHub par, Sync/Update 1.90.0. Firebase rules badalne ki zaroorat NAHI.
+NAYA (khata ki main screen par):
+- Upar ek line mein chips: 🔔 "2 late · 1 aaj" (laal/peela, dabane par Due Accounts) · ⬇️ "Backup baqi" (peela; dabate hi backup)
+  / "✓ Backup" (hara) · 🔒 "Din band" (wohi kaam jo bara button karta tha; band ho to "🔓 Din kholein" / "✓ Din band")
+  · ☁️ "Synced" / ⏳ "Sync baqi" / 📴 "Offline" (Pending ho to dabane par Pending Sync khulta hai).
+- Chips ke neeche ek choti line: jaise "2 wasooli late · aaj ka backup baqi · din khula hai" ya "Sab theek hai ✓ · din khula hai".
+- Bare peele dabbe (🔔 late, Aaj ka backup), bara "Din band karein" button aur "Cloud synced" line khata home par ab nahi — chips mein.
+  (Baqi screens par pehle jaise.)
+- Baqaya: 👤 Customers card (lene hain bara, dene chhota, ginti) aur 🏭 Suppliers card (dene hain bara, lene chhota) +
+  neeche "Baqi accounts" (na customer na supplier) ki ek line. Customers / Suppliers tab par sirf usi ka card.
+- Tarteeb: ek patli line ki chips (Naam se · Zyada lene · Zyada dene · Bara baqaya) — chuni hui neeli. ⭐ Aksar chips bhi patli.
+- "POS Ledger" tab upar ki patti se hataya (data waisa hi; "🖥 POS n" wala button rehta hai).
