@@ -555,3 +555,26 @@ SMART SEARCH: smart-search.js partyScore(p,q) (items wala fold/ed1/scoreItem; wo
 POS Purchase: loadSupItems(pid) — appPurchasesOf + POS ke 6 aakhri bill (billIdsOf via setup, cloud.purchaseBill;
   itemId ya naam/code se) -> top 12 "📦 Is supplier se aksar" chips (search khali ho).
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.87.0').
+
+=== v1.88.0 — MULAZIM LOCATION LOCK (geo-guard.js) + CHHOOT PASSWORD + SAB BAND + LOG (RULES v1.88) ===
+Malik: mulazim ghar ja kar app na chala sake; 50 m kaha — 100 m default rakha (andar GPS 20-60 m ghalat). Malik ne
+"dukan ka waqt" (server-side hours), khud logout aur PC QR MANA kiye. Chhoot password se sab pabandi khatam.
+- NAYI FILE geo-guard.js: geoSetup/geoWatch/geoStop/geoEnsure/geoOwnerForm. Config doc blueAccess/geo {lat,lng,radius,
+  placeAcc,placeAt,salt,passHash,passVer,lockAll,lockAt,by,updatedAt} (malik generic blueAccess rule se likhta;
+  staff get list mein 'geo'). Staff (session.role 'staff', har scope) par: listenGeo -> check(); setInterval 3 min
+  (visible ho to); visibilitychange; geoEnsure() har SAVE se pehle — app.js connect ke baad cloud ke likhne wale
+  methods wrap (add, edit, saveAppSale, saveAppPurchase, saveStockCount, requestTransfer/Label/Subcode/Print/Post,
+  saveTransfer, setDayLock, reprintAppSale, setStockFlag, setAlias). Owner par geoEnsure foran return.
+- geoInside: haversine - min(acc,100) <= radius. Node test: 30m±20 andar, 120m±50 andar, 180m±40 bahar, 400m±900 bahar.
+  Lock sharten: lockAll (bypass na ho) | ijazat band/no geolocation | 3 fail lagataar | 2 bahar lagataar. Pehli bahar
+  reading par lock nahi (GPS jhatka). Save par: taza (<3.5 min) andar reading ho to foran; warna 1-2 nayi reading.
+- Lock overlay #geoLock (z-index max, opaque, dialog band) — Dobara check, Chhoot password, Logout.
+- Chhoot: SHA-256(salt+':'+pw) hex; localStorage 'sam-geo-chhoot' {uid, until=aaj raat 12, at, passVer}; valid sirf
+  passVer same aur at > lockAt. 'sam-geo-tries' 5 ghalat -> 10 min. Log throttle 15 min (outside/noloc).
+- geoLog/{id} {by,who (scope · credentialId aakhri 4),kind outside|chhoot|wrongpass|noloc,dist,acc,at,day} — lat/lng
+  KABHI nahi. Rules: read isOwner; create by==uid, keys hasOnly, kind in list, isStaff (sasti shart pehle).
+- cloud.js: listenGeo, getGeo, setGeo (sirf malik, merge), logGeo, geoLogs (orderBy at desc limit 80; imports mein
+  orderBy, limit). app.js: onSession -> geoWatch(); reset -> geoStop(); Settings ⋮ "📍 Dukan location ..." (#geoBtn).
+- Rules publish na ho to staff ka listenGeo permission-denied -> cfg null -> KOI pabandi nahi (fail-open, jaan boojh kar:
+  galti se sab mulazim band na hon).
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.88.0').

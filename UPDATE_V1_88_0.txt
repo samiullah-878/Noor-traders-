@@ -1,0 +1,17 @@
+Blue Khata v1.88.0 — MULAZIM ki app sirf DUKAN ke andar (location) + CHHOOT PASSWORD + "Sab mulazim band"
+INSTALL:
+ 1) firestore.rules PUBLISH (copy page — 2nd line "BLUE KHATA v1.88"). ZAROORI — is ke baghair lock kaam nahi karega.
+    (v1.86 / v1.87 ke rules bhi isi mein hain.)
+ 2) ZIP ki SAB files GitHub par (nayi: geo-guard.js; v1.86/1.87 wali files bhi shamil). Sync/Update 1.88.0 — malik + mulazim dono phone.
+ 3) MALIK dukan ke ANDAR: Settings ⋮ > "📍 Dukan location · Chhoot password · Mulazim band" >
+    "📍 Dukan ki jagah YAHAN set karo" (browser Location allow). Phir chhoot password rakhein. Phir "📏 Main kitna door hoon?" se tasdeeq.
+KAISE CHALTA HAI:
+- Mulazim (Full / Purchase / Stock / Sale) ki app: kholte waqt, har 3 minute, screen wapas aane par, aur har SAVE par location.
+  Ghera 100 m (GPS ki ghalti ka 100 m tak fayda). Bahar 2 reading lagataar -> poori screen LOCK ("Aap dukan se X km door hain").
+  Location ki ijazat band = lock. 3 dafa location na mile = lock. Wapas dukan mein -> "🔄 Dobara check" / khud khul jati hai.
+  Adhoora bill phone par mehfooz rehta hai. MALIK par koi pabandi nahi. Dukan ki jagah set na ho = koi pabandi nahi.
+- 🔑 Chhoot password (lock screen par): sahi = AAJ RAAT 12 BAJE tak sab pabandi khatam. 5 ghalat = 10 minute ruko.
+  Password badalne ya dobara "Sab band" dabane se pehle ki chhoot khatam. Password sirf hash ki shakal mein save.
+- 🔒 "Sab mulazim abhi band" / 🔓 "Khol do" — isi Settings screen mein.
+- 📋 Log: bahar se kholna, chhoot password, 5 ghalat password, location band — waqt + mulazim + dukan se FAASLA (asal jagah nahi).
+- App band ho to koi tracking nahi. Yeh check phone par hai (Fake GPS se dhoka mumkin; log mein ajeeb cheez nazar aa sakti hai).

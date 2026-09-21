@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v1.87 (POS Purchase edit — editOf) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v1.88 (mulazim location lock — geo, geoLog) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -98,7 +98,7 @@ service cloud.firestore {
         && (isOwner() || (isToday(day) && blueStaff() && dayOpen()));
     }
     match /businesses/noor-traders/blueAccess/{id} {
-      allow get: if isOwner() || (isStaff() && id in ['config','purchaseConfig','stockConfig','saleConfig','dayLock','itemAliases']);   // v1.75: itemAliases (items ke doosre naam)
+      allow get: if isOwner() || (isStaff() && id in ['config','purchaseConfig','stockConfig','saleConfig','dayLock','itemAliases','geo']);   // v1.88: geo (dukan location / chhoot / sab band)   // v1.75: itemAliases (items ke doosre naam)
     }
     // Din band ka nishan: mulazim sirf AAJ ka din band kar sakta hai (khol nahi sakta). Malik upar wale rule se sab kuch.
     match /businesses/noor-traders/blueAccess/dayLock {
@@ -185,6 +185,15 @@ service cloud.firestore {
 
     // App se sale (Counter / Wholesale). App sirf "new" sale likhta hai; POS bill PC ka sale-post.js banata hai
     // (admin key se status/saleNo likhta hai). Mulazim ki sale PC par POS ke rate se hi banti hai.
+    // v1.88: mulazim ki location/chhoot LOG — sirf faasla + waqt (asal jagah nahi). Malik parhta, mulazim sirf likhta.
+    match /businesses/noor-traders/geoLog/{id} {
+      allow read: if isOwner();
+      allow create: if request.resource.data.by == request.auth.uid
+        && request.resource.data.keys().hasOnly(['by','who','kind','dist','acc','at','day'])
+        && request.resource.data.kind in ['outside','chhoot','wrongpass','noloc']
+        && isStaff();
+    }
+
     // v1.86: POS PURCHASE (phone se POS purchase bill + naye rates). Malik + Full + Purchase mulazim.
     // Sasti shartein pehle. Status/purchaseNo sirf PC (admin key) likhta hai.
     match /businesses/noor-traders/appPurchases/{pid} {

@@ -402,3 +402,17 @@ dialog.full-dialog #dialogBody{max-height:calc(100dvh - 64px)}
 .pp-edit b{color:#8a5a00}
 .pp-edit small{color:#6b5a33}
 .pp-edit button{justify-self:start}
+
+/* v1.88: mulazim location lock (poori screen, neeche kuch nazar na aaye) */
+.geo-lock{position:fixed;inset:0;z-index:2147483000;background:#0b1f44;display:flex;align-items:center;justify-content:center;padding:20px;padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(20px,env(safe-area-inset-bottom))}
+.geo-lock[hidden]{display:none}
+.geo-card{background:#fff;border-radius:18px;padding:20px;max-width:420px;width:100%;display:grid;gap:10px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
+.geo-card h2{margin:0;color:#0b3f9e}
+.geo-card p{margin:0;line-height:1.5;color:#334155}
+.geo-card details{background:#f6f8ff;border-radius:12px;padding:8px 10px}
+.geo-card details input{width:100%;margin:8px 0}
+body.geo-locked{overflow:hidden}
+.geo-own{display:grid;gap:8px}
+.geo-own hr{border:0;border-top:1px solid #e2e8f0;width:100%;margin:6px 0}
+.geo-log{display:grid;padding:6px 0;border-bottom:1px solid #eef2f7}
+.geo-log small{color:#64748b}
