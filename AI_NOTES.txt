@@ -425,3 +425,20 @@ RULES v1.83 (PUBLISH ZAROORI, v1.82 items rules bhi isi mein): rateJobs read
  owner+blueStaff; create sirf owner, keys [lines,status,by,at], status 'new',
  lines<=100. Parchi mein "Naye Rates" table. Edit par aiName wapas name ban
  jata hai jab useSys===false.
+
+=== v1.83.1 — PC WATCHER rate-lagao.js BAN GAYA (rate-pc.zip) ===
+Malik ne PC folder bheja (sale-post/khata-sync waghera). POS = SQL Server (dbo.Items,
+dbo.ItemBranchRate). Rate khane (rate-dekho.json + sync-stock/sale-post comments se,
+SAB FI PIECE): SaleRate = R "Cotton/pack" (carton bhao / pack), SaleRate2 = "Peice
+Rate" (khula piece), SaleRate3 + SaleRateSize = Wholesale, PurchaseRate = khareed —
+Items mein kisi item ka carton ka kisi ka piece ka (sync-stock ka log-ratio test;
+rate-lagao USI convention par likhta hai: costIsCarton -> costP x pack), ItemBranchRate
+mein hamesha fi piece. rate-lagao.js: rateJobs status new -> claim(working) -> ek SQL
+transaction mein Items + item ki SAB ItemBranchRate rows; SystemNotes mein POS jaisi
+Old/New line; jo khana job mein 0/khali usay haath nahi lagata; 7 din purani job
+failed. Status done{applied}/failed{error} (transfer-sync pattern; lock port 47819,
+rate-auto.bat loop + Startup vbs 90s, log rate-log.txt). Node par math checked: kala
+chana pack 25 rctn 6500 -> SaleRate 260; baba-rice cost 8500 carton pehchana. App
+v1.83.1: watchRates ab working/failed bhi samjhta hai ('error' bhi chalta hai).
+Rules mein tabdeeli NAHI (v1.83 wale hi). PC install: LAGAO-RATES.bat (files copy +
+Startup vbs + loop shuru). PC AI_NOTES.txt mein bhi hissa jora gaya (rate-pc.zip).

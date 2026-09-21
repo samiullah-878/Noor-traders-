@@ -1,0 +1,9 @@
+Blue Khata v1.83.1
+INSTALL: 1) firestore.rules PUBLISH (copy page — 2nd line "BLUE KHATA v1.83"; is mein v1.82 wale items rules bhi shamil hain). 2) ZIP GitHub par, Sync/Update 1.83.1.
+- Naam ka faisla: POS item match ho to har line par radio: "System wala naam" (default) ya "AI/likha hua" — jo chunein wohi save/parchi par jata hai.
+- Naya cost khud: bill ke rate se fi-Ctn aur fi-Pcs cost. Purana cost aur PURANA NAFA % bhi dikhta hai.
+- Parchoon rate KHUD tajweez: purane nafa % ko naye cost par laga kar (Ctn+Pcs) — editable. Purana cost POS mein na ho to khali (khud likhein).
+- Wholesale chips: +1% +1.25% +1.5% +2% ya apni % likh kar "Lagao" — sab selected items ka wholesale (Ctn+Pcs) cost ke upar ban jata hai — editable.
+- 📄 Parchi mein "Naye Rates" ka alag table (Cost / Wholesale / Parchoon).
+- 📌 "Naye rates POS par lagao (PC)" (SIRF MALIK): rates PC ko job ban kar jate hain (rateJobs) — PC script POS mein lagayegi aur ✅/❌ wapas bhejegi. NOTE: PC SCRIPT KA NAYA HISSA ABHI BANANA HAI — malik apni PC script (sale-post / khata-sync wali) bheje to usi mein watcher jor diya jayega. Tab tak jobs mehfooz parhi rehti hain.
+- v1.83.1: PC WALA HISSA BHI BAN GAYA — rate-pc.zip mein rate-lagao.js + LAGAO-RATES.bat (PC par chalayein). App ab PC ka "working/failed" bhi dikhati hai.
