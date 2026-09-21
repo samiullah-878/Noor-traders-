@@ -1,0 +1,9 @@
+Blue Khata v1.85.0
+INSTALL: sirf ZIP GitHub par, Sync/Update 1.85.0. (Rules wahi v1.84 — nayi publish NAHI chahiye.)
+- 🤖 TASVEER <-> POS BILL MILAN: Purchase card par (jahan bill ki photo lagi ho) aur "Bill dekhein" ke andar
+  naya button. AI photo se items parhta hai (Urdu naam ho to Roman bhi banata hai: چینی -> cheeni), phir POS
+  wale purchase bill (larke ki entry) se line-ba-line milata hai:
+   ✓ item/tadad/rate barabar · ⚠ tadad ka farq, rate ka farq, item POS mein nahi / tasveer mein nahi
+  neeche dono totals aur kul FARQ. Kuch bhi khud save/tabdeel nahi hota — sirf dikhata hai.
+- POS bill juda na ho (Milao baqi) to sirf parhi hui list dikhti hai, milan nahi.
+- Malik + Full + Purchase mulazim sab chala sakte hain (wohi AI key).

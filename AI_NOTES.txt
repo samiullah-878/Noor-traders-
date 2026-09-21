@@ -478,3 +478,25 @@ shamil (item naam/rate ka milan isi collection se — saleStock() lazy start hot
 purchase form kholte hi). dayTally/rateJobs waise hi (tally Daily Sale full/owner;
 rates POS sirf malik). YAAD: Gemini key ab purchase-scope browser tak bhi jati hai —
 Google console ki restriction/quota wali baat isi liye aur zaroori.
+
+=== v1.85.0 — TASVEER <-> POS PURCHASE BILL ka AI MILAN (RULES WAHI v1.84) ===
+Malik ka plan: bill ki photo AI parhe aur larke ke POS-entered purchase bill se
+line-ba-line milaye. POS bill ki poori lines pehle hi sync-bills.js se posBills/{pos-
+<PurchaseID>} mein aati hain (lines: name/code/godam/qty=ctn/perCtn/totalPcs/
+ctn,pcs=PAISA rates/total=PAISA; net PAISA) — is liye PC/rules ko haath NAHI lagaya.
+- ai-tally.js BILL_PROMPT + parseBill: har line mein "roman" (Urdu naam ki Roman Urdu
+  shakal) — matching isi se hoti hai kyunke POS naam English hain.
+- app.js: photoCompare(c) c=cash purchase (billPhotos wali; pos=c.posBill). Buttons:
+  purchase card (data-photo-compare, linked card par bhi — c resolve IIFE) +
+  showBill ke aakhir mein (cashLinkedTo({id})). Gate canTally() (owner/full/
+  purchase). readPurchaseBill SAVE SHUDA billPhotos par chalta hai.
+- Pairing: tokenScore(roman||name, posLine.name) — wohi nameTokens (+3/+1.5/+2,
+  size-mismatch -1.5), threshold 3, greedy best-first, ek-ek pair.
+- Farq: ctn (tasveer ctn vs POS qty), pcs-only line vs totalPcs, rate (ctn ho to
+  POS ctn-rate warna pcs-rate, ±0.5), line total (±1 Rs), aakhri mein aiTotal
+  (bill.total warna jama) vs posB.net/100. paisa<->rupay dhyan: POS PAISA, AI RUPAY.
+- Kuch save nahi hota (koi rules/collection nahi). "Dobara AI se parho" = nayi AI
+  call (kharcha). pc-row/pc-total CSS. esbuild pass; tokenScore/parseBill node-test
+  (kala chana Urdu->Roman->match; roman field aata hai).
+!!! showBill mein insert OUTER }catch se pehle — andar ek aur try/}catch{} hai
+  (posItems), python patch mein pehli dafa wahin ja laga tha (build error).

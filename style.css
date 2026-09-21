@@ -362,3 +362,10 @@ dialog.full-dialog #dialogBody{max-height:calc(100dvh - 64px)}
 .bl-nums small{color:#64748b}
 .bl-nums input{padding:10px 8px}
 @media(max-width:400px){.bl-two{grid-template-columns:1fr}}
+
+/* v1.85: tasveer <-> POS bill milan */
+.pc-row{display:flex;gap:8px;background:#f0fdf4;border:1px solid #bbe7c8;border-radius:10px;padding:8px;margin:6px 0}
+.pc-row.warn{background:#fff7e6;border-color:#e8c37a}
+.pc-row>span{font-size:1.1rem}
+.pc-total{border-radius:10px;padding:10px;margin-top:10px;background:#f0fdf4;border:1px solid #bbe7c8}
+.pc-total.warn{background:#fdecec;border-color:#e79a9a}
