@@ -400,3 +400,28 @@ dataURL, ~1000px) se parhta hai — sath warning ke woh chhoti hoti hai, nayi
 photo behtar. Pehle se items hon to confirm() ke baad hi overwrite. Rules /
 cloud NAHI badle — sirf app.js. Yaad rahe: save shuda photos packPhotos
 (1000px/120KB) wali hain, shrinkForAI (1800px) sirf nayi file par chalta hai.
+
+=== v1.83.0 — PURCHASE PAR RATES: naam sys/AI, cost, WHOLESALE % chips, PARCHOON purane nafa se, rateJobs (auto POS) ===
+Malik ki farmaish + "script ke sath auto". Line ke naye fields (sab RUPAY):
+ sysName, aiName?, useSys (radio; save par name = useSys? sysName : likha hua),
+ costC (fi ctn int), costP (fi pcs, 2 dec), wctn/wpcs (wholesale), rctn/rpcs
+ (parchoon). recalcRates(): bill rate fi-ctn (ctn>0) ya fi-pcs se costC/costP;
+ parchoon SIRF pehli dafa auto: (oldRate/oldPrate) x naya costP (oldPrate/oldRate
+ POS item ke prate/rate fi-piece se, select ke dataset ya AI-match hit se);
+ oldPrate na ho to khali. Wholesale chips [1,1.25,1.5,2,custom %]:
+ applyWholesalePct — sab itemId lines par cost ke upar. Math node-checked
+ (cost 100, purana 95->114 = 20% nafa -> rpcs 120, rctn 1440; +1.5% w = 101.5).
+ rate badalne par rctn/rpcs reset ho kar dobara auto.
+AUTO POS: cloud.requestRates({lines})/watchRates -> rateJobs/{id}
+ {lines:[{itemId,code,name,pack,costP,wctn,wpcs,rctn,rpcs}],status:'new',by,at}.
+ Button "📌 Naye rates POS par lagao" SIRF MALIK (rules bhi isOwner create).
+ PC admin key se status done/error + applied/error likhe (rules bypass).
+ !!! PC WATCHER ABHI NAHI LIKHA — PC script repo mein NAHI hai. Malik se
+ sale-post/khata-sync script mangi gayi hai; usi pattern par rateJobs watcher
+ jorna hai (labelJobs/subcodeJobs/transferJobs/postJobs jaisa). POS DB schema
+ PC script se hi milega. Jab tak PC side nahi, jobs 'new' pari rehti hain aur
+ app 30s baad kehta hai "PC on hote hi lag jayegi".
+RULES v1.83 (PUBLISH ZAROORI, v1.82 items rules bhi isi mein): rateJobs read
+ owner+blueStaff; create sirf owner, keys [lines,status,by,at], status 'new',
+ lines<=100. Parchi mein "Naye Rates" table. Edit par aiName wapas name ban
+ jata hai jab useSys===false.

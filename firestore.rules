@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v1.82 (purchase items) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v1.83 (rateJobs + purchase items rates) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -77,6 +77,16 @@ service cloud.firestore {
     match /businesses/noor-traders/blueAccess/aiConfig {
       allow get: if blueStaff();
     }
+    // v1.83: naye rates ka job — SIRF MALIK bhejta hai; PC (admin key) status done/error likhta hai. Sasti shart pehle.
+    match /businesses/noor-traders/rateJobs/{id} {
+      allow read: if isOwner() || blueStaff();
+      allow create: if request.resource.data.status == 'new'
+        && request.resource.data.keys().hasOnly(['lines','status','by','at'])
+        && request.resource.data.lines is list && request.resource.data.lines.size() <= 100
+        && request.resource.data.by == request.auth.uid
+        && isOwner();
+    }
+
     // v1.81: sham ke milan ka natija (AI ki parhi hui raqmein) — din ke hisaab se ek doc. Sasti shart pehle.
     match /businesses/noor-traders/dayTally/{day} {
       allow read: if isOwner() || blueStaff();

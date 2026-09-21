@@ -40,6 +40,8 @@ return {authReady,currentUid:()=>auth.currentUser?.uid||'',
  // v1.81: AI key (malik likhta hai; malik + Full App mulazim parhte hain) aur sham ke milan ka natija
  async getAiConfig(){const d=await getDoc(other('blueAccess','aiConfig'));return d.exists()?d.data():null},
  async setAiConfig(cfg){await setDoc(other('blueAccess','aiConfig'),{provider:'gemini',key:String(cfg.key||'').trim(),model:String(cfg.model||'').trim(),updatedAt:Date.now(),by:auth.currentUser?.uid||''})},
+ async requestRates(d){if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('Rates sirf malik badal sakta hai');const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7);await setDoc(other('rateJobs',id),{lines:(d.lines||[]).slice(0,100),status:'new',by:auth.currentUser.uid,at:Date.now()});return id},
+ watchRates(id,cb){return onSnapshot(other('rateJobs',id),s=>cb(s.exists()?s.data():null),()=>cb(null))},
  async getTally(day){const d=await getDoc(other('dayTally',day));return d.exists()?d.data():null},
  async setTally(day,data){await setDoc(other('dayTally',day),{date:day,items:(data.items||[]).slice(0,300).map(x=>({amount:Math.round(Number(x.amount)||0),text:String(x.text||'').slice(0,80),struck:x.struck===true,unsure:x.unsure===true})),model:String(data.model||''),by:auth.currentUser?.uid||'',at:Date.now()})},
  // v1.79.11: rules ki sharton ko alag-alag azmao (bisect)
