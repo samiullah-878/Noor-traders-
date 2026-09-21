@@ -442,3 +442,39 @@ chana pack 25 rctn 6500 -> SaleRate 260; baba-rice cost 8500 carton pehchana. Ap
 v1.83.1: watchRates ab working/failed bhi samjhta hai ('error' bhi chalta hai).
 Rules mein tabdeeli NAHI (v1.83 wale hi). PC install: LAGAO-RATES.bat (files copy +
 Startup vbs + loop shuru). PC AI_NOTES.txt mein bhi hissa jora gaya (rate-pc.zip).
+
+=== v1.84.0 — FULL-SCREEN purchase editor, naam ka token-matcher + 5 CHIPS, wholesale bhi auto ===
+Malik ke screenshots: AI ke lambe naam ("COLGATE GRF 200 GMS X 48 - DIAT-2608_440")
+smartSearch se POS ke chhote naam ("colgate 200gm") se nahi milte the; adhi khirki
+mein kaam mushkil. Tabdeeliyan (sab app.js/style.css, RULES WAHI v1.83):
+- modal(title,html,full) — teesra arg 'full-dialog' class (100vw/100dvh). purchaseForm
+  full=true. CSS dialog.full-dialog.
+- matchPosItems(items,name,top): nameTokens = words (>=2, stopwords GM/GMS/X/PACK...
+  nazar-andaz, digit-mile lafz sirf 125G shakal mein) + nums (<=4 hindse; 125G->125).
+  Score: word exact +3 / prefix(>=3) +1.5, num match +2, pack match +2, aur PENALTY
+  -1.5 jab dono taraf nums hon magar koi na mile (150 vs 100 wala masla). itemTk
+  cache Map. AUTO-SELECT sirf _score>=5 (billAIFill, pehle branch ki items par);
+  warna sirf chips. Node par asal namon se test pass.
+- lineMatches(l) 5 chips (l._m cache q+branch par), chipsHTML, data-bl-chip click ->
+  applyPosItem (itemId/code/pack/cName/uName/sysName/old rates/useSys=true +
+  recalcRates). blName 'change' par renderBillLines (chips taza). itemOptions ab
+  matcher top-8 (smartSearch sirf yahan se hata, baqi app mein qaim).
+- Layout .bill-line2: numbered head (1., naam, X), chips, .bl-two (POS item select +
+  godam), .bl-nums labelled Ctn/Pcs/Rate/Total, phir ratesRow.
+- recalcRates: WHOLESALE bhi pehli dafa auto (oldWrate/oldPrate x costP), parchoon
+  jaisa; rate edit par rctn/rpcs/wctn/wpcs char-on reset. ratesRow mein "purana R
+  nafa" + "W nafa %" dono.
+!!! WARNING: applyWholesalePct chips ab bhi sab par override karti hain. l._m/_score
+  cleanBillLines mein nahi jate (sirf UI). tkCache items ke naam badalne par purana
+  ho sakta hai (key id|name se bacha hua). smartSearch ka istemal itemOptions se
+  hataya gaya hai — accounts wali search par asar NAHI.
+
+=== v1.84.1 — PURCHASE MULAZIM KO BHI BILL AI (RULES v1.84 PUBLISH ZAROORI) ===
+Masla: canTally() sirf owner/full — Purchase login par AI button hi nahi tha; aur
+rules mein aiConfig get + posStock read purchaseStaff() ko nahi thi (button aata bhi
+to key/items par permission-denied). Tabdeeli: canTally scope full YA purchase;
+rules aiConfig get: blueStaff()||purchaseStaff(); posStock read mein purchaseStaff()
+shamil (item naam/rate ka milan isi collection se — saleStock() lazy start hota hai,
+purchase form kholte hi). dayTally/rateJobs waise hi (tally Daily Sale full/owner;
+rates POS sirf malik). YAAD: Gemini key ab purchase-scope browser tak bhi jati hai —
+Google console ki restriction/quota wali baat isi liye aur zaroori.

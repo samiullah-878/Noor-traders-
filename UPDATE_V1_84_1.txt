@@ -1,0 +1,12 @@
+Blue Khata v1.84.1
+INSTALL: 1) firestore.rules PUBLISH (copy page — 2nd line "BLUE KHATA v1.84" — ZAROORI, warna mulazim ko AI error dega). 2) ZIP GitHub par, Sync/Update 1.84.1.
+- PURCHASE wale mulazim ko bhi bill AI: "📷 Bill ki photo se bharo" ab uski tab par bhi; item-milan/chips/godam/rates sab wahan bhi chalta hai (rules: aiConfig + posStock parhne ki ijazat purchase login ko). Rates POS par lagana ab bhi SIRF MALIK.
+- Purchase ka bill-editor ab POORI SCREEN par khulta hai (adhi khirki khatam).
+- Naam ka SAMAJHDAR milan: "COLGATE GRF 200 GMS X 48 - DIAT-2608_440" ab system ke "colgate 200gm" se khud mil jata hai
+  (brand ke lafz + 200/48 jaise hindse; GMS, X, bill-code nazar-andaz). Size na mile (150 vs 100) to KHUD select NAHI hota.
+- Har item ke neeche 5 milte-julte system items ki CHIPS — ghalat mila ho to bas chip dabayein. Naam badal kar bahar
+  tap karein to chips taza. Select-list ab bhi hai (chips ke neeche), us mein bhi behtar 8 naam.
+- Line ki nayi tarteeb, number ke sath: 1. naam -> chips -> POS item + Godam -> Ctn/Pcs/Rate/Total (label ke sath)
+  -> naya cost / rates.
+- WHOLESALE bhi ab khud: purane W-nafa % (POS ke W aur khareed se) ko naye cost par laga kar — editable; % chips
+  pehle jaisi. Rate badalne par parchoon + wholesale dono dobara ban jate hain.
