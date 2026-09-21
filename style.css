@@ -416,3 +416,23 @@ body.geo-locked{overflow:hidden}
 .geo-own hr{border:0;border-top:1px solid #e2e8f0;width:100%;margin:6px 0}
 .geo-log{display:grid;padding:6px 0;border-bottom:1px solid #eef2f7}
 .geo-log small{color:#64748b}
+
+/* v1.89: Settings ki nayi shakal (icon · naam · ek line · ›) */
+.set-wrap{display:grid;gap:14px}
+.set-grp h4{margin:0 0 6px 4px;font-size:13px;color:#64748b;font-weight:700;letter-spacing:.2px}
+.set-card{border:1px solid #dbe3ef;border-radius:18px;overflow:hidden;background:#fff}
+.set-row{display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:12px 14px;background:#fff;border:0;border-radius:0;border-bottom:1px solid #e8edf5;text-align:left;color:#0f172a;text-decoration:none;font:inherit;cursor:pointer}
+.set-card>.set-row:last-child,.set-card>.set-block:last-child{border-bottom:0}
+.set-row:active{background:#f1f5fb}
+.set-ic{flex:none;width:36px;height:36px;display:grid;place-items:center;font-size:20px;background:#eef3fd;border-radius:10px}
+.set-tx{flex:1;min-width:0;display:grid;gap:2px}
+.set-tx b{font-size:16px;font-weight:700;color:#0f172a}
+.set-tx small{font-size:13px;color:#64748b;line-height:1.35}
+.set-ch{flex:none;font-size:24px;color:#94a3b8;line-height:1}
+.set-row.set-danger b{color:#b42332}
+.set-row.set-danger .set-ic{background:#fdecec}
+.set-block{display:grid;gap:6px;padding:12px 14px;border-bottom:1px solid #e8edf5;background:#fbfcfe}
+.set-block label{display:grid;gap:6px;font-weight:700;font-size:15px;color:#0f172a}
+.set-sub{margin:0;font-size:13px;color:#64748b}
+.set-lead{margin:0;color:#334155;line-height:1.5}
+.set-foot{margin:0;font-size:13.5px;color:#475569;line-height:1.5}

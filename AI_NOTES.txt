@@ -578,3 +578,18 @@ Malik: mulazim ghar ja kar app na chala sake; 50 m kaha — 100 m default rakha 
 - Rules publish na ho to staff ka listenGeo permission-denied -> cfg null -> KOI pabandi nahi (fail-open, jaan boojh kar:
   galti se sab mulazim band na hon).
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.88.0').
+
+=== v1.89.0 — ZERO KHATA = REMINDER KHATAM · SETTINGS NAYI SHAKAL · UPDATE KE LINKS (rules WAHI v1.88) ===
+- reminderLive(r) = party mile aur balance(p,entries()) > 0 (lene hain). reminderRows + dueCounts (banner) isi se —
+  0 ya minus wale foran bahar. autoEndZeroReminders(): SIRF malik, loaded, !localMode, !snapCached (server snapshot;
+  listen callback mein snapCached = snap.cached), 3 sec debounce, har reminder ek dafa (zeroTried): save({...r,
+  deleted:true}) — wahi jo "Reminder hataein" karta hai. Malik ka faisla: dobara udhaar par reminder WAPAS NAHI.
+- Settings: setRow(id,ic,title,sub,cls) / setGrp(title,inner) — SAB purane ids wahi (backup, loginCheck, restore,
+  restorePreview, restoreSave, imports, changePass, staffPass, aiKeyBtn, geoBtn, syncSuppliers, trashBtn, logout,
+  purchaseLogout) taake purane handlers chalein. Naya updLinks (#updLinks -> updLinks()). backup button ab
+  downloadDailyBackup($('backup').querySelector('b')) — textContent sirf naam badle, row ki shakal na toote.
+- APP_VER const app.js mein ('1.89.0') — version bump sed isi pattern se badalta hai. version.json mein ab
+  "rules" (zaroori rules version) aur "rulesChanged" (is update mein rules badle?) — Update ke links ki neeche wali line
+  inhi se. HAR UPDATE PAR yeh do field sahi rakhein.
+- NOTE: purana sync code v.version !== '1.34.1' se compare karta hai (hamesha update path) — jaan boojh kar nahi chheda.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.89.0') + version.json.

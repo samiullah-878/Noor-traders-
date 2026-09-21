@@ -1,0 +1,11 @@
+Blue Khata v1.89.0 — Zero khata = reminder khatam · Settings nayi shakal · Update ke links
+INSTALL: sirf ZIP GitHub par, Sync/Update 1.89.0. Firebase rules badalne ki zaroorat NAHI (v1.88 wale hi).
+ (v1.88 ke rules abhi publish nahi kiye to copy page se kar lein — location lock unhi se chalta hai.)
+NAYA:
+- Khata 0 ya minus (lene kuch nahi) -> Due Accounts aur "🔔 wasooli due" banner se foran bahar (sab phones).
+  Malik ke phone par (data poora sync hone ke baad) reminder khud khatam — "Reminder hataein" jaisa.
+  Dobara udhaar par reminder khud WAPAS NAHI aata — malik "+ Reminder" se naya lagaye (malik ka faisla).
+- Settings (⋮) nayi shakal: groups (💾 Backup · 👥 Mulazim aur hifazat · 🔌 POS aur AI · 🔗 Update · Account),
+  har line par icon + naam + ek line samjhane wali + ›. Koi button/kaam nahi hataya. Mulazim/Purchase ki settings bhi isi style.
+- 🔗 Update ke links (malik): GitHub upload / deploy check / poora repo / firestore.rules file, Firebase rules / login settings,
+  Google AI Studio. Neeche: is update mein rules badalne hain ya nahi (version.json se) + "Phone par vX · GitHub par vY ✅".
