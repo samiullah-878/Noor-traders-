@@ -5,6 +5,7 @@
 //  Data: businesses/noor-traders/posLedger
 // ============================================================
 
+import { partyScore } from './smart-search.js?v=1.87.0';
 import { money } from './model.js';
 
 const $ = id => document.getElementById(id);
@@ -60,12 +61,16 @@ function inRange(r) {
   return true;
 }
 
+const pmemo = new Map();   // v1.87: smart search (spelling ki ghalti bhi) — party naam par
 function matches(r, q) {
   if (!q) return true;
   const s = q.toLowerCase();
-  return String(r.partyName || '').toLowerCase().includes(s)
+  if (String(r.partyName || '').toLowerCase().includes(s)
       || String(r.partyPhone || '').includes(s)
-      || String(r.note || '').toLowerCase().includes(s);
+      || String(r.note || '').toLowerCase().includes(s)) return true;
+  const k = (r.partyName || '') + '|' + (r.partyPhone || '');
+  let o = pmemo.get(k); if (!o) { o = { name: r.partyName || '', phone: r.partyPhone || '' }; pmemo.set(k, o); }
+  return partyScore(o, q) > 0;
 }
 
 function suppliers(list) {

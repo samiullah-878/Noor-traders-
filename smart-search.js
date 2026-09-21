@@ -86,3 +86,29 @@ export function voiceSearch(cb, lang = 'ur-PK') {
   try { r.start(); } catch { return false; }
   return true;
 }
+
+// ================= v1.87: PARTY / ACCOUNT smart search =================
+// Items wali hi samajh (fold: ee/i, q/k, z/j, w/v, double harf; lafz kisi bhi tarteeb; 1 harf ki ghalti),
+// + mobile ke hindse (aakhri 3+ hindse bhi). Ranking app.js ka "istemal" (entries + is phone par chunna).
+const PHITS_KEY = 'sam-party-hits-v1';
+let phits = null;
+function loadPHits() { if (phits) return phits; try { phits = JSON.parse(localStorage.getItem(PHITS_KEY) || '{}') || {}; } catch { phits = {}; } return phits; }
+export function notePartyPick(id) {   // party chuni / kholi — is device par ginti (60 din)
+  if (!id) return;
+  const h = loadPHits(), k = String(id), now = Date.now();
+  h[k] = { n: ((h[k]?.n) || 0) + 1, t: now };
+  for (const key of Object.keys(h)) if (now - (h[key]?.t || 0) > 60 * 86400000) delete h[key];
+  try { localStorage.setItem(PHITS_KEY, JSON.stringify(h)); } catch {}
+}
+export function partyPicks(id) { const h = loadPHits()[String(id)]; return h ? h.n : 0; }
+let pidx = new WeakMap();
+function pentry(p) {
+  const nameF = fold(p.name || p.label || p.account || '');
+  const digits = String(p.phone || '').replace(/\D/g, '');
+  return { nameF, words: nameF.split(' ').filter(Boolean), aliasF: '', codes: digits ? [digits, digits.replace(/^92/, '0')] : [], raw: String(p.name || p.label || '').toLowerCase() };
+}
+export function partyScore(p, q) {
+  const qF = fold(q); if (!qF || !p) return 0;
+  let e = pidx.get(p); if (!e) { e = pentry(p); pidx.set(p, e); }
+  return scoreItem(e, qF.split(' ').filter(Boolean), qF);
+}

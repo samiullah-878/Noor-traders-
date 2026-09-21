@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v1.86 (POS Purchase screen — appPurchases) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v1.87 (POS Purchase edit — editOf) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -192,7 +192,8 @@ service cloud.firestore {
       function validPur() {
         let d = request.resource.data;
         return d.status == 'new' && d.by == request.auth.uid
-          && d.keys().hasOnly(['id','date','at','branch','godam','partyId','partyName','invoiceNo','note','lines','total','role','by','status','createdAt'])
+          && d.keys().hasOnly(['id','date','at','branch','godam','partyId','partyName','invoiceNo','note','lines','total','role','by','status','createdAt','editOf'])
+          && (!('editOf' in d) || d.editOf is map)
           && d.id == pid && pid.matches('^[a-zA-Z0-9_-]{6,60}$')
           && d.lines is list && d.lines.size() > 0 && d.lines.size() <= 150
           && d.total is number && d.total > 0

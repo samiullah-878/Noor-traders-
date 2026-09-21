@@ -1,0 +1,17 @@
+Blue Khata v1.87.0 — POS bill EDIT + SMART SEARCH / CHIPS har jagah
+INSTALL:
+ 1) firestore.rules PUBLISH (copy page — 2nd line "BLUE KHATA v1.87"). v1.86 abhi publish nahi kiya to yeh dono shamil hain.
+ 2) ZIP ki sab files GitHub par (v1.86 wali nayi files — purchase.js, manifest, logo images — bhi is ZIP mein hain). Sync/Update 1.87.0.
+ 3) PC: purchase-pc.zip (NAYA — purana wala na lagayein) > LAGAO-PURCHASE.bat. Is mein sync-bills.js v5 bhi hai (edit isi se chalta hai).
+NAYA:
+- "Bill dekhein" > "✏️ POS Purchase screen mein Edit": khula bill poora POS Purchase screen par (supplier, godam, tareekh,
+  bill #, items Ctn/Pcs/khareed). Upar peela "✏️ EDIT — POS bill ..." — Save = "💾 POS bill UPDATE": PC WOHI bill number
+  badalta hai (purani lines hat kar nayi) + naye rates. Malik koi bhi khula bill, mulazim sirf AAJ ka. Posted bill: pehle Unpost.
+  Isi dauran POS par bill badla ho to update nahi hota ("bill badal chuka — dobara kholein"). "✕ Edit chhodo" se chhor sakte hain.
+- SMART SEARCH (spelling ki ghalti, lafz aage-peeche, mobile ke aakhri hindse) sab account searches mein: Khata list, entry form,
+  Daily Sale sheet (Sale/Wasooli/Akhrajat), Akhrajat form, Purchase form, POS Purchase supplier, Transfer, Cash/Dasti, Due/report,
+  POS Ledger.
+- ⭐ AKSAR chips: search khali ho to 8 sab se zyada istemal wale — purchase par suppliers, sale/wasooli par customers, akhrajat par
+  kharche. Pichhle 60 din ki entries (7 din wali double) + is phone par chunna — data badle to chips khud badlein.
+  Khata list ke upar bhi ⭐ chips (tab ke hisaab se). Supplier chips mein ab "COUNTER SALE"/loan jaise account nahi aate.
+- POS Purchase: supplier chunte hi "📦 Is supplier se aksar aane wale" items ki chips.

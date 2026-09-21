@@ -533,3 +533,25 @@ PC: purchase-pc.zip (purchase-post.js v1) — tafseel PC ke AI_NOTES mein. Proce
   Lifebuoy 50 ctn = DB Qty 600).
 UNTESTED on real POS: purchase-post (pehla test EK sasta item). rateJobs/rate-lagao ab app se istemal nahi hota
   (purani jobs ke liye script rehne dein ya band kar dein — nuqsan nahi).
+
+=== v1.87.0 — POS PURCHASE BILL EDIT (editOf) + PARTY SMART SEARCH + ⭐ AKSAR CHIPS (RULES v1.87) ===
+EDIT: showBill (Bill dekhein) mein canPP() par button — sharten: b.purchaseId && b.stamp (sync-bills v5), docStatus !=3,
+  !posted (docStatus 2 ya isPosted(ent)), owner ya b.date===today(). purchase.js ppLoadBill(b, ent): lines itemId ->
+  stock item (na mile to edit nahi), qtyPcs -> Ctn/Pcs, costP = ratePcs, rates = POS ke maujooda (mode 'old', recalc
+  sirf khareed badalne par), godam = lines ka aksar godamId, supplier = ent.partyId, day = b.date, edit state draft mein.
+  Save doc mein editOf {purchaseId, billNo, stamp, partyId (asal app party), posPartyId}; date = edit.date (malik badal
+  sakta). Rules: keys mein 'editOf' + (editOf is map). PC purchase-post v2 editPurchase (tafseel PC AI_NOTES).
+SMART SEARCH: smart-search.js partyScore(p,q) (items wala fold/ed1/scoreItem; words = naam, codes = mobile hindse +
+  92->0), notePartyPick/partyPicks (localStorage 'sam-party-hits-v1', 60 din). app.js accountMatches aakhir mein
+  || partyScore>0 (purane includes/notes waise hi). partyUse(): records cache — 60 din entries (7 din x2): supplier
+  (purchase===true | purchaseCash/borrow/payment), customer (credit/collection/sale), expense ('expense:'+account,
+  'party:'+id payment), any. rankList(list,q,ctx,n,prefer): khali q = top 8 istemal (koi na ho to pehle 8), warna
+  accountMatches filter + (prefer, score, istemal, naam). isSupplierParty = category Supplier | supplier istemal.
+  Lagaya: entryForm (ctxOfKind), purchaseForm (supplier+prefer), dailySheet options (expense/customer), unifiedExpenseForm
+  (expense, khulte hi chips), mountPartyPicker (any, khulte hi chips), khata list (q ho aur sort 'name' to relevance;
+  khali par ⭐ chips data-party-chip -> route; data-party NAHI taake accountButton scroll-restore na toote), route()
+  khata id par notePartyPick, POS Purchase supplier (rank via setup), pos-ledger.js matches (partyScore memo).
+  Har pick par notePartyPick.
+POS Purchase: loadSupItems(pid) — appPurchasesOf + POS ke 6 aakhri bill (billIdsOf via setup, cloud.purchaseBill;
+  itemId ya naam/code se) -> top 12 "📦 Is supplier se aksar" chips (search khali ho).
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.87.0').

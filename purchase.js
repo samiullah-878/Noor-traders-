@@ -1,12 +1,14 @@
-// purchase.js — v1.86.0 "POS Purchase" screen (Purchase tab ke andar nayi screen)
+// purchase.js — v1.87.0 "POS Purchase" screen
+// v1.87.0: POS ka KHULA bill yahan EDIT (editOf) -> PC wohi bill number update karta hai; supplier ki smart chips
+//          (istemal ke hisaab se); supplier chunte hi "is supplier se aksar aane wale items" chips. (Purchase tab ke andar nayi screen)
 // Sale screen jaisi: barcode scan / smart search / Ctn + Pcs. Har item par khareed rate + 4 naye rate
 // (Wholesale Ctn/Pcs, Parchoon Ctn/Pcs) — PURANE NAFA se khud, % chips se wholesale.
 // Save -> Firestore "appPurchases" (status new) -> PC ka purchase-post.js POS mein ASLI purchase bill
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.86.0';
-import { smartSearch, noteHit, voiceSearch } from './smart-search.js?v=1.86.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.87.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=1.87.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -23,7 +25,9 @@ const DRAFT_KEY = 'sam-pp-draft';
 const W_CHIPS = [1, 1.25, 1.5, 2];
 
 let cloud = null, rerender = () => {}, notice = () => {}, isOwner = () => false, uidOf = () => '';
-let partiesOf = () => [], partyOf = () => null, matchesOf = () => true, canUse = () => false;
+let partiesOf = () => [], partyOf = () => null, matchesOf = () => true, canUse = () => false, rankOf = null, billIdsOf = () => [];
+let edit = null;            // v1.87: {purchaseId, billNo, stamp, partyId, posPartyId, date} — POS ka khula bill edit ho raha hai
+const supItems = new Map();  // partyId -> {loading, list:[{id,n}]}
 let supplier = '', godam = BILL_BRANCH, day = '', invoiceNo = '', note = '', cart = [], saving = false;
 let supQuery = '', supOpen = false;
 let today = [], todayDay = '', stopToday = null, todayErr = '';
@@ -32,13 +36,14 @@ export function ppSetup(o) {
   cloud = o.cloud; rerender = o.rerender || rerender; notice = o.notice || notice;
   isOwner = o.owner || isOwner; uidOf = o.uid || uidOf;
   partiesOf = o.parties || partiesOf; partyOf = o.party || partyOf; matchesOf = o.accountMatches || matchesOf; canUse = o.canUse || canUse;
+  rankOf = o.rank || rankOf; billIdsOf = o.billIdsOf || billIdsOf;
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
-    if (d && d.saved === todayStr()) { supplier = d.supplier || ''; godam = d.godam ?? BILL_BRANCH; day = d.day || ''; invoiceNo = d.invoiceNo || ''; note = d.note || ''; cart = Array.isArray(d.cart) ? d.cart : []; }
+    if (d && d.saved === todayStr()) { supplier = d.supplier || ''; godam = d.godam ?? BILL_BRANCH; day = d.day || ''; invoiceNo = d.invoiceNo || ''; note = d.note || ''; cart = Array.isArray(d.cart) ? d.cart : []; edit = d.edit || null; }
   } catch {}
 }
 function keepDraft() {
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ saved: todayStr(), supplier, godam, day, invoiceNo, note, cart })); } catch {}
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ saved: todayStr(), supplier, godam, day, invoiceNo, note, cart, edit })); } catch {}
 }
 
 // ---------- data ----------
@@ -129,7 +134,7 @@ function watchToday() {
     if ($('dialog')?.open && $('dialogTitle')?.textContent.startsWith('Aaj ke app purchase')) openToday();
   }, e => { todayErr = e?.message || 'Load nahi hue'; stopToday = null; });
 }
-const statusText = p => p.status === 'done' ? `✓ POS bill ${esc(p.purchaseNo || '')}${p.rates ? ' · ' + esc(String(p.rates)) + ' items ke rate lage' : ''}${p.rateError ? ' · <span class="red">rates: ' + esc(p.rateError) + '</span>' : ''}`
+const statusText = p => p.status === 'done' ? `✓ POS bill ${esc(p.purchaseNo || '')}${p.editOf ? ' UPDATE ho gaya' : ''}${p.rates ? ' · ' + esc(String(p.rates)) + ' items ke rate lage' : ''}${p.rateError ? ' · <span class="red">rates: ' + esc(p.rateError) + '</span>' : ''}`
   : p.status === 'failed' ? `<span class="red">✕ Nahi bana: ${esc(p.error || '')}</span>`
   : p.status === 'posting' ? '… PC bill bana raha hai' : '⏳ PC ka intezar (PC on ho)';
 const todayLabel = () => { const w = today.filter(p => p.status === 'new' || p.status === 'posting').length; return `📋 Aaj ke app purchase (${today.length})${w ? ' · ' + w + ' intezar' : ''}`; };
@@ -141,7 +146,7 @@ function dlg(title, html) {
 }
 function openToday() {
   dlg(`Aaj ke app purchase (${today.length})`, todayErr ? `<p>${esc(todayErr)}</p>` : !today.length ? '<p>Aaj app se koi purchase bill nahi bana.</p>' :
-    today.map(p => `<details class="sale-hist"><summary><b>${esc(p.partyName || '')} · Rs ${num(p.total)}</b><small>${esc(new Date(p.createdAt || 0).toLocaleTimeString('en-PK'))} · ${statusText(p)}</small></summary>
+    today.map(p => `<details class="sale-hist"><summary><b>${p.editOf ? '✏️ ' + esc(p.editOf.billNo || '') + ' · ' : ''}${esc(p.partyName || '')} · Rs ${num(p.total)}</b><small>${esc(new Date(p.createdAt || 0).toLocaleTimeString('en-PK'))} · ${statusText(p)}</small></summary>
       <div style="overflow-x:auto"><table><thead><tr><th>Item</th><th>Qty</th><th>Khareed</th><th>Rs</th></tr></thead><tbody>
       ${(p.lines || []).map(l => `<tr><td>${esc(l.name)}</td><td>${qtyText(l)}</td><td>${num(l.costP)}/${esc(l.uName || 'Pcs')}</td><td>${num(r2(l.qty * l.costP))}</td></tr>`).join('')}
       </tbody></table></div>${p.invoiceNo ? `<p>Supplier bill # ${esc(p.invoiceNo)}</p>` : ''}${p.note ? `<p>${esc(p.note)}</p>` : ''}</details>`).join(''));
@@ -156,10 +161,13 @@ function qtyText(l) {
 function supplierBox() {
   const p = partyOf(supplier);
   if (p && !supOpen) return `<div class="pp-sup"><div><small>Supplier</small><b>${esc(p.name)}</b></div><button type="button" data-pp-sup-change>Badlein</button></div>`;
-  const list = partiesOf().filter(x => !x.deleted && matchesOf(x, supQuery))
-    .sort((a, b) => (b.category === 'Supplier') - (a.category === 'Supplier')).slice(0, 25);
-  return `<div class="pp-sup-pick"><label>Supplier chunein<input id="ppSupQ" type="search" placeholder="Naam / mobile" value="${esc(supQuery)}" autocomplete="off"></label>
-    <div class="pp-sup-list">${list.map(x => `<button type="button" data-pp-sup="${esc(x.id)}">${esc(x.name)}</button>`).join('') || '<small>Koi supplier nahi mila</small>'}</div></div>`;
+  return `<div class="pp-sup-pick"><label>Supplier chunein<input id="ppSupQ" type="search" placeholder="Naam / mobile (spelling ghalat bhi chalegi)" value="${esc(supQuery)}" autocomplete="off"></label>
+    <div class="pp-sup-list">${supList()}</div></div>`;
+}
+function supList() {
+  const q = supQuery.trim();
+  const list = rankOf ? rankOf(partiesOf(), q, 25) : partiesOf().filter(x => !x.deleted && matchesOf(x, q)).slice(0, 25);
+  return (list.length && !q ? '<small class="pchip-h">⭐ Aksar</small>' : '') + (list.map(x => `<button type="button" data-pp-sup="${esc(x.id)}">${esc(x.name)}</button>`).join('') || `<small>${q ? 'Koi supplier nahi mila' : 'Naam likhein'}</small>`);
 }
 export function renderPP() {
   installHooks(); watchToday();
@@ -167,6 +175,7 @@ export function renderPP() {
   const total = cartTotal();
   const gopts = b => s.branches.map(x => `<option value="${x}"${Number(x) === Number(b) ? ' selected' : ''}>${esc(s.branchName(x, s.names))}</option>`).join('');
   $('summary').innerHTML = `<div class="stock-head sale-head pp-head" data-pp-root="1">
+    ${edit ? `<div class="pp-edit"><b>✏️ EDIT — POS bill ${esc(edit.billNo || '')}</b><small>Save par yahi bill POS mein UPDATE hoga (naya nahi banega)</small><button type="button" data-pp-edit-off="1">✕ Edit chhodo</button></div>` : ''}
     ${supplierBox()}
     <div class="pp-meta">
       ${s.branches.length ? `<label>Godam (sab items)<select data-pp-godam="1">${gopts(godam)}</select></label>` : ''}
@@ -187,6 +196,9 @@ export function renderPP() {
     const hits = smartSearch(s.items, q, 25);
     found = `<div class="sale-found">${hits.length ? hits.map(r => `<button type="button" class="sale-hit" data-pp-add="${esc(r.id)}"><b>${esc(r.name)}</b><small>${esc(r.code || '')} · khareed ${num(r.prate)}${Number(r.pack) > 1 ? ' · 1 ' + esc(r.cName || 'Ctn') + ' = ' + num(r.pack) : ''} · stock ${num(r.stock)}</small></button>`).join('') : '<p class="stat-note">Koi item nahi mila</p>'}</div>`;
   }
+  if (supplier && !q) loadSupItems(supplier);
+  const si2 = supplier && !q ? (supItems.get(supplier)?.list || []).map(x => s.items.find(r => String(r.id) === String(x.id))).filter(Boolean).slice(0, 12) : [];
+  if (si2.length) found = `<div class="sale-found"><p class="stat-note" style="margin:0 0 4px">📦 Is supplier se aksar aane wale</p><div class="mchips">${si2.map(r => `<button type="button" data-pp-add="${esc(r.id)}">${esc(r.name)}</button>`).join('')}</div></div>`;
   const bar = cart.length ? `<div class="ws-chips"><small>Wholesale nafa SAB items par (naye khareed ke upar):</small>${W_CHIPS.map(p => `<button type="button" data-pp-wall="${p}">+${p}%</button>`).join('')}<input id="ppWCustom" type="number" inputmode="decimal" min="0" step="0.01" placeholder="apni %"><button type="button" data-pp-wall-custom="1">Lagao</button><button type="button" data-pp-old-all="1">↺ Sab par purana nafa</button></div>` : '';
   const rows = cart.map((l, i) => {
     const pk = packOf(l), pcs = linePcs(l);
@@ -221,12 +233,13 @@ export function renderPP() {
   $('list').innerHTML = camRow + found + (cart.length ? bar + `<div class="sale-cart">${rows}</div>` + foot :
     (q ? '' : `<div class="empty"><strong>Naya purchase bill</strong><p>Upar supplier chunein, phir item ka naam likhein ya 📷 se scan karein.</p></div>`));
   $('actions').innerHTML = cart.length ? `<button class="give" data-pp-clear="1">✕ Naya bill</button><button data-pp-camera="1" title="Barcode scan">📷</button>
-    <button class="got" data-pp-save="1"${saving ? ' disabled' : ''}>${saving ? 'Bhej raha hoon…' : '💾 POS mein bhejo · Rs ' + num(total)}</button>` : '';
+    <button class="got" data-pp-save="1"${saving ? ' disabled' : ''}>${saving ? 'Bhej raha hoon…' : saveLabel(total)}</button>` : '';
 }
+const saveLabel = t => (edit ? '💾 POS bill UPDATE · Rs ' : '💾 POS mein bhejo · Rs ') + num(t);
 function refreshTotals() {
   const t = $('ppTotal'); if (t) t.textContent = 'Rs ' + num(cartTotal());
   cart.forEach((l, i) => { const a = $('ppAmt' + i); if (a) a.textContent = num(lineTotal(l)); });
-  const b = document.querySelector('[data-pp-save]'); if (b && !saving) b.textContent = '💾 POS mein bhejo · Rs ' + num(cartTotal());
+  const b = document.querySelector('[data-pp-save]'); if (b && !saving) b.textContent = saveLabel(cartTotal());
 }
 // rates ke khane (focus kharab kiye baghair) taza karo
 function paintRates(i) {
@@ -242,8 +255,7 @@ const inPP = t => !!t?.closest?.('#list,#summary') && !!document.querySelector('
 document.addEventListener('input', e => {
   const t = e.target;
   if (t?.id === 'ppSupQ') { supQuery = t.value; const box = t.closest('.pp-sup-pick')?.querySelector('.pp-sup-list');
-    if (box) { const list = partiesOf().filter(x => !x.deleted && matchesOf(x, supQuery)).sort((a, b) => (b.category === 'Supplier') - (a.category === 'Supplier')).slice(0, 25);
-      box.innerHTML = list.map(x => `<button type="button" data-pp-sup="${esc(x.id)}">${esc(x.name)}</button>`).join('') || '<small>Koi supplier nahi mila</small>'; } return; }
+    if (box) box.innerHTML = supList(); return; }
   if (!inPP(t)) return;
   const d = t.dataset; let i;
   if ((i = d.ppCtn) != null) cart[i].ctn = Math.max(0, Math.floor(Number(t.value) || 0));
@@ -287,14 +299,16 @@ document.addEventListener('click', async e => {
   if (!document.querySelector('[data-pp-root]')) return;
   const mic = e.target.closest?.('[data-pp-mic]');
   if (mic) { const ok = voiceSearch(t => { const s = $('search'); if (s) { s.value = t; s.dispatchEvent(new Event('input', { bubbles: true })); } }); if (!ok) notice('Is phone/browser mein awaz se search nahi chalti'); return; }
+  const off = e.target.closest?.('[data-pp-edit-off]');
+  if (off) { if (!confirm('Edit chhor dein? (POS ka bill waisa hi rahega; screen saaf ho jayegi)')) return; edit = null; cart = []; note = ''; invoiceNo = ''; day = ''; keepDraft(); rerender(); return; }
   const t = e.target.closest?.('[data-pp-sup],[data-pp-sup-change],[data-pp-add],[data-pp-del],[data-pp-clear],[data-pp-save],[data-pp-today],[data-pp-camera],[data-pp-old],[data-pp-w],[data-pp-wall],[data-pp-wall-custom],[data-pp-old-all],[data-pp-copy]');
   if (!t) return;
   const d = t.dataset;
-  if (d.ppSup) { supplier = d.ppSup; supOpen = false; supQuery = ''; keepDraft(); rerender(); return; }
+  if (d.ppSup) { supplier = d.ppSup; notePartyPick(supplier); supOpen = false; supQuery = ''; keepDraft(); rerender(); return; }
   if (d.ppSupChange != null) { supOpen = true; rerender(); setTimeout(() => $('ppSupQ')?.focus(), 50); return; }
   if (d.ppAdd) { const it = stock().items.find(r => String(r.id) === d.ppAdd); if (it) { const r = addItem(it); const s = $('search'); if (s) s.value = ''; notice(r.again ? `+1 · ${it.name}` : `✓ ${it.name}`); rerender(); focusLine(r.line.k); } return; }
   if (d.ppDel != null) { cart.splice(Number(d.ppDel), 1); keepDraft(); rerender(); return; }
-  if (d.ppClear) { if (!confirm('Yeh purchase bill saaf kar dein?')) return; cart = []; note = ''; invoiceNo = ''; keepDraft(); rerender(); return; }
+  if (d.ppClear) { if (!confirm(edit ? 'Edit chhor kar screen saaf kar dein? (POS ka bill waisa hi rahega)' : 'Yeh purchase bill saaf kar dein?')) return; cart = []; note = ''; invoiceNo = ''; edit = null; day = ''; keepDraft(); rerender(); return; }
   if (d.ppCamera) { openSaleCamera(); return; }
   if (d.ppToday) { openToday(); return; }
   if (d.ppOld != null) { const l = cart[d.ppOld]; if (l) { l.wMode = 'old'; l.rMode = 'old'; recalc(l); keepDraft(); rerender(); } return; }
@@ -351,22 +365,74 @@ async function save() {
   if (low.length && !confirm('Dhyan: in items ka naya sale rate KHAREED SE KAM hai:\n\n' + low.join('\n') + '\n\nPhir bhi bhejein?')) return;
   const total = r2(lines.reduce((n, l) => n + l.qty * l.costP, 0));
   const date = isOwner() && day ? day : todayStr();
-  if (!confirm(`POS PURCHASE BILL\n${p.name}\n${lines.length} items · Rs ${num(total)}${invoiceNo ? '\nSupplier bill # ' + invoiceNo : ''}\n\nPOS mein bill banayein aur naye rates lagayein?`)) return;
+  const date2 = edit ? (isOwner() && day ? day : edit.date) : date;
+  if (!confirm(`${edit ? 'POS BILL ' + edit.billNo + ' — UPDATE' : 'POS PURCHASE BILL'}\n${p.name}\n${lines.length} items · Rs ${num(total)}${invoiceNo ? '\nSupplier bill # ' + invoiceNo : ''}\n\n${edit ? 'POS mein yahi bill badlein (purani lines hat kar yeh lagengi) aur naye rates lagayein?' : 'POS mein bill banayein aur naye rates lagayein?'}`)) return;
   const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  const doc = { id, date, at: new Date().toISOString(), branch: BILL_BRANCH, godam: Number(godam) || BILL_BRANCH,
+  const doc = { id, date: date2, at: new Date().toISOString(), branch: BILL_BRANCH, godam: Number(godam) || BILL_BRANCH,
     partyId: String(p.id), partyName: String(p.name || '').slice(0, 120), invoiceNo: invoiceNo.trim(), note: note.trim(),
-    lines, total, role: isOwner() ? 'owner' : 'staff', by: uidOf(), status: 'new', createdAt: Date.now() };
+    lines, total, role: isOwner() ? 'owner' : 'staff', by: uidOf(), status: 'new', createdAt: Date.now(),
+    ...(edit ? { editOf: { purchaseId: Number(edit.purchaseId), billNo: String(edit.billNo || ''), stamp: String(edit.stamp || ''), partyId: String(edit.partyId || ''), posPartyId: Number(edit.posPartyId) || 0 } } : {}) };
   saving = true; rerender();
   try {
     const w = cloud.saveAppPurchase(doc);
     await Promise.race([w, new Promise(r => setTimeout(r, 4000))]);
-    const keep = { cart, invoiceNo, note };
-    cart = []; note = ''; invoiceNo = ''; keepDraft();
-    notice('Purchase bill bhej diya — PC POS mein bana dega (Aaj ke app purchase mein status)');
+    const keep = { cart, invoiceNo, note, edit, day };
+    cart = []; note = ''; invoiceNo = ''; edit = null; day = ''; keepDraft();
+    notice(keep.edit ? 'Update PC ko bhej diya — PC POS mein wohi bill badal dega (Aaj ke app purchase mein status)' : 'Purchase bill bhej diya — PC POS mein bana dega (Aaj ke app purchase mein status)');
     w.catch(err => {
-      if (!cart.length) { cart = keep.cart; invoiceNo = keep.invoiceNo; note = keep.note; keepDraft(); rerender(); }
+      if (!cart.length) { cart = keep.cart; invoiceNo = keep.invoiceNo; note = keep.note; edit = keep.edit; day = keep.day; keepDraft(); rerender(); }
       alert('Purchase bill PC tak NAHI gaya: ' + (err?.message || err) + '\nBill wapas screen par hai — dobara bhejein.');
     });
   } catch (err) { notice('Nahi gaya: ' + (err?.message || err)); }
   finally { saving = false; rerender(); }
+}
+
+// ---------- v1.87: is supplier se aksar aane wale items (app ke bills + POS ke pichhle 6 bills) ----------
+async function loadSupItems(pid) {
+  if (!pid || supItems.has(pid) || !cloud) return;
+  supItems.set(pid, { loading: true, list: [] });
+  try {
+    const cnt = new Map(), add = id => { if (id != null && id !== '') cnt.set(String(id), (cnt.get(String(id)) || 0) + 1); };
+    const apps = cloud.appPurchasesOf ? await cloud.appPurchasesOf(pid).catch(() => []) : [];
+    apps.filter(p => p.status !== 'failed').forEach(p => (p.lines || []).forEach(l => add(l.id)));
+    const { items } = stock();
+    for (const id of billIdsOf(pid).slice(0, 6)) {
+      const b = await cloud.purchaseBill(id).catch(() => null);
+      for (const l of b?.lines || []) {
+        if (l.itemId) { add(l.itemId); continue; }
+        const it = items.find(r => norm(r.name) === norm(l.name)) || items.find(r => l.code && String(r.code) === String(l.code));
+        if (it) add(it.id);
+      }
+    }
+    supItems.set(pid, { loading: false, list: [...cnt].map(([id, n]) => ({ id, n })).sort((a, b) => b.n - a.n).slice(0, 12) });
+  } catch { supItems.set(pid, { loading: false, list: [] }); }
+  if (document.querySelector('[data-pp-root]') && supplier === pid && !$('search')?.value.trim()) rerender();
+}
+
+// ---------- v1.87: POS ka KHULA bill is screen par (edit) ----------
+// b = posBills doc (sync-bills v5: purchaseId, stamp, posPartyId, invoiceNo, lines[{itemId, qtyPcs, ratePcs, godamId}])
+export function ppLoadBill(b, ent) {
+  if (!b || !Number(b.purchaseId) || !b.stamp || !(b.lines || []).every(l => l.itemId)) return 'Is bill ki poori tafseel abhi nahi aayi — PC par nayi sync-bills.js lagayein, 2 minute baad dobara kholein.';
+  const s = stock();
+  if (!s.loaded) return 'Items abhi load ho rahe hain — thori der baad dobara dabayein.';
+  if (cart.length && !confirm('POS Purchase screen par pehle se items hain — woh hata kar yeh bill kholein?')) return 'cancel';
+  const missing = [], next = [];
+  const gcount = new Map();
+  for (const x of b.lines) {
+    const it = s.items.find(r => String(r.id) === String(x.itemId));
+    if (!it) { missing.push(x.name); continue; }
+    const o = oldOf(it), pk = Number(it.pack) > 1 ? Number(it.pack) : 0, q = Number(x.qtyPcs) || 0;
+    const g = Number(x.godamId) || BILL_BRANCH; gcount.set(g, (gcount.get(g) || 0) + 1);
+    next.push({ k: newKey(), id: it.id, code: it.code || '', name: it.name, pack: Number(it.pack) || 0, cName: it.cName || 'Ctn', uName: it.uName || 'Pcs',
+      godam: g, ctn: pk ? Math.floor(q / pk + 1e-9) : 0, pcs: pk ? r3(q - Math.floor(q / pk + 1e-9) * pk) : q, costP: r4(Number(x.ratePcs) || o.oldCost), ...o,
+      wpcs: o.oldW, wctn: pk ? Math.round(o.oldW * pk) : 0, rpcs: pk ? o.oldR2 : o.oldR, rctn: pk ? Math.round(o.oldR * pk) : 0, wMode: 'old', rMode: 'old' });
+  }
+  if (missing.length) return 'Yeh items POS stock list mein nahi mile, is liye edit nahi ho sakta:\n' + missing.join('\n');
+  cart = next;
+  godam = [...gcount].sort((a, c) => c[1] - a[1])[0]?.[0] ?? BILL_BRANCH;
+  supplier = String(ent?.partyId || ''); supOpen = !partyOf(supplier); supQuery = '';
+  day = b.date || ''; invoiceNo = String(b.invoiceNo || ''); note = '';
+  edit = { purchaseId: Number(b.purchaseId), billNo: String(b.billNo || ''), stamp: String(b.stamp), partyId: supplier, posPartyId: Number(b.posPartyId) || 0, date: b.date || todayStr() };
+  keepDraft();
+  return '';
 }
