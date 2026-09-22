@@ -1,4 +1,5 @@
-// purchase.js — v1.99.0 "POS Purchase" screen
+// purchase.js — v2.0.0 "POS Purchase" screen
+// v2.0.0: AI ko humare items ki list bhi jati hai (itemId khud wapas karta hai) — matching pehli dafa hi sahi.
 // v1.99.0: AI wale bill ki har line par "bill ka naam → system ka naam" — ✓ Yaad kar lo (naam us item ke
 //          "Doosre naam" mein save) aur ✏️ Badlein (sahi item chunein; chunte hi naam khud yaad ho jata hai).
 // v1.98.0: SAB purchase ka kaam isi ek screen par — upar do chip (Items wali bill / 📷 sirf photo + raqam),
@@ -12,8 +13,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.99.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=1.99.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.0.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=2.0.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -495,14 +496,15 @@ function aiItems() {
     dlg('🤖 Bill ki tasveer se items', '<p id="ppAiMsg" role="status">Tayyari…</p><div id="ppAiOut"></div>');
     const say = x => { const m = $('ppAiMsg'); if (m) m.textContent = x; };
     try {
-      const bill = await aiBillOf({ files, onStatus: say });
+      const bill = await aiBillOf({ files, onStatus: say, partyId: supplier });
       const lines = (bill && bill.lines) || [];
       if (!lines.length) throw Error('Tasveer se koi item nahi parha gaya. Saaf photo (seedhi, poori bill) lagayein.');
       const { items } = stock();
       aiBillInfo = bill; aiRows = [];
       for (const l of lines) {
         const q = aiNameOf(l);
-        const hit = q ? (smartSearch(items, q, 1)[0] || null) : null;
+        // v2.0.0: AI ko humare items ki list di jati hai — wo khud itemId de de to wahi lagao, warna naam se dhoondo
+        const hit = (l.itemId && items.find(x => String(x.id) === String(l.itemId))) || (q ? (smartSearch(items, q, 1)[0] || null) : null);
         if (!hit) { aiRows.push({ ai: l, key: null, itemId: '', learn: '' }); continue; }
         const ln = addItem(hit, false).line;
         aiApply(ln, l);

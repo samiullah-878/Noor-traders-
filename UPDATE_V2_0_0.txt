@@ -1,0 +1,23 @@
+Blue Khata v2.0.0 — AI ko humare items ki list · Tez jawab · Mulazim bhi naam sikha sake
+INSTALL: 1) Is ZIP ki 13 files GitHub par, phir app mein "↻ Sync / Update" -> 2.0.0.
+         2) ⚠️ RULES BADLI HAIN: firestore.rules ka naya matan Firebase Console > Firestore > Rules mein
+            paste kar ke PUBLISH karein (pehli line ke baad "BLUE KHATA v2.0" likha hona chahiye).
+            Rules publish na karein to mulazim ka "Yaad kar lo" kaam nahi karega (baqi sab chalega).
+
+1) AI AB HUMARE ITEMS KI LIST DEKH KAR NAAM MILATA HAI
+   - Bill parhte waqt AI ko humare 400 tak items (naam + jo doosre naam aap ne yaad karwaye) bhi jate hain.
+     Wo khud batata hai ke bill ki har line humara kaun sa item hai — is liye pehli hi dafa sahi item lagta hai.
+   - Us supplier ke pichhle bills wale items sab se pehle bhejte hain.
+   - Jitne naam aap "✓ Yaad kar lo" se sikhate jayenge, utna hi AI sahi hota jayega.
+
+2) TEZ
+   - Gemini ka "sochna" (thinking) band kar diya — jawab kaafi tez. Jo model yeh na maane, app khud purane
+     tareeqe se dobara bhej deti hai (aap ko kuch nahi karna).
+   - Bill ki tasveer ab 1400px/0.75 par jati hai (chhapa hua bill is par saaf rehta hai) — upload aadha.
+     Roznamcha/kaapi wali tasveer pehle jaisi hi hai.
+   - Screen par ab second ki ginti dikhti hai: "AI bill parh raha hai… (12s)".
+
+3) MULAZIM BHI NAAM YAAD KARWA SAKE
+   - Full App aur Purchase wala mulazim bhi ab "✓ Yaad kar lo" daba sakta hai.
+   - Mehfooz rakha gaya: naam sirf BARH sakte hain — koi mulazim naam MITA nahi sakta.
+   - Yaad rahe: mulazim kisi item ka naam badal zaroor sakta hai (mita nahi sakta).

@@ -1,4 +1,6 @@
-// Blue Khata v1.81 — sham ka milan: kaapi ki tasveer (AI sirf PARHTA hai) vs Daily Sale (milan yeh code karta hai).
+// Blue Khata v2.0.0 — AI se PARHWANA (hisaab nahi). v2.0.0: (1) purchase bill parhte waqt humare items ki
+// list bhi saath jati hai taake AI khud sahi item ka id (itemId) laga de; (2) 'thinking' band (tez jawab).
+// v1.81 — sham ka milan: kaapi ki tasveer (AI sirf PARHTA hai) vs Daily Sale (milan yeh code karta hai).
 // AI se hisaab nahi karwaya jata — sirf raqmein parhwai jati hain. Koi entry khud nahi badalti.
 
 const API = 'https://generativelanguage.googleapis.com/v1beta';
@@ -62,11 +64,24 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const busyError = e => /overloaded|high demand|try again later|temporar|unavailable|503/i.test(String(e?.message || ''));
 
 // v1.82: Google par rush (503) ho to khud 2 dafa ruk kar dobara koshish; phir bhi na chale to doosra flash model aazmao.
-async function generate({ key, model, parts, onStatus }) {
-  const call = m => api('/models/' + encodeURIComponent(m) + ':generateContent', key, {
+async function generate({ key, model, parts, onStatus, fast = false }) {
+  // v2.0.0: Gemini 2.5 flash har jawab se pehle "sochta" hai — parhne ke kaam mein us ki zarurat nahi.
+  // thinkingBudget 0 se jawab kaafi tez aata hai. Jo model yeh na maane (400) us par khud purane tareeqe se dobara.
+  let noThink = fast;
+  const cfg = () => ({ temperature: 0, responseMimeType: 'application/json', ...(noThink ? { thinkingConfig: { thinkingBudget: 0 } } : {}) });
+  const once = m => api('/models/' + encodeURIComponent(m) + ':generateContent', key, {
     method: 'POST',
-    body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } })
+    body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: cfg() })
   });
+  const call = async m => {
+    try { return await once(m); }
+    catch (e) {
+      if (noThink && /thinking|thinking_budget|thinkingConfig|generation_?config|INVALID_ARGUMENT|HTTP 400/i.test(String(e?.message || ''))) {
+        noThink = false; return await once(m);          // yeh model thinking band nahi karta — purane tareeqe se
+      }
+      throw e;
+    }
+  };
   const delays = [2500, 6000];
   let lastErr = null;
   for (let i = 0; i <= delays.length; i++) {
@@ -110,8 +125,18 @@ export const BILL_PROMPT = [
   '- lines: HAR item ki line: {"name": item ka naam BILKUL waisa jaisa likha hai (Urdu likha ho to Urdu hi), "roman": agar naam Urdu/Arabic rasm-ul-khat mein hai to wohi naam Roman Urdu (English harfon) mein — jaise "چینی" ka "cheeni" — warna "", "ctn": carton / peti / bora ki ginti (na mile to 0), "pcs": khule pieces / dozen se bahar ginti (na mile to 0), "rate": fi carton qeemat rupay agar ctn hai warna fi piece (na mile to 0), "total": us line ka total rupay (na mile to 0), "unsure": true agar hindsa saaf na ho}.',
   '- Agar bill par sirf ek ginti likhi hai aur pata nahi carton hai ya piece, to use "ctn" mein daal do. "5+3" ka matlab aksar 5 carton aur 3 pieces hota hai.',
   '- Tareekh, mobile number, address, "previous balance", tax number waghera ko LINES mein SHAMIL NA karo.',
-  'Sirf yeh JSON do, aur kuch nahi: {"supplier":"","date":"","total":0,"lines":[{"name":"","roman":"","ctn":0,"pcs":0,"rate":0,"total":0,"unsure":false}]}'
+  '- itemId: agar neeche "HUMARE ITEMS" ki list di gayi ho to har line ka sab se milta julta item us list mein se dhoondo aur wahan likha hua id yahan do. Poora yaqeen na ho to itemId "" chhor do — ghalat item lagane se behtar khali chhorna hai. List se bahar ka koi id mat banao.',
+  'Sirf yeh JSON do, aur kuch nahi: {"supplier":"","date":"","total":0,"lines":[{"name":"","roman":"","itemId":"","ctn":0,"pcs":0,"rate":0,"total":0,"unsure":false}]}'
 ].join('\n');
+
+// v2.0.0: humare POS items ki list — AI ko saath bhejte hain taake wohi sahi item chun le.
+// known = [{id, name, code, alias}] — alias woh naam hain jo malik ne bill se "yaad" karwaye (in se match sab se acha hota hai).
+export function knownItemsText(known) {
+  const rows = (known || []).filter(k => k && k.id && k.name).slice(0, 400)
+    .map(k => String(k.id) + ' | ' + String(k.name).slice(0, 60) + (k.alias ? ' | ' + String(k.alias).slice(0, 80) : ''));
+  if (!rows.length) return '';
+  return ['HUMARE ITEMS (shakal: id | naam | doosre naam) — itemId inhi mein se chunna hai:', ...rows].join('\n');
+}
 
 export function parseBill(text) {
   let raw = String(text || '').replace(/```json|```/g, '').trim();
@@ -122,6 +147,7 @@ export function parseBill(text) {
   const lines = (Array.isArray(d.lines) ? d.lines : []).map(l => ({
     name: String(l?.name || '').slice(0, 120).trim(),
     roman: String(l?.roman || '').slice(0, 120).trim(),
+    itemId: String(l?.itemId || '').slice(0, 40).trim(),
     ctn: Math.max(0, num(l?.ctn)) || (Math.max(0, num(l?.qty)) || 0),   // purana "qty" bhi ctn ban jata hai
     pcs: Math.max(0, num(l?.pcs)),
     rate: Math.max(0, num(l?.rate)),
@@ -132,13 +158,15 @@ export function parseBill(text) {
   return { supplier: String(d.supplier || '').slice(0, 120), date: /^\d{4}-\d{2}-\d{2}$/.test(String(d.date || '')) ? d.date : '', total: Math.round(num(d.total)), lines };
 }
 
-export async function readPurchaseBill({ key, model, images, onStatus }) {
+export async function readPurchaseBill({ key, model, images, onStatus, known = null, fast = true }) {
   if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
   if (!model) throw Error('Model ka naam khali hai — Settings > AI key > Test dabayein.');
   if (!images?.length) throw Error('Bill ki kam az kam 1 picture chunein');
   const parts = images.map(im => ({ inline_data: { mime_type: im.mime, data: im.data } }));
   parts.push({ text: BILL_PROMPT });
-  return parseBill(textOf(await generate({ key, model, parts, onStatus })));
+  const list = knownItemsText(known);
+  if (list) parts.push({ text: list });
+  return parseBill(textOf(await generate({ key, model, parts, onStatus, fast })));
 }
 
 export function parseItems(text) {

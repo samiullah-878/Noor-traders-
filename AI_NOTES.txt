@@ -833,3 +833,44 @@ ABHI BAQI (malik ne "1-2-3" kaha tha — teeno chahiye):
 NOTE: malik ne is chat mein khata-sync.zip (PC wala folder) bheja tha — us mein app ki files (ai-tally.js,
 smart-search.js, cloud.js) nahi hotin; woh GitHub wale app repo mein hain.
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.99.0') + version.json.
+
+=== v2.0.0 — AI KO HUMARE ITEMS KI LIST + TEZ JAWAB + MULAZIM BHI NAAM SIKHA SAKE (RULES v2.0 PUBLISH ZAROORI) ===
+Malik ne "1-2-3" kaha tha (teeno kaam). Files (ai-tally.js, cloud.js, firestore.rules waghera) isi chat mein aayin.
+
+1) AI KO PEHLE HI HUMARE ITEMS KI LIST (ai-tally.js + app.js + purchase.js)
+- ai-tally.js: BILL_PROMPT mein naya khana "itemId" (list mein se chuno; yaqeen na ho to khali — ghalat item mat lagao,
+  list se bahar ka id mat banao). Nayi export knownItemsText(known): "id | naam | doosre naam" ki satrein, 400 tak,
+  naam 60 harf, alias 80 harf. readPurchaseBill({...,known,fast=true}) list ko ALAG text part bana kar bhejta hai.
+  parseBill ab itemId bhi rakhta hai (40 harf).
+- app.js knownItems(partyId): stockPools() ke items; pehle wo jo isi supplier ke pichhle 8 POS purchase bills mein
+  aaye (e.items[].itemId se ginti), phir baqi, 400 tak; har item ke sath aliasOf(id) — yani jo naam malik/mulazim ne
+  "Yaad kar lo" se sikhaye WOHI AI ko bhi milte hain (jitna sikhayenge utna match behtar).
+- purchase.js aiItems: pehle l.itemId se item dhoondta hai, na mile to purana smartSearch wala rasta.
+- SABAQ: BILL_PROMPT ke andar bhi lafz "HUMARE ITEMS" aata hai — test mein sirf usi lafz se list ka hona mat jaanchein
+  (header "HUMARE ITEMS (shakal" ya koi asal satar dekhein).
+
+2) SPEED (ai-tally.js + app.js)
+- generate({...,fast}) ab generationConfig mein thinkingConfig:{thinkingBudget:0} bhejta hai (Gemini 2.5 flash ka
+  "sochna" band = kaafi tez). Jo model ise na maane (400 / INVALID_ARGUMENT / thinking / generation_config) us par
+  KHUD ek dafa purane tareeqe se dobara. readPurchaseBill default fast=true; readPages (roznamcha) WAISA HI (fast nahi).
+- app.js ppAiBill: bill ki tasveer ab shrinkForAI(f,1400,0.75) (pehle 1800/0.85) — sirf BILL ke liye; kaapi/roznamcha
+  wali tasveer ka size nahi chhera gaya.
+- naya aiReadBill({cfg,images,onStatus,partyId}): har second status mein "(12s)" likhta hai; photoCompare (milan) bhi
+  ab isi se chalta hai (yani milan ko bhi list + tez jawab + ginti milti hai).
+
+3) MULAZIM BHI NAAM YAAD KARWA SAKE (firestore.rules — PUBLISH ZAROORI, version.json rules 2.0 / rulesChanged true)
+- Naya match /businesses/noor-traders/blueAccess/itemAliases: create/update sirf blueStaff() ya purchaseStaff(),
+  keys hasOnly(['map','updatedAt']), map is map, size <= 5000, aur update par
+  request.resource.data.map.size() >= resource.data.map.size() — yani naam JOR sakte hain, MITA nahi sakte.
+- Jaan boojh kar: mulazim kisi maujooda item ka naam BADAL sakta hai (rules mein map ke andar ki values par shart
+  nahi lag sakti — koi loop nahi hota). Malik ko yeh baat bata di gayi thi, us ne haan ki.
+- setAlias wahi purana (cloud.js): businesses/noor-traders/blueAccess/itemAliases doc, {map:{[itemId]:csv},updatedAt},
+  merge:true, 120 harf. Rules mein merge par request.resource.data = MILA HUA poora doc hota hai (is liye map.size()
+  se ek-naam ki shart nahi lag sakti).
+
+TEST (node + jsdom, nakli fetch/cloud/stock): 9 ai-tally test (list ki shakal, 400 ki hadd, itemId, thinking band,
+purane model par khud dobara, list na ho to na jaye), 23 purchase.js test (AI ke itemId se sahi item laga jab bill ka
+naam bilkul alag tha, naam se match, na mila alag, learn/pick, cashDupes, save), 15 + 14 test v1.98 wale (screen
+restore, back, switch). Sab pass.
+ZIP mein ab ai-tally.js aur firestore.rules bhi hain (13 files).
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js ai-tally.js sw.js index.html (pattern '2.0.0') + version.json (rules 2.0, rulesChanged true).
