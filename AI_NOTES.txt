@@ -874,3 +874,50 @@ naam bilkul alag tha, naam se match, na mila alag, learn/pick, cashDupes, save),
 restore, back, switch). Sab pass.
 ZIP mein ab ai-tally.js aur firestore.rules bhi hain (13 files).
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js ai-tally.js sw.js index.html (pattern '2.0.0') + version.json (rules 2.0, rulesChanged true).
+
+=== v2.1.0 — PICHHLE BILL KA KHAREED + WOHI NAFA · RAQAM KA KHANA · AI KA CHUNA HUA NAAM KHUD YAAD (RULES v2.1 PUBLISH) ===
+MALIK KI 3 FARMAISHEN (Affan Traders ke bill ki tasveer par):
+ (a) "line mein aik khana ho jis mein raqam khud likhein (1546) aur peeche pieces — rate khud nikal aaye";
+ (b) "AI ne aik dafa broast khud sahi chuna tha, agli dafa bhool gaya — jo lafz AI khud sahi chune wo bhi yaad rahe";
+ (c) "usi item ka pichhla khareed dekhein aur jitna nafa pichhli dafa laga tha wohi is dafa bhi — W aur R dono".
+ NOTE: khareed rate ka faisla malik ne "bill ka Rate hi rahe" diya (yani Amt ÷ ginti wala rasta NAHI liya; wajah
+ malik ko bata di gayi thi ke Affan ke bill par Amt = rate − dis − T.O. + tax, is liye asal lagat 128.88 banti hai
+ jabke Rate 114.43 hai aur poore bill ka farq ~36,400 tha). Manual khana isi liye diya gaya hai.
+ Bonus (Bon. column): malik ne kaha bonus nahi aata — AI se bonus NAHI mangwaya gaya.
+
+(a) RAQAM KA KHANA (purchase.js)
+- .sale-amt ab <label class="sale-amt pp-amt"> ke andar input [data-pp-amt] hai (pehle sirf <b> dikhta tha).
+  Likhne par: costP = raqam ÷ linePcs(l), phir recalc + paintRates. refreshTotals() ab .value bharta hai aur jis
+  khane mein likha ja raha ho (document.activeElement) use haath nahi lagata.
+
+(b) AI KA CHUNA HUA NAAM KHUD YAAD (purchase.js + app.js)
+- aiRows ki har row par naya flag byAi (matlab item AI ne HUMARI list se itemId de kar chuna, smartSearch se nahi).
+- AI ka jawab aane ke baad: har byAi row par aiLearn(i,null,true) — quiet (koi toast nahi). Sirf byAi par, kyunke
+  smartSearch ka andaza ghalat bhi ho sakta hai.
+- aiLearn(i,btn,quiet) mein teesra parameter naya.
+- aiPicked(): agar pehle koi item laga tha (byAi ya yaad kiya hua) aur ab doosra chuna ja raha hai to pehle
+  unlearnOf(puranaItemId, naam) — app.js ka naya unlearnAlias() us item ki alias CSV se sirf wo naam nikal deta hai
+  (baqi naam wahi rehte). Warna ghalat naam hamesha ke liye chipka reh jata tha (malik ka "broast" wala masla).
+
+(c) PICHHLA KHAREED + WOHI NAFA (cloud.js + rules + app.js + purchase.js)
+- cloud.js: naya listenItemRates(cb) aur setItemRates(map) — doc businesses/noor-traders/blueAccess/itemRates,
+  {map:{[itemId]:{c,w,r,t}}, updatedAt}, merge:true (setAlias jaisa hi tareeqa).
+- rules v2.1: blueAccess/{id} ki staff-read list mein 'itemRates'; naya match block — create/update sirf blueStaff()
+  ya purchaseStaff(), keys hasOnly(['map','updatedAt']), map <= 6000, aur update par size ghat na sake.
+- app.js: itemRates state + connect ke waqt listenItemRates (aliases jaisa), hooks: lastRates, saveRates, unlearn.
+- purchase.js: NAYA baseOf(it) = oldOf(it) par pichhli yaad chipka deta hai (oldCost = mem.c, oldW = mem.w,
+  oldR/oldR2 = mem.r, mem:1). addItem aur ppLoadBill dono ab baseOf istemal karte hain. recalc() waisa hi hai —
+  nafa oldW/oldCost se nikalta hai, is liye "jitna nafa pichhli dafa laga tha" khud naye khareed par lag jata hai.
+- ppLoadBill (EDIT MODE): line banane ke foran baad recalc() — bill ka apna khareed aata hai aur us par pichhla
+  nafa khud lag jata hai (malik ki farmaish: "edit mode mein aate hi neeche rates khud lag jayein").
+- Line ke <small> mein ab "pichhli dafa khareed X" likha aata hai (yaad na ho to pehle jaisa "purana khareed").
+- save(): bill bhejte hi mem = {itemId:{c:costP,w:wpcs,r:rpcs,t:now}} -> saveRatesOf (fire-and-forget, nakam ho to
+  bill par koi asar nahi).
+
+TEST (node + jsdom): 27 purchase test (raqam ÷ ginti = khareed, AI ka naam bina dabaye yaad, Badlein par purane
+item se naam hata, bhejte waqt rates yaad), 6 naye memory test (pichhli dafa ka W +20% aur R +50% naye khareed 100
+par 120/150; yaad na ho to POS wale rates se +40% -> 140), 9 ai-tally, 15 + 14 purane. Sab pass.
+ZIP: 14 files (ab cloud.js bhi).
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js ai-tally.js cloud.js sw.js index.html ('2.1.0') + version.json (rules 2.1, rulesChanged true).
+AGLA: malik ka jumla adhoora tha — "...wholesale ka bhi parchoon ka or maza ki baat ....." — agli chat mein poochein
+ke aage kya kehna chahte the.

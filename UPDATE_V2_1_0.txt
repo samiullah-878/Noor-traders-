@@ -1,0 +1,22 @@
+Blue Khata v2.1.0 — Pichhla khareed aur wohi nafa · Raqam ka khana · AI ka chuna naam khud yaad
+INSTALL: 1) Is ZIP ki 14 files GitHub par, phir app mein "↻ Sync / Update" -> 2.1.0.
+         2) ⚠️ RULES DOBARA PUBLISH KAREIN: firestore.rules Firebase Console > Firestore > Rules mein paste kar ke
+            Publish (doosri line par "BLUE KHATA v2.1"). Publish na karein to pichhle rates yaad nahi rahenge.
+
+1) HAR ITEM KA PICHHLA KHAREED AUR WOHI NAFA
+   - Bill POS bhejte waqt har item ka khareed aur us par lage Wholesale / Parchoon rate yaad ho jate hain.
+   - Agli dafa wohi item lagayein — ya POS ka bill EDIT karein — to line par likha aayega:
+     "pichhli dafa khareed 114.43 · nafa W 2% · R 12.5%" aur naye khareed par WOHI NAFA khud lag jayega.
+   - Yaad na ho to pehle jaisa POS ke maujooda rates se nafa lagta rahega.
+
+2) LINE MEIN "BILL KI RAQAM" KA KHANA
+   - Jo raqam pehle sirf dikhti thi, ab likhi bhi ja sakti hai. Aap 1546.53 likhein aur ginti 12 —
+     khareed khud 128.88 ban jayega. Ginti ya khareed badlein to raqam khud badal jayegi.
+   - AI abhi bhi bill ka "Rate" wala column hi uthata hai (jaisa aap ne kaha). Tax/discount wala hisaab
+     chahiye to us line par bill ki Amt. likh dein — khareed theek ho jayega.
+
+3) AI KA CHUNA HUA NAAM BHI KHUD YAAD
+   - Jab AI khud humari list se sahi item chun le, wo naam ab bina "✓ Yaad kar lo" dabaye yaad ho jata hai
+     (isi liye "BROAST" agli dafa bhool gaya tha — ab nahi bhoolega).
+   - Aur agar AI ne ghalat item chuna aur aap "✏️ Badlein" se sahi chunein, to wo naam purane (ghalat) item
+     se HATA bhi diya jata hai — ghalat naam chipka nahi rehta.

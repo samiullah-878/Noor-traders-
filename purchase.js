@@ -1,4 +1,7 @@
-// purchase.js — v2.0.0 "POS Purchase" screen
+// purchase.js — v2.1.0 "POS Purchase" screen
+// v2.1.0: (1) har item ka PICHHLA khareed aur nafa yaad — item dobara lagayein ya bill edit mode mein aayein to
+//          wohi nafa (W aur R) naye khareed par khud lag jata hai; (2) line par "bill ki raqam" likhne ka khana
+//          (raqam ÷ ginti = khareed); (3) AI khud sahi item chun le to wo naam bhi bina dabaye yaad ho jata hai.
 // v2.0.0: AI ko humare items ki list bhi jati hai (itemId khud wapas karta hai) — matching pehli dafa hi sahi.
 // v1.99.0: AI wale bill ki har line par "bill ka naam → system ka naam" — ✓ Yaad kar lo (naam us item ke
 //          "Doosre naam" mein save) aur ✏️ Badlein (sahi item chunein; chunte hi naam khud yaad ho jata hai).
@@ -13,8 +16,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.0.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=2.0.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.1.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=2.1.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -32,7 +35,8 @@ const W_CHIPS = [1, 1.25, 1.5, 2];
 
 let cloud = null, rerender = () => {}, notice = () => {}, isOwner = () => false, uidOf = () => '';
 let partiesOf = () => [], partyOf = () => null, matchesOf = () => true, canUse = () => false, rankOf = null, billIdsOf = () => [], pcBillsOf = () => [];
-let photoFormOf = null, aiBillOf = null, cashDupesOf = () => [], learnOf = null;   // v1.98.0: photo wala purchase form, AI bill reader, milan ka dhyan
+let photoFormOf = null, aiBillOf = null, cashDupesOf = () => [], learnOf = null, unlearnOf = null;
+let lastRatesOf = () => ({}), saveRatesOf = () => {};   // v2.1.0: har item ka pichhla khareed / nafa   // v1.98.0: photo wala purchase form, AI bill reader, milan ka dhyan
 let pcQ = '', pcWhen = 'all';   // v1.96: PC ke bill ki list
 let edit = null;            // v1.87: {purchaseId, billNo, stamp, partyId, posPartyId, date} — POS ka khula bill edit ho raha hai
 const supItems = new Map();  // partyId -> {loading, list:[{id,n}]}
@@ -46,6 +50,7 @@ export function ppSetup(o) {
   partiesOf = o.parties || partiesOf; partyOf = o.party || partyOf; matchesOf = o.accountMatches || matchesOf; canUse = o.canUse || canUse;
   rankOf = o.rank || rankOf; billIdsOf = o.billIdsOf || billIdsOf; pcBillsOf = o.pcBills || pcBillsOf;
   photoFormOf = o.photoForm || photoFormOf; aiBillOf = o.aiBill || aiBillOf; cashDupesOf = o.cashDupes || cashDupesOf; learnOf = o.learn || learnOf;
+  unlearnOf = o.unlearn || unlearnOf; lastRatesOf = o.lastRates || lastRatesOf; saveRatesOf = o.saveRates || saveRatesOf;
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
     if (d && d.saved === todayStr()) { supplier = d.supplier || ''; godam = d.godam ?? BILL_BRANCH; day = d.day || ''; invoiceNo = d.invoiceNo || ''; note = d.note || ''; cart = Array.isArray(d.cart) ? d.cart : []; edit = d.edit || null; }
@@ -78,6 +83,18 @@ function findByCode(items, code) {
 function oldOf(it) {
   return { oldCost: r4(Number(it.prate) || 0), oldW: r2(Number(it.wrate) || 0), oldR: r2(Number(it.rate) || 0), oldR2: r2(Number(it.rate2) || Number(it.rate) || 0) };
 }
+// v2.1.0: pehle PICHHLE purchase ki yaad (khareed + us waqt lage hue rates), warna POS ke maujooda rates.
+// Nafa isi se nikalta hai (recalc: oldW/oldCost), yani "jitna nafa pichhli dafa laga tha wohi is dafa bhi".
+function baseOf(it) {
+  const o = oldOf(it);
+  let m = null; try { m = (lastRatesOf() || {})[String(it.id)] || null; } catch {}
+  if (!m || !(Number(m.c) > 0)) return o;
+  o.oldCost = r4(Number(m.c));
+  if (Number(m.w) > 0) o.oldW = r2(Number(m.w));
+  if (Number(m.r) > 0) { o.oldR = r2(Number(m.r)); o.oldR2 = r2(Number(m.r)); }
+  o.mem = 1;
+  return o;
+}
 const pct = (a, b) => b > 0 && a > 0 ? Math.round((a / b - 1) * 1000) / 10 : null;
 // cost ya mode badle to rates dobara (wMode: 'old' | % number | 'manual'; rMode: 'old' | 'manual')
 function recalc(l) {
@@ -97,7 +114,7 @@ function addItem(it, again = true) {
     if (packOf(had)) had.ctn = (Number(had.ctn) || 0) + 1; else had.pcs = r3((Number(had.pcs) || 0) + 1);
     keepDraft(); return { line: had, again: true };
   }
-  const o = oldOf(it), pk = Number(it.pack) > 1 ? Number(it.pack) : 0;
+  const o = baseOf(it), pk = Number(it.pack) > 1 ? Number(it.pack) : 0;
   const l = {
     k: newKey(), id: it.id, code: it.code || '', name: it.name, pack: Number(it.pack) || 0, cName: it.cName || 'Ctn', uName: it.uName || 'Pcs',
     godam: Number(godam) || BILL_BRANCH, ctn: pk ? 1 : 0, pcs: pk ? 0 : 1, costP: o.oldCost, ...o,
@@ -345,14 +362,14 @@ export function renderPP() {
     const ch = (v, now) => v > 0 && Math.abs((Number(now) || 0) - v) > 0.004 ? ' changed' : '';
     return `<div class="sale-line pp-line" data-pp-line="${i}">
       <div class="sale-line-top"><b><span class="pp-no">${i + 1}.</span> ${esc(l.name)}</b><button type="button" class="danger sale-x" data-pp-del="${i}" aria-label="Hatao">✕</button></div>
-      <small>${esc(l.code)}${pk ? ' · 1 ' + esc(l.cName) + ' = ' + num(pk) : ''} · purana khareed <b>${l.oldCost > 0 ? num(l.oldCost) + '/' + esc(l.uName) + (pk ? ' (' + num(r2(l.oldCost * pk)) + '/' + esc(l.cName) + ')' : '') : 'maloom nahi'}</b>${wN != null ? ' · nafa W ' + wN + '%' : ''}${rN != null ? ' · R ' + rN + '%' : ''}</small>
+      <small>${esc(l.code)}${pk ? ' · 1 ' + esc(l.cName) + ' = ' + num(pk) : ''} · ${l.mem ? '<b>pichhli dafa</b> khareed' : 'purana khareed'} <b>${l.oldCost > 0 ? num(l.oldCost) + '/' + esc(l.uName) + (pk ? ' (' + num(r2(l.oldCost * pk)) + '/' + esc(l.cName) + ')' : '') : 'maloom nahi'}</b>${wN != null ? ' · nafa W ' + wN + '%' : ''}${rN != null ? ' · R ' + rN + '%' : ''}</small>
       <div class="sale-inputs pp-inputs">
         ${pk ? `<label>${esc(l.cName)} (${num(pk)})<input type="number" min="0" step="1" inputmode="numeric" data-pp-ctn="${i}" value="${l.ctn || ''}"></label>` : ''}
         <label>${esc(l.uName)}<input type="number" min="0" step="any" inputmode="decimal" data-pp-pcs="${i}" value="${l.pcs || ''}"></label>
         ${pk ? `<label>Khareed / ${esc(l.cName)}<input type="number" min="0" step="any" inputmode="decimal" data-pp-costc="${i}" value="${l.costP ? r2(l.costP * pk) : ''}"></label>` : ''}
         <label>Khareed / ${esc(l.uName)}<input type="number" min="0" step="any" inputmode="decimal" data-pp-costp="${i}" value="${l.costP ? r2(l.costP) : ''}"></label>
         ${s.branches.length > 1 ? `<label>Godam<select data-pp-lg="${i}">${gopts(l.godam)}</select></label>` : ''}
-        <div class="sale-amt"><small>${num(pcs)} ${esc(l.uName)}</small><b id="ppAmt${i}">${num(lineTotal(l))}</b></div>
+        <label class="sale-amt pp-amt"><small>${num(pcs)} ${esc(l.uName)} · bill ki raqam</small><input type="number" min="0" step="any" inputmode="decimal" data-pp-amt="${i}" id="ppAmt${i}" value="${lineTotal(l) ? r2(lineTotal(l)) : ''}" placeholder="raqam"></label>
       </div>
       <div class="pp-rates">
         <small class="pp-rates-h">Naye rates (POS mein lagenge)${l.wMode === 'old' && l.rMode === 'old' ? ' · purane nafa se' : ''}</small>
@@ -376,7 +393,7 @@ export function renderPP() {
 const saveLabel = t => (edit ? '💾 POS bill UPDATE · Rs ' : '💾 POS mein bhejo · Rs ') + num(t);
 function refreshTotals() {
   const t = $('ppTotal'); if (t) t.textContent = 'Rs ' + num(cartTotal());
-  cart.forEach((l, i) => { const a = $('ppAmt' + i); if (a) a.textContent = num(lineTotal(l)); });
+  cart.forEach((l, i) => { const a = $('ppAmt' + i); if (a && document.activeElement !== a) a.value = lineTotal(l) ? r2(lineTotal(l)) : ''; });
   const b = document.querySelector('[data-pp-save]'); if (b && !saving) b.textContent = saveLabel(cartTotal());
 }
 // rates ke khane (focus kharab kiye baghair) taza karo
@@ -400,6 +417,10 @@ document.addEventListener('input', e => {
   else if ((i = d.ppPcs) != null) cart[i].pcs = Math.max(0, Number(t.value) || 0);
   else if ((i = d.ppCostc) != null) { const l = cart[i]; l.costP = packOf(l) ? r4((Number(t.value) || 0) / packOf(l)) : Number(t.value) || 0; recalc(l); paintRates(i); }
   else if ((i = d.ppCostp) != null) { const l = cart[i]; l.costP = r4(Number(t.value) || 0); recalc(l); paintRates(i); }
+  else if ((i = d.ppAmt) != null) {   // v2.1.0: bill ki raqam likho -> khareed = raqam ÷ ginti
+    const l = cart[i], q = linePcs(l), amt = Number(t.value) || 0;
+    if (q > 0 && amt > 0) { l.costP = r4(amt / q); recalc(l); paintRates(i); }
+  }
   else if ((i = d.ppWctn) != null) { cart[i].wctn = Number(t.value) || 0; cart[i].wMode = 'manual'; }
   else if ((i = d.ppWpcs) != null) { cart[i].wpcs = Number(t.value) || 0; cart[i].wMode = 'manual'; }
   else if ((i = d.ppRctn) != null) { cart[i].rctn = Number(t.value) || 0; cart[i].rMode = 'manual'; }
@@ -504,13 +525,16 @@ function aiItems() {
       for (const l of lines) {
         const q = aiNameOf(l);
         // v2.0.0: AI ko humare items ki list di jati hai — wo khud itemId de de to wahi lagao, warna naam se dhoondo
-        const hit = (l.itemId && items.find(x => String(x.id) === String(l.itemId))) || (q ? (smartSearch(items, q, 1)[0] || null) : null);
+        const byAi = l.itemId ? items.find(x => String(x.id) === String(l.itemId)) : null;
+        const hit = byAi || (q ? (smartSearch(items, q, 1)[0] || null) : null);
         if (!hit) { aiRows.push({ ai: l, key: null, itemId: '', learn: '' }); continue; }
         const ln = addItem(hit, false).line;
         aiApply(ln, l);
-        aiRows.push({ ai: l, key: ln.k, itemId: String(hit.id), learn: '' });
+        aiRows.push({ ai: l, key: ln.k, itemId: String(hit.id), learn: '', byAi: !!byAi });
       }
       keepDraft(); rerender(); aiRender();
+      // v2.1.0: jo item AI ne KHUD humari list se chuna, us ka bill wala naam bina dabaye yaad kar lo
+      for (let i = 0; i < aiRows.length; i++) if (aiRows[i].byAi) await aiLearn(i, null, true);
     } catch (err) {
       say('❌ ' + ((err && err.message) || 'Nakam'));
     } finally { aiBusy = false; }
@@ -531,7 +555,7 @@ function aiRender() {
       const it = r.itemId ? items.find(x => String(x.id) === String(r.itemId)) : null;
       const qty = `<small>${aiQtyText(r.ai)} · rate ${num(r.ai.rate || 0)}${it && r.key ? ' → khareed ' + num((cart.find(l => l.k === r.key) || {}).costP || 0) + '/' + esc(it.uName || 'Pcs') : ''}</small>`;
       if (!it) return `<div class="pc-row warn"><span>⚠</span><div><b>${esc(r.ai.name || '')}</b><br>${qty}<br><small class="red">Stock mein nahi mila</small><br><button type="button" data-pp-pick="${i}">✏️ Item chunein</button></div></div>`;
-      const tail = r.learn === 'ok' ? '<small>✓ naam yaad kar liya</small>'
+      const tail = r.learn === 'ok' ? (r.byAi ? '<small>✓ AI ne khud chuna — naam yaad kar liya</small>' : '<small>✓ naam yaad kar liya</small>')
         : r.learn === 'pehle se' ? '<small>✓ naam pehle se yaad hai</small>'
         : r.learn ? `<small class="red">${esc(r.learn)}</small>`
         : `<button type="button" data-pp-learn="${i}">✓ Yaad kar lo</button>`;
@@ -539,13 +563,12 @@ function aiRender() {
     }).join('') +
     `<p class="stat-note">⚠️ AI hamesha theek nahi parhta — har line ki <b>ginti aur khareed rate</b> khud check karein${aiBillInfo?.total ? ` (tasveer ka total Rs ${num(aiBillInfo.total)})` : ''}.<br>"Yaad kar lo" dabane par bill ka naam us item ke "Doosre naam" mein chala jata hai — agli dafa app khud pehchan lega.</p>`;
 }
-async function aiLearn(i, btn) {
+async function aiLearn(i, btn, quiet) {
   const r = aiRows && aiRows[i]; if (!r || !r.itemId || !learnOf) return;
   if (btn) btn.disabled = true;
   const res = await learnOf(r.itemId, aiNameOf(r.ai) || r.ai.name);
   r.learn = res === 'ok' ? 'ok' : res === 'pehle se' ? 'pehle se' : res;
-  if (res === 'ok') notice('✓ "' + (aiNameOf(r.ai) || '') + '" yaad kar liya');
-  else if (res !== 'pehle se') notice(res);
+  if (!quiet) { if (res === 'ok') notice('✓ "' + (aiNameOf(r.ai) || '') + '" yaad kar liya'); else if (res !== 'pehle se') notice(res); }
   aiRender();
 }
 function aiPickForm(i) {
@@ -567,9 +590,13 @@ async function aiPicked(i, id) {
   const r = aiRows && aiRows[i]; if (!r) return;
   const it = stock().items.find(x => String(x.id) === String(id)); if (!it) return;
   if (r.key) { const ix = cart.findIndex(l => l.k === r.key); if (ix >= 0) cart.splice(ix, 1); }
+  // v2.1.0: pehle jo item laga tha (AI ka ya yaad kiya hua) us se yeh naam hata do — warna ghalat naam wahin chipka rehta
+  if (r.itemId && String(r.itemId) !== String(it.id) && unlearnOf && (r.byAi || r.learn === 'ok' || r.learn === 'pehle se')) {
+    try { await unlearnOf(r.itemId, aiNameOf(r.ai) || r.ai.name); } catch {}
+  }
   const ln = addItem(it, false).line;
   aiApply(ln, r.ai);
-  r.key = ln.k; r.itemId = String(it.id); r.learn = '';
+  r.key = ln.k; r.itemId = String(it.id); r.learn = ''; r.byAi = false;
   keepDraft(); rerender(); aiRender();
   await aiLearn(i, null);
 }
@@ -634,6 +661,11 @@ async function save() {
   try {
     const w = cloud.saveAppPurchase(doc);
     await Promise.race([w, new Promise(r => setTimeout(r, 4000))]);
+    try {   // v2.1.0: is bill ke rates yaad — agli dafa wohi nafa khud lagega
+      const mem = {};
+      for (const l of lines) if (l.id) mem[String(l.id)] = { c: r4(l.costP), w: r2(l.wpcs), r: r2(l.rpcs), t: Date.now() };
+      Promise.resolve(saveRatesOf(mem)).catch(() => {});
+    } catch {}
     const keep = { cart, invoiceNo, note, edit, day };
     cart = []; note = ''; invoiceNo = ''; edit = null; day = ''; keepDraft();
     notice(keep.edit ? 'Update PC ko bhej diya — PC POS mein wohi bill badal dega (Aaj ke app purchase mein status)' : 'Purchase bill bhej diya — PC POS mein bana dega (Aaj ke app purchase mein status)');
@@ -679,11 +711,12 @@ export function ppLoadBill(b, ent) {
   for (const x of b.lines) {
     const it = s.items.find(r => String(r.id) === String(x.itemId));
     if (!it) { missing.push(x.name); continue; }
-    const o = oldOf(it), pk = Number(it.pack) > 1 ? Number(it.pack) : 0, q = Number(x.qtyPcs) || 0;
+    const o = baseOf(it), pk = Number(it.pack) > 1 ? Number(it.pack) : 0, q = Number(x.qtyPcs) || 0;
     const g = Number(x.godamId) || BILL_BRANCH; gcount.set(g, (gcount.get(g) || 0) + 1);
     next.push({ k: newKey(), id: it.id, code: it.code || '', name: it.name, pack: Number(it.pack) || 0, cName: it.cName || 'Ctn', uName: it.uName || 'Pcs',
       godam: g, ctn: pk ? Math.floor(q / pk + 1e-9) : 0, pcs: pk ? r3(q - Math.floor(q / pk + 1e-9) * pk) : q, costP: r4(Number(x.ratePcs) || o.oldCost), ...o,
       wpcs: o.oldW, wctn: pk ? Math.round(o.oldW * pk) : 0, rpcs: pk ? o.oldR2 : o.oldR, rctn: pk ? Math.round(o.oldR * pk) : 0, wMode: 'old', rMode: 'old' });
+    recalc(next[next.length - 1]);   // v2.1.0: bill ke naye khareed par pichhla NAFA khud lag jaye
   }
   if (missing.length) return 'Yeh items POS stock list mein nahi mile, is liye edit nahi ho sakta:\n' + missing.join('\n');
   cart = next;
