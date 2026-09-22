@@ -1,4 +1,6 @@
-// Blue Khata v2.0.0 — AI se PARHWANA (hisaab nahi). v2.0.0: (1) purchase bill parhte waqt humare items ki
+// Blue Khata v2.3.0 — AI se PARHWANA (hisaab nahi). v2.3.0: bill ke liye "pro" model (pickProModel) aur prompt
+// ab ginti ka ANDAZA nahi lagata — column ke asal heading bhi wapas karta hai (supplier ka naqsha app khud banati hai).
+// v2.0.0: v2.0.0: (1) purchase bill parhte waqt humare items ki
 // list bhi saath jati hai taake AI khud sahi item ka id (itemId) laga de; (2) 'thinking' band (tez jawab).
 // v1.81 — sham ka milan: kaapi ki tasveer (AI sirf PARHTA hai) vs Daily Sale (milan yeh code karta hai).
 // AI se hisaab nahi karwaya jata — sirf raqmein parhwai jati hain. Koi entry khud nahi badalti.
@@ -58,6 +60,19 @@ export async function pickModel(key) {
   const plain = names.filter(n => /^gemini-\d+(\.\d+)?-flash$/.test(n)).sort((a, b) => ver(b) - ver(a));
   const loose = names.filter(n => /flash/.test(n) && !/(lite|tts|image|live|audio|embedding)/.test(n)).sort((a, b) => ver(b) - ver(a));
   return { best: plain[0] || loose[0] || names[0] || '', all: names };
+}
+
+// v2.3.0: bill ki tasveer ke liye behtar (pro) model — na mile to flash hi.
+export async function pickProModel(key) {
+  const out = await api('/models?pageSize=200', key, { method: 'GET' });
+  const names = (out.models || [])
+    .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+    .map(m => String(m.name || '').replace(/^models\//, ''))
+    .filter(n => !/(tts|image|live|audio|embedding|vision-latest)/.test(n));
+  const ver = n => Number((n.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || 0);
+  const plain = names.filter(n => /^gemini-\d+(\.\d+)?-pro$/.test(n)).sort((a, b) => ver(b) - ver(a));
+  const loose = names.filter(n => /pro/.test(n) && !/lite/.test(n)).sort((a, b) => ver(b) - ver(a));
+  return plain[0] || loose[0] || '';
 }
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
@@ -123,10 +138,11 @@ export const BILL_PROMPT = [
   '- date: bill ki tareekh YYYY-MM-DD (na mile ya samajh na aaye to "").',
   '- total: bill ka aakhri grand total, poore rupay, sirf hindse (na mile to 0).',
   '- lines: HAR item ki line: {"name": item ka naam BILKUL waisa jaisa likha hai (Urdu likha ho to Urdu hi), "roman": agar naam Urdu/Arabic rasm-ul-khat mein hai to wohi naam Roman Urdu (English harfon) mein — jaise "چینی" ka "cheeni" — warna "", "ctn": carton / peti / bora ki ginti (na mile to 0), "pcs": khule pieces / dozen se bahar ginti (na mile to 0), "rate": fi carton qeemat rupay agar ctn hai warna fi piece (na mile to 0), "total": us line ka total rupay (na mile to 0), "unsure": true agar hindsa saaf na ho}.',
-  '- Agar bill par sirf ek ginti likhi hai aur pata nahi carton hai ya piece, to use "ctn" mein daal do. "5+3" ka matlab aksar 5 carton aur 3 pieces hota hai.',
+  '- GINTI KA ANDAZA MAT LAGAO: bill par jo ek hi ginti likhi ho usay "qty" mein daalo aur "qtyLabel" mein us column ka asal heading likho (jaise "Qty.", "Pcs", "Ctn", "Packs"). Sirf tab "ctn" aur "pcs" alag alag bharo jab bill par SAAF do alag khane hon. "5+3" jaisi likhai ka matlab 5 carton aur 3 pieces hota hai (ctn 5, pcs 3).',
+  '- Bill ke upar wale column headings jaisay ke likhe hain: qtyLabel (ginti ka heading), rateLabel (rate ka heading), amtLabel (aakhri raqam ka heading). Na dikhein to "".',
   '- Tareekh, mobile number, address, "previous balance", tax number waghera ko LINES mein SHAMIL NA karo.',
   '- itemId: agar neeche "HUMARE ITEMS" ki list di gayi ho to har line ka sab se milta julta item us list mein se dhoondo aur wahan likha hua id yahan do. Poora yaqeen na ho to itemId "" chhor do — ghalat item lagane se behtar khali chhorna hai. List se bahar ka koi id mat banao.',
-  'Sirf yeh JSON do, aur kuch nahi: {"supplier":"","date":"","total":0,"lines":[{"name":"","roman":"","itemId":"","ctn":0,"pcs":0,"rate":0,"total":0,"unsure":false}]}'
+  'Sirf yeh JSON do, aur kuch nahi: {"supplier":"","date":"","total":0,"qtyLabel":"","rateLabel":"","amtLabel":"","lines":[{"name":"","roman":"","itemId":"","qty":0,"ctn":0,"pcs":0,"rate":0,"total":0,"unsure":false}]}'
 ].join('\n');
 
 // v2.0.0: humare POS items ki list — AI ko saath bhejte hain taake wohi sahi item chun le.
@@ -148,6 +164,7 @@ export function parseBill(text) {
     name: String(l?.name || '').slice(0, 120).trim(),
     roman: String(l?.roman || '').slice(0, 120).trim(),
     itemId: String(l?.itemId || '').slice(0, 40).trim(),
+    qty: Math.max(0, num(l?.qty)),          // v2.3.0: bill par likhi hui ek hi ginti (pcs ya ctn — naqsha faisla karta hai)
     ctn: Math.max(0, num(l?.ctn)) || (Math.max(0, num(l?.qty)) || 0),   // purana "qty" bhi ctn ban jata hai
     pcs: Math.max(0, num(l?.pcs)),
     rate: Math.max(0, num(l?.rate)),
@@ -155,15 +172,17 @@ export function parseBill(text) {
     unsure: l?.unsure === true
   })).filter(l => l.name || l.total > 0).slice(0, 100);
   for (const l of lines) { if (!l.ctn && !l.pcs) l.ctn = 1; if (!l.total && l.ctn && l.rate) l.total = Math.round(l.ctn * l.rate); }
-  return { supplier: String(d.supplier || '').slice(0, 120), date: /^\d{4}-\d{2}-\d{2}$/.test(String(d.date || '')) ? d.date : '', total: Math.round(num(d.total)), lines };
+  return { supplier: String(d.supplier || '').slice(0, 120), date: /^\d{4}-\d{2}-\d{2}$/.test(String(d.date || '')) ? d.date : '', total: Math.round(num(d.total)),
+    qtyLabel: String(d.qtyLabel || '').slice(0, 30), rateLabel: String(d.rateLabel || '').slice(0, 30), amtLabel: String(d.amtLabel || '').slice(0, 30), lines };
 }
 
-export async function readPurchaseBill({ key, model, images, onStatus, known = null, fast = true }) {
+export async function readPurchaseBill({ key, model, images, onStatus, known = null, fast = true, note = '' }) {
   if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
   if (!model) throw Error('Model ka naam khali hai — Settings > AI key > Test dabayein.');
   if (!images?.length) throw Error('Bill ki kam az kam 1 picture chunein');
   const parts = images.map(im => ({ inline_data: { mime_type: im.mime, data: im.data } }));
   parts.push({ text: BILL_PROMPT });
+  if (note) parts.push({ text: note });       // v2.3.0: is supplier ke bill ka naqsha (app ne seekha hua)
   const list = knownItemsText(known);
   if (list) parts.push({ text: list });
   return parseBill(textOf(await generate({ key, model, parts, onStatus, fast })));

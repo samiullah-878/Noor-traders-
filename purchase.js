@@ -1,4 +1,7 @@
-// purchase.js — v2.2.0 "POS Purchase" screen
+// purchase.js — v2.3.0 "POS Purchase" screen
+// v2.3.0: HAR SUPPLIER KE BILL KA NAQSHA — ginti PCS hai ya CTN, rate fi PCS hai ya fi CTN. Naqsha maloom ho to
+//          AI ka jawab usi hisaab se lagta hai; na ho to upar ek patti poochti hai (ek tap). Aur jab aap bill
+//          theek kar ke POS bhejte hain, app AI ke parhe hue se farq dekh kar naqsha KHUD seekh leti hai.
 // v2.2.0: jo bill ki tasveer AI ko di, wohi screen par — upar chhoti si, "📄 Bill dekhein" (poori screen, zoom),
 //          aur "📌 upar chipka do" (aadhi screen par chipki rahe, neeche items chalte rahein).
 //          Tasveer sirf usi waqt tak (memory mein) — refresh par chali jati hai, kahin save nahi hoti.
@@ -19,8 +22,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.2.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=2.2.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.3.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=2.3.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -39,7 +42,8 @@ const W_CHIPS = [1, 1.25, 1.5, 2];
 let cloud = null, rerender = () => {}, notice = () => {}, isOwner = () => false, uidOf = () => '';
 let partiesOf = () => [], partyOf = () => null, matchesOf = () => true, canUse = () => false, rankOf = null, billIdsOf = () => [], pcBillsOf = () => [];
 let photoFormOf = null, aiBillOf = null, cashDupesOf = () => [], learnOf = null, unlearnOf = null;
-let lastRatesOf = () => ({}), saveRatesOf = () => {};   // v2.1.0: har item ka pichhla khareed / nafa   // v1.98.0: photo wala purchase form, AI bill reader, milan ka dhyan
+let lastRatesOf = () => ({}), saveRatesOf = () => {};   // v2.1.0: har item ka pichhla khareed / nafa
+let billFmtOf = () => null, saveBillFmtOf = () => {};   // v2.3.0: supplier ke bill ka naqsha   // v1.98.0: photo wala purchase form, AI bill reader, milan ka dhyan
 let pcQ = '', pcWhen = 'all';   // v1.96: PC ke bill ki list
 let edit = null;            // v1.87: {purchaseId, billNo, stamp, partyId, posPartyId, date} — POS ka khula bill edit ho raha hai
 const supItems = new Map();  // partyId -> {loading, list:[{id,n}]}
@@ -54,6 +58,7 @@ export function ppSetup(o) {
   rankOf = o.rank || rankOf; billIdsOf = o.billIdsOf || billIdsOf; pcBillsOf = o.pcBills || pcBillsOf;
   photoFormOf = o.photoForm || photoFormOf; aiBillOf = o.aiBill || aiBillOf; cashDupesOf = o.cashDupes || cashDupesOf; learnOf = o.learn || learnOf;
   unlearnOf = o.unlearn || unlearnOf; lastRatesOf = o.lastRates || lastRatesOf; saveRatesOf = o.saveRates || saveRatesOf;
+  billFmtOf = o.billFmt || billFmtOf; saveBillFmtOf = o.saveBillFmt || saveBillFmtOf;
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
     if (d && d.saved === todayStr()) { supplier = d.supplier || ''; godam = d.godam ?? BILL_BRANCH; day = d.day || ''; invoiceNo = d.invoiceNo || ''; note = d.note || ''; cart = Array.isArray(d.cart) ? d.cart : []; edit = d.edit || null; }
@@ -478,6 +483,16 @@ document.addEventListener('click', async e => {
     else if (d.ppVnext != null) { billIx = (billIx + 1) % billPics.length; billZoom = 1; billView(); }
     else { billIx = Math.min(Number(d.ppPic) || 0, billPics.length - 1); billZoom = 1; billView(); }
     return; }
+  const fm = e.target.closest?.('[data-pp-fmt]');
+  if (fm) {
+    const q = fm.dataset.ppFmt === 'ctn' ? 'ctn' : 'pcs';
+    const old = billFmtOf(supplier) || {};
+    const next = { q, r: old.r || '', n: (Number(old.n) || 0) + 1, t: Date.now() };
+    if (supplier && saveBillFmtOf) { try { Promise.resolve(saveBillFmtOf(supplier, next)).catch(() => {}); } catch {} }
+    aiReapply(next);
+    notice('📐 Naqsha yaad kar liya: ginti = ' + (q === 'pcs' ? 'PCS' : 'CTN'));
+    return;
+  }
   const al = e.target.closest?.('[data-pp-learn],[data-pp-pick],[data-pp-picked],[data-pp-aiback]');
   if (al) { const d = al.dataset;
     if (d.ppLearn != null) aiLearn(Number(d.ppLearn), al);
@@ -524,10 +539,55 @@ function billStripHTML() {
 }
 const aiQtyText = l => [(Number(l.ctn) || 0) && (num(l.ctn) + ' ctn'), (Number(l.pcs) || 0) && (num(l.pcs) + ' pcs')].filter(Boolean).join(' + ') || '—';
 const aiNameOf = l => String(l.roman || l.name || '').trim();
-function aiApply(ln, l) {   // AI ki ginti aur rate line par lagao (ctn wali line par rate = fi Ctn)
+// v2.3.0: AI ki ginti aur rate line par — supplier ke NAQSHE ke mutabiq (na ho to purana andaza)
+function aiApply(ln, l, fmt) {
   const pk = packOf(ln), ctn = Number(l.ctn) || 0, pcs = Number(l.pcs) || 0, rate = Number(l.rate) || 0;
-  if (pk && ctn) { ln.ctn = ctn; ln.pcs = pcs; } else { ln.ctn = 0; ln.pcs = pcs || ctn; }
-  if (rate > 0) { ln.costP = (ctn && pk) ? r4(rate / pk) : r4(rate); recalc(ln); }
+  const q = fmt && fmt.q, r = fmt && fmt.r;
+  if (q === 'pcs') { ln.ctn = 0; ln.pcs = r3(ctn + pcs); }                 // bill ka number = pieces
+  else if (q === 'ctn') { ln.ctn = ctn || pcs; ln.pcs = ctn ? pcs : 0; }   // bill ka number = carton
+  else if (pk && ctn) { ln.ctn = ctn; ln.pcs = pcs; }
+  else { ln.ctn = 0; ln.pcs = pcs || ctn; }
+  if (rate > 0) {
+    // rate ka naqsha na ho to GINTI ke naqshe par chalo (ginti pieces = rate fi piece), warna purana andaza
+    const perCtn = r === 'ctn' ? true : r === 'pcs' ? false : q === 'pcs' ? false : q === 'ctn' ? true : (!!ctn && !!pk);
+    ln.costP = (perCtn && pk) ? r4(rate / pk) : r4(rate);
+    recalc(ln);
+  }
+}
+// AI ke jawab ko naye naqshe par dobara lagao (patti se PCS / CTN chunne par)
+function aiReapply(fmt) {
+  if (!aiRows) return;
+  for (const r of aiRows) {
+    if (!r.key) continue;
+    const ln = cart.find(l => l.k === r.key); if (!ln) continue;
+    aiApply(ln, r.ai, fmt);
+  }
+  keepDraft(); rerender(); aiRender();
+}
+// v2.3.0: aap ke theek kiye hue bill se naqsha seekho (AI ne kya diya tha vs aap ne kya bheja)
+function learnBillFmt() {
+  if (!aiRows || !supplier || !saveBillFmtOf) return;
+  let qp = 0, qc = 0, rp = 0, rc = 0;
+  for (const r of aiRows) {
+    if (!r.key) continue;
+    const l = cart.find(x => x.k === r.key); if (!l) continue;
+    const pk = packOf(l), n = (Number(r.ai.ctn) || 0) + (Number(r.ai.pcs) || 0), rate = Number(r.ai.rate) || 0;
+    const pcsNow = linePcs(l), ctnNow = Number(l.ctn) || 0, cost = Number(l.costP) || 0;
+    if (n > 0) {
+      if (Math.abs(pcsNow - n) < 0.01 && !ctnNow) qp++;
+      else if (pk && Math.abs(ctnNow - n) < 0.01) qc++;
+    }
+    if (rate > 0 && cost > 0) {
+      if (Math.abs(cost - rate) < 0.05) rp++;
+      else if (pk && Math.abs(cost * pk - rate) < 0.5) rc++;
+    }
+  }
+  const q = qp > qc ? 'pcs' : qc > qp ? 'ctn' : '';
+  const rr = rp > rc ? 'pcs' : rc > rp ? 'ctn' : '';
+  if (!q && !rr) return;
+  const old = billFmtOf(supplier) || {};
+  if (old.q === q && old.r === rr) return;
+  try { Promise.resolve(saveBillFmtOf(supplier, { q: q || old.q || '', r: rr || old.r || '', n: (Number(old.n) || 0) + 1, t: Date.now() })).catch(() => {}); } catch {}
 }
 function aiItems() {
   if (aiBusy) { notice('AI abhi bill parh raha hai…'); return; }
@@ -547,6 +607,7 @@ function aiItems() {
       const lines = (bill && bill.lines) || [];
       if (!lines.length) throw Error('Tasveer se koi item nahi parha gaya. Saaf photo (seedhi, poori bill) lagayein.');
       const { items } = stock();
+      const fmt = billFmtOf(supplier);   // v2.3.0: is supplier ke bill ka naqsha
       aiBillInfo = bill; aiRows = [];
       for (const l of lines) {
         const q = aiNameOf(l);
@@ -555,7 +616,7 @@ function aiItems() {
         const hit = byAi || (q ? (smartSearch(items, q, 1)[0] || null) : null);
         if (!hit) { aiRows.push({ ai: l, key: null, itemId: '', learn: '' }); continue; }
         const ln = addItem(hit, false).line;
-        aiApply(ln, l);
+        aiApply(ln, l, fmt);
         aiRows.push({ ai: l, key: ln.k, itemId: String(hit.id), learn: '', byAi: !!byAi });
       }
       keepDraft(); rerender(); aiRender();
@@ -582,7 +643,12 @@ function aiRender() {
     `<p id="ppAiMsg" role="status">${done ? '✅ ' + done + ' items bill mein aa gaye' : '❌ Koi item stock se match nahi hua'}${aiRows.length - done ? ' · ' + (aiRows.length - done) + ' nahi mile' : ''}</p><div id="ppAiOut"></div>`);
   const { items } = stock();
   const sup = aiBillInfo?.supplier && !supplier && rankOf ? (rankOf(partiesOf(), aiBillInfo.supplier, 1)[0] || null) : null;
-  $('ppAiOut').innerHTML =
+  const fmt = billFmtOf(supplier);
+  const askFmt = !fmt || !fmt.q
+    ? `<div class="pp-ask"><b>Is supplier ke bill par ginti kya hoti hai?</b><small>Ek dafa bata dein — agli dafa app khud laga legi${aiBillInfo?.qtyLabel ? ' (bill par column ka naam: ' + esc(aiBillInfo.qtyLabel) + ')' : ''}.</small>
+       <div class="mchips"><button type="button" data-pp-fmt="pcs">PCS (pieces)</button><button type="button" data-pp-fmt="ctn">CTN (carton / peti)</button></div></div>`
+    : `<p class="stat-note">📐 Naqsha: ginti = <b>${fmt.q === 'pcs' ? 'PCS' : 'CTN'}</b>${fmt.r ? ' · rate = fi ' + (fmt.r === 'pcs' ? 'PCS' : 'CTN') : ''} <button type="button" data-pp-fmt="${fmt.q === 'pcs' ? 'ctn' : 'pcs'}">badlein</button></p>`;
+  $('ppAiOut').innerHTML = askFmt +
     (sup ? `<p><button type="button" data-pp-sup="${esc(sup.id)}">👤 Supplier lagayein: ${esc(sup.name)}</button> <small>(tasveer par: ${esc(aiBillInfo.supplier)})</small></p>` :
       aiBillInfo?.supplier && !supplier ? `<p class="stat-note">Tasveer par supplier: <b>${esc(aiBillInfo.supplier)}</b> — upar se khud chunein.</p>` : '') +
     aiRows.map((r, i) => {
@@ -629,7 +695,7 @@ async function aiPicked(i, id) {
     try { await unlearnOf(r.itemId, aiNameOf(r.ai) || r.ai.name); } catch {}
   }
   const ln = addItem(it, false).line;
-  aiApply(ln, r.ai);
+  aiApply(ln, r.ai, billFmtOf(supplier));
   r.key = ln.k; r.itemId = String(it.id); r.learn = ''; r.byAi = false;
   keepDraft(); rerender(); aiRender();
   await aiLearn(i, null);
@@ -695,6 +761,7 @@ async function save() {
   try {
     const w = cloud.saveAppPurchase(doc);
     await Promise.race([w, new Promise(r => setTimeout(r, 4000))]);
+    try { learnBillFmt(); } catch {}   // v2.3.0: bill ka naqsha khud seekho
     try {   // v2.1.0: is bill ke rates yaad — agli dafa wohi nafa khud lagega
       const mem = {};
       for (const l of lines) if (l.id) mem[String(l.id)] = { c: r4(l.costP), w: r2(l.wpcs), r: r2(l.rpcs), t: Date.now() };

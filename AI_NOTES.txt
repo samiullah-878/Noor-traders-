@@ -957,3 +957,42 @@ TEST (node + jsdom): 32 purchase (tasveer ki patti, chipkana, zoom, poori screen
 6 memory, 9 ai-tally, 15 + 14 purane. Sab pass.
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html ('2.2.0') + version.json
 (rules 2.1, rulesChanged FALSE — is update mein rules nahi badlin).
+
+=== v2.3.0 — HAR SUPPLIER KE BILL KA NAQSHA + BILL KE LIYE PRO MODEL (RULES v2.2 PUBLISH ZAROORI) ===
+MALIK KA MASLA: "AI naam to theek laata hai magar bill samajh nahi pata — pcs wala hai ya carton wala. Kya poora
+bill yaad kar sakta hai? Ek dafa larka charha de phir hamesha yaad rahe."
+TASHKHEES (malik ko bhi batai gayi): yeh model ki kharabi se zyada BILL ki kami hai — Affan ke bill par kahin nahi
+likha ke Qty pieces hai ya carton. Upar se humara apna BILL_PROMPT kehta tha "pata na chale to ctn maan lo" — Affan
+par wahi ulta parta tha (144 -> 144 carton, aur rate 224.88/72 = 3.12 fi piece; malik ki screenshot mein yahi tha).
+
+(1) NAQSHA (billFormats) — cloud.js + rules + app.js + purchase.js
+- cloud.js: listenBillFormats(cb) + setBillFormat(partyId,{q,r,n,t}) -> blueAccess/billFormats, map merge.
+  q = 'pcs' | 'ctn' (ginti ka column), r = 'pcs' | 'ctn' (rate ka column).
+- rules v2.2: staff-read list mein 'billFormats' + itemAliases jaisa create/update block (map <= 3000, size ghat na sake).
+- app.js: billFormats state + listener; hooks billFmt(pid) / saveBillFmt(pid,f); billNote(pid) AI ko naqsha URDU mein
+  bata deta hai (readPurchaseBill ka naya 'note' part).
+- purchase.js aiApply(ln,l,fmt): q='pcs' -> sab kuch Pcs mein (ctn+pcs jama), q='ctn' -> number Ctn mein.
+  RATE: r='ctn'/'pcs' ho to wahi; na ho to GINTI ke naqshe par (q='pcs' -> fi piece) — yahi 3.12 wala bug tha;
+  naqsha bilkul na ho to purana andaza (ctn && pack -> fi Ctn).
+- aiRender ke upar patti: naqsha na ho to "Is supplier ke bill par ginti kya hoti hai? [PCS] [CTN]" (data-pp-fmt) —
+  ek tap par naqsha save + aiReapply() se sab lines dobara lag jati hain. Naqsha ho to "📐 Naqsha: ginti = PCS …
+  [badlein]". AI ka qtyLabel (column ka asal heading) bhi patti mein dikhta hai.
+- learnBillFmt() save() ke waqt: har row par AI ne kya diya vs aap ne kya bheja — ginti aur rate ke vote,
+  majority se naqsha save. Yani "ek dafa larka charha de" wala kaam khud ho jata hai.
+
+(2) PRO MODEL (ai-tally.js + app.js)
+- pickProModel(key): gemini-*-pro tarjeeh, warna koi bhi 'pro' (lite/tts/image/live/audio/embedding nikal kar).
+- app.js billModelOf(cfg): cfg.billModel -> yaad kiya pro -> (ek dafa dhoondo) -> warna cfg.model. aiReadBill pehle
+  pro se koshish karta hai; nakami par proModel = flash kar ke flash se dobara (status par batata hai). Sirf BILL ke
+  liye — roznamcha/kaapi (readPages) wahi flash, waisa hi.
+
+(3) PROMPT (ai-tally.js)
+- "pata na chale to ctn maan lo" HATA diya. Ab: "GINTI KA ANDAZA MAT LAGAO" — ek hi ginti ho to 'qty' mein do aur
+  'qtyLabel' (column ka asal heading) batao; ctn/pcs alag sirf tab jab bill par do alag khane hon.
+- parseBill ab qty + qtyLabel/rateLabel/amtLabel bhi wapas karta hai (purane 'qty' ka ctn wala fallback waisa hi).
+
+TEST (node + jsdom): 10 naye naqsha-test (patti, PCS chunne par 144 CTN -> 144 PCS, rate 3.12 ki jagah 224.88,
+POS ko qty 144, bhejne par rate ka naqsha khud seekha) + 32 purchase + 8 PDF + 6 memory + 9 ai-tally + 29 purane.
+Sab pass.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js ai-tally.js cloud.js sw.js index.html
+('2.3.0') + version.json (rules 2.2, rulesChanged TRUE).

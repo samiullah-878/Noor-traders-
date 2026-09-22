@@ -1,0 +1,21 @@
+Blue Khata v2.3.0 — Har supplier ke bill ka naqsha (PCS ya CTN) · Bill ke liye behtar model
+INSTALL: 1) Is ZIP ki files GitHub par, phir app mein "↻ Sync / Update" -> 2.3.0.
+         2) ⚠️ RULES DOBARA PUBLISH: firestore.rules Firebase Console > Firestore > Rules mein paste kar ke Publish
+            (doosri line par "BLUE KHATA v2.2"). Publish na karein to naqsha yaad nahi rahega.
+
+1) BILL KA NAQSHA — AB AI ANDAZA NAHI LAGATA
+   - Pehle AI ko kaha gaya tha "pata na chale to carton maan lo" — Affan ke bill par yahi ghalti thi
+     (144 ko 144 carton samajh kar khareed 3.12 lagata tha). Ab yeh hidayat hata di gayi hai.
+   - AI se bill parhwane ke baad upar ek patti aayegi: "Is supplier ke bill par ginti kya hoti hai? [PCS] [CTN]".
+     Ek tap — sab lines usi waqt theek ho jayengi, aur us supplier ka naqsha hamesha ke liye yaad.
+   - Naqsha yaad hone ke baad har agle bill par khud lag jayega (aur AI ko bhi pehle bata diya jata hai).
+   - Aur jab aap bill theek kar ke "POS mein bhejo" dabate hain, app khud bhi dekh leti hai ke aap ne kya badla —
+     rate fi piece tha ya fi carton — aur wo bhi yaad kar leti hai. Yani "ek dafa charha dein", bas.
+
+2) BILL KE LIYE BEHTAR (PRO) MODEL
+   - Sirf bill ki tasveer ke liye ab behtar model istemal hota hai (tables theek parhta hai).
+   - Agar aap ki key par pro model na chale, app khud purane (flash) model se dobara parh leti hai —
+     aap ko kuch nahi karna, screen par likha aa jata hai.
+   - Roznamcha / kaapi wala milan pehle jaisa hi (flash) — wahan koi farq nahi.
+
+NOTE: pehli dafa naqsha poochne wali patti har naye supplier par aayegi — ek hi dafa.
