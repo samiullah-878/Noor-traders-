@@ -1,0 +1,36 @@
+Blue Khata v2.4.0 — JAANCH MODE: har line ka rang, hari ek tap mein pakki, baqi ek ek kar ke
+INSTALL: Is ZIP ki files GitHub par, phir app mein "↻ Sync / Update" -> 2.4.0.
+         Firebase rules WAHI (v2.2) — is dafa kuch publish nahi karna.
+
+1) AI BILL PARHE -> APP HAR LINE KHUD JAANCHTI HAI
+   - Har line par app kai tareeqe aazmati hai: PIECES · POS ka CARTON · bill ka سائز (misal badam: 5 carton × 23 kg
+     = 115 kg, khareed 65,772 ÷ 23 = 2,859.65) · DONO (carton aur piece ke alag khane).
+   - Jo tareeqa pichhle khareed ke sab se qareeb ho wahi lagta hai. 5-20 rupay ka farq masla nahi —
+     unit ki ghalti 20-70 guna ka farq hoti hai, wo foran pakri jati hai.
+   - Rang: 🟢 pakki · 🟡 dekh lein (rate 10% se zyada badla / pehli dafa) · 🔴 shak (unit, hisaab ya stock).
+   - Do pehre: "ginti × rate" bill ki line se na mile to 🔴; aur agar khareed stock ko had se zyada bara kar de
+     (jaise QUORMA 8 carton se 368) to 🔴 "Stock ka pehra".
+
+2) HARI EK TAP MEIN, BAQI EK EK
+   - Upar: "16 lines · 🟢 12 · 🟡 3 · 🔴 1" aur bill ka total vs aap ki lines ka farq.
+   - "✓ 12 hari pakki karein" — ek tap. Phir "Jaanch shuru" — sirf baqi lines, EK EK CARD mein:
+     upar bill ki tasveer, "Bill par" kya likha, "App ne" kya lagaya, pichhla khareed aur farq,
+     PCS / CTN / سائز ke button, ginti · khareed · wholesale · parchoon ke khane.
+   - "✓ Theek — agla ›" dabate hi AGLI LINE KHUD — upar neeche nahi jana.
+   - "✕ Chhor do" (jaise خالی بوری) — khulase mein "↺ wapas" bhi la sakte hain.
+
+3) AAKHRI KHULASA
+   - Bill ka total vs lines — farq kitna aur shayad kyun (tax / T.O. / mazdoori).
+   - Kaun se items mehnge hue, kaun se saste (rupay ke sath).
+   - Ek item bill par do dafa ho to "Mila do".
+   - Seedha "💾 POS mein bhejo".
+
+4) APP KHUD SEEKHTI HAI
+   - Supplier ka naqsha (PCS / CTN / Dono) KHUD pakar leti hai — sawal sirf tab jab pakar na sake.
+   - Har bill ke baad us supplier ki 12 misalein ("bill ka naam => humara item") yaad — agle bill par AI ko bhi.
+   - Bill ka سائز (carton size) har item ke sath yaad. "📦 Carton size khali" button un items ki list deta hai
+     jin ka POS mein carton size khali hai (POS mein bharne ka button PC ka script aane par).
+   - Supplier ke sath likha aata hai: "pichhle 5 bill · 94% hari".
+
+5) ENTER = AGLA KHANA
+   - List mein bhi aur card mein bhi: keyboard ka Done/Enter -> agla khana, aur line khatam ho to agli line.

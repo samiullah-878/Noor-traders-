@@ -1,4 +1,4 @@
-// Blue Khata v2.3.0 — AI se PARHWANA (hisaab nahi). v2.3.0: bill ke liye "pro" model (pickProModel) aur prompt
+// Blue Khata v2.4.0 (bill ka سائز bhi) — AI se PARHWANA (hisaab nahi). v2.3.0: bill ke liye "pro" model (pickProModel) aur prompt
 // ab ginti ka ANDAZA nahi lagata — column ke asal heading bhi wapas karta hai (supplier ka naqsha app khud banati hai).
 // v2.0.0: v2.0.0: (1) purchase bill parhte waqt humare items ki
 // list bhi saath jati hai taake AI khud sahi item ka id (itemId) laga de; (2) 'thinking' band (tez jawab).
@@ -139,10 +139,11 @@ export const BILL_PROMPT = [
   '- total: bill ka aakhri grand total, poore rupay, sirf hindse (na mile to 0).',
   '- lines: HAR item ki line: {"name": item ka naam BILKUL waisa jaisa likha hai (Urdu likha ho to Urdu hi), "roman": agar naam Urdu/Arabic rasm-ul-khat mein hai to wohi naam Roman Urdu (English harfon) mein — jaise "چینی" ka "cheeni" — warna "", "ctn": carton / peti / bora ki ginti (na mile to 0), "pcs": khule pieces / dozen se bahar ginti (na mile to 0), "rate": fi carton qeemat rupay agar ctn hai warna fi piece (na mile to 0), "total": us line ka total rupay (na mile to 0), "unsure": true agar hindsa saaf na ho}.',
   '- GINTI KA ANDAZA MAT LAGAO: bill par jo ek hi ginti likhi ho usay "qty" mein daalo aur "qtyLabel" mein us column ka asal heading likho (jaise "Qty.", "Pcs", "Ctn", "Packs"). Sirf tab "ctn" aur "pcs" alag alag bharo jab bill par SAAF do alag khane hon. "5+3" jaisi likhai ka matlab 5 carton aur 3 pieces hota hai (ctn 5, pcs 3).',
+  '- size: agar bill par "سائز" / "Size" / "Packing" / "Wt" jaisa column ho (ek carton / bori mein kitne kg ya pieces) to us line ka wo number, warna 0. "من ریٹ" (fi 40 kg rate) ko rate MAT samjho — rate wohi hai jo ginti se zarb ho kar line ka total banta hai.',
   '- Bill ke upar wale column headings jaisay ke likhe hain: qtyLabel (ginti ka heading), rateLabel (rate ka heading), amtLabel (aakhri raqam ka heading). Na dikhein to "".',
   '- Tareekh, mobile number, address, "previous balance", tax number waghera ko LINES mein SHAMIL NA karo.',
   '- itemId: agar neeche "HUMARE ITEMS" ki list di gayi ho to har line ka sab se milta julta item us list mein se dhoondo aur wahan likha hua id yahan do. Poora yaqeen na ho to itemId "" chhor do — ghalat item lagane se behtar khali chhorna hai. List se bahar ka koi id mat banao.',
-  'Sirf yeh JSON do, aur kuch nahi: {"supplier":"","date":"","total":0,"qtyLabel":"","rateLabel":"","amtLabel":"","lines":[{"name":"","roman":"","itemId":"","qty":0,"ctn":0,"pcs":0,"rate":0,"total":0,"unsure":false}]}'
+  'Sirf yeh JSON do, aur kuch nahi: {"supplier":"","date":"","total":0,"qtyLabel":"","rateLabel":"","amtLabel":"","lines":[{"name":"","roman":"","itemId":"","qty":0,"ctn":0,"pcs":0,"size":0,"rate":0,"total":0,"unsure":false}]}'
 ].join('\n');
 
 // v2.0.0: humare POS items ki list — AI ko saath bhejte hain taake wohi sahi item chun le.
@@ -164,7 +165,8 @@ export function parseBill(text) {
     name: String(l?.name || '').slice(0, 120).trim(),
     roman: String(l?.roman || '').slice(0, 120).trim(),
     itemId: String(l?.itemId || '').slice(0, 40).trim(),
-    qty: Math.max(0, num(l?.qty)),          // v2.3.0: bill par likhi hui ek hi ginti (pcs ya ctn — naqsha faisla karta hai)
+    qty: Math.max(0, num(l?.qty)),
+    size: Math.max(0, num(l?.size)),        // v2.4.0: bill ka سائز (ek carton mein kitne)          // v2.3.0: bill par likhi hui ek hi ginti (pcs ya ctn — naqsha faisla karta hai)
     ctn: Math.max(0, num(l?.ctn)) || (Math.max(0, num(l?.qty)) || 0),   // purana "qty" bhi ctn ban jata hai
     pcs: Math.max(0, num(l?.pcs)),
     rate: Math.max(0, num(l?.rate)),

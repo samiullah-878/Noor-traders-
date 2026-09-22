@@ -996,3 +996,57 @@ POS ko qty 144, bhejne par rate ka naqsha khud seekha) + 32 purchase + 8 PDF + 6
 Sab pass.
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js ai-tally.js cloud.js sw.js index.html
 ('2.3.0') + version.json (rules 2.2, rulesChanged TRUE).
+
+=== v2.4.0 — JAANCH MODE + LINE KA DIMAGH (rules wahi v2.2 — kuch publish nahi) ===
+MALIK KI BAAT (Affan + Bhaiya ke bills, badam/dania screenshot, Godam 1 aur 3 ki stock PDF ke baad): "AI bill samajh nahi
+pata — pcs/carton; badam ka carton nahi aata; ek item ke rates lagte hi agla khud aaye, upar neeche na jana pare."
+MALIK KE FAISLE: hari lines EK TAP par pakki, baqi ek ek dikhao. Khareed rate = bill ka Rate (Amt ÷ ginti nahi).
+Bonus nahi aata. PC ka hissa (pack-lagao.js — POS mein Items.PackQty bharna) BAAD mein, jab malik PC ki files bheje:
+purchase-post.js, rate-lagao.js, sync-stock.js, start-all .bat (node_modules / firebase-key.json NAHI).
+PC ka purana khata-sync.zip (22 Sep) is chat mein tha: POS ka carton size = dbo.Items.PackQty (+ PackQtyName);
+rate-lagao.js wala job pattern (claim -> transaction -> SystemNotes -> done/failed) naye script ka namuna hai.
+
+LINE KA DIMAGH (purchase.js, "v2.4.0: LINE KA DIMAGH + JAANCH MODE" block)
+- jCandidates(ln, ai): pcs {ginti = pieces, rate fi piece} · ctn {POS pack > 1: ginti = carton, rate ÷ pack} ·
+  both {ctn aur pcs dono bhare: "5+3"} · size {bill ka سائز (ya yaad kiya memOf(id).s) > 1 aur POS pack se alag:
+  pieces = ginti × size, khareed = rate ÷ size}.
+- jJudge(r, fmt): har candidate ka score = |ln(khareed / pichhla khareed)| + naqsha ki tarjeeh (-0.3) (+ r.force -100).
+  Pichhla khareed = baseOf (itemRates memory ya POS prate). Kuch bhi maloom na ho -> purana andaza.
+  RANG: ±10% = 🟢 g · ±50% = 🟡 y ("rate X% badla") · us se door = 🔴 r ("N guna — unit / ginti check").
+  Pichhla khareed na ho = 🟡. PEHRE: hisaab (ginti × rate vs line total, 20% gunjaish tax/discount ke liye) -> 🔴;
+  stock (khareed > max(stock×10, pack×40 ya 400)) -> 🔴 "Stock ka pehra: X se Y". Item naam ke andaze se (byAi false)
+  mila ho to hara nahi, zyada se zyada 🟡.
+- jAutoFmt(): hari lines ke modes se naqsha KHUD (pcs / ctn / both — size aur both 'ctn' gine jate hain) aur save.
+  Patti sirf tab jab pakra na ja sake. Patti par TAP = IS bill par r.force (sab lines), agle bills par tarjeeh.
+
+JAANCH UI
+- aiRender() = overview: ginti (🟢/🟡/🔴), bill total vs lines + farq, naqsha line (khud pakra / badlein), "✓ N hari
+  pakki karein" (jAccept: done + naam yaad), "Jaanch shuru (N) ›", aur har line ka jz-row (tap = card).
+- jCard(i): bill ki tasveer (chhoti, ⤢), "Bill par" (naam, ginti, سائز, ریٹ, کل), "App ne lagaya" (item, unit, khareed,
+  pichhla + farq), wajahen, unit chips (data-pp-jmode = r.force), khane: CTN/PCS/khareed/W/R (seedha cart line mein,
+  khareed badle to pichhla nafa se W/R), [✓ Theek — agla ›] [Item badlein] [✕ Chhor do] [‹ List].
+  jNext(): pehle ghair-hari, phir baqi; khatam = jSummary().
+- jSummary(): bill ka farq (aur andaza: tax / T.O. / mazdoori), mehnge / saste items (rupay fi unit), do dafa item
+  "Mila do" (jMerge: ginti jama, khareed wazni ausat), chhori lines "↺ wapas" (jUnskip), laal baqi ki yaad-dahani,
+  "💾 POS mein bhejo" (seedha save()).
+- Bhejne ke baad aiRows = null (purani jaanch band — pehle bheje hue bill ki jaanch dobara khul sakti thi).
+- Enter / Done: .sale-cart aur .jc-card mein agla khana; line badle to scrollIntoView; card ke aakhri khane par ✓.
+
+SIKHNA (save par)
+- learnFromBill(): naqsha (modes se), r (q ke mutabiq), n, b (bills), g (hari ka ausat %), ex = 12 misalein
+  "bill ka naam => humara item | tareeqa x size". app.js billNote() yeh misalein aur 'both' ki hidayat AI ko deta hai.
+- itemRates memory ab s (carton size) bhi rakhti hai (sizeMemFromBill). cloud.js setItemRates s, setBillFormat
+  g/b/ex rakhta hai (rules mein map ki values par shart nahi — rules badalne ki zarurat nahi).
+- packGaps() / packsView(): "📦 Carton size khali (N)" — jin items ka bill par سائز mila magar POS mein pack khali
+  ya alag. Abhi sirf dikhata hai; pack-lagao.js ke baad yahin se bharna.
+
+AI (ai-tally.js): naya 'size' khana (سائز / Size / Packing / Wt) + hidayat: "من ریٹ" (fi 40 kg) ko rate mat samjho —
+rate wohi jo ginti se zarb ho kar line ka total bane. parseBill size rakhta hai.
+
+TEST (node + jsdom, ASLI BILLS KE NUMBER): runj.mjs 23 — Bhaiya: badam 5 کارٹن × سائز 23 = 115 @ 2,859.65 🟢, dania
+5 CTN @ 575 🟢, ajwain 10 @ 325 🟢, khali bori 🔴, naqsha khud "Dono", hari pakki, khali bori chhori, POS ko 3 lines,
+carton size 23 yaad, misalein. Affan: QUORMA 360 PCS (CTN nahi), naqsha khud PCS, CTN zabardasti = 🔴 + stock ka pehra,
+card mein khareed badla to W pichhle nafa se, Enter = agla khana. + run 33, runfmt 10, runmem 6, runai 9, runpdf 8,
+runb 15, runc 14. Sab pass. SABAQ: test mein pos-stock stub ko '?v=' ke SATH import karein warna alag module milta hai.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html ('2.4.0') + version.json
+(rules 2.2, rulesChanged FALSE).
