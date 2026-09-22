@@ -640,3 +640,13 @@ VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js 
 - Browser test: sale chip+5000+note save (1 entry add), swipe -> Wasooli, noton 2×5000+3×100+45 = 10,345 -> count row ->
   Save ginti (closing edit), koi page error nahi.
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.92.0') + version.json.
+
+=== v1.93.0 — DAILY SALE: TABS WAPAS HATAYE (malik ko pasand nahi aaye) — columns pehle jaisi, sirf styling (rules wahi v1.88) ===
+- dailySheet: .day-tabs aur .day-tabbed HATAYE; .sheet-scroll.day-cols (purana 6-column grid + horizontal scroll wahi).
+  Form ki DOM tarteeb pehle wali: query, suggestions, account, amount, note (HAMESHA visible, toggle nahi), submit, phir extras
+  (.sheet-extra: sale -> Roznamcha + AI; expense -> naya kharcha account). 📷 Pictures wapas summary mein (.day-camera chip).
+- setupDayTabs/paintDayActs ab call nahi hote (functions pade hain, nuqsan nahi). #actions.day-acts patli line rehti hai.
+- Farq patti (v1.92) aur noton se ginti (details, .day-cols mein 1 column grid) RAKHE.
+- SABAQ: malik ko screen ki TARTEEB badalna pasand nahi — sirf shakal (chips/fonts/buttons) badlein, layout wahi rakhein.
+- Browser test: 6 columns sath, tabs nahi, note nazar, sale save 1 entry, koi error nahi.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.93.0') + version.json.

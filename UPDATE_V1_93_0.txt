@@ -1,0 +1,6 @@
+Blue Khata v1.93.0 — Daily Sale PEHLE JAISI screen, sirf nayi shakal (malik ki farmaish)
+INSTALL: sirf is ZIP ki 11 files GitHub par (v1.92 pehle lag chuka ho), Sync/Update 1.93.0. Firebase rules badalne ki zaroorat NAHI.
+- Tabs HATAYE. Sab columns pehle ki tarah sath sath: Sale · Wasooli · Akhrajat · Kal ka Change · Aaj ka Change · Closing Cash
+  (daayein/baayein scroll). Har column ki tarteeb pehle wali: search → Aksar → account → raqam → Note (hamesha) → Save.
+- Sirf shakal nayi: Aksar chips patli ek line, gol khane/buttons, saaf fonts, numayan Save, saaf entries, gradient header.
+- Rakha gaya: upar ⚖️ Farq patti, 📷 Pictures (upar), Closing/Change mein band hone wala 💵 Noton se ginti, neeche patli buttons.
