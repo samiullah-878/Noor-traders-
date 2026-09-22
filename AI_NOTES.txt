@@ -679,3 +679,18 @@ VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js 
 - BUG: autoEndZeroReminders -> save() -> $('dialog').close() + notice: app khulne ke baad koi bhi khuli khirki band ho
   jati thi. FIX: save(data, existing, quiet) — quiet par close/notice nahi; autoEnd quiet=true. Browser test pass.
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.94.0') + version.json (rules 1.94, rulesChanged true).
+
+=== v1.95.0 — NAVY THEME + PREMIUM CHIPS + zoom .92 + godam stock filter + bill action taza check (rules wahi v1.94) ===
+- Permission masla (malik ki screenshot): 1000-expression NAHI (rules 30KB/256KB; update shart chhoti). Saboot: momin ka
+  "Dobara" kamyab (⏳ aa gaya). OLper par button dabate waqt haalat badli thi (list purani). FIX: billAct pehle
+  cloud.getAppPurchase(id) (getDoc) — NEEDS[kind] na mile to STATUS_WORD Urdu alert + openToday(); permission-denied par
+  do wajah wala Urdu paigham. Momin ⏳ par ruka = PC par purchase-post nahi chal rahi thi.
+- Rang: /tmp/navy.py jaisa algorithm — blue hue (195-240°, s>.25): hue 220, darks s*.85(cap .62) l*.64, mid s*.5 l*.92,
+  light tints s*.45. style.css 211 rang, index theme-color, manifest theme/background, app.js colours.blue. Primary
+  #1258ce -> ~#223b6d. Logo PNG waise hi (neela) — malik kahe to badlein.
+- `html{zoom:.92}` (lafz ~8% chhote) — Chrome test: footer (fixed) 0..390 bottom 844 theek, dialog theek, scrollWidth 390.
+- Premium chips CSS (:root --navy/--chip-bd): party/sort/m/ws chips, pp-sup-list, sheet chips, pp-bill-acts, day-acts,
+  .account-tools button (stock filters bhi) — safed + border + saaya; .on/.selected/.got navy gradient.
+- pos-stock: data-stock-branch par branch !== 1 -> filter 'has' (sirf is godam ka stock) + chip label "📦 Is godam ka stock".
+- Malik ka faisla: godam se sale par POS stock GODAM se hi minus (sale-post waisa hi).
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.95.0') + version.json.

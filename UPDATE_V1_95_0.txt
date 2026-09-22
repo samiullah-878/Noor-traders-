@@ -1,0 +1,9 @@
+Blue Khata v1.95.0 — NAVY rang · premium chips · lafz chhote · godam stock · bill button ka saaf paigham
+INSTALL: sirf is ZIP ki 13 files GitHub par (v1.94 pehle laga ho), Sync/Update 1.95.0. Firebase rules WAHI v1.94 (publish nahi karna, agar v1.94 ho chuke).
+- Rang: tez neele ki jagah NAVY / gehra neela — header, buttons, tabs, chips, app ka upar ka rang (theme). Logo waisa hi.
+- Chips premium: safed, patli border, halka saaya, gol; chuni hui gehri navy. Upar ki nav bhi gol pills. Header chips shisha jaisi.
+- Poori app ke lafz ~8% chhote (zyada nazar aaye).
+- Stock: koi GODAM chunein to neeche SIRF usi godam ka stock ("📦 Is godam ka stock"); "Sab" chip se sab.
+- Aaj ke app purchase: button dabane se pehle bill ki TAZA haalat — badal chuki ho to Urdu mein batata hai
+  ("PC abhi bana raha hai" / "ban chuka") — "Missing or insufficient permissions" wala angrezi paigham nahi.
+- Godam se sale par stock GODAM se hi minus (malik ka faisla) — koi tabdeeli nahi.

@@ -1,5 +1,5 @@
-// purchase.js — v1.94.0 "POS Purchase" screen
-// v1.94.0: POS ka KHULA bill yahan EDIT (editOf) -> PC wohi bill number update karta hai; supplier ki smart chips
+// purchase.js — v1.95.0 "POS Purchase" screen
+// v1.95.0: POS ka KHULA bill yahan EDIT (editOf) -> PC wohi bill number update karta hai; supplier ki smart chips
 //          (istemal ke hisaab se); supplier chunte hi "is supplier se aksar aane wale items" chips. (Purchase tab ke andar nayi screen)
 // Sale screen jaisi: barcode scan / smart search / Ctn + Pcs. Har item par khareed rate + 4 naye rate
 // (Wholesale Ctn/Pcs, Parchoon Ctn/Pcs) — PURANE NAFA se khud, % chips se wholesale.
@@ -7,8 +7,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.94.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=1.94.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.95.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=1.95.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -180,11 +180,19 @@ function loadFromJob(p) {
   keepDraft();
   return miss.length ? 'Yeh items stock list mein nahi mile, is liye chhor diye:\n' + miss.join('\n') : '';
 }
+const STATUS_WORD = { new: '⏳ PC ke intezar mein', posting: '… PC abhi bana raha hai', done: '✓ POS mein ban chuka', failed: '✕ Nahi bana', cancelled: '✕ Cancel ho chuka', replaced: '↪ Naya bana diya gaya' };
+const NEEDS = { retry: ['failed'], reopen: ['failed', 'cancelled'], cancel: ['new'], editdone: ['done'] };
 async function billAct(kind, id, btn) {
-  const p = today.find(x => x.id === id); if (!p || !cloud?.updateAppPurchase) return;
-  if (!mayTouch(p)) { notice('Is bill par aap ki ijazat nahi'); return; }
+  const p0 = today.find(x => x.id === id); if (!p0 || !cloud?.updateAppPurchase) return;
+  if (!mayTouch(p0)) { notice('Is bill par aap ki ijazat nahi'); return; }
   btn.disabled = true;
+  let p = p0;
   try {
+    // v1.95: dabane se pehle TAZA haalat (list purani ho sakti hai — PC ne beech mein utha liya ho)
+    if (cloud.getAppPurchase) {
+      const fresh = await cloud.getAppPurchase(id).catch(() => null);
+      if (fresh) { p = { ...p0, ...fresh, id }; if (!NEEDS[kind].includes(fresh.status)) { alert(`Is bill ki haalat badal chuki hai:\n${STATUS_WORD[fresh.status] || fresh.status}\n\nList taza kar di — dobara dekhein.`); openToday(); return; } }
+    }
     if (kind === 'retry') {
       if (!confirm(`${p.partyName} · Rs ${num(p.total)}\n\nYahi bill dobara PC ko bhejein?`)) return;
       await cloud.updateAppPurchase(id, { status: 'new', retryAt: Date.now(), error: '' });
@@ -208,7 +216,11 @@ async function billAct(kind, id, btn) {
       $('dialog')?.close(); rerender(); notice('✏️ Edit mode — badal kar "POS bill UPDATE" dabayein');
     }
   } catch (err) {
-    alert((kind === 'cancel' ? 'Cancel nahi ho saka — shayad PC ne bill utha liya hai.\n\n' : 'Nahi hua: ') + (err?.message || err));
+    const perm = err?.code === 'permission-denied' || /permission/i.test(String(err?.message || ''));
+    alert(perm
+      ? (kind === 'cancel' ? 'Cancel nahi ho saka — PC ne yeh bill utha liya hai.' : 'Ijazat nahi mili. Do wajah ho sakti hain:\n1) Is bill ki haalat abhi badli hai (list taza kar di)\n2) Firebase rules v1.94+ publish nahi hue (copy page ki 2nd line dekhein)')
+      : 'Nahi hua: ' + (err?.message || err));
+    openToday();
   } finally { btn.disabled = false; }
 }
 function openToday() {
@@ -432,7 +444,7 @@ async function save() {
   const low = cart.filter(l => linePcs(l) > 0 && ((Number(l.wpcs) > 0 && Number(l.wpcs) < Number(l.costP)) || (Number(l.rpcs) > 0 && Number(l.rpcs) < Number(l.costP)))).map(l => l.name);
   if (low.length && !confirm('Dhyan: in items ka naya sale rate KHAREED SE KAM hai:\n\n' + low.join('\n') + '\n\nPhir bhi bhejein?')) return;
   const total = r2(lines.reduce((n, l) => n + l.qty * l.costP, 0));
-  const date = todayStr();   // v1.94.0: tareekh ka khana nahi — naya bill hamesha AAJ ka
+  const date = todayStr();   // v1.95.0: tareekh ka khana nahi — naya bill hamesha AAJ ka
   const date2 = edit ? edit.date : date;   // edit: bill ki apni purani tareekh
   if (!confirm(`${edit ? 'POS BILL ' + edit.billNo + ' — UPDATE' : 'POS PURCHASE BILL'}\n${p.name}\n${lines.length} items · Rs ${num(total)}${invoiceNo ? '\nSupplier bill # ' + invoiceNo : ''}\n\n${edit ? 'POS mein yahi bill badlein (purani lines hat kar yeh lagengi) aur naye rates lagayein?' : 'POS mein bill banayein aur naye rates lagayein?'}`)) return;
   const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);

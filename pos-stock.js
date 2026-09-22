@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf } from './smart-search.js?v=1.94.0';
+import { smartSearch, setAliases, aliasOf } from './smart-search.js?v=1.95.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -448,7 +448,7 @@ function summaryHTML(branches, pick, items, meta, names) {
     ${branchBar ? `<div class="sh-label">Branch</div>${branchBar}` : ''}
     <div class="sh-label">Dikhao</div>
     <div class="account-tools">
-      ${btn('data-stock-filter', 'has', filter, `Stock wale (${num(hasN)})`)}
+      ${btn('data-stock-filter', 'has', filter, pick !== 1 ? `📦 Is godam ka stock (${num(hasN)})` : `Stock wale (${num(hasN)})`)}
       ${btn('data-stock-filter', 'all', filter, `Sab (${num(live.length)})`)}
       ${btn('data-stock-filter', 'minus', filter, `Minus stock (${num(minus)})`)}
       ${btn('data-stock-filter', 'baqi', filter, `Ginti baqi (${num(items.length - done)})`)}
@@ -805,7 +805,7 @@ function rowHTML(r) {
 // branch aur sort ke buttons
 document.addEventListener('click', e => {
   const b = e.target.closest?.('[data-stock-branch]');
-  if (b) { branch = Number(b.dataset.stockBranch); limit = PAGE; rerender(); return; }
+  if (b) { branch = Number(b.dataset.stockBranch); if (branch !== 1) filter = 'has'; limit = PAGE; rerender(); return; }   // v1.95: godam kholte hi sirf USI godam ka stock
   if (e.target.closest?.('[data-stock-scan]')) { openScanner(); return; }
   if (e.target.closest?.('[data-stock-clear]')) { clearScan(); return; }
   const sa = e.target.closest?.('[data-scan-saveall]');
