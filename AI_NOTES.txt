@@ -665,3 +665,17 @@ VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js 
   faisla sirf malik: Maaf / Warning / Katauti; katauti khud = tankhwah ÷ mahine ke din ÷ duty ghante × der (qareebi Rs 5), badal
   sakte; tankhwah parchi mein line. Hazri app ka code is chat mein NAHI — malik ZIP dega.
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.93.1') + version.json.
+
+=== v1.94.0 — APP PURCHASE LIST: DOBARA / SCREEN PAR / EDIT / CANCEL + save(quiet) BUG FIX (RULES v1.94 PUBLISH ZAROORI) ===
+- purchase.js openToday: billActs(p) (mayTouch = owner | by==uid && date aaj): failed -> data-pp-retry (status new,
+  retryAt, error '') + data-pp-reopen (pehle status 'replaced' — PC v3 ki ANJAAN-retry se DOUBLE bill na bane — phir
+  loadFromJob: NAYA bill, rates jo bheje the mode 'manual'); cancelled -> reopen; done -> data-pp-editdone (posBills
+  'pos-'+purchaseId -> docStatus/date checks -> ppLoadBill); new -> data-pp-cancel (status cancelled). statusText mein
+  cancelled / replaced. Dialog refresh par khuli details khuli rehti hain.
+- cloud.updateAppPurchase(id,patch) = setDoc merge (updateDoc import nahi).
+- RULES appPurchases update: (failed -> new|replaced) ya (new -> cancelled), affectedKeys hasOnly [status retryAt error
+  replacedAt cancelledAt], owner ya (by==uid && isToday(date) && purUser). Sasti shartein pehle. PC admin key bypass.
+  PC v3 'replaced'/'cancelled' ko uthata hi nahi (listener new/posting/failed; claim ke rules).
+- BUG: autoEndZeroReminders -> save() -> $('dialog').close() + notice: app khulne ke baad koi bhi khuli khirki band ho
+  jati thi. FIX: save(data, existing, quiet) — quiet par close/notice nahi; autoEnd quiet=true. Browser test pass.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.94.0') + version.json (rules 1.94, rulesChanged true).

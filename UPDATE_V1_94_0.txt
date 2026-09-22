@@ -1,0 +1,12 @@
+Blue Khata v1.94.0 — "Aaj ke app purchase" par kaam ke buttons + khirki band hone ka bug
+INSTALL (tarteeb se):
+ 1) firestore.rules PUBLISH (copy page — 2nd line "BLUE KHATA v1.94"). ZAROORI — warna Dobara/Cancel "permission denied".
+ 2) Is ZIP ki 13 files GitHub par (v1.93.0/1.93.1 pehle lage hon; 1.93.1 na laga ho to bhi yeh sab us ke upar hai). Sync/Update 1.94.0.
+NAYA (POS Purchase > 📋 Aaj ke app purchase > bill kholein):
+- ✕ Nahi bana: "🔄 Dobara PC ko bhejo" (wohi bill) · "✏️ Screen par kholo" (items screen par, theek kar ke naya bhejein;
+  purana "↪ naya bana diya gaya" ho jata hai taake PC dobara na banaye).
+- ✓ Ban gaya: "✏️ Edit (POS bill …)" — seedha edit mode (bill khula ho; mulazim sirf aaj ka).
+- ⏳ Intezar: "✕ Cancel" — PC uthane se pehle. PC utha chuka ho to cancel nahi hota (bataya jata hai).
+- Malik har bill par; mulazim sirf apna bheja, aaj ka.
+BUG FIX: v1.89 ka "zero khata reminder khud hatao" app khulne ke ~3 sec baad jo khirki khuli ho use BAND kar deta tha — theek.
+Tareekh ka khana (v1.93.1) hata hua hai.

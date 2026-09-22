@@ -1,5 +1,5 @@
-// purchase.js — v1.93.1 "POS Purchase" screen
-// v1.93.1: POS ka KHULA bill yahan EDIT (editOf) -> PC wohi bill number update karta hai; supplier ki smart chips
+// purchase.js — v1.94.0 "POS Purchase" screen
+// v1.94.0: POS ka KHULA bill yahan EDIT (editOf) -> PC wohi bill number update karta hai; supplier ki smart chips
 //          (istemal ke hisaab se); supplier chunte hi "is supplier se aksar aane wale items" chips. (Purchase tab ke andar nayi screen)
 // Sale screen jaisi: barcode scan / smart search / Ctn + Pcs. Har item par khareed rate + 4 naye rate
 // (Wholesale Ctn/Pcs, Parchoon Ctn/Pcs) — PURANE NAFA se khud, % chips se wholesale.
@@ -7,8 +7,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.93.1';
-import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=1.93.1';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.94.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=1.94.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -131,11 +131,13 @@ function watchToday() {
   stopToday = cloud.listenAppPurchases(d, list => {
     today = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); todayErr = '';
     const b = $('ppTodayBtn'); if (b) b.textContent = todayLabel();
-    if ($('dialog')?.open && $('dialogTitle')?.textContent.startsWith('Aaj ke app purchase')) openToday();
+    if ($('dialog')?.open && $('dialogTitle')?.textContent.startsWith('Aaj ke app purchase')) { const open = [...document.querySelectorAll('#dialogBody details[open]')].length; openToday(); if (open) document.querySelectorAll('#dialogBody details').forEach(d => d.open = true); }
   }, e => { todayErr = e?.message || 'Load nahi hue'; stopToday = null; });
 }
 const statusText = p => p.status === 'done' ? `✓ POS bill ${esc(p.purchaseNo || '')}${p.editOf ? ' UPDATE ho gaya' : ''}${p.rates ? ' · ' + esc(String(p.rates)) + ' items ke rate lage' : ''}${p.rateError ? ' · <span class="red">rates: ' + esc(p.rateError) + '</span>' : ''}`
   : p.status === 'failed' ? `<span class="red">✕ Nahi bana: ${esc(p.error || '')}</span>`
+  : p.status === 'cancelled' ? '<span class="red">✕ Cancel kiya gaya</span>'
+  : p.status === 'replaced' ? '↪ Screen par khol kar naya bana diya gaya'
   : p.status === 'posting' ? '… PC bill bana raha hai' : '⏳ PC ka intezar (PC on ho)';
 const todayLabel = () => { const w = today.filter(p => p.status === 'new' || p.status === 'posting').length; return `📋 Aaj ke app purchase (${today.length})${w ? ' · ' + w + ' intezar' : ''}`; };
 function dlg(title, html) {
@@ -144,12 +146,77 @@ function dlg(title, html) {
   $('dialogTitle').textContent = title; $('dialogBody').innerHTML = html;
   if (!d.open) d.showModal();
 }
+// v1.94: har app purchase par kaam — ✕ par Dobara bhejo / Screen par kholo, ✓ par Edit, ⏳ par Cancel
+const mayTouch = p => isOwner() || (p.by === uidOf() && p.date === todayStr());
+function billActs(p) {
+  if (!mayTouch(p)) return '';
+  const b = [];
+  if (p.status === 'failed') b.push(`<button type="button" class="got" data-pp-retry="${esc(p.id)}">🔄 Dobara PC ko bhejo</button>`, `<button type="button" data-pp-reopen="${esc(p.id)}">✏️ Screen par kholo</button>`);
+  if (p.status === 'cancelled') b.push(`<button type="button" data-pp-reopen="${esc(p.id)}">✏️ Screen par kholo</button>`);
+  if (p.status === 'done' && p.purchaseId) b.push(`<button type="button" data-pp-editdone="${esc(p.id)}">✏️ Edit (POS bill ${esc(p.purchaseNo || '')})</button>`);
+  if (p.status === 'new') b.push(`<button type="button" class="danger" data-pp-cancel="${esc(p.id)}">✕ Cancel</button>`);
+  return b.length ? `<div class="pp-bill-acts">${b.join('')}</div>` : '';
+}
+// ✕/cancel wala bill screen par — NAYA bill (edit nahi); rates wahi jo bheje the
+function loadFromJob(p) {
+  const s = stock();
+  if (!s.loaded) return 'Items abhi load ho rahe hain — thori der baad dobara dabayein.';
+  const miss = [], next = [];
+  for (const x of p.lines || []) {
+    const it = s.items.find(r => String(r.id) === String(x.id));
+    if (!it) { miss.push(x.name); continue; }
+    const o = oldOf(it), pk = Number(it.pack) > 1 ? Number(it.pack) : 0, q = Number(x.qty) || 0;
+    const hasW = Number(x.wctn) > 0 || Number(x.wpcs) > 0, hasR = Number(x.rctn) > 0 || Number(x.rpcs) > 0;
+    next.push({ k: newKey(), id: it.id, code: it.code || '', name: it.name, pack: Number(it.pack) || 0, cName: it.cName || 'Ctn', uName: it.uName || 'Pcs',
+      godam: Number(x.godam) || Number(p.godam) || BILL_BRANCH, ctn: pk ? Math.floor(q / pk + 1e-9) : 0, pcs: pk ? r3(q - Math.floor(q / pk + 1e-9) * pk) : q,
+      costP: r4(Number(x.costP) || o.oldCost), ...o,
+      wpcs: hasW ? r2(x.wpcs) : o.oldW, wctn: hasW ? r2(x.wctn) : (pk ? Math.round(o.oldW * pk) : 0),
+      rpcs: hasR ? r2(x.rpcs) : (pk ? o.oldR2 : o.oldR), rctn: hasR ? r2(x.rctn) : (pk ? Math.round(o.oldR * pk) : 0),
+      wMode: hasW ? 'manual' : 'old', rMode: hasR ? 'manual' : 'old' });
+  }
+  if (!next.length) return 'Is bill ka koi item POS stock list mein nahi mila.';
+  cart = next; edit = null; supplier = String(p.partyId || ''); supOpen = !partyOf(supplier); supQuery = '';
+  godam = Number(p.godam) || BILL_BRANCH; invoiceNo = String(p.invoiceNo || ''); note = String(p.note || ''); day = '';
+  keepDraft();
+  return miss.length ? 'Yeh items stock list mein nahi mile, is liye chhor diye:\n' + miss.join('\n') : '';
+}
+async function billAct(kind, id, btn) {
+  const p = today.find(x => x.id === id); if (!p || !cloud?.updateAppPurchase) return;
+  if (!mayTouch(p)) { notice('Is bill par aap ki ijazat nahi'); return; }
+  btn.disabled = true;
+  try {
+    if (kind === 'retry') {
+      if (!confirm(`${p.partyName} · Rs ${num(p.total)}\n\nYahi bill dobara PC ko bhejein?`)) return;
+      await cloud.updateAppPurchase(id, { status: 'new', retryAt: Date.now(), error: '' });
+      notice('🔄 Dobara bhej diya — PC POS mein bana dega');
+    } else if (kind === 'cancel') {
+      if (!confirm(`${p.partyName} · Rs ${num(p.total)}\n\nYeh bill CANCEL karein? (PC isay POS mein nahi banayega)`)) return;
+      await cloud.updateAppPurchase(id, { status: 'cancelled', cancelledAt: Date.now() });
+      notice('✕ Cancel ho gaya');
+    } else if (kind === 'reopen') {
+      if (cart.length && !confirm('POS Purchase screen par pehle se items hain — woh hata kar yeh bill kholein?')) return;
+      if (p.status === 'failed') await cloud.updateAppPurchase(id, { status: 'replaced', replacedAt: Date.now() });   // PC ab isay dobara na uthaye (double bill se bachao)
+      const r = loadFromJob(p); if (r) alert(r);
+      $('dialog')?.close(); rerender(); notice('✏️ Bill screen par — theek kar ke "POS mein bhejo" dabayein');
+    } else if (kind === 'editdone') {
+      const b = await cloud.purchaseBill('pos-' + p.purchaseId).catch(() => null);
+      if (!b) { alert('POS se is bill ki tafseel abhi nahi aayi — 2-3 minute baad dobara dabayein.'); return; }
+      if (Number(b.docStatus) === 2) { alert('Yeh bill POSTED hai — pehle malik Unpost kare.'); return; }
+      if (Number(b.docStatus) === 3) { alert('Yeh bill POS mein cancel hai.'); return; }
+      if (!isOwner() && b.date !== todayStr()) { alert('Mulazim sirf AAJ ka bill edit kar sakta hai.'); return; }
+      const r = ppLoadBill(b, { partyId: p.partyId }); if (r === 'cancel') return; if (r) { alert(r); return; }
+      $('dialog')?.close(); rerender(); notice('✏️ Edit mode — badal kar "POS bill UPDATE" dabayein');
+    }
+  } catch (err) {
+    alert((kind === 'cancel' ? 'Cancel nahi ho saka — shayad PC ne bill utha liya hai.\n\n' : 'Nahi hua: ') + (err?.message || err));
+  } finally { btn.disabled = false; }
+}
 function openToday() {
   dlg(`Aaj ke app purchase (${today.length})`, todayErr ? `<p>${esc(todayErr)}</p>` : !today.length ? '<p>Aaj app se koi purchase bill nahi bana.</p>' :
     today.map(p => `<details class="sale-hist"><summary><b>${p.editOf ? '✏️ ' + esc(p.editOf.billNo || '') + ' · ' : ''}${esc(p.partyName || '')} · Rs ${num(p.total)}</b><small>${esc(new Date(p.createdAt || 0).toLocaleTimeString('en-PK'))} · ${statusText(p)}</small></summary>
       <div style="overflow-x:auto"><table><thead><tr><th>Item</th><th>Qty</th><th>Khareed</th><th>Rs</th></tr></thead><tbody>
       ${(p.lines || []).map(l => `<tr><td>${esc(l.name)}</td><td>${qtyText(l)}</td><td>${num(l.costP)}/${esc(l.uName || 'Pcs')}</td><td>${num(r2(l.qty * l.costP))}</td></tr>`).join('')}
-      </tbody></table></div>${p.invoiceNo ? `<p>Supplier bill # ${esc(p.invoiceNo)}</p>` : ''}${p.note ? `<p>${esc(p.note)}</p>` : ''}</details>`).join(''));
+      </tbody></table></div>${p.invoiceNo ? `<p>Supplier bill # ${esc(p.invoiceNo)}</p>` : ''}${p.note ? `<p>${esc(p.note)}</p>` : ''}${billActs(p)}</details>`).join(''));
 }
 function qtyText(l) {
   const pk = Number(l.pack) || 0, q = Number(l.qty) || 0;
@@ -300,6 +367,8 @@ document.addEventListener('click', async e => {
   if (mic) { const ok = voiceSearch(t => { const s = $('search'); if (s) { s.value = t; s.dispatchEvent(new Event('input', { bubbles: true })); } }); if (!ok) notice('Is phone/browser mein awaz se search nahi chalti'); return; }
   const off = e.target.closest?.('[data-pp-edit-off]');
   if (off) { if (!confirm('Edit chhor dein? (POS ka bill waisa hi rahega; screen saaf ho jayegi)')) return; edit = null; cart = []; note = ''; invoiceNo = ''; day = ''; keepDraft(); rerender(); return; }
+  const ba = e.target.closest?.('[data-pp-retry],[data-pp-reopen],[data-pp-editdone],[data-pp-cancel]');
+  if (ba) { const d = ba.dataset; billAct(d.ppRetry ? 'retry' : d.ppReopen ? 'reopen' : d.ppEditdone ? 'editdone' : 'cancel', d.ppRetry || d.ppReopen || d.ppEditdone || d.ppCancel, ba); return; }
   const t = e.target.closest?.('[data-pp-sup],[data-pp-sup-change],[data-pp-add],[data-pp-del],[data-pp-clear],[data-pp-save],[data-pp-today],[data-pp-camera],[data-pp-old],[data-pp-w],[data-pp-wall],[data-pp-wall-custom],[data-pp-old-all],[data-pp-copy]');
   if (!t) return;
   const d = t.dataset;
@@ -363,7 +432,7 @@ async function save() {
   const low = cart.filter(l => linePcs(l) > 0 && ((Number(l.wpcs) > 0 && Number(l.wpcs) < Number(l.costP)) || (Number(l.rpcs) > 0 && Number(l.rpcs) < Number(l.costP)))).map(l => l.name);
   if (low.length && !confirm('Dhyan: in items ka naya sale rate KHAREED SE KAM hai:\n\n' + low.join('\n') + '\n\nPhir bhi bhejein?')) return;
   const total = r2(lines.reduce((n, l) => n + l.qty * l.costP, 0));
-  const date = todayStr();   // v1.93.1: tareekh ka khana nahi — naya bill hamesha AAJ ka
+  const date = todayStr();   // v1.94.0: tareekh ka khana nahi — naya bill hamesha AAJ ka
   const date2 = edit ? edit.date : date;   // edit: bill ki apni purani tareekh
   if (!confirm(`${edit ? 'POS BILL ' + edit.billNo + ' — UPDATE' : 'POS PURCHASE BILL'}\n${p.name}\n${lines.length} items · Rs ${num(total)}${invoiceNo ? '\nSupplier bill # ' + invoiceNo : ''}\n\n${edit ? 'POS mein yahi bill badlein (purani lines hat kar yeh lagengi) aur naye rates lagayein?' : 'POS mein bill banayein aur naye rates lagayein?'}`)) return;
   const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);

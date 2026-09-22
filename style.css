@@ -629,3 +629,7 @@ main .summary>.stock-head{display:block!important;min-width:0!important;width:10
 .pp-sup-pick,.pp-sup-list,.pp-meta{min-width:0;max-width:100%}
 .pp-meta{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 @media(max-width:460px){.pp-meta label:last-child{grid-column:auto!important}}
+
+/* v1.94: app purchase list par kaam ke buttons */
+.pp-bill-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pp-bill-acts button{min-height:38px;padding:6px 12px;border-radius:999px;font-size:13.5px;font-weight:700}
