@@ -1,0 +1,23 @@
+Blue Khata v1.98.0 — Purchase aik jagha · Wahi screen wapas · Andar se screen switch
+INSTALL: Is ZIP ki 11 files GitHub par (v1.97 pehle laga ho), phir app mein "↻ Sync / Update" -> 1.98.0.
+         Firebase rules WAHI (v1.94) — kuch publish nahi karna.
+
+1) PURCHASE AB AIK HI SCREEN PAR (🧾 POS Purchase)
+   - Upar do chip: "🧾 Items wali bill" (jo pehle tha) aur "📷 Sirf photo + raqam" (purana + Purchase wala form
+     wahin khul jata hai — ab doosri jagha jane ki zarurat nahi).
+   - Naya button "🤖 Bill ki tasveer se items": bill ki photo lagayein, AI items parh kar SEEDHE isi bill mein
+     daal deta hai (ginti + khareed rate ke saath). Jo item stock mein na mile woh alag list mein dikhta hai.
+     ⚠️ AI hamesha theek nahi parhta — har line ki ginti aur rate khud check karein, phir "POS mein bhejo".
+   - DO DAFA ENTRY SE BACHAO: agar isi supplier ki wahi raqam wali photo-purchase (ya POS bill) pehle se maujood
+     ho to Save par app poochta hai — "Milao" ki yaad dilata hai. Kuch khud nahi jorta/hataata.
+
+2) APP WAHIN SE KHULTA HAI JAHAN CHHORA THA
+   - Jo screen (aur khula hua account) tha wohi dobara khulta hai — app band karke kholne par aur login ke baad bhi.
+   - Phone ka BACK button: pehle khuli khirki band, phir andar wali screen se peechay — app band nahi hota.
+     Ghar (Khata) par back dabayein to app se bahar (jaisa pehle tha).
+
+3) MULAZIM: ANDAR SE HI DOOSRI SCREEN (🔄 Screen badlein)
+   - Purchase / Stock / Sale / Full App — jis ka password ho, wahin se daal kar us screen par chale jayein.
+     Logout ya app dobara kholna nahi parta. Password "aaj ke liye yaad" bhi rakh sakte hain (agli dafa aik tap).
+   - Yeh button sirf mulazim ke login par aata hai (malik ke paas sab screens pehle se hain).
+   - Sync baqi ho to switch se pehle app warning deta hai (pending kaam usi login se sync hota hai).

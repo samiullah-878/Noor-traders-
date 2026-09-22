@@ -1,4 +1,7 @@
-// purchase.js — v1.97.0 "POS Purchase" screen
+// purchase.js — v1.98.0 "POS Purchase" screen
+// v1.98.0: SAB purchase ka kaam isi ek screen par — upar do chip (Items wali bill / 📷 sirf photo + raqam),
+//          "🤖 Bill ki tasveer se items" (AI bill parh kar seedhe isi cart mein), aur Save par isi supplier ki
+//          photo-purchase ka dhyan (do dafa na chare — POS bill aate hi Milao se khud jur jati hai).
 // v1.97.0: POS ka KHULA bill yahan EDIT (editOf) -> PC wohi bill number update karta hai; supplier ki smart chips
 //          (istemal ke hisaab se); supplier chunte hi "is supplier se aksar aane wale items" chips. (Purchase tab ke andar nayi screen)
 // Sale screen jaisi: barcode scan / smart search / Ctn + Pcs. Har item par khareed rate + 4 naye rate
@@ -7,8 +10,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.97.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=1.97.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.98.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=1.98.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -26,6 +29,7 @@ const W_CHIPS = [1, 1.25, 1.5, 2];
 
 let cloud = null, rerender = () => {}, notice = () => {}, isOwner = () => false, uidOf = () => '';
 let partiesOf = () => [], partyOf = () => null, matchesOf = () => true, canUse = () => false, rankOf = null, billIdsOf = () => [], pcBillsOf = () => [];
+let photoFormOf = null, aiBillOf = null, cashDupesOf = () => [];   // v1.98.0: photo wala purchase form, AI bill reader, milan ka dhyan
 let pcQ = '', pcWhen = 'all';   // v1.96: PC ke bill ki list
 let edit = null;            // v1.87: {purchaseId, billNo, stamp, partyId, posPartyId, date} — POS ka khula bill edit ho raha hai
 const supItems = new Map();  // partyId -> {loading, list:[{id,n}]}
@@ -38,6 +42,7 @@ export function ppSetup(o) {
   isOwner = o.owner || isOwner; uidOf = o.uid || uidOf;
   partiesOf = o.parties || partiesOf; partyOf = o.party || partyOf; matchesOf = o.accountMatches || matchesOf; canUse = o.canUse || canUse;
   rankOf = o.rank || rankOf; billIdsOf = o.billIdsOf || billIdsOf; pcBillsOf = o.pcBills || pcBillsOf;
+  photoFormOf = o.photoForm || photoFormOf; aiBillOf = o.aiBill || aiBillOf; cashDupesOf = o.cashDupes || cashDupesOf;
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
     if (d && d.saved === todayStr()) { supplier = d.supplier || ''; godam = d.godam ?? BILL_BRANCH; day = d.day || ''; invoiceNo = d.invoiceNo || ''; note = d.note || ''; cart = Array.isArray(d.cart) ? d.cart : []; edit = d.edit || null; }
@@ -305,6 +310,7 @@ export function renderPP() {
   const total = cartTotal();
   const gopts = b => s.branches.map(x => `<option value="${x}"${Number(x) === Number(b) ? ' selected' : ''}>${esc(s.branchName(x, s.names))}</option>`).join('');
   $('summary').innerHTML = `<div class="stock-head sale-head pp-head" data-pp-root="1">
+    <div class="pp-modes"><button type="button" class="on">🧾 Items wali bill</button>${photoFormOf ? '<button type="button" data-pp-photo="1">📷 Sirf photo + raqam</button>' : ''}</div>
     ${edit ? `<div class="pp-edit"><b>✏️ EDIT — POS bill ${esc(edit.billNo || '')}</b><small>Save par yahi bill POS mein UPDATE hoga (naya nahi banega)</small><button type="button" data-pp-edit-off="1">✕ Edit chhodo</button></div>` : ''}
     ${supplierBox()}
     <div class="pp-meta">
@@ -312,7 +318,7 @@ export function renderPP() {
       <label>Supplier bill # <input maxlength="40" data-pp-inv="1" value="${esc(invoiceNo)}" placeholder="ikhtiyari"></label>
     </div>
     <div class="sale-total"><small>Purchase · ${cart.length} items</small><strong id="ppTotal">Rs ${num(total)}</strong></div>
-    <div class="account-tools"><button class="sh-wide" id="ppTodayBtn" data-pp-today="1">${todayLabel()}</button>${canUse() && !edit ? '<button class="sh-wide" data-pp-pcbills="1">✏️ PC ka bill edit karein</button>' : ''}${supplier ? '<button data-pp-copy="1">📑 Pichhla bill copy</button>' : ''}</div>
+    <div class="account-tools"><button class="sh-wide" id="ppTodayBtn" data-pp-today="1">${todayLabel()}</button>${aiBillOf && canUse() ? '<button class="sh-wide" data-pp-ai="1">🤖 Bill ki tasveer se items</button>' : ''}${canUse() && !edit ? '<button class="sh-wide" data-pp-pcbills="1">✏️ PC ka bill edit karein</button>' : ''}${supplier ? '<button data-pp-copy="1">📑 Pichhla bill copy</button>' : ''}</div>
   </div>`;
   const si = $('search'); if (si) si.placeholder = '📷 scan ya item ka naam / code (Enter)';
   if (s.failed) { $('list').innerHTML = `<div class="empty"><strong>Items nahi mile</strong><p>${esc(s.failed)}</p></div>`; $('actions').innerHTML = ''; return; }
@@ -432,6 +438,8 @@ document.addEventListener('click', async e => {
   if (off) { if (!confirm('Edit chhor dein? (POS ka bill waisa hi rahega; screen saaf ho jayegi)')) return; edit = null; cart = []; note = ''; invoiceNo = ''; day = ''; keepDraft(); rerender(); return; }
   const pc = e.target.closest?.('[data-pp-pcbills],[data-pp-pcbill],[data-pp-pcwhen]');
   if (pc) { const d = pc.dataset; if (d.ppPcbills) openPcBills(); else if (d.ppPcwhen) { pcWhen = d.ppPcwhen; openPcBills(); } else if (d.ppPcbill) openPcBill(d.ppPcbill, pc); return; }
+  const px = e.target.closest?.('[data-pp-photo],[data-pp-ai]');
+  if (px) { if (px.dataset.ppPhoto != null) { if (photoFormOf) photoFormOf(); } else aiItems(); return; }
   const ba = e.target.closest?.('[data-pp-retry],[data-pp-reopen],[data-pp-editdone],[data-pp-cancel]');
   if (ba) { const d = ba.dataset; billAct(d.ppRetry ? 'retry' : d.ppReopen ? 'reopen' : d.ppEditdone ? 'editdone' : 'cancel', d.ppRetry || d.ppReopen || d.ppEditdone || d.ppCancel, ba); return; }
   const t = e.target.closest?.('[data-pp-sup],[data-pp-sup-change],[data-pp-add],[data-pp-del],[data-pp-clear],[data-pp-save],[data-pp-today],[data-pp-camera],[data-pp-old],[data-pp-w],[data-pp-wall],[data-pp-wall-custom],[data-pp-old-all],[data-pp-copy]');
@@ -454,6 +462,54 @@ document.addEventListener('click', async e => {
   if (d.ppCopy) { copyLast(t); return; }
   if (d.ppSave) save();
 });
+
+// ---------- v1.98.0: bill ki tasveer -> AI items parhe -> SEEDHE isi bill ke cart mein ----------
+let aiBusy = false;
+function aiItems() {
+  if (aiBusy) { notice('AI abhi bill parh raha hai…'); return; }
+  if (!aiBillOf) { notice('Is login par AI nahi chalta'); return; }
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true; inp.style.display = 'none';
+  document.body.appendChild(inp);
+  inp.onchange = async () => {
+    const files = [...(inp.files || [])].slice(0, 4); inp.remove();
+    if (!files.length) return;
+    aiBusy = true;
+    dlg('🤖 Bill ki tasveer se items', '<p id="ppAiMsg" role="status">Tayyari…</p><div id="ppAiOut"></div>');
+    const say = x => { const m = $('ppAiMsg'); if (m) m.textContent = x; };
+    try {
+      const bill = await aiBillOf({ files, onStatus: say });
+      const lines = (bill && bill.lines) || [];
+      if (!lines.length) throw Error('Tasveer se koi item nahi parha gaya. Saaf photo (seedhi, poori bill) lagayein.');
+      const { items } = stock();
+      const added = [], miss = [];
+      for (const l of lines) {
+        const q = String(l.roman || l.name || '').trim();
+        const hit = q ? (smartSearch(items, q, 1)[0] || null) : null;
+        if (!hit) { miss.push(l); continue; }
+        const ln = addItem(hit, false).line, pk = packOf(ln);
+        const ctn = Number(l.ctn) || 0, pcs = Number(l.pcs) || 0, rate = Number(l.rate) || 0;
+        if (pk && ctn) { ln.ctn = ctn; ln.pcs = pcs; } else { ln.ctn = 0; ln.pcs = pcs || ctn; }
+        if (rate > 0) { ln.costP = (ctn && pk) ? r4(rate / pk) : r4(rate); recalc(ln); }   // ctn wali line par rate = fi Ctn
+        added.push({ ai: l, ln });
+      }
+      keepDraft(); rerender();
+      const qa = l => [(Number(l.ctn) || 0) && (num(l.ctn) + ' ctn'), (Number(l.pcs) || 0) && (num(l.pcs) + ' pcs')].filter(Boolean).join(' + ') || '—';
+      say(added.length ? '✅ ' + added.length + ' items bill mein aa gaye' : '❌ Koi item stock se match nahi hua');
+      const sup = bill.supplier && !supplier && rankOf ? (rankOf(partiesOf(), bill.supplier, 1)[0] || null) : null;
+      $('ppAiOut').innerHTML =
+        (sup ? `<p><button type="button" data-pp-sup="${esc(sup.id)}">👤 Supplier lagayein: ${esc(sup.name)}</button> <small>(tasveer par: ${esc(bill.supplier)})</small></p>` :
+          bill.supplier && !supplier ? `<p class="stat-note">Tasveer par supplier: <b>${esc(bill.supplier)}</b> — upar se khud chunein.</p>` : '') +
+        added.map(a => `<div class="pc-row ok"><span>✓</span><div>${esc(a.ai.name || '')} → <b>${esc(a.ln.name)}</b><br><small>${qa(a.ai)} · rate ${num(a.ai.rate || 0)} → khareed ${num(a.ln.costP)}/${esc(a.ln.uName)}</small></div></div>`).join('') +
+        (miss.length ? `<p class="stat-note">Yeh tasveer mein the magar stock mein nahi mile — inhein haath se dhoond kar lagayein:</p>` +
+          miss.map(l => `<div class="pc-row warn"><span>⚠</span><div>${esc(l.name || '')}<br><small>${qa(l)} · rate ${num(l.rate || 0)}</small></div></div>`).join('') : '') +
+        `<p class="stat-note">⚠️ AI hamesha theek nahi parhta — har line ki <b>ginti aur khareed rate</b> khud check karein${bill.total ? ` (tasveer ka total Rs ${num(bill.total)})` : ''}.</p>`;
+    } catch (err) {
+      say('❌ ' + ((err && err.message) || 'Nakam'));
+    } finally { aiBusy = false; }
+  };
+  inp.click();
+}
 
 // isi supplier ka app se bana aakhri bill — items/tadad/khareed wapas (rates naye hisaab se)
 async function copyLast(btn) {
@@ -499,6 +555,12 @@ async function save() {
   const total = r2(lines.reduce((n, l) => n + l.qty * l.costP, 0));
   const date = todayStr();   // v1.97.0: tareekh ka khana nahi — naya bill hamesha AAJ ka
   const date2 = edit ? edit.date : date;   // edit: bill ki apni purani tareekh
+  if (!edit) {   // v1.98.0: isi supplier ki photo wali purchase pehle se to nahi?
+    const dup = (cashDupesOf(p.id, total) || []).slice(0, 5);
+    if (dup.length && !confirm('Dhyan: isi supplier ki photo wali purchase pehle se maujood hai:\n\n' +
+      dup.map(x => `${x.date} · Rs ${num(x.rs)}${x.note ? ' · ' + x.note : ''}`).join('\n') +
+      '\n\nAgar yeh WAHI kharid hai to POS bill aate hi woh khud jur jayegi (do dafa nahi ginti) — warna "Milao" se jorein.\n\nBill bhejein?')) return;
+  }
   if (!confirm(`${edit ? 'POS BILL ' + edit.billNo + ' — UPDATE' : 'POS PURCHASE BILL'}\n${p.name}\n${lines.length} items · Rs ${num(total)}${invoiceNo ? '\nSupplier bill # ' + invoiceNo : ''}\n\n${edit ? 'POS mein yahi bill badlein (purani lines hat kar yeh lagengi) aur naye rates lagayein?' : 'POS mein bill banayein aur naye rates lagayein?'}`)) return;
   const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const doc = { id, date: date2, at: new Date().toISOString(), branch: BILL_BRANCH, godam: Number(godam) || BILL_BRANCH,

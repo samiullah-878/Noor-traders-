@@ -724,3 +724,68 @@ VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js 
 - Browser test: tick colgate 96 (tick:true), minus par call nahi, round na ho to khane nahi, Godam 3 = sirf kala chana;
   edit intezar -> 3rd poll par khud edit mode. Koi error nahi.
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.97.0') + version.json.
+
+=== v1.98.0 — PURCHASE AIK JAGHA + WAHI SCREEN WAPAS + ANDAR SE SCREEN SWITCH (rules wahi v1.94) ===
+MALIK KI FARMAISH: (1) purchase ka kaam do jagha ho raha tha (Purchase list ka "＋ Purchase" photo form aur POS
+Purchase screen) — aik hi jagha ho, milan (Milao) bhi rahe, aur bill ki photo se items bhi add hon. (2) app har dafa
+naya page na khole — jahan chhora tha wahin se khule, login ke baad bhi. (3) sale/purchase/stock wali screens ke
+ANDAR se hi password daal kar doosri screen par ja sakein (logout/dobara login nahi).
+
+A) PURCHASE AIK JAGHA (purchase.js + app.js)
+- renderPP ke head mein .pp-modes ke do chip: "🧾 Items wali bill" (on) aur "📷 Sirf photo + raqam" (data-pp-photo)
+  -> ppSetup ka naya hook photoForm() = app.js ka purchaseForm(). Purana "＋ Purchase" button Purchase list par
+  WAISA HI hai (layout nahi chheri — v1.93.0 ka sabaq).
+- "🤖 Bill ki tasveer se items" (data-pp-ai, sirf canUse()) -> aiItems(): chhupa <input type=file> (4 tasveer tak)
+  -> hook aiBill({files,onStatus}) = app.js ka ppAiBill() (loadAiCfg + shrinkForAI + readPurchaseBill; kuch save
+  nahi hota) -> har AI line par smartSearch(stock().items, roman||name, 1); mila to addItem(it,false) aur
+  ctn/pcs + rate bharo. RATE KA USOOL: line par ctn ho aur item ka pack ho to rate = FI CTN (costP = rate/pack),
+  warna fi pcs. Dialog mein: mile hue (pc-row ok), na mile hue (pc-row warn, haath se lagayein), supplier ka chip
+  (rank se, sirf tab jab supplier chuna hua na ho) aur warning "ginti aur khareed rate khud check karein".
+- DO DAFA ENTRY KA DHYAN (dono taraf, sirf poochta hai — apne aap kuch nahi jorta/hatata):
+  * purchase.js save(): naya bill bhejne se pehle cashDupes hook = app.js ppCashDupes(partyId,total) — isi party ki
+    KHAALI (posBill nahi) cash purchase, 7 din ke andar, raqam ka farq <= 2% (kam se kam Rs 1) -> confirm.
+  * app.js purchaseForm ka formSave: nayi photo purchase se pehle posDupOk(pid,amount) — isi party ka POS bill
+    (isPosPurchase, 7 din, wahi raqam, cashLinkedTo nahi) -> confirm "Milao dabayein". Cancel par sirf return
+    (koi error toast nahi).
+  * Party merge / naam se auto-matching AB BHI NAHI (v1.79.2 ka faisla wahi hai).
+
+B) WAHI SCREEN WAPAS (app.js, "===== v1.98.0 (B)" wala block route() ke neeche)
+- keepView() har route() par localStorage 'sam-last-view:<projectId>' = {v:view, id:selected, sc:viewScope()}.
+  viewScope() = 'owner' ya 'staff:<scope>' — scope badle to purani screen NAHI uthti.
+- allowedView(v): purchase login -> purchase/ppurchase; stock -> stock; sale -> sale; ppurchase -> canPP();
+  sale -> saleUser(); stock -> sirf owner; baqi khata/daily/expenses/cash/dasti/due/chart/purchase/pos.
+- onSession: pehle pendingView (switch ka target), warna restoreView(), warna purana wala chalan. Restore par
+  viewCheck=true; pehle listen snapshot par agar us id ka party na mile to selected=null (deleted account par
+  khali screen na khule).
+- PHONE KA BACK: navPush() ek "spare" history state rakhta hai (login par aur har route par). popstate par —
+  dialog khuli ho to pehle wohi band, warna #back nazar aa raha ho to wohi click (aur naya spare state), aur
+  ghar (khata) par kuch na karo = app se bahar. Yani andar wali screens par app band nahi hota.
+
+C) ANDAR SE SCREEN SWITCH (app.js "===== v1.98.0 (C)" + index.html #switchNav)
+- .app-nav mein naya button #switchNav "🔄 Screen badlein" — renderSurface mein sirf MULAZIM (session.role==='staff',
+  !localMode) ko dikhta hai (malik ke paas sab screens pehle se hain). Baqi nav buttons ki purani shart waisi hi,
+  bas switchNav us se bahar rakha gaya.
+- switchForm(): 4 chip (purchase/stock/sale/full; apni wali disabled, jis ka password yaad ho us par 🔒) + password
+  + "yaad rakhein". Chip dabate hi yaad kiya password khud bhar jata hai (remRead/remDec).
+- Submit: Sync baqi ho to pehle confirm; phir $('role')='staff', $('accessScope')=scope, $('rememberPw') set karke
+  cloud.controller.login({role:'staff',username:'admin',password,scope}) — yani asal mein us scope ka NAYA login,
+  is liye FIREBASE RULES BILKUL NAHI BADLI (ijazat khud sahi rehti hai). Kamyabi par rememberAfterLogin(pw) aur
+  pendingView = ppurchase/stock/sale/khata. Nakami par pendingView saaf, khirki khuli rehti hai, paigham
+  loginErrMsg() se (cloud.js ka loginErrorMessage import block mein mehfooz kiya gaya hai), too-many-requests par
+  wahi 60 sec ki rok.
+- NOTE: switch = doosra login. Jo pending (bina sync) kaam pehle login ka hai woh usi login se dobara khulne par
+  jayega — is liye "Sync baqi" wali warning zaroori hai.
+
+TEST (node + jsdom, nakli cloud/stock — browser is bar available nahi tha):
+- purchase.js: chips, AI se 2 items cart mein (600/12 = 50 fi pcs), 1 na mila alag dikha, save par cashDupes poocha,
+  bheje gaye doc mein 2 lines aur total 6,750. Sab pass.
+- app.js (B): 5 scope ke allowedView, screen+account restore, scope badle to restore nahi, back par dialog pehle
+  band, ghar par app se bahar. Sab pass.
+- app.js (C): 4 chip, apni screen disabled, yaad kiya password khud bhara, login sahi scope se, ghalat password par
+  khirki khuli + dobara koshish. Sab pass.
+- posDupOk / ppCashDupes: juri hui bill par nahi poochta, 7 din se purani nahi uthati, 2% tak qareeb raqam pakarti.
+AGLI DAFA: (a) malik ne kaha tha stock-only/sale-only ko bhi purchase chahiye — abhi woh SWITCH se milti hai (rules
+nahi chheri); agar aage un logins ko seedhi purchase deni ho to firestore.rules badalni parengi (malik se rules file
+mangein). (b) AI ke items par "ye item stock mein nahi" wali lines par abhi naya item banane ka rasta nahi — chahiye
+to POS side par banana behtar hoga.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.98.0') + version.json.

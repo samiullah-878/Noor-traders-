@@ -667,3 +667,16 @@ footer button:not(.give):not(.got){background:linear-gradient(180deg,#27437c,#17
 .pc-bill.posted{opacity:.55}
 /* v1.97: stock ✓ Tick */
 .count-tick{background:#ecf8f1!important;color:#147548!important;border:1px solid #c3e8d3!important;font-weight:700;border-radius:999px!important}
+
+/* v1.98.0 — POS Purchase ke do mode (items wali bill / sirf photo) + andar se screen switch */
+.pp-modes{display:flex;gap:8px;margin:0 0 10px}
+.pp-modes button{flex:1 1 0;min-width:0;padding:10px 8px;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  background:#fff!important;border:1px solid var(--chip-bd)!important;color:var(--chip-tx)!important;border-radius:999px!important;
+  font-weight:700!important;box-shadow:0 1px 2px rgba(15,23,42,.05),0 2px 8px rgba(15,23,42,.04)}
+.pp-modes button.on{background:linear-gradient(180deg,#27437c,#172b52)!important;color:#fff!important;border-color:#172b52!important;box-shadow:0 3px 10px rgba(23,43,82,.28)}
+.pp-modes button:active{transform:scale(.97)}
+#switchNav{font-weight:700}
+.sw-chips{flex-wrap:wrap;overflow:visible;gap:8px;margin:10px 0}
+.sw-chips button{flex:1 1 44%;max-width:none;justify-content:center;text-align:center}
+.sw-chips button[disabled]{opacity:.45}
+.sw-chips button.on{background:linear-gradient(180deg,#27437c,#172b52)!important;color:#fff!important;border-color:#172b52!important}
