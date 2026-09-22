@@ -789,3 +789,47 @@ nahi chheri); agar aage un logins ko seedhi purchase deni ho to firestore.rules 
 mangein). (b) AI ke items par "ye item stock mein nahi" wali lines par abhi naya item banane ka rasta nahi — chahiye
 to POS side par banana behtar hoga.
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.98.0') + version.json.
+
+=== v1.99.0 — AI KO "SIKHANA": BILL KA NAAM -> SYSTEM KA ITEM (alias se; rules wahi v1.94) ===
+MALIK KI FARMAISH: "kya hum AI ko train kar sakte hain — bill ke naam aur PC ke naam yaad kar le, aur milan wali
+screen par bhi bill ka naam aur system ka naam dikhe."
+FAISLA: Gemini ko hum train/fine-tune NAHI kar sakte. Is ke bajaye APP ko yaad karwaya gaya — wahi purana
+alias system (cloud.setAlias / listenAliases / aliasOf, v1.75) jo Stock screen mein "Doosre naam" ke naam se hai.
+Naya collection NAHI, nayi rules NAHI. Faida dogana: smartSearch har jagah (Sale/Stock/Purchase) usi naam se
+item dhoondh leta hai.
+
+app.js:
+- import mein aliasOf shamil (smart-search.js).
+- learnAlias(itemId,name): naam saaf (comma/newline hata kar, 60 harf tak) -> aliasOf(itemId) ki CSV mein jorta hai
+  (pehle se ho to 'pehle se'), CSV 120 harf se barhe to sab se purana naam nikal deta hai (Stock ke input ka
+  maxlength 120 hai), phir cloud.setAlias(itemId, csv). Return: 'ok' | 'pehle se' | paigham.
+  permission-denied -> "naam sirf malik yaad karwa sakta hai (rules)" — yani MULAZIM ke liye rules badalni parengi
+  (aliases collection par staff write). Malik ke liye abhi bhi kaam karta hai.
+- photoCompareHTML (milan): har jori par, agar POS line ka itemId ho, "✓ Yeh naam yaad kar lo" button
+  (data-tally-learn="<itemId>|<AI ka naam>"); alag click handler (learnAlias ke natije ke mutabiq button ki jagah
+  chhoti line likh deta hai).
+- ppSetup ko naya hook: learn: learnAlias.
+
+purchase.js (AI wale bill ki screen):
+- aiRows[] = {ai (AI ki line), key (cart line ka k), itemId, learn}. aiItems() sirf data banata hai; dikhana
+  aiRender() karta hai (dialog dobara banata hai, is liye har tabdeeli par nayi list).
+- Har mili hui line: "bill ka naam → system ka naam" + [✓ Yaad kar lo] (aiLearn -> learnOf) + [✏️ Badlein].
+  Na mili line: [✏️ Item chunein].
+- aiPickForm(i): search + list (smartSearch), "‹ Wapas list par" (data-pp-aiback). aiPicked(i,id): purani cart line
+  hata kar naya item daalta hai, AI ki ginti/rate aiApply() se lagata hai, aur PHIR KHUD aiLearn() chala deta hai
+  (yani item chunna = naam sikhana).
+- aiApply(ln,l): wahi usool — line par ctn ho aur item ka pack ho to rate = FI CTN (costP = rate/pack), warna fi pcs.
+- Naye data-* : pp-learn, pp-pick, pp-picked ("i|itemId"), pp-aiback — click handler mein pp-photo/pp-ai ke foran baad.
+
+TEST (node + jsdom, nakli cloud/stock): Yaad kar lo -> learn hook ko (itemId, bill ka naam) gaya aur "yaad kar liya"
+likha aaya; "Item chunein" -> picker mein search se item mila, chunte hi cart mein aaya aur naam bhi yaad hua
+(learn 2 dafa). Purane v1.98 ke sab test bhi pass.
+
+ABHI BAQI (malik ne "1-2-3" kaha tha — teeno chahiye):
+1. AI ko PEHLE HI supplier ke items ki list dena (taake pehli dafa hi sahi naam/match aaye) — is ke liye
+   ai-tally.js chahiye (readPurchaseBill ka prompt wahin hai). Malik se maanga hua hai.
+2. Speed (abhi 10-40 sec): halka model (flash-lite), ek hi tasveer, chhota size — bhi ai-tally.js/pickModel mein.
+3. Mulazim bhi naam yaad karwa sake -> firestore.rules mein aliases par staff write (malik se rules file mangein).
+NOTE: malik ne is chat mein khata-sync.zip (PC wala folder) bheja tha — us mein app ki files (ai-tally.js,
+smart-search.js, cloud.js) nahi hotin; woh GitHub wale app repo mein hain.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.99.0') + version.json.

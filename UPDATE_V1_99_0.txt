@@ -1,0 +1,23 @@
+Blue Khata v1.99.0 — Bill ka naam app yaad kar lega (+ v1.98 ka poora kaam is mein shamil hai)
+INSTALL: Is ZIP ki 11 files GitHub par, phir app mein "↻ Sync / Update" -> 1.99.0.
+         Firebase rules WAHI (v1.94) — kuch publish nahi karna. (v1.98 alag se lagane ki zarurat nahi.)
+
+NAYA (v1.99.0):
+- "🤖 Bill ki tasveer se items" ki har line par ab: bill ka naam → system ka naam.
+  * "✓ Yaad kar lo" — bill wala naam us item ke "Doosre naam" mein chala jata hai. AGLI DAFA app khud pehchan lega,
+    aur Sale/Stock ki search mein bhi wahi naam kaam karega.
+  * "✏️ Badlein" / "✏️ Item chunein" — galat item laga ho ya item mila hi na ho to sahi item chunein;
+    chunte hi naam KHUD yaad ho jata hai. 2-3 bill ke baad us supplier ke sab naam sikh jayega.
+- "🤖 Tasveer se items parho" (milan wali screen) par bhi har jori par "✓ Yeh naam yaad kar lo".
+- Abhi yeh sirf MALIK ke login par save hota hai. Mulazim bhi yaad karwa sake — us ke liye rules badalni hongi
+  (firestore.rules ki file bhejein).
+
+PEHLE WALA (v1.98.0, is mein shamil):
+- Purchase aik hi screen par: chip "🧾 Items wali bill" / "📷 Sirf photo + raqam", aur do dafa entry par sawal.
+- App wahin se khulta hai jahan chhora tha; phone ka back button andar wali screen se peechay (app band nahi hota).
+- Mulazim ke liye "🔄 Screen badlein" — password daal kar Purchase/Stock/Sale/Full par, bina logout ke.
+
+ABHI BAQI (files chahiye):
+- AI ko pehle hi supplier ke items ki list dena + speed tez karna -> "ai-tally.js" (aur ho sake to "smart-search.js",
+  "cloud.js") bhejein. Yeh app wale GitHub repo mein hain (khata-sync PC folder mein nahi).
+- Mulazim bhi naam yaad karwa sake -> "firestore.rules" bhejein.
