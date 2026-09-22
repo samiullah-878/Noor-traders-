@@ -607,3 +607,20 @@ VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js 
 - sortBar -> .sort-chips (on = chuni). party-chips patli.
 - posNav hamesha hidden (b.id==='posNav'); renderPOS code / data waisa hi. posList ("🖥 POS n") waisa hi.
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.90.0') + version.json (rules/rulesChanged).
+
+=== v1.91.0 — SAB SCREENS NAYI SHAKAL + NIKHRI KHATA LINES + NAYA ACCOUNT FORM (rules wahi v1.88) ===
+- paintHomeBar ab BAR_VIEWS (khata daily due purchase sale stock expenses cash dasti chart) par, !selected. main.home-smart
+  CSS se purane dabbe/button har jagah chhupte hain + .link-pending. View extras: purchase -> lastPurchasePending (renderPurchases
+  mein set) chip data-hb="milao" (pehla "Milao" button scroll + .flash) + aaj ki purchase ginti; expenses -> aaj ka kharcha
+  (expense+payment); cash -> summary mein "Ginti baqi". MutationObserver ab #list aur #summary (childList) bhi.
+- CSS: main .summary transparent, har bacha div safed card (strong 20px); .bq-card safed; .party patli (avatar 38, naam
+  nowrap ellipsis, amount pill :has(b.red/.green), b.zero grey). Khata line markup: b class red/green/zero, small =
+  "category · phone". .toolbar patla, #list>p:not([class]) chhoti grey, #actions button 48px.
+- accountForm(p, preset): form ke NAAM WAHI (name phone category expenseOnly dasti posSync opening side) — category/side
+  hidden select, cards (data-af-type) aur pill (data-af-side) unhein set karte; save/similar-on-submit logic bilkul wahi.
+  acctFormSmart(): live similarParties (350ms, 2 tak, data-open-similar Kholein), navigator.contacts (Contact Picker —
+  sirf jahan ho), #afPreview live. Default qism: Supplier jab purchase view / Supplier tab / preset.
+- purchaseSupplierForm: nayi shakal, live partyScore>=6 warning, contacts. cloud.addPurchaseSupplier wahi.
+- Browser test (Chrome, nakli cloud): khata, purchase, due, cash, dasti chips + smart line sahi; form Supplier + Dene 2500
+  preview "Rs 2,500 Dene hain"; koi page error nahi.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.91.0') + version.json.

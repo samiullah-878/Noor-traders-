@@ -1,0 +1,15 @@
+Blue Khata v1.91.0 — SAB SCREENS nayi shakal · khata ki nikhri lines · naya Account / Supplier form
+INSTALL: sirf is ZIP ki 11 files GitHub par (v1.90 pehle lag chuka ho), Sync/Update 1.91.0. Firebase rules badalne ki zaroorat NAHI.
+ (sale.js, pos-stock.js, purchase.js, pos-ledger.js mein sirf version number badla — phir bhi ZAROOR upload karein.)
+NAYA:
+- Chips (🔔 · ⬇️ Backup · 🔒 Din band · ☁️ Synced) + smart line ab Daily Sale, Due, Purchase, Sale, Stock, Akhrajat, Closing Cash,
+  Dasti, Chart — sab par. Bara peela backup dabba aur lamba "Din band karein" button in sab se hata.
+  Purchase: "🔗 9 bill milane" chip (dabane par pehle "Milao" tak le jati hai) + "aaj N purchase". Akhrajat: "aaj ka kharcha Rs …".
+  Closing Cash: "aaj ki closing ginti baqi".
+- Upar ke hisaab: ek bara safed dabba -> alag chhote safed cards (label + raqam). Purchase par 💵 Cash / 🧾 Credit.
+- Khata ki lines: chhota avatar, naam ek line ("…"), neeche "Customer · mobile", raqam ke neeche rangeen pill
+  (Lene hain laal / Dene hain hara / Barabar grey). Ek screen par zyada khate.
+- Search / PDF / POS button patle; samjhane wali lambi lines chhoti grey; neeche ke buttons saaf.
+- Naya account / Account edit: 👤 Customer · 🏭 Supplier · 🧾 Kharcha ke cards · naam likhte hi milta-julta account ki peeli line
+  (Kholein) · 📇 Contacts (Chrome Android) · shuru ka baqaya + Lene/Dene pill · switches · "Aisa dikhega" preview · ✓ Account banayein.
+  Purchase ka "+ Supplier" form bhi isi shakal mein.

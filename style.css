@@ -462,3 +462,73 @@ main.home-smart #syncStatus,main.home-smart #syncDetails,main.home-smart #dayLoc
 .sort-chips button.on{background:#1258ce;color:#fff;border-color:#1258ce}
 .party-chips button{min-height:32px!important;padding:5px 11px!important;font-size:13px!important}
 @media(max-width:380px){.bq-card strong{font-size:17px!important}}
+
+/* ===== v1.91: sab screens ki nayi shakal ===== */
+/* chips har screen (purane bare dabbe / button chhupe) */
+main.home-smart .link-pending{display:none!important}
+.flash{animation:bkflash 1.5s ease}
+@keyframes bkflash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 4px #f5b400}}
+/* upar ke hisaab: ek bara safed dabba -> alag chhote cards */
+main .summary{background:transparent!important;box-shadow:none!important;padding:0!important;gap:10px!important;align-items:stretch!important}
+main .summary>div{flex:1 1 0;min-width:0;background:#fff;border-radius:16px;padding:12px 14px!important;box-shadow:0 6px 18px #042e7418;border-left:0!important;display:grid;gap:2px;align-content:start}
+main .summary strong{font-size:20px!important;line-height:1.25;overflow-wrap:anywhere;letter-spacing:-.2px}
+main .summary small{font-size:12.5px!important;color:#6b7c93}
+main .summary>.bq-wrap{background:transparent!important;box-shadow:none!important;padding:0!important}
+.bq-card{background:#fff!important;border:0!important;box-shadow:0 6px 18px #042e7418;border-radius:16px!important}
+.bq-other{color:#dbe8ff!important;padding:0 4px}
+main .summary>.stock-head{padding:12px!important}
+/* khata ki lines — patli, saaf */
+.party{padding:11px 10px!important;gap:11px!important;border-bottom:1px solid #eef2f7!important;align-items:center!important}
+.party .avatar{width:38px!important;height:38px!important;border-radius:11px!important;font-size:13.5px!important;font-weight:700;letter-spacing:.3px}
+.party .name{overflow-wrap:normal!important}
+.party .name b{display:block;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.party .name small{display:block;font-size:12.5px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.party .amount b{display:block;font-size:15.5px!important;line-height:1.3}
+.party .amount b.zero{color:#64748b}
+.party .amount small{display:inline-block;margin-top:3px;padding:1px 9px;border-radius:999px;font-size:11.5px!important;background:#eef2f7;color:#64748b}
+.party .amount:has(b.red) small{background:#fdecec;color:#b42332}
+.party .amount:has(b.green) small{background:#e7f7ee;color:#147548}
+/* search / PDF / POS — patle */
+.toolbar{gap:8px!important;margin:10px 0 8px!important}
+.toolbar .search input{min-height:44px}
+.toolbar>button{min-height:44px!important;padding:0 12px!important;font-size:14px!important;border-radius:14px!important}
+/* samjhane wali lambi lines — chhoti grey */
+#list>p:not([class]){font-size:12.5px;color:#7a889b;margin:2px 4px 8px;line-height:1.45}
+#list>label{font-size:13px}
+/* neeche ke buttons */
+#actions button{min-height:48px;border-radius:14px!important;font-size:15px;box-shadow:0 4px 12px #0b3f9e22}
+/* ===== naya account / supplier form ===== */
+.acct-form{display:grid;gap:12px}
+.af-h{display:block;font-size:12px;color:#64748b;margin:0 0 6px 2px;font-weight:700}
+.af-types{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.af-types.one{grid-template-columns:1fr}
+.af-types button{display:grid;justify-items:center;gap:4px;padding:10px 6px;border-radius:14px;background:#f6f8fc;border:1px solid #dbe3ef;color:#334155;font-size:13.5px;font-weight:700}
+.af-types button .af-ic{font-size:22px;line-height:1}
+.af-types button.on{background:#e8f0fe;border:2px solid #1258ce;color:#0b3f9e}
+.af-field{display:grid;gap:4px}
+.af-field>small{font-size:12px;color:#64748b;font-weight:700;margin-left:2px}
+.af-field input{min-height:46px;border-radius:12px;font-size:16px}
+.af-row{display:flex;gap:8px;align-items:center}
+.af-row input{flex:1;min-width:0}
+.af-mini{flex:none;min-height:46px;padding:0 12px;border-radius:12px;background:#fff;border:1px solid #cfd9e8;color:#0b3f9e;font-size:13.5px;font-weight:700}
+.af-side{flex:none;display:inline-flex;border:1px solid #cfd9e8;border-radius:999px;overflow:hidden}
+.af-side button{padding:9px 11px;font-size:12.5px;font-weight:700;background:#fff;color:#64748b;border-radius:0;min-height:0}
+.af-side button.on.lene{background:#fdecec;color:#b42332}
+.af-side button.on.dene{background:#e7f7ee;color:#147548}
+.af-warn{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px;background:#fff4d6;color:#8a5a00;font-size:13px;margin-top:2px}
+.af-warn span{flex:1;min-width:0}
+.af-warn button{flex:none;padding:5px 10px;min-height:0;border-radius:999px;background:#fff;color:#8a5a00;font-size:12.5px;font-weight:700}
+.af-switches{display:grid;gap:0;background:#f6f8fc;border:1px solid #e1e8f3;border-radius:14px;padding:2px 12px}
+.af-sw{display:flex!important;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;font-size:14.5px;cursor:pointer}
+.af-sw+.af-sw{border-top:1px solid #e6ecf5}
+.af-sw span{display:grid}
+.af-sw small{font-size:12px;color:#7a889b}
+.af-sw input{position:absolute;opacity:0;width:1px;height:1px}
+.af-sw i{flex:none;position:relative;width:44px;height:26px;border-radius:999px;background:#cbd5e1;transition:.2s}
+.af-sw i::after{content:'';position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 3px #0003;transition:.2s}
+.af-sw input:checked+i{background:#1258ce}
+.af-sw input:checked+i::after{left:21px}
+.af-sw input:disabled+i{opacity:.55}
+.af-hint{margin:6px 2px 0;font-size:13px;color:#475569}
+#afPreview .af-prev{border:1px solid #e1e8f3!important;border-radius:14px;background:#fff;pointer-events:none}
+.af-save{min-height:52px;border-radius:14px!important;font-size:16px;font-weight:700;background:#1258ce;color:#fff}
