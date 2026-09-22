@@ -650,3 +650,18 @@ VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js 
 - SABAQ: malik ko screen ki TARTEEB badalna pasand nahi — sirf shakal (chips/fonts/buttons) badlein, layout wahi rakhein.
 - Browser test: 6 columns sath, tabs nahi, note nazar, sale save 1 entry, koi error nahi.
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.93.0') + version.json.
+
+=== v1.93.1 — POS PURCHASE LAYOUT FIX + TAREEKH HATAYI (rules wahi v1.88) ===
+- BUG (v1.91): `main .summary>div{display:grid}` ne .stock-head (Sale/Stock/POS Purchase head) ko bhi grid bana diya; grid item
+  min-width:auto -> .pp-sup-list (nowrap chips) ne track ko 577px tak khencha, phone par poora page zoom-out. FIX:
+  `main .summary>.stock-head{display:block!important}` + pp-* min-width:0. Test: ppurchase/sale/stock scrollWidth = 390.
+- purchase.js: Tareekh input (data-pp-day) HATAYA (malik ki farmaish). date = todayStr(); edit -> date2 = edit.date (PC
+  editPurchase original PurchaseDate rakhta hai kyunke j.date == bill date). `day` variable ab sirf draft mein pada hai.
+- BAR_VIEWS mein 'ppurchase' shamil (chips + purane dabbe chhupe).
+- PC NOTE (22-Sep): PURCHASE-LAGAO.bat (ek-file installer) — pehli banayi hui copy mein head '::FILE:' ke pehle wajood
+  (PowerShell command ke andar) par kat gaya tha -> base64 lines cmd ne chala di (bekaar, nuqsan nahi). Nayi copy markers
+  #F#/#E# line-start (?m) regex + asal pwsh 7.4 par extraction test. sync-bills v5 ab ASAL PC ki v4 par (pehle ghalti se purani v3 par).
+- AGLA KAAM (nayi chat): HAZRI app mein "🎫 Bina bataye gaya" ticket — banane wale: manager, malik, senior mulazim (per-staff switch);
+  faisla sirf malik: Maaf / Warning / Katauti; katauti khud = tankhwah ÷ mahine ke din ÷ duty ghante × der (qareebi Rs 5), badal
+  sakte; tankhwah parchi mein line. Hazri app ka code is chat mein NAHI — malik ZIP dega.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.93.1') + version.json.

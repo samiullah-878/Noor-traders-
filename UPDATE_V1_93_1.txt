@@ -1,0 +1,6 @@
+Blue Khata v1.93.1 — POS Purchase screen theek + tareekh ka khana hataya
+INSTALL: sirf is ZIP ki 11 files GitHub par (v1.93.0 pehle lag chuka ho), Sync/Update 1.93.1. Firebase rules badalne ki zaroorat NAHI.
+- POS Purchase screen chauri ho kar choti dikhti thi (v1.91 ki ghalti — supplier chips wali line screen se bahar khenchti thi) — theek.
+  Sale aur Stock screen bhi isi wajah se check kiye — sab 390px mein.
+- POS Purchase se "Tareekh" ka khana HATAYA: naya bill hamesha AAJ ki tareekh ka; Edit mein bill ki apni purani tareekh hi rehti hai.
+- POS Purchase screen par bhi upar chips (🔔 · ⬇️ Backup · 🔒 Din band · ☁️) — baqi screens jaise.

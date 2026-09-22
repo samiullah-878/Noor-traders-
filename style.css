@@ -623,3 +623,9 @@ main .summary>.day-camera{flex:0 0 auto!important;align-self:flex-start;min-heig
 .day-cols .nc-grid{grid-template-columns:1fr!important}
 .day-cols .nc-foot{flex-direction:column;align-items:stretch}
 .day-cols .sheet-extra{border-radius:12px!important;line-height:1.3;padding:6px 8px!important}
+
+/* v1.93.1: Sale / Stock / POS Purchase ke upar wala hissa grid NAHI (v1.91 ki ghalti — lambi chips screen se bahar khench rahi thin) */
+main .summary>.stock-head{display:block!important;min-width:0!important;width:100%}
+.pp-sup-pick,.pp-sup-list,.pp-meta{min-width:0;max-width:100%}
+.pp-meta{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+@media(max-width:460px){.pp-meta label:last-child{grid-column:auto!important}}
