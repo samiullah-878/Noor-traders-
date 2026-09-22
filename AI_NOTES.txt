@@ -694,3 +694,17 @@ VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js 
 - pos-stock: data-stock-branch par branch !== 1 -> filter 'has' (sirf is godam ka stock) + chip label "📦 Is godam ka stock".
 - Malik ka faisla: godam se sale par POS stock GODAM se hi minus (sale-post waisa hi).
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.95.0') + version.json.
+
+[22-Sep-2026, app ke bahar] PC ke liye CHECK-BILLS.bat (bills-check.js) — Edit na aane ki JAANCH. Wajahen: (a) sync-bills v5 PC par nahi
+chal rahi -> posBills mein purchaseId/stamp nahi -> Bill dekhein mein "PC par nayi sync-bills.js lagayein"; (b) bill POSTED (docStatus 2);
+(c) mulazim + purana bill. Bat band pade loops (bills-auto / purchase-auto) chala deti hai. Tafseel PC ke AI_NOTES mein.
+
+=== v1.96.0 — POS PURCHASE SCREEN SE PC KA BILL EDIT (rules wahi v1.94) ===
+- Malik: POS Purchase screen par PC wala (khula) bill edit karne ka rasta hi nahi tha (sirf Purchase tab > Bill dekhein).
+- purchase.js: "✏️ PC ka bill edit karein" (data-pp-pcbills, canUse && !edit) -> openPcBills(): pcBillsOf() list (app.js
+  setup pcBills: entries().filter(isPosPurchase) -> {id, billNo (note "POS Purchase X"), date, partyId, partyName, rs,
+  posted=isPosted}); search pcQ (bill # / naam / matchesOf), pcWhen today|yday|all (sirf malik), mulazim sirf aaj.
+  Posted disabled. openPcBill(id): cloud.purchaseBill -> docStatus 2/3, mulazim aaj check -> ppLoadBill(b,{partyId}).
+  ppLoadBill ka "tafseel nahi" paigham ab CHECK-BILLS.bat batata hai.
+- Browser test: button, list (khula + posted band), search 2470 = 1, khule par tafseel-nahi paigham; koi error nahi.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.96.0') + version.json.

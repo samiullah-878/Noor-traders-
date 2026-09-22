@@ -1,0 +1,8 @@
+Blue Khata v1.96.0 — POS Purchase screen se PC ka bill EDIT
+INSTALL: sirf is ZIP ki 11 files GitHub par (v1.95 pehle laga ho), Sync/Update 1.96.0. Firebase rules WAHI (v1.94).
+- POS Purchase screen par naya button "✏️ PC ka bill edit karein" -> PC par bane purchase bills ki list (supplier · bill # ·
+  tareekh · Rs), search (supplier / bill #), chips Aaj · Kal · Sab (malik). Posted bill halka + "pehle Unpost". Mulazim ko
+  sirf AAJ ke bill.
+- Bill chunte hi wohi screen EDIT mode: party (Badlein), godam, ginti, khareed, wholesale/parchoon rates, item hatana/jorna
+  -> "💾 POS bill UPDATE" (PC wohi bill number badalta hai + rates).
+- Tafseel PC se na aayi ho to: "PC par CHECK-BILLS.bat chalayein".

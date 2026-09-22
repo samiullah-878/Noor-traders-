@@ -1,5 +1,5 @@
-// purchase.js — v1.95.0 "POS Purchase" screen
-// v1.95.0: POS ka KHULA bill yahan EDIT (editOf) -> PC wohi bill number update karta hai; supplier ki smart chips
+// purchase.js — v1.96.0 "POS Purchase" screen
+// v1.96.0: POS ka KHULA bill yahan EDIT (editOf) -> PC wohi bill number update karta hai; supplier ki smart chips
 //          (istemal ke hisaab se); supplier chunte hi "is supplier se aksar aane wale items" chips. (Purchase tab ke andar nayi screen)
 // Sale screen jaisi: barcode scan / smart search / Ctn + Pcs. Har item par khareed rate + 4 naye rate
 // (Wholesale Ctn/Pcs, Parchoon Ctn/Pcs) — PURANE NAFA se khud, % chips se wholesale.
@@ -7,8 +7,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.95.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=1.95.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.96.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=1.96.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -25,7 +25,8 @@ const DRAFT_KEY = 'sam-pp-draft';
 const W_CHIPS = [1, 1.25, 1.5, 2];
 
 let cloud = null, rerender = () => {}, notice = () => {}, isOwner = () => false, uidOf = () => '';
-let partiesOf = () => [], partyOf = () => null, matchesOf = () => true, canUse = () => false, rankOf = null, billIdsOf = () => [];
+let partiesOf = () => [], partyOf = () => null, matchesOf = () => true, canUse = () => false, rankOf = null, billIdsOf = () => [], pcBillsOf = () => [];
+let pcQ = '', pcWhen = 'all';   // v1.96: PC ke bill ki list
 let edit = null;            // v1.87: {purchaseId, billNo, stamp, partyId, posPartyId, date} — POS ka khula bill edit ho raha hai
 const supItems = new Map();  // partyId -> {loading, list:[{id,n}]}
 let supplier = '', godam = BILL_BRANCH, day = '', invoiceNo = '', note = '', cart = [], saving = false;
@@ -36,7 +37,7 @@ export function ppSetup(o) {
   cloud = o.cloud; rerender = o.rerender || rerender; notice = o.notice || notice;
   isOwner = o.owner || isOwner; uidOf = o.uid || uidOf;
   partiesOf = o.parties || partiesOf; partyOf = o.party || partyOf; matchesOf = o.accountMatches || matchesOf; canUse = o.canUse || canUse;
-  rankOf = o.rank || rankOf; billIdsOf = o.billIdsOf || billIdsOf;
+  rankOf = o.rank || rankOf; billIdsOf = o.billIdsOf || billIdsOf; pcBillsOf = o.pcBills || pcBillsOf;
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
     if (d && d.saved === todayStr()) { supplier = d.supplier || ''; godam = d.godam ?? BILL_BRANCH; day = d.day || ''; invoiceNo = d.invoiceNo || ''; note = d.note || ''; cart = Array.isArray(d.cart) ? d.cart : []; edit = d.edit || null; }
@@ -223,6 +224,41 @@ async function billAct(kind, id, btn) {
     openToday();
   } finally { btn.disabled = false; }
 }
+// ---------- v1.96: PC par bane KHULE purchase bill — list se chun kar EDIT ----------
+function pcRows() {
+  const t = todayStr(), y = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
+  const q = norm(pcQ);
+  return pcBillsOf().filter(r => (isOwner() || r.date === t) && (pcWhen === 'all' || (pcWhen === 'today' ? r.date === t : r.date === y)))
+    .filter(r => !q || norm(r.billNo).includes(q) || norm(r.partyName).includes(q) || (matchesOf(partyOf(r.partyId) || { name: r.partyName }, pcQ)))
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.billNo).localeCompare(String(a.billNo))).slice(0, 60);
+}
+function pcListHTML() {
+  const rows = pcRows();
+  return rows.length ? rows.map(r => `<button type="button" class="pc-bill${r.posted ? ' posted' : ''}" data-pp-pcbill="${esc(r.id)}"${r.posted ? ' disabled' : ''}>
+      <span><b>${esc(r.partyName || '')}</b><small>Bill ${esc(r.billNo || r.id)} · ${esc(r.date)}${r.posted ? ' · Posted — pehle Unpost' : ' · khula ✓'}</small></span><b>Rs ${num(r.rs)}</b></button>`).join('')
+    : `<p class="stat-note">${isOwner() ? 'Is chunao mein koi PC ka purchase bill nahi.' : 'Aaj PC par koi purchase bill nahi bana (mulazim sirf aaj ka bill edit kar sakta hai).'}</p>`;
+}
+function openPcBills() {
+  dlg('✏️ PC ka bill edit karein', `<p class="stat-note">PC par bane purchase bill — sirf <b>khule</b> (post na hue) edit hote hain.</p>
+    <input id="ppPcQ" type="search" placeholder="🔍 Supplier ya bill number" value="${esc(pcQ)}" autocomplete="off">
+    ${isOwner() ? `<div class="sort-chips" style="margin-top:8px">${[['today', 'Aaj'], ['yday', 'Kal'], ['all', 'Sab']].map(([k, l]) => `<button type="button" data-pp-pcwhen="${k}" class="${pcWhen === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}
+    <div id="ppPcList" class="pc-bills">${pcListHTML()}</div>`);
+  const i = $('ppPcQ'); if (i) i.oninput = () => { pcQ = i.value; const l = $('ppPcList'); if (l) l.innerHTML = pcListHTML(); };
+}
+async function openPcBill(id, btn) {
+  const r = pcBillsOf().find(x => x.id === id); if (!r) return;
+  btn.disabled = true;
+  try {
+    const b = await cloud.purchaseBill(id).catch(() => null);
+    if (!b) { alert('Is bill ki tafseel PC se abhi nahi aayi.\n\nPC par CHECK-BILLS.bat chalayein — 2-3 minute baad dobara kholein.'); return; }
+    const st = Number(b.docStatus ?? b.status);
+    if (st === 2) { alert('Yeh bill POSTED hai — pehle malik Unpost kare, phir edit.'); return; }
+    if (st === 3) { alert('Yeh bill POS mein CANCEL hai.'); return; }
+    if (!isOwner() && b.date !== todayStr()) { alert('Mulazim sirf AAJ ka khula bill edit kar sakta hai.'); return; }
+    const m = ppLoadBill(b, { partyId: r.partyId }); if (m === 'cancel') return; if (m) { alert(m); return; }
+    $('dialog')?.close(); rerender(); notice('✏️ Edit mode — party, godam, ginti, rates badal kar "💾 POS bill UPDATE" dabayein');
+  } finally { btn.disabled = false; }
+}
 function openToday() {
   dlg(`Aaj ke app purchase (${today.length})`, todayErr ? `<p>${esc(todayErr)}</p>` : !today.length ? '<p>Aaj app se koi purchase bill nahi bana.</p>' :
     today.map(p => `<details class="sale-hist"><summary><b>${p.editOf ? '✏️ ' + esc(p.editOf.billNo || '') + ' · ' : ''}${esc(p.partyName || '')} · Rs ${num(p.total)}</b><small>${esc(new Date(p.createdAt || 0).toLocaleTimeString('en-PK'))} · ${statusText(p)}</small></summary>
@@ -261,7 +297,7 @@ export function renderPP() {
       <label>Supplier bill # <input maxlength="40" data-pp-inv="1" value="${esc(invoiceNo)}" placeholder="ikhtiyari"></label>
     </div>
     <div class="sale-total"><small>Purchase · ${cart.length} items</small><strong id="ppTotal">Rs ${num(total)}</strong></div>
-    <div class="account-tools"><button class="sh-wide" id="ppTodayBtn" data-pp-today="1">${todayLabel()}</button>${supplier ? '<button data-pp-copy="1">📑 Pichhla bill copy</button>' : ''}</div>
+    <div class="account-tools"><button class="sh-wide" id="ppTodayBtn" data-pp-today="1">${todayLabel()}</button>${canUse() && !edit ? '<button class="sh-wide" data-pp-pcbills="1">✏️ PC ka bill edit karein</button>' : ''}${supplier ? '<button data-pp-copy="1">📑 Pichhla bill copy</button>' : ''}</div>
   </div>`;
   const si = $('search'); if (si) si.placeholder = '📷 scan ya item ka naam / code (Enter)';
   if (s.failed) { $('list').innerHTML = `<div class="empty"><strong>Items nahi mile</strong><p>${esc(s.failed)}</p></div>`; $('actions').innerHTML = ''; return; }
@@ -379,6 +415,8 @@ document.addEventListener('click', async e => {
   if (mic) { const ok = voiceSearch(t => { const s = $('search'); if (s) { s.value = t; s.dispatchEvent(new Event('input', { bubbles: true })); } }); if (!ok) notice('Is phone/browser mein awaz se search nahi chalti'); return; }
   const off = e.target.closest?.('[data-pp-edit-off]');
   if (off) { if (!confirm('Edit chhor dein? (POS ka bill waisa hi rahega; screen saaf ho jayegi)')) return; edit = null; cart = []; note = ''; invoiceNo = ''; day = ''; keepDraft(); rerender(); return; }
+  const pc = e.target.closest?.('[data-pp-pcbills],[data-pp-pcbill],[data-pp-pcwhen]');
+  if (pc) { const d = pc.dataset; if (d.ppPcbills) openPcBills(); else if (d.ppPcwhen) { pcWhen = d.ppPcwhen; openPcBills(); } else if (d.ppPcbill) openPcBill(d.ppPcbill, pc); return; }
   const ba = e.target.closest?.('[data-pp-retry],[data-pp-reopen],[data-pp-editdone],[data-pp-cancel]');
   if (ba) { const d = ba.dataset; billAct(d.ppRetry ? 'retry' : d.ppReopen ? 'reopen' : d.ppEditdone ? 'editdone' : 'cancel', d.ppRetry || d.ppReopen || d.ppEditdone || d.ppCancel, ba); return; }
   const t = e.target.closest?.('[data-pp-sup],[data-pp-sup-change],[data-pp-add],[data-pp-del],[data-pp-clear],[data-pp-save],[data-pp-today],[data-pp-camera],[data-pp-old],[data-pp-w],[data-pp-wall],[data-pp-wall-custom],[data-pp-old-all],[data-pp-copy]');
@@ -444,7 +482,7 @@ async function save() {
   const low = cart.filter(l => linePcs(l) > 0 && ((Number(l.wpcs) > 0 && Number(l.wpcs) < Number(l.costP)) || (Number(l.rpcs) > 0 && Number(l.rpcs) < Number(l.costP)))).map(l => l.name);
   if (low.length && !confirm('Dhyan: in items ka naya sale rate KHAREED SE KAM hai:\n\n' + low.join('\n') + '\n\nPhir bhi bhejein?')) return;
   const total = r2(lines.reduce((n, l) => n + l.qty * l.costP, 0));
-  const date = todayStr();   // v1.95.0: tareekh ka khana nahi — naya bill hamesha AAJ ka
+  const date = todayStr();   // v1.96.0: tareekh ka khana nahi — naya bill hamesha AAJ ka
   const date2 = edit ? edit.date : date;   // edit: bill ki apni purani tareekh
   if (!confirm(`${edit ? 'POS BILL ' + edit.billNo + ' — UPDATE' : 'POS PURCHASE BILL'}\n${p.name}\n${lines.length} items · Rs ${num(total)}${invoiceNo ? '\nSupplier bill # ' + invoiceNo : ''}\n\n${edit ? 'POS mein yahi bill badlein (purani lines hat kar yeh lagengi) aur naye rates lagayein?' : 'POS mein bill banayein aur naye rates lagayein?'}`)) return;
   const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -492,7 +530,7 @@ async function loadSupItems(pid) {
 // ---------- v1.87: POS ka KHULA bill is screen par (edit) ----------
 // b = posBills doc (sync-bills v5: purchaseId, stamp, posPartyId, invoiceNo, lines[{itemId, qtyPcs, ratePcs, godamId}])
 export function ppLoadBill(b, ent) {
-  if (!b || !Number(b.purchaseId) || !b.stamp || !(b.lines || []).every(l => l.itemId)) return 'Is bill ki poori tafseel abhi nahi aayi — PC par nayi sync-bills.js lagayein, 2 minute baad dobara kholein.';
+  if (!b || !Number(b.purchaseId) || !b.stamp || !(b.lines || []).every(l => l.itemId)) return 'Is bill ki poori tafseel PC se abhi nahi aayi.\n\nPC par CHECK-BILLS.bat chalayein (sync-bills v5 chalu karti hai) — 2-3 minute baad dobara kholein.';
   const s = stock();
   if (!s.loaded) return 'Items abhi load ho rahe hain — thori der baad dobara dabayein.';
   if (cart.length && !confirm('POS Purchase screen par pehle se items hain — woh hata kar yeh bill kholein?')) return 'cancel';
