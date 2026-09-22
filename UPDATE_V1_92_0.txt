@@ -1,0 +1,14 @@
+Blue Khata v1.92.0 — DAILY SALE smart
+INSTALL: sirf is ZIP ki 11 files GitHub par (v1.91 pehle lag chuka ho), Sync/Update 1.92.0. Firebase rules badalne ki zaroorat NAHI.
+NAYA (Daily Sale):
+- Upar hisaab: ➕ Sale + Wasooli + Kal ka change · ➖ Akhrajat + Aaj ka change, aur patti "⚖️ Hona chahiye Rs … · Gina Rs …"
+  -> ✓ Barabar (hara) / Farq −500 (laal) / Closing ginti baqi (peela).
+- Columns ki jagah TABS: Sale · Wasooli · Akhrajat · Change (Kal + Aaj) · Closing — har tab par jama. Ek waqt ek column
+  poori chaudai mein. Ungli se daayein/baayein khiskane par agla/pichhla tab. Aakhri chuna hua tab yaad rehta hai.
+- Entry ka saaf khana: ⭐ Aksar ek patli line (lamba naam "…"), Account + Raqam ek line, "＋ Note" sirf zaroorat par, ✓ Save.
+  Sale tab ke upar chips: 📷 Pictures · 🧾 Sale + Roznamcha · 🤖 AI se milao. Akhrajat: ＋ Naya kharcha account.
+- Aaj ki entries patli lines (account · raqam, neeche note, Edit/Delete chhote).
+- Change / Closing mein "💵 Noton se ginti": 5000 · 1000 · 500 · 100 · 50 · 20 · 10 · sikke — jama khud;
+  "Yeh jama ginti mein daalo" -> phir "Save ginti". Purana "Nayi raqam / Row" bhi hai.
+- Neeche ke 5 buttons patli ek line, icon ke saath; jo tab khula ho us ka button neela.
+Saving ka tareeqa BILKUL wohi (wahi forms, wahi closing record).

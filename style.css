@@ -532,3 +532,67 @@ main .summary>.stock-head{padding:12px!important}
 .af-hint{margin:6px 2px 0;font-size:13px;color:#475569}
 #afPreview .af-prev{border:1px solid #e1e8f3!important;border-radius:14px;background:#fff;pointer-events:none}
 .af-save{min-height:52px;border-radius:14px!important;font-size:16px;font-weight:700;background:#1258ce;color:#fff}
+
+/* ===== v1.92: Daily Sale smart ===== */
+main .summary>.farq-bar{flex:1 1 100%!important;display:flex!important;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px!important;border-radius:14px;box-shadow:none}
+.farq-bar span{font-size:13px;min-width:0}
+.farq-bar b{flex:none;font-size:15px}
+.farq-bar.ok{background:#e7f7ee;color:#147548}
+.farq-bar.bad{background:#fdecec;color:#b42332}
+.farq-bar.wait{background:#fff4d6;color:#8a5a00}
+.day-tabs{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none;position:sticky;top:0;z-index:3;background:#f3f7fe}
+.day-tabs::-webkit-scrollbar{display:none}
+.day-tabs button{flex:none;display:grid;gap:0;text-align:left;padding:7px 14px;min-height:0;border-radius:14px;background:#fff;border:1px solid #d6e2f5;color:#0b3f9e;font-size:14px;font-weight:700;line-height:1.25}
+.day-tabs button small{font-size:11.5px;font-weight:600;color:#64748b}
+.day-tabs button.on{background:#1258ce;border-color:#1258ce;color:#fff}
+.day-tabs button.on small{color:#dbe8ff}
+.day-hint{margin:0 2px 8px!important;font-size:12px!important}
+.day-tabbed{overflow:visible!important;border:0!important;background:transparent!important}
+.day-tabbed .cash-sheet{display:block!important;min-width:0!important}
+.day-tabbed .sheet-column{display:none!important;border:1px solid #dde6f3!important;border-radius:16px;background:#fff;padding:12px!important;margin-bottom:10px;box-shadow:0 4px 14px #0b3f9e10}
+.day-tabbed .sheet-column.on{display:flex!important}
+.day-tabbed .sheet-column h3{margin:0 0 10px!important;min-height:0!important;padding:0!important;background:none!important;color:#0b3f9e!important;font-size:15px!important}
+.day-tabbed form[data-sheet]{display:grid!important;grid-template-columns:1fr 1fr;gap:8px!important;grid-auto-flow:row dense}
+.day-tabbed form[data-sheet]>*{grid-column:1/-1;min-width:0}
+.day-tabbed form[data-sheet] .sheet-quick{order:0}
+.day-tabbed form[data-sheet] [name=query]{order:1}
+.day-tabbed form[data-sheet] .sheet-suggestions{order:2}
+.day-tabbed form[data-sheet] [name=account]{order:3;grid-column:1}
+.day-tabbed form[data-sheet] [name=amount]{order:3;grid-column:2;font-size:17px!important;font-weight:700}
+.day-tabbed form[data-sheet] [name=note]{order:4}
+.day-tabbed form[data-sheet] .note-toggle{order:5;grid-column:1}
+.day-tabbed form[data-sheet] [type=submit]{order:5;grid-column:2;min-height:44px!important;font-size:15px!important;border-radius:12px}
+.day-tabbed form[data-sheet].note-open [type=submit]{grid-column:1/-1}
+.day-tabbed .sheet-column input,.day-tabbed .sheet-column select{min-height:44px;border-radius:12px;font-size:15px!important}
+.note-toggle{background:transparent!important;color:#1258ce!important;justify-self:start;font-size:14px!important;font-weight:700}
+.sheet-quick{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.sheet-quick button{flex:none;min-height:34px!important;padding:5px 12px!important;border-radius:999px!important;background:#eef3fd;border:1px solid #d6e2f5;color:#0b3f9e;font-size:13px!important;font-weight:700;white-space:nowrap}
+.day-tabbed .sheet-suggestions{display:flex!important;flex-wrap:nowrap!important;gap:6px;overflow-x:auto;max-height:none!important;scrollbar-width:none;align-items:center}
+.day-tabbed .sheet-suggestions::-webkit-scrollbar{display:none}
+.day-tabbed .sheet-suggestions .pchip-h{flex:none;width:auto;margin:0}
+.day-tabbed .sheet-suggestions button{flex:none;max-width:62vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:32px!important;padding:5px 11px!important;border-radius:999px!important;background:#eef3fd;border:1px solid #d6e2f5;color:#0b3f9e;font-size:13px!important}
+.day-tabbed .sheet-entries{margin-top:12px!important;border-top:1px solid #eef2f7}
+.day-tabbed .sheet-entries>div{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:9px 2px!important;border-bottom:1px solid #eef2f7}
+.day-tabbed .sheet-entries>div>small:nth-of-type(1){order:1;flex:1;min-width:0;color:#152747!important;font-size:14.5px!important;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.day-tabbed .sheet-entries>div>strong{order:2;font-size:15px!important;margin-left:auto}
+.day-tabbed .sheet-entries>div>small:nth-of-type(2){order:3;flex-basis:100%;font-size:12.5px!important}
+.day-tabbed .sheet-entries>div>small:nth-of-type(2):empty{display:none}
+.day-tabbed .sheet-entries>div>*:not(small):not(strong){order:4}
+.day-tabbed .sheet-entries>div>button{min-height:30px!important;padding:4px 10px!important;font-size:12.5px!important;border-radius:999px}
+.day-tabbed .sheet-total{margin:12px -12px -12px!important;padding:10px 14px!important;border-radius:0 0 16px 16px;border-top:1px solid #d6e2f5!important;font-size:15px}
+.day-tabbed form[data-count]{border-radius:12px;padding:10px!important;display:grid;gap:8px}
+.day-tabbed form[data-count] [type=submit]{min-height:44px!important;font-size:15px!important;border-radius:12px}
+.notes-calc{background:#fff;border:1px solid #d6e2f5;border-radius:12px;padding:8px 10px}
+.notes-calc summary{font-weight:700;color:#0b3f9e;cursor:pointer;font-size:14px}
+.nc-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px}
+.nc-grid label{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700;color:#334155}
+.nc-grid label span{flex:none;min-width:56px}
+.nc-grid label input{min-height:38px!important;padding:6px 8px!important}
+.nc-grid .nc-coin{grid-column:1/-1}
+.nc-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px}
+.nc-foot b{font-size:16px;color:#147548}
+.nc-foot button{min-height:36px!important;padding:6px 12px!important;border-radius:999px;font-size:13px!important}
+#actions.day-acts{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+#actions.day-acts::-webkit-scrollbar{display:none}
+#actions.day-acts button{flex:none;min-height:42px;padding:0 14px;border-radius:999px!important;background:#fff;color:#0b3f9e;border:1px solid #cfd9e8;box-shadow:none;font-size:14px;font-weight:700;white-space:nowrap}
+#actions.day-acts button.on{background:#1258ce;color:#fff;border-color:#1258ce}

@@ -624,3 +624,19 @@ VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js 
 - Browser test (Chrome, nakli cloud): khata, purchase, due, cash, dasti chips + smart line sahi; form Supplier + Dene 2500
   preview "Rs 2,500 Dene hain"; koi page error nahi.
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.91.0') + version.json.
+
+=== v1.92.0 — DAILY SALE SMART: hisaab + Farq patti, TABS, saaf entry, NOTON SE GINTI, patli neeche line (rules wahi v1.88) ===
+- Summary: dIn = sale+collection+opening, dOut = expense+payment+change, hona = dIn-dOut; .farq-bar (ok / bad / wait) —
+  d.closed ho to "Gina d.cash" + d.difference (>0 = cash KAM -> "−"). 📷 Pictures ab Sale tab ki .sheet-quick mein
+  (data-day-camera, list render ke baad bind).
+- dailySheet: .day-tabs (sale, collection, expense, change = opening+change sections, cash) + section data-col / .on;
+  .day-tabbed CSS: ek waqt ek column, block layout (purana 6-column grid/scroll sirf CSS se band). dayTab sessionStorage
+  'sam-day-tab'. setupDayTabs(): click + touch swipe (70px, input/select/chips par nahi). setDayTab bina render ke classes.
+- Sheet form: wahi naam (query account amount note) — note hidden + [data-note-toggle] (setupSheet: value ho to khula).
+  CSS grid order: quick, query, chips, account|amount, note, toggle|submit. Chips ek line nowrap ellipsis.
+- countSheet: <details.notes-calc> data-nc (5000..10, 1 = sikke Rs) — naam "count" NAHI (save sirf [name=count] parhta);
+  ncTotal/ncPaint/ncRestore (sheetDrafts key+':nc'); "Yeh jama ginti mein daalo" khali count row bharta ya nayi row.
+- #actions.day-acts (renderSurface shuru mein class hatti hai) + data-dact; paintDayActs: change/cash -> Closing neela.
+- Browser test: sale chip+5000+note save (1 entry add), swipe -> Wasooli, noton 2×5000+3×100+45 = 10,345 -> count row ->
+  Save ginti (closing edit), koi page error nahi.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.92.0') + version.json.
