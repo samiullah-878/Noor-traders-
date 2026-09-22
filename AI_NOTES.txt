@@ -708,3 +708,19 @@ chal rahi -> posBills mein purchaseId/stamp nahi -> Bill dekhein mein "PC par na
   ppLoadBill ka "tafseel nahi" paigham ab CHECK-BILLS.bat batata hai.
 - Browser test: button, list (khula + posted band), search 2470 = 1, khule par tafseel-nahi paigham; koi error nahi.
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.96.0') + version.json.
+
+=== v1.97.0 — STOCK ✓ TICK + GODAM FILTER + EDIT INTEZAR (rules wahi v1.94) · PC: purchase-post v4 + sync-bills v6 ===
+- pos-stock: countHTML — !round (Nayi ginti chalu nahi) par khane/Save/Tick nahi, "Ginti abhi band hai" + history.
+  [data-count-tick] -> tickCount(): system stock (item.stock) = ginti (ctn/pcs pack se), minus par band, pehli ginti alag ho
+  to confirm, 0 par confirm; writeCount(item, v, null, tick=true) -> history h.tick; historyHTML "✓ Tick — system jaisa".
+  Baqi nishan ho to hata deta. Purana data-flag-check/checked code UI mein nahi tha (sirf handlers) — chhuya nahi.
+- Godam: godamAll flag — pickedBranch !== 1 aur filter 'all' ho to 'has' (render par bhi, sirf click par nahi); 'Sab' chip
+  dabane par godamAll = true; branch badalne par false.
+- purchase.js: openBillForEdit(id, partyId, minUpdated) — billReady (purchaseId, stamp, lines itemId, updatedAt >= minUpdated
+  [editdone: job.doneAt, taake edit ke baad purani stamp na aaye]); na ho to waitBill: "⏳" dialog, 5 sec poll, 4 min had,
+  aate hi ppLoadBill. openPcBill + editdone dono isi se.
+- PC (PURCHASE-TEZ.bat): purchase-post v4 har kamyab bill par bills-now.flag; sync-bills v6 har 5 sec flag -> foran runOnce.
+  Installer bills-auto dobara START nahi karta (sync-bills mein lock nahi — do copies ban jatin); 35 sec baad band ho tabhi.
+- Browser test: tick colgate 96 (tick:true), minus par call nahi, round na ho to khane nahi, Godam 3 = sirf kala chana;
+  edit intezar -> 3rd poll par khud edit mode. Koi error nahi.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.97.0') + version.json.

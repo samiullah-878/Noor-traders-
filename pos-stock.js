@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf } from './smart-search.js?v=1.96.0';
+import { smartSearch, setAliases, aliasOf } from './smart-search.js?v=1.97.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -15,7 +15,8 @@ let limit = PAGE;
 
 let cloud = null, rerender = () => {}, notice = () => {};
 let stop = null, rows = [], loaded = false, failed = '';
-let branch = null, sort = 'name', filter = 'all', bills = [];   // v1.67: shuru mein SAB items
+let branch = null, sort = 'name', filter = 'all', bills = [];
+let godamAll = false;   // v1.97: godam par 'Sab' khud chuna ho tabhi sab items   // v1.67: shuru mein SAB items
 let postReq = null;
 let hidden = {};   // item id -> true (Band kiye hue items, sab branches mein chhupe)
 let counts = new Map(), round = '', stopCount = null, isOwner = () => false;
@@ -353,6 +354,7 @@ function renderStockInner() {
     return;
   }
 
+  if (pickedBranch !== 1 && filter === 'all' && !godamAll) filter = 'has';   // v1.97: godam khula ho to shuru se sirf usi ke items
   let shown = items.filter(passes);
   if (q) { const hit = new Set(smartSearch(shown, q, 500)); shown = shown.filter(r => hit.has(r)); }   // v1.75: smart search
 
@@ -752,11 +754,13 @@ function countHTML(r) {
   const c = countOf(pickedBranch, r);
   const diff = c ? Math.round((countedPcs(c) - Number(sysOf(c, r))) * 100) / 100 : 0;
   if (countLocked()) return `<div style="margin:0 4px 14px">${c ? `<small>Ginti ${num(countedPcs(c))} · Farq ${diff > 0 ? '+' : ''}${num(diff)}</small><br>` : ''}${flagHTML(r)}</div>${historyHTML(r, c)}`;
+  if (!round) return `<div style="margin:0 4px 12px"><small class="stat-note">Ginti abhi band hai — ${isOwner() ? 'upar "Nayi ginti shuru" dabayein' : 'malik "Nayi ginti shuru" kare'}, phir yahan Save aur ✓ Tick aayenge.</small></div>${historyHTML(r, c)}`;
   return `<div class="pos-dates" style="margin:0 4px 8px">
     <label>Ctn<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-ctn="${esc(r.id)}" value="${c ? esc(String(c.ctn ?? '')) : ''}"></label>
     <label>${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-pcs="${esc(r.id)}" value="${c ? esc(String(c.pcs ?? '')) : ''}"></label>
     <label>Kul ${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" style="width:5.6em" data-count-tot="${esc(r.id)}" value=""></label>
     <button type="button" data-count-save="${esc(r.id)}">Save</button>
+    <button type="button" class="count-tick" data-count-tick="${esc(r.id)}" title="Jitna system mein hai utna hi maal hai">✓ Tick</button>
     <div class="count-live" data-count-live="${esc(r.id)}"></div>
     ${c ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Us waqt system ${num(sysOf(c, r))}${sysSure(c) ? ' ✓' : ' (PC tasdeeq baqi)'} · Farq ${diff > 0 ? '+' : ''}${num(diff)}${
       r.prate ? ' · Rs ' + (diff > 0 ? '+' : '') + num(diff * r.prate) : ''}</small>` : ''}
@@ -771,7 +775,7 @@ function historyHTML(r, c) {
   return `<div class="stat-note" style="margin:0 4px 12px">${list.map(h => {
     const d = Math.round((Number(h.total) - Number(h.sys)) * 100) / 100;
     const ctn = esc(r.cName || 'Ctn'), pcs = esc(r.uName || 'Pcs');
-    const jama = h.add ? `<b style="color:#0b6b2e">+${num(h.add.ctn)} ${ctn} + ${num(h.add.pcs)} ${pcs}${h.note ? ' (' + esc(h.note) + ')' : ''}</b> → ` : (h.note ? `(${esc(h.note)}) ` : '');
+    const jama = h.tick ? '<b style="color:#0b6b2e">✓ Tick — system jaisa</b> · ' : h.add ? `<b style="color:#0b6b2e">+${num(h.add.ctn)} ${ctn} + ${num(h.add.pcs)} ${pcs}${h.note ? ' (' + esc(h.note) + ')' : ''}</b> → ` : (h.note ? `(${esc(h.note)}) ` : '');
     return `${esc(stampText(h.at))} — ${jama}<b>${num(h.ctn)} ${ctn} + ${num(h.pcs)} ${pcs}</b> · ${num(h.total)} ${pcs} · System ${num(h.sys)} · Farq ${d > 0 ? '+' : ''}${num(d)}${
       r.prate ? ' · Rs ' + (d > 0 ? '+' : '') + num(d * r.prate) : ''}`;
   }).join('<br>')}</div>`;
@@ -805,7 +809,7 @@ function rowHTML(r) {
 // branch aur sort ke buttons
 document.addEventListener('click', e => {
   const b = e.target.closest?.('[data-stock-branch]');
-  if (b) { branch = Number(b.dataset.stockBranch); if (branch !== 1) filter = 'has'; limit = PAGE; rerender(); return; }   // v1.95: godam kholte hi sirf USI godam ka stock
+  if (b) { branch = Number(b.dataset.stockBranch); godamAll = false; if (branch !== 1) filter = 'has'; limit = PAGE; rerender(); return; }   // v1.95/97: godam kholte hi sirf USI godam ka stock
   if (e.target.closest?.('[data-stock-scan]')) { openScanner(); return; }
   if (e.target.closest?.('[data-stock-clear]')) { clearScan(); return; }
   const sa = e.target.closest?.('[data-scan-saveall]');
@@ -823,7 +827,7 @@ document.addEventListener('click', e => {
   const s = e.target.closest?.('[data-stock-sort]');
   if (s) { sort = s.dataset.stockSort; rerender(); return; }
   const f = e.target.closest?.('[data-stock-filter]');
-  if (f) { filter = f.dataset.stockFilter; limit = PAGE; rerender(); return; }
+  if (f) { filter = f.dataset.stockFilter; if (filter === 'all') godamAll = true; limit = PAGE; rerender(); return; }
 
   const nr = e.target.closest?.('[data-stock-round]');
   if (nr) { startNewRound(); return; }
@@ -831,6 +835,8 @@ document.addEventListener('click', e => {
   if (e.target.closest?.('[data-stock-approve]')) { answerPost(true); return; }
   if (e.target.closest?.('[data-stock-cancelpost]')) { answerPost(false); return; }
 
+  const tk = e.target.closest?.('[data-count-tick]');
+  if (tk) { tickCount(tk.dataset.countTick, tk); return; }
   const sv = e.target.closest?.('[data-count-save]');
   if (sv) { saveCount(sv.dataset.countSave, sv); return; }
   const ad = e.target.closest?.('[data-count-add]');
@@ -977,12 +983,13 @@ function readCount(item, skipBlank) {
   return { ctn, pcs, total, bad: !Number.isFinite(total) || !Number.isFinite(ctn) || !Number.isFinite(pcs) };
 }
 
-async function writeCount(item, v, add = null) {
+async function writeCount(item, v, add = null, tick = false) {
   const at = Date.now();
   const old = counts.get(countId(pickedBranch, item.id));
   const past = Array.isArray(old?.history) ? old.history : [];
   const h = { at, ctn: v.ctn, pcs: v.pcs, total: v.total, sys: item.stock };
   if (add) { h.add = { ctn: add.ctn, pcs: add.pcs, total: add.total }; if (add.note) h.note = add.note; }
+  if (tick) h.tick = true;
   const history = [...past, h].slice(-20);
   await cloud.saveStockCount({
     id: countId(pickedBranch, item.id),
@@ -1034,6 +1041,29 @@ async function saveCount(itemId, button, mode = 'save') {
   } finally {
     button.disabled = false;
   }
+}
+
+// v1.97: ✓ Tick — "jitna system mein hai utna hi maal hai": system stock ko hi ginti maan kar save; history mein "✓ Tick" line
+async function tickCount(itemId, button) {
+  if (!round) { notice('Pehle "Nayi ginti shuru" dabayein'); return; }
+  if (countLocked()) { notice('Malik ne counting band ki hui hai'); return; }
+  const item = collect().items.find(r => String(r.id) === String(itemId));
+  if (!item) return;
+  const sys = Math.round((Number(item.stock) || 0) * 1000) / 1000;
+  if (sys < 0) { notice(`System mein stock minus (${num(sys)}) hai — tick nahi hota, asal ginti likh kar Save karein`); return; }
+  const per = Number(item.pack) || 0;
+  const ctn = per > 1 ? Math.floor(sys / per + 1e-9) : 0;
+  const pcs = Math.round((sys - ctn * (per > 1 ? per : 0)) * 1000) / 1000;
+  const old = countOf(pickedBranch, item);
+  if (old && countedPcs(old) !== sys && !confirm(`"${item.name}" ki pehle ginti ${num(countedPcs(old))} hai.\nTick se ginti system jaisi ${num(sys)} ho jayegi — theek?`)) return;
+  if (sys === 0 && !confirm(`"${item.name}" — system mein 0 hai. Tick = ginti ZERO. Theek?`)) return;
+  button.disabled = true;
+  try {
+    await writeCount(item, { ctn, pcs, total: sys, bad: false }, null, true);
+    if (flagOf(item.id).baqi) await setFlag(item.id, { baqi: false });
+    notice(`✓ ${item.name} — system jaisa ${num(sys)} ${item.uName || 'Pcs'} (tick)`);
+  } catch (e) { notice(e?.message || 'Tick save nahi hua'); }
+  finally { button.disabled = false; }
 }
 
 // Scan list ke sab items ek dafa save (jin ki ginti likhi hai aur badli hai)

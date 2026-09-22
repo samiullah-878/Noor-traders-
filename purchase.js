@@ -1,5 +1,5 @@
-// purchase.js — v1.96.0 "POS Purchase" screen
-// v1.96.0: POS ka KHULA bill yahan EDIT (editOf) -> PC wohi bill number update karta hai; supplier ki smart chips
+// purchase.js — v1.97.0 "POS Purchase" screen
+// v1.97.0: POS ka KHULA bill yahan EDIT (editOf) -> PC wohi bill number update karta hai; supplier ki smart chips
 //          (istemal ke hisaab se); supplier chunte hi "is supplier se aksar aane wale items" chips. (Purchase tab ke andar nayi screen)
 // Sale screen jaisi: barcode scan / smart search / Ctn + Pcs. Har item par khareed rate + 4 naye rate
 // (Wholesale Ctn/Pcs, Parchoon Ctn/Pcs) — PURANE NAFA se khud, % chips se wholesale.
@@ -7,8 +7,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.96.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=1.96.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=1.97.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=1.97.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -208,13 +208,7 @@ async function billAct(kind, id, btn) {
       const r = loadFromJob(p); if (r) alert(r);
       $('dialog')?.close(); rerender(); notice('✏️ Bill screen par — theek kar ke "POS mein bhejo" dabayein');
     } else if (kind === 'editdone') {
-      const b = await cloud.purchaseBill('pos-' + p.purchaseId).catch(() => null);
-      if (!b) { alert('POS se is bill ki tafseel abhi nahi aayi — 2-3 minute baad dobara dabayein.'); return; }
-      if (Number(b.docStatus) === 2) { alert('Yeh bill POSTED hai — pehle malik Unpost kare.'); return; }
-      if (Number(b.docStatus) === 3) { alert('Yeh bill POS mein cancel hai.'); return; }
-      if (!isOwner() && b.date !== todayStr()) { alert('Mulazim sirf AAJ ka bill edit kar sakta hai.'); return; }
-      const r = ppLoadBill(b, { partyId: p.partyId }); if (r === 'cancel') return; if (r) { alert(r); return; }
-      $('dialog')?.close(); rerender(); notice('✏️ Edit mode — badal kar "POS bill UPDATE" dabayein');
+      await openBillForEdit('pos-' + p.purchaseId, p.partyId, Number(p.doneAt) || 0);   // v1.97: taza tafseel ka intezar, phir khud khule
     }
   } catch (err) {
     const perm = err?.code === 'permission-denied' || /permission/i.test(String(err?.message || ''));
@@ -248,16 +242,37 @@ function openPcBills() {
 async function openPcBill(id, btn) {
   const r = pcBillsOf().find(x => x.id === id); if (!r) return;
   btn.disabled = true;
-  try {
-    const b = await cloud.purchaseBill(id).catch(() => null);
-    if (!b) { alert('Is bill ki tafseel PC se abhi nahi aayi.\n\nPC par CHECK-BILLS.bat chalayein — 2-3 minute baad dobara kholein.'); return; }
-    const st = Number(b.docStatus ?? b.status);
-    if (st === 2) { alert('Yeh bill POSTED hai — pehle malik Unpost kare, phir edit.'); return; }
-    if (st === 3) { alert('Yeh bill POS mein CANCEL hai.'); return; }
-    if (!isOwner() && b.date !== todayStr()) { alert('Mulazim sirf AAJ ka khula bill edit kar sakta hai.'); return; }
-    const m = ppLoadBill(b, { partyId: r.partyId }); if (m === 'cancel') return; if (m) { alert(m); return; }
-    $('dialog')?.close(); rerender(); notice('✏️ Edit mode — party, godam, ginti, rates badal kar "💾 POS bill UPDATE" dabayein');
-  } finally { btn.disabled = false; }
+  try { await openBillForEdit(id, r.partyId, 0); } finally { btn.disabled = false; }
+}
+// v1.97: bill ki poori (aur TAZA) tafseel — na ho to "⏳ aa rahi hai" khirki, har 5 second dekhna, aate hi edit khud khule
+const billReady = (b, minUpdated) => !!(b && Number(b.purchaseId) && b.stamp && (b.lines || []).length && b.lines.every(l => l.itemId) && (Number(b.updatedAt) || 0) >= minUpdated);
+function waitBill(id, minUpdated) {
+  return new Promise(res => {
+    const t0 = Date.now(); let done = false;
+    const end = v => { if (done) return; done = true; res(v); };
+    dlg('⏳ PC se tafseel aa rahi hai…', `<p>Bill abhi bana / badla hai — PC is ki poori tafseel bhej raha hai. Aate hi <b>edit khud khul jayega</b>, dobara dabane ki zaroorat nahi.</p><p class="stat-note" id="ppWaitSec">0 second</p><div class="account-tools"><button type="button" id="ppWaitStop">Band karo</button></div>`);
+    $('ppWaitStop').onclick = () => { $('dialog')?.close(); end(null); };
+    const tick = async () => {
+      if (done) return;
+      if (!$('dialog')?.open || !$('ppWaitSec')) { end(null); return; }   // khirki band kar di
+      const s = $('ppWaitSec'); if (s) s.textContent = Math.round((Date.now() - t0) / 1000) + ' second';
+      const b = await cloud.purchaseBill(id).catch(() => null);
+      if (billReady(b, minUpdated)) { end(b); return; }
+      if (Date.now() - t0 > 240000) { alert('4 minute mein bhi tafseel nahi aayi — PC par CHECK-BILLS.bat chalayein.'); $('dialog')?.close(); end(null); return; }
+      setTimeout(tick, 5000);
+    };
+    setTimeout(tick, 2500);
+  });
+}
+async function openBillForEdit(id, partyId, minUpdated) {
+  let b = await cloud.purchaseBill(id).catch(() => null);
+  if (!billReady(b, minUpdated)) { b = await waitBill(id, minUpdated); if (!b) return; }
+  const st = Number(b.docStatus ?? b.status);
+  if (st === 2) { alert('Yeh bill POSTED hai — pehle malik Unpost kare, phir edit.'); return; }
+  if (st === 3) { alert('Yeh bill POS mein CANCEL hai.'); return; }
+  if (!isOwner() && b.date !== todayStr()) { alert('Mulazim sirf AAJ ka khula bill edit kar sakta hai.'); return; }
+  const m = ppLoadBill(b, { partyId }); if (m === 'cancel') return; if (m) { alert(m); return; }
+  $('dialog')?.close(); rerender(); notice('✏️ Edit mode — party, godam, ginti, rates badal kar "💾 POS bill UPDATE" dabayein');
 }
 function openToday() {
   dlg(`Aaj ke app purchase (${today.length})`, todayErr ? `<p>${esc(todayErr)}</p>` : !today.length ? '<p>Aaj app se koi purchase bill nahi bana.</p>' :
@@ -482,7 +497,7 @@ async function save() {
   const low = cart.filter(l => linePcs(l) > 0 && ((Number(l.wpcs) > 0 && Number(l.wpcs) < Number(l.costP)) || (Number(l.rpcs) > 0 && Number(l.rpcs) < Number(l.costP)))).map(l => l.name);
   if (low.length && !confirm('Dhyan: in items ka naya sale rate KHAREED SE KAM hai:\n\n' + low.join('\n') + '\n\nPhir bhi bhejein?')) return;
   const total = r2(lines.reduce((n, l) => n + l.qty * l.costP, 0));
-  const date = todayStr();   // v1.96.0: tareekh ka khana nahi — naya bill hamesha AAJ ka
+  const date = todayStr();   // v1.97.0: tareekh ka khana nahi — naya bill hamesha AAJ ka
   const date2 = edit ? edit.date : date;   // edit: bill ki apni purani tareekh
   if (!confirm(`${edit ? 'POS BILL ' + edit.billNo + ' — UPDATE' : 'POS PURCHASE BILL'}\n${p.name}\n${lines.length} items · Rs ${num(total)}${invoiceNo ? '\nSupplier bill # ' + invoiceNo : ''}\n\n${edit ? 'POS mein yahi bill badlein (purani lines hat kar yeh lagengi) aur naye rates lagayein?' : 'POS mein bill banayein aur naye rates lagayein?'}`)) return;
   const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);

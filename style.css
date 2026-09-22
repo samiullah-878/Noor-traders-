@@ -665,3 +665,5 @@ footer button:not(.give):not(.got){background:linear-gradient(180deg,#27437c,#17
 .pc-bill span small{color:#7b879b;font-weight:500}
 .pc-bill>b{flex:none}
 .pc-bill.posted{opacity:.55}
+/* v1.97: stock ✓ Tick */
+.count-tick{background:#ecf8f1!important;color:#147548!important;border:1px solid #c3e8d3!important;font-weight:700;border-radius:999px!important}

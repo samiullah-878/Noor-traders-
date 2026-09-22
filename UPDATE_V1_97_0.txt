@@ -1,0 +1,10 @@
+Blue Khata v1.97.0 — Stock ✓ Tick · godam par sirf usi ke items · Edit ka intezar khud
+INSTALL: 1) Is ZIP ki 11 files GitHub par (v1.96 pehle laga ho), Sync/Update 1.97.0. Firebase rules WAHI (v1.94).
+         2) PC par PURCHASE-TEZ.bat (ek file) — Edit ki tafseel 2 minute ki jagah ~15 second mein.
+STOCK:
+- Har item par "✓ Tick" (Save ke saath): "jitna system mein hai utna hi maal hai" — system stock hi ginti ban kar save,
+  history mein Save jaisi line: "✓ Tick — system jaisa · 48 PCS · System 48 · Farq 0". Minus stock par tick nahi (asal ginti likhein).
+- Ginti ke khane, Save aur ✓ Tick SIRF jab "Nayi ginti" chalu ho; warna "Ginti abhi band hai" likha aata hai (history nazar aati hai).
+- Godam chunein to shuru se hi SIRF usi godam ke items (jin ka stock hai / gine gaye); "Sab" chip se sab.
+EDIT:
+- Edit dabane par tafseel na ho (ya purani ho) to alert nahi — "⏳ PC se tafseel aa rahi hai…" (seconds), aate hi edit KHUD khulta hai.
