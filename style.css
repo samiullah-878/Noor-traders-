@@ -680,3 +680,68 @@ footer button:not(.give):not(.got){background:linear-gradient(180deg,#27437c,#17
 .sw-chips button{flex:1 1 44%;max-width:none;justify-content:center;text-align:center}
 .sw-chips button[disabled]{opacity:.45}
 .sw-chips button.on{background:linear-gradient(180deg,#27437c,#172b52)!important;color:#fff!important;border-color:#172b52!important}
+
+/* ===== v2.2.0 — PDF sheet (har PDF par ek hi shakal) ===== */
+.pdf-sheet{background:#fff;border:1px solid var(--chip-bd);border-radius:18px;padding:14px;margin:0 0 12px;
+  box-shadow:0 2px 10px rgba(15,23,42,.06)}
+.pdf-head{display:flex;gap:12px;align-items:center;margin-bottom:12px}
+.pdf-ic{font-size:26px;line-height:1}
+.pdf-meta{min-width:0;display:flex;flex-direction:column;gap:2px}
+.pdf-meta b{font-size:16px;color:var(--navy)}
+.pdf-meta small{color:#7b879b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pdf-share{width:100%;min-height:52px;font-size:16px;font-weight:700;border-radius:14px;
+  background:linear-gradient(180deg,#27437c,#172b52)!important;color:#fff!important;border:0}
+.pdf-share[disabled]{opacity:.55}
+.pdf-acts{display:flex;gap:8px;margin-top:10px}
+.pdf-acts button{flex:1 1 0;min-height:46px;border-radius:999px!important;background:#fff!important;
+  border:1px solid var(--chip-bd)!important;color:var(--chip-tx)!important;font-weight:600!important}
+.pdf-acts button[disabled]{opacity:.5}
+
+/* ===== v2.2.0 — bill ki tasveer POS Purchase screen par ===== */
+.pp-pics{display:flex;gap:8px;align-items:center;overflow-x:auto;margin:0 0 10px;padding-bottom:2px}
+.pp-pics button{flex:none;min-height:40px;padding:8px 12px;font-size:13px;white-space:nowrap;
+  background:#fff!important;border:1px solid var(--chip-bd)!important;color:var(--chip-tx)!important;
+  border-radius:999px!important;font-weight:600!important}
+.pp-pics button.on{background:linear-gradient(180deg,#27437c,#172b52)!important;color:#fff!important;border-color:#172b52!important}
+.pp-pics .pp-pic{padding:0;width:44px;height:44px;border-radius:12px!important;overflow:hidden}
+.pp-pics .pp-pic img{width:100%;height:100%;object-fit:cover;display:block}
+.pp-billbar{background:#fff;border:1px solid var(--chip-bd);border-radius:16px;padding:8px;margin:0 0 10px;
+  box-shadow:0 2px 10px rgba(15,23,42,.06)}
+.pp-billwrap{max-height:42vh;overflow:auto;border-radius:12px;background:#f2f4f9}
+.pp-billbar img{width:100%;display:block;transform-origin:top left}
+.pp-billbar[data-zoom="1.5"] img{width:150%}
+.pp-billbar[data-zoom="2"] img{width:200%}
+.pp-billbar[data-zoom="2.5"] img{width:250%}
+.pp-billbar[data-zoom="3"] img{width:300%}
+.pp-billacts{display:flex;gap:6px;margin-top:8px;overflow-x:auto}
+.pp-billacts button{flex:none;min-height:40px;padding:8px 14px;border-radius:999px!important;background:#fff!important;
+  border:1px solid var(--chip-bd)!important;color:var(--chip-tx)!important;font-weight:600!important;font-size:13px}
+.pp-view{max-height:72vh;overflow:auto;border-radius:12px;background:#f2f4f9}
+.pp-view img{width:100%;display:block}
+.pp-view[data-zoom="1.5"] img{width:150%}
+.pp-view[data-zoom="2"] img{width:200%}
+.pp-view[data-zoom="2.5"] img{width:250%}
+.pp-view[data-zoom="3"] img{width:300%}
+.pp-view[data-zoom="3.5"] img{width:350%}
+.pp-view[data-zoom="4"] img{width:400%}
+
+/* ===== v2.2.0 — POS Purchase ki nikhri shakal (tarteeb wahi, sirf look) ===== */
+.pp-line{background:#fff;border:1px solid #e5eaf3;border-radius:16px;padding:12px;margin-bottom:12px;
+  box-shadow:0 1px 3px rgba(15,23,42,.05),0 6px 16px rgba(15,23,42,.04)}
+.pp-line .sale-line-top b{font-size:15.5px;color:var(--navy);display:flex;align-items:center;gap:8px}
+.pp-no{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 6px;
+  border-radius:999px;background:#eef2fa;color:var(--navy);font-size:12.5px;font-weight:700}
+.pp-line>small{display:block;color:#6b7c93;font-size:12.5px;line-height:1.5;margin:2px 0 10px}
+.pp-inputs label{font-size:12px;color:#6b7c93}
+.pp-inputs input,.pp-inputs select{min-height:46px;font-size:16px;font-weight:600;border-radius:12px;
+  border:1px solid #dbe2ee;background:#fbfcfe}
+.pp-inputs input:focus{border-color:#27437c;background:#fff;outline:none}
+.pp-amt input{font-weight:700;text-align:right}
+.pp-rates{background:#f7f9fd;border:1px solid #e8edf6;border-radius:14px;padding:10px;margin-top:10px}
+.pp-rates-h{display:block;color:#6b7c93;font-size:12px;margin-bottom:8px}
+.pp-rates input{min-height:44px;border-radius:12px;background:#fff}
+.pc-row{display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:12px;margin-bottom:8px;
+  background:#fff;border:1px solid #e8edf6}
+.pc-row.ok{background:#f4fbf7;border-color:#d6eee1}
+.pc-row.warn{background:#fffaf0;border-color:#f3e4bd}
+.pp-head .sale-total{border-radius:14px}

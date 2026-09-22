@@ -1,0 +1,23 @@
+Blue Khata v2.2.0 — Har PDF par WhatsApp/Share sheet · Bill ki tasveer saath · Purchase ki nayi shakal
+INSTALL: Is ZIP ki files GitHub par, phir app mein "↻ Sync / Update" -> 2.2.0.
+         Firebase rules WAHI (v2.1) — is dafa kuch publish nahi karna.
+
+1) HAR PDF PAR EK HI SHEET (Hazri app jaisi)
+   - Koi bhi PDF kholein (khata report, Daily Sale, Purchase report, receipt, parchi, bill, stock ginti,
+     Settings > Saved PDF): upar "📄 PDF tayyar hai" + file ka naam.
+   - Bara "⤴ WhatsApp / Share" button — phone ka apna share khulta hai (WhatsApp, email, jo chahein).
+   - Neeche "⇩ Download" aur "Kholein" (PDF nayi khirki mein).
+   - PDF background mein pehle hi ban jati hai, is liye button dabate hi kaam hota hai.
+
+2) POS PURCHASE PAR BILL KI TASVEER SAATH
+   - "🤖 Bill ki tasveer se items" ke baad wohi tasveer upar chhoti si nazar aayegi.
+   - "📄 Bill dekhein" — poori screen par, + / − se zoom, kai photo hon to agli tasveer.
+   - "📌 Upar chipka do" — tasveer aadhi screen par chipak jati hai aur neeche items chalte rehte hain,
+     taake bill dekh dekh kar har line theek ki ja sake.
+   - Tasveer sirf usi waqt tak rehti hai (app halka rakhne ke liye) — refresh par chali jati hai,
+     "✕ Naya bill" par bhi hat jati hai.
+
+3) PURCHASE SCREEN KI NAYI SHAKAL
+   - Har line ab saaf safed card, item ka number gol badge mein, ginti/rate ke khane bare (ungli ke liye asaan),
+     "Naye rates" ka hissa halke pas-manzar mein, AI wali list ke sahi/galat rang narm.
+   - TARTEEB WAHI HAI — sirf shakal badli hai (pichhli dafa tarteeb badalna aap ko pasand nahi aaya tha).

@@ -921,3 +921,39 @@ ZIP: 14 files (ab cloud.js bhi).
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js ai-tally.js cloud.js sw.js index.html ('2.1.0') + version.json (rules 2.1, rulesChanged true).
 AGLA: malik ka jumla adhoora tha — "...wholesale ka bhi parchoon ka or maza ki baat ....." — agli chat mein poochein
 ke aage kya kehna chahte the.
+
+=== v2.2.0 — HAR PDF PAR EK HI SHEET · BILL KI TASVEER SCREEN PAR · PURCHASE KI NIKHRI SHAKAL (rules wahi v2.1) ===
+MALIK KI FARMAISH (Hazri app ka "PDF tayyar hai" wala screenshot bhej kar): (1) "har PDF kholne par is tarah ka
+option" — yani Hazri app jaisi sheet Blue Khata mein bhi; (2) POS Purchase par jo bill ki tasveer AI ko di, wo
+saath nazar aaye ("pura bill dekhain"); (3) purchase screen ko premium / user-friendly look.
+MALIK KA FAISLA: tasveer SIRF usi waqt tak (halki) — kahin save nahi hoti.
+
+(1) PDF SHEET (app.js)
+- Naya pdfSheetHTML(filename) + wirePdfSheet({filename,prepare,valid}): 📄 sar-naame ke sath status (id
+  reportDownloadStatus — purana id jaan boojh kar wahi rakha), bara "⤴ WhatsApp / Share" (#sharePdf), phir
+  "⇩ Download" (#downloadReport, purana id) aur "Kholein" (#openPdf -> createObjectURL + window.open).
+- prepare() ek hi dafa chalta hai (file cache); sheet khulte hi background mein PDF banna shuru — tap par foran.
+  Share na ho to khud download + saaf paigham. Share ab HAR PDF par (pehle sirf receipt par tha).
+- openReportPreview() ab yahi sheet + neeche preview dikhata hai (purana report-toolbar hata diya). valid() wahi
+  (button.isConnected + wahi uid + options.valid).
+- Settings > "Saved PDF reports" bhi ab isi sheet se khulti hai (pehle seedha download hota tha).
+
+(2) BILL KI TASVEER (purchase.js)
+- billPics = object URLs (URL.createObjectURL) — SIRF memory mein; setBillPics() purane URL revoke karta hai.
+  aiItems() ki files se bharte hain; "✕ Naya bill" par saaf. Refresh par chali jati hai (malik ka faisla).
+- Head mein billStripHTML(): chhoti thumbnails + "📄 Bill dekhein" + "📌 Upar chipka do".
+- Pin par #list ke sab se upar .pp-billbar — tasveer 42vh tak, zoom −/+ (CSS width 150-300%), ek se zyada ho to
+  "1/3 ›", "⤢ Poori screen", "✕".
+- billView(): poori screen wala dialog (.pp-view, zoom 4x tak, agli tasveer).
+- Naye data-*: pp-pic, pp-pin, pp-zoom, pp-nextpic, pp-vzoom, pp-vnext — click handler mein pp-photo/pp-ai se pehle.
+
+(3) SHAKAL (style.css) — TARTEEB BILKUL NAHI CHHERI (v1.93.0 ka sabaq)
+- .pdf-sheet / .pdf-share / .pdf-acts; .pp-pics / .pp-billbar / .pp-view / .pp-billacts.
+- .pp-line ab safed card (border + do saaye), .pp-no gol badge, khane 46px + 16px font (ungli ke liye),
+  .pp-rates halka pas-manzar, .pp-amt ka input dayein taraf mota, .pc-row ok/warn ke halke rang.
+
+TEST (node + jsdom): 32 purchase (tasveer ki patti, chipkana, zoom, poori screen ka viewer + purane sab),
+8 naye PDF sheet ke (teen button, naam, pehle band, PDF banne par chalu, status, share ko file, download, kholein),
+6 memory, 9 ai-tally, 15 + 14 purane. Sab pass.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html ('2.2.0') + version.json
+(rules 2.1, rulesChanged FALSE — is update mein rules nahi badlin).
