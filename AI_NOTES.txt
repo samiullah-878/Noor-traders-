@@ -1203,20 +1203,26 @@ Rules NAHI badlin (v2.3 hi). Files: pos-stock.js, app.js, purchase.js, style.css
 Tests: /tmp/ts/t2.mjs ab 17. Kul 208 paas.
 PC: item-post.js chal rahi hai (user ne chala li); Startup shortcut bhi lag gaya.
 
-==================== v2.6.0 (2026-09-24) — 📥 AAYA HUA MAAL ====================
+==================== v2.6.0 (2026-09-24) — 📥 AAYA / GAYA MAAL ====================
 Rules NAHI badlin (v2.3). Files: pos-stock.js, app.js, cloud.js, style.css + version bump.
-Stock screen par naya button "📥 Aaya hua maal" (scan/transfer ke saath, sab logins).
-- Data: trList (listenTransfers — ab stockSetup mein shuru se, pehle sirf transfer khirki par chalta tha)
-  + cloud.appPurchasesRecent(since) [NAYA: appPurchases where at > since]. Sirf khule godam (pick) mein aaya maal.
-- Har row: kahan se (⇄ branch / 🧾 supplier + tareekh), kitna aaya (CTN+PCS), yahan ka stock, nikla (aaya − yahan),
-  aur DOOSRE godam ka stock (jahan se aaya). conf: 🔴 stock 0 (POS mein nahi chadha) · 🟡 90% se zyada nikal gaya · 🟢.
-  Tarteeb: 🔴 pehle, phir raqam (qty × prate) ke hisaab se.
-- Chips: Aaj / 3 din / 7 din · Sab / ⇄ Transfer / 🧾 Bill · 🔴 N (filter: conf !== 'g').
-- Item par click -> khirki band, search mein wohi naam, ginti ka khana focus.
-- "📋 Poori list ginti mein kholein" -> inPick (Set) — stock list sirf unhi items ki; upar .in-strip + "✕ saaf karein".
-- "⇩ PDF": pos-stock inReport() data deta hai, app.js inMaalPdf() printArea bhar kar openReportPreview() —
-  wahi purani PDF sheet (WhatsApp / Download / Kholein). setInPdf(fn) se juda.
-Tests: /tmp/ts/t3.mjs (14). Kul 222 paas.
+Stock screen par "📥 Aaya / gaya maal" (sab logins). Har dafa kholne/chip badalne par TAZA data (inCollect),
+upar "⟳ HH:MM par liya gaya".
+- Data: trList (listenTransfers ab stockSetup mein shuru se) + cloud.appPurchasesRecent(since) [NAYA:
+  appPurchases where at > since]. HAR transfer dikhta hai (godam se godam bhi), sirf "yahan aaya" nahi.
+- HISSE (groups): "tr:<from>><to>" aur "bill:<party>><godam>". Tarteeb: transfer pehle (from, phir to ke number
+  se — Godam 1 → Noor sab se upar), phir bill (party ke naam se). Har hisse ka sar-nama: ⇄ gehra neela, 🧾 gehra sunehra.
+- Har item ka card: naam + tareekh, phir grid — CTN | PCS alag khane (cp(): pack se carton nikaalta hai,
+  20 carton = PCS 0). Qatarein: "Gaya / Bill se", phir JAHAN SE (pehle ~ / ab), phir JAHAN GAYA (pehle ~ / ab).
+  "pehle" ANDAZA hai (ab ± jo gaya) — is liye `~` ka nishan. User ne kaha: transfer note nikalte hi maal bhi
+  nikal jata hai, is liye POS ka stock pehle se sahi — koi jama-tafreeq nahi karni.
+  conf: 🔴 pahunchne wale godam mein stock 0 · 🟡 90% se zyada nikal gaya · 🟢.
+- Chips: Aaj/3/7 din · Sab/⇄/🧾 · 📍 Sirf yahan (inHere) · 🔴 N (inFilter).
+- Item click -> search + ginti; "📋 Poori list ginti mein kholein" -> inPick.
+- PDF: inReport() se data, app.js inMaalPdf() — har hisse ka apna rangeen sar-nama + table (Item | khana | CTN | PCS),
+  har item ki 2-3 qatarein (gaya / jahan se pehle→ab / jahan gaya pehle→ab), laal-peeli-hari patti.
+  openReportPreview ab POORI SCREEN par (modal ka teesra argument), share sheet pehle jaisi.
+- CSS: .iv-chips/.iv-gh/.iv-card/.iv-grid/.iv-line + report ke rang (print-color-adjust: exact).
+Tests: /tmp/ts/t3.mjs (18). Kul 226 paas.
 AGLA KAAM (tay ho chuka, banana baqi): ⚖️ TOLAI —
   · label-print.js: har label par number, ROZ 1 se, har item ka apna, code "3N-47" (tareekh+mahina harf+number),
     barcode ke neeche khali kone mein; label ka naqsha/size (32x25, 3 cols) NAHI badalna.
@@ -1226,3 +1232,31 @@ AGLA KAAM (tay ho chuka, banana baqi): ⚖️ TOLAI —
   · Setting (malik): duty 9:30-6:00 + rest, har size ka waqt (1kg=1min, 500gm=2min...), kisi item ka apna waqt;
     badlein to sirf aane wale din badlein. Report: kaam hua vs hona chahiye tha, % aur 🟢🟡🔴.
   · Godam mein printer: TSC USB001 par hai (network port nahi) -> lamba USB cable (5m tak aam, zyada ho to active).
+
+==================== v2.7.0 (2026-09-24) — ⚖️ TOLAI (label ke number se ginti) ====================
+⚠️ RULES BADLI HAIN (v2.4) — malik ko firestore.rules PUBLISH karni hai.
+PC (label-print.js v3 — alag file, C:\khata-sync mein lagani hai; purani label-print.v2old.js):
+  - Har label par NUMBER: "3I-47" = tareekh ka aakhri hindsa + mahina ka harf (A=Jan..L=Dec) + us item ka aaj ka number.
+  - ROZ 1 se shuru, HAR ITEM ka apna (label-numbers.json: {day, items:{itemId:lastN}}).
+  - nextNums(itemId, copies) — DIR/log ke BAAD rakha (purchase-post v4 wali ghalti se bacha).
+  - labelCmds(S,j,x0,tag): TEXT font "1", x = x0+W-m-(tag.length*8), y = y0+H-m-16 → neeche DAYEN kona.
+    Label ka size/naqsha/barcode/naam/rate BILKUL NAHI badla. --test par bhi number aata hai.
+  - Job done par Firestore mein numFrom/numTo/numCode/day likhta hai.
+  - LAGANA: copy /y label-print.js label-print.v2old.js && naya copy && node label-print.js --test
+App (naya tolai.js + ai-tally.js + cloud.js + pos-stock.js + app.js + rules):
+  - ai-tally: LABEL_PROMPT + readLabel({key,model,images}) -> {name,code,tag,n,rate}; n=0 = nahi parha (andaza mana hai).
+  - app.js: aiReadLabel({file}) — shrinkForAI(1200,0.8), wahi Gemini key.
+  - tolai.js: openTolai/tolaiClick/tolaiSum/tolaiReport/setTolaiPdf. Stock screen par "⚖️ Tolai" (sab logins).
+    📷 bara button -> camera (capture=environment) -> AI -> confirm box (item + number, dono badle ja sakte hain)
+    -> saveTolai. GINTI = aaj ka naya number − jo pehle darj hua (number roz 1 se shuru hota hai, is liye
+    aakhri number hi us din ki ginti hai). Wohi number dobara aaye to "pehle darj ho chuka".
+    AI na parhe -> haath se likhne ka khana. "↩ Aakhri wapas" (apni, aaj ki).
+    Calendar: mahine ke din rangeen (🟢80%+ 🟡50-80% 🔴<50%), din par tap = us din ka hisaab, mahine ka jama, PDF.
+    Setting (malik): duty se/tak + rest + chhutti ka din, har size ka waqt (1kg=1min, 500gm=2min...), "➕ Aur size";
+    kisi item ka apna waqt cfg.items[itemId]. Setting badle to sirf aane wale din (purani report nahi badalti).
+  - cloud.js: listenTolaiConfig/setTolaiConfig (blueAccess/tolaiConfig), listenTolaiDay(day), saveTolai, delTolai,
+    tolaiMonth(y,m) [tolai where day >= ... < ...].
+  - rules v2.4: /tolai/{id} — read sab logins, create sab (apni, aaj ki, packets 1-5000), delete apni aaj ki (malik sab);
+    blueAccess get list mein 'tolaiConfig'.
+Tests: /tmp/tl/t.mjs (17). Kul 243 paas.
+BAQI: subah test label ki tasveer dekh kar number ki jagah/size theek karna (abhi andaze par: font 1, dayen kona).

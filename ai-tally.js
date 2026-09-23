@@ -200,6 +200,30 @@ export async function readPurchaseBill({ key, model, images, onStatus, known = n
   return parseBill(textOf(await generate({ key, model, parts, onStatus, fast })));
 }
 
+// ---------- v2.7: TOLAI — label ki tasveer se number parhna ----------
+export const LABEL_PROMPT = [
+  'Yeh ek dukan ke packet par laga BARCODE LABEL ki tasveer hai. Us par item ka naam, barcode, rate (Rs ...) aur neeche DAYEN kone mein ek NUMBER hota hai.',
+  'Number ki shakal aisi hai: pehle ek hindsa, phir ek angrezi harf, phir dash, phir ginti — misal "3I-47" (yani 23 tareekh, September, us item ka 47wan label).',
+  'Tasveer mein ek se zyada label hon to jis par number sab se BARA ho wohi lena.',
+  'Sirf yeh JSON do, aur kuch nahi: {"name":"item ka naam jaisa likha hai","code":"barcode ka number agar parha jaye warna khali","tag":"3I-47","n":47,"rate":0}',
+  'Number saaf na parha jaye to n 0 aur tag "" kar do — andaza MAT lagao.'
+].join('\n');
+export async function readLabel({ key, model, images, onStatus }) {
+  if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
+  if (!model) throw Error('Model ka naam khali hai — Settings > AI key > Test dabayein.');
+  if (!images?.length) throw Error('Label ki tasveer chunein');
+  const parts = images.map(im => ({ inline_data: { mime_type: im.mime, data: im.data } }));
+  parts.push({ text: LABEL_PROMPT });
+  let raw = textOf(await generate({ key, model, parts, onStatus, fast: true }));
+  raw = String(raw || '').replace(/```json|```/g, '').trim();
+  const a = raw.indexOf('{'), b = raw.lastIndexOf('}');
+  if (a >= 0 && b > a) raw = raw.slice(a, b + 1);
+  let d; try { d = JSON.parse(raw); } catch { throw Error('Label parha nahi gaya — saaf tasveer lein.'); }
+  const n = Math.max(0, Math.floor(Number(d?.n) || 0));
+  return { name: String(d?.name || '').slice(0, 120), code: String(d?.code || '').slice(0, 50),
+    tag: String(d?.tag || '').slice(0, 20), n, rate: Math.max(0, Number(d?.rate) || 0) };
+}
+
 export function parseItems(text) {
   let raw = String(text || '').replace(/```json|```/g, '').trim();
   const a = raw.indexOf('{'), b = raw.lastIndexOf('}');

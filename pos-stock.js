@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch } from './smart-search.js?v=2.6.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch } from './smart-search.js?v=2.7.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -28,8 +28,9 @@ const countLocked = () => countOff && !isOwner();
 let aliasStop = null;
 let itemCfg = {}, cfgStop = null;                         // v2.5: stockConfig (mulazim item/rates badal sake)
 const canEditItem = () => isOwner() || itemCfg.itemEdit === true;
-let inPdfOf = null;
+let inPdfOf = null, tolaiOf = null, tolaiClickOf = null;
 export function setInPdf(fn) { inPdfOf = fn; }
+export function setTolai(open, click) { tolaiOf = open; tolaiClickOf = click; }   // v2.7
 export function stockSetup(opts) {
   if (!aliasStop && opts?.cloud?.listenAliases) aliasStop = opts.cloud.listenAliases(m => setAliases(m));   // v1.75: doosre naam
   if (!cfgStop && opts?.cloud?.listenStockConfig) cfgStop = opts.cloud.listenStockConfig(c => { itemCfg = c || {}; if (stockActive) soft(); });
@@ -456,7 +457,8 @@ function summaryHTML(branches, pick, items, meta, names) {
            <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>`
         : `<div class="sh-scanrow"><button class="sh-wide sh-scan" data-stock-scan="1">📷 Barcode scan karein (ek ya kai items)</button><button type="button" class="sh-mic" data-stock-mic="1" title="Awaz se dhoondein">🎤</button></div>
            ${canEditItem() ? '<button class="sh-wide" data-stock-newitem="1">➕ Naya item</button>' : ''}
-           <button class="sh-wide" data-stock-in="1">📥 Aaya hua maal</button>
+           <button class="sh-wide" data-stock-in="1">📥 Aaya / gaya maal</button>
+           <button class="sh-wide sh-tolai" data-stock-tolai="1">⚖️ Tolai</button>
            <button class="sh-wide" data-stock-transfer="1">⇄ Transfer note (godam se godam)</button>
            ${($('search')?.value || '').trim() ? '<button class="sh-wide" data-stock-clear="1">✕ Search saaf karein</button>' : ''}`}
     </div>
@@ -744,100 +746,122 @@ function trBranches() { const { branches, names } = collect(); return branches.m
 function trStockOf(b, id) { return Number(saleStockItem(b, id)?.stock || 0); }
 function saleStockItem(b, id) { const chunks = rows.filter(r => !r.meta && Array.isArray(r.items) && r.branch === Number(b)); for (const c of chunks) { const it = c.items.find(x => String(x.id) === String(id)); if (it) return it; } return null; }
 // ---------- v2.6: 📥 AAYA HUA MAAL — transfer + purchase bill se aaye items, dono taraf ka stock ----------
-let inDays = 1, inKind = 'all', inRows = null, inBusy = false, inFilter = false, inPick = null;
+let inDays = 1, inKind = 'all', inRows = null, inFilter = false, inPick = null, inHere = false;
 const dayAgo = n => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (n - 1)); return d.getTime(); };
 const dmy = t => { const d = new Date(t); return String(d.getDate()).padStart(2, '0') + '-' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]; };
 async function inCollect() {
-  const since = dayAgo(inDays), map = new Map(), { pick, items, names } = collect();
-  const put = (id, name, qty, src) => {
-    if (!(qty > 0)) return;
-    const k = String(id); let e = map.get(k);
-    if (!e) { e = { id: k, name, qty: 0, from: new Set(), srcs: [] }; map.set(k, e); }
-    e.qty += qty; e.name = e.name || name; e.srcs.push(src); if (src.from != null) e.from.add(Number(src.from));
+  const since = dayAgo(inDays), { pick, items, names } = collect();
+  const G = new Map();                       // hisse: "tr:9>1" / "bill:Bhaiya"
+  const add = (key, head, l, at) => {
+    const qty = Number(l.qty) || 0; if (!(qty > 0)) return;
+    let g = G.get(key); if (!g) { g = { key, ...head, items: new Map(), at: 0 }; G.set(key, g); }
+    g.at = Math.max(g.at, at || 0);
+    const id = String(l.itemId ?? l.id); let e = g.items.get(id);
+    if (!e) { e = { id, name: l.name || '', qty: 0, at: 0 }; g.items.set(id, e); }
+    e.qty = r2(e.qty + qty); e.at = Math.max(e.at, at || 0); e.name = e.name || l.name;
   };
-  if (inKind !== 'bill') for (const j of trList) {          // ⇄ transfer note (14 din tak aate hain)
+  if (inKind !== 'bill') for (const j of trList) {           // ⇄ har transfer (kahin se kahin bhi)
     if (Number(j.at) < since || j.op === 'delete' || j.status === 'failed') continue;
-    if (Number(j.to) !== Number(pick)) continue;            // jo godam khula hai, usi mein aaya maal
-    for (const l of (j.lines || [])) put(l.itemId, l.name, Number(l.qty) || 0,
-      { kind: 'tr', from: j.from, at: j.at, no: j.transferNo || '', ok: j.status === 'done' });
+    if (inHere && Number(j.to) !== Number(pick)) continue;   // chip: sirf yahan aaya
+    for (const l of (j.lines || [])) add(`tr:${j.from}>${j.to}`, { kind: 'tr', from: Number(j.from), to: Number(j.to) }, l, j.at);
   }
-  if (inKind !== 'tr' && cloud?.appPurchasesRecent) {        // 🧾 purchase bill (app se)
+  if (inKind !== 'tr' && cloud?.appPurchasesRecent) {        // 🧾 purchase bill
     try {
-      const list = await cloud.appPurchasesRecent(since);
-      for (const b of list) {
+      for (const b of await cloud.appPurchasesRecent(since)) {
         if (b.status === 'cancelled' || b.status === 'replaced') continue;
+        const at = b.at || Date.parse(b.date) || 0, party = b.partyName || 'Bill';
         for (const l of (b.lines || [])) {
-          if (Number(l.godam ?? b.godam) !== Number(pick)) continue;
-          put(l.id, l.name, Number(l.qty) || 0, { kind: 'bill', party: b.partyName || '', at: b.at || Date.parse(b.date) || 0, ok: b.status === 'done', no: b.purchaseNo || '' });
+          const to = Number(l.godam ?? b.godam) || 0;
+          if (inHere && to !== Number(pick)) continue;
+          add(`bill:${party}>${to}`, { kind: 'bill', party, to }, l, at);
         }
       }
     } catch {}
   }
-  const other = [...new Set([...map.values()].flatMap(e => [...e.from]))].filter(b => b && b !== pick);
-  const rows = [...map.values()].map(e => {
-    const it = items.find(x => String(x.id) === e.id) || {};
-    const here = Number(saleStockItem(pick, e.id)?.stock || 0);
-    const bika = Math.max(0, r2(e.qty - here));
-    const bad = here <= 0.001 && e.qty > 0;                                     // stock mein nazar hi nahi aaya
-    const tez = !bad && e.qty > 0 && here / e.qty < 0.1;                        // 90% se zyada nikal gaya
-    return { ...e, it, here, bika, conf: bad ? 'r' : tez ? 'y' : 'g',
-      away: other.map(b => ({ b, n: Number(saleStockItem(b, e.id)?.stock || 0) })),
-      uName: it.uName || 'Pcs', cName: it.cName || 'Ctn', pack: Number(it.pack) || 0, rate: Number(it.prate) || 0 };
-  }).sort((a, b) => (a.conf === b.conf ? b.qty * b.rate - a.qty * a.rate : a.conf === 'r' ? -1 : b.conf === 'r' ? 1 : a.conf === 'y' ? -1 : 1));
-  inRows = { rows, pick, names, other };
+  const stockOf = (b, id) => Number(saleStockItem(b, id)?.stock || 0);
+  const groups = [...G.values()].map(g => {
+    const rows = [...g.items.values()].map(e => {
+      const it = items.find(x => String(x.id) === e.id) || {};
+      const pack = Number(it.pack) || 0, rate = Number(it.prate) || 0;
+      const to = { b: g.to, ab: stockOf(g.to, e.id) };
+      to.pehle = r2(to.ab - e.qty);                                    // andaza: ab − jo aaya
+      const from = g.kind === 'tr' ? { b: g.from, ab: stockOf(g.from, e.id) } : null;
+      if (from) from.pehle = r2(from.ab + e.qty);                      // andaza: ab + jo gaya
+      const bad = to.ab <= 0.001 && e.qty > 0;
+      const tez = !bad && e.qty > 0 && to.ab / e.qty < 0.1;
+      return { ...e, pack, rate, uName: it.uName || 'Pcs', cName: it.cName || 'Ctn',
+        to, from, conf: bad ? 'r' : tez ? 'y' : 'g' };
+    }).sort((x, y) => (x.conf === y.conf ? y.qty * y.rate - x.qty * x.rate : x.conf === 'r' ? -1 : y.conf === 'r' ? 1 : x.conf === 'y' ? -1 : 1));
+    return { ...g, rows,
+      title: g.kind === 'tr' ? `${branchName(g.from, names)} → ${branchName(g.to, names)}` : `${g.party} → ${branchName(g.to, names)}`,
+      red: rows.filter(r => r.conf === 'r').length };
+  }).sort((a, b) => {                                                   // tarteeb: transfer pehle (godam ke number se), phir bill
+    if (a.kind !== b.kind) return a.kind === 'tr' ? -1 : 1;
+    if (a.kind === 'tr') return (a.from - b.from) || (a.to - b.to);
+    return String(a.party).localeCompare(String(b.party));
+  });
+  inRows = { groups, pick, names, at: Date.now() };
   return inRows;
 }
-function inQtyText(r) {
-  if (r.pack > 1) { const c = Math.floor(r.qty / r.pack), p = r2(r.qty - c * r.pack);
-    return (c ? num(c) + ' ' + esc(r.cName) : '') + (c && p ? ' + ' : '') + (p ? num(p) + ' ' + esc(r.uName) : '') + ` (${num(r.qty)} ${esc(r.uName)})`; }
-  return num(r.qty) + ' ' + esc(r.uName);
-}
-function inSrcText(r, names) {
-  const t = r.srcs.filter(x => x.kind === 'tr'), b = r.srcs.filter(x => x.kind === 'bill');
-  const out = [];
-  if (t.length) out.push('⇄ ' + [...new Set(t.map(x => branchName(x.from, names)))].join(', ') + ' · ' + dmy(t[t.length - 1].at));
-  if (b.length) out.push('🧾 ' + [...new Set(b.map(x => x.party).filter(Boolean))].join(', ') + ' · ' + dmy(b[b.length - 1].at));
-  return out.join('<br>');
+// CTN / PCS alag — 20 carton hon to PCS 0
+const cp = (qty, pack) => {
+  const q = Number(qty) || 0, pk = Number(pack) || 0;
+  if (pk > 1) { const c = Math.floor(Math.abs(q) / pk) * (q < 0 ? -1 : 1), p = r2(q - c * pk); return { c, p }; }
+  return { c: 0, p: r2(q) };
+};
+const cpCell = (qty, pack, tilde) => { const { c, p } = cp(qty, pack); const t = tilde ? '~' : '';
+  return `<span>${c ? t + num(c) : '0'}</span><span>${p ? t + num(p) : '0'}</span>`; };
+function inRowHTML(r, names) {
+  const line = (lab, qty, tilde, cls) => `<div class="iv-line ${cls || ''}"><small>${lab}</small>${cpCell(qty, r.pack, tilde)}</div>`;
+  return `<button type="button" class="iv-card ${r.conf}" data-in-item="${esc(r.id)}">
+    <div class="iv-top"><b>${esc(r.name)}</b><small>${dmy(r.at)}</small></div>
+    <div class="iv-grid">
+      <div class="iv-head"><small></small><span>${esc(r.cName).toUpperCase()}</span><span>${esc(r.uName).toUpperCase()}</span></div>
+      ${line(r.from ? 'Gaya' : 'Bill se', r.qty, false, 'go')}
+      ${r.from ? `<div class="iv-sub">${esc(branchName(r.from.b, names))}</div>
+        ${line('pehle', r.from.pehle, true)}${line('ab', r.from.ab, false, 'now')}` : ''}
+      <div class="iv-sub">${esc(branchName(r.to.b, names))}</div>
+      ${line('pehle', r.to.pehle, true)}${line('ab', r.to.ab, false, 'now')}
+    </div>
+    ${r.conf === 'r' ? '<div class="iv-warn">⚠ Stock mein nahi — POS mein chadha?</div>'
+      : r.conf === 'y' ? '<div class="iv-warn amber">Qareeb qareeb khatam</div>' : ''}</button>`;
 }
 async function openIn(refresh = true) {
   const d = $('dialog'); if (!d) return;
-  d.classList.remove('search-dialog');
-  $('dialogTitle').textContent = '📥 Aaya hua maal';
-  if (refresh || !inRows) { $('dialogBody').innerHTML = '<p class="stat-note">Dekh raha hoon…</p>'; if (!d.open) d.showModal(); await inCollect(); }
-  const { rows, pick, names, other } = inRows;
-  const show = inFilter ? rows.filter(r => r.conf !== 'g') : rows;
-  const kulQ = rows.reduce((n, r) => n + r.qty, 0), kulB = rows.reduce((n, r) => n + r.bika, 0);
-  const red = rows.filter(r => r.conf === 'r').length;
-  const chip = (k, v, lab) => `<button type="button" class="${k === 'd' ? (inDays === v ? 'on' : '') : (inKind === v ? 'on' : '')}" data-in-${k}="${v}">${lab}</button>`;
-  $('dialogBody').innerHTML = `<div class="in-bar">
-      ${chip('d', 1, 'Aaj')}${chip('d', 3, '3 din')}${chip('d', 7, '7 din')}
-    </div><div class="in-bar">
-      ${chip('k', 'all', 'Sab')}${chip('k', 'tr', '⇄ Transfer')}${chip('k', 'bill', '🧾 Bill')}
-      ${red ? `<button type="button" class="${inFilter ? 'on' : ''}" data-in-red="1">🔴 ${red}</button>` : ''}
+  d.classList.remove('search-dialog'); d.classList.add('full-dialog');
+  $('dialogTitle').textContent = '📥 Aaya / gaya maal';
+  if (refresh || !inRows) { $('dialogBody').innerHTML = '<p class="stat-note">Taza data le raha hoon…</p>'; if (!d.open) d.showModal(); await inCollect(); }
+  const { groups, pick, names, at } = inRows;
+  const show = groups.map(g => ({ ...g, rows: inFilter ? g.rows.filter(r => r.conf !== 'g') : g.rows })).filter(g => g.rows.length);
+  const nItems = groups.reduce((n, g) => n + g.rows.length, 0), red = groups.reduce((n, g) => n + g.red, 0);
+  const C = (on, k, v, lab) => `<button type="button" class="${on ? 'on' : ''}" data-in-${k}="${v}">${lab}</button>`;
+  $('dialogBody').innerHTML = `<div class="iv-chips">
+      ${C(inDays === 1, 'd', 1, 'Aaj')}${C(inDays === 3, 'd', 3, '3 din')}${C(inDays === 7, 'd', 7, '7 din')}
+    </div><div class="iv-chips">
+      ${C(inKind === 'all', 'k', 'all', 'Sab')}${C(inKind === 'tr', 'k', 'tr', '⇄ Transfer')}${C(inKind === 'bill', 'k', 'bill', '🧾 Bill')}
+      ${C(inHere, 'here', '1', '📍 Sirf yahan')}${red ? C(inFilter, 'red', '1', `🔴 ${red}`) : ''}
     </div>
-    <p class="stat-note">${esc(branchName(pick, names))} · ${num(rows.length)} items · aaya ${num(kulQ)} · nikla ${num(kulB)}</p>
-    <div class="in-list">${show.map(r => `<button type="button" class="in-row ${r.conf}" data-in-item="${esc(r.id)}">
-      <div class="in-name"><b>${esc(r.name)}</b><small>${inSrcText(r, names)}</small></div>
-      <div class="in-num"><span>Aaya ${inQtyText(r)}</span>
-        <small>${esc(branchName(pick, names))}: <b>${num(r.here)}</b>${r.bika > 0 ? ` · nikla ${num(r.bika)}` : ''}</small>
-        ${r.away.map(a => `<small class="in-away">${esc(branchName(a.b, names))}: ${num(a.n)}</small>`).join('')}
-        ${r.conf === 'r' ? '<small class="red">Stock mein nahi — POS mein chadha?</small>' : r.conf === 'y' ? '<small class="amber">Qareeb qareeb khatam</small>' : ''}</div>
-    </button>`).join('') || '<p class="muted">Is arse mein kuch nahi aaya.</p>'}</div>
-    <div class="account-tools in-acts">
-      ${show.length ? `<button type="button" class="sh-wide" data-in-count="1">📋 Poori list ginti mein kholein (${show.length})</button>` : ''}
-      <button type="button" data-in-pdf="1">⇩ PDF</button><button type="button" data-in-close="1">✕ Band</button></div>`;
+    <p class="iv-note">${esc(branchName(pick, names))} · ${num(nItems)} items · ⟳ ${new Date(at).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })} par liya gaya</p>
+    ${show.map(g => `<div class="iv-group">
+      <div class="iv-gh ${g.kind}"><span>${g.kind === 'tr' ? '⇄' : '🧾'}</span><b>${esc(g.title)}</b><small>${g.rows.length}</small></div>
+      ${g.rows.map(r => inRowHTML(r, names)).join('')}
+    </div>`).join('') || '<p class="muted">Is arse mein kuch nahi aaya / gaya.</p>'}
+    <div class="account-tools iv-acts">
+      ${nItems ? `<button type="button" class="sh-wide" data-in-count="1">📋 Poori list ginti mein kholein (${nItems})</button>` : ''}
+      <button type="button" class="primary" data-in-pdf="1">⇩ PDF</button><button type="button" data-in-close="1">✕ Band</button></div>`;
   if (!d.open) d.showModal();
 }
 // app.js PDF banata hai — yahan se sirf data
 export function inReport() {
-  const { rows, pick, names } = inRows || {}; if (!rows || !rows.length) return null;
+  const { groups, pick, names, at } = inRows || {}; if (!groups || !groups.length) return null;
+  const cell = (q, pk) => { const x = cp(q, pk); return { c: x.c ? num(x.c) : '0', p: x.p ? num(x.p) : '0' }; };
   return { branch: branchName(pick, names), din: inDays === 1 ? 'Aaj' : inDays + ' din',
-    kulQ: r2(rows.reduce((n, r) => n + r.qty, 0)), kulB: r2(rows.reduce((n, r) => n + r.bika, 0)),
-    red: rows.filter(r => r.conf === 'r').length,
-    rows: rows.map(r => ({ name: r.name, conf: r.conf,
-      src: inSrcText(r, names).replace(/<br>/g, ' · ').replace(/<[^>]+>/g, ''),
-      aaya: inQtyText(r).replace(/<[^>]+>/g, ''), here: num(r.here),
-      away: r.away.map(a => branchName(a.b, names) + ' ' + num(a.n)).join(', ') || '—', bika: num(r.bika) })) };
+    at: new Date(at).toLocaleString('en-PK'),
+    groups: groups.map(g => ({ title: g.title, kind: g.kind, red: g.red,
+      rows: g.rows.map(r => ({ name: r.name, conf: r.conf, date: dmy(r.at), cName: r.cName, uName: r.uName,
+        gaya: cell(r.qty, r.pack),
+        from: r.from ? { name: branchName(r.from.b, names), pehle: cell(r.from.pehle, r.pack), ab: cell(r.from.ab, r.pack) } : null,
+        to: { name: branchName(r.to.b, names), pehle: cell(r.to.pehle, r.pack), ab: cell(r.to.ab, r.pack) } })) })) };
 }
 function openTransfer() {
   const d = $('dialog'); if (!d) return;
@@ -1040,7 +1064,9 @@ document.addEventListener('click', e => {
   if (e.target.closest?.('[data-stock-bills]')) { openBills(); return; }
   if (e.target.closest?.('[data-stock-ginti]')) { openGinti(); return; }
   if (e.target.closest?.('[data-stock-transfer]')) { openTransfer(); return; }
-  if (e.target.closest?.('[data-stock-in]')) { openIn(true); return; }          // v2.6
+  if (e.target.closest?.('[data-stock-in]')) { openIn(true); return; }
+  if (e.target.closest?.('[data-stock-tolai]')) { tolaiOf?.(); return; }        // v2.7
+  if (tolaiClickOf && tolaiClickOf(e)) return;          // v2.6
   const inb = e.target.closest?.('[data-in-d],[data-in-k],[data-in-red],[data-in-item],[data-in-count],[data-in-pdf],[data-in-close]');
   if (inb) { const d = inb.dataset;                                   // v2.6: aaya hua maal
     if (d.inD != null) { inDays = Number(d.inD); openIn(true); }
@@ -1048,8 +1074,8 @@ document.addEventListener('click', e => {
     else if (d.inRed != null) { inFilter = !inFilter; openIn(false); }
     else if (d.inClose != null) $('dialog')?.close();
     else if (d.inPdf != null) inPdfOf?.();
-    else if (d.inCount != null) { const ids = (inRows?.rows || []).filter(r => !inFilter || r.conf !== 'g').map(r => r.id); inPick = new Set(ids); $('dialog')?.close(); const q = $('search'); if (q) q.value = ''; rerender(); }
-    else if (d.inItem != null) { const r = (inRows?.rows || []).find(x => x.id === d.inItem); $('dialog')?.close(); const q = $('search'); if (q && r) { q.value = r.name; q.dispatchEvent(new Event('input', { bubbles: true })); } rerender(); setTimeout(() => document.querySelector(`[data-stock-row="${d.inItem}"] input`)?.focus(), 200); }
+    else if (d.inCount != null) { const ids = (inRows?.groups || []).flatMap(g => g.rows).filter(r => !inFilter || r.conf !== 'g').map(r => r.id); inPick = new Set(ids); $('dialog')?.close(); const q = $('search'); if (q) q.value = ''; rerender(); }
+    else if (d.inItem != null) { const r = (inRows?.groups || []).flatMap(g => g.rows).find(x => x.id === d.inItem); $('dialog')?.close(); const q = $('search'); if (q && r) { q.value = r.name; q.dispatchEvent(new Event('input', { bubbles: true })); } rerender(); setTimeout(() => document.querySelector(`[data-stock-row="${d.inItem}"] input`)?.focus(), 200); }
     return; }
   if (e.target.closest?.('[data-in-clear]')) { inPick = null; rerender(); return; }
   const lb = e.target.closest?.('[data-stock-label]');

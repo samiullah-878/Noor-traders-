@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v2.3 (itemJobs: app se POS ka item banana / badalna; mulazim ko ijazat stockConfig.itemEdit se) · v2.2 (billFormats: har supplier ke bill ka naqsha — ginti PCS ya CTN, rate fi PCS ya fi CTN) · v2.1 (itemRates: har item ka pichhla khareed aur nafa yaad) · v2.0 (itemAliases: Full / Purchase mulazim bhi bill ka naam "yaad" karwa sake — naam sirf barh sakte hain, mit nahi sakte) · v1.94 (app purchase: dobara / cancel) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v2.4 (tolai: label ki tasveer se ginti + tolaiConfig) · v2.3 (itemJobs: app se POS ka item banana / badalna; mulazim ko ijazat stockConfig.itemEdit se) · v2.2 (billFormats: har supplier ke bill ka naqsha — ginti PCS ya CTN, rate fi PCS ya fi CTN) · v2.1 (itemRates: har item ka pichhla khareed aur nafa yaad) · v2.0 (itemAliases: Full / Purchase mulazim bhi bill ka naam "yaad" karwa sake — naam sirf barh sakte hain, mit nahi sakte) · v1.94 (app purchase: dobara / cancel) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -102,7 +102,7 @@ service cloud.firestore {
         && (isOwner() || (isToday(day) && blueStaff() && dayOpen()));
     }
     match /businesses/noor-traders/blueAccess/{id} {
-      allow get: if isOwner() || (isStaff() && id in ['config','purchaseConfig','stockConfig','saleConfig','dayLock','itemAliases','itemRates','billFormats','geo']);   // v1.88: geo (dukan location / chhoot / sab band)   // v1.75: itemAliases (items ke doosre naam)
+      allow get: if isOwner() || (isStaff() && id in ['config','purchaseConfig','stockConfig','saleConfig','dayLock','itemAliases','itemRates','billFormats','geo','tolaiConfig']);   // v2.4: tolaiConfig   // v1.88: geo (dukan location / chhoot / sab band)   // v1.75: itemAliases (items ke doosre naam)
     }
     // v2.0: items ke "Doosre naam" (bill par likha hua naam -> humara item). Malik upar wale generic rule se likhta hai.
     // Ab Full aur Purchase wala mulazim bhi naam JOR sakta hai — magar naam KAM nahi kar sakta (map chhota na ho),
@@ -194,6 +194,19 @@ service cloud.firestore {
         && request.resource.data.name is string && request.resource.data.name.size() <= 150
         && request.resource.data.subs is list && request.resource.data.subs.size() <= 50
         && (isOwner() || ((blueStaff() || stockStaff()) && itemEditOn()));
+    }
+
+    // v2.4: ⚖️ TOLAI — label ki tasveer se ginti. Koi bhi login likhta hai (apni), malik sab parhta hai.
+    match /businesses/noor-traders/tolai/{id} {
+      allow read: if isOwner() || blueStaff() || stockStaff() || saleStaff() || purchaseStaff();
+      allow create: if (isOwner() || blueStaff() || stockStaff() || saleStaff())
+        && request.resource.data.keys().hasOnly(['day','itemId','name','packets','lastN','at','by'])
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.packets is int && request.resource.data.packets > 0 && request.resource.data.packets <= 5000
+        && request.resource.data.name is string && request.resource.data.name.size() <= 120
+        && (isOwner() || isToday(request.resource.data.day));
+      allow delete: if isOwner() || ((blueStaff() || stockStaff() || saleStaff())
+        && resource.data.by == request.auth.uid && isToday(resource.data.day));
     }
 
     // v1.73: stock transfer note (transferJobs) aur thermal print (printJobs) — PC transfer-sync.js admin key se
