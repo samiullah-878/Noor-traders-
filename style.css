@@ -883,3 +883,26 @@ footer button:not(.give):not(.got){background:linear-gradient(180deg,#27437c,#17
 .stock-item-btn{display:block;margin-top:4px;font-size:12.5px;padding:6px 10px;border-radius:10px;background:#eef2f8;border:1px solid #cbd5e1;white-space:nowrap}
 .sh-switch{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#334e6f;background:#f8fafc;border:1px solid #e6ecf3;border-radius:12px;padding:10px 12px;margin:8px 0 0}
 .sh-switch input{width:auto;min-height:auto}
+.it-note{font-size:11.5px;color:#94a3b8;margin:-4px 0 0}
+
+/* ===== v2.6 — 📥 Aaya hua maal ===== */
+.in-bar{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.in-bar button{flex:1 1 auto;min-height:42px;border-radius:12px;font-size:13px;font-weight:600;background:#f1f5f9;border:1px solid #cbd5e1;color:#334e6f}
+.in-bar button.on{background:#223b6d;border-color:#223b6d;color:#fff}
+.in-list{display:flex;flex-direction:column;gap:8px;margin:6px 0 10px}
+.in-row{display:flex;gap:10px;text-align:left;width:100%;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid #e6ecf3;border-left:5px solid #cbd5e1}
+.in-row.g{border-left-color:#16a34a}
+.in-row.y{border-left-color:#d69e1c;background:#fffdf5}
+.in-row.r{border-left-color:#dc2626;background:#fff5f5}
+.in-name{flex:1 1 auto;min-width:0}
+.in-name b{display:block;font-size:14.5px;line-height:1.25}
+.in-name small{display:block;color:#7c8ba1;font-size:11.5px;margin-top:2px}
+.in-num{flex:0 0 auto;text-align:right}
+.in-num span{display:block;font-size:13px;font-weight:700;color:#1e3a5f}
+.in-num small{display:block;font-size:11.5px;color:#64748b}
+.in-num .in-away{color:#94a3b8}
+.in-num .red{color:#dc2626;font-weight:700}
+.in-num .amber{color:#9a6b0c;font-weight:600}
+.in-acts{margin-top:4px}
+.in-strip{display:flex;align-items:center;gap:8px;background:#eef6ff;border:1px solid #cfe3fb;border-radius:12px;padding:8px 12px;margin:0 4px 10px;font-size:13px;font-weight:600;color:#1e3a5f}
+.in-strip button{margin-left:auto;padding:6px 10px;border-radius:10px;background:#fff;border:1px solid #cbd5e1;font-size:12.5px}

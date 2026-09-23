@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.5.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=2.5.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.6.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=2.6.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -76,12 +76,16 @@ export function ppSetup(o) {
   billFmtOf = o.billFmt || billFmtOf; saveBillFmtOf = o.saveBillFmt || saveBillFmtOf;
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
-    if (d && d.saved === todayStr()) { supplier = d.supplier || ''; godam = d.godam ?? BILL_BRANCH; day = d.day || ''; invoiceNo = d.invoiceNo || ''; note = d.note || ''; cart = Array.isArray(d.cart) ? d.cart : []; edit = d.edit || null; xtra = Number(d.xtra) || 0; xtraName = String(d.xtraName || ''); }
+    if (d && d.saved === todayStr()) { supplier = d.supplier || ''; godam = d.godam ?? BILL_BRANCH; day = d.day || ''; invoiceNo = d.invoiceNo || ''; note = d.note || ''; cart = Array.isArray(d.cart) ? d.cart : []; edit = d.edit || null; xtra = Number(d.xtra) || 0; xtraName = String(d.xtraName || '');
+      if (d.jd && Array.isArray(d.jd.rows) && d.jd.rows.length) { aiRows = d.jd.rows; aiBillInfo = d.jd.info || null; jView = d.jd.view || 'list'; jIx = Number(d.jd.ix) >= 0 ? Number(d.jd.ix) : -1; aiFmtAuto = d.jd.fmt || ''; }   // v2.5.1
+    }
   } catch {}
 }
 function keepDraft() {
   xtraApply();
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ saved: todayStr(), supplier, godam, day, invoiceNo, note, cart, edit, xtra, xtraName })); } catch {}
+  // v2.5.1: Jaanch bhi mehfooz — WhatsApp se wapas aayein to wahi card khula mile (tasveerein memory mein hi rehti hain)
+  const jd = aiRows ? { rows: aiRows.map(r => ({ ...r, ai: r.ai, aiFix: r.aiFix || null })), info: aiBillInfo, view: jView, ix: jIx, fmt: aiFmtAuto } : null;
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ saved: todayStr(), supplier, godam, day, invoiceNo, note, cart, edit, xtra, xtraName, jd })); } catch {}
 }
 
 // ---------- data ----------

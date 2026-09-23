@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch } from './smart-search.js?v=2.5.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch } from './smart-search.js?v=2.6.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -28,9 +28,12 @@ const countLocked = () => countOff && !isOwner();
 let aliasStop = null;
 let itemCfg = {}, cfgStop = null;                         // v2.5: stockConfig (mulazim item/rates badal sake)
 const canEditItem = () => isOwner() || itemCfg.itemEdit === true;
+let inPdfOf = null;
+export function setInPdf(fn) { inPdfOf = fn; }
 export function stockSetup(opts) {
   if (!aliasStop && opts?.cloud?.listenAliases) aliasStop = opts.cloud.listenAliases(m => setAliases(m));   // v1.75: doosre naam
   if (!cfgStop && opts?.cloud?.listenStockConfig) cfgStop = opts.cloud.listenStockConfig(c => { itemCfg = c || {}; if (stockActive) soft(); });
+  if (!trStop && opts?.cloud?.listenTransfers) trStop = opts.cloud.listenTransfers(list => { trList = list; const h = document.querySelector('[data-tr-hist]'); if (h) h.innerHTML = trHistHTML(); });   // v2.6: transfer shuru se (aaya hua maal ke liye)
   cloud = opts.cloud;
   rerender = opts.rerender || (() => {});
   notice = opts.notice || (() => {});
@@ -359,6 +362,7 @@ function renderStockInner() {
 
   if (pickedBranch !== 1 && filter === 'all' && !godamAll) filter = 'has';   // v1.97: godam khula ho to shuru se sirf usi ke items
   let shown = items.filter(passes), wide = 0;
+  if (inPick && inPick.size) shown = items.filter(r => inPick.has(String(r.id)));   // v2.6: aaye hue maal ki ginti
   if (q) {   // v2.4.5: sale jaisi — poore stock mein (filter se bahar bhi), best match UPAR (tarteeb smartSearch ki)
     const pool = items.filter(r => filter === 'hidden' ? isHidden(r) : !isHidden(r));
     const inF = new Set(shown);
@@ -371,6 +375,7 @@ function renderStockInner() {
   const list = shown.slice(0, limit);
 
   $('list').innerHTML =
+    (inPick && inPick.size ? `<div class="in-strip">📥 Aaye hue maal ki ginti — ${num(shown.length)} items <button type="button" data-in-clear="1">✕ saaf karein</button></div>` : '') +
     (q ? `<p class="stat-note">${shown.length} item mile${wide && filter !== 'all' ? ` · ${num(wide)} filter ke bahar se bhi (poore stock mein dhoonda)` : ''}</p>` : '') +
     list.map(rowHTML).join('') +
     (extra > 0 ? `<div class="account-tools"><button data-stock-more="1">Aur ${num(Math.min(extra, PAGE))} dikhao (${num(extra)} baqi)</button></div>
@@ -451,6 +456,7 @@ function summaryHTML(branches, pick, items, meta, names) {
            <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>`
         : `<div class="sh-scanrow"><button class="sh-wide sh-scan" data-stock-scan="1">📷 Barcode scan karein (ek ya kai items)</button><button type="button" class="sh-mic" data-stock-mic="1" title="Awaz se dhoondein">🎤</button></div>
            ${canEditItem() ? '<button class="sh-wide" data-stock-newitem="1">➕ Naya item</button>' : ''}
+           <button class="sh-wide" data-stock-in="1">📥 Aaya hua maal</button>
            <button class="sh-wide" data-stock-transfer="1">⇄ Transfer note (godam se godam)</button>
            ${($('search')?.value || '').trim() ? '<button class="sh-wide" data-stock-clear="1">✕ Search saaf karein</button>' : ''}`}
     </div>
@@ -517,20 +523,22 @@ function itemForm(r, pre) {
   const v = { name: r?.name || '', code: r?.code || '', pack: Number(r?.pack) || 0,
     costP: Number(r?.prate) || 0, rpcs: Number(r?.rate2) || Number(r?.rate) || 0,
     rctn: (Number(r?.pack) > 1 ? (Number(r?.rate) || 0) * Number(r.pack) : 0) || 0,
-    wpcs: Number(r?.wrate) || 0, wctn: 0, ...(pre || {}) };
+    wpcs: Number(r?.wrate) || 0, wctn: 0, costC: 0, ...(pre || {}) };
+  const pk0 = Number(v.pack) > 0 ? Number(v.pack) : 1;
+  if (!v.costC) v.costC = r2(v.costP * pk0);
   if (Number(v.pack) > 1) { if (!v.rctn) v.rctn = r2(v.rpcs * v.pack); if (!v.wctn) v.wctn = r2(v.wpcs * v.pack); }
   const rates = canEditItem();
   d.classList.remove('search-dialog');
   $('dialogTitle').textContent = isNew ? '➕ Naya item' : '✏️ ' + r.name;
-  const f = (lab, k) => `<label class="it-f"><span>${lab}</span><input type="number" min="0" step="any" inputmode="decimal" name="${k}" value="${v[k] ? num(v[k]) : ''}" placeholder="0"${rates ? '' : ' disabled'}></label>`;
+  const f = (lab, k) => `<label class="it-f"><span>${lab}</span><input type="number" min="0" step="any" inputmode="decimal" name="${k}" value="${v[k] ? r2(v[k]) : ''}" placeholder="0"${rates ? '' : ' disabled'}></label>`;
   const subs = r ? labelRows(r).filter(x => !x.main) : [];
   $('dialogBody').innerHTML = `<form class="item-form" data-item-form="${r ? esc(r.id) : 'new'}">
     <label class="it-wide"><span>Item ka naam</span><input name="name" required maxlength="150" autocomplete="off" value="${esc(v.name)}" placeholder="misal: marhaba honey 80gm"></label>
     <label class="it-wide"><span>Barcode</span><div class="it-code"><input name="code" maxlength="50" autocomplete="off" value="${esc(v.code)}" placeholder="${isNew ? 'Khali chhorein to POS khud banayega' : ''}"><button type="button" data-item-scan="1">📷</button></div></label>
-    <div class="it-grid">
-      <label class="it-f"><span>1 CTN = PCS</span><input type="number" min="0" step="any" inputmode="decimal" name="pack" value="${v.pack || ''}" placeholder="0"></label>
-      ${f('Khareed / PCS', 'costP')}
-    </div>
+    <label class="it-wide"><span>1 CTN = kitne PCS</span><input type="number" min="0" step="any" inputmode="decimal" name="pack" value="${v.pack || ''}" placeholder="misal: 12"></label>
+    <div class="it-head">Khareed</div>
+    <div class="it-grid">${f('Kh / CTN', 'costC')}${f('Kh / PCS', 'costP')}</div>
+    <div class="it-note">Kh / CTN likhein — Kh / PCS khud nikal aayega</div>
     <div class="it-head">Parchoon</div>
     <div class="it-grid">${f('R / CTN', 'rctn')}${f('R / PCS', 'rpcs')}</div>
     <div class="it-head">Wholesale</div>
@@ -550,12 +558,14 @@ function itemRead(form) {
   const g = k => form.querySelector('[name=' + k + ']');
   const nv = k => { const e = g(k); return e && !e.disabled ? Math.max(0, Number(e.value) || 0) : null; };
   return { name: String(g('name').value || '').trim(), code: String(g('code').value || '').trim(),
-    pack: Math.max(0, Number(g('pack').value) || 0), costP: nv('costP'), rctn: nv('rctn'), rpcs: nv('rpcs'), wctn: nv('wctn'), wpcs: nv('wpcs') };
+    pack: Math.max(0, Number(g('pack').value) || 0), costC: nv('costC'), costP: nv('costP'), rctn: nv('rctn'), rpcs: nv('rpcs'), wctn: nv('wctn'), wpcs: nv('wpcs') };
 }
 async function itemSave(form, btn) {
   const id = form.dataset.itemForm, isNew = id === 'new';
   const r = isNew ? null : rowCache.get(String(id));
   const v = itemRead(form), msg = form.querySelector('.it-msg');
+  const pk = (Number(v.pack) > 0 ? Number(v.pack) : 1);
+  if (!(v.costP > 0) && v.costC > 0) v.costP = r2(v.costC / pk);        // v2.5.1: sirf CTN likha to PCS khud
   if (!v.name) { msg.textContent = 'Item ka naam likhein'; return; }
   if (!cloud?.requestItem) { msg.textContent = 'Item ke liye app update karein'; return; }
   const keep = k => (v[k] == null ? (k === 'costP' ? Number(r?.prate) || 0 : k === 'rpcs' ? Number(r?.rate2) || Number(r?.rate) || 0 : k === 'wpcs' ? Number(r?.wrate) || 0 : 0) : v[k]);
@@ -657,6 +667,18 @@ document.addEventListener('click', e => {
   if (t.dataset.subDel) { const r = rowCache.get(t.dataset.subItem), x = r && labelRows(r).find(y => String(y.subId) === t.dataset.subDel);
     if (!x) return; if (!confirm(`"${x.code}" (${r.name}) POS se hata dein?`)) return; subSend(r, 'delete', x, t.closest('.label-row')?.querySelector('small'), t); return; }
 });
+// v2.5.1: Kh / CTN likhein -> Kh / PCS khud (÷ pack). Kh / PCS likhein to Kh / CTN khud (× pack).
+// Parchoon aur Wholesale ko app HAATH NAHI lagati — wo aap ke apne likhe hue rehte hain.
+document.addEventListener('input', e => {
+  const t = e.target, f = t?.closest?.('[data-item-form]'); if (!f) return;
+  const k = t.name; if (!['pack', 'costC', 'costP'].includes(k)) return;
+  const g = n => f.querySelector('[name=' + n + ']');
+  const pk = Math.max(0, Number(g('pack').value) || 0) || 1;
+  const put = (n, val) => { const el = g(n); if (el && document.activeElement !== el && !el.disabled) el.value = val > 0 ? String(r2(val)) : ''; };   // number khane mein comma nahi
+  if (k === 'costC') put('costP', (Number(t.value) || 0) / pk);
+  else if (k === 'costP') put('costC', (Number(t.value) || 0) * pk);
+  else { const c = Number(g('costC').value) || 0; if (c > 0) put('costP', c / pk); else put('costC', (Number(g('costP').value) || 0) * pk); }
+});
 document.addEventListener('submit', e => {                            // v2.5: item form
   const itf = e.target.closest?.('[data-item-form]');
   if (itf) { e.preventDefault(); itemSave(itf, itf.querySelector('button[type=submit]')); return; }
@@ -721,6 +743,102 @@ let trLines = [], trFrom = null, trTo = null, trStop = null, trList = [];
 function trBranches() { const { branches, names } = collect(); return branches.map(b => ({ id: b, name: branchName(b, names) })); }
 function trStockOf(b, id) { return Number(saleStockItem(b, id)?.stock || 0); }
 function saleStockItem(b, id) { const chunks = rows.filter(r => !r.meta && Array.isArray(r.items) && r.branch === Number(b)); for (const c of chunks) { const it = c.items.find(x => String(x.id) === String(id)); if (it) return it; } return null; }
+// ---------- v2.6: 📥 AAYA HUA MAAL — transfer + purchase bill se aaye items, dono taraf ka stock ----------
+let inDays = 1, inKind = 'all', inRows = null, inBusy = false, inFilter = false, inPick = null;
+const dayAgo = n => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (n - 1)); return d.getTime(); };
+const dmy = t => { const d = new Date(t); return String(d.getDate()).padStart(2, '0') + '-' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]; };
+async function inCollect() {
+  const since = dayAgo(inDays), map = new Map(), { pick, items, names } = collect();
+  const put = (id, name, qty, src) => {
+    if (!(qty > 0)) return;
+    const k = String(id); let e = map.get(k);
+    if (!e) { e = { id: k, name, qty: 0, from: new Set(), srcs: [] }; map.set(k, e); }
+    e.qty += qty; e.name = e.name || name; e.srcs.push(src); if (src.from != null) e.from.add(Number(src.from));
+  };
+  if (inKind !== 'bill') for (const j of trList) {          // ⇄ transfer note (14 din tak aate hain)
+    if (Number(j.at) < since || j.op === 'delete' || j.status === 'failed') continue;
+    if (Number(j.to) !== Number(pick)) continue;            // jo godam khula hai, usi mein aaya maal
+    for (const l of (j.lines || [])) put(l.itemId, l.name, Number(l.qty) || 0,
+      { kind: 'tr', from: j.from, at: j.at, no: j.transferNo || '', ok: j.status === 'done' });
+  }
+  if (inKind !== 'tr' && cloud?.appPurchasesRecent) {        // 🧾 purchase bill (app se)
+    try {
+      const list = await cloud.appPurchasesRecent(since);
+      for (const b of list) {
+        if (b.status === 'cancelled' || b.status === 'replaced') continue;
+        for (const l of (b.lines || [])) {
+          if (Number(l.godam ?? b.godam) !== Number(pick)) continue;
+          put(l.id, l.name, Number(l.qty) || 0, { kind: 'bill', party: b.partyName || '', at: b.at || Date.parse(b.date) || 0, ok: b.status === 'done', no: b.purchaseNo || '' });
+        }
+      }
+    } catch {}
+  }
+  const other = [...new Set([...map.values()].flatMap(e => [...e.from]))].filter(b => b && b !== pick);
+  const rows = [...map.values()].map(e => {
+    const it = items.find(x => String(x.id) === e.id) || {};
+    const here = Number(saleStockItem(pick, e.id)?.stock || 0);
+    const bika = Math.max(0, r2(e.qty - here));
+    const bad = here <= 0.001 && e.qty > 0;                                     // stock mein nazar hi nahi aaya
+    const tez = !bad && e.qty > 0 && here / e.qty < 0.1;                        // 90% se zyada nikal gaya
+    return { ...e, it, here, bika, conf: bad ? 'r' : tez ? 'y' : 'g',
+      away: other.map(b => ({ b, n: Number(saleStockItem(b, e.id)?.stock || 0) })),
+      uName: it.uName || 'Pcs', cName: it.cName || 'Ctn', pack: Number(it.pack) || 0, rate: Number(it.prate) || 0 };
+  }).sort((a, b) => (a.conf === b.conf ? b.qty * b.rate - a.qty * a.rate : a.conf === 'r' ? -1 : b.conf === 'r' ? 1 : a.conf === 'y' ? -1 : 1));
+  inRows = { rows, pick, names, other };
+  return inRows;
+}
+function inQtyText(r) {
+  if (r.pack > 1) { const c = Math.floor(r.qty / r.pack), p = r2(r.qty - c * r.pack);
+    return (c ? num(c) + ' ' + esc(r.cName) : '') + (c && p ? ' + ' : '') + (p ? num(p) + ' ' + esc(r.uName) : '') + ` (${num(r.qty)} ${esc(r.uName)})`; }
+  return num(r.qty) + ' ' + esc(r.uName);
+}
+function inSrcText(r, names) {
+  const t = r.srcs.filter(x => x.kind === 'tr'), b = r.srcs.filter(x => x.kind === 'bill');
+  const out = [];
+  if (t.length) out.push('⇄ ' + [...new Set(t.map(x => branchName(x.from, names)))].join(', ') + ' · ' + dmy(t[t.length - 1].at));
+  if (b.length) out.push('🧾 ' + [...new Set(b.map(x => x.party).filter(Boolean))].join(', ') + ' · ' + dmy(b[b.length - 1].at));
+  return out.join('<br>');
+}
+async function openIn(refresh = true) {
+  const d = $('dialog'); if (!d) return;
+  d.classList.remove('search-dialog');
+  $('dialogTitle').textContent = '📥 Aaya hua maal';
+  if (refresh || !inRows) { $('dialogBody').innerHTML = '<p class="stat-note">Dekh raha hoon…</p>'; if (!d.open) d.showModal(); await inCollect(); }
+  const { rows, pick, names, other } = inRows;
+  const show = inFilter ? rows.filter(r => r.conf !== 'g') : rows;
+  const kulQ = rows.reduce((n, r) => n + r.qty, 0), kulB = rows.reduce((n, r) => n + r.bika, 0);
+  const red = rows.filter(r => r.conf === 'r').length;
+  const chip = (k, v, lab) => `<button type="button" class="${k === 'd' ? (inDays === v ? 'on' : '') : (inKind === v ? 'on' : '')}" data-in-${k}="${v}">${lab}</button>`;
+  $('dialogBody').innerHTML = `<div class="in-bar">
+      ${chip('d', 1, 'Aaj')}${chip('d', 3, '3 din')}${chip('d', 7, '7 din')}
+    </div><div class="in-bar">
+      ${chip('k', 'all', 'Sab')}${chip('k', 'tr', '⇄ Transfer')}${chip('k', 'bill', '🧾 Bill')}
+      ${red ? `<button type="button" class="${inFilter ? 'on' : ''}" data-in-red="1">🔴 ${red}</button>` : ''}
+    </div>
+    <p class="stat-note">${esc(branchName(pick, names))} · ${num(rows.length)} items · aaya ${num(kulQ)} · nikla ${num(kulB)}</p>
+    <div class="in-list">${show.map(r => `<button type="button" class="in-row ${r.conf}" data-in-item="${esc(r.id)}">
+      <div class="in-name"><b>${esc(r.name)}</b><small>${inSrcText(r, names)}</small></div>
+      <div class="in-num"><span>Aaya ${inQtyText(r)}</span>
+        <small>${esc(branchName(pick, names))}: <b>${num(r.here)}</b>${r.bika > 0 ? ` · nikla ${num(r.bika)}` : ''}</small>
+        ${r.away.map(a => `<small class="in-away">${esc(branchName(a.b, names))}: ${num(a.n)}</small>`).join('')}
+        ${r.conf === 'r' ? '<small class="red">Stock mein nahi — POS mein chadha?</small>' : r.conf === 'y' ? '<small class="amber">Qareeb qareeb khatam</small>' : ''}</div>
+    </button>`).join('') || '<p class="muted">Is arse mein kuch nahi aaya.</p>'}</div>
+    <div class="account-tools in-acts">
+      ${show.length ? `<button type="button" class="sh-wide" data-in-count="1">📋 Poori list ginti mein kholein (${show.length})</button>` : ''}
+      <button type="button" data-in-pdf="1">⇩ PDF</button><button type="button" data-in-close="1">✕ Band</button></div>`;
+  if (!d.open) d.showModal();
+}
+// app.js PDF banata hai — yahan se sirf data
+export function inReport() {
+  const { rows, pick, names } = inRows || {}; if (!rows || !rows.length) return null;
+  return { branch: branchName(pick, names), din: inDays === 1 ? 'Aaj' : inDays + ' din',
+    kulQ: r2(rows.reduce((n, r) => n + r.qty, 0)), kulB: r2(rows.reduce((n, r) => n + r.bika, 0)),
+    red: rows.filter(r => r.conf === 'r').length,
+    rows: rows.map(r => ({ name: r.name, conf: r.conf,
+      src: inSrcText(r, names).replace(/<br>/g, ' · ').replace(/<[^>]+>/g, ''),
+      aaya: inQtyText(r).replace(/<[^>]+>/g, ''), here: num(r.here),
+      away: r.away.map(a => branchName(a.b, names) + ' ' + num(a.n)).join(', ') || '—', bika: num(r.bika) })) };
+}
 function openTransfer() {
   const d = $('dialog'); if (!d) return;
   const bs = trBranches();
@@ -922,6 +1040,18 @@ document.addEventListener('click', e => {
   if (e.target.closest?.('[data-stock-bills]')) { openBills(); return; }
   if (e.target.closest?.('[data-stock-ginti]')) { openGinti(); return; }
   if (e.target.closest?.('[data-stock-transfer]')) { openTransfer(); return; }
+  if (e.target.closest?.('[data-stock-in]')) { openIn(true); return; }          // v2.6
+  const inb = e.target.closest?.('[data-in-d],[data-in-k],[data-in-red],[data-in-item],[data-in-count],[data-in-pdf],[data-in-close]');
+  if (inb) { const d = inb.dataset;                                   // v2.6: aaya hua maal
+    if (d.inD != null) { inDays = Number(d.inD); openIn(true); }
+    else if (d.inK != null) { inKind = d.inK; openIn(true); }
+    else if (d.inRed != null) { inFilter = !inFilter; openIn(false); }
+    else if (d.inClose != null) $('dialog')?.close();
+    else if (d.inPdf != null) inPdfOf?.();
+    else if (d.inCount != null) { const ids = (inRows?.rows || []).filter(r => !inFilter || r.conf !== 'g').map(r => r.id); inPick = new Set(ids); $('dialog')?.close(); const q = $('search'); if (q) q.value = ''; rerender(); }
+    else if (d.inItem != null) { const r = (inRows?.rows || []).find(x => x.id === d.inItem); $('dialog')?.close(); const q = $('search'); if (q && r) { q.value = r.name; q.dispatchEvent(new Event('input', { bubbles: true })); } rerender(); setTimeout(() => document.querySelector(`[data-stock-row="${d.inItem}"] input`)?.focus(), 200); }
+    return; }
+  if (e.target.closest?.('[data-in-clear]')) { inPick = null; rerender(); return; }
   const lb = e.target.closest?.('[data-stock-label]');
   if (lb) { openLabels(lb.dataset.stockLabel); return; }
   const lp = e.target.closest?.('[data-label-print]');

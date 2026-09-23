@@ -1187,3 +1187,42 @@ App: pos-stock.js itemForm/itemRead/itemSave — Stock row par "✏️ Item", up
   (rules mein bhi itemEditOn() shart). CSS: .item-form/.it-grid/.it-f/.it-sub/.sh-switch (premium).
 Tests: /tmp/ts/t2.mjs (13). Kul 204 paas.
 BAQI (agli dafa): app dobara khulne par wahi screen + background refresh (user ne manga, abhi nahi bana).
+
+==================== v2.5.1 (2026-09-23) — ITEM FORM (CTN pehle) + APP WAHI SE KHULE ====================
+Rules NAHI badlin (v2.3 hi). Files: pos-stock.js, app.js, purchase.js, style.css + version bump.
+1) Item form nayi tarteeb (malik ki hidayat): "1 CTN = kitne PCS" poori chaurai upar, phir KHAREED (Kh/CTN · Kh/PCS),
+   phir Parchoon (R/CTN · R/PCS), phir Wholesale (W/CTN · W/PCS). CTN ke khane HAMESHA khule (pack 1 ho tab bhi).
+   Live hisaab SIRF khareed par: Kh/CTN -> Kh/PCS (÷pack), Kh/PCS -> Kh/CTN (×pack), pack badle to dobara.
+   R aur W ko app HAATH NAHI lagati — malik khud bharta hai. itemSave: costP khali + costC hai to costP = costC/pack.
+   BUG FIX: number khano mein num() comma daal raha tha ("1,800") -> Number() NaN. Ab String(r2(v)) / r2(v).
+2) app.js: keepView ab scroll (y) aur waqt (t) bhi rakhti hai; visibilitychange(hidden) + pagehide par bhi save.
+   restoreView: 12 ghante se purani jagah nahi; backY se login ke baad wahi scroll (120ms + 600ms par).
+   syncStatus shuru mein "⟳ Taza ho raha hai…" — screen foran, data background mein.
+3) purchase.js: keepDraft mein `jd` (aiRows + aiBillInfo + jView + jIx + aiFmtAuto) — WhatsApp se wapas aayein
+   to Jaanch wahin se. Tasveerein (object URL) memory mein hi rehti hain, dobara chunni parengi.
+Tests: /tmp/ts/t2.mjs ab 17. Kul 208 paas.
+PC: item-post.js chal rahi hai (user ne chala li); Startup shortcut bhi lag gaya.
+
+==================== v2.6.0 (2026-09-24) — 📥 AAYA HUA MAAL ====================
+Rules NAHI badlin (v2.3). Files: pos-stock.js, app.js, cloud.js, style.css + version bump.
+Stock screen par naya button "📥 Aaya hua maal" (scan/transfer ke saath, sab logins).
+- Data: trList (listenTransfers — ab stockSetup mein shuru se, pehle sirf transfer khirki par chalta tha)
+  + cloud.appPurchasesRecent(since) [NAYA: appPurchases where at > since]. Sirf khule godam (pick) mein aaya maal.
+- Har row: kahan se (⇄ branch / 🧾 supplier + tareekh), kitna aaya (CTN+PCS), yahan ka stock, nikla (aaya − yahan),
+  aur DOOSRE godam ka stock (jahan se aaya). conf: 🔴 stock 0 (POS mein nahi chadha) · 🟡 90% se zyada nikal gaya · 🟢.
+  Tarteeb: 🔴 pehle, phir raqam (qty × prate) ke hisaab se.
+- Chips: Aaj / 3 din / 7 din · Sab / ⇄ Transfer / 🧾 Bill · 🔴 N (filter: conf !== 'g').
+- Item par click -> khirki band, search mein wohi naam, ginti ka khana focus.
+- "📋 Poori list ginti mein kholein" -> inPick (Set) — stock list sirf unhi items ki; upar .in-strip + "✕ saaf karein".
+- "⇩ PDF": pos-stock inReport() data deta hai, app.js inMaalPdf() printArea bhar kar openReportPreview() —
+  wahi purani PDF sheet (WhatsApp / Download / Kholein). setInPdf(fn) se juda.
+Tests: /tmp/ts/t3.mjs (14). Kul 222 paas.
+AGLA KAAM (tay ho chuka, banana baqi): ⚖️ TOLAI —
+  · label-print.js: har label par number, ROZ 1 se, har item ka apna, code "3N-47" (tareekh+mahina harf+number),
+    barcode ke neeche khali kone mein; label ka naqsha/size (32x25, 3 cols) NAHI badalna.
+  · App: "⚖️ Tolai" (sab logins) — 📷 photo -> AI (wahi Gemini key) number+item parhe -> ginti khud
+    (pichhla number se farq), waqt darj. Ghalat parhe to haath se theek.
+  · Calendar wali report (roz/hafta/mahina), PDF.
+  · Setting (malik): duty 9:30-6:00 + rest, har size ka waqt (1kg=1min, 500gm=2min...), kisi item ka apna waqt;
+    badlein to sirf aane wale din badlein. Report: kaam hua vs hona chahiye tha, % aur 🟢🟡🔴.
+  · Godam mein printer: TSC USB001 par hai (network port nahi) -> lamba USB cable (5m tak aam, zyada ho to active).
