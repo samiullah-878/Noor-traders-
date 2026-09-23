@@ -1,4 +1,9 @@
-// purchase.js — v2.4.0 "POS Purchase" screen
+// purchase.js — v2.4.1 "POS Purchase" screen
+// v2.4.1: Jaanch card EK SCREEN mein — upar bill ki PATTI (sirf wohi line, AI ki di hui jagah y se), do qataarein
+//          (CTN · PCS · Khareed/CTN · Khareed/PCS / W/CTN · W/PCS · R/CTN · R/PCS, har ek ke neeche "pehle"),
+//          carton size khali ho to "1 CTN =" ka khana, neeche chipka ✓, swipe (daayein = ✓ agla, baayein = pichhla).
+//          Poori tasveer: do ungliyon se zoom, khainchna, do dafa tap, "‹ Wapas Jaanch". "🧾 Jaanch kholo" button.
+//          Bill ke neeche ginti ke total (ctnTotal / pcsTotal) se lines ka milan.
 // v2.4.0: JAANCH MODE — AI ki har line ka rang (🟢 pakki / 🟡 dekh lein / 🔴 shak), hari ek tap par pakki, baqi
 //          ek ek card mein ("✓ Theek — agla ›" dabate hi agli line). Line ka dimagh: PCS / CTN / bill ka سائز /
 //          Dono — jo khareed pichhle ke qareeb ho wahi. Hisaab + stock ke pehre. Naqsha khud pakarna, supplier ki
@@ -26,8 +31,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.4.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=2.4.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.4.1';
+import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=2.4.1';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -351,7 +356,7 @@ export function renderPP() {
       <label>Supplier bill # <input maxlength="40" data-pp-inv="1" value="${esc(invoiceNo)}" placeholder="ikhtiyari"></label>
     </div>
     <div class="sale-total"><small>Purchase · ${cart.length} items</small><strong id="ppTotal">Rs ${num(total)}</strong></div>
-    <div class="account-tools"><button class="sh-wide" id="ppTodayBtn" data-pp-today="1">${todayLabel()}</button>${aiBillOf && canUse() ? '<button class="sh-wide" data-pp-ai="1">🤖 Bill ki tasveer se items</button>' : ''}${canUse() && !edit ? '<button class="sh-wide" data-pp-pcbills="1">✏️ PC ka bill edit karein</button>' : ''}${packGaps().length ? `<button data-pp-packs="1">📦 Carton size khali (${packGaps().length})</button>` : ''}${supplier ? '<button data-pp-copy="1">📑 Pichhla bill copy</button>' : ''}</div>
+    <div class="account-tools"><button class="sh-wide" id="ppTodayBtn" data-pp-today="1">${todayLabel()}</button>${aiBillOf && canUse() ? '<button class="sh-wide" data-pp-ai="1">🤖 Bill ki tasveer se items</button>' : ''}${aiRows && aiRows.length ? `<button class="sh-wide" data-pp-jopen="1">🧾 Jaanch kholo (${aiRows.filter(r => !r.skip && !r.done).length} baqi)</button>` : ''}${canUse() && !edit ? '<button class="sh-wide" data-pp-pcbills="1">✏️ PC ka bill edit karein</button>' : ''}${packGaps().length ? `<button data-pp-packs="1">📦 Carton size khali (${packGaps().length})</button>` : ''}${supplier ? '<button data-pp-copy="1">📑 Pichhla bill copy</button>' : ''}</div>
   </div>`;
   const si = $('search'); if (si) si.placeholder = '📷 scan ya item ka naam / code (Enter)';
   if (s.failed) { $('list').innerHTML = `<div class="empty"><strong>Items nahi mile</strong><p>${esc(s.failed)}</p></div>`; $('actions').innerHTML = ''; return; }
@@ -470,20 +475,39 @@ document.addEventListener('keydown', e => {
     document.querySelector('[data-pp-jok]')?.click();
   } else t.blur();
 }, true);
-document.addEventListener('input', e => {       // v2.4.0: Jaanch card ke khane seedha cart line mein
+document.addEventListener('input', e => {       // v2.4.1: Jaanch card ke khane seedha cart line mein (CTN rates bhi)
   const t = e.target, d = t?.dataset; if (!d || !t.closest?.('.jc-card')) return;
   const r = aiRows && aiRows[jIx]; const l = r && r.key ? cart.find(x => x.k === r.key) : null; if (!l) return;
-  if (d.ppJctn != null) l.ctn = Math.max(0, Math.floor(Number(t.value) || 0));
-  else if (d.ppJpcs != null) l.pcs = Math.max(0, Number(t.value) || 0);
-  else if (d.ppJcost != null) { l.costP = r4(Number(t.value) || 0); recalc(l);
-    const w = document.querySelector('[data-pp-jw]'), rr = document.querySelector('[data-pp-jr]');
-    if (w) w.value = l.wpcs || ''; if (rr) rr.value = l.rpcs || ''; }
-  else if (d.ppJw != null) { l.wpcs = Number(t.value) || 0; l.wctn = packOf(l) ? Math.round(l.wpcs * packOf(l)) : 0; l.wMode = 'manual'; }
-  else if (d.ppJr != null) { l.rpcs = Number(t.value) || 0; l.rctn = packOf(l) ? Math.round(l.rpcs * packOf(l)) : 0; l.rMode = 'manual'; }
+  const v = Number(t.value) || 0, pk = packOf(l), cs = jCs(r, l), m = pk || cs;
+  if (d.ppJcs != null) { r.cs = v > 1 ? v : 0; return; }                 // change par card dobara banta hai
+  if (d.ppJctn != null) { if (pk) l.ctn = Math.max(0, Math.floor(v)); else if (cs) l.pcs = r3(v * cs); }
+  else if (d.ppJpcs != null) l.pcs = Math.max(0, v);
+  else if (d.ppJkc != null) { if (m) { l.costP = r4(v / m); recalc(l); } }
+  else if (d.ppJcost != null) { l.costP = r4(v); recalc(l); }
+  else if (d.ppJwc != null) { if (pk) { l.wctn = v; l.wMode = 'manual'; } else if (cs) { l.wpcs = r2(v / cs); l.wMode = 'manual'; } }
+  else if (d.ppJw != null) { l.wpcs = v; if (pk && !l.wctn) l.wctn = Math.round(v * pk); l.wMode = 'manual'; }
+  else if (d.ppJrc != null) { if (pk) { l.rctn = v; l.rMode = 'manual'; } else if (cs) { l.rpcs = r2(v / cs); l.rMode = 'manual'; } }
+  else if (d.ppJr != null) { l.rpcs = v; if (pk && !l.rctn) l.rctn = Math.round(v * pk); l.rMode = 'manual'; }
   else return;
-  const a = $('jcAmt'); if (a) a.textContent = num(lineTotal(l));
-  keepDraft(); refreshTotals();
+  jRepaint(); keepDraft(); refreshTotals();
 });
+document.addEventListener('change', e => {      // "1 CTN =" likh kar chhora -> card naye size se
+  const t = e.target; if (!t?.dataset || t.dataset.ppJcs == null || !t.closest?.('.jc-card')) return;
+  const r = aiRows && aiRows[jIx]; if (!r) return;
+  r.force = r.cs ? 'size' : ''; jJudge(r, billFmtOf(supplier)); keepDraft(); rerender(); jCard(jIx);
+});
+// v2.4.1: card par ungli daayein = ✓ agla, baayein = pichhla (khane / button par nahi)
+let jTouch = null;
+document.addEventListener('touchstart', e => {
+  const c = e.target.closest?.('.jc-card'); if (!c || e.target.closest('input,button,select,label')) { jTouch = null; return; }
+  const t = e.touches[0]; jTouch = { x: t.clientX, y: t.clientY };
+}, { passive: true });
+document.addEventListener('touchend', e => {
+  if (!jTouch || jView !== 'card') return;
+  const t = e.changedTouches[0], dx = t.clientX - jTouch.x, dy = t.clientY - jTouch.y; jTouch = null;
+  if (Math.abs(dx) < 70 || Math.abs(dy) > 60) return;
+  if (dx > 0) document.querySelector('[data-pp-jok]')?.click(); else jPrev();
+}, { passive: true });
 document.addEventListener('keydown', e => {
   if (e.key !== 'Enter' || e.target?.id !== 'search' || !document.querySelector('[data-pp-root]')) return;
   const v = e.target.value.trim(); if (!v) return;
@@ -513,9 +537,9 @@ document.addEventListener('click', async e => {
     if (d.ppPin != null) { billPin = !billPin; rerender(); }
     else if (d.ppZoom != null) { billZoom = Math.min(3, Math.max(1, billZoom + Number(d.ppZoom) * 0.5)); rerender(); }
     else if (d.ppNextpic != null) { billIx = (billIx + 1) % billPics.length; rerender(); }
-    else if (d.ppVzoom != null) { billZoom = Math.min(4, Math.max(1, billZoom + Number(d.ppVzoom) * 0.5)); billView(); }
-    else if (d.ppVnext != null) { billIx = (billIx + 1) % billPics.length; billZoom = 1; billView(); }
-    else { billIx = Math.min(Number(d.ppPic) || 0, billPics.length - 1); billZoom = 1; billView(); }
+    else if (d.ppVzoom != null) { zStep(Number(d.ppVzoom)); }
+    else if (d.ppVnext != null) { billIx = (billIx + 1) % billPics.length; zFocus = 0; billView(); }
+    else { billIx = Math.min(Number(d.ppPic) || 0, billPics.length - 1); zFocus = Number(d.ppFocus) || 0; billView(); }
     return; }
   const fm = e.target.closest?.('[data-pp-fmt]');
   if (fm) {
@@ -529,7 +553,7 @@ document.addEventListener('click', async e => {
     const fmtNow = next;
     for (const r of aiRows || []) if (!r.skip) {          // aap ka tap = IS bill par zabardasti (agle bills par tarjeeh)
       const ln = r.key ? cart.find(l => l.k === r.key) : null;
-      const has = ln ? jCandidates(ln, r.ai).map(c => c.mode) : [];
+      const has = ln ? jCandidates(ln, r.ai, r.cs).map(c => c.mode) : [];
       r.force = q === 'pcs' ? 'pcs' : q === 'ctn' ? (has.includes('ctn') ? 'ctn' : has.includes('size') ? 'size' : '') : '';
       jJudge(r, fmtNow);
     }
@@ -538,6 +562,8 @@ document.addEventListener('click', async e => {
     return;
   }
   // v2.4.0: Jaanch mode ke button
+  if (e.target.closest?.('[data-pp-jopen]')) { if (aiRows) aiRender(); return; }
+  if (e.target.closest?.('[data-pp-vback]')) { if (jView === 'card' && jIx >= 0) jCard(jIx); else if (aiRows) aiRender(); else $('dialog')?.close(); return; }
   const jb = e.target.closest?.('[data-pp-jgreen],[data-pp-jstart],[data-pp-jcard],[data-pp-jok],[data-pp-jskip],[data-pp-junskip],[data-pp-jmode],[data-pp-jsum],[data-pp-jsend],[data-pp-jlist],[data-pp-jmerge],[data-pp-jclose],[data-pp-packs]');
   if (jb) { const d = jb.dataset;
     if (d.ppJgreen) { for (let i = 0; i < aiRows.length; i++) if (!aiRows[i].skip && !aiRows[i].done && aiRows[i].j?.conf === 'g') await jAccept(i); notice('✓ Hari lines pakki'); jView = 'list'; aiRender(); }
@@ -570,7 +596,7 @@ document.addEventListener('click', async e => {
   if (d.ppSupChange != null) { supOpen = true; rerender(); setTimeout(() => $('ppSupQ')?.focus(), 50); return; }
   if (d.ppAdd) { const it = stock().items.find(r => String(r.id) === d.ppAdd); if (it) { const r = addItem(it); const s = $('search'); if (s) s.value = ''; notice(r.again ? `+1 · ${it.name}` : `✓ ${it.name}`); rerender(); focusLine(r.line.k); } return; }
   if (d.ppDel != null) { cart.splice(Number(d.ppDel), 1); keepDraft(); rerender(); return; }
-  if (d.ppClear) { if (!confirm(edit ? 'Edit chhor kar screen saaf kar dein? (POS ka bill waisa hi rahega)' : 'Yeh purchase bill saaf kar dein?')) return; cart = []; note = ''; invoiceNo = ''; edit = null; day = ''; setBillPics([]); billPin = false; keepDraft(); rerender(); return; }
+  if (d.ppClear) { if (!confirm(edit ? 'Edit chhor kar screen saaf kar dein? (POS ka bill waisa hi rahega)' : 'Yeh purchase bill saaf kar dein?')) return; cart = []; note = ''; invoiceNo = ''; edit = null; day = ''; setBillPics([]); billPin = false; aiRows = null; aiBillInfo = null; jView = 'list'; jIx = -1; keepDraft(); rerender(); return; }
   if (d.ppCamera) { openSaleCamera(); return; }
   if (d.ppToday) { openToday(); return; }
   if (d.ppOld != null) { const l = cart[d.ppOld]; if (l) { l.wMode = 'old'; l.rMode = 'old'; recalc(l); keepDraft(); rerender(); } return; }
@@ -630,9 +656,9 @@ function aiNum(ai) {                          // AI ne jo ginti di: ctn + pcs, y
   const c = Number(ai.ctn) || 0, p = Number(ai.pcs) || 0, q = Number(ai.qty) || 0;
   return { c, p, n: r3((c + p) || q), rate: Number(ai.rate) || 0, total: Number(ai.total) || 0 };
 }
-function jCandidates(ln, ai) {
+function jCandidates(ln, ai, cs0) {
   const pk = packOf(ln), { c, p, n, rate } = aiNum(ai);
-  const size = Number(ai.size) || Number(memOf(ln.id)?.s) || 0;
+  const size = Number(cs0) || Number(ai.size) || Number(memOf(ln.id)?.s) || 0;
   const out = [{ mode: 'pcs', ctn: 0, pcs: n, costP: rate }];
   if (pk > 1) {
     if (c > 0 && p > 0) out.push({ mode: 'both', ctn: c, pcs: p, costP: rate / pk });   // "5+3" = 5 ctn 3 pcs
@@ -652,7 +678,7 @@ function jPrior(mode, fmt) {
 function jJudge(r, fmt) {
   const ln = r.key ? cart.find(l => l.k === r.key) : null;
   if (!ln) { r.j = { conf: 'r', why: ['Item stock mein nahi mila'], mode: '' }; return; }
-  const old = Number(ln.oldCost) || 0, cands = jCandidates(ln, r.ai);
+  const old = Number(ln.oldCost) || 0, cands = jCandidates(ln, r.ai, r.cs);
   let best = null, bestS = Infinity;
   for (const cd of cands) {
     const lr = logR(cd.costP, old);
@@ -711,6 +737,23 @@ function jBillTotals() {
   const lines = (aiRows || []).filter(r => !r.skip && r.key).map(r => cart.find(l => l.k === r.key)).filter(Boolean);
   return { mine: r2(lines.reduce((n, l) => n + lineTotal(l), 0)), bill: Number(aiBillInfo?.total) || 0 };
 }
+// v2.4.1: bill ke neeche likhe ginti ke total vs AI ki lines — koi line chhooti / ghalat parhi to pata chale
+function jColTotals() {
+  const b = aiBillInfo || {}, ct = Number(b.ctnTotal) || 0, pt = Number(b.pcsTotal) || 0;
+  if (!ct && !pt) return '';
+  const L = b.lines || [], tol = T => Math.max(1, T * 0.005);
+  let ok, txt;
+  if (ct && pt) {
+    const sc = r3(L.reduce((n, l) => n + (Number(l.ctn) || 0), 0)), sp = r3(L.reduce((n, l) => n + (Number(l.pcs) || 0), 0));
+    ok = Math.abs(sc - ct) <= tol(ct) && Math.abs(sp - pt) <= tol(pt);
+    txt = `Bill par ginti: CTN ${num(ct)} · PCS ${num(pt)} — lines mein ${num(sc)} · ${num(sp)}`;
+  } else {
+    const T = ct || pt, sn = r3(L.reduce((n, l) => n + aiNum(l).n, 0));
+    ok = Math.abs(sn - T) <= tol(T);
+    txt = `Bill par ginti ka total ${num(T)} — lines mein ${num(sn)}`;
+  }
+  return `<p class="${ok ? 'stat-note' : 'red'}">${ok ? '✓' : '⚠️'} ${txt}${ok ? '' : ' — koi line chhooti ya ghalat parhi?'}</p>`;
+}
 // ---------- overview (pehli khirki) ----------
 function aiRender() {
   if (!aiRows) return;
@@ -730,6 +773,7 @@ function aiRender() {
       <div class="jz-count"><b>${k.all}</b> lines · 🟢 ${k.g} · 🟡 ${k.y} · 🔴 ${k.r}</div>
       ${bill ? `<div class="jz-tot">Bill ${num(bill)} · lines ${num(mine)} · <b class="${Math.abs(bill - mine) > Math.max(10, bill * 0.02) ? 'red' : ''}">farq ${num(r2(bill - mine))}</b></div>` : ''}
     </div>
+    ${jColTotals()}
     ${fmtLine}
     ${sup ? `<p><button type="button" data-pp-sup="${esc(sup.id)}">👤 Supplier lagayein: ${esc(sup.name)}</button> <small>(tasveer par: ${esc(aiBillInfo.supplier)})</small></p>` : aiBillInfo?.supplier && !supplier ? `<p class="stat-note">Tasveer par supplier: <b>${esc(aiBillInfo.supplier)}</b> — upar se khud chunein.</p>` : ''}
     <div class="jz-acts">
@@ -746,44 +790,144 @@ function aiRender() {
     <p class="stat-note">⚠️ AI hamesha theek nahi parhta. Hari lines par bhi nazar daal lein; ✓ dabane se naam, unit aur rate app yaad kar leti hai.</p>`);
   const d = $('dialog'); if (d) d.classList.add('full-dialog');
 }
-// ---------- ek line ka card ----------
+// ---------- v2.4.1: ek screen ka card — bill ki patti, do qataarein (CTN·PCS·Khareed / W·R), "1 CTN =", swipe ----------
+function jPageIx(r) { return Math.max(0, Math.min(billPics.length - 1, (Number(r?.ai?.page) || 1) - 1)); }
+function jY(r) {                       // line ki jagah (0..1000): AI ne di ho to wahi, warna padosi lines se andaza
+  const y = Number(r?.ai?.y) || 0; if (y > 0) return y;
+  const pg = Number(r?.ai?.page) || 1;
+  const same = (aiRows || []).filter(x => (Number(x.ai.page) || 1) === pg);
+  const i = same.indexOf(r), n = same.length;
+  const known = same.map((x, k) => [k, Number(x.ai.y) || 0]).filter(v => v[1] > 0);
+  if (known.length >= 2) {
+    const [k1, y1] = known[0], [k2, y2] = known[known.length - 1];
+    return Math.max(0, Math.min(1000, y1 + (i - k1) * (y2 - y1) / Math.max(1, k2 - k1)));
+  }
+  return n > 1 ? 280 + i * 570 / (n - 1) : 450;
+}
+function jCs(r, ln) {                 // carton size: POS ka pack, warna aap ka likha / yaad kiya / bill ka سائز
+  const pk = ln ? packOf(ln) : 0; if (pk) return pk;
+  return Number(r?.cs) || Number(memOf(ln?.id)?.s) || (Number(r?.ai?.size) > 1 ? Number(r.ai.size) : 0) || 0;
+}
+function jPattiPaint(r) {
+  const box = $('jcPatti'); if (!box || !billPics.length) return;
+  if (typeof Image === 'undefined') return;
+  const src = billPics[jPageIx(r)], img = new Image();
+  img.onload = () => {
+    const W = box.clientWidth || 340, H = box.clientHeight || 120;
+    const ih = W * img.naturalHeight / Math.max(1, img.naturalWidth);
+    const yy = jY(r) / 1000 * ih, top = Math.max(0, Math.min(Math.max(0, ih - H), yy - H * 0.45));
+    box.style.backgroundImage = `url("${src}")`;
+    box.style.backgroundSize = `${W}px ${ih}px`;
+    box.style.backgroundPosition = `0 ${-top}px`;
+    const m = box.querySelector('.jc-mark'); if (m) m.style.top = Math.max(0, yy - top - 15) + 'px';
+  };
+  img.src = src;
+}
+const jF = v => (v || v === 0) && Number(v) ? r2(Number(v)) : '';
 function jCard(i) {
   const r = aiRows[i]; if (!r) { jView = 'list'; return aiRender(); }
   jView = 'card'; jIx = i;
   const q = jQueue(), pos = q.indexOf(i), ln = r.key ? cart.find(l => l.k === r.key) : null;
-  const { n, rate, total } = aiNum(r.ai), pk = ln ? packOf(ln) : 0;
+  const { total } = aiNum(r.ai), pk = ln ? packOf(ln) : 0, cs = ln ? jCs(r, ln) : 0, m = pk || cs;
   const it = ln ? stock().items.find(x => String(x.id) === String(ln.id)) : null;
-  const size = Number(r.ai.size) || Number(memOf(r.itemId)?.s) || 0;
-  const modes = ln ? jCandidates(ln, r.ai).map(c => c.mode) : [];
+  const size = Number(r.cs) || Number(r.ai.size) || Number(memOf(r.itemId)?.s) || 0;
+  const modes = ln ? jCandidates(ln, r.ai, r.cs).map(c => c.mode) : [];
   const diff = ln && r.j?.old ? r2(ln.costP - r.j.old) : 0;
-  const pic = billPics.length ? `<div class="jc-pic"><img src="${billPics[Math.min(billIx, billPics.length - 1)]}" alt="bill"><button type="button" data-pp-pic="${billIx}">⤢</button></div>` : '';
-  dlg(`🤖 Jaanch ${pos >= 0 ? (pos + 1) + '/' + q.length : ''}`, `${pic}
-    <div class="jc-card ${r.j?.conf || 'r'}">
-      <div class="jc-sec"><small>Bill par</small><b>${esc(r.ai.name || '')}</b>
-        <span>${esc(aiQtyText(r.ai))}${size ? ' · سائز ' + num(size) : ''} · ریٹ ${num(rate)}${total ? ' · کل ' + num(total) : ''}</span></div>
-      ${ln ? `<div class="jc-sec"><small>App ne lagaya</small><b>${esc(ln.name)}</b>
-        <span>${jUnit(ln)} · khareed ${num(ln.costP)}/${esc(ln.uName)}${r.j?.old ? ` · pichhli ${num(r.j.old)} <b class="${diff > 0 ? 'red' : 'green'}">${diff > 0 ? '+' : ''}${num(diff)}</b>` : ''}</span></div>
+  const o = ln || {}, oW = Number(o.oldW) || 0, oR = pk ? (Number(o.oldR2) || Number(o.oldR) || 0) : (Number(o.oldR) || 0), oC = Number(o.oldCost) || 0;
+  const ph = v => `<small class="jc-ph">${v ? 'pehle ' + num(r2(v)) : '&nbsp;'}</small>`;
+  const fld = (lab, key, val, pehle, off) => `<label class="jc-f"><span>${lab}</span><input type="number" min="0" step="any" inputmode="decimal" data-pp-${key}="1" value="${val}"${off ? ' disabled placeholder="—"' : ''}>${ph(pehle)}</label>`;
+  const patti = billPics.length ? `<div class="jc-patti" id="jcPatti" data-pp-pic="${jPageIx(r)}" data-pp-focus="${Math.round(jY(r))}" role="button" aria-label="Poori tasveer"><span class="jc-mark"></span><span class="jc-patti-z">⤢</span></div>` : '';
+  const ctnVal = pk ? (ln.ctn || '') : cs ? jF(linePcs(ln) / cs) : '';
+  dlg(`🤖 Jaanch ${pos >= 0 ? (pos + 1) + '/' + q.length : ''}`, `${patti}
+    <div class="jc-card ${r.j?.conf || 'r'}" id="jcCard">
+      <div class="jc-top"><b>${esc(r.ai.name || '')}${ln ? ' → ' + esc(ln.name) : ''}</b><span id="jcAmt">${ln ? num(lineTotal(ln)) : ''}</span></div>
+      <div class="jc-bill">Bill: ${esc(aiQtyText(r.ai))}${size ? ' · سائز ' + num(size) : ''} · ریٹ ${num(aiNum(r.ai).rate)}${total ? ' · کل ' + num(total) : ''}</div>
       ${r.j?.why?.length ? `<div class="jc-why">${r.j.why.map(w => `<small>${jMark(r.j.conf)} ${esc(w)}</small>`).join('')}</div>` : '<div class="jc-why"><small>🟢 Sab theek lag raha hai</small></div>'}
-      <div class="mchips jc-modes">${modes.map(m => `<button type="button" class="${r.j?.mode === m ? 'on' : ''}" data-pp-jmode="${m}">${jModeName(m)}${m === 'size' ? ' ×' + num(size) : ''}</button>`).join('')}</div>
-      <div class="jc-grid">
-        ${pk ? `<label>${esc(ln.cName)} (${num(pk)})<input type="number" min="0" step="1" inputmode="numeric" data-pp-jctn="1" value="${ln.ctn || ''}"></label>` : ''}
-        <label>${esc(ln.uName)}<input type="number" min="0" step="any" inputmode="decimal" data-pp-jpcs="1" value="${ln.pcs || ''}"></label>
-        <label>Khareed / ${esc(ln.uName)}<input type="number" min="0" step="any" inputmode="decimal" data-pp-jcost="1" value="${ln.costP ? r2(ln.costP) : ''}"></label>
-        <label>Wholesale / ${esc(ln.uName)}<input type="number" min="0" step="any" inputmode="decimal" data-pp-jw="1" value="${ln.wpcs || ''}"></label>
-        <label>Parchoon / ${esc(ln.uName)}<input type="number" min="0" step="any" inputmode="decimal" data-pp-jr="1" value="${ln.rpcs || ''}"></label>
-        <div class="jc-amt"><small>${num(linePcs(ln))} ${esc(ln.uName)}</small><b id="jcAmt">${num(lineTotal(ln))}</b></div>
+      ${ln ? `<div class="jc-units"><div class="mchips jc-modes">${modes.map(md => `<button type="button" class="${r.j?.mode === md ? 'on' : ''}" data-pp-jmode="${md}">${jModeName(md)}${md === 'size' ? ' ×' + num(size) : ''}</button>`).join('')}</div>
+        ${!pk ? `<label class="jc-cs"><span>1 CTN =</span><input type="number" min="0" step="any" inputmode="decimal" data-pp-jcs="1" value="${cs || ''}" placeholder="?"></label>` : ''}</div>
+      <div class="jc-g4">
+        ${fld(esc(ln.cName || 'CTN') + (m ? ' (' + num(m) + ')' : ''), 'jctn', ctnVal, 0, !m)}
+        ${fld(esc(ln.uName || 'PCS'), 'jpcs', pk ? (ln.pcs || '') : (ln.pcs || ''), 0)}
+        ${fld('Kh/' + esc(ln.cName || 'CTN'), 'jkc', m ? jF(ln.costP * m) : '', m ? oC * m : 0, !m)}
+        ${fld('Kh/' + esc(ln.uName || 'PCS'), 'jcost', jF(ln.costP), oC)}
       </div>
-      <small class="stat-note">Stock abhi ${num(Number(it?.stock) || 0)} ${esc(ln.uName)} · naye rates pichhle nafa se</small>` :
+      <div class="jc-sub">Naye rates · pichhle nafa se${r.j?.old ? ` · khareed pichhli ${num(r.j.old)} <b class="${diff > 0 ? 'red' : 'green'}">${diff > 0 ? '+' : ''}${num(diff)}</b>` : ''}</div>
+      <div class="jc-g4">
+        ${fld('W/' + esc(ln.cName || 'CTN'), 'jwc', pk ? jF(ln.wctn) : cs ? jF(ln.wpcs * cs) : '', pk ? oW * pk : oW * cs, !m)}
+        ${fld('W/' + esc(ln.uName || 'PCS'), 'jw', jF(ln.wpcs), oW)}
+        ${fld('R/' + esc(ln.cName || 'CTN'), 'jrc', pk ? jF(ln.rctn) : cs ? jF(ln.rpcs * cs) : '', pk ? (Number(o.oldR) || 0) * pk : oR * cs, !m)}
+        ${fld('R/' + esc(ln.uName || 'PCS'), 'jr', jF(ln.rpcs), oR)}
+      </div>
+      <small class="stat-note">Stock abhi ${num(Number(it?.stock) || 0)} ${esc(ln.uName)}${!pk && cs ? ' · POS mein carton size khali — CTN sirf app mein' : ''}</small>` :
       `<div class="jc-why"><small>🔴 Humare stock mein ye item nahi mila</small></div>`}
     </div>
-    <div class="jc-acts">
+    <div class="jc-acts jc-sticky">
       ${ln ? '<button type="button" class="got jc-ok" data-pp-jok="1">✓ Theek — agla ›</button>' : ''}
-      <button type="button" data-pp-pick="${i}">✏️ ${ln ? 'Item badlein' : 'Item chunein'}</button>
-      <button type="button" class="danger" data-pp-jskip="1">✕ Chhor do</button>
+      <button type="button" data-pp-pick="${i}">✏️ ${ln ? 'Item' : 'Item chunein'}</button>
+      <button type="button" class="danger" data-pp-jskip="1">✕ Chhor</button>
       <button type="button" data-pp-jlist="1">‹ List</button>
-    </div>`);
+    </div>
+    <small class="stat-note jc-hint">Ungli daayein khainchein = ✓ agla · baayein = pichhla</small>`);
   const d = $('dialog'); if (d) d.classList.add('full-dialog');
+  jPattiPaint(r);
 }
+function jRepaint() {                 // card ke khane dobara bharo (jo khana likha ja raha ho use chhor kar)
+  const r = aiRows && aiRows[jIx]; const l = r && r.key ? cart.find(x => x.k === r.key) : null; if (!l) return;
+  const pk = packOf(l), cs = jCs(r, l), m = pk || cs, act = document.activeElement;
+  const set = (k, v) => { const e = document.querySelector(`[data-pp-${k}]`); if (e && e !== act && !e.disabled) e.value = v; };
+  set('jctn', pk ? (l.ctn || '') : cs ? jF(linePcs(l) / cs) : '');
+  set('jpcs', l.pcs || '');
+  set('jkc', m ? jF(l.costP * m) : ''); set('jcost', jF(l.costP));
+  set('jwc', pk ? jF(l.wctn) : cs ? jF(l.wpcs * cs) : ''); set('jw', jF(l.wpcs));
+  set('jrc', pk ? jF(l.rctn) : cs ? jF(l.rpcs * cs) : ''); set('jr', jF(l.rpcs));
+  const a = $('jcAmt'); if (a) a.textContent = num(lineTotal(l));
+}
+function jPrev() {
+  const act = (aiRows || []).map((r, i) => i).filter(i => !aiRows[i].skip);
+  const before = act.filter(x => x < jIx);
+  if (before.length) jCard(before[before.length - 1]);
+}
+// ---------- v2.4.1: poori tasveer — do ungliyon se zoom, khainchna, do dafa tap, "‹ Wapas Jaanch" ----------
+let zS = 1, zX = 0, zY = 0, zFocus = 0;
+function zApply() { const im = $('ppZoomImg'); if (im) im.style.transform = `translate(${zX}px, ${zY}px) scale(${zS})`; }
+function zClamp() {
+  const box = $('ppZoom'), im = $('ppZoomImg'); if (!box || !im) return;
+  const W = box.clientWidth, H = box.clientHeight, iw = W * zS, ih = (im.naturalHeight / Math.max(1, im.naturalWidth)) * W * zS;
+  zX = Math.min(0, Math.max(W - iw, zX)); zY = ih > H ? Math.min(0, Math.max(H - ih, zY)) : 0;
+}
+function zAt(ns, cx, cy) { ns = Math.max(1, Math.min(5, ns)); zX = cx - (cx - zX) * ns / zS; zY = cy - (cy - zY) * ns / zS; zS = ns; zClamp(); zApply(); }
+function zStep(dir) { const box = $('ppZoom'); if (!box) return; zAt(zS + dir * 0.5, box.clientWidth / 2, box.clientHeight / 2); }
+function zWire() {
+  const box = $('ppZoom'), im = $('ppZoomImg'); if (!box || !im) return;
+  const pts = new Map(); let start = null, lastTap = 0;
+  const go = () => {
+    zS = 1; zX = 0; zY = 0;
+    if (zFocus > 0) {            // patti se aaye: seedha usi line par 2.2x
+      const W = box.clientWidth, H = box.clientHeight, ih = (im.naturalHeight / Math.max(1, im.naturalWidth)) * W;
+      zAt(2.2, 0, 0); zY = -(zFocus / 1000 * ih * zS - H / 2); zX = 0; zClamp(); zApply();
+    } else zApply();
+  };
+  if (im.complete && im.naturalWidth) go(); else im.onload = go;
+  box.addEventListener('pointerdown', e => {
+    box.setPointerCapture?.(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const now = Date.now();
+    if (pts.size === 1 && now - lastTap < 300) { const b = box.getBoundingClientRect(); zAt(zS > 1.2 ? 1 : 2.5, e.clientX - b.left, e.clientY - b.top); lastTap = 0; }
+    else lastTap = now;
+    start = null;
+  });
+  box.addEventListener('pointermove', e => {
+    if (!pts.has(e.pointerId)) return;
+    const prev = pts.get(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    const b = box.getBoundingClientRect();
+    if (pts.size === 1) { zX += e.clientX - prev.x; zY += e.clientY - prev.y; zClamp(); zApply(); return; }
+    const [a, c] = [...pts.values()], dist = Math.hypot(a.x - c.x, a.y - c.y), mx = (a.x + c.x) / 2 - b.left, my = (a.y + c.y) / 2 - b.top;
+    if (!start) { start = { dist, s: zS }; return; }
+    zAt(start.s * dist / Math.max(1, start.dist), mx, my);
+  });
+  const up = e => { pts.delete(e.pointerId); if (pts.size < 2) start = null; };
+  box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
+}
+
 function jNext() {
   const q = jQueue().filter(x => aiRows[x].j?.conf !== 'g' || !aiRows.some(r => !r.skip && !r.done && r.j?.conf !== 'g'));
   const after = q.find(x => x > jIx);
@@ -841,6 +985,7 @@ function jSummary() {
   const farq = r2(bill - mine);
   dlg('🤖 Khulasa', `<div class="jz-head"><div class="jz-count">🟢 ${k.g} · 🟡 ${k.y} · 🔴 ${k.r} · pakki ${aiRows.filter(r => r.done).length}/${k.all}</div></div>
     ${bill ? `<div class="jc-card ${Math.abs(farq) > Math.max(10, bill * 0.02) ? 'y' : 'g'}"><div class="jc-sec"><small>Bill ka total</small><b>${num(bill)}</b><span>Aap ki lines ${num(mine)} · farq <b>${num(farq)}</b>${Math.abs(farq) > 1 ? (farq > 0 ? ' — shayad tax / T.O. / mazdoori, ya koi line reh gayi' : ' — koi line zyada ya ginti ghalat') : ''}</span></div></div>` : ''}
+    ${jColTotals()}
     ${up.length ? `<div class="jc-card y"><div class="jc-sec"><small>📈 ${up.length} items mehnge</small><span>${up.join(' · ')}</span></div></div>` : ''}
     ${down.length ? `<div class="jc-card g"><div class="jc-sec"><small>📉 ${down.length} items saste</small><span>${down.join(' · ')}</span></div></div>` : ''}
     ${dup.map(([a, b]) => `<div class="jc-card y"><div class="jc-sec"><small>Ek item do dafa</small><span>${esc(aiRows[a].ai.name || '')} + ${esc(aiRows[b].ai.name || '')}</span></div><div class="jc-acts"><button type="button" data-pp-jmerge="${a}|${b}">Mila do</button></div></div>`).join('')}
@@ -869,8 +1014,9 @@ function learnFromBill() {
 function sizeMemFromBill() {           // bill ka سائز item ke sath yaad (carton size)
   const m = {};
   for (const r of aiRows || []) {
-    if (r.skip || !r.key || !(r.j?.size > 1)) continue;
-    const ln = cart.find(l => l.k === r.key); if (ln) m[String(ln.id)] = r.j.size;
+    const sz = Number(r.cs) > 1 ? Number(r.cs) : Number(r.j?.size) > 1 ? Number(r.j.size) : 0;
+    if (r.skip || !r.key || !sz) continue;
+    const ln = cart.find(l => l.k === r.key); if (ln && !packOf(ln)) m[String(ln.id)] = sz;
   }
   return m;
 }
@@ -915,13 +1061,16 @@ function aiItems() {
   };
   inp.click();
 }
-// v2.2.0: bill poori screen par — zoom aur (ek se zyada ho to) agli tasveer
+// v2.4.1: bill poori screen par — do ungliyon se zoom, khainchna, do dafa tap; Jaanch se aaye to "‹ Wapas Jaanch"
 function billView() {
   if (!billPics.length) return;
+  const back = aiRows && (jView === 'card' || jView === 'list' || jView === 'sum');
   dlg('📄 Bill' + (billPics.length > 1 ? ` (${billIx + 1}/${billPics.length})` : ''),
-    `<div class="pp-view" data-zoom="${billZoom}"><img src="${billPics[billIx]}" alt="bill"></div>
-     <div class="pp-billacts"><button type="button" data-pp-vzoom="-1">− chhota</button><button type="button" data-pp-vzoom="1">+ bara</button>${billPics.length > 1 ? '<button type="button" data-pp-vnext="1">Agli tasveer ›</button>' : ''}<button type="button" data-pp-pin="1">📌 Upar chipka do</button></div>`);
+    `<div class="pp-zoom" id="ppZoom"><img id="ppZoomImg" src="${billPics[billIx]}" alt="bill" draggable="false"></div>
+     <div class="pp-billacts">${back ? '<button type="button" class="got" data-pp-vback="1">‹ Wapas Jaanch</button>' : ''}<button type="button" data-pp-vzoom="-1" aria-label="Chhota">−</button><button type="button" data-pp-vzoom="1" aria-label="Bara">+</button>${billPics.length > 1 ? '<button type="button" data-pp-vnext="1">Agli tasveer ›</button>' : ''}<button type="button" data-pp-pin="1">📌</button></div>
+     <small class="stat-note">Do ungliyon se zoom · ek ungli se khainchein · do dafa tap = zoom</small>`);
   const d = $('dialog'); if (d) d.classList.add('full-dialog');
+  zWire();
 }
 async function aiLearn(i, btn, quiet) {
   const r = aiRows && aiRows[i]; if (!r || !r.itemId || !learnOf) return;

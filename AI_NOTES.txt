@@ -1050,3 +1050,43 @@ card mein khareed badla to W pichhle nafa se, Enter = agla khana. + run 33, runf
 runb 15, runc 14. Sab pass. SABAQ: test mein pos-stock stub ko '?v=' ke SATH import karein warna alag module milta hai.
 VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html ('2.4.0') + version.json
 (rules 2.2, rulesChanged FALSE).
+
+=== v2.4.1 — JAANCH CARD EK SCREEN MEIN · BILL KI PATTI · PINCH-ZOOM · "1 CTN =" (rules wahi v2.2) ===
+MALIK: "sab theek hai, sirf bill dekhna nahi ho pa raha" + "CTN / PCS / wholesale / parchoon sab ek line mein, jagah kam"
++ "aksar items par CTN aur PCS nahi aata — sab items par CTN PCS W R lagna chahiye". Malik ko pehle visualizer se card ka
+namoona dikhaya gaya (numbered 1-6), us ne OK kiya. CLAUDE MODEL: malik ne poocha — bataya ke app ke liye Claude ka muft
+model nahi; faisla: abhi GEMINI hi (Claude ka option nahi banaya). Agar kabhi: "sirf laal lines" tareeqa + Anthropic
+Console mein mahana spend limit.
+
+AI (ai-tally.js): har line ka y (0..1000, tasveer par upar se jagah) + page (kaunsi tasveer), aur bill ke neeche ginti ke
+total ctnTotal / pcsTotal. parseBill teeno rakhta hai (y clamp 0..1000).
+
+CARD (purchase.js jCard — poora naya):
+- Upar .jc-patti (id jcPatti, 120px): jPattiPaint() tasveer ko background bana kar sirf us line ke gird ka hissa dikhata
+  hai (natural size se height nikal kar background-position), .jc-mark peela nishan line par. y na ho to jY() padosi
+  lines se andaza (warna 280..850 mein barabar). Tap = billView() usi line par 2.2x (data-pp-focus = y).
+- .jc-top: "bill ka naam → humara item" + line ki raqam (#jcAmt). .jc-bill: bill ki ginti · سائز · ریٹ · کل.
+- Unit chips (jmode) + POS mein pack khali ho to "1 CTN = [ ]" (data-pp-jcs -> r.cs; change par r.force='size' aur
+  card dobara). jCs(r, ln) = POS pack || r.cs || memOf(id).s || bill ka size (>1). jCandidates(ln, ai, cs0) ab cs0 leta hai.
+- .jc-g4 do qataarein, 8 khane: jctn · jpcs · jkc (Kh/CTN) · jcost (Kh/PCS) / jwc · jw · jrc · jr; har ek ke neeche
+  "pehle" (oldCost / oldW / oldR ke hisaab se, CTN wale × pack ya × cs). Pack bhi nahi aur cs bhi nahi -> CTN khane band.
+  POS pack KHALI item par CTN sirf app mein (POS ko pieces hi jate hain) — card par likha aata hai.
+  jRepaint(): kisi khane ke badalne par baqi khane (jo likha ja raha ho us ke siwa) dobara.
+- .jc-sticky (position sticky; bottom 0): ✓ Theek — agla (pura chauda), ✏️ Item · ✕ Chhor · ‹ List.
+- Swipe (touchstart/touchend, khane/button par nahi): daayein (dx > 70) = ✓ agla, baayein = jPrev().
+- sizeMemFromBill: pehle r.cs, phir r.j.size — sirf un items ka jin ka POS pack khali (itemRates.s).
+
+VIEWER (billView — naya): #ppZoom (68vh, touch-action none) + #ppZoomImg transform translate/scale; pointer events:
+ek ungli = khainchna, do = pinch (midpoint ke gird), do dafa tap (<300ms) = 1x/2.5x; −/+ (zStep); 1..5x; zClamp.
+"‹ Wapas Jaanch" (data-pp-vback) -> jCard(jIx) ya aiRender(). Purana .pp-view / billZoom wala viewer hata diya
+(pin wali pp-billbar ab bhi billZoom istemal karti hai).
+
+BAQI: "🧾 Jaanch kholo (N baqi)" (data-pp-jopen) POS Purchase head mein jab aiRows hon — khirki band ho jaye to wapas
+usi jagah (jView/jIx yaad). "✕ Naya bill" par aiRows bhi saaf. jColTotals(): ctnTotal+pcsTotal dono ho to alag alag,
+warna ek total vs sab lines ki ginti (0.5% ya 1 ki gunjaish) — overview aur khulase mein.
+
+TEST (node + jsdom): runj2 19 naye (ginti total 180, patti + focus y, 8 khane, "1 CTN =", CTN band -> 20 likhne par chalu,
+170 × 20 = 3400 PCS @ 341.5, Kh/CTN 6830, W/CTN 7400 -> W/PCS 370, viewer + wapas usi card, swipe = agla, Jaanch kholo,
+cs 20 yaad, POS ko 3400 @ 341.5) + run 33, runj 23, runfmt 10, runmem 6, runai 9, runpdf 8, runb 15, runc 14. Sab pass.
+(Purane test ke labels naye card ke mutabiq badle; jsdom mein Image nahi — jPattiPaint mein typeof Image guard.)
+VERSION BUMP: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html ('2.4.1') + version.json (rules 2.2, false).

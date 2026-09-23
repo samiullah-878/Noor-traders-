@@ -1,0 +1,27 @@
+Blue Khata v2.4.1 — Jaanch card ek screen mein · Bill ki patti · Ungliyon se zoom · "1 CTN ="
+INSTALL: Is ZIP ki files GitHub par, phir app mein "↻ Sync / Update" -> 2.4.1.
+         Firebase rules WAHI (v2.2) — kuch publish nahi karna.
+
+1) BILL KI PATTI — sirf wohi line
+   - Card ke upar bill ki tasveer ka sirf wo hissa jahan ye line hai (peela nishan ke sath).
+   - Patti par tap = poori tasveer, SEEDHA usi line par zoom.
+   - Poori tasveer: do ungliyon se zoom, ek ungli se khainchein, do dafa tap = zoom. "‹ Wapas Jaanch" = usi card par.
+
+2) SAB KHANE DO QATAAR MEIN
+   - Upar: CTN · PCS · Khareed/CTN · Khareed/PCS
+   - Neeche: Wholesale/CTN · Wholesale/PCS · Parchoon/CTN · Parchoon/PCS
+   - Har khane ke neeche chhota "pehle" — pichhli dafa ki qeemat. Kisi ek ko badlein, baqi khud theek.
+
+3) CARTON SIZE KHALI HO TO "1 CTN ="
+   - Jaise bassan / badam — ek dafa likh dein (misal 20). CTN ke khane chalu, hisaab khud:
+     170 carton × 20 = 3400, khareed 6830 ÷ 20 = 341.5. App hamesha ke liye yaad rakhti hai.
+   - Note: POS mein us item ka carton size jab tak khali hai, POS ko pieces hi jayenge (CTN sirf app mein).
+
+4) TEZ CHALNA
+   - "✓ Theek — agla ›" hamesha neeche chipka hua.
+   - Card par ungli DAAYEIN khainchein = ✓ agla · BAAYEIN = pichhla.
+   - Khirki ghalti se band ho jaye to POS Purchase par "🧾 Jaanch kholo (N baqi)" — wahin se wapas.
+
+5) BILL KE NEECHE WALE TOTAL SE MILAN
+   - Bill par ginti ka total ho (jaise کارٹن 201 · پیس 309) to app apni lines ka jama milati hai.
+     Farq ho to laal: "koi line chhooti ya ghalat parhi?"
