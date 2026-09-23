@@ -143,11 +143,12 @@ export const BILL_PROMPT = [
   '- mr: agar bill par "من ریٹ" / "Man Rate" column ho to us line ka number (0.00 ho to 0), warna 0.',
   '- EK HI NUMBER KO "ctn" AUR "pcs" DONO MEIN MAT DAALO — jis khane (کارٹن / پیس) mein likha ho sirf usi mein. Bill ke hisaab se jaanch lo: ginti × rate = us line ki kul raqam.',
   '- y: har line tasveer par KAHAN hai — upar se kitni neeche, 0 se 1000 tak (0 = tasveer ka bilkul upar, 1000 = bilkul neeche). page: ek se zyada tasveerein hon to line kis tasveer par hai (1, 2, ...), warna 1.',
+  '- xtra: bill ke NEECHE items ke jor ke UPAR jo kharche JAMA kiye gaye hon — labour / لیبر / مزدوری / کرایہ / freight / loading / packing / cartage — har ek {"name": jaisa likha ho, "amount": raqam}. Discount, "previous balance", pichhla baqaya, tax number SHAMIL NA karo. Na hon to [].',
   '- ctnTotal / pcsTotal: bill ke neeche agar ginti ke total likhe hon (carton / کارٹن ka jama, pieces / پیس ka jama) to wo numbers, warna 0.',
   '- Bill ke upar wale column headings jaisay ke likhe hain: qtyLabel (ginti ka heading), rateLabel (rate ka heading), amtLabel (aakhri raqam ka heading). Na dikhein to "".',
   '- Tareekh, mobile number, address, "previous balance", tax number waghera ko LINES mein SHAMIL NA karo.',
   '- itemId: agar neeche "HUMARE ITEMS" ki list di gayi ho to har line ka sab se milta julta item us list mein se dhoondo aur wahan likha hua id yahan do. Poora yaqeen na ho to itemId "" chhor do — ghalat item lagane se behtar khali chhorna hai. List se bahar ka koi id mat banao.',
-  'Sirf yeh JSON do, aur kuch nahi: {"supplier":"","date":"","total":0,"ctnTotal":0,"pcsTotal":0,"qtyLabel":"","rateLabel":"","amtLabel":"","lines":[{"name":"","roman":"","itemId":"","qty":0,"ctn":0,"pcs":0,"size":0,"mr":0,"rate":0,"total":0,"y":0,"page":1,"unsure":false}]}'
+  'Sirf yeh JSON do, aur kuch nahi: {"supplier":"","date":"","total":0,"ctnTotal":0,"pcsTotal":0,"xtra":[{"name":"","amount":0}],"qtyLabel":"","rateLabel":"","amtLabel":"","lines":[{"name":"","roman":"","itemId":"","qty":0,"ctn":0,"pcs":0,"size":0,"mr":0,"rate":0,"total":0,"y":0,"page":1,"unsure":false}]}'
 ].join('\n');
 
 // v2.0.0: humare POS items ki list — AI ko saath bhejte hain taake wohi sahi item chun le.
@@ -183,6 +184,7 @@ export function parseBill(text) {
   for (const l of lines) { if (!l.ctn && !l.pcs) l.ctn = 1; if (!l.total && l.ctn && l.rate) l.total = Math.round(l.ctn * l.rate); }
   return { supplier: String(d.supplier || '').slice(0, 120), date: /^\d{4}-\d{2}-\d{2}$/.test(String(d.date || '')) ? d.date : '', total: Math.round(num(d.total)),
     ctnTotal: Math.max(0, num(d.ctnTotal)), pcsTotal: Math.max(0, num(d.pcsTotal)),   // v2.4.1: bill ke neeche ginti ke total
+    xtra: (Array.isArray(d.xtra) ? d.xtra : []).map(x => ({ name: String(x?.name || '').slice(0, 30), amount: Math.round(Math.max(0, num(x?.amount))) })).filter(x => x.amount > 0).slice(0, 5),   // v2.4.6: labour / kiraya
     qtyLabel: String(d.qtyLabel || '').slice(0, 30), rateLabel: String(d.rateLabel || '').slice(0, 30), amtLabel: String(d.amtLabel || '').slice(0, 30), lines };
 }
 

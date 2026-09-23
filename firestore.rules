@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v2.2 (billFormats: har supplier ke bill ka naqsha — ginti PCS ya CTN, rate fi PCS ya fi CTN) · v2.1 (itemRates: har item ka pichhla khareed aur nafa yaad) · v2.0 (itemAliases: Full / Purchase mulazim bhi bill ka naam "yaad" karwa sake — naam sirf barh sakte hain, mit nahi sakte) · v1.94 (app purchase: dobara / cancel) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v2.3 (itemJobs: app se POS ka item banana / badalna; mulazim ko ijazat stockConfig.itemEdit se) · v2.2 (billFormats: har supplier ke bill ka naqsha — ginti PCS ya CTN, rate fi PCS ya fi CTN) · v2.1 (itemRates: har item ka pichhla khareed aur nafa yaad) · v2.0 (itemAliases: Full / Purchase mulazim bhi bill ka naam "yaad" karwa sake — naam sirf barh sakte hain, mit nahi sakte) · v1.94 (app purchase: dobara / cancel) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -45,6 +45,10 @@ service cloud.firestore {
     function blueStaff() { return isStaff() && acctIs(staffAccount(), 'full'); }
     function purchaseStaff() { return isStaff() && acctIs(staffAccount(), 'purchase'); }
     function stockStaff() { return isStaff() && acctIs(staffAccount(), 'stock'); }
+    // v2.3: malik ki ijazat — mulazim item / rates badal sake (Stock screen ka switch)
+    function itemEditOn() {
+      return get(/databases/$(database)/documents/businesses/noor-traders/blueAccess/stockConfig).data.itemEdit == true;
+    }
     function saleStaff() { return isStaff() && acctIs(staffAccount(), 'sale'); }
     match /businesses/noor-traders/{collectionName}/{docId} {
       allow read: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount'];
@@ -177,6 +181,19 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly(['op','itemId','subId','code','qty','rate','show','status','by','at'])
         && request.resource.data.op in ['add','edit','delete'] && request.resource.data.status == 'new'
         && request.resource.data.by == request.auth.uid && request.resource.data.code is string && request.resource.data.code.size() <= 50;
+    }
+
+    // v2.3: POS ka item banana / badalna (itemJobs) — PC item-post.js admin key se status likhta hai.
+    // Malik hamesha; Full / Stock mulazim tabhi jab malik ne stockConfig.itemEdit ON kiya ho.
+    match /businesses/noor-traders/itemJobs/{jobId} {
+      allow read: if isOwner() || blueStaff() || stockStaff();
+      allow create: if request.resource.data.status == 'new'
+        && request.resource.data.keys().hasOnly(['op','itemId','code','name','pack','costP','rctn','rpcs','wctn','wpcs','subs','subsDel','status','by','at'])
+        && request.resource.data.op in ['new','edit']
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.name is string && request.resource.data.name.size() <= 150
+        && request.resource.data.subs is list && request.resource.data.subs.size() <= 50
+        && (isOwner() || ((blueStaff() || stockStaff()) && itemEditOn()));
     }
 
     // v1.73: stock transfer note (transferJobs) aur thermal print (printJobs) — PC transfer-sync.js admin key se

@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch } from './smart-search.js?v=2.4.5';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch } from './smart-search.js?v=2.5.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -26,8 +26,11 @@ const flagOf = id => flags[String(id)] || {};
 const countLocked = () => countOff && !isOwner();
 
 let aliasStop = null;
+let itemCfg = {}, cfgStop = null;                         // v2.5: stockConfig (mulazim item/rates badal sake)
+const canEditItem = () => isOwner() || itemCfg.itemEdit === true;
 export function stockSetup(opts) {
   if (!aliasStop && opts?.cloud?.listenAliases) aliasStop = opts.cloud.listenAliases(m => setAliases(m));   // v1.75: doosre naam
+  if (!cfgStop && opts?.cloud?.listenStockConfig) cfgStop = opts.cloud.listenStockConfig(c => { itemCfg = c || {}; if (stockActive) soft(); });
   cloud = opts.cloud;
   rerender = opts.rerender || (() => {});
   notice = opts.notice || (() => {});
@@ -447,9 +450,11 @@ function summaryHTML(branches, pick, items, meta, names) {
         ? `<button class="sh-wide sh-scan" data-stock-scan="1">📷 Aur scan karein (${num(scanList.length)} list mein)</button>
            <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>`
         : `<div class="sh-scanrow"><button class="sh-wide sh-scan" data-stock-scan="1">📷 Barcode scan karein (ek ya kai items)</button><button type="button" class="sh-mic" data-stock-mic="1" title="Awaz se dhoondein">🎤</button></div>
+           ${canEditItem() ? '<button class="sh-wide" data-stock-newitem="1">➕ Naya item</button>' : ''}
            <button class="sh-wide" data-stock-transfer="1">⇄ Transfer note (godam se godam)</button>
            ${($('search')?.value || '').trim() ? '<button class="sh-wide" data-stock-clear="1">✕ Search saaf karein</button>' : ''}`}
     </div>
+    ${isOwner() ? `<label class="sh-switch"><input type="checkbox" data-stock-itemedit="1"${itemCfg.itemEdit ? ' checked' : ''}> Mulazim item aur rates badal sake</label>` : ''}
     ${branchBar ? `<div class="sh-label">Branch</div>${branchBar}` : ''}
     <div class="sh-label">Dikhao</div>
     <div class="account-tools">
@@ -503,6 +508,75 @@ function applySub(r, op, x) {
   if (op === 'delete') subPatch.set(k, { at: Date.now(), list: list.filter(y => Number(y.id) !== Number(x.subId)) });
   else if (op === 'edit') subPatch.set(k, { at: Date.now(), list: list.map(y => Number(y.id) === Number(x.subId) ? { ...y, b: x.code, q: x.qty, r: x.rate, s: x.show } : y) });
   else subPatch.set(k, { at: Date.now(), list: [...list, { id: x.subId, b: x.code, q: x.qty, r: x.rate, s: x.show }] });
+}
+// ---------- v2.5: ITEM — naam, barcode, 1 CTN = PCS, khareed + parchoon / wholesale rates ----------
+const itemDraft = new Map();
+function itemForm(r, pre) {
+  const d = $('dialog'); if (!d) return;
+  const isNew = !r;
+  const v = { name: r?.name || '', code: r?.code || '', pack: Number(r?.pack) || 0,
+    costP: Number(r?.prate) || 0, rpcs: Number(r?.rate2) || Number(r?.rate) || 0,
+    rctn: (Number(r?.pack) > 1 ? (Number(r?.rate) || 0) * Number(r.pack) : 0) || 0,
+    wpcs: Number(r?.wrate) || 0, wctn: 0, ...(pre || {}) };
+  if (Number(v.pack) > 1) { if (!v.rctn) v.rctn = r2(v.rpcs * v.pack); if (!v.wctn) v.wctn = r2(v.wpcs * v.pack); }
+  const rates = canEditItem();
+  d.classList.remove('search-dialog');
+  $('dialogTitle').textContent = isNew ? '➕ Naya item' : '✏️ ' + r.name;
+  const f = (lab, k) => `<label class="it-f"><span>${lab}</span><input type="number" min="0" step="any" inputmode="decimal" name="${k}" value="${v[k] ? num(v[k]) : ''}" placeholder="0"${rates ? '' : ' disabled'}></label>`;
+  const subs = r ? labelRows(r).filter(x => !x.main) : [];
+  $('dialogBody').innerHTML = `<form class="item-form" data-item-form="${r ? esc(r.id) : 'new'}">
+    <label class="it-wide"><span>Item ka naam</span><input name="name" required maxlength="150" autocomplete="off" value="${esc(v.name)}" placeholder="misal: marhaba honey 80gm"></label>
+    <label class="it-wide"><span>Barcode</span><div class="it-code"><input name="code" maxlength="50" autocomplete="off" value="${esc(v.code)}" placeholder="${isNew ? 'Khali chhorein to POS khud banayega' : ''}"><button type="button" data-item-scan="1">📷</button></div></label>
+    <div class="it-grid">
+      <label class="it-f"><span>1 CTN = PCS</span><input type="number" min="0" step="any" inputmode="decimal" name="pack" value="${v.pack || ''}" placeholder="0"></label>
+      ${f('Khareed / PCS', 'costP')}
+    </div>
+    <div class="it-head">Parchoon</div>
+    <div class="it-grid">${f('R / CTN', 'rctn')}${f('R / PCS', 'rpcs')}</div>
+    <div class="it-head">Wholesale</div>
+    <div class="it-grid">${f('W / CTN', 'wctn')}${f('W / PCS', 'wpcs')}</div>
+    ${rates ? '' : '<p class="muted it-lock">🔒 Rates sirf malik badal sakta hai</p>'}
+    ${r ? `<div class="it-head">Sub-barcode (${subs.length})</div>
+      <div class="it-subs">${subs.map(x => `<div class="it-sub${x.show === false ? ' off' : ''}"><div><b>${esc(x.code)}</b><small>${x.qty !== 1 ? 'Tadad ' + num(x.qty) + ' · ' : ''}Rs ${num(x.price)}${x.show === false ? ' · Show off' : ''}</small></div>
+        <button type="button" data-sub-edit="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Badlein">✏️</button>
+        <button type="button" class="danger" data-sub-del="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Hatao">🗑️</button></div>`).join('') || '<p class="muted">Koi sub-barcode nahi</p>'}</div>
+      <div class="account-tools"><button type="button" data-sub-new="${esc(r.id)}">➕ Naya barcode</button></div>` : ''}
+    <div class="account-tools it-acts"><button type="submit" class="primary">${isNew ? '➕ POS mein banao' : '💾 POS mein save'}</button><button type="button" data-item-close="1">Wapas</button></div>
+    <p class="muted it-msg" role="status"></p></form>`;
+  if (!d.open) d.showModal();
+  setTimeout(() => $('dialogBody').querySelector('input[name=name]')?.focus(), 50);
+}
+function itemRead(form) {
+  const g = k => form.querySelector('[name=' + k + ']');
+  const nv = k => { const e = g(k); return e && !e.disabled ? Math.max(0, Number(e.value) || 0) : null; };
+  return { name: String(g('name').value || '').trim(), code: String(g('code').value || '').trim(),
+    pack: Math.max(0, Number(g('pack').value) || 0), costP: nv('costP'), rctn: nv('rctn'), rpcs: nv('rpcs'), wctn: nv('wctn'), wpcs: nv('wpcs') };
+}
+async function itemSave(form, btn) {
+  const id = form.dataset.itemForm, isNew = id === 'new';
+  const r = isNew ? null : rowCache.get(String(id));
+  const v = itemRead(form), msg = form.querySelector('.it-msg');
+  if (!v.name) { msg.textContent = 'Item ka naam likhein'; return; }
+  if (!cloud?.requestItem) { msg.textContent = 'Item ke liye app update karein'; return; }
+  const keep = k => (v[k] == null ? (k === 'costP' ? Number(r?.prate) || 0 : k === 'rpcs' ? Number(r?.rate2) || Number(r?.rate) || 0 : k === 'wpcs' ? Number(r?.wrate) || 0 : 0) : v[k]);
+  const job = { op: isNew ? 'new' : 'edit', itemId: isNew ? '' : String(r.id), code: v.code, name: v.name, pack: v.pack,
+    costP: keep('costP'), rctn: keep('rctn'), rpcs: keep('rpcs'), wctn: keep('wctn'), wpcs: keep('wpcs') };
+  if (!isNew) job.subs = labelRows(r).filter(x => !x.main).map(x => ({ b: x.code, q: x.qty, r: x.rate || 0, s: x.show !== false }));
+  btn.disabled = true; const old = btn.textContent; btn.textContent = '⏳ PC ko bhej raha hoon…';
+  try {
+    const jid = await cloud.requestItem(job);
+    msg.textContent = '⏳ PC ke jawab ka intezar… (PC on ho aur item-post chal raha ho)';
+    let stop = null, done = false;
+    const end = (m, ok) => { if (done) return; done = true; try { stop && stop(); } catch {}
+      btn.disabled = false; btn.textContent = old; msg.textContent = m;
+      if (ok) { notice(isNew ? '✓ Item POS mein ban gaya' : '✓ Item POS mein save ho gaya'); setTimeout(() => $('dialog')?.close(), 900); rerender(); } };
+    stop = cloud.watchItem ? cloud.watchItem(jid, j => {
+      if (!j) return;
+      if (j.status === 'done') end('✓ POS mein ho gaya' + (j.code ? ' — code ' + j.code : ''), true);
+      else if (j.status === 'failed') end('Nahi hua: ' + (j.error || 'nakam'), false);
+    }) : null;
+    setTimeout(() => end('PC se jawab nahi aaya — PC on hai aur item-post chal raha hai? (hukum mehfooz hai, PC on hote hi lag jayega)', false), 45000);
+  } catch (e) { btn.disabled = false; btn.textContent = old; msg.textContent = 'Nahi bheja: ' + (e?.message || e); }
 }
 function subForm(r, edit) {
   const d = $('dialog');
@@ -582,6 +656,10 @@ document.addEventListener('click', e => {
   if (t.dataset.subEdit) { const r = rowCache.get(t.dataset.subItem), x = r && labelRows(r).find(y => String(y.subId) === t.dataset.subEdit); if (x) subForm(r, x); return; }
   if (t.dataset.subDel) { const r = rowCache.get(t.dataset.subItem), x = r && labelRows(r).find(y => String(y.subId) === t.dataset.subDel);
     if (!x) return; if (!confirm(`"${x.code}" (${r.name}) POS se hata dein?`)) return; subSend(r, 'delete', x, t.closest('.label-row')?.querySelector('small'), t); return; }
+});
+document.addEventListener('submit', e => {                            // v2.5: item form
+  const itf = e.target.closest?.('[data-item-form]');
+  if (itf) { e.preventDefault(); itemSave(itf, itf.querySelector('button[type=submit]')); return; }
 });
 document.addEventListener('submit', e => {
   const f = e.target.closest?.('[data-sub-form]'); if (!f) return;
@@ -714,6 +792,13 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', e => {
   const t = e.target;
+  if (t.matches?.('[data-stock-itemedit]')) {                          // v2.5: malik ka switch
+    const on = t.checked;
+    (cloud?.setItemEdit ? cloud.setItemEdit(on) : Promise.reject(Error('app update karein')))
+      .then(() => notice(on ? 'Mulazim ab item aur rates badal sakta hai' : 'Mulazim ab item / rates nahi badal sakta'))
+      .catch(err => { t.checked = !on; notice('Nahi hua: ' + (err?.message || err)); });
+    return;
+  }
   if (t.matches?.('[data-tr-from]')) { trFrom = Number(t.value); openTransfer(); }
   else if (t.matches?.('[data-tr-to]')) { trTo = Number(t.value); openTransfer(); }
   else if (t.matches?.('[data-tr-ctn]')) { const l = trLines[Number(t.dataset.trCtn)]; if (l) { l.ctn = Math.max(0, Math.floor(Number(t.value) || 0)); trCalc(l); } openTransfer(); }
@@ -802,6 +887,7 @@ function rowHTML(r) {
       <strong>${big}</strong>
       <small>${num(r.stock)} ${esc(r.uName || 'Pcs')}</small>
       <button type="button" class="stock-label-btn" data-stock-label="${esc(r.id)}">🏷️ Label</button>
+      ${canEditItem() ? `<button type="button" class="stock-item-btn" data-stock-item="${esc(r.id)}">✏️ Item</button>` : ''}
       ${isOwner() ? `<label style="display:block;font-size:.85em;white-space:nowrap"><input type="checkbox" style="width:auto" data-stock-hide="${esc(r.id)}"${isHidden(r) ? ' checked' : ''}> Band</label>` : ''}
     </div>
     </div>
@@ -814,6 +900,15 @@ document.addEventListener('click', e => {
   const b = e.target.closest?.('[data-stock-branch]');
   if (b) { branch = Number(b.dataset.stockBranch); godamAll = false; if (branch !== 1) filter = 'has'; limit = PAGE; rerender(); return; }   // v1.95/97: godam kholte hi sirf USI godam ka stock
   if (e.target.closest?.('[data-stock-scan]')) { openScanner(); return; }
+  const ib = e.target.closest?.('[data-stock-item],[data-stock-newitem],[data-item-close]');
+  if (ib) { const d = ib.dataset;
+    if (d.itemClose != null) $('dialog')?.close();
+    else if (d.stockNewitem != null) itemForm(null, null);
+    else itemForm(rowCache.get(String(d.stockItem)), null);
+    return; }
+  const isc = e.target.closest?.('[data-item-scan]');
+  if (isc) { const form = isc.closest('form'), id = form.dataset.itemForm, v = itemRead(form);
+    itemDraft.set(id, v); scanPick(code => { const r = id === 'new' ? null : rowCache.get(String(id)); itemForm(r, { ...itemDraft.get(id), code }); }); return; }
   if (e.target.closest?.('[data-stock-mic]')) {   // v2.4.5: awaz se search (sale jaisa)
     const ok = voiceSearch(t => { const s = $('search'); if (s) { s.value = t; s.dispatchEvent(new Event('input', { bubbles: true })); } });
     if (!ok) alert('Is phone/browser mein awaz se search nahi chalti'); return;

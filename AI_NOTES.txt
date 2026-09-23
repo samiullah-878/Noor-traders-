@@ -1151,3 +1151,39 @@ Rules NAHI badlin. Files: pos-stock.js, purchase.js, style.css + version bump.
    Khareed mamooli badle (|Δ| < min(1 rupee, 0.5%)) to W/R PURANE hi (tinyCost) — 330.50→330.46 par R 390, W 335.46.
    Wholesale bhi poora rupee (user: "Yes"). Khud likha rate (manual) nahi chhedte.
 Tests: /tmp/t/runr.mjs (9), /tmp/ts/t.mjs (5, asli pos-stock.js). Kul 172 paas.
+
+==================== v2.4.6 (2026-09-23) — BILL KA KHARCHA (labour / kiraya) ====================
+Rules NAHI badlin. Files: purchase.js, ai-tally.js, style.css + version bump.
+User ne tareeqa "C" chuna: kharcha RAQAM ke hisaab se (sab items par ek hi %).
+- ai-tally: bill level `xtra: [{name, amount}]` (لیبر / مزدوری / کرایہ / freight / loading / packing), discount /
+  previous balance NAHI. normalize: 5 tak, amount > 0.
+- purchase.js: `xtra`, `xtraName` (draft mein bhi; Naya bill / bhejne ke baad 0). aiRead: bill ka xtra jab xtra 0 ho.
+  xtraApply() (keepDraft aur save se pehle): line.xs = xtra × costP ÷ Σ(lineTotal) — fi piece hissa, costP BADALTA NAHI.
+  effCost(l) = costP + xs -> POS ko yahi (save payload), recalc/tinyCost bhi isi par (W/R nafa kharcha samet).
+  lineTotal = bill ki line (kharcha ke baghair) -> card milan ✓ bill line se. cartTotal = Σ pcs × effCost.
+  UI: purchase screen foot "Kharcha (لیبر)" khana + note (+%, POS bill Rs); Khulasa card "🧾 Bill par kharcha"
+  (data-pp-jxtra), jBillTotals.mine = lines + xtra (farq 0); Jaanch card "kharcha +X (POS khareed Y)".
+  Do dafa nahi judta (xs har dafa costP se naya banta hai).
+- Misal (Bhaiya 13-Sep): lines 26,82,938 + لیبر 3,500 = 26,86,438; har item +0.13%; ghee 5200 -> 5206.78.
+Tests: /tmp/t/runx.mjs (11). Kul 191 paas.
+
+==================== v2.5.0 (2026-09-23) — POS ITEM banana / badalna ====================
+⚠️ RULES BADLI HAIN (v2.3) — malik ko firestore.rules PUBLISH karni hai.
+POS ka naqsha (ITEM-DEKHO.txt se):
+- dbo.Items: ItemCode, ItemCatID, ItemSubCatID, ItemName, SaleRate (R carton), SaleRate2 (R piece),
+  SaleRate3 (W piece), SaleRateSize (W piece), PurchaseRate (Items mein CARTON wala), PackQty,
+  PackQtyName 'CTN', QtyName 'PCS', UOMID 2, Qty1inctn. Naye items: Cat 80, SubCat 236 (waqar ke naye items wahin).
+- usp_Items_InsertUpdate (ItemID 0 = naya; AutoCode 1 -> code khud 000xxx) + usp_ItemBranchRate_InsertUpdate
+  (har branch ki row khud ban jati hai). ⚠️ Items proc ke andar "Delete From ItemSubCode WHERE ItemID" hai —
+  is liye item-post.js EDIT se pehle sub-barcode parh kar BAAD mein wapas daalta hai.
+- usp_ItemSubCode_InsertUpdate (ItemSubCodeID 0 = naya), ItemSubCode: SBBarCode, SBSaleRate, SBItemQty, IsShowOnLookup.
+PC: item-post.js (naya, item-auto.bat + Startup vbs), lock 47821, log item-log.txt, job 7 din, transaction +
+  rollback, barcode dupe check (Items + ItemSubCode), SystemNotes mein "Blue Khata" + purana->naya.
+App: pos-stock.js itemForm/itemRead/itemSave — Stock row par "✏️ Item", upar "➕ Naya item";
+  khane sirf: naam, barcode (📷 scan), 1 CTN = PCS, Khareed/PCS, R CTN·PCS, W CTN·PCS, sub-barcode list
+  (add/edit/delete pehle jaisa subcodeJobs se). Category / re-order / model NAHI.
+  cloud.requestItem/watchItem (itemJobs), listenStockConfig/setItemEdit (blueAccess/stockConfig.itemEdit).
+  Malik ki Stock screen par switch "Mulazim item aur rates badal sake" — OFF par mulazim ko form hi nahi milta
+  (rules mein bhi itemEditOn() shart). CSS: .item-form/.it-grid/.it-f/.it-sub/.sh-switch (premium).
+Tests: /tmp/ts/t2.mjs (13). Kul 204 paas.
+BAQI (agli dafa): app dobara khulne par wahi screen + background refresh (user ne manga, abhi nahi bana).
