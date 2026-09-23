@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.4.4';
-import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=2.4.4';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.4.5';
+import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=2.4.5';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -119,14 +119,24 @@ function baseOf(it) {
 }
 const pct = (a, b) => b > 0 && a > 0 ? Math.round((a / b - 1) * 1000) / 10 : null;
 // cost ya mode badle to rates dobara (wMode: 'old' | % number | 'manual'; rMode: 'old' | 'manual')
+// v2.4.5: bechne ke rate POORE RUPEE (upar ki taraf, nafa kam na ho); khareed mamooli badle (1 rupee / 0.5% se kam) to PURANE rate hi
+const upR = v => { v = Number(v) || 0; const u = Math.ceil(v - 0.005); return v > 0 && (u - v) / v <= 0.01 ? u : r2(v); };   // 1% se zyada barhe (sasti cheez) to paise rahen
+const tinyCost = l => l.oldCost > 0 && Math.abs((Number(l.costP) || 0) - l.oldCost) < Math.min(1, l.oldCost * 0.005);
 function recalc(l) {
   const c = Number(l.costP) || 0, pk = packOf(l);
   if (!(c > 0)) return;
-  if (l.wMode === 'old' && l.oldCost > 0 && l.oldW > 0) { const m = l.oldW / l.oldCost; l.wpcs = r2(c * m); l.wctn = pk ? Math.round(c * m * pk) : 0; }
-  else if (typeof l.wMode === 'number') { const m = 1 + l.wMode / 100; l.wpcs = r2(c * m); l.wctn = pk ? Math.round(c * m * pk) : 0; }
+  const same = tinyCost(l);
+  if (l.wMode === 'old' && l.oldCost > 0 && l.oldW > 0) {
+    if (same) { l.wpcs = r2(l.oldW); l.wctn = pk ? Math.round(l.oldW * pk) : 0; }
+    else { const m = l.oldW / l.oldCost; l.wpcs = upR(c * m); l.wctn = pk ? upR(c * m * pk) : 0; }
+  }
+  else if (typeof l.wMode === 'number') { const m = 1 + l.wMode / 100; l.wpcs = upR(c * m); l.wctn = pk ? upR(c * m * pk) : 0; }
   if (l.rMode === 'old' && l.oldCost > 0 && l.oldR > 0) {
-    l.rctn = pk ? Math.round(c * (l.oldR / l.oldCost) * pk) : 0;
-    l.rpcs = r2(c * ((pk ? l.oldR2 : l.oldR) / l.oldCost));
+    if (same) { l.rctn = pk ? Math.round(l.oldR * pk) : 0; l.rpcs = r2(pk ? l.oldR2 : l.oldR); }
+    else {
+      l.rctn = pk ? upR(c * (l.oldR / l.oldCost) * pk) : 0;
+      l.rpcs = upR(c * ((pk ? l.oldR2 : l.oldR) / l.oldCost));
+    }
   }
   if (!pk && l.one) { if (!l.wcOwn) l.wctn = r2(l.wpcs); if (!l.rcOwn) l.rctn = r2(l.rpcs); }   // v2.4.2: 1 ctn = 1 pcs
 }
@@ -544,6 +554,14 @@ document.addEventListener('click', async e => {
   if (pc) { const d = pc.dataset; if (d.ppPcbills) openPcBills(); else if (d.ppPcwhen) { pcWhen = d.ppPcwhen; openPcBills(); } else if (d.ppPcbill) openPcBill(d.ppPcbill, pc); return; }
   const px = e.target.closest?.('[data-pp-photo],[data-pp-ai]');
   if (px) { if (px.dataset.ppPhoto != null) { if (photoFormOf) photoFormOf(); } else aiItems(); return; }
+  const cm = e.target.closest?.('[data-pp-aicam],[data-pp-aigal],[data-pp-camgo],[data-pp-camnext],[data-pp-camredo],[data-pp-camx]');
+  if (cm) { const d = cm.dataset;          // v2.4.5: camera / gallery
+    if (d.ppAicam != null || d.ppCamnext != null) aiPick(true);
+    else if (d.ppAigal != null) aiPick(false);
+    else if (d.ppCamredo != null) { camPages.pop(); aiPick(true); }
+    else if (d.ppCamx != null) { camClear(); $('dialog')?.close?.(); }
+    else if (d.ppCamgo != null && camPages.length) { const f = camPages.slice(); camClear(); aiRead(f); }
+    return; }
   const bp = e.target.closest?.('[data-pp-pic],[data-pp-pin],[data-pp-zoom],[data-pp-nextpic],[data-pp-vzoom],[data-pp-vnext]');
   if (bp) { const d = bp.dataset;
     if (d.ppPin != null) { billPin = !billPin; rerender(); }
@@ -1125,45 +1143,73 @@ function sizeMemFromBill() {           // bill ka سائز item ke sath yaad (ca
   return m;
 }
 
+// v2.4.5: 🤖 Bill ki tasveer se items — pehle raasta chunein: 📷 camera (page ba page) ya 🖼️ gallery
+let camPages = [], camUrls = [];
 function aiItems() {
   if (aiBusy) { notice('AI abhi bill parh raha hai…'); return; }
   if (!aiBillOf) { notice('Is login par AI nahi chalta'); return; }
+  camClear();
+  dlg('🤖 Bill ki tasveer se items', `<div class="pp-aichoose">
+      <button type="button" class="got" data-pp-aicam="1">📷 Camera se photo lo</button>
+      <button type="button" data-pp-aigal="1">🖼️ Gallery se chunein</button>
+    </div><p class="stat-note">Lamba bill ho to camera se ek ek page lein (4 tak) — sab ek saath parhe jayenge.</p>`);
+}
+function aiPick(cam) {                    // cam: seedha peeche wala camera (capture) — warna gallery (kai tasveerein)
   const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true; inp.style.display = 'none';
+  inp.type = 'file'; inp.accept = 'image/*'; inp.style.display = 'none';
+  if (cam) inp.setAttribute('capture', 'environment'); else inp.multiple = true;
   document.body.appendChild(inp);
   inp.onchange = async () => {
     const files = [...(inp.files || [])].slice(0, 4); inp.remove();
     if (!files.length) return;
-    setBillPics(files);   // v2.2.0: wohi tasveerein screen par bhi
-    aiBusy = true; aiRows = null; aiBillInfo = null; aiFmtAuto = ''; jView = 'list'; jIx = -1; jForceAsk = false;
-    dlg('🤖 Bill ki tasveer se items', '<p id="ppAiMsg" role="status">Tayyari…</p><div id="ppAiOut"></div>');
-    const say = x => { const m = $('ppAiMsg'); if (m) m.textContent = x; };
-    try {
-      const bill = await aiBillOf({ files, onStatus: say, partyId: supplier });
-      const lines = (bill && bill.lines) || [];
-      if (!lines.length) throw Error('Tasveer se koi item nahi parha gaya. Saaf photo (seedhi, poori bill) lagayein.');
-      const { items } = stock();
-      const fmt = billFmtOf(supplier);   // v2.3.0: is supplier ke bill ka naqsha
-      aiBillInfo = bill; aiRows = [];
-      for (const l of lines) {
-        const q = aiNameOf(l);
-        // v2.0.0: AI ko humare items ki list di jati hai — wo khud itemId de de to wahi lagao, warna naam se dhoondo
-        const byAi = l.itemId ? items.find(x => String(x.id) === String(l.itemId)) : null;
-        const hit = byAi || (q ? (smartSearch(items, q, 1)[0] || null) : null);
-        if (!hit) { aiRows.push({ ai: l, key: null, itemId: '', learn: '' }); continue; }
-        const ln = addItem(hit, false).line;
-        aiRows.push({ ai: l, key: ln.k, itemId: String(hit.id), learn: '', byAi: !!byAi });
-      }
-      jJudgeAll(); jAutoFmt();
-      if (aiFmtAuto) jJudgeAll();          // naya naqsha mila — us ki tarjeeh ke sath dobara
-      keepDraft(); rerender(); aiRender();
-      // v2.1.0: jo item AI ne KHUD humari list se chuna, us ka bill wala naam bina dabaye yaad kar lo
-      for (let i = 0; i < aiRows.length; i++) if (aiRows[i].byAi) await aiLearn(i, null, true);
-    } catch (err) {
-      say('❌ ' + ((err && err.message) || 'Nakam'));
-    } finally { aiBusy = false; }
+    if (cam) { camPages.push(files[0]); camPages = camPages.slice(0, 4); camShow(); return; }
+    await aiRead(files);
   };
   inp.click();
+}
+function camClear() { for (const u of camUrls) { try { URL.revokeObjectURL(u); } catch {} } camUrls = []; camPages = []; }
+function camShow() {                      // li hui photos ki jhalak + agla page / dobara / parho
+  for (const u of camUrls) { try { URL.revokeObjectURL(u); } catch {} }
+  camUrls = camPages.map(f => { try { return URL.createObjectURL(f); } catch { return ''; } });
+  const n = camPages.length;
+  dlg(`📷 Bill ke page (${n})`, `<div class="pp-camthumbs">${camUrls.map((u, i) => `<div class="pp-camthumb">${u ? `<img src="${u}" alt="page ${i + 1}">` : ''}<small>Page ${i + 1}</small></div>`).join('')}</div>
+    <p class="stat-note">Photo saaf aur seedhi ho — sab likha nazar aaye. Dhundli ho to "Dobara lo".</p>
+    <div class="pp-camacts">
+      <button type="button" class="got" data-pp-camgo="1">✓ Bas, parho (${n} page)</button>
+      ${n < 4 ? '<button type="button" data-pp-camnext="1">📷 Agla page</button>' : ''}
+      <button type="button" data-pp-camredo="1">🔁 Aakhri dobara lo</button>
+      <button type="button" class="danger" data-pp-camx="1">✕ Chhor dein</button>
+    </div>`);
+}
+async function aiRead(files) {
+  setBillPics(files);   // v2.2.0: wohi tasveerein screen par bhi
+  aiBusy = true; aiRows = null; aiBillInfo = null; aiFmtAuto = ''; jView = 'list'; jIx = -1; jForceAsk = false;
+  dlg('🤖 Bill ki tasveer se items', '<p id="ppAiMsg" role="status">Tayyari…</p><div id="ppAiOut"></div>');
+  const say = x => { const m = $('ppAiMsg'); if (m) m.textContent = x; };
+  try {
+    const bill = await aiBillOf({ files, onStatus: say, partyId: supplier });
+    const lines = (bill && bill.lines) || [];
+    if (!lines.length) throw Error('Tasveer se koi item nahi parha gaya. Saaf photo (seedhi, poori bill) lagayein.');
+    const { items } = stock();
+    const fmt = billFmtOf(supplier);   // v2.3.0: is supplier ke bill ka naqsha
+    aiBillInfo = bill; aiRows = [];
+    for (const l of lines) {
+      const q = aiNameOf(l);
+      // v2.0.0: AI ko humare items ki list di jati hai — wo khud itemId de de to wahi lagao, warna naam se dhoondo
+      const byAi = l.itemId ? items.find(x => String(x.id) === String(l.itemId)) : null;
+      const hit = byAi || (q ? (smartSearch(items, q, 1)[0] || null) : null);
+      if (!hit) { aiRows.push({ ai: l, key: null, itemId: '', learn: '' }); continue; }
+      const ln = addItem(hit, false).line;
+      aiRows.push({ ai: l, key: ln.k, itemId: String(hit.id), learn: '', byAi: !!byAi });
+    }
+    jJudgeAll(); jAutoFmt();
+    if (aiFmtAuto) jJudgeAll();          // naya naqsha mila — us ki tarjeeh ke sath dobara
+    keepDraft(); rerender(); aiRender();
+    // v2.1.0: jo item AI ne KHUD humari list se chuna, us ka bill wala naam bina dabaye yaad kar lo
+    for (let i = 0; i < aiRows.length; i++) if (aiRows[i].byAi) await aiLearn(i, null, true);
+  } catch (err) {
+    say('❌ ' + ((err && err.message) || 'Nakam'));
+  } finally { aiBusy = false; }
 }
 // v2.4.1: bill poori screen par — do ungliyon se zoom, khainchna, do dafa tap; Jaanch se aaye to "‹ Wapas Jaanch"
 function billView() {

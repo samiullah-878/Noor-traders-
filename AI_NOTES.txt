@@ -1123,3 +1123,31 @@ Rules NAHI badlin. Files: purchase.js, style.css + version bump.
 2) jFix: ek number do khano mein (c === p) ho aur c×rate bill se 20% ke andar (2c×rate nahi) -> c khud (Medicam 12+12).
 3) Card "سائز -1" bug hataya (band par size 0).
 Test: /tmp/t/runkul.mjs (9). Kul 158 paas. jsdom: stubs ka ?v= purchase.js ke import se match hona zaroori.
+
+==================== PC: purchase-post.js v4.1 (2026-09-23) ====================
+MASLA: purchase-post.js v4 (22 Sep) chalte hi girti thi — "Cannot access 'DIR' before initialization" (line 43):
+  `const BILLS_FLAG = path.join(DIR, ...)` aur `pokeBills` DIR/log se PEHLE likhe the. 22 Sep se app ki koi
+  purchase POS mein nahi bani (jobs 'new' par atki; script Firestore tak pahunchti hi nahi thi).
+FIX: purchase-fix.js (PC par `node %USERPROFILE%\Downloads\purchase-fix.js`) — sirf 2 lines ko `const log =` ke
+  baad le jata hai + header mein v4.1 line; purani file purchase-post.v4old.js; node --check; ghalti ho to purani wapas.
+  Atki jobs (7 din ke andar) fix ke baad khud POS mein banti hain (user ne kaha: sirf aaj subah wali ek purchase atki).
+PC JAANCH (CLAUDE-STARTUP.txt): Startup folder mein 11 .vbs (bills, farq, khata, khata-sync, label, purchase, rate,
+  sale-chupa, stock, subcode, transfer) + Task "KhataSync-StartAll" (login+1 min, start-all.ps1, double nahi chalata).
+  MSSQL$SQLEXPRESS Automatic + failure restart. Har *-auto.bat loop: gire to 30 sec baad dobara. Internet/SQL girne
+  par sab khud wapas aaye (logs). Shart: Windows LOGIN zaroori (Startup + AtLogOn). Baqi 10 scripts stub-test mein theek.
+  sale-log mein bohat minus stock (REAL SURF -12906, white chana -4526) — alag masla, baad mein dekhna.
+
+==================== v2.4.5 (2026-09-23) — STOCK SEARCH · CAMERA · POORE RUPEE ====================
+Rules NAHI badlin. Files: pos-stock.js, purchase.js, style.css + version bump.
+1) pos-stock.js (stock/ginti screen) search sale jaisi: q ho to POORE stock (hidden ke ilawa) mein smartSearch,
+   natija smartSearch ki TARTEEB mein (best match upar; pehle naam A-Z ho jata tha). Filter (has/baqi/...) search
+   ko nahi rokta; "N filter ke bahar se bhi" note. 🎤 button (data-stock-mic, voiceSearch) scan ke saath
+   (.sh-scanrow). Save / Tick par noteHit(id) — agli dafa search mein aage.
+2) purchase.js "🤖 Bill ki tasveer se items": pehle chooser — 📷 Camera (input capture=environment, ek photo) ya
+   🖼️ Gallery (multiple). Camera: camPages (4 tak) + jhalak; "📷 Agla page" / "🔁 Aakhri dobara lo" /
+   "✓ Bas, parho (N page)" / "✕ Chhor". aiItems -> aiPick(cam) -> aiRead(files) (purana onchange ka jism).
+   Tests: [data-pp-ai] ke baad [data-pp-aigal] click.
+3) recalc: bechne ke rate POORE RUPEE upar (upR: ceil, magar 1% se zyada barhe to paise — sasti cheez 4.56 ≠ 5).
+   Khareed mamooli badle (|Δ| < min(1 rupee, 0.5%)) to W/R PURANE hi (tinyCost) — 330.50→330.46 par R 390, W 335.46.
+   Wholesale bhi poora rupee (user: "Yes"). Khud likha rate (manual) nahi chhedte.
+Tests: /tmp/t/runr.mjs (9), /tmp/ts/t.mjs (5, asli pos-stock.js). Kul 172 paas.

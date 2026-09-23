@@ -835,3 +835,16 @@ footer button:not(.give):not(.got){background:linear-gradient(180deg,#27437c,#17
 .jc-okrow .jc-ok{flex:1 1 auto!important}
 /* v2.4.4 — Kul raqam ka khana */
 .jc-kul input{border-color:#d69e1c!important;background:#fffdf5!important}
+/* v2.4.5 — stock: scan + 🎤 ek qataar */
+.sh-scanrow{display:flex;gap:8px;width:100%}
+.sh-scanrow .sh-scan{flex:1 1 auto}
+.sh-mic{flex:0 0 56px;min-height:48px;border-radius:14px;font-size:20px}
+/* v2.4.5 — bill ki tasveer: camera / gallery */
+.pp-aichoose{display:flex;flex-direction:column;gap:10px;margin:6px 0 10px}
+.pp-aichoose button{min-height:56px;font-size:16px;font-weight:700;border-radius:16px}
+.pp-camthumbs{display:flex;gap:8px;overflow-x:auto;padding:4px 0 8px}
+.pp-camthumb{flex:0 0 auto;text-align:center}
+.pp-camthumb img{height:150px;max-width:120px;object-fit:cover;border-radius:10px;border:1px solid #cbd5e1;display:block}
+.pp-camacts{display:flex;flex-wrap:wrap;gap:8px}
+.pp-camacts button{flex:1 1 45%;min-height:48px;border-radius:14px;font-weight:700}
+.pp-camacts .got{flex:1 1 100%;min-height:54px;font-size:16px}

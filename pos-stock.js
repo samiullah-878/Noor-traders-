@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf } from './smart-search.js?v=2.4.4';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch } from './smart-search.js?v=2.4.5';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -355,17 +355,20 @@ function renderStockInner() {
   }
 
   if (pickedBranch !== 1 && filter === 'all' && !godamAll) filter = 'has';   // v1.97: godam khula ho to shuru se sirf usi ke items
-  let shown = items.filter(passes);
-  if (q) { const hit = new Set(smartSearch(shown, q, 500)); shown = shown.filter(r => hit.has(r)); }   // v1.75: smart search
-
-  if (sort === 'stock') shown.sort((a, b) => b.stock - a.stock);
+  let shown = items.filter(passes), wide = 0;
+  if (q) {   // v2.4.5: sale jaisi — poore stock mein (filter se bahar bhi), best match UPAR (tarteeb smartSearch ki)
+    const pool = items.filter(r => filter === 'hidden' ? isHidden(r) : !isHidden(r));
+    const inF = new Set(shown);
+    shown = smartSearch(pool, q, 500);
+    wide = shown.filter(r => !inF.has(r)).length;
+  } else if (sort === 'stock') shown.sort((a, b) => b.stock - a.stock);
   else shown.sort((a, b) => NAMEC.compare(String(a.name), String(b.name)));
 
   const extra = shown.length - limit;
   const list = shown.slice(0, limit);
 
   $('list').innerHTML =
-    (q ? `<p class="stat-note">${shown.length} item mile</p>` : '') +
+    (q ? `<p class="stat-note">${shown.length} item mile${wide && filter !== 'all' ? ` · ${num(wide)} filter ke bahar se bhi (poore stock mein dhoonda)` : ''}</p>` : '') +
     list.map(rowHTML).join('') +
     (extra > 0 ? `<div class="account-tools"><button data-stock-more="1">Aur ${num(Math.min(extra, PAGE))} dikhao (${num(extra)} baqi)</button></div>
       <p class="stat-note">Ya naam / code search karein.</p>` : '');
@@ -443,7 +446,7 @@ function summaryHTML(branches, pick, items, meta, names) {
       ${scanList.length
         ? `<button class="sh-wide sh-scan" data-stock-scan="1">📷 Aur scan karein (${num(scanList.length)} list mein)</button>
            <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>`
-        : `<button class="sh-wide sh-scan" data-stock-scan="1">📷 Barcode scan karein (ek ya kai items)</button>
+        : `<div class="sh-scanrow"><button class="sh-wide sh-scan" data-stock-scan="1">📷 Barcode scan karein (ek ya kai items)</button><button type="button" class="sh-mic" data-stock-mic="1" title="Awaz se dhoondein">🎤</button></div>
            <button class="sh-wide" data-stock-transfer="1">⇄ Transfer note (godam se godam)</button>
            ${($('search')?.value || '').trim() ? '<button class="sh-wide" data-stock-clear="1">✕ Search saaf karein</button>' : ''}`}
     </div>
@@ -811,6 +814,10 @@ document.addEventListener('click', e => {
   const b = e.target.closest?.('[data-stock-branch]');
   if (b) { branch = Number(b.dataset.stockBranch); godamAll = false; if (branch !== 1) filter = 'has'; limit = PAGE; rerender(); return; }   // v1.95/97: godam kholte hi sirf USI godam ka stock
   if (e.target.closest?.('[data-stock-scan]')) { openScanner(); return; }
+  if (e.target.closest?.('[data-stock-mic]')) {   // v2.4.5: awaz se search (sale jaisa)
+    const ok = voiceSearch(t => { const s = $('search'); if (s) { s.value = t; s.dispatchEvent(new Event('input', { bubbles: true })); } });
+    if (!ok) alert('Is phone/browser mein awaz se search nahi chalti'); return;
+  }
   if (e.target.closest?.('[data-stock-clear]')) { clearScan(); return; }
   const sa = e.target.closest?.('[data-scan-saveall]');
   if (sa) { saveAll(sa); return; }
@@ -836,9 +843,9 @@ document.addEventListener('click', e => {
   if (e.target.closest?.('[data-stock-cancelpost]')) { answerPost(false); return; }
 
   const tk = e.target.closest?.('[data-count-tick]');
-  if (tk) { tickCount(tk.dataset.countTick, tk); return; }
+  if (tk) { try { noteHit(tk.dataset.countTick); } catch {} tickCount(tk.dataset.countTick, tk); return; }   // v2.4.5: search mein aage
   const sv = e.target.closest?.('[data-count-save]');
-  if (sv) { saveCount(sv.dataset.countSave, sv); return; }
+  if (sv) { try { noteHit(sv.dataset.countSave); } catch {} saveCount(sv.dataset.countSave, sv); return; }
   const ad = e.target.closest?.('[data-count-add]');
   if (ad) { saveCount(ad.dataset.countAdd, ad, 'baqi'); return; }
   const fb = e.target.closest?.('[data-flag-baqi]');
