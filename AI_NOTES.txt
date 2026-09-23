@@ -1090,3 +1090,24 @@ TEST (node + jsdom): runj2 19 naye (ginti total 180, patti + focus y, 8 khane, "
 cs 20 yaad, POS ko 3400 @ 341.5) + run 33, runj 23, runfmt 10, runmem 6, runai 9, runpdf 8, runb 15, runc 14. Sab pass.
 (Purane test ke labels naye card ke mutabiq badle; jsdom mein Image nahi — jPattiPaint mein typeof Image guard.)
 VERSION BUMP: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html ('2.4.1') + version.json (rules 2.2, false).
+
+==================== v2.4.2 (2026-09-23) — BILL KHUD JAWAB DETA HAI ====================
+Rules NAHI badlin (v2.2 hi). Files: purchase.js, ai-tally.js, cloud.js, style.css + version bump.
+1) jFix(r, ln): hisaab (ginti × rate = kul, 2%) na mile to:
+   - kul ÷ rate = AI ka koi number -> khud lagao (357 ctn + 357 pcs -> 357; ek hi number do khano mein tha).
+   - rate pichhle khareed se ±10% mile (fi pcs ya fi carton) -> ghalti ginti mein -> kul ÷ rate khud (maida "3C" -> 30).
+   - warna laal + buttons "Bill se ginti lagao: X" / "Bill se rate lagao: kul ÷ ginti" (r.aiFix, r.aiFixUser).
+   aiOf(r) = r.aiFix || r.ai — jJudge/jCandidates/modes sab isi se.
+2) Carton BAND (r.band, line.one): POS pack khali ho aur (aap ne "1 CTN =" 1/khali likha = r.cs -1) ya yaad s=1
+   ya bill par سائز 1 (aur bill rate pichhle khareed se ±50%). Band = sirf PCS, ek ginti, bill ka سائز carton nahi.
+   Bill ka سائز carton size SIRF jab app ne 'size' tareeqa chuna ho (khajoor 1000 gram carton nahi banta).
+   itemRates s=1 = band (cloud.js ab s>=1 rakhta hai; packGaps s>1 hi dikhata hai).
+3) من ریٹ: AI ab `mr` bhi deta hai. jMan: mr÷40 = rate -> fi kg/piece ✓; mr÷40×سائز = rate -> fi carton ✓;
+   na mile -> peela note. (Bhaiya: khajoor 15500÷40=387.5 ✓, sufi 20400÷40×20=10200 ✓)
+4) Stock pehra: band ho ya من ریٹ saboot de to laal NAHI — sirf note "(bada maal — sirf note)".
+   "✓ Hisaab bill se mila" note jab line ki raqam bill se 0.5% ke andar.
+5) Card: zinda milan "Aap X · bill Y ✓ / ≈ (tax/discount?) / ✗" (jMilanHTML, jRepaint mein update).
+   W/Ctn aur R/Ctn KABHI band nahi: band par Ctn rate = Pcs rate (recalc), W/Pcs likhne se W/Ctn saath badle,
+   W/Ctn alag likha to alag rahe (l.wcOwn / l.rcOwn). POS ko wctn/rctn jaate hain.
+6) AI prompt: ek number ko ctn aur pcs dono mein mat daalo.
+Tests: /tmp/t/runk.mjs (17) naya; runj2 ka "CTN khane band" test ab "W/Ctn khula". Kul 154 paas.

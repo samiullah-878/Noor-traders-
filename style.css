@@ -820,3 +820,11 @@ footer button:not(.give):not(.got){background:linear-gradient(180deg,#27437c,#17
 .pp-zoom{position:relative;height:68vh;overflow:hidden;border-radius:12px;background:#f2f4f9;touch-action:none;user-select:none}
 #ppZoomImg{position:absolute;left:0;top:0;width:100%;transform-origin:0 0;will-change:transform;-webkit-user-drag:none}
 .pp-billacts button.got{background:linear-gradient(180deg,#1f8a55,#146b41)!important;color:#fff!important;border:0!important}
+
+/* ===== v2.4.2 — zinda milan + bill se theek ===== */
+.jc-milan{font-size:12.5px;margin:2px 0 4px}
+.jc-milan .ok{color:#146b41;font-weight:700}
+.jc-milan .near{color:#9a6b0c;font-weight:600}
+.jc-milan .bad{color:#b42332;font-weight:700}
+.jc-fix{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+.jc-fix button{flex:1 1 auto;min-height:40px;border-radius:12px!important;background:#fffaf0!important;border:1px solid #d69e1c!important;color:#7a5409!important;font-weight:700!important;font-size:13px}
