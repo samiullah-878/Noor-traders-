@@ -5,7 +5,7 @@
 //  Data: businesses/noor-traders/posLedger
 // ============================================================
 
-import { partyScore } from './smart-search.js?v=2.4.2';
+import { partyScore } from './smart-search.js?v=2.4.4';
 import { money } from './model.js';
 
 const $ = id => document.getElementById(id);

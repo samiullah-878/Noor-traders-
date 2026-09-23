@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.4.2';
-import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=2.4.2';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.4.4';
+import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=2.4.4';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -487,9 +487,10 @@ document.addEventListener('input', e => {       // v2.4.1: Jaanch card ke khane 
   const v = Number(t.value) || 0, pk = packOf(l), cs = jCs(r, l), m = pk || cs;
   if (d.ppJcs != null) { r.cs = v > 1 ? v : -1; return; }                // 1 ya khali = carton BAND (change par card dobara)
   if (d.ppJctn != null) { if (pk) l.ctn = Math.max(0, Math.floor(v)); else if (cs) l.pcs = r3(v * cs); }
-  else if (d.ppJpcs != null) l.pcs = Math.max(0, v);
+  else if (d.ppJpcs != null) { l.pcs = Math.max(0, v); if (l.kul > 0 && linePcs(l) > 0) { l.costP = r4(l.kul / linePcs(l)); recalc(l); } }   // kul raqam pakki, rate dobara
+  else if (d.ppJtot != null) { l.kul = v; if (v > 0 && linePcs(l) > 0) { l.costP = r4(v / linePcs(l)); recalc(l); } }        // v2.4.4: kul ÷ ginti = net khareed
   else if (d.ppJkc != null) { if (m) { l.costP = r4(v / m); recalc(l); } }
-  else if (d.ppJcost != null) { l.costP = r4(v); recalc(l); }
+  else if (d.ppJcost != null) { l.costP = r4(v); l.kul = 0; recalc(l); }
   else if (d.ppJwc != null) { if (pk) l.wctn = v; else if (cs) l.wpcs = r2(v / cs); else { l.wctn = v; l.wcOwn = true; } l.wMode = 'manual'; }
   else if (d.ppJw != null) { l.wpcs = v; if (pk && !l.wctn) l.wctn = Math.round(v * pk); if (!pk && l.one && !l.wcOwn) l.wctn = v; l.wMode = 'manual'; }
   else if (d.ppJrc != null) { if (pk) l.rctn = v; else if (cs) l.rpcs = r2(v / cs); else { l.rctn = v; l.rcOwn = true; } l.rMode = 'manual'; }
@@ -574,6 +575,7 @@ document.addEventListener('click', async e => {
   }
   // v2.4.0: Jaanch mode ke button
   if (e.target.closest?.('[data-pp-jopen]')) { if (aiRows) aiRender(); return; }
+  if (e.target.closest?.('[data-pp-jprev]')) { jPrev(); return; }   // pichhla card — current pakka nahi hota
   if (e.target.closest?.('[data-pp-jfixq],[data-pp-jfixr]')) {      // v2.4.2: bill ke hisaab se
     const r = aiRows && aiRows[jIx]; if (!r) return;
     const base = aiOf(r);
@@ -685,7 +687,8 @@ function jFix(r, ln) {
   if (!(total > 0) || !(rate > 0)) return;
   if (n > 0 && jNear(n * rate, total, 0.02)) return;              // hisaab pehle se theek
   const q = total / rate;
-  const pick = [c, p].find(x => x > 0 && jNear(q, x, 0.01));     // bill ka kul ÷ rate = AI ka koi number
+  let pick = [c, p].find(x => x > 0 && jNear(q, x, 0.01));       // bill ka kul ÷ rate = AI ka koi number
+  if (!pick && c > 0 && c === p && jNear(c * rate, total, 0.20) && !jNear(2 * c * rate, total, 0.20)) pick = c;   // v2.4.4: ek number do khano mein (discount/tax 20% tak)
   if (pick) {
     r.aiFix = { ...r.ai, ctn: pick === c && !(c === p) ? c : 0, pcs: pick === p || c === p ? pick : 0, qty: pick };
     if (c === p) r.aiFix = { ...r.ai, ctn: 0, pcs: 0, qty: pick };   // ek hi number do khano mein tha
@@ -918,7 +921,7 @@ function jCard(i) {
   const q = jQueue(), pos = q.indexOf(i), ln = r.key ? cart.find(l => l.k === r.key) : null;
   const { total } = aiNum(r.ai), pk = ln ? packOf(ln) : 0, cs = ln ? jCs(r, ln) : 0, m = pk || cs;
   const it = ln ? stock().items.find(x => String(x.id) === String(ln.id)) : null;
-  const size = Number(r.cs) || Number(r.ai.size) || Number(memOf(r.itemId)?.s) || 0;
+  const size = Number(r.cs) > 1 ? Number(r.cs) : r.band ? 0 : (Number(r.ai.size) || Number(memOf(r.itemId)?.s) || 0);
   const modes = ln ? jCandidates(ln, aiOf(r), r.band ? -1 : r.cs).map(c => c.mode) : [];
   const diff = ln && r.j?.old ? r2(ln.costP - r.j.old) : 0;
   const o = ln || {}, oW = Number(o.oldW) || 0, oR = pk ? (Number(o.oldR2) || Number(o.oldR) || 0) : (Number(o.oldR) || 0), oC = Number(o.oldCost) || 0;
@@ -938,7 +941,8 @@ function jCard(i) {
       <div class="jc-g4">
         ${fld(esc(ln.cName || 'CTN') + (m ? ' (' + num(m) + ')' : ''), 'jctn', ctnVal, 0, !m)}
         ${fld(esc(ln.uName || 'PCS'), 'jpcs', pk ? (ln.pcs || '') : (ln.pcs || ''), 0)}
-        ${fld('Kh/' + esc(ln.cName || 'CTN'), 'jkc', m ? jF(ln.costP * m) : '', m ? oC * m : 0, !m)}
+        ${m ? fld('Kh/' + esc(ln.cName || 'CTN'), 'jkc', jF(ln.costP * m), oC * m)
+            : `<label class="jc-f jc-kul"><span>Kul raqam</span><input type="number" min="0" step="any" inputmode="decimal" data-pp-jtot="1" value="${ln.kul > 0 ? jF(ln.kul) : ''}" placeholder="${total ? num(total) : 'bill ki raqam'}"><small class="jc-ph">${total ? 'bill ' + num(total) : '&nbsp;'}</small></label>`}
         ${fld('Kh/' + esc(ln.uName || 'PCS'), 'jcost', jF(ln.costP), oC)}
       </div>
       <div class="jc-sub">Naye rates · pichhle nafa se${r.j?.old ? ` · khareed pichhli ${num(r.j.old)} <b class="${diff > 0 ? 'red' : 'green'}">${diff > 0 ? '+' : ''}${num(diff)}</b>` : ''}</div>
@@ -952,7 +956,7 @@ function jCard(i) {
       `<div class="jc-why"><small>🔴 Humare stock mein ye item nahi mila</small></div>`}
     </div>
     <div class="jc-acts jc-sticky">
-      ${ln ? '<button type="button" class="got jc-ok" data-pp-jok="1">✓ Theek — agla ›</button>' : ''}
+      <div class="jc-okrow"><button type="button" class="jc-prev" data-pp-jprev="1"${jHasPrev() ? '' : ' disabled'}>‹ Pichhla</button>${ln ? '<button type="button" class="got jc-ok" data-pp-jok="1">✓ Theek — agla ›</button>' : ''}</div>
       <button type="button" data-pp-pick="${i}">✏️ ${ln ? 'Item' : 'Item chunein'}</button>
       <button type="button" class="danger" data-pp-jskip="1">✕ Chhor</button>
       <button type="button" data-pp-jlist="1">‹ List</button>
@@ -968,6 +972,7 @@ function jRepaint() {                 // card ke khane dobara bharo (jo khana li
   set('jctn', pk ? (l.ctn || '') : cs ? jF(linePcs(l) / cs) : '');
   set('jpcs', l.pcs || '');
   set('jkc', m ? jF(l.costP * m) : ''); set('jcost', jF(l.costP));
+  set('jtot', l.kul > 0 ? jF(l.kul) : '');
   set('jwc', pk ? jF(l.wctn) : cs ? jF(l.wpcs * cs) : jF(l.wctn)); set('jw', jF(l.wpcs));
   set('jrc', pk ? jF(l.rctn) : cs ? jF(l.rpcs * cs) : jF(l.rctn)); set('jr', jF(l.rpcs));
   const a = $('jcAmt'); if (a) a.textContent = num(lineTotal(l));
@@ -980,6 +985,7 @@ function jMilanHTML(l, total) {
   const mark = cls === 'ok' ? '✓' : cls === 'near' ? '≈ (tax / discount?)' : '✗';
   return `<span class="${cls}">Aap ${num(mine)} · bill ${num(total)} ${mark}</span>`;
 }
+function jHasPrev() { return (aiRows || []).some((r, i) => i < jIx && !r.skip); }   // v2.4.2: "‹ Pichhla" button
 function jPrev() {
   const act = (aiRows || []).map((r, i) => i).filter(i => !aiRows[i].skip);
   const before = act.filter(x => x < jIx);

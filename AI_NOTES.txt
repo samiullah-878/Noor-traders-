@@ -1111,3 +1111,15 @@ Rules NAHI badlin (v2.2 hi). Files: purchase.js, ai-tally.js, cloud.js, style.cs
    W/Ctn alag likha to alag rahe (l.wcOwn / l.rcOwn). POS ko wctn/rctn jaate hain.
 6) AI prompt: ek number ko ctn aur pcs dono mein mat daalo.
 Tests: /tmp/t/runk.mjs (17) naya; runj2 ka "CTN khane band" test ab "W/Ctn khula". Kul 154 paas.
+7) v2.4.3 — Card par "‹ Pichhla" button — "✓ Theek — agla ›" ke baayein, ek qataar (.jc-okrow).
+   jHasPrev(): pehle card par band. Dabane se current card pakka NAHI hota; bill ki pichhli (skip na ki hui)
+   line par jata hai, hari bhi. Swipe baayein pehle jaisa. Test: /tmp/t/runprev.mjs (3).
+
+==================== v2.4.4 (2026-09-23) — KUL RAQAM KA KHANA ====================
+Rules NAHI badlin. Files: purchase.js, style.css + version bump.
+1) Card: jab carton size na ho (Kh/Ctn band hota tha) uski jagah "Kul raqam" khana (data-pp-jtot, line.kul).
+   Likhne par costP = kul ÷ linePcs (net khareed, discount/tax samet); Pcs badlein to kul pakki, rate dobara;
+   Kh/Pcs khud likhein to kul chhoot jata hai (l.kul = 0). Placeholder = bill ki line ki raqam.
+2) jFix: ek number do khano mein (c === p) ho aur c×rate bill se 20% ke andar (2c×rate nahi) -> c khud (Medicam 12+12).
+3) Card "سائز -1" bug hataya (band par size 0).
+Test: /tmp/t/runkul.mjs (9). Kul 158 paas. jsdom: stubs ka ?v= purchase.js ke import se match hona zaroori.
