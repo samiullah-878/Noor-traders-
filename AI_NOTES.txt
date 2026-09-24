@@ -1311,3 +1311,17 @@ app.js aiReadLabel: canTally() ki jagah sirf login ki shart (bill AI ka canTally
 tolai.js (mulazim = !isOwner()): "✏️ Theek karein" nahi; confirmBox mein number readonly; askManual mein
   haath se likhne ka khana nahi — sirf "📷 Dobara photo". Malik ke liye sab pehle jaisa.
 Tests: /tmp/tl/tstaff.mjs (5). Kul 254.
+
+==================== v2.10.0 (2026-09-24) — PURCHASE: rate ka farsh · % + mazdoori upar · bill ki tarteeb · bill ka naam ====================
+Rules NAHI badlin (v2.7). Files: purchase.js, style.css + version bump.
+1) recalc: khareed oldCost se KAM ho to W/R purane hi (same = tinyCost || c < oldCost). App kabhi khud rate kam nahi
+   karti; malik Jaanch card mein khud likh sakta hai. Barhe to pehle jaisa (upR).
+2) Upar (Supplier bill # ke neeche) do khane: "+ % (har item par)" [data-pp-pct, state pct 0-100] aur
+   "Mazdoori / kharcha Rs" [data-pp-xtra — foot se upar aaya]. effCost = costP × (1+pct/100) + xs.
+   xtraApply pctLast se pct badalne par bhi recalc. Note (#ppXtraNote) mein dono. Jaanch Khulase mein bhi +% (data-pp-jpct).
+   Draft/reset mein pct. POS ko effCost jata hai (pehle jaisa).
+3) aiRead: lines.sort(page, y) -> cart bill ki tarteeb mein; PC purchase-post lines usi tarteeb se banata hai.
+   Jaanch overview ki tarteeb (laal pehle) waise hi — TESTS ab card ko NAAM se dhoondte hain (cardIx(key)).
+4) line.billName (AI ka naam, 60 char) — purchase lines mein naam ke neeche "bill: ..." (.pp-billname, rtl).
+   POS bill mein NAHI (user ne tay nahi kiya). AUTO PRINT bhi baqi — user se poochna: thermal (sale jaisa) ya A4.
+Tests: /tmp/t/runpct.mjs (9). Kul 267 paas.

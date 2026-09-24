@@ -991,3 +991,8 @@ footer button:not(.give):not(.got){background:linear-gradient(180deg,#27437c,#17
 .tl-bywho{background:#f8fafc;border:1px solid #e6ecf3;border-radius:14px;padding:10px;margin:0 0 10px}
 .tl-bywho>small{display:block;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#94a3b8;margin:0 0 6px}
 .tl-bywho .tl-row{border:0;background:transparent;padding:6px 4px}
+/* v2.10 — upar % + mazdoori, bill ka naam */
+.pp-add label{flex:1 1 45%}
+.pp-add input{font-weight:700;text-align:center;border-color:#d69e1c!important;background:#fffdf5!important}
+.pp-addnote{margin:-4px 4px 10px}
+.pp-billname{display:block;font-size:11px;font-weight:500;color:#7c8ba1;direction:rtl;text-align:left}
