@@ -1369,3 +1369,12 @@ User ne baad mein v2.13 chadha di (4 asli files wapas). Saaf ZIP mein: Blue Khat
 files HATAYIN; root par pare html2canvas.js/jspdf.js/pdf.mjs/pdf.worker.mjs bhi hataye (app sirf vendor/ wale istemal karti hai).
 Tasdeeq: sw.js ki har file aur har import maujood. Hazri app apne alag repo mein hai (user ke mutabiq theek chal rahi).
 SABAQ: Hazri aur Blue Khata ke updates KABHI ek repo mein nahi — dono ka index.html/app.js/sw.js/version.json takra jata hai.
+
+==================== v2.13.1 (2026-09-24) — 📊 Data ka size (dheemi opening ki naap) ====================
+Rules NAHI badlin. Sirf app.js + version bump.
+Wajah ka shak: tasveerein (photos / billPhotos / goodsPhotos, packPhotos = JPEG data URL ~120 KB tak, 3 fi entry)
+SEEDHA blueKhata docs ke andar. liveQuery (party, entry, closing, expenseAccount, dayPhoto, import, cashCustody, reminder)
+har dafa SAARE docs uthata hai (baqaya ke liye zaroori) — tasveerein samet. Firestore web SDK mein field projection nahi.
+Settings (malik) > "📊 Data ka size": records ki ginti, kul MB, tasveeron ka % aur MB, qism ke hisaab se table.
+AGLA QADAM (user ke OK ke baad): nayi tasveerein `entryPhotos/<entryId>` mein, entry par sirf ginti; tasveer tab load
+jab entry khule; malik ke liye ek-dafa "Purani tasveerein alag karein" (pehle backup). Rules badlengi.
