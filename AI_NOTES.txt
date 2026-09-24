@@ -1303,3 +1303,11 @@ FIX:
    saveTolai mein who; rules keys mein 'who' jura; PDF mein "Mulazim" ka khana.
 4) "↩ Aakhri wapas" ab sirf apni aakhri entry (myLast()).
 Tests: /tmp/tl/t.mjs ab 22.
+
+==================== v2.9.1 (2026-09-24) — Tolai: mulazim ke liye AI + number band ====================
+⚠️ RULES v2.7 — publish. blueAccess/aiConfig ab stockStaff() aur saleStaff() bhi parh sakte hain
+  (pehle sirf full/purchase) — warna mulazim ki photo par chup-chaap kuch nahi hota tha (key hi nahi milti thi).
+app.js aiReadLabel: canTally() ki jagah sirf login ki shart (bill AI ka canTally pehle jaisa).
+tolai.js (mulazim = !isOwner()): "✏️ Theek karein" nahi; confirmBox mein number readonly; askManual mein
+  haath se likhne ka khana nahi — sirf "📷 Dobara photo". Malik ke liye sab pehle jaisa.
+Tests: /tmp/tl/tstaff.mjs (5). Kul 254.

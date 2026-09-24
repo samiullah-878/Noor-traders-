@@ -88,7 +88,7 @@ function paint() {
     ${staff.length ? `<div class="tl-who">${staff.map(n => `<button type="button" class="${who === n ? 'on' : ''}" data-tl-who="${esc(n)}">${esc(n)}</button>`).join('')}</div>` : ''}
     ${lastSave ? `<div class="tl-done"><b>✓ ${esc(lastSave.name)} — ${num(lastSave.packets)} packet darj</b>
       <small>${esc(lastSave.tag || '')}${lastSave.tag ? ' · ' : ''}${hhmm(lastSave.at)}${lastSave.who ? ' · ' + esc(lastSave.who) : ''}</small>
-      <button type="button" data-tl-fix="1">✏️ Theek karein</button></div>` : ''}
+      ${isOwner() ? '<button type="button" data-tl-fix="1">✏️ Theek karein</button>' : ''}</div>` : ''}
     <button type="button" class="tl-cam" data-tl-cam="1"${busy ? ' disabled' : ''}>
       <span>📷</span><b>${busy ? 'Parh raha hoon…' : 'Label ki tasveer lein'}</b>
       <small>Bori khatam hone par aakhri packet ka label</small></button>
@@ -145,13 +145,21 @@ function confirmBox(got) {
   $('dialogBody').innerHTML = `<div class="tl-ask">
     <p class="tl-read">Label par: <b>${esc(got.tag || got.n)}</b></p>
     <label class="it-wide"><span>Item</span><input name="name" value="${esc(it?.name || got.name || '')}" maxlength="120"></label>
-    <label class="it-wide"><span>Aakhri number (aaj ka)</span><input name="n" type="number" min="1" step="1" inputmode="numeric" value="${got.n || ''}"></label>
-    <p class="muted">Aaj is item ke <b>${got.n || '—'}</b> packet bane. Number ghalat ho to yahan theek kar lein.</p>
+    <label class="it-wide"><span>Aakhri number (aaj ka)</span><input name="n" type="number" min="1" step="1" inputmode="numeric" value="${got.n || ''}"${isOwner() ? '' : ' readonly'}></label>
+    <p class="muted">Aaj is item ke <b>${got.n || '—'}</b> packet bane.${isOwner() ? ' Number ghalat ho to yahan theek kar lein.' : ' Number label se aaya hai — badla nahi ja sakta.'}</p>
     <div class="account-tools"><button type="button" class="primary" data-tl-save="${esc(it?.id || '')}">✓ Save</button>
       <button type="button" data-tl-back="1">Wapas</button></div></div>`;
 }
 function askManual(got) {
   view = 'ask';
+  if (!isOwner()) {                                    // v2.9.1: mulazim number haath se nahi likh sakta
+    $('dialogTitle').textContent = '⚖️ Tolai';
+    $('dialogBody').innerHTML = `<div class="tl-ask">
+      <p class="tl-read amber">Number saaf nahi parha — label ko seedha rakh kar, roshni mein, dobara tasveer lein.</p>
+      <div class="account-tools"><button type="button" class="primary" data-tl-cam="1">📷 Dobara photo</button>
+        <button type="button" data-tl-back="1">Wapas</button></div></div>`;
+    return;
+  }
   $('dialogTitle').textContent = '⚖️ Number likhein';
   $('dialogBody').innerHTML = `<div class="tl-ask">
     <p class="tl-read amber">Number saaf nahi parha — label dekh kar likh dein.</p>
