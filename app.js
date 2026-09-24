@@ -1,230 +1,1226 @@
-// app.js — app ka dhancha: login screen, malik/staff ka panel chalana, buttons ka aik hi jagah se intezam.
-import { APP_VERSION, esc, normalizePhone } from './core.js';
-import { createAuthController, loginErrorMessage } from './auth.js';
-import { createData } from './data.js';
-import { createStaffView } from './staffview.js';
-// v215: malik ka panel (bara) sirf malik/manager ke liye load hota hai — larke ke phone par nahi.
-const loadOwnerView = () => import('./owner.js').then(m => m.createOwnerView);
-const loadManagerView = () => import('./manager.js').then(m => m.createManagerView);
-import { $, icon, toast, formValues, closeSheets, refreshSheets, errorText } from './ui.js';
+import {installSearchFocus} from './search-focus.js';
+import {optimisticRecords} from './optimistic.js';
+import {findDuplicate,createSyncBook} from './entry-status.js';
+import {bufferedWriter} from './live-data.js';
+import {expenseSummary,custodyBalances,addCustodyMove,cashLedger,appendCashMove,nextReminder,validateExtraRecord} from './finance-tools.js';
+import {planImport} from './import-plan.js';
+import {posSetup,renderPOS,posBack,posStop} from './pos-ledger.js?v=2.13.0';
+import {stockSetup,renderStock,stockStop,stockReport,billRates,saleStock,inReport,setInPdf,setTolai,gintiReport,setGintiPdf} from './pos-stock.js?v=2.13.0';
+import {saleSetup,renderSale} from './sale.js?v=2.13.0';
+import {ppSetup,renderPP,ppLoadBill} from './purchase.js?v=2.13.0';
+import {geoSetup,geoWatch,geoStop,geoEnsure,geoOwnerForm} from './geo-guard.js?v=2.13.0';
+import {TYPES,money,cents,norm,balance as rawBalance,daily,yesterday,inDaily} from './model.js';
+import {shrinkForAI,readPages,pickModel,pickProModel,matchTally,readPurchaseBill,readLabel} from './ai-tally.js?v=2.13.0';
+import {tolaiSetup,openTolai,tolaiClick,tolaiReport,setTolaiPdf} from './tolai.js?v=2.13.0';
+import {smartSearch,partyScore,notePartyPick,partyPicks,aliasOf} from './smart-search.js?v=2.13.0';
+let khataSort=(()=>{try{return localStorage.getItem('sam-khata-sort')||'name'}catch{return 'name'}})();
+const $=id=>document.getElementById(id),esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const searchFocus=installSearchFocus();
+const today=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Karachi'}).format(new Date());
+let localMode=false;let booting=true;let cloud,session=null,records=[],loaded=false,view='khata',selected=null,tab='all',date=today(),unsub=null,importDraft=null;
+function newestEntries(rows){const stamp=r=>{const n=Number(r.createdAt);return Number.isFinite(n)&&n>0?n:(Date.parse((r.date||'1970-01-01')+'T00:00:00+05:00')||0)};return [...rows].sort((a,b)=>stamp(b)-stamp(a)||String(b.id||'').localeCompare(String(a.id||'')))}
+let lastEntryCreatedAt=0;
+function nextEntryCreatedAt(){lastEntryCreatedAt=Math.max(Date.now(),lastEntryCreatedAt+1,records.reduce((n,r)=>r.type==='entry'?Math.max(n,(Number(r.createdAt)||0)+1):n,0));return lastEntryCreatedAt}
+const purchaseOnly=()=>session?.role==='staff'&&session?.scope==='purchase';let dayLock={},stopDayLock=null,dayLockReady=false;
+const dayStr=()=>{const d=new Date(),p=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`};
+const dayIsClosed=()=>String(dayLock?.closed||'')===dayStr();
+// Din band: mulazim (full) sirf dekh sakta hai. Malik par rok nahi; purchase mulazim par bhi nahi.
+const lockedNow=()=>dayIsClosed()&&session?.role==='staff'&&(session?.scope||'full')==='full';
+// v1.79.4: pehle yeh sirf ek dafa (login se pehle) chalta tha — nakam hone par dobara koshish hi nahi hoti thi,
+// to app ko pata hi nahi chalta tha ke din band hai aur mulazim ki har entry Firestore par reject hoti thi.
+function watchDayLock(){if(stopDayLock||!cloud?.listenDayLock)return;dayLockReady=false;stopDayLock=cloud.listenDayLock(d=>{dayLock=d||{};dayLockReady=true;paintDayLock();render()},err=>{stopDayLock=null;dayLockReady=false;console.warn('dayLock listen fail',err);setTimeout(()=>{if(session)watchDayLock()},8000)})}
+function paintDayLock(){const b=$('dayLockBtn'),n=$('dayLockNote');if(!b||!n)return;
+ const staffFull=session?.role==='staff'&&(session?.scope||'full')==='full',show=owner()||staffFull;
+ b.hidden=!show;n.hidden=!(show&&dayIsClosed());
+ if(!show)return;
+ b.textContent=dayIsClosed()?(owner()?'🔓 Din wapas kholein':'🔒 Din band hai'):'🔒 Din band karein';
+ b.className='day-lock'+(dayIsClosed()?' closed':'');
+ b.disabled=dayIsClosed()&&!owner();
+ n.textContent=dayIsClosed()?(owner()?`Aaj ka din band hai (${dayLock.closed}) — mulazim entry nahi kar sakta. Aap kar sakte hain.`:'Aaj ka din band ho chuka hai — sirf dekh sakte hain. Malik hi dobara khol sakta hai.'):'';
+ document.body.classList.toggle('day-locked',lockedNow())}
+async function toggleDayLock(){const b=$('dayLockBtn');if(!b||b.disabled)return;
+ const closed=dayIsClosed();
+ if(closed&&!owner())return;
+ if(!confirm(closed?'Din wapas kholein? Mulazim phir entry kar sakega.':'Din band karein? Is ke baad mulazim aaj koi entry, edit ya delete nahi kar sakega.'))return;
+ b.disabled=true;
+ try{await cloud.setDayLock(closed?'':dayStr());notice(closed?'Din khul gaya':'Din band kar diya')}
+ catch(e){notice('Nahi hua: '+(e?.message||e))}
+ finally{b.disabled=false;paintDayLock();render()}}
+// Edit: malik hamesha; mulazim (full) sirf AAJ ki entry aur jab tak din band na ho
+const bandParty=e=>all('party').some(p=>p.id===e?.partyId&&p.active===false);
+const staffFull=()=>session?.role==='staff'&&(session?.scope||'full')==='full';
+const canEditAccount=()=>owner()||(staffFull()&&!dayIsClosed());
+const canRemind=()=>owner()||(staffFull()&&!dayIsClosed());   // v2.13: full mulazim bhi reminder laga / badal / hata sake
+const isPosted=e=>Number(e?.posStatus)===2;   // v1.78: POS mein posted = band
+const canEditEntry=e=>!!session&&e?.type==='entry'&&!e.deleted&&!isPosted(e)&&!e.transferId&&!(bandParty(e)&&!owner())&&(owner()||(session.role==='staff'&&(session.scope||'full')==='full'&&!dayIsClosed()&&e.date===today()));
+const stockOnly=()=>session?.role==='staff'&&session?.scope==='stock';const saleOnly=()=>session?.role==='staff'&&session?.scope==='sale';const saleUser=()=>owner()||saleOnly()||(session?.role==='staff'&&(session?.scope||'full')==='full');const canPP=()=>!!session&&!localMode&&(owner()||(session.role==='staff'&&['full','purchase'].includes(session.scope||'full')));
+let dataIndex=null;
+function indexData(){if(dataIndex&&dataIndex.source===records&&dataIndex.length===records.length)return dataIndex;const byType=new Map(),byParty=new Map(),partyNotes=new Map(),expenseNotes=new Map(),deltas=new Map();for(const r of records){if(r.deleted)continue;if(!byType.has(r.type))byType.set(r.type,[]);byType.get(r.type).push(r);if(r.type==='party')byParty.set(r.id,r);const note=norm(r.note||r.notes||'');if(note&&r.partyId)partyNotes.set(r.partyId,(partyNotes.get(r.partyId)||'')+'\n'+note);if(note&&r.kind==='expense'&&r.account)expenseNotes.set(r.account,(expenseNotes.get(r.account)||'')+'\n'+note);if(r.type==='entry'&&r.partyId){const sign=['credit','payment'].includes(r.kind)?1:['borrow','collection'].includes(r.kind)?-1:0;deltas.set(r.partyId,(deltas.get(r.partyId)||0)+sign*r.amount)}}return dataIndex={source:records,length:records.length,byType,byParty,partyNotes,expenseNotes,deltas,sorted:null}}
+const all=type=>indexData().byType.get(type)||[],parties=()=>all('party').filter(p=>p.active!==false),bandParties=()=>all('party').filter(p=>p.active===false),entries=()=>{const ix=indexData();return ix.sorted||(ix.sorted=newestEntries(all('entry')))},closings=()=>all('closing'),party=id=>indexData().byParty.get(id),owner=()=>session?.role==='owner';
+function balance(p,es){return es===entries()?(p.opening||0)+(indexData().deltas.get(p.id)||0):rawBalance(p,es)}
+function notice(t){$('toast').textContent=t;$('toast').hidden=false;setTimeout(()=>$('toast').hidden=true,5000)}
+function error(e,ctx){if(ctx)window.lastFail={at:new Date().toLocaleTimeString(),code:e.code||'',msg:String(e.message||'').slice(0,120),payload:ctx};notice(e.code==='permission-denied'?'Ijazat nahi mili · '+failDetail(ctx)+' · '+String(e.message||'').slice(0,80):e.message||'Save nahi hua');console.error(e,ctx)}
+// v1.79.3: koi bhi chhoot gaya background write bhi pakra jaye
+window.addEventListener('unhandledrejection',ev=>{const e=ev?.reason;if(e&&e.code==='permission-denied'){notice('Ijazat nahi mili (chhupa hua write) · '+String(e.message||'').slice(0,120));console.error('unhandled permission-denied',e)}});
+// v1.79.2: nakami ki tafseel — kaunsa record, kis ne, POSTED hai ya nahi (taake andaza na lagana pare)
+async function runLoginCheck(){if(!cloud?.diagnose){notice('Cloud abhi tayyar nahi');return}
+ modal('Login check','<p>Parha ja raha hai…</p>');
+ try{const d=await cloud.diagnose();const k=d.key&&typeof d.key==='object'?d.key:null;
+  const line=(a,b)=>`<div class="source-row"><span>${esc(a)}</span><span>${esc(String(b))}</span></div>`;
+  const verdict=[];
+  if(session?.role==='staff'){
+   if(!k)verdict.push('❌ Login record (blueStaffKeys) nahi mila — malik "Mulazim password" dobara Save kare.');
+   else{if(k.active!==true)verdict.push('❌ active true nahi hai — is wajah se Firestore har entry rok raha hai.');
+    const sc=k.scope===undefined?'full':k.scope;
+    if(sc!=='full')verdict.push('❌ is login ka scope "'+sc+'" hai, Full App nahi.');
+    if(k.active===true&&sc==='full')verdict.push('✅ login record theek hai (active + full).')}
+   if(session?.user?.uid&&d.uid&&session.user.uid!==d.uid)verdict.push('❌ app ka purana uid ('+String(session.user.uid).slice(0,10)+'…) aur asal login uid ('+String(d.uid).slice(0,10)+'…) alag hain — entry isi wajah se ruk rahi thi.');
+   const closed=String(d.dayLock&&d.dayLock.closed||'');
+   verdict.push(closed?('din band ka din: '+closed+(closed===dayStr()?' ❌ (aaj band hai)':' ✅ (aaj khula hai)')):'✅ din khula hai');
+  }else verdict.push('Malik login — mulazim ki jaanch ke liye mulazim wale phone par yeh button dabayein.');
+  const lf=window.lastFail;const liveU=String(d.uid||''),byU=String(lf?.payload?.by||'');
+  const sumHTML=lf?`<p style="background:#fff3cd;padding:8px;border-radius:8px"><b>Khulasa:</b><br>uid abhi: ${esc(liveU.slice(0,14))}…<br>payload ka by: ${esc(byU.slice(0,14))}…<br>${byU&&liveU?(byU===liveU?'✅ uid mel khata hai':'❌ uid MEL NAHI khata'):'-'}<br>session doc: ${k?'✅ mila (key: '+esc(String(k.name||'')+' / '+String(k.scope||''))+')':'❌ NAHI mila — isi wajah se rules mulazim nahi maante'}</p>`:'';
+  const lfHTML=lf?`${sumHTML}<p><b>Aakhri nakam write (${esc(lf.at)} · ${esc(lf.code)}):</b></p><pre style="white-space:pre-wrap;word-break:break-all;font-size:12px;background:#f2f5fa;padding:8px;border-radius:8px">${esc(JSON.stringify(lf.payload,(k,v)=>k==='photos'||k==='goodsPhotos'||k==='billPhotos'?'(pictures)':v,1))}</pre>`:'<p class="stat-note">Abhi koi nakam write record nahi hui — pehle entry karke error laayein, phir yeh check kholein.</p>';
+  $('dialogBody').innerHTML=`<div class="import-preview">${line('Login',session?.role||'-')+line('uid',d.uid)+line('anonymous',d.anon)+line('scope (app)',d.scope)+line('session doc',typeof d.session==='object'?JSON.stringify(d.session):d.session||d.sessionErr||'-')+line('key doc',k?JSON.stringify(k):(d.key||d.keyErr||'-'))+line('dayLock',typeof d.dayLock==='object'?JSON.stringify(d.dayLock):d.dayLock||d.dayLockErr||'-')+line('device tareekh',dayStr())}</div><p><b>Natija:</b></p><p>${verdict.map(esc).join('<br>')}</p><button type="button" id="probeBtn" style="width:100%;margin:8px 0">🧪 Rules test chalayein (10 second)</button><div id="probeOut"></div>${lfHTML}`;
+ }catch(e){$('dialogBody').innerHTML='<p>Check nahi ho saka: '+esc(e.code||e.message||'')+'</p>'}}
+// ===== v1.80: (6) ghair-mamooli raqam ki tanbeeh · (7) milte-julte khate · (9) due patti =====
+function usualAmounts(data,skipId){const same=data.partyId?e=>e.partyId===data.partyId:(data.account?e=>!e.partyId&&e.account===data.account:null);if(!same)return[];
+ return entries().filter(e=>!e.deleted&&e.kind===data.kind&&e.id!==skipId&&e.amount>0&&same(e)).sort((a,b)=>(b.createdAt||0)-(a.createdAt||0)).slice(0,20).map(e=>e.amount)}
+function oddAmountMessage(data,existing){if(data?.type!=='entry'||data.deleted===true||!(data.amount>0))return'';if(existing&&existing.amount===data.amount&&existing.partyId===data.partyId&&existing.account===data.account)return'';
+ const a=usualAmounts(data,existing?.id||data.id);if(a.length<4)return'';const s=[...a].sort((x,y)=>x-y),trim=s.length>=8?1:0,lo=s[trim],hi=s[s.length-1-trim],med=s[Math.floor(s.length/2)];
+ const big=data.amount>=med*8&&data.amount>hi,small=data.amount*8<=med&&data.amount<lo;if(!big&&!small)return'';
+ const who=party(data.partyId)?.name||data.account||TYPES[data.kind]||'';
+ return who+' · '+(TYPES[data.kind]||data.kind)+'\n\nIs khate ki aam raqam '+money(lo)+' se '+money(hi)+' hoti hai.\nAap ne '+money(data.amount)+' likha hai — '+(big?'bohat ZYADA':'bohat KAM')+'.\n\nOK = raqam theek hai, Save karein\nCancel = wapas ja kar raqam dekhein'}
+function nameKey(v){return norm(v).replace(/[^a-z0-9\u0600-\u06ff]+/g,'')}
+function editDistance(a,b,max=2){if(Math.abs(a.length-b.length)>max)return max+1;let prev=Array.from({length:b.length+1},(_,i)=>i);for(let i=1;i<=a.length;i++){const cur=[i];let best=cur[0];for(let j=1;j<=b.length;j++){cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));best=Math.min(best,cur[j])}if(best>max)return max+1;prev=cur}return prev[b.length]}
+function similarParties(name,phone,skipId){const k=nameKey(name),ph=String(phone||'').replace(/\D/g,'').slice(-10);if(k.length<3)return[];
+ return all('party').filter(x=>!x.deleted&&x.id!==skipId).map(x=>{const xk=nameKey(x.name),xp=String(x.phone||'').replace(/\D/g,'').slice(-10);let score=0;
+  if(xk===k)score=4;else if(ph.length>=7&&xp===ph)score=3;else if(k.length>=5&&xk.length>=5&&(xk.startsWith(k)||k.startsWith(xk)))score=2;else if(k.length>=5&&editDistance(k,xk,2)<=2)score=1;
+  return{p:x,score}}).filter(x=>x.score).sort((a,b)=>b.score-a.score||a.p.name.localeCompare(b.p.name)).slice(0,3)}
+// v1.91: account form ki smart cheezein — qism cards, lene/dene pill, live milta-julta, 📇 contacts, preview
+function acctFormSmart(f,p){const el=f.elements,prev=$('afPreview'),sim=$('afSimilar');
+ const mode=()=>el.expenseOnly?.checked?'expense':el.category.value;
+ const paint=()=>{const nm=el.name.value.trim(),m=mode(),op=el.opening&&!el.opening.disabled?Number(el.opening.value)||0:0,sd=Number(el.side?.value||1),bal=p?balance(p,entries()):Math.round(op*100)*sd;
+  f.querySelectorAll('[data-af-type]').forEach(b=>b.classList.toggle('on',b.dataset.afType===m));
+  prev.innerHTML=`<div class="party af-prev"><span class="avatar">${esc((nm||'?').slice(0,2).toUpperCase())}</span><span class="name"><b>${esc(nm||'Naam')}</b><small>${esc([m==='expense'?'Kharchay ka account':m,el.phone.value.trim()].filter(Boolean).join(' · '))}</small></span><span class="amount">${m==='expense'?'':`<b class="${bal>0?'red':bal<0?'green':'zero'}">${money(Math.abs(bal))}</b><small>${bal>0?'Lene hain':bal<0?'Dene hain':'Barabar'}</small>`}</span></div>`};
+ let t=0;const live=()=>{clearTimeout(t);t=setTimeout(()=>{const nm=el.name.value.trim();if(!sim)return;if(mode()==='expense'||nm.length<3||(p&&nameKey(p.name)===nameKey(nm))){sim.innerHTML='';return}const es=entries(),l=similarParties(nm,el.phone.value.trim(),p?.id).slice(0,2);sim.innerHTML=l.map(({p:x})=>{const b=balance(x,es);return `<div class="af-warn">⚠️ <span>"${esc(x.name)}" pehle se hai · ${b===0?'Barabar':money(Math.abs(b))+(b>0?' lene':' dene')}</span><button type="button" data-open-similar="${esc(x.id)}">Kholein</button></div>`}).join('')},350)};
+ f.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.afType){const v=b.dataset.afType;if(el.expenseOnly){el.expenseOnly.checked=v==='expense';el.expenseOnly.onchange?.()}if(v!=='expense')el.category.value=v;paint();live();return}
+  if(b.dataset.afSide){el.side.value=b.dataset.afSide;f.querySelectorAll('[data-af-side]').forEach(x=>x.classList.toggle('on',x===b));paint();return}});
+ f.addEventListener('input',e=>{if(['name','phone','opening'].includes(e.target.name)){paint();if(e.target.name!=='opening')live()}});
+ const cb=$('afContacts');if(cb&&'contacts' in navigator&&'ContactsManager' in window){cb.hidden=false;cb.onclick=async()=>{try{const [c]=await navigator.contacts.select(['name','tel'],{multiple:false});if(!c)return;if(!el.name.value.trim()&&c.name?.[0])el.name.value=c.name[0];if(c.tel?.[0])el.phone.value=String(c.tel[0]).replace(/\s+/g,'');paint();live()}catch{}}}
+ paint()}
+function similarHTML(list){const es=entries();return `<div class="warning" id="similarBox"><strong>Milta-julta khata pehle se maujood hai</strong>${list.map(({p,score})=>{const b=balance(p,es);return `<div class="source-row"><span><b>${esc(p.name)}</b>${p.active===false?' · band':''}<br><small>${esc(p.category||'')}${p.phone?' · '+esc(p.phone):''} · ${b===0?'Barabar':(b>0?'Lena ':'Dena ')+money(Math.abs(b))}${score>=4?' · naam bilkul wohi':score===3?' · mobile wohi':''}</small></span><button type="button" data-open-similar="${esc(p.id)}">Yeh kholein</button></div>`}).join('')}<p class="stat-note">Agar yeh waqai ALAG banda hai to neeche "Phir bhi naya banao" dabayein. Koi khata khud nahi milaya jata.</p></div>`}
+document.addEventListener('click',e=>{const b=e.target.closest?.('[data-open-similar]');if(!b)return;$('dialog')?.close();route('khata',b.dataset.openSimilar)});
+function dueCounts(){const t=today();let due=0,late=0;for(const r of all('reminder')){if(r.deleted||!r.dueDate||!reminderLive(r))continue;if(r.dueDate===t)due++;else if(r.dueDate<t)late++}return{due,late}}
+let zeroTried=new Set(),zeroTimer=0,snapCached=true;
+function autoEndZeroReminders(){if(!owner()||!loaded||localMode||snapCached||!cloud)return;clearTimeout(zeroTimer);zeroTimer=setTimeout(async()=>{if(!owner()||snapCached)return;for(const r of all('reminder')){if(zeroTried.has(r.id))continue;const p=party(r.partyId);if(!p||balance(p,entries())>0)continue;zeroTried.add(r.id);try{await save({...r,deleted:true},r,true)}catch(e){console.warn('zero reminder khatam nahi hua',r.id,e)}}},3000)}
+// v1.90: baqaya Customers / Suppliers alag (tab ke hisaab se) + baqi accounts ki ek line
+function baqayaHTML(es){const g=list=>{let l=0,d=0;for(const p of list){const b=balance(p,es);if(b>0)l+=b;else if(b<0)d-=b}return{l,d,n:list.length}};const all=parties(),cu=g(all.filter(p=>p.category==='Customer')),su=g(all.filter(p=>p.category==='Supplier')),ot=g(all.filter(p=>p.category!=='Customer'&&p.category!=='Supplier'));
+ const card=(ic,t,x,main)=>`<div class="bq-card"><small class="bq-h">${ic} ${t} · ${x.n}</small>${main==='l'?`<small>Lene hain</small><strong class="red">${money(x.l)}</strong><small class="bq-sub">Dene hain ${money(x.d)}</small>`:`<small>Dene hain</small><strong class="green">${money(x.d)}</strong><small class="bq-sub">Lene hain ${money(x.l)}</small>`}</div>`;
+ if(tab==='Customer')return `<div class="bq-wrap"><div class="bq-grid one">${card('👤','Customers',cu,'l')}</div></div>`;
+ if(tab==='Supplier')return `<div class="bq-wrap"><div class="bq-grid one">${card('🏭','Suppliers',su,'d')}</div></div>`;
+ return `<div class="bq-wrap"><div class="bq-grid">${card('👤','Customers',cu,'l')}${card('🏭','Suppliers',su,'d')}</div>${ot.n?`<small class="bq-other">Baqi accounts (${ot.n}) · lene ${money(ot.l)} · dene ${money(ot.d)}</small>`:''}</div>`}
+// v1.90: khata home ki chips (🔔 late · ⬇️ backup · 🔒 din band · ☁️ sync) + ek line tafseel — purane bare dabbe yahan chhup jate hain
+let lastPurchasePending=0;const BAR_VIEWS=['khata','daily','due','purchase','ppurchase','sale','stock','expenses','cash','dasti','chart'];
+function paintHomeBar(){const bar=$('homeBar');if(!bar)return;const on=!!session&&!selected&&BAR_VIEWS.includes(view)&&(view!=='khata'||(!purchaseOnly()&&!stockOnly()&&!saleOnly()));document.querySelector('main')?.classList.toggle('home-smart',on);bar.hidden=!on;if(!on)return;
+ const chips=[],narr=[];const dueOk=owner()||(session.role==='staff'&&(session.scope||'full')==='full');
+ if(view==='purchase'&&lastPurchasePending){chips.push(`<button type="button" class="hchip warn" data-hb="milao">🔗 ${lastPurchasePending} bill milane</button>`);narr.push(lastPurchasePending+' POS bill milane baqi')}
+ if(view==='purchase'&&loaded){const n=entries().filter(e=>e.purchase===true&&e.date===today()).length;if(n)narr.push('aaj '+n+' purchase')}
+ if(view==='expenses'&&loaded){const t=entries().filter(e=>e.date===today()&&(e.kind==='expense'||e.kind==='payment')).reduce((s,e)=>s+(e.amount||0),0);narr.push(t?'aaj ka kharcha '+money(t):'aaj abhi koi kharcha nahi')}
+ if(view==='cash'&&/Ginti baqi/i.test($('summary')?.textContent||''))narr.push('aaj ki closing ginti baqi');
+ if(dueOk&&loaded){const c=dueCounts();if(c.late||c.due){chips.push(`<button type="button" class="hchip ${c.late?'bad':'warn'}" data-hb="due">🔔 ${c.late?c.late+' late':''}${c.late&&c.due?' · ':''}${c.due?c.due+' aaj':''}</button>`);if(c.late)narr.push(c.late+' wasooli late');if(c.due)narr.push(c.due+' aaj due')}}
+ if(owner()&&loaded){const done=backupDownloadDay()===today();chips.push(`<button type="button" class="hchip ${done?'ok':'warn'}" data-hb="backup">${backupDownloading?'⏳ Backup…':done?'✓ Backup':'⬇️ Backup baqi'}</button>`);if(!done)narr.push('aaj ka backup baqi')}
+ const db=$('dayLockBtn');if(db&&!db.hidden){const closed=dayIsClosed();chips.push(`<button type="button" class="hchip ${closed?'ok':''}" data-hb="day">${closed?(owner()?'🔓 Din kholein':'✓ Din band'):'🔒 Din band'}</button>`);narr.push(closed?'din band hai':'din khula hai')}
+ const st=($('syncStatus')?.textContent||'').trim();let bad=narr.filter(x=>!x.startsWith('din '));if(st){const pend=/baqi|pending|ho raha|load/i.test(st),off=/offline|cached|nahi hua/i.test(st);chips.push(`<button type="button" class="hchip ${pend?'warn':off?'':'ok'}" data-hb="sync">${pend?'⏳ Sync baqi':off?'📴 Offline':'☁️ Synced'}</button>`);if(pend){narr.push('kuch entries sync baqi');bad.push(1)}if(off){narr.push('offline — naya data baad mein aayega');bad.push(1)}}
+ bar.innerHTML=`<div class="hchips">${chips.join('')}</div><p class="hnarr">${bad.length?'':'Sab theek hai ✓ · '}${esc(narr.join(' · '))}</p>`}
+document.addEventListener('click',e=>{const b=e.target.closest?.('[data-hb]');if(!b)return;const k=b.dataset.hb;if(k==='milao'){const t=[...document.querySelectorAll('#list button')].find(x=>/Milao/.test(x.textContent));if(t){t.scrollIntoView({block:'center'});t.classList.add('flash');setTimeout(()=>t.classList.remove('flash'),1600)}}else if(k==='due'){dueFilter='due';route('due')}else if(k==='backup')downloadDailyBackup(null).finally?.(paintHomeBar);else if(k==='day')toggleDayLock();else if(k==='sync'){const s=$('syncDetails');if(s&&!s.hidden)s.click();else notice($('syncStatus')?.textContent||'')}});
+{let raf=0;const again=()=>{cancelAnimationFrame(raf);raf=requestAnimationFrame(paintHomeBar)};const mo=new MutationObserver(again);for(const id of ['syncStatus','dayLockBtn','dailyBackupReminder','syncDetails'])if($(id))mo.observe($(id),{attributes:true,childList:true,characterData:true,subtree:true});for(const id of ['list','summary'])if($(id))mo.observe($(id),{childList:true})}
+function paintDueNudge(){let box=$('dueNudge');const host=$('dailyBackupReminder');if(!box&&host){box=document.createElement('section');box.id='dueNudge';box.className='warning due-nudge';box.setAttribute('role','button');box.tabIndex=0;box.hidden=true;host.parentNode.insertBefore(box,host);const go=()=>{dueFilter='due';route('due')};box.addEventListener('click',go);box.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();go()}})}
+ if(!box)return;const ok=!!session&&(owner()||(session.role==='staff'&&(session.scope||'full')==='full'))&&view==='khata'&&!selected;const c=ok?dueCounts():{due:0,late:0};
+ if(!ok||(!c.due&&!c.late)){box.hidden=true;return}box.hidden=false;box.innerHTML=`<strong>🔔 ${c.due?`Aaj ${c.due} wasooli due`:''}${c.due&&c.late?' · ':''}${c.late?`${c.late} late`:''}</strong><p>Dekhne ke liye yahan dabayein — Due Accounts khulega.</p>`}
+// ===== v1.81: sham ka milan — kaapi ki tasveer (AI parhta hai) vs Daily Sale (code milata hai) =====
+let aiCfg=null,tallyState=null;
+function canTally(){return !!session&&!localMode&&(owner()||(session.role==='staff'&&['full','purchase'].includes(session.scope||'full')))}
+async function loadAiCfg(force){if(aiCfg&&!force)return aiCfg;aiCfg=await cloud.getAiConfig();return aiCfg}
+// v1.89: Settings ki nayi shakal (icon · naam · ek line · ›) aur Update ke links
+const APP_VER='2.13.0';
+const setRow=(id,ic,t,sub,cls='')=>`<button type="button" class="set-row${cls}" id="${id}"><span class="set-ic">${ic}</span><span class="set-tx"><b>${t}</b><small>${sub}</small></span><span class="set-ch">›</span></button>`;
+const setGrp=(title,inner)=>inner?`<div class="set-grp"><h4>${title}</h4><div class="set-card">${inner}</div></div>`:'';
+function updLinks(){if(!owner())return;const host=location.hostname,user=host.split('.')[0],seg=location.pathname.split('/').filter(Boolean)[0],repo=(seg&&!seg.includes('.'))?seg:host,gh='https://github.com/'+user+'/'+repo,pid=window.khataProjectId||'note-traders-khata-7ccc1',fb='https://console.firebase.google.com/project/'+pid;
+ const L=[['⬆️','1. GitHub — files upload karein',user+'/'+repo+' · main',gh+'/upload/main'],['✅','2. GitHub — deploy check karein','Hara nishan = nayi version live',gh+'/actions'],['📁','GitHub — poora repo','Files dekhna / purani file delete karna',gh],['📜','firestore.rules file (GitHub)','Rules copy karne ke liye',gh+'/blob/main/firestore.rules'],['🔥','3. Firebase — Firestore rules','Rules paste kar ke "Publish"',fb+'/firestore/rules'],['🔐','Firebase — login settings','Anonymous aur Email/Password dono on',fb+'/authentication/providers'],['🤖','Google AI Studio — AI key','Gemini key banana / dekhna','https://aistudio.google.com/apikey']];
+ modal('Update ke links',`<div class="set-wrap"><p class="set-lead">Naya update: zip ki saari files <b>GitHub upload</b> par daal kar "Commit changes" dabayein. 1-2 minute baad app mein "↻ Sync / Update" dabayein.</p><div class="set-card">${L.map(([ic,t,s,u])=>`<a class="set-row" href="${esc(u)}" target="_blank" rel="noopener"><span class="set-ic">${ic}</span><span class="set-tx"><b>${esc(t)}</b><small>${esc(s)}</small></span><span class="set-ch">›</span></a>`).join('')}</div><p id="updRules" class="set-foot"></p><p id="updVer" class="set-foot">Version dekh raha hoon…</p></div>`);
+ fetch('./version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(v=>{const r=$('updRules'),x=$('updVer');if(r)r.innerHTML=v.rulesChanged?`⚠️ Is update (v${esc(v.version)}) mein Firebase <b>rules badalne hain</b> — copy page ki 2nd line "BLUE KHATA v${esc(v.rules||'')}" honi chahiye.`:`Is update (v${esc(v.version)}) mein Firebase rules badalne ki zaroorat nahi${v.rules?' (rules v'+esc(v.rules)+' hi chahiye)':''}.`;if(x)x.innerHTML=v.version===APP_VER?`Phone par v${APP_VER} · GitHub par v${esc(v.version)} ✅ — sab taza`:`Phone par v${APP_VER} · GitHub par <b>v${esc(v.version)}</b> — "↻ Sync / Update" dabayein`}).catch(()=>{const x=$('updVer');if(x)x.textContent='GitHub ka version nahi mila (internet dekh lein).'})}
+document.addEventListener('click',e=>{if(e.target.closest?.('#updLinks'))updLinks()});
+function aiKeyForm(){if(!owner())return;modal('AI key — sham ka milan','<p>Parha ja raha hai…</p>');
+ loadAiCfg(true).catch(()=>null).then(cfg=>{$('dialogBody').innerHTML=`<form id="aiKeyForm"><p class="stat-note">Google AI Studio (aistudio.google.com) se bani hui <b>Gemini API key</b> yahan paste karein. Yeh key sirf malik aur Full App mulazim ke phone tak jati hai; GitHub par nahi jati.</p><label>Gemini API key<input name="key" type="password" autocomplete="off" value="${esc(cfg?.key||'')}" placeholder="AIza…"></label><label>Model<input name="model" value="${esc(cfg?.model||'')}" placeholder="Test dabane par khud bhar jayega"></label><button type="button" id="aiKeyTest">Test (key check + model chunein)</button><p id="aiKeyMsg" role="status" class="stat-note"></p><button type="submit">Save</button></form>`;
+  const f=$('aiKeyForm'),msg=$('aiKeyMsg');
+  $('aiKeyTest').onclick=async()=>{const key=f.elements.key.value.trim();if(!key){msg.textContent='Pehle key paste karein';return}msg.textContent='Google se pooch raha hoon…';try{const m=await pickModel(key);if(!m.best)throw Error('Is key par koi model nahi mila');if(!f.elements.model.value.trim()||!m.all.includes(f.elements.model.value.trim()))f.elements.model.value=m.best;msg.textContent='✅ Key theek hai. Model: '+f.elements.model.value+' ('+m.all.length+' models mile)'}catch(e){msg.textContent='❌ '+(e.message||'Test nakam')}};
+  f.onsubmit=async ev=>{ev.preventDefault();try{const key=f.elements.key.value.trim();let model=f.elements.model.value.trim();if(key&&!model){model=(await pickModel(key)).best}await cloud.setAiConfig({key,model});aiCfg={key,model};$('dialog').close();notice(key?'AI key save ho gayi':'AI key hata di gayi')}catch(e){error(e)}}})}
+document.addEventListener('click',e=>{if(e.target.closest?.('#aiKeyBtn'))aiKeyForm()});
+document.addEventListener('click',e=>{if(e.target.closest?.('#geoBtn')&&owner())geoOwnerForm(modal)});
 
-const ROLE_KEY = 'nt-hazri-last-role';
-const FIELD = /^(INPUT|TEXTAREA|SELECT)$/;
-
-const OWNER_IN_KEY = 'nt-hazri-owner-in';
-const STAFF_CACHE_KEY = 'nt-hazri-session-v200';
-// v215: pichli screen ki "tasveer" (HTML) — index.html usay app ke JS se bhi pehle dikha deta hai.
-const SNAP_KEY = 'nt-hazri-snap-v1';
-
-/**
- * sdk ya sdkPromise. Tez kholne ke liye boot.js Firebase ko peeche load karta hai (sdkPromise):
- * jo pehle se login nahi, us ko login screen FORAN nazar aati hai, Firebase aane tak intezar nahi.
- */
-export function startApp({ sdk, sdkPromise, firebaseConfig, storage = safeLocalStorage(), win = window }) {
-  const doc = win.document, root = $('#app', doc);
-  let view = null, dirty = false, login = { role: storage?.getItem(ROLE_KEY) || 'staff', error: '', busy: false, showPass: false };
-  let data = null, controller = null, sessionSeq = 0, snapTimer = null, firstPaint = true;
-  const hint = () => { try { return !!(storage?.getItem(STAFF_CACHE_KEY) || storage?.getItem(OWNER_IN_KEY)); } catch { return false; } };
-  // v207: malik ka bheja hua login link  ...#login=03001234567  -> number likhe baghair khud login
-  const linkPhone = (() => { const m = String(win.location?.hash || '').match(/login=([+\d\s-]{10,16})/); return m ? normalizePhone(decodeURIComponent(m[1])) : ''; })();
-  if (linkPhone) { try { win.history?.replaceState?.(null, '', win.location.pathname + win.location.search); } catch { /* ignore */ } login.role = 'staff'; }
-  const cachedStaffPhone = () => { try { return JSON.parse(storage?.getItem(STAFF_CACHE_KEY) || 'null')?.phone || ''; } catch { return ''; } };
-  const ownerIn = () => { try { return storage?.getItem(OWNER_IN_KEY) === '1'; } catch { return false; } };
-  if (!hint() || (linkPhone && !ownerIn() && cachedStaffPhone() !== linkPhone)) showLogin();
-
-  const ready = Promise.resolve(sdkPromise || sdk).then(realSdk => { build(realSdk); return true; }).then(ok => {
-    if (ok && linkPhone) {
-      if (ownerIn()) toast('Is phone par malik login hai. Staff ka link kholne ke liye pehle malik logout karein.', 'bad');
-      else if (cachedStaffPhone() !== linkPhone) void doLogin({ role: 'staff', password: linkPhone }, linkPhone);
-    }
-    return ok;
-  }).catch(error => {
-    console.error(error); login.busy = false;
-    login.error = 'App ka Firebase hissa load nahi hua. Internet check kar ke page dobara kholein.'; showLogin(); return false;
-  });
-
-  function build(sdk) {
-  data = createData({
-    sdk, firebaseConfig,
-    onChange: () => { softRender(); view?.onData?.(); },
-    onProblem: (name, error) => {
-      console.warn('data', name, error);
-      if (name === 'new-ticket') { toast('Naya "bina bataye gaya" ticket — Hazri tab mein faisla karein', 'bad'); try { win.navigator.vibrate?.([300, 100, 300]); } catch { /* ignore */ } return; }
-      if (name === 'new-out') { // nayi parchi: malik ko foran khabar (app khuli ho to)
-        const n = error?.fresh?.length || 1; toast(n > 1 ? `${n} nayi parchiyan — Haan / Nahi karein` : 'Nayi parchi: koi bahar jana chahta hai — Hazri tab dekhein', 'ok');
-        try { win.navigator.vibrate?.([200, 100, 200]); } catch { /* ignore */ }
-        try { const A = win.AudioContext || win.webkitAudioContext; if (A) { const c = new A(), o = c.createOscillator(), g = c.createGain(); o.frequency.value = 880; g.gain.value = 0.08; o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + 0.25); } } catch { /* ignore */ }
-        return;
-      }
-      if (name === 'save' || name === 'queued-write') toast('Entry server par save nahi hui (' + (error?.code || 'error') + '). Internet check kar ke dobara karein.', 'bad');
-      else if (error?.code === 'permission-denied') toast('Kuch data ki ijazat nahi mili (' + name + '). Logout kar ke dobara login karein.', 'bad');
-    }
-  });
-  controller = createAuthController({
-    auth: data.auth, sdk, accounts: data.accounts, storage,
-    onReset() { data.stop(); view = null; closeSheets(); login.busy = false; try { storage?.removeItem(OWNER_IN_KEY); storage?.removeItem(SNAP_KEY); } catch { /* ignore */ } showLogin(); },
-    onSession(session) {
-      clearTimeout(win.__bootTimer);
-      login.error = ''; login.busy = false;
-      try { storage?.setItem(ROLE_KEY, session.role); if (session.role === 'owner') storage?.setItem(OWNER_IN_KEY, '1'); } catch { /* ignore */ }
-      const shared = { data, controller, rerender: render, logout: () => controller.logout().catch(e => toast(errorText(e), 'bad')), checkUpdate, install };
-      const seq = ++sessionSeq;
-      const show = make => { if (seq !== sessionSeq) return; view = make(shared); root.dataset.screen = session.role; render(); };
-      const failView = error => { console.error(error); if (seq === sessionSeq) toast('App ka ek hissa load nahi hua. Internet check kar ke "Taza kholein" dabayein.', 'bad'); };
-      if (session.role === 'owner') { data.startOwner(); loadOwnerView().then(show).catch(failView); }
-      else if (session.account?.canApproveOuts === true) { data.startOwner({ role: 'manager', phone: session.phone, account: session.account }); loadManagerView().then(show).catch(failView); } // v211: manager = poora panel
-      else { data.startStaff(session.phone, session.account); show(createStaffView); }
-    },
-    onError(error, role) { login.role = role || login.role; login.error = loginErrorMessage(error); login.busy = false; showLogin(); }
-  });
-  }
-
-  /* ---------- login screen ---------- */
-  function showLogin() {
-    clearTimeout(win.__bootTimer);
-    // Dobara banane par likha hua number/password na mite
-    const kept = {}; for (const el of root.querySelectorAll('form[data-form=login] input')) if (el.name) kept[el.name] = el.value;
-    const focused = doc.activeElement?.closest?.('form[data-form=login]') ? doc.activeElement.name : '';
-    queueMicrotask(() => { for (const [k, v] of Object.entries(kept)) { const el = root.querySelector(`form[data-form=login] input[name="${k}"]`); if (el && !el.value) el.value = v; } if (focused) root.querySelector(`form[data-form=login] input[name="${focused}"]`)?.focus(); });
-    root.dataset.screen = 'login';
-    const staff = login.role === 'staff';
-    root.innerHTML = `<main class="login">
-      <div class="login-card">
-        <div class="login-brand"><span class="brand-mark lg" aria-hidden="true">NT</span><h1>Noor Traders</h1><p>Hazri aur salary ka register</p></div>
-        <div class="switch full" role="tablist" aria-label="Kaun login kar raha hai"><button type="button" role="tab" aria-selected="${staff}" data-action="login-role" data-arg="staff">Staff</button><button type="button" role="tab" aria-selected="${!staff}" data-action="login-role" data-arg="owner">Malik</button></div>
-        <form class="form" data-form="login" novalidate>
-          ${staff
-            ? `<label>Apna mobile number<input name="phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="03001234567" maxlength="16" required ${login.busy ? 'disabled' : ''}></label>
-               <p class="hint">Wohi number likhein jo malik ne Staff list mein likha hai. Password ki zaroorat nahi.</p>`
-            : `<label>Password<span class="pass"><input name="password" type="${login.showPass ? 'text' : 'password'}" autocomplete="current-password" required ${login.busy ? 'disabled' : ''}><button type="button" class="link" data-action="login-show">${login.showPass ? 'Chhupayein' : 'Dikhayein'}</button></span></label>
-               <details><summary>Email se login (ikhtiyari)</summary><label>Email<input name="username" type="email" autocomplete="username" placeholder="khali = admin" ${login.busy ? 'disabled' : ''}></label></details>`}
-          <p class="login-error" role="alert" ${login.error ? '' : 'hidden'}>${esc(login.error)}</p>
-          <button class="btn btn-primary btn-xl" ${login.busy ? 'disabled' : ''}>${login.busy ? 'Check ho raha hai…' : 'Login'}</button>
-          ${login.busy ? '<p class="hint center">Kamzor internet par 10-20 second lag sakte hain. Button dobara na dabayein.</p>' : ''}
-        </form>
-      </div>
-      <p class="foot">${APP_VERSION} &nbsp; <button type="button" class="link" data-action="app-update">Update check karein</button></p>
-    </main>`;
-  }
-  async function submitLogin(form) {
-    const v = formValues(form);
-    await doLogin(login.role === 'staff' ? { role: 'staff', password: v.phone } : { role: 'owner', username: v.username, password: v.password }, v.phone || '');
-  }
-  async function doLogin(input, phoneDraft = '') {
-    if (login.busy) return;
-    login.busy = true; login.error = ''; login.phoneDraft = phoneDraft;
-    showLogin();
-    const phoneInput = $('input[name=phone]', root); if (phoneInput) phoneInput.value = login.phoneDraft;
-    try {
-      if (!(await ready)) throw Object.assign(new Error('sdk'), { code: 'auth/network-request-failed' });
-      await controller.login(input);
-    } catch (error) {
-      login.busy = false; login.error = loginErrorMessage(error); showLogin();
-      const again = $('input[name=phone]', root); if (again) again.value = login.phoneDraft;
-    }
-  }
-
-  /* ---------- render ---------- */
-  function render(options = {}) {
-    if (!view) return;
-    dirty = false;
-    const scroll = win.scrollY;
-    root.innerHTML = view.render();
-    if (firstPaint) {
-      firstPaint = false;
-      try { doc.documentElement.classList.remove('is-snap'); } catch { /* ignore */ }
-      const t0 = Number(win.__ntT0) || 0, now = win.performance?.now?.() || 0;
-      if (data?.state && t0 && now > t0) data.state.bootMs = Math.round(now - t0);
-    }
-    clearTimeout(snapTimer);
-    snapTimer = setTimeout(saveSnap, 900);
-    if (options.keepFocus?.dataset?.input) { const el = $(`[data-input="${options.keepFocus.dataset.input}"]`, root); if (el) { el.focus(); try { el.setSelectionRange(el.value.length, el.value.length); } catch { /* search type */ } } }
-    if (scroll) win.scrollTo?.(0, scroll);
-  }
-  /** Screen ki tasveer phone mein rakho (agli dafa foran dikhane ke liye). Sheets / login is mein nahi. */
-  function saveSnap() {
-    try {
-      if (!view || !['staff', 'owner', 'manager'].includes(root.dataset.screen)) return;
-      const html = root.innerHTML;
-      if (html.length > 300000) { storage?.removeItem(SNAP_KEY); return; }
-      storage?.setItem(SNAP_KEY, JSON.stringify({ v: APP_VERSION, role: root.dataset.screen, html, at: Date.now() }));
-    } catch { /* jagah na ho to chup */ }
-  }
-  /** Data badalne par screen taza hoti hai, lekin agar koi kuch likh raha ho to us ka likha hua nahi mit-ta. */
-  function softRender() {
-    if (!view) return;
-    const active = doc.activeElement;
-    if (active && FIELD.test(active.tagName) && root.contains(active)) { dirty = true; return; }
-    render();
-  }
-  doc.addEventListener('focusout', () => { if (dirty) setTimeout(() => { if (dirty) softRender(); }, 150); });
-  win.setInterval?.(() => { if (view && doc.visibilityState !== 'hidden') { softRender(); refreshSheets(); } }, 60000);
-  doc.addEventListener('visibilitychange', () => { if (doc.visibilityState === 'visible' && view) { softRender(); refreshSheets(); } });
-
-  /* ---------- aik hi jagah se saare buttons / forms ---------- */
-  const shellActions = {
-    'login-role'(el) { login.role = el.dataset.arg; login.error = ''; showLogin(); },
-    'login-show'() { const input = $('input[name=password]', root), value = input?.value || ''; login.showPass = !login.showPass; showLogin(); const next = $('input[name=password]', root); if (next) { next.value = value; next.focus(); } },
-    'app-update'() { void checkUpdate(true); }
-  };
-  doc.addEventListener('click', event => {
-    const el = event.target.closest?.('[data-action]'); if (!el || el.disabled) return;
-    const fn = view?.actions[el.dataset.action] || shellActions[el.dataset.action];
-    if (!fn) { if (!view && root.dataset.screen === 'snapshot') { event.preventDefault(); toast('Ek second — app taza ho rahi hai…', 'ok'); } return; }
-    event.preventDefault();
-    Promise.resolve().then(() => fn(el, event)).catch(error => { console.error(error); toast(errorText(error), 'bad'); });
-  });
-  doc.addEventListener('submit', event => {
-    const form = event.target.closest?.('form[data-form]'); if (!form) return;
-    event.preventDefault();
-    if (form.dataset.form === 'login') { void submitLogin(form); return; }
-    if (!form.checkValidity?.() && !form.noValidate) { form.reportValidity?.(); return; }
-    const fn = view?.forms[form.dataset.form]; if (!fn) return;
-    const button = event.submitter || $('button:not([type=button])', form);
-    Promise.resolve().then(() => fn(form, formValues(form), button)).catch(error => { console.error(error); toast(errorText(error), 'bad'); });
-  });
-  doc.addEventListener('change', event => { const el = event.target.closest?.('[data-change]'); if (el) view?.changes?.[el.dataset.change]?.(el); });
-  doc.addEventListener('input', event => { const el = event.target.closest?.('[data-input]'); if (el) view?.inputs?.[el.dataset.input]?.(el); });
-
-  /* ---------- v207: home screen par install ---------- */
-  let installEvent = null;
-  win.addEventListener?.('beforeinstallprompt', e => { e.preventDefault(); installEvent = e; if (view) softRender(); });
-  win.addEventListener?.('appinstalled', () => { installEvent = null; try { storage?.setItem('nt-hazri-installed', '1'); } catch { /* ignore */ } toast('App home screen par lag gayi. Ab wahan se kholein.', 'ok'); if (view) softRender(); });
-  const install = {
-    get standalone() { try { return !!(win.matchMedia?.('(display-mode: standalone)')?.matches || win.navigator?.standalone); } catch { return false; } },
-    get canPrompt() { return !!installEvent; },
-    get dismissed() { try { return Number(storage?.getItem('nt-hazri-install-later') || 0) > Date.now(); } catch { return false; } },
-    later() { try { storage?.setItem('nt-hazri-install-later', String(Date.now() + 3 * 86400000)); } catch { /* ignore */ } },
-    async prompt() {
-      if (!installEvent) return false;
-      const e = installEvent; installEvent = null;
-      try { await e.prompt(); const r = await e.userChoice; return r?.outcome === 'accepted'; } catch { return false; }
-    }
-  };
-
-  /* ---------- update ---------- */
-  const newer = (a, b) => (parseInt(String(a).replace(/\D/g, ''), 10) || 0) > (parseInt(String(b).replace(/\D/g, ''), 10) || 0);
-  async function checkUpdate(manual = false) {
-    try {
-      const res = await win.fetch('./version.json?t=' + Date.now(), { cache: 'no-store' });
-      if (!res.ok) throw new Error('version');
-      const latest = (await res.json()).version;
-      if (!newer(latest, APP_VERSION)) { if (manual) toast('App bilkul taza hai (' + APP_VERSION + ')', 'ok'); return; }
-      const guard = 'nt-hazri-updated-to';
-      if (!manual && storage?.getItem(guard) === latest) return; // aik version ke liye sirf aik dafa khud reload
-      try { storage?.setItem(guard, latest); } catch { /* ignore */ }
-      toast('Nayi version ' + latest + ' aa rahi hai…');
-      try { const keys = await win.caches?.keys?.() || []; await Promise.all(keys.map(k => win.caches.delete(k))); } catch { /* ignore */ }
-      try { const regs = await win.navigator.serviceWorker?.getRegistrations?.() || []; await Promise.all(regs.map(r => r.update())); } catch { /* ignore */ }
-      win.location.reload();
-    } catch { if (manual) toast('Internet nahi mila. Thori der baad dobara dekhein.', 'bad'); }
-  }
-  if (win.navigator?.serviceWorker && /^https?:$/.test(win.location?.protocol || '')) {
-    win.navigator.serviceWorker.register('./sw.js').catch(() => { /* app SW ke baghair bhi chalti hai */ });
-  }
-  win.setTimeout?.(() => checkUpdate(false), 1500);
-
-  return { get data() { return data; }, get controller() { return controller; }, ready, render, get view() { return view; } };
+function tallyRows(){return entries().filter(e=>e.date===date&&!e.deleted&&inDaily(e)).map(e=>({id:e.id,cents:e.amount,kind:e.kind,label:(party(e.partyId)?.name||e.account||TYPES[e.kind]||'')+(e.note?' · '+e.note:'')}))}
+function tallyTotals(){const d=daily(date,entries(),closings());return [['Sale ka total',d.sale],['Wasooli ka total',d.collection],['Akhrajat ka total',d.expense+d.payment],['Kal ka change',d.opening],['Aaj ka change',d.change],['Closing cash',d.cash],['Sale + Wasooli',d.sale+d.collection]].map(([label,cents])=>({label,cents}))}
+function tallyHTML(){const st=tallyState,r=matchTally(st.items,tallyRows(),tallyTotals()),kindLabel=k=>k==='sale'?'Sale':k==='collection'?'Wasooli':'Akhrajat';
+ const appRow=x=>`<span><b>${money(x.cents)}</b><br><small>${esc(kindLabel(x.kind))} · ${esc(x.label)}</small></span>`,bookRow=b=>`<span><b>${money(b.amount*100)}</b>${b.unsure?' <small class="red">(AI ko shak)</small>':''}<br><small>kaapi · ${esc(b.text||'—')}</small></span>`,editBtn=x=>canEditEntry(entries().find(e=>e.id===x.id))?`<button type="button" data-tally-edit="${esc(x.id)}">Edit</button>`:'';
+ const sec=(title,cls,rows)=>rows.length?`<h4 class="${cls}">${title} (${rows.length})</h4>${rows.join('')}`:'';
+ return `<div class="tally">
+  <p class="stat-note">${esc(st.date)} · AI ne ${st.items.length} raqmein parhi${st.model?' · '+esc(st.model):''}. <b>AI sirf parhta hai — koi entry khud nahi badalti.</b></p>
+  <div class="tally-sum"><div><small>Kaapi ka jama</small><b>${money(r.bookSum)}</b></div><div><small>App ka jama</small><b>${money(r.appSum)}</b></div><div><small>Farq</small><b class="${r.bookSum===r.appSum?'green':'red'}">${money(Math.abs(r.bookSum-r.appSum))}</b></div></div>
+  ${sec('⚠ Milti-julti raqam — ghalti ka imkaan','red',r.near.map(n=>`<div class="source-row">${bookRow(n.book)}${appRow(n.row)}${editBtn(n.row)}</div>`))}
+  ${sec('❌ Kaapi mein hai, app mein NAHI','red',r.onlyBook.map(b=>`<div class="source-row">${bookRow(b)}</div>`))}
+  ${sec('❌ App mein hai, kaapi mein NAHI','red',r.onlyApp.map(x=>`<div class="source-row">${appRow(x)}${editBtn(x)}</div>`))}
+  ${sec('ℹ Kaapi mein likha hua total','',r.totalHits.map(t=>`<div class="source-row">${bookRow(t.book)}<span><small>= ${esc(t.label)}</small></span></div>`))}
+  <details><summary>✅ Mili hui (${r.matched.length})</summary>${r.matched.map(m=>`<div class="source-row">${bookRow(m.book)}${appRow(m.row)}</div>`).join('')||'<small>—</small>'}</details>
+  <details${st.editing?' open':''}><summary>✏ AI ki parhi hui list theek karein</summary><p class="stat-note">Ghalat parha hua hindsa yahan badlein, phir "Dobara milao". Is se AI dobara nahi chalta (kharcha nahi).</p><div id="tallyEdit">${st.items.map((b,i)=>`<div class="tally-edit"><input type="number" inputmode="numeric" min="0" step="1" data-tally-amt="${i}" value="${b.amount}" aria-label="raqam ${i+1}"><small>${esc(b.text||'')}${b.struck?' · kati hui':''}</small><button type="button" class="danger" data-tally-del="${i}" aria-label="hatao">×</button></div>`).join('')}</div><button type="button" data-tally-add>＋ raqam</button> <button type="button" data-tally-redo>Dobara milao</button></details>
+  <button type="button" class="ghost" data-tally-new>📷 Nayi tasveer se dobara parhwayein</button></div>`}
+function paintTally(){if(!tallyState)return;$('dialogBody').innerHTML=tallyHTML()}
+$('dialog')?.addEventListener('close',()=>{tallyState=null});
+function tallyPickHTML(note){return `<div class="tally"><p>${esc(note||'Kaapi ke aaj ke pages ki 1 se 4 SAAF tasveerein chunein (roshni achhi ho, page seedha ho).')}</p><label class="tally-pick">📷 Tasveer chunein / kheenchein<input id="tallyFiles" type="file" accept="image/*" multiple hidden></label><p id="tallyMsg" role="status" class="stat-note"></p><p class="stat-note">Yeh bari tasveerein sirf parhne ke liye AI ko jati hain — app mein save nahi hotin.</p></div>`}
+async function openTally(){if(!canTally())return;modal('🤖 AI se milao — '+date,'<p>Dekh raha hoon…</p>');
+ try{const saved=await cloud.getTally(date);if(saved?.items?.length){tallyState={date,items:saved.items.map(x=>({...x})),model:saved.model||'',editing:false};paintTally();return}}catch(e){console.warn('tally load',e)}
+ $('dialogBody').innerHTML=tallyPickHTML()}
+async function runTally(files){const msg=$('tallyMsg');try{if(!files.length)return;if(files.length>4)throw Error('Zyada se zyada 4 tasveerein');
+  msg.textContent='Key parh raha hoon…';const cfg=await loadAiCfg(true);if(!cfg?.key)throw Error(owner()?'Pehle Settings (⋮) > "AI key" mein Gemini key save karein.':'Malik ne abhi AI key nahi lagayi.');
+  msg.textContent='Tasveerein tayyar ho rahi hain…';const images=[];for(const f of files)images.push(await shrinkForAI(f));
+  msg.textContent='AI parh raha hai… (10-40 second)';const items=await readPages({key:cfg.key,model:cfg.model,images});if(!items.length)throw Error('AI ko koi raqam nazar nahi aayi — tasveer zyada saaf le kar dobara koshish karein.');
+  tallyState={date,items,model:cfg.model,editing:false};paintTally();try{await cloud.setTally(date,{items,model:cfg.model})}catch(e){notice('Natija dikha diya, magar save nahi hua: '+(e.code==='permission-denied'?'naye rules publish karein':(e.message||'')))}}
+ catch(e){if(msg)msg.textContent='❌ '+(e.message||'Nakam');else error(e)}}
+function tallyReadEdits(){document.querySelectorAll('[data-tally-amt]').forEach(inp=>{const i=Number(inp.dataset.tallyAmt);if(tallyState.items[i])tallyState.items[i].amount=Math.max(0,Math.round(Number(inp.value)||0))});tallyState.items=tallyState.items.filter(x=>x.amount>0)}
+document.addEventListener('click',async e=>{const t=e.target;if(!t.closest)return;
+ if(t.closest('[data-ai-tally]')){openTally();return}
+ if(!tallyState&&!t.closest('.tally'))return;
+ if(t.closest('[data-tally-new]')){$('dialogBody').innerHTML=tallyPickHTML('Nayi tasveerein chunein — purana natija badal jayega.');return}
+ if(t.closest('[data-tally-add]')){tallyReadEdits();tallyState.items.push({amount:0,text:'(haath se)',struck:false,unsure:false});tallyState.editing=true;paintTally();const ins=document.querySelectorAll('[data-tally-amt]');ins[ins.length-1]?.focus();return}
+ const del=t.closest('[data-tally-del]');if(del){tallyReadEdits();tallyState.items.splice(Number(del.dataset.tallyDel),1);tallyState.editing=true;paintTally();return}
+ if(t.closest('[data-tally-redo]')){tallyReadEdits();tallyState.editing=false;paintTally();try{await cloud.setTally(tallyState.date,{items:tallyState.items,model:tallyState.model})}catch(err){console.warn('tally save',err)}return}
+ const ed=t.closest('[data-tally-edit]');if(ed){const x=entries().find(r=>r.id===ed.dataset.tallyEdit);if(x&&canEditEntry(x)){tallyState=null;x.purchase?purchaseForm(x):entryForm(x.kind,x.partyId,x)}}});
+document.addEventListener('change',e=>{if(e.target?.id==='tallyFiles')runTally([...e.target.files])});
+document.addEventListener('click',e=>{if(e.target.closest?.('#loginCheck'))runLoginCheck()});
+document.addEventListener('click',async e=>{if(!e.target.closest?.('#probeBtn'))return;const box=$('probeOut');if(!box||!cloud?.probe)return;box.innerHTML='<p>Test chal raha hai…</p>';
+ try{const p=await cloud.probe();const row=(a,b)=>`<div class="source-row"><span>${esc(a)}</span><span><b>${esc(String(b))}</b></span></div>`;
+  const hint=String(p.staffRead).startsWith('FAIL')?'❌ Firestore is login ko mulazim maanta hi nahi (blueStaff false).':String(p.createNoDate).startsWith('FAIL')?'❌ Mulazim maana gaya, magar likhne ki buniyadi shart tooti (din band / by / rev).':String(p.createToday).startsWith('FAIL')?'❌ Sirf TAREEKH wali shart toot rahi hai — server ki tareekh aur phone ki tareekh dekhein.':'✅ Test entry save ho gayi — rules theek hain; masla kisi khaas entry ke data mein hai.';
+  box.innerHTML=`<div class="import-preview">${row('1. mulazim pehchan (read)',p.staffRead)+row('2. dayLock read',p.dayLockRead)+row('3. likhai — baghair tareekh',p.createNoDate)+row('4. likhai — aaj ki entry',p.createToday)+row('server ka waqt',p.serverDate)+row('phone ka waqt',p.deviceNow)}</div><p><b>${esc(hint)}</b></p><p class="stat-note">Note: test se "ZZ TEST" naam ki 1-2 cheezein ban sakti hain — malik baad mein delete kar de.</p>`}
+ catch(err){box.innerHTML='<p>Test nahi chal saka: '+esc(err.code||err.message||'')+'</p>'}});
+// v1.79.10: login ke baad khud check — agar is uid ka session record Firestore mein nahi to entry kabhi save nahi hogi
+async function checkSessionDoc(){if(!cloud?.diagnose||session?.role!=='staff')return;try{const d=await cloud.diagnose();
+ if(!d.session||typeof d.session!=='object'||!d.session.credentialId)notice('Is login ka record Firestore mein nahi mila — entry save nahi hogi. Logout karke password se dobara login karein.');
+ else if(!d.key||typeof d.key!=='object'||d.key.active!==true)notice('Login record active nahi — malik "Mulazim password" dobara Save kare.')}catch{}}
+function failDetail(ctx){if(dayIsClosed()&&session?.role==='staff'&&(session?.scope||'full')==='full')return 'AAJ KA DIN BAND HAI — mulazim entry nahi kar sakta. Malik "Din wapas kholein" dabaye.';
+ return failDetail0(ctx)}
+function failDetail0(ctx){if(!ctx)return 'record ka pata nahi (background write)';const who=owner()?'malik':'mulazim',st=Number(ctx.posStatus)||0;const old=records.find(r=>r.id===ctx.id);const keys=old?Object.keys(ctx).filter(k=>JSON.stringify(ctx[k])!==JSON.stringify(old[k])).join(','):'(nayi entry)';return [ctx.type||'',ctx.kind||'',ctx.amount!=null?money(ctx.amount):'',ctx.date||'',party(ctx.partyId)?.name||ctx.account||'',st===2?'POSTED':st===3?'CANCELLED':'khula',who+' login','badle: '+keys,'id '+String(ctx.id||'').slice(0,12)].filter(Boolean).join(' · ')}
+function modal(title,html,full){$('dialogTitle').textContent=title;$('dialogBody').innerHTML=html;$('dialog').classList.toggle('full-dialog',!!full);if(!$('dialog').open)$('dialog').showModal()}
+$('close').onclick=()=>$('dialog').close();
+// Remember the list before opening an account, including its visible row.
+let accountListReturn=null,returnScrollFrame=0;
+function resetAccountNavigation(){searchFocus.reset();accountListReturn=null;cancelAnimationFrame(returnScrollFrame);returnScrollFrame=0}
+function accountButton(id){return [...$('list').querySelectorAll('[data-party]')].find(el=>el.dataset.party===id)}
+function captureAccountList(id){
+ const anchor=accountButton(id);
+ return {view,tab,date,search:$('search').value,from:$('from').value,to:$('to').value,x:window.scrollX,y:window.scrollY,anchorId:id,anchorTop:anchor?anchor.getBoundingClientRect().top:null};
+}
+function restoreAccountListScroll(saved){
+ const restore=()=>{
+  if(!session||selected||view!==saved.view)return;
+  const anchor=accountButton(saved.anchorId);
+  const top=anchor&&saved.anchorTop!==null?window.scrollY+anchor.getBoundingClientRect().top-saved.anchorTop:saved.y;
+  window.scrollTo(saved.x,Math.max(0,top));
+ };
+ restore();
+ // Reapply after layout; a shorter account screen may have clamped the scroll.
+ returnScrollFrame=requestAnimationFrame(()=>{returnScrollFrame=0;restore()});
+}
+(function(){const el=document.getElementById('repoLink');if(!el)return;const host=location.hostname,user=host.split('.')[0];const seg=location.pathname.split('/').filter(Boolean)[0];const repo=(seg&&!seg.includes('.'))?seg:host;el.href='https://github.com/'+user+'/'+repo+'/upload/main';el.title=user+'/'+repo})();
+function route(v,id=null){
+ clearTimeout(searchTimer);cancelAnimationFrame(returnScrollFrame);returnScrollFrame=0;
+ if(purchaseOnly()&&v!=='purchase'&&v!=='ppurchase'){notice('Is login par sirf Purchase khulti hai');v='purchase';id=null}
+ if(v==='ppurchase'&&!canPP()){v='purchase';id=null}
+ if(stockOnly()&&v!=='stock'){notice('Is login par sirf Stock khulti hai');v='stock';id=null}
+ if(saleOnly()&&v!=='sale'){notice('Is login par sirf Sale khulti hai');v='sale';id=null}
+ if(v==='sale'&&!saleUser()){v='khata';id=null}
+ const returning=!id&&selected&&accountListReturn?.view===v?accountListReturn:null;
+ if(v==='khata'&&id&&!selected)accountListReturn=captureAccountList(id);
+ else if(!id)accountListReturn=null;
+ searchFocus.reset();
+ if(v==='khata'&&id)notePartyPick(id);
+ view=v;selected=id;keepView();navKeep();
+ if(returning){tab=returning.tab;date=returning.date}
+ $('search').value=returning?.search||'';$('from').value=returning?.from||'';$('to').value=returning?.to||'';
+ render();
+ if(returning)restoreAccountListScroll(returning);else window.scrollTo(0,0);
+}
+$('back').onclick=()=>route(selected&&accountListReturn?accountListReturn.view:view==='chart'?'expenses':view==='due'?'daily':view==='ppurchase'?'purchase':'khata');
+// ===== v1.98.0 (B): jo screen khuli thi wahi dobara khulti hai — app dobara kholne par aur login ke baad bhi =====
+const VIEW_KEY='sam-last-view:'+(window.khataProjectId||'');
+const viewScope=()=>session?(session.role==='owner'?'owner':'staff:'+(session.scope||'full')):'';
+let viewCheck=false,pendingView='';
+function keepView(){if(!session||localMode)return;try{localStorage.setItem(VIEW_KEY,JSON.stringify({v:view,id:selected||'',sc:viewScope(),y:Math.round(window.scrollY||0),t:Date.now()}))}catch{}}
+// v2.5.1: app peeche jaye to scroll bhi yaad; wapas aane par wahi jagah
+let backY=0;
+document.addEventListener('visibilitychange',()=>{if(document.hidden)keepView();});
+window.addEventListener('pagehide',()=>keepView());
+function allowedView(v){if(!v)return false;
+ if(purchaseOnly())return v==='purchase'||v==='ppurchase';
+ if(stockOnly())return v==='stock';
+ if(saleOnly())return v==='sale';
+ if(v==='ppurchase')return canPP();
+ if(v==='sale')return saleUser();
+ if(v==='stock')return owner();
+ return ['khata','daily','expenses','cash','dasti','due','chart','purchase','pos'].includes(v)}
+function restoreView(){let o=null;try{o=JSON.parse(localStorage.getItem(VIEW_KEY)||'null')}catch{}
+ if(!o||o.sc!==viewScope()||!allowedView(o.v))return false;
+ if(o.t&&Date.now()-o.t>12*3600000)return false;                       // v2.5.1: 12 ghante se purani jagah nahi
+ view=o.v;selected=o.id||null;viewCheck=!!selected;backY=Number(o.y)||0;return true}
+// phone ka back: andar wali screen se peechay — app band na ho. Ghar (khata) par back = app se bahar.
+let navSpare=false;
+function navPush(){try{history.pushState({sam:1},'')}catch{}navSpare=true}
+function navKeep(){if(!navSpare&&session)navPush()}
+window.addEventListener('popstate',()=>{navSpare=false;if(!session)return;
+ const d=$('dialog');
+ if(d?.open){navPush();d.close();return}
+ const b=$('back');
+ if(b&&!b.hidden){navPush();b.click();return}});
+// ===== v1.98.0 (C): app ke ANDAR se hi doosri screen ka login (logout ki zarurat nahi) =====
+const SW_SCOPES=[['purchase','🧾 Sirf Purchase'],['stock','📦 Sirf Stock'],['sale','🧾 Sirf Sale'],['full','📋 Full App']];
+const SW_VIEW={purchase:'ppurchase',stock:'stock',sale:'sale',full:'khata'};
+const scopeName=k=>k==='owner'?'Malik':({'staff:purchase':'Sirf Purchase','staff:stock':'Sirf Stock','staff:sale':'Sirf Sale','staff:full':'Full App'}[k]||k);
+let loginErrMsg=e=>(e&&(e.message||e.code))||'Login nahi hua';
+function switchForm(){
+ if(localMode||!cloud?.controller?.login){notice('Abhi screen nahi badal sakti');return}
+ const now=viewScope(),rem=remRead().items;
+ modal('🔄 Doosri screen',`<form id="swForm"><p class="stat-note">Abhi <b>${esc(scopeName(now))}</b> khula hai. Jis screen par jana hai us ka password daalein — app band karne ya logout karne ki zarurat nahi.</p>
+  <div class="mchips sw-chips">${SW_SCOPES.map(([k,n])=>`<button type="button" data-sw="${k}"${'staff:'+k===now?' disabled':''}>${n}${rem['staff:'+k]?' 🔒':''}</button>`).join('')}</div>
+  <input type="hidden" name="scope" value="">
+  <label>Password<input name="pw" type="password" autocomplete="current-password" placeholder="Pehle upar se screen chunein"></label>
+  <label class="remember-row"><input type="checkbox" name="rem"> 🔒 Password aaj ke liye is phone par yaad rakhein</label>
+  <p id="swMsg" role="status" class="stat-note"></p>
+  <button type="submit" id="swGo" disabled>Screen badlein</button></form>`);
+ const f=$('swForm'),msg=$('swMsg');
+ f.querySelector('.sw-chips').onclick=e=>{const b=e.target.closest('[data-sw]');if(!b||b.disabled)return;
+  f.querySelectorAll('[data-sw]').forEach(x=>x.classList.toggle('on',x===b));
+  const k=b.dataset.sw;f.elements.scope.value=k;
+  const enc=remRead().items['staff:'+k];
+  f.elements.pw.value=enc?remDec(enc):'';f.elements.rem.checked=!!enc;f.elements.pw.placeholder='Password';
+  $('swGo').disabled=false;msg.textContent=enc?'🔒 Yaad kiya password laga diya — "Screen badlein" dabayein.':'';
+  if(!enc)f.elements.pw.focus()};
+ f.onsubmit=async e=>{e.preventDefault();
+  const scope=f.elements.scope.value,pw=f.elements.pw.value;
+  if(!scope){msg.textContent='Pehle upar se screen chunein';return}
+  if(!pw){msg.textContent='Password likhein';return}
+  if(String($('syncStatus')?.textContent||'').includes('baqi')&&!confirm('Sync abhi baqi hai. Screen badalne par woh pending kaam isi phone par ruka rahega jab tak isi login se dobara na khulein.\n\nPhir bhi badlein?'))return;
+  const go=$('swGo');go.disabled=true;msg.textContent='Login ho raha hai…';
+  try{
+   if($('role'))$('role').value='staff';
+   if($('accessScope'))$('accessScope').value=scope;
+   if($('rememberPw'))$('rememberPw').checked=!!f.elements.rem.checked;
+   pendingView=SW_VIEW[scope]||'';
+   await cloud.controller.login({role:'staff',username:'admin',password:pw,scope});
+   rememberAfterLogin(pw);
+   $('dialog').close();
+   notice('✅ '+scopeName('staff:'+scope)+' khul gaya');
+  }catch(err){pendingView='';go.disabled=false;
+   msg.textContent='❌ '+loginErrMsg(err,'staff');
+   if(err?.code==='auth/too-many-requests'){try{sessionStorage.setItem('sam-login-pause:'+window.khataProjectId,String(Date.now()+60000))}catch{}}}};
+}
+if($('switchNav'))$('switchNav').onclick=switchForm;if($('khataNav'))$('khataNav').onclick=()=>route('khata');$('dailyNav').onclick=()=>route('daily');if($('expenseNav'))$('expenseNav').onclick=()=>route('expenses');if($('cashNav'))$('cashNav').onclick=()=>route('cash');if($('dastiNav'))$('dastiNav').onclick=()=>route('dasti');if($('dueNav'))$('dueNav').onclick=()=>route('due');if($('purchaseNav'))$('purchaseNav').onclick=()=>route('purchase');if($('posNav'))$('posNav').onclick=()=>route('pos');if($('stockNav'))$('stockNav').onclick=()=>route('stock');if($('dayLockBtn'))$('dayLockBtn').onclick=toggleDayLock;if($('saleNav'))$('saleNav').onclick=()=>route('sale');
+let searchTimer;const searchRender=()=>{clearTimeout(searchTimer);searchTimer=setTimeout(render,150)};$('search').oninput=searchRender;$('from').onchange=$('to').onchange=render;
+$('tabs').onclick=e=>{const b=e.target.closest('[data-tab]');if(b){tab=b.dataset.tab;render()}};
+function accountMatches(p,q){const term=norm(q);if(!term)return true;const ix=indexData(),id=String(p.partyId||p.id||'').replace(/^party:/,'');if((ix.partyNotes.get(id)||'').includes(term)||(ix.expenseNotes.get(p.account||p.name)||'').includes(term))return true;const digits=String(q).replace(/\D/g,'');return norm([p.name,p.phone,p.details,p.note,p.notes].filter(Boolean).join(' ')).includes(term)||(!!digits&&(p.phone||'').replace(/\D/g,'').includes(digits))||partyScore(p,q)>0}
+// v1.87: istemal (pichhle 60 din ki entries, 7 din wali double) + is phone par chunna -> chips/tarteeb. Data badle to khud badle.
+let useCache=null;function partyUse(){if(useCache&&useCache.src===records&&useCache.len===records.length)return useCache;const back=n=>{const d=new Date();d.setDate(d.getDate()-n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};const cut=back(60),wk=back(7),M=()=>new Map(),U={supplier:M(),customer:M(),expense:M(),any:M()},add=(m,k,w)=>m.set(k,(m.get(k)||0)+w);for(const e of records){if(e.type!=='entry'||e.deleted||!e.date||e.date<cut)continue;const w=e.date>=wk?2:1;if(e.partyId){add(U.any,e.partyId,w);if(e.purchase===true||['purchaseCash','borrow','payment'].includes(e.kind))add(U.supplier,e.partyId,w);if(['credit','collection','sale'].includes(e.kind))add(U.customer,e.partyId,w)}if(e.kind==='expense'&&e.account)add(U.expense,'expense:'+e.account,w);if(e.kind==='payment'&&e.partyId)add(U.expense,'party:'+e.partyId,w)}return useCache={src:records,len:records.length,...U}}
+const isSupplierParty=p=>p?.category==='Supplier'||partyUse().supplier.has(p?.id);
+const ctxOfKind=k=>['credit','collection','sale'].includes(k)?'customer':['payment','borrow','purchaseCash'].includes(k)?'supplier':'any';
+function rankList(list,q,ctx='any',n=30,prefer=null){const U=partyUse(),m=U[ctx]||U.any,us=p=>(m.get(p.id)||0)+partyPicks(p.id)*2;q=String(q||'').trim();if(!q){let l=list.filter(p=>!p.deleted&&(!prefer||prefer(p)));const used=l.filter(p=>us(p)>0).sort((x,y)=>us(y)-us(x));return (used.length?used:l).slice(0,Math.min(n,8))}return list.filter(p=>!p.deleted&&accountMatches(p,q)).map(p=>({p,s:partyScore(p,q)||1,u:us(p),pr:prefer&&!prefer(p)?0:1})).sort((x,y)=>(y.pr-x.pr)||(y.s-x.s)||(y.u-x.u)||String(x.p.name||x.p.label||'').localeCompare(String(y.p.name||y.p.label||''))).slice(0,n).map(x=>x.p)}
+const chipHead=q=>String(q||'').trim()?'':'<small class="pchip-h">⭐ Aksar</small>';
+function matches(e){const q=norm($('search').value);return (!q||norm((party(e.partyId)?.name||e.account||'')+' '+(party(e.partyId)?.phone||'')+' '+(e.note||'')+' '+(e.notes||'')+' '+entryLabel(e)).includes(q))&&(!$('from').value||e.date>=$('from').value)&&(!$('to').value||e.date<=$('to').value)}
+function receiptEligible(e){return !!e&&!e.deleted&&e.type==='entry'&&(['payment','collection','purchaseCash'].includes(e.kind)||e.id?.startsWith('cashpay-')||!!e.transferId)}
+function receiptButton(e){return receiptEligible(e)?`<button type="button" data-receipt="${esc(e.id)}">Receipt / رسید</button>`:''}
+function paymentReceipt(id){
+ const e=entries().find(r=>r.id===id);if(!session||!receiptEligible(e))return;
+ if(optimistic.pending()||pendingDrafts.size){notice('Pehle entry save hone dein, phir receipt nikalein');return}
+ const p=party(e.partyId),isCollection=e.kind==='collection'&&!e.transferId;
+ const title=e.transferId?'Payment Transfer Receipt':isCollection?'Wasooli Receipt':'Payment Receipt';
+ const rows=[['Receipt reference',e.transferId||e.id],['Entry version',String(e.rev||1)],['Tareekh',e.date],
+  ...(e.transferId?[['Se',party(e.fromPartyId)?.name||e.fromName||'Account'],['Ko',party(e.toPartyId)?.name||e.toName||'Account']]:[['Account',p?.name||e.account||'Account'],...(p?.phone?[['Mobile',p.phone]]:[])]),
+  ['Qism',e.transferId?'Account transfer':isCollection?'Wasooli / Payment received':e.kind==='purchaseCash'?'Cash purchase':'Payment diya'],['Raqam',money(e.amount)],['Notes',e.note||'—']];
+ $('printArea').innerHTML=`<h1>NOOR TRADERS</h1><h2>${esc(title)}</h2><p>Khate ki entry ki receipt${localMode?' · Local device record':''}</p><table><thead><tr><th>Tafseel</th><th>Record</th></tr></thead><tbody>${rows.map(([label,value])=>`<tr><td>${esc(label)}</td><td style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(value)}</td></tr>`).join('')}</tbody></table>`;
+ const revision=e.rev,uid=session.user.uid;
+ const valid=()=>{const current=entries().find(r=>r.id===id);return session?.user.uid===uid&&current&&!current.deleted&&current.rev===revision};
+ openReportPreview('Receipt-'+(e.transferId||e.id),{receipt:true,valid});
+}
+function entryHTML(rows){return newestEntries(rows).map(e=>`<div class="entry"><div class="note"><b>${esc(entryLabel(e))}</b><small>${esc(e.date)} · ${esc(party(e.partyId)?.name||e.account||'')}</small>${esc(e.note||'')}${photoHTML(e)}${receiptButton(e)}${canEditEntry(e)?`<br><button data-edit="${esc(e.id)}">Edit</button>`:''}</div><strong class="red">${['payment','expense','credit','purchaseCash'].includes(e.kind)?money(e.amount):'—'}</strong><strong class="green">${['collection','sale','borrow'].includes(e.kind)?money(e.amount):'—'}</strong></div>`).join('')||'<div class="empty">Abhi koi entry nahi.</div>'}
+const sheetDrafts=new Map(),accountChoices=new Map();
+function ledgerHTML(rows){const ordered=newestEntries(rows);return '<div class="ledger-pair">'+[['Diye / Udhar','red',['payment','credit','expense','purchaseCash']],['Liye / Wasooli','green',['collection','borrow','sale']]].map(([title,color,kinds])=>{const list=ordered.filter(e=>kinds.includes(e.kind));return `<section class="ledger-column"><h3 class="${color}">${title}<small>${money(list.reduce((n,e)=>n+e.amount,0))}</small></h3>${list.map(e=>`<article class="ledger-item${e.transferId?' transfer-entry':''}"><strong class="${color}">${money(e.amount)}</strong><b>${esc(entryLabel(e))}</b><small>${esc(e.date)}</small><p>${esc(e.note||'')}</p>${posStatusHTML(e)}${photoHTML(e)}${receiptButton(e)}${e.transferId?transferEntryActions(e):canEditEntry(e)?`<button data-edit="${esc(e.id)}">Edit</button>`:''}</article>`).join('')||'<p class="stat-note">Koi entry nahi</p>'}</section>`}).join('')+'</div>'}
+// v1.78: POS posting — PC (transfer-sync) usp_Voucher_Post se post / unpost karta hai
+function postTarget(e){if(!e||e.deleted)return null;if(e.purchase===true&&e.kind==='borrow'&&/^pos-\d+$/.test(String(e.id)))return{kind:'purchase',purchaseId:Number(String(e.id).slice(4)),label:e.note||e.id};if(e.posCode&&/^(CPV|CRV|JV|BPV|BRV)-/i.test(String(e.posCode)))return{kind:'voucher',code:String(e.posCode),label:e.posCode};return null}
+function postBadgeHTML(e){const t=postTarget(e);const st=Number(e.posStatus)||0;let h='';if(st===2)h+='<small class="post-badge posted">📌 POS mein Posted</small>';else if(st===3)h+='<small class="post-badge cancel">✖ POS mein Cancelled</small>';if(t&&owner()&&st!==3)h+=st===2?`<button type="button" class="post-btn" data-unpost="${esc(e.id)}">↩ Unpost</button>`:`<button type="button" class="post-btn" data-post="${esc(e.id)}">📌 Post</button>`;return h}
+async function sendPost(op,list){const items=list.map(postTarget).filter(Boolean).map(({label,...x})=>x);if(!items.length){notice('Post karne layak kuch nahi');return}const jid=await cloud.requestPost({op,items});notice((op==='post'?'📌 Post':'↩ Unpost')+' ka hukum PC ko bheja…');let done=false;const stop=cloud.watchPost(jid,j=>{if(!j||done)return;if(j.status==='done'||j.status==='failed'){done=true;try{stop()}catch{}const ok=j.ok||0,bad=(j.errors||[]).length;notice(ok?`✓ ${ok} ${op==='post'?'post':'unpost'} ho gaye`+(bad?` · ${bad} nahi hue: `+(j.errors[0]||''):''):'Nahi hua: '+((j.errors||[])[0]||j.error||''))}});setTimeout(()=>{if(!done){done=true;try{stop()}catch{}notice('PC se jawab nahi aaya — PC on hai? (hukum mehfooz hai)')}},60000)}
+function posStatusHTML(e){return postBadgeHTML(e)+posStatusHTML0(e)}
+function posStatusHTML0(e){if(e.posCode)return `<small class="pos-status" style="display:block;color:#1c7c43">🖥 POS: ${esc(e.posCode)}${e.posPrintedAt?' · rasid print ho gayi':''}</small>`;if(e.posError)return `<small class="pos-status" style="display:block;color:#c62828">🖥 POS mein nahi bani: ${esc(e.posError)}</small>`;const p=party(e.partyId);if(!p||e.purchase||String(e.id).startsWith('pos'))return '';const linked=p.posSync||p.posLinked||String(p.id).startsWith('pos-party-');if(!linked||!(['payment','collection','credit'].includes(e.kind)||e.transferId))return '';if(Date.now()-(Number(e.updatedAt||e.createdAt)||0)>15*60000)return '';return `<small class="pos-status" style="display:block;color:#b26a00">🖥 POS ko ja rahi hai… (1 minute tak)</small>`}
+function canDeleteEntry(e){return !isPosted(e)&&!e?.transferId&&!(bandParty(e)&&!owner())&&(!purchaseOnly()||e?.purchase===true)&&!!session&&e?.type==='entry'&&!e.deleted&&(owner()||e.date===today())}
+function dailySheet(d,es){const ds=newestEntries(es.filter(e=>e.date===date&&inDaily(e)&&matches(e)));const defs=[['sale','Sale',d.sale],['collection','Wasooli',d.collection],['expense','Akhrajat',d.expense+d.payment],['opening','Kal ka Change',d.opening],['change','Aaj ka Change',d.change],['cash','Closing Cash',d.cash]];const tabOf=k=>k==='opening'||k==='change'?'change':k;const tabs=[['sale','Sale',d.sale],['collection','Wasooli',d.collection],['expense','Akhrajat',d.expense+d.payment],['change','Change',d.change],['cash','Closing',d.cash]];
+ return `<p class="stat-note day-hint">Columns dekhne ke liye daayein / baayein scroll karein. Account choose karke raqam Save karein.</p><div class="sheet-scroll day-cols"><div class="cash-sheet">${defs.map(([kind,label,total])=>{const items=ds.filter(e=>kind==='expense'?['expense','payment','purchaseCash'].includes(e.kind):e.kind===kind);return `<section class="sheet-column${tabOf(kind)===dayTab?' on':''}" data-col="${tabOf(kind)}"><h3>${label}</h3>${['sale','collection','expense'].includes(kind)?`<form data-sheet="${kind}"><input name="query" type="search" placeholder="🔍 Account search" aria-label="${label} account search"><div class="sheet-suggestions" aria-live="polite"></div><select name="account" aria-label="${label} account"><option value="">${kind==='sale'?'Bina account / cash sale':'Account select karein'}</option></select><input name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" required placeholder="Raqam Rs" aria-label="${label} raqam"><input name="note" placeholder="Note" maxlength="1000" aria-label="${label} note"><button type="submit">✓ Save</button>${kind==='expense'?'<button type="button" class="sheet-extra" data-expense-add>＋ Naya kharcha account</button>':''}${kind==='sale'?'<button type="button" class="sheet-extra" data-entry="sale">🧾 Sale + Roznamcha pictures</button>'+(canTally()?'<button type="button" class="sheet-extra" data-ai-tally>🤖 AI se milao (kaapi)</button>':''):''}</form>`:countSheet(kind,label,d)}<div class="sheet-entries">${items.map(e=>`<div><strong>${money(e.amount)}</strong><small>${esc(party(e.partyId)?.name||e.account||'')}</small><small>${esc(e.note||'')}</small>${photoHTML(e)}${receiptButton(e)}${canEditEntry(e)?`<button data-edit="${esc(e.id)}">Edit</button>`:''} ${canDeleteEntry(e)?`<button class="danger" data-delete="${esc(e.id)}">Delete</button>`:''}</div>`).join('')||(['opening','change','cash'].includes(kind)?`<strong>${money(total)}</strong>`:'<small>Abhi entry nahi</small>')}</div><div class="sheet-total">${money(total)}</div></section>`}).join('')}</div></div>`}
+function countSheet(kind,label,d){const c=closings().find(c=>c.date===date),prev=closings().find(c=>c.date===yesterday(date)),locked=kind==='opening'&&prev?.change!=null,source=locked?prev:c,field=locked?'change':kind;const rows=source?.[field+'Rows']|| (source?.[field]!=null?[source[field]]:[]);return `<form data-count="${kind}"><small>${locked?'Pichhle din se auto':label+' ki ginti'}</small><div class="count-rows">${(rows.length?rows:['']).map(n=>`<input name="count" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Raqam Rs" aria-label="${label} raqam" value="${n===''?'':n/100}" ${locked||(!owner()&&date!==today())?'readonly':''}>`).join('')}</div>${!locked&&(owner()||date===today())?'<button type="button" data-count-add>＋ Nayi raqam / Row</button><button type="submit">Save ginti</button>':''}<small>Jama: <b data-count-total>${money(d[kind])}</b></small>${!locked&&(owner()||date===today())?`<details class="notes-calc"><summary>💵 Noton se ginti</summary><div class="nc-grid">${[5000,1000,500,100,50,20,10].map(n=>`<label><span>${n} ×</span><input data-nc="${n}" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></label>`).join('')}<label class="nc-coin"><span>Sikke / khula Rs</span><input data-nc="1" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></label></div><div class="nc-foot"><b data-nc-total>Rs 0</b><button type="button" data-nc-use>Yeh jama ginti mein daalo</button></div></details>`:''}</form>`}
+// v1.92: Daily Sale — tabs (ek waqt ek column), ungli se khiskana, neeche ke buttons ki patli line, noton se ginti
+let dayTab=(()=>{try{return sessionStorage.getItem('sam-day-tab')||'sale'}catch{return 'sale'}})();
+const DAY_TABS=['sale','collection','expense','change','cash'];
+function setDayTab(k){if(!DAY_TABS.includes(k))return;dayTab=k;try{sessionStorage.setItem('sam-day-tab',k)}catch{}document.querySelectorAll('[data-day-tab]').forEach(b=>b.classList.toggle('on',b.dataset.dayTab===k));document.querySelectorAll('.day-tabbed .sheet-column').forEach(c=>c.classList.toggle('on',c.dataset.col===k));document.querySelector(`[data-day-tab="${k}"]`)?.scrollIntoView({block:'nearest',inline:'center'});paintDayActs()}
+function paintDayActs(){const m={sale:'sale',collection:'collection',expense:'expense',change:'cash',cash:'cash'}[dayTab];document.querySelectorAll('#actions [data-dact]').forEach(b=>b.classList.toggle('on',b.dataset.dact===m))}
+function setupDayTabs(){document.querySelectorAll('[data-day-tab]').forEach(b=>b.onclick=()=>setDayTab(b.dataset.dayTab));const box=document.querySelector('.day-tabbed');if(!box)return;let x0=null,y0=null;box.addEventListener('touchstart',e=>{const t=e.touches[0];if(e.target.closest('input,select,textarea,.sheet-suggestions,.nc-grid'))return;x0=t.clientX;y0=t.clientY},{passive:true});box.addEventListener('touchend',e=>{if(x0==null)return;const t=e.changedTouches[0],dx=t.clientX-x0,dy=t.clientY-y0;x0=null;if(Math.abs(dx)<70||Math.abs(dy)>Math.abs(dx)*0.6)return;const i=DAY_TABS.indexOf(dayTab)+(dx<0?1:-1);if(i>=0&&i<DAY_TABS.length)setDayTab(DAY_TABS[i])},{passive:true})}
+const ncTotal=f=>[...f.querySelectorAll('[data-nc]')].reduce((s,i)=>s+Math.max(0,Math.floor(Number(i.value)||0))*Number(i.dataset.nc),0);
+function ncPaint(f,key){const t=ncTotal(f),b=f.querySelector('[data-nc-total]');if(b)b.textContent='Rs '+t.toLocaleString('en-PK');sheetDrafts.set(key+':nc',[...f.querySelectorAll('[data-nc]')].map(i=>i.value))}
+function ncRestore(f,key){const v=sheetDrafts.get(key+':nc');if(!v)return;const ins=[...f.querySelectorAll('[data-nc]')];ins.forEach((i,n)=>{i.value=v[n]||''});if(v.some(x=>x))f.querySelector('.notes-calc')?.setAttribute('open','');ncPaint(f,key)}
+function setupCounts(){document.querySelectorAll('[data-count]').forEach(f=>{const kind=f.dataset.count,key=date+':count:'+kind;const draft=sheetDrafts.get(key);if(draft&&f.querySelector('[type=submit]'))f.querySelector('.count-rows').innerHTML=draft.map(v=>`<input name="count" type="number" min="0" step="0.01" inputmode="decimal" placeholder="Raqam Rs" aria-label="${kind} raqam" value="${esc(v)}">`).join('');const values=()=>[...f.querySelectorAll('[name=count]')].map(i=>i.value);const update=()=>{sheetDrafts.set(key,values());try{f.querySelector('[data-count-total]').textContent=money(values().reduce((n,v)=>n+cents(v),0))}catch{}};f.oninput=e=>{if(e.target.dataset?.nc!=null){ncPaint(f,key);return}update()};ncRestore(f,key);{const use=f.querySelector('[data-nc-use]');if(use)use.onclick=()=>{const t=ncTotal(f);if(!t){notice('Pehle noton ki ginti likhein');return}const ins=[...f.querySelectorAll('[name=count]')],empty=ins.find(i=>!i.value.trim());let inp=empty;if(!inp){inp=ins[0].cloneNode();f.querySelector('.count-rows').append(inp)}inp.value=String(t);update();notice('Noton ka jama '+money(t*100)+' ginti mein daal diya — ab "Save ginti" dabayein')}}const add=f.querySelector('[data-count-add]');if(add)add.onclick=()=>{const input=f.querySelector('[name=count]').cloneNode();input.value='';f.querySelector('.count-rows').append(input);update();input.focus()};f.onsubmit=async e=>{e.preventDefault();const b=f.querySelector('[type=submit]');if(!b)return;b.disabled=true;try{const rows=values().filter(v=>v.trim()!=='').map(cents);if(!rows.length)throw Error('Ginti likhein; zero ho to 0 likhein');const c=closings().find(c=>c.date===date);if(kind==='opening'&&closings().some(c=>c.date===yesterday(date)&&c.change!=null))throw Error('Kal ka Change pichhle din se aa raha hai');await save({...c,type:'closing',id:'closing-'+date,date,[kind]:rows.reduce((a,b)=>a+b,0),[kind+'Rows']:rows},c);sheetDrafts.delete(key);render()}catch(e){error(e)}finally{b.disabled=false}}})}
+function setupSheet(){document.querySelectorAll('[data-sheet]').forEach(f=>{
+ const kind=f.dataset.sheet,key=date+':'+kind,saved=sheetDrafts.get(key)||{...(accountChoices.get(kind)||{})};
+ if(kind==='expense'&&saved.account&&!/^(expense|party):/.test(saved.account))saved.account=(saved.mode==='payment'?'party:':'expense:')+saved.account;
+ for(const name of ['query','amount','note'])if(f.elements[name])f.elements[name].value=saved[name]??f.elements[name].value;
+ {const t=f.querySelector('[data-note-toggle]'),n=f.elements.note;if(t&&n){const show=()=>{n.hidden=false;t.hidden=true;f.classList.add('note-open')};if(n.value)show();t.onclick=()=>{show();n.focus()}}}
+ const accounts=()=>kind==='expense'?expenseChoices():parties();
+ const remember=()=>{const v=Object.fromEntries(new FormData(f));saved.account=v.account;sheetDrafts.set(key,v);accountChoices.set(kind,{account:v.account});};
+ let optionList=null;const options=()=>{const list=optionList||(optionList=accounts()),choice=saved.account||'';if(!f.elements.account.dataset.ready){f.elements.account.innerHTML=`<option value="">${kind==='sale'?'Bina account / cash sale':'Account select karein'}</option>`+list.map(a=>`<option value="${esc(a.id)}">${esc(a.label||a.name)}</option>`).join('');f.elements.account.dataset.ready='1'}f.elements.account.value=list.some(a=>a.id===choice)?choice:'';const q=f.elements.query.value.trim(),box=f.querySelector('.sheet-suggestions');{const l=rankList(list,q,kind==='expense'?'expense':'customer',40);box.innerHTML=(l.length?chipHead(q):'')+(l.map(a=>`<button type="button" data-choice="${esc(a.id)}">${esc(a.label||a.name)}</button>`).join('')||(q?'<small>Account nahi mila</small>':''))}};options();
+ f.querySelector('.sheet-suggestions').onclick=e=>{const b=e.target.closest('[data-choice]');if(!b)return;notePartyPick(b.dataset.choice);saved.account=b.dataset.choice;f.elements.account.value=b.dataset.choice;f.elements.query.value='';remember();options()};
+ f.oninput=e=>{if(e.target.name==='query')options();remember()};f.onchange=e=>{if(e.target.name==='account')remember()};
+ f.onsubmit=async e=>{e.preventDefault();const button=f.querySelector('button[type=submit]');if(button.disabled)return;button.disabled=true;const v=Object.fromEntries(new FormData(f));try{const a=accounts().find(a=>a.id===v.account),k=kind==='expense'?a?.kind:kind,amount=cents(v.amount);if(!amount)throw Error('Raqam likhein');if(kind!=='sale'&&!a)throw Error('Account select karein');if(v.account&&!a)throw Error('Account dobara select karein');remember();sheetDrafts.set(key,{...v,query:'',amount:'',note:''});await save({type:'entry',kind:k,amount,date,partyId:kind==='expense'?a.partyId:v.account,account:kind==='expense'?a.account:'',note:v.note});render()}catch(err){sheetDrafts.set(key,v);error(err)}finally{button.disabled=false}};
+ })}
+document.addEventListener('submit',e=>{if(!lockedNow())return;e.preventDefault();e.stopImmediatePropagation();notice('Aaj ka din band hai — sirf malik khol sakta hai')},true);
+document.addEventListener('click',e=>{if(!lockedNow())return;const b=e.target.closest?.('button,a');if(!b||b.id==='dayLockBtn'||b.id==='settings'||b.id==='back'||b.closest('.app-nav,#tabs,dialog'))return;
+ if(b.type==='submit'||b.dataset.sheet!=null||b.dataset.count!=null||b.closest('[data-sheet],[data-count]')||b.matches('[data-del],[data-edit],[data-remove],[data-transfer-edit],[data-transfer-delete],[data-pos-done],[data-edit-purchase],[data-ready]')){
+  e.preventDefault();e.stopImmediatePropagation();notice('Aaj ka din band hai — sirf malik khol sakta hai')}},true);
+function render(){refreshBackupReminder();paintDayLock();const active=document.activeElement,form=active?.closest?.('[data-sheet],[data-count]'),kind=form?.dataset.sheet||form?.dataset.count,count=!!form?.dataset.count,index=form?[...form.querySelectorAll('input')].indexOf(active):-1,name=active?.name,selection=active?.type==='search'?[active.selectionStart,active.selectionEnd]:null,scroll=document.querySelector('.sheet-scroll')?.scrollLeft||0;renderSurface();const next=kind&&name?(count?document.querySelector(`[data-count="${kind}"]`)?.querySelectorAll("input")[index]:document.querySelector(`[data-sheet="${kind}"]`)?.elements[name]):null;if(next){next.focus({preventScroll:true});if(selection)try{next.setSelectionRange(...selection)}catch{}}const sheet=document.querySelector('.sheet-scroll');if(sheet)sheet.scrollLeft=scroll}
+function renderSurface(){if(!session)return;$('actions')?.classList.remove('day-acts');try{paintDueNudge()}catch(err){console.warn('dueNudge',err)}try{paintHomeBar()}catch(err){console.warn('homeBar',err)}if(purchaseOnly()&&view!=='ppurchase'){view='purchase';selected=null}if(stockOnly()){view='stock';selected=null}if(saleOnly()){view='sale';selected=null}if($('report'))$('report').hidden=view==='sale'||view==='ppurchase';if($('posList')){const n=posPendingList().length;$('posList').hidden=!n||stockOnly()||saleOnly();$('posList').textContent='🖥 POS '+n}document.querySelectorAll('.app-nav button').forEach(b=>b.hidden=b.id==='switchNav'?!(session?.role==='staff'&&!localMode):((purchaseOnly()&&b.id!=='purchaseNav')||(stockOnly()&&b.id!=='stockNav')||(saleOnly()&&b.id!=='saleNav')||(b.id==='saleNav'&&!saleUser())||b.id==='posNav'||(b.id==='stockNav'&&!owner()&&!stockOnly())));const p=party(selected),q=$('search').value;$('back').hidden=!selected&&!['due','chart','dasti','pos','stock','sale','ppurchase'].includes(view);$('tabs').hidden=view!=='khata'||!!selected;$('detailTools').hidden=!selected;$('title').textContent=p?.name||({khata:'Mera Khata',daily:'Daily Sale',expenses:'Akhrajat accounts',cash:'Daily Closing Cash Khata',dasti:'Dasti Payment',due:'Due Accounts',chart:'Akhrajat Chart',purchase:'Purchase',ppurchase:'🧾 POS Purchase',pos:'POS Ledger',stock:'Stock',sale:'Nayi Sale'})[view];$('search').placeholder=selected?'Entry / note search karein':'Naam, mobile ya notes search karein';
+ $('tabs').querySelectorAll('button').forEach(b=>b.classList.toggle('selected',b.dataset.tab===tab));
+ document.querySelector('main').classList.toggle('due-screen',view==='due');if(view==='sale'){renderSale();return}if(view==='ppurchase'){renderPP();return}if(view==='stock'){renderStock();return}const es=entries();if(view==='pos'){renderPOS();return}if(view==='purchase'){renderPurchases();return}if(['dasti','due','chart','cash'].includes(view)){renderFinanceView();return}if(view==='khata'){
+ if(p){void autoLinkPurchases();const b=balance(p,es);$('summary').innerHTML=`<div><strong class="${b>=0?'red':'green'}">${money(Math.abs(b))}</strong><small>${b>0?'Hum ne lene hain':b<0?'Hum ne dene hain':'Hisaab barabar'} · ${esc(p.phone||'')}</small></div>`;$('list').innerHTML=`<p class="stat-note">${p.pdfAsOf?'PDF baqaya: '+money(Math.abs(p.pdfBalance))+' · '+p.pdfAsOf+' · Hisabi opening:':'Opening:'} ${money(Math.abs(p.opening||0))} · ${(p.opening||0)>=0?'Lena':'Dena'} · ${esc(p.asOf||'')}</p>`+`<div class="account-tools">${owner()?`<button data-account-transfer>⇄ Payment transfer</button><button data-reminder="${esc(p.id)}">Reminder / Due date</button>`:canEditAccount()?`<button data-account-transfer>⇄ Payment transfer</button><button data-reminder="${esc(p.id)}">Reminder / Due date</button>`:''}${canEditAccount()?`<button data-dasti-toggle="${esc(p.id)}">${p.dasti?'Dasti se nikalein':'Dasti mein shamil karein'}</button><button data-party-photo="${esc(p.id)}">📷 ${p.hasPhoto?'Picture badlein':'Picture lagayein'}</button>`:''}${p.dasti?'<span>Dasti Payment mein shamil</span>':''}</div>${partyPhotoHTML(p)}`+ledgerHTML(es.filter(e=>e.partyId===p.id&&matches(e)));$('actions').innerHTML='<button data-entry="collection" class="got">Wasooli / وصولی</button><button data-entry="payment" class="give">Payment / ادائیگی</button>'+(owner()?'<button data-cash-pay>Cash se payment</button>':'')+'<button data-more>+</button>';
+ }else{$('summary').innerHTML=baqayaHTML(es);const ps=(tab==='band'?bandParties():parties()).filter(p=>(tab==='all'||tab==='band'||p.category===tab)&&accountMatches(p,q)).sort((a,b)=>a.name.localeCompare(b.name));if(String(q||'').trim()&&khataSort==='name'){const sc=new Map(ps.map(p=>[p.id,(partyScore(p,q)||1)*100+partyPicks(p.id)+(partyUse().any.get(p.id)||0)]));ps.sort((a,b)=>sc.get(b.id)-sc.get(a.id))}const topChips=!String(q||'').trim()&&tab!=='band'?rankList(parties().filter(p=>tab==='all'||p.category===tab),'',tab==='Supplier'?'supplier':tab==='Customer'?'customer':'any',8):[];{const bal=new Map(ps.map(p=>[p.id,balance(p,es)]));if(khataSort==='high')ps.sort((a,b)=>bal.get(b.id)-bal.get(a.id));else if(khataSort==='low')ps.sort((a,b)=>bal.get(a.id)-bal.get(b.id));else if(khataSort==='abs')ps.sort((a,b)=>Math.abs(bal.get(b.id))-Math.abs(bal.get(a.id)));}const sortBar=`<div class="sort-chips"><small>Tarteeb</small>${[['name','Naam se'],['high','Zyada lene'],['low','Zyada dene'],['abs','Bara baqaya']].map(([k,t])=>`<button type="button" data-khata-sort="${k}"${khataSort===k?' class="on"':''}>${t}</button>`).join('')}</div>`;$('list').innerHTML=(topChips.length?`<div class="party-chips"><small class="pchip-h">⭐ Aksar</small>${topChips.map(p=>`<button type="button" data-party-chip="${esc(p.id)}">${esc(p.name)}</button>`).join('')}</div>`:'')+(ps.length?sortBar:'')+(ps.map(p=>{const b=balance(p,es);return `<button class="party" data-party="${esc(p.id)}"><span class="avatar">${esc(p.name.slice(0,2).toUpperCase())}</span><span class="name"><b>${esc(p.name)}</b><small>${esc([p.category,p.phone].filter(Boolean).join(' · ')||'—')}</small></span><span class="amount"><b class="${b>0?'red':b<0?'green':'zero'}">${money(Math.abs(b))}</b><small>${b>0?'Lene hain':b<0?'Dene hain':'Barabar'}</small></span></button>`}).join('')||'<div class="empty"><strong>Apna khata shuru karein</strong><p>Naya account banayein ya PDF import karein.</p></div>');if(tab==='all'&&(!q||norm('Daily Closing Cash Khata').includes(norm(q))||cashBookRows(cashLedger(records)).length))$('list').insertAdjacentHTML('afterbegin',`<button class="party" data-cash-khata><span class="name"><b>Daily Closing Cash Khata</b><small>Cash aayi / gayi / notes</small></span><b>${money(cashLedger(records).available)}</b></button>`);$('actions').innerHTML='<button data-add>＋ Naya account</button>'+(owner()?'<button data-import>PDF Import</button>':'')}
+ }else if(view==='daily'){
+ const d=daily(date,es,closings());const dIn=d.sale+d.collection+d.opening,dOut=d.expense+d.payment+d.change,dHona=dIn-dOut;$('summary').innerHTML=`<div><small>➕ Sale + Wasooli + Kal ka change</small><strong>${money(dIn)}</strong></div><div><small>➖ Akhrajat + Aaj ka change</small><strong>${money(dOut)}</strong></div><div class="farq-bar ${!d.closed?'wait':d.difference?'bad':'ok'}"><span>⚖️ Hona chahiye ${money(dHona)}${d.closed?' · Gina '+money(d.cash):''}</span><b>${!d.closed?'Closing ginti baqi':d.difference?'Farq '+(d.difference>0?'−':'+')+money(Math.abs(d.difference)):'✓ Barabar'}</b></div><button class="day-camera" data-day-camera>📷 Pictures</button>`;
+ $('list').innerHTML=`<label>Tareekh<input id="dayPicker" type="date" value="${date}"></label>${!d.openingKnown?'<p class="warning">Pichhle din ka Change nahi mila. Closing mein opening Change likhein.</p>':''}${dailySheet(d,es)}<p class="stat-note">Sale + Wasooli + Kal ka Change − Akhrajat − Aaj ka Change − Closing Cash</p>`;setupSheet();setupCounts();document.querySelectorAll('[data-day-camera]').forEach(b=>b.onclick=dayCamera);$('dayPicker').onchange=e=>{date=e.target.value||today();render()};$('actions').classList.add('day-acts');$('actions').innerHTML=`<button data-entry="sale" data-dact="sale">📷 Sale / Photo</button><button data-purchase data-dact="purchase">🛒 Purchase</button><button data-entry="collection" data-dact="collection">↙️ Wasooli</button><button data-entry="expense" data-dact="expense">🧾 Kharcha</button>`+(owner()?'<button data-closing data-dact="cash">🔒 Closing</button>':'');
+ }else if(view==='expenses'){
+ const accounts=[...new Set(['Bijli','Kiraya','Transport','Dukan ka kharcha',...all('expenseAccount').map(a=>a.name),...es.filter(e=>e.kind==='expense').map(e=>e.account)])];$('summary').innerHTML=`<div><small>Total kharcha + party payments</small><strong>${money(es.filter(e=>inDaily(e)&&['expense','payment','purchaseCash'].includes(e.kind)).reduce((s,e)=>s+e.amount,0))}</strong></div>`;$('list').innerHTML=accounts.filter(a=>accountMatches({name:a,account:a},q)).map(a=>`<button class="party" data-expense="${esc(a)}"><span class="name"><b>${esc(a)}</b><small>Kharchay ka account</small></span><b>${money(es.filter(e=>e.account===a&&e.kind==='expense').reduce((s,e)=>s+e.amount,0))}</b></button>`).join('')+'<h3>Entries / Party payments</h3>'+entryHTML(es.filter(e=>inDaily(e)&&['expense','payment','purchaseCash'].includes(e.kind)&&matches(e)));$('actions').innerHTML='<button data-chart>Chart</button><button data-expense-add>＋ Kharcha account</button><button data-entry="payment">Party payment</button>';
+ }else{const cs=closings().sort((a,b)=>b.date.localeCompare(a.date));$('summary').innerHTML=`<div><small>Closing Cash account · aakhri counted cash</small><strong>${money(cs[0]?.cash||0)}</strong><small>Har din ki ginti alag hai; yeh jama-shuda balance nahi.</small></div>`;$('list').innerHTML=cs.map(c=>`<button class="party" data-day="${c.date}"><span class="name"><b>${c.date}</b><small>Change ${money(c.change)}</small></span><b>${money(c.cash)}</b></button>`).join('')||'<div class="empty">Daily Sale mein pehli closing save karein.</div>';$('actions').innerHTML='<button data-daily>Daily Sale kholein</button>'}
+}
+let optimistic=optimisticRecords();
+let syncBook=null,syncKey='',syncUid='',pendingDrafts=new Map();
+const syncLabels={sending:'Save bheja gaya · tasdeeq baqi',pending:'Device par saved · Cloud Sync baqi',synced:'Cloud par saved',failed:'Save nahi hua',local:'Local device par saved'};
+function initSyncBook(){const key='sam-sync:'+window.khataProjectId+':'+session.user.uid+':'+(session.scope||session.role);if(syncKey===key&&syncBook)return;syncKey=key;syncUid=session.user.uid;pendingDrafts=new Map();let stored=[];try{stored=JSON.parse(sessionStorage.getItem(key)||'[]');if(!Array.isArray(stored))stored=[]}catch{}syncBook=createSyncBook(stored,rows=>{try{sessionStorage.setItem(key,JSON.stringify(rows))}catch{}},refreshSyncDetails);refreshSyncDetails()}
+function refreshSyncDetails(){const rows=(syncBook?.rows()||[]).filter(r=>!['synced','local'].includes(r.status)),n=rows.length;if($('syncDetails')){$('syncDetails').hidden=n===0;$('syncDetails').textContent='Pending Sync ('+n+')';}if($('syncDetailRows'))$('syncDetailRows').innerHTML=rows.map(r=>`<article class="ledger-item"><b>${esc(r.label||TYPES[r.kind]||r.kind)}</b><p>${esc(r.date)} · ${money(r.amount)}</p><p>${esc(r.note||'')}</p><strong class="${r.status==='failed'?'red':r.status==='synced'?'green':''}">${esc(syncLabels[r.status]||r.status)}</strong>${r.error?`<p>${esc(r.error)}</p>`:''}</article>`).join('')||'<p>Sab entries save ho gayi hain. Koi Pending Sync nahi.</p>'}
+function showSyncDetails(){if(!session)return;initSyncBook();modal('Pending Sync','<p>Sirf woh entries jo abhi save ho rahi hain ya save nahi ho sakin. Save hone par entry yahan se khud hat jayegi. “Save nahi hua” wali entry ki wajah durust karke dobara save karein.</p><button id="refreshSyncList">Status refresh</button><div id="syncDetailRows"></div>');$('refreshSyncList').onclick=()=>{refreshSyncDetails();notice(navigator.onLine?'Online: Firebase Sync ka intezar karein.':'Internet band hai; queued entries online hone par sync hongi.')};refreshSyncDetails()}
+async function trackSave(payload,write){initSyncBook();const book=syncBook;book.begin({id:payload.id,rev:payload.rev,writeStamp:payload.updatedAt,date:payload.date||today(),kind:payload.kind||payload.type,amount:payload.amount??payload.cash??0,note:payload.note||'',label:party(payload.partyId)?.name||payload.account||TYPES[payload.kind]||payload.type});pendingDrafts.set(payload.id,payload);const drafts=pendingDrafts;try{const result=await write();book.finish(payload.id,payload.rev,localMode?'local':'synced');return result}catch(e){book.finish(payload.id,payload.rev,'failed',(e.code?e.code+': ':'')+(e.message||'Save nahi hua'));throw e}finally{drafts.delete(payload.id)}}
+if($('syncDetails'))$('syncDetails').onclick=showSyncDetails;
+window.addEventListener('beforeunload',e=>{if(optimistic.pending()||transferSaving){e.preventDefault();e.returnValue=''}});
+function optimisticEdit(payload,rev){
+ const state=optimistic,uid=session.user.uid;
+ if(state.has(payload.id))throw Error('Is entry ka pehla save abhi Sync ho raha hai. Pending Sync dekhein.');
+ state.seed(records);records=state.begin(payload);render();$('syncStatus').textContent='Tabdeeli screen par · Cloud Sync baqi';
+ const operation=trackSave(payload,()=>cloud.edit(payload,rev));
+ operation.then(saved=>{if(optimistic!==state||session?.user.uid!==uid)return;records=state.accept(payload.id);for(const row of saved||[]){if(row.id===payload.id)continue;if(state.has(row.id))state.reject(row.id);records=state.begin(row);records=state.accept(row.id)}render();$('syncStatus').textContent=state.pending()?'Cloud Sync baqi':'Edit / delete Cloud par save ho gaya'},e=>{if(optimistic!==state||session?.user.uid!==uid)return;records=state.reject(payload.id);render();$('syncStatus').textContent='Tabdeeli save nahi hui · Pending Sync dekhein';error(e,payload)});
+ return operation;
+}
+async function save(data,existing,quiet=false){if(isPosted(existing)&&!isLinkOnlyChange(data,existing))throw Error('Yeh POS mein POSTED hai — badalne ke liye malik pehle Unpost kare');if(data.transferId||existing?.transferId)throw Error('Transfer ke Edit / Delete se dono entries saath badlein');if(purchaseOnly()&&!(data.type==='entry'&&data.purchase===true&&['purchaseCash','borrow'].includes(data.kind)))throw Error('Sirf Purchase ki ijazat hai');if(!owner()&&existing?.date&&existing.date!==today())throw Error('Pichhli tareekh sirf malik edit kar sakta hai');validateExtraRecord(data);if(!owner()&&data.date&&data.date!==today())throw Error('Mulazim sirf aaj ki entry kar sakta hai');if(!session||!loaded)throw Error('Data load hone ka intezar karein');if(!existing&&data.type==='entry'&&data.kind==='payment'&&data.partyId){const paid=entries().find(c=>c.kind==='purchaseCash'&&!c.deleted&&c.posBill&&c.partyId===data.partyId&&c.amount===data.amount&&dayDiff(c.date,data.date||today())<=7);if(paid&&!confirm((party(data.partyId)?.name||'')+' · '+money(data.amount)+'\nIs raqam ka bill '+paid.date+' ko pehle hi CASH ada ho chuka hai (larke ki entry). Phir bhi payment save karein?'))throw Error('Payment save nahi ki.')}if(!existing&&data.type==='entry'){const duplicate=findDuplicate([...entries(),...pendingDrafts.values()],data);if(duplicate&&!confirm((party(data.partyId)?.name||data.account||TYPES[data.kind])+' · '+money(data.amount)+' · '+data.date+'\nIsi qism ki entry pehle ho chuki hai. Phir bhi nayi entry Save karein?'))throw Error('Nayi entry save nahi ki. Pehli entry check karein.')}{const odd=oddAmountMessage(data,existing);if(odd&&!confirm(odd))throw Error('Save nahi kiya — raqam dekh lein.')}const liveUid=cloud?.currentUid?.()||session.user.uid;
+ if(liveUid&&session.user.uid&&liveUid!==session.user.uid){session={...session,user:{...session.user,uid:liveUid}};console.warn('uid badal gaya tha — nayi uid par set kiya',liveUid)}
+ const payload={...data,id:existing?.id||data.id||crypto.randomUUID(),createdAt:existing?.createdAt??(data.type==='entry'?nextEntryCreatedAt():Date.now()),by:(existing?.by&&existing.by===liveUid?existing.by:(existing?existing.by||liveUid:liveUid)),updatedAt:Date.now(),updatedBy:liveUid,rev:(existing?.rev||0)+1};if(existing||['closing','cashCustody','reminder'].includes(data.type)){if(!owner()&&!(data.type==='reminder'&&canRemind()&&(!existing||existing.type==='reminder'))&&!(existing?.purchase===true&&data.purchase===true&&data.type==='entry'&&existing.date===today()&&data.date===today()&&['purchaseCash','borrow'].includes(data.kind))&&!(data.type==='cashCustody'&&data.date===today()&&(!existing||existing.type==='cashCustody'&&existing.date===today()))&&!(data.type==='closing'&&data.date===today()&&(!existing||existing.type==='closing'&&existing.date===today()))&&!(canDeleteEntry(existing)&&data.deleted===true&&Object.keys(data).every(k=>k==='deleted'||JSON.stringify(data[k])===JSON.stringify(existing[k])))&&!(existing&&data.type==='entry'&&existing.type==='entry'&&canEditEntry(existing)&&existing.date===today()&&data.date===today()))throw Error(dayIsClosed()?'Aaj ka din band hai — malik "Din wapas kholein" dabaye':'Sirf malik edit kar sakta hai (mulazim sirf AAJ ki khuli entry badal sakta hai)');if(localMode)await trackSave(payload,()=>cloud.edit(payload,existing?.rev||0));else if(data.type==='cashCustody')await optimisticEdit(payload,existing?.rev||0);else optimisticEdit(payload,existing?.rev||0)}else if(localMode)await trackSave(payload,()=>cloud.add(payload));else trackSave(payload,()=>cloud.add(payload)).catch(e=>error(e,payload));if(quiet)return;$('dialog').close();notice(localMode?'Local device par saved. Backup download karte rahein.':navigator.onLine?'Save bheja gaya; Sync status dekhein.':'Offline: entry device par, online hone par Sync hogi.')}
+function formSave(fn){const f=$('dialogBody').querySelector('form');f.onsubmit=async e=>{e.preventDefault();const b=f.querySelector('[type=submit]');if(b.disabled)return;b.disabled=true;try{await fn(f)}catch(e){error(e)}finally{b.disabled=false}}}
+function accountForm(p=null,preset=''){const cat0=p?.category==='Supplier'||(!p&&(preset==='Supplier'||view==='purchase'||tab==='Supplier'))?'Supplier':'Customer';modal(p?'Account edit':'Naya account',`<form class="acct-form">
+<div class="af-sec"><small class="af-h">Qism</small><div class="af-types"><button type="button" data-af-type="Customer" class="${cat0==='Customer'?'on':''}"><span class="af-ic">👤</span>Customer</button><button type="button" data-af-type="Supplier" class="${cat0==='Supplier'?'on':''}"><span class="af-ic">🏭</span>Supplier</button>${!p?'<button type="button" data-af-type="expense"><span class="af-ic">🧾</span>Kharcha</button>':''}</div>
+<select name="category" hidden><option ${cat0==='Customer'?'selected':''}>Customer</option><option ${cat0==='Supplier'?'selected':''}>Supplier</option></select>${!p?'<input name="expenseOnly" type="checkbox" hidden><p id="expenseAccountHint" class="af-hint" hidden>🧾 Is account ka kharcha Akhrajat mein jayega; lena/dena baqaya nahi banega.</p>':''}</div>
+<label class="af-field"><small>Naam</small><input name="name" required maxlength="160" autocomplete="off" value="${esc(p?.name||'')}" placeholder="Poora naam likhein"></label><div id="afSimilar"></div>
+<div class="af-field"><small>Mobile</small><div class="af-row"><input name="phone" inputmode="tel" autocomplete="off" value="${esc(p?.phone||'')}" placeholder="03xx xxxxxxx"><button type="button" id="afContacts" class="af-mini" hidden>📇 Contacts</button></div></div>
+<div id="partyAccountFields">${!p&&owner()?`<div class="af-field"><small>Shuru ka baqaya (ikhtiyari)</small><div class="af-row"><input name="opening" type="number" min="0" step="0.01" value="0" inputmode="decimal"><span class="af-side"><button type="button" data-af-side="1" class="on lene">Lene hain</button><button type="button" data-af-side="-1" class="dene">Dene hain</button></span></div><select name="side" hidden><option value="1" selected>Hum ne lene hain</option><option value="-1">Hum ne dene hain</option></select></div>`:''}
+<div class="af-switches"><label class="af-sw"><span>Dasti Payment mein shamil</span><input name="dasti" type="checkbox" ${p?.dasti||(!p&&view==='dasti')?'checked':''}><i></i></label>${owner()?`<label class="af-sw"><span>POS mein bhi banayein<small>khata aur payments dono taraf sync</small></span><input name="posSync" type="checkbox" ${p?.posSync||String(p?.id||'').startsWith('pos-party-')?'checked':''} ${String(p?.id||'').startsWith('pos-party-')?'disabled':''}><i></i></label>`:''}</div></div>
+<div class="af-sec"><small class="af-h">Aisa dikhega</small><div id="afPreview"></div></div>
+<button type="submit" class="af-save">✓ ${p?'Save':'Account banayein'}</button>${p&&owner()?`<div class="acct-danger"><button type="button" data-acct-band="${esc(p.id)}">${p.active===false?'🔓 Khata chalu karein':'🚫 Khata band karein'}</button><button type="button" class="danger" data-acct-del="${esc(p.id)}">🗑 Khata delete</button><p class="stat-note">Band khata list aur search se hat jata hai; us ki entries record mein rehti hain aur mulazim unhein badal nahi sakta. Delete sirf tab jab baqaya 0 ho.</p></div>`:''}</form>`);
+ const f=$('dialogBody').querySelector('form');if(!p)f.elements.expenseOnly.onchange=()=>{const on=f.elements.expenseOnly.checked;$('partyAccountFields').hidden=on;$('expenseAccountHint').hidden=!on;$('partyAccountFields').querySelectorAll('input,select').forEach(el=>el.disabled=on)};acctFormSmart(f,p);
+ formSave(f=>{const name=f.elements.name.value.trim(),phone=f.elements.phone.value.trim();if(!name)throw Error('Naam likhein');
+ if(!(!p&&f.elements.expenseOnly.checked)&&(!p||nameKey(p.name)!==nameKey(name))){const sig=nameKey(name)+'|'+phone;if(f.dataset.similarOk!==sig){const sim=similarParties(name,phone,p?.id);if(sim.length){f.dataset.similarOk=sig;$('similarBox')?.remove();const btn=f.querySelector('[type=submit]');btn.insertAdjacentHTML('beforebegin',similarHTML(sim));btn.textContent=p?'Phir bhi yehi naam rakhein':'Phir bhi naya banao';$('similarBox').scrollIntoView({block:'center'});return}}}
+ if(!p&&f.elements.expenseOnly.checked){if(all('expenseAccount').some(a=>norm(a.name)===norm(name)))throw Error('Yeh kharcha account pehle maujood hai');return save({type:'expenseAccount',name,phone})}return save({...p,type:'party',name,phone,category:f.elements.category.value,dasti:f.elements.dasti.checked,...(f.elements.posSync&&!f.elements.posSync.disabled?{posSync:f.elements.posSync.checked}:{}),...(!p?{opening:owner()?cents(f.elements.opening.value)*Number(f.elements.side.value):0,asOf:today()}:{})},p)})}
+async function acctBand(id){const p=party(id);if(!p)return;const on=p.active===false;
+ if(!confirm(on?`"${p.name}" wapas chalu karein?`:`"${p.name}" band karein? List aur search se hat jayega, entries record mein rahengi.`))return;
+ try{await save({...p,active:on?true:false},p);$('dialog')?.close();notice(on?'Khata chalu ho gaya':'Khata band kar diya');render()}catch(e){error(e)}}
+async function acctDelete(id){const p=party(id);if(!p)return;const b=balance(p,entries()),n=entries().filter(e=>e.partyId===id&&!e.deleted).length;
+ if(b!==0){alert(`"${p.name}" ka baqaya ${money(Math.abs(b))} hai. Pehle raqam wasool karein ya doosre khate mein transfer karein, phir delete karein.`);return}
+ if(!confirm(`"${p.name}" hamesha ke liye delete karein?${n?`\n\nIs mein ${n} entries hain — woh bhi list se hat jayengi.`:''}\n\nPC ki script POS se bhi is party ko hatane ki koshish karegi (agar POS mein bill/voucher hon to POS nahi hatayega).`))return;
+ try{await save({...p,deleted:true},p);$('dialog')?.close();if(selected===id){selected=null;route('khata')}notice('Khata delete ho gaya');render()}catch(e){error(e)}}
+document.getElementById('dialog')?.addEventListener('click',e=>{const b=e.target.closest?.('button');if(!b)return;
+ if(b.dataset.acctBand){acctBand(b.dataset.acctBand);return}
+ if(b.dataset.acctDel){acctDelete(b.dataset.acctDel)}});
+// ---- Khate ki picture: alag collection partyPhotos/{partyId} (sirf khata kholne par download) ----
+const partyPhotoCache=new Map();
+function partyPhotoHTML(p){if(!p?.hasPhoto)return '';const c=partyPhotoCache.get(p.id);
+ if(c===undefined){partyPhotoCache.set(p.id,null);cloud?.getPartyPhoto?.(p.id).then(src=>{partyPhotoCache.set(p.id,src||'');if(selected===p.id)render()}).catch(()=>partyPhotoCache.set(p.id,''));}
+ return c?`<div class="party-photo"><a href="${c}" target="_blank" rel="noopener"><img src="${c}" alt="${esc(p.name)}"></a></div>`:c===null?'<p class="stat-note">Picture load ho rahi hai…</p>':''}
+function partyPhotoForm(id){const p=party(id);if(!p||!canEditAccount())return;
+ modal('Khate ki picture — '+p.name,`<form><label>Picture (camera ya gallery)<input type="file" accept="image/*" name="photo" ${p.hasPhoto?'':'required'}></label>
+  <p class="stat-note">Ek picture; app chhoti karke mehfooz karegi (takreeban 30 KB).</p>
+  <button type="submit">Save</button>${p.hasPhoto?'<button type="button" class="danger" data-party-photo-del="'+esc(p.id)+'">Picture hatao</button>':''}</form>`);
+ const f=$('dialogBody').querySelector('form');
+ f.querySelector('[data-party-photo-del]')?.addEventListener('click',async()=>{if(!confirm('Picture hata dein?'))return;try{await cloud.setPartyPhoto(p.id,null);await save({...p,hasPhoto:false},p);partyPhotoCache.delete(p.id);$('dialog').close();render()}catch(e){error(e)}});
+ formSave(async fm=>{const file=fm.elements.photo.files[0];if(!file)throw Error('Picture chunein');
+  const [src]=await packPhotos([file],400,60000);await cloud.setPartyPhoto(p.id,src);partyPhotoCache.set(p.id,src);
+  return save({...p,hasPhoto:true},p)})}
+// ---- Recycle bin: delete hui entries (deleted:true) — sirf malik, wapas layein ----
+let trashQ='',trashFrom='';
+function trashList(){const q=norm(trashQ);return records.filter(r=>r.type==='entry'&&r.deleted===true&&(!trashFrom||String(r.date||'')>=trashFrom)).filter(r=>{if(!q)return true;const p=indexAll('party').get(r.partyId);return norm(`${p?.name||''} ${r.note||''} ${r.account||''} ${money(r.amount)} ${r.date||''} ${TYPES[r.kind]||r.kind}`).includes(q)}).sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).slice(0,300)}
+function indexAll(type){const m=new Map();for(const r of records)if(r.type===type)m.set(r.id,r);return m}
+function trashView(){const list=trashList(),parties=indexAll('party');
+ modal('🗑 Deleted entries',`<div class="row"><input id="trashQ" class="grow" placeholder="Naam / note / raqam dhoondein" value="${esc(trashQ)}"><input id="trashFrom" type="date" value="${esc(trashFrom)}" title="Is tareekh se"></div>
+ <p class="stat-note">${list.length} entries${list.length>=300?' (pehli 300)':''}. "Wapas layein" dabane par entry apni jagah wapas aa jayegi aur hisaab update ho jayega.</p>
+ <div class="trash">${list.length?list.map(r=>{const p=parties.get(r.partyId);return `<article class="trash-it"><div><b>${esc(TYPES[r.kind]||r.kind)} · ${money(r.amount)}</b><br><small>${esc(r.date||'')} · ${esc(p?.name||r.account||'')}${r.note?' · '+esc(r.note):''}</small><br><small class="muted">Delete: ${r.updatedAt?new Date(r.updatedAt).toLocaleString('en-PK'):'—'}${r.transferId?' · transfer':''}${r.purchase?' · purchase':''}</small></div><button type="button" class="got" data-restore="${esc(r.id)}"${r.transferId?' disabled title="Transfer entry — dono taraf wapas nahi ho sakti"':''}>↩ Wapas layein</button></article>`}).join(''):'<p class="stat-note">Koi delete hui entry nahi.</p>'}</div>`);
+ $('trashQ').oninput=e=>{trashQ=e.target.value;trashView();const b=$('trashQ');b.focus();b.setSelectionRange(trashQ.length,trashQ.length)};
+ $('trashFrom').onchange=e=>{trashFrom=e.target.value;trashView()};
+ $('dialogBody').querySelectorAll('[data-restore]').forEach(b=>b.onclick=async()=>{const r=records.find(x=>x.id===b.dataset.restore);if(!r)return;const p=parties.get(r.partyId);
+  if(!confirm(`${TYPES[r.kind]||r.kind} · ${money(r.amount)} · ${r.date}\n${p?.name||r.account||''}\n\nYeh entry wapas layein?`))return;
+  b.disabled=true;try{await save({...r,deleted:false},r);notice('Entry wapas aa gayi');trashView();render()}catch(e){b.disabled=false;error(e)}})}
+function expenseChoices(){const names=[...new Set(['Bijli','Kiraya','Transport','Dukan ka kharcha',...all('expenseAccount').map(a=>a.name),...entries().filter(e=>e.kind==='expense').map(e=>e.account).filter(Boolean)])];return [...names.map(name=>({id:'expense:'+name,name,label:name+' · Kharcha',kind:'expense',account:name,partyId:''})),...parties().map(p=>({...p,id:'party:'+p.id,partyId:p.id,account:'',kind:'payment',label:p.name+' · Party'}))].sort((a,b)=>a.name.localeCompare(b.name))}
+function dailyChoice(existing){return `<label><input type="checkbox" name="dailyIncluded" ${existing?.dailyIncluded===false?'':'checked'}> Daily Sale ki Wasooli / Akhrajat mein shamil karein</label><p>Band ho to sirf party ka Khata aur baqaya badlega.</p>`}
+function unifiedExpenseForm(kind,pid,existing,account){
+ const showDailyChoice=(view==='khata'&&!!selected)||existing?.dailyIncluded!==undefined;
+ const options=expenseChoices(),old=accountChoices.get('expense')||{};
+ const initial=existing?(existing.kind==='expense'?'expense:'+existing.account:'party:'+existing.partyId):account?'expense:'+account:pid?'party:'+pid:old.account?.startsWith('expense:')||old.account?.startsWith('party:')?old.account:old.account?(old.mode==='payment'?'party:':'expense:')+old.account:'';
+ modal('Akhrajat / Party payment',`<form><label>Account search<input id="expenseQuery" type="search" placeholder="Naam / mobile / notes — kharcha ya party"></label><div id="expenseResults" class="picker"></div><select id="expenseSelect" required aria-label="Kharcha ya party account"><option value="">Account select karein</option>${options.map(a=>`<option value="${esc(a.id)}">${esc(a.label)}</option>`).join('')}</select><p id="expensePicked"></p>${showDailyChoice?dailyChoice(existing):''}<label>Raqam Rs<input name="amount" type="number" min="0.01" step="0.01" required inputmode="decimal" value="${existing?existing.amount/100:''}"></label><label>Tareekh<input name="date" type="date" required ${owner()?'':'readonly'} value="${existing?.date||(owner()&&view==='daily'?date:today())}"></label><label>Note<textarea name="note" maxlength="1000">${esc(existing?.note||'')}</textarea></label><label><input type="checkbox" name="posPending" ${existing?.posPending?'checked':''}> Computer (POS) mein daalni hai</label><button type="submit">Save</button>${existing&&existing.kind==='payment'&&existing.partyId&&owner()?'<button type="button" id="flipKind">Wasooli banayein</button>':''}${existing?'<button type="button" id="deleteExpense" class="danger">Delete entry</button>':''}</form>`);
+ if($('flipKind'))$('flipKind').onclick=()=>flipEntryKind(existing,'collection');
+ $('expenseSelect').value=initial;const describe=()=>{const a=options.find(a=>a.id===$('expenseSelect').value);$('expensePicked').textContent=a?(a.kind==='expense'?'Kharcha Akhrajat mein lagega.':(showDailyChoice?'Party payment khate mein lagegi; Daily Sale option ke mutabiq hogi.':'Party payment khate aur Akhrajat mein aik baar lagegi.')):''};describe();$('expenseSelect').onchange=describe;
+ $('expenseQuery').oninput=()=>{const q=$('expenseQuery').value,l=rankList(options,q,'expense',40);$('expenseResults').innerHTML=(l.length?chipHead(q):'')+l.map(a=>`<button type="button" data-pick-expense="${esc(a.id)}">${esc(a.label)}</button>`).join('')};$('expenseQuery').oninput();$('expenseResults').onclick=e=>{const b=e.target.closest('[data-pick-expense]');if(b){notePartyPick(b.dataset.pickExpense);$('expenseSelect').value=b.dataset.pickExpense;$('expenseQuery').value='';$('expenseResults').innerHTML='';describe()}};
+ formSave(async f=>{const a=expenseChoices().find(a=>a.id===$('expenseSelect').value),amount=cents(f.elements.amount.value);if(!a)throw Error('Account select karein');if(!amount)throw Error('Raqam likhein');await save({...existing,type:'entry',kind:a.kind,partyId:a.partyId,account:a.account,...(a.kind==='payment'?{dailyIncluded:f.elements.dailyIncluded?f.elements.dailyIncluded.checked:existing?.dailyIncluded!==false}:{}),amount,date:f.elements.date.value,note:f.elements.note.value,posPending:!!(f.elements.posPending&&f.elements.posPending.checked)},existing);accountChoices.set('expense',{account:a.id,mode:a.kind});if(a.kind==='payment')accountChoices.set('payment',{account:a.partyId});render()});
+ if(existing)$('deleteExpense').onclick=()=>{if(confirm('Entry delete karein? Khata aur daily hisaab update hoga.'))save({...existing,deleted:true},existing).catch(error)};
 }
 
-function safeLocalStorage() { try { const s = window.localStorage; s.getItem('x'); return s; } catch { return null; } }
+function posPendingList(){return entries().filter(e=>e.posPending&&!e.deleted).sort((a,b)=>a.date<b.date?-1:1)}
+function posListText(rows){
+ const line=e=>`${e.date}  ${entryLabel(e)}  ${party(e.partyId)?.name||e.account||''}  Rs ${money(e.amount)}${e.note?'  ('+e.note+')':''}`;
+ return 'POS mein daalni hain — '+rows.length+' entries\n\n'+rows.map(line).join('\n');
+}
+function showPosList(){
+ const rows=posPendingList();
+ if(!rows.length)return modal('POS list','<div class="empty"><strong>Koi entry baqi nahi</strong><p>Jis entry par nishan lagayenge woh yahan aayegi.</p></div>');
+ modal('POS list',`<p class="stat-note">${rows.length} entries computer mein daalni hain</p>
+  <div class="sheet-scroll"><table class="daily-table"><thead><tr><th>Tareekh</th><th>Kya</th><th>Account</th><th>Raqam</th><th>POS voucher</th></tr></thead><tbody>
+  ${rows.map(e=>`<tr><td>${esc(e.date)}</td><td>${esc(entryLabel(e))}${e.note?`<br><small>${esc(e.note)}</small>`:''}</td><td>${esc(party(e.partyId)?.name||e.account||'')}</td><td>${money(e.amount)}</td><td>${(e.transferId&&!owner())?'<small>Malik hi nikal sakta hai</small>':`<input data-pos-input="${esc(e.id)}" type="text" inputmode="numeric" placeholder="Voucher #" style="width:9em"> <button type="button" data-pos-done="${esc(e.id)}">Save</button>`}</td></tr>`).join('')}
+  </tbody></table></div>
+  <div class="form-actions"><button type="button" id="posShare">Larke ko bhejein</button><button type="button" id="posCopy">Copy karein</button></div>`);
+ $('posShare').onclick=async()=>{const text=posListText(posPendingList());
+  try{if(navigator.share)await navigator.share({text});else{await navigator.clipboard.writeText(text);notice('Copy ho gaya — WhatsApp par paste kar dein')}}catch(e){}};
+ $('posCopy').onclick=async()=>{try{await navigator.clipboard.writeText(posListText(posPendingList()));notice('Copy ho gaya')}catch(e){notice('Copy nahi hua')}};
+ $('dialogBody').onclick=async e=>{const b=e.target.closest('[data-pos-done]');if(!b)return;
+  const r=entries().find(r=>r.id===b.dataset.posDone);if(!r)return;
+  const box=$('dialogBody').querySelector(`[data-pos-input="${CSS.escape(b.dataset.posDone)}"]`);
+  const voucher=(box?.value||'').trim();
+  if(!voucher){notice('POS ka voucher number likhein');box?.focus();return}
+  b.disabled=true;
+  try{
+   if(r.transferId)await commitAccountTransfer({id:r.transferId,rev:r.rev,fromPartyId:r.fromPartyId,toPartyId:r.toPartyId,amount:r.amount,date:r.date,note:r.note,posPending:false,posVoucher:voucher});
+   else await save({...r,posPending:false,posVoucher:voucher},r);
+   showPosList();render();
+  }catch(err){b.disabled=false;notice(err?.message||'Nahi hua')}};
+}
+function flipEntryKind(existing,to){
+ const f=$('dialogBody').querySelector('form');
+ const amount=f&&f.elements.amount&&f.elements.amount.value?cents(f.elements.amount.value):existing.amount;
+ const date=f&&f.elements.date&&f.elements.date.value?f.elements.date.value:existing.date;
+ const note=f&&f.elements.note?f.elements.note.value:existing.note;
+ const next={...existing,kind:to,amount,date,note};
+ entryForm(to,next.partyId,next,next.account||'');
+ notice(to==='collection'?'Ab yeh Wasooli hai — Save dabayein':'Ab yeh Payment hai — Save dabayein');
+}
+function entryForm(kind,pid=selected,existing=null,account=''){if(existing?.transferId)return accountTransferForm(existing);if(['expense','payment'].includes(kind))return unifiedExpenseForm(kind,pid,existing,account);
+ const showDailyChoice=kind==='collection'&&((view==='khata'&&!!selected)||existing?.dailyIncluded!==undefined);
+ let picked=existing?.partyId||pid||accountChoices.get(kind)?.account;const requires=['payment','collection','credit','borrow','purchaseCash'].includes(kind),accs=[...new Set(['Bijli','Kiraya','Transport','Dukan ka kharcha',...all('expenseAccount').map(a=>a.name)])];
+ modal(TYPES[kind],`<form>${existing&&['expense','payment'].includes(kind)?`<label>Entry qism<select id="editPaymentMode"><option value="expense" ${kind==='expense'?'selected':''}>Kharcha account</option><option value="payment" ${kind==='payment'?'selected':''}>Party ko payment</option></select></label>`:''}${(requires||kind==='sale')?'<label id="partySearchLabel">Account search<input id="partySearch" type="search" placeholder="Naam / mobile / notes"></label><div id="partyChoices" class="picker"></div><div id="picked" class="selected-account"></div><button type="button" id="changeAccount">Account badlein</button>':''}${kind==='expense'?`<label>Kharcha account<select name="account">${accs.map(a=>`<option ${a===(existing?.account||account||accountChoices.get('expense')?.account)?'selected':''}>${esc(a)}</option>`).join('')}</select></label>`:''}<label>Raqam (Rs)<input name="amount" type="number" min="0.01" step="0.01" required value="${existing?existing.amount/100:''}" inputmode="decimal"></label><label>Tareekh<input name="date" type="date" ${owner()?'':'readonly'} required value="${existing?.date||(owner()&&view==='daily'?date:today())}"></label>${kind==='sale'?'<label>Roznamcha pictures (zyada se zyada 3)<input name="photos" type="file" accept="image/*" multiple></label>':''}<label>Note<textarea name="note" rows="2" maxlength="1000">${esc(existing?.note||'')}</textarea></label>${showDailyChoice?dailyChoice(existing):''}<p class="stat-note">${['credit','borrow'].includes(kind)?'Sirf khate ka baqaya badlega. Daily cash sale mein shamil nahi hoga.':(showDailyChoice?'Khata update hoga; Daily Sale upar diye option ke mutabiq.':'Ek entry khate aur daily hisaab mein ek baar lagegi.')}</p><label><input type="checkbox" name="posPending" ${existing?.posPending?'checked':''}> Computer (POS) mein daalni hai</label><div class="form-actions"><button type="submit">Save / محفوظ کریں</button>${existing&&kind==='collection'&&existing.partyId&&owner()?'<button type="button" id="flipKind">Payment banayein</button>':''}${existing?'<button type="button" id="deleteEntry" class="danger">Delete entry</button>':''}</div></form>`);
+ if($('flipKind'))$('flipKind').onclick=()=>flipEntryKind(existing,'payment');
+ if(requires||kind==='sale'){const choose=()=>{$('picked').textContent=picked?party(picked)?.name||'Account nahi mila':'Account select karein';{const q=$('partySearch').value,l=rankList(parties(),q,ctxOfKind(kind),30);$('partyChoices').innerHTML=(l.length?chipHead(q):'')+l.map(p=>`<button type="button" data-pick="${p.id}">${esc(p.name)}${p.phone?' · '+esc(p.phone):''}</button>`).join('')}};$('partySearch').oninput=choose;$('partyChoices').onclick=e=>{const b=e.target.closest('[data-pick]');if(b){picked=b.dataset.pick;notePartyPick(picked);if(!existing)accountChoices.set(kind,{account:picked});$('picked').textContent=party(picked).name;$('partyChoices').innerHTML=''}};choose();const collapse=()=>{const has=!!party(picked);$('partySearchLabel').hidden=has;$('partyChoices').hidden=has;$('changeAccount').hidden=!has};collapse();$('changeAccount').onclick=()=>{$('partySearchLabel').hidden=false;$('partyChoices').hidden=false;$('partySearch').focus()};const pickClick=$('partyChoices').onclick;$('partyChoices').onclick=e=>{pickClick(e);collapse()};if(party(picked))$('dialogBody').querySelector('[name=amount]').focus()}
+ formSave(async f=>{const amount=cents(f.elements.amount.value);if(!amount)throw Error('Raqam likhein');if(requires&&!party(picked))throw Error('Account select karein');return save({...existing,type:'entry',kind,...(kind==='collection'?{dailyIncluded:f.elements.dailyIncluded?f.elements.dailyIncluded.checked:existing?.dailyIncluded!==false}:{}),partyId:(requires||kind==='sale')?(picked||''):'',account:kind==='expense'?f.elements.account.value:'',amount,date:f.elements.date.value,note:f.elements.note.value,posPending:!!(f.elements.posPending&&f.elements.posPending.checked),...((f.elements.photos&&(photoDrafts.has(f.elements.photos)||f.elements.photos.files.length))?{photos:await formPhotos(f.elements.photos)}:{})},existing)});
+ if(kind==='expense'&&!existing)$('dialogBody').querySelector('[name=account]').onchange=e=>accountChoices.set('expense',{mode:'expense',account:e.target.value});
+ if($('editPaymentMode'))$('editPaymentMode').onchange=e=>{const f=$('dialogBody').querySelector('form'),next=e.target.value;entryForm(next,picked,{...existing,kind:next,amount:cents(f.elements.amount.value),date:f.elements.date.value,note:f.elements.note.value},account)};
+ setupPhotoInputs();if(existing)$('deleteEntry').onclick=()=>{if(confirm(existing.id?.startsWith('cashpay-')?'Sirf is account ki entry delete hogi. Closing / available cash nahi badlega.':'Entry delete karni hai? Khata aur daily hisaab dono badlenge.'))save({...existing,deleted:true},existing).catch(error)};
+}
+function dayCamera(){const day=date;let pics=[];modal('Roznamcha pictures · '+day,`<div class="day-gallery">${all('dayPhoto').filter(r=>r.date===day).map(photoHTML).join('')}</div>${owner()||day===today()?'<label class="camera-label">📷 Camera se picture<input id="dayCapture" type="file" accept="image/*" capture="environment"></label><div id="capturePreview"></div><p id="captureStatus">Ek ke baad ek 3 pictures le sakte hain.</p><button id="saveDayPhotos">Save pictures</button>':'<p>Pichhle din ki pictures sirf malik add kar sakta hai.</p>'}`);if(!$('dayCapture'))return;let processing=false;$('dayCapture').onchange=async e=>{processing=true;$('saveDayPhotos').disabled=true;try{if(pics.length>=3)throw Error('Pehle yeh 3 pictures save karein, phir mazeed lagayein');pics.push(...await packPhotos(e.target.files));$('capturePreview').innerHTML=photoHTML({photos:pics});$('captureStatus').textContent=pics.length+' pictures tayyar'}catch(e){error(e)}finally{e.target.value='';processing=false;$('saveDayPhotos').disabled=false}};$('saveDayPhotos').onclick=async()=>{if(processing||!pics.length)return;const b=$('saveDayPhotos');b.disabled=true;try{await save({type:'dayPhoto',date:day,photos:pics});}catch(e){error(e);b.disabled=false}}}
+const photoDrafts=new WeakMap();
+function setupPhotoInputs(){document.querySelectorAll('#dialogBody input[type=file][accept="image/*"]').forEach(input=>{const preview=document.createElement('div');input.after(preview);input.onchange=()=>{const previous=photoDrafts.get(input)||Promise.resolve([]);const work=previous.then(async old=>{const files=[...input.files];if(old.length+files.length>3)throw Error('Har qism mein 3 pictures tak lagayein');return [...old,...await packPhotos(files)]});photoDrafts.set(input,work);work.then(pics=>{preview.innerHTML=photoHTML({photos:pics})+'<small>'+pics.length+' / 3 pictures</small><button type="button">Pictures hataein</button>';preview.querySelector('button').onclick=()=>{photoDrafts.delete(input);preview.innerHTML='';input.value=''}}).catch(e=>{photoDrafts.set(input,previous);error(e)}).finally(()=>{input.value=''})}})}
+async function formPhotos(input){return photoDrafts.has(input)?await photoDrafts.get(input):await packPhotos(input.files)}
+async function packPhotos(files,maxPx=1000,maxLen=120000){if(files.length>3)throw Error('Zyada se zyada 3 pictures lagayein');const out=[];for(const file of files){if(!file.type.startsWith('image/'))throw Error('Sirf picture choose karein');const bitmap=await createImageBitmap(file);const canvas=document.createElement('canvas'),scale=Math.min(1,maxPx/Math.max(bitmap.width,bitmap.height));canvas.width=Math.round(bitmap.width*scale);canvas.height=Math.round(bitmap.height*scale);canvas.getContext('2d').drawImage(bitmap,0,0,canvas.width,canvas.height);bitmap.close();let image=canvas.toDataURL('image/jpeg',0.65);for(let i=0;image.length>maxLen&&i<5;i++){const copy=document.createElement('canvas');copy.width=Math.max(1,Math.round(canvas.width*0.8));copy.height=Math.max(1,Math.round(canvas.height*0.8));copy.getContext('2d').drawImage(canvas,0,0,copy.width,copy.height);canvas.width=copy.width;canvas.height=copy.height;canvas.getContext('2d').drawImage(copy,0,0);image=canvas.toDataURL('image/jpeg',0.6)}if(image.length>maxLen)throw Error('Picture bohat bari hai; chhoti picture choose karein');out.push(image)}return out}
+function purchaseForm(existing=null){if(existing&&!canEditPurchase(existing))return;modal('Purchase / Samaan ki khareed',`<form><label>Supplier search<input id="supplierQuery" type="search" placeholder="Naam / mobile / notes"></label><div id="supplierResults" class="picker"></div><input name="supplier" type="hidden" value="${esc(existing?.partyId||'')}"><b id="supplierPicked">${esc(party(existing?.partyId)?.name||'Supplier select karein')}</b><label>Payment<select name="payment"><option value="cash" ${existing?.kind!=='borrow'?'selected':''}>Cash</option><option value="credit" ${existing?.kind==='borrow'?'selected':''}>Credit / Udhar</option></select></label><label>Raqam Rs<input name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" required value="${existing?existing.amount/100:''}"></label><label>Tareekh<input name="date" type="date" ${owner()?'':'readonly'} required value="${existing?.date||(owner()?date:today())}"></label><label>Samaan ki live picture<input name="goods" type="file" accept="image/*" capture="environment" multiple></label><label>Bill ki live picture<input name="bill" type="file" accept="image/*" capture="environment" multiple></label><label>Note<textarea name="note">${esc(existing?.note||'')}</textarea></label><button type="submit">Save purchase</button>${existing?.items?.length?`<button type="button" data-parchi="${esc(existing.id)}">📄 Parchi print (mobile)</button>`:''}</form>`);setupPhotoInputs();billLines=(existing?.items||[]).map(l=>({...l,name:l.aiName&&l.useSys===false?l.aiName:l.name}));renderBillLines();const show=()=>{const q=$('supplierQuery').value,l=rankList(parties(),q,'supplier',30,isSupplierParty);$('supplierResults').innerHTML=(l.length?chipHead(q):'')+l.map(p=>`<button type="button" data-supplier="${esc(p.id)}">${esc(p.name)}</button>`).join('')};$('supplierQuery').oninput=show;show();$('supplierResults').onclick=e=>{const b=e.target.closest('[data-supplier]');if(b){notePartyPick(b.dataset.supplier);$('dialogBody').querySelector('[name=supplier]').value=b.dataset.supplier;$('supplierPicked').textContent=party(b.dataset.supplier).name;$('supplierResults').innerHTML=''}};formSave(async f=>{const pid=f.elements.supplier.value;if(!party(pid))throw Error('Supplier select karein');const amount=cents(f.elements.amount.value);if(!amount)throw Error('Raqam likhein');if(!existing&&!posDupOk(pid,amount))return;return save({...existing,type:'entry',kind:f.elements.payment.value==='cash'?'purchaseCash':'borrow',purchase:true,partyId:pid,amount,date:f.elements.date.value,note:f.elements.note.value,goodsPhotos:photoDrafts.has(f.elements.goods)?await formPhotos(f.elements.goods):existing?.goodsPhotos||[],billPhotos:photoDrafts.has(f.elements.bill)?await formPhotos(f.elements.bill):existing?.billPhotos||[],...(billLines.length||existing?.items?.length?{items:cleanBillLines()}:{})},existing)})}
+
+// ===== v1.82: purchase bill ki photo se items (AI sirf parhta hai; Save se pehle banda check karta hai) =====
+let billLines=[];
+function stockPools(){try{const st=saleStock();if(!st.branches.length)return null;return {branches:st.branches,names:st.names,itemsFor:st.itemsFor,branchName:st.branchName}}catch{return null}}
+function cleanBillLines(){return billLines.filter(l=>String(l.name||'').trim()||l.total>0).slice(0,100).map(l=>({name:String((l.useSys!==false&&l.sysName?l.sysName:l.name)||'').slice(0,120),...(l.sysName&&l.useSys===false?{aiName:String(l.name||'').slice(0,120)}:{}),...(l.sysName?{sysName:String(l.sysName).slice(0,120)}:{}),...(l.costC?{costC:Math.round(l.costC)}:{}),...(l.costP?{costP:r2(l.costP)}:{}),...(l.wctn?{wctn:Math.round(l.wctn)}:{}),...(l.wpcs?{wpcs:r2(l.wpcs)}:{}),...(l.rctn?{rctn:Math.round(l.rctn)}:{}),...(l.rpcs?{rpcs:r2(l.rpcs)}:{}),ctn:Math.max(0,Number(l.ctn)||0),pcs:Math.max(0,Number(l.pcs)||0),rate:Math.max(0,Number(l.rate)||0),total:Math.round(Math.max(0,Number(l.total)||0)),godam:String(l.godam||'').slice(0,40),...(Number(l.pack)>1?{pack:Number(l.pack)}:{}),cName:String(l.cName||'Ctn').slice(0,20),uName:String(l.uName||'Pcs').slice(0,20),...(l.itemId?{itemId:String(l.itemId),code:String(l.code||'')}:{}),...(l.unsure?{unsure:true}:{})}))}
+function lineSum(){return billLines.reduce((n,l)=>n+(Number(l.total)||0),0)}
+// v1.84: naam ka samajhdar milan — brand ke lafz + size/pack ke hindse; GMS/X/code nazar-andaz
+const MSTOP=new Set(['GM','GMS','G','KG','ML','LTR','L','PC','PCS','X','PACK','CTN','NO','NEW','THE','OF','WITH','AND']);
+function nameTokens(str){const words=[],nums=[];for(let t of String(str||'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').split(' ')){if(!t)continue;
+ if(/^\d+$/.test(t)){if(t.length<=4)nums.push(String(Number(t)))}
+ else if(/^\d+[A-Z]+$/.test(t)){const m=t.match(/^(\d+)([A-Z]+)$/);if(m[1].length<=4)nums.push(String(Number(m[1])));if(!MSTOP.has(m[2])&&m[2].length>2)words.push(m[2])}
+ else if(!/\d/.test(t)&&!MSTOP.has(t)&&t.length>=2)words.push(t)}
+ return {words,nums}}
+const tkCache=new Map();
+function itemTk(it){const k=String(it.id)+'|'+it.name;let v=tkCache.get(k);if(!v){v=nameTokens(it.name);tkCache.set(k,v)}return v}
+function matchPosItems(items,name,top){const q=nameTokens(name);if(!q.words.length&&!q.nums.length)return[];const out=[];
+ for(const it of items){const c=itemTk(it);let sc=0;
+  for(const w of q.words){if(c.words.includes(w))sc+=3;else if(c.words.some(x=>x.length>=3&&w.length>=3&&(x.startsWith(w)||w.startsWith(x))))sc+=1.5}
+  for(const n of q.nums)if(c.nums.includes(n))sc+=2;
+  if(Number(it.pack)>1&&q.nums.includes(String(it.pack)))sc+=2;
+  if(q.nums.length&&c.nums.length&&!q.nums.some(n=>c.nums.includes(n)))sc-=1.5; // size likha hai magar milta nahi (150 vs 100) — auto-select na ho
+  if(sc>=3)out.push([sc,it])}
+ out.sort((x,y)=>y[0]-x[0]);return out.slice(0,top).map(([sc,it])=>({...it,_score:sc}))}
+function tokenScore(qs,cs){const q=nameTokens(qs),cx=nameTokens(cs);let sc=0;
+ for(const w of q.words){if(cx.words.includes(w))sc+=3;else if(cx.words.some(x=>x.length>=3&&w.length>=3&&(x.startsWith(w)||w.startsWith(x))))sc+=1.5}
+ for(const n of q.nums)if(cx.nums.includes(n))sc+=2;
+ if(q.nums.length&&cx.nums.length&&!q.nums.some(n=>cx.nums.includes(n)))sc-=1.5;return sc}
+function lineBranch(pool,l){return pool.branches.find(x=>pool.branchName(x,pool.names)===l.godam)??pool.branches[0]}
+function lineMatches(l){const pool=stockPools();if(!pool||!String(l.name||'').trim())return[];const b=lineBranch(pool,l);
+ if(l._m&&l._m.q===l.name&&l._m.b===b)return l._m.list;const list=matchPosItems(pool.itemsFor(b),l.name,5);l._m={q:l.name,b,list};return list}
+function applyPosItem(l,it){l.itemId=String(it.id);l.code=String(it.code||'');if(Number(it.pack))l.pack=Number(it.pack);l.cName=String(it.cName||'Ctn');l.uName=String(it.uName||'Pcs');l.sysName=String(it.name||'');l.useSys=true;l.oldPrate=Number(it.prate)||0;l.oldRate=Number(it.rate)||0;l.oldWrate=Number(it.wrate)||0;recalcRates(l)}
+function chipsHTML(l,i){const m=lineMatches(l);if(!m.length)return String(l.name||'').trim()?'<small class="stat-note">Milta system item nahi mila — neeche "POS item" list se dhoondein</small>':'';
+ return `<div class="mchips">${m.map(it=>`<button type="button" data-bl-chip="${i}" data-cid="${esc(String(it.id))}" class="${String(l.itemId)===String(it.id)?'on':''}">${esc(it.name)}</button>`).join('')}</div>`}
+function itemOptions(l,i){const pool=stockPools();if(!pool)return '';const b=pool.branches.find(x=>pool.branchName(x,pool.names)===l.godam)??pool.branches[0];const hits=String(l.name||'').trim()?matchPosItems(pool.itemsFor(b),l.name,8):[];
+ return `<select data-bl-item="${i}" aria-label="POS item"><option value="">— POS item nahi —</option>${hits.map(h=>`<option value="${esc(String(h.id))}" data-code="${esc(String(h.code||''))}" data-pack="${Number(h.pack)||0}" data-cname="${esc(String(h.cName||'Ctn'))}" data-uname="${esc(String(h.uName||'Pcs'))}" data-prate="${Number(h.prate)||0}" data-rate="${Number(h.rate)||0}" data-wrate="${Number(h.wrate)||0}" ${String(l.itemId)===String(h.id)?'selected':''}>${esc(h.name)}</option>`).join('')}${l.itemId&&!hits.some(h=>String(h.id)===String(l.itemId))?`<option value="${esc(String(l.itemId))}" selected>${esc(l.code||l.itemId)}</option>`:''}</select>`}
+function godamOptions(l,i){const pool=stockPools();if(!pool)return `<input data-bl-godam="${i}" value="${esc(l.godam||'')}" placeholder="Godam" aria-label="Godam">`;
+ return `<select data-bl-godam="${i}" aria-label="Godam">${pool.branches.map(b=>{const n=pool.branchName(b,pool.names);return `<option ${l.godam?(l.godam===n?'selected':''):(b===pool.branches[0]?'selected':'')}>${esc(n)}</option>`}).join('')}</select>`}
+// v1.83: naya cost fi-ctn/fi-pcs; parchoon PURANE NAFA ke hisaab se khud; wholesale % chip se
+const r2=v=>Math.round((Number(v)||0)*100)/100;
+function recalcRates(l){const pack=Number(l.pack)||0,rate=Number(l.rate)||0;if(!rate)return;
+ if((Number(l.ctn)||0)>0||pack<=1){l.costC=Math.round(pack>1?rate:rate*(pack||1));l.costP=r2(pack>1?rate/pack:rate)}else{l.costP=r2(rate);l.costC=Math.round(rate*(pack||1))}
+ if(l.oldPrate>0&&l.oldRate>0&&l.rctn==null&&l.rpcs==null){const m=l.oldRate/l.oldPrate;l.rpcs=r2(l.costP*m);l.rctn=Math.round((pack>1?l.rpcs*pack:l.costC*m))}
+ if(l.oldPrate>0&&l.oldWrate>0&&l.wctn==null&&l.wpcs==null){const wm=l.oldWrate/l.oldPrate;l.wpcs=r2(l.costP*wm);l.wctn=Math.round((pack>1?l.wpcs*pack:l.costC*wm))}}
+function applyWholesalePct(p){p=Number(p)||0;if(p<=0)return;billLines.forEach(l=>{if(!l.itemId||!(l.costP>0))return;l.wpcs=r2(l.costP*(1+p/100));l.wctn=Math.round((Number(l.pack)>1?l.wpcs*l.pack:(l.costC||0)*(1+p/100)))});renderBillLines()}
+function ratesRow(l,i){if(!l.itemId)return'';const nafa=l.oldPrate>0&&l.oldRate>0?Math.round((l.oldRate/l.oldPrate-1)*1000)/10:null;
+ return `<div class="bill-rates"><div class="name-pick">${l.sysName?`<label><input type="radio" name="bn${i}" data-bl-usesys="${i}" value="1" ${l.useSys!==false?'checked':''}> System: <b>${esc(l.sysName)}</b></label>`:''}<label><input type="radio" name="bn${i}" data-bl-usesys="${i}" value="" ${l.useSys===false||!l.sysName?'checked':''}> AI/likha: ${esc(l.name||'—')}</label></div>
+ <small>Naya cost: ${l.costC?money(l.costC*100)+' fi '+esc(l.cName||'Ctn'):'—'}${l.costP?' · '+money(Math.round(l.costP*100))+' fi '+esc(l.uName||'Pcs'):''}${l.oldPrate?' · purana cost '+l.oldPrate:''}${nafa!=null?' · purana R nafa '+nafa+'%':' · purana R nafa maloom nahi'}${l.oldPrate>0&&l.oldWrate>0?' · W nafa '+(Math.round((l.oldWrate/l.oldPrate-1)*1000)/10)+'%':''}</small>
+ <div class="rate-grid"><span>W ${esc(l.cName||'Ctn')}</span><input data-bl-wctn="${i}" type="number" inputmode="decimal" min="0" value="${l.wctn??''}" placeholder="—"><span>W ${esc(l.uName||'Pcs')}</span><input data-bl-wpcs="${i}" type="number" inputmode="decimal" min="0" step="0.01" value="${l.wpcs??''}" placeholder="${l.oldWrate?('purana '+l.oldWrate):'—'}"><span>Parchoon ${esc(l.cName||'Ctn')}</span><input data-bl-rctn="${i}" type="number" inputmode="decimal" min="0" value="${l.rctn??''}" placeholder="—"><span>Parchoon ${esc(l.uName||'Pcs')}</span><input data-bl-rpcs="${i}" type="number" inputmode="decimal" min="0" step="0.01" value="${l.rpcs??''}" placeholder="${l.oldRate?('purana '+l.oldRate):'—'}"></div></div>`}
+function renderBillLines(){const box=$('billLinesBox');if(!box)return;if(!billLines.length){box.innerHTML='<button type="button" data-bl-add>＋ Items ki list (khaali line)</button>';return}
+ const chips=billLines.some(l=>l.itemId)?`<div class="ws-chips"><small>Wholesale nafa (cost par):</small>${[1,1.25,1.5,2].map(p=>`<button type="button" data-ws-pct="${p}">+${p}%</button>`).join('')}<input id="wsCustom" type="number" inputmode="decimal" min="0" step="0.01" placeholder="apni %" style="width:5.5rem"><button type="button" data-ws-apply>Lagao</button></div>`:'';
+ box.innerHTML=`<h4>Items (${billLines.length}) — jama ${money(lineSum()*100)}</h4>${chips}<p class="stat-note">AI ka parha hua sab check karein — naam, ginti, rate. Ghalat ho to yahin theek karein.</p>${billLines.map((l,i)=>`<div class="bill-line2${l.unsure?' unsure':''}"><div class="bl-head"><b class="bl-no">${i+1}.</b><input data-bl-name="${i}" value="${esc(l.name||'')}" placeholder="Item ka naam (bill wala)" aria-label="naam"><button type="button" class="danger bl-x" data-bl-del="${i}" aria-label="line hatao">×</button></div>${chipsHTML(l,i)}<div class="bl-two">${itemOptions(l,i)}${godamOptions(l,i)}</div><div class="bl-nums"><label><small>${esc(l.cName||'Ctn')}</small><input data-bl-ctn="${i}" type="number" inputmode="decimal" min="0" step="0.01" value="${l.ctn??(l.qty??1)}"></label><label><small>${esc(l.uName||'Pcs')}</small><input data-bl-pcs="${i}" type="number" inputmode="decimal" min="0" step="0.01" value="${l.pcs??0}"></label><label><small>Rate</small><input data-bl-rate="${i}" type="number" inputmode="decimal" min="0" step="0.01" value="${l.rate??0}"></label><label><small>Total</small><input data-bl-total="${i}" type="number" inputmode="numeric" min="0" step="1" value="${l.total??0}"></label></div>${ratesRow(l,i)}</div>`).join('')}<button type="button" data-bl-add>＋ line</button> <button type="button" data-bl-sum>Raqam = items ka jama (${money(lineSum()*100)})</button>${billLines.some(l=>l.unsure)?'<p class="stat-note red">Peeli lines par AI ko shak tha — zaroor check karein.</p>':''}`}
+document.addEventListener('input',e=>{const t=e.target,d=t.dataset||{};const i=['blName','blCtn','blPcs','blRate','blTotal','blGodam','blWctn','blWpcs','blRctn','blRpcs'].map(k=>d[k]).find(v=>v!==undefined);if(i===undefined||!billLines[i])return;const l=billLines[i];
+ if(d.blName!==undefined){l.name=t.value;l.itemId='';l.code='';clearTimeout(l._t);l._t=setTimeout(()=>{const row=t.closest('.bill-line');if(row)row.querySelector('[data-bl-item]')?.outerHTML!==undefined&&renderBillLinesKeepFocus(t)},400)}
+ if(d.blCtn!==undefined){l.ctn=Number(t.value)||0;autoTotal(l,t)}
+ if(d.blPcs!==undefined){l.pcs=Number(t.value)||0;autoTotal(l,t)}
+ if(d.blRate!==undefined){l.rate=Number(t.value)||0;l.rctn=null;l.rpcs=null;l.wctn=null;l.wpcs=null;recalcRates(l);autoTotal(l,t)}
+ if(d.blTotal!==undefined)l.total=Math.round(Number(t.value)||0);
+ if(d.blGodam!==undefined)l.godam=t.value;
+ if(d.blWctn!==undefined)l.wctn=Number(t.value)||0;if(d.blWpcs!==undefined)l.wpcs=Number(t.value)||0;
+ if(d.blRctn!==undefined)l.rctn=Number(t.value)||0;if(d.blRpcs!==undefined)l.rpcs=Number(t.value)||0});
+document.addEventListener('change',e=>{const t=e.target;if(t?.dataset?.blUsesys!==undefined&&billLines[t.dataset.blUsesys]){billLines[t.dataset.blUsesys].useSys=t.value==='1'}
+ if(t?.dataset?.blName!==undefined&&billLines[t.dataset.blName]){renderBillLines()}});
+document.addEventListener('click',e=>{const c=e.target.closest?.('[data-bl-chip]');if(!c)return;e.preventDefault();const l=billLines[c.dataset.blChip];if(!l)return;const it=(l._m?.list||[]).find(x=>String(x.id)===c.dataset.cid);if(it){applyPosItem(l,it);renderBillLines()}});
+document.addEventListener('click',e=>{const c=e.target.closest?.('[data-ws-pct],[data-ws-apply]');if(!c)return;e.preventDefault();applyWholesalePct(c.dataset.wsPct!==undefined?c.dataset.wsPct:$('wsCustom')?.value)});
+// rate = fi carton; khule pieces ka hisaab pack (1 carton mein kitne) se — POS item select ho to pack wahan se aata hai
+function autoTotal(l,t){const ctn=Number(l.ctn)||0,pcs=Number(l.pcs)||0,rate=Number(l.rate)||0,pack=Number(l.pack)||0;if(rate>0&&(ctn>0||pcs>0)){l.total=Math.round(ctn*rate+(pcs>0?(pack>1?pcs*rate/pack:(ctn>0?0:pcs*rate)):0));const row=t.closest('.bill-line');row?.querySelector('[data-bl-total]')&&(row.querySelector('[data-bl-total]').value=l.total)}}
+function renderBillLinesKeepFocus(inp){const d=inp.dataset,key=Object.keys(d)[0],idx=d[key],pos=inp.selectionStart;renderBillLines();const again=document.querySelector(`[data-${key.replace(/[A-Z]/g,m=>'-'+m.toLowerCase())}="${idx}"]`);if(again){again.focus();try{again.setSelectionRange(pos,pos)}catch{}}}
+document.addEventListener('change',e=>{const t=e.target,d=t.dataset||{};if(d.blItem!==undefined&&billLines[d.blItem]){const l=billLines[d.blItem],o=t.selectedOptions[0];l.itemId=t.value;l.code=o?.dataset?.code||'';if(o?.dataset?.pack)l.pack=Number(o.dataset.pack)||0;l.cName=o?.dataset?.cname||l.cName||'Ctn';l.uName=o?.dataset?.uname||l.uName||'Pcs';l.sysName=t.value?(o?.textContent||''):'';l.oldPrate=Number(o?.dataset?.prate)||0;l.oldRate=Number(o?.dataset?.rate)||0;l.oldWrate=Number(o?.dataset?.wrate)||0;if(l.useSys===undefined)l.useSys=!!t.value;if(t.value&&o&&!String(l.name||'').trim())l.name=o.textContent;recalcRates(l);renderBillLines()}
+ if(d.blGodam!==undefined&&billLines[d.blGodam]){billLines[d.blGodam].godam=t.value;renderBillLines()}});
+document.addEventListener('click',e=>{const t=e.target.closest?.('[data-bl-add],[data-bl-del],[data-bl-sum]');if(!t)return;e.preventDefault();
+ if(t.dataset.blAdd!==undefined){const pool=stockPools();billLines.push({name:'',qty:1,rate:0,total:0,godam:pool?pool.branchName(pool.branches[0],pool.names):''})}
+ else if(t.dataset.blDel!==undefined)billLines.splice(Number(t.dataset.blDel),1);
+ else if(t.dataset.blSum!==undefined){const amt=document.querySelector('#dialogBody [name=amount]');if(amt)amt.value=lineSum()}
+ renderBillLines()});
+async function billAIFill(existing=null){const msg=$('billAIMsg'),f=$('dialogBody').querySelector('form');if(!msg||!f)return;try{
+  const files=[...(f.elements.bill?.files||[])];
+  const savedPhotos=(existing?.billPhotos||[]).map(src=>{const m=/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(String(src||''));return m?{mime:m[1],data:m[2]}:null}).filter(Boolean);
+  if(!files.length&&!savedPhotos.length)throw Error('Pehle upar "Bill ki live picture" mein bill ki photo lagayein, phir yeh button dabayein.');
+  msg.textContent='Key parh raha hoon…';const cfg=await loadAiCfg(true);if(!cfg?.key)throw Error(owner()?'Pehle Settings (⋮) > "AI key" mein Gemini key save karein.':'Malik ne abhi AI key nahi lagayi.');
+  let images=[];
+  if(files.length){msg.textContent='Bill ki tasveer tayyar ho rahi hai…';for(const file of files.slice(0,4))images.push(await shrinkForAI(file))}
+  else{images=savedPhotos.slice(0,4);msg.textContent='Nayi photo nahi lagi — SAVE SHUDA bill photo se parh raha hoon (woh chhoti hoti hai, hindse kam saaf parhe ja sakte hain; behtar natija chahiye to nayi photo laga kar dobara dabayein)…'}
+  if(billLines.length&&!confirm('Items ki maujooda list ('+billLines.length+' lines) AI ke naye natije se BADAL jayegi. Jari rakhein?')){msg.textContent='';return}
+  msg.textContent='AI bill parh raha hai… (10-40 second)';const bill=await readPurchaseBill({key:cfg.key,model:cfg.model,images,onStatus:x=>msg.textContent=x});
+  const pool=stockPools(),g=pool?pool.branchName(pool.branches[0],pool.names):'';
+  billLines=bill.lines.map(l=>{const out={...l,godam:g,itemId:'',code:'',pack:Number(l.pack)||0,cName:'Ctn',uName:'Pcs'};
+   if(pool&&l.name){const list=matchPosItems(pool.itemsFor(pool.branches[0]),l.name,5);out._m={q:l.name,b:pool.branches[0],list};
+    if(list[0]&&list[0]._score>=5)applyPosItem(out,list[0])}
+   return out});
+  renderBillLines();
+  if(bill.supplier&&!f.elements.supplier.value){const q=$('supplierQuery');if(q){q.value=bill.supplier;q.dispatchEvent(new Event('input'))}}
+  if(!f.elements.amount.value||Number(f.elements.amount.value)===0)f.elements.amount.value=bill.total||lineSum();
+  msg.textContent='✅ '+bill.lines.length+' items parhe'+(bill.supplier?' · supplier: '+bill.supplier+' (neeche list se select karein)':'')+(bill.total?' · bill total Rs '+bill.total.toLocaleString():'')+'. Ab har line check karein.'}
+ catch(e){msg.textContent='❌ '+(e.message||'Nakam')}}
+// v1.98.0: photo wali purchase save karte waqt — isi supplier ka POS bill (PC se aaya) pehle se to nahi?
+function posDupOk(pid,amount){
+ const d=new Date();d.setDate(d.getDate()-7);
+ const cut=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+ const near=Math.max(100,Math.round(amount*0.02));
+ const hit=entries().filter(e=>isPosPurchase(e)&&e.partyId===pid&&e.date>=cut&&Math.abs((e.amount||0)-amount)<=near&&!cashLinkedTo(e)).slice(0,5);
+ if(!hit.length)return true;
+ return confirm('Dhyan: isi supplier ka POS bill pehle se maujood hai:\n\n'+hit.map(e=>e.date+' · '+money(e.amount)+(e.note?' · '+e.note:'')).join('\n')+'\n\nAgar yeh WAHI kharid hai to nayi entry na banayein — Purchase list mein us bill par "Milao" dabayein (warna do dafa gini jayegi).\n\nPhir bhi nayi entry save karein?');
+}
+// v1.99.0: bill par likha naam us POS item ke "Doosre naam" (alias) mein — agli dafa app KHUD pehchan le
+// Naya collection nahi, nayi rules nahi: wahi setAlias jo Stock screen mein malik istemal karta hai.
+async function learnAlias(itemId,name){
+ const nm=String(name||'').replace(/[,\r\n]+/g,' ').replace(/\s+/g,' ').trim().slice(0,60);
+ if(!itemId||!nm)return 'Naam nahi mila';
+ if(!cloud?.setAlias)return 'Is app mein doosre naam save nahi hote';
+ const parts=String(aliasOf(itemId)||'').split(',').map(x=>x.trim()).filter(Boolean);
+ if(parts.some(x=>norm(x)===norm(nm)))return 'pehle se';
+ parts.push(nm);
+ let csv=parts.join(', ');
+ while(csv.length>120&&parts.length>1){parts.shift();csv=parts.join(', ')}
+ try{await cloud.setAlias(String(itemId),csv);return 'ok'}
+ catch(err){return err?.code==='permission-denied'?'Ijazat nahi mili — naam sirf malik yaad karwa sakta hai (rules).':(err?.message||'Save nahi hua')}
+}
+// v2.1.0: ghalat naam us item se HATANA (jab malik "Badlein" se doosra item chunta hai)
+async function unlearnAlias(itemId,name){
+ const nm=String(name||'').replace(/[,\r\n]+/g,' ').replace(/\s+/g,' ').trim();
+ if(!itemId||!nm||!cloud?.setAlias)return '';
+ const parts=String(aliasOf(itemId)||'').split(',').map(x=>x.trim()).filter(Boolean);
+ const left=parts.filter(x=>norm(x)!==norm(nm));
+ if(left.length===parts.length)return '';
+ try{await cloud.setAlias(String(itemId),left.join(', '));return 'ok'}catch{return ''}
+}
+// v2.1.0: har item ka pichhla khareed aur nafa (blueAccess/itemRates) — POS purchase bhejte waqt save hota hai
+let itemRates={},stopItemRates=null;
+// v2.3.0: har supplier ke bill ka naqsha (ginti PCS/CTN, rate fi PCS/CTN) — app khud seekhti hai
+let billFormats={},stopBillFormats=null,proModel='',proTried=false;
+// v1.98.0: POS Purchase screen ke liye — bill ki tasveer AI se parho (kuch save nahi hota, sirf lines wapas)
+// v2.7: label ki tasveer -> number
+async function aiReadLabel({file}){
+ if(!session||localMode)throw Error('Login chahiye');          // v2.9.1: tolai sab logins ke liye (rules v2.7)
+ const cfg=await loadAiCfg(true);
+ if(!cfg?.key)throw Error(owner()?'Pehle Settings (⋮) > "AI key" mein Gemini key save karein.':'Malik ne abhi AI key nahi lagayi.');
+ const images=[await shrinkForAI(file,1200,0.8)];
+ return await readLabel({key:cfg.key,model:cfg.model,images,onStatus:()=>{}});
+}
+// v2.7: tolai ka PDF
+// v2.13: stock ginti ki report
+function gintiPdf(){const r=gintiReport();if(!r){notice('Abhi koi ginti nahi');return}
+ $('printArea').innerHTML=`<h1>NOOR TRADERS</h1><h2>Stock ginti ${esc(String(r.round))} — ${esc(r.branch)}</h2>
+  <p>${r.total} items gine · ${r.kam} kam · ${r.zyada} zyada · Kul farq <b>Rs ${r.net>0?'+':''}${esc(new Intl.NumberFormat('en-PK').format(r.net))}</b> · ${esc(new Date().toLocaleString('en-PK'))}</p>
+  <table class="iv-tbl"><thead><tr><th>Item</th><th>Gina</th><th>System</th><th>Farq</th><th>Rs</th></tr></thead><tbody>
+  ${r.rows.map(x=>`<tr class="iv-${x.conf||'g'}"><td class="iv-item"><b>${esc(x.name)}</b><br><small>${esc(x.at)}</small></td><td class="iv-n">${esc(x.gina)}<br><small>${esc(x.ginaPcs)}</small></td><td class="iv-n">${esc(x.sys)}</td><td class="iv-n">${esc(x.farq)}</td><td class="iv-n">${esc(x.rs)}</td></tr>`).join('')}
+  </tbody></table>`;
+ openReportPreview('Stock ginti '+r.branch);}
+function tolaiPdf(){const r=tolaiReport();if(!r){notice('Kuch nahi mila');return}
+ $('printArea').innerHTML=`<h1>NOOR TRADERS</h1><h2>Tolai ka hisaab — ${esc(r.title)}</h2>
+  <p>Kul ${esc(r.packets)} packet · ${esc(r.mins)} minute · ${esc(new Date().toLocaleString('en-PK'))}</p>
+  <table class="iv-tbl"><thead><tr><th>Din</th><th>Mulazim</th><th>Items</th><th>Waqt</th><th>Packet</th><th>Minute</th><th>Kaam</th></tr></thead><tbody>
+  ${r.rows.map(x=>`<tr class="iv-${x.conf}"><td><b>${esc(x.date)}</b><br><small>${esc(x.wd)}</small></td><td><small>${esc(x.who||'—')}</small></td><td><small>${esc(x.items)}</small></td>
+   <td><small>${esc(x.waqt)}</small></td><td class="iv-n">${esc(x.packets)}</td><td class="iv-n">${esc(x.mins)} / ${esc(x.duty)}</td><td class="iv-n">${x.pc}%</td></tr>`).join('')}
+  </tbody></table>`;
+ openReportPreview('Tolai '+r.title);}
+async function ppAiBill({files,onStatus=()=>{},partyId=''}){
+ if(!canTally())throw Error('Is login par AI nahi chalta');
+ onStatus('Key parh raha hoon…');
+ const cfg=await loadAiCfg(true);
+ if(!cfg?.key)throw Error(owner()?'Pehle Settings (⋮) > "AI key" mein Gemini key save karein.':'Malik ne abhi AI key nahi lagayi.');
+ onStatus('Tasveer tayyar ho rahi hai…');
+ // v2.0.0: chhapa hua bill 1400px/0.75 par bhi saaf parha jata hai — upload aadha, jawab tez.
+ const images=[];for(const f of [...files].slice(0,4))images.push(await shrinkForAI(f,1400,0.75));
+ return await aiReadBill({cfg,images,onStatus,partyId});
+}
+// v2.3.0: bill ke liye behtar (pro) model — ek dafa dhoond kar rakh liya jata hai; na mile to wahi flash
+async function billModelOf(cfg){
+ if(cfg.billModel)return cfg.billModel;
+ if(proModel)return proModel;
+ if(proTried)return cfg.model;
+ proTried=true;
+ try{proModel=await pickProModel(cfg.key)||''}catch{proModel=''}
+ return proModel||cfg.model;
+}
+// v2.3.0: is supplier ke bill ka naqsha — AI ko pehle hi bata do
+function billNote(partyId){
+ const f=billFormats[String(partyId||'')];if(!f||!(f.q||f.r||(f.ex&&f.ex.length)))return '';
+ const l=['IS SUPPLIER KE BILL KA NAQSHA (pichhle bill se seekha hua) — isi ke mutabiq parho:'];
+ if(f.q==='pcs')l.push('- Ginti wala column PIECES hota hai (carton nahi). Har line ki ginti "qty" aur "pcs" dono mein wohi likho, "ctn" 0 rakho.');
+ if(f.q==='ctn')l.push('- Ginti wala column CARTON / PETI hota hai. Har line ki ginti "qty" aur "ctn" mein likho.');
+ if(f.r==='pcs')l.push('- Rate wala column FI PIECE hota hai.');
+ if(f.r==='ctn')l.push('- Rate wala column FI CARTON hota hai.');
+ if(f.q==='both')l.push('- Is bill par CARTON aur PIECE ke ALAG khane hain — har line mein jo khana bhara ho wohi "ctn" ya "pcs" mein, aur rate usi khane ka.');
+ if(Array.isArray(f.ex)&&f.ex.length)l.push('- Pichhle bill ki misalein (bill ka naam => humara item | ginti ka tareeqa):\n  '+f.ex.slice(0,12).join('\n  '));
+ return l.join('\n');
+}
+// v2.0.0: bill parhwana — humare items ki list saath, aur screen par second ki ginti
+async function aiReadBill({cfg,images,onStatus,partyId}){
+ let base='AI bill parh raha hai…',t0=Date.now();
+ const tick=()=>onStatus(base+' ('+Math.round((Date.now()-t0)/1000)+'s)');
+ const iv=setInterval(tick,1000);tick();
+ const args={key:cfg.key,images,known:knownItems(partyId),note:billNote(partyId),onStatus:x=>{base=x;t0=Date.now();tick()}};
+ try{
+  const pro=await billModelOf(cfg);
+  try{return await readPurchaseBill({...args,model:pro})}
+  catch(err){
+   if(!pro||pro===cfg.model)throw err;
+   proModel=cfg.model;   // pro nahi chala (key par ijazat / hadd) — aage flash hi
+   base='Behtar model nahi chala — flash se parh raha hoon…';t0=Date.now();tick();
+   return await readPurchaseBill({...args,model:cfg.model});
+  }
+ }
+ finally{clearInterval(iv)}
+}
+// v2.0.0: AI ko dene wali items ki list — pehle isi supplier ke pichhle bills wale, phir baqi. Yaad kiye hue
+// "Doosre naam" (alias) bhi jate hain — wahi bill par likhe hue naam hote hain, is liye match sab se acha hota hai.
+function knownItems(partyId){
+ const pool=stockPools();if(!pool)return [];
+ let items=[];try{items=pool.itemsFor(pool.branches[0])||[]}catch{return []}
+ const seen=new Set(),used=new Map();
+ if(partyId)for(const e of entries().filter(x=>isPosPurchase(x)&&x.partyId===partyId).slice(0,8))
+  for(const l of (e.items||[]))if(l.itemId)used.set(String(l.itemId),(used.get(String(l.itemId))||0)+1);
+ const row=r=>({id:String(r.id),name:String(r.name||''),code:String(r.code||''),alias:String(aliasOf(r.id)||'')});
+ const out=[];
+ for(const r of items.filter(r=>used.has(String(r.id))).sort((a,b)=>used.get(String(b.id))-used.get(String(a.id)))){seen.add(String(r.id));out.push(row(r))}
+ for(const r of items){if(seen.has(String(r.id)))continue;out.push(row(r));if(out.length>=400)break}
+ return out;
+}
+// v1.98.0: isi supplier ki khaali (POS bill se na juri) photo purchase — 7 din, qareeb ki raqam
+function ppCashDupes(pid,rs){
+ const amt=Math.round((Number(rs)||0)*100);if(!pid||!amt)return [];
+ const d=new Date();d.setDate(d.getDate()-7);
+ const cut=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+ const near=Math.max(100,Math.round(amt*0.02));
+ return entries().filter(e=>e.purchase===true&&e.kind==='purchaseCash'&&!e.deleted&&e.partyId===pid&&!e.posBill&&e.date>=cut&&Math.abs((e.amount||0)-amt)<=near)
+  .sort((x,y)=>String(y.date).localeCompare(String(x.date)))
+  .map(e=>({id:e.id,date:e.date,rs:(e.amount||0)/100,note:String(e.note||'').slice(0,60)}));
+}
+// v1.85: bill ki tasveer -> AI parhe -> POS purchase bill se line-ba-line milan (kuch save nahi hota)
+async function photoCompare(c){if(!canTally())return;
+ const pos=c.posBill?entries().find(x=>x.id===c.posBill):null;
+ modal('🤖 Tasveer se items — '+(party(c.partyId)?.name||''),'<p id="pcMsg" role="status">Tayyari…</p><div id="pcOut"></div>',true);
+ const msg=$('pcMsg');
+ try{
+  const photos=(c.billPhotos||[]).map(src=>{const m=/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(String(src||''));return m?{mime:m[1],data:m[2]}:null}).filter(Boolean).slice(0,4);
+  if(!photos.length)throw Error('Is purchase par bill ki photo nahi lagi.');
+  msg.textContent='Key parh raha hoon…';const cfg=await loadAiCfg(true);if(!cfg?.key)throw Error(owner()?'Pehle Settings (⋮) > "AI key" mein Gemini key save karein.':'Malik ne abhi AI key nahi lagayi.');
+  let posB=null;if(pos){msg.textContent='POS bill ki tafseel la raha hoon…';posB=await cloud.purchaseBill(pos.id).catch(()=>null)}
+  const bill=await aiReadBill({cfg,images:photos,onStatus:x=>{msg.textContent=x},partyId:c.partyId});
+  msg.textContent='';$('pcOut').innerHTML=photoCompareHTML(bill,posB,c,pos);
+ }catch(e2){msg.textContent='❌ '+(e2.message||'Masla');msg.insertAdjacentHTML('afterend',`<p><button data-photo-compare="${esc(c.id)}">🔄 Dobara koshish</button></p>`)}}
+function photoCompareHTML(bill,posB,c,pos){
+ const ai=(bill.lines||[]).map((l,ix)=>({...l,ix}));
+ const aiName=l=>esc(l.name)+(l.roman&&l.roman!==l.name?` · <i>${esc(l.roman)}</i>`:'');
+ const aiQty=l=>[(Number(l.ctn)||0)&&(l.ctn+' ctn'),(Number(l.pcs)||0)&&(l.pcs+' pcs')].filter(Boolean).join(' + ')||'—';
+ const aiSum=Math.round(ai.reduce((n,l)=>n+(Number(l.total)||0),0)),aiTotal=Number(bill.total)||aiSum;
+ if(!posB||!Array.isArray(posB.lines)||!posB.lines.length){
+  return `<p class="stat-note">${pos?'POS bill ki tafseel abhi POS se nahi aayi — sirf tasveer ka parha hua neeche hai.':'Is cash purchase se abhi koi POS bill nahi jura ("Milao" se jorein) — sirf tasveer ka parha hua neeche hai.'}</p>
+   ${ai.map((l,i)=>`<div class="pc-row"><b>${i+1}.</b> ${aiName(l)} — ${aiQty(l)} · rate ${l.rate||0} · total ${money(Math.round((l.total||0)*100))}${l.unsure?' <span class="red">shak</span>':''}</div>`).join('')}
+   <p><b>Tasveer ka total: ${money(aiTotal*100)}</b>${aiTotal!==aiSum?` <small>(lines ka jama ${money(aiSum*100)})</small>`:''}</p>
+   <p><button data-photo-compare="${esc(c.id)}">🔄 Dobara AI se parho</button></p>`}
+ const posLines=posB.lines.map((l,ix)=>({...l,ix}));
+ const cand=[];for(const x of ai){const qn=x.roman||x.name||'';if(!qn.trim())continue;for(const p of posLines){const sc=tokenScore(qn,p.name);if(sc>=3)cand.push([sc,x.ix,p.ix])}}
+ cand.sort((u,v)=>v[0]-u[0]);const usedA=new Set(),usedP=new Set(),pairs=[];
+ for(const [sc,aI,pI] of cand){if(usedA.has(aI)||usedP.has(pI))continue;usedA.add(aI);usedP.add(pI);pairs.push([ai[aI],posLines[pI]])}
+ pairs.sort((u,v)=>u[0].ix-v[0].ix);
+ const rows=pairs.map(([x,p])=>{const d=[];
+  const posCtn=Number(p.qty)||0,posTotPcs=Number(p.totalPcs)||0,posCtnRate=p.ctn!=null?p.ctn/100:null,posPcsRate=p.pcs!=null?p.pcs/100:null,posTot=(Number(p.total)||0)/100;
+  const aQ=Number(x.ctn)||0,aP=Number(x.pcs)||0,aR=Number(x.rate)||0,aT=Number(x.total)||0;
+  if(aQ&&posCtn&&aQ!==posCtn)d.push(`Tadad: tasveer ${aQ} / POS ${posCtn} ${esc(p.cName||'Ctn')}`);
+  if(!aQ&&aP&&posTotPcs&&aP!==posTotPcs)d.push(`Tadad: tasveer ${aP} / POS ${posTotPcs} ${esc(p.uName||'Pcs')}`);
+  if(aR&&(posCtnRate!=null||posPcsRate!=null)){const pr=aQ?(posCtnRate??posPcsRate):(posPcsRate??posCtnRate);if(Math.abs(aR-pr)>0.5)d.push(`Rate: tasveer ${aR} / POS ${Math.round(pr*100)/100}`)}
+  if(aT&&posTot&&Math.abs(aT-posTot)>1)d.push(`Total: tasveer ${money(Math.round(aT*100))} / POS ${money(Math.round(posTot*100))}`);
+  const learn=p.itemId?`<br><button type="button" data-tally-learn="${esc(String(p.itemId))}|${esc(String(x.roman||x.name||''))}">✓ Yeh naam yaad kar lo</button>`:'';
+  return `<div class="pc-row ${d.length?'warn':'ok'}"><span>${d.length?'⚠':'✓'}</span><div>${aiName(x)} → <b>${esc(p.name)}</b><br><small>Tasveer: ${aiQty(x)} · rate ${x.rate||0} · ${money(Math.round((x.total||0)*100))} — POS: ${posCtn} ${esc(p.cName||'Ctn')} · rate ${posCtnRate??''} · ${money(Number(p.total)||0)}</small>${d.map(t=>`<br><small class="red">${t}</small>`).join('')}${learn}</div></div>`});
+ const missPos=ai.filter(x=>!usedA.has(x.ix)).map(x=>`<div class="pc-row warn"><span>⚠</span><div>${aiName(x)} — ${aiQty(x)} · ${money(Math.round((x.total||0)*100))}<br><small class="red">POS bill mein NAHI mila</small></div></div>`);
+ const missAI=posLines.filter(p=>!usedP.has(p.ix)).map(p=>`<div class="pc-row warn"><span>⚠</span><div><b>${esc(p.name)}</b> — ${Number(p.qty)||0} ${esc(p.cName||'Ctn')} · ${money(Number(p.total)||0)}<br><small class="red">Tasveer mein NAHI mila</small></div></div>`);
+ const posNet=(Number(posB.net)||0)/100,farq=Math.round((aiTotal-posNet)*100)/100;
+ return `<p class="stat-note">POS bill ${esc(posB.billNo||'')} · ${esc(posB.date||'')} se milan — tasveer wala pehle, POS wala baad mein.</p>
+  ${rows.join('')}${missPos.join('')}${missAI.join('')}
+  <div class="pc-total ${Math.abs(farq)>1?'warn':'ok'}"><b>Tasveer ka total ${money(aiTotal*100)} · POS bill ${money(Math.round(posNet*100))}</b><br>${Math.abs(farq)>1?`<b class="red">Farq ${money(Math.round(Math.abs(farq)*100))} ${farq>0?'— tasveer zyada':'— POS zyada'}</b>`:'✓ Total barabar'}</div>
+  <p class="stat-note">AI ne koi hindsa ghalat parha ho to "Dobara" chalayein ya bill ki nayi saaf photo laga kar phir se. Kuch bhi khud save/tabdeel NAHI hota.</p>
+  <p><button data-photo-compare="${esc(c.id)}">🔄 Dobara AI se parho</button></p>`}
+async function sendRateJob(){const msg=$('rateJobMsg');try{const lines=cleanBillLines().filter(l=>l.itemId&&(l.wctn||l.wpcs||l.rctn||l.rpcs)).map(l=>({itemId:String(l.itemId),code:String(l.code||''),name:String(l.name||''),pack:Number(l.pack)||0,costP:Number(l.costP)||0,wctn:Number(l.wctn)||0,wpcs:Number(l.wpcs)||0,rctn:Number(l.rctn)||0,rpcs:Number(l.rpcs)||0}));
+  if(!lines.length)throw Error('Kisi line par naya wholesale ya parchoon rate nahi likha (aur POS item select hona zaroori hai).');
+  if(!confirm(lines.length+' items ke naye rates PC ko bheje jayenge — PC in ko POS mein lagayega. Theek?'))return;
+  msg.textContent='PC ko bhej raha hoon…';const id=await cloud.requestRates({lines});msg.textContent='⏳ PC ke jawab ka intezar… (PC on ho aur script chal rahi ho)';
+  const stop=cloud.watchRates(id,j=>{if(!j)return;if(j.status==='working'){msg.textContent='🔧 PC rates laga raha hai…'}else if(j.status==='done'){msg.textContent='✅ PC ne '+(j.applied??lines.length)+' items ke rates POS mein laga diye';stop()}else if(j.status==='failed'||j.status==='error'){msg.textContent='❌ PC: '+(j.error||'nakam');stop()}});
+  setTimeout(()=>{if(msg.textContent.startsWith('⏳'))msg.textContent='⏳ Abhi jawab nahi — job PC par mehfooz hai, PC on hote hi lag jayegi.'},30000)}
+ catch(e){if(msg)msg.textContent='❌ '+(e.message||'Nakam');else error(e)}}
+function parchiHTML(x){const p=party(x.partyId);const qtyTxt=l=>{const c=Number(l.ctn)||Number(l.qty)||0,p=Number(l.pcs)||0;return [c?c+' '+(l.cName||'Ctn'):'',p?p+' '+(l.uName||'Pcs'):''].filter(Boolean).join(' + ')||''};const rows=(x.items||[]).map((l,i)=>`<tr><td>${i+1}</td><td>${esc(l.name)}${l.code?`<br><small>${esc(l.code)}</small>`:''}</td><td>${esc(l.godam||'')}</td><td>${esc(qtyTxt(l))}</td><td>${l.rate?l.rate.toLocaleString():''}</td><td>${(l.total||0).toLocaleString()}</td></tr>`).join('');
+ return `<!doctype html><html lang="ur"><head><meta charset="utf-8"><title>Purchase parchi</title><style>body{font-family:system-ui,sans-serif;margin:12px;color:#000}h2{margin:0}table{width:100%;border-collapse:collapse;margin-top:8px}td,th{border:1px solid #000;padding:4px 6px;font-size:13px;text-align:left}tfoot td{font-weight:700}p{margin:4px 0}@media print{button{display:none}}</style></head><body><h2>Noor Traders — Purchase</h2><p>Tareekh: ${esc(x.date)} · ${x.kind==='purchaseCash'?'Cash':'Credit / Udhar'}</p><p>Supplier: <b>${esc(p?.name||'')}</b>${p?.phone?' · '+esc(p.phone):''}</p>${x.note?`<p>Note: ${esc(x.note)}</p>`:''}<table><thead><tr><th>#</th><th>Item</th><th>Godam</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead><tbody>${rows||'<tr><td colspan="6">Items nahi likhe</td></tr>'}</tbody><tfoot><tr><td colspan="5">Items ka jama</td><td>${(x.items||[]).reduce((n,l)=>n+(l.total||0),0).toLocaleString()}</td></tr><tr><td colspan="5">Entry ki raqam</td><td>${(x.amount/100).toLocaleString()}</td></tr></tfoot></table>${(x.items||[]).some(l=>l.wctn||l.wpcs||l.rctn||l.rpcs)?`<h3>Naye Rates (POS mein lagane ke liye)</h3><table><thead><tr><th>Item</th><th>Cost</th><th>Wholesale</th><th>Parchoon</th></tr></thead><tbody>${(x.items||[]).filter(l=>l.wctn||l.wpcs||l.rctn||l.rpcs).map(l=>`<tr><td>${esc(l.name)}${l.code?`<br><small>${esc(l.code)}</small>`:''}</td><td>${l.costC?l.costC+' /'+esc(l.cName||'Ctn'):''}${l.costP?'<br>'+l.costP+' /'+esc(l.uName||'Pcs'):''}</td><td>${l.wctn?l.wctn+' /'+esc(l.cName||'Ctn'):''}${l.wpcs?'<br>'+l.wpcs+' /'+esc(l.uName||'Pcs'):''}</td><td>${l.rctn?l.rctn+' /'+esc(l.cName||'Ctn'):''}${l.rpcs?'<br>'+l.rpcs+' /'+esc(l.uName||'Pcs'):''}</td></tr>`).join('')}</tbody></table>`:''}<p><small>Sam Blue Khata se print — ${new Date().toLocaleString()}</small></p><button onclick="print()">🖨 Print</button></body></html>`}
+document.addEventListener('click',e=>{const b=e.target.closest?.('[data-photo-compare]');if(!b)return;const c=entries().find(r=>r.id===b.dataset.photoCompare);if(c)photoCompare(c).catch(error)});
+// v1.99.0: milan ki har jori par — bill ka naam POS item ko yaad karwa do
+document.addEventListener('click',async e=>{const b=e.target.closest?.('[data-tally-learn]');if(!b)return;
+ const [id,...rest]=String(b.dataset.tallyLearn).split('|');const nm=rest.join('|');
+ b.disabled=true;const r=await learnAlias(id,nm);
+ if(r==='ok'){b.outerHTML='<small>✓ naam yaad kar liya — agli dafa khud pehchanega</small>';notice('✓ "'+nm+'" yaad kar liya')}
+ else if(r==='pehle se'){b.outerHTML='<small>✓ naam pehle se yaad hai</small>'}
+ else{b.disabled=false;notice(r)}});
+document.addEventListener('click',e=>{const b=e.target.closest?.('[data-parchi]');if(!b)return;const x=entries().find(r=>r.id===b.dataset.parchi);if(!x)return;const w=window.open('','_blank');if(!w){alert('Popup band hai — browser mein is site ke popups allow karein');return}w.document.write(parchiHTML(x));w.document.close();setTimeout(()=>{try{w.print()}catch{}},400)});
+function photoHTML(e){return ['photos','goodsPhotos','billPhotos'].map(k=>(e[k]||[]).map(src=>/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(src)?`<a href="${src}" download="${k}.jpg"><img class="entry-photo" src="${src}" alt="${k==='goodsPhotos'?'Samaan':k==='billPhotos'?'Bill':'Roznamcha'}"></a>`:'').join('')).join('')}
+function closingForm(){const c=closings().find(c=>c.date===date),prev=closings().find(c=>c.date===yesterday(date)&&c.change!=null);modal('Closing · '+date,`<form>${!prev?`<label>Kal ka Change (opening)<input name="opening" type="number" min="0" step="0.01" required value="${c?.opening!=null?c.opening/100:''}"></label>`:`<p>Kal ka Change: ${money(prev.change)}</p>`}<label>Aaj counted Change<input name="change" type="number" min="0" step="0.01" required value="${c?.change!=null?c.change/100:''}"></label><label>Counted Closing Cash<input name="cash" type="number" min="0" step="0.01" required value="${c?.cash!=null?c.cash/100:''}"></label><p>Change agle din ki opening banega. Cash apne account mein save hoga.</p><button type="submit">Save closing</button></form>`);formSave(f=>save({type:'closing',id:'closing-'+date,date,change:cents(f.elements.change.value),changeRows:[cents(f.elements.change.value)],cash:cents(f.elements.cash.value),cashRows:[cents(f.elements.cash.value)],...(f.elements.opening?{opening:cents(f.elements.opening.value),openingRows:[cents(f.elements.opening.value)]}:{})},c))}
+let chartMode='day',chartDate=today(),dueFilter='due';
+const repeats={once:'Aik dafa',daily:'Rozana',weekly:'Har hafta',fortnightly:'Har 14 din',monthly:'Har mahina'};
+const custodyName=id=>id==='shop'?'Dukan':id==='external'?'Notes wali entry':party(id)?.name||'Purana account';
+function cashState(){const c=closings().find(c=>c.date===date),record=all('cashCustody').find(r=>r.date===date);return {c,record,moves:record?.moves||[],balances:custodyBalances(c?.cash||0,record?.moves)}}
+// v1.89: khata 0 ya minus (lene kuch nahi) -> Due list / banner se bahar; malik ke phone par reminder khud khatam
+const reminderLive=r=>{const p=party(r.partyId);return !!p&&balance(p,entries())>0};
+function reminderRows(){return all('reminder').filter(r=>reminderLive(r)&&accountMatches(party(r.partyId),$('search').value)&&(dueFilter==='all'||r.dueDate<=today())).sort((a,b)=>a.dueDate.localeCompare(b.dueDate)||party(a.partyId).name.localeCompare(party(b.partyId).name))}
+function chartData(){return expenseSummary(entries().filter(inDaily).filter(matches),chartMode,chartMode==='day'?chartDate:chartDate.slice(0,7))}
+function groupName(g){return g.kind==='expense'?g.account||'Kharcha':party(g.partyId)?.name||'Account'}
+const toneOrder={blue:0,red:1,green:2};const byTone=(a,b)=>toneOrder[pdfTone(a)]-toneOrder[pdfTone(b)];
+function pdfTone(e){return e.kind==='purchaseCash'||e.purchase?'blue':e.kind==='expense'?'red':'green'}
+function pdfCell(value){const v=value&&typeof value==='object'?value:{text:value};const colours={red:'#b42332',green:'#147548',blue:'#223b6d',yellow:'#9a6b00'};return `<td${colours[v.tone]?` style="color:${colours[v.tone]};font-weight:600"`:''}>${esc(v.text)}</td>`}
+function renderFinanceView(){
+ const q=$('search').value,es=entries();
+ if(view==='cash'){
+  const c=closings().find(c=>c.date===date),book=cashLedger(records,date),prior=cashLedger(records,yesterday(date));
+  $('summary').innerHTML=`<div><small>${esc(date)} · Is din ki Closing Cash</small><strong>${c?.cash!=null?money(c.cash):'Ginti baqi'}</strong></div><div><small>Total Available Cash · ${esc(date)} tak</small><strong>${money(book.available)}</strong><small>Purani bachi cash: ${money(prior.available)}</small></div>`;
+  $('list').innerHTML=`<label>Tareekh tak<input id="cashDate" type="date" value="${date}"></label><p>Har din ki Closing Cash jama hoti hai. Cash dene par neeche wale total se minus hoga.</p>${book.available<0?'<p class="warning">Cash balance manfi hai. Purani Closing Cash aur cash records check karein.</p>':''}<div class="cash-book-totals"><span>Jama / Aayi: <b>${money(book.incoming)}</b></span><span>Di / Gayi: <b>${money(book.outgoing)}</b></span></div><h3>Cash ka khata</h3>`+cashBookRows(book).map(r=>`<article class="ledger-item cash-book-row"><b>${esc(r.label)}${r.partyId&&r.partyId!=='external'?' · '+esc(custodyName(r.partyId)):''}</b><small>${esc(r.date)}</small>${r.from&&r.from!=='shop'&&r.to!=='shop'?`<small>${esc(custodyName(r.from))} → ${esc(custodyName(r.to))} · ${money(r.amount)}</small>`:''}<p>${esc(r.note)}</p><div class="cash-book-totals"><span class="green">Aayi: ${money(r.incoming)}</span><span class="red">Gayi: ${money(r.outgoing)}</span></div><strong>Baqi cash: ${money(r.balance)}</strong>${owner()&&r.source==='move'?`<button data-cash-edit="${esc(r.id)}">Edit</button>`:''}${owner()&&r.source==='move'?`<button class="danger" data-cash-delete="${esc(r.id)}">Delete</button>`:''}</article>`).join('')+`<div class="cash-book-total"><small>Total Available Cash</small><strong>${money(book.available)}</strong></div>`;
+  $('cashDate').onchange=e=>{date=e.target.value||today();render()};$('actions').innerHTML=`${owner()||date===today()?'<button data-cash-add>＋ Cash Add / Aya</button><button data-custody-transfer>Cash diya</button>':''}<button data-daily>Daily Sale</button>`;
+ }else if(view==='chart'){
+  const d=chartData(),max=d.groups[0]?.total||1;$('summary').innerHTML=`<div><small>${chartMode==='day'?'Din':'Mahina'} ka kharcha + party payments</small><strong>${money(d.total)}</strong></div>`;
+  $('list').innerHTML=`<div class="chart-controls"><label>Chart<select id="chartMode"><option value="day" ${chartMode==='day'?'selected':''}>Din wise</option><option value="month" ${chartMode==='month'?'selected':''}>Mahina wise</option></select></label><label>Tareekh<input id="chartDate" type="${chartMode==='day'?'date':'month'}" value="${chartMode==='day'?chartDate:chartDate.slice(0,7)}"></label></div><p>Sab se zyada raqam upar. Party payments aur samaan ki khareed bhi shamil hain.</p><div class="expense-chart">${d.groups.map(g=>`<div class="chart-item"><div><b>${esc(groupName(g))}</b><strong>${money(g.total)}</strong></div><small>${esc(TYPES[g.kind])}</small><div class="chart-track"><div style="width:${g.total/max*100}%"></div></div></div>`).join('')||'<p>Is muddat mein kharcha nahi.</p>'}</div>`;
+  $('chartMode').onchange=e=>{chartMode=e.target.value;render()};$('chartDate').onchange=e=>{chartDate=(e.target.value||today())+(e.target.value?.length===7?'-01':'');render()};$('actions').innerHTML='<button data-expenses-back>Akhrajat wapas</button>';
+ }else{
+  const due=view==='due',rs=reminderRows(),ps=due?rs.map(r=>party(r.partyId)):parties().filter(p=>p.dasti&&accountMatches(p,q)).sort((a,b)=>a.name.localeCompare(b.name));
+  $('summary').innerHTML=`<div><small>${due?'Due Accounts':'Dasti Payment'} · ${ps.length} accounts</small><strong>${money(ps.reduce((n,p)=>n+Math.max(0,balance(p,es)),0))}</strong><small>Lene ka baqaya</small></div>`;
+  $('list').innerHTML=(due?`<label>Accounts<select id="dueFilter"><option value="due" ${dueFilter==='due'?'selected':''}>Aaj due / Late</option><option value="all" ${dueFilter==='all'?'selected':''}>Sab reminders / Agli tareekhein</option></select></label><p>Reminders app mein dikhte hain. Phone notification ya message khud nahi bheja jata.</p>`:'<p>Yehi accounts main Khata mein bhi hain. Entries aur baqaya ek hi hain.</p>')+ps.map(p=>{const r=all('reminder').find(r=>r.partyId===p.id),b=balance(p,es),col=es.filter(e=>e.partyId===p.id&&e.kind==='collection').reduce((n,e)=>n+e.amount,0);return `<article class="due-card"><button class="party" data-party="${esc(p.id)}"><span class="name"><b>${esc(p.name)}</b><small>${esc(p.phone)}</small></span><span><b>${money(Math.abs(b))}</b><small>${b>=0?'Lene hain':'Dene hain'}</small></span></button><p>Wasooli jama: ${money(col)}</p>${r?`<p class="${r.dueDate<today()?'red':''}">${r.dueDate<today()?'Late':r.dueDate===today()?'Aaj due':'Due'}: ${esc(r.dueDate)} · ${repeats[r.repeat]}</p><p>${esc(r.note||'')}</p>`:''}<div class="account-tools"><button data-collect-party="${esc(p.id)}">Wasooli</button>${canRemind()?`<button data-reminder="${esc(p.id)}">${r?'Reminder edit':'Reminder lagayein'}</button>${r?`<button data-next-reminder="${esc(r.id)}">${r.repeat==='once'?'Reminder mukammal':'Agli due date'}</button><button data-remove-reminder="${esc(r.id)}">Reminder hataein</button>`:''}`:''}${!due&&canEditAccount()?`<button data-account-transfer>⇄ Payment transfer</button><button data-dasti-toggle="${esc(p.id)}">Dasti se nikalein</button>`:''}</div></article>`}).join('')+(ps.length?'':'<div class="empty">Abhi koi account nahi.</div>');
+  if(due)$('dueFilter').onchange=e=>{dueFilter=e.target.value;render()};$('actions').innerHTML=owner()?'<button data-include-dasti>Account Dasti mein shamil karein</button><button data-reminder-new>＋ Reminder</button>'+(due?'':'<button data-add>＋ Naya account</button>'):((canEditAccount()?'<button data-include-dasti>Account Dasti mein shamil karein</button>':'')+(canRemind()?'<button data-reminder-new>＋ Reminder</button>':'')+'<button data-daily>Daily Sale</button>');
+ }
+}
+let transferSaving=false;
+function entryLabel(e){if(!e.transferId)return TYPES[e.kind];return e.transferRole==='out'?'⇄ Transfer → '+(party(e.toPartyId)?.name||e.toName||'Account'):'⇄ Transfer ← '+(party(e.fromPartyId)?.name||e.fromName||'Account')}
+function transferEntryActions(e){return owner()&&!isPosted(e)?`<button data-transfer-edit="${esc(e.id)}">Edit</button> <button class="danger" data-transfer-delete="${esc(e.id)}">Delete</button>`:''}
+async function commitAccountTransfer(request){
+ if(!(owner()||(canEditAccount()&&!request.remove&&(request.rev??0)===0))||!loaded)throw Error('Is transfer ki ijazat nahi (mulazim sirf aaj ka naya transfer)');
+ if(transferSaving||optimistic.pending()||pendingDrafts.size)throw Error('Pehli entry Sync hone dein, phir transfer karein');
+ const uid=session.user.uid,state=optimistic;transferSaving=true;$('syncStatus').textContent='Transfer save ho raha hai…';
+ try{
+  const pair=await cloud.saveTransfer(request);
+  if(session?.user.uid!==uid||optimistic!==state)return false;
+  // A server-confirmed pair stays together even if a preceding snapshot arrives late.
+  state.seed(records);for(const row of pair){if(state.has(row.id))state.reject(row.id);records=state.begin(row);}for(const row of pair)records=state.accept(row.id);
+  render();$('syncStatus').textContent=localMode?'Transfer is device par saved':'Transfer Cloud par save ho gaya';return true;
+ }catch(e){if(session?.user.uid===uid)$('syncStatus').textContent='Transfer confirm nahi hua · Dobara koshish karein';throw e}
+ finally{transferSaving=false}
+}
+function accountTransferForm(existing=null){
+ if(!owner()&&(existing||!canEditAccount()))return;if(transferSaving){notice('Transfer save ho raha hai');return}
+ const source=party(existing?.fromPartyId||selected);if(!source){notice('Pehle source account kholein');return}
+ const transferId=existing?.transferId||crypto.randomUUID();
+ modal(existing?'⇄ Transfer edit':'⇄ Payment transfer',`<form>
+  <p>Is account se: <b>${esc(source.name)}</b></p>
+  <label>Doosra account / supplier<input id="transferPartyQuery" type="search" placeholder="Naam / mobile search"></label>
+  <div id="transferPartyResults" class="picker"></div><select id="transferPartySelect" required aria-label="Transfer account"></select>
+  <label>Raqam Rs<input name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" required value="${existing?existing.amount/100:''}"></label>
+  <label>Tareekh<input name="date" type="date" required value="${esc(existing?.date||today())}"${owner()?'':` readonly min="${today()}" max="${today()}"`}></label>
+  <label>Note<textarea name="note" maxlength="1000">${esc(existing?.note||'')}</textarea></label>
+  <label><input type="checkbox" name="posPending" ${existing?.posPending?'checked':''}> Computer (POS) mein daalni hai</label>
+  <p id="transferPreview" class="transfer-preview" aria-live="polite"></p>
+  <p>Supplier ko payment se us ka dene wala baqaya kam hoga. Closing Cash aur Daily Sale mein dobara raqam nahi lagegi.</p>
+  <button type="submit">${existing?'Dono entries update karein':'Transfer save karein'}</button>
+  ${existing?'<button type="button" id="deleteTransfer" class="danger">Transfer delete karein</button>':''}
+ </form>`);
+ mountPartyPicker('transferParty',existing?.toPartyId||'');
+ const select=$('transferPartySelect'),form=$('dialogBody').querySelector('form');
+ [...select.options].find(o=>o.value===source.id)?.remove();
+ const show=()=>{
+  const target=party(select.value);if(!target||target.id===source.id){$('transferPreview').textContent='Doosra account select karein';return}
+  try{const amount=cents(form.elements.amount.value),without=entries().filter(e=>!existing||e.transferId!==existing.transferId),label=n=>money(Math.abs(n))+(n<0?' dene hain':n>0?' lene hain':' · barabar');
+   $('transferPreview').textContent='Transfer ke baad: '+source.name+' — '+label(rawBalance(source,without)-amount)+'; '+target.name+' — '+label(rawBalance(target,without)+amount);
+  }catch{$('transferPreview').textContent='Raqam durust likhein'}
+ };
+ form.addEventListener('input',show);select.addEventListener('change',show);$('transferPartyResults').addEventListener('click',show);show();
+ formSave(async f=>{const request={id:transferId,rev:existing?.rev||0,fromPartyId:source.id,toPartyId:select.value,amount:cents(f.elements.amount.value),date:f.elements.date.value,note:f.elements.note.value,posPending:!!(f.elements.posPending&&f.elements.posPending.checked),posVoucher:existing?.posVoucher||''};
+  if(!party(request.toPartyId)||source.id===request.toPartyId||request.amount<=0)throw Error('Doosra account aur raqam select karein');
+  if(await commitAccountTransfer(request)){if(form.isConnected)$('dialog').close();notice('Transfer ki dono entries save ho gayi hain')}
+ });
+ if(existing)$('deleteTransfer').onclick=()=>deleteAccountTransfer(existing,form);
+}
+async function deleteAccountTransfer(entry,form=null){
+ if(!owner()||!entry?.transferId||transferSaving)return;
+ if(!confirm(entryLabel(entry)+' · '+money(entry.amount)+'\nTransfer delete karein? Dono khaton ka balance wapas ho jayega.'))return;
+ try{if(await commitAccountTransfer({id:entry.transferId,rev:entry.rev,remove:true})){if(form?.isConnected)$('dialog').close();notice('Transfer ki dono entries delete ho gayi hain')}}catch(e){error(e)}
+}
+document.querySelector('main').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+ if('accountTransfer' in b.dataset)accountTransferForm();
+ if(b.dataset.transferEdit){const r=entries().find(r=>r.id===b.dataset.transferEdit);if(r)accountTransferForm(r)}
+ if(b.dataset.transferDelete){const r=entries().find(r=>r.id===b.dataset.transferDelete);if(r)void deleteAccountTransfer(r)}
+});
+
+function mountPartyPicker(prefix,selectedId='',includeShop=false){
+ const query=$(prefix+'Query'),result=$(prefix+'Results'),select=$(prefix+'Select');
+ const options=()=>[...(includeShop?[{id:'shop',name:'Dukan',phone:''}]:[]),...parties()];
+ select.innerHTML='<option value="">Account select karein</option>'+options().map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');select.value=selectedId;
+ query.oninput=()=>{const l=rankList(options(),query.value,'any',40);result.innerHTML=(l.length?chipHead(query.value):'')+l.map(p=>`<button type="button" data-choice="${esc(p.id)}">${esc(p.name)}${p.phone?' · '+esc(p.phone):''}</button>`).join('')};query.oninput();result.onclick=e=>{const b=e.target.closest('[data-choice]');if(b){notePartyPick(b.dataset.choice);select.value=b.dataset.choice;query.value='';result.innerHTML=''}};
+}
+function pickerHTML(prefix,label){return `<label>${label}<input id="${prefix}Query" type="search" placeholder="Naam / mobile / notes search"></label><div id="${prefix}Results" class="picker"></div><select id="${prefix}Select" aria-label="${label}" required></select>`}
+function cashBookRows(book){const q=norm($('search').value);return [...book.rows].reverse().filter(r=>!q||norm(r.label+' '+custodyName(r.partyId)+' '+custodyName(r.from)+' '+custodyName(r.to)+' '+r.note).includes(q))}
+function balanceLabel(p){const b=balance(p,entries());return money(Math.abs(b))+(b>0?' · Lena hai':b<0?' · Dena hai':'');}
+function cashRecordAction(rowId,remove=false){
+ const row=cashLedger(records).rows.find(r=>r.id===rowId);if(!row||row.source!=='move')return;if(!owner()){notice('Cash entry Edit / Delete malik karein');return}if(optimistic.pending()||pendingDrafts.size){notice('Pehla save Sync hone dein');return}
+ const isClosing=row.source==='closing',split=rowId.lastIndexOf(':'),id=isClosing?rowId:rowId.slice(0,split),index=isClosing?-1:Number(rowId.slice(split+1)),record=records.find(r=>r.id===id);if(!record)return;
+ const commit=async(amount,note,newParty)=>{let next;if(isClosing){next={...record};if(remove){delete next.cash;delete next.cashRows;if(!['opening','change'].some(k=>next[k]!=null))next={...record,deleted:true}}else{next.cash=amount;next.cashRows=[amount]}}else{const moves=record.moves.map(m=>({...m}));if(remove)moves.splice(index,1);else moves[index]={...moves[index],amount,note,...(newParty!==undefined?{to:newParty||'external'}:{})};next={...record,moves}}const changed=[...records.filter(r=>r.id!==id),next];if(cashLedger(changed).rows.some(r=>r.date>=row.date&&r.balance<0))throw Error('Is tabdeeli se baqi cash manfi ho jayegi. Pehle related cash record durust karein.');await save(next,record);render()};
+ if(remove){if(confirm(row.date+' · '+row.label+' · '+money(row.incoming||row.outgoing||row.amount)+'\nSirf cash book ki yeh entry delete karein? Available cash dobara calculate hoga. Doosre account ki entry nahi badlegi.'))commit().catch(error);return}
+ modal('Cash entry edit · '+row.date,`<form><label>Raqam Rs<input name="amount" type="number" min="${isClosing?'0':'0.01'}" step="0.01" required value="${(row.incoming||row.outgoing||row.amount||0)/100}"></label>${!isClosing?`<label>Notes<textarea name="note" required maxlength="1000">${esc(row.note)}</textarea></label>${row.outgoing?`<label>Account<input id="cashEdQuery" type="search" placeholder="Naam / mobile search"></label><div id="cashEdResults" class="picker"></div><select id="cashEdSelect" aria-label="Account"></select>`:''}`:'<p>Is se Daily Sale ki Closing Cash bhi update hogi. Change ki ginti mehfooz rahegi.</p>'}<button type="submit">Save changes</button><button type="button" class="danger" id="deleteCashPayment">Cash record delete</button></form>`);$('deleteCashPayment').onclick=()=>cashRecordAction(rowId,true);if($('cashEdSelect'))mountPartyPicker('cashEd',row.partyId&&row.partyId!=='external'?row.partyId:'');formSave(f=>{const amount=cents(f.elements.amount.value);if(!isClosing&&amount<=0)throw Error('Raqam likhein');const np=$('cashEdSelect')?$('cashEdSelect').value:undefined;return commit(amount,f.elements.note?.value.trim()||'',np)});
+}
+function custodyForm(direction='out',presetParty=''){
+ const day=date,record=all('cashCustody').find(r=>r.date===day),moves=record?.moves||[],incoming=direction==='in';
+ modal(incoming?'Cash Add / Aya':'Cash diya',`<form><p>Tareekh: ${esc(day)} · Total Available Cash: <b>${money(cashLedger(records,day).available)}</b></p>${incoming?'':`<label>Account (khali chhor sakte hain)<input id="cashPartyQuery" type="search" placeholder="Naam / mobile search"></label><div id="cashPartyResults" class="picker"></div><select id="cashPartySelect" aria-label="Account"></select><p id="cashPartyBal"></p>`}<label>Notes / Tafseel<textarea name="note" required maxlength="1000" placeholder="Kis ko diya / kahan se aya / wajah likhein"></textarea></label><label>Raqam Rs<input name="amount" type="number" min="0.01" step="0.01" required inputmode="decimal"></label><p>${incoming?'Raqam available cash mein jama hogi. Aaj ki Closing Cash yahan dobara add na karein.':'Raqam Total Available Cash se minus aur chune hue account mein save hogi. Baad mein account ki entry edit/delete karne se cash nahi badlega.'}</p><button type="submit">Save cash record</button></form>`);
+ if(!incoming){mountPartyPicker('cashParty',presetParty);const bal=$('cashPartyBal'),sel=$('cashPartySelect');const show=()=>{const pp=party(sel.value);bal.textContent=pp?('Is account ka balance: '+balanceLabel(pp)):''};sel.addEventListener('change',show);show()}
+ formSave(async f=>{if(optimistic.pending()||pendingDrafts.size)throw Error('Pehle Pending Sync khali hone dein. Agar koi entry "Save nahi hua" dikha rahi hai to page refresh karein, phir dobara koshish karein.');const note=f.elements.note.value.trim();if(!note)throw Error('Notes / tafseel likhein');const amt=cents(f.elements.amount.value);const pid=incoming?'':($('cashPartySelect')?.value||'');const ref=pid?('cp'+crypto.randomUUID()):'';const move=ref?{amount:amt,at:Date.now(),from:'shop',note,ref,to:pid}:{amount:amt,at:Date.now(),from:incoming?'external':'shop',note,to:incoming?'shop':'external'};const next=appendCashMove(records,day,moves,move);await save({...record,id:'custody-'+day,type:'cashCustody',date:day,moves:next},record);render()});
+}
+function includeDasti(){if(!canEditAccount())return;modal('Account Dasti mein shamil karein',`<form>${pickerHTML('dasti','Account search')}<button type="submit">Shamil karein</button></form>`);mountPartyPicker('dasti');formSave(async()=>{const p=party($('dastiSelect').value);if(!p)throw Error('Account select karein');await save({...p,dasti:true},p);render()})}
+function reminderForm(pid=''){if(!canRemind())return;const existing=records.find(r=>r.id==='reminder-'+pid),active=existing&&!existing.deleted?existing:null;modal('Reminder / Due date',`<form>${pickerHTML('remind','Account')}<label>Pehli / agli due date<input name="due" type="date" value="${active?.dueDate||today()}" required></label><label>Repeat<select name="repeat">${Object.entries(repeats).map(([v,label])=>`<option value="${v}" ${active?.repeat===v?'selected':''}>${label}</option>`).join('')}</select></label><label>Note<textarea name="note" maxlength="1000">${esc(active?.note||'')}</textarea></label><button type="submit">Save reminder</button></form>`);mountPartyPicker('remind',pid);if(pid){$('remindSelect').disabled=true;$('remindQuery').disabled=true;}formSave(async f=>{const id=pid||$('remindSelect').value;if(!party(id))throw Error('Account select karein');const old=records.find(r=>r.id==='reminder-'+id);if(!pid&&old&&!old.deleted)throw Error('Is account ka reminder pehle hai. Due Accounts mein Reminder edit kholein.');await save({...old,id:'reminder-'+id,type:'reminder',partyId:id,date:today(),anchorDate:active&&active.dueDate===f.elements.due.value&&active.repeat===f.elements.repeat.value?active.anchorDate:f.elements.due.value,dueDate:f.elements.due.value,repeat:f.elements.repeat.value,note:f.elements.note.value,deleted:false},old);render()})}
+document.querySelector('main').addEventListener('click',async e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;try{
+ if(d.cashEdit)cashRecordAction(d.cashEdit);if(d.cashDelete)cashRecordAction(d.cashDelete,true);if('cashKhata'in d)route('cash');if('due'in d)route('due');if('chart'in d)route('chart');if('expensesBack'in d)route('expenses');if('custodyTransfer'in d)custodyForm();if('cashAdd'in d)custodyForm('in');if('cashPay'in d)custodyForm('out',selected||'');if(d.custodyDay){date=d.custodyDay;render()}
+ if(d.collectParty)entryForm('collection',d.collectParty);if(d.reminder)reminderForm(d.reminder);if('reminderNew'in d)reminderForm();if('includeDasti'in d)includeDasti();
+ if(d.partyPhoto){partyPhotoForm(d.partyPhoto);return}
+ if(d.dastiToggle&&canEditAccount()){const p=party(d.dastiToggle);b.disabled=true;await save({...p,dasti:!p.dasti},p);render()}
+ if((d.removeReminder||d.nextReminder)&&canRemind()){const r=all('reminder').find(r=>r.id===(d.removeReminder||d.nextReminder));if(!r)return;if(!confirm(d.removeReminder?'Reminder hata dein? Khata mehfooz rahega.':'Is reminder ko mukammal karke agli due date lagayein?'))return;b.disabled=true;const next=d.nextReminder?nextReminder(r.anchorDate,r.repeat,r.dueDate>today()?r.dueDate:today()):null;await save({...r,...(next?{dueDate:next}:{deleted:true})},r);render()}
+ if('undoCustody'in d&&owner()){const {record,moves}=cashState();if(record&&confirm('Aakhri transfer wapas karein?')){b.disabled=true;await save({...record,moves:moves.slice(0,-1)},record);render()}}
+ }catch(err){b.disabled=false;error(err)}});
+function financeReport(){let heading='',headers=[],rows=[],sub='';const es=entries();
+ if(view==='cash'){const book=cashLedger(records,date),c=closings().find(c=>c.date===date);heading='Cash ka khata · '+date;headers=['Tareekh','Record','Notes / Tafseel','Aayi','Gayi','Baqi Cash'];sub='Is din closing '+money(c?.cash||0)+' · Total Available '+money(book.available)+' · Jama '+money(book.incoming)+' · Di '+money(book.outgoing);rows=cashBookRows(book).map(r=>[r.date,(r.partyId&&r.partyId!=='external'?custodyName(r.partyId)+' · ':'')+r.label,r.note,money(r.incoming),money(r.outgoing),money(r.balance)]);}
+ else if(view==='chart'){const d=chartData();heading='Akhrajat Chart';headers=['Account','Qism','Raqam'];sub=(chartMode==='day'?chartDate:chartDate.slice(0,7))+' · Total '+money(d.total);rows=d.groups.map(g=>[groupName(g),TYPES[g.kind],money(g.total)].map(text=>({text,tone:pdfTone(g)})));}
+ else{heading=view==='due'?'Due Accounts':'Dasti Payment';headers=['Account / Mobile','Lena','Dena','Wasooli jama','Due date / Repeat'];const ps=view==='due'?reminderRows().map(r=>party(r.partyId)):parties().filter(p=>p.dasti&&accountMatches(p,$('search').value)).sort((a,b)=>a.name.localeCompare(b.name));rows=ps.map(p=>{const b=balance(p,es),r=all('reminder').find(r=>r.partyId===p.id);return [p.name+' · '+(p.phone||''),money(Math.max(0,b)),money(Math.max(0,-b)),money(es.filter(e=>e.partyId===p.id&&e.kind==='collection').reduce((n,e)=>n+e.amount,0)),r?r.dueDate+' · '+repeats[r.repeat]:''].map(text=>({text,tone:'green'}))});sub='As of '+today();}
+ $('printArea').innerHTML=`<h1>Sam · Noor Traders</h1><h2>${esc(heading)}</h2><p>${esc(sub)}</p><table class="${view==='daily'?'tight':''}"><thead><tr>${headers.map(h=>'<th>'+esc(h)+'</th>').join('')}</tr></thead><tbody>${rows.map(r=>'<tr>'+r.map(pdfCell).join('')+'</tr>').join('')}</tbody></table>`;openReportPreview(heading);
+}
+
+function canEditPurchase(e){return !!session&&e?.purchase===true&&!e.deleted&&!isPosted(e)&&(owner()||e.date===today())}
+// ---------- v1.71: POS purchase <-> larke ki cash purchase ko EK bill samajhna ----------
+// Link cash-purchase entry par field posBill = POS entry ki id ('pos-<PurchaseID>'). posDiffOk = malik ne kaha farq asal hai.
+const isPosPurchase=e=>e.purchase===true&&e.kind==='borrow'&&String(e.id).startsWith('pos-')&&!e.deleted;
+const dayDiff=(a,b)=>Math.abs((Date.parse(a)-Date.parse(b))/86400000);
+function cashLinkedTo(pos){return entries().find(e=>e.kind==='purchaseCash'&&!e.deleted&&e.posBill===pos.id)}
+function cashCandidates(pos){return entries().filter(e=>e.kind==='purchaseCash'&&!e.deleted&&!e.posBill&&e.partyId===pos.partyId&&dayDiff(e.date,pos.date)<=7)}
+// v1.79.2: doosri party ki cash purchase — sirf malik ko, sirf bilkul barabar raqam, aur confirm ke baad
+function otherPartyCandidates(pos){return entries().filter(e=>e.kind==='purchaseCash'&&!e.deleted&&!e.posBill&&e.partyId!==pos.partyId&&e.amount===pos.amount&&dayDiff(e.date,pos.date)<=3)}
+function pickCandidates(pos){return [...cashCandidates(pos),...(owner()?otherPartyCandidates(pos):[])].filter(canLinkCash)}
+function canLinkCash(c){return !!session&&(owner()||c.date===today())}
+// v1.79.2: POSTED entry par sirf POS-link jorna / alag karna — baqi sab band (rules bhi yahi kehte hain)
+function isLinkOnlyChange(data,existing){if(!existing)return false;const free=['posBill','posDiffOk','updatedAt','updatedBy','rev'];for(const k of new Set([...Object.keys(data||{}),...Object.keys(existing)])){if(free.includes(k))continue;if(JSON.stringify(data?.[k])!==JSON.stringify(existing[k]))return false}return true}
+const autoLinkTried=new Set();
+async function autoLinkPurchases(){if(!session||!loaded)return;for(const pos of entries().filter(isPosPurchase)){if(cashLinkedTo(pos)||autoLinkTried.has(pos.id))continue;const same=cashCandidates(pos).filter(c=>c.amount===pos.amount&&canLinkCash(c));if(same.length!==1)continue;try{await save({...same[0],posBill:pos.id},same[0]);autoLinkTried.add(pos.id)}catch(err){autoLinkTried.add(pos.id);notice('POS bill '+money(pos.amount)+' khud nahi jur saka: '+(err?.code==='permission-denied'?'ijazat nahi mili (rules / POS mein posted)':(err?.message||'error'))+' — "Milao" se haath se jorein');console.warn('autoLink fail',pos.id,err)}}}
+function linkForm(pos){const same=cashCandidates(pos).filter(canLinkCash),other=owner()?otherPartyCandidates(pos).filter(canLinkCash):[],cands=[...same,...other];if(!cands.length){notice('7 din ke andar is party ki koi khaali cash purchase nahi mili. Pehle larke ki cash purchase entry check karein (ya us par pehle se koi POS bill juda hua hai).');return}
+ const pickRow=(c,i,showParty)=>`<label class="pick-row"><input type="radio" name="c" value="${esc(c.id)}"${i===0?' checked':''}> <b>${money(c.amount)}</b> · ${esc(c.date)}${showParty?` · <b class="red">${esc(party(c.partyId)?.name||'Supplier')}</b>`:''}${c.amount!==pos.amount?` · <span class="red">farq ${money(Math.abs(c.amount-pos.amount))}</span>`:''}${photoHTML(c)}</label>`;
+ modal('Milao — '+(party(pos.partyId)?.name||'')+' · '+money(pos.amount),`<form><p>POS bill ${esc(pos.note||'')} · ${esc(pos.date)} · <b>${money(pos.amount)}</b></p>${same.length?`<p>Isi party ki cash purchase:</p>${same.map((c,i)=>pickRow(c,i,false)).join('')}`:'<p class="stat-note">Isi party ki koi khaali cash purchase nahi mili.</p>'}${other.length?`<p class="red"><b>Doosri party ki barabar raqam</b> — sirf tab chunein jab larke ne POS par ghalat supplier laga diya ho:</p>${other.map((c,i)=>pickRow(c,same.length?1:i,true)).join('')}`:''}<button type="submit">Jorein</button></form>`);
+ formSave(async f=>{const c=entries().find(x=>x.id===f.elements.c.value);if(!c)throw Error('Cash purchase chunein');if(c.partyId!==pos.partyId&&!confirm('Yeh cash purchase "'+(party(c.partyId)?.name||'')+'" ki hai, jabke POS bill "'+(party(pos.partyId)?.name||'')+'" ka hai.\n\nDono alag supplier hain — phir bhi jorein?'))throw Error('Nahi jora.');await save({...c,posBill:pos.id},c)})}
+function linkedHTML(pos,c){const diff=c.amount-pos.amount;const diffLine=diff===0?'':`<p class="link-diff">POS bill <b>${money(pos.amount)}</b> · Cash diya <b>${money(c.amount)}</b> · <b class="red">${diff<0?'Baqi '+money(-diff)+' dena':money(diff)+' zyada diya'}</b>${c.posDiffOk?' · ✓ farq asal hai':''}</p>${owner()&&!c.posDiffOk?`<button data-link-fix="${esc(c.id)}">Larke ki ghalti — POS wali raqam sahi</button><button data-link-ok="${esc(c.id)}">Farq asal hai</button>`:''}`;
+ return `<small class="link-ok">✓ Cash ada — larke ki entry ${esc(c.date)}</small>${diffLine}${photoHTML(c)}${receiptButton(c)}${owner()?`<button data-link-undo="${esc(c.id)}">Alag karein</button>`:''}`}
+function renderPurchases(){void autoLinkPurchases();const list=entries().filter(e=>e.purchase===true&&matches(e)),cash=list.filter(e=>e.kind==='purchaseCash').reduce((n,e)=>n+e.amount,0),credit=list.filter(e=>e.kind==='borrow').reduce((n,e)=>n+e.amount,0);const hide=new Set(),linkOf=new Map();for(const p of list.filter(isPosPurchase)){const c=cashLinkedTo(p);if(c){hide.add(c.id);linkOf.set(p.id,c)}}const pending=list.filter(p=>isPosPurchase(p)&&!linkOf.has(p.id)&&pickCandidates(p).length).length;lastPurchasePending=pending;$('summary').innerHTML=`<div><small>💵 Cash purchase</small><strong>${money(cash)}</strong></div><div><small>🧾 Credit purchase</small><strong>${money(credit)}</strong></div>`;$('list').innerHTML='<p>Purchase records. Mulazim sirf aaj ki purchase add, edit ya delete kar sakta hai.</p>'+(pending?`<p class="link-pending">🔗 <b>${pending}</b> POS bill${pending>1?'s':''} abhi milane hain (neeche "Milao").</p>`:'')+list.filter(e=>!hide.has(e.id)).map(e=>{const c=linkOf.get(e.id);const cands=!c&&isPosPurchase(e)?pickCandidates(e):[];return `<article class="ledger-item${c?' linked':''}"><b>${esc(party(e.partyId)?.name||'Supplier')}</b><strong>${money(e.amount)}</strong><small>${esc(e.date)} · ${e.kind==='purchaseCash'?'Cash':c?'Credit bill · <b>Cash ada ✓</b>':'Credit'}</small><p>${esc(e.note||'')}</p>${postBadgeHTML(e)}${c?linkedHTML(e,c):photoHTML(e)+receiptButton(e)}${e.id.startsWith('pos-')?`<button data-bill="${esc(e.id)}">Bill dekhein</button>`:''}${e.items?.length?`<button data-parchi="${esc(e.id)}">📄 Parchi</button>`:''}<button data-print-purchase="${esc(e.id)}">🖨️ Print</button>${(()=>{const pc=e.kind==='purchaseCash'?e:c;return canTally()&&pc?.billPhotos?.length?`<button data-photo-compare="${esc(pc.id)}">🤖 Tasveer se items parho</button>`:''})()}${!c&&isPosPurchase(e)?`<button data-link-pick="${esc(e.id)}">🔗 Milao${cands.length?` (${cands.length})`:''}</button>`:''}${canEditPurchase(e)?`<button data-edit-purchase="${esc(e.id)}">Edit</button><button class="danger" data-delete="${esc(e.id)}">Delete</button>`:''}</article>`}).join('');const openToday=owner()?entries().filter(x=>isPosPurchase(x)&&x.date===today()&&!isPosted(x)&&Number(x.posStatus)!==3):[];$('actions').innerHTML=(canPP()?'<button class="got" data-pp-open>🧾 POS Purchase</button>':'')+'<button data-purchase>＋ Purchase</button><button data-purchase-supplier>＋ Supplier</button>'+(openToday.length?`<button data-post-today>📌 Aaj ke ${openToday.length} bill post</button>`:'')}
+async function showBill(id){
+ modal('Purchase bill','<p>Bill load ho raha hai…</p>');
+ try{
+  const b=await cloud.purchaseBill(id);
+  if(!b||!Array.isArray(b.lines)||!b.lines.length){$('dialogBody').innerHTML='<p>Is purchase ka bill abhi POS se nahi aaya. Thori der baad dekhein.</p>';return}
+  const rate=l=>[l.ctn!=null?money(l.ctn)+' / '+esc(l.cName||'Ctn'):'',l.pcs!=null?money(l.pcs)+' / '+esc(l.uName||'Pcs'):''].filter(Boolean).join('<br>');
+  const qty=l=>`${esc(String(l.qty??''))} ${esc(l.cName||'Ctn')} + ${esc(String(l.loose??0))} ${esc(l.uName||'Pcs')}`+(l.totalPcs?`<br><small>= ${esc(String(l.totalPcs))} ${esc(l.uName||'Pcs')}</small>`:'')+(l.bonus?`<br><small>Bonus ${esc(String(l.bonus))}</small>`:'');
+  // v1.77: har item ke POS ke maujooda SALE rate (NOOR TRADERS ke stock data se, code se milaya)
+  let posItems=[];try{const s=saleStock();posItems=s.itemsFor(s.branches.includes(1)?1:s.branches[0])||[]}catch{}
+  // v1.79.1: pehle naam + code, phir sirf naam; code akela sirf tab jab naam se kuch na mile aur code ek hi item ka ho (barcode takrao se ghalat rate aata tha)
+  const nm=x=>String(x||'').trim().toLowerCase().replace(/\s+/g,' ');
+  const codesOf=r=>[r.code,...(Array.isArray(r.bc)?r.bc:[])].map(x=>String(x||'').trim()).filter(Boolean);
+  const findIt=l=>{const c=String(l.code||'').trim(),n=nm(l.name);const byName=posItems.filter(r=>nm(r.name)===n);if(byName.length){return byName.find(r=>codesOf(r).includes(c))||(byName.length===1?byName[0]:null)}const byCode=posItems.filter(r=>codesOf(r).includes(c));return byCode.length===1&&String(byCode[0].code||'').trim()===c?byCode[0]:null};
+  const saleHTML=l=>{const it=findIt(l);if(!it)return '<div class="bill-sale"><span>Sale rate nahi mila</span></div>';const pk=Number(it.pack)||0,pc=Number(it.rate2)||Number(it.rate)||0,ct=(Number(it.rate)||0)*(pk>1?pk:1),w=Number(it.wrate)||0,wc=w*(pk>1?pk:1);
+   return `<div class="bill-sale"><span>Sale: <b>${money(ct)}</b>/${esc(l.cName||'Ctn')} · <b>${money(pc)}</b>/${esc(l.uName||'Pcs')}</span>${w?`<span>Wholesale: <b>${money(wc)}</b>/${esc(l.cName||'Ctn')} · <b>${money(w)}</b>/${esc(l.uName||'Pcs')}</span>`:''}</div>`};
+  const rows=b.lines.map(l=>`<tr><td>${esc(l.name)}${l.code?`<br><small>${esc(l.code)}</small>`:''}${saleHTML(l)}</td><td>${esc(l.godam||'')}</td><td>${qty(l)}</td><td><small>Khareed</small><br>${rate(l)}</td><td>${money(l.total)}</td></tr>`).join('');
+  const sum=b.lines.reduce((n,l)=>n+l.total,0);
+  const ent=entries().find(x=>x.id===id);
+  $('dialogBody').innerHTML=`<p class="stat-note">${esc(b.partyName||'')} · ${esc(b.date||'')}${b.billNo?' · Bill '+esc(b.billNo):''}${Number(b.status||ent?.posStatus)===2?' · <b>📌 Posted</b>':Number(b.status)===3?' · ✖ Cancelled':' · khula (unposted)'}</p>
+   <div class="sheet-scroll"><table class="daily-table"><thead><tr><th>Item</th><th>Godam</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead><tbody>${rows}</tbody></table></div>
+   <p class="stat-note">Items ka jama ${money(sum)}${b.discount?' · Discount '+money(b.discount):''}${b.tax?' · Tax '+money(b.tax):''}</p>
+   <p><strong>Bill total ${money(b.net??sum)}</strong></p>
+   <div class="form-actions"><button type="button" id="billPdf">⇩ PDF / Share</button><button type="button" id="billPrint">🖨️ Print</button></div>`;
+  $('billPrint').onclick=()=>{if(!cloud?.requestPrint)return;$('billPrint').disabled=true;cloud.requestPrint({kind:'purchase',id,partyName:b.partyName||''}).then(()=>notice('🖨️ PC ko bheja…')).catch(error).finally(()=>{const x=$('billPrint');if(x)x.disabled=false})};
+  $('billPdf').onclick=()=>{
+   $('printArea').innerHTML=`<h1>NOOR TRADERS</h1><h2>Purchase bill${b.billNo?' '+esc(b.billNo):''}</h2>
+    <p>${esc(b.partyName||'')} · ${esc(b.date||'')}</p>
+    <table><thead><tr><th>Item</th><th>Godam</th><th>Qty</th><th>Rate</th><th>Total</th></tr></thead><tbody>
+    ${b.lines.map(l=>`<tr><td>${esc(l.name)}${l.code?' · '+esc(l.code):''}</td><td>${esc(l.godam||'')}</td><td>${esc(String(l.qty??''))} ${esc(l.cName||'Ctn')} + ${esc(String(l.loose??0))} ${esc(l.uName||'Pcs')}${l.totalPcs?' = '+esc(String(l.totalPcs))+' '+esc(l.uName||'Pcs'):''}</td><td>${l.ctn!=null?money(l.ctn)+' / '+esc(l.cName||'Ctn'):''}${l.ctn!=null&&l.pcs!=null?' · ':''}${l.pcs!=null?money(l.pcs)+' / '+esc(l.uName||'Pcs'):''}</td><td>${money(l.total)}</td></tr>`).join('')}
+    <tr><td colspan="4"><strong>Bill total</strong></td><td><strong>${money(b.net??sum)}</strong></td></tr>
+    </tbody></table>`;
+   openReportPreview('Bill-'+(b.billNo||id),{receipt:true});
+  };
+   if(canPP()){const posted=Number(b.docStatus)===2||Number(b.docStatus)===3||isPosted(ent),mine=owner()||b.date===today();let why='';if(!b.purchaseId||!b.stamp)why='Edit ke liye PC par nayi sync-bills.js lagayein (bill ki poori tafseel abhi nahi aati).';else if(Number(b.docStatus)===3)why='Yeh bill POS mein CANCEL hai.';else if(posted)why='Posted bill edit nahi hota — pehle malik Unpost kare.';else if(!mine)why='Mulazim sirf AAJ ka khula bill edit kar sakta hai.';$('dialogBody').insertAdjacentHTML('beforeend',why?`<p class="stat-note">✏️ ${esc(why)}</p>`:`<p><button type="button" class="got" id="billEditPP">✏️ POS Purchase screen mein Edit</button></p>`);if(!why)$('billEditPP').onclick=()=>{const r=ppLoadBill(b,ent);if(r==='cancel')return;if(r){alert(r);return}$('dialog').close();$('search').value='';route('ppurchase')}}
+   if(canTally()){const cash=cashLinkedTo({id});$('dialogBody').insertAdjacentHTML('beforeend',cash?.billPhotos?.length?`<p><button data-photo-compare="${esc(cash.id)}">🤖 Tasveer se milao (AI)</button></p>`:`<p class="stat-note">🤖 Tasveer se milan ke liye is bill se judi cash purchase par bill ki photo lagi honi chahiye.</p>`)}
+ }catch(e){$('dialogBody').innerHTML='<p>Bill nahi khula: '+esc(e?.message||'')+'</p>'}
+}
+function purchaseSupplierForm(){modal('Naya supplier','<form class="acct-form"><div class="af-sec"><div class="af-types one"><button type="button" class="on" tabindex="-1"><span class="af-ic">🏭</span>Supplier</button></div></div><label class="af-field"><small>Naam</small><input name="name" required maxlength="160" autocomplete="off" placeholder="Supplier ka poora naam"></label><div id="afSupSim"></div><div class="af-field"><small>Mobile</small><div class="af-row"><input name="phone" inputmode="tel" maxlength="30" autocomplete="off" placeholder="03xx xxxxxxx"><button type="button" id="afContacts" class="af-mini" hidden>📇 Contacts</button></div></div><button type="submit" class="af-save">✓ Supplier banayein</button></form>');{const f=$('dialogBody').querySelector('form'),box=$('afSupSim');let t=0;f.elements.name.oninput=()=>{clearTimeout(t);t=setTimeout(()=>{const nm=f.elements.name.value.trim();box.innerHTML=nm.length<3?'':parties().filter(x=>partyScore(x,nm)>=6).slice(0,2).map(x=>`<div class="af-warn">⚠️ <span>"${esc(x.name)}" pehle se hai</span></div>`).join('')},350)};const cb=$('afContacts');if(cb&&'contacts' in navigator&&'ContactsManager' in window){cb.hidden=false;cb.onclick=async()=>{try{const [c]=await navigator.contacts.select(['name','tel'],{multiple:false});if(!c)return;if(!f.elements.name.value.trim()&&c.name?.[0])f.elements.name.value=c.name[0];if(c.tel?.[0])f.elements.phone.value=String(c.tel[0]).replace(/\s+/g,'')}catch{}}}}formSave(async f=>{await cloud.addPurchaseSupplier(f.elements.name.value,f.elements.phone.value);$('dialog').close();notice('Supplier save ho gaya')})}
+// v2.6: 📥 Aaya hua maal ka PDF (data pos-stock.js se)
+function inMaalPdf(){const r=inReport();if(!r){notice('Kuch nahi aaya / gaya');return}
+ const cell=(x,tilde)=>`<td class="iv-n">${tilde?'~':''}${esc(x.c)}</td><td class="iv-n">${tilde?'~':''}${esc(x.p)}</td>`;
+ const rowsOf=g=>g.rows.map(x=>`<tr class="iv-${x.conf}"><td rowspan="${x.from?3:2}" class="iv-item"><b>${esc(x.name)}</b><br><small>${esc(x.date)}</small>${x.conf==='r'?'<br><small class="iv-bad">Stock mein nahi</small>':''}</td>
+   <td class="iv-lab">${x.from?'Gaya':'Bill se'}</td>${cell(x.gaya)}</tr>
+   ${x.from?`<tr class="iv-${x.conf}"><td class="iv-lab">${esc(x.from.name)}<br><small>pehle → ab</small></td><td class="iv-n">~${esc(x.from.pehle.c)} → ${esc(x.from.ab.c)}</td><td class="iv-n">~${esc(x.from.pehle.p)} → ${esc(x.from.ab.p)}</td></tr>`:''}
+   <tr class="iv-${x.conf}"><td class="iv-lab">${esc(x.to.name)}<br><small>pehle → ab</small></td><td class="iv-n">~${esc(x.to.pehle.c)} → ${esc(x.to.ab.c)}</td><td class="iv-n">~${esc(x.to.pehle.p)} → ${esc(x.to.ab.p)}</td></tr>`).join('');
+ $('printArea').innerHTML=`<h1>NOOR TRADERS</h1><h2>Aaya / gaya maal</h2>
+  <p>${esc(r.din)} · ${esc(r.branch)} · ${esc(r.at)}</p>
+  ${r.groups.map(g=>`<h3 class="iv-gh ${g.kind}">${g.kind==='tr'?'⇄':'🧾'} ${esc(g.title)} <small>(${g.rows.length}${g.red?` · ${g.red} stock mein nahi`:''})</small></h3>
+   <table class="iv-tbl"><thead><tr><th>Item</th><th></th><th>${esc(g.rows[0]?.cName||'CTN').toUpperCase()}</th><th>${esc(g.rows[0]?.uName||'PCS').toUpperCase()}</th></tr></thead><tbody>${rowsOf(g)}</tbody></table>`).join('')}`;
+ openReportPreview('Aaya gaya maal '+r.branch);}
+function purchaseReport(){const list=entries().filter(e=>e.purchase===true&&matches(e));$('printArea').innerHTML=`<h1>Sam · Noor Traders</h1><h2>Purchase report</h2><table><thead><tr><th>Tareekh</th><th>Supplier</th><th>Cash / Credit</th><th>Raqam</th><th>Note</th></tr></thead><tbody>${list.map(e=>'<tr>'+[e.date,party(e.partyId)?.name||'Supplier',e.kind==='purchaseCash'?'Cash':'Credit',money(e.amount),e.note||''].map(text=>pdfCell({text,tone:'blue'})).join('')+'</tr>').join('')}</tbody></table><section class="report-photo-gallery">${list.map(e=>['goodsPhotos','billPhotos','photos'].map(k=>(e[k]||[]).filter(src=>/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(src)).map(src=>`<figure><figcaption>${esc(e.date)} · ${esc(party(e.partyId)?.name||'Supplier')} · ${k==='billPhotos'?'Bill':'Samaan'}</figcaption><img src="${src}" alt="Purchase picture"></figure>`).join('')).join('')).join('')}</section>`;openReportPreview('Purchase')}
+document.querySelector('main').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if('ppOpen' in b.dataset){$('search').value='';route('ppurchase');return}if('purchaseSupplier' in b.dataset)purchaseSupplierForm();if(b.dataset.bill)showBill(b.dataset.bill);if(b.dataset.editPurchase){const r=entries().find(r=>r.id===b.dataset.editPurchase);if(canEditPurchase(r))purchaseForm(r)}
+ if(b.dataset.linkPick){const p=entries().find(x=>x.id===b.dataset.linkPick);if(p)linkForm(p)}
+ if(b.dataset.post&&owner()){const x=entries().find(r=>r.id===b.dataset.post);if(x&&confirm('POS mein POST karein?\n'+(postTarget(x)?.label||'')+' · '+money(x.amount)+'\n\nPost ke baad edit / delete band ho jayega (POS aur app dono mein).'))sendPost('post',[x]).catch(e=>error(e,{...x,type:'postJob (post)'}))}
+ if(b.dataset.unpost&&owner()){const x=entries().find(r=>r.id===b.dataset.unpost);if(x&&confirm('UNPOST karein? '+(postTarget(x)?.label||'')+'\nPhir yeh dobara edit ho sakega.'))sendPost('unpost',[x]).catch(e=>error(e,{...x,type:'postJob (unpost)'}))}
+ if(b.dataset.printPurchase){const x=entries().find(r=>r.id===b.dataset.printPurchase);if(!x||!cloud?.requestPrint)return;b.disabled=true;cloud.requestPrint({kind:'purchase',id:x.id,partyName:party(x.partyId)?.name||''}).then(jid=>{notice('🖨️ PC ko bheja…');const stop=cloud.watchPrint(jid,j=>{if(!j)return;if(j.status==='done'){notice('✓ Print ho gaya');stop()}else if(j.status==='failed'){notice('Print nahi hua: '+(j.error||''));stop()}});setTimeout(()=>{try{stop()}catch{}},45000)}).catch(error).finally(()=>{b.disabled=false})}
+ if(b.dataset.linkUndo){const c=entries().find(x=>x.id===b.dataset.linkUndo);if(c&&owner()&&confirm('Is cash purchase ko POS bill se alag karein?'))save({...c,posBill:null,posDiffOk:null},c).catch(error)}
+ if(b.dataset.linkOk){const c=entries().find(x=>x.id===b.dataset.linkOk);if(c&&owner())save({...c,posDiffOk:true},c).catch(error)}
+ if(b.dataset.linkFix){const c=entries().find(x=>x.id===b.dataset.linkFix),p=c&&entries().find(x=>x.id===c.posBill);if(c&&p&&owner()&&confirm('Cash purchase ki raqam '+money(c.amount)+' se '+money(p.amount)+' kar dein? (POS bill ke mutabiq)'))save({...c,amount:p.amount,posDiffOk:null},c).catch(error)}});
+
+$('profile').onclick=()=>canEditAccount()?accountForm(party(selected)):notice(dayIsClosed()?'Aaj ka din band hai':'Account edit sirf malik ya full mulazim kar sakta hai');
+document.querySelector('main').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const d=b.dataset;if(d.receipt){paymentReceipt(d.receipt);return}if(d.delete){const x=entries().find(x=>x.id===d.delete);if(!canDeleteEntry(x))return;if(confirm(TYPES[x.kind]+' · '+money(x.amount)+' · '+x.date+'\nYeh entry delete karein? Hisaab bhi update hoga.')){b.disabled=true;save({...x,deleted:true},x).catch(e=>{b.disabled=false;error(e)})}return}if('purchase'in d)purchaseForm();if(d.party)route('khata',d.party);if(d.partyChip)route('khata',d.partyChip);if(d.entry)entryForm(d.entry);if('add'in d)accountForm();if(d.edit){const x=entries().find(x=>x.id===d.edit);if(x)x.purchase?purchaseForm(x):entryForm(x.kind,x.partyId,x)}if('closing'in d)closingForm();if(d.day){date=d.day;route('daily')}if('daily'in d)route('daily');if(d.expense)entryForm('expense',null,null,d.expense);if('expenseAdd'in d){modal('Kharcha account','<form><label>Naam<input name="name" required maxlength="100"></label><button type="submit">Save</button></form>');formSave(f=>{const name=f.elements.name.value.trim();if(!name)throw Error('Naam likhein');return save({type:'expenseAccount',name})})}if('more'in d){modal('Khate ki entry','<div class="menu"><button id="credit">Udhar diya / Lene hain</button><button id="borrow">Udhar liya / Dene hain</button></div>');$('credit').onclick=()=>entryForm('credit');$('borrow').onclick=()=>entryForm('borrow')}if('import'in d)importForm()});
+const rsSigned=v=>(v>0?'+':v<0?'-':'')+money(Math.round(Math.abs(v)*100));
+async function report(){
+ if(view==='stock'){
+  let r=stockReport();
+  if(r.noCost&&cloud?.posBills){try{r=stockReport(billRates(await cloud.posBills()))}catch(e){console.warn('Bill cost nahi mila',e)}}
+  if(!r.rows.length){notice('Pehle kisi item ki ginti karein');return}
+  $('printArea').innerHTML=`<h1>NOOR TRADERS</h1><h2>Stock ginti — ${esc(r.branch)}</h2>
+   <p>${esc(r.round||'')} · ${r.counted} / ${r.total} items gine · ${esc(new Date().toLocaleString('en-PK'))}</p>
+   <table><thead><tr><th>Item</th><th>Computer stock</th><th>Physical ginti</th><th>Farq</th><th>Cost</th><th>Farq × Cost = Rs</th></tr></thead><tbody>
+   ${r.rows.map(x=>`<tr><td>${esc(x.name)}${x.code?'<br><small>'+esc(x.code)+'</small>':''}</td><td>${esc(x.sys)}</td><td>${esc(x.count)}</td><td>${esc(x.diff)}</td><td>${esc(x.cost).replace(/\n/g,'<br>')}</td><td>${esc(x.calc)}</td></tr>`).join('')}
+   <tr class="stock-total"><td colspan="5"><strong>Kam nikla (nuqsan)</strong></td><td><strong>${rsSigned(r.kamRs)}</strong></td></tr>
+   <tr class="stock-total"><td colspan="5"><strong>Zyada nikla</strong></td><td><strong>${rsSigned(r.zyadaRs)}</strong></td></tr>
+   <tr class="stock-total"><td colspan="5"><strong>Kul farq (net)</strong></td><td><strong>${rsSigned(r.netRs)}</strong></td></tr>
+   </tbody></table>${`<p><strong>Kul farq: ${rsSigned(r.netRs)} ${r.netRs<0?'(nuqsan)':r.netRs>0?'(zyada nikla)':''}</strong> · Kam ${rsSigned(r.kamRs)} · Zyada ${rsSigned(r.zyadaRs)}</p>${r.noCost?`<p><small>${r.noCost} item(s) ka Cost nahi mila, un ki raqam total mein shaamil nahi.</small></p>`:''}${r.unsure?`<p><small>${r.unsure} item(s) ka "Computer stock" abhi PC se tasdeeq nahi hua (PC band ho ya abhi gina ho) — thori der baad PDF dobara nikaalein.</small></p>`:`<p><small>Computer stock: ginti ke lamhe ka, POS ledger se tasdeeq shuda.</small></p>`}`}`;
+  openReportPreview('Stock-ginti-'+r.branch,{receipt:true});
+  return;
+ }
+ if(view==='purchase'||purchaseOnly()){purchaseReport();return}if(['cash','dasti','due','chart'].includes(view)){financeReport();return}const p=party(selected),es=entries();let heading='Accounts report',headers=['Account','Mobile','Lena','Dena'],rows=(tab==='band'?bandParties():parties()).filter(p=>accountMatches(p,$('search').value)&&(tab==='all'||tab==='band'||p.category===tab)).map(p=>{const b=balance(p,es);return[p.name,p.phone,money(Math.max(b,0)),money(Math.max(-b,0))].map(text=>({text,tone:'green'}))});let sub='As of '+today();if(p){heading=p.name+' — Khata';headers=['Tareekh','Entry / Note','Diye / Udhar','Liye / Wasooli','Balance'];
+ const mine=es.filter(e=>e.partyId===p.id).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:((a.createdAt||0)-(b.createdAt||0)));
+ const effect=e=>['credit','payment'].includes(e.kind)?e.amount:['borrow','collection'].includes(e.kind)?-e.amount:0;
+ const runningBal=new Map();let run=p.opening||0;for(const e of mine){run+=effect(e);runningBal.set(e.id,run)}
+ const fmtBal=v=>money(Math.abs(v))+(v>=0?' Lena':' Dena');
+ rows=mine.filter(e=>matches(e)).map(e=>[e.date,entryLabel(e)+(!inDaily(e)?' · Sirf Khata':'')+' · '+(e.note||''),['payment','credit','expense','purchaseCash'].includes(e.kind)?money(e.amount):'',['collection','borrow','sale'].includes(e.kind)?money(e.amount):'',fmtBal(runningBal.get(e.id))].map(text=>({text,tone:pdfTone(e)})));
+ const b=balance(p,es);sub=`Opening ${money(Math.abs(p.opening||0))} (${(p.opening||0)>=0?'Lena':'Dena'}) · Current ${money(Math.abs(b))} (${b>=0?'Lena':'Dena'}) · Filter ${$('from').value||'Start'} to ${$('to').value||today()}`}
+if(view==='daily'){heading='Daily Sale · '+date;const d=daily(date,es,closings()),dayEntries=es.filter(e=>e.date===date&&inDaily(e)&&matches(e));headers=['Sale','Wasooli','Akhrajat','Sirf Khata','Kal ka Change','Aaj ka Change','Closing Cash'];const cell=e=>({text:money(e.amount)+' · '+(party(e.partyId)?.name||e.account||'')+(e.note?' · '+e.note:''),tone:pdfTone(e)});const outside=es.filter(e=>e.date===date&&!inDaily(e)&&matches(e)).sort(byTone);const cols=[dayEntries.filter(e=>e.kind==='sale').sort(byTone).map(cell),dayEntries.filter(e=>e.kind==='collection').sort(byTone).map(cell),dayEntries.filter(e=>inDaily(e)&&['expense','payment','purchaseCash'].includes(e.kind)).sort(byTone).map(cell),outside.map(cell),[money(d.opening)],[money(d.change)],[money(d.cash)]];rows=Array.from({length:Math.max(1,...cols.map(c=>c.length))},(_,i)=>cols.map(c=>c[i]||''));rows.push([d.sale,d.collection,d.expense+d.payment,outside.reduce((n,e)=>n+e.amount,0),d.opening,d.change,d.cash].map(v=>'Total '+money(v)));sub='Sale + Wasooli + Kal ka Change − Akhrajat − Change − Cash · Farq: '+(d.closed?money(d.difference):'Closing baqi')}
+
+if(view==='cash'){heading='Closing Cash account';headers=['Tareekh','Counted Cash','Counted Change'];rows=closings().sort((a,b)=>a.date.localeCompare(b.date)).map(c=>[c.date,money(c.cash),money(c.change)])}if(view==='expenses'){heading='Akhrajat report';headers=['Tareekh','Account','Note','Raqam','Sirf Khata'];rows=es.filter(e=>['expense','payment','purchaseCash'].includes(e.kind)&&matches(e)).sort(byTone).map(e=>{const nm=party(e.partyId)?.name||e.account||'';const tone=/noor\s*traders\s*hbl/i.test(nm)?'yellow':(e.partyId?'red':pdfTone(e));return [e.date,nm,e.note,inDaily(e)?money(e.amount):'',inDaily(e)?'':money(e.amount)].map(text=>({text,tone}))})}
+$('printArea').innerHTML=`<h1>Sam · Noor Traders</h1><h2>${esc(heading)}</h2><p>${esc(sub)}</p><table><thead><tr>${headers.map(h=>'<th>'+esc(h)+'</th>').join('')}</tr></thead><tbody>${rows.map(r=>'<tr>'+r.map(x=>pdfCell(x)).join('')+'</tr>').join('')}</tbody></table><p>Generated ${esc(new Date().toLocaleString('en-PK',{timeZone:'Asia/Karachi'}))}</p>`;const photoRecords=view==='daily'?[...es.filter(e=>e.date===date&&inDaily(e)),...all('dayPhoto').filter(e=>e.date===date)]:p?es.filter(e=>e.partyId===p.id&&matches(e)):view==='expenses'?es.filter(e=>['expense','payment','purchaseCash'].includes(e.kind)&&matches(e)):[];$('printArea').innerHTML+='<section class="report-photo-gallery">'+newestEntries(photoRecords).map(e=>['photos','goodsPhotos','billPhotos'].map(k=>(e[k]||[]).filter(src=>/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(src)).map(src=>`<figure><figcaption>${esc(e.date)} · ${esc(party(e.partyId)?.name||'Roznamcha')} · ${k==='goodsPhotos'?'Samaan':k==='billPhotos'?'Bill':'Roznamcha'}</figcaption><img src="${src}" alt="Report picture"></figure>`).join('')).join('')).join('')+'</section>';openReportPreview(heading)}
+$('posList').onclick=showPosList;$('report').onclick=report;
+let backupDownloading=false;
+const backupSessionDates=new Map();
+function backupKey(){return session?'sam-backup-day:'+window.khataProjectId+':'+session.user.uid+':'+(localMode?'local':'cloud'):''}
+function backupDownloadDay(){const key=backupKey();try{return localStorage.getItem(key)||backupSessionDates.get(key)||''}catch{return backupSessionDates.get(key)||''}}
+function refreshBackupReminder(){const box=$('dailyBackupReminder');if(!box)return;box.hidden=!owner()||!loaded||backupDownloadDay()===today();if($('dailyBackupButton'))$('dailyBackupButton').disabled=backupDownloading;}
+async function downloadDailyBackup(button){
+ if(!owner()){notice('Full backup Malik login se download karein');return}
+ if(backupDownloading)return;
+ if(optimistic.pending()||pendingDrafts.size||transferSaving){notice('Pehle Pending Sync mukammal hone dein, phir backup lein');return}
+ const uid=session.user.uid,key=backupKey(),day=today();backupDownloading=true;
+ if(button){button.disabled=true;button.textContent='Backup tayyar ho raha hai…'}refreshBackupReminder();
+ try{
+  const data=localMode?{format:'sam-blue-khata-v1',records:structuredClone(records),exportedAt:new Date().toISOString(),source:'local-recovery'}:await cloud.fullBackup();
+  if(session?.user.uid!==uid||backupKey()!==key)return;
+  if(!Array.isArray(data.records))throw Error('Backup data mukammal nahi mila');
+  download('Noor-Traders-backup-'+day+'.json',new Blob([JSON.stringify(data)],{type:'application/json'}));
+  backupSessionDates.set(key,day);try{localStorage.setItem(key,day)}catch{}
+  notice('Backup download bhej di gayi hai. Downloads mein file rakh lein.');
+ }catch(e){error(e)}finally{backupDownloading=false;if(button){button.disabled=false;button.textContent='↓ Backup download'}refreshBackupReminder()}
+}
+if($('dailyBackupButton'))$('dailyBackupButton').onclick=()=>downloadDailyBackup($('dailyBackupButton'));
+window.addEventListener('focus',refreshBackupReminder);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshBackupReminder()});
+window.addEventListener('storage',e=>{if(e.key?.startsWith('sam-backup-day:'))refreshBackupReminder()});
+function download(name,blob){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),20000)}
+function importForm(){if(!owner())return;modal('DigiKhata PDF import',`<label>All Parties List PDF<input id="importFile" type="file" accept="application/pdf"></label><p class="stat-note">Aapka format: You'll Give = Lene hain · You'll Get = Dene hain. Balance ko daily sale mein add nahi kiya jayega.</p><div id="importStatus"></div>`);$('importFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;if(file.size>8e6){$('importStatus').textContent='PDF 8 MB se chhoti honi chahiye';return}try{$('importStatus').textContent='Report parhi ja rahi hai…';const bytes=new Uint8Array(await file.arrayBuffer()),hash=[...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(b=>b.toString(16).padStart(2,'0')).join('');if(records.some(r=>r.id==='import-'+hash))throw Error('Yeh PDF pehle import ho chuki hai');const pdfjs=await import('./vendor/pdf.mjs');pdfjs.GlobalWorkerOptions.workerSrc=new URL('./vendor/pdf.worker.mjs',import.meta.url).href;const {readReport}=await import('./pdf-import.js'),result=await readReport(bytes,pdfjs);importDraft={...result,hash,file,bytes};const plans=planImport(result.rows,records,today(),hash);$('importStatus').innerHTML=`<p>${plans.filter(p=>p.old).length} accounts update · ${plans.filter(p=>!p.old).length} naye accounts</p><p>PDF mein na hone wale accounts aur tamam purani entries mehfooz rahengi. Report ki tareekh tak ka baqaya PDF ke mutabiq hoga; us ke baad ki entries alag jama hongi.</p><p><b>${result.rows.length} accounts</b> · Lena ${money(result.give)} · Dena ${money(result.get)}</p><div class="import-preview">${result.rows.map(r=>`<div class="source-row"><span>${esc(r.name)}</span><span>${money(r.give||r.get)} · ${r.give?'Lena':r.get?'Dena':'0'}</span></div>`).join('')}</div><label>Report ki tareekh<input id="importDate" type="date" value="${today()}" required></label><button id="confirmImport">Confirm import</button>`;$('confirmImport').onclick=async()=>{const b=$('confirmImport');if(b.disabled)return;const dateInput=$('importDate'),draft=importDraft,reportDate=dateInput.value;let status=$('importSaveStatus');if(!status){status=document.createElement('p');status.id='importSaveStatus';status.setAttribute('role','status');b.before(status)}b.disabled=true;dateInput.disabled=true;b.textContent='Save ho raha hai…';status.textContent='Accounts check aur save ho rahe hain. Dobara button na dabayein.';status.scrollIntoView?.({block:'nearest'});const slow=setTimeout(()=>{status.textContent='Server ka jawab aane mein dair ho rahi hai. Internet check karein; import abhi pending hai.'},15000);try{if(!reportDate)throw Error('Tareekh dein');planImport(draft.rows,records,reportDate,draft.hash);await cloud.importPDF(draft,reportDate,message=>{status.textContent=message});status.textContent='Import save ho gaya.';b.textContent='Import complete';if(b.isConnected)$('dialog').close();notice('PDF import: accounts aur baqaye update ho gaye')}catch(e){status.textContent=e.code==='permission-denied'?'Save nahi hua: Firebase ijazat nahi de raha. note-traders-khata-7ccc1 mein latest firestore.rules Publish karein, phir dobara koshish karein.':('Save nahi hua: '+(e.message||e.code||'Connection check karein'));b.disabled=false;b.textContent='Dobara import karein';dateInput.disabled=false;status.scrollIntoView?.({block:'nearest'})}finally{clearTimeout(slow)}}}catch(e){$('importStatus').textContent=e.message}}}
+$('settings').onclick=()=>{if(purchaseOnly()){modal('Settings',`<div class="set-wrap">${setGrp('Account',setRow('purchaseLogout','🚪','Logout','Is phone se bahar'))}<p class="set-foot">Is login par sirf Purchase ki ijazat hai.</p></div>`);$('purchaseLogout').onclick=()=>cloud.controller.logout();return}modal('Settings · v'+APP_VER,`<div class="set-wrap">${setGrp('💾 Backup',setRow('backup','⬇️','Backup download','Poora data phone mein — roz kaam ke baad')+(owner()?`<div class="set-block"><label>♻️ Backup se wapas (Restore)<input id="restore" type="file" accept="application/json,.json"></label><p id="restorePreview" role="status" class="set-sub">JSON backup choose karein, phir Restore / Save Backup dabayein.</p><button type="button" id="restoreSave" disabled>Restore / Save Backup</button></div>`+setRow('imports','📄','Saved PDF reports','Import ki hui PDF files')+setRow('trashBtn','🗑','Deleted entries','Ghalti se mitayi entries wapas layein'):''))}
+${setGrp('👥 Mulazim aur hifazat',(owner()?setRow('staffPass','👥','Mulazim / Purchase password','Naya mulazim · password · access')+setRow('geoBtn','📍','Dukan location · Chhoot · Mulazim band','App sirf dukan ke andar chale'):'')+setRow('loginCheck','🔎','Login check','Ijazat (permission) ka masla dekhein')+(owner()?setRow('changePass','🔑','Malik password change','Apna login password badlein'):''))}
+${owner()?setGrp('🔌 POS aur AI',setRow('aiKeyBtn','🤖','AI key','Sham ka milan (Gemini key)')+setRow('syncSuppliers','🔄','Purchase supplier list update','Purchase mulazim ke liye suppliers ki list')):''}
+${owner()?setGrp('🔗 Update',setRow('updLinks','🔗','Update ke links','GitHub · Firebase · rules · version check')):''}
+${setGrp('Account',setRow('logout','🚪','Logout','Is phone se bahar',' set-danger'))}
+<p class="set-foot">PDF report pehle preview mein khulti hai. Naye mobile par pehla login internet se karein. Pending entries Sync hone tak isi device par rehti hain.</p></div>`);$('logout').onclick=()=>{try{sessionStorage.setItem('sam-no-auto','1')}catch{}cloud.controller.logout()};$('backup').onclick=()=>downloadDailyBackup($('backup').querySelector('b')||$('backup'));if(owner()){if($('trashBtn'))$('trashBtn').onclick=()=>trashView();
+const restoreFile=$('restore'),restoreButton=$('restoreSave'),restorePreview=$('restorePreview'),restoreUid=session.user.uid;let restoreDraft=null,restoreRead=0,restoreBusy=false;
+if(restoreFile)restoreFile.onchange=async e=>{const ticket=++restoreRead;restoreDraft=null;restoreButton.disabled=true;const f=e.target.files[0];if(!f){restorePreview.textContent='Pehle JSON backup choose karein.';return}restorePreview.textContent='Backup parh rahe hain…';try{const data=JSON.parse(await f.text());if(ticket!==restoreRead||!restoreFile.isConnected)return;if(data.format!=='sam-blue-khata-v1'||!Array.isArray(data.records))throw Error('Sam Khata ki JSON backup file choose karein.');if(!data.records.length)throw Error('Is backup mein koi record nahi.');if(data.records.some(r=>!r||typeof r.id!=='string'||typeof r.type!=='string'))throw Error('Backup ke records durust nahi.');restoreDraft=data.records;const accounts=data.records.filter(r=>r.type==='party'&&!r.deleted).length,entries=data.records.filter(r=>r.type==='entry'&&!r.deleted).length;restorePreview.textContent=f.name+' · '+accounts+' accounts · '+entries+' entries · Total '+data.records.length+' records. Ab Restore / Save Backup dabayein.';restoreButton.disabled=false}catch(e){if(ticket===restoreRead){restorePreview.textContent=e.message;restoreDraft=null}}};
+if(restoreButton)restoreButton.onclick=async()=>{if(restoreBusy||!restoreDraft||!owner()||session.user.uid!==restoreUid)return;restoreBusy=true;restoreButton.disabled=true;restoreFile.disabled=true;restorePreview.textContent='Backup save ho raha hai. Is screen ko khula rakhein…';try{await cloud.restore(restoreDraft);restoreDraft=null;restorePreview.textContent='Backup restore / save ho gaya. Khata screen par data dekhein.';notice('Backup restore / save ho gaya');render()}catch(e){restorePreview.textContent='Restore mukammal nahi hua: '+(e.message||e.code)+'. File dobara choose karne ki zaroorat nahi; masla durust karke phir Save dabayein.'}finally{restoreBusy=false;restoreFile.disabled=false;restoreButton.disabled=!restoreDraft}};
+
+if($('imports'))$('imports').onclick=()=>{modal('Saved PDF reports',all('import').map(r=>`<button data-download-pdf="${r.id}">${esc(r.filename)} · ${esc(r.date)}</button>`).join('')||'<p>Abhi koi PDF import nahi hui.</p>');$('dialogBody').onclick=async e=>{const b=e.target.closest('[data-download-pdf]');if(!b||b.disabled)return;const uid=session?.user.uid;const r=records.find(x=>x.id===b.dataset.downloadPdf);if(!r)return;
+ modal('📄 '+r.filename,pdfSheetHTML(r.filename));   // v2.2.0: wahi PDF sheet
+ const alive=$('downloadReport');
+ wirePdfSheet({filename:r.filename,valid:()=>alive.isConnected&&session?.user.uid===uid,prepare:async()=>{
+  const chunks=localMode?all('pdfChunk').filter(c=>c.importId===r.id).sort((a,b)=>a.order-b.order):await cloud.pdfChunks(r);
+  if(!chunks.length||(r.chunks!=null&&chunks.length!==r.chunks))throw Error('PDF ki saved copy mukammal nahi');
+  if(session?.user.uid!==uid)throw Error('Login badal gaya');
+  const raw=atob(chunks.map(c=>c.data).join(''));
+  return new File([Uint8Array.from(raw,c=>c.charCodeAt(0))],r.filename,{type:'application/pdf'});
+ }})}};
+if($('syncSuppliers'))$('syncSuppliers').onclick=async()=>{try{const n=await cloud.syncPurchaseSuppliers();notice(n+' suppliers ki list update ho gayi')}catch(e){error(e)}};if($('staffPass'))$('staffPass').onclick=()=>{modal('Mulazim password','<form><label>Access<select name="scope"><option value="full">Full App Mulazim</option><option value="purchase">Sirf Purchase Mulazim</option><option value="stock">Sirf Stock Mulazim</option><option value="sale">Sirf Sale Mulazim</option></select></label><label>Username<input value="admin" readonly></label><label>Naya password<input name="password" type="password" minlength="10" required autocomplete="new-password"></label><label>Dobara password<input name="confirm" type="password" required autocomplete="new-password"></label><p>Full App, Sirf Purchase, Sirf Stock aur Sirf Sale — sab ke alag passwords hain. Naya password sirf selected access ka purana login band karega. Nayi Firestore rules pehle publish karein.</p><button type="button" id="checkStaffPassword">Password check</button><p id="staffPasswordResult" role="status"></p><button type="submit">Save password</button></form>');$('checkStaffPassword').onclick=async()=>{const b=$('checkStaffPassword');b.disabled=true;try{await cloud.checkStaffPassword($('dialogBody').querySelector('[name=password]').value,$('dialogBody').querySelector('[name=scope]').value);$('staffPasswordResult').textContent='Password server par match karta hai. Login error aaye to us ka S code bhejein.'}catch(e){$('staffPasswordResult').textContent=e.message}finally{b.disabled=false}};formSave(async f=>{if(f.elements.password.value!==f.elements.confirm.value)throw Error('Dono passwords same likhein');await cloud.setStaffPassword(f.elements.password.value,f.elements.scope.value).then(r=>{forgetRemembered('staff:'+f.elements.scope.value);return r});$('dialog').close();notice('Mulazim password save ho gaya')})};if($('changePass'))$('changePass').onclick=()=>{modal('Malik password change','<form><label>Purana password<input name="old" type="password" required></label><label>Naya password<input name="new" type="password" minlength="6" required></label><button type="submit">Save password</button></form>');formSave(async f=>{await cloud.controller.changePassword(f.elements.old.value,f.elements.new.value);$('dialog').close();notice('Password badal gaya')})}
+}};
+let syncRunning=false;
+async function sync(){
+ if(syncRunning)return;
+ if(transferSaving||optimistic.pending()||pendingDrafts.size){notice('Entry save ho rahi hai. Pending Sync mein status dekhein.');return}
+ syncRunning=true;
+ let stage='Data Sync';
+ try{
+  if(localMode){await cloud.wait();download('Sam-Local-Backup.json',new Blob([JSON.stringify(await window.KhataRecovery.get('local'))],{type:'application/json'}));notice('Local backup download. Cloud sync nahi hua.');return}
+  if(!navigator.onLine)throw Error('Internet band hai. Online hone par dobara Sync karein.');
+  if(cloud&&session){$('syncStatus').textContent='Sync ho raha hai…';await cloud.wait();$('syncStatus').textContent='Data synced'}
+  stage='App update check';
+  const r=await fetch('./version.json?t='+Date.now(),{cache:'no-store'});
+  if(!r.ok)throw Error('version.json load nahi hui (HTTP '+r.status+')');
+  const v=await r.json();if(typeof v.version!=='string')throw Error('version.json mein version nahi mila');
+  if(v.version!=='1.34.1'){
+   if(confirm('Naya version '+v.version+' tayyar hai. Reload karein?')){stage='App update';const reg=await navigator.serviceWorker?.getRegistration();await reg?.update();location.reload()}
+  }else notice('Version 1.34.1 latest hai');
+ }catch(e){console.error(stage,e);notice(stage+' nahi hua: '+(e.code?e.code+' · ':'')+(e.message||'Dobara koshish karein'));if(stage==='Data Sync')$('syncStatus').textContent='Sync confirm nahi hua · Dobara koshish karein'}
+ finally{syncRunning=false}
+}
+
+document.querySelectorAll('.sync').forEach(b=>b.onclick=sync);
+const recoveryWriter=bufferedWriter(async packet=>{if(window.KhataRecovery)await window.KhataRecovery.put('ledger:'+packet.projectId,packet)});
+window.flushKhataRecovery=()=>recoveryWriter.flush();
+window.addEventListener('pagehide',()=>{void recoveryWriter.flush().catch(()=>{})});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)void recoveryWriter.flush().catch(()=>{})});
+import('./cloud.js?v=2.13.0').then(async m=>{const connected=await m.connect({reset(){if(localMode)return;geoStop();resetAccountNavigation();void recoveryWriter.flush().catch(()=>{});session=null;optimistic=optimisticRecords();syncBook=null;syncKey='';syncUid='';pendingDrafts=new Map();window.ownerBackupAuthorized=false;loaded=false;records=[];unsub?.();unsub=null;document.querySelector('main').hidden=true;$('login').hidden=booting;$('dialog').close();$('printArea').innerHTML='';$('dialogBody').innerHTML='';sheetDrafts.clear();accountChoices.clear()},onSession(s){if(localMode)return;if(s.role==='owner'){try{localStorage.setItem('sam-owner-email',s.user.email)}catch{}}session=s;watchDayLock();geoWatch();setTimeout(checkSessionDoc,2500);initSyncBook();window.ownerBackupAuthorized=s.role==='owner';if(window.ownerBackupAuthorized&&window.pendingOwnerBackup){window.pendingOwnerBackup=false;document.getElementById('emergencyBackup').click()}if(pendingView&&allowedView(pendingView)){view=pendingView;selected=null;viewCheck=false}else if(!restoreView()){if(purchaseOnly()){view='purchase';selected=null}else if(view==='purchase')view='khata'}pendingView='';keepView();navPush();$('password').value='';$('login').hidden=true;document.querySelector('main').hidden=false;$('syncStatus').textContent='⟳ Taza ho raha hai…';if(backY>0){const yy=backY;backY=0;setTimeout(()=>{try{window.scrollTo(0,yy)}catch{}},120);setTimeout(()=>{try{window.scrollTo(0,yy)}catch{}},600)}unsub=cloud.listen(snap=>{const before=records;records=optimistic.receive(snap.rows);const changed=before!==records;loaded=true;if(viewCheck){viewCheck=false;if(selected&&!party(selected)){selected=null;keepView()}}syncBook?.reconcile(records,snap.pendingIds||[],snap.cached,session.user.uid);for(const [id,r] of pendingDrafts)if(records.some(x=>x.id===id&&x.rev>=r.rev))pendingDrafts.delete(id);if(changed&&!purchaseOnly()&&window.KhataRecovery&&snap.rows.length)recoveryWriter.queue({format:'sam-blue-khata-v1',records:snap.rows,savedAt:new Date().toISOString(),source:'live-ledger-device-copy',importedPdfsIncluded:false,projectId:window.khataProjectId,pending:snap.pending,cached:snap.cached});$('syncStatus').textContent=(snap.pending||optimistic.pending())?'Device par saved · Cloud Sync baqi':snap.cached?'Offline / cached data':'Cloud synced';snapCached=!!snap.cached;if(changed)render();autoEndZeroReminders()},e=>{$('syncStatus').textContent='Data load nahi hua: '+e.code;if(purchaseOnly()){records=[];loaded=false;render()}error(e)});render()},onError(e,role){if(localMode)return;$('loginMessage').textContent=m.loginErrorMessage(e,role)}});window.readKhataCache=()=>connected.cachedBackup();loginErrMsg=(e,r)=>m.loginErrorMessage(e,r);if(localMode)return;cloud=connected;posSetup({cloud:connected,rerender:render,notice});stockSetup({cloud:connected,rerender:render,notice,owner});setInPdf(inMaalPdf);
+ tolaiSetup({cloud:connected,notice,owner,uid:()=>session?.user?.uid||'',items:()=>saleStock().itemsFor?.()||[],aiLabel:aiReadLabel});setTolaiPdf(tolaiPdf);setTolai(openTolai,tolaiClick);setGintiPdf(gintiPdf);watchDayLock();saleSetup({cloud:connected,rerender:render,notice,owner,uid:()=>session?.user?.uid||''});geoSetup({cloud:connected,session:()=>session,notice,logout:()=>{try{sessionStorage.setItem('sam-no-auto','1')}catch{}connected.controller.logout()}});for(const k of ['add','edit','saveAppSale','saveAppPurchase','saveStockCount','requestTransfer','requestLabel','requestSubcode','requestPrint','requestPost','saveTransfer','setDayLock','reprintAppSale','setStockFlag','setAlias']){const f=connected[k];if(typeof f==='function')connected[k]=async(...x)=>{await geoEnsure();return f.apply(connected,x)}}try{if(connected.listenItemRates){stopItemRates?.();stopItemRates=connected.listenItemRates(m=>{itemRates=m||{}})}}catch(err){console.warn('itemRates',err)}
+try{if(connected.listenBillFormats){stopBillFormats?.();stopBillFormats=connected.listenBillFormats(m=>{billFormats=m||{}})}}catch(err){console.warn('billFormats',err)}
+ppSetup({cloud:connected,rerender:render,notice,owner,uid:()=>session?.user?.uid||'',parties:()=>parties(),party,accountMatches,canUse:canPP,photoForm:()=>purchaseForm(),aiBill:ppAiBill,cashDupes:ppCashDupes,learn:learnAlias,unlearn:unlearnAlias,lastRates:()=>itemRates,saveRates:m=>cloud?.setItemRates?.(m),billFmt:pid=>billFormats[String(pid||'')]||null,saveBillFmt:(pid,f)=>cloud?.setBillFormat?.(pid,f),rank:(l,q,n)=>rankList(l,q,'supplier',n,isSupplierParty),billIdsOf:pid=>entries().filter(e=>isPosPurchase(e)&&e.partyId===pid).sort((x,y)=>String(y.date).localeCompare(String(x.date))).map(e=>e.id),pcBills:()=>entries().filter(isPosPurchase).map(e=>({id:e.id,billNo:(String(e.note||'').match(/POS Purchase\s+(\S+)/)||[])[1]||'',date:e.date,partyId:e.partyId,partyName:party(e.partyId)?.name||'',rs:(e.amount||0)/100,posted:isPosted(e)}))});const stopBooting=()=>{if(!booting)return;booting=false;if($('boot'))$('boot').hidden=true;if(!session&&document.querySelector('main').hidden){$('login').hidden=false;setTimeout(()=>tryAutoLogin('boot'),300)}};connected.authReady.then(stopBooting).catch(stopBooting);setTimeout(stopBooting,8000);$('loginMessage').textContent='Username admin hai. Malik ya mulazim ka password likhein.';$('loginForm').onsubmit=async e=>{e.preventDefault();if(Number(sessionStorage.getItem('sam-login-pause:'+window.khataProjectId)||0)>Date.now()){$('loginMessage').textContent='Baar baar try na karein. Thori der ruk kar dobara karein; Firebase ki pabandi ka waqt alag ho sakta hai.';return}const b=e.target.querySelector('button');b.disabled=true;const pwUsed=$('password').value;try{await cloud.controller.login({role:$('role').value,username:$('username').value,password:$('password').value,ownerEmail:$('ownerEmail').value,scope:$('accessScope').value});rememberAfterLogin(pwUsed)}catch(e){rememberFailed();$('loginMessage').textContent=m.loginErrorMessage(e,$('role').value);if(e.code==='auth/too-many-requests'){try{sessionStorage.setItem('sam-login-pause:'+window.khataProjectId,String(Date.now()+60000))}catch{}}}finally{b.disabled=false}}}).catch(e=>{booting=false;if($('boot'))$('boot').hidden=true;$('login').hidden=false;$('loginMessage').textContent='Connection load nahi hua: '+((e&&(e.code||e.message))||e)+' — yeh line Claude ko bhejein.';console.error(e)});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('./sw.js').catch(console.warn);
+try{document.modelContext?.registerTool({name:'read_khata_summary',description:'Read current signed-in khata totals',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true},execute(){if(!session||!loaded)throw Error('Login and data loading required');return{accounts:parties().length,date,daily:daily(date,entries(),closings())}}})}catch{}
+// v2.2.0: har PDF ke liye ek hi shakal — "PDF tayyar hai": bara WhatsApp/Share, phir Download aur Kholein.
+function pdfSheetHTML(filename){
+ return `<div class="pdf-sheet">
+  <div class="pdf-head"><span class="pdf-ic">📄</span><div class="pdf-meta"><b id="reportDownloadStatus" role="status">PDF tayyar ho rahi hai…</b><small>${esc(filename)}</small></div></div>
+  <button type="button" id="sharePdf" class="pdf-share" disabled>⤴ WhatsApp / Share</button>
+  <div class="pdf-acts"><button type="button" id="downloadReport">⇩ Download</button><button type="button" id="openPdf" disabled>Kholein</button></div>
+ </div>`;
+}
+// prepare() => Promise<File>. valid() false ho to kuch na karo (entry badal gayi / khirki band).
+function wirePdfSheet({filename,prepare,valid=()=>true}){
+ const status=$('reportDownloadStatus'),share=$('sharePdf'),dl=$('downloadReport'),open=$('openPdf');
+ let file=null,url='';
+ const ready=async()=>{if(file)return file;file=await prepare();if(share)share.disabled=false;if(open)open.disabled=false;
+  if(status)status.textContent='PDF tayyar hai';return file};
+ const say=t=>{if(status&&status.isConnected)status.textContent=t};
+ if(dl)dl.onclick=async()=>{dl.disabled=true;try{const f=await ready();if(!valid())throw Error('Khirki band ho gayi — dobara kholein');download(filename,f);say('Download bhej di gayi')}catch(e){say(e.message||'PDF nahi bani')}finally{dl.disabled=false}};
+ if(share)share.onclick=async()=>{share.disabled=true;try{const f=await ready();if(!valid())throw Error('Khirki band ho gayi — dobara kholein');
+   if(navigator.share&&navigator.canShare?.({files:[f]})){await navigator.share({files:[f],title:filename});say('Share ki khirki band ho gayi')}
+   else{download(filename,f);say('Is phone par seedha share nahi hota — PDF download kar di, WhatsApp mein attach kar dein')}}
+  catch(e){if(e.name!=='AbortError')say(e.message||'Share nahi hua — Download kar ke attach karein')}finally{share.disabled=false}};
+ if(open)open.onclick=async()=>{open.disabled=true;try{const f=await ready();if(url)URL.revokeObjectURL(url);url=URL.createObjectURL(f);window.open(url,'_blank','noopener');say('PDF nayi khirki mein khul gayi')}catch(e){say(e.message||'PDF nahi khuli')}finally{open.disabled=false}};
+ ready().catch(e=>say(e.message||'PDF nahi bani — Download se dobara koshish karein'));
+}
+function openReportPreview(heading,options={}){
+ const content=$('printArea').innerHTML,uid=session?.user.uid;
+ const filename='Noor-Traders-'+heading.replace(/[^a-zA-Z0-9_-]/g,'-').slice(0,100)+'.pdf';
+ modal(options.receipt?'Receipt preview':'Report preview',pdfSheetHTML(filename)+`<div class="report-preview${options.receipt?' receipt-preview':''}"><div class="report-document">${content}</div></div>`,!options.receipt);   // v2.6: report poori screen par
+ const alive=$('downloadReport');
+ const valid=()=>alive.isConnected&&session?.user.uid===uid&&(!options.valid||options.valid());
+ wirePdfSheet({filename,valid,prepare:async()=>{
+   const {exportReport}=await import('./pdf-export.js');
+   const blob=await exportReport(content);
+   if(!valid())throw Error('Entry badal gayi ya preview band ho gaya — dobara kholein');
+   return new File([blob],filename,{type:'application/pdf'});
+ }});
+}
+
+
+$('role').addEventListener('change',()=>{$('ownerEmailLabel').hidden=$('role').value!=='owner';$('accessScopeLabel').hidden=$('role').value!=='staff'});try{const email=localStorage.getItem('sam-owner-email');if(email&&[...$('ownerEmail').options].some(o=>o.value===email))$('ownerEmail').value=email}catch{}
+async function startRecovery(){const data=window.pendingKhataRecovery;if(!data)return;try{const {localStore}=await import('./local-mode.js');const local=await localStore(data,window.KhataRecovery);localMode=true;unsub?.();cloud=local;session={role:'owner',user:{uid:'local-recovery'}};loaded=true;$('login').hidden=true;document.querySelector('main').hidden=false;$('dialog').close();selected=null;view='khata';unsub=cloud.listen(snap=>{records=snap.rows;render();$('syncStatus').textContent='LOCAL MODE · Sirf is device par saved · Cloud sync band';});window.pendingKhataRecovery=null;notice('Local backup khul gaya. Kaam ke baad backup download karein.')}catch(e){$('recoveryStatus').textContent=e.message}}
+window.addEventListener('khata-recovery',startRecovery);if(window.pendingKhataRecovery)startRecovery();
+document.addEventListener('click',e=>{const b=e.target.closest?.('[data-khata-sort]');if(!b)return;e.stopPropagation();khataSort=b.dataset.khataSort;try{localStorage.setItem('sam-khata-sort',khataSort)}catch{}render()},true);
+
+// v1.78: aaj ke khule POS purchase bills ek saath post (malik)
+document.addEventListener('click',e=>{const b=e.target.closest?.('[data-post-today]');if(!b||!owner())return;const list=entries().filter(x=>isPosPurchase(x)&&x.date===today()&&!isPosted(x)&&Number(x.posStatus)!==3);if(!list.length)return;if(!confirm(`Aaj ke ${list.length} POS purchase bill POST karein?\n\n${list.slice(0,8).map(x=>(party(x.partyId)?.name||'')+' · '+money(x.amount)).join('\n')}${list.length>8?'\n…':''}\n\nPost ke baad edit / delete band.`))return;sendPost('post',list).catch(e=>error(e,{type:'postJob',kind:'Aaj ke bill post'}))});
+
+// ---------- v1.79: password AAJ ke liye yaad (malik ki hidayat: har roz naya) ----------
+// Sirf is phone ke localStorage mein, din badalte hi khud mit jata hai. Access badlein to yaad wala password khud login.
+const REM_KEY='sam-remember-pw-v1';
+const remDay=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const remCombo=()=>$('role')?.value==='owner'?'owner:'+($('ownerEmail')?.value||''):'staff:'+($('accessScope')?.value||'full');
+const remEnc=t=>{try{return btoa(unescape(encodeURIComponent([...String(t)].map((c,i)=>String.fromCharCode(c.charCodeAt(0)^(7+i%5))).join(''))))}catch{return ''}};
+const remDec=t=>{try{return [...decodeURIComponent(escape(atob(t)))].map((c,i)=>String.fromCharCode(c.charCodeAt(0)^(7+i%5))).join('')}catch{return ''}};
+function remRead(){try{const o=JSON.parse(localStorage.getItem(REM_KEY)||'null');if(!o||o.day!==remDay()){localStorage.removeItem(REM_KEY);return{day:remDay(),items:{},last:''}}return o}catch{return{day:remDay(),items:{},last:''}}}
+function remWrite(o){try{Object.keys(o.items).length?localStorage.setItem(REM_KEY,JSON.stringify(o)):localStorage.removeItem(REM_KEY)}catch{}remButton()}
+function remButton(){const b=$('forgetPw');if(b)b.hidden=!Object.keys(remRead().items).length;const c=$('rememberPw');if(c&&remRead().items[remCombo()])c.checked=true}
+let remAuto='';
+function rememberAfterLogin(pw){remAuto='';try{sessionStorage.removeItem('sam-no-auto')}catch{}const o=remRead(),k=remCombo();if($('rememberPw')?.checked&&pw){o.items[k]=remEnc(pw);o.last=k}else{delete o.items[k];if(o.last===k)o.last=''}remWrite(o)}
+function rememberFailed(){if(!remAuto)return;const o=remRead();delete o.items[remAuto];if(o.last===remAuto)o.last='';remWrite(o);$('password').value='';remAuto='';setTimeout(()=>{const m=$('loginMessage');if(m)m.textContent='Yaad kiya password ab nahi chalta (shayad badal gaya) — naya likhein.'},50)}
+function forgetRemembered(k){const o=remRead();if(k){delete o.items[k];if(o.last===k)o.last=''}else o.items={};remWrite(o)}
+function tryAutoLogin(why){if(session||$('login')?.hidden)return;const o=remRead();
+ if(why==='boot'){let noAuto=false;try{noAuto=sessionStorage.getItem('sam-no-auto')==='1'}catch{}remButton();if(noAuto||!o.last)return;const [role,rest]=o.last.split(/:(.*)/s);if($('role')){$('role').value=role;$('role').dispatchEvent(new Event('change',{bubbles:true}))}if(role==='owner'&&$('ownerEmail'))$('ownerEmail').value=rest;if(role==='staff'&&$('accessScope'))$('accessScope').value=rest}
+ const k=remCombo(),enc=o.items[k];remButton();if(!enc)return;const pw=remDec(enc);if(!pw)return;
+ $('password').value=pw;if($('rememberPw'))$('rememberPw').checked=true;remAuto=k;const m=$('loginMessage');if(m)m.textContent='🔒 Yaad kiye password se khul raha hai…';
+ const f=$('loginForm');if(f?.requestSubmit)f.requestSubmit();else f?.querySelector('button[type=submit]')?.click()}
+['role','accessScope','ownerEmail'].forEach(id=>{const el=$(id);if(el)el.addEventListener('change',()=>setTimeout(()=>{if($('password'))$('password').value='';if($('rememberPw'))$('rememberPw').checked=!!remRead().items[remCombo()];tryAutoLogin('change')},0))});
+$('forgetPw')?.addEventListener('click',()=>{if(!confirm('Is phone par yaad kiye sab passwords mita dein?'))return;forgetRemembered();$('password').value='';if($('rememberPw'))$('rememberPw').checked=false;const m=$('loginMessage');if(m)m.textContent='Yaad kiye passwords mita diye.'});
+setTimeout(remButton,500);

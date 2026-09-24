@@ -1,510 +1,1371 @@
-NOOR TRADERS HAZRI — AI NOTES
-=============================
-Version: v215   Tareekh: 2026-09-24  (v200-v204: 2026-09-21)
-Malik: Samiullah (Noor Traders, Gulyana/Kharian). Zuban: ROMAN Urdu (Latin harf). Wo Devanagari aur Urdu lipi theek se nahi parh sakte.
-Kaam ka tareeqa: pehle plan batao, un ke "OK" ka intezar karo, phir banao. Har update ke sath ye AI_NOTES.txt bhi update karo.
+BLUE KHATA — AI_NOTES  (v1.79.2, 2026-09-20)
+Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
-------------------------------------------------------------
-000000000000000. v215 — LARKE KI APP FORAN KHULE
-------------------------------------------------------------
-Malik: larke ka (staff) safha bohat tez khule, login/load ka intezar khatam ho.
-- Screen ki "tasveer": app.js har render ke 0.9 s baad root.innerHTML localStorage 'nt-hazri-snap-v1' {v, role, html, at} mein rakhta hai
-  (300 KB se bara ho to nahi; sheets/login nahi). index.html ki inline script (app ke JS se bhi PEHLE) — agar login shuda phone
-  (session-v200 ya owner-in) aur tasveer 7 din se purani nahi aur #login= link nahi — wohi HTML #app mein daal deti hai,
-  data-screen='snapshot', <html class="is-snap"> -> upar chhota "Taza ho raha hai…". Asal pehli render par class hat jati hai.
-  Tasveer ke dauran button dabaya to toast "Ek second — app taza ho rahi hai". Logout (onReset) par tasveer mit jati hai.
-  __ntBootMsg / 15 s timer ab snapshot screen par bhi neeche paigham (snap-msg) dikhate hain; boot.js fail() bhi.
-- Halka code: app.js ab owner.js / manager.js ko dynamic import karta hai (sirf malik/manager); staffview.js pdf.js ko sirf PDF
-  banate waqt. index.html modulepreload se owner/manager/pdf/push hata diye (larke ke phone par ~160 KB kam). SW phir bhi sab cache
-  karta hai (peeche).
-- Pichla tab yaad: staffview localStorage 'nt-hazri-staff-tab' (hazri|salary|request).
-- Raftaar: window.__ntT0 (index.html) se pehli asal render tak ka waqt -> data.state.bootMs; staff footer aur malik ke Settings
-  "App update" tool mein "0.9s mein khuli".
-- Firestore offline cache (persistentLocalCache) pehle se laga tha — is liye doosri dafa data bhi phone se aata hai.
-- Check-In/Out ki hifazat wohi (serverTimestamp + rules). Rules/functions mein koi tabdeeli nahi. Tests 72 (+ tasveer save/mitne ki jaanch).
+=== MASLA (malik ne bataya) ===
+POS purchase bill (shop PC se sync) aur larke ki photo wali CASH purchase
+aapas mein "khud milao" nahi ho rahe the. Purchase page par "1 POS bill abhi
+milane hain" banner to aata tha, magar kai bill par "Milao" button hi nazar
+nahi aata tha. Natija: ek hi kharid do dafa dikhti thi (11,520 / 34,920 /
+10,800 · 2026-09-20).
 
-------------------------------------------------------------
-00000000000000. v214 — KHABAR FORAN (COLD START KHATAM)
-------------------------------------------------------------
-Malik: v213 ke baad parchi ki khabar aa gayi lekin ~2 minute baad (cold start). Malik ne "instant wala lagao" kaha (kharcha bata diya tha:
-aik chhota instance hamesha jagta = taqreeban $1.5-$3 / Rs 400-900 mahana).
-- functions/index.js: FAST = { region, memory:'256MiB', minInstances:1, concurrency:20 } sirf onOut (parchi) par — 2-4 second.
-  Baqi (onRequest, onTicket, onCheckIn, onPushTest, watchDay, monthlySalary) NORMAL = 256MiB, minInstances 0 (kharcha nahi).
-- Khabar halki/tez: config() ab 1 minute cache; onRequest/onCheckIn/onTicket ab poori staffAccounts list nahi parhte (sirf apna doc, ya
-  doc ka 'name' field); onCheckIn pehle bina Firestore ke late check karta hai aur waqt par aane par foran ruk jata hai; leave query ab
-  kind=='leave' se chhoti.
-- Notification par android.priority high aur TTL 86400 (pehle 3600).
-- App: Settings > Notifications > Jaanch mein hidayat — der ho to us phone par Battery "Unrestricted" aur notification channel "Urgent".
-- Malik ko: kharche par nazar ke liye Firebase > Usage and billing > Budgets & alerts mein $5 ka alert. Wapas normal karna ho to
-  functions/index.js mein onOut ke FAST ko NORMAL kar dein.
-- Sirf functions/index.js + app ki 5 files badli hain; rules mein koi tabdeeli nahi. Tests 72.
+=== TASHKHEES (app.js ke purane code se) ===
+1. cashCandidates() sirf WOHI cash purchase uthata tha jiska partyId POS bill
+   ke partyId ke bilkul barabar ho, aur 3 din ke andar ho.
+   Screenshots mein "Saim purchaser", "SAIM purchaser" aur "Saim default
+   purchase akhrajat and sale" ALAG-ALAG party records hain.
+   >>> MALIK NE CONFIRM KIYA: yeh sab ALAG suppliers hain. Is liye party
+   >>> MERGE / naam se auto-matching JAAN BUJH KAR NAHI ki gayi. Agli AI bhi
+   >>> party merge na kare.
+2. autoLinkPurchases() sirf renderPurchases() se chalta tha (Purchase page).
+   Party ke khate (ledger) par kuch nahi hota tha.
+3. autoLink ka catch{} khali tha: nakami (permission-denied waghera) khamoshi
+   se gum ho jati thi, aur autoLinkTried mein id pehle hi dal di jati thi, to
+   page refresh tak dobara koshish bhi nahi hoti thi.
+4. "Milao" button sirf tab render hota tha jab candidate mil jaye — candidate
+   na mile to malik ke paas haath se jorne ka koi rasta hi nahi bachta tha.
 
-------------------------------------------------------------
-0000000000000. v213 — NOTIFICATIONS KA SAFHA SAAF (TEST + JAANCH)
-------------------------------------------------------------
-Malik ne v212 ke baad Functions deploy kar li (GitHub Actions; service account ko Editor + Security Admin dena para, compute SA ko
-run.invoker + eventarc.eventReceiver, aur eventarc/pubsub/cloudbuild/artifactregistry/run APIs enable). Lekin notification nahi aaya:
-Firestore mein pushTokens collection hi nahi bana tha (yani "Is phone par chalu karein" kabhi mukammal nahi hua), aur purana safha
-upar se scroll nahi ho raha tha + Firebase wala hissa ntfy ke hidayat ke neeche dab gaya tha.
-- owner.pushBox() nayi shakal: sab se upar halat ("Is phone par: CHALU / BAND"), aik bara button, ghalti ka paigham sheet ke andar
-  (ui.pushMsg — toast nahi, kyunki wo chala jata tha), "Test notification bhejein", "Kin phones par chalu hai", "Is phone par band karein",
-  aur do <details>: settings (khud aane wali khabrein, minute) aur "Jaanch" (key lagi?, ijazat, token ke aakhri 8 harf, Firebase mein
-  mehfooz?, app home screen se khuli ya browser mein). ntfy ab neeche <details> mein.
-- notifySheet khulte hi currentToken() aur pushDevices() se halat khud bhar deta hai (ui.pushToken, ui.pushSaved).
-- push.disablePush() (deleteToken) = "Is phone par band karein".
-- Test push: app pushTokens/{id} par {testAt: Date.now()} likhti hai (data.pushTestPing) -> nayi function onPushTest (onDocumentWritten)
-  usi token par test khabar bhejti hai. Is liye FUNCTIONS AUR RULES DONO KA NAYA VERSION CHAHIYE:
-  rules mein pushTokens keys mein 'testAt' add hua; functions/index.js mein onPushTest.
-- Malik ko batana: v213 upload -> functions/index.js badal kar Actions se deploy -> rules publish -> app mein Settings > Notifications
-  > "Is phone par notification chalu karein" -> "Test notification bhejein".
-- Tests 72 (koi naya test nahi; UI wala hissa).
+=== v1.79.2 MEIN KYA BADLA (sirf app.js + version files) ===
+app.js:
+ * cashCandidates(): window 3 din se 7 din. partyId ki shart WAISE HI hai.
+ * NAYA otherPartyCandidates(pos): doosri party ki cash purchase — sirf jab
+   raqam BILKUL barabar ho, 3 din ke andar ho, aur sirf MALIK ko dikhti hai.
+ * NAYA pickCandidates(pos) = same-party + (malik ho to) other-party.
+ * autoLinkPurchases(): ab sirf KAMYABI par autoLinkTried mein id jati hai;
+   nakami par notice() se wajah screen par dikhti hai aur console.warn hota
+   hai. Auto-link ab bhi SIRF same-party + exact raqam par hota hai (mehfooz).
+ * Party ka khata kholte hi bhi autoLinkPurchases() chalta hai (line ~145).
+ * renderPurchases(): har un-linked POS bill par "Milao" button HAMESHA
+   dikhta hai (count sifar ho to bhi). Banner ab pickCandidates par.
+ * linkForm(): do hisson mein list — (a) isi party ki cash purchase,
+   (b) "Doosri party ki barabar raqam" (party ka naam laal mein likha hua).
+   (b) chunne par confirm() se dono naam dikha kar poocha jata hai.
+   Candidate bilkul na ho to saaf paigham: "7 din ke andar is party ki koi
+   khaali cash purchase nahi mili… (ya us par pehle se POS bill juda hai)".
+ * error(): permission-denied ka paigham behtar — ab dono wajah likhta hai
+   (record POS mein POSTED hai, ya naye firestore.rules publish nahi hue).
+version.json / sw.js / index.html: 1.79.1 -> 1.79.2
 
-------------------------------------------------------------
-000000000000. v212 — FIREBASE PUSH (APP BAND HO TAB BHI, NT HAZRI KE ICON SE)
-------------------------------------------------------------
-Malik ka Firebase pehle se Blaze par hai -> asal push (Cloud Messaging + Cloud Functions) bana diya. ntfy (v211) bhi chalta rahega.
-- functions/ (naya, Node 20, ESM): index.js + logic.js + package.json. Region asia-south1, TZ Asia/Karachi.
-  Foran: onOut (parchi pending), onRequest (chutti/correction), onTicket, onCheckIn (late — aadhi chutti subah wali par nahi).
-  onSchedule 'every 15 minutes' (watchDay): (1) duty shuru + push.absentAfter(30) min -> "X tak nahi aaye: ..." (din mein aik dafa,
-  pushState/{date}.absent), (2) khane ka break jin ka waqt +5 min guzra -> khabar aur us out doc par overdueAlert:true,
-  (3) duty khatam + push.checkoutAfter(30) -> "N ka Check-Out baqi" (pushState/{date}.checkout).
-  onSchedule '0 10 1 * *' (monthlySalary): pichle mahine ki salary jin ki final nahi.
-  Tokens: businesses/noor-traders/pushTokens/{last40}: {token, role owner|manager|staff, phone, name, device, at}. Khabar sirf
-  role owner/manager ko. Jo token mar jaye (unregistered) wo khud delete ho jata hai. Data-only message; dikhane ka kaam SW karta hai.
-  staffConfig/main.push = { vapidKey, on, absentAfter, checkoutAfter } aur appUrl (notification click par app kholne ke liye).
-- App: push.js (enablePush/currentToken/pushSupported), firebase-messaging-sw.js (icon-192, tag, actions, click -> app kholta hai),
-  firebase-config-sw.js (wahi config, SW ke liye — firebase-config.js badlein to ise bhi badlein!).
-  Settings > Notifications mein upar "Firebase notification": VAPID key ka form (Firebase console > Project settings > Cloud Messaging >
-  Web Push certificates), "Is phone par notification chalu karein" (permission + token + appUrl save), "Kin phones par chalu hai",
-  khud aane wali khabrein on/off aur dono waqt (minute).
-- Rules v212: pushTokens (read: malik/manager; create/update: koi bhi logged-in apna token; delete: malik/manager). Baqi v211 jaisa.
-- Deploy: workflows/deploy-functions.yml -> GitHub par .github/workflows/deploy-functions.yml banani hai; secret FIREBASE_SERVICE_ACCOUNT
-  (Firebase > Project settings > Service accounts > Generate new private key ka poora JSON). Ya computer se: firebase deploy --only functions.
-  firebase.json mein functions block add hua.
-- Yahan test nahi ho saka: asal deploy, asal push, VAPID key. Tests 72 (functions/logic.test.mjs naya: nahi aaya / check-out baqi /
-  break overdue / late — sab window aur dedupe ke sath).
+=== JO NAHI BADLA (jaan bujh kar) ===
+- firestore.rules bilkul nahi chhui. Rules mein malik ka update tab bhi band
+  rehta hai jab resource.data.posStatus == 2 (POS mein POSTED) — line ~50.
+  Agar "Ijazat nahi mili" phir bhi aaye to pehle Unpost karein.
+- Party merge / naam se matching: NAHI ki (upar wajah dekhein).
+- posBill field ka matlab wahi hai: cash-purchase entry par POS entry ki id.
 
-------------------------------------------------------------
-00000000000. v211 — MANAGER KA POORA PANEL, NOTIFICATIONS (ntfy), BREAK/BAHAR CARD, APP KHUD THEEK HO
-------------------------------------------------------------
-Pichla masla: v209 zip upload nahi hui thi -> GitHub par tickets.js nahi thi -> poori app band ("Internet kamzor" ghalat paigham).
-Malik ne 2 files (tickets.js, app.js) upload ki, phone ki purani copy saaf ki, app chal gayi.
-Malik (v211): manager ko poori app — sab dekh bhi sake, badal bhi sake (salary, final, payment, ticket faisla, staff, qawaid) — SIRF kisi ki
-hazri na laga/badal sake. App band ho tab bhi notification (malik ne 1/2 nahi chuna -> ntfy laga). Break card mein har naam ke aage waqt, naam
-daba kar usi ki wapsi. Late aane ki khabar.
-- Manager (staffAccounts.canApproveOuts): app.js onSession -> data.startOwner({ role:'manager', phone, account }) + manager.js (switch
-  "Meri hazri" = staffview | "Manager panel" = owner view with manager:true). state.role 'manager'; data.full() = owner|manager; actor() naam;
-  guardOwner() manager ko ijazat; guardHazri() = sirf malik (saveAttendance, deleteAttendance, toggleClosed, closeCheckouts, migrateSelfies);
-  notSelf(): manager apni parchi/request/ticket ka faisla khud nahi. Audit mein byName. Owner view manager:true mein hazri wale actions
-  (tix, quick-present, close-due, toggle-closed, att-delete, migrate) toast "sirf malik", att form sirf dekhne ka, password tool nahi.
-  Staff view manager mode: requests/parchi apne phone se filter.
-- Rules v211: generic match mein manager read (staff collections + staffAttendance/staffSelfies) aur write (staffAccounts, staff,
-  staffSchedules, staffConfig, staffRequests, staffPayroll, staffTickets, staffOuts, staffAudit) — hazri NAHI. Rules na hon to manager panel
-  "permission-denied" paigham dikhata hai. MALIK KO v211 RULES PUBLISH KARNE HAIN.
-- Break/bahar card: breaks.breakStatusHtml har naam button (gaya · tak · baqi/zyada · "Wapas ✓") -> action break-end-one; owner outCards
-  "abhi bahar" list rows -> out-return (tasdeeq).
-- Notifications (notify.js): muft ntfy.sh (koi server nahi). Settings > Notifications: "chalu karein" -> config.notify {topic 'nt-hazri-xxxx',
-  on, out, leave, late, ticket}; ntfy app install + topic subscribe ki hidayat, Copy, Test, band/chalu, naya topic.
-  Bhejta kaun: staff ki parchi (requestOut), chutti/correction (sendRequest), late Check-In (checkIn, aadhi chutti subah ho to nahi),
-  manager/senior ka ticket (createTicket). "Abhi tak nahi aaya" NAHI (us ke liye server/Cloud Functions chahiye — Blaze plan).
-  Notification ntfy ke icon se aati hai (NT Hazri icon wala asal push = Firebase Cloud Functions + card; malik chahe to baad mein).
-- App khud theek ho: boot.js ab app.js dynamic import; fail ho to FILES list ki har file ?nocache se check -> "Ye file GitHub par nahi mili: ..."
-  saaf paigham; files sab hon to aik dafa khud purani copy (service worker + cache) mita kar reload (__ntRepair, index.html inline);
-  15 s timer: internet band ho to wohi, warna "Taza kholein". sw.js ?nocache ko cache se nahi deta. Nayi file bane to boot.js FILES mein likhein!
-- Zip ab "zaroori sab JS files" wali (sirf badli nahi) taake koi file reh na jaye.
-- Tests 67 (notify.test.mjs naya).
+=== AGLI DAFA DEKHNE WALI CHEEZEIN ===
+- Malik ne ek screenshot bheja tha jismein Sale + Photo wali screen par
+  "Ijazat nahi mili. Malik supplied rules publish karein." aaya. Us waqt tak
+  yeh tay nahi ho saka ke kaunsa button dabaya gaya tha. Naya paigham ab
+  wajah bhi likhta hai — agli dafa malik se poochein ke paigham kya aaya.
+- Agar cross-party link zyada istemal hone lage to behtar hoga ke POS bill ka
+  supplier badalne ka option (POS side par) banaya jaye, app mein nahi.
 
-------------------------------------------------------------
-0000000000. v210 — AADHI CHUTTI + HAR CHUTTI PAR "PAISA KATEGA YA NAHI"
-------------------------------------------------------------
-Malik: chutti mein half day ka option; aur chutti par likha ho ke paisa katna hai ya nahi.
-- staffRequests (leave) naya field half: '' | 'am' (subah ki chutti — der se aayega) | 'pm' (shaam ki — jaldi jayega); aadhi chutti sirf aik din (to == date).
-  Malik manzoori par paid: true (paisa nahi katega) | false (paisa katega). Na likha ho to Settings ka leavePaid.
-  data.sendRequest({ half }), data.reviewRequest(id, status, note, paid), data.markLeave({ half, paid:'yes'|'no'|bool }).
-- core: leaveFor(requests, phone, date), halfSchedule(schedule, half) (am: shiftStart = beech ka waqt; pm: shiftEnd = beech ka waqt).
-  statusFor: aadhi chutti + aaya = 'half' ("Aadhi chutti", register H, hazir mein bhi gina jata hai, late nahi); aadhi chutti + nahi aaya = 'absent'
-  (salary mein 0.5 ghair hazir + 0.5 chutti). dayRows/monthSummary: row.leave; late/due halfSchedule se (subah wali par late nahi, shaam wali par
-  jaldi jane par "Check-Out baqi" nahi).
-- Salary (salaryCalc): absentDays ab sirf ghair hazri (+ join se pehle). Din ke hisab: paisa katega wali chutti -> leaveLines
-  [{text:"Chutti 24 Sep (aadha din)", amount}] aur leaveCut (deductions mein). Ghanton ke hisab: paisa nahi katega wali chutti ke duty ghante
-  jurte hain (leavePay = din × duty ghante × hourly). Purana hisab badla: pehle "leavePaid=false" chutti absentDays mein thi, ab leaveCut mein.
-- UI malik: Requests mein leave par "Manzoor — paisa nahi katega" / "Manzoor — paisa katega" / "Na-manzoor"; "Chutti dein": Poora / Aadha subah /
-  Aadha shaam + Paisa nahi katega / katega; qataar chip "Aadhi chutti (shaam) · paisa katega"; profile list; salary sheet/PDF lines.
-  Staff: Request > Chutti: "Poora din / Aadha din — subah / Aadha din — shaam"; apni request par "Paisa nahi katega / katega"; salary lines.
-- Rules v210: staffRequests keys mein 'half' ('' ya 'am'/'pm' sirf leave aur to == date). MALIK KO v210 RULES PUBLISH KARNE HAIN.
-- Tests 65.
+=== v1.79.2 — DOOSRA HISSA: firestore.rules (usi chat mein baad mein) ===
+WAJAH: malik ko "Ijazat nahi mili" is liye aa raha tha ke rules ki generic
+owner-update line malik ka har update rok deti hai jab resource.data.posStatus
+== 2 (POS mein POSTED). Malik pehle "Aaj ke 10 bill post" dabata hai, phir
+Milao karta hai — Milao cash-purchase entry par posBill field likhta hai, aur
+POSTED hone ki wajah se wo write reject ho jata tha.
+BADLAV (tang aur mehfooz):
+ * firestore.rules: nayi function linkOnlyEdit() — POSTED blueKhata doc par
+   update sirf tab jayez jab badalne wale keys sirf
+   ['posBill','posDiffOk','updatedAt','updatedBy','rev'] hon.
+   Raqam / tareekh / party / kind / deleted POSTED ke baad ab bhi band hain.
+ * app.js save(): isPosted(existing) wali rok ab isLinkOnlyChange(data,existing)
+   ke sath — yani app bhi POSTED entry par sirf link jorne / alag karne deta hai.
+   Nayi helper: isLinkOnlyChange() (autoLinkTried ke bilkul upar).
+NOTE: rules mein aur kuch nahi chhua. Agar aage koi aur "Ijazat nahi mili"
+aaye to pehle app ka naya paigham parhein (wajah likhta hai), andaze se rules
+mat badlein.
 
-------------------------------------------------------------
-000000000. v209 — "BINA BATAYE GAYA" TICKET (FAISLA SIRF MALIK)
-------------------------------------------------------------
-Malik ne doosri chat ka plan (screenshots) bheja; is chat mein code tha is liye yahin banaya. Malik: "Ok".
-- Kaun banaye: malik, manager (canApproveOuts), senior (NAYA staffAccounts.canTicket — staff form "Ye senior hai"). Koi apne upar nahi;
-  senior manager par nahi (malik ne sawal ka jawab nahi diya tha — ye faisla main ne liya, AI_NOTES/jawab mein bataya; badalna aasan).
-- Data: businesses/noor-traders/staffTickets/{auto} {phone, name, date, from(ms), returnAt?(ms), note, status 'open'|'returned'|'decided',
-  by, byName, createdAt, serverAt} + wapsi {returnAt, returnBy, returnServerAt} + malik ka faisla {decision 'maaf'|'warning'|'katauti',
-  amount, decidedAt, decidedBy, ownerNote}. data.createTicket / returnTicket / decideTicket / ticketSuggestFor.
-- Katauti: core.ticketSuggest(hourly, minutes) = round5(hourly × minutes/60); hourly wahi salary wala (mahana ÷ (roz ghante × din)).
-  Misal: 30,000 / 30 / 12 = 83.3 × 1.5 = 125. Malik raqam badal sakta hai. Final mahine mein katauti mana ("Dobara kholein").
-  salaryCalc({ tickets }) -> ticketLines [{text:"Bina bataye gaya — 22 Sep, 1:15 se 2:45 — Rs 125"}], ticketCut (deductions mein).
-  Maaf/Warning = sirf record. Staff ki apni Salary, PDF slip, Excel "Ticket katauti" mein nazar aata hai.
-- Malik UI: Hazri (aaj) "Bina bataye gaya" button; qataar chips (abhi bahar / faisla baqi / Ticket: Katauti Rs ..); Tawajju card
-  "N ticket ka faisla baqi"; tickets sheet (aaj / 45 din): Wapas aa gaya, raqam (mashwara pehle se), Maaf / Warning / Katauti.
-  Settings > "Bina bataye gaya — tickets". Naye ticket par toast + vibrate. History labels.
-- Staff UI (manager/senior): "Bina bataye gaya — ticket" card: "Ticket banayein" (roster se; apna naam nahi; senior ko managers nahi), aaj ke tickets,
-  "Wapas aa gaya". tickets.js = openTicketSheet (larka, kab gaya [Abhi], wapas kab [khali], note).
-- roster mein ab mgr:true (manager) bhi.
-- Rules v209: isTicketer(), isManagerPhone(); staffTickets block (create: phone != apna, senior -> manager nahi, keys ginti ki,
-  serverAt == request.time; update: open -> returned sirf; faisla sirf owner). MALIK KO v209 RULES PUBLISH KARNE HAIN.
-- Tests 63.
+=== TOAST KAHAN SE AATA HAI (2026-09-20, poora repo dekhne ke baad) ===
+Malik ko "Ijazat nahi mili" Daily-sheet (Sale / Wasooli / Akhrajat) wali
+screen par dikh raha tha, halanke us screen par kuch save nahi kiya tha.
+Wajah: optimisticEdit() ka failure handler (app.js ~line 163) error() ko
+ASYNC call karta hai. Yani Milao / link ka nakam write jis bhi screen par
+banda us waqt khara ho, wahan toast dikha deta hai. Screen ka us error se
+koi taalluq nahi hota — agli dafa isi dhoke mein na aayein.
 
-------------------------------------------------------------
-00000000. v208 — KHANE KA WAQFA (ROTI BREAK)
-------------------------------------------------------------
-Malik: roti ke waqt manager sab par aik sath break lagaye; 2-3 larke us waqt dukaan sambhalein (un ka break baad mein).
-Break ka waqt roz badalta hai -> manager (aur malik) har dafa khud minute chune.
-- Data: staffOuts mein hi, kind:'break', reason 'Khana', status seedha 'approved', outAt=abhi, minutes, batch, approvedByName.
-  data.startBreak(phones, minutes) (malik: fast batch + audit 'khana break'; manager: writeBatch), data.endBreaks(list) ("Sab wapas aa gaye").
-  Larka khud bhi "Wapas aa gaya" daba sakta hai (purana staff rule). Check-Out par khula break khud band.
-- Bari: staffAccounts.breakGroup 1 (pehli, default) / 2 (doosri) — staff form "Khane ki bari".
-- Manager ko naam/bari chahiye: malik ki app staffConfig/main.roster [{phone,name,group}] khud barabar rakhti hai (syncRoster; core.rosterOf).
-  Manager ki app aaj ki hazri bhi sunti hai (staffAttendance where date==aaj -> teamAttendance) taake pata chale kaun duty par hai.
-- breaks.js: openBreakSheet (Pehli/Doosri bari tab, minute chips 10-60 + apna minute, "1:35 pm tak wapas", har larke ka nishan — duty par
-  nahi / pehle se bahar wale band), breakStatusHtml ("N khane ke break par", baqi/zyada minute, "Sab wapas aa gaye").
-- Malik: Hazri (aaj) "Khana break" button + break card; qataar chips "Khana break · 12 min se", "Khana 1:05 pm–1:35 pm (30 min)";
-  parchiyan list mein "Khana break" tag; Excel "Khana (min)". Staff: Gate Pass jaisa "KHANA BREAK · کھانے کا وقفہ" pass.
-  Manager: "Khana break shuru karein" + break card manager wale hisse mein.
-- Hisab: core.dayOuts(..., kind 'out'|'break'|'all'); parchi (outMin) aur break (breakMin) alag. salaryDefault.breakDeduct (default band,
-  Settings > Salary ke qawaid) -> breakCut = breakMin/60 × hourly.
-- Rules (v208): staffAttendance read mein isOutManager(); staffOuts create: manager kind=='break' approved (keys ginti ki hui, serverAt/
-  approvedServerAt == request.time, minutes 1-180); manager update: apna break bhi wapas laga sake. MALIK KO v208 RULES PUBLISH KARNE HAIN.
-- Tests 61.
+=== v1.79.2 — TEESRA HISSA: full-mulazim ka link (malik ne kaha "problem mulazim ki entry par") ===
+Bug: firestore.rules ki staffEditEntry() (blueStaff = Full App mulazim) ki
+affectedKeys list mein 'posBill' aur 'posDiffOk' the hi nahi. purchaseStaff
+wali line (~250) mein yeh v1.71 se mojood thay. Natija: FULL login wale
+mulazim ke device par Milao / auto-milan hamesha permission-denied deta tha.
+Fix: staffEditEntry() ki list mein 'posBill','posDiffOk' shamil kiye.
+Baqi sab waise hi: aaj ki entry, dayOpen, rev+1, posStatus != 2.
 
-------------------------------------------------------------
-0000000. v207 — HOME SCREEN APP, WHATSAPP LOGIN LINK, LOGOUT NEECHE
-------------------------------------------------------------
-Malik (Hamayun ke phone ka photo): mulazim ko baar baar kholna/number likhna na pade, seedha us ka safha khule — default.
-- Install (PWA): icon-192.png, icon-512.png (maskable bhi), manifest id/start_url './?app=1'/orientation. app.js 'beforeinstallprompt' pakarta hai ->
-  shared.install {standalone, canPrompt, dismissed, later(), prompt()}. Staff Hazri tab ke upar installCard ("Install karein" / "Kaise lagayein?"
-  -> Chrome ⋮ > Add to Home screen ki hidayat; "Baad mein" = 3 din chhupa). App standalone khuli ho to banner nahi. Malik Settings mein bhi.
-- Login link: '<app>/#login=03xxxxxxxxx' -> app khud staff login (doLogin), phir hash address se hata deta hai. Malik is phone par login ho to
-  auto-login nahi (toast). Pehle se wohi staff login ho to kuch nahi. Staff form (purana staff): "WhatsApp par bhejein" (wa.me/92... + hidayat ka paigham)
-  aur "Link copy karein". Hifazat wahi (login pehle bhi sirf number se tha).
-- Staff app: upar wala logout icon hata diya (ghalti se dab jata tha); neeche footer mein chhota "Logout" + saaf tasdeeq.
-- Chhoti ghaltiyan: bahar ka waqt core.durText() ("1 min se kam", "7 min", "1h 05m") — pehle "0h 00m". Malik ki hidayat Urdu ho to poora
-  paragraph rtl + unicode-bidi:plaintext (Urdu + English mila matn ulta nazar aata tha). Staff screen par "Chutti 7:52 pm" = malik ki default duty
-  abhi 7:52 pm save hai — malik ko Settings > Duty ka waqt mein 7:00 pm karna hai.
-- Rules: v206 wale hi (koi tabdeeli nahi). Tests 59 (app.link.test.mjs naya).
+=== v1.79.3 — CACHE WALI GHALTI (zaroori sabaq) ===
+1.79.2 ke andar app.js DO dafa badla gaya, magar version number wahi raha.
+sw.js ka CACHE naam ('sam-blue-khata-1.79.2') aur index.html ke ?v=1.79.2
+bhi wahi rahe — is liye phone purana app.js hi cache se uthata raha aur malik
+ko purana error message dikhta raha (isi se pata chala ke naya code nahi chala).
+SABAQ: app.js / sale.js / pos-stock.js waghera mein zara bhi tabdeeli ho to
+version.json + sw.js ka CACHE + index.html ke ?v= HAR DAFA barhana zaroori hai,
+warna update phone tak pahunchta hi nahi.
+1.79.3 = 1.79.2 ka poora kaam + naya tafseeli error message (failDetail).
 
-------------------------------------------------------------
-000000. v206 — PARCHI URDU MEIN, WASHROOM, 3/5/7 MINUTE, MANAGER MANZOORI
-------------------------------------------------------------
-Malik: parchi mein tatti / susu ke chips, parchi wali jagah Urdu (lipi), waqt 3/5/7 minute bhi, aur jis ko malik manager chune wo bhi manzoor kare.
-- core.OUT_REASONS ab [{key, ur}]: key Roman (Firebase + malik ki screen), ur = Urdu lipi (staff ki parchi + Gate Pass). Naye: 'Washroom (chhoti hajat)',
-  'Washroom (bari hajat)' (izzat wale alfaaz). reasonUr(key), OUT_MINUTES [3,5,7,10,15,20,30,45,60,90,120], minutesUr(n).
-- Staff ki parchi ka sheet poora Urdu (dir=rtl, Noto Naskh). Gate Pass: "گیٹ پاس", وجہ/گیا/واپسی, "مالک نے منظور کیا" ya "<naam> (منیجر) نے منظور کیا".
-  Malik ki app mein wajah Roman hi (malik Urdu lipi aasani se nahi parhta).
-- Manager: staffAccounts.canApproveOuts (staff form: "Ye manager hai"). Staff app mein managerCard: aaj ki doosron ki parchiyan (query staffOuts date==aaj),
-  Haan/Nahi, "abhi bahar" + wapsi. Apni parchi manzoor nahi kar sakta. Nayi parchi par toast/vibrate (app khuli ho to).
-  data: managerWatch() account snapshot se chalta/rukta; state.teamOuts; reviewOut/returnOut manager branch (quick setDoc, approvedByName, approvedServerAt/returnServerAt serverTimestamp).
-  Malik ki manzoori bhi approvedByName:'Malik' likhti hai. Parchi banate waqt 'name' bhi jata hai (manager ko naam dikhane ke liye).
-- Rules: isOutManager() (canApproveOuts == true); staffOuts read mein manager; create keys mein 'name'; manager update: pending -> approved/rejected
-  (sirf status, approvedAt, outAt, rejectedAt, approvedBy==uid, approvedByName, approvedServerAt==request.time) aur approved -> returned
-  (status, returnAt, returnBy, returnByName, returnServerAt==request.time), aur sirf doosre ki parchi. MALIK KO v206 RULES PUBLISH KARNE HAIN.
-- Tests 55.
+=== v1.79.4 — error ki tafseel (tashkhees jari hai) ===
+Malik ko 1.79.3 par paigham mila: "Ijazat nahi mili · record ka pata nahi
+(background write)". Matlab nakami aise raste se aayi jo error() ko payload
+deta hi nahi tha. 1.79.4 mein:
+ * save() ka create-path (cloud.add) ab error(e,payload) bhejta hai.
+ * sendPost (post / unpost / aaj ke bill) bhi context bhejta hai.
+ * error() Firestore ka asal message bhi (80 harf) sath dikhata hai.
+ * window 'unhandledrejection' par bhi permission-denied pakra jata hai.
+AGLI AI: malik se poora toast text mangein — usi se pata chalega ke kaunsa
+collection / field fail ho raha hai. Andaze se rules mat badlein.
 
-------------------------------------------------------------
-00000. v205 — BAHAR JANE KI PARCHI (GATE PASS) + PIN HATAYA
-------------------------------------------------------------
-Malik: larke bina bataye dukaan se bahar chale jate hain. Live GPS web app mein mumkin nahi (app band ho to browser GPS nahi deta) —
-malik ko Google Maps sharing / WhatsApp live / Life360 / CCTV bataye. App ke andar "bahar jane ki parchi" manga:
-print nahi, mobile par guard ko dikhe; wajah + jane/aane ka waqt; bahar ka waqt duty se ALAG nazar aaye; har parchi (namaz/khana bhi) par
-malik ki Haan/Nahi zaroori. PIN nahi chahiye — login pehle jaisa.
+=== v1.79.5 — ASAL MASLA MIL GAYA: "Din band" (dayLock) ===
+Malik ne naye tafseeli error ka screenshot bheja:
+ "Ijazat nahi mili · entry · collection · Rs 2 · 2026-09-20 · <party> · khula ·
+  mulazim login · badle: · Missing or insufficient permissions"
+Yani: POS / POSTED ka is se koi taalluq nahi tha. Mulazim (full scope) ki
+AAJ ki normal entry Firestore par reject ho rahi thi.
+WAJAH: rules ki har blueStaff line mein dayOpen() shart hai — din band ho to
+mulazim ka koi write nahi. App ki taraf watchDayLock() SIRF EK DAFA chalta tha,
+aur wo bhi cloud connect ke foran baad (login se pehle). Us waqt listen nakam
+ho jaye (auth nahi hui / rules) to fail callback stopDayLock=null kar deta tha
+aur dobara koshish kabhi nahi hoti thi. Natija: app samajhta raha ke din khula
+hai (dayLock={}), UI ne entry karne di, aur Firestore ne mana kar diya —
+wajah batae baghair.
+FIX (app.js):
+ * watchDayLock() ab onSession (login) par bhi chalta hai, aur nakami par
+   8 second baad khud dobara koshish karta hai.
+ * naya flag dayLockReady (aage kaam aayega).
+ * failDetail(): agar din band hai aur full mulazim login hai to seedha likhta
+   hai "AAJ KA DIN BAND HAI — malik Din wapas kholein dabaye".
+FORI HAL MALIK KE LIYE: apne login se "🔓 Din wapas kholein" dabayein, phir
+mulazim entry kar sakega.
 
-Data: businesses/noor-traders/staffOuts/{auto}
-  staff banata hai: {phone, date, reason, note, minutes, status:'pending', requestedAt, serverAt(serverTimestamp), by}  (rules: sirf ye keys)
-  malik: status 'approved' + approvedAt, outAt(=manzoori ka waqt), approvedBy, ownerNote  |  'rejected' + rejectedAt
-  staff: pending -> 'cancelled' (sirf status)  |  approved -> 'returned' + returnAt, returnLat/Lng/Distance/Accuracy, returnServerAt(== request.time)
-  malik bhi wapsi laga sakta hai (returnBy:'malik'). Staff Check-Out kare to khuli parchi khud 'returned'.
-Hisab (core): outMinutes(o, now), dayOuts(outs, phone, date, now) -> {list, done, open, pending, total, count}, dayColor(date), OUT_REASONS.
-  salaryCalc({ ..., outs }): outMin/outCount sirf 'returned'; config.salaryDefault.outDeduct=true ho to outCut = outMin/60 × hourly (deductions mein).
-Malik UI: Hazri (aaj) ke upar "X bahar jana chahta hai" card + Haan/Nahi; "N abhi bahar hain" card; qataar mein chips
-  "Abhi bahar · 20m se · Bank" (waqt se zyada = surkh), "Bahar 3:10 pm–3:45 pm (35m)", "Asal kaam 8h 55m"; Settings > "Bahar jane ki parchiyan";
-  nayi parchi par toast + vibrate + beep (sirf jab malik ki app khuli ho — push notification nahi hai). Salary sheet/PDF/Excel mein bahar ka waqt/kati.
-  Settings > Salary ke qawaid: "Bahar jane ki parchi ka waqt salary se katein" (default band).
-Staff UI: duty ke dauran "Bahar jana hai? Parchi banayein" -> wajah chips + der chips + tafseel -> "Parchi malik ke paas hai" (Cancel) ->
-  Haan par GATE PASS: tasveer, naam, wajah, gaya/wapsi ka waqt, "Malik ne manzoor kiya", har second chalti ghari ([data-live-clock], ui.js),
-  aaj ke din ka rang (dayColor) aur chalti patti — taake purana screenshot pehchana jaye. "Guard ko dikhayein" (bara), "Wapas aa gaya" (GPS; door ho to poochta hai).
-PIN hataya: auth.parseLogin (pin nahi), login form (PIN field nahi), createSession(uid, phone), staff form (PIN nahi), saveStaff purana 'pin' field
-  deleteField se mita deta hai, rules staffSessions wapas hasOnly(['phone','createdAt']) aur pinOk nikala.
-Rules: staffOuts ka naya block. MALIK KO v205 KE RULES PUBLISH KARNE HAIN (v204 wale ki jagah) — pehle sab phone par v205 aane dein.
-  Rules publish na hon to staff ki parchi "permission-denied" -> saaf paigham "malik ko Firebase rules update karne hain".
-Tests 54.
+=== v1.79.6 — LOGIN CHECK (tashkhees ka auzaar) ===
+Mulazim ki entry par "Missing or insufficient permissions" jari raha,
+halanke: din KHULA tha (malik ke button par "Din band karein" likha tha),
+malik ne "Mulazim password" dobara Save bhi kiya, aur POSTED ka mamla bhi
+nahi tha. Andaze khatam — is liye app mein hi jaanch daali gayi.
+NAYA: Settings (⋮) mein "🔎 Login check" button (malik aur mulazim dono ko).
+ * cloud.js: naya diagnose() — blueStaffSessions/{uid}, blueStaffKeys/{credentialId}
+   aur blueAccess/dayLock parh kar wapas karta hai (har doc ka error alag).
+ * app.js: runLoginCheck() sab kuch modal mein dikhata hai + natija likhta hai
+   (key doc mila? active===true? scope=='full'? dayLock.closed aaj ka to nahi?).
+RULES KA ASOOL (yaad rahe): blueStaff() = isStaff() && staffAccount().active == true
+&& (scope na ho ya 'full'). staffAccount() DO get karta hai: session doc se
+credentialId, phir blueStaffKeys/{credentialId}. Login ki apni sharayit narm hain
+(active !== false chalta hai), is liye login ho jata hai magar write ruk sakta hai.
+AGLI AI: pehle mulazim ke phone par Login check chalwayein aur uska screenshot
+mangein. Us ke baghair rules ya app mat badlein.
 
-------------------------------------------------------------
-0000. v204 — SETTINGS TAB, SELFIES ALAG, RULES SE HIFAZAT, HISTORY, EXCEL
-------------------------------------------------------------
-Malik: "sab settings mein dalo, poori app parh kar bugs/kamiyan batao". Plan diya; malik ne kaha sab karo SIWAYE staff PIN/password ke.
+=== v1.79.7 — mulazim ka Settings modal khamoshi se toot raha tha ===
+1.79.6 mein "Login check" button to dikha, magar dabane par kuch nahi hota tha.
+WAJAH: $('settings').onclick ke andar modal() ke foran baad MALIK-ONLY elements
+istemal hote hain (restore, restoreSave, imports, syncSuppliers, staffPass,
+changePass, trashBtn). Mulazim ke login par ye elements render hi nahi hote,
+to pehla hi `restoreFile.onchange=` null par TypeError phenk deta tha aur us ke
+baad ka saara code (button handlers samet) chalta hi nahi tha. Yeh purana bug
+hai — sirf ab zahir hua kyunki naya button us ke baad laga tha.
+FIX: (1) Login check ab document-level delegation se chalta hai (#loginCheck),
+(2) upar wale saat malik-only handlers ko if($('id')) se guard kar diya.
 
-UI:
-- Neeche 4 tab: Hazri · Salary · Staff · Settings. Staff tab = sirf staff list + naya staff.
-- Settings: Rozana (Requests, Tabdeeli ki history, Advance/qarz khata) · Qawaid (Duty ka waqt, Salary ke qawaid, Check-In ki had aur
-  hidayat — teen alag sheets: cfg-duty / cfg-salary / cfg-checkin) · App (Update ke links, update check, "App ko halka karein" jab tak
-  purani selfies hon, App ki jaanch, password, logout). Purana action 'settings' ab arg ke mutabiq sheet kholta hai.
-Bugs theek:
-- saveConfig ab sirf form wale hisse badalta hai (pehle duty save karne se default salary ke qawaid reset ho sakte the).
-- timeField opts.guess 'in'/'out': AM/PM na dabaya ho to Gaya wala ghanta PM samjha jata hai (pehle 8 -> 8 AM).
-- closeCheckouts: aik fail ho to baqi jari; {done, failed} wapas.
-- deleteStaff staffSchedules bhi mitata hai.
-- Malik ki default duty data mein 9:15 am – 7:52 pm hai (purane minute) — malik ko 7:00 pm ticket se Save karna hai (code se nahi badla).
-Tez:
-- Selfie ab alag collection businesses/noor-traders/staffSelfies/{date_phone} {phone,date,selfie,at}; hazri record mein sirf hasSelfie:true.
-  Malik ki mahine wali list mein selfies nahi aati (pehle 2 mahine ki selfies = 10-20 MB). Selfie daba kar (data.getSelfie) ya
-  "Selfies dekhein" (data.selfiesFor(date), aik din) par load hoti hai.
-- data.migrateSelfies(): pichle 12 mahine ke records se selfie nikaal kar staffSelfies mein (batch 100, deleteField) — Settings > "App ko halka karein".
-- Purane rules par staffSelfies likhna mana ho to staff app selfie hazri record mein hi daal deti hai (fallback) — is liye app pehle, rules baad mein.
-Hifazat (firestore.rules — MALIK KO PUBLISH KARNE HAIN):
-- staffAttendance create (staff): id == date_phone, serverAt == request.time (serverTimestamp), selfie field mana.
-- staffAttendance update (staff): sirf checkOut* + outServerAt, sirf aik dafa (checkOut khali ho), outServerAt == request.time.
-  -> staff apna aane ka waqt baad mein nahi badal sakta.
-- serverGap(a): phone ke checkIn aur server waqt (serverAt) ka farq; >=10 min -> malik ki qataar/selfies mein surkh nishan
-  ("ghari ghalat ya internet band tha"). Sirf nishan, rok nahi (offline qataar wali sahi hazri bhi late pohanch sakti hai).
-- staffSelfies: staff sirf apni aaj wali (id == date_phone), sirf 'phone','date','selfie','at', 300 KB tak, jpeg data URL.
-- GHALTI: v204 mein ikhtiyari staff PIN (login par PIN field, staff form mein PIN, rules pinOk) chala gaya tha halanke malik ne mana kiya tha. v205 mein POORA hata diya (neeche dekhein).
-Naya:
-- "Selfies dekhein" (Hazri din view): profile tasveer vs selfie, waqt, faasla, GPS ±, server farq. Daba kar hazri khulti hai.
-- "Tabdeeli ki history" (Settings): staffAudit orderBy at desc limit 200, staff ke hisab se filter.
-- Excel (Hazri > Mahina aur Salary tab): xlsx.mini.min.js (SheetJS 0.18.5, sirf dabane par load). 3 sheets: Register, Hazri, Salary.
-- Tests 52 (npm test --test-force-exit).
+=== v1.79.8 — Login check mein nakam payload ===
+1.79.7 ka Login check chala. Natija: login record active:true + scope full,
+session doc theek, din KHULA. Yani blueStaff() aur dayOpen() dono theek hain —
+phir bhi create reject ho raha hai. Is liye ab aakhri nakam write ka POORA
+payload (window.lastFail) Login check ke neeche JSON mein dikhaya jata hai
+(pictures chhupa kar). Usi se pata chalega ke kaun sa field rule tor raha hai
+(by / updatedBy / rev / type / kind / amount / date / koi extra field).
 
-RULES PUBLISH KA TAREEQA (ahem):
- 1) Pehle app upload karein aur SAB larkon ke phone par app khol kar v204 aane dein (purani v203 ya kam ki check-in naye rules par ruk jayegi).
- 2) Settings > Update ke links > "firestore.rules file (GitHub)" -> sab copy.
- 3) "Firebase — Firestore rules" -> purana sab mita kar paste -> Publish.
- 4) Aik larke se Check-In/Check-Out karwa kar dekhein. Masla ho to purane rules (pichli zip ka firestore.rules) wapas paste kar dein.
+=== v1.79.9 — ★ ASAL JAR (root cause) MIL GAYI ★ ===
+Login check ke "Aakhri nakam write" JSON se sab saaf ho gaya:
+  auth ka asal uid : UkPw3L1KfBff56F5sQAQuDZMQo73   (diagnose se)
+  entry par likha  : "by"/"updatedBy": "PtyC2G7Ol8X4bhmLMtQDV29TUF12"
+Rules ki shart (blueKhata staff create): request.resource.data.by == request.auth.uid
+Dono alag the -> permission-denied. POS / POSTED / dayLock / staff password —
+in mein se koi wajah nahi thi (sab check ho chuke thay, sab theek nikle).
+KYUN: app ka `session` object purane (khatam ho chuke) anonymous login ka uid
+pakde hue tha. Anonymous user dobara ban gaya (naya uid) magar session update
+nahi hua, aur save() payload mein session.user.uid hi likhta tha.
+FIX:
+ * cloud.js: naya currentUid() — auth.currentUser.uid seedha deta hai.
+ * app.js save(): payload ka by/updatedBy ab LIVE uid se (cloud.currentUid()),
+   aur agar session ka uid purana ho to session usi waqt naye uid par set ho
+   jata hai (console.warn ke sath).
+ * Login check ke natije mein uid ka farq bhi likha jata hai.
+AGLI AI: "Missing or insufficient permissions" par sab se pehle uid ka milan
+dekhein (Login check). Yeh ghalti dobara ho sakti hai agar kahin bhi
+session.user.uid ko write payload mein seedha istemal kiya jaye — hamesha
+cloud.currentUid() istemal karein.
 
-------------------------------------------------------------
-000. v203 — TEZ APP + UPDATE KE LINKS
-------------------------------------------------------------
-Malik: "GitHub aur Firebase rules ka link app mein lagao; login screen aur entries save bohat tez chahiye."
+=== v1.79.10 — abhi bhi ruka hua (jaanch jari) ===
+1.79.9 (live uid) ke baad bhi mulazim ki entry par permission-denied.
+Nakam payload: by = updatedBy = WANM5DyRbxUb8gloVve9gDV33gm2 (yani live uid
+ab sahi likha ja raha hai). Matlab ab shak blueStaffSessions/{uid} par hai:
+har staff login signInAnonymously se NAYA uid banata hai (auth-controller.js
+line ~126) aur usi waqt createPasswordSession() session doc likhta hai. Agar
+kisi wajah se wo doc us naye uid ke liye maujood na ho (ya kisi doosri tab ne
+login badal diya ho), to rules ki staffAccount() = get(blueStaffSessions/{uid})
+fail kar jati hai aur har write ruk jata hai — sab kuch warna theek dikhta hai.
+NAYA is version mein:
+ * Login check ke neeche khulasa: uid abhi vs payload ka by (mel ✅/❌) aur
+   session doc mila ya nahi — scroll kiye baghair nazar aata hai.
+ * checkSessionDoc(): login ke 2.5 second baad khud chalta hai; session doc ya
+   active key na mile to foran saaf paigham deta hai.
+NOTE: malik ke phone par 5 browser tabs khuli hui thin. Firebase auth ek hi
+browser mein share hota hai — ek tab ka naya login doosri tab ka uid badal
+deta hai. Malik ko keh diya gaya hai ke sirf EK tab rakhein.
 
-- Staff tab > "Update ke links" (owner.linksSheet): GitHub ka pata website se khud banta hai (<user>.github.io/<repo>/ -> github.com/<user>/<repo>):
-  /upload/main, /actions, repo, blob/main/firestore.rules; Firebase console: firestore/rules, authentication/providers, data (projectId firebase-config se).
-- Tez kholna:
-  * boot.js ab Firebase SDK ko dynamic import se peeche load karta hai; startApp({ sdkPromise }). Jo login nahi (localStorage mein
-    'nt-hazri-session-v200' ya 'nt-hazri-owner-in' nahi), us ko login screen FORAN; Login dabaye to SDK ka intezar (await ready).
-    showLogin() dobara banne par likha hua number/password rakhta hai.
-  * index.html: preconnect (gstatic, firestore, identitytoolkit, securetoken) + modulepreload (SDK + apni files).
-  * sw.js: apni files stale-while-revalidate (phone se foran, peeche taza); Firebase SDK versioned URL cache-first ('nt-hazri-sdk-12.18.0').
-    Update ab bhi version.json se: nayi version -> cache mita kar reload (check ab 1.5 s par).
-- Tez save (data.fast): runTransaction ki jagah writeBatch; parhna phone ke state se (localGet). Screen foran badalti hai, server ka intezar
-  max 0.4 s; peeche state.pendingWrites -> header mein "N entry server par ja rahi". Server inkar kare -> toast "Entry server par save nahi hui".
-  Isteemal: saveStaff, deleteStaff, saveConfig, apply*All, toggleClosed, saveAttendance, deleteAttendance, markLeave, cancelLeave,
-  reviewRequest, addExtra, removeExtra. toggleFinal aur addPayment ab bhi runTransaction (paisa).
-  Staff: request 0.4 s, Check-In/Out 2.5 s (phir "phone mein mehfooz, pohanch jayegi").
-- Selfie 320px, jpeg 0.62 (pehle 420/0.7) -> malik ki mahine ki list halki.
-- Firestore rules mein koi tabdeeli NAHI. Tests 50 (app.fast.test.mjs naya).
+=== 2026-09-20 sham — NATIJA: ghalti DEPLOYED rules mein hai, app mein nahi ===
+Mulazim ke phone ka Login check (v1.79.10) — sab ✅:
+  uid (auth)  = payload.by = payload.updatedBy   (mel khata hai)
+  session doc = {credentialId, createdAt} mojood
+  key doc     = {name:"Mulazim", scope:"full", active:true, loginEnabled:true}
+  dayLock     = khula;  payload: type entry, kind collection, amount 200 (int),
+  date aaj, rev 1, na 'deleted' na 'transferId'.
+Repo ki firestore.rules (blueKhata, "allow create: if blueStaff() && dayOpen()…")
+ki HAR shart is payload par poori hoti hai — phir bhi permission-denied.
+Is ka ek hi matlab: Firebase console mein jo rules PUBLISHED hain wo repo wali
+file jaise nahi (purana version / adhoora paste). Malik ko phone par rules
+file kholne/copy karne mein masla tha (.rules 0 KB dikhta tha).
+HAL: ek-button copy page banaya (rules-copy.html, claude.ai artifact) — malik
+wahan se poore rules copy kar ke console mein Publish kare. Publish ke baad
+Rules ki doosri line "BLUE KHATA v1.79.2 …" honi chahiye.
+AGLI AI: agar phir bhi masla ho to malik se console ke Rules tab ki pehli
+3 lines ka screenshot mangein — wohi bataega ke kaunsa version deployed hai.
 
-------------------------------------------------------------
-00. v202 — IS UPDATE MEIN KYA HUA
-------------------------------------------------------------
-Malik ki shikayat (screenshot): Android ka ghari wala time dialer (24 ghante, AM/PM nahi) mushkil hai. Isi ghalti se default duty
-"9:15 pm – 7:52 am" (21:15–07:52) save ho gayi thi -> "10h 37m duty" aur late ghalat. v201 ke baad hazri theek dikhne lagi (tareekh wala fix kaam kar gaya).
-Farmaish: aasan picker, AM/PM; default duty 9:15 am – 7:00 pm; Hazri list par "Gaya" tickets 7:00/7:30/8:00/8:30/9:00 pm aur "Aaya" tickets bhi.
+=== v1.79.11 — RULES BISECT PROBE (meri pichhli theory ghalat nikli) ===
+Malik ne Firebase console ke Rules tab ke screenshot bheje: rules v1.79.2
+PUBLISHED hain aur repo wali file se harf-ba-harf milte hain (project
+note-traders-khata, Database default). Yani "rules publish nahi hue" ghalat tha.
+Ab soorat: deployed rules = repo rules; payload har shart poori karta hai;
+login record theek; din khula — phir bhi mulazim ki create permission-denied.
+cloud.add() sada setDoc hai (koi batch / cashRevision sath nahi jata).
+Is liye sharton ko alag-alag azmane ka probe banaya (cloud.js probe()):
+ 1. getDocFromServer(blueAccess/cashRevision)  -> sirf blueStaff()
+ 2. getDocFromServer(blueAccess/dayLock)
+ 3. create expenseAccount "ZZ TEST" -> blueStaff+dayOpen+by/updatedBy/rev (tareekh ke baghair)
+ 4. create entry kind expense amount 1, date = aaj (PKT) -> + isToday + amount/kind
+ + server ka waqt (version.json ke Date header se) aur phone ka waqt.
+Login check -> "🧪 Rules test chalayein". Natije se pata chalega kaunsi shart
+tooti. Test "ZZ TEST" naam ke 1-2 record bana sakta hai — malik delete kar de.
 
-- ui.timeField(name, value, {label, tickets, optional, now}): chhupa input "HH:MM" (24h, Firebase ki shakal wahi) + Ghanta(1-12) select
-  + Minute(00-59) select + AM/PM buttons + tickets + "Abhi" + "Khali". Saare <input type="time"> hata diye (hazri durust, default duty,
-  staff ki alag duty, staff ki correction request). Click/change listeners ui.js ke andar (document par), app ke data-action se alag.
-  IN_TICKETS 9:00, 9:15, 9:30, 10:00 am; OUT_TICKETS 7:00, 7:30, 8:00, 8:30, 9:00 pm (+ us staff ki apni duty ka waqt).
-- Hazri qataar (owner.personRow): ghair hazir / abhi nahi aaya -> "Aaya:" tickets (quickPresent(phone,date,at)); kaam par / Check-Out baqi
-  -> "Gaya:" tickets; jin ka dono lag gaya -> "Waqt badlein" (ui.openTickets) se dono tickets. Action 'tix'. Purana "Hazir lagao" button aur
-  "Duty ke waqt par band karein" button tickets se badal gaye (Tawajju card ka sab-band-karo ab bhi hai).
-- saveAttendance: Gaya aane se pehle ho ya 16 ghante se zyada farq -> saaf error "AM / PM check karein".
-- DEFAULT_CONFIG shiftStart 09:15, shiftEnd 19:00 (sirf tab jab Firebase mein kuch save na ho). Malik ko Settings mein aik dafa
-  9:15 am / 7:00 pm save karna hai phir "Sab par default duty lagayein".
-- Raat ki duty ki warning: default ka aane ka waqt PM aur jane ka us se pehle -> Tawajju card + Settings mein surkh line.
-- Tests 46. Version v202.
+=== v1.79.12 — ★ GHALIB WAJAH: Firestore ki 1000-expression hadd ★ ===
+Sab kuch check ho chuka tha aur theek tha: deployed rules = repo rules (console
+ke screenshot), login record active+full, uid = by = updatedBy, din khula,
+payload har shart poori karta hai, cloud.add sada setDoc. Phir bhi mulazim ki
+create par permission-denied; malik ki entry theek.
+FARQ: malik ki request generic block ki pehli allow par pass ho jati hai (sasti).
+Mulazim ki request blueKhata ki SAATON allow-create lines chalwati hai (transfer,
+purchase x2, closing, custody, aam entry) aur har ek blueStaff()/purchaseStaff()
+bulati hai. Purana blueStaff() staffAccount() ko 3 dafa chalata tha (har dafa 2
+get + lambe path). Firestore: "max 1,000 expressions evaluated per request" —
+hadd paar ho to sirf permission-denied milta hai, wajah nahi. Lines har version
+ke sath barhti gayin (v1.61 transfer, cashCustody, v1.78 posStatus…), is liye
+"update ke baad" shuru hua.
+FIX (firestore.rules, matlab wahi):
+ * acctIs(a, scope) — staffAccount() ab fi helper EK dafa evaluate hota hai.
+ * create lines par sasti shart pehle: 'transferId' in data / purchase==true /
+   type=='party' / 'closing' / 'cashCustody'; aam entry wali line mein type aur
+   !transferId pehle, phir blueStaff().
+ * update lines (closing / cashCustody / party) par type ki shart pehle.
+NOTE: yeh natija mantiqi tor par nikala gaya hai (emulator yahan nahi chal
+sakta). Agar publish ke baad bhi masla rahe to Login check -> "Rules test
+chalayein" ka screenshot mangein — wo bataega kaunsi shart tooti.
+AGLI AI: rules mein nayi allow line daalte waqt SASTI shart pehle rakhein aur
+blueStaff()/purchaseStaff() ko kam se kam bulayein.
 
-------------------------------------------------------------
-0. v201 — IS UPDATE MEIN KYA HUA (v200 ke baad)
-------------------------------------------------------------
-Malik ne v200 chala kar screenshot bheja: app pasand aayi, lekin aaj larkon ne hazri lagayi phir bhi SAB "Ghair hazir" dikh rahe the.
-Farmaish: har qataar mein aane/jane ka waqt aur duty ke ghante chips mein; sab par default duty; default salary jis se sab ka hisab ho;
-aur ye 9 mashwaray bhi (malik ne "sab kar do" kaha): 1 jaldi hazir, 2 dukaan band, 3 bhoola Check-Out band, 4 ghair hazri ki kati,
-5 late jurmana, 6 advance/qarz khata, 7 sab ki salary slips, 8 hafte ka khulasa, 9 staff ko ghante hue/baqi.
+=== v1.79.12 KA NATIJA + v1.79.13 ===
+v1.79.12 ke halke rules PUBLISH hote hi mulazim ki entry save hone lagi —
+yani 1000-expression hadd wali tashkhees DURUST thi. (Malik: "ho gayi hai".)
+v1.79.13: malik ne kaha "same day mein mulazim edit kar sakta hai, yahan nahi
+ho raha". Wajah app ke andar tazaad:
+ * canEditEntry(e) (button dikhata hai) aur rules ka staffEditEntry() dono
+   full mulazim ko AAJ ki entry edit karne dete hain,
+ * magar save() ke non-owner guard mein sirf purchase / cashCustody / closing /
+   soft-delete ki istisna thi — aam entry ka edit chhoot gaya tha, is liye
+   "Sirf malik edit kar sakta hai" aata tha.
+FIX: save() mein nayi istisna — existing.type==='entry' && canEditEntry(existing)
+&& existing.date===today() && data.date===today(). Rules nahi chhue.
+AGAR edit par "Ijazat nahi mili" aaye: rules ki update lines 251 / 311 / 334
+(blueKhata) par bhi sasti shart pehle lagani hogi (type=='entry', purchase,
+deleted) — wohi 1000-expression wala masla update par bhi ho sakta hai.
 
-"Sab Ghair hazir" — asal wajah malik ke data ke baghair PAKKI nahi mil saki (Firebase yahan se nahi khulta). Jo theek kiya:
-  a) pkDate() ab formatToParts se "YYYY-MM-DD" banata hai. Pehle Intl 'en-CA' par depend tha; kuch Android/ICU is par "9/21/2026" dete hain
-     -> aaj ki tareekh kisi record se nahi milti thi aur sab ghair hazir. (Sab se mumkin wajah.)
-  b) Malik ki hazri abhi load na hui ho ya Firebase error de to ab "Load ho rahi…" / surkh error line dikhti hai, "Ghair hazir" nahi.
-     Errors state.errors mein; data.problem() se.
-  c) Naya "Staff › App ki jaanch" sheet: app ki tareekh vs purane tareeqe ki tareekh, mahine ke records, aaj ke records (id/phone),
-     staff list mein na milne wale numbers, aakhri server sync, errors. Malik se is ka screenshot mangwana agar masla rahe.
-  d) Staff ki screen: "Malik tak pohanch gayi" / "Hazri abhi phone mein hai" (onSnapshot includeMetadataChanges + hasPendingWrites).
-  Doosri mumkin wajuhat (agar a) ke baad bhi ho): staff ke phone par purani v118 cached; hazri record ka phone staff list ke number se
-  mukhtalif (jaanch sheet dikhata hai); staff ka Check-In selfie/GPS par hi ruk gaya.
+=== v1.80.0 — AI ke BAGHAIR teen behtariyan (malik ke OK ke baad) ===
+Pas-e-manzar: malik ne poocha app mein AI se kya behtar ho sakta hai. 9 tajaweez
+di gayin; malik ne no.4 (WhatsApp wasooli paigham) aur no.8 (rozana khulasa)
+MANA kar diye. Tay shuda tarteeb:
+  v1.80  = no.6 + 7 + 9 (yeh version, AI nahi)
+  v1.81  = no.3 sham ka milan: kaapi ki "Sale + Roznamcha pictures" ko AI (Google
+           Gemini) se parhwa kar Daily Sale se milana. Malik ke faisle: key
+           Firestore ke doc mein (malik + Full App mulazim parh saken), dono chala
+           saken, natija din ke sath save ho, kuch khud na badle. Rules ki 2 nayi
+           lines + Publish chahiye. Malik ko Gemini key banani hai.
+  phir   = no.1 purchase bill ki photo se entry, no.2 bol kar entry, no.5 khate se sawal.
+IS VERSION MEIN (sirf app.js + style.css; rules NAHI chhue):
+ (6) oddAmountMessage(data,existing) — save() ke andar, duplicate check ke baad.
+     Usi party (ya kharche ke account) + usi kind ki pichhli 20 entries; kam az
+     kam 4 hon. median se 8x zyada aur range se bahar (ya 8x kam) ho to confirm().
+     Raqam na badli ho (link / POS / soft-delete) to check nahi chalta.
+ (7) similarParties(name,phone,skipId) + similarHTML() — accountForm ke Save par.
+     nameKey() = norm + harf/hindse ke siwa sab hata do. score 4 naam wohi,
+     3 mobile (aakhri 10 hindse) wohi, 2 ek naam doosre se shuru, 1 edit-distance<=2.
+     Pehli dafa Save par dabba dikhta hai aur button "Phir bhi naya banao" ban
+     jata hai; doosri dafa Save ho jata hai. MERGE KABHI NAHI (malik ka hukum:
+     Saim purchaser / SAIM purchaser / Saim default… sab ALAG suppliers hain).
+ (9) paintDueNudge() — renderSurface() ke shuru mein. #dueNudge section
+     #dailyBackupReminder se pehle JS se banta hai; all('reminder') se aaj due /
+     late ginta hai; sirf view==='khata' && !selected par; malik + full mulazim.
+Helpers ka unit test node se chalaya gaya (28,000 vs 2-3.5 hazaar -> tanbeeh;
+"saim purchaser" -> dono Saim khate; "Tarik bhawal" -> Tariq bhawal).
 
-Naye features:
-  - Qataar (Hazri tab): chips — Duty 9:00 am – 7:00 pm, "10h duty", Aaya, Gaya / Kaam par / Check-Out baqi, kaam ke ghante (+OT), "Malik ne lagayi".
-  - [1] "Hazir lagao" button ghair hazir/abhi-nahi-aaya par (aane ka waqt = duty shuru; pichla din ho to jane ka = duty khatam).
-        "Sab ghair hazir ko hazir lagao" bhi.  data.quickPresent()
-  - [2] "Aaj dukaan band (Eid/chutti)" — staffConfig.closedDays [{date,reason}], status 'closed' ("Dukaan band", register mein B). data.toggleClosed()
-  - [3] "Duty ke waqt par band karein" — bhoola Check-Out = shiftEnd (na ho to checkIn + duty ghante). Tawajju card sab ko band karta hai. data.closeCheckouts()
-  - Default duty: Settings (Staff › Default duty aur default salary): aane/jane ka waqt, riayat (grace), had. useDefaultShift=true wale
-    staff par waqt + grace dono default ke. "Sab par default duty lagayein". data.applyDefaultShiftAll()
-  - Default salary: staffConfig.salaryDefault {monthlySalary, workingDays, overtimeRate, mode, leavePaid, lateEvery, lateFineDays}.
-    Staff par salary.useDefault (true = default). Purane staff jin ki apni raqam likhi thi wo "apni salary" par rehte hain jab tak
-    "Sab par default salary lagayein" na dabayein (un ki purani raqam salary object mein mehfooz rehti hai). Default wale ke roz ke ghante = duty ke ghante.
-  - [4] mode 'days': mahana salary − (ghair hazir din + join se pehle ke din [+ chutti agar leavePaid=false]) × (salary/workingDays) + overtime.
-        mode 'hours': purana ghanton wala formula. Mode sab staff par lagta hai.
-  - [5] Late jurmana: har lateEvery late par lateFineDays din ki salary kati (0 = band).
-  - [6] Qarz: salaryExtras kind 'loan' {amount, perMonth, month=shuru}. Har mahine min(qist, baqi) kat-ta hai (core.loanCuts, deterministic).
-        "Advance / qarz ka khata" sheet (Salary tab aur Staff tab se).
-  - [7] "Sab ki slips": har staff ki alag PDF, aik sath WhatsApp share (navigator.share multiple files) ya aik aik download.
-  - [8] "Is hafte" card Hazri tab par (Peer se aaj tak): poori hazri kitno ki, sab se zyada late, har aik ka aaya/late/ghair/ghante. core.weekSummary
-  - [9] Staff ki Check-In card: duty chips, progress bar, "Xh hue | Yh baqi" ya "Duty poori, Zm overtime"; dukaan band ho to "Aaj dukaan band hai".
-  - PDF: din wale hisab, qarz qist, late jurmana; salary sheet mein "Katautiyan" (advance + qist + jurmana).
-  - Tests: 44 (8 naye). Version v201 (core.js, sw.js, version.json, index.html ?v=201).
+=== v1.81.0 — SHAM KA MILAN (AI: Google Gemini) — malik ke OK ke baad ===
+Maqsad: malik sham ko haath ki kaapi (roznamcha) ko app ki Daily Sale se milata
+hai (pehle ChatGPT mein tasveerein daal kar karta tha). Ab app ke andar.
+FAISLE (malik ke): key Firestore doc mein; malik + Full App mulazim dono chala
+saken; natija save ho; kuch khud na badle. WhatsApp paigham aur rozana khulasa
+MANA hain.
+NAYI FILE ai-tally.js (pure, node se test shuda):
+ * shrinkForAI(file,1800px,q .85) — AI ke liye BARI tasveer (save nahi hoti;
+   dayPhoto wali 900px tasveerein hindson ke liye dhundli hain).
+ * pickModel(key) — GET /v1beta/models se behtareen "gemini-X-flash" chunta hai
+   (Google naam badalta rehta hai; model ka naam hard-code NA karein).
+ * readPages({key,model,images}) — POST /v1beta/models/{model}:generateContent,
+   header x-goog-api-key, parts: inline_data + TALLY_PROMPT,
+   generationConfig {temperature:0,responseMimeType:'application/json'}.
+ * parseItems(text) -> [{amount(rupay,int),text,struck,unsure}]
+ * matchTally(book,rows,totals): 1) bilkul barabar 2) kaapi mein likha total
+   (Sale/Wasooli/Akhrajat/change/cash) 3) milti-julti = ek hindsa badla / ek
+   hindsa zyada-kam (x10) / do hindse aage-peeche. Milan RAQAM par hota hai,
+   naam sirf dikhane ke liye (Urdu likhai mein naam kam parhe jate hain).
+   Test: kaapi 13330/11900/2800 vs app 13380/11800/28000 -> teeno "near".
+app.js: canTally(), aiKeyForm() (Settings > "AI key", sirf malik, Test button),
+ openTally()/runTally()/tallyHTML() — Daily Sale ke Sale column mein button
+ [data-ai-tally]. Edit button purane entryForm / purchaseForm kholta hai.
+cloud.js: getAiConfig/setAiConfig (blueAccess/aiConfig), getTally/setTally
+ (dayTally/{YYYY-MM-DD}).
+RULES (v1.81, PUBLISH ZAROORI): match blueAccess/aiConfig { allow get: if blueStaff() }
+ (malik generic block se likhta/parhta hai; 'aiConfig' jaan boojh kar staff ki
+ aam list mein NAHI). match dayTally/{day}: read malik+blueStaff; create/update
+ keys hasOnly [date,items,model,by,at], by==uid, malik ya (aaj + blueStaff +
+ dayOpen). Sasti shart pehle (1000-expression hadd yaad rahe).
+KHATRA: key Full App mulazim ke browser tak jati hai — malik Google console mein
+key par restriction / hadd lagaye; key Settings se badli ja sakti hai.
+AGLA (tay shuda tarteeb): no.1 purchase bill ki photo se entry (wohi key),
+phir no.2 bol kar entry, no.5 khate se sawal. Malik ne yeh bhi poocha hai ke AI
+se SALE BILL ban sakta hai ya nahi — jawab: haan (parchi ki photo / bol kar ->
+Sale cart bhar jaye, banda dekh kar Save kare; POS bill PC ka sale-post.js
+banata hai). Abhi sirf tajweez hai, plan + OK baqi.
 
-------------------------------------------------------------
-1. v200 MEIN KYA HUA (v118 -> v200)
-------------------------------------------------------------
-Malik ki farmaish: bugs khatam, login aksar fail hoti thi, sirf Hazri + Salary rakho baqi sab hatao,
-har staff par PDF button, aaj ki sab larkon ki hazri ki PDF, fonts theek, layout bilkul naya,
-smart search, "AI based" layout, user friendly.
+=== v1.82.0 — PURCHASE BILL PHOTO -> ENTRY (AI) + AI RUSH RETRY (malik ke OK ke baad) ===
+Malik ki farmaish: bill ki pic se entry, items par edit/delete, POS item + GODAM
+select, mobile PRINT. "Saman ki picture se ginti" MANA kar di gayi (AI se
+qabil-e-bharosa nahi — carton ke dher mein pichhli qatarein nazar nahi aatin);
+malik ne qubool kiya. Rasta A chuna gaya: bill sirf app/khata mein; POS ka
+purchase bill ab bhi PC banata hai aur "Milao" se jurta hai (Rasta B = PC
+script mein import — alag bara project, abhi NAHI).
+ai-tally.js: generate() wrapper — 503/overload par 2 retry (2.5s/6s), phir
+ pickModel se doosra flash model 1 dafa (yeh v1.81 wale "high demand" error ka
+ ilaj hai jo malik ko pehli koshish par aaya). BILL_PROMPT + parseBill(text)
+ -> {supplier,date,total,lines:[{name,qty,rate,total,unsure}]} (rupay, cents
+ NAHI) + readPurchaseBill({key,model,images,onStatus}). parseBill node-tested.
+app.js: purchaseForm mein #billAI button (sirf canTally = malik/full staff;
+ purchase-scope ko key hi nahi milti is liye button nahi, magar woh items ki
+ line HAATH se add kar sakta hai). billLines[] editor (#billLinesBox):
+ [data-bl-name/-item/-qty/-rate/-total/-godam/-del/-add/-sum]. POS item match =
+ smartSearch(saleStock().itemsFor(branch)) — godam options saleStock().branches
+ + branchName (POS load na ho to godam TEXT input). qty*rate -> total auto.
+ items ENTRY KE ANDAR save hote hain: [{name,qty,rate,total(RUPAY int),godam,
+ itemId?,code?,unsure?}] — amount pehle ki tarah CENTS mein hai, mix na karein!
+ parchiHTML(x) + [data-parchi] -> window.open + print (mobile). PC-print
+ (requestPrint) alag / pehle jaisa.
+RULES v1.82 (PUBLISH ZAROORI): validPurchase mein 'items' key + cheap check
+ (!('items' in d) || (d.items is list && size<=100)); purchase update
+ affectedKeys + 'items'; staffEditEntry affectedKeys + 'items'. Andar ke maps
+ deep-validate NAHI kiye (1000-expression hadd!).
+NOT TESTED: asal Gemini bill-call (sandbox mein key nahi). parseBill,
+ matchTally, bundle syntax test shuda.
+AGLA: malik ke test ke baad — no.2 bol kar entry, no.5 khate se sawal; ya
+ Rasta B (PC import). Har naye kaam se pehle plan + OK.
 
-Purani app (v118) ko patch karne ke bajaye NAYI SAAF APP likhi gayi:
-- Purani index.html 927 KB thi, V84 se V118 tak ke patch aik doosre ke upar (127 versioned functions),
-  premium-panels.css 449 KB, fonts 5 jagah se set the (600 KB base64 Nastaliq bhi). Isi liye bugs khatam nahi hote the.
-- Nayi app ~200 KB apna code + 400 KB PDF library (sirf pehli PDF par load hoti hai).
+=== v1.82.1 — purchase items mein CTN / PCS (malik: "Coton pieces wala nahi add kiya") ===
+Line ka dhancha ab: {name,ctn,pcs,rate,total,godam,pack?,cName,uName,itemId?,code?,unsure?}
+ (purana qty parseBill mein ctn ban jata hai; rupay hi hain, cents nahi).
+RATE = FI CARTON jab ctn ho; sirf pcs hon to fi piece. autoTotal: ctn*rate +
+ pcs*rate/pack (pack>1 ho to; pack POS item se aata hai — items ke fields
+ pack/cName/uName wahi hain jo sale.js cart mein hain). POS item select par
+ pack/cName/uName line par copy hote hain aur khano ke placeholder badal jate
+ hain. RULES NAHI BADLE (items ke andar ke maps deep-validate nahi hote) —
+ v1.82 publish kaafi hai. parseBill node-tested (ctn/pcs + purana qty).
 
-HATAYA GAYA (sirf screen se; Firebase ka data NAHI mitaya):
-  sales / hisab entries, stock, purchases, batches, tasks + task pictures + task points, notifications,
-  suggestions (staff ki raaye), dukaan kholne/band karne ki hidayat, Urdu awaaz se likhna, change-history screen.
-  -> Ye data Firestore mein waise hi para hai. Wapas chahiye ho to alag app mein dikhaya ja sakta hai.
-  -> Task points salary mein ab nahi jurte (taskPoints hamesha 0). Hazri ke points (autoScore/finalScore) × pointRate ab bhi jurte hain.
+=== v1.82.2 — EDIT wale purchase par bhi AI (malik: "Edit wala bill bi ai mein ja ske") ===
+billAIFill(existing): nayi photo na lagi ho to existing.billPhotos (save shuda
+dataURL, ~1000px) se parhta hai — sath warning ke woh chhoti hoti hai, nayi
+photo behtar. Pehle se items hon to confirm() ke baad hi overwrite. Rules /
+cloud NAHI badle — sirf app.js. Yaad rahe: save shuda photos packPhotos
+(1000px/120KB) wali hain, shrinkForAI (1800px) sirf nayi file par chalta hai.
 
-LOGIN FAIL HONE KI WAJUHAT JO MILIN AUR THEEK KIN:
-  a) Malik "admin" likhta tha to app har dafa 3 emails try karti thi -> Firebase "too-many-requests" block.
-     Ab: jo email aik dafa chal jaye wo yaad (localStorage 'nt-hazri-owner-email') aur pehle wohi try hoti hai.
-  b) Staff login 3 qadam (anonymous sign-in -> session likhna -> account parhna); kamzor net par beech mein toot jata tha.
-     Ab: har qadam withRetry (3 koshish, sirf network wali ghaltiyon par).
-  c) App dobara kholne par kisi bhi chhoti network ghalti par login screen aa jati thi.
-     Ab: staff ka session localStorage mein (uid ke sath) -> foran andar, tasdeeq peeche. Network ghalti par bahar nahi nikalta;
-     sirf tab nikalta hai jab server bataye ke account band/delete hai.
-  d) "Username admin + password = phone" wala uljha tareeqa. Ab staff sirf mobile number likhta hai.
-  e) Saaf Roman-Urdu paigham har ghalti ke liye (auth.js -> loginErrorMessage).
+=== v1.83.0 — PURCHASE PAR RATES: naam sys/AI, cost, WHOLESALE % chips, PARCHOON purane nafa se, rateJobs (auto POS) ===
+Malik ki farmaish + "script ke sath auto". Line ke naye fields (sab RUPAY):
+ sysName, aiName?, useSys (radio; save par name = useSys? sysName : likha hua),
+ costC (fi ctn int), costP (fi pcs, 2 dec), wctn/wpcs (wholesale), rctn/rpcs
+ (parchoon). recalcRates(): bill rate fi-ctn (ctn>0) ya fi-pcs se costC/costP;
+ parchoon SIRF pehli dafa auto: (oldRate/oldPrate) x naya costP (oldPrate/oldRate
+ POS item ke prate/rate fi-piece se, select ke dataset ya AI-match hit se);
+ oldPrate na ho to khali. Wholesale chips [1,1.25,1.5,2,custom %]:
+ applyWholesalePct — sab itemId lines par cost ke upar. Math node-checked
+ (cost 100, purana 95->114 = 20% nafa -> rpcs 120, rctn 1440; +1.5% w = 101.5).
+ rate badalne par rctn/rpcs reset ho kar dobara auto.
+AUTO POS: cloud.requestRates({lines})/watchRates -> rateJobs/{id}
+ {lines:[{itemId,code,name,pack,costP,wctn,wpcs,rctn,rpcs}],status:'new',by,at}.
+ Button "📌 Naye rates POS par lagao" SIRF MALIK (rules bhi isOwner create).
+ PC admin key se status done/error + applied/error likhe (rules bypass).
+ !!! PC WATCHER ABHI NAHI LIKHA — PC script repo mein NAHI hai. Malik se
+ sale-post/khata-sync script mangi gayi hai; usi pattern par rateJobs watcher
+ jorna hai (labelJobs/subcodeJobs/transferJobs/postJobs jaisa). POS DB schema
+ PC script se hi milega. Jab tak PC side nahi, jobs 'new' pari rehti hain aur
+ app 30s baad kehta hai "PC on hote hi lag jayegi".
+RULES v1.83 (PUBLISH ZAROORI, v1.82 items rules bhi isi mein): rateJobs read
+ owner+blueStaff; create sirf owner, keys [lines,status,by,at], status 'new',
+ lines<=100. Parchi mein "Naye Rates" table. Edit par aiName wapas name ban
+ jata hai jab useSys===false.
 
-------------------------------------------------------------
-2. FILES (sab aik hi folder mein — malik GitHub web par flat upload karta hai)
-------------------------------------------------------------
-index.html        chhota shell + boot paigham (12 s mein na khule to "Dobara kholein")
-boot.js           asal Firebase SDK (gstatic 12.18.0) import kar ke startApp() ko deta hai
-app.js            login screen, malik/staff panel chalana, aik jagah se clicks/forms (data-action / data-form / data-change / data-input), update check
-core.js           sirf hisab: phone, Pakistan ka waqt, status, salary formula, smart search. DOM/Firebase nahi.
-auth.js           login controller (retry, cache, owner email yaad)
-data.js           Firestore listeners + saare likhne ke kaam
-owner.js          malik ki screens (Hazri / Salary / Staff + sheets)
-staffview.js      staff ki screens (Check-In/Out, meri hazri, meri salary, request)
-ui.js             icons, sheet (neeche se uthne wala panel), toast, selfie camera, GPS, PDF share
-pdf.js            4 PDF: rozana hazri, staff ka mahina (hazri + salary), mahine ka register, salary sheet
-styles.css        AKELA stylesheet
-sw.js             service worker (network pehle, cache 'nt-hazri-v200'; purane 'noor-traders-*' cache mitata hai)
-manifest.webmanifest, icon.svg, version.json
-archivo-latin.woff2, naskh-arabic-400.woff2, naskh-arabic-700.woff2   fonts (repo ke andar)
-jspdf.umd.min.js (2.5.2), jspdf.plugin.autotable.min.js (3.8.4)       PDF library
-firebase-config.js, firebase.json, firestore.indexes.json, pages.yml, .nojekyll, .gitignore   purani waisi hi; firestore.rules v204 mein badli
-xlsx.mini.min.js  Excel library (sirf dabane par)
-*.test.mjs, test-fake-sdk.mjs, package.json     tests (npm install; npm test)  — 72 tests pass
-LICENSES.txt, README.md
+=== v1.83.1 — PC WATCHER rate-lagao.js BAN GAYA (rate-pc.zip) ===
+Malik ne PC folder bheja (sale-post/khata-sync waghera). POS = SQL Server (dbo.Items,
+dbo.ItemBranchRate). Rate khane (rate-dekho.json + sync-stock/sale-post comments se,
+SAB FI PIECE): SaleRate = R "Cotton/pack" (carton bhao / pack), SaleRate2 = "Peice
+Rate" (khula piece), SaleRate3 + SaleRateSize = Wholesale, PurchaseRate = khareed —
+Items mein kisi item ka carton ka kisi ka piece ka (sync-stock ka log-ratio test;
+rate-lagao USI convention par likhta hai: costIsCarton -> costP x pack), ItemBranchRate
+mein hamesha fi piece. rate-lagao.js: rateJobs status new -> claim(working) -> ek SQL
+transaction mein Items + item ki SAB ItemBranchRate rows; SystemNotes mein POS jaisi
+Old/New line; jo khana job mein 0/khali usay haath nahi lagata; 7 din purani job
+failed. Status done{applied}/failed{error} (transfer-sync pattern; lock port 47819,
+rate-auto.bat loop + Startup vbs 90s, log rate-log.txt). Node par math checked: kala
+chana pack 25 rctn 6500 -> SaleRate 260; baba-rice cost 8500 carton pehchana. App
+v1.83.1: watchRates ab working/failed bhi samjhta hai ('error' bhi chalta hai).
+Rules mein tabdeeli NAHI (v1.83 wale hi). PC install: LAGAO-RATES.bat (files copy +
+Startup vbs + loop shuru). PC AI_NOTES.txt mein bhi hissa jora gaya (rate-pc.zip).
 
-PURANE REPO SE YE FILES DELETE KARNI HAIN (ab kaam ki nahi):
-  premium-panels.css, premium-workforce.css, staff-tasks.css, staff-tasks.js, staff-upgrades.js,
-  task-model.js, task-service.js, task-notifications.js, firebase-sync.js, auth-controller.js, build-inline.mjs,
-  attendance-live.test.mjs, dom.integration.mjs, fake-sdk.mjs, firestore.rules.mjs, notifications.test.mjs,
-  salary.test.mjs, shift-checkout.test.mjs, staff-upgrades.test.mjs, task-rules.mjs, tasks.test.mjs,
-  Noto-Nastaliq-Urdu-OFL.txt, FIREBASE_SETUP_URDU.md, LOCATION_REFERENCE.md, PREMIUM_REDESIGN_NOTE_URDU.txt,
-  SETUP_V84_URDU.md, SETUP_V85_URDU.md, START_HERE_URDU.md, UPDATE_ONLY.txt
-  (index.html, app.js, styles.css, sw.js, manifest, version.json, README.md, package.json, auth.test.mjs naye se badal jati hain)
-  Note: purani build-inline.mjs ab NAHI chalani — nayi app build ke baghair chalti hai.
+=== v1.84.0 — FULL-SCREEN purchase editor, naam ka token-matcher + 5 CHIPS, wholesale bhi auto ===
+Malik ke screenshots: AI ke lambe naam ("COLGATE GRF 200 GMS X 48 - DIAT-2608_440")
+smartSearch se POS ke chhote naam ("colgate 200gm") se nahi milte the; adhi khirki
+mein kaam mushkil. Tabdeeliyan (sab app.js/style.css, RULES WAHI v1.83):
+- modal(title,html,full) — teesra arg 'full-dialog' class (100vw/100dvh). purchaseForm
+  full=true. CSS dialog.full-dialog.
+- matchPosItems(items,name,top): nameTokens = words (>=2, stopwords GM/GMS/X/PACK...
+  nazar-andaz, digit-mile lafz sirf 125G shakal mein) + nums (<=4 hindse; 125G->125).
+  Score: word exact +3 / prefix(>=3) +1.5, num match +2, pack match +2, aur PENALTY
+  -1.5 jab dono taraf nums hon magar koi na mile (150 vs 100 wala masla). itemTk
+  cache Map. AUTO-SELECT sirf _score>=5 (billAIFill, pehle branch ki items par);
+  warna sirf chips. Node par asal namon se test pass.
+- lineMatches(l) 5 chips (l._m cache q+branch par), chipsHTML, data-bl-chip click ->
+  applyPosItem (itemId/code/pack/cName/uName/sysName/old rates/useSys=true +
+  recalcRates). blName 'change' par renderBillLines (chips taza). itemOptions ab
+  matcher top-8 (smartSearch sirf yahan se hata, baqi app mein qaim).
+- Layout .bill-line2: numbered head (1., naam, X), chips, .bl-two (POS item select +
+  godam), .bl-nums labelled Ctn/Pcs/Rate/Total, phir ratesRow.
+- recalcRates: WHOLESALE bhi pehli dafa auto (oldWrate/oldPrate x costP), parchoon
+  jaisa; rate edit par rctn/rpcs/wctn/wpcs char-on reset. ratesRow mein "purana R
+  nafa" + "W nafa %" dono.
+!!! WARNING: applyWholesalePct chips ab bhi sab par override karti hain. l._m/_score
+  cleanBillLines mein nahi jate (sirf UI). tkCache items ke naam badalne par purana
+  ho sakta hai (key id|name se bacha hua). smartSearch ka istemal itemOptions se
+  hataya gaya hai — accounts wali search par asar NAHI.
 
-------------------------------------------------------------
-3. DATA MODEL (Firestore: businesses/noor-traders/...)  — purana hi, koi migration nahi
-------------------------------------------------------------
-staffAccounts/{phone}   name, role, address, phone, photo(dataURL), active, loginEnabled, joinDate(NAYA, ikhtiyari),
-                        salary{useDefault(v201),monthlySalary,dutyHours,workingDays,overtimeRate,pointRate,mealMode,mealRate,mealInSalary},
-                        salaryExtras[{id,month,kind:'bonus'|'advance'|'loan',amount,perMonth(loan),note,date,by,at}]
-staff/{phone}           purani copy — saveStaff ab bhi likhta hai (purani hisab app ke liye)
-settings/main           purani hisab app; salaryConfig.{phone} / salaryExtras.{phone} best-effort updateDoc se barabar rakhe jate hain
-staffSessions/{uid}     sirf {phone, createdAt} (rules isi par chalte hain)
-staffConfig/main        shiftStart, shiftEnd, grace, radius, instruction, scores{m10,m20,m30,m45,late},
-                        salaryDefault{monthlySalary,workingDays,overtimeRate,mode:'hours'|'days',leavePaid,lateEvery,lateFineDays}, closedDays[{date,reason}]  (v201)
-staffSchedules/{phone}  phone, useDefaultShift, shiftStart, shiftEnd, grace, weeklyOff[0-6, 0=Itwar]
-staffAttendance/{date_phone}  date, phone, name, checkIn, checkOut, checkInTs, checkOutTs, selfie, checkInLat/Lng/Accuracy/Distance,
-                        minutesLate, autoScore, finalScore, shiftStart, ownerNote, editedAt, editedBy, manual
-                        WAQT: naya record 24-ghante "HH:MM" mein likhta hai; purane "9:05 am" bhi parhe jate hain (core.parseTime). Screen par 12-ghante.
-staffRequests/{id}      staff sirf ye keys likh sakta hai: phone,kind,date,to,checkIn,checkOut,reason,status,createdAt,by (rules). kind leave|correction.
-                        Malik khud chutti lagaye to status:'approved' ke sath banta hai.
-staffPayroll/{month_phone}  state draft|final, snapshot (final ke waqt jama hisab), paid, payments[]
-staffAudit/{id}         har malik ki tabdeeli ka record (type, target, before, after, reason, by, at) — screen nahi, sirf record
+=== v1.84.1 — PURCHASE MULAZIM KO BHI BILL AI (RULES v1.84 PUBLISH ZAROORI) ===
+Masla: canTally() sirf owner/full — Purchase login par AI button hi nahi tha; aur
+rules mein aiConfig get + posStock read purchaseStaff() ko nahi thi (button aata bhi
+to key/items par permission-denied). Tabdeeli: canTally scope full YA purchase;
+rules aiConfig get: blueStaff()||purchaseStaff(); posStock read mein purchaseStaff()
+shamil (item naam/rate ka milan isi collection se — saleStock() lazy start hota hai,
+purchase form kholte hi). dayTally/rateJobs waise hi (tally Daily Sale full/owner;
+rates POS sirf malik). YAAD: Gemini key ab purchase-scope browser tak bhi jati hai —
+Google console ki restriction/quota wali baat isi liye aur zaroori.
 
-------------------------------------------------------------
-4. QAWAID (rules of logic)
-------------------------------------------------------------
-Status (core.statusFor): checkIn hai -> late agar (checkIn − shiftStart) > grace, warna present.
-  Checkin nahi -> manzoor chutti = leave; weeklyOff = off; AAJ shift+grace se pehle = waiting ("Abhi nahi aaya"); warna absent.
-  joinDate se pehle aur aane wale din = na (ginti mein nahi).
-Check-out baqi: shiftEnd guzar gaya aur checkOut khali (raat ki shift ke liye agla din). shiftEnd na ho to 24 ghante.
-Raat ki shift: openRecord() 16 ghante tak ka khula record deta hai, is liye aadhi raat ke baad bhi Check-Out lagta hai.
-Kaam ke minute: checkOut − checkIn, aadhi raat paar theek; 0 ya 16 ghante se zyada = ghalat, nahi gina jata.
-Salary (purani app wala formula, badla nahi):
-  hourly = monthlySalary / (dutyHours × workingDays)
-  har din: normal = min(kaam, dutyHours), overtime = baqi
-  final = normal×hourly + OT×(overtimeRate ya hourly) + points×pointRate + bonus + khana(agar mealInSalary) − advance
-  mahina "final" ho to snapshot hi dikhta hai (hazri badalne se nahi badalta). Final se pehle koi Check-Out baqi ho to final nahi hota.
-  Final mahine mein advance/bonus nahi likha/hataya ja sakta — pehle "Dobara kholein".
-  Payment sirf final ke baad, aur baqi se zyada nahi.
-Check-In: live selfie + GPS lazmi, dukaan (32.7979125, 73.956984375) se radius (default 200m) ke andar.
-  Server 12 s mein jawab na de to "phone mein mehfooz, signal aate hi jayegi" (Firestore persistent cache).
+=== v1.85.0 — TASVEER <-> POS PURCHASE BILL ka AI MILAN (RULES WAHI v1.84) ===
+Malik ka plan: bill ki photo AI parhe aur larke ke POS-entered purchase bill se
+line-ba-line milaye. POS bill ki poori lines pehle hi sync-bills.js se posBills/{pos-
+<PurchaseID>} mein aati hain (lines: name/code/godam/qty=ctn/perCtn/totalPcs/
+ctn,pcs=PAISA rates/total=PAISA; net PAISA) — is liye PC/rules ko haath NAHI lagaya.
+- ai-tally.js BILL_PROMPT + parseBill: har line mein "roman" (Urdu naam ki Roman Urdu
+  shakal) — matching isi se hoti hai kyunke POS naam English hain.
+- app.js: photoCompare(c) c=cash purchase (billPhotos wali; pos=c.posBill). Buttons:
+  purchase card (data-photo-compare, linked card par bhi — c resolve IIFE) +
+  showBill ke aakhir mein (cashLinkedTo({id})). Gate canTally() (owner/full/
+  purchase). readPurchaseBill SAVE SHUDA billPhotos par chalta hai.
+- Pairing: tokenScore(roman||name, posLine.name) — wohi nameTokens (+3/+1.5/+2,
+  size-mismatch -1.5), threshold 3, greedy best-first, ek-ek pair.
+- Farq: ctn (tasveer ctn vs POS qty), pcs-only line vs totalPcs, rate (ctn ho to
+  POS ctn-rate warna pcs-rate, ±0.5), line total (±1 Rs), aakhri mein aiTotal
+  (bill.total warna jama) vs posB.net/100. paisa<->rupay dhyan: POS PAISA, AI RUPAY.
+- Kuch save nahi hota (koi rules/collection nahi). "Dobara AI se parho" = nayi AI
+  call (kharcha). pc-row/pc-total CSS. esbuild pass; tokenScore/parseBill node-test
+  (kala chana Urdu->Roman->match; roman field aata hai).
+!!! showBill mein insert OUTER }catch se pehle — andar ek aur try/}catch{} hai
+  (posItems), python patch mein pehli dafa wahin ja laga tha (build error).
 
-------------------------------------------------------------
-5. "SMART / AI" KE BAARE MEIN — IMAANDARI SE
-------------------------------------------------------------
-Ye cloud AI nahi hai, app ke andar ke qawaid (rules) hain, is liye internet ke baghair aur muft chalte hain:
-- Smart talash (core.parseQuery/smartSearch): naam (1-2 harf ki ghalti maaf), number, tareekh ("15 sep", "12/9", "kal", "aaj",
-  "is hafte", "pichle mahine", "december"), status ("late", "ghair hazir", "nahi aaya", "chutti"), "checkout baqi",
-  "salary baqi", "advance". Misal: "late is hafte", "ali pichle mahine".
-- "Tawajju chahiye" (owner.js attention): Check-Out baqi, jawab baqi requests, is hafte 3+ dafa late, pichle mahine ki salary final nahi (mahine ki 1-10 tareekh).
-- Qataarein khud tarteeb: Check-Out baqi > Late > abhi nahi aaya > ghair hazir > hazir > chutti.
+=== v1.86.0 — 🧾 POS PURCHASE SCREEN (purchase.js) + NOOR TRADERS LOGO + purani purchase se AI hataya ===
+Malik: sale jaisi purchase screen, 4 rate khane (W/R x Ctn/Pcs), purane nafa ke chips, W % chips, barcode/smart
+search, bill POS mein baqi bills jaisa save, mulazim bhi. AI bill-photo "bekar" — purani purchase form se HATAYA.
+APP:
+- NAYI FILE purchase.js (view 'ppurchase', root [data-pp-root]). Sale ke camera/scanner hooks (pos-stock.js) hi
+  istemal: sale.js ab installSaleHooks() renderSale par dobara lagata hai, purchase.js installHooks() renderPP par.
+  pos-stock saleRoot() = [data-sale-root],[data-pp-root].
+- !!! IMPORT VERSIONS: sale.js/pos-stock.js/smart-search.js/pos-ledger.js ke imports '?v=1.79.1' the — ab SAB
+  '?v=1.86.0'. Alag ?v = alag module instance (hooks/stock toot jate). AGLE VERSION BUMP MEIN sed in files par bhi:
+  app.js sale.js pos-stock.js purchase.js sw.js index.html (sirf '1.86.0' pattern).
+- Line: {k,id,code,name,pack,cName,uName,godam,ctn,pcs,costP (FI PIECE, 4 dec), oldCost=prate, oldW=wrate,
+  oldR=rate, oldR2=rate2||rate, wctn,wpcs,rctn,rpcs, wMode 'old'|%|'manual', rMode 'old'|'manual'}. recalc(): old
+  margin = oldX/oldCost x costP (ctn = round(x pack), pcs 2 dec); W% = costP x (1+p). Rate khana edit = manual.
+  Node test: colgate pack 48 prate 384.62 wrate 388.47 rate 435 rate2 440 -> cost 400: W 404/19392, R 457.59/21715.
+- Dobara scan/chunna = +1 Ctn (pack<=1 to +1 Pcs) usi line par. Draft localStorage 'sam-pp-draft' (aaj ka).
+- Supplier list = app parties() + accountMatches (Supplier pehle). Save doc appPurchases/{p...}: {id,date,at,
+  branch 1,godam,partyId,partyName,invoiceNo,note,lines[{id,code,name,pack,cName,uName,godam,qty PIECES,costP,
+  wctn,wpcs,rctn,rpcs}],total,role,by,status 'new',createdAt}. Pichhla bill copy = cloud.appPurchasesOf(partyId).
+- app.js: canPP (owner/full/purchase, !localMode); route/renderSurface/back/title; Purchase actions
+  "🧾 POS Purchase" (data-pp-open). purchaseForm se billAI button, #billLinesBox, rateJobBtn HATAYE (billLines
+  existing.items se bharte hain to save par purane items mehfooz; renderBillLines box na mile to return).
+- cloud.js: listenAppPurchases(date), saveAppPurchase, appPurchasesOf(partyId).
+- Logo: icon-192/512, icon-maskable-512, apple-touch-icon, favicon-64 (root par, flat zip) + manifest.webmanifest
+  (name "Noor Traders — Blue Khata", short "Noor Traders"). index.html links, sw ASSETS mein.
+RULES v1.86 (PUBLISH ZAROORI): appPurchases/{pid} read purUser (owner/blueStaff/purchaseStaff); create validPur
+  (sasti pehle: status new, by uid, keys hasOnly, id, lines 1-150, total>0, ints, partyId string; role owner ->
+  isOwner, staff -> isToday(date)). Update/delete koi nahi — status PC (admin) likhta hai.
+PC: purchase-pc.zip (purchase-post.js v1) — tafseel PC ke AI_NOTES mein. Procedure parameter sys.parameters se;
+  ANJAAN parameter par kuch nahi likhta (safe fail). --dekho tasdeeq. Qty PIECES, Rate FI PIECE (AI_NOTES 17-Sep:
+  Lifebuoy 50 ctn = DB Qty 600).
+UNTESTED on real POS: purchase-post (pehla test EK sasta item). rateJobs/rate-lagao ab app se istemal nahi hota
+  (purani jobs ke liye script rehne dein ya band kar dein — nuqsan nahi).
 
-------------------------------------------------------------
-6. LAYOUT / DESIGN
-------------------------------------------------------------
-Roman Urdu UI, LTR. Rang: ink blue #1b2a4a, zameen #eef1f7; hara=hazir, narangi=late, surkh=ghair hazir, jamni=chutti.
-Pehchan: kaghaz wale hazri register jaisi lakeerein + surkh hashiya (margin line) + halki tirchi "stamp" status.
-Mobile: neeche 3 tab (Hazri / Salary / Staff); upar talash. Desktop (860px+): tab upar.
-Font: Archivo (Roman + ginti) + Noto Naskh Arabic (sirf Urdu lipi wale naamon ke liye). Doosra koi font nahi.
-PDF mein Urdu lipi wala matn tasveer bana kar lagta hai (jsPDF Urdu font nahi banata).
+=== v1.87.0 — POS PURCHASE BILL EDIT (editOf) + PARTY SMART SEARCH + ⭐ AKSAR CHIPS (RULES v1.87) ===
+EDIT: showBill (Bill dekhein) mein canPP() par button — sharten: b.purchaseId && b.stamp (sync-bills v5), docStatus !=3,
+  !posted (docStatus 2 ya isPosted(ent)), owner ya b.date===today(). purchase.js ppLoadBill(b, ent): lines itemId ->
+  stock item (na mile to edit nahi), qtyPcs -> Ctn/Pcs, costP = ratePcs, rates = POS ke maujooda (mode 'old', recalc
+  sirf khareed badalne par), godam = lines ka aksar godamId, supplier = ent.partyId, day = b.date, edit state draft mein.
+  Save doc mein editOf {purchaseId, billNo, stamp, partyId (asal app party), posPartyId}; date = edit.date (malik badal
+  sakta). Rules: keys mein 'editOf' + (editOf is map). PC purchase-post v2 editPurchase (tafseel PC AI_NOTES).
+SMART SEARCH: smart-search.js partyScore(p,q) (items wala fold/ed1/scoreItem; words = naam, codes = mobile hindse +
+  92->0), notePartyPick/partyPicks (localStorage 'sam-party-hits-v1', 60 din). app.js accountMatches aakhir mein
+  || partyScore>0 (purane includes/notes waise hi). partyUse(): records cache — 60 din entries (7 din x2): supplier
+  (purchase===true | purchaseCash/borrow/payment), customer (credit/collection/sale), expense ('expense:'+account,
+  'party:'+id payment), any. rankList(list,q,ctx,n,prefer): khali q = top 8 istemal (koi na ho to pehle 8), warna
+  accountMatches filter + (prefer, score, istemal, naam). isSupplierParty = category Supplier | supplier istemal.
+  Lagaya: entryForm (ctxOfKind), purchaseForm (supplier+prefer), dailySheet options (expense/customer), unifiedExpenseForm
+  (expense, khulte hi chips), mountPartyPicker (any, khulte hi chips), khata list (q ho aur sort 'name' to relevance;
+  khali par ⭐ chips data-party-chip -> route; data-party NAHI taake accountButton scroll-restore na toote), route()
+  khata id par notePartyPick, POS Purchase supplier (rank via setup), pos-ledger.js matches (partyScore memo).
+  Har pick par notePartyPick.
+POS Purchase: loadSupItems(pid) — appPurchasesOf + POS ke 6 aakhri bill (billIdsOf via setup, cloud.purchaseBill;
+  itemId ya naam/code se) -> top 12 "📦 Is supplier se aksar" chips (search khali ho).
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.87.0').
 
-------------------------------------------------------------
-7. UPLOAD KA TAREEQA (malik ke liye)
-------------------------------------------------------------
-1) App mein Staff > "Update ke links" > "GitHub — files upload karein" (ya repo > "Add file" > "Upload files") -> zip ke andar ki SAB files ek sath daal dein (folder nahi, sirf files) -> Commit.
-2) Upar wali list ki purani files delete karein (har file kholein -> ... -> Delete file).
-3) 1-2 minute baad app kholein; neeche/login par "v215" likha aaye. Staff ke phone par bhi v215 aana zaroori hai (purani na chal rahi ho).
-v204 se Firestore rules NAYE hain (upar 0000 dekhein) — app ke baad publish karne hain. Authentication mein "Anonymous" aur "Email/Password" dono ON rehne chahiye.
+=== v1.88.0 — MULAZIM LOCATION LOCK (geo-guard.js) + CHHOOT PASSWORD + SAB BAND + LOG (RULES v1.88) ===
+Malik: mulazim ghar ja kar app na chala sake; 50 m kaha — 100 m default rakha (andar GPS 20-60 m ghalat). Malik ne
+"dukan ka waqt" (server-side hours), khud logout aur PC QR MANA kiye. Chhoot password se sab pabandi khatam.
+- NAYI FILE geo-guard.js: geoSetup/geoWatch/geoStop/geoEnsure/geoOwnerForm. Config doc blueAccess/geo {lat,lng,radius,
+  placeAcc,placeAt,salt,passHash,passVer,lockAll,lockAt,by,updatedAt} (malik generic blueAccess rule se likhta;
+  staff get list mein 'geo'). Staff (session.role 'staff', har scope) par: listenGeo -> check(); setInterval 3 min
+  (visible ho to); visibilitychange; geoEnsure() har SAVE se pehle — app.js connect ke baad cloud ke likhne wale
+  methods wrap (add, edit, saveAppSale, saveAppPurchase, saveStockCount, requestTransfer/Label/Subcode/Print/Post,
+  saveTransfer, setDayLock, reprintAppSale, setStockFlag, setAlias). Owner par geoEnsure foran return.
+- geoInside: haversine - min(acc,100) <= radius. Node test: 30m±20 andar, 120m±50 andar, 180m±40 bahar, 400m±900 bahar.
+  Lock sharten: lockAll (bypass na ho) | ijazat band/no geolocation | 3 fail lagataar | 2 bahar lagataar. Pehli bahar
+  reading par lock nahi (GPS jhatka). Save par: taza (<3.5 min) andar reading ho to foran; warna 1-2 nayi reading.
+- Lock overlay #geoLock (z-index max, opaque, dialog band) — Dobara check, Chhoot password, Logout.
+- Chhoot: SHA-256(salt+':'+pw) hex; localStorage 'sam-geo-chhoot' {uid, until=aaj raat 12, at, passVer}; valid sirf
+  passVer same aur at > lockAt. 'sam-geo-tries' 5 ghalat -> 10 min. Log throttle 15 min (outside/noloc).
+- geoLog/{id} {by,who (scope · credentialId aakhri 4),kind outside|chhoot|wrongpass|noloc,dist,acc,at,day} — lat/lng
+  KABHI nahi. Rules: read isOwner; create by==uid, keys hasOnly, kind in list, isStaff (sasti shart pehle).
+- cloud.js: listenGeo, getGeo, setGeo (sirf malik, merge), logGeo, geoLogs (orderBy at desc limit 80; imports mein
+  orderBy, limit). app.js: onSession -> geoWatch(); reset -> geoStop(); Settings ⋮ "📍 Dukan location ..." (#geoBtn).
+- Rules publish na ho to staff ka listenGeo permission-denied -> cfg null -> KOI pabandi nahi (fail-open, jaan boojh kar:
+  galti se sab mulazim band na hon).
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.88.0').
 
-------------------------------------------------------------
-8. KYA TEST HUA, KYA NAHI
-------------------------------------------------------------
-Hua: 72 automated tests (hisab, status, salary, talash, login ke saare raaste, aur poori app naqli Firebase + happy-dom par:
-  login -> hazri -> hazri durust -> request manzoor -> talash -> naya staff -> advance -> final -> payment -> staff check-in/out -> request).
-  4 PDF Node mein ban kar tasveer ki shakal mein dekhi gayin.
-Nahi hua (yahan mumkin nahi tha): asal Firebase/rules ke sath, asal phone ka camera aur GPS, asal browser mein dekhna (layout).
-  -> Pehli dafa chalate waqt in cheezon ko dhyan se dekhein.
+=== v1.89.0 — ZERO KHATA = REMINDER KHATAM · SETTINGS NAYI SHAKAL · UPDATE KE LINKS (rules WAHI v1.88) ===
+- reminderLive(r) = party mile aur balance(p,entries()) > 0 (lene hain). reminderRows + dueCounts (banner) isi se —
+  0 ya minus wale foran bahar. autoEndZeroReminders(): SIRF malik, loaded, !localMode, !snapCached (server snapshot;
+  listen callback mein snapCached = snap.cached), 3 sec debounce, har reminder ek dafa (zeroTried): save({...r,
+  deleted:true}) — wahi jo "Reminder hataein" karta hai. Malik ka faisla: dobara udhaar par reminder WAPAS NAHI.
+- Settings: setRow(id,ic,title,sub,cls) / setGrp(title,inner) — SAB purane ids wahi (backup, loginCheck, restore,
+  restorePreview, restoreSave, imports, changePass, staffPass, aiKeyBtn, geoBtn, syncSuppliers, trashBtn, logout,
+  purchaseLogout) taake purane handlers chalein. Naya updLinks (#updLinks -> updLinks()). backup button ab
+  downloadDailyBackup($('backup').querySelector('b')) — textContent sirf naam badle, row ki shakal na toote.
+- APP_VER const app.js mein ('1.89.0') — version bump sed isi pattern se badalta hai. version.json mein ab
+  "rules" (zaroori rules version) aur "rulesChanged" (is update mein rules badle?) — Update ke links ki neeche wali line
+  inhi se. HAR UPDATE PAR yeh do field sahi rakhein.
+- NOTE: purana sync code v.version !== '1.34.1' se compare karta hai (hamesha update path) — jaan boojh kar nahi chheda.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.89.0') + version.json.
 
-------------------------------------------------------------
-9. AGLE KAAM / KHULE SAWAL
-------------------------------------------------------------
-- Malik ka pehla message "...user friendly bi ho or es ka" par kat gaya tha; baqi hissa abhi maloom nahi.
-- v201 ke baad: malik se poochna ke hazri theek dikh rahi hai; na ho to "App ki jaanch" ka screenshot.
-- Staff ka number badalna: abhi nahi hota (naya staff banao, purana band karo). Chahiye ho to hazri records move karne wala feature banana hoga.
+=== v1.90.0 — KHATA HOME: CHIPS + SMART LINE · BAQAYA ALAG · TARTEEB CHIPS · POS LEDGER TAB HATAYA (rules wahi v1.88) ===
+- index.html header mein #homeBar (dayLockNote ke baad). paintHomeBar(): sirf khata home (view khata, !selected, na
+  purchase/stock/sale-only) -> main.home-smart class; CSS se #syncStatus #syncDetails #dayLockBtn #dayLockNote #dueNudge
+  #dailyBackupReminder chhupte hain (unka apna logic chalta rehta hai — chips unhi se parhti hain). Chips: due (dueCounts,
+  owner/full staff), backup (owner; backupDownloadDay()===today()), din (dayLockBtn dikhe to; dayIsClosed), sync
+  (#syncStatus text: baqi/pending/load -> warn, offline/cached -> neutral, warna ok). data-hb click: due -> route('due'),
+  backup -> downloadDailyBackup(null), day -> toggleDayLock(), sync -> #syncDetails click. Repaint: renderSurface +
+  MutationObserver (syncStatus, dayLockBtn, dailyBackupReminder, syncDetails).
+- baqayaHTML(es): Customer / Supplier / baqi (category na ho) — lene (b>0) / dene (b<0) alag; tab Customer/Supplier par
+  sirf woh card. .summary>.bq-wrap full width. Node test pass.
+- sortBar -> .sort-chips (on = chuni). party-chips patli.
+- posNav hamesha hidden (b.id==='posNav'); renderPOS code / data waisa hi. posList ("🖥 POS n") waisa hi.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.90.0') + version.json (rules/rulesChanged).
+
+=== v1.91.0 — SAB SCREENS NAYI SHAKAL + NIKHRI KHATA LINES + NAYA ACCOUNT FORM (rules wahi v1.88) ===
+- paintHomeBar ab BAR_VIEWS (khata daily due purchase sale stock expenses cash dasti chart) par, !selected. main.home-smart
+  CSS se purane dabbe/button har jagah chhupte hain + .link-pending. View extras: purchase -> lastPurchasePending (renderPurchases
+  mein set) chip data-hb="milao" (pehla "Milao" button scroll + .flash) + aaj ki purchase ginti; expenses -> aaj ka kharcha
+  (expense+payment); cash -> summary mein "Ginti baqi". MutationObserver ab #list aur #summary (childList) bhi.
+- CSS: main .summary transparent, har bacha div safed card (strong 20px); .bq-card safed; .party patli (avatar 38, naam
+  nowrap ellipsis, amount pill :has(b.red/.green), b.zero grey). Khata line markup: b class red/green/zero, small =
+  "category · phone". .toolbar patla, #list>p:not([class]) chhoti grey, #actions button 48px.
+- accountForm(p, preset): form ke NAAM WAHI (name phone category expenseOnly dasti posSync opening side) — category/side
+  hidden select, cards (data-af-type) aur pill (data-af-side) unhein set karte; save/similar-on-submit logic bilkul wahi.
+  acctFormSmart(): live similarParties (350ms, 2 tak, data-open-similar Kholein), navigator.contacts (Contact Picker —
+  sirf jahan ho), #afPreview live. Default qism: Supplier jab purchase view / Supplier tab / preset.
+- purchaseSupplierForm: nayi shakal, live partyScore>=6 warning, contacts. cloud.addPurchaseSupplier wahi.
+- Browser test (Chrome, nakli cloud): khata, purchase, due, cash, dasti chips + smart line sahi; form Supplier + Dene 2500
+  preview "Rs 2,500 Dene hain"; koi page error nahi.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.91.0') + version.json.
+
+=== v1.92.0 — DAILY SALE SMART: hisaab + Farq patti, TABS, saaf entry, NOTON SE GINTI, patli neeche line (rules wahi v1.88) ===
+- Summary: dIn = sale+collection+opening, dOut = expense+payment+change, hona = dIn-dOut; .farq-bar (ok / bad / wait) —
+  d.closed ho to "Gina d.cash" + d.difference (>0 = cash KAM -> "−"). 📷 Pictures ab Sale tab ki .sheet-quick mein
+  (data-day-camera, list render ke baad bind).
+- dailySheet: .day-tabs (sale, collection, expense, change = opening+change sections, cash) + section data-col / .on;
+  .day-tabbed CSS: ek waqt ek column, block layout (purana 6-column grid/scroll sirf CSS se band). dayTab sessionStorage
+  'sam-day-tab'. setupDayTabs(): click + touch swipe (70px, input/select/chips par nahi). setDayTab bina render ke classes.
+- Sheet form: wahi naam (query account amount note) — note hidden + [data-note-toggle] (setupSheet: value ho to khula).
+  CSS grid order: quick, query, chips, account|amount, note, toggle|submit. Chips ek line nowrap ellipsis.
+- countSheet: <details.notes-calc> data-nc (5000..10, 1 = sikke Rs) — naam "count" NAHI (save sirf [name=count] parhta);
+  ncTotal/ncPaint/ncRestore (sheetDrafts key+':nc'); "Yeh jama ginti mein daalo" khali count row bharta ya nayi row.
+- #actions.day-acts (renderSurface shuru mein class hatti hai) + data-dact; paintDayActs: change/cash -> Closing neela.
+- Browser test: sale chip+5000+note save (1 entry add), swipe -> Wasooli, noton 2×5000+3×100+45 = 10,345 -> count row ->
+  Save ginti (closing edit), koi page error nahi.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.92.0') + version.json.
+
+=== v1.93.0 — DAILY SALE: TABS WAPAS HATAYE (malik ko pasand nahi aaye) — columns pehle jaisi, sirf styling (rules wahi v1.88) ===
+- dailySheet: .day-tabs aur .day-tabbed HATAYE; .sheet-scroll.day-cols (purana 6-column grid + horizontal scroll wahi).
+  Form ki DOM tarteeb pehle wali: query, suggestions, account, amount, note (HAMESHA visible, toggle nahi), submit, phir extras
+  (.sheet-extra: sale -> Roznamcha + AI; expense -> naya kharcha account). 📷 Pictures wapas summary mein (.day-camera chip).
+- setupDayTabs/paintDayActs ab call nahi hote (functions pade hain, nuqsan nahi). #actions.day-acts patli line rehti hai.
+- Farq patti (v1.92) aur noton se ginti (details, .day-cols mein 1 column grid) RAKHE.
+- SABAQ: malik ko screen ki TARTEEB badalna pasand nahi — sirf shakal (chips/fonts/buttons) badlein, layout wahi rakhein.
+- Browser test: 6 columns sath, tabs nahi, note nazar, sale save 1 entry, koi error nahi.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.93.0') + version.json.
+
+=== v1.93.1 — POS PURCHASE LAYOUT FIX + TAREEKH HATAYI (rules wahi v1.88) ===
+- BUG (v1.91): `main .summary>div{display:grid}` ne .stock-head (Sale/Stock/POS Purchase head) ko bhi grid bana diya; grid item
+  min-width:auto -> .pp-sup-list (nowrap chips) ne track ko 577px tak khencha, phone par poora page zoom-out. FIX:
+  `main .summary>.stock-head{display:block!important}` + pp-* min-width:0. Test: ppurchase/sale/stock scrollWidth = 390.
+- purchase.js: Tareekh input (data-pp-day) HATAYA (malik ki farmaish). date = todayStr(); edit -> date2 = edit.date (PC
+  editPurchase original PurchaseDate rakhta hai kyunke j.date == bill date). `day` variable ab sirf draft mein pada hai.
+- BAR_VIEWS mein 'ppurchase' shamil (chips + purane dabbe chhupe).
+- PC NOTE (22-Sep): PURCHASE-LAGAO.bat (ek-file installer) — pehli banayi hui copy mein head '::FILE:' ke pehle wajood
+  (PowerShell command ke andar) par kat gaya tha -> base64 lines cmd ne chala di (bekaar, nuqsan nahi). Nayi copy markers
+  #F#/#E# line-start (?m) regex + asal pwsh 7.4 par extraction test. sync-bills v5 ab ASAL PC ki v4 par (pehle ghalti se purani v3 par).
+- AGLA KAAM (nayi chat): HAZRI app mein "🎫 Bina bataye gaya" ticket — banane wale: manager, malik, senior mulazim (per-staff switch);
+  faisla sirf malik: Maaf / Warning / Katauti; katauti khud = tankhwah ÷ mahine ke din ÷ duty ghante × der (qareebi Rs 5), badal
+  sakte; tankhwah parchi mein line. Hazri app ka code is chat mein NAHI — malik ZIP dega.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.93.1') + version.json.
+
+=== v1.94.0 — APP PURCHASE LIST: DOBARA / SCREEN PAR / EDIT / CANCEL + save(quiet) BUG FIX (RULES v1.94 PUBLISH ZAROORI) ===
+- purchase.js openToday: billActs(p) (mayTouch = owner | by==uid && date aaj): failed -> data-pp-retry (status new,
+  retryAt, error '') + data-pp-reopen (pehle status 'replaced' — PC v3 ki ANJAAN-retry se DOUBLE bill na bane — phir
+  loadFromJob: NAYA bill, rates jo bheje the mode 'manual'); cancelled -> reopen; done -> data-pp-editdone (posBills
+  'pos-'+purchaseId -> docStatus/date checks -> ppLoadBill); new -> data-pp-cancel (status cancelled). statusText mein
+  cancelled / replaced. Dialog refresh par khuli details khuli rehti hain.
+- cloud.updateAppPurchase(id,patch) = setDoc merge (updateDoc import nahi).
+- RULES appPurchases update: (failed -> new|replaced) ya (new -> cancelled), affectedKeys hasOnly [status retryAt error
+  replacedAt cancelledAt], owner ya (by==uid && isToday(date) && purUser). Sasti shartein pehle. PC admin key bypass.
+  PC v3 'replaced'/'cancelled' ko uthata hi nahi (listener new/posting/failed; claim ke rules).
+- BUG: autoEndZeroReminders -> save() -> $('dialog').close() + notice: app khulne ke baad koi bhi khuli khirki band ho
+  jati thi. FIX: save(data, existing, quiet) — quiet par close/notice nahi; autoEnd quiet=true. Browser test pass.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.94.0') + version.json (rules 1.94, rulesChanged true).
+
+=== v1.95.0 — NAVY THEME + PREMIUM CHIPS + zoom .92 + godam stock filter + bill action taza check (rules wahi v1.94) ===
+- Permission masla (malik ki screenshot): 1000-expression NAHI (rules 30KB/256KB; update shart chhoti). Saboot: momin ka
+  "Dobara" kamyab (⏳ aa gaya). OLper par button dabate waqt haalat badli thi (list purani). FIX: billAct pehle
+  cloud.getAppPurchase(id) (getDoc) — NEEDS[kind] na mile to STATUS_WORD Urdu alert + openToday(); permission-denied par
+  do wajah wala Urdu paigham. Momin ⏳ par ruka = PC par purchase-post nahi chal rahi thi.
+- Rang: /tmp/navy.py jaisa algorithm — blue hue (195-240°, s>.25): hue 220, darks s*.85(cap .62) l*.64, mid s*.5 l*.92,
+  light tints s*.45. style.css 211 rang, index theme-color, manifest theme/background, app.js colours.blue. Primary
+  #1258ce -> ~#223b6d. Logo PNG waise hi (neela) — malik kahe to badlein.
+- `html{zoom:.92}` (lafz ~8% chhote) — Chrome test: footer (fixed) 0..390 bottom 844 theek, dialog theek, scrollWidth 390.
+- Premium chips CSS (:root --navy/--chip-bd): party/sort/m/ws chips, pp-sup-list, sheet chips, pp-bill-acts, day-acts,
+  .account-tools button (stock filters bhi) — safed + border + saaya; .on/.selected/.got navy gradient.
+- pos-stock: data-stock-branch par branch !== 1 -> filter 'has' (sirf is godam ka stock) + chip label "📦 Is godam ka stock".
+- Malik ka faisla: godam se sale par POS stock GODAM se hi minus (sale-post waisa hi).
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.95.0') + version.json.
+
+[22-Sep-2026, app ke bahar] PC ke liye CHECK-BILLS.bat (bills-check.js) — Edit na aane ki JAANCH. Wajahen: (a) sync-bills v5 PC par nahi
+chal rahi -> posBills mein purchaseId/stamp nahi -> Bill dekhein mein "PC par nayi sync-bills.js lagayein"; (b) bill POSTED (docStatus 2);
+(c) mulazim + purana bill. Bat band pade loops (bills-auto / purchase-auto) chala deti hai. Tafseel PC ke AI_NOTES mein.
+
+=== v1.96.0 — POS PURCHASE SCREEN SE PC KA BILL EDIT (rules wahi v1.94) ===
+- Malik: POS Purchase screen par PC wala (khula) bill edit karne ka rasta hi nahi tha (sirf Purchase tab > Bill dekhein).
+- purchase.js: "✏️ PC ka bill edit karein" (data-pp-pcbills, canUse && !edit) -> openPcBills(): pcBillsOf() list (app.js
+  setup pcBills: entries().filter(isPosPurchase) -> {id, billNo (note "POS Purchase X"), date, partyId, partyName, rs,
+  posted=isPosted}); search pcQ (bill # / naam / matchesOf), pcWhen today|yday|all (sirf malik), mulazim sirf aaj.
+  Posted disabled. openPcBill(id): cloud.purchaseBill -> docStatus 2/3, mulazim aaj check -> ppLoadBill(b,{partyId}).
+  ppLoadBill ka "tafseel nahi" paigham ab CHECK-BILLS.bat batata hai.
+- Browser test: button, list (khula + posted band), search 2470 = 1, khule par tafseel-nahi paigham; koi error nahi.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.96.0') + version.json.
+
+=== v1.97.0 — STOCK ✓ TICK + GODAM FILTER + EDIT INTEZAR (rules wahi v1.94) · PC: purchase-post v4 + sync-bills v6 ===
+- pos-stock: countHTML — !round (Nayi ginti chalu nahi) par khane/Save/Tick nahi, "Ginti abhi band hai" + history.
+  [data-count-tick] -> tickCount(): system stock (item.stock) = ginti (ctn/pcs pack se), minus par band, pehli ginti alag ho
+  to confirm, 0 par confirm; writeCount(item, v, null, tick=true) -> history h.tick; historyHTML "✓ Tick — system jaisa".
+  Baqi nishan ho to hata deta. Purana data-flag-check/checked code UI mein nahi tha (sirf handlers) — chhuya nahi.
+- Godam: godamAll flag — pickedBranch !== 1 aur filter 'all' ho to 'has' (render par bhi, sirf click par nahi); 'Sab' chip
+  dabane par godamAll = true; branch badalne par false.
+- purchase.js: openBillForEdit(id, partyId, minUpdated) — billReady (purchaseId, stamp, lines itemId, updatedAt >= minUpdated
+  [editdone: job.doneAt, taake edit ke baad purani stamp na aaye]); na ho to waitBill: "⏳" dialog, 5 sec poll, 4 min had,
+  aate hi ppLoadBill. openPcBill + editdone dono isi se.
+- PC (PURCHASE-TEZ.bat): purchase-post v4 har kamyab bill par bills-now.flag; sync-bills v6 har 5 sec flag -> foran runOnce.
+  Installer bills-auto dobara START nahi karta (sync-bills mein lock nahi — do copies ban jatin); 35 sec baad band ho tabhi.
+- Browser test: tick colgate 96 (tick:true), minus par call nahi, round na ho to khane nahi, Godam 3 = sirf kala chana;
+  edit intezar -> 3rd poll par khud edit mode. Koi error nahi.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.97.0') + version.json.
+
+=== v1.98.0 — PURCHASE AIK JAGHA + WAHI SCREEN WAPAS + ANDAR SE SCREEN SWITCH (rules wahi v1.94) ===
+MALIK KI FARMAISH: (1) purchase ka kaam do jagha ho raha tha (Purchase list ka "＋ Purchase" photo form aur POS
+Purchase screen) — aik hi jagha ho, milan (Milao) bhi rahe, aur bill ki photo se items bhi add hon. (2) app har dafa
+naya page na khole — jahan chhora tha wahin se khule, login ke baad bhi. (3) sale/purchase/stock wali screens ke
+ANDAR se hi password daal kar doosri screen par ja sakein (logout/dobara login nahi).
+
+A) PURCHASE AIK JAGHA (purchase.js + app.js)
+- renderPP ke head mein .pp-modes ke do chip: "🧾 Items wali bill" (on) aur "📷 Sirf photo + raqam" (data-pp-photo)
+  -> ppSetup ka naya hook photoForm() = app.js ka purchaseForm(). Purana "＋ Purchase" button Purchase list par
+  WAISA HI hai (layout nahi chheri — v1.93.0 ka sabaq).
+- "🤖 Bill ki tasveer se items" (data-pp-ai, sirf canUse()) -> aiItems(): chhupa <input type=file> (4 tasveer tak)
+  -> hook aiBill({files,onStatus}) = app.js ka ppAiBill() (loadAiCfg + shrinkForAI + readPurchaseBill; kuch save
+  nahi hota) -> har AI line par smartSearch(stock().items, roman||name, 1); mila to addItem(it,false) aur
+  ctn/pcs + rate bharo. RATE KA USOOL: line par ctn ho aur item ka pack ho to rate = FI CTN (costP = rate/pack),
+  warna fi pcs. Dialog mein: mile hue (pc-row ok), na mile hue (pc-row warn, haath se lagayein), supplier ka chip
+  (rank se, sirf tab jab supplier chuna hua na ho) aur warning "ginti aur khareed rate khud check karein".
+- DO DAFA ENTRY KA DHYAN (dono taraf, sirf poochta hai — apne aap kuch nahi jorta/hatata):
+  * purchase.js save(): naya bill bhejne se pehle cashDupes hook = app.js ppCashDupes(partyId,total) — isi party ki
+    KHAALI (posBill nahi) cash purchase, 7 din ke andar, raqam ka farq <= 2% (kam se kam Rs 1) -> confirm.
+  * app.js purchaseForm ka formSave: nayi photo purchase se pehle posDupOk(pid,amount) — isi party ka POS bill
+    (isPosPurchase, 7 din, wahi raqam, cashLinkedTo nahi) -> confirm "Milao dabayein". Cancel par sirf return
+    (koi error toast nahi).
+  * Party merge / naam se auto-matching AB BHI NAHI (v1.79.2 ka faisla wahi hai).
+
+B) WAHI SCREEN WAPAS (app.js, "===== v1.98.0 (B)" wala block route() ke neeche)
+- keepView() har route() par localStorage 'sam-last-view:<projectId>' = {v:view, id:selected, sc:viewScope()}.
+  viewScope() = 'owner' ya 'staff:<scope>' — scope badle to purani screen NAHI uthti.
+- allowedView(v): purchase login -> purchase/ppurchase; stock -> stock; sale -> sale; ppurchase -> canPP();
+  sale -> saleUser(); stock -> sirf owner; baqi khata/daily/expenses/cash/dasti/due/chart/purchase/pos.
+- onSession: pehle pendingView (switch ka target), warna restoreView(), warna purana wala chalan. Restore par
+  viewCheck=true; pehle listen snapshot par agar us id ka party na mile to selected=null (deleted account par
+  khali screen na khule).
+- PHONE KA BACK: navPush() ek "spare" history state rakhta hai (login par aur har route par). popstate par —
+  dialog khuli ho to pehle wohi band, warna #back nazar aa raha ho to wohi click (aur naya spare state), aur
+  ghar (khata) par kuch na karo = app se bahar. Yani andar wali screens par app band nahi hota.
+
+C) ANDAR SE SCREEN SWITCH (app.js "===== v1.98.0 (C)" + index.html #switchNav)
+- .app-nav mein naya button #switchNav "🔄 Screen badlein" — renderSurface mein sirf MULAZIM (session.role==='staff',
+  !localMode) ko dikhta hai (malik ke paas sab screens pehle se hain). Baqi nav buttons ki purani shart waisi hi,
+  bas switchNav us se bahar rakha gaya.
+- switchForm(): 4 chip (purchase/stock/sale/full; apni wali disabled, jis ka password yaad ho us par 🔒) + password
+  + "yaad rakhein". Chip dabate hi yaad kiya password khud bhar jata hai (remRead/remDec).
+- Submit: Sync baqi ho to pehle confirm; phir $('role')='staff', $('accessScope')=scope, $('rememberPw') set karke
+  cloud.controller.login({role:'staff',username:'admin',password,scope}) — yani asal mein us scope ka NAYA login,
+  is liye FIREBASE RULES BILKUL NAHI BADLI (ijazat khud sahi rehti hai). Kamyabi par rememberAfterLogin(pw) aur
+  pendingView = ppurchase/stock/sale/khata. Nakami par pendingView saaf, khirki khuli rehti hai, paigham
+  loginErrMsg() se (cloud.js ka loginErrorMessage import block mein mehfooz kiya gaya hai), too-many-requests par
+  wahi 60 sec ki rok.
+- NOTE: switch = doosra login. Jo pending (bina sync) kaam pehle login ka hai woh usi login se dobara khulne par
+  jayega — is liye "Sync baqi" wali warning zaroori hai.
+
+TEST (node + jsdom, nakli cloud/stock — browser is bar available nahi tha):
+- purchase.js: chips, AI se 2 items cart mein (600/12 = 50 fi pcs), 1 na mila alag dikha, save par cashDupes poocha,
+  bheje gaye doc mein 2 lines aur total 6,750. Sab pass.
+- app.js (B): 5 scope ke allowedView, screen+account restore, scope badle to restore nahi, back par dialog pehle
+  band, ghar par app se bahar. Sab pass.
+- app.js (C): 4 chip, apni screen disabled, yaad kiya password khud bhara, login sahi scope se, ghalat password par
+  khirki khuli + dobara koshish. Sab pass.
+- posDupOk / ppCashDupes: juri hui bill par nahi poochta, 7 din se purani nahi uthati, 2% tak qareeb raqam pakarti.
+AGLI DAFA: (a) malik ne kaha tha stock-only/sale-only ko bhi purchase chahiye — abhi woh SWITCH se milti hai (rules
+nahi chheri); agar aage un logins ko seedhi purchase deni ho to firestore.rules badalni parengi (malik se rules file
+mangein). (b) AI ke items par "ye item stock mein nahi" wali lines par abhi naya item banane ka rasta nahi — chahiye
+to POS side par banana behtar hoga.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.98.0') + version.json.
+
+=== v1.99.0 — AI KO "SIKHANA": BILL KA NAAM -> SYSTEM KA ITEM (alias se; rules wahi v1.94) ===
+MALIK KI FARMAISH: "kya hum AI ko train kar sakte hain — bill ke naam aur PC ke naam yaad kar le, aur milan wali
+screen par bhi bill ka naam aur system ka naam dikhe."
+FAISLA: Gemini ko hum train/fine-tune NAHI kar sakte. Is ke bajaye APP ko yaad karwaya gaya — wahi purana
+alias system (cloud.setAlias / listenAliases / aliasOf, v1.75) jo Stock screen mein "Doosre naam" ke naam se hai.
+Naya collection NAHI, nayi rules NAHI. Faida dogana: smartSearch har jagah (Sale/Stock/Purchase) usi naam se
+item dhoondh leta hai.
+
+app.js:
+- import mein aliasOf shamil (smart-search.js).
+- learnAlias(itemId,name): naam saaf (comma/newline hata kar, 60 harf tak) -> aliasOf(itemId) ki CSV mein jorta hai
+  (pehle se ho to 'pehle se'), CSV 120 harf se barhe to sab se purana naam nikal deta hai (Stock ke input ka
+  maxlength 120 hai), phir cloud.setAlias(itemId, csv). Return: 'ok' | 'pehle se' | paigham.
+  permission-denied -> "naam sirf malik yaad karwa sakta hai (rules)" — yani MULAZIM ke liye rules badalni parengi
+  (aliases collection par staff write). Malik ke liye abhi bhi kaam karta hai.
+- photoCompareHTML (milan): har jori par, agar POS line ka itemId ho, "✓ Yeh naam yaad kar lo" button
+  (data-tally-learn="<itemId>|<AI ka naam>"); alag click handler (learnAlias ke natije ke mutabiq button ki jagah
+  chhoti line likh deta hai).
+- ppSetup ko naya hook: learn: learnAlias.
+
+purchase.js (AI wale bill ki screen):
+- aiRows[] = {ai (AI ki line), key (cart line ka k), itemId, learn}. aiItems() sirf data banata hai; dikhana
+  aiRender() karta hai (dialog dobara banata hai, is liye har tabdeeli par nayi list).
+- Har mili hui line: "bill ka naam → system ka naam" + [✓ Yaad kar lo] (aiLearn -> learnOf) + [✏️ Badlein].
+  Na mili line: [✏️ Item chunein].
+- aiPickForm(i): search + list (smartSearch), "‹ Wapas list par" (data-pp-aiback). aiPicked(i,id): purani cart line
+  hata kar naya item daalta hai, AI ki ginti/rate aiApply() se lagata hai, aur PHIR KHUD aiLearn() chala deta hai
+  (yani item chunna = naam sikhana).
+- aiApply(ln,l): wahi usool — line par ctn ho aur item ka pack ho to rate = FI CTN (costP = rate/pack), warna fi pcs.
+- Naye data-* : pp-learn, pp-pick, pp-picked ("i|itemId"), pp-aiback — click handler mein pp-photo/pp-ai ke foran baad.
+
+TEST (node + jsdom, nakli cloud/stock): Yaad kar lo -> learn hook ko (itemId, bill ka naam) gaya aur "yaad kar liya"
+likha aaya; "Item chunein" -> picker mein search se item mila, chunte hi cart mein aaya aur naam bhi yaad hua
+(learn 2 dafa). Purane v1.98 ke sab test bhi pass.
+
+ABHI BAQI (malik ne "1-2-3" kaha tha — teeno chahiye):
+1. AI ko PEHLE HI supplier ke items ki list dena (taake pehli dafa hi sahi naam/match aaye) — is ke liye
+   ai-tally.js chahiye (readPurchaseBill ka prompt wahin hai). Malik se maanga hua hai.
+2. Speed (abhi 10-40 sec): halka model (flash-lite), ek hi tasveer, chhota size — bhi ai-tally.js/pickModel mein.
+3. Mulazim bhi naam yaad karwa sake -> firestore.rules mein aliases par staff write (malik se rules file mangein).
+NOTE: malik ne is chat mein khata-sync.zip (PC wala folder) bheja tha — us mein app ki files (ai-tally.js,
+smart-search.js, cloud.js) nahi hotin; woh GitHub wale app repo mein hain.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html (pattern '1.99.0') + version.json.
+
+=== v2.0.0 — AI KO HUMARE ITEMS KI LIST + TEZ JAWAB + MULAZIM BHI NAAM SIKHA SAKE (RULES v2.0 PUBLISH ZAROORI) ===
+Malik ne "1-2-3" kaha tha (teeno kaam). Files (ai-tally.js, cloud.js, firestore.rules waghera) isi chat mein aayin.
+
+1) AI KO PEHLE HI HUMARE ITEMS KI LIST (ai-tally.js + app.js + purchase.js)
+- ai-tally.js: BILL_PROMPT mein naya khana "itemId" (list mein se chuno; yaqeen na ho to khali — ghalat item mat lagao,
+  list se bahar ka id mat banao). Nayi export knownItemsText(known): "id | naam | doosre naam" ki satrein, 400 tak,
+  naam 60 harf, alias 80 harf. readPurchaseBill({...,known,fast=true}) list ko ALAG text part bana kar bhejta hai.
+  parseBill ab itemId bhi rakhta hai (40 harf).
+- app.js knownItems(partyId): stockPools() ke items; pehle wo jo isi supplier ke pichhle 8 POS purchase bills mein
+  aaye (e.items[].itemId se ginti), phir baqi, 400 tak; har item ke sath aliasOf(id) — yani jo naam malik/mulazim ne
+  "Yaad kar lo" se sikhaye WOHI AI ko bhi milte hain (jitna sikhayenge utna match behtar).
+- purchase.js aiItems: pehle l.itemId se item dhoondta hai, na mile to purana smartSearch wala rasta.
+- SABAQ: BILL_PROMPT ke andar bhi lafz "HUMARE ITEMS" aata hai — test mein sirf usi lafz se list ka hona mat jaanchein
+  (header "HUMARE ITEMS (shakal" ya koi asal satar dekhein).
+
+2) SPEED (ai-tally.js + app.js)
+- generate({...,fast}) ab generationConfig mein thinkingConfig:{thinkingBudget:0} bhejta hai (Gemini 2.5 flash ka
+  "sochna" band = kaafi tez). Jo model ise na maane (400 / INVALID_ARGUMENT / thinking / generation_config) us par
+  KHUD ek dafa purane tareeqe se dobara. readPurchaseBill default fast=true; readPages (roznamcha) WAISA HI (fast nahi).
+- app.js ppAiBill: bill ki tasveer ab shrinkForAI(f,1400,0.75) (pehle 1800/0.85) — sirf BILL ke liye; kaapi/roznamcha
+  wali tasveer ka size nahi chhera gaya.
+- naya aiReadBill({cfg,images,onStatus,partyId}): har second status mein "(12s)" likhta hai; photoCompare (milan) bhi
+  ab isi se chalta hai (yani milan ko bhi list + tez jawab + ginti milti hai).
+
+3) MULAZIM BHI NAAM YAAD KARWA SAKE (firestore.rules — PUBLISH ZAROORI, version.json rules 2.0 / rulesChanged true)
+- Naya match /businesses/noor-traders/blueAccess/itemAliases: create/update sirf blueStaff() ya purchaseStaff(),
+  keys hasOnly(['map','updatedAt']), map is map, size <= 5000, aur update par
+  request.resource.data.map.size() >= resource.data.map.size() — yani naam JOR sakte hain, MITA nahi sakte.
+- Jaan boojh kar: mulazim kisi maujooda item ka naam BADAL sakta hai (rules mein map ke andar ki values par shart
+  nahi lag sakti — koi loop nahi hota). Malik ko yeh baat bata di gayi thi, us ne haan ki.
+- setAlias wahi purana (cloud.js): businesses/noor-traders/blueAccess/itemAliases doc, {map:{[itemId]:csv},updatedAt},
+  merge:true, 120 harf. Rules mein merge par request.resource.data = MILA HUA poora doc hota hai (is liye map.size()
+  se ek-naam ki shart nahi lag sakti).
+
+TEST (node + jsdom, nakli fetch/cloud/stock): 9 ai-tally test (list ki shakal, 400 ki hadd, itemId, thinking band,
+purane model par khud dobara, list na ho to na jaye), 23 purchase.js test (AI ke itemId se sahi item laga jab bill ka
+naam bilkul alag tha, naam se match, na mila alag, learn/pick, cashDupes, save), 15 + 14 test v1.98 wale (screen
+restore, back, switch). Sab pass.
+ZIP mein ab ai-tally.js aur firestore.rules bhi hain (13 files).
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js ai-tally.js sw.js index.html (pattern '2.0.0') + version.json (rules 2.0, rulesChanged true).
+
+=== v2.1.0 — PICHHLE BILL KA KHAREED + WOHI NAFA · RAQAM KA KHANA · AI KA CHUNA HUA NAAM KHUD YAAD (RULES v2.1 PUBLISH) ===
+MALIK KI 3 FARMAISHEN (Affan Traders ke bill ki tasveer par):
+ (a) "line mein aik khana ho jis mein raqam khud likhein (1546) aur peeche pieces — rate khud nikal aaye";
+ (b) "AI ne aik dafa broast khud sahi chuna tha, agli dafa bhool gaya — jo lafz AI khud sahi chune wo bhi yaad rahe";
+ (c) "usi item ka pichhla khareed dekhein aur jitna nafa pichhli dafa laga tha wohi is dafa bhi — W aur R dono".
+ NOTE: khareed rate ka faisla malik ne "bill ka Rate hi rahe" diya (yani Amt ÷ ginti wala rasta NAHI liya; wajah
+ malik ko bata di gayi thi ke Affan ke bill par Amt = rate − dis − T.O. + tax, is liye asal lagat 128.88 banti hai
+ jabke Rate 114.43 hai aur poore bill ka farq ~36,400 tha). Manual khana isi liye diya gaya hai.
+ Bonus (Bon. column): malik ne kaha bonus nahi aata — AI se bonus NAHI mangwaya gaya.
+
+(a) RAQAM KA KHANA (purchase.js)
+- .sale-amt ab <label class="sale-amt pp-amt"> ke andar input [data-pp-amt] hai (pehle sirf <b> dikhta tha).
+  Likhne par: costP = raqam ÷ linePcs(l), phir recalc + paintRates. refreshTotals() ab .value bharta hai aur jis
+  khane mein likha ja raha ho (document.activeElement) use haath nahi lagata.
+
+(b) AI KA CHUNA HUA NAAM KHUD YAAD (purchase.js + app.js)
+- aiRows ki har row par naya flag byAi (matlab item AI ne HUMARI list se itemId de kar chuna, smartSearch se nahi).
+- AI ka jawab aane ke baad: har byAi row par aiLearn(i,null,true) — quiet (koi toast nahi). Sirf byAi par, kyunke
+  smartSearch ka andaza ghalat bhi ho sakta hai.
+- aiLearn(i,btn,quiet) mein teesra parameter naya.
+- aiPicked(): agar pehle koi item laga tha (byAi ya yaad kiya hua) aur ab doosra chuna ja raha hai to pehle
+  unlearnOf(puranaItemId, naam) — app.js ka naya unlearnAlias() us item ki alias CSV se sirf wo naam nikal deta hai
+  (baqi naam wahi rehte). Warna ghalat naam hamesha ke liye chipka reh jata tha (malik ka "broast" wala masla).
+
+(c) PICHHLA KHAREED + WOHI NAFA (cloud.js + rules + app.js + purchase.js)
+- cloud.js: naya listenItemRates(cb) aur setItemRates(map) — doc businesses/noor-traders/blueAccess/itemRates,
+  {map:{[itemId]:{c,w,r,t}}, updatedAt}, merge:true (setAlias jaisa hi tareeqa).
+- rules v2.1: blueAccess/{id} ki staff-read list mein 'itemRates'; naya match block — create/update sirf blueStaff()
+  ya purchaseStaff(), keys hasOnly(['map','updatedAt']), map <= 6000, aur update par size ghat na sake.
+- app.js: itemRates state + connect ke waqt listenItemRates (aliases jaisa), hooks: lastRates, saveRates, unlearn.
+- purchase.js: NAYA baseOf(it) = oldOf(it) par pichhli yaad chipka deta hai (oldCost = mem.c, oldW = mem.w,
+  oldR/oldR2 = mem.r, mem:1). addItem aur ppLoadBill dono ab baseOf istemal karte hain. recalc() waisa hi hai —
+  nafa oldW/oldCost se nikalta hai, is liye "jitna nafa pichhli dafa laga tha" khud naye khareed par lag jata hai.
+- ppLoadBill (EDIT MODE): line banane ke foran baad recalc() — bill ka apna khareed aata hai aur us par pichhla
+  nafa khud lag jata hai (malik ki farmaish: "edit mode mein aate hi neeche rates khud lag jayein").
+- Line ke <small> mein ab "pichhli dafa khareed X" likha aata hai (yaad na ho to pehle jaisa "purana khareed").
+- save(): bill bhejte hi mem = {itemId:{c:costP,w:wpcs,r:rpcs,t:now}} -> saveRatesOf (fire-and-forget, nakam ho to
+  bill par koi asar nahi).
+
+TEST (node + jsdom): 27 purchase test (raqam ÷ ginti = khareed, AI ka naam bina dabaye yaad, Badlein par purane
+item se naam hata, bhejte waqt rates yaad), 6 naye memory test (pichhli dafa ka W +20% aur R +50% naye khareed 100
+par 120/150; yaad na ho to POS wale rates se +40% -> 140), 9 ai-tally, 15 + 14 purane. Sab pass.
+ZIP: 14 files (ab cloud.js bhi).
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js ai-tally.js cloud.js sw.js index.html ('2.1.0') + version.json (rules 2.1, rulesChanged true).
+AGLA: malik ka jumla adhoora tha — "...wholesale ka bhi parchoon ka or maza ki baat ....." — agli chat mein poochein
+ke aage kya kehna chahte the.
+
+=== v2.2.0 — HAR PDF PAR EK HI SHEET · BILL KI TASVEER SCREEN PAR · PURCHASE KI NIKHRI SHAKAL (rules wahi v2.1) ===
+MALIK KI FARMAISH (Hazri app ka "PDF tayyar hai" wala screenshot bhej kar): (1) "har PDF kholne par is tarah ka
+option" — yani Hazri app jaisi sheet Blue Khata mein bhi; (2) POS Purchase par jo bill ki tasveer AI ko di, wo
+saath nazar aaye ("pura bill dekhain"); (3) purchase screen ko premium / user-friendly look.
+MALIK KA FAISLA: tasveer SIRF usi waqt tak (halki) — kahin save nahi hoti.
+
+(1) PDF SHEET (app.js)
+- Naya pdfSheetHTML(filename) + wirePdfSheet({filename,prepare,valid}): 📄 sar-naame ke sath status (id
+  reportDownloadStatus — purana id jaan boojh kar wahi rakha), bara "⤴ WhatsApp / Share" (#sharePdf), phir
+  "⇩ Download" (#downloadReport, purana id) aur "Kholein" (#openPdf -> createObjectURL + window.open).
+- prepare() ek hi dafa chalta hai (file cache); sheet khulte hi background mein PDF banna shuru — tap par foran.
+  Share na ho to khud download + saaf paigham. Share ab HAR PDF par (pehle sirf receipt par tha).
+- openReportPreview() ab yahi sheet + neeche preview dikhata hai (purana report-toolbar hata diya). valid() wahi
+  (button.isConnected + wahi uid + options.valid).
+- Settings > "Saved PDF reports" bhi ab isi sheet se khulti hai (pehle seedha download hota tha).
+
+(2) BILL KI TASVEER (purchase.js)
+- billPics = object URLs (URL.createObjectURL) — SIRF memory mein; setBillPics() purane URL revoke karta hai.
+  aiItems() ki files se bharte hain; "✕ Naya bill" par saaf. Refresh par chali jati hai (malik ka faisla).
+- Head mein billStripHTML(): chhoti thumbnails + "📄 Bill dekhein" + "📌 Upar chipka do".
+- Pin par #list ke sab se upar .pp-billbar — tasveer 42vh tak, zoom −/+ (CSS width 150-300%), ek se zyada ho to
+  "1/3 ›", "⤢ Poori screen", "✕".
+- billView(): poori screen wala dialog (.pp-view, zoom 4x tak, agli tasveer).
+- Naye data-*: pp-pic, pp-pin, pp-zoom, pp-nextpic, pp-vzoom, pp-vnext — click handler mein pp-photo/pp-ai se pehle.
+
+(3) SHAKAL (style.css) — TARTEEB BILKUL NAHI CHHERI (v1.93.0 ka sabaq)
+- .pdf-sheet / .pdf-share / .pdf-acts; .pp-pics / .pp-billbar / .pp-view / .pp-billacts.
+- .pp-line ab safed card (border + do saaye), .pp-no gol badge, khane 46px + 16px font (ungli ke liye),
+  .pp-rates halka pas-manzar, .pp-amt ka input dayein taraf mota, .pc-row ok/warn ke halke rang.
+
+TEST (node + jsdom): 32 purchase (tasveer ki patti, chipkana, zoom, poori screen ka viewer + purane sab),
+8 naye PDF sheet ke (teen button, naam, pehle band, PDF banne par chalu, status, share ko file, download, kholein),
+6 memory, 9 ai-tally, 15 + 14 purane. Sab pass.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html ('2.2.0') + version.json
+(rules 2.1, rulesChanged FALSE — is update mein rules nahi badlin).
+
+=== v2.3.0 — HAR SUPPLIER KE BILL KA NAQSHA + BILL KE LIYE PRO MODEL (RULES v2.2 PUBLISH ZAROORI) ===
+MALIK KA MASLA: "AI naam to theek laata hai magar bill samajh nahi pata — pcs wala hai ya carton wala. Kya poora
+bill yaad kar sakta hai? Ek dafa larka charha de phir hamesha yaad rahe."
+TASHKHEES (malik ko bhi batai gayi): yeh model ki kharabi se zyada BILL ki kami hai — Affan ke bill par kahin nahi
+likha ke Qty pieces hai ya carton. Upar se humara apna BILL_PROMPT kehta tha "pata na chale to ctn maan lo" — Affan
+par wahi ulta parta tha (144 -> 144 carton, aur rate 224.88/72 = 3.12 fi piece; malik ki screenshot mein yahi tha).
+
+(1) NAQSHA (billFormats) — cloud.js + rules + app.js + purchase.js
+- cloud.js: listenBillFormats(cb) + setBillFormat(partyId,{q,r,n,t}) -> blueAccess/billFormats, map merge.
+  q = 'pcs' | 'ctn' (ginti ka column), r = 'pcs' | 'ctn' (rate ka column).
+- rules v2.2: staff-read list mein 'billFormats' + itemAliases jaisa create/update block (map <= 3000, size ghat na sake).
+- app.js: billFormats state + listener; hooks billFmt(pid) / saveBillFmt(pid,f); billNote(pid) AI ko naqsha URDU mein
+  bata deta hai (readPurchaseBill ka naya 'note' part).
+- purchase.js aiApply(ln,l,fmt): q='pcs' -> sab kuch Pcs mein (ctn+pcs jama), q='ctn' -> number Ctn mein.
+  RATE: r='ctn'/'pcs' ho to wahi; na ho to GINTI ke naqshe par (q='pcs' -> fi piece) — yahi 3.12 wala bug tha;
+  naqsha bilkul na ho to purana andaza (ctn && pack -> fi Ctn).
+- aiRender ke upar patti: naqsha na ho to "Is supplier ke bill par ginti kya hoti hai? [PCS] [CTN]" (data-pp-fmt) —
+  ek tap par naqsha save + aiReapply() se sab lines dobara lag jati hain. Naqsha ho to "📐 Naqsha: ginti = PCS …
+  [badlein]". AI ka qtyLabel (column ka asal heading) bhi patti mein dikhta hai.
+- learnBillFmt() save() ke waqt: har row par AI ne kya diya vs aap ne kya bheja — ginti aur rate ke vote,
+  majority se naqsha save. Yani "ek dafa larka charha de" wala kaam khud ho jata hai.
+
+(2) PRO MODEL (ai-tally.js + app.js)
+- pickProModel(key): gemini-*-pro tarjeeh, warna koi bhi 'pro' (lite/tts/image/live/audio/embedding nikal kar).
+- app.js billModelOf(cfg): cfg.billModel -> yaad kiya pro -> (ek dafa dhoondo) -> warna cfg.model. aiReadBill pehle
+  pro se koshish karta hai; nakami par proModel = flash kar ke flash se dobara (status par batata hai). Sirf BILL ke
+  liye — roznamcha/kaapi (readPages) wahi flash, waisa hi.
+
+(3) PROMPT (ai-tally.js)
+- "pata na chale to ctn maan lo" HATA diya. Ab: "GINTI KA ANDAZA MAT LAGAO" — ek hi ginti ho to 'qty' mein do aur
+  'qtyLabel' (column ka asal heading) batao; ctn/pcs alag sirf tab jab bill par do alag khane hon.
+- parseBill ab qty + qtyLabel/rateLabel/amtLabel bhi wapas karta hai (purane 'qty' ka ctn wala fallback waisa hi).
+
+TEST (node + jsdom): 10 naye naqsha-test (patti, PCS chunne par 144 CTN -> 144 PCS, rate 3.12 ki jagah 224.88,
+POS ko qty 144, bhejne par rate ka naqsha khud seekha) + 32 purchase + 8 PDF + 6 memory + 9 ai-tally + 29 purane.
+Sab pass.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js ai-tally.js cloud.js sw.js index.html
+('2.3.0') + version.json (rules 2.2, rulesChanged TRUE).
+
+=== v2.4.0 — JAANCH MODE + LINE KA DIMAGH (rules wahi v2.2 — kuch publish nahi) ===
+MALIK KI BAAT (Affan + Bhaiya ke bills, badam/dania screenshot, Godam 1 aur 3 ki stock PDF ke baad): "AI bill samajh nahi
+pata — pcs/carton; badam ka carton nahi aata; ek item ke rates lagte hi agla khud aaye, upar neeche na jana pare."
+MALIK KE FAISLE: hari lines EK TAP par pakki, baqi ek ek dikhao. Khareed rate = bill ka Rate (Amt ÷ ginti nahi).
+Bonus nahi aata. PC ka hissa (pack-lagao.js — POS mein Items.PackQty bharna) BAAD mein, jab malik PC ki files bheje:
+purchase-post.js, rate-lagao.js, sync-stock.js, start-all .bat (node_modules / firebase-key.json NAHI).
+PC ka purana khata-sync.zip (22 Sep) is chat mein tha: POS ka carton size = dbo.Items.PackQty (+ PackQtyName);
+rate-lagao.js wala job pattern (claim -> transaction -> SystemNotes -> done/failed) naye script ka namuna hai.
+
+LINE KA DIMAGH (purchase.js, "v2.4.0: LINE KA DIMAGH + JAANCH MODE" block)
+- jCandidates(ln, ai): pcs {ginti = pieces, rate fi piece} · ctn {POS pack > 1: ginti = carton, rate ÷ pack} ·
+  both {ctn aur pcs dono bhare: "5+3"} · size {bill ka سائز (ya yaad kiya memOf(id).s) > 1 aur POS pack se alag:
+  pieces = ginti × size, khareed = rate ÷ size}.
+- jJudge(r, fmt): har candidate ka score = |ln(khareed / pichhla khareed)| + naqsha ki tarjeeh (-0.3) (+ r.force -100).
+  Pichhla khareed = baseOf (itemRates memory ya POS prate). Kuch bhi maloom na ho -> purana andaza.
+  RANG: ±10% = 🟢 g · ±50% = 🟡 y ("rate X% badla") · us se door = 🔴 r ("N guna — unit / ginti check").
+  Pichhla khareed na ho = 🟡. PEHRE: hisaab (ginti × rate vs line total, 20% gunjaish tax/discount ke liye) -> 🔴;
+  stock (khareed > max(stock×10, pack×40 ya 400)) -> 🔴 "Stock ka pehra: X se Y". Item naam ke andaze se (byAi false)
+  mila ho to hara nahi, zyada se zyada 🟡.
+- jAutoFmt(): hari lines ke modes se naqsha KHUD (pcs / ctn / both — size aur both 'ctn' gine jate hain) aur save.
+  Patti sirf tab jab pakra na ja sake. Patti par TAP = IS bill par r.force (sab lines), agle bills par tarjeeh.
+
+JAANCH UI
+- aiRender() = overview: ginti (🟢/🟡/🔴), bill total vs lines + farq, naqsha line (khud pakra / badlein), "✓ N hari
+  pakki karein" (jAccept: done + naam yaad), "Jaanch shuru (N) ›", aur har line ka jz-row (tap = card).
+- jCard(i): bill ki tasveer (chhoti, ⤢), "Bill par" (naam, ginti, سائز, ریٹ, کل), "App ne lagaya" (item, unit, khareed,
+  pichhla + farq), wajahen, unit chips (data-pp-jmode = r.force), khane: CTN/PCS/khareed/W/R (seedha cart line mein,
+  khareed badle to pichhla nafa se W/R), [✓ Theek — agla ›] [Item badlein] [✕ Chhor do] [‹ List].
+  jNext(): pehle ghair-hari, phir baqi; khatam = jSummary().
+- jSummary(): bill ka farq (aur andaza: tax / T.O. / mazdoori), mehnge / saste items (rupay fi unit), do dafa item
+  "Mila do" (jMerge: ginti jama, khareed wazni ausat), chhori lines "↺ wapas" (jUnskip), laal baqi ki yaad-dahani,
+  "💾 POS mein bhejo" (seedha save()).
+- Bhejne ke baad aiRows = null (purani jaanch band — pehle bheje hue bill ki jaanch dobara khul sakti thi).
+- Enter / Done: .sale-cart aur .jc-card mein agla khana; line badle to scrollIntoView; card ke aakhri khane par ✓.
+
+SIKHNA (save par)
+- learnFromBill(): naqsha (modes se), r (q ke mutabiq), n, b (bills), g (hari ka ausat %), ex = 12 misalein
+  "bill ka naam => humara item | tareeqa x size". app.js billNote() yeh misalein aur 'both' ki hidayat AI ko deta hai.
+- itemRates memory ab s (carton size) bhi rakhti hai (sizeMemFromBill). cloud.js setItemRates s, setBillFormat
+  g/b/ex rakhta hai (rules mein map ki values par shart nahi — rules badalne ki zarurat nahi).
+- packGaps() / packsView(): "📦 Carton size khali (N)" — jin items ka bill par سائز mila magar POS mein pack khali
+  ya alag. Abhi sirf dikhata hai; pack-lagao.js ke baad yahin se bharna.
+
+AI (ai-tally.js): naya 'size' khana (سائز / Size / Packing / Wt) + hidayat: "من ریٹ" (fi 40 kg) ko rate mat samjho —
+rate wohi jo ginti se zarb ho kar line ka total bane. parseBill size rakhta hai.
+
+TEST (node + jsdom, ASLI BILLS KE NUMBER): runj.mjs 23 — Bhaiya: badam 5 کارٹن × سائز 23 = 115 @ 2,859.65 🟢, dania
+5 CTN @ 575 🟢, ajwain 10 @ 325 🟢, khali bori 🔴, naqsha khud "Dono", hari pakki, khali bori chhori, POS ko 3 lines,
+carton size 23 yaad, misalein. Affan: QUORMA 360 PCS (CTN nahi), naqsha khud PCS, CTN zabardasti = 🔴 + stock ka pehra,
+card mein khareed badla to W pichhle nafa se, Enter = agla khana. + run 33, runfmt 10, runmem 6, runai 9, runpdf 8,
+runb 15, runc 14. Sab pass. SABAQ: test mein pos-stock stub ko '?v=' ke SATH import karein warna alag module milta hai.
+VERSION BUMP files: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html ('2.4.0') + version.json
+(rules 2.2, rulesChanged FALSE).
+
+=== v2.4.1 — JAANCH CARD EK SCREEN MEIN · BILL KI PATTI · PINCH-ZOOM · "1 CTN =" (rules wahi v2.2) ===
+MALIK: "sab theek hai, sirf bill dekhna nahi ho pa raha" + "CTN / PCS / wholesale / parchoon sab ek line mein, jagah kam"
++ "aksar items par CTN aur PCS nahi aata — sab items par CTN PCS W R lagna chahiye". Malik ko pehle visualizer se card ka
+namoona dikhaya gaya (numbered 1-6), us ne OK kiya. CLAUDE MODEL: malik ne poocha — bataya ke app ke liye Claude ka muft
+model nahi; faisla: abhi GEMINI hi (Claude ka option nahi banaya). Agar kabhi: "sirf laal lines" tareeqa + Anthropic
+Console mein mahana spend limit.
+
+AI (ai-tally.js): har line ka y (0..1000, tasveer par upar se jagah) + page (kaunsi tasveer), aur bill ke neeche ginti ke
+total ctnTotal / pcsTotal. parseBill teeno rakhta hai (y clamp 0..1000).
+
+CARD (purchase.js jCard — poora naya):
+- Upar .jc-patti (id jcPatti, 120px): jPattiPaint() tasveer ko background bana kar sirf us line ke gird ka hissa dikhata
+  hai (natural size se height nikal kar background-position), .jc-mark peela nishan line par. y na ho to jY() padosi
+  lines se andaza (warna 280..850 mein barabar). Tap = billView() usi line par 2.2x (data-pp-focus = y).
+- .jc-top: "bill ka naam → humara item" + line ki raqam (#jcAmt). .jc-bill: bill ki ginti · سائز · ریٹ · کل.
+- Unit chips (jmode) + POS mein pack khali ho to "1 CTN = [ ]" (data-pp-jcs -> r.cs; change par r.force='size' aur
+  card dobara). jCs(r, ln) = POS pack || r.cs || memOf(id).s || bill ka size (>1). jCandidates(ln, ai, cs0) ab cs0 leta hai.
+- .jc-g4 do qataarein, 8 khane: jctn · jpcs · jkc (Kh/CTN) · jcost (Kh/PCS) / jwc · jw · jrc · jr; har ek ke neeche
+  "pehle" (oldCost / oldW / oldR ke hisaab se, CTN wale × pack ya × cs). Pack bhi nahi aur cs bhi nahi -> CTN khane band.
+  POS pack KHALI item par CTN sirf app mein (POS ko pieces hi jate hain) — card par likha aata hai.
+  jRepaint(): kisi khane ke badalne par baqi khane (jo likha ja raha ho us ke siwa) dobara.
+- .jc-sticky (position sticky; bottom 0): ✓ Theek — agla (pura chauda), ✏️ Item · ✕ Chhor · ‹ List.
+- Swipe (touchstart/touchend, khane/button par nahi): daayein (dx > 70) = ✓ agla, baayein = jPrev().
+- sizeMemFromBill: pehle r.cs, phir r.j.size — sirf un items ka jin ka POS pack khali (itemRates.s).
+
+VIEWER (billView — naya): #ppZoom (68vh, touch-action none) + #ppZoomImg transform translate/scale; pointer events:
+ek ungli = khainchna, do = pinch (midpoint ke gird), do dafa tap (<300ms) = 1x/2.5x; −/+ (zStep); 1..5x; zClamp.
+"‹ Wapas Jaanch" (data-pp-vback) -> jCard(jIx) ya aiRender(). Purana .pp-view / billZoom wala viewer hata diya
+(pin wali pp-billbar ab bhi billZoom istemal karti hai).
+
+BAQI: "🧾 Jaanch kholo (N baqi)" (data-pp-jopen) POS Purchase head mein jab aiRows hon — khirki band ho jaye to wapas
+usi jagah (jView/jIx yaad). "✕ Naya bill" par aiRows bhi saaf. jColTotals(): ctnTotal+pcsTotal dono ho to alag alag,
+warna ek total vs sab lines ki ginti (0.5% ya 1 ki gunjaish) — overview aur khulase mein.
+
+TEST (node + jsdom): runj2 19 naye (ginti total 180, patti + focus y, 8 khane, "1 CTN =", CTN band -> 20 likhne par chalu,
+170 × 20 = 3400 PCS @ 341.5, Kh/CTN 6830, W/CTN 7400 -> W/PCS 370, viewer + wapas usi card, swipe = agla, Jaanch kholo,
+cs 20 yaad, POS ko 3400 @ 341.5) + run 33, runj 23, runfmt 10, runmem 6, runai 9, runpdf 8, runb 15, runc 14. Sab pass.
+(Purane test ke labels naye card ke mutabiq badle; jsdom mein Image nahi — jPattiPaint mein typeof Image guard.)
+VERSION BUMP: app.js sale.js pos-stock.js purchase.js pos-ledger.js sw.js index.html ('2.4.1') + version.json (rules 2.2, false).
+
+==================== v2.4.2 (2026-09-23) — BILL KHUD JAWAB DETA HAI ====================
+Rules NAHI badlin (v2.2 hi). Files: purchase.js, ai-tally.js, cloud.js, style.css + version bump.
+1) jFix(r, ln): hisaab (ginti × rate = kul, 2%) na mile to:
+   - kul ÷ rate = AI ka koi number -> khud lagao (357 ctn + 357 pcs -> 357; ek hi number do khano mein tha).
+   - rate pichhle khareed se ±10% mile (fi pcs ya fi carton) -> ghalti ginti mein -> kul ÷ rate khud (maida "3C" -> 30).
+   - warna laal + buttons "Bill se ginti lagao: X" / "Bill se rate lagao: kul ÷ ginti" (r.aiFix, r.aiFixUser).
+   aiOf(r) = r.aiFix || r.ai — jJudge/jCandidates/modes sab isi se.
+2) Carton BAND (r.band, line.one): POS pack khali ho aur (aap ne "1 CTN =" 1/khali likha = r.cs -1) ya yaad s=1
+   ya bill par سائز 1 (aur bill rate pichhle khareed se ±50%). Band = sirf PCS, ek ginti, bill ka سائز carton nahi.
+   Bill ka سائز carton size SIRF jab app ne 'size' tareeqa chuna ho (khajoor 1000 gram carton nahi banta).
+   itemRates s=1 = band (cloud.js ab s>=1 rakhta hai; packGaps s>1 hi dikhata hai).
+3) من ریٹ: AI ab `mr` bhi deta hai. jMan: mr÷40 = rate -> fi kg/piece ✓; mr÷40×سائز = rate -> fi carton ✓;
+   na mile -> peela note. (Bhaiya: khajoor 15500÷40=387.5 ✓, sufi 20400÷40×20=10200 ✓)
+4) Stock pehra: band ho ya من ریٹ saboot de to laal NAHI — sirf note "(bada maal — sirf note)".
+   "✓ Hisaab bill se mila" note jab line ki raqam bill se 0.5% ke andar.
+5) Card: zinda milan "Aap X · bill Y ✓ / ≈ (tax/discount?) / ✗" (jMilanHTML, jRepaint mein update).
+   W/Ctn aur R/Ctn KABHI band nahi: band par Ctn rate = Pcs rate (recalc), W/Pcs likhne se W/Ctn saath badle,
+   W/Ctn alag likha to alag rahe (l.wcOwn / l.rcOwn). POS ko wctn/rctn jaate hain.
+6) AI prompt: ek number ko ctn aur pcs dono mein mat daalo.
+Tests: /tmp/t/runk.mjs (17) naya; runj2 ka "CTN khane band" test ab "W/Ctn khula". Kul 154 paas.
+7) v2.4.3 — Card par "‹ Pichhla" button — "✓ Theek — agla ›" ke baayein, ek qataar (.jc-okrow).
+   jHasPrev(): pehle card par band. Dabane se current card pakka NAHI hota; bill ki pichhli (skip na ki hui)
+   line par jata hai, hari bhi. Swipe baayein pehle jaisa. Test: /tmp/t/runprev.mjs (3).
+
+==================== v2.4.4 (2026-09-23) — KUL RAQAM KA KHANA ====================
+Rules NAHI badlin. Files: purchase.js, style.css + version bump.
+1) Card: jab carton size na ho (Kh/Ctn band hota tha) uski jagah "Kul raqam" khana (data-pp-jtot, line.kul).
+   Likhne par costP = kul ÷ linePcs (net khareed, discount/tax samet); Pcs badlein to kul pakki, rate dobara;
+   Kh/Pcs khud likhein to kul chhoot jata hai (l.kul = 0). Placeholder = bill ki line ki raqam.
+2) jFix: ek number do khano mein (c === p) ho aur c×rate bill se 20% ke andar (2c×rate nahi) -> c khud (Medicam 12+12).
+3) Card "سائز -1" bug hataya (band par size 0).
+Test: /tmp/t/runkul.mjs (9). Kul 158 paas. jsdom: stubs ka ?v= purchase.js ke import se match hona zaroori.
+
+==================== PC: purchase-post.js v4.1 (2026-09-23) ====================
+MASLA: purchase-post.js v4 (22 Sep) chalte hi girti thi — "Cannot access 'DIR' before initialization" (line 43):
+  `const BILLS_FLAG = path.join(DIR, ...)` aur `pokeBills` DIR/log se PEHLE likhe the. 22 Sep se app ki koi
+  purchase POS mein nahi bani (jobs 'new' par atki; script Firestore tak pahunchti hi nahi thi).
+FIX: purchase-fix.js (PC par `node %USERPROFILE%\Downloads\purchase-fix.js`) — sirf 2 lines ko `const log =` ke
+  baad le jata hai + header mein v4.1 line; purani file purchase-post.v4old.js; node --check; ghalti ho to purani wapas.
+  Atki jobs (7 din ke andar) fix ke baad khud POS mein banti hain (user ne kaha: sirf aaj subah wali ek purchase atki).
+PC JAANCH (CLAUDE-STARTUP.txt): Startup folder mein 11 .vbs (bills, farq, khata, khata-sync, label, purchase, rate,
+  sale-chupa, stock, subcode, transfer) + Task "KhataSync-StartAll" (login+1 min, start-all.ps1, double nahi chalata).
+  MSSQL$SQLEXPRESS Automatic + failure restart. Har *-auto.bat loop: gire to 30 sec baad dobara. Internet/SQL girne
+  par sab khud wapas aaye (logs). Shart: Windows LOGIN zaroori (Startup + AtLogOn). Baqi 10 scripts stub-test mein theek.
+  sale-log mein bohat minus stock (REAL SURF -12906, white chana -4526) — alag masla, baad mein dekhna.
+
+==================== v2.4.5 (2026-09-23) — STOCK SEARCH · CAMERA · POORE RUPEE ====================
+Rules NAHI badlin. Files: pos-stock.js, purchase.js, style.css + version bump.
+1) pos-stock.js (stock/ginti screen) search sale jaisi: q ho to POORE stock (hidden ke ilawa) mein smartSearch,
+   natija smartSearch ki TARTEEB mein (best match upar; pehle naam A-Z ho jata tha). Filter (has/baqi/...) search
+   ko nahi rokta; "N filter ke bahar se bhi" note. 🎤 button (data-stock-mic, voiceSearch) scan ke saath
+   (.sh-scanrow). Save / Tick par noteHit(id) — agli dafa search mein aage.
+2) purchase.js "🤖 Bill ki tasveer se items": pehle chooser — 📷 Camera (input capture=environment, ek photo) ya
+   🖼️ Gallery (multiple). Camera: camPages (4 tak) + jhalak; "📷 Agla page" / "🔁 Aakhri dobara lo" /
+   "✓ Bas, parho (N page)" / "✕ Chhor". aiItems -> aiPick(cam) -> aiRead(files) (purana onchange ka jism).
+   Tests: [data-pp-ai] ke baad [data-pp-aigal] click.
+3) recalc: bechne ke rate POORE RUPEE upar (upR: ceil, magar 1% se zyada barhe to paise — sasti cheez 4.56 ≠ 5).
+   Khareed mamooli badle (|Δ| < min(1 rupee, 0.5%)) to W/R PURANE hi (tinyCost) — 330.50→330.46 par R 390, W 335.46.
+   Wholesale bhi poora rupee (user: "Yes"). Khud likha rate (manual) nahi chhedte.
+Tests: /tmp/t/runr.mjs (9), /tmp/ts/t.mjs (5, asli pos-stock.js). Kul 172 paas.
+
+==================== v2.4.6 (2026-09-23) — BILL KA KHARCHA (labour / kiraya) ====================
+Rules NAHI badlin. Files: purchase.js, ai-tally.js, style.css + version bump.
+User ne tareeqa "C" chuna: kharcha RAQAM ke hisaab se (sab items par ek hi %).
+- ai-tally: bill level `xtra: [{name, amount}]` (لیبر / مزدوری / کرایہ / freight / loading / packing), discount /
+  previous balance NAHI. normalize: 5 tak, amount > 0.
+- purchase.js: `xtra`, `xtraName` (draft mein bhi; Naya bill / bhejne ke baad 0). aiRead: bill ka xtra jab xtra 0 ho.
+  xtraApply() (keepDraft aur save se pehle): line.xs = xtra × costP ÷ Σ(lineTotal) — fi piece hissa, costP BADALTA NAHI.
+  effCost(l) = costP + xs -> POS ko yahi (save payload), recalc/tinyCost bhi isi par (W/R nafa kharcha samet).
+  lineTotal = bill ki line (kharcha ke baghair) -> card milan ✓ bill line se. cartTotal = Σ pcs × effCost.
+  UI: purchase screen foot "Kharcha (لیبر)" khana + note (+%, POS bill Rs); Khulasa card "🧾 Bill par kharcha"
+  (data-pp-jxtra), jBillTotals.mine = lines + xtra (farq 0); Jaanch card "kharcha +X (POS khareed Y)".
+  Do dafa nahi judta (xs har dafa costP se naya banta hai).
+- Misal (Bhaiya 13-Sep): lines 26,82,938 + لیبر 3,500 = 26,86,438; har item +0.13%; ghee 5200 -> 5206.78.
+Tests: /tmp/t/runx.mjs (11). Kul 191 paas.
+
+==================== v2.5.0 (2026-09-23) — POS ITEM banana / badalna ====================
+⚠️ RULES BADLI HAIN (v2.3) — malik ko firestore.rules PUBLISH karni hai.
+POS ka naqsha (ITEM-DEKHO.txt se):
+- dbo.Items: ItemCode, ItemCatID, ItemSubCatID, ItemName, SaleRate (R carton), SaleRate2 (R piece),
+  SaleRate3 (W piece), SaleRateSize (W piece), PurchaseRate (Items mein CARTON wala), PackQty,
+  PackQtyName 'CTN', QtyName 'PCS', UOMID 2, Qty1inctn. Naye items: Cat 80, SubCat 236 (waqar ke naye items wahin).
+- usp_Items_InsertUpdate (ItemID 0 = naya; AutoCode 1 -> code khud 000xxx) + usp_ItemBranchRate_InsertUpdate
+  (har branch ki row khud ban jati hai). ⚠️ Items proc ke andar "Delete From ItemSubCode WHERE ItemID" hai —
+  is liye item-post.js EDIT se pehle sub-barcode parh kar BAAD mein wapas daalta hai.
+- usp_ItemSubCode_InsertUpdate (ItemSubCodeID 0 = naya), ItemSubCode: SBBarCode, SBSaleRate, SBItemQty, IsShowOnLookup.
+PC: item-post.js (naya, item-auto.bat + Startup vbs), lock 47821, log item-log.txt, job 7 din, transaction +
+  rollback, barcode dupe check (Items + ItemSubCode), SystemNotes mein "Blue Khata" + purana->naya.
+App: pos-stock.js itemForm/itemRead/itemSave — Stock row par "✏️ Item", upar "➕ Naya item";
+  khane sirf: naam, barcode (📷 scan), 1 CTN = PCS, Khareed/PCS, R CTN·PCS, W CTN·PCS, sub-barcode list
+  (add/edit/delete pehle jaisa subcodeJobs se). Category / re-order / model NAHI.
+  cloud.requestItem/watchItem (itemJobs), listenStockConfig/setItemEdit (blueAccess/stockConfig.itemEdit).
+  Malik ki Stock screen par switch "Mulazim item aur rates badal sake" — OFF par mulazim ko form hi nahi milta
+  (rules mein bhi itemEditOn() shart). CSS: .item-form/.it-grid/.it-f/.it-sub/.sh-switch (premium).
+Tests: /tmp/ts/t2.mjs (13). Kul 204 paas.
+BAQI (agli dafa): app dobara khulne par wahi screen + background refresh (user ne manga, abhi nahi bana).
+
+==================== v2.5.1 (2026-09-23) — ITEM FORM (CTN pehle) + APP WAHI SE KHULE ====================
+Rules NAHI badlin (v2.3 hi). Files: pos-stock.js, app.js, purchase.js, style.css + version bump.
+1) Item form nayi tarteeb (malik ki hidayat): "1 CTN = kitne PCS" poori chaurai upar, phir KHAREED (Kh/CTN · Kh/PCS),
+   phir Parchoon (R/CTN · R/PCS), phir Wholesale (W/CTN · W/PCS). CTN ke khane HAMESHA khule (pack 1 ho tab bhi).
+   Live hisaab SIRF khareed par: Kh/CTN -> Kh/PCS (÷pack), Kh/PCS -> Kh/CTN (×pack), pack badle to dobara.
+   R aur W ko app HAATH NAHI lagati — malik khud bharta hai. itemSave: costP khali + costC hai to costP = costC/pack.
+   BUG FIX: number khano mein num() comma daal raha tha ("1,800") -> Number() NaN. Ab String(r2(v)) / r2(v).
+2) app.js: keepView ab scroll (y) aur waqt (t) bhi rakhti hai; visibilitychange(hidden) + pagehide par bhi save.
+   restoreView: 12 ghante se purani jagah nahi; backY se login ke baad wahi scroll (120ms + 600ms par).
+   syncStatus shuru mein "⟳ Taza ho raha hai…" — screen foran, data background mein.
+3) purchase.js: keepDraft mein `jd` (aiRows + aiBillInfo + jView + jIx + aiFmtAuto) — WhatsApp se wapas aayein
+   to Jaanch wahin se. Tasveerein (object URL) memory mein hi rehti hain, dobara chunni parengi.
+Tests: /tmp/ts/t2.mjs ab 17. Kul 208 paas.
+PC: item-post.js chal rahi hai (user ne chala li); Startup shortcut bhi lag gaya.
+
+==================== v2.6.0 (2026-09-24) — 📥 AAYA / GAYA MAAL ====================
+Rules NAHI badlin (v2.3). Files: pos-stock.js, app.js, cloud.js, style.css + version bump.
+Stock screen par "📥 Aaya / gaya maal" (sab logins). Har dafa kholne/chip badalne par TAZA data (inCollect),
+upar "⟳ HH:MM par liya gaya".
+- Data: trList (listenTransfers ab stockSetup mein shuru se) + cloud.appPurchasesRecent(since) [NAYA:
+  appPurchases where at > since]. HAR transfer dikhta hai (godam se godam bhi), sirf "yahan aaya" nahi.
+- HISSE (groups): "tr:<from>><to>" aur "bill:<party>><godam>". Tarteeb: transfer pehle (from, phir to ke number
+  se — Godam 1 → Noor sab se upar), phir bill (party ke naam se). Har hisse ka sar-nama: ⇄ gehra neela, 🧾 gehra sunehra.
+- Har item ka card: naam + tareekh, phir grid — CTN | PCS alag khane (cp(): pack se carton nikaalta hai,
+  20 carton = PCS 0). Qatarein: "Gaya / Bill se", phir JAHAN SE (pehle ~ / ab), phir JAHAN GAYA (pehle ~ / ab).
+  "pehle" ANDAZA hai (ab ± jo gaya) — is liye `~` ka nishan. User ne kaha: transfer note nikalte hi maal bhi
+  nikal jata hai, is liye POS ka stock pehle se sahi — koi jama-tafreeq nahi karni.
+  conf: 🔴 pahunchne wale godam mein stock 0 · 🟡 90% se zyada nikal gaya · 🟢.
+- Chips: Aaj/3/7 din · Sab/⇄/🧾 · 📍 Sirf yahan (inHere) · 🔴 N (inFilter).
+- Item click -> search + ginti; "📋 Poori list ginti mein kholein" -> inPick.
+- PDF: inReport() se data, app.js inMaalPdf() — har hisse ka apna rangeen sar-nama + table (Item | khana | CTN | PCS),
+  har item ki 2-3 qatarein (gaya / jahan se pehle→ab / jahan gaya pehle→ab), laal-peeli-hari patti.
+  openReportPreview ab POORI SCREEN par (modal ka teesra argument), share sheet pehle jaisi.
+- CSS: .iv-chips/.iv-gh/.iv-card/.iv-grid/.iv-line + report ke rang (print-color-adjust: exact).
+Tests: /tmp/ts/t3.mjs (18). Kul 226 paas.
+AGLA KAAM (tay ho chuka, banana baqi): ⚖️ TOLAI —
+  · label-print.js: har label par number, ROZ 1 se, har item ka apna, code "3N-47" (tareekh+mahina harf+number),
+    barcode ke neeche khali kone mein; label ka naqsha/size (32x25, 3 cols) NAHI badalna.
+  · App: "⚖️ Tolai" (sab logins) — 📷 photo -> AI (wahi Gemini key) number+item parhe -> ginti khud
+    (pichhla number se farq), waqt darj. Ghalat parhe to haath se theek.
+  · Calendar wali report (roz/hafta/mahina), PDF.
+  · Setting (malik): duty 9:30-6:00 + rest, har size ka waqt (1kg=1min, 500gm=2min...), kisi item ka apna waqt;
+    badlein to sirf aane wale din badlein. Report: kaam hua vs hona chahiye tha, % aur 🟢🟡🔴.
+  · Godam mein printer: TSC USB001 par hai (network port nahi) -> lamba USB cable (5m tak aam, zyada ho to active).
+
+==================== v2.7.0 (2026-09-24) — ⚖️ TOLAI (label ke number se ginti) ====================
+⚠️ RULES BADLI HAIN (v2.4) — malik ko firestore.rules PUBLISH karni hai.
+PC (label-print.js v3 — alag file, C:\khata-sync mein lagani hai; purani label-print.v2old.js):
+  - Har label par NUMBER: "3I-47" = tareekh ka aakhri hindsa + mahina ka harf (A=Jan..L=Dec) + us item ka aaj ka number.
+  - ROZ 1 se shuru, HAR ITEM ka apna (label-numbers.json: {day, items:{itemId:lastN}}).
+  - nextNums(itemId, copies) — DIR/log ke BAAD rakha (purchase-post v4 wali ghalti se bacha).
+  - labelCmds(S,j,x0,tag): TEXT font "1", x = x0+W-m-(tag.length*8), y = y0+H-m-16 → neeche DAYEN kona.
+    Label ka size/naqsha/barcode/naam/rate BILKUL NAHI badla. --test par bhi number aata hai.
+  - Job done par Firestore mein numFrom/numTo/numCode/day likhta hai.
+  - LAGANA: copy /y label-print.js label-print.v2old.js && naya copy && node label-print.js --test
+App (naya tolai.js + ai-tally.js + cloud.js + pos-stock.js + app.js + rules):
+  - ai-tally: LABEL_PROMPT + readLabel({key,model,images}) -> {name,code,tag,n,rate}; n=0 = nahi parha (andaza mana hai).
+  - app.js: aiReadLabel({file}) — shrinkForAI(1200,0.8), wahi Gemini key.
+  - tolai.js: openTolai/tolaiClick/tolaiSum/tolaiReport/setTolaiPdf. Stock screen par "⚖️ Tolai" (sab logins).
+    📷 bara button -> camera (capture=environment) -> AI -> confirm box (item + number, dono badle ja sakte hain)
+    -> saveTolai. GINTI = aaj ka naya number − jo pehle darj hua (number roz 1 se shuru hota hai, is liye
+    aakhri number hi us din ki ginti hai). Wohi number dobara aaye to "pehle darj ho chuka".
+    AI na parhe -> haath se likhne ka khana. "↩ Aakhri wapas" (apni, aaj ki).
+    Calendar: mahine ke din rangeen (🟢80%+ 🟡50-80% 🔴<50%), din par tap = us din ka hisaab, mahine ka jama, PDF.
+    Setting (malik): duty se/tak + rest + chhutti ka din, har size ka waqt (1kg=1min, 500gm=2min...), "➕ Aur size";
+    kisi item ka apna waqt cfg.items[itemId]. Setting badle to sirf aane wale din (purani report nahi badalti).
+  - cloud.js: listenTolaiConfig/setTolaiConfig (blueAccess/tolaiConfig), listenTolaiDay(day), saveTolai, delTolai,
+    tolaiMonth(y,m) [tolai where day >= ... < ...].
+  - rules v2.4: /tolai/{id} — read sab logins, create sab (apni, aaj ki, packets 1-5000), delete apni aaj ki (malik sab);
+    blueAccess get list mein 'tolaiConfig'.
+Tests: /tmp/tl/t.mjs (17). Kul 243 paas.
+BAQI: subah test label ki tasveer dekh kar number ki jagah/size theek karna (abhi andaze par: font 1, dayen kona).
+
+==================== v2.8.0 (2026-09-24) — POS ke TRANSFER app mein + label ka number theek ====================
+⚠️ RULES BADLI HAIN (v2.5) — publish karni hain.
+MASLA: user POS par transfer banata hai (app se nahi), is liye "Aaya / gaya maal" khali tha — app ke paas sirf
+  transferJobs the (jo app se bante hain).
+PC (naya transfer-dekho.js + transfer-dekho-auto.bat + Startup shortcut, lock 47822, log transfer-dekho-log.txt):
+  - dbo.StockTransfer (TransferID, FromBranchID, ToBranchID, TransferNo, TransferDate, SystemNotes, Remarks)
+    + dbo.StockTransferDetail (ItemID, Qty, Rate, TransferRate) + Items (ItemName, PackQty) — sirf SELECT.
+  - Pichhle 14 din, har 2 minute -> Firestore `posTransfers/T<TransferID>`: {transferId, transferNo, from, to, at,
+    day, app, note, lines:[{itemId,name,qty,pack,rate}]}. app = SystemNotes mein "BK-APP" ya Remarks "App".
+  - 14 din se purane khud hat jate hain. lastSent Map se dobara nahi bhejta.
+  - NOTE: branch 11 bhi mila (naya godam) — app branchName() se khud naam le leti hai.
+App: cloud.listenPosTransfers; pos-stock inCollect ab ptList (POS wale) pehle leta hai aur transferJobs mein se
+  sirf wo jodta hai jinka transferNo POS mein abhi nahi aaya (do dafa na dikhe).
+LABEL (label-print v3.1 — dobara bhejni hai): user ke labels par rate "Rs 200" NEECHE KINARE SE KAT raha tha,
+  is liye rate ki line 4 dot upar ki (H-m-24) aur number usi line par DAYEN, font "2" (pehle "1" — chhota tha).
+  Misal (32x25): TEXT 12,164 "Rs 200" · TEXT 184,164 "4I-58". Label ka size/barcode/naam nahi chhera.
+Tests: t3 ab 19 (POS transfer shamil). Kul 244 paas.
+
+---- label-print v3.2 (2026-09-24) ----
+Number ab BARCODE ke code ("086") wali line par, DAYEN kone mein (y = y + 4 + bh + 2; x = W - m - len*12, font "2").
+Wajah: naam do line le leta hai (jaise "kali mirch piise - 0.25") to rate wali line kinare par aa jati thi.
+Rate pehle jaisi jagah (H - m - 24). density user ne 12 ki (label-settings.json) — chhapai gehri.
+AHEM: nayi file copy karne ke baad CHALTI HUI purani script band karni parti hai, warna wahi chalti rehti hai:
+  taskkill /f /fi "WINDOWTITLE eq label*"  — phir label-auto.bat 30 sec mein nayi utha leta hai.
+Log se pata chala tha ke 10:44 se "label-print v2" chal raha tha jabke file v3 thi.
+
+==================== v2.9.0 (2026-09-24) — TOLAI: AUTO SAVE + MULAZIM ke hisaab se ====================
+⚠️ RULES v2.6 — publish karni hain (tolai mein `who` field).
+MASLA jo user ne pakda: ginti ITEM ke hisaab se thi. Doosra mulazim usi item ka label laata to
+  (naya number − pehle darj) = 0 aata tha, yani uska kaam ginti mein aata hi nahi tha.
+FIX:
+1) doSave({itemId,name,n,tag}) — ek hi jagah se save. Ginti ab `who` (mulazim) ke hisaab se:
+   packets = n − (usi mulazim ka usi item par pehle darj). tolaiSum(rows, only) mein `only` = who.
+   tolaiByWho(rows) — har mulazim ka apna hisaab (main screen + calendar + PDF mein).
+2) AUTO SAVE: photo -> AI -> item mil gaya to seedha doSave, koi button nahi. Screen par hara
+   "✓ <item> — N packet darj (tag · waqt · naam)" + "✏️ Theek karein" (lastSave se confirmBox).
+   Item na mile ya number na parhe to pehle jaisa poochhta hai.
+3) Mulazim: cfg.staff [] (Setting mein "Mulazim ke naam" + "➕ Aur mulazim"). Main screen par chips;
+   chuna hua naam localStorage 'sam-tolai-who' mein yaad (roz chunna nahi parta). Title: "⚖️ Tolai — Abdurehman".
+   saveTolai mein who; rules keys mein 'who' jura; PDF mein "Mulazim" ka khana.
+4) "↩ Aakhri wapas" ab sirf apni aakhri entry (myLast()).
+Tests: /tmp/tl/t.mjs ab 22.
+
+==================== v2.9.1 (2026-09-24) — Tolai: mulazim ke liye AI + number band ====================
+⚠️ RULES v2.7 — publish. blueAccess/aiConfig ab stockStaff() aur saleStaff() bhi parh sakte hain
+  (pehle sirf full/purchase) — warna mulazim ki photo par chup-chaap kuch nahi hota tha (key hi nahi milti thi).
+app.js aiReadLabel: canTally() ki jagah sirf login ki shart (bill AI ka canTally pehle jaisa).
+tolai.js (mulazim = !isOwner()): "✏️ Theek karein" nahi; confirmBox mein number readonly; askManual mein
+  haath se likhne ka khana nahi — sirf "📷 Dobara photo". Malik ke liye sab pehle jaisa.
+Tests: /tmp/tl/tstaff.mjs (5). Kul 254.
+
+==================== v2.10.0 (2026-09-24) — PURCHASE: rate ka farsh · % + mazdoori upar · bill ki tarteeb · bill ka naam ====================
+Rules NAHI badlin (v2.7). Files: purchase.js, style.css + version bump.
+1) recalc: khareed oldCost se KAM ho to W/R purane hi (same = tinyCost || c < oldCost). App kabhi khud rate kam nahi
+   karti; malik Jaanch card mein khud likh sakta hai. Barhe to pehle jaisa (upR).
+2) Upar (Supplier bill # ke neeche) do khane: "+ % (har item par)" [data-pp-pct, state pct 0-100] aur
+   "Mazdoori / kharcha Rs" [data-pp-xtra — foot se upar aaya]. effCost = costP × (1+pct/100) + xs.
+   xtraApply pctLast se pct badalne par bhi recalc. Note (#ppXtraNote) mein dono. Jaanch Khulase mein bhi +% (data-pp-jpct).
+   Draft/reset mein pct. POS ko effCost jata hai (pehle jaisa).
+3) aiRead: lines.sort(page, y) -> cart bill ki tarteeb mein; PC purchase-post lines usi tarteeb se banata hai.
+   Jaanch overview ki tarteeb (laal pehle) waise hi — TESTS ab card ko NAAM se dhoondte hain (cardIx(key)).
+4) line.billName (AI ka naam, 60 char) — purchase lines mein naam ke neeche "bill: ..." (.pp-billname, rtl).
+   POS bill mein NAHI (user ne tay nahi kiya). AUTO PRINT bhi baqi — user se poochna: thermal (sale jaisa) ya A4.
+Tests: /tmp/t/runpct.mjs (9). Kul 267 paas.
+
+---- label-print v3.3 (2026-09-24) ----
+Counter ki key ab j.code (BARCODE / sub-barcode), itemId nahi — ek item ke sub-barcode (surf 1kg / 2kg) ka apna
+silsila, har ek 1 se; dobara chhapne par aage se (20 -> 21..70). Roz reset pehle jaisa.
+Sirf label script band karne ka mehfooz tareeqa: wmic process where "commandline like '%label-print.js%'" delete
+(taskkill /im node.exe SAB band kar deta hai — purchase/item/transfer wali kaali windows dobara nahi khultin).
+
+==================== v2.11.0 (2026-09-24) — TOLAI: har mulazim ki APNI setting ====================
+Rules NAHI badlin. Files: tolai.js + version bump.
+cfg.per[naam] = {from,to,rest,offDay,sizes}; na ho to cfg (default). cfgOf(who), minOf(name,itemId,who),
+dutyMins(who); tolaiSum(rows, only) `only` ke hisaab se apni setting — report/% har mulazim ka apna.
+Setting screen: chips "Sab (default) / <har naam> / ➕ Naya" (cfgWho). Naam wale par: naam badal sakte hain,
+"Default par wapas" (per se hata do), "🗑️ Ye mulazim hatao" (staff se hata do, ginti rehti hai).
+➕ Naya = prompt se naam -> staff mein + uski setting (default ki copy) khul jati hai. ➕ Aur size jis ki khuli hai us mein.
+Tests: /tmp/tl/tper.mjs (7). Kul 270 paas.
+
+==================== v2.12.0 (2026-09-24) — TOLAI: packet ka ASAL wazan naam ke aakhir se ====================
+Masla: "songi 1kg - 0.25" mein "1kg" mil jata tha -> 1 kg ka waqt lag raha tha; asal packet 0.25 kg hai.
+minOf: kgOfName (naam ke aakhir "- 0.25") -> setting ke sizes kgOfSize se kg mein ("500 gm" = 0.5, "250" bina unit = gm,
+"0.25" = kg) -> NISBAT se sab se qareeb (log fark: 0.12 ke qareeb 0.125). Aakhir mein number na ho to pehle jaisa
+naam mein size dhoondna. Hisaab har dafa dobara lagta hai, is liye purani entries bhi khud theek.
+Tip: jo wazan setting mein na ho (0.025, 5 kg) wo size Setting mein daal dein warna qareeb wala lagega.
+Tests: /tmp/tl/tkg.mjs (7). Kul 277.
+
+==================== v2.13.0 (2026-09-24) — Reminder/Dasti full mulazim ko · Stock ginti ka PDF ====================
+⚠️ RULES v2.8 — publish.
+1) Reminder: canRemind() = owner() || (staffFull() && !dayIsClosed()). reminderForm, next/remove reminder, khate ka
+   "Reminder / Due date" button, Due/Dasti cards ke reminder buttons, neeche "＋ Reminder" — sab full mulazim ko.
+   save(): reminder type existing ho tab bhi mulazim ki ijazat (baqi entries ki "sirf aaj" wali shart wahi).
+   Rules (blueKhata match ke andar): validReminder() — type 'reminder', partyId, dueDate (10 char), updatedBy,
+   keys hasOnly [...], note <= 1000; blueStaff() && dayOpen(). Kisi bhi khate par (purani tareekh wala bhi).
+2) Dasti: full mulazim ke liye Dasti cards par "⇄ Payment transfer" + "Dasti se nikalein", neeche
+   "Account Dasti mein shamil karein" (rules pehle se allow karti thin — sirf buttons).
+3) Stock ginti: "📋 Dekhein" khirki mein "⇩ PDF · WhatsApp" (data-ginti-pdf). pos-stock gintiReport() data deta hai,
+   app.js gintiPdf() -> openReportPreview (poori screen, WhatsApp/Share/Download). Kam = laal, zyada = hara, kul farq Rs.
+Tests: 277 paas (reminder/ginti PDF app.js ke andar hain — asli phone par dekhna).
+
+==================== REPO SAFAI (2026-09-24) ====================
+Hazri app ka update ghalti se Blue Khata repo (Noor-traders) mein chadh gaya tha: index.html, app.js, sw.js, version.json
+Hazri ke (v215, boot.js mangta tha jo yahan nahi) + core.js, owner.js, staffview.js, styles.css.
+User ne baad mein v2.13 chadha di (4 asli files wapas). Saaf ZIP mein: Blue Khata v2.13 ki saari files; Hazri ki 4 faltu
+files HATAYIN; root par pare html2canvas.js/jspdf.js/pdf.mjs/pdf.worker.mjs bhi hataye (app sirf vendor/ wale istemal karti hai).
+Tasdeeq: sw.js ki har file aur har import maujood. Hazri app apne alag repo mein hai (user ke mutabiq theek chal rahi).
+SABAQ: Hazri aur Blue Khata ke updates KABHI ek repo mein nahi — dono ka index.html/app.js/sw.js/version.json takra jata hai.

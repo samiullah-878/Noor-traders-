@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch } from './smart-search.js?v=2.12.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch } from './smart-search.js?v=2.13.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -395,6 +395,23 @@ function gintiLine(pick, done) {
     ${isOwner() && countOff ? '<div class="account-tools"><button data-stock-lock="1" class="sh-lock off">🔴 Counting band hai — kholein</button></div>' : ''}
     ${countLocked() ? '<p class="stat-note sh-locked">🔴 Malik ne counting band ki hui hai — ginti save nahi ho sakti.</p>' : ''}`;
 }
+// v2.13: ginti ki report ka data (PDF app.js banata hai)
+export function gintiReport() {
+  const { pick, items, names } = collect();
+  const list = items.map(r => ({ r, c: countOf(pick, r) })).filter(x => x.c)
+    .sort((a, b) => (Number(b.c.at) || 0) - (Number(a.c.at) || 0));
+  if (!list.length) return null;
+  let net = 0, kam = 0, zyada = 0;
+  const rows = list.map(({ r, c }) => {
+    const sys = Number(sysOf(c, r)), got = countedPcs(c), f = got - sys, rs = r.prate ? f * r.prate : 0;
+    net += rs; if (f < 0) kam++; else if (f > 0) zyada++;
+    return { name: r.name, at: stampText(c.at), gina: `${num(c.ctn)}+${num(c.pcs)}`, ginaPcs: num(got), sys: num(sys),
+      farq: (f > 0 ? '+' : '') + num(f), rs: (rs > 0 ? '+' : '') + num(Math.round(rs)), conf: f < 0 ? 'r' : f > 0 ? 'g' : '' };
+  });
+  return { branch: branchName(pick, names), round: round || '', rows, net: Math.round(net), kam, zyada, total: list.length };
+}
+let gintiPdfOf = null;
+export function setGintiPdf(fn) { gintiPdfOf = fn; }
 function openGinti() {
   const d = $('dialog'); if (!d) return;
   const { pick, items, names } = collect();
@@ -411,6 +428,7 @@ function openGinti() {
     ? `<p>${num(list.length)} items gine gaye · Kul farq <b>Rs ${net > 0 ? '+' : ''}${num(net)}</b></p>
        <div style="overflow-x:auto"><table><thead><tr><th>Item</th><th>Gina</th><th>System</th><th>Farq</th></tr></thead><tbody>${rows}</tbody></table></div>`
     : '<p>Is branch mein abhi koi item nahi gina gaya.</p>')
+    + (list.length ? `<div class="account-tools"><button type="button" class="primary" data-ginti-pdf="1">⇩ PDF · WhatsApp</button></div>` : '')   // v2.13
     + (isOwner() ? `<p class="muted" style="margin-top:12px;font-size:.85em">Farq ka bill banne ke baad nayi ginti shuru karein, taake purani ginti dobara na gine.</p>
        <div class="account-tools"><button data-stock-round="new">Nayi ginti shuru</button></div>` : '');
   if (!d.open) d.showModal();
@@ -1077,6 +1095,7 @@ document.addEventListener('click', e => {
   if (e.target.closest?.('[data-stock-ginti]')) { openGinti(); return; }
   if (e.target.closest?.('[data-stock-transfer]')) { openTransfer(); return; }
   if (e.target.closest?.('[data-stock-in]')) { openIn(true); return; }
+  if (e.target.closest?.('[data-ginti-pdf]')) { gintiPdfOf?.(); return; }       // v2.13
   if (e.target.closest?.('[data-stock-tolai]')) { tolaiOf?.(); return; }        // v2.7
   if (tolaiClickOf && tolaiClickOf(e)) return;          // v2.6
   const inb = e.target.closest?.('[data-in-d],[data-in-k],[data-in-red],[data-in-item],[data-in-count],[data-in-pdf],[data-in-close]');
