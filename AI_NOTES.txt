@@ -1398,3 +1398,11 @@ rules: entryPhotos {read: owner/full/purchase; create/update: validPhotos (keys,
   delete: owner}. blueKhata key lists mein 'pn'. linkOnlyEdit (posted) mein pn + photo arrays (sirf muntaqili).
 Purana behaviour wahi: edit par nayi tasveer lagao to us qism ki purani jagah le leti hai (pehle bhi yahi tha).
 PC scripts tasveer nahi parhtin (check kiya). Tests 277 + splitPhotos/photoHTML ki alag jaanch.
+
+---- v2.14.1 (2026-09-25) — tasveer ka kaam KHUD (button hataya) ----
+schedulePhotoWork() har snapshot par (5 sec baad, ek hi dafa chalta hai). photoWork():
+ (a) aaj + kal (date >= kal) ki pn wali entries/dayPhoto ki tasveerein loadPhotos -> render (bina dabaye dikhti hain)
+ (b) SIRF malik + online + AAJ KA BACKUP ho chuka (backupDownloadDay()===today()): purani inline tasveerein 25-25
+     moveOldPhotos, agla hissa 20 sec baad. Backup na ho to ek dafa notice "aaj ka backup lein". Backup button
+     dabane ke 8 sec baad khud shuru. Mukammal hone par notice. Settings wala "Purani tasveerein alag karein" row hataya.
+User ka faisla: backup haath se, muntaqili khud.
