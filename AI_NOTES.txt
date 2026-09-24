@@ -1340,3 +1340,11 @@ Setting screen: chips "Sab (default) / <har naam> / ➕ Naya" (cfgWho). Naam wal
 "Default par wapas" (per se hata do), "🗑️ Ye mulazim hatao" (staff se hata do, ginti rehti hai).
 ➕ Naya = prompt se naam -> staff mein + uski setting (default ki copy) khul jati hai. ➕ Aur size jis ki khuli hai us mein.
 Tests: /tmp/tl/tper.mjs (7). Kul 270 paas.
+
+==================== v2.12.0 (2026-09-24) — TOLAI: packet ka ASAL wazan naam ke aakhir se ====================
+Masla: "songi 1kg - 0.25" mein "1kg" mil jata tha -> 1 kg ka waqt lag raha tha; asal packet 0.25 kg hai.
+minOf: kgOfName (naam ke aakhir "- 0.25") -> setting ke sizes kgOfSize se kg mein ("500 gm" = 0.5, "250" bina unit = gm,
+"0.25" = kg) -> NISBAT se sab se qareeb (log fark: 0.12 ke qareeb 0.125). Aakhir mein number na ho to pehle jaisa
+naam mein size dhoondna. Hisaab har dafa dobara lagta hai, is liye purani entries bhi khud theek.
+Tip: jo wazan setting mein na ho (0.025, 5 kg) wo size Setting mein daal dein warna qareeb wala lagega.
+Tests: /tmp/tl/tkg.mjs (7). Kul 277.

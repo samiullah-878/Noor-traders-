@@ -36,12 +36,27 @@ function watchDay(day) {
 // ---------- hisaab ----------
 // v2.11: har mulazim ki APNI setting (cfg.per[naam]); na ho to default (cfg khud)
 const cfgOf = w => { const p = w && cfg.per && cfg.per[w]; return p ? { ...cfg, ...p } : cfg; };
+// v2.12: packet ka ASAL wazan naam ke aakhir se ("songi 1kg - 0.25" = 0.25 kg). Setting ke size kg mein badal kar
+// sab se qareeb wala. Aakhir mein number na ho to pehle jaisa naam mein size dhoondo.
+const kgOfSize = t => {                                     // "1 kg" -> 1, "500 gm" -> 0.5, "250g" -> 0.25, "0.125" -> 0.125
+  const m = String(t || '').toLowerCase().replace(/,/g, '.').match(/(\d*\.?\d+)\s*(kg|k|gm|g|gram)?/);
+  if (!m) return 0; const v = Number(m[1]) || 0; const u = m[2] || '';
+  return u.startsWith('g') ? v / 1000 : u.startsWith('k') ? v : (v >= 5 ? v / 1000 : v);   // bina unit: 250 = gm, 0.25 = kg
+};
+const kgOfName = n => { const m = String(n || '').match(/-\s*(\d*\.?\d+)\s*$/); return m ? Number(m[1]) || 0 : 0; };
 const minOf = (name, itemId, w) => {
   const C = cfgOf(w);
   const own = Number(C.items?.[String(itemId)]); if (own > 0) return own;
-  const n = String(name || '').toLowerCase();
+  const sizes = (C.sizes || []).map(s => ({ ...s, kg: kgOfSize(s.name) })).filter(s => s.kg > 0);
+  const kg = kgOfName(name);
+  if (kg > 0 && sizes.length) {                             // sab se qareeb size (nisbat se — 0.12 ke qareeb 0.125)
+    let best = sizes[0], bd = Infinity;
+    for (const s of sizes) { const d = Math.abs(Math.log(s.kg / kg)); if (d < bd) { bd = d; best = s; } }
+    return Number(best.min) || 0;
+  }
+  const n = String(name || '').toLowerCase().replace(/\s+/g, '');
   for (const s of (C.sizes || [])) { const k = String(s.name || '').toLowerCase().replace(/\s+/g, '');
-    if (k && n.replace(/\s+/g, '').includes(k)) return Number(s.min) || 0; }
+    if (k && n.includes(k)) return Number(s.min) || 0; }
   return Number(C.sizes?.[0]?.min) || 0;
 };
 function dutyMins(w) {
