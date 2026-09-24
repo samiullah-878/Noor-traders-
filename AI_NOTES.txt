@@ -1325,3 +1325,18 @@ Rules NAHI badlin (v2.7). Files: purchase.js, style.css + version bump.
 4) line.billName (AI ka naam, 60 char) — purchase lines mein naam ke neeche "bill: ..." (.pp-billname, rtl).
    POS bill mein NAHI (user ne tay nahi kiya). AUTO PRINT bhi baqi — user se poochna: thermal (sale jaisa) ya A4.
 Tests: /tmp/t/runpct.mjs (9). Kul 267 paas.
+
+---- label-print v3.3 (2026-09-24) ----
+Counter ki key ab j.code (BARCODE / sub-barcode), itemId nahi — ek item ke sub-barcode (surf 1kg / 2kg) ka apna
+silsila, har ek 1 se; dobara chhapne par aage se (20 -> 21..70). Roz reset pehle jaisa.
+Sirf label script band karne ka mehfooz tareeqa: wmic process where "commandline like '%label-print.js%'" delete
+(taskkill /im node.exe SAB band kar deta hai — purchase/item/transfer wali kaali windows dobara nahi khultin).
+
+==================== v2.11.0 (2026-09-24) — TOLAI: har mulazim ki APNI setting ====================
+Rules NAHI badlin. Files: tolai.js + version bump.
+cfg.per[naam] = {from,to,rest,offDay,sizes}; na ho to cfg (default). cfgOf(who), minOf(name,itemId,who),
+dutyMins(who); tolaiSum(rows, only) `only` ke hisaab se apni setting — report/% har mulazim ka apna.
+Setting screen: chips "Sab (default) / <har naam> / ➕ Naya" (cfgWho). Naam wale par: naam badal sakte hain,
+"Default par wapas" (per se hata do), "🗑️ Ye mulazim hatao" (staff se hata do, ginti rehti hai).
+➕ Naya = prompt se naam -> staff mein + uski setting (default ki copy) khul jati hai. ➕ Aur size jis ki khuli hai us mein.
+Tests: /tmp/tl/tper.mjs (7). Kul 270 paas.

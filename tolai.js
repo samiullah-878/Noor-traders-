@@ -34,17 +34,21 @@ function watchDay(day) {
 }
 
 // ---------- hisaab ----------
-const minOf = (name, itemId) => {
-  const own = Number(cfg.items?.[String(itemId)]); if (own > 0) return own;
+// v2.11: har mulazim ki APNI setting (cfg.per[naam]); na ho to default (cfg khud)
+const cfgOf = w => { const p = w && cfg.per && cfg.per[w]; return p ? { ...cfg, ...p } : cfg; };
+const minOf = (name, itemId, w) => {
+  const C = cfgOf(w);
+  const own = Number(C.items?.[String(itemId)]); if (own > 0) return own;
   const n = String(name || '').toLowerCase();
-  for (const s of (cfg.sizes || [])) { const k = String(s.name || '').toLowerCase().replace(/\s+/g, '');
+  for (const s of (C.sizes || [])) { const k = String(s.name || '').toLowerCase().replace(/\s+/g, '');
     if (k && n.replace(/\s+/g, '').includes(k)) return Number(s.min) || 0; }
-  return Number(cfg.sizes?.[0]?.min) || 0;
+  return Number(C.sizes?.[0]?.min) || 0;
 };
-function dutyMins() {
-  const [a, b] = String(cfg.from || '09:30').split(':').map(Number);
-  const [c, d] = String(cfg.to || '18:00').split(':').map(Number);
-  return Math.max(0, ((c * 60 + d) - (a * 60 + b)) - (Number(cfg.rest) || 0));
+function dutyMins(w) {
+  const C = cfgOf(w);
+  const [a, b] = String(C.from || '09:30').split(':').map(Number);
+  const [c, d] = String(C.to || '18:00').split(':').map(Number);
+  return Math.max(0, ((c * 60 + d) - (a * 60 + b)) - (Number(C.rest) || 0));
 }
 // v2.9: ginti MULAZIM ke hisaab se (pehle item ke hisaab se thi — doosra mulazim aata to uska kaam 0 ho jata)
 export function tolaiSum(rows, only) {
@@ -56,9 +60,9 @@ export function tolaiSum(rows, only) {
     e.packets += Number(r.packets) || 0; e.at.push(r.at); e.name = r.name || e.name;
     items.set(k, e);
   }
-  const list = [...items.values()].map(e => ({ ...e, min: r2((Number(minOf(e.name, e.itemId)) || 0) * e.packets), at: e.at.sort((a, b) => a - b) }));
+  const list = [...items.values()].map(e => ({ ...e, min: r2((Number(minOf(e.name, e.itemId, only)) || 0) * e.packets), at: e.at.sort((a, b) => a - b) }));
   const packets = list.reduce((n, e) => n + e.packets, 0), mins = r2(list.reduce((n, e) => n + e.min, 0));
-  const duty = dutyMins(), pc = duty > 0 ? Math.round(mins / duty * 100) : 0;
+  const duty = dutyMins(only), pc = duty > 0 ? Math.round(mins / duty * 100) : 0;
   return { list: list.sort((a, b) => b.min - a.min), packets, mins, duty, pc,
     conf: pc >= 80 ? 'g' : pc >= 50 ? 'y' : 'r',
     first: Math.min(...use.map(r => r.at).filter(Boolean), Infinity),
@@ -97,7 +101,7 @@ function paint() {
       <div><b>${num(s.mins)}</b><small>minute</small></div>
       <div><b>${s.pc}%</b><small>kaam</small></div>
     </div>
-    ${s.packets ? `<p class="tl-note">Duty ${esc(cfg.from)}–${esc(cfg.to)} · rest ${num(cfg.rest)} min = ${num(s.duty)} min${s.last ? ` · pehla ${hhmm(s.first)} · aakhri ${hhmm(s.last)}` : ''}</p>` : ''}
+    ${s.packets ? `<p class="tl-note">Duty ${esc(cfgOf(who).from)}–${esc(cfgOf(who).to)} · rest ${num(cfgOf(who).rest)} min = ${num(s.duty)} min${s.last ? ` · pehla ${hhmm(s.first)} · aakhri ${hhmm(s.last)}` : ''}</p>` : ''}
     <div class="tl-list">${s.list.map(e => `<div class="tl-row">
       <div><b>${esc(e.name)}</b><small>${e.at.map(hhmm).join(' · ')}</small></div>
       <div class="tl-n"><b>${num(e.packets)}</b><small>${num(e.min)} min</small></div>
@@ -247,62 +251,107 @@ export function tolaiReport() {
 }
 
 // ---------- setting (malik) ----------
+let cfgWho = '';   // setting screen par kis mulazim ki setting khuli hai ('' = sab ke liye default)
 function openCfg() {
   view = 'cfg';
+  const staff = (cfg.staff || []).filter(Boolean);
+  if (cfgWho && !staff.includes(cfgWho)) cfgWho = '';
+  const C = cfgOf(cfgWho), own = !!(cfgWho && cfg.per && cfg.per[cfgWho]);
   $('dialogTitle').textContent = '⚙️ Tolai ki setting';
   $('dialogBody').innerHTML = `<div class="tl-cfg">
+    <div class="tl-who">
+      <button type="button" class="${!cfgWho ? 'on' : ''}" data-tl-cfgwho="">Sab (default)</button>
+      ${staff.map(n => `<button type="button" class="${cfgWho === n ? 'on' : ''}" data-tl-cfgwho="${esc(n)}">${esc(n)}</button>`).join('')}
+      <button type="button" data-tl-staffadd="1">➕ Naya</button>
+    </div>
+    <div class="it-head">${cfgWho ? esc(cfgWho) + (own ? ' — apni setting' : ' — abhi default chal raha hai, badlein to apni ban jayegi') : 'Sab ke liye default'}</div>
+    ${cfgWho ? `<label class="it-wide"><span>Naam</span><input name="wname" value="${esc(cfgWho)}" maxlength="30"></label>` : ''}
     <div class="it-head">Duty ka waqt</div>
     <div class="it-grid">
-      <label class="it-f"><span>Se</span><input type="time" name="from" value="${esc(cfg.from)}"></label>
-      <label class="it-f"><span>Tak</span><input type="time" name="to" value="${esc(cfg.to)}"></label>
+      <label class="it-f"><span>Se</span><input type="time" name="from" value="${esc(C.from)}"></label>
+      <label class="it-f"><span>Tak</span><input type="time" name="to" value="${esc(C.to)}"></label>
     </div>
     <div class="it-grid">
-      <label class="it-f"><span>Rest (minute)</span><input type="number" min="0" step="5" name="rest" value="${Number(cfg.rest) || 0}"></label>
+      <label class="it-f"><span>Rest (minute)</span><input type="number" min="0" step="5" name="rest" value="${Number(C.rest) || 0}"></label>
       <label class="it-f"><span>Chhutti ka din</span><select name="offDay">
-        <option value="-1"${cfg.offDay < 0 ? ' selected' : ''}>—</option>
-        ${DAYS.map((d, i) => `<option value="${i}"${Number(cfg.offDay) === i ? ' selected' : ''}>${d}</option>`).join('')}</select></label>
+        <option value="-1"${C.offDay < 0 ? ' selected' : ''}>—</option>
+        ${DAYS.map((d, i) => `<option value="${i}"${Number(C.offDay) === i ? ' selected' : ''}>${d}</option>`).join('')}</select></label>
     </div>
-    <div class="it-head">Mulazim ke naam</div>
-    <div class="tl-sizes">${((cfg.staff || []).length ? cfg.staff : ['']).map((n, i) => `<label class="it-wide"><input name="w${i}" value="${esc(n)}" maxlength="30" placeholder="misal: Abdurehman"></label>`).join('')}</div>
-    <div class="account-tools"><button type="button" data-tl-staff="1">➕ Aur mulazim</button></div>
     <div class="it-head">Ek packet mein kitna waqt</div>
-    <div class="tl-sizes">${(cfg.sizes || []).map((s, i) => `<div class="it-grid">
-      <label class="it-f"><span>Size</span><input name="sn${i}" value="${esc(s.name)}" maxlength="20"></label>
-      <label class="it-f"><span>Minute</span><input type="number" min="0" step="any" name="sm${i}" value="${Number(s.min) || 0}"></label>
+    <div class="tl-sizes">${(C.sizes || []).map((sz, i) => `<div class="it-grid">
+      <label class="it-f"><span>Size</span><input name="sn${i}" value="${esc(sz.name)}" maxlength="20"></label>
+      <label class="it-f"><span>Minute</span><input type="number" min="0" step="any" name="sm${i}" value="${Number(sz.min) || 0}"></label>
     </div>`).join('')}</div>
     <div class="account-tools"><button type="button" data-tl-size="1">➕ Aur size</button></div>
+    ${cfgWho && own ? '<div class="account-tools"><button type="button" class="danger" data-tl-cfgreset="1">Default par wapas</button></div>' : ''}
+    ${cfgWho ? '<div class="account-tools"><button type="button" class="danger" data-tl-staffdel="1">🗑️ Ye mulazim hatao</button></div>' : ''}
     <p class="muted">Setting badlein to sirf aane wale din badlenge — purani report waisi hi rahegi.</p>
     <div class="account-tools tl-acts"><button type="button" class="primary" data-tl-cfgsave="1">💾 Save</button>
       <button type="button" data-tl-main="1">‹ Wapas</button></div></div>`;
 }
-async function saveCfg() {
+function readCfgForm() {
   const b = $('dialogBody'), g = n => b.querySelector(`[name=${n}]`);
   const sizes = [];
   for (let i = 0; i < 12; i++) { const n = g('sn' + i), m = g('sm' + i); if (!n) break;
     const name = String(n.value || '').trim(); if (name) sizes.push({ name, min: Math.max(0, Number(m?.value) || 0) }); }
-  const staff = [];
-  for (let i = 0; i < 20; i++) { const w = g('w' + i); if (!w) break; const v = String(w.value || '').trim(); if (v) staff.push(v); }
-  const next = { from: g('from').value || '09:30', to: g('to').value || '18:00',
-    rest: Math.max(0, Number(g('rest').value) || 0), offDay: Number(g('offDay').value), sizes, items: cfg.items || {}, staff };
-  try { await cloud.setTolaiConfig(next); cfg = { ...cfg, ...next }; notice('✓ Setting save'); view = 'main'; paint(); }
+  return { from: g('from').value || '09:30', to: g('to').value || '18:00',
+    rest: Math.max(0, Number(g('rest').value) || 0), offDay: Number(g('offDay').value), sizes,
+    newName: String(g('wname')?.value || '').trim() };
+}
+async function saveCfg() {
+  const f = readCfgForm();
+  const per = { ...(cfg.per || {}) }, staff = [...(cfg.staff || [])];
+  let next;
+  if (cfgWho) {                                            // is mulazim ki apni
+    const nm = f.newName || cfgWho;
+    if (nm !== cfgWho) { const i = staff.indexOf(cfgWho); if (i >= 0) staff[i] = nm; delete per[cfgWho]; }
+    per[nm] = { from: f.from, to: f.to, rest: f.rest, offDay: f.offDay, sizes: f.sizes };
+    next = { ...cfg, per, staff }; cfgWho = nm;
+  } else {                                                 // sab ke liye default
+    next = { ...cfg, from: f.from, to: f.to, rest: f.rest, offDay: f.offDay, sizes: f.sizes, per, staff };
+  }
+  try { await cloud.setTolaiConfig(next); cfg = next; notice('✓ Setting save'); openCfg(); }
   catch (e) { notice('Save nahi hua: ' + (e?.message || e)); }
+}
+async function cfgReset() {
+  const per = { ...(cfg.per || {}) }; delete per[cfgWho];
+  const next = { ...cfg, per };
+  try { await cloud.setTolaiConfig(next); cfg = next; notice('Default par wapas'); openCfg(); } catch (e) { notice('Nahi hua: ' + (e?.message || e)); }
+}
+async function staffAdd() {
+  const nm = String(prompt('Naye mulazim ka naam:') || '').trim(); if (!nm) return;
+  const staff = [...new Set([...(cfg.staff || []), nm])];
+  const next = { ...cfg, staff };
+  try { await cloud.setTolaiConfig(next); cfg = next; cfgWho = nm; openCfg(); } catch (e) { notice('Nahi hua: ' + (e?.message || e)); }
+}
+async function staffDel() {
+  if (!confirm(cfgWho + ' ko list se hata dein? (purani ginti rahegi)')) return;
+  const per = { ...(cfg.per || {}) }; delete per[cfgWho];
+  const next = { ...cfg, per, staff: (cfg.staff || []).filter(x => x !== cfgWho) };
+  try { await cloud.setTolaiConfig(next); cfg = next; if (who === cfgWho) { who = ''; try { localStorage.setItem(WHO_KEY, ''); } catch {} } cfgWho = ''; openCfg(); } catch (e) { notice('Nahi hua: ' + (e?.message || e)); }
 }
 
 // ---------- clicks ----------
 export function tolaiClick(e) {
-  const b = e.target.closest?.('[data-tl-cam],[data-tl-save],[data-tl-back],[data-tl-cal],[data-tl-cfg],[data-tl-cfgsave],[data-tl-size],[data-tl-main],[data-tl-day],[data-tl-mon],[data-tl-pdf],[data-tl-undo],[data-tl-close],[data-tl-who],[data-tl-fix],[data-tl-staff]');
+  const b = e.target.closest?.('[data-tl-cam],[data-tl-save],[data-tl-back],[data-tl-cal],[data-tl-cfg],[data-tl-cfgsave],[data-tl-size],[data-tl-main],[data-tl-day],[data-tl-mon],[data-tl-pdf],[data-tl-undo],[data-tl-close],[data-tl-who],[data-tl-fix],[data-tl-staff],[data-tl-cfgwho],[data-tl-staffadd],[data-tl-staffdel],[data-tl-cfgreset]');
   if (!b) return false;
   const d = b.dataset;
   if (d.tlWho != null) { who = d.tlWho === who ? '' : d.tlWho; try { localStorage.setItem(WHO_KEY, who); } catch {} lastSave = null; paint(); }
   else if (d.tlFix != null && lastSave) { const l = lastSave; confirmBox({ name: l.name, code: '', tag: l.tag, n: l.n }); }
-  else if (d.tlStaff != null) { cfg.staff = [...(cfg.staff || []), '']; openCfg(); }
+  else if (d.tlCfgwho != null) { cfgWho = d.tlCfgwho; openCfg(); }
+  else if (d.tlStaffadd != null) staffAdd();
+  else if (d.tlStaffdel != null) staffDel();
+  else if (d.tlCfgreset != null) cfgReset();
   else if (d.tlCam != null) shoot();
   else if (d.tlSave != null) saveRow(d.tlSave);
   else if (d.tlBack != null || d.tlMain != null) { view = 'main'; paint(); }
   else if (d.tlCal != null) openCal();
   else if (d.tlCfg != null) openCfg();
   else if (d.tlCfgsave != null) saveCfg();
-  else if (d.tlSize != null) { cfg.sizes = [...(cfg.sizes || []), { name: '', min: 0 }]; openCfg(); }
+  else if (d.tlSize != null) { const f = readCfgForm(); const sizes = [...f.sizes, { name: '', min: 0 }];
+    if (cfgWho) { cfg.per = { ...(cfg.per || {}), [cfgWho]: { ...(cfgOf(cfgWho)), from: f.from, to: f.to, rest: f.rest, offDay: f.offDay, sizes } }; }
+    else cfg = { ...cfg, from: f.from, to: f.to, rest: f.rest, offDay: f.offDay, sizes };
+    openCfg(); }
   else if (d.tlDay != null) { pick = d.tlDay; openCal(); }
   else if (d.tlMon != null) { month = new Date(month.getFullYear(), month.getMonth() + Number(d.tlMon), 1); openCal(); }
   else if (d.tlPdf != null) tolaiPdfOf?.();
