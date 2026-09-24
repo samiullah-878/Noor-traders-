@@ -1,0 +1,444 @@
+/* Noor Traders Hazri — aik hi stylesheet.
+   Font sirf do: Archivo (Roman/ginti) aur Noto Naskh Arabic (Urdu lipi wale naam). Dono repo ke andar hain, internet se nahi aate. */
+@font-face{font-family:"Archivo";src:url("./archivo-latin.woff2") format("woff2");font-weight:100 900;font-style:normal;font-display:swap}
+@font-face{font-family:"Noto Naskh Arabic";src:url("./naskh-arabic-400.woff2") format("woff2");font-weight:400;font-style:normal;font-display:swap;unicode-range:U+0600-06FF,U+0750-077F,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F}
+@font-face{font-family:"Noto Naskh Arabic";src:url("./naskh-arabic-700.woff2") format("woff2");font-weight:500 800;font-style:normal;font-display:swap;unicode-range:U+0600-06FF,U+0750-077F,U+FB50-FDFF,U+FE70-FEFF,U+200C-200F}
+
+:root{
+  --ink:#1b2a4a; --ink-2:#2c4173; --ink-soft:#e7ebf5;
+  --ground:#eef1f7; --paper:#fff; --rule:#dde3ee; --margin:#e9a19d;
+  --text:#18233a; --muted:#5d6980;
+  --ok:#17784d; --ok-bg:#e6f4ec; --late:#a8650a; --late-bg:#fdf3e0; --bad:#b3261e; --bad-bg:#fdeceb; --leave:#574fa0; --leave-bg:#efeefa; --off:#66728a; --off-bg:#eef1f6;
+  --font:"Archivo","Noto Naskh Arabic",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --r:12px; --tab-h:64px;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ground);color:var(--text);font-family:var(--font);font-size:16px;line-height:1.45;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+body.sheet-open{overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:disabled{cursor:default;opacity:.55}
+h1,h2,h3,p{margin:0}
+ol,ul{margin:0;padding:0;list-style:none}
+small{font-size:.8125rem;font-weight:400}
+[hidden]{display:none!important}
+.ic{flex:none;vertical-align:-4px}
+.ur{font-family:"Noto Naskh Arabic",var(--font);font-size:1.08em;line-height:1.7}
+:focus-visible{outline:3px solid #6f8fe0;outline-offset:2px;border-radius:6px}
+.muted{color:var(--muted)} .txt-ok{color:var(--ok)} .txt-bad{color:var(--bad)} .txt-late{color:var(--late)} .center{text-align:center}
+.pad{padding:14px}
+
+/* ---------- boot + login ---------- */
+.boot{min-height:100dvh;display:grid;place-content:center;justify-items:center;gap:6px;text-align:center;padding:24px}
+.boot-mark,.brand-mark{display:grid;place-items:center;width:40px;height:40px;border-radius:10px;background:var(--ink);color:#fff;font-weight:800;letter-spacing:.02em;font-size:15px}
+.boot-mark{width:64px;height:64px;font-size:24px;border-radius:16px;margin-bottom:10px}
+.brand-mark.lg{width:56px;height:56px;font-size:21px;border-radius:14px}
+.boot-name{font-weight:750;font-size:1.25rem}
+.boot-text{color:var(--muted)}
+.login{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px 16px calc(24px + env(safe-area-inset-bottom))}
+.login-card{width:min(100%,400px);background:var(--paper);border:1px solid var(--rule);border-radius:18px;padding:26px 20px 22px;display:grid;gap:18px;box-shadow:0 18px 40px -28px rgba(27,42,74,.55)}
+.login-brand{display:grid;justify-items:center;gap:4px;text-align:center}
+.login-brand h1{font-size:1.6rem;font-weight:800;letter-spacing:-.02em;margin-top:8px}
+.login-brand p{color:var(--muted)}
+.login-error{background:var(--bad-bg);color:var(--bad);border-radius:10px;padding:10px 12px;font-weight:550}
+.pass{display:flex;align-items:center;gap:8px}.pass input{flex:1}
+.foot{color:var(--muted);font-size:.8125rem;text-align:center;padding:18px 0}
+
+/* ---------- buttons ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 16px;border-radius:10px;border:1px solid transparent;font-weight:650;text-decoration:none;white-space:nowrap;background:var(--paper);color:var(--text)}
+.btn-sm{min-height:36px;padding:0 12px;font-size:.875rem}
+.btn-lg{min-height:50px;padding:0 20px;font-size:1.0625rem}
+.btn-xl{min-height:60px;width:100%;font-size:1.1875rem;border-radius:14px}
+.btn-primary{background:var(--ink);color:#fff}.btn-primary:active{background:var(--ink-2)}
+.btn-ink{background:var(--ink-soft);color:var(--ink);border-color:#cfd7ea}
+.btn-ghost{background:var(--paper);border-color:var(--rule);color:var(--ink)}
+.btn-in{background:var(--ok);color:#fff}.btn-out{background:var(--bad);color:#fff}
+.btn.is-busy{position:relative;color:transparent!important}
+.btn.is-busy::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;border:2.5px solid rgba(120,135,170,.4);border-top-color:#7d8fb8;animation:spin .7s linear infinite}
+.btn-primary.is-busy::after,.btn-in.is-busy::after,.btn-out.is-busy::after{border-color:rgba(255,255,255,.35);border-top-color:#fff}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn-row{display:flex;flex-wrap:wrap;gap:8px}.btn-row .btn-lg{flex:1 1 auto}
+.btn-col{display:grid;gap:10px}
+.btn-row.sticky{position:sticky;bottom:0;background:linear-gradient(transparent,var(--paper) 30%);padding:18px 0 4px;margin-top:4px}
+.icon-btn{display:grid;place-items:center;width:42px;height:42px;border-radius:10px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);flex:none}
+.icon-btn.on-ink{background:transparent;border-color:rgba(255,255,255,.25);color:#fff}
+.link,.link-bad{background:none;border:0;padding:4px 0;color:var(--ink-2);font-weight:600;text-decoration:underline;text-underline-offset:3px;display:inline-flex;gap:6px;align-items:center}
+.link-bad{color:var(--bad);font-size:.875rem;margin-left:8px}
+
+/* ---------- top bar + tabs ---------- */
+.top{position:sticky;top:0;z-index:20;background:var(--ink);color:#fff;padding-top:env(safe-area-inset-top)}
+.top-in{max-width:1100px;margin:0 auto;padding:10px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.brand>span:last-child{display:grid;min-width:0}
+.brand b{font-weight:750;font-size:1.0625rem;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.brand small{color:#b9c4dd}
+.top .brand-mark{background:#fff;color:var(--ink)}
+.top .avatar{border:2px solid rgba(255,255,255,.35)}
+.search-btn{order:3;flex:1 1 100%;display:flex;align-items:center;gap:8px;min-height:42px;padding:0 12px;border-radius:10px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.1);color:#d5dcee;text-align:left}
+.search-btn span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;background:var(--paper);border-top:1px solid var(--rule);padding-bottom:env(safe-area-inset-bottom)}
+.tabs button{flex:1;position:relative;display:grid;justify-items:center;gap:2px;height:var(--tab-h);align-content:center;border:0;background:none;color:var(--muted);font-size:.75rem;font-weight:600}
+.tabs button[aria-current=page]{color:var(--ink)}
+.tabs button[aria-current=page]::before{content:"";position:absolute;top:0;left:22%;right:22%;height:3px;border-radius:0 0 3px 3px;background:var(--ink)}
+.badge{position:absolute;top:8px;left:calc(50% + 8px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font-size:.6875rem;font-style:normal;font-weight:700;display:grid;place-items:center}
+.view{max-width:820px;margin:0 auto;padding:14px 12px calc(var(--tab-h) + 28px + env(safe-area-inset-bottom));display:grid;gap:12px}
+.view-hazri{max-width:1100px}
+@media(min-width:860px){
+  .top-in{flex-wrap:nowrap}
+  .brand{flex:0 0 auto}
+  .tabs{position:static;border:0;background:none;padding:0;flex:0 0 auto;gap:4px}
+  .tabs button{display:flex;gap:8px;height:42px;padding:0 14px;border-radius:10px;color:#c3cde3;font-size:.9375rem}
+  .tabs button[aria-current=page]{background:rgba(255,255,255,.14);color:#fff}
+  .tabs button[aria-current=page]::before{display:none}
+  .badge{position:static}
+  .search-btn{order:0;flex:1 1 auto;max-width:420px;margin-left:auto}
+  .view{padding-bottom:40px}
+}
+
+/* ---------- toolbar, date ---------- */
+.toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.page-title{font-size:1.5rem;font-weight:800;letter-spacing:-.02em}.page-title small{color:var(--muted);font-size:1rem;font-weight:600}
+.section-label{font-size:.9375rem;font-weight:700;color:var(--muted)}
+.switch{display:inline-flex;padding:3px;border-radius:11px;background:#dfe5f0}
+.switch.full{display:flex}.switch.full button{flex:1}
+.switch button{min-height:38px;padding:0 16px;border:0;border-radius:8px;background:none;font-weight:650;color:var(--muted)}
+.switch button[aria-selected=true]{background:var(--paper);color:var(--ink);box-shadow:0 1px 2px rgba(27,42,74,.18)}
+.datebar{display:flex;align-items:center;gap:8px}
+.date-pick{position:relative;flex:1;min-height:42px;display:flex;align-items:center;justify-content:center;border:1px solid var(--rule);border-radius:10px;background:var(--paper);font-weight:700;overflow:hidden}
+.date-pick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0}
+.date-pick input::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
+.date-static{flex:1;text-align:center;font-weight:700}
+
+/* ---------- khulasa patti + filter ---------- */
+.panel{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r);overflow:hidden}
+.strip{display:flex;height:10px;background:var(--off-bg)}
+.seg{display:block;min-width:4px}.seg+.seg{border-left:2px solid var(--paper)}
+.s-present.seg{background:var(--ok)}.s-late.seg{background:#d9960f}.s-absent.seg{background:var(--bad)}.s-leave.seg{background:var(--leave)}.s-waiting.seg{background:#b8c1d3}.s-na.seg{background:var(--off-bg)}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:12px;scrollbar-width:none;border-bottom:1px solid var(--rule)}
+.chips::-webkit-scrollbar{display:none}
+.chips.wrap{flex-wrap:wrap;overflow:visible;padding:12px 0;border:0}
+.chip{flex:none;min-height:38px;padding:0 13px;border-radius:19px;border:1px solid var(--rule);background:var(--paper);color:var(--muted);font-weight:600;font-size:.875rem;white-space:nowrap}
+.chip b{color:var(--text);font-weight:800;margin-right:2px}
+.chip[aria-selected=true]{background:var(--ink);border-color:var(--ink);color:#fff}.chip[aria-selected=true] b{color:#fff}
+.c-present b{color:var(--ok)}.c-late b{color:var(--late)}.c-absent b{color:var(--bad)}.c-leave b{color:var(--leave)}
+
+/* ---------- register: kaghaz wale register ki lakeerein aur surkh hashiya ---------- */
+.register{position:relative}
+.register::before{content:"";position:absolute;top:0;bottom:0;left:59px;z-index:1;width:1px;background:var(--margin);pointer-events:none}
+.row{display:flex;align-items:stretch;border-bottom:1px solid var(--rule);border-left:4px solid transparent}
+.row:last-child{border-bottom:0}
+.row.s-present{border-left-color:var(--ok)}.row.s-late{border-left-color:#d9960f}.row.s-absent{border-left-color:var(--bad)}.row.s-leave{border-left-color:var(--leave)}.row.s-off,.row.s-closed,.row.s-waiting,.row.s-loading{border-left-color:#c3cbdb}
+.row.is-due{background:var(--bad-bg)}.row.is-off{opacity:.6}
+.row-main{flex:1;min-width:0;display:flex;align-items:center;gap:12px;padding:11px 10px 11px 8px;border:0;background:none;text-align:left}
+.row-text{flex:1;min-width:0;display:grid;padding-left:8px}
+.row-text b{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-text small{color:var(--muted);line-height:1.35}
+.arrow{color:#9aa5bb;font-size:.75rem}
+.row-pdf{flex:none;display:grid;justify-items:center;align-content:center;gap:1px;width:54px;border:0;border-left:1px solid var(--rule);background:#f7f9fd;color:var(--ink);font-size:.6875rem;font-weight:700}
+.row-pdf.is-busy{color:transparent}
+.avatar{flex:none;width:38px;height:38px;border-radius:50%;background:var(--ink-soft);color:var(--ink);display:grid;place-items:center;font-weight:750;font-size:.875rem;overflow:hidden}
+.avatar img{width:100%;height:100%;object-fit:cover}
+.avatar.lg{width:64px;height:64px;font-size:1.25rem}
+.stamp{flex:none;display:inline-block;padding:2px 8px;border:1.5px solid currentColor;border-radius:5px;font-size:.75rem;font-weight:750;letter-spacing:.01em;white-space:nowrap}
+.row .stamp{transform:rotate(-2.5deg)}
+.st-present{color:var(--ok)}.st-late{color:var(--late)}.st-absent{color:var(--bad)}.st-leave{color:var(--leave)}.st-off,.st-closed,.st-waiting,.st-na,.st-loading{color:var(--off)}
+.amount{flex:none;display:grid;justify-items:end}.amount b{font-weight:750}
+.empty{padding:28px 16px;display:grid;gap:12px;justify-items:center;text-align:center;color:var(--muted)}
+.empty-line,.loading-line{padding:16px;color:var(--muted);text-align:center}
+.loading-line{background:var(--late-bg);color:var(--late);font-weight:600;padding:8px 12px;font-size:.875rem}
+.hint{color:var(--muted);font-size:.875rem}
+.panel>.hint{padding:12px 14px}.panel>.link{margin:6px 14px 12px}
+
+/* ---------- tawajju ---------- */
+.attention{display:grid;gap:8px}
+.attention-list{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.att-card{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border-radius:var(--r);border:1px solid;text-align:left;background:var(--paper)}
+.att-card span{display:grid;min-width:0}.att-card b{font-weight:700}.att-card small{color:inherit;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tone-bad{background:var(--bad-bg);border-color:#f3c2be;color:var(--bad)}.tone-late{background:var(--late-bg);border-color:#efd59c;color:var(--late)}.tone-ink{background:var(--ink-soft);border-color:#cfd7ea;color:var(--ink)}
+
+/* ---------- mahine ka jaal ---------- */
+.legend{padding:10px 12px;font-size:.8125rem;color:var(--muted);border-bottom:1px solid var(--rule);line-height:2}
+.mk{display:inline-grid;place-items:center;width:20px;height:20px;border:1.5px solid currentColor;border-radius:4px;font-weight:800;font-size:.6875rem;margin-left:6px}
+.grid-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.grid{border-collapse:separate;border-spacing:0;font-size:.8125rem;width:100%}
+.grid th,.grid td{border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);text-align:center;padding:0;min-width:30px;height:36px}
+.grid thead th{background:var(--ink);color:#fff;font-weight:700;border-color:#33466f;height:40px;line-height:1.1}
+.grid thead small{display:block;font-size:.625rem;font-weight:500;opacity:.75}
+.grid thead .is-fri{background:#3b4f7e}.grid .is-today{box-shadow:inset 0 0 0 2px #d9960f}
+.g-name{position:sticky;left:0;z-index:2;background:var(--paper);min-width:120px;max-width:150px;text-align:left!important;border-right:2px solid var(--margin)!important}
+thead .g-name{background:var(--ink);padding-left:10px}
+.g-name button{width:100%;height:36px;padding:0 10px;border:0;background:none;text-align:left;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.grid td button{width:100%;height:36px;border:0;background:none;font-weight:800;color:inherit}
+.grid td.st-late{background:var(--late-bg)}.grid td.st-absent{background:var(--bad-bg)}.grid td.st-leave{background:var(--leave-bg)}.grid td.st-off,.grid td.st-closed{background:var(--off-bg)}
+.g-sum{font-weight:750;min-width:34px!important}
+
+/* ---------- salary ---------- */
+.totals{display:grid;grid-template-columns:repeat(3,1fr);background:var(--paper);border:1px solid var(--rule);border-radius:var(--r)}
+.totals div{padding:12px;display:grid;gap:2px;border-left:1px solid var(--rule);min-width:0}.totals div:first-child{border-left:0}
+.totals small{color:var(--muted)}.totals b{font-size:1.0625rem;font-weight:800;letter-spacing:-.01em;overflow-wrap:anywhere}
+.calc{width:100%;border-collapse:collapse}
+.calc td{padding:9px 2px;border-bottom:1px solid var(--rule)}.calc td:last-child{text-align:right;font-weight:650;white-space:nowrap}
+.calc small{display:block;color:var(--muted)}
+.calc .is-total td{font-weight:800;border-top:2px solid var(--ink)}
+.calc .is-balance td{font-weight:800;font-size:1.125rem;color:var(--ink);border-bottom:0}
+.sub{font-size:.9375rem;font-weight:750;margin:18px 0 6px}
+.ledger li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--rule)}
+.ledger small{color:var(--muted)}
+.inline-form{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.inline-form .btn,.inline-form input[name=note]{grid-column:1/-1}
+.pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+
+/* ---------- staff tab ---------- */
+.search-inline,.search-box{display:flex;align-items:center;gap:8px;padding:0 12px;min-height:46px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);color:var(--muted)}
+.search-inline input,.search-box input{flex:1;min-width:0;border:0;outline:0;background:none;min-height:44px;color:var(--text)}
+.search-box{border:2px solid var(--ink);min-height:52px;font-size:1.0625rem}
+.tools{display:grid}
+.tool{position:relative;display:flex;align-items:center;gap:12px;padding:14px;border:0;border-bottom:1px solid var(--rule);background:none;text-align:left;color:var(--ink)}
+.tool:last-child{border-bottom:0}.tool span{display:grid}.tool small{color:var(--muted)}
+.tool.tone-bad{background:none;color:var(--bad)}
+.tool .badge{position:static;margin-left:auto}
+.result-head{padding:4px 0 10px;color:var(--muted)}.result-head b{color:var(--text)}
+#smartResults .register{border:1px solid var(--rule);border-radius:var(--r);overflow:hidden}
+
+/* ---------- forms ---------- */
+.form{display:grid;gap:14px}
+.form label{display:grid;gap:5px;font-weight:650;font-size:.9375rem}
+.form label small{color:var(--muted);font-weight:400}
+input,select,textarea{width:100%;min-height:46px;padding:10px 12px;border:1px solid #c5cede;border-radius:10px;background:var(--paper);font-size:1rem}
+textarea{min-height:88px;resize:vertical}
+input[readonly]{background:var(--ground);color:var(--muted)}
+input[type=checkbox]{width:22px;height:22px;min-height:0;padding:0;flex:none;accent-color:var(--ink)}
+.form .check{display:flex;align-items:flex-start;gap:10px;font-weight:500}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+fieldset{border:1px solid var(--rule);border-radius:var(--r);padding:12px 12px 14px;margin:0;display:grid;gap:12px;min-width:0}
+legend{font-weight:750;padding:0 6px;color:var(--ink)}
+details summary{cursor:pointer;color:var(--ink-2);font-weight:600;padding:6px 0}
+.photo-pick,.profile-head{display:flex;align-items:center;gap:14px}
+.proof{display:flex;gap:12px;align-items:center;background:var(--ground);border-radius:10px;padding:10px}
+.proof img{width:84px;height:84px;object-fit:cover;border-radius:8px}
+
+/* ---------- sheet ---------- */
+.sheet-wrap{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.sheet-backdrop{position:absolute;inset:0;background:rgba(16,24,44,.5);opacity:0;transition:opacity .18s}
+.sheet{position:relative;width:100%;max-width:560px;max-height:92dvh;display:flex;flex-direction:column;background:var(--paper);border-radius:18px 18px 0 0;transform:translateY(24px);opacity:0;transition:transform .2s ease-out,opacity .2s}
+.sheet.wide{max-width:760px}
+.sheet-wrap.in .sheet-backdrop{opacity:1}.sheet-wrap.in .sheet{transform:none;opacity:1}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 14px 10px 18px;border-bottom:1px solid var(--rule)}
+.sheet-head h2{font-size:1.1875rem;font-weight:800;letter-spacing:-.01em;min-width:0}
+.sheet-head h2 small{display:block;color:var(--muted);font-weight:500}
+.sheet-body{overflow-y:auto;padding:16px 18px calc(20px + env(safe-area-inset-bottom));display:grid;gap:12px;align-content:start;overscroll-behavior:contain}
+@media(min-width:700px){.sheet-wrap{align-items:center;padding:24px}.sheet{border-radius:18px;max-height:88dvh}}
+@media(prefers-reduced-motion:reduce){.sheet,.sheet-backdrop{transition:none}.btn.is-busy::after{animation-duration:1.6s}}
+
+/* ---------- profile / din ---------- */
+.counts{display:grid;grid-template-columns:repeat(5,1fr);background:var(--paper);border:1px solid var(--rule);border-radius:var(--r)}
+.counts div{display:grid;justify-items:center;padding:10px 2px;border-left:1px solid var(--rule);color:var(--text)}.counts div:first-child{border-left:0}
+.counts b{font-size:1.125rem;font-weight:800;color:inherit}.counts small{color:var(--muted);font-size:.6875rem;text-align:center}
+.counts .st-present b{color:var(--ok)}.counts .st-late b{color:var(--late)}.counts .st-absent b{color:var(--bad)}.counts .st-leave b{color:var(--leave)}
+.days li{border-bottom:1px solid var(--rule);border-left:4px solid transparent}.days li:last-child{border-bottom:0}
+.days li.s-present{border-left-color:var(--ok)}.days li.s-late{border-left-color:#d9960f}.days li.s-absent{border-left-color:var(--bad)}.days li.s-leave{border-left-color:var(--leave)}
+.days li>button,.days li>div{width:100%;display:flex;align-items:center;gap:12px;padding:9px 12px 9px 10px;border:0;background:none;text-align:left}
+.d-date{flex:none;width:38px;display:grid;justify-items:center;line-height:1.15}.d-date b{font-size:1.0625rem;font-weight:800}.d-date small{color:var(--muted);font-size:.6875rem}
+.d-time{flex:1;min-width:0;display:grid}.d-time small{color:var(--muted)}
+.sheet .days{border:1px solid var(--rule);border-radius:var(--r);overflow:hidden}
+
+/* ---------- staff: check-in card ---------- */
+.punch{background:var(--paper);border:1px solid var(--rule);border-radius:16px;padding:20px 16px 16px;display:grid;gap:6px;justify-items:center;text-align:center;border-top:5px solid var(--ink)}
+.punch.is-in{border-top-color:var(--ok)}.punch.is-done{border-top-color:#b8c1d3}
+.punch-state{display:flex;align-items:center;gap:6px;color:var(--muted);font-weight:650}
+.is-in .punch-state{color:var(--ok)}
+.punch-big{font-size:2rem;font-weight:800;letter-spacing:-.025em;line-height:1.15}.punch-big small{font-size:1rem;font-weight:600;color:var(--muted)}
+.punch-sub{color:var(--muted);margin-bottom:10px}
+.punch-step{min-height:1.4em;color:var(--muted);font-size:.875rem;margin-top:6px}
+.notice{display:flex;gap:10px;background:var(--ink-soft);color:var(--ink);border-radius:var(--r);padding:12px 14px}
+.reqs .req{padding:12px 14px;border-bottom:1px solid var(--rule);display:grid;gap:4px}.reqs .req:last-child{border-bottom:0}
+.req p:first-child{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.cam{display:grid;gap:12px;justify-items:center}
+.cam video{width:100%;max-height:52dvh;border-radius:12px;background:#0d1424;transform:scaleX(-1);object-fit:cover}
+.pdf-name{display:flex;gap:10px;align-items:center;font-weight:650;overflow-wrap:anywhere}
+
+/* ---------- toast ---------- */
+.toast{position:fixed;left:50%;bottom:calc(var(--tab-h) + 18px + env(safe-area-inset-bottom));z-index:80;transform:translate(-50%,12px);max-width:min(92vw,460px);padding:12px 16px;border-radius:12px;background:#121b30;color:#fff;font-weight:600;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;text-align:center}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.ok{background:#11603d}.toast.bad{background:#93201a}
+
+@media print{.top,.tabs,.toast,.toolbar .btn{display:none!important}body{background:#fff}}
+
+/* ---------- v201: duty chips, jaldi buttons, hafta, qawaid ---------- */
+.row-col{flex:1;min-width:0;display:grid}
+.row-col .row-main{padding-bottom:4px}
+.tags{display:flex;flex-wrap:wrap;gap:6px;padding:0 10px 11px 70px}
+.tags.inline{padding:4px 0 0}.tags.center{justify-content:center;padding:4px 0 6px}
+.tag{display:inline-flex;align-items:center;gap:4px;min-height:24px;padding:0 8px;border-radius:12px;background:var(--ground);color:var(--muted);font-size:.75rem;font-weight:600;white-space:nowrap}
+.tag .ic{vertical-align:0}
+.t-ok{background:var(--ok-bg);color:var(--ok)}.t-bad{background:var(--bad-bg);color:var(--bad)}.t-ink{background:var(--ink-soft);color:var(--ink)}
+.quick{display:inline-flex;align-items:center;gap:4px;min-height:30px;padding:0 11px;border-radius:15px;border:1.5px solid var(--ok);background:var(--paper);color:var(--ok);font-size:.8125rem;font-weight:700}
+.quick.q-bad{border-color:var(--bad);color:var(--bad)}
+.quick.is-busy{color:transparent}
+.day-tools{display:flex;flex-wrap:wrap;gap:8px}
+.closed-line,.error-line{display:flex;gap:10px;align-items:flex-start;border-radius:var(--r);padding:12px 14px;background:var(--off-bg);color:var(--ink)}
+.error-line{background:var(--bad-bg);color:var(--bad);font-weight:600;border-radius:0;font-size:.875rem}
+.punch .error-line{border-radius:10px;text-align:left}
+.week{background:var(--paper);border:1px solid var(--rule);border-radius:var(--r)}
+.week summary{display:grid;gap:4px;padding:12px 14px;color:var(--text);list-style:none}
+.week summary::-webkit-details-marker{display:none}
+.week-bits{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.8125rem;color:var(--muted)}
+.week-table{width:100%;border-collapse:collapse;font-size:.875rem}
+.week-table th,.week-table td{padding:8px 10px;border-top:1px solid var(--rule);text-align:right}
+.week-table th:first-child,.week-table td:first-child{text-align:left}
+.week-table th{color:var(--muted);font-weight:600;font-size:.75rem}
+.rule-card{display:flex;align-items:center;gap:12px;width:100%;padding:12px 14px;border-radius:var(--r);border:1px solid #cfd7ea;background:var(--ink-soft);color:var(--ink);text-align:left}
+.rule-card>span{flex:1;display:grid;min-width:0}.rule-card small{color:var(--muted)}
+.sub-box{display:grid;gap:12px;padding-left:12px;border-left:3px solid var(--ink-soft)}
+.progress{width:100%;max-width:320px;height:8px;border-radius:4px;background:var(--ground);overflow:hidden;margin:6px 0 2px}
+.progress i{display:block;height:100%;background:var(--ok)}
+.sync-line{display:flex;gap:6px;align-items:center;justify-content:center;color:var(--ok);font-size:.8125rem;font-weight:600;margin-top:4px}
+.sync-line.is-wait{color:var(--late)}
+.pdf-list li{display:grid;gap:8px;padding:10px 0;border-bottom:1px solid var(--rule)}
+.pdf-list .pdf-name{font-size:.9375rem}
+
+/* ---------- v202: aasan time picker + Aaya/Gaya tickets ---------- */
+.tp{display:grid;gap:8px;padding:12px;border:1px solid var(--rule);border-radius:var(--r);background:#fafbfe}
+.tp-label{font-weight:650;font-size:.9375rem}
+.tp-show{font-size:1.75rem;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.1}
+.tp-row{display:flex;align-items:center;gap:6px}
+.tp-row select{flex:1;min-width:0;min-height:50px;font-size:1.125rem;font-weight:700;text-align:center;padding:0 6px}
+.tp-colon{font-weight:800;font-size:1.25rem;color:var(--muted)}
+.tp-ap{display:flex;flex:none;border:1px solid #c5cede;border-radius:10px;overflow:hidden}
+.tp-ap button{min-width:56px;min-height:50px;border:0;background:var(--paper);font-weight:800;color:var(--muted)}
+.tp-ap button+button{border-left:1px solid #c5cede}
+.tp-ap button[aria-pressed=true]{background:var(--ink);color:#fff}
+.tp-tickets,.tix{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tp-tickets button{min-height:40px;padding:0 12px;border-radius:20px;border:1px solid #c5cede;background:var(--paper);font-weight:700;font-size:.875rem;color:var(--ink)}
+.tp-tickets button[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.tp-tickets .tp-clear{color:var(--muted);font-weight:600}
+.tix-wrap{display:grid;gap:6px;padding:0 10px 12px 70px}
+.tix-label{font-size:.75rem;font-weight:700;color:var(--muted);min-width:38px}
+.tix-btn{display:inline-flex;align-items:baseline;gap:2px;min-height:34px;padding:0 10px;border-radius:17px;border:1.5px solid #c5cede;background:var(--paper);color:var(--ink);font-weight:750;font-size:.875rem}
+.tix-btn small{font-size:.6875rem;font-weight:600;color:var(--muted)}
+.tix-btn.is-on{background:var(--ink);border-color:var(--ink);color:#fff}.tix-btn.is-on small{color:#c3cde3}
+.tix-btn.is-busy{color:transparent}.tix-btn.is-busy small{visibility:hidden}
+.tix-more{justify-self:start;border:0;background:none;padding:2px 0;color:var(--ink-2);font-weight:650;font-size:.8125rem;text-decoration:underline;text-underline-offset:3px}
+
+/* ---------- v203 ---------- */
+.link-card{text-decoration:none}
+.sync-pill{display:inline-flex;align-items:center;gap:4px;color:#ffd48a;font-weight:600}
+
+/* ---------- v204 ---------- */
+.selfie-wait{display:grid;place-items:center;width:84px;height:84px;border-radius:8px;background:var(--rule);color:var(--muted);font-size:.6875rem;text-align:center;padding:4px}
+.view-settings .section-label{margin-top:6px}
+
+/* ---------- v204: selfies, history ---------- */
+.selfie-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.selfie-grid li>button{width:100%;display:grid;gap:3px;padding:8px;border:1px solid var(--rule);border-radius:var(--r);background:var(--paper);text-align:left}
+.selfie-grid .pair{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px}
+.selfie-grid .pair>*{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px}
+.selfie-grid .pair .avatar{width:100%;height:auto;border-radius:8px}
+.selfie-grid .noselfie{display:grid;place-items:center;background:var(--ground);color:var(--muted);font-size:.75rem;text-align:center}
+.selfie-grid small{color:var(--muted)}
+.inline-select{display:flex;align-items:center;gap:10px;font-weight:650}.inline-select select{flex:1}
+.history li{align-items:flex-start}.history li>span{display:grid;gap:2px}
+
+/* ---------- v205: bahar jane ki parchi / Gate Pass ---------- */
+.out-cards{display:grid;gap:8px}
+.out-card{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:var(--r);border:2px solid #efc56a;background:var(--late-bg)}
+.out-text{flex:1;min-width:160px;display:grid}.out-text small{color:var(--muted)}
+.out-btns{display:flex;gap:8px}
+button.tag{border:0;cursor:pointer}
+.t-late{background:var(--late-bg);color:var(--late)}
+.out-btn{width:100%}
+.out-wait{display:flex;align-items:center;gap:12px;padding:14px;border-radius:var(--r);background:var(--late-bg);color:var(--late)}
+.out-wait div{flex:1;display:grid}.out-wait small{color:var(--muted)}
+.notice.tone-bad{background:var(--bad-bg);color:var(--bad)}
+.choice{display:flex;flex-wrap:wrap;gap:8px}
+.choice .chip[aria-pressed=true]{background:var(--ink);border-color:var(--ink);color:#fff}
+.gate{position:relative;overflow:hidden;border-radius:16px;border:3px solid var(--day);background:var(--paper);padding:0 0 14px;display:grid;gap:10px}
+.gate-top{display:flex;justify-content:space-between;gap:8px;padding:10px 14px;background:var(--day);color:#fff;font-weight:800;letter-spacing:.06em;font-size:.8125rem}
+.gate-top span:last-child{letter-spacing:0;font-weight:600}
+.gate-body{display:flex;align-items:center;gap:12px;padding:0 14px}.gate-body>div{display:grid}
+.gate-name{font-size:1.375rem;font-weight:800}
+.gate-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;padding:0 14px}
+.gate-grid>div{display:grid;background:var(--ground);border-radius:10px;padding:8px 10px}.gate-grid small{color:var(--muted)}.gate-grid b{font-size:1.0625rem}
+.gate-ok{display:flex;align-items:center;justify-content:center;gap:6px;color:var(--ok);font-weight:800}
+.gate-clock{text-align:center;font-size:2.25rem;font-weight:800;letter-spacing:.02em;color:var(--day);font-variant-numeric:tabular-nums}
+.gate-stripe{height:8px;margin:0 14px;border-radius:4px;background:repeating-linear-gradient(90deg,var(--day) 0 14px,transparent 14px 28px);background-size:28px 8px;animation:gateMove 1s linear infinite}
+@keyframes gateMove{to{background-position:28px 0}}
+.gate-sub{text-align:center;color:var(--muted);font-weight:600}
+.gate .btn-row{padding:0 14px}.gate .btn-row .btn{flex:1}
+.gate.big .gate-name{font-size:1.75rem}.gate.big .gate-clock{font-size:3rem}
+@media(prefers-reduced-motion:reduce){.gate-stripe{animation:none}}
+
+/* ---------- v206: Urdu parchi, manager ---------- */
+.ur-form legend,.ur-form label,.ur-form .hint,.ur-form .btn{font-family:"Noto Naskh Arabic",var(--font)}
+.ur-form legend{font-size:1.0625rem}
+.ur-chip{font-family:"Noto Naskh Arabic",var(--font);font-size:1rem;min-height:44px;line-height:1.6}
+.mgr{display:grid;gap:10px;border-color:#cfd7ea}
+.mgr .section-label{display:flex;align-items:center;gap:6px;color:var(--ink)}
+.mgr-out{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 12px;border-radius:10px;background:var(--late-bg)}
+.gate .ur{font-size:1em}
+
+/* ---------- v207: install, login link, hidayat ---------- */
+.install-card{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center;padding:14px;border-radius:var(--r);background:var(--ink-soft);color:var(--ink);border:1px solid #cfd7ea}
+.install-card>div:first-of-type{display:grid}.install-card small{color:var(--muted)}
+.install-card .btn-row{grid-column:1/-1}
+.link-box{display:grid;gap:6px;padding:12px;border-radius:var(--r);background:var(--ok-bg)}
+.link-box small{color:var(--muted)}
+.muted-link{color:var(--muted);font-weight:500}
+.steps{display:grid;gap:10px;padding-left:22px;list-style:decimal}
+.notice{align-items:flex-start}.notice>div{display:grid;gap:2px;flex:1}
+.notice.is-rtl>div{text-align:right;unicode-bidi:plaintext}
+.notice.is-rtl p{unicode-bidi:plaintext}
+
+/* ---------- v208: khane ka waqfa ---------- */
+.break-card{display:grid;gap:8px;padding:12px 14px;border-radius:var(--r);background:var(--late-bg);border:1px solid #efd59c;color:var(--text)}
+.break-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--late)}.break-head b{flex:1}
+.break-card ul{display:grid;gap:4px}.break-card li{display:flex;justify-content:space-between;gap:10px;font-size:.9375rem}
+.break-back{display:flex;gap:8px;align-items:center;padding:10px 12px;border-radius:10px;background:var(--ok-bg);color:var(--ok)}
+.pick-list{display:grid;gap:2px}
+.pick-list .pick{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--rule)}
+.pick-list .pick>span{display:grid}.pick-list small{color:var(--muted)}
+.pick-list .is-off{opacity:.55}
+.inline-min{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--muted)}
+.inline-min input{width:78px;min-height:38px}
+
+/* ---------- v209: bina bataye gaya ---------- */
+.decide{display:grid;gap:6px;padding:10px;border-radius:10px;background:var(--bad-bg)}
+.decide label{display:flex;align-items:center;gap:8px;font-weight:650}.decide input{width:120px;min-height:40px}
+.tone-bad-btn{color:var(--bad);border-color:#f3c2be}
+
+/* ---------- v210: aadhi chutti ---------- */
+.st-half{color:var(--leave)}
+.row.s-half{border-left-color:var(--leave)}
+.grid td.st-half{background:var(--leave-bg)}
+.days li.s-half{border-left-color:var(--leave)}
+
+/* ---------- v211: manager panel ---------- */
+.mode-bar{display:flex;gap:4px;padding:6px 12px;background:var(--ink);position:relative;z-index:21}
+.mode-bar button{flex:1;min-height:36px;border:1px solid rgba(255,255,255,.25);border-radius:9px;background:transparent;color:#c3cde3;font-weight:700}
+.mode-bar button[aria-selected=true]{background:#fff;color:var(--ink);border-color:#fff}
+[data-mgr] [data-action=tix],[data-mgr] [data-action=tix-open],[data-mgr] [data-action=quick-present],[data-mgr] [data-action=quick-present-all],
+[data-mgr] [data-action=close-due],[data-mgr] [data-action=toggle-closed]{opacity:.4;filter:grayscale(1)}
+.break-card li button.b-row,.out-list button.b-row{width:100%;display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 10px;border:1px solid transparent;border-radius:9px;background:var(--paper);text-align:left;font-size:.9375rem}
+.b-row small{display:block;color:var(--muted);font-size:.75rem}
+.b-row .b-back{font-weight:700;color:var(--ok);white-space:nowrap}
+.out-list{display:grid;gap:6px;padding:12px 14px;border-radius:var(--r);background:var(--late-bg);border:1px solid #efd59c}
+.out-list .break-head{color:var(--late)}
+.topic-box{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:6px 0}.topic-box code{padding:6px 10px;border-radius:8px;background:var(--ground);font-size:.9375rem;word-break:break-all}
+
+/* ---------- v213: notifications ka saaf khana ---------- */
+.push-box{display:grid;gap:12px;padding:14px;border:1px solid var(--rule);border-radius:var(--r);background:var(--paper)}
+.push-state{display:flex;align-items:center;gap:8px;font-size:1.0625rem}
+.push-state.s-ok{color:var(--ok)}.push-state.s-bad{color:var(--bad)}.push-state.s-wait{color:var(--late)}
+.ok-line{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:var(--ok-bg);color:var(--ok);font-weight:600;font-size:.875rem}
+.push-more{border-top:1px solid var(--rule);padding-top:8px}
+.push-more summary{font-weight:650;color:var(--ink-2)}
+.push-more>*:not(summary){margin-top:10px}
+
+/* ---------- v215: pichli screen foran (tasveer) ---------- */
+html.is-snap #app::before{content:"Taza ho raha hai…";position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);z-index:60;
+  padding:6px 14px;border-radius:999px;background:rgba(27,42,74,.92);color:#fff;font-size:.8125rem;font-weight:650;box-shadow:0 4px 14px rgba(0,0,0,.18);pointer-events:none}
+html.is-snap .live-clock,html.is-snap [data-live]{opacity:.6}
+.snap-msg{position:fixed;left:12px;right:12px;bottom:calc(env(safe-area-inset-bottom,0px) + 80px);z-index:61;padding:14px;border-radius:14px;background:#fff;color:var(--ink);
+  box-shadow:0 10px 30px rgba(0,0,0,.2);text-align:center;font-weight:600}
