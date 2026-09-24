@@ -14,10 +14,13 @@ const today = () => dayStr(new Date());
 const hhmm = t => new Date(t).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' });
 
 let cloud = null, notice = () => {}, isOwner = () => false, aiLabel = null, itemsOf = () => [], uid = () => '';
-let cfg = { from: '09:30', to: '18:00', rest: 60, offDay: -1, sizes: [{ name: '1 kg', min: 1 }, { name: '500 gm', min: 2 }], items: {} };
+let cfg = { from: '09:30', to: '18:00', rest: 60, offDay: -1, sizes: [{ name: '1 kg', min: 1 }, { name: '500 gm', min: 2 }], items: {}, staff: [] };
+let who = '';   // v2.9: kaun tol raha hai (naam). Alag login ho to khud, warna ek tap se chunein.
 let cfgStop = null, dayStop = null, cur = { day: '', rows: [] }, pick = today(), month = new Date();
-let busy = false, view = 'main';
+let busy = false, view = 'main', lastSave = null;
 
+const WHO_KEY = 'sam-tolai-who';
+try { who = localStorage.getItem(WHO_KEY) || ''; } catch {}
 export function tolaiSetup(o) {
   cloud = o.cloud; notice = o.notice || notice; isOwner = o.owner || isOwner;
   aiLabel = o.aiLabel || null; itemsOf = o.items || itemsOf; uid = o.uid || uid;
@@ -43,9 +46,11 @@ function dutyMins() {
   const [c, d] = String(cfg.to || '18:00').split(':').map(Number);
   return Math.max(0, ((c * 60 + d) - (a * 60 + b)) - (Number(cfg.rest) || 0));
 }
-export function tolaiSum(rows) {
+// v2.9: ginti MULAZIM ke hisaab se (pehle item ke hisaab se thi — doosra mulazim aata to uska kaam 0 ho jata)
+export function tolaiSum(rows, only) {
+  const use = only ? (rows || []).filter(r => (r.who || '') === only) : (rows || []);
   const items = new Map();
-  for (const r of (rows || [])) {
+  for (const r of use) {
     const k = String(r.itemId || r.name);
     const e = items.get(k) || { name: r.name, itemId: r.itemId, packets: 0, at: [], min: 0 };
     e.packets += Number(r.packets) || 0; e.at.push(r.at); e.name = r.name || e.name;
@@ -56,8 +61,14 @@ export function tolaiSum(rows) {
   const duty = dutyMins(), pc = duty > 0 ? Math.round(mins / duty * 100) : 0;
   return { list: list.sort((a, b) => b.min - a.min), packets, mins, duty, pc,
     conf: pc >= 80 ? 'g' : pc >= 50 ? 'y' : 'r',
-    first: Math.min(...(rows || []).map(r => r.at).filter(Boolean), Infinity),
-    last: Math.max(...(rows || []).map(r => r.at).filter(Boolean), 0) };
+    first: Math.min(...use.map(r => r.at).filter(Boolean), Infinity),
+    last: Math.max(...use.map(r => r.at).filter(Boolean), 0) };
+}
+// har mulazim ka apna hisaab
+export function tolaiByWho(rows) {
+  const names = [...new Set((rows || []).map(r => r.who || '').filter(Boolean))];
+  if (!names.length) return [];
+  return names.map(w => ({ who: w, ...tolaiSum(rows, w) })).sort((a, b) => b.packets - a.packets);
 }
 
 // ---------- screen ----------
@@ -69,9 +80,15 @@ export function openTolai() {
 }
 function paint() {
   if (view !== 'main') return;                 // doosri screen khuli ho to na chhero
-  $('dialogTitle').textContent = '⚖️ Tolai';
-  const s = tolaiSum(cur.rows);
+  $('dialogTitle').textContent = '⚖️ Tolai' + (who ? ' — ' + who : '');
+  const s = tolaiSum(cur.rows, who || null);
+  const staff = (cfg.staff || []).filter(Boolean);
+  const byWho = tolaiByWho(cur.rows);
   $('dialogBody').innerHTML = `
+    ${staff.length ? `<div class="tl-who">${staff.map(n => `<button type="button" class="${who === n ? 'on' : ''}" data-tl-who="${esc(n)}">${esc(n)}</button>`).join('')}</div>` : ''}
+    ${lastSave ? `<div class="tl-done"><b>✓ ${esc(lastSave.name)} — ${num(lastSave.packets)} packet darj</b>
+      <small>${esc(lastSave.tag || '')}${lastSave.tag ? ' · ' : ''}${hhmm(lastSave.at)}${lastSave.who ? ' · ' + esc(lastSave.who) : ''}</small>
+      <button type="button" data-tl-fix="1">✏️ Theek karein</button></div>` : ''}
     <button type="button" class="tl-cam" data-tl-cam="1"${busy ? ' disabled' : ''}>
       <span>📷</span><b>${busy ? 'Parh raha hoon…' : 'Label ki tasveer lein'}</b>
       <small>Bori khatam hone par aakhri packet ka label</small></button>
@@ -85,7 +102,9 @@ function paint() {
       <div><b>${esc(e.name)}</b><small>${e.at.map(hhmm).join(' · ')}</small></div>
       <div class="tl-n"><b>${num(e.packets)}</b><small>${num(e.min)} min</small></div>
     </div>`).join('') || '<p class="muted">Aaj abhi kuch nahi.</p>'}</div>
-    ${cur.rows.length ? `<div class="tl-undo"><button type="button" data-tl-undo="${esc(cur.rows[cur.rows.length - 1].id)}">↩ Aakhri wapas</button></div>` : ''}
+    ${byWho.length > 1 ? `<div class="tl-bywho"><small>Aaj sab mulazim</small>${byWho.map(w => `<div class="tl-row"><div><b>${esc(w.who)}</b><small>${w.pc}% kaam</small></div>
+      <div class="tl-n"><b>${num(w.packets)}</b><small>${num(w.mins)} min</small></div></div>`).join('')}</div>` : ''}
+    ${myLast() ? `<div class="tl-undo"><button type="button" data-tl-undo="${esc(myLast().id)}">↩ Aakhri wapas</button></div>` : ''}
     <div class="account-tools tl-acts">
       <button type="button" data-tl-cal="1">📅 Calendar</button>
       ${isOwner() ? '<button type="button" data-tl-cfg="1">⚙️ Setting</button>' : ''}
@@ -106,7 +125,9 @@ async function shoot() {
       const got = await aiLabel({ file: f });
       busy = false;
       if (!got || !(got.n > 0)) { paint(); return askManual(got || {}); }
-      confirmBox(got);
+      const it = itemMatch(got.name, got.code);
+      if (!it) { paint(); return confirmBox(got); }         // item na mila to poochh lo
+      await doSave({ itemId: it.id, name: it.name, n: got.n, tag: got.tag });   // v2.9: AUTO SAVE
     } catch (e) { busy = false; paint(); notice('Label parha nahi gaya: ' + (e?.message || e)); }
   };
   inp.click();
@@ -146,14 +167,20 @@ async function saveRow(itemId) {
   const n = Math.max(0, Math.floor(Number(body.querySelector('[name=n]')?.value) || 0));
   if (!name || !(n > 0)) { notice('Item aur number likhein'); return; }
   const it = itemId ? (itemsOf() || []).find(x => String(x.id) === String(itemId)) : itemMatch(name, '');
-  const before = tolaiSum(cur.rows).list.find(e => String(e.itemId || e.name) === String(it?.id || name));
-  const packets = Math.max(0, n - (before?.packets || 0));      // aaj ke number se, jo pehle darj hua us ke baad
-  if (!(packets > 0)) { notice('Yeh number pehle darj ho chuka hai'); view = 'main'; paint(); return; }
+  await doSave({ itemId: it?.id || '', name: it?.name || name, n, tag: '' });
+}
+// v2.9: ek hi jagah se save — ginti MULAZIM ke hisaab se (doosre ka kaam nahi katta)
+async function doSave({ itemId, name, n, tag }) {
+  const mine = tolaiSum(cur.rows, who || null).list.find(e => String(e.itemId || e.name) === String(itemId || name));
+  const packets = Math.max(0, n - (mine?.packets || 0));
+  if (!(packets > 0)) { view = 'main'; paint(); notice('Yeh number pehle darj ho chuka hai'); return; }
   try {
-    await cloud.saveTolai({ day: today(), itemId: String(it?.id || ''), name: it?.name || name, packets, lastN: n, at: Date.now() });
-    view = 'main'; paint(); notice(`✓ ${num(packets)} packet darj`);
+    await cloud.saveTolai({ day: today(), itemId: String(itemId || ''), name, packets, lastN: n, at: Date.now(), who });
+    lastSave = { name, packets, tag, at: Date.now(), who, n, itemId };
+    view = 'main'; paint();
   } catch (e) { notice('Save nahi hua: ' + (e?.message || e)); }
 }
+const myLast = () => [...(cur.rows || [])].reverse().find(r => !who || (r.who || '') === who);
 
 // ---------- calendar ----------
 async function openCal() {
@@ -172,7 +199,7 @@ async function openCal() {
     cells.push(`<button type="button" class="tl-d ${s ? s.conf : ''}${key === pick ? ' on' : ''}" data-tl-day="${key}">
       <b>${n}</b>${s ? `<small>${num(s.packets)}</small>` : ''}</button>`);
   }
-  const rows = days[pick] || [], s = rows.length ? tolaiSum(rows) : null;
+  const rows = days[pick] || [], s = rows.length ? tolaiSum(rows) : null, bw = tolaiByWho(rows);
   const mPk = Object.values(days).reduce((n, r) => n + tolaiSum(r).packets, 0);
   const mMin = Object.values(days).reduce((n, r) => n + tolaiSum(r).mins, 0);
   const pd = new Date(pick + 'T00:00:00');
@@ -182,6 +209,8 @@ async function openCal() {
     <div class="tl-cal">${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map(x => `<small>${x}</small>`).join('')}${cells.join('')}</div>
     <div class="tl-day">
       <b>${pd.getDate()} ${MONTHS[pd.getMonth()]} · ${DAYS[pd.getDay()]}</b>
+      ${bw.length > 1 ? `<div class="tl-bywho"><small>Mulazim</small>${bw.map(w => `<div class="tl-row"><div><b>${esc(w.who)}</b><small>${w.pc}% kaam</small></div>
+        <div class="tl-n"><b>${num(w.packets)}</b><small>${num(w.mins)} min</small></div></div>`).join('')}</div>` : ''}
       ${s ? `<div class="tl-list">${s.list.map(e => `<div class="tl-row"><div><b>${esc(e.name)}</b><small>${e.at.map(hhmm).join(' · ')}</small></div>
         <div class="tl-n"><b>${num(e.packets)}</b><small>${num(e.min)} min</small></div></div>`).join('')}</div>
         <p class="tl-tot ${s.conf}">Kul ${num(s.packets)} packet · ${num(s.mins)} / ${num(s.duty)} minute · <b>${s.pc}%</b></p>`
@@ -201,6 +230,7 @@ export function tolaiReport() {
     return { date: `${d.getDate()} ${MONTHS[d.getMonth()]}`, wd: DAYS[d.getDay()], conf: s.conf, pc: s.pc,
       packets: num(s.packets), mins: num(s.mins), duty: num(s.duty),
       items: s.list.map(e => `${e.name} ${num(e.packets)}`).join(' · '),
+      who: tolaiByWho(rows).map(w => `${w.who} ${num(w.packets)}`).join(' · '),
       waqt: s.last ? hhmm(s.first) + '–' + hhmm(s.last) : '' };
   });
   return { title: `${MONTHS[m]} ${y}`, rows: list,
@@ -224,6 +254,9 @@ function openCfg() {
         <option value="-1"${cfg.offDay < 0 ? ' selected' : ''}>—</option>
         ${DAYS.map((d, i) => `<option value="${i}"${Number(cfg.offDay) === i ? ' selected' : ''}>${d}</option>`).join('')}</select></label>
     </div>
+    <div class="it-head">Mulazim ke naam</div>
+    <div class="tl-sizes">${((cfg.staff || []).length ? cfg.staff : ['']).map((n, i) => `<label class="it-wide"><input name="w${i}" value="${esc(n)}" maxlength="30" placeholder="misal: Abdurehman"></label>`).join('')}</div>
+    <div class="account-tools"><button type="button" data-tl-staff="1">➕ Aur mulazim</button></div>
     <div class="it-head">Ek packet mein kitna waqt</div>
     <div class="tl-sizes">${(cfg.sizes || []).map((s, i) => `<div class="it-grid">
       <label class="it-f"><span>Size</span><input name="sn${i}" value="${esc(s.name)}" maxlength="20"></label>
@@ -239,18 +272,23 @@ async function saveCfg() {
   const sizes = [];
   for (let i = 0; i < 12; i++) { const n = g('sn' + i), m = g('sm' + i); if (!n) break;
     const name = String(n.value || '').trim(); if (name) sizes.push({ name, min: Math.max(0, Number(m?.value) || 0) }); }
+  const staff = [];
+  for (let i = 0; i < 20; i++) { const w = g('w' + i); if (!w) break; const v = String(w.value || '').trim(); if (v) staff.push(v); }
   const next = { from: g('from').value || '09:30', to: g('to').value || '18:00',
-    rest: Math.max(0, Number(g('rest').value) || 0), offDay: Number(g('offDay').value), sizes, items: cfg.items || {} };
+    rest: Math.max(0, Number(g('rest').value) || 0), offDay: Number(g('offDay').value), sizes, items: cfg.items || {}, staff };
   try { await cloud.setTolaiConfig(next); cfg = { ...cfg, ...next }; notice('✓ Setting save'); view = 'main'; paint(); }
   catch (e) { notice('Save nahi hua: ' + (e?.message || e)); }
 }
 
 // ---------- clicks ----------
 export function tolaiClick(e) {
-  const b = e.target.closest?.('[data-tl-cam],[data-tl-save],[data-tl-back],[data-tl-cal],[data-tl-cfg],[data-tl-cfgsave],[data-tl-size],[data-tl-main],[data-tl-day],[data-tl-mon],[data-tl-pdf],[data-tl-undo],[data-tl-close]');
+  const b = e.target.closest?.('[data-tl-cam],[data-tl-save],[data-tl-back],[data-tl-cal],[data-tl-cfg],[data-tl-cfgsave],[data-tl-size],[data-tl-main],[data-tl-day],[data-tl-mon],[data-tl-pdf],[data-tl-undo],[data-tl-close],[data-tl-who],[data-tl-fix],[data-tl-staff]');
   if (!b) return false;
   const d = b.dataset;
-  if (d.tlCam != null) shoot();
+  if (d.tlWho != null) { who = d.tlWho === who ? '' : d.tlWho; try { localStorage.setItem(WHO_KEY, who); } catch {} lastSave = null; paint(); }
+  else if (d.tlFix != null && lastSave) { const l = lastSave; confirmBox({ name: l.name, code: '', tag: l.tag, n: l.n }); }
+  else if (d.tlStaff != null) { cfg.staff = [...(cfg.staff || []), '']; openCfg(); }
+  else if (d.tlCam != null) shoot();
   else if (d.tlSave != null) saveRow(d.tlSave);
   else if (d.tlBack != null || d.tlMain != null) { view = 'main'; paint(); }
   else if (d.tlCal != null) openCal();

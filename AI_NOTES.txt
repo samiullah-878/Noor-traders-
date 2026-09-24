@@ -1260,3 +1260,46 @@ App (naya tolai.js + ai-tally.js + cloud.js + pos-stock.js + app.js + rules):
     blueAccess get list mein 'tolaiConfig'.
 Tests: /tmp/tl/t.mjs (17). Kul 243 paas.
 BAQI: subah test label ki tasveer dekh kar number ki jagah/size theek karna (abhi andaze par: font 1, dayen kona).
+
+==================== v2.8.0 (2026-09-24) — POS ke TRANSFER app mein + label ka number theek ====================
+⚠️ RULES BADLI HAIN (v2.5) — publish karni hain.
+MASLA: user POS par transfer banata hai (app se nahi), is liye "Aaya / gaya maal" khali tha — app ke paas sirf
+  transferJobs the (jo app se bante hain).
+PC (naya transfer-dekho.js + transfer-dekho-auto.bat + Startup shortcut, lock 47822, log transfer-dekho-log.txt):
+  - dbo.StockTransfer (TransferID, FromBranchID, ToBranchID, TransferNo, TransferDate, SystemNotes, Remarks)
+    + dbo.StockTransferDetail (ItemID, Qty, Rate, TransferRate) + Items (ItemName, PackQty) — sirf SELECT.
+  - Pichhle 14 din, har 2 minute -> Firestore `posTransfers/T<TransferID>`: {transferId, transferNo, from, to, at,
+    day, app, note, lines:[{itemId,name,qty,pack,rate}]}. app = SystemNotes mein "BK-APP" ya Remarks "App".
+  - 14 din se purane khud hat jate hain. lastSent Map se dobara nahi bhejta.
+  - NOTE: branch 11 bhi mila (naya godam) — app branchName() se khud naam le leti hai.
+App: cloud.listenPosTransfers; pos-stock inCollect ab ptList (POS wale) pehle leta hai aur transferJobs mein se
+  sirf wo jodta hai jinka transferNo POS mein abhi nahi aaya (do dafa na dikhe).
+LABEL (label-print v3.1 — dobara bhejni hai): user ke labels par rate "Rs 200" NEECHE KINARE SE KAT raha tha,
+  is liye rate ki line 4 dot upar ki (H-m-24) aur number usi line par DAYEN, font "2" (pehle "1" — chhota tha).
+  Misal (32x25): TEXT 12,164 "Rs 200" · TEXT 184,164 "4I-58". Label ka size/barcode/naam nahi chhera.
+Tests: t3 ab 19 (POS transfer shamil). Kul 244 paas.
+
+---- label-print v3.2 (2026-09-24) ----
+Number ab BARCODE ke code ("086") wali line par, DAYEN kone mein (y = y + 4 + bh + 2; x = W - m - len*12, font "2").
+Wajah: naam do line le leta hai (jaise "kali mirch piise - 0.25") to rate wali line kinare par aa jati thi.
+Rate pehle jaisi jagah (H - m - 24). density user ne 12 ki (label-settings.json) — chhapai gehri.
+AHEM: nayi file copy karne ke baad CHALTI HUI purani script band karni parti hai, warna wahi chalti rehti hai:
+  taskkill /f /fi "WINDOWTITLE eq label*"  — phir label-auto.bat 30 sec mein nayi utha leta hai.
+Log se pata chala tha ke 10:44 se "label-print v2" chal raha tha jabke file v3 thi.
+
+==================== v2.9.0 (2026-09-24) — TOLAI: AUTO SAVE + MULAZIM ke hisaab se ====================
+⚠️ RULES v2.6 — publish karni hain (tolai mein `who` field).
+MASLA jo user ne pakda: ginti ITEM ke hisaab se thi. Doosra mulazim usi item ka label laata to
+  (naya number − pehle darj) = 0 aata tha, yani uska kaam ginti mein aata hi nahi tha.
+FIX:
+1) doSave({itemId,name,n,tag}) — ek hi jagah se save. Ginti ab `who` (mulazim) ke hisaab se:
+   packets = n − (usi mulazim ka usi item par pehle darj). tolaiSum(rows, only) mein `only` = who.
+   tolaiByWho(rows) — har mulazim ka apna hisaab (main screen + calendar + PDF mein).
+2) AUTO SAVE: photo -> AI -> item mil gaya to seedha doSave, koi button nahi. Screen par hara
+   "✓ <item> — N packet darj (tag · waqt · naam)" + "✏️ Theek karein" (lastSave se confirmBox).
+   Item na mile ya number na parhe to pehle jaisa poochhta hai.
+3) Mulazim: cfg.staff [] (Setting mein "Mulazim ke naam" + "➕ Aur mulazim"). Main screen par chips;
+   chuna hua naam localStorage 'sam-tolai-who' mein yaad (roz chunna nahi parta). Title: "⚖️ Tolai — Abdurehman".
+   saveTolai mein who; rules keys mein 'who' jura; PDF mein "Mulazim" ka khana.
+4) "↩ Aakhri wapas" ab sirf apni aakhri entry (myLast()).
+Tests: /tmp/tl/t.mjs ab 22.

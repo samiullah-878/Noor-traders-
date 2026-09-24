@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch } from './smart-search.js?v=2.7.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch } from './smart-search.js?v=2.9.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -26,7 +26,7 @@ const flagOf = id => flags[String(id)] || {};
 const countLocked = () => countOff && !isOwner();
 
 let aliasStop = null;
-let itemCfg = {}, cfgStop = null;                         // v2.5: stockConfig (mulazim item/rates badal sake)
+let itemCfg = {}, cfgStop = null, ptList = [], ptStop = null;                         // v2.5: stockConfig (mulazim item/rates badal sake)
 const canEditItem = () => isOwner() || itemCfg.itemEdit === true;
 let inPdfOf = null, tolaiOf = null, tolaiClickOf = null;
 export function setInPdf(fn) { inPdfOf = fn; }
@@ -35,6 +35,7 @@ export function stockSetup(opts) {
   if (!aliasStop && opts?.cloud?.listenAliases) aliasStop = opts.cloud.listenAliases(m => setAliases(m));   // v1.75: doosre naam
   if (!cfgStop && opts?.cloud?.listenStockConfig) cfgStop = opts.cloud.listenStockConfig(c => { itemCfg = c || {}; if (stockActive) soft(); });
   if (!trStop && opts?.cloud?.listenTransfers) trStop = opts.cloud.listenTransfers(list => { trList = list; const h = document.querySelector('[data-tr-hist]'); if (h) h.innerHTML = trHistHTML(); });   // v2.6: transfer shuru se (aaya hua maal ke liye)
+  if (!ptStop && opts?.cloud?.listenPosTransfers) ptStop = opts.cloud.listenPosTransfers(list => { ptList = list || []; });   // v2.8: POS ke apne transfer (PC transfer-dekho.js)
   cloud = opts.cloud;
   rerender = opts.rerender || (() => {});
   notice = opts.notice || (() => {});
@@ -760,10 +761,21 @@ async function inCollect() {
     if (!e) { e = { id, name: l.name || '', qty: 0, at: 0 }; g.items.set(id, e); }
     e.qty = r2(e.qty + qty); e.at = Math.max(e.at, at || 0); e.name = e.name || l.name;
   };
-  if (inKind !== 'bill') for (const j of trList) {           // ⇄ har transfer (kahin se kahin bhi)
-    if (Number(j.at) < since || j.op === 'delete' || j.status === 'failed') continue;
-    if (inHere && Number(j.to) !== Number(pick)) continue;   // chip: sirf yahan aaya
-    for (const l of (j.lines || [])) add(`tr:${j.from}>${j.to}`, { kind: 'tr', from: Number(j.from), to: Number(j.to) }, l, j.at);
+  if (inKind !== 'bill') {
+    // v2.8: POS ke apne transfer (PC se) — in mein app wale bhi aa jate hain, is liye yahi asal list hai
+    const seen = new Set();
+    for (const j of ptList) {
+      if (Number(j.at) < since) continue;
+      if (inHere && Number(j.to) !== Number(pick)) continue;
+      seen.add(String(j.transferNo || '').trim());
+      for (const l of (j.lines || [])) add(`tr:${j.from}>${j.to}`, { kind: 'tr', from: Number(j.from), to: Number(j.to) }, l, j.at);
+    }
+    for (const j of trList) {                                 // app ke wo transfer jo abhi POS tak nahi pahunche
+      if (Number(j.at) < since || j.op === 'delete' || j.status === 'failed') continue;
+      if (seen.has(String(j.transferNo || '').trim())) continue;
+      if (inHere && Number(j.to) !== Number(pick)) continue;
+      for (const l of (j.lines || [])) add(`tr:${j.from}>${j.to}`, { kind: 'tr', from: Number(j.from), to: Number(j.to) }, l, j.at);
+    }
   }
   if (inKind !== 'tr' && cloud?.appPurchasesRecent) {        // 🧾 purchase bill
     try {
