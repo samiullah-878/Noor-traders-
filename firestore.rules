@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v2.8 (reminder: full mulazim bhi) · v2.7 (aiConfig stock/sale ko bhi — tolai) · v2.6 (tolai mein `who` — har mulazim ka apna hisaab) · v2.5 (posTransfers: POS par bane transfer bhi app mein) · v2.4 (tolai: label ki tasveer se ginti + tolaiConfig) · v2.3 (itemJobs: app se POS ka item banana / badalna; mulazim ko ijazat stockConfig.itemEdit se) · v2.2 (billFormats: har supplier ke bill ka naqsha — ginti PCS ya CTN, rate fi PCS ya fi CTN) · v2.1 (itemRates: har item ka pichhla khareed aur nafa yaad) · v2.0 (itemAliases: Full / Purchase mulazim bhi bill ka naam "yaad" karwa sake — naam sirf barh sakte hain, mit nahi sakte) · v1.94 (app purchase: dobara / cancel) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v2.9 (entryPhotos: tasveerein alag · pn) · v2.8 (reminder: full mulazim bhi) · v2.7 (aiConfig stock/sale ko bhi — tolai) · v2.6 (tolai mein `who` — har mulazim ka apna hisaab) · v2.5 (posTransfers: POS par bane transfer bhi app mein) · v2.4 (tolai: label ki tasveer se ginti + tolaiConfig) · v2.3 (itemJobs: app se POS ka item banana / badalna; mulazim ko ijazat stockConfig.itemEdit se) · v2.2 (billFormats: har supplier ke bill ka naqsha — ginti PCS ya CTN, rate fi PCS ya fi CTN) · v2.1 (itemRates: har item ka pichhla khareed aur nafa yaad) · v2.0 (itemAliases: Full / Purchase mulazim bhi bill ka naam "yaad" karwa sake — naam sirf barh sakte hain, mit nahi sakte) · v1.94 (app purchase: dobara / cancel) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -59,7 +59,7 @@ service cloud.firestore {
       // Raqam, tareekh, party, kind, delete — sab POSTED ke baad band hi rehte hain.
       function linkOnlyEdit() {
         return request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['posBill','posDiffOk','updatedAt','updatedBy','rev']);
+          .hasOnly(['posBill','posDiffOk','updatedAt','updatedBy','rev','pn','photos','billPhotos','goodsPhotos']);   // v2.9: tasveerein alag khane mein (sirf hatana / ginti)
       }
       allow update: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount']
         && (collectionName != 'blueKhata' || (!('transferId' in resource.data) && !('transferId' in request.resource.data)))
@@ -194,6 +194,21 @@ service cloud.firestore {
         && request.resource.data.name is string && request.resource.data.name.size() <= 150
         && request.resource.data.subs is list && request.resource.data.subs.size() <= 50
         && (isOwner() || ((blueStaff() || stockStaff()) && itemEditOn()));
+    }
+
+    // v2.9: TASVEEREIN (entry ki) — alag khana, taake app kholte waqt saari tasveerein na aayen
+    match /businesses/noor-traders/entryPhotos/{id} {
+      allow read: if isOwner() || blueStaff() || purchaseStaff();
+      function validPhotos() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['photos','billPhotos','goodsPhotos','by','at'])
+          && (!('photos' in d) || (d.photos is list && d.photos.size() <= 3))
+          && (!('billPhotos' in d) || (d.billPhotos is list && d.billPhotos.size() <= 3))
+          && (!('goodsPhotos' in d) || (d.goodsPhotos is list && d.goodsPhotos.size() <= 3));
+      }
+      allow create, update: if validPhotos() && (isOwner()
+        || ((blueStaff() || purchaseStaff()) && request.resource.data.by == request.auth.uid));
+      allow delete: if isOwner();
     }
 
     // v2.5: POS ke apne STOCK TRANSFER (PC transfer-dekho.js admin key se likhta hai) — app sirf parhti hai
@@ -384,7 +399,7 @@ service cloud.firestore {
           && (blueStaff() || exists(/databases/$(database)/documents/businesses/noor-traders/purchaseSuppliers/$(d.partyId)))
           && d.updatedBy == request.auth.uid
           && (!('items' in d) || (d.items is list && d.items.size() <= 100))   // v1.82: bill ke items (AI ya haath se) — sasti shart
-          && d.keys().hasOnly(['id','type','kind','purchase','partyId','amount','date','note','goodsPhotos','billPhotos','photos','account','items','by','createdAt','updatedBy','updatedAt','rev','deleted']);
+          && d.keys().hasOnly(['id','type','kind','purchase','partyId','amount','date','note','goodsPhotos','billPhotos','photos','pn','account','items','by','createdAt','updatedBy','updatedAt','rev','deleted']);
       }
       allow create: if request.resource.data.get('purchase', false) == true && purchaseStaff() && validPurchase() && request.resource.data.by == request.auth.uid
         && request.resource.data.rev == 1 && !('deleted' in request.resource.data);
@@ -393,7 +408,7 @@ service cloud.firestore {
         && (!('deleted' in resource.data) || resource.data.deleted == false)
         && request.resource.data.date == resource.data.date
         && request.resource.data.rev == resource.data.rev + 1
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['kind','partyId','amount','note','goodsPhotos','billPhotos','photos','account','items','deleted','posPending','posVoucher','posBill','updatedAt','updatedBy','rev']);   // v1.82: +items · v1.71: posBill (mulazim aaj ki cash purchase ko POS bill se jor sakta hai)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['kind','partyId','amount','note','goodsPhotos','billPhotos','photos','pn','account','items','deleted','posPending','posVoucher','posBill','updatedAt','updatedBy','rev']);   // v1.82: +items · v1.71: posBill (mulazim aaj ki cash purchase ko POS bill se jor sakta hai)
       allow create: if request.resource.data.type == 'party' && purchaseStaff()
         && request.resource.data.id == recordId && request.resource.data.category == 'Supplier'
         && request.resource.data.opening == 0 && request.resource.data.rev == 1
@@ -469,7 +484,7 @@ service cloud.firestore {
           && d.kind in ['sale','collection','payment','expense','credit','borrow','purchaseCash']
           && d.updatedBy == request.auth.uid && d.rev == resource.data.rev + 1
           && d.diff(resource.data).affectedKeys().hasOnly(['kind','partyId','amount','date','note','account','dailyIncluded',
-              'photos','goodsPhotos','billPhotos','purchase','items','posPending','posVoucher','posBill','posDiffOk','deleted','updatedAt','updatedBy','rev']);   // v1.82: +items · v1.79.2: posBill / posDiffOk (full mulazim bhi aaj ki cash purchase ko POS bill se jor sake — purchase-scope ko yeh ijazat pehle se thi)
+              'photos','goodsPhotos','billPhotos','pn','purchase','items','posPending','posVoucher','posBill','posDiffOk','deleted','updatedAt','updatedBy','rev']);   // v1.82: +items · v1.79.2: posBill / posDiffOk (full mulazim bhi aaj ki cash purchase ko POS bill se jor sake — purchase-scope ko yeh ijazat pehle se thi)
       }
       allow update: if resource.data.get('posStatus', 1) != 2 && blueStaff() && dayOpen() && staffEditEntry();
       // v2.8: REMINDER (due date) — full mulazim bhi bana / badal / hata sake, kisi bhi khate par. Paisa nahi badalta.

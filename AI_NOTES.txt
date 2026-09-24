@@ -1378,3 +1378,23 @@ har dafa SAARE docs uthata hai (baqaya ke liye zaroori) — tasveerein samet. Fi
 Settings (malik) > "📊 Data ka size": records ki ginti, kul MB, tasveeron ka % aur MB, qism ke hisaab se table.
 AGLA QADAM (user ke OK ke baad): nayi tasveerein `entryPhotos/<entryId>` mein, entry par sirf ginti; tasveer tab load
 jab entry khule; malik ke liye ek-dafa "Purani tasveerein alag karein" (pehle backup). Rules badlengi.
+
+==================== v2.14.0 (2026-09-25) — TASVEEREIN ALAG KHANE MEIN (tez opening) ====================
+⚠️ RULES v2.9 — publish. Naap: user ke data ka 94% tasveerein thin (sab har opening par parhi jati thin).
+cloud.js:
+  - splitPhotos(r): type entry/dayPhoto (transferId nahi) — photos/billPhotos/goodsPhotos ke data-URL
+    `entryPhotos/<id>` mein setDoc merge (INTEZAR NAHI — offline par atakta), entry se arrays hata kar `pn` {k: ginti}.
+    Nayi tasveer na ho to khaali arrays hatao, purana pn wahi. add() aur edit() dono mein.
+  - getPhotos(id), moveOldPhotos(rows, progress): 1-1: entryPhotos likho -> getDocFromServer se PAKKA -> tab
+    updateDoc(entry: arrays deleteField, pn, rev+1). Atke to fail ginti; dobara chalane par sirf baqi.
+app.js:
+  - photoCache (Map), ph(e,k), phCount, phTotal, loadPhotos(list). photoHTML: inline -> jaise tha; cache -> img;
+    warna button "📷 N tasveerein — dekhein" (data-ph-load) -> getPhotos -> wahi jagah img.
+  - AI compare (billAIFill savedPhotos, photo-compare) loadPhotos pehle; buttons phCount se.
+  - PDF: report() gallery aur purchaseReport (ab async) loadPhotos ke baad ph(e,k).
+  - Settings: "🗂️ Purani tasveerein alag karein" — pehle fullBackup DOWNLOAD (zaroori, na mile to ruk jata),
+    phir moveOldPhotos progress ke saath.
+rules: entryPhotos {read: owner/full/purchase; create/update: validPhotos (keys, har list <=3) + owner ya apna `by`;
+  delete: owner}. blueKhata key lists mein 'pn'. linkOnlyEdit (posted) mein pn + photo arrays (sirf muntaqili).
+Purana behaviour wahi: edit par nayi tasveer lagao to us qism ki purani jagah le leti hai (pehle bhi yahi tha).
+PC scripts tasveer nahi parhtin (check kiya). Tests 277 + splitPhotos/photoHTML ki alag jaanch.
