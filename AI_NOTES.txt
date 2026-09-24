@@ -1406,3 +1406,18 @@ schedulePhotoWork() har snapshot par (5 sec baad, ek hi dafa chalta hai). photoW
      moveOldPhotos, agla hissa 20 sec baad. Backup na ho to ek dafa notice "aaj ka backup lein". Backup button
      dabane ke 8 sec baad khud shuru. Mukammal hone par notice. Settings wala "Purani tasveerein alag karein" row hataya.
 User ka faisla: backup haath se, muntaqili khud.
+
+==================== v2.15.0 (2026-09-25) — MILAO: credit bhi · kai bill · thora farq ====================
+⚠️ RULES v2.10 — publish. ⚠️ model.js BHI badli (pehli dafa is ZIP mein) — upload zaroor.
+MASLA pakda: larke ki CREDIT purchase entry (borrow, id 'pos-' nahi) + POS ka credit bill DONO khate mein gin rahe the
+  = udhaar do dafa. Aur Milao sirf CASH entry, ek bill, exact raqam (auto) tak mehdood tha.
+app.js helpers (function declarations): billsOf(e) [posBillIds || posBill], isLarkeCredit, linkable (cash ya larke credit),
+  skipsBalance (larke credit + juri), nearAmt (1%, kam se kam Re 1), groupBills.
+  cashLinkedTo / cashCandidates / otherPartyCandidates -> linkable + billsOf. autoLink: nearAmt (1%) + ek hi candidate.
+  Milao form: har row par Cash/Credit; "Isi supplier ke aur khule POS bill" checkbox (7 din) + zinda jama (#linkSum).
+  Save: posBill = pehla bill, posBillIds = sab (1 se zyada ho tab). Undo: dono null. linkFix: group ka jama.
+  linkedHTML: kai bill ho to "N bill: a + b = jama"; credit ho to "Larke ki credit entry juri — khate mein sirf POS bill".
+  Balance: indexData deltas aur ledger running balance mein skipsBalance -> 0. Purchase screen ka Credit jama bhi.
+model.js balance(): skipsBalance export + filter (PDF/report wale hisaab bhi ek dafa). Repo ke model.test.mjs 2/2 paas.
+rules: 'posBillIds' teeno lists mein (linkOnlyEdit, staff update x2).
+ASAR: jin supplier par larke ki credit entry POS bill se jurti hai, baqaya pehle se KAM dikhega — yani sahi (pehle do dafa tha).
