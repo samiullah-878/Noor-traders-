@@ -1445,3 +1445,32 @@ REPO mein naya folder `pc/` (29 files + manifest.json). PC par C:\khata-sync.
   "📄 Log", "⬇️ KHATA-DOCTOR.bat" (app ke andar wahi bat — test se tasdeeq ke PC wali ke barabar).
 DUMP SE PAKRA: us waqt purchase-post aur transfer-dekho BAND thin; transfer-dekho Startup mein thi hi nahi. Doctor dono chala dega.
 Purani tool scripts (find-*, patch-*, *-dekho) doctor nahi sambhalta — wo sync-stock.js se password parhti thin, ab nahi milega.
+
+---- KHATA-DOCTOR v2 + app v2.16.1 (2026-09-25) ----
+User: 8 purchase "PC ka intezar" mein atki, jabke purchase-post "zinda" thi (doctor ki nazar mein theek). Pehli run par
+PC ki ghari ghalat thi (UNAUTHENTICATED) — ghari theek ki, baqi scripts chal padin, purchase atki rahi.
+doctor v2: har 2 min (QUICK) zinda + ATKA KAAM; GitHub har 30 min. manifest services[].queues:
+  purchase-post appPurchases[new,posting] · sale-post appSales[new,posting] · item-post itemJobs · label-print labelJobs ·
+  rate-lagao rateJobs · transfer-sync transferJobs/printJobs/postJobs [new].
+  stuckOf: at 3 min se purana (24 ghante se purana chhoro) -> script dobara (10 min mein ek dafa, kick[] 3 dafa tak, key =
+  sab se purana doc; badle to ginti 0). 3 ke baad "atki — ... phir bhi nahi (log dekhein)" aur ruk jata hai.
+  pcCheck listener toote to 1 min baad dobara jurta hai. Report har chakkar (every: 2 min).
+  Nakli test: 5 min atki -> 1 restart · foran dobara nahi · 3 ke baad ruk · kaam hua to saaf · 1 min purana chhoro — sab sahi.
+app: 🖥️ PC scripts — 10 min se report na ho to laal; 🟡 "Atki thi — chala di" / "Kaam ruka", 🔴 "Atki hai".
+
+---- 2026-09-25 ASAL WAJAH: purchase-post ka ruk jana ----
+item-post.js (v2.5.0 mein banayi) ka LOCK_PORT 47821 tha = purchase-post ka bhi 47821. Jo pehle chale taala le leti,
+doosri "pehle se chal raha hai" -> exit 3 -> purchase-auto.bat "if errorlevel 3 exit" se HAMESHA ke liye band.
+FIX: item-post LOCK_PORT 47823. Ports ab: sale 47815, label 47816, subcode 47817, transfer-sync 47818, rate 47819,
+purchase 47821, transfer-dekho 47822, item 47823, doctor 47830. NAYI SCRIPT BANATE WAQT PORT YAHAN SE ALAG CHUNO.
+manifest 2026-09-25.3 (item-post + doctor v2).
+
+==================== v2.17.0 (2026-09-25) — TRANSFER NOTE: camera khula, carton pehle ====================
+Rules NAHI badlin. Files: pos-stock.js, style.css + version.
+Masla: 📷 Scan ek code parh kar camera band (scanPick one-shot) -> har dafa ek hi item; naya item 1 PCS se aata tha.
+- Scanner: scanPickMany(cb, done) — pickMulti mode. Detect loop mein har NAYA code (wahi code 1.5 sec tak dobara nahi)
+  cb(code) -> {ok, text, count}; camera par .scan-msg mein "✓ item — 2 Ctn · kul N items", .scan-done "✓ Ho gaya — list
+  dikhao (N)". finishScan: pickMulti.done() (openTransfer). scanPick (ek code) pehle jaisa.
+- trAddLine(r): naya = 1 CTN (pack > 1) warna 1 PCS; wahi dobara = +1 CTN / +1 PCS; naya NEECHE (push). trAdd = trAddLine + openTransfer.
+- Line: upar chip "1 Ctn = 24 Pcs" (.tr-pack), "1." number (.tr-no), CTN khana pehle aur bara. Jama: "3 items · 5 CTN + 6 PCS · kul N pcs".
+Tests: stock t/t2/t3 paas; trAddLine alag jaanch (1 CTN, dobara 2 CTN, 3 items tarteeb se, 2 CTN + 6 PCS = 54).

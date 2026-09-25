@@ -998,3 +998,7 @@ footer button:not(.give):not(.got){background:linear-gradient(180deg,#27437c,#17
 .pp-billname{display:block;font-size:11px;font-weight:500;color:#7c8ba1;direction:rtl;text-align:left}
 /* v2.16 — PC scripts */
 .pc-log{max-height:260px;overflow:auto;background:#0f172a;color:#e2e8f0;font-size:11px;line-height:1.5;padding:10px;border-radius:12px;white-space:pre-wrap;margin:8px 0}
+/* v2.17 — transfer note */
+.tr-pack{display:inline-block;font-size:11.5px;font-weight:700;color:#0f766e;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:999px;padding:1px 9px;margin:0 0 3px}
+.tr-no{color:#94a3b8;font-weight:700;margin-right:2px}
+.tr-line .tr-q:first-of-type input{font-weight:800;font-size:17px}

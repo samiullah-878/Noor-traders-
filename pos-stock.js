@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch } from './smart-search.js?v=2.16.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch } from './smart-search.js?v=2.17.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -906,10 +906,10 @@ function openTransfer() {
     <div class="scan-find" style="margin:8px 0"><input class="scan-q" data-tr-q type="search" placeholder="🔍 Item ka naam / code likhein" autocomplete="off"><div class="scan-hits" data-tr-hits hidden></div></div>
     <div class="account-tools"><button type="button" data-tr-scan="1">📷 Scan</button></div>
     <div class="tr-lines">${trLines.map((l, i) => { const have = trStockOf(trFrom, l.id); const short = trFrom !== 1 && have < l.qty - 0.0005; const pk = Number(l.pack) || 0;
-      return `<div class="tr-line${short ? ' short' : ''}"><div class="tr-name"><b>${esc(l.name)}</b><small>${esc(branchName(trFrom, collect().names))} mein stock ${num(have)}${pk > 1 ? ' · 1 ' + esc(l.cName || 'Ctn') + ' = ' + num(pk) : ''}${short ? ' · <b class="red">⛔ kam hai</b>' : ''}</small>${pk > 1 ? `<small>= ${num(l.qty)} ${esc(l.uName || 'Pcs')}</small>` : ''}</div>
+      return `<div class="tr-line${short ? ' short' : ''}"><div class="tr-name">${pk > 1 ? `<span class="tr-pack">1 ${esc(l.cName || 'Ctn')} = ${num(pk)} ${esc(l.uName || 'Pcs')}</span>` : ''}<b><span class="tr-no">${i + 1}.</span> ${esc(l.name)}</b><small>${esc(branchName(trFrom, collect().names))} mein stock ${num(have)}${pk > 1 ? ' · 1 ' + esc(l.cName || 'Ctn') + ' = ' + num(pk) : ''}${short ? ' · <b class="red">⛔ kam hai</b>' : ''}</small>${pk > 1 ? `<small>= ${num(l.qty)} ${esc(l.uName || 'Pcs')}</small>` : ''}</div>
       ${pk > 1 ? `<label class="tr-q"><span>${esc(l.cName || 'Ctn')}</span><input type="text" inputmode="decimal" value="${num(l.ctn || 0)}" data-tr-ctn="${i}"></label>` : ''}
       <label class="tr-q"><span>${esc(l.uName || 'Pcs')}</span><input type="text" inputmode="decimal" value="${num(l.pcs ?? l.qty)}" data-tr-pcs="${i}"></label><button type="button" class="danger" data-tr-del="${i}">✕</button></div>`; }).join('') || '<p class="muted">Upar se item chunein ya scan karein.</p>'}</div>
-    ${trLines.length ? `<p class="tr-sum">${trLines.length} items · kul ${num(kul)}</p>` : ''}
+    ${trLines.length ? `<p class="tr-sum">${trLines.length} items · ${(() => { const c = trLines.reduce((n, l) => n + (Number(l.pack) > 1 ? Number(l.ctn) || 0 : 0), 0), p = trLines.reduce((n, l) => n + (Number(l.pcs) || 0), 0); return [c ? num(c) + ' CTN' : '', p ? num(p) + ' PCS' : ''].filter(Boolean).join(' + ') || '0'; })()} · kul ${num(kul)} pcs</p>` : ''}
     <label>Note<input type="text" data-tr-note maxlength="150" placeholder="ikhtiyari"></label>
     <div class="account-tools"><button type="button" class="primary" data-tr-save="1"${trLines.length ? '' : ' disabled'}>✓ POS mein transfer note banao</button>${trLines.length ? '<button type="button" data-tr-clear="1">Saaf</button>' : ''}</div>
     <p class="muted tr-msg" style="font-size:.85em"></p>
@@ -924,7 +924,13 @@ function openTransfer() {
   q.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const r = (hits._src || [])[0]; if (r) trAdd(r); } };
 }
 function trCalc(l) { const pk = Number(l.pack) || 0; l.qty = Math.round(((pk > 1 ? (Number(l.ctn) || 0) * pk : 0) + (Number(l.pcs) || 0)) * 1000) / 1000; return l; }
-function trAdd(r, qty = 1) { if (!r) return; const old = trLines.find(l => String(l.id) === String(r.id)); if (old) { old.pcs = Math.round(((Number(old.pcs) || 0) + qty) * 1000) / 1000; trCalc(old); } else trLines.push(trCalc({ id: r.id, name: r.name, pack: Number(r.pack) || 0, cName: r.cName || 'Ctn', uName: r.uName || 'Pcs', ctn: 0, pcs: qty, qty })); openTransfer(); }
+// v2.17: naya item = 1 CTN (carton ho to), warna 1 PCS; wahi dobara aaye to +1 CTN. Naya neeche jurta hai.
+function trAddLine(r) { if (!r) return null; const pk = Number(r.pack) || 0; let l = trLines.find(x => String(x.id) === String(r.id));
+  if (l) { if (pk > 1) l.ctn = (Number(l.ctn) || 0) + 1; else l.pcs = Math.round(((Number(l.pcs) || 0) + 1) * 1000) / 1000; trCalc(l); }
+  else { l = trCalc({ id: r.id, name: r.name, pack: pk, cName: r.cName || 'Ctn', uName: r.uName || 'Pcs', ctn: pk > 1 ? 1 : 0, pcs: pk > 1 ? 0 : 1, qty: 0 }); trLines.push(l); }
+  return l; }
+function trAdd(r) { if (trAddLine(r)) openTransfer(); }
+function trQtyText(l) { const pk = Number(l.pack) || 0; return pk > 1 ? `${num(l.ctn || 0)} ${l.cName || 'Ctn'}${Number(l.pcs) ? ' + ' + num(l.pcs) + ' ' + (l.uName || 'Pcs') : ''}` : `${num(l.pcs || 0)} ${l.uName || 'Pcs'}`; }
 function trHistHTML() {
   if (!trList.length) return '<p class="muted">Koi nahi.</p>';
   const names = collect().names;
@@ -954,7 +960,11 @@ document.addEventListener('click', e => {
   if (t.dataset.trDel) { trLines.splice(Number(t.dataset.trDel), 1); openTransfer(); }
   else if (t.dataset.trClear) { trLines = []; openTransfer(); }
   else if (t.dataset.trSave) trSave(t);
-  else if (t.dataset.trScan) { try { $('dialog').close(); } catch {} scanPick(c => { const { items } = collect(); c = String(c).trim(); const r = items.find(x => String(x.code).trim() === c || (Array.isArray(x.bc) && x.bc.some(b => String(b).trim() === c))); if (r) trAdd(r); else { notice('"' + c + '" stock mein nahi mila'); openTransfer(); } }); }
+  else if (t.dataset.trScan) { try { $('dialog').close(); } catch {}      // v2.17: camera khula rahe — ek ke baad ek
+    scanPickMany(c => { const { items } = collect(); c = String(c).trim(); const r = items.find(x => String(x.code).trim() === c || (Array.isArray(x.bc) && x.bc.some(b => String(b).trim() === c)));
+      if (!r) return { ok: false, text: '⚠️ "' + esc(c) + '" stock mein nahi mila', count: trLines.length };
+      const l = trAddLine(r); return { ok: true, text: `✓ <b>${esc(r.name)}</b> — ${esc(trQtyText(l))} · kul ${trLines.length} items`, count: trLines.length }; },
+      () => openTransfer()); }
   else if (t.dataset.trPrint) {   // v1.75: dobara print — wajah zaroori, note par bara "DOBARA PRINT" chhapta hai
     const j = trList.find(x => x.id === t.dataset.trPrint); const n = (j?.reprints?.length || 0) + 1;
     const reason = prompt(`Dobara print (${n}) ki wajah likhein:`); if (reason == null) return; if (!reason.trim()) { notice('Wajah likhna zaroori hai'); return; }
@@ -1412,8 +1422,9 @@ let lastCode = '', lastCodeAt = 0;
 let badCode = '', badN = 0, lastGoodAt = 0;   // v1.56: ghalat parhai ka filter
 let camRetry = 0, audioCtx = null;            // v1.57: kaala camera dobara chalu, scan ki awaz
 // v1.74: "ek barcode chuno" mode — wohi bara scanner (Focus/Zoom/Camera/Light) sirf ek code parh kar wapas
-let pickHook = null;
-export function scanPick(cb) { pickHook = cb; if (scanBox) finishScan(); openScanner(); }
+let pickHook = null, pickMulti = null;   // v2.17: pickMulti = { done } — camera khula rahe, har code par cb (transfer note)
+export function scanPick(cb) { pickMulti = null; pickHook = cb; if (scanBox) finishScan(); openScanner(); }
+export function scanPickMany(cb, done) { if (scanBox) finishScan(); pickMulti = { done }; pickHook = cb; openScanner(); }
 // v1.59: camera ka jawab 4 sec mein na aaye to intezar khatam (baad mein mila stream foran band, taake camera na phanse)
 function gumT(c, ms = 4000) {
   return new Promise((res, rej) => {
@@ -1460,8 +1471,9 @@ function closeScanner() {
 
 function finishScan() {
   camRetry = 0;
-  const wasPick = !!pickHook; pickHook = null;
+  const wasPick = !!pickHook, many = pickMulti; pickHook = null; pickMulti = null;
   closeScanner();
+  if (many) { try { many.done?.(); } catch {} return; }   // v2.17: kai code wala chunao khatam
   if (wasPick) return;   // v1.74: sirf code chunna tha — sale/ginti ko haath na lagao
   if (saleRoot()) { saleSeen = []; rerender(); return; }
   if (!scanList.length) return;
@@ -1588,8 +1600,8 @@ async function openScanner() {
     scanBox.classList.add('pick-mode');
     scanBox.querySelector('.scan-find')?.setAttribute('hidden', '');
     scanBox.querySelector('.scan-pad')?.setAttribute('hidden', '');
-    scanBox.querySelector('.scan-done')?.setAttribute('hidden', '');
-    msg.textContent = 'Barcode camera ke saamne rakhein — parhte hi wapas form khulega';
+    if (pickMulti) { const dn = scanBox.querySelector('.scan-done'); if (dn) dn.innerHTML = '✓ Ho gaya — list dikhao (<span>0</span>)'; msg.textContent = 'Ek ke baad ek barcode camera ke saamne laayein — har item neeche list mein jurta jayega'; }
+    else { scanBox.querySelector('.scan-done')?.setAttribute('hidden', ''); msg.textContent = 'Barcode camera ke saamne rakhein — parhte hi wapas form khulega'; }
   }
   const namesBox = scanBox.querySelector('.scan-names');
   const countBox = scanBox.querySelector('.scan-done span');
@@ -1827,6 +1839,16 @@ async function openScanner() {
         const now = Date.now();
         // v1.62: jab tak wahi barcode camera ke saamne hai, dobara na gino (warna har 1.5 sec nayi line banti)
         if (code && code === lastCode && now - lastCodeAt < 1500) lastCodeAt = now;
+        if (code && pickHook && pickMulti) {   // v2.17: camera khula — har naya code list mein
+          if (!(code === lastCode && now - lastCodeAt < 1500)) {
+            lastCode = code; lastCodeAt = now;
+            let res = null; try { res = pickHook(code); } catch {}
+            const ok = !!(res && res.ok);
+            beep(ok); if (ok && navigator.vibrate) navigator.vibrate(60);
+            const m = scanBox?.querySelector('.scan-msg'); if (m) m.innerHTML = res?.text || (ok ? '✓' : '"' + code + '" nahi mila');
+            const c = scanBox?.querySelector('.scan-done span'); if (c && res?.count != null) c.textContent = res.count;
+          }
+        } else
         if (code && pickHook) { const cb = pickHook; pickHook = null; beep(true); if (navigator.vibrate) navigator.vibrate(60); finishScan(); try { cb(code); } catch {} return; }
         if (code && !(code === lastCode && now - lastCodeAt < 1500)) {   // wahi barcode dobara foran na gine
           const r = addScanned(code);
