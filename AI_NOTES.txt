@@ -1421,3 +1421,27 @@ app.js helpers (function declarations): billsOf(e) [posBillIds || posBill], isLa
 model.js balance(): skipsBalance export + filter (PDF/report wale hisaab bhi ek dafa). Repo ke model.test.mjs 2/2 paas.
 rules: 'posBillIds' teeno lists mein (linkOnlyEdit, staff update x2).
 ASAR: jin supplier par larke ki credit entry POS bill se jurti hai, baqaya pehle se KAM dikhega — yani sahi (pehle do dafa tha).
+
+==================== v2.16.0 (2026-09-25) — KHATA-DOCTOR (PC scripts GitHub se khud) ====================
+Rules NAHI badlin (blueAccess/pcStatus + pcCheck malik ke generic rule se; PC admin key se likhta hai).
+REPO mein naya folder `pc/` (29 files + manifest.json). PC par C:\khata-sync.
+- sql-config.js: SQL setting local-config.json se {sql:{server,database,user,password}} (sirf PC par, GitHub par KABHI nahi).
+  Na ho to purani sync-stock/sync-bills/sync.js (ya backup\) ke inline SQL_CONFIG se khud bana leti hai.
+- 12 scripts patch: purchase-post, rate-lagao, sale-post, pos-khata-sync, post-farq, subcode-sync, transfer-sync, item-post,
+  transfer-dekho (sync-stock.js regex hata kar require('./sql-config.js')); sync-stock, sync-bills, sync (inline block hata kar).
+  label-print v3.3 wahi. Asli PC files (PC-SCRIPTS.txt dump 2026-09-25) se banaye — koi purani cheez nahi aayi.
+- doctor.js v1 (lock 47830, log doctor-log.txt): shuru + har 30 min + app ke "Abhi check" (pcCheck onSnapshot) par:
+  ensureConfig (PEHLE purani scripts se password) -> manifest (raw.githubusercontent.com/samiullah-878/Noor-traders-|Noor-traders/main/pc/)
+  -> sirf badli files (sha256 jaanch), purani backup\<din>\, sql-config.js sab se pehle. local-config.json / firebase-key.json /
+  label-settings / label-numbers / package.json KABHI nahi. SQL setting na ho to KOI script nahi badalta.
+  -> badli + chalti script ka node band (us ki .bat 30 sec mein nayi uthati hai) -> har service zinda? (node <script> ya cmd <bat>,
+  POORA naam — "sync.js" != "pos-khata-sync.js") band ho to bat chupke se (spawn cmd /c, windowsHide).
+  -> pcStatus {at, host, bootAt, manifest, lastGit, changed, services[{name,script,ver,action,log,ok}], recent(30 log)}.
+  Startup mein KHATA-DOCTOR.vbs khud (2 min baad). node_modules mein mssql/firebase-admin na ho to npm install.
+  doctor.js khud badle to exit 0 -> KHATA-DOCTOR.bat nayi uthata hai.
+- KHATA-DOCTOR.bat: node check, doctor.js na ho to GitHub se, loop (exit 3 = pehle se chal raha).
+- 13 services manifest mein (sync.js periodic, khata-auto.bat).
+- App: Settings (malik) "🖥️ PC scripts" — pcStatus zinda, rang 🟢🔵🟡🔴, "▶ Abhi check" (2 min jawab na aaye to batata hai),
+  "📄 Log", "⬇️ KHATA-DOCTOR.bat" (app ke andar wahi bat — test se tasdeeq ke PC wali ke barabar).
+DUMP SE PAKRA: us waqt purchase-post aur transfer-dekho BAND thin; transfer-dekho Startup mein thi hi nahi. Doctor dono chala dega.
+Purani tool scripts (find-*, patch-*, *-dekho) doctor nahi sambhalta — wo sync-stock.js se password parhti thin, ab nahi milega.
