@@ -1,5 +1,8 @@
 // =========================================================
-//  doctor.js  v1 (2026-09-25) — KHATA PC DOCTOR
+//  doctor.js  v2 (2026-09-25) — KHATA PC DOCTOR
+//  v2: sirf ZINDA nahi, KAAM bhi dekhta hai — qataar (appPurchases, appSales, labelJobs...) mein koi kaam 3 min se
+//      zyada ruka ho to wohi script dobara shuru (10 min mein ek dafa, 3 dafa ke baad ruk kar batata hai). Har 2 min jaanch,
+//      GitHub har 30 min. pcCheck ka rabta toote to khud dobara jurta hai.
 //  PC on hote hi (KHATA-DOCTOR.bat, Startup se) chalta hai aur har 30 minute:
 //   1) GitHub (repo ka pc/ folder) se manifest.json — jo script BADLI ho sirf wahi download, purani backup\<din>\ mein,
 //      aur sirf USI ko dobara shuru (node band -> us ki .bat 30 sec mein nayi utha leti hai).
@@ -18,8 +21,10 @@ const crypto = require('crypto');
 const { execSync, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '1';
-const EVERY = 30 * 60 * 1000;
+const VER = '2';
+const EVERY = 30 * 60 * 1000;          // GitHub
+const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
+const STUCK = 3 * 60 * 1000, REST_GAP = 10 * 60 * 1000;
 const LOCK_PORT = 47830;
 const NEVER = new Set(['local-config.json', 'firebase-key.json', 'label-settings.json', 'label-numbers.json', 'package.json', 'package-lock.json']);
 
@@ -160,16 +165,35 @@ function fb() {
 const statusRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('pcStatus');
 const checkRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('pcCheck');
 
+// ---------- atka kaam (v2) ----------
+const kick = {};   // script -> { at, n, key }
+async function stuckOf(s) {
+  const d = fb(); if (!d || !Array.isArray(s.queues) || !s.queues.length) return null;
+  const now = Date.now(); let n = 0, oldest = Infinity, key = '';
+  for (const q of s.queues) {
+    try {
+      const snap = await d.collection('businesses').doc('noor-traders').collection(q.col).where('status', 'in', q.status || ['new']).limit(30).get();
+      for (const doc of snap.docs) {
+        const x = doc.data(), at = Number(x.at || x.createdAt || x.updatedAt) || 0;
+        if (!at || at > now - STUCK || at < now - 24 * 3600 * 1000) continue;   // taza ya bohat purana (chhoro)
+        n++; if (at < oldest) { oldest = at; key = q.col + '/' + doc.id; }
+      }
+    } catch (e) { log(`⚠ ${q.col}: ${e.message}`); }
+  }
+  return n ? { n, oldest, key } : null;
+}
+
 // ---------- ek chakkar ----------
 let services = [], manifestVer = '', lastGit = 0, busy = false, restartSelf = false;
-async function cycle(why) {
+async function cycle(why, full = true) {
   if (busy) return; busy = true;
   try {
-    log(`— jaanch (${why}) —`);
+    if (full) log(`— jaanch (${why}) —`);
     await ensureConfig();
     let changed = [];
-    const m = await manifest();
-    if (m) {
+    const m = full ? await manifest() : null;
+    if (!full) {}
+    else if (m) {
       manifestVer = String(m.version || ''); lastGit = Date.now();
       services = Array.isArray(m.services) ? m.services : services;
       changed = await update(m);
@@ -186,6 +210,24 @@ async function cycle(why) {
         if (startBat(s)) { action = action || 'band thi — chala di'; log(`▶ ${s.script}: band thi, ${s.bat} chala di`); }
         else action = 'band — .bat nahi mili';
       }
+      // v2: zinda hai magar kaam ruka hua?
+      let stuck = null;
+      if (!action && alive(s, list)) {
+        stuck = await stuckOf(s);
+        const k = kick[s.script] || (kick[s.script] = { at: 0, n: 0, key: '' });
+        if (!stuck) { k.n = 0; k.key = ''; }
+        else {
+          if (k.key !== stuck.key) { k.n = 0; k.key = stuck.key; }
+          const mins = Math.round((Date.now() - stuck.oldest) / 60000);
+          if (k.n >= 3) action = `atki — ${stuck.n} kaam ${mins} min se ruke, 3 dafa chalayi phir bhi nahi (log dekhein)`;
+          else if (Date.now() - k.at > REST_GAP) {
+            const nk = stopScript(s, list); if (!nk) startBat(s);
+            k.at = Date.now(); k.n++;
+            action = `atki thi — ${stuck.n} kaam ${mins} min se ruke — dobara chalayi (${k.n})`;
+            log(`↻ ${s.script}: ${stuck.n} kaam ${mins} min se ruke (${stuck.key}) — dobara shuru (${k.n}/3)`);
+          } else action = `${stuck.n} kaam ruke — abhi dobara chalayi thi, intezar`;
+        }
+      }
       const ll = s.log ? lastLine(s.log) : { line: '', at: 0 };
       rows.push({ name: s.name || s.script, script: s.script, ver: verOf(s.script), action, log: ll.line, logAt: ll.at, periodic: !!s.periodic });
     }
@@ -194,8 +236,8 @@ async function cycle(why) {
     for (const r of rows) { const s = services.find(x => x.script === r.script); r.ok = s ? alive(s, list) : false; if (!r.ok && !r.action) r.action = 'band'; }
     const ref = statusRef();
     if (ref) await ref.set({ at: Date.now(), host: os.hostname(), bootAt: Date.now() - os.uptime() * 1000, doctor: VER, manifest: manifestVer,
-      lastGit, changed, services: rows, recent: recent.slice(-30) }).catch(e => log('⚠ report: ' + e.message));
-    log(`✓ ${rows.filter(r => r.ok).length}/${rows.length} chal rahi${changed.length ? ' · nayi: ' + changed.join(', ') : ''}`);
+      lastGit, changed, services: rows, recent: recent.slice(-30), every: QUICK }).catch(e => log('⚠ report: ' + e.message));
+    if (full || rows.some(r => r.action)) log(`✓ ${rows.filter(r => r.ok).length}/${rows.length} chal rahi${changed.length ? ' · nayi: ' + changed.join(', ') : ''}`);
   } catch (e) { log('⚠ ' + (e?.message || e)); }
   finally { busy = false; }
   if (restartSelf) { log('doctor.js khud nayi aayi — dobara shuru'); setTimeout(() => process.exit(0), 1500); }
@@ -225,7 +267,12 @@ lock.on('listening', async () => {
   ensureStartup(); ensureModules();
   await cycle('shuru');
   setInterval(() => cycle('30 minute'), EVERY);
+  setInterval(() => cycle('2 minute', false), QUICK);
   let lastAsk = 0;
-  const ref = checkRef();
-  if (ref) ref.onSnapshot(d => { const at = Number(d.data()?.at) || 0; if (!lastAsk) { lastAsk = at || 1; return; } if (at > lastAsk) { lastAsk = at; cycle('app se "Abhi check"'); } }, e => log('⚠ pcCheck: ' + e.message));
+  const listen = () => {
+    const ref = checkRef(); if (!ref) return setTimeout(listen, 60000);
+    const stop = ref.onSnapshot(d => { const at = Number(d.data()?.at) || 0; if (!lastAsk) { lastAsk = at || 1; return; } if (at > lastAsk) { lastAsk = at; cycle('app se "Abhi check"'); } },
+      e => { log('⚠ pcCheck: ' + e.message + ' — 1 min baad dobara jurunga'); try { stop(); } catch {} setTimeout(listen, 60000); });
+  };
+  listen();
 });

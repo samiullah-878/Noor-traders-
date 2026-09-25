@@ -27,7 +27,7 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
 const BUSINESS_ID = 'noor-traders';
 const MAX_JOB_DIN = 7;
-const LOCK_PORT = 47821;
+const LOCK_PORT = 47823;   // 2026-09-25: pehle 47821 tha — purchase-post ka bhi yahi tha, dono ek doosre ko band kar deti thin
 const NEW_CAT = 80, NEW_SUBCAT = 236;    // naye items: "noor traders" / jahan aap ke naye items jate hain
 const MAIN_BRANCH = 1;
 

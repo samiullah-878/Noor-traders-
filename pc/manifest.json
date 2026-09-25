@@ -1,13 +1,13 @@
 {
- "version": "2026-09-25.1",
+ "version": "2026-09-25.3",
  "note": "KHATA-DOCTOR manifest — sirf ye files PC par jati hain. local-config.json / firebase-key.json kabhi nahi.",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
   "bills-auto.bat": "54431947b55fa811e2a00fa69e743d5eb4a5aadd7c58cf914e15ba5864011d5e",
-  "doctor.js": "2238ad07828685e11c006b252ef86d3f6a620dfcb50d47c2dee90a266fc26dc7",
+  "doctor.js": "014070ba23a6b424a72bc56a968cfdcaec03d4b60e7740030cfb7b82ffaeb0c0",
   "farq-auto.bat": "3c12c5d09de14aa0ecaf0e4928f0aa0b6e0f55f2c1d01b3bdaaea32cf930b800",
   "item-auto.bat": "885974cce1e5fbff99db3708889d4dcaa9eaa58db8d512d1cb97c20e4d64e5f9",
-  "item-post.js": "468565eb9cb394153534dc5d5ab895d1fd602f10cfcce8bb0cf4f21cffa93562",
+  "item-post.js": "18d8cf3326794584d0c3f47e48879f73234b837e4f0280f4870bfc3e52256541",
   "khata-auto.bat": "cb51ba952434923d50b05247c0915540bdb80860103c31da0f374621966373c6",
   "khata-sync-auto.bat": "0ebef5416f48dce60fb129c2d8a293fe5af022faa8689569ce1b4a64eed4259d",
   "label-auto.bat": "4247598116d9498db2452b32861f36bb8a18d5df3b023036ae4f42da10407f5a",
@@ -55,19 +55,57 @@
    "name": "Transfer + print",
    "script": "transfer-sync.js",
    "bat": "transfer-auto.bat",
-   "log": "transfer-log.txt"
+   "log": "transfer-log.txt",
+   "queues": [
+    {
+     "col": "transferJobs",
+     "status": [
+      "new"
+     ]
+    },
+    {
+     "col": "printJobs",
+     "status": [
+      "new"
+     ]
+    },
+    {
+     "col": "postJobs",
+     "status": [
+      "new"
+     ]
+    }
+   ]
   },
   {
    "name": "Sale posting",
    "script": "sale-post.js",
    "bat": "sale-auto.bat",
-   "log": "sale-log.txt"
+   "log": "sale-log.txt",
+   "queues": [
+    {
+     "col": "appSales",
+     "status": [
+      "new",
+      "posting"
+     ]
+    }
+   ]
   },
   {
    "name": "Purchase posting",
    "script": "purchase-post.js",
    "bat": "purchase-auto.bat",
-   "log": "purchase-log.txt"
+   "log": "purchase-log.txt",
+   "queues": [
+    {
+     "col": "appPurchases",
+     "status": [
+      "new",
+      "posting"
+     ]
+    }
+   ]
   },
   {
    "name": "Farq ka bill",
@@ -79,19 +117,43 @@
    "name": "Naya item / rate",
    "script": "item-post.js",
    "bat": "item-auto.bat",
-   "log": "item-log.txt"
+   "log": "item-log.txt",
+   "queues": [
+    {
+     "col": "itemJobs",
+     "status": [
+      "new"
+     ]
+    }
+   ]
   },
   {
    "name": "Rate lagao",
    "script": "rate-lagao.js",
    "bat": "rate-auto.bat",
-   "log": "rate-log.txt"
+   "log": "rate-log.txt",
+   "queues": [
+    {
+     "col": "rateJobs",
+     "status": [
+      "new"
+     ]
+    }
+   ]
   },
   {
    "name": "Label print",
    "script": "label-print.js",
    "bat": "label-auto.bat",
-   "log": "label-log.txt"
+   "log": "label-log.txt",
+   "queues": [
+    {
+     "col": "labelJobs",
+     "status": [
+      "new"
+     ]
+    }
+   ]
   },
   {
    "name": "Sub-barcode",
