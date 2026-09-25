@@ -1,0 +1,116 @@
+{
+ "version": "2026-09-25.1",
+ "note": "KHATA-DOCTOR manifest — sirf ye files PC par jati hain. local-config.json / firebase-key.json kabhi nahi.",
+ "files": {
+  "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
+  "bills-auto.bat": "54431947b55fa811e2a00fa69e743d5eb4a5aadd7c58cf914e15ba5864011d5e",
+  "doctor.js": "2238ad07828685e11c006b252ef86d3f6a620dfcb50d47c2dee90a266fc26dc7",
+  "farq-auto.bat": "3c12c5d09de14aa0ecaf0e4928f0aa0b6e0f55f2c1d01b3bdaaea32cf930b800",
+  "item-auto.bat": "885974cce1e5fbff99db3708889d4dcaa9eaa58db8d512d1cb97c20e4d64e5f9",
+  "item-post.js": "468565eb9cb394153534dc5d5ab895d1fd602f10cfcce8bb0cf4f21cffa93562",
+  "khata-auto.bat": "cb51ba952434923d50b05247c0915540bdb80860103c31da0f374621966373c6",
+  "khata-sync-auto.bat": "0ebef5416f48dce60fb129c2d8a293fe5af022faa8689569ce1b4a64eed4259d",
+  "label-auto.bat": "4247598116d9498db2452b32861f36bb8a18d5df3b023036ae4f42da10407f5a",
+  "label-print.js": "036efc8dbe63544a0585a5dc340484b3338bdc936049acaa6c14048a510b4b58",
+  "pos-khata-sync.js": "ae11c66e518f8f446c630332145e96ef7d85f5a67a6e0c6a4e413b1fbb0ef458",
+  "post-farq.js": "fc068c68dec96329e211c8bf71ec529d466311ea5ccded2bde8493d01c785e37",
+  "purchase-auto.bat": "e008a0b5505c87b5606382735ba51946ede94ca865e73ff14463dabcdd6e392a",
+  "purchase-post.js": "8a25c49b0de94017f9dda7485207e997087c38ced1e5d63b19aeb2abae39ce48",
+  "rate-auto.bat": "cd219ab91d598bf8c555a57f45cdf445a2fdd0d3b74a102767f8dfab322a5846",
+  "rate-lagao.js": "c50739d37b1fcaa341caebbb335427d8464eb419c691b9fe84c81941bb18d421",
+  "sale-auto.bat": "051dde548ac7d1ab53e3aa58b33312680de373ba57206e981ac52d2687805648",
+  "sale-post.js": "6810f22a3072907c626d7579dea22ca533e24332fafce4a2be6ac993601674da",
+  "sql-config.js": "6e2bf966d0907b5be6c9001a249f1338ecb6f67ced6af9aff5d5921938742ba7",
+  "stock-auto.bat": "5dac7ff237518f54369fb988ea5d41420b52a4c0bd3c9b1a3df0dfb6cf8b72ce",
+  "subcode-auto.bat": "da847d900990b63eb8f33649dfab6db1ef5e86126ef6a1d9d252cc53375d8536",
+  "subcode-sync.js": "ab71fa619a4110071ea15efeb919d4b7d6dbfbfcb662f65bc4cb7ebdb5ccabd2",
+  "sync-bills.js": "f049a70b8f8d65bb0aa6c979fcc4f496f3d938de643c0c19a023eeaa7c0388e0",
+  "sync-stock.js": "ab29af47701d364516fc5b6edafb4fc9f4d002ad06437b7b8e5b9f0d34f5f2f1",
+  "sync.js": "12537c97d798d20ab91a78e38dea6eb3e2853a0dc443093aa0de86bb964602fa",
+  "transfer-auto.bat": "43ba27116c4233a26c9ab0892cb3d33d64a8fdea9e505cb50ec7f32cc5201724",
+  "transfer-dekho-auto.bat": "119e5b1ddf941bee8881e93ba5d14449429cb89502916ad6e9adb196ac1ecf0c",
+  "transfer-dekho.js": "60254ea88dc1754b0d6217eab7df7b1a192d38d369c9456c137849bc82587817",
+  "transfer-sync.js": "f0eb3d5b278035d270ea20e9916bbf2efe435fb67d61aeb2fba1a1366561ba34"
+ },
+ "services": [
+  {
+   "name": "Stock",
+   "script": "sync-stock.js",
+   "bat": "stock-auto.bat",
+   "log": "stock-log.txt"
+  },
+  {
+   "name": "POS bills",
+   "script": "sync-bills.js",
+   "bat": "bills-auto.bat",
+   "log": "bills-log.txt"
+  },
+  {
+   "name": "Khata vouchers",
+   "script": "pos-khata-sync.js",
+   "bat": "khata-sync-auto.bat",
+   "log": "khata-sync-log.txt"
+  },
+  {
+   "name": "Transfer + print",
+   "script": "transfer-sync.js",
+   "bat": "transfer-auto.bat",
+   "log": "transfer-log.txt"
+  },
+  {
+   "name": "Sale posting",
+   "script": "sale-post.js",
+   "bat": "sale-auto.bat",
+   "log": "sale-log.txt"
+  },
+  {
+   "name": "Purchase posting",
+   "script": "purchase-post.js",
+   "bat": "purchase-auto.bat",
+   "log": "purchase-log.txt"
+  },
+  {
+   "name": "Farq ka bill",
+   "script": "post-farq.js",
+   "bat": "farq-auto.bat",
+   "log": "farq-log.txt"
+  },
+  {
+   "name": "Naya item / rate",
+   "script": "item-post.js",
+   "bat": "item-auto.bat",
+   "log": "item-log.txt"
+  },
+  {
+   "name": "Rate lagao",
+   "script": "rate-lagao.js",
+   "bat": "rate-auto.bat",
+   "log": "rate-log.txt"
+  },
+  {
+   "name": "Label print",
+   "script": "label-print.js",
+   "bat": "label-auto.bat",
+   "log": "label-log.txt"
+  },
+  {
+   "name": "Sub-barcode",
+   "script": "subcode-sync.js",
+   "bat": "subcode-auto.bat",
+   "log": "subcode-log.txt"
+  },
+  {
+   "name": "POS transfer dekho",
+   "script": "transfer-dekho.js",
+   "bat": "transfer-dekho-auto.bat",
+   "log": "transfer-dekho-log.txt"
+  },
+  {
+   "name": "Khata sync (har 5 min)",
+   "script": "sync.js",
+   "bat": "khata-auto.bat",
+   "log": "sync-log.txt",
+   "periodic": true
+  }
+ ]
+}
