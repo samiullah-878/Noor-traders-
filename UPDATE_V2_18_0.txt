@@ -1,0 +1,43 @@
+Blue Khata v2.18.0 — TRANSFER NOTE: SMART SEARCH (chips · 0 stock chhupa · barcode)
+INSTALL: Is ZIP ki saari files GitHub repo "Noor-traders" par upload karein,
+         phir app mein "↻ Sync / Update" -> 2.18.0.
+         Firebase rules WAHI (2.10) — kuch publish nahi karna.
+
+1) FAALTU RESULT KHATAM
+   - "Mayo" likhne par "mop 500" jaisi cheezein AB NAHI aatin.
+   - Naya usool: agar 3 ya zyada PAKKE match (naam / lafz ka shuru / code) mil jayein to
+     andaze wale (1 harf ki ghalti wale) match bilkul nahi dikhte.
+   - Ghalti wali spelling tab bhi chalti hai jab pakka match na mile: "mayonaise" -> Mayonise national.
+
+2) JIS GODAM SE MAAL NIKALNA HAI — WAHAN 0 / MINUS STOCK WALE ITEM DIKHTE HI NAHI
+   - Jo cheez us godam mein hai hi nahi, wo list mein nahi aayegi.
+   - Agar sirf 0 stock wale hi match hon to neeche ek patti:
+     "🚫 2 item mile magar Godam 1 mein stock 0 — phir bhi dikhayein" — ek tap se dikh jayenge.
+   - "Se (nikle)" godam badalte hi list us godam ke hisaab se nayi.
+
+3) PREMIUM ROWS — BARE CHIPS
+   - Har result par: 🏷 godam ka naam · 📦 stock (hara = theek, peela = kam, laal = 0) ·
+     "1 Ctn = 24" (carton wale items par) · #barcode.
+   - Stock carton mein bhi: "📦 72 Pcs · 3 Ctn".
+   - Jo harf match hue wo peele nishan (highlight) mein.
+
+4) BARCODE LIKHTE / SCAN KARTE HI ITEM KHUD LAG JATA HAI
+   - 8 ya zyada hindson ka poora code (scanner gun ya haath se) -> item foran list mein,
+     search khana saaf, aur cursor SEEDHA tadad (Ctn/Pcs) ke khane par, purani tadad select.
+   - Adhoora code likhein to normal search chalti rahegi.
+
+5) KHALI KHANE PAR "AKSAR BHEJE JANE WALE"
+   - Search par tap karte hi, bina kuch likhe, aakhri 6 items jo aap is phone se transfer karte hain
+     (jin ka us godam mein stock hai) — seedha tap karke lag jayein.
+   - Ye ginti sirf is phone par rehti hai, kisi doosre ka kaam kharab nahi karti.
+   - Ye items search mein bhi zara upar aate hain (match ki jagah nahi leti — sirf barabri toot ti hai).
+
+6) EK KE BAAD EK TEZ
+   - Item chunte hi keyboard khula rehta hai aur cursor wapas search par — agla naam foran likhein.
+   - Keyboard wale: ⬆⬇ se chunein, Enter = lag gaya, Esc = list band.
+   - Search 70ms ruk kar chalti hai — hazaron item par bhi jhatka nahi.
+
+BADLI HUI FILES: smart-search.js, pos-stock.js, style.css, index.html, sw.js, version.json,
+                 app.js / sale.js / purchase.js / pos-ledger.js (sirf version ka number).
+BAQI APP PAR ASAR: sale aur purchase ki search mein bhi faaltu andaza wale result kam ho gaye
+                   (baqi wahan sab pehle jaisa — 0 stock chhupane ka usool SIRF transfer note mein hai).

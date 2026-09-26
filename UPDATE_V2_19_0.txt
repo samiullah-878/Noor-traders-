@@ -1,0 +1,55 @@
+Blue Khata v2.19.0 — PURCHASE: NAFA CHIPS · NAAM YAAD · BILL KI TASVEER · JAANCH BEHTAR
+INSTALL: Is ZIP ki saari files GitHub repo "Noor-traders" par upload karein,
+         phir app mein "↻ Sync / Update" -> 2.19.0.
+         Firebase rules WAHI (2.10) — kuch publish nahi karna.
+
+1) NAFA CHIPS — har item par (purchase card) aur Jaanch card dono mein
+   - Lambi "↺ Purana nafa W 2% · R 21%" patti hat gayi. Us ki jagah char qataarein:
+       W/CTN  1% · 1.25% · 1.5% · 2%
+       W/PCS  1% · 1.25% · 1.5% · 2%
+       R/CTN  5% · 10% · 15% · 20%
+       R/PCS  5% · 10% · 15% · 20%
+   - Carton aur pieces BILKUL ALAG: CTN par +1% aur PCS par +2% ek sath chal sakta hai.
+   - Har qataar ke naam ke neeche ABHI ka asal nafa % likha aata hai (hara; ghata ho to laal).
+   - Kone mein chhota gol ↺ = purana nafa wapis (charon par).
+   - Lagi hui chip dobara dabayein = purana nafa. Khane mein haath se rate likhein to sirf wohi taraf badalti hai.
+   - Khule item (carton nahi, jaise SAFAI BRUSH) par sirf PCS wali do qataarein.
+   - Upar "SAB items par wholesale nafa" patti waisi hi — ab CTN + PCS dono par lagti hai.
+
+2) "+ % (har item par)" KE NEECHE CHIPS
+   0.5% · 1% · 1.5% · 2% · 3% — ek tap se lag jata hai, dobara tap = hat jata hai. Khana apni % ke liye rahega.
+
+3) AI NAAM YAAD RAKHTI HAI — ab pakka
+   - Bill par jo naam likha hai (Urdu asal + AI ka roman) DONO item ke "Doosre naam" mein yaad hote hain.
+   - Pehle har item ke doosre naam sirf 120 harf tak rehte the — Urdu naam lambe hote hain is liye purane
+     naam khud nikal jate the. Ab 250 harf.
+   - Agli dafa wohi naam aaye to app PEHLE yaad kiye naam se dhoondti hai — AI ke andaze se bhi pehle.
+     Card par "📌 Yaad kiya hua naam", list mein "📌 yaad".
+   - Urdu ke Arabic/Urdu harf (ي/ی, ك/ک, ه/ہ) aur ۹۰۰ / 900 hindse ek jaise samjhe jate hain.
+   - Agar ek hi naam do alag items par yaad ho to app shak mein us ko istemal NAHI karti.
+
+4) BILL KI TASVEER MEHFOOZ
+   - Tasveer chunte hi chhoti (lamba kinara 1600px, JPEG, 260KB tak) ho kar PHONE mein mehfooz —
+     app band karke / WhatsApp se wapas aayein to tasveer wahi.
+   - Bill bhejte waqt tasveer BILL KE SATH CLOUD mein (3 tasveer tak). Us se zyada sirf phone mein.
+   - "📋 Aaj ke app purchase" mein har bill par "📄 Bill ki tasveer".
+   - DOBARA BILL KHOLO (EDIT — POS bill ...) to us ki tasveer (aur jaanch, agar isi phone par bani thi)
+     KHUD upar aa jati hai.
+   - Sirf is update ke BAAD bane bills ki tasveer milegi — purane bills ki tasveer kahin save hi nahi thi.
+
+5) JAANCH — jo toota tha
+   - Phone ka BACK ab ek qadam peeche: tasveer -> card -> list -> band (pehle poora band ho jata tha).
+     "Item chunein" se Back = wapas card. Khulasa se Back = list.
+   - ✓ ho chuki line dobara kholi aur "✓ Theek — agla" dabaya to ab BILL KI AGLI LINE khulti hai
+     (pehle seedha khulasa par phenk deta tha).
+
+6) JAANCH — naye
+   - Upar TAB-PATTI: ☰ List · 🃏 Card 3/8 · 📋 Khulasa — kahin se bhi kahin ek tap.
+     Neeche hari patti: "5/8 pakki".
+   - List mein FILTER chips: Sab · 🔴 · 🟡 · 🟢 · ✓ pakki · ✕ chhori (ginti ke sath).
+   - FARQ DHOONDNE WALA: bill ke neeche ki ginti (CTN/PCS) ya Rs lines se na mile to app khud batati hai
+     "🔍 Farq 357 CTN — shayad is line ki wajah se: [sufi soap]" — tap karein, card khulega, PCS/CTN theek karein.
+   - PAISE KA FARQ (1 Rupee se kam, jaise 0.56) ab hara "✓ barabar" — laal nahi.
+
+BADLI HUI FILES: purchase.js, app.js, cloud.js, pos-stock.js, style.css + version (index.html, sw.js,
+                 version.json, sale.js, pos-ledger.js). smart-search.js v2.18 wali (sath hi hai).

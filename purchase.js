@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.17.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick } from './smart-search.js?v=2.17.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.19.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf } from './smart-search.js?v=2.19.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -80,6 +80,10 @@ export function ppSetup(o) {
       if (d.jd && Array.isArray(d.jd.rows) && d.jd.rows.length) { aiRows = d.jd.rows; aiBillInfo = d.jd.info || null; jView = d.jd.view || 'list'; jIx = Number(d.jd.ix) >= 0 ? Number(d.jd.ix) : -1; aiFmtAuto = d.jd.fmt || ''; }   // v2.5.1
     }
   } catch {}
+  if (!ppOnce) {   // v2.19: app band ho kar khuli — draft ki tasveer wapas; phone ka Back jaanch mein ek qadam
+    ppOnce = true; window.ppBack = ppBack;
+    if ((cart.length || aiRows) && !billPics.length) picGet('draft').then(v => { if (v?.pics?.length && !billPics.length) { billPics = v.pics; billIx = 0; rerender(); } });
+  }
 }
 function keepDraft() {
   xtraApply();
@@ -144,20 +148,54 @@ function recalc(l) {
   const c = effCost(l), pk = packOf(l);
   if (!(c > 0)) return;
   const same = tinyCost(l) || (l.oldCost > 0 && c < l.oldCost);   // v2.10: khareed KAM ho to bhi purane rate (app khud kam nahi karti)
-  if (l.wMode === 'old' && l.oldCost > 0 && l.oldW > 0) {
-    if (same) { l.wpcs = r2(l.oldW); l.wctn = pk ? Math.round(l.oldW * pk) : 0; }
-    else { const m = l.oldW / l.oldCost; l.wpcs = upR(c * m); l.wctn = pk ? upR(c * m * pk) : 0; }
-  }
-  else if (typeof l.wMode === 'number') { const m = 1 + l.wMode / 100; l.wpcs = upR(c * m); l.wctn = pk ? upR(c * m * pk) : 0; }
-  if (l.rMode === 'old' && l.oldCost > 0 && l.oldR > 0) {
-    if (same) { l.rctn = pk ? Math.round(l.oldR * pk) : 0; l.rpcs = r2(pk ? l.oldR2 : l.oldR); }
-    else {
-      l.rctn = pk ? upR(c * (l.oldR / l.oldCost) * pk) : 0;
-      l.rpcs = upR(c * ((pk ? l.oldR2 : l.oldR) / l.oldCost));
-    }
-  }
+  // v2.19: char alag taraf — W/PCS (wMode) · W/CTN (wcMode) · R/PCS (rMode) · R/CTN (rcMode). CTN wala khali ho to PCS ke peeche chalta hai (purane draft)
+  const wp = l.wMode, wc = l.wcMode ?? l.wMode, rp = l.rMode, rc = l.rcMode ?? l.rMode;
+  const oW = l.oldCost > 0 && l.oldW > 0, oR = l.oldCost > 0 && l.oldR > 0;
+  if (wp === 'old' && oW) l.wpcs = same ? r2(l.oldW) : upR(c * (l.oldW / l.oldCost));
+  else if (typeof wp === 'number') l.wpcs = upR(c * (1 + wp / 100));
+  if (pk) {
+    if (wc === 'old' && oW) l.wctn = same ? Math.round(l.oldW * pk) : upR(c * (l.oldW / l.oldCost) * pk);
+    else if (typeof wc === 'number') l.wctn = upR(c * (1 + wc / 100) * pk);
+  } else if ((wp === 'old' && oW) || typeof wp === 'number') l.wctn = 0;
+  if (rp === 'old' && oR) l.rpcs = same ? r2(pk ? l.oldR2 : l.oldR) : upR(c * ((pk ? l.oldR2 : l.oldR) / l.oldCost));
+  else if (typeof rp === 'number') l.rpcs = upR(c * (1 + rp / 100));
+  if (pk) {
+    if (rc === 'old' && oR) l.rctn = same ? Math.round(l.oldR * pk) : upR(c * (l.oldR / l.oldCost) * pk);
+    else if (typeof rc === 'number') l.rctn = upR(c * (1 + rc / 100) * pk);
+  } else if ((rp === 'old' && oR) || typeof rp === 'number') l.rctn = 0;
   if (!pk && l.one) { if (!l.wcOwn) l.wctn = r2(l.wpcs); if (!l.rcOwn) l.rctn = r2(l.rpcs); }   // v2.4.2: 1 ctn = 1 pcs
 }
+// ---------- v2.19: NAFA CHIPS — W/CTN · W/PCS · R/CTN · R/PCS alag alag ----------
+const W_PCT = [1, 1.25, 1.5, 2], R_PCT = [5, 10, 15, 20], PCT_CHIPS = [0.5, 1, 1.5, 2, 3];
+const modeOf = (l, side) => side === 'wp' ? l.wMode : side === 'wc' ? (l.wcMode ?? l.wMode) : side === 'rp' ? l.rMode : (l.rcMode ?? l.rMode);
+function setMode(l, side, v) {          // sirf ek taraf badle — baqi teen ki maujooda halat pehle pakki
+  if (l.wcMode == null) l.wcMode = l.wMode;
+  if (l.rcMode == null) l.rcMode = l.rMode;
+  if (side === 'wp') l.wMode = v; else if (side === 'wc') l.wcMode = v; else if (side === 'rp') l.rMode = v; else l.rcMode = v;
+}
+const allModes = (l, v) => { l.wMode = v; l.wcMode = v; l.rMode = v; l.rcMode = v; };
+function nafaNow(l, side) {             // abhi ka asal nafa % (khane mein jo rate hai us ke hisaab se)
+  const c = effCost(l), pk = packOf(l); if (!(c > 0)) return null;
+  const v = side === 'wp' ? Number(l.wpcs) : side === 'rp' ? Number(l.rpcs) : side === 'wc' ? (pk ? Number(l.wctn) / pk : 0) : (pk ? Number(l.rctn) / pk : 0);
+  return v > 0 ? Math.round((v / c - 1) * 1000) / 10 : null;
+}
+function rateChipsHTML(l, ix, idp = 'ppRc') {
+  if (!l) return '';
+  const pk = packOf(l);
+  const row = (side, lab, list) => {
+    const m = modeOf(l, side), n = nafaNow(l, side);
+    return `<div class="rc-row"><span class="rc-lab">${lab}${n != null ? `<i class="${n < 0 ? 'neg' : ''}">${n}%</i>` : ''}</span><span class="rc-set">${list.map(p => `<button type="button" class="rc${m === p ? ' on' : ''}" data-pp-rch="${ix}|${side}|${p}">${p}%</button>`).join('')}</span></div>`;
+  };
+  const allOld = ['wp', 'wc', 'rp', 'rc'].every(sd => modeOf(l, sd) === 'old');
+  return `<div class="rate-chips" id="${idp}${ix}"><div class="rc-head"><small>Nafa chips · naye khareed ke upar</small>${l.oldCost > 0 ? `<button type="button" class="rc-old${allOld ? ' on' : ''}" data-pp-rold="${ix}" title="Purana nafa" aria-label="Purana nafa">↺</button>` : ''}</div>`
+    + (pk ? row('wc', 'W/' + esc(l.cName || 'CTN'), W_PCT) : '') + row('wp', 'W/' + esc(l.uName || 'PCS'), W_PCT)
+    + (pk ? row('rc', 'R/' + esc(l.cName || 'CTN'), R_PCT) : '') + row('rp', 'R/' + esc(l.uName || 'PCS'), R_PCT) + '</div>';
+}
+function paintChips(ix) {
+  const l = cart[ix]; if (!l) return;
+  for (const idp of ['ppRc', 'jcRc']) { const b = document.getElementById(idp + ix); if (b) b.outerHTML = rateChipsHTML(l, ix, idp); }
+}
+const pctChipsHTML = () => `<div class="mchips pct-chips" id="ppPctChips"><small>+% jaldi:</small>${PCT_CHIPS.map(p => `<button type="button" class="rc${Number(pct) === p ? ' on' : ''}" data-pp-pctc="${p}">${p}%</button>`).join('')}</div>`;
 function addItem(it, again = true) {
   noteHit(it.id);
   const had = again && [...cart].reverse().find(l => String(l.id) === String(it.id));
@@ -219,6 +257,7 @@ const statusText = p => p.status === 'done' ? `✓ POS bill ${esc(p.purchaseNo |
 const todayLabel = () => { const w = today.filter(p => p.status === 'new' || p.status === 'posting').length; return `📋 Aaj ke app purchase (${today.length})${w ? ' · ' + w + ' intezar' : ''}`; };
 function dlg(title, html) {
   const d = $('dialog'); if (!d) return;
+  if (!d._ppClose) { d._ppClose = true; d.addEventListener('close', () => vTmpEnd()); }   // v2.19
   d.classList.remove('search-dialog', 'full-dialog');
   $('dialogTitle').textContent = title; $('dialogBody').innerHTML = html;
   if (!d.open) d.showModal();
@@ -355,7 +394,7 @@ function openToday() {
     today.map(p => `<details class="sale-hist"><summary><b>${p.editOf ? '✏️ ' + esc(p.editOf.billNo || '') + ' · ' : ''}${esc(p.partyName || '')} · Rs ${num(p.total)}</b><small>${esc(new Date(p.createdAt || 0).toLocaleTimeString('en-PK'))} · ${statusText(p)}</small></summary>
       <div style="overflow-x:auto"><table><thead><tr><th>Item</th><th>Qty</th><th>Khareed</th><th>Rs</th></tr></thead><tbody>
       ${(p.lines || []).map(l => `<tr><td>${esc(l.name)}</td><td>${qtyText(l)}</td><td>${num(l.costP)}/${esc(l.uName || 'Pcs')}</td><td>${num(r2(l.qty * l.costP))}</td></tr>`).join('')}
-      </tbody></table></div>${p.invoiceNo ? `<p>Supplier bill # ${esc(p.invoiceNo)}</p>` : ''}${p.note ? `<p>${esc(p.note)}</p>` : ''}${billActs(p)}</details>`).join(''));
+      </tbody></table></div>${p.invoiceNo ? `<p>Supplier bill # ${esc(p.invoiceNo)}</p>` : ''}${p.note ? `<p>${esc(p.note)}</p>` : ''}<div class="pp-bill-acts"><button type="button" data-pp-tpic="${esc(p.id)}">📄 Bill ki tasveer</button></div>${billActs(p)}</details>`).join(''));
 }
 function qtyText(l) {
   const pk = Number(l.pack) || 0, q = Number(l.qty) || 0;
@@ -393,6 +432,7 @@ export function renderPP() {
       <label>+ % (har item par)<input type="number" min="0" step="any" inputmode="decimal" data-pp-pct="1" value="${pct || ''}" placeholder="0"></label>
       <label>Mazdoori / kharcha Rs${xtraName ? ' (' + esc(xtraName) + ')' : ''}<input type="number" min="0" step="any" inputmode="decimal" data-pp-xtra="1" value="${xtra || ''}" placeholder="0"></label>
     </div>
+    ${pctChipsHTML()}
     <p class="stat-note pp-addnote" id="ppXtraNote">${xtraNoteText()}</p>
     <div class="sale-total"><small>Purchase · ${cart.length} items</small><strong id="ppTotal">Rs ${num(total)}</strong></div>
     <div class="account-tools"><button class="sh-wide" id="ppTodayBtn" data-pp-today="1">${todayLabel()}</button>${aiBillOf && canUse() ? '<button class="sh-wide" data-pp-ai="1">🤖 Bill ki tasveer se items</button>' : ''}${aiRows && aiRows.length ? `<button class="sh-wide" data-pp-jopen="1">🧾 Jaanch kholo (${aiRows.filter(r => !r.skip && !r.done).length} baqi)</button>` : ''}${canUse() && !edit ? '<button class="sh-wide" data-pp-pcbills="1">✏️ PC ka bill edit karein</button>' : ''}${packGaps().length ? `<button data-pp-packs="1">📦 Carton size khali (${packGaps().length})</button>` : ''}${supplier ? '<button data-pp-copy="1">📑 Pichhla bill copy</button>' : ''}</div>
@@ -436,7 +476,7 @@ export function renderPP() {
           ${pk ? `<label>Parchoon ${esc(l.cName)}<input class="${ch(Math.round(l.oldR * pk), l.rctn)}" type="number" min="0" step="any" inputmode="decimal" data-pp-rctn="${i}" value="${l.rctn || ''}"><small>${hint(Math.round(l.oldR * pk))}</small></label>` : ''}
           <label>Parchoon ${esc(l.uName)}<input class="${ch(pk ? l.oldR2 : l.oldR, l.rpcs)}" type="number" min="0" step="any" inputmode="decimal" data-pp-rpcs="${i}" value="${l.rpcs || ''}"><small>${hint(pk ? l.oldR2 : l.oldR)}</small></label>
         </div>
-        <div class="mchips">${l.oldCost > 0 ? `<button type="button" class="${l.wMode === 'old' && l.rMode === 'old' ? 'on' : ''}" data-pp-old="${i}">↺ Purana nafa${wN != null ? ' W ' + wN + '%' : ''}${rN != null ? ' · R ' + rN + '%' : ''}</button>` : ''}${W_CHIPS.map(p => `<button type="button" class="${l.wMode === p ? 'on' : ''}" data-pp-w="${i}:${p}">W +${p}%</button>`).join('')}</div>
+        ${rateChipsHTML(l, i)}
       </div>
     </div>`;
   }).join('');
@@ -468,6 +508,7 @@ function paintRates(i) {
     const el = document.querySelector(`[data-pp-${k}="${i}"]`);
     if (el && document.activeElement !== el) el.value = v || '';
   }
+  paintChips(i);   // v2.19: chips par nafa % bhi taza
 }
 
 // ---------- events ----------
@@ -486,12 +527,12 @@ document.addEventListener('input', e => {
     const l = cart[i], q = linePcs(l), amt = Number(t.value) || 0;
     if (q > 0 && amt > 0) { l.costP = r4(amt / q); recalc(l); paintRates(i); }
   }
-  else if ((i = d.ppWctn) != null) { cart[i].wctn = Number(t.value) || 0; cart[i].wMode = 'manual'; }
-  else if ((i = d.ppWpcs) != null) { cart[i].wpcs = Number(t.value) || 0; cart[i].wMode = 'manual'; }
-  else if ((i = d.ppRctn) != null) { cart[i].rctn = Number(t.value) || 0; cart[i].rMode = 'manual'; }
-  else if ((i = d.ppRpcs) != null) { cart[i].rpcs = Number(t.value) || 0; cart[i].rMode = 'manual'; }
+  else if ((i = d.ppWctn) != null) { cart[i].wctn = Number(t.value) || 0; setMode(cart[i], 'wc', 'manual'); paintChips(i); }   // v2.19: sirf wohi taraf
+  else if ((i = d.ppWpcs) != null) { cart[i].wpcs = Number(t.value) || 0; setMode(cart[i], 'wp', 'manual'); paintChips(i); }
+  else if ((i = d.ppRctn) != null) { cart[i].rctn = Number(t.value) || 0; setMode(cart[i], 'rc', 'manual'); paintChips(i); }
+  else if ((i = d.ppRpcs) != null) { cart[i].rpcs = Number(t.value) || 0; setMode(cart[i], 'rp', 'manual'); paintChips(i); }
   else if (d.ppXtra != null) { xtra = Math.max(0, Number(t.value) || 0); xtraApply(); cart.forEach((_, j) => paintRates(j)); }
-  else if (d.ppPct != null) { pct = Math.max(0, Math.min(100, Number(t.value) || 0)); xtraApply(); cart.forEach((_, j) => paintRates(j)); }
+  else if (d.ppPct != null) { pct = Math.max(0, Math.min(100, Number(t.value) || 0)); xtraApply(); cart.forEach((_, j) => paintRates(j)); const pc = $('ppPctChips'); if (pc) pc.outerHTML = pctChipsHTML(); }
   else if (d.ppNote != null) note = t.value.slice(0, 100);
   else if (d.ppInv != null) invoiceNo = t.value.slice(0, 40);
   else return;
@@ -542,10 +583,10 @@ document.addEventListener('input', e => {       // v2.4.1: Jaanch card ke khane 
   else if (d.ppJtot != null) { l.kul = v; if (v > 0 && linePcs(l) > 0) { l.costP = r4(v / linePcs(l)); recalc(l); } }        // v2.4.4: kul ÷ ginti = net khareed
   else if (d.ppJkc != null) { if (m) { l.costP = r4(v / m); recalc(l); } }
   else if (d.ppJcost != null) { l.costP = r4(v); l.kul = 0; recalc(l); }
-  else if (d.ppJwc != null) { if (pk) l.wctn = v; else if (cs) l.wpcs = r2(v / cs); else { l.wctn = v; l.wcOwn = true; } l.wMode = 'manual'; }
-  else if (d.ppJw != null) { l.wpcs = v; if (pk && !l.wctn) l.wctn = Math.round(v * pk); if (!pk && l.one && !l.wcOwn) l.wctn = v; l.wMode = 'manual'; }
-  else if (d.ppJrc != null) { if (pk) l.rctn = v; else if (cs) l.rpcs = r2(v / cs); else { l.rctn = v; l.rcOwn = true; } l.rMode = 'manual'; }
-  else if (d.ppJr != null) { l.rpcs = v; if (pk && !l.rctn) l.rctn = Math.round(v * pk); if (!pk && l.one && !l.rcOwn) l.rctn = v; l.rMode = 'manual'; }
+  else if (d.ppJwc != null) { if (pk) { l.wctn = v; setMode(l, 'wc', 'manual'); } else if (cs) { l.wpcs = r2(v / cs); setMode(l, 'wp', 'manual'); } else { l.wctn = v; l.wcOwn = true; setMode(l, 'wc', 'manual'); } }   // v2.19
+  else if (d.ppJw != null) { l.wpcs = v; if (pk && !l.wctn) l.wctn = Math.round(v * pk); if (!pk && l.one && !l.wcOwn) l.wctn = v; setMode(l, 'wp', 'manual'); }
+  else if (d.ppJrc != null) { if (pk) { l.rctn = v; setMode(l, 'rc', 'manual'); } else if (cs) { l.rpcs = r2(v / cs); setMode(l, 'rp', 'manual'); } else { l.rctn = v; l.rcOwn = true; setMode(l, 'rc', 'manual'); } }
+  else if (d.ppJr != null) { l.rpcs = v; if (pk && !l.rctn) l.rctn = Math.round(v * pk); if (!pk && l.one && !l.rcOwn) l.rctn = v; setMode(l, 'rp', 'manual'); }
   else return;
   jRepaint(); keepDraft(); refreshTotals();
 });
@@ -558,6 +599,42 @@ document.addEventListener('change', e => {      // "1 CTN =" likh kar chhora -> 
     if (l && tt > 0 && q > 0 && !jNear(lineTotal(l), tt)) { l.costP = r4(tt / q); recalc(l); jJudge(r, billFmtOf(supplier)); }
   }
   keepDraft(); rerender(); jCard(jIx);
+});
+// ---------- v2.19: nafa chips · +% chips · jaanch tab / filter · purane bill ki tasveer ----------
+document.addEventListener('click', async e => {
+  if (!document.querySelector('[data-pp-root]')) return;
+  const rc = e.target.closest?.('[data-pp-rch]');
+  if (rc) {
+    const [i, side, pv] = rc.dataset.ppRch.split('|'), ix = Number(i), l = cart[ix], v = Number(pv); if (!l) return;
+    setMode(l, side, modeOf(l, side) === v && l.oldCost > 0 ? 'old' : v);   // lagi hui chip dobara = purana nafa
+    recalc(l); keepDraft(); paintRates(ix); refreshTotals();
+    if ($('jcCard')) jRepaint(); else rerender();
+    return;
+  }
+  const ro = e.target.closest?.('[data-pp-rold]');
+  if (ro) { const ix = Number(ro.dataset.ppRold), l = cart[ix]; if (!l) return; allModes(l, 'old'); recalc(l); keepDraft(); paintRates(ix); refreshTotals(); if ($('jcCard')) jRepaint(); else rerender(); notice('↺ Purana nafa'); return; }
+  const pc = e.target.closest?.('[data-pp-pctc]');
+  if (pc) { const v = Number(pc.dataset.ppPctc); pct = Number(pct) === v ? 0 : v; xtraApply(); keepDraft(); rerender(); return; }
+  if (e.target.closest?.('[data-pp-jtabcard]')) {
+    if (!aiRows) return;
+    const q = jQueue();
+    const i = jLastIx >= 0 && aiRows[jLastIx] && !aiRows[jLastIx].skip ? jLastIx : (q.find(x => aiRows[x].j?.conf !== 'g') ?? q[0] ?? aiRows.findIndex(r => !r.skip));
+    if (i != null && i >= 0) jCard(i);
+    return;
+  }
+  const jf = e.target.closest?.('[data-pp-jf]');
+  if (jf) { jFilter = jf.dataset.ppJf || 'all'; jView = 'list'; jIx = -1; aiRender(); return; }
+  const tp = e.target.closest?.('[data-pp-tpic]');
+  if (tp) {
+    tp.disabled = true;
+    try {
+      const id = tp.dataset.ppTpic, loc = await picGet('bill:' + id);
+      let pics = loc?.pics?.length ? loc.pics : null;
+      if (!pics && cloud?.getPhotos) { const ph = await cloud.getPhotos(id); if (Array.isArray(ph?.billPhotos) && ph.billPhotos.length) pics = ph.billPhotos; }
+      if (!pics) { notice('Is bill ki tasveer save nahi hui (shayad v2.19 se pehle ka bill)'); return; }
+      viewSavedPics(pics);
+    } finally { tp.disabled = false; }
+  }
 });
 // v2.4.1: card par ungli daayein = ✓ agla, baayein = pichhla (khane / button par nahi)
 let jTouch = null;
@@ -649,7 +726,7 @@ document.addEventListener('click', async e => {
     if (d.ppJgreen) { for (let i = 0; i < aiRows.length; i++) if (!aiRows[i].skip && !aiRows[i].done && aiRows[i].j?.conf === 'g') await jAccept(i); notice('✓ Hari lines pakki'); jView = 'list'; aiRender(); }
     else if (d.ppJstart) { const q = jQueue(); const first = q.find(x => aiRows[x].j?.conf !== 'g'); jIx = first != null ? first : (q[0] ?? -1); if (jIx < 0) jSummary(); else jCard(jIx); }
     else if (d.ppJcard != null) { jCard(Number(d.ppJcard)); }
-    else if (d.ppJok) { await jAccept(jIx); jNext(); }
+    else if (d.ppJok) { const was = !!aiRows[jIx]?.done; await jAccept(jIx); jNext(was); }
     else if (d.ppJskip) { jSkip(jIx); jNext(); }
     else if (d.ppJunskip != null) { jUnskip(Number(d.ppJunskip)); jSummary(); }
     else if (d.ppJmode) { const r = aiRows[jIx]; if (r) { r.force = d.ppJmode; jJudge(r, billFmtOf(supplier)); keepDraft(); rerender(); jCard(jIx); } }
@@ -679,13 +756,13 @@ document.addEventListener('click', async e => {
   if (d.ppClear) { if (!confirm(edit ? 'Edit chhor kar screen saaf kar dein? (POS ka bill waisa hi rahega)' : 'Yeh purchase bill saaf kar dein?')) return; cart = []; note = ''; invoiceNo = ''; edit = null; day = ''; xtra = 0; xtraName = ''; pct = 0; setBillPics([]); billPin = false; aiRows = null; aiBillInfo = null; jView = 'list'; jIx = -1; keepDraft(); rerender(); return; }
   if (d.ppCamera) { openSaleCamera(); return; }
   if (d.ppToday) { openToday(); return; }
-  if (d.ppOld != null) { const l = cart[d.ppOld]; if (l) { l.wMode = 'old'; l.rMode = 'old'; recalc(l); keepDraft(); rerender(); } return; }
-  if (d.ppW) { const [i, p] = d.ppW.split(':'); const l = cart[i]; if (l) { l.wMode = Number(p); recalc(l); keepDraft(); rerender(); } return; }
+  if (d.ppOld != null) { const l = cart[d.ppOld]; if (l) { allModes(l, 'old'); recalc(l); keepDraft(); rerender(); } return; }
+  if (d.ppW) { const [i, p] = d.ppW.split(':'); const l = cart[i]; if (l) { l.wMode = Number(p); l.wcMode = Number(p); recalc(l); keepDraft(); rerender(); } return; }
   if (d.ppWall || d.ppWallCustom) {
     const p = Number(d.ppWall || $('ppWCustom')?.value) || 0; if (!(p > 0)) { notice('Pehle % likhein'); return; }
-    cart.forEach(l => { l.wMode = p; recalc(l); }); keepDraft(); rerender(); notice(`Wholesale +${p}% sab items par`); return;
+    cart.forEach(l => { l.wMode = p; l.wcMode = p; recalc(l); }); keepDraft(); rerender(); notice(`Wholesale +${p}% sab items par (CTN + PCS)`); return;
   }
-  if (d.ppOldAll) { cart.forEach(l => { l.wMode = 'old'; l.rMode = 'old'; recalc(l); }); keepDraft(); rerender(); return; }
+  if (d.ppOldAll) { cart.forEach(l => { allModes(l, 'old'); recalc(l); }); keepDraft(); rerender(); return; }
   if (d.ppCopy) { copyLast(t); return; }
   if (d.ppSave) save();
 });
@@ -694,11 +771,105 @@ document.addEventListener('click', async e => {
 // v1.99.0: har line par bill ka naam aur system ka naam — Yaad kar lo / Badlein
 let aiBusy = false, aiRows = null, aiBillInfo = null;
 // v2.2.0: bill ki tasveerein — sirf is waqt ke liye (object URL, memory mein; kahin save nahi hoti)
-let billPics = [], billPin = false, billIx = 0, billZoom = 1;
-function setBillPics(files) {
-  for (const u of billPics) { try { URL.revokeObjectURL(u); } catch {} }
-  billPics = [...files].map(f => { try { return URL.createObjectURL(f); } catch { return ''; } }).filter(Boolean);
+let billPics = [], billPin = false, billIx = 0, billZoom = 1;   // v2.19: billPics ab data-URL (mehfooz) — shuru mein blob
+function setBillPics(files) {          // v2.19: foran dikhe (blob), phir chhoti ho kar phone mein mehfooz (IndexedDB)
+  const list = [...(files || [])];
+  for (const u of oldBlobs) { try { URL.revokeObjectURL(u); } catch {} }
+  oldBlobs = billPics.filter(u => String(u).startsWith('blob:'));
+  billPics = list.map(f => { try { return URL.createObjectURL(f); } catch { return ''; } }).filter(Boolean);
   billIx = 0; billZoom = 1;
+  const seq = ++picSeq;
+  if (!list.length) { picDel('draft'); return; }
+  Promise.all(list.slice(0, 6).map(shrinkPic)).then(arr => {
+    const ok = arr.filter(Boolean); if (seq !== picSeq || !ok.length) return;
+    oldBlobs.push(...billPics.filter(u => String(u).startsWith('blob:')));   // jo dikh rahi hain unhein baad mein chhoro
+    billPics = ok; picPut('draft', { pics: ok, at: Date.now() });
+  }).catch(() => {});
+}
+// ---------- v2.19: bill ki TASVEER — phone (IndexedDB) + bill ke sath cloud (entryPhotos/<bill id>, 3 tak) ----------
+const PIC_DB = 'sam-pp-bills-v1', PIC_KEEP = 60, PIC_MAX = 260000;   // 3 x 260KB < Firestore ki 1MB hadd
+let picDbP = null, picSeq = 0, vTmp = null, restoreSeq = 0, oldBlobs = [], ppOnce = false;
+const isData = u => typeof u === 'string' && u.startsWith('data:image/');
+function picDb() {
+  if (picDbP) return picDbP;
+  picDbP = new Promise((res, rej) => { try { const r = indexedDB.open(PIC_DB, 1); r.onupgradeneeded = () => r.result.createObjectStore('b'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); } catch (e) { rej(e); } });
+  picDbP.catch(() => { picDbP = null; });
+  return picDbP;
+}
+async function picPut(key, val) { try { const db = await picDb(); await new Promise((res, rej) => { const tx = db.transaction('b', 'readwrite'); tx.objectStore('b').put(val, key); tx.oncomplete = res; tx.onerror = () => rej(tx.error); }); return true; } catch { return false; } }
+async function picGet(key) { try { const db = await picDb(); return await new Promise((res, rej) => { const q = db.transaction('b').objectStore('b').get(key); q.onsuccess = () => res(q.result ?? null); q.onerror = () => rej(q.error); }); } catch { return null; } }
+async function picDel(key) { try { const db = await picDb(); await new Promise(res => { const tx = db.transaction('b', 'readwrite'); tx.objectStore('b').delete(key); tx.oncomplete = res; tx.onerror = res; }); } catch {} }
+async function picKeepBill(id, rec) {  // aakhri 60 bills ki tasveer + jaanch isi phone par
+  await picPut('bill:' + id, rec);
+  const ix = (await picGet('idx')) || [], nx = [{ id, at: Date.now() }, ...ix.filter(x => x.id !== id)];
+  for (const x of nx.slice(PIC_KEEP)) await picDel('bill:' + x.id);
+  await picPut('idx', nx.slice(0, PIC_KEEP));
+}
+function shrinkPic(file) {             // lamba kinara 1600px, JPEG — 260KB se kam
+  return new Promise(res => {
+    let url = ''; try { url = URL.createObjectURL(file); } catch { res(''); return; }
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const W0 = img.naturalWidth, H0 = img.naturalHeight; let k = Math.min(1, 1600 / Math.max(W0, H0, 1)), q = 0.72, out = '';
+        const cv = document.createElement('canvas'), cx = cv.getContext('2d');
+        const draw = () => { cv.width = Math.max(1, Math.round(W0 * k)); cv.height = Math.max(1, Math.round(H0 * k)); cx.fillStyle = '#fff'; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(img, 0, 0, cv.width, cv.height); out = cv.toDataURL('image/jpeg', q); };
+        draw();
+        while (out.length > PIC_MAX && q > 0.45) { q -= 0.09; out = cv.toDataURL('image/jpeg', q); }
+        while (out.length > PIC_MAX && k > 0.3) { k *= 0.82; draw(); }
+        res(out.length <= PIC_MAX ? out : '');
+      } catch { res(''); }
+      try { URL.revokeObjectURL(url); } catch {}
+    };
+    img.onerror = () => { try { URL.revokeObjectURL(url); } catch {} res(''); };
+    img.src = url;
+  });
+}
+function viewSavedPics(pics) { vTmp = { pics: billPics, ix: billIx }; billPics = pics; billIx = 0; billView(); }   // aaj ke bills ki tasveer
+function vTmpEnd() { if (!vTmp) return; billPics = vTmp.pics; billIx = vTmp.ix; vTmp = null; }
+async function restoreExtras(ed) {     // dobara bill khula (EDIT) -> us ki tasveer (phone ya cloud) + jaanch (phone)
+  const seq = ++restoreSeq;
+  if (!cloud?.appPurchasesOf || !ed?.partyId) return;
+  let found = null;
+  try {
+    const pid = Number(ed.purchaseId) || 0, bno = String(ed.billNo || '');
+    const list = (await cloud.appPurchasesOf(ed.partyId)) || [];
+    const hits = list.filter(p => (pid && (Number(p.purchaseId) === pid || Number(p.editOf?.purchaseId) === pid)) || (bno && (String(p.purchaseNo || '') === bno || String(p.editOf?.billNo || '') === bno)))
+      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    for (const p of hits.slice(0, 6)) {
+      const loc = await picGet('bill:' + p.id);
+      let pics = loc?.pics?.length ? loc.pics : null;
+      if (!pics && cloud.getPhotos) { const ph = await cloud.getPhotos(p.id); if (Array.isArray(ph?.billPhotos) && ph.billPhotos.length) pics = ph.billPhotos; }
+      if (pics || loc?.jd) { found = { pics, jd: loc?.jd || null }; break; }
+    }
+  } catch (e) { console.warn('bill ki tasveer nahi mili', e); }
+  if (seq !== restoreSeq || !found || !edit || Number(edit.purchaseId) !== Number(ed.purchaseId)) return;
+  if (found.pics && !billPics.length) { billPics = found.pics; billIx = 0; picPut('draft', { pics: found.pics, at: Date.now() }); }
+  let gotJ = false;
+  if (found.jd && Array.isArray(found.jd.rows) && found.jd.rows.length && !aiRows) {
+    const used = new Set();
+    aiRows = found.jd.rows.map(r => {
+      const ln = r.itemId ? cart.find(l => String(l.id) === String(r.itemId) && !used.has(l.k)) : null;
+      if (ln) { used.add(ln.k); if (!ln.billName && r.ai?.name) ln.billName = String(r.ai.name).slice(0, 60); }
+      return { ...r, key: ln ? ln.k : null };
+    });
+    aiBillInfo = found.jd.info || null; aiFmtAuto = found.jd.fmt || ''; jView = 'list'; jIx = -1; gotJ = true;
+    try { jJudgeAll(); } catch {}
+  }
+  keepDraft(); rerender();
+  const msg = found.pics ? '📄 Is bill ki tasveer aa gayi' + (gotJ ? ' · 🧾 jaanch bhi' : '') : gotJ ? '🧾 Is bill ki jaanch wapas aa gayi' : '';
+  if (msg) notice(msg);
+}
+// ---------- v2.19: phone ka BACK = ek qadam peeche (tasveer -> card -> list -> band) ----------
+function ppBack() {
+  const d = $('dialog'); if (!d?.open) return false;
+  const title = $('dialogTitle')?.textContent || '';
+  if (vTmp && $('ppZoom')) { vTmpEnd(); openToday(); return true; }
+  if ($('ppZoom') && aiRows) { if (jView === 'card' && jIx >= 0) jCard(jIx); else aiRender(); return true; }
+  if (title.startsWith('✏️ Item chunein') && aiRows) { if (jView === 'card' && jIx >= 0) jCard(jIx); else aiRender(); return true; }
+  if ($('jcCard') && aiRows) { jView = 'list'; jIx = -1; aiRender(); return true; }
+  if (title.startsWith('🤖 Khulasa') && aiRows) { jView = 'list'; jIx = -1; aiRender(); return true; }
+  return false;
 }
 function billStripHTML() {
   if (!billPics.length) return '';
@@ -706,6 +877,20 @@ function billStripHTML() {
 }
 const aiQtyText = l => [(Number(l.ctn) || 0) && (num(l.ctn) + ' ctn'), (Number(l.pcs) || 0) && (num(l.pcs) + ' pcs')].filter(Boolean).join(' + ') || '—';
 const aiNameOf = l => String(l.roman || l.name || '').trim();
+// v2.19: yaad kiye hue naam se BILKUL barabar match (Urdu ke harf / hindse ek jaise kar ke) — AI ke andaze se bhi pehle
+const nameKey = s => String(s || '').normalize('NFKC').toLowerCase()
+  .replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[هۀە]/g, 'ہ')
+  .replace(/[۰-۹]/g, x => String(x.charCodeAt(0) - 1776)).replace(/[٠-٩]/g, x => String(x.charCodeAt(0) - 1632))
+  .replace(/[^a-z0-9\u0600-\u06ff]+/g, ' ').replace(/\s+/g, ' ').trim();
+function memIndex(items) {
+  const m = new Map();
+  for (const it of items || []) for (const a of aliasOf(it.id).split(',')) {
+    const k = nameKey(a); if (k.length < 2) continue;
+    if (!m.has(k)) m.set(k, it); else { const w = m.get(k); if (w && String(w.id) !== String(it.id)) m.set(k, null); }   // do items par ek naam = shak, istemal nahi
+  }
+  return m;
+}
+function memFind(m, l) { for (const nm of [l?.name, l?.roman]) { const k = nameKey(nm); if (k && m.get(k)) return m.get(k); } return null; }
 // v2.4.0: jin items ka bill par carton size (سائز) mila magar POS mein "1 CTN = ?" khali ya alag hai
 function packGaps() {
   let m = {}; try { m = lastRatesOf() || {}; } catch {}
@@ -879,6 +1064,44 @@ function jCounts() {
   return { all: act.length, g: act.filter(r => r.j?.conf === 'g').length, y: act.filter(r => r.j?.conf === 'y').length, r: act.filter(r => r.j?.conf === 'r').length,
     open: act.filter(r => !r.done).length, openNotG: act.filter(r => !r.done && r.j?.conf !== 'g').length };
 }
+// ---------- v2.19: jaanch — tab-patti + progress · filter chips · farq dhoondne wala madadgar ----------
+let jLastIx = -1, jFilter = 'all';
+function jTabsHTML(active) {
+  if (!aiRows || !aiRows.length) return '';
+  const act = aiRows.filter(r => !r.skip), done = act.filter(r => r.done).length, all = act.length, pc = all ? Math.round(done * 100 / all) : 0;
+  const ci = active === 'card' ? jIx : jLastIx;
+  return `<div class="jz-tabs"><button type="button" class="${active === 'list' ? 'on' : ''}" data-pp-jlist="1">☰ List</button><button type="button" class="${active === 'card' ? 'on' : ''}" data-pp-jtabcard="1">🃏 Card${ci >= 0 && aiRows[ci] ? ' ' + (ci + 1) + '/' + aiRows.length : ''}</button><button type="button" class="${active === 'sum' ? 'on' : ''}" data-pp-jsum="1">📋 Khulasa</button></div>`
+    + `<div class="jz-prog"><span><i style="width:${pc}%"></i></span><small>${done}/${all} pakki</small></div>`;
+}
+const jfPass = (r, f = jFilter) => f === 'all' ? true : f === 'skip' ? !!r.skip : f === 'done' ? (!r.skip && !!r.done) : (!r.skip && (r.j?.conf || 'r') === f);
+function jFilterHTML() {
+  if (!aiRows || aiRows.length < 4) return '';
+  const opts = [['all', 'Sab'], ['r', '🔴'], ['y', '🟡'], ['g', '🟢'], ['done', '✓ pakki'], ['skip', '✕ chhori']];
+  return `<div class="mchips jz-filter">${opts.map(([f, lab]) => { const n = aiRows.filter(r => jfPass(r, f)).length;
+    return (n || f === 'all' || f === jFilter) ? `<button type="button" class="${jFilter === f ? 'on' : ''}" data-pp-jf="${f}">${lab} ${n}</button>` : ''; }).join('')}</div>`;
+}
+function farqHTML(bill, mine) {
+  const f = r2(bill - mine);
+  if (Math.abs(f) < 1) return `Bill ${num(bill)} · lines ${num(mine)} · <b class="green">✓ barabar</b>${f ? ` <small>(sirf ${num(Math.abs(f))} ka farq — paise)</small>` : ''}`;
+  return `Bill ${num(bill)} · lines ${num(mine)} · <b class="${Math.abs(f) > Math.max(10, bill * 0.02) ? 'red' : ''}">farq ${num(f)}</b>`;
+}
+function jQtySuspects(field, D) {     // kaun si line (ya do lines) ki ginti bilkul farq jitni hai
+  if (!aiRows || !(D > 0)) return [];
+  const val = r => field === 'n' ? (Number(aiNum(r.ai).n) || 0) : (Number(r.ai?.[field]) || 0);
+  const act = aiRows.map((r, i) => ({ r, i, v: val(r) })).filter(x => !x.r.skip && x.v > 0);
+  const tol = Math.max(0.5, D * 0.005);
+  let hit = act.filter(x => Math.abs(x.v - D) <= tol).map(x => x.i);
+  if (!hit.length) { outer: for (let a = 0; a < act.length; a++) for (let b = a + 1; b < act.length; b++) if (Math.abs(act[a].v + act[b].v - D) <= tol) { hit = [act[a].i, act[b].i]; break outer; } }
+  if (!hit.length && field === 'ctn') hit = act.filter(x => Math.abs((Number(x.r.ai?.pcs) || 0) - x.v) < 0.001).map(x => x.i);   // CTN aur PCS dono khano mein wohi ginti
+  return hit.slice(0, 4);
+}
+const susHTML = (list, D, what) => list.length ? `<div class="jz-sus"><small>🔍 Farq ${num(D)}${what ? ' ' + what : ''} — shayad ${list.length > 1 ? 'in lines' : 'is line'} ki wajah se (tap karke dekhein, phir PCS / CTN theek karein):</small><div class="mchips">${list.map(i => `<button type="button" data-pp-jcard="${i}">${esc(aiRows[i].ai.name || 'line ' + (i + 1))}</button>`).join('')}</div></div>` : '';
+function jRsSuspects(bill, mine) {    // Rs ka farq kis line ki wajah se
+  const D = r2(mine - bill); if (Math.abs(D) < 1 || !aiRows) return '';
+  const tol = Math.max(1, Math.abs(D) * 0.01), out = [];
+  aiRows.forEach((r, i) => { if (r.skip || !r.key) return; const ln = cart.find(l => l.k === r.key), t = Number(aiNum(r.ai).total) || 0; if (ln && t > 0 && Math.abs((lineTotal(ln) - t) - D) <= tol) out.push(i); });
+  return susHTML(out.slice(0, 4), Math.abs(D), 'Rs');
+}
 function jQueue() { return (aiRows || []).map((r, i) => i).filter(i => !aiRows[i].skip && !aiRows[i].done); }
 function jBillTotals() {
   const lines = (aiRows || []).filter(r => !r.skip && r.key).map(r => cart.find(l => l.k === r.key)).filter(Boolean);
@@ -889,17 +1112,21 @@ function jColTotals() {
   const b = aiBillInfo || {}, ct = Number(b.ctnTotal) || 0, pt = Number(b.pcsTotal) || 0;
   if (!ct && !pt) return '';
   const L = b.lines || [], tol = T => Math.max(1, T * 0.005);
-  let ok, txt;
+  let ok, txt, sus = '';
   if (ct && pt) {
     const sc = r3(L.reduce((n, l) => n + (Number(l.ctn) || 0), 0)), sp = r3(L.reduce((n, l) => n + (Number(l.pcs) || 0), 0));
     ok = Math.abs(sc - ct) <= tol(ct) && Math.abs(sp - pt) <= tol(pt);
     txt = `Bill par ginti: CTN ${num(ct)} · PCS ${num(pt)} — lines mein ${num(sc)} · ${num(sp)}`;
+    if (!ok) { const dc = r3(sc - ct), dp = r3(sp - pt);   // v2.19: farq kis line se
+      if (Math.abs(dc) > tol(ct)) sus += susHTML(jQtySuspects(dc > 0 ? 'ctn' : 'pcs', Math.abs(dc)), Math.abs(dc), 'CTN');
+      if (Math.abs(dp) > tol(pt)) sus += susHTML(jQtySuspects(dp > 0 ? 'pcs' : 'ctn', Math.abs(dp)), Math.abs(dp), 'PCS'); }
   } else {
     const T = ct || pt, sn = r3(L.reduce((n, l) => n + aiNum(l).n, 0));
     ok = Math.abs(sn - T) <= tol(T);
     txt = `Bill par ginti ka total ${num(T)} — lines mein ${num(sn)}`;
+    if (!ok && sn > T) sus = susHTML(jQtySuspects('n', r3(sn - T)), r3(sn - T), '');
   }
-  return `<p class="${ok ? 'stat-note' : 'red'}">${ok ? '✓' : '⚠️'} ${txt}${ok ? '' : ' — koi line chhooti ya ghalat parhi?'}</p>`;
+  return `<p class="${ok ? 'stat-note' : 'red'}">${ok ? '✓' : '⚠️'} ${txt}${ok ? '' : ' — koi line chhooti ya ghalat parhi?'}</p>${sus}`;
 }
 // ---------- overview (pehli khirki) ----------
 function aiRender() {
@@ -916,9 +1143,9 @@ function aiRender() {
       ? `<p class="stat-note">📐 Naqsha: ginti = <b>${jModeName(fmt.q)}</b>${stat} <button type="button" data-pp-fmt="ask">badlein</button></p>`
       : `<div class="pp-ask"><b>Is supplier ke bill par ginti kya hoti hai?</b><small>Pichhla khareed maloom na hone ki wajah se app khud nahi pakar saki${aiBillInfo?.qtyLabel ? ' (bill par column: ' + esc(aiBillInfo.qtyLabel) + ')' : ''}. Ek dafa bata dein.</small>
          <div class="mchips"><button type="button" data-pp-fmt="pcs">PCS (pieces)</button><button type="button" data-pp-fmt="ctn">CTN (carton / peti)</button><button type="button" data-pp-fmt="both">Dono (alag khane)</button></div></div>`;
-  dlg('🤖 Bill ki jaanch', `<div class="jz-head">
+  dlg('🤖 Bill ki jaanch', `${jTabsHTML('list')}<div class="jz-head">
       <div class="jz-count"><b>${k.all}</b> lines · 🟢 ${k.g} · 🟡 ${k.y} · 🔴 ${k.r}</div>
-      ${bill ? `<div class="jz-tot">Bill ${num(bill)} · lines ${num(mine)} · <b class="${Math.abs(bill - mine) > Math.max(10, bill * 0.02) ? 'red' : ''}">farq ${num(r2(bill - mine))}</b></div>` : ''}
+      ${bill ? `<div class="jz-tot">${farqHTML(bill, mine)}</div>${jRsSuspects(bill, mine)}` : ''}
     </div>
     ${jColTotals()}
     ${fmtLine}
@@ -927,13 +1154,15 @@ function aiRender() {
       ${k.g && aiRows.some(r => !r.skip && !r.done && r.j?.conf === 'g') ? `<button type="button" class="got" data-pp-jgreen="1">✓ ${aiRows.filter(r => !r.skip && !r.done && r.j?.conf === 'g').length} hari pakki karein</button>` : ''}
       ${k.openNotG || k.open ? `<button type="button" class="got" data-pp-jstart="1">Jaanch shuru (${k.openNotG || k.open}) ›</button>` : `<button type="button" class="got" data-pp-jsum="1">Khulasa ›</button>`}
     </div>
+    ${jFilterHTML()}
     <div class="jz-list">${aiRows.map((r, i) => {
+      if (!jfPass(r)) return '';   // v2.19: filter
       const ln = r.key ? cart.find(l => l.k === r.key) : null;
       const it = r.itemId ? items.find(x => String(x.id) === String(r.itemId)) : null;
       return `<button type="button" class="jz-row ${r.skip ? 'skip' : r.j?.conf || 'r'}${r.done ? ' done' : ''}" data-pp-jcard="${i}">
         <span class="jz-dot">${r.skip ? '✕' : r.done ? '✓' : jMark(r.j?.conf)}</span>
-        <span class="jz-txt"><b>${esc(r.ai.name || '')}</b><small>${it ? esc(it.name) + ' · ' + jUnit(ln) + ' · ' + num(ln?.costP || 0) + '/' + esc(ln?.uName || 'Pcs') : 'item nahi mila'}${r.j?.why?.length ? ' · ' + esc(r.j.why[0]) : ''}</small></span></button>`;
-    }).join('')}</div>
+        <span class="jz-txt"><b>${esc(r.ai.name || '')}${r.mem ? ' <em class="jz-mem">📌 yaad</em>' : ''}</b><small>${it ? esc(it.name) + ' · ' + jUnit(ln) + ' · ' + num(ln?.costP || 0) + '/' + esc(ln?.uName || 'Pcs') : 'item nahi mila'}${r.j?.why?.length ? ' · ' + esc(r.j.why[0]) : ''}</small></span></button>`;
+    }).join('') || '<p class="stat-note">Is filter mein koi line nahi</p>'}</div>
     <p class="stat-note">⚠️ AI hamesha theek nahi parhta. Hari lines par bhi nazar daal lein; ✓ dabane se naam, unit aur rate app yaad kar leti hai.</p>`);
   const d = $('dialog'); if (d) d.classList.add('full-dialog');
 }
@@ -976,7 +1205,7 @@ function jPattiPaint(r) {
 const jF = v => (v || v === 0) && Number(v) ? r2(Number(v)) : '';
 function jCard(i) {
   const r = aiRows[i]; if (!r) { jView = 'list'; return aiRender(); }
-  jView = 'card'; jIx = i;
+  jView = 'card'; jIx = i; jLastIx = i;   // v2.19: tab-patti ke liye
   const q = jQueue(), pos = q.indexOf(i), ln = r.key ? cart.find(l => l.k === r.key) : null;
   const { total } = aiNum(r.ai), pk = ln ? packOf(ln) : 0, cs = ln ? jCs(r, ln) : 0, m = pk || cs;
   const it = ln ? stock().items.find(x => String(x.id) === String(ln.id)) : null;
@@ -988,10 +1217,11 @@ function jCard(i) {
   const fld = (lab, key, val, pehle, off) => `<label class="jc-f"><span>${lab}</span><input type="number" min="0" step="any" inputmode="decimal" data-pp-${key}="1" value="${val}"${off ? ' disabled placeholder="—"' : ''}>${ph(pehle)}</label>`;
   const patti = billPics.length ? `<div class="jc-patti" id="jcPatti" data-pp-pic="${jPageIx(r)}" data-pp-focus="${Math.round(jY(r))}" role="button" aria-label="Poori tasveer"><span class="jc-mark"></span><span class="jc-patti-z">⤢</span></div>` : '';
   const ctnVal = pk ? (ln.ctn || '') : cs ? jF(linePcs(ln) / cs) : '';
-  dlg(`🤖 Jaanch ${pos >= 0 ? (pos + 1) + '/' + q.length : ''}`, `${patti}
+  dlg(`🤖 Jaanch ${pos >= 0 ? (pos + 1) + '/' + q.length : ''}`, `${jTabsHTML('card')}${patti}
     <div class="jc-card ${r.j?.conf || 'r'}" id="jcCard">
       <div class="jc-top"><b>${esc(r.ai.name || '')}${ln ? ' → ' + esc(ln.name) : ''}</b><span id="jcAmt">${ln ? num(lineTotal(ln)) : ''}</span></div>
       ${ln && total ? `<div class="jc-milan" id="jcMilan">${jMilanHTML(ln, total)}</div>` : ''}
+      ${r.mem ? '<div class="jc-memo">📌 Yaad kiya hua naam — pichhli dafa aap ne yahi item chuna tha</div>' : ''}
       <div class="jc-bill">Bill: ${esc(aiQtyText(r.ai))}${size ? ' · سائز ' + num(size) : ''} · ریٹ ${num(aiNum(r.ai).rate)}${total ? ' · کل ' + num(total) : ''}</div>
       ${r.j?.why?.length ? `<div class="jc-why">${r.j.why.map(w => `<small>${jMark(r.j.conf)} ${esc(w)}</small>`).join('')}</div>` : '<div class="jc-why"><small>🟢 Sab theek lag raha hai</small></div>'}
       ${ln ? `<div class="jc-units"><div class="mchips jc-modes">${modes.map(md => `<button type="button" class="${r.j?.mode === md ? 'on' : ''}" data-pp-jmode="${md}">${jModeName(md)}${md === 'size' ? ' ×' + num(size) : ''}</button>`).join('')}</div>
@@ -1011,6 +1241,7 @@ function jCard(i) {
         ${fld('R/' + esc(ln.cName || 'CTN'), 'jrc', pk ? jF(ln.rctn) : cs ? jF(ln.rpcs * cs) : jF(ln.rctn), pk ? (Number(o.oldR) || 0) * pk : cs ? oR * cs : (ln.one ? oR : 0))}
         ${fld('R/' + esc(ln.uName || 'PCS'), 'jr', jF(ln.rpcs), oR)}
       </div>
+      ${rateChipsHTML(ln, cart.indexOf(ln), 'jcRc')}
       <small class="stat-note">Stock abhi ${num(Number(it?.stock) || 0)} ${esc(ln.uName)}${!pk && cs ? ' · POS mein carton size khali — CTN sirf app mein' : ''}</small>` :
       `<div class="jc-why"><small>🔴 Humare stock mein ye item nahi mila</small></div>`}
     </div>
@@ -1036,6 +1267,7 @@ function jRepaint() {                 // card ke khane dobara bharo (jo khana li
   set('jrc', pk ? jF(l.rctn) : cs ? jF(l.rpcs * cs) : jF(l.rctn)); set('jr', jF(l.rpcs));
   const a = $('jcAmt'); if (a) a.textContent = num(lineTotal(l));
   const mm = $('jcMilan'), tt = aiNum(r.ai).total; if (mm && tt) mm.innerHTML = jMilanHTML(l, tt);
+  paintChips(cart.indexOf(l));   // v2.19
 }
 // v2.4.2: zinda milan — aap ki line vs bill ki kul raqam
 function jMilanHTML(l, total) {
@@ -1091,7 +1323,12 @@ function zWire() {
   box.addEventListener('pointerup', up); box.addEventListener('pointercancel', up);
 }
 
-function jNext() {
+function jNext(reopened) {
+  if (reopened && aiRows) {   // v2.19: ✓ ho chuki line dobara kholi thi — bill ki tarteeb mein agli line (✓ wali bhi), khulasa par nahi
+    const nx = aiRows.findIndex((r, i) => i > jIx && !r.skip);
+    if (nx >= 0) return jCard(nx);
+    jView = 'sum'; jIx = -1; return jSummary();
+  }
   const q = jQueue().filter(x => aiRows[x].j?.conf !== 'g' || !aiRows.some(r => !r.skip && !r.done && r.j?.conf !== 'g'));
   const after = q.find(x => x > jIx);
   const nx = after != null ? after : q[0];
@@ -1102,7 +1339,7 @@ async function jAccept(i, quiet = true) {
   const r = aiRows[i]; if (!r || !r.key) return;
   r.done = true;
   if (r.itemId && learnOf && !r.learn) {           // ✓ = naam bhi yaad
-    try { const res = await learnOf(r.itemId, aiNameOf(r.ai) || r.ai.name); r.learn = res === 'ok' ? 'ok' : res === 'pehle se' ? 'pehle se' : res; } catch {}
+    try { const res = await learnOf(r.itemId, aiNameOf(r.ai) || r.ai.name, r.ai.name); r.learn = res === 'ok' ? 'ok' : res === 'pehle se' ? 'pehle se' : res; } catch {}
   }
   if (!quiet) notice('✓ ' + (r.ai.name || ''));
 }
@@ -1146,8 +1383,8 @@ function jSummary() {
   const redLeft = (aiRows || []).filter(r => !r.skip && !r.done && r.j?.conf === 'r').length;
   const dup = jDupes(), skipped = (aiRows || []).map((r, i) => [r, i]).filter(([r]) => r.skip && !r.merged);
   const farq = r2(bill - mine);
-  dlg('🤖 Khulasa', `<div class="jz-head"><div class="jz-count">🟢 ${k.g} · 🟡 ${k.y} · 🔴 ${k.r} · pakki ${aiRows.filter(r => r.done).length}/${k.all}</div></div>
-    ${bill ? `<div class="jc-card ${Math.abs(farq) > Math.max(10, bill * 0.02) ? 'y' : 'g'}"><div class="jc-sec"><small>Bill ka total</small><b>${num(bill)}</b><span>Aap ki lines ${num(mine)} · farq <b>${num(farq)}</b>${Math.abs(farq) > 1 ? (farq > 0 ? ' — shayad tax / T.O. / mazdoori, ya koi line reh gayi' : ' — koi line zyada ya ginti ghalat') : ''}</span></div></div>` : ''}
+  dlg('🤖 Khulasa', `${jTabsHTML('sum')}<div class="jz-head"><div class="jz-count">🟢 ${k.g} · 🟡 ${k.y} · 🔴 ${k.r} · pakki ${aiRows.filter(r => r.done).length}/${k.all}</div></div>
+    ${bill ? `<div class="jc-card ${Math.abs(farq) > Math.max(10, bill * 0.02) ? 'y' : 'g'}"><div class="jc-sec"><small>Bill ka total</small><b>${num(bill)}</b><span>Aap ki lines ${num(mine)} · ${Math.abs(farq) < 1 ? '<b class="green">✓ barabar</b>' + (farq ? ' <small>(' + num(Math.abs(farq)) + ' ka farq — paise)</small>' : '') : 'farq <b>' + num(farq) + '</b>'}${Math.abs(farq) > 1 ? (farq > 0 ? ' — shayad tax / T.O. / mazdoori, ya koi line reh gayi' : ' — koi line zyada ya ginti ghalat') : ''}</span></div></div>` : ''}
     ${jColTotals()}
     <div class="jc-card ${xtra > 0 ? 'g' : ''}"><div class="jc-sec"><small>🧾 Bill par kharcha${xtraName ? ' — ' + esc(xtraName) : ' (labour / kiraya)'}</small>
       <label class="jc-xtra">Rs <input type="number" min="0" step="any" inputmode="decimal" data-pp-jxtra="1" value="${xtra || ''}" placeholder="0"></label>
@@ -1241,15 +1478,17 @@ async function aiRead(files) {
     const bx = (bill.xtra || []).reduce((n, x) => n + (Number(x.amount) || 0), 0);   // v2.4.6: labour / kiraya
     if (bx > 0 && !(xtra > 0)) { xtra = bx; xtraName = (bill.xtra || []).map(x => x.name).filter(Boolean).join(' + ').slice(0, 40); }
     lines.sort((a, b) => ((Number(a.page) || 1) - (Number(b.page) || 1)) || ((Number(a.y) || 0) - (Number(b.y) || 0)));   // v2.10: bill ki tarteeb
+    const memIx = memIndex(items);   // v2.19: aap ke yaad karwaye naam — pehli tarjeeh
     for (const l of lines) {
       const q = aiNameOf(l);
+      const mem = memFind(memIx, l);
       // v2.0.0: AI ko humare items ki list di jati hai — wo khud itemId de de to wahi lagao, warna naam se dhoondo
-      const byAi = l.itemId ? items.find(x => String(x.id) === String(l.itemId)) : null;
-      const hit = byAi || (q ? (smartSearch(items, q, 1)[0] || null) : null);
+      const byAi = !mem && l.itemId ? items.find(x => String(x.id) === String(l.itemId)) : null;
+      const hit = mem || byAi || (q ? (smartSearch(items, q, 1)[0] || null) : null);
       if (!hit) { aiRows.push({ ai: l, key: null, itemId: '', learn: '' }); continue; }
       const ln = addItem(hit, false).line;
       ln.billName = String(l.name || '').slice(0, 60);          // v2.10: bill wala naam line ke saath
-      aiRows.push({ ai: l, key: ln.k, itemId: String(hit.id), learn: '', byAi: !!byAi });
+      aiRows.push({ ai: l, key: ln.k, itemId: String(hit.id), learn: mem ? 'pehle se' : '', byAi: !!byAi, mem: !!mem });
     }
     jJudgeAll(); jAutoFmt();
     if (aiFmtAuto) jJudgeAll();          // naya naqsha mila — us ki tarjeeh ke sath dobara
@@ -1263,10 +1502,10 @@ async function aiRead(files) {
 // v2.4.1: bill poori screen par — do ungliyon se zoom, khainchna, do dafa tap; Jaanch se aaye to "‹ Wapas Jaanch"
 function billView() {
   if (!billPics.length) return;
-  const back = aiRows && (jView === 'card' || jView === 'list' || jView === 'sum');
+  const back = !vTmp && aiRows && (jView === 'card' || jView === 'list' || jView === 'sum');   // v2.19: vTmp = purane bill ki tasveer
   dlg('📄 Bill' + (billPics.length > 1 ? ` (${billIx + 1}/${billPics.length})` : ''),
     `<div class="pp-zoom" id="ppZoom"><img id="ppZoomImg" src="${billPics[billIx]}" alt="bill" draggable="false"></div>
-     <div class="pp-billacts">${back ? '<button type="button" class="got" data-pp-vback="1">‹ Wapas Jaanch</button>' : ''}<button type="button" data-pp-vzoom="-1" aria-label="Chhota">−</button><button type="button" data-pp-vzoom="1" aria-label="Bara">+</button>${billPics.length > 1 ? '<button type="button" data-pp-vnext="1">Agli tasveer ›</button>' : ''}<button type="button" data-pp-pin="1">📌</button></div>
+     <div class="pp-billacts">${back ? '<button type="button" class="got" data-pp-vback="1">‹ Wapas Jaanch</button>' : ''}<button type="button" data-pp-vzoom="-1" aria-label="Chhota">−</button><button type="button" data-pp-vzoom="1" aria-label="Bara">+</button>${billPics.length > 1 ? '<button type="button" data-pp-vnext="1">Agli tasveer ›</button>' : ''}${vTmp ? '' : '<button type="button" data-pp-pin="1">📌</button>'}</div>
      <small class="stat-note">Do ungliyon se zoom · ek ungli se khainchein · do dafa tap = zoom</small>`);
   const d = $('dialog'); if (d) d.classList.add('full-dialog');
   zWire();
@@ -1274,7 +1513,7 @@ function billView() {
 async function aiLearn(i, btn, quiet) {
   const r = aiRows && aiRows[i]; if (!r || !r.itemId || !learnOf) return;
   if (btn) btn.disabled = true;
-  const res = await learnOf(r.itemId, aiNameOf(r.ai) || r.ai.name);
+  const res = await learnOf(r.itemId, aiNameOf(r.ai) || r.ai.name, r.ai.name);
   r.learn = res === 'ok' ? 'ok' : res === 'pehle se' ? 'pehle se' : res;
   if (!quiet) { if (res === 'ok') notice('✓ "' + (aiNameOf(r.ai) || '') + '" yaad kar liya'); else if (res !== 'pehle se') notice(res); }
   aiRender();
@@ -1300,10 +1539,10 @@ async function aiPicked(i, id) {
   if (r.key) { const ix = cart.findIndex(l => l.k === r.key); if (ix >= 0) cart.splice(ix, 1); }
   // v2.1.0: pehle jo item laga tha (AI ka ya yaad kiya hua) us se yeh naam hata do — warna ghalat naam wahin chipka rehta
   if (r.itemId && String(r.itemId) !== String(it.id) && unlearnOf && (r.byAi || r.learn === 'ok' || r.learn === 'pehle se')) {
-    try { await unlearnOf(r.itemId, aiNameOf(r.ai) || r.ai.name); } catch {}
+    try { await unlearnOf(r.itemId, aiNameOf(r.ai) || r.ai.name, r.ai.name); } catch {}
   }
   const ln = addItem(it, false).line;
-  r.key = ln.k; r.itemId = String(it.id); r.learn = ''; r.byAi = true; r.force = ''; r.skip = false;   // aap ne khud chuna = pakka naam
+  r.key = ln.k; r.itemId = String(it.id); r.learn = ''; r.byAi = true; r.mem = false; r.force = ''; r.skip = false;   // aap ne khud chuna = pakka naam
   jJudge(r, billFmtOf(supplier));
   if (jView !== 'sum') { jView = 'card'; jIx = i; }
   keepDraft(); rerender(); aiRender();
@@ -1370,6 +1609,9 @@ async function save() {
   saving = true; rerender();
   try {
     const w = cloud.saveAppPurchase(doc);
+    const picsNow = billPics.filter(isData);   // v2.19: tasveer bill ke sath — cloud (3 tak) + phone (jaanch bhi)
+    if (picsNow.length && cloud.putBillPhotos) Promise.resolve(cloud.putBillPhotos(id, picsNow.slice(0, 3))).catch(er => { console.warn('bill ki tasveer cloud par nahi gayi', er); notice('⚠️ Bill chala gaya magar tasveer cloud par nahi gayi (phone mein mehfooz hai)'); });
+    picKeepBill(id, { pics: picsNow, jd: aiRows ? { rows: aiRows.map(r => ({ ...r })), info: aiBillInfo, fmt: aiFmtAuto } : null, partyId: String(p.id), total, at: Date.now() }).catch(() => {});
     await Promise.race([w, new Promise(r => setTimeout(r, 4000))]);
     try { learnFromBill(); } catch {}   // v2.4.0: naqsha + misalein + hari ka % seekho
     try {   // v2.1.0: is bill ke rates yaad — agli dafa wohi nafa khud lagega
@@ -1378,12 +1620,12 @@ async function save() {
       for (const l of lines) if (l.id) { const m0 = memOf(l.id) || {}; mem[String(l.id)] = { c: r4(l.costP), w: r2(l.wpcs), r: r2(l.rpcs), t: Date.now(), ...(sz[String(l.id)] || m0.s ? { s: sz[String(l.id)] || m0.s } : {}) }; }
       Promise.resolve(saveRatesOf(mem)).catch(() => {});
     } catch {}
-    const keep = { cart, invoiceNo, note, edit, day };
-    cart = []; note = ''; invoiceNo = ''; edit = null; day = ''; xtra = 0; xtraName = ''; pct = 0; keepDraft();
+    const keep = { cart, invoiceNo, note, edit, day, pics: billPics };
+    cart = []; note = ''; invoiceNo = ''; edit = null; day = ''; xtra = 0; xtraName = ''; pct = 0; setBillPics([]); billPin = false; keepDraft();   // v2.19: tasveer bill ke sath chali gayi
     aiRows = null; aiBillInfo = null; jView = 'list'; jIx = -1;   // v2.4.0: bheja hua bill — purani jaanch band
     notice(keep.edit ? 'Update PC ko bhej diya — PC POS mein wohi bill badal dega (Aaj ke app purchase mein status)' : 'Purchase bill bhej diya — PC POS mein bana dega (Aaj ke app purchase mein status)');
     w.catch(err => {
-      if (!cart.length) { cart = keep.cart; invoiceNo = keep.invoiceNo; note = keep.note; edit = keep.edit; day = keep.day; keepDraft(); rerender(); }
+      if (!cart.length) { cart = keep.cart; invoiceNo = keep.invoiceNo; note = keep.note; edit = keep.edit; day = keep.day; if (!billPics.length && keep.pics?.length) { billPics = keep.pics; if (keep.pics.every(isData)) picPut('draft', { pics: keep.pics, at: Date.now() }); } keepDraft(); rerender(); }
       alert('Purchase bill PC tak NAHI gaya: ' + (err?.message || err) + '\nBill wapas screen par hai — dobara bhejein.');
     });
   } catch (err) { notice('Nahi gaya: ' + (err?.message || err)); }
@@ -1437,6 +1679,8 @@ export function ppLoadBill(b, ent) {
   supplier = String(ent?.partyId || ''); supOpen = !partyOf(supplier); supQuery = '';
   day = b.date || ''; invoiceNo = String(b.invoiceNo || ''); note = '';
   edit = { purchaseId: Number(b.purchaseId), billNo: String(b.billNo || ''), stamp: String(b.stamp), partyId: supplier, posPartyId: Number(b.posPartyId) || 0, date: b.date || todayStr() };
+  aiRows = null; aiBillInfo = null; jView = 'list'; jIx = -1; setBillPics([]); billPin = false;   // v2.19: pichhle bill ki jaanch/tasveer nahi
   keepDraft();
+  restoreExtras({ ...edit });   // v2.19: is bill ki apni tasveer + jaanch (mile to) khud aa jaye
   return '';
 }

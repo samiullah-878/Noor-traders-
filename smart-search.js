@@ -1,4 +1,4 @@
-// smart-search.js — v1.75: items ki SMART search (sale, camera, stock, transfer sab jagah yehi)
+// smart-search.js — v2.18 (pehle v1.75): items ki SMART search (sale, camera, stock, transfer sab jagah yehi)
 // - Roman Urdu spelling ke farq (ee/i, oo/u, aa/a, z/j, w/v, ph/f, c/k, double letters) khud barabar
 // - lafz kisi bhi tarteeb mein, har lafz ka shuru ya hissa, chhoti ghalti (1 harf) bhi chal jati hai
 // - barcode ka hissa (aakhri 4-5 hindse) · doosre naam (alias) · tarteeb: naam-shuru pehle, phir zyada bikne wale
@@ -42,39 +42,68 @@ function entry(r) {
   const codes = [r.code, ...(Array.isArray(r.bc) ? r.bc : [])].map(x => String(x || '').trim().toLowerCase()).filter(Boolean);
   return { nameF, words: words.concat(awords), aliasF, codes, raw: String(r.name || '').toLowerCase() };
 }
-function scoreItem(e, toks, qF) {
-  let score = 0;
+function scoreItem(e, toks, qF) {   // v2.18: ab { sc, fz } — fz = sirf andaze (ghalti wali) match
+  let score = 0, fuzzy = false;
   for (const t of toks) {
-    let best = 0;
+    let best = 0, bf = false;
     if (isCodeTok(t)) { for (const c of e.codes) { if (c === t) { best = 6; break; } if (c.endsWith(t) || c.includes(t)) best = Math.max(best, 3); } }
     if (!best) {
       for (const w of e.words) {
-        if (w === t) { best = 5; break; }
-        if (w.startsWith(t)) { best = Math.max(best, 4); continue; }
-        if (w.includes(t)) { best = Math.max(best, 2); continue; }
-        if (t.length >= 4 && Math.abs(w.length - t.length) <= 1 && ed1(w, t)) best = Math.max(best, 1.5);
-        else if (t.length >= 5 && w.length >= t.length && ed1(w.slice(0, t.length), t)) best = Math.max(best, 1.2);
+        if (w === t) { best = 5; bf = false; break; }
+        if (w.startsWith(t)) { if (4 > best) { best = 4; bf = false; } continue; }
+        if (w.includes(t)) { if (2 > best) { best = 2; bf = false; } continue; }
+        if (t.length >= 4 && Math.abs(w.length - t.length) <= 1 && ed1(w, t)) { if (1.5 > best) { best = 1.5; bf = true; } }
+        else if (t.length >= 5 && w.length >= t.length && ed1(w.slice(0, t.length), t)) { if (1.2 > best) { best = 1.2; bf = true; } }
       }
       if (!best && e.codes.some(c => c.includes(t))) best = 2;
     }
-    if (!best) return 0;
+    if (!best) return { sc: 0, fz: false };
+    if (bf) fuzzy = true;
     score += best;
   }
   if (e.nameF.startsWith(qF)) score += 10; else if (e.nameF.includes(qF)) score += 3; else if (e.aliasF && e.aliasF.startsWith(qF)) score += 8;
-  return score;
+  return { sc: score, fz: fuzzy };
 }
-export function smartSearch(items, q, limit = 25) {
+export function smartSearch(items, q, limit = 25, opts = null) {
+  // v2.18: opts.keep(r) -> false to woh item bilkul nahi aayega | opts.bonus(r) -> extra number (upar lane ke liye)
+  //        aur: agar 3 ya zyada "pakke" match mil jayein to andaze (ghalti wale) match BILKUL nahi dikhte
+  //        (isi wajah se "mayo" par "mop" jaisi cheez ab nahi aati)
   const qF = fold(q); if (!qF) return [];
   const toks = qF.split(' ').filter(Boolean);
   const h = loadHits();
-  const out = [];
+  const keep = opts && typeof opts.keep === 'function' ? opts.keep : null;
+  const bonus = opts && typeof opts.bonus === 'function' ? opts.bonus : null;
+  const pakka = [], andaza = [];
   for (const r of items) {
+    if (keep && !keep(r)) continue;
     let e = idx.get(r); if (!e) { e = entry(r); idx.set(r, e); }
-    const sc = scoreItem(e, toks, qF);
-    if (sc > 0) out.push({ r, sc, hit: h[String(r.id)]?.n || 0 });
+    const { sc, fz } = scoreItem(e, toks, qF);
+    if (!(sc > 0)) continue;
+    const row = { r, sc: sc + (bonus ? (Number(bonus(r)) || 0) : 0), hit: h[String(r.id)]?.n || 0 };
+    (fz ? andaza : pakka).push(row);
   }
-  out.sort((a, b) => (b.sc - a.sc) || (b.hit - a.hit) || a.r.name.localeCompare(b.r.name));
+  const cmp = (a, b) => (b.sc - a.sc) || (b.hit - a.hit) || String(a.r.name || '').localeCompare(String(b.r.name || ''));
+  pakka.sort(cmp); andaza.sort(cmp);
+  const out = pakka.length >= 3 ? pakka : pakka.concat(andaza);
   return out.slice(0, limit).map(x => x.r);
+}
+// v2.18: jo harf match hue unhein <mark> mein — naam khud escape ho kar aata hai (HTML mehfooz)
+const SH_ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+const shEsc = s => String(s ?? '').replace(/[&<>"']/g, c => SH_ESC[c]);
+export function hlName(text, q) {
+  const raw = String(text ?? '');
+  const toks = [...new Set(String(q || '').toLowerCase().split(/[^a-z0-9\u0600-\u06ff]+/).filter(t => t.length >= 2))];
+  if (!raw) return '';
+  if (!toks.length) return shEsc(raw);
+  const low = raw.toLowerCase(), mark = new Array(raw.length).fill(false);
+  for (const t of toks) { let from = 0, i; while ((i = low.indexOf(t, from)) !== -1) { for (let k = i; k < i + t.length; k++) mark[k] = true; from = i + t.length; } }
+  let out = '', on = false;
+  for (let i = 0; i < raw.length; i++) {
+    if (mark[i] && !on) { out += '<mark>'; on = true; }
+    else if (!mark[i] && on) { out += '</mark>'; on = false; }
+    out += shEsc(raw[i]);
+  }
+  return out + (on ? '</mark>' : '');
 }
 // 🎤 awaz se (Android Chrome) — mile to cb(text)
 export function voiceSearch(cb, lang = 'ur-PK') {
@@ -110,5 +139,5 @@ function pentry(p) {
 export function partyScore(p, q) {
   const qF = fold(q); if (!qF || !p) return 0;
   let e = pidx.get(p); if (!e) { e = pentry(p); pidx.set(p, e); }
-  return scoreItem(e, qF.split(' ').filter(Boolean), qF);
+  return scoreItem(e, qF.split(' ').filter(Boolean), qF).sc;   // v2.18: scoreItem ab object deta hai
 }

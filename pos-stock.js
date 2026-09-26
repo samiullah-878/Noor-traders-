@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch } from './smart-search.js?v=2.17.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.19.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -734,7 +734,7 @@ function openLabels(id) {
       ${x.subId ? `<button type="button" data-sub-edit="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Badlein">✏️</button><button type="button" class="danger" data-sub-del="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Hatao">🗑️</button>` : ''}
     </div>`).join('') || '<p>Is item ka koi barcode nahi.</p>'}</div>
     <div class="account-tools" style="margin-top:8px"><button type="button" data-sub-new="${esc(r.id)}">➕ Naya barcode</button></div>
-    ${isOwner() ? `<label style="display:block;margin-top:10px">Doosre naam (search ke liye, comma se alag)<input type="text" data-alias-item="${esc(r.id)}" value="${esc(aliasOf(r.id))}" placeholder="misal: surkh mirch, lal mirch, chilli" maxlength="120"></label>` : (aliasOf(r.id) ? `<p class="muted" style="font-size:.85em">Doosre naam: ${esc(aliasOf(r.id))}</p>` : '')}
+    ${isOwner() ? `<label style="display:block;margin-top:10px">Doosre naam (search ke liye, comma se alag)<input type="text" data-alias-item="${esc(r.id)}" value="${esc(aliasOf(r.id))}" placeholder="misal: surkh mirch, lal mirch, chilli" maxlength="250"></label>` : (aliasOf(r.id) ? `<p class="muted" style="font-size:.85em">Doosre naam: ${esc(aliasOf(r.id))}</p>` : '')}
     <p class="muted" style="font-size:.85em;margin-top:8px">Label PC ke TSC printer par chhapta hai (PC par label-print chalna chahiye).</p>`;
   if (!d.open) d.showModal();
 }
@@ -763,6 +763,52 @@ async function printLabel(btn) {
 let trLines = [], trFrom = null, trTo = null, trStop = null, trList = [];
 function trBranches() { const { branches, names } = collect(); return branches.map(b => ({ id: b, name: branchName(b, names) })); }
 function trStockOf(b, id) { return Number(saleStockItem(b, id)?.stock || 0); }
+// ---------- v2.18: Transfer note ki SMART search ----------
+// - jis godam se maal nikalna hai wahan STOCK 0 / minus wale items DIKHTE HI NAHI (chahein to ek tap se dikha lein)
+// - bade chips: godam · stock (green/amber/red) · 1 Ctn = ? · code | match hue harf highlight
+// - poora barcode likhte hi item khud lag jata hai aur cursor seedha tadad par
+// - khali khana: "aksar bheje jane wale" (isi phone ki yaad-dasht se)
+const TR_REC_KEY = 'sam-tr-recent-v1';
+let trRecent = null, trFocus = null, trZeroShow = false, trFindTimer = null;
+function trRecLoad() { if (trRecent) return trRecent; try { trRecent = JSON.parse(localStorage.getItem(TR_REC_KEY) || '[]'); } catch { trRecent = []; } if (!Array.isArray(trRecent)) trRecent = []; return trRecent; }
+function trRecNote(id) { const a = trRecLoad().filter(x => String(x) !== String(id)); a.unshift(String(id)); trRecent = a.slice(0, 15); try { localStorage.setItem(TR_REC_KEY, JSON.stringify(trRecent)); } catch {} }
+function trRecRank(id) { const i = trRecLoad().indexOf(String(id)); return i < 0 ? 0 : (15 - i) / 6; }   // halka sa upar, match ki jagah nahi leta
+function trRecItems(items, n = 6) { const out = [];
+  for (const id of trRecLoad()) { const r = items.find(x => String(x.id) === String(id)); if (r && trHas(r)) out.push(r); if (out.length >= n) break; }
+  return out; }
+const trHas = r => trStockOf(trFrom, r.id) > 0.0005;
+function trStockChip(r) {
+  const s = trStockOf(trFrom, r.id), pk = Number(r.pack) || 0;
+  const cls = s <= 0.0005 ? 'red' : (pk > 1 ? (s < pk ? 'amber' : 'green') : (s < 5 ? 'amber' : 'green'));
+  const ctn = pk > 1 && s >= pk ? ` · ${num(Math.floor(s / pk))} ${esc(r.cName || 'Ctn')}` : '';
+  return `<span class="sh-chip ${cls}">📦 ${num(s)} ${esc(r.uName || 'Pcs')}${ctn}</span>`;
+}
+function trRowHTML(r, i, q, gname) {
+  const pk = Number(r.pack) || 0;
+  return `<button type="button" class="sh-row" data-tr-pick="${i}"><b class="sh-name">${hlName(r.name, q)}</b><span class="sh-chips"><span class="sh-chip godam">${gname}</span>${trStockChip(r)}${pk > 1 ? `<span class="sh-chip pack">1 ${esc(r.cName || 'Ctn')} = ${num(pk)}</span>` : ''}${r.code ? `<span class="sh-chip code">#${esc(r.code)}</span>` : ''}</span></button>`;
+}
+function trMark(hits, n) {
+  const rows = [...hits.querySelectorAll('[data-tr-pick]')];
+  rows.forEach((b, i) => b.classList.toggle('on', i === n));
+  if (n >= 0 && rows[n]) try { rows[n].scrollIntoView({ block: 'nearest' }); } catch {}
+}
+function trPaint(hits, list, q, zeroN, gname) {
+  hits._src = list;
+  hits.innerHTML = (list.length ? list.map((r, i) => trRowHTML(r, i, q, gname)).join('') : `<p class="sh-empty">Kuch nahi mila${zeroN ? '' : ' — naam ya code dobara dekh lein'}</p>`)
+    + (zeroN ? `<button type="button" class="sh-more" data-tr-zero="1">🚫 ${num(zeroN)} item mile magar ${gname} mein stock 0 — phir bhi dikhayein</button>` : '');
+  trMark(hits, list.length ? 0 : -1);
+  hits.hidden = false;
+}
+function trShowRecent(hits) {
+  const { items, names } = collect(), list = trRecItems(items, 6);
+  if (!list.length) { hits.hidden = true; return; }
+  const gname = esc(branchName(trFrom, names));
+  hits._src = list;
+  hits.innerHTML = `<p class="sh-head">⏱ Aksar bheje jane wale</p>` + list.map((r, i) => trRowHTML(r, i, '', gname)).join('');
+  trMark(hits, -1);
+  hits.hidden = false;
+}
+function trPick(r, qtyFocus) { if (!r) return; trRecNote(r.id); trFocus = { id: r.id, qty: !!qtyFocus }; trAdd(r); }
 function saleStockItem(b, id) { const chunks = rows.filter(r => !r.meta && Array.isArray(r.items) && r.branch === Number(b)); for (const c of chunks) { const it = c.items.find(x => String(x.id) === String(id)); if (it) return it; } return null; }
 // ---------- v2.6: 📥 AAYA HUA MAAL — transfer + purchase bill se aaye items, dono taraf ka stock ----------
 let inDays = 1, inKind = 'all', inRows = null, inFilter = false, inPick = null, inHere = false;
@@ -895,6 +941,7 @@ export function inReport() {
 }
 function openTransfer() {
   const d = $('dialog'); if (!d) return;
+  trZeroShow = false;   // v2.18
   const bs = trBranches();
   if (trFrom == null) trFrom = bs.find(b => b.id !== 1)?.id ?? bs[0]?.id;
   if (trTo == null) trTo = 1;
@@ -917,11 +964,49 @@ function openTransfer() {
   if (!d.open) d.showModal();
   if (!trStop && cloud?.listenTransfers) trStop = cloud.listenTransfers(list => { trList = list; const h = document.querySelector('[data-tr-hist]'); if (h) h.innerHTML = trHistHTML(); });
   const q = $('dialogBody').querySelector('[data-tr-q]'), hits = $('dialogBody').querySelector('[data-tr-hits]');
-  q.oninput = () => { const t = norm(q.value); if (t.length < 2) { hits.hidden = true; return; } const { items } = collect();
-    const found = smartSearch(items, q.value, 8);   // v1.75
-    hits._src = found; hits.innerHTML = found.map((r, i) => `<button type="button" data-tr-pick="${i}"><b>${esc(r.name)}</b><small>${esc(r.code || '')} · ${esc(branchName(trFrom, collect().names))} ${num(trStockOf(trFrom, r.id))}</small></button>`).join('') || '<p>Nahi mila</p>'; hits.hidden = false; };
-  hits.onclick = e => { const b = e.target.closest('[data-tr-pick]'); if (!b) return; trAdd(hits._src[Number(b.dataset.trPick)]); };
-  q.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const r = (hits._src || [])[0]; if (r) trAdd(r); } };
+  hits.classList.add('sh-hits');   // v2.18: premium rows + chips
+  const trFind = () => {
+    const raw = q.value, t = norm(raw);
+    if (!t) { trShowRecent(hits); return; }
+    if (t.length < 2) { hits.hidden = true; return; }
+    const { items, names } = collect(), gname = esc(branchName(trFrom, names));
+    if (/^[0-9]{8,}$/.test(t)) {   // poora barcode — seedha lag jaye, cursor tadad par
+      const exact = items.find(x => String(x.code || '').trim() === t || (Array.isArray(x.bc) && x.bc.some(b => String(b).trim() === t)));
+      if (exact) { hits.hidden = true; q.value = ''; trPick(exact, true); return; }
+    }
+    const all = smartSearch(items, raw, 30, { bonus: r => trRecRank(r.id) });
+    const ok = [], zero = [];
+    for (const r of all) (trHas(r) ? ok : zero).push(r);
+    const list = (trZeroShow ? ok.concat(zero) : ok).slice(0, 8);
+    trPaint(hits, list, raw, trZeroShow ? 0 : zero.length, gname);
+  };
+  q.oninput = () => { trZeroShow = false; clearTimeout(trFindTimer); trFindTimer = setTimeout(trFind, 70); };
+  q.onfocus = () => { if (!norm(q.value)) trShowRecent(hits); };
+  hits.onclick = e => {
+    if (e.target.closest('[data-tr-zero]')) { trZeroShow = true; trFind(); return; }
+    const b = e.target.closest('[data-tr-pick]'); if (!b) return;
+    trPick((hits._src || [])[Number(b.dataset.trPick)]);
+  };
+  q.onkeydown = e => {
+    const rows = [...hits.querySelectorAll('[data-tr-pick]')];
+    if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !hits.hidden && rows.length) {
+      e.preventDefault();
+      const cur = rows.findIndex(b => b.classList.contains('on'));
+      trMark(hits, Math.max(0, Math.min(rows.length - 1, (cur < 0 ? -1 : cur) + (e.key === 'ArrowDown' ? 1 : -1))));
+      return;
+    }
+    if (e.key === 'Escape') { hits.hidden = true; return; }
+    if (e.key === 'Enter') { e.preventDefault(); clearTimeout(trFindTimer);
+      const cur = rows.findIndex(b => b.classList.contains('on'));
+      const r = (hits._src || [])[cur < 0 ? 0 : cur]; if (r && !hits.hidden) trPick(r); }
+  };
+  if (trFocus) {   // item lagne ke baad: barcode wala -> tadad par, warna wapas search par (agla item foran likh sakein)
+    const f = trFocus; trFocus = null;
+    const i = trLines.findIndex(l => String(l.id) === String(f.id));
+    const cell = f.qty && i >= 0 ? ($('dialogBody').querySelector(`[data-tr-ctn="${i}"]`) || $('dialogBody').querySelector(`[data-tr-pcs="${i}"]`)) : null;
+    if (cell) { try { cell.focus(); cell.select(); } catch {} }
+    else { try { q.focus(); } catch {} }
+  }
 }
 function trCalc(l) { const pk = Number(l.pack) || 0; l.qty = Math.round(((pk > 1 ? (Number(l.ctn) || 0) * pk : 0) + (Number(l.pcs) || 0)) * 1000) / 1000; return l; }
 // v2.17: naya item = 1 CTN (carton ho to), warna 1 PCS; wahi dobara aaye to +1 CTN. Naya neeche jurta hai.
@@ -963,6 +1048,7 @@ document.addEventListener('click', e => {
   else if (t.dataset.trScan) { try { $('dialog').close(); } catch {}      // v2.17: camera khula rahe — ek ke baad ek
     scanPickMany(c => { const { items } = collect(); c = String(c).trim(); const r = items.find(x => String(x.code).trim() === c || (Array.isArray(x.bc) && x.bc.some(b => String(b).trim() === c)));
       if (!r) return { ok: false, text: '⚠️ "' + esc(c) + '" stock mein nahi mila', count: trLines.length };
+      trRecNote(r.id);   // v2.18
       const l = trAddLine(r); return { ok: true, text: `✓ <b>${esc(r.name)}</b> — ${esc(trQtyText(l))} · kul ${trLines.length} items`, count: trLines.length }; },
       () => openTransfer()); }
   else if (t.dataset.trPrint) {   // v1.75: dobara print — wajah zaroori, note par bara "DOBARA PRINT" chhapta hai

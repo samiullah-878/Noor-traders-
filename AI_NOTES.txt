@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (v1.79.2, 2026-09-20)
+BLUE KHATA — AI_NOTES  (aakhri: v2.19.0, 2026-09-26 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1474,3 +1474,114 @@ Masla: 📷 Scan ek code parh kar camera band (scanPick one-shot) -> har dafa ek
 - trAddLine(r): naya = 1 CTN (pack > 1) warna 1 PCS; wahi dobara = +1 CTN / +1 PCS; naya NEECHE (push). trAdd = trAddLine + openTransfer.
 - Line: upar chip "1 Ctn = 24 Pcs" (.tr-pack), "1." number (.tr-no), CTN khana pehle aur bara. Jama: "3 items · 5 CTN + 6 PCS · kul N pcs".
 Tests: stock t/t2/t3 paas; trAddLine alag jaanch (1 CTN, dobara 2 CTN, 3 items tarteeb se, 2 CTN + 6 PCS = 54).
+
+==================== v2.18.0 (2026-09-26) — TRANSFER NOTE KI SMART SEARCH ====================
+Rules NAHI badlin (2.10). Files: smart-search.js, pos-stock.js, style.css + version files.
+
+=== MASLA (malik ne screenshot bheja) ===
+Transfer note (godam se godam) ki search mein "Mayo" likhne par "mop 500" bhi aa raha tha,
+aur 0 stock wale item (Youngs mayo 200ml — Godam 1 mein 0) upar list mein jagah gher rahe the.
+MALIK KA FAISLA: jis godam SE maal nikal raha hai, wahan 0 stock wale item BILKUL CHUPA DO.
+
+=== smart-search.js ===
+* scoreItem() ab { sc, fz } deta hai. fz = true jab match SIRF ed1 (1 harf ki ghalti) se bana ho.
+  partyScore() ko .sc lagana para — agli AI dhyan rakhe, ye function ab object deta hai.
+* smartSearch(items, q, limit, opts) — naya chautha parameter (purani sab callein waise hi chalti hain):
+    opts.keep(r)  -> false to item scan hi nahi hota
+    opts.bonus(r) -> extra score (transfer mein "aksar bheje jane wale" ko halka upar lane ke liye)
+* NAYA USOOL: pakke match >= 3 hon to andaza (fz) wale match BILKUL nahi lautte.
+  Isi se "mayo" par "mop" khatam. Pakka match na ho to fuzzy pehle jaisa chalta hai (mayonaise -> Mayonise).
+  YE USOOL SARI APP PAR HAI (sale + purchase + transfer) — jaan bujh kar, kyunki faalto result har jagah masla the.
+* hlName(text, q) — match hue harf <mark> mein, andar se khud escape karta hai (esc() dobara na lagayein).
+
+=== pos-stock.js (sirf openTransfer wala hissa) ===
+* trHas(r) = trStockOf(trFrom, r.id) > 0.0005. Search ka natija do hisson mein: ok / zero.
+  Default sirf ok dikhte hain; zero ki ginti neeche patti par "phir bhi dikhayein" (trZeroShow = true).
+  trZeroShow har naye harf par aur openTransfer() par false ho jata hai.
+* NOTE: 0-stock chhupana SIRF transfer ki search mein hai. Stock screen / sale / purchase ka
+  purana usool (stock ka tarteeb par asar nahi) waise hi hai — usay mat badlein.
+* Barcode: /^[0-9]{8,}$/ aur code ya bc[] se BILKUL barabar mile -> trPick(item, true):
+  item lag gaya, search khana khali, cursor us line ke Ctn (ya Pcs) khane par, value select.
+  8 se kam hindse = normal search (chhote codes jaise 165465 galti se auto na lag jayein).
+* trFocus = {id, qty} module var. openTransfer() ke aakhir mein: qty true ho to us line ka khana,
+  warna wapas search input — isi liye ek ke baad ek item likhna tez ho gaya.
+* Recent: localStorage 'sam-tr-recent-v1' (aakhri 15 id). trRecNote() search-pick, click aur
+  camera scan teenon par. Khali khane par upar 6 dikhte hain (sirf jin ka us godam mein stock hai).
+  trRecRank() sirf (15-i)/6 ka halka bonus deta hai — match ki jagah nahi leta.
+* Rows ki HTML: trRowHTML() -> .sh-row > .sh-name (hlName) + .sh-chips (godam / stock / pack / code).
+  Stock chip: laal 0, peela (carton wale par 1 carton se kam), warna hara.
+* Keyboard: ⬆⬇ trMark() se .on class, Enter = .on wala (ya pehla), Esc = band. Search 70ms debounce.
+
+=== style.css (file ke aakhir mein) ===
+.scan-hits.sh-hits ... .sh-row / .sh-name mark / .sh-chip (godam, green, amber, red, pack, code) / .sh-more.
+Class SIRF transfer ke hits par lagti hai (hits.classList.add('sh-hits')), is liye sale/purchase ki
+purani dropdown bilkul nahi badli.
+
+=== JAANCH ===
+Node par smartSearch ka alag test: "Mayo" -> 3 mayo items (mop gaya), "mayonaise" -> Mayonise,
+"1kg mayo" -> Mayo national 1kg, "13213" -> 500gm, 0-stock chhupne par hidden=1, barcode 8964000061107 -> Youngs.
+repo ke app.dom.test.mjs / model.test.mjs is ZIP se nahi chalte (test-fake-sdk.mjs aur ../model.js
+ZIP mein hain hi nahi) — ye pehle se aisa hai, is update se nahi toota.
+
+==================== v2.19.0 (2026-09-26) — PURCHASE: NAFA CHIPS · NAAM YAAD · TASVEER · JAANCH ====================
+Rules NAHI badlin (2.10). Malik ne har hissa pehle plan dekh kar "OK" kiya.
+
+!!! AGLI AI KE LIYE ZAROORI: version badalte waqt "2.18.0" ka andha sed "firebasejs/12.18.0" ko bhi 12.19.0
+    bana deta hai (cloud.js + sw.js) — wo version maujood nahi, app band. Is dafa pakra aur wapas 12.18.0 kiya.
+    Aainda version sirf is regex se badlein: (?<![\d.])2\.19\.0  — aur baad mein "firebasejs/" check karein.
+
+=== A) NAFA CHIPS (purchase.js) ===
+* Line par ab char mode: wMode (W/PCS) · wcMode (W/CTN) · rMode (R/PCS) · rcMode (R/CTN).
+  Har mode: 'old' | number (%) | 'manual'. wcMode/rcMode KHALI (purane draft) = PCS wale ke peeche (?? se).
+* recalc() dobara likha — char alag hisse, purana "same" (khareed kam/mamooli badle = purane rate) usool wahi.
+* setMode(l, side, v): pehle wcMode/rcMode ko maujooda halat par pakka karta hai, phir sirf ek taraf. side: wp wc rp rc.
+  allModes(l,'old') = ↺. Global "SAB items par" (data-pp-wall) ab wMode + wcMode dono.
+* W_PCT [1,1.25,1.5,2] · R_PCT [5,10,15,20] (malik ne chune) · PCT_CHIPS [0.5,1,1.5,2,3] (+% har item par).
+* rateChipsHTML(l, ix, idp) — idp 'ppRc' (purchase card) / 'jcRc' (jaanch card) taake do jagah ek id na ho.
+  paintChips(ix) dono ko taza karta hai; paintRates() aur jRepaint() ke aakhir mein chalta hai.
+* Chip: data-pp-rch="ix|side|p" · ↺: data-pp-rold="ix" · +%: data-pp-pctc="p" — naya alag click listener
+  (swipe wale code se theek pehle). Purana data-pp-w / data-pp-old handler abhi bhi hai (kahin istemal nahi).
+* Haath se likhna (ppWctn/ppWpcs/ppRctn/ppRpcs aur jaanch ppJwc/ppJw/ppJrc/ppJr) ab SIRF wohi taraf 'manual'.
+
+=== B) NAAM YAAD ===
+* app.js learnAlias(itemId, name, name2): roman + bill ka asal naam EK write mein; hadd 250 (pehle 120).
+  aliasRecent[itemId] (2 minute) — listener aane se pehle doosri call pehla naam na mitaye.
+  unlearnAlias(itemId, name, name2) dono hatata hai.
+* cloud.js setAlias slice 120 -> 250. pos-stock.js Stock screen ka "Doosre naam" maxlength 120 -> 250.
+  Rules mein alias ki lambai ki koi shart nahi (sirf map.size <= 5000 aur kam na ho).
+  Dhyan: itemAliases EK doc hai (1MB hadd) — bohat zyada lambe naam hazaron items par hon to masla ho sakta hai.
+* purchase.js: nameKey() (NFKC, aerab hatao, ي->ی ك->ک ه->ہ, Urdu/Arabic hindse -> 0-9), memIndex(items),
+  memFind(m, aiLine). AI bill ki lines match karte waqt: mem (yaad) > AI ka itemId > smartSearch.
+  Ek naam do items par = null (shak, istemal nahi). Row par r.mem = true -> card "jc-memo", list "jz-mem".
+  learnOf/unlearnOf ab (id, roman||name, name) — teesra parameter bill ka asal naam.
+
+=== C) BILL KI TASVEER ===
+* billPics ab data-URL (pehle blob). setBillPics(files): foran blob, phir shrinkPic() (1600px, JPEG, <=260KB)
+  -> billPics + IndexedDB 'sam-pp-bills-v1' store 'b' key 'draft'. Khali = draft delete.
+* save(): cloud.putBillPhotos(id, pics.slice(0,3)) -> entryPhotos/<appPurchase id> {billPhotos, by, at}
+  (rules v2.9 pehle se ijazat deti hain: 3 tak, by == uid). Phone: picKeepBill(id, {pics, jd, partyId, total})
+  key 'bill:<id>', 'idx' mein aakhri 60. Bhejne ke baad screen ki tasveer saaf; bhejna fail ho to wapas.
+* ppLoadBill() (EDIT — purchase screen + Khata dono raste): purani jaanch/tasveer saaf, phir restoreExtras(edit):
+  cloud.appPurchasesOf(partyId) -> purchaseId / editOf.purchaseId / purchaseNo / editOf.billNo se milte docs ->
+  phone ka 'bill:<id>' ya cloud getPhotos(id).billPhotos. Jaanch (jd) sirf isi phone par — rows ki key
+  itemId se naye cart ki lines par dobara jori jati hai, phir jJudgeAll().
+  Jaanch cloud par NAHI (appPurchases rules hasOnly — naya khana = rules badalna parta).
+* "Aaj ke app purchase": data-pp-tpic -> viewSavedPics(pics) (vTmp: purani billPics bacha kar), band hote hi vTmpEnd().
+
+=== D) NAVIGATION ===
+* app.js popstate: dialog khula ho to pehle window.ppBack() — true = sambhal liya. purchase.js ppBack():
+  zoom (vTmp) -> Aaj ke purchase · zoom -> card/list · "✏️ Item chunein" -> card · card -> list · khulasa -> list.
+* jNext(reopened): ✓ ho chuki line dobara khuli ho (ppJok se pehle r.done dekha) to bill ki agli line (✓ bhi).
+
+=== E) JAANCH NAYE ===
+* jTabsHTML(active) — list/card/khulasa ke upar; data-pp-jtabcard naya (jLastIx yaad), jlist/jsum purane handler.
+* jFilter + jfPass + jFilterHTML (4 se kam lines par nahi dikhta). data-pp-jf.
+* jQtySuspects(field, D): ek line ya do lines ka jor = farq; CTN mein na mile to jin lines mein ctn == pcs.
+  jColTotals() ke neeche susHTML; Rs ke liye jRsSuspects(bill, mine). Chips = data-pp-jcard (purana handler).
+* farqHTML(): |farq| < 1 = hara "✓ barabar". Khulasa mein bhi.
+
+=== JAANCH (is chat mein) ===
+Node par recalc ka alag test: brush W+1.5% = 305, R+15% = 345; ghee (16) W/CTN +1% = 6978 aur W/PCS wahi,
+W/PCS +2% = 441 aur W/CTN wahi, ↺ = sab purane; purana draft (wcMode khali) PCS ke peeche. nameKey: Arabic ي/ك
++ ۹۰۰ wala naam Urdu alias se mila. Farq 357 CTN -> "sufi soap" (ctn=pcs=357). Sab files node --check se paas.
+Browser/phone par khud nahi chala saka — malik se screenshot mangwa kar dekhein.

@@ -1002,3 +1002,55 @@ footer button:not(.give):not(.got){background:linear-gradient(180deg,#27437c,#17
 .tr-pack{display:inline-block;font-size:11.5px;font-weight:700;color:#0f766e;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:999px;padding:1px 9px;margin:0 0 3px}
 .tr-no{color:#94a3b8;font-weight:700;margin-right:2px}
 .tr-line .tr-q:first-of-type input{font-weight:800;font-size:17px}
+
+/* ===== v2.18: Transfer note ki smart search — premium rows + chips ===== */
+.scan-hits.sh-hits{padding:6px;border-radius:14px;border:1px solid #e6ebf4;box-shadow:0 14px 34px rgba(16,25,43,.26);max-height:46vh}
+.sh-hits .sh-head{margin:2px 6px 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#8494ab;font-weight:800}
+.sh-hits .sh-row{display:block;width:100%;text-align:left;border:0;border-bottom:0;border-radius:11px;padding:9px 10px;margin:0 0 4px;background:#f6f8fc;min-height:0}
+.sh-hits .sh-row:last-child{margin-bottom:0}
+.sh-hits .sh-row.on{background:linear-gradient(180deg,#eef3ff,#e2ebff);box-shadow:inset 0 0 0 1.5px #2f4f9e}
+.sh-hits .sh-name{display:block;font-size:14.5px;font-weight:700;color:#10192b;line-height:1.3}
+.sh-hits .sh-name mark{background:#ffe6a1;color:#10192b;border-radius:3px;padding:0 1px}
+.sh-hits .sh-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.sh-hits .sh-chip{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#e9eef7;color:#41536f;white-space:nowrap;line-height:1.55}
+.sh-hits .sh-chip.godam{background:#1a2d53;color:#fff}
+.sh-hits .sh-chip.green{background:#e3f6ea;color:#17703c}
+.sh-hits .sh-chip.amber{background:#fdf0d8;color:#8a5a06}
+.sh-hits .sh-chip.red{background:#fde8e8;color:#a32020}
+.sh-hits .sh-chip.pack{background:#ece8fb;color:#4b3c93}
+.sh-hits .sh-chip.code{background:#eef1f5;color:#6b7c93;font-weight:600}
+.sh-hits .sh-empty{margin:10px;color:#6b7c93;font-size:13px}
+.sh-hits .sh-more{display:block;width:100%;text-align:center;border:0;border-radius:10px;margin:4px 0 0;padding:9px;background:#eef1f7;color:#41536f;font-size:12.5px;font-weight:700;min-height:0}
+
+/* ===== v2.19: NAFA CHIPS (W/CTN · W/PCS · R/CTN · R/PCS) — purchase card + jaanch card ===== */
+.rate-chips{margin-top:8px;padding:8px 8px 6px;background:linear-gradient(180deg,#ffffff,#f4f7fc);border:1px solid #e3e9f3;border-radius:14px;display:grid;gap:6px}
+.rate-chips .rc-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.rate-chips .rc-head small{color:#6b7c93;font-size:11.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase}
+.rate-chips .rc-old{min-height:32px;width:34px;padding:0;border-radius:999px;font-size:17px;line-height:1;background:#fff;border:1px solid #d5dce9;color:#223b6d}
+.rate-chips .rc-old.on{background:#223b6d;color:#fff;border-color:#223b6d}
+.rate-chips .rc-row{display:flex;align-items:center;gap:6px}
+.rate-chips .rc-lab{flex:none;width:74px;display:flex;flex-direction:column;line-height:1.15;font-size:12px;font-weight:800;color:#1a2d53}
+.rate-chips .rc-lab i{font-style:normal;font-weight:700;font-size:11px;color:#17703c}
+.rate-chips .rc-lab i.neg{color:#b3261e}
+.rate-chips .rc-set{display:flex;gap:5px;overflow-x:auto;flex:1;min-width:0;padding-bottom:1px}
+.rc{flex:none;min-height:32px;padding:4px 10px;border-radius:999px;font-size:12.5px;font-weight:700;background:#fff;border:1px solid #d5dce9;color:#1e3460;box-shadow:0 1px 0 #10192b0a}
+.rc.on{background:linear-gradient(180deg,#2b4a86,#1b3058);color:#fff;border-color:#1b3058;box-shadow:0 3px 8px #1b305840}
+.pct-chips{align-items:center;margin:6px 0 2px}
+.pct-chips small{flex:none;color:#6b7c93;font-weight:700;font-size:12px}
+.pct-chips .rc{min-height:34px}
+
+/* ===== v2.19: JAANCH — tab-patti · progress · filter · farq madadgar · yaad kiya hua ===== */
+.jz-tabs{display:flex;gap:6px;margin:0 0 6px;padding:4px;background:#eef2f8;border-radius:14px}
+.jz-tabs button{flex:1;min-height:36px;padding:6px 8px;border-radius:10px;font-size:13px;font-weight:800;background:transparent;color:#41536f;white-space:nowrap}
+.jz-tabs button.on{background:#fff;color:#1b3058;box-shadow:0 2px 8px #1b305826}
+.jz-prog{display:flex;align-items:center;gap:8px;margin:0 2px 10px}
+.jz-prog span{flex:1;height:7px;border-radius:999px;background:#e4e9f2;overflow:hidden}
+.jz-prog i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#1e9a5a,#17703c);transition:width .3s}
+.jz-prog small{flex:none;font-size:12px;font-weight:800;color:#17703c}
+.jz-filter{margin:4px 0 8px}
+.jz-filter button{min-height:34px;padding:5px 11px;border-radius:999px;font-size:12.5px}
+.jz-sus{margin:6px 0 8px;padding:8px 10px;border-radius:12px;background:#fff7e6;border:1px solid #f1d59a}
+.jz-sus small{display:block;color:#7a5306;font-weight:700;margin-bottom:6px;line-height:1.35}
+.jz-sus .mchips button{background:#fff;border-color:#e9c77e;color:#6b4705;min-height:34px;border-radius:999px}
+.jz-mem{font-style:normal;font-size:11px;font-weight:800;color:#4b3c93;background:#ece8fb;border-radius:999px;padding:1px 7px;margin-left:4px;white-space:nowrap}
+.jc-memo{margin:4px 0 6px;padding:6px 10px;border-radius:10px;background:#ece8fb;color:#4b3c93;font-size:12.5px;font-weight:700}
