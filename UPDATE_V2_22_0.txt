@@ -1,0 +1,36 @@
+Blue Khata v2.22.0 — 🕘 HISTORY: poori app ki har harkat ek jagah
+=================================================================
+INSTALL (3 qadam — RULES BHI):
+ 1) Is ZIP ki saari files GitHub repo "Noor-traders" par upload karein (audit.js NAYI file hai).
+ 2) FIREBASE RULES (2.12): Firebase console -> project **note-traders-khata-7ccc1** -> Firestore -> Rules ->
+    firestore.rules ki POORI file paste -> Publish. (nt-traders mein NAHI.)
+ 3) App mein "↻ Sync / Update" -> 2.22.0.
+
+KYA MILA:
+ - Upar naya tab "🕘 History" (malik aur Full App mulazim ko; Sirf Purchase/Stock/Sale/Galla login par nahi).
+ - Har line: waqt · kis ne · kya kiya (➕ nayi · ✏️ badli · 🗑 hatai · 📌 post · 💵 diye · 🔒 din band ...) ·
+   kis par (party / item / bill) · raqam · KYA BADLA (jaise "raqam Rs 25,200 → Rs 30,000", "party Amjad → Saim").
+ - Tap karein -> us ka khata / purchase screen khul jaye.
+ - Filter chips: Aaj · 7 din · 30 din | Sab · Khata · Purchase · Sale · Stock · Galla · Din · Mulazim |
+   Sab log · har banda alag (ginti ke sath) | 🔍 search (naam, raqam, note).
+ - Din ke hisaab se (Aaj / Kal / tareekh). Ek dafa mein 400 lines tak.
+
+KYA-KYA LOG HOTA HAI:
+ Khata: entry (sab qismein), party, closing cash, dasti/custody, reminder, akhrajat account, delete/wapas.
+ Purchase: POS bill bheja / update / cancel / dobara, photo purchase. Sale: bill, dobara print.
+ Stock: transfer note (banaya/hataya), ginti, farq post, item banaya/badla, sub-barcode, label print, rates lagaye,
+        doosre naam yaad, ginti band/chalu/round. Galla: awaaz bheji / paise de diye. Din band/khula.
+ Mulazim: screen badalna (login), password badalna.
+
+30 DIN: History 30 din rehti hai. Malik History kholta hai to 30 din se purani KHUD saaf ho jati hai;
+        neeche button "🗑 30 din se purani abhi saaf karein" bhi hai.
+
+SACH:
+ - Poori tafseel (kya se kya badla) sirf is update ke BAAD ki harkaton ki. Purani entries aur PC (POS sync) wali
+   entries par sirf "kab bani / kab badli / kis ne" — record ke apne stamp se (line par "record ka stamp" likha hoga).
+ - Mulazim ka naam har line par tab dikhega jab wo is update ke baad kuch likhe (naam sath save hota hai);
+   purane records par "Mulazim" ya "🖥 PC".
+ - History mein koi kuch badal ya mita nahi sakta (rules) — sirf malik purani saaf kar sakta hai.
+
+BADLI HUI FILES: audit.js (NAYI), app.js, cloud.js, firestore.rules (2.12), index.html, style.css, sw.js,
+                 version.json + version (purchase.js, sale.js, pos-stock.js, pos-ledger.js).

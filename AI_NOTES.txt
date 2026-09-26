@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.21.0, 2026-09-27 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.22.0, 2026-09-27 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1640,3 +1640,26 @@ awaaz mein sirf supplier + raqam; malik ki manzoori NAHI; ek hi galla phone; "de
 
 AGLI AI: v2.21 ka kaam pehle ek adhoori koshish mein (galla.js/app.js/cloud.js) ban gaya tha aur phir poora kiya gaya —
 dono ek hi design par hain. Owner ke liye galla view ka nav button NAHI (galla phone par Sirf Galla login se hi).
+
+==================== v2.22.0 (2026-09-27) — 🕘 HISTORY (RULES 2.12) ====================
+Malik: "poori app mein jahan bhi entry ho us ki history ka system, ek upar tab". Faisle: Full mulazim sab dekhe; 30 din.
+* audit.js (NAYI): auditSetup({cloud,notice,who,records,partyName,open}), auditAttach(cloudObj) — cloud.js ke methods
+  (MAP: saveAppPurchase, updateAppPurchase, saveAppSale, reprintAppSale, requestTransfer/FarqPost/Item/Subcode/Label/Print/
+  Rates/Post, saveStockCount, setStockLock/Round, setItemEdit, setAlias, setDayLock, setStaffPassword, addGallaCall,
+  payGallaCall) ko lapet kar (promise resolve ke baad) auditEvent(). Khata ke add/edit MAP mein NAHI — app.js save() se
+  auditKhata(payload, existing) diff ke sath (FIELDS per type; kuch na badla ho to log nahi). auditEvent doc:
+  {id, at, day, by, byName, role, scope, area, act, what, ref, refType, party, amount(Rs), diff[<=12], note} — rules ke hasOnly
+  ke bilkul mutabiq (test kiya). renderHistory(): cloud.listenAudit(from 30 din) + stampEvents() (records ke createdAt/
+  updatedAt jin ka audit nahi; by khali = "🖥 PC") ; filters fPeriod/fWho/fArea/fQ; tap -> open(refType, ref).
+  Malik par pehli dafa pruneAudit() khud. names Map (by -> byName) audit docs se.
+* cloud.js: addAudit, listenAudit(fromDay) (where day >= from; sort client par), pruneAudit(beforeDay) (300 x 20 batches).
+* app.js: import; BAR_VIEWS + 'history'; render -> renderHistory; title; report hidden; historyNav onclick; auditSetup +
+  auditAttach(connected) gallaSetup ke sath; save() mein auditKhata(payload,existing) `if(quiet)return` se pehle;
+  staff screen-switch login par auditEvent staff/login. open(): khata party/entry -> route('khata', partyId); purchase -> ppurchase.
+* firestore.rules 2.12: auditLog — validAudit() (keys hasOnly, sizes, by == uid, diff list <= 12, amount number optional);
+  read owner || blueStaff; create owner || (isStaff && exists(session)); delete owner. Emulator nahi (network), haath se parha.
+* index.html: <button id="historyNav">🕘 History</button> dasti ke baad. Nav chhupane ki logic purani (restricted scopes par
+  sab nav chhup jate hain) — history khud chhup jati hai. style.css .hs-*. sw.js audit.js dono shakal.
+* Test (happy-dom): 7 events (khata add/edit/del + purchase/din/galla/stock), diff "raqam Rs 25,200 -> Rs 30,000 | party
+  Amjad -> Saim", keys rules-compatible, screen 9 rows (2 stamp), galla filter 1, open -> purchase. Sab pass.
+* Version bump regex se; firebasejs 12.18.0 salamat. galla.js ka header comment wapas v2.21.0 (bump ne badla tha).
