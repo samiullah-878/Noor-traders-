@@ -1,0 +1,42 @@
+Blue Khata v2.21.0 — 💰 GALLA SCREEN: purchase daalte hi galla wale ke phone par ghanti + URDU AWAAZ
+=====================================================================================================
+INSTALL (3 qadam — is dafa RULES BHI):
+ 1) Is ZIP ki saari files GitHub repo "Noor-traders" par upload karein (galla.js NAYI file hai — zaroor upload ho).
+ 2) FIREBASE RULES (2.11) publish karein: Firebase console -> project **note-traders-khata-7ccc1** (Hisaab/Sale wala)
+    -> Firestore Database -> Rules -> firestore.rules ki POORI file paste -> Publish.
+    (nt-traders wale project mein NAHI.)
+ 3) App mein "↻ Sync / Update" -> 2.21.0.
+
+GALLA WALE KA PHONE (ek dafa ka setup):
+ a) Malik: Settings (⋮) -> "Mulazim password" -> Access "💰 Sirf Galla Mulazim" -> naya password.
+ b) Galla wale ke phone par Blue Khata kholein -> Mulazim login -> username admin + Galla wala password. Login raha rahega.
+ c) Phone Settings -> "Text-to-speech" / "Awaaz" -> Google ki URDU awaaz install (ek dafa). Na ho to Hindi awaaz bhi chal jati hai.
+ d) App khulne ke baad har dafa bara peela button "🔔 Awaaz chalu karein" EK dafa dabana hai — phone ki apni shart hai.
+
+KAAM KAISE CHALTA HAI:
+ - 🧾 POS Purchase: bill ke neeche "💵 Galla se abhi cash" — chips: Kuch nahi (udhaar) · Poora bill Rs ... · Apni raqam.
+   Shuru mein "Kuch nahi" laga hota hai. Sirf NAYE bill par (EDIT par nahi — dobara paise na niklen).
+   Neeche likha aata hai galla wala kya sunega. Bill cloud par pohanchte hi galla ko darkhwast jati hai.
+ - 📷 "Sirf photo + raqam" wali CASH purchase par bhi checkbox "💵 Galla wale ko awaaz bhejo".
+ - Galla wale ka phone: ghanti + vibrate + Urdu awaaz "Amjad Islam ko pachees hazaar do sau rupay dein" (2 dafa),
+   phir har 30 second baad dobara jab tak button na dabe. Screen par bare hindse, alfaaz, aur NOTON ki rangeen
+   tasveerein (5000 x 5, 100 x 2 ...). Button: 🔊 Dobara suno · ✅ Paise de diye -> "Pakka?" -> ✕ Nahi / ✅ Haan.
+ - "De diye" par: supplier ke khata mein "Party ko payment" khud lag jati hai (aaj ki tareekh, note "💵 Galla se"),
+   PC ki khata-sync isay POS mein CPV voucher bana kar bhejti hai — supplier ka POS hisaab bhi kam. Daily cash mein
+   cash-out ginti hoti hai. Photo wali cash purchase par entry pehle se hoti hai — sirf "de diye" ka nishan.
+ - Purchase wala / malik: "📋 Aaj ke app purchase" mein har bill par chip "💵 Rs ... · ⏳ galla ne abhi nahi diye"
+   ya "✓ galla ne de diye 3:42 · naam".
+ - Galla screen par neeche "Aaj diye (ginti) · kul" ki list.
+
+HIFAZAT:
+ - Galla wala raqam / supplier badal NAHI sakta — sirf "de diye". Rules is ko pakka karte hain: khata entry bilkul
+   utni hi raqam, wohi supplier, aaj ki, aur darkhwast ke sath EK hi batch mein. Galla login se koi aur entry nahi banti.
+ - Din band ho to galla ki payment nahi lagti (baqi mulazim entries jaisa) — screen par "ijazat nahi (din band?)".
+ - Darkhwast sirf malik / Full / Sirf Purchase login se ban sakti hai.
+
+HADD (sach):
+ - Awaaz sirf tab jab galla phone par Blue Khata KHULI ho. Phone band / doosri app -> wapas aate hi bolega.
+ - Screen jagti rakhi jati hai (wake lock); phir bhi phone charger par rakhein.
+
+BADLI HUI FILES: galla.js (NAYI), app.js, cloud.js, purchase.js, style.css, firestore.rules (2.11), sw.js, index.html,
+                 version.json, sale.js, pos-ledger.js, pos-stock.js (version).

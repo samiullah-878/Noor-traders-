@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.20.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold } from './smart-search.js?v=2.20.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.21.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold } from './smart-search.js?v=2.21.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -53,7 +53,7 @@ const BILL_BRANCH = 1;              // purchase bill hamesha NOOR TRADERS (branc
 const DRAFT_KEY = 'sam-pp-draft';
 const W_CHIPS = [1, 1.25, 1.5, 2];
 
-let cloud = null, rerender = () => {}, notice = () => {}, isOwner = () => false, uidOf = () => '';
+let cloud = null, rerender = () => {}, notice = () => {}, isOwner = () => false, uidOf = () => '', nameOf = () => '';   // v2.21: nameOf (galla ke liye)
 let partiesOf = () => [], partyOf = () => null, matchesOf = () => true, canUse = () => false, rankOf = null, billIdsOf = () => [], pcBillsOf = () => [];
 let photoFormOf = null, aiBillOf = null, cashDupesOf = () => [], learnOf = null, unlearnOf = null;
 let lastRatesOf = () => ({}), saveRatesOf = () => {};   // v2.1.0: har item ka pichhla khareed / nafa
@@ -68,7 +68,7 @@ let today = [], todayDay = '', stopToday = null, todayErr = '';
 
 export function ppSetup(o) {
   cloud = o.cloud; rerender = o.rerender || rerender; notice = o.notice || notice;
-  isOwner = o.owner || isOwner; uidOf = o.uid || uidOf;
+  isOwner = o.owner || isOwner; uidOf = o.uid || uidOf; nameOf = o.name || nameOf;
   partiesOf = o.parties || partiesOf; partyOf = o.party || partyOf; matchesOf = o.accountMatches || matchesOf; canUse = o.canUse || canUse;
   rankOf = o.rank || rankOf; billIdsOf = o.billIdsOf || billIdsOf; pcBillsOf = o.pcBills || pcBillsOf;
   photoFormOf = o.photoForm || photoFormOf; aiBillOf = o.aiBill || aiBillOf; cashDupesOf = o.cashDupes || cashDupesOf; learnOf = o.learn || learnOf;
@@ -390,11 +390,12 @@ async function openBillForEdit(id, partyId, minUpdated) {
   $('dialog')?.close(); rerender(); notice('✏️ Edit mode — party, godam, ginti, rates badal kar "💾 POS bill UPDATE" dabayein');
 }
 function openToday() {
+  gallaWatch();   // v2.21: har bill par galla ka haal
   dlg(`Aaj ke app purchase (${today.length})`, todayErr ? `<p>${esc(todayErr)}</p>` : !today.length ? '<p>Aaj app se koi purchase bill nahi bana.</p>' :
     today.map(p => `<details class="sale-hist"><summary><b>${p.editOf ? '✏️ ' + esc(p.editOf.billNo || '') + ' · ' : ''}${esc(p.partyName || '')} · Rs ${num(p.total)}</b><small>${esc(new Date(p.createdAt || 0).toLocaleTimeString('en-PK'))} · ${statusText(p)}</small></summary>
       <div style="overflow-x:auto"><table><thead><tr><th>Item</th><th>Qty</th><th>Khareed</th><th>Rs</th></tr></thead><tbody>
       ${(p.lines || []).map(l => `<tr><td>${esc(l.name)}</td><td>${qtyText(l)}</td><td>${num(l.costP)}/${esc(l.uName || 'Pcs')}</td><td>${num(r2(l.qty * l.costP))}</td></tr>`).join('')}
-      </tbody></table></div>${p.invoiceNo ? `<p>Supplier bill # ${esc(p.invoiceNo)}</p>` : ''}${p.note ? `<p>${esc(p.note)}</p>` : ''}<div class="pp-bill-acts"><button type="button" data-pp-tpic="${esc(p.id)}">📄 Bill ki tasveer</button></div>${billActs(p)}</details>`).join(''));
+      </tbody></table></div>${p.invoiceNo ? `<p>Supplier bill # ${esc(p.invoiceNo)}</p>` : ''}${p.note ? `<p>${esc(p.note)}</p>` : ''}<div class="pp-bill-acts"><button type="button" data-pp-tpic="${esc(p.id)}">📄 Bill ki tasveer</button><span data-pg-bill="${esc(p.id)}">${gallaChip(p.id)}</span></div>${billActs(p)}</details>`).join(''));
 }
 function qtyText(l) {
   const pk = Number(l.pack) || 0, q = Number(l.qty) || 0;
@@ -481,7 +482,8 @@ export function renderPP() {
     </div>`;
   }).join('');
   const foot = cart.length ? `<div class="sale-pay"><label>Note (ikhtiyari)<input maxlength="100" data-pp-note="1" value="${esc(note)}"></label>
-    <p class="stat-note">Bill POS mein baqi bills jaisa (credit, open) banega — post baad mein "📌 post" se. Payment ki entry pehle jaisi alag.</p></div>` : '';
+    ${gallaHTML()}
+    <p class="stat-note">Bill POS mein baqi bills jaisa (credit, open) banega — post baad mein "📌 post" se. ${edit ? 'Payment ki entry pehle jaisi alag.' : 'Galla se cash chuna to galla wala "de diye" dabate hi supplier ko payment khata mein khud lag jayegi.'}</p></div>` : '';
   const pinned = billPin && billPics.length ? `<div class="pp-billbar" data-zoom="${billZoom}"><div class="pp-billwrap"><img src="${billPics[Math.min(billIx, billPics.length - 1)]}" alt="bill"></div><div class="pp-billacts"><button type="button" data-pp-zoom="-1">−</button><button type="button" data-pp-zoom="1">+</button>${billPics.length > 1 ? `<button type="button" data-pp-nextpic="1">${billIx + 1}/${billPics.length} ›</button>` : ''}<button type="button" data-pp-pic="${billIx}">⤢ Poori screen</button><button type="button" data-pp-pin="1">✕</button></div></div>` : '';
   $('list').innerHTML = pinned + camRow + found + (cart.length ? bar + `<div class="sale-cart">${rows}</div>` + foot :
     (q ? '' : `<div class="empty"><strong>Naya purchase bill</strong><p>Upar supplier chunein, phir item ka naam likhein ya 📷 se scan karein.</p></div>`));
@@ -500,6 +502,7 @@ function refreshTotals() {
   const t = $('ppTotal'); if (t) t.textContent = 'Rs ' + num(cartTotal());
   cart.forEach((l, i) => { const a = $('ppAmt' + i); if (a && document.activeElement !== a) a.value = lineTotal(l) ? r2(lineTotal(l)) : ''; });
   const b = document.querySelector('[data-pp-save]'); if (b && !saving) b.textContent = saveLabel(cartTotal());
+  const g = $('ppGalla'); if (g && gallaMode !== 'own') g.outerHTML = gallaHTML();   // v2.21
 }
 // rates ke khane (focus kharab kiye baghair) taza karo
 function paintRates(i) {
@@ -613,6 +616,8 @@ document.addEventListener('click', async e => {
   }
   const ro = e.target.closest?.('[data-pp-rold]');
   if (ro) { const ix = Number(ro.dataset.ppRold), l = cart[ix]; if (!l) return; allModes(l, 'old'); recalc(l); keepDraft(); paintRates(ix); refreshTotals(); if ($('jcCard')) jRepaint(); else rerender(); notice('↺ Purana nafa'); return; }
+  const gl = e.target.closest?.('[data-pp-gl]');   // v2.21: galla se cash
+  if (gl) { gallaMode = gl.dataset.ppGl || 'none'; const g = $('ppGalla'); if (g) g.outerHTML = gallaHTML(); if (gallaMode === 'own') setTimeout(() => document.querySelector('[data-pp-glown]')?.focus(), 30); return; }
   const pc = e.target.closest?.('[data-pp-pctc]');
   if (pc) { const v = Number(pc.dataset.ppPctc); pct = Number(pct) === v ? 0 : v; xtraApply(); keepDraft(); rerender(); return; }
   if (e.target.closest?.('[data-pp-jtabcard]')) {
@@ -635,6 +640,11 @@ document.addEventListener('click', async e => {
       viewSavedPics(pics);
     } finally { tp.disabled = false; }
   }
+});
+document.addEventListener('input', e => {   // v2.21: galla — apni raqam
+  if (!e.target.matches?.('[data-pp-glown]')) return;
+  gallaOwn = Math.max(0, Math.round(Number(e.target.value) || 0));
+  const sy = $('ppGallaSay'); if (sy) sy.innerHTML = gallaSayHTML();
 });
 // v2.4.1: card par ungli daayein = ✓ agla, baayein = pichhla (khane / button par nahi)
 let jTouch = null;
@@ -753,7 +763,7 @@ document.addEventListener('click', async e => {
   if (d.ppSupChange != null) { supOpen = true; rerender(); setTimeout(() => $('ppSupQ')?.focus(), 50); return; }
   if (d.ppAdd) { const it = stock().items.find(r => String(r.id) === d.ppAdd); if (it) { const r = addItem(it); const s = $('search'); if (s) s.value = ''; notice(r.again ? `+1 · ${it.name}` : `✓ ${it.name}`); rerender(); focusLine(r.line.k); } return; }
   if (d.ppDel != null) { cart.splice(Number(d.ppDel), 1); keepDraft(); rerender(); return; }
-  if (d.ppClear) { if (!confirm(edit ? 'Edit chhor kar screen saaf kar dein? (POS ka bill waisa hi rahega)' : 'Yeh purchase bill saaf kar dein?')) return; cart = []; note = ''; invoiceNo = ''; edit = null; day = ''; xtra = 0; xtraName = ''; pct = 0; setBillPics([]); billPin = false; aiRows = null; aiBillInfo = null; jView = 'list'; jIx = -1; keepDraft(); rerender(); return; }
+  if (d.ppClear) { if (!confirm(edit ? 'Edit chhor kar screen saaf kar dein? (POS ka bill waisa hi rahega)' : 'Yeh purchase bill saaf kar dein?')) return; cart = []; note = ''; invoiceNo = ''; edit = null; day = ''; xtra = 0; xtraName = ''; pct = 0; gallaMode = 'none'; gallaOwn = 0; setBillPics([]); billPin = false; aiRows = null; aiBillInfo = null; jView = 'list'; jIx = -1; keepDraft(); rerender(); return; }
   if (d.ppCamera) { openSaleCamera(); return; }
   if (d.ppToday) { openToday(); return; }
   if (d.ppOld != null) { const l = cart[d.ppOld]; if (l) { allModes(l, 'old'); recalc(l); keepDraft(); rerender(); } return; }
@@ -824,6 +834,34 @@ function shrinkPic(file) {             // lamba kinara 1600px, JPEG — 260KB se
     img.onerror = () => { try { URL.revokeObjectURL(url); } catch {} res(''); };
     img.src = url;
   });
+}
+// ---------- v2.21: 💵 GALLA — bill ke sath "abhi cash do" (galla wale ke phone par ghanti + Urdu awaaz) ----------
+let gallaMode = 'none', gallaOwn = 0, gallaMap = new Map(), gallaStopFn = null, gallaDay = '';
+const gallaRs = () => gallaMode === 'full' ? Math.round(cartTotal()) : gallaMode === 'own' ? Math.max(0, Math.round(Number(gallaOwn) || 0)) : 0;
+const gallaSayHTML = () => gallaRs() > 0 ? `🔊 Galla wala sunega: "<b>${esc(partyOf(supplier)?.name || 'Supplier')} ko ${num(gallaRs())} rupay dein</b>"` : '';
+function gallaHTML() {
+  if (edit || !cloud?.addGallaCall) return '';   // purana bill badalna = dobara paise nahi
+  const full = Math.round(cartTotal());
+  return `<div class="pp-galla${gallaMode !== 'none' ? ' on' : ''}" id="ppGalla"><div class="pg-head"><b>💵 Galla se abhi cash</b><small>galla wale ke phone par awaaz jayegi</small></div>
+    <div class="mchips"><button type="button" class="rc${gallaMode === 'none' ? ' on' : ''}" data-pp-gl="none">Kuch nahi (udhaar)</button><button type="button" class="rc${gallaMode === 'full' ? ' on' : ''}" data-pp-gl="full">Poora bill Rs ${num(full)}</button><button type="button" class="rc${gallaMode === 'own' ? ' on' : ''}" data-pp-gl="own">Apni raqam</button></div>
+    ${gallaMode === 'own' ? `<label class="pg-own">Kitna cash? Rs<input type="number" inputmode="numeric" min="1" step="1" data-pp-glown="1" value="${gallaOwn || ''}"></label>` : ''}
+    <p class="pg-say" id="ppGallaSay">${gallaSayHTML()}</p></div>`;
+}
+const pgMoney = paisa => 'Rs ' + num(Math.round((Number(paisa) || 0) / 100));
+const pgClock = ms => { try { return new Date(ms).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
+function gallaChip(billId) {
+  const c = gallaMap.get(String(billId)); if (!c) return '';
+  return c.status === 'paid' ? `<span class="pg-chip ok">💵 ${pgMoney(c.amount)} · ✓ galla ne de diye ${esc(pgClock(c.paidAt))}${c.paidName ? ' · ' + esc(c.paidName) : ''}</span>`
+    : `<span class="pg-chip wait">💵 ${pgMoney(c.amount)} · ⏳ galla ne abhi nahi diye</span>`;
+}
+function gallaWatch() {
+  const d = todayStr(); if (gallaStopFn && gallaDay === d) return;
+  try { gallaStopFn?.(); } catch {}
+  gallaDay = d;
+  gallaStopFn = cloud?.listenGallaCalls ? cloud.listenGallaCalls(d, list => {
+    gallaMap = new Map((list || []).map(c => [String(c.billId || ''), c]));
+    document.querySelectorAll('[data-pg-bill]').forEach(el => { el.innerHTML = gallaChip(el.dataset.pgBill); });
+  }) : null;
 }
 function viewSavedPics(pics) { vTmp = { pics: billPics, ix: billIx }; billPics = pics; billIx = 0; billView(); }   // aaj ke bills ki tasveer
 function vTmpEnd() { if (!vTmp) return; billPics = vTmp.pics; billIx = vTmp.ix; vTmp = null; }
@@ -1671,6 +1709,13 @@ async function save() {
     // v2.20: bill ke sath jo lines gayin un sab ke bill wale naam yaad (✓ dabaya ho ya nahi) — peeche chalta hai, bill nahi rukta
     const learnLater = (aiRows || []).filter(r => !r.skip && r.itemId && r.key && cart.some(l => l.k === r.key) && !['ok', 'pehle se'].includes(r.learn));
     if (learnLater.length && learnOf) (async () => { for (const r of learnLater) { try { await Promise.race([learnOf(r.itemId, aiNameOf(r.ai) || r.ai.name, r.ai.name), new Promise(res => setTimeout(res, 4000))]); } catch {} } })();
+    const gRs = !edit ? gallaRs() : 0;   // v2.21: galla wale ko "itne paise do" — bill cloud par pohanchne ke BAAD hi
+    if (gRs > 0 && cloud.addGallaCall) {
+      const gdoc = { id: 'p' + String(id).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 60), kind: 'payment', amount: Math.round(gRs * 100), partyId: String(p.id), partyName: String(p.name || '').slice(0, 120),
+        note: (invoiceNo ? 'Bill # ' + invoiceNo : 'POS purchase').slice(0, 300), billId: String(id), by: uidOf(), byName: String(nameOf() || (isOwner() ? 'Malik' : 'Mulazim')).slice(0, 60), at: Date.now(), date: todayStr(), status: 'new' };
+      Promise.resolve(w).then(() => cloud.addGallaCall(gdoc)).then(() => notice('💵 Galla wale ko awaaz chali gayi — Rs ' + num(gRs))).catch(er => notice('⚠️ Galla ko awaaz nahi gayi: ' + (er?.message || er)));
+    }
+    gallaMode = 'none'; gallaOwn = 0;
     picKeepBill(id, { pics: picsNow, jd: aiRows ? { rows: aiRows.map(r => ({ ...r })), info: aiBillInfo, fmt: aiFmtAuto } : null, partyId: String(p.id), total, at: Date.now() }).catch(() => {});
     await Promise.race([w, new Promise(r => setTimeout(r, 4000))]);
     try { learnFromBill(); } catch {}   // v2.4.0: naqsha + misalein + hari ka % seekho

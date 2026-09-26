@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v2.10 (posBillIds: ek entry ke saath kai POS bill) · v2.9 (entryPhotos: tasveerein alag · pn) · v2.8 (reminder: full mulazim bhi) · v2.7 (aiConfig stock/sale ko bhi — tolai) · v2.6 (tolai mein `who` — har mulazim ka apna hisaab) · v2.5 (posTransfers: POS par bane transfer bhi app mein) · v2.4 (tolai: label ki tasveer se ginti + tolaiConfig) · v2.3 (itemJobs: app se POS ka item banana / badalna; mulazim ko ijazat stockConfig.itemEdit se) · v2.2 (billFormats: har supplier ke bill ka naqsha — ginti PCS ya CTN, rate fi PCS ya fi CTN) · v2.1 (itemRates: har item ka pichhla khareed aur nafa yaad) · v2.0 (itemAliases: Full / Purchase mulazim bhi bill ka naam "yaad" karwa sake — naam sirf barh sakte hain, mit nahi sakte) · v1.94 (app purchase: dobara / cancel) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v2.11 (gallaCalls: purchase wala "itne paise do" -> galla wala "de diye" + supplier ki payment · Sirf Galla login) · v2.10 (posBillIds: ek entry ke saath kai POS bill) · v2.9 (entryPhotos: tasveerein alag · pn) · v2.8 (reminder: full mulazim bhi) · v2.7 (aiConfig stock/sale ko bhi — tolai) · v2.6 (tolai mein `who` — har mulazim ka apna hisaab) · v2.5 (posTransfers: POS par bane transfer bhi app mein) · v2.4 (tolai: label ki tasveer se ginti + tolaiConfig) · v2.3 (itemJobs: app se POS ka item banana / badalna; mulazim ko ijazat stockConfig.itemEdit se) · v2.2 (billFormats: har supplier ke bill ka naqsha — ginti PCS ya CTN, rate fi PCS ya fi CTN) · v2.1 (itemRates: har item ka pichhla khareed aur nafa yaad) · v2.0 (itemAliases: Full / Purchase mulazim bhi bill ka naam "yaad" karwa sake — naam sirf barh sakte hain, mit nahi sakte) · v1.94 (app purchase: dobara / cancel) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -50,6 +50,7 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/businesses/noor-traders/blueAccess/stockConfig).data.itemEdit == true;
     }
     function saleStaff() { return isStaff() && acctIs(staffAccount(), 'sale'); }
+    function gallaStaff() { return isStaff() && acctIs(staffAccount(), 'galla'); }   // v2.11: 💰 Sirf Galla
     match /businesses/noor-traders/{collectionName}/{docId} {
       allow read: if isOwner() && collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount'];
       // Linked transfers have a paired-write rule below, including for older app versions.
@@ -197,6 +198,36 @@ service cloud.firestore {
     }
 
     // v2.9: TASVEEREIN (entry ki) — alag khana, taake app kholte waqt saari tasveerein na aayen
+    // v2.11: 💰 GALLA — purchase wala (malik / full / Sirf Purchase) likhta hai "is supplier ko itne paise do";
+    // galla wala (Sirf Galla / malik) sirf "de diye" kar sakta hai — raqam / supplier badal nahi sakta.
+    // kind 'payment' = POS bill (udhaar) ka cash: "de diye" ke SATH hi blueKhata/galla-<id> payment entry (neeche rule).
+    // kind 'cash'    = photo wali cash purchase: khata entry pehle se hai, sirf 'paid'.
+    match /businesses/noor-traders/gallaCalls/{id} {
+      function validCall() {
+        let d = request.resource.data;
+        return id.matches('^[a-zA-Z0-9_-]{1,80}$') && d.id == id
+          && d.keys().hasOnly(['id','kind','amount','partyId','partyName','note','billId','date','by','byName','at','status'])
+          && d.kind in ['payment','cash'] && d.status == 'new' && isToday(d.date)
+          && d.amount is int && d.amount > 0 && d.amount <= 100000000000
+          && d.partyId is string && d.partyId.size() > 0 && d.partyId.size() <= 120
+          && d.partyName is string && d.partyName.size() <= 120
+          && d.note is string && d.note.size() <= 300
+          && d.billId is string && d.billId.size() <= 120
+          && d.byName is string && d.byName.size() <= 60 && d.at is int
+          && d.by == request.auth.uid;
+      }
+      allow read: if isOwner() || blueStaff() || purchaseStaff() || gallaStaff();
+      allow create: if validCall() && (isOwner() || blueStaff() || purchaseStaff());
+      allow update: if resource.data.status == 'new' && request.resource.data.status == 'paid'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','paidAt','paidBy','paidName','entryId'])
+        && request.resource.data.paidBy == request.auth.uid && request.resource.data.paidAt is int
+        && request.resource.data.paidName is string && request.resource.data.paidName.size() <= 60
+        && request.resource.data.entryId is string
+        && (resource.data.kind != 'payment' || (request.resource.data.entryId == 'galla-' + id
+            && existsAfter(/databases/$(database)/documents/businesses/noor-traders/blueKhata/$('galla-' + id))))
+        && (isOwner() || gallaStaff());
+      allow delete: if isOwner();
+    }
     match /businesses/noor-traders/entryPhotos/{id} {
       allow read: if isOwner() || blueStaff() || purchaseStaff();
       function validPhotos() {
@@ -391,6 +422,20 @@ service cloud.firestore {
         && !resource.data.get('deleted', false);
 
       allow read: if isOwner() || blueStaff() || (purchaseStaff() && resource.data.type == 'entry' && resource.data.purchase == true);
+      // v2.11: GALLA ki payment — sirf galla-<id> entry, bilkul galla ki darkhwast jitni raqam / wohi supplier / aaj,
+      // aur usi batch mein darkhwast 'paid' ho (getAfter). Galla wala koi aur entry nahi bana sakta.
+      function validGallaPay() {
+        let d = request.resource.data;
+        let g = getAfter(/databases/$(database)/documents/businesses/noor-traders/gallaCalls/$(d.galla)).data;
+        return d.type == 'entry' && d.kind == 'payment' && d.galla is string && d.galla.matches('^[a-zA-Z0-9_-]{1,80}$')
+          && recordId == 'galla-' + d.galla && d.id == recordId && isToday(d.date)
+          && d.keys().hasOnly(['id','type','kind','partyId','account','amount','date','note','posPending','galla','by','createdAt','updatedBy','updatedAt','rev'])
+          && d.amount is int && d.amount > 0 && d.note is string && d.note.size() <= 300
+          && d.by == request.auth.uid && d.updatedBy == request.auth.uid && d.rev == 1
+          && g.kind == 'payment' && g.status == 'paid' && g.entryId == recordId
+          && g.amount == d.amount && g.partyId == d.partyId && g.date == d.date;
+      }
+      allow create: if request.resource.data.get('galla', '') != '' && gallaStaff() && dayOpen() && validGallaPay();
       function validPurchase() {
         let d = request.resource.data;
         return d.type == 'entry' && d.purchase == true && d.id == recordId

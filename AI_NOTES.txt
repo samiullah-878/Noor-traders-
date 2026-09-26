@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.20.0, 2026-09-26 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.21.0, 2026-09-27 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1605,3 +1605,38 @@ Naam SAVE ho raha tha (learnAlias theek), masla PEHCHANNE mein tha:
   hi nahi the. Ab aliasTail() = aakhri 160 harf (poore naam se shuru).
 * app.js knownItems(): supplier ke items -> phir jin items ka alias hai -> phir baqi, 400 tak.
 * Version bump is dafa regex (?<![\d.])2\.19\.0 se — firebasejs/12.18.0 salamat (check kiya).
+
+==================== v2.21.0 (2026-09-27) — 💰 GALLA SCREEN (RULES 2.11) ====================
+Malik: "purchase add karte hi galla wale (anpadh) ko awaaz aaye ke itne paise de". Pehle asal phone call (Twilio: Pakistan
+mobile $0.18/min; robocall.pk local) dekha, phir malik ne FREE "bolne wali screen" chuni. Faisle: cash seedha supplier ko;
+awaaz mein sirf supplier + raqam; malik ki manzoori NAHI; ek hi galla phone; "de diye" par khata mein payment BHI.
+
+=== Files ===
+* galla.js (NAYI): gallaSetup/renderGalla/gallaStop, romanWords(), notesOf(). cloud.listenGallaCalls(day) (where date==day).
+  Awaaz: speechSynthesis — ur voice ho to Urdu script, warna hi voice Devanagari, warna roman (en-IN). Beep WebAudio,
+  vibrate, wakeLock, Notification (sirf jab tab peeche ho). audioOn sirf user ke tap se (browser autoplay).
+  30s ringTimer (pending par dobara). pay(): optimistic 'paid' + cloud.payGallaCall (3s race) — fail par wapas + notice.
+* cloud.js: listenGallaCalls, addGallaCall(d) (setDoc), payGallaCall(c, who): writeBatch — kind 'payment' par
+  blueKhata/galla-<id> {type entry, kind payment, partyId, account '', amount (PAISA), date, note, posPending false,
+  galla:<id>, by, createdAt, updatedBy, updatedAt, rev 1} + gallaCalls update {status paid, paidAt, paidBy, paidName, entryId}.
+  kind 'cash' (photo cash purchase) = sirf update, entryId = billId. accessScope 'galla' -> listen() khali, add/edit band.
+* app.js: scope 'galla' (SW_SCOPES/SW_VIEW/scopeName, gallaOnly(), view routing 'galla', nav chhupa, staffPass option),
+  purchaseForm: checkbox gallaAsk (sirf naye + cash) -> gallaAskPhoto() -> gallaCalls {id 'e'+uuid, kind 'cash', billId = entry id}.
+  ppSetup ko name:() (byName). gallaSetup() connected ke baad.
+* purchase.js: gallaMode none|full|own, gallaOwn; gallaHTML() foot mein (edit par nahi). refreshTotals() "Poora bill Rs" taza
+  (own mode mein nahi — input ka focus). save(): gRs>0 -> Promise.resolve(w).then(addGallaCall) — bill cloud par jaye TAB.
+  gdoc {id 'p'+appPurchaseId, kind 'payment', amount = Rs*100, partyId p.id, partyName, note, billId = appPurchase id,
+  by uidOf(), byName nameOf(), at, date todayStr(), status 'new'}. gallaWatch() openToday par -> gallaMap billId->call ->
+  chip [data-pg-bill]. Naya bill / save ke baad gallaMode reset.
+* firestore.rules 2.11: gallaStaff(); match gallaCalls (validCall: keys hasOnly, kind payment|cash, status new, isToday,
+  amount int; create = owner/full/purchase; update = new->paid sirf status/paidAt/paidBy/paidName/entryId, kind payment par
+  entryId == 'galla-'+id && existsAfter(blueKhata/galla-<id>); owner/galla). blueKhata: validGallaPay() — recordId 'galla-'+galla,
+  getAfter(gallaCalls) status paid, amount/partyId/date barabar, keys hasOnly, rev 1, by == uid; allow create if
+  data.galla != '' && gallaStaff() && dayOpen(). Emulator yahan chal nahi saka (storage.googleapis.com band) — rules
+  haath se do dafa parhe; publish par Firebase khud syntax check karega.
+* style.css: .gl-* (galla screen), .pp-galla / .pg-chip. sw.js: galla.js dono shakal.
+* Test: happy-dom par galla.js — romanWords 25200 = "pachees hazaar do sau", notes 25200 = 5000x5 100x2, render -> paid ->
+  confirm -> payGallaCall(who.name) -> list "Aaj diye (1)" sab pass. Phone par asal awaaz/beep malik check kare.
+
+AGLI AI: v2.21 ka kaam pehle ek adhoori koshish mein (galla.js/app.js/cloud.js) ban gaya tha aur phir poora kiya gaya —
+dono ek hi design par hain. Owner ke liye galla view ka nav button NAHI (galla phone par Sirf Galla login se hi).
