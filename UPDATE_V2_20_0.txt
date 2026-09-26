@@ -1,0 +1,40 @@
+Blue Khata v2.20.0 — AI AB NAAM PAKKA YAAD RAKHTI HAI
+INSTALL: Is ZIP ki saari files GitHub repo "Noor-traders" par upload karein,
+         phir app mein "↻ Sync / Update" -> 2.20.0.
+         Firebase rules WAHI (2.10) — kuch publish nahi karna.
+
+MASLA: naam yaad to ho raha tha, magar agli dafa MILTA nahi tha. Char wajahen thin — charon theek:
+
+1) HAATH KA LIKHA BILL — AI har dafa naam thora alag parhti hai
+   Pehle sirf BILKUL barabar naam pehchana jata tha. Ab "milta julta" bhi:
+     کاٹن سپیگٹی = کاٹن سپگیٹی = کاٹن سپگٹی = کاٹنسپیگٹی = coton spagheti  -> GOLDEN spaghetti
+   Hifazat:
+   - Hindse / size BILKUL barabar hon: "1kg" wala "2kg" se, "900" wala "950" se KABHI nahi milega.
+   - Do items qareeb qareeb milte hon to app andaza NAHI lagati.
+   - Bohat chhote naam (4 harf se kam) par milta-julta nahi chalta.
+   - Milta-julta mila to card PEELA rehta hai aur "📌 Yaad wale naam se milta julta" likha aata hai —
+     ek nazar dekh kar ✓ dabayein, to ye nayi likhawat bhi yaad ho jati hai (agli dafa bilkul barabar).
+
+2) AI KO YAAD KIYE NAAM DIKHTE HI NAHI THE
+   - AI ko jo items ki list jati hai us mein har item ke doosre naam sirf PEHLE 80 harf tak jate the,
+     aur naya naam hamesha AAKHIR mein judta hai — yani abhi yaad karwaya naam AI tak pohanchta hi nahi tha.
+     Ab AAKHRI 160 harf jate hain (naye naam).
+   - AI ko sirf 400 items jate hain. Ab jin items ke naam yaad hain wo HAMESHA list mein (supplier ke
+     items ke baad sab se pehle).
+
+3) BINA ✓ KE BHI YAAD
+   - "✏️ Item" se chuna -> foran yaad (pehle se tha).
+   - ✓ Theek -> yaad.
+   - Bill bhejte waqt: bill ki SAARI lines ke naam khud yaad, chahe ✓ dabaya ho ya nahi.
+
+4) AB NAZAR AATA HAI
+   Card par:  🟢 "📌 Naam yaad hai ✓ — agli dafa ... par yahi item khud lagega"
+              🟡 "📌 Yaad wale naam se milta julta — item ek nazar dekh lein"
+              ⏳ "Naam save ho raha hai — internet aate hi pakka"
+              🔴 "⚠️ Naam save nahi hua — (wajah)"
+              ⚪ "Naam abhi yaad nahi — ✓ dabayein ya ✏️ Item se chunein"
+   List mein: "📌 yaad" ya "📌 milta".
+   Offline / dheema internet: ✓ ab 2.5 second se zyada nahi atakta — save peeche chalta rehta hai.
+
+BADLI HUI FILES: purchase.js, app.js, ai-tally.js, style.css + version (index.html, sw.js, version.json,
+                 sale.js, pos-ledger.js, pos-stock.js).

@@ -153,9 +153,11 @@ export const BILL_PROMPT = [
 
 // v2.0.0: humare POS items ki list — AI ko saath bhejte hain taake wohi sahi item chun le.
 // known = [{id, name, code, alias}] — alias woh naam hain jo malik ne bill se "yaad" karwaye (in se match sab se acha hota hai).
+// v2.20: naye yaad kiye naam AAKHIR mein judte hain — pehle 80 harf kaatne se AI ko wohi nahi dikhte the. Ab aakhri 160.
+const aliasTail = a => { const s = String(a || ''); if (s.length <= 160) return s; const t = s.slice(-160); const c = t.indexOf(','); return c >= 0 ? t.slice(c + 1).trim() : t; };
 export function knownItemsText(known) {
   const rows = (known || []).filter(k => k && k.id && k.name).slice(0, 400)
-    .map(k => String(k.id) + ' | ' + String(k.name).slice(0, 60) + (k.alias ? ' | ' + String(k.alias).slice(0, 80) : ''));
+    .map(k => String(k.id) + ' | ' + String(k.name).slice(0, 60) + (k.alias ? ' | ' + aliasTail(k.alias) : ''));
   if (!rows.length) return '';
   return ['HUMARE ITEMS (shakal: id | naam | doosre naam) — itemId inhi mein se chunna hai:', ...rows].join('\n');
 }

@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.19.0, 2026-09-26 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.20.0, 2026-09-26 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1585,3 +1585,23 @@ Node par recalc ka alag test: brush W+1.5% = 305, R+15% = 345; ghee (16) W/CTN +
 W/PCS +2% = 441 aur W/CTN wahi, ↺ = sab purane; purana draft (wcMode khali) PCS ke peeche. nameKey: Arabic ي/ك
 + ۹۰۰ wala naam Urdu alias se mila. Farq 357 CTN -> "sufi soap" (ctn=pcs=357). Sab files node --check se paas.
 Browser/phone par khud nahi chala saka — malik se screenshot mangwa kar dekhein.
+
+==================== v2.20.0 (2026-09-26) — NAAM YAAD PAKKA ====================
+Rules NAHI badlin (2.10). Malik ki shikayat: "item chun kar OK karein, bill save ho ya na ho, naam yaad rahe".
+Naam SAVE ho raha tha (learnAlias theek), masla PEHCHANNE mein tha:
+* purchase.js memIndex() ab { ex: Map (bilkul barabar, shak = null), list: [{z:{s,d}, it}] }.
+  memFind(m, aiLine) -> { it, how: 'exact'|'fuzzy', sc } | null. Fuzzy: memZ = fold(nameKey) bina space;
+  hindse (d) BILKUL barabar; osa() (Damerau/OSA, aage-peeche = 1) <= 18% lambai; sc >= 0.82; doosra item
+  0.04 ke andar ho to null. Test: سپیگٹی/سپگیٹی/سپگٹی/space/roman sab mile; 1kg≠2kg, 900≠950; 3000 items x 30 lines = 0.13s.
+  fold ab smart-search se import (purchase.js).
+* Row: mem, memFz. exact = learn 'pehle se'; fuzzy = learn '' (✓ par nayi likhawat bhi yaad).
+  jJudge: memFz -> peela ("Naam yaad wale se milta julta"); exact mem par "andaze se mila" wala peela NAHI.
+* learnRow(r): learnOf ek jagah; r.learn 'wait' -> 'ok'|'pehle se'|galti; 2.5s Promise.race (offline mein
+  Firestore setDoc server ka jawab aane tak atka rehta tha — ✓ button ruk jata tha). Fail = notice.
+  jAccept + aiLearn dono learnRow se. jLearnHTML(r) -> #jcLearn (jc-memo ok/fz/bad/off). List: jz-mem / jz-mem.fz.
+* save(): learnLater — bill ki saari lines (skip nahi, cart mein hain, learn ok/pehle se nahi) ke naam peeche
+  ek ek kar ke (har ek 4s race), bill nahi rukta.
+* ai-tally.js knownItemsText: alias pehle slice(0,80) = PURANE naam; naye aakhir mein judte hain -> AI ko dikhte
+  hi nahi the. Ab aliasTail() = aakhri 160 harf (poore naam se shuru).
+* app.js knownItems(): supplier ke items -> phir jin items ka alias hai -> phir baqi, 400 tak.
+* Version bump is dafa regex (?<![\d.])2\.19\.0 se — firebasejs/12.18.0 salamat (check kiya).

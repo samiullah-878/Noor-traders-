@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.19.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf } from './smart-search.js?v=2.19.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.20.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold } from './smart-search.js?v=2.20.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -882,15 +882,51 @@ const nameKey = s => String(s || '').normalize('NFKC').toLowerCase()
   .replace(/[\u064B-\u065F\u0670\u0640]/g, '').replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[هۀە]/g, 'ہ')
   .replace(/[۰-۹]/g, x => String(x.charCodeAt(0) - 1776)).replace(/[٠-٩]/g, x => String(x.charCodeAt(0) - 1632))
   .replace(/[^a-z0-9\u0600-\u06ff]+/g, ' ').replace(/\s+/g, ' ').trim();
-function memIndex(items) {
-  const m = new Map();
+function memIndex(items) {             // v2.20: { ex: bilkul barabar, list: milta-julta dhoondne ke liye }
+  const ex = new Map();
   for (const it of items || []) for (const a of aliasOf(it.id).split(',')) {
     const k = nameKey(a); if (k.length < 2) continue;
-    if (!m.has(k)) m.set(k, it); else { const w = m.get(k); if (w && String(w.id) !== String(it.id)) m.set(k, null); }   // do items par ek naam = shak, istemal nahi
+    if (!ex.has(k)) ex.set(k, it); else { const w = ex.get(k); if (w && String(w.id) !== String(it.id)) ex.set(k, null); }   // do items par ek naam = shak, istemal nahi
   }
-  return m;
+  const list = [];
+  for (const [k, it] of ex) if (it) { const z = memZ(k); if (z.s.length >= 4) list.push({ z, it }); }
+  return { ex, list };
 }
-function memFind(m, l) { for (const nm of [l?.name, l?.roman]) { const k = nameKey(nm); if (k && m.get(k)) return m.get(k); } return null; }
+const memZ = k => { const s = fold(k).replace(/\s+/g, ''); return { s, d: (s.match(/\d+/g) || []).join(',') }; };
+function osa(a, b, max) {              // harf ka farq (aage-peeche hue do harf = 1 farq)
+  const la = a.length, lb = b.length; if (Math.abs(la - lb) > max) return max + 1;
+  let p2 = null, p1 = Array.from({ length: lb + 1 }, (_, j) => j);
+  for (let i = 1; i <= la; i++) {
+    const cur = new Array(lb + 1); cur[0] = i; let mn = i;
+    for (let j = 1; j <= lb; j++) {
+      let v = Math.min(p1[j] + 1, cur[j - 1] + 1, p1[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, p2[j - 2] + 1);
+      cur[j] = v; if (v < mn) mn = v;
+    }
+    if (mn > max) return max + 1;
+    p2 = p1; p1 = cur;
+  }
+  return p1[lb];
+}
+function memFind(m, l) {               // pehle bilkul barabar; na mile to ~82%+ milta julta (hindse / size BILKUL barabar hon)
+  if (!m) return null;
+  for (const nm of [l?.name, l?.roman]) { const k = nameKey(nm); if (k && m.ex.get(k)) return { it: m.ex.get(k), how: 'exact' }; }
+  let best = null, bs = 0, second = 0;
+  for (const nm of [l?.name, l?.roman]) {
+    const k = nameKey(nm); if (!k) continue;
+    const q = memZ(k); if (q.s.length < 4) continue;
+    for (const e of m.list) {
+      if (e.z.d !== q.d) continue;                                  // 1kg vs 500g kabhi nahi milenge
+      const L = Math.max(q.s.length, e.z.s.length), mx = Math.floor(L * 0.18);
+      if (!mx || Math.abs(q.s.length - e.z.s.length) > mx) continue;
+      const dist = osa(q.s, e.z.s, mx); if (dist > mx) continue;
+      const sc = 1 - dist / L;
+      if (sc > bs) { if (best && String(best.id) !== String(e.it.id)) second = Math.max(second, bs); best = e.it; bs = sc; }
+      else if (best && String(best.id) !== String(e.it.id)) second = Math.max(second, sc);
+    }
+  }
+  return best && bs >= 0.82 && bs - second >= 0.04 ? { it: best, how: 'fuzzy', sc: bs } : null;   // do items qareeb = shak, nahi lagao
+}
 // v2.4.0: jin items ka bill par carton size (سائز) mila magar POS mein "1 CTN = ?" khali ya alag hai
 function packGaps() {
   let m = {}; try { m = lastRatesOf() || {}; } catch {}
@@ -1040,7 +1076,8 @@ function jJudge(r, fmt) {
     if (r.band || (man && man.k !== 'no')) why.push(`Stock ${num(stockPcs)} → ${num(stockPcs + add)} ${esc(ln.uName || 'Pcs')} (bada maal — sirf note)`);   // unit ka shak nahi
     else { conf = 'r'; why.push(`Stock ka pehra: ${num(stockPcs)} se ${num(stockPcs + add)} ${esc(ln.uName || 'Pcs')} ho jayega`); }
   }
-  if (!r.byAi && conf === 'g') { conf = 'y'; why.push('Item naam ke andaze se mila'); }
+  if (r.memFz && conf === 'g') { conf = 'y'; why.push('Naam yaad wale se milta julta — item ek nazar dekh lein'); }   // v2.20
+  else if (!r.byAi && !r.mem && conf === 'g') { conf = 'y'; why.push('Item naam ke andaze se mila'); }
   if (r.fixNote && conf === 'g') conf = 'y';                       // app ne khud theek kiya — ek nazar dekh lein
   r.j = { conf, why, mode: best.mode, size: best.size || 0, old, ratio };
 }
@@ -1161,7 +1198,7 @@ function aiRender() {
       const it = r.itemId ? items.find(x => String(x.id) === String(r.itemId)) : null;
       return `<button type="button" class="jz-row ${r.skip ? 'skip' : r.j?.conf || 'r'}${r.done ? ' done' : ''}" data-pp-jcard="${i}">
         <span class="jz-dot">${r.skip ? '✕' : r.done ? '✓' : jMark(r.j?.conf)}</span>
-        <span class="jz-txt"><b>${esc(r.ai.name || '')}${r.mem ? ' <em class="jz-mem">📌 yaad</em>' : ''}</b><small>${it ? esc(it.name) + ' · ' + jUnit(ln) + ' · ' + num(ln?.costP || 0) + '/' + esc(ln?.uName || 'Pcs') : 'item nahi mila'}${r.j?.why?.length ? ' · ' + esc(r.j.why[0]) : ''}</small></span></button>`;
+        <span class="jz-txt"><b>${esc(r.ai.name || '')}${r.memFz && !['ok', 'pehle se'].includes(r.learn) ? ' <em class="jz-mem fz">📌 milta</em>' : (r.mem || r.learn === 'ok' || r.learn === 'pehle se') ? ' <em class="jz-mem">📌 yaad</em>' : ''}</b><small>${it ? esc(it.name) + ' · ' + jUnit(ln) + ' · ' + num(ln?.costP || 0) + '/' + esc(ln?.uName || 'Pcs') : 'item nahi mila'}${r.j?.why?.length ? ' · ' + esc(r.j.why[0]) : ''}</small></span></button>`;
     }).join('') || '<p class="stat-note">Is filter mein koi line nahi</p>'}</div>
     <p class="stat-note">⚠️ AI hamesha theek nahi parhta. Hari lines par bhi nazar daal lein; ✓ dabane se naam, unit aur rate app yaad kar leti hai.</p>`);
   const d = $('dialog'); if (d) d.classList.add('full-dialog');
@@ -1221,7 +1258,7 @@ function jCard(i) {
     <div class="jc-card ${r.j?.conf || 'r'}" id="jcCard">
       <div class="jc-top"><b>${esc(r.ai.name || '')}${ln ? ' → ' + esc(ln.name) : ''}</b><span id="jcAmt">${ln ? num(lineTotal(ln)) : ''}</span></div>
       ${ln && total ? `<div class="jc-milan" id="jcMilan">${jMilanHTML(ln, total)}</div>` : ''}
-      ${r.mem ? '<div class="jc-memo">📌 Yaad kiya hua naam — pichhli dafa aap ne yahi item chuna tha</div>' : ''}
+      <div id="jcLearn">${jLearnHTML(r)}</div>
       <div class="jc-bill">Bill: ${esc(aiQtyText(r.ai))}${size ? ' · سائز ' + num(size) : ''} · ریٹ ${num(aiNum(r.ai).rate)}${total ? ' · کل ' + num(total) : ''}</div>
       ${r.j?.why?.length ? `<div class="jc-why">${r.j.why.map(w => `<small>${jMark(r.j.conf)} ${esc(w)}</small>`).join('')}</div>` : '<div class="jc-why"><small>🟢 Sab theek lag raha hai</small></div>'}
       ${ln ? `<div class="jc-units"><div class="mchips jc-modes">${modes.map(md => `<button type="button" class="${r.j?.mode === md ? 'on' : ''}" data-pp-jmode="${md}">${jModeName(md)}${md === 'size' ? ' ×' + num(size) : ''}</button>`).join('')}</div>
@@ -1338,9 +1375,7 @@ function jNext(reopened) {
 async function jAccept(i, quiet = true) {
   const r = aiRows[i]; if (!r || !r.key) return;
   r.done = true;
-  if (r.itemId && learnOf && !r.learn) {           // ✓ = naam bhi yaad
-    try { const res = await learnOf(r.itemId, aiNameOf(r.ai) || r.ai.name, r.ai.name); r.learn = res === 'ok' ? 'ok' : res === 'pehle se' ? 'pehle se' : res; } catch {}
-  }
+  if (r.itemId && learnOf && !['ok', 'pehle se', 'wait'].includes(r.learn)) await learnRow(r);   // ✓ = naam bhi yaad (v2.20: fail wala dobara, 2.5s se zyada nahi rukta)
   if (!quiet) notice('✓ ' + (r.ai.name || ''));
 }
 function jSkip(i) {
@@ -1481,14 +1516,14 @@ async function aiRead(files) {
     const memIx = memIndex(items);   // v2.19: aap ke yaad karwaye naam — pehli tarjeeh
     for (const l of lines) {
       const q = aiNameOf(l);
-      const mem = memFind(memIx, l);
+      const memR = memFind(memIx, l), mem = memR ? memR.it : null, memFz = memR?.how === 'fuzzy';   // v2.20: milta-julta bhi
       // v2.0.0: AI ko humare items ki list di jati hai — wo khud itemId de de to wahi lagao, warna naam se dhoondo
       const byAi = !mem && l.itemId ? items.find(x => String(x.id) === String(l.itemId)) : null;
       const hit = mem || byAi || (q ? (smartSearch(items, q, 1)[0] || null) : null);
       if (!hit) { aiRows.push({ ai: l, key: null, itemId: '', learn: '' }); continue; }
       const ln = addItem(hit, false).line;
       ln.billName = String(l.name || '').slice(0, 60);          // v2.10: bill wala naam line ke saath
-      aiRows.push({ ai: l, key: ln.k, itemId: String(hit.id), learn: mem ? 'pehle se' : '', byAi: !!byAi, mem: !!mem });
+      aiRows.push({ ai: l, key: ln.k, itemId: String(hit.id), learn: mem && !memFz ? 'pehle se' : '', byAi: !!byAi, mem: !!mem, memFz });
     }
     jJudgeAll(); jAutoFmt();
     if (aiFmtAuto) jJudgeAll();          // naya naqsha mila — us ki tarjeeh ke sath dobara
@@ -1510,12 +1545,34 @@ function billView() {
   const d = $('dialog'); if (d) d.classList.add('full-dialog');
   zWire();
 }
-async function aiLearn(i, btn, quiet) {
+// v2.20: naam yaad karna — ek jagah. Offline / dheema net ho to 2.5 second baad aage (save peeche chalta rahe), nateeja card par
+function learnRow(r) {
+  if (!r || !r.itemId || !learnOf) return Promise.resolve('');
+  if (r.learn === 'ok' || r.learn === 'pehle se') return Promise.resolve(r.learn);
+  r.learn = 'wait';
+  const p = Promise.resolve().then(() => learnOf(r.itemId, aiNameOf(r.ai) || r.ai.name, r.ai.name)).catch(e => (e && e.message) || 'Save nahi hua');
+  p.then(res => {
+    r.learn = res === 'ok' ? 'ok' : res === 'pehle se' ? 'pehle se' : (res || 'Save nahi hua');
+    if (r.learn !== 'ok' && r.learn !== 'pehle se') notice('⚠️ Naam yaad nahi hua: ' + r.learn);
+    try { keepDraft(); } catch {}
+    const b = $('jcLearn'); if (b && aiRows && aiRows[jIx] === r) b.innerHTML = jLearnHTML(r);
+  });
+  return Promise.race([p, new Promise(res => setTimeout(() => res('wait'), 2500))]);
+}
+function jLearnHTML(r) {
+  if (!r || !r.itemId) return '';
+  const ok = r.learn === 'ok' || r.learn === 'pehle se';
+  if (r.memFz && !ok) return '<div class="jc-memo fz">📌 Yaad wale naam se milta julta — item ek nazar dekh lein. ✓ dabate hi ye naya likhawat bhi yaad</div>';
+  if (ok) return `<div class="jc-memo ok">📌 Naam yaad hai ✓ — agli dafa "${esc(r.ai?.name || '')}" par yahi item khud lagega</div>`;
+  if (r.learn === 'wait') return '<div class="jc-memo">⏳ Naam save ho raha hai — internet aate hi pakka</div>';
+  if (r.learn) return `<div class="jc-memo bad">⚠️ Naam save nahi hua — ${esc(r.learn)}</div>`;
+  return '<div class="jc-memo off">Naam abhi yaad nahi — ✓ dabayein ya ✏️ Item se chunein, to yaad ho jayega</div>';
+}
+async function aiLearn(i, btn, quiet) {   // v2.20: learnRow se — offline mein atakta nahi, fail ho to saaf batata hai
   const r = aiRows && aiRows[i]; if (!r || !r.itemId || !learnOf) return;
   if (btn) btn.disabled = true;
-  const res = await learnOf(r.itemId, aiNameOf(r.ai) || r.ai.name, r.ai.name);
-  r.learn = res === 'ok' ? 'ok' : res === 'pehle se' ? 'pehle se' : res;
-  if (!quiet) { if (res === 'ok') notice('✓ "' + (aiNameOf(r.ai) || '') + '" yaad kar liya'); else if (res !== 'pehle se') notice(res); }
+  const res = await learnRow(r);
+  if (!quiet) { if (res === 'ok') notice('✓ "' + (aiNameOf(r.ai) || '') + '" yaad kar liya'); else if (res === 'wait') notice('⏳ Naam internet aate hi yaad ho jayega'); }
   aiRender();
 }
 function aiPickForm(i) {
@@ -1542,7 +1599,7 @@ async function aiPicked(i, id) {
     try { await unlearnOf(r.itemId, aiNameOf(r.ai) || r.ai.name, r.ai.name); } catch {}
   }
   const ln = addItem(it, false).line;
-  r.key = ln.k; r.itemId = String(it.id); r.learn = ''; r.byAi = true; r.mem = false; r.force = ''; r.skip = false;   // aap ne khud chuna = pakka naam
+  r.key = ln.k; r.itemId = String(it.id); r.learn = ''; r.byAi = true; r.mem = false; r.memFz = false; r.force = ''; r.skip = false;   // aap ne khud chuna = pakka naam
   jJudge(r, billFmtOf(supplier));
   if (jView !== 'sum') { jView = 'card'; jIx = i; }
   keepDraft(); rerender(); aiRender();
@@ -1611,6 +1668,9 @@ async function save() {
     const w = cloud.saveAppPurchase(doc);
     const picsNow = billPics.filter(isData);   // v2.19: tasveer bill ke sath — cloud (3 tak) + phone (jaanch bhi)
     if (picsNow.length && cloud.putBillPhotos) Promise.resolve(cloud.putBillPhotos(id, picsNow.slice(0, 3))).catch(er => { console.warn('bill ki tasveer cloud par nahi gayi', er); notice('⚠️ Bill chala gaya magar tasveer cloud par nahi gayi (phone mein mehfooz hai)'); });
+    // v2.20: bill ke sath jo lines gayin un sab ke bill wale naam yaad (✓ dabaya ho ya nahi) — peeche chalta hai, bill nahi rukta
+    const learnLater = (aiRows || []).filter(r => !r.skip && r.itemId && r.key && cart.some(l => l.k === r.key) && !['ok', 'pehle se'].includes(r.learn));
+    if (learnLater.length && learnOf) (async () => { for (const r of learnLater) { try { await Promise.race([learnOf(r.itemId, aiNameOf(r.ai) || r.ai.name, r.ai.name), new Promise(res => setTimeout(res, 4000))]); } catch {} } })();
     picKeepBill(id, { pics: picsNow, jd: aiRows ? { rows: aiRows.map(r => ({ ...r })), info: aiBillInfo, fmt: aiFmtAuto } : null, partyId: String(p.id), total, at: Date.now() }).catch(() => {});
     await Promise.race([w, new Promise(r => setTimeout(r, 4000))]);
     try { learnFromBill(); } catch {}   // v2.4.0: naqsha + misalein + hari ka % seekho
