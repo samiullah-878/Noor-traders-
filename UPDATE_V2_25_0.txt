@@ -1,0 +1,22 @@
+Blue Khata v2.25.0 — 👤 NOTES MEIN CONTACT · 📞 CALL · 💬 WHATSAPP
+===================================================================
+INSTALL (3 qadam — rules bhi):
+ 1) GitHub: ZIP ki saari files (sab flat, koi folder nahi) repo "Noor-traders" par.
+ 2) RULES 2.14: firestore-rules-2.14.html kholein -> "📋 Poori rules copy" -> Firebase console
+    project **note-traders-khata-7ccc1** -> Firestore -> Rules -> paste -> Publish.
+ 3) App mein "↻ Sync / Update" -> 2.25.0.
+ (Notification wala Cloud Function dobara deploy karne ki zaroorat NAHI.)
+
+KYA NAYA:
+ - Note banate / badalte waqt "👤 Contact":
+     📇 Phone ki list — phone ki apni contact list khulti hai, naam chunein (ek se zyada number hon to chunne ke buttons).
+     📒 Khata se — khata ka naam search, number khud aa jata hai.
+     Ya naam / number khud likhein. ✕ = hatao.
+ - Note card par: 👤 naam · 📞 Call (seedha SIM dialer, +92 number) · 💬 WhatsApp (usi ki chat).
+ - HBL payment wale order reminder par supplier ka number (khata mein ho to) khud lag jata hai.
+ - Search mein contact ka naam / number bhi.
+SACH:
+ - WhatsApp seedha CALL shuru karne ki ijazat kisi app ko nahi deta — 💬 se chat khulti hai, wahan upar 📞 ek tap.
+ - "📇 Phone ki list" Android Chrome par chalti hai; jahan na chale wahan button nazar nahi aata (khata / khud likhna chalega).
+BADLI HUI FILES: notes.js, style.css, firestore.rules (2.14), app.js, index.html, sw.js, version.json,
+                 purchase.js, sale.js, pos-stock.js, pos-ledger.js (version).

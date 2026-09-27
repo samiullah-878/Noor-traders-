@@ -1233,3 +1233,15 @@ footer button:not(.give):not(.got){background:linear-gradient(180deg,#27437c,#17
 .bc-code .bc-cnt{margin-left:auto;font-size:15px}
 .bc-fail{color:#a32020;font-weight:700}
 .bc-nums{width:100%;color:#9aa8bd}
+
+/* ===== v2.25: 👤 contact · 📞 Call · 💬 WhatsApp ===== */
+.nt-contact{display:grid;gap:6px;padding:10px;border-radius:14px;background:#f6f8fc;border:1px solid #e3e9f3}
+.nt-ct-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px}
+.nt-ct-head .mchips{gap:5px}
+.nt-contact input[type=search]{width:100%;min-height:40px;border-radius:10px;border:1px solid #d5dce9;padding:0 10px}
+.nt-callrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.nt-ct-name{font-weight:800;color:#1b3058;margin-right:auto}
+.nt-call,.nt-wa{display:inline-flex;align-items:center;gap:4px;min-height:38px;padding:0 14px;border-radius:999px;font-weight:800;font-size:13.5px;text-decoration:none;color:#fff;box-shadow:0 4px 10px #10192b26}
+.nt-call{background:linear-gradient(180deg,#2b6fd6,#1b4fa6)}
+.nt-wa{background:linear-gradient(180deg,#25d366,#128c4b)}
+.nt-card.done .nt-callrow{display:none}

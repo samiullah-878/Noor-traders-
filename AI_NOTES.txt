@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.24.0, 2026-09-27 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.25.0, 2026-09-27 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1691,3 +1691,15 @@ account (naam mein "HBL") — naya nahi. Malik soya hua tha: "sab ki approval, s
   order note (items, 2 din, 11:00), ✓ -> anim -> done save, note keys = rules; barcode 70 label / 30 sub / MAIN+SUB /
   5 wala / #3I-1–40 / fail filter / PDF. Cloud Function sirf syntax check (firebase-admin yahan nahi chal sakta).
 * audit.js is update mein NAHI badli (header comment wapas v2.22.0).
+
+==================== v2.25.0 (2026-09-27) — NOTES: CONTACT · CALL · WHATSAPP (RULES 2.14) ====================
+Malik: notes mein contact select ho, wahin se WhatsApp / SIM call. Faisla: phone list + khata dono. Notification ab chal rahi hai
+(malik ne FCM Registration API waghera sahi project mein chalu kar di; "🔍 jaanch" button ki zaroorat nahi rahi).
+* notes.js: saveNote + contactName (80) / contactPhone (cleanPhone, 20). contactBox(prefix,...) + wireContact(f,prefix):
+  📇 navigator.contacts.select(['name','tel']) (canPick() par hi button; zyada numbers = data-ct-p buttons), 📒 khata
+  (partyScore search, p.phone), ✕. callBtns(n): tel:+92… (telNum) aur https://wa.me/92… (waNum: 0300… / 300… / 0092… -> 92…),
+  data-nt-stop = card ka edit na khule. HBL order: contactPhone = partyOf(sup).phone. matchQ mein contact.
+* firestore.rules 2.14: validNote hasOnly + contactName/contactPhone (optional, sizes). Cloud Function NAHI badla.
+* Test (happy-dom): phone list -> Waqar Bhai 03001234567 (+ doosre number ka button); khata -> Amjad 03335556667;
+  links tel:+923335556667 / wa.me/923335556667; keys rules ke mutabiq.
+* Version bump regex se; firebasejs 12.18.0 salamat; barcode.js header wapas v2.24.0 (content wahi).
