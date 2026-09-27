@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.27.0, 2026-09-27 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.27.1, 2026-09-27 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1722,3 +1722,4 @@ Malik: zero balance khate default par na dikhen, filter tap par dikhen. Faisle: 
   zeroN ginti; khataZero false ho to ps se nikaal do. zeroChip (data-khata-zero) sortBar se pehle. khataZero global
   (localStorage NAHI — har dafa false); capture-phase click listener toggle + render(). style.css .zero-chip.
 * version.json rulesChanged false (rules 2.14 hi).
+* v2.27.1: malik — "0 se 10 rupees tak sab hide". isZ ab |balance| <= 1000 paisa (Rs 10, lene ya dene dono). Chip "Rs 0–10".

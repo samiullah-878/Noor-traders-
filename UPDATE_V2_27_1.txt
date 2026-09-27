@@ -1,0 +1,10 @@
+Blue Khata v2.27.1 — Rs 0–10 WALE KHATE CHHUPE (filter chip)
+======================================================
+INSTALL: GitHub par ZIP ki files -> app mein ↻ Sync -> 2.27.1. Rules NAHI badlin.
+KYA NAYA:
+ - Khata ki list mein Rs 0 se Rs 10 tak (lene ya dene) wale khate SHURU SE CHHUPE rehte hain (har dafa app khulne par bhi).
+ - List ke upar chip "👁 Rs 0–10 wale khate (47) dikhao" — tap = sab dikh jayein (chip neeli: "🙈 Rs 0–10 wale khate chhupao").
+ - SEARCH karte waqt 0 wale khate bhi milte hain (purane supplier ko dhoond kar entry daal sakein).
+ - Total / hisaab par koi asar nahi — sirf nazar se chhupte hain.
+BADLI HUI FILES: app.js, style.css + version (index.html, sw.js, version.json, notes.js, purchase.js, sale.js,
+                 pos-stock.js, pos-ledger.js).
