@@ -1274,3 +1274,10 @@ footer button:not(.give):not(.got){background:linear-gradient(180deg,#27437c,#17
 .pp-full{padding:0;border:0;background:none;min-height:0;cursor:zoom-in}
 .pp-view{display:grid;place-items:center;min-height:60vh}
 .pp-view img{max-width:100%;max-height:78vh;border-radius:16px;box-shadow:0 12px 30px #0005}
+
+/* ===== v2.28.1: bade cards ki raqam chhupi — tap = 30 sec ===== */
+button.bq-card{width:100%;text-align:left;font:inherit;color:inherit;cursor:pointer;min-height:0;-webkit-tap-highlight-color:transparent;transition:transform .15s}
+button.bq-card:active{transform:scale(.98)}
+.bq-card.bq-hid strong{letter-spacing:.18em;color:#9aa8bd!important}
+.bq-card.bq-hid .bq-sub{color:#b8c3d6}
+.bq-tip{margin-top:4px;font-size:11px!important;font-weight:700;color:#6b7c93}

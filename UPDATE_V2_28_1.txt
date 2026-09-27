@@ -1,0 +1,7 @@
+Blue Khata v2.28.1 — BADE CARDS KI RAQAM CHHUPI
+INSTALL: GitHub par ZIP ki files -> app mein ↻ Sync -> 2.28.1. Rules NAHI badlin.
+ - Khata screen ke "👤 Customers" aur "🏭 Suppliers" cards (aur "Baqi accounts" line) ki raqam shuru se "Rs ••••••"
+   — malik aur mulazim dono ke liye.
+ - Card par tap = raqam 30 second ke liye khul jati hai, phir khud chhup jati hai. Dobara tap = foran chhupao.
+ - App dobara khule to phir chhupi hui. Hisaab par koi asar nahi.
+BADLI HUI FILES: app.js, style.css + version (index.html, sw.js, version.json, notes.js, purchase.js, sale.js, pos-stock.js, pos-ledger.js).

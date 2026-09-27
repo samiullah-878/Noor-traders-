@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.28.0, 2026-09-27 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.28.1, 2026-09-27 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1745,3 +1745,9 @@ partyPhotoCache, cloud.getPartyPhoto / setPartyPhoto. Is liye RULES nahi badlin.
   data-party-photo-view -> modal(..., true) poori screen.
 * List: avatarHTML(p) + avQueue/avPump (3 concurrent, sirf hasPhoto, cache; load par sirf us [data-av] ka DOM badle,
   selected ho to render). Test (happy-dom): p1 tasveer, p2 initials, p3 hasPhoto nahi = read nahi, dobara cache.
+
+==================== v2.28.1 (2026-09-27) — Customers / Suppliers cards ki raqam chhupi ====================
+Malik: bade cards default par chhupe (malik + mulazim), khud tap kar ke dekhein; 30 sec baad khud chhupein.
+* app.js baqayaHTML: M(v) = bqShow ? money(v) : 'Rs ••••••'; card ab <button data-bq-toggle> (.bq-hid) + .bq-tip;
+  "Baqi accounts" line bhi M. Global bqShow/bqTimer (persist NAHI), capture click: toggle, on par 30s timer -> false + render.
+* Test: chhupa = raqam nahi, 4 dots; khula = dono raqamein. style.css button.bq-card / .bq-hid / .bq-tip.
