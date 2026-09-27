@@ -1,0 +1,13 @@
+Blue Khata v2.29.0 — TEZ KHULNA · PASSWORD 30 DIN · SCREEN BADALNA BINA PASSWORD
+================================================================================
+INSTALL: GitHub par ZIP ki files -> app mein ↻ Sync -> 2.29.0. Rules NAHI badlin.
+ 1) TEZ: index.html ab app ki 25 files + Firebase ki 3 bari files SHURU SE EK SATH mangwata hai (pehle ek ke baad ek,
+    aur Firebase sab se aakhir mein). Login se pehle ki 0.3 second ki rukawat khatam. "Khul raha hai…" ki jagah
+    NT logo wali neeli screen; password yaad ho to login ka form nazar hi nahi aata — seedha app.
+    Andaza: sasta phone pehli dafa ~4-5 sec -> ~1.5-2 sec; baad mein (cache se) aur tez. Bilkul 0 mumkin nahi.
+ 2) PASSWORD 30 DIN yaad (malik + mulazim): "🔒 Password 30 din is phone par yaad rakhein" pehle se tick.
+    31ve din khud bhool jata hai. Logout = foran bhool. Password badla to purana kaam nahi karega (login maangega).
+ 3) 🔄 DOOSRI SCREEN: jis screen ka password yaad hai us par sirf TAP = seedha khul jati hai. Nayi screen ka password
+    sirf pehli dafa — phir wo bhi 30 din yaad.
+SACH: phone kisi aur ke haath lage to 30 din tak app bina password khulegi — phone par screen lock zaroor rakhein.
+BADLI HUI FILES: index.html, app.js + version (sw.js, version.json, notes.js, purchase.js, sale.js, pos-stock.js, pos-ledger.js, style.css).

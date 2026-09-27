@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.28.1, 2026-09-27 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.29.0, 2026-09-27 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1751,3 +1751,15 @@ Malik: bade cards default par chhupe (malik + mulazim), khud tap kar ke dekhein;
 * app.js baqayaHTML: M(v) = bqShow ? money(v) : 'Rs ••••••'; card ab <button data-bq-toggle> (.bq-hid) + .bq-tip;
   "Baqi accounts" line bhi M. Global bqShow/bqTimer (persist NAHI), capture click: toggle, on par 30s timer -> false + render.
 * Test: chhupa = raqam nahi, 4 dots; khula = dono raqamein. style.css button.bq-card / .bq-hid / .bq-tip.
+
+==================== v2.29.0 (2026-09-27) — TEZ KHULNA · PASSWORD 30 DIN · SWITCH BINA PASSWORD ====================
+Malik: loading zero ho, mulazim/malik ek dafa password se app seedha khule, screen switch par password na mange.
+Faisle: 30 din, malik + mulazim dono.
+* index.html: preconnect (gstatic, firestore, identitytoolkit, securetoken) + 28 modulepreload — har URL BILKUL wahi jo
+  code import karta hai (query ke sath; script se jaancha: missing 0, bekaar 0). cloud.js pehle dynamic import ke baad
+  aata tha (waterfall) — ab shuru se. #boot ab NT logo splash (<style> head mein, #boot[hidden]{display:none}).
+  rememberPw default checked. VERSION BUMP: index.html mein ab 19 jagah version hai (preloads) — regex sab badalta hai.
+* app.js: REM_DAYS 30 — remRead: o.exp (purana format o.day == aaj bhi chalta, exp jud jata hai); remWrite exp.
+  stopBooting: auto = o.items[o.last]; auto par login form ke upar splash rehti hai jab tak session ya error (80ms check,
+  8s cap); 300ms setTimeout hata kar tryAutoLogin foran. switchForm: yaad password = chip tap par requestSubmit;
+  rem hamesha checked. Test: 30 din expiry, 29 din yaad, 31 bhoola, purana din-format bhoola.
