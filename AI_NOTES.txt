@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.25.0, 2026-09-27 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.27.0, 2026-09-27 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1703,3 +1703,22 @@ Malik: notes mein contact select ho, wahin se WhatsApp / SIM call. Faisla: phone
 * Test (happy-dom): phone list -> Waqar Bhai 03001234567 (+ doosre number ka button); khata -> Amjad 03335556667;
   links tel:+923335556667 / wa.me/923335556667; keys rules ke mutabiq.
 * Version bump regex se; firebasejs 12.18.0 salamat; barcode.js header wapas v2.24.0 (content wahi).
+
+==================== v2.26.0 (2026-09-27) — 📇 GOOGLE CONTACTS, KAI ACCOUNT (rules wahi 2.14) ====================
+Malik: OnePlus Nord 5 par Chrome ka contact picker "No contacts found" (Contacts permission Allow hone ke bawajood).
+Web app poori list khud nahi parh sakti -> malik ne "Google Contacts se jorna" chuna, sirf malik ka phone, KAI Gmail.
+* notes.js gc*: GIS token client (accounts.google.com/gsi/client, scope contacts.readonly + openid email, prompt
+  'select_account' naya / hint = taza), userinfo -> email, People API connections (names, phoneNumbers, pageSize 1000,
+  15 page tak), bina number wale chhode. localStorage 'sam-gcontacts-v1' {accounts:[{email, at, list:[{n, p[]}]}]} —
+  cloud par KUCH nahi. gcCardHTML (#ntGc, sirf owner), gcCidForm -> cloud.setGoogleClientId (blueAccess/pushConfig
+  .googleClientId, merge). ctSuggest(q): Google + khata (naam / 4+ hindse), waNum se dedupe; contactBox mein #<p>CtSug.
+* Test (happy-dom, naqli GIS + fetch): Client ID save, 2 account, pagination, suggestion Google + khata, fill, 🔄 hint.
+* Setup: GOOGLE_CONTACTS_SETUP.txt (People API, Google Auth Platform: External + test users SAB Gmail + scope, Web client
+  origin https://samiullah-878.github.io). Asal Google par test nahi ho saka (yahan network band) — malik ke phone par dekhein.
+
+==================== v2.27.0 (2026-09-27) — KHATA LIST: 0 WALE KHATE CHHUPE ====================
+Malik: zero balance khate default par na dikhen, filter tap par dikhen. Faisle: search mein sab milein; har dafa chhupe khulein.
+* app.js: khata list mein `const ps` -> `let ps`; sort ke baad, jab search KHALI ho: isZ = |balance| < 0.5 paisa ->
+  zeroN ginti; khataZero false ho to ps se nikaal do. zeroChip (data-khata-zero) sortBar se pehle. khataZero global
+  (localStorage NAHI — har dafa false); capture-phase click listener toggle + render(). style.css .zero-chip.
+* version.json rulesChanged false (rules 2.14 hi).

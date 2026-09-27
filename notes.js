@@ -1,4 +1,4 @@
-// notes.js — v2.25.0 (contact: phone list / khata, 📞 Call · 💬 WhatsApp) · v2.23.0: 🔔 REMINDER + 📝 NOTES + 💸 HBL PAYMENT + push notification
+// notes.js — v2.26.0 (📇 Google contacts, kai account) · v2.25.0 (contact: phone list / khata, 📞 Call · 💬 WhatsApp) · v2.23.0: 🔔 REMINDER + 📝 NOTES + 💸 HBL PAYMENT + push notification
 // - notes/<id>: {kind 'note'|'order', text, items[{id,name}], partyId, partyName, amount(paisa), transferId,
 //   remindDay 'YYYY-MM-DD', remindTime 'HH:MM', allDay, done, doneAt, hasPic, by, byName, createdAt, updatedBy, updatedAt, deleted}
 //   Tasveer: entryPhotos/n-<id> {photos:[...]} (khata entries jaisa, 2 tak).
@@ -6,7 +6,7 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { smartSearch, partyScore } from './smart-search.js?v=2.25.0';
+import { smartSearch, partyScore } from './smart-search.js?v=2.27.0';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -139,12 +139,16 @@ async function pickPhoneContact() {
 }
 function contactBox(prefix, name, phone) {
   return `<div class="nt-contact" id="${prefix}Ct">
-    <div class="nt-ct-head"><b>👤 Contact</b><span class="mchips">${canPick() ? `<button type="button" class="rc" data-ct-pick="${prefix}">📇 Phone ki list</button>` : ''}<button type="button" class="rc" data-ct-khata="${prefix}">📒 Khata se</button>${name || phone ? `<button type="button" class="rc" data-ct-clear="${prefix}">✕</button>` : ''}</span></div>
+    <div class="nt-ct-head"><b>👤 Contact</b><span class="mchips">${canPick() ? `<button type="button" class="rc" data-ct-pick="${prefix}">📇 Phone ki list</button>` : ''}<button type="button" class="rc" data-ct-khata="${prefix}">📒 Khata se</button>${gcLoad().accounts.length ? `<span class="nt-gc-tip">📇 ${gcAll().length} Google contacts — naam likhein</span>` : ''}${name || phone ? `<button type="button" class="rc" data-ct-clear="${prefix}">✕</button>` : ''}</span></div>
     <div class="nt-pick" id="${prefix}CtList"></div>
+    <div class="nt-pick nt-sugg" id="${prefix}CtSug"></div>
     <div class="nt-when"><label>Naam<input name="ctName" autocomplete="off" maxlength="80" value="${esc(name || '')}" placeholder="kis ka"></label><label>Number<input name="ctPhone" type="tel" inputmode="tel" maxlength="20" value="${esc(phone || '')}" placeholder="03xx xxxxxxx"></label></div>
   </div>`;
 }
 function wireContact(f, prefix) {       // form ke andar contact ke buttons
+  const sug = () => { const q = f.elements.ctName.value; const l = ctSuggest(q); $(prefix + 'CtSug').innerHTML = l.map(c => `<button type="button" data-ct-sug="${esc(c.n)}|${esc(c.ph)}">${c.src} <b>${esc(c.n)}</b> <small>${esc(c.ph)}</small></button>`).join(''); };
+  f.elements.ctName.addEventListener('input', sug); f.elements.ctPhone.addEventListener('input', () => { if (String(f.elements.ctPhone.value).replace(/\D/g, '').length >= 4 && !f.elements.ctName.value) { const l = ctSuggest(f.elements.ctPhone.value); $(prefix + 'CtSug').innerHTML = l.map(c => `<button type="button" data-ct-sug="${esc(c.n)}|${esc(c.ph)}">${c.src} <b>${esc(c.n)}</b> <small>${esc(c.ph)}</small></button>`).join(''); } });
+  f.addEventListener('click', e => { const b = e.target.closest('[data-ct-sug]'); if (!b) return; const i = b.dataset.ctSug.lastIndexOf('|'); f.elements.ctName.value = b.dataset.ctSug.slice(0, i); f.elements.ctPhone.value = b.dataset.ctSug.slice(i + 1); $(prefix + 'CtSug').innerHTML = ''; });
   f.addEventListener('click', async e => {
     const t = e.target.closest(`[data-ct-pick="${prefix}"],[data-ct-khata="${prefix}"],[data-ct-clear="${prefix}"],[data-ct-p]`); if (!t) return;
     const list = $(prefix + 'CtList'), d = t.dataset;
@@ -166,6 +170,88 @@ function wireContact(f, prefix) {       // form ke andar contact ke buttons
 }
 const callBtns = n => { const ph = n.contactPhone; if (!ph) return '';
   return `<div class="nt-callrow"><span class="nt-ct-name">👤 ${esc(n.contactName || ph)}</span><a class="nt-call" href="tel:${esc(telNum(ph))}" data-nt-stop="1">📞 Call</a><a class="nt-wa" href="https://wa.me/${esc(waNum(ph))}" target="_blank" rel="noopener" data-nt-stop="1">💬 WhatsApp</a></div>`; };
+
+// ---------- v2.26: 📇 GOOGLE CONTACTS — kai Gmail account, list SIRF isi phone par (localStorage), cloud par nahi ----------
+// Google Identity Services token client (contacts.readonly + email) -> People API connections (names, phoneNumbers).
+// Client ID: blueAccess/pushConfig.googleClientId (malik "⚙️ Client ID"). Har account alag: {email, at, list:[{n, p:[..]}]}.
+const GC_KEY = 'sam-gcontacts-v1', GC_SCOPE = 'https://www.googleapis.com/auth/contacts.readonly openid email';
+let gcData = null, gcBusy = '', gisP = null;
+function gcLoad() { if (gcData) return gcData; try { gcData = JSON.parse(localStorage.getItem(GC_KEY) || 'null'); } catch { gcData = null; } if (!gcData || !Array.isArray(gcData.accounts)) gcData = { accounts: [] }; return gcData; }
+function gcSave() { try { localStorage.setItem(GC_KEY, JSON.stringify(gcData)); } catch (e) { notice('⚠️ Phone mein jagah kam — contacts save nahi hue'); } }
+const gcAll = () => gcLoad().accounts.flatMap(a => a.list.map(c => ({ ...c, acc: a.email })));
+const gcOwner = () => (whoOf() || {}).role === 'owner';
+function loadGis() {
+  if (window.google?.accounts?.oauth2) return Promise.resolve();
+  if (gisP) return gisP;
+  gisP = new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://accounts.google.com/gsi/client'; s.async = true; s.onload = () => res(); s.onerror = () => { gisP = null; rej(Error('Google login load nahi hua — internet dekhein')); }; document.head.appendChild(s); });
+  return gisP;
+}
+async function gcToken(hint) {
+  pushCfg = pushCfg || await cloud.getPushConfig();
+  const cid = String(pushCfg?.googleClientId || '').trim();
+  if (!cid) throw Error('Pehle "⚙️ Client ID" save karein');
+  await loadGis();
+  return new Promise((res, rej) => {
+    const tc = window.google.accounts.oauth2.initTokenClient({ client_id: cid, scope: GC_SCOPE, hint: hint || undefined, prompt: hint ? '' : 'select_account',
+      callback: r => r?.access_token ? res(r.access_token) : rej(Error(r?.error_description || r?.error || 'Login nahi hua')),
+      error_callback: e => rej(Error(e?.type === 'popup_closed' ? 'Login band kar diya' : (e?.message || e?.type || 'Login nahi hua'))) });
+    tc.requestAccessToken();
+  });
+}
+async function gcSync(hint) {        // naya account (hint khali) ya purana taza
+  if (gcBusy) return; gcBusy = hint || 'new'; gcPaint();
+  try {
+    const tok = await gcToken(hint), H = { Authorization: 'Bearer ' + tok };
+    const me = await (await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: H })).json();
+    const email = String(me?.email || hint || 'account').toLowerCase();
+    const list = []; let page = '';
+    for (let i = 0; i < 15; i++) {
+      const u = 'https://people.googleapis.com/v1/people/me/connections?personFields=names,phoneNumbers&pageSize=1000' + (page ? '&pageToken=' + encodeURIComponent(page) : '');
+      const r = await fetch(u, { headers: H }); const j = await r.json();
+      if (!r.ok) throw Error(j?.error?.message || ('People API ' + r.status));
+      for (const p of j.connections || []) { const ph = [...new Set((p.phoneNumbers || []).map(x => cleanPhone(x.canonicalForm || x.value)).filter(Boolean))].slice(0, 4);
+        if (!ph.length) continue; list.push({ n: String(p.names?.[0]?.displayName || ph[0]).slice(0, 80), p: ph }); }
+      page = j.nextPageToken || ''; if (!page) break;
+    }
+    const d = gcLoad(), i = d.accounts.findIndex(a => a.email === email), acc = { email, at: Date.now(), list };
+    if (i >= 0) d.accounts[i] = acc; else d.accounts.push(acc);
+    gcSave(); notice('📇 ' + email + ' — ' + list.length + ' contacts aa gaye');
+  } catch (e) { notice('⚠️ Google contacts: ' + (e?.message || e)); }
+  finally { gcBusy = ''; gcPaint(); }
+}
+function gcAgo(ms) { const m = Math.round((Date.now() - ms) / 60000); return m < 1 ? 'abhi' : m < 60 ? m + ' min pehle' : m < 1440 ? Math.round(m / 60) + ' ghante pehle' : Math.round(m / 1440) + ' din pehle'; }
+function gcCardHTML() {
+  if (!gcOwner()) return '';
+  const d = gcLoad(), cid = !!String(pushCfg?.googleClientId || '').trim();
+  return `<div class="nt-gc"><div class="nt-gc-head"><b>📇 Google contacts</b><span>${d.accounts.reduce((n, a) => n + a.list.length, 0)} contacts · isi phone par</span></div>
+    ${d.accounts.map(a => `<div class="nt-gc-acc${Date.now() - a.at > 7 * 864e5 ? ' old' : ''}"><span class="nt-gc-mail">${esc(a.email)}</span><small>${a.list.length} · ${esc(gcAgo(a.at))}</small>
+      <button type="button" class="rc" data-gc-sync="${esc(a.email)}"${gcBusy ? ' disabled' : ''}>${gcBusy === a.email ? '⏳' : '🔄'}</button><button type="button" class="rc" data-gc-rm="${esc(a.email)}">✕</button></div>`).join('')}
+    <div class="mchips"><button type="button" class="rc on" data-gc-add="1"${gcBusy || !cid ? ' disabled' : ''}>${gcBusy === 'new' ? '⏳ Login…' : '➕ ' + (d.accounts.length ? 'Aur account jorein' : 'Google account jorein')}</button><button type="button" class="nt-link" data-gc-cid="1">⚙️ Client ID${cid ? ' ✓' : ' (pehle ye)'}</button></div></div>`;
+}
+function gcPaint() { const b = $('ntGc'); if (b) b.innerHTML = gcCardHTML(); }
+function gcCidForm() {
+  dlgOf('⚙️ Google contacts — Client ID', `<form class="nt-form"><p class="stat-note">Google Cloud → <b>Google Auth Platform → Clients</b> → Web client → <b>Client ID</b> copy (…apps.googleusercontent.com) → yahan paste. Tafseel: GOOGLE_CONTACTS_SETUP.txt</p>
+    <label>Client ID<input name="c" autocomplete="off" required minlength="20" value="${esc(pushCfg?.googleClientId || '')}" placeholder="1234-abc.apps.googleusercontent.com"></label><button type="submit" class="got">Save</button></form>`);
+  const f = document.querySelector('#dialogBody form');
+  f.onsubmit = async e => { e.preventDefault(); const v = f.elements.c.value.trim(); if (!/\.apps\.googleusercontent\.com$/.test(v)) { notice('Ye Client ID nahi lagti — aakhir mein .apps.googleusercontent.com hota hai'); return; }
+    try { await cloud.setGoogleClientId(v); pushCfg = { ...(pushCfg || {}), googleClientId: v }; closeDlg(); notice('✓ Client ID save — ab "➕ Google account jorein"'); gcPaint(); } catch (er) { notice('⚠️ ' + (er?.message || er)); } };
+}
+function ctSuggest(q) {             // Google contacts + khata — naam ya number se
+  const t = String(q || '').trim().toLowerCase(); if (t.length < 2) return [];
+  const digits = t.replace(/\D/g, ''), out = [], seen = new Set();
+  const add = (n, ph, src) => { const k = waNum(ph); if (!k || seen.has(k)) return; seen.add(k); out.push({ n, ph, src }); };
+  for (const c of gcAll()) { if (out.length >= 10) break; const hit = c.n.toLowerCase().includes(t) || (digits.length >= 4 && c.p.some(p => p.replace(/\D/g, '').includes(digits))); if (hit) c.p.forEach(p => add(c.n, p, '📇')); }
+  for (const p of (partiesOf() || [])) { if (out.length >= 12) break; if (!p || p.deleted || !p.phone) continue; if (String(p.name || '').toLowerCase().includes(t) || (digits.length >= 4 && String(p.phone).replace(/\D/g, '').includes(digits))) add(String(p.name).slice(0, 80), cleanPhone(p.phone), '📒'); }
+  return out.slice(0, 10);
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest?.('[data-gc-add],[data-gc-sync],[data-gc-rm],[data-gc-cid]'); if (!t) return;
+  const d = t.dataset;
+  if (d.gcCid) { gcCidForm(); return; }
+  if (d.gcAdd) { gcSync(''); return; }
+  if (d.gcSync) { gcSync(d.gcSync); return; }
+  if (d.gcRm) { if (!confirm(d.gcRm + ' ke contacts is phone se hata dein?')) return; const g = gcLoad(); g.accounts = g.accounts.filter(a => a.email !== d.gcRm); gcSave(); gcPaint(); }
+});
 
 // ---------- notes likhna ----------
 async function saveNote(n, old) {
@@ -267,6 +353,7 @@ export function renderNotes() {
   $('actions').innerHTML = `<button class="got" data-nt-new="1">📝 Naya note</button>${payOf ? '<button data-nt-hbl="1">💸 HBL payment</button>' : ''}`;
   paint();
   pushStatus();
+  if (!pushCfg && cloud?.getPushConfig) cloud.getPushConfig().then(c => { pushCfg = c || {}; gcPaint(); }).catch(() => {});
 }
 function card(n) {
   loadPics(n);
@@ -286,7 +373,7 @@ function card(n) {
 function paint() {
   const root = $('ntRoot'); if (!root) return;
   const due = dueParty(), l = listFor(fTab), cnt = t => listFor(t).length;
-  root.innerHTML = `<div class="nt-push" id="ntPush"></div>
+  root.innerHTML = `<div class="nt-push" id="ntPush"></div><div id="ntGc">${gcCardHTML()}</div>
     <label class="nt-search"><input type="search" placeholder="🔍 note, item, supplier, raqam…" value="${esc(fQ)}" data-nt-q="1"></label>
     <div class="mchips nt-tabs">${[['open', 'Sab khule'], ['today', '🔔 Aaj'], ['late', '⏰ Guzar gaye'], ['next', 'Aane wale'], ['order', '🧾 Order'], ['done', '✓ Ho gaye']].map(([k, lab]) => `<button type="button" class="rc${fTab === k ? ' on' : ''}" data-nt-tab="${k}">${lab} ${cnt(k)}</button>`).join('')}</div>
     ${due.length && fTab !== 'done' ? `<div class="nt-sec"><h3>📒 Accounts ke due</h3>${due.map(x => `<button type="button" class="nt-due${x.late ? ' late' : ''}" data-nt-party="${esc(x.p.id)}"><b>${esc(x.p.name)}</b><span>${esc(nice(x.r.dueDate))}${x.r.dueTime ? ' · ' + esc(t12(x.r.dueTime)) : ''}</span>${x.r.note ? `<small>${esc(x.r.note)}</small>` : ''}</button>`).join('')}</div>` : ''}
