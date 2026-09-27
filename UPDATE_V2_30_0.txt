@@ -1,0 +1,8 @@
+Blue Khata v2.30.0 — KHATE PAR SIRF DO CHIP (customer / supplier alag)
+INSTALL: GitHub par ZIP ki files -> app mein ↻ Sync -> 2.30.0. Rules NAHI badlin. (v2.29 ki tezi / 30-din password bhi is mein hai.)
+ - CUSTOMER ka khata: sirf "💰 Paisa wasool kiya" aur "📦 Saman diya" (udhar — lene hain).
+ - SUPPLIER ka khata: sirf "💸 Payment di" aur "📦 Saman liya" (udhar — dene hain).
+ - "Cash se payment", "+" (Udhar diya / liya wala menu) in dono par HAT gaye. Kharcha / bank (HBL) wale khaton par pehle jaisa.
+ - Entry ke form ka naam bhi wahi (jaise "📦 Saman diya (udhar)").
+ - Hisaab, khata, POS par koi asar nahi — sirf button aur naam.
+BADLI HUI FILES: app.js, style.css + version (index.html, sw.js, version.json, notes.js, purchase.js, sale.js, pos-stock.js, pos-ledger.js).

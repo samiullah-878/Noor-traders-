@@ -1281,3 +1281,6 @@ button.bq-card:active{transform:scale(.98)}
 .bq-card.bq-hid strong{letter-spacing:.18em;color:#9aa8bd!important}
 .bq-card.bq-hid .bq-sub{color:#b8c3d6}
 .bq-tip{margin-top:4px;font-size:11px!important;font-weight:700;color:#6b7c93}
+
+/* ===== v2.30: khate par sirf do chip — customer / supplier ===== */
+#actions button.saman{background:linear-gradient(180deg,#4b5fd6,#2f3f9e)!important;color:#fff!important}
