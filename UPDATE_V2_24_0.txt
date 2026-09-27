@@ -1,0 +1,49 @@
+Blue Khata v2.24.0 — 🔔 NOTIFICATION · REMINDER · 📝 NOTES · 💸 HBL PAYMENT · 🏷 BARCODE REPORT
+=================================================================================================
+(Raat ko dono updates — plan ke Update 1 aur Update 2 — ek sath bana diye gaye.)
+
+INSTALL — 4 qadam:
+ 1) GitHub: ZIP ki saari files repo "Noor-traders" par. notes.js aur barcode.js NAYI files hain.
+    (cloud-functions folder GitHub par ho ya na ho, farq nahi — wo PC se deploy hota hai.)
+ 2) FIREBASE RULES (2.13): console -> project **note-traders-khata-7ccc1** -> Firestore -> Rules ->
+    firestore.rules POORI paste -> Publish. (v2.11 / v2.12 wali bhi isi mein hain — ek dafa kaafi.)
+ 3) App mein "↻ Sync / Update" -> 2.24.0.
+ 4) NOTIFICATION (app band ho tab bhi) — cloud-functions/DEPLOY_KAISE.txt dekhein (Blaze card, push key, PC se deploy).
+    Ye 4th qadam na bhi karein to baqi sab chalta hai — sirf "app band ho tab notification" nahi aayegi.
+
+1) 🔔 REMINDER / NOTES — naya tab upar "🔔 Reminder" (malik + Full mulazim). Tab par laal ginti = aaj/guzre.
+   - "📒 Accounts ke due" — purane account reminders (aaj / kal / late), tap = khata.
+   - Notes: likhai · stock ke ITEM chips (smart search — item chunte hi naam note mein bhi) · 2 tasveer · reminder din + waqt
+     (ya "poora din") · chips Aaj / Kal / 2 din / Hafta. Tap = edit. 🗑 hatao (edit ke andar).
+   - ✓ checkbox: tick hote hi note kat kar halka (animation), "✓ Ho gaye" mein. Wapas untick bhi.
+   - Chips: Sab khule · 🔔 Aaj · ⏰ Guzar gaye · Aane wale · 🧾 Order · ✓ Ho gaye (ginti ke sath) + 🔍 premium search
+     (note, item, supplier, raqam).
+   - Account ke purane reminder (Due Accounts -> Reminder) mein ab "Waqt (notification)" ka khana bhi.
+
+2) 💸 HBL PAYMENT
+   - App khud wo khata dhoondti hai jis ke naam mein "HBL" hai. Do mil jayein ya na mile to pehli dafa ek dafa poochti hai
+     (isi phone par yaad). "badlein" se kabhi bhi badlein.
+   - HBL wale khate par (aur Reminder tab par) button "💸 HBL payment": supplier (search) · raqam (chips 10k/25k/50k/1 lakh) ·
+     kya order kiya (items search + apni likhai, chips) · note · reminder din/waqt (default 2 din baad 11 baje).
+   - Save = khata mein HBL -> supplier ACCOUNT TRANSFER (wohi jo aap pehle se karte hain — POS mein bhi voucher) +
+     "🧾 Amjad Islam — Rs 50,000 · HBL · maal aana baqi" ka reminder. Maal aa jaye to ✓.
+
+3) 🔔 NOTIFICATION
+   - "🔔 Reminder" tab ke upar: "🔔 Notification chalu karein" -> Allow. (Malik ek dafa "⚙️ Push key" save kare.)
+   - Waqt aate hi phone par notification — notification bar mein RAHTI hai jab tak aap khud na hatayein. Tap = wohi note/khata.
+   - Subah 7 se raat 11:30 tak, har 10 minute check. Waqt na diya = subah 9 baje. 2 din se purane par shor nahi.
+
+4) 🏷 BARCODE REPORT — naya tab "🏷 Barcode" (asal data — PC ke label jobs se, rules ki zaroorat nahi):
+   - Aaj · Kal · 7 din · 30 din | ✓ Chhap gaye · ⏳ Line mein · ⚠️ Fail · Sab | 🔍 item/barcode.
+   - Upar: kul label · items · sub-barcode · hukum. Din ke hisaab se -> item -> har barcode:
+     MAIN / SUB · barcode · "📦 5 wala" (packet) · rate · × kitne label · label numbers (#3I-1–40).
+   - "📄 PDF · WhatsApp" — app ki report screen (poori screen + bhejna).
+
+SACH:
+ - HBL bank ka asal account app se jur nahi sakta (bank ijazat nahi deta) — isi liye khata wala HBL account istemal hota hai.
+ - Notification ke liye Firebase Blaze (card) + ek dafa PC se deploy zaroori. Bill taqreeban sifar; Rs 500 ka alert lagayein.
+ - iPhone par notification sirf tab jab app "Add to Home Screen" se khuli ho (iOS 16.4+).
+ - Barcode report mein sirf wo label jo APP se chhapwaye gaye (PC par seedha POS se chhape shamil nahi).
+
+BADLI HUI FILES: notes.js (NAYI), barcode.js (NAYI), app.js, cloud.js, firestore.rules (2.13), index.html, style.css, sw.js,
+                 version.json + version (purchase.js, sale.js, pos-stock.js, pos-ledger.js) + cloud-functions/ (PC se deploy).

@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.22.0, 2026-09-27 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.24.0, 2026-09-27 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1663,3 +1663,31 @@ Malik: "poori app mein jahan bhi entry ho us ki history ka system, ek upar tab".
 * Test (happy-dom): 7 events (khata add/edit/del + purchase/din/galla/stock), diff "raqam Rs 25,200 -> Rs 30,000 | party
   Amjad -> Saim", keys rules-compatible, screen 9 rows (2 stamp), galla filter 1, open -> purchase. Sab pass.
 * Version bump regex se; firebasejs 12.18.0 salamat. galla.js ka header comment wapas v2.21.0 (bump ne badla tha).
+
+==================== v2.24.0 (2026-09-27, raat) — NOTIFICATION · NOTES · HBL · BARCODE (RULES 2.13) ====================
+Malik: notification (app band ho tab bhi), reminder mein waqt + poora din bar mein, notes + tasveer + un ka reminder,
+notes edit + ✓ (kata/halka, animation), premium search, notes mein item naam; HBL account se payment + order ka reminder;
+barcode (tolai) ka asal data report + PDF WhatsApp. Faisle: push = Firebase Cloud Function (Blaze). HBL = khata mein PURANA
+account (naam mein "HBL") — naya nahi. Malik soya hua tha: "sab ki approval, subah tak dono updates".
+* notes.js (NAYI): notesSetup({cloud,notice,who,records,party,parties,items,route,modal,close,pay,canUse}), renderNotes,
+  noteForm, hblPayForm, bankId/isBank (localStorage 'sam-bank-party-v1', warna naam /\bhbl\b/ akela). notes/<id> doc
+  (keys = rules hasOnly), tasveer entryPhotos/n-<id> {photos}. HBL: pay = app.js commitAccountTransfer({id,rev:0,
+  fromPartyId: bank, toPartyId: supplier, amount paisa, date, note, posPending false}) -> note kind 'order' id 'o'+tid.
+  Push: cloud.getPushConfig (blueAccess/pushConfig.vapidKey, malik "⚙️ Push key"), cloud.pushRegister (firebase-messaging
+  getToken + app ki sw.js registration) -> pushTokens/<sha256 40>. hash deep-link #note=<id> / #rem=<partyId>.
+* barcode.js (NAYI): cloud.listenLabelJobs(30 din, where at >=) ; build(): din -> item -> code (MAIN = item.code, warna SUB),
+  qty = packet, copies = label, numFrom/numTo/numCode (PC label-print v3). PDF: app ka openReportPreview via #printArea.
+* cloud.js: saveNote, listenNotes, putPhotos, getPushConfig, setPushConfig, pushRegister, listenLabelJobs.
+* sw.js: 'push' (data message -> showNotification requireInteraction, tag, url) + 'notificationclick' (focus + navigate).
+* app.js: imports; BAR_VIEWS + notes, barcode; render/title/report; notesNav/barcodeNav; party page par
+  "💸 HBL payment" (isBank(selected) && canEditAccount()); reminderForm mein dueTime (rules validReminder + dueTime).
+* firestore.rules 2.13: notes (validNote; read/create/update owner||blueStaff, by/createdAt badal nahi sakte; delete owner),
+  pushTokens (create/update owner||blueStaff, id hex, uid == auth), blueAccess get list + 'pushConfig', validReminder dueTime.
+* cloud-functions/ (functions/index.js remindPush, onSchedule '*/10 7-23 * * *' Asia/Karachi, asia-south1, maxInstances 1):
+  blueKhata type reminder + notes done==false (sirf single-field queries — composite index NAHI chahiye) -> due (din+waqt,
+  khali = 09:00, 2 din se purane nahi) -> pushSent/state.sent map (4 din) -> sendEachForMulticast data msg; dead tokens delete.
+  12 se zyada = ek "aur X". DEPLOY_KAISE.txt (Blaze, VAPID, PC: firebase-tools, firebase deploy --only functions).
+* Test (happy-dom): HBL khud mila, late note + account due (3:30 PM), badge 2, HBL payment -> transfer hbl1->amjad 5000000 +
+  order note (items, 2 din, 11:00), ✓ -> anim -> done save, note keys = rules; barcode 70 label / 30 sub / MAIN+SUB /
+  5 wala / #3I-1–40 / fail filter / PDF. Cloud Function sirf syntax check (firebase-admin yahan nahi chal sakta).
+* audit.js is update mein NAHI badli (header comment wapas v2.22.0).
