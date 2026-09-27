@@ -1,0 +1,13 @@
+Blue Khata v2.28.0 — 👤 KHATE KI TASVEER (naya account + purane khate)
+======================================================================
+INSTALL: GitHub par ZIP ki files -> app mein ↻ Sync -> 2.28.0. RULES NAHI badlin (tasveer ka nizam pehle se tha).
+KYA NAYA:
+ - "+ Naya account" aur khata edit (✏️) ke form mein "👤" gol tasveer + 📷 Camera (usi waqt) · 🖼 Gallery · 🗑 Hatao.
+   Save dabate hi tasveer khate ke sath. Customer / Supplier dono.
+ - Khata kholne par "📷 Picture lagayein / badlein" — ab bhi alag 📷 Camera / 🖼 Gallery + bari gol preview.
+ - Khate ke page par tasveer par tap = POORI SCREEN (pehle naye tab mein khulti thi jo aksar nahi khulta).
+ - Khata ki LIST mein "NA / QA" harf ki jagah chhoti gol tasveer (jin ki tasveer hai). Sirf wohi 3-3 kar ke load hoti hain.
+ - Tasveer ab thori saaf: 640px (pehle 400px), phir bhi ~80KB se kam.
+KAUN: malik + Full mulazim (din khula ho). Sirf Purchase mulazim ko tasveer ka hissa nazar nahi aata.
+BADLI HUI FILES: app.js, style.css + version (index.html, sw.js, version.json, notes.js, purchase.js, sale.js,
+                 pos-stock.js, pos-ledger.js).

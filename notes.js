@@ -6,7 +6,7 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { smartSearch, partyScore } from './smart-search.js?v=2.27.1';
+import { smartSearch, partyScore } from './smart-search.js?v=2.28.0';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -228,7 +228,7 @@ function gcCardHTML() {
       <button type="button" class="rc" data-gc-sync="${esc(a.email)}"${gcBusy ? ' disabled' : ''}>${gcBusy === a.email ? '⏳' : '🔄'}</button><button type="button" class="rc" data-gc-rm="${esc(a.email)}">✕</button></div>`).join('')}
     <div class="mchips"><button type="button" class="rc on" data-gc-add="1"${gcBusy || !cid ? ' disabled' : ''}>${gcBusy === 'new' ? '⏳ Login…' : '➕ ' + (d.accounts.length ? 'Aur account jorein' : 'Google account jorein')}</button><button type="button" class="nt-link" data-gc-cid="1">⚙️ Client ID${cid ? ' ✓' : ' (pehle ye)'}</button></div></div>`;
 }
-function gcPaint() { const b = $('ntGc'); if (b) b.innerHTML = gcCardHTML(); }
+function gcPaint() { const b = $('ntGc'); if (b) b.innerHTML = gcLoad().accounts.length ? gcCardHTML() : ''; }
 function gcCidForm() {
   dlgOf('⚙️ Google contacts — Client ID', `<form class="nt-form"><p class="stat-note">Google Cloud → <b>Google Auth Platform → Clients</b> → Web client → <b>Client ID</b> copy (…apps.googleusercontent.com) → yahan paste. Tafseel: GOOGLE_CONTACTS_SETUP.txt</p>
     <label>Client ID<input name="c" autocomplete="off" required minlength="20" value="${esc(pushCfg?.googleClientId || '')}" placeholder="1234-abc.apps.googleusercontent.com"></label><button type="submit" class="got">Save</button></form>`);
@@ -373,7 +373,7 @@ function card(n) {
 function paint() {
   const root = $('ntRoot'); if (!root) return;
   const due = dueParty(), l = listFor(fTab), cnt = t => listFor(t).length;
-  root.innerHTML = `<div class="nt-push" id="ntPush"></div><div id="ntGc">${gcCardHTML()}</div>
+  root.innerHTML = `<div class="nt-push" id="ntPush"></div><div id="ntGc">${gcLoad().accounts.length ? gcCardHTML() : ''}</div>
     <label class="nt-search"><input type="search" placeholder="🔍 note, item, supplier, raqam…" value="${esc(fQ)}" data-nt-q="1"></label>
     <div class="mchips nt-tabs">${[['open', 'Sab khule'], ['today', '🔔 Aaj'], ['late', '⏰ Guzar gaye'], ['next', 'Aane wale'], ['order', '🧾 Order'], ['done', '✓ Ho gaye']].map(([k, lab]) => `<button type="button" class="rc${fTab === k ? ' on' : ''}" data-nt-tab="${k}">${lab} ${cnt(k)}</button>`).join('')}</div>
     ${due.length && fTab !== 'done' ? `<div class="nt-sec"><h3>📒 Accounts ke due</h3>${due.map(x => `<button type="button" class="nt-due${x.late ? ' late' : ''}" data-nt-party="${esc(x.p.id)}"><b>${esc(x.p.name)}</b><span>${esc(nice(x.r.dueDate))}${x.r.dueTime ? ' · ' + esc(t12(x.r.dueTime)) : ''}</span>${x.r.note ? `<small>${esc(x.r.note)}</small>` : ''}</button>`).join('')}</div>` : ''}

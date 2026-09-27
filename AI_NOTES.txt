@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.27.1, 2026-09-27 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.28.0, 2026-09-27 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1723,3 +1723,25 @@ Malik: zero balance khate default par na dikhen, filter tap par dikhen. Faisle: 
   (localStorage NAHI — har dafa false); capture-phase click listener toggle + render(). style.css .zero-chip.
 * version.json rulesChanged false (rules 2.14 hi).
 * v2.27.1: malik — "0 se 10 rupees tak sab hide". isZ ab |balance| <= 1000 paisa (Rs 10, lene ya dene dono). Chip "Rs 0–10".
+
+==================== v2.27.2 (2026-09-27) — Google contacts card chhupa ====================
+Malik ne Google Contacts ka console setup beech mein chhor diya (People API chalu ho chuki thi; Auth Platform / Client ID
+NAHI bane) — "number khud likh kar save kar lenge". File (.vcf) wala raasta bhi malik ne mana kiya ("genuine chahiye").
+* notes.js: #ntGc sirf tab jab gcLoad().accounts.length > 0 (gcPaint bhi). Google code poora maujood.
+  Dobara chahiye to: Google Auth Platform (External, test users, contacts.readonly) + Web client (origin
+  https://samiullah-878.github.io) -> app mein "⚙️ Client ID" — lekin card chhupa hai, is liye pehle gcCardHTML ko
+  kisi button se kholna hoga (ya ek account ki shart hata dein).
+
+==================== v2.28.0 (2026-09-27) — KHATE KI TASVEER (rules wahi 2.14) ====================
+Malik: naye account par live / gallery tasveer, edit / delete, purane khaton par bhi, full mulazim ko bhi (sirf Full).
+PEHLE SE THA (v2.17 se bhi pehle): partyPhotos/<partyId> {photo, updatedAt, by} (rules: read owner||blueStaff, write
+owner || blueStaff && dayOpen, photo <= 90000), party.hasPhoto, partyPhotoForm (khate ke page par), partyPhotoHTML,
+partyPhotoCache, cloud.getPartyPhoto / setPartyPhoto. Is liye RULES nahi badlin.
+* app.js accountForm: canEditAccount() par .af-photo (phCam capture=environment / phGal / data-af-ph-del), preview;
+  formSave ab async: packPhotos([f],640,85000) -> cloud.setPartyPhoto (await nahi — offline mein atakta nahi) + hasPhoto
+  sirf tab payload mein jab tasveer badli (purchase staff ke create rule mein hasPhoto nahi). Naye khate ka id pehle se
+  crypto.randomUUID() (save data.id ko manta hai).
+* partyPhotoForm: photo (camera) + photo2 (gallery), #ppPrev, 640px. partyPhotoHTML: <a target=_blank> -> button
+  data-party-photo-view -> modal(..., true) poori screen.
+* List: avatarHTML(p) + avQueue/avPump (3 concurrent, sirf hasPhoto, cache; load par sirf us [data-av] ka DOM badle,
+  selected ho to render). Test (happy-dom): p1 tasveer, p2 initials, p3 hasPhoto nahi = read nahi, dobara cache.

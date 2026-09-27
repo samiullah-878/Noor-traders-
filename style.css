@@ -1261,3 +1261,16 @@ footer button:not(.give):not(.got){background:linear-gradient(180deg,#27437c,#17
 /* ===== v2.27: 0 wale khate ki chip ===== */
 .zero-chip{display:block;width:100%;margin:6px 0 8px;min-height:40px;border-radius:999px;border:1.5px dashed #b8c3d6;background:#f6f8fc;color:#41536f;font-weight:800;font-size:13.5px}
 .zero-chip.on{border-style:solid;border-color:#2b4a86;background:#e2ebff;color:#1b3058}
+
+/* ===== v2.28: 👤 khate ki tasveer — form · list · poori screen ===== */
+.af-photo{display:flex;align-items:center;gap:12px;margin:8px 0 10px;padding:10px 12px;border-radius:16px;background:linear-gradient(160deg,#f6f8fc,#eef3ff);border:1px solid #e3e9f3}
+.af-ph-prev{flex:none;width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font-size:30px;background:#fff;border:2px solid #d3def5;overflow:hidden;box-shadow:0 4px 12px #10192b1a}
+.af-ph-prev img,.af-ph-big img{width:100%;height:100%;object-fit:cover}
+.af-ph-btns{display:flex;flex-wrap:wrap;gap:6px}
+.af-ph-btns label.rc{display:inline-flex;align-items:center;cursor:pointer;min-height:40px;padding:6px 14px}
+.af-ph-big{width:160px;height:160px;margin:4px auto 10px;border-radius:50%;display:grid;place-items:center;font-size:54px;background:#f6f8fc;border:3px solid #d3def5;overflow:hidden;box-shadow:0 8px 22px #10192b24}
+.avatar.ph{padding:0;overflow:hidden;background:#fff;border:2px solid #d3def5}
+.avatar.ph img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
+.pp-full{padding:0;border:0;background:none;min-height:0;cursor:zoom-in}
+.pp-view{display:grid;place-items:center;min-height:60vh}
+.pp-view img{max-width:100%;max-height:78vh;border-radius:16px;box-shadow:0 12px 30px #0005}
