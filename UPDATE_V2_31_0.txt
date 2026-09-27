@@ -1,0 +1,13 @@
+Blue Khata v2.31.0 — 🎤 BOL KAR BILL (Sale screen, scanner jaisa)
+INSTALL: GitHub par ZIP ki files -> app mein ↻ Sync -> 2.31.0. Rules NAHI badlin. (v2.29 + v2.30 bhi is mein.)
+ - Sale screen par 🎤 (scanner ke sath). Ek tap = sunta rahega (button laal "🎤 Sun raha…"), dobara tap = band.
+ - Har jumla = usi bill mein line, scanner ki tarah, usi waqt (beep ke sath):
+     "cheeni 5 kilo" · "چینی پانچ کلو" · "ghee 1 carton" · "aata 1 thaila godam 1" · "surf 2 carton aur ghee 12 piece"
+   Ginti ke lafz (ek, do, paanch, bees, aadha, dedh, darjan) aur hindse dono. Carton/bori/thaila/peti = poora carton;
+   kilo/piece/packet = khula. "godam 1" = us godam se (rate bhi usi ka).
+ - Item pehchan: "doosre naam" (Urdu bhi) -> phir Urdu harf khud roman mein (چینی -> chini -> Cheeni) -> phir naam.
+   Na mile to neeche beep + wo lafz search mein aa jata hai, list se tap karein.
+ - Bill waise hi bhejein jaise abhi bhejte hain. Screen se nikle to mic khud band.
+SACH: awaaz Google ki Urdu pehchan se (internet chahiye). Pehli dafa Chrome mic ki ijazat maangega — Allow.
+      Shor mein kabhi ghalat sun sakta hai — line par naam dikh jata hai, ✕ se hata dein.
+BADLI HUI FILES: sale.js, style.css + version (app.js, index.html, sw.js, version.json, notes.js, purchase.js, pos-stock.js, pos-ledger.js).

@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.30.0, 2026-09-27 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.31.0, 2026-09-27 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1771,3 +1771,16 @@ menu) bilkul hata do; kharcha/bank waise hi. Faisle: supplier ka doosra = 📦 S
   diya", .saman); Supplier -> payment ("💸 Payment di", .give) + borrow ("📦 Saman liya", .saman); baqi category purana
   (Wasooli/Payment/Cash se payment/HBL/+). data-entry handler pehle se credit/borrow leta hai. entryTitle(kind,pid) ->
   modal ka naam category ke hisaab se (TYPES model.js mein waise hi — statements/PDF par asar nahi). style .saman.
+
+==================== v2.31.0 (2026-09-27) — 🎤 BOL KAR BILL (sale.js) ====================
+Malik: sale screen par mic, scanner jaisa — bolo "cheeni 5 kilo" to usi bill mein line usi waqt; koi alag screen/jaanch/TTS nahi.
+(Malik ne buttons wale sawal band karne ko kaha — ab seedhi baat.)
+* sale.js vb*: SpeechRecognition ur-PK continuous (onend par restart jab tak vbOn; language-not-supported -> en-IN).
+  vbParse(text, items, st): tokens (Urdu hindse -> 0-9), ginti ke lafz VB_WORD (roman + Urdu), VB_CTN / VB_PCS unit lafz,
+  darjan x12, VB_GODAM + number -> st.names se branch ("godam 1" -> 9), VB_SKIP (ka/ki/aur...). Item: smartSearch(q) ->
+  Urdu ho to smartSearch(vbRoman(q)) (VB_UR harf map; fold phonetic se "chini"="Cheeni") -> naam includes. Unit: same()
+  (fold+roman, startsWith 3+, 1 harf farq) item ke cName/uName se; carton = ctn n, warna pcs n. "aur/,/اور" se kai items.
+  vbAdd: addItem(it,0) + ctn/pcs + godam (itemIn -> setStd), beep, notice; na mile to search box + neechi beep.
+  Mic button (data-sale-mic) ab toggle (pehle ek dafa voiceSearch -> search). camRow template vbOn se laal "Sun raha…".
+  Test (node, asal smartSearch): 12 jumle Roman/Urdu — sab sahi (lux sabun items mein nahi = nahi mila, theek).
+* AI fallback NAHI banaya (context kam) — zaroorat ho to ai-tally mein text-only Gemini call + saleSetup option.

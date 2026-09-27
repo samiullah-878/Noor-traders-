@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.30.0';
-import { smartSearch, topItems, noteHit, voiceSearch } from './smart-search.js?v=2.30.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.31.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.31.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -99,6 +99,74 @@ function addItem(it, qtyPcs = 1) {
 // v1.61.2: camera ki list bill se (rate bhi bill wala: khula piece l.rate, carton crate)
 // v1.64: camera ki list ka ✕ -> bill ki wohi line (pehchan k se)
 // v1.86: hooks function mein — POS Purchase screen bhi yahi hooks leti hai; jo screen khule woh apne laga leti hai
+// ---------- v2.31: 🎤 BOL KAR BILL — scanner jaisa: har jumla = usi bill mein ek line (Urdu/Roman, ginti ke lafz, carton/kilo, godam) ----------
+let vbRec = null, vbOn = false, vbAudio = null, vbSeq = 0;
+const VB_DIG = s => String(s || '').replace(/[۰-۹]/g, x => String(x.charCodeAt(0) - 1776)).replace(/[٠-٩]/g, x => String(x.charCodeAt(0) - 1632));
+const VB_WORD = { aik: 1, ek: 1, ایک: 1, do: 2, دو: 2, teen: 3, tin: 3, تین: 3, char: 4, chaar: 4, چار: 4, panch: 5, paanch: 5, پانچ: 5, chay: 6, che: 6, chhe: 6, چھ: 6, چھے: 6, saat: 7, sat: 7, سات: 7, aath: 8, ath: 8, آٹھ: 8, nau: 9, no: 9, نو: 9, das: 10, دس: 10, gyara: 11, گیارہ: 11, bara: 12, بارہ: 12, tera: 13, تیرہ: 13, chauda: 14, چودہ: 14, pandra: 15, پندرہ: 15, sola: 16, سولہ: 16, satra: 17, سترہ: 17, athara: 18, اٹھارہ: 18, unnis: 19, انیس: 19, bees: 20, بیس: 20, pachees: 25, پچیس: 25, tees: 30, تیس: 30, chalis: 40, چالیس: 40, pachas: 50, پچاس: 50, sath: 60, ساٹھ: 60, sattar: 70, ستر: 70, assi: 80, اسی: 80, nabbe: 90, نوے: 90, sau: 100, سو: 100, aadha: 0.5, آدھا: 0.5, dedh: 1.5, ڈیڑھ: 1.5, dhai: 2.5, ڈھائی: 2.5 };
+const VB_CTN = new Set(['carton', 'cartoon', 'ctn', 'cotton', 'karton', 'kartan', 'peti', 'box', 'dabba', 'gatta', 'کارٹن', 'کاٹن', 'کارٹون', 'پیٹی', 'ڈبہ', 'بکس', 'گتا']);
+const VB_PCS = new Set(['pcs', 'piece', 'pieces', 'pc', 'dana', 'adad', 'kilo', 'kg', 'kilogram', 'litre', 'liter', 'ltr', 'packet', 'pkt', 'bottle', 'botal', 'thaila', 'thela', 'bori', 'bag', 'kg.', 'کلو', 'کلوگرام', 'لیٹر', 'لٹر', 'پیس', 'دانہ', 'عدد', 'پیکٹ', 'بوتل', 'تھیلا', 'تھیلی', 'بوری', 'بیگ']);
+const VB_GODAM = new Set(['godam', 'godaam', 'gudam', 'گودام', 'گودم', 'گدام']);
+const VB_SKIP = new Set(['ka', 'ki', 'ke', 'ko', 'aur', 'or', 'and', 'wala', 'wali', 'walay', 'walee', 'کا', 'کی', 'کے', 'کو', 'اور', 'والا', 'والی', 'والے', 'daal', 'daalo', 'do', 'dedo', 'ڈالو', 'ڈال', 'add', 'plus', 'lagao', 'لگاؤ', 'لگا']);
+const VB_UR = { 'ا': 'a', 'آ': 'a', 'ب': 'b', 'پ': 'p', 'ت': 't', 'ٹ': 't', 'ث': 's', 'ج': 'j', 'چ': 'ch', 'ح': 'h', 'خ': 'kh', 'د': 'd', 'ڈ': 'd', 'ذ': 'z', 'ر': 'r', 'ڑ': 'r', 'ز': 'z', 'ژ': 'zh', 'س': 's', 'ش': 'sh', 'ص': 's', 'ض': 'z', 'ط': 't', 'ظ': 'z', 'ع': '', 'غ': 'gh', 'ف': 'f', 'ق': 'q', 'ک': 'k', 'ك': 'k', 'گ': 'g', 'ل': 'l', 'م': 'm', 'ن': 'n', 'ں': 'n', 'و': 'o', 'ہ': 'h', 'ھ': 'h', 'ه': 'h', 'ء': '', 'ی': 'i', 'ي': 'i', 'ے': 'e', 'ئ': 'i', 'ۃ': 'h', 'ة': 'h' };
+const vbRoman = s => String(s || '').replace(/[\u064B-\u065F\u0670\u0640]/g, '').split('').map((c, i, a) => c in VB_UR ? (c === 'و' && (i === 0 || a[i - 1] === ' ') ? 'w' : VB_UR[c]) : c).join('');
+function vbNum(t) { const d = VB_DIG(t).replace(/[^\d.]/g, ''); if (d && /^\d+(\.\d+)?$/.test(d)) return Number(d); const w = t.toLowerCase(); return VB_WORD[w] ?? null; }
+function vbTok(s) { return VB_DIG(s).toLowerCase().replace(/[،,؛;]/g, ' , ').replace(/(\d)([a-z\u0600-\u06ff])/g, '$1 $2').replace(/([a-z\u0600-\u06ff])(\d)/g, '$1 $2').split(/\s+/).filter(Boolean); }
+function vbParse(text, items, st) {          // ek jumla -> { it, ctn, pcs, godam, q }
+  const toks = vbTok(text); if (!toks.length) return null;
+  let qty = null, unit = '', godam = null; const words = [];
+  for (let i = 0; i < toks.length; i++) {
+    const t = toks[i];
+    if (VB_GODAM.has(t)) { const n = vbNum(toks[i + 1] || ''); if (n != null) { i++; const nm = 'godam ' + n; godam = (st.branches || []).find(b => norm(st.names?.[b] || '').replace(/[^a-z0-9 ]/g, '') === nm) ?? (st.branches || []).find(b => String(b) === String(n)) ?? null; } continue; }
+    const n = vbNum(t); if (n != null && qty == null) { qty = n; continue; }
+    if (t === 'darjan' || t === 'dozen' || t === 'درجن') { qty = (qty ?? 1) * 12; if (!unit) unit = 'pcs'; continue; }
+    if (VB_CTN.has(t) || VB_PCS.has(t)) { if (!unit) unit = t; continue; }
+    if (VB_SKIP.has(t)) continue;
+    words.push(t);
+  }
+  const q = words.join(' ').trim();
+  if (!q) return { it: null, q: '', qty, unit, godam };
+  let it = smartSearch(items, q, 3)[0] || null;
+  if (!it && /[\u0600-\u06ff]/.test(q)) it = smartSearch(items, vbRoman(q), 3)[0] || null;   // Urdu harf -> roman (چینی -> chini -> Cheeni)
+  if (!it) { const qq = norm(q); it = items.find(r => norm(r.name).includes(qq)) || null; }
+  if (!it) return { it: null, q, qty, unit, godam };
+  const n = qty ?? 1, cn = norm(it.cName || 'ctn'), un = norm(it.uName || 'pcs'), u = norm(unit);
+  const same = (x, y) => { if (!x || !y) return false; x = fold(vbRoman(x)); y = fold(vbRoman(y)); if (x === y) return true; if (x.length >= 3 && y.length >= 3 && (x.startsWith(y) || y.startsWith(x))) return true; if (Math.abs(x.length - y.length) > 1) return false; let d = 0, i = 0, j = 0; while (i < x.length && j < y.length) { if (x[i] === y[j]) { i++; j++; continue; } if (++d > 1) return false; if (x.length > y.length) i++; else if (y.length > x.length) j++; else { i++; j++; } } return d + (x.length - i) + (y.length - j) <= 1; };
+  const isCtn = !!u && (same(u, cn) || (VB_CTN.has(u) && !same(u, un))) && !same(u, un);
+  return { it, q, qty: n, unit, godam, ctn: isCtn ? n : 0, pcs: isCtn ? 0 : n };
+}
+function vbBeep(ok = true) { try { vbAudio = vbAudio || new (window.AudioContext || window.webkitAudioContext)(); const o = vbAudio.createOscillator(), g = vbAudio.createGain(); o.frequency.value = ok ? 1320 : 330; g.gain.value = 0.12; o.connect(g); g.connect(vbAudio.destination); o.start(); o.stop(vbAudio.currentTime + (ok ? 0.09 : 0.25)); } catch {} }
+function vbAdd(text) {
+  if (!document.querySelector('[data-sale-root]')) { vbStop(); return; }
+  const st = stock(), parts = String(text || '').split(/\s+(?:aur|or|and|اور)\s+|[،,]/i).map(x => x.trim()).filter(Boolean);
+  let added = 0, miss = '';
+  for (const p of parts) {
+    const r = vbParse(p, st.items, st); if (!r) continue;
+    if (!r.it) { miss = r.q || p; continue; }
+    const l = addItem(r.it, 0);
+    l.ctn = r.ctn; l.pcs = r.pcs;
+    if (r.godam != null && r.godam !== l.godam) { l.godam = Number(r.godam); const gi = itemIn(l.godam, r.it.id); if (gi) setStd(l, gi); }
+    added++;
+    notice('🎤 ✓ ' + r.it.name + ' · ' + (r.ctn ? r.ctn + ' ' + (r.it.cName || 'Ctn') : r.pcs + ' ' + (r.it.uName || 'Pcs')) + (r.godam != null ? ' · ' + (st.names?.[r.godam] || 'godam ' + r.godam) : ''));
+  }
+  if (added) { cash = null; keepDraft(); rerender(); vbBeep(true); }
+  if (miss) { vbBeep(false); const s = $('search'); if (s) { s.value = miss; s.dispatchEvent(new Event('input', { bubbles: true })); } notice('🎤 "' + miss + '" nahi mila — list se chunein'); }
+}
+function vbStart() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
+  vbStop(); vbOn = true; const seq = ++vbSeq;
+  const mk = lang => { const r = new SR(); r.lang = lang; r.continuous = true; r.interimResults = false; r.maxAlternatives = 1;
+    r.onresult = ev => { for (let i = ev.resultIndex; i < ev.results.length; i++) { const res = ev.results[i]; if (res.isFinal) { const t = String(res[0]?.transcript || '').trim(); if (t) vbAdd(t); } } };
+    r.onerror = ev => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { vbOn = false; vbPaint(); notice('Mic ki ijazat dein (Chrome → Microphone → Allow)'); } else if (ev.error === 'language-not-supported' && lang !== 'en-IN') { vbRec = mk('en-IN'); try { vbRec.start(); } catch {} } };
+    r.onend = () => { if (vbOn && seq === vbSeq && vbRec === r) setTimeout(() => { if (vbOn && seq === vbSeq && vbRec === r) { try { r.start(); } catch {} } }, 250); };
+    return r; };
+  vbRec = mk('ur-PK');
+  try { vbRec.start(); } catch (e) { vbOn = false; notice('Mic shuru nahi hua: ' + (e?.message || e)); }
+  vbPaint(); notice('🎤 Sun raha hoon — bolein: "cheeni 5 kilo", "ghee 1 carton", "aata 1 thaila godam 1"');
+}
+function vbStop() { vbOn = false; vbSeq++; if (vbRec) { try { vbRec.onend = null; vbRec.stop(); } catch {} vbRec = null; } vbPaint(); }
+function vbPaint() { const b = document.querySelector('[data-sale-mic]'); if (!b) return; b.classList.toggle('on', vbOn); b.textContent = vbOn ? '🎤 Sun raha…' : '🎤'; b.title = vbOn ? 'Band karne ke liye dabayein' : 'Bol kar bill'; }
+
 function installSaleHooks() {
 setSaleDelHook(key => {
   const i = cart.findIndex(l => l.k === key);
@@ -203,7 +271,7 @@ export function renderSale() {
 
   const q = norm(si?.value || '');
   let found = '';
-  const camRow = `<div class="sale-camrow"><button type="button" class="sale-cam" data-sale-camera="1">📷 Scan</button><button type="button" class="sale-mic" data-sale-mic="1" title="Awaz se">🎤</button><span class="stat-note">Naam likhein ya scan karein</span></div>`;
+  const camRow = `<div class="sale-camrow"><button type="button" class="sale-cam" data-sale-camera="1">📷 Scan</button><button type="button" class="sale-mic${vbOn ? ' on' : ''}" data-sale-mic="1" title="Bol kar bill">${vbOn ? '🎤 Sun raha…' : '🎤'}</button><span class="stat-note">Naam likhein ya scan karein</span></div>`;
   if (!q && searchFocused) {   // v1.75: khali search par aksar bikne wale items
     const top = topItems(s.items, 10);
     if (top.length) found = `<div class="sale-found"><p class="stat-note" style="margin:0 0 4px">Aksar bikne wale</p>${top.map(r => `<button type="button" class="sale-hit" data-sale-add="${esc(r.id)}"><b>${esc(r.name)}</b><small>${esc(r.code || '')} · R ${num(r.rate)} · stock ${num(r.stock)}</small></button>`).join('')}</div>`;
@@ -302,7 +370,7 @@ document.addEventListener('keydown', e => {
 
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { const ok = voiceSearch(t => { const s = $('search'); if (s) { s.value = t; s.dispatchEvent(new Event('input', { bubbles: true })); } }); if (!ok) notice('Is phone/browser mein awaz se search nahi chalti'); return; }
+  if (mic) { if (vbOn) vbStop(); else vbStart(); return; }   // v2.31: scanner jaisa — bol kar line
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {
