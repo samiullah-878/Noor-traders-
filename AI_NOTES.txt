@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.31.0, 2026-09-27 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.31.1, 2026-09-27 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1784,3 +1784,6 @@ Malik: sale screen par mic, scanner jaisa — bolo "cheeni 5 kilo" to usi bill m
   Mic button (data-sale-mic) ab toggle (pehle ek dafa voiceSearch -> search). camRow template vbOn se laal "Sun raha…".
   Test (node, asal smartSearch): 12 jumle Roman/Urdu — sab sahi (lux sabun items mein nahi = nahi mila, theek).
 * AI fallback NAHI banaya (context kam) — zaroorat ho to ai-tally mein text-only Gemini call + saleSetup option.
+* v2.31.1: Android Chrome par continuous recognition pehli utterance ke baad band -> ab HOLD-TO-TALK: pointerdown = vbStart
+  (continuous+interim, sessions khud restart jab tak vbHold; vbDone+vbHeard jama), pointerup = vbRelease (600ms baad stop)
+  -> onend par poora text vbAdd. Click sirf hint. Beep ke sath vibrate. "Suna: ..." notice na milne par.

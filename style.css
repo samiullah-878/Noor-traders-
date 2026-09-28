@@ -1288,3 +1288,4 @@ button.bq-card:active{transform:scale(.98)}
 /* ===== v2.31: 🎤 bol kar bill ===== */
 .sale-mic.on{background:linear-gradient(180deg,#e0574f,#b3261e)!important;color:#fff!important;animation:micPulse 1.2s ease-in-out infinite;min-width:120px}
 @keyframes micPulse{50%{box-shadow:0 0 0 6px #e0574f44}}
+.sale-mic{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}

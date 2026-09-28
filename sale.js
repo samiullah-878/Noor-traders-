@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.31.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.31.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.31.1';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.31.1';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -148,24 +148,32 @@ function vbAdd(text) {
     added++;
     notice('🎤 ✓ ' + r.it.name + ' · ' + (r.ctn ? r.ctn + ' ' + (r.it.cName || 'Ctn') : r.pcs + ' ' + (r.it.uName || 'Pcs')) + (r.godam != null ? ' · ' + (st.names?.[r.godam] || 'godam ' + r.godam) : ''));
   }
-  if (added) { cash = null; keepDraft(); rerender(); vbBeep(true); }
-  if (miss) { vbBeep(false); const s = $('search'); if (s) { s.value = miss; s.dispatchEvent(new Event('input', { bubbles: true })); } notice('🎤 "' + miss + '" nahi mila — list se chunein'); }
+  if (added) { cash = null; keepDraft(); rerender(); try { navigator.vibrate?.([40, 40, 40]); } catch {} vbBeep(true); }
+  if (miss) { vbBeep(false); const s = $('search'); if (s) { s.value = miss; s.dispatchEvent(new Event('input', { bubbles: true })); } notice('🎤 Suna: "' + String(text).slice(0, 60) + '" — "' + miss + '" nahi mila, list se chunein'); }
 }
-function vbStart() {
+let vbHold = false, vbStopT = 0, vbHeard = '', vbDone = '';
+function vbStart() {               // v2.31.1: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
-  vbStop(); vbOn = true; const seq = ++vbSeq;
-  const mk = lang => { const r = new SR(); r.lang = lang; r.continuous = true; r.interimResults = false; r.maxAlternatives = 1;
-    r.onresult = ev => { for (let i = ev.resultIndex; i < ev.results.length; i++) { const res = ev.results[i]; if (res.isFinal) { const t = String(res[0]?.transcript || '').trim(); if (t) vbAdd(t); } } };
-    r.onerror = ev => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { vbOn = false; vbPaint(); notice('Mic ki ijazat dein (Chrome → Microphone → Allow)'); } else if (ev.error === 'language-not-supported' && lang !== 'en-IN') { vbRec = mk('en-IN'); try { vbRec.start(); } catch {} } };
-    r.onend = () => { if (vbOn && seq === vbSeq && vbRec === r) setTimeout(() => { if (vbOn && seq === vbSeq && vbRec === r) { try { r.start(); } catch {} } }, 250); };
+  if (vbRec) { try { vbRec.abort(); } catch {} vbRec = null; }
+  clearTimeout(vbStopT); vbOn = true; vbHold = true; vbHeard = ''; vbDone = ''; const seq = ++vbSeq;
+  const mk = lang => { const r = new SR(); r.lang = lang; r.continuous = true; r.interimResults = true; r.maxAlternatives = 1;
+    r.onresult = ev => { let fin = '', tmp = ''; for (let i = 0; i < ev.results.length; i++) { const t = String(ev.results[i][0]?.transcript || ''); if (ev.results[i].isFinal) fin += ' ' + t; else tmp += ' ' + t; } vbHeard = (fin + ' ' + tmp).trim(); vbPaint(); };
+    r.onerror = ev => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { vbOn = false; vbHold = false; vbPaint(); notice('Mic ki ijazat dein (Chrome → Microphone → Allow)'); } else if (ev.error === 'language-not-supported' && lang !== 'en-IN') { vbRec = mk('en-IN'); try { vbRec.start(); } catch {} } };
+    r.onend = () => { if (seq !== vbSeq || vbRec !== r) return; if (vbHold) { vbDone = (vbDone + ' ' + vbHeard).trim(); vbHeard = ''; try { r.start(); } catch {} return; } vbOn = false; vbRec = null; const t = (vbDone + ' ' + vbHeard).trim(); vbHeard = ''; vbDone = ''; vbPaint(); if (t) vbAdd(t); else notice('🎤 Kuch suna nahi — daba kar rakhein aur bolein'); };
     return r; };
   vbRec = mk('ur-PK');
-  try { vbRec.start(); } catch (e) { vbOn = false; notice('Mic shuru nahi hua: ' + (e?.message || e)); }
-  vbPaint(); notice('🎤 Sun raha hoon — bolein: "cheeni 5 kilo", "ghee 1 carton", "aata 1 thaila godam 1"');
+  try { vbRec.start(); } catch (e) { vbOn = false; vbHold = false; notice('Mic shuru nahi hua: ' + (e?.message || e)); }
+  try { navigator.vibrate?.(30); } catch {}
+  vbPaint();
 }
-function vbStop() { vbOn = false; vbSeq++; if (vbRec) { try { vbRec.onend = null; vbRec.stop(); } catch {} vbRec = null; } vbPaint(); }
-function vbPaint() { const b = document.querySelector('[data-sale-mic]'); if (!b) return; b.classList.toggle('on', vbOn); b.textContent = vbOn ? '🎤 Sun raha…' : '🎤'; b.title = vbOn ? 'Band karne ke liye dabayein' : 'Bol kar bill'; }
+function vbRelease() {             // ungli uthi — aakhri lafz ke liye 0.6s ruk kar band
+  if (!vbHold) return; vbHold = false;
+  clearTimeout(vbStopT); vbStopT = setTimeout(() => { if (vbRec) { try { vbRec.stop(); } catch {} } }, 600);
+  vbPaint();
+}
+function vbStop() { vbHold = false; vbOn = false; vbSeq++; clearTimeout(vbStopT); if (vbRec) { try { vbRec.onend = null; vbRec.abort(); } catch {} vbRec = null; } vbPaint(); }
+function vbPaint() { const b = document.querySelector('[data-sale-mic]'); if (!b) return; b.classList.toggle('on', vbOn); b.textContent = vbOn ? (vbHold ? '🎤 ' + (vbHeard ? vbHeard.slice(-24) : 'Bolein…') : '⏳') : '🎤 Daba kar bolo'; }
 
 function installSaleHooks() {
 setSaleDelHook(key => {
@@ -271,7 +279,7 @@ export function renderSale() {
 
   const q = norm(si?.value || '');
   let found = '';
-  const camRow = `<div class="sale-camrow"><button type="button" class="sale-cam" data-sale-camera="1">📷 Scan</button><button type="button" class="sale-mic${vbOn ? ' on' : ''}" data-sale-mic="1" title="Bol kar bill">${vbOn ? '🎤 Sun raha…' : '🎤'}</button><span class="stat-note">Naam likhein ya scan karein</span></div>`;
+  const camRow = `<div class="sale-camrow"><button type="button" class="sale-cam" data-sale-camera="1">📷 Scan</button><button type="button" class="sale-mic${vbOn ? ' on' : ''}" data-sale-mic="1" title="Daba kar bolo">${vbOn ? '🎤 Bolein…' : '🎤 Daba kar bolo'}</button><span class="stat-note">Naam likhein ya scan karein</span></div>`;
   if (!q && searchFocused) {   // v1.75: khali search par aksar bikne wale items
     const top = topItems(s.items, 10);
     if (top.length) found = `<div class="sale-found"><p class="stat-note" style="margin:0 0 4px">Aksar bikne wale</p>${top.map(r => `<button type="button" class="sale-hit" data-sale-add="${esc(r.id)}"><b>${esc(r.name)}</b><small>${esc(r.code || '')} · R ${num(r.rate)} · stock ${num(r.stock)}</small></button>`).join('')}</div>`;
@@ -368,9 +376,13 @@ document.addEventListener('keydown', e => {
   setTimeout(() => qtyPad(cart.length - 1), 60);
 });
 
+document.addEventListener('pointerdown', e => { const m = e.target.closest?.('[data-sale-mic]'); if (!m) return; e.preventDefault(); try { m.setPointerCapture?.(e.pointerId); } catch {} vbStart(); });
+document.addEventListener('pointerup', e => { if (e.target.closest?.('[data-sale-mic]') || vbHold) vbRelease(); });
+document.addEventListener('pointercancel', () => vbRelease());
+document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sale-mic]')) e.preventDefault(); });
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { if (vbOn) vbStop(); else vbStart(); return; }   // v2.31: scanner jaisa — bol kar line
+  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.31.1: hold se chalta hai
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {

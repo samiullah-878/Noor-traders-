@@ -1,0 +1,9 @@
+Blue Khata v2.31.1 — 🎤 DABA KAR BOLO (WhatsApp voice note jaisa)
+INSTALL: GitHub par ZIP ki files -> app mein ↻ Sync -> 2.31.1. Rules NAHI badlin.
+ - Android ka Chrome lagataar sunna theek nahi karta (pehli baat ke baad ruk jata tha). Ab:
+   🎤 button DABA KAR RAKHEIN -> item bolein ("cheeni 5 kilo") -> CHHOR DEIN -> line lag jati hai (phone halka vibrate).
+   Har item ke liye ek dafa. Dabe hue button par jo sun raha hai wo likha aata hai.
+ - "surf 2 carton aur ghee 12 piece" ek hi dafa mein do lines.
+ - Na mile to likha aata hai kya SUNA gaya aur kya nahi mila — wo lafz search mein aa jata hai, list se tap karein.
+   (Jo suna gaya wo Claude ko bhej dein — pehchan behtar kar dunga.)
+BADLI HUI FILES: sale.js, style.css + version.
