@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.35.1, 2026-09-28 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.36.0, 2026-09-28 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1852,3 +1852,19 @@ setRegPdf maangta -> module graph fail -> app.js chalta hi nahi -> v2.29 ki full
   bkBooted ho to purana rule (login dikhao). Test (happy-dom): atki = button + galti, tap = unregister + cache delete + reload;
   khuli = button nahi.
 * Upload tip: saari files -> 2-3 minute ruk kar app kholo.
+
+==================== v2.36.0 (2026-09-28) — 📢 DEMAND · ORDER SAAF (RULES 2.16) ====================
+Malik ne pehla AI order dekha: factory ke items (Thyla surf...), bohat bari tadad (andar ke Noor Traders bill sale mein ginay
+gaye), aur larka copy par demand likhta hai. Tasveer-parhwana reject; ye bana:
+* demands/<id> {id,i,n,lvl out|low,by,byName,at,st open|done} — rules 2.16: create koi bhi staff (by==uid, st open), read
+  sab staff, update st (owner/full/apni), delete owner. cloud.listenDemands (where st==open) / saveDemand.
+* notes.js dm*: openDemand() dialog (dlgOf) — search (stockOf map, fallback saleStock) + 🎤 voiceSearch, Khatam/Kam buttons,
+  duplicate rok, khuli list ✕. Buttons: pos-stock (data-demand, .dm-btn), sale.js camRow 📢. document click [data-demand].
+* poMake: pehle dmOpen() -> cand (d, di; need = out ? lq : hisaab; left -1), phir stats; poSkipped(party) (localStorage
+  'sam-po-skip', default ['our factory']) bahar; AI table mein DEMAND + 'MULAZIM NE KAHA'; AI chhor de to bhi demand line
+  mein jud jati hai; lines demand-wali pehle; chip.d / chip.why. got -> dmList di done. Single tap prompt mein gs (godam-wise,
+  app.js stock() ab {gs:{godamName:qty}}). 🚫 data-po-skip / data-po-unskip. Bazaar: text (share/clipboard/wa.me) + pdfOf
+  (notesSetup pdf: app.js openReportPreview).
+* pc/sales-stats.js v1.1: SKIP — Party '%noor%trader%' / '%our factory%' sale+purchase se bahar (LEFT JOIN Party). manifest .3.
+* Test (happy-dom): staff demand save -> owner order: demand line pehle (10 Ctn = lq), factory bahar, AI ne demand dekhi,
+  double tap -> demand done.

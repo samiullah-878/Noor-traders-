@@ -1,0 +1,22 @@
+Blue Khata v2.36.0 — 📢 DEMAND (mulazim) · order saaf (factory bahar, andar ke bill bahar) · 🧾 Bazaar list
+=========================================================================================================
+INSTALL — 3 qadam:
+ 1) GitHub bahar wala folder: App ZIP ki files -> 2-3 min ruk kar app kholein -> ↻ Sync -> 2.36.0.
+ 2) RULES 2.16: firestore-rules-2.16.html -> 📋 Copy -> Firebase -> Rules -> paste -> Publish (LAZMI — demand ke liye).
+ 3) GitHub pc/ folder: pc ZIP ki 2 files (sales-stats.js, manifest.json) — doctor khud utha lega. Agle ghante ka data
+    Noor Traders ke apne bill ke baghair aayega (tab tak purane bade number reh sakte hain).
+KYA NAYA:
+ 📢 DEMAND — Stock aur Sale screen par button "📢 Demand (khatam / kam)" (Sale par scanner ke sath 📢):
+   item likho ya 🎤 bolo -> "Khatam" ya "Kam hai". Bas. Sab mulazim (Full/Stock/Sale/Purchase) daal sakte hain.
+   Neeche khuli demand ki list; apni demand ✕ se hata sakte hain (malik/Full sab ki).
+ 🛒 ORDER:
+   - Larkon ki demand SAB SE UPAR, supplier ki line mein, chip par "👦 Kashif: khatam". AI ko bhi hukum: demand lazmi rakhe.
+     "Khatam" ho to pichhli purchase jitni tadad, "kam" ho to hisaab wali.
+   - Har chip par wajah: 👦 demand / stock 0 / 3 din baqi.
+   - "our factory" order se BAHAR (hamesha). Har supplier line par 🚫 = ye supplier aainda bahar; upar "Order se bahar"
+     chips, ✕ = wapas.
+   - Chip par ek tap (ruk kar) = har GODAM ka stock alag + tadad badlo.
+   - Chip par DOUBLE TAP = maal aa gaya -> us ki demand khud band.
+   - 🧾 Bazaar list (WhatsApp / share, copy bhi) + 📄 PDF (☐ tick ke sath) — purchaser ke liye seedhi list.
+ PC: Noor Traders / our factory party ke sale-purchase bill bikri/khareed ki ginti se bahar (andar ka lena-dena).
+BADLI HUI FILES: notes.js, cloud.js, pos-stock.js, sale.js, app.js, style.css, firestore.rules + version; pc/sales-stats.js, pc/manifest.json.

@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.35.1';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.36.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -476,7 +476,7 @@ function summaryHTML(branches, pick, items, meta, names) {
            <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>`
         : `<div class="sh-scanrow"><button class="sh-wide sh-scan" data-stock-scan="1">📷 Barcode scan karein (ek ya kai items)</button><button type="button" class="sh-mic" data-stock-mic="1" title="Awaz se dhoondein">🎤</button></div>
            ${canEditItem() ? '<button class="sh-wide" data-stock-newitem="1">➕ Naya item</button>' : ''}
-           <button class="sh-wide" data-stock-in="1">📥 Aaya / gaya maal</button><button class="sh-wide" data-stock-reg="1">📋 Transfer register</button>
+           <button class="sh-wide" data-stock-in="1">📥 Aaya / gaya maal</button><button class="sh-wide" data-stock-reg="1">📋 Transfer register</button><button class="sh-wide dm-btn" data-demand="1">📢 Demand (khatam / kam)</button>
            <button class="sh-wide sh-tolai" data-stock-tolai="1">⚖️ Tolai</button>
            <button class="sh-wide" data-stock-transfer="1">⇄ Transfer note (godam se godam)</button>
            ${($('search')?.value || '').trim() ? '<button class="sh-wide" data-stock-clear="1">✕ Search saaf karein</button>' : ''}`}

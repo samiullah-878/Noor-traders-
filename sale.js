@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.35.1';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.35.1';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.36.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.36.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -227,7 +227,7 @@ function vbAdd(text) {
   if (!lastSug) notice('🎤 Suna: "' + heard.slice(0, 60) + '" — item ka naam samajh nahi aaya');
 }
 let vbHold = false, vbStopT = 0, vbHeard = '', vbDone = '';
-function vbStart() {               // v2.35.1: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
+function vbStart() {               // v2.36.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
   if (vbRec) { try { vbRec.abort(); } catch {} vbRec = null; }
@@ -354,7 +354,7 @@ export function renderSale() {
 
   const q = norm(si?.value || '');
   let found = '';
-  const camRow = `<div class="sale-camrow"><button type="button" class="sale-cam" data-sale-camera="1">📷 Scan</button><button type="button" class="sale-mic${vbOn ? ' on' : ''}" data-sale-mic="1" title="Daba kar bolo">${vbOn ? '🎤 Bolein…' : '🎤 Daba kar bolo'}</button><span class="stat-note">Naam likhein ya scan karein</span></div>`;
+  const camRow = `<div class="sale-camrow"><button type="button" class="sale-cam" data-sale-camera="1">📷 Scan</button><button type="button" class="sale-mic dm-btn" data-demand="1" title="Demand">📢</button><button type="button" class="sale-mic${vbOn ? ' on' : ''}" data-sale-mic="1" title="Daba kar bolo">${vbOn ? '🎤 Bolein…' : '🎤 Daba kar bolo'}</button><span class="stat-note">Naam likhein ya scan karein</span></div>`;
   if (!q && searchFocused) {   // v1.75: khali search par aksar bikne wale items
     const top = topItems(s.items, 10);
     if (top.length) found = `<div class="sale-found"><p class="stat-note" style="margin:0 0 4px">Aksar bikne wale</p>${top.map(r => `<button type="button" class="sale-hit" data-sale-add="${esc(r.id)}"><b>${esc(r.name)}</b><small>${esc(r.code || '')} · R ${num(r.rate)} · stock ${num(r.stock)}</small></button>`).join('')}</div>`;
@@ -457,7 +457,7 @@ document.addEventListener('pointercancel', () => vbRelease());
 document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sale-mic]')) e.preventDefault(); });
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.35.1: hold se chalta hai
+  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.36.0: hold se chalta hai
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {
