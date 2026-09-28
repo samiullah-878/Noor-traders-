@@ -1301,3 +1301,41 @@ button.bq-card:active{transform:scale(.98)}
 .vb-sug-c button{flex:none;display:grid;text-align:left;min-height:48px;padding:6px 12px;border-radius:14px;border:1.5px solid #d3def5;background:linear-gradient(180deg,#fff,#f3f7ff);font-weight:800;color:#10192b;font-size:13.5px}
 .vb-sug-c button small{font-weight:700;color:#2b4a86;font-size:11.5px}
 .vb-sug-f{color:#6b7c93;font-size:11.5px}
+
+/* ===== v2.33: nayi line upar + chamak ===== */
+.sale-line.fresh{animation:lineIn .45s ease,lineGlow 1.8s ease}
+@keyframes lineIn{from{transform:translateY(-8px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes lineGlow{0%,40%{box-shadow:0 0 0 3px #22a86299;background:#effaf3}100%{box-shadow:none}}
+
+/* ===== v2.34: 🛒 Purchase order ===== */
+.po-box{display:grid;gap:8px;padding:12px;border-radius:18px;background:linear-gradient(160deg,#fffaf0,#fff2d6);border:1px solid #f1d59a}
+.po-head{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.po-head b{font-size:16px;color:#6b4705}
+.po-head small{color:#8a5a06;font-weight:700}
+.po-make{margin-left:auto;min-height:40px;border-radius:12px;padding:6px 14px}
+.po-meta{color:#8a5a06;font-size:11.5px}
+.po-meta i{font-style:normal;font-weight:800}
+.po-empty{margin:4px 0;color:#8a5a06;font-size:13px}
+.po-line,.po-got{display:grid;gap:5px;padding:8px 10px;border-radius:14px;background:#fff;border:1px solid #f0dfb8}
+.po-got{background:#f3faf6;border-color:#b9e2c9}
+.po-party{display:flex;align-items:center;gap:6px;font-weight:800;color:#1b3058;font-size:13.5px}
+.po-party small{margin-left:auto;min-width:22px;text-align:center;padding:1px 7px;border-radius:999px;background:#fdf0d8;color:#8a5a06;font-size:11px}
+.po-got .po-party{color:#17703c}.po-got .po-party small{background:#e3f6ea;color:#17703c}
+.po-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:6px}
+.po-chip{display:grid;text-align:left;min-height:48px;padding:6px 9px;border-radius:12px;border:1.5px solid #e9c77e;background:linear-gradient(180deg,#fff,#fff8ea);font-size:12.5px;font-weight:700;color:#10192b;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.po-chip b{font-size:12px;color:#8a5a06}
+.po-chip:active{transform:scale(.96)}
+.po-chip.got{border-color:#9fd7b3;background:#effaf3;text-decoration:line-through;color:#4f7a61}
+.po-chip.got b{color:#17703c}
+
+/* ===== v2.35: 📋 Transfer register ===== */
+.reg-root{display:grid;gap:8px}
+.reg-card{border-radius:14px;background:#fff;border:1px solid #e3e9f3;box-shadow:0 3px 10px #10192b0d;overflow:hidden}
+.reg-h{display:grid;grid-template-columns:62px 1fr auto;gap:4px 8px;align-items:center;width:100%;text-align:left;padding:9px 10px;border:0;background:none;min-height:0;position:relative}
+.reg-time{font-weight:900;color:#1b3058;font-size:13px}
+.reg-main{display:grid;min-width:0}.reg-main b{color:#10192b}.reg-main small{color:#6b7c93;font-size:12px}
+.reg-tot{display:grid;text-align:right}.reg-tot b{color:#17703c;font-size:13.5px}.reg-tot small{color:#6b7c93;font-size:11.5px}
+.reg-src{position:absolute;top:4px;right:8px;font-style:normal;font-size:10px;color:#9aa8bd}
+.reg-lines{display:grid;gap:3px;padding:0 12px 10px 72px}
+.reg-lines div{display:flex;justify-content:space-between;gap:8px;font-size:13px;border-top:1px dashed #eef1f5;padding-top:3px}
+.reg-lines b{color:#1b3058;white-space:nowrap}

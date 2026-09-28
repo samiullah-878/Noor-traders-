@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.32.0, 2026-09-27 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.35.0, 2026-09-28 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1799,3 +1799,43 @@ Malik: sale screen par mic, scanner jaisa — bolo "cheeni 5 kilo" to usi bill m
   (body mein), chip data-vb-pick -> purani line (lineK) hatao + vbPut + vbLearnSet (local + learnOf = app learnAlias
   roman, Urdu). saleSetup learn:learnAlias (app.js). Click/popstate par vbSugPaint (sale screen na ho to chhupao).
 * vbRoman: aakhri ہ -> a; ؤ أ إ ۓ map. Tests: 12 jumle + chips UI (render, pick, cloud learn, dobara khud).
+
+==================== v2.33.0 (2026-09-28) — NAYI LINE UPAR (sale + purchase + scanner list) ====================
+* sale.js / purchase.js: rows = cart.map((l,i)=>[l,i]).reverse().map(([l,i])=>...) — DOM ulta, INDEX wahi (data-*-line,
+  ✕, qtyPad, focusLast sab index se — kuch nahi toota). cart array ki tarteeb WAHI -> rasid / POS bill purani tarteeb.
+  .fresh class aakhri index par jab addItem ko 1.8s na hue (lastAddAt / ppAddAt). style .sale-line.fresh animation.
+* pos-stock.js scanner list: list.slice().reverse(), <ol reversed start=len>. lastKey (tadad buttons) scanOrder ke aakhir
+  se — hook ULTA NAHI kiya (warna tadad ghalat line par jati).
+
+==================== v2.34.0 (2026-09-28) — 🛒 PURCHASE ORDER (RULES 2.15) ====================
+Malik: AI se sale/purchase data le kar purchasing order, Reminder screen par, supplier-wise line mein 4-5 chips; double tap =
+maal aa gaya list; wahan tap = gayab. Data check: posBills = sirf PURCHASE (15 Sep se); POS counter sale Firestore mein NAHI
+thi -> malik ne "B" chuna: nayi PC sync, kam az kam 6 mahine.
+* PC: sales-stats.js (repo pc/ mein source; SALE-DATA.bat mein base64 embedded -> C:\khata-sync\sales-stats.js, sales-stats-auto.bat
+  loop 3600s, Startup folder launcher). SELECT only: SaleDetail+Sale (DocStatusID<>3) hafte-wise 26 + s30/s90/s180;
+  PurchaseDetail+Purchase 182 din q/n; ROW_NUMBER aakhri purchase (Qty, Rate, PartyName). Qty = PIECES. -> posStats/items-<k>
+  (400 items/doc) {i, w[], s30, s90, s180, p180, pn, lp{d,q,r,party}} + posStats/meta {at, days, n, chunks}.
+* notes.js po*: poWatch (listenPurchaseOrders last 5), poMake: getPosStats + stock (app.js: sab godam ka jor, Map id->item) ->
+  daily = max(s30/30, s90/90*.9, s180/182*.7), left = stock/daily < 14 -> candidates (90 tak) -> aiOf(prompt JSON) [app.js:
+  loadAiCfg + ai-tally askText] -> fallback supplier-wise need (21 din, carton ceil). purchaseOrders/<id> {id, at, by, byName,
+  note, lines[{party, items[{i,n,q,u,st open|got|gone}]}]}. Chip: 2 tap < 400ms = got; ek tap 420ms = prompt tadad; got par tap = gone.
+* rules 2.15: posStats read owner||blueStaff (write sirf admin/PC); purchaseOrders keys hasOnly, lines <= 30; delete owner.
+* Test (happy-dom): Surf (50 din stock) nahi gaya, 3 items AI ko, 2 supplier lines, double tap -> got, tap -> gone.
+* 2026-09-28 LABEL-GEHRA.bat (PC helper, app update nahi): label-settings.json mein density/speed (PowerShell, BOM ke baghair
+  — BOM se label-print JSON.parse fail ho kar DEFAULTS par chala jata). 1=11/3, 2=13/3, 3=15/2, 0=8/4; phir --test.
+  label-print handle() har job par settings() dobara parhta hai — restart ki zaroorat nahi.
+
+==================== 2026-09-28 — KHATA-DOCTOR manifest 2026-09-28.1 (PC, app version wahi) ====================
+Malik: "doctor bat GitHub se dono scripts khud uthaye". pc/manifest.json: files + sales-stats.js, sales-stats-auto.bat,
+BARCODE-DOCTOR.bat, LABEL-GEHRA.bat (sha256 = file ke raw bytes, bat CRLF + ASCII); services + {"Sale / purchase data
+(6 mahine)", sales-stats.js, sales-stats-auto.bat, sales-stats-log.txt, periodic:true}. Doctor ab GitHub se naya version
+utha kar dobara chalata hai aur band ho to chala deta hai. sales-stats-auto.bat shuru mein SALE-DATA.bat wala Startup launcher
+(blue-khata-sale-data.bat) mita deta hai — ab sirf doctor. BARCODE-DOCTOR / LABEL-GEHRA sirf files (service nahi).
+AAINDA pc/ ki koi file badlo to manifest.json mein us ka sha256 + version badalna LAZMI, warna doctor purani rakhega.
+
+==================== v2.35.0 (2026-09-28) — 📋 TRANSFER REGISTER ====================
+Malik: transfer note ki mukammal tadad, waqt ke sath — kab kaunsa nikla. Pehle se "📥 Aaya / gaya maal" item-wise tha.
+* pos-stock.js reg*: ptList (posTransfers — PC transfer-dekho, POS + app dono) -> regRows (din filter Aaj/Kal/7/30/60, godam se/ko,
+  search item/TN), cp(qty,pack) se ctn/pcs, Rs = qty*rate; din-wise groups, card tap = lines, KPIs. data-stock-reg button
+  (Aaya/gaya ke sath). setRegPdf hook (app.js -> #printArea + openReportPreview). Test (happy-dom): kpis, times, lines, 7 din, PDF.
+* pc/transfer-dekho.js v1.1: DIN 14 -> 60. pc/manifest.json 2026-09-28.2 (sha256 badla).

@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.32.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.35.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -476,7 +476,7 @@ function summaryHTML(branches, pick, items, meta, names) {
            <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>`
         : `<div class="sh-scanrow"><button class="sh-wide sh-scan" data-stock-scan="1">📷 Barcode scan karein (ek ya kai items)</button><button type="button" class="sh-mic" data-stock-mic="1" title="Awaz se dhoondein">🎤</button></div>
            ${canEditItem() ? '<button class="sh-wide" data-stock-newitem="1">➕ Naya item</button>' : ''}
-           <button class="sh-wide" data-stock-in="1">📥 Aaya / gaya maal</button>
+           <button class="sh-wide" data-stock-in="1">📥 Aaya / gaya maal</button><button class="sh-wide" data-stock-reg="1">📋 Transfer register</button>
            <button class="sh-wide sh-tolai" data-stock-tolai="1">⚖️ Tolai</button>
            <button class="sh-wide" data-stock-transfer="1">⇄ Transfer note (godam se godam)</button>
            ${($('search')?.value || '').trim() ? '<button class="sh-wide" data-stock-clear="1">✕ Search saaf karein</button>' : ''}`}
@@ -927,6 +927,69 @@ async function openIn(refresh = true) {
       <button type="button" class="primary" data-in-pdf="1">⇩ PDF</button><button type="button" data-in-close="1">✕ Band</button></div>`;
   if (!d.open) d.showModal();
 }
+// ---------- v2.35: 📋 TRANSFER REGISTER — har transfer note, waqt ke sath (POS + app), din-wise jor ----------
+let regDays = 1, regGodam = 'all', regQ = '', regOpen = new Set(), regPdfOf = null;
+export function setRegPdf(fn) { regPdfOf = fn; }
+const regClock = ms => { try { return new Date(ms).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
+const regDay = ms => { const d = new Date(ms); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+function regRows() {
+  const since = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (regDays === 2 ? 1 : regDays - 1)); return d.getTime(); })();
+  const till = regDays === 2 ? (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); })() : Infinity;
+  const q = norm(regQ);
+  return (ptList || []).filter(t => t && t.at >= since && t.at < till)
+    .filter(t => regGodam === 'all' || String(t.from) === regGodam || String(t.to) === regGodam)
+    .filter(t => !q || norm(t.transferNo).includes(q) || (t.lines || []).some(l => norm(l.name).includes(q)))
+    .map(t => { let c = 0, p = 0, rs = 0; for (const l of t.lines || []) { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); c += x.c; p += x.p; rs += (Number(l.qty) || 0) * (Number(l.rate) || 0); } return { ...t, c, p: Math.round(p * 1000) / 1000, rs: Math.round(rs), n: (t.lines || []).length }; })
+    .sort((a, b) => b.at - a.at);
+}
+function regHTML() {
+  const rows = regRows(), names = collect().names || {};
+  const tot = rows.reduce((s, t) => ({ n: s.n + 1, i: s.i + t.n, c: s.c + t.c, p: s.p + t.p, rs: s.rs + t.rs }), { n: 0, i: 0, c: 0, p: 0, rs: 0 });
+  const days = new Map(); for (const t of rows) { const k = regDay(t.at); if (!days.has(k)) days.set(k, []); days.get(k).push(t); }
+  const gods = [...new Set((ptList || []).flatMap(t => [t.from, t.to]))].filter(Boolean).sort((a, b) => a - b);
+  const C = (on, k, v, lab) => `<button type="button" class="rc${on ? ' on' : ''}" data-reg-${k}="${esc(String(v))}">${lab}</button>`;
+  const today = regDay(Date.now()), yest = regDay(Date.now() - 864e5);
+  return `<div class="reg-root">
+    <div class="mchips">${C(regDays === 1, 'd', 1, 'Aaj')}${C(regDays === 2, 'd', 2, 'Kal')}${C(regDays === 7, 'd', 7, '7 din')}${C(regDays === 30, 'd', 30, '30 din')}${C(regDays === 60, 'd', 60, '60 din')}</div>
+    <div class="mchips">${C(regGodam === 'all', 'g', 'all', 'Sab godam')}${gods.map(g => C(regGodam === String(g), 'g', g, esc(branchName(g, names)))).join('')}</div>
+    <label class="hs-search"><input type="search" data-reg-q="1" placeholder="🔍 item ya TN number…" value="${esc(regQ)}"></label>
+    <div class="bc-kpis"><div><b>${num(tot.n)}</b><small>transfer note</small></div><div><b>${num(tot.i)}</b><small>items</small></div><div><b>${num(tot.c)}</b><small>ctn</small></div><div><b>${num(tot.p)}</b><small>pcs</small></div></div>
+    ${tot.rs ? `<p class="iv-note">Kul maal: <b>Rs ${num(tot.rs)}</b></p>` : ''}
+    ${[...days].map(([d, list]) => { const dc = list.reduce((s, t) => s + t.c, 0), dp = list.reduce((s, t) => s + t.p, 0);
+      return `<div class="bc-day"><div class="bc-dayhead"><b>${d === today ? 'Aaj' : d === yest ? 'Kal' : esc(d)}</b><span>${list.length} note · ${num(dc)} ctn${dp ? ' + ' + num(dp) + ' pcs' : ''}</span></div>
+      ${list.map(t => { const op = regOpen.has(String(t.transferId || t.id));
+        return `<div class="reg-card${op ? ' open' : ''}"><button type="button" class="reg-h" data-reg-open="${esc(String(t.transferId || t.id))}">
+          <span class="reg-time">${esc(regClock(t.at))}</span><span class="reg-main"><b>${esc(t.transferNo || '—')}</b><small>${esc(branchName(t.from, names))} → ${esc(branchName(t.to, names))}</small></span>
+          <span class="reg-tot"><b>${num(t.c)} ctn${t.p ? ' + ' + num(t.p) : ''}</b><small>${t.n} items${t.rs ? ' · Rs ' + num(t.rs) : ''}</small></span><i class="reg-src">${t.app ? '📱 App' : '🖥 POS'}</i></button>
+          ${op ? `<div class="reg-lines">${(t.lines || []).map(l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); return `<div><span>${esc(l.name)}</span><b>${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}</b></div>`; }).join('')}${t.note ? `<small>📝 ${esc(t.note)}</small>` : ''}</div>` : ''}</div>`; }).join('')}</div>`; }).join('') || '<p class="muted">Is arse mein koi transfer note nahi.</p>'}
+    <div class="account-tools iv-acts"><button type="button" class="primary" data-reg-pdf="1">📄 PDF · WhatsApp</button><button type="button" data-in-close="1">✕ Band</button></div></div>`;
+}
+function openRegister() {
+  const d = $('dialog'); if (!d) return;
+  d.classList.remove('search-dialog'); d.classList.add('full-dialog');
+  $('dialogTitle').textContent = '📋 Transfer register';
+  $('dialogBody').innerHTML = regHTML();
+  if (!d.open) d.showModal();
+}
+function regPdf() {
+  const rows = regRows(), names = collect().names || {}; if (!rows.length) { notice('Is arse mein koi transfer note nahi'); return; }
+  const lab = { 1: 'Aaj', 2: 'Kal', 7: 'Pichhle 7 din', 30: 'Pichhle 30 din', 60: 'Pichhle 60 din' }[regDays];
+  const html = `<h1>NOOR TRADERS</h1><h2>📋 Transfer register — ${esc(lab)}${regGodam !== 'all' ? ' · ' + esc(branchName(Number(regGodam), names)) : ''}</h2><p>${rows.length} transfer note · ${esc(new Date().toLocaleString('en-PK'))}</p>
+    <table class="iv-tbl"><thead><tr><th>Waqt</th><th>TN</th><th>Se → Ko</th><th>Items</th><th>Tadad</th><th>Rs</th></tr></thead><tbody>
+    ${rows.map(t => `<tr><td>${esc(regDay(t.at))}<br><small>${esc(regClock(t.at))}</small></td><td><b>${esc(t.transferNo || '')}</b><br><small>${t.app ? 'App' : 'POS'}</small></td><td>${esc(branchName(t.from, names))} → ${esc(branchName(t.to, names))}</td><td class="iv-n">${t.n}</td><td class="iv-n">${num(t.c)} ctn${t.p ? ' + ' + num(t.p) : ''}</td><td class="iv-n">${t.rs ? num(t.rs) : ''}</td></tr>`).join('')}
+    </tbody></table>`;
+  regPdfOf ? regPdfOf(html, 'Transfer register ' + regDay(Date.now())) : notice('PDF abhi nahi bana');
+}
+document.addEventListener('click', e => {
+  if (e.target.closest?.('[data-stock-reg]')) { openRegister(); return; }
+  if (!document.querySelector('.reg-root')) return;
+  const t = e.target.closest?.('[data-reg-d],[data-reg-g],[data-reg-open],[data-reg-pdf]'); if (!t) return;
+  const d = t.dataset;
+  if (d.regD) regDays = Number(d.regD); else if (d.regG) regGodam = d.regG; else if (d.regOpen) { if (regOpen.has(d.regOpen)) regOpen.delete(d.regOpen); else regOpen.add(d.regOpen); } else if (d.regPdf != null) { regPdf(); return; }
+  $('dialogBody').innerHTML = regHTML();
+});
+document.addEventListener('input', e => { if (!e.target.matches?.('[data-reg-q]')) return; regQ = e.target.value || ''; $('dialogBody').innerHTML = regHTML(); const q = document.querySelector('[data-reg-q]'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } });
+
 // app.js PDF banata hai — yahan se sirf data
 export function inReport() {
   const { groups, pick, names, at } = inRows || {}; if (!groups || !groups.length) return null;
@@ -1709,9 +1772,9 @@ async function openScanner() {
     if (sale) {
       const list = scanOrder.map(k => [k, scanItems.get(k)]).filter(x => x[1]);
       countBox.textContent = list.length;
-      namesBox.innerHTML = list.map(([k, it]) => { const L = lineOf(it, k);
+      namesBox.innerHTML = list.slice().reverse().map(([k, it]) => { const L = lineOf(it, k);   // v2.33: nayi upar
         return `<li${k === lastKey ? ' class="now"' : ''}><button type="button" class="scan-del" data-del="${esc(k)}" aria-label="Hatao">✕</button><b>${esc(it.name)}</b><span>${esc(L.qtxt)} x ${num(L.rate)} = <b>${num(L.amt)}</b></span></li>`; }).join('');
-      namesBox.start = 1;
+      namesBox.reversed = true; namesBox.start = list.length;
       const kul = list.reduce((n, [k, it]) => n + lineOf(it, k).amt, 0);
       sumBox.innerHTML = list.length ? `Kul: <b>Rs ${num(kul)}</b>` : '';
       try { namesBox.scrollTop = namesBox.scrollHeight; } catch {}

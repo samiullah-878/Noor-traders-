@@ -1,0 +1,12 @@
+Blue Khata v2.35.0 — 📋 TRANSFER REGISTER (har transfer note, waqt ke sath)
+INSTALL:
+ 1) GitHub (bahar wala folder): App ki ZIP ki files -> app mein ↻ Sync -> 2.35.0. Rules NAHI badlin.
+ 2) GitHub ka pc/ folder: pc wali ZIP ki 2 files (transfer-dekho.js, manifest.json). KHATA-DOCTOR khud naya version
+    uthayega — ab PC 14 ki jagah 60 din ke transfer app ko bhejega. (Pehli dafa 60 din aane mein ek chakkar lagega.)
+KYA NAYA — Stock screen -> "📋 Transfer register":
+ - Har transfer note ek card: waqt (9:30 AM) · TN number · Godam 1 -> Noor Traders · kul ctn + pcs · items · Rs · 📱 App / 🖥 POS.
+   Tap = poori lines.
+ - Upar khulasa: kitne transfer note · items · ctn · pcs · kul Rs. Din-wise (Aaj / Kal / tareekh) har din ka jor.
+ - Chips: Aaj · Kal · 7 din · 30 din · 60 din | Sab godam / har godam | 🔍 item ya TN number.
+ - 📄 PDF · WhatsApp.
+BADLI HUI FILES: pos-stock.js, app.js, style.css + version; pc/transfer-dekho.js, pc/manifest.json.
