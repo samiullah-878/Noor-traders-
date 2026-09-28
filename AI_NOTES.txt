@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.35.0, 2026-09-28 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.35.1, 2026-09-28 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1839,3 +1839,16 @@ Malik: transfer note ki mukammal tadad, waqt ke sath — kab kaunsa nikla. Pehle
   search item/TN), cp(qty,pack) se ctn/pcs, Rs = qty*rate; din-wise groups, card tap = lines, KPIs. data-stock-reg button
   (Aaya/gaya ke sath). setRegPdf hook (app.js -> #printArea + openReportPreview). Test (happy-dom): kpis, times, lines, 7 din, PDF.
 * pc/transfer-dekho.js v1.1: DIN 14 -> 60. pc/manifest.json 2026-09-28.2 (sha256 badla).
+
+==================== v2.35.1 (2026-09-28) — LOGO PAR ATAKNA (SW deploy-lag) ====================
+Malik: POORI-APP (40 files) upload ke baad app logo par atak gayi. Wajah (andaza, pakka): GitHub Pages deploy ke dauran SW
+install ne naye ?v= URLs par PURANI files cache kar leen (server query ignore karta hai) -> naya app.js purane pos-stock.js se
+setRegPdf maangta -> module graph fail -> app.js chalta hi nahi -> v2.29 ki full-screen splash hamesha.
+* sw.js install: pehle version.json (no-store) — CACHE ka version barabar na ho to install FAIL (browser baad mein dobara
+  karta hai). Assets fetch {cache:'reload'} (HTTP cache bypass) + core.put.
+* app.js: imports ke foran baad window.bkBooted = true.
+* index.html watchdog (inline, non-module): window error -> bkErr; 10s par bkBooted na ho to "🔄 App ki marammat" (full
+  screen): SW unregister + sirf 'sam-blue-khata-*' caches (libs NAHI) delete -> ?fix= reload. localStorage/IndexedDB NAHI chhoota.
+  bkBooted ho to purana rule (login dikhao). Test (happy-dom): atki = button + galti, tap = unregister + cache delete + reload;
+  khuli = button nahi.
+* Upload tip: saari files -> 2-3 minute ruk kar app kholo.

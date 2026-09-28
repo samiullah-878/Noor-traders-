@@ -1,0 +1,10 @@
+Blue Khata v2.35.1 — LOGO PAR ATAKNA KHATAM
+INSTALL: GitHub (bahar wala folder) par ZIP ki SAARI files -> 2-3 minute ruk kar app kholein -> ↻ Sync -> 2.35.1. Rules NAHI badlin.
+MASLA THA: 40 files ek sath upload hueen; GitHub unhein chalu karne mein 1-2 minute leta hai. Isi beech phone ne kuch NAYI
+           files ki jagah PURANI utha kar yaad rakh li -> naye aur purane code ka mail nahi bana -> app logo par atki.
+AB:
+ - App (service worker) tab tak nayi files yaad NAHI karti jab tak GitHub par version.json bhi naya na dikhe — beech ka
+   mix-up nahi hoga. Files bhi browser ki purani yaad (HTTP cache) chhor kar seedha GitHub se aati hain.
+ - Kabhi phir bhi 10 second mein app na khule: screen par "🔄 App ki marammat" button — ek tap = sirf app ki purani files
+   saaf + app dobara khulti hai. Aap ka data, password, draft — sab mehfooz. Neeche chhoti likhai mein galti ka naam bhi.
+BADLI HUI FILES: index.html, app.js, sw.js + version (sab).
