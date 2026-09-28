@@ -1,0 +1,74 @@
+# NT Camera — shop PC par AIK command se install (PowerShell mein):
+#   irm https://samiullah-878.github.io/nt-traders-/ntcam.txt|iex
+# Repo ka naam alag ho to app (Settings > Cameras) wahi command dikhati hai jo aap ke liye sahi hai ($b ke sath).
+# Kya karta hai: C:\NTCam banata hai, Python + OpenCV (na ho to) install, ntcam.py GitHub se, camera jodne ka setup,
+# aur PC on hote hi khud chalne ka intezam (Startup) + desktop par "NT Camera jodein" icon.
+$ErrorActionPreference = 'Stop'
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch {}
+if (-not $b) { $b = 'https://samiullah-878.github.io/nt-traders-/' }
+if (-not $b.EndsWith('/')) { $b = $b + '/' }
+$d = 'C:\NTCam'
+New-Item -ItemType Directory -Force -Path $d | Out-Null
+Write-Host ''
+Write-Host '  NT CAMERA — install ho raha hai (pehli dafa 3-8 minute)' -ForegroundColor Cyan
+Write-Host ''
+
+function Find-Python {
+  foreach ($c in @('py', 'python')) {
+    try {
+      $a = if ($c -eq 'py') { @('-3', '-c', 'import sys;print(sys.executable)') } else { @('-c', 'import sys;print(sys.executable)') }
+      $p = (& $c @a 2>$null | Select-Object -First 1)
+      if ($p -and (Test-Path $p) -and ($p -notmatch 'WindowsApps')) { return $p.Trim() }
+    } catch {}
+  }
+  foreach ($p in @("$env:LOCALAPPDATA\Programs\Python\Python312\python.exe", "$env:LOCALAPPDATA\Programs\Python\Python311\python.exe", 'C:\Program Files\Python312\python.exe')) {
+    if (Test-Path $p) { return $p }
+  }
+  return $null
+}
+
+$py = Find-Python
+if (-not $py) {
+  Write-Host '  1/4  Python install ho raha hai...'
+  if (Get-Command winget -ErrorAction SilentlyContinue) {
+    try { winget install -e --id Python.Python.3.12 --scope user --silent --accept-package-agreements --accept-source-agreements | Out-Null } catch {}
+  }
+  $py = Find-Python
+  if (-not $py) {
+    $exe = "$env:TEMP\python-3.12.7-amd64.exe"
+    Invoke-WebRequest 'https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe' -OutFile $exe -UseBasicParsing
+    Start-Process $exe -ArgumentList '/quiet', 'InstallAllUsers=0', 'PrependPath=1', 'Include_launcher=1' -Wait
+    $py = Find-Python
+  }
+  if (-not $py) { Write-Host '  [!!] Python install nahi hua. Internet check kar ke command dobara chalayein.' -ForegroundColor Red; return }
+} else { Write-Host "  1/4  Python mil gaya: $py" }
+
+Write-Host '  2/4  Camera ki libraries (OpenCV) — thora waqt lagega...'
+# v1.0.1: pip ki "WARNING ... not on PATH" (stderr) ko Windows PowerShell 5.1 'Stop' par ghalti samajh kar rok deta tha.
+# Ab pip ke waqt 'Continue', warning band (--no-warn-script-location), aur faisla sirf exit code se.
+$ErrorActionPreference = 'Continue'
+& $py -m pip install --upgrade pip --quiet --disable-pip-version-check --no-warn-script-location 2>&1 | Out-Null
+& $py -m pip install --quiet --disable-pip-version-check --no-warn-script-location opencv-python-headless numpy requests 2>&1 | ForEach-Object { if ("$_" -notmatch 'WARNING') { "$_" } }
+$pipCode = $LASTEXITCODE
+$ErrorActionPreference = 'Stop'
+if ($pipCode -ne 0) { Write-Host '  [!!] Libraries install nahi huin. Internet check kar ke dobara chalayein.' -ForegroundColor Red; return }
+
+Write-Host '  3/4  Program GitHub se...'
+Invoke-WebRequest ($b + 'ntcam.py?t=' + [DateTime]::Now.Ticks) -OutFile "$d\ntcam.py" -UseBasicParsing
+Set-Content -Path "$d\base.txt" -Value $b -Encoding ASCII
+
+# PC on hote hi khud chale (bina kaali window) + desktop par "NT Camera jodein"
+$pyw = Join-Path (Split-Path $py) 'pythonw.exe'
+if (-not (Test-Path $pyw)) { $pyw = $py }
+$ws = New-Object -ComObject WScript.Shell
+$s = $ws.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Startup')) 'NT Camera.lnk'))
+$s.TargetPath = $pyw; $s.Arguments = "`"$d\ntcam.py`" run"; $s.WorkingDirectory = $d; $s.Save()
+$s2 = $ws.CreateShortcut((Join-Path ([Environment]::GetFolderPath('Desktop')) 'NT Camera jodein.lnk'))
+$s2.TargetPath = $py; $s2.Arguments = "`"$d\ntcam.py`" setup"; $s2.WorkingDirectory = $d; $s2.Save()
+
+Write-Host '  4/4  Ab camera jodte hain:' -ForegroundColor Cyan
+& $py "$d\ntcam.py" setup
+Start-Process $pyw -ArgumentList "`"$d\ntcam.py`" run" -WorkingDirectory $d -WindowStyle Hidden
+Write-Host ''
+Write-Host '  [OK] NT Camera chal raha hai. PC on hote hi khud shuru hoga.' -ForegroundColor Green
+Write-Host '       Naya camera jodna ho to desktop par "NT Camera jodein" icon chalayein.'
