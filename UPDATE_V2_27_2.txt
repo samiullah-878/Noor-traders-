@@ -1,0 +1,6 @@
+Blue Khata v2.27.2 — Reminder screen saaf
+INSTALL: GitHub par ZIP ki files -> app mein ↻ Sync -> 2.27.2. Rules NAHI badlin.
+ - 🔔 Reminder screen se grey "📇 Google contacts" card hata diya (malik ne Google setup chhor diya).
+   Code maujood hai — kabhi Google account juda to card khud wapas aa jayega.
+ - Note mein Naam ke 2 harf = 📒 khata ke accounts number ke sath suggest (pehle jaisa). Khud number likhna bhi.
+BADLI HUI FILES: notes.js + version (app.js, index.html, sw.js, version.json, purchase.js, sale.js, pos-stock.js, pos-ledger.js).

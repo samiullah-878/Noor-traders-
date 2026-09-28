@@ -115,6 +115,10 @@ async function generate({ key, model, parts, onStatus, fast = false }) {
   throw Error('Google ke server par abhi bohat rush hai. 2-5 minute baad dobara koshish karein. (' + (lastErr?.message || '') + ')');
 }
 
+export async function askText({ key, model, prompt }) {   // v2.34: sirf likhai (purchase order)
+  if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
+  return textOf(await generate({ key, model, parts: [{ text: String(prompt || '') }] }));
+}
 function textOf(out) {
   const text = (out.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
   if (!text) throw Error('AI ne khali jawab diya' + (out.promptFeedback?.blockReason ? ' (' + out.promptFeedback.blockReason + ')' : '') + ' — tasveer dobara saaf le kar koshish karein.');

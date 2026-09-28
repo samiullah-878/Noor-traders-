@@ -1,0 +1,20 @@
+Blue Khata v2.34.0 — 🛒 PURCHASE ORDER (AI + POS ki 6 mahine ki bikri / purchase)
+==================================================================================
+INSTALL — 4 qadam:
+ 1) GitHub: ZIP ki files -> app mein ↻ Sync -> 2.34.0.
+ 2) RULES 2.15: firestore-rules-2.15.html -> "📋 Copy" -> Firebase (note-traders-khata-7ccc1) -> Rules -> paste -> Publish.
+ 3) DUKAN KE PC par: SALE-DATA.bat Downloads mein -> DOUBLE-CLICK. Pehli dafa 6 mahine ka data uthata hai (1-2 minute),
+    phir har ghante khud taza; PC on hone par khud chalti hai (Startup mein lag jati hai). Aakhir mein "HO GAYA" aana chahiye.
+ 4) App -> 🔔 Reminder -> "🛒 Purchase order" -> "🤖 Order banao".
+KAISE CHALTA HAI:
+ - PC har item ki 6 mahine ki BIKRI (hafte-wise, 30/90/180 din) aur PURCHASE (kitni dafa, pichhli: kab, kitna, kis supplier se)
+   POS se PARHTA hai (SQL mein kuch nahi likhta) aur app ko bhejta hai.
+ - "🤖 Order banao": jin items ka stock 14 din se kam ka hai (roz ki bikri ke hisaab se) -> AI ko: stock, roz ki bikri,
+   8 hafton ka rujhan, pichhli purchase -> AI ~3 hafte ki munasib tadad tay karta hai aur SUPPLIER-WISE jama karta hai.
+   AI na chale to seedha hisaab (3 hafte ki zaroorat, carton mein poora).
+ - Har line ek supplier: 🧾 naam, neeche 4-5 chips har qatar mein — "Cheeni 50kg · 25 Bori".
+ - Chip par DOUBLE TAP = "✓ Maal aa gaya" (hari, kati hui) · wahan TAP = gayab.
+   Ek tap (ruk kar) = tadad badlo (0 = hatao).
+ - Order sab (malik + Full mulazim) ko nazar aata hai; aakhri order dikhta hai; naya jab chahein.
+SACH: counter ki sale ab poori aati hai (PC se). Naya item jis ki bikri ki history nahi, us ka andaza nahi lagta.
+BADLI HUI FILES: notes.js, ai-tally.js, cloud.js, app.js, style.css, firestore.rules (2.15) + version.

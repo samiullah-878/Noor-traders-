@@ -1,0 +1,7 @@
+Blue Khata v2.33.0 — NAYI LINE UPAR (Sale + Purchase)
+INSTALL: GitHub par ZIP ki files -> app mein ↻ Sync -> 2.33.0. Rules NAHI badlin.
+ - Sale aur POS Purchase ke bill mein NAYI line ab SAB SE UPAR aati hai (scan, search, 🎤, AI bill — sab).
+ - Nayi lagi line 2 second ke liye hari chamakti hai, taake foran nazar aaye.
+ - Scanner ki "list dikhao" wali list mein bhi nayi upar (number ulta: sab se upar wali = aakhri scan).
+ - Chhapi rasid aur POS ka bill PEHLE JAISI tarteeb mein (jis tarteeb se item lage) — sirf screen par ulta.
+BADLI HUI FILES: sale.js, purchase.js, pos-stock.js, style.css + version.

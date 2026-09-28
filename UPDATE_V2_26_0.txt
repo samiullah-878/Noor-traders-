@@ -1,0 +1,15 @@
+Blue Khata v2.26.0 — 📇 GOOGLE CONTACTS (kai Gmail account)
+===========================================================
+INSTALL: GitHub par ZIP ki files -> app mein ↻ Sync -> 2.26.0. RULES NAHI badlin (2.14 hi — agar abhi publish nahi ki to
+firestore-rules-2.14.html se kar dein). Phir GOOGLE_CONTACTS_SETUP.txt (ek dafa, ~10 minute).
+KYA NAYA:
+ - 🔔 Reminder tab par "📇 Google contacts" (sirf malik): ➕ Google account jorein — jitne chahein (dukan + apna Gmail).
+   Har account: contacts ki ginti · kab taza hui · 🔄 taza · ✕ hatao. Contacts SIRF isi phone par.
+ - Note -> 👤 Contact -> "Naam" (ya number) mein 2 harf -> suggestion: 📇 Google contacts + 📒 khata, number ke sath -> tap.
+ - Pichhla 📇 Phone ki list / 📒 Khata se / khud likhna — sab waise hi.
+SACH:
+ - Sirf Google account mein save contacts aate hain (SIM / sirf phone wale nahi).
+ - Pehli login par "Google hasn't verified this app" — apni app hai: Advanced -> Go to Blue Khata.
+ - Taza karna ek tap se (🔄) — Google bina tap ke chupke se login nahi karne deta.
+BADLI HUI FILES: notes.js, cloud.js, style.css + version (app.js, index.html, sw.js, version.json, purchase.js, sale.js,
+                 pos-stock.js, pos-ledger.js).

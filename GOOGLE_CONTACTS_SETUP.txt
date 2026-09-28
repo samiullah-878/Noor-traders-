@@ -1,0 +1,30 @@
+📇 GOOGLE CONTACTS — EK DAFA KA SETUP (malik ka phone, Chrome, ~10 minute)
+==========================================================================
+Har qadam par upar project **note-traders-khata** hona chahiye ("nt traders" NAHI).
+
+1) PEOPLE API chalu:
+   console.cloud.google.com/apis/library/people.googleapis.com?project=note-traders-khata-7ccc1  -> ENABLE
+
+2) GOOGLE AUTH PLATFORM (pehle "OAuth consent screen" kehlata tha):
+   console.cloud.google.com/auth/overview?project=note-traders-khata-7ccc1  -> "Get started"
+   - App name: Blue Khata   · User support email: apna Gmail  -> Next
+   - Audience: External -> Next   · Contact email: apna Gmail -> Next -> Agree -> Create
+   - Baayein "Audience" -> "Test users" -> + Add users -> jitne Gmail jorne hain SAB likhein (dukan wala + apna) -> Save
+     (Jo Gmail yahan nahi hoga, us se login nahi hoga.)
+   - Baayein "Data access" -> Add or remove scopes -> search "contacts.readonly" -> tick -> Update -> Save
+
+3) CLIENT ID:
+   Baayein "Clients" -> + Create client -> Application type: **Web application** -> Name: Blue Khata
+   - Authorized JavaScript origins -> + Add URI ->   https://samiullah-878.github.io
+     (sirf itna — aakhir mein "/" ya folder ka naam NAHI)
+   - Create -> jo "Client ID" aaye (...apps.googleusercontent.com) -> COPY
+
+4) APP MEIN:
+   Blue Khata -> 🔔 Reminder -> "📇 Google contacts" -> "⚙️ Client ID" -> paste -> Save
+   -> "➕ Google account jorein" -> Gmail chunein -> "Google hasn't verified this app" aaye to
+      **Advanced -> Go to Blue Khata (unsafe)** -> contacts ki ijazat par tick -> Continue.
+   Doosra Gmail: "➕ Aur account jorein" -> wohi.
+
+ISTEMAL: note -> 👤 Contact -> "Naam" mein 2 harf likhein -> 📇 Google / 📒 Khata ke suggestion -> tap.
+TAZA: har account ke saath 🔄 (7 din purani list peeli ho jati hai). ✕ = is phone se hatao.
+Contacts SIRF isi phone mein rehte hain — cloud / mulazim ko nazar nahi aate.

@@ -34,7 +34,7 @@ export function parseLogin({ role, username, password, ownerEmail, scope = 'full
   }
   if (role !== 'staff') throw failure('login/role-required');
   if(name !== 'admin') throw failure('login/staff-credentials');
-  if(!['full','purchase','stock','sale'].includes(scope))throw failure('login/scope-required');
+  if(!['full','purchase','stock','sale','galla'].includes(scope))throw failure('login/scope-required');
   return {role,password,scope,phone:normalizePhone(password)};
 }
 
@@ -67,7 +67,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
         throw failure('login/staff-disabled');
       }
       const scope=account.scope||'full';
-      if(!['full','purchase','stock','sale'].includes(scope)||(expectedScope&&scope!==expectedScope))throw failure('login/scope-required');
+      if(!['full','purchase','stock','sale','galla'].includes(scope)||(expectedScope&&scope!==expectedScope))throw failure('login/scope-required');
       onSession({ role: 'staff', scope, user, phone, account });
     } else {
       if (expectedRole === 'staff' || !isOwnerUser(user)) throw failure('login/owner-required');
