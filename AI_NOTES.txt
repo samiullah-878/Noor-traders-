@@ -1,8 +1,46 @@
 NOOR TRADERS HAZRI — AI NOTES
 =============================
-Version: v221   Tareekh: 2026-09-27  (v220 cameras bhi isi zip mein; v217-v219 malik ne upload kar ke 'good' kaha)
+Version: v222   Tareekh: 2026-09-28  (v220 cameras + v221 bahar se Check-Out bhi isi zip mein; ntcam.py v1.1)
 Malik: Samiullah (Noor Traders, Gulyana/Kharian). Zuban: ROMAN Urdu (Latin harf). Wo Devanagari aur Urdu lipi theek se nahi parh sakte.
 Kaam ka tareeqa: pehle plan batao, un ke "OK" ka intezar karo, phir banao. Har update ke sath ye AI_NOTES.txt bhi update karo.
+
+------------------------------------------------------------
+0000000000000000000000. v222 — GALLA NIGRANI (camera HISSA B) + ntcam.py v1.1
+------------------------------------------------------------
+28 Sep: shop PC par NT Camera install ho gaya (Windows 10, PS 5.1). Network par 4 Dahua: 192.168.0.32, .88, .110 (password
+ghalat — 401, abhi nahi jode) aur .143 = ghoomne wala DH-H3A, naam "GHALA", juda, tasveer app mein aayi — yaani H3A RTSP deta hai.
+Malik: "sirf aik camera ki pehle tracking" -> sirf GHALA par galla nigrani. Claude key PC mein save (setup ne dobara nahi maangi).
+Malik ki uljhan: getpass par kuch nazar nahi aata tha ("password likha nahi ja raha"); key ki ID (apikey_01...) ko key samjha.
+- ntcam.py v1.1 (khud update: run() shuru ke 2 min baad / har 6 ghante GitHub se): secret_input() password/key par **** (msvcrt);
+  'apikey_' paste par saaf paigham; check_key() — setup mein chhota Claude sawaal (key/credit theek?). ghalat key mita di jati hai.
+  NIGRANI: watch_wanted = role 'galla' + zone.w + enabled + is PC mein password. Watch thread: video lagatar (main stream; 10 s
+  mein 3 fps se kam = khud 'subtype=1' halki video, stream:'sub'); latest frame app ki 5-min tasveer ke liye bhi (doosra RTSP
+  connection nahi). Har 0.2 s: dabbe (zone_px) ka grey 160px + blur, Motion (peechay ki tasveer accumulateWeighted; SENS low/mid/high
+  = pixel farq 35/28/22, badla hissa 6/3.5/2%; do lagatar sample = harkat). Har 0.5 s ring mein dabba + 50% aas paas (haath/jeb).
+  Harkat par (3 s waqfa) 1.6 s pehle + 1.6 s baad ke tukre -> pick 6 -> Galla qataar. Galla thread: cameraStats ginti (touches);
+  COOLDOWN 20 s ke andar sirf ginti; roz ki had (cameras.aiCap, default 300) / key nahi / AI ruka = unchecked. Claude Haiku 4.5
+  (GALLA_PROMPT, 6 tasveer 512px) -> parse_verdict: normal | shak | saaf_nahi (+ 'error' jab AI na chale; phir 10 min AI_PAUSE).
+  Pehle cameraFrames/{cam-ms} {frames[6], at, cam} phir cameraEvents/{cam-ms} {cam, camName, at, date (PK), verdict, why, thumb
+  (320px), n, ms, model, agent} — event bante hi function khabar deta hai. Stats har 2 min flush. cameras par watch/fps/stream/lastMotionAt.
+- ntcam_test.py: 13 tests (+6: zone_px, Motion (khamoshi/aik sample/do sample), pick + parse_verdict + pk_date, Galla flow (jaanch,
+  waqfa, had, tarteeb frames->event, rules keys, Firestore size), AI ghalti -> 'error' + ruko, watch_wanted).
+- App (sirf malik): naya tab NIGRANI (manager ko nahi). data.watchEvents(date) sirf tab khula ho (cameraEvents + cameraStats us din),
+  owner hamesha aaj ke cameraStats (Tawajju: "Aaj N dafa galla par shak"). nigraniTab: din aage/peeche, galla cameras ke chips
+  (nigrani chalu / band), khulasa (galla chhua, AI jaanch, shak, shak dekhe), unchecked ka hint, filter (Sab / Na dekhe shak / Shak /
+  Normal), event cards (thumb, waqt, faisla chip, wajah, camera). eventSheet: data.loadFrames (cameraFrames sirf kholne par), badi
+  tasveer + 6 ki patti, poori screen (viewImage), AI ki wajah, "Us waqt duty par" (hazri: checkIn <= waqt <= checkOut; parchi par
+  bahar tha to "(bahar tha)"), note, "Theek hai" / "Shak pakka" (reviewEvent: reviewed ok|confirmed, reviewedAt, reviewNote).
+  zoneSheet ("Galla ka hissa", Cameras card aur Nigrani notice se): tasveer par ungli se dabba (pointer events sheet.body par),
+  saveZone 0-1 (3 decimal, 4% se chhota mana; null = nigrani band). Camera edit: aiCap (roz ki had) + sens (Harkat: Kam/Aam/Zyada).
+  cleanupCam(): Nigrani pehli dafa khulne par 30 din purane events + frames + stats (40-40 kar ke).
+- functions/index.js: onHazriWrite router mein cameraEvents (naya) -> handleCamEvent: sirf verdict 'shak' par SIRF owner ko push
+  "Galla: shak · <camera> · 9:26 pm", tag 'cam-<id>' (app khuli ho to bhi bajti hai — out-/tkt- wali shart mein nahi). router.test +1.
+- firestore.rules v222: cameraEvents (PC create, keys ginti, verdict list, why<=300, thumb<80000), cameraFrames (frames list <= 8),
+  cameraStats (PC create/update, keys). cameras PC keys + watch, fps, stream, lastMotionAt. Manager ke liye cameraFrames/cameraStats
+  bhi band. MALIK KO v222 RULES PUBLISH + FUNCTIONS UPLOAD KARNE HAIN.
+- Tests: app 78 (app.dom: Tawajju -> Nigrani, khulasa, filter, event + 6 tasveer + badi + poori screen, duty, faisla, din badalna,
+  dabba hatao -> paigham, chhota dabba mana, zone save; manager ko Nigrani nahi) + functions router 5 + Python 13. Chromium mein
+  Nigrani tab aur event sheet dekhi. Asal camera par harkat / AI ka asal faisla yahan test nahi hua.
 
 ------------------------------------------------------------
 ntcam.txt v1.0.1 (2026-09-28) — PC par pehli asal chalai ka sabaq

@@ -1,16 +1,44 @@
-const CACHE='sam-blue-khata-2.36.1';
-const LIB_CACHE='sam-blue-khata-libs-v1';
-const ASSETS=['./','./index.html','./style.css','./app.js','./style.css?v=2.36.1','./app.js?v=2.36.1','./recovery.js?v=2.36.1','./recovery.js','./local-mode.js','./account-transfer.js','./search-focus.js','./cash-links.js','./optimistic.js','./entry-status.js','./live-data.js','./pos-ledger.js','./pos-ledger.js?v=2.36.1','./pos-stock.js','./pos-stock.js?v=2.36.1','./sale.js','./sale.js?v=2.36.1','./purchase.js', './galla.js','./purchase.js?v=2.36.1', './galla.js?v=2.36.1', './audit.js?v=2.36.1','./notes.js?v=2.36.1','./barcode.js?v=2.36.1','./geo-guard.js','./geo-guard.js?v=2.36.1','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-maskable-512.png','./apple-touch-icon.png','./favicon-64.png','./smart-search.js','./ai-tally.js','./tolai.js','./tolai.js?v=2.36.1','./ai-tally.js?v=2.36.1','./smart-search.js?v=2.36.1','./model.js','./finance-tools.js','./import-plan.js','./cloud.js','./cloud.js?v=2.36.1','./auth-controller.js','./auth-controller.js?v=2.36.1','./config.js','./config.js?v=2.36.1','./pdf-import.js','./pdf-export.js','./vendor/jspdf.js','./vendor/html2canvas.js','./vendor/pdf.mjs','./vendor/pdf.worker.mjs'];
-const isLibrary=u=>u.hostname==='www.gstatic.com'&&u.pathname.startsWith('/firebasejs/12.18.0/')||u.origin===location.origin&&u.pathname.includes('/vendor/');
-self.addEventListener('install',e=>e.waitUntil((async()=>{const want=CACHE.replace('sam-blue-khata-','');const vr=await fetch(new Request(new URL('./version.json?sw='+Date.now(),location.href),{cache:'no-store'}));const vj=await vr.json();if(String(vj.version)!==want)throw Error('GitHub par naya version abhi poora chalu nahi ('+vj.version+' != '+want+') — baad mein dobara');const core=await caches.open(CACHE),libs=await caches.open(LIB_CACHE);await Promise.all(ASSETS.map(async path=>{const request=new Request(new URL(path,location.href));if(isLibrary(new URL(request.url))){const hit=await caches.match(request);if(hit){await libs.put(request,hit);return}const r=await fetch(request);if(!r.ok)throw Error('Library load failed');await libs.put(request,r)}else{const r=await fetch(new Request(request.url,{cache:'reload'}));if(!r.ok)throw Error('file nahi mili: '+request.url);await core.put(request,r)}}));await self.skipWaiting()})()));
-self.addEventListener('activate',e=>e.waitUntil((async()=>{for(const key of await caches.keys())if(key.startsWith('sam-blue-khata-')&&key!==CACHE&&key!==LIB_CACHE)await caches.delete(key);await self.clients.claim()})()));
-self.addEventListener('fetch',e=>{const u=new URL(e.request.url);if(e.request.method!=='GET'||u.pathname.endsWith('version.json')||u.pathname.endsWith('sw.js'))return;if(u.origin!==location.origin&&!isLibrary(u))return;
- const html=e.request.mode==='navigate'||u.pathname.endsWith('/index.html');
- e.respondWith((async()=>{const cache=await caches.open(isLibrary(u)?LIB_CACHE:CACHE);if(!html){const hit=await cache.match(e.request);if(hit)return hit}try{const response=await fetch(e.request,{cache:html?'no-cache':'default'});if(response.ok){const write=cache.put(e.request,response.clone());e.waitUntil(write.catch(()=>{}))}return response}catch(error){const hit=await cache.match(e.request)|| (html?await cache.match(new URL('./index.html',location.href)):null);if(hit)return hit;throw error}})());
+/* Noor Traders Hazri — service worker (v203: tez).
+   App ki files aur Firebase SDK phone se foran milte hain (peeche se taza bhi hote rehte hain).
+   Hazri/salary ka DATA yahan se nahi guzarta — wo Firebase khud sambhalta hai.
+   Nayi version: app version.json dekhti hai; nayi ho to cache mita kar reload karti hai. */
+const APP_VERSION = 'v222';
+const CACHE = 'nt-hazri-' + APP_VERSION;
+const SDK_CACHE = 'nt-hazri-sdk-12.18.0';
+const SHELL = ['./', './index.html', './styles.css', './boot.js', './app.js', './core.js', './auth.js', './data.js', './ui.js', './owner.js', './staffview.js', './breaks.js', './tickets.js', './manager.js', './notify.js', './push.js', './pdf.js', './firebase-config.js', './archivo-latin.woff2', './icon.svg', './icon-192.png', './icon-512.png', './manifest.webmanifest'];
+const SDK = ['firebase-app.js', 'firebase-auth.js', 'firebase-firestore.js'].map(f => 'https://www.gstatic.com/firebasejs/12.18.0/' + f);
+
+self.addEventListener('install', event => {
+  self.skipWaiting();
+  event.waitUntil(Promise.all([
+    caches.open(CACHE).then(c => Promise.allSettled(SHELL.map(u => c.add(new Request(u, { cache: 'reload' }))))),
+    caches.open(SDK_CACHE).then(c => Promise.allSettled(SDK.map(u => c.add(new Request(u, { mode: 'cors' })))))
+  ]));
 });
-// v2.23: 🔔 PUSH — Cloud Function (FCM) data message -> notification bar mein, jab tak khud na hatayein. Tap = wohi note / khata.
-self.addEventListener('push',e=>{let p={};try{p=e.data?e.data.json():{}}catch{try{p={data:{title:'Blue Khata',body:e.data.text()}}}catch{}}
- const d=p.data||p.notification||p||{},title=String(d.title||'Blue Khata').slice(0,120);
- e.waitUntil(self.registration.showNotification(title,{body:String(d.body||'').slice(0,240),tag:String(d.tag||'bk'),renotify:true,requireInteraction:true,icon:'./icon-192.png',badge:'./favicon-64.png',vibrate:[300,150,300],data:{url:String(d.url||'./')}}));});
-self.addEventListener('notificationclick',e=>{e.notification.close();const url=new URL(e.notification.data?.url||'./',self.registration.scope).href;
- e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(ws=>{for(const w of ws){if(w.url.startsWith(self.registration.scope)&&'focus' in w){try{w.navigate?.(url)}catch{}return w.focus()}}return self.clients.openWindow(url)}));});
+self.addEventListener('activate', event => {
+  event.waitUntil(Promise.all([
+    self.clients.claim(),
+    caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== SDK_CACHE && (k.startsWith('nt-hazri') || k.startsWith('noor-traders-'))).map(k => caches.delete(k))))
+  ]));
+});
+self.addEventListener('fetch', event => {
+  const request = event.request;
+  if (request.method !== 'GET') return;
+  const url = new URL(request.url);
+  // Firebase SDK: version wala URL kabhi nahi badalta -> hamesha phone se
+  if (url.origin === 'https://www.gstatic.com' && url.pathname.startsWith('/firebasejs/')) {
+    event.respondWith(caches.open(SDK_CACHE).then(c => c.match(request).then(hit => hit || fetch(request).then(res => { if (res.ok) c.put(request, res.clone()); return res; }))));
+    return;
+  }
+  if (url.origin !== location.origin) return;               // Firestore / login seedha internet se
+  if (url.pathname.endsWith('version.json')) return;         // update check hamesha taza
+  if (url.searchParams.has('nocache')) return;              // boot.js ki file jaanch: seedha internet
+  const key = request.mode === 'navigate' ? './index.html' : url.pathname;
+  // Phone wali copy foran do, peeche se taza copy le kar rakh lo
+  event.respondWith(caches.open(CACHE).then(async c => {
+    const hit = await c.match(key, { ignoreSearch: true });
+    const fresh = fetch(request, { cache: 'no-store' }).then(res => { if (res && res.ok) c.put(key, res.clone()); return res; });
+    if (hit) { event.waitUntil(fresh.catch(() => {})); return hit; }
+    return fresh.catch(() => c.match('./index.html'));
+  }));
+});
