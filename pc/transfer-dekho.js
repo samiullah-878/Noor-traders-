@@ -1,5 +1,5 @@
 // =========================================================
-//  transfer-dekho.js  v1  (2026-09-24) — POS ke STOCK TRANSFER app mein dikhane ke liye
+//  transfer-dekho.js  v1.1  (2026-09-28: 60 din)  ·  v1  (2026-09-24) — POS ke STOCK TRANSFER app mein dikhane ke liye
 //  POS ki dbo.StockTransfer + StockTransferDetail parhta hai (sirf SELECT — POS mein kuch nahi badalta)
 //  aur pichhle DIN din ke transfer Firestore `posTransfers` mein rakhta hai. App ki
 //  "📥 Aaya / gaya maal" screen wahi se dikhati hai — chahe transfer POS par bana ho ya app se.
@@ -16,7 +16,7 @@ const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
 const BUSINESS_ID = 'noor-traders';
-const DIN = 14;                 // kitne din ke transfer app mein rakhne hain
+const DIN = 60;   // v1.1 (2026-09-28): 14 -> 60 — app ka 📋 Transfer register 60 din tak                 // kitne din ke transfer app mein rakhne hain
 const EVERY = 2 * 60 * 1000;    // har 2 minute
 const LOCK_PORT = 47822;
 
