@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.36.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.36.1';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,10 +57,20 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.36.1: atke to khud / button se dobara
+export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
+export function stockWaitHTML() {
+  const w = stockT0 ? Date.now() - stockT0 : 0;
+  if (w < 12000) return '<p class="stat-note">Items load ho rahe hain…</p>';
+  const why = navigator.onLine === false ? '📵 Phone par internet nahi — Wi-Fi / mobile data dekhein.' : (w < 30000 ? '⏳ Pehli dafa (ya dheema internet) — sara stock aa raha hai, thora aur ruk jayein.' : '⚠️ Bohat der ho gayi — neeche dabayein, rabta naya jorta hoon.');
+  return `<div class="empty stock-wait"><strong>Items load ho rahe hain… (${Math.round(w / 1000)} sec)</strong><p>${why}</p><button type="button" class="primary" data-stock-retry="1">🔄 Dobara load karo</button></div>`;
+}
+document.addEventListener('click', e => { if (e.target.closest?.('[data-stock-retry]')) { stockRetried = true; stockRetry(); } });
 function start(withCounts = true) {
   if (!cloud) return;
   if (!stop) {
-    loaded = false; failed = '';
+    loaded = false; failed = ''; stockT0 = Date.now();
+    clearInterval(stockTick); stockTick = setInterval(() => { if (loaded) { clearInterval(stockTick); stockTick = null; return; } const w = Date.now() - stockT0; if (w > 30000 && !stockRetried) { stockRetried = true; stockRetry(); return; } if (w > 12000) rerender(); }, 6000);
     stop = cloud.listenStock(
       list => { rows = list.map(fixCost); loaded = true; failed = ''; soft(); },
       e => { failed = e?.message || 'Stock load nahi hua'; loaded = true; stop = null; rerender(); }

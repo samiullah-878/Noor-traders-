@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.36.0, 2026-09-28 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.36.1, 2026-09-28 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1868,3 +1868,12 @@ gaye), aur larka copy par demand likhta hai. Tasveer-parhwana reject; ye bana:
 * pc/sales-stats.js v1.1: SKIP — Party '%noor%trader%' / '%our factory%' sale+purchase se bahar (LEFT JOIN Party). manifest .3.
 * Test (happy-dom): staff demand save -> owner order: demand line pehle (10 Ctn = lq), factory bahar, AI ne demand dekhi,
   double tap -> demand done.
+
+==================== v2.36.1 (2026-09-28) — 🔐 RULES BUTTON · STOCK WATCHDOG ====================
+Malik: "Firestore ka option GitHub ke button ke sath" + Purchase mein items load nahi (us phone par; naqli data par code theek
+chala — smoke test fake Firebase loader rt/fb/, purchase test bhi). Pehle Sale bhi isi phone par atki thi, phir khud aa gayi.
+* index.html #rulesBtn (🔐, hidden) ⇪ ke baad; app.js render() malik par dikhata hai; openRulesDlg: fetch ./firestore.rules
+  + ./version.json (no-store), "BLUE KHATA vX" parse vs version.rules, 📋 clipboard (execCommand fallback), Firebase rules link.
+* pos-stock.js: stockT0 / stockTick (6s): 12s+ par rerender (wait HTML), 30s+ par ek dafa khud stockRetry(). stockRetry:
+  purana listener band + naya. stockWaitHTML() (sale.js + purchase.js ka "Items load ho rahe hain" ab isi se). [data-stock-retry].
+* DHYAN: app.js mein single-line code ke baad "// comment" NA lagao — pichhli dafa naya code comment ke aage chipak gaya tha.

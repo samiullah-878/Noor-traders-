@@ -1,0 +1,8 @@
+Blue Khata v2.36.1 — 🔐 RULES BUTTON · ITEMS ATKE TO KHUD HAL
+INSTALL: GitHub bahar wala folder -> ZIP ki files -> 2-3 min ruk kar app kholein -> ↻ Sync -> 2.36.1. Rules NAHI badlin.
+ - Header mein ⇪ (GitHub) ke sath 🔐 (sirf malik): tap = "Rules v2.16 · ✅ app ko yahi chahiye", 📋 Rules copy karo (ek tap),
+   🔥 Firebase Rules kholo (seedha Rules page) -> paste -> Publish. Ab HTML file ki zaroorat nahi.
+   (Rules GitHub ki firestore.rules se aati hain — nayi rules ho to pehle GitHub par firestore.rules daalein.)
+ - Sale / Purchase mein 12 second tak "Items load ho rahe hain…" rahe: wajah (internet nahi / pehli dafa / bohat der) +
+   "🔄 Dobara load karo" button (rabta naya). 30 second par khud ek dafa dobara koshish.
+BADLI HUI FILES: index.html, app.js, pos-stock.js, sale.js, purchase.js, style.css + version.
