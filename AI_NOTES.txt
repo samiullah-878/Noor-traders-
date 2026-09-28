@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.31.1, 2026-09-27 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.32.0, 2026-09-27 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1787,3 +1787,15 @@ Malik: sale screen par mic, scanner jaisa — bolo "cheeni 5 kilo" to usi bill m
 * v2.31.1: Android Chrome par continuous recognition pehli utterance ke baad band -> ab HOLD-TO-TALK: pointerdown = vbStart
   (continuous+interim, sessions khud restart jab tak vbHold; vbDone+vbHeard jama), pointerup = vbRelease (600ms baad stop)
   -> onend par poora text vbAdd. Click sirf hint. Beep ke sath vibrate. "Suna: ..." notice na milne par.
+
+==================== v2.32.0 (2026-09-27) — 🎤 SUGGESTION CHIPS / URDU ROMAN / PAO / YAAD ====================
+* sale.js vbParse: tokens asal (Urdu) — IN(set,t) aur NUM(t) dono shakal (asal + vbRoman) check. VB_SAWA/+0.25,
+  VB_PAUNE/-0.25, VB_PAO -> pao (kg) = (qty??1)*0.25, nq = naam + pao lafz (packet ke liye), q = naam baghair.
+  paoWord = pao se pehle ka lafz (adha/dedh...). 'daal' VB_SKIP se nikala.
+* vbCands: learned (localStorage 'sam-voice-v1' key = vbKey(fold(roman)) -> itemId) pehle; smartSearch(nq/q + roman);
+  naam includes; KUCH na mile to vbSkelHits (fold(roman) se [aeiouyhw] hata kar lafz ka dhancha, har query lafz match).
+  pao par sort: naam mein pao (+2), paoWord (+1). vbSure: learned || ek hi || fold(name) q/nq se shuru aur doosra nahi.
+* vbAdd: yaqeen -> vbPut (line) + vbSug {heard roman, r, list, added, lineK}; warna sirf vbSug. #vbSug fixed panel
+  (body mein), chip data-vb-pick -> purani line (lineK) hatao + vbPut + vbLearnSet (local + learnOf = app learnAlias
+  roman, Urdu). saleSetup learn:learnAlias (app.js). Click/popstate par vbSugPaint (sale screen na ho to chhupao).
+* vbRoman: aakhri ہ -> a; ؤ أ إ ۓ map. Tests: 12 jumle + chips UI (render, pick, cloud learn, dobara khud).

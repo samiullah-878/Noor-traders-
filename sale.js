@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.31.1';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.31.1';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera } from './pos-stock.js?v=2.32.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.32.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -26,7 +26,7 @@ let searchFocused = false;   // v1.75
 
 export function saleSetup(o) {
   cloud = o.cloud; rerender = o.rerender || rerender; notice = o.notice || notice;
-  isOwner = o.owner || isOwner; uidOf = o.uid || uidOf;
+  isOwner = o.owner || isOwner; uidOf = o.uid || uidOf; learnOf = o.learn || learnOf;
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
     if (d && d.day === todayStr()) { mode = d.mode || 'counter'; godam = d.godam ?? null; cart = d.cart || []; cash = d.cash ?? null; note = d.note || ''; }
@@ -106,53 +106,126 @@ const VB_WORD = { aik: 1, ek: 1, ایک: 1, do: 2, دو: 2, teen: 3, tin: 3, ت�
 const VB_CTN = new Set(['carton', 'cartoon', 'ctn', 'cotton', 'karton', 'kartan', 'peti', 'box', 'dabba', 'gatta', 'کارٹن', 'کاٹن', 'کارٹون', 'پیٹی', 'ڈبہ', 'بکس', 'گتا']);
 const VB_PCS = new Set(['pcs', 'piece', 'pieces', 'pc', 'dana', 'adad', 'kilo', 'kg', 'kilogram', 'litre', 'liter', 'ltr', 'packet', 'pkt', 'bottle', 'botal', 'thaila', 'thela', 'bori', 'bag', 'kg.', 'کلو', 'کلوگرام', 'لیٹر', 'لٹر', 'پیس', 'دانہ', 'عدد', 'پیکٹ', 'بوتل', 'تھیلا', 'تھیلی', 'بوری', 'بیگ']);
 const VB_GODAM = new Set(['godam', 'godaam', 'gudam', 'گودام', 'گودم', 'گدام']);
-const VB_SKIP = new Set(['ka', 'ki', 'ke', 'ko', 'aur', 'or', 'and', 'wala', 'wali', 'walay', 'walee', 'کا', 'کی', 'کے', 'کو', 'اور', 'والا', 'والی', 'والے', 'daal', 'daalo', 'do', 'dedo', 'ڈالو', 'ڈال', 'add', 'plus', 'lagao', 'لگاؤ', 'لگا']);
-const VB_UR = { 'ا': 'a', 'آ': 'a', 'ب': 'b', 'پ': 'p', 'ت': 't', 'ٹ': 't', 'ث': 's', 'ج': 'j', 'چ': 'ch', 'ح': 'h', 'خ': 'kh', 'د': 'd', 'ڈ': 'd', 'ذ': 'z', 'ر': 'r', 'ڑ': 'r', 'ز': 'z', 'ژ': 'zh', 'س': 's', 'ش': 'sh', 'ص': 's', 'ض': 'z', 'ط': 't', 'ظ': 'z', 'ع': '', 'غ': 'gh', 'ف': 'f', 'ق': 'q', 'ک': 'k', 'ك': 'k', 'گ': 'g', 'ل': 'l', 'م': 'm', 'ن': 'n', 'ں': 'n', 'و': 'o', 'ہ': 'h', 'ھ': 'h', 'ه': 'h', 'ء': '', 'ی': 'i', 'ي': 'i', 'ے': 'e', 'ئ': 'i', 'ۃ': 'h', 'ة': 'h' };
-const vbRoman = s => String(s || '').replace(/[\u064B-\u065F\u0670\u0640]/g, '').split('').map((c, i, a) => c in VB_UR ? (c === 'و' && (i === 0 || a[i - 1] === ' ') ? 'w' : VB_UR[c]) : c).join('');
+const VB_SKIP = new Set(['ka', 'ki', 'ke', 'ko', 'aur', 'or', 'and', 'wala', 'wali', 'walay', 'walee', 'کا', 'کی', 'کے', 'کو', 'اور', 'والا', 'والی', 'والے', 'daalo', 'dalo', 'dedo', 'ڈالو', 'ڈال', 'add', 'plus', 'lagao', 'لگاؤ', 'لگا']);
+const VB_UR = { 'ا': 'a', 'آ': 'a', 'ب': 'b', 'پ': 'p', 'ت': 't', 'ٹ': 't', 'ث': 's', 'ج': 'j', 'چ': 'ch', 'ح': 'h', 'خ': 'kh', 'د': 'd', 'ڈ': 'd', 'ذ': 'z', 'ر': 'r', 'ڑ': 'r', 'ز': 'z', 'ژ': 'zh', 'س': 's', 'ش': 'sh', 'ص': 's', 'ض': 'z', 'ط': 't', 'ظ': 'z', 'ع': '', 'غ': 'gh', 'ف': 'f', 'ق': 'q', 'ک': 'k', 'ك': 'k', 'گ': 'g', 'ل': 'l', 'م': 'm', 'ن': 'n', 'ں': 'n', 'و': 'o', 'ہ': 'h', 'ھ': 'h', 'ه': 'h', 'ء': '', 'ی': 'i', 'ي': 'i', 'ے': 'e', 'ئ': 'i', 'ۃ': 'h', 'ة': 'h', 'ؤ': 'o', 'أ': 'a', 'إ': 'i', 'ۓ': 'e' };
+const vbRoman = s => String(s || '').replace(/[\u064B-\u065F\u0670\u0640]/g, '').split('').map((c, i, a) => c in VB_UR ? (c === 'و' && (i === 0 || a[i - 1] === ' ') ? 'w' : (c === 'ہ' || c === 'ه') && (i === a.length - 1 || a[i + 1] === ' ') && i > 0 && a[i - 1] !== ' ' ? 'a' : VB_UR[c]) : c).join('');
 function vbNum(t) { const d = VB_DIG(t).replace(/[^\d.]/g, ''); if (d && /^\d+(\.\d+)?$/.test(d)) return Number(d); const w = t.toLowerCase(); return VB_WORD[w] ?? null; }
 function vbTok(s) { return VB_DIG(s).toLowerCase().replace(/[،,؛;]/g, ' , ').replace(/(\d)([a-z\u0600-\u06ff])/g, '$1 $2').replace(/([a-z\u0600-\u06ff])(\d)/g, '$1 $2').split(/\s+/).filter(Boolean); }
-function vbParse(text, items, st) {          // ek jumla -> { it, ctn, pcs, godam, q }
+function vbParse(text, items, st) {          // ek jumla -> { q, nq (pao samet naam), qty, pao (kg), unit, godam }
   const toks = vbTok(text); if (!toks.length) return null;
-  let qty = null, unit = '', godam = null; const words = [];
+  const IN = (set, t) => set.has(t) || set.has(vbRoman(t)), NUM = t => { const n = vbNum(t); return n != null ? n : vbNum(vbRoman(t)); };
+  let qty = null, mod = 0, unit = '', godam = null, pao = null, qtyInPao = false, lastNumTok = ''; const words = [], nwords = [];
   for (let i = 0; i < toks.length; i++) {
     const t = toks[i];
-    if (VB_GODAM.has(t)) { const n = vbNum(toks[i + 1] || ''); if (n != null) { i++; const nm = 'godam ' + n; godam = (st.branches || []).find(b => norm(st.names?.[b] || '').replace(/[^a-z0-9 ]/g, '') === nm) ?? (st.branches || []).find(b => String(b) === String(n)) ?? null; } continue; }
-    const n = vbNum(t); if (n != null && qty == null) { qty = n; continue; }
+    if (IN(VB_GODAM, t)) { const n = NUM(toks[i + 1] || ''); if (n != null) { i++; const nm = 'godam ' + n; godam = (st.branches || []).find(b => norm(st.names?.[b] || '').replace(/[^a-z0-9 ]/g, '') === nm) ?? (st.branches || []).find(b => String(b) === String(n)) ?? null; } continue; }
+    if (IN(VB_SAWA, t)) { mod = 0.25; continue; }
+    if (IN(VB_PAUNE, t)) { mod = -0.25; continue; }
+    if (IN(VB_PAO, t)) { const base = (qty ?? 1) + (qty == null ? mod : 0); pao = base * 0.25; qtyInPao = qty != null; if (lastNumTok && !/\d/.test(lastNumTok)) nwords.push(lastNumTok); nwords.push('pao'); mod = 0; continue; }
     if (t === 'darjan' || t === 'dozen' || t === 'درجن') { qty = (qty ?? 1) * 12; if (!unit) unit = 'pcs'; continue; }
-    if (VB_CTN.has(t) || VB_PCS.has(t)) { if (!unit) unit = t; continue; }
-    if (VB_SKIP.has(t)) continue;
-    words.push(t);
+    const n = NUM(t); if (n != null && qty == null) { qty = n + mod; mod = 0; lastNumTok = t; continue; }
+    if (IN(VB_CTN, t) || IN(VB_PCS, t)) { if (!unit) unit = t; continue; }
+    if (IN(VB_SKIP, t)) continue;
+    words.push(t); nwords.push(t);
   }
-  const q = words.join(' ').trim();
-  if (!q) return { it: null, q: '', qty, unit, godam };
-  let it = smartSearch(items, q, 3)[0] || null;
-  if (!it && /[\u0600-\u06ff]/.test(q)) it = smartSearch(items, vbRoman(q), 3)[0] || null;   // Urdu harf -> roman (چینی -> chini -> Cheeni)
-  if (!it) { const qq = norm(q); it = items.find(r => norm(r.name).includes(qq)) || null; }
-  if (!it) return { it: null, q, qty, unit, godam };
-  const n = qty ?? 1, cn = norm(it.cName || 'ctn'), un = norm(it.uName || 'pcs'), u = norm(unit);
+  if (qty == null && mod && pao == null) qty = 1 + mod;          // "sawa kilo" = 1.25
+  return { q: words.join(' ').trim(), nq: nwords.join(' ').trim(), qty, pao, qtyInPao, unit, godam, paoWord: pao != null && lastNumTok ? fold(vbRoman(lastNumTok)) : '' };
+}
+// ---------- v2.32: 🎤 suggestion chips · Urdu -> Roman · pao/sawa/paune · ek dafa bolo yaad ----------
+const VB_PAO = new Set(['pao', 'paao', 'pav', 'paw', 'پاؤ', 'پاو', 'پا']), VB_SAWA = new Set(['sawa', 'sowa', 'سوا']), VB_PAUNE = new Set(['paune', 'pone', 'paunay', 'پونے', 'پونا']);
+const VB_LKEY = 'sam-voice-v1';
+let vbLearn = null, learnOf = null, vbSug = null;
+const vbKey = q => fold(vbRoman(q)).replace(/\s+/g, '');
+function vbLearnGet(q) { try { vbLearn = vbLearn || JSON.parse(localStorage.getItem(VB_LKEY) || '{}'); } catch { vbLearn = {}; } return vbLearn[vbKey(q)] || null; }
+function vbLearnSet(q, id, it) {
+  const k = vbKey(q); if (!k) return;
+  try { vbLearn = vbLearn || JSON.parse(localStorage.getItem(VB_LKEY) || '{}'); vbLearn[k] = String(id); const ks = Object.keys(vbLearn); if (ks.length > 600) delete vbLearn[ks[0]]; localStorage.setItem(VB_LKEY, JSON.stringify(vbLearn)); } catch {}
+  if (learnOf && it) { const rom = vbRoman(q).trim(); Promise.resolve(learnOf(String(id), rom, /[\u0600-\u06ff]/.test(q) ? q : '')).catch(() => {}); }   // "doosre naam" mein bhi — sab phones
+}
+const vbNamePao = it => /\b(pao|pav|paw)\b|پاؤ/i.test(String(it?.name || ''));
+function vbQty(r, it) {            // is item ke liye ctn / pcs
+  if (r.pao != null) { if (vbNamePao(it)) return { ctn: 0, pcs: r.qty && Number.isInteger(r.qty) && r.qty >= 1 && !r.qtyInPao ? r.qty : 1 }; return { ctn: 0, pcs: Math.round(r.pao * 1000) / 1000 }; }
+  const n = r.qty ?? 1, cn = norm(it.cName || 'ctn'), un = norm(it.uName || 'pcs'), u = norm(r.unit || '');
   const same = (x, y) => { if (!x || !y) return false; x = fold(vbRoman(x)); y = fold(vbRoman(y)); if (x === y) return true; if (x.length >= 3 && y.length >= 3 && (x.startsWith(y) || y.startsWith(x))) return true; if (Math.abs(x.length - y.length) > 1) return false; let d = 0, i = 0, j = 0; while (i < x.length && j < y.length) { if (x[i] === y[j]) { i++; j++; continue; } if (++d > 1) return false; if (x.length > y.length) i++; else if (y.length > x.length) j++; else { i++; j++; } } return d + (x.length - i) + (y.length - j) <= 1; };
   const isCtn = !!u && (same(u, cn) || (VB_CTN.has(u) && !same(u, un))) && !same(u, un);
-  return { it, q, qty: n, unit, godam, ctn: isCtn ? n : 0, pcs: isCtn ? 0 : n };
+  return isCtn ? { ctn: n, pcs: 0 } : { ctn: 0, pcs: n };
 }
+const vbSkel = w => fold(vbRoman(w)).replace(/[aeiouyhw]/g, '');   // harfon ka dhancha: garam / grm -> grm, masala / msalhh -> msl
+const vbSk = new WeakMap();
+function vbSkelHits(q, items) {
+  const qs = String(q || '').split(/\s+/).map(vbSkel).filter(x => x.length >= 2); if (!qs.length) return [];
+  const out = [];
+  for (const it of items) { let e = vbSk.get(it); if (!e) { e = fold(String(it.name || '')).split(/\s+/).map(w => w.replace(/[aeiouyhw]/g, '')).filter(Boolean); vbSk.set(it, e); }
+    let hit = 0; for (const x of qs) if (e.some(w => w === x || (x.length >= 2 && w.startsWith(x)) || (w.length >= 3 && x.startsWith(w)))) hit++;
+    if (hit === qs.length) out.push([it, e.length - hit]); }
+  return out.sort((a, b) => a[1] - b[1]).slice(0, 6).map(x => x[0]);
+}
+function vbCands(r, items) {      // milte julte items (learned pehle)
+  const seen = new Set(), out = [], push = it => { if (it && !seen.has(String(it.id))) { seen.add(String(it.id)); out.push(it); } };
+  const lid = vbLearnGet(r.q) || (r.nq !== r.q ? vbLearnGet(r.nq) : null);
+  if (lid) push(items.find(x => String(x.id) === String(lid)));
+  for (const q of [r.nq, r.q].filter(Boolean)) {
+    for (const x of [q, /[\u0600-\u06ff]/.test(q) ? vbRoman(q) : ''].filter(Boolean)) for (const it of smartSearch(items, x, 6)) push(it);
+    const qq = norm(vbRoman(q)); for (const it of items) { if (out.length >= 8) break; if (norm(it.name).includes(qq)) push(it); }
+  }
+  if (!out.length) for (const q of [r.nq, r.q].filter(Boolean)) for (const it of vbSkelHits(q, items)) push(it);   // sirf jab kuch na mile (Urdu zer-zabar baghair)
+  if (r.pao != null && !lid) { const sc = it => { const f = fold(String(it.name || '')); return (vbNamePao(it) ? 2 : 0) + (r.paoWord && (f.includes(r.paoWord) || (r.paoWord === 'ada' && f.includes('adh'))) ? 1 : 0); }; out.sort((a, b) => sc(b) - sc(a)); }   // "adha pao" -> Adha Pao packet pehle
+  return { list: out.slice(0, 6), learned: !!lid && out.length > 0 && String(out[0].id) === String(lid) };
+}
+function vbSure(r, c) {
+  if (c.learned) return true;
+  if (c.list.length === 1) return true;
+  const a = c.list[0] ? fold(c.list[0].name).replace(/\s+/g, '') : '', b = c.list[1] ? fold(c.list[1].name).replace(/\s+/g, '') : '';
+  return [r.q, r.nq].filter(Boolean).some(x => { const qf = vbKey(x); return qf.length >= 4 && a.startsWith(qf) && !b.startsWith(qf); });
+}
+function vbPut(r, it, st) {
+  const l = addItem(it, 0), q = vbQty(r, it); l.ctn = q.ctn; l.pcs = q.pcs;
+  if (r.godam != null && r.godam !== l.godam) { l.godam = Number(r.godam); const gi = itemIn(l.godam, it.id); if (gi) setStd(l, gi); }
+  return l;
+}
+const vbQtyTxt = (r, it) => { const q = vbQty(r, it); return q.ctn ? q.ctn + ' ' + (it.cName || 'Ctn') : q.pcs + ' ' + (it.uName || 'Pcs'); };
+function vbSugPaint() {
+  let box = document.getElementById('vbSug');
+  if (!vbSug || !document.querySelector('[data-sale-root]')) { if (box) box.hidden = true; return; }
+  if (!box) { box = document.createElement('div'); box.id = 'vbSug'; box.className = 'vb-sug'; document.body.appendChild(box); }
+  const s = vbSug;
+  box.innerHTML = `<div class="vb-sug-h"><span>🎤 <b>${esc(s.heard)}</b>${s.added ? ` · ✓ <i>${esc(s.added.name)}</i> lag gaya` : ' · kaunsa?'}</span><button type="button" data-vb-x="1" aria-label="band">✕</button></div>`
+    + `<div class="vb-sug-c">${s.list.filter(it => !s.added || String(it.id) !== String(s.added.id)).map((it, i) => `<button type="button" data-vb-pick="${esc(String(it.id))}">${esc(it.name)}<small>${esc(vbQtyTxt(s.r, it))}</small></button>`).join('') || '<small>Aur koi milta julta nahi</small>'}</div>`
+    + (s.added ? '<small class="vb-sug-f">Ghalat hai? Sahi wala tap karein — badal jayega aur yaad rahega</small>' : '<small class="vb-sug-f">Tap karein — lag jayega aur agli dafa khud pehchanega</small>');
+  box.hidden = false;
+}
+document.addEventListener('click', () => setTimeout(vbSugPaint, 60));   // sale screen chhori to chips chhupen
+window.addEventListener('popstate', () => setTimeout(vbSugPaint, 60));
+document.addEventListener('click', e => {
+  const x = e.target.closest?.('[data-vb-x]'); if (x) { vbSug = null; vbSugPaint(); return; }
+  const b = e.target.closest?.('[data-vb-pick]'); if (!b || !vbSug) return;
+  const st = stock(), it = st.items.find(r => String(r.id) === b.dataset.vbPick) || vbSug.list.find(r => String(r.id) === b.dataset.vbPick); if (!it) return;
+  if (vbSug.lineK) cart = cart.filter(l => l.k !== vbSug.lineK);    // ghalat wali line hatao
+  const l = vbPut(vbSug.r, it, st);
+  vbLearnSet(vbSug.r.nq || vbSug.r.q, it.id, it);
+  notice('✓ ' + it.name + ' · ' + vbQtyTxt(vbSug.r, it) + ' — yaad kar liya');
+  vbSug = null; cash = null; keepDraft(); rerender(); vbSugPaint();
+  try { navigator.vibrate?.(40); } catch {}
+});
+
 function vbBeep(ok = true) { try { vbAudio = vbAudio || new (window.AudioContext || window.webkitAudioContext)(); const o = vbAudio.createOscillator(), g = vbAudio.createGain(); o.frequency.value = ok ? 1320 : 330; g.gain.value = 0.12; o.connect(g); g.connect(vbAudio.destination); o.start(); o.stop(vbAudio.currentTime + (ok ? 0.09 : 0.25)); } catch {} }
 function vbAdd(text) {
   if (!document.querySelector('[data-sale-root]')) { vbStop(); return; }
-  const st = stock(), parts = String(text || '').split(/\s+(?:aur|or|and|اور)\s+|[،,]/i).map(x => x.trim()).filter(Boolean);
-  let added = 0, miss = '';
+  const st = stock(), heard = vbRoman(text).trim(), parts = String(text || '').split(/\s+(?:aur|or|and|اور)\s+|[،,]/i).map(x => x.trim()).filter(Boolean);
+  let added = 0, lastSug = null;
   for (const p of parts) {
-    const r = vbParse(p, st.items, st); if (!r) continue;
-    if (!r.it) { miss = r.q || p; continue; }
-    const l = addItem(r.it, 0);
-    l.ctn = r.ctn; l.pcs = r.pcs;
-    if (r.godam != null && r.godam !== l.godam) { l.godam = Number(r.godam); const gi = itemIn(l.godam, r.it.id); if (gi) setStd(l, gi); }
-    added++;
-    notice('🎤 ✓ ' + r.it.name + ' · ' + (r.ctn ? r.ctn + ' ' + (r.it.cName || 'Ctn') : r.pcs + ' ' + (r.it.uName || 'Pcs')) + (r.godam != null ? ' · ' + (st.names?.[r.godam] || 'godam ' + r.godam) : ''));
+    const r = vbParse(p, st.items, st); if (!r || !(r.q || r.nq)) continue;
+    const c = vbCands(r, st.items);
+    const hp = vbRoman(p).trim();
+    if (c.list.length && vbSure(r, c)) { const l = vbPut(r, c.list[0], st); added++; lastSug = { heard: hp, r, list: c.list, added: c.list[0], lineK: l.k }; notice('🎤 ✓ ' + c.list[0].name + ' · ' + vbQtyTxt(r, c.list[0])); }
+    else lastSug = { heard: hp, r, list: c.list, added: null, lineK: null };
   }
   if (added) { cash = null; keepDraft(); rerender(); try { navigator.vibrate?.([40, 40, 40]); } catch {} vbBeep(true); }
-  if (miss) { vbBeep(false); const s = $('search'); if (s) { s.value = miss; s.dispatchEvent(new Event('input', { bubbles: true })); } notice('🎤 Suna: "' + String(text).slice(0, 60) + '" — "' + miss + '" nahi mila, list se chunein'); }
+  else if (lastSug) vbBeep(false);
+  vbSug = lastSug; vbSugPaint();
+  if (!lastSug) notice('🎤 Suna: "' + heard.slice(0, 60) + '" — item ka naam samajh nahi aaya');
 }
 let vbHold = false, vbStopT = 0, vbHeard = '', vbDone = '';
-function vbStart() {               // v2.31.1: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
+function vbStart() {               // v2.32.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
   if (vbRec) { try { vbRec.abort(); } catch {} vbRec = null; }
@@ -173,7 +246,7 @@ function vbRelease() {             // ungli uthi — aakhri lafz ke liye 0.6s ru
   vbPaint();
 }
 function vbStop() { vbHold = false; vbOn = false; vbSeq++; clearTimeout(vbStopT); if (vbRec) { try { vbRec.onend = null; vbRec.abort(); } catch {} vbRec = null; } vbPaint(); }
-function vbPaint() { const b = document.querySelector('[data-sale-mic]'); if (!b) return; b.classList.toggle('on', vbOn); b.textContent = vbOn ? (vbHold ? '🎤 ' + (vbHeard ? vbHeard.slice(-24) : 'Bolein…') : '⏳') : '🎤 Daba kar bolo'; }
+function vbPaint() { const b = document.querySelector('[data-sale-mic]'); if (!b) return; b.classList.toggle('on', vbOn); b.textContent = vbOn ? (vbHold ? '🎤 ' + (vbHeard ? vbRoman(vbHeard).slice(-26) : 'Bolein…') : '⏳') : '🎤 Daba kar bolo'; }
 
 function installSaleHooks() {
 setSaleDelHook(key => {
@@ -382,7 +455,7 @@ document.addEventListener('pointercancel', () => vbRelease());
 document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sale-mic]')) e.preventDefault(); });
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.31.1: hold se chalta hai
+  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.32.0: hold se chalta hai
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {

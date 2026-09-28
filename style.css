@@ -1289,3 +1289,15 @@ button.bq-card:active{transform:scale(.98)}
 .sale-mic.on{background:linear-gradient(180deg,#e0574f,#b3261e)!important;color:#fff!important;animation:micPulse 1.2s ease-in-out infinite;min-width:120px}
 @keyframes micPulse{50%{box-shadow:0 0 0 6px #e0574f44}}
 .sale-mic{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+
+/* ===== v2.32: 🎤 suggestion chips ===== */
+.vb-sug{position:fixed;left:8px;right:8px;bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:60;padding:10px 12px;border-radius:18px;background:#fff;border:1px solid #d3def5;box-shadow:0 14px 34px #10192b33;display:grid;gap:8px;animation:vbIn .2s ease}
+@keyframes vbIn{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+.vb-sug-h{display:flex;align-items:center;gap:8px;font-size:13.5px;color:#1b3058}
+.vb-sug-h span{flex:1;min-width:0}
+.vb-sug-h i{font-style:normal;color:#17703c;font-weight:800}
+.vb-sug-h button{min-height:32px;width:34px;padding:0;border-radius:999px;border:0;background:#eef2f8;font-weight:900}
+.vb-sug-c{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.vb-sug-c button{flex:none;display:grid;text-align:left;min-height:48px;padding:6px 12px;border-radius:14px;border:1.5px solid #d3def5;background:linear-gradient(180deg,#fff,#f3f7ff);font-weight:800;color:#10192b;font-size:13.5px}
+.vb-sug-c button small{font-weight:700;color:#2b4a86;font-size:11.5px}
+.vb-sug-f{color:#6b7c93;font-size:11.5px}

@@ -1,0 +1,14 @@
+Blue Khata v2.32.0 — 🎤 SUGGESTION CHIPS · URDU -> ROMAN · PAO / SAWA / PAUNE · EK DAFA BOLO YAAD
+INSTALL: GitHub par ZIP ki files -> app mein ↻ Sync -> 2.32.0. Rules NAHI badlin.
+ - Jo suna wo ROMAN mein dikhta hai (گرم مصالحہ -> "grm msalha"). Urdu mein zer-zabar nahi hote, is liye app
+   harfon ka dhancha bhi milati hai (garam = grm) — Urdu bolo ya Roman, item mil jata hai.
+ - Bolne ke baad neeche CHIPS: milte julte items, har ek par us ki ginti ("Garam Masala Adha Pao · 1 Pcs").
+     * Pakka yaqeen (pehle yaad / sirf ek item / naam bilkul shuru se) -> line KHUD lagti hai, chips "ghalat? ye lagao".
+     * Yaqeen nahi -> line nahi lagti, chip tap karein.
+ - Chip tap = line lag gayi + YAAD: agli dafa wohi bola to seedha lagega. Yaad "Doosre naam" mein bhi jata hai
+   (sab phones) aur is phone par bhi.
+ - PAO: khule (kilo) item par "pao" = 0.25, "adha pao" = 0.125, "dedh pao" = 0.375, "do pao" = 0.5;
+   "sawa kilo" = 1.25, "paune do kilo" = 1.75. Item ke naam mein hi "Pao" ho (packet) to wo packet chunta hai,
+   aur "adha pao" bola to "Adha Pao" wala packet sab se pehle.
+ - "daal" ab item ka naam samjha jata hai (pehle "daal do" samajh kar hata deta tha).
+BADLI HUI FILES: sale.js, app.js (learn), style.css + version.
