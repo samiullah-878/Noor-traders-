@@ -144,6 +144,18 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
         pending = false;
       }
     },
+    // v2.37: pichhla login ZINDA ho (Firebase ne phone par yaad rakha) to dobara sign-in / hashing / session likhe baghair
+    // andar. activate() server ka session + account wahi jaanchta hai jo login karta hai — password badla / band = fail.
+    async resume(role, scope) {
+      if (pending) throw failure('login/busy');
+      const u = auth.currentUser;
+      if (!u) throw failure('login/no-user');
+      pending = true;
+      const ticket = ++epoch;
+      reset();
+      try { await activate(u, ticket, role, role === 'staff' ? (scope || '') : ''); return true; }
+      finally { pending = false; }
+    },
     async logout() {
       ++epoch;
       reset();

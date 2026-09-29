@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.36.1, 2026-09-28 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.37.0, 2026-09-29 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1877,3 +1877,14 @@ chala — smoke test fake Firebase loader rt/fb/, purchase test bhi). Pehle Sale
 * pos-stock.js: stockT0 / stockTick (6s): 12s+ par rerender (wait HTML), 30s+ par ek dafa khud stockRetry(). stockRetry:
   purana listener band + naya. stockWaitHTML() (sale.js + purchase.js ka "Items load ho rahe hain" ab isi se). [data-stock-retry].
 * DHYAN: app.js mein single-line code ke baad "// comment" NA lagao — pichhli dafa naya code comment ke aage chipak gaya tha.
+
+==================== v2.37.0 (2026-09-29) — MULAZIM KI APP TEZ ====================
+Malik: mulazim ki app bohat late khulti. Wajah: tryAutoLogin har boot par controller.login -> signOut + signInAnonymously
+(naya UID) + passwordKey PBKDF2 210000 + createPasswordSession (write, server ack) + activate (getSession + getAccount).
+* auth-controller.js: resume(role, scope) — auth.currentUser (Firebase persist) par seedha activate() (wahi server jaanch:
+  session.credentialId -> account active/scope). Password badla = account/credential nahi = fail.
+* app.js tryAutoLogin (boot): yaad password ho + cloud.currentUid() -> controller.resume(role, scope); fail -> purana go()
+  (password bhar kar submit). bootPath ⚡/🔑, render() par pehli dafa session -> #bootTime "⏱ Xs ⚡".
+* auth-controller import ?v=1.79.1 -> app version (cloud.js + index preload) — pehle phone purani copy chalata tha.
+* Test (node): zinda login = getSession → getAccount (sign-in nahi); band account = staff-disabled; ghalat scope = fail.
+* restoreView() pehle se pichhli screen kholta hai.
