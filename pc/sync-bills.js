@@ -1,5 +1,5 @@
 // =========================================================
-//  sync-bills.js  —  POS ke purchase bill ki poori tafseel
+//  sync-bills.js  v4.2 (2026-09-30: lines POS ki tarteeb se)  —  POS ke purchase bill ki poori tafseel
 //  item, godam, CTN rate, PCS rate, qty, total
 //  SQL mein kuch LIKHTA nahi - sirf padhta hai.
 //  v6 (22-Sep-2026): bills-now.flag (purchase-post v4 likhta hai) har 5 second dekhti hai — ho to FORAN chakkar (2 minute
@@ -94,6 +94,7 @@ FROM dbo.PurchaseDetail d
 JOIN dbo.Items i ON i.ItemID = d.ItemID
 JOIN dbo.Purchase p ON p.PurchaseID = d.PurchaseID
 WHERE p.PurchaseDate >= @startDate
+ORDER BY d.PurchaseID, d.PurchaseDetailID   -- 2026-09-30: jis tarteeb se item lage (POS ki line ID), wohi tarteeb app mein
 `;
 
 async function readBills(pool, names) {
