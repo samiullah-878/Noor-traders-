@@ -1,0 +1,1106 @@
+NOOR TRADERS HAZRI — AI NOTES
+=============================
+Version: v230   Tareekh: 2026-09-30  (SASTA MODE + budget + aaj ki 5 videos; ntcam.py v1.9.1 chowkidar/heartbeat/crash.log; ntfix.txt; RULES)
+Malik: Samiullah (Noor Traders, Gulyana/Kharian). Zuban: ROMAN Urdu (Latin harf). Wo Devanagari aur Urdu lipi theek se nahi parh sakte.
+Kaam ka tareeqa: pehle plan batao, un ke "OK" ka intezar karo, phir banao. Har update ke sath ye AI_NOTES.txt bhi update karo.
+
+------------------------------------------------------------
+0000000000000000000000000000000. ntcam.py v1.9.1 + ntup.txt — CHOWKIDAR (watchdog), heartbeat, crash.log
+------------------------------------------------------------
+30 Sep 6:59 pm: ntcam.log mein aakhri line "sasta .. True jeb normal []" (bara AI ne jeb ko normal kaha), phir 40 min kuch nahi;
+app: camera "Offline 41 min", "Recording: PC band / camera offline". Camera nahi gaya — program chup-chaap band / jama hua (native
+crash ya hang ka log mein nishan nahi). Startup shortcut sirf boot par chalta hai, is liye agle din tak band rehta.
+- ntcam.py v1.9.1: run() -> guard(): faulthandler -> C:\NTCam\crash.log (native crash ka traceback), threading.excepthook -> ntcam.log
+  "thread ghalti". heartbeat(): C:\NTCam\heartbeat.txt har main-loop (5 s) — main loop jama ho (Firestore / SQL hang) to file purani.
+- ntup.txt: ntcam.py mein 'HB_FILE' ho to C:\NTCam\ntwatch.ps1 likhta hai + schtasks "NT Camera chowkidar" har 5 minute: process nahi
+  ya heartbeat 6 min purana -> kill + Startup shortcut se dobara (lock port double nahi chalne deta). ntcam.log mein "chowkidar: NT
+  Camera band tha / jama hua - dobara shuru". Purane ntcam.py (bina heartbeat) par task nahi lagta (warna har 5 min restart).
+- Malik ko: crash ki asal wajah crash.log se milegi — dobara ho to `gc C:\NTCam\crash.log -Tail 30` ka screenshot.
+
+------------------------------------------------------------
+000000000000000000000000000000. v230 + ntcam.py v1.9 + ntfix.txt — SASTA MODE, BUDGET, AAJ KI 5 VIDEOS, RECORDING FIX
+------------------------------------------------------------
+Malik (29-30 Sep): API kharcha (Console: key par US$1.03 / 2 din ≈ Rs 0.85 fi jaanch) — v1.8 kahani ~Rs 20,000 mahina "afford
+mushkil". Free (Gemini: tasveerein Google ke paas, had 20-500/din) aur lagatar video (Rs 35-70k) rad. Malik ke saaf lafz: galla KHULA
+rehta hai; asal masla sirf "galle se paisa nikal kar kis ko diya — customer ka baqaya tha ya waise diya"; doosre vouchers (Galla
+screen / kharch) NAHI milane, video se khud dekhega; hisaab alag se aata hai (galla hisaab / aaj ke bills rad). Mashware: baqaya
+tray, POS cash drawer, saamne wala camera, sirf bare baqaye par AI, aaj ki 5 random videos — OK: sasta Claude + budget + (3) + (4).
+Videos 0/26 "recording PC par nahi mili" = PC recording hi nahi kar raha (ffmpeg pip se nahi aaya / antivirus).
+- ntfix.txt (Pages par): `irm https://samiullah-878.github.io/nt-traders-/ntfix.txt|iex` — ffmpeg.exe seedha (BtbN GitHub latest, phir
+  gyan.dev) -> C:\NTCam\ffmpeg.exe (ffmpeg_exe() is ko pehle dekhta hai), -version jaanch, Unblock-File, NT Camera dobara. Pehle
+  se ho to sirf restart.
+- ntcam.py v1.9 (v1.8 ka kahani-for-all HATA — sirf 🔴 par):
+  * Watch settings (cameras doc): budget (Rs/din, 200), second (doosri raaye, True), minChange (Rs, 0). aiCap wahi.
+  * handle -> hasattr key_frames -> kf = key_frames(t0-5, t1+8, CHEAP_N 8, crv waqt) -> handle_cheap. Budget: handle mein
+    st['cost'] >= w.budget = cap ki tarah (unchecked +1, AI nahi). minChange: sab crv ka change maloom aur 0 < change < minChange ->
+    AI nahi (moneyIn/matched +1).
+  * ai_cheap (CHEAP_PROMPT, tasveerein small_b64 288 px q60, max_tokens 160, MODEL) -> parse_cheap {nikla, kis: wahi|aur|jeb|haath|?,
+    note, why}. judge_cheap(res, crvs, tender): nikla nahi / haath -> []; jeb -> jeb; crv nahi -> novoucher; aur -> aurko; ? -> unsure;
+    tender + sab change maloom: mx <= 0 -> nochange, note bada & mx < 1000 -> badanote. SIRF crv (Galla screen / kharch / refund nahi).
+  * nikla nahi -> koi doc nahi (checks+1, moneyIn+1, cost). ✅ (nikla wahi, crv) -> cameraEvents verdict normal, flow nikla, matchState
+    ok, match crv, why "Baqaya usi customer ko — ..", frames 8 + times. 🔴 candidate (flags) + second on -> ai_story (20 tasveerein,
+    CONFIRM_MODELS) -> judge_story; bara AI mein sirf baqaya wahi aur koi flag nahi -> ✅ normal ("Doosre AI ne dekha: .."); warna flags
+    jama, story + 20 frames, verdict shak, clip, khabar (create shak). second off -> 🔴 seedha (story []). novoucher -> matchState
+    'missing'. cameras.aiTest "AI chal raha hai — aakhri .. (Baqaya|Shak)".
+  * Kharcha: claude_call usage -> COST['last'] = cost_rs(model, in, out) (PRICE $/M: haiku 1/5, sonnet-5-5 2/10, sonnet-4-6 3/15;
+    FX_PKR 280 — andaza) -> stats 'cost' (round 3; stat() old se load). RULES: cameraStats + 'cost'.
+  * daily_video(): har len-den par ehtimaal DAILY_VIDEOS/220, roz max 5 -> cameraClips kind 'daily' '<cid>-d-<ms>' title "Aaj ki video
+    N", [t0-5, t1+10] (SHAK_MAX had), eventId ''.
+  * nopay_check, bill badla, missing (wait 2 min) wahi. FLAG_TEXT + novoucher, unsure.
+  * ntcam_test.py 53 (Kahani tests v1.9 par: cheap -> 🔴 -> kahani -> shak/story/frames 20/rules keys; ✅ sirf chhota AI (8 frames);
+    nikla nahi = koi card nahi; second off + novoucher missing; doosri raaye ne bachaya; budget / minChange / cost_rs / daily 5;
+    parse_cheap + judge_cheap har raasta).
+- App v230: camera form (galla): budget, minChange, second (checkbox; save sirf jab galla form — v.budget != null). data.saveCamera
+  extra keys. Camera card costLine: "💸 Aaj AI kharcha: Rs 143 / 200 · doosri raaye on · sirf baqaya > Rs 500" (S.camStats ya
+  camDayStats). Nigrani: outLine "💸 Galle se paisa bahar N — M ✅ · K 🔴 (x na dekhe) | AI kharcha: Rs .. / .." (agent >= '1.9',
+  flow nikla); dailyVideos() "🎲 Aaj ki N videos" (kind daily, ▶). FLAG + novoucher / unsure. CSS .nig-out/.nig-cost. v230.
+- Malik ko: kharcha ~Rs 130 roz (Rs 4,000 mahina); minChange 500 par ~Rs 1,500. Doosri raaye off = zyada 🔴 khud dekhne. Console
+  par asal bill. Tray / drawer / saamne camera — dukaan ke faisle.
+- Yahan test NAHI: asal chhote AI ka "kis" (aur / wahi) — galat ho to 🔴 zyada ya kam; ntfix asal PC par.
+
+------------------------------------------------------------
+00000000000000000000000000000. v229 + ntcam.py v1.8 — LEN-DEN KI KAHANI (parchi / paisa / baqaya / kis ko) + RULES
+------------------------------------------------------------
+Malik (29 Sep shaam, OK): bina parchi paisa bhi track ho; parchi scan ho magar paisa na liya jaye wo bhi; rush mein kai customer;
+"kis ne parchi di, kis ne parchi de kar paisa nahi diya"; galle se paisa nikal kar kisi ko diya; "straight forward mukammal moment:
+aik ne paisa diya, baqaya liya, doosra aaya khara raha, galle wale ne usay paisa diya — paison ka mukammal record"; aur ASAL
+MASLA: "voucher ho tab galle se nikle paise" (v1.6 mein voucher ki window = har nikla baqaya maana jata tha).
+- ntcam.py v1.8:
+  * Watch.zone2 (malik ka "Counter ka hissa", cameras doc) + tape: har 0.5 s galla (0.5 pad) + counter (0.15 pad) ko gherne wala
+    dabba (tape_box; counter na ho to galla 0.8 pad) -> JPEG 416 px q62 b64 + counter mein harkat (32x24 gray diff) — TAPE_SEC 360 s
+    (deque 720). key_frames(a, b, n=20, must=voucher waqt): voucher ke qareeb wali zaroor, phir counter harkat sab se zyada (>= 1 s
+    fasla, 2/3 tak), baqi barabar. tape_covers(a, b).
+  * Galla.handle: w.key_frames ho aur >= 6 tasveer (t0-30 .. t1+10) -> handle_story; warna purana raasta (tests / purana PC).
+    ai_story (KAHANI_PROMPT, "Tasveer i (waqt)", max_tokens 700, claude_call model fallback) -> parse_story: story [{i, kaun (jagah +
+    kapre, naam / chehra NAHI), kya: parchi_paisa|paisa|parchi|rakha|baqaya|diya|jeb|khara|gaya|ginti, kis: wahi|aur|mulazim, note:
+    bada|chhota}] (<=16, ghalat i / kya chhor), log, flow, khula, verdict, why.
+  * judge_story(res, t0, t1, near, vouchers, tender) — POS sanad, AI sirf "kya dikha". Flags (FLAG_TEXT): jeb (AI shak ya kya jeb);
+    voucher (crv) ho to: noparchi (alag paisa dene wale / log > crv ginti: "3 logon ne paisa diya, 2 parchi scan — 1 bina parchi"),
+    parchi (parchi di paisa nahi), aurko (diya / baqaya aur-mulazim ko, aur pay/return/voucher(kharch) record nahi), tender (POS
+    CashReceived > bill kabhi dekha) aur sab crv ka change maloom: nochange (sab ka baqaya 0 — phir bhi baqaya), double (baqaya lines
+    > change wale bill), badanote (baqaya < Rs 1000 aur note "bada"); tender na ho to double = baqaya > crv ginti. Voucher hi na ho ->
+    purana wait -> missing (bina parchi / bina voucher). Flags -> verdict shak (khabar + clip), why = flag lines + " — " + AI why.
+  * Bara AI (CONFIRM_MODELS Sonnet) kahani DOBARA likhta hai jab flags / shak / log >= 2 / 2+ crv — aakhri wahi (na chale to pehli).
+    Seedha aik customer + baqaya usi ko = sirf Haiku (kharcha kam).
+  * Doc: cameraEvents + story (story_doc: i, t ms, kaun, kya, kis, note) + flags; cameraFrames + times (ms). thumb = beech wali tape
+    JPEG. by_bill crv ka bill bhi.
+  * Pos: sale rec 'cash' (CashReceived); tender_seen; change_of(sale) = cash - bill (> 1) warna 0; crv rec 'change'. status: "Baqaya:
+    POS se ✅" / "Baqaya: POS di hui raqam nahi likhta (sirf bill)" / "Baqaya: dekh raha". context_text crv: "POS: baqaya Rs 140 banta
+    hai" / "di hui raqam = bill (baqaya 0)".
+  * nopay_check (har 10 s): crv jis ko NOPAY_WAIT (150 s) guzar gaye, aik dafa (crv_seen): window [at-60, at+90] mein kisi galla camera
+    ki koi harkat (Galla.moves — har q item) nahi aur camera us poore waqt chal raha tha (tape_covers) -> cameraEvents
+    '<cid>-np-<ms>' verdict shak, flow kuch_nahi, flags ['nopay'], match crv, model 'pos', 8 tape tasveerein, clip [at-30, at+30],
+    stats shak +1 (checks nahi — AI nahi laga).
+  * ntcam_test.py 48 (+7 Kahani: tape_box / key_frames / covers, parse_story, judge_story (normal, aurko, Galla screen jaiz, nochange,
+    tender nahi, double, badanote + bara baqaya, noparchi 3/2, parchi, jeb, voucher nahi), handle_story (lal nishan -> Sonnet dobara,
+    doc + frames times + rules keys), seedha len-den = aik AI, nopay (aik dafa, harkat ho to nahi, camera na ho to nahi), tender status).
+- RULES (publish ZAROORI): cameraEvents create keys + 'story', 'flags' (list <= 16 / <= 8); cameraFrames keys + 'times', frames <= 24.
+  cameras zone2 malik likhta hai (isOwner — pehle se).
+- App v229: data.saveZone(id, zone, which='zone'|'zone2'). zoneSheet(camId, which): counter ka hint, neela dabba (is-counter), doosra
+  dabba halka (is-ghost), sirf is-main khainchta. Camera card: "Counter ka hissa" button (galla mark ho to) + line "Counter ka hissa
+  mark hai — kahani ..." / "mark nahi — kahani adhoori". Card: flagChips (🔴 FLAG), "📖 Kahani · N", flow chip kuch_nahi par nahi.
+  missText(e): aaya/len_den -> "Bina parchi paisa liya", nikla -> "Bina voucher paisa nikla", warna "Bina voucher galla khula" (chip +
+  sheet). Filter chip "Parchi / baqaya" (flags). Sheet: nig-flags + storyBlock: har line waqt (secOf, second tak) + kaun + KYA; lal
+  (storyBad: jeb / parchi / diya / baqaya aur-ko); tap = nig-idx (wo tasveer); clip ho to "▶ Ns" -> nig-video data-arg = second
+  (blob '#t=' + loadedmetadata par currentTime). CSS v229. core/sw v229, index ?v=229. app.dom 1-3 pass (labels, filter).
+- SAAF BAAT (malik ko bataya): AI naam / chehra nahi — jagah + kapre; notes gin kar amount nahi (POS se); 4-5 log / haath ek doosre par
+  = saaf nahi; "wahi banda" sirf aik len-den mein; kharcha barhega (20 tasveer + mushkil par Sonnet); card 1-2 min baad. Baqaya ki
+  jaanch tab hi jab larke POS mein di hui raqam likhein ("exact" nahi).
+- Yahan test NAHI: asal Claude ki kahani, asal counter harkat, asal POS CashReceived ka matlab (PC "Baqaya:" line batayegi).
+
+------------------------------------------------------------
+0000000000000000000000000000. v228 — LAYOUT KI ASAL WAJAH (.view grid) + VIDEO NA BANNE KI WAJAH KHULASE MEIN
+------------------------------------------------------------
+29 Sep 4:31 pm malik ka screenshot (v227): header ab poora, lekin Nigrani ka sab mawad (khulasa, notice, cards) daayen se KATA hua,
+aur "🎬 Aaj videos: 0 bani · 26 nahi bani". v227 ka overflow-x:clip sirf chhupa raha tha.
+- ASAL WAJAH: .view {display:grid} ka aik hi column = auto -> kisi bhi nowrap cheez ka min-content poora column chauda karta. Is dafa
+  "Mangwayi hui clips" (nig-clip-row) ki .tag "Nahi bani: Us waqt ki recording PC par nahi mili (...)" nowrap -> main 390 ke andar,
+  column 676 (150% font par 950) -> sab kata. Harness (happy-dom se asal HTML + Playwright Chromium 390 px, 100/130/150% font) se
+  pakra. Theek: .view{grid-template-columns:minmax(0,1fr)} + .view > *{min-width:0;max-width:100%} (sab tabs par, aage kabhi aisa
+  nahi); .nig-clip-row wrap, us ki .tag aur .nig-vid .tag wrap. Baad: main 390 / scroll 390 har font par.
+- vidSum(): sab se zyada aane wali ghalti "Wajah (N mein): ..." surkh line (card khole baghair); "card khol kar ▶" sirf jab koi bani ho.
+- VIDEO 0/26: wajah abhi malik se maloom karni hai — camera card ki "🎬 Recording ..." line (v227) aur khulase ki "Wajah" line.
+  Mumkin: recording chal hi nahi rahi (imageio-ffmpeg Windows par / cameras.rec ghalti) ya PC purana (v1.5) tha. ntcam nahi badla.
+- core/sw v228, index.html ?v=228. app.dom 1-3 pass (Hazri, Cameras, Nigrani).
+
+------------------------------------------------------------
+000000000000000000000000000. v227 + ntcam.py v1.7 — NIGRANI LAYOUT, VIDEO KI HALAT, AIK LEN-DEN = AIK JAANCH, SHAK KI DOOSRI RAAYE
+------------------------------------------------------------
+29 Sep shaam: malik ke screenshots (4:06 pm): Nigrani page phone se chauda (header aadha, screen side mein khisakti), aur sawal
+"video ja rahi hai ya nahi". Khulasa: 929 galla chhua, 300 AI jaanch (= roz ki had, 12:36 pm par poori -> 582 bina jaanch, list ka
+aakhri card 12:36), 187 shak (62%!), 16 bina voucher, 23 bill badle. Aik hi bill #00119126 par 12:35-12:36 teen shak cards; AI ki
+wajah "notes ... shalwar/qameez ke PAAS". Camera ki tasveer: larka kursi par baith kar note GODE (lap) par ginta hai, paas narangi
+tokri mein note. Ye cards v1.5 ke the (update 3:30 pm ke baad hua) — v1.6 ki "Voucher:" line malik se dekhni baqi.
+- LAYOUT KI WAJAH (Playwright/Chromium 390 px par asal jaisa data laga kar pakri): .tag white-space:nowrap — card ka hara chip
+  ("Bill #.. · Rs ..", v226 mein "Cash Received · Bill #.." aur lamba) grid ke 1fr (= minmax(auto,1fr)) ko min-content tak kheenchta ->
+  poora document 450 px (phone 390). Theek: .nig-ev grid 112px/96px minmax(0,1fr) + min/max-width; .nig-rec/.nig-clip/.nig-match
+  .tag wrap (white-space normal, overflow-wrap anywhere); .view-nigrani overflow-x clip; card par AI ki wajah 3 line (line-clamp;
+  poori sheet mein). Baad: 390 = 390, 125% font par bhi. index.html styles.css?v=227 / boot.js?v=227 (CSS badli — cache).
+- VIDEO KI HALAT (app pehle kahin nahi dikhati thi, PC 'rec'/'recFree' bhejta tha): owner.js recLine(c, on) camera card (sirf
+  galla): "🎬 Recording chalu — video ban sakti hai · 38 GB khali" / "Recording band — video nahi banegi" / "Recording mein ghalti:
+  <wajah>" / PC band / "khabar abhi nahi aayi (PC purana ho to ntup)". vidChip(e) har Nigrani card: 🎬 Video (ok) / ban rahi (making,
+  req) / nahi bani (error) / "Video ka intezar" (shak ya bina voucher, na dekha, clip abhi nahi). vidSum(): "🎬 Aaj videos: N bani ·
+  M ban rahi · K nahi bani" (sirf kind shak). CSS .cam-rec, .nig-vid, .tag.t-vid. Cameras hint ki purani line ("Galla nigrani agle
+  hisse mein judegi") badli.
+- ntcam.py v1.7:
+  * merge_items(hold, now, wait): aik camera ki harkatein — agli ka t0 pichli ke t1 se <= MERGE_GAP (60 s) aur len-den <= MERGE_MAX
+    (180 s) = aik len-den; tayyar tab jab aakhri harkat ke baad max(45, 60) s koi nayi na aaye (3 min wala 45 s par). 10 tasveerein
+    (pick) sab hisson mein se. Galla.run: q se nikalte hi touches +1 (har harkat gini jati hai), item + counted=True; handle(...,
+    counted) touches dobara nahi. COOLDOWN wahi. Natija: AI jaanch ~3 guna kam, 300 ki had poore din.
+  * GALLA_PROMPT3 + : kursi par baith kar GODE (lap) par ginna / haath mein / tokri / machine = normal; haath shalwar / qameez / gode
+    ke PAAS dikhna shak NAHI; shak sirf note jeb / kapron ke ANDAR aur wapas na aaye; "paas le jana" shak nahi.
+  * ai_confirm(key, crops, ctx, gap, why) + CONFIRM_PROMPT: Haiku "shak" kahe to wahi tasveerein CONFIRM_MODELS ('claude-sonnet-5-5',
+    phir 'claude-sonnet-4-6' — 400/404 + "model" matn par agla) ko; "shak" sirf jab kam az kam do tasveeron mein note ANDAR. Normal kahe
+    -> verdict normal, why "Doosre AI ne dekha: .. (pehle: ..)". Shak kahe -> shak, why doosre ka. Na chale (credit / network) -> pehla
+    shak hi rehta hai (chhupaya nahi jata), log. event.model = "haiku+sonnet", ms dono ka. stats.shak sirf aakhri faisle par. Rules /
+    stats keys NAHI badle.
+  * ntcam_test.py 41 (+5 EkLenDen: merge (60 s, doosra camera, 3 min had, 10 tasveer, ginti), doosri raaye normal / shak / na chale,
+    model fallback + prompts).
+- Rules / functions: NAHI badle. Upload: badli files (neeche chat mein list). PC: `irm https://samiullah-878.github.io/nt-traders-/ntup.txt|iex`.
+- Kharcha: Sonnet sirf Haiku ke shak par (pehle 187/din tha; merge ke baad bohat kam). Roz ki had camera "Badlein" (aiCap) se malik
+  khud badal sakta hai.
+- Yahan test NAHI: asal Sonnet ka faisla, asal harkat ka merge (Watch ke asli waqfe), asal phone par naya layout (Chromium 390 px
+  mein dekha).
+
+------------------------------------------------------------
+00000000000000000000000000. v226 + ntcam.py v1.6 — GALLA SIRF VOUCHER PAR (Cash Received)
+------------------------------------------------------------
+29 Sep dopahar: malik ne galle ki photos bhejin — POS "System Notes": bill "Created & Printed 12:32:54 PM at PC:DESKTOP-KEIME1D"
+(counter PC), phir "Cash Received By:waqar 12:33:48 PM" aur "12:33:54 PM at PC:DESKTOP-032A3V6" (galla PC). Yaani galle par paisa
+bill banne ke ~1 minute BAAD aata hai (customer parchi le kar galle par aata hai; rush mein minute). v1.5 ki window (BiltyDate -30 ..
+CreatedOn +45 s) counter ke waqt par band ho jati thi -> roz ka normal len-den "Entry nahi / shak". Malik ka routine: paisa haath /
+counting machine mein -> parchi scan -> baqaya galle se -> paisa galle mein.
+MALIK KA NAYA QANOON (OK): "bill ka cash receive voucher usi number ka bana, usi waqt galla khula / baqaya = normal; koi voucher nahi
+aur galla khula = shak; jeb mein paisa = shak; shak par video / tasveerein". Galla khulne ki ijazat sirf voucher se; AI ka andaza nahi.
+PEHLE SE THA (malik ko bataya, dobara NAHI banaya): aik-command installer ntcam.txt (Python, Startup auto-run, desktop icon "NT Camera
+jodein", password sirf PC par C:\NTCam\secrets.json, GitHub se khud update) = malik ki "camera BAT file" ki farmaish poori thi.
+AI ko bill ka record + malik ke faislon ki misaalein bhi v1.2 se hain. Cameras .88 / .110 ka password ghalat (401) tha — jodne hon to
+desktop icon se sahi (DMSS wala) password.
+- ntcam.py v1.6 (PC khud le lega — 6 ghante mein / restart par; PC par koi command nahi):
+  * Pos.vch_discover(): aik dafa POS mein dhoondta hai ke Cash Received ka waqt kahan hai -> C:\NTCam\pos-voucher.json (7 din; na mile
+    to har 6 ghante dobara). Tarteeb: dbo.Voucher (VoucherID + waqt ka khana VCH_TIME_COLS: CreatedOn..) ki aakhri 72 ghante ki
+    qataarein -> find_link(): kaunsa khana bill rakhta hai — 'no' (SaleNo barabar, matn ho to naam ki shart nahi: "voucher usi number
+    ka"), 'id' (SaleID barabar — sirf khane ke naam mein sale/ref/doc/inv/bill/source/link/against, warna VoucherID bhi SaleID se
+    ittefaq se takrata), 'text' (lambe matn mein SaleNo). >= 3 hits aur >= 30%. Na mile -> VoucherDetail (join) -> Sale ka koi
+    'voucher' khana (salecol) -> Sale ke matn khane mein "Cash Received By .. On .." (notes, NOTES_RE, notes_times()) -> kuch nahi
+    (mode 'sale' = bill ke waqt se, thora khula: scan -30 .. post +120). Amount / type / no / by / txt khane best-effort (VCH_*_COLS).
+  * poll_vouchers() har 20 s (poll_sql ke andar, apni try): VoucherID > aakhri (shuru mein 4 ghante) -> recs 'crv' {no: VoucherNo,
+    vid, bill: SaleNo, at, amount (voucher ya bill ki), party, who, billAt} jab bill se juda, warna 'voucher' (kharch waghaira —
+    galla khulna phir bhi jaiz, bill nahi). sale_by_id / sale_by_no maps (sale poll mein). add(): key (kind, vid|no) — aik bill par do
+    voucher (6 s baad) alag. notes mode: Sale (4 ghante, UpdatedOn bhi) ke notes se har "Cash Received" = crv '<SaleNo>#<k>'.
+  * window(): crv/voucher [at-60, at+90] (VCH_BEFORE/AFTER), pay/return ±120 (OUT_PAD), sale [start-30, at+120] (SALE_*). in_bill()
+    ab window() par. match(flow, t0, t1, recs, pos_ok, bk_ok, vouchers=True, khula=None): kuch_nahi -> none; khula False + ginti/
+    saaf_nahi -> none (galla khula hi nahi); vouchers=True (Pos.vch_ok(): mode voucher/salecol/notes) -> sirf crv/voucher/pay/return
+    (BILL KA BANNA KAFI NAHI); vouchers=False -> sale/pay/return. nikla par pay/return pehle, warna crv/sale pehle; phir qareeb tar.
+    Na mile -> nopos (POS band) ya wait. Galla.MISSING_AFTER 300 -> 120 s. recheck(): missing par clips.shak() bhi (shak par pehle
+    ban chuki ho to nahi). Clips.shak: t0-10 .. t1+20, 40 s had (SHAK_BEFORE/AFTER/MAX).
+  * GALLA_PROMPT3 (GALLA_PROMPT2 = wahi): dukaan ka tareeqa AI ko likha (haath / machine / counter par paisa shak NAHI), record mein
+    bill ke DONO waqt (context_text: "Bill #.. counter par bana 12:32:54 pm — galle par abhi Cash Received nahi" / "CASH RECEIVED
+    voucher: Bill #.. galle par 12:33:48 pm (galla khulna JAIZ)" / "POS voucher #.. (galla khulna jaiz)"), naya "khula" true/false
+    (parse_khula). "Galla bina record ke khula ya nahi — program khud record se" (AI se nahi). ai_judge2 -> (flow, verdict, why, ms,
+    khula) — purana 4-tuple bhi chalta hai (handle res[:4]). match_doc: + bill, billAt (match map rules mein khula hai — rules nahi badle).
+  * Pos.status(): "POS theek · Voucher: mil rahe (Voucher.VoucherNo, aaj 42) · Galla screen theek" | "Voucher: dhoond raha" |
+    "Voucher ka khana nahi mila — bill ke waqt se milaan (wajah)" (app ka PC card 'nahi' par surkh). cameraPC/status.pos wahi key.
+  * ntcam_test.py 36 (+9: match v1.6 (voucher zaroori, 60/90, khula, fallback), context/prompt/khula/match_doc, voucher mode wait->ok
+    (crv der se)->missing+clip, norm_no/notes_times (12:33:48 PM PK = 07:33:48 UTC), find_link (VoucherNo=SaleNo / RefSaleID sirf naam
+    ke sath / matn / kuch nahi), sale_of + vch_rec + vch_text, notes mode poll, poora dhoond+poll naqli SQL par, clip padding).
+- RULES: NAHI BADLE (v225 wale hi) — matchState list wahi (ok/wait/missing/none/nopos), match ke andar ki keys rules check nahi kartin,
+  cameraClips create pehle se. Functions bhi wahi (missing par "Galla: entry nahi" push pehle se; shak par create push).
+- App v226: owner.js — 'missing' = "Bina voucher galla khula" (chip, sheet text, filter chip "Bina voucher", khulasa "voucher / entry
+  mili" / "bina voucher"), 'wait' = "Voucher dhoond rahe… (2 minute)", "Na dekhe shak" filter mein shak + bina voucher (na dekhe) dono,
+  Tawajju: "Aaj N dafa galla par shak · M dafa bina voucher galla khula", recText crv = "Cash Received · Bill #.. · Rs .." (sheet mein
+  "(bill counter par 12:32 bana)"), voucher = "POS voucher #..". Nigrani ka hint naya (chhutta / ginti / malik ka apna kaam bhi bina
+  voucher mein aayega -> "Theek hai"). core.js/sw.js/version.json v226. app.dom (crv event cc33-ch1-3, labels, na dekhe 2;
+  "shak dekhe" = shakList - shakOpen, kyunke open mein ab bina voucher bhi). Tests: Python 36 pass, sync 10 pass, app.dom pehle 22
+  (Nigrani wala test 3 samet) pass — is sandbox mein poori 78 ki daud 5 minute ki had par kat gayi aur test 15 (Excel) yahan
+  xlsx.mini.min.js zip mein na hone se chalta nahi (repo mein hai); baqi tests mein v226 ka koi code nahi badla.
+- SAAF BAAT (malik ko): voucher ki window ke andar larka paisa customer ki jagah kisi aur ko de de to camera par baqaya jaisa lagta hai —
+  AI farq nahi kar sakta (window ab 2.5 min, exact waqt par). Notes gin kar amount nahi. Rush mein 1.5 min baad galle mein dalna,
+  chhutta, shaam ki ginti, malik ka khud nikalna = "bina voucher" -> "Theek hai" dabana.
+- Yahan test NAHI: asal POS ke Voucher table ke khane (dhoond khud hoti hai — Cameras card par "Voucher: ..." dekhein; 'nahi mila'
+  aaye to posdekho jaisi jaanch chahiye), asal Claude ka "khula".
+- Upload: sab files (ntcam.py + ntcam_test.py + AI_NOTES.txt + app). Rules publish ZAROORI NAHI.
+- ntup.txt (naya, Pages par): PC ko ABHI naya ntcam.py dilana — `irm https://samiullah-878.github.io/nt-traders-/ntup.txt|iex`:
+  base.txt se URL, ntcam.py utaar kar VERSION + py_compile jaanch, purana pythonw band, Startup shortcut se dobara shuru, v purana ->
+  naya dikhata hai; Pages taaza na ho to peela paigham (2 min baad dobara). Aage har update par yahi command (6 ghante ka intezar nahi).
+
+------------------------------------------------------------
+0000000000000000000000000. v225 + ntcam.py v1.4 / v1.5 — VIDEO CLIPS + BILL SIRF APNE WAQT KA
+------------------------------------------------------------
+29 Sep subah: cards aa gaye (rules mein frames.size() <= 8 tha, PC 10 bhejta tha -> 403; ab <= 12). Malik ka test: larke ne
+5,000 kisi aur ko diye — AI ne nahi pakra: 3 minute ke andar bill (#00119023 Rs 29,762) tha to "baqaya" ban gaya. Malik: AI ka
+andaza nahi, BILL POSTING sanad ho.
+- ntcam v1.5 in_bill(): bill sirf [scan shuru (BiltyDate) - 30 s, post (CreatedOn) + 45 s] ka. match(): sales sirf in_bill;
+  pay/return ±120 s pehle jaisa. Is se post ke 45 s baad "nikla" -> wait -> missing (Entry nahi + khabar). Test badle.
+- ntcam v1.4 VIDEO: Recorder thread per galla camera: Watch.latest ko har 1/8 s ffmpeg (rawvideo bgr24 -> libx264 ultrafast crf 30,
+  640 px, 8 fps, -g 16) -> C:\NTCam\rec\<cid>\<epoch>.ts (60 s tukre). prune(): 48 ghante se purane / disk 5 GB se kam ho to
+  sab se purane. seg_files / pick_segs / clip_cmd (concat demuxer list, -ss offset, -t, dobara encode veryfast crf 29, faststart).
+  Recorder.clip(t0, t1, out) (3 min had). ffmpeg: NTCAM_FFMPEG env > C:\NTCam\ffmpeg.exe > imageio-ffmpeg (khud pip install).
+  Clips thread: shak par Galla.handle -> clips.shak() (t0-5 .. t1+5, max 30 s) + har 20 s Fire.query cameraClips status=='req'
+  (malik ki farmaish) -> make(): cameraClips status making -> Recorder.clip -> upload_clip(): base64 700k harf ke tukre
+  cameraClipParts/<id>_<i> {clip, i, data}, phir cameraClips {..., status ok, n, size, at}; recording na ho / na mile -> error + wajah.
+  cameras par rec ('on' / ghalti / 'off') + recFree (GB). Fire.query ab 'id' bhi deta hai.
+  SANDBOX NOTE: imageio-ffmpeg ka static Linux binary yahan TS parhte hi crash (-11) hua — /usr/bin/ffmpeg se tests pass. Windows
+  par imageio-ffmpeg theek hona chahiye; na ho to C:\NTCam\ffmpeg.exe rakh dein (gyan.dev build). Recording karte waqt ffmpeg
+  chalta hi hai, is liye ghalti ho to cameras.rec mein likhi aayegi.
+- rules v225: cameraClips (PC create/update keys, status list; malik generic se 'req' banata / keep / delete), cameraClipParts
+  (PC create, data < 800000), cameras + rec/recFree, cameraFrames <= 12, manager ke liye cameraClips/Parts band. PUBLISHED (chat).
+- functions: handleClip — kind 'req' status -> 'ok' (pehli dafa) par owner push "Clip tayyar: <naam/waqt>". router.test 8.
+- App v225: data: camClips (watchEvents), loadClip (parts jod kar), requestClip (cam, from, to ms, 3 min had, aane wala waqt nahi,
+  id 'req-<base36>', kind req, status req, date = from ki PK date, by, title), deleteClip (parts + doc), keepClip, reviewEvent(id,
+  status, note, keepVideo) -> event ki clips mita deta (ya keep), cleanupCam: kal ya purani clips (keep = 30 din). ui.viewVideo(src,
+  title, fps): poori screen player — controls, 0.5x/1x, ◀ frame / frame ▶ (1/8 s), Escape/Band; b64ToBlobUrl. owner: event sheet
+  clipBlock (▶ Video dekhein / PC bana raha hai / Nahi bani + wajah / shak par clip na ho to note; "🎬 Mukammal clip mangwayein");
+  review form mein "Video 30 din rakhein" checkbox; Nigrani header "🎬 Waqt ki clip"; clipReqSheet (camera, din, shuru/khatam
+  time step 1 s, naam) -> pkMs(date, hms, +05:00); clipsList "Mangwayi hui clips" (Dekhein / Rakhein / Mitayein / halat). Ghalti par
+  sheet khuli rehti hai (busy ka return check). app.dom 78 pass (video player, faisle par clip mit gayi, 3 min ki had, farmaish).
+- Tankhwah "kaam ke hisaab se" — malik ne abhi tak a/b/c nahi bataya, nahi banaya.
+
+------------------------------------------------------------
+000000000000000000000000. v224 + ntcam.py v1.3 — BILL CANCEL / BADLA
+------------------------------------------------------------
+28 Sep raat: rules v223 publish ke baad sab chal gaya (PC card "chal raha hai", Galla nigrani chalu). Pehle 3 AI jaanch 403 par
+gum huin (ginti rahi, card nahi). Malik ka naya nuqta: ghee ka Rs 9,000 bill print, phir POS mein cancel/edit kar ke Rs 100 ka
+naya bill — camera ne 9,000 dekha, POS mein 100. Chahiye: yeh bhi card ke sath.
+- ntcam.py v1.3 Pos: har poll (20 s) pichle 4 ghante ke SAB bill (cancel wale bhi) + SaleDetail COUNT aur CHECKSUM_AGG(ItemID,
+  Qty, Rate). watch_bills(): pichli haalat se muqabla — DocStatusID 3 = 'cancel'; TotalSale kam = 'edit'; total wahi lekin items
+  badle (h/n) = 'items'. alert(): posAlerts/<no>-<whenMs> {kind, no, before, after, amount(=before), at (bill bana ms), when
+  (badla ms), by (POS user naam: Users/UserMaster/tblUsers/AppUsers/Login table best-effort, warna "user 8"), date, eventId,
+  replacedBy {no, amount, at}}. replacedBy = cancel/edit ke -1..+10 min mein naya bill jis ki raqam pehle se kam (15 min tak dekhta).
+  Galla.by_bill (bill no -> camera event id, match/recheck par) -> cameraEvents.match += {changed, after, alertId} (rules: match
+  update allowed). cameraStats cam='pos' alerts +1 (Tawajju). Pos(fire), pos.galla = galla. ntcam_test 25 (+2 BillBadla).
+- rules v224: posAlerts (PC create/update, keys ginti, kind list); manager ke liye posAlerts band; cameraStats + 'alerts'. PUBLISH.
+- functions: handlePosAlert (naye posAlerts par) -> owner push "Bill cancel: #.. · Rs 9,000" / "Bill badla: .. → .." (+ naya bill
+  agar replacedBy pehle se). router.test 7.
+- App v224: data.watchEvents + posAlerts (us din); cleanupCam posAlerts bhi. Nigrani: surkh notice "N bill cancel / badle" (tap =
+  filter 'alerts'), filter chip "Bill badle", alert cards (kind, bill, raqam pehle -> baad, kab bana / kab badla, kis ne,
+  "Is ki jagah naya bill", "Us waqt ki photos" -> camera event). Camera card + event sheet: match.changed -> surkh chip
+  "Bill cancel hua → Rs 0" / "Bill badla → Rs 100". Tawajju: "Aaj N bill cancel / badle". app.dom 78 pass.
+- Sach: jaiz cancel bhi alert hote hain (customer ne wapas kiya) — faisla malik. PC band ho to badlav agle din PC on hote hi.
+
+------------------------------------------------------------
+00000000000000000000000. v223 + ntcam.py v1.2 — GALLA MILAAN
+------------------------------------------------------------
+Malik: har sale bill POS par scan hota hai, paisa kuch second baad; galla ki har harkat ko bill / Galla screen "de diye" se
+milao taake paisa kisi aur ko dena bhi pakra jaye (jeb hi nahi). Nayi screen NAHI — shop PC khud kare. posdekho se pakka: dbo.Sale
+CreatedOn / SaleDate second tak (PK ka sada waqt, timezone ke baghair), BiltyDate = bill shuru, CashReceived / TotalSale, SaleNo,
+IsCreditSale; SaleReturn (TotalSaleReturn, CreatedOn); Voucher (CRV / JV / CPV) CreatedOn. Malik ne 17:05:40-54 ki DMSS tasveerein
+dikhayin: 14 s ka len-den (note gine, bill kaaghaz, laal note baqaya, aakhir mein SEENE PAR HAATH = qalam/phone) — purani 3 s ki
+6 tasveer mein AI isay "jeb" samajh sakta tha. Is liye: bill pehle, poori kahani, sakht shak, malik ke faislon se seekhna.
+- ntcam.py v1.2: Pos thread (har 20 s, SIRF parhna): pymssql (khud pip install) C:\khata-sync\local-config.json ki sql setting se
+  — naye Sale (SaleID > aakhri; shuru mein pichle 4 ghante) + SaleReturn; google-auth (khud install) + C:\khata-sync\firebase-key.json
+  (Blue Khata service account) se Firestore runQuery gallaCalls paidAt >= 4 ghante (status paid, amount PAISA /100, partyName,
+  paidName). recs deque (kind sale|return|pay, no, at epoch s, amount Rs, party, who). pk_epoch(): naive PK waqt - 5 ghante.
+  status: cameraPC/status.pos = "POS theek · Galla screen theek" / "nahi: <ghalti>".
+  Watch: harkat par pending {from now-4, until now+5}, harkat chalti rahe to until = now+3 (at+20 tak) -> 10 tasveer (pick).
+  Galla: len-den khatam hone ke 45 s baad kaam (POS record aa jaye). near = recs(t0-180, t1+120) -> context_text ("POS sale Bill
+  #00119008 Rs 1,215 save 6:43:02 pm ..."). ai_judge2 (GALLA_PROMPT2): flow aaya | nikla | len_den | ginti | kuch_nahi (+ saaf_nahi),
+  verdict; "shak SIRF jab note jeb/qameez/shalwar/chhupi jagah mein saaf jaye; seene/jeb ke paas haath, qalam, phone shak NAHI;
+  bill hai aur customer se liya/baqaya diya = normal". load_examples(): Fire.query cameraEvents reviewed IN [ok, confirmed] (40,
+  naye 6) -> "Malik ke pichle faisle" prompt mein (10 min cache). match(): aaya/len_den -> sale [t0-180, t1+60] qareeb tar;
+  nikla -> pay/return [t0-120, t1+120] ya sale (baqaya); ginti/kuch_nahi -> none; na mile -> wait; POS (ya nikla par Galla screen)
+  parh na sake -> nopos (ALARM NAHI); AI error -> nopos. Event: flow, matchState, match {kind, no, amount, at ms, party, who},
+  start, end. recheck() har 2 s loop mein: wait -> ok (bill der se) / nopos / 5 min baad missing. Stats + moneyIn, moneyOut, matched,
+  missing. ntcam_test 23 (+5 Milaan: pk_epoch, match ke 8 haalat, context/flow/prompt, handle: AI ko bill + malik ki misaal, rules
+  keys; wait -> ok (der se bill) / missing).
+- rules v223: cameraPC status + 'pos'; cameraEvents: PC read (misaalein), PC update SIRF matchState/match/matchAt (matchState list),
+  create keys + flow, matchState, match, start, end; cameraStats + moneyIn, moneyOut, matched, missing. PUBLISH ZAROORI.
+- functions: handleCamEvent(ev, before): naya + shak = khabar (pehle jaisa); update par matchState -> 'missing' (pehli dafa, shak
+  na ho) = "Galla: entry nahi · <camera> · <waqt>" sirf owner. Router: cameraEvents update bhi. router.test 6.
+- App v223 (Nigrani): card par flow chip (Paisa aaya / nikla / Liya + baqaya / Sirf ginti) + milaan chip (hara "Bill #.. · Rs ..",
+  surkh "Entry nahi", "Bill dhoond rahe…", "POS se jaanch nahi"), Entry nahi wale card ka hashiya surkh; doosri khulasa qataar
+  (paisa aaya, nikla, bill / entry mili, entry nahi); filter "Entry nahi"; event sheet mein "Record mila / Entry nahi" dabba.
+  Cameras sheet PC card par "Galla milaan: POS theek · Galla screen theek". app.dom 78 pass; Chromium mein Nigrani dekha.
+- Yahan test NAHI: asal SQL Server (pymssql named instance localhost\SQLEXPRESS — SQL Browser chahiye), asal Blue Khata runQuery,
+  asal Claude faisla. POS ya Galla screen na parh sake to milaan 'nopos' (alarm nahi) aur Cameras card par wajah.
+
+------------------------------------------------------------
+posdekho.txt (2026-09-28 raat) — GALLA MILAAN ki tayyari: POS ka data dekhna (sirf jaanch)
+------------------------------------------------------------
+Malik: camera ki har "paisa aaya / nikla" harkat ko sale bill (POS par scan — waqt mein sirf kuch second ka farq) aur Galla
+screen ki "de diye" payment se milana; nayi screen NAHI. Blue Khata alag Firebase (note-traders-khata-7ccc1), Hazri nt-traders.
+Shop PC C:\khata-sync: node + mssql, sql-config.js -> local-config.json { sql: { server localhost\SQLEXPRESS, database POS,
+user sa, password } } (PC par hi), firebase-key.json (Blue Khata admin). POS tables: dbo.Sale (SaleID, SaleNo, SaleDate, PartyID,
+BranchID, Description, DocStatusID <> 3 = zinda), SaleDetail, SaleReturn(+Detail), Party, Items, Voucher/VoucherDetail, Purchase.
+Galla screen payments: Blue Khata Firestore gallaCalls {amount paisa, partyName, status paid, paidAt, paidName, date}.
+posdekho.txt (PowerShell, Pages se `irm .../posdekho.txt|iex`): _posdekho.js likh kar node se Sale/SaleReturn/Voucher/
+VoucherDetail ke columns + aakhri 3 sale/voucher ke sirf waqt/raqam wale khane -> _pos.txt -> notepad. (Pehli command PowerShell
+ke backtick / $ ki wajah se JS tod deti thi — isi liye here-string file.) Agla: SaleDate mein asal waqt hai ya nahi -> ntcam v1.2.
+
+------------------------------------------------------------
+ntcam.py v1.1.2 (2026-09-28 raat) — camera card ki "AI test" line taaza
+------------------------------------------------------------
+Nayi key (PC par hi copy + right-click paste) chal gayi. Malik ko app mein phir bhi "Claude key ghalat" dikh raha tha = purani
+aiTest line (sirf setup mein badalti thi) aur ghalat-key ke waqt ke 'error' events. Ab: run() shuru hote hi aik dafa check_key ->
+har camera ki aiTest ("AI tayyar — Claude key chal rahi hai" / "AI nahi chala: ..."); Galla.handle har jaanch ke baad aiTest =
+"AI chal raha hai — aakhri jaanch 10:42 pm (Normal/Shak/Saaf nahi)" ya ghalti. Malik ne poocha "mera panel kahan" = Nigrani tab.
+Upload: sirf ntcam.py (+test, notes); PC khud leta hai (shuru ke 2 min baad / har 6 ghante). ntcam_test 18 pass.
+
+------------------------------------------------------------
+ntcam.py v1.1.1 (2026-09-28 raat) — Claude "400" bina wajah
+------------------------------------------------------------
+28 Sep raat: malik ne camera 192.168.0.32 ko "galla" naam se joda — Online, wahi galla ki tasveer (192.168.0.143 wala
+"Galla" offline; dono aik hi jagah dikhate hain — malik ko kaha purana hata de, nahi to ginti / AI kharcha dugna).
+AI test: "AI nahi chala: AI 400:" aur v1.1 check_key: "Claude ne jawab nahi diya (400)" — chhoti "ok" request par bhi, aur
+jawab ka matn KHALI. Andaza (pakka nahi): save hui key mein chhupa control harf (AnyDesk mobile ke Ctrl+V / paste se) — header
+mein ja kar server 400 bina body deta hai. Credit ya ghalat key par Claude saaf JSON wajah deta hai, is liye wo nahi lagta.
+- clean_key(): sirf [A-Za-z0-9_-]. secrets() purani save key khud saaf kar ke file mein likhta hai; har request par bhi saaf.
+- api_error(r): JSON error.message / 401 / credit / khali body -> Roman Urdu paigham (khali = "chhupa ghalat harf, dobara paste").
+  ai_describe + ai_judge dono isi se. check_key() ab (ok, msg, code).
+- setup: key check na chale (400/401/403) to wahin "Nayi key daalein? (h)" — 3 dafa tak, paste bhi saaf.
+- ntcam_test.py 18 (+5 KeyFix). Agar clean ke baad bhi 400 aaye to agla shak: shop network / antivirus HTTPS jaanch.
+
+------------------------------------------------------------
+0000000000000000000000. v222 — GALLA NIGRANI (camera HISSA B) + ntcam.py v1.1
+------------------------------------------------------------
+28 Sep: shop PC par NT Camera install ho gaya (Windows 10, PS 5.1). Network par 4 Dahua: 192.168.0.32, .88, .110 (password
+ghalat — 401, abhi nahi jode) aur .143 = ghoomne wala DH-H3A, naam "GHALA", juda, tasveer app mein aayi — yaani H3A RTSP deta hai.
+Malik: "sirf aik camera ki pehle tracking" -> sirf GHALA par galla nigrani. Claude key PC mein save (setup ne dobara nahi maangi).
+Malik ki uljhan: getpass par kuch nazar nahi aata tha ("password likha nahi ja raha"); key ki ID (apikey_01...) ko key samjha.
+- ntcam.py v1.1 (khud update: run() shuru ke 2 min baad / har 6 ghante GitHub se): secret_input() password/key par **** (msvcrt);
+  'apikey_' paste par saaf paigham; check_key() — setup mein chhota Claude sawaal (key/credit theek?). ghalat key mita di jati hai.
+  NIGRANI: watch_wanted = role 'galla' + zone.w + enabled + is PC mein password. Watch thread: video lagatar (main stream; 10 s
+  mein 3 fps se kam = khud 'subtype=1' halki video, stream:'sub'); latest frame app ki 5-min tasveer ke liye bhi (doosra RTSP
+  connection nahi). Har 0.2 s: dabbe (zone_px) ka grey 160px + blur, Motion (peechay ki tasveer accumulateWeighted; SENS low/mid/high
+  = pixel farq 35/28/22, badla hissa 6/3.5/2%; do lagatar sample = harkat). Har 0.5 s ring mein dabba + 50% aas paas (haath/jeb).
+  Harkat par (3 s waqfa) 1.6 s pehle + 1.6 s baad ke tukre -> pick 6 -> Galla qataar. Galla thread: cameraStats ginti (touches);
+  COOLDOWN 20 s ke andar sirf ginti; roz ki had (cameras.aiCap, default 300) / key nahi / AI ruka = unchecked. Claude Haiku 4.5
+  (GALLA_PROMPT, 6 tasveer 512px) -> parse_verdict: normal | shak | saaf_nahi (+ 'error' jab AI na chale; phir 10 min AI_PAUSE).
+  Pehle cameraFrames/{cam-ms} {frames[6], at, cam} phir cameraEvents/{cam-ms} {cam, camName, at, date (PK), verdict, why, thumb
+  (320px), n, ms, model, agent} — event bante hi function khabar deta hai. Stats har 2 min flush. cameras par watch/fps/stream/lastMotionAt.
+- ntcam_test.py: 13 tests (+6: zone_px, Motion (khamoshi/aik sample/do sample), pick + parse_verdict + pk_date, Galla flow (jaanch,
+  waqfa, had, tarteeb frames->event, rules keys, Firestore size), AI ghalti -> 'error' + ruko, watch_wanted).
+- App (sirf malik): naya tab NIGRANI (manager ko nahi). data.watchEvents(date) sirf tab khula ho (cameraEvents + cameraStats us din),
+  owner hamesha aaj ke cameraStats (Tawajju: "Aaj N dafa galla par shak"). nigraniTab: din aage/peeche, galla cameras ke chips
+  (nigrani chalu / band), khulasa (galla chhua, AI jaanch, shak, shak dekhe), unchecked ka hint, filter (Sab / Na dekhe shak / Shak /
+  Normal), event cards (thumb, waqt, faisla chip, wajah, camera). eventSheet: data.loadFrames (cameraFrames sirf kholne par), badi
+  tasveer + 6 ki patti, poori screen (viewImage), AI ki wajah, "Us waqt duty par" (hazri: checkIn <= waqt <= checkOut; parchi par
+  bahar tha to "(bahar tha)"), note, "Theek hai" / "Shak pakka" (reviewEvent: reviewed ok|confirmed, reviewedAt, reviewNote).
+  zoneSheet ("Galla ka hissa", Cameras card aur Nigrani notice se): tasveer par ungli se dabba (pointer events sheet.body par),
+  saveZone 0-1 (3 decimal, 4% se chhota mana; null = nigrani band). Camera edit: aiCap (roz ki had) + sens (Harkat: Kam/Aam/Zyada).
+  cleanupCam(): Nigrani pehli dafa khulne par 30 din purane events + frames + stats (40-40 kar ke).
+- functions/index.js: onHazriWrite router mein cameraEvents (naya) -> handleCamEvent: sirf verdict 'shak' par SIRF owner ko push
+  "Galla: shak · <camera> · 9:26 pm", tag 'cam-<id>' (app khuli ho to bhi bajti hai — out-/tkt- wali shart mein nahi). router.test +1.
+- firestore.rules v222: cameraEvents (PC create, keys ginti, verdict list, why<=300, thumb<80000), cameraFrames (frames list <= 8),
+  cameraStats (PC create/update, keys). cameras PC keys + watch, fps, stream, lastMotionAt. Manager ke liye cameraFrames/cameraStats
+  bhi band. MALIK KO v222 RULES PUBLISH + FUNCTIONS UPLOAD KARNE HAIN.
+- Tests: app 78 (app.dom: Tawajju -> Nigrani, khulasa, filter, event + 6 tasveer + badi + poori screen, duty, faisla, din badalna,
+  dabba hatao -> paigham, chhota dabba mana, zone save; manager ko Nigrani nahi) + functions router 5 + Python 13. Chromium mein
+  Nigrani tab aur event sheet dekhi. Asal camera par harkat / AI ka asal faisla yahan test nahi hua.
+
+------------------------------------------------------------
+ntcam.txt v1.0.1 (2026-09-28) — PC par pehli asal chalai ka sabaq
+------------------------------------------------------------
+Malik ne shop PC (Windows 10, Windows PowerShell 5.1, user 'Dell') par command chalayi: 1/4 Python 3.12 install ho gaya
+(C:\Users\Dell\AppData\Local\Programs\Python\Python312), phir 2/4 par laal ghalti: pip ki "WARNING: The scripts pip.exe ...
+not on PATH" (stderr) — `2>$null` ke sath aur $ErrorActionPreference = 'Stop' par PowerShell 5.1 isay NativeCommandError bana kar
+script rok deta hai. Asal masla nahi tha (pip upgrade ho chuka tha). Theek: pip ke waqt 'Continue', --no-warn-script-location,
+faisla $LASTEXITCODE se. Sabaq: PS 5.1 mein native command ka stderr redirect + 'Stop' = ghalti. ntcam.py nahi badla.
+
+------------------------------------------------------------
+000000000000000000000. v221 — CHECK-OUT PAR LOCATION ZAROORI + DUKAAN SE BAHAR HO TO MALIK KO REQUEST  [naye kaam ka HISSA 1 / 2]
+------------------------------------------------------------
+Malik: "Check-Out ka time location plus; agar ghar se bhi karna ho to request ke sath". Sath (Hissa 2 = v222, baad mein): chutti ke waqt
+larke ke APNE phone par khud yaad-dehani, larke ke phone par notification (kaise aayega), aur malik kisi bhi larke ko paigham/notification
+bhej sake. Hissa 2 mein pushTokens rules bhi tight karne hain (abhi koi bhi logged-in phone role 'owner' wala token likh sakta hai).
+- staffview 'check-out' (hold ke baad): getGps ZAROORI. Andar = gps.distance - min(accuracy, 100) <= radius (default 200 m) -> purana
+  data.checkOut (tasdeeq + animation). Bahar ya location na mile (ijazat band / GPS band) -> outsideSheet(open): "Aap dukaan se X km door
+  hain" / "Location nahi mili (wajah)", "Dukaan par hoon — location dobara dekhein" (co-regps: andar mila to seedha Check-Out), form
+  'co-outside': kab nikle (Abhi / Chutti ka waqt — sirf agar guzar chuka aur check-in ke baad / Apna waqt), wajah chips (CO_REASONS),
+  note. Punch card: outsideLine() — pending = narangi "Bahar se Check-Out — malik ke paas" (waqt + faasla), rejected = surkh notice.
+  Hold button ab bhi (dukaan par aa kar seedha Check-Out). Staff Request list: "Bahar se Check-Out 9:05 pm · 3.2 km door".
+- data.requestOutsideCheckout({ row, time, reason, note, gps, gpsError }): staffRequests { kind:'correction', via:'outside', date=to=row.date,
+  half:'', checkIn:'', checkOut:'HH:MM', reason ("wajah — note"), status pending, createdAt, by } + { lat, lng (6 decimal), distance,
+  accuracy (m, integer) } YA { gpsError (<=60) }. Jaanch: waqt zaroori, check-in se pehle / 16 ghante se zyada nahi (workMinutes), aaj ka
+  record ho to aane wala waqt nahi, aik din ki aik pending. settle(write) 2.5 s. ntfy ping (purana).
+- reviewRequest: correction + via outside manzoor -> hazri mein checkOut + checkOutVia:'outside', checkOutLat/Lng/Distance/Accuracy.
+- owner.js: Tawajju text "Sonu: bahar se Check-Out (3.2 km)"; Requests card "Dukaan se bahar Check-Out", faasla chip (±accuracy),
+  "Naqsha dekhein" (google.com/maps?q=lat,lng), "Manzoor karne par Check-Out X lagega". Register row chip "Check-Out bahar se · 3.2 km"
+  jab checkOutVia outside ya purana checkOutDistance > radius. kmText() helper (staffview + owner).
+- firestore.rules v221: staffRequests create keys + 'via','lat','lng','distance','accuracy','gpsError' (via == 'outside' sirf correction,
+  checkIn '' aur checkOut 5 harf; number/string jaanch). MALIK KO v221 RULES PUBLISH KARNE HAIN (warna bahar wali request mana hogi).
+- Server par "andar/bahar" ki pakki jaanch nahi (GPS phone deta hai) — malik ko faasla + naqsha dikhta hai, faisla malik ka.
+- CSS: .co-wait, .co-head(.is-nogps), .co-regps, .co-set, .co-time, .co-where (chips .cam-pick dobara istemal).
+- Tests 78 (+2 sync.test: request -> sirf rules wali keys -> malik manzoor -> checkOut + via + faasla; location na mile -> gpsError.
+  app.dom: 2 ghante pehle aaya, 4 km door hold -> sheet, seedha Check-Out nahi, request (keys/location/wajah), "malik ke paas" card,
+  dobara request mana; phir dukaan par wapas -> purane tests (mana -> Dobara bhejein -> kamyab)). Tests asal waqt ke hisab se (raat 1 baje bhi).
+- Yahan test nahi: asal phone ka GPS (andar dukaan mein kamzor signal par accuracy), asal rules.
+
+------------------------------------------------------------
+00000000000000000000. v220 — CAMERAS, HISSA A (shop PC ka camera program + Settings > Cameras)  [camera ke 3 hisson ka pehla]
+------------------------------------------------------------
+Malik: dukaan ke cameras (Dahua DH-IPC-HDW1431T1 fixed 4MP PoE "Counter" + Dahua DH-H3A ghoomne wala WiFi, TP-Link_640C)
+par AI nigrani; pehle GALLA (cash) wala hissa. "Multiple camera add ho saken, koi problem na ho, aur ISI hazri app mein bana do."
+Shop PC (AnyDesk) sirf dukaan ke waqt on. Claude API key malik ne bana li. Plan (OK): Hissa A = PC program + test + Settings >
+Cameras; Hissa B = galla nigrani (hissa mark, harkat par burst, Claude jaanch, "Nigrani" tab, push alert, duty par kaun tha);
+Hissa C = roz ki PDF, 30 din purani tasveerein saaf, AI kharche ki had.
+SACH (malik ko bataya): browser app camera ki RTSP video nahi parh sakti -> parhna shop PC karta hai; app sirf dikhati/sambhalti hai.
+Camera ke password aur Claude key SIRF PC mein (C:\NTCam\secrets.json) — Firebase/app mein kabhi nahi. Nigrani SIRF malik (manager bhi staff hai).
+- ntcam.py (VERSION '1.0', Python 3.12, opencv-python-headless + numpy + requests): setup | run | test.
+  setup (desktop "NT Camera jodein"): PC code -> Firebase login (REST identitytoolkit, apna email/password login, rules lagte hain),
+  Claude key (getpass, right-click paste), network /24 scan (port 554; brand: 37777 = Dahua, 8000 = Hikvision, http text), MAC (arp -a),
+  har device: naam, username [admin], password (getpass), channels (NVR ho to). RTSP: Dahua /cam/realmonitor?channel=N&subtype=0,
+  Hikvision /Streaming/Channels/N01 (rtsp_transport tcp, 8 s timeout). Kamyab -> secrets.cams[<mac>-chN] = {url,user,pw,ip,brand,ch,mac},
+  Firestore cameras/<id> (naya ho to naam/role 'view'/enabled), cameraShots/<id> (640px JPEG base64 <400KB), Claude Haiku 4.5
+  (claude-haiku-4-5-20251001) se 1-2 line ka AI test -> cameras.aiTest. cameraPC/status mein found list.
+  run (Startup shortcut, pythonw, lock port 47391): list har 20 s, tasveer har 5 min ya malik ki "Abhi ki tasveer" (snapReq > lastShotAt),
+  online/offline/off/"password nahi", IP badle to MAC se dhoond kar URL theek, cameraPC/status har 2 min, har 6 ghante GitHub
+  (base.txt = Pages URL) se naya ntcam.py (VERSION bara ho to, compile check, khud dobara shuru) — PC par dobara type nahi karna.
+  Firestore REST patch hamesha updateMask ke sath (sirf apni fields) — malik ka naam/kaam nahi mit-ta.
+- ntcam.txt (PowerShell installer, .txt taake Pages text/plain de): `irm <pages>/ntcam.txt|iex`. $b na ho to
+  'https://samiullah-878.github.io/nt-traders-/' (zip ka naam "nt-traders--main" se repo "nt-traders-" ka andaza). App repo ke hisab se
+  sahi command dikhati hai (alag ho to `$b='<url>';irm "${b}ntcam.txt"|iex`). Python (py/python, winget, ya python.org 3.12.7 silent),
+  pip, ntcam.py, Startup "NT Camera.lnk" (pythonw run) + Desktop "NT Camera jodein.lnk" (setup), phir setup, phir run peeche.
+- ntcam_test.py (python ntcam_test.py): 7 tests — PC code, Firestore values, RTSP URL + password chhupana, JPEG 2560->640 <400KB,
+  version compare, patch sirf apni fields (updateMask), AGENT_KEYS rules mein.
+- App (sirf malik): Settings > "Cameras" (manager ko tool nahi, rules bhi band). data.js: owner live cameras / cameraPC status + config;
+  watchShots(on) sirf sheet khuli ho tab (tasveerein bhaari); createCameraPC(): doosri Firebase app (initializeAuth inMemory) se
+  createUserWithEmailAndPassword('cam-<6>@nttraders.local', <10>) -> deleteApp -> cameraPC/config {uid,email,at,by} + audit; code
+  "<6>-<10>" (harf a-z bina i/l/o, 2-9) sirf aik dafa ui.camCode. saveCamera(name, role galla|counter|view, enabled), requestShot,
+  deleteCamera. owner.js camerasSheet: PC card (chalu = status.at 6 min ke andar, dhadakta hara nishan), "PC jodein" 4 qadam (code, AnyDesk
+  PowerShell, command + Copy, password/key PC par hi), PC ne jo naye device dekhe, camera cards (16:9 tasveer, Online/Offline/Band chip,
+  naam + kaam chip, ip/brand, AI test, ghalti), "Abhi ki tasveer", "Badlein" (naam, kaam chips, chalu), "Hatayein", tasveer tap = ui.viewImage
+  poori screen. "Naya PC code banayein" (tasdeeq: purana PC band).
+- firestore.rules v220: isCameraPC() (password login + cameraPC/config.uid). Generic match: manager ke liye cameras / cameraShots /
+  cameraPC / cameraEvents parhna-likhna band. cameraPC/{doc}: PC sirf 'status' (keys ginti). cameras: PC create (keys ginti, naam <=40),
+  update sirf apni fields. cameraShots: PC likhe (jpg < 400000). Malik generic se sab. MALIK KO v220 RULES PUBLISH KARNE HAIN.
+- Firebase Authentication mein "Email/Password" ON hona chahiye (pehle se hai — malik login isi se).
+- Tests 76 app (app.dom: malik Cameras — PC code bana, malik ka login nahi hila, tasveer, naya device, Abhi ki tasveer, naam/kaam save,
+  PC fields nahi badlin, poori screen; manager ko Cameras nahi) + 7 Python. Headless Chromium mein Cameras sheet dekhi.
+- Yahan test nahi ho saka: asal camera / RTSP (khaas kar H3A), asal Windows PC par installer, asal Firebase rules, Claude ka asal jawab.
+- Agla: Hissa B (galla) — cameras.zone (malik tasveer par hissa mark), ntcam.py mein harkat + burst + Claude, cameraEvents (rules mein naam
+  pehle se band/khula soch kar), "Nigrani" tab, onHazriWrite mein cameraEvents -> push (sirf owner), hazri se duty par kaun tha.
+
+------------------------------------------------------------
+0000000000000000000. v219 — SAB KHABREIN FORAN (AIK JAGTI FUNCTION) + TOKEN SAFAI + APP KHULI HO TAB BHI AWAAZ  [HISSA 3 / 3]
+------------------------------------------------------------
+Malik ne v217 aur v218 upload NAHI ki — teeno hisse (v217 + v218 + v219) AIK hi update mein jate hain. Do zip: app wali (repo ki jar
+mein) aur functions wali (repo ke functions/ folder mein).
+Masla: "notification band ho jata hai / usi waqt nahi aata". Wajah (code se): sirf onOut (parchi) FAST (minInstances 1) tha;
+onRequest / onTicket / onCheckIn / onPushTest NORMAL — so jati thin, 1-2 minute der (cold start). Aik phone ke 3 token (list mein
+"Malik" 3 dafa) — Chrome Android sab phones ka UA "Android 10; K" batata hai, is liye purane token pehchane nahi jate the aur har
+khabar 3 token par jati thi. App KHULI ho to Firebase khabar page ko deta hai (onBackgroundMessage nahi) aur onMessage sirf "chalu
+karein" button par lagta tha — autoPush (v216) par nahi — is liye khuli app par kuch nahi bajta tha.
+- functions/index.js: onOut/onRequest/onTicket/onCheckIn/onPushTest ki jagah AIK export: onHazriWrite = onDocumentWritten(
+  { ...FAST (256MiB, minInstances 1, concurrency 20), document: 'businesses/noor-traders/{coll}/{docId}' }). Router: mitaya = kuch nahi;
+  pushTokens (testAt badla) = test khabar; sirf NAYA doc: staffOuts -> handleOut, staffRequests -> handleRequest, staffTickets ->
+  handleTicket, staffAttendance -> handleCheckIn (late). Baqi sab (audit, selfies, diag, blueKhata, updates) foran return. Handlers
+  wahi purane (sirf naam badla). watchDay / monthlySalary (schedule) NORMAL hi. Kharcha: jagta instance pehle bhi aik tha, ab bhi aik.
+  Deploy: GitHub Actions (deploy-functions.yml, "--non-interactive --force") purani 5 functions khud mita deti hai.
+- tokensFor(): aik token aik dafa, aur aik phone (device 'd:<id>') par sirf sab se naya token (at ke hisab se).
+- data.savePushToken(token, label): device = 'd:<deviceId> · <deviceText()>' (deviceId localStorage 'nt-hazri-device-id', random).
+  Save ke baad pushTokens mein isi phone ke purane token delete: wahi deviceId, YA purana record (bina 'd:') jis ka device == label
+  (navigator.userAgent 60 harf) aur role/phone wahi. Wapas: kitne hataye. Rules mein koi nayi key nahi (device string hi hai).
+  owner.js "Notification wale phones" list mein 'd:xxx · ' chhupa kar dikhata hai.
+- push.js bindForeground(): aik dafa m.onMessage — app khuli ho to reg.showNotification (awaaz + vibration, wahi tag). 'out-' aur
+  'tkt-' tag par NAHI (app pehle se toast + awaaz deti hai, dobara na baje). enablePush aur refreshPush (autoPush) dono lagate hain;
+  owner.autoPush ab onMessage (toast) bhi deta hai.
+- Tests: app 76 (+1 sync.test: token safai — isi phone ke purane hat-te, manager / doosre phone ke nahi). functions: logic 5 +
+  router.test.mjs 4 (node --test --experimental-test-module-mocks; firebase-admin/functions naqli mock): minInstances 1 + wildcard,
+  parchi/request/ticket par khabar sirf owner/manager ko aur aik phone ko aik, update/mitana/audit/blueKhata par kuch nahi, test push.
+  (Mock ke liye functions/node_modules mein package resolve hona chahiye — npm install --prefix functions.)
+- Yahan test nahi ho saka: asal Firebase deploy, asal wildcard trigger, asal phone par khabar ki awaaz.
+- Rules: v218 wale hi (is mein v219 ki koi nayi tabdeeli nahi).
+
+------------------------------------------------------------
+000000000000000000. v218 — JAANCH KA RECORD (staffDiag) + PHONES KI JAANCH  [3 hisson ka HISSA 2]
+------------------------------------------------------------
+Malik: "agla kaam, phir aik dafa update karunga" — v217 upload NAHI hui thi, is liye ye zip v217 + v218 dono hai (aik hi upload).
+Maqsad: andaze ki jagah ASAL wajah — kis larke ka Check-Out/Wapsi server tak kyun nahi gaya, aur kis phone par purani app hai.
+- Firestore: businesses/noor-traders/staffDiag/{phone} — har phone apna AIK doc (merge). Keys (data.js DIAG_KEYS = rules hasOnly):
+  phone, name, v (APP_VERSION), at (phone ka ms), serverAt (== request.time), device (UA se chhota: "Android 10; K · 139"),
+  app ('home' = home screen / 'browser'), pending (outbox mein kitni likhai), failKind (checkout|checkin|return), failCode,
+  failAt, failId (doc id), failDate (YYYY-MM-DD), fixedAt, lateKind, lateMin, lateAt.
+- data.diagPing(extra, force): sirf staff/manager. Aam record 30 minute mein aik dafa (localStorage 'nt-hazri-diag-v218'),
+  ya version/pending badle to. failed() -> fail ki wajah foran; confirmed(): pehle fail hui thi -> fixedAt; der se pohanchi
+  (fresh:false, >= 2 min) -> lateKind/lateMin/lateAt + fixedAt; drain mein Check-In 'lost' -> fail. Kab likhta: staff ka apna
+  account doc aate hi; manager ka staff list mein apna account milte hi. Best-effort (.catch chup) — rules na hon to kuch nahi toot-ta.
+- Owner/manager: live(col('staffDiag'), 'diag') -> state.diag. owner.js phoneHealth(): har kaam wala staff -> { d, v, old, fail, late }.
+  old = version malik ki app (APP_VERSION) se kam, YA record hi nahi lekin aaj Check-In kiya (v218 se purani app record nahi likhti).
+  fail = failDate kal/aaj aur fixedAt < failAt. late = pichle 2 din mein der se pohanchi.
+  "Tawajju chahiye": sab se upar surkh "N phone se Check-Out server tak nahi gayi — Sonu: Check-Out 9:05 pm (internet)",
+  aur narangi "N phone par purani app — ... larke se kahein app band kar ke dobara kholein". Dono -> action 'phones'.
+  phonesSheet() "Phones ki jaanch" (Settings > App mein bhi tool): har larka, version chip (hara / narangi / "Record nahi"),
+  Home screen ya browser, phone, aakhri dafa kab kholi, ruki likhai, fail (kya, kab, wajah Roman Urdu mein: internet / ijazat /
+  Check-In tha hi nahi / phone se mit gayi), der se pohanchi (kitne min). Sab ka record na ho -> "v218 rules Publish karein".
+- firestore.rules v218: naya match staffDiag/{phone}: create/update sirf validStaffSession() && phone == sessionPhone(),
+  keys hasOnly, serverAt == request.time, size limits. Parhna: upar wala generic match (malik + manager). MALIK KO v218 RULES
+  PUBLISH KARNE HAIN (warna larkon ke phone record nahi likh sakte; app phir bhi chalti hai).
+- CSS: .phones, .ver-chip (is-ok / is-old / is-none).
+- Tests 75 (+2 sync.test: record likhna, sirf rules wali keys (firestore.rules se parh kar milate hain), 30 min throttle,
+  fail -> failKind/failCode, theek -> fixedAt; der se pohanchi -> lateMin). app.dom.test: purani app + fail Tawajju mein, sheet.
+- Functions mein koi tabdeeli nahi (wo HISSA 3 = v219 mein).
+
+------------------------------------------------------------
+00000000000000000. v217 — PAKKI TASDEEQ (CHECK-IN / CHECK-OUT / WAPSI) + PREMIUM ANIMATION  [3 hisson ka HISSA 1]
+------------------------------------------------------------
+Malik (27 Sep): (1) larke ne Check-Out kiya lekin malik ki app mein "Check-Out baqi" (misal: 25-26 Sep ke 10 log, Sonu);
+(2) notification 1-2 request ke baad / usi waqt nahi aata; (3) larka "Wapas aa gaya" dabata hai, malik ki screen par nahi aata —
+malik/manager ko khud lagana parta hai. Sath: Check-In/Out par larkon ko premium animation. Plan 3 hisson mein (jawab kat gaya tha):
+  HISSA 1 = v217 (ye) — sirf app files. HISSA 2 = v218 — jaanch ka record (fail ki wajah server par) + har phone ka app version
+  (rules badlenge). HISSA 3 = v219 — sab khabrein foran (aik hi jagti function, kharcha wahi) + token safai + app khuli ho tab bhi awaaz.
+ASAL KAMZORI (code mein mili): Check-Out 2.5 s baad, aur staff ki wapsi (quick) 0.6 s baad hi "ho gaya" bol deti thi — server ne
+qubool kiya ho ya nahi. App band / net gaya / server ne mana kiya -> larke ko laga lag gaya, malik tak nahi pohancha. Mana hone par
+Firestore local copy wapas le leta hai -> "Check-Out wapas aa gaya". (Asal Firebase par pakki wajah hissa 2 ke record se milegi.)
+- data.js: watchPunch HATAYA -> tracked(entry, write, fresh). state.sync[key] = { kind, phase: sending|waiting|ok|fail, code, at },
+  key = 'checkin:<id>' | 'checkout:<id>' | 'return:<outId>'. setDoc ka promise tab poora hota hai jab SERVER qubool kare = tasdeeq.
+  2.5 s mein na aaye -> 'waiting'. Mana ho -> pehle onServer() (getDocFromServer, na ho to getDoc) se dekho: pehle hi lag chuka
+  (doosri koshish / malik ne band kiya) = kamyab; record hi nahi = code 'missing'; warna 'fail' + state.punchError {kind, code}.
+- OUTBOX (localStorage 'nt-hazri-outbox-v217', max 12): Check-Out aur Wapsi ki likhai (asal waqt ke sath, fields) jab tak server
+  confirm na kare. Check-In sirf jaanch ke liye (selfie dobara nahi bhejte). drainOutbox(): staff/manager start ke 6 s baad,
+  window 'online' par, aur baqi ho to har 30 s: server par dekho -> lag chuka = confirmed(fresh:false) | net nahi = waiting |
+  Firebase ki apni qataar mein (row/out .pending) = waiting | warna resend() WAHI PURANA WAQT (checkOut/returnAt badalta nahi,
+  sirf outServerAt/returnServerAt = serverTimestamp). Check-In server par na mile aur phone mein bhi na ho -> punchError 'lost'.
+  36 ghante se purani entry chhor di jati hai. retrySync(key) = "Dobara bhejein" (fresh:true), dismissSync(key) = "Theek hai".
+  Staff 'outs' listener ab includeMetadataChanges (o.pending). returnOut(o, gps, wait=true) staff raasta tracked + settle;
+  checkOut apni khuli parchi ki wapsi wait=false se (Check-Out na ruke). createData({ storage }) — app.js deta hai.
+- Kamyabi: data onProblem('confirmed', { kind, id, fresh, at, outKind }) -> app.js -> view.onConfirmed (manager.js aage deta hai)
+  -> staffview.onConfirmed -> ui.celebrate(). fresh:false (baad mein khud pohanchi) = sirf chhota toast "Pichla Check-Out ... ✓".
+- ANIMATION (ui.celebrate, styles.css "v217" hissa): #app ke BAHAR body par .fx overlay (app har data par root.innerHTML dobara
+  banati hai — andar hoti to toot jati). Register ka panna (lakeerein + surkh hashiya), gola + check khud banta (stroke draw),
+  phir STAMP thapp se: HAZIR (hara) | "LATE · N min" (narangi, minutesLate > grace) | CHUTTI (ink, kaam ke ghante 0 se gin kar,
+  overtime chip chamakta) | WAPAS (ink-2). Vibration. 4.6 s ya "Theek hai"/tap/Escape par band. prefers-reduced-motion = bina harkat.
+  Check-In 3 qadam (staffview stepper, ui.stage selfie|gps|send): selfie pulse, location par radar lehrein, server par ghoomta ring;
+  qadam chalte hue Check-In button nahi dikhta (double tap nahi). Server mana kare -> .punch-error mein halka shake (sirf pehle
+  1.5 s, har render par nahi) + checkout ke liye "Dobara bhejein". sync-line: sending (ink, dhadakta nishan) / waiting (narangi +
+  "Dobara bhejein") / pohanch gaya (hara). Wapsi ruki/mana: returnSync() card outCard ke upar.
+- CHECK-OUT "DABA KAR RAKHEIN": purana confirm() HATAYA. Button data-hold="check-out" data-hold-ms="900"; app.js generic
+  pointerdown/pointerup/pointercancel + Enter/Space (keydown/keyup) -> ring (SVG pathLength 100) aur halka parda 0.9 s mein bharta;
+  pehle chhora = kuch nahi + nudge + toast "daba kar rakhein"; hold ke dauran softRender ruka rehta hai (hold != null -> dirty).
+  CSS: touch-action:none, user-select none, contextmenu band.
+- Tests 73 (+5 sync.test.mjs: app band ho kar dobara khuli -> purana waqt khud gaya; malik ne pehle band kiya -> dobara nahi;
+  mana -> fail -> Dobara bhejein; record hi nahi -> missing; wapsi dheemi -> dobara; Check-In confirmed event). app.dom.test:
+  animation (.fx HAZIR/WAPAS/CHUTTI), jaldi chhorne par Check-Out nahi, mana -> Dobara bhejein -> kamyab, outbox khali.
+  test-fake-sdk: getDocFromServer, fail.offline, fail.dropPath, fail.hangPath (promise kabhi poora nahi = app band / net gaya).
+  Headless Chromium mein animation ki tasveer dekhi (HAZIR / CHUTTI card theek). Asal phone, asal Firebase par test nahi hua.
+- Rules / functions mein KOI tabdeeli nahi (rules mein nayi key nahi — resend wahi keys bhejta hai). Blue Khata ko hath nahi laga.
+- Purani faltu files (premium-panels.css, staff-tasks.js ... list neeche section 2 mein) ab bhi GitHub par hain — app par asar nahi,
+  sirf un ke purane tests fail hote hain. Mitani hon to list dekhein.
+
+------------------------------------------------------------
+0000000000000000. v216 — NOTIFICATION KHUD CHALU RAHE + CHECK-OUT KI TASDEEQ
+------------------------------------------------------------
+Malik: (1) notification har dafa app khol kar dobara chalu karna parta tha; (2) kuch larkon ka Check-Out ho kar phir "Check-Out karein"
+wapas aa jata hai / hazri nahi lagti.
+- ASAL WAJAH (notification): push.js firebase-messaging-sw.js ko scope './' par register karta tha — wohi scope app ke sw.js ka hai,
+  is liye har app open par sw.js dobara register ho kar messaging SW ko hata deta tha aur token mar jata tha. Ab messaging SW alag scope
+  './firebase-cloud-messaging-push-scope' par (Firebase ka default), purani ghalat registration khud unregister, aur currentToken/
+  refreshPush getRegistrations() se sahi registration dhoondte hain. firebase-messaging-sw.js: icon/link absolute, click par same-origin
+  window focus karta hai.
+- owner.js autoPush(): malik/manager ki app khulte hi (config aa jane par, ijazat pehle se 'granted' ho to) chupke se token taza kar ke
+  pushTokens mein save — button dabane ki zaroorat nahi.
+- Check-In/Out: data.watchPunch(kind, write, id) — server ne mana kiya to state.punchError {kind, code}; Check-In par permission-denied
+  aaye to getDoc se dekhta hai ke record pehle se hai ('already'). staffview punchBox(): pakka surkh paigham ("Check-Out server par NAHI
+  laga" + wajah) jab tak larka "Theek hai" na dabaye ya dobara kamyab na ho. syncLine ab Check-Out ke liye alag: "Check-Out abhi phone
+  mein hai — server tak nahi gaya" / "Check-Out malik tak pohanch gaya".
+- Manager bug: checkOut ab sirf APNI khuli parchi/break band karta hai (pehle manager mode mein state.outs sab ki thi -> kisi aur ki
+  parchi band ho jati thi).
+- Bachao: saveAttendance mein khali "jane ka waqt" ab larke ka lagaya Check-Out NAHI mitata (malik ka purana form / score badalna
+  stale data se checkOut '' likh deta tha — ye bhi "Check-Out wapas aa jana" ki mumkin wajah thi).
+- test-fake-sdk: fail.denyPath (setDoc par permission-denied) — tests: inkaar par paigham, dobara kamyabi, manager ka check-out doosre ki
+  parchi band na kare, khali check-out na mite. Tests 73. Rules/functions mein koi tabdeeli nahi.
+
+------------------------------------------------------------
+000000000000000. v215 — LARKE KI APP FORAN KHULE
+------------------------------------------------------------
+Malik: larke ka (staff) safha bohat tez khule, login/load ka intezar khatam ho.
+- Screen ki "tasveer": app.js har render ke 0.9 s baad root.innerHTML localStorage 'nt-hazri-snap-v1' {v, role, html, at} mein rakhta hai
+  (300 KB se bara ho to nahi; sheets/login nahi). index.html ki inline script (app ke JS se bhi PEHLE) — agar login shuda phone
+  (session-v200 ya owner-in) aur tasveer 7 din se purani nahi aur #login= link nahi — wohi HTML #app mein daal deti hai,
+  data-screen='snapshot', <html class="is-snap"> -> upar chhota "Taza ho raha hai…". Asal pehli render par class hat jati hai.
+  Tasveer ke dauran button dabaya to toast "Ek second — app taza ho rahi hai". Logout (onReset) par tasveer mit jati hai.
+  __ntBootMsg / 15 s timer ab snapshot screen par bhi neeche paigham (snap-msg) dikhate hain; boot.js fail() bhi.
+- Halka code: app.js ab owner.js / manager.js ko dynamic import karta hai (sirf malik/manager); staffview.js pdf.js ko sirf PDF
+  banate waqt. index.html modulepreload se owner/manager/pdf/push hata diye (larke ke phone par ~160 KB kam). SW phir bhi sab cache
+  karta hai (peeche).
+- Pichla tab yaad: staffview localStorage 'nt-hazri-staff-tab' (hazri|salary|request).
+- Raftaar: window.__ntT0 (index.html) se pehli asal render tak ka waqt -> data.state.bootMs; staff footer aur malik ke Settings
+  "App update" tool mein "0.9s mein khuli".
+- Firestore offline cache (persistentLocalCache) pehle se laga tha — is liye doosri dafa data bhi phone se aata hai.
+- Check-In/Out ki hifazat wohi (serverTimestamp + rules). Rules/functions mein koi tabdeeli nahi. Tests 72 (+ tasveer save/mitne ki jaanch).
+
+------------------------------------------------------------
+00000000000000. v214 — KHABAR FORAN (COLD START KHATAM)
+------------------------------------------------------------
+Malik: v213 ke baad parchi ki khabar aa gayi lekin ~2 minute baad (cold start). Malik ne "instant wala lagao" kaha (kharcha bata diya tha:
+aik chhota instance hamesha jagta = taqreeban $1.5-$3 / Rs 400-900 mahana).
+- functions/index.js: FAST = { region, memory:'256MiB', minInstances:1, concurrency:20 } sirf onOut (parchi) par — 2-4 second.
+  Baqi (onRequest, onTicket, onCheckIn, onPushTest, watchDay, monthlySalary) NORMAL = 256MiB, minInstances 0 (kharcha nahi).
+- Khabar halki/tez: config() ab 1 minute cache; onRequest/onCheckIn/onTicket ab poori staffAccounts list nahi parhte (sirf apna doc, ya
+  doc ka 'name' field); onCheckIn pehle bina Firestore ke late check karta hai aur waqt par aane par foran ruk jata hai; leave query ab
+  kind=='leave' se chhoti.
+- Notification par android.priority high aur TTL 86400 (pehle 3600).
+- App: Settings > Notifications > Jaanch mein hidayat — der ho to us phone par Battery "Unrestricted" aur notification channel "Urgent".
+- Malik ko: kharche par nazar ke liye Firebase > Usage and billing > Budgets & alerts mein $5 ka alert. Wapas normal karna ho to
+  functions/index.js mein onOut ke FAST ko NORMAL kar dein.
+- Sirf functions/index.js + app ki 5 files badli hain; rules mein koi tabdeeli nahi. Tests 72.
+
+------------------------------------------------------------
+0000000000000. v213 — NOTIFICATIONS KA SAFHA SAAF (TEST + JAANCH)
+------------------------------------------------------------
+Malik ne v212 ke baad Functions deploy kar li (GitHub Actions; service account ko Editor + Security Admin dena para, compute SA ko
+run.invoker + eventarc.eventReceiver, aur eventarc/pubsub/cloudbuild/artifactregistry/run APIs enable). Lekin notification nahi aaya:
+Firestore mein pushTokens collection hi nahi bana tha (yani "Is phone par chalu karein" kabhi mukammal nahi hua), aur purana safha
+upar se scroll nahi ho raha tha + Firebase wala hissa ntfy ke hidayat ke neeche dab gaya tha.
+- owner.pushBox() nayi shakal: sab se upar halat ("Is phone par: CHALU / BAND"), aik bara button, ghalti ka paigham sheet ke andar
+  (ui.pushMsg — toast nahi, kyunki wo chala jata tha), "Test notification bhejein", "Kin phones par chalu hai", "Is phone par band karein",
+  aur do <details>: settings (khud aane wali khabrein, minute) aur "Jaanch" (key lagi?, ijazat, token ke aakhri 8 harf, Firebase mein
+  mehfooz?, app home screen se khuli ya browser mein). ntfy ab neeche <details> mein.
+- notifySheet khulte hi currentToken() aur pushDevices() se halat khud bhar deta hai (ui.pushToken, ui.pushSaved).
+- push.disablePush() (deleteToken) = "Is phone par band karein".
+- Test push: app pushTokens/{id} par {testAt: Date.now()} likhti hai (data.pushTestPing) -> nayi function onPushTest (onDocumentWritten)
+  usi token par test khabar bhejti hai. Is liye FUNCTIONS AUR RULES DONO KA NAYA VERSION CHAHIYE:
+  rules mein pushTokens keys mein 'testAt' add hua; functions/index.js mein onPushTest.
+- Malik ko batana: v213 upload -> functions/index.js badal kar Actions se deploy -> rules publish -> app mein Settings > Notifications
+  > "Is phone par notification chalu karein" -> "Test notification bhejein".
+- Tests 72 (koi naya test nahi; UI wala hissa).
+
+------------------------------------------------------------
+000000000000. v212 — FIREBASE PUSH (APP BAND HO TAB BHI, NT HAZRI KE ICON SE)
+------------------------------------------------------------
+Malik ka Firebase pehle se Blaze par hai -> asal push (Cloud Messaging + Cloud Functions) bana diya. ntfy (v211) bhi chalta rahega.
+- functions/ (naya, Node 20, ESM): index.js + logic.js + package.json. Region asia-south1, TZ Asia/Karachi.
+  Foran: onOut (parchi pending), onRequest (chutti/correction), onTicket, onCheckIn (late — aadhi chutti subah wali par nahi).
+  onSchedule 'every 15 minutes' (watchDay): (1) duty shuru + push.absentAfter(30) min -> "X tak nahi aaye: ..." (din mein aik dafa,
+  pushState/{date}.absent), (2) khane ka break jin ka waqt +5 min guzra -> khabar aur us out doc par overdueAlert:true,
+  (3) duty khatam + push.checkoutAfter(30) -> "N ka Check-Out baqi" (pushState/{date}.checkout).
+  onSchedule '0 10 1 * *' (monthlySalary): pichle mahine ki salary jin ki final nahi.
+  Tokens: businesses/noor-traders/pushTokens/{last40}: {token, role owner|manager|staff, phone, name, device, at}. Khabar sirf
+  role owner/manager ko. Jo token mar jaye (unregistered) wo khud delete ho jata hai. Data-only message; dikhane ka kaam SW karta hai.
+  staffConfig/main.push = { vapidKey, on, absentAfter, checkoutAfter } aur appUrl (notification click par app kholne ke liye).
+- App: push.js (enablePush/currentToken/pushSupported), firebase-messaging-sw.js (icon-192, tag, actions, click -> app kholta hai),
+  firebase-config-sw.js (wahi config, SW ke liye — firebase-config.js badlein to ise bhi badlein!).
+  Settings > Notifications mein upar "Firebase notification": VAPID key ka form (Firebase console > Project settings > Cloud Messaging >
+  Web Push certificates), "Is phone par notification chalu karein" (permission + token + appUrl save), "Kin phones par chalu hai",
+  khud aane wali khabrein on/off aur dono waqt (minute).
+- Rules v212: pushTokens (read: malik/manager; create/update: koi bhi logged-in apna token; delete: malik/manager). Baqi v211 jaisa.
+- Deploy: workflows/deploy-functions.yml -> GitHub par .github/workflows/deploy-functions.yml banani hai; secret FIREBASE_SERVICE_ACCOUNT
+  (Firebase > Project settings > Service accounts > Generate new private key ka poora JSON). Ya computer se: firebase deploy --only functions.
+  firebase.json mein functions block add hua.
+- Yahan test nahi ho saka: asal deploy, asal push, VAPID key. Tests 72 (functions/logic.test.mjs naya: nahi aaya / check-out baqi /
+  break overdue / late — sab window aur dedupe ke sath).
+
+------------------------------------------------------------
+00000000000. v211 — MANAGER KA POORA PANEL, NOTIFICATIONS (ntfy), BREAK/BAHAR CARD, APP KHUD THEEK HO
+------------------------------------------------------------
+Pichla masla: v209 zip upload nahi hui thi -> GitHub par tickets.js nahi thi -> poori app band ("Internet kamzor" ghalat paigham).
+Malik ne 2 files (tickets.js, app.js) upload ki, phone ki purani copy saaf ki, app chal gayi.
+Malik (v211): manager ko poori app — sab dekh bhi sake, badal bhi sake (salary, final, payment, ticket faisla, staff, qawaid) — SIRF kisi ki
+hazri na laga/badal sake. App band ho tab bhi notification (malik ne 1/2 nahi chuna -> ntfy laga). Break card mein har naam ke aage waqt, naam
+daba kar usi ki wapsi. Late aane ki khabar.
+- Manager (staffAccounts.canApproveOuts): app.js onSession -> data.startOwner({ role:'manager', phone, account }) + manager.js (switch
+  "Meri hazri" = staffview | "Manager panel" = owner view with manager:true). state.role 'manager'; data.full() = owner|manager; actor() naam;
+  guardOwner() manager ko ijazat; guardHazri() = sirf malik (saveAttendance, deleteAttendance, toggleClosed, closeCheckouts, migrateSelfies);
+  notSelf(): manager apni parchi/request/ticket ka faisla khud nahi. Audit mein byName. Owner view manager:true mein hazri wale actions
+  (tix, quick-present, close-due, toggle-closed, att-delete, migrate) toast "sirf malik", att form sirf dekhne ka, password tool nahi.
+  Staff view manager mode: requests/parchi apne phone se filter.
+- Rules v211: generic match mein manager read (staff collections + staffAttendance/staffSelfies) aur write (staffAccounts, staff,
+  staffSchedules, staffConfig, staffRequests, staffPayroll, staffTickets, staffOuts, staffAudit) — hazri NAHI. Rules na hon to manager panel
+  "permission-denied" paigham dikhata hai. MALIK KO v211 RULES PUBLISH KARNE HAIN.
+- Break/bahar card: breaks.breakStatusHtml har naam button (gaya · tak · baqi/zyada · "Wapas ✓") -> action break-end-one; owner outCards
+  "abhi bahar" list rows -> out-return (tasdeeq).
+- Notifications (notify.js): muft ntfy.sh (koi server nahi). Settings > Notifications: "chalu karein" -> config.notify {topic 'nt-hazri-xxxx',
+  on, out, leave, late, ticket}; ntfy app install + topic subscribe ki hidayat, Copy, Test, band/chalu, naya topic.
+  Bhejta kaun: staff ki parchi (requestOut), chutti/correction (sendRequest), late Check-In (checkIn, aadhi chutti subah ho to nahi),
+  manager/senior ka ticket (createTicket). "Abhi tak nahi aaya" NAHI (us ke liye server/Cloud Functions chahiye — Blaze plan).
+  Notification ntfy ke icon se aati hai (NT Hazri icon wala asal push = Firebase Cloud Functions + card; malik chahe to baad mein).
+- App khud theek ho: boot.js ab app.js dynamic import; fail ho to FILES list ki har file ?nocache se check -> "Ye file GitHub par nahi mili: ..."
+  saaf paigham; files sab hon to aik dafa khud purani copy (service worker + cache) mita kar reload (__ntRepair, index.html inline);
+  15 s timer: internet band ho to wohi, warna "Taza kholein". sw.js ?nocache ko cache se nahi deta. Nayi file bane to boot.js FILES mein likhein!
+- Zip ab "zaroori sab JS files" wali (sirf badli nahi) taake koi file reh na jaye.
+- Tests 67 (notify.test.mjs naya).
+
+------------------------------------------------------------
+0000000000. v210 — AADHI CHUTTI + HAR CHUTTI PAR "PAISA KATEGA YA NAHI"
+------------------------------------------------------------
+Malik: chutti mein half day ka option; aur chutti par likha ho ke paisa katna hai ya nahi.
+- staffRequests (leave) naya field half: '' | 'am' (subah ki chutti — der se aayega) | 'pm' (shaam ki — jaldi jayega); aadhi chutti sirf aik din (to == date).
+  Malik manzoori par paid: true (paisa nahi katega) | false (paisa katega). Na likha ho to Settings ka leavePaid.
+  data.sendRequest({ half }), data.reviewRequest(id, status, note, paid), data.markLeave({ half, paid:'yes'|'no'|bool }).
+- core: leaveFor(requests, phone, date), halfSchedule(schedule, half) (am: shiftStart = beech ka waqt; pm: shiftEnd = beech ka waqt).
+  statusFor: aadhi chutti + aaya = 'half' ("Aadhi chutti", register H, hazir mein bhi gina jata hai, late nahi); aadhi chutti + nahi aaya = 'absent'
+  (salary mein 0.5 ghair hazir + 0.5 chutti). dayRows/monthSummary: row.leave; late/due halfSchedule se (subah wali par late nahi, shaam wali par
+  jaldi jane par "Check-Out baqi" nahi).
+- Salary (salaryCalc): absentDays ab sirf ghair hazri (+ join se pehle). Din ke hisab: paisa katega wali chutti -> leaveLines
+  [{text:"Chutti 24 Sep (aadha din)", amount}] aur leaveCut (deductions mein). Ghanton ke hisab: paisa nahi katega wali chutti ke duty ghante
+  jurte hain (leavePay = din × duty ghante × hourly). Purana hisab badla: pehle "leavePaid=false" chutti absentDays mein thi, ab leaveCut mein.
+- UI malik: Requests mein leave par "Manzoor — paisa nahi katega" / "Manzoor — paisa katega" / "Na-manzoor"; "Chutti dein": Poora / Aadha subah /
+  Aadha shaam + Paisa nahi katega / katega; qataar chip "Aadhi chutti (shaam) · paisa katega"; profile list; salary sheet/PDF lines.
+  Staff: Request > Chutti: "Poora din / Aadha din — subah / Aadha din — shaam"; apni request par "Paisa nahi katega / katega"; salary lines.
+- Rules v210: staffRequests keys mein 'half' ('' ya 'am'/'pm' sirf leave aur to == date). MALIK KO v210 RULES PUBLISH KARNE HAIN.
+- Tests 65.
+
+------------------------------------------------------------
+000000000. v209 — "BINA BATAYE GAYA" TICKET (FAISLA SIRF MALIK)
+------------------------------------------------------------
+Malik ne doosri chat ka plan (screenshots) bheja; is chat mein code tha is liye yahin banaya. Malik: "Ok".
+- Kaun banaye: malik, manager (canApproveOuts), senior (NAYA staffAccounts.canTicket — staff form "Ye senior hai"). Koi apne upar nahi;
+  senior manager par nahi (malik ne sawal ka jawab nahi diya tha — ye faisla main ne liya, AI_NOTES/jawab mein bataya; badalna aasan).
+- Data: businesses/noor-traders/staffTickets/{auto} {phone, name, date, from(ms), returnAt?(ms), note, status 'open'|'returned'|'decided',
+  by, byName, createdAt, serverAt} + wapsi {returnAt, returnBy, returnServerAt} + malik ka faisla {decision 'maaf'|'warning'|'katauti',
+  amount, decidedAt, decidedBy, ownerNote}. data.createTicket / returnTicket / decideTicket / ticketSuggestFor.
+- Katauti: core.ticketSuggest(hourly, minutes) = round5(hourly × minutes/60); hourly wahi salary wala (mahana ÷ (roz ghante × din)).
+  Misal: 30,000 / 30 / 12 = 83.3 × 1.5 = 125. Malik raqam badal sakta hai. Final mahine mein katauti mana ("Dobara kholein").
+  salaryCalc({ tickets }) -> ticketLines [{text:"Bina bataye gaya — 22 Sep, 1:15 se 2:45 — Rs 125"}], ticketCut (deductions mein).
+  Maaf/Warning = sirf record. Staff ki apni Salary, PDF slip, Excel "Ticket katauti" mein nazar aata hai.
+- Malik UI: Hazri (aaj) "Bina bataye gaya" button; qataar chips (abhi bahar / faisla baqi / Ticket: Katauti Rs ..); Tawajju card
+  "N ticket ka faisla baqi"; tickets sheet (aaj / 45 din): Wapas aa gaya, raqam (mashwara pehle se), Maaf / Warning / Katauti.
+  Settings > "Bina bataye gaya — tickets". Naye ticket par toast + vibrate. History labels.
+- Staff UI (manager/senior): "Bina bataye gaya — ticket" card: "Ticket banayein" (roster se; apna naam nahi; senior ko managers nahi), aaj ke tickets,
+  "Wapas aa gaya". tickets.js = openTicketSheet (larka, kab gaya [Abhi], wapas kab [khali], note).
+- roster mein ab mgr:true (manager) bhi.
+- Rules v209: isTicketer(), isManagerPhone(); staffTickets block (create: phone != apna, senior -> manager nahi, keys ginti ki,
+  serverAt == request.time; update: open -> returned sirf; faisla sirf owner). MALIK KO v209 RULES PUBLISH KARNE HAIN.
+- Tests 63.
+
+------------------------------------------------------------
+00000000. v208 — KHANE KA WAQFA (ROTI BREAK)
+------------------------------------------------------------
+Malik: roti ke waqt manager sab par aik sath break lagaye; 2-3 larke us waqt dukaan sambhalein (un ka break baad mein).
+Break ka waqt roz badalta hai -> manager (aur malik) har dafa khud minute chune.
+- Data: staffOuts mein hi, kind:'break', reason 'Khana', status seedha 'approved', outAt=abhi, minutes, batch, approvedByName.
+  data.startBreak(phones, minutes) (malik: fast batch + audit 'khana break'; manager: writeBatch), data.endBreaks(list) ("Sab wapas aa gaye").
+  Larka khud bhi "Wapas aa gaya" daba sakta hai (purana staff rule). Check-Out par khula break khud band.
+- Bari: staffAccounts.breakGroup 1 (pehli, default) / 2 (doosri) — staff form "Khane ki bari".
+- Manager ko naam/bari chahiye: malik ki app staffConfig/main.roster [{phone,name,group}] khud barabar rakhti hai (syncRoster; core.rosterOf).
+  Manager ki app aaj ki hazri bhi sunti hai (staffAttendance where date==aaj -> teamAttendance) taake pata chale kaun duty par hai.
+- breaks.js: openBreakSheet (Pehli/Doosri bari tab, minute chips 10-60 + apna minute, "1:35 pm tak wapas", har larke ka nishan — duty par
+  nahi / pehle se bahar wale band), breakStatusHtml ("N khane ke break par", baqi/zyada minute, "Sab wapas aa gaye").
+- Malik: Hazri (aaj) "Khana break" button + break card; qataar chips "Khana break · 12 min se", "Khana 1:05 pm–1:35 pm (30 min)";
+  parchiyan list mein "Khana break" tag; Excel "Khana (min)". Staff: Gate Pass jaisa "KHANA BREAK · کھانے کا وقفہ" pass.
+  Manager: "Khana break shuru karein" + break card manager wale hisse mein.
+- Hisab: core.dayOuts(..., kind 'out'|'break'|'all'); parchi (outMin) aur break (breakMin) alag. salaryDefault.breakDeduct (default band,
+  Settings > Salary ke qawaid) -> breakCut = breakMin/60 × hourly.
+- Rules (v208): staffAttendance read mein isOutManager(); staffOuts create: manager kind=='break' approved (keys ginti ki hui, serverAt/
+  approvedServerAt == request.time, minutes 1-180); manager update: apna break bhi wapas laga sake. MALIK KO v208 RULES PUBLISH KARNE HAIN.
+- Tests 61.
+
+------------------------------------------------------------
+0000000. v207 — HOME SCREEN APP, WHATSAPP LOGIN LINK, LOGOUT NEECHE
+------------------------------------------------------------
+Malik (Hamayun ke phone ka photo): mulazim ko baar baar kholna/number likhna na pade, seedha us ka safha khule — default.
+- Install (PWA): icon-192.png, icon-512.png (maskable bhi), manifest id/start_url './?app=1'/orientation. app.js 'beforeinstallprompt' pakarta hai ->
+  shared.install {standalone, canPrompt, dismissed, later(), prompt()}. Staff Hazri tab ke upar installCard ("Install karein" / "Kaise lagayein?"
+  -> Chrome ⋮ > Add to Home screen ki hidayat; "Baad mein" = 3 din chhupa). App standalone khuli ho to banner nahi. Malik Settings mein bhi.
+- Login link: '<app>/#login=03xxxxxxxxx' -> app khud staff login (doLogin), phir hash address se hata deta hai. Malik is phone par login ho to
+  auto-login nahi (toast). Pehle se wohi staff login ho to kuch nahi. Staff form (purana staff): "WhatsApp par bhejein" (wa.me/92... + hidayat ka paigham)
+  aur "Link copy karein". Hifazat wahi (login pehle bhi sirf number se tha).
+- Staff app: upar wala logout icon hata diya (ghalti se dab jata tha); neeche footer mein chhota "Logout" + saaf tasdeeq.
+- Chhoti ghaltiyan: bahar ka waqt core.durText() ("1 min se kam", "7 min", "1h 05m") — pehle "0h 00m". Malik ki hidayat Urdu ho to poora
+  paragraph rtl + unicode-bidi:plaintext (Urdu + English mila matn ulta nazar aata tha). Staff screen par "Chutti 7:52 pm" = malik ki default duty
+  abhi 7:52 pm save hai — malik ko Settings > Duty ka waqt mein 7:00 pm karna hai.
+- Rules: v206 wale hi (koi tabdeeli nahi). Tests 59 (app.link.test.mjs naya).
+
+------------------------------------------------------------
+000000. v206 — PARCHI URDU MEIN, WASHROOM, 3/5/7 MINUTE, MANAGER MANZOORI
+------------------------------------------------------------
+Malik: parchi mein tatti / susu ke chips, parchi wali jagah Urdu (lipi), waqt 3/5/7 minute bhi, aur jis ko malik manager chune wo bhi manzoor kare.
+- core.OUT_REASONS ab [{key, ur}]: key Roman (Firebase + malik ki screen), ur = Urdu lipi (staff ki parchi + Gate Pass). Naye: 'Washroom (chhoti hajat)',
+  'Washroom (bari hajat)' (izzat wale alfaaz). reasonUr(key), OUT_MINUTES [3,5,7,10,15,20,30,45,60,90,120], minutesUr(n).
+- Staff ki parchi ka sheet poora Urdu (dir=rtl, Noto Naskh). Gate Pass: "گیٹ پاس", وجہ/گیا/واپسی, "مالک نے منظور کیا" ya "<naam> (منیجر) نے منظور کیا".
+  Malik ki app mein wajah Roman hi (malik Urdu lipi aasani se nahi parhta).
+- Manager: staffAccounts.canApproveOuts (staff form: "Ye manager hai"). Staff app mein managerCard: aaj ki doosron ki parchiyan (query staffOuts date==aaj),
+  Haan/Nahi, "abhi bahar" + wapsi. Apni parchi manzoor nahi kar sakta. Nayi parchi par toast/vibrate (app khuli ho to).
+  data: managerWatch() account snapshot se chalta/rukta; state.teamOuts; reviewOut/returnOut manager branch (quick setDoc, approvedByName, approvedServerAt/returnServerAt serverTimestamp).
+  Malik ki manzoori bhi approvedByName:'Malik' likhti hai. Parchi banate waqt 'name' bhi jata hai (manager ko naam dikhane ke liye).
+- Rules: isOutManager() (canApproveOuts == true); staffOuts read mein manager; create keys mein 'name'; manager update: pending -> approved/rejected
+  (sirf status, approvedAt, outAt, rejectedAt, approvedBy==uid, approvedByName, approvedServerAt==request.time) aur approved -> returned
+  (status, returnAt, returnBy, returnByName, returnServerAt==request.time), aur sirf doosre ki parchi. MALIK KO v206 RULES PUBLISH KARNE HAIN.
+- Tests 55.
+
+------------------------------------------------------------
+00000. v205 — BAHAR JANE KI PARCHI (GATE PASS) + PIN HATAYA
+------------------------------------------------------------
+Malik: larke bina bataye dukaan se bahar chale jate hain. Live GPS web app mein mumkin nahi (app band ho to browser GPS nahi deta) —
+malik ko Google Maps sharing / WhatsApp live / Life360 / CCTV bataye. App ke andar "bahar jane ki parchi" manga:
+print nahi, mobile par guard ko dikhe; wajah + jane/aane ka waqt; bahar ka waqt duty se ALAG nazar aaye; har parchi (namaz/khana bhi) par
+malik ki Haan/Nahi zaroori. PIN nahi chahiye — login pehle jaisa.
+
+Data: businesses/noor-traders/staffOuts/{auto}
+  staff banata hai: {phone, date, reason, note, minutes, status:'pending', requestedAt, serverAt(serverTimestamp), by}  (rules: sirf ye keys)
+  malik: status 'approved' + approvedAt, outAt(=manzoori ka waqt), approvedBy, ownerNote  |  'rejected' + rejectedAt
+  staff: pending -> 'cancelled' (sirf status)  |  approved -> 'returned' + returnAt, returnLat/Lng/Distance/Accuracy, returnServerAt(== request.time)
+  malik bhi wapsi laga sakta hai (returnBy:'malik'). Staff Check-Out kare to khuli parchi khud 'returned'.
+Hisab (core): outMinutes(o, now), dayOuts(outs, phone, date, now) -> {list, done, open, pending, total, count}, dayColor(date), OUT_REASONS.
+  salaryCalc({ ..., outs }): outMin/outCount sirf 'returned'; config.salaryDefault.outDeduct=true ho to outCut = outMin/60 × hourly (deductions mein).
+Malik UI: Hazri (aaj) ke upar "X bahar jana chahta hai" card + Haan/Nahi; "N abhi bahar hain" card; qataar mein chips
+  "Abhi bahar · 20m se · Bank" (waqt se zyada = surkh), "Bahar 3:10 pm–3:45 pm (35m)", "Asal kaam 8h 55m"; Settings > "Bahar jane ki parchiyan";
+  nayi parchi par toast + vibrate + beep (sirf jab malik ki app khuli ho — push notification nahi hai). Salary sheet/PDF/Excel mein bahar ka waqt/kati.
+  Settings > Salary ke qawaid: "Bahar jane ki parchi ka waqt salary se katein" (default band).
+Staff UI: duty ke dauran "Bahar jana hai? Parchi banayein" -> wajah chips + der chips + tafseel -> "Parchi malik ke paas hai" (Cancel) ->
+  Haan par GATE PASS: tasveer, naam, wajah, gaya/wapsi ka waqt, "Malik ne manzoor kiya", har second chalti ghari ([data-live-clock], ui.js),
+  aaj ke din ka rang (dayColor) aur chalti patti — taake purana screenshot pehchana jaye. "Guard ko dikhayein" (bara), "Wapas aa gaya" (GPS; door ho to poochta hai).
+PIN hataya: auth.parseLogin (pin nahi), login form (PIN field nahi), createSession(uid, phone), staff form (PIN nahi), saveStaff purana 'pin' field
+  deleteField se mita deta hai, rules staffSessions wapas hasOnly(['phone','createdAt']) aur pinOk nikala.
+Rules: staffOuts ka naya block. MALIK KO v205 KE RULES PUBLISH KARNE HAIN (v204 wale ki jagah) — pehle sab phone par v205 aane dein.
+  Rules publish na hon to staff ki parchi "permission-denied" -> saaf paigham "malik ko Firebase rules update karne hain".
+Tests 54.
+
+------------------------------------------------------------
+0000. v204 — SETTINGS TAB, SELFIES ALAG, RULES SE HIFAZAT, HISTORY, EXCEL
+------------------------------------------------------------
+Malik: "sab settings mein dalo, poori app parh kar bugs/kamiyan batao". Plan diya; malik ne kaha sab karo SIWAYE staff PIN/password ke.
+
+UI:
+- Neeche 4 tab: Hazri · Salary · Staff · Settings. Staff tab = sirf staff list + naya staff.
+- Settings: Rozana (Requests, Tabdeeli ki history, Advance/qarz khata) · Qawaid (Duty ka waqt, Salary ke qawaid, Check-In ki had aur
+  hidayat — teen alag sheets: cfg-duty / cfg-salary / cfg-checkin) · App (Update ke links, update check, "App ko halka karein" jab tak
+  purani selfies hon, App ki jaanch, password, logout). Purana action 'settings' ab arg ke mutabiq sheet kholta hai.
+Bugs theek:
+- saveConfig ab sirf form wale hisse badalta hai (pehle duty save karne se default salary ke qawaid reset ho sakte the).
+- timeField opts.guess 'in'/'out': AM/PM na dabaya ho to Gaya wala ghanta PM samjha jata hai (pehle 8 -> 8 AM).
+- closeCheckouts: aik fail ho to baqi jari; {done, failed} wapas.
+- deleteStaff staffSchedules bhi mitata hai.
+- Malik ki default duty data mein 9:15 am – 7:52 pm hai (purane minute) — malik ko 7:00 pm ticket se Save karna hai (code se nahi badla).
+Tez:
+- Selfie ab alag collection businesses/noor-traders/staffSelfies/{date_phone} {phone,date,selfie,at}; hazri record mein sirf hasSelfie:true.
+  Malik ki mahine wali list mein selfies nahi aati (pehle 2 mahine ki selfies = 10-20 MB). Selfie daba kar (data.getSelfie) ya
+  "Selfies dekhein" (data.selfiesFor(date), aik din) par load hoti hai.
+- data.migrateSelfies(): pichle 12 mahine ke records se selfie nikaal kar staffSelfies mein (batch 100, deleteField) — Settings > "App ko halka karein".
+- Purane rules par staffSelfies likhna mana ho to staff app selfie hazri record mein hi daal deti hai (fallback) — is liye app pehle, rules baad mein.
+Hifazat (firestore.rules — MALIK KO PUBLISH KARNE HAIN):
+- staffAttendance create (staff): id == date_phone, serverAt == request.time (serverTimestamp), selfie field mana.
+- staffAttendance update (staff): sirf checkOut* + outServerAt, sirf aik dafa (checkOut khali ho), outServerAt == request.time.
+  -> staff apna aane ka waqt baad mein nahi badal sakta.
+- serverGap(a): phone ke checkIn aur server waqt (serverAt) ka farq; >=10 min -> malik ki qataar/selfies mein surkh nishan
+  ("ghari ghalat ya internet band tha"). Sirf nishan, rok nahi (offline qataar wali sahi hazri bhi late pohanch sakti hai).
+- staffSelfies: staff sirf apni aaj wali (id == date_phone), sirf 'phone','date','selfie','at', 300 KB tak, jpeg data URL.
+- GHALTI: v204 mein ikhtiyari staff PIN (login par PIN field, staff form mein PIN, rules pinOk) chala gaya tha halanke malik ne mana kiya tha. v205 mein POORA hata diya (neeche dekhein).
+Naya:
+- "Selfies dekhein" (Hazri din view): profile tasveer vs selfie, waqt, faasla, GPS ±, server farq. Daba kar hazri khulti hai.
+- "Tabdeeli ki history" (Settings): staffAudit orderBy at desc limit 200, staff ke hisab se filter.
+- Excel (Hazri > Mahina aur Salary tab): xlsx.mini.min.js (SheetJS 0.18.5, sirf dabane par load). 3 sheets: Register, Hazri, Salary.
+- Tests 52 (npm test --test-force-exit).
+
+RULES PUBLISH KA TAREEQA (ahem):
+ 1) Pehle app upload karein aur SAB larkon ke phone par app khol kar v204 aane dein (purani v203 ya kam ki check-in naye rules par ruk jayegi).
+ 2) Settings > Update ke links > "firestore.rules file (GitHub)" -> sab copy.
+ 3) "Firebase — Firestore rules" -> purana sab mita kar paste -> Publish.
+ 4) Aik larke se Check-In/Check-Out karwa kar dekhein. Masla ho to purane rules (pichli zip ka firestore.rules) wapas paste kar dein.
+
+------------------------------------------------------------
+000. v203 — TEZ APP + UPDATE KE LINKS
+------------------------------------------------------------
+Malik: "GitHub aur Firebase rules ka link app mein lagao; login screen aur entries save bohat tez chahiye."
+
+- Staff tab > "Update ke links" (owner.linksSheet): GitHub ka pata website se khud banta hai (<user>.github.io/<repo>/ -> github.com/<user>/<repo>):
+  /upload/main, /actions, repo, blob/main/firestore.rules; Firebase console: firestore/rules, authentication/providers, data (projectId firebase-config se).
+- Tez kholna:
+  * boot.js ab Firebase SDK ko dynamic import se peeche load karta hai; startApp({ sdkPromise }). Jo login nahi (localStorage mein
+    'nt-hazri-session-v200' ya 'nt-hazri-owner-in' nahi), us ko login screen FORAN; Login dabaye to SDK ka intezar (await ready).
+    showLogin() dobara banne par likha hua number/password rakhta hai.
+  * index.html: preconnect (gstatic, firestore, identitytoolkit, securetoken) + modulepreload (SDK + apni files).
+  * sw.js: apni files stale-while-revalidate (phone se foran, peeche taza); Firebase SDK versioned URL cache-first ('nt-hazri-sdk-12.18.0').
+    Update ab bhi version.json se: nayi version -> cache mita kar reload (check ab 1.5 s par).
+- Tez save (data.fast): runTransaction ki jagah writeBatch; parhna phone ke state se (localGet). Screen foran badalti hai, server ka intezar
+  max 0.4 s; peeche state.pendingWrites -> header mein "N entry server par ja rahi". Server inkar kare -> toast "Entry server par save nahi hui".
+  Isteemal: saveStaff, deleteStaff, saveConfig, apply*All, toggleClosed, saveAttendance, deleteAttendance, markLeave, cancelLeave,
+  reviewRequest, addExtra, removeExtra. toggleFinal aur addPayment ab bhi runTransaction (paisa).
+  Staff: request 0.4 s, Check-In/Out 2.5 s (phir "phone mein mehfooz, pohanch jayegi").
+- Selfie 320px, jpeg 0.62 (pehle 420/0.7) -> malik ki mahine ki list halki.
+- Firestore rules mein koi tabdeeli NAHI. Tests 50 (app.fast.test.mjs naya).
+
+------------------------------------------------------------
+00. v202 — IS UPDATE MEIN KYA HUA
+------------------------------------------------------------
+Malik ki shikayat (screenshot): Android ka ghari wala time dialer (24 ghante, AM/PM nahi) mushkil hai. Isi ghalti se default duty
+"9:15 pm – 7:52 am" (21:15–07:52) save ho gayi thi -> "10h 37m duty" aur late ghalat. v201 ke baad hazri theek dikhne lagi (tareekh wala fix kaam kar gaya).
+Farmaish: aasan picker, AM/PM; default duty 9:15 am – 7:00 pm; Hazri list par "Gaya" tickets 7:00/7:30/8:00/8:30/9:00 pm aur "Aaya" tickets bhi.
+
+- ui.timeField(name, value, {label, tickets, optional, now}): chhupa input "HH:MM" (24h, Firebase ki shakal wahi) + Ghanta(1-12) select
+  + Minute(00-59) select + AM/PM buttons + tickets + "Abhi" + "Khali". Saare <input type="time"> hata diye (hazri durust, default duty,
+  staff ki alag duty, staff ki correction request). Click/change listeners ui.js ke andar (document par), app ke data-action se alag.
+  IN_TICKETS 9:00, 9:15, 9:30, 10:00 am; OUT_TICKETS 7:00, 7:30, 8:00, 8:30, 9:00 pm (+ us staff ki apni duty ka waqt).
+- Hazri qataar (owner.personRow): ghair hazir / abhi nahi aaya -> "Aaya:" tickets (quickPresent(phone,date,at)); kaam par / Check-Out baqi
+  -> "Gaya:" tickets; jin ka dono lag gaya -> "Waqt badlein" (ui.openTickets) se dono tickets. Action 'tix'. Purana "Hazir lagao" button aur
+  "Duty ke waqt par band karein" button tickets se badal gaye (Tawajju card ka sab-band-karo ab bhi hai).
+- saveAttendance: Gaya aane se pehle ho ya 16 ghante se zyada farq -> saaf error "AM / PM check karein".
+- DEFAULT_CONFIG shiftStart 09:15, shiftEnd 19:00 (sirf tab jab Firebase mein kuch save na ho). Malik ko Settings mein aik dafa
+  9:15 am / 7:00 pm save karna hai phir "Sab par default duty lagayein".
+- Raat ki duty ki warning: default ka aane ka waqt PM aur jane ka us se pehle -> Tawajju card + Settings mein surkh line.
+- Tests 46. Version v202.
+
+------------------------------------------------------------
+0. v201 — IS UPDATE MEIN KYA HUA (v200 ke baad)
+------------------------------------------------------------
+Malik ne v200 chala kar screenshot bheja: app pasand aayi, lekin aaj larkon ne hazri lagayi phir bhi SAB "Ghair hazir" dikh rahe the.
+Farmaish: har qataar mein aane/jane ka waqt aur duty ke ghante chips mein; sab par default duty; default salary jis se sab ka hisab ho;
+aur ye 9 mashwaray bhi (malik ne "sab kar do" kaha): 1 jaldi hazir, 2 dukaan band, 3 bhoola Check-Out band, 4 ghair hazri ki kati,
+5 late jurmana, 6 advance/qarz khata, 7 sab ki salary slips, 8 hafte ka khulasa, 9 staff ko ghante hue/baqi.
+
+"Sab Ghair hazir" — asal wajah malik ke data ke baghair PAKKI nahi mil saki (Firebase yahan se nahi khulta). Jo theek kiya:
+  a) pkDate() ab formatToParts se "YYYY-MM-DD" banata hai. Pehle Intl 'en-CA' par depend tha; kuch Android/ICU is par "9/21/2026" dete hain
+     -> aaj ki tareekh kisi record se nahi milti thi aur sab ghair hazir. (Sab se mumkin wajah.)
+  b) Malik ki hazri abhi load na hui ho ya Firebase error de to ab "Load ho rahi…" / surkh error line dikhti hai, "Ghair hazir" nahi.
+     Errors state.errors mein; data.problem() se.
+  c) Naya "Staff › App ki jaanch" sheet: app ki tareekh vs purane tareeqe ki tareekh, mahine ke records, aaj ke records (id/phone),
+     staff list mein na milne wale numbers, aakhri server sync, errors. Malik se is ka screenshot mangwana agar masla rahe.
+  d) Staff ki screen: "Malik tak pohanch gayi" / "Hazri abhi phone mein hai" (onSnapshot includeMetadataChanges + hasPendingWrites).
+  Doosri mumkin wajuhat (agar a) ke baad bhi ho): staff ke phone par purani v118 cached; hazri record ka phone staff list ke number se
+  mukhtalif (jaanch sheet dikhata hai); staff ka Check-In selfie/GPS par hi ruk gaya.
+
+Naye features:
+  - Qataar (Hazri tab): chips — Duty 9:00 am – 7:00 pm, "10h duty", Aaya, Gaya / Kaam par / Check-Out baqi, kaam ke ghante (+OT), "Malik ne lagayi".
+  - [1] "Hazir lagao" button ghair hazir/abhi-nahi-aaya par (aane ka waqt = duty shuru; pichla din ho to jane ka = duty khatam).
+        "Sab ghair hazir ko hazir lagao" bhi.  data.quickPresent()
+  - [2] "Aaj dukaan band (Eid/chutti)" — staffConfig.closedDays [{date,reason}], status 'closed' ("Dukaan band", register mein B). data.toggleClosed()
+  - [3] "Duty ke waqt par band karein" — bhoola Check-Out = shiftEnd (na ho to checkIn + duty ghante). Tawajju card sab ko band karta hai. data.closeCheckouts()
+  - Default duty: Settings (Staff › Default duty aur default salary): aane/jane ka waqt, riayat (grace), had. useDefaultShift=true wale
+    staff par waqt + grace dono default ke. "Sab par default duty lagayein". data.applyDefaultShiftAll()
+  - Default salary: staffConfig.salaryDefault {monthlySalary, workingDays, overtimeRate, mode, leavePaid, lateEvery, lateFineDays}.
+    Staff par salary.useDefault (true = default). Purane staff jin ki apni raqam likhi thi wo "apni salary" par rehte hain jab tak
+    "Sab par default salary lagayein" na dabayein (un ki purani raqam salary object mein mehfooz rehti hai). Default wale ke roz ke ghante = duty ke ghante.
+  - [4] mode 'days': mahana salary − (ghair hazir din + join se pehle ke din [+ chutti agar leavePaid=false]) × (salary/workingDays) + overtime.
+        mode 'hours': purana ghanton wala formula. Mode sab staff par lagta hai.
+  - [5] Late jurmana: har lateEvery late par lateFineDays din ki salary kati (0 = band).
+  - [6] Qarz: salaryExtras kind 'loan' {amount, perMonth, month=shuru}. Har mahine min(qist, baqi) kat-ta hai (core.loanCuts, deterministic).
+        "Advance / qarz ka khata" sheet (Salary tab aur Staff tab se).
+  - [7] "Sab ki slips": har staff ki alag PDF, aik sath WhatsApp share (navigator.share multiple files) ya aik aik download.
+  - [8] "Is hafte" card Hazri tab par (Peer se aaj tak): poori hazri kitno ki, sab se zyada late, har aik ka aaya/late/ghair/ghante. core.weekSummary
+  - [9] Staff ki Check-In card: duty chips, progress bar, "Xh hue | Yh baqi" ya "Duty poori, Zm overtime"; dukaan band ho to "Aaj dukaan band hai".
+  - PDF: din wale hisab, qarz qist, late jurmana; salary sheet mein "Katautiyan" (advance + qist + jurmana).
+  - Tests: 44 (8 naye). Version v201 (core.js, sw.js, version.json, index.html ?v=201).
+
+------------------------------------------------------------
+1. v200 MEIN KYA HUA (v118 -> v200)
+------------------------------------------------------------
+Malik ki farmaish: bugs khatam, login aksar fail hoti thi, sirf Hazri + Salary rakho baqi sab hatao,
+har staff par PDF button, aaj ki sab larkon ki hazri ki PDF, fonts theek, layout bilkul naya,
+smart search, "AI based" layout, user friendly.
+
+Purani app (v118) ko patch karne ke bajaye NAYI SAAF APP likhi gayi:
+- Purani index.html 927 KB thi, V84 se V118 tak ke patch aik doosre ke upar (127 versioned functions),
+  premium-panels.css 449 KB, fonts 5 jagah se set the (600 KB base64 Nastaliq bhi). Isi liye bugs khatam nahi hote the.
+- Nayi app ~200 KB apna code + 400 KB PDF library (sirf pehli PDF par load hoti hai).
+
+HATAYA GAYA (sirf screen se; Firebase ka data NAHI mitaya):
+  sales / hisab entries, stock, purchases, batches, tasks + task pictures + task points, notifications,
+  suggestions (staff ki raaye), dukaan kholne/band karne ki hidayat, Urdu awaaz se likhna, change-history screen.
+  -> Ye data Firestore mein waise hi para hai. Wapas chahiye ho to alag app mein dikhaya ja sakta hai.
+  -> Task points salary mein ab nahi jurte (taskPoints hamesha 0). Hazri ke points (autoScore/finalScore) × pointRate ab bhi jurte hain.
+
+LOGIN FAIL HONE KI WAJUHAT JO MILIN AUR THEEK KIN:
+  a) Malik "admin" likhta tha to app har dafa 3 emails try karti thi -> Firebase "too-many-requests" block.
+     Ab: jo email aik dafa chal jaye wo yaad (localStorage 'nt-hazri-owner-email') aur pehle wohi try hoti hai.
+  b) Staff login 3 qadam (anonymous sign-in -> session likhna -> account parhna); kamzor net par beech mein toot jata tha.
+     Ab: har qadam withRetry (3 koshish, sirf network wali ghaltiyon par).
+  c) App dobara kholne par kisi bhi chhoti network ghalti par login screen aa jati thi.
+     Ab: staff ka session localStorage mein (uid ke sath) -> foran andar, tasdeeq peeche. Network ghalti par bahar nahi nikalta;
+     sirf tab nikalta hai jab server bataye ke account band/delete hai.
+  d) "Username admin + password = phone" wala uljha tareeqa. Ab staff sirf mobile number likhta hai.
+  e) Saaf Roman-Urdu paigham har ghalti ke liye (auth.js -> loginErrorMessage).
+
+------------------------------------------------------------
+2. FILES (sab aik hi folder mein — malik GitHub web par flat upload karta hai)
+------------------------------------------------------------
+index.html        chhota shell + boot paigham (12 s mein na khule to "Dobara kholein")
+boot.js           asal Firebase SDK (gstatic 12.18.0) import kar ke startApp() ko deta hai
+app.js            login screen, malik/staff panel chalana, aik jagah se clicks/forms (data-action / data-form / data-change / data-input), update check
+core.js           sirf hisab: phone, Pakistan ka waqt, status, salary formula, smart search. DOM/Firebase nahi.
+auth.js           login controller (retry, cache, owner email yaad)
+data.js           Firestore listeners + saare likhne ke kaam
+owner.js          malik ki screens (Hazri / Salary / Staff + sheets)
+staffview.js      staff ki screens (Check-In/Out, meri hazri, meri salary, request)
+ui.js             icons, sheet (neeche se uthne wala panel), toast, selfie camera, GPS, PDF share
+pdf.js            4 PDF: rozana hazri, staff ka mahina (hazri + salary), mahine ka register, salary sheet
+styles.css        AKELA stylesheet
+sw.js             service worker (network pehle, cache 'nt-hazri-v200'; purane 'noor-traders-*' cache mitata hai)
+manifest.webmanifest, icon.svg, version.json
+archivo-latin.woff2, naskh-arabic-400.woff2, naskh-arabic-700.woff2   fonts (repo ke andar)
+jspdf.umd.min.js (2.5.2), jspdf.plugin.autotable.min.js (3.8.4)       PDF library
+firebase-config.js, firebase.json, firestore.indexes.json, pages.yml, .nojekyll, .gitignore   purani waisi hi; firestore.rules v204 mein badli
+xlsx.mini.min.js  Excel library (sirf dabane par)
+*.test.mjs, test-fake-sdk.mjs, package.json     tests (npm install; npm test)  — 72 tests pass
+LICENSES.txt, README.md
+
+PURANE REPO SE YE FILES DELETE KARNI HAIN (ab kaam ki nahi):
+  premium-panels.css, premium-workforce.css, staff-tasks.css, staff-tasks.js, staff-upgrades.js,
+  task-model.js, task-service.js, task-notifications.js, firebase-sync.js, auth-controller.js, build-inline.mjs,
+  attendance-live.test.mjs, dom.integration.mjs, fake-sdk.mjs, firestore.rules.mjs, notifications.test.mjs,
+  salary.test.mjs, shift-checkout.test.mjs, staff-upgrades.test.mjs, task-rules.mjs, tasks.test.mjs,
+  Noto-Nastaliq-Urdu-OFL.txt, FIREBASE_SETUP_URDU.md, LOCATION_REFERENCE.md, PREMIUM_REDESIGN_NOTE_URDU.txt,
+  SETUP_V84_URDU.md, SETUP_V85_URDU.md, START_HERE_URDU.md, UPDATE_ONLY.txt
+  (index.html, app.js, styles.css, sw.js, manifest, version.json, README.md, package.json, auth.test.mjs naye se badal jati hain)
+  Note: purani build-inline.mjs ab NAHI chalani — nayi app build ke baghair chalti hai.
+
+------------------------------------------------------------
+3. DATA MODEL (Firestore: businesses/noor-traders/...)  — purana hi, koi migration nahi
+------------------------------------------------------------
+staffAccounts/{phone}   name, role, address, phone, photo(dataURL), active, loginEnabled, joinDate(NAYA, ikhtiyari),
+                        salary{useDefault(v201),monthlySalary,dutyHours,workingDays,overtimeRate,pointRate,mealMode,mealRate,mealInSalary},
+                        salaryExtras[{id,month,kind:'bonus'|'advance'|'loan',amount,perMonth(loan),note,date,by,at}]
+staff/{phone}           purani copy — saveStaff ab bhi likhta hai (purani hisab app ke liye)
+settings/main           purani hisab app; salaryConfig.{phone} / salaryExtras.{phone} best-effort updateDoc se barabar rakhe jate hain
+staffSessions/{uid}     sirf {phone, createdAt} (rules isi par chalte hain)
+staffConfig/main        shiftStart, shiftEnd, grace, radius, instruction, scores{m10,m20,m30,m45,late},
+                        salaryDefault{monthlySalary,workingDays,overtimeRate,mode:'hours'|'days',leavePaid,lateEvery,lateFineDays}, closedDays[{date,reason}]  (v201)
+staffSchedules/{phone}  phone, useDefaultShift, shiftStart, shiftEnd, grace, weeklyOff[0-6, 0=Itwar]
+staffAttendance/{date_phone}  date, phone, name, checkIn, checkOut, checkInTs, checkOutTs, selfie, checkInLat/Lng/Accuracy/Distance,
+                        minutesLate, autoScore, finalScore, shiftStart, ownerNote, editedAt, editedBy, manual
+                        WAQT: naya record 24-ghante "HH:MM" mein likhta hai; purane "9:05 am" bhi parhe jate hain (core.parseTime). Screen par 12-ghante.
+staffRequests/{id}      staff sirf ye keys likh sakta hai: phone,kind,date,to,checkIn,checkOut,reason,status,createdAt,by (rules). kind leave|correction.
+                        Malik khud chutti lagaye to status:'approved' ke sath banta hai.
+staffPayroll/{month_phone}  state draft|final, snapshot (final ke waqt jama hisab), paid, payments[]
+staffAudit/{id}         har malik ki tabdeeli ka record (type, target, before, after, reason, by, at) — screen nahi, sirf record
+
+------------------------------------------------------------
+4. QAWAID (rules of logic)
+------------------------------------------------------------
+Status (core.statusFor): checkIn hai -> late agar (checkIn − shiftStart) > grace, warna present.
+  Checkin nahi -> manzoor chutti = leave; weeklyOff = off; AAJ shift+grace se pehle = waiting ("Abhi nahi aaya"); warna absent.
+  joinDate se pehle aur aane wale din = na (ginti mein nahi).
+Check-out baqi: shiftEnd guzar gaya aur checkOut khali (raat ki shift ke liye agla din). shiftEnd na ho to 24 ghante.
+Raat ki shift: openRecord() 16 ghante tak ka khula record deta hai, is liye aadhi raat ke baad bhi Check-Out lagta hai.
+Kaam ke minute: checkOut − checkIn, aadhi raat paar theek; 0 ya 16 ghante se zyada = ghalat, nahi gina jata.
+Salary (purani app wala formula, badla nahi):
+  hourly = monthlySalary / (dutyHours × workingDays)
+  har din: normal = min(kaam, dutyHours), overtime = baqi
+  final = normal×hourly + OT×(overtimeRate ya hourly) + points×pointRate + bonus + khana(agar mealInSalary) − advance
+  mahina "final" ho to snapshot hi dikhta hai (hazri badalne se nahi badalta). Final se pehle koi Check-Out baqi ho to final nahi hota.
+  Final mahine mein advance/bonus nahi likha/hataya ja sakta — pehle "Dobara kholein".
+  Payment sirf final ke baad, aur baqi se zyada nahi.
+Check-In: live selfie + GPS lazmi, dukaan (32.7979125, 73.956984375) se radius (default 200m) ke andar.
+  Server 12 s mein jawab na de to "phone mein mehfooz, signal aate hi jayegi" (Firestore persistent cache).
+
+------------------------------------------------------------
+5. "SMART / AI" KE BAARE MEIN — IMAANDARI SE
+------------------------------------------------------------
+Ye cloud AI nahi hai, app ke andar ke qawaid (rules) hain, is liye internet ke baghair aur muft chalte hain:
+- Smart talash (core.parseQuery/smartSearch): naam (1-2 harf ki ghalti maaf), number, tareekh ("15 sep", "12/9", "kal", "aaj",
+  "is hafte", "pichle mahine", "december"), status ("late", "ghair hazir", "nahi aaya", "chutti"), "checkout baqi",
+  "salary baqi", "advance". Misal: "late is hafte", "ali pichle mahine".
+- "Tawajju chahiye" (owner.js attention): Check-Out baqi, jawab baqi requests, is hafte 3+ dafa late, pichle mahine ki salary final nahi (mahine ki 1-10 tareekh).
+- Qataarein khud tarteeb: Check-Out baqi > Late > abhi nahi aaya > ghair hazir > hazir > chutti.
+
+------------------------------------------------------------
+6. LAYOUT / DESIGN
+------------------------------------------------------------
+Roman Urdu UI, LTR. Rang: ink blue #1b2a4a, zameen #eef1f7; hara=hazir, narangi=late, surkh=ghair hazir, jamni=chutti.
+Pehchan: kaghaz wale hazri register jaisi lakeerein + surkh hashiya (margin line) + halki tirchi "stamp" status.
+Mobile: neeche 3 tab (Hazri / Salary / Staff); upar talash. Desktop (860px+): tab upar.
+Font: Archivo (Roman + ginti) + Noto Naskh Arabic (sirf Urdu lipi wale naamon ke liye). Doosra koi font nahi.
+PDF mein Urdu lipi wala matn tasveer bana kar lagta hai (jsPDF Urdu font nahi banata).
+
+------------------------------------------------------------
+7. UPLOAD KA TAREEQA (malik ke liye)
+------------------------------------------------------------
+1) App mein Staff > "Update ke links" > "GitHub — files upload karein" (ya repo > "Add file" > "Upload files") -> zip ke andar ki SAB files ek sath daal dein (folder nahi, sirf files) -> Commit.
+2) Upar wali list ki purani files delete karein (har file kholein -> ... -> Delete file).
+3) 1-2 minute baad app kholein; neeche/login par "v216" likha aaye. Staff ke phone par bhi v216 aana zaroori hai (purani na chal rahi ho).
+v204 se Firestore rules NAYE hain (upar 0000 dekhein) — app ke baad publish karne hain. Authentication mein "Anonymous" aur "Email/Password" dono ON rehne chahiye.
+
+------------------------------------------------------------
+8. KYA TEST HUA, KYA NAHI
+------------------------------------------------------------
+Hua: 72 automated tests (hisab, status, salary, talash, login ke saare raaste, aur poori app naqli Firebase + happy-dom par:
+  login -> hazri -> hazri durust -> request manzoor -> talash -> naya staff -> advance -> final -> payment -> staff check-in/out -> request).
+  4 PDF Node mein ban kar tasveer ki shakal mein dekhi gayin.
+Nahi hua (yahan mumkin nahi tha): asal Firebase/rules ke sath, asal phone ka camera aur GPS, asal browser mein dekhna (layout).
+  -> Pehli dafa chalate waqt in cheezon ko dhyan se dekhein.
+
+------------------------------------------------------------
+9. AGLE KAAM / KHULE SAWAL
+------------------------------------------------------------
+- Malik ka pehla message "...user friendly bi ho or es ka" par kat gaya tha; baqi hissa abhi maloom nahi.
+- v201 ke baad: malik se poochna ke hazri theek dikh rahi hai; na ho to "App ki jaanch" ka screenshot.
+- Staff ka number badalna: abhi nahi hota (naya staff banao, purana band karo). Chahiye ho to hazri records move karne wala feature banana hoga.

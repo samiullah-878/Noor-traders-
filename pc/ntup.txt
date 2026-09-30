@@ -1,0 +1,53 @@
+# ntup.txt — NT Camera ko ABHI naya program dilana (6 ghante ka intezar nahi). PC par PowerShell mein AIK command:
+#   irm https://samiullah-878.github.io/nt-traders-/ntup.txt|iex
+# Kya karta hai: GitHub Pages se taaza ntcam.py utarta hai, purana chalta program band kar ke dobara shuru karta hai, version dikhata hai.
+# Agar version wahi purana dikhe to GitHub Pages abhi taaza nahi hua — 2 minute baad dobara wahi command.
+$ErrorActionPreference = 'Continue'
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch {}
+$d = 'C:\NTCam'
+if (-not (Test-Path "$d\ntcam.py")) { Write-Host '  [!!] C:\NTCam mein program nahi — pehle installer chalayein: irm https://samiullah-878.github.io/nt-traders-/ntcam.txt|iex' -ForegroundColor Red; return }
+$b = 'https://samiullah-878.github.io/nt-traders-/'
+if (Test-Path "$d\base.txt") { $t = (Get-Content "$d\base.txt" -Raw).Trim(); if ($t) { $b = $t } }
+if (-not $b.EndsWith('/')) { $b = $b + '/' }
+$ver = { param($f) $m = Select-String -Path $f -Pattern "^VERSION\s*=\s*'([^']+)'" | Select-Object -First 1; if ($m) { $m.Matches[0].Groups[1].Value } else { '?' } }
+$old = & $ver "$d\ntcam.py"
+Write-Host ''
+Write-Host "  NT CAMERA update — abhi v$old chal raha hai" -ForegroundColor Cyan
+try {
+  Invoke-WebRequest ($b + 'ntcam.py?t=' + [DateTime]::Now.Ticks) -OutFile "$d\ntcam_new.py" -UseBasicParsing -ErrorAction Stop
+} catch { Write-Host "  [!!] GitHub se nahi mila: $($_.Exception.Message)" -ForegroundColor Red; return }
+$new = & $ver "$d\ntcam_new.py"
+if ($new -eq '?') { Write-Host '  [!!] Utri hui file theek nahi (VERSION nahi mila) — purana hi rehne diya.' -ForegroundColor Red; Remove-Item "$d\ntcam_new.py" -ErrorAction SilentlyContinue; return }
+$py = $null
+foreach ($c in @('py', 'python')) { try { $p = (& $c -c 'import sys;print(sys.executable)' 2>$null | Select-Object -First 1); if ($p -and (Test-Path $p)) { $py = $p.Trim(); break } } catch {} }
+if ($py) { & $py -m py_compile "$d\ntcam_new.py" 2>$null; if ($LASTEXITCODE -ne 0) { Write-Host '  [!!] Nayi file mein ghalti (compile) — purana hi rehne diya.' -ForegroundColor Red; Remove-Item "$d\ntcam_new.py" -ErrorAction SilentlyContinue; return } }
+Move-Item "$d\ntcam_new.py" "$d\ntcam.py" -Force
+Write-Host "  Program: v$old -> v$new"
+Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*ntcam.py*' } | ForEach-Object { try { Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop } catch {} }
+Start-Sleep -Seconds 2
+$lnk = Join-Path ([Environment]::GetFolderPath('Startup')) 'NT Camera.lnk'
+if (Test-Path $lnk) { Start-Process $lnk } else {
+  $pyw = if ($py) { Join-Path (Split-Path $py) 'pythonw.exe' } else { 'pythonw' }
+  Start-Process $pyw -ArgumentList "`"$d\ntcam.py`" run" -WorkingDirectory $d -WindowStyle Hidden
+}
+# v1.9.1: CHOWKIDAR — Windows task har 5 minute: NT Camera band ho ya heartbeat 6 minute purana (jama hua) to dobara shuru.
+if ((Get-Content "$d\ntcam.py" -Raw) -match 'HB_FILE') {
+  $ws = @'
+$d = 'C:\NTCam'; $hb = "$d\heartbeat.txt"; $lnk = Join-Path ([Environment]::GetFolderPath('Startup')) 'NT Camera.lnk'
+$p = Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like '*ntcam.py*' }
+$stale = (Test-Path $hb) -and (((Get-Date) - (Get-Item $hb).LastWriteTime).TotalMinutes -gt 6)
+if (-not $p -or $stale) {
+  $why = if ($p) { 'jama hua (heartbeat 6 min purana)' } else { 'band tha' }
+  if ($p) { $p | ForEach-Object { try { Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop } catch {} }; Start-Sleep -Seconds 3 }
+  Add-Content "$d\ntcam.log" ("{0} chowkidar: NT Camera {1} - dobara shuru" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $why)
+  if (Test-Path $lnk) { Start-Process $lnk } else { Start-Process 'pythonw' -ArgumentList "`"$d\ntcam.py`" run" -WorkingDirectory $d -WindowStyle Hidden }
+}
+'@
+  Set-Content "$d\ntwatch.ps1" $ws -Encoding UTF8
+  try {
+    schtasks /Create /F /SC MINUTE /MO 5 /TN "NT Camera chowkidar" /TR "powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$d\ntwatch.ps1`"" | Out-Null
+    Write-Host '  [OK] Chowkidar laga: har 5 minute dekhega, band ya jama ho to khud dobara shuru.' -ForegroundColor Green
+  } catch { Write-Host "  [..] Chowkidar nahi laga: $($_.Exception.Message)" -ForegroundColor Yellow }
+}
+if ($new -eq $old) { Write-Host "  [..] GitHub par abhi wahi v$old hai — zip upload ke 2-3 minute baad yahi command dobara chalayein." -ForegroundColor Yellow }
+else { Write-Host "  [OK] NT Camera v$new chal raha hai. App mein Settings > Cameras > PC card par 'Voucher: ...' line 1-2 minute mein aa jayegi." -ForegroundColor Green }
