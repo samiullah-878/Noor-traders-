@@ -1,0 +1,12 @@
+Blue Khata v2.38.0 — 🤖 BILL KI JAANCH: POORI SCREEN, BINA SCROLL
+INSTALL: GitHub bahar wala folder -> ZIP ki files -> 2-3 min ruk kar app kholein -> ↻ Sync -> 2.38.0. Rules NAHI badlin.
+ - Jaanch (List / Card / Khulasa) ab kinare se kinare poori screen par — peeche ki screen nahi jhaankti.
+ - CARD: bill ki tasveer ki patti UPAR CHIPKI rehti hai (scroll par bhi). Item ka naam + jor ek line; "bill se mila",
+   "naam yaad", "stock ka pehra" CHHOTE chips; bill ki line chhoti. Tadad / khareed / rates ke khane kam unche,
+   "pehle ..." bohat chhota. NAFA chips chhote. Neeche ek qataar: ‹  ✏️  ✕  ☰  aur bara "✓ Theek — agla ›".
+   Aam phone par tasveer + item + tadad + rates + nafa — ek hi screen par.
+ - LIST: "Ginti kya hoti hai?" ke teeno button (PCS / CTN / Dono) poore, katte nahi. Item ka naam 2 line mein.
+   "Jaanch shuru" neeche tika. Tasveer ka supplier khata mein na mile to "🔍 Supplier dhoondein: <naam>" — tap = jaanch
+   band ho kar isi naam se supplier list khulti hai.
+ - Hisaab / jaanch ka tareeqa bilkul nahi badla — sirf shakal.
+BADLI HUI FILES: purchase.js, style.css + version.

@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.37.2';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold } from './smart-search.js?v=2.37.2';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.38.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold } from './smart-search.js?v=2.38.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -196,6 +196,12 @@ function paintChips(ix) {
   for (const idp of ['ppRc', 'jcRc']) { const b = document.getElementById(idp + ix); if (b) b.outerHTML = rateChipsHTML(l, ix, idp); }
 }
 const pctChipsHTML = () => `<div class="mchips pct-chips" id="ppPctChips"><small>+% jaldi:</small>${PCT_CHIPS.map(p => `<button type="button" class="rc${Number(pct) === p ? ' on' : ''}" data-pp-pctc="${p}">${p}%</button>`).join('')}</div>`;
+function keepScan(el) {   // scan box upar nazar rahe; nayi line uske neeche — dono dikhein to screen na hile
+  const sb = document.getElementById('search'); if (!el || !sb) return;
+  const r = el.getBoundingClientRect(), s = sb.getBoundingClientRect(), vh = window.innerHeight || 800;
+  if (r.top >= 0 && r.bottom <= vh && s.top >= 0 && s.bottom <= vh) return;
+  window.scrollTo({ top: Math.max(0, (window.scrollY || 0) + s.top - 8), behavior: 'smooth' });
+}
 let ppAddAt = 0, ppScrolled = 0;
 function addItem(it, again = true) {
   ppAddAt = Date.now();
@@ -260,8 +266,9 @@ const todayLabel = () => { const w = today.filter(p => p.status === 'new' || p.s
 function dlg(title, html) {
   const d = $('dialog'); if (!d) return;
   if (!d._ppClose) { d._ppClose = true; d.addEventListener('close', () => vTmpEnd()); }   // v2.19
-  d.classList.remove('search-dialog', 'full-dialog');
+  d.classList.remove('search-dialog', 'full-dialog', 'jaanch-dlg');
   $('dialogTitle').textContent = title; $('dialogBody').innerHTML = html;
+  if (String(title).startsWith('🤖')) d.classList.add('full-dialog', 'jaanch-dlg');   // v2.38: jaanch kinare se kinare
   if (!d.open) d.showModal();
 }
 // v1.94: har app purchase par kaam — ✕ par Dobara bhejo / Screen par kholo, ✓ par Edit, ⏳ par Cancel
@@ -489,7 +496,7 @@ export function renderPP() {
   const pinned = billPin && billPics.length ? `<div class="pp-billbar" data-zoom="${billZoom}"><div class="pp-billwrap"><img src="${billPics[Math.min(billIx, billPics.length - 1)]}" alt="bill"></div><div class="pp-billacts"><button type="button" data-pp-zoom="-1">−</button><button type="button" data-pp-zoom="1">+</button>${billPics.length > 1 ? `<button type="button" data-pp-nextpic="1">${billIx + 1}/${billPics.length} ›</button>` : ''}<button type="button" data-pp-pic="${billIx}">⤢ Poori screen</button><button type="button" data-pp-pin="1">✕</button></div></div>` : '';
   $('list').innerHTML = pinned + camRow + found + (cart.length ? bar + `<div class="sale-cart">${rows}</div>` + foot :
     (q ? '' : `<div class="empty"><strong>Naya purchase bill</strong><p>Upar supplier chunein, phir item ka naam likhein ya 📷 se scan karein.</p></div>`));
-  if (Date.now() - ppAddAt < 1800 && ppAddAt !== ppScrolled) { ppScrolled = ppAddAt; requestAnimationFrame(() => { const el = document.querySelector('.pp-line.fresh'); if (el) el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }); }   // v2.37.2: nayi line par screen khud
+  if (Date.now() - ppAddAt < 1800 && ppAddAt !== ppScrolled) { ppScrolled = ppAddAt; requestAnimationFrame(() => keepScan(document.querySelector('.pp-line.fresh'))); }   // scan box upar rahe (nayi line us ke neeche)
   $('actions').innerHTML = cart.length ? `<button class="give" data-pp-clear="1">✕ Naya bill</button><button data-pp-camera="1" title="Barcode scan">📷</button>
     <button class="got" data-pp-save="1"${saving ? ' disabled' : ''}>${saving ? 'Bhej raha hoon…' : saveLabel(total)}</button>` : '';
 }
@@ -673,7 +680,7 @@ document.addEventListener('keydown', e => {
 });
 function focusLine(k) {
   setTimeout(() => { const i = cart.findIndex(l => l.k === k); const box = document.querySelector(`[data-pp-ctn="${i}"]`) || document.querySelector(`[data-pp-pcs="${i}"]`);
-    if (box) { box.scrollIntoView({ block: 'center' }); } }, 60);
+    if (box) keepScan(box.closest('.pp-line') || box); }, 60);
 }
 document.addEventListener('click', async e => {
   if (!document.querySelector('[data-pp-root]')) return;
@@ -759,11 +766,12 @@ document.addEventListener('click', async e => {
     return; }
   const ba = e.target.closest?.('[data-pp-retry],[data-pp-reopen],[data-pp-editdone],[data-pp-cancel]');
   if (ba) { const d = ba.dataset; billAct(d.ppRetry ? 'retry' : d.ppReopen ? 'reopen' : d.ppEditdone ? 'editdone' : 'cancel', d.ppRetry || d.ppReopen || d.ppEditdone || d.ppCancel, ba); return; }
-  const t = e.target.closest?.('[data-pp-sup],[data-pp-sup-change],[data-pp-add],[data-pp-del],[data-pp-clear],[data-pp-save],[data-pp-today],[data-pp-camera],[data-pp-old],[data-pp-w],[data-pp-wall],[data-pp-wall-custom],[data-pp-old-all],[data-pp-copy]');
+  const t = e.target.closest?.('[data-pp-sup],[data-pp-sup-change],[data-pp-supfind],[data-pp-add],[data-pp-del],[data-pp-clear],[data-pp-save],[data-pp-today],[data-pp-camera],[data-pp-old],[data-pp-w],[data-pp-wall],[data-pp-wall-custom],[data-pp-old-all],[data-pp-copy]');
   if (!t) return;
   const d = t.dataset;
   if (d.ppSup) { supplier = d.ppSup; notePartyPick(supplier); supOpen = false; supQuery = ''; keepDraft(); rerender(); return; }
   if (d.ppSupChange != null) { supOpen = true; rerender(); setTimeout(() => $('ppSupQ')?.focus(), 50); return; }
+  if (d.ppSupfind != null) { supOpen = true; supQuery = String(d.ppSupfind || '').split(/\s+/).slice(0, 2).join(' '); try { $('dialog')?.close(); } catch {} rerender(); setTimeout(() => { const q = $('ppSupQ'); if (q) { q.value = supQuery; q.focus(); q.dispatchEvent(new Event('input', { bubbles: true })); } }, 60); return; }
   if (d.ppAdd) { const it = stock().items.find(r => String(r.id) === d.ppAdd); if (it) { const r = addItem(it); const s = $('search'); if (s) s.value = ''; notice(r.again ? `+1 · ${it.name}` : `✓ ${it.name}`); rerender(); focusLine(r.line.k); } return; }
   if (d.ppDel != null) { cart.splice(Number(d.ppDel), 1); keepDraft(); rerender(); return; }
   if (d.ppClear) { if (!confirm(edit ? 'Edit chhor kar screen saaf kar dein? (POS ka bill waisa hi rahega)' : 'Yeh purchase bill saaf kar dein?')) return; cart = []; note = ''; invoiceNo = ''; edit = null; day = ''; xtra = 0; xtraName = ''; pct = 0; gallaMode = 'none'; gallaOwn = 0; setBillPics([]); billPin = false; aiRows = null; aiBillInfo = null; jView = 'list'; jIx = -1; keepDraft(); rerender(); return; }
@@ -1227,7 +1235,7 @@ function aiRender() {
     </div>
     ${jColTotals()}
     ${fmtLine}
-    ${sup ? `<p><button type="button" data-pp-sup="${esc(sup.id)}">👤 Supplier lagayein: ${esc(sup.name)}</button> <small>(tasveer par: ${esc(aiBillInfo.supplier)})</small></p>` : aiBillInfo?.supplier && !supplier ? `<p class="stat-note">Tasveer par supplier: <b>${esc(aiBillInfo.supplier)}</b> — upar se khud chunein.</p>` : ''}
+    ${sup ? `<p><button type="button" data-pp-sup="${esc(sup.id)}">👤 Supplier lagayein: ${esc(sup.name)}</button> <small>(tasveer par: ${esc(aiBillInfo.supplier)})</small></p>` : aiBillInfo?.supplier && !supplier ? `<p class="jz-supfind"><button type="button" data-pp-supfind="${esc(aiBillInfo.supplier)}">🔍 Supplier dhoondein: <b>${esc(aiBillInfo.supplier)}</b></button><small>khata na mila — tap karein, isi naam se list khulegi</small></p>` : ''}
     <div class="jz-acts">
       ${k.g && aiRows.some(r => !r.skip && !r.done && r.j?.conf === 'g') ? `<button type="button" class="got" data-pp-jgreen="1">✓ ${aiRows.filter(r => !r.skip && !r.done && r.j?.conf === 'g').length} hari pakki karein</button>` : ''}
       ${k.openNotG || k.open ? `<button type="button" class="got" data-pp-jstart="1">Jaanch shuru (${k.openNotG || k.open}) ›</button>` : `<button type="button" class="got" data-pp-jsum="1">Khulasa ›</button>`}
@@ -1324,10 +1332,10 @@ function jCard(i) {
       `<div class="jc-why"><small>🔴 Humare stock mein ye item nahi mila</small></div>`}
     </div>
     <div class="jc-acts jc-sticky">
-      <div class="jc-okrow"><button type="button" class="jc-prev" data-pp-jprev="1"${jHasPrev() ? '' : ' disabled'}>‹ Pichhla</button>${ln ? '<button type="button" class="got jc-ok" data-pp-jok="1">✓ Theek — agla ›</button>' : ''}</div>
-      <button type="button" data-pp-pick="${i}">✏️ ${ln ? 'Item' : 'Item chunein'}</button>
-      <button type="button" class="danger" data-pp-jskip="1">✕ Chhor</button>
-      <button type="button" data-pp-jlist="1">‹ List</button>
+      <div class="jc-okrow"><button type="button" class="jc-prev" data-pp-jprev="1"${jHasPrev() ? '' : ' disabled'} title="Pichhla" aria-label="Pichhla">‹</button>${ln ? '<button type="button" class="got jc-ok" data-pp-jok="1">✓ Theek — agla ›</button>' : ''}</div>
+      <button type="button" class="jc-mini" data-pp-pick="${i}" title="Item badlein" aria-label="Item badlein">${ln ? '✏️' : '✏️ Item chunein'}</button>
+      <button type="button" class="danger jc-mini" data-pp-jskip="1" title="Chhor" aria-label="Chhor">✕</button>
+      <button type="button" class="jc-mini" data-pp-jlist="1" title="List" aria-label="List">☰</button>
     </div>
     <small class="stat-note jc-hint">Ungli daayein khainchein = ✓ agla · baayein = pichhla</small>`);
   const d = $('dialog'); if (d) d.classList.add('full-dialog');

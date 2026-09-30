@@ -1378,3 +1378,66 @@ button.bq-card:active{transform:scale(.98)}
 .reg-items div{padding:1px 0;border-bottom:1px dashed #e3e9f3;font-size:12px}
 .reg-items div:last-child{border-bottom:0}
 .reg-items b{white-space:nowrap}
+
+/* ===== v2.38: 🤖 BILL KI JAANCH — kinare se kinare, bina scroll (tasveer upar tiki, sab chhota) ===== */
+dialog.jaanch-dlg{position:fixed;left:0!important;right:0!important;top:0!important;bottom:0!important;width:auto!important;max-width:none!important;height:auto!important;max-height:none!important;margin:0!important;border-radius:0!important}
+.jaanch-dlg header,.jaanch-dlg .dialog-head{padding:8px 12px!important;min-height:0}
+.jaanch-dlg #dialogTitle{font-size:18px!important}
+.jaanch-dlg #dialogBody{max-height:calc(100dvh - 54px)!important;padding:8px 10px!important}
+/* tabs */
+.jaanch-dlg .jz-tabs,.jaanch-dlg .j-tabs{margin:0 0 6px!important}
+.jaanch-dlg .jz-tabs button,.jaanch-dlg .j-tabs button{min-height:36px!important;font-size:14px!important;padding:4px 8px!important}
+/* tasveer ki patti — upar chipki */
+.jaanch-dlg .jc-patti{position:sticky;top:-8px;z-index:6;max-height:19dvh;height:19dvh;margin:0 0 6px!important;border-radius:12px;box-shadow:0 6px 14px -8px #0006}
+/* item card — peeli jagah chhoti */
+.jaanch-dlg .jc-card{padding:8px 10px!important;margin:0!important;border-radius:14px!important}
+.jaanch-dlg .jc-top{font-size:14.5px!important;gap:8px;margin:0 0 3px!important;align-items:center}
+.jaanch-dlg .jc-top b{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jaanch-dlg .jc-top span{font-size:15px;font-weight:900;white-space:nowrap}
+.jaanch-dlg .jc-milan,.jaanch-dlg #jcLearn>*,.jaanch-dlg .jc-why small{display:inline-block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle;font-size:11.5px!important;line-height:1.3!important;padding:2px 8px!important;margin:0 4px 3px 0!important;border-radius:999px!important;min-height:0!important}
+.jaanch-dlg .jc-milan{background:#eef7f1;color:#17703c;font-weight:800}
+.jaanch-dlg #jcLearn{display:inline}
+.jaanch-dlg #jcLearn>*{background:#e9f6ee;border:0!important}
+.jaanch-dlg .jc-why{display:inline;padding:0!important;margin:0!important;background:none!important}
+.jaanch-dlg .jc-why small{background:#f4f6fa;color:#41536f}
+.jaanch-dlg .jc-bill{font-size:11px!important;color:#6b7c93;margin:1px 0 4px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* PCS / CTN + khane */
+.jaanch-dlg .jc-units{margin:0 0 4px!important;gap:6px}
+.jaanch-dlg .jc-modes button,.jaanch-dlg .jc-units button{min-height:30px!important;padding:3px 12px!important;font-size:13px!important}
+.jaanch-dlg .jc-fix button{min-height:32px!important;font-size:12.5px!important;padding:3px 10px!important}
+.jaanch-dlg .jc-g4{gap:5px!important;margin-bottom:2px!important}
+.jaanch-dlg .jc-f span{font-size:10.5px!important;margin:0 0 1px!important}
+.jaanch-dlg .jc-f input{min-height:0!important;height:38px!important;font-size:16px!important;padding:2px 4px!important;border-radius:10px!important;text-align:center}
+.jaanch-dlg .jc-ph{font-size:9.5px!important;line-height:1.1!important;margin:1px 0 0!important}
+.jaanch-dlg .jc-sub{font-size:10.5px!important;margin:2px 0 3px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* nafa chips — chhote, ek qataar har rate */
+.jaanch-dlg .rate-chips{padding:5px 7px!important;margin:4px 0 2px!important;border-radius:12px!important;gap:3px!important}
+.jaanch-dlg .rc-head{font-size:9.5px!important;margin:0!important}
+.jaanch-dlg .rc-head button{min-height:24px!important;width:26px!important;height:24px!important;font-size:12px!important;padding:0!important}
+.jaanch-dlg .rc-row{gap:4px!important;margin:0!important;align-items:center}
+.jaanch-dlg .rc-lab{font-size:11px!important;min-width:58px!important;line-height:1.1}
+.jaanch-dlg .rc-lab *{font-size:10px!important}
+.jaanch-dlg .rc-set{gap:4px!important}
+.jaanch-dlg .rc-set button,.jaanch-dlg .rate-chips .rc{min-height:26px!important;height:26px!important;padding:0 8px!important;font-size:12px!important;border-radius:999px!important}
+.jaanch-dlg .rc-old{font-size:9.5px!important}
+.jaanch-dlg .jc-card>.stat-note{font-size:10.5px!important;margin:2px 0 0!important}
+/* neeche buttons — ek qataar, tike */
+.jaanch-dlg .jc-sticky{bottom:-8px!important;padding:6px 0 8px!important}
+.jaanch-dlg .jc-acts{display:flex!important;flex-wrap:nowrap!important;gap:6px!important;margin:6px 0 0!important;align-items:stretch}
+.jaanch-dlg .jc-okrow{display:contents!important}
+.jaanch-dlg .jc-acts button{min-height:46px!important;padding:4px 10px!important;font-size:16px!important;border-radius:14px!important}
+.jaanch-dlg .jc-prev{order:1;flex:0 0 46px}
+.jaanch-dlg .jc-mini{order:2;flex:0 0 auto;min-width:46px}
+.jaanch-dlg .jc-ok{order:3;flex:1 1 auto;font-size:17px!important}
+.jaanch-dlg .jc-hint{display:none!important}
+/* list wali screen */
+.jaanch-dlg .pp-ask .mchips{flex-wrap:wrap!important;overflow:visible!important}
+.jaanch-dlg .pp-ask .mchips button{flex:1 1 30%;min-height:44px!important;white-space:normal!important}
+.jaanch-dlg .jz-head{padding:8px 10px!important}
+.jaanch-dlg .jz-list>*{padding:8px 10px!important}
+.jaanch-dlg .jz-list b{white-space:normal!important;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.jaanch-dlg .jz-acts{position:sticky;bottom:-8px;z-index:4;background:#fff;padding:6px 0 8px;margin:6px 0!important;box-shadow:0 -8px 12px -10px rgba(15,23,42,.18)}
+.jz-supfind{display:grid;gap:3px;margin:6px 0}
+.jz-supfind button{min-height:44px;border-radius:14px;font-size:14px;text-align:left;padding:6px 12px;background:#fff8ea;border:1.5px solid #f1d59a;color:#6b4705}
+.jz-supfind small{color:#6b7c93;font-size:11.5px}
+.jaanch-dlg #close{min-height:0!important;width:40px!important;height:36px!important;font-size:18px!important}

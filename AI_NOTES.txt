@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.37.2, 2026-09-29 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.38.0, 2026-10-01 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1897,3 +1897,67 @@ Malik: mulazim ki app bohat late khulti. Wajah: tryAutoLogin har boot par contro
   se delete. Rules 2.17: staff party update rev == resource.data.get('rev', 0) + 1. (cloud.edit tx pehle se rev||0.)
 * sale.js / purchase.js: list paint ke baad (multi-line statement ke BAAD) fresh line scrollIntoView center, har add par ek dafa
   (lastScrolled / ppScrolled). Test (happy-dom): search -> add -> scroll hua.
+
+==================== 2026-09-30 — PC sync-bills v4.2 (purchase lines ki tarteeb) · manifest 2026-09-30.1 ====================
+Malik: purchase bill jis tarteeb se add karein PC par bhi wohi. App -> PC pehle se cart (push) tarteeb, purchase-post
+insertLines sequential. Masla: sync-bills Q_LINES mein ORDER BY nahi tha -> posBills ki lines SQL ki marzi se -> "Bill dekhein"
+/ EDIT par ulti-pulti tarteeb app mein aati aur EDIT par wohi POS mein chali jati. Fix: ORDER BY d.PurchaseID, d.PurchaseDetailID.
+Bill hash mein lines ki tarteeb shamil -> sab window ke bill ek dafa dobara likhe jayenge (sahi tarteeb).
+
+==================== 2026-09-30 — BUNDLE / CDN: NAHI (malik: "rehna do") ====================
+* CDN: GitHub Pages (Fastly) + gstatic pehle se CDN; SW phone se files deta hai; dheemapan login + Firestore data tha -> CDN bekaar.
+* esbuild bundle aazmaya: 29 files -> 954 KB (code pehle se compact, Urdu likhai) — faida ~0.1-0.3s, stale-bundle ka khatra -> NAHI bheja.
+* Stock halka karna: malik ne abhi mana kiya (pehle "📊 Data ka size" + mulazim ⏱ dekhna tha).
+* auth-controller: v2.37 wala resume(role,scope) purane resume() (no-arg, onAuth restore ke liye, kahin call nahi) se TAKRATA tha
+  (duplicate key) -> ab resumeLogin(role, scope); app.js tryAutoLogin usi ko bulata hai. Ye agli app update mein jayega.
+
+==================== v2.37.3 (2026-09-30) — STAFF PASSWORD 6 · GALLA PASSWORD ====================
+* cloud.js setStaffPassword: min 10 -> 6; aasaan block (/^(.)\1+$/, 123456, 654321, 012345, 123123, 112233, 121212, 1234567..,
+  abcdef, password); scope list mein 'galla' (pehle nahi tha -> galla password "Access select karein" deta tha).
+* app.js staff password form minlength 10 -> 6 + placeholder. auth-controller resumeLogin rename (upar note) bhi isi mein.
+* Test (node): 482915 sale/galla OK; 12345, 123456, 111111 rad; ghee2026 OK; ghalat scope rad.
+
+==================== v2.37.4 (2026-09-30) — STAFF KHATA EDIT (client guard) ====================
+* save() ka non-owner guard existing record par sirf reminder/purchase/cashCustody/closing/delete/aaj ki entry chhorta tha ->
+  party/expenseAccount edit (Dasti toggle, naam/phone, hasPhoto) "Sirf malik edit kar sakta hai" -> ab exception:
+  existing party/expenseAccount + data.type same + canEditAccount() (owner || Full staff && din khula). Rules 2.17 pehle se.
+
+==================== 2026-09-30 — GITHUB-UPLOAD.bat (PC se GitHub par khud) ====================
+Malik: bat file se GitHub par auto upload. pc/github-upload.ps1 (source) — GITHUB-UPLOAD.bat mein base64 (3000 harf ki
+lines) -> C:\khata-sync\github-upload.ps1 -> powershell -ExecutionPolicy Bypass. Kaam: token C:\khata-sync\github-token.txt
+(pehli dafa Read-Host, fine-grained PAT: sirf Noor-traders-, Contents RW); Downloads ki sab se nayi Blue-Khata*.zip /
+GitHub-pc-folder*.zip; Y/N; Git Data API: ref -> base tree -> blobs -> tree(base_tree) -> commit -> PATCH ref (EK commit,
+adhoora upload nahi). pc zip -> pc/<name>, warna root. Skip: local-config.json, firebase-key.json, github-token.txt.
+App zip: github.io version.json poll (10s x 40) == zip version. rulesChanged true + firestore.rules -> cloud-functions mein
+copy + firebase.json (functions + firestore.rules) -> firebase deploy --only firestore:rules (fail par login --reauth).
+PS 5.1: User-Agent / Accept -Headers mein NAHI (error) — -UserAgent param. Test: pwsh 7 parse OK + mock GitHub API dry-run.
+RULES-PUBLISH.bat: sirf rules (GitHub Pages se firestore.rules -> deploy).
+* github-upload.ps1 v2: pehli asal chalai mein Downloads ki sab se nayi "Blue-Khata*" 27 Sep ki v2.24.0 thi (aaj ki files
+  "files (7).zip" naam se aayin) -> v2.37 par purani chadh jati (403 ne bachaya). Ab: app ZIP ka version github.io live
+  version se <= ho to RUKO ("PURANI" likhe baghair nahi); 24 ghante se purani ZIP par warning. Token Read-Host -AsSecureString
+  (screen par nahi). 403 = token Contents Read-only -> saaf hidayat. Test: mock — purani v2.24 ruki, nayi v2.37.5 chadhi.
+
+==================== v2.37.5 (2026-09-30) — SCAN BOX UPAR RAHE ====================
+* v2.37.2 wala scrollIntoView center (sale + purchase) aur purchase focusLine center -> scan box (#search) bahar chala jata.
+  Ab keepScan(el): #search aur nayi line dono viewport mein hon to kuch nahi; warna window.scrollTo(#search ke upar -8px).
+  DHYAN: version bump regex comments mein bhi number badal deta hai — marker ke liye version wale comment par bharosa NA karo.
+* 2026-09-30 PURCHASE-DOCTOR.bat (PC helper): malik — app purchase POS mein nahi gayi. App side test (happy-dom) theek:
+  supplier -> item -> ctn/rate -> saveAppPurchase (status new). PC jaanch script (pc/purchase-doctor.js source, bat mein base64):
+  files, lock 47821 (chal rahi?), SQL TOP 1 Purchase, appPurchases 3 din (status ginti, 2 min se atke, aakhri 6 + GALTI),
+  purchase-log.txt aakhri 12 lines; S = purchase-auto.bat chalu.
+
+==================== 2026-09-30 — PC: UNAUTHENTICATED par khud restart (manifest 2026-09-30.2) ====================
+PURCHASE-DOCTOR ne dikhaya: purchase-log "Masla: 16 UNAUTHENTICATED: Request had invalid authentication credentials" (5:58,
+6:01 PM) — listener zinda, magar transaction/write fail; later() sirf log karta -> naye bill NEW par atke. Doctor ki nayi process
+usi firebase-key se parh saki -> chabi theek, chalti process ka auth toota.
+* 7 scripts (purchase-post, sale-post, transfer-sync, label-print, item-post, rate-lagao, subcode-sync) ka later(): e.code 16 /
+  UNAUTHENTICATED -> log + process.exit(1) -> *-auto.bat loop 30s baad nayi process (nayi chabi). Test: 16 = exit(1), aam galti = nahi.
+* PC-SCRIPTS-RESTART.bat (helper): in 7 ki node processes Terminate -> bat loops khud chalati hain; 40s baad purchase-post jaanch.
+
+==================== v2.38.0 (2026-10-01) — JAANCH COMPACT FULL SCREEN ====================
+* purchase.js dlg(): title '🤖' se shuru = full-dialog + jaanch-dlg (list / card / khulasa). CSS dialog.jaanch-dlg left/right/
+  top/bottom 0 + width auto (100vw kuch phones par chhota — daayein patti). Scoped .jaanch-dlg compact CSS: sticky .jc-patti
+  (19dvh), chips (.jc-milan, #jcLearn>*, .jc-why small inline, nowrap ellipsis), inputs 38px, .rate-chips/.rc 26px,
+  .jc-acts ek qataar (.jc-okrow display:contents; order prev/mini/ok), .jc-hint none, list .pp-ask .mchips wrap, .jz-acts sticky.
+* Card buttons label: ‹ / ✏️ / ✕ / ☰ (title + aria-label). data-pp-supfind: jaanch band -> supOpen + supQuery (naam ke 2 lafz).
+* Test: purchase save raasta (happy-dom) theek. Shakal asal phone par dekhni hai (yahan browser nahi).
