@@ -340,7 +340,7 @@ async function applyRates(lines, jobId) {
 // ---------- Firestore ----------
 const busy = new Set();
 let queue = Promise.resolve();
-const later = fn => { queue = queue.then(fn).catch(e => log('Masla: ' + e.message)); };
+const later = fn => { queue = queue.then(fn).catch(e => { log('Masla: ' + e.message); if (e?.code === 16 || /UNAUTHENTICATED|invalid authentication credentials/i.test(String(e?.message))) { log('Firebase ka rabta toot gaya (UNAUTHENTICATED) — script 30 sec mein nayi chabi se dobara shuru hogi'); setTimeout(() => process.exit(1), 500); } }); };   // 2026-09-30: pehle bas likh kar aage chal padti thi, bill atak jate
 async function handle(doc) {
   const id = doc.id;
   if (busy.has(id)) return; busy.add(id);
