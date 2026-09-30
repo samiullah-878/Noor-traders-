@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.37.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.37.2';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,7 +57,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.37.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.37.2: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -985,8 +985,8 @@ function regPdf() {
   const rows = regRows(), names = collect().names || {}; if (!rows.length) { notice('Is arse mein koi transfer note nahi'); return; }
   const lab = { 1: 'Aaj', 2: 'Kal', 7: 'Pichhle 7 din', 30: 'Pichhle 30 din', 60: 'Pichhle 60 din' }[regDays];
   const html = `<h1>NOOR TRADERS</h1><h2>📋 Transfer register — ${esc(lab)}${regGodam !== 'all' ? ' · ' + esc(branchName(Number(regGodam), names)) : ''}</h2><p>${rows.length} transfer note · ${esc(new Date().toLocaleString('en-PK'))}</p>
-    <table class="iv-tbl"><thead><tr><th>Waqt</th><th>TN</th><th>Se → Ko</th><th>Items</th><th>Tadad</th><th>Rs</th></tr></thead><tbody>
-    ${rows.map(t => `<tr><td>${esc(regDay(t.at))}<br><small>${esc(regClock(t.at))}</small></td><td><b>${esc(t.transferNo || '')}</b><br><small>${t.app ? 'App' : 'POS'}</small></td><td>${esc(branchName(t.from, names))} → ${esc(branchName(t.to, names))}</td><td class="iv-n">${t.n}</td><td class="iv-n">${num(t.c)} ctn${t.p ? ' + ' + num(t.p) : ''}</td><td class="iv-n">${t.rs ? num(t.rs) : ''}</td></tr>`).join('')}
+    <table class="iv-tbl"><thead><tr><th>Waqt</th><th>TN</th><th>Se → Ko</th><th>Items (naam · tadad)</th><th>Kul</th><th>Rs</th></tr></thead><tbody>
+    ${rows.map(t => `<tr><td>${esc(regDay(t.at))}<br><small>${esc(regClock(t.at))}</small></td><td><b>${esc(t.transferNo || '')}</b><br><small>${t.app ? 'App' : 'POS'}</small></td><td>${esc(branchName(t.from, names))} → ${esc(branchName(t.to, names))}</td><td class="reg-items">${(t.lines || []).map(l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); return `<div>${esc(l.name)} <b>${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}</b></div>`; }).join('') || t.n}</td><td class="iv-n">${num(t.c)} ctn${t.p ? ' + ' + num(t.p) : ''}</td><td class="iv-n">${t.rs ? num(t.rs) : ''}</td></tr>`).join('')}
     </tbody></table>`;
   regPdfOf ? regPdfOf(html, 'Transfer register ' + regDay(Date.now())) : notice('PDF abhi nahi bana');
 }

@@ -1375,3 +1375,6 @@ button.bq-card:active{transform:scale(.98)}
 .rl-steps{margin:4px 0 0;padding-left:20px;color:#41536f;font-size:13.5px;line-height:1.7}
 .stock-wait{display:grid;gap:8px;justify-items:center;text-align:center}
 .stock-wait button{min-height:50px;padding:8px 20px;border-radius:14px;font-weight:900}
+.reg-items div{padding:1px 0;border-bottom:1px dashed #e3e9f3;font-size:12px}
+.reg-items div:last-child{border-bottom:0}
+.reg-items b{white-space:nowrap}

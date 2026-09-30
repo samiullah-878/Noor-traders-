@@ -1,0 +1,11 @@
+Blue Khata v2.37.2 — SALE MEIN NAYI LINE NAZAR AAYE · MULAZIM DASTI MEIN SHAMIL KAR SAKE
+INSTALL — 2 qadam:
+ 1) GitHub bahar wala folder -> ZIP ki SAARI files (firestore.rules samet) -> 2-3 min ruk kar app kholein -> ↻ Sync -> 2.37.2.
+ 2) RULES 2.17 — header ka 🔐 button -> "Rules v2.17 ✅" -> 📋 Copy -> 🔥 Firebase Rules kholo -> paste -> Publish. LAZMI.
+KYA THEEK HUA:
+ - Sale (aur Purchase): nayi line upar lagti thi magar screen neeche hi rehti thi. Ab item lagte hi screen khud us line par.
+ - Mulazim "Dasti mein shamil karein" (aur purane khaton ka naam / phone badalna) nahi kar pata tha: purane khaton (PDF import /
+   pehle versions) mein andar ke khane (rev / by / createdAt) khali the; app unhein bharti aur rules mulazim ko sirf
+   naam / phone / dasti badalne deti hain -> poori likhai rad. Ab app mulazim ke liye wo khane nahi bharti, aur rules
+   khali "rev" ko 0 samajhti hain. Malik ke liye kuch nahi badla.
+BADLI HUI FILES: app.js, sale.js, purchase.js, firestore.rules (2.17) + version.

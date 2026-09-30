@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.37.0, 2026-09-29 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.37.2, 2026-09-29 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1888,3 +1888,12 @@ Malik: mulazim ki app bohat late khulti. Wajah: tryAutoLogin har boot par contro
 * auth-controller import ?v=1.79.1 -> app version (cloud.js + index preload) — pehle phone purani copy chalata tha.
 * Test (node): zinda login = getSession → getAccount (sign-in nahi); band account = staff-disabled; ghalat scope = fail.
 * restoreView() pehle se pichhli screen kholta hai.
+* v2.37.1: Transfer register PDF — Items column mein t.lines ke naam + cp() ctn/pcs (.reg-items), purana count fallback.
+
+==================== v2.37.2 (2026-09-29) — SALE SCROLL · MULAZIM DASTI (RULES 2.17) ====================
+* Mulazim Dasti mein shamil nahi kar pata: save() purane party/expenseAccount mein by/createdAt na ho to naya daalta ->
+  staff rule affectedKeys hasOnly(name,phone,category,note,dasti,hasPhoto,updatedAt,updatedBy,rev) fail; aur resource.rev
+  missing -> rev+1 error. Fix: app.js save() — staff + existing party/expenseAccount + field missing = by/createdAt payload
+  se delete. Rules 2.17: staff party update rev == resource.data.get('rev', 0) + 1. (cloud.edit tx pehle se rev||0.)
+* sale.js / purchase.js: list paint ke baad (multi-line statement ke BAAD) fresh line scrollIntoView center, har add par ek dafa
+  (lastScrolled / ppScrolled). Test (happy-dom): search -> add -> scroll hua.

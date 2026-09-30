@@ -1,0 +1,5 @@
+Blue Khata v2.37.1 — TRANSFER REGISTER PDF MEIN ITEM KE NAAM
+INSTALL: GitHub bahar wala folder -> ZIP ki files -> 2-3 min ruk kar app kholein -> ↻ Sync -> 2.37.1. Rules NAHI badlin.
+ - 📋 Transfer register ki PDF mein "Items" column ab har item ka NAAM + tadad dikhata hai (jaise "Ghee Hamza 3 ctn"),
+   har item alag line mein. "Kul" column mein us note ka jor.
+BADLI HUI FILES: pos-stock.js, style.css + version.
