@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.40.0, 2026-10-01 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.41.0, 2026-10-01 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2012,3 +2012,9 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
 * pc/sale-post.js printSale(saleNo, saleId, copies): text ek dafa banao, n dafa printText; gate pass printGatePasses alag (1).
   handleSale ok.copies, handlePrint d.copies.
 * Test (happy-dom): chips, ×2 yaad, save doc copies=2. Teesra kaam (POS bill edit app se) malik ne baad ke liye rakha.
+
+==================== v2.41.0 (2026-10-01) — TRANSFER NOTE: list band / scanner search / nayi upar ====================
+* pos-stock.js: trShowRecent + trFind headers mein .sh-close [data-tr-close]; hits.onclick close; document pointerdown (capture)
+  bahar tap -> [data-tr-hits] hidden. openScanner pick-mode: pickMulti ho to .scan-find NAHI chhupta; search pick handler mein
+  pickHook(code, r) (transfer hook ab (c, r0) — r0 se item seedha). trLines render reverse (index wahi), .tr-sticky save.
+* Test (happy-dom): search list khuli, ✕ se band, bahar tap se band.

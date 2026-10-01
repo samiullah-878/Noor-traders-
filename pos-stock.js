@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.40.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.41.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,7 +57,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.40.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.41.0: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -804,7 +804,7 @@ function trMark(hits, n) {
 }
 function trPaint(hits, list, q, zeroN, gname) {
   hits._src = list;
-  hits.innerHTML = (list.length ? list.map((r, i) => trRowHTML(r, i, q, gname)).join('') : `<p class="sh-empty">Kuch nahi mila${zeroN ? '' : ' — naam ya code dobara dekh lein'}</p>`)
+  hits.innerHTML = `<p class="sh-head">🔍 ${esc(q)}<button type="button" class="sh-close" data-tr-close="1" aria-label="band">✕</button></p>` + (list.length ? list.map((r, i) => trRowHTML(r, i, q, gname)).join('') : `<p class="sh-empty">Kuch nahi mila${zeroN ? '' : ' — naam ya code dobara dekh lein'}</p>`)
     + (zeroN ? `<button type="button" class="sh-more" data-tr-zero="1">🚫 ${num(zeroN)} item mile magar ${gname} mein stock 0 — phir bhi dikhayein</button>` : '');
   trMark(hits, list.length ? 0 : -1);
   hits.hidden = false;
@@ -814,7 +814,7 @@ function trShowRecent(hits) {
   if (!list.length) { hits.hidden = true; return; }
   const gname = esc(branchName(trFrom, names));
   hits._src = list;
-  hits.innerHTML = `<p class="sh-head">⏱ Aksar bheje jane wale</p>` + list.map((r, i) => trRowHTML(r, i, '', gname)).join('');
+  hits.innerHTML = `<p class="sh-head">⏱ Aksar bheje jane wale<button type="button" class="sh-close" data-tr-close="1" aria-label="band">✕</button></p>` + list.map((r, i) => trRowHTML(r, i, '', gname)).join('');
   trMark(hits, -1);
   hits.hidden = false;
 }
@@ -1012,6 +1012,7 @@ export function inReport() {
         from: r.from ? { name: branchName(r.from.b, names), pehle: cell(r.from.pehle, r.pack), ab: cell(r.from.ab, r.pack) } : null,
         to: { name: branchName(r.to.b, names), pehle: cell(r.to.pehle, r.pack), ab: cell(r.to.ab, r.pack) } })) })) };
 }
+document.addEventListener('pointerdown', e => { const h = document.querySelector('[data-tr-hits]'); if (!h || h.hidden) return; if (e.target.closest?.('[data-tr-hits],[data-tr-q]')) return; h.hidden = true; }, true);   // v2.41: list ke bahar tap = band
 function openTransfer() {
   const d = $('dialog'); if (!d) return;
   trZeroShow = false;   // v2.18
@@ -1025,13 +1026,13 @@ function openTransfer() {
   $('dialogBody').innerHTML = `<div class="tr-head"><label>Se (nikle)${sel('from', trFrom)}</label><label>Ko (jaye)${sel('to', trTo)}</label></div>
     <div class="scan-find" style="margin:8px 0"><input class="scan-q" data-tr-q type="search" placeholder="🔍 Item ka naam / code likhein" autocomplete="off"><div class="scan-hits" data-tr-hits hidden></div></div>
     <div class="account-tools"><button type="button" data-tr-scan="1">📷 Scan</button></div>
-    <div class="tr-lines">${trLines.map((l, i) => { const have = trStockOf(trFrom, l.id); const short = trFrom !== 1 && have < l.qty - 0.0005; const pk = Number(l.pack) || 0;
+    <div class="tr-lines">${trLines.map((l, i) => [l, i]).reverse().map(([l, i]) => { const have = trStockOf(trFrom, l.id); const short = trFrom !== 1 && have < l.qty - 0.0005; const pk = Number(l.pack) || 0;
       return `<div class="tr-line${short ? ' short' : ''}"><div class="tr-name">${pk > 1 ? `<span class="tr-pack">1 ${esc(l.cName || 'Ctn')} = ${num(pk)} ${esc(l.uName || 'Pcs')}</span>` : ''}<b><span class="tr-no">${i + 1}.</span> ${esc(l.name)}</b><small>${esc(branchName(trFrom, collect().names))} mein stock ${num(have)}${pk > 1 ? ' · 1 ' + esc(l.cName || 'Ctn') + ' = ' + num(pk) : ''}${short ? ' · <b class="red">⛔ kam hai</b>' : ''}</small>${pk > 1 ? `<small>= ${num(l.qty)} ${esc(l.uName || 'Pcs')}</small>` : ''}</div>
       ${pk > 1 ? `<label class="tr-q"><span>${esc(l.cName || 'Ctn')}</span><input type="text" inputmode="decimal" value="${num(l.ctn || 0)}" data-tr-ctn="${i}"></label>` : ''}
       <label class="tr-q"><span>${esc(l.uName || 'Pcs')}</span><input type="text" inputmode="decimal" value="${num(l.pcs ?? l.qty)}" data-tr-pcs="${i}"></label><button type="button" class="danger" data-tr-del="${i}">✕</button></div>`; }).join('') || '<p class="muted">Upar se item chunein ya scan karein.</p>'}</div>
     ${trLines.length ? `<p class="tr-sum">${trLines.length} items · ${(() => { const c = trLines.reduce((n, l) => n + (Number(l.pack) > 1 ? Number(l.ctn) || 0 : 0), 0), p = trLines.reduce((n, l) => n + (Number(l.pcs) || 0), 0); return [c ? num(c) + ' CTN' : '', p ? num(p) + ' PCS' : ''].filter(Boolean).join(' + ') || '0'; })()} · kul ${num(kul)} pcs</p>` : ''}
     <label>Note<input type="text" data-tr-note maxlength="150" placeholder="ikhtiyari"></label>
-    <div class="account-tools"><button type="button" class="primary" data-tr-save="1"${trLines.length ? '' : ' disabled'}>✓ POS mein transfer note banao</button>${trLines.length ? '<button type="button" data-tr-clear="1">Saaf</button>' : ''}</div>
+    <div class="account-tools tr-sticky"><button type="button" class="primary" data-tr-save="1"${trLines.length ? '' : ' disabled'}>✓ POS mein transfer note banao</button>${trLines.length ? '<button type="button" data-tr-clear="1">Saaf</button>' : ''}</div>
     <p class="muted tr-msg" style="font-size:.85em"></p>
     <div class="tr-hist"><b>Pichhle 14 din ke transfer (app se)</b><div data-tr-hist>${trHistHTML()}</div></div>`;
   if (!d.open) d.showModal();
@@ -1056,6 +1057,7 @@ function openTransfer() {
   q.oninput = () => { trZeroShow = false; clearTimeout(trFindTimer); trFindTimer = setTimeout(trFind, 70); };
   q.onfocus = () => { if (!norm(q.value)) trShowRecent(hits); };
   hits.onclick = e => {
+    if (e.target.closest('[data-tr-close]')) { hits.hidden = true; q.blur(); return; }   // v2.41: ✕ se list band
     if (e.target.closest('[data-tr-zero]')) { trZeroShow = true; trFind(); return; }
     const b = e.target.closest('[data-tr-pick]'); if (!b) return;
     trPick((hits._src || [])[Number(b.dataset.trPick)]);
@@ -1119,7 +1121,7 @@ document.addEventListener('click', e => {
   else if (t.dataset.trClear) { trLines = []; openTransfer(); }
   else if (t.dataset.trSave) trSave(t);
   else if (t.dataset.trScan) { try { $('dialog').close(); } catch {}      // v2.17: camera khula rahe — ek ke baad ek
-    scanPickMany(c => { const { items } = collect(); c = String(c).trim(); const r = items.find(x => String(x.code).trim() === c || (Array.isArray(x.bc) && x.bc.some(b => String(b).trim() === c)));
+    scanPickMany((c, r0) => { const { items } = collect(); c = String(c).trim(); const r = r0 ? (items.find(x => String(x.id) === String(r0.id)) || r0) : items.find(x => String(x.code).trim() === c || (Array.isArray(x.bc) && x.bc.some(b => String(b).trim() === c)));
       if (!r) return { ok: false, text: '⚠️ "' + esc(c) + '" stock mein nahi mila', count: trLines.length };
       trRecNote(r.id);   // v2.18
       const l = trAddLine(r); return { ok: true, text: `✓ <b>${esc(r.name)}</b> — ${esc(trQtyText(l))} · kul ${trLines.length} items`, count: trLines.length }; },
@@ -1758,9 +1760,9 @@ async function openScanner() {
     </div>`;
   document.body.appendChild(scanBox);
   const msg = scanBox.querySelector('.scan-msg');
-  if (pickHook) {   // v1.74: sirf ek code chunna hai — search/tadad/list chhupa do
+  if (pickHook) {   // v1.74: sirf ek code chunna hai — search/tadad/list chhupa do (v2.41: transfer wale pickMulti mein search rahe)
     scanBox.classList.add('pick-mode');
-    scanBox.querySelector('.scan-find')?.setAttribute('hidden', '');
+    if (!pickMulti) scanBox.querySelector('.scan-find')?.setAttribute('hidden', '');
     scanBox.querySelector('.scan-pad')?.setAttribute('hidden', '');
     if (pickMulti) { const dn = scanBox.querySelector('.scan-done'); if (dn) dn.innerHTML = '✓ Ho gaya — list dikhao (<span>0</span>)'; msg.textContent = 'Ek ke baad ek barcode camera ke saamne laayein — har item neeche list mein jurta jayega'; }
     else { scanBox.querySelector('.scan-done')?.setAttribute('hidden', ''); msg.textContent = 'Barcode camera ke saamne rakhein — parhte hi wapas form khulega'; }
@@ -1863,6 +1865,13 @@ async function openScanner() {
   qBox.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); if (chosen) { nBox.focus(); return; } const r = (hitBox._src || [])[0]; if (r) pickHit(r); } };
   // v1.59 (sale): item chunne par seedha add nahi — cursor "Tadad" mein; wahan Enter par add, phir cursor wapas search mein
   const pickHit = r => {
+    if (pickHook && pickMulti) {   // v2.41: transfer note — search se chuna item bhi scan ki tarah list mein
+      qBox.value = ''; hitBox.hidden = true;
+      let res = null; try { res = pickHook(String(r.code || r.bc?.[0] || ''), r); } catch {}
+      const ok = !!(res && res.ok); beep(ok); if (ok && navigator.vibrate) navigator.vibrate(60);
+      if (msg) msg.innerHTML = res?.text || (ok ? '✓' : 'nahi mila'); const c = scanBox?.querySelector('.scan-done span'); if (c && res?.count != null) c.textContent = res.count;
+      qBox.focus(); return;
+    }
     if (saleRoot() && saleHook) {
       chosen = r; qBox.value = r.name; hitBox.hidden = true; nBox.value = ''; setUnit('pcs', r);
       msg.textContent = `${r.name} — tadad likh kar Enter dabayein (khali = 1)`;

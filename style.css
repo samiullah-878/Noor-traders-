@@ -1463,3 +1463,9 @@ dialog.jaanch-dlg{position:fixed;left:0!important;right:0!important;top:0!import
 .sale-copies-h{margin-left:auto;color:#6b7c93!important;font-weight:600!important}
 .sale-copies button{min-height:36px;min-width:46px;padding:4px 10px;border-radius:999px;border:1.5px solid #d3def5;background:#fff;font-weight:800}
 .sale-copies button.on{background:linear-gradient(180deg,#2b4a86,#1b3058);color:#fff;border-color:#1b3058}
+
+/* ===== v2.41: transfer note — list band, nayi line upar, save tika ===== */
+.sh-head{display:flex;align-items:center;gap:8px}
+.sh-close{margin-left:auto;min-height:30px;width:34px;padding:0;border-radius:999px;border:0;background:#eef2f8;font-weight:900;color:#1b3058}
+.tr-sticky{position:sticky;bottom:-8px;z-index:4;background:#fff;padding:8px 0;margin:6px 0 0;box-shadow:0 -8px 12px -10px rgba(15,23,42,.18)}
+.pick-mode .scan-find:not([hidden]){display:block}
