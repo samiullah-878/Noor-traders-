@@ -445,10 +445,11 @@ async function printGatePasses(r) {
     log(err ? 'Gate pass print nahi hua (' + (names[g] || g) + '): ' + err.message : 'GATE PASS print: ' + (names[g] || g) + ' · Sale ' + r.saleNo);
   }
 }
-async function printSale(saleNo, saleId) {
+async function printSale(saleNo, saleId, copies = 1) {   // 2026-10-01: bill `copies` dafa (1-3), gate pass alag (ek hi)
   if (!AUTO_PRINT) return;
-  const err = await printText(await receiptFor(saleNo, saleId));
-  log(err ? 'Print nahi hua: ' + err.message : 'Rasid print: Sale ' + saleNo);
+  const text = await receiptFor(saleNo, saleId), n = Math.min(3, Math.max(1, Number(copies) || 1));
+  for (let i = 0; i < n; i++) { const err = await printText(text); if (err) { log('Print nahi hua: ' + err.message); return; } }
+  log('Rasid print: Sale ' + saleNo + (n > 1 ? ' x' + n : ''));
 }
 
 // ---- Firestore se kaam ----
@@ -475,7 +476,7 @@ async function handleSale(doc) {
         ...(r.cash != null ? { cash: r.cash } : {}), doneAt: Date.now(), error: FieldValue.delete() });
       log(`${r.again ? 'Pehle se bani thi' : 'Sale ban gayi'}: ${r.saleNo} · ${ok.mode} · Rs ${r.total}${r.crvNo ? ' · ' + r.crvNo : ''}`);
       if (!r.again) {
-        await printSale(r.saleNo, r.saleId).catch(e => log('Print masla: ' + e.message));
+        await printSale(r.saleNo, r.saleId, ok.copies).catch(e => log('Print masla: ' + e.message));
         await printGatePasses(r).catch(e => log('Gate pass masla: ' + e.message));
       }
     } catch (e) {
@@ -491,7 +492,7 @@ async function handlePrint(doc) {
   if (busy.has(key)) return;
   busy.add(key);
   try {
-    if (d.status === 'done' && d.saleNo) await printSale(d.saleNo, d.saleId);
+    if (d.status === 'done' && d.saleNo) await printSale(d.saleNo, d.saleId, d.copies);
     await doc.ref.update({ printReq: FieldValue.delete(), printedAt: Date.now() });
   } catch (e) { log('Dobara print masla: ' + e.message); }
   finally { busy.delete(key); }
