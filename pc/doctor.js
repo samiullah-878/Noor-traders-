@@ -1,5 +1,5 @@
 // =========================================================
-//  doctor.js  v2.2 (2026-10-01: 3 dafa ke baad bhi 30 min mein phir koshish) · v2.1 (UNAUTHENTICATED par doctor khud dobara · PC ka waqt jaanch) · v2 (2026-09-25) — KHATA PC DOCTOR
+//  doctor.js  v2.3 (2026-10-01: HEARTBEAT — latki script pakar kar dobara) · v2.2 (3 dafa ke baad bhi 30 min mein phir koshish) · v2.1 (UNAUTHENTICATED par doctor khud dobara · PC ka waqt jaanch) · v2 (2026-09-25) — KHATA PC DOCTOR
 //  v2: sirf ZINDA nahi, KAAM bhi dekhta hai — qataar (appPurchases, appSales, labelJobs...) mein koi kaam 3 min se
 //      zyada ruka ho to wohi script dobara shuru (10 min mein ek dafa, 3 dafa ke baad ruk kar batata hai). Har 2 min jaanch,
 //      GitHub har 30 min. pcCheck ka rabta toote to khud dobara jurta hai.
@@ -25,6 +25,7 @@ const VER = '2';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const STUCK = 3 * 60 * 1000, REST_GAP = 10 * 60 * 1000;
+const hung = {};   // v2.3: heartbeat se pakri latki scripts
 const LOCK_PORT = 47830;
 const NEVER = new Set(['local-config.json', 'firebase-key.json', 'label-settings.json', 'label-numbers.json', 'package.json', 'package-lock.json']);
 
@@ -226,6 +227,15 @@ async function cycle(why, full = true) {
       if (!alive(s, list)) {
         if (startBat(s)) { action = action || 'band thi — chala di'; log(`▶ ${s.script}: band thi, ${s.bat} chala di`); }
         else action = 'band — .bat nahi mili';
+      }
+      // 2026-10-01 v2.3: zinda dikh rahi magar HEARTBEAT 3 min purani = latki hui -> dobara
+      if (!action && alive(s, list) && !s.periodic) {
+        let age = null; try { const t = Number(fs.readFileSync(path.join(DIR, s.script.replace(/\.js$/, '') + '.alive'), 'utf8')); if (t > 0) age = Date.now() - t; } catch {}
+        if (age != null && age > STUCK) {
+          const h = hung[s.script] || (hung[s.script] = { at: 0 });
+          if (Date.now() - h.at > REST_GAP) { const nk = stopScript(s, list); if (!nk) startBat(s); h.at = Date.now(); action = `latki thi (${Math.round(age / 60000)} min se be-khabar) — dobara chalayi`; log(`↻ ${s.script}: heartbeat ${Math.round(age / 60000)} min purani — latki hui, dobara shuru`); }
+          else action = `latki (${Math.round(age / 60000)} min) — abhi dobara chalayi thi, intezar`;
+        }
       }
       // v2: zinda hai magar kaam ruka hua?
       let stuck = null;

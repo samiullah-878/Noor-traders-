@@ -43,6 +43,8 @@ const LOCK_PORT = 47821;
 const SCRIPT_VER = 3;
 
 const DIR = __dirname;
+// 2026-10-01 HEARTBEAT: har 30 sec '<script>.alive' mein waqt — doctor 3 min purana dekhe to script ko latki samajh kar dobara chalata hai
+{ const _hb = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive'); const _w = () => { try { require('fs').writeFileSync(_hb, String(Date.now())); } catch {} }; _w(); setInterval(_w, 30000).unref(); }
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const BILLS_FLAG = path.join(DIR, 'bills-now.flag');   // v4: sync-bills ko 'abhi chalo'
 const pokeBills = () => { try { fs.writeFileSync(BILLS_FLAG, String(Date.now())); } catch (e) { log('bills-now.flag nahi likha: ' + e.message); } };          // failed job par likha jata hai — 'ANJAAN' wali job sirf NAYI version par ek dafa dobara

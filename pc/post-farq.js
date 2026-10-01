@@ -28,6 +28,8 @@ const PRINTER_NAME = 'TM-T88IV';   // Devices and Printers mein jo naam likha ha
 // ------------------------------------------
 
 const DIR = __dirname;
+// 2026-10-01 HEARTBEAT: har 30 sec '<script>.alive' mein waqt — doctor 3 min purana dekhe to script ko latki samajh kar dobara chalata hai
+{ const _hb = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive'); const _w = () => { try { require('fs').writeFileSync(_hb, String(Date.now())); } catch {} }; _w(); setInterval(_w, 30000).unref(); }
 const LOCAL_LOG = path.join(DIR, 'posted-farq.json');
 const round2 = n => Math.round((Number(n) || 0) * 100) / 100;
 const round3 = n => Math.round((Number(n) || 0) * 1000) / 1000;

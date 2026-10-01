@@ -25,6 +25,8 @@ const LOCK_PORT = 47818;
 // ------------------------------------------
 
 const DIR = __dirname;
+// 2026-10-01 HEARTBEAT: har 30 sec '<script>.alive' mein waqt — doctor 3 min purana dekhe to script ko latki samajh kar dobara chalata hai
+{ const _hb = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive'); const _w = () => { try { require('fs').writeFileSync(_hb, String(Date.now())); } catch {} }; _w(); setInterval(_w, 30000).unref(); }
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const SQL_CONFIG = require('./sql-config.js');   // v2026-09-25: setting local-config.json se (PC Doctor)
 SQL_CONFIG.options = { ...(SQL_CONFIG.options || {}), useUTC: false };
