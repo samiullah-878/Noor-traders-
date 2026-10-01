@@ -1,5 +1,5 @@
 // =========================================================
-//  doctor.js  v2 (2026-09-25) — KHATA PC DOCTOR
+//  doctor.js  v2.2 (2026-10-01: 3 dafa ke baad bhi 30 min mein phir koshish) · v2.1 (UNAUTHENTICATED par doctor khud dobara · PC ka waqt jaanch) · v2 (2026-09-25) — KHATA PC DOCTOR
 //  v2: sirf ZINDA nahi, KAAM bhi dekhta hai — qataar (appPurchases, appSales, labelJobs...) mein koi kaam 3 min se
 //      zyada ruka ho to wohi script dobara shuru (10 min mein ek dafa, 3 dafa ke baad ruk kar batata hai). Har 2 min jaanch,
 //      GitHub har 30 min. pcCheck ka rabta toote to khud dobara jurta hai.
@@ -178,14 +178,31 @@ async function stuckOf(s) {
         if (!at || at > now - STUCK || at < now - 24 * 3600 * 1000) continue;   // taza ya bohat purana (chhoro)
         n++; if (at < oldest) { oldest = at; key = q.col + '/' + doc.id; }
       }
-    } catch (e) { log(`⚠ ${q.col}: ${e.message}`); }
+    } catch (e) { log(`⚠ ${q.col}: ${e.message}`); if (e?.code === 16 || /UNAUTHENTICATED|invalid authentication credentials/i.test(String(e?.message))) { log('Doctor ka Firebase rabta toota (UNAUTHENTICATED) — doctor khud dobara shuru ho raha hai, phir atke kaam dekhega'); restartSelf = true; } }
   }
   return n ? { n, oldest, key } : null;
+}
+
+// ---------- PC ka waqt (2026-10-01) — ghalat ho to Firebase "UNAUTHENTICATED" deta hai ----------
+let clockAt = 0;
+function clockCheck() {
+  if (Date.now() - clockAt < 30 * 60 * 1000) return; clockAt = Date.now();
+  try {
+    require('https').request({ host: 'www.google.com', method: 'HEAD', path: '/', timeout: 8000 }, r => {
+      const g = Date.parse(r.headers.date || ''); if (!g) return;
+      const off = Math.round((Date.now() - g) / 1000);
+      if (Math.abs(off) > 120) {
+        log(`⚠ PC ka waqt ${Math.round(off / 60)} minute ${off > 0 ? 'aage' : 'peeche'} hai — Firebase rabta tootega. Waqt theek kar raha hoon (w32tm)...`);
+        try { require('child_process').exec('w32tm /resync /nowait', () => {}); } catch {}
+      }
+    }).on('error', () => {}).end();
+  } catch {}
 }
 
 // ---------- ek chakkar ----------
 let services = [], manifestVer = '', lastGit = 0, busy = false, restartSelf = false;
 async function cycle(why, full = true) {
+  clockCheck();
   if (busy) return; busy = true;
   try {
     if (full) log(`— jaanch (${why}) —`);
@@ -219,7 +236,8 @@ async function cycle(why, full = true) {
         else {
           if (k.key !== stuck.key) { k.n = 0; k.key = stuck.key; }
           const mins = Math.round((Date.now() - stuck.oldest) / 60000);
-          if (k.n >= 3) action = `atki — ${stuck.n} kaam ${mins} min se ruke, 3 dafa chalayi phir bhi nahi (log dekhein)`;
+          if (k.n >= 3 && Date.now() - k.at > 30 * 60 * 1000) { k.n = 0; log(`↻ ${s.script}: 30 min baad phir koshish (haar nahi maani)`); }   // 2026-10-01: waqt / internet theek ho jaye to khud wapas aaye
+          if (k.n >= 3) action = `atki — ${stuck.n} kaam ${mins} min se ruke, 3 dafa chalayi phir bhi nahi (30 min baad phir koshish)`;
           else if (Date.now() - k.at > REST_GAP) {
             const nk = stopScript(s, list); if (!nk) startBat(s);
             k.at = Date.now(); k.n++;
