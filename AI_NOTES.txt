@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.39.0, 2026-10-01 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.40.0, 2026-10-01 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1986,3 +1986,29 @@ Malik: "Hbl loan 7999 account" 15 lakh limit — supplier ko transfer se "dene" 
 * notes.js: bankId() pehle p.bank (ek ho to), isBank(id) p.bank bhi; hblPayForm commit se pehle limit confirm (balanceOf hook
   app.js notesSetup balance:id=>balance(party,entries)).
 * Test: loanCardHTML over case sahi. Malik ke 29.5 lakh ka asal farq (ulti entry / double) abhi data mein dekhna baqi.
+
+==================== 2026-10-01 — HEARTBEAT (manifest 2026-10-01.3, doctor v2.3) ====================
+App "PC scripts" ne dikhaya: purchase-post + rate-lagao "Chal rahi" magar aakhri log kal raat 11:00 PM ("Exceeded maximum
+retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
+* 12 lambi scripts (purchase, sale, transfer, label, item, rate, subcode, pos-khata-sync, post-farq, transfer-dekho, sync-stock,
+  sync-bills): shuru mein + har 30s `<script>.alive` (Date.now) likhti hain (setInterval unref).
+* doctor.js v2.3: non-periodic service alive ho magar .alive 3 min (STUCK) purani -> stopScript + startBat (hung[] REST_GAP 10 min).
+  Pehli dafa .alive file na ho (purani script) -> kuch nahi.
+* Foran: wmic se purchase-post.js + rate-lagao.js terminate -> bat loop restart.
+* doctor v2.4 (manifest 2026-10-01.4): stopScript — process.kill + taskkill /F /PID (Windows par latki process pakka band) + log.
+  Jaanch: doctor GitHub se files utha raha tha (app: VERSION 2026-10-01.2, sync-bills v4.2) — masla latki process ko na maarna tha.
+* doctor v2.5 (manifest 2026-10-01.5): wmic ne dikhaya purchase-post ki node process THI HI NAHI, doctor "Chal rahi" — alive()
+  .bat window ko bhi zinda ginta tha. Ab non-periodic: zinda = runsScript (node); bat ho magar node na ho -> startBat (lock port
+  duplicate rokta). Nayi file par stopScript 0 ho to bhi startBat.
+* 2026-10-01 GODAM-KHALI.bat (PC helper; source pc/godam-khali.js): dbo.Branch list -> SE/KO number -> ItemBranchRate
+  CurrStock>0 -> preview (count, pcs, 10 items) -> "HAAN" -> transferJobs docs (op create, 60 lines/note, note "Godam khali
+  ... hissa k/n", by 'pc', status new) -> transfer-sync usp_StockTransfer + print. Admin SDK (rules bypass).
+
+==================== v2.40.0 (2026-10-01) — CAMERA OFF · PRINT COPIES (RULES 2.18, manifest 2026-10-01.6) ====================
+* pos-stock.js: scanCamOff (localStorage 'sam-scan-camoff'); camOffBtn(tools) 🔄 Camera ke neeche; openScanner: camOff ->
+  getUserMedia skip, msg + sirf chalu button, video hidden (scan loop nahi; keyboard scanner / search chalte).
+* sale.js: copies (localStorage 'sam-sale-copies' 1-3), copyChips() cart ke neeche, doc.copies; reprint prompt copies.
+  cloud.reprintAppSale(id, copies). Rules 2.18: appSales create hasOnly + copies (int 1-3); update printReq + copies.
+* pc/sale-post.js printSale(saleNo, saleId, copies): text ek dafa banao, n dafa printText; gate pass printGatePasses alag (1).
+  handleSale ok.copies, handlePrint d.copies.
+* Test (happy-dom): chips, ×2 yaad, save doc copies=2. Teesra kaam (POS bill edit app se) malik ne baad ke liye rakha.

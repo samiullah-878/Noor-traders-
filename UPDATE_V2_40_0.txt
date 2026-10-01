@@ -1,0 +1,11 @@
+Blue Khata v2.40.0 — 📷 CAMERA BAND/CHALU · 🖨 BILL ×1/×2/×3
+INSTALL — 3 qadam:
+ 1) GitHub bahar wala folder: App ZIP -> 2-3 min ruk kar app kholein -> ↻ Sync -> 2.40.0.
+ 2) RULES 2.18: header ka 🔐 -> "Rules v2.18 ✅" -> Copy -> Firebase -> Publish (LAZMI — bina is ke sale save nahi hogi!).
+ 3) GitHub pc/ folder: pc ZIP (sale-post.js, manifest.json) — doctor khud utha lega. Is ke baghair bill ek hi dafa chhapega.
+KYA NAYA:
+ - Sale ke scanner mein "🔄 Camera" ke neeche "📷 Camera band" — tap = camera ruk jaye (battery), barcode gun / naam se kaam
+   chalta rahe; dobara "📷 Camera chalu". Phone yaad rakhta hai: band rakha to agli dafa khud chalu nahi hoga.
+ - Sale screen: bill ke neeche "🖨 Bill print ×1 ×2 ×3" — bill utni dafa chhapega, GATE PASS hamesha ek dafa. Choice yaad rahegi.
+   "Dobara print" par bhi poochega kitni dafa.
+BADLI HUI FILES: pos-stock.js, sale.js, cloud.js, style.css, firestore.rules (2.18) + version; pc/sale-post.js, pc/manifest.json.

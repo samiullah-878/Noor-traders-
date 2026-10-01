@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.39.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.39.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.40.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.40.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -86,6 +86,9 @@ function keepScan(el) {   // scan box upar nazar rahe; nayi line uske neeche —
   window.scrollTo({ top: Math.max(0, (window.scrollY || 0) + s.top - 8), behavior: 'smooth' });
 }
 let lastAddAt = 0, lastScrolled = 0;
+let copies = 1; try { copies = Math.min(3, Math.max(1, Number(localStorage.getItem('sam-sale-copies')) || 1)); } catch {}   // v2.40: bill kitni dafa chhape (gate pass ek hi)
+const copyChips = () => `<div class="sale-copies"><small>🖨 Bill print</small>${[1, 2, 3].map(n => `<button type="button" data-sale-copies="${n}"${copies === n ? ' class="on"' : ''}>×${n}</button>`).join('')}<small class="sale-copies-h">gate pass ×1</small></div>`;
+document.addEventListener('click', e => { const b = e.target.closest?.('[data-sale-copies]'); if (!b) return; copies = Number(b.dataset.saleCopies) || 1; try { localStorage.setItem('sam-sale-copies', String(copies)); } catch {} document.querySelectorAll('[data-sale-copies]').forEach(x => x.classList.toggle('on', Number(x.dataset.saleCopies) === copies)); });
 function addItem(it, qtyPcs = 1) {
   lastAddAt = Date.now();
   noteHit(it.id);   // v1.75: ranking ke liye
@@ -233,7 +236,7 @@ function vbAdd(text) {
   if (!lastSug) notice('🎤 Suna: "' + heard.slice(0, 60) + '" — item ka naam samajh nahi aaya');
 }
 let vbHold = false, vbStopT = 0, vbHeard = '', vbDone = '';
-function vbStart() {               // v2.39.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
+function vbStart() {               // v2.40.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
   if (vbRec) { try { vbRec.abort(); } catch {} vbRec = null; }
@@ -400,7 +403,7 @@ export function renderSale() {
       <label>Note (ikhtiyari)<input maxlength="100" data-sale-note="1" value="${esc(note)}"></label>
     </div>` : '';
 
-  $('list').innerHTML = camRow + found + (cart.length ? `<div class="sale-cart">${rows}</div>${pay}` :
+  $('list').innerHTML = camRow + found + (cart.length ? `<div class="sale-cart">${rows}</div>${pay}${copyChips()}` :
     (q ? '' : `<div class="empty"><strong>Naya bill</strong><p>Upar item ka naam likhein ya 📷 se scan karein.</p></div>`));
   if (Date.now() - lastAddAt < 1800 && lastAddAt !== lastScrolled) { lastScrolled = lastAddAt; requestAnimationFrame(() => keepScan(document.querySelector('.sale-line.fresh'))); }   // scan box upar rahe (nayi line us ke neeche)
   $('actions').innerHTML = cart.length ? `<button class="give" data-sale-clear="1">✕ Naya bill</button><button data-sale-camera="1" title="Barcode scan">📷</button>
@@ -464,7 +467,7 @@ document.addEventListener('pointercancel', () => vbRelease());
 document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sale-mic]')) e.preventDefault(); });
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.39.0: hold se chalta hai
+  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.40.0: hold se chalta hai
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {
@@ -492,7 +495,7 @@ document.addEventListener('click', async e => {
   if (t.dataset.saleCamera) { openSaleCamera(); return; }
   if (t.dataset.saleToday) { openToday(); return; }
   if (t.dataset.saleReprint) {
-    try { t.disabled = true; await cloud.reprintAppSale(t.dataset.saleReprint); notice('Print ka hukam PC ko bhej diya'); }
+    try { t.disabled = true; const c = Number(prompt('Kitni dafa chhapein? (1-3)', String(copies))) || 1; await cloud.reprintAppSale(t.dataset.saleReprint, Math.min(3, Math.max(1, c))); notice('Print ka hukam PC ko bhej diya (×' + Math.min(3, Math.max(1, c)) + ')'); }
     catch (err) { notice('Nahi hua: ' + (err?.message || err)); t.disabled = false; }
     return;
   }
@@ -576,7 +579,7 @@ async function save() {
     (mode === 'wholesale' ? `\nCash Rs ${num(paid)}${total - paid > 0 ? ' · Udhaar Rs ' + num(total - paid) : ''}` : '') + '\n\nSave karke POS mein bill banayein?';
   if (!confirm(msg)) return;
   const id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  const doc = { id, date: todayStr(), at: new Date().toISOString(), mode, branch: SALE_BRANCH, godam: Number(godam) || SALE_BRANCH,
+  const doc = { id, copies, date: todayStr(), at: new Date().toISOString(), mode, branch: SALE_BRANCH, godam: Number(godam) || SALE_BRANCH,
     lines, total, cash: paid, note: note.trim(), role: isOwner() ? 'owner' : 'staff', by: uidOf(), status: 'new', createdAt: Date.now() };
   saving = true; rerender();
   try {

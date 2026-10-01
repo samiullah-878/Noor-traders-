@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v2.17 (mulazim: purane khate — rev na ho to 0; Dasti mein shamil) · v2.16 (demands: 📢 mulazim ki khatam/kam demand) · v2.15 (posStats: PC ki 6 mahine ki bikri · purchaseOrders: 🛒 order) · v2.14 (notes: contactName/contactPhone) · v2.13 (notes + tasveer · pushTokens · reminder dueTime · pushConfig) · v2.12 (auditLog: 🕘 history — har harkat, sirf jorna) · v2.11 (gallaCalls: purchase wala "itne paise do" -> galla wala "de diye" + supplier ki payment · Sirf Galla login) · v2.10 (posBillIds: ek entry ke saath kai POS bill) · v2.9 (entryPhotos: tasveerein alag · pn) · v2.8 (reminder: full mulazim bhi) · v2.7 (aiConfig stock/sale ko bhi — tolai) · v2.6 (tolai mein `who` — har mulazim ka apna hisaab) · v2.5 (posTransfers: POS par bane transfer bhi app mein) · v2.4 (tolai: label ki tasveer se ginti + tolaiConfig) · v2.3 (itemJobs: app se POS ka item banana / badalna; mulazim ko ijazat stockConfig.itemEdit se) · v2.2 (billFormats: har supplier ke bill ka naqsha — ginti PCS ya CTN, rate fi PCS ya fi CTN) · v2.1 (itemRates: har item ka pichhla khareed aur nafa yaad) · v2.0 (itemAliases: Full / Purchase mulazim bhi bill ka naam "yaad" karwa sake — naam sirf barh sakte hain, mit nahi sakte) · v1.94 (app purchase: dobara / cancel) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v2.18 (appSales copies: bill ×1-3) · v2.17 (mulazim: purane khate — rev na ho to 0; Dasti mein shamil) · v2.16 (demands: 📢 mulazim ki khatam/kam demand) · v2.15 (posStats: PC ki 6 mahine ki bikri · purchaseOrders: 🛒 order) · v2.14 (notes: contactName/contactPhone) · v2.13 (notes + tasveer · pushTokens · reminder dueTime · pushConfig) · v2.12 (auditLog: 🕘 history — har harkat, sirf jorna) · v2.11 (gallaCalls: purchase wala "itne paise do" -> galla wala "de diye" + supplier ki payment · Sirf Galla login) · v2.10 (posBillIds: ek entry ke saath kai POS bill) · v2.9 (entryPhotos: tasveerein alag · pn) · v2.8 (reminder: full mulazim bhi) · v2.7 (aiConfig stock/sale ko bhi — tolai) · v2.6 (tolai mein `who` — har mulazim ka apna hisaab) · v2.5 (posTransfers: POS par bane transfer bhi app mein) · v2.4 (tolai: label ki tasveer se ginti + tolaiConfig) · v2.3 (itemJobs: app se POS ka item banana / badalna; mulazim ko ijazat stockConfig.itemEdit se) · v2.2 (billFormats: har supplier ke bill ka naqsha — ginti PCS ya CTN, rate fi PCS ya fi CTN) · v2.1 (itemRates: har item ka pichhla khareed aur nafa yaad) · v2.0 (itemAliases: Full / Purchase mulazim bhi bill ka naam "yaad" karwa sake — naam sirf barh sakte hain, mit nahi sakte) · v1.94 (app purchase: dobara / cancel) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -422,7 +422,8 @@ service cloud.firestore {
       function saleUser() { return isOwner() || blueStaff() || saleStaff(); }
       function validSale() {
         let d = request.resource.data;
-        return d.keys().hasOnly(['id','date','at','mode','branch','godam','lines','total','cash','note','role','by','status','createdAt','printReq'])
+        return d.keys().hasOnly(['id','date','at','mode','branch','godam','lines','total','cash','note','role','by','status','createdAt','printReq','copies'])   // v2.18: copies (bill kitni dafa)
+          && (!('copies' in d) || (d.copies is int && d.copies >= 1 && d.copies <= 3))
           && d.id == saleId && saleId.matches('^[a-zA-Z0-9_-]{6,60}$')
           && isToday(d.date) && d.mode in ['counter','wholesale']
           && d.branch is int && d.godam is int
@@ -435,8 +436,8 @@ service cloud.firestore {
       allow create: if saleUser() && validSale();
       // sirf "dobara print" ka hukam
       allow update: if saleUser()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['printReq'])
-        && request.resource.data.printReq is int;
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['printReq','copies'])
+        && request.resource.data.printReq is int && (!('copies' in request.resource.data) || (request.resource.data.copies is int && request.resource.data.copies >= 1 && request.resource.data.copies <= 3));
     }
 
     // Khate ki picture (alag, sirf khata kholne par parhi jati hai). Malik aur full mulazim.

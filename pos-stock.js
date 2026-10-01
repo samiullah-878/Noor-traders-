@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.39.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.40.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,7 +57,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.39.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.40.0: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -1577,6 +1577,9 @@ document.addEventListener('keydown', e => {
 let scanHit = null;
 let scanList = [];        // scan kiye hue item ids (tarteeb se)
 let scanStream = null, scanTimer = null, scanBox = null, scanBusy = false;
+let scanCamOff = false; try { scanCamOff = localStorage.getItem('sam-scan-camoff') === '1'; } catch {}   // v2.40: 📷 camera band/chalu (phone yaad rakhta hai)
+function camOffBtn(tools) { const b = document.createElement('button'); b.type = 'button'; b.className = 'scan-camoff'; b.textContent = scanCamOff ? '📷 Camera chalu' : '📷 Camera band';
+  b.onclick = () => { scanCamOff = !scanCamOff; try { localStorage.setItem('sam-scan-camoff', scanCamOff ? '1' : '0'); } catch {} closeScanner(); openScanner(); }; tools.appendChild(b); return b; }
 let lastCode = '', lastCodeAt = 0;
 let badCode = '', badN = 0, lastGoodAt = 0;   // v1.56: ghalat parhai ka filter
 let camRetry = 0, audioCtx = null;            // v1.57: kaala camera dobara chalu, scan ki awaz
@@ -1903,6 +1906,12 @@ async function openScanner() {
     const main = back.find(d => !/wide|ultra|macro|tele|depth|bokeh/i.test(d.label)) || back[0];
     return main ? { deviceId: { exact: main.deviceId } } : { facingMode: { ideal: 'environment' } };
   };
+  if (scanCamOff) {   // v2.40: camera band — scanner / search se kaam, video nahi
+    const msg0 = scanBox.querySelector('.scan-msg'); if (msg0) msg0.textContent = 'Camera band hai — barcode gun ya naam/code se item lagayein. Chalu karne ke liye 📷 dabayein.';
+    const tools0 = document.createElement('div'); tools0.className = 'scan-tools'; camOffBtn(tools0); (scanBox.querySelector('.scan-left') || msg0).append(tools0);
+    const v0 = scanBox.querySelector('video'); if (v0) v0.style.display = 'none';
+    return;
+  }
   try {
     // pehle ijazat (labels tabhi milte hain), phir sahi camera
     let cam = await pickCamera();
@@ -1979,6 +1988,7 @@ async function openScanner() {
       msg.textContent = `Camera: ${track.label || 'main'} — dhundla ho to 🔄 se badlein`;
     }
   } catch {}
+  camOffBtn(tools);   // v2.40: 🔄 Camera ke neeche 📷 Camera band
   video.addEventListener('click', refocus);
   if (caps.torch) {
     let on = false; const tb = document.createElement('button'); tb.type = 'button'; tb.textContent = '🔦 Light';
