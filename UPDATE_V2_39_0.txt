@@ -1,0 +1,9 @@
+Blue Khata v2.39.0 — 🏦 BANK / LOAN ACCOUNT (limit ke sath)
+INSTALL: GitHub bahar wala folder -> ZIP ki files -> 2-3 min ruk kar app kholein -> ↻ Sync -> 2.39.0. Rules NAHI badlin.
+ - Account edit (malik): "🏦 Bank / loan account" tick + "Loan / limit (Rs)" (jaise 1500000).
+ - Khate ke upar card: Limit · Istemal · Baqi (ya "Limit se zyada" laal) + patti + neeche "Jama (payment) / Nikaala (bheja)" ka jor.
+ - Buttons: ⬆ Bank mein jama (loan kam) · ⬇ Supplier ko bhejo (HBL payment — loan barhta) · 💵 Cash nikaala (loan barhta).
+ - Limit cross hone wali payment / entry par pehle warning (phir bhi karein? Yes/No).
+ - "Bank / loan" tick wala khata khud HBL payment ke liye bank ban jata hai (naam mein HBL hona zaroori nahi).
+HISAAB: loan "istemal" = jo bank ko dene hain. Jama = "payment" entry. HBL se supplier ko bhejna = bank par "collection".
+BADLI HUI FILES: app.js, notes.js, style.css + version.

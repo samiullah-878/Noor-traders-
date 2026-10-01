@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.38.0, 2026-10-01 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.39.0, 2026-10-01 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -1961,3 +1961,28 @@ usi firebase-key se parh saki -> chabi theek, chalti process ka auth toota.
   .jc-acts ek qataar (.jc-okrow display:contents; order prev/mini/ok), .jc-hint none, list .pp-ask .mchips wrap, .jz-acts sticky.
 * Card buttons label: ‹ / ✏️ / ✕ / ☰ (title + aria-label). data-pp-supfind: jaanch band -> supOpen + supQuery (naam ke 2 lafz).
 * Test: purchase save raasta (happy-dom) theek. Shakal asal phone par dekhni hai (yahan browser nahi).
+
+==================== 2026-10-01 — PC: atakna band (manifest 2026-10-01.1) ====================
+Malik: "koi atka nahi, perfect hal". Jaanch: manifest services mein queues MAUJOOD hain (doctor v2 stuck pehra chalu) —
+pichhli dafa maine ghalat key dekh kar "queues ghayab" kaha tha, wo GHALAT tha. Asal: 30 Sep shaam Firebase auth sab lambi
+node processes mein toota — doctor ka stuckOf bhi UNAUTHENTICATED par sirf log karta -> pehra andha.
+* doctor.js v2.1: stuckOf catch mein code 16 / UNAUTHENTICATED -> restartSelf (KHATA-DOCTOR.bat loop nayi process) ;
+  clockCheck() har cycle (30 min mein ek dafa): google.com Date header vs PC — 2 min se zyada farq -> log + w32tm /resync.
+* 30-09b ke 7 scripts (khud restart on 16) bhi isi zip mein. Test: stuckOf UNAUTHENTICATED -> restartSelf true.
+Teh: (1) script mari -> doctor chalata; (2) script zinda magar kaam 3 min se ruka -> doctor restart; (3) auth toota -> script
+khud + doctor khud restart; (4) PC ka waqt ghalat -> doctor theek karta / batata.
+* 2026-10-01 doctor.js v2.2 (manifest 2026-10-01.2): asal masla PC ka WAQT ghalat tha (FIREBASE-TEST ne pakra; w32tm ko admin
+  chahiye; Settings se theek hua). Waqt ghalat rehne se sab scripts 3 dafa fail -> doctor haar maan kar (k.n>=3) phir kabhi na
+  chalata -> "ek chalta doosra atka". Ab k.n>=3 par 30 min baad k.n=0 (phir koshish). Foran: taskkill /F /IM node.exe -> bat loops.
+  FIREBASE-TEST.bat (PC helper): waqt vs google, chabi token, get, 25s listener.
+
+==================== v2.39.0 (2026-10-01) — 🏦 BANK / LOAN ACCOUNT ====================
+Malik: "Hbl loan 7999 account" 15 lakh limit — supplier ko transfer se "dene" barhta, limit ka hisaab nahi (29.5 lakh dikh raha).
+* party fields: bank (bool), limit (paisa). Account form (owner): tick + limit; save payload mein sirf badle to (phX).
+  Rules: owner party update broad — NAHI badli; staff ke affectedKeys mein bank/limit nahi (staff set nahi karta).
+* app.js loanCardHTML(p,b,es): used = max(0,-b), avail, over; jama = payment+credit, nikaala = collection+borrow (transfer
+  out = collection on bank). Actions for p.bank: payment / data-hbl-pay (canEditAccount) / borrow. entryTitle bank.
+  save(): naya entry borrow/collection par bank+limit -> used > limit -> confirm.
+* notes.js: bankId() pehle p.bank (ek ho to), isBank(id) p.bank bhi; hblPayForm commit se pehle limit confirm (balanceOf hook
+  app.js notesSetup balance:id=>balance(party,entries)).
+* Test: loanCardHTML over case sahi. Malik ke 29.5 lakh ka asal farq (ulti entry / double) abhi data mein dekhna baqi.

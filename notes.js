@@ -6,8 +6,8 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { saleStock } from './pos-stock.js?v=2.38.0';
-import { voiceSearch, smartSearch, partyScore } from './smart-search.js?v=2.38.0';
+import { saleStock } from './pos-stock.js?v=2.39.0';
+import { voiceSearch, smartSearch, partyScore } from './smart-search.js?v=2.39.0';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -19,7 +19,7 @@ const t12 = hm => { if (!hm) return ''; const [h, m] = hm.split(':').map(Number)
 const ID = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const BANK_KEY = 'sam-bank-party-v1';
 
-let aiOf = null, stockOf = () => null;
+let aiOf = null, stockOf = () => null, balanceOf = null;
 let cloud = null, notice = () => {}, whoOf = () => ({}), recordsOf = () => [], partyOf = () => null, partiesOf = () => [], itemsOf = () => [], routeTo = () => {}, dlgOf = null, closeDlg = () => {}, payOf = null, canUseOf = () => false;
 let notes = [], stop = null, fTab = 'open', fQ = '', pics = new Map(), picLoad = new Set(), animating = new Set();
 let pushCfg = null, pushState = '';
@@ -27,7 +27,7 @@ let pushCfg = null, pushState = '';
 export function notesSetup(o) {
   cloud = o.cloud || cloud; notice = o.notice || notice; whoOf = o.who || whoOf; recordsOf = o.records || recordsOf;
   partyOf = o.party || partyOf; partiesOf = o.parties || partiesOf; itemsOf = o.items || itemsOf; routeTo = o.route || routeTo;
-  dlgOf = o.modal || dlgOf; closeDlg = o.close || closeDlg; payOf = o.pay || payOf; canUseOf = o.canUse || canUseOf; aiOf = o.ai || aiOf; stockOf = o.stock || stockOf; pdfOf = o.pdf || pdfOf;
+  dlgOf = o.modal || dlgOf; closeDlg = o.close || closeDlg; payOf = o.pay || payOf; canUseOf = o.canUse || canUseOf; aiOf = o.ai || aiOf; stockOf = o.stock || stockOf; pdfOf = o.pdf || pdfOf; balanceOf = o.balance || balanceOf;
   if (!stop && cloud?.listenNotes) stop = cloud.listenNotes(list => { notes = (list || []).filter(n => n && n.id && !n.deleted); if ($('ntRoot')) paint(); badge(); });
   window.addEventListener('hashchange', hashGo);
   setTimeout(hashGo, 1800);
@@ -47,10 +47,12 @@ export function bankId() {
   const all = (partiesOf() || []).filter(p => p && !p.deleted);
   let id = ''; try { id = localStorage.getItem(BANK_KEY) || ''; } catch {}
   if (id && all.some(p => p.id === id)) return id;
+  const flagged = all.filter(p => p.bank);   // v2.39: account edit mein "Bank / loan account" tick
+  if (flagged.length === 1) return flagged[0].id;
   const hbl = all.filter(p => /\bhbl\b/i.test(String(p.name || '')));
   return hbl.length === 1 ? hbl[0].id : '';
 }
-export const isBank = id => !!id && id === bankId();
+export const isBank = id => !!id && (id === bankId() || !!partyOf(id)?.bank);
 function pickBank(then) {
   const all = (partiesOf() || []).filter(p => p && !p.deleted);
   const hbl = all.filter(p => /hbl|bank/i.test(String(p.name || '')));
@@ -110,6 +112,7 @@ export function hblPayForm(forceBank) {
     const tid = ID();
     const tnote = ('HBL payment' + (items ? ' — ' + items : '') + (f.elements.note.value ? ' · ' + f.elements.note.value : '')).slice(0, 900);
     try {
+      if (bank.bank && Number(bank.limit) > 0 && balanceOf) { const used = Math.max(0, -Number(balanceOf(bid) || 0)) + amt * 100; if (used > Number(bank.limit) && !confirm('⚠️ Is payment ke baad loan limit se ' + Math.round((used - Number(bank.limit)) / 100).toLocaleString('en-PK') + ' zyada ho jayega (limit ' + Math.round(Number(bank.limit) / 100).toLocaleString('en-PK') + '). Phir bhi bhejein?')) throw Error('Limit ki wajah se rok diya'); }
       const ok = await payOf({ id: tid, rev: 0, fromPartyId: bid, toPartyId: sup, amount: amt * 100, date: dayOf(), note: tnote, posPending: false });
       if (ok === false) throw Error('Transfer nahi hua');
       await saveNote({ id: 'o' + tid, contactName: sname.slice(0, 80), contactPhone: partyOf(sup)?.phone || '', kind: 'order', text: (f.elements.note.value || '').slice(0, 500), items: chosen.slice(0, 20), partyId: sup, partyName: sname.slice(0, 120), amount: amt * 100, transferId: tid, remindDay: f.elements.day.value || '', remindTime: f.elements.time.value || '', allDay: !f.elements.time.value }, null);

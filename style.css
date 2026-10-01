@@ -1441,3 +1441,17 @@ dialog.jaanch-dlg{position:fixed;left:0!important;right:0!important;top:0!import
 .jz-supfind button{min-height:44px;border-radius:14px;font-size:14px;text-align:left;padding:6px 12px;background:#fff8ea;border:1.5px solid #f1d59a;color:#6b4705}
 .jz-supfind small{color:#6b7c93;font-size:11.5px}
 .jaanch-dlg #close{min-height:0!important;width:40px!important;height:36px!important;font-size:18px!important}
+
+/* ===== v2.39: 🏦 Bank / loan account ===== */
+.af-limit{display:grid;gap:4px;margin:0 0 10px;font-weight:700;color:#41536f;font-size:13px}
+.af-limit input{min-height:46px;font-size:18px;font-weight:800}
+.loan-card{margin:10px 0 0;padding:10px 12px;border-radius:14px;background:#f3f7ff;border:1px solid #cfdcf5;display:grid;gap:7px}
+.loan-card.over{background:#fdecec;border-color:#f3b4b4}
+.loan-row{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;font-size:11.5px;color:#41536f}
+.loan-row span{display:grid}.loan-row b{font-size:14.5px;color:#10192b}
+.loan-card.over .loan-row span:last-child b{color:#b3261e}
+.loan-bar{height:8px;border-radius:999px;background:#dde6f5;overflow:hidden}
+.loan-bar i{display:block;height:100%;background:linear-gradient(90deg,#2b4a86,#4b5fd6)}
+.loan-card.over .loan-bar i{background:linear-gradient(90deg,#e0574f,#b3261e)}
+.loan-card small{color:#6b7c93;font-size:11.5px}
+.loan-card.over small b{color:#b3261e}
