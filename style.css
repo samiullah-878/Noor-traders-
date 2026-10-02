@@ -1469,3 +1469,21 @@ dialog.jaanch-dlg{position:fixed;left:0!important;right:0!important;top:0!import
 .sh-close{margin-left:auto;min-height:30px;width:34px;padding:0;border-radius:999px;border:0;background:#eef2f8;font-weight:900;color:#1b3058}
 .tr-sticky{position:sticky;bottom:-8px;z-index:4;background:#fff;padding:8px 0;margin:6px 0 0;box-shadow:0 -8px 12px -10px rgba(15,23,42,.18)}
 .pick-mode .scan-find:not([hidden]){display:block}
+
+/* ===== v2.42: purchase ke nafa chips har jagah chhote (jaanch jaise) ===== */
+.rate-chips{padding:5px 7px!important;margin:4px 0 2px!important;border-radius:12px!important;gap:3px!important}
+.rate-chips .rc-head small{font-size:9.5px!important}
+.rate-chips .rc-old{min-height:24px!important;width:26px!important;height:24px!important;font-size:12px!important}
+.rate-chips .rc-row{gap:4px!important}
+.rate-chips .rc-lab{width:58px!important;font-size:11px!important;line-height:1.1}
+.rate-chips .rc-lab i{font-size:10px!important}
+.rate-chips .rc-set{gap:4px!important}
+.rate-chips .rc-set button{min-height:26px!important;height:26px!important;padding:0 8px!important;font-size:12px!important;border-radius:999px!important}
+
+/* ===== v2.44: khata entry par chalta hua baqaya ===== */
+.ledger-item .run{display:block;font-style:normal;font-size:11.5px;font-weight:800;margin:2px 0 0;padding:2px 8px;border-radius:999px;background:#f3f6fb;width:fit-content}
+.ledger-item .run.red{color:#b3261e;background:#fdecec}.ledger-item .run.green{color:#17703c;background:#e8f5ec}
+
+/* ===== v2.47: dasti toggle chip (party page) ===== */
+.dasti-chip{display:inline-flex;align-items:center;gap:6px;margin:10px 0 0;min-height:38px;padding:6px 14px;border-radius:999px;border:1.5px solid #d3def5;background:#fff;color:#1b3058;font-weight:800;font-size:13px}
+.dasti-chip.on{background:#e8f5ec;border-color:#9fd3b0;color:#17703c}

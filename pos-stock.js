@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.41.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.47.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,7 +57,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.41.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.47.0: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -240,7 +240,7 @@ let lastScan = null, lastKey = '', scanQty = new Map(), padUnit = 'pcs';   // v1
 let scanOrder = [], scanItems = new Map();   // camera ki screen par bill ki lines
 export function setSaleScanHook(fn) { saleHook = fn; }
 export function openSaleCamera() { saleSeen = []; openScanner(); }
-const saleRoot = () => !!document.querySelector('[data-sale-root],[data-pp-root]');   // v1.86: POS Purchase screen bhi
+const saleRoot = () => !!document.querySelector('[data-sale-root],[data-pp-root],[data-tr-root]');   // v1.86: POS Purchase screen bhi · v2.42: transfer note bhi
 
 // ---------- data ----------
 
@@ -780,6 +780,9 @@ function trStockOf(b, id) { return Number(saleStockItem(b, id)?.stock || 0); }
 // - khali khana: "aksar bheje jane wale" (isi phone ki yaad-dasht se)
 const TR_REC_KEY = 'sam-tr-recent-v1';
 let trRecent = null, trFocus = null, trZeroShow = false, trFindTimer = null;
+let trCopies = 1; try { trCopies = Math.min(3, Math.max(1, Number(localStorage.getItem('sam-tr-copies')) || 1)); } catch {}   // v2.43: note kitni dafa chhape
+const trCopyChips = () => `<div class="sale-copies"><small>🖨 Note print</small>${[1, 2, 3].map(n => `<button type="button" data-tr-copies="${n}"${trCopies === n ? ' class="on"' : ''}>×${n}</button>`).join('')}</div>`;
+document.addEventListener('click', e => { const b = e.target.closest?.('[data-tr-copies]'); if (!b) return; trCopies = Number(b.dataset.trCopies) || 1; try { localStorage.setItem('sam-tr-copies', String(trCopies)); } catch {} document.querySelectorAll('[data-tr-copies]').forEach(x => x.classList.toggle('on', Number(x.dataset.trCopies) === trCopies)); });
 function trRecLoad() { if (trRecent) return trRecent; try { trRecent = JSON.parse(localStorage.getItem(TR_REC_KEY) || '[]'); } catch { trRecent = []; } if (!Array.isArray(trRecent)) trRecent = []; return trRecent; }
 function trRecNote(id) { const a = trRecLoad().filter(x => String(x) !== String(id)); a.unshift(String(id)); trRecent = a.slice(0, 15); try { localStorage.setItem(TR_REC_KEY, JSON.stringify(trRecent)); } catch {} }
 function trRecRank(id) { const i = trRecLoad().indexOf(String(id)); return i < 0 ? 0 : (15 - i) / 6; }   // halka sa upar, match ki jagah nahi leta
@@ -1013,6 +1016,31 @@ export function inReport() {
         to: { name: branchName(r.to.b, names), pehle: cell(r.to.pehle, r.pack), ab: cell(r.to.ab, r.pack) } })) })) };
 }
 document.addEventListener('pointerdown', e => { const h = document.querySelector('[data-tr-hits]'); if (!h || h.hidden) return; if (e.target.closest?.('[data-tr-hits],[data-tr-q]')) return; h.hidden = true; }, true);   // v2.41: list ke bahar tap = band
+// ===== v2.42: transfer note ka camera = Sale wali screen (wahi hooks, wahi list, wahi Tadad/Pcs/Ctn pad) =====
+let trRootMark = null, trHooksSaved = null;
+const trKey = l => l.k || (l.k = 'tr' + Math.random().toString(36).slice(2, 8));
+function trScanOpen() {
+  try { $('dialog').close(); } catch {}
+  trRootMark = document.createElement('div'); trRootMark.dataset.trRoot = '1'; trRootMark.hidden = true; document.body.appendChild(trRootMark);
+  trHooksSaved = { saleHook, saleQtyHook, saleCartHook, saleDelHook, saleFindHook };
+  saleDelHook = key => { const i = trLines.findIndex(l => l.k === key); if (i >= 0) trLines.splice(i, 1); };
+  saleCartHook = () => trLines.map(l => ({ key: trKey(l), item: { id: l.id, code: l.code || '', name: l.name, pack: Number(l.pack) || 0, cName: l.cName, uName: l.uName, rate: 0, rate2: 0 }, pcs: Number(l.pcs) || 0, ctn: Number(l.ctn) || 0 }));
+  saleFindHook = q => smartSearch(collect().items, q, 12).map(r => ({ ...r, stock: trStockOf(trFrom, r.id) }));   // stock = jis godam SE nikal raha hai
+  saleQtyHook = (it, q, key) => { const l = (key && trLines.find(x => x.k === key)) || [...trLines].reverse().find(x => String(x.id) === String(it.id)); if (!l) return; l.pcs = Number(q.pcs) || 0; l.ctn = Number(q.ctn) || 0; trCalc(l); };
+  saleHook = (code, direct, qty) => {
+    const { items, names } = collect(), c = String(code || '').trim();
+    const it = direct ? (items.find(x => String(x.id) === String(direct.id)) || direct) : items.find(x => String(x.code).trim() === c || (Array.isArray(x.bc) && x.bc.some(b => String(b).trim() === c)));
+    if (!it) return { state: null };
+    if (!trHas(it)) { notice(`⚠️ ${it.name} — ${branchName(trFrom, names)} mein stock NAHI, lagaya nahi`); return { state: null }; }
+    trRecNote(it.id);
+    const l = trAddLine(it); trKey(l);
+    if (Number(qty) > 0) { const pk = Number(it.pack) || 0, q = Math.round(Number(qty) * 1000) / 1000; if (pk > 1) { l.ctn = Math.floor(q / pk + 1e-9); l.pcs = Math.round((q - l.ctn * pk) * 1000) / 1000; } else { l.pcs = q; l.ctn = 0; } trCalc(l); }
+    const have = trStockOf(trFrom, it.id); if (l.qty > have + 0.0005) notice(`⚠️ ${it.name}: stock ${num(have)} — ${num(l.qty)} nahi ja sakte`);
+    return { state: 'added', item: it, line: l.k, pcs: Number(l.pcs) || 0, ctn: Number(l.ctn) || 0 };
+  };
+  pickHook = null; pickMulti = { done: () => { trRootMark?.remove(); trRootMark = null; if (trHooksSaved) ({ saleHook, saleQtyHook, saleCartHook, saleDelHook, saleFindHook } = trHooksSaved); trHooksSaved = null; openTransfer(); } };
+  saleSeen = []; openScanner();
+}
 function openTransfer() {
   const d = $('dialog'); if (!d) return;
   trZeroShow = false;   // v2.18
@@ -1032,7 +1060,7 @@ function openTransfer() {
       <label class="tr-q"><span>${esc(l.uName || 'Pcs')}</span><input type="text" inputmode="decimal" value="${num(l.pcs ?? l.qty)}" data-tr-pcs="${i}"></label><button type="button" class="danger" data-tr-del="${i}">✕</button></div>`; }).join('') || '<p class="muted">Upar se item chunein ya scan karein.</p>'}</div>
     ${trLines.length ? `<p class="tr-sum">${trLines.length} items · ${(() => { const c = trLines.reduce((n, l) => n + (Number(l.pack) > 1 ? Number(l.ctn) || 0 : 0), 0), p = trLines.reduce((n, l) => n + (Number(l.pcs) || 0), 0); return [c ? num(c) + ' CTN' : '', p ? num(p) + ' PCS' : ''].filter(Boolean).join(' + ') || '0'; })()} · kul ${num(kul)} pcs</p>` : ''}
     <label>Note<input type="text" data-tr-note maxlength="150" placeholder="ikhtiyari"></label>
-    <div class="account-tools tr-sticky"><button type="button" class="primary" data-tr-save="1"${trLines.length ? '' : ' disabled'}>✓ POS mein transfer note banao</button>${trLines.length ? '<button type="button" data-tr-clear="1">Saaf</button>' : ''}</div>
+    ${trLines.length ? trCopyChips() : ''}<div class="account-tools tr-sticky"><button type="button" class="primary" data-tr-save="1"${trLines.length ? '' : ' disabled'}>✓ POS mein transfer note banao</button>${trLines.length ? '<button type="button" data-tr-clear="1">Saaf</button>' : ''}</div>
     <p class="muted tr-msg" style="font-size:.85em"></p>
     <div class="tr-hist"><b>Pichhle 14 din ke transfer (app se)</b><div data-tr-hist>${trHistHTML()}</div></div>`;
   if (!d.open) d.showModal();
@@ -1106,10 +1134,10 @@ async function trSave(btn) {
   btn.disabled = true; msg.textContent = '🖥 PC ko ja raha hai…';
   try {
     if (trLines.some(l => !(l.qty > 0))) { msg.textContent = '⚠️ Har item ki tadad 0 se zyada likhein'; return; }
-    const jid = await cloud.requestTransfer({ op: 'create', from: trFrom, to: trTo, lines: trLines.map(l => ({ itemId: l.id, name: l.name, qty: l.qty, ctn: Number(l.ctn) || 0, pcs: Number(l.pcs) || 0, pack: Number(l.pack) || 0, cName: l.cName || 'Ctn', uName: l.uName || 'Pcs' })), note, byName: '' });
-    let stop = null, done = false;
-    const end = (ok, t) => { if (done) return; done = true; try { stop && stop(); } catch {} btn.disabled = false;
-      if (ok) { trLines = []; notice('✓ Transfer note ' + t + ' ban gaya'); openTransfer(); } else { msg.textContent = '⚠️ ' + t; notice('Transfer nahi bana: ' + t); } };
+    const jid = await cloud.requestTransfer({ op: 'create', copies: trCopies, from: trFrom, to: trTo, lines: trLines.map(l => ({ itemId: l.id, name: l.name, qty: l.qty, ctn: Number(l.ctn) || 0, pcs: Number(l.pcs) || 0, pack: Number(l.pack) || 0, cName: l.cName || 'Ctn', uName: l.uName || 'Pcs' })), note, byName: '' });
+    let stop = null, done = false; const t0 = Date.now(), tick = setInterval(() => { if (!done && msg) msg.textContent = `🖥 PC bana raha hai… ${Math.round((Date.now() - t0) / 1000)}s`; }, 1000);   // v2.46: kitna waqt lag raha hai
+    const end = (ok, t) => { if (done) return; done = true; clearInterval(tick); try { stop && stop(); } catch {} btn.disabled = false;
+      if (ok) { trLines = []; notice('✓ Transfer note ' + t + ' ban gaya (' + Math.round((Date.now() - t0) / 1000) + 's)'); openTransfer(); } else { msg.textContent = '⚠️ ' + t; notice('Transfer nahi bana: ' + t); } };
     stop = cloud.watchTransfer(jid, j => { if (!j) return; if (j.status === 'done') end(true, j.transferNo || ''); else if (j.status === 'failed') end(false, j.error || 'masla'); });
     setTimeout(() => end(false, 'PC se jawab nahi aaya — PC on hai aur transfer-sync chal raha hai? (hukum mehfooz hai)'), 45000);
   } catch (e) { btn.disabled = false; msg.textContent = '⚠️ ' + (e?.message || e); }
@@ -1119,17 +1147,13 @@ document.addEventListener('click', e => {
   if (!t) return;
   if (t.dataset.trDel) { trLines.splice(Number(t.dataset.trDel), 1); openTransfer(); }
   else if (t.dataset.trClear) { trLines = []; openTransfer(); }
-  else if (t.dataset.trSave) trSave(t);
-  else if (t.dataset.trScan) { try { $('dialog').close(); } catch {}      // v2.17: camera khula rahe — ek ke baad ek
-    scanPickMany((c, r0) => { const { items } = collect(); c = String(c).trim(); const r = r0 ? (items.find(x => String(x.id) === String(r0.id)) || r0) : items.find(x => String(x.code).trim() === c || (Array.isArray(x.bc) && x.bc.some(b => String(b).trim() === c)));
-      if (!r) return { ok: false, text: '⚠️ "' + esc(c) + '" stock mein nahi mila', count: trLines.length };
-      trRecNote(r.id);   // v2.18
-      const l = trAddLine(r); return { ok: true, text: `✓ <b>${esc(r.name)}</b> — ${esc(trQtyText(l))} · kul ${trLines.length} items`, count: trLines.length }; },
-      () => openTransfer()); }
+  else if (t.dataset.trSave) { const bad = trFrom !== 1 ? trLines.filter(l => l.qty > trStockOf(trFrom, l.id) + 0.0005) : []; if (bad.length) { notice(`⚠️ Stock se zyada: ${bad.slice(0, 3).map(l => l.name + ' (stock ' + num(trStockOf(trFrom, l.id)) + ')').join(', ')}${bad.length > 3 ? ' …' : ''} — pehle theek karein`); return; } trSave(t); }   // v2.42
+  else if (t.dataset.trScan) trScanOpen();   // v2.42: Sale wali camera screen (search + Tadad + Pcs/Ctn + list)
   else if (t.dataset.trPrint) {   // v1.75: dobara print — wajah zaroori, note par bara "DOBARA PRINT" chhapta hai
     const j = trList.find(x => x.id === t.dataset.trPrint); const n = (j?.reprints?.length || 0) + 1;
     const reason = prompt(`Dobara print (${n}) ki wajah likhein:`); if (reason == null) return; if (!reason.trim()) { notice('Wajah likhna zaroori hai'); return; }
-    t.disabled = true; cloud.requestPrint({ kind: 'transfer', id: t.dataset.trPrint, reason: reason.trim().slice(0, 100) }).then(() => notice('🖨️ Dobara print PC ko bheja')).catch(er => notice(er?.message || 'Nahi hua')).finally(() => { t.disabled = false; }); }
+    const cps = Math.min(3, Math.max(1, Number(prompt('Kitni dafa chhapein? (1-3)', String(trCopies))) || 1));   // v2.43
+    t.disabled = true; cloud.requestPrint({ kind: 'transfer', id: t.dataset.trPrint, reason: reason.trim().slice(0, 100), copies: cps }).then(() => notice('🖨️ Dobara print PC ko bheja')).catch(er => notice(er?.message || 'Nahi hua')).finally(() => { t.disabled = false; }); }
   else if (t.dataset.trUndo) { const j = trList.find(x => x.id === t.dataset.trUndo); if (!j || !confirm('Transfer note ' + (j.transferNo || '') + ' POS se hata dein? Dono godam ka stock wapas ho jayega.')) return; t.disabled = true;
     cloud.requestTransfer({ op: 'delete', from: j.from, to: j.to, transferId: j.transferId, lines: j.lines }).then(() => notice('Hatane ka hukum PC ko bheja')).catch(er => notice(er?.message || 'Nahi hua')); }
 });
@@ -1788,10 +1812,10 @@ async function openScanner() {
       const list = scanOrder.map(k => [k, scanItems.get(k)]).filter(x => x[1]);
       countBox.textContent = list.length;
       namesBox.innerHTML = list.slice().reverse().map(([k, it]) => { const L = lineOf(it, k);   // v2.33: nayi upar
-        return `<li${k === lastKey ? ' class="now"' : ''}><button type="button" class="scan-del" data-del="${esc(k)}" aria-label="Hatao">✕</button><b>${esc(it.name)}</b><span>${esc(L.qtxt)} x ${num(L.rate)} = <b>${num(L.amt)}</b></span></li>`; }).join('');
+        return `<li${k === lastKey ? ' class="now"' : ''}><button type="button" class="scan-del" data-del="${esc(k)}" aria-label="Hatao">✕</button><b>${esc(it.name)}</b><span>${esc(L.qtxt)}${L.rate ? ` x ${num(L.rate)} = <b>${num(L.amt)}</b>` : ''}</span></li>`; }).join('');   // v2.42: transfer (rate 0) par sirf tadad
       namesBox.reversed = true; namesBox.start = list.length;
       const kul = list.reduce((n, [k, it]) => n + lineOf(it, k).amt, 0);
-      sumBox.innerHTML = list.length ? `Kul: <b>Rs ${num(kul)}</b>` : '';
+      sumBox.innerHTML = list.length ? (kul ? `Kul: <b>Rs ${num(kul)}</b>` : `<b>${list.length}</b> items`) : '';
       try { namesBox.scrollTop = namesBox.scrollHeight; } catch {}
       return;
     }

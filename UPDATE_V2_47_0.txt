@@ -1,0 +1,11 @@
+Blue Khata v2.47.0 — HAR MULAZIM: "DASTI PAYMENT MEIN SHAMIL" (RULES 2.20)
+ASAL WAJAH (aakhir mil gayi): rules mein khata badalne ki ijazat SIRF "full" mulazim ko thi. Sale / Stock / Purchase wale
+ mulazim ke liye Firebase hamesha mana karta tha — app mein jo bhi theek karte, rules rok deti theen.
+INSTALL — 2 qadam, dono lazmi:
+ 1) RULES 2.20: firestore-rules-2.20.html -> copy -> Firebase -> Publish (ya header 🔐). Pehle ye.
+ 2) App ZIP -> GitHub bahar wala folder -> Sync -> 2.47.0.
+KYA NAYA:
+ - Khate ke upar (balance card ke neeche) ek button: "💼 Dasti payment mein shamil karein" / "✅ Dasti payment mein hai · nikaalein".
+   Malik aur HAR mulazim (koi bhi scope) — ek tap. Account edit kholne ki zaroorat nahi.
+ - Rules: mulazim sirf 'dasti' ka khana badal sakta hai, naam/phone/baqaya nahi. Din band ho to nahi.
+BADLI HUI FILES: app.js, style.css, firestore.rules (2.20) + version.

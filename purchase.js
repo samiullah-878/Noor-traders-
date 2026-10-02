@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.41.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold } from './smart-search.js?v=2.41.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.47.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold } from './smart-search.js?v=2.47.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -347,7 +347,7 @@ function pcRows() {
   const t = todayStr(), y = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
   const q = norm(pcQ);
   return pcBillsOf().filter(r => (isOwner() || r.date === t) && (pcWhen === 'all' || (pcWhen === 'today' ? r.date === t : r.date === y)))
-    .filter(r => !q || norm(r.billNo).includes(q) || norm(r.partyName).includes(q) || (matchesOf(partyOf(r.partyId) || { name: r.partyName }, pcQ)))
+    .filter(r => !q || norm(r.billNo).includes(q) || norm(r.partyName).includes(q) || (/^[0-9.,\s]+$/.test(String(pcQ).trim()) && String(Math.round(Number(r.rs) || 0)).startsWith(String(pcQ).replace(/[^0-9]/g, ''))) || (matchesOf(partyOf(r.partyId) || { name: r.partyName }, pcQ)))   // v2.45: raqam se bhi
     .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.billNo).localeCompare(String(a.billNo))).slice(0, 60);
 }
 function pcListHTML() {

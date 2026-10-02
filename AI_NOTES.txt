@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.41.0, 2026-10-01 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.47.0, 2026-10-02 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2018,3 +2018,43 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
   bahar tap -> [data-tr-hits] hidden. openScanner pick-mode: pickMulti ho to .scan-find NAHI chhupta; search pick handler mein
   pickHook(code, r) (transfer hook ab (c, r0) — r0 se item seedha). trLines render reverse (index wahi), .tr-sticky save.
 * Test (happy-dom): search list khuli, ✕ se band, bahar tap se band.
+
+==================== v2.42.0 (2026-10-02) — TRANSFER CAMERA = SALE SCREEN · STOCK GUARD · CHIPS CHHOTE ====================
+* pos-stock.js: saleRoot() mein [data-tr-root]. trScanOpen(): dialog band, body mein hidden [data-tr-root] marker, sale hooks
+  (saleHook/Qty/Cart/Del/Find) transfer ke liye set (purane yaad), pickMulti.done -> marker hatao, hooks wapas, openTransfer().
+  saleHook: trHas(it) nahi -> notice + {state:null} (lagta nahi); qty (pcs total) -> ctn/pcs by pack; qty > stock -> notice.
+  saleFindHook: smartSearch(collect().items) + stock = trStockOf(trFrom). trLines mein l.k (key). drawNames: rate 0 -> sirf tadad,
+  Kul 0 -> "N items". trSave guard: trFrom !== 1 && qty > stock -> notice, ruk jao. scanPickMany ab transfer mein istemal nahi.
+* style.css: .rate-chips compact har jagah (pehle sirf .jaanch-dlg).
+* Test (happy-dom, BarcodeDetector stub, camoff): search+Tadad -> line, stock 0 ruka, wapas note mein line.
+* Print x1/x2/x3 transfer ke liye ABHI NAHI bana (malik se dobara poochna).
+
+==================== v2.43.0 (2026-10-02) — TRANSFER PRINT COPIES (RULES 2.19, manifest 2026-10-02.1) ====================
+* pos-stock.js: trCopies (localStorage 'sam-tr-copies'), trCopyChips() lines ke neeche (.sale-copies class), requestTransfer copies,
+  reprint prompt copies -> requestPrint copies. cloud.js: transferJobs + printJobs docs mein copies (1-3).
+* Rules 2.19: transferJobs create hasOnly + copies int 1-3; printJobs create hasOnly + copies.
+* pc/transfer-sync.js: create ke baad print loop nC; printJobs handler loop nC.
+
+==================== v2.44.0 (2026-10-02) — KHATA ENTRY PAR CHALTA BAQAYA ====================
+* app.js: runningOf(pid) — party ki saari entries chronological (newestEntries reverse), opening + sign (credit/payment +1,
+  borrow/collection -1, skipsBalance chhor) -> Map(id -> balance). runHTML() ledger-item mein date ke baad chip.
+  (Dasti payment screen mein nahi lagaya — malik ne sirf khata kaha.)
+
+==================== v2.45.0 (2026-10-02) — SEARCH MEIN RAQAM ====================
+* app.js amtHit(q, paisa): sirf digits/,/./space wali query, >=2 hindse, rupay string === ya startsWith. matches() (entries),
+  accountMatches() (balance), custody book filter. purchase.js PC bills (r.rs rupay) startsWith. Item search (naam/code) waisi hi.
+
+==================== v2.46.0 + PC 2026-10-02.2 — TEZ PRINT (DLL cache) · ⏳ waqt ====================
+* Malik: transfer note + closing cash bohat waqt lete. Code mein CPU hotspot nahi mila; print path: har sendRaw/printText PowerShell
+  Add-Type -TypeDefinition (C# compile) = 3-8s, aur transfer-sync ki `later` queue serial -> agla job print ke peeche. 
+* 5 scripts: Add-Type ek dafa -OutputAssembly RawCached.dll (DIR), phir Add-Type -Path; class RawCached.Send(printer,bytes,doc).
+* App: trSave msg "PC bana raha hai… Ns" + notice mein seconds; formSave ⏳ Ns, >=3s -> "internet sust" notice. Closing save =
+  runTransaction (record + cash guard get) — network bound. Agla qadam agar phir bhi sust: malik se seconds poochna.
+
+==================== v2.47.0 (2026-10-02) — DASTI TOGGLE HAR MULAZIM (RULES 2.20) ====================
+* ASAL JAR: rules party update blueStaff() = sirf scope 'full'. Sale/stock/purchase mulazim -> permission denied hamesha.
+  App mein purchaseOnly() guard bhi "Sirf Purchase ki ijazat" phenkta tha.
+* Rules 2.20: naya allow update party: isStaff() && staffAccount().active && dayOpen(), affectedKeys hasOnly
+  ['dasti','updatedAt','updatedBy','rev'], rev+1, updatedBy==uid.
+* app.js: dastiChipHTML(p) summary ke neeche (owner ya koi staff, din khula); click -> save({...p,dasti:!p.dasti},p).
+  save() purchaseOnly guard: party+existing exempt. style .dasti-chip.

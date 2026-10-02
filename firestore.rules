@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v2.18 (appSales copies: bill ×1-3) · v2.17 (mulazim: purane khate — rev na ho to 0; Dasti mein shamil) · v2.16 (demands: 📢 mulazim ki khatam/kam demand) · v2.15 (posStats: PC ki 6 mahine ki bikri · purchaseOrders: 🛒 order) · v2.14 (notes: contactName/contactPhone) · v2.13 (notes + tasveer · pushTokens · reminder dueTime · pushConfig) · v2.12 (auditLog: 🕘 history — har harkat, sirf jorna) · v2.11 (gallaCalls: purchase wala "itne paise do" -> galla wala "de diye" + supplier ki payment · Sirf Galla login) · v2.10 (posBillIds: ek entry ke saath kai POS bill) · v2.9 (entryPhotos: tasveerein alag · pn) · v2.8 (reminder: full mulazim bhi) · v2.7 (aiConfig stock/sale ko bhi — tolai) · v2.6 (tolai mein `who` — har mulazim ka apna hisaab) · v2.5 (posTransfers: POS par bane transfer bhi app mein) · v2.4 (tolai: label ki tasveer se ginti + tolaiConfig) · v2.3 (itemJobs: app se POS ka item banana / badalna; mulazim ko ijazat stockConfig.itemEdit se) · v2.2 (billFormats: har supplier ke bill ka naqsha — ginti PCS ya CTN, rate fi PCS ya fi CTN) · v2.1 (itemRates: har item ka pichhla khareed aur nafa yaad) · v2.0 (itemAliases: Full / Purchase mulazim bhi bill ka naam "yaad" karwa sake — naam sirf barh sakte hain, mit nahi sakte) · v1.94 (app purchase: dobara / cancel) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v2.20 (har mulazim: party.dasti on/off) · v2.19 (transferJobs/printJobs copies: note ×1-3) · v2.18 (appSales copies: bill ×1-3) · v2.17 (mulazim: purane khate — rev na ho to 0; Dasti mein shamil) · v2.16 (demands: 📢 mulazim ki khatam/kam demand) · v2.15 (posStats: PC ki 6 mahine ki bikri · purchaseOrders: 🛒 order) · v2.14 (notes: contactName/contactPhone) · v2.13 (notes + tasveer · pushTokens · reminder dueTime · pushConfig) · v2.12 (auditLog: 🕘 history — har harkat, sirf jorna) · v2.11 (gallaCalls: purchase wala "itne paise do" -> galla wala "de diye" + supplier ki payment · Sirf Galla login) · v2.10 (posBillIds: ek entry ke saath kai POS bill) · v2.9 (entryPhotos: tasveerein alag · pn) · v2.8 (reminder: full mulazim bhi) · v2.7 (aiConfig stock/sale ko bhi — tolai) · v2.6 (tolai mein `who` — har mulazim ka apna hisaab) · v2.5 (posTransfers: POS par bane transfer bhi app mein) · v2.4 (tolai: label ki tasveer se ginti + tolaiConfig) · v2.3 (itemJobs: app se POS ka item banana / badalna; mulazim ko ijazat stockConfig.itemEdit se) · v2.2 (billFormats: har supplier ke bill ka naqsha — ginti PCS ya CTN, rate fi PCS ya fi CTN) · v2.1 (itemRates: har item ka pichhla khareed aur nafa yaad) · v2.0 (itemAliases: Full / Purchase mulazim bhi bill ka naam "yaad" karwa sake — naam sirf barh sakte hain, mit nahi sakte) · v1.94 (app purchase: dobara / cancel) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -344,7 +344,8 @@ service cloud.firestore {
     match /businesses/noor-traders/transferJobs/{jobId} {
       allow read: if isOwner() || blueStaff() || stockStaff();
       allow create: if (isOwner() || blueStaff() || stockStaff())
-        && request.resource.data.keys().hasOnly(['op','from','to','lines','note','transferId','byName','status','by','at'])
+        && request.resource.data.keys().hasOnly(['op','from','to','lines','note','transferId','byName','status','by','at','copies'])   // v2.19: copies (note kitni dafa, 1-3)
+        && (!('copies' in request.resource.data) || (request.resource.data.copies is int && request.resource.data.copies >= 1 && request.resource.data.copies <= 3))
         && request.resource.data.op in ['create','delete'] && request.resource.data.status == 'new'
         && request.resource.data.by == request.auth.uid && request.resource.data.lines.size() <= 100
         && (request.resource.data.op != 'delete' || isOwner());
@@ -352,7 +353,8 @@ service cloud.firestore {
     match /businesses/noor-traders/printJobs/{jobId} {
       allow read: if isOwner() || blueStaff() || stockStaff() || purchaseStaff();
       allow create: if (isOwner() || blueStaff() || stockStaff() || purchaseStaff())
-        && request.resource.data.keys().hasOnly(['kind','id','partyName','reason','byName','status','by','at'])
+        && request.resource.data.keys().hasOnly(['kind','id','partyName','reason','byName','status','by','at','copies'])   // v2.19
+        && (!('copies' in request.resource.data) || (request.resource.data.copies is int && request.resource.data.copies >= 1 && request.resource.data.copies <= 3))
         && request.resource.data.kind in ['purchase','transfer'] && request.resource.data.status == 'new'
         && request.resource.data.by == request.auth.uid;
     }
@@ -631,6 +633,12 @@ service cloud.firestore {
         && request.resource.data.rev == resource.data.get('rev', 0) + 1   // v2.17: purane khaton mein rev nahi hota
         && request.resource.data.updatedBy == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','category','note','dasti','hasPhoto','updatedAt','updatedBy','rev']);
+      // v2.20: HAR mulazim (sale / stock / purchase / galla bhi) sirf "Dasti payment mein shamil" on/off kar sakta hai — aur kuch nahi
+      allow update: if resource.data.type == 'party' && isStaff() && staffAccount().active == true && dayOpen()
+        && request.resource.data.type == 'party'
+        && request.resource.data.rev == resource.data.get('rev', 0) + 1
+        && request.resource.data.updatedBy == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dasti','updatedAt','updatedBy','rev']);
 
       allow create: if request.resource.data.type in ['entry', 'party', 'expenseAccount', 'dayPhoto']
         && !('transferId' in request.resource.data)

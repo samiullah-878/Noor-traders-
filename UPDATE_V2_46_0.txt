@@ -1,0 +1,7 @@
+Blue Khata v2.46.0 + PC 2026-10-02.2 — TEZ PRINT · WAQT DIKHE
+INSTALL: (1) App ZIP -> GitHub bahar wala folder -> Sync -> 2.46.0. (2) pc ZIP (6 files) -> GitHub pc/ folder — doctor khud lagayega.
+PC (asal sudhaar): har print par PowerShell C# helper DOBARA compile hota tha (3-8 sec fi print, aur queue mein agli note us ke
+ peeche rukti thi). Ab ek dafa RawCached.dll banta hai, phir har print 1 sec se kam. Transfer note, bill, label, voucher, farq sab.
+APP: Transfer note bhejne par "PC bana raha hai… Ns" ginti; har form Save par "⏳ Ns…" — agar 3 sec se zyada lage to likh kar
+ batata hai "internet sust hai". Closing cash ka Save Firebase par 2 round-trip (transaction) hai — waqt internet ka hai.
+BADLI HUI FILES: app.js, pos-stock.js + version; pc/transfer-sync.js, sale-post.js, label-print.js, pos-khata-sync.js, post-farq.js, manifest.json.
