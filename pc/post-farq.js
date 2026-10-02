@@ -425,9 +425,11 @@ function printText(text) {
 $ErrorActionPreference='Stop'
 $name='${PRINTER_NAME.replace(/'/g, "''")}'
 $bytes=[System.IO.File]::ReadAllBytes('${file.replace(/'/g, "''")}')
-Add-Type -TypeDefinition @"
+# 2026-10-02 TEZ PRINT: C# helper ek dafa RawCached.dll mein compile, phir har print par sirf load (pehle har dafa compile = 3-8 sec)
+$dll=Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'RawCached.dll'
+if(!(Test-Path $dll)){ Add-Type -TypeDefinition @"
 using System;using System.IO;using System.Runtime.InteropServices;
-public class RawP{
+public class RawCached{
  [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)] public struct DI{[MarshalAs(UnmanagedType.LPWStr)]public string n;[MarshalAs(UnmanagedType.LPWStr)]public string o;[MarshalAs(UnmanagedType.LPWStr)]public string t;}
  [DllImport("winspool.Drv",EntryPoint="OpenPrinterW",SetLastError=true,CharSet=CharSet.Unicode)] public static extern bool OpenPrinter(string p,out IntPtr h,IntPtr d);
  [DllImport("winspool.Drv",EntryPoint="ClosePrinter")] public static extern bool ClosePrinter(IntPtr h);
@@ -436,13 +438,14 @@ public class RawP{
  [DllImport("winspool.Drv",EntryPoint="StartPagePrinter")] public static extern bool StartPagePrinter(IntPtr h);
  [DllImport("winspool.Drv",EntryPoint="EndPagePrinter")] public static extern bool EndPagePrinter(IntPtr h);
  [DllImport("winspool.Drv",EntryPoint="WritePrinter")] public static extern bool WritePrinter(IntPtr h,IntPtr b,int c,out int w);
- public static void Send(string printer,byte[] data){IntPtr h;if(!OpenPrinter(printer,out h,IntPtr.Zero))throw new Exception("printer nahi mila: "+printer);
-  DI di=new DI();di.n="Rasid";di.t="RAW";StartDocPrinter(h,1,ref di);StartPagePrinter(h);
+ public static void Send(string printer,byte[] data,string doc){IntPtr h;if(!OpenPrinter(printer,out h,IntPtr.Zero))throw new Exception("printer nahi mila: "+printer);
+  DI di=new DI();di.n=doc;di.t="RAW";StartDocPrinter(h,1,ref di);StartPagePrinter(h);
   IntPtr p=Marshal.AllocCoTaskMem(data.Length);Marshal.Copy(data,0,p,data.Length);int w;WritePrinter(h,p,data.Length,out w);
   Marshal.FreeCoTaskMem(p);EndPagePrinter(h);EndDocPrinter(h);ClosePrinter(h);}
 }
-"@
-[RawP]::Send($name,$bytes)
+"@ -OutputAssembly $dll }
+Add-Type -Path $dll
+[RawCached]::Send($name,$bytes,'Rasid')
 `;
   const psFile = path.join(DIR, 'farq-raw-print.ps1');
   fs.writeFileSync(psFile, ps);

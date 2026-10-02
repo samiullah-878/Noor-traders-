@@ -172,9 +172,11 @@ function sendRaw(text, docName) {
 $ErrorActionPreference='Stop'
 $name='${PRINTER_NAME.replace(/'/g, "''")}'
 $bytes=[System.IO.File]::ReadAllBytes('${file.replace(/'/g, "''")}')
-Add-Type -TypeDefinition @"
+# 2026-10-02 TEZ PRINT: C# helper ek dafa RawCached.dll mein compile, phir har print par sirf load (pehle har dafa compile = 3-8 sec)
+$dll=Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'RawCached.dll'
+if(!(Test-Path $dll)){ Add-Type -TypeDefinition @"
 using System;using System.IO;using System.Runtime.InteropServices;
-public class RawT{
+public class RawCached{
  [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)] public struct DI{[MarshalAs(UnmanagedType.LPWStr)]public string n;[MarshalAs(UnmanagedType.LPWStr)]public string o;[MarshalAs(UnmanagedType.LPWStr)]public string t;}
  [DllImport("winspool.Drv",EntryPoint="OpenPrinterW",SetLastError=true,CharSet=CharSet.Unicode)] public static extern bool OpenPrinter(string p,out IntPtr h,IntPtr d);
  [DllImport("winspool.Drv",EntryPoint="ClosePrinter")] public static extern bool ClosePrinter(IntPtr h);
@@ -183,13 +185,14 @@ public class RawT{
  [DllImport("winspool.Drv",EntryPoint="StartPagePrinter")] public static extern bool StartPagePrinter(IntPtr h);
  [DllImport("winspool.Drv",EntryPoint="EndPagePrinter")] public static extern bool EndPagePrinter(IntPtr h);
  [DllImport("winspool.Drv",EntryPoint="WritePrinter")] public static extern bool WritePrinter(IntPtr h,IntPtr b,int c,out int w);
- public static void Send(string printer,byte[] data){IntPtr h;if(!OpenPrinter(printer,out h,IntPtr.Zero))throw new Exception("printer nahi mila: "+printer);
-  DI di=new DI();di.n="${docName}";di.t="RAW";StartDocPrinter(h,1,ref di);StartPagePrinter(h);
+ public static void Send(string printer,byte[] data,string doc){IntPtr h;if(!OpenPrinter(printer,out h,IntPtr.Zero))throw new Exception("printer nahi mila: "+printer);
+  DI di=new DI();di.n=doc;di.t="RAW";StartDocPrinter(h,1,ref di);StartPagePrinter(h);
   IntPtr p=Marshal.AllocCoTaskMem(data.Length);Marshal.Copy(data,0,p,data.Length);int w;WritePrinter(h,p,data.Length,out w);
   Marshal.FreeCoTaskMem(p);EndPagePrinter(h);EndDocPrinter(h);ClosePrinter(h);}
 }
-"@
-[RawT]::Send($name,$bytes)
+"@ -OutputAssembly $dll }
+Add-Type -Path $dll
+[RawCached]::Send($name,$bytes,"${docName.replace(/"/g, "")}")
 `;
   const psFile = path.join(DIR, 'transfer-raw.ps1');
   fs.writeFileSync(psFile, ps);
@@ -222,7 +225,7 @@ async function handleTransfer(doc) {
         const r = await createTransfer({ ...j, id: doc.id });
         await ref.update({ status: 'done', transferId: r.transferId, transferNo: r.transferNo, cogs: r.cogs, doneAt: Date.now(), error: FieldValue.delete() });
         log(`Transfer note bana: ${r.transferNo} · ${r.from} -> ${r.to} · ${r.rows.length} items`);
-        if (AUTO_PRINT || j.print) { const e = await sendRaw(transferText(r, j.note), 'STN ' + r.transferNo); if (e) log('Print masla: ' + e.message); else log('Transfer note print ho gaya'); }
+        if (AUTO_PRINT || j.print) { const nC = Math.min(3, Math.max(1, Number(j.copies) || 1)), txt = transferText(r, j.note); let e = null; for (let i = 0; i < nC && !e; i++) e = await sendRaw(txt, 'STN ' + r.transferNo); if (e) log('Print masla: ' + e.message); else log('Transfer note print ho gaya' + (nC > 1 ? ' x' + nC : '')); }   // 2026-10-02: copies 1-3
       }
     } catch (e) {
       await ref.update({ status: 'failed', error: String(e.message).slice(0, 250), doneAt: Date.now() });
@@ -250,7 +253,7 @@ async function handlePrint(doc) {
         text = transferText({ transferNo: tj.transferNo, at: tj.doneAt || Date.now(), from: names[tj.from] || tj.from, to: names[tj.to] || tj.to, rows: tj.lines || [] }, tj.note, rp);
         await tRef.update({ reprints: FieldValue.arrayUnion({ at: rp.at, reason: rp.reason, by: j.by || '', n: rp.n }) });
       } else throw new Error('Print ki qisam nahi pehchani: ' + j.kind);
-      const e = await sendRaw(text, 'Print ' + j.kind);
+      const nC = Math.min(3, Math.max(1, Number(j.copies) || 1)); let e = null; for (let i = 0; i < nC && !e; i++) e = await sendRaw(text, 'Print ' + j.kind);   // 2026-10-02: copies 1-3
       if (e) throw e;
       await ref.update({ status: 'done', doneAt: Date.now(), error: FieldValue.delete() });
       log(`Print ho gaya: ${j.kind} ${j.id}`);
