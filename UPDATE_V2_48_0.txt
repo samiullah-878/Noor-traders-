@@ -1,0 +1,13 @@
+Blue Khata v2.48.0 + PC 2026-10-02.3 — CASH PURCHASE = POS BILL KI ADAYGI
+INSTALL: (1) App ZIP -> GitHub bahar wala folder -> Sync -> 2.48.0. (2) pc ZIP (pos-khata-sync.js, manifest.json) -> GitHub pc/. Rules NAHI badlin.
+MASLA: larke ki "Cash purchase" (bayan) aur POS ka wohi bill "Hum ne dena hai" (daayein) — jor ban bhi jaye to cash purchase baqaye
+ mein shamil hi nahi hoti thi, aur POS mein bill udhaar hi rehta tha. Supplier ka "Dena" double ho jata tha.
+AB:
+ - Jo cash purchase POS bill se JURI ho (khud ya "Milao" se) = us bill ki CASH ADAYGI: app mein baqaya barabar (payment jaisi),
+   aur PC (Khata vouchers script) POS mein us supplier ka CPV (Cash Payment) bana deta hai — POS mein bhi bill cash mein ada.
+ - POS bill par "💵 Cash se ada · Rs X", cash purchase par "🔗 POS Purchase N ki adaygi · POS CPV-…" dikhega.
+ - Jor tod dein to POS wala CPV bhi khud hat jata hai. POS bill "Posted" ho tab bhi chalta hai — Unpost ki zaroorat nahi.
+ - Hadd: 20 Sep 2026 se ki cash purchases (purane jor waise hi; chip par likha aata hai "purana jor").
+DHYAN: jo cash purchase abhi kisi bill se NAHI juri (jaise 31,280) — khata kholte hi malik ke phone par khud jur jati hai
+ (wohi supplier, wohi raqam, 7 din). Na jure to POS bill par "Milao" se jorein.
+BADLI HUI FILES: app.js, model.js, style.css + version; pc/pos-khata-sync.js, pc/manifest.json.

@@ -1492,3 +1492,7 @@ dialog.jaanch-dlg{position:fixed;left:0!important;right:0!important;top:0!import
 .summary{flex-wrap:wrap}
 .summary>.dasti-row{flex:0 0 100%;border-left:0!important;padding-left:0!important;margin-top:-6px}
 .summary>.dasti-row .dasti-chip{margin:0}
+
+/* v2.48: cash <-> POS bill jor */
+.cash-link{margin:4px 0 0;font-size:12px;font-weight:700;color:#6b7c93}
+.cash-link.ok{color:#17703c}

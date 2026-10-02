@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.47.2, 2026-10-02 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.48.0, 2026-10-02 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2062,3 +2062,13 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
   "liveUid is not defined" har khata save par. Ab /* */ comment. SABAQ: app.js ki minified lines mein KABHI `//` na likho —
   sirf /* */ ya alag line. Scan: baqi file saaf. .dasti-chip grid-column 1/-1 (bara ho gaya tha).
 * v2.47.2: dasti-row (flex 100%) — .summary flex row mein chip balance ko daba raha tha.
+
+==================== v2.48.0 + PC 2026-10-02.3 — LINKED CASH PURCHASE = PAYMENT ====================
+* Pehle: purchaseCash balance mein 0; POS bill (pos-<id>, borrow) -amount -> supplier par double "dena". POS mein purchase hamesha
+  party ke udhaar par (cash mode nahi) — cash adaygi = CPV.
+* model.js: CASH_LINK_FROM '2026-09-20', cashPaysBill(e) = purchaseCash && billsOf && date>=hadd. balance() mein +amount.
+  app.js: indexData deltas, runningOf, effect (3 jagah) + import; cashLinkChip() posStatusHTML mein (POS bill / cash dono taraf).
+* pc/pos-khata-sync.js: same cashPays; appBalance +; loop: purchase flag skip se purchaseCash bahar; purchaseCash -> base kind
+  'payment' (note + "Cash purchase (POS bill)") -> CPV; jor toota + link voucher -> deleted -> POS se hatao; ENABLED_AT cash par nahi.
+* Test: model balance — jura 0, na-jura dena, purana hadd se bahar.
+* autoLinkPurchases waisa (canLinkCash: malik ya aaj). Agar malik ke phone par bhi na jure to cashCandidates/partyId dekhna.
