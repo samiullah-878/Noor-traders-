@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.47.1, 2026-10-02 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.47.2, 2026-10-02 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2061,3 +2061,4 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
 * v2.47.1 HOTFIX: app.js line 505 (save(), ek lambi minified line) mein `// v2.47` comment ne aage ka code nigal liya ->
   "liveUid is not defined" har khata save par. Ab /* */ comment. SABAQ: app.js ki minified lines mein KABHI `//` na likho —
   sirf /* */ ya alag line. Scan: baqi file saaf. .dasti-chip grid-column 1/-1 (bara ho gaya tha).
+* v2.47.2: dasti-row (flex 100%) — .summary flex row mein chip balance ko daba raha tha.

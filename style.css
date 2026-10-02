@@ -1487,3 +1487,8 @@ dialog.jaanch-dlg{position:fixed;left:0!important;right:0!important;top:0!import
 /* ===== v2.47: dasti toggle chip (party page) ===== */
 .dasti-chip{grid-column:1/-1;justify-self:start;align-self:start;display:inline-flex;align-items:center;gap:6px;margin:8px 0 0;min-height:36px;max-height:40px;padding:6px 14px;border-radius:999px;border:1.5px solid #d3def5;background:#fff;color:#1b3058;font-weight:800;font-size:13px;width:auto;flex:0 0 auto}
 .dasti-chip.on{background:#e8f5ec;border-color:#9fd3b0;color:#17703c}
+
+/* v2.47.2: dasti chip apni qataar mein — balance poora dikhe */
+.summary{flex-wrap:wrap}
+.summary>.dasti-row{flex:0 0 100%;border-left:0!important;padding-left:0!important;margin-top:-6px}
+.summary>.dasti-row .dasti-chip{margin:0}
