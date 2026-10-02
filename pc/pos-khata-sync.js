@@ -325,12 +325,15 @@ function wrap(t, W) {
   if (cur) out.push(cur);
   return out;
 }
+// 2026-10-02: larke ki CASH purchase jo POS ke purchase bill se juri ho = us bill ki CASH ADAYGI (app mein payment jaisi, POS mein CPV)
+const CASH_LINK_FROM = '2026-09-20';
+const cashPays = e => e.kind === 'purchaseCash' && !e.deleted && String(e.date || '') >= CASH_LINK_FROM && ((Array.isArray(e.posBillIds) && e.posBillIds.length > 0) || !!e.posBill);
 function appBalance(partyId) {
   const p = app.get(partyId);
   let b = p?.opening || 0;
   for (const e of app.values()) {
     if (e.type !== 'entry' || e.deleted || e.partyId !== partyId) continue;
-    if (['credit', 'payment'].includes(e.kind)) b += e.amount;
+    if (['credit', 'payment'].includes(e.kind) || cashPays(e)) b += e.amount;
     else if (['borrow', 'collection'].includes(e.kind)) b -= e.amount;
   }
   return b;
@@ -646,7 +649,7 @@ async function syncEntries(pool, acct) {
     if (done.has(key)) continue;
     done.add(key);
     const fromPos = String(e.id).startsWith('posv-') || String(e.transferId || '').startsWith('posv');
-    if (e.purchase || String(e.id).startsWith('pos-')) continue;          // sync.js wali purchase / sabqa
+    if ((e.purchase && e.kind !== 'purchaseCash') || String(e.id).startsWith('pos-')) continue;          // sync.js wali purchase / sabqa (cash purchase neeche)
     let base = e;
     if (isTransfer) {
       base = app.get(`transfer-${e.transferId}-out`) || e;
@@ -654,7 +657,12 @@ async function syncEntries(pool, acct) {
         await noteSkip(e, base, true, notInPos(!acct.has(base.fromPartyId) ? base.fromPartyId : base.toPartyId)); continue;
       }
     } else {
-      if (!['payment', 'collection', 'credit'].includes(e.kind)) continue;
+      if (e.kind === 'purchaseCash') {   // 2026-10-02: POS bill se juri cash purchase -> POS mein CPV (bill cash mein ada)
+        const lk = links.get(key);
+        if (cashPays(e)) base = { ...e, kind: 'payment', note: (String(e.note || '').trim() ? String(e.note).trim() + ' · ' : '') + 'Cash purchase (POS bill)' };
+        else if (lk && lk.voucherId && !lk.deleted) base = { ...e, kind: 'payment', deleted: true };   // jor toota -> CPV hatao
+        else continue;
+      } else if (!['payment', 'collection', 'credit'].includes(e.kind)) continue;
       if (!acct.has(e.partyId)) { await noteSkip(e, e, false, notInPos(e.partyId)); continue; }
     }
     const link = links.get(key);
@@ -662,7 +670,7 @@ async function syncEntries(pool, acct) {
     if (link && link.appHash === h) continue;
     if (base.updatedBy === WRITER && link) { await setLink(key, { appHash: h }); continue; }
     if (!link && fromPos) continue;                                        // POS wali, abhi link nahi bana
-    if (!link && ms(base.createdAt) < ENABLED_AT) continue;                // purani entry — POS mein nahi bhejni
+    if (!link && ms(base.createdAt) < ENABLED_AT && e.kind !== 'purchaseCash') continue;                // purani entry — POS mein nahi bhejni (cash purchase ki hadd CASH_LINK_FROM)
     if (!link && base.deleted) continue;
 
     const recovered = !link && appMade.get(isTransfer ? 't-' + e.transferId : e.id);

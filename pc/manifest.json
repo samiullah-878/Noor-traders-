@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-02.2",
+  "version": "2026-10-02.3",
   "note": "KHATA-DOCTOR manifest — sirf ye files PC par jati hain. local-config.json / firebase-key.json kabhi nahi.",
   "files": {
     "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -12,7 +12,7 @@
     "khata-sync-auto.bat": "0ebef5416f48dce60fb129c2d8a293fe5af022faa8689569ce1b4a64eed4259d",
     "label-auto.bat": "4247598116d9498db2452b32861f36bb8a18d5df3b023036ae4f42da10407f5a",
     "label-print.js": "82e90553cb17ecc647e4cce42ee08dd42608622334cf2d67b976b4a84248fb6a",
-    "pos-khata-sync.js": "93b6a9b2bf616397c66478d6a2f8a924b03b03958382028c27dca170ce9af455",
+    "pos-khata-sync.js": "2aac5a0519517adb7ac6e8d74811940a71490c1cdc089bf871afdbd408b92943",
     "post-farq.js": "79fb0c2a662d4f3828ef9971169d91dce510bc33b3b7b1b522b00551b88ddbde",
     "purchase-auto.bat": "e008a0b5505c87b5606382735ba51946ede94ca865e73ff14463dabcdd6e392a",
     "purchase-post.js": "9d9c72e5a1bf0fb28a737b4a6c5ef8891c53ec884b014e34491c4c878a686932",
