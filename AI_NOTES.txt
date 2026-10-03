@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.56.0, 2026-10-03 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.57.0, 2026-10-03 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2128,3 +2128,11 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
 * Test: bq {b:'5550001',q:0.5} search Enter -> line 0.5 ✓. (Test mein module ?v= app wala hi rakho, warna do instance.)
 * v2.55.1: scanner list (drawNames) nayi line upar thi magar scrollTop = scrollHeight (neeche) — ab scrollTop 0, nayi item hamesha nazar.
 * v2.56.0: scanCamOff -> scanBox.cam-off; style.css .scan-box.cam-off safed (inner #fff, text gehra, list li halki patti). themes dobara generate.
+* v2.56.1: .scan-hits b/small font bara (phone 17/14, PC 24/18), PC padding + 60vh.
+
+==================== v2.57.0 (2026-10-03) — F5 = "Kitne print?" (Sale, PC) ====================
+* sale.js: keydown F5 (capture) [data-sale-root] par: browser refresh roka; #f5Ask card (1/2/3 bare buttons, items + Rs cartTotal()).
+  Keys 1/2/3 = copies + save, Enter = pichhla copies, Esc/F5 = wapas. quickSave flag (4s) -> save() ka confirm() chhorta hai.
+  copies localStorage + chips sync, phir [data-sale-save].click(). Test: F5 -> 2 -> doc.copies 2, confirm 0 dafa.
+* Scanner beep: Posx "Fixed barcode scanner" TS-51xx — manual internet par nahi; config barcode khud NA banao. Malik ko: dukan se
+  manual / speaker par tape. Scanner ki taar entry par phati hui — malik ko bataya.
