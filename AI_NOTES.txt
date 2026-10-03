@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.65.0, 2026-10-03 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.65.2, 2026-10-03 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2174,3 +2174,5 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
 * sale.js watchSales: posSales listener; setSaleBillsHook: app sales (POS mein cancel ho to cancelled) + POS-only bills
   (pos:true, cr -> wholesale/udhaar, x -> ⊘). Reprint sirf app bills. pos-stock chip par "POS" tag + party.
 * Test: ✓ app, ⊘ app (POS cancel), ⏳, ✓ POS, ⊘ POS.
+* v2.65.1 + PC 2026-10-03.2: pos-sales-dekho v1.1 har 10s chhota sawal (COUNT/MAX/cancel/SUM) — badle ya 5 min ho to poori list. App: bills panel 280px, chip ek qataar (22px nishan, 13px), party 'COUNTER SALE' chhupa.
+* v2.65.2: bills chip — number 17px bara (shuru ke 0 hata kar, kam az kam 4 hindse), raqam neeche, waqt daayein; patti 220px.

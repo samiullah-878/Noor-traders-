@@ -1642,3 +1642,29 @@ html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-
 }
 
 .sb-chip b u{text-decoration:none;font-size:10px;font-weight:800;padding:1px 6px;border-radius:6px;background:#e3eaf8;color:#2b4a86;margin-left:4px;vertical-align:2px}
+
+/* v2.65.1: "Aaj ke bills" chhota / compact */
+@media (min-width:1100px){
+ .scan-box.has-bills .scan-inner{margin-left:290px!important;max-width:calc(100vw - 305px)!important}
+ .scan-box.has-bills .scan-bills{width:280px!important;padding:10px 8px!important;gap:6px!important}
+ .sb-head b{font-size:15px!important}.sb-q{min-height:38px!important;font-size:14px!important;border-radius:10px!important}
+ .sb-list{gap:3px!important}
+ .sb-chip{padding:4px 8px!important;gap:7px!important;border-radius:10px!important}
+ .sb-chip i{width:22px!important;height:22px!important;font-size:12px!important}
+ .sb-chip b{font-size:13px!important;display:inline!important}.sb-chip small{display:inline!important;font-size:11px!important;margin-left:6px}
+ .sb-chip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .sb-chip em{font-size:13px!important}
+ .sb-chip b u{font-size:9px!important;padding:0 4px!important}
+}
+
+/* v2.65.2: bill number bara, raqam neeche, patti aur patli */
+@media (min-width:1100px){
+ .scan-box.has-bills .scan-inner{margin-left:230px!important;max-width:calc(100vw - 245px)!important}
+ .scan-box.has-bills .scan-bills{width:220px!important;padding:8px 6px!important}
+ .sb-chip{grid-template-columns:auto 1fr auto!important;padding:5px 7px!important}
+ .sb-chip span{display:flex!important;flex-direction:column;min-width:0}
+ .sb-chip b{display:block!important;font-size:17px!important;font-weight:800!important;letter-spacing:.2px;line-height:1.15;font-variant-numeric:tabular-nums}
+ .sb-chip span em{display:block;font-size:13px!important;font-weight:700!important;color:#3a4b6a;margin-top:1px}
+ .sb-chip>small{display:block!important;margin:0!important;font-size:10.5px!important;text-align:right;color:#8a97ad;max-width:70px;overflow:hidden;text-overflow:ellipsis}
+ .sb-chip.cx span em{text-decoration:line-through}
+}
