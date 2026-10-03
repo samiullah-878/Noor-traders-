@@ -1502,3 +1502,39 @@ dialog.jaanch-dlg{position:fixed;left:0!important;right:0!important;top:0!import
 .look-chip{display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 12px;border-radius:14px;border:1px solid #d7dde8;background:#fff;color:#1d3561;font-weight:700;font-size:13.5px;text-align:left}
 .look-chip i{width:26px;height:26px;border-radius:9px;flex:0 0 auto;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
 html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-chip[data-look="frost"],html[data-look="royal"] .look-chip[data-look="royal"],html[data-look="teal"] .look-chip[data-look="teal"],html[data-look="graphite"] .look-chip[data-look="graphite"],html[data-look="ocean"] .look-chip[data-look="ocean"],html[data-look="paper"] .look-chip[data-look="paper"],html[data-look="glass"] .look-chip[data-look="glass"],html[data-look="gold"] .look-chip[data-look="gold"],html[data-look="emerald"] .look-chip[data-look="emerald"],html[data-look="cyber"] .look-chip[data-look="cyber"]{border:2px solid #2B4A86!important;box-shadow:0 0 0 3px rgba(94,140,230,.35)!important}
+
+/* ===== v2.51: PC VERSION (1100px se chaudi screen) ===== */
+@media (min-width:1100px){
+ main{max-width:none!important;width:auto!important;margin:0!important;padding-left:236px!important;box-shadow:none!important}
+ main>header{border-radius:0 0 0 26px!important;padding:22px 32px 20px!important}
+ main>header .app-nav{position:fixed;left:0;top:0;bottom:0;width:220px;box-sizing:border-box;display:flex!important;flex-direction:column;gap:4px;margin:0!important;padding:20px 12px 24px;overflow-y:auto;background:linear-gradient(180deg,#14284f,#0c1a38);z-index:6;box-shadow:6px 0 24px #0c1a3830}
+ main>header .app-nav::before{content:'SAM · BLUE KHATA';display:block;color:#b8c6e4;font-size:11px;font-weight:800;letter-spacing:1.8px;padding:6px 12px 14px}
+ main>header .app-nav button{width:100%;text-align:left;justify-content:flex-start;border-radius:12px!important;min-height:42px!important;padding:8px 14px!important;font-size:14px!important;background:transparent!important;color:#dfe6f5!important;border:0!important;box-shadow:none!important}
+ main>header .app-nav button:hover{background:#ffffff14!important}
+ main>header .app-nav button.desk-on{background:#ffffff!important;color:#14284f!important;font-weight:800}
+ main>header .top{max-width:1500px}
+ #tabs{max-width:760px}
+ .workspace{max-width:1500px;padding:18px 32px 120px!important;box-sizing:border-box}
+ footer{left:236px!important;right:0!important;transform:none!important;width:auto!important;justify-content:flex-end;padding:14px 32px!important}
+ footer button{flex:0 0 auto!important;min-width:220px;max-width:320px}
+ /* master-detail: baayein khaton ki list */
+ html.desk-split main{padding-left:596px!important}
+ html.desk-split footer{left:596px!important}
+ #deskList{position:fixed;left:220px;top:0;bottom:0;width:360px;box-sizing:border-box;background:#f6f8fc;border-right:1px solid #e1e6ef;display:flex;flex-direction:column;z-index:5}
+ #deskList[hidden]{display:none}
+ .dl-top{padding:18px 14px 10px;display:grid;gap:6px;border-bottom:1px solid #e6eaf2;background:#fff}
+ .dl-top input{min-height:44px;border-radius:12px}
+ .dl-top small{color:#6b7c93;font-weight:700;font-size:11.5px;padding-left:4px}
+ .dl-rows{flex:1;overflow-y:auto;padding:8px}
+ .dl-row{display:flex;align-items:center;gap:10px;width:100%;min-height:58px;padding:8px 10px;margin:0 0 4px;border-radius:12px;background:transparent;border:1px solid transparent;text-align:left;color:#10192b}
+ .dl-row:hover{background:#fff;border-color:#e3e8f2}
+ .dl-row.sel,.dl-row.kb{background:#fff;border-color:#2b4a86;box-shadow:0 0 0 3px #2b4a861a}
+ .dl-av{width:36px;height:36px;border-radius:11px;background:#e3eaf8;color:#14284f;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+ .dl-t{flex:1;min-width:0}.dl-t b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dl-t small{display:block;color:#6b7c93;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .dl-b{text-align:right;font-weight:800;font-size:13.5px;font-variant-numeric:tabular-nums}.dl-b small{display:block;font-size:10px;font-weight:800;opacity:.75}
+ /* dialog bara */
+ dialog{width:min(720px,calc(100% - 300px))!important}
+ /* khata: Diye | Liye dono columns chaude */
+ .ledger-pair{gap:18px!important}
+}
+.st-out{margin-top:12px;border:1px solid #e3e8f2;border-radius:14px;overflow:hidden}

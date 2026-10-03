@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.50.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.52.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,7 +57,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.50.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.52.0: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -2111,11 +2111,11 @@ function focusItem(item) {
 //  Kisi bhi khane mein cursor ho, barcode wahan nahi likha jata; item scan list mein judta hai.
 // ============================================================
 let kbBuf = '', kbFirst = 0, kbLast = 0, kbTarget = null, kbStartVal = null, kbTimer = null;
-const KB_GAP = 50;          // is se zyada ms ka faasla = insaan likh raha hai
+const KB_GAP = 90;          // is se zyada ms ka faasla = insaan likh raha hai (v2.52: 50 -> 90, aahista USB scanner bhi)
 function kbReset() { kbBuf = ''; kbTarget = null; kbStartVal = null; clearTimeout(kbTimer); kbTimer = null; }
 function kbIsScan(now) {
   const n = kbBuf.length;
-  return n >= 6 && (kbLast - kbFirst) / Math.max(1, n - 1) < 35 && now - kbLast < 150;
+  return n >= 5 && (kbLast - kbFirst) / Math.max(1, n - 1) < 60 && now - kbLast < 220;   // v2.52: 35ms -> 60ms fi akshar
 }
 function kbFinish() {
   const code = kbBuf.trim();
@@ -2126,11 +2126,14 @@ function kbFinish() {
     target.value = startVal;
     if (target === $('search')) target.dispatchEvent(new Event('input', { bubbles: true }));
   }
+  const trq = !saleRoot() && document.querySelector('#dialog[open] [data-tr-q]');   // v2.52: transfer note khula ho to code wahan
+  if (trq) { trq.value = code; trq.dispatchEvent(new Event('input', { bubbles: true })); return; }
   hardScan(code);
 }
 document.addEventListener('keydown', e => {
   const onStock = stockActive && !saleRoot() && !!document.querySelector('.stock-head');
-  if ((!onStock && !saleRoot()) || scanBox || e.ctrlKey || e.altKey || e.metaKey) return;
+  const onTr = !!document.querySelector('#dialog[open] [data-tr-q]');
+  if ((!onStock && !saleRoot() && !onTr) || scanBox || e.ctrlKey || e.altKey || e.metaKey) return;
   const now = performance.now();
   if (e.key.length === 1) {
     if (!kbBuf || now - kbLast > KB_GAP) {
@@ -2140,7 +2143,7 @@ document.addEventListener('keydown', e => {
     }
     kbBuf += e.key; kbLast = now;
     clearTimeout(kbTimer);
-    kbTimer = setTimeout(() => { if (kbIsScan(performance.now() - 60)) kbFinish(); else kbReset(); }, 120);   // scanner jo Enter na bheje
+    kbTimer = setTimeout(() => { if (kbIsScan(performance.now() - 60)) kbFinish(); else kbReset(); }, 200);   // scanner jo Enter na bheje
     return;
   }
   if ((e.key === 'Enter' || e.key === 'Tab') && kbBuf) {

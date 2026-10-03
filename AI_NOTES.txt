@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.50.0, 2026-10-03 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.52.0, 2026-10-03 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2091,3 +2091,18 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
   style.css badlo -> `python3 tools/theme-generator.py` (repo ki jad se) -> themes.css taza.
 * index.html: window.SAM_LOOKS {key:[mode,themeColor]} + inline script (default 'frost', localStorage 'sam-look'; 'old' = koi class nahi).
 * app.js: setGrp('🎨 Look') look-grid chips; applyLook(k). Chuna hua chip CSS se: html[data-look=k] .look-chip[data-look=k].
+
+==================== v2.51.0 (2026-10-03) — PC VERSION ====================
+* style.css @media (min-width:1100px): main padding-left 236 (fixed .app-nav sidebar 220px), header/workspace max 1500, footer left 236;
+  html.desk-split (khata view): #deskList fixed left 220 width 360, main padding-left 596.
+* app.js (aakhir): deskMQ, DESK_NAV view->nav id (.desk-on), deskPaint() (#list childList MutationObserver par), deskRows()
+  indexData().deltas + opening se baqaya (O(P)), accountMatches filter, max 400, click -> route('khata',id). Keys: F2, Ctrl+S
+  (dialog form requestSubmit / sale/pp/tr save), Esc, deskQ par ↑↓ Enter. themes.css dobara generate.
+* Baqi plan (3: sale/purchase do-column, 5: dialog side-panel) agli update.
+
+==================== v2.52.0 (2026-10-03) — USB SCANNER ====================
+* Malik: desktop 2D scanner (lal LED) se scan nahi, mobile camera se ho jata. App ka keyboard-wedge detector bohat sakht tha.
+* pos-stock.js: KB_GAP 50->90, kbIsScan n>=5 && ausat <60ms && now-kbLast <220, timer 200ms. kbFinish: transfer dialog
+  [data-tr-q] khula ho (aur saleRoot nahi) -> code wahan + input event (trFind barcode auto-pick). keydown listener onTr bhi.
+* app.js: settings '🔫 Scanner' -> #scanTest modal (stIn): har akshar ka faasla, ausat/max, Enter, ajeeb akshar check.
+* Agar Notepad mein bhi kuch na aaye: scanner USB COM mode — model sticker se "USB HID Keyboard" config barcode chahiye.

@@ -1,0 +1,6 @@
+Blue Khata v2.52.0 — USB SCANNER
+INSTALL: App ZIP -> GitHub bahar wala folder -> Sync -> 2.52.0. Rules NAHI badlin.
+ - Aahista likhne wale USB / desktop scanner bhi ab pehchane jaate hain (pehle sirf bohat tez wale).
+ - Scanner ab Transfer note mein bhi seedha chalta hai (Sale, Stock, Purchase pehle se).
+ - ⋮ -> 🔫 Scanner -> "Scanner test": scan karo to dikhata hai kya aaya, raftaar, Enter aaya ya nahi, aur kya karna hai.
+BADLI HUI FILES: pos-stock.js, app.js, style.css, themes.css + version
