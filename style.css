@@ -1538,3 +1538,25 @@ html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-
  .ledger-pair{gap:18px!important}
 }
 .st-out{margin-top:12px;border:1px solid #e3e8f2;border-radius:14px;overflow:hidden}
+
+/* ===== v2.54: PC — scanner screen poori, bare font, bare buttons (layout WAHI) ===== */
+@media (min-width:1100px){
+ .scan-inner{max-width:min(1200px,96vw)!important}
+ .scan-find input,.scan-find .scan-q{font-size:22px!important;min-height:58px!important;padding:12px 16px!important}
+ .scan-find .scan-n{font-size:22px!important;flex-basis:120px!important;width:120px!important}
+ .scan-find .scan-u{font-size:20px!important;min-width:80px!important}
+ .scan-hits button{font-size:19px!important;min-height:56px!important}
+ .scan-hits button.kbsel,.scan-hits button:focus{outline:3px solid #5ee7ff!important;outline-offset:-3px}
+ .scan-msg{font-size:21px!important;margin:12px 8px!important}
+ .scan-names{max-height:30vh!important}
+ .scan-names li{font-size:19px!important}.scan-names li b{font-size:22px!important}
+ .scan-sum{font-size:22px!important}
+ .scan-done,.scan-close{min-height:64px!important;font-size:21px!important;font-weight:800!important}
+ .scan-mid .scan-pad{width:130px!important}
+ .scan-mid .scan-pad-row button{min-height:46px!important;font-size:19px!important}
+ .scan-mid .scan-pad-name{font-size:15px!important;max-height:3.6em!important}
+ /* app ka search aur neeche ke buttons */
+ #search,.toolbar input,.sale-root input[type=search]{font-size:19px!important;min-height:54px!important}
+ footer button,#actions button{min-height:60px!important;font-size:19px!important;font-weight:800!important}
+ .kbsel{outline:3px solid #2b4a86!important;outline-offset:-2px}
+}
