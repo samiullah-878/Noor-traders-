@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.60.0, 2026-10-03 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.64.0, 2026-10-03 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2145,3 +2145,23 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
 * Test: 2 items, ↓↓ -> Ghee, "3" Enter -> 3 Pcs ✓.
 * v2.59.0: sale save ke baad scanNewBill() (pos-stock export): scanner khuli ho to scanOrder/Items/Qty saaf, _redraw, msg, qBox focus; warna #search focus. Test: F5->1 -> list 0, cursor search par.
 * v2.60.0: pop corn label sub-code "99" scanner screen par 'Maq feeder 9 0z' (naam-search ka pehla natija) lagta tha. codeLike: koi bhi lambai, findByCode exact mile to barcode (feedCode) — naam-search baad mein. Test '99' -> pop corn 0.5 ✓.
+* v2.61.0: stock ginti card — is round mein na gina ho to oldHistoryHTML(r): stockCount doc (c-branch-item) ki history (pichhle rounds, max 20) <details> '🕘 Pichhli ginti ki history (N)' mein, historyHTML wahi.
+
+==================== v2.62.0 (2026-10-03) — SALE (PC): item lage, number likho = us ki tadad ====================
+* sale.js: addItem -> qtyFocusNext; #list MutationObserver -> qtyFocusPaint: aakhri line qtyK (.qty-live hari kinari). (pointer:fine
+  = sirf PC/mouse; scanner screen / dialog khula ho to nahi.) document keydown: focus body / khali #search / button par hindse ->
+  qBuf, 400ms ya Enter -> cart[qtyK].pcs. Tez burst (>=4, <40ms) = scanner barcode -> chhoro. Harf = search (qtyK band), Esc = chhoro.
+  Focus-on-input wala tariqa rerender par focus khota tha, is liye ye buffer tariqa.
+* Test: item -> "5" -> 5 ✓; tez 7 hindse -> tadad nahi badli ✓.
+* v2.63.0: Sale mode default Counter — draft khali ho to Counter; save ke baad aur 'Naya bill' par mode='counter'. Wholesale sirf usi bill ke liye.
+
+==================== v2.64.0 (2026-10-03) — SCANNER: GODAM CHIPS + PC "AAJ KE BILLS" ====================
+* pos-stock.js: setSaleGodamHook / setSaleBillsHook. openScanner (sale, pickHook nahi): .scan-godam chips scan-find ke baad
+  (hook().set(b) -> sale godam; cart filter NAHI, lines ka apna godam). PC (min-width 1100): aside.scan-bills (fixed left 340px,
+  .has-bills -> scan-inner margin-left 350): search (bill no / naam / item / raqam), chips: ✓ paid (counter ya cash>=total),
+  ✗ udhaar, ⊘ cancel (s.cancelled/status cancelled), ⏳ new/posting, ⚠ failed. Tap = lines + Dobara print (reprintAppSale copies).
+  4s par taza (interval closeScanner mein clear).
+* sale.js: hooks set (stock().branches + branchName(b, names); sales list).
+* BAQI (agla qadam, malik ke OK par): POS par seedha bane sale bills — nayi PC script (aaj ke SaleMaster: no, total, paid,
+  balance, cancel) -> Firestore posSales + rules 2.21 -> isi panel mein.
+* Test: chips (NOOR TRADERS*, Godam 1), bills ✓/✗/⏳, search, godam badla ✓.

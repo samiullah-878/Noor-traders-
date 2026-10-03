@@ -1607,3 +1607,36 @@ html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-
  .scan-box.cam-off .scan-names{max-height:none!important;flex:1 1 auto!important;overflow:auto!important}
  .scan-box.cam-off .scan-inner{display:flex!important;flex-direction:column!important}
 }
+
+/* v2.61: pichhli ginti ki history (khulne wali) */
+.old-hist{margin:0 4px 12px}
+.old-hist>summary{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:4px 14px;border-radius:999px;background:#eef2f8;border:1px solid #d7dde8;color:#1b3058;font-weight:800;font-size:13.5px;cursor:pointer;list-style:none}
+.old-hist>summary::-webkit-details-marker{display:none}
+.old-hist[open]>summary{background:#1b3058;color:#fff}
+.old-hist .stat-note{margin:8px 2px 0!important}
+.qty-live{outline:3px solid #138150!important;outline-offset:1px;background:#eefaf3!important}
+
+/* ===== v2.64: scanner — godam chips + PC aaj ke bills ===== */
+.scan-godam{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 10px}
+.scan-godam small{font-weight:800;color:#8fa0c8;font-size:12px;margin-right:2px}
+.scan-godam button{min-height:36px;padding:0 12px;border-radius:999px;border:1px solid #c9d3e6;background:#fff;color:#1b3058;font-weight:700;font-size:13px}
+.scan-godam button.on{background:#1b3058;color:#fff;border-color:#1b3058}
+.scan-bills{display:none}
+@media (min-width:1100px){
+ .scan-box.has-bills .scan-inner{margin-left:350px!important;max-width:calc(100vw - 370px)!important}
+ .scan-box.has-bills .scan-bills{display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;width:340px;box-sizing:border-box;background:#f6f8fc;border-right:1px solid #e1e6ef;padding:14px 12px;gap:10px;z-index:3;color:#10192b}
+ .sb-head{display:flex;justify-content:space-between;align-items:center}.sb-head b{font-size:18px}.sb-head small{font-weight:800;color:#5c6a85}
+ .sb-q{min-height:46px;border-radius:12px;border:1px solid #d5dbe8;padding:0 12px;font-size:16px;background:#fff;color:#10192b}
+ .sb-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:2px}
+ .sb-chip{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:9px 10px;border-radius:14px;background:#fff;border:1px solid #e3e8f2;cursor:pointer}
+ .sb-chip i{font-style:normal;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px}
+ .sb-chip.pd i{background:#e3f6ec;color:#138150}.sb-chip.up i{background:#fdecec;color:#b42332}.sb-chip.cx i{background:#eceff4;color:#6b7280}.sb-chip.wt i{background:#fff3e0;color:#8a4b00}.sb-chip.fl i{background:#fdecec;color:#b42332}
+ .sb-chip.cx{opacity:.7}.sb-chip.cx b{text-decoration:line-through}
+ .sb-chip b{display:block;font-size:14.5px}.sb-chip small{display:block;color:#6b7c93;font-size:11.5px;font-weight:600}
+ .sb-chip em{font-style:normal;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}
+ .sb-chip.open{border-color:#2b4a86;box-shadow:0 0 0 3px #2b4a861a}
+ .sb-det{grid-column:1/-1;border-top:1px dashed #d5dbe8;padding-top:6px;font-size:13px}
+ .sb-det p{display:flex;justify-content:space-between;gap:8px;margin:3px 0}.sb-det p span{color:#5c6a85;font-variant-numeric:tabular-nums}
+ .sb-det .sb-pay{font-weight:700;color:#1b3058}
+ .sb-det button{margin-top:6px;width:100%;min-height:40px;border-radius:10px;border:1px solid #d5dbe8;background:#eef2f8;color:#1b3058;font-weight:800}
+}

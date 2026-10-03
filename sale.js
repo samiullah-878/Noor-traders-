@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML, scanNewBill } from './pos-stock.js?v=2.60.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.60.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.64.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.64.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -29,7 +29,7 @@ export function saleSetup(o) {
   isOwner = o.owner || isOwner; uidOf = o.uid || uidOf; learnOf = o.learn || learnOf;
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
-    if (d && d.day === todayStr()) { mode = d.mode || 'counter'; godam = d.godam ?? null; cart = d.cart || []; cash = d.cash ?? null; note = d.note || ''; }
+    if (d && d.day === todayStr()) { cart = d.cart || []; mode = cart.length ? (d.mode || 'counter') : 'counter'; godam = d.godam ?? null; cash = d.cash ?? null; note = d.note || ''; }   // v2.63: khali bill = hamesha Counter
   } catch {}
 }
 function keepDraft() {
@@ -90,8 +90,10 @@ let quickSave = false;   // v2.57: F5 -> sirf '1 ya 2 print?'
 let copies = 1; try { copies = Math.min(3, Math.max(1, Number(localStorage.getItem('sam-sale-copies')) || 1)); } catch {}   // v2.40: bill kitni dafa chhape (gate pass ek hi)
 const copyChips = () => `<div class="sale-copies"><small>🖨 Bill print</small>${[1, 2, 3].map(n => `<button type="button" data-sale-copies="${n}"${copies === n ? ' class="on"' : ''}>×${n}</button>`).join('')}<small class="sale-copies-h">gate pass ×1</small></div>`;
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-sale-copies]'); if (!b) return; copies = Number(b.dataset.saleCopies) || 1; try { localStorage.setItem('sam-sale-copies', String(copies)); } catch {} document.querySelectorAll('[data-sale-copies]').forEach(x => x.classList.toggle('on', Number(x.dataset.saleCopies) === copies)); });
+let qtyFocusNext = false;   // v2.62: PC — nayi line ki tadad par cursor
+const finePtr = window.matchMedia ? window.matchMedia('(pointer:fine)') : { matches: false };
 function addItem(it, qtyPcs = 1) {
-  lastAddAt = Date.now();
+  lastAddAt = Date.now(); qtyFocusNext = true;
   noteHit(it.id);   // v1.75: ranking ke liye
   {
     cart.push({
@@ -237,7 +239,7 @@ function vbAdd(text) {
   if (!lastSug) notice('🎤 Suna: "' + heard.slice(0, 60) + '" — item ka naam samajh nahi aaya');
 }
 let vbHold = false, vbStopT = 0, vbHeard = '', vbDone = '';
-function vbStart() {               // v2.60.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
+function vbStart() {               // v2.64.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
   if (vbRec) { try { vbRec.abort(); } catch {} vbRec = null; }
@@ -468,7 +470,7 @@ document.addEventListener('pointercancel', () => vbRelease());
 document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sale-mic]')) e.preventDefault(); });
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.60.0: hold se chalta hai
+  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.64.0: hold se chalta hai
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {
@@ -492,7 +494,7 @@ document.addEventListener('click', async e => {
     return;
   }
   if (t.dataset.saleDel != null) { cart.splice(Number(t.dataset.saleDel), 1); cash = null; keepDraft(); rerender(); return; }
-  if (t.dataset.saleClear) { if (!confirm('Yeh bill saaf kar dein?')) return; cart = []; cash = null; note = ''; keepDraft(); rerender(); return; }
+  if (t.dataset.saleClear) { if (!confirm('Yeh bill saaf kar dein?')) return; cart = []; cash = null; note = ''; mode = 'counter'; keepDraft(); rerender(); return; }   // v2.63: Naya bill = Counter
   if (t.dataset.saleCamera) { openSaleCamera(); return; }
   if (t.dataset.saleToday) { openToday(); return; }
   if (t.dataset.saleReprint) {
@@ -587,7 +589,7 @@ async function save() {
     const p = cloud.saveAppSale(doc);
     // internet na ho to bhi phone par mehfooz; net aate hi chali jayegi
     await Promise.race([p, new Promise(r => setTimeout(r, 4000))]);
-    cart = []; cash = null; note = ''; keepDraft();
+    cart = []; cash = null; note = ''; mode = 'counter'; keepDraft();   // v2.63: Wholesale bill ke baad wapas Counter
     notice('Sale save ho gayi — PC bill bana kar print karega');
     setTimeout(() => { if (!scanNewBill()) { const se = $('search'); if (se) { se.value = ''; se.focus(); } } }, 60);   // v2.59: foran naya bill
     p.catch(err => {
@@ -632,3 +634,40 @@ document.addEventListener('keydown', e => {
   document.addEventListener('keydown', key, true);
   box.addEventListener('click', ev => { const t = ev.target.closest('[data-f5]'); if (t) done(Number(t.dataset.f5)); else if (ev.target === box) done(0); });
 }, true);
+
+// v2.62: PC — item lagte hi us ki TADAD badalne ke liye: number likho -> aakhri line ki tadad (0.4 sec ruk kar ya Enter).
+// Harf likho = search. Esc = chhoro. Scanner ke tez hindse (barcode) nahi pakarta.
+let qtyK = null, qBuf = '', qT0 = 0, qLast = 0, qTimer = null;
+function qtyFocusPaint() {
+  if (!qtyFocusNext) return;
+  if (document.querySelector('#dialog[open]')) return;
+  qtyFocusNext = false;
+  if (!finePtr.matches || document.querySelector('.scan-box') || !document.querySelector('[data-sale-root]')) return;
+  const l = cart[cart.length - 1]; qtyK = l ? l.k : null; qBuf = '';
+  document.querySelectorAll('.qty-live').forEach(x => x.classList.remove('qty-live'));
+  const i = cart.length - 1, box = document.querySelector(`[data-sale-pcs="${i}"]`) || document.querySelector(`[data-sale-ctn="${i}"]`);
+  box?.classList.add('qty-live');
+}
+new MutationObserver(() => setTimeout(qtyFocusPaint, 0)).observe(document.getElementById('list') || document.body, { childList: true });
+function qtyApply() {
+  clearTimeout(qTimer); qTimer = null;
+  const v = qBuf; qBuf = ''; if (!v) return;
+  const fast = v.length >= 4 && (qLast - qT0) / Math.max(1, v.length - 1) < 40; if (fast) return;   // barcode tha
+  const i = cart.findIndex(l => l.k === qtyK); if (i < 0) return;
+  const n = Number(v); if (!(n >= 0)) return;
+  cart[i].pcs = n; cash = null; keepDraft(); rerender(); notice(`✓ ${cart[i].name} — ${n}`);
+}
+document.addEventListener('keydown', e => {
+  if (!finePtr.matches || !qtyK || !document.querySelector('[data-sale-root]') || document.querySelector('.scan-box,#dialog[open]') || e.ctrlKey || e.altKey || e.metaKey) return;
+  const a = document.activeElement, se = $('search');
+  const free = !a || a === document.body || (a === se && !se.value) || a.matches?.('button');
+  if (e.key === 'Escape') { qtyK = null; qBuf = ''; document.querySelectorAll('.qty-live').forEach(x => x.classList.remove('qty-live')); return; }
+  if (!free) { if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) { qtyK = null; document.querySelectorAll('.qty-live').forEach(x => x.classList.remove('qty-live')); } return; }
+  if (/^[0-9.]$/.test(e.key)) { e.preventDefault(); const now = performance.now(); if (!qBuf) qT0 = now; qLast = now; qBuf += e.key; clearTimeout(qTimer); qTimer = setTimeout(qtyApply, 400); return; }
+  if (e.key === 'Enter' && qBuf) { e.preventDefault(); e.stopPropagation(); qtyApply(); return; }
+  if (e.key.length === 1 && /[a-zA-Z]/.test(e.key)) { qtyK = null; qBuf = ''; document.querySelectorAll('.qty-live').forEach(x => x.classList.remove('qty-live')); }
+});
+
+// v2.64: scanner screen ke liye — godam chips aur PC par aaj ke bills
+setSaleGodamHook(() => { const st = stock(); return { list: st.branches.map(b => ({ b, name: (st.branchName ? st.branchName(b, st.names) : '') || st.names?.[b] || ('Godam ' + b) })), cur: st.pick, set: b => { godam = Number(b); keepDraft(); rerender(); } }; });
+setSaleBillsHook(() => ({ list: sales, reprint: id => cloud.reprintAppSale(id, copies) }));

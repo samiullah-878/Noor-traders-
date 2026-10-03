@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.60.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.64.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,7 +57,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.60.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.64.0: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -219,7 +219,10 @@ let saleHook = null, saleSeen = [], saleQtyHook = null, saleFindHook = null;
 export function setSaleFindHook(fn) { saleFindHook = fn; }
 // v1.61.2: camera khulte waqt apni list BILL se dobara banaye (Naya bill / item hatane ke baad purani list na dikhe)
 let saleCartHook = null, saleDelHook = null;
-export function setSaleDelHook(fn) { saleDelHook = fn; }   // v1.64: camera ki list se line katna
+export function setSaleDelHook(fn) { saleDelHook = fn; }
+let saleGodamHook = null, saleBillsHook = null;   // v2.64: scanner par godam chips + PC par aaj ke bills
+export function setSaleGodamHook(fn) { saleGodamHook = fn; }
+export function setSaleBillsHook(fn) { saleBillsHook = fn; }   // v1.64: camera ki list se line katna
 export function setSaleCartHook(fn) { saleCartHook = fn; }
 function syncFromCart() {
   if (!saleRoot() || !saleCartHook) return;
@@ -1221,7 +1224,14 @@ function countHTML(r) {
       r.prate ? ' · Rs ' + (diff > 0 ? '+' : '') + num(diff * r.prate) : ''}</small>` : ''}
   </div>
   ${flagHTML(r)}
-  ${historyHTML(r, c)}`;
+  ${c ? historyHTML(r, c) : oldHistoryHTML(r)}`;
+}
+// v2.61: is round mein abhi nahi gina — pichhli gintiyon ki history (wahi jo gine hue par neeche aati hai), tap se khule
+function oldHistoryHTML(r) {
+  const old = counts.get(countId(pickedBranch, r.id));
+  const n = Array.isArray(old?.history) ? old.history.length : 0;
+  if (!n) return '';
+  return `<details class="old-hist"><summary>🕘 Pichhli ginti ki history (${n})</summary>${historyHTML(r, old)}</details>`;
 }
 
 function historyHTML(r, c) {
@@ -1652,6 +1662,7 @@ function clearScan() {
 }
 
 function closeScanner() {
+  try { clearInterval(scanBox?._billsTimer); } catch {}
   clearTimeout(scanTimer); try { cancelAnimationFrame(scanTimer); } catch {} scanTimer = null;
   if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
   if (scanBox) { scanBox.remove(); scanBox = null; }
@@ -1826,7 +1837,33 @@ async function openScanner() {
     sumBox.innerHTML = '';
   };
   drawNames();
-  scanBox._redraw = () => { try { showPad(); drawNames(); } catch {} };   // v2.59: naya bill par list saaf
+  scanBox._redraw = () => { try { showPad(); drawNames(); } catch {} };
+  // v2.64: Pcs/Ctn ke sath GODAM chips (sale) — agla scan isi godam se
+  if (saleRoot() && saleGodamHook && !pickHook) {
+    const gw = document.createElement('div'); gw.className = 'scan-godam';
+    const paintG = () => { let g = null; try { g = saleGodamHook(); } catch {} if (!g || !g.list || g.list.length < 2) { gw.hidden = true; return; } gw.hidden = false;
+      gw.innerHTML = '<small>Godam</small>' + g.list.map(x => `<button type="button" data-sg="${x.b}"${Number(x.b) === Number(g.cur) ? ' class="on"' : ''}>${esc(x.name)}</button>`).join(''); };
+    gw.addEventListener('click', e => { const b = e.target.closest('[data-sg]'); if (!b) return; try { saleGodamHook().set(Number(b.dataset.sg)); } catch {} paintG(); if (msg) msg.textContent = `✓ Godam: ${b.textContent} — agla item yahin se`; qBox?.focus?.(); });
+    paintG(); (scanBox.querySelector('.scan-find') || scanBox.firstElementChild).after(gw);
+  }
+  // v2.64: PC par baayein — AAJ KE BILLS (chips: ✓ paid · ✗ baqi · ⊘ cancel · ⏳ PC · ⚠ fail) + search
+  if (saleRoot() && saleBillsHook && !pickHook && window.matchMedia && window.matchMedia('(min-width:1100px)').matches) {
+    const side = document.createElement('aside'); side.className = 'scan-bills';
+    side.innerHTML = '<div class="sb-head"><b>🧾 Aaj ke bills</b><small></small></div><input type="search" class="sb-q" placeholder="Bill no, naam ya raqam…" autocomplete="off"><div class="sb-list"></div>';
+    scanBox.appendChild(side); scanBox.classList.add('has-bills');
+    const q = side.querySelector('.sb-q'), listBox = side.querySelector('.sb-list'), cnt = side.querySelector('.sb-head small');
+    let open = '';
+    const mark = s => (s.cancelled || s.status === 'cancelled') ? ['⊘', 'cx'] : s.status === 'failed' ? ['⚠', 'fl'] : (s.status === 'new' || s.status === 'posting') ? ['⏳', 'wt'] : (s.mode !== 'wholesale' || Number(s.cash) >= Number(s.total) - 0.5) ? ['✓', 'pd'] : ['✗', 'up'];
+    const paintB = () => { let h = null; try { h = saleBillsHook(); } catch {} const all = (h && h.list) || [];
+      const t = String(q.value || '').trim().toLowerCase(), d = t.replace(/[^0-9]/g, '');
+      const rows = all.filter(s => !t || String(s.saleNo || '').includes(t) || (s.note || '').toLowerCase().includes(t) || (s.party || '').toLowerCase().includes(t) || (d.length >= 2 && String(Math.round(Number(s.total) || 0)).startsWith(d)) || (s.lines || []).some(l => String(l.name || '').toLowerCase().includes(t)));
+      cnt.textContent = `${rows.length}${rows.length !== all.length ? ' / ' + all.length : ''}`;
+      listBox.innerHTML = rows.map(s => { const [ic, cl] = mark(s), tm = new Date(s.createdAt || 0).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' });
+        return `<div class="sb-chip ${cl}${open === s.id ? ' open' : ''}" data-sb="${esc(s.id)}"><i>${ic}</i><span><b>${s.saleNo ? esc(s.saleNo) : (s.mode === 'wholesale' ? 'Wholesale' : 'Counter')}</b><small>${tm} · ${(s.lines || []).length} items</small></span><em>Rs ${num(s.total)}</em>${open === s.id ? `<div class="sb-det">${(s.lines || []).map(l => `<p>${esc(l.name)}<span>${num(l.qty)} × ${num(l.rate)}</span></p>`).join('')}<p class="sb-pay">Cash Rs ${num(s.cash)}${s.mode === 'wholesale' && s.total - s.cash > 0 ? ' · Udhaar Rs ' + num(s.total - s.cash) : ''}</p>${s.status === 'done' ? `<button type="button" data-sb-print="${esc(s.id)}">🖨 Dobara print</button>` : ''}</div>` : ''}</div>`; }).join('') || '<p class="stat-note">Aaj koi bill nahi</p>'; };
+    q.oninput = paintB;
+    listBox.addEventListener('click', e => { const pr = e.target.closest('[data-sb-print]'); if (pr) { e.stopPropagation(); try { saleBillsHook().reprint(pr.dataset.sbPrint); notice('🖨 Print ka hukam PC ko bhej diya'); } catch (er) { notice('Print nahi hua'); } return; } const c = e.target.closest('[data-sb]'); if (!c) return; open = open === c.dataset.sb ? '' : c.dataset.sb; paintB(); });
+    paintB(); scanBox._billsTimer = setInterval(paintB, 4000);
+  }   // v2.59: naya bill par list saaf
   // v1.64: list ki line ka ✕ — bill se bhi kat jaye
   namesBox.addEventListener('pointerdown', e => { if (e.target.closest('.scan-del')) e.preventDefault(); });
   // v2.58: list ki line par tap / ↑↓ = wo line chuno -> Pcs/Ctn pad aur Tadad usi par lagein
