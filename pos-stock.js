@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.66.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.68.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,7 +57,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.66.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.68.0: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -1823,7 +1823,7 @@ async function openScanner() {
       const list = scanOrder.map(k => [k, scanItems.get(k)]).filter(x => x[1]);
       countBox.textContent = list.length;
       namesBox.innerHTML = list.slice().reverse().map(([k, it]) => { const L = lineOf(it, k);   // v2.33: nayi upar
-        return `<li data-k="${esc(k)}"${k === lastKey ? ' class="now"' : ''}><button type="button" class="scan-del" data-del="${esc(k)}" aria-label="Hatao">✕</button><b>${esc(it.name)}</b><span>${esc(L.qtxt)}${L.rate ? ` x ${num(L.rate)} = <b>${num(L.amt)}</b>` : ''}</span></li>`; }).join('');   // v2.42: transfer (rate 0) par sirf tadad
+        return `<li data-k="${esc(k)}"${k === lastKey ? ' class="now"' : ''}><button type="button" class="scan-del" data-del="${esc(k)}" aria-label="Hatao">✕</button><b>${esc(it.name)}</b><span>${esc(L.qtxt)}${L.rate ? ` x ${num(L.rate)} = <b>${num(L.amt)}</b>` : ''}</span>${(() => { const q = scanQty.get(k) || { pcs: 0, ctn: 0 }, pk = Number(it.pack) || 0; return `<div class="li-qty">${pk > 1 ? `<label>${esc(it.cName || 'Ctn')}<input class="li-in" data-li="${esc(k)}" data-u="ctn" type="text" inputmode="decimal" autocomplete="off" value="${q.ctn || ''}" placeholder="0"></label>` : ''}<label>${esc(it.uName || 'Pcs')}<input class="li-in" data-li="${esc(k)}" data-u="pcs" type="text" inputmode="decimal" autocomplete="off" value="${q.pcs || ''}" placeholder="0"></label></div>`; })()}</li>`; }).join('');   // v2.67: har line par Pcs (aur Ctn) ke khane   // v2.42: transfer (rate 0) par sirf tadad
       namesBox.reversed = true; namesBox.start = list.length;
       const kul = list.reduce((n, [k, it]) => n + lineOf(it, k).amt, 0);
       sumBox.innerHTML = list.length ? (kul ? `Kul: <b>Rs ${num(kul)}</b>` : `<b>${list.length}</b> items`) : '';
@@ -1870,6 +1870,25 @@ async function openScanner() {
   const pickLine = k => { if (!k || !scanItems.has(k)) return; lastKey = k; lastScan = scanItems.get(k); showPad(); drawNames(true); };
   namesBox.addEventListener('click', e => { if (e.target.closest('.scan-del')) return; const li = e.target.closest('li[data-k]'); if (li) { pickLine(li.dataset.k); kbLine = true; } });
   let kbLine = false, kbNum = '';
+  // v2.67: list ki line ke khane — Shift / click = wahan jao, Tab = agla khana, Enter = lagao + wapas search. Scanner ke tez hindse = naya item.
+  const liFocus = k => { const box = namesBox.querySelector(`li[data-k="${CSS.escape(k)}"] .li-in[data-u="pcs"]`) || namesBox.querySelector(`li[data-k="${CSS.escape(k)}"] .li-in`); if (box) { box.focus(); try { box.select(); } catch {} } };
+  const liApply = (inp, redraw) => { const k = inp.dataset.li; if (!k || !scanItems.has(k)) return; const it = scanItems.get(k), li = inp.closest('li');
+    const val = u => { const x = li.querySelector(`.li-in[data-u="${u}"]`); return x ? Math.max(0, Number(String(x.value).replace(/[^0-9.]/g, '')) || 0) : 0; };
+    const q = { pcs: val('pcs'), ctn: Number(it.pack) > 1 ? Math.floor(val('ctn')) : 0 };
+    scanQty.set(k, q); lastKey = k; lastScan = it; if (saleQtyHook) saleQtyHook(it, q, k);
+    if (redraw) { showPad(); drawNames(true); } else { const L = lineOf(it, k), sp = li.querySelector(':scope > span'); if (sp) sp.innerHTML = `${esc(L.qtxt)}${L.rate ? ` x ${num(L.rate)} = <b>${num(L.amt)}</b>` : ''}`; } };
+  let liT0 = 0, liLast = 0, liN = 0;
+  namesBox.addEventListener('keydown', e => { const inp = e.target.closest?.('.li-in'); if (!inp) return;
+    const now = performance.now(); if (/^[0-9]$/.test(e.key)) { if (!liN || now - liLast > 300) { liT0 = now; liN = 0; } liN++; liLast = now; }
+    if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation();
+      const raw = String(inp.value).replace(/[^0-9]/g, '');
+      if (raw.length >= 5 && liN >= 5 && (liLast - liT0) / Math.max(1, liN - 1) < 40) { inp.value = inp.defaultValue; liN = 0; feedCode(raw); qBox?.focus(); return; }   // scanner ka barcode
+      liN = 0; liApply(inp, true); qBox?.focus(); return; }
+    if (e.key === 'Escape') { e.preventDefault(); inp.value = inp.defaultValue; qBox?.focus(); return; }
+  }, true);
+  namesBox.addEventListener('input', e => { const inp = e.target.closest?.('.li-in'); if (inp) liApply(inp, false); });
+  namesBox.addEventListener('focusout', e => { const inp = e.target.closest?.('.li-in'); if (inp && !namesBox.contains(e.relatedTarget)) { liApply(inp, true); } });
+  namesBox.addEventListener('pointerdown', e => { if (e.target.closest('.li-in,.scan-del')) return; const li = e.target.closest('li[data-k]'); if (li) { e.preventDefault(); pickLine(li.dataset.k); setTimeout(() => liFocus(li.dataset.k), 0); } });
   const lineKeys = () => [...namesBox.querySelectorAll('li[data-k]')].map(li => li.dataset.k);
   scanBox.addEventListener('keydown', e => {
     if (!saleRoot()) return;
@@ -1972,6 +1991,11 @@ async function openScanner() {
     msg.textContent = r.state === 'added' ? `✓ ${r.item.name} — tadad chunein ya agla scan karein` : `${r.item.name} pehle se list mein`;
     beep(true); if (navigator.vibrate) navigator.vibrate(80);
   };
+  // v2.67: search mein akela SHIFT = neeche abhi wali line ke tadad ke khane mein (Tab = Ctn / agli line)
+  { let shiftAlone = false;
+    qBox.addEventListener('keydown', e => { if (e.key === 'Shift') shiftAlone = true; else shiftAlone = false; });
+    qBox.addEventListener('keyup', e => { if (e.key !== 'Shift' || !shiftAlone) return; shiftAlone = false; if (!saleRoot()) return; const k = (lastKey && scanItems.has(lastKey)) ? lastKey : namesBox.querySelector('li[data-k]')?.dataset.k; if (!k) return; hitBox.hidden = true; pickLine(k); setTimeout(() => { const box = namesBox.querySelector(`li[data-k="${CSS.escape(k)}"] .li-in[data-u="pcs"]`) || namesBox.querySelector(`li[data-k="${CSS.escape(k)}"] .li-in`); if (box) { box.focus(); try { box.select(); } catch {} } }, 0); });
+  }
   const codeLike = v => /^[0-9]{6,}$/.test(v) || (v.length >= 1 && !/\s/.test(v) && !!findByCode(v));   // v2.55 / v2.60: chhota sub-code (jaise "99") pehle barcode samjho, naam-search baad mein
   qBox.addEventListener('input', () => { const v = String(qBox.value || '').trim(); if (/^[0-9]{8,}$/.test(v) && findByCode(v)) { clearTimeout(qBox._ft); qBox._ft = setTimeout(() => { if (String(qBox.value || '').trim() === v) { qBox.value = ''; hitBox.hidden = true; chosen = null; feedCode(v); } }, 140); } });   // Enter na bhejne wala scanner
   qBox.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const v = String(qBox.value || '').trim(); if (codeLike(v)) { clearTimeout(qBox._ft); qBox.value = ''; hitBox.hidden = true; chosen = null; feedCode(v); return; } if (chosen) { nBox.focus(); return; } const r = (hitBox._src || [])[0]; if (r) pickHit(r); } };

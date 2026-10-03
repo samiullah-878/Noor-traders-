@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.66.0, 2026-10-03 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.68.0, 2026-10-03 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2178,3 +2178,21 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
 * v2.65.2: bills chip — number 17px bara (shuru ke 0 hata kar, kam az kam 4 hindse), raqam neeche, waqt daayein; patti 220px.
 * v2.65.3: PC scanner — .has-bills .scan-inner fixed left:230 right:0 (dono taraf ka gap khatam); bills patti 230; number 21px; POS tag raqam ki line mein (kat-ta nahi tha).
 * v2.66.0: PC Sale screen — #homeBar (late/backup/din band/synced) chhupa (body:has([data-sale-root])), Counter/Wholesale bare (52px/18px) upar, total daayein. Generator: html.lt header .summary/.stock-head button (selected/on ke ilawa) = surf2 + ink (safed par safed text tha).
+
+==================== v2.67.0 (2026-10-03) — SCANNER LIST: HAR LINE PAR PCS / CTN KHANE ====================
+* pos-stock.js drawNames (sale): li ke andar .li-qty — Ctn (pack>1) + Pcs inputs (.li-in data-li=k data-u). input = live
+  scanQty + saleQtyHook + line ka span; Enter = apply + drawNames(true) + qBox focus; Esc = wapas; focusout (list se bahar) = apply.
+  Tez 5+ hindse burst + Enter = barcode -> feedCode (tadad nahi). Line par click (khane ke ilawa) = pickLine + Pcs khane par focus.
+  qBox par AKELA Shift (keyup, beech mein koi aur key nahi) = abhi wali line (lastKey) ka Pcs khana; Tab = Ctn / agli line.
+* CSS: .li-in 64px (PC 78px, 20px font), PC par khane line ke daayein (✕ se pehle).
+* Test: Shift -> Cheeni Pcs khana ✓; Ghee Ctn 2 Enter -> "2 Ctn + 1 Pcs", focus wapas search ✓.
+
+==================== v2.68.0 + PC 2026-10-03.3 — COUNTER PRINTER (RULES 2.22) ====================
+* Malik: 3 counter — Abdurehman, Bilal bhai, Mithu — har ek ka apna printer; F5 par yaad rahe; gate pass bhi bill wale printer par.
+* sale.js: COUNTERS [abdurehman|bilal|mithu], localStorage 'sam-sale-counter', chips (copyChips se pehle), doc.counter;
+  F5 card mein counter chips + keys A/B/M; reprint (dialog + bills panel) counter ke sath. cloud.reprintAppSale(id,copies,counter).
+* Rules 2.22: appSales create hasOnly + 'counter' (string <=20); update affectedKeys + counter.
+* pc/sale-post.js: printerFor(counter) = local-config.json counterPrinters[counter] || PRINTER_NAME (har dafa file parhta);
+  printText(text, printer); printSale(..., printer); printGatePasses(r, printer) — dono usi printer par; reprint d.counter.
+* COUNTER-PRINTER.bat (PC helper; source pc/counter-printer.js): Get-Printer list -> har counter ka number -> counterPrinters merge.
+* Test: F5 -> M -> 2 => copies 2, counter mithu, yaad ✓.
