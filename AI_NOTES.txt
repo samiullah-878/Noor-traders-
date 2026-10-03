@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.52.1, 2026-10-03 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.53.0, 2026-10-03 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2107,3 +2107,9 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
 * app.js: settings '🔫 Scanner' -> #scanTest modal (stIn): har akshar ka faasla, ausat/max, Enter, ajeeb akshar check.
 * Agar Notepad mein bhi kuch na aaye: scanner USB COM mode — model sticker se "USB HID Keyboard" config barcode chahiye.
 * v2.52.1: generator — rang wale button ka bg hamesha emit (html.lt button generic se na dabe); dk mein hara/laal gehre rang 'deep' navy na banein; .scan-done/.scan-close har look mein hara/laal. Scanner layout malik ko pasand — NAHI badla.
+
+==================== v2.53.0 (2026-10-03) — USB SCANNER camera-screen ke search mein ====================
+* PC: USB scanner ne code camera screen ke search (qBox) mein likha -> sirf naam-search -> "Nahi mila" (global kb detector scanBox
+  khula ho to band hai). Ab openScanner: feedCode(code) = camera detect wala raasta (addScanned, scanQty/Items/Order, showPad,
+  drawNames, beep). qBox Enter + sirf hindse >=6 -> feedCode; Enter na ho: input >=8 hindse + findByCode mile -> 140ms baad feedCode.
+* Test (happy-dom): barcode + Enter -> line + search khali; Enter ke baghair bhi.
