@@ -1736,3 +1736,5 @@ html.boot-auto.has-app body::after{display:none}
 .dev-line{margin:12px 0 0;padding:10px 12px;border-radius:12px;background:#eef2f8;color:#1b3058;font-size:13.5px;line-height:1.45}
 .dev-line b{font-size:20px;letter-spacing:2px;font-family:ui-monospace,Consolas,monospace}
 .dev-line small{color:#5c6a85}
+
+.look-grid.look-ro .look-chip{opacity:.55;pointer-events:none}

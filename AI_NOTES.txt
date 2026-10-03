@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.73.0, 2026-10-04 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.74.0, 2026-10-04 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2233,3 +2233,4 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
   Owner: #devJoin modal (ID, scope chips, us scope ka password, naam) -> cloud.joinOffer. Rules 2.24: deviceJoins read/delete
   signedIn (anonymous bhi), create/update owner, keys hasOnly, pw <= 400.
 * Revoke = setStaffPassword (purana remembered fail -> hat jata hai).
+* v2.74.0 (rules 2.25): applyLook(k) malik -> cloud.setLook (blueAccess/look {k,at}); sab devices listenLook -> applyLook(k,true) (localStorage bhi, agli boot pehle se). Mulazim ke chips read-only (notice). blueAccess get list mein 'look'.
