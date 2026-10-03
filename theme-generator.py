@@ -40,7 +40,7 @@ def dbg(c):
     h,l,s_,a,ch=i
     if a<0.35: return rgba(h,.75,s_,a*.9)
     if l>=0.80: return rgba(h,.60,min(1,s_+.1),.18) if ch>0.05 else ('var(--glass)' if l>.96 else 'var(--glass2)')
-    if l<=0.32: return 'var(--deep)' if ch>0.12 else 'var(--deep2)'
+    if l<=0.32: return ('var(--deep)' if 0.53<=h<=0.70 else rgba(h,.40,min(1,s_+.1),a)) if ch>0.12 else 'var(--deep2)'   # hara/laal button rang na khoye
     return rgba(h,min(.58,l+.04),min(1,s_+.12),a)
 def dfg(c):
     i=info(c)
@@ -98,7 +98,7 @@ def conv(txt,pfx,fb,ff,fd):
             fn=fb if p in BGP else ff if p in FGP else fd if p in BDP else None
             if fn and COL.search(v):
                 nv=COL.sub(lambda m: fn(m.group(0)), v)
-                if nv!=v: decs.append(f'{p}:{nv}!important')
+                if nv!=v or p in BGP: decs.append(f'{p}:{nv}!important')   # v2.52.1: rang wale button ka asal bg bhi (generic button rule se na dabe)
         if decs:
             sels=[]
             for x in head.split(','):
@@ -142,8 +142,8 @@ html.dk input,html.dk select,html.dk textarea{{background:rgba(255,255,255,.06)!
 html.dk input::placeholder,html.dk textarea::placeholder{{color:var(--ink2)!important;opacity:.8}}
 html.dk input:focus,html.dk select:focus,html.dk textarea:focus{{outline:none!important;border-color:var(--p1)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--p1) 22%,transparent),0 0 18px color-mix(in srgb,var(--p1) 25%,transparent)!important}}
 html.dk select option{{background:#111;color:#eee}}
-{X3} .got,{X3} footer .got,{X3} #actions .got{{background:linear-gradient(135deg,color-mix(in srgb,var(--good) 40%,transparent),color-mix(in srgb,var(--good) 10%,transparent))!important;border-color:color-mix(in srgb,var(--good) 70%,transparent)!important;color:#fff!important;box-shadow:0 0 18px color-mix(in srgb,var(--good) 35%,transparent),inset 0 1px 0 rgba(255,255,255,.3)!important}}
-{X3} .give,{X3} footer .give,{X3} .danger,{X3} #actions .due-button{{background:linear-gradient(135deg,color-mix(in srgb,var(--bad) 40%,transparent),color-mix(in srgb,var(--bad) 10%,transparent))!important;border-color:color-mix(in srgb,var(--bad) 70%,transparent)!important;color:#fff!important;box-shadow:0 0 18px color-mix(in srgb,var(--bad) 35%,transparent),inset 0 1px 0 rgba(255,255,255,.3)!important}}
+{X3} .got,{X3} footer .got,{X3} #actions .got,{X3} .scan-done{{background:linear-gradient(135deg,color-mix(in srgb,var(--good) 40%,transparent),color-mix(in srgb,var(--good) 10%,transparent))!important;border-color:color-mix(in srgb,var(--good) 70%,transparent)!important;color:#fff!important;box-shadow:0 0 18px color-mix(in srgb,var(--good) 35%,transparent),inset 0 1px 0 rgba(255,255,255,.3)!important}}
+{X3} .give,{X3} footer .give,{X3} .danger,{X3} #actions .due-button,{X3} .scan-close{{background:linear-gradient(135deg,color-mix(in srgb,var(--bad) 40%,transparent),color-mix(in srgb,var(--bad) 10%,transparent))!important;border-color:color-mix(in srgb,var(--bad) 70%,transparent)!important;color:#fff!important;box-shadow:0 0 18px color-mix(in srgb,var(--bad) 35%,transparent),inset 0 1px 0 rgba(255,255,255,.3)!important}}
 {X3} .saman,{X3} .primary,{X3} button.primary,{X3} .hbl-btn{{background:linear-gradient(135deg,color-mix(in srgb,var(--p1) 34%,transparent),color-mix(in srgb,var(--p2) 18%,transparent))!important;border-color:color-mix(in srgb,var(--p1) 70%,transparent)!important;color:#fff!important;box-shadow:0 0 18px color-mix(in srgb,var(--p1) 32%,transparent),inset 0 1px 0 rgba(255,255,255,.3)!important}}
 html.dk.dk.dk.dk .on,html.dk.dk.dk.dk button.on,html.dk.dk.dk.dk .active,html.dk.dk.dk.dk [aria-selected="true"]{{background:linear-gradient(135deg,var(--p1),var(--p2))!important;color:var(--ontx)!important;border-color:transparent!important;box-shadow:0 0 16px color-mix(in srgb,var(--p1) 40%,transparent)!important}}
 html.dk.dk .red{{color:var(--red)!important}}html.dk.dk .green{{color:var(--green)!important}}
@@ -156,10 +156,11 @@ html.lt header{{background:var(--hd)!important;color:#fff!important}}
 html.lt dialog{{background:var(--surf)!important;color:var(--ink)!important;border:1px solid var(--line)!important}}
 html.lt button{{background:var(--surf)!important;color:var(--ink)!important;border:1px solid var(--line)!important;box-shadow:0 1px 2px rgba(0,0,0,.05)!important}}
 html.lt header button{{background:rgba(255,255,255,.14)!important;color:#fff!important;border-color:rgba(255,255,255,.25)!important}}
+html.lt header .summary button:not(.selected):not(.on),html.lt header .stock-head button:not(.selected):not(.on){{background:var(--surf2)!important;color:var(--ink)!important;border:1px solid var(--line)!important}}
 html.lt input,html.lt select,html.lt textarea{{background:var(--surf)!important;color:var(--ink)!important;border:1px solid var(--line)!important}}
 html.lt input:focus,html.lt select:focus,html.lt textarea:focus{{outline:none!important;border-color:var(--pri)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--pri) 18%,transparent)!important}}
-{L3} .got,{L3} footer .got,{L3} #actions .got{{background:var(--good)!important;color:#fff!important;border-color:var(--good)!important;box-shadow:0 6px 16px color-mix(in srgb,var(--good) 30%,transparent)!important}}
-{L3} .give,{L3} footer .give,{L3} #actions .due-button{{background:var(--bad)!important;color:#fff!important;border-color:var(--bad)!important;box-shadow:0 6px 16px color-mix(in srgb,var(--bad) 30%,transparent)!important}}
+{L3} .got,{L3} footer .got,{L3} #actions .got,{L3} .scan-done{{background:var(--good)!important;color:#fff!important;border-color:var(--good)!important;box-shadow:0 6px 16px color-mix(in srgb,var(--good) 30%,transparent)!important}}
+{L3} .give,{L3} footer .give,{L3} #actions .due-button,{L3} .scan-close{{background:var(--bad)!important;color:#fff!important;border-color:var(--bad)!important;box-shadow:0 6px 16px color-mix(in srgb,var(--bad) 30%,transparent)!important}}
 {L3} .danger{{background:color-mix(in srgb,var(--bad) 10%,var(--surf))!important;color:var(--bad)!important;border-color:color-mix(in srgb,var(--bad) 35%,transparent)!important}}
 {L3} .saman,{L3} .primary,{L3} button.primary,{L3} .hbl-btn{{background:var(--pri)!important;color:#fff!important;border-color:var(--pri)!important;box-shadow:0 6px 16px color-mix(in srgb,var(--pri) 30%,transparent)!important}}
 html.lt.lt.lt.lt .on,html.lt.lt.lt.lt button.on,html.lt.lt.lt.lt .active,html.lt.lt.lt.lt [aria-selected="true"]{{background:var(--pri)!important;color:var(--ontx)!important;border-color:var(--pri)!important}}

@@ -1679,3 +1679,16 @@ html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-
  .sb-chip span em u{text-decoration:none;font-size:9.5px!important;font-weight:800;padding:0 5px;border-radius:5px;background:#e3eaf8;color:#2b4a86;margin-left:6px;vertical-align:1px}
  .sb-chip.cx span em u{text-decoration:none}
 }
+
+/* v2.66: PC Sale screen — din band / backup / late wali qataar chhupi; Counter / Wholesale usi jagah upar */
+@media (min-width:1100px){
+ html.desk body:has([data-sale-root]) #homeBar{display:none!important}
+ html.desk body:has([data-sale-root]) main>header{padding-top:14px!important;padding-bottom:14px!important}
+ html.desk body:has([data-sale-root]) #summary{margin-top:6px!important}
+ html.desk body:has([data-sale-root]) .sale-head{padding:10px 14px!important;display:grid!important;grid-template-columns:1fr auto;align-items:center;gap:8px 14px}
+ html.desk body:has([data-sale-root]) .sale-head .account-tools{margin:0!important;display:flex!important;gap:10px}
+ html.desk body:has([data-sale-root]) .sale-head .sale-mode{min-height:52px!important;font-size:18px!important;padding:0 24px!important;flex:0 0 auto!important}
+ html.desk body:has([data-sale-root]) .sale-head .sale-total{margin:0!important;text-align:right}
+ html.desk body:has([data-sale-root]) .sale-head .sale-total strong{font-size:28px!important}
+ html.desk body:has([data-sale-root]) .sale-head>:not(.account-tools):not(.sale-total){grid-column:1/-1}
+}

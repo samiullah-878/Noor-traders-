@@ -25,6 +25,7 @@ html.lt header{background:var(--hd)!important;color:#fff!important}
 html.lt dialog{background:var(--surf)!important;color:var(--ink)!important;border:1px solid var(--line)!important}
 html.lt button{background:var(--surf)!important;color:var(--ink)!important;border:1px solid var(--line)!important;box-shadow:0 1px 2px rgba(0,0,0,.05)!important}
 html.lt header button{background:rgba(255,255,255,.14)!important;color:#fff!important;border-color:rgba(255,255,255,.25)!important}
+html.lt header .summary button:not(.selected):not(.on),html.lt header .stock-head button:not(.selected):not(.on){background:var(--surf2)!important;color:var(--ink)!important;border:1px solid var(--line)!important}
 html.lt input,html.lt select,html.lt textarea{background:var(--surf)!important;color:var(--ink)!important;border:1px solid var(--line)!important}
 html.lt input:focus,html.lt select:focus,html.lt textarea:focus{outline:none!important;border-color:var(--pri)!important;box-shadow:0 0 0 3px color-mix(in srgb,var(--pri) 18%,transparent)!important}
 html.lt.lt.lt .got,html.lt.lt.lt footer .got,html.lt.lt.lt #actions .got,html.lt.lt.lt .scan-done{background:var(--good)!important;color:#fff!important;border-color:var(--good)!important;box-shadow:0 6px 16px color-mix(in srgb,var(--good) 30%,transparent)!important}
