@@ -37,6 +37,8 @@ const WHOLESALE_NAME = 'whole sale';
 const AUTO_PRINT = true;           // rasid script hi chhapti hai (PRINTER_NAME par, notepad ke baghair)
 const PRINT_WIDTH = 32;
 const PRINTER_NAME = 'TM-T88IV';   // Devices and Printers mein jo naam likha hai — ghalat ho to yahan theek karein
+// 2026-10-03: COUNTER printer — app 'counter' (abdurehman / bilal / mithu) bhejti hai; naam local-config.json counterPrinters mein (COUNTER-PRINTER.bat)
+function printerFor(counter) { try { const m = JSON.parse(fs.readFileSync(path.join(DIR, 'local-config.json'), 'utf8')).counterPrinters || {}; const n = counter && m[String(counter)]; return n ? String(n) : PRINTER_NAME; } catch { return PRINTER_NAME; } }
 const LOCK_PORT = 47815;           // ek hi sale-post chale
 const MARK = 'BK-APP ';            // Sale.Description mein nishan
 // ------------------------------------------
@@ -347,12 +349,12 @@ async function receiptFor(saleNo, saleId) {
 }
 
 // RAW print: ESC/POS bytes seedha printer ko (barcode/bara text chalta hai)
-function printText(text) {
+function printText(text, printer = PRINTER_NAME) {
   const file = path.join(DIR, 'sale-print.bin');
   fs.writeFileSync(file, Buffer.from(text, 'binary'));
   const ps = `
 $ErrorActionPreference='Stop'
-$name='${PRINTER_NAME.replace(/'/g, "''")}'
+$name='${String(printer || PRINTER_NAME).replace(/'/g, "''")}'
 $bytes=[System.IO.File]::ReadAllBytes('${file.replace(/'/g, "''")}')
 # 2026-10-02 TEZ PRINT: C# helper ek dafa RawCached.dll mein compile, phir har print par sirf load (pehle har dafa compile = 3-8 sec)
 $dll=Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'RawCached.dll'
@@ -433,7 +435,7 @@ function gatePassText(godamName, rows, saleNo, partyName, when) {
   out.push(GS + 'V' + '\x42' + '\x00');
   return out.join('\r\n');
 }
-async function printGatePasses(r) {
+async function printGatePasses(r, printer = PRINTER_NAME) {
   if (!AUTO_PRINT || !Array.isArray(r.lines)) return;
   const gp = r.lines.filter(l => Number(l.godam) && Number(l.godam) !== Number(r.branch));
   if (!gp.length) return;
@@ -444,15 +446,15 @@ async function printGatePasses(r) {
   const godams = [...new Set(gp.map(l => Number(l.godam)))];
   const when = new Date();
   for (const g of godams) {
-    const err = await printText(gatePassText(names[g] || ('Godam ' + g), gp.filter(l => Number(l.godam) === g), r.saleNo, r.partyName, when));
+    const err = await printText(gatePassText(names[g] || ('Godam ' + g), gp.filter(l => Number(l.godam) === g), r.saleNo, r.partyName, when), printer);   // bill wale printer par hi
     log(err ? 'Gate pass print nahi hua (' + (names[g] || g) + '): ' + err.message : 'GATE PASS print: ' + (names[g] || g) + ' · Sale ' + r.saleNo);
   }
 }
-async function printSale(saleNo, saleId, copies = 1) {   // 2026-10-01: bill `copies` dafa (1-3), gate pass alag (ek hi)
+async function printSale(saleNo, saleId, copies = 1, printer = PRINTER_NAME) {   // 2026-10-01: bill `copies` dafa (1-3), gate pass alag (ek hi)
   if (!AUTO_PRINT) return;
   const text = await receiptFor(saleNo, saleId), n = Math.min(3, Math.max(1, Number(copies) || 1));
-  for (let i = 0; i < n; i++) { const err = await printText(text); if (err) { log('Print nahi hua: ' + err.message); return; } }
-  log('Rasid print: Sale ' + saleNo + (n > 1 ? ' x' + n : ''));
+  for (let i = 0; i < n; i++) { const err = await printText(text, printer); if (err) { log('Print nahi hua (' + printer + '): ' + err.message); return; } }
+  log('Rasid print: Sale ' + saleNo + (n > 1 ? ' x' + n : '') + (printer !== PRINTER_NAME ? ' -> ' + printer : ''));
 }
 
 // ---- Firestore se kaam ----
@@ -479,8 +481,9 @@ async function handleSale(doc) {
         ...(r.cash != null ? { cash: r.cash } : {}), doneAt: Date.now(), error: FieldValue.delete() });
       log(`${r.again ? 'Pehle se bani thi' : 'Sale ban gayi'}: ${r.saleNo} · ${ok.mode} · Rs ${r.total}${r.crvNo ? ' · ' + r.crvNo : ''}`);
       if (!r.again) {
-        await printSale(r.saleNo, r.saleId, ok.copies).catch(e => log('Print masla: ' + e.message));
-        await printGatePasses(r).catch(e => log('Gate pass masla: ' + e.message));
+        const pr = printerFor(ok.counter);
+        await printSale(r.saleNo, r.saleId, ok.copies, pr).catch(e => log('Print masla: ' + e.message));
+        await printGatePasses(r, pr).catch(e => log('Gate pass masla: ' + e.message));
       }
     } catch (e) {
       log(`Sale NAHI bani (${id}): ${e.message}`);
@@ -495,7 +498,7 @@ async function handlePrint(doc) {
   if (busy.has(key)) return;
   busy.add(key);
   try {
-    if (d.status === 'done' && d.saleNo) await printSale(d.saleNo, d.saleId, d.copies);
+    if (d.status === 'done' && d.saleNo) await printSale(d.saleNo, d.saleId, d.copies, printerFor(d.counter));
     await doc.ref.update({ printReq: FieldValue.delete(), printedAt: Date.now() });
   } catch (e) { log('Dobara print masla: ' + e.message); }
   finally { busy.delete(key); }
