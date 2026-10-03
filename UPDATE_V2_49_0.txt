@@ -1,0 +1,10 @@
+Blue Khata v2.49.0 — LOOK B: DARK GLASS (poori app)
+INSTALL: App ZIP -> GitHub bahar wala folder (theme-glass.css NAYI file hai — zaroor daalein) -> 2-3 min ruk kar Sync -> 2.49.0. Rules NAHI badlin.
+KYA BADLA (sirf dikhawat — hisaab, data, kaam sab wahi):
+ - Poori app gehre navy glass mein: shishe jaise cards, patli chamakdar kinare, font Sora.
+ - Buttons Look B: kaam wala NEON HARA (Paisa wasool, Save), khatre wala NEON LAAL (Payment di, Delete), neela-jamni (Saman, primary);
+   chuna hua chip / tab chamakta neela.
+ - Laal = lena, hara = dena — wahi matlab, bas chamakdar. Likhte waqt khane ki kinari neeli chamakti hai.
+ - PDF, rasid, print, WhatsApp bill — safed hi (kaghaz ke liye).
+WAPAS PURANA: ⋮ (settings) -> 🎨 Look -> "Look badlein" (phone yaad rakhta hai).
+BADLI HUI FILES: theme-glass.css (NAYI), index.html, sw.js, app.js + version.

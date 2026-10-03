@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.48.0, 2026-10-02 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.49.0, 2026-10-03 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2072,3 +2072,14 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
   'payment' (note + "Cash purchase (POS bill)") -> CPV; jor toota + link voucher -> deleted -> POS se hatao; ENABLED_AT cash par nahi.
 * Test: model balance — jura 0, na-jura dena, purana hadd se bahar.
 * autoLinkPurchases waisa (canLinkCash: malik ya aaj). Agar malik ke phone par bhi na jure to cashCandidates/partyId dekhna.
+
+==================== v2.49.0 (2026-10-03) — LOOK B (DARK GLASS) ====================
+* Malik ne Buttons style B (glass futuristic) chuna; font nahi chuna -> Sora (fallback Poppins/system).
+* theme-glass.css: tools/theme-glass-generator.py style.css ke HAR rang wale rule ko `html.glass` prefix + !important ke sath
+  dark mein map karta hai (bg: safed -> glass rgba, halka tint -> hue wala glass; text: gehra -> safed, laal/hara/neela -> neon;
+  border: halki -> rgba white). @media print chhorta hai. Aakhir mein haath ke rules (body gradient, header, dialog, button glass,
+  input focus glow, .got/.give/.saman/.primary/.danger neon, .on chamak — specificity html.glass.glass.glass).
+  style.css badlo to generator DOBARA chalao: python3 tools/theme-glass-generator.py
+* index.html: theme link + Sora font + inline script: localStorage 'sam-look' !== 'old' -> html.glass (paint se pehle), theme-color.
+  sw.js ASSETS mein theme-glass.css. app.js: settings 🎨 Look -> #lookBtn toggle.
+* Playwright demo render se dekha (header, tabs, chips, ledger, buttons theek).
