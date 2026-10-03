@@ -6,7 +6,7 @@ import {planImport} from './import-plan.js';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import * as authSDK from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
 import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,memoryLocalCache,collection,query,where,doc,getDoc,getDocFromServer,getDocs,getDocsFromServer,getDocsFromCache,setDoc,deleteDoc,updateDoc,deleteField,onSnapshot,runTransaction,writeBatch,waitForPendingWrites,orderBy,limit} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.54.0';
+import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.55.1';
 import {firebaseConfig,BUSINESS_ID} from './config.js?v=1.79.1';
 export {loginErrorMessage};
 export async function connect(callbacks){const app=initializeApp(firebaseConfig,'blue-khata'),auth=authSDK.getAuth(app);try{await authSDK.setPersistence(auth,authSDK.browserLocalPersistence)}catch(e){console.warn('Auth persistence nahi mili',e)}let db;try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})})}catch(e){console.warn('Offline storage nahi mili — memory mode',e);db=initializeFirestore(app,{localCache:memoryLocalCache()})}const col=collection(db,'businesses',BUSINESS_ID,'blueKhata'),ref=id=>doc(col,id),other=(name,id)=>doc(db,'businesses',BUSINESS_ID,name,id);

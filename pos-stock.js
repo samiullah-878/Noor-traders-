@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.54.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.55.1';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,7 +57,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.54.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.55.1: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -1687,7 +1687,7 @@ function findByCode(code) {
   const clean = String(code).trim();
   const bare = clean.replace(/^0+/, '');
   const { items } = collect();
-  const codesOf = r => [r.code, ...(Array.isArray(r.bc) ? r.bc : [])].map(x => String(x || '').trim()).filter(Boolean);
+  const codesOf = r => [r.code, ...(Array.isArray(r.bc) ? r.bc : []), ...(Array.isArray(r.bq) ? r.bq.map(x => x?.b) : [])].map(x => String(x || '').trim()).filter(Boolean);   // v2.55: sub-barcode bhi
   return items.find(r => codesOf(r).includes(clean))
     || items.find(r => bare && codesOf(r).some(x => x.replace(/^0+/, '') === bare))
     || null;
@@ -1816,7 +1816,7 @@ async function openScanner() {
       namesBox.reversed = true; namesBox.start = list.length;
       const kul = list.reduce((n, [k, it]) => n + lineOf(it, k).amt, 0);
       sumBox.innerHTML = list.length ? (kul ? `Kul: <b>Rs ${num(kul)}</b>` : `<b>${list.length}</b> items`) : '';
-      try { namesBox.scrollTop = namesBox.scrollHeight; } catch {}
+      try { namesBox.scrollTop = 0; } catch {}   // v2.55.1: nayi line upar hai — list upar se dikhe
       return;
     }
     const names = scanList.slice(-6).map(id => byId.get(String(id))?.name || id);
@@ -1897,7 +1897,7 @@ async function openScanner() {
     msg.textContent = r.state === 'added' ? `✓ ${r.item.name} — tadad chunein ya agla scan karein` : `${r.item.name} pehle se list mein`;
     beep(true); if (navigator.vibrate) navigator.vibrate(80);
   };
-  const codeLike = v => /^[0-9]{6,}$/.test(v);
+  const codeLike = v => /^[0-9]{6,}$/.test(v) || (v.length >= 3 && !/\s/.test(v) && !!findByCode(v));   // v2.55: chhota sub-barcode bhi
   qBox.addEventListener('input', () => { const v = String(qBox.value || '').trim(); if (/^[0-9]{8,}$/.test(v) && findByCode(v)) { clearTimeout(qBox._ft); qBox._ft = setTimeout(() => { if (String(qBox.value || '').trim() === v) { qBox.value = ''; hitBox.hidden = true; chosen = null; feedCode(v); } }, 140); } });   // Enter na bhejne wala scanner
   qBox.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const v = String(qBox.value || '').trim(); if (codeLike(v)) { clearTimeout(qBox._ft); qBox.value = ''; hitBox.hidden = true; chosen = null; feedCode(v); return; } if (chosen) { nBox.focus(); return; } const r = (hitBox._src || [])[0]; if (r) pickHit(r); } };
   // v1.59 (sale): item chunne par seedha add nahi — cursor "Tadad" mein; wahan Enter par add, phir cursor wapas search mein
@@ -2128,7 +2128,7 @@ const KB_GAP = 90;          // is se zyada ms ka faasla = insaan likh raha hai (
 function kbReset() { kbBuf = ''; kbTarget = null; kbStartVal = null; clearTimeout(kbTimer); kbTimer = null; }
 function kbIsScan(now) {
   const n = kbBuf.length;
-  return n >= 5 && (kbLast - kbFirst) / Math.max(1, n - 1) < 60 && now - kbLast < 220;   // v2.52: 35ms -> 60ms fi akshar
+  return n >= 4 && (kbLast - kbFirst) / Math.max(1, n - 1) < 60 && now - kbLast < 220;   // v2.52: 35ms -> 60ms fi akshar
 }
 function kbFinish() {
   const code = kbBuf.trim();

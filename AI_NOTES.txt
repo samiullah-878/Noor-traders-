@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.54.0, 2026-10-03 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.55.1, 2026-10-03 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2119,3 +2119,11 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
   scan-done/close 64px 21px; pad 130px 46px. #search 19px 54px; footer/#actions button 60px 19px. Layout WAHI (malik ki shart).
 * app.js: KB_LISTS — input se ArrowDown = pehla natija focus (.kbsel), ↑↓ ghoomo, upar se bahar = wapas input; Enter = native click.
 * pos-stock.js: Esc = finishScan (dialog band ho to).
+
+==================== v2.55.0 (2026-10-03) — SUB-BARCODE KI TADAD (PC / USB) ====================
+* Masla: White Chana 500gm sub-barcode (item 1kg, bq q 0.5) PC/USB scanner se 1 lagta tha. Camera raasta saleHook->subQty theek tha;
+  sale.js #search Enter handler addItem(it) (1) karta tha.
+* sale.js: findByCode + pos-stock findByCode bq[].b bhi dekhte; #search Enter: barcode se mila -> subQty(it,v). pos-stock codeLike:
+  6+ hindse YA findByCode mile (chhota sub-code). kbIsScan n>=4.
+* Test: bq {b:'5550001',q:0.5} search Enter -> line 0.5 ✓. (Test mein module ?v= app wala hi rakho, warna do instance.)
+* v2.55.1: scanner list (drawNames) nayi line upar thi magar scrollTop = scrollHeight (neeche) — ab scrollTop 0, nayi item hamesha nazar.

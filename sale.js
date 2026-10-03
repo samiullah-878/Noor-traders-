@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.54.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.54.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.55.1';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.55.1';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -63,7 +63,7 @@ function itemIn(g, id) {
 }
 function findByCode(items, code) {
   const clean = String(code).trim(), bare = clean.replace(/^0+/, '');
-  const codesOf = r => [r.code, ...(Array.isArray(r.bc) ? r.bc : [])].map(x => String(x || '').trim()).filter(Boolean);
+  const codesOf = r => [r.code, ...(Array.isArray(r.bc) ? r.bc : []), ...(Array.isArray(r.bq) ? r.bq.map(x => x?.b) : [])].map(x => String(x || '').trim()).filter(Boolean);   // v2.55: sub-barcode (bq) bhi
   return items.find(r => codesOf(r).includes(clean))
     || items.find(r => bare && codesOf(r).some(x => x.replace(/^0+/, '') === bare)) || null;
 }
@@ -236,7 +236,7 @@ function vbAdd(text) {
   if (!lastSug) notice('🎤 Suna: "' + heard.slice(0, 60) + '" — item ka naam samajh nahi aaya');
 }
 let vbHold = false, vbStopT = 0, vbHeard = '', vbDone = '';
-function vbStart() {               // v2.54.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
+function vbStart() {               // v2.55.1: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
   if (vbRec) { try { vbRec.abort(); } catch {} vbRec = null; }
@@ -449,7 +449,7 @@ document.addEventListener('keydown', e => {
   const v = e.target.value.trim(); if (!v) return;
   e.preventDefault();
   const { items } = stock();
-  let it = findByCode(items, v);
+  let it = findByCode(items, v); const byCode = !!it;   // v2.55: barcode se mila to sub-barcode ki tadad (500gm = 0.5) bhi
   if (!it) { const hs = smartSearch(items, v, 2); if (hs.length === 1) it = hs[0]; }
   if (!it) {
     const q = norm(v);
@@ -457,7 +457,7 @@ document.addEventListener('keydown', e => {
     if (hits.length === 1) it = hits[0];
   }
   if (!it) { notice('Ek item nahi mila — list se chunein'); return; }
-  addItem(it); e.target.value = ''; notice(`✓ ${it.name}`); rerender();
+  const q0 = byCode ? subQty(it, v) : 1; addItem(it, q0); e.target.value = ''; notice(`✓ ${it.name}${q0 !== 1 ? ' — ' + q0 : ''}`); rerender();
   setTimeout(() => qtyPad(cart.length - 1), 60);
 });
 
@@ -467,7 +467,7 @@ document.addEventListener('pointercancel', () => vbRelease());
 document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sale-mic]')) e.preventDefault(); });
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.54.0: hold se chalta hai
+  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.55.1: hold se chalta hai
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {
