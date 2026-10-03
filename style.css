@@ -1668,3 +1668,14 @@ html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-
  .sb-chip>small{display:block!important;margin:0!important;font-size:10.5px!important;text-align:right;color:#8a97ad;max-width:70px;overflow:hidden;text-overflow:ellipsis}
  .sb-chip.cx span em{text-decoration:line-through}
 }
+
+/* v2.65.3: dono taraf ka gap khatam — bills patti 230px, baqi poori screen scanner; number aur bara */
+@media (min-width:1100px){
+ .scan-box.has-bills{padding:0!important}
+ .scan-box.has-bills .scan-bills{width:230px!important}
+ .scan-box.has-bills .scan-inner{position:fixed!important;left:230px!important;right:0!important;top:0!important;bottom:0!important;margin:0!important;max-width:none!important;width:auto!important;border-radius:0!important;box-sizing:border-box;padding:10px 14px!important;overflow-y:auto}
+ .sb-chip b{font-size:21px!important}
+ .sb-chip span em{font-size:14px!important}
+ .sb-chip span em u{text-decoration:none;font-size:9.5px!important;font-weight:800;padding:0 5px;border-radius:5px;background:#e3eaf8;color:#2b4a86;margin-left:6px;vertical-align:1px}
+ .sb-chip.cx span em u{text-decoration:none}
+}

@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.65.2';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.65.2';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.65.3';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.65.3';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -239,7 +239,7 @@ function vbAdd(text) {
   if (!lastSug) notice('🎤 Suna: "' + heard.slice(0, 60) + '" — item ka naam samajh nahi aaya');
 }
 let vbHold = false, vbStopT = 0, vbHeard = '', vbDone = '';
-function vbStart() {               // v2.65.2: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
+function vbStart() {               // v2.65.3: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
   if (vbRec) { try { vbRec.abort(); } catch {} vbRec = null; }
@@ -471,7 +471,7 @@ document.addEventListener('pointercancel', () => vbRelease());
 document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sale-mic]')) e.preventDefault(); });
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.65.2: hold se chalta hai
+  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.65.3: hold se chalta hai
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {
