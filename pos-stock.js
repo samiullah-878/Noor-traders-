@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.55.1';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.56.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,7 +57,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.55.1: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.56.0: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -1816,7 +1816,7 @@ async function openScanner() {
       namesBox.reversed = true; namesBox.start = list.length;
       const kul = list.reduce((n, [k, it]) => n + lineOf(it, k).amt, 0);
       sumBox.innerHTML = list.length ? (kul ? `Kul: <b>Rs ${num(kul)}</b>` : `<b>${list.length}</b> items`) : '';
-      try { namesBox.scrollTop = 0; } catch {}   // v2.55.1: nayi line upar hai — list upar se dikhe
+      try { namesBox.scrollTop = 0; } catch {}   // v2.56.0: nayi line upar hai — list upar se dikhe
       return;
     }
     const names = scanList.slice(-6).map(id => byId.get(String(id))?.name || id);
@@ -1953,6 +1953,7 @@ async function openScanner() {
     return main ? { deviceId: { exact: main.deviceId } } : { facingMode: { ideal: 'environment' } };
   };
   if (scanCamOff) {   // v2.40: camera band — scanner / search se kaam, video nahi
+    scanBox.classList.add('cam-off');   // v2.56: camera band = safed screen
     const msg0 = scanBox.querySelector('.scan-msg'); if (msg0) msg0.textContent = 'Camera band hai — barcode gun ya naam/code se item lagayein. Chalu karne ke liye 📷 dabayein.';
     const tools0 = document.createElement('div'); tools0.className = 'scan-tools'; camOffBtn(tools0); (scanBox.querySelector('.scan-left') || msg0).append(tools0);
     const v0 = scanBox.querySelector('video'); if (v0) v0.style.display = 'none';

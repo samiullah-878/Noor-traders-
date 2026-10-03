@@ -1560,3 +1560,14 @@ html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-
  footer button,#actions button{min-height:60px!important;font-size:19px!important;font-weight:800!important}
  .kbsel{outline:3px solid #2b4a86!important;outline-offset:-2px}
 }
+
+/* ===== v2.56: camera band ho to scanner screen SAFED ===== */
+.scan-box.cam-off{background:#eef2f8!important}
+.scan-box.cam-off .scan-inner{background:#fff!important;color:#10192b!important}
+.scan-box.cam-off video,.scan-box.cam-off .scan-cam{background:#f4f6fb!important}
+.scan-box.cam-off .scan-msg,.scan-box.cam-off .scan-sum,.scan-box.cam-off .scan-pad-name{color:#10192b!important;text-shadow:none!important}
+.scan-box.cam-off .scan-names li{color:#10192b!important;background:#f6f8fc;border-radius:10px;padding:6px 46px 6px 8px!important;margin:4px 0!important}
+.scan-box.cam-off .scan-names li.now{background:#e3f6f2!important}
+.scan-box.cam-off .scan-mid .scan-pad,.scan-box.cam-off .scan-pad{background:#eef2f8!important}
+.scan-box.cam-off .scan-find input,.scan-box.cam-off .scan-n{border:1px solid #d5d9e2!important}
+.scan-box.cam-off .scan-camoff{background:#fff3e0!important;color:#8a4b00!important}

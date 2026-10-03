@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.55.1, 2026-10-03 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.56.0, 2026-10-03 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2127,3 +2127,4 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
   6+ hindse YA findByCode mile (chhota sub-code). kbIsScan n>=4.
 * Test: bq {b:'5550001',q:0.5} search Enter -> line 0.5 ✓. (Test mein module ?v= app wala hi rakho, warna do instance.)
 * v2.55.1: scanner list (drawNames) nayi line upar thi magar scrollTop = scrollHeight (neeche) — ab scrollTop 0, nayi item hamesha nazar.
+* v2.56.0: scanCamOff -> scanBox.cam-off; style.css .scan-box.cam-off safed (inner #fff, text gehra, list li halki patti). themes dobara generate.
