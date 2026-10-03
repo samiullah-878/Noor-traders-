@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.68.0, 2026-10-03 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.70.0, 2026-10-03 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2196,3 +2196,12 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
   printText(text, printer); printSale(..., printer); printGatePasses(r, printer) — dono usi printer par; reprint d.counter.
 * COUNTER-PRINTER.bat (PC helper; source pc/counter-printer.js): Get-Printer list -> har counter ka number -> counterPrinters merge.
 * Test: F5 -> M -> 2 => copies 2, counter mithu, yaad ✓.
+
+==================== v2.69.0 (2026-10-03) — MOBILE: LINE KE KHANE + UPAR CTN KHANA ====================
+* Masla (mobile): list line ke Ctn/Pcs khane mein kabhi likha nahi jata tha — (1) namesBox 'click' handler khane par bhi pickLine ->
+  drawNames(true) -> khana hi mit jata; (2) scanBox keydown (kbLine) hindse preventDefault kar ke kbNum mein le jata.
+  Ab: click handler .li-in/.li-qty chhorta; keydown handler activeElement .li-in/.scan-c ho to return.
+* Upar find-row: Tadad -> "Pcs" khana + naya .scan-c "Ctn" khana (scan-u toggle chhupa). Enter (dono khanon se) = ctn*pack + pcs.
+  setUnit: Ctn khana pack<=1 par disabled, placeholder cName/uName.
+* Test: tap + "3" Ctn -> 3 Ctn + 1 Pcs, khana bacha ✓; upar 2 Ctn + 4 Pcs ✓.
+* v2.70.0: scanner search natije — hitRates(r): Parchoon pcs (rate2||rate), P/Ctn (rate*pack), Wholesale pcs (wrate||rate), W/Ctn (wrate*pack); sale ke rateFor/crateFor jaisa. Neela = parchoon, hara = wholesale.

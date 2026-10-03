@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.68.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.70.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,7 +57,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.68.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.70.0: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -1661,6 +1661,13 @@ function clearScan() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// v2.70: search natije mein 4 rate — Parchoon (Pcs / Ctn) · Wholesale (Pcs / Ctn)
+function hitRates(r) {
+  const pk = Number(r.pack) || 0, rp = Number(r.rate2) || Number(r.rate) || 0, rc = Number(r.rate) || 0, wp = Number(r.wrate) || Number(r.rate) || 0;
+  if (!rp && !wp) return '';
+  const c = (lbl, v, cls) => v ? `<i class="hr ${cls}">${lbl} <b>${num(Math.round(v * 100) / 100)}</b></i>` : '';
+  return `<span class="hit-rates">${c('Parchoon', rp, 'r')}${pk > 1 ? c('P/' + (r.cName || 'Ctn'), rc * pk, 'r') : ''}${c('Wholesale', wp, 'w')}${pk > 1 ? c('W/' + (r.cName || 'Ctn'), wp * pk, 'w') : ''}</span>`;
+}
 function closeScanner() {
   try { clearInterval(scanBox?._billsTimer); } catch {}
   clearTimeout(scanTimer); try { cancelAnimationFrame(scanTimer); } catch {} scanTimer = null;
@@ -1777,7 +1784,7 @@ async function openScanner() {
   scanBox = document.createElement('div');
   scanBox.className = 'scan-box';
   scanBox.innerHTML = `<div class="scan-inner">
-      <div class="scan-find"><div class="scan-find-row"><input class="scan-q" type="search" enterkeyhint="next" placeholder="🔍 Naam ya code likhein" autocomplete="off"><input class="scan-n" type="text" inputmode="decimal" enterkeyhint="done" placeholder="Tadad" autocomplete="off"><button type="button" class="scan-u">Pcs</button></div><div class="scan-hits" hidden></div></div>
+      <div class="scan-find"><div class="scan-find-row"><input class="scan-q" type="search" enterkeyhint="next" placeholder="🔍 Naam ya code likhein" autocomplete="off"><input class="scan-n" type="text" inputmode="decimal" enterkeyhint="done" placeholder="Pcs" autocomplete="off"><input class="scan-c" type="text" inputmode="decimal" enterkeyhint="done" placeholder="Ctn" autocomplete="off"><button type="button" class="scan-u" hidden>Pcs</button></div><div class="scan-hits" hidden></div></div>
       <div class="scan-mid">
         <div class="scan-left"></div>
         <div class="scan-cam"><video playsinline muted autoplay></video><div class="scan-line"></div></div>
@@ -1868,7 +1875,8 @@ async function openScanner() {
   namesBox.addEventListener('pointerdown', e => { if (e.target.closest('.scan-del')) e.preventDefault(); });
   // v2.58: list ki line par tap / ↑↓ = wo line chuno -> Pcs/Ctn pad aur Tadad usi par lagein
   const pickLine = k => { if (!k || !scanItems.has(k)) return; lastKey = k; lastScan = scanItems.get(k); showPad(); drawNames(true); };
-  namesBox.addEventListener('click', e => { if (e.target.closest('.scan-del')) return; const li = e.target.closest('li[data-k]'); if (li) { pickLine(li.dataset.k); kbLine = true; } });
+  namesBox.addEventListener('click', e => { if (e.target.closest('.scan-del,.li-in,.li-qty')) return;   // v2.69: khane par tap = sirf likhna (redraw nahi)
+    const li = e.target.closest('li[data-k]'); if (li) { pickLine(li.dataset.k); kbLine = true; } });
   let kbLine = false, kbNum = '';
   // v2.67: list ki line ke khane — Shift / click = wahan jao, Tab = agla khana, Enter = lagao + wapas search. Scanner ke tez hindse = naya item.
   const liFocus = k => { const box = namesBox.querySelector(`li[data-k="${CSS.escape(k)}"] .li-in[data-u="pcs"]`) || namesBox.querySelector(`li[data-k="${CSS.escape(k)}"] .li-in`); if (box) { box.focus(); try { box.select(); } catch {} } };
@@ -1906,6 +1914,7 @@ async function openScanner() {
       msg.textContent = `↑↓ line chuno · tadad likh kar Enter · ${padUnit === 'ctn' ? 'Ctn' : 'Pcs'} badalne ke liye C / P`;
       return;
     }
+    if (document.activeElement?.closest?.('.li-in,.scan-c')) return;   // v2.69: line ke khane / Ctn khane mein likhna — rokna nahi
     if (!kbLine || inQ || inN || !lastScan) return;
     if (/^[0-9.]$/.test(e.key)) { e.preventDefault(); kbNum += e.key; clearTimeout(scanBox._kbT); if (kbNum.length >= 8) scanBox._kbT = setTimeout(() => { if (kbNum.length >= 8) { const c = kbNum; kbNum = ''; kbLine = false; feedCode(c); } }, 220); msg.textContent = `${lastScan.name}: ${kbNum} ${padUnit === 'ctn' ? 'Ctn' : 'Pcs'} — Enter dabayein`; return; }   // 8+ hindse = scanner ka barcode
     if (e.key === 'Backspace') { e.preventDefault(); kbNum = kbNum.slice(0, -1); return; }
@@ -1963,6 +1972,8 @@ async function openScanner() {
     uBtn.textContent = nUnit === 'ctn' ? ((it || chosen)?.cName || 'Ctn') : ((it || chosen)?.uName || 'Pcs');
     uBtn.classList.toggle('ctn', nUnit === 'ctn');
     uBtn.disabled = !canCtn;
+    const cB = scanBox?.querySelector('.scan-c'); if (cB) { cB.disabled = !!(it || chosen) && !canCtn; cB.placeholder = (it || chosen)?.cName || 'Ctn'; }   // v2.69
+    if (nBox) nBox.placeholder = (it || chosen)?.uName || 'Pcs';
   };
   uBtn.addEventListener('pointerdown', e => e.preventDefault());   // keyboard band na ho
   uBtn.onclick = () => { setUnit(nUnit === 'pcs' ? 'ctn' : 'pcs'); nBox.focus(); };
@@ -1975,7 +1986,7 @@ async function openScanner() {
     if (!q) { hitBox.hidden = true; hitBox.innerHTML = ''; return; }
     const src = saleRoot() && saleFindHook ? saleFindHook(q) : smartSearch(items, q, 12);   // v1.75
     hitBox.hidden = false;
-    hitBox.innerHTML = src.length ? src.map((r, i) => `<button type="button" data-pick="${i}"><b>${esc(r.name)}</b><small>${esc(r.code || '')}${r.rate ? ' · ' + num(r.rate) : ''}${r.stock != null ? ' · stock ' + num(r.stock) : ''}</small></button>`).join('') : '<p class="stat-note">Nahi mila</p>';
+    hitBox.innerHTML = src.length ? src.map((r, i) => `<button type="button" data-pick="${i}"><b>${esc(r.name)}</b><small>${esc(r.code || '')}${r.stock != null ? ' · stock ' + num(r.stock) : ''}</small>${hitRates(r)}</button>`).join('') : '<p class="stat-note">Nahi mila</p>';
     hitBox._src = src;
   };
   showPad();   // v1.57: dobara kholne par aakhri item ki tadad fauran nazar aaye
@@ -2025,16 +2036,19 @@ async function openScanner() {
     if (e.key !== 'Enter') return;
     e.preventDefault();
     if (!chosen) { const r = (hitBox._src || [])[0]; if (!r) { qBox.focus(); return; } chosen = r; setUnit('pcs', r); }
-    let q = Number(String(nBox.value || '').replace(',', '.').trim());
-    if (!(q > 0)) q = 1;
-    const r = chosen, ctn = nUnit === 'ctn' && Number(r.pack) > 1;
-    chosen = null; nBox.value = '';
-    addHit(r, ctn ? q * Number(r.pack) : q);   // Ctn = pack se zarb (bill khud carton mein badal deta hai)
+    const cBox = scanBox.querySelector('.scan-c');   // v2.69: upar Pcs + Ctn dono khane
+    let q = Number(String(nBox.value || '').replace(',', '.').trim()) || 0, cq = Math.floor(Number(String(cBox?.value || '').replace(',', '.').trim()) || 0);
+    const r = chosen, pk = Number(r.pack) || 0;
+    if (!(pk > 1)) cq = 0;
+    if (!(q > 0) && !(cq > 0)) q = 1;
+    chosen = null; nBox.value = ''; if (cBox) cBox.value = '';
+    addHit(r, cq * pk + q);   // Ctn = pack se zarb (bill khud carton mein badal deta hai)
     beep(true);
-    msg.textContent = `✓ ${r.name} — ${num(q)} ${ctn ? (r.cName || 'Ctn') : (r.uName || 'Pcs')} · agla item likhein`;
+    msg.textContent = `✓ ${r.name} — ${cq ? cq + ' ' + (r.cName || 'Ctn') + (q ? ' + ' : '') : ''}${q ? num(q) + ' ' + (r.uName || 'Pcs') : ''} · agla item likhein`;
     setUnit('pcs', null);
     qBox.focus();
   };
+  { const cB = scanBox.querySelector('.scan-c'); if (cB) cB.onkeydown = e => { if (e.key === 'Enter') nBox.onkeydown(e); }; }   // v2.69: Ctn khane mein Enter bhi wahi
   hitBox.addEventListener('pointerdown', e => e.preventDefault());   // list par tap se keyboard band na ho
   hitBox.addEventListener('click', e => { const b = e.target.closest('[data-pick]'); if (!b) return; const r = (hitBox._src || [])[Number(b.dataset.pick)]; if (r) pickHit(r); });
   scanBox.querySelector('.scan-done').onclick = finishScan;

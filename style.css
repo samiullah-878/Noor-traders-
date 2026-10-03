@@ -1707,3 +1707,16 @@ html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-
 .f5-ctr button{min-height:44px;padding:0 14px;border-radius:12px;border:2px solid #d5dbe8;background:#fff;color:#1b3058;font-weight:800;font-size:14px}
 .f5-ctr button kbd{margin-right:4px}
 .f5-ctr button.on{border-color:#138150;background:#e6f6ee;color:#0f6a3f}
+
+/* v2.69: upar Pcs + Ctn khane */
+.scan-find-row .scan-c{flex:0 0 84px;width:84px;min-height:inherit;border-radius:14px;border:1px solid #d5d9e2;background:#fff;color:#10192b;font-size:18px;font-weight:800;text-align:center;padding:0 6px}
+.scan-find-row .scan-c:disabled{opacity:.45;background:#f3f5f9}
+.scan-find-row .scan-n{text-align:center;font-weight:800}
+@media (min-width:1100px){ .scan-find-row .scan-c{flex-basis:120px!important;width:120px!important;font-size:22px!important} }
+
+/* v2.70: search natije mein Parchoon / Wholesale rate (Pcs + Ctn) */
+.scan-hits .hit-rates{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.scan-hits .hr{font-style:normal;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.scan-hits .hr b{display:inline;font-size:13px;font-weight:800}
+.scan-hits .hr.r{background:#e8f1ff;color:#1b3a7a}.scan-hits .hr.w{background:#e6f6ee;color:#0f6a3f}
+@media (min-width:1100px){ .scan-hits .hr{font-size:15px!important}.scan-hits .hr b{font-size:17px!important} }
