@@ -1,0 +1,12 @@
+Blue Khata v2.73.0 — LOGIN SCREEN NA DIKHE · SCREEN BADALNE PAR PASSWORD NAHI · MULAZIM KA DEVICE JORNA (RULES 2.24)
+INSTALL: (1) Rules 2.24 publish (firestore-rules-2.24.html). (2) App ZIP -> GitHub bahar wala folder -> Sync -> 2.73.0.
+ 1) Password yaad ho (30 din) to app khulte hi LOGIN SCREEN NAHI dikhti — chhota "khul raha hai" aata hai, seedha app.
+    Login screen sirf: 30 din poore / password badla / Logout.
+ 2) Mulazim doosri screen (Sale -> Stock -> Purchase...) par jaye: us screen ka password pehle se yaad ho to CHUP-CHAAP khul jati
+    hai — koi khana nahi. Yaad na ho to sirf pehli dafa poochti hai (screen pehle se chuni hui), phir 30 din yaad.
+    Mulazim ko ab Khata/Sale/Stock/Purchase ke button nazar aate hain — tap karo, badal jati hai.
+ 3) Device jorna: mulazim ke phone/laptop par login screen ke neeche "Device ID" (jaise K7P-2M9). Malik: ⋮ -> Mulazim ->
+    "Mulazim ka device jorain" -> ID + screen (Full/Sale/Stock/Purchase/Galla) + us screen ka password -> Jor dein.
+    Us device par 10 min ke andar app khuli ho to KHUD login (password kisi ko nahi dikhta), 30 din yaad.
+    Band karna ho to us screen ka password badal dein (⋮ -> Mulazim) — purana yaad kiya password nahi chalega.
+BADLI HUI FILES: app.js, cloud.js, index.html, style.css, themes.css, firestore.rules (2.24) + version

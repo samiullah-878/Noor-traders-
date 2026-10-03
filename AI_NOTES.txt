@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.71.0, 2026-10-03 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.73.0, 2026-10-04 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2206,3 +2206,30 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
 * Test: tap + "3" Ctn -> 3 Ctn + 1 Pcs, khana bacha ✓; upar 2 Ctn + 4 Pcs ✓.
 * v2.70.0: scanner search natije — hitRates(r): Parchoon pcs (rate2||rate), P/Ctn (rate*pack), Wholesale pcs (wrate||rate), W/Ctn (wrate*pack); sale ke rateFor/crateFor jaisa. Neela = parchoon, hara = wholesale.
 * v2.71.0: scanner search natije — hitCodes(r): code + bc[] + bq[].b (sub-barcode ki tadad ke sath, narangi) — sab chips mein; stock alag line.
+
+==================== v2.72.0 + PC 2026-10-03.4 — "🖥 YEHI DEVICE" PRINT + TOKEN + CRATES (RULES 2.23) ====================
+* Malik: jis device par app chal rahi ho usi ke default printer par bill + gate pass + chhoti TOKEN parchi; F5 par "kitne crate?"
+  — 2 crate = 2 token parchi, upar bara Urdu "اس بل کے 2 کریٹ ہیں", parchi chhoti.
+* sale.js: COUNTERS mein 'local' (🖥 Yehi device, F5 key D). Save: cloud.nextToken(day) (4s; na mile to localStorage 'sam-tok-<day>')
+  -> doc.token, doc.crates. F5 + local -> askCrates() (1-9 / Enter=1) -> save. local -> localQueue(id) (localStorage
+  'sam-local-print'); listenAppSales par localCheck(): done+saleNo -> printLocal(sale, copies, crates); failed -> notice; 30 min purana hata.
+  printLocal: hidden iframe, @page 80mm: bill x copies, har godam (branch ke ilawa) ka gate pass, N token parchi (TOKEN n bara, Urdu
+  line, Crate i/N, bill no, waqt). Reprint (local) seedha printLocal.
+* cloud.nextToken: runTransaction tokens/<day> {n,at}. Rules 2.23: tokens create n==1 / update n==old+1 (owner/blue/sale staff);
+  appSales hasOnly + token (int) + crates (1-20).
+* pc/sale-post.js: ok.counter === 'local' -> PC bill/gate pass NAHI chhapti; reprint local bhi skip.
+* CHROME-SEEDHA-PRINT.bat (pc/ mein copy): Desktop shortcut chrome.exe --kiosk-printing --app=<app> (Chrome poora band kar ke).
+* Test: F5 -> D -> 1 -> 2 crate -> token 7, crates 2; done -> iframe: bill + 2 token parchi + Urdu ✓.
+
+==================== v2.73.0 (2026-10-04) — NO LOGIN SCREEN · QUIET SWITCH · DEVICE JOIN (RULES 2.24) ====================
+* index.html inline: localStorage sam-remember-pw-v1 .last + exp valid && !sessionStorage sam-no-auto -> html.boot-auto
+  (css: #login hidden, body::after splash). app.js: reset() (login dikhao) aur session set par class hatao; 15s safety.
+* Quiet switch: route() mein staff limited scope + target scope != current -> switchQuiet(scope): remembered 'staff:'+scope ->
+  controller.login seedha (pendingView), fail -> remembered hatao + switchForm(scope). Na ho -> switchForm(pre) chip pre-click.
+  Nav: SW_NAV (purchaseNav/stockNav/saleNav/khataNav) limited staff ko bhi dikhte.
+* Device join: deviceId() localStorage 'sam-device-id' (6, ABC..9 bina O/I/0/1 confusion -> devNorm). Login screen par #devLine.
+  devJoinStart() (har 2s check, login visible): cloud.joinWatch(id) = anonymous sign-in + onSnapshot deviceJoins/{id};
+  doc {scope,pw(devEnc id-key),name,at,by} 10 min valid -> remembered save + joinTake (delete) + loginForm submit.
+  Owner: #devJoin modal (ID, scope chips, us scope ka password, naam) -> cloud.joinOffer. Rules 2.24: deviceJoins read/delete
+  signedIn (anonymous bhi), create/update owner, keys hasOnly, pw <= 400.
+* Revoke = setStaffPassword (purana remembered fail -> hat jata hai).

@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.71.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.71.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.73.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.73.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -87,7 +87,8 @@ function keepScan(el) {   // scan box upar nazar rahe; nayi line uske neeche —
 }
 let lastAddAt = 0, lastScrolled = 0;
 let quickSave = false, posSales = [], stopPosSales = null;
-const COUNTERS = [['abdurehman', 'Abdurehman'], ['bilal', 'Bilal bhai'], ['mithu', 'Mithu']];   // v2.68: kis counter ke printer par bill + gate pass
+const COUNTERS = [['abdurehman', 'Abdurehman'], ['bilal', 'Bilal bhai'], ['mithu', 'Mithu'], ['local', '🖥 Yehi device']];   // v2.72: local = isi device ka default printer
+let crates = 1;   // v2.72: token parchiyan (har crate ki ek)   // v2.68: kis counter ke printer par bill + gate pass
 let counter = 'abdurehman'; try { const c = localStorage.getItem('sam-sale-counter'); if (COUNTERS.some(x => x[0] === c)) counter = c; } catch {}
 const counterName = k => (COUNTERS.find(x => x[0] === k) || COUNTERS[0])[1];
 const setCounter = k => { if (!COUNTERS.some(x => x[0] === k)) return; counter = k; try { localStorage.setItem('sam-sale-counter', k); } catch {} document.querySelectorAll('[data-sale-counter]').forEach(x => x.classList.toggle('on', x.dataset.saleCounter === k)); document.querySelectorAll('[data-f5c]').forEach(x => x.classList.toggle('on', x.dataset.f5c === k)); };
@@ -244,7 +245,7 @@ function vbAdd(text) {
   if (!lastSug) notice('🎤 Suna: "' + heard.slice(0, 60) + '" — item ka naam samajh nahi aaya');
 }
 let vbHold = false, vbStopT = 0, vbHeard = '', vbDone = '';
-function vbStart() {               // v2.71.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
+function vbStart() {               // v2.73.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
   if (vbRec) { try { vbRec.abort(); } catch {} vbRec = null; }
@@ -310,7 +311,7 @@ function watchSales() {
   salesDay = day;
   try { stopPosSales?.(); } catch {} stopPosSales = cloud.listenPosSales ? cloud.listenPosSales(day, b => { posSales = Array.isArray(b) ? b : []; }) : null;   // v2.64.1: POS ke bills
   stopSales = cloud.listenAppSales(day, list => {
-    sales = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); salesErr = '';
+    sales = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); salesErr = ''; localCheck();
     const box = $('saleTodayBtn'); if (box) box.textContent = todayLabel();
     if ($('dialog')?.open && $('dialogTitle')?.textContent.startsWith('Aaj ki app sales')) openToday();
   }, e => { salesErr = e?.message || 'Load nahi hui'; stopSales = null; });
@@ -476,7 +477,7 @@ document.addEventListener('pointercancel', () => vbRelease());
 document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sale-mic]')) e.preventDefault(); });
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.71.0: hold se chalta hai
+  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.73.0: hold se chalta hai
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {
@@ -588,13 +589,16 @@ async function save() {
     (mode === 'wholesale' ? `\nCash Rs ${num(paid)}${total - paid > 0 ? ' · Udhaar Rs ' + num(total - paid) : ''}` : '') + '\n\nSave karke POS mein bill banayein?';
   if (!quickSave && !confirm(msg)) return;   // v2.57: F5 wala raasta pehle hi pooch chuka
   const id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-  const doc = { id, copies, counter, date: todayStr(), at: new Date().toISOString(), mode, branch: SALE_BRANCH, godam: Number(godam) || SALE_BRANCH,
+  let token = 0; try { token = await Promise.race([cloud.nextToken(todayStr()), new Promise((_, j) => setTimeout(() => j(Error('token der')), 4000))]); } catch { try { const k = 'sam-tok-' + todayStr(); token = Number(localStorage.getItem(k) || 0) + 1; localStorage.setItem(k, String(token)); } catch {} }   // v2.72
+  const doc = { id, copies, counter, token: Number(token) || 0, crates: Math.min(20, Math.max(1, crates | 0)), date: todayStr(), at: new Date().toISOString(), mode, branch: SALE_BRANCH, godam: Number(godam) || SALE_BRANCH,
     lines, total, cash: paid, note: note.trim(), role: isOwner() ? 'owner' : 'staff', by: uidOf(), status: 'new', createdAt: Date.now() };
   saving = true; rerender();
   try {
     const p = cloud.saveAppSale(doc);
     // internet na ho to bhi phone par mehfooz; net aate hi chali jayegi
     await Promise.race([p, new Promise(r => setTimeout(r, 4000))]);
+    if (counter === 'local') localQueue(doc.id, copies, doc.crates);   // v2.72: bill bante hi isi device par print
+    crates = 1;
     cart = []; cash = null; note = ''; mode = 'counter'; keepDraft();   // v2.63: Wholesale bill ke baad wapas Counter
     notice('Sale save ho gayi — PC bill bana kar print karega');
     setTimeout(() => { if (!scanNewBill()) { const se = $('search'); if (se) { se.value = ''; se.focus(); } } }, 60);   // v2.59: foran naya bill
@@ -626,7 +630,7 @@ document.addEventListener('keydown', e => {
   if (document.getElementById('f5Ask')) return;
   if (!cart.length) { notice('Bill khali hai — pehle item lagayein'); return; }
   const box = document.createElement('div'); box.id = 'f5Ask'; box.className = 'f5-ask';
-  box.innerHTML = `<div class="f5-card"><b>🖨 Kitne print?</b><small>${cart.length} items · Rs ${num(cartTotal())}</small><div class="f5-ctr">${COUNTERS.map(([k, n]) => `<button type="button" data-f5c="${k}"${counter === k ? ' class="on"' : ''}><kbd>${n[0]}</kbd> ${n}</button>`).join('')}</div><div class="f5-row">${[1, 2, 3].map(n => `<button type="button" data-f5="${n}"${n === copies ? ' class="on"' : ''}><span>${n}</span>print</button>`).join('')}</div><p>Counter: <kbd>A</kbd> <kbd>B</kbd> <kbd>M</kbd> · Print: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> · <kbd>Enter</kbd> = ${copies} · <kbd>Esc</kbd> = wapas</p></div>`;
+  box.innerHTML = `<div class="f5-card"><b>🖨 Kitne print?</b><small>${cart.length} items · Rs ${num(cartTotal())}</small><div class="f5-ctr">${COUNTERS.map(([k, n]) => `<button type="button" data-f5c="${k}"${counter === k ? ' class="on"' : ''}><kbd>${k === 'local' ? 'D' : n[0]}</kbd> ${n}</button>`).join('')}</div><div class="f5-row">${[1, 2, 3].map(n => `<button type="button" data-f5="${n}"${n === copies ? ' class="on"' : ''}><span>${n}</span>print</button>`).join('')}</div><p>Counter: <kbd>A</kbd> <kbd>B</kbd> <kbd>M</kbd> <kbd>D</kbd> · Print: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> · <kbd>Enter</kbd> = ${copies} · <kbd>Esc</kbd> = wapas</p></div>`;
   document.body.appendChild(box);
   const done = n => {
     document.removeEventListener('keydown', key, true); box.remove();
@@ -634,9 +638,10 @@ document.addEventListener('keydown', e => {
     copies = n; try { localStorage.setItem('sam-sale-copies', String(n)); } catch {}
     document.querySelectorAll('[data-sale-copies]').forEach(x => x.classList.toggle('on', Number(x.dataset.saleCopies) === n));
     const b = document.querySelector('[data-sale-save]'); if (!b || b.disabled) { notice('Save abhi nahi ho sakta'); return; }
+    if (counter === 'local') { askCrates(() => { quickSave = true; setTimeout(() => { quickSave = false; }, 4000); b.click(); }); return; }   // v2.72
     quickSave = true; setTimeout(() => { quickSave = false; }, 4000); b.click();
   };
-  const key = ev => { const ck = { a: 'abdurehman', b: 'bilal', m: 'mithu' }[String(ev.key).toLowerCase()]; if (ck) { ev.preventDefault(); ev.stopPropagation(); setCounter(ck); return; } if (['1', '2', '3'].includes(ev.key)) { ev.preventDefault(); ev.stopPropagation(); done(Number(ev.key)); } else if (ev.key === 'Enter') { ev.preventDefault(); ev.stopPropagation(); done(copies); } else if (ev.key === 'Escape' || ev.key === 'F5') { ev.preventDefault(); ev.stopPropagation(); done(0); } };
+  const key = ev => { const ck = { a: 'abdurehman', b: 'bilal', m: 'mithu', d: 'local' }[String(ev.key).toLowerCase()]; if (ck) { ev.preventDefault(); ev.stopPropagation(); setCounter(ck); return; } if (['1', '2', '3'].includes(ev.key)) { ev.preventDefault(); ev.stopPropagation(); done(Number(ev.key)); } else if (ev.key === 'Enter') { ev.preventDefault(); ev.stopPropagation(); done(copies); } else if (ev.key === 'Escape' || ev.key === 'F5') { ev.preventDefault(); ev.stopPropagation(); done(0); } };
   document.addEventListener('keydown', key, true);
   box.addEventListener('click', ev => { const cc = ev.target.closest('[data-f5c]'); if (cc) { setCounter(cc.dataset.f5c); return; } const t = ev.target.closest('[data-f5]'); if (t) done(Number(t.dataset.f5)); else if (ev.target === box) done(0); });
 }, true);
@@ -680,5 +685,57 @@ setSaleBillsHook(() => {   // v2.68: dobara print usi counter par jo chuna hai
   const posByApp = new Map(posSales.filter(b => b.app).map(b => [b.app, b]));
   const app = sales.map(s => { const pb = posByApp.get(s.id); return pb && pb.x ? { ...s, cancelled: true } : s; });
   const pos = posSales.filter(b => !b.app).map(b => ({ id: 'pos-' + b.id, pos: true, saleNo: b.no, total: b.t, cash: b.cr ? b.c : b.t, mode: b.cr ? 'wholesale' : 'counter', status: 'done', cancelled: !!b.x, createdAt: b.tm, party: b.p, n: b.n }));
-  return { list: [...app, ...pos].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)), reprint: id => { if (String(id).startsWith('pos-')) throw Error('POS bill'); return cloud.reprintAppSale(id, copies, counter); } };
+  return { list: [...app, ...pos].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)), reprint: id => { if (String(id).startsWith('pos-')) throw Error('POS bill'); if (counter === 'local') { const sl = sales.find(x => x.id === id); if (sl) { printLocal(sl, copies, sl.crates || 1); return; } } return cloud.reprintAppSale(id, copies, counter); } };
 });
+
+// ===== v2.72: "🖥 Yehi device" — bill + gate pass + TOKEN parchiyan isi device ke default printer par =====
+// Chrome ko --kiosk-printing ke sath kholo (CHROME-SEEDHA-PRINT.bat) to print dabba nahi aata.
+function askCrates(go) {
+  const box = document.createElement('div'); box.id = 'f5Ask'; box.className = 'f5-ask';
+  box.innerHTML = `<div class="f5-card"><b>📦 Kitne crate?</b><small>Har crate ki ek token parchi</small><div class="f5-row">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-cr="${n}"${n === 1 ? ' class="on"' : ''}><span>${n}</span>crate</button>`).join('')}</div><p><kbd>1</kbd>–<kbd>9</kbd> · <kbd>Enter</kbd> = 1 · <kbd>Esc</kbd> = wapas</p></div>`;
+  document.body.appendChild(box);
+  const done = n => { document.removeEventListener('keydown', key, true); box.remove(); if (n) { crates = n; go(); } };
+  const key = ev => { if (/^[1-9]$/.test(ev.key)) { ev.preventDefault(); ev.stopPropagation(); done(Number(ev.key)); } else if (ev.key === 'Enter') { ev.preventDefault(); ev.stopPropagation(); done(1); } else if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); done(0); } };
+  setTimeout(() => document.addEventListener('keydown', key, true), 0);
+  box.addEventListener('click', ev => { const t = ev.target.closest('[data-cr]'); if (t) done(Number(t.dataset.cr)); else if (ev.target === box) done(0); });
+}
+const LQ = 'sam-local-print';
+function localQueue(id, cp, cr) { try { const q = JSON.parse(localStorage.getItem(LQ) || '{}'); q[id] = { cp, cr, at: Date.now() }; localStorage.setItem(LQ, JSON.stringify(q)); } catch {} }
+function localCheck() {
+  let q = {}; try { q = JSON.parse(localStorage.getItem(LQ) || '{}'); } catch {}
+  let ch = false;
+  for (const [id, v] of Object.entries(q)) {
+    const sl = sales.find(x => x.id === id);
+    if (Date.now() - (v.at || 0) > 30 * 60 * 1000) { delete q[id]; ch = true; continue; }
+    if (!sl) continue;
+    if (sl.status === 'done' && sl.saleNo) { delete q[id]; ch = true; printLocal(sl, v.cp, v.cr); }
+    else if (sl.status === 'failed') { delete q[id]; ch = true; notice('Bill nahi bana — print nahi hua'); }
+  }
+  if (ch) try { localStorage.setItem(LQ, JSON.stringify(q)); } catch {}
+}
+function printLocal(sl, cp = 1, cr = 1) {
+  const st = stock(), gname = b => (st.branchName ? st.branchName(b, st.names) : '') || st.names?.[b] || ('Godam ' + b);
+  const when = new Date(sl.createdAt || Date.now()), d8 = when.toLocaleDateString('en-GB'), tm = when.toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' });
+  const qtxt = l => l.unit === 'ctn' && Number(l.pack) > 1 ? `${num(l.qty / l.pack)} ${esc(l.cName || 'Ctn')}` : `${num(l.qty)} ${esc(l.uName || 'Pcs')}`;
+  const lines = Array.isArray(sl.lines) ? sl.lines : [], total = Number(sl.total) || 0, cash = Number(sl.cash) || 0, tok = Number(sl.token) || 0;
+  const bill = `<section class="pg bill"><h1>NOOR TRADERS</h1><p class="c">${sl.mode === 'wholesale' ? 'WHOLESALE' : 'COUNTER SALE'}</p><p class="row"><b>Bill # ${esc(sl.saleNo || '')}</b><b>Token ${tok || '-'}</b></p><p class="row"><span>${d8}</span><span>${tm}</span></p><hr>
+    ${lines.map(l => `<div class="it"><b>${esc(l.name)}</b><p class="row"><span>${qtxt(l)} × ${num(l.rate)}</span><span>${num(Math.round(l.qty * l.rate))}</span></p></div>`).join('')}<hr>
+    <p class="row big"><b>KUL</b><b>Rs ${num(total)}</b></p>${sl.mode === 'wholesale' ? `<p class="row"><span>Cash</span><span>${num(cash)}</span></p>${total - cash > 0.5 ? `<p class="row"><b>Udhaar</b><b>${num(total - cash)}</b></p>` : ''}` : ''}<p class="c sm">Shukriya · Blue Khata</p></section>`;
+  const gp = {}; for (const l of lines) { const g = Number(l.godam) || 1; if (g !== Number(sl.branch || 1)) (gp[g] = gp[g] || []).push(l); }
+  const gates = Object.entries(gp).map(([g, ls]) => `<section class="pg gate"><h1>GATE PASS</h1><p class="c big">${esc(gname(Number(g)))}</p><p class="row"><b>Bill # ${esc(sl.saleNo || '')}</b><b>Token ${tok || '-'}</b></p><p class="row"><span>${d8}</span><span>${tm}</span></p><hr>${ls.map(l => `<p class="row"><span>${esc(l.name)}</span><b>${qtxt(l)}</b></p>`).join('')}<hr><p class="c sm">Maal de kar parchi rakh lein</p></section>`).join('');
+  const n = Math.max(1, cr | 0);
+  const toks = Array.from({ length: n }, (_, i) => `<section class="pg tok"><p class="tl">TOKEN</p><p class="tn">${tok || '-'}</p><p class="ur" dir="rtl" lang="ur">اس بل کے ${n} کریٹ ہیں</p><p class="tc">Crate ${i + 1} / ${n}</p><p class="row sm"><span>Bill # ${esc(sl.saleNo || '')}</span><span>${tm}</span></p></section>`).join('');
+  const html = `<!doctype html><html><head><meta charset="utf-8"><style>
+    @page{size:80mm auto;margin:3mm}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000;width:74mm}
+    .pg{page-break-after:always;break-after:page;padding:1mm 0}.pg:last-child{page-break-after:auto}
+    h1{font-size:20px;text-align:center;margin:0 0 2px}.c{text-align:center;margin:2px 0}.sm{font-size:11px}.big{font-size:16px}
+    .row{display:flex;justify-content:space-between;gap:6px;margin:2px 0;font-size:13px}.row.big{font-size:17px}
+    .it{margin:3px 0}.it>b{font-size:13px}hr{border:0;border-top:1px dashed #000;margin:4px 0}
+    .tok{text-align:center;padding:2mm 0 1mm}.tl{font-size:14px;font-weight:700;letter-spacing:3px;margin:0}.tn{font-size:64px;font-weight:900;line-height:1;margin:2px 0}
+    .ur{font-size:24px;font-weight:700;margin:4px 0;font-family:'Noto Nastaliq Urdu','Jameel Noori Nastaleeq','Urdu Typesetting',Tahoma,Arial,sans-serif}.tc{font-size:18px;font-weight:800;margin:2px 0}
+  </style></head><body>${Array.from({ length: Math.max(1, cp | 0) }, () => bill).join('')}${gates}${toks}</body></html>`;
+  const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(f); const w = f.contentWindow; w.document.open(); w.document.write(html); w.document.close();
+  setTimeout(() => { try { w.focus(); w.print(); } catch {} setTimeout(() => f.remove(), 60000); }, 300);
+  notice(`🖨 Bill ${sl.saleNo} · token ${tok || '-'} · ${n} parchi — isi device par`);
+}
