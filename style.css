@@ -1592,3 +1592,18 @@ html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-
 .f5-row button span{font-size:38px;font-weight:800;line-height:1}
 .f5-row button.on{border-color:#138150;background:#e6f6ee;color:#0f6a3f}
 .f5-card p{margin:14px 0 0;color:#5c6a85;font-size:13px}.f5-card kbd{display:inline-block;min-width:22px;padding:2px 6px;border-radius:6px;background:#eef2f8;border:1px solid #d5dbe8;font-weight:800;color:#1b3058}
+
+/* v2.58: scanner list ki chuni line (↑↓ / tap) */
+.scan-names li{cursor:pointer}
+.scan-names li.kbsel{outline:3px solid #2b4a86;outline-offset:-2px;border-radius:10px}
+/* v2.58: PC + camera band = khali jagah khatam, list upar aur lambi; 1-12 pad ek patli qataar */
+@media (min-width:1100px){
+ .scan-box.cam-off .scan-mid{position:relative!important;flex:0 0 auto!important;height:auto!important;min-height:0!important}
+ .scan-box.cam-off .scan-mid .scan-cam,.scan-box.cam-off video{display:none!important}
+ .scan-box.cam-off .scan-mid .scan-pad{position:static!important;width:auto!important;max-height:none!important;margin:6px 10px!important;padding:8px!important;border-radius:14px!important}
+ .scan-box.cam-off .scan-mid .scan-pad-row{display:flex!important;flex-wrap:wrap;gap:6px!important;justify-content:flex-start}
+ .scan-box.cam-off .scan-mid .scan-pad-row button{min-width:58px!important;min-height:48px!important;grid-column:auto!important}
+ .scan-box.cam-off .scan-mid .scan-pad-name{max-height:none!important;font-size:18px!important}
+ .scan-box.cam-off .scan-names{max-height:none!important;flex:1 1 auto!important;overflow:auto!important}
+ .scan-box.cam-off .scan-inner{display:flex!important;flex-direction:column!important}
+}
