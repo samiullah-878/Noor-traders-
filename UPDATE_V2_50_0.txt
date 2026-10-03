@@ -1,0 +1,7 @@
+Blue Khata v2.50.0 — 11 LOOKS (⋮ -> 🎨 Look)
+INSTALL: App ZIP -> GitHub bahar wala folder (themes.css NAYI file — zaroor) -> 2-3 min ruk kar Sync -> 2.50.0. Rules NAHI badlin.
+LOOKS (tap karo, foran badle, phone yaad rakhe; har mulazim apni pasand):
+ Purana · Navy Frost (naya DEFAULT — purane jaisa, behtar) · Royal Navy (sunehri lakeer) · Navy + Teal · Graphite · Ocean Light ·
+ Soft Paper (aankhon ke liye aasan) · Glass (B) · Midnight Gold · Emerald Night · Cyber Neon.
+ - PDF / rasid / print har look mein safed. Hisaab kuch nahi badla.
+BADLI HUI FILES: themes.css (NAYI), index.html, sw.js, app.js, style.css + version. (theme-glass.css ab istemal nahi — rehne dein.)

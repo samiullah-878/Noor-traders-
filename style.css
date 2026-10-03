@@ -1496,3 +1496,9 @@ dialog.jaanch-dlg{position:fixed;left:0!important;right:0!important;top:0!import
 /* v2.48: cash <-> POS bill jor */
 .cash-link{margin:4px 0 0;font-size:12px;font-weight:700;color:#6b7c93}
 .cash-link.ok{color:#17703c}
+
+/* v2.50: look chips (settings) */
+.look-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:6px 0}
+.look-chip{display:flex;align-items:center;gap:10px;min-height:48px;padding:6px 12px;border-radius:14px;border:1px solid #d7dde8;background:#fff;color:#1d3561;font-weight:700;font-size:13.5px;text-align:left}
+.look-chip i{width:26px;height:26px;border-radius:9px;flex:0 0 auto;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)}
+html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-chip[data-look="frost"],html[data-look="royal"] .look-chip[data-look="royal"],html[data-look="teal"] .look-chip[data-look="teal"],html[data-look="graphite"] .look-chip[data-look="graphite"],html[data-look="ocean"] .look-chip[data-look="ocean"],html[data-look="paper"] .look-chip[data-look="paper"],html[data-look="glass"] .look-chip[data-look="glass"],html[data-look="gold"] .look-chip[data-look="gold"],html[data-look="emerald"] .look-chip[data-look="emerald"],html[data-look="cyber"] .look-chip[data-look="cyber"]{border:2px solid #2B4A86!important;box-shadow:0 0 0 3px rgba(94,140,230,.35)!important}
