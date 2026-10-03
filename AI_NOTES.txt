@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.59.0, 2026-10-03 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.60.0, 2026-10-03 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2144,3 +2144,4 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
 * style.css: li.kbsel; @media 1100 + .cam-off: cam/video chhupa, pad static ek qataar, names flex lambi.
 * Test: 2 items, ↓↓ -> Ghee, "3" Enter -> 3 Pcs ✓.
 * v2.59.0: sale save ke baad scanNewBill() (pos-stock export): scanner khuli ho to scanOrder/Items/Qty saaf, _redraw, msg, qBox focus; warna #search focus. Test: F5->1 -> list 0, cursor search par.
+* v2.60.0: pop corn label sub-code "99" scanner screen par 'Maq feeder 9 0z' (naam-search ka pehla natija) lagta tha. codeLike: koi bhi lambai, findByCode exact mile to barcode (feedCode) — naam-search baad mein. Test '99' -> pop corn 0.5 ✓.

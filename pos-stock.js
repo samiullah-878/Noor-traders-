@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.59.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.60.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,7 +57,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.59.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.60.0: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -1935,7 +1935,7 @@ async function openScanner() {
     msg.textContent = r.state === 'added' ? `✓ ${r.item.name} — tadad chunein ya agla scan karein` : `${r.item.name} pehle se list mein`;
     beep(true); if (navigator.vibrate) navigator.vibrate(80);
   };
-  const codeLike = v => /^[0-9]{6,}$/.test(v) || (v.length >= 3 && !/\s/.test(v) && !!findByCode(v));   // v2.55: chhota sub-barcode bhi
+  const codeLike = v => /^[0-9]{6,}$/.test(v) || (v.length >= 1 && !/\s/.test(v) && !!findByCode(v));   // v2.55 / v2.60: chhota sub-code (jaise "99") pehle barcode samjho, naam-search baad mein
   qBox.addEventListener('input', () => { const v = String(qBox.value || '').trim(); if (/^[0-9]{8,}$/.test(v) && findByCode(v)) { clearTimeout(qBox._ft); qBox._ft = setTimeout(() => { if (String(qBox.value || '').trim() === v) { qBox.value = ''; hitBox.hidden = true; chosen = null; feedCode(v); } }, 140); } });   // Enter na bhejne wala scanner
   qBox.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); const v = String(qBox.value || '').trim(); if (codeLike(v)) { clearTimeout(qBox._ft); qBox.value = ''; hitBox.hidden = true; chosen = null; feedCode(v); return; } if (chosen) { nBox.focus(); return; } const r = (hitBox._src || [])[0]; if (r) pickHit(r); } };
   // v1.59 (sale): item chunne par seedha add nahi — cursor "Tadad" mein; wahan Enter par add, phir cursor wapas search mein
