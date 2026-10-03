@@ -1720,3 +1720,9 @@ html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-
 .scan-hits .hr b{display:inline;font-size:13px;font-weight:800}
 .scan-hits .hr.r{background:#e8f1ff;color:#1b3a7a}.scan-hits .hr.w{background:#e6f6ee;color:#0f6a3f}
 @media (min-width:1100px){ .scan-hits .hr{font-size:15px!important}.scan-hits .hr b{font-size:17px!important} }
+
+/* v2.71: search natije mein saare barcode */
+.scan-hits .hit-codes{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.scan-hits .hc{font-style:normal;font-family:ui-monospace,Consolas,monospace;font-size:12px;font-weight:700;padding:1px 7px;border-radius:6px;background:#eef1f6;color:#41536f;border:1px solid #dfe5ef}
+.scan-hits .hc.sub{background:#fff3e0;color:#8a4b00;border-color:#f3d2a6}.scan-hits .hc b{font-size:12px}
+@media (min-width:1100px){ .scan-hits .hc{font-size:15px!important}.scan-hits .hc b{font-size:15px!important} }

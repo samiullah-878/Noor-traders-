@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.70.0, 2026-10-03 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.71.0, 2026-10-03 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2205,3 +2205,4 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
   setUnit: Ctn khana pack<=1 par disabled, placeholder cName/uName.
 * Test: tap + "3" Ctn -> 3 Ctn + 1 Pcs, khana bacha ✓; upar 2 Ctn + 4 Pcs ✓.
 * v2.70.0: scanner search natije — hitRates(r): Parchoon pcs (rate2||rate), P/Ctn (rate*pack), Wholesale pcs (wrate||rate), W/Ctn (wrate*pack); sale ke rateFor/crateFor jaisa. Neela = parchoon, hara = wholesale.
+* v2.71.0: scanner search natije — hitCodes(r): code + bc[] + bq[].b (sub-barcode ki tadad ke sath, narangi) — sab chips mein; stock alag line.

@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.70.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.71.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,7 +57,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.70.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.71.0: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -1661,6 +1661,13 @@ function clearScan() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// v2.71: search natije mein item ke SAARE barcode (code + extra barcode + sub-barcode tadad ke sath)
+function hitCodes(r) {
+  const sub = new Map((Array.isArray(r.bq) ? r.bq : []).filter(x => x && x.b).map(x => [String(x.b).trim(), x.q]));
+  const all = [...new Set([r.code, ...(Array.isArray(r.bc) ? r.bc : []), ...sub.keys()].map(x => String(x || '').trim()).filter(Boolean))];
+  if (!all.length) return '';
+  return `<span class="hit-codes">${all.map(c => `<i class="hc${sub.has(c) ? ' sub' : ''}">${esc(c)}${sub.has(c) ? ` <b>${num(sub.get(c))}</b>` : ''}</i>`).join('')}</span>`;
+}
 // v2.70: search natije mein 4 rate — Parchoon (Pcs / Ctn) · Wholesale (Pcs / Ctn)
 function hitRates(r) {
   const pk = Number(r.pack) || 0, rp = Number(r.rate2) || Number(r.rate) || 0, rc = Number(r.rate) || 0, wp = Number(r.wrate) || Number(r.rate) || 0;
@@ -1986,7 +1993,7 @@ async function openScanner() {
     if (!q) { hitBox.hidden = true; hitBox.innerHTML = ''; return; }
     const src = saleRoot() && saleFindHook ? saleFindHook(q) : smartSearch(items, q, 12);   // v1.75
     hitBox.hidden = false;
-    hitBox.innerHTML = src.length ? src.map((r, i) => `<button type="button" data-pick="${i}"><b>${esc(r.name)}</b><small>${esc(r.code || '')}${r.stock != null ? ' · stock ' + num(r.stock) : ''}</small>${hitRates(r)}</button>`).join('') : '<p class="stat-note">Nahi mila</p>';
+    hitBox.innerHTML = src.length ? src.map((r, i) => `<button type="button" data-pick="${i}"><b>${esc(r.name)}</b><small>${r.stock != null ? 'stock ' + num(r.stock) : ''}</small>${hitCodes(r)}${hitRates(r)}</button>`).join('') : '<p class="stat-note">Nahi mila</p>';
     hitBox._src = src;
   };
   showPad();   // v1.57: dobara kholne par aakhri item ki tadad fauran nazar aaye
