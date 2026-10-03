@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.64.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.64.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.65.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.65.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -86,7 +86,7 @@ function keepScan(el) {   // scan box upar nazar rahe; nayi line uske neeche —
   window.scrollTo({ top: Math.max(0, (window.scrollY || 0) + s.top - 8), behavior: 'smooth' });
 }
 let lastAddAt = 0, lastScrolled = 0;
-let quickSave = false;   // v2.57: F5 -> sirf '1 ya 2 print?'
+let quickSave = false, posSales = [], stopPosSales = null;   // v2.57: F5 -> sirf '1 ya 2 print?'
 let copies = 1; try { copies = Math.min(3, Math.max(1, Number(localStorage.getItem('sam-sale-copies')) || 1)); } catch {}   // v2.40: bill kitni dafa chhape (gate pass ek hi)
 const copyChips = () => `<div class="sale-copies"><small>🖨 Bill print</small>${[1, 2, 3].map(n => `<button type="button" data-sale-copies="${n}"${copies === n ? ' class="on"' : ''}>×${n}</button>`).join('')}<small class="sale-copies-h">gate pass ×1</small></div>`;
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-sale-copies]'); if (!b) return; copies = Number(b.dataset.saleCopies) || 1; try { localStorage.setItem('sam-sale-copies', String(copies)); } catch {} document.querySelectorAll('[data-sale-copies]').forEach(x => x.classList.toggle('on', Number(x.dataset.saleCopies) === copies)); });
@@ -239,7 +239,7 @@ function vbAdd(text) {
   if (!lastSug) notice('🎤 Suna: "' + heard.slice(0, 60) + '" — item ka naam samajh nahi aaya');
 }
 let vbHold = false, vbStopT = 0, vbHeard = '', vbDone = '';
-function vbStart() {               // v2.64.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
+function vbStart() {               // v2.65.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
   if (vbRec) { try { vbRec.abort(); } catch {} vbRec = null; }
@@ -303,6 +303,7 @@ function watchSales() {
   if (stopSales) { stopSales(); stopSales = null; }
   if (!cloud?.listenAppSales) return;
   salesDay = day;
+  try { stopPosSales?.(); } catch {} stopPosSales = cloud.listenPosSales ? cloud.listenPosSales(day, b => { posSales = Array.isArray(b) ? b : []; }) : null;   // v2.64.1: POS ke bills
   stopSales = cloud.listenAppSales(day, list => {
     sales = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); salesErr = '';
     const box = $('saleTodayBtn'); if (box) box.textContent = todayLabel();
@@ -470,7 +471,7 @@ document.addEventListener('pointercancel', () => vbRelease());
 document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sale-mic]')) e.preventDefault(); });
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.64.0: hold se chalta hai
+  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.65.0: hold se chalta hai
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {
@@ -670,4 +671,9 @@ document.addEventListener('keydown', e => {
 
 // v2.64: scanner screen ke liye — godam chips aur PC par aaj ke bills
 setSaleGodamHook(() => { const st = stock(); return { list: st.branches.map(b => ({ b, name: (st.branchName ? st.branchName(b, st.names) : '') || st.names?.[b] || ('Godam ' + b) })), cur: st.pick, set: b => { godam = Number(b); keepDraft(); rerender(); } }; });
-setSaleBillsHook(() => ({ list: sales, reprint: id => cloud.reprintAppSale(id, copies) }));
+setSaleBillsHook(() => {
+  const posByApp = new Map(posSales.filter(b => b.app).map(b => [b.app, b]));
+  const app = sales.map(s => { const pb = posByApp.get(s.id); return pb && pb.x ? { ...s, cancelled: true } : s; });
+  const pos = posSales.filter(b => !b.app).map(b => ({ id: 'pos-' + b.id, pos: true, saleNo: b.no, total: b.t, cash: b.cr ? b.c : b.t, mode: b.cr ? 'wholesale' : 'counter', status: 'done', cancelled: !!b.x, createdAt: b.tm, party: b.p, n: b.n }));
+  return { list: [...app, ...pos].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)), reprint: id => { if (String(id).startsWith('pos-')) throw Error('POS bill'); return cloud.reprintAppSale(id, copies); } };
+});

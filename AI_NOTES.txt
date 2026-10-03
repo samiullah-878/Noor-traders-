@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.64.0, 2026-10-03 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.65.0, 2026-10-03 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2165,3 +2165,12 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
 * BAQI (agla qadam, malik ke OK par): POS par seedha bane sale bills — nayi PC script (aaj ke SaleMaster: no, total, paid,
   balance, cancel) -> Firestore posSales + rules 2.21 -> isi panel mein.
 * Test: chips (NOOR TRADERS*, Godam 1), bills ✓/✗/⏳, search, godam badla ✓.
+
+==================== v2.65.0 + PC 2026-10-03.1 — POS KE AAJ KE BILLS (RULES 2.21) ====================
+* pc/pos-sales-dekho.js (NAYA, lock 47824, pos-sales-auto.bat, manifest service "POS ke aaj ke bills"): har 1 min dbo.Sale aaj
+  (SaleDate) SELECT -> posSales/<YYYY-MM-DD> {day, at, bills:[{id,no,t,c,cr,x(DocStatusID 3),p,n,tm,app(Description "BK-APP <id>")}]}
+  sirf hash badle to. UNAUTHENTICATED -> exit 1 (bat restart). Heartbeat.
+* Rules 2.21: posSales read (owner + sab staff). cloud.listenPosSales(day,cb) doc snapshot.
+* sale.js watchSales: posSales listener; setSaleBillsHook: app sales (POS mein cancel ho to cancelled) + POS-only bills
+  (pos:true, cr -> wholesale/udhaar, x -> ⊘). Reprint sirf app bills. pos-stock chip par "POS" tag + party.
+* Test: ✓ app, ⊘ app (POS cancel), ⏳, ✓ POS, ⊘ POS.
