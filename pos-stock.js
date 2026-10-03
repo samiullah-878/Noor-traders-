@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.75.1';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.76.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,7 +57,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.75.1: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.76.0: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -447,6 +447,30 @@ function openGinti() {
   if (!d.open) d.showModal();
 }
 
+// v2.76: MALIK ONLY — stock ki kul maaliyat (khareed rate se), bechne par, nafa; har godam alag. Minus / rate-ke-baghair alag gine.
+let valShowUntil = 0;
+function valueCardHTML(branches, names) {
+  const chunks = rows.filter(r => !r.meta && Array.isArray(r.items));
+  const per = [], tot = { cost: 0, sale: 0, neg: 0, noRate: 0, n: 0 };
+  for (const b of branches) {
+    const its = chunks.filter(c => c.branch === b).flatMap(c => c.items).map(fixCost);
+    const g = { b, cost: 0, sale: 0, neg: 0, noRate: 0, n: 0 };
+    for (const r of its) {
+      const q = Number(r.stock) || 0; if (q < -0.0005) { g.neg++; continue; } if (q <= 0.0005) continue;
+      const pr = Number(r.prate) || 0, sr = Number(r.rate) || 0;
+      if (!pr) { g.noRate++; } else g.cost += q * pr;
+      if (sr) g.sale += q * sr; g.n++;
+    }
+    per.push(g); for (const k of Object.keys(tot)) tot[k] += g[k];
+  }
+  const show = Date.now() < valShowUntil, R = v => show ? 'Rs ' + num(Math.round(v)) : 'Rs ••••';
+  return `<div class="val-card" data-val-toggle="1"><div class="vc-top"><span>💰 Kul stock ki maaliyat <small>(sirf malik)</small></span><b>${R(tot.cost)}</b></div>
+    <div class="vc-sub"><span>Bechne par ${R(tot.sale)}</span><span>Andaza nafa <b>${R(tot.sale - tot.cost)}</b></span></div>
+    <div class="vc-g">${per.map(g => `<span><small>${esc(branchName(g.b, names))}</small><b>${R(g.cost)}</b></span>`).join('')}</div>
+    ${tot.neg || tot.noRate ? `<p class="vc-warn">${tot.neg ? `⚠ ${num(tot.neg)} items ka stock minus — jor mein nahi` : ''}${tot.neg && tot.noRate ? ' · ' : ''}${tot.noRate ? `${num(tot.noRate)} items ka khareed rate nahi` : ''}</p>` : ''}
+    <p class="vc-tap">${show ? 'Tap = chhupao' : 'Tap = 30 second dikhao'}</p></div>`;
+}
+document.addEventListener('click', e => { const c = e.target.closest?.('[data-val-toggle]'); if (!c || !isOwner()) return; valShowUntil = Date.now() < valShowUntil ? 0 : Date.now() + 30000; rerender(); if (valShowUntil) setTimeout(() => { if (Date.now() >= valShowUntil) rerender(); }, 30500); });
 function summaryHTML(branches, pick, items, meta, names) {
   const totalPcs = meta?.totalPcs ?? items.reduce((s, r) => s + (r.stock || 0), 0);
   const stamp = meta?.syncedAt;
@@ -478,7 +502,7 @@ function summaryHTML(branches, pick, items, meta, names) {
     + (isOwner() ? `<button data-stock-lock="1" class="${countOff ? 'sh-lock off' : 'sh-lock'}">${countOff ? '🔴 Counting OFF — mulazim save nahi kar sakta' : '🟢 Counting ON'}</button>` : '')
     + (countLocked() ? '<p class="stat-note sh-locked">🔴 Malik ne counting band ki hui hai — ginti save nahi ho sakti, sirf dekh sakte hain.</p>' : '');
   const nishanN = items.filter(r => flagOf(r.id).baqi).length, checkN = items.filter(r => flagOf(r.id).check).length;
-  return `<div class="stock-head">
+  return `${isOwner() ? valueCardHTML(branches, names) : ''}<div class="stock-head">
     <div class="sh-title">
       <strong>${num(shownCount)} items</strong>
       <small>${esc(branchName(pick, names))} · kul ${num(totalPcs)} pcs${stamp ? ' · ' + esc(since(stamp)) : ''}</small>

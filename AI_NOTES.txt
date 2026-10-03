@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.75.1, 2026-10-04 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.76.0, 2026-10-04 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2236,3 +2236,4 @@ retries") — process zinda, andar se mari hui. Doctor sirf process dekhta tha.
 * v2.74.0 (rules 2.25): applyLook(k) malik -> cloud.setLook (blueAccess/look {k,at}); sab devices listenLook -> applyLook(k,true) (localStorage bhi, agli boot pehle se). Mulazim ke chips read-only (notice). blueAccess get list mein 'look'.
 * v2.75.0: Android par settings '🔋 Battery / background' — #batApp intent APPLICATION_DETAILS_SETTINGS package:com.android.chrome, #batList IGNORE_BATTERY_OPTIMIZATION_SETTINGS. 1.6s mein page hidden na ho (Chrome ne intent roka) -> batGuide() haath ka raasta (Samsung/OnePlus). Chrome aksar non-BROWSABLE settings intent rokta hai — guide hi asal fallback.
 * v2.75.1: Battery group ab har login par (owner ke ilawa full/sale/stock/galla staff, aur purchase-only settings mein bhi).
+* v2.76.0: Stock screen (isOwner) valueCardHTML: har godam stock>0 x prate (fixCost per piece) = maaliyat, x rate = bechne par, farq = nafa; minus aur bina khareed-rate alag gine. Rs •••• — tap = 30s. Mulazim ko card render hi nahi. Test: 1,200 = 1,000 + 200 ✓.
