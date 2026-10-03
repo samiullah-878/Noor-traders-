@@ -1738,3 +1738,5 @@ html.boot-auto.has-app body::after{display:none}
 .dev-line small{color:#5c6a85}
 
 .look-grid.look-ro .look-chip{opacity:.55;pointer-events:none}
+
+.bat-steps{margin:8px 0 12px 18px;padding:0;line-height:1.7;font-size:15px}
