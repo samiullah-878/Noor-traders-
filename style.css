@@ -1751,7 +1751,7 @@ html.boot-auto.has-app body::after{display:none}
 .val-card .vc-g span{background:rgba(255,255,255,.1);border-radius:10px;padding:6px 8px}.val-card .vc-g small{display:block;font-size:11px;opacity:.8}.val-card .vc-g b{font-size:14px;font-variant-numeric:tabular-nums}
 .val-card .vc-warn{margin:8px 0 0;font-size:12px;color:#ffd7a8}.val-card .vc-tap{margin:4px 0 0;font-size:11px;opacity:.6;text-align:right}
 
-/* v2.76.1: maaliyat card — summary ke safed card ke rang se na dabe (har look mein navy, safed text) */
+/* v2.77.0: maaliyat card — summary ke safed card ke rang se na dabe (har look mein navy, safed text) */
 .summary{flex-wrap:wrap}
 html .summary>.val-card,html.lt.lt.lt.lt .summary>.val-card,html.dk.dk.dk.dk .summary>.val-card,html.lt.lt.lt.lt header .summary>.val-card{flex:0 0 100%!important;width:100%!important;box-sizing:border-box;background:linear-gradient(135deg,#13295a,#1f4a8f)!important;color:#fff!important;border:0!important;border-left:0!important;padding:12px 14px!important;margin:0 0 4px!important;box-shadow:0 8px 22px rgba(15,35,71,.25)!important}
 html .summary>.val-card *,html.lt.lt.lt.lt .summary>.val-card *,html.dk.dk.dk.dk .summary>.val-card *{color:#fff!important;background-color:transparent}
@@ -1760,3 +1760,8 @@ html .summary>.val-card .vc-warn,html.lt.lt.lt.lt .summary>.val-card .vc-warn{co
 html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .val-card .vc-top span{white-space:nowrap}
 .val-card .vc-top{flex-direction:column;align-items:flex-start!important;gap:2px!important}.val-card .vc-top b{font-size:28px!important;white-space:nowrap}
+
+/* v2.77: PC par camera nahi -> 🔫 scanner gun */
+.sale-cam.gun{background:linear-gradient(135deg,#1a2d53,#2c4a85);box-shadow:0 2px 8px rgba(26,45,83,.25)}
+.gun-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:#e8f5ee;color:#0f6b3d;border:1px solid #b9e2cb;font-weight:700;font-size:14px}
+.scan-box.no-cam .scan-msg{font-weight:700;color:#1a2d53}

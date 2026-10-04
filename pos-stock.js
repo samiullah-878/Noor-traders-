@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.76.1';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.77.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,7 +57,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.76.1: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.77.0: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -369,7 +369,7 @@ function renderStockInner() {
       </div>` + shownScan.map(rowHTML).join('') +
       `<div class="account-tools scan-foot">
         <button class="sh-wide scan-save" data-scan-saveall="1">💾 Sab save karein (${num(shownScan.length)})</button>
-        <button class="sh-wide" data-stock-scan="1">📷 Aur scan karein</button>
+        <button class="sh-wide" data-stock-scan="1">${camIco()} Aur scan karein</button>
         <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>
       </div>`;
     return;
@@ -509,9 +509,9 @@ function summaryHTML(branches, pick, items, meta, names) {
     </div>
     <div class="account-tools">
       ${scanList.length
-        ? `<button class="sh-wide sh-scan" data-stock-scan="1">📷 Aur scan karein (${num(scanList.length)} list mein)</button>
+        ? `<button class="sh-wide sh-scan" data-stock-scan="1">${camIco()} Aur scan karein (${num(scanList.length)} list mein)</button>
            <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>`
-        : `<div class="sh-scanrow"><button class="sh-wide sh-scan" data-stock-scan="1">📷 Barcode scan karein (ek ya kai items)</button><button type="button" class="sh-mic" data-stock-mic="1" title="Awaz se dhoondein">🎤</button></div>
+        : `<div class="sh-scanrow"><button class="sh-wide sh-scan" data-stock-scan="1">${camMissing() ? '🔫 Scanner gun se scan karein (ek ya kai items)' : '📷 Barcode scan karein (ek ya kai items)'}</button><button type="button" class="sh-mic" data-stock-mic="1" title="Awaz se dhoondein">🎤</button></div>
            ${canEditItem() ? '<button class="sh-wide" data-stock-newitem="1">➕ Naya item</button>' : ''}
            <button class="sh-wide" data-stock-in="1">📥 Aaya / gaya maal</button><button class="sh-wide" data-stock-reg="1">📋 Transfer register</button><button class="sh-wide dm-btn" data-demand="1">📢 Demand (khatam / kam)</button>
            <button class="sh-wide sh-tolai" data-stock-tolai="1">⚖️ Tolai</button>
@@ -689,7 +689,7 @@ async function subSend(r, op, x, msgEl, btn) {
 }
 // ek barcode scan karke wapas (chhota camera, sirf is form ke liye)
 async function scanOnce(input) {
-  if (!navigator.mediaDevices?.getUserMedia) { notice('Camera nahi khulta'); return; }
+  if (!navigator.mediaDevices?.getUserMedia || !(await camCheck())) { notice('🔫 Is device par camera nahi — barcode scanner gun se seedha khane mein scan karein, ya code likhein.'); try { input.focus(); } catch {} return; }
   let det;
   if ('BarcodeDetector' in window) { try { det = new BarcodeDetector(); } catch {} }
   if (!det) { try { det = await zxingDetector(); } catch { notice('Barcode library load nahi hui'); return; } }
@@ -700,7 +700,7 @@ async function scanOnce(input) {
   const close = () => { on = false; try { stream?.getTracks().forEach(t => t.stop()); } catch {} box.remove(); };
   box.querySelector('.sub-scan-x').onclick = close;
   try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false }); v.srcObject = stream; await v.play(); }
-  catch (e) { close(); notice('Camera nahi khula: ' + (e?.message || e)); return; }
+  catch (e) { close(); notice(e?.name === 'NotFoundError' ? '🔫 Is device par camera nahi mila — scanner gun se khane mein scan karein, ya code likhein.' : 'Camera nahi khula: ' + (e?.message || e)); try { input.focus(); } catch {} return; }
   const loop = async () => {
     if (!on) return;
     if (v.readyState >= 2) { try { const f = await det.detect(v); const c = f.map(x => String(x.rawValue || '').trim()).find(Boolean); if (c) { input.value = c; beep(true); if (navigator.vibrate) navigator.vibrate(60); close(); return; } } catch {} }
@@ -1080,7 +1080,7 @@ function openTransfer() {
   const kul = trLines.reduce((s, l) => s + l.qty, 0);
   $('dialogBody').innerHTML = `<div class="tr-head"><label>Se (nikle)${sel('from', trFrom)}</label><label>Ko (jaye)${sel('to', trTo)}</label></div>
     <div class="scan-find" style="margin:8px 0"><input class="scan-q" data-tr-q type="search" placeholder="🔍 Item ka naam / code likhein" autocomplete="off"><div class="scan-hits" data-tr-hits hidden></div></div>
-    <div class="account-tools"><button type="button" data-tr-scan="1">📷 Scan</button></div>
+    <div class="account-tools"><button type="button" data-tr-scan="1">${camMissing() ? '🔫 Scanner gun' : '📷 Scan'}</button></div>
     <div class="tr-lines">${trLines.map((l, i) => [l, i]).reverse().map(([l, i]) => { const have = trStockOf(trFrom, l.id); const short = trFrom !== 1 && have < l.qty - 0.0005; const pk = Number(l.pack) || 0;
       return `<div class="tr-line${short ? ' short' : ''}"><div class="tr-name">${pk > 1 ? `<span class="tr-pack">1 ${esc(l.cName || 'Ctn')} = ${num(pk)} ${esc(l.uName || 'Pcs')}</span>` : ''}<b><span class="tr-no">${i + 1}.</span> ${esc(l.name)}</b><small>${esc(branchName(trFrom, collect().names))} mein stock ${num(have)}${pk > 1 ? ' · 1 ' + esc(l.cName || 'Ctn') + ' = ' + num(pk) : ''}${short ? ' · <b class="red">⛔ kam hai</b>' : ''}</small>${pk > 1 ? `<small>= ${num(l.qty)} ${esc(l.uName || 'Pcs')}</small>` : ''}</div>
       ${pk > 1 ? `<label class="tr-q"><span>${esc(l.cName || 'Ctn')}</span><input type="text" inputmode="decimal" value="${num(l.ctn || 0)}" data-tr-ctn="${i}"></label>` : ''}
@@ -1792,17 +1792,35 @@ function zxingDetector() {
   return zxingP;
 }
 
+// v2.77: is device par camera hai? (PC par aksar nahi) — na ho to 📷 ki jagah 🔫 scanner gun wala tareeqa
+let noCam = null;
+try { if (localStorage.getItem('sam-nocam') === '1') noCam = true; } catch {}
+export function camMissing() { return noCam === true; }
+function camIco() { return noCam === true ? '🔫' : '📷'; }
+export async function camCheck() {
+  let none = false;
+  try {
+    if (!navigator.mediaDevices?.enumerateDevices) none = true;
+    else none = !(await navigator.mediaDevices.enumerateDevices()).some(d => d.kind === 'videoinput');
+  } catch { none = false; }
+  noCam = none; try { localStorage.setItem('sam-nocam', none ? '1' : '0'); } catch {}
+  return !none;
+}
+try { navigator.mediaDevices?.addEventListener?.('devicechange', () => { camCheck(); }); } catch {}
 async function openScanner() {
+  if (scanBox) return;
+  const hasCam = await camCheck();   // v2.77
   if (scanBox) return;
   if (!pickHook) syncFromCart();
   // awaz: button dabane (user ke haath) par hi chalu ho sakti hai
   try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state === 'suspended') audioCtx.resume(); } catch {}
-  if (!navigator.mediaDevices?.getUserMedia) {
+  if (hasCam && !navigator.mediaDevices?.getUserMedia) {
     notice('Is phone/browser mein camera nahi khulta — code search mein likhein.');
     return;
   }
   let detector;
-  if ('BarcodeDetector' in window) {   // Android Chrome: phone ka apna tez tareeqa
+  if (!hasCam) { /* v2.77: camera nahi — detector ki zaroorat nahi */ }
+  else if ('BarcodeDetector' in window) {   // Android Chrome: phone ka apna tez tareeqa
     let formats = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'itf', 'codabar', 'qr_code'];
     try { const sup = await BarcodeDetector.getSupportedFormats(); formats = formats.filter(f => sup.includes(f)); } catch {}
     try { detector = new BarcodeDetector({ formats }); } catch { detector = new BarcodeDetector(); }
@@ -2096,10 +2114,14 @@ async function openScanner() {
     const main = back.find(d => !/wide|ultra|macro|tele|depth|bokeh/i.test(d.label)) || back[0];
     return main ? { deviceId: { exact: main.deviceId } } : { facingMode: { ideal: 'environment' } };
   };
-  if (scanCamOff) {   // v2.40: camera band — scanner / search se kaam, video nahi
+  if (scanCamOff || !hasCam) {   // v2.40: camera band — scanner / search se kaam, video nahi · v2.77: camera hai hi nahi (PC)
     scanBox.classList.add('cam-off');   // v2.56: camera band = safed screen
-    const msg0 = scanBox.querySelector('.scan-msg'); if (msg0) msg0.textContent = 'Camera band hai — barcode gun ya naam/code se item lagayein. Chalu karne ke liye 📷 dabayein.';
-    const tools0 = document.createElement('div'); tools0.className = 'scan-tools'; camOffBtn(tools0); (scanBox.querySelector('.scan-left') || msg0).append(tools0);
+    if (!hasCam) scanBox.classList.add('no-cam');
+    const msg0 = scanBox.querySelector('.scan-msg'); if (msg0) msg0.textContent = hasCam ? 'Camera band hai — barcode gun ya naam/code se item lagayein. Chalu karne ke liye 📷 dabayein.' : '🔫 Is PC par camera nahi — barcode scanner gun se scan karein, ya naam / code likh kar Enter.';
+    const tools0 = document.createElement('div'); tools0.className = 'scan-tools';
+    if (hasCam) camOffBtn(tools0); else { const g = document.createElement('span'); g.className = 'gun-chip'; g.textContent = '🔫 Scanner gun tayyar'; tools0.appendChild(g); }
+    (scanBox.querySelector('.scan-left') || msg0).append(tools0);
+    setTimeout(() => scanBox?.querySelector('.scan-q')?.focus(), 60);
     const v0 = scanBox.querySelector('video'); if (v0) v0.style.display = 'none';
     return;
   }
@@ -2116,6 +2138,10 @@ async function openScanner() {
     });
   } catch (e) {
     closeScanner();
+    if (e?.name === 'NotFoundError' || e?.name === 'OverconstrainedError' || /device not found/i.test(e?.message || '')) {   // v2.77: camera mila hi nahi -> scanner gun
+      noCam = true; try { localStorage.setItem('sam-nocam', '1'); } catch {}
+      if (!await camCheck()) { setTimeout(openScanner, 200); return; }
+    }
     if (e?.name === 'Timeout' && camRetry < 1) {   // ek dafa khud dobara (yaad kiya lens bhool kar)
       camRetry++; try { localStorage.removeItem('sam-scan-cam'); } catch {}
       setTimeout(openScanner, 600); return;
