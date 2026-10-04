@@ -6,5 +6,5 @@ cd /d C:\khata-sync
 echo ---- shuru: %date% %time% >> bills-log.txt
 node sync-bills.js >> bills-log.txt 2>&1
 echo ---- ruk gaya: %date% %time% >> bills-log.txt
-timeout /t 30 /nobreak >nul
+ping -n 31 127.0.0.1 >nul
 goto loop

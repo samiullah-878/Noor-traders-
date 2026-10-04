@@ -1,5 +1,7 @@
 // =========================================================
-//  doctor.js  v2.3 (2026-10-01: HEARTBEAT — latki script pakar kar dobara) · v2.2 (3 dafa ke baad bhi 30 min mein phir koshish) · v2.1 (UNAUTHENTICATED par doctor khud dobara · PC ka waqt jaanch) · v2 (2026-09-25) — KHATA PC DOCTOR
+//  doctor.js  v2.6 (2026-10-04: sab scripts CHUPKE (chupa.vbs, koi window nahi) · ek dafa purani dikhti windows band kar ke chupke chalata hai ·
+//              PC ka waqt ghalat -> "NT Waqt Theek" task + w32tm, pcStatus.clockOff app ko) · v2.5 (non-periodic zinda = node) · v2.4 (taskkill /F)
+//              · v2.3 (2026-10-01: HEARTBEAT — latki script pakar kar dobara) · v2.2 (3 dafa ke baad bhi 30 min mein phir koshish) · v2.1 (UNAUTHENTICATED par doctor khud dobara · PC ka waqt jaanch) · v2 (2026-09-25) — KHATA PC DOCTOR
 //  v2: sirf ZINDA nahi, KAAM bhi dekhta hai — qataar (appPurchases, appSales, labelJobs...) mein koi kaam 3 min se
 //      zyada ruka ho to wohi script dobara shuru (10 min mein ek dafa, 3 dafa ke baad ruk kar batata hai). Har 2 min jaanch,
 //      GitHub har 30 min. pcCheck ka rabta toote to khud dobara jurta hai.
@@ -21,7 +23,7 @@ const crypto = require('crypto');
 const { execSync, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '2';
+const VER = '2.6';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const STUCK = 3 * 60 * 1000, REST_GAP = 10 * 60 * 1000;
@@ -130,17 +132,50 @@ function procs() {
 const word = (hay, w) => new RegExp('(^|[\\s\\\\/"])' + w.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=[\\s"]|$)').test(hay);
 const runsScript = (p, s) => /node(\.exe)?"?\s/.test(p.cmd) && word(p.cmd, s.script);
 const runsBat = (p, s) => word(p.cmd, s.bat);
-function alive(s, list) { return list.some(p => runsScript(p, s) || runsBat(p, s)); }
+function alive(s, list) { return list.some(p => runsScript(p, s) || (s.periodic && runsBat(p, s))); }   // v2.5: lambi script = node zaroori
+// v2.6: Node ka spawn(detached + windowsHide) Windows par cmd ki window phir bhi dikha deta tha. Ab wscript + chupa.vbs
+// (Run ..., 0 = window chhupi) — wscript khud GUI hai, us ki koi console nahi.
+const CHUPA = path.join(DIR, 'chupa.vbs');
+const CHUPA_TXT = "' chupa.vbs (KHATA-DOCTOR v2.6) - .bat ko bina window ke chalata hai\r\nIf WScript.Arguments.Count > 0 Then CreateObject(\"WScript.Shell\").Run \"cmd /c \"\"\" & WScript.Arguments(0) & \"\"\"\", 0, False\r\n";
+function ensureChupa() {
+  try { if (!fs.existsSync(CHUPA) || fs.readFileSync(CHUPA, 'utf8') !== CHUPA_TXT) fs.writeFileSync(CHUPA, CHUPA_TXT); return true; }
+  catch (e) { log('⚠ chupa.vbs: ' + e.message); return false; }
+}
 function startBat(s) {
   const b = path.join(DIR, s.bat);
   if (!fs.existsSync(b)) { log(`⚠ ${s.bat} nahi mili`); return false; }
+  if (process.platform === 'win32' && ensureChupa()) {
+    try { spawn('wscript.exe', ['//B', '//Nologo', CHUPA, b], { cwd: DIR, detached: true, stdio: 'ignore', windowsHide: true }).unref(); return true; }
+    catch (e) { log('⚠ wscript: ' + e.message + ' — purane tareeqe se'); }
+  }
   spawn('cmd.exe', ['/c', b], { cwd: DIR, detached: true, stdio: 'ignore', windowsHide: true }).unref();
   return true;
 }
+function killPid(pid, tree) {
+  try { process.kill(pid); } catch {}
+  try { execSync(`taskkill /F ${tree ? '/T ' : ''}/PID ${pid}`, { stdio: 'ignore', windowsHide: true }); } catch {}
+}
 function stopScript(s, list) {
   let n = 0;
-  for (const p of list) if (runsScript(p, s)) { try { process.kill(p.pid); n++; } catch {} }
+  for (const p of list) if (runsScript(p, s)) { killPid(p.pid); n++; log(`■ ${s.script}: process ${p.pid} band ki`); }
   return n;
+}
+// v2.5: bat ki khaali window (node ke baghair) — purani loop band, warna do loop
+function stopBatOnly(s, list) {
+  let n = 0;
+  for (const p of list) if (runsBat(p, s) && !runsScript(p, s) && /cmd(\.exe)?/.test(p.cmd)) { killPid(p.pid, true); n++; }
+  return n;
+}
+// v2.6: ek dafa — jo bat loops pehle dikhti windows mein chal rahi thin unhein band kar ke chupke chalao
+const HIDE_MARK = path.join(DIR, 'chupa.done');
+function hideOnce(list) {
+  if (process.platform !== 'win32' || fs.existsSync(HIDE_MARK)) return false;
+  let n = 0;
+  for (const s of services) for (const p of list) if (runsBat(p, s) && /cmd(\.exe)?/.test(p.cmd)) { killPid(p.pid, true); n++; }
+  for (const s of services) for (const p of list) if (runsScript(p, s)) { killPid(p.pid); n++; }
+  try { fs.writeFileSync(HIDE_MARK, String(Date.now())); } catch {}
+  log(`🙈 v2.6: ${n} purani (dikhti) processes band — ab sab scripts chupke (bina window) chalengi`);
+  return true;
 }
 function verOf(f) { try { const h = fs.readFileSync(path.join(DIR, f), 'utf8').slice(0, 600); const m = h.match(/\bv(\d+(?:\.\d+)*)\b/); return m ? 'v' + m[1] : ''; } catch { return ''; } }
 function lastLine(f) {
@@ -185,17 +220,20 @@ async function stuckOf(s) {
 }
 
 // ---------- PC ka waqt (2026-10-01) — ghalat ho to Firebase "UNAUTHENTICATED" deta hai ----------
-let clockAt = 0;
+let clockAt = 0, clockOff = null, clockFixAt = 0;
 function clockCheck() {
-  if (Date.now() - clockAt < 30 * 60 * 1000) return; clockAt = Date.now();
+  if (Date.now() - clockAt < (clockOff != null && Math.abs(clockOff) > 120 ? 5 : 30) * 60 * 1000) return; clockAt = Date.now();
   try {
     require('https').request({ host: 'www.google.com', method: 'HEAD', path: '/', timeout: 8000 }, r => {
       const g = Date.parse(r.headers.date || ''); if (!g) return;
-      const off = Math.round((Date.now() - g) / 1000);
+      const off = Math.round((Date.now() - g) / 1000); clockOff = off;
       if (Math.abs(off) > 120) {
-        log(`⚠ PC ka waqt ${Math.round(off / 60)} minute ${off > 0 ? 'aage' : 'peeche'} hai — Firebase rabta tootega. Waqt theek kar raha hoon (w32tm)...`);
-        try { require('child_process').exec('w32tm /resync /nowait', () => {}); } catch {}
-      }
+        log(`⚠ PC ka waqt ${Math.round(off / 60)} minute ${off > 0 ? 'aage' : 'peeche'} hai — Firebase rabta tootega. Waqt theek kar raha hoon ("NT Waqt Theek" task + w32tm)...`);
+        const cp = require('child_process'), o = { windowsHide: true };
+        try { cp.exec('schtasks /run /tn "NT Waqt Theek"', o, e => { if (e) log('⚠ "NT Waqt Theek" task nahi chala (admin PowerShell wala block ek dafa chalayein)'); }); } catch {}
+        try { cp.exec('w32tm /resync /nowait', o, () => {}); } catch {}
+        clockFixAt = Date.now();
+      } else if (clockFixAt) { log('✓ PC ka waqt ab theek hai'); clockFixAt = 0; }
     }).on('error', () => {}).end();
   } catch {}
 }
@@ -219,12 +257,14 @@ async function cycle(why, full = true) {
     } else log('GitHub tak nahi pahuncha (internet?) — sirf jaanch');
     if (!services.length) try { services = JSON.parse(fs.readFileSync(path.join(DIR, 'manifest.json'), 'utf8')).services || []; } catch {}
     let list = procs();
+    if (hideOnce(list)) { await new Promise(r => setTimeout(r, 3000)); list = procs(); }
     const rows = [];
     for (const s of services) {
       let action = '';
       if (changed.includes(s.script) && alive(s, list)) { const n = stopScript(s, list); if (n) { action = 'nayi lagi — dobara shuru'; log(`↻ ${s.script}: nayi file, dobara shuru`); } }
       else if (changed.includes(s.script)) action = 'nayi lagi';
       if (!alive(s, list)) {
+        if (!s.periodic && stopBatOnly(s, list)) log(`■ ${s.bat}: window thi magar ${s.script} nahi chal rahi — purani loop band`);
         if (startBat(s)) { action = action || 'band thi — chala di'; log(`▶ ${s.script}: band thi, ${s.bat} chala di`); }
         else action = 'band — .bat nahi mili';
       }
@@ -263,7 +303,7 @@ async function cycle(why, full = true) {
     list = procs();
     for (const r of rows) { const s = services.find(x => x.script === r.script); r.ok = s ? alive(s, list) : false; if (!r.ok && !r.action) r.action = 'band'; }
     const ref = statusRef();
-    if (ref) await ref.set({ at: Date.now(), host: os.hostname(), bootAt: Date.now() - os.uptime() * 1000, doctor: VER, manifest: manifestVer,
+    if (ref) await ref.set({ at: Date.now(), host: os.hostname(), bootAt: Date.now() - os.uptime() * 1000, doctor: VER, manifest: manifestVer, clockOff,
       lastGit, changed, services: rows, recent: recent.slice(-30), every: QUICK }).catch(e => log('⚠ report: ' + e.message));
     if (full || rows.some(r => r.action)) log(`✓ ${rows.filter(r => r.ok).length}/${rows.length} chal rahi${changed.length ? ' · nayi: ' + changed.join(', ') : ''}`);
   } catch (e) { log('⚠ ' + (e?.message || e)); }
@@ -292,7 +332,7 @@ const lock = net.createServer().listen(LOCK_PORT, '127.0.0.1');
 lock.on('error', () => { console.log('KHATA-DOCTOR pehle se chal raha hai.'); process.exit(3); });
 lock.on('listening', async () => {
   log(`KHATA-DOCTOR v${VER} shuru — ${os.hostname()}`);
-  ensureStartup(); ensureModules();
+  ensureStartup(); ensureModules(); ensureChupa();
   await cycle('shuru');
   setInterval(() => cycle('30 minute'), EVERY);
   setInterval(() => cycle('2 minute', false), QUICK);

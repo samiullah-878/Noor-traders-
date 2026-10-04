@@ -1104,3 +1104,34 @@ Nahi hua (yahan mumkin nahi tha): asal Firebase/rules ke sath, asal phone ka cam
 - Malik ka pehla message "...user friendly bi ho or es ka" par kat gaya tha; baqi hissa abhi maloom nahi.
 - v201 ke baad: malik se poochna ke hazri theek dikh rahi hai; na ho to "App ki jaanch" ka screenshot.
 - Staff ka number badalna: abhi nahi hota (naya staff banao, purana band karo). Chahiye ho to hazri records move karne wala feature banana hoga.
+==================== v2.77.0 + PC manifest 2026-10-04.1 — DOCTOR v2.6: SCRIPTS CHUPKE · PING INTEZAR · WAQT PEHRA ====================
+Malik (4 Oct): PC par phir UNAUTHENTICATED. Wajah: PC ka waqt ~12 ghante AAGE (AM/PM ulta) — photo 10:44 AM, PC 10:36 PM.
+Admin PowerShell block chalaya (malik ne kiya, waqt theek hua 10:49 AM): w32time Automatic, tzutil "Pakistan Standard Time",
+NTP time.google.com + time.windows.com, MaxPos/NegPhaseCorrection 172800, w32tm /resync /force, schtasks "NT Waqt Theek"
+(har ghanta, SYSTEM) + "NT Waqt Startup" (onstart 1 min), taskkill node.exe.
+Phir malik: "ya dono window baar baar screen par na aayein, background mein chalti rahein" (transfer-dekho + khata-sync-auto ki
+"timeout /t 60" window — us mein "Waiting for 42809 seconds": waqt 12 ghante peeche gaya to timeout ~12 ghante atak gaya).
+JAANCH: repo ka pc/doctor.js v2.3 tha magar manifest mein doctor.js ki sha (ff24..) KISI aur file ki — doctor "download adhoori"
+kehta, purani rakhta. v2.4 (taskkill) / v2.5 (alive = node) ka code repo mein NAHI tha — v2.6 mein dobara likha.
+* pc/doctor.js v2.6 (VER '2.6'):
+  - startBat: wscript.exe //B //Nologo chupa.vbs <bat> (chupa.vbs doctor khud likhta: WScript.Shell.Run "cmd /c ""bat""", 0) —
+    Node spawn(detached+windowsHide) Windows par window phir bhi dikhata tha. wscript na chale to purana spawn.
+  - killPid: process.kill + taskkill /F [/T] /PID. stopScript log "■ process band ki".
+  - alive(): non-periodic = sirf node process (v2.5); periodic = node ya bat. Non-periodic bat ho magar node nahi ->
+    stopBatOnly (purani loop /T band) -> startBat (do loop nahi banti).
+  - hideOnce(): pehli dafa (chupa.done file na ho) saari service bat loops + un ki node band -> usi chakkar mein chupke chalti hain.
+    Ye ek dafa ka hai; dobara chahiye to C:\khata-sync\chupa.done mita do.
+  - clockCheck: farq > 2 min -> schtasks /run "NT Waqt Theek" + w32tm; ghalat rahe to har 5 min jaanch (warna 30). clockOff
+    (sec, + = PC aage) pcStatus mein.
+* Saari 15 *-auto.bat: `timeout /t N /nobreak >nul` -> `ping -n N+1 127.0.0.1 >nul` (ghari badle to nahi atakta).
+  REM line JAAN BUJH KAR nahi jori — chalti bat ka byte offset same rahe (cmd chalti file dobara parhti hai).
+  KHATA-DOCTOR.bat NAHI badli (app.js DOCTOR_BAT ke barabar rehni chahiye).
+* pc/manifest.json 2026-10-04.1 — sab files ki sha dobara (16 badli).
+* app v2.77.0: 🖥️ PC scripts mein d.clockOff > 120 -> laal "⏰ PC ka waqt N ghante/minute aage/peeche ...". Version 2.76.1 -> 2.77.0
+  (app, cloud, index, notes, pos-ledger, pos-stock, purchase, sale, style, sw, version.json).
+* Root ka doctor.js (v2.1) purana hai — doctor sirf pc/ se leta hai; root wala kaam ka nahi.
+* Test: alive/runsBat (bat-only non-periodic = band; periodic = zinda; sync.js != pos-khata-sync.js), chupa.vbs quoting, pcHTML
+  laal line. Asal Windows par wscript/chupa YAHAN test nahi — PC par 30 min (ya app "▶ Abhi check") ke baad dekhein: windows band
+  ho kar 🟢 chal rahi, doctor-log mein "🙈 v2.6".
+* "NT Waqt Theek" task non-admin doctor se schtasks /run ho sakta hai ya nahi — pakka nahi (access denied ho to log aata hai);
+  task khud har ghante chalta hai.

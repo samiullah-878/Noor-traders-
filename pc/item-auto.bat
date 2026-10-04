@@ -5,5 +5,5 @@ cd /d C:\khata-sync
 node item-post.js
 echo.
 echo [%date% %time%] item-post band ho gaya - 30 second baad dobara...
-timeout /t 30 /nobreak >nul
+ping -n 31 127.0.0.1 >nul
 goto loop

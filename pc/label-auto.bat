@@ -4,5 +4,5 @@ cd /d C:\khata-sync
 :loop
 node label-print.js >> label-log.txt 2>&1
 if errorlevel 3 if not errorlevel 4 exit /b
-timeout /t 30 /nobreak >nul
+ping -n 31 127.0.0.1 >nul
 goto loop
