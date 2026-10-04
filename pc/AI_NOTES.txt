@@ -1189,3 +1189,16 @@ Malik: "tokri kitni hai, bill number ke saath, print nahi ho raha" (Abdurehman/B
   Dobara print (printReq) par token NAHI (sirf bill) — pehle jaisa.
 * App sale.js v2.79.1: "Kitne crate?" ab HAR counter par poochhta (pehle sirf Yehi device / PC).
 * Test: nt-print builders (bill/gate/token) nt-parchi ke saath ✓ (node). Asal printer YAHAN test nahi.
+
+==================== 2026-10-04 (raat) — COUNTER PRINTERS KA NAQSHA (server local-config.json) ====================
+Server DESKTOP-Q1SLV77 ke C:\khata-sync\local-config.json mein ab counterPrinters hai (pehle tha hi nahi — sab bills server ke
+TM-T88IV par ja rahe the):
+  abdurehman -> \\DESKTOP-KEIME1D\EPSON TM-T88IV Receipt   (Abdurehman ka PC; share seedha laga)
+  bilal      -> TM-T88IV                                   (server ka apna, USB)
+  mithu      -> \\DESKTOP-8BR23BF\MithuRAW                 (Mithu ka PC)
+Mithu ka asal printer "EPSON TM-T88V Receipt" (port ESDPRT001 = Epson virtual) tha; server par T88V driver nahi aur ESDPRT par
+Generic driver nahi chalta. Hal: Mithu ke PC par doosra printer "Mithu-USB002" (Generic / Text Only, asal USB002 port) banaya,
+share 'MithuRAW'; server Add-Printer -ConnectionName. POS wahan purane EPSON printer se hi chhapta hai.
+Sharing ke liye Mithu PC par: printer shared + firewall "File and Printer Sharing" + guest/anonymous reg (Lsa) ; server par
+LanmanWorkstation AllowInsecureGuestAuth=1. Test: "x" | Out-Printer -Name '\\DESKTOP-8BR23BF\MithuRAW'.
+Laptop (DESKTOP-?): NT-PRINT ke liye shared printers lagaye the — zaroorat nahi, counter chips server se chhapte hain.
