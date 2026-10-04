@@ -2379,3 +2379,26 @@ lagta magar login screen phir bhi dikhti hai".
 * Boot overlay: auto-login ke dauran sirf session / 15 s / fail message (nahi|ghalat|error|S\d:|baar baar) par hatta —
   pehle loginMessage badalte hi hat jata tha, is liye login page jhalakta tha.
 * CSS .dev-list/.dev-row.
+
+==================== 2026-10-04 (raat) — COUNTER PRINTERS KA NAQSHA (server local-config.json) ====================
+Server DESKTOP-Q1SLV77 ke C:\khata-sync\local-config.json mein ab counterPrinters hai (pehle tha hi nahi — sab bills server ke
+TM-T88IV par ja rahe the):
+  abdurehman -> \\DESKTOP-KEIME1D\EPSON TM-T88IV Receipt   (Abdurehman ka PC; share seedha laga)
+  bilal      -> TM-T88IV                                   (server ka apna, USB)
+  mithu      -> \\DESKTOP-8BR23BF\MithuRAW                 (Mithu ka PC)
+Mithu ka asal printer "EPSON TM-T88V Receipt" (port ESDPRT001 = Epson virtual) tha; server par T88V driver nahi aur ESDPRT par
+Generic driver nahi chalta. Hal: Mithu ke PC par doosra printer "Mithu-USB002" (Generic / Text Only, asal USB002 port) banaya,
+share 'MithuRAW'; server Add-Printer -ConnectionName. POS wahan purane EPSON printer se hi chhapta hai.
+Sharing ke liye Mithu PC par: printer shared + firewall "File and Printer Sharing" + guest/anonymous reg (Lsa) ; server par
+LanmanWorkstation AllowInsecureGuestAuth=1. Test: "x" | Out-Printer -Name '\\DESKTOP-8BR23BF\MithuRAW'.
+Laptop (DESKTOP-?): NT-PRINT ke liye shared printers lagaye the — zaroorat nahi, counter chips server se chhapte hain.
+
+==================== v2.80.1 (2026-10-04) — LOGIN PARDA LOGIN TAK · DOOSRA TAB KHABARDAR · ⏱ KAHAN WAQT LAGA ====================
+Malik: laptop par mulazim ko refresh par login page; pic mein 2 tabs khule + ⏱ 96.3s.
+* Boot parda (#boot) ab login mukammal hone tak (ya fail message / 120 s); 30 s baad .boot-skip "Der ho rahi hai… Login page
+  kholein". (Pehle 15 s par hat jata -> sust net par login page jhalakta.)
+* BroadcastChannel 'sam-tabs': doosra tab -> #tabWarn banner "doosre tab mein bhi khuli hai — ek band kar dein" (dono tab ka
+  Firebase auth ek hai, login() signOut karta hai -> ek doosre ko kaat dete).
+* reset() (booting nahi) -> event 'sam-signed-out' -> akela tab + sam-no-auto nahi -> 1.2 s baad tryAutoLogin('relogin')
+  (yaad kiye password se chup-chaap). 2 tabs ho to nahi (tug-of-war na ho).
+* ⏱ bootTime tap -> modal: Firebase tayyar / Login / pehli screen ke waqt (bootMark auth/session), internet type.
