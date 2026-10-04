@@ -2363,3 +2363,19 @@ Malik: "tokri kitni hai, bill number ke saath, print nahi ho raha" (Abdurehman/B
   Dobara print (printReq) par token NAHI (sirf bill) — pehle jaisa.
 * App sale.js v2.79.1: "Kitne crate?" ab HAR counter par poochhta (pehle sirf Yehi device / PC).
 * Test: nt-print builders (bill/gate/token) nt-parchi ke saath ✓ (node). Asal printer YAHAN test nahi.
+
+==================== v2.80.0 (2026-10-04) — DEVICE JORAIN: KAI SCREENS · PASSWORD BADLE TO KHUD UPDATE · LOGIN PAGE NA JHALKE ====================
+Malik: device add karne ke baad kabhi password na lage (password badalne par bhi), ek saath kai screens, aur "password nahi
+lagta magar login screen phir bhi dikhti hai".
+* Device side (devJoinStart): deviceJoins doc 30 din valid (pehle 10 min). scope 'purchase,sale' + pw 'enc|enc' -> har scope
+  remembered (o.items['staff:'+sc]); pehla scope last. localStorage 'sam-dev-joined'.
+* Malik modal #devJoin: chips multi-select, har chuni screen ka alag password field (#djPws data-pw); 390 harf se zyada enc
+  (rules pw<=400) -> 3 screens tak. joinOffer {scope:'a,b', pw:'enc|enc', name}. Rules NAHI badle.
+* cloud.getJoined / setJoined: blueAccess/joinedDevices {list:[{id,name,scopes,at}],at} (malik generic rule se).
+* Mulazim password badalne par (staffPass formSave): jude hue devices jin ke scopes mein wo scope hai -> joinOffer naya pw
+  (devEnc per device) -> notice "📱 N device(s) ko naya password bhej diya". Device par agli boot: remembered fail ->
+  login page -> devJoinStart 2 s -> naya pw -> auto login. (Device 30 din ke andar khule.)
+* Settings -> 👥 -> "📋 Jude hue devices" (#devList): list + ✕ Hatao (sirf list se; yaad kiya password device par rehta).
+* Boot overlay: auto-login ke dauran sirf session / 15 s / fail message (nahi|ghalat|error|S\d:|baar baar) par hatta —
+  pehle loginMessage badalte hi hat jata tha, is liye login page jhalakta tha.
+* CSS .dev-list/.dev-row.
