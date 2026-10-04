@@ -49,7 +49,24 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
   };
   function reset() {
     activeUid = null;
+    optimistic = null;
     onReset();
+  }
+  // v2.81: ⚡ FORAN KHULNA — pichhla tasdeeq shuda session (isi UID ka) phone par yaad; boot par foran onSession, server ki jaanch
+  // (getSession + getAccount) peeche. Jaanch fail = reset + signOut (pehle jaisa). Internet band = yaad wala session chalta rahe.
+  // Server rules phir bhi har read/write jaanchte hain — ye sirf screen jaldi dikhane ke liye hai.
+  const CK = 'sam-sess-v1';
+  const ls = () => { try { return globalThis.localStorage || null; } catch { return null; } };
+  let optimistic = null;
+  const readCache = uid => { try { const c = JSON.parse(ls()?.getItem(CK) || 'null'); return c && c.uid === uid && Date.now() - (Number(c.at) || 0) < 30 * 864e5 ? c : null; } catch { return null; } };
+  const writeCache = s => { try { const a = s.account ? Object.fromEntries(Object.entries(s.account).filter(([k]) => !/hash|salt|pass|pw|secret|key|cred/i.test(k))) : undefined; ls()?.setItem(CK, JSON.stringify({ uid: s.user.uid, role: s.role, scope: s.scope, phone: s.phone, account: a, at: Date.now() })); } catch {} };
+  const clearCache = () => { try { ls()?.removeItem(CK); } catch {} };
+  function emit(s) {
+    writeCache(s);
+    const o = optimistic; optimistic = null;
+    if (o && o.user?.uid === s.user.uid && o.role === s.role && (o.scope || '') === (s.scope || '')) { Object.assign(o, s, { optimistic: false }); return; }   // wahi session — dobara listeners nahi
+    if (o) { activeUid = null; onReset(); }
+    onSession(s);
   }
   async function activate(user, ticket, expectedRole, expectedScope) {
     check(ticket, user);
@@ -68,10 +85,10 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       }
       const scope=account.scope||'full';
       if(!['full','purchase','stock','sale','galla'].includes(scope)||(expectedScope&&scope!==expectedScope))throw failure('login/scope-required');
-      onSession({ role: 'staff', scope, user, phone, account });
+      emit({ role: 'staff', scope, user, phone, account });
     } else {
       if (expectedRole === 'staff' || !isOwnerUser(user)) throw failure('login/owner-required');
-      onSession({ role: 'owner', user });
+      emit({ role: 'owner', user });
     }
     activeUid = user.uid;
   }
@@ -82,10 +99,19 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
     const ticket = ++epoch;
     reset();
     if (!user) return;
+    const c = readCache(user.uid);
+    if (c && (c.role === 'owner' ? !user.isAnonymous : user.isAnonymous)) {
+      optimistic = { role: c.role, scope: c.scope, phone: c.phone, account: c.account, user, optimistic: true };
+      activeUid = user.uid;
+      try { onSession(optimistic); } catch {}
+    }
     try {
       await activate(user, ticket);
     } catch (error) {
       if (ticket !== epoch) return;
+      const off = ['unavailable', 'auth/network-request-failed'].includes(error.code);
+      if (off && optimistic) { optimistic = null; return; }   // internet band — yaad wala session chalne do
+      clearCache();
       reset();
       const offline = ['unavailable', 'auth/network-request-failed'].includes(error.code);
       if (!offline && auth.currentUser?.uid === user.uid) await sdk.signOut(auth);
@@ -157,6 +183,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       finally { pending = false; }
     },
     async logout() {
+      clearCache();
       ++epoch;
       reset();
       await sdk.signOut(auth);
