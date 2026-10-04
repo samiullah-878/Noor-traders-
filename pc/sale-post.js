@@ -1,5 +1,6 @@
 // ============================================================
 //  sale-post.js — Blue Khata app ki "Nayi Sale" -> POS Sale bill (v1)
+//  v1.6 (2026-10-04): rasid + gate pass ke baad har crate ka TOKEN bhi usi counter printer par (nt-parchi.js saanjha)
 //  v1.5.2 (2026-10-04): counter 'local' / 'pc:<id>' par print NAHI (app / NT-PRINT khud chhapte hain) — pehle local par bhi PC chhapta tha
 //
 //  App sale Firestore "appSales" mein status "new" ke saath likhta hai. Yeh script:
@@ -451,6 +452,16 @@ async function printGatePasses(r, printer = PRINTER_NAME) {
     log(err ? 'Gate pass print nahi hua (' + (names[g] || g) + '): ' + err.message : 'GATE PASS print: ' + (names[g] || g) + ' · Sale ' + r.saleNo);
   }
 }
+// 2026-10-04: TOKEN parchi (bara number + Urdu "اس بل کے N کریٹ ہیں" + Crate i/N + Bill #) — wahi jo app 'Yehi device' / NT-PRINT par chhapti hai.
+// nt-parchi.js saanjha: raster PowerShell (NtPrint1.dll) se, har parchi ALAG job + cut.
+let PARCHI = null;
+async function printTokens(d, saleNo, printer) {
+  const tok = Number(d.token) || 0, n = Math.max(1, Math.min(20, Number(d.crates) || 1));
+  if (!tok && !Number(d.crates)) return;
+  if (!PARCHI) PARCHI = require('./nt-parchi.js').make({ dir: DIR, width: PRINT_WIDTH });
+  const err = await PARCHI.sendJobs(PARCHI.tokenJobs({ saleNo, token: tok, crates: n, doneAt: Date.now() }), printer || PRINTER_NAME);
+  if (err) log('Token parchi nahi hui (' + printer + '): ' + err.message); else log(`Token parchi: ${tok || '-'} x${n} -> ${printer || PRINTER_NAME}`);
+}
 async function printSale(saleNo, saleId, copies = 1, printer = PRINTER_NAME) {   // 2026-10-01: bill `copies` dafa (1-3), gate pass alag (ek hi)
   if (!AUTO_PRINT) return;
   const text = await receiptFor(saleNo, saleId), n = Math.min(3, Math.max(1, Number(copies) || 1));
@@ -488,6 +499,7 @@ async function handleSale(doc) {
         const pr = printerFor(ok.counter);
         await printSale(r.saleNo, r.saleId, ok.copies, pr).catch(e => log('Print masla: ' + e.message));
         await printGatePasses(r, pr).catch(e => log('Gate pass masla: ' + e.message));
+        await printTokens(ok, r.saleNo, pr).catch(e => log('Token masla: ' + e.message));   // 2026-10-04: har crate ka TOKEN bhi (nt-parchi)
       }
     } catch (e) {
       log(`Sale NAHI bani (${id}): ${e.message}`);
@@ -529,7 +541,7 @@ if (process.argv.includes('--print')) {
   lock.listen(LOCK_PORT, '127.0.0.1', async () => {
     try {
       await basics(await getPool());
-      log('sale-post v1.5.2 chal raha hai — app ki sale ka intezar. Band: Ctrl+C');
+      log('sale-post v1.6 chal raha hai — app ki sale ka intezar. Band: Ctrl+C');
       listen();
     } catch (e) { log('Shuru nahi hua: ' + e.message); process.exit(1); }
   });
