@@ -2410,3 +2410,12 @@ dikhe) + signInAnonymously + PBKDF2 + createPasswordSession = 10-15 s.
 * Ab (resumeLogin || resume).call(controller, role, scope) — boot aur 'relogin' dono. Firebase persisted user (browserLocal)
   par seedha activate (session + account jaanch) -> ⚡ 1-3 s, login page nahi. Fail -> purana go() (🔑).
 * resuming flag: resume ke andar reset() -> 'sam-signed-out' -> relogin listener ab nahi chalta (busy loop se bacha).
+
+==================== v2.80.3 (2026-10-04) — BOOT: FIREBASE RESTORE KO AKELE CHALNE DO ====================
+Malik pic: v2.80.2 par ⏱ 9.8s aur nishan KHALI (na ⚡ na 🔑) = session auth-controller restore() (onAuthStateChanged) se aaya.
+Pehle: stopBooting -> login form + tryAutoLogin('boot') -> resume -> 'login/busy' (restore pending) -> catch -> go() -> poora
+login() (signOut -> login page) — dono takrate the.
+* stopBooting: connected.currentUid() ho to bootPath '🔄', parda rehta, sirf session ka intezar (150 ms poll); 30 s ya fail
+  message (nahi|ghalat|error|S\d:|band|ijazat) par purana oldBoot() (login form + tryAutoLogin, bootPath 🔑). currentUid na ho
+  (pehli dafa / logout) -> seedha oldBoot().
+* Waqt 9.8 s = activate() ki getSession + getAccount server reads (internet). ⏱ par tap = tafseel.
