@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.82.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.82.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.83.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.83.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -19,7 +19,7 @@ const todayStr = () => { const d = new Date(), p = n => String(n).padStart(2, '0
 const SALE_BRANCH = 1;          // POS bill hamesha NOOR TRADERS (branch 1) mein
 const DRAFT_KEY = 'sam-sale-draft';
 
-let cloud = null, rerender = () => {}, notice = () => {}, isOwner = () => false, uidOf = () => '';
+let cloud = null, rerender = () => {}, notice = () => {}, isOwner = () => false, uidOf = () => '', nameOf = () => '';
 let mode = 'counter', godam = null, cart = [], cash = null, note = '', saving = false;
 let sales = [], salesDay = '', stopSales = null, salesErr = '';
 let searchFocused = false;   // v1.75
@@ -28,7 +28,7 @@ export function saleSetup(o) {
   { const before = camMissing(); camCheck().then(() => { if (camMissing() !== before && document.querySelector('.sale-camrow')) { try { renderSale(); } catch {} } }); }   // v2.77: PC par camera nahi -> 🔫
   cloud = o.cloud; rerender = o.rerender || rerender; notice = o.notice || notice;
   if (!pcsUn) try { pcsUn = cloud?.listenPrintPCs?.(pcsChanged) || null; } catch {}   // v2.78: 💻 PC chunein
-  isOwner = o.owner || isOwner; uidOf = o.uid || uidOf; learnOf = o.learn || learnOf;
+  isOwner = o.owner || isOwner; uidOf = o.uid || uidOf; learnOf = o.learn || learnOf; nameOf = o.name || nameOf;
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
     if (d && d.day === todayStr()) { cart = d.cart || []; mode = cart.length ? (d.mode || 'counter') : 'counter'; godam = d.godam ?? null; cash = d.cash ?? null; note = d.note || ''; }   // v2.63: khali bill = hamesha Counter
@@ -110,7 +110,7 @@ const counterDiv = () => `<div class="sale-copies sale-counter"><small>🖨 Coun
 const printerDiv = () => { if (!isPC(counter)) return ''; const p = pcOf(counter); const list = Array.isArray(p?.printers) ? p.printers.filter(x => x && x.n && x.h) : []; if (!list.length) return ''; const cur = String(counter).split(':')[2] || '';
   return `<div class="sale-copies sale-prn"><small>🖨 Printer</small><button type="button" data-sale-printer=""${cur ? '' : ' class="on"'}>Default${p.printer ? ' (' + esc(String(p.printer).slice(0, 16)) + ')' : ''}</button>${list.map(x => `<button type="button" data-sale-printer="${esc(x.h)}"${cur === x.h ? ' class="on"' : ''}>${esc(x.n.slice(0, 22))}</button>`).join('')}</div>`; };
 const setPrinter = h => { if (!isPC(counter)) return; setCounter('pc:' + String(counter).split(':')[1] + (h ? ':' + h : ''), true); };
-document.addEventListener('click', e => { const b = e.target.closest?.('[data-sale-printer]'); if (b) setPrinter(b.dataset.salePrinter); });
+document.addEventListener('click', e => { const b = e.target.closest?.('[data-sale-printer]'); if (b) setPrinter(b.dataset.salePrinter); const c = e.target.closest?.('[data-live-clear]'); if (c && isOwner() && cloud?.liveCartStop) cloud.liveCartStop(counter, null).then(() => notice('✓ Clear')).catch(er => notice('Nahi hua: ' + (er?.message || er))); });
 const copyChips = () => counterDiv() + printerDiv() + `<div class="sale-copies"><small>🖨 Bill print</small>${[1, 2, 3].map(n => `<button type="button" data-sale-copies="${n}"${copies === n ? ' class="on"' : ''}>×${n}</button>`).join('')}<small class="sale-copies-h">gate pass ×1</small></div>`;
 function pcsChanged(list) {   // v2.78: chips jagah par badlo (poora render nahi — likhte waqt focus na jaye)
   PCS = (Array.isArray(list) ? list : []).filter(p => p && p.id).sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id)));
@@ -271,7 +271,7 @@ function vbAdd(text) {
   if (!lastSug) notice('🎤 Suna: "' + heard.slice(0, 60) + '" — item ka naam samajh nahi aaya');
 }
 let vbHold = false, vbStopT = 0, vbHeard = '', vbDone = '';
-function vbStart() {               // v2.82.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
+function vbStart() {               // v2.83.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
   if (vbRec) { try { vbRec.abort(); } catch {} vbRec = null; }
@@ -372,6 +372,32 @@ function qtyText(l) {
 }
 
 // ---------- screen ----------
+// v2.83: 📺 COUNTER NAZAR — bill bante waqt har line nigrani wale ko live (liveCarts/<counter>). ⛔ ROKO -> yahan laal, save band.
+let liveSig = '', liveTimer = null, liveDoc = null, liveUn = null, liveCounter = '', liveIdleT = null;
+const liveLines = () => cart.filter(l => l && l.name).map(l => { const pcs = Number(l.pcs) || 0, ctn = Number(l.ctn) || 0, pack = Number(l.pack) || 0; return { n: String(l.name).slice(0, 60), q: ctn && pack > 1 ? `${num(ctn)} ${l.cName || 'Ctn'}${pcs ? ' + ' + num(pcs) + ' ' + (l.uName || 'Pcs') : ''}` : `${num(pcs)} ${l.uName || 'Pcs'}`, a: lineTotal(l) }; });
+function liveSync(force) {
+  if (!cloud?.liveCartSet || !counter) return;
+  const lines = liveLines(); const sig = counter + '|' + mode + '|' + JSON.stringify(lines);
+  if (!force && sig === liveSig) return; liveSig = sig;
+  clearTimeout(liveIdleT);
+  const empty = !lines.length;
+  cloud.liveCartSet(counter, { status: empty ? 'idle' : 'open', mode, lines, n: lines.length, total: cartTotal(), by: uidOf(), byName: byNameOf() }).catch(() => {});
+}
+const byNameOf = () => { try { return String(nameOf() || (isOwner() ? 'Malik' : '')).slice(0, 40); } catch { return ''; } };
+function liveSaved(doc) {
+  if (!cloud?.liveCartSet) return;
+  const last = [{ saleId: doc.id, token: doc.token || 0, crates: doc.crates || 1, total: doc.total, n: doc.lines?.length || 0, at: Date.now(), byName: byNameOf() }, ...(Array.isArray(liveDoc?.last) ? liveDoc.last : [])].slice(0, 5);
+  cloud.liveCartSet(counter, { status: 'saved', saleId: doc.id, token: doc.token || 0, crates: doc.crates || 1, total: doc.total, n: doc.lines?.length || 0, lines: liveLines(), last, byName: byNameOf() }).catch(() => {});
+  liveSig = '';
+  liveIdleT = setTimeout(() => { if (!cart.length) liveSync(true); }, 12000);
+}
+function liveWatch() {
+  if (liveCounter === counter || !cloud?.listenLiveCart) return;
+  try { liveUn?.(); } catch {} liveCounter = counter;
+  liveUn = cloud.listenLiveCart(counter, d => { const was = !!liveDoc?.stop; liveDoc = d; if (!!d?.stop !== was) { if (d?.stop) { try { navigator.vibrate?.([200, 100, 200]); } catch {} } rerender(); } });
+}
+const liveStopped = () => !!liveDoc?.stop && liveDoc.counter === counter;
+setInterval(() => { try { if (document.querySelector('.sale-camrow')) { liveWatch(); liveSync(); } } catch {} }, 800);
 export function renderSale() {
   installSaleHooks(); watchSales();
   const s = stock();
@@ -398,6 +424,7 @@ export function renderSale() {
   if (!s.loaded) { $('list').innerHTML = stockWaitHTML(); $('actions').innerHTML = ''; return; }
 
   const q = norm(si?.value || '');
+  if (liveStopped()) { const b = document.createElement('div'); b.className = 'live-stop'; b.innerHTML = `<b>⛔ Nigrani ne roka</b> — crate camera ko dikhayein. Bill save nahi hoga jab tak clear na ho.${esc(liveDoc.stop.name || '')} ${liveDoc.stop.at ? new Date(liveDoc.stop.at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : ''}${isOwner() ? ' <button type="button" data-live-clear="1">✓ Theek hai</button>' : ''}`; $('list').prepend(b); }
   let found = '';
   const camRow = `<div class="sale-camrow"><button type="button" class="sale-cam${camMissing() ? ' gun' : ''}" data-sale-camera="1" title="${camMissing() ? 'Is PC par camera nahi — scanner gun se scan karein' : 'Camera se barcode scan'}">${camMissing() ? '🔫 Scanner gun' : '📷 Scan'}</button><button type="button" class="sale-mic dm-btn" data-demand="1" title="Demand">📢</button><button type="button" class="sale-mic${vbOn ? ' on' : ''}" data-sale-mic="1" title="Daba kar bolo">${vbOn ? '🎤 Bolein…' : '🎤 Daba kar bolo'}</button><span class="stat-note">Naam likhein ya scan karein</span></div>`;
   if (!q && searchFocused) {   // v1.75: khali search par aksar bikne wale items
@@ -503,7 +530,7 @@ document.addEventListener('pointercancel', () => vbRelease());
 document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sale-mic]')) e.preventDefault(); });
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.82.0: hold se chalta hai
+  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.83.0: hold se chalta hai
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {
@@ -576,6 +603,7 @@ function focusLast() {
 
 async function save() {
   if (saving) return;
+  if (liveStopped()) { notice('⛔ Nigrani ne roka hai — pehle crate dikhayein, clear hone ke baad save hoga'); try { navigator.vibrate?.(300); } catch {} return; }   // v2.83
   // v1.61: carton aur khule piece ke rate alag hon to POS ko DO lines (unit 'ctn' / 'pcs'), warna ek line
   const lines = [];
   let emptyLines = 0;
@@ -623,6 +651,7 @@ async function save() {
     const p = cloud.saveAppSale(doc);
     // internet na ho to bhi phone par mehfooz; net aate hi chali jayegi
     await Promise.race([p, new Promise(r => setTimeout(r, 4000))]);
+    try { liveSaved(doc); } catch {}   // v2.83: nazar ko "✓ Bill ban gaya"
     if (counter === 'local') localQueue(doc.id, copies, doc.crates);   // v2.72: bill bante hi isi device par print
     if (isPC(counter) && !pcLive(pcOf(counter))) setTimeout(() => notice('💤 Chuna hua PC abhi band hai / NT-PRINT nahi chal raha — bill ban jayega magar print nahi hoga. Doosra counter chunein.'), 1200);   // v2.78
     crates = 1;
@@ -665,7 +694,7 @@ document.addEventListener('keydown', e => {
     copies = n; try { localStorage.setItem('sam-sale-copies', String(n)); } catch {}
     document.querySelectorAll('[data-sale-copies]').forEach(x => x.classList.toggle('on', Number(x.dataset.saleCopies) === n));
     const b = document.querySelector('[data-sale-save]'); if (!b || b.disabled) { notice('Save abhi nahi ho sakta'); return; }
-    { askCrates(() => { quickSave = true; setTimeout(() => { quickSave = false; }, 4000); b.click(); }); return; }   // v2.72 · v2.82.0: har counter (Abdurehman/Bilal/Mithu bhi — sale-post token chhapta hai)
+    { askCrates(() => { quickSave = true; setTimeout(() => { quickSave = false; }, 4000); b.click(); }); return; }   // v2.72 · v2.83.0: har counter (Abdurehman/Bilal/Mithu bhi — sale-post token chhapta hai)
     quickSave = true; setTimeout(() => { quickSave = false; }, 4000); b.click();
   };
   const key = ev => { const ck = { a: 'abdurehman', b: 'bilal', m: 'mithu', d: 'local' }[String(ev.key).toLowerCase()]; if (ck) { ev.preventDefault(); ev.stopPropagation(); setCounter(ck); return; } if (['1', '2', '3'].includes(ev.key)) { ev.preventDefault(); ev.stopPropagation(); done(Number(ev.key)); } else if (ev.key === 'Enter') { ev.preventDefault(); ev.stopPropagation(); done(copies); } else if (ev.key === 'Escape' || ev.key === 'F5') { ev.preventDefault(); ev.stopPropagation(); done(0); } };
