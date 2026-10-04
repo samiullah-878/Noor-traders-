@@ -2352,3 +2352,14 @@ Malik: "login page tang karta hai — ek dafa password lag jaye to usi device pa
 * index.html / switch card: checkbox label "🔒 Is device par yaad rakhein (Logout tak)" (pehle "30 din"). Default checked pehle se tha.
 * Logout pehle jaisa: sessionStorage sam-no-auto -> us session mein auto nahi; agli dafa phir auto (password yaad hai).
   Agar malik chahe "Logout = password bhool jao" to forgetRemembered() logout mein jorna hoga (abhi nahi kiya).
+
+==================== v2.79.1 + sale-post v1.6 + nt-print v1.3 + nt-parchi v1.0 (manifest 2026-10-04.5) — COUNTER PAR BHI TOKEN ====================
+Malik: "tokri kitni hai, bill number ke saath, print nahi ho raha" (Abdurehman/Bilal/Mithu counter se). Pehle token sirf
+'local' / 'pc:' raaste par tha.
+* pc/nt-parchi.js (NAYA, saanjha): make({dir,width,dots,fontUr}) -> Seg (ESC/POS + raster segments), tokenJobs(d),
+  sendJobs(jobs, printer) (nt-print.ps1 + NtPrint1.dll khud likhta), line/hr/when. nt-print.js ab isi ko istemal karta (v1.3).
+* pc/sale-post.js v1.6: handleSale -> printSale -> printGatePasses -> printTokens(ok, saleNo, pr): har crate ka TOKEN
+  (bara number, Urdu "اس بل کے N کریٹ ہیں", Crate i/N, Bill #, waqt) usi counter printer par, har parchi alag cut.
+  Dobara print (printReq) par token NAHI (sirf bill) — pehle jaisa.
+* App sale.js v2.79.1: "Kitne crate?" ab HAR counter par poochhta (pehle sirf Yehi device / PC).
+* Test: nt-print builders (bill/gate/token) nt-parchi ke saath ✓ (node). Asal printer YAHAN test nahi.
