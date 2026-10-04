@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-print.js  v1.0 (2026-10-04) — 💻 NT-PRINT: app ka bill IS PC ke printer par, bina kisi window ke
+//  nt-print.js  v1.1 (2026-10-04) — 💻 NT-PRINT: app ka bill IS PC ke printer par, bina kisi window ke
 //
 //  App (Nayi Sale) mein counter "💻 <PC ka naam>" chuna ho to sale ka doc counter = 'pc:<id>' hota hai.
 //  sale-post (main PC) POS mein bill banata hai (status done + saleNo) magar 'pc:' par PRINT NAHI karta.
@@ -12,7 +12,10 @@
 //    "pcName": "Counter PC"   (app mein yehi naam)      "ntPrinter": "TM-T88IV"  (warna Windows default printer)
 //    "printWidth": 32  (harf fi line)   "dots": 512 (printer ki chaurai dots — 58mm = 384)
 //    "godamNames": {"2": "Bara Godam"}  (SQL na ho to)
-//  Chalana: nt-print-auto.bat (loop).   Test: node nt-print.js --test   (naqli bill + token isi printer par)
+//  Chalana: nt-print-auto.bat (loop).   Test: node nt-print.js --test [--gate]   (naqli bill + 2 token; --gate = gate pass bhi)
+//  v1.2 (2026-10-04): app PC ke saath PRINTER bhi chun sakti hai (network wale Mithu/Abdurehman/Bilal bhi, jo is Windows mein lage hon):
+//        counter 'pc:<id8>:<printer-hash6>'; printPCs.printers = [{n, h}]. Listener: aaj ke sab appSales, counter khud chhanta.
+//  v1.1 (2026-10-04): rasid bilkul POS wali (sale-post receiptFor): phone, barcode, Items PCS CTN Rate, Total, Cash, Balance, shop lines
 // ============================================================
 const fs = require('fs');
 const os = require('os');
@@ -22,14 +25,15 @@ const { execFile, execFileSync } = require('child_process');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
-const VER = '1.0';
+const VER = '1.2';
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
 { const hb = path.join(DIR, 'nt-print.alive'); const w = () => { try { fs.writeFileSync(hb, String(Date.now())); } catch {} }; w(); setInterval(w, 30000).unref(); }
 const log = (...a) => console.log(`[${new Date().toLocaleString('en-GB')}]`, ...a);
 const cfg = () => { try { return JSON.parse(fs.readFileSync(path.join(DIR, 'local-config.json'), 'utf8')) || {}; } catch { return {}; } };
-const slug = s => String(s || 'pc').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 17) || 'pc';
+const slug = s => String(s || 'pc').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 8) || 'pc';   // v1.2: 8 harf (counter 'pc:<id>:<printer6>' <= 20)
+const h6 = s => require('crypto').createHash('sha1').update(String(s || '')).digest('hex').slice(0, 6);
 const C0 = cfg();
 const PC_ID = slug(C0.pcId || os.hostname());
 const PC_NAME = String(C0.pcName || os.hostname()).trim().slice(0, 40);
@@ -49,7 +53,9 @@ function scanPrinters() {
   try { PR_DEF = ps("(Get-CimInstance Win32_Printer -Filter 'Default=TRUE').Name").trim(); } catch { PR_DEF = ''; }
   prAt = Date.now();
 }
-const printerName = () => String(cfg().ntPrinter || PR_DEF || '').trim();
+const printerName = (hash) => { if (hash) { const p = PR_LIST.find(x => h6(x) === hash); if (p) return p; } return String(cfg().ntPrinter || PR_DEF || '').trim(); };   // v1.2: app ne printer chuna ho (hash) to wahi, warna default
+const mine = c => c === COUNTER || String(c || '').startsWith(COUNTER + ':');
+const hashOf = c => (String(c || '').split(':')[2] || '');
 
 // ---------------- ESC/POS parchi ----------------
 const ESC = '\x1b', GS = '\x1d';
@@ -72,34 +78,85 @@ const dstr = t => t.toLocaleDateString('en-GB');
 const tstr = t => t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
 const qtxt = l => l.unit === 'ctn' && Number(l.pack) > 1 ? `${num(Number(l.qty) / Number(l.pack))} ${l.cName || 'Ctn'}` : `${num(l.qty)} ${l.uName || 'Pcs'}`;
 
+// ---- Rasid bilkul POS / sale-post wali: naam, phone, barcode, jadwal (Items PCS CTN Rate), total, cash, balance, neeche shop ki lines ----
+const SHOP = {
+  name: 'NOOR TRADERS',
+  phone: '03450412515',
+  lines: [
+    'Agar hamare bill mein koi cheez aap ke ghar nahi',
+    'pohanchi ya koi bhi maslaha ho to is number par',
+    'rabta karein: 03450412515 Sami Ullah',
+    '',
+    'Bank HBL',
+    'IBAN: PK90HABB0002577900846303',
+    'Accounts title: Noor Traders',
+    '',
+    'Saman nikalwane ya home delivery ke liye list',
+    'WhatsApp karein. Delivery/packing time 3 to 5 ghante.'
+  ]
+};
+const n3 = v => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: 3 });
+const r3 = v => Math.round((Number(v) || 0) * 1000) / 1000;
+const pad = (t, w, right) => { t = String(t ?? ''); if (t.length > w) t = t.slice(0, w); return right ? t.padStart(w) : t.padEnd(w); };
+const big = t => ESC + '!' + '\x30' + t + ESC + '!' + '\x00';
+const bold = t => ESC + 'E' + '\x01' + t + ESC + 'E' + '\x00';
+const barcode = code => { const c = String(code || '').trim(); if (!c) return ''; return GS + 'h' + '\x50' + GS + 'w' + '\x02' + GS + 'H' + '\x02' + GS + 'k' + '\x49' + String.fromCharCode(c.length + 2) + '{B' + c + '\n'; };
+const whenStr = t => t.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });
+const custName = d => d.mode === 'wholesale' ? 'whole sale' : 'COUNTER SALE';
+// app ki line: qty = pieces, pack = carton mein pieces (POS PackQty) -> CTN / PCS
+const ctnPcs = l => { const pack = Number(l.pack) || 0, qty = Number(l.qty) || 0; const ctn = pack > 1 ? Math.floor(qty / pack + 1e-9) : 0; return { ctn, pcs: pack > 1 ? r3(qty - ctn * pack) : qty }; };
+
 function billJob(d) {
-  const s = Seg(), t = when(d), tok = Number(d.token) || 0, total = Number(d.total) || 0, cash = Number(d.cash) || 0;
-  s.raw(ESC + '@' + ESC + 'a\x01'); s.ln(ESC + '!\x30NOOR TRADERS' + ESC + '!\x00'); s.ln(d.mode === 'wholesale' ? 'WHOLESALE' : 'COUNTER SALE');
+  const s = Seg(), t = when(d), tok = Number(d.token) || 0, total = Number(d.total) || 0;
+  const cash = d.mode === 'wholesale' ? (Number(d.cash) || 0) : total;
+  s.raw(ESC + '@' + ESC + 'a\x01');
+  s.ln(big(SHOP.name)); s.ln(SHOP.phone);
   s.raw(ESC + 'a\x00'); s.ln(hr());
-  s.ln(ESC + 'E\x01' + line('Bill # ' + String(d.saleNo || ''), 'Token ' + (tok || '-')) + ESC + 'E\x00');
-  s.ln(line(dstr(t), tstr(t))); s.ln(hr());
+  { const sn = 'Sale No: ' + String(d.saleNo || '').trim(), ws = whenStr(t); if (sn.length + ws.length + 1 <= W) s.ln(line(sn, ws)); else { s.ln(bold(sn)); s.ln(line('', ws)); } }
+  if (tok) s.ln(bold(line('Token: ' + tok, '')));
+  s.raw(ESC + 'a\x01'); s.ln(barcode(String(d.saleNo || '').trim())); s.raw(ESC + 'a\x00');
+  s.ln('Customer: ' + custName(d));
+  s.ln(hr());
+  s.ln(bold(pad('Items', 14) + pad('PCS', 4, true) + pad('CTN', 4, true) + pad('Rate', 9, true)));
+  s.ln(hr());
+  let pcsSum = 0, ctnSum = 0;
   for (const l of Array.isArray(d.lines) ? d.lines : []) {
-    s.ln(String(l.name || '').slice(0, ascii(l.name) ? W : 60));
-    s.ln(line('  ' + qtxt(l) + ' x ' + num(l.rate), num(Math.round(Number(l.qty) * Number(l.rate)))));
+    const { ctn, pcs } = ctnPcs(l); pcsSum = r3(pcsSum + pcs); ctnSum += ctn;
+    const amt = Math.round(Number(l.qty) * Number(l.rate) * 100) / 100;
+    s.ln(String(l.name || '').trim().slice(0, ascii(l.name) ? W : 60));
+    s.ln(pad('', 1) + pad(n3(pcs), 6, true) + pad(num(ctn), 5, true) + pad(num(l.rate), 9, true) + pad(num(amt), 10, true));
   }
   s.ln(hr());
-  s.ln(ESC + '!\x10' + ESC + 'E\x01' + line('KUL', 'Rs ' + num(total)) + ESC + 'E\x00' + ESC + '!\x00');
-  if (d.mode === 'wholesale') { s.ln(line('Cash', num(cash))); if (total - cash > 0.5) s.ln(ESC + 'E\x01' + line('Udhaar', num(total - cash)) + ESC + 'E\x00'); }
-  s.raw(ESC + 'a\x01'); s.ln(hr()); s.ln('Shukriya - Blue Khata');
+  s.ln(line('Total (PCS ' + n3(pcsSum) + ' / CTN ' + num(ctnSum) + ')', ''));
+  s.raw(ESC + 'a\x02'); s.ln(big('Rs.' + num(total))); s.raw(ESC + 'a\x00');
+  s.ln(line('Cash Received:', 'Rs.' + num(cash)));
+  s.ln(line(d.mode === 'wholesale' ? 'Balance (Udhaar):' : 'Balance:', 'Rs.' + num(Math.round((total - cash) * 100) / 100)));
+  s.ln(hr());
+  for (const x of SHOP.lines) s.ln(x);
   return s.end();
 }
 function gateJobs(d, names) {
   const gp = {}; for (const l of Array.isArray(d.lines) ? d.lines : []) { const g = Number(l.godam) || 1; if (g !== Number(d.branch || 1)) (gp[g] = gp[g] || []).push(l); }
-  const t = when(d), tok = Number(d.token) || 0;
+  const t = when(d);
   return Object.entries(gp).map(([g, ls]) => {
     const s = Seg(); const gn = names[g] || ('Godam ' + g);
-    s.raw(ESC + '@' + ESC + 'a\x01'); s.ln(ESC + '!\x30GATE PASS' + ESC + '!\x00');
-    if (ascii(gn)) s.ln(ESC + '!\x30' + gn.slice(0, Math.floor(W / 2)) + ESC + '!\x00'); else s.img(gn, 34, true);
+    s.raw(ESC + '@' + ESC + 'a\x01'); s.ln(big('GATE PASS'));
+    if (ascii(gn)) s.ln(big(gn.slice(0, Math.floor(W / 2)))); else s.img(gn, 34, true);
     s.raw(ESC + 'a\x00'); s.ln(hr());
-    s.ln(ESC + 'E\x01' + line('Bill # ' + String(d.saleNo || ''), 'Token ' + (tok || '-')) + ESC + 'E\x00');
-    s.ln(line(dstr(t), tstr(t))); s.ln(hr());
-    for (const l of ls) { s.ln(String(l.name || '').slice(0, ascii(l.name) ? W : 60)); s.ln(ESC + 'E\x01' + line('', qtxt(l)) + ESC + 'E\x00'); }
-    s.ln(hr()); s.raw(ESC + 'a\x01'); s.ln('Maal de kar parchi rakh lein');
+    s.ln(bold('Sale No: ' + String(d.saleNo || '').trim()));
+    s.ln(whenStr(t));
+    s.raw(ESC + 'a\x01'); s.ln(barcode(String(d.saleNo || '').trim())); s.raw(ESC + 'a\x00');
+    s.ln('Customer: ' + custName(d));
+    s.ln(hr());
+    s.ln(bold(pad('Items', W - 12) + pad('CTN', 5, true) + pad('PCS', 7, true)));
+    s.ln(hr());
+    let pcsSum = 0, ctnSum = 0;
+    for (const l of ls) { const { ctn, pcs } = ctnPcs(l); pcsSum = r3(pcsSum + pcs); ctnSum += ctn;
+      s.ln(String(l.name || '').trim().slice(0, ascii(l.name) ? W : 60)); s.ln(pad('', W - 12) + pad(num(ctn), 5, true) + pad(n3(pcs), 7, true)); }
+    s.ln(hr());
+    s.ln(bold(line('Total', 'CTN ' + num(ctnSum) + ' / PCS ' + n3(pcsSum))));
+    s.ln(hr());
+    s.ln('Dene wale ke dastakhat: ________');
     return s.end();
   });
 }
@@ -187,10 +244,10 @@ if (process.argv.includes('--test')) {
   scanPrinters();
   const pr = printerName();
   const d = { saleNo: 'TEST-1', token: 7, crates: 2, mode: 'counter', branch: 1, total: 513.75, cash: 0, doneAt: Date.now(),
-    lines: [{ name: 'kala chana', qty: 0.05, rate: 275, unit: 'pcs' }, { name: 'ghee 1kg', qty: 1, rate: 500, unit: 'pcs', godam: 2 }] };
+    lines: [{ name: 'kala chana', qty: 0.05, rate: 275, unit: 'pcs' }, { name: 'ghee 1kg', qty: 14, rate: 500, unit: 'ctn', pack: 12, cName: 'Ctn', uName: 'Pcs', godam: process.argv.includes('--gate') ? 2 : 1 }] };
   console.log('Printer:', pr || '(nahi mila)', '| PC:', PC_NAME, '| id:', COUNTER);
   if (!pr) { console.log('Windows mein default printer set karein, ya local-config.json mein "ntPrinter"'); process.exit(1); }
-  sendJobs([billJob(d), ...gateJobs(d, { 2: 'Godam 2' }), ...tokenJobs(d)], pr).then(e => { console.log(e ? 'NAHI HUA: ' + e.message : 'Theek — 4 alag parchiyan aani chahiye (bill, gate pass, 2 token)'); process.exit(e ? 1 : 0); });
+  sendJobs([billJob(d), ...gateJobs(d, { 2: 'Godam 2' }), ...tokenJobs(d)], pr).then(e => { console.log(e ? 'NAHI HUA: ' + e.message : 'Theek — bill + 2 token (aur --gate ho to gate pass bhi), har ek alag cut'); process.exit(e ? 1 : 0); });
   return;
 }
 
@@ -203,7 +260,7 @@ const pcDoc = base.collection('printPCs').doc(PC_ID);
 
 async function beat() {
   if (!prAt || Date.now() - prAt > 10 * 60000) scanPrinters();
-  try { await pcDoc.set({ name: PC_NAME, host: os.hostname(), printer: printerName(), printers: PR_LIST, at: Date.now(), ver: VER, width: W }); }
+  try { await pcDoc.set({ name: PC_NAME, host: os.hostname(), printer: printerName(), printers: PR_LIST.map(n => ({ n, h: h6(n) })), at: Date.now(), ver: VER, width: W }); }
   catch (e) { log('⚠ report: ' + e.message); if (unauth(e)) { log('Firebase rabta toota (UNAUTHENTICATED) — dobara shuru'); setTimeout(() => process.exit(1), 500); } }
 }
 
@@ -213,14 +270,14 @@ const later = fn => { queue = queue.then(fn).catch(e => { log('Masla: ' + e.mess
 
 async function onDoc(doc) {
   const d = doc.data() || {}, id = doc.id;
-  if (d.counter !== COUNTER || d.status !== 'done' || !d.saleNo || busy.has(id)) return;
+  if (!mine(d.counter) || d.status !== 'done' || !d.saleNo || busy.has(id)) return;
   const printed = Number(d.pcPrintedAt) || 0;
   const fresh = !printed && Date.now() - (Number(d.doneAt) || Number(d.createdAt) || 0) < 30 * 60000;   // purane din ki history dobara na chhape
   const again = Number(d.printReq) > printed;
   if (!fresh && !again) return;
   busy.add(id);
   try {
-    const pr = printerName();
+    const pr = printerName(hashOf(d.counter));
     if (!pr) throw new Error('printer nahi mila — Windows mein default printer set karein');
     const cp = Math.min(3, Math.max(1, Number(d.copies) || 1));
     const jobs = Array.from({ length: cp }, () => billJob(d));
@@ -238,7 +295,7 @@ async function onDoc(doc) {
 
 function listen() {
   const day = today();
-  saleCol.where('counter', '==', COUNTER).where('date', '==', day).onSnapshot(s => {
+  saleCol.where('date', '==', day).onSnapshot(s => {   // v1.2: aaj ke sab, phir counter 'pc:<id>[:printer]' khud chhanta (range + date ko index chahiye hota)
     s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => onDoc(c.doc)); });
   }, e => { log('Listener toota: ' + e.message + ' — 30 sec mein dobara'); process.exit(1); });
   setInterval(() => { if (today() !== day) { log('Naya din — dobara shuru'); process.exit(0); } }, 60000);

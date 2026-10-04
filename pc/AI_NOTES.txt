@@ -1161,3 +1161,20 @@ Malik: "print on this device karein to window na aaye" (browser kabhi ijazat nah
   (bill / gate / token text + Urdu img segments) ✓. PowerShell/C# raster + asal printer YAHAN test nahi (Windows chahiye).
 * Doosre PC par: Node + C:\khata-sync\firebase-key.json (haath se copy — GitHub par kabhi nahi) + npm firebase-admin +
   Startup NT-PRINT.vbs (setup command chat mein).
+* nt-print v1.1 (manifest 2026-10-04.3): malik ne --test parchi dekhi — "pehle wale bill (POS rasid) jaisi ho: barcode, CTN".
+  Ab billJob = sale-post receiptFor jaisa: SHOP naam/phone/lines (copy), Sale No + waqt (lamba ho to agli line), Token bold,
+  CODE128 barcode, Customer (COUNTER SALE / whole sale), jadwal Items PCS CTN Rate (pack se CTN), Total (PCS/CTN), bara Rs.,
+  Cash Received, Balance (counter = total). Gate pass bhi sale-post gatePassText jaisa (barcode, CTN/PCS, dastakhat).
+  --test ab sirf bill + 2 token; gate pass test ke liye --test --gate.
+
+==================== v2.78.1 + nt-print v1.2 (manifest 2026-10-04.4) — 💻 PC KE SAATH PRINTER CHUNEIN ====================
+Malik: "Mithu / Abdurehman / Bilal printer ek hi network par hain — add karwa do" (NT-PRINT PC se un par bhi chhape).
+* nt-print v1.2: PC id slug 8 harf; printPCs.printers = [{n: naam, h: sha1(naam) 6 hex}]; counter 'pc:<id8>' (default printer)
+  ya 'pc:<id8>:<h6>' (chuna printer) — 20 harf ke andar, RULES NAHI badle. printerName(hash) -> wahi printer, na mile to default.
+  Listener ab where date == aaj (sab), counter mine() se khud chhanta (range + equality ko composite index chahiye hota).
+  Network printer Windows mein "Add printer" se laga ho to list mein khud aata hai.
+* App sale.js: pcOf/prnOf 'pc:id:h' parse; PC chip label "💻 Laptop · 🖨 Mithu"; PC chunne par neeche "🖨 Printer" row
+  (Default (naam) + har printer) — Sale screen (.sale-prn) aur F5 card (.f5-prn, data-f5p). setCounter(k, force): PC chip dobara
+  dabane par printer yaad rehta; Default chip force se hatata. setCounter PC change par pcsChanged (rows taza).
+* Test (happy-dom): PC chip -> printer row 4 chips; Mithu chunna -> 'pc:laptop:bbbbbb' + label; PC chip dobara -> yaad; Default
+  -> 'pc:laptop'; Mithu counter -> row ghayab ✓. Asal printer YAHAN test nahi.
