@@ -1,40 +1,45 @@
 {
-  "version": "2026-10-02.3",
+  "version": "2026-10-04.6",
   "note": "KHATA-DOCTOR manifest — sirf ye files PC par jati hain. local-config.json / firebase-key.json kabhi nahi.",
   "files": {
     "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
-    "bills-auto.bat": "54431947b55fa811e2a00fa69e743d5eb4a5aadd7c58cf914e15ba5864011d5e",
-    "doctor.js": "ff24157fb6db9bb1bdd0ab5c80cc6b8da314d07f53d3a67f60c0b6a36e4fe65b",
-    "farq-auto.bat": "3c12c5d09de14aa0ecaf0e4928f0aa0b6e0f55f2c1d01b3bdaaea32cf930b800",
-    "item-auto.bat": "885974cce1e5fbff99db3708889d4dcaa9eaa58db8d512d1cb97c20e4d64e5f9",
+    "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
+    "doctor.js": "ba7d26d48677aa44127493cac5fe5d8d13eb0d5e717bb2d318e48bf7c65fbca1",
+    "farq-auto.bat": "43b036da0a9dc1c7f7ffd42f085a57b6ee2c208ce093bcd135e9720d15858f8c",
+    "item-auto.bat": "3cf5fb7147862e01e667fcb2689428c9303539fe85b6b14762788658b6a108a3",
     "item-post.js": "cad10078a08fe8d1dd95911ced03ce19c1432ced5314dc212e045169cc2ef31e",
-    "khata-auto.bat": "cb51ba952434923d50b05247c0915540bdb80860103c31da0f374621966373c6",
-    "khata-sync-auto.bat": "0ebef5416f48dce60fb129c2d8a293fe5af022faa8689569ce1b4a64eed4259d",
-    "label-auto.bat": "4247598116d9498db2452b32861f36bb8a18d5df3b023036ae4f42da10407f5a",
+    "khata-auto.bat": "c6f019335516b837d486e8c47bd5d1acb753628b80669795df7bad51e9f718d7",
+    "khata-sync-auto.bat": "7006262d6b2e395b6212aa2b130c191bb3284b1a2bf60793ee537fd845f69905",
+    "label-auto.bat": "7094351892e48c7a2d4a32b2ac49e96e8d39e66856a3ff276d36b27b91368824",
     "label-print.js": "82e90553cb17ecc647e4cce42ee08dd42608622334cf2d67b976b4a84248fb6a",
     "pos-khata-sync.js": "2aac5a0519517adb7ac6e8d74811940a71490c1cdc089bf871afdbd408b92943",
     "post-farq.js": "79fb0c2a662d4f3828ef9971169d91dce510bc33b3b7b1b522b00551b88ddbde",
-    "purchase-auto.bat": "e008a0b5505c87b5606382735ba51946ede94ca865e73ff14463dabcdd6e392a",
+    "purchase-auto.bat": "f877f7a5c14ad0a654b499396e8661c20a1140c2b99d68c1a91b18cae440fb85",
     "purchase-post.js": "9d9c72e5a1bf0fb28a737b4a6c5ef8891c53ec884b014e34491c4c878a686932",
-    "rate-auto.bat": "cd219ab91d598bf8c555a57f45cdf445a2fdd0d3b74a102767f8dfab322a5846",
+    "rate-auto.bat": "5ef8ee9e5dab8c93513083444c472c8be819e6c5e21973008a31552f8c23152f",
     "rate-lagao.js": "ce2ae49d6b1f3a5153a3931aab6064faf91dfce9e6428c5ba3fbc55f89f1f6bd",
-    "sale-auto.bat": "051dde548ac7d1ab53e3aa58b33312680de373ba57206e981ac52d2687805648",
-    "sale-post.js": "9bd8a79fbd1222b648ad1a39ae98531fdbdce5e19220d6e9774093acf2abd503",
+    "sale-auto.bat": "dd778ec2ff7f58d3e8eedc8d0b70cc81713152b919048b8beb8c5b2f5ea4ab5d",
+    "sale-post.js": "1f1a5c6951e714dff7c57873d9b95241f38754f4095e2d7fe7a9951334b11574",
     "sql-config.js": "6e2bf966d0907b5be6c9001a249f1338ecb6f67ced6af9aff5d5921938742ba7",
-    "stock-auto.bat": "5dac7ff237518f54369fb988ea5d41420b52a4c0bd3c9b1a3df0dfb6cf8b72ce",
-    "subcode-auto.bat": "da847d900990b63eb8f33649dfab6db1ef5e86126ef6a1d9d252cc53375d8536",
+    "stock-auto.bat": "4d92cfa7495bf9bb0519228443e053537d1d6a096efecc97f3c999178790c47e",
+    "subcode-auto.bat": "40d8530886748dc71c8139a70ce768922f2e3c9aae896d2ed13731948e9d9d3a",
     "subcode-sync.js": "8a63bd6ab7a9440253deb3ae5159e160dabb06e4158da091a0b05e60723ca0a1",
     "sync-bills.js": "7ad67e89efbd5b221507fa1a7d5bb6b2fb7e4a4bba53c0cb58c53b09de87c777",
-    "sync-stock.js": "16e9314662a62eb00f9a559fcd5ac8ec94d61a116a6787cb8fc4f6c8b8e70bd8",
+    "sync-stock.js": "fa04e21bbaae4689541e7f15b8740f44282bcd0d68ca33e6a565a40b2379b8bb",
     "sync.js": "12537c97d798d20ab91a78e38dea6eb3e2853a0dc443093aa0de86bb964602fa",
-    "transfer-auto.bat": "43ba27116c4233a26c9ab0892cb3d33d64a8fdea9e505cb50ec7f32cc5201724",
-    "transfer-dekho-auto.bat": "119e5b1ddf941bee8881e93ba5d14449429cb89502916ad6e9adb196ac1ecf0c",
+    "transfer-auto.bat": "bc22e9e1dee01b646f4153fb971535dcf5c3fe8d4b84bb0bd55c451971ddb4f7",
+    "transfer-dekho-auto.bat": "a7ea0955221df6e712737467a9d39e110c867f1f2526f8572fc76955625156ee",
     "transfer-dekho.js": "e98c0faec369e3185d269f2088c71d638f9297ae39cc8706baafad9932087f8f",
     "transfer-sync.js": "dce6fb0652b54e19d41d7a04bc26c7c4e17f39bf466c9626248c689b4fc55bef",
     "sales-stats.js": "34d77d1ab5575a2719e012e7e7c0d51a5254944690ede65accaf9ea09c77e41d",
-    "sales-stats-auto.bat": "1ee5f1d3affaf678cee2e7224f62ee7ca18107d323366a71b83b250d9f84c06b",
+    "sales-stats-auto.bat": "a5f4f2546741d00fecd83d6db87e82af075cca1ed8e189d26e7075388c6a1212",
     "BARCODE-DOCTOR.bat": "b127ae24f3219d77288bb6a6ad17758d85376fe2ef1f50aeb6293a2ebfe7ccb4",
-    "LABEL-GEHRA.bat": "2fd4a77c5241b38433ba280babd4659011672fcb08b928a968e9e7e3931d4d88"
+    "LABEL-GEHRA.bat": "2fd4a77c5241b38433ba280babd4659011672fcb08b928a968e9e7e3931d4d88",
+    "pos-sales-dekho.js": "006a9f9d6fd9f2c0bc8659a6fe14fd15fe373d16d9253482e416f57a1b3c6993",
+    "pos-sales-auto.bat": "aef4a274bb9cdcde344028e9ad2de8fe7a3572580a0b20f3e3f7b1e806d33e11",
+    "nt-print.js": "14ff69f5f6e77b94ea7648e7e73ae07f636acdc823599968440e61fa348ba235",
+    "nt-print-auto.bat": "6d2d36d3e6db49986502bdf20df2dd3fe8d2bcce6aca4b807d7b8ed9294dccce",
+    "nt-parchi.js": "5627e0c9696026dc5b45acba5e1bc30d8c3b83be37322776669066f3475e3e68"
   },
   "services": [
     {
@@ -184,6 +189,18 @@
       "bat": "sales-stats-auto.bat",
       "log": "sales-stats-log.txt",
       "periodic": true
+    },
+    {
+      "name": "POS ke aaj ke bills",
+      "script": "pos-sales-dekho.js",
+      "bat": "pos-sales-auto.bat",
+      "log": "pos-sales-log.txt"
+    },
+    {
+      "name": "💻 NT-PRINT (PC chunein)",
+      "script": "nt-print.js",
+      "bat": "nt-print-auto.bat",
+      "log": "nt-print-log.txt"
     }
   ]
 }
