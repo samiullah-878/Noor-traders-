@@ -1202,3 +1202,15 @@ share 'MithuRAW'; server Add-Printer -ConnectionName. POS wahan purane EPSON pri
 Sharing ke liye Mithu PC par: printer shared + firewall "File and Printer Sharing" + guest/anonymous reg (Lsa) ; server par
 LanmanWorkstation AllowInsecureGuestAuth=1. Test: "x" | Out-Printer -Name '\\DESKTOP-8BR23BF\MithuRAW'.
 Laptop (DESKTOP-?): NT-PRINT ke liye shared printers lagaye the — zaroorat nahi, counter chips server se chhapte hain.
+
+==================== v2.82.0 + sync-stock category (manifest 2026-10-04.6) — 🧮 NT + GODAM 2 FARZI JAMA ====================
+Malik: Stock screen par Godam 2 ka stock NOOR TRADERS mein farzi jama kar ke dikhao; "apni factory" category (surf, soda,
+kala soap — NT mein minus) ka minus jama na ho. Sirf dikhana, POS mein kuch nahi.
+* pc/sync-stock.js: categoryJoin() — Items ka '%ategor%ID' khana + '%ategor%' table ka Name/Title khana khud dhoondta (LEFT JOIN);
+  har item mein cat (<=40 harf). Pehli sync par sab chunks dobara (hash badla).
+* pos-stock.js: JAMA = 0 (farzi branch). collect(): canJama = branch 1 + Godam 2 (naam /godam\s*-?\s*2/ ya id 2); pick 0 ->
+  jamaItems(NT, G2): stock = (factory && NT<0 ? 0 : NT) + G2, ctn/pcs dobara; _nt/_g2/_fac/_jama. isFactory = cat ~ /factory/.
+  Chip "🧮 NT + G2 (jama)" (.jama-chip) + note; row mein ".jama-sum" "NT 10 + G2 7 = 17" (factory: NT <s>-40</s> 0 🏭).
+  meta/syncedAt NT ka. Click -> filter 'has'. Baaqi (search, filters, PDF) wahi list istemal karte.
+* Test (node): surf soda NT -40 (factory) + G2 30 = 30 🏭 ctn 2; ghee 10+7 = 17; sirf-G2 item bhi aata ✓.
+* Note: cat tabhi aayega jab server par nayi sync-stock chale (doctor manifest se) — tab tak factory items ka minus bhi jama hoga.

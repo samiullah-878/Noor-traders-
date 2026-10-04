@@ -1,6 +1,7 @@
 // =========================================================
 //  sync-stock.js  —  POS ka stock Firestore par bhejta hai
 //  SQL mein kuch LIKHTA nahi - sirf padhta hai.
+//  2026-10-04: har item ke saath category ka naam (cat) — Items ka '%ategor%ID' khana + category table khud dhoondta hai
 // =========================================================
 //
 //  Chalane ka tareeqa:   node sync-stock.js
@@ -122,6 +123,23 @@ async function branchNames(pool) {
   }
 }
 
+// 2026-10-04: CATEGORY (item ki category ka naam — app mein "apni factory" wale items pehchanne ke liye). Items mein jo bhi khana
+// 'categ' naam ka ho (CategoryID / ItemCategoryID) aur jis table ke naam mein 'categ' ho us ka Name khana — khud dhoondta hai.
+let catJoin = null;   // null = abhi nahi dekha, '' = nahi mila
+async function categoryJoin(pool) {
+  if (catJoin !== null) return catJoin;
+  catJoin = '';
+  try {
+    const col = (await pool.request().query(`SELECT COLUMN_NAME AS c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='Items' AND COLUMN_NAME LIKE '%ategor%ID%'`)).recordset[0]?.c;
+    if (!col) return catJoin;
+    const tabs = (await pool.request().query(`SELECT c.TABLE_NAME AS t, c.COLUMN_NAME AS k FROM INFORMATION_SCHEMA.COLUMNS c WHERE c.TABLE_NAME LIKE '%ategor%' AND c.COLUMN_NAME = '${col}'`)).recordset;
+    for (const t of tabs) {
+      const nm = (await pool.request().query(`SELECT COLUMN_NAME AS c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME='${t.t}' AND (COLUMN_NAME LIKE '%Name%' OR COLUMN_NAME LIKE '%Title%') AND DATA_TYPE IN ('varchar','nvarchar','char','nchar')`)).recordset[0]?.c;
+      if (nm) { catJoin = { col, table: t.t, key: t.k, name: nm }; break; }
+    }
+  } catch (e) { console.log('Category nahi mili: ' + e.message); }
+  return catJoin;
+}
 let hasActiveCol = null;
 async function skipFilter(pool) {
   if (!SKIP_INACTIVE) return '';
@@ -227,7 +245,9 @@ async function subFullMap(pool) {
 
 async function readStock(pool, branch, lastRates, codes, subq, shows, subs) {
   const base = INCLUDE_ZERO ? Q_STOCK : Q_STOCK_NONZERO;
-  const q = base.replace('WHERE r.BranchID = @branch', 'WHERE r.BranchID = @branch' + await skipFilter(pool));
+  let q = base.replace('WHERE r.BranchID = @branch', 'WHERE r.BranchID = @branch' + await skipFilter(pool));
+  const cj = await categoryJoin(pool);   // 2026-10-04: category ka naam (cat)
+  if (cj) q = q.replace('SELECT i.ItemID,', `SELECT i.ItemID, cat.[${cj.name}] AS CatName,`).replace('JOIN dbo.Items i ON i.ItemID = r.ItemID', `JOIN dbo.Items i ON i.ItemID = r.ItemID LEFT JOIN dbo.[${cj.table}] cat ON cat.[${cj.key}] = i.[${cj.col}]`);
   const res = await pool.request().input('branch', sql.Int, branch).query(q);
 
   return res.recordset.map(r => {
@@ -246,6 +266,7 @@ async function readStock(pool, branch, lastRates, codes, subq, shows, subs) {
       ...(shows && shows.has(r.ItemID) ? { bs: shows.get(r.ItemID) } : {}),   // v8: Show ✓ wale sub-barcode
       ...(subs && subs.has(r.ItemID) ? { sb: subs.get(r.ItemID) } : {}),   // v9: poori tafseel (edit/delete ke liye)
       name: String(r.ItemName || '').trim(),
+      ...(r.CatName ? { cat: String(r.CatName).trim().slice(0, 40) } : {}),   // 2026-10-04: category (jaise 'apni factory')
       stock,                                        // kul pieces
       pack,                                         // ek carton mein kitne
       ctn,                                          // poore carton
