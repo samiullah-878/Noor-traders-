@@ -2341,3 +2341,14 @@ Malik: "Mithu / Abdurehman / Bilal printer ek hi network par hain — add karwa 
   dabane par printer yaad rehta; Default chip force se hatata. setCounter PC change par pcsChanged (rows taza).
 * Test (happy-dom): PC chip -> printer row 4 chips; Mithu chunna -> 'pc:laptop:bbbbbb' + label; PC chip dobara -> yaad; Default
   -> 'pc:laptop'; Mithu counter -> row ghayab ✓. Asal printer YAHAN test nahi.
+
+==================== v2.79.0 (2026-10-04) — LOGIN EK DAFA, PHIR LOGOUT TAK NAHI ====================
+Malik: "login page tang karta hai — ek dafa password lag jaye to usi device par dobara na aaye".
+* app.js REM_DAYS 30 -> 3650 (yaad rakha password Logout tak; password badla / account band = pehle jaisa fail -> login).
+  remOff() = localStorage 'sam-rem-off'=='1': rememberAfterLogin save nahi karta, tryAutoLogin nahi chalta, boot auto nahi.
+* Settings -> 👥 Mulazim aur hifazat -> naya row #remOff "Password yaad rakhna: ON/BAND" (toggle; BAND par yaad kiye sab
+  passwords mit jate, rememberPw untick). Dukaan ke shared phone ke liye.
+* Boot: auto-login ke dauran #boot overlay 8 s -> 15 s tak rehta (login form nazar nahi aata), text "NOOR TRADERS · ⚡ khul raha hai…".
+* index.html / switch card: checkbox label "🔒 Is device par yaad rakhein (Logout tak)" (pehle "30 din"). Default checked pehle se tha.
+* Logout pehle jaisa: sessionStorage sam-no-auto -> us session mein auto nahi; agli dafa phir auto (password yaad hai).
+  Agar malik chahe "Logout = password bhool jao" to forgetRemembered() logout mein jorna hoga (abhi nahi kiya).
