@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.77.1';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.77.1';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.78.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.78.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -27,6 +27,7 @@ let searchFocused = false;   // v1.75
 export function saleSetup(o) {
   { const before = camMissing(); camCheck().then(() => { if (camMissing() !== before && document.querySelector('.sale-camrow')) { try { renderSale(); } catch {} } }); }   // v2.77: PC par camera nahi -> 🔫
   cloud = o.cloud; rerender = o.rerender || rerender; notice = o.notice || notice;
+  if (!pcsUn) try { pcsUn = cloud?.listenPrintPCs?.(pcsChanged) || null; } catch {}   // v2.78: 💻 PC chunein
   isOwner = o.owner || isOwner; uidOf = o.uid || uidOf; learnOf = o.learn || learnOf;
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
@@ -88,14 +89,29 @@ function keepScan(el) {   // scan box upar nazar rahe; nayi line uske neeche —
 }
 let lastAddAt = 0, lastScrolled = 0;
 let quickSave = false, posSales = [], stopPosSales = null;
-const COUNTERS = [['abdurehman', 'Abdurehman'], ['bilal', 'Bilal bhai'], ['mithu', 'Mithu'], ['local', '🖥 Yehi device']];   // v2.72: local = isi device ka default printer
+const BASE_COUNTERS = [['abdurehman', 'Abdurehman'], ['bilal', 'Bilal bhai'], ['mithu', 'Mithu'], ['local', '🖥 Yehi device']];
+// v2.78: 💻 PC chunein — har PC ka NT-PRINT agent printPCs/{id} mein zinda report deta hai; bill usi PC par bina window ke
+let PCS = [], pcsUn = null;
+const isPC = k => String(k || '').startsWith('pc:');
+const pcOf = k => PCS.find(p => 'pc:' + p.id === k);
+const pcLive = p => !!p && Math.abs(Date.now() - (Number(p.at) || 0)) < 4 * 60000;
+const allCounters = () => [...BASE_COUNTERS, ...PCS.filter(p => pcLive(p) || 'pc:' + p.id === counter).map(p => ['pc:' + p.id, (pcLive(p) ? '💻 ' : '💤 ') + String(p.name || p.id).slice(0, 24)])];
+const COUNTERS = { some: f => allCounters().some(f), find: f => allCounters().find(f), map: f => allCounters().map(f), get 0() { return BASE_COUNTERS[0]; } };   // v2.72: local = isi device ka default printer
 let crates = 1;   // v2.72: token parchiyan (har crate ki ek)   // v2.68: kis counter ke printer par bill + gate pass
-let counter = 'abdurehman'; try { const c = localStorage.getItem('sam-sale-counter'); if (COUNTERS.some(x => x[0] === c)) counter = c; } catch {}
-const counterName = k => (COUNTERS.find(x => x[0] === k) || COUNTERS[0])[1];
-const setCounter = k => { if (!COUNTERS.some(x => x[0] === k)) return; counter = k; try { localStorage.setItem('sam-sale-counter', k); } catch {} document.querySelectorAll('[data-sale-counter]').forEach(x => x.classList.toggle('on', x.dataset.saleCounter === k)); document.querySelectorAll('[data-f5c]').forEach(x => x.classList.toggle('on', x.dataset.f5c === k)); };
+let counter = 'abdurehman'; try { const c = localStorage.getItem('sam-sale-counter'); if (BASE_COUNTERS.some(x => x[0] === c) || isPC(c)) counter = c; } catch {}
+const counterName = k => isPC(k) ? '💻 ' + String(pcOf(k)?.name || 'PC') : (COUNTERS.find(x => x[0] === k) || COUNTERS[0])[1];
+const setCounter = k => { if (!COUNTERS.some(x => x[0] === k) && !isPC(k)) return; counter = k; try { localStorage.setItem('sam-sale-counter', k); } catch {} document.querySelectorAll('[data-sale-counter]').forEach(x => x.classList.toggle('on', x.dataset.saleCounter === k)); document.querySelectorAll('[data-f5c]').forEach(x => x.classList.toggle('on', x.dataset.f5c === k)); };
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-sale-counter]'); if (b) setCounter(b.dataset.saleCounter); });   // v2.57: F5 -> sirf '1 ya 2 print?'
 let copies = 1; try { copies = Math.min(3, Math.max(1, Number(localStorage.getItem('sam-sale-copies')) || 1)); } catch {}   // v2.40: bill kitni dafa chhape (gate pass ek hi)
-const copyChips = () => `<div class="sale-copies sale-counter"><small>🖨 Counter</small>${COUNTERS.map(([k, n]) => `<button type="button" data-sale-counter="${k}"${counter === k ? ' class="on"' : ''}>${n}</button>`).join('')}</div><div class="sale-copies"><small>🖨 Bill print</small>${[1, 2, 3].map(n => `<button type="button" data-sale-copies="${n}"${copies === n ? ' class="on"' : ''}>×${n}</button>`).join('')}<small class="sale-copies-h">gate pass ×1</small></div>`;
+const counterDiv = () => `<div class="sale-copies sale-counter"><small>🖨 Counter</small>${COUNTERS.map(([k, n]) => `<button type="button" data-sale-counter="${k}"${isPC(k) ? ` class="pc-chip${pcLive(pcOf(k)) ? '' : ' off'}${counter === k ? ' on' : ''}" title="${pcLive(pcOf(k)) ? 'Is PC par bina window ke print — printer: ' + String(pcOf(k)?.printer || 'default').replace(/"/g, '') : 'PC band / agent nahi chal raha'}"` : (counter === k ? ' class="on"' : '')}>${n}</button>`).join('')}</div>`;
+const copyChips = () => counterDiv() + `<div class="sale-copies"><small>🖨 Bill print</small>${[1, 2, 3].map(n => `<button type="button" data-sale-copies="${n}"${copies === n ? ' class="on"' : ''}>×${n}</button>`).join('')}<small class="sale-copies-h">gate pass ×1</small></div>`;
+function pcsChanged(list) {   // v2.78: chips jagah par badlo (poora render nahi — likhte waqt focus na jaye)
+  PCS = (Array.isArray(list) ? list : []).filter(p => p && p.id).sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id)));
+  document.querySelectorAll('.sale-counter').forEach(el => { const t = document.createElement('div'); t.innerHTML = counterDiv(); el.replaceWith(t.firstElementChild); });
+  const f = document.querySelector('.f5-ctr'); if (f) f.innerHTML = f5Chips();
+}
+const f5Chips = () => COUNTERS.map(([k, n]) => `<button type="button" data-f5c="${k}" class="${isPC(k) ? 'pc-chip' + (pcLive(pcOf(k)) ? '' : ' off') : ''}${counter === k ? ' on' : ''}"><kbd>${k === 'local' ? 'D' : isPC(k) ? '💻' : n[0]}</kbd> ${isPC(k) ? n.replace(/^(💻|💤) /, '') : n}</button>`).join('');
+setInterval(() => { if (PCS.length) pcsChanged(PCS); }, 60000);
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-sale-copies]'); if (!b) return; copies = Number(b.dataset.saleCopies) || 1; try { localStorage.setItem('sam-sale-copies', String(copies)); } catch {} document.querySelectorAll('[data-sale-copies]').forEach(x => x.classList.toggle('on', Number(x.dataset.saleCopies) === copies)); });
 let qtyFocusNext = false;   // v2.62: PC — nayi line ki tadad par cursor
 const finePtr = window.matchMedia ? window.matchMedia('(pointer:fine)') : { matches: false };
@@ -246,7 +262,7 @@ function vbAdd(text) {
   if (!lastSug) notice('🎤 Suna: "' + heard.slice(0, 60) + '" — item ka naam samajh nahi aaya');
 }
 let vbHold = false, vbStopT = 0, vbHeard = '', vbDone = '';
-function vbStart() {               // v2.77.1: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
+function vbStart() {               // v2.78.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
   if (vbRec) { try { vbRec.abort(); } catch {} vbRec = null; }
@@ -478,7 +494,7 @@ document.addEventListener('pointercancel', () => vbRelease());
 document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sale-mic]')) e.preventDefault(); });
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.77.1: hold se chalta hai
+  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.78.0: hold se chalta hai
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {
@@ -599,6 +615,7 @@ async function save() {
     // internet na ho to bhi phone par mehfooz; net aate hi chali jayegi
     await Promise.race([p, new Promise(r => setTimeout(r, 4000))]);
     if (counter === 'local') localQueue(doc.id, copies, doc.crates);   // v2.72: bill bante hi isi device par print
+    if (isPC(counter) && !pcLive(pcOf(counter))) setTimeout(() => notice('💤 Chuna hua PC abhi band hai / NT-PRINT nahi chal raha — bill ban jayega magar print nahi hoga. Doosra counter chunein.'), 1200);   // v2.78
     crates = 1;
     cart = []; cash = null; note = ''; mode = 'counter'; keepDraft();   // v2.63: Wholesale bill ke baad wapas Counter
     notice('Sale save ho gayi — PC bill bana kar print karega');
@@ -631,7 +648,7 @@ document.addEventListener('keydown', e => {
   if (document.getElementById('f5Ask')) return;
   if (!cart.length) { notice('Bill khali hai — pehle item lagayein'); return; }
   const box = document.createElement('div'); box.id = 'f5Ask'; box.className = 'f5-ask';
-  box.innerHTML = `<div class="f5-card"><b>🧾 Bill ki kitni copy?</b><small class="f5-tok">🎫 Token parchi alag se khud aati hai</small><small>${cart.length} items · Rs ${num(cartTotal())}</small><div class="f5-ctr">${COUNTERS.map(([k, n]) => `<button type="button" data-f5c="${k}"${counter === k ? ' class="on"' : ''}><kbd>${k === 'local' ? 'D' : n[0]}</kbd> ${n}</button>`).join('')}</div><div class="f5-row">${[1, 2, 3].map(n => `<button type="button" data-f5="${n}"${n === copies ? ' class="on"' : ''}><span>${n}</span>print</button>`).join('')}</div><p>Counter: <kbd>A</kbd> <kbd>B</kbd> <kbd>M</kbd> <kbd>D</kbd> · Print: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> · <kbd>Enter</kbd> = ${copies} · <kbd>Esc</kbd> = wapas</p></div>`;
+  box.innerHTML = `<div class="f5-card"><b>🧾 Bill ki kitni copy?</b><small class="f5-tok">🎫 Token parchi alag se khud aati hai</small><small>${cart.length} items · Rs ${num(cartTotal())}</small><div class="f5-ctr">${f5Chips()}</div><div class="f5-row">${[1, 2, 3].map(n => `<button type="button" data-f5="${n}"${n === copies ? ' class="on"' : ''}><span>${n}</span>print</button>`).join('')}</div><p>Counter: <kbd>A</kbd> <kbd>B</kbd> <kbd>M</kbd> <kbd>D</kbd> · Print: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> · <kbd>Enter</kbd> = ${copies} · <kbd>Esc</kbd> = wapas</p></div>`;
   document.body.appendChild(box);
   const done = n => {
     document.removeEventListener('keydown', key, true); box.remove();
@@ -639,7 +656,7 @@ document.addEventListener('keydown', e => {
     copies = n; try { localStorage.setItem('sam-sale-copies', String(n)); } catch {}
     document.querySelectorAll('[data-sale-copies]').forEach(x => x.classList.toggle('on', Number(x.dataset.saleCopies) === n));
     const b = document.querySelector('[data-sale-save]'); if (!b || b.disabled) { notice('Save abhi nahi ho sakta'); return; }
-    if (counter === 'local') { askCrates(() => { quickSave = true; setTimeout(() => { quickSave = false; }, 4000); b.click(); }); return; }   // v2.72
+    if (counter === 'local' || isPC(counter)) { askCrates(() => { quickSave = true; setTimeout(() => { quickSave = false; }, 4000); b.click(); }); return; }   // v2.72
     quickSave = true; setTimeout(() => { quickSave = false; }, 4000); b.click();
   };
   const key = ev => { const ck = { a: 'abdurehman', b: 'bilal', m: 'mithu', d: 'local' }[String(ev.key).toLowerCase()]; if (ck) { ev.preventDefault(); ev.stopPropagation(); setCounter(ck); return; } if (['1', '2', '3'].includes(ev.key)) { ev.preventDefault(); ev.stopPropagation(); done(Number(ev.key)); } else if (ev.key === 'Enter') { ev.preventDefault(); ev.stopPropagation(); done(copies); } else if (ev.key === 'Escape' || ev.key === 'F5') { ev.preventDefault(); ev.stopPropagation(); done(0); } };
