@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.78.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.78.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.78.1';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.78.1';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -93,24 +93,33 @@ const BASE_COUNTERS = [['abdurehman', 'Abdurehman'], ['bilal', 'Bilal bhai'], ['
 // v2.78: 💻 PC chunein — har PC ka NT-PRINT agent printPCs/{id} mein zinda report deta hai; bill usi PC par bina window ke
 let PCS = [], pcsUn = null;
 const isPC = k => String(k || '').startsWith('pc:');
-const pcOf = k => PCS.find(p => 'pc:' + p.id === k);
+const pcOf = k => { const id = String(k || '').split(':')[1]; return PCS.find(p => p.id === id); };   // 'pc:<id>' ya 'pc:<id>:<printer>'
+const pcKey = p => 'pc:' + p.id;
+const prnOf = k => { const h = String(k || '').split(':')[2] || ''; const p = pcOf(k); const x = h && Array.isArray(p?.printers) ? p.printers.find(q => q && q.h === h) : null; return x ? x.n : ''; };   // v2.78: chuna hua printer ka naam
+const samePC = (k, p) => isPC(k) && String(k).split(':')[1] === p.id;
 const pcLive = p => !!p && Math.abs(Date.now() - (Number(p.at) || 0)) < 4 * 60000;
-const allCounters = () => [...BASE_COUNTERS, ...PCS.filter(p => pcLive(p) || 'pc:' + p.id === counter).map(p => ['pc:' + p.id, (pcLive(p) ? '💻 ' : '💤 ') + String(p.name || p.id).slice(0, 24)])];
+const allCounters = () => [...BASE_COUNTERS, ...PCS.filter(p => pcLive(p) || samePC(counter, p)).map(p => [samePC(counter, p) ? counter : pcKey(p), (pcLive(p) ? '💻 ' : '💤 ') + String(p.name || p.id).slice(0, 24) + (samePC(counter, p) && prnOf(counter) ? ' · 🖨 ' + prnOf(counter).slice(0, 18) : '')])];
 const COUNTERS = { some: f => allCounters().some(f), find: f => allCounters().find(f), map: f => allCounters().map(f), get 0() { return BASE_COUNTERS[0]; } };   // v2.72: local = isi device ka default printer
 let crates = 1;   // v2.72: token parchiyan (har crate ki ek)   // v2.68: kis counter ke printer par bill + gate pass
 let counter = 'abdurehman'; try { const c = localStorage.getItem('sam-sale-counter'); if (BASE_COUNTERS.some(x => x[0] === c) || isPC(c)) counter = c; } catch {}
 const counterName = k => isPC(k) ? '💻 ' + String(pcOf(k)?.name || 'PC') : (COUNTERS.find(x => x[0] === k) || COUNTERS[0])[1];
-const setCounter = k => { if (!COUNTERS.some(x => x[0] === k) && !isPC(k)) return; counter = k; try { localStorage.setItem('sam-sale-counter', k); } catch {} document.querySelectorAll('[data-sale-counter]').forEach(x => x.classList.toggle('on', x.dataset.saleCounter === k)); document.querySelectorAll('[data-f5c]').forEach(x => x.classList.toggle('on', x.dataset.f5c === k)); };
+const setCounter = (k, force) => { if (!COUNTERS.some(x => x[0] === k) && !isPC(k)) return; if (!force && isPC(k) && isPC(counter) && String(k).split(':').length === 2 && String(counter).split(':')[1] === String(k).split(':')[1]) k = counter; const wasPC = isPC(counter); counter = k; try { localStorage.setItem('sam-sale-counter', k); } catch {} if ((isPC(k) || wasPC) && PCS.length) pcsChanged(PCS); document.querySelectorAll('[data-sale-counter]').forEach(x => x.classList.toggle('on', x.dataset.saleCounter === k)); document.querySelectorAll('[data-f5c]').forEach(x => x.classList.toggle('on', x.dataset.f5c === k)); };
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-sale-counter]'); if (b) setCounter(b.dataset.saleCounter); });   // v2.57: F5 -> sirf '1 ya 2 print?'
 let copies = 1; try { copies = Math.min(3, Math.max(1, Number(localStorage.getItem('sam-sale-copies')) || 1)); } catch {}   // v2.40: bill kitni dafa chhape (gate pass ek hi)
 const counterDiv = () => `<div class="sale-copies sale-counter"><small>🖨 Counter</small>${COUNTERS.map(([k, n]) => `<button type="button" data-sale-counter="${k}"${isPC(k) ? ` class="pc-chip${pcLive(pcOf(k)) ? '' : ' off'}${counter === k ? ' on' : ''}" title="${pcLive(pcOf(k)) ? 'Is PC par bina window ke print — printer: ' + String(pcOf(k)?.printer || 'default').replace(/"/g, '') : 'PC band / agent nahi chal raha'}"` : (counter === k ? ' class="on"' : '')}>${n}</button>`).join('')}</div>`;
-const copyChips = () => counterDiv() + `<div class="sale-copies"><small>🖨 Bill print</small>${[1, 2, 3].map(n => `<button type="button" data-sale-copies="${n}"${copies === n ? ' class="on"' : ''}>×${n}</button>`).join('')}<small class="sale-copies-h">gate pass ×1</small></div>`;
+const printerDiv = () => { if (!isPC(counter)) return ''; const p = pcOf(counter); const list = Array.isArray(p?.printers) ? p.printers.filter(x => x && x.n && x.h) : []; if (!list.length) return ''; const cur = String(counter).split(':')[2] || '';
+  return `<div class="sale-copies sale-prn"><small>🖨 Printer</small><button type="button" data-sale-printer=""${cur ? '' : ' class="on"'}>Default${p.printer ? ' (' + esc(String(p.printer).slice(0, 16)) + ')' : ''}</button>${list.map(x => `<button type="button" data-sale-printer="${esc(x.h)}"${cur === x.h ? ' class="on"' : ''}>${esc(x.n.slice(0, 22))}</button>`).join('')}</div>`; };
+const setPrinter = h => { if (!isPC(counter)) return; setCounter('pc:' + String(counter).split(':')[1] + (h ? ':' + h : ''), true); };
+document.addEventListener('click', e => { const b = e.target.closest?.('[data-sale-printer]'); if (b) setPrinter(b.dataset.salePrinter); });
+const copyChips = () => counterDiv() + printerDiv() + `<div class="sale-copies"><small>🖨 Bill print</small>${[1, 2, 3].map(n => `<button type="button" data-sale-copies="${n}"${copies === n ? ' class="on"' : ''}>×${n}</button>`).join('')}<small class="sale-copies-h">gate pass ×1</small></div>`;
 function pcsChanged(list) {   // v2.78: chips jagah par badlo (poora render nahi — likhte waqt focus na jaye)
   PCS = (Array.isArray(list) ? list : []).filter(p => p && p.id).sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id)));
-  document.querySelectorAll('.sale-counter').forEach(el => { const t = document.createElement('div'); t.innerHTML = counterDiv(); el.replaceWith(t.firstElementChild); });
-  const f = document.querySelector('.f5-ctr'); if (f) f.innerHTML = f5Chips();
+  document.querySelectorAll('.sale-prn').forEach(el => el.remove());
+  document.querySelectorAll('.sale-counter').forEach(el => { const t = document.createElement('div'); t.innerHTML = counterDiv() + printerDiv(); el.replaceWith(...t.children); });
+  const f = document.querySelector('.f5-ctr'); if (f) f.innerHTML = f5Chips() + f5Prn();
 }
 const f5Chips = () => COUNTERS.map(([k, n]) => `<button type="button" data-f5c="${k}" class="${isPC(k) ? 'pc-chip' + (pcLive(pcOf(k)) ? '' : ' off') : ''}${counter === k ? ' on' : ''}"><kbd>${k === 'local' ? 'D' : isPC(k) ? '💻' : n[0]}</kbd> ${isPC(k) ? n.replace(/^(💻|💤) /, '') : n}</button>`).join('');
+const f5Prn = () => { const d = printerDiv(); return d ? d.replace(/data-sale-printer=/g, 'data-f5p=').replace('class="sale-copies sale-prn"', 'class="f5-prn"') : ''; };
 setInterval(() => { if (PCS.length) pcsChanged(PCS); }, 60000);
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-sale-copies]'); if (!b) return; copies = Number(b.dataset.saleCopies) || 1; try { localStorage.setItem('sam-sale-copies', String(copies)); } catch {} document.querySelectorAll('[data-sale-copies]').forEach(x => x.classList.toggle('on', Number(x.dataset.saleCopies) === copies)); });
 let qtyFocusNext = false;   // v2.62: PC — nayi line ki tadad par cursor
@@ -262,7 +271,7 @@ function vbAdd(text) {
   if (!lastSug) notice('🎤 Suna: "' + heard.slice(0, 60) + '" — item ka naam samajh nahi aaya');
 }
 let vbHold = false, vbStopT = 0, vbHeard = '', vbDone = '';
-function vbStart() {               // v2.78.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
+function vbStart() {               // v2.78.1: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
   if (vbRec) { try { vbRec.abort(); } catch {} vbRec = null; }
@@ -494,7 +503,7 @@ document.addEventListener('pointercancel', () => vbRelease());
 document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sale-mic]')) e.preventDefault(); });
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.78.0: hold se chalta hai
+  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.78.1: hold se chalta hai
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {
@@ -648,7 +657,7 @@ document.addEventListener('keydown', e => {
   if (document.getElementById('f5Ask')) return;
   if (!cart.length) { notice('Bill khali hai — pehle item lagayein'); return; }
   const box = document.createElement('div'); box.id = 'f5Ask'; box.className = 'f5-ask';
-  box.innerHTML = `<div class="f5-card"><b>🧾 Bill ki kitni copy?</b><small class="f5-tok">🎫 Token parchi alag se khud aati hai</small><small>${cart.length} items · Rs ${num(cartTotal())}</small><div class="f5-ctr">${f5Chips()}</div><div class="f5-row">${[1, 2, 3].map(n => `<button type="button" data-f5="${n}"${n === copies ? ' class="on"' : ''}><span>${n}</span>print</button>`).join('')}</div><p>Counter: <kbd>A</kbd> <kbd>B</kbd> <kbd>M</kbd> <kbd>D</kbd> · Print: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> · <kbd>Enter</kbd> = ${copies} · <kbd>Esc</kbd> = wapas</p></div>`;
+  box.innerHTML = `<div class="f5-card"><b>🧾 Bill ki kitni copy?</b><small class="f5-tok">🎫 Token parchi alag se khud aati hai</small><small>${cart.length} items · Rs ${num(cartTotal())}</small><div class="f5-ctr">${f5Chips()}${f5Prn()}</div><div class="f5-row">${[1, 2, 3].map(n => `<button type="button" data-f5="${n}"${n === copies ? ' class="on"' : ''}><span>${n}</span>print</button>`).join('')}</div><p>Counter: <kbd>A</kbd> <kbd>B</kbd> <kbd>M</kbd> <kbd>D</kbd> · Print: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> · <kbd>Enter</kbd> = ${copies} · <kbd>Esc</kbd> = wapas</p></div>`;
   document.body.appendChild(box);
   const done = n => {
     document.removeEventListener('keydown', key, true); box.remove();
@@ -661,7 +670,7 @@ document.addEventListener('keydown', e => {
   };
   const key = ev => { const ck = { a: 'abdurehman', b: 'bilal', m: 'mithu', d: 'local' }[String(ev.key).toLowerCase()]; if (ck) { ev.preventDefault(); ev.stopPropagation(); setCounter(ck); return; } if (['1', '2', '3'].includes(ev.key)) { ev.preventDefault(); ev.stopPropagation(); done(Number(ev.key)); } else if (ev.key === 'Enter') { ev.preventDefault(); ev.stopPropagation(); done(copies); } else if (ev.key === 'Escape' || ev.key === 'F5') { ev.preventDefault(); ev.stopPropagation(); done(0); } };
   document.addEventListener('keydown', key, true);
-  box.addEventListener('click', ev => { const cc = ev.target.closest('[data-f5c]'); if (cc) { setCounter(cc.dataset.f5c); return; } const t = ev.target.closest('[data-f5]'); if (t) done(Number(t.dataset.f5)); else if (ev.target === box) done(0); });
+  box.addEventListener('click', ev => { const pp = ev.target.closest('[data-f5p]'); if (pp) { setPrinter(pp.dataset.f5p); return; } const cc = ev.target.closest('[data-f5c]'); if (cc) { setCounter(cc.dataset.f5c); const f = box.querySelector('.f5-ctr'); if (f) f.innerHTML = f5Chips() + f5Prn(); return; } const t = ev.target.closest('[data-f5]'); if (t) done(Number(t.dataset.f5)); else if (ev.target === box) done(0); });
 }, true);
 
 // v2.62: PC — item lagte hi us ki TADAD badalne ke liye: number likho -> aakhri line ki tadad (0.4 sec ruk kar ya Enter).
