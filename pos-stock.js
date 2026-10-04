@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.83.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.84.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -31,7 +31,29 @@ const canEditItem = () => isOwner() || itemCfg.itemEdit === true;
 let inPdfOf = null, tolaiOf = null, tolaiClickOf = null;
 export function setInPdf(fn) { inPdfOf = fn; }
 export function setTolai(open, click) { tolaiOf = open; tolaiClickOf = click; }   // v2.7
+// v2.84: 🔤 URDU NAAM — blueAccess/urduNames {map: itemId -> Urdu}; AI (Gemini) se ek dafa, phir malik/stock theek kar sake; label par English ke saath.
+let urdu = {}, urduStop = null, aiText = null, urduBusy = false;
+const urduOf = id => String(urdu[String(id)] || '');
+async function urduMake(items, onlyMissing = true) {
+  if (!aiText) throw Error('AI tayyar nahi (login / key)');
+  const todo = items.filter(r => r && r.id && r.name && (!onlyMissing || !urduOf(r.id)));
+  if (!todo.length) return 0;
+  let done = 0;
+  for (let i = 0; i < todo.length; i += 60) {
+    const chunk = todo.slice(i, i + 60);
+    const prompt = `Tum ek Pakistani grocery (kiryana) ki dukaan ke items ke naam Urdu rasm-ul-khat mein likhte ho. Har English/Roman naam ko URDU script mein likho — tarjuma nahi, wahi naam Urdu harfon mein (brand ke naam jaise chhapte hain waise: Dettol = ڈیٹول, Surf = سرف, Colgate = کولگیٹ). Wazan/size (5kg, 160g, 1.5 ltr) hindson mein wahi rakho (jaise 5 کلو, 160 گرام, 1.5 لیٹر). Sirf JSON array do, aur kuch nahi: [{"id":"...","ur":"..."}]\n` + JSON.stringify(chunk.map(r => ({ id: String(r.id), en: String(r.name).slice(0, 80) })));
+    const out = await aiText(prompt);
+    const m = String(out || '').match(/\[[\s\S]*\]/); if (!m) continue;
+    let arr = []; try { arr = JSON.parse(m[0]); } catch { continue; }
+    const patch = {}; for (const x of arr) { if (x && x.id && x.ur && /[\u0600-\u06FF]/.test(x.ur)) patch[String(x.id)] = String(x.ur).trim().slice(0, 120); }
+    if (Object.keys(patch).length) { await cloud.setUrdu(patch); Object.assign(urdu, patch); done += Object.keys(patch).length; }
+    notice(`🔤 ${done} / ${todo.length} Urdu naam ban gaye…`);
+  }
+  return done;
+}
 export function stockSetup(opts) {
+  aiText = opts?.ai || aiText;
+  if (!urduStop && opts?.cloud?.listenUrdu) urduStop = opts.cloud.listenUrdu(m => { urdu = m || {}; if (stockActive) soft(); });
   if (!aliasStop && opts?.cloud?.listenAliases) aliasStop = opts.cloud.listenAliases(m => setAliases(m));   // v1.75: doosre naam
   if (!cfgStop && opts?.cloud?.listenStockConfig) cfgStop = opts.cloud.listenStockConfig(c => { itemCfg = c || {}; if (stockActive) soft(); });
   if (!trStop && opts?.cloud?.listenTransfers) trStop = opts.cloud.listenTransfers(list => { trList = list; const h = document.querySelector('[data-tr-hist]'); if (h) h.innerHTML = trHistHTML(); });   // v2.6: transfer shuru se (aaya hua maal ke liye)
@@ -57,7 +79,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.83.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.84.0: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -534,7 +556,7 @@ function summaryHTML(branches, pick, items, meta, names) {
         : `<div class="sh-scanrow"><button class="sh-wide sh-scan" data-stock-scan="1">${camMissing() ? '🔫 Scanner gun se scan karein (ek ya kai items)' : '📷 Barcode scan karein (ek ya kai items)'}</button><button type="button" class="sh-mic" data-stock-mic="1" title="Awaz se dhoondein">🎤</button></div>
            ${canEditItem() ? '<button class="sh-wide" data-stock-newitem="1">➕ Naya item</button>' : ''}
            <button class="sh-wide" data-stock-in="1">📥 Aaya / gaya maal</button><button class="sh-wide" data-stock-reg="1">📋 Transfer register</button><button class="sh-wide dm-btn" data-demand="1">📢 Demand (khatam / kam)</button>
-           <button class="sh-wide sh-tolai" data-stock-tolai="1">⚖️ Tolai</button>
+           <button class="sh-wide sh-tolai" data-stock-tolai="1">⚖️ Tolai</button>${canEditItem() ? `<button class="sh-wide sh-urdu" data-stock-urdu="1">🔤 Urdu naam banao (AI)${Object.keys(urdu).length ? ' · ' + num(Object.keys(urdu).length) + ' bane' : ''}</button>` : ''}
            <button class="sh-wide" data-stock-transfer="1">⇄ Transfer note (godam se godam)</button>
            ${($('search')?.value || '').trim() ? '<button class="sh-wide" data-stock-clear="1">✕ Search saaf karein</button>' : ''}`}
     </div>
@@ -1302,6 +1324,7 @@ function rowHTML(r) {
     <div class="party" style="border-bottom:0">
     <div class="name">
       <b>${esc(r.name)}</b>
+      ${urduOf(r.id) || canEditItem() ? `<span class="ur-name" data-ur-edit="${esc(r.id)}" dir="rtl" title="Urdu naam — tap kar ke badlein">${urduOf(r.id) ? esc(urduOf(r.id)) : '<i>+ Urdu naam</i>'}</span>` : ''}
       <small>${esc(r.code || '')}${pack > 0 ? ` · 1 ${esc(r.cName || 'Ctn')} = ${num(pack)}` : ''}${r.rate ? ' · R ' + num(r.rate) : ''}${r.wrate ? ' · W ' + num(r.wrate) : ''}${r.prate ? ' · Khareed ' + num(r.prate) : ''}</small>
     </div>
     <div class="amount">
@@ -1322,6 +1345,16 @@ document.addEventListener('click', e => {
   const b = e.target.closest?.('[data-stock-branch]');
   if (b) { branch = Number(b.dataset.stockBranch); godamAll = false; if (branch !== 1) filter = 'has'; limit = PAGE; rerender(); return; }   // v2.82: 0 = jama (filter has)   // v1.95/97: godam kholte hi sirf USI godam ka stock
   if (e.target.closest?.('[data-stock-scan]')) { openScanner(); return; }
+  { const u = e.target.closest?.('[data-ur-edit]'); if (u && canEditItem()) { const id = u.dataset.urEdit; const cur = urduOf(id); const v = prompt('Urdu naam (label par English ke saath aayega):', cur); if (v === null) return; cloud.setUrdu({ [id]: String(v).trim() }).then(() => { urdu[id] = String(v).trim(); notice('✓ Urdu naam save'); soft(); }).catch(er => notice('Nahi hua: ' + (er?.message || er))); return; } }
+  if (e.target.closest?.('[data-stock-urdu]')) {
+    if (urduBusy) { notice('Pehle wala kaam chal raha hai…'); return; }
+    const { items } = collect(); const miss = items.filter(r => !urduOf(r.id)).length;
+    if (!miss) { notice('Sab items ke Urdu naam pehle se hain'); return; }
+    if (!confirm(`${miss} items ke Urdu naam AI se banayein? (sirf jin ka nahi hai — ${Math.ceil(miss / 60)} dafa AI chalega)`)) return;
+    urduBusy = true; notice('🔤 AI se Urdu naam ban rahe hain…');
+    urduMake(items, true).then(n => notice(`✓ ${n} Urdu naam ban gaye — ghalat ho to naam par tap kar ke theek karein`)).catch(er => notice('Nahi hua: ' + (er?.message || er))).finally(() => { urduBusy = false; soft(); });
+    return;
+  }
   const ib = e.target.closest?.('[data-stock-item],[data-stock-newitem],[data-item-close]');
   if (ib) { const d = ib.dataset;
     if (d.itemClose != null) $('dialog')?.close();

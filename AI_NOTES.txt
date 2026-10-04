@@ -2461,3 +2461,17 @@ camera par baitha ho aur bill bante waqt dekhe" — sada screen, koi AI/camera/w
   enum, mulazim 'stop' badal nahi sakta (resource==null guard); nazar update sirf stop/status/at; delete owner.
 * POS (Cognitive) ke bills live nahi (sirf save ke baad posSales) — sirf APP se bane bills live.
 * Test (happy-dom): 2 boxes (open/saved), ROKO -> stop doc + laal box + clear ✓; sale.js listenLiveCart + idle write ✓.
+
+==================== v2.84.0 + RULES 2.28 + label-print v3.4 (manifest 2026-10-05.1) — 🔤 LABEL PAR URDU NAAM ====================
+Malik: barcode label par English ke saath Urdu naam (Roman/English ko Urdu rasm-ul-khat mein) — parhne mein aasani.
+* blueAccess/urduNames {map: itemId -> Urdu (<=120), updatedAt}. cloud.listenUrdu / setUrdu (merge). RULES 2.28: create/update
+  malik + Full + Stock (hasOnly map/updatedAt, <=8000); blueAccess get list mein 'urduNames'.
+* pos-stock.js: urdu map listen; row mein .ur-name (RTL, Nastaleeq font) — tap (canEditItem) -> prompt -> setUrdu.
+  Button "🔤 Urdu naam banao (AI)" (canEditItem): sirf jin ka nahi, 60 ke batch, Gemini prompt (tarjuma nahi, naam Urdu harfon
+  mein; wazan hindson mein), JSON [{id,ur}] parse -> setUrdu. app.js stockSetup ai: loadAiCfg + pickModel + askText.
+* pc/label-print.js v3.4: urduNames doc 5 min cache; labelCmds(…, ur): urduRaster() -> urdu-raster.ps1 (System.Drawing, RTL,
+  Bold, fonts list) -> [wb,h,data] (1 bit; TSPL mein 0 = kala, is liye white=1; label-settings urduInvert agar ulta chhape),
+  TSPL BITMAP x,y,wb,h,0,<latin1 bytes> naam ke neeche (max 34 dots), barcode 34% -> 26% jab Urdu ho. label-settings.json:
+  urdu (true), urduFont, urduPx (20), urduInvert (false). Cache 2000 texts.
+* Test (node, naqli raster): TEXT naam -> BITMAP 29x30 -> BARCODE 52 -> tag -> Rs ✓. Asal TSC par Urdu ki shakal / polarity
+  YAHAN test nahi — pehla label dekh kar urduInvert / urduPx set karein.
