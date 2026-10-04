@@ -2402,3 +2402,11 @@ Malik: laptop par mulazim ko refresh par login page; pic mein 2 tabs khule + ⏱
 * reset() (booting nahi) -> event 'sam-signed-out' -> akela tab + sam-no-auto nahi -> 1.2 s baad tryAutoLogin('relogin')
   (yaad kiye password se chup-chaap). 2 tabs ho to nahi (tug-of-war na ho).
 * ⏱ bootTime tap -> modal: Firebase tayyar / Login / pehli screen ke waqt (bootMark auth/session), internet type.
+
+==================== v2.80.2 (2026-10-04) — ASAL WAJAH: ⚡ RESUME KABHI CHALTA HI NAHI THA ====================
+Malik: v2.80.1 par bhi ⏱ 13.8s 🔑 + login screen. tryAutoLogin boot cloud.controller.resumeLogin dhoondta tha — controller
+mein naam `resume(role, scope)` hai (v2.37 se) -> fast path kabhi nahi, har boot 🔑: login() = signOut (reset -> login form
+dikhe) + signInAnonymously + PBKDF2 + createPasswordSession = 10-15 s.
+* Ab (resumeLogin || resume).call(controller, role, scope) — boot aur 'relogin' dono. Firebase persisted user (browserLocal)
+  par seedha activate (session + account jaanch) -> ⚡ 1-3 s, login page nahi. Fail -> purana go() (🔑).
+* resuming flag: resume ke andar reset() -> 'sam-signed-out' -> relogin listener ab nahi chalta (busy loop se bacha).
