@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.81.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.82.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,7 +57,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.81.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.82.0: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -250,17 +250,37 @@ const saleRoot = () => !!document.querySelector('[data-sale-root],[data-pp-root]
 function collect() {
   const chunks = rows.filter(r => !r.meta && Array.isArray(r.items));
   const branches = [...new Set(chunks.map(c => c.branch))].sort((a, b) => a - b);
-  const pick = branches.includes(branch) ? branch : (branches.includes(1) ? 1 : branches[0]);   // v1.67: shuru mein NOOR TRADERS (branch 1)
-  const items = chunks
-    .filter(c => c.branch === pick)
-    .sort((a, b) => (a.order || 0) - (b.order || 0))
-    .flatMap(c => c.items);
-  const meta = rows.find(r => r.meta && r.branch === pick) || null;
   const names = {};
   rows.forEach(r => { if (r.branch != null && r.name) names[r.branch] = r.name; });
-  return { branches, pick, items, meta, names };
+  const g2 = jamaG2(branches, names);
+  const canJama = branches.includes(1) && g2 != null;
+  const pick = (branch === JAMA && canJama) ? JAMA : branches.includes(branch) ? branch : (branches.includes(1) ? 1 : branches[0]);   // v1.67: shuru mein NOOR TRADERS (branch 1) · v2.82: 0 = 🧮 jama
+  const of = b => chunks.filter(c => c.branch === b).sort((a, b) => (a.order || 0) - (b.order || 0)).flatMap(c => c.items);
+  const items = pick === JAMA ? jamaItems(of(1), of(g2)) : of(pick);
+  const meta = rows.find(r => r.meta && r.branch === (pick === JAMA ? 1 : pick)) || null;
+  return { branches, pick, items, meta, names, g2, canJama };
 }
 
+// v2.82: 🧮 JAMA (farzi) — NOOR TRADERS + Godam 2 ek jagah. Sirf dikhane ke liye, POS mein kuch nahi badalta.
+// "apni factory" category (surf, soda, kala soap) ka NT wala MINUS stock jama mein shamil NAHI (0 gina jata).
+const JAMA = 0;
+const isFactory = r => /factory|fact?ry|فیکٹری/i.test(String(r.cat || ''));
+function jamaG2(branches, names) {
+  const byName = branches.find(b => /godam\s*-?\s*2\b/i.test(String(names[b] || '')));
+  if (byName != null) return byName;
+  return branches.includes(2) ? 2 : null;
+}
+function jamaItems(nt, g2) {
+  const map = new Map();
+  for (const r of nt) map.set(String(r.id), { ...r, _nt: Number(r.stock) || 0, _g2: 0 });
+  for (const r of g2) { const k = String(r.id); const o = map.get(k); if (o) o._g2 = Number(r.stock) || 0; else map.set(k, { ...r, _nt: 0, _g2: Number(r.stock) || 0 }); }
+  return [...map.values()].map(o => {
+    const fac = isFactory(o) && o._nt < 0;
+    const stock = Math.round(((fac ? 0 : o._nt) + o._g2) * 100) / 100;
+    const pack = Number(o.pack) || 0, ctn = pack > 0 ? Math.floor(stock / pack) : 0;
+    return { ...o, stock, ctn, pcs: pack > 0 ? Math.round((stock - ctn * pack) * 100) / 100 : stock, _fac: fac, _jama: true };
+  }).sort((a, b) => String(a.name).localeCompare(String(b.name)));
+}
 const isHidden = r => !!hidden[String(r.id)];
 const passes = r => {
   if (filter === 'hidden') return isHidden(r);
@@ -342,7 +362,7 @@ function renderStockInner() {
   start();
 
   const q = norm($('search')?.value || '');
-  const { branches, pick, items, meta, names } = collect();
+  const { branches, pick, items, meta, names, canJama } = collect();
   pickedBranch = pick;
 
   $('actions').innerHTML = '';
@@ -478,7 +498,7 @@ function summaryHTML(branches, pick, items, meta, names) {
   const branchBar = branches.length > 1
     ? `<div class="account-tools">${branches.map(b =>
         `<button data-stock-branch="${b}"${b === pick ? ' class="selected"' : ''}>${esc(branchName(b, names))}</button>`
-      ).join('')}</div>`
+      ).join('')}${canJama ? `<button data-stock-branch="${JAMA}" class="jama-chip${pick === JAMA ? ' selected' : ''}" title="NOOR TRADERS + Godam 2 ek jagah (farzi jama — POS mein kuch nahi badalta); apni factory ka minus shamil nahi">🧮 NT + G2 (jama)</button>` : ''}</div>${pick === JAMA ? '<p class="stat-note jama-note">🧮 Farzi jama: NOOR TRADERS + Godam 2 · apni factory (surf, soda, kala soap) ka minus 0 gina gaya · POS mein kuch nahi badla</p>' : ''}`
     : '';
 
   const minus = items.filter(r => r.stock < 0 && !isHidden(r)).length;
@@ -1287,6 +1307,7 @@ function rowHTML(r) {
     <div class="amount">
       <strong>${big}</strong>
       <small>${num(r.stock)} ${esc(r.uName || 'Pcs')}</small>
+      ${r._jama ? `<small class="jama-sum">NT ${r._fac ? `<s>${num(r._nt)}</s> 0` : num(r._nt)} + G2 ${num(r._g2)} = ${num(r.stock)}${r._fac ? ' 🏭' : ''}</small>` : ''}
       <button type="button" class="stock-label-btn" data-stock-label="${esc(r.id)}">🏷️ Label</button>
       ${canEditItem() ? `<button type="button" class="stock-item-btn" data-stock-item="${esc(r.id)}">✏️ Item</button>` : ''}
       ${isOwner() ? `<label style="display:block;font-size:.85em;white-space:nowrap"><input type="checkbox" style="width:auto" data-stock-hide="${esc(r.id)}"${isHidden(r) ? ' checked' : ''}> Band</label>` : ''}
@@ -1299,7 +1320,7 @@ function rowHTML(r) {
 // branch aur sort ke buttons
 document.addEventListener('click', e => {
   const b = e.target.closest?.('[data-stock-branch]');
-  if (b) { branch = Number(b.dataset.stockBranch); godamAll = false; if (branch !== 1) filter = 'has'; limit = PAGE; rerender(); return; }   // v1.95/97: godam kholte hi sirf USI godam ka stock
+  if (b) { branch = Number(b.dataset.stockBranch); godamAll = false; if (branch !== 1) filter = 'has'; limit = PAGE; rerender(); return; }   // v2.82: 0 = jama (filter has)   // v1.95/97: godam kholte hi sirf USI godam ka stock
   if (e.target.closest?.('[data-stock-scan]')) { openScanner(); return; }
   const ib = e.target.closest?.('[data-stock-item],[data-stock-newitem],[data-item-close]');
   if (ib) { const d = ib.dataset;
