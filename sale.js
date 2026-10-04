@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.77.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.77.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.77.1';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.77.1';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -246,7 +246,7 @@ function vbAdd(text) {
   if (!lastSug) notice('🎤 Suna: "' + heard.slice(0, 60) + '" — item ka naam samajh nahi aaya');
 }
 let vbHold = false, vbStopT = 0, vbHeard = '', vbDone = '';
-function vbStart() {               // v2.77.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
+function vbStart() {               // v2.77.1: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
   if (vbRec) { try { vbRec.abort(); } catch {} vbRec = null; }
@@ -478,7 +478,7 @@ document.addEventListener('pointercancel', () => vbRelease());
 document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sale-mic]')) e.preventDefault(); });
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.77.0: hold se chalta hai
+  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.77.1: hold se chalta hai
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {
@@ -631,7 +631,7 @@ document.addEventListener('keydown', e => {
   if (document.getElementById('f5Ask')) return;
   if (!cart.length) { notice('Bill khali hai — pehle item lagayein'); return; }
   const box = document.createElement('div'); box.id = 'f5Ask'; box.className = 'f5-ask';
-  box.innerHTML = `<div class="f5-card"><b>🖨 Kitne print?</b><small>${cart.length} items · Rs ${num(cartTotal())}</small><div class="f5-ctr">${COUNTERS.map(([k, n]) => `<button type="button" data-f5c="${k}"${counter === k ? ' class="on"' : ''}><kbd>${k === 'local' ? 'D' : n[0]}</kbd> ${n}</button>`).join('')}</div><div class="f5-row">${[1, 2, 3].map(n => `<button type="button" data-f5="${n}"${n === copies ? ' class="on"' : ''}><span>${n}</span>print</button>`).join('')}</div><p>Counter: <kbd>A</kbd> <kbd>B</kbd> <kbd>M</kbd> <kbd>D</kbd> · Print: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> · <kbd>Enter</kbd> = ${copies} · <kbd>Esc</kbd> = wapas</p></div>`;
+  box.innerHTML = `<div class="f5-card"><b>🧾 Bill ki kitni copy?</b><small class="f5-tok">🎫 Token parchi alag se khud aati hai</small><small>${cart.length} items · Rs ${num(cartTotal())}</small><div class="f5-ctr">${COUNTERS.map(([k, n]) => `<button type="button" data-f5c="${k}"${counter === k ? ' class="on"' : ''}><kbd>${k === 'local' ? 'D' : n[0]}</kbd> ${n}</button>`).join('')}</div><div class="f5-row">${[1, 2, 3].map(n => `<button type="button" data-f5="${n}"${n === copies ? ' class="on"' : ''}><span>${n}</span>print</button>`).join('')}</div><p>Counter: <kbd>A</kbd> <kbd>B</kbd> <kbd>M</kbd> <kbd>D</kbd> · Print: <kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd> · <kbd>Enter</kbd> = ${copies} · <kbd>Esc</kbd> = wapas</p></div>`;
   document.body.appendChild(box);
   const done = n => {
     document.removeEventListener('keydown', key, true); box.remove();
@@ -726,17 +726,22 @@ function printLocal(sl, cp = 1, cr = 1) {
   const gates = Object.entries(gp).map(([g, ls]) => `<section class="pg gate"><h1>GATE PASS</h1><p class="c big">${esc(gname(Number(g)))}</p><p class="row"><b>Bill # ${esc(sl.saleNo || '')}</b><b>Token ${tok || '-'}</b></p><p class="row"><span>${d8}</span><span>${tm}</span></p><hr>${ls.map(l => `<p class="row"><span>${esc(l.name)}</span><b>${qtxt(l)}</b></p>`).join('')}<hr><p class="c sm">Maal de kar parchi rakh lein</p></section>`).join('');
   const n = Math.max(1, cr | 0);
   const toks = Array.from({ length: n }, (_, i) => `<section class="pg tok"><p class="tl">TOKEN</p><p class="tn">${tok || '-'}</p><p class="ur" dir="rtl" lang="ur">اس بل کے ${n} کریٹ ہیں</p><p class="tc">Crate ${i + 1} / ${n}</p><p class="row sm"><span>Bill # ${esc(sl.saleNo || '')}</span><span>${tm}</span></p></section>`).join('');
-  const html = `<!doctype html><html><head><meta charset="utf-8"><style>
-    @page{size:80mm auto;margin:3mm}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#000;width:74mm}
+  // v2.77: har hissa ALAG print job (printer har job ke baad khud cut karta hai) — bill copies, gate pass, har crate ka token.
+  // Chaurai 68mm (80mm printer asal mein ~72mm chhapta hai — 74mm par kinare kat-te the).
+  const CSS = `
+    @page{size:80mm auto;margin:2mm 0}*{box-sizing:border-box}body{margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#000;width:68mm;padding:0 1mm}
     .pg{page-break-after:always;break-after:page;padding:1mm 0}.pg:last-child{page-break-after:auto}
     h1{font-size:20px;text-align:center;margin:0 0 2px}.c{text-align:center;margin:2px 0}.sm{font-size:11px}.big{font-size:16px}
     .row{display:flex;justify-content:space-between;gap:6px;margin:2px 0;font-size:13px}.row.big{font-size:17px}
     .it{margin:3px 0}.it>b{font-size:13px}hr{border:0;border-top:1px dashed #000;margin:4px 0}
     .tok{text-align:center;padding:2mm 0 1mm}.tl{font-size:14px;font-weight:700;letter-spacing:3px;margin:0}.tn{font-size:64px;font-weight:900;line-height:1;margin:2px 0}
     .ur{font-size:24px;font-weight:700;margin:4px 0;font-family:'Noto Nastaliq Urdu','Jameel Noori Nastaleeq','Urdu Typesetting',Tahoma,Arial,sans-serif}.tc{font-size:18px;font-weight:800;margin:2px 0}
-  </style></head><body>${Array.from({ length: Math.max(1, cp | 0) }, () => bill).join('')}${gates}${toks}</body></html>`;
-  const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
-  document.body.appendChild(f); const w = f.contentWindow; w.document.open(); w.document.write(html); w.document.close();
-  setTimeout(() => { try { w.focus(); w.print(); } catch {} setTimeout(() => f.remove(), 60000); }, 300);
+  `;
+  const parts = h => String(h || '').split('</section>').filter(x => x.trim()).map(x => x + '</section>');
+  const jobs = [...Array.from({ length: Math.max(1, cp | 0) }, () => bill), ...parts(gates), ...parts(toks)];
+  const one = (body, k) => { const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+    document.body.appendChild(f); const w = f.contentWindow; w.document.open(); w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>NT ${k + 1}</title><style>${CSS}</style></head><body>${body}</body></html>`); w.document.close();
+    setTimeout(() => { try { w.focus(); w.print(); } catch {} setTimeout(() => f.remove(), 60000); }, 300); };
+  jobs.forEach((b, k) => setTimeout(() => one(b, k), k * 1600));
   notice(`🖨 Bill ${sl.saleNo} · token ${tok || '-'} · ${n} parchi — isi device par`);
 }

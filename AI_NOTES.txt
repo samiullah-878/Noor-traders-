@@ -2284,3 +2284,16 @@ Malik (4 Oct): shop PC par Nayi Sale -> 📷 Scan = "Camera nahi khula: Requeste
 * style.css: .sale-cam.gun, .gun-chip (hara pill), .scan-box.no-cam .scan-msg.
 * Test (happy-dom): devices [] -> openSaleCamera -> scan-box cam-off no-cam + paigham + chip ✓; camera wapas -> camMissing false ✓.
   Asal PC par Chrome ke sath YAHAN test nahi.
+
+==================== v2.77.1 (2026-10-04) — 🖥 YEHI DEVICE PRINT: HAR PARCHI ALAG CUT + KINARE NA KATEIN ====================
+Malik: token 5 bill — bill 2 copy + crate token sab EK lambi parchi mein (cut nahi), kinare kate ("3ill #", "Token 5" adha,
+raqam "14"). Malik ne kaha: "Bill plus token" (bill aur token alag-alag parchi).
+* sale.js printLocal: page-break par printer cut nahi karta (driver sirf job ke aakhir mein cut) -> ab HAR hissa alag print job:
+  bill x copies, har gate pass, har crate token — har ek apna iframe, 1.6 s faasla (kiosk-printing mein dialog nahi).
+  parts(h) = section string ko '</section>' par todna (gates / toks joined strings hain).
+* Chaurai: @page 80mm auto margin 2mm 0; body 68mm margin auto + 1mm padding (pehle 74mm — 80mm printer ~72mm chhapta).
+* F5 card: "🖨 Kitne print?" -> "🧾 Bill ki kitni copy?" + chip ".f5-tok" "🎫 Token parchi alag se khud aati hai" (malik ne 2 dabaya
+  tha shayad bill+token samajh kar). PC script (sale-post.js) wali printing NAHI chheri.
+* Version 2.77.0 -> 2.77.1 (pichhla zip shayad upload ho chuka — cache ke liye).
+* Test (happy-dom, naqli iframe): 1 copy + godam 2 gate + 2 crate = 4 alag jobs (bill, gate, tok, tok), sab 68mm ✓.
+  Asal printer par cut YAHAN test nahi.
