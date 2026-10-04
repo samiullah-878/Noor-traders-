@@ -1135,3 +1135,29 @@ kehta, purani rakhta. v2.4 (taskkill) / v2.5 (alive = node) ka code repo mein NA
   ho kar 🟢 chal rahi, doctor-log mein "🙈 v2.6".
 * "NT Waqt Theek" task non-admin doctor se schtasks /run ho sakta hai ya nahi — pakka nahi (access denied ho to log aata hai);
   task khud har ghante chalta hai.
+
+==================== v2.78.0 + RULES 2.26 + PC manifest 2026-10-04.2 — 💻 PC CHUNEIN (NT-PRINT, BINA WINDOW) ====================
+Malik: "print on this device karein to window na aaye" (browser kabhi ijazat nahi deta — kiosk shortcut diya) phir
+"PC select karne ka option app ke andar" -> OK. (Kitne PC hain — malik ne nahi bataya; feature 1 ya zyada PC dono par chalta.)
+* pc/nt-print.js v1.0 (NAYA, service "💻 NT-PRINT", nt-print-auto.bat, lock 47831, .alive, log nt-print-log.txt):
+  - PC id = slug(local-config pcId || hostname) <=17, naam pcName || hostname, counter 'pc:<id>'. Printer: local-config ntPrinter
+    || Windows default (Get-CimInstance). printWidth (32), dots (512), godamNames (SQL na ho to; SQL ho to dbo.Branch).
+  - Har 60 s printPCs/<id> {name, host, printer, printers[], at, ver, width} (printers har 10 min dobara).
+  - Listener appSales where counter == 'pc:<id>' && date == aaj (do equality — composite index nahi chahiye). done + saleNo:
+    fresh = pcPrintedAt nahi aur doneAt 30 min ke andar -> bill x copies + har gate pass + har crate token; again = printReq >
+    pcPrintedAt -> sirf bill x copies. Phir update pcPrintedAt/pcPrintedBy, printReq delete. Ghalti -> pcError + pcPrintedAt.
+    Naya din -> exit 0 (bat). UNAUTHENTICATED -> exit 1.
+  - Chhapai: RAW ESC/POS, har parchi ALAG job + GS V cut. nt-print.ps1 (script khud likhti) + NtPrint1.dll (C#: Send + Img).
+    Img = System.Drawing se text -> GS v 0 raster (Urdu "اس بل کے N کریٹ ہیں", bara token number, Urdu item naam). Font pick:
+    Jameel Noori Nastaleeq, Urdu Typesetting, Segoe UI, Tahoma, Arial. `node nt-print.js --test` = naqli bill + gate + 2 token.
+* pc/sale-post.js v1.5.2: notHere(counter) = 'local' || 'pc:*' -> print NAHI (pehle 'local' par bhi main PC chhapta tha —
+  v2.72 note ghalat tha, code mein skip tha hi nahi); handlePrint bhi skip (printReq NT-PRINT hatata hai).
+* App sale.js: BASE_COUNTERS + PCS (cloud.listenPrintPCs) -> allCounters(): zinda PC (at 4 min ke andar) "💻 naam", chuna hua band
+  PC "💤 naam" (dashed). COUNTERS ab proxy object (some/find/map/[0]). pcsChanged: chips jagah par badalte (.sale-counter
+  replaceWith, .f5-ctr innerHTML) — poora render nahi. 60 s par dobara. F5: PC chips (kbd 💻), PC par bhi askCrates. Save par PC band
+  -> notice "💤 ... print nahi hoga". counterName pc. localStorage 'pc:' bhi qabool. CSS .pc-chip/.on/.off.
+* cloud.js listenPrintPCs. RULES 2.26: printPCs read (owner/blue/sale), likhna sirf admin. firestore-rules-2.26.html.
+* Test: happy-dom — zinda PC chip aata, ghanta purana nahi, click -> 'pc:counter-pc' yaad + class on ✓; nt-print parchi builder
+  (bill / gate / token text + Urdu img segments) ✓. PowerShell/C# raster + asal printer YAHAN test nahi (Windows chahiye).
+* Doosre PC par: Node + C:\khata-sync\firebase-key.json (haath se copy — GitHub par kabhi nahi) + npm firebase-admin +
+  Startup NT-PRINT.vbs (setup command chat mein).

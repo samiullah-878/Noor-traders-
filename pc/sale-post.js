@@ -1,5 +1,6 @@
 // ============================================================
 //  sale-post.js — Blue Khata app ki "Nayi Sale" -> POS Sale bill (v1)
+//  v1.5.2 (2026-10-04): counter 'local' / 'pc:<id>' par print NAHI (app / NT-PRINT khud chhapte hain) — pehle local par bhi PC chhapta tha
 //
 //  App sale Firestore "appSales" mein status "new" ke saath likhta hai. Yeh script:
 //   1) POS ke apne procedures (usp_Sale_InsertUpdate / usp_SaleDetail_InsertUpdate) se bill banati hai
@@ -462,6 +463,8 @@ const busy = new Set();
 let queue = Promise.resolve();
 const later = fn => { queue = queue.then(fn).catch(e => { log('Masla: ' + e.message); if (e?.code === 16 || /UNAUTHENTICATED|invalid authentication credentials/i.test(String(e?.message))) { log('Firebase ka rabta toot gaya (UNAUTHENTICATED) — script 30 sec mein nayi chabi se dobara shuru hogi'); setTimeout(() => process.exit(1), 500); } }); };   // 2026-09-30: pehle bas likh kar aage chal padti thi, bill atak jate
 
+// 2026-10-04: counter 'local' (app khud chhapti) ya 'pc:<id>' (us PC ka NT-PRINT) — yeh script print NAHI karti
+const notHere = c => c === 'local' || String(c || '').startsWith('pc:');
 async function handleSale(doc) {
   const id = doc.id;
   if (busy.has(id)) return;
@@ -480,7 +483,8 @@ async function handleSale(doc) {
       await ref.update({ status: 'done', saleNo: r.saleNo, saleId: r.saleId, crvNo: r.crvNo || '', total: r.total,
         ...(r.cash != null ? { cash: r.cash } : {}), doneAt: Date.now(), error: FieldValue.delete() });
       log(`${r.again ? 'Pehle se bani thi' : 'Sale ban gayi'}: ${r.saleNo} · ${ok.mode} · Rs ${r.total}${r.crvNo ? ' · ' + r.crvNo : ''}`);
-      if (!r.again) {
+      if (!r.again && notHere(ok.counter)) log(`Print yahan nahi: counter ${ok.counter} (${String(ok.counter).startsWith('pc:') ? 'NT-PRINT us PC par chhapega' : 'app usi device par chhapti hai'})`);
+      else if (!r.again) {
         const pr = printerFor(ok.counter);
         await printSale(r.saleNo, r.saleId, ok.copies, pr).catch(e => log('Print masla: ' + e.message));
         await printGatePasses(r, pr).catch(e => log('Gate pass masla: ' + e.message));
@@ -494,6 +498,7 @@ async function handleSale(doc) {
 
 async function handlePrint(doc) {
   const d = doc.data();
+  if (notHere(d.counter)) return;   // 2026-10-04: 💻 PC / yehi device wala dobara print yahan nahi
   const key = 'p' + doc.id;
   if (busy.has(key)) return;
   busy.add(key);
@@ -524,7 +529,7 @@ if (process.argv.includes('--print')) {
   lock.listen(LOCK_PORT, '127.0.0.1', async () => {
     try {
       await basics(await getPool());
-      log('sale-post v1.5.1 chal raha hai — app ki sale ka intezar. Band: Ctrl+C');
+      log('sale-post v1.5.2 chal raha hai — app ki sale ka intezar. Band: Ctrl+C');
       listen();
     } catch (e) { log('Shuru nahi hua: ' + e.message); process.exit(1); }
   });
