@@ -2551,3 +2551,20 @@ alag ho; counter ki aam bill (sab NT) par kabhi nahi banta tha. Ab Sale mein swi
   (title = poora naam); mobile (<640px) par agli line poori chaurai. Purani alag "Godam" row khatam.
 * sale.js: gShort(); hook list branch 0 (jama) ke baghair; naya bill (save / saaf / draft khali) -> godam = SALE_BRANCH (NT);
   scan list mein NT ke ilawa line ke naam ke saath " · G1" nishan. Gate switch (v2.89) pehle jaisa — ON ho to wo godam.
+
+==================== v2.91.0 + post-farq v2.0 (manifest 2026-10-05.7) — 🧮 GINTI FARQ = POS ADJUSTMENT (sale nahi) ====================
+Malik: stock farq sale screen / sale mein plus-minus na ho. POS mein Adjustment module mila:
+  usp_Adjustment_InsertUpdate(@AdjustmentID,@BranchID,@AdjustmentNo,@AdjustmentDate,@Description,@CreatedBy,@CreatedOn,@UpdatedBy,
+  @UpdatedOn,@Remarks,@SystemNotes,@COGS,@DocStatusID,@SaleID) · usp_AdjustmentDetail_InsertUpdate(@AdjustmentDetailID,
+  @AdjustmentID,@ItemID,@Qty,@Rate,@AdjustmentRate,@Narration). Namoona: AdjustmentNo '00000235' (branch-wise), DocStatusID 1,
+  SaleID 0, detail Qty minus, Rate = cost, AdjustmentRate 0.
+* post-farq.js v2.0: createBill -> createAdjustment (default; local-config "farqMode":"sale" = purana sale/return). Ek tx:
+  agla AdjustmentNo (MAX TRY_CAST +1, UPDLOCK), header, ID recordset ya No se; har line ke pehle/baad ItemBranchRate.CurrStock —
+  POS ne stock na badla to ROLLBACK + error (khud CurrStock NAHI chhedte). postedKey/history pehle jaisa; saleNo = 'ADJ-<no>'.
+  buildList: adjust mode mein "stock fraq" party zaroori nahi.
+* sale.js: posSales mein "stock fraq/farq" party wale bills Aaj ke bills list se bahar (purane farq bills sale mein na dikhein).
+* YAHAN TEST NAHI HUA (asal POS chahiye) — pehli dafa chhoti ginti (1 item) se jaanchein; error aaye to farqMode "sale".
+* v2.91.1 + post-farq v2.1 (manifest 2026-10-05.8): MALIK NE ADJUSTMENT NAHI CHAHA — farq pehle jaisa "stock fraq" party ki
+  sale/return (khate mein peeche se). farqMode default 'sale' (adjust sirf local-config "farqMode":"adjust").
+  App Sale "Aaj ke bills": farq bills wapas dikhte hain magar 🧮 grey dashed chip "farq · sale nahi" (s.farq) — paid/udhaar
+  (✓/✗) mein nahi ginte.

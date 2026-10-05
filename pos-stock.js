@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.90.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.91.1';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -79,7 +79,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.90.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.91.1: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -1372,7 +1372,7 @@ document.addEventListener('click', e => {
   const sa = e.target.closest?.('[data-scan-saveall]');
   if (sa) { saveAll(sa); return; }
   const hb = e.target.closest?.('[data-stock-hide]');
-  if (hb) {   // v2.90.0: 🔒 Band par password (default 7183; stockConfig.bandPw se badal sakte hain) — on aur off dono
+  if (hb) {   // v2.91.1: 🔒 Band par password (default 7183; stockConfig.bandPw se badal sakte hain) — on aur off dono
     const want = String(itemCfg.bandPw || '7183'), got = prompt((hb.checked ? 'Item BAND karne' : 'Item dobara CHALU karne') + ' ka password:');
     if (got === null || got !== want) { hb.checked = !hb.checked; if (got !== null) notice('❌ Password ghalat'); return; }
     toggleHidden(hb.dataset.stockHide, hb.checked, hb); return; }
@@ -1966,13 +1966,13 @@ async function openScanner() {
     scanBox.appendChild(side); scanBox.classList.add('has-bills');
     const q = side.querySelector('.sb-q'), listBox = side.querySelector('.sb-list'), cnt = side.querySelector('.sb-head small');
     let open = '';
-    const mark = s => (s.cancelled || s.status === 'cancelled') ? ['⊘', 'cx'] : s.status === 'failed' ? ['⚠', 'fl'] : (s.status === 'new' || s.status === 'posting') ? ['⏳', 'wt'] : (s.mode !== 'wholesale' || Number(s.cash) >= Number(s.total) - 0.5) ? ['✓', 'pd'] : ['✗', 'up'];
+    const mark = s => s.farq ? ['🧮', 'fq'] : (s.cancelled || s.status === 'cancelled') ? ['⊘', 'cx'] : s.status === 'failed' ? ['⚠', 'fl'] : (s.status === 'new' || s.status === 'posting') ? ['⏳', 'wt'] : (s.mode !== 'wholesale' || Number(s.cash) >= Number(s.total) - 0.5) ? ['✓', 'pd'] : ['✗', 'up'];
     const paintB = () => { let h = null; try { h = saleBillsHook(); } catch {} const all = (h && h.list) || [];
       const t = String(q.value || '').trim().toLowerCase(), d = t.replace(/[^0-9]/g, '');
       const rows = all.filter(s => !t || String(s.saleNo || '').includes(t) || (s.note || '').toLowerCase().includes(t) || (s.party || '').toLowerCase().includes(t) || (d.length >= 2 && String(Math.round(Number(s.total) || 0)).startsWith(d)) || (s.lines || []).some(l => String(l.name || '').toLowerCase().includes(t)));
       cnt.textContent = `${rows.length}${rows.length !== all.length ? ' / ' + all.length : ''}`;
       listBox.innerHTML = rows.map(s => { const [ic, cl] = mark(s), tm = new Date(s.createdAt || 0).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' });
-        return `<div class="sb-chip ${cl}${open === s.id ? ' open' : ''}" data-sb="${esc(s.id)}"><i>${ic}</i><span><b>${s.saleNo ? esc(String(s.saleNo).replace(/^0+(?=\d{4})/, '')) : (s.mode === 'wholesale' ? 'Wholesale' : 'Counter')}</b><em>Rs ${num(s.total)}${s.pos ? ' <u>POS</u>' : ''}</em></span><small>${tm}${s.party && !/counter\s*sale/i.test(s.party) ? '<br>' + esc(s.party) : ''}</small>${open === s.id ? `<div class="sb-det">${s.pos ? `<p>POS par bana bill${s.party ? ' · ' + esc(s.party) : ''}<span>${num(s.n || 0)} items</span></p>` : ''}${(s.lines || []).map(l => `<p>${esc(l.name)}<span>${num(l.qty)} × ${num(l.rate)}</span></p>`).join('')}<p class="sb-pay">Cash Rs ${num(s.cash)}${s.mode === 'wholesale' && s.total - s.cash > 0 ? ' · Udhaar Rs ' + num(s.total - s.cash) : ''}</p>${s.status === 'done' && !s.pos ? `<button type="button" data-sb-print="${esc(s.id)}">🖨 Dobara print</button>` : ''}</div>` : ''}</div>`; }).join('') || '<p class="stat-note">Aaj koi bill nahi</p>'; };
+        return `<div class="sb-chip ${cl}${open === s.id ? ' open' : ''}" data-sb="${esc(s.id)}"><i>${ic}</i><span><b>${s.saleNo ? esc(String(s.saleNo).replace(/^0+(?=\d{4})/, '')) : (s.mode === 'wholesale' ? 'Wholesale' : 'Counter')}</b><em>Rs ${num(s.total)}${s.farq ? ' <u>farq · sale nahi</u>' : s.pos ? ' <u>POS</u>' : ''}</em></span><small>${tm}${s.party && !/counter\s*sale/i.test(s.party) ? '<br>' + esc(s.party) : ''}</small>${open === s.id ? `<div class="sb-det">${s.pos ? `<p>POS par bana bill${s.party ? ' · ' + esc(s.party) : ''}<span>${num(s.n || 0)} items</span></p>` : ''}${(s.lines || []).map(l => `<p>${esc(l.name)}<span>${num(l.qty)} × ${num(l.rate)}</span></p>`).join('')}<p class="sb-pay">Cash Rs ${num(s.cash)}${s.mode === 'wholesale' && s.total - s.cash > 0 ? ' · Udhaar Rs ' + num(s.total - s.cash) : ''}</p>${s.status === 'done' && !s.pos ? `<button type="button" data-sb-print="${esc(s.id)}">🖨 Dobara print</button>` : ''}</div>` : ''}</div>`; }).join('') || '<p class="stat-note">Aaj koi bill nahi</p>'; };
     q.oninput = paintB;
     listBox.addEventListener('click', e => { const pr = e.target.closest('[data-sb-print]'); if (pr) { e.stopPropagation(); try { saleBillsHook().reprint(pr.dataset.sbPrint); notice('🖨 Print ka hukam PC ko bhej diya'); } catch (er) { notice('Print nahi hua'); } return; } const c = e.target.closest('[data-sb]'); if (!c) return; open = open === c.dataset.sb ? '' : c.dataset.sb; paintB(); });
     paintB(); scanBox._billsTimer = setInterval(paintB, 4000);
