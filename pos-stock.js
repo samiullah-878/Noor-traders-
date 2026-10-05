@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.85.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.85.1';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -79,7 +79,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.85.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.85.1: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -388,7 +388,7 @@ function renderStockInner() {
   pickedBranch = pick;
 
   $('actions').innerHTML = '';
-  $('summary').innerHTML = summaryHTML(branches, pick, items, meta, names);
+  $('summary').innerHTML = summaryHTML(branches, pick, items, meta, names, canJama);
 
   if (failed) {
     $('list').innerHTML = `<div class="empty"><strong>Stock nahi mila</strong><p>${esc(failed)}</p></div>`;
@@ -513,7 +513,7 @@ function valueCardHTML(branches, names) {
     <p class="vc-tap">${show ? 'Tap = chhupao' : 'Tap = 30 second dikhao'}</p></div>`;
 }
 document.addEventListener('click', e => { const c = e.target.closest?.('[data-val-toggle]'); if (!c || !isOwner()) return; valShowUntil = Date.now() < valShowUntil ? 0 : Date.now() + 30000; rerender(); if (valShowUntil) setTimeout(() => { if (Date.now() >= valShowUntil) rerender(); }, 30500); });
-function summaryHTML(branches, pick, items, meta, names) {
+function summaryHTML(branches, pick, items, meta, names, canJama = false) {
   const totalPcs = meta?.totalPcs ?? items.reduce((s, r) => s + (r.stock || 0), 0);
   const stamp = meta?.syncedAt;
 

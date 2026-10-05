@@ -2492,3 +2492,9 @@ par auto backup.
   `node auto-backup.js --now` = foran test.
 * Server par Google Drive for Desktop (usi email) install chahiye — warna sirf PC par backups (status ⚠️).
 * Test (node, fake db): times 00:00/23:59 -> tick -> backup + extra files bane, status ok ✓.
+
+==================== v2.85.1 (2026-10-05) — STOCK SCREEN KHALI (canJama ReferenceError) FIX ====================
+Malik: Stock screen "Branch undefined · 0" / "Stock load ho raha hai…" magar Sale mein items aate. Wajah: v2.82 mein summaryHTML()
+mein canJama istemal kiya magar wo renderStockInner se pass nahi hota tha -> ReferenceError -> render ruk jata (purana DOM rehta).
+* summaryHTML(…, canJama=false) + call site pass. happy-dom test: 50+10+20+5 items -> head + 30 rows (visible) ✓, jama chip click
+  -> jama view + .jama-sum ✓. (Test mein rerender noop tha is liye pehle nahi pakra — ab rerender = renderStock.)
