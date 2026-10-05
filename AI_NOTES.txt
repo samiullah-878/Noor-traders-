@@ -2568,3 +2568,21 @@ Malik: stock farq sale screen / sale mein plus-minus na ho. POS mein Adjustment 
   sale/return (khate mein peeche se). farqMode default 'sale' (adjust sirf local-config "farqMode":"adjust").
   App Sale "Aaj ke bills": farq bills wapas dikhte hain magar 🧮 grey dashed chip "farq · sale nahi" (s.farq) — paid/udhaar
   (✓/✗) mein nahi ginte.
+
+==================== v2.92.0 + RULES 2.31 (2026-10-05) — 🚚 GAARI KA HISAAB + "Sirf Gaari" login ====================
+Malik ki ek gaari (GJL640630, Falcon-i / TPL Trakker). Falcon-i ka khula API nahi -> tracker km SCREENSHOT se (AI).
+* gaari.js (naya): collection businesses/noor-traders/gaari/{id} kind bilty|diesel|kharch|reading|tracker|driver + gaari/_config
+  {no, driver, avg 5.5, commType pct|fixed, commVal}. Screen: mahina ‹ ›, NAFA/NUQSAN = kiraya − (diesel + commission + kharche),
+  meter km = pichhle mahine ki aakhri reading (ya is mahine ki pehli) -> is mahine ki aakhri; asal average; diesel banta tha =
+  km/avg; farq > max(5 L, 8%) = laal; meter vs tracker farq > max(30, 5%) = laal; fi km kharch; driver baqaya (kul commission −
+  kul diye). Forms: bilty (commission khali = setting), diesel (litre×rate auto, reading zaroori; pichhli se kam par confirm),
+  kharch (Toll/Repair/Tyre/Oil/Khana/Police/Parking/Doosra), reading, tracker km, driver ko diye (sirf malik). 📷 photo -> AI
+  (askImage, Gemini): parchi -> litre/rate/amount/reading/pump, meter -> reading, Falcon-i report -> km. PDF (openReportPreview).
+* ai-tally.askImage({key,model,images,prompt}). cloud: listenGaari/addGaari/setGaariConfig/delGaari (malik deleteDoc, mulazim
+  deleted:true). Scope 'gaari' har jagah (auth-controller, cloud createStaff 'gaariPrivate', switchScope, SW_SCOPES, SW_VIEW,
+  scopeName, scopeForView, route/allowed views, nav #gaariNav "🚚 Gaari", login select, settings staff password select, title).
+  Malik + Full mulazim + Sirf Gaari dekh sakte hain.
+* RULES 2.31: gaariStaff(); gaari/{id}: read malik/full/gaari; create (kind enum, date 10, by = uid; mulazim sirf aaj, driver-kind
+  sirf malik; _config sirf malik); update mulazim sirf apni aaj ki deleted:true; delete malik.
+* happy-dom test: 7 entries -> km 1,500, diesel 350 L, avg 4.29, 77.3 L zyada alert, tracker farq alert, nafa/nuqsan, PDF, diesel
+  form submit ✓.

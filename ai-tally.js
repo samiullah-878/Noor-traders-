@@ -115,6 +115,11 @@ async function generate({ key, model, parts, onStatus, fast = false }) {
   throw Error('Google ke server par abhi bohat rush hai. 2-5 minute baad dobara koshish karein. (' + (lastErr?.message || '') + ')');
 }
 
+export async function askImage({ key, model, images, prompt }) {   // v2.92: tasveer + sawal (gaari: meter / parchi / tracker)
+  if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
+  const parts = (images || []).map(im => ({ inline_data: { mime_type: im.mime, data: im.data } })); parts.push({ text: String(prompt || '') });
+  return textOf(await generate({ key, model, parts, fast: true }));
+}
 export async function askText({ key, model, prompt }) {   // v2.34: sirf likhai (purchase order)
   if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
   return textOf(await generate({ key, model, parts: [{ text: String(prompt || '') }] }));

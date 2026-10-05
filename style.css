@@ -1751,7 +1751,7 @@ html.boot-auto.has-app body::after{display:none}
 .val-card .vc-g span{background:rgba(255,255,255,.1);border-radius:10px;padding:6px 8px}.val-card .vc-g small{display:block;font-size:11px;opacity:.8}.val-card .vc-g b{font-size:14px;font-variant-numeric:tabular-nums}
 .val-card .vc-warn{margin:8px 0 0;font-size:12px;color:#ffd7a8}.val-card .vc-tap{margin:4px 0 0;font-size:11px;opacity:.6;text-align:right}
 
-/* v2.91.1: maaliyat card — summary ke safed card ke rang se na dabe (har look mein navy, safed text) */
+/* v2.92.0: maaliyat card — summary ke safed card ke rang se na dabe (har look mein navy, safed text) */
 .summary{flex-wrap:wrap}
 html .summary>.val-card,html.lt.lt.lt.lt .summary>.val-card,html.dk.dk.dk.dk .summary>.val-card,html.lt.lt.lt.lt header .summary>.val-card{flex:0 0 100%!important;width:100%!important;box-sizing:border-box;background:linear-gradient(135deg,#13295a,#1f4a8f)!important;color:#fff!important;border:0!important;border-left:0!important;padding:12px 14px!important;margin:0 0 4px!important;box-shadow:0 8px 22px rgba(15,35,71,.25)!important}
 html .summary>.val-card *,html.lt.lt.lt.lt .summary>.val-card *,html.dk.dk.dk.dk .summary>.val-card *{color:#fff!important;background-color:transparent}
@@ -1776,7 +1776,7 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .f5-prn button.on{background:linear-gradient(135deg,#1a2d53,#2c4a85);color:#fff}
 /* v2.80: jude hue devices */
 .dev-list{display:flex;flex-direction:column;gap:8px}.dev-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:10px 12px;border:1px solid #c9d3e6;border-radius:14px;background:#f7f9ff}.dev-row b{font-size:18px;letter-spacing:2px}.dev-row span{grid-column:1}.dev-row small{grid-column:1;color:#4a5a7a}.dev-row button{grid-row:1/4;grid-column:2}
-/* v2.91.1 */
+/* v2.92.0 */
 #tabWarn{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9999;max-width:92vw;background:#fff4e0;color:#7a4e00;border:1px solid #f0c36d;border-radius:14px;padding:10px 14px;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
 #tabWarn button{margin-left:8px;border:0;background:transparent;font-size:16px;color:#7a4e00}
 .boot-skip{display:block;margin:18px auto 0;padding:10px 16px;border:1px solid #c9d3e6;border-radius:999px;background:#fff;color:#1a2d53;font-size:14px}
@@ -1825,5 +1825,27 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .scan-godam-in button{min-width:44px;min-height:40px;padding:0 10px;border-radius:10px;border:1px solid #c9d3e6;background:#fff;font-weight:800;font-size:14px;color:#1a2d53}
 .scan-godam-in button.on{background:linear-gradient(135deg,#1a2d53,#2c4a85);color:#fff;border-color:transparent}
 @media (max-width:640px){.scan-find-row{flex-wrap:wrap}.scan-godam-in{flex:1 1 100%;margin:4px 0 0}.scan-godam-in button{flex:1}}
-/* v2.91.1: ginti farq bill — sirf dikhe */
+/* v2.92.0: ginti farq bill — sirf dikhe */
 .sb-chip.fq{opacity:.7;background:#f1f3f8!important;border-style:dashed!important}.sb-chip.fq i{background:#6b7a99!important;color:#fff}
+/* v2.92: 🚚 Gaari ka hisaab */
+.gr-card{background:linear-gradient(160deg,#16284d,#22407a);color:#fff;border-radius:22px;padding:16px;box-shadow:0 10px 30px rgba(10,20,45,.25)}
+.gr-head{display:flex;justify-content:space-between;align-items:center;gap:10px}.gr-head small{display:block;opacity:.75;font-size:.8rem}.gr-head b{font-size:1.3rem}
+.gr-month{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border-radius:14px;padding:4px}.gr-month span{font-weight:800;min-width:76px;text-align:center}
+.gr-month button{width:34px;height:34px;border-radius:10px;border:0;background:rgba(255,255,255,.15);color:#fff;font-size:1.2rem}
+.gr-big{margin:14px 0 10px;padding:14px;border-radius:16px;background:rgba(255,255,255,.08)}.gr-big small{opacity:.8}.gr-big strong{display:block;font-size:2rem;font-weight:900}
+.gr-big.up strong{color:#7dffb2}.gr-big.down strong{color:#ff9b9b}.gr-big em{font-style:normal;font-size:.85rem;opacity:.8}
+.gr-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}@media(min-width:760px){.gr-grid{grid-template-columns:repeat(4,1fr)}}
+.gr-grid div{background:rgba(255,255,255,.07);border-radius:14px;padding:10px}.gr-grid small{display:block;opacity:.7;font-size:.75rem}.gr-grid b{font-size:1.15rem}.gr-grid b.bad{color:#ffb4b4}
+.gr-grid em{display:block;font-style:normal;font-size:.75rem;opacity:.7}
+.gr-alerts p{background:rgba(255,80,80,.18);border-left:4px solid #ff6b6b;border-radius:10px;padding:8px 10px;margin:8px 0;font-size:.9rem}
+.gr-ok{background:rgba(80,220,140,.15);border-radius:10px;padding:8px 10px;margin:8px 0}.gr-err{color:#ffb4b4}.gr-driver{margin:8px 0;font-size:.9rem;opacity:.9}
+.gr-btns{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}@media(min-width:760px){.gr-btns{grid-template-columns:repeat(4,1fr)}}
+.gr-btns button{min-height:48px;border-radius:14px;border:0;background:#fff;color:#16284d;font-weight:800;font-size:.95rem}
+.gr-list{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.gr-row{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid #e3e8f2;border-radius:14px;padding:10px 12px}
+.gr-d{font-weight:800;color:#5b6b8a;min-width:52px;font-size:.85rem}.gr-t{flex:1;font-size:.95rem}.gr-t small{display:block;color:#8a96ad;font-size:.75rem}
+.gr-v{font-weight:900;text-align:right}.gr-v small{display:block;font-weight:600;color:#8a96ad;font-size:.72rem}
+.gr-x{border:0;background:#fdecec;color:#b00;border-radius:10px;width:32px;height:32px}.gr-empty{text-align:center;color:#6b7a99;padding:24px}
+.gr-diesel{border-left:4px solid #e0a000}.gr-bilty{border-left:4px solid #1e9e4a}.gr-kharch{border-left:4px solid #d9534f}.gr-reading,.gr-tracker{border-left:4px solid #1a73e8}.gr-driver{border-left-color:#6b4ec4}
+.gr-form label{display:block;margin:8px 0}.gr-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gr-photo{display:block;text-align:center;padding:14px;border:2px dashed #9fb0d0;border-radius:14px;font-weight:800;color:#22407a;cursor:pointer}
+.gr-ai{background:#eef3ff;border-radius:10px;padding:8px;font-size:.9rem}.gr-msg{color:#b00}
