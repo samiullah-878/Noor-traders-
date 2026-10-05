@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.89.1';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.90.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -79,7 +79,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.89.1: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.90.0: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -1372,7 +1372,7 @@ document.addEventListener('click', e => {
   const sa = e.target.closest?.('[data-scan-saveall]');
   if (sa) { saveAll(sa); return; }
   const hb = e.target.closest?.('[data-stock-hide]');
-  if (hb) {   // v2.89.1: 🔒 Band par password (default 7183; stockConfig.bandPw se badal sakte hain) — on aur off dono
+  if (hb) {   // v2.90.0: 🔒 Band par password (default 7183; stockConfig.bandPw se badal sakte hain) — on aur off dono
     const want = String(itemCfg.bandPw || '7183'), got = prompt((hb.checked ? 'Item BAND karne' : 'Item dobara CHALU karne') + ' ka password:');
     if (got === null || got !== want) { hb.checked = !hb.checked; if (got !== null) notice('❌ Password ghalat'); return; }
     toggleHidden(hb.dataset.stockHide, hb.checked, hb); return; }
@@ -1955,9 +1955,9 @@ async function openScanner() {
   if (saleRoot() && saleGodamHook && !pickHook) {
     const gw = document.createElement('div'); gw.className = 'scan-godam';
     const paintG = () => { let g = null; try { g = saleGodamHook(); } catch {} if (!g || !g.list || g.list.length < 2) { gw.hidden = true; return; } gw.hidden = false;
-      gw.innerHTML = '<small>Godam</small>' + g.list.map(x => `<button type="button" data-sg="${x.b}"${Number(x.b) === Number(g.cur) ? ' class="on"' : ''}>${esc(x.name)}</button>`).join(''); };
-    gw.addEventListener('click', e => { const b = e.target.closest('[data-sg]'); if (!b) return; try { saleGodamHook().set(Number(b.dataset.sg)); } catch {} paintG(); if (msg) msg.textContent = `✓ Godam: ${b.textContent} — agla item yahin se`; qBox?.focus?.(); });
-    paintG(); (scanBox.querySelector('.scan-find') || scanBox.firstElementChild).after(gw);
+      gw.innerHTML = g.list.map(x => `<button type="button" data-sg="${x.b}" title="${esc(x.full || x.name)}"${Number(x.b) === Number(g.cur) ? ' class="on"' : ''}>${esc(x.name)}</button>`).join(''); };   // v2.90: chhote NT/G1/G2
+    gw.addEventListener('click', e => { const b = e.target.closest('[data-sg]'); if (!b) return; try { saleGodamHook().set(Number(b.dataset.sg)); } catch {} paintG(); if (msg) msg.textContent = `✓ Godam: ${b.title || b.textContent} — agla item yahin se`; qBox?.focus?.(); });
+    gw.className = 'scan-godam scan-godam-in'; paintG(); { const row = scanBox.querySelector('.scan-find-row'); if (row) row.appendChild(gw); else (scanBox.querySelector('.scan-find') || scanBox.firstElementChild).after(gw); }   // v2.90: Pcs/Ctn ke aage isi line mein
   }
   // v2.64: PC par baayein — AAJ KE BILLS (chips: ✓ paid · ✗ baqi · ⊘ cancel · ⏳ PC · ⚠ fail) + search
   if (saleRoot() && saleBillsHook && !pickHook && window.matchMedia && window.matchMedia('(min-width:1100px)').matches) {

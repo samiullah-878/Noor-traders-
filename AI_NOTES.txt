@@ -2545,3 +2545,9 @@ alag ho; counter ki aam bill (sab NT) par kabhi nahi banta tha. Ab Sale mein swi
 * nt-print gateJobs / sale-post printGatePasses: d.gate ho to sab lines (godam-wise). sale-post IsGetStore pehle jaisa (godam != branch).
 * v2.89.1: Stock "Band" checkbox par PASSWORD (default 7183; blueAccess/stockConfig.bandPw se badla ja sakta hai) — band/chalu dono;
   ghalat/cancel = checkbox wapas. (pos-stock.js click handler data-stock-hide)
+
+==================== v2.90.0 (2026-10-05) — SCAN SHEET: GODAM SWITCH Pcs/Ctn KE AAGE, DEFAULT NOOR TRADERS ====================
+* pos-stock.js scan sheet: godam chips (saleGodamHook) ab .scan-find-row ke andar (Pcs | Ctn ke aage), chhote labels NT / G1 / G2 / G3
+  (title = poora naam); mobile (<640px) par agli line poori chaurai. Purani alag "Godam" row khatam.
+* sale.js: gShort(); hook list branch 0 (jama) ke baghair; naya bill (save / saaf / draft khali) -> godam = SALE_BRANCH (NT);
+  scan list mein NT ke ilawa line ke naam ke saath " · G1" nishan. Gate switch (v2.89) pehle jaisa — ON ho to wo godam.

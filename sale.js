@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.89.1';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.89.1';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.90.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.90.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -31,7 +31,7 @@ export function saleSetup(o) {
   isOwner = o.owner || isOwner; uidOf = o.uid || uidOf; learnOf = o.learn || learnOf; nameOf = o.name || nameOf;
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
-    if (d && d.day === todayStr()) { cart = d.cart || []; mode = cart.length ? (d.mode || 'counter') : 'counter'; godam = d.godam ?? null; cash = d.cash ?? null; note = d.note || ''; }   // v2.63: khali bill = hamesha Counter
+    if (d && d.day === todayStr()) { cart = d.cart || []; mode = cart.length ? (d.mode || 'counter') : 'counter'; godam = cart.length ? (d.godam ?? null) : SALE_BRANCH; cash = d.cash ?? null; note = d.note || ''; }   // v2.63: khali bill = hamesha Counter
   } catch {}
 }
 function keepDraft() {
@@ -275,7 +275,7 @@ function vbAdd(text) {
   if (!lastSug) notice('🎤 Suna: "' + heard.slice(0, 60) + '" — item ka naam samajh nahi aaya');
 }
 let vbHold = false, vbStopT = 0, vbHeard = '', vbDone = '';
-function vbStart() {               // v2.89.1: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
+function vbStart() {               // v2.90.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
   if (vbRec) { try { vbRec.abort(); } catch {} vbRec = null; }
@@ -304,8 +304,9 @@ setSaleDelHook(key => {
   if (i < 0) return;
   cart.splice(i, 1); cash = null; keepDraft(); rerender();
 });
+const gShort = b => { const st = saleStock(); const nm = String((st.branchName ? st.branchName(b, st.names) : '') || st.names?.[b] || b); const m = nm.match(/(\d+)\s*$/); return m ? m[1] : nm.slice(0, 3); };   // v2.90
 setSaleCartHook(() => cart.map(l => ({ key: l.k || (l.k = newKey()),
-  item: { id: l.id, code: l.code, name: l.name, pack: Number(l.pack) || 0, cName: l.cName, uName: l.uName, rate: crateOf(l), rate2: Number(l.rate) || 0 },
+  item: { id: l.id, code: l.code, name: l.name + ((Number(l.godam) || SALE_BRANCH) !== SALE_BRANCH ? ' · G' + gShort(l.godam) : ''), pack: Number(l.pack) || 0, cName: l.cName, uName: l.uName, rate: crateOf(l), rate2: Number(l.rate) || 0 },
   pcs: Number(l.pcs) || 0, ctn: Number(l.ctn) || 0 })));
 setSaleFindHook(q => smartSearch(stock().items, q, 12));   // v1.75: smart search
 // camera par tadad ke buttons -> bill ki line
@@ -534,7 +535,7 @@ document.addEventListener('pointercancel', () => vbRelease());
 document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sale-mic]')) e.preventDefault(); });
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.89.1: hold se chalta hai
+  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.90.0: hold se chalta hai
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {
@@ -558,7 +559,7 @@ document.addEventListener('click', async e => {
     return;
   }
   if (t.dataset.saleDel != null) { cart.splice(Number(t.dataset.saleDel), 1); cash = null; keepDraft(); rerender(); return; }
-  if (t.dataset.saleClear) { if (!confirm('Yeh bill saaf kar dein?')) return; cart = []; cash = null; note = ''; mode = 'counter'; keepDraft(); rerender(); return; }   // v2.63: Naya bill = Counter
+  if (t.dataset.saleClear) { if (!confirm('Yeh bill saaf kar dein?')) return; cart = []; cash = null; note = ''; mode = 'counter'; godam = SALE_BRANCH; keepDraft(); rerender(); return; }   // v2.63: Naya bill = Counter
   if (t.dataset.saleCamera) { openSaleCamera(); return; }
   if (t.dataset.saleToday) { openToday(); return; }
   if (t.dataset.saleReprint) {
@@ -659,7 +660,7 @@ async function save() {
     if (counter === 'local') localQueue(doc.id, copies, doc.crates);   // v2.72: bill bante hi isi device par print
     if (isPC(counter) && !pcLive(pcOf(counter))) setTimeout(() => notice('💤 Chuna hua PC abhi band hai / NT-PRINT nahi chal raha — bill ban jayega magar print nahi hoga. Doosra counter chunein.'), 1200);   // v2.78
     crates = 1;
-    cart = []; cash = null; note = ''; mode = 'counter'; keepDraft();   // v2.63: Wholesale bill ke baad wapas Counter
+    cart = []; cash = null; note = ''; mode = 'counter'; godam = SALE_BRANCH; keepDraft();   // v2.90: godam wapas NOOR TRADERS · v2.63: Wholesale bill ke baad wapas Counter
     notice('Sale save ho gayi — PC bill bana kar print karega');
     setTimeout(() => { if (!scanNewBill()) { const se = $('search'); if (se) { se.value = ''; se.focus(); } } }, 60);   // v2.59: foran naya bill
     p.catch(err => {
@@ -698,7 +699,7 @@ document.addEventListener('keydown', e => {
     copies = n; try { localStorage.setItem('sam-sale-copies', String(n)); } catch {}
     document.querySelectorAll('[data-sale-copies]').forEach(x => x.classList.toggle('on', Number(x.dataset.saleCopies) === n));
     const b = document.querySelector('[data-sale-save]'); if (!b || b.disabled) { notice('Save abhi nahi ho sakta'); return; }
-    { askCrates(() => { quickSave = true; setTimeout(() => { quickSave = false; }, 4000); b.click(); }); return; }   // v2.72 · v2.89.1: har counter (Abdurehman/Bilal/Mithu bhi — sale-post token chhapta hai)
+    { askCrates(() => { quickSave = true; setTimeout(() => { quickSave = false; }, 4000); b.click(); }); return; }   // v2.72 · v2.90.0: har counter (Abdurehman/Bilal/Mithu bhi — sale-post token chhapta hai)
     quickSave = true; setTimeout(() => { quickSave = false; }, 4000); b.click();
   };
   const key = ev => { const ck = { a: 'abdurehman', b: 'bilal', m: 'mithu', d: 'local' }[String(ev.key).toLowerCase()]; if (ck) { ev.preventDefault(); ev.stopPropagation(); setCounter(ck); return; } if (['1', '2', '3'].includes(ev.key)) { ev.preventDefault(); ev.stopPropagation(); done(Number(ev.key)); } else if (ev.key === 'Enter') { ev.preventDefault(); ev.stopPropagation(); done(copies); } else if (ev.key === 'Escape' || ev.key === 'F5') { ev.preventDefault(); ev.stopPropagation(); done(0); } };
@@ -740,7 +741,7 @@ document.addEventListener('keydown', e => {
 });
 
 // v2.64: scanner screen ke liye — godam chips aur PC par aaj ke bills
-setSaleGodamHook(() => { const st = stock(); return { list: st.branches.map(b => ({ b, name: (st.branchName ? st.branchName(b, st.names) : '') || st.names?.[b] || ('Godam ' + b) })), cur: st.pick, set: b => { godam = Number(b); keepDraft(); rerender(); } }; });
+setSaleGodamHook(() => { const st = stock(); return { list: st.branches.filter(b => b !== 0).map(b => ({ b, name: b === SALE_BRANCH ? 'NT' : 'G' + gShort(b), full: (st.branchName ? st.branchName(b, st.names) : '') || st.names?.[b] || ('Godam ' + b) })), cur: st.pick, set: b => { godam = Number(b); keepDraft(); rerender(); } }; });
 setSaleBillsHook(() => {   // v2.68: dobara print usi counter par jo chuna hai
   const posByApp = new Map(posSales.filter(b => b.app).map(b => [b.app, b]));
   const app = sales.map(s => { const pb = posByApp.get(s.id); return pb && pb.x ? { ...s, cancelled: true } : s; });
