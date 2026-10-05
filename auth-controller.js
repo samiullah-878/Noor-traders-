@@ -182,6 +182,22 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       try { await activate(u, ticket, role, role === 'staff' ? (scope || '') : ''); return true; }
       finally { pending = false; }
     },
+    // v2.88: SCREEN BADALNA bina logout/login — wahi anonymous user, server par session ki credentialId badal kar (rules 2.29
+    // nayi key active check karti hain = password ki jaanch), phir activate() se naya scope. Login screen nahi aati.
+    async switchScope(credentialId, scope) {
+      if (pending) throw failure('login/busy');
+      const u = auth.currentUser;
+      if (!u || !u.isAnonymous || !accounts.updateSession) throw failure('login/staff-session');
+      pending = true;
+      const ticket = ++epoch;
+      try {
+        await accounts.updateSession(u.uid, credentialId);   // ghalat password = permission-denied, session wahi rehta hai
+        reset(); activeUid = null;
+        try { await activate(u, ticket, 'staff', scope); }
+        catch (e) { activeUid = null; void restore(u).catch(() => {}); throw e; }
+        return true;
+      } finally { pending = false; }
+    },
     async logout() {
       clearCache();
       ++epoch;

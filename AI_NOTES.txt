@@ -2521,3 +2521,16 @@ SCREEN par chalta tha (if(session)return) — Sonu pehle se Sirf Stock mein logg
   notice "✅ Malik ne screens jor di", dobara login NAHI; watcher 1.5 s baad dobara. setInterval: logged-in mulazim par bhi.
 * switchForm: 🔒 (yaad) wali screens upar bari chips "🔓 Tap karein — seedhi khulegi"; baaqi neeche "🔑 Password ek dafa";
   password box (#swPwBox) sirf bina-yaad screen chunne par dikhta hai. CSS .sw-h / .sw-big.
+
+==================== v2.88.0 + RULES 2.29 + nt-print v1.4 (manifest 2026-10-05.5) — 🔄 SCREEN BADALNA BINA LOGIN · 🔔 PC BEEP ====================
+Malik: screen badalne par login screen aati thi (3G par 10-50 s), tang. Wajah: switch = controller.login = signOut + naya anonymous
+sign-in + session create + activate.
+* RULES 2.29: blueStaffSessions/{uid} update (apna uid, hasOnly credentialId/createdAt/switchedAt, createdAt wahi, nayi credentialId
+  ki blueStaffKeys active==true) — password ghalat = key nahi = permission-denied.
+* auth-controller.switchScope(credentialId,scope): accounts.updateSession -> reset() -> activate(u,'staff',scope) (fail -> restore).
+  cloud.updateSession (updateDoc session), cloud.switchScope(pw,scope): passwordKey -> controller.switchScope; permission-denied ->
+  'Password ghalat hai' (code auth/wrong-password).
+* app.js: switchForm submit: session staff && cloud.switchScope -> quick (switching=true, #swParda overlay "khul rahi hai…", login
+  hidden: reset mein $('login').hidden=booting||switching); malik/local -> purana login. CSS #swParda/.sw-spin.
+* nt-print v1.4: listenBeep() liveCarts onSnapshot -> apne counter (pc:<id>) ya local-config beepCounters (["bilal"] / "all") par
+  scan (n/total badle, status open) = beep 1500Hz, saved = do-tone, stop = lamba 400Hz; local-config "beep": false band.
