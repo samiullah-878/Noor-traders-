@@ -1263,3 +1263,29 @@ sign-in + session create + activate.
   hidden: reset mein $('login').hidden=booting||switching); malik/local -> purana login. CSS #swParda/.sw-spin.
 * nt-print v1.4: listenBeep() liveCarts onSnapshot -> apne counter (pc:<id>) ya local-config beepCounters (["bilal"] / "all") par
   scan (n/total badle, status open) = beep 1500Hz, saved = do-tone, stop = lamba 400Hz; local-config "beep": false band.
+
+==================== v2.89.0 + RULES 2.30 + nt-print v1.5 / sale-post v1.7 (manifest 2026-10-05.6) — 🚪 GATE PASS SWITCH ====================
+Malik: "gate pass nahi nikal raha" — wajah: gate pass sirf un lines ka banta tha jin ka godam bill ki branch (NOOR TRADERS) se
+alag ho; counter ki aam bill (sab NT) par kabhi nahi banta tha. Ab Sale mein switch:
+* sale.js: `gate` (localStorage sam-sale-gate; 0 = off). Chips "🚪 Gate pass OFF/ON" + ON par godam chips (NOOR TRADERS default,
+  Godam 1/2/3). ON: cart ki sab lines ka godam = gate (rate dobara), nayi lines bhi; save: doc.gate = godam (0 = off), lines.godam = gate.
+  Local print (Yehi device): sl.gate ho to HAR godam ka gate pass (NT bhi), warna pehle jaisa (sirf doosra godam).
+* RULES 2.30: appSales keys + 'gate' (int 0..999). (2.29 ki jagah 2.30 publish karein — 2.29 ka sab is mein hai.)
+* nt-print gateJobs / sale-post printGatePasses: d.gate ho to sab lines (godam-wise). sale-post IsGetStore pehle jaisa (godam != branch).
+
+==================== v2.91.0 + post-farq v2.0 (manifest 2026-10-05.7) — 🧮 GINTI FARQ = POS ADJUSTMENT (sale nahi) ====================
+Malik: stock farq sale screen / sale mein plus-minus na ho. POS mein Adjustment module mila:
+  usp_Adjustment_InsertUpdate(@AdjustmentID,@BranchID,@AdjustmentNo,@AdjustmentDate,@Description,@CreatedBy,@CreatedOn,@UpdatedBy,
+  @UpdatedOn,@Remarks,@SystemNotes,@COGS,@DocStatusID,@SaleID) · usp_AdjustmentDetail_InsertUpdate(@AdjustmentDetailID,
+  @AdjustmentID,@ItemID,@Qty,@Rate,@AdjustmentRate,@Narration). Namoona: AdjustmentNo '00000235' (branch-wise), DocStatusID 1,
+  SaleID 0, detail Qty minus, Rate = cost, AdjustmentRate 0.
+* post-farq.js v2.0: createBill -> createAdjustment (default; local-config "farqMode":"sale" = purana sale/return). Ek tx:
+  agla AdjustmentNo (MAX TRY_CAST +1, UPDLOCK), header, ID recordset ya No se; har line ke pehle/baad ItemBranchRate.CurrStock —
+  POS ne stock na badla to ROLLBACK + error (khud CurrStock NAHI chhedte). postedKey/history pehle jaisa; saleNo = 'ADJ-<no>'.
+  buildList: adjust mode mein "stock fraq" party zaroori nahi.
+* sale.js: posSales mein "stock fraq/farq" party wale bills Aaj ke bills list se bahar (purane farq bills sale mein na dikhein).
+* YAHAN TEST NAHI HUA (asal POS chahiye) — pehli dafa chhoti ginti (1 item) se jaanchein; error aaye to farqMode "sale".
+* v2.91.1 + post-farq v2.1 (manifest 2026-10-05.8): MALIK NE ADJUSTMENT NAHI CHAHA — farq pehle jaisa "stock fraq" party ki
+  sale/return (khate mein peeche se). farqMode default 'sale' (adjust sirf local-config "farqMode":"adjust").
+  App Sale "Aaj ke bills": farq bills wapas dikhte hain magar 🧮 grey dashed chip "farq · sale nahi" (s.farq) — paid/udhaar
+  (✓/✗) mein nahi ginte.

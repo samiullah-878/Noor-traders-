@@ -1,3 +1,4 @@
+// post-farq.js v2.1 — farq pehle jaisa "stock fraq" party par (khate mein). Adjustment sirf local-config farqMode "adjust". Purana:
 // post-farq.js — stock ginti ka farq POS mein darj karta hai: KAM nikla = udhaar Sale, ZYADA nikla = usi Sale se jura Return.
 // Bill POS ke apne procedures se banta hai (usp_Sale_InsertUpdate, usp_SaleReturn_InsertUpdate),
 // is liye bilkul waisa hi banta hai jaise POS ki Sale screen se.
@@ -150,6 +151,7 @@ async function buildList(pool, req) {
   const party = (await pool.request()
     .query(`SELECT PartyID, PartyName, AccountID FROM dbo.Party
       WHERE (LOWER(PartyName) LIKE '%stock%fraq%' OR LOWER(PartyName) LIKE '%stock%farq%')`)).recordset;
+  if (party.length !== 1 && farqMode() !== 'sale') party.splice(0, party.length, { PartyID: 0, PartyName: 'POS Adjustment', AccountID: 0 });   // v2.0: adjustment ko party nahi chahiye
   if (party.length !== 1) {
     return { error: `POS mein "${PARTY_NAME}" naam ka ${party.length ? 'ek se zyada' : 'koi'} account mila` };
   }
@@ -220,7 +222,58 @@ function printList(L) {
 }
 
 // ---- POS mein bill banao (sab ya kuch nahi) ----
+// v2.0 (2026-10-05): 🧮 FARQ = POS ADJUSTMENT (sale ke baghair) — malik: "stock farq sale mein na ho, sale disturb hoti hai".
+//   usp_Adjustment_InsertUpdate (header, AdjustmentNo branch-wise agla) + usp_AdjustmentDetail_InsertUpdate (Qty: kam = minus,
+//   zyada = plus; Rate = cost). Ek transaction; har line ke baad ItemBranchRate.CurrStock jaancha — POS ne stock na badla to
+//   ROLLBACK + error (khud stock nahi chhedte, ledger kharab na ho). Purana tareeqa: local-config.json "farqMode": "sale".
+async function createAdjustment(pool, L) {
+  const { round, branch, kam, zyada } = L;
+  const now = new Date();
+  const note = `Created By:Administrator On:${now.toLocaleString('en-US')} at PC:${os.hostname()} (stock ginti ${round})\r\n`;
+  const rows = [...kam.map(k => ({ ...k, sq: -k.qty })), ...zyada.map(k => ({ ...k, sq: k.qty }))];
+  const cogs = round2(rows.reduce((t, k) => t + k.sq * k.cost, 0));
+  const tx = new sql.Transaction(pool);
+  await tx.begin();
+  let adjNo = '';
+  try {
+    const mx = (await new sql.Request(tx).input('b', sql.Int, branch)
+      .query(`SELECT ISNULL(MAX(TRY_CAST(AdjustmentNo AS INT)),0) AS n FROM dbo.Adjustment WITH (UPDLOCK, HOLDLOCK) WHERE BranchID = @b`)).recordset[0].n;
+    adjNo = String(Number(mx) + 1).padStart(8, '0');
+    const h = await new sql.Request(tx)
+      .input('AdjustmentID', sql.Int, 0).input('BranchID', sql.Int, branch).input('AdjustmentNo', sql.VarChar(50), adjNo)
+      .input('AdjustmentDate', sql.DateTime, now).input('Description', sql.VarChar(150), `Stock ginti farq ${round}`)
+      .input('CreatedBy', sql.Int, CREATED_BY).input('CreatedOn', sql.DateTime, now).input('UpdatedBy', sql.Int, 0).input('UpdatedOn', sql.DateTime, null)
+      .input('Remarks', sql.VarChar(150), 'Blue Khata ginti').input('SystemNotes', sql.VarChar(sql.MAX), note)
+      .input('COGS', sql.Float, cogs).input('DocStatusID', sql.Int, 1).input('SaleID', sql.Int, 0)
+      .execute('dbo.usp_Adjustment_InsertUpdate');
+    let adjId = Number(h.recordset?.[0]?.AdjustmentID) || 0;
+    if (h.recordset?.[0]?.AdjustmentNo) adjNo = String(h.recordset[0].AdjustmentNo);
+    if (!adjId) adjId = Number((await new sql.Request(tx).input('b', sql.Int, branch).input('n', sql.VarChar(50), adjNo)
+      .query(`SELECT TOP 1 AdjustmentID FROM dbo.Adjustment WHERE BranchID = @b AND AdjustmentNo = @n ORDER BY AdjustmentID DESC`)).recordset[0]?.AdjustmentID) || 0;
+    if (!adjId) throw new Error('Adjustment ban gaya magar ID nahi mili');
+    const cur = async id => Number((await new sql.Request(tx).input('i', sql.Int, id).input('b', sql.Int, branch)
+      .query(`SELECT ISNULL(SUM(CurrStock),0) AS s FROM dbo.ItemBranchRate WHERE ItemID = @i AND BranchID = @b`)).recordset[0].s) || 0;
+    for (const k of rows) {
+      const before = await cur(k.ItemID);
+      await new sql.Request(tx)
+        .input('AdjustmentDetailID', sql.Int, 0).input('AdjustmentID', sql.Int, adjId).input('ItemID', sql.Int, k.ItemID)
+        .input('Qty', sql.Float, k.sq).input('Rate', sql.Float, k.cost).input('AdjustmentRate', sql.Float, 0).input('Narration', sql.VarChar(150), '')
+        .execute('dbo.usp_AdjustmentDetail_InsertUpdate');
+      const after = await cur(k.ItemID);
+      if (Math.abs(after - before - k.sq) > 0.01) throw new Error(`POS adjustment ne stock nahi badla (${k.ItemName}: ${before} -> ${after}, chahiye ${round3(before + k.sq)}) — kuch save NAHI kiya. Ek dafa POS se haath se adjustment bana kar dekhein ya farqMode "sale" rakhein.`);
+    }
+    await tx.commit();
+  } catch (e) { await tx.rollback().catch(() => {}); throw e; }
+  const items = { ...L.already };
+  rows.forEach(k => { items[k.key] = round3((Number(items[k.key]) || 0) + k.qty); });
+  const local = readLocal(); local[L.postedKey] = items; writeLocal(local);
+  await countCol.doc(L.postedKey).set({ round, branch, items, updatedAt: Date.now() }, { merge: true });
+  log(`🧮 ADJUSTMENT ${adjNo} (branch ${branch}): ${kam.length} kam, ${zyada.length} zyada`);
+  return { saleNo: 'ADJ-' + adjNo, returnNo: '', adjustment: adjNo };
+}
+const farqMode = () => { try { return String(JSON.parse(fs.readFileSync(path.join(DIR, 'local-config.json'), 'utf8')).farqMode || 'sale'); } catch { return 'sale'; } };   // v2.1: malik — PURANA tareeqa (stock fraq party, khate mein) hi default; 'adjust' sirf local-config se
 async function createBill(pool, L) {
+  if (farqMode() !== 'sale') return createAdjustment(pool, L);
   const { P, round, branch, kam, zyada, saleTotal, saleCogs, retTotal, retCogs } = L;
   const net = L.net;
   const now = new Date();
