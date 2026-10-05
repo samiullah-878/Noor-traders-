@@ -83,34 +83,55 @@ function alerts(c) {
 
 function paint() {
   const sum = $('summary'); if (!sum) return;
-  const c = calc(), al = alerts(c);
-  const own = isOwner();
-  sum.innerHTML = `<div class="gr-card">
-    <div class="gr-head"><div><small>🚚 ${esc(cfg.no || 'Gaari')}${cfg.driver ? ' · ' + esc(cfg.driver) : ''}</small><b>Gaari ka hisaab</b></div>
-      <div class="gr-month"><button type="button" data-gr-m="-1">‹</button><span>${esc(monthName(month))}</span><button type="button" data-gr-m="1">›</button></div></div>
-    ${err ? `<p class="gr-err">⚠ ${esc(err)}</p>` : ''}
-    <div class="gr-big ${c.nafa >= 0 ? 'up' : 'down'}"><small>${c.nafa >= 0 ? 'Nafa' : 'Nuqsan'}</small><strong>${rs(Math.abs(c.nafa))}</strong><em>Kiraya ${rs(c.kiraya)} − kharch ${rs(c.kharchTotal)}</em></div>
-    <div class="gr-grid">
-      <div><small>Chali</small><b>${num(c.km)} km</b><em>${c.startR ? num(c.startR) + ' → ' + num(c.endR) : 'reading nahi'}</em></div>
-      <div><small>Tracker</small><b>${c.trackerKm ? num(c.trackerKm) + ' km' : '—'}</b><em>Falcon-i</em></div>
-      <div><small>Diesel</small><b>${num(c.litre, 1)} L</b><em>${rs(c.dieselRs)}${c.rate ? ' · ' + num(c.rate, 1) + '/L' : ''}</em></div>
-      <div><small>Average</small><b class="${c.realAvg && c.realAvg < c.avg * 0.92 ? 'bad' : ''}">${c.realAvg ? num(c.realAvg, 2) : '—'}</b><em>chahiye ${c.avg} km/L</em></div>
-      <div><small>Bilty</small><b>${c.bilty.length}</b><em>${rs(c.kiraya)}</em></div>
-      <div><small>Driver commission</small><b>${rs(c.comm)}</b><em>${cfg.commType === 'fixed' ? rs(cfg.commVal) + ' fi bilty' : num(cfg.commVal, 1) + '% kiraya'}</em></div>
-      <div><small>Doosre kharche</small><b>${rs(c.kharchRs)}</b><em>${c.kharch.length} entry</em></div>
-      <div><small>Fi km kharch</small><b>${c.perKm ? 'Rs ' + num(c.perKm, 1) : '—'}</b><em>sab mila kar</em></div>
+  const c = calc(), al = alerts(c), own = isOwner(), up = c.nafa >= 0;
+  const chip = (k, ic, v, l, bad) => `<button type="button" class="gx-chip${bad ? ' gx-bad' : ''}" data-gr-open="${k}"><i>${ic}</i><b>${v}</b><small>${l}</small></button>`;
+  sum.innerHTML = `<div class="gx">
+    <div class="gx-hero" style="background:linear-gradient(135deg,#0b1a3a 0%,#1d3b7a 55%,#3a2c8f 100%);color:#fff">
+      <div class="gx-top"><span class="gx-tag">🚚 ${esc(cfg.no || 'Gaari')}${cfg.driver ? ' · ' + esc(cfg.driver) : ''}</span>
+        <span class="gx-month"><button type="button" data-gr-m="-1" style="color:#fff">‹</button><b style="color:#fff">${esc(monthName(month))}</b><button type="button" data-gr-m="1" style="color:#fff">›</button></span></div>
+      <small style="color:rgba(255,255,255,.7)">${up ? 'Is mahine ka NAFA' : 'Is mahine ka NUQSAN'}</small>
+      <strong class="gx-big" style="color:${up ? '#6dffb0' : '#ff9a9a'}">${rs(Math.abs(c.nafa))}</strong>
+      <div class="gx-bar"><span style="width:${c.kiraya > 0 ? Math.min(100, Math.round(c.kharchTotal / c.kiraya * 100)) : 0}%"></span></div>
+      <small style="color:rgba(255,255,255,.75)">Kiraya ${rs(c.kiraya)} · Kharch ${rs(c.kharchTotal)}</small>
+      ${err ? `<p class="gx-err">⚠ ${/permission/i.test(err) ? 'Ijazat nahi — Firebase mein Rules 2.31 publish karein' : esc(err)}</p>` : ''}
     </div>
-    ${al.length ? `<div class="gr-alerts">${al.map(x => `<p>${x}</p>`).join('')}</div>` : (c.km && c.litre ? '<p class="gr-ok">✅ Diesel aur km theek mel kha rahe hain</p>' : '')}
-    <p class="gr-driver">👤 Driver ka baqaya (sab mahine): <b>${rs(c.driverBaqi)}</b>${c.paid ? ` · is mahine diye ${rs(c.paid)}` : ''}</p>
-    <div class="gr-btns">
-      <button type="button" data-gr-add="bilty">📄 Bilty / kiraya</button><button type="button" data-gr-add="diesel">⛽ Diesel</button>
-      <button type="button" data-gr-add="kharch">🧾 Kharcha</button><button type="button" data-gr-add="reading">📍 Meter reading</button>
-      <button type="button" data-gr-add="tracker">📸 Tracker km</button>${own ? '<button type="button" data-gr-add="driver">👤 Driver ko diye</button>' : ''}
-      <button type="button" data-gr-pdf="1">⇩ PDF</button>${own ? '<button type="button" data-gr-cfg="1">⚙ Setting</button>' : ''}
+    ${al.length ? `<div class="gx-alerts">${al.map(x => `<p>${x}</p>`).join('')}</div>` : ''}
+    <div class="gx-chips">
+      ${chip('km', '🛣️', c.km ? num(c.km) + ' km' : '—', 'Chali')}
+      ${chip('diesel', '⛽', num(c.litre, 1) + ' L', rs(c.dieselRs))}
+      ${chip('avg', '📊', c.realAvg ? num(c.realAvg, 2) : '—', 'Average · ' + c.avg, c.realAvg && c.realAvg < c.avg * 0.92)}
+      ${chip('bilty', '📄', c.bilty.length + ' bilty', rs(c.kiraya))}
+      ${chip('kharch', '🧾', rs(c.kharchRs), 'Kharche')}
+      ${chip('driver', '👤', rs(c.comm), 'Commission · baqi ' + rs(c.driverBaqi))}
+      ${chip('tracker', '📍', c.trackerKm ? num(c.trackerKm) + ' km' : '—', 'Tracker')}
+      ${chip('perkm', '💸', c.perKm ? 'Rs ' + num(c.perKm, 1) : '—', 'Fi km')}
+    </div>
+    <div class="gx-acts">
+      <button type="button" data-gr-add="bilty">＋ Bilty</button><button type="button" data-gr-add="diesel">⛽ Diesel</button>
+      <button type="button" data-gr-add="kharch">🧾 Kharcha</button><button type="button" data-gr-add="reading">📍 Reading</button>
+      <button type="button" data-gr-add="tracker">📸 Tracker</button>${own ? '<button type="button" data-gr-add="driver">👤 Driver</button>' : ''}
+      <button type="button" data-gr-open="all">📋 Entries ${c.m.length}</button><button type="button" data-gr-pdf="1">⇩ PDF</button>${own ? '<button type="button" data-gr-cfg="1">⚙</button>' : ''}
     </div></div>`;
-  const list = $('list'); if (!list) return;
-  const sorted = c.m.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || (Number(b.at) || 0) - (Number(a.at) || 0));
-  list.innerHTML = sorted.length ? `<div class="gr-list">${sorted.map(r => rowHTML(r)).join('')}</div>` : `<p class="gr-empty">${esc(monthName(month))} mein abhi koi entry nahi. Upar se bilty, diesel ya reading daalein.</p>`;
+  const list = $('list'); if (list) list.innerHTML = '';
+}
+
+// chip tap = window (modal) — screen chhoti rahe, neeche scroll na karna pare
+function openDetail(k) {
+  const c = calc(), L = rows => rows.length ? `<div class="gr-list">${rows.slice().sort((a, b) => String(b.date).localeCompare(String(a.date)) || (Number(b.at) || 0) - (Number(a.at) || 0)).map(rowHTML).join('')}</div>` : '<p class="gr-empty">Abhi kuch nahi</p>';
+  const kv = arr => `<div class="gx-kv">${arr.map(([a, b]) => `<p><span>${a}</span><b>${b}</b></p>`).join('')}</div>`;
+  const rd = c.m.filter(r => Number(r.reading) > 0);
+  const D = {
+    km: ['🛣️ Kitna chali', kv([['Shuru reading', c.startR ? num(c.startR) : '—'], ['Aakhri reading', c.endR ? num(c.endR) : '—'], ['Chali', num(c.km) + ' km'], ['Tracker', c.trackerKm ? num(c.trackerKm) + ' km' : '—']]) + L(rd)],
+    diesel: ['⛽ Diesel', kv([['Litre', num(c.litre, 1)], ['Raqam', rs(c.dieselRs)], ['Rate', c.rate ? num(c.rate, 1) + '/L' : '—'], ['Banta tha', c.shouldL ? num(c.shouldL, 1) + ' L' : '—'], ['Farq', c.shouldL ? num(c.extraL, 1) + ' L (' + rs(c.extraL * c.rate) + ')' : '—']]) + L(c.diesel)],
+    avg: ['📊 Average', kv([['Asal', c.realAvg ? num(c.realAvg, 2) + ' km/L' : '—'], ['Chahiye', c.avg + ' km/L'], ['Km', num(c.km)], ['Litre', num(c.litre, 1)]]) + '<p class="gr-ai">Average = chali km ÷ diesel litre. Har diesel par meter reading likhne se sahi aata hai.</p>'],
+    bilty: ['📄 Bilty / kiraya', kv([['Bilty', c.bilty.length], ['Kul kiraya', rs(c.kiraya)], ['Commission', rs(c.comm)]]) + L(c.bilty)],
+    kharch: ['🧾 Kharche', kv(Object.entries(c.kharchCat).map(([a, b]) => [esc(a), rs(b)]).concat([['Kul', rs(c.kharchRs)]])) + L(c.kharch)],
+    driver: ['👤 Driver', kv([['Is mahine commission', rs(c.comm)], ['Is mahine diye', rs(c.paid)], ['Kul baqaya (sab mahine)', rs(c.driverBaqi)]]) + L(c.driver)],
+    tracker: ['📍 Tracker', kv([['Tracker km', c.trackerKm ? num(c.trackerKm) : '—'], ['Meter km', num(c.km)], ['Farq', c.trackerKm && c.km ? num(c.km - c.trackerKm) + ' km' : '—']]) + L(c.tracker)],
+    perkm: ['💸 Fi km kharch', kv([['Diesel', rs(c.dieselRs)], ['Commission', rs(c.comm)], ['Kharche', rs(c.kharchRs)], ['Kul', rs(c.kharchTotal)], ['Km', num(c.km)], ['Fi km', c.perKm ? 'Rs ' + num(c.perKm, 1) : '—']])],
+    all: ['📋 ' + monthName(month) + ' ki entries', L(c.m)]
+  }[k];
+  if (D) modal(D[0], `<div class="gx-win">${D[1]}</div>`);
 }
 
 function rowHTML(r) {
@@ -213,6 +234,7 @@ document.addEventListener('click', e => {
   if (!mounted) return;
   const m = e.target.closest?.('[data-gr-m]'); if (m) { shiftMonth(Number(m.dataset.grM)); return; }
   const a = e.target.closest?.('[data-gr-add]'); if (a) { openForm(a.dataset.grAdd); return; }
+  const o = e.target.closest?.('[data-gr-open]'); if (o) { openDetail(o.dataset.grOpen); return; }
   if (e.target.closest?.('[data-gr-cfg]')) { if (isOwner()) openCfg(); return; }
   if (e.target.closest?.('[data-gr-pdf]')) { makePdf(); return; }
   const x = e.target.closest?.('[data-gr-del]'); if (x) { if (!confirm('Ye entry hata dein?')) return; cloud.delGaari(x.dataset.grDel).then(() => notice('Hata di')).catch(er => notice('Nahi hua: ' + (er?.message || er))); }

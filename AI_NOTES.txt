@@ -2586,3 +2586,5 @@ Malik ki ek gaari (GJL640630, Falcon-i / TPL Trakker). Falcon-i ka khula API nah
   sirf malik; _config sirf malik); update mulazim sirf apni aaj ki deleted:true; delete malik.
 * happy-dom test: 7 entries -> km 1,500, diesel 350 L, avg 4.29, 77.3 L zyada alert, tracker farq alert, nafa/nuqsan, PDF, diesel
   form submit ✓.
+* v2.92.1: gaari card app ke white #summary CSS mein chhup raha tha (safed par safed) -> #summary .gr-card !important; permission error par 'Rules 2.31 publish karein' paigham.
+* v2.92.2: Gaari screen naya design — neela/jamni gradient HERO (nafa + kharch bar), 8 STAT CHIPS (tap = window/modal tafseel: km, diesel, average, bilty, kharche, driver, tracker, fi km), ACTION chips ek line (scroll), entries '📋 Entries' window mein (screen neeche lambi nahi). Inline rang + #summary .gx !important (app ke white CSS se bachao).
