@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-04.6",
+  "version": "2026-10-05.3",
   "note": "KHATA-DOCTOR manifest — sirf ye files PC par jati hain. local-config.json / firebase-key.json kabhi nahi.",
   "files": {
     "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -11,7 +11,7 @@
     "khata-auto.bat": "c6f019335516b837d486e8c47bd5d1acb753628b80669795df7bad51e9f718d7",
     "khata-sync-auto.bat": "7006262d6b2e395b6212aa2b130c191bb3284b1a2bf60793ee537fd845f69905",
     "label-auto.bat": "7094351892e48c7a2d4a32b2ac49e96e8d39e66856a3ff276d36b27b91368824",
-    "label-print.js": "82e90553cb17ecc647e4cce42ee08dd42608622334cf2d67b976b4a84248fb6a",
+    "label-print.js": "9186366da8a8904fb268706014d48f0ea139ebaefdddd67df98c1824717d79ad",
     "pos-khata-sync.js": "2aac5a0519517adb7ac6e8d74811940a71490c1cdc089bf871afdbd408b92943",
     "post-farq.js": "79fb0c2a662d4f3828ef9971169d91dce510bc33b3b7b1b522b00551b88ddbde",
     "purchase-auto.bat": "f877f7a5c14ad0a654b499396e8661c20a1140c2b99d68c1a91b18cae440fb85",
@@ -39,7 +39,9 @@
     "pos-sales-auto.bat": "aef4a274bb9cdcde344028e9ad2de8fe7a3572580a0b20f3e3f7b1e806d33e11",
     "nt-print.js": "14ff69f5f6e77b94ea7648e7e73ae07f636acdc823599968440e61fa348ba235",
     "nt-print-auto.bat": "6d2d36d3e6db49986502bdf20df2dd3fe8d2bcce6aca4b807d7b8ed9294dccce",
-    "nt-parchi.js": "5627e0c9696026dc5b45acba5e1bc30d8c3b83be37322776669066f3475e3e68"
+    "nt-parchi.js": "5627e0c9696026dc5b45acba5e1bc30d8c3b83be37322776669066f3475e3e68",
+    "auto-backup.js": "b3b0413ebc3b9ed80d2e305994a14e767a79ca72ddecbce802374115930b21f5",
+    "auto-backup-auto.bat": "66868d07539895c23632ee8cebaa65bab5888098fe222b6a9cdd19528c12fe84"
   },
   "services": [
     {
@@ -201,6 +203,12 @@
       "script": "nt-print.js",
       "bat": "nt-print-auto.bat",
       "log": "nt-print-log.txt"
+    },
+    {
+      "name": "☁️ AUTO-BACKUP (Drive)",
+      "script": "auto-backup.js",
+      "bat": "auto-backup-auto.bat",
+      "log": "auto-backup-log.txt"
     }
   ]
 }
