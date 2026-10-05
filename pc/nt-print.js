@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-print.js  v1.1 (2026-10-04) — 💻 NT-PRINT: app ka bill IS PC ke printer par, bina kisi window ke
+//  nt-print.js  v1.4 (2026-10-05: 🔔 scan par beep — liveCarts, local-config beep/beepCounters) · v1.1 (2026-10-04) — 💻 NT-PRINT: app ka bill IS PC ke printer par, bina kisi window ke
 //
 //  App (Nayi Sale) mein counter "💻 <PC ka naam>" chuna ho to sale ka doc counter = 'pc:<id>' hota hai.
 //  sale-post (main PC) POS mein bill banata hai (status done + saleNo) magar 'pc:' par PRINT NAHI karta.
@@ -12,6 +12,7 @@
 //    "pcName": "Counter PC"   (app mein yehi naam)      "ntPrinter": "TM-T88IV"  (warna Windows default printer)
 //    "printWidth": 32  (harf fi line)   "dots": 512 (printer ki chaurai dots — 58mm = 384)
 //    "godamNames": {"2": "Bara Godam"}  (SQL na ho to)
+//    "beep": true  (v1.4: app mein scan par IS PC se beep)   "beepCounters": ["bilal","mithu"] ya "all"  (default: sirf is PC ka counter 'pc:<id>')
 //  Chalana: nt-print-auto.bat (loop).   Test: node nt-print.js --test [--gate]   (naqli bill + 2 token; --gate = gate pass bhi)
 //  v1.3 (2026-10-04): parchi/token/print ka code nt-parchi.js (saanjha, sale-post bhi istemal karta)
 //  v1.2 (2026-10-04): app PC ke saath PRINTER bhi chun sakti hai (network wale Mithu/Abdurehman/Bilal bhi, jo is Windows mein lage hon):
@@ -216,7 +217,37 @@ async function onDoc(doc) {
   } finally { busy.delete(id); }
 }
 
+// v1.4: 🔔 SCAN KI AWAZ — liveCarts (app ka live bill) dekh kar lines/total badle to PowerShell beep (jaise app karti hai)
+const beepSeen = new Map();
+function beep(kind) {
+  try {
+    const f = kind === 'saved' ? '[console]::beep(900,90);[console]::beep(1300,160)' : kind === 'stop' ? '[console]::beep(400,500)' : '[console]::beep(1500,110)';
+    require('child_process').spawn('powershell.exe', ['-NoProfile', '-Command', f], { windowsHide: true, stdio: 'ignore', detached: true }).unref();
+  } catch {}
+}
+function beepFor(counter) {
+  const c = cfg(); if (c.beep === false) return false;
+  const list = c.beepCounters; if (list === 'all') return true;
+  if (Array.isArray(list) && list.map(x => String(x).toLowerCase()).includes(String(counter).toLowerCase())) return true;
+  return String(counter).startsWith(COUNTER);
+}
+function listenBeep() {
+  base.collection('liveCarts').onSnapshot(s => {
+    s.docChanges().forEach(ch => {
+      if (ch.type === 'removed') { beepSeen.delete(ch.doc.id); return; }
+      const d = ch.doc.data() || {}, id = ch.doc.id;
+      if (!beepFor(id)) return;
+      const prev = beepSeen.get(id); const cur = { n: Number(d.n) || 0, total: Number(d.total) || 0, status: d.status, at: Number(d.at) || 0, stop: d.stop ? 1 : 0 };
+      beepSeen.set(id, cur);
+      if (!prev) return;   // pehli dafa = sirf yaad
+      if (cur.stop && !prev.stop) beep('stop');
+      else if (cur.status === 'saved' && prev.status !== 'saved') beep('saved');
+      else if (cur.status === 'open' && (cur.n > prev.n || cur.total !== prev.total)) beep('scan');
+    });
+  }, e => log('liveCarts beep: ' + e.message));
+}
 function listen() {
+  listenBeep();
   const day = today();
   saleCol.where('date', '==', day).onSnapshot(s => {   // v1.2: aaj ke sab, phir counter 'pc:<id>[:printer]' khud chhanta (range + date ko index chahiye hota)
     s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => onDoc(c.doc)); });
