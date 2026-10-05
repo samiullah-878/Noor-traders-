@@ -1228,3 +1228,20 @@ Malik: barcode label par English ke saath Urdu naam (Roman/English ko Urdu rasm-
   urdu (true), urduFont, urduPx (20), urduInvert (false). Cache 2000 texts.
 * Test (node, naqli raster): TEXT naam -> BITMAP 29x30 -> BARCODE 52 -> tag -> Rs ✓. Asal TSC par Urdu ki shakal / polarity
   YAHAN test nahi — pehla label dekh kar urduInvert / urduPx set karein.
+
+==================== v2.85.0 + auto-backup v1.0 (manifest 2026-10-05.2) — ☁️ AUTO BACKUP · PEELA BOX / POS BUTTON HATAYE ====================
+Malik: "Aaj ka backup le lein" peela box aur 🖥 POS button har screen se hatao; Settings mein email + din mein 2 dafa Google Drive
+par auto backup.
+* app.js: refreshBackupReminder -> box hamesha hidden; posList hidden. Settings 💾 Backup -> "☁️ Auto backup" block (#abBlock):
+  email, 2 waqt, on/off, status line (paintAbStatus: ✅ aakhri backup / ❌ fail / Drive folder mila ya nahi), 💾 Save ->
+  blueAccess/backupConfig {on,email,times,updatedAt}; ⬆️ Abhi backup lo -> {now: Date.now()} (90 s baad status dobara).
+  cloud.getBackupConfig/setBackupConfig/getBackupStatus (blueAccess, malik generic rule — RULES NAHI badle).
+* pc/auto-backup.js v1.0 (service "☁️ AUTO-BACKUP (Drive)", lock 47832, auto-backup-auto.bat 60 s loop): har minute
+  backupConfig; times (default 14:00/22:00, 6 ghante tak late chal sakta) ya naya 'now' (10 min) -> makeBackup():
+  Noor-Traders-backup-<stamp>.json (blueKhata, format sam-blue-khata-v1 = app Restore compatible) + Noor-Traders-extra-<stamp>.json.gz
+  (blueAccess bina private/aiConfig/pushConfig, appSales, appPurchases, notes, demands, gallaCalls, purchaseSuppliers,
+  purchaseOrders, posLedger, tokens, entryPhotos, partyPhotos). C:\khata-sync\backups + Drive folder (local-config driveFolder ||
+  %USERPROFILE%\My Drive || G:\My Drive … + "Blue Khata Backup"); KEEP 60; backupStatus {at,ok,file,size,count,drive,pc,ms,why}.
+  `node auto-backup.js --now` = foran test.
+* Server par Google Drive for Desktop (usi email) install chahiye — warna sirf PC par backups (status ⚠️).
+* Test (node, fake db): times 00:00/23:59 -> tick -> backup + extra files bane, status ok ✓.
