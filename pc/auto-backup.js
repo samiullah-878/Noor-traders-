@@ -22,7 +22,7 @@ const zlib = require('zlib');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
-const VER = '1.0';
+const VER = '1.1';   // v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47832;
 const DIR = __dirname;
@@ -81,10 +81,33 @@ async function makeBackup(why) {
   return status;
 }
 
+// ---- v1.1: 🚚 GAARI NOTIFICATION (app band ho tab bhi — FCM, malik ke pushTokens par) ----
+const gaariSent = new Set();
+async function gaariNotify() {
+  const now = new Date(), hm = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`, day = dayOf(now);
+  const cd = await base.collection('gaari').doc('_config').get(); const c = cd.exists ? cd.data() : {};
+  if (c.notifyOn === false) return;
+  const times = Array.isArray(c.notifyTimes) && c.notifyTimes.length ? c.notifyTimes : ['18:00', '19:30', '21:00'];
+  const t = times.find(x => hm >= x && !gaariSent.has(day + ' ' + x) && (() => { const d = new Date(now); d.setHours(...String(x).split(':').map(Number), 0, 0); return Date.now() - d.getTime() < 40 * 60000; })());
+  if (!t) return; gaariSent.add(day + ' ' + t);
+  const s = await base.collection('gaari').where('kind', '==', 'phera').get();
+  let pend = 0, nPend = 0, open = 0, todayN = 0, noEnd = 0;
+  s.docs.forEach(d => { const p = d.data(); if (p.deleted) return; (p.bilties || []).forEach(b => { if (!b.col && Number(b.kiraya) > 0) { pend += Number(b.kiraya); nPend++; } });
+    if (p.status !== 'closed') open++; if (p.date === day) { todayN++; if (!Number(p.endR)) noEnd++; } });
+  if (!pend && !open) { log('🚚 gaari: hisaab saaf — notification nahi'); return; }
+  const body = [pend ? `💰 Driver se Rs ${Math.round(pend).toLocaleString('en-PK')} lena (${nPend} bilty)` : '', open ? `🟢 ${open} phera khula` : '', todayN ? `aaj ${todayN} phera${noEnd ? `, ${noEnd} ki aakhri reading baqi` : ''}` : ''].filter(Boolean).join(' · ');
+  const tk = await base.collection('pushTokens').get();
+  const tokens = tk.docs.map(d => d.data()).filter(x => x.token && (x.role === 'owner' || x.role === 'malik')).map(x => x.token);
+  if (!tokens.length) { log('🚚 gaari: malik ka koi push token nahi (app mein notification ON karein)'); return; }
+  const { getMessaging } = require('firebase-admin/messaging');
+  const r = await getMessaging().sendEachForMulticast({ tokens, data: { title: '🚚 Driver se hisaab lena hai', body, tag: 'gaari-' + day, link: 'https://samiullah-878.github.io/Noor-traders-/' }, webpush: { headers: { Urgency: 'high' } } });
+  log(`🚚 gaari notification ${t}: ${r.successCount}/${tokens.length} phone — ${body}`);
+}
 let doneKeys = new Set(), lastNow = 0, busy = false;
 async function tick() {
   if (busy) return;
   busy = true;
+  try { await gaariNotify(); } catch (e) { log('gaari notification masla: ' + e.message); }
   try {
     const cd = await base.collection('blueAccess').doc('backupConfig').get();
     const c = cd.exists ? cd.data() : {};

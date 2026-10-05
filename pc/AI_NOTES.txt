@@ -1289,3 +1289,27 @@ Malik: stock farq sale screen / sale mein plus-minus na ho. POS mein Adjustment 
   sale/return (khate mein peeche se). farqMode default 'sale' (adjust sirf local-config "farqMode":"adjust").
   App Sale "Aaj ke bills": farq bills wapas dikhte hain magar 🧮 grey dashed chip "farq · sale nahi" (s.farq) — paid/udhaar
   (✓/✗) mein nahi ginte.
+
+==================== v2.94.0 + RULES 2.32 + auto-backup v1.1 (manifest 2026-10-06.1) — 🚚 GAARI = "PHERA" SYSTEM ====================
+Malik ka tareeqa: bilty ban'ti -> kiraya tay -> kahan se/tak -> us ke kharche -> meter reading (shuru default, wapsi par driver
+photo + Falcon screenshot, milan) -> diesel average 5.5 se banta vs asal (tanki full se full) -> sab EK page par. Tez entry.
+* gaari.js v3 (poora naya): kind 'phera' {date, startR (= pichhle phere ki max endR), endR, trackerKm, bilties[{id,from,to,party,
+  kiraya,comm?,col,colAt}], kharche[{n,a}], diesel[{l,rate,amount,full}], status open|closed, note, by, byName, at, updatedAt}.
+  Phera page (modal full): biltiyan inline edit + 🗑 + ＋ (nayi bilty ka "se" = pichhli ka "tak"), ☐ driver se kiraya le liya (sirf
+  malik), kharche chips+search (naam yaad sab entries se, cfg.hideK), meter shuru/aakhri + 📷 AI, tracker km + 📸 AI, milan ✓/❌
+  (max 10 km ya 5%), diesel lines (l×rate auto, rate = aakhri rate, ☐ tanki full, 📷 parchi AI), "km ÷ avg = itna lagna chahiye"
+  vs dala, fullCheck(): pichhli full-fill se is full-fill tak km + litre = asal average, zyada litre = Rs; nichod (kiraya − kharche
+  − diesel − commission = nafa), 💰 lena; ✅ band / 🔓 kholein (malik), 🗑 phera (malik). Har change save() -> 500 ms debounce ->
+  cloud.putGaari (setDoc, await nahi) — foran rows mein; modal band par flush.
+* Main: hero (mahina / chuna din, nafa, bar), ＋ Naya phera, 💰 Driver se lena chip (sab mahine ki uncollected biltiyan -> window
+  "✓ Le liya" = col true), chips km / average / kharche phera-wise / driver, 📅 calendar (din par phera ginti, tap = us din ka
+  filter + hero), phera cards (route, km, L, kharche, ⚠ km farq / diesel zyada / lena, nafa). PDF: summary + har phera ki table
+  + kharche naam-wise. ⚙: gaari no, driver, avg, commission, 🔔 notifyOn + notifyTimes, yaad wale naam ✕. Purani v2.92 entries
+  (bilty/diesel/kharch/tracker/driver) monthCalc mein jurti hain + "📋 Purani entries" window.
+* cloud.newGaariId / putGaari. RULES 2.32: create kind + 'phera'; update: + (Full/Sirf Gaari) KHULA phera (status open) update agar
+  kind phera, by aur date wahi, status open|closed. Band phera sirf malik.
+* pc/auto-backup.js v1.1: har minute gaariNotify() — gaari/_config notifyTimes (default 18:00, 19:30, 21:00; 40 min tak late),
+  notifyOn != false; pheray se lena (uncollected kiraya) / khule / aaj reading baqi; agar kuch ho to pushTokens role 'owner' ko
+  FCM data msg {title,body,tag,link} (firebase-admin/messaging sendEachForMulticast) — app band ho tab bhi (firebase-messaging-sw).
+* happy-dom test: naya phera startR 100400 (pichhle se), bilty/kharcha/reading/tracker/diesel full -> milan ✅, 72.7 L banta vs 85,
+  full-se-full avg 4.71, nichod nafa 7,100, band, hero 2 phera, collect window 2 bilty ✓.
