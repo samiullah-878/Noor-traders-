@@ -2534,3 +2534,14 @@ sign-in + session create + activate.
   hidden: reset mein $('login').hidden=booting||switching); malik/local -> purana login. CSS #swParda/.sw-spin.
 * nt-print v1.4: listenBeep() liveCarts onSnapshot -> apne counter (pc:<id>) ya local-config beepCounters (["bilal"] / "all") par
   scan (n/total badle, status open) = beep 1500Hz, saved = do-tone, stop = lamba 400Hz; local-config "beep": false band.
+
+==================== v2.89.0 + RULES 2.30 + nt-print v1.5 / sale-post v1.7 (manifest 2026-10-05.6) — 🚪 GATE PASS SWITCH ====================
+Malik: "gate pass nahi nikal raha" — wajah: gate pass sirf un lines ka banta tha jin ka godam bill ki branch (NOOR TRADERS) se
+alag ho; counter ki aam bill (sab NT) par kabhi nahi banta tha. Ab Sale mein switch:
+* sale.js: `gate` (localStorage sam-sale-gate; 0 = off). Chips "🚪 Gate pass OFF/ON" + ON par godam chips (NOOR TRADERS default,
+  Godam 1/2/3). ON: cart ki sab lines ka godam = gate (rate dobara), nayi lines bhi; save: doc.gate = godam (0 = off), lines.godam = gate.
+  Local print (Yehi device): sl.gate ho to HAR godam ka gate pass (NT bhi), warna pehle jaisa (sirf doosra godam).
+* RULES 2.30: appSales keys + 'gate' (int 0..999). (2.29 ki jagah 2.30 publish karein — 2.29 ka sab is mein hai.)
+* nt-print gateJobs / sale-post printGatePasses: d.gate ho to sab lines (godam-wise). sale-post IsGetStore pehle jaisa (godam != branch).
+* v2.89.1: Stock "Band" checkbox par PASSWORD (default 7183; blueAccess/stockConfig.bandPw se badla ja sakta hai) — band/chalu dono;
+  ghalat/cancel = checkbox wapas. (pos-stock.js click handler data-stock-hide)

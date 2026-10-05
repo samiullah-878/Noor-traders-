@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.88.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.89.1';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -79,7 +79,7 @@ document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
 
-let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.88.0: atke to khud / button se dobara
+let stockT0 = 0, stockRetried = false, stockTick = null;   // v2.89.1: atke to khud / button se dobara
 export function stockRetry() { if (stop) { try { stop(); } catch {} stop = null; } loaded = false; failed = ''; stockT0 = 0; start(false); rerender(); }
 export function stockWaitHTML() {
   const w = stockT0 ? Date.now() - stockT0 : 0;
@@ -1372,7 +1372,10 @@ document.addEventListener('click', e => {
   const sa = e.target.closest?.('[data-scan-saveall]');
   if (sa) { saveAll(sa); return; }
   const hb = e.target.closest?.('[data-stock-hide]');
-  if (hb) { toggleHidden(hb.dataset.stockHide, hb.checked, hb); return; }
+  if (hb) {   // v2.89.1: 🔒 Band par password (default 7183; stockConfig.bandPw se badal sakte hain) — on aur off dono
+    const want = String(itemCfg.bandPw || '7183'), got = prompt((hb.checked ? 'Item BAND karne' : 'Item dobara CHALU karne') + ' ka password:');
+    if (got === null || got !== want) { hb.checked = !hb.checked; if (got !== null) notice('❌ Password ghalat'); return; }
+    toggleHidden(hb.dataset.stockHide, hb.checked, hb); return; }
   if (e.target.closest?.('[data-stock-more]')) { limit += PAGE; rerender(); return; }
   if (e.target.closest?.('[data-stock-bills]')) { openBills(); return; }
   if (e.target.closest?.('[data-stock-ginti]')) { openGinti(); return; }

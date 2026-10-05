@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.88.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.88.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.89.1';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.89.1';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -105,13 +105,17 @@ let counter = 'abdurehman'; try { const c = localStorage.getItem('sam-sale-count
 const counterName = k => isPC(k) ? '💻 ' + String(pcOf(k)?.name || 'PC') : (COUNTERS.find(x => x[0] === k) || COUNTERS[0])[1];
 const setCounter = (k, force) => { if (!COUNTERS.some(x => x[0] === k) && !isPC(k)) return; if (!force && isPC(k) && isPC(counter) && String(k).split(':').length === 2 && String(counter).split(':')[1] === String(k).split(':')[1]) k = counter; const wasPC = isPC(counter); counter = k; try { localStorage.setItem('sam-sale-counter', k); } catch {} if ((isPC(k) || wasPC) && PCS.length) pcsChanged(PCS); document.querySelectorAll('[data-sale-counter]').forEach(x => x.classList.toggle('on', x.dataset.saleCounter === k)); document.querySelectorAll('[data-f5c]').forEach(x => x.classList.toggle('on', x.dataset.f5c === k)); };
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-sale-counter]'); if (b) setCounter(b.dataset.saleCounter); });   // v2.57: F5 -> sirf '1 ya 2 print?'
+// v2.89: 🚪 GATE PASS switch — on ho to saari lines us godam se (default NOOR TRADERS) aur gate pass HAMESHA chhape (branch wala bhi)
+let gate = 0; try { gate = Number(localStorage.getItem('sam-sale-gate')) || 0; } catch {}
+const gateDiv = () => { const s = saleStock(); const br = (s.branches || []).filter(b => b !== 0); const on = gate > 0; return `<div class="sale-copies sale-gate"><small>🚪 Gate pass</small><button type="button" data-sale-gate="${on ? 0 : (SALE_BRANCH)}" class="${on ? 'on' : ''}">${on ? 'ON' : 'OFF'}</button>${on ? br.map(b => `<button type="button" data-sale-gate="${b}"${gate === b ? ' class="on"' : ''}>${esc(s.branchName ? s.branchName(b, s.names) : 'Godam ' + b)}</button>`).join('') : '<small class="sale-copies-h">off = sirf doosre godam ka</small>'}</div>`; };
+document.addEventListener('click', e => { const b = e.target.closest?.('[data-sale-gate]'); if (!b) return; gate = Number(b.dataset.saleGate) || 0; try { localStorage.setItem('sam-sale-gate', String(gate)); } catch {} if (gate) for (const l of cart) { l.godam = gate; const it = itemIn(gate, l.id); if (it) setStd(l, it); } rerender(); });
 let copies = 1; try { copies = Math.min(3, Math.max(1, Number(localStorage.getItem('sam-sale-copies')) || 1)); } catch {}   // v2.40: bill kitni dafa chhape (gate pass ek hi)
 const counterDiv = () => `<div class="sale-copies sale-counter"><small>🖨 Counter</small>${COUNTERS.map(([k, n]) => `<button type="button" data-sale-counter="${k}"${isPC(k) ? ` class="pc-chip${pcLive(pcOf(k)) ? '' : ' off'}${counter === k ? ' on' : ''}" title="${pcLive(pcOf(k)) ? 'Is PC par bina window ke print — printer: ' + String(pcOf(k)?.printer || 'default').replace(/"/g, '') : 'PC band / agent nahi chal raha'}"` : (counter === k ? ' class="on"' : '')}>${n}</button>`).join('')}</div>`;
 const printerDiv = () => { if (!isPC(counter)) return ''; const p = pcOf(counter); const list = Array.isArray(p?.printers) ? p.printers.filter(x => x && x.n && x.h) : []; if (!list.length) return ''; const cur = String(counter).split(':')[2] || '';
   return `<div class="sale-copies sale-prn"><small>🖨 Printer</small><button type="button" data-sale-printer=""${cur ? '' : ' class="on"'}>Default${p.printer ? ' (' + esc(String(p.printer).slice(0, 16)) + ')' : ''}</button>${list.map(x => `<button type="button" data-sale-printer="${esc(x.h)}"${cur === x.h ? ' class="on"' : ''}>${esc(x.n.slice(0, 22))}</button>`).join('')}</div>`; };
 const setPrinter = h => { if (!isPC(counter)) return; setCounter('pc:' + String(counter).split(':')[1] + (h ? ':' + h : ''), true); };
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-sale-printer]'); if (b) setPrinter(b.dataset.salePrinter); const c = e.target.closest?.('[data-live-clear]'); if (c && isOwner() && cloud?.liveCartStop) cloud.liveCartStop(counter, null).then(() => notice('✓ Clear')).catch(er => notice('Nahi hua: ' + (er?.message || er))); });
-const copyChips = () => counterDiv() + printerDiv() + `<div class="sale-copies"><small>🖨 Bill print</small>${[1, 2, 3].map(n => `<button type="button" data-sale-copies="${n}"${copies === n ? ' class="on"' : ''}>×${n}</button>`).join('')}<small class="sale-copies-h">gate pass ×1</small></div>`;
+const copyChips = () => counterDiv() + printerDiv() + gateDiv() + `<div class="sale-copies"><small>🖨 Bill print</small>${[1, 2, 3].map(n => `<button type="button" data-sale-copies="${n}"${copies === n ? ' class="on"' : ''}>×${n}</button>`).join('')}<small class="sale-copies-h">gate pass ×1</small></div>`;
 function pcsChanged(list) {   // v2.78: chips jagah par badlo (poora render nahi — likhte waqt focus na jaye)
   PCS = (Array.isArray(list) ? list : []).filter(p => p && p.id).sort((a, b) => String(a.name || a.id).localeCompare(String(b.name || b.id)));
   document.querySelectorAll('.sale-prn').forEach(el => el.remove());
@@ -130,7 +134,7 @@ function addItem(it, qtyPcs = 1) {
   {
     cart.push({
       k: newKey(), id: it.id, code: it.code || '', name: it.name, pack: Number(it.pack) || 0,
-      cName: it.cName || 'Ctn', uName: it.uName || 'Pcs', godam: Number(godam) || SALE_BRANCH,
+      cName: it.cName || 'Ctn', uName: it.uName || 'Pcs', godam: Number(gate || godam) || SALE_BRANCH,
       ctn: 0, pcs: qtyPcs, rate: rateFor(it), std: rateFor(it), crate: crateFor(it), cstd: crateFor(it), edited: false
     });
     // v1.60: nayi line par bhi poore carton alag (misal 2 Ctn likha = 24 pcs -> 2 Ctn)
@@ -271,7 +275,7 @@ function vbAdd(text) {
   if (!lastSug) notice('🎤 Suna: "' + heard.slice(0, 60) + '" — item ka naam samajh nahi aaya');
 }
 let vbHold = false, vbStopT = 0, vbHeard = '', vbDone = '';
-function vbStart() {               // v2.88.0: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
+function vbStart() {               // v2.89.1: DABA KAR BOLO — button dabe rahne tak sunta hai, chhorte hi line
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { notice('Is phone/browser mein awaz nahi chalti'); return; }
   if (vbRec) { try { vbRec.abort(); } catch {} vbRec = null; }
@@ -530,7 +534,7 @@ document.addEventListener('pointercancel', () => vbRelease());
 document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sale-mic]')) e.preventDefault(); });
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
-  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.88.0: hold se chalta hai
+  if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.89.1: hold se chalta hai
   const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
   if (!t) return;
   if (t.dataset.saleMode) {
@@ -609,7 +613,7 @@ async function save() {
   let emptyLines = 0;
   cart.forEach(l => {
     const base = { id: String(l.id), code: String(l.code || ''), name: String(l.name || ''), pack: Number(l.pack) || 0,
-      cName: l.cName, uName: l.uName, godam: Number(l.godam) || Number(godam) || SALE_BRANCH };
+      cName: l.cName, uName: l.uName, godam: gate > 0 ? gate : (Number(l.godam) || Number(godam) || SALE_BRANCH) };   // v2.89: gate switch
     const cq = ctnPcsOf(l), pq = r3(Number(l.pcs) || 0), cr = r2(crateOf(l)), pr = r2(l.rate);
     if (!(cq + pq > 0)) { emptyLines++; return; }
     if (cq > 0 && pq > 0 && Math.abs(cr - pr) > 0.004) {
@@ -644,7 +648,7 @@ async function save() {
   if (!quickSave && !confirm(msg)) return;   // v2.57: F5 wala raasta pehle hi pooch chuka
   const id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   let token = 0; try { token = await Promise.race([cloud.nextToken(todayStr()), new Promise((_, j) => setTimeout(() => j(Error('token der')), 4000))]); } catch { try { const k = 'sam-tok-' + todayStr(); token = Number(localStorage.getItem(k) || 0) + 1; localStorage.setItem(k, String(token)); } catch {} }   // v2.72
-  const doc = { id, copies, counter, token: Number(token) || 0, crates: Math.min(20, Math.max(1, crates | 0)), date: todayStr(), at: new Date().toISOString(), mode, branch: SALE_BRANCH, godam: Number(godam) || SALE_BRANCH,
+  const doc = { id, copies, counter, token: Number(token) || 0, crates: Math.min(20, Math.max(1, crates | 0)), date: todayStr(), at: new Date().toISOString(), mode, branch: SALE_BRANCH, godam: Number(godam) || SALE_BRANCH, gate: gate > 0 ? gate : 0,
     lines, total, cash: paid, note: note.trim(), role: isOwner() ? 'owner' : 'staff', by: uidOf(), status: 'new', createdAt: Date.now() };
   saving = true; rerender();
   try {
@@ -694,7 +698,7 @@ document.addEventListener('keydown', e => {
     copies = n; try { localStorage.setItem('sam-sale-copies', String(n)); } catch {}
     document.querySelectorAll('[data-sale-copies]').forEach(x => x.classList.toggle('on', Number(x.dataset.saleCopies) === n));
     const b = document.querySelector('[data-sale-save]'); if (!b || b.disabled) { notice('Save abhi nahi ho sakta'); return; }
-    { askCrates(() => { quickSave = true; setTimeout(() => { quickSave = false; }, 4000); b.click(); }); return; }   // v2.72 · v2.88.0: har counter (Abdurehman/Bilal/Mithu bhi — sale-post token chhapta hai)
+    { askCrates(() => { quickSave = true; setTimeout(() => { quickSave = false; }, 4000); b.click(); }); return; }   // v2.72 · v2.89.1: har counter (Abdurehman/Bilal/Mithu bhi — sale-post token chhapta hai)
     quickSave = true; setTimeout(() => { quickSave = false; }, 4000); b.click();
   };
   const key = ev => { const ck = { a: 'abdurehman', b: 'bilal', m: 'mithu', d: 'local' }[String(ev.key).toLowerCase()]; if (ck) { ev.preventDefault(); ev.stopPropagation(); setCounter(ck); return; } if (['1', '2', '3'].includes(ev.key)) { ev.preventDefault(); ev.stopPropagation(); done(Number(ev.key)); } else if (ev.key === 'Enter') { ev.preventDefault(); ev.stopPropagation(); done(copies); } else if (ev.key === 'Escape' || ev.key === 'F5') { ev.preventDefault(); ev.stopPropagation(); done(0); } };
@@ -777,7 +781,7 @@ function printLocal(sl, cp = 1, cr = 1) {
   const bill = `<section class="pg bill"><h1>NOOR TRADERS</h1><p class="c">${sl.mode === 'wholesale' ? 'WHOLESALE' : 'COUNTER SALE'}</p><p class="row"><b>Bill # ${esc(sl.saleNo || '')}</b><b>Token ${tok || '-'}</b></p><p class="row"><span>${d8}</span><span>${tm}</span></p><hr>
     ${lines.map(l => `<div class="it"><b>${esc(l.name)}</b><p class="row"><span>${qtxt(l)} × ${num(l.rate)}</span><span>${num(Math.round(l.qty * l.rate))}</span></p></div>`).join('')}<hr>
     <p class="row big"><b>KUL</b><b>Rs ${num(total)}</b></p>${sl.mode === 'wholesale' ? `<p class="row"><span>Cash</span><span>${num(cash)}</span></p>${total - cash > 0.5 ? `<p class="row"><b>Udhaar</b><b>${num(total - cash)}</b></p>` : ''}` : ''}<p class="c sm">Shukriya · Blue Khata</p></section>`;
-  const gp = {}; for (const l of lines) { const g = Number(l.godam) || 1; if (g !== Number(sl.branch || 1)) (gp[g] = gp[g] || []).push(l); }
+  const gp = {}; for (const l of lines) { const g = Number(l.godam) || 1; if (sl.gate || g !== Number(sl.branch || 1)) (gp[g] = gp[g] || []).push(l); }   // v2.89: gate switch = har godam ka
   const gates = Object.entries(gp).map(([g, ls]) => `<section class="pg gate"><h1>GATE PASS</h1><p class="c big">${esc(gname(Number(g)))}</p><p class="row"><b>Bill # ${esc(sl.saleNo || '')}</b><b>Token ${tok || '-'}</b></p><p class="row"><span>${d8}</span><span>${tm}</span></p><hr>${ls.map(l => `<p class="row"><span>${esc(l.name)}</span><b>${qtxt(l)}</b></p>`).join('')}<hr><p class="c sm">Maal de kar parchi rakh lein</p></section>`).join('');
   const n = Math.max(1, cr | 0);
   const toks = Array.from({ length: n }, (_, i) => `<section class="pg tok"><p class="tl">TOKEN</p><p class="tn">${tok || '-'}</p><p class="ur" dir="rtl" lang="ur">اس بل کے ${n} کریٹ ہیں</p><p class="tc">Crate ${i + 1} / ${n}</p><p class="row sm"><span>Bill # ${esc(sl.saleNo || '')}</span><span>${tm}</span></p></section>`).join('');
