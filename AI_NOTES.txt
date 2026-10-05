@@ -2588,3 +2588,7 @@ Malik ki ek gaari (GJL640630, Falcon-i / TPL Trakker). Falcon-i ka khula API nah
   form submit ✓.
 * v2.92.1: gaari card app ke white #summary CSS mein chhup raha tha (safed par safed) -> #summary .gr-card !important; permission error par 'Rules 2.31 publish karein' paigham.
 * v2.92.2: Gaari screen naya design — neela/jamni gradient HERO (nafa + kharch bar), 8 STAT CHIPS (tap = window/modal tafseel: km, diesel, average, bilty, kharche, driver, tracker, fi km), ACTION chips ek line (scroll), entries '📋 Entries' window mein (screen neeche lambi nahi). Inline rang + #summary .gx !important (app ke white CSS se bachao).
+* v2.93.0: Gaari — bilty form mein "🧾 Is safar ke kharche": search + chips (naam yaad: kharch.cat + bilty.kharche[].n se, zyada
+  istemal pehle; default list Toll/Repair/...), chip tap / Enter = line (naam + Rs + ✕), live "bilty ka nafa". bilty.kharche
+  [{n,a}] (max 30). Alag 🧾 Kharcha form bhi isi chip+search se (select hata). calc: kharchCat mein bilty kharche bhi; row par
+  kharche + bilty nafa. Setting: yaad wale naam ✕ -> _config.hideK. Rules nahi badli.

@@ -39,6 +39,15 @@ export function renderGaari() {
   start(); paint();
 }
 
+// v2.93: kharchon ke naam — entries se khud yaad (kharch.cat + bilty.kharche[].n), zyada istemal pehle; malik Setting se chhupa sake (cfg.hideK)
+function kNames() {
+  const c = {}; const add = n => { n = String(n || '').trim(); if (n) c[n] = (c[n] || 0) + 1; };
+  rows.forEach(r => { if (r.kind === 'kharch') add(r.cat); if (r.kind === 'bilty' && Array.isArray(r.kharche)) r.kharche.forEach(k => add(k.n)); });
+  KHARCH.forEach(k => { if (!c[k]) c[k] = 0; });
+  const hide = new Set(Array.isArray(cfg.hideK) ? cfg.hideK : []);
+  return Object.entries(c).filter(([n]) => !hide.has(n)).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([n]) => n);
+}
+const biltyK = b => (Array.isArray(b.kharche) ? b.kharche : []).reduce((s, k) => s + (Number(k.a) || 0), 0);
 const commOf = b => b.comm != null && b.comm !== '' ? Number(b.comm) || 0 : (cfg.commType === 'fixed' ? Number(cfg.commVal) || 0 : r2((Number(b.kiraya) || 0) * (Number(cfg.commVal) || 0) / 100));
 const inMonth = r => String(r.date || '').slice(0, 7) === month;
 
@@ -50,8 +59,9 @@ function calc() {
   const comm = bilty.reduce((s, b) => s + commOf(b), 0);
   const litre = diesel.reduce((s, d) => s + (Number(d.litre) || 0), 0);
   const dieselRs = diesel.reduce((s, d) => s + (Number(d.amount) || 0), 0);
-  const kharchRs = kharch.reduce((s, k) => s + (Number(k.amount) || 0), 0);
   const kharchCat = {}; kharch.forEach(k => { kharchCat[k.cat || 'Doosra'] = (kharchCat[k.cat || 'Doosra'] || 0) + (Number(k.amount) || 0); });
+  bilty.forEach(b => (Array.isArray(b.kharche) ? b.kharche : []).forEach(k => { const n = String(k.n || 'Doosra'); kharchCat[n] = (kharchCat[n] || 0) + (Number(k.a) || 0); }));   // v2.93
+  const kharchRs = Object.values(kharchCat).reduce((s, v) => s + v, 0);
   // meter: pichhle mahine ki aakhri reading (ya is mahine ki pehli) se is mahine ki aakhri tak
   const rd = rows.filter(r => Number(r.reading) > 0).map(r => ({ d: String(r.date || ''), at: Number(r.at) || 0, v: Number(r.reading) })).sort((a, b) => a.d.localeCompare(b.d) || a.at - b.at);
   const before = rd.filter(x => x.d.slice(0, 7) < month), inside = rd.filter(x => x.d.slice(0, 7) === month);
@@ -138,7 +148,7 @@ function rowHTML(r) {
   const d = String(r.date || '').slice(8, 10) + ' ' + (MONTHS[Number(String(r.date).slice(5, 7)) - 1] || '');
   const can = isOwner() || (r.by === uidOf() && r.date === today());
   let t = '', v = '';
-  if (r.kind === 'bilty') { t = `📄 ${esc(r.from || '?')} → ${esc(r.to || '?')}${r.party ? ' · ' + esc(r.party) : ''}`; v = `${rs(r.kiraya)}<small>comm ${rs(commOf(r))}</small>`; }
+  if (r.kind === 'bilty') { const bk = biltyK(r); t = `📄 ${esc(r.from || '?')} → ${esc(r.to || '?')}${r.party ? ' · ' + esc(r.party) : ''}${bk ? `<small>🧾 ${(r.kharche || []).map(k => esc(k.n) + ' ' + num(k.a)).join(' · ')}</small>` : ''}`; v = `${rs(r.kiraya)}<small>comm ${rs(commOf(r))}${bk ? ' · kharch ' + rs(bk) : ''} · nafa ${rs((Number(r.kiraya) || 0) - commOf(r) - bk)}</small>`; }
   else if (r.kind === 'diesel') { t = `⛽ ${num(r.litre, 1)} L × ${num(r.rate, 1)}${r.reading ? ' · reading ' + num(r.reading) : ''}${r.pump ? ' · ' + esc(r.pump) : ''}`; v = rs(r.amount); }
   else if (r.kind === 'kharch') { t = `🧾 ${esc(r.cat || 'Kharcha')}${r.note ? ' · ' + esc(r.note) : ''}`; v = rs(r.amount); }
   else if (r.kind === 'reading') { t = `📍 Meter reading${r.note ? ' · ' + esc(r.note) : ''}`; v = num(r.reading) + ' km'; }
@@ -151,12 +161,32 @@ function rowHTML(r) {
 const field = (name, label, type = 'number', val = '', extra = '') => `<label>${label}<input name="${name}" type="${type}" ${type === 'number' ? 'inputmode="decimal" step="any"' : ''} value="${esc(val)}" ${extra}></label>`;
 const photoBtn = (what) => ai ? `<label class="gr-photo">📷 ${what} ki photo — AI khud bhar dega<input type="file" accept="image/*" capture="environment" data-gr-photo hidden></label><p class="gr-ai" hidden></p>` : '';
 
+const kChips = (q = '') => { const L = kNames().filter(n => !q || n.toLowerCase().includes(q.toLowerCase())).slice(0, 14);
+  return L.map(n => `<button type="button" class="gk-chip" data-gk="${esc(n)}">${esc(n)}</button>`).join('') || (q ? `<button type="button" class="gk-chip gk-new" data-gk="${esc(q)}">＋ "${esc(q)}" naya</button>` : ''); };
+const kBox = multi => `<div class="gk"><b>🧾 ${multi ? 'Is safar ke kharche' : 'Kis cheez ka'}</b><input type="search" class="gk-q" placeholder="🔍 Naam dhoondein ya naya likh kar Enter" autocomplete="off"><div class="gk-chips">${kChips()}</div>${multi ? '<div class="gk-lines"></div><p class="gk-sum"></p>' : '<input type="hidden" name="cat" value="">'}</div>`;
+function kWire(f, multi) {
+  const q = f.querySelector('.gk-q'), chips = f.querySelector('.gk-chips'), lines = f.querySelector('.gk-lines'), sum = f.querySelector('.gk-sum');
+  const redraw = () => { chips.innerHTML = kChips(q.value.trim()); };
+  const total = () => { if (!sum) return; let k = 0; lines.querySelectorAll('.gk-line').forEach(l => { k += Number(l.querySelector('.gk-a').value) || 0; });
+    const kir = Number(f.elements.kiraya?.value) || 0, cv = f.elements.comm?.value, cm = cv !== '' && cv != null ? Number(cv) || 0 : (cfg.commType === 'fixed' ? Number(cfg.commVal) || 0 : kir * (Number(cfg.commVal) || 0) / 100);
+    sum.innerHTML = k || kir ? `Kharche <b>${rs(k)}</b> · commission ${rs(cm)} · <b>bilty ka nafa ${rs(kir - cm - k)}</b>` : ''; };
+  const pick = n => { n = String(n || '').trim(); if (!n) return;
+    if (!multi) { f.elements.cat.value = n; chips.querySelectorAll('.gk-chip').forEach(c => c.classList.toggle('on', c.dataset.gk === n)); q.value = n; f.elements.amount?.focus(); return; }
+    const d = document.createElement('div'); d.className = 'gk-line';
+    d.innerHTML = `<span>${esc(n)}</span><input class="gk-a" type="number" inputmode="decimal" step="any" placeholder="Rs"><button type="button" class="gk-x">✕</button>`; d.dataset.n = n;
+    lines.appendChild(d); q.value = ''; redraw(); d.querySelector('.gk-a').focus(); };
+  q.addEventListener('input', redraw);
+  q.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); pick(q.value); } });
+  chips.addEventListener('click', e => { const b = e.target.closest('[data-gk]'); if (b) pick(b.dataset.gk); });
+  if (lines) { lines.addEventListener('click', e => { const x = e.target.closest('.gk-x'); if (x) { x.parentElement.remove(); total(); } }); f.addEventListener('input', total); }
+  return () => multi ? [...lines.querySelectorAll('.gk-line')].map(l => ({ n: String(l.dataset.n).slice(0, 40), a: Number(l.querySelector('.gk-a').value) || 0 })).filter(k => k.a > 0) : (f.elements.cat.value || q.value.trim());
+}
 function openForm(kind) {
   const d = today(), lastR = Math.max(0, ...rows.map(r => Number(r.reading) || 0));
   const F = {
-    bilty: ['📄 Bilty / kiraya', `${field('date', 'Tareekh', 'date', d)}<div class="gr-2">${field('from', 'Kahan se', 'text', '', 'placeholder="Kharian"')}${field('to', 'Kahan tak', 'text', '', 'placeholder="Lahore"')}</div>${field('party', 'Party / maal', 'text')}${field('kiraya', 'Bilty kiraya (Rs)', 'number', '', 'required')}${field('comm', `Driver commission (khali = ${cfg.commType === 'fixed' ? rs(cfg.commVal) : num(cfg.commVal, 1) + '%'})`)}${field('note', 'Note', 'text')}`],
+    bilty: ['📄 Bilty / kiraya', `${field('date', 'Tareekh', 'date', d)}<div class="gr-2">${field('from', 'Kahan se', 'text', '', 'placeholder="Kharian"')}${field('to', 'Kahan tak', 'text', '', 'placeholder="Lahore"')}</div>${field('party', 'Party / maal', 'text')}${field('kiraya', 'Bilty kiraya (Rs)', 'number', '', 'required')}${field('comm', `Driver commission (khali = ${cfg.commType === 'fixed' ? rs(cfg.commVal) : num(cfg.commVal, 1) + '%'})`)}${kBox(true)}${field('note', 'Note', 'text')}`],
     diesel: ['⛽ Diesel', `${photoBtn('Pump parchi / meter')}${field('date', 'Tareekh', 'date', d)}<div class="gr-2">${field('litre', 'Litre', 'number', '', 'required')}${field('rate', 'Rate fi litre')}</div>${field('amount', 'Kul raqam (Rs)')}${field('reading', `Meter reading (pichhli ${lastR ? num(lastR) : '—'})`, 'number', '', 'required')}${field('pump', 'Pump', 'text')}`],
-    kharch: ['🧾 Kharcha', `${field('date', 'Tareekh', 'date', d)}<label>Kis cheez ka<select name="cat">${KHARCH.map(k => `<option>${k}</option>`).join('')}</select></label>${field('amount', 'Raqam (Rs)', 'number', '', 'required')}${field('note', 'Tafseel', 'text')}`],
+    kharch: ['🧾 Kharcha', `${field('date', 'Tareekh', 'date', d)}${kBox(false)}${field('amount', 'Raqam (Rs)', 'number', '', 'required')}${field('note', 'Tafseel', 'text')}`],
     reading: ['📍 Meter reading', `${photoBtn('Meter')}${field('date', 'Tareekh', 'date', d)}${field('reading', `Reading (pichhli ${lastR ? num(lastR) : '—'})`, 'number', '', 'required')}${field('note', 'Note', 'text', '', 'placeholder="mahine ki shuru / aakhir"')}`],
     tracker: ['📸 Tracker ke km', `${photoBtn('Falcon-i report (Mileage/Trip)')}${field('date', 'Tareekh (din ya mahine ki aakhri)', 'date', d)}${field('km', 'Km (tracker ke mutabiq)', 'number', '', 'required')}${field('note', 'Note', 'text', '', 'placeholder="1-31 Oct ki report"')}`],
     driver: ['👤 Driver ko diye', `${field('date', 'Tareekh', 'date', d)}${field('amount', 'Raqam (Rs)', 'number', '', 'required')}${field('note', 'Note', 'text', '', 'placeholder="commission / advance"')}`]
@@ -167,14 +197,15 @@ function openForm(kind) {
   if (kind === 'diesel') f.addEventListener('input', e => { const L = Number(f.elements.litre.value) || 0, R = Number(f.elements.rate.value) || 0, A = Number(f.elements.amount.value) || 0;
     if (e.target.name !== 'amount' && L && R) f.elements.amount.value = Math.round(L * R); else if (e.target.name === 'amount' && L && A && !R) f.elements.rate.value = r2(A / L); });
   f.querySelector('[data-gr-photo]')?.addEventListener('change', e => readPhoto(kind, f, e.target.files?.[0]));
+  const kGet = (kind === 'bilty' || kind === 'kharch') ? kWire(f, kind === 'bilty') : null;
   f.onsubmit = async e => {
     e.preventDefault();
     const o = Object.fromEntries(new FormData(f)); const msg = f.querySelector('.gr-msg');
     const n = k => o[k] === '' || o[k] == null ? null : Number(o[k]);
     const doc = { kind, date: String(o.date || d).slice(0, 10), note: String(o.note || '').slice(0, 200) };
-    if (kind === 'bilty') Object.assign(doc, { from: String(o.from || '').slice(0, 60), to: String(o.to || '').slice(0, 60), party: String(o.party || '').slice(0, 80), kiraya: n('kiraya') || 0, comm: n('comm') });
+    if (kind === 'bilty') { Object.assign(doc, { from: String(o.from || '').slice(0, 60), to: String(o.to || '').slice(0, 60), party: String(o.party || '').slice(0, 80), kiraya: n('kiraya') || 0, comm: n('comm') }); const kk = kGet(); if (kk.length) doc.kharche = kk.slice(0, 30); }
     if (kind === 'diesel') Object.assign(doc, { litre: n('litre') || 0, rate: n('rate') || (n('amount') && n('litre') ? r2(n('amount') / n('litre')) : 0), amount: n('amount') || Math.round((n('litre') || 0) * (n('rate') || 0)), reading: n('reading') || 0, pump: String(o.pump || '').slice(0, 60) });
-    if (kind === 'kharch') Object.assign(doc, { cat: String(o.cat || 'Doosra').slice(0, 40), amount: n('amount') || 0 });
+    if (kind === 'kharch') { const cat = String(kGet() || '').trim(); if (!cat) { msg.textContent = 'Kharche ka naam chunein ya likhein'; return; } Object.assign(doc, { cat: cat.slice(0, 40), amount: n('amount') || 0 }); }
     if (kind === 'reading') Object.assign(doc, { reading: n('reading') || 0 });
     if (kind === 'tracker') Object.assign(doc, { km: n('km') || 0 });
     if (kind === 'driver') Object.assign(doc, { amount: n('amount') || 0 });
@@ -210,8 +241,9 @@ async function readPhoto(kind, f, file) {
 function openCfg() {
   modal('⚙ Gaari setting', `<form id="grCfg" class="gr-form">${field('no', 'Gaari number', 'text', cfg.no || '')}${field('driver', 'Driver ka naam', 'text', cfg.driver || '')}${field('avg', 'Sahi average (km fi litre)', 'number', cfg.avg ?? 5.5)}
     <label>Driver commission<select name="commType"><option value="pct"${cfg.commType !== 'fixed' ? ' selected' : ''}>% kiraya ka</option><option value="fixed"${cfg.commType === 'fixed' ? ' selected' : ''}>Fixed fi bilty (Rs)</option></select></label>
-    ${field('commVal', 'Commission (% ya Rs)', 'number', cfg.commVal ?? 10)}<p class="gr-msg"></p><button type="submit" class="primary">💾 Save</button></form>`);
+    ${field('commVal', 'Commission (% ya Rs)', 'number', cfg.commVal ?? 10)}<b>🧾 Yaad wale kharchon ke naam</b><div class="gk-chips">${kNames().map(n => `<button type="button" class="gk-chip" data-gk-hide="${esc(n)}">${esc(n)} ✕</button>`).join('')}</div><p class="gr-ai">✕ = list se hatao (purani entries par asar nahi)</p><p class="gr-msg"></p><button type="submit" class="primary">💾 Save</button></form>`);
   const f = $('grCfg');
+  f.addEventListener('click', async e => { const b = e.target.closest('[data-gk-hide]'); if (!b) return; const h = new Set(Array.isArray(cfg.hideK) ? cfg.hideK : []); h.add(b.dataset.gkHide); try { await cloud.setGaariConfig({ hideK: [...h].slice(0, 200) }); cfg.hideK = [...h]; b.remove(); } catch (er) { notice('Nahi hua: ' + (er?.message || er)); } });
   f.onsubmit = async e => { e.preventDefault(); const o = Object.fromEntries(new FormData(f));
     try { await cloud.setGaariConfig({ no: String(o.no || '').slice(0, 30), driver: String(o.driver || '').slice(0, 40), avg: Number(o.avg) || 5.5, commType: o.commType === 'fixed' ? 'fixed' : 'pct', commVal: Number(o.commVal) || 0, updatedAt: Date.now() }); closeModal(); notice('✓ Setting save'); }
     catch (er) { f.querySelector('.gr-msg').textContent = 'Nahi hua: ' + (er?.message || er); } };
