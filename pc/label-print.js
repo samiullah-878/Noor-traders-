@@ -1,5 +1,5 @@
 // =========================================================
-//  label-print.js  v3.4 (2026-10-05: English naam ke neeche URDU naam — blueAccess/urduNames, PowerShell raster -> TSPL BITMAP; label-settings urdu/urduFont/urduPx/urduInvert)
+//  label-print.js  v3.6 (2026-10-05: Urdu raster upar/neeche padding px*0.35 — Nastaleeq ka sar kat-ta tha; default font Tahoma 24) · v3.5 (2026-10-05: lamba naam 2 line (char 14 dot), Urdu 46 dot tak, barcode 24/20%) · v3.4 (2026-10-05: English naam ke neeche URDU naam — blueAccess/urduNames, PowerShell raster -> TSPL BITMAP; label-settings urdu/urduFont/urduPx/urduInvert)
 //  v3.3 (2026-09-24: number har BARCODE ka apna — ek item ke sub-barcode alag alag 1 se; dobara chhapne par aage se)
 //  v3.2 (number barcode ke code wali line par dayen — naam 2 line ho to bhi theek)
 //  v3.1 (number font 2, rate ki line 4 dot upar — neeche kat rahi thi)
@@ -28,8 +28,8 @@ const DEFAULTS = {
   xOffset: 0, yOffset: 0,       // poori qatar ko khiskana (mm) â€” bayen kate to + karein
   showRate: true, speed: 4, density: 8,
   urdu: true,                   // v3.4: English naam ke neeche URDU naam (blueAccess/urduNames se), tasveer bana kar
-  urduFont: 'Jameel Noori Nastaleeq,Urdu Typesetting,Segoe UI,Tahoma',
-  urduPx: 20,                   // Urdu harf ki unchai (dots) — chhote label par 18-22
+  urduFont: 'Tahoma,Segoe UI,Arial,Jameel Noori Nastaleeq',   // v3.6: Naskh (Tahoma) chhote label par saaf; Nastaleeq upar se kat-ta tha
+  urduPx: 24,                   // Urdu harf ki unchai (dots) — chhote label par 18-22
   urduInvert: false             // agar Urdu ki jagah kala block aaye to true kar dein
 };
 const LOCK_PORT = 47816;
@@ -48,10 +48,10 @@ $inst=New-Object System.Drawing.Text.InstalledFontCollection
 $fam='Arial'; foreach($n in $fonts.Split(',')){ $t=$n.Trim(); foreach($ff in $inst.Families){ if($ff.Name -ieq $t){ $fam=$ff.Name; break } }; if($fam -ne 'Arial'){ break } }
 $f=New-Object System.Drawing.Font($fam,$px,[System.Drawing.FontStyle]::Bold,[System.Drawing.GraphicsUnit]::Pixel)
 $sf=New-Object System.Drawing.StringFormat; $sf.Alignment=[System.Drawing.StringAlignment]::Near; $sf.FormatFlags=[System.Drawing.StringFormatFlags]::DirectionRightToLeft
-$b0=New-Object System.Drawing.Bitmap 10,10; $g0=[System.Drawing.Graphics]::FromImage($b0); $sz=$g0.MeasureString($text,$f,$width,$sf); $h=[int][Math]::Ceiling($sz.Height)+4; $g0.Dispose(); $b0.Dispose()
+$b0=New-Object System.Drawing.Bitmap 10,10; $g0=[System.Drawing.Graphics]::FromImage($b0); $sz=$g0.MeasureString($text,$f,$width,$sf); $pad=[int][Math]::Ceiling($px*0.35); $h=[int][Math]::Ceiling($sz.Height)+$pad*2; $g0.Dispose(); $b0.Dispose()
 $bmp=New-Object System.Drawing.Bitmap $width,$h; $g=[System.Drawing.Graphics]::FromImage($bmp); $g.Clear([System.Drawing.Color]::White)
 $g.TextRenderingHint=[System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
-$g.DrawString($text,$f,[System.Drawing.Brushes]::Black,(New-Object System.Drawing.RectangleF 0,2,$width,$h),$sf); $g.Dispose()
+$g.DrawString($text,$f,[System.Drawing.Brushes]::Black,(New-Object System.Drawing.RectangleF 0,$pad,$width,$h),$sf); $g.Dispose()
 $wb=[int][Math]::Ceiling($width/8); $out1=New-Object System.Collections.Generic.List[byte]
 $out1.Add([byte]($wb -band 255)); $out1.Add([byte]($wb -shr 8)); $out1.Add([byte]($h -band 255)); $out1.Add([byte]($h -shr 8))
 for($y=0;$y -lt $h;$y++){ for($xb=0;$xb -lt $wb;$xb++){ $v=0; for($k=0;$k -lt 8;$k++){ $x=$xb*8+$k; $white=$true; if($x -lt $width){ $c=$bmp.GetPixel($x,$y); if(($c.R+$c.G+$c.B) -lt 384){ $white=$false } }; if($white){ $v=$v -bor (0x80 -shr $k) } }; $out1.Add([byte]$v) } }
@@ -114,7 +114,7 @@ function labelCmds(S, j, x0, tag, ur) {
   const W = S.w * DOT, H = S.h * DOT, m = Math.round(1.5 * DOT), y0 = Math.round(S.yOffset * DOT);
   const urR = (S.urdu && ur) ? urduRaster(String(ur), S, Math.floor((W - 2 * m) / 8) * 8) : null;   // v3.4: Urdu bitmap
   const code = clean(j.code, 40), qty = Number(j.qty) || 1;
-  const nameMax = Math.floor((W - 2 * m) / 12);
+  const nameMax = Math.floor((W - 2 * m) / (Number(S.charW) || 14));   // v3.5: font "2" asal mein ~14 dot chaura (12 par naam dayen se kat-ta tha)
   const name = clean(j.name, 60) + (qty !== 1 ? ' - ' + num(qty) : '');
   let l1 = name, l2 = '';
   if (name.length > nameMax) { const cut = name.lastIndexOf(' ', nameMax); const at = cut > nameMax / 2 ? cut : nameMax; l1 = name.slice(0, at).trim(); l2 = name.slice(at).trim().slice(0, nameMax); }
@@ -122,11 +122,11 @@ function labelCmds(S, j, x0, tag, ur) {
   const modules = digits ? (1 + Math.floor(code.length / 2) + (code.length % 2 ? 2 : 0) + 1) * 11 + 13 : (code.length + 3) * 11 + 13;
   const narrow = modules * 2 <= W - 2 * m ? 2 : 1;
   const bw = modules * narrow, bx = x0 + Math.max(m, Math.round((W - bw) / 2));
-  const bh = Math.round(H * (urR ? 0.26 : 0.34));
+  const bh = Math.round(H * (urR ? (l2 ? 0.20 : 0.24) : 0.34));   // v3.5: Urdu + 2 line naam ho to barcode thora chhota
   const out = [`TEXT ${x0 + m},${y0 + m},"2",0,1,1,"${l1}"`];
   let y = y0 + m + 22;
   if (l2) { out.push(`TEXT ${x0 + m},${y},"2",0,1,1,"${l2}"`); y += 22; }
-  if (urR) { const uh = Math.min(urR.h, 34); out.push(`BITMAP ${x0 + m},${y},${urR.wb},${uh},0,${urR.data.slice(0, urR.wb * uh)}`); y += uh + 2; }
+  if (urR) { const uh = Math.min(urR.h, 56); out.push(`BITMAP ${x0 + m},${y},${urR.wb},${uh},0,${urR.data.slice(0, urR.wb * uh)}`); y += uh + 2; }
   out.push(`BARCODE ${bx},${y + 4},"128",${bh},1,0,${narrow},${narrow},"${code}"`);
   // v3.2: number BARCODE KE CODE ("086") wali line par, DAYEN kone mein — naam do line le le tab bhi jagah rehti hai
   if (tag) { const tw = String(tag).length * 12;         // font "2" = 12 dot chaura

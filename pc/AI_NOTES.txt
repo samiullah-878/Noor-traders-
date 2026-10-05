@@ -1245,3 +1245,8 @@ par auto backup.
   `node auto-backup.js --now` = foran test.
 * Server par Google Drive for Desktop (usi email) install chahiye — warna sirf PC par backups (status ⚠️).
 * Test (node, fake db): times 00:00/23:59 -> tick -> backup + extra files bane, status ok ✓.
+* label-print v3.5 (manifest 2026-10-05.3): malik — "wazan chhup gaya" (garam masala - 0.25 -> "0."). nameMax ab (W-2m)/14
+  (label-settings charW) -> lamba naam 2 line; Urdu raster 46 dot tak (urduPx 28 par kat-ta tha); barcode 24% (2 line naam: 20%).
+* label-print v3.6 (manifest 2026-10-05.4): Urdu ka upar wala hissa kat-ta tha (Nastaleeq ascenders MeasureString se bahar) ->
+  raster mein pad = px*0.35 upar/neeche; default urduFont Tahoma (Naskh, chhote size par saaf), urduPx 24; uh cap 56.
+  Malik ke server label-settings.json mein urduPx 28 + (command se) urduFont Tahoma.
