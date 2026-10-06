@@ -38,7 +38,8 @@ const DEFAULTS = {
   urduInvert: false,            // agar Urdu ki jagah kala block aaye to true kar dein
   urduMode: 'bitmap',           // v3.8: 'bitmap' (kati hui chhoti tasveer har label par). 'putbmp-test' = DOWNLOAD/PUTBMP (TSC ~35 label baad rukta tha)
   urduTtf: 'C:\\Windows\\Fonts\\tahomabd.ttf',   // v3.9: urduMode 'ttf' ke liye font (bold Tahoma); 'arialbd.ttf' bhi chal sakta
-  urduTtfPx: 26,                // v3.9: TTF Urdu ki unchai (dots)
+  urduPt: 10,                   // v3.9.1: TTF Urdu ka size (POINT — TSC mein TTF ka size point mein, 26 = bohat bara tha)
+  urduReverse: false,           // v3.9.1: false = printer khud RTL karta hai (test: ulta aaya tha)
   rowsPerJob: 8                 // v3.8: itni qataron (x cols label) ka EK print job — printer ka buffer na bhare
 };
 const LOCK_PORT = 47816;
@@ -154,8 +155,9 @@ function labelCmds(S, j, x0, tag, ur) {
   const out = [`TEXT ${x0 + m},${y0 + m},"2",0,1,1,"${l1}"`];
   let y = y0 + m + 22;
   if (l2) { out.push(`TEXT ${x0 + m},${y},"2",0,1,1,"${l2}"`); y += 22; }
-  if (ttf) { const px = Math.max(14, Math.min(60, Number(S.urduTtfPx) || 26)); const t = Buffer.from(urduShape(String(ur)).replace(/"/g, ''), 'utf8').toString('latin1');
-    out.push(`TEXT ${x0 + m},${y},"UR.TTF",0,${px},${px},"${t}"`); y += px + 6; }   // v3.9: Urdu as TEXT (font printer mein)
+  if (ttf) { const pt = Math.max(5, Math.min(30, Number(S.urduPt) || 10)), dots = Math.round(pt * 203 / 72);
+    const t = Buffer.from(urduShape(String(ur), { reverse: S.urduReverse === true }).replace(/"/g, ''), 'utf8').toString('latin1');
+    out.push(`TEXT ${x0 + m},${y},"UR.TTF",0,${pt},${pt},"${t}"`); y += dots + 6; }   // v3.9.1: point size   // v3.9: Urdu as TEXT (font printer mein)
   if (urR) { const uh = Math.min(urR.h, 56), c = urR.crop;
     if (S.urduMode === 'putbmp-test') out.push(`PUTBMP ${x0 + m},${y},"UR.BMP"`);
     else if (c && c.y < uh) { const ch = Math.min(c.h, uh - c.y); out.push(`BITMAP ${x0 + m + c.xb * 8},${y + c.y},${c.wb},${ch},0,${c.data.slice(0, c.wb * ch)}`); }   // v3.8: kati hui (chhoti)
@@ -291,11 +293,13 @@ if (process.argv.includes('--calibrate')) {   // v2.1: roll badalne ke baad prin
     .then(e => { console.log(e ? 'Nahi hua: ' + e.message : 'Calibrate ka hukum bhej diya â€” printer 2-3 khali labels nikalega, yeh theek hai.'); process.exit(e ? 1 : 0); });
 } else if (process.argv.includes('--test-urdu')) {   // v3.9: node label-print.js --test-urdu [C:\Windows\Fonts\arialbd.ttf]
   const S = { ...settings(), urdu: true, urduMode: 'ttf' }; const fa = process.argv[process.argv.indexOf('--test-urdu') + 1]; if (fa && !fa.startsWith('--')) S.urduTtf = fa;
-  console.log('Font: ' + S.urduTtf + ' · ' + S.urduTtfPx + ' dots');
+  console.log('Font: ' + S.urduTtf + ' · ' + S.urduPt + ' pt');
   (async () => { const e1 = await ensureFont(S); if (e1) { console.log('Font NAHI gaya: ' + e1.message); process.exit(1); }
     const j = { name: 'nimko 0.700gm', code: '03265', qty: 1, rate: 370, copies: 3 };
-    const jobs = tspl(S, j, { code: 'TT', from: 1 }, 'نمکو 0.700 گرام'); const e2 = await sendRaw(jobs[0], S.printer);
-    console.log(e2 ? 'Nahi hua: ' + e2.message : 'Test qatar bhej di — Urdu "نمکو 0.700 گرام" jure hue harf mein aani chahiye'); process.exit(e2 ? 1 : 0); })();
+    const A = tspl({ ...S, urduReverse: false }, j, { code: 'A', from: 1 }, 'نمکو 0.700 گرام')[0];
+    const B = tspl({ ...S, urduReverse: true }, j, { code: 'B', from: 1 }, 'نمکو 0.700 گرام')[0];
+    const e2 = await sendRaw(A, S.printer) || await sendRaw(B, S.printer);
+    console.log(e2 ? 'Nahi hua: ' + e2.message : 'Do qatarein: A-1..3 aur B-1..3 — jis mein "نمکو 0.700 گرام" SAHI parha jaye wo batayein'); process.exit(e2 ? 1 : 0); })();
 } else if (process.argv.includes('--test')) {
   const S = settings();
   console.log('Naap: ' + S.cols + ' columns x ' + S.w + 'x' + S.h + ' mm, gap ' + S.colGap + '/' + S.rowGap + ' mm, offset ' + S.xOffset + '/' + S.yOffset + ' mm');
@@ -305,7 +309,7 @@ if (process.argv.includes('--calibrate')) {   // v2.1: roll badalne ke baad prin
   const lock = net.createServer();
   lock.once('error', () => { console.log('label-print pehle se chal raha hai.'); process.exit(3); });
   lock.listen(LOCK_PORT, '127.0.0.1', () => {
-    { const S = settings(); log(`label-print v3.9 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
+    { const S = settings(); log(`label-print v3.9.1 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
     jobCol.where('status', '==', 'new').onSnapshot(s => {
       s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handle(c.doc)); });
     }, e => { log('Listener toot gaya: ' + e.message + ' â€” band, bat 30 second mein dobara chalayega'); process.exit(1); });

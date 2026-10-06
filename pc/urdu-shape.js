@@ -24,7 +24,7 @@ const LAM_ALEF = { 0x0622: [0xFEF5, 0xFEF6], 0x0623: [0xFEF7, 0xFEF8], 0x0625: [
 const isAr = c => (c >= 0x0600 && c <= 0x06FF) || (c >= 0xFB50 && c <= 0xFEFF);
 const isMark = c => (c >= 0x064B && c <= 0x065F) || c === 0x0670 || (c >= 0x06D6 && c <= 0x06ED);   // zer zabar pesh (chhor do)
 const joinsLeft = c => F[c] && F[c].length === 4;   // agle harf se jur sakta hai
-function shapeRun(cps) {
+function shapeRun(cps, rev = true) {
   const out = [];
   const letters = cps.filter(c => !isMark(c));
   for (let i = 0; i < letters.length; i++) {
@@ -39,9 +39,13 @@ function shapeRun(cps) {
     if (pj && nj) g = f[3]; else if (pj) g = f[1]; else if (nj) g = f[2]; else g = f[0];
     out.push(g);
   }
-  return out.reverse();   // RTL -> visual LTR
+  return rev ? out.reverse() : out;   // RTL -> visual LTR (printer khud ulta kare to rev=false)
 }
-function shape(text) {
+function shape(text, opt = {}) {
+  const rev = opt.reverse !== false;
+  if (!rev) { const cps0 = [...String(text || '')].map(ch => ch.codePointAt(0)); const words = []; let w = [];
+    for (const c of cps0) { if (c === 0x20) { words.push(w); w = []; } else w.push(c); } words.push(w);
+    return words.map(x => x.some(isAr) ? shapeRun(x, false) : x).map(x => x.map(c => String.fromCodePoint(c)).join('')).join(' '); }
   const cps = [...String(text || '')].map(ch => ch.codePointAt(0));
   // runs: Arabic (with spaces inside) vs other; poori line RTL hai -> runs ka order bhi ulta
   const runs = []; let cur = null;

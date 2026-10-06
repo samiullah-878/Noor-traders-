@@ -2762,3 +2762,7 @@ Malik: v3.8 (kati bitmap + chhote jobs) par bhi ruka; "Urdu alfaz ki shakl mein 
 * 200 label = 9 jobs, kul 36 KB (bitmap 106 KB, PUTBMP 17 KB magar rukta). --test-urdu [font] = ek qatar.
 * Khatra: font mein presentation-form glyph na hon to dabbe/khali — pehle --test-urdu dekho; arialbd.ttf / micross.ttf try. Asal TSC par
   yahan test NAHI.
+* label-print v3.9.1 (manifest .12): pehla TTF test (17:53) — Urdu JURE HUE harf aaye (TTF + shaping kaam karta hai!) magar
+  (1) bohat bara: TSC mein TTF ka size POINT mein hota hai (26 = ~73 dots) -> urduPt 10 (~28 dots), y += pt*203/72 + 6;
+  (2) ULTA: printer khud RTL karta hai (hamara ulta + printer ulta = galat) -> urduReverse false (shape(t,{reverse:false}) = shaped,
+  logical order). --test-urdu ab do qatarein: A (reverse false) / B (reverse true) — malik jo sahi bataye.
