@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.95.5';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.95.6';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1630,6 +1630,8 @@ async function tickCount(itemId, button) {
   if (countLocked()) { notice('Malik ne counting band ki hui hai'); return; }
   const item = collect().items.find(r => String(r.id) === String(itemId));
   if (!item) return;
+  // v2.95.6: khanon mein ginti likhi ho to Tick = wahi ginti Save (farq ke saath history mein), system jaisa NAHI
+  { const typed = readCount(item, true); if (typed && !typed.bad) { await saveCount(itemId, button); return; } }
   const sys = Math.round((Number(item.stock) || 0) * 1000) / 1000;
   if (sys < 0) { notice(`System mein stock minus (${num(sys)}) hai — tick nahi hota, asal ginti likh kar Save karein`); return; }
   const per = Number(item.pack) || 0;
