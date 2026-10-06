@@ -2695,3 +2695,12 @@ Malik: counter PCs par baar baar command na chalani pare — "server se command 
 * Test: asli GitHub se manifest + files aayin, sha theek, dono badli, exit 0 ✓.
 * Is ke baad counter PC par sirf GitHub par file daalni hai — 5 min + 30 sec mein khud. PEHLI dafa (v1.6 -> v1.7) haath se / server ki
   network-copy command se.
+
+==================== label-print v3.7 (manifest 2026-10-06.5) — 🏷️ LABEL RUK RUK KAR + "Error - Printing" ====================
+Malik (screenshot TSC TTP-244 Pro queue): Label jobs 158 / 267 / 357 KB, "Printing" atka, labels ruk ruk kar.
+* Wajah (v3.4 Urdu): har label par poori Urdu BITMAP (~1.6 KB: 29 byte x 56 line) — 90 label = 158 KB (test se bilkul yahi),
+  printer ka buffer bhar jata, Windows "Error - Printing".
+* v3.7: tspl() shuru mein EK dafa DOWNLOAD "UR.BMP",<size>,<1-bit BMP> (bmp1(): 62 byte header, palette 0 kala/1 safed,
+  rows neeche se upar, 4 byte padding), har label par sirf PUTBMP x,y,"UR.BMP". 90 label: 158.5 KB -> 17.6 KB.
+  label-settings.json "urduMode": "bitmap" = purana tareeqa (agar printer PUTBMP na samjhe). urW(S) = Urdu chaurai helper.
+* Test: BMP PIL se khula (232x56, 1-bit, kala/safed sahi jagah). Asal TSC par yahan test nahi.

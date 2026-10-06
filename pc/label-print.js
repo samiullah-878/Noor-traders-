@@ -1,5 +1,6 @@
 // =========================================================
-//  label-print.js  v3.6 (2026-10-05: Urdu raster upar/neeche padding px*0.35 — Nastaleeq ka sar kat-ta tha; default font Tahoma 24) · v3.5 (2026-10-05: lamba naam 2 line (char 14 dot), Urdu 46 dot tak, barcode 24/20%) · v3.4 (2026-10-05: English naam ke neeche URDU naam — blueAccess/urduNames, PowerShell raster -> TSPL BITMAP; label-settings urdu/urduFont/urduPx/urduInvert)
+//  label-print.js  v3.7 (2026-10-06: ⚡ Urdu tasveer printer ko EK dafa (DOWNLOAD "UR.BMP"), har label par sirf PUTBMP — job 158-357 KB se
+//                     ~10 KB; labels ruk ruk kar nahi nikalte / "Error - Printing" nahi. label-settings "urduMode": "bitmap" = purana) · v3.6 (2026-10-05: Urdu raster upar/neeche padding px*0.35 — Nastaleeq ka sar kat-ta tha; default font Tahoma 24) · v3.5 (2026-10-05: lamba naam 2 line (char 14 dot), Urdu 46 dot tak, barcode 24/20%) · v3.4 (2026-10-05: English naam ke neeche URDU naam — blueAccess/urduNames, PowerShell raster -> TSPL BITMAP; label-settings urdu/urduFont/urduPx/urduInvert)
 //  v3.3 (2026-09-24: number har BARCODE ka apna — ek item ke sub-barcode alag alag 1 se; dobara chhapne par aage se)
 //  v3.2 (number barcode ke code wali line par dayen — naam 2 line ho to bhi theek)
 //  v3.1 (number font 2, rate ki line 4 dot upar — neeche kat rahi thi)
@@ -30,7 +31,8 @@ const DEFAULTS = {
   urdu: true,                   // v3.4: English naam ke neeche URDU naam (blueAccess/urduNames se), tasveer bana kar
   urduFont: 'Tahoma,Segoe UI,Arial,Jameel Noori Nastaleeq',   // v3.6: Naskh (Tahoma) chhote label par saaf; Nastaleeq upar se kat-ta tha
   urduPx: 24,                   // Urdu harf ki unchai (dots) — chhote label par 18-22
-  urduInvert: false             // agar Urdu ki jagah kala block aaye to true kar dein
+  urduInvert: false,            // agar Urdu ki jagah kala block aaye to true kar dein
+  urduMode: 'putbmp'            // v3.7: 'putbmp' = tasveer ek dafa printer mein (tez) · 'bitmap' = har label par poori tasveer (purana, dheema)
 };
 const LOCK_PORT = 47816;
 // -----------------------------------------------------------------
@@ -110,9 +112,21 @@ const num = v => String(Math.round((Number(v) || 0) * 1000) / 1000);
 const money = v => (Math.round((Number(v) || 0) * 100) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });
 
 // Ek label ka mawad â€” x0 = is column ka bayan kinara (dots)
+// v3.7: 1-bit BMP (TSPL DOWNLOAD/PUTBMP) — raster ki bits: 1 = safed, 0 = kala -> palette[0] kala, palette[1] safed
+function bmp1(r, uh) {
+  const wpx = r.wb * 8, rowB = Math.ceil(r.wb / 4) * 4, size = 62 + rowB * uh, b = Buffer.alloc(size, 0);
+  b.write('BM', 0, 'latin1'); b.writeUInt32LE(size, 2); b.writeUInt32LE(62, 10);
+  b.writeUInt32LE(40, 14); b.writeInt32LE(wpx, 18); b.writeInt32LE(uh, 22); b.writeUInt16LE(1, 26); b.writeUInt16LE(1, 28);
+  b.writeUInt32LE(0, 30); b.writeUInt32LE(rowB * uh, 34); b.writeInt32LE(2835, 38); b.writeInt32LE(2835, 42); b.writeUInt32LE(2, 46); b.writeUInt32LE(2, 50);
+  b.writeUInt32LE(0x00000000, 54); b.writeUInt32LE(0x00FFFFFF, 58);
+  const src = Buffer.from(r.data, 'latin1');
+  for (let y = 0; y < uh; y++) { const dst = 62 + (uh - 1 - y) * rowB; src.copy(b, dst, y * r.wb, y * r.wb + r.wb); for (let k = r.wb; k < rowB; k++) b[dst + k] = 0xFF; }
+  return b.toString('latin1');
+}
+const urW = S => Math.floor((S.w * DOT - 2 * Math.round(1.5 * DOT)) / 8) * 8;
 function labelCmds(S, j, x0, tag, ur) {
   const W = S.w * DOT, H = S.h * DOT, m = Math.round(1.5 * DOT), y0 = Math.round(S.yOffset * DOT);
-  const urR = (S.urdu && ur) ? urduRaster(String(ur), S, Math.floor((W - 2 * m) / 8) * 8) : null;   // v3.4: Urdu bitmap
+  const urR = (S.urdu && ur) ? urduRaster(String(ur), S, urW(S)) : null;   // v3.4: Urdu bitmap
   const code = clean(j.code, 40), qty = Number(j.qty) || 1;
   const nameMax = Math.floor((W - 2 * m) / (Number(S.charW) || 14));   // v3.5: font "2" asal mein ~14 dot chaura (12 par naam dayen se kat-ta tha)
   const name = clean(j.name, 60) + (qty !== 1 ? ' - ' + num(qty) : '');
@@ -126,7 +140,7 @@ function labelCmds(S, j, x0, tag, ur) {
   const out = [`TEXT ${x0 + m},${y0 + m},"2",0,1,1,"${l1}"`];
   let y = y0 + m + 22;
   if (l2) { out.push(`TEXT ${x0 + m},${y},"2",0,1,1,"${l2}"`); y += 22; }
-  if (urR) { const uh = Math.min(urR.h, 56); out.push(`BITMAP ${x0 + m},${y},${urR.wb},${uh},0,${urR.data.slice(0, urR.wb * uh)}`); y += uh + 2; }
+  if (urR) { const uh = Math.min(urR.h, 56); out.push(S.urduMode === 'bitmap' ? `BITMAP ${x0 + m},${y},${urR.wb},${uh},0,${urR.data.slice(0, urR.wb * uh)}` : `PUTBMP ${x0 + m},${y},"UR.BMP"`); y += uh + 2; }   // v3.7: PUTBMP (tasveer ek dafa)
   out.push(`BARCODE ${bx},${y + 4},"128",${bh},1,0,${narrow},${narrow},"${code}"`);
   // v3.2: number BARCODE KE CODE ("086") wali line par, DAYEN kone mein — naam do line le le tab bhi jagah rehti hai
   if (tag) { const tw = String(tag).length * 12;         // font "2" = 12 dot chaura
@@ -143,6 +157,7 @@ function rowHead(S) {
 function tspl(S, j, nums, ur) {
   const copies = Math.max(1, Math.min(200, Math.floor(Number(j.copies) || 1)));
   const out = rowHead(S);
+  if (S.urdu && ur && S.urduMode !== 'bitmap') { const r = urduRaster(String(ur), S, urW(S)); if (r) { const bm = bmp1(r, Math.min(r.h, 56)); out.push(`DOWNLOAD "UR.BMP",${bm.length},${bm}`); } }   // v3.7
   for (let done = 0; done < copies; ) {
     out.push('CLS');
     for (let c = 0; c < S.cols && done < copies; c++, done++)
