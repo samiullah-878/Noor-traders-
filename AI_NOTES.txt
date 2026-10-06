@@ -2766,3 +2766,5 @@ Malik: v3.8 (kati bitmap + chhote jobs) par bhi ruka; "Urdu alfaz ki shakl mein 
   (1) bohat bara: TSC mein TTF ka size POINT mein hota hai (26 = ~73 dots) -> urduPt 10 (~28 dots), y += pt*203/72 + 6;
   (2) ULTA: printer khud RTL karta hai (hamara ulta + printer ulta = galat) -> urduReverse false (shape(t,{reverse:false}) = shaped,
   logical order). --test-urdu ab do qatarein: A (reverse false) / B (reverse true) — malik jo sahi bataye.
+* label-print v3.9.2 (manifest .13): malik — "Urdu jaise pehle tha (tasveer) bas haroof HALKE". urduBold (default false) ->
+  PowerShell raster FontStyle Regular (-bold 0/1), cache key mein bold. Mode wapas "bitmap" (v3.8: kati tasveer + 24 label ke chhote jobs).

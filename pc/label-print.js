@@ -34,9 +34,10 @@ const DEFAULTS = {
   showRate: true, speed: 4, density: 8,
   urdu: true,                   // v3.4: English naam ke neeche URDU naam (blueAccess/urduNames se), tasveer bana kar
   urduFont: 'Tahoma,Segoe UI,Arial,Jameel Noori Nastaleeq',   // v3.6: Naskh (Tahoma) chhote label par saaf; Nastaleeq upar se kat-ta tha
-  urduPx: 24,                   // Urdu harf ki unchai (dots) — chhote label par 18-22
+  urduPx: 24,                   // Urdu harf ki unchai (dots)
+  urduBold: false,              // v3.9.2: Urdu HALKE harf (malik: 'haroof halka') — true = mote
   urduInvert: false,            // agar Urdu ki jagah kala block aaye to true kar dein
-  urduMode: 'bitmap',           // v3.8: 'bitmap' (kati hui chhoti tasveer har label par). 'putbmp-test' = DOWNLOAD/PUTBMP (TSC ~35 label baad rukta tha)
+  urduMode: 'bitmap',           // v3.9.2 default bitmap (malik: tasveer wali shakl theek thi) · v3.8: 'bitmap' (kati hui chhoti tasveer har label par). 'putbmp-test' = DOWNLOAD/PUTBMP (TSC ~35 label baad rukta tha)
   urduTtf: 'C:\\Windows\\Fonts\\tahomabd.ttf',   // v3.9: urduMode 'ttf' ke liye font (bold Tahoma); 'arialbd.ttf' bhi chal sakta
   urduPt: 10,                   // v3.9.1: TTF Urdu ka size (POINT — TSC mein TTF ka size point mein, 26 = bohat bara tha)
   urduReverse: false,           // v3.9.1: false = printer khud RTL karta hai (test: ulta aaya tha)
@@ -51,12 +52,13 @@ const DIR = __dirname;
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 // ---- v3.4: URDU raster (PowerShell/System.Drawing) -> TSPL BITMAP (1 bit, TSPL mein 0 = kala) ----
 const PS_UR = path.join(DIR, 'urdu-raster.ps1');
-const PS_UR_TXT = `param([string]$text,[string]$fonts,[single]$px,[int]$width,[string]$out)
+const PS_UR_TXT = `param([string]$text,[string]$fonts,[single]$px,[int]$width,[string]$out,[int]$bold=1)
 $ErrorActionPreference='Stop'
 Add-Type -AssemblyName System.Drawing
 $inst=New-Object System.Drawing.Text.InstalledFontCollection
 $fam='Arial'; foreach($n in $fonts.Split(',')){ $t=$n.Trim(); foreach($ff in $inst.Families){ if($ff.Name -ieq $t){ $fam=$ff.Name; break } }; if($fam -ne 'Arial'){ break } }
-$f=New-Object System.Drawing.Font($fam,$px,[System.Drawing.FontStyle]::Bold,[System.Drawing.GraphicsUnit]::Pixel)
+$st=[System.Drawing.FontStyle]::Regular; if($bold -eq 1){ $st=[System.Drawing.FontStyle]::Bold }
+$f=New-Object System.Drawing.Font($fam,$px,$st,[System.Drawing.GraphicsUnit]::Pixel)
 $sf=New-Object System.Drawing.StringFormat; $sf.Alignment=[System.Drawing.StringAlignment]::Near; $sf.FormatFlags=[System.Drawing.StringFormatFlags]::DirectionRightToLeft
 $b0=New-Object System.Drawing.Bitmap 10,10; $g0=[System.Drawing.Graphics]::FromImage($b0); $sz=$g0.MeasureString($text,$f,$width,$sf); $pad=[int][Math]::Ceiling($px*0.35); $h=[int][Math]::Ceiling($sz.Height)+$pad*2; $g0.Dispose(); $b0.Dispose()
 $bmp=New-Object System.Drawing.Bitmap $width,$h; $g=[System.Drawing.Graphics]::FromImage($bmp); $g.Clear([System.Drawing.Color]::White)
@@ -69,12 +71,12 @@ $bmp.Dispose(); [System.IO.File]::WriteAllBytes($out,$out1.ToArray())
 `;
 const urCache = new Map();
 function urduRaster(text, S, widthDots) {
-  const key = text + '|' + widthDots + '|' + S.urduPx + '|' + S.urduInvert;
+  const key = text + '|' + widthDots + '|' + S.urduPx + '|' + S.urduInvert + '|' + !!S.urduBold;
   if (urCache.has(key)) return urCache.get(key);
   try {
     if (!fs.existsSync(PS_UR) || fs.readFileSync(PS_UR, 'utf8') !== PS_UR_TXT) fs.writeFileSync(PS_UR, PS_UR_TXT);
     const out = path.join(DIR, 'urdu-raster.bin');
-    require('child_process').execFileSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', PS_UR, '-text', text, '-fonts', S.urduFont, '-px', String(S.urduPx), '-width', String(widthDots), '-out', out], { timeout: 20000, windowsHide: true });
+    require('child_process').execFileSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', PS_UR, '-text', text, '-fonts', S.urduFont, '-px', String(S.urduPx), '-width', String(widthDots), '-out', out, '-bold', S.urduBold ? '1' : '0'], { timeout: 20000, windowsHide: true });
     const b = fs.readFileSync(out);
     const wb = b[0] | (b[1] << 8), h = b[2] | (b[3] << 8);
     let data = b.subarray(4);
@@ -309,7 +311,7 @@ if (process.argv.includes('--calibrate')) {   // v2.1: roll badalne ke baad prin
   const lock = net.createServer();
   lock.once('error', () => { console.log('label-print pehle se chal raha hai.'); process.exit(3); });
   lock.listen(LOCK_PORT, '127.0.0.1', () => {
-    { const S = settings(); log(`label-print v3.9.1 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
+    { const S = settings(); log(`label-print v3.9.2 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
     jobCol.where('status', '==', 'new').onSnapshot(s => {
       s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handle(c.doc)); });
     }, e => { log('Listener toot gaya: ' + e.message + ' â€” band, bat 30 second mein dobara chalayega'); process.exit(1); });
