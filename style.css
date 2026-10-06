@@ -1751,7 +1751,7 @@ html.boot-auto.has-app body::after{display:none}
 .val-card .vc-g span{background:rgba(255,255,255,.1);border-radius:10px;padding:6px 8px}.val-card .vc-g small{display:block;font-size:11px;opacity:.8}.val-card .vc-g b{font-size:14px;font-variant-numeric:tabular-nums}
 .val-card .vc-warn{margin:8px 0 0;font-size:12px;color:#ffd7a8}.val-card .vc-tap{margin:4px 0 0;font-size:11px;opacity:.6;text-align:right}
 
-/* v2.93.0: maaliyat card — summary ke safed card ke rang se na dabe (har look mein navy, safed text) */
+/* v2.94.0: maaliyat card — summary ke safed card ke rang se na dabe (har look mein navy, safed text) */
 .summary{flex-wrap:wrap}
 html .summary>.val-card,html.lt.lt.lt.lt .summary>.val-card,html.dk.dk.dk.dk .summary>.val-card,html.lt.lt.lt.lt header .summary>.val-card{flex:0 0 100%!important;width:100%!important;box-sizing:border-box;background:linear-gradient(135deg,#13295a,#1f4a8f)!important;color:#fff!important;border:0!important;border-left:0!important;padding:12px 14px!important;margin:0 0 4px!important;box-shadow:0 8px 22px rgba(15,35,71,.25)!important}
 html .summary>.val-card *,html.lt.lt.lt.lt .summary>.val-card *,html.dk.dk.dk.dk .summary>.val-card *{color:#fff!important;background-color:transparent}
@@ -1776,7 +1776,7 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .f5-prn button.on{background:linear-gradient(135deg,#1a2d53,#2c4a85);color:#fff}
 /* v2.80: jude hue devices */
 .dev-list{display:flex;flex-direction:column;gap:8px}.dev-row{display:grid;grid-template-columns:1fr auto;gap:4px 10px;align-items:center;padding:10px 12px;border:1px solid #c9d3e6;border-radius:14px;background:#f7f9ff}.dev-row b{font-size:18px;letter-spacing:2px}.dev-row span{grid-column:1}.dev-row small{grid-column:1;color:#4a5a7a}.dev-row button{grid-row:1/4;grid-column:2}
-/* v2.93.0 */
+/* v2.94.0 */
 #tabWarn{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:9999;max-width:92vw;background:#fff4e0;color:#7a4e00;border:1px solid #f0c36d;border-radius:14px;padding:10px 14px;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
 #tabWarn button{margin-left:8px;border:0;background:transparent;font-size:16px;color:#7a4e00}
 .boot-skip{display:block;margin:18px auto 0;padding:10px 16px;border:1px solid #c9d3e6;border-radius:999px;background:#fff;color:#1a2d53;font-size:14px}
@@ -1825,7 +1825,7 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .scan-godam-in button{min-width:44px;min-height:40px;padding:0 10px;border-radius:10px;border:1px solid #c9d3e6;background:#fff;font-weight:800;font-size:14px;color:#1a2d53}
 .scan-godam-in button.on{background:linear-gradient(135deg,#1a2d53,#2c4a85);color:#fff;border-color:transparent}
 @media (max-width:640px){.scan-find-row{flex-wrap:wrap}.scan-godam-in{flex:1 1 100%;margin:4px 0 0}.scan-godam-in button{flex:1}}
-/* v2.93.0: ginti farq bill — sirf dikhe */
+/* v2.94.0: ginti farq bill — sirf dikhe */
 .sb-chip.fq{opacity:.7;background:#f1f3f8!important;border-style:dashed!important}.sb-chip.fq i{background:#6b7a99!important;color:#fff}
 /* v2.92: 🚚 Gaari ka hisaab */
 .gr-card{background:linear-gradient(160deg,#16284d,#22407a);color:#fff;border-radius:22px;padding:16px;box-shadow:0 10px 30px rgba(10,20,45,.25)}
@@ -1849,7 +1849,7 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .gr-diesel{border-left:4px solid #e0a000}.gr-bilty{border-left:4px solid #1e9e4a}.gr-kharch{border-left:4px solid #d9534f}.gr-reading,.gr-tracker{border-left:4px solid #1a73e8}.gr-driver{border-left-color:#6b4ec4}
 .gr-form label{display:block;margin:8px 0}.gr-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gr-photo{display:block;text-align:center;padding:14px;border:2px dashed #9fb0d0;border-radius:14px;font-weight:800;color:#22407a;cursor:pointer}
 .gr-ai{background:#eef3ff;border-radius:10px;padding:8px;font-size:.9rem}.gr-msg{color:#b00}
-/* v2.93.0: gaari card — app ke white #summary styles se bachao */
+/* v2.94.0: gaari card — app ke white #summary styles se bachao */
 #summary .gr-card{background:linear-gradient(160deg,#16284d,#22407a)!important;color:#fff!important;border:0!important}
 #summary .gr-card *{color:inherit}
 #summary .gr-card .gr-grid div,#summary .gr-card .gr-big{background:rgba(255,255,255,.08)!important;color:#fff!important;border:0!important;box-shadow:none!important}
@@ -1859,7 +1859,7 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 #summary .gr-card .gr-err{color:#ffd0d0!important;background:rgba(255,80,80,.18);border-radius:10px;padding:8px 10px}
 #summary .gr-card .gr-btns button{background:#fff!important;color:#16284d!important}
 #summary .gr-card .gr-month button{background:rgba(255,255,255,.15)!important;color:#fff!important}
-/* v2.93.0: 🚚 Gaari — futuristic chips + windows */
+/* v2.94.0: 🚚 Gaari — futuristic chips + windows */
 #summary .gx{display:flex;flex-direction:column;gap:12px;background:transparent!important;border:0!important;box-shadow:none!important;padding:0!important}
 #summary .gx-hero{border-radius:24px;padding:16px 18px;position:relative;overflow:hidden;box-shadow:0 14px 36px rgba(29,59,122,.35)}
 #summary .gx-hero:after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(120,180,255,.35),transparent 70%)}
@@ -1892,3 +1892,32 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .gk-lines{display:flex;flex-direction:column;gap:6px;margin-top:8px}.gk-line{display:flex;align-items:center;gap:8px;background:#fff;border-radius:12px;padding:6px 8px;border:1px solid #e3e8f2}
 .gk-line span{flex:1;font-weight:800;color:#13244a}.gk-line .gk-a{width:110px;text-align:right}.gk-x{border:0;background:#fdecec;color:#b00;border-radius:10px;width:32px;height:32px}
 .gk-sum{margin:8px 0 0;font-size:.9rem;color:#13244a}
+/* v2.94: 🚚 Phera system */
+#summary .gx-new{width:100%;min-height:56px;border-radius:18px;border:0!important;font-size:1.15rem;font-weight:900;color:#fff!important;background:linear-gradient(135deg,#00b37a,#1d7af0)!important;box-shadow:0 10px 24px rgba(0,140,180,.3)}
+#summary .gx-collect{width:100%;display:grid;grid-template-columns:1fr auto;align-items:center;text-align:left;padding:12px 16px;border-radius:18px;border:1px solid #ffd27a!important;background:linear-gradient(135deg,#fff8e6,#ffefc2)!important;color:#5a3d00!important}
+#summary .gx-collect strong{grid-row:1/3;grid-column:2;font-size:1.5rem;font-weight:900;color:#a35b00!important}#summary .gx-collect small{color:#7a5a1a!important}
+#summary .gx-calbox{background:#fff!important;border:1px solid #dfe6f5!important;border-radius:18px;padding:8px 12px}#summary .gx-calbox summary{cursor:pointer;font-weight:800;color:#13244a;padding:4px 0}#summary .gx-calbox summary a{color:#1d7af0;margin-left:8px}
+#summary .gx-cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px}#summary .gx-cal i{font-style:normal;font-size:.68rem;text-align:center;color:#8a96ad}
+#summary .gx-cal button{position:relative;aspect-ratio:1;border-radius:12px;border:1px solid #e3e8f2!important;background:#f7f9ff!important;color:#13244a!important;font-weight:700;font-size:.9rem;padding:0}
+#summary .gx-cal button.has{background:linear-gradient(135deg,#e6efff,#ece6ff)!important;border-color:#b9c8f0!important}
+#summary .gx-cal button.td{outline:2px solid #00b37a}#summary .gx-cal button.on{background:linear-gradient(135deg,#1d3b7a,#3a2c8f)!important;color:#fff!important}
+#summary .gx-cal button em{position:absolute;top:2px;right:3px;font-style:normal;font-size:.62rem;background:#3a2c8f;color:#fff;border-radius:9px;padding:0 5px}#summary .gx-cal button.on em{background:#6dffb0;color:#0b1a3a}
+#summary .gx-plist{display:flex;flex-direction:column;gap:8px}
+#summary .gp-card{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;text-align:left;padding:12px;border-radius:18px;border:1px solid #dfe6f5!important;background:#fff!important;box-shadow:0 4px 14px rgba(29,59,122,.07);color:#13244a!important}
+#summary .gp-card.closed{opacity:.85;background:#fbfcff!important}
+#summary .gp-d b{display:block;font-size:1rem}#summary .gp-d small,#summary .gp-m small,#summary .gp-v small{display:block;font-size:.72rem;color:#6b7a99!important}
+#summary .gp-m b{display:block;font-size:.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#summary .gp-m em{display:block;font-style:normal;font-size:.75rem;color:#b25000!important}
+#summary .gp-v{text-align:right}#summary .gp-v b{font-size:1.05rem}#summary .gp-v b.up{color:#0f8a4a!important}#summary .gp-v b.down{color:#c62828!important}
+.gp-page{display:flex;flex-direction:column;gap:12px;padding-bottom:20px}
+.gp-sec{background:#f6f8fe;border:1px solid #e1e7f5;border-radius:18px;padding:12px}.gp-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}.gp-h b{font-size:1.02rem;color:#13244a}
+.gp-h button{border:0;border-radius:999px;padding:8px 14px;font-weight:800;color:#fff;background:linear-gradient(135deg,#1d3b7a,#3a2c8f)}
+.gp-bilty,.gp-diesel{background:#fff;border:1px solid #e3e8f2;border-radius:14px;padding:8px;margin-bottom:8px}
+.gp-2{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}.gp-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:6px}
+.gp-page input[type=text],.gp-page input[type=number],.gp-page input[type=search]{width:100%;min-height:44px;border-radius:12px;border:1px solid #cfd8ea;padding:6px 10px;font-size:1rem}
+.gp-page label{display:block;font-size:.8rem;color:#5b6b8a}.gp-row{display:flex;align-items:center;gap:8px}.gp-chk{display:flex!important;align-items:center;gap:6px;flex:1;font-size:.88rem!important;color:#13244a!important}
+.gp-chk input{width:22px;height:22px}.gp-mini{font-size:.78rem;color:#6b7a99}.gp-x{border:0;background:#fdecec;border-radius:10px;width:38px;height:38px}
+.gp-match,.gp-dcheck{margin:8px 0 0;padding:8px 10px;border-radius:12px;background:#eef2fb;font-size:.88rem;color:#13244a}.gp-match.ok,.gp-dcheck.ok{background:#e7f8ee;color:#0f6b3d}.gp-match.bad,.gp-dcheck.bad{background:#fdecec;color:#a11}.gp-dcheck b.bad{color:#c62828}
+.gp-net p{display:flex;justify-content:space-between;margin:4px 0;color:#13244a}.gp-net .gp-tot{margin-top:8px;padding:10px 12px;border-radius:14px;background:linear-gradient(135deg,#0b1a3a,#3a2c8f);color:#fff}.gp-net .gp-tot b{font-size:1.3rem}
+.gp-net .gp-tot.up b{color:#6dffb0}.gp-net .gp-tot.down b{color:#ff9a9a}.gp-pend{background:#fff4d6;border-radius:12px;padding:8px 10px}
+.gp-foot{display:flex;gap:8px}.gp-foot button{flex:1;min-height:50px;border-radius:14px;border:0;font-weight:900;font-size:1rem}.gp-close{background:linear-gradient(135deg,#00b37a,#0f8a4a);color:#fff}.gp-del{background:#fdecec;color:#b00;flex:0 0 auto!important;padding:0 14px}
+.gp-kcard{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid #e3e8f2;margin-bottom:6px;cursor:pointer}.gp-kcard small{grid-column:1;color:#6b7a99}.gp-kcard em{grid-row:1/3;grid-column:2;font-style:normal;font-weight:900;align-self:center}.gp-kcard.bad{border-color:#ffb3b3}
