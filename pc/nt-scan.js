@@ -1,0 +1,96 @@
+// ============================================================
+//  nt-scan.js  v1.0 (2026-10-06) — 🔔 SCAN AWAZ (POS ya koi bhi software): har scan par "tik", GHALAT scan (item POS mein nahi /
+//  band) par alag zor ki "bzzz bzzz bzzz" — larka screen dekhe baghair scan karta rahe.
+//  NT-PRINT (nt-print.js) isay chalata hai (khud-update saath). POS ko haath NAHI lagata — sirf awaz.
+//  Kaise: nt-scan.ps1 (C# NtScan1.dll) Windows ka keyboard hook — sirf SCANNER pakarta hai: 4+ harf bohat tez (< ~45 ms fasla)
+//  aur aakhir mein Enter/Tab. Haath se type karna (dheema) nahi pakarta, kuch save/record NAHI karta. Code ko Firestore posStock
+//  (POS items: code, barcode, sub-barcode — sirf chalu items) se milata hai.
+//  local-config.json: "scanAwaz": false = band · "scanSkip": ["chrome","msedge"] (in programs mein app ki apni awaz hai)
+//                     "scanGap": 45 (ms, scanner ki raftar) · "scanGood": false = sahi scan par khamoshi
+// ============================================================
+const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
+
+function start({ dir, base, log, cfg }) {
+  const C = () => { try { return cfg() || {}; } catch { return {}; } };
+  if (process.platform !== 'win32' || C().scanAwaz === false) return null;
+  const norm = s => String(s || '').trim().toUpperCase();
+  let codes = new Set(), loaded = false;
+  const chunks = new Map();
+  const rebuild = () => { const s = new Set(); for (const items of chunks.values()) for (const it of items) {
+      if (it.code) s.add(norm(it.code));
+      for (const b of it.bc || []) s.add(norm(b));
+      for (const x of it.bq || []) if (x && x.b) s.add(norm(x.b));
+      for (const x of it.sb || []) if (x && x.b) s.add(norm(x.b));
+      for (const b of it.bs || []) s.add(norm(typeof b === 'string' ? b : b && b.b));
+    } s.delete(''); codes = s; loaded = s.size > 50; };
+  base.collection('posStock').where('branch', '==', 1).onSnapshot(sn => {
+    sn.docChanges().forEach(c => { if (c.type === 'removed') chunks.delete(c.doc.id); else chunks.set(c.doc.id, (c.doc.data() || {}).items || []); });
+    rebuild();
+  }, e => log('🔔 scan: items nahi mile — ' + e.message));
+
+  const PS = path.join(dir, 'nt-scan.ps1');
+  const TXT = `$ErrorActionPreference='Stop'
+$dll=Join-Path $PSScriptRoot 'NtScan1.dll'
+if(!(Test-Path $dll)){ Add-Type -ReferencedAssemblies System.Windows.Forms -OutputAssembly $dll -TypeDefinition @"
+using System;using System.Diagnostics;using System.Runtime.InteropServices;using System.Text;using System.Threading;using System.Windows.Forms;
+public class NtScan{
+ delegate IntPtr LLProc(int n,IntPtr w,IntPtr l);
+ [DllImport("user32.dll",SetLastError=true)] static extern IntPtr SetWindowsHookEx(int id,LLProc fn,IntPtr mod,uint tid);
+ [DllImport("user32.dll")] static extern IntPtr CallNextHookEx(IntPtr h,int n,IntPtr w,IntPtr l);
+ [DllImport("kernel32.dll",CharSet=CharSet.Auto)] static extern IntPtr GetModuleHandle(string name);
+ [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+ [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h,out uint pid);
+ static LLProc proc=Hook; static IntPtr hh; static StringBuilder buf=new StringBuilder(); static int last=0; static int gap=45;
+ static string Fg(){try{uint pid;GetWindowThreadProcessId(GetForegroundWindow(),out pid);return Process.GetProcessById((int)pid).ProcessName.ToLower();}catch{return "";}}
+ static object lk=new object();
+ static IntPtr Hook(int n,IntPtr w,IntPtr l){
+  try{ if(n>=0&&(w==(IntPtr)0x100||w==(IntPtr)0x104)){ int vk=Marshal.ReadInt32(l); int now=Environment.TickCount; char c='\\0';
+   if(vk>=0x30&&vk<=0x39)c=(char)vk; else if(vk>=0x41&&vk<=0x5A)c=(char)vk; else if(vk>=0x60&&vk<=0x69)c=(char)('0'+vk-0x60);
+   else if(vk==0xBD||vk==0x6D)c='-'; else if(vk==0xBE||vk==0x6E)c='.'; else if(vk==0xBF||vk==0x6F)c='/';
+   if(vk==0x0D||vk==0x09){ if(buf.Length>=4&&now-last<=gap*2){ string code=buf.ToString(); ThreadPool.QueueUserWorkItem(_=>{try{string fg=Fg();lock(lk){Console.Out.WriteLine("SCAN\\t"+code+"\\t"+fg);Console.Out.Flush();}}catch{}});} buf.Length=0; }
+   else if(c!='\\0'){ if(buf.Length>0&&now-last>gap)buf.Length=0; buf.Append(c); last=now; }
+   else if(vk!=0x10&&vk!=0xA0&&vk!=0xA1&&vk!=0x14){ buf.Length=0; } } }catch{}
+  return CallNextHookEx(hh,n,w,l);}
+ static void Play(string k){ThreadPool.QueueUserWorkItem(_=>{try{ if(k=="OK"){Console.Beep(2000,70);} else if(k=="BAD"){for(int i=0;i<3;i++){Console.Beep(330,260);Thread.Sleep(70);}} }catch{}});}
+ static void ReadIn(){try{string s;while((s=Console.In.ReadLine())!=null){Play(s.Trim());}}catch{} Application.Exit();}
+ public static void Run(int g){ gap=g; var t=new Thread(ReadIn);t.IsBackground=true;t.Start();
+  using(var p=Process.GetCurrentProcess())using(var m=p.MainModule){hh=SetWindowsHookEx(13,proc,GetModuleHandle(m.ModuleName),0);}
+  if(hh==IntPtr.Zero){Console.Out.WriteLine("ERR hook nahi laga");Console.Out.Flush();return;}
+  Console.Out.WriteLine("READY");Console.Out.Flush(); Application.Run(); }
+}
+"@ }
+Add-Type -Path $dll
+[NtScan]::Run([int]$args[0])
+`;
+  let child = null, fails = 0, stopped = false;
+  const skipList = () => { const s = C().scanSkip; return Array.isArray(s) ? s.map(x => String(x).toLowerCase()) : ['chrome', 'msedge', 'firefox']; };
+  const run = () => {
+    if (stopped || C().scanAwaz === false) return;
+    try { if (!fs.existsSync(PS) || fs.readFileSync(PS, 'utf8') !== TXT) fs.writeFileSync(PS, TXT); } catch (e) { log('🔔 scan: ' + e.message); return; }
+    const gap = Math.max(15, Math.min(150, Number(C().scanGap) || 45));
+    const w = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', PS, String(gap)], { windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
+    child = w; let buf = '', err = '';
+    w.stdout.setEncoding('utf8');
+    w.stdout.on('data', d => { buf += d; let i; while ((i = buf.indexOf('\n')) >= 0) { const l = buf.slice(0, i).replace(/\r$/, ''); buf = buf.slice(i + 1); onLine(l, w); } });
+    w.stderr.on('data', d => { err = (err + d).slice(-300); });
+    w.stdin.on('error', () => {});
+    w.on('exit', code => { if (child === w) child = null; if (stopped) return; fails++;
+      log(`🔔 scan awaz band ho gayi (code ${code})${err ? ' — ' + err.trim().split(/\r?\n/).pop() : ''}` + (fails < 6 ? ' — 30 sec mein dobara' : ' — ab chhor diya (NT-PRINT restart par dobara)'));
+      if (fails < 6) setTimeout(run, 30000); });
+  };
+  const onLine = (l, w) => {
+    if (l === 'READY') { fails = 0; log(`🔔 Scan awaz chalu — ${codes.size} barcode yaad`); return; }
+    if (l.startsWith('ERR ')) { log('🔔 scan: ' + l.slice(4)); return; }
+    if (!l.startsWith('SCAN\t')) return;
+    const [, code, fg] = l.split('\t');
+    if (skipList().includes(String(fg || '').toLowerCase())) return;   // hamari app (Chrome) ki apni awaz hai
+    const ok = !loaded || codes.has(norm(code)) || codes.has(norm(code).replace(/^0+/, ''));
+    if (ok) { if (C().scanGood !== false) try { w.stdin.write('OK\n'); } catch {} }
+    else { try { w.stdin.write('BAD\n'); } catch {} log(`🔔 GHALAT scan: "${code}" (${fg || '?'}) — POS mein ye barcode nahi / item band`); }
+  };
+  setTimeout(run, 3000);
+  return { stop() { stopped = true; try { child && child.kill(); } catch {} }, size: () => codes.size };
+}
+module.exports = { start };
