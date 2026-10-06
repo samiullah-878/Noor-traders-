@@ -1406,3 +1406,10 @@ Malik (screenshot TSC TTP-244 Pro queue): Label jobs 158 / 267 / 357 KB, "Printi
   Urdu saaf nikle = DOWNLOAD/PUTBMP TSC par CHALTA hai. Masla: aaj 100+100+100+100+50+10 = 460 labels ke order (bar bar dabaya) +
   purane bhari (158-357 KB) jobs queue mein — printer peeche tha. Malik ne galti se urduMode "bitmap" kiya -> wapas "putbmp" ki command.
   Restart-Service Spooler admin ke baghair nahi chalti (zaroorat bhi nahi).
+
+==================== sale-post v1.9.1 (manifest 2026-10-06.7) — ✏️ EDIT "POS ne naya bill bana diya" (ghalat rok) ====================
+Malik (2:22 pm): Bill #00122341 edit -> "NAHI badla: POS ne naya bill bana diya". Wajah: hifazat MAX(SaleID) pehle/baad milati thi;
+dukaan chal rahi hoti hai — doosre counter ne beech mein bill banaya to MAX badal gaya -> ghalat rok (rollback, POS mein kuch nahi badla).
+* Ab: MAX badle to dekho SaleID > maxBefore mein koi Sale jis ka SystemNotes BILKUL hamare edit wale notes (waqt + naam ke saath) ho —
+  wo ho to asli khatra (proc ne nayi Sale banayi) -> wapas; warna doosre PC ka bill, edit jaari. Baqi hifazat (SaleNo, lines, DocStatusID,
+  stock farq) wahi.

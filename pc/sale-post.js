@@ -1,5 +1,6 @@
 // ============================================================
 //  sale-post.js — Blue Khata app ki "Nayi Sale" -> POS Sale bill (v1)
+//  v1.9.1 (2026-10-06): ✏️ edit — doosre counter ka naya bill (beech mein) ab edit nahi rokta; sirf APNE notes wala naya bill = wapas
 //  v1.9 (2026-10-06): ⚡ TEZ PRINT — rasid/gate pass bhi nt-parchi worker se (PowerShell ek dafa khula), status 'done' aur print saath saath
 //  v1.8 (2026-10-06): ✏️ BILL EDIT (saleEdits) — sirf UN-POSTED (DocStatusID 1) POS bill, wahi SaleID / SaleNo; minus (wapsi) lines
 //  v1.6 (2026-10-04): rasid + gate pass ke baad har crate ka TOKEN bhi usi counter printer par (nt-parchi.js saanjha)
@@ -331,7 +332,11 @@ async function editSale(e) {
     // ---- hifazat ----
     const chk = (await new sql.Request(tx).input('id', sql.Int, id).query('SELECT SaleNo, DocStatusID, (SELECT COUNT(*) FROM dbo.SaleDetail WHERE SaleID = @id) AS N, (SELECT MAX(SaleID) FROM dbo.Sale) AS M FROM dbo.Sale WHERE SaleID = @id')).recordset[0];
     if (!chk || String(chk.SaleNo || '').trim() !== no) throw new Error('POS ne bill number badal diya — edit wapas');
-    if (Number(chk.M) !== Number(maxBefore)) throw new Error('POS ne naya bill bana diya — edit wapas');
+    if (Number(chk.M) !== Number(maxBefore)) {   // v1.9.1: dukaan chal rahi — doosre PC ne bill banaya ho to theek; sirf hamare hukam se nayi Sale bani ho to wapas
+      const mine = (await new sql.Request(tx).input('m', sql.Int, Number(maxBefore) || 0).input('n', sql.NVarChar(sql.MAX), notes.slice(-7900))
+        .query('SELECT COUNT(*) AS c FROM dbo.Sale WHERE SaleID > @m AND CAST(SystemNotes AS NVARCHAR(MAX)) = @n')).recordset[0].c;
+      if (Number(mine)) throw new Error('POS ne naya bill bana diya (purana nahi badla) — edit wapas');
+    }
     if (Number(chk.N) !== built.lines.length) throw new Error(`Lines ${chk.N} bani, chahiye ${built.lines.length} — edit wapas`);
     if (Number(chk.DocStatusID) !== 1) throw new Error('Bill ka haal badal gaya — edit wapas');
     const after = await stockOf(new sql.Request(tx));
