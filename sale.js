@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.95.1';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.95.1';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.95.2';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.95.2';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -794,6 +794,8 @@ function billsData() {
 const billPaid = b => !b.credit || b.cash >= b.total - 0.5;
 const billCls = b => b.farq ? 'fq' : b.cancelled ? 'cx' : b.status === 'failed' ? 'fl' : (b.status === 'new' || b.status === 'posting') ? 'wt' : billPaid(b) ? 'pd' : 'up';
 const billIcon = { fq: '🧮', cx: '⊘', fl: '⚠', wt: '⏳', pd: '✓', up: '✗' };
+// v2.95.2: nishan = POST haal — ✓ posted, ○ (khali) un-posted; rang = paid (hara) / udhaar (laal)
+const psIcon = (b, c) => (c === 'fq' || c === 'cx' || c === 'fl' || c === 'wt') ? billIcon[c] : b.ps === 2 ? '✓' : b.ps === 1 ? '' : '•';
 const canEditBill = b => !b.cancelled && !b.farq && b.ps === 1 && b.posId > 0 && (b.src === 'pos' || b.status === 'done');
 async function billLines(b) {
   if (b.posId && lineCache.has(b.posId)) return lineCache.get(b.posId);
@@ -802,7 +804,7 @@ async function billLines(b) {
 }
 const mounts = new Set();
 function billsRepaint() { for (const m of [...mounts]) { if (!m.box.isConnected) { mounts.delete(m); continue; } m.paint(); } const b = $('saleTodayBtn'); if (b) b.textContent = todayLabel(); }
-const FILTERS = [['all', 'Sab'], ['pd', '✓ Paid'], ['up', '✗ Udhaar'], ['un', '⏳ Un-posted'], ['po', '📌 Posted'], ['pc', '💻 PC'], ['app', '📱 App']];
+const FILTERS = [['all', 'Sab'], ['un', '○ Un-posted'], ['po', '✓ Posted'], ['pd', '🟢 Paid'], ['up', '🔴 Udhaar'], ['pc', '💻 PC'], ['app', '📱 App']];
 function mountBills(box) {
   let open = '', filter = 'all';
   try { filter = localStorage.getItem('sam-bills-f') || 'all'; } catch {}
@@ -821,14 +823,14 @@ function mountBills(box) {
     const live = rows.filter(b => !b.cancelled && !b.farq);
     const tot = live.reduce((n, b) => n + b.total, 0), udh = live.filter(b => billCls(b) === 'up').reduce((n, b) => n + (b.total - b.cash), 0);
     sum.innerHTML = `${num(rows.length)} bills · <b>Rs ${num(tot)}</b>${udh > 0.5 ? ` · <span class="red">udhaar Rs ${num(udh)}</span>` : ''}`;
-    const un = all.filter(b => b.ps === 1 && !b.cancelled && !b.farq).length; unpBtn.textContent = `🖨 Un-posted (${un})`; unpBtn.disabled = !un;
+    const un = all.filter(b => b.ps === 1 && !b.cancelled && !b.farq).length; unpBtn.textContent = `🖨 Un-posted ${un}`; unpBtn.title = `${un} un-posted bills ka print`; unpBtn.disabled = !un;
     syncEl.innerHTML = posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : '';
     syncEl.className = 'nb-sync' + (posSyncAt && Date.now() - posSyncAt > 3 * 60000 ? ' old' : '');
     list.innerHTML = rows.map(b => { const c = billCls(b), tm = new Date(b.createdAt || 0).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' });
       const L = open === b.id ? (b.posId && lineCache.get(b.posId)) || (b.src === 'app' ? (b.lines || []).map(l => ({ n: l.name, q: l.qty, r: l.rate })) : null) : null;
       return `<div class="nb-bill ${c}${open === b.id ? ' open' : ''}" data-nb="${esc(b.id)}">
-        <div class="nb-row"><i>${billIcon[c]}</i><span class="nb-m"><b>${b.saleNo ? esc(String(b.saleNo).replace(/^0+(?=\d{4})/, '')) : (b.credit ? 'Wholesale' : 'Counter')}</b><small>${esc(b.where)}${b.by ? ' · ' + esc(b.by) : ''} · ${tm}</small>${b.party && !/counter\s*sale/i.test(b.party) ? `<small>${esc(b.party)}</small>` : ''}</span>
-        <span class="nb-v"><b>Rs ${num(b.total)}</b>${b.ps === 2 ? '<u class="ps2">📌 Posted</u>' : b.ps === 1 && !b.cancelled ? '<u class="ps1">⏳ Un-posted</u>' : ''}${b.farq ? '<u>farq · sale nahi</u>' : ''}${b.edited ? '<u>✏️ badla</u>' : ''}</span></div>
+        <div class="nb-row"><i class="${b.ps === 1 && !b.cancelled ? 'unp' : b.ps === 2 ? 'pst' : ''}">${psIcon(b, c)}</i><b class="nb-no">${b.saleNo ? esc(String(b.saleNo).replace(/^0+(?=\d{4})/, '')) : (b.credit ? 'Wholesale' : 'Counter')}</b><b class="nb-amt">${num(b.total)}</b>
+          <small class="nb-meta">${esc(b.where)}${b.by ? ' · ' + esc(b.by) : ''} · ${tm}${b.party && !/counter\s*sale/i.test(b.party) ? ' · ' + esc(b.party) : ''}</small><span class="nb-tags">${b.ps === 2 ? '<u class="ps2">✓ Posted</u>' : b.ps === 1 && !b.cancelled ? '<u class="ps1">○ Un-posted</u>' : ''}${b.farq ? '<u>farq</u>' : ''}${b.edited ? '<u>✏️</u>' : ''}${c === 'up' ? '<u class="ud">udhaar</u>' : ''}</span></div>
         ${open === b.id ? `<div class="nb-det">${b.status === 'failed' ? `<p class="red">⚠ ${esc(b.error)}</p>` : ''}${L ? L.map(l => `<p><span>${esc(l.n)}</span><span>${num(l.q)} × ${num(l.r)} = <b>${num(r2(l.q * l.r))}</b></span></p>`).join('') : (b.posId && lineTried.has(b.posId) ? '<p class="stat-note">Items abhi PC se nahi aaye (PC sync chalu hai?) — thori dair baad kholein</p>' : '<p class="stat-note">Items aa rahe hain…</p>')}
           <p class="nb-pay">${b.credit ? `Cash Rs ${num(b.cash)}${b.total - b.cash > 0.5 ? ` · <b class="red">Udhaar Rs ${num(b.total - b.cash)}</b>` : ''}` : 'Cash · poora'}</p>
           <div class="nb-acts">${canEditBill(b) ? `<button type="button" class="nb-edit" data-nb-edit="${esc(b.id)}">✏️ Edit</button>` : b.ps === 2 ? '<small>📌 Post ho chuka — edit band</small>' : ''}${b.src === 'app' && b.status === 'done' ? `<button type="button" data-nb-print="${esc(b.id)}">🖨 Dobara print</button>` : ''}</div></div>` : ''}

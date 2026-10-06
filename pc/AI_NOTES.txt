@@ -1353,3 +1353,13 @@ Malik: v2.95.0 ke baad barcode beech beech mein ruk jata. Wajah: scan screen ki 
 saleGodamHook() bulate the, jo sale.js stock() chalata tha = poore godam ke HAZARON items ka flatMap + filter (lines x items har
 scan/draw par). Theek: godam hook ab sirf saleStock().branches/names parhta hai (items nahi), aur pos-stock drawNames list EK dafa
 (liG) bana kar har line par wahi istemal. Rules nahi badli (2.33). PC files nahi badli.
+
+==================== v2.95.2 — 🧾 AAJ KE BILLS ka layout + nishan ====================
+Malik (screenshot): PC ki baayin patti mein raqam / posted chip kat rahe the (side scroll), filter chips nazar nahi aate the; aur kaha:
+"jo POST ho un par ✓, jo UN-POST hon un par khali (untick) nishan".
+* Nishan (gol): ✓ = posted, khali gola (rang wali border) = un-posted, • = pata nahi; ⊘ cancel, 🧮 farq, ⏳ app bill intezar, ⚠ fail.
+  Rang wahi: hara = paid, laal = udhaar.
+* Bill card 3 lines: [nishan] bill no ...... raqam / PC · kisne · waqt · party / chips (✓ Posted, ○ Un-posted, udhaar, ✏️).
+  grid minmax(0,1fr) — side scroll khatam. Filter chips wrap (sab nazar): Sab, ○ Un-posted, ✓ Posted, 🟢 Paid, 🔴 Udhaar, PC, App.
+  Search + "🖨 Un-posted N" ek line. PC patti 230 -> 300px (scan-inner left 300).
+* Chromium screenshot test se layout dekha.

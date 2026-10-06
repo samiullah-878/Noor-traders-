@@ -1962,3 +1962,33 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .sale-lgc button.on,.li-g button.on{background:linear-gradient(135deg,#1a2d53,#2c4a85);color:#fff;border-color:transparent}
 .li-g{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
 .ub-bill{margin:10px 0;page-break-inside:avoid}.ub-bill h3{margin:6px 0 4px;font-size:15px}.ub-bill h3 small{font-weight:400;font-size:12px;color:#555}
+/* v2.95.2: 🧾 Aaj ke bills — saaf layout (PC ki baayin patti + mobile window). Nishan: ✓ posted · ○ un-posted · rang: hara paid / laal udhaar */
+@media (min-width:1100px){
+ .scan-box.has-bills .scan-bills{width:300px!important}
+ .scan-box.has-bills .scan-inner{left:300px!important}
+}
+.nb-wrap{overflow:hidden!important;box-sizing:border-box}
+.nb-wrap *{box-sizing:border-box}
+.nb-head{flex-wrap:wrap;gap:4px 8px}.nb-head b{font-size:1rem;white-space:nowrap}.nb-sync{font-size:.7rem;padding:2px 8px;white-space:nowrap}
+.nb-top{display:grid!important;grid-template-columns:1fr auto;gap:6px;min-width:0}
+.nb-q{min-width:0;width:100%;min-height:40px;font-size:.95rem;background:#fff;color:#13244a}
+.nb-unp{min-height:40px;padding:0 12px!important;font-size:.95rem}
+.nb-f{flex-wrap:wrap!important;overflow:visible!important;gap:4px!important}
+.nb-f button{padding:4px 9px!important;font-size:.74rem!important;min-height:30px}
+.nb-sum{font-size:.78rem}
+.nb-list{overflow-x:hidden!important;flex:1}
+.nb-bill{min-width:0;border-left-width:5px}
+.nb-row{display:grid!important;grid-template-columns:30px minmax(0,1fr) auto!important;grid-template-areas:"ic no amt" "ic meta meta" "ic tags tags";gap:1px 8px!important;align-items:center;padding:7px 9px!important}
+.nb-row>i{grid-area:ic;align-self:center;width:28px!important;height:28px!important;border-radius:50%!important;font-size:16px;font-weight:900}
+.nb-row>i.unp{background:#fff!important;border:3px solid #9aa7c0}
+.nb-bill.pd .nb-row>i.unp{border-color:#12a150}.nb-bill.up .nb-row>i.unp{border-color:#d32f2f}
+.nb-no{grid-area:no;font-size:1.05rem;color:#13244a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.nb-amt{grid-area:amt;font-size:1rem;color:#13244a;white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+.nb-bill.up .nb-amt{color:#c62828}.nb-bill.cx .nb-amt{text-decoration:line-through;color:#7a869c}
+.nb-meta{grid-area:meta;font-size:.7rem;color:#5b6b8a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.nb-tags{grid-area:tags;display:flex;flex-wrap:wrap;gap:3px}
+.nb-tags:empty{display:none}
+.nb-tags u{text-decoration:none;font-size:.64rem;font-weight:800;border-radius:999px;padding:1px 7px;background:#eef2fb;color:#3a4a6a;white-space:nowrap}
+.nb-tags u.ps1{background:#fff2d6;color:#9a5a00;border:1px dashed #e0a000}.nb-tags u.ps2{background:#e3ecff;color:#1d3b7a}.nb-tags u.ud{background:#fdecec;color:#c62828}
+.nb-det p{font-size:.8rem}.nb-det p span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nb-acts button{min-height:38px;padding:0 10px}
