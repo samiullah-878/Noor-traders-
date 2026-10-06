@@ -2850,3 +2850,10 @@ User ka maqsad: larka aankh band kar ke scan kare aur koi cheez miss na ho. User
   - pc(): mk (meter) || tk (tracker) = km, kmSrc; milan sirf jab dono. Diesel banta / average / mahine km tracker se bhi; card "(tracker)".
   - Phera band: endR ya trackerKm ho to sawal nahi.
   - User ki screenshots se: 11:48 AM 33.87 + 5:01 PM 7.74 + 5:26 PM 10.37 + 11:36 PM 5.1 + 12:14 AM 20.49 + 1:05 AM 7.26 = 84.83; 10:41 AM ka km kata hua.
+
+==================== PENDING (user ne yaad rakhne ko kaha, 2026-10-07) — CASH DIYA SAVE SUST ====================
+* Cash khata "Cash diya" / "Cash Add" Save par ⏳ 6s+ (screenshot: Haseeb 950000). Agla koi bhi kaam ho to SAATH theek karna hai.
+  Wajah (shuru ki jaanch): custodyForm -> formSave -> save(custody-<day> moves) — cash records blueAccess/cashRevision guard ke
+  saath transaction (server round-trip) + account ki linked entry; save mukammal hone tak dialog ruka rehta hai.
+  Mumkin hal: dialog foran band + entry "⏳ sync" ke saath list mein (optimistic), transaction peeche; ghalti par wapas aur laal paigham.
+  Pehle plan user ko dikhana hai, OK ke baad.
