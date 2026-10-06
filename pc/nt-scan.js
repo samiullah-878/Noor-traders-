@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-scan.js  v1.0 (2026-10-06) — 🔔 SCAN AWAZ (POS ya koi bhi software): har scan par "tik", GHALAT scan (item POS mein nahi /
+//  nt-scan.js  v1.1 (2026-10-06: beep() bahar se — POS item-add) · v1.0 (2026-10-06) — 🔔 SCAN AWAZ (POS ya koi bhi software): har scan par "tik", GHALAT scan (item POS mein nahi /
 //  band) par alag zor ki "bzzz bzzz bzzz" — larka screen dekhe baghair scan karta rahe.
 //  NT-PRINT (nt-print.js) isay chalata hai (khud-update saath). POS ko haath NAHI lagata — sirf awaz.
 //  Kaise: nt-scan.ps1 (C# NtScan1.dll) Windows ka keyboard hook — sirf SCANNER pakarta hai: 4+ harf bohat tez (< ~45 ms fasla)
@@ -91,6 +91,8 @@ Add-Type -Path $dll
     else { try { w.stdin.write('BAD\n'); } catch {} log(`🔔 GHALAT scan: "${code}" (${fg || '?'}) — POS mein ye barcode nahi / item band`); }
   };
   setTimeout(run, 3000);
-  return { stop() { stopped = true; try { child && child.kill(); } catch {} }, size: () => codes.size };
+  // v1.1: bahar se awaz (POS beep) — worker chal raha ho to us se (foran), warna null
+  const beep = kind => { if (!child) return false; try { child.stdin.write((kind || 'OK') + '\n'); return true; } catch { return false; } };
+  return { stop() { stopped = true; try { child && child.kill(); } catch {} }, size: () => codes.size, beep };
 }
 module.exports = { start };

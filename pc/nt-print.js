@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-print.js  v1.8 (2026-10-06: 🔔 SCAN AWAZ — nt-scan.js: POS mein har scan par tik, ghalat scan par bzzz) · v1.7 (2026-10-06: 🔄 KHUD-UPDATE — har 5 min GitHub manifest, nt-print.js / nt-parchi.js naye hon to sha jaanch kar
+//  nt-print.js  v1.9 (2026-10-06: 🔔 POS BEEP — posBeep/<is PC ka host> badle = POS mein item jura -> beep; tab scan ki 'tik' band, ghalat scan ki bzzz chalu) · v1.8 (2026-10-06: 🔔 SCAN AWAZ — nt-scan.js: POS mein har scan par tik, ghalat scan par bzzz) · v1.7 (2026-10-06: 🔄 KHUD-UPDATE — har 5 min GitHub manifest, nt-print.js / nt-parchi.js naye hon to sha jaanch kar
 //                   badal kar band; nt-print-auto.bat dobara chalata hai. local-config "autoUpdate": false = band) · v1.6 (2026-10-06: ⚡ TEZ PRINT — nt-parchi worker: PowerShell shuru se khula, bill aate hi seedha printer) · v1.4 (2026-10-05: 🔔 scan par beep — liveCarts, local-config beep/beepCounters) · v1.1 (2026-10-04) — 💻 NT-PRINT: app ka bill IS PC ke printer par, bina kisi window ke
 //
 //  App (Nayi Sale) mein counter "💻 <PC ka naam>" chuna ho to sale ka doc counter = 'pc:<id>' hota hai.
@@ -28,7 +28,7 @@ const { execFile, execFileSync } = require('child_process');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
-const VER = '1.8';
+const VER = '1.9';
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
@@ -249,7 +249,19 @@ function listenBeep() {
 }
 function listen() {
   listenBeep();
-  try { require('./nt-scan.js').start({ dir: DIR, base, log, cfg }); } catch (e) { log('🔔 scan awaz shuru nahi hui: ' + e.message); }   // v1.8
+  let scan = null;
+  const posBeepOn = () => cfg().posBeep !== false;
+  try { scan = require('./nt-scan.js').start({ dir: DIR, base, log, cfg: () => ({ ...cfg(), ...(posBeepOn() ? { scanGood: false } : {}) }) }); } catch (e) { log('🔔 scan awaz shuru nahi hui: ' + e.message); }   // v1.8
+  // v1.9: 🔔 POS BEEP — server (pos-sales-dekho v1.4) har nayi POS line par posBeep/<HOST> likhta hai
+  if (posBeepOn()) { let first = true, lastAt = 0;
+    base.collection('posBeep').doc(os.hostname().toUpperCase()).onSnapshot(d => {
+      const at = Number((d.data() || {}).at) || 0;
+      if (first) { first = false; lastAt = at; return; }
+      if (at <= lastAt || !posBeepOn()) return; lastAt = at;
+      if (Date.now() - at > 15000) return;   // purani khabar
+      if (!(scan && scan.beep && scan.beep('OK'))) beep('scan');
+    }, e => log('🔔 POS beep listener: ' + e.message));
+    log('🔔 POS beep sun raha hai: ' + os.hostname().toUpperCase()); }
   const day = today();
   saleCol.where('date', '==', day).onSnapshot(s => {   // v1.2: aaj ke sab, phir counter 'pc:<id>[:printer]' khud chhanta (range + date ko index chahiye hota)
     s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => onDoc(c.doc)); });

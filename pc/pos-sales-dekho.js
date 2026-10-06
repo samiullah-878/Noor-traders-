@@ -1,5 +1,5 @@
 // =========================================================
-//  pos-sales-dekho.js  v1.3 (2026-10-06: ⚡ har 2 sec + app ka bill bante / edit hote hi foran) · v1.2 (2026-10-06: ps = DocStatusID (1 un-posted / 2 posted), pc + by (SystemNotes se), items posSaleLines/<SaleID>, _sync har 30 sec) · v1.1 (2026-10-03: har 10 sec, pehle chhota sawal) · v1  (2026-10-03) — POS par bane AAJ ke SALE BILLS app mein (sirf SELECT, POS mein kuch nahi badalta)
+//  pos-sales-dekho.js  v1.4 (2026-10-06: 🔔 POS mein item judte hi (scan ya code) us PC ko beep — posBeep/<PC host>, har 0.4 sec) · v1.3 (2026-10-06: ⚡ har 2 sec + app ka bill bante / edit hote hi foran) · v1.2 (2026-10-06: ps = DocStatusID (1 un-posted / 2 posted), pc + by (SystemNotes se), items posSaleLines/<SaleID>, _sync har 30 sec) · v1.1 (2026-10-03: har 10 sec, pehle chhota sawal) · v1  (2026-10-03) — POS par bane AAJ ke SALE BILLS app mein (sirf SELECT, POS mein kuch nahi badalta)
 //  Har 1 minute dbo.Sale (aaj) parhta hai -> Firestore posSales/<YYYY-MM-DD> (ek doc, sirf badle to likhta hai).
 //  App: scanner screen ke baayein "Aaj ke bills" mein chips — ✓ cash/poora · ✗ udhaar · ⊘ cancel (DocStatusID 3).
 //  App se bani sale (Description = "BK-APP <id>") ko app:<id> nishan — app wali chip se jod deta hai (do dafa na dikhe).
@@ -17,6 +17,7 @@ const EVERY = 2 * 1000;             // v1.3: 2 sec (sirf ginti; Firestore par li
 const FULL_EVERY = 5 * 60 * 1000;    // phir bhi har 5 min poori list (koi badlaav na chhoote)
 let lastKey = '', lastFull = 0;
 const LOCK_PORT = 47824;
+const cfgLocal = () => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'local-config.json'), 'utf8')) || {}; } catch { return {}; } };
 const DIR = __dirname;
 // HEARTBEAT (doctor v2.3+): har 30 sec
 { const _hb = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); const _w = () => { try { fs.writeFileSync(_hb, String(Date.now())); } catch {} }; _w(); setInterval(_w, 30000).unref(); }
@@ -91,7 +92,7 @@ const lock = net.createServer().listen(LOCK_PORT, '127.0.0.1');
 lock.on('error', () => { console.log('pos-sales-dekho pehle se chal raha hai — yeh copy band.'); process.exit(3); });
 lock.on('listening', async () => {
   try { await getPool(); log('SQL se jur gaya'); } catch (e) { log('SQL masla: ' + e.message); process.exit(1); }
-  log('pos-sales-dekho v1.3 chal raha hai — har 2 second (sirf badlaav par likhta hai)…');
+  log('pos-sales-dekho v1.4 chal raha hai — har 2 second (sirf badlaav par likhta hai)…');
   let running = false, again = false;
   const tick = async () => { if (running) { again = true; return; } running = true;
     try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }
@@ -106,6 +107,31 @@ lock.on('listening', async () => {
     if (seen.size > 5000) seen.clear();
   }, e => log('Foran-dekho listener: ' + e.message));
   watch('appSales', 'createdAt'); watch('saleEdits', 'at');
+  // v1.4: 🔔 POS BEEP — nayi SaleDetail line (save se pehle bhi POS likhta hai) -> us PC (SystemNotes "at PC:") ke posBeep doc par waqt.
+  // NT-PRINT (us PC par) dekh kar beep karta hai. App ke bill (BK-APP) aur bari kheep (> 30 line = save/import) par nahi.
+  if (cfgLocal().posBeep !== false) {
+    const beepCol = db.collection('businesses').doc(BUSINESS_ID).collection('posBeep');
+    let lastLine = 0, bRun = false;
+    const beepTick = async () => { if (bRun) return; bRun = true;
+      try {
+        if (!lastLine) { lastLine = Number((await p0.request().query('SELECT MAX(SaleDetailID) AS m FROM dbo.SaleDetail')).recordset[0].m) || 0; return; }
+        const r = (await p0.request().input('l', sql.Int, lastLine).query(`SELECT TOP 200 d.SaleDetailID AS D, CAST(s.SystemNotes AS NVARCHAR(400)) AS SN,
+          CAST(s.Description AS NVARCHAR(200)) AS DS, i.ItemName AS N FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID
+          LEFT JOIN dbo.Items i ON i.ItemID = d.ItemID WHERE d.SaleDetailID > @l ORDER BY d.SaleDetailID`)).recordset;
+        if (!r.length) return;
+        lastLine = Math.max(lastLine, ...r.map(x => Number(x.D) || 0));
+        if (r.length > 30) return;
+        const by = new Map();
+        for (const x of r) { if (/BK-APP/i.test(String(x.DS || ''))) continue;
+          const host = ((String(x.SN || '').match(/at PC:\s*([A-Za-z0-9_.-]+)/i) || [])[1] || 'UNKNOWN').toUpperCase();
+          const o = by.get(host) || { n: 0, item: '' }; o.n++; o.item = String(x.N || '').trim().slice(0, 40); by.set(host, o); }
+        for (const [k, o] of by) beepCol.doc(k).set({ at: Date.now(), n: o.n, item: o.item }).catch(() => {});
+      } catch (e) { log('POS beep: ' + e.message); }
+      finally { bRun = false; } };
+    const p0 = await getPool();
+    setInterval(beepTick, 400);
+    log('🔔 POS beep chalu — har nayi line par us PC ko awaz');
+  }
   const beat = () => col.doc('_sync').set({ at: Date.now() }).catch(() => {});   // v1.2: app mein "PC sync X sec pehle"
   beat(); setInterval(beat, 30000);
 });
