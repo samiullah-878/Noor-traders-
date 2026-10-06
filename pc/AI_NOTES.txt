@@ -1544,3 +1544,33 @@ User ka maqsad: larka aankh band kar ke scan kare aur koi cheez miss na ho. User
   Pehle plan user ko dikhana hai, OK ke baad.
 * PENDING (2026-10-07, yehi bunch): "⇄ Transfer edit" (account se account, jaise haseeb cus -> Sheikh naiem karachi) Save par bhi ⏳ intezar.
   cloud.saveTransfer — dono entries ek saath (transaction) server par; dialog mukammal hone tak ruka. Cash diya wale hal ke saath isay bhi optimistic karna.
+
+==================== App v2.96.0 (2026-10-07) — 🚚 GAARI v4 (farzi diesel, tanki khata, qist) + ⚡ cash/transfer Save foran ====================
+User ki baat: diesel tanki full km ke hisaab se; har phere ka diesel FARZI (Falcon km ÷ 5.5 × rate) tanki khata mein jama, phere ke total mein
+asal diesel plus/minus NAHI; dobara full par asal nafe se cash kat kar diesel; tanki khata mein farzi vs asal farq; farq MARK = asal average
+app mein lag jaye. Qist 140,000 + fixed salary nafe se nikal kar tay ho NAFA ya GHATA. Mobil 5000 km. Tanki 76 L. Parchi par litre + rate.
+* gaari.js:
+  - pc(): avg = p.dAvg || avgFor(phere ka waqt), rate = p.dRate || rateFor(phere ka waqt); shouldL/shouldRs = farzi; nafa = kiraya − comm − kh − farzi
+    (asal dL/dRs sirf dikhane ko). driverDe = kiraya − kh − comm; lena = driverDe − pehle le chuke (col); settled = 0.
+  - rateFor(key): us waqt se pehle ki aakhri parchi ka rate, ya cfg.dieselRate agar cfg.rateAt us ke baad aur phere se pehle. curRate = rateFor(null).
+  - avgFor(key): cfg.avgHist [{at,avg}] (pehli entry {at:0, purani avg}); "farq mark" / setting badalne par sirf BAAD ke pheron par nayi average —
+    is liye mark karne se purana cycle ka farq zero nahi hota. Phera band par dRate/dAvg jamte (kholne par 0 = live).
+  - fills(): phere ki diesel lines (key = pheraKey|zNNN, phere ke baad) + kind diesel docs (key = date|at). tankCycles(): full se full cycle —
+    pheras key ke beech, beech ki "thora" fills jor; closed: actL = tops + end.l, farq = actRs − farziRs, avg = km / actL. Pehli full se pehle ke
+    phere "before" (farzi nafe mein, milan mein nahi). tankNow: used = farziL − topL, left = cap − used, pct; needRs = used × curRate.
+  - monthCalc: safi = kiraya − comm − kh − farzi; fixed (cfg.fixed [{n,a}]), tankFarq (is mahine khatam hone wale cycles), qist (cfg.qist);
+    beforeQist = safi − fixed − tankFarq; qistPaid/qistBaqi; nafa = beforeQist − qist (day filter par fixed/qist nahi). driverBaqi − settled.comm.
+  - UI: hero NAFA/GHATA + qist progress + flow chips; ⛽ tanki card (dial SVG + %, L, bharwana hai, odometer) -> Tanki khata modal
+    (dashboard: dial + tanki SVG + meter digits + stats; "⛽ Tanki full karwa li" / "＋ Thora diesel"; cycles: farzi vs asal, farq, average,
+    "✓ Farq mark karein"; diesel history). openFill: parchi photo AI {litre,rate,amount}, date+waqt (at), meter; owner par cfg.dieselRate/rateAt.
+    🛢 chip + openOil (kind kharch oil:true, ginti phere km se, 90% peela, 100% laal). odoNow: aakhri reading/fill odo/mobil odo + baad ke km (≈).
+    Phera page: farzi diesel box (rate na ho to ⚠️), "Rastay mein dalwaya" lines tanki khata mein, nichod BACHAT, 💰 Driver se lena
+    (safi nafa + farzi), owner "✅ Driver se le liya" (sab bilty col + settled{at,amount,comm}), ↩ wapas. Setting: dieselRate, tankL 76, qist,
+    oilKm 5000, fixed kharche rows. PDF naye hisaab se. Rules badalne ki zaroorat NAHI (diesel/kharch kinds, _config owner).
+* app.js ⚡ (pending wala kaam poora):
+  - save(): cashCustody ab await nahi (optimisticEdit peeche) — cloud.edit cash par getDocsFromServer(cashQuery) SAARI cash docs parhta tha
+    (har din barhta) + transaction = 6s+. Server jaanch wahi; mana ho to wapas + error(). Doosri cash entry jaldi par saaf paigham.
+  - commitAccountTransfer(request, {wait}): EDIT / DELETE ab peeche (run() background, "bg" return, notice; ghalti par error()). POS voucher
+    wala raasta {wait:true} (list foran taza chahiye).
+* Test: happy-dom naqli data — 200 km/5.5=36.4 L x280 = 10,182 farzi, asal 38 L 10,830, farq 648, avg 5.26, mark ke baad sirf naya phera 5.26;
+  qist/fixed hero; settle; setting save; parchi AI fill + rate. (app.dom.test.mjs is mahol mein purane version par bhi nahi chalti — happy-dom farq.)
