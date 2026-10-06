@@ -1,5 +1,6 @@
 // =========================================================
-//  label-print.js  v3.7 (2026-10-06: ⚡ Urdu tasveer printer ko EK dafa (DOWNLOAD "UR.BMP"), har label par sirf PUTBMP — job 158-357 KB se
+//  label-print.js  v3.8 (2026-10-06: ⚠ PUTBMP par TSC ~30-36 label ke baad ruk jata tha -> wapas BITMAP magar Urdu tasveer sirf
+//                     likhai jitni (kaat kar, 2-4 guna chhoti) + bara order 8-8 qatar (24 label) ke ALAG print jobs mein) · v3.7 (2026-10-06: ⚡ Urdu tasveer printer ko EK dafa (DOWNLOAD "UR.BMP"), har label par sirf PUTBMP — job 158-357 KB se
 //                     ~10 KB; labels ruk ruk kar nahi nikalte / "Error - Printing" nahi. label-settings "urduMode": "bitmap" = purana) · v3.6 (2026-10-05: Urdu raster upar/neeche padding px*0.35 — Nastaleeq ka sar kat-ta tha; default font Tahoma 24) · v3.5 (2026-10-05: lamba naam 2 line (char 14 dot), Urdu 46 dot tak, barcode 24/20%) · v3.4 (2026-10-05: English naam ke neeche URDU naam — blueAccess/urduNames, PowerShell raster -> TSPL BITMAP; label-settings urdu/urduFont/urduPx/urduInvert)
 //  v3.3 (2026-09-24: number har BARCODE ka apna — ek item ke sub-barcode alag alag 1 se; dobara chhapne par aage se)
 //  v3.2 (number barcode ke code wali line par dayen — naam 2 line ho to bhi theek)
@@ -32,7 +33,8 @@ const DEFAULTS = {
   urduFont: 'Tahoma,Segoe UI,Arial,Jameel Noori Nastaleeq',   // v3.6: Naskh (Tahoma) chhote label par saaf; Nastaleeq upar se kat-ta tha
   urduPx: 24,                   // Urdu harf ki unchai (dots) — chhote label par 18-22
   urduInvert: false,            // agar Urdu ki jagah kala block aaye to true kar dein
-  urduMode: 'putbmp'            // v3.7: 'putbmp' = tasveer ek dafa printer mein (tez) · 'bitmap' = har label par poori tasveer (purana, dheema)
+  urduMode: 'bitmap',           // v3.8: 'bitmap' (kati hui chhoti tasveer har label par). 'putbmp-test' = DOWNLOAD/PUTBMP (TSC ~35 label baad rukta tha)
+  rowsPerJob: 8                 // v3.8: itni qataron (x cols label) ka EK print job — printer ka buffer na bhare
 };
 const LOCK_PORT = 47816;
 // -----------------------------------------------------------------
@@ -72,6 +74,12 @@ function urduRaster(text, S, widthDots) {
     let data = b.subarray(4);
     if (S.urduInvert) data = Buffer.from(data.map(x => 255 - x));
     const r = { wb, h, data: data.toString('latin1') };
+    // v3.8: KAAT — sirf likhai wala hissa (safed byte = 0xFF). x byte-wise, y line-wise. Invert par nahi.
+    if (!S.urduInvert) { let x0 = wb, x1 = -1, y0 = h, y1 = -1;
+      for (let y = 0; y < h; y++) for (let xb = 0; xb < wb; xb++) if (data[y * wb + xb] !== 0xFF) { if (xb < x0) x0 = xb; if (xb > x1) x1 = xb; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      if (x1 >= 0) { const cw = x1 - x0 + 1, out = Buffer.alloc(cw * (y1 - y0 + 1));
+        for (let y = y0; y <= y1; y++) data.copy(out, (y - y0) * cw, y * wb + x0, y * wb + x1 + 1);
+        r.crop = { xb: x0, y: y0, wb: cw, h: y1 - y0 + 1, data: out.toString('latin1') }; } }
     if (urCache.size > 2000) urCache.clear();
     urCache.set(key, r); return r;
   } catch (e) { log('Urdu raster nahi bana: ' + (e.message || e)); urCache.set(key, null); return null; }
@@ -140,7 +148,11 @@ function labelCmds(S, j, x0, tag, ur) {
   const out = [`TEXT ${x0 + m},${y0 + m},"2",0,1,1,"${l1}"`];
   let y = y0 + m + 22;
   if (l2) { out.push(`TEXT ${x0 + m},${y},"2",0,1,1,"${l2}"`); y += 22; }
-  if (urR) { const uh = Math.min(urR.h, 56); out.push(S.urduMode === 'bitmap' ? `BITMAP ${x0 + m},${y},${urR.wb},${uh},0,${urR.data.slice(0, urR.wb * uh)}` : `PUTBMP ${x0 + m},${y},"UR.BMP"`); y += uh + 2; }   // v3.7: PUTBMP (tasveer ek dafa)
+  if (urR) { const uh = Math.min(urR.h, 56), c = urR.crop;
+    if (S.urduMode === 'putbmp-test') out.push(`PUTBMP ${x0 + m},${y},"UR.BMP"`);
+    else if (c && c.y < uh) { const ch = Math.min(c.h, uh - c.y); out.push(`BITMAP ${x0 + m + c.xb * 8},${y + c.y},${c.wb},${ch},0,${c.data.slice(0, c.wb * ch)}`); }   // v3.8: kati hui (chhoti)
+    else if (!c) out.push(`BITMAP ${x0 + m},${y},${urR.wb},${uh},0,${urR.data.slice(0, urR.wb * uh)}`);
+    y += uh + 2; }
   out.push(`BARCODE ${bx},${y + 4},"128",${bh},1,0,${narrow},${narrow},"${code}"`);
   // v3.2: number BARCODE KE CODE ("086") wali line par, DAYEN kone mein — naam do line le le tab bhi jagah rehti hai
   if (tag) { const tw = String(tag).length * 12;         // font "2" = 12 dot chaura
@@ -154,18 +166,21 @@ function rowHead(S) {
   return [`SIZE ${rowW} mm,${S.h} mm`, `GAP ${S.rowGap} mm,0 mm`, `SPEED ${S.speed}`, `DENSITY ${S.density}`, 'DIRECTION 1', `REFERENCE ${Math.round(S.xOffset * DOT)},0`];
 }
 // Ek hukum ke copies ko qataron mein baant kar TSPL (har qatar = ek PRINT)
+// v3.8: ek hukum -> kai CHHOTE print jobs (har job rowsPerJob qataren), taake TSC ka buffer na bhare
 function tspl(S, j, nums, ur) {
   const copies = Math.max(1, Math.min(200, Math.floor(Number(j.copies) || 1)));
-  const out = rowHead(S);
-  if (S.urdu && ur && S.urduMode !== 'bitmap') { const r = urduRaster(String(ur), S, urW(S)); if (r) { const bm = bmp1(r, Math.min(r.h, 56)); out.push(`DOWNLOAD "UR.BMP",${bm.length},${bm}`); } }   // v3.7
+  const per = Math.max(1, Math.min(50, Math.floor(Number(S.rowsPerJob) || 8)));
+  const jobs = []; let out = null, rows = 0;
+  const head = () => { const h = rowHead(S); if (S.urdu && ur && S.urduMode === 'putbmp-test') { const r = urduRaster(String(ur), S, urW(S)); if (r) { const bm = bmp1(r, Math.min(r.h, 56)); h.push(`DOWNLOAD "UR.BMP",${bm.length},${bm}`); } } return h; };
   for (let done = 0; done < copies; ) {
+    if (!out) { out = head(); rows = 0; }
     out.push('CLS');
     for (let c = 0; c < S.cols && done < copies; c++, done++)
       out.push(...labelCmds(S, j, c * (S.w + S.colGap) * DOT, nums ? `${nums.code}-${nums.from + done}` : '', ur));
-    out.push('PRINT 1,1');
+    out.push('PRINT 1,1'); rows++;
+    if (rows >= per || done >= copies) { out.push(''); jobs.push(out.join('\r\n')); out = null; }
   }
-  out.push('');
-  return out.join('\r\n');
+  return jobs;
 }
 // Test: teeno labels par box + naap (alignment dekhne ke liye)
 function tsplTest(S) {
@@ -242,7 +257,7 @@ async function handle(doc) {
     const copies2 = Math.max(1, Math.min(200, Math.floor(Number(j.copies) || 1)));
     const nums = nextNums(j.code || j.itemId, copies2);            // v3.3: har BARCODE (sub-barcode) ka apna silsila — surf 1kg alag, 2kg alag
     const ur = S.urdu ? (await urduNames())[String(j.itemId)] || '' : '';   // v3.4: Urdu naam (ho to)
-    const err = await sendRaw(tspl(S, j, nums, ur), S.printer);
+    let err = null; for (const t of tspl(S, j, nums, ur)) { err = await sendRaw(t, S.printer); if (err) break; }   // v3.8: chhote jobs ek ke baad ek
     if (err) { await ref.update({ status: 'failed', error: String(err.message).slice(0, 300), doneAt: Date.now() }); log(`Label NAHI chhapa: ${j.name} â€” ${err.message}`); }
     else { await ref.update({ status: 'done', doneAt: Date.now(), error: FieldValue.delete(), numFrom: nums.from, numTo: nums.to, numCode: nums.code, day: dayKey() }); log(`Label chhapa: ${j.name}${Number(j.qty) !== 1 ? ' - ' + num(j.qty) : ''} x ${copies2} -> ${nums.code}-${nums.from}${copies2>1?' se '+nums.code+'-'+nums.to:''}`); }
   } finally { busy.delete(doc.id); }
@@ -262,7 +277,7 @@ if (process.argv.includes('--calibrate')) {   // v2.1: roll badalne ke baad prin
   const lock = net.createServer();
   lock.once('error', () => { console.log('label-print pehle se chal raha hai.'); process.exit(3); });
   lock.listen(LOCK_PORT, '127.0.0.1', () => {
-    { const S = settings(); log(`label-print v3.7 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
+    { const S = settings(); log(`label-print v3.8 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
     jobCol.where('status', '==', 'new').onSnapshot(s => {
       s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handle(c.doc)); });
     }, e => { log('Listener toot gaya: ' + e.message + ' â€” band, bat 30 second mein dobara chalayega'); process.exit(1); });

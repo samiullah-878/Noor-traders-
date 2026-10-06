@@ -811,7 +811,7 @@ function openLabels(id) {
       <br>Piece rate <b>${num(Number(r.rate2) || Number(r.rate) || 0)}</b>${pack > 1 ? ` · ${esc(r.cName || 'Ctn')} rate <b>${num((Number(r.rate) || 0) * pack)}</b>` : ''}${r.wrate ? ` · Wholesale <b>${num(r.wrate)}</b>` : ''}</p>
     <div class="label-list">${rows.map((x, i) => `<div class="label-row${x.show === false ? ' off' : ''}">
       <div class="label-info"><b>${esc(x.code)}</b><small>${x.qty !== 1 ? 'Tadad ' + num(x.qty) + ' · ' : ''}Rs ${num(x.price)}${x.show === false ? ' · Show off' : ''}${x.main ? ' · asal code' : ''}</small></div>
-      ${x.show === false ? '' : `<input type="number" min="1" max="200" value="1" inputmode="numeric" data-label-copies="${i}" aria-label="Kitne label">
+      ${x.show === false ? '' : `<input type="number" min="1" max="1000" value="1" inputmode="numeric" data-label-copies="${i}" aria-label="Kitne label">
       <button type="button" class="primary" data-label-print="${i}" data-label-item="${esc(r.id)}">🖨️</button>`}
       ${x.subId ? `<button type="button" data-sub-edit="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Badlein">✏️</button><button type="button" class="danger" data-sub-del="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Hatao">🗑️</button>` : ''}
     </div>`).join('') || '<p>Is item ka koi barcode nahi.</p>'}</div>
@@ -824,20 +824,23 @@ async function printLabel(btn) {
   const r = rowCache.get(String(btn.dataset.labelItem)); if (!r) return;
   const i = Number(btn.dataset.labelPrint), x = labelRows(r)[i]; if (!x) return;
   const inp = document.querySelector(`[data-label-copies="${i}"]`);
-  const copies = Math.max(1, Math.min(200, Math.floor(Number(inp?.value) || 1)));
+  const copies = Math.max(1, Math.min(1000, Math.floor(Number(inp?.value) || 1)));   // v2.95.5: 1000 tak — 200-200 ke hisson mein
   if (!cloud?.requestLabel) { notice('Label ke liye app update karein'); return; }
+  const parts = []; for (let left = copies; left > 0; left -= 200) parts.push(Math.min(200, left));
+  if (parts.length > 1 && !confirm(`${copies} label — ${parts.length} hisson mein chhapenge (${parts.join(' + ')}). Theek?`)) return;
   btn.disabled = true; const old = btn.textContent; btn.textContent = '⏳ Bhej rahe...';
   try {
-    const jid = await cloud.requestLabel({ itemId: r.id, code: x.code, name: r.name, qty: x.qty, rate: x.price, copies });
+    const jids = [];
+    for (const c of parts) jids.push(await cloud.requestLabel({ itemId: r.id, code: x.code, name: r.name, qty: x.qty, rate: x.price, copies: c }));
     btn.textContent = '⏳ PC...';
-    let stop = null, done = false;
-    const end = (msg, ok) => { if (done) return; done = true; try { stop && stop(); } catch {} btn.disabled = false; btn.textContent = ok ? '✓ Chhap gaya' : old; notice(msg); setTimeout(() => { if (btn.isConnected) btn.textContent = old; }, 4000); };
-    stop = cloud.watchLabel ? cloud.watchLabel(jid, j => {
-      if (!j) return;
-      if (j.status === 'done') end(`✓ ${copies} label chhap gaye`, true);
-      else if (j.status === 'failed' || j.status === 'skipped') end('Label nahi chhapa: ' + (j.error || j.status), false);
-    }) : null;
-    setTimeout(() => end('PC se jawab nahi aaya — PC on hai aur label-print chal raha hai? (hukum mehfooz hai, PC on hote hi chhapega)', false), 45000);
+    const stops = []; let done = false, ok = 0;
+    const end = (msg, good) => { if (done) return; done = true; stops.forEach(f => { try { f && f(); } catch {} }); btn.disabled = false; btn.textContent = good ? '✓ Chhap gaya' : old; notice(msg); setTimeout(() => { if (btn.isConnected) btn.textContent = old; }, 4000); };
+    if (cloud.watchLabel) jids.forEach(jid => { let seen = false; stops.push(cloud.watchLabel(jid, j => {
+      if (!j || seen) return;
+      if (j.status === 'done') { seen = true; ok++; if (ok === jids.length) end(`✓ ${copies} label chhap gaye`, true); else btn.textContent = `⏳ ${ok}/${jids.length}`; }
+      else if (j.status === 'failed' || j.status === 'skipped') { seen = true; end('Label nahi chhapa: ' + (j.error || j.status), false); }
+    })); });
+    setTimeout(() => end('PC se jawab nahi aaya — PC on hai aur label-print chal raha hai? (hukum mehfooz hai, PC on hote hi chhapega)', false), 45000 * parts.length);
   } catch (e) { btn.disabled = false; btn.textContent = old; notice('Label nahi bheja: ' + (e?.message || e)); }
 }
 

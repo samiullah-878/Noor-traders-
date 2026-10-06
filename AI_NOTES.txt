@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.95.4, 2026-10-06 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.95.5, 2026-10-06 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2740,3 +2740,14 @@ POS hamara nahi, is liye POS ke bahar se:
   Ghalat scan log: "🔔 GHALAT scan". Band ho to 30 s baad dobara (6 tak).
 * local-config: scanAwaz false = band · scanSkip [...] · scanGap ms · scanGood false = sahi par khamoshi.
 * Test: Mono mcs se NtScan1 compile ✓; naqli hook se OK/BAD/chrome-skip/sub-barcode ✓. Asal Windows hook yahan test nahi.
+
+==================== v2.95.5 + label-print v3.8 (manifest 2026-10-06.10) — 🏷️ LABEL 30-36 BAAD RUKNA + 1000 ka order ====================
+Malik (4:40 pm): 200 ka order -> sirf 6J-1..36; dopahar 6J-301..330. Queue: job "Printing, Retained" size 0 (sara data printer ko
+chala gaya) magar printer ruk gaya -> PUTBMP (v3.7) par TSC ~30-36 label ke baad rukta (printer ka memory?). App 200 se zyada nahi bhejti thi.
+* label-print v3.8: PUTBMP sirf urduMode "putbmp-test" par (settings mein "putbmp" ab bitmap hi ginta). BITMAP ab KATI hui:
+  urduRaster() r.crop {xb, y, wb, h, data} — sirf likhai ke byte/line (test: 29x56=1624 -> 13x28=364 byte); jagah wahi (x + xb*8, y + crop.y).
+  tspl() ab ARRAY of jobs: har job rowsPerJob (default 8) qatar (= 24 label), apna SIZE/GAP header; handle() ek ke baad ek sendRaw.
+  200 label = 9 chhote jobs.
+* App v2.95.5 (pos-stock printLabel): copies 1000 tak (input max 1000) -> 200-200 ke labelJobs (rules 200 hadd wahi), confirm
+  "N hisson mein", watch sab — "⏳ 2/5", sab done = ✓. Timeout 45 s x hisse.
+* showRate false (malik): label se "Rs" line band (barcode number par chadh rahi thi).
