@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-06.8",
+  "version": "2026-10-06.9",
   "note": "KHATA-DOCTOR manifest — sirf ye files PC par jati hain. local-config.json / firebase-key.json kabhi nahi.",
   "files": {
     "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -37,11 +37,12 @@
     "LABEL-GEHRA.bat": "2fd4a77c5241b38433ba280babd4659011672fcb08b928a968e9e7e3931d4d88",
     "pos-sales-dekho.js": "3d440e92f4eb4dbad1c929699a0dc75ae7b2e3464d49e425f434875e19e7bc8b",
     "pos-sales-auto.bat": "aef4a274bb9cdcde344028e9ad2de8fe7a3572580a0b20f3e3f7b1e806d33e11",
-    "nt-print.js": "631133e29876d1899c8c85bfe29d6a9c8ab5532d6b4ae43fe2318ea0722ee99d",
+    "nt-print.js": "0a83b870adae17d5c207cfaf2662910df2bc54fe60b81674ae24f05c6f9ffc9d",
     "nt-print-auto.bat": "6d2d36d3e6db49986502bdf20df2dd3fe8d2bcce6aca4b807d7b8ed9294dccce",
     "nt-parchi.js": "7a45873ebc250a38990ee170a264008859cfdeef0928bbadb6ddf3d1d5c33ee2",
     "auto-backup.js": "eae651ca69375b66104f33fb4fc4650039b022aae8a60bd9c682554c4afcd5a0",
-    "auto-backup-auto.bat": "66868d07539895c23632ee8cebaa65bab5888098fe222b6a9cdd19528c12fe84"
+    "auto-backup-auto.bat": "66868d07539895c23632ee8cebaa65bab5888098fe222b6a9cdd19528c12fe84",
+    "nt-scan.js": "c259fb3188c8b67a5d39232f4730812538e757a7eb4b72cea3eafa7706e6ea22"
   },
   "services": [
     {

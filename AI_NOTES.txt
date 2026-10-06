@@ -2727,3 +2727,16 @@ Galti (meri, v2.95.3): Img() mein parameter "px" (float) aur LockBits ka array b
 counter printers par, NT-PRINT bill/token) ruk gaye. Mithu/Abdurehman ke "print nahi" ki asal wajah ho sakti hai.
 * Theek: array "pb"; class/DLL NtPrint3 (purani adhoori NtPrint2.dll ka khatra nahi). Mono mcs se compile + Img() chala ke test ✓.
 * SABAQ: C# wala code hamesha mcs se compile kar ke dekho (apt-get install mono-mcs libgdiplus) — Linux par naqli powershell kaafi nahi.
+
+==================== nt-print v1.8 + nt-scan v1.0 (manifest 2026-10-06.9) — 🔔 SCAN AWAZ (POS mein bhi) ====================
+Malik: "har scan par awaz aaye, jo GHALAT scan ho (item scan hi nahi hua) us par awaz badle — larka aankhein band kar scan karta rahe".
+POS hamara nahi, is liye POS ke bahar se:
+* nt-scan.js (nt-print listen() se start; UPD_FILES mein — khud update): nt-scan.ps1 -> C# NtScan1.dll (WH_KEYBOARD_LL hook +
+  Application.Run). Sirf SCANNER: harf 0-9 A-Z - . / (numpad bhi), har harf ke beech <= scanGap (45 ms) warna buffer naya; Enter/Tab
+  par 4+ harf aur aakhri harf 2xgap ke andar -> "SCAN\t<code>\t<foreground process>" (Fg ThreadPool par — hook tez rahe).
+  Kuch save/record nahi. stdin "OK" = Beep(2000,70) · "BAD" = 3x Beep(330,260) (ThreadPool).
+* Node: posStock branch 1 onSnapshot -> Set(code, bc[], bq[].b, sb[].b, bs) uppercase (sirf chalu items; band item = ghalat).
+  Set 50 se kam (load nahi) = sab OK (jhooti bzzz nahi). Foreground chrome/msedge/firefox = chhor do (app ki apni awaz).
+  Ghalat scan log: "🔔 GHALAT scan". Band ho to 30 s baad dobara (6 tak).
+* local-config: scanAwaz false = band · scanSkip [...] · scanGap ms · scanGood false = sahi par khamoshi.
+* Test: Mono mcs se NtScan1 compile ✓; naqli hook se OK/BAD/chrome-skip/sub-barcode ✓. Asal Windows hook yahan test nahi.
