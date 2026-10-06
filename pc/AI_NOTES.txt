@@ -1346,3 +1346,10 @@ scan screen par items ke saath khule; minus (wapsi) line se sale minus; har item
 * manifest: sale-post.js, pos-sales-dekho.js + nt-print.js ka hash theek (pehle ghalat tha -> doctor update nahi karta tha).
 * happy-dom test: 4 bills (app udhaar un-posted, PC paid un-posted, PC udhaar posted, cancel) -> rang/ginti/jama/udhaar sahi,
   sync "20 sec pehle", lines (minus line -150), posted = "edit band", un-posted report 2 bill, Edit -> cart 2 lines godam 1/3.
+  sync "20 sec pehle", lines (minus line -150), posted = "edit band", un-posted report 2 bill, Edit -> cart 2 lines godam 1/3.
+
+==================== v2.95.1 — ⚡ BARCODE RUK RUK KAR (v2.95.0 ki ghalti) ====================
+Malik: v2.95.0 ke baad barcode beech beech mein ruk jata. Wajah: scan screen ki har line ke godam chips (liGodam) har line par
+saleGodamHook() bulate the, jo sale.js stock() chalata tha = poore godam ke HAZARON items ka flatMap + filter (lines x items har
+scan/draw par). Theek: godam hook ab sirf saleStock().branches/names parhta hai (items nahi), aur pos-stock drawNames list EK dafa
+(liG) bana kar har line par wahi istemal. Rules nahi badli (2.33). PC files nahi badli.

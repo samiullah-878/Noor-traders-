@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.95.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.95.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.95.1';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.95.1';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -771,7 +771,10 @@ document.addEventListener('keydown', e => {
 });
 
 // v2.64: scanner screen ke liye — godam chips aur PC par aaj ke bills
-setSaleGodamHook(() => { const st = stock(); return { list: st.branches.filter(b => b !== 0).map(b => ({ b, name: b === SALE_BRANCH ? 'NT' : 'G' + gShort(b), full: (st.branchName ? st.branchName(b, st.names) : '') || st.names?.[b] || ('Godam ' + b) })), cur: st.pick, set: b => { godam = Number(b); keepDraft(); rerender(); } }; });
+// v2.95.1: HALKA — pehle stock() poore godam ke hazaron items banata tha (har scan line par) -> barcode ruk ruk kar chalta tha
+setSaleGodamHook(() => { const st = saleStock(); const cur = st.branches.includes(godam) ? godam : (st.branches.includes(SALE_BRANCH) ? SALE_BRANCH : st.branches[0]);
+  return { list: st.branches.filter(b => b !== 0).map(b => { const full = (st.branchName ? st.branchName(b, st.names) : '') || st.names?.[b] || ('Godam ' + b), m = String(full).match(/(\d+)\s*$/);
+    return { b, name: b === SALE_BRANCH ? 'NT' : 'G' + (m ? m[1] : String(full).slice(0, 3)), full }; }), cur, set: b => { godam = Number(b); keepDraft(); rerender(); } }; });
 // ===== v2.95: 🧾 AAJ KE BILLS — PC + app ek list. Rang: hara = paid, laal = udhaar, grey = cancel / farq.
 // 📌 posted / ⏳ un-posted (POS DocStatusID 2 / 1), 💻 kis PC + kisne + kab, "sync X sec pehle". Un-posted = ✏️ edit
 // (wahi scan screen par khulta hai; PC sale-post.js POS mein wahi bill badalta hai). 🖨 tamam un-posted ek report mein.
