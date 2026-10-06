@@ -1402,3 +1402,7 @@ Malik (screenshot TSC TTP-244 Pro queue): Label jobs 158 / 267 / 357 KB, "Printi
   rows neeche se upar, 4 byte padding), har label par sirf PUTBMP x,y,"UR.BMP". 90 label: 158.5 KB -> 17.6 KB.
   label-settings.json "urduMode": "bitmap" = purana tareeqa (agar printer PUTBMP na samjhe). urW(S) = Urdu chaurai helper.
 * Test: BMP PIL se khula (232x56, 1-bit, kala/safed sahi jagah). Asal TSC par yahan test nahi.
+* 13:43 log se: label-print v3.7 (log mein galti se "v3.3" likha tha — ab theek) ne 1:34 ke baad ke order chhape; 6J-301..330
+  Urdu saaf nikle = DOWNLOAD/PUTBMP TSC par CHALTA hai. Masla: aaj 100+100+100+100+50+10 = 460 labels ke order (bar bar dabaya) +
+  purane bhari (158-357 KB) jobs queue mein — printer peeche tha. Malik ne galti se urduMode "bitmap" kiya -> wapas "putbmp" ki command.
+  Restart-Service Spooler admin ke baghair nahi chalti (zaroorat bhi nahi).

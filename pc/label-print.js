@@ -262,7 +262,7 @@ if (process.argv.includes('--calibrate')) {   // v2.1: roll badalne ke baad prin
   const lock = net.createServer();
   lock.once('error', () => { console.log('label-print pehle se chal raha hai.'); process.exit(3); });
   lock.listen(LOCK_PORT, '127.0.0.1', () => {
-    { const S = settings(); log(`label-print v3.3 chal raha hai â€” printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
+    { const S = settings(); log(`label-print v3.7 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
     jobCol.where('status', '==', 'new').onSnapshot(s => {
       s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handle(c.doc)); });
     }, e => { log('Listener toot gaya: ' + e.message + ' â€” band, bat 30 second mein dobara chalayega'); process.exit(1); });
