@@ -2814,3 +2814,26 @@ User ne SQL se POS ke andar awaz ka poocha: SQL password se sirf DATA milta hai,
 * nt-print v1.13: posui onErr -> scan.beep("BAD") (bzzz); agar nt-scan ne 2 s ke andar ghalat-scan bzzz bajayi ho to dobara nahi.
 * nt-scan v1.2.1: onScanBad callback.
 * C# mcs se compile-check (stub5.cs). Counter PCs (Mithu) khud update; Abdurehman PC ko abhi bhi ek dafa haath se NT-PRINT update chahiye.
+
+==================== nt-print v1.14 + nt-scan v1.3 + nt-posui v1.5 (manifest 2026-10-07.1) + App v2.95.7 — 🔔 AANKH BAND SCAN ====================
+User ka maqsad: larka aankh band kar ke scan kare aur koi cheez miss na ho. User ne kaha: double-scan awaz NAHI, bill-save awaz NAHI.
+* nt-scan v1.3 (NtScan3.dll): 3ri awaz WARN "tu-tu-tu" (700 Hz x3). scanWhere(fg): scan POS ke program ke ilawa kisi window mein
+  (jaise Claude chat, desktop) = "other" -> tu-tu-tu (tik/bzzz nahi) + onScanWrong. Browser (scanSkip) pehle ki tarah chhoda (app ki apni awaz).
+  POS ka naam maloom na ho to purana tareeqa. onReady / onDown / alive(). onScanOk/onScanBad(code, fg).
+* nt-posui v1.5 (NtPosUi6.dll): "PROC <naam>" (POS ka program, nt-print pos-proc.json mein yaad rakhta), "WIN 1/0" (Sale screen khuli/band);
+  Sale screen khuli magar patti nahi -> 0.5 s mein dobara dhoondo (pehle 1 s); error box ke baad 0.3 s.
+  BARA FIX: C# ab stdin dekhta hai — NT-PRINT band/restart ho to posui bhi band. Pehle har restart (self-update, naya din) par purana posui
+  peeche chalta rehta tha (CPU). Shuru mein ek dafa sweep: CommandLine *nt-posui.ps1* wale purane PowerShell band.
+  HashSet hata kar Dictionary (System.Core PowerShell Add-Type default mein pakka nahi). mcs -noconfig -r:System.dll se compile-check.
+* nt-print v1.14: tu-tu-tu (10 s mein ek dafa max): (1) sahi scan ke 1.6 s baad posui band ho -> "POS awaz system band";
+  Sale screen khuli magar patti nahi -> "patti nahi mili"; (2) posui / nt-scan crash -> tu-tu-tu. Ghalat-window wali har scan par (nt-scan khud).
+  PC on hote hi (uptime < 20 min, har boot ek dafa, sound-test.txt) tik -> bzzz -> tu-tu-tu test. local-config: startTest:false, scanWrongWarn:false,
+  scanApps:["program"] (in mein scan bhi theek).
+  printPCs/<id>.snd: day, ok, add, bad, err, warn, wrong, lastScan, scanOn, posAlive, posWin, posOn, posUi, posProc, miss[{c,n,at}] (30),
+  errs[{t,at}] (6), warns[{k,at}] (6). Event par 5 s debounce beat. Rules badalne ki zaroorat NAHI (printPCs read pehle se).
+* App v2.95.7 nazar.js: Counter Nazar ke upar "🔔 Counter Awaz" (khulta/band, localStorage sam-nazar-pcs): har PC card — halat pill
+  (🟢 chalu / 🟠 patti nahi / 🔴 band / ⚫ PC band >3 min / ⚪ purana NT-PRINT), chips ✅ sahi ❌ ghalat ⚠️ POS error 🪟 ghalat jagah 📢 tu-tu-tu ⏱,
+  lists: ghalat barcodes (📋 copy), POS errors, tu-tu-tu kyun. Masle wale PC upar; 1 din se band PC chhupe. style.css .nzp-*.
+* Agla (kal dukan par): patti test — wohi item dobara scan par patti badalti hai? phir PAKKI TASDEEQ (tik sirf jab POS mein item jure).
+  Dhyan: agar khali bill par patti hoti hi nahi to pehle item par "patti nahi mili" ghalat tu-tu-tu aa sakti hai — log/app mein dekhein.
+* Abdurehman PC ko ab bhi ek dafa haath se NT-PRINT update chahiye.

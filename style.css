@@ -1807,6 +1807,20 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .nz-roko{border:0;border-radius:14px;padding:12px 22px;background:#b3261e;color:#fff;font-size:18px;font-weight:900;box-shadow:0 4px 12px rgba(179,38,30,.35)}
 .nz-last{padding:6px 14px 12px;font-size:13px;color:#4a5a7a}.nz-last summary{cursor:pointer;font-weight:700}.nz-last div{padding:3px 0}
 .nz-empty{padding:20px}
+/* v2.95.7: 🔔 Counter Awaz */
+.nzp-wrap{margin:0 0 12px}.nzp-top{border:1px solid #dfe6f3;border-radius:18px;background:linear-gradient(180deg,#fbfcff,#f3f6fc);box-shadow:0 4px 14px rgba(20,40,90,.06)}
+.nzp-top>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;font-size:16px}.nzp-top>summary::-webkit-details-marker{display:none}
+.nzp-top>summary::after{content:'▾';margin-left:6px;color:#7a88a6;transition:transform .2s}.nzp-top:not([open])>summary::after{transform:rotate(-90deg)}
+.nzp-sum{margin-left:auto;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:800}.nzp-sum.ok{background:#e8f5ee;color:#0f6b3d}.nzp-sum.bad{background:#fdecea;color:#a3221a;animation:nzPulse 1.4s ease-in-out infinite}
+.nzp-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:10px;padding:0 10px 12px}
+.nzp{--k:#1e9e4a;border:1px solid #e3e8f2;border-left:5px solid var(--k);border-radius:14px;background:#fff;overflow:hidden}
+.nzp.ok{--k:#1e9e4a}.nzp.idle{--k:#5aa97a}.nzp.warn{--k:#e08a00}.nzp.bad{--k:#c62828}.nzp.off{--k:#4a4f5c}.nzp.old{--k:#9aa3b5}
+.nzp header{display:flex;align-items:center;gap:8px;padding:9px 12px;flex-wrap:wrap}.nzp header b{font-size:16px}.nzp header em{margin-left:auto;font-style:normal;font-weight:800;font-size:12.5px;padding:3px 10px;border-radius:999px;background:color-mix(in srgb,var(--k) 12%,#fff);color:var(--k)}
+.nzp.bad header em,.nzp.warn header em{animation:nzPulse 1.2s ease-in-out infinite}
+.nzp-chips{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 10px}.nzp-c{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:4px 10px;font-size:12.5px;background:#f3f6fb;color:#33415e}.nzp-c b{font-size:14px}
+.nzp-c.ok{background:#e8f5ee;color:#0f6b3d}.nzp-c.bad{background:#fdecea;color:#a3221a}.nzp-c.err{background:#fff4e0;color:#8a5200}.nzp-c.wrong{background:#eef0ff;color:#3b3fa8}.nzp-c.warn{background:#fff0f6;color:#a01d5c}.nzp-c.zero{opacity:.55}.nzp-c.t{background:#fff;border:1px dashed #cfd7e6}
+.nzp-d{border-top:1px dashed #e3e8f2;padding:6px 12px;font-size:13px}.nzp-d summary{cursor:pointer;font-weight:700;color:#33415e}
+.nzp-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px dotted #edf0f6}.nzp-row code{font-weight:800;font-size:14px}.nzp-row small{margin-left:auto;color:#7a88a6;white-space:nowrap}.nzp-row button{border:1px solid #d6deec;background:#fff;border-radius:8px;padding:2px 8px}.nzp-t{flex:1;min-width:0;overflow-wrap:anywhere}
 /* v2.84: 🔤 Urdu naam */
 .ur-name{display:block;font-family:"Jameel Noori Nastaleeq","Noto Nastaliq Urdu","Urdu Typesetting","Segoe UI",sans-serif;font-size:1.15em;color:#1a2d53;line-height:1.7;text-align:right;cursor:pointer}
 .ur-name i{font-size:.8em;color:#9aa;font-style:normal}

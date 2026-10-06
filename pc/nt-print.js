@@ -1,5 +1,6 @@
 // ============================================================
-//  nt-print.js  v1.13 (2026-10-06: POS ERROR box par bzzz (nt-posui v1.4) — ghalat scan ki bzzz abhi baji ho to dobara nahi) · v1.10 (2026-10-06: 🔔 nt-posui.js — POS ki screen par item judte hi tik, code likh kar bhi) · v1.9 (2026-10-06: 🔔 POS BEEP — posBeep/<is PC ka host> badle = POS mein item jura -> beep; tab scan ki 'tik' band, ghalat scan ki bzzz chalu) · v1.8 (2026-10-06: 🔔 SCAN AWAZ — nt-scan.js: POS mein har scan par tik, ghalat scan par bzzz) · v1.7 (2026-10-06: 🔄 KHUD-UPDATE — har 5 min GitHub manifest, nt-print.js / nt-parchi.js naye hon to sha jaanch kar
+//  nt-print.js  v1.14 (2026-10-07: 🔔 AANKH BAND SCAN — ⚠️ tu-tu-tu: scan ghalat window mein / POS awaz system band / Sale screen khuli magar
+//                   patti nahi (andha); PC on hote hi tik-bzzz-tu-tu-tu test; printPCs.snd = aaj ki ginti + ghalat barcode + POS errors (app: Counter Nazar)) · v1.13 (2026-10-06: POS ERROR box par bzzz (nt-posui v1.4) — ghalat scan ki bzzz abhi baji ho to dobara nahi) · v1.10 (2026-10-06: 🔔 nt-posui.js — POS ki screen par item judte hi tik, code likh kar bhi) · v1.9 (2026-10-06: 🔔 POS BEEP — posBeep/<is PC ka host> badle = POS mein item jura -> beep; tab scan ki 'tik' band, ghalat scan ki bzzz chalu) · v1.8 (2026-10-06: 🔔 SCAN AWAZ — nt-scan.js: POS mein har scan par tik, ghalat scan par bzzz) · v1.7 (2026-10-06: 🔄 KHUD-UPDATE — har 5 min GitHub manifest, nt-print.js / nt-parchi.js naye hon to sha jaanch kar
 //                   badal kar band; nt-print-auto.bat dobara chalata hai. local-config "autoUpdate": false = band) · v1.6 (2026-10-06: ⚡ TEZ PRINT — nt-parchi worker: PowerShell shuru se khula, bill aate hi seedha printer) · v1.4 (2026-10-05: 🔔 scan par beep — liveCarts, local-config beep/beepCounters) · v1.1 (2026-10-04) — 💻 NT-PRINT: app ka bill IS PC ke printer par, bina kisi window ke
 //
 //  App (Nayi Sale) mein counter "💻 <PC ka naam>" chuna ho to sale ka doc counter = 'pc:<id>' hota hai.
@@ -28,7 +29,7 @@ const { execFile, execFileSync } = require('child_process');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
-const VER = '1.13';
+const VER = '1.14';
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
@@ -183,9 +184,19 @@ const base = db.collection('businesses').doc(BUSINESS_ID);
 const saleCol = base.collection('appSales');
 const pcDoc = base.collection('printPCs').doc(PC_ID);
 
+// v1.14: 🔔 COUNTER AWAZ — aaj ki ginti aur halat (app ka Counter Nazar printPCs.snd parhta hai)
+const SND = { ok: 0, add: 0, bad: 0, err: 0, warn: 0, wrong: 0, lastScan: 0, miss: [], errs: [], warns: [] };
+let scanRef = null, posuiRef = null, posProcs = new Set(), sndT = null;
+const fnv = (o, k) => !!(o && typeof o[k] === 'function' && o[k]());
+function sndState() {
+  return { ...SND, day: today(), scanOn: fnv(scanRef, 'alive'), posAlive: fnv(posuiRef, 'alive'), posWin: fnv(posuiRef, 'win'), posOn: fnv(posuiRef, 'active'),
+    posUi: cfg().posUi !== false, posProc: [...posProcs].slice(0, 3).join(', '), at: Date.now() };
+}
+const sndBump = () => { if (sndT) return; sndT = setTimeout(() => { sndT = null; beat(); }, 5000); };   // 5 sec mein ek dafa — Firestore par bojh nahi
+const keep = (arr, x, n) => { arr.unshift(x); if (arr.length > n) arr.length = n; };
 async function beat() {
   if (!prAt || Date.now() - prAt > 10 * 60000) scanPrinters();
-  try { await pcDoc.set({ name: PC_NAME, host: os.hostname(), printer: printerName(), printers: PR_LIST.map(n => ({ n, h: h6(n) })), at: Date.now(), ver: VER, width: W }); }
+  try { await pcDoc.set({ name: PC_NAME, host: os.hostname(), printer: printerName(), printers: PR_LIST.map(n => ({ n, h: h6(n) })), at: Date.now(), ver: VER, width: W, snd: sndState() }); }
   catch (e) { log('⚠ report: ' + e.message); if (unauth(e)) { log('Firebase rabta toota (UNAUTHENTICATED) — dobara shuru'); setTimeout(() => process.exit(1), 500); } }
 }
 
@@ -253,9 +264,53 @@ function listen() {
   const posBeepOn = () => cfg().posBeep === true;   // v1.9.1: sirf jab local-config posBeep:true (POS live likhta hai ya nahi — pakka nahi)
   let posui = null;
   let lastScanOk = 0, lastScanBad = 0;   // v1.11: scan ki tik baj chuki ho (1.5 s) to POS patti badalne par dobara nahi
-  try { scan = require('./nt-scan.js').start({ dir: DIR, base, log, onScanOk: () => { lastScanOk = Date.now(); }, onScanBad: () => { lastScanBad = Date.now(); }, cfg: () => ({ ...cfg(), ...(posBeepOn() ? { scanGood: false } : {}) }) }); } catch (e) { log('🔔 scan awaz shuru nahi hui: ' + e.message); }   // v1.8
+  // v1.14: POS ka program (nt-posui batata hai) yaad — scan kisi AUR window mein jaye to tu-tu-tu
+  const PF = path.join(DIR, 'pos-proc.json');
+  try { (JSON.parse(fs.readFileSync(PF, 'utf8')) || []).forEach(x => posProcs.add(String(x).toLowerCase())); } catch {}
+  const scanWhere = fg => {
+    fg = String(fg || '').toLowerCase(); const c = cfg();
+    if (!fg || c.scanWrongWarn === false || !posProcs.size) return 'pos';   // POS ka naam abhi maloom nahi = purana tareeqa
+    const extra = Array.isArray(c.scanApps) ? c.scanApps.map(x => String(x).toLowerCase()) : [];
+    return posProcs.has(fg) || extra.includes(fg) ? 'pos' : 'other';
+  };
+  let lastWarnAt = 0, testDone = false;
+  const play = (k, fb) => { if (!(scan && scan.beep && scan.beep(k))) beep(fb); };
+  const warn = why => {   // ⚠️ tu-tu-tu — 10 sec mein ek dafa se zyada nahi
+    const now = Date.now(); if (now - lastWarnAt < 10000) return; lastWarnAt = now;
+    SND.warn++; keep(SND.warns, { k: String(why).slice(0, 80), at: now }, 6); play('WARN', 'stop'); log('🔔 ⚠️ tu-tu-tu: ' + why); sndBump();
+  };
+  const blindCheck = () => setTimeout(() => {   // scan sahi tha — kya POS dekhne wala system jaag raha hai?
+    if (!posui || cfg().posUi === false || typeof posui.alive !== 'function') return;
+    if (!posui.alive()) warn('POS awaz system band hai — aankh se dekhein');
+    else if (posui.win() && !posui.active()) warn('POS Sale screen ki patti nahi mili — aankh se dekhein');
+  }, 1600);
+  try { scan = require('./nt-scan.js').start({ dir: DIR, base, log, scanWhere,
+    onScanOk: () => { lastScanOk = Date.now(); SND.ok++; SND.lastScan = lastScanOk; sndBump(); blindCheck(); },
+    onScanBad: code => { lastScanBad = Date.now(); SND.bad++; SND.lastScan = lastScanBad;
+      const c = String(code || '').slice(0, 40), m = SND.miss.find(x => x.c === c);
+      if (m) { m.n++; m.at = lastScanBad; SND.miss.splice(SND.miss.indexOf(m), 1); SND.miss.unshift(m); } else keep(SND.miss, { c, n: 1, at: lastScanBad }, 30);
+      sndBump(); },
+    onScanWrong: (code, fg) => { SND.wrong++; SND.lastScan = Date.now(); keep(SND.warns, { k: 'Ghalat jagah scan: ' + String(fg || '?').slice(0, 30), at: Date.now() }, 6); sndBump(); },
+    onDown: () => { warn('Scan awaz system band ho gaya'); },
+    onReady: () => {   // PC on hote hi (20 min ke andar, har boot par ek dafa) teeno awazein — larke pehchan lein, system chalu hai
+      if (testDone || cfg().startTest === false) return; testDone = true;
+      const up = os.uptime(); if (up > 20 * 60) return;
+      const boot = Math.round((Date.now() / 1000 - up) / 60), f = path.join(DIR, 'sound-test.txt');
+      let prev = NaN; try { prev = Number(fs.readFileSync(f, 'utf8').trim()); } catch {}
+      if (Math.abs(prev - boot) <= 3) return;
+      try { fs.writeFileSync(f, String(boot)); } catch {}
+      setTimeout(() => play('OK', 'scan'), 1500); setTimeout(() => play('BAD', 'stop'), 2600); setTimeout(() => play('WARN', 'stop'), 4200);
+      log('🔔 PC on — awazon ka test: tik, bzzz, tu-tu-tu');
+    },
+    cfg: () => ({ ...cfg(), ...(posBeepOn() ? { scanGood: false } : {}) }) }); } catch (e) { log('🔔 scan awaz shuru nahi hui: ' + e.message); }   // v1.8
+  scanRef = scan;
   // v1.10: 🔔 POS SCREEN — item-list ki ginti barhe (scan YA code likh kar) -> "tik"; tab scan ki apni tik band (do dafa na baje)
-  try { posui = require('./nt-posui.js').start({ dir: DIR, log, cfg, onAdd: () => { if (Date.now() - lastScanOk < 1500) return; if (!(scan && scan.beep && scan.beep('OK'))) beep('scan'); }, onErr: () => { if (Date.now() - lastScanBad < 2000) return; if (!(scan && scan.beep && scan.beep('BAD'))) beep('stop'); } }); } catch (e) { log('🔔 POS screen shuru nahi hua: ' + e.message); }
+  try { posui = require('./nt-posui.js').start({ dir: DIR, log, cfg,
+    onAdd: () => { SND.add++; if (Date.now() - lastScanOk < 1500) return; play('OK', 'scan'); },
+    onErr: t => { SND.err++; keep(SND.errs, { t: String(t || '').slice(0, 120), at: Date.now() }, 6); sndBump(); if (Date.now() - lastScanBad < 2000) return; play('BAD', 'stop'); },
+    onProc: n => { n = String(n || '').toLowerCase(); if (!n || posProcs.has(n)) return; posProcs.add(n); try { fs.writeFileSync(PF, JSON.stringify([...posProcs])); } catch {} log('🔔 POS ka program: ' + n + ' (is ke ilawa kahin scan = tu-tu-tu)'); },
+    onDown: () => { if (cfg().posUi !== false) warn('POS awaz system band ho gaya — aankh se dekhein'); } }); } catch (e) { log('🔔 POS screen shuru nahi hua: ' + e.message); }
+  posuiRef = posui;
   // v1.9: 🔔 POS BEEP — server (pos-sales-dekho v1.4) har nayi POS line par posBeep/<HOST> likhta hai
   if (posBeepOn()) { let first = true, lastAt = 0;
     base.collection('posBeep').doc(os.hostname().toUpperCase()).onSnapshot(d => {
