@@ -1542,3 +1542,5 @@ User ka maqsad: larka aankh band kar ke scan kare aur koi cheez miss na ho. User
   saath transaction (server round-trip) + account ki linked entry; save mukammal hone tak dialog ruka rehta hai.
   Mumkin hal: dialog foran band + entry "⏳ sync" ke saath list mein (optimistic), transaction peeche; ghalti par wapas aur laal paigham.
   Pehle plan user ko dikhana hai, OK ke baad.
+* PENDING (2026-10-07, yehi bunch): "⇄ Transfer edit" (account se account, jaise haseeb cus -> Sheikh naiem karachi) Save par bhi ⏳ intezar.
+  cloud.saveTransfer — dono entries ek saath (transaction) server par; dialog mukammal hone tak ruka. Cash diya wale hal ke saath isay bhi optimistic karna.
