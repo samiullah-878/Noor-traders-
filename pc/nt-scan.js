@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
-function start({ dir, base, log, cfg }) {
+function start({ dir, base, log, cfg, onScanOk }) {
   const C = () => { try { return cfg() || {}; } catch { return {}; } };
   if (process.platform !== 'win32' || C().scanAwaz === false) return null;
   const norm = s => String(s || '').trim().toUpperCase();
@@ -94,7 +94,7 @@ Add-Type -Path $dll
     const [, code, fg] = l.split('\t');
     if (skipList().includes(String(fg || '').toLowerCase())) return;   // hamari app (Chrome) ki apni awaz hai
     const ok = !loaded || codes.has(norm(code)) || codes.has(norm(code).replace(/^0+/, ''));
-    if (ok) { if (C().scanGood !== false) try { w.stdin.write('OK\n'); } catch {} }
+    if (ok) { try { onScanOk && onScanOk(); } catch {} if (C().scanGood !== false) try { w.stdin.write('OK\n'); } catch {} }
     else { try { w.stdin.write('BAD\n'); } catch {} log(`🔔 GHALAT scan: "${code}" (${fg || '?'}) — POS mein ye barcode nahi / item band`); }
   };
   setTimeout(run, 3000);

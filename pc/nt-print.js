@@ -28,7 +28,7 @@ const { execFile, execFileSync } = require('child_process');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
-const VER = '1.10';
+const VER = '1.11';
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
@@ -252,9 +252,10 @@ function listen() {
   let scan = null;
   const posBeepOn = () => cfg().posBeep === true;   // v1.9.1: sirf jab local-config posBeep:true (POS live likhta hai ya nahi — pakka nahi)
   let posui = null;
-  try { scan = require('./nt-scan.js').start({ dir: DIR, base, log, cfg: () => ({ ...cfg(), ...((posBeepOn() || (posui && posui.active())) ? { scanGood: false } : {}) }) }); } catch (e) { log('🔔 scan awaz shuru nahi hui: ' + e.message); }   // v1.8
+  let lastScanOk = 0;   // v1.11: scan ki tik baj chuki ho (1.5 s) to POS patti badalne par dobara nahi
+  try { scan = require('./nt-scan.js').start({ dir: DIR, base, log, onScanOk: () => { lastScanOk = Date.now(); }, cfg: () => ({ ...cfg(), ...(posBeepOn() ? { scanGood: false } : {}) }) }); } catch (e) { log('🔔 scan awaz shuru nahi hui: ' + e.message); }   // v1.8
   // v1.10: 🔔 POS SCREEN — item-list ki ginti barhe (scan YA code likh kar) -> "tik"; tab scan ki apni tik band (do dafa na baje)
-  try { posui = require('./nt-posui.js').start({ dir: DIR, log, cfg, onAdd: () => { if (!(scan && scan.beep && scan.beep('OK'))) beep('scan'); } }); } catch (e) { log('🔔 POS screen shuru nahi hua: ' + e.message); }
+  try { posui = require('./nt-posui.js').start({ dir: DIR, log, cfg, onAdd: () => { if (Date.now() - lastScanOk < 1500) return; if (!(scan && scan.beep && scan.beep('OK'))) beep('scan'); } }); } catch (e) { log('🔔 POS screen shuru nahi hua: ' + e.message); }
   // v1.9: 🔔 POS BEEP — server (pos-sales-dekho v1.4) har nayi POS line par posBeep/<HOST> likhta hai
   if (posBeepOn()) { let first = true, lastAt = 0;
     base.collection('posBeep').doc(os.hostname().toUpperCase()).onSnapshot(d => {
