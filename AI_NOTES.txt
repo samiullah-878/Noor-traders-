@@ -2751,3 +2751,4 @@ chala gaya) magar printer ruk gaya -> PUTBMP (v3.7) par TSC ~30-36 label ke baad
 * App v2.95.5 (pos-stock printLabel): copies 1000 tak (input max 1000) -> 200-200 ke labelJobs (rules 200 hadd wahi), confirm
   "N hisson mein", watch sab — "⏳ 2/5", sab done = ✓. Timeout 45 s x hisse.
 * showRate false (malik): label se "Rs" line band (barcode number par chadh rahi thi).
+* NOTE: v2.95.4 (PC scanner keydown se beep chalu, pos-stock) 14:38 par push ho gaya tha (malik ne command rok di thi magar tab tak chal chuki thi) — bezarar, live hai.
