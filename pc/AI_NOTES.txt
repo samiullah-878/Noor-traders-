@@ -1476,3 +1476,11 @@ Malik: "jab POS mein cheez add ho (scan ho ya code likh kar) to sath hi system s
   NtScan2.dll (class NtScan2). Mono se compile + WAV bana kar check ✓. POS live-beep (posBeep) ab OPT-IN (local-config posBeep:true) —
   pos-live test mein 2 min koi line nahi aayi -> POS shayad sirf save par likhta hai; tab tak scan ka tik (barcode POS list mein mila) hi
   "item add" ki awaz.
+
+==================== nt-print v1.10 + nt-posui v1.0 (manifest 2026-10-06.16) — 🔔 POS SCREEN SE "ITEM JURA" ====================
+pos-live (18:21): server ke POS mein item jode -> KOI line nahi; KEIME1D ki 2 line ek hi second mein (save) => POS SQL mein SIRF SAVE par.
+Is liye: nt-posui.js — alag PowerShell + C# NtPosUi1.dll (UIAutomationClient/Types): window naam mein "Retail Solution" (posTitle),
+us ke andar sab se bari Table/DataGrid, GridPattern.RowCount (ya children) har 250 ms; barhe -> "ADD n" -> NT-PRINT onAdd -> nt-scan
+worker "OK" (WAV tik). Grid mile (gridOn) to nt-scan ki apni scan-tik band (scanGood false) — ghalat scan bzzz chalu. Grid na mile:
+har 3 s dhoondo; toote (form band) -> LOST, dobara dhoondo. posUi:false = band. UPD_FILES + nt-posui.js (khud update).
+Test: C# stub UIA assembly ke saath mcs compile ✓. Asal POS par YAHAN test nahi — log "🔔 POS item-list mil gayi: <id/naam> <rows>".
