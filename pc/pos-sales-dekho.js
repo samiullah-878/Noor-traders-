@@ -1,5 +1,5 @@
 // =========================================================
-//  pos-sales-dekho.js  v1.1 (2026-10-03: har 10 sec, pehle chhota sawal) · v1  (2026-10-03) — POS par bane AAJ ke SALE BILLS app mein (sirf SELECT, POS mein kuch nahi badalta)
+//  pos-sales-dekho.js  v1.2 (2026-10-06: ps = DocStatusID (1 un-posted / 2 posted), pc + by (SystemNotes se), items posSaleLines/<SaleID>, _sync har 30 sec) · v1.1 (2026-10-03: har 10 sec, pehle chhota sawal) · v1  (2026-10-03) — POS par bane AAJ ke SALE BILLS app mein (sirf SELECT, POS mein kuch nahi badalta)
 //  Har 1 minute dbo.Sale (aaj) parhta hai -> Firestore posSales/<YYYY-MM-DD> (ek doc, sirf badle to likhta hai).
 //  App: scanner screen ke baayein "Aaj ke bills" mein chips — ✓ cash/poora · ✗ udhaar · ⊘ cancel (DocStatusID 3).
 //  App se bani sale (Description = "BK-APP <id>") ko app:<id> nishan — app wali chip se jod deta hai (do dafa na dikhe).
@@ -26,33 +26,61 @@ SQL_CONFIG.options = { ...(SQL_CONFIG.options || {}), useUTC: false };
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore();
 const col = db.collection('businesses').doc(BUSINESS_ID).collection('posSales');
+const linesCol = db.collection('businesses').doc(BUSINESS_ID).collection('posSaleLines');   // v1.2: har bill ke items (edit / un-posted print)
+// v1.2: PC ka naam (SystemNotes "at PC:DESKTOP-xxx") -> dukaan ka naam. local-config.json "pcNames": {"DESKTOP-xxx": "Naam"} se badlein.
+const PC_DEFAULT = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-KEIME1D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
+const pcNames = () => { try { return { ...PC_DEFAULT, ...(JSON.parse(fs.readFileSync(path.join(DIR, 'local-config.json'), 'utf8')).pcNames || {}) }; } catch { return PC_DEFAULT; } };
+const lineHash = new Map();
 let pool = null;
 async function getPool() { if (pool && pool.connected) return pool; pool = await new sql.ConnectionPool(SQL_CONFIG).connect(); return pool; }
 const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
 const dayOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 let lastHash = '';
 
+// v1.2: aaj ke har bill ke items -> posSaleLines/<SaleID> {day, no, at, lines:[{i,n,q,r,g}]} — sirf badle hue likhe
+async function syncLines(p, d0, d1, day) {
+  const rs = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
+    SELECT d.SaleID, s.SaleNo, d.ItemID, i.ItemName, d.Qty, d.Rate, d.GBranchID
+    FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID JOIN dbo.Items i ON i.ItemID = d.ItemID
+    WHERE s.SaleDate >= @a AND s.SaleDate < @b ORDER BY d.SaleID, d.SaleDetailID`)).recordset;
+  const by = new Map();
+  for (const r of rs) { if (!by.has(r.SaleID)) by.set(r.SaleID, { no: String(r.SaleNo || '').trim(), lines: [] });
+    by.get(r.SaleID).lines.push({ i: r.ItemID, n: String(r.ItemName || '').trim().slice(0, 60), q: Math.round((Number(r.Qty) || 0) * 1000) / 1000, r: r2(r.Rate), g: Number(r.GBranchID) || 0 }); }
+  let batch = db.batch(), n = 0, w = 0;
+  for (const [id, v] of by) {
+    const h = JSON.stringify(v.lines.slice(0, 150)); if (lineHash.get(id) === h) continue;
+    batch.set(linesCol.doc(String(id)), { day, no: v.no, at: Date.now(), lines: v.lines.slice(0, 150) }); lineHash.set(id, h); n++; w++;
+    if (n >= 400) { await batch.commit(); batch = db.batch(); n = 0; }
+  }
+  if (n) await batch.commit();
+  if (w) log(`Items: ${w} bills ke items app mein`);
+  if (lineHash.size > 3000) lineHash.clear();
+}
 async function once() {
   const p = await getPool();
   const d0 = new Date(); d0.setHours(0, 0, 0, 0); const d1 = new Date(d0); d1.setDate(d1.getDate() + 1);
   const k = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
-    SELECT COUNT(*) AS C, MAX(SaleID) AS M, SUM(CASE WHEN DocStatusID = 3 THEN 1 ELSE 0 END) AS X, SUM(CAST(TotalSale AS FLOAT)) AS T, SUM(CAST(CashReceived AS FLOAT)) AS R
+    SELECT COUNT(*) AS C, MAX(SaleID) AS M, SUM(CASE WHEN DocStatusID = 3 THEN 1 ELSE 0 END) AS X, SUM(DocStatusID) AS S, SUM(CAST(TotalSale AS FLOAT)) AS T, SUM(CAST(CashReceived AS FLOAT)) AS R, MAX(UpdatedOn) AS U
     FROM dbo.Sale WHERE SaleDate >= @a AND SaleDate < @b`)).recordset[0] || {};
-  const key = `${dayOf(d0)}|${k.C}|${k.M}|${k.X}|${Math.round(k.T || 0)}|${Math.round(k.R || 0)}`;
+  const key = `${dayOf(d0)}|${k.C}|${k.M}|${k.X}|${k.S}|${Math.round(k.T || 0)}|${Math.round(k.R || 0)}|${k.U ? new Date(k.U).getTime() : 0}`;   // v1.2: post hona / edit bhi
   if (key === lastKey && Date.now() - lastFull < FULL_EVERY) return;   // kuch nahi badla
   lastKey = key; lastFull = Date.now();
   const rows = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
-    SELECT s.SaleID, s.SaleNo, s.SaleDate, s.TotalSale, s.CashReceived, s.IsCreditSale, s.DocStatusID, s.Description, pt.PartyName,
+    SELECT s.SaleID, s.SaleNo, s.SaleDate, s.TotalSale, s.CashReceived, s.IsCreditSale, s.DocStatusID, s.Description, s.SystemNotes, pt.PartyName,
            (SELECT COUNT(*) FROM dbo.SaleDetail d WHERE d.SaleID = s.SaleID) AS N
     FROM dbo.Sale s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
     WHERE s.SaleDate >= @a AND s.SaleDate < @b ORDER BY s.SaleID DESC`)).recordset;
+  const names = pcNames();
   const bills = rows.slice(0, 600).map(r => {
     const desc = String(r.Description || ''), m = desc.match(/BK-APP[ :]([A-Za-z0-9_-]+)/);
+    const sn = String(r.SystemNotes || ''), host = (sn.match(/at PC:\s*([A-Za-z0-9_.-]+)/i) || [])[1] || '', by = (sn.match(/By:\s*([^\r\n]+?)\s+On:/i) || [])[1] || '';
     return { id: r.SaleID, no: String(r.SaleNo || '').trim(), t: r2(r.TotalSale), c: r2(r.CashReceived), cr: r.IsCreditSale ? 1 : 0,
       x: Number(r.DocStatusID) === 3 ? 1 : 0, p: String(r.PartyName || '').slice(0, 60), n: Number(r.N) || 0,
-      tm: r.SaleDate ? new Date(r.SaleDate).getTime() : 0, app: m ? m[1] : '' };
+      tm: r.SaleDate ? new Date(r.SaleDate).getTime() : 0, app: m ? m[1] : '',
+      ps: Number(r.DocStatusID) || 0, pc: String(names[host] || host.replace(/^DESKTOP-/i, '') || '').slice(0, 30), by: /blue khata/i.test(by) ? '' : String(by).trim().slice(0, 20) };
   });
   const day = dayOf(d0), hash = day + JSON.stringify(bills);
+  await syncLines(p, d0, d1, day).catch(e => log('Items masla: ' + e.message));
   if (hash === lastHash) return;
   await col.doc(day).set({ day, at: Date.now(), bills });
   lastHash = hash;
@@ -63,8 +91,10 @@ const lock = net.createServer().listen(LOCK_PORT, '127.0.0.1');
 lock.on('error', () => { console.log('pos-sales-dekho pehle se chal raha hai — yeh copy band.'); process.exit(3); });
 lock.on('listening', async () => {
   try { await getPool(); log('SQL se jur gaya'); } catch (e) { log('SQL masla: ' + e.message); process.exit(1); }
-  log('pos-sales-dekho v1.1 chal raha hai — har 10 second (sirf badlaav par likhta hai)…');
+  log('pos-sales-dekho v1.2 chal raha hai — har 10 second (sirf badlaav par likhta hai)…');
   const tick = async () => { try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); } };
   await tick();
   setInterval(tick, EVERY);
+  const beat = () => col.doc('_sync').set({ at: Date.now() }).catch(() => {});   // v1.2: app mein "PC sync X sec pehle"
+  beat(); setInterval(beat, 30000);
 });

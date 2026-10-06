@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.94.0';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.95.0';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -246,6 +246,9 @@ let saleGodamHook = null, saleBillsHook = null;   // v2.64: scanner par godam ch
 export function setSaleGodamHook(fn) { saleGodamHook = fn; }
 export function setSaleBillsHook(fn) { saleBillsHook = fn; }   // v1.64: camera ki list se line katna
 export function setSaleCartHook(fn) { saleCartHook = fn; }
+let saleLineGodamHook = null; export function setSaleLineGodamHook(fn) { saleLineGodamHook = fn; }   // v2.95: line ka godam
+// v2.95: bill (edit / naya) bahar se badla -> khuli scan screen ki list dobara bill se; band ho to khol do
+export function scanReload(noOpen) { if (scanBox && scanBox._reload) { scanBox._reload(); return; } if (!noOpen && saleRoot()) openSaleCamera(); }
 function syncFromCart() {
   if (!saleRoot() || !saleCartHook) return;
   try {
@@ -1930,13 +1933,15 @@ async function openScanner() {
     const ctnPcs = Math.round((Number(q.ctn) || 0) * (pack > 1 ? pack : 0) * 1000) / 1000;
     return { total, rate, amt: r2(ctnPcs * ctnRate + (Number(q.pcs) || 0) * rate), qtxt };
   };
+  const liGodam = (k, it) => { if (!saleLineGodamHook || !saleGodamHook) return ''; let g = null; try { g = saleGodamHook(); } catch {} if (!g || !g.list || g.list.length < 2) return '';
+    const cur = Number(it.g) || 1; return `<div class="li-g">${g.list.map(x => `<button type="button" data-lgk="${esc(k)}" data-lgb="${x.b}" title="${esc(x.full || x.name)}"${Number(x.b) === cur ? ' class="on"' : ''}>${esc(x.name)}</button>`).join('')}</div>`; };
   const drawNames = (keepScroll) => {
     const sale = saleRoot();
     if (sale) {
       const list = scanOrder.map(k => [k, scanItems.get(k)]).filter(x => x[1]);
       countBox.textContent = list.length;
       namesBox.innerHTML = list.slice().reverse().map(([k, it]) => { const L = lineOf(it, k);   // v2.33: nayi upar
-        return `<li data-k="${esc(k)}"${k === lastKey ? ' class="now"' : ''}><button type="button" class="scan-del" data-del="${esc(k)}" aria-label="Hatao">✕</button><b>${esc(it.name)}</b><span>${esc(L.qtxt)}${L.rate ? ` x ${num(L.rate)} = <b>${num(L.amt)}</b>` : ''}</span>${(() => { const q = scanQty.get(k) || { pcs: 0, ctn: 0 }, pk = Number(it.pack) || 0; return `<div class="li-qty">${pk > 1 ? `<label>${esc(it.cName || 'Ctn')}<input class="li-in" data-li="${esc(k)}" data-u="ctn" type="text" inputmode="decimal" autocomplete="off" value="${q.ctn || ''}" placeholder="0"></label>` : ''}<label>${esc(it.uName || 'Pcs')}<input class="li-in" data-li="${esc(k)}" data-u="pcs" type="text" inputmode="decimal" autocomplete="off" value="${q.pcs || ''}" placeholder="0"></label></div>`; })()}</li>`; }).join('');   // v2.67: har line par Pcs (aur Ctn) ke khane   // v2.42: transfer (rate 0) par sirf tadad
+        return `<li data-k="${esc(k)}"${k === lastKey ? ' class="now"' : ''}><button type="button" class="scan-del" data-del="${esc(k)}" aria-label="Hatao">✕</button><b>${esc(it.name)}</b><span>${esc(L.qtxt)}${L.rate ? ` x ${num(L.rate)} = <b>${num(L.amt)}</b>` : ''}</span>${(() => { const q = scanQty.get(k) || { pcs: 0, ctn: 0 }, pk = Number(it.pack) || 0; return `<div class="li-qty">${pk > 1 ? `<label>${esc(it.cName || 'Ctn')}<input class="li-in" data-li="${esc(k)}" data-u="ctn" type="text" inputmode="decimal" autocomplete="off" value="${q.ctn || ''}" placeholder="0"></label>` : ''}<label>${esc(it.uName || 'Pcs')}<input class="li-in" data-li="${esc(k)}" data-u="pcs" type="text" inputmode="decimal" autocomplete="off" value="${q.pcs || ''}" placeholder="0"></label><button type="button" class="li-neg${L.total < 0 ? ' on' : ''}" data-neg="${esc(k)}" title="Wapsi (minus)">${L.total < 0 ? '↩' : '±'}</button></div>`; })()}${liGodam(k, it)}</li>`; }).join('');   // v2.95: ± wapsi + line ka godam   // v2.67: har line par Pcs (aur Ctn) ke khane   // v2.42: transfer (rate 0) par sirf tadad
       namesBox.reversed = true; namesBox.start = list.length;
       const kul = list.reduce((n, [k, it]) => n + lineOf(it, k).amt, 0);
       sumBox.innerHTML = list.length ? (kul ? `Kul: <b>Rs ${num(kul)}</b>` : `<b>${list.length}</b> items`) : '';
@@ -1951,6 +1956,7 @@ async function openScanner() {
   };
   drawNames();
   scanBox._redraw = () => { try { showPad(); drawNames(); } catch {} };
+  scanBox._reload = () => { const keep = lastKey; syncFromCart(); if (keep && scanItems.has(keep)) { lastKey = keep; lastScan = scanItems.get(keep); } try { showPad(); drawNames(true); } catch {} };   // v2.95
   // v2.64: Pcs/Ctn ke sath GODAM chips (sale) — agla scan isi godam se
   if (saleRoot() && saleGodamHook && !pickHook) {
     const gw = document.createElement('div'); gw.className = 'scan-godam';
@@ -1961,34 +1967,28 @@ async function openScanner() {
   }
   // v2.64: PC par baayein — AAJ KE BILLS (chips: ✓ paid · ✗ baqi · ⊘ cancel · ⏳ PC · ⚠ fail) + search
   if (saleRoot() && saleBillsHook && !pickHook && window.matchMedia && window.matchMedia('(min-width:1100px)').matches) {
-    const side = document.createElement('aside'); side.className = 'scan-bills';
-    side.innerHTML = '<div class="sb-head"><b>🧾 Aaj ke bills</b><small></small></div><input type="search" class="sb-q" placeholder="Bill no, naam ya raqam…" autocomplete="off"><div class="sb-list"></div>';
+    const side = document.createElement('aside'); side.className = 'scan-bills';   // v2.95: sale.js mountBills (PC + app, rang, posted, edit)
     scanBox.appendChild(side); scanBox.classList.add('has-bills');
-    const q = side.querySelector('.sb-q'), listBox = side.querySelector('.sb-list'), cnt = side.querySelector('.sb-head small');
-    let open = '';
-    const mark = s => s.farq ? ['🧮', 'fq'] : (s.cancelled || s.status === 'cancelled') ? ['⊘', 'cx'] : s.status === 'failed' ? ['⚠', 'fl'] : (s.status === 'new' || s.status === 'posting') ? ['⏳', 'wt'] : (s.mode !== 'wholesale' || Number(s.cash) >= Number(s.total) - 0.5) ? ['✓', 'pd'] : ['✗', 'up'];
-    const paintB = () => { let h = null; try { h = saleBillsHook(); } catch {} const all = (h && h.list) || [];
-      const t = String(q.value || '').trim().toLowerCase(), d = t.replace(/[^0-9]/g, '');
-      const rows = all.filter(s => !t || String(s.saleNo || '').includes(t) || (s.note || '').toLowerCase().includes(t) || (s.party || '').toLowerCase().includes(t) || (d.length >= 2 && String(Math.round(Number(s.total) || 0)).startsWith(d)) || (s.lines || []).some(l => String(l.name || '').toLowerCase().includes(t)));
-      cnt.textContent = `${rows.length}${rows.length !== all.length ? ' / ' + all.length : ''}`;
-      listBox.innerHTML = rows.map(s => { const [ic, cl] = mark(s), tm = new Date(s.createdAt || 0).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' });
-        return `<div class="sb-chip ${cl}${open === s.id ? ' open' : ''}" data-sb="${esc(s.id)}"><i>${ic}</i><span><b>${s.saleNo ? esc(String(s.saleNo).replace(/^0+(?=\d{4})/, '')) : (s.mode === 'wholesale' ? 'Wholesale' : 'Counter')}</b><em>Rs ${num(s.total)}${s.farq ? ' <u>farq · sale nahi</u>' : s.pos ? ' <u>POS</u>' : ''}</em></span><small>${tm}${s.party && !/counter\s*sale/i.test(s.party) ? '<br>' + esc(s.party) : ''}</small>${open === s.id ? `<div class="sb-det">${s.pos ? `<p>POS par bana bill${s.party ? ' · ' + esc(s.party) : ''}<span>${num(s.n || 0)} items</span></p>` : ''}${(s.lines || []).map(l => `<p>${esc(l.name)}<span>${num(l.qty)} × ${num(l.rate)}</span></p>`).join('')}<p class="sb-pay">Cash Rs ${num(s.cash)}${s.mode === 'wholesale' && s.total - s.cash > 0 ? ' · Udhaar Rs ' + num(s.total - s.cash) : ''}</p>${s.status === 'done' && !s.pos ? `<button type="button" data-sb-print="${esc(s.id)}">🖨 Dobara print</button>` : ''}</div>` : ''}</div>`; }).join('') || '<p class="stat-note">Aaj koi bill nahi</p>'; };
-    q.oninput = paintB;
-    listBox.addEventListener('click', e => { const pr = e.target.closest('[data-sb-print]'); if (pr) { e.stopPropagation(); try { saleBillsHook().reprint(pr.dataset.sbPrint); notice('🖨 Print ka hukam PC ko bhej diya'); } catch (er) { notice('Print nahi hua'); } return; } const c = e.target.closest('[data-sb]'); if (!c) return; open = open === c.dataset.sb ? '' : c.dataset.sb; paintB(); });
-    paintB(); scanBox._billsTimer = setInterval(paintB, 4000);
+    try { scanBox._billsTimer = saleBillsHook(side); } catch (e) { console.warn('bills', e); }
   }   // v2.59: naya bill par list saaf
   // v1.64: list ki line ka ✕ — bill se bhi kat jaye
-  namesBox.addEventListener('pointerdown', e => { if (e.target.closest('.scan-del')) e.preventDefault(); });
+  namesBox.addEventListener('pointerdown', e => { if (e.target.closest('.scan-del,.li-g,.li-neg')) e.preventDefault(); });
+  namesBox.addEventListener('click', e => {   // v2.95: line ka godam chip / ± wapsi
+    const gb = e.target.closest('[data-lgk]'); if (gb) { e.stopPropagation(); try { saleLineGodamHook?.(gb.dataset.lgk, Number(gb.dataset.lgb)); } catch {} scanBox._reload?.(); msg.textContent = '✓ Godam: ' + (gb.title || gb.textContent); return; }
+    const nb = e.target.closest('[data-neg]'); if (nb) { e.stopPropagation(); const k = nb.dataset.neg, it = scanItems.get(k); if (!it) return; const q = scanQty.get(k) || { pcs: 0, ctn: 0 };
+      const nq = (Number(q.pcs) || Number(q.ctn)) ? { pcs: -(Number(q.pcs) || 0), ctn: -(Number(q.ctn) || 0) } : { pcs: -1, ctn: 0 };
+      scanQty.set(k, nq); lastKey = k; lastScan = it; if (saleQtyHook) saleQtyHook(it, nq, k); showPad(); drawNames(true); msg.textContent = (nq.pcs < 0 || nq.ctn < 0) ? `↩ ${it.name} — WAPSI (minus)` : `✓ ${it.name} — wapis plus`; return; }
+  });
   // v2.58: list ki line par tap / ↑↓ = wo line chuno -> Pcs/Ctn pad aur Tadad usi par lagein
   const pickLine = k => { if (!k || !scanItems.has(k)) return; lastKey = k; lastScan = scanItems.get(k); showPad(); drawNames(true); };
-  namesBox.addEventListener('click', e => { if (e.target.closest('.scan-del,.li-in,.li-qty')) return;   // v2.69: khane par tap = sirf likhna (redraw nahi)
+  namesBox.addEventListener('click', e => { if (e.target.closest('.scan-del,.li-in,.li-qty,.li-g,.li-neg')) return;   // v2.69: khane par tap = sirf likhna (redraw nahi)
     const li = e.target.closest('li[data-k]'); if (li) { pickLine(li.dataset.k); kbLine = true; } });
   let kbLine = false, kbNum = '';
   // v2.67: list ki line ke khane — Shift / click = wahan jao, Tab = agla khana, Enter = lagao + wapas search. Scanner ke tez hindse = naya item.
   const liFocus = k => { const box = namesBox.querySelector(`li[data-k="${CSS.escape(k)}"] .li-in[data-u="pcs"]`) || namesBox.querySelector(`li[data-k="${CSS.escape(k)}"] .li-in`); if (box) { box.focus(); try { box.select(); } catch {} } };
   const liApply = (inp, redraw) => { const k = inp.dataset.li; if (!k || !scanItems.has(k)) return; const it = scanItems.get(k), li = inp.closest('li');
-    const val = u => { const x = li.querySelector(`.li-in[data-u="${u}"]`); return x ? Math.max(0, Number(String(x.value).replace(/[^0-9.]/g, '')) || 0) : 0; };
-    const q = { pcs: val('pcs'), ctn: Number(it.pack) > 1 ? Math.floor(val('ctn')) : 0 };
+    const val = u => { const x = li.querySelector(`.li-in[data-u="${u}"]`); return x ? Number(String(x.value).replace(/[^0-9.\-]/g, '')) || 0 : 0; };   // v2.95: minus (wapsi) bhi
+    const q = { pcs: val('pcs'), ctn: Number(it.pack) > 1 ? Math.trunc(val('ctn')) : 0 };
     scanQty.set(k, q); lastKey = k; lastScan = it; if (saleQtyHook) saleQtyHook(it, q, k);
     if (redraw) { showPad(); drawNames(true); } else { const L = lineOf(it, k), sp = li.querySelector(':scope > span'); if (sp) sp.innerHTML = `${esc(L.qtxt)}${L.rate ? ` x ${num(L.rate)} = <b>${num(L.amt)}</b>` : ''}`; } };
   let liT0 = 0, liLast = 0, liN = 0;
@@ -2002,7 +2002,7 @@ async function openScanner() {
   }, true);
   namesBox.addEventListener('input', e => { const inp = e.target.closest?.('.li-in'); if (inp) liApply(inp, false); });
   namesBox.addEventListener('focusout', e => { const inp = e.target.closest?.('.li-in'); if (inp && !namesBox.contains(e.relatedTarget)) { liApply(inp, true); } });
-  namesBox.addEventListener('pointerdown', e => { if (e.target.closest('.li-in,.scan-del')) return; const li = e.target.closest('li[data-k]'); if (li) { e.preventDefault(); pickLine(li.dataset.k); setTimeout(() => liFocus(li.dataset.k), 0); } });
+  namesBox.addEventListener('pointerdown', e => { if (e.target.closest('.li-in,.scan-del,.li-g,.li-neg')) return; const li = e.target.closest('li[data-k]'); if (li) { e.preventDefault(); pickLine(li.dataset.k); setTimeout(() => liFocus(li.dataset.k), 0); } });
   const lineKeys = () => [...namesBox.querySelectorAll('li[data-k]')].map(li => li.dataset.k);
   scanBox.addEventListener('keydown', e => {
     if (!saleRoot()) return;

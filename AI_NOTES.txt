@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.76.1, 2026-10-04 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.95.0, 2026-10-06 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2616,3 +2616,36 @@ photo + Falcon screenshot, milan) -> diesel average 5.5 se banta vs asal (tanki 
   FCM data msg {title,body,tag,link} (firebase-admin/messaging sendEachForMulticast) — app band ho tab bhi (firebase-messaging-sw).
 * happy-dom test: naya phera startR 100400 (pichhle se), bilty/kharcha/reading/tracker/diesel full -> milan ✅, 72.7 L banta vs 85,
   full-se-full avg 4.71, nichod nafa 7,100, band, hero 2 phera, collect window 2 bilty ✓.
+
+==================== v2.95.0 + RULES 2.33 + sale-post v1.8 + pos-sales-dekho v1.2 (manifest 2026-10-06.2) — 🧾 AAJ KE BILLS ====================
+Malik: PC aur mobile dono par "Aaj ke bills" — paid hara, unpaid (udhaar) laal; 📌 posted / ⏳ un-posted; kis PC ne kab banaya;
+sync time; tamam un-posted EK print (har bill alag hissa); un-posted bill (PC ka ho ya app ka) EDIT — posted edit NAHI; edit wahi
+scan screen par items ke saath khule; minus (wapsi) line se sale minus; har item ke aage godam chips (godam tab jaise).
+* sale.js: billsData() = app (appSales) + POS (posSales/{day}) ek list {id,src,saleNo,posId,total,cash,credit,status,cancelled,ps,
+  farq,createdAt,where,by,party}. billCls: fq farq (grey, sale nahi) / cx cancel / fl failed / wt intezar / pd paid / up udhaar.
+  mountBills(box): search, filter chips (Sab/Paid/Udhaar/Un-posted/Posted/PC/App, localStorage sam-bills-f), jama + udhaar,
+  "🔄 PC sync X pehle" (posSales/_sync; 3 min se purana = laal), bill tap = lines (posSaleLines/{SaleID}, cache) + ✏️ Edit
+  (sirf ps 1, cancel/farq nahi) + 🖨 Dobara print (app bill). 🖨 Un-posted (N) = report (salePdf -> printArea + openReportPreview:
+  kholo/bhejo/full screen). PC scan screen ka baayan panel = mountBills (setSaleBillsHook); mobile = 📋 button -> dialog.
+* Edit: editBill() lines cart mein (pcs = POS Qty, rate = POS rate, godam = GBranchID), editing {posId,saleNo,appId,credit,oldTotal}
+  draft mein bhi; laal patti "✏️ Bill # edit ho raha hai · ✕ Edit chhoro"; save = "✏️ Bill badlo" -> saveEdit() ->
+  saleEdits/{e…} {posId,saleNo,appId,mode,lines,total,cash,…,status new}; listenSaleEdit -> done ✅ / failed ❌ alert.
+  Edit mein: gate switch line godam nahi badalta, godam stock-kam rok nahi (PC jaanchta hai), mode badal nahi sakte.
+* Minus: line qty manfi (± Wapsi button / '-' likhna) — sale.js + scan screen (pos-stock li-neg). Total 0 mana; total < 0:
+  counter cash = total (wapas), wholesale cash 0. Scan screen line par godam chips li-g (data-lgk/lgb) -> setSaleLineGodamHook.
+  Bug fix: gShort/gLabel module scope par (pehle installSaleHooks ke andar -> ReferenceError, scan godam chips chhup jati thin).
+* pc/pos-sales-dekho.js v1.2: bills mein ps (DocStatusID), pc (SystemNotes "at PC:<host>" -> naam: DESKTOP-8BR23BF Mithu,
+  DESKTOP-KEIME1D Abdurehman, DESKTOP-Q1SLV77 Bilal; local-config pcNames se badlein), by; key mein SUM(DocStatusID) + MAX(UpdatedOn)
+  (post/edit par bhi dobara likhe); syncLines() -> posSaleLines/{SaleID} {day,no,at,lines[{i,n,q,r,g}]} sirf badle hue;
+  posSales/_sync {at} har 30 sec.
+* pc/sale-post.js v1.8: buildLines() alag (minus qty chalti); saleEdits listener (status new) -> handleEdit -> editSale():
+  POS mein bill dhoondo, SaleNo milao, DocStatusID 2 = "POST ho chuka" mana, 1 ke ilawa mana; wholesale: purana CashReceived naye
+  total se zyada ho to mana. Transaction: usp_Sale_InsertUpdate (wahi SaleID, SystemNotes + "Edited By:Blue Khata app"),
+  usp_SaleDetail_DeleteBySaleID, nayi lines usp_SaleDetail_InsertUpdate. Hifazat: SaleNo wahi, naya bill nahi bana (MAX SaleID),
+  lines ginti, DocStatusID 1, stock farq ya to bilkul theek (purana wapas + naya kata) ya bilkul nahi — warna ROLLBACK.
+  Done -> saleEdits status done + total; app bill ho to appSales lines/total/editedAt.
+* RULES 2.33: appSales total != 0 (minus bill), cash koi number; saleEdits create (owner/blueStaff/saleStaff, hasOnly fields,
+  status new, by = uid, posId int, lines 1..150, role); posSaleLines read.
+* manifest: sale-post.js, pos-sales-dekho.js + nt-print.js ka hash theek (pehle ghalat tha -> doctor update nahi karta tha).
+* happy-dom test: 4 bills (app udhaar un-posted, PC paid un-posted, PC udhaar posted, cancel) -> rang/ginti/jama/udhaar sahi,
+  sync "20 sec pehle", lines (minus line -150), posted = "edit band", un-posted report 2 bill, Edit -> cart 2 lines godam 1/3.
