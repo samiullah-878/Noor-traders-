@@ -2043,3 +2043,12 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .gp-settled{margin:8px 0 0;padding:9px 11px;border-radius:12px;background:#e7f8ee;color:#0f6b3d;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.gp-settled button{margin-left:auto;border:1px solid #b9e2cb;background:#fff;border-radius:10px;padding:4px 10px;color:#0f6b3d}
 .gf-rows{display:flex;flex-direction:column;gap:6px;margin:6px 0}.gf-row{display:grid;grid-template-columns:1fr 110px 36px;gap:6px;align-items:center}.gf-add{border:1px dashed #9fb0d0;background:#fff;border-radius:12px;padding:8px 12px;font-weight:800;color:#1d3b7a}
 .gp-norate{color:#b3261e}
+/* v2.96.1: 📒 driver ka khata */
+.gx-collect.gx-give{background:linear-gradient(135deg,#e8f5ee,#d4f0e0);border-color:#9fd8b6}.gx-collect.gx-give strong{color:#0f6b3d}
+.dk-head{border-radius:18px;padding:14px;color:#fff;background:linear-gradient(135deg,#7a4a00,#c98a12)}.dk-head.dena{background:linear-gradient(135deg,#0f6b3d,#1fb866)}.dk-head.saaf{background:linear-gradient(135deg,#1d3b7a,#3a2c8f)}
+.dk-head small{display:block;opacity:.85}.dk-head strong{display:block;font-size:2rem;font-weight:900;margin:2px 0}.dk-head span{font-size:.78rem;opacity:.85}
+.dk-list{display:flex;flex-direction:column;gap:6px}.dk-row{display:grid;grid-template-columns:52px 1fr auto auto;gap:8px;align-items:center;background:#fff;border:1px solid #e3e8f2;border-left:4px solid #9aa3b5;border-radius:14px;padding:9px 10px}
+.dk-row.phera{border-left-color:#c98a12;cursor:pointer}.dk-row.liya{border-left-color:#1e9e4a}.dk-row.diya{border-left-color:#d64545}.dk-row.salary{opacity:.7}
+.dk-d{font-weight:800;color:#5b6b8a;font-size:.82rem}.dk-t{font-size:.92rem;font-weight:700;color:#13244a;min-width:0}.dk-t small{display:block;font-weight:500;color:#6b7a99;font-size:.75rem;overflow-wrap:anywhere}
+.dk-a{text-align:right;font-weight:900;white-space:nowrap}.dk-a.plus{color:#8a5200}.dk-a.minus{color:#0f7a44}.dk-a small{display:block;font-weight:600;color:#8a96ad;font-size:.72rem}
+.dk-mini{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:8px;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.7);font-size:.85rem}.dk-now{font-size:1rem}

@@ -2889,3 +2889,16 @@ app mein lag jaye. Qist 140,000 + fixed salary nafe se nikal kar tay ho NAFA ya 
     wala raasta {wait:true} (list foran taza chahiye).
 * Test: happy-dom naqli data — 200 km/5.5=36.4 L x280 = 10,182 farzi, asal 38 L 10,830, farq 648, avg 5.26, mark ke baad sirf naya phera 5.26;
   qist/fixed hero; settle; setting save; parchi AI fill + rate. (app.dom.test.mjs is mahol mein purane version par bhi nahi chalti — happy-dom farq.)
+
+==================== App v2.96.1 + PC auto-backup v1.2 (manifest 2026-10-07.3) — 📒 DRIVER KA KHATA ====================
+User: upar "Driver se lena hai" 18,000 (bilty kiraya) dikha raha tha — asal 11,900 (kiraya − kharche − commission) aana chahiye; 5,000 le to
+baqaya agle din ke phere ke saath jure. "Driver ko diye": user ne "khata hi bana do" — default ADVANCE (khate mein), option SALARY (khate se bahar).
+* gaari.js driverLedger(): ev = phera +driverDe (key pKey), purana liya −(settled.amount ya col bilty kiraya) (key pKey|y), kind driver:
+  dir in = liya −, dir out (ya purana bina dir) = diya +, sal = 0. Running bal. balBefore(L,key).
+  Banner = L.bal (sab mahine; manfi = "Driver ko dena hai"), "Aakhri dafa liya". Tap / commission chip -> openDriverKhata (head + 💵 Driver
+  se liya + 👤 Driver ko diye + line ba line baqaya, phera line tap = phera). openDriverGet: raqam default = bal, "Baqaya X — agle phere ke saath".
+  openDriverPay: typ adv | sal. Phera page: "Is phere ka" + pichhla baqaya + abhi kul + 💵 button (purana "✅ le liya" hata; purane settled
+  dikhte aur ↩ wapas). Card: "💰 driver ka Rs X". PDF: kul baqaya + commission (driver ne rakhi).
+* FIX commOf: kiraya 0 (khali bilty) par commission 0 — fixed fi bilty par khali bilty bhi 1000 kaat rahi thi (07 Oct band phera).
+* pc/auto-backup.js v1.2: shaam notification ka "driver se lena" isi khate se (bilty col nahi). Server KHATA-DOCTOR 30 min mein le lega.
+* Test (happy-dom): 18,000 − 5,100 − 1,000 = 11,900; 5,000 liye -> 6,900; agla phera 8,000 -> kul 14,900.

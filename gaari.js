@@ -1,4 +1,6 @@
 // gaari.js — 🚚 GAARI KA HISAAB v3 (v2.94, 2026-10-06) — sab kuch "PHERA" ke gird
+// v2.96.1 (2026-10-07): 📒 DRIVER KA KHATA — har phera + (kiraya − kharche − commission), "💵 Driver se liya" − (adhoora bhi), "Driver ko diye"
+//   advance + (salary = khate se bahar); baqaya khud agle phere ke saath. Purane tick / "le liya" = liya. kind 'driver' {dir:'in'|'out', sal}.
 // v2.96.0 (2026-10-07): ⛽ FARZI DIESEL + TANKI KHATA — phere ka nafa = kiraya − kharche − commission − farzi diesel (km ÷ average × rate);
 //   asal diesel phere mein plus/minus NAHI, tanki khata mein: tanki full se full ka cycle (farzi vs asal, farq, asal average, "✓ farq mark" =
 //   wohi average app mein). Dashboard: fuel dial + tanki (cfg.tankL 76 L) + meter. Mahina: safi nafa − fixed kharche (cfg.fixed) − qist (cfg.qist)
@@ -52,7 +54,7 @@ export function renderGaari() {
 }
 
 // ---------- hisaab ----------
-const commOf = b => b.comm != null && b.comm !== '' ? N(b.comm) : (cfg.commType === 'fixed' ? N(cfg.commVal) : r2(N(b.kiraya) * N(cfg.commVal) / 100));
+const commOf = b => b.comm != null && b.comm !== '' ? N(b.comm) : !(N(b.kiraya) > 0) ? 0 : (cfg.commType === 'fixed' ? N(cfg.commVal) : r2(N(b.kiraya) * N(cfg.commVal) / 100));   // v2.96.1: khali bilty (kiraya 0) par commission nahi
 const avgOf = () => N(cfg.avg) || 5.5;
 // ---------- v2.96: tanki / diesel ----------
 const tankCap = () => N(cfg.tankL) || 76;
@@ -112,6 +114,19 @@ function odoNow() {   // aakhri meter reading + us ke baad ke km (Falcon)
   for (const e of ev) { if (e.set) { odo = e.set; est = false; } else if (e.end) { odo = e.end; est = false; } else if (e.km && (odo || e.start)) { odo = Math.max(odo, e.start) + e.km; est = true; } }
   return { odo: Math.round(odo), est };
 }
+// v2.96.1: 📒 DRIVER KA KHATA — chalta hisaab (sab mahine)
+function driverLedger() {
+  const ev = [];
+  for (const p of pheras()) { const c = pc(p);
+    if (c.driverDe) ev.push({ key: pKey(p), date: p.date, t: 'phera', amt: c.driverDe, p, c });
+    const got = p.settled ? N(p.settled.amount) : c.colRs;   // purana tareeqa: bilty tick / "le liya"
+    if (got) ev.push({ key: pKey(p) + '|y', date: p.date, t: 'liya', amt: -got, old: true, p }); }
+  for (const r of rows) if (r.kind === 'driver') ev.push(r.dir === 'in' ? { key: pKey(r), date: r.date, t: 'liya', amt: -N(r.amount), r } : r.sal ? { key: pKey(r), date: r.date, t: 'salary', amt: 0, r } : { key: pKey(r), date: r.date, t: 'diya', amt: N(r.amount), r });
+  ev.sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0);
+  let bal = 0; for (const e of ev) { bal = r2(bal + e.amt); e.bal = bal; }
+  return { ev, bal, lastIn: [...ev].reverse().find(e => e.t === 'liya') || null };
+}
+const balBefore = (L, key) => { let b = 0; for (const e of L.ev) { if (e.key >= key) break; b = e.bal; } return b; };
 function oilNow() {   // 🛢 mobil: aakhri badalne ke baad kitne km
   const O = rows.filter(r => r.kind === 'kharch' && r.oil).sort((a, b) => pKey(a) < pKey(b) ? -1 : 1), last = O[O.length - 1];
   if (!last) return null;
@@ -209,13 +224,14 @@ function paint() {
       ${err ? `<p class="gx-err">⚠ ${/permission/i.test(err) ? 'Ijazat nahi — Firebase mein Rules 2.32 publish karein' : esc(err)}</p>` : ''}
     </div>
     <button type="button" class="gx-new" data-gp-new="1">＋ Naya phera${day ? ' (' + esc(day.slice(8)) + ' tareekh)' : ''}</button>
-    ${s.pending ? `<button type="button" class="gx-collect" data-gr-open="collect"><b>💰 Driver se lena hai</b><strong>${rs(s.pending)}</strong><small>${s.pendList.length} bilty · tap = jo le liya tick karein</small></button>` : ''}
+    ${(() => { const L = driverLedger(); if (Math.abs(L.bal) < 1) return ''; const li = L.lastIn;
+      return `<button type="button" class="gx-collect${L.bal < 0 ? ' gx-give' : ''}" data-gr-open="collect"><b>${L.bal > 0 ? '💰 Driver se lena hai' : '👤 Driver ko dena hai'}</b><strong>${rs(Math.abs(L.bal))}</strong><small>${li ? 'Aakhri dafa liya ' + rs(-li.amt) + ' · ' + esc(dmy(li.date)) + ' · ' : ''}tap = khata / 💵 paisa liya</small></button>`; })()}
     ${tankCard()}
     <div class="gx-chips">
       ${chip('km', '🛣️', s.km ? num(s.km) + ' km' : '—', 'Chali · tracker ' + (s.tk ? num(s.tk) : '—'))}
       ${(() => { const o = oilNow(); return o ? chip('oil', '🛢', num(o.km) + ' / ' + num(o.every), o.lvl === 'bad' ? 'Mobil badalwao!' : 'km · Mobil', o.lvl === 'bad' ? 'gx-bad' : o.lvl === 'warn' ? 'gx-warn' : '') : chip('oil', '🛢', '—', 'Mobil kab badla? likhein'); })()}
       ${chip('kharch', '🧾', rs(s.kh), 'Kharche · phera-wise')}
-      ${chip('driver', '👤', rs(s.comm), 'Commission · baqi ' + rs(s.driverBaqi))}
+      ${chip('driver', '👤', rs(s.comm), 'Commission · driver ne rakhi')}
     </div>
     <details class="gx-calbox"${day ? ' open' : ''}><summary>📅 Calendar — tareekh chunein${day ? ` · <b>${esc(day.slice(8))} ${esc(monthName(month))}</b> <a data-gd="">sab dikhao</a>` : ''}</summary>${calendar()}</details>
     <div class="gx-acts"><button type="button" data-gr-pdf="1">⇩ PDF report</button>${s.old.length ? `<button type="button" data-gr-open="old">📋 Purani entries ${s.old.length}</button>` : ''}${own ? '<button type="button" data-gr-add="driver">👤 Driver ko diye</button><button type="button" data-gr-cfg="1">⚙ Setting</button>' : ''}</div>
@@ -225,7 +241,7 @@ function paint() {
 }
 function cardHTML(p) {
   const c = pc(p), d = String(p.date || '').slice(8, 10) + ' ' + (MONTHS[Number(String(p.date).slice(5, 7)) - 1] || '');
-  const warn = [!c.kmOk ? '📍 km farq' : '', c.lena > 0 ? '💰 ' + rs(c.lena) + ' lena' : '', p.settled ? '✅ hisaab ho gaya' : ''].filter(Boolean);
+  const warn = [!c.kmOk ? '📍 km farq' : '', c.driverDe ? '💰 driver ka ' + rs(c.driverDe) : ''].filter(Boolean);
   return `<button type="button" class="gp-card${p.status === 'closed' ? ' closed' : ''}" data-gp="${esc(p.id)}">
     <span class="gp-d"><b>${esc(d)}</b><small>${p.status === 'closed' ? '✅ band' : '🟢 khula'}</small></span>
     <span class="gp-m"><b>${esc(c.routes.join(' · ') || 'Bilty abhi nahi')}</b><small>${c.km ? num(c.km) + ' km' + (c.kmSrc === 'tracker' ? ' (tracker)' : '') : 'km baqi'} · ⛽ ${num(c.shouldL, 1)} L farzi · kharche ${rs(c.kh)}</small>${warn.length ? `<em>${warn.join(' · ')}</em>` : ''}</span>
@@ -336,7 +352,9 @@ function drawPhera() {
     <p class="gp-tot ${c.nafa >= 0 ? 'up' : 'down'}"><span>${c.nafa >= 0 ? 'BACHAT' : 'NUQSAN'}</span><b>${rs(Math.abs(c.nafa))}</b></p>
     ${!c.dL && c.shouldRs ? `<p class="gp-mini">Is phere se bachat ${rs(c.nafa)} — diesel abhi nahi dalwaya, farzi ${rs(c.shouldRs)} kaat liya (tanki khata mein jama)</p>` : ''}
     ${cur.settled ? `<p class="gp-settled">✅ Driver se hisaab ho gaya · ${rs(cur.settled.amount)} · ${esc(new Date(N(cur.settled.at)).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit' }))}${own ? ' <button type="button" data-gp-unsettle="1">↩ wapas</button>' : ''}</p>`
-      : c.kiraya ? `<div class="gp-pend"><p>💰 Driver se lena: <b>${rs(c.lena)}</b></p><small>Kiraya ${rs(c.kiraya)} − kharche ${rs(c.kh)} − commission ${rs(c.comm)}${c.colRs ? ` − pehle le chuke ${rs(c.colRs)}` : ''} · is mein <b>safi nafa ${rs(c.nafa)}</b> + tanki ke liye farzi ${rs(c.shouldRs)}</small>${own ? `<button type="button" class="gp-settle" data-gp-settle="1">✅ Driver se ${rs(c.lena)} le liya</button>` : ''}</div>` : ''}
+      : c.driverDe ? (() => { const L = driverLedger(), before = balBefore(L, pKey(cur));
+        return `<div class="gp-pend"><p>💰 Is phere ka driver se: <b>${rs(c.driverDe)}</b></p><small>Kiraya ${rs(c.kiraya)} − kharche ${rs(c.kh)} − commission ${rs(c.comm)} · is mein <b>safi nafa ${rs(c.nafa)}</b> + tanki ke liye farzi ${rs(c.shouldRs)}</small>
+        <div class="dk-mini"><span>Pichhla baqaya <b>${rs(before)}</b></span><span>Abhi kul lena <b>${rs(L.bal)}</b></span></div>${own ? `<button type="button" class="gp-settle" data-gp-get="1">💵 Driver se paisa liya</button>` : ''}</div>`; })() : ''}
   </div>
   <label>Note${inp('note', cur.note, 'Kuch likhna ho', 'text')}</label>
   <div class="gp-foot">${cur.status === 'closed' ? (own ? '<button type="button" data-gst="open">🔓 Dobara kholein</button>' : '<span class="gp-mini">✅ Phera band — sirf malik badal sakta hai</span>') : '<button type="button" class="gp-close" data-gst="closed">✅ Phera band karein</button>'}${own ? '<button type="button" class="gp-del" data-gp-del="1">🗑 Phera hatao</button>' : ''}</div>`;
@@ -383,6 +401,7 @@ function wirePhera(box) {
       if (!confirm(`Driver se ${rs(c.lena)} le liye?\n(sab biltiyan "le liya" ho jayengi, commission ${rs(c.comm)} driver ne rakh li)`)) return;
       (cur.bilties || []).forEach(b => { if (!b.col) { b.col = true; b.colAt = Date.now(); } });
       save({ bilties: cur.bilties, settled: { at: Date.now(), amount: Math.round(c.lena), comm: Math.round(c.comm), by: uidOf() } }); drawPhera(); notice('✅ ' + rs(c.lena) + ' le liye'); return; }
+    if (e.target.closest('[data-gp-get]') && cur && isOwner()) { closeModal(); setTimeout(openDriverGet, 30); return; }
     if (e.target.closest('[data-gp-unsettle]') && cur && isOwner()) { if (!confirm('Hisaab wapas kholein?')) return; save({ settled: null }); drawPhera(); return; }
     if (e.target.closest('[data-gt-open]')) { closeModal(); setTimeout(openTank, 30); return; }
     if (e.target.closest('[data-gp-del]') && cur) { if (!confirm('Poora phera (sab biltiyan, kharche, diesel) hata dein?')) return; const id = cur.id; clearTimeout(curTimer); curTimer = null; rows = rows.filter(r => r.id !== id); cloud.delGaari(id).catch(er => notice('Nahi hua: ' + (er?.message || er))); closeModal(); notice('Phera hata diya'); }
@@ -482,10 +501,7 @@ async function photoTrips(files) {
 function openDetail(k) {
   const s = monthCalc(), own = isOwner();
   const kv = arr => `<div class="gx-kv">${arr.map(([a, b]) => `<p><span>${a}</span><b>${b}</b></p>`).join('')}</div>`;
-  if (k === 'collect') {
-    modal('💰 Driver se lena hai', `<div class="gx-win">${kv([['Kul', rs(s.pending)], ['Biltiyan', s.pendList.length]])}<div class="gr-list">${s.pendList.map(({ p, b }) => `<div class="gr-row"><span class="gr-d">${esc(String(p.date).slice(8))} ${esc(MONTHS[Number(String(p.date).slice(5, 7)) - 1] || '')}</span><span class="gr-t">${esc(b.from || '?')} → ${esc(b.to || '?')}<small>${esc(b.party || '')}</small></span><span class="gr-v">${rs(b.kiraya)}</span>${own ? `<button type="button" class="gk-chip" data-gcol="${esc(p.id)}|${esc(b.id)}">✓ Le liya</button>` : ''}</div>`).join('') || '<p class="gr-empty">Sab le liya ✅</p>'}</div></div>`);
-    return;
-  }
+  if (k === 'collect' || k === 'driver') { openDriverKhata(); return; }
   if (k === 'kharch') {
     const P = s.pheras;
     modal('🧾 Kharche — phera-wise', `<div class="gx-win">${kv(Object.entries(s.cat).sort((a, b) => b[1] - a[1]).map(([a, b]) => [esc(a), rs(b)]).concat([['Kul', rs(s.kh)]]))}${P.map(p => { const c = pc(p); return (p.kharche || []).length ? `<div class="gp-kcard" data-gp="${esc(p.id)}"><b>${esc(String(p.date).slice(8))} ${esc(MONTHS[Number(String(p.date).slice(5, 7)) - 1])} · ${esc(c.routes.join(' · '))}</b><small>${(p.kharche || []).map(x => esc(x.n) + ' ' + num(x.a)).join(' · ')}</small><em>${rs(c.kh)}</em></div>` : ''; }).join('')}</div>`);
@@ -495,11 +511,6 @@ function openDetail(k) {
   if (k === 'oil') { openOil(); return; }
   if (k === 'km') {
     modal('🛣️ Km — phera-wise', `<div class="gx-win">${kv([['Km (meter, warna Falcon)', num(s.km)], ['Falcon km', s.tk ? num(s.tk) : '—'], ['Farzi diesel', num(s.shouldL, 1) + ' L · ' + rs(s.farziRs)], ['Average (setting)', num(avgOf(), 2) + ' km/L']])}${s.pheras.map(p => { const c = pc(p); return `<div class="gp-kcard${!c.kmOk ? ' bad' : ''}" data-gp="${esc(p.id)}"><b>${esc(dmy(p.date))} · ${esc(c.routes.join(' · '))}</b><small>${c.kmSrc === 'tracker' ? 'Falcon ' + num(c.km) + ' km (meter nahi)' : 'Meter ' + num(c.km) + ' km'} · tracker ${c.tk ? num(c.tk) : '—'} · farzi ${num(c.shouldL, 1)} L / ${rs(c.shouldRs)}</small><em>${c.kmOk ? '✓' : '❌ ' + num(Math.abs(c.kmDiff)) + ' km'}</em></div>`; }).join('')}</div>`);
-    return;
-  }
-  if (k === 'driver') {
-    const D = rows.filter(r => r.kind === 'driver').sort((a, b) => String(b.date).localeCompare(String(a.date)));
-    modal('👤 Driver', `<div class="gx-win">${kv([['Is mahine commission', rs(s.comm)], ['Kul baqaya (sab mahine)', rs(s.driverBaqi)], ['Driver se kiraya lena', rs(s.pending)]])}<div class="gr-list">${D.map(r => `<div class="gr-row"><span class="gr-d">${esc(r.date)}</span><span class="gr-t">👤 Diye${r.note ? ' · ' + esc(r.note) : ''}</span><span class="gr-v">${rs(r.amount)}</span>${own ? `<button type="button" class="gr-x" data-gr-del="${esc(r.id)}">✕</button>` : ''}</div>`).join('')}</div></div>`);
     return;
   }
   if (k === 'old') {
@@ -594,11 +605,38 @@ function openOil() {
 
 // ---------- chhote forms (driver ko diye / setting) ----------
 const field = (name, label, type = 'number', val = '', extra = '') => `<label>${label}<input name="${name}" type="${type}" ${type === 'number' ? 'inputmode="decimal" step="any"' : ''} value="${esc(val)}" ${extra}></label>`;
+function openDriverKhata() {
+  const L = driverLedger(), own = isOwner(), lab = { phera: '🚚 Phera', liya: '💵 Driver se liya', diya: '👤 Driver ko diye', salary: '👤 Salary / inaam' };
+  modal('📒 Driver ka khata', `<div class="gx-win dk-win">
+    <div class="dk-head ${L.bal > 0 ? 'lena' : L.bal < 0 ? 'dena' : 'saaf'}"><small>${L.bal > 0 ? 'Driver se lena hai' : L.bal < 0 ? 'Driver ko dena hai' : 'Hisaab saaf'}</small><strong>${rs(Math.abs(L.bal))}</strong>
+      <span>Har phera: kiraya − kharche − commission · paisa liya to kam · baqaya agle phere ke saath</span></div>
+    ${own ? `<div class="gt-btns"><button type="button" class="gt-full" data-dk-get="1">💵 Driver se liya</button><button type="button" data-gr-add="driver">👤 Driver ko diye</button></div>` : ''}
+    <div class="dk-list">${L.ev.slice().reverse().slice(0, 80).map(e => `<div class="dk-row ${e.t}"${e.p ? ` data-gp="${esc(e.p.id)}"` : ''}>
+      <span class="dk-d">${esc(dmy(e.date))}</span>
+      <span class="dk-t">${lab[e.t]}${e.t === 'phera' ? `<small>${esc(e.c.routes.join(' · '))} · kiraya ${rs(e.c.kiraya)} − kharche ${rs(e.c.kh)} − comm ${rs(e.c.comm)}</small>` : ''}${e.old ? '<small>bilty tick / le liya (purana)</small>' : ''}${e.r?.note ? `<small>${esc(e.r.note)}</small>` : ''}</span>
+      <span class="dk-a ${e.amt > 0 ? 'plus' : e.amt < 0 ? 'minus' : ''}">${e.amt > 0 ? '+' : e.amt < 0 ? '−' : ''}${rs(Math.abs(e.amt || N(e.r?.amount)))}<small>baqaya ${rs(e.bal)}</small></span>
+      ${own && e.r ? `<button type="button" class="gr-x" data-gr-del="${esc(e.r.id)}">✕</button>` : ''}</div>`).join('') || '<p class="gr-empty">Abhi koi hisaab nahi</p>'}</div></div>`);
+}
+function openDriverGet() {
+  const L = driverLedger();
+  modal('💵 Driver se paisa liya', `<form id="grForm" class="gr-form"><p class="dk-now">Abhi lena hai: <b>${rs(Math.max(0, L.bal))}</b></p>
+    ${field('amount', 'Kitne liye (Rs)', 'number', L.bal > 0 ? Math.round(L.bal) : '', 'required')}<p class="gr-ai" id="dkLeft"></p>
+    ${field('date', 'Tareekh', 'date', day || today())}${field('note', 'Note', 'text', '', 'placeholder="jaise: baqi kal dega"')}
+    <button type="submit" class="primary">💾 Save</button></form>`);
+  const f = $('grForm'), show = () => { const left = r2(L.bal - N(f.elements.amount.value)); $('dkLeft').textContent = left > 0 ? `Baqaya ${rs(left)} — agle phere ke saath jur jayega` : left < 0 ? `${rs(-left)} zyada — driver ko dena ban jayega` : '✓ Hisaab saaf'; };
+  f.elements.amount.addEventListener('input', show); show();
+  f.onsubmit = e => { e.preventDefault(); const o = Object.fromEntries(new FormData(f)); const amt = N(o.amount); if (!(amt > 0)) return;
+    const id = cloud.newGaariId(), d = { kind: 'driver', dir: 'in', date: String(o.date || today()).slice(0, 10), amount: amt, note: String(o.note || '').slice(0, 200), by: uidOf(), byName: byName() || '', at: Date.now() };
+    rows.push({ ...d, id }); cloud.putGaari(id, d).catch(er => notice('❌ ' + (er?.message || er))); closeModal();
+    const left = r2(L.bal - amt); notice(`✓ ${rs(amt)} liye${left > 0 ? ' · baqaya ' + rs(left) : left < 0 ? ' · driver ko ' + rs(-left) + ' dena' : ' · hisaab saaf'}`); paint(); };
+}
 function openDriverPay() {
-  modal('👤 Driver ko diye', `<form id="grForm" class="gr-form">${field('date', 'Tareekh', 'date', day || today())}${field('amount', 'Raqam (Rs)', 'number', '', 'required')}${field('note', 'Note', 'text', '', 'placeholder="commission / advance"')}<button type="submit" class="primary">💾 Save</button></form>`);
+  modal('👤 Driver ko diye', `<form id="grForm" class="gr-form">${field('date', 'Tareekh', 'date', day || today())}${field('amount', 'Raqam (Rs)', 'number', '', 'required')}
+    <label>Kis liye?<select name="typ"><option value="adv">Advance / kharche ke paise — driver ke khate mein jurega</option><option value="sal">Salary / inaam — khate se bahar (salary fixed kharche mein pehle se)</option></select></label>
+    ${field('note', 'Note', 'text', '', 'placeholder="jaise: toll ke liye"')}<button type="submit" class="primary">💾 Save</button></form>`);
   const f = $('grForm');
   f.onsubmit = e => { e.preventDefault(); const o = Object.fromEntries(new FormData(f)); if (!(N(o.amount) > 0)) return;
-    const id = cloud.newGaariId(), d = { kind: 'driver', date: String(o.date).slice(0, 10), amount: N(o.amount), note: String(o.note || '').slice(0, 200), by: uidOf(), byName: byName() || '', at: Date.now() };
+    const id = cloud.newGaariId(), d = { kind: 'driver', dir: 'out', sal: o.typ === 'sal', date: String(o.date).slice(0, 10), amount: N(o.amount), note: String(o.note || '').slice(0, 200), by: uidOf(), byName: byName() || '', at: Date.now() };
     rows.push({ ...d, id }); cloud.putGaari(id, d).catch(er => notice('❌ ' + (er?.message || er))); closeModal(); notice('✓ Save'); paint(); };
 }
 function openCfg() {
@@ -635,7 +673,7 @@ function makePdf() {
   pdf(`🚚 Gaari ${cfg.no || ''} — ${monthName(month)}`, `<h1>NOOR TRADERS</h1><h2>Gaari ${esc(cfg.no || '')} — ${esc(day ? day : monthName(month))}${cfg.driver ? ' · Driver: ' + esc(cfg.driver) : ''}</h2>
     <table class="iv-tbl"><tbody>${line('Pheray', s.pheras.length)}${line('Kiraya', rs(s.kiraya))}${line('− Kharche', rs(s.kh))}${line('− Driver commission', rs(s.comm))}${line('− Diesel farzi (' + num(s.shouldL, 1) + ' L)', rs(s.farziRs))}
     ${line('<b>Pheron ki bachat</b>', '<b>' + rs(s.safi) + '</b>')}${s.fixedL.map(x => line('− ' + esc(x.n), rs(x.a))).join('')}${s.tankFarq ? line(s.tankFarq > 0 ? '− Tanki farq (zyada laga)' : '+ Tanki bachat', rs(Math.abs(s.tankFarq))) : ''}${s.qist ? line('− Qist (' + rs(s.qistPaid) + ' pura, ' + rs(s.qistBaqi) + ' baqi)', rs(s.qist)) : ''}
-    ${line('<b>' + (s.nafa >= 0 ? 'NAFA' : 'GHATA') + '</b>', '<b>' + rs(Math.abs(s.nafa)) + '</b>')}${line('Km (meter / Falcon)', num(s.km) + ' / ' + (s.tk ? num(s.tk) : '—'))}${line('Asal diesel dalwaya', rs(s.fillRs))}${line('Average', s.realAvg ? num(s.realAvg, 2) + ' (setting ' + num(avgOf(), 2) + ')' : num(avgOf(), 2) + ' (setting)')}${line('Driver se lena', rs(s.pending))}${line('Driver baqaya', rs(s.driverBaqi))}</tbody></table>
+    ${line('<b>' + (s.nafa >= 0 ? 'NAFA' : 'GHATA') + '</b>', '<b>' + rs(Math.abs(s.nafa)) + '</b>')}${line('Km (meter / Falcon)', num(s.km) + ' / ' + (s.tk ? num(s.tk) : '—'))}${line('Asal diesel dalwaya', rs(s.fillRs))}${line('Average', s.realAvg ? num(s.realAvg, 2) + ' (setting ' + num(avgOf(), 2) + ')' : num(avgOf(), 2) + ' (setting)')}${(() => { const L = driverLedger(); return line(L.bal >= 0 ? 'Driver se lena (kul baqaya)' : 'Driver ko dena', rs(Math.abs(L.bal))); })()}${line('Commission (driver ne rakhi)', rs(s.comm))}</tbody></table>
     <table class="iv-tbl"><thead><tr><th>Tareekh</th><th>Biltiyan</th><th>Kharche</th><th>Km</th><th>Diesel</th><th>Nafa</th></tr></thead><tbody>
     ${s.pheras.map(p => { const c = pc(p); return `<tr><td>${esc(p.date)}</td><td>${(p.bilties || []).map(b => `${esc(b.from)}→${esc(b.to)} ${rs(b.kiraya)}${b.col ? '' : ' (lena)'}`).join('<br>')}</td><td>${(p.kharche || []).map(k => esc(k.n) + ' ' + num(k.a)).join('<br>')}<br><b>${rs(c.kh)}</b></td><td class="iv-n">${num(c.km)}${c.tk ? '<br>trk ' + num(c.tk) : ''}${c.kmOk ? '' : ' ❌'}</td><td class="iv-n">farzi ${num(c.shouldL, 1)} L<br>${rs(c.shouldRs)}${c.dL ? '<br>asal ' + num(c.dL, 1) + ' L' : ''}</td><td class="iv-n"><b>${rs(c.nafa)}</b></td></tr>`; }).join('')}</tbody></table>
     <table class="iv-tbl"><thead><tr><th>Kharcha</th><th>Kul</th></tr></thead><tbody>${Object.entries(s.cat).sort((a, b) => b[1] - a[1]).map(([a, b]) => line(esc(a), rs(b))).join('')}</tbody></table>`);
@@ -655,6 +693,7 @@ document.addEventListener('click', e => {
   if (e.target.closest?.('[data-gr-cfg]')) { if (isOwner()) openCfg(); return; }
   if (e.target.closest?.('[data-gr-pdf]')) { makePdf(); return; }
   if (e.target.closest?.('[data-gt-open]')) { openTank(); return; }
+  if (e.target.closest?.('[data-dk-get]')) { if (isOwner()) openDriverGet(); return; }
   const gf = e.target.closest?.('[data-gt-fill]'); if (gf) { openFill(gf.dataset.gtFill === 'full'); return; }
   const gm = e.target.closest?.('[data-gt-mark]'); if (gm) { markCycle(gm.dataset.gtMark); return; }
   const x = e.target.closest?.('[data-gr-del]'); if (x) { if (!confirm('Ye entry hata dein?')) return; rows = rows.filter(r => r.id !== x.dataset.grDel); cloud.delGaari(x.dataset.grDel).catch(er => notice('Nahi hua: ' + (er?.message || er))); x.closest('.gr-row')?.remove(); }
