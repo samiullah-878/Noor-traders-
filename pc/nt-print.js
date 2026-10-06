@@ -28,7 +28,7 @@ const { execFile, execFileSync } = require('child_process');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
-const VER = '1.11';
+const VER = '1.12';
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
@@ -293,6 +293,10 @@ async function selfUpdate() {
   updBusy = true;
   try {
     const m = JSON.parse((await getBuf(UPD_BASE + 'manifest.json?t=' + Date.now())).toString('utf8'));
+    // v1.12: sirf NAYA manifest (GitHub CDN kabhi purana deta hai -> pehle wapas purani file aa jati thi)
+    const vn = v => { const m2 = String(v || '').match(/^(\d{4}-\d{2}-\d{2})\.(\d+)$/); return m2 ? m2[1] + '.' + m2[2].padStart(4, '0') : ''; };
+    let localV = ''; try { localV = JSON.parse(fs.readFileSync(path.join(DIR, 'manifest.json'), 'utf8')).version || ''; } catch {}
+    if (localV && vn(m.version) <= vn(localV)) return;
     const want = UPD_FILES.filter(f => m.files && m.files[f] && (() => { try { return sha256(fs.readFileSync(path.join(DIR, f))) !== m.files[f]; } catch { return true; } })());
     if (!want.length) return;
     const got = [];
@@ -302,6 +306,7 @@ async function selfUpdate() {
       got.push([f, b]);
     }
     for (const [f, b] of got) { const tmp = path.join(DIR, f + '.new'); fs.writeFileSync(tmp, b); fs.renameSync(tmp, path.join(DIR, f)); }
+    try { fs.writeFileSync(path.join(DIR, 'manifest.json'), JSON.stringify(m, null, 2)); } catch {}   // v1.12
     log(`🔄 KHUD-UPDATE: ${got.map(x => x[0]).join(', ')} naye (manifest ${m.version || '?'}) — print khatam hote hi dobara shuru`);
     const bye = () => { if (busy.size) { setTimeout(bye, 2000); return; } queue.then(() => process.exit(0)); };
     bye();
