@@ -1,5 +1,6 @@
 // ============================================================
 //  sale-post.js — Blue Khata app ki "Nayi Sale" -> POS Sale bill (v1)
+//  v1.8 (2026-10-06): ✏️ BILL EDIT (saleEdits) — sirf UN-POSTED (DocStatusID 1) POS bill, wahi SaleID / SaleNo; minus (wapsi) lines
 //  v1.6 (2026-10-04): rasid + gate pass ke baad har crate ka TOKEN bhi usi counter printer par (nt-parchi.js saanjha)
 //  v1.5.2 (2026-10-04): counter 'local' / 'pc:<id>' par print NAHI (app / NT-PRINT khud chhapte hain) — pehle local par bhi PC chhapta tha
 //
@@ -59,6 +60,7 @@ SQL_CONFIG.options = { ...(SQL_CONFIG.options || {}), useUTC: false };
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore();
 const saleCol = db.collection('businesses').doc(BUSINESS_ID).collection('appSales');
+const editCol = db.collection('businesses').doc(BUSINESS_ID).collection('saleEdits');   // v1.8
 
 let pool = null;
 async function getPool() {
@@ -92,6 +94,48 @@ async function basics(p) {
   return base;
 }
 
+// v2.95: lines (POS rate / cost) — naya bill aur EDIT dono isi se
+async function buildLines(p, s, godam, wholesale, staff) {
+  // lines: POS se item + rate + cost — v1.2: SAB items EK sawal mein (tez)
+  const want = (s.lines || []).filter(l => r3(l.qty) !== 0).map(l => ({ id: Number(l.id), g: Number(l.godam) || godam }));
+  const itemMap = new Map();
+  if (want.length) {
+    const ids = [...new Set(want.map(w => w.id))].filter(Number.isFinite), gs = [...new Set(want.map(w => w.g))];
+    const rows = (await p.request().query(`
+      SELECT i.ItemID, i.ItemName, i.PackQty, r.BranchID, r.SaleRate, r.SaleRate2, r.SaleRate3, r.SaleRateSize, r.PurchaseRate, r.CurrStock
+      FROM dbo.Items i JOIN dbo.ItemBranchRate r ON r.ItemID = i.ItemID
+      WHERE i.ItemID IN (${ids.join(',')}) AND r.BranchID IN (${gs.join(',')})`)).recordset;
+    rows.forEach(r => itemMap.set(r.ItemID + '|' + r.BranchID, r));
+  }
+  const lines = [];
+  for (const l of s.lines || []) {
+    const qty = r3(l.qty);
+    if (!qty) continue;   // v2.95: minus (wapsi) line bhi
+    const lg = Number(l.godam) || godam;
+    const it = itemMap.get(Number(l.id) + '|' + lg);
+    if (!it) throw new Error(`Item nahi mila: ${l.name} (${l.id}) godam ${lg}`);
+    const posRate = wholesale ? (Number(it.SaleRate3) || Number(it.SaleRateSize) || Number(it.SaleRate) || 0) : (Number(it.SaleRate) || 0);
+    if (Number(it.CurrStock) < qty) log(`  Stock kam: ${String(it.ItemName).trim()} (stock ${it.CurrStock}, sale ${qty})`);
+    const base = { ItemID: it.ItemID, name: String(it.ItemName).trim(), cost: Number(it.PurchaseRate) || 0, godam: lg, pack: Number(it.PackQty) || 0 };
+    if (staff && !wholesale) {
+      // v1.5: POS ki Sale screen jaisa — poore carton "Cotton Rate" (SaleRate fi piece), khule piece "Peice Rate" (SaleRate2)
+      const pk = Number(it.PackQty) || 0;
+      const ctnRate = r2(Number(it.SaleRate) || 0), pcsRate = r2(Number(it.SaleRate2) || Number(it.SaleRate) || 0);
+      // app v1.61 line ki ikai batati hai (unit 'ctn' / 'pcs'); purani app (unit nahi) -> pack se khud taqseem
+      const cq = l.unit === 'ctn' ? qty : l.unit === 'pcs' ? 0 : (pk > 1 && qty > 0 ? Math.floor(qty / pk + 1e-9) * pk : 0), pq = r3(qty - cq);
+      if (cq) lines.push({ ...base, qty: cq, rate: ctnRate });
+      if (pq) lines.push({ ...base, qty: pq, rate: pcsRate });
+    } else {
+      const rate = r2(staff ? posRate : (Number(l.rate) >= 0 ? Number(l.rate) : posRate));
+      lines.push({ ...base, qty, rate });
+    }
+  }
+  if (!lines.length) throw new Error('Bill mein koi item nahi');
+  const total = r2(lines.reduce((n, l) => n + l.qty * l.rate, 0));
+  const cogs = lines.reduce((n, l) => n + l.qty * l.cost, 0);
+  return { lines, total, cogs };
+}
+
 // ---- ek sale POS mein ----
 async function postSale(s) {
   const p = await getPool();
@@ -112,44 +156,8 @@ async function postSale(s) {
   const godam = Number(s.godam) || 1, branch = Number(s.branch) || 1;
   const staff = s.role !== 'owner';
 
-  // lines: POS se item + rate + cost — v1.2: SAB items EK sawal mein (tez)
-  const want = (s.lines || []).filter(l => r3(l.qty) > 0).map(l => ({ id: Number(l.id), g: Number(l.godam) || godam }));
-  const itemMap = new Map();
-  if (want.length) {
-    const ids = [...new Set(want.map(w => w.id))].filter(Number.isFinite), gs = [...new Set(want.map(w => w.g))];
-    const rows = (await p.request().query(`
-      SELECT i.ItemID, i.ItemName, i.PackQty, r.BranchID, r.SaleRate, r.SaleRate2, r.SaleRate3, r.SaleRateSize, r.PurchaseRate, r.CurrStock
-      FROM dbo.Items i JOIN dbo.ItemBranchRate r ON r.ItemID = i.ItemID
-      WHERE i.ItemID IN (${ids.join(',')}) AND r.BranchID IN (${gs.join(',')})`)).recordset;
-    rows.forEach(r => itemMap.set(r.ItemID + '|' + r.BranchID, r));
-  }
-  const lines = [];
-  for (const l of s.lines || []) {
-    const qty = r3(l.qty);
-    if (!(qty > 0)) continue;
-    const lg = Number(l.godam) || godam;
-    const it = itemMap.get(Number(l.id) + '|' + lg);
-    if (!it) throw new Error(`Item nahi mila: ${l.name} (${l.id}) godam ${lg}`);
-    const posRate = wholesale ? (Number(it.SaleRate3) || Number(it.SaleRateSize) || Number(it.SaleRate) || 0) : (Number(it.SaleRate) || 0);
-    if (Number(it.CurrStock) < qty) log(`  Stock kam: ${String(it.ItemName).trim()} (stock ${it.CurrStock}, sale ${qty})`);
-    const base = { ItemID: it.ItemID, name: String(it.ItemName).trim(), cost: Number(it.PurchaseRate) || 0, godam: lg, pack: Number(it.PackQty) || 0 };
-    if (staff && !wholesale) {
-      // v1.5: POS ki Sale screen jaisa — poore carton "Cotton Rate" (SaleRate fi piece), khule piece "Peice Rate" (SaleRate2)
-      const pk = Number(it.PackQty) || 0;
-      const ctnRate = r2(Number(it.SaleRate) || 0), pcsRate = r2(Number(it.SaleRate2) || Number(it.SaleRate) || 0);
-      // app v1.61 line ki ikai batati hai (unit 'ctn' / 'pcs'); purani app (unit nahi) -> pack se khud taqseem
-      const cq = l.unit === 'ctn' ? qty : l.unit === 'pcs' ? 0 : (pk > 1 ? Math.floor(qty / pk + 1e-9) * pk : 0), pq = r3(qty - cq);
-      if (cq > 0) lines.push({ ...base, qty: cq, rate: ctnRate });
-      if (pq > 0) lines.push({ ...base, qty: pq, rate: pcsRate });
-    } else {
-      const rate = r2(staff ? posRate : (Number(l.rate) >= 0 ? Number(l.rate) : posRate));
-      lines.push({ ...base, qty, rate });
-    }
-  }
-  if (!lines.length) throw new Error('Bill mein koi item nahi');
-  const total = r2(lines.reduce((n, l) => n + l.qty * l.rate, 0));
-  const cogs = lines.reduce((n, l) => n + l.qty * l.cost, 0);
-  const cash = wholesale ? r2(Math.min(Math.max(Number(s.cash) || 0, 0), total)) : total;
+  const { lines, total, cogs } = await buildLines(p, s, godam, wholesale, staff);
+  const cash = wholesale ? (total < 0 ? 0 : r2(Math.min(Math.max(Number(s.cash) || 0, 0), total))) : total;   // v2.95: wapsi bill (minus) — wholesale khate mein
   if (staff && Math.abs(total - Number(s.total)) > 0.5) log(`  Mulazim ka total ${s.total} tha, POS rate se ${total}`);
 
   const now = new Date();
@@ -256,6 +264,101 @@ async function postSale(s) {
     await tx.rollback().catch(() => {});
     throw e;
   }
+}
+
+// ================= v1.8: ✏️ BILL EDIT =================
+// Sirf UN-POSTED (DocStatusID 1) bill. POS ke apne procedures: usp_Sale_InsertUpdate (wahi SaleID / SaleNo),
+// usp_SaleDetail_DeleteBySaleID, usp_SaleDetail_InsertUpdate. Ek transaction. Hifazat: (1) baad mein bhi wahi SaleNo,
+// DocStatusID 1, koi naya bill nahi bana, lines ginti theek; (2) stock — ya to bilkul POS ke hisaab se badla
+// (purane wapas + naye kam) ya bilkul nahi chhua (un-posted par stock na lagta ho). Beech ki surat = ROLLBACK.
+// Wholesale ka cash / CRV NAHI chhedte (sirf items / total) — party wahi.
+const procCache = new Map();
+async function procParams(p, name) {
+  if (procCache.has(name)) return procCache.get(name);
+  const r = (await p.request().input('n', sql.VarChar(200), name).query("SELECT PARAMETER_NAME AS n, DATA_TYPE AS t, CHARACTER_MAXIMUM_LENGTH AS l FROM INFORMATION_SCHEMA.PARAMETERS WHERE SPECIFIC_NAME = @n AND PARAMETER_MODE = 'IN' ORDER BY ORDINAL_POSITION")).recordset;
+  if (!r.length) throw new Error('POS procedure nahi mila: ' + name);
+  procCache.set(name, r); return r;
+}
+const sqlType = (t, l) => { const L = Number(l) > 0 ? Number(l) : sql.MAX; return ({ int: sql.Int, bigint: sql.BigInt, smallint: sql.SmallInt, tinyint: sql.TinyInt, bit: sql.Bit, float: sql.Float, real: sql.Real, decimal: sql.Decimal(18, 4), numeric: sql.Decimal(18, 4), money: sql.Money,
+  datetime: sql.DateTime, datetime2: sql.DateTime2, date: sql.Date, smalldatetime: sql.SmallDateTime, varchar: sql.VarChar(L), nvarchar: sql.NVarChar(L), char: sql.Char(Number(l) > 0 ? Number(l) : 1), nchar: sql.NChar(Number(l) > 0 ? Number(l) : 1), text: sql.Text, ntext: sql.NText })[String(t).toLowerCase()] || sql.VarChar(sql.MAX); };
+async function execProc(tx, p, name, vals) {
+  const ps = await procParams(p, name), req = new sql.Request(tx), keys = Object.keys(vals);
+  for (const x of ps) { const k = x.n.replace(/^@/, ''); const key = keys.find(z => z.toLowerCase() === k.toLowerCase()); req.input(k, sqlType(x.t, x.l), key ? vals[key] : null); }
+  return req.execute('dbo.' + name);
+}
+async function editSale(e) {
+  const p = await getPool();
+  const id = Number(e.posId);
+  const head = (await p.request().input('id', sql.Int, id).query('SELECT * FROM dbo.Sale WHERE SaleID = @id')).recordset[0];
+  if (!head) throw new Error('Bill POS mein nahi mila');
+  const no = String(head.SaleNo || '').trim();
+  if (e.saleNo && no !== String(e.saleNo).trim()) throw new Error(`Bill number mel nahi khata (${no} / ${e.saleNo})`);
+  if (Number(head.DocStatusID) === 2) throw new Error('Bill POST ho chuka hai — edit nahi ho sakta');
+  if (Number(head.DocStatusID) !== 1) throw new Error('Bill cancel / band hai — edit nahi ho sakta');
+  const branch = Number(head.BranchID) || 1, wholesale = !!head.IsCreditSale, staff = e.role !== 'owner';
+  const built = await buildLines(p, { ...e, mode: wholesale ? 'wholesale' : 'counter' }, branch, wholesale, staff);
+  if (wholesale && built.total > 0 && Number(head.CashReceived) > built.total + 0.5) throw new Error(`Is bill par cash Rs ${head.CashReceived} mila hai — naya total Rs ${built.total} us se kam hai. POS mein khud edit karein`);
+  const old = (await p.request().input('id', sql.Int, id).query('SELECT ItemID, Qty, GBranchID FROM dbo.SaleDetail WHERE SaleID = @id')).recordset;
+  const delta = new Map(), add = (i, b, q) => { const k = i + '|' + b; delta.set(k, r3((delta.get(k) || 0) + q)); };
+  old.forEach(o => add(o.ItemID, Number(o.GBranchID) || branch, Number(o.Qty) || 0));
+  built.lines.forEach(l => add(l.ItemID, Number(l.godam) || branch, -l.qty));
+  const keys = [...delta.keys()], ids = [...new Set(keys.map(k => Number(k.split('|')[0])))].filter(Number.isFinite);
+  const stockOf = async req => { const out = new Map(); if (!ids.length) return out;
+    (await req.query(`SELECT ItemID, BranchID, CurrStock FROM dbo.ItemBranchRate WHERE ItemID IN (${ids.join(',')})`)).recordset.forEach(x => out.set(x.ItemID + '|' + x.BranchID, Number(x.CurrStock) || 0)); return out; };
+  for (const n of ['usp_Sale_InsertUpdate', 'usp_SaleDetail_DeleteBySaleID', 'usp_SaleDetail_InsertUpdate']) await procParams(p, n);
+  const maxBefore = (await p.request().query('SELECT MAX(SaleID) AS m FROM dbo.Sale')).recordset[0].m;
+  const now = new Date(), who = e.role === 'owner' ? 'Malik' : 'Mulazim';
+  const notes = String(head.SystemNotes || '') + `Edited By:Blue Khata app (${who}${e.byName ? ' ' + e.byName : ''}) On:${now.toLocaleString('en-US')} at PC:${os.hostname()}\r\n`;
+  const tx = new sql.Transaction(p);
+  await tx.begin();
+  try {
+    const before = await stockOf(new sql.Request(tx));
+    const total = built.total;
+    await execProc(tx, p, 'usp_Sale_InsertUpdate', { ...head, SaleID: id, SaleNo: head.SaleNo, UpdatedBy: CREATED_BY, UpdatedOn: now, SystemNotes: notes.slice(-7900),
+      TotalSale: total, COGS: built.cogs, CashReceived: wholesale ? head.CashReceived : total, CCNo: String(total), BiltyNo: String(total), vNetAmount: total,
+      CancelAndNew: 0, IsCancleReturn: 0, SaleCustomerPhone: head.SaleCustomerPhone ?? '', DocStatusID: 1 });
+    await execProc(tx, p, 'usp_SaleDetail_DeleteBySaleID', { SaleID: id });
+    for (const l of built.lines) {
+      await new sql.Request(tx)
+        .input('SaleDetailID', sql.Int, 0).input('SaleID', sql.Int, id).input('ItemID', sql.Int, l.ItemID)
+        .input('Qty', sql.Float, l.qty).input('Rate', sql.Float, l.rate).input('Discount', sql.VarChar(10), '0').input('Tax', sql.VarChar(10), '0')
+        .input('Cost', sql.Float, l.cost).input('ItemIncentive', sql.Float, 0).input('Bonus', sql.Float, 0)
+        .input('IsGetStore', sql.Bit, (l.godam || branch) !== branch ? 1 : 0).input('TradeOffer', sql.Float, 0).input('Cotton', sql.Int, 0)
+        .input('Bardana', sql.Int, 0).input('GQgy', sql.Float, 0).input('GBranchID', sql.Int, l.godam || branch)
+        .execute('dbo.usp_SaleDetail_InsertUpdate');
+    }
+    // ---- hifazat ----
+    const chk = (await new sql.Request(tx).input('id', sql.Int, id).query('SELECT SaleNo, DocStatusID, (SELECT COUNT(*) FROM dbo.SaleDetail WHERE SaleID = @id) AS N, (SELECT MAX(SaleID) FROM dbo.Sale) AS M FROM dbo.Sale WHERE SaleID = @id')).recordset[0];
+    if (!chk || String(chk.SaleNo || '').trim() !== no) throw new Error('POS ne bill number badal diya — edit wapas');
+    if (Number(chk.M) !== Number(maxBefore)) throw new Error('POS ne naya bill bana diya — edit wapas');
+    if (Number(chk.N) !== built.lines.length) throw new Error(`Lines ${chk.N} bani, chahiye ${built.lines.length} — edit wapas`);
+    if (Number(chk.DocStatusID) !== 1) throw new Error('Bill ka haal badal gaya — edit wapas');
+    const after = await stockOf(new sql.Request(tx));
+    let allExp = true, allZero = true;
+    for (const k of keys) { const d = (after.get(k) || 0) - (before.get(k) || 0); if (Math.abs(d) > 0.01) allZero = false; if (Math.abs(d - delta.get(k)) > 0.01) allExp = false; }
+    if (!allExp && !allZero) throw new Error('POS ne stock theek se nahi badla — kuch save NAHI kiya (POS se khud edit karein)');
+    await tx.commit();
+    return { saleNo: no, total, stock: allExp ? 'theek' : 'un-posted par stock nahi lagta' };
+  } catch (err) { await tx.rollback().catch(() => {}); throw err; }
+}
+async function handleEdit(doc) {
+  const key = 'e' + doc.id;
+  if (busy.has(key)) return;
+  busy.add(key);
+  try {
+    const ref = editCol.doc(doc.id);
+    const ok = await db.runTransaction(async t => { const cur = (await t.get(ref)).data(); if (!cur || cur.status !== 'new') return null; t.update(ref, { status: 'posting', postingAt: Date.now(), pc: os.hostname() }); return cur; });
+    if (!ok) return;
+    try {
+      const r = await editSale(ok);
+      await ref.update({ status: 'done', doneAt: Date.now(), total: r.total, stockNote: r.stock });
+      if (ok.appId) await saleCol.doc(String(ok.appId)).update({ lines: ok.lines, total: r.total, editedAt: Date.now(), editedBy: String(ok.byName || '') }).catch(() => {});
+      log(`✏️ Bill EDIT: ${r.saleNo} -> Rs ${r.total} (${ok.byName || ok.role}) · stock ${r.stock}`);
+    } catch (e) {
+      log(`✏️ Edit NAHI hua (${ok.saleNo}): ${e.message}`);
+      await ref.update({ status: 'failed', error: clip(e.message, 300), doneAt: Date.now() }).catch(() => {});
+    }
+  } finally { busy.delete(key); }
 }
 
 // ---- Rasid (POS se parh kar — kuch save nahi hota) ----
@@ -526,6 +629,9 @@ function listen() {
   saleCol.where('status', 'in', ['new', 'posting']).onSnapshot(s => {
     s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handleSale(c.doc)); });
   }, fail('Sale'));
+  editCol.where('status', '==', 'new').onSnapshot(s => {   // v1.8: ✏️ bill edit
+    s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handleEdit(c.doc)); });
+  }, fail('Edit'));
   saleCol.where('printReq', '>', 0).onSnapshot(s => {
     s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handlePrint(c.doc)); });
   }, fail('Print'));
@@ -541,7 +647,7 @@ if (process.argv.includes('--print')) {
   lock.listen(LOCK_PORT, '127.0.0.1', async () => {
     try {
       await basics(await getPool());
-      log('sale-post v1.6 chal raha hai — app ki sale ka intezar. Band: Ctrl+C');
+      log('sale-post v1.8 chal raha hai — app ki sale ka intezar. Band: Ctrl+C');
       listen();
     } catch (e) { log('Shuru nahi hua: ' + e.message); process.exit(1); }
   });
