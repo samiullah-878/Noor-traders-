@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-parchi.js  v1.1 (2026-10-06: ⚡ TEZ — PowerShell EK dafa khula (worker), har print seedha; Urdu tasveer LockBits se; parchiyon
+//  nt-parchi.js  v1.1.1 (2026-10-06: ⚠ v1.1 ka C# compile NAHI hota tha (px naam do dafa) -> print ruk gaya; theek + NtPrint3.dll) · v1.1 (2026-10-06: ⚡ TEZ — PowerShell EK dafa khula (worker), har print seedha; Urdu tasveer LockBits se; parchiyon
 //                     ke beech 150 ms; worker atke to purana tareeqa khud) · v1.0 (2026-10-04) — SAANJHI parchi: ESC/POS segments + Urdu/bara text ka raster + Windows RAW print (har job alag cut)
 //  Istemal: nt-print.js (💻 PC) aur sale-post.js (counter: Abdurehman / Bilal / Mithu) — token parchi dono jagah ek jaisi.
 //  make(opts) -> { Seg, tokenJobs(d), sendJobs(jobs, printer), ESC, GS, line, hr, big, bold, when, FONT_UR }
@@ -48,10 +48,10 @@ function tokenJobs(d) {
   const PS1 = path.join(DIR, 'nt-print.ps1');
 const PS1_TXT = `param([string]$spec,[string]$printer)
 $ErrorActionPreference='Stop'
-$dll=Join-Path $PSScriptRoot 'NtPrint2.dll'
+$dll=Join-Path $PSScriptRoot 'NtPrint3.dll'
 if(!(Test-Path $dll)){ Add-Type -ReferencedAssemblies System.Drawing -OutputAssembly $dll -TypeDefinition @"
 using System;using System.Collections.Generic;using System.Drawing;using System.Drawing.Text;using System.Runtime.InteropServices;
-public class NtPrint2{
+public class NtPrint3{
  static Dictionary<string,string> FC=new Dictionary<string,string>();
  [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)] public struct DI{[MarshalAs(UnmanagedType.LPWStr)]public string n;[MarshalAs(UnmanagedType.LPWStr)]public string o;[MarshalAs(UnmanagedType.LPWStr)]public string t;}
  [DllImport("winspool.Drv",EntryPoint="OpenPrinterW",SetLastError=true,CharSet=CharSet.Unicode)] public static extern bool OpenPrinter(string p,out IntPtr h,IntPtr d);
@@ -75,8 +75,8 @@ public class NtPrint2{
     g.Clear(Color.White);g.TextRenderingHint=TextRenderingHint.AntiAliasGridFit;
     g.DrawString(text,f,Brushes.Black,new RectangleF(0,4,width,h),sf);
     int bw=(width+7)/8;var o=new List<byte>();o.AddRange(new byte[]{0x1b,0x61,0x00,0x1d,0x76,0x30,0x00,(byte)(bw&255),(byte)(bw>>8),(byte)(h&255),(byte)(h>>8)});
-    var bd=bmp.LockBits(new Rectangle(0,0,width,h),System.Drawing.Imaging.ImageLockMode.ReadOnly,System.Drawing.Imaging.PixelFormat.Format32bppArgb);int st=bd.Stride;byte[] px=new byte[st*h];Marshal.Copy(bd.Scan0,px,0,px.Length);bmp.UnlockBits(bd);
-    for(int y=0;y<h;y++)for(int xb=0;xb<bw;xb++){int v=0;for(int k=0;k<8;k++){int x=xb*8+k;if(x<width){int q=y*st+x*4;if(px[q]+px[q+1]+px[q+2]<384)v|=0x80>>k;}}o.Add((byte)v);}
+    var bd=bmp.LockBits(new Rectangle(0,0,width,h),System.Drawing.Imaging.ImageLockMode.ReadOnly,System.Drawing.Imaging.PixelFormat.Format32bppArgb);int st=bd.Stride;byte[] pb=new byte[st*h];Marshal.Copy(bd.Scan0,pb,0,pb.Length);bmp.UnlockBits(bd);
+    for(int y=0;y<h;y++)for(int xb=0;xb<bw;xb++){int v=0;for(int k=0;k<8;k++){int x=xb*8+k;if(x<width){int q=y*st+x*4;if(pb[q]+pb[q+1]+pb[q+2]<384)v|=0x80>>k;}}o.Add((byte)v);}
     return o.ToArray();}}}
 }
 "@ }
@@ -85,8 +85,8 @@ $o=Get-Content -Raw -Encoding UTF8 $spec | ConvertFrom-Json
 $k=0
 foreach($job in $o.jobs){
  $ms=New-Object System.IO.MemoryStream
- foreach($s in $job.s){ if($s.r){$b=[Convert]::FromBase64String([string]$s.r)} else {$b=[NtPrint2]::Img([string]$s.i,[string]$s.f,[float]$s.px,[bool]$s.b,[int]$s.w,[int]$s.a)}; $ms.Write($b,0,$b.Length) }
- $k++; [NtPrint2]::Send($printer,$ms.ToArray(),('NT-PRINT '+$k)); if($k -lt $o.jobs.Count){Start-Sleep -Milliseconds 150}
+ foreach($s in $job.s){ if($s.r){$b=[Convert]::FromBase64String([string]$s.r)} else {$b=[NtPrint3]::Img([string]$s.i,[string]$s.f,[float]$s.px,[bool]$s.b,[int]$s.w,[int]$s.a)}; $ms.Write($b,0,$b.Length) }
+ $k++; [NtPrint3]::Send($printer,$ms.ToArray(),('NT-PRINT '+$k)); if($k -lt $o.jobs.Count){Start-Sleep -Milliseconds 150}
 }
 `;
 // v1.1: WORKER — PowerShell ek dafa khulta hai (DLL load), phir har print ek line (base64 JSON) -> "OK" / "ERR ...".
@@ -102,8 +102,8 @@ while($true){
   $k=0
   foreach($job in $o.jobs){
    $ms=New-Object System.IO.MemoryStream
-   foreach($s in $job.s){ if($s.r){$b=[Convert]::FromBase64String([string]$s.r)} else {$b=[NtPrint2]::Img([string]$s.i,[string]$s.f,[float]$s.px,[bool]$s.b,[int]$s.w,[int]$s.a)}; $ms.Write($b,0,$b.Length) }
-   $k++; [NtPrint2]::Send([string]$o.printer,$ms.ToArray(),('NT-PRINT '+$k)); if($k -lt $o.jobs.Count){Start-Sleep -Milliseconds 150}
+   foreach($s in $job.s){ if($s.r){$b=[Convert]::FromBase64String([string]$s.r)} else {$b=[NtPrint3]::Img([string]$s.i,[string]$s.f,[float]$s.px,[bool]$s.b,[int]$s.w,[int]$s.a)}; $ms.Write($b,0,$b.Length) }
+   $k++; [NtPrint3]::Send([string]$o.printer,$ms.ToArray(),('NT-PRINT '+$k)); if($k -lt $o.jobs.Count){Start-Sleep -Milliseconds 150}
   }
   [Console]::Out.WriteLine('OK')
  } catch { [Console]::Out.WriteLine('ERR ' + ($_.Exception.Message -replace "[\r\n]+",' ')) }

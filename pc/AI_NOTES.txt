@@ -1413,3 +1413,10 @@ dukaan chal rahi hoti hai — doosre counter ne beech mein bill banaya to MAX ba
 * Ab: MAX badle to dekho SaleID > maxBefore mein koi Sale jis ka SystemNotes BILKUL hamare edit wale notes (waqt + naam ke saath) ho —
   wo ho to asli khatra (proc ne nayi Sale banayi) -> wapas; warna doosre PC ka bill, edit jaari. Baqi hifazat (SaleNo, lines, DocStatusID,
   stock farq) wahi.
+
+==================== ⚠ HOTFIX nt-parchi v1.1.1 (manifest 2026-10-06.8) — v1.1 ka C# COMPILE NAHI HOTA THA ====================
+Galti (meri, v2.95.3): Img() mein parameter "px" (float) aur LockBits ka array bhi "px" -> C# CS0136 -> NtPrint2.dll kabhi nahi bani
+-> worker aur purana oneShot DONO fail -> 13:35 ke baad nt-parchi se jane wale SAB print (sale-post rasid/gate/token jo server
+counter printers par, NT-PRINT bill/token) ruk gaye. Mithu/Abdurehman ke "print nahi" ki asal wajah ho sakti hai.
+* Theek: array "pb"; class/DLL NtPrint3 (purani adhoori NtPrint2.dll ka khatra nahi). Mono mcs se compile + Img() chala ke test ✓.
+* SABAQ: C# wala code hamesha mcs se compile kar ke dekho (apt-get install mono-mcs libgdiplus) — Linux par naqli powershell kaafi nahi.
