@@ -2685,3 +2685,13 @@ Malik: "PC sync har nayi entry par auto ho, bill ka status foran aaye; print bhi
 * Test (Linux, naqli powershell): pehla print oneShot, garam hone ke baad worker 29 ms, printer ghalti = Error (dobara nahi).
   Asal Windows printer yahan test nahi.
 * Counter PCs (Mithu/Abdurehman) par nt-print.js + nt-parchi.js khud download karni hain (command chat mein).
+
+==================== nt-print v1.7 (manifest 2026-10-06.4) — 🔄 COUNTER PCs KHUD-UPDATE ====================
+Malik: counter PCs par baar baar command na chalani pare — "server se command bhej do".
+* nt-print v1.7 selfUpdate(): startup ke 1 min baad, phir har 5 min raw.githubusercontent .../pc/manifest.json (?t= cache-bust);
+  nt-print.js / nt-parchi.js ka sha256 local se alag ho to dono download, sha milao (na mile = GitHub CDN purana, baad mein),
+  .new likh kar rename, busy/queue khali hone par exit(0) -> nt-print-auto.bat ~30 sec baad nayi file se chalata hai.
+  local-config "autoUpdate": false = band. https redirect 3 tak, 20 s timeout.
+* Test: asli GitHub se manifest + files aayin, sha theek, dono badli, exit 0 ✓.
+* Is ke baad counter PC par sirf GitHub par file daalni hai — 5 min + 30 sec mein khud. PEHLI dafa (v1.6 -> v1.7) haath se / server ki
+  network-copy command se.

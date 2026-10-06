@@ -1,5 +1,6 @@
 // ============================================================
-//  nt-print.js  v1.6 (2026-10-06: ⚡ TEZ PRINT — nt-parchi worker: PowerShell shuru se khula, bill aate hi seedha printer) · v1.4 (2026-10-05: 🔔 scan par beep — liveCarts, local-config beep/beepCounters) · v1.1 (2026-10-04) — 💻 NT-PRINT: app ka bill IS PC ke printer par, bina kisi window ke
+//  nt-print.js  v1.7 (2026-10-06: 🔄 KHUD-UPDATE — har 5 min GitHub manifest, nt-print.js / nt-parchi.js naye hon to sha jaanch kar
+//                   badal kar band; nt-print-auto.bat dobara chalata hai. local-config "autoUpdate": false = band) · v1.6 (2026-10-06: ⚡ TEZ PRINT — nt-parchi worker: PowerShell shuru se khula, bill aate hi seedha printer) · v1.4 (2026-10-05: 🔔 scan par beep — liveCarts, local-config beep/beepCounters) · v1.1 (2026-10-04) — 💻 NT-PRINT: app ka bill IS PC ke printer par, bina kisi window ke
 //
 //  App (Nayi Sale) mein counter "💻 <PC ka naam>" chuna ho to sale ka doc counter = 'pc:<id>' hota hai.
 //  sale-post (main PC) POS mein bill banata hai (status done + saleNo) magar 'pc:' par PRINT NAHI karta.
@@ -27,7 +28,7 @@ const { execFile, execFileSync } = require('child_process');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
-const VER = '1.6';
+const VER = '1.7';
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
@@ -255,6 +256,42 @@ function listen() {
   setInterval(() => { if (today() !== day) { log('Naya din — dobara shuru'); process.exit(0); } }, 60000);
 }
 
+// v1.7: 🔄 KHUD-UPDATE — counter PCs par haath se command nahi. GitHub (pc/manifest.json) ke sha256 se milata hai.
+const UPD_BASE = 'https://raw.githubusercontent.com/samiullah-878/Noor-traders-/main/pc/';
+const UPD_FILES = ['nt-print.js', 'nt-parchi.js'];
+const sha256 = b => require('crypto').createHash('sha256').update(b).digest('hex');
+function getBuf(url, n = 0) {
+  return new Promise((res, rej) => {
+    const req = require('https').get(url, { headers: { 'Cache-Control': 'no-cache', 'User-Agent': 'nt-print' }, timeout: 20000 }, r => {
+      if ([301, 302, 307, 308].includes(r.statusCode) && r.headers.location && n < 3) { r.resume(); getBuf(new URL(r.headers.location, url).href, n + 1).then(res, rej); return; }
+      if (r.statusCode !== 200) { r.resume(); rej(new Error('HTTP ' + r.statusCode)); return; }
+      const a = []; r.on('data', c => a.push(c)); r.on('end', () => res(Buffer.concat(a))); r.on('error', rej);
+    });
+    req.on('timeout', () => req.destroy(new Error('timeout'))); req.on('error', rej);
+  });
+}
+let updBusy = false;
+async function selfUpdate() {
+  if (updBusy || cfg().autoUpdate === false) return;
+  updBusy = true;
+  try {
+    const m = JSON.parse((await getBuf(UPD_BASE + 'manifest.json?t=' + Date.now())).toString('utf8'));
+    const want = UPD_FILES.filter(f => m.files && m.files[f] && (() => { try { return sha256(fs.readFileSync(path.join(DIR, f))) !== m.files[f]; } catch { return true; } })());
+    if (!want.length) return;
+    const got = [];
+    for (const f of want) {
+      const b = await getBuf(UPD_BASE + f + '?t=' + Date.now());
+      if (sha256(b) !== m.files[f]) { log(`🔄 Update: ${f} ka sha nahi mila (GitHub abhi purana de raha) — baad mein`); return; }
+      got.push([f, b]);
+    }
+    for (const [f, b] of got) { const tmp = path.join(DIR, f + '.new'); fs.writeFileSync(tmp, b); fs.renameSync(tmp, path.join(DIR, f)); }
+    log(`🔄 KHUD-UPDATE: ${got.map(x => x[0]).join(', ')} naye (manifest ${m.version || '?'}) — print khatam hote hi dobara shuru`);
+    const bye = () => { if (busy.size) { setTimeout(bye, 2000); return; } queue.then(() => process.exit(0)); };
+    bye();
+  } catch (e) { log('🔄 Update check nahi hua: ' + e.message); }
+  finally { updBusy = false; }
+}
+
 const lock = net.createServer();
 lock.once('error', () => { console.log('nt-print pehle se chal raha hai.'); process.exit(3); });
 lock.listen(LOCK_PORT, '127.0.0.1', async () => {
@@ -263,4 +300,5 @@ lock.listen(LOCK_PORT, '127.0.0.1', async () => {
   try { P.warm(); } catch {}   // v1.6: print worker pehle se garam
   await beat(); setInterval(beat, 60000);
   listen();
+  setTimeout(selfUpdate, 60000); setInterval(selfUpdate, 5 * 60000);   // v1.7
 });
