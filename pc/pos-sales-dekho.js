@@ -1,5 +1,5 @@
 // =========================================================
-//  pos-sales-dekho.js  v1.2 (2026-10-06: ps = DocStatusID (1 un-posted / 2 posted), pc + by (SystemNotes se), items posSaleLines/<SaleID>, _sync har 30 sec) · v1.1 (2026-10-03: har 10 sec, pehle chhota sawal) · v1  (2026-10-03) — POS par bane AAJ ke SALE BILLS app mein (sirf SELECT, POS mein kuch nahi badalta)
+//  pos-sales-dekho.js  v1.3 (2026-10-06: ⚡ har 2 sec + app ka bill bante / edit hote hi foran) · v1.2 (2026-10-06: ps = DocStatusID (1 un-posted / 2 posted), pc + by (SystemNotes se), items posSaleLines/<SaleID>, _sync har 30 sec) · v1.1 (2026-10-03: har 10 sec, pehle chhota sawal) · v1  (2026-10-03) — POS par bane AAJ ke SALE BILLS app mein (sirf SELECT, POS mein kuch nahi badalta)
 //  Har 1 minute dbo.Sale (aaj) parhta hai -> Firestore posSales/<YYYY-MM-DD> (ek doc, sirf badle to likhta hai).
 //  App: scanner screen ke baayein "Aaj ke bills" mein chips — ✓ cash/poora · ✗ udhaar · ⊘ cancel (DocStatusID 3).
 //  App se bani sale (Description = "BK-APP <id>") ko app:<id> nishan — app wali chip se jod deta hai (do dafa na dikhe).
@@ -13,7 +13,7 @@ const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
 const BUSINESS_ID = 'noor-traders';
-const EVERY = 10 * 1000;            // v1.1: 10 sec — pehle sirf ginti/aakhri bill dekhta hai, badle to poori list
+const EVERY = 2 * 1000;             // v1.3: 2 sec (sirf ginti; Firestore par likhna sirf badlaav par) · v1.1: 10 sec — pehle sirf ginti/aakhri bill dekhta hai, badle to poori list
 const FULL_EVERY = 5 * 60 * 1000;    // phir bhi har 5 min poori list (koi badlaav na chhoote)
 let lastKey = '', lastFull = 0;
 const LOCK_PORT = 47824;
@@ -91,10 +91,21 @@ const lock = net.createServer().listen(LOCK_PORT, '127.0.0.1');
 lock.on('error', () => { console.log('pos-sales-dekho pehle se chal raha hai — yeh copy band.'); process.exit(3); });
 lock.on('listening', async () => {
   try { await getPool(); log('SQL se jur gaya'); } catch (e) { log('SQL masla: ' + e.message); process.exit(1); }
-  log('pos-sales-dekho v1.2 chal raha hai — har 10 second (sirf badlaav par likhta hai)…');
-  const tick = async () => { try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); } };
+  log('pos-sales-dekho v1.3 chal raha hai — har 2 second (sirf badlaav par likhta hai)…');
+  let running = false, again = false;
+  const tick = async () => { if (running) { again = true; return; } running = true;
+    try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }
+    finally { running = false; if (again) { again = false; setTimeout(tick, 50); } } };
   await tick();
   setInterval(tick, EVERY);
+  // v1.3: app ka bill POS mein bana (done) / edit hua -> foran dekho (2 sec ka intezar bhi nahi)
+  const kick = () => setTimeout(() => { lastKey = ''; tick(); }, 150);
+  const base = db.collection('businesses').doc(BUSINESS_ID), seen = new Map();
+  const watch = (name, field) => base.collection(name).where(field, '>', Date.now() - 6 * 3600000).onSnapshot(sn => {
+    sn.docChanges().forEach(c => { const d = c.doc.data() || {}, st = d.status, prev = seen.get(c.doc.id); seen.set(c.doc.id, st); if (prev !== undefined && st === 'done' && prev !== 'done') kick(); });
+    if (seen.size > 5000) seen.clear();
+  }, e => log('Foran-dekho listener: ' + e.message));
+  watch('appSales', 'createdAt'); watch('saleEdits', 'at');
   const beat = () => col.doc('_sync').set({ at: Date.now() }).catch(() => {});   // v1.2: app mein "PC sync X sec pehle"
   beat(); setInterval(beat, 30000);
 });

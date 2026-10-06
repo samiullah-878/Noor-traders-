@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-print.js  v1.4 (2026-10-05: 🔔 scan par beep — liveCarts, local-config beep/beepCounters) · v1.1 (2026-10-04) — 💻 NT-PRINT: app ka bill IS PC ke printer par, bina kisi window ke
+//  nt-print.js  v1.6 (2026-10-06: ⚡ TEZ PRINT — nt-parchi worker: PowerShell shuru se khula, bill aate hi seedha printer) · v1.4 (2026-10-05: 🔔 scan par beep — liveCarts, local-config beep/beepCounters) · v1.1 (2026-10-04) — 💻 NT-PRINT: app ka bill IS PC ke printer par, bina kisi window ke
 //
 //  App (Nayi Sale) mein counter "💻 <PC ka naam>" chuna ho to sale ka doc counter = 'pc:<id>' hota hai.
 //  sale-post (main PC) POS mein bill banata hai (status done + saleNo) magar 'pc:' par PRINT NAHI karta.
@@ -27,7 +27,7 @@ const { execFile, execFileSync } = require('child_process');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
-const VER = '1.3';
+const VER = '1.6';
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
@@ -260,6 +260,7 @@ lock.once('error', () => { console.log('nt-print pehle se chal raha hai.'); proc
 lock.listen(LOCK_PORT, '127.0.0.1', async () => {
   scanPrinters();
   log(`💻 NT-PRINT v${VER} — PC "${PC_NAME}" (${COUNTER}) · printer: ${printerName() || 'NAHI MILA'} · ${W} harf / ${DOTS} dots`);
+  try { P.warm(); } catch {}   // v1.6: print worker pehle se garam
   await beat(); setInterval(beat, 60000);
   listen();
 });

@@ -1363,3 +1363,23 @@ Malik (screenshot): PC ki baayin patti mein raqam / posted chip kat rahe the (si
   grid minmax(0,1fr) — side scroll khatam. Filter chips wrap (sab nazar): Sab, ○ Un-posted, ✓ Posted, 🟢 Paid, 🔴 Udhaar, PC, App.
   Search + "🖨 Un-posted N" ek line. PC patti 230 -> 300px (scan-inner left 300).
 * Chromium screenshot test se layout dekha.
+
+==================== v2.95.3 + sale-post v1.9 + pos-sales-dekho v1.3 + nt-print v1.6 + nt-parchi v1.1 (manifest 2026-10-06.3) — ⚡ FORAN STATUS + TEZ PRINT ====================
+Malik: "PC sync har nayi entry par auto ho, bill ka status foran aaye; print bhi aur tez — dabate hi printer par."
+* Wajah: pos-sales-dekho har 10 sec; app "PC sync 3 min pehle" = server PC ki GHARI peeche (at = server Date.now()).
+  Print: har dafa powershell.exe naya (1.5-3 s) + Urdu tasveer GetPixel (dheema) + har parchi ke baad 500 ms.
+* pos-sales-dekho v1.3: har 2 sec (sirf key query; likhna sirf badlaav par) + tick ek waqt mein ek (running/again) +
+  appSales (createdAt 6 ghante) / saleEdits (at) listener: status done hote hi kick() (lastKey khali -> foran poori list).
+* App (sale.js): posSyncAt = IS device ki ghari jab _sync / posSales snapshot aaye (pehla snapshot = server at, ghari se zyada nahi).
+  "abhi" (< 45 s), 90 s se purana = laal (.old).
+* nt-parchi v1.1: C# class NtPrint2 (NtPrint2.dll naya — purana NtPrint1 chhoot gaya): Img LockBits (GetPixel nahi) + font cache.
+  WORKER: nt-print-srv.ps1 ek dafa (DLL load) -> stdin par base64(JSON {printer,jobs}) har line -> "OK" / "ERR ...".
+  warm() startup par; worker tayyar na ho to us dafa purana oneShot (intezar NAHI); 40 s mein READY na aaye = 10 min band;
+  15 s jawab na aaye = kill + purana tareeqa (print kabhi na ruke; ERR = printer ki ghalti, dobara nahi chhapta). Jobs ke beech 150 ms.
+  sendRaw(bin, printer) = sirf ESC/POS bytes.
+* sale-post v1.9: printText -> nt-parchi sendRaw (worker); printTextOld = purana RawCached. status done ka update intezar ke bagair
+  (print saath saath), aakhir mein await. Startup par warm().
+* nt-print v1.6 (VER 1.6): startup par P.warm(). Bill pehle, phir gate pass, phir token (pehle se).
+* Test (Linux, naqli powershell): pehla print oneShot, garam hone ke baad worker 29 ms, printer ghalti = Error (dobara nahi).
+  Asal Windows printer yahan test nahi.
+* Counter PCs (Mithu/Abdurehman) par nt-print.js + nt-parchi.js khud download karni hain (command chat mein).

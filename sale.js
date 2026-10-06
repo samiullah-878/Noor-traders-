@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.95.2';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.95.2';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.95.3';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.95.3';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -346,8 +346,8 @@ function watchSales() {
   if (stopSales) { stopSales(); stopSales = null; }
   if (!cloud?.listenAppSales) return;
   salesDay = day;
-  try { stopPosSales?.(); } catch {} stopPosSales = cloud.listenPosSales ? cloud.listenPosSales(day, b => { posSales = Array.isArray(b) ? b : []; billsRepaint(); }) : null;   // v2.64.1: POS ke bills
-  try { stopPosSync?.(); } catch {} stopPosSync = cloud.listenPosSync ? cloud.listenPosSync(at => { posSyncAt = Number(at) || 0; }) : null;   // v2.95: PC ka aakhri sync
+  try { stopPosSales?.(); } catch {} let firstPos = true; stopPosSales = cloud.listenPosSales ? cloud.listenPosSales(day, b => { posSales = Array.isArray(b) ? b : []; if (!firstPos) posSyncAt = Date.now(); firstPos = false; billsRepaint(); }) : null;   // v2.64.1: POS ke bills
+  try { stopPosSync?.(); } catch {} let firstSync = true; stopPosSync = cloud.listenPosSync ? cloud.listenPosSync(at => { if (firstSync) { firstSync = false; posSyncAt = Math.max(posSyncAt, Math.min(Date.now(), Number(at) || 0)); } else posSyncAt = Date.now(); billsRepaint(); }) : null;   // v2.95.3: is device ki ghari se (server PC ki ghari peeche thi -> '3 min pehle')   // v2.95: PC ka aakhri sync
   stopSales = cloud.listenAppSales(day, list => {
     sales = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); salesErr = ''; localCheck();
     const box = $('saleTodayBtn'); if (box) box.textContent = todayLabel();
@@ -780,7 +780,7 @@ setSaleGodamHook(() => { const st = saleStock(); const cur = st.branches.include
 // (wahi scan screen par khulta hai; PC sale-post.js POS mein wahi bill badalta hai). 🖨 tamam un-posted ek report mein.
 const isFarq = b => /stock\s*['"]?\s*f[ae]?r?a?q/i.test(String(b.p || ''));
 const lineCache = new Map(), lineTried = new Set();   // posId -> lines [{i,n,q,r,g}]
-const ago = t => { if (!t) return '—'; const s0 = Math.max(0, Math.round((Date.now() - t) / 1000)); return s0 < 60 ? s0 + ' sec pehle' : s0 < 3600 ? Math.round(s0 / 60) + ' min pehle' : new Date(t).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }); };
+const ago = t => { if (!t) return '—'; const s0 = Math.max(0, Math.round((Date.now() - t) / 1000)); return s0 < 45 ? 'abhi' : s0 < 60 ? s0 + ' sec pehle' : s0 < 3600 ? Math.round(s0 / 60) + ' min pehle' : new Date(t).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }); };
 function billsData() {
   const posByApp = new Map(posSales.filter(b => b.app).map(b => [b.app, b]));
   const app = sales.map(s => { const pb = posByApp.get(s.id);
@@ -825,7 +825,7 @@ function mountBills(box) {
     sum.innerHTML = `${num(rows.length)} bills · <b>Rs ${num(tot)}</b>${udh > 0.5 ? ` · <span class="red">udhaar Rs ${num(udh)}</span>` : ''}`;
     const un = all.filter(b => b.ps === 1 && !b.cancelled && !b.farq).length; unpBtn.textContent = `🖨 Un-posted ${un}`; unpBtn.title = `${un} un-posted bills ka print`; unpBtn.disabled = !un;
     syncEl.innerHTML = posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : '';
-    syncEl.className = 'nb-sync' + (posSyncAt && Date.now() - posSyncAt > 3 * 60000 ? ' old' : '');
+    syncEl.className = 'nb-sync' + (posSyncAt && Date.now() - posSyncAt > 90000 ? ' old' : '');
     list.innerHTML = rows.map(b => { const c = billCls(b), tm = new Date(b.createdAt || 0).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' });
       const L = open === b.id ? (b.posId && lineCache.get(b.posId)) || (b.src === 'app' ? (b.lines || []).map(l => ({ n: l.name, q: l.qty, r: l.rate })) : null) : null;
       return `<div class="nb-bill ${c}${open === b.id ? ' open' : ''}" data-nb="${esc(b.id)}">
@@ -847,7 +847,7 @@ function mountBills(box) {
     if (open) { const b = billsData().find(x => x.id === open); if (b && b.posId && !lineCache.has(b.posId)) { lineTried.delete(b.posId); await billLines(b); paint(); } }
   });
   const m = { box, paint }; mounts.add(m); paint();
-  return setInterval(() => { if (!box.isConnected) return; syncEl.innerHTML = posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : ''; }, 5000);
+  return setInterval(() => { if (!box.isConnected) return; syncEl.innerHTML = posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : ''; syncEl.className = 'nb-sync' + (posSyncAt && Date.now() - posSyncAt > 90000 ? ' old' : ''); }, 5000);
 }
 setSaleBillsHook(box => mountBills(box));   // PC scan screen ka baayan hissa
 

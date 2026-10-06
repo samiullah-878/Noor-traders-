@@ -1,5 +1,6 @@
 // ============================================================
 //  sale-post.js — Blue Khata app ki "Nayi Sale" -> POS Sale bill (v1)
+//  v1.9 (2026-10-06): ⚡ TEZ PRINT — rasid/gate pass bhi nt-parchi worker se (PowerShell ek dafa khula), status 'done' aur print saath saath
 //  v1.8 (2026-10-06): ✏️ BILL EDIT (saleEdits) — sirf UN-POSTED (DocStatusID 1) POS bill, wahi SaleID / SaleNo; minus (wapsi) lines
 //  v1.6 (2026-10-04): rasid + gate pass ke baad har crate ka TOKEN bhi usi counter printer par (nt-parchi.js saanjha)
 //  v1.5.2 (2026-10-04): counter 'local' / 'pc:<id>' par print NAHI (app / NT-PRINT khud chhapte hain) — pehle local par bhi PC chhapta tha
@@ -454,7 +455,10 @@ async function receiptFor(saleNo, saleId) {
 }
 
 // RAW print: ESC/POS bytes seedha printer ko (barcode/bara text chalta hai)
-function printText(text, printer = PRINTER_NAME) {
+function printText(text, printer = PRINTER_NAME) {   // v1.9: worker se (tez); worker na chale to nt-parchi khud purana tareeqa
+  try { return getParchi().sendRaw(text, printer || PRINTER_NAME); } catch (e) { return printTextOld(text, printer); }
+}
+function printTextOld(text, printer = PRINTER_NAME) {
   const file = path.join(DIR, 'sale-print.bin');
   fs.writeFileSync(file, Buffer.from(text, 'binary'));
   const ps = `
@@ -558,11 +562,11 @@ async function printGatePasses(r, printer = PRINTER_NAME) {
 // 2026-10-04: TOKEN parchi (bara number + Urdu "اس بل کے N کریٹ ہیں" + Crate i/N + Bill #) — wahi jo app 'Yehi device' / NT-PRINT par chhapti hai.
 // nt-parchi.js saanjha: raster PowerShell (NtPrint1.dll) se, har parchi ALAG job + cut.
 let PARCHI = null;
+const getParchi = () => PARCHI || (PARCHI = require('./nt-parchi.js').make({ dir: DIR, width: PRINT_WIDTH }));
 async function printTokens(d, saleNo, printer) {
   const tok = Number(d.token) || 0, n = Math.max(1, Math.min(20, Number(d.crates) || 1));
   if (!tok && !Number(d.crates)) return;
-  if (!PARCHI) PARCHI = require('./nt-parchi.js').make({ dir: DIR, width: PRINT_WIDTH });
-  const err = await PARCHI.sendJobs(PARCHI.tokenJobs({ saleNo, token: tok, crates: n, doneAt: Date.now() }), printer || PRINTER_NAME);
+  const err = await getParchi().sendJobs(PARCHI.tokenJobs({ saleNo, token: tok, crates: n, doneAt: Date.now() }), printer || PRINTER_NAME);
   if (err) log('Token parchi nahi hui (' + printer + '): ' + err.message); else log(`Token parchi: ${tok || '-'} x${n} -> ${printer || PRINTER_NAME}`);
 }
 async function printSale(saleNo, saleId, copies = 1, printer = PRINTER_NAME) {   // 2026-10-01: bill `copies` dafa (1-3), gate pass alag (ek hi)
@@ -594,8 +598,10 @@ async function handleSale(doc) {
     if (!ok) return;
     try {
       const r = await postSale({ ...ok, id });
-      await ref.update({ status: 'done', saleNo: r.saleNo, saleId: r.saleId, crvNo: r.crvNo || '', total: r.total,
-        ...(r.cash != null ? { cash: r.cash } : {}), doneAt: Date.now(), error: FieldValue.delete() });
+      const upd = ref.update({ status: 'done', saleNo: r.saleNo, saleId: r.saleId, crvNo: r.crvNo || '', total: r.total,
+        ...(r.cash != null ? { cash: r.cash } : {}), doneAt: Date.now(), error: FieldValue.delete() });   // v1.9: intezar nahi — print saath saath
+      upd.catch(() => {});   // (rad ho to neeche await par pakra jata hai)
+      if (r.again || notHere(ok.counter)) await upd;
       log(`${r.again ? 'Pehle se bani thi' : 'Sale ban gayi'}: ${r.saleNo} · ${ok.mode} · Rs ${r.total}${r.crvNo ? ' · ' + r.crvNo : ''}`);
       if (!r.again && notHere(ok.counter)) log(`Print yahan nahi: counter ${ok.counter} (${String(ok.counter).startsWith('pc:') ? 'NT-PRINT us PC par chhapega' : 'app usi device par chhapti hai'})`);
       else if (!r.again) {
@@ -603,6 +609,7 @@ async function handleSale(doc) {
         await printSale(r.saleNo, r.saleId, ok.copies, pr).catch(e => log('Print masla: ' + e.message));
         await printGatePasses(r, pr).catch(e => log('Gate pass masla: ' + e.message));
         await printTokens(ok, r.saleNo, pr).catch(e => log('Token masla: ' + e.message));   // 2026-10-04: har crate ka TOKEN bhi (nt-parchi)
+        await upd;
       }
     } catch (e) {
       log(`Sale NAHI bani (${id}): ${e.message}`);
@@ -647,7 +654,8 @@ if (process.argv.includes('--print')) {
   lock.listen(LOCK_PORT, '127.0.0.1', async () => {
     try {
       await basics(await getPool());
-      log('sale-post v1.8 chal raha hai — app ki sale ka intezar. Band: Ctrl+C');
+      try { getParchi().warm(); } catch {}   // v1.9: PowerShell print worker pehle se garam
+      log('sale-post v1.9 chal raha hai — app ki sale ka intezar. Band: Ctrl+C');
       listen();
     } catch (e) { log('Shuru nahi hua: ' + e.message); process.exit(1); }
   });
