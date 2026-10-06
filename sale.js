@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook } from './pos-stock.js?v=2.94.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.94.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.95.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.95.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -21,6 +21,8 @@ const DRAFT_KEY = 'sam-sale-draft';
 
 let cloud = null, rerender = () => {}, notice = () => {}, isOwner = () => false, uidOf = () => '', nameOf = () => '';
 let mode = 'counter', godam = null, cart = [], cash = null, note = '', saving = false;
+let editing = null;   // v2.95: ✏️ bill edit {posId, saleNo, appId, credit, oldTotal}
+let salePdf = null; export function setSalePdf(fn) { salePdf = fn; }
 let sales = [], salesDay = '', stopSales = null, salesErr = '';
 let searchFocused = false;   // v1.75
 
@@ -31,11 +33,11 @@ export function saleSetup(o) {
   isOwner = o.owner || isOwner; uidOf = o.uid || uidOf; learnOf = o.learn || learnOf; nameOf = o.name || nameOf;
   try {
     const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
-    if (d && d.day === todayStr()) { cart = d.cart || []; mode = cart.length ? (d.mode || 'counter') : 'counter'; godam = cart.length ? (d.godam ?? null) : SALE_BRANCH; cash = d.cash ?? null; note = d.note || ''; }   // v2.63: khali bill = hamesha Counter
+    if (d && d.day === todayStr()) { editing = d.editing || null; cart = d.cart || []; mode = cart.length ? (d.mode || 'counter') : 'counter'; godam = cart.length ? (d.godam ?? null) : SALE_BRANCH; cash = d.cash ?? null; note = d.note || ''; }   // v2.63: khali bill = hamesha Counter
   } catch {}
 }
 function keepDraft() {
-  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ day: todayStr(), mode, godam, cart, cash, note })); } catch {}
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ day: todayStr(), mode, godam, cart, cash, note, editing })); } catch {}
 }
 
 // ---------- data ----------
@@ -63,6 +65,7 @@ function itemIn(g, id) {
   const st = saleStock();
   return st.itemsFor(Number(g)).find(r => String(r.id) === String(id)) || null;
 }
+function setLineGodam(l, b) { l.godam = Number(b) || SALE_BRANCH; const it = itemIn(l.godam, l.id); if (it && !l.edited) setStd(l, it); cash = null; keepDraft(); rerender(); }
 function findByCode(items, code) {
   const clean = String(code).trim(), bare = clean.replace(/^0+/, '');
   const codesOf = r => [r.code, ...(Array.isArray(r.bc) ? r.bc : []), ...(Array.isArray(r.bq) ? r.bq.map(x => x?.b) : [])].map(x => String(x || '').trim()).filter(Boolean);   // v2.55: sub-barcode (bq) bhi
@@ -88,7 +91,7 @@ function keepScan(el) {   // scan box upar nazar rahe; nayi line uske neeche —
   window.scrollTo({ top: Math.max(0, (window.scrollY || 0) + s.top - 8), behavior: 'smooth' });
 }
 let lastAddAt = 0, lastScrolled = 0;
-let quickSave = false, posSales = [], stopPosSales = null;
+let quickSave = false, posSales = [], stopPosSales = null, posSyncAt = 0, stopPosSync = null;
 const BASE_COUNTERS = [['abdurehman', 'Abdurehman'], ['bilal', 'Bilal bhai'], ['mithu', 'Mithu'], ['local', '🖥 Yehi device']];
 // v2.78: 💻 PC chunein — har PC ka NT-PRINT agent printPCs/{id} mein zinda report deta hai; bill usi PC par bina window ke
 let PCS = [], pcsUn = null;
@@ -298,17 +301,20 @@ function vbRelease() {             // ungli uthi — aakhri lafz ke liye 0.6s ru
 function vbStop() { vbHold = false; vbOn = false; vbSeq++; clearTimeout(vbStopT); if (vbRec) { try { vbRec.onend = null; vbRec.abort(); } catch {} vbRec = null; } vbPaint(); }
 function vbPaint() { const b = document.querySelector('[data-sale-mic]'); if (!b) return; b.classList.toggle('on', vbOn); b.textContent = vbOn ? (vbHold ? '🎤 ' + (vbHeard ? vbRoman(vbHeard).slice(-26) : 'Bolein…') : '⏳') : '🎤 Daba kar bolo'; }
 
+// v2.95: module scope (pehle function ke andar tha -> scan screen ke godam chips ReferenceError se chhup jate the)
+const gShort = b => { const st = saleStock(); const nm = String((st.branchName ? st.branchName(b, st.names) : '') || st.names?.[b] || b); const m = nm.match(/(\d+)\s*$/); return m ? m[1] : nm.slice(0, 3); };
+const gLabel = b => Number(b) === SALE_BRANCH ? 'NT' : 'G' + gShort(b);
 function installSaleHooks() {
 setSaleDelHook(key => {
   const i = cart.findIndex(l => l.k === key);
   if (i < 0) return;
   cart.splice(i, 1); cash = null; keepDraft(); rerender();
 });
-const gShort = b => { const st = saleStock(); const nm = String((st.branchName ? st.branchName(b, st.names) : '') || st.names?.[b] || b); const m = nm.match(/(\d+)\s*$/); return m ? m[1] : nm.slice(0, 3); };   // v2.90
 setSaleCartHook(() => cart.map(l => ({ key: l.k || (l.k = newKey()),
-  item: { id: l.id, code: l.code, name: l.name + ((Number(l.godam) || SALE_BRANCH) !== SALE_BRANCH ? ' · G' + gShort(l.godam) : ''), pack: Number(l.pack) || 0, cName: l.cName, uName: l.uName, rate: crateOf(l), rate2: Number(l.rate) || 0 },
+  item: { id: l.id, code: l.code, name: l.name + ((Number(l.godam) || SALE_BRANCH) !== SALE_BRANCH ? ' · G' + gShort(l.godam) : ''), pack: Number(l.pack) || 0, cName: l.cName, uName: l.uName, rate: crateOf(l), rate2: Number(l.rate) || 0, g: Number(l.godam) || SALE_BRANCH },
   pcs: Number(l.pcs) || 0, ctn: Number(l.ctn) || 0 })));
 setSaleFindHook(q => smartSearch(stock().items, q, 12));   // v1.75: smart search
+setSaleLineGodamHook((key, b) => { const l = cart.find(x => x.k === key); if (!l) return; setLineGodam(l, b); });   // v2.95: line ka godam (scan screen chips)
 // camera par tadad ke buttons -> bill ki line
 setSaleQtyHook((it, q, key) => {
   // v1.62: camera ke buttons AAKHRI scan wali line par (line ki pehchan se), warna is item ki aakhri line
@@ -340,35 +346,28 @@ function watchSales() {
   if (stopSales) { stopSales(); stopSales = null; }
   if (!cloud?.listenAppSales) return;
   salesDay = day;
-  try { stopPosSales?.(); } catch {} stopPosSales = cloud.listenPosSales ? cloud.listenPosSales(day, b => { posSales = Array.isArray(b) ? b : []; }) : null;   // v2.64.1: POS ke bills
+  try { stopPosSales?.(); } catch {} stopPosSales = cloud.listenPosSales ? cloud.listenPosSales(day, b => { posSales = Array.isArray(b) ? b : []; billsRepaint(); }) : null;   // v2.64.1: POS ke bills
+  try { stopPosSync?.(); } catch {} stopPosSync = cloud.listenPosSync ? cloud.listenPosSync(at => { posSyncAt = Number(at) || 0; }) : null;   // v2.95: PC ka aakhri sync
   stopSales = cloud.listenAppSales(day, list => {
     sales = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); salesErr = ''; localCheck();
     const box = $('saleTodayBtn'); if (box) box.textContent = todayLabel();
-    if ($('dialog')?.open && $('dialogTitle')?.textContent.startsWith('Aaj ki app sales')) openToday();
+    billsRepaint();
   }, e => { salesErr = e?.message || 'Load nahi hui'; stopSales = null; });
 }
 const statusText = s => s.status === 'done' ? `✓ Sale ${esc(s.saleNo || '')}${s.crvNo ? ' · ' + esc(s.crvNo) : ''}`
   : s.status === 'failed' ? `✕ Nahi bani: ${esc(s.error || '')}`
   : s.status === 'posting' ? '… PC bill bana raha hai' : '⏳ PC ka intezar';
 const todayLabel = () => {
-  const wait = sales.filter(s => s.status === 'new' || s.status === 'posting').length;
-  return `📋 Aaj ki app sales (${num(sales.length)})${wait ? ' · ' + num(wait) + ' intezar mein' : ''}`;
+  const all = billsData(), wait = sales.filter(s => s.status === 'new' || s.status === 'posting').length, un = all.filter(b => b.ps === 1 && !b.cancelled && !b.farq).length;
+  return `📋 Aaj ke bills (${num(all.length)})${un ? ' · ⏳ ' + num(un) + ' un-posted' : ''}${wait ? ' · ' + num(wait) + ' intezar' : ''}`;
 };
-function openToday() {
+function openToday() {   // v2.95: mobile par bhi wahi "Aaj ke bills" (PC + app, rang, posted / un-posted, edit, print)
   const d = $('dialog'); if (!d) return;
   d.classList.remove('search-dialog');
-  $('dialogTitle').textContent = `Aaj ki app sales (${num(sales.length)})`;
-  $('dialogBody').innerHTML = salesErr ? `<p>${esc(salesErr)}</p>` : !sales.length ? '<p>Aaj app se koi sale nahi hui.</p>' :
-    sales.map(s => `<details class="sale-hist">
-      <summary><b>${s.mode === 'wholesale' ? 'Wholesale' : 'Counter'} · Rs ${num(s.total)}</b>
-        <small>${esc(new Date(s.createdAt || 0).toLocaleTimeString('en-PK'))} · ${statusText(s)}</small></summary>
-      <div style="overflow-x:auto"><table><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Rs</th></tr></thead><tbody>
-      ${(s.lines || []).map(l => `<tr><td>${esc(l.name)}</td><td>${qtyText(l)}</td><td>${num(l.rate)}</td><td>${num(r2(l.qty * l.rate))}</td></tr>`).join('')}
-      </tbody></table></div>
-      <p>Cash: Rs ${num(s.cash)}${s.mode === 'wholesale' && s.total - s.cash > 0 ? ' · Udhaar Rs ' + num(s.total - s.cash) : ''}${s.note ? ' · ' + esc(s.note) : ''}</p>
-      ${s.status === 'done' ? `<button type="button" data-sale-reprint="${esc(s.id)}">🖨 Dobara print (kuch save nahi hoga)</button>` : ''}
-    </details>`).join('');
+  $('dialogTitle').textContent = '🧾 Aaj ke bills';
+  $('dialogBody').innerHTML = '<div class="nb-wrap nb-dlg"></div>';
   if (!d.open) d.showModal();
+  mountBills($('dialogBody').querySelector('.nb-wrap'));
 }
 function qtyText(l) {
   const pk = Number(l.pack) || 0, q = Number(l.qty) || 0;
@@ -413,6 +412,7 @@ export function renderSale() {
 
   // v1.54: godam ke buttons hata diye — bill hamesha main branch se; line ke andar godam badla ja sakta hai
   $('summary').innerHTML = `<div class="stock-head sale-head" data-sale-root="1">
+    ${editing ? `<div class="sale-edit-bar"><b>✏️ Bill #${esc(String(editing.saleNo || ''))} edit ho raha hai</b><small>Purana Rs ${num(editing.oldTotal)} · items badlein, phir "Bill badlo" — POS mein wahi bill (number wahi) badlega</small><button type="button" data-sale-edit-x="1">✕ Edit chhoro</button></div>` : ''}
     <div class="account-tools">
       <button class="sale-mode${mode === 'counter' ? ' selected' : ''}" data-sale-mode="counter">🛒 Counter Sale</button>
       <button class="sale-mode${mode === 'wholesale' ? ' selected' : ''}" data-sale-mode="wholesale">📦 Wholesale</button>
@@ -448,13 +448,14 @@ export function renderSale() {
     const lg = Number(l.godam) || s.pick;
     const it = itemIn(lg, l.id) || s.items.find(r => String(r.id) === String(l.id));
     const pcs = linePcs(l), short = it && pcs > Number(it.stock), block = short && lg !== SALE_BRANCH;   // v1.72: godam mein rok
-    const gsel = s.branches.length > 1 ? `<label>Godam<select data-sale-lg="${i}">${s.branches.map(b => `<option value="${b}"${b === lg ? ' selected' : ''}>${esc(s.branchName(b, s.names))}</option>`).join('')}</select></label>` : '';
-    return `<div class="sale-line${i === cart.length - 1 && Date.now() - lastAddAt < 1800 ? ' fresh' : ''}" data-sale-line="${i}">
+    const gsel = s.branches.filter(b => b !== 0).length > 1 ? `<div class="sale-lgc"><small>Godam</small>${s.branches.filter(b => b !== 0).map(b => `<button type="button" data-sale-lgc="${i}:${b}" title="${esc(s.branchName(b, s.names))}"${b === lg ? ' class="on"' : ''}>${gLabel(b)}</button>`).join('')}</div>` : '';   // v2.95: chips
+    return `<div class="sale-line${linePcs(l) < 0 ? ' neg' : ''}${i === cart.length - 1 && Date.now() - lastAddAt < 1800 ? ' fresh' : ''}" data-sale-line="${i}">
       <div class="sale-line-top"><b>${esc(l.name)}</b><button type="button" class="danger sale-x" data-sale-del="${i}" aria-label="Hatao">✕</button></div>
       <small>${esc(l.code)}${it ? ' · stock ' + num(it.stock) + ' (' + esc(s.branchName(lg, s.names)) + ')' : ''}${block ? ' · <b class="red">⛔ godam mein stock nahi — godam badlein</b>' : short ? ' · <span class="red">stock kam hai</span>' : ''}</small>
       <div class="sale-inputs">
-        <label>${esc(l.uName)}<input type="number" min="0" step="any" inputmode="decimal" data-sale-pcs="${i}" value="${l.pcs || ''}"></label>
-        ${Number(l.pack) > 1 ? `<label>${esc(l.cName)} (${num(l.pack)})<input type="number" min="0" step="1" inputmode="numeric" data-sale-ctn="${i}" value="${l.ctn || ''}"></label>` : ''}
+        <label>${esc(l.uName)}<input type="number" step="any" inputmode="decimal" data-sale-pcs="${i}" value="${l.pcs || ''}"></label>
+        ${Number(l.pack) > 1 ? `<label>${esc(l.cName)} (${num(l.pack)})<input type="number" step="1" inputmode="numeric" data-sale-ctn="${i}" value="${l.ctn || ''}"></label>` : ''}
+        <button type="button" class="sale-neg${linePcs(l) < 0 ? ' on' : ''}" data-sale-neg="${i}" title="Wapsi (minus)">${linePcs(l) < 0 ? '↩ Wapsi' : '± Wapsi'}</button>
         <label>Rate${l.edited ? ' ✎' : ''}<input type="number" min="0" step="any" inputmode="decimal" data-sale-rate="${i}" value="${l.rate}"${owner ? '' : ' readonly'}></label>
         ${gsel}
         ${Number(l.pack) > 1 && Math.abs(crateOf(l) - (Number(l.rate) || 0)) > 0.004 ? `<small class="sale-crate">${esc(l.cName)} rate ${num(r2(crateOf(l) * Number(l.pack)))}</small>` : ''}
@@ -475,9 +476,10 @@ export function renderSale() {
     (q ? '' : `<div class="empty"><strong>Naya bill</strong><p>Upar item ka naam likhein ya 📷 se scan karein.</p></div>`));
   if (Date.now() - lastAddAt < 1800 && lastAddAt !== lastScrolled) { lastScrolled = lastAddAt; requestAnimationFrame(() => keepScan(document.querySelector('.sale-line.fresh'))); }   // scan box upar rahe (nayi line us ke neeche)
   $('actions').innerHTML = cart.length ? `<button class="give" data-sale-clear="1">✕ Naya bill</button><button data-sale-camera="1" title="Barcode scan">${camMissing() ? '🔫' : '📷'}</button>
-    <button class="got" data-sale-save="1"${saving ? ' disabled' : ''}>${saving ? 'Save ho raha hai…' : '💾 Save + Print · Rs ' + num(total)}</button>` : '';
+    <button class="got" data-sale-save="1"${saving ? ' disabled' : ''}>${saving ? 'Save ho raha hai…' : (editing ? '✏️ Bill badlo · Rs ' : '💾 Save + Print · Rs ') + num(total)}</button>` : '';
 }
 function dueText(due) {
+  if (cartTotal() < 0) return `<b class="red">↩ Wapsi bill — customer ko Rs ${num(-cartTotal())} wapas</b>`;   // v2.95
   if (mode === 'wholesale') return due > 0 ? `Udhaar: Rs ${num(due)}` : due < 0 ? `<span class="red">Cash bill se zyada hai (Rs ${num(-due)})</span>` : 'Poora cash';
   return due > 0 ? `<span class="red">Rs ${num(due)} kam hain — counter sale mein poora cash chahiye</span>` : due < 0 ? `Wapas dein: Rs ${num(-due)}` : '';
 }
@@ -488,15 +490,15 @@ function refreshTotals() {
   const c = document.querySelector('[data-sale-cash]');
   if (c && cash == null && document.activeElement !== c) c.value = total;
   const d = $('saleDue'); if (d) d.innerHTML = dueText(r2(total - cashNow()));
-  const b = document.querySelector('[data-sale-save]'); if (b && !saving) b.textContent = '💾 Save + Print · Rs ' + num(total);
+  const b = document.querySelector('[data-sale-save]'); if (b && !saving) b.textContent = (editing ? '✏️ Bill badlo · Rs ' : '💾 Save + Print · Rs ') + num(total);
 }
 
 // ---------- events ----------
 document.addEventListener('input', e => {
   const t = e.target; if (!t.closest?.('#list')) return;
   let i;
-  if ((i = t.dataset.saleCtn) != null) { cart[i].ctn = Math.max(0, Math.floor(Number(t.value) || 0)); cash = null; }
-  else if ((i = t.dataset.salePcs) != null) { cart[i].pcs = Math.max(0, Number(t.value) || 0); cash = null; }
+  if ((i = t.dataset.saleCtn) != null) { cart[i].ctn = Math.trunc(Number(t.value) || 0); cash = null; }   // v2.95: minus bhi
+  else if ((i = t.dataset.salePcs) != null) { cart[i].pcs = Number(t.value) || 0; cash = null; }
   else if ((i = t.dataset.saleRate) != null) { if (!isOwner()) return; cart[i].rate = Math.max(0, Number(t.value) || 0); cart[i].crate = cart[i].rate; cart[i].edited = cart[i].rate !== cart[i].std; cash = null; }   // malik ka apna rate: carton par bhi wohi
   else if (t.dataset.saleCash != null) { cash = t.value === '' ? 0 : Math.max(0, Number(t.value) || 0); }
   else if (t.dataset.saleNote != null) { note = t.value.slice(0, 100); }
@@ -536,10 +538,14 @@ document.addEventListener('contextmenu', e => { if (e.target.closest?.('[data-sa
 document.addEventListener('click', async e => {
   const mic = e.target.closest?.('[data-sale-mic]');
   if (mic) { if (!vbOn && !vbHold) notice('🎤 Button DABA KAR RAKHEIN, item bolein, phir chhor dein — line lag jayegi'); return; }   // v2.94.0: hold se chalta hai
-  const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera]');
+  const t = e.target.closest?.('[data-sale-mode],[data-sale-godam],[data-sale-add],[data-sale-del],[data-sale-clear],[data-sale-save],[data-sale-today],[data-sale-reprint],[data-sale-camera],[data-sale-lgc],[data-sale-neg],[data-sale-edit-x]');
   if (!t) return;
+  if (t.dataset.saleEditX) { if (confirm('Edit chhor dein? Bill waisa hi rahega.')) cancelEdit(); return; }
+  if (t.dataset.saleLgc) { const [i, b] = t.dataset.saleLgc.split(':'); const l = cart[Number(i)]; if (l) setLineGodam(l, b); return; }
+  if (t.dataset.saleNeg != null) { const l = cart[Number(t.dataset.saleNeg)]; if (l) { if (!(Number(l.pcs) || Number(l.ctn))) l.pcs = 1; l.pcs = -(Number(l.pcs) || 0); l.ctn = -(Number(l.ctn) || 0); cash = null; keepDraft(); rerender(); } return; }
   if (t.dataset.saleMode) {
     if (mode === t.dataset.saleMode) return;
+    if (editing) { notice('Edit mein Counter / Wholesale nahi badalta (party wahi rehti hai)'); return; }
     mode = t.dataset.saleMode;
     const { items } = stock();
     cart.forEach(l => { const it = items.find(r => String(r.id) === String(l.id)); if (it && (!l.edited || !isOwner())) { setStd(l, it); l.edited = false; } });
@@ -559,7 +565,7 @@ document.addEventListener('click', async e => {
     return;
   }
   if (t.dataset.saleDel != null) { cart.splice(Number(t.dataset.saleDel), 1); cash = null; keepDraft(); rerender(); return; }
-  if (t.dataset.saleClear) { if (!confirm('Yeh bill saaf kar dein?')) return; cart = []; cash = null; note = ''; mode = 'counter'; godam = SALE_BRANCH; keepDraft(); rerender(); return; }   // v2.63: Naya bill = Counter
+  if (t.dataset.saleClear) { if (!confirm(editing ? 'Edit chhor dein? Bill waisa hi rahega.' : 'Yeh bill saaf kar dein?')) return; editing = null; cart = []; cash = null; note = ''; mode = 'counter'; godam = SALE_BRANCH; keepDraft(); rerender(); return; }   // v2.63: Naya bill = Counter
   if (t.dataset.saleCamera) { openSaleCamera(); return; }
   if (t.dataset.saleToday) { openToday(); return; }
   if (t.dataset.saleReprint) {
@@ -606,6 +612,25 @@ function focusLast() {
   if (box) { box.scrollIntoView({ block: 'center' }); box.focus(); try { box.select(); } catch {} }
 }
 
+async function saveEdit(lines, total, paid) {
+  const ed = editing; if (!ed) return;
+  if (!confirm(`✏️ Bill #${ed.saleNo} badal dein?\nPurana Rs ${num(ed.oldTotal)} → naya Rs ${num(total)}\n${lines.length} lines${ed.credit ? '\n(Wholesale: cash / udhaar wahi rahega)' : ''}`)) return;
+  const id = 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const doc = { id, posId: Number(ed.posId), saleNo: String(ed.saleNo || ''), appId: String(ed.appId || ''), mode, lines, total, cash: paid, note: note.trim(), by: uidOf(), byName: byNameOf(), role: isOwner() ? 'owner' : 'staff', status: 'new', at: Date.now(), date: todayStr() };
+  saving = true; rerender();
+  try {
+    const p = cloud.saveSaleEdit(doc);
+    await Promise.race([p, new Promise(r => setTimeout(r, 4000))]);
+    notice('✏️ Bill #' + ed.saleNo + ' badalne ka hukam PC ko gaya…');
+    let un = null; un = cloud.listenSaleEdit?.(id, d => { if (!d) return;
+      if (d.status === 'done') { notice('✅ Bill #' + ed.saleNo + ' badal gaya — Rs ' + num(d.total ?? total)); if (ed.posId) lineCache.delete(Number(ed.posId)); try { un?.(); } catch {} }
+      else if (d.status === 'failed') { alert('❌ Bill #' + ed.saleNo + ' NAHI badla:\n' + (d.error || '') + '\n\nPOS mein bill waisa hi hai.'); try { un?.(); } catch {} } });
+    editing = null; cart = []; cash = null; note = ''; mode = 'counter'; godam = SALE_BRANCH; keepDraft();
+    setTimeout(() => scanReload(true), 50);
+    p.catch(err => alert('Edit PC tak NAHI gaya: ' + (err?.message || err)));
+  } catch (err) { notice('Nahi hua: ' + (err?.message || err)); }
+  finally { saving = false; rerender(); }
+}
 async function save() {
   if (saving) return;
   if (liveStopped()) { notice('⛔ Nigrani ne roka hai — pehle crate dikhayein, clear hone ke baad save hoga'); try { navigator.vibrate?.(300); } catch {} return; }   // v2.83
@@ -614,14 +639,14 @@ async function save() {
   let emptyLines = 0;
   cart.forEach(l => {
     const base = { id: String(l.id), code: String(l.code || ''), name: String(l.name || ''), pack: Number(l.pack) || 0,
-      cName: l.cName, uName: l.uName, godam: gate > 0 ? gate : (Number(l.godam) || Number(godam) || SALE_BRANCH) };   // v2.89: gate switch
+      cName: l.cName, uName: l.uName, godam: gate > 0 && !editing ? gate : (Number(l.godam) || Number(godam) || SALE_BRANCH) };   // v2.89: gate switch · v2.95: edit mein line ka apna godam
     const cq = ctnPcsOf(l), pq = r3(Number(l.pcs) || 0), cr = r2(crateOf(l)), pr = r2(l.rate);
-    if (!(cq + pq > 0)) { emptyLines++; return; }
-    if (cq > 0 && pq > 0 && Math.abs(cr - pr) > 0.004) {
+    if (Math.abs(cq + pq) < 0.0005 && !cq) { emptyLines++; return; }   // v2.95: minus (wapsi) lines bhi chalti hain
+    if (cq && pq && Math.abs(cr - pr) > 0.004) {
       lines.push({ ...base, unit: 'ctn', qty: cq, rate: cr, std: r2(l.cstd ?? l.std) });
       lines.push({ ...base, unit: 'pcs', qty: pq, rate: pr, std: r2(l.std) });
-    } else if (cq > 0 && !(pq > 0)) lines.push({ ...base, unit: 'ctn', qty: cq, rate: cr, std: r2(l.cstd ?? l.std) });
-    else if (!(cq > 0)) lines.push({ ...base, unit: 'pcs', qty: pq, rate: pr, std: r2(l.std) });
+    } else if (cq && !pq) lines.push({ ...base, unit: 'ctn', qty: cq, rate: cr, std: r2(l.cstd ?? l.std) });
+    else if (!cq) lines.push({ ...base, unit: 'pcs', qty: pq, rate: pr, std: r2(l.std) });
     else lines.push({ ...base, qty: r3(cq + pq), rate: pr, std: r2(l.std) });
   });
   if (!lines.length) { notice('Kisi item ki qty likhein'); return; }
@@ -630,7 +655,7 @@ async function save() {
   const shortG = [];
   for (const l of cart) {
     const g = Number(l.godam) || Number(godam) || SALE_BRANCH;
-    if (g === SALE_BRANCH) continue;
+    if (g === SALE_BRANCH || editing) continue;   // v2.95: edit — purane bill ka stock pehle hi kat chuka (PC khud jaanchta hai)
     const need = linePcs(l); if (!(need > 0)) continue;
     const it = itemIn(g, l.id);
     const have = it ? Number(it.stock) || 0 : 0;
@@ -640,10 +665,15 @@ async function save() {
   if (emptyLines && !confirm('Jin items ki qty khali hai woh bill mein nahi jayenge. Theek hai?')) return;
   if (lines.some(l => !(l.rate > 0)) && !confirm('Kisi item ka rate 0 hai. Phir bhi save karein?')) return;
   const total = r2(lines.reduce((n, l) => n + l.qty * l.rate, 0));
+  if (Math.abs(total) < 0.005) { notice('Bill ka total 0 hai — kuch qty badlein'); return; }
   let paid = r2(cashNow());
+  if (total < 0) paid = mode === 'counter' ? total : 0;     // v2.95: wapsi bill — counter: cash wapas, wholesale: khate mein
+  else {
   if (mode === 'counter' && paid < total) { notice('Counter sale mein poora cash likhein (ya Wholesale chunein)'); return; }
   if (mode === 'counter') paid = total;                     // POS: counter sale ka CashReceived = bill
   if (paid > total) { notice('Cash bill se zyada nahi ho sakta'); return; }
+  }
+  if (editing) { await saveEdit(lines, total, paid); return; }   // v2.95: ✏️ POS mein wahi bill badlo
   const msg = `${mode === 'wholesale' ? 'WHOLESALE' : 'COUNTER SALE'}\n${lines.length} items · Rs ${num(total)}` +
     (mode === 'wholesale' ? `\nCash Rs ${num(paid)}${total - paid > 0 ? ' · Udhaar Rs ' + num(total - paid) : ''}` : '') + '\n\nSave karke POS mein bill banayein?';
   if (!quickSave && !confirm(msg)) return;   // v2.57: F5 wala raasta pehle hi pooch chuka
@@ -742,13 +772,115 @@ document.addEventListener('keydown', e => {
 
 // v2.64: scanner screen ke liye — godam chips aur PC par aaj ke bills
 setSaleGodamHook(() => { const st = stock(); return { list: st.branches.filter(b => b !== 0).map(b => ({ b, name: b === SALE_BRANCH ? 'NT' : 'G' + gShort(b), full: (st.branchName ? st.branchName(b, st.names) : '') || st.names?.[b] || ('Godam ' + b) })), cur: st.pick, set: b => { godam = Number(b); keepDraft(); rerender(); } }; });
-setSaleBillsHook(() => {   // v2.68: dobara print usi counter par jo chuna hai
+// ===== v2.95: 🧾 AAJ KE BILLS — PC + app ek list. Rang: hara = paid, laal = udhaar, grey = cancel / farq.
+// 📌 posted / ⏳ un-posted (POS DocStatusID 2 / 1), 💻 kis PC + kisne + kab, "sync X sec pehle". Un-posted = ✏️ edit
+// (wahi scan screen par khulta hai; PC sale-post.js POS mein wahi bill badalta hai). 🖨 tamam un-posted ek report mein.
+const isFarq = b => /stock\s*['"]?\s*f[ae]?r?a?q/i.test(String(b.p || ''));
+const lineCache = new Map(), lineTried = new Set();   // posId -> lines [{i,n,q,r,g}]
+const ago = t => { if (!t) return '—'; const s0 = Math.max(0, Math.round((Date.now() - t) / 1000)); return s0 < 60 ? s0 + ' sec pehle' : s0 < 3600 ? Math.round(s0 / 60) + ' min pehle' : new Date(t).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }); };
+function billsData() {
   const posByApp = new Map(posSales.filter(b => b.app).map(b => [b.app, b]));
-  const app = sales.map(s => { const pb = posByApp.get(s.id); return pb && pb.x ? { ...s, cancelled: true } : s; });
-  const isFarq = b => /stock\s*['"]?\s*f[ae]?r?a?q/i.test(String(b.p || '')) || /stock\s*fraq|stock\s*farq/i.test(String(b.p || ''));   // v2.94.0: ginti farq wale POS bills sirf DIKHTE hain (🧮), sale mein shumar nahi
-  const pos = posSales.filter(b => !b.app).map(b => ({ farq: isFarq(b), id: 'pos-' + b.id, pos: true, saleNo: b.no, total: b.t, cash: b.cr ? b.c : b.t, mode: b.cr ? 'wholesale' : 'counter', status: 'done', cancelled: !!b.x, createdAt: b.tm, party: b.p, n: b.n }));
-  return { list: [...app, ...pos].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)), reprint: id => { if (String(id).startsWith('pos-')) throw Error('POS bill'); if (counter === 'local') { const sl = sales.find(x => x.id === id); if (sl) { printLocal(sl, copies, sl.crates || 1); return; } } return cloud.reprintAppSale(id, copies, counter); } };
-});
+  const app = sales.map(s => { const pb = posByApp.get(s.id);
+    return { id: s.id, src: 'app', saleNo: s.saleNo || pb?.no || '', posId: Number(s.saleId || pb?.id) || 0, total: Number(pb ? pb.t : s.total) || 0, cash: Number(s.cash) || 0,
+      credit: s.mode === 'wholesale', status: s.status, error: s.error || '', cancelled: !!pb?.x, ps: pb ? Number(pb.ps) || 0 : 0, farq: false,
+      createdAt: s.createdAt || 0, where: '📱 App · ' + String(counterName(s.counter) || '').replace(/^💻 /, ''), by: '', party: '', lines: s.lines || [], edited: !!s.editedAt }; });
+  const pos = posSales.filter(b => !b.app).map(b => ({ id: 'pos-' + b.id, src: 'pos', saleNo: b.no, posId: Number(b.id) || 0, total: Number(b.t) || 0, cash: b.cr ? Number(b.c) || 0 : Number(b.t) || 0,
+    credit: !!b.cr, status: 'done', cancelled: !!b.x, ps: Number(b.ps) || 0, farq: isFarq(b), createdAt: b.tm || 0, where: '💻 ' + (b.pc || 'POS'), by: b.by || '', party: b.p || '', n: b.n || 0 }));
+  return [...app, ...pos].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+}
+const billPaid = b => !b.credit || b.cash >= b.total - 0.5;
+const billCls = b => b.farq ? 'fq' : b.cancelled ? 'cx' : b.status === 'failed' ? 'fl' : (b.status === 'new' || b.status === 'posting') ? 'wt' : billPaid(b) ? 'pd' : 'up';
+const billIcon = { fq: '🧮', cx: '⊘', fl: '⚠', wt: '⏳', pd: '✓', up: '✗' };
+const canEditBill = b => !b.cancelled && !b.farq && b.ps === 1 && b.posId > 0 && (b.src === 'pos' || b.status === 'done');
+async function billLines(b) {
+  if (b.posId && lineCache.has(b.posId)) return lineCache.get(b.posId);
+  if (b.posId && cloud?.getPosSaleLines) { try { const L = await cloud.getPosSaleLines(b.posId); if (L && L.length) { lineCache.set(b.posId, L); return L; } } catch {} lineTried.add(b.posId); }
+  return (b.lines || []).map(l => ({ i: Number(l.id), n: l.name, q: Number(l.qty) || 0, r: Number(l.rate) || 0, g: Number(l.godam) || SALE_BRANCH }));
+}
+const mounts = new Set();
+function billsRepaint() { for (const m of [...mounts]) { if (!m.box.isConnected) { mounts.delete(m); continue; } m.paint(); } const b = $('saleTodayBtn'); if (b) b.textContent = todayLabel(); }
+const FILTERS = [['all', 'Sab'], ['pd', '✓ Paid'], ['up', '✗ Udhaar'], ['un', '⏳ Un-posted'], ['po', '📌 Posted'], ['pc', '💻 PC'], ['app', '📱 App']];
+function mountBills(box) {
+  let open = '', filter = 'all';
+  try { filter = localStorage.getItem('sam-bills-f') || 'all'; } catch {}
+  box.classList.add('nb-wrap');
+  box.innerHTML = `<div class="nb-head"><b>🧾 Aaj ke bills</b><small class="nb-sync"></small></div>
+    <div class="nb-top"><input type="search" class="nb-q" placeholder="🔍 Bill no, naam, raqam…" autocomplete="off"><button type="button" class="nb-unp" data-nb-unp="1">🖨 Un-posted</button></div>
+    <div class="nb-f"></div><div class="nb-sum"></div><div class="nb-list"></div>`;
+  const q = box.querySelector('.nb-q'), list = box.querySelector('.nb-list'), fbox = box.querySelector('.nb-f'), sum = box.querySelector('.nb-sum'), syncEl = box.querySelector('.nb-sync'), unpBtn = box.querySelector('.nb-unp');
+  const paint = () => {
+    const all = billsData();
+    const t = String(q.value || '').trim().toLowerCase(), dg = t.replace(/[^0-9]/g, '');
+    const pass = b => filter === 'all' || (filter === 'pd' && billCls(b) === 'pd') || (filter === 'up' && billCls(b) === 'up') || (filter === 'un' && b.ps === 1 && !b.cancelled) || (filter === 'po' && b.ps === 2) || (filter === 'pc' && b.src === 'pos') || (filter === 'app' && b.src === 'app');
+    const rows = all.filter(b => pass(b) && (!t || String(b.saleNo || '').includes(t) || (b.party || '').toLowerCase().includes(t) || (b.where || '').toLowerCase().includes(t) || (b.by || '').toLowerCase().includes(t) || (dg.length >= 2 && String(Math.round(Math.abs(b.total))).startsWith(dg))));
+    const cnt = k => all.filter(b => k === 'all' || (k === 'pd' && billCls(b) === 'pd') || (k === 'up' && billCls(b) === 'up') || (k === 'un' && b.ps === 1 && !b.cancelled) || (k === 'po' && b.ps === 2) || (k === 'pc' && b.src === 'pos') || (k === 'app' && b.src === 'app')).length;
+    fbox.innerHTML = FILTERS.map(([k, n]) => `<button type="button" data-nb-f="${k}" class="${filter === k ? 'on' : ''}">${n} <em>${cnt(k)}</em></button>`).join('');
+    const live = rows.filter(b => !b.cancelled && !b.farq);
+    const tot = live.reduce((n, b) => n + b.total, 0), udh = live.filter(b => billCls(b) === 'up').reduce((n, b) => n + (b.total - b.cash), 0);
+    sum.innerHTML = `${num(rows.length)} bills · <b>Rs ${num(tot)}</b>${udh > 0.5 ? ` · <span class="red">udhaar Rs ${num(udh)}</span>` : ''}`;
+    const un = all.filter(b => b.ps === 1 && !b.cancelled && !b.farq).length; unpBtn.textContent = `🖨 Un-posted (${un})`; unpBtn.disabled = !un;
+    syncEl.innerHTML = posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : '';
+    syncEl.className = 'nb-sync' + (posSyncAt && Date.now() - posSyncAt > 3 * 60000 ? ' old' : '');
+    list.innerHTML = rows.map(b => { const c = billCls(b), tm = new Date(b.createdAt || 0).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' });
+      const L = open === b.id ? (b.posId && lineCache.get(b.posId)) || (b.src === 'app' ? (b.lines || []).map(l => ({ n: l.name, q: l.qty, r: l.rate })) : null) : null;
+      return `<div class="nb-bill ${c}${open === b.id ? ' open' : ''}" data-nb="${esc(b.id)}">
+        <div class="nb-row"><i>${billIcon[c]}</i><span class="nb-m"><b>${b.saleNo ? esc(String(b.saleNo).replace(/^0+(?=\d{4})/, '')) : (b.credit ? 'Wholesale' : 'Counter')}</b><small>${esc(b.where)}${b.by ? ' · ' + esc(b.by) : ''} · ${tm}</small>${b.party && !/counter\s*sale/i.test(b.party) ? `<small>${esc(b.party)}</small>` : ''}</span>
+        <span class="nb-v"><b>Rs ${num(b.total)}</b>${b.ps === 2 ? '<u class="ps2">📌 Posted</u>' : b.ps === 1 && !b.cancelled ? '<u class="ps1">⏳ Un-posted</u>' : ''}${b.farq ? '<u>farq · sale nahi</u>' : ''}${b.edited ? '<u>✏️ badla</u>' : ''}</span></div>
+        ${open === b.id ? `<div class="nb-det">${b.status === 'failed' ? `<p class="red">⚠ ${esc(b.error)}</p>` : ''}${L ? L.map(l => `<p><span>${esc(l.n)}</span><span>${num(l.q)} × ${num(l.r)} = <b>${num(r2(l.q * l.r))}</b></span></p>`).join('') : (b.posId && lineTried.has(b.posId) ? '<p class="stat-note">Items abhi PC se nahi aaye (PC sync chalu hai?) — thori dair baad kholein</p>' : '<p class="stat-note">Items aa rahe hain…</p>')}
+          <p class="nb-pay">${b.credit ? `Cash Rs ${num(b.cash)}${b.total - b.cash > 0.5 ? ` · <b class="red">Udhaar Rs ${num(b.total - b.cash)}</b>` : ''}` : 'Cash · poora'}</p>
+          <div class="nb-acts">${canEditBill(b) ? `<button type="button" class="nb-edit" data-nb-edit="${esc(b.id)}">✏️ Edit</button>` : b.ps === 2 ? '<small>📌 Post ho chuka — edit band</small>' : ''}${b.src === 'app' && b.status === 'done' ? `<button type="button" data-nb-print="${esc(b.id)}">🖨 Dobara print</button>` : ''}</div></div>` : ''}
+      </div>`; }).join('') || '<p class="stat-note">Koi bill nahi</p>';
+  };
+  q.oninput = paint;
+  box.addEventListener('click', async e => {
+    const f = e.target.closest('[data-nb-f]'); if (f) { filter = f.dataset.nbF; try { localStorage.setItem('sam-bills-f', filter); } catch {} paint(); return; }
+    if (e.target.closest('[data-nb-unp]')) { printUnposted(); return; }
+    const ed = e.target.closest('[data-nb-edit]'); if (ed) { e.stopPropagation(); const b = billsData().find(x => x.id === ed.dataset.nbEdit); if (b) editBill(b); return; }
+    const pr = e.target.closest('[data-nb-print]'); if (pr) { e.stopPropagation(); const sl = sales.find(x => x.id === pr.dataset.nbPrint); try { if (counter === 'local' && sl) printLocal(sl, copies, sl.crates || 1); else { await cloud.reprintAppSale(pr.dataset.nbPrint, copies, counter); notice('🖨 Print ka hukam bhej diya'); } } catch (er) { notice('Print nahi hua: ' + (er?.message || er)); } return; }
+    const c = e.target.closest('[data-nb]'); if (!c) return;
+    open = open === c.dataset.nb ? '' : c.dataset.nb; paint();
+    if (open) { const b = billsData().find(x => x.id === open); if (b && b.posId && !lineCache.has(b.posId)) { lineTried.delete(b.posId); await billLines(b); paint(); } }
+  });
+  const m = { box, paint }; mounts.add(m); paint();
+  return setInterval(() => { if (!box.isConnected) return; syncEl.innerHTML = posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : ''; }, 5000);
+}
+setSaleBillsHook(box => mountBills(box));   // PC scan screen ka baayan hissa
+
+// ✏️ un-posted bill -> wahi scan screen par items ke saath. Save = PC (sale-post) POS mein ISI bill ko badalta hai.
+async function editBill(b) {
+  if (!canEditBill(b)) { notice(b.ps === 2 ? '📌 Bill post ho chuka — edit nahi ho sakta' : 'Ye bill edit nahi ho sakta'); return; }
+  if (cart.length && !editing && !confirm('Screen par abhi wala bill hat jayega. Bill #' + b.saleNo + ' edit karein?')) return;
+  notice('✏️ Bill #' + b.saleNo + ' khul raha hai…');
+  const L = await billLines(b);
+  if (!L.length) { notice('Is bill ke items nahi mile — 1 minute baad dobara koshish karein'); return; }
+  const owner = isOwner();
+  cart = L.map(x => { const g = Number(x.g) || SALE_BRANCH, it = itemIn(g, x.i) || itemIn(SALE_BRANCH, x.i); const std = it ? rateFor(it, b.credit ? 'wholesale' : 'counter') : Number(x.r) || 0;
+    return { k: newKey(), id: String(x.i), code: it?.code || '', name: it?.name || x.n, pack: Number(it?.pack) || 0, cName: it?.cName || 'Ctn', uName: it?.uName || 'Pcs', godam: g,
+      ctn: 0, pcs: Number(x.q) || 0, rate: Number(x.r) || 0, std, crate: Number(x.r) || 0, cstd: it ? crateFor(it, b.credit ? 'wholesale' : 'counter') : Number(x.r) || 0, edited: owner && Math.abs((Number(x.r) || 0) - std) > 0.004 }; });
+  mode = b.credit ? 'wholesale' : 'counter'; cash = b.credit ? b.cash : null; note = '';
+  editing = { posId: b.posId, saleNo: b.saleNo, appId: b.src === 'app' ? b.id : '', credit: b.credit, oldTotal: b.total };
+  keepDraft();
+  if ($('dialog')?.open && $('dialogTitle')?.textContent.startsWith('🧾')) $('dialog').close();
+  rerender(); setTimeout(() => scanReload(), 80);
+}
+function cancelEdit() { editing = null; cart = []; cash = null; note = ''; mode = 'counter'; godam = SALE_BRANCH; keepDraft(); rerender(); setTimeout(() => scanReload(true), 50); }
+
+// 🖨 tamam un-posted bills EK report mein (har bill alag hissa: no, PC, kisne, waqt, items, raqam) — PDF kholo / bhejo / print
+async function printUnposted() {
+  const L = billsData().filter(b => b.ps === 1 && !b.cancelled && !b.farq).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  if (!L.length) { notice('Koi un-posted bill nahi'); return; }
+  notice('🖨 ' + L.length + ' un-posted bills ki report ban rahi hai…');
+  if (cloud?.listPosSaleLines) { try { const all = await cloud.listPosSaleLines(todayStr()); all.forEach(d => { if (d.id && Array.isArray(d.lines)) lineCache.set(Number(d.id), d.lines); }); } catch {} }
+  for (const b of L) if (b.posId && !lineCache.has(b.posId)) await billLines(b);
+  const kul = L.reduce((n, b) => n + b.total, 0), udh = L.filter(b => !billPaid(b)).reduce((n, b) => n + (b.total - b.cash), 0);
+  const html = `<h1>NOOR TRADERS</h1><h2>⏳ Un-posted bills — ${esc(new Date().toLocaleDateString('en-GB'))}</h2>
+    <p>${L.length} bills · Kul <b>Rs ${num(kul)}</b>${udh > 0.5 ? ` · Udhaar Rs ${num(udh)}` : ''} · ${esc(new Date().toLocaleTimeString('en-PK'))}</p>
+    ${L.map(b => { const lines = (b.posId && lineCache.get(b.posId)) || (b.lines || []).map(l => ({ n: l.name, q: l.qty, r: l.rate }));
+      return `<div class="ub-bill"><h3>Bill # ${esc(String(b.saleNo || '-'))} <small>${esc(b.where)}${b.by ? ' · ' + esc(b.by) : ''} · ${esc(new Date(b.createdAt || 0).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }))}${b.party && !/counter\s*sale/i.test(b.party) ? ' · ' + esc(b.party) : ''}</small></h3>
+      <table class="iv-tbl"><thead><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Rs</th></tr></thead><tbody>${lines.map(l => `<tr><td>${esc(l.n)}</td><td class="iv-n">${num(l.q)}</td><td class="iv-n">${num(l.r)}</td><td class="iv-n">${num(r2(l.q * l.r))}</td></tr>`).join('')}
+      <tr><td colspan="3"><b>KUL</b>${b.credit ? ` · cash ${num(b.cash)}${b.total - b.cash > 0.5 ? ' · udhaar ' + num(b.total - b.cash) : ''}` : ''}</td><td class="iv-n"><b>${num(b.total)}</b></td></tr></tbody></table></div>`; }).join('')}`;
+  if (salePdf) salePdf(html, 'Un-posted bills'); else notice('Report nahi khul saki');
+}
 
 // ===== v2.72: "🖥 Yehi device" — bill + gate pass + TOKEN parchiyan isi device ke default printer par =====
 // Chrome ko --kiosk-printing ke sath kholo (CHROME-SEEDHA-PRINT.bat) to print dabba nahi aata.
