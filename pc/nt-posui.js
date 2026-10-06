@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-posui.js  v1.0 (2026-10-06) — 🔔 POS SCREEN DEKHO: POS (Cognitive "Retail Solution") ki Sale screen ki item-list (grid) ki
+//  nt-posui.js  v1.0.1 (2026-10-06: UIA assemblies poore raste se — pehle compile nahi hota tha) · v1.0 (2026-10-06) — 🔔 POS SCREEN DEKHO: POS (Cognitive "Retail Solution") ki Sale screen ki item-list (grid) ki
 //  qataron ki ginti har 0.25 sec (Windows UI Automation, sirf PARHNA). Ginti barhi = item JURA (scan ho ya code likh kar) -> onAdd().
 //  POS SQL mein sirf SAVE par likhta hai (pos-live test), is liye screen dekhna hi raasta hai. POS ko haath nahi lagata.
 //  local-config: "posUi": false = band · "posTitle": "Retail Solution" (POS window ke naam ka hissa)
@@ -15,7 +15,9 @@ function start({ dir, log, cfg, onAdd }) {
   const PS = path.join(dir, 'nt-posui.ps1');
   const TXT = `$ErrorActionPreference='Stop'
 $dll=Join-Path $PSScriptRoot 'NtPosUi1.dll'
-if(!(Test-Path $dll)){ Add-Type -ReferencedAssemblies UIAutomationClient,UIAutomationTypes,WindowsBase -OutputAssembly $dll -TypeDefinition @"
+Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes,WindowsBase
+$refs=@([System.Windows.Automation.AutomationElement].Assembly.Location,[System.Windows.Automation.ControlType].Assembly.Location,[System.Windows.Rect].Assembly.Location)
+if(!(Test-Path $dll)){ Add-Type -ReferencedAssemblies $refs -OutputAssembly $dll -TypeDefinition @"
 using System;using System.Threading;using System.Windows.Automation;
 public class NtPosUi1{
  static void Say(string s){try{Console.Out.WriteLine(s);Console.Out.Flush();}catch{}}
@@ -57,9 +59,10 @@ Add-Type -Path $dll
       else if (l.startsWith('GRID ')) { gridOn = true; log('🔔 POS item-list mil gayi: ' + l.slice(5)); }
       else if (l === 'LOST') { gridOn = false; }
       else if (l.startsWith('ADD ')) { try { onAdd(Number(l.slice(4)) || 1); } catch {} } } });
-    w.stderr.on('data', d => { err = (err + d).slice(-300); });
+    w.stderr.on('data', d => { err = (err + d).slice(-2000); });
     w.on('exit', code => { if (child === w) child = null; gridOn = false; if (stopped) return; fails++;
-      log(`🔔 POS screen dekhna band (code ${code})${err ? ' — ' + err.trim().split(/\r?\n/).pop() : ''}` + (fails < 6 ? ' — 30 sec mein dobara' : ' — chhor diya'));
+      const el = err.split(/\r?\n/).filter(x => /error|CS\d{4}/i.test(x)).slice(0, 3).join(' | ') || err.trim().split(/\r?\n/).pop();
+      log(`🔔 POS screen dekhna band (code ${code})${err ? ' — ' + el : ''}` + (fails < 6 ? ' — 30 sec mein dobara' : ' — chhor diya'));
       if (fails < 6) setTimeout(run, 30000); });
   };
   setTimeout(run, 5000);

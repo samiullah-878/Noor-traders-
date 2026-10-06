@@ -1484,3 +1484,6 @@ us ke andar sab se bari Table/DataGrid, GridPattern.RowCount (ya children) har 2
 worker "OK" (WAV tik). Grid mile (gridOn) to nt-scan ki apni scan-tik band (scanGood false) — ghalat scan bzzz chalu. Grid na mile:
 har 3 s dhoondo; toote (form band) -> LOST, dobara dhoondo. posUi:false = band. UPD_FILES + nt-posui.js (khud update).
 Test: C# stub UIA assembly ke saath mcs compile ✓. Asal POS par YAHAN test nahi — log "🔔 POS item-list mil gayi: <id/naam> <rows>".
+* nt-posui v1.0.1 (manifest .17): server log 18:24 "POS screen dekhna band (code 1) SOURCE_CODE_ERROR AddType" — Add-Type
+  -ReferencedAssemblies chhote naam (UIAutomationClient) se assembly nahi milti -> namespace nahi. Ab pehle Add-Type -AssemblyName,
+  phir [AutomationElement]/[ControlType]/[Rect].Assembly.Location poore raste. Log mein compile ki "error CS" lines (3 tak).
