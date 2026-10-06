@@ -1,7 +1,7 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.95.3';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.95.4';
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1703,6 +1703,8 @@ function camOffBtn(tools) { const b = document.createElement('button'); b.type =
 let lastCode = '', lastCodeAt = 0;
 let badCode = '', badN = 0, lastGoodAt = 0;   // v1.56: ghalat parhai ka filter
 let camRetry = 0, audioCtx = null;            // v1.57: kaala camera dobara chalu, scan ki awaz
+// v2.95.4: PC par scanner gun (keyboard) ka pehla scan hi awaz chalu kar de — mouse click ki zaroorat nahi
+if (typeof document !== 'undefined') document.addEventListener('keydown', () => { try { audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)(); if (audioCtx.state !== 'running') audioCtx.resume(); } catch {} }, true);
 // v1.74: "ek barcode chuno" mode — wohi bara scanner (Focus/Zoom/Camera/Light) sirf ek code parh kar wapas
 let pickHook = null, pickMulti = null;   // v2.17: pickMulti = { done } — camera khula rahe, har code par cb (transfer note)
 export function scanPick(cb) { pickMulti = null; pickHook = cb; if (scanBox) finishScan(); openScanner(); }

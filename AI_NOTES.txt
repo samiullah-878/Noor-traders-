@@ -1,4 +1,4 @@
-BLUE KHATA — AI_NOTES  (aakhri: v2.95.3, 2026-10-06 — neeche sab se aakhir mein)
+BLUE KHATA — AI_NOTES  (aakhri: v2.95.4, 2026-10-06 — neeche sab se aakhir mein)
 Yeh file agli AI ke liye hai: pichhli chat mein kya kaam hua.
 
 === MASLA (malik ne bataya) ===
@@ -2715,3 +2715,8 @@ dukaan chal rahi hoti hai — doosre counter ne beech mein bill banaya to MAX ba
 * Ab: MAX badle to dekho SaleID > maxBefore mein koi Sale jis ka SystemNotes BILKUL hamare edit wale notes (waqt + naam ke saath) ho —
   wo ho to asli khatra (proc ne nayi Sale banayi) -> wapas; warna doosre PC ka bill, edit jaari. Baqi hifazat (SaleNo, lines, DocStatusID,
   stock farq) wahi.
+
+==================== v2.95.4 — 🔔 PC par scanner gun se scan = awaz (bina click) ====================
+Malik: "PC par bill bana rahe hain — scan par awaz aaye". beep() pehle se tha magar audioCtx sirf pointerdown / scan button par
+banta tha; scanner gun (keyboard) se Chrome awaz band rakhta. Ab document keydown (capture) par audioCtx bana / resume — keydown
+user-gesture ginta hai, pehla scan hi awaz chalu. Sirf ye ek line; aur kuch nahi badla.
