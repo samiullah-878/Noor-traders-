@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-scan.js  v1.2 (2026-10-06: ASLI awaz — WAV (SoundPlayer): sahi = chhoti oonchi tik, ghalat = 3 moti bzzz; Console.Beep Windows
+//  nt-scan.js  v1.2.1 (2026-10-06: onScanBad — ghalat scan ka waqt bahar batao, POS error box ki bzzz dohri na ho) · v1.2 (2026-10-06: ASLI awaz — WAV (SoundPlayer): sahi = chhoti oonchi tik, ghalat = 3 moti bzzz; Console.Beep Windows
 //                     ki 'ding' ban jati thi aur dono ek jaisi) · v1.1 (2026-10-06: beep() bahar se — POS item-add) · v1.0 (2026-10-06) — 🔔 SCAN AWAZ (POS ya koi bhi software): har scan par "tik", GHALAT scan (item POS mein nahi /
 //  band) par alag zor ki "bzzz bzzz bzzz" — larka screen dekhe baghair scan karta rahe.
 //  NT-PRINT (nt-print.js) isay chalata hai (khud-update saath). POS ko haath NAHI lagata — sirf awaz.
@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 
-function start({ dir, base, log, cfg, onScanOk }) {
+function start({ dir, base, log, cfg, onScanOk, onScanBad }) {
   const C = () => { try { return cfg() || {}; } catch { return {}; } };
   if (process.platform !== 'win32' || C().scanAwaz === false) return null;
   const norm = s => String(s || '').trim().toUpperCase();
@@ -95,7 +95,7 @@ Add-Type -Path $dll
     if (skipList().includes(String(fg || '').toLowerCase())) return;   // hamari app (Chrome) ki apni awaz hai
     const ok = !loaded || codes.has(norm(code)) || codes.has(norm(code).replace(/^0+/, ''));
     if (ok) { try { onScanOk && onScanOk(); } catch {} if (C().scanGood !== false) try { w.stdin.write('OK\n'); } catch {} }
-    else { try { w.stdin.write('BAD\n'); } catch {} log(`🔔 GHALAT scan: "${code}" (${fg || '?'}) — POS mein ye barcode nahi / item band`); }
+    else { try { onScanBad && onScanBad(); } catch {} try { w.stdin.write('BAD\n'); } catch {} log(`🔔 GHALAT scan: "${code}" (${fg || '?'}) — POS mein ye barcode nahi / item band`); }
   };
   setTimeout(run, 3000);
   // v1.1: bahar se awaz (POS beep) — worker chal raha ho to us se (foran), warna null

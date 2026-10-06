@@ -2802,3 +2802,15 @@ Test: C# stub UIA assembly ke saath mcs compile ✓. Asal POS par YAHAN test nah
 * nt-print v1.12 (manifest .21): server par nt-posui v1.2 lagaya magar NT-PRINT selfUpdate ne GitHub CDN ka PURANA manifest dekh kar purani nt-posui wapas la di. Ab selfUpdate sirf tab jab remote manifest.version > local manifest.json version (date + number), update ke baad manifest.json likhta hai.
 * v2.95.6: Stock ginti — '✓ Tick' dabane par agar Ctn/PCS/Kul khanon mein ginti likhi ho to wahi ginti Save (saveCount, farq ke saath history) — pehle Tick likhi ginti chhor kar 'system jaisa' save karta tha (cheeni: 81 likha, history mein tick).
 * nt-posui v1.3 (manifest .22): 'awaz phir nahi' — POS mein Sale screen band/dobara khulne (Stock Ledger wagera ke baad) par pakri hui patti murda (naam nahi badalta, error bhi nahi). Ab har ~3 s window+patti dobara dhoondo, Automation.Compare se naya ho to badlo, na mile to LOST. NtPosUi4.dll.
+
+==================== nt-posui v1.4 + nt-print v1.13 + nt-scan v1.2.1 (manifest 2026-10-06.23) — POS ERROR BOX ====================
+Masla (user): POS par error aaye (message box) to us ke baad item-add ki awaz ruk jati thi.
+User ne SQL se POS ke andar awaz ka poocha: SQL password se sirf DATA milta hai, POS ka program nahi; POS SQL mein sirf SAVE par likhta hai
+(pos-live test) -> SQL trigger se har item par awaz mumkin nahi. User ne option 2 chuna (hamara watcher mazboot).
+* nt-posui v1.4 (NtPosUi5.dll): har ~0.3 s POS process (ProcessId) ke top-level windows + Sale window ke Window-children dekho;
+  chhota (<=900x600) jis mein OK/Yes/No/Cancel/Retry button ho = message box -> "ERR <title: text>" (naya RuntimeId par ek dafa).
+  Box band hote hi "BACK" + patti (info) null -> foran dobara dhoondo (300 ms), pehle 3 s lagte the. Sale window mile magar patti na mile -> 1 s.
+  local-config "posErrBeep": false = error par bzzz band. Log: "🔔 POS ERROR box: ..." hamesha.
+* nt-print v1.13: posui onErr -> scan.beep("BAD") (bzzz); agar nt-scan ne 2 s ke andar ghalat-scan bzzz bajayi ho to dobara nahi.
+* nt-scan v1.2.1: onScanBad callback.
+* C# mcs se compile-check (stub5.cs). Counter PCs (Mithu) khud update; Abdurehman PC ko abhi bhi ek dafa haath se NT-PRINT update chahiye.
