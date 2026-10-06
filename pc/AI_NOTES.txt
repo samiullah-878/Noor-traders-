@@ -1470,3 +1470,9 @@ Malik: "jab POS mein cheez add ho (scan ho ya code likh kar) to sath hi system s
   (foran) ya powershell beep. posBeep on ho to nt-scan ki "tik" (scanGood) band — warna scan par do awazein; ghalat scan ki bzzz chalu.
 * KHATRA: draft bill ki SystemNotes mein "at PC:" na ho to host UNKNOWN -> beep kahin nahi. pos-live.js mein "PC ?" aaye to
   agla qadam: Sale.CreatedBy (user) -> PC map.
+* nt-scan v1.2 + nt-print v1.9.1 + pos-sales-dekho v1.4.1 (manifest .15): malik — "awaz beep ki nahi, Windows ki apni (ding)
+  aati hai, har scan par, item add ho ya na ho". Wajah: Console.Beep is PC par Windows ki default awaz ban jata (OK aur BAD ek jaise).
+  Ab C# WAV khud banata hai (22050 Hz square, fade) + System.Media.SoundPlayer: OK = 1900 Hz 70 ms "tik", BAD = 3x 260 Hz (0.96 s) — saaf alag.
+  NtScan2.dll (class NtScan2). Mono se compile + WAV bana kar check ✓. POS live-beep (posBeep) ab OPT-IN (local-config posBeep:true) —
+  pos-live test mein 2 min koi line nahi aayi -> POS shayad sirf save par likhta hai; tab tak scan ka tik (barcode POS list mein mila) hi
+  "item add" ki awaz.

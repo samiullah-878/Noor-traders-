@@ -1,8 +1,9 @@
 // ============================================================
-//  nt-scan.js  v1.1 (2026-10-06: beep() bahar se — POS item-add) · v1.0 (2026-10-06) — 🔔 SCAN AWAZ (POS ya koi bhi software): har scan par "tik", GHALAT scan (item POS mein nahi /
+//  nt-scan.js  v1.2 (2026-10-06: ASLI awaz — WAV (SoundPlayer): sahi = chhoti oonchi tik, ghalat = 3 moti bzzz; Console.Beep Windows
+//                     ki 'ding' ban jati thi aur dono ek jaisi) · v1.1 (2026-10-06: beep() bahar se — POS item-add) · v1.0 (2026-10-06) — 🔔 SCAN AWAZ (POS ya koi bhi software): har scan par "tik", GHALAT scan (item POS mein nahi /
 //  band) par alag zor ki "bzzz bzzz bzzz" — larka screen dekhe baghair scan karta rahe.
 //  NT-PRINT (nt-print.js) isay chalata hai (khud-update saath). POS ko haath NAHI lagata — sirf awaz.
-//  Kaise: nt-scan.ps1 (C# NtScan1.dll) Windows ka keyboard hook — sirf SCANNER pakarta hai: 4+ harf bohat tez (< ~45 ms fasla)
+//  Kaise: nt-scan.ps1 (C# NtScan2.dll) Windows ka keyboard hook — sirf SCANNER pakarta hai: 4+ harf bohat tez (< ~45 ms fasla)
 //  aur aakhir mein Enter/Tab. Haath se type karna (dheema) nahi pakarta, kuch save/record NAHI karta. Code ko Firestore posStock
 //  (POS items: code, barcode, sub-barcode — sirf chalu items) se milata hai.
 //  local-config.json: "scanAwaz": false = band · "scanSkip": ["chrome","msedge"] (in programs mein app ki apni awaz hai)
@@ -32,10 +33,10 @@ function start({ dir, base, log, cfg }) {
 
   const PS = path.join(dir, 'nt-scan.ps1');
   const TXT = `$ErrorActionPreference='Stop'
-$dll=Join-Path $PSScriptRoot 'NtScan1.dll'
+$dll=Join-Path $PSScriptRoot 'NtScan2.dll'
 if(!(Test-Path $dll)){ Add-Type -ReferencedAssemblies System.Windows.Forms -OutputAssembly $dll -TypeDefinition @"
 using System;using System.Diagnostics;using System.Runtime.InteropServices;using System.Text;using System.Threading;using System.Windows.Forms;
-public class NtScan{
+public class NtScan2{
  delegate IntPtr LLProc(int n,IntPtr w,IntPtr l);
  [DllImport("user32.dll",SetLastError=true)] static extern IntPtr SetWindowsHookEx(int id,LLProc fn,IntPtr mod,uint tid);
  [DllImport("user32.dll")] static extern IntPtr CallNextHookEx(IntPtr h,int n,IntPtr w,IntPtr l);
@@ -53,7 +54,13 @@ public class NtScan{
    else if(c!='\\0'){ if(buf.Length>0&&now-last>gap)buf.Length=0; buf.Append(c); last=now; }
    else if(vk!=0x10&&vk!=0xA0&&vk!=0xA1&&vk!=0x14){ buf.Length=0; } } }catch{}
   return CallNextHookEx(hh,n,w,l);}
- static void Play(string k){ThreadPool.QueueUserWorkItem(_=>{try{ if(k=="OK"){Console.Beep(2000,70);} else if(k=="BAD"){for(int i=0;i<3;i++){Console.Beep(330,260);Thread.Sleep(70);}} }catch{}});}
+ static byte[] Wav(int[] spec){ int sr=22050; var ms=new System.IO.MemoryStream(); var bw=new System.IO.BinaryWriter(ms); int n=0; for(int i=0;i<spec.Length;i+=3)n+=sr*(spec[i+1]+spec[i+2])/1000;
+  bw.Write(0x46464952);bw.Write(36+n*2);bw.Write(0x45564157);bw.Write(0x20746D66);bw.Write(16);bw.Write((short)1);bw.Write((short)1);bw.Write(sr);bw.Write(sr*2);bw.Write((short)2);bw.Write((short)16);bw.Write(0x61746164);bw.Write(n*2);
+  for(int i=0;i<spec.Length;i+=3){ int f=spec[i],on=sr*spec[i+1]/1000,off=sr*spec[i+2]/1000; for(int t=0;t<on;t++){ double ph=(double)t*f/sr; short v=(short)(((ph-Math.Floor(ph))<0.5?1:-1)*14000*Math.Min(1.0,Math.Min(t,on-t)/60.0)); bw.Write(v);} for(int t=0;t<off;t++)bw.Write((short)0);} bw.Flush(); return ms.ToArray(); }
+ static System.Media.SoundPlayer okP=new System.Media.SoundPlayer(new System.IO.MemoryStream(Wav(new int[]{1900,70,0})));
+ static System.Media.SoundPlayer badP=new System.Media.SoundPlayer(new System.IO.MemoryStream(Wav(new int[]{260,230,90,260,230,90,260,320,0})));
+ static object pl=new object();
+ static void Play(string k){ThreadPool.QueueUserWorkItem(_=>{try{ lock(pl){ if(k=="OK")okP.PlaySync(); else if(k=="BAD")badP.PlaySync(); } }catch{}});}
  static void ReadIn(){try{string s;while((s=Console.In.ReadLine())!=null){Play(s.Trim());}}catch{} Application.Exit();}
  public static void Run(int g){ gap=g; var t=new Thread(ReadIn);t.IsBackground=true;t.Start();
   using(var p=Process.GetCurrentProcess())using(var m=p.MainModule){hh=SetWindowsHookEx(13,proc,GetModuleHandle(m.ModuleName),0);}
@@ -62,7 +69,7 @@ public class NtScan{
 }
 "@ }
 Add-Type -Path $dll
-[NtScan]::Run([int]$args[0])
+[NtScan2]::Run([int]$args[0])
 `;
   let child = null, fails = 0, stopped = false;
   const skipList = () => { const s = C().scanSkip; return Array.isArray(s) ? s.map(x => String(x).toLowerCase()) : ['chrome', 'msedge', 'firefox']; };

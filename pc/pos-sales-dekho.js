@@ -109,7 +109,7 @@ lock.on('listening', async () => {
   watch('appSales', 'createdAt'); watch('saleEdits', 'at');
   // v1.4: 🔔 POS BEEP — nayi SaleDetail line (save se pehle bhi POS likhta hai) -> us PC (SystemNotes "at PC:") ke posBeep doc par waqt.
   // NT-PRINT (us PC par) dekh kar beep karta hai. App ke bill (BK-APP) aur bari kheep (> 30 line = save/import) par nahi.
-  if (cfgLocal().posBeep !== false) {
+  if (cfgLocal().posBeep === true) {   // v1.4.1: opt-in
     const beepCol = db.collection('businesses').doc(BUSINESS_ID).collection('posBeep');
     let lastLine = 0, bRun = false;
     const beepTick = async () => { if (bRun) return; bRun = true;

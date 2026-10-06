@@ -28,7 +28,7 @@ const { execFile, execFileSync } = require('child_process');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
-const VER = '1.9';
+const VER = '1.9.1';
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
@@ -250,7 +250,7 @@ function listenBeep() {
 function listen() {
   listenBeep();
   let scan = null;
-  const posBeepOn = () => cfg().posBeep !== false;
+  const posBeepOn = () => cfg().posBeep === true;   // v1.9.1: sirf jab local-config posBeep:true (POS live likhta hai ya nahi — pakka nahi)
   try { scan = require('./nt-scan.js').start({ dir: DIR, base, log, cfg: () => ({ ...cfg(), ...(posBeepOn() ? { scanGood: false } : {}) }) }); } catch (e) { log('🔔 scan awaz shuru nahi hui: ' + e.message); }   // v1.8
   // v1.9: 🔔 POS BEEP — server (pos-sales-dekho v1.4) har nayi POS line par posBeep/<HOST> likhta hai
   if (posBeepOn()) { let first = true, lastAt = 0;
