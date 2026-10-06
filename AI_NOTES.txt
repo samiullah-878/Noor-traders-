@@ -2752,3 +2752,13 @@ chala gaya) magar printer ruk gaya -> PUTBMP (v3.7) par TSC ~30-36 label ke baad
   "N hisson mein", watch sab — "⏳ 2/5", sab done = ✓. Timeout 45 s x hisse.
 * showRate false (malik): label se "Rs" line band (barcode number par chadh rahi thi).
 * NOTE: v2.95.4 (PC scanner keydown se beep chalu, pos-stock) 14:38 par push ho gaya tha (malik ne command rok di thi magar tab tak chal chuki thi) — bezarar, live hai.
+
+==================== label-print v3.9 + urdu-shape v1.0 (manifest 2026-10-06.11) — 🔤 URDU TEXT KI TARAH (tasveer nahi) ====================
+Malik: v3.8 (kati bitmap + chhote jobs) par bhi ruka; "Urdu alfaz ki shakl mein aaye jaise English aati hai" — ABHI.
+* urduMode "ttf": Windows ka TTF (default tahomabd.ttf) printer ke FLASH mein: KILL F,"UR.TTF" + DOWNLOAD F,"UR.TTF",<n>,<bytes> EOP —
+  ek dafa fi process (ensureFont, ttfSent). rowHead + CODEPAGE UTF-8. Label: TEXT x,y,"UR.TTF",0,px,px,"<shaped utf8>" (urduTtfPx 26).
+* urdu-shape.js: Arabic/Urdu presentation forms (FE70-FEFF + FB50-FBFF: ٹ پ چ ڈ ڑ ژ ک گ ں ھ ہ ۃ ی ے ۓ), lam-alef, zer/zabar hata,
+  lafz/runs ulte (visual LTR), hindse/English seedhe, space run ke aage. Test: نمکو 0.700 گرام -> FEE1 FE8D FEAE FB94 20 30.. 20 FEEE FB91 FEE4 FEE7 ✓
+* 200 label = 9 jobs, kul 36 KB (bitmap 106 KB, PUTBMP 17 KB magar rukta). --test-urdu [font] = ek qatar.
+* Khatra: font mein presentation-form glyph na hon to dabbe/khali — pehle --test-urdu dekho; arialbd.ttf / micross.ttf try. Asal TSC par
+  yahan test NAHI.

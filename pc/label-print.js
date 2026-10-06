@@ -1,5 +1,7 @@
 // =========================================================
-//  label-print.js  v3.8 (2026-10-06: ⚠ PUTBMP par TSC ~30-36 label ke baad ruk jata tha -> wapas BITMAP magar Urdu tasveer sirf
+//  label-print.js  v3.9 (2026-10-06: 🔤 urduMode 'ttf' — Urdu TASVEER nahi, TEXT: Windows ka TTF font (tahoma) ek dafa printer ke flash mein
+//                     (DOWNLOAD F,"UR.TTF"), harf urdu-shape.js se jure hue (presentation forms) + visual order; CODEPAGE UTF-8.
+//                     --test-urdu [font] = ek qatar test. Data: har label par ~30 byte (tasveer 300-1600 thi)) · v3.8 (2026-10-06: ⚠ PUTBMP par TSC ~30-36 label ke baad ruk jata tha -> wapas BITMAP magar Urdu tasveer sirf
 //                     likhai jitni (kaat kar, 2-4 guna chhoti) + bara order 8-8 qatar (24 label) ke ALAG print jobs mein) · v3.7 (2026-10-06: ⚡ Urdu tasveer printer ko EK dafa (DOWNLOAD "UR.BMP"), har label par sirf PUTBMP — job 158-357 KB se
 //                     ~10 KB; labels ruk ruk kar nahi nikalte / "Error - Printing" nahi. label-settings "urduMode": "bitmap" = purana) · v3.6 (2026-10-05: Urdu raster upar/neeche padding px*0.35 — Nastaleeq ka sar kat-ta tha; default font Tahoma 24) · v3.5 (2026-10-05: lamba naam 2 line (char 14 dot), Urdu 46 dot tak, barcode 24/20%) · v3.4 (2026-10-05: English naam ke neeche URDU naam — blueAccess/urduNames, PowerShell raster -> TSPL BITMAP; label-settings urdu/urduFont/urduPx/urduInvert)
 //  v3.3 (2026-09-24: number har BARCODE ka apna — ek item ke sub-barcode alag alag 1 se; dobara chhapne par aage se)
@@ -22,6 +24,7 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 // ---------------- SETTINGS ----------------
 // Label ka naap label-settings.json mein hai (isi folder mein) â€” wahan badlein, script ko haath na lagayein.
 const BUSINESS_ID = 'noor-traders';
+const { shape: urduShape } = require('./urdu-shape.js');   // v3.9
 const DEFAULTS = {
   printer: 'TSC TTP-244 Pro',   // Devices and Printers wala naam
   cols: 3,                      // ek qatar mein kitne labels (roll par 3)
@@ -34,6 +37,8 @@ const DEFAULTS = {
   urduPx: 24,                   // Urdu harf ki unchai (dots) — chhote label par 18-22
   urduInvert: false,            // agar Urdu ki jagah kala block aaye to true kar dein
   urduMode: 'bitmap',           // v3.8: 'bitmap' (kati hui chhoti tasveer har label par). 'putbmp-test' = DOWNLOAD/PUTBMP (TSC ~35 label baad rukta tha)
+  urduTtf: 'C:\\Windows\\Fonts\\tahomabd.ttf',   // v3.9: urduMode 'ttf' ke liye font (bold Tahoma); 'arialbd.ttf' bhi chal sakta
+  urduTtfPx: 26,                // v3.9: TTF Urdu ki unchai (dots)
   rowsPerJob: 8                 // v3.8: itni qataron (x cols label) ka EK print job — printer ka buffer na bhare
 };
 const LOCK_PORT = 47816;
@@ -134,7 +139,8 @@ function bmp1(r, uh) {
 const urW = S => Math.floor((S.w * DOT - 2 * Math.round(1.5 * DOT)) / 8) * 8;
 function labelCmds(S, j, x0, tag, ur) {
   const W = S.w * DOT, H = S.h * DOT, m = Math.round(1.5 * DOT), y0 = Math.round(S.yOffset * DOT);
-  const urR = (S.urdu && ur) ? urduRaster(String(ur), S, urW(S)) : null;   // v3.4: Urdu bitmap
+  const ttf = S.urdu && ur && S.urduMode === 'ttf';   // v3.9
+  const urR = (S.urdu && ur && !ttf) ? urduRaster(String(ur), S, urW(S)) : null;   // v3.4: Urdu bitmap
   const code = clean(j.code, 40), qty = Number(j.qty) || 1;
   const nameMax = Math.floor((W - 2 * m) / (Number(S.charW) || 14));   // v3.5: font "2" asal mein ~14 dot chaura (12 par naam dayen se kat-ta tha)
   const name = clean(j.name, 60) + (qty !== 1 ? ' - ' + num(qty) : '');
@@ -144,10 +150,12 @@ function labelCmds(S, j, x0, tag, ur) {
   const modules = digits ? (1 + Math.floor(code.length / 2) + (code.length % 2 ? 2 : 0) + 1) * 11 + 13 : (code.length + 3) * 11 + 13;
   const narrow = modules * 2 <= W - 2 * m ? 2 : 1;
   const bw = modules * narrow, bx = x0 + Math.max(m, Math.round((W - bw) / 2));
-  const bh = Math.round(H * (urR ? (l2 ? 0.20 : 0.24) : 0.34));   // v3.5: Urdu + 2 line naam ho to barcode thora chhota
+  const bh = Math.round(H * ((urR || ttf) ? (l2 ? 0.20 : 0.24) : 0.34));   // v3.5: Urdu + 2 line naam ho to barcode thora chhota
   const out = [`TEXT ${x0 + m},${y0 + m},"2",0,1,1,"${l1}"`];
   let y = y0 + m + 22;
   if (l2) { out.push(`TEXT ${x0 + m},${y},"2",0,1,1,"${l2}"`); y += 22; }
+  if (ttf) { const px = Math.max(14, Math.min(60, Number(S.urduTtfPx) || 26)); const t = Buffer.from(urduShape(String(ur)).replace(/"/g, ''), 'utf8').toString('latin1');
+    out.push(`TEXT ${x0 + m},${y},"UR.TTF",0,${px},${px},"${t}"`); y += px + 6; }   // v3.9: Urdu as TEXT (font printer mein)
   if (urR) { const uh = Math.min(urR.h, 56), c = urR.crop;
     if (S.urduMode === 'putbmp-test') out.push(`PUTBMP ${x0 + m},${y},"UR.BMP"`);
     else if (c && c.y < uh) { const ch = Math.min(c.h, uh - c.y); out.push(`BITMAP ${x0 + m + c.xb * 8},${y + c.y},${c.wb},${ch},0,${c.data.slice(0, c.wb * ch)}`); }   // v3.8: kati hui (chhoti)
@@ -163,7 +171,7 @@ function labelCmds(S, j, x0, tag, ur) {
 }
 function rowHead(S) {
   const rowW = S.cols * S.w + (S.cols - 1) * S.colGap;
-  return [`SIZE ${rowW} mm,${S.h} mm`, `GAP ${S.rowGap} mm,0 mm`, `SPEED ${S.speed}`, `DENSITY ${S.density}`, 'DIRECTION 1', `REFERENCE ${Math.round(S.xOffset * DOT)},0`];
+  return [`SIZE ${rowW} mm,${S.h} mm`, `GAP ${S.rowGap} mm,0 mm`, `SPEED ${S.speed}`, `DENSITY ${S.density}`, 'DIRECTION 1', `REFERENCE ${Math.round(S.xOffset * DOT)},0`, ...(S.urduMode === 'ttf' ? ['CODEPAGE UTF-8'] : [])];   // v3.9
 }
 // Ek hukum ke copies ko qataron mein baant kar TSPL (har qatar = ek PRINT)
 // v3.8: ek hukum -> kai CHHOTE print jobs (har job rowsPerJob qataren), taake TSC ka buffer na bhare
@@ -194,6 +202,18 @@ function tsplTest(S) {
   return out.join('\r\n');
 }
 
+// v3.9: Urdu TTF font printer ke FLASH mein (ek dafa fi process; flash band hone par bhi rehta hai)
+let ttfSent = false;
+function fontJob(S) {
+  const f = String(S.urduTtf || DEFAULTS.urduTtf); const b = fs.readFileSync(f);
+  return 'KILL F,"UR.TTF"\r\n' + `DOWNLOAD F,"UR.TTF",${b.length},` + b.toString('latin1') + '\r\nEOP\r\n';
+}
+async function ensureFont(S) {
+  if (S.urduMode !== 'ttf' || ttfSent) return null;
+  let err = null; try { err = await sendRaw(fontJob(S), S.printer); } catch (e) { err = e; }
+  if (err) { log('Urdu font printer mein nahi gaya: ' + err.message); return err; }
+  ttfSent = true; log(`Urdu font printer mein daal diya (${path.basename(String(S.urduTtf || DEFAULTS.urduTtf))})`); return null;
+}
 function sendRaw(text, printerName) {
   const PRINTER_NAME = printerName;
   const file = path.join(DIR, 'label-print.bin');
@@ -257,7 +277,8 @@ async function handle(doc) {
     const copies2 = Math.max(1, Math.min(200, Math.floor(Number(j.copies) || 1)));
     const nums = nextNums(j.code || j.itemId, copies2);            // v3.3: har BARCODE (sub-barcode) ka apna silsila — surf 1kg alag, 2kg alag
     const ur = S.urdu ? (await urduNames())[String(j.itemId)] || '' : '';   // v3.4: Urdu naam (ho to)
-    let err = null; for (const t of tspl(S, j, nums, ur)) { err = await sendRaw(t, S.printer); if (err) break; }   // v3.8: chhote jobs ek ke baad ek
+    let err = (S.urdu && ur) ? await ensureFont(S) : null;   // v3.9
+    if (!err) for (const t of tspl(S, j, nums, ur)) { err = await sendRaw(t, S.printer); if (err) break; }   // v3.8: chhote jobs ek ke baad ek
     if (err) { await ref.update({ status: 'failed', error: String(err.message).slice(0, 300), doneAt: Date.now() }); log(`Label NAHI chhapa: ${j.name} â€” ${err.message}`); }
     else { await ref.update({ status: 'done', doneAt: Date.now(), error: FieldValue.delete(), numFrom: nums.from, numTo: nums.to, numCode: nums.code, day: dayKey() }); log(`Label chhapa: ${j.name}${Number(j.qty) !== 1 ? ' - ' + num(j.qty) : ''} x ${copies2} -> ${nums.code}-${nums.from}${copies2>1?' se '+nums.code+'-'+nums.to:''}`); }
   } finally { busy.delete(doc.id); }
@@ -268,6 +289,13 @@ if (process.argv.includes('--calibrate')) {   // v2.1: roll badalne ke baad prin
   const rowW = S.cols * S.w + (S.cols - 1) * S.colGap;
   sendRaw([`SIZE ${rowW} mm,${S.h} mm`, `GAP ${S.rowGap} mm,0 mm`, 'GAPDETECT', 'AUTODETECT', ''].join('\r\n'), S.printer)
     .then(e => { console.log(e ? 'Nahi hua: ' + e.message : 'Calibrate ka hukum bhej diya â€” printer 2-3 khali labels nikalega, yeh theek hai.'); process.exit(e ? 1 : 0); });
+} else if (process.argv.includes('--test-urdu')) {   // v3.9: node label-print.js --test-urdu [C:\Windows\Fonts\arialbd.ttf]
+  const S = { ...settings(), urdu: true, urduMode: 'ttf' }; const fa = process.argv[process.argv.indexOf('--test-urdu') + 1]; if (fa && !fa.startsWith('--')) S.urduTtf = fa;
+  console.log('Font: ' + S.urduTtf + ' · ' + S.urduTtfPx + ' dots');
+  (async () => { const e1 = await ensureFont(S); if (e1) { console.log('Font NAHI gaya: ' + e1.message); process.exit(1); }
+    const j = { name: 'nimko 0.700gm', code: '03265', qty: 1, rate: 370, copies: 3 };
+    const jobs = tspl(S, j, { code: 'TT', from: 1 }, 'نمکو 0.700 گرام'); const e2 = await sendRaw(jobs[0], S.printer);
+    console.log(e2 ? 'Nahi hua: ' + e2.message : 'Test qatar bhej di — Urdu "نمکو 0.700 گرام" jure hue harf mein aani chahiye'); process.exit(e2 ? 1 : 0); })();
 } else if (process.argv.includes('--test')) {
   const S = settings();
   console.log('Naap: ' + S.cols + ' columns x ' + S.w + 'x' + S.h + ' mm, gap ' + S.colGap + '/' + S.rowGap + ' mm, offset ' + S.xOffset + '/' + S.yOffset + ' mm');
@@ -277,7 +305,7 @@ if (process.argv.includes('--calibrate')) {   // v2.1: roll badalne ke baad prin
   const lock = net.createServer();
   lock.once('error', () => { console.log('label-print pehle se chal raha hai.'); process.exit(3); });
   lock.listen(LOCK_PORT, '127.0.0.1', () => {
-    { const S = settings(); log(`label-print v3.8 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
+    { const S = settings(); log(`label-print v3.9 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
     jobCol.where('status', '==', 'new').onSnapshot(s => {
       s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handle(c.doc)); });
     }, e => { log('Listener toot gaya: ' + e.message + ' â€” band, bat 30 second mein dobara chalayega'); process.exit(1); });
