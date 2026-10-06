@@ -2006,3 +2006,9 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .nb-tags u.ps1{background:#fff2d6;color:#9a5a00;border:1px dashed #e0a000}.nb-tags u.ps2{background:#e3ecff;color:#1d3b7a}.nb-tags u.ud{background:#fdecec;color:#c62828}
 .nb-det p{font-size:.8rem}.nb-det p span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nb-acts button{min-height:38px;padding:0 10px}
+
+/* v2.95.8: 🚚 Falcon trips chips */
+.gp-trips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px}.gp-trip{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:5px 6px 5px 11px;background:#eef4ff;border:1px solid #d3e0fb;color:#1d3b7a;font-size:12.5px}
+.gp-trip b{font-weight:800}.gp-trip button{border:0;background:rgba(29,59,122,.1);color:#1d3b7a;border-radius:999px;width:22px;height:22px;line-height:22px;padding:0;font-size:11px}
+.gp-trip.cut{background:#fff4e0;border-color:#f3d39b;color:#8a5200}.gp-trip.cut button{background:rgba(138,82,0,.12);color:#8a5200}
+.gp-tsum{margin:2px 0 8px;font-size:13px;color:#33415e}.gp-tsum .bad{color:#a3221a;font-weight:700}.gp-match.trk{background:#eef4ff;color:#1d3b7a}

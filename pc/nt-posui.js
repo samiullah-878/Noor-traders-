@@ -1,5 +1,6 @@
 // ============================================================
-//  nt-posui.js  v1.5 (2026-10-07: NT-PRINT band ho to ye bhi band (purane bhatke posui processes shuru mein khatam) · 'PROC <naam>' (POS ka program — ghalat-window scan pakarne ko) · 'WIN 1/0' (Sale screen khuli/band) ·
+//  nt-posui.js  v1.6 (2026-10-07: error box sirf ASLI — likhai + OK/Yes/No; settings/print/search jaisi window (likhne ka khana, list,
+//                   checkbox) par bzzz nahi · Sale screen par wapsi 0.5 s mein (pehle 2 s)) · v1.5 (2026-10-07: NT-PRINT band ho to ye bhi band (purane bhatke posui processes shuru mein khatam) · 'PROC <naam>' (POS ka program — ghalat-window scan pakarne ko) · 'WIN 1/0' (Sale screen khuli/band) ·
 //                   Sale screen khuli magar patti nahi = 0.5 s mein dobara dhoondo (pehle 1 s)) · v1.4 (2026-10-06: POS ka ERROR/message box (OK/Yes/No wala chhota window) pakro -> bzzz; box band hote hi patti foran dobara dhoondo
 //                   taake awaz na ruke · local-config "posErrBeep": false = error par bzzz band) · v1.3 (2026-10-06: har 3 sec patti dobara dhoondo — Sale screen dobara khulne par purani patti murda, awaz band ho jati thi) · v1.2 (2026-10-06: screen-ginti (0 aati thi) chhori; ab POS ki 'Retail: .. PEICES: ..' patti ka NAAM (UIA) har 150 ms —
 //                   item judte hi us item ki tafseel se badalti hai -> ADD) · v1.1 (2026-10-06: list 'table' nahi (sab Pane) -> SCREEN se: No. column ki patti (58px) ka screenshot har 200ms, likhai ki
@@ -34,16 +35,21 @@ public class NtPosUi6{
   foreach(AutomationElement e in w.FindAll(TreeScope.Descendants,Condition.TrueCondition)){ try{ string n=e.Current.Name??""; if(n.StartsWith("Retail:")&&n.IndexOf("PEICES",StringComparison.OrdinalIgnoreCase)>=0)return e; }catch{} }
   return null;}
  static string Key(AutomationElement e){ try{ int[] r=e.GetRuntimeId(); return r==null?"":string.Join(".",Array.ConvertAll(r,x=>x.ToString())); }catch{ return ""; } }
- // v1.4: POS ka ERROR / message box — POS hi ka chhota window jis mein OK / Yes / No button ho
+ // v1.4: POS ka ERROR / message box · v1.6: SIRF asli box — likhai + OK/Yes/No jaise button; koi likhne ka khana / list / checkbox
+ //   ho (settings, print, search window) to ye message box NAHI (pehle settings/print window par bhi bzzz baj sakti thi)
+ static readonly string[] OKB={"OK","YES","NO","RETRY","TRY AGAIN"};
+ static readonly string[] ANYB={"OK","YES","NO","RETRY","TRY AGAIN","CANCEL","ABORT","IGNORE","CLOSE","CONTINUE","HELP","MINIMIZE","MAXIMIZE","RESTORE"};
  static bool IsMsg(AutomationElement d, out string txt){
   txt=""; bool btn=false; var sb=new StringBuilder();
   try{ var r=d.Current.BoundingRectangle; if(r.Width>900||r.Height>600)return false; }catch{ return false; }
   try{ foreach(AutomationElement c in d.FindAll(TreeScope.Descendants,Condition.TrueCondition)){
-    try{ var ct=c.Current.ControlType; string n=(c.Current.Name??"").Trim();
-     if(ct==ControlType.Button){ string b=n.Replace("&","").ToUpperInvariant(); if(b=="OK"||b=="YES"||b=="NO"||b=="CANCEL"||b=="RETRY")btn=true; }
-     else if(ct==ControlType.Text&&n.Length>0&&sb.Length<200){ sb.Append(n).Append(' '); } }catch{} } }catch{}
+    var ct=c.Current.ControlType; string n=(c.Current.Name??"").Trim();
+    if(ct==ControlType.Button){ string b=n.Replace("&","").ToUpperInvariant(); if(Array.IndexOf(ANYB,b)<0)return false; if(Array.IndexOf(OKB,b)>=0)btn=true; }
+    else if(ct==ControlType.Edit||ct==ControlType.ComboBox||ct==ControlType.List||ct==ControlType.ListItem||ct==ControlType.CheckBox||ct==ControlType.RadioButton||ct==ControlType.DataGrid||ct==ControlType.Table||ct==ControlType.Tree||ct==ControlType.Tab||ct==ControlType.Spinner||ct==ControlType.Slider||ct==ControlType.Menu||ct==ControlType.MenuBar||ct==ControlType.ToolBar)return false;
+    else if(ct==ControlType.Text&&n.Length>0&&sb.Length<200){ sb.Append(n).Append(' '); } } }catch{ return false; }
   if(!btn)return false;
   string nm=""; try{ nm=d.Current.Name??""; }catch{}
+  if(sb.Length==0&&nm.Length==0)return false;
   txt=(nm+": "+sb.ToString()).Replace((char)13,' ').Replace((char)10,' ').Trim(); return true; }
  static List<AutomationElement> Dialogs(AutomationElement w,int pid){
   var L=new List<AutomationElement>();
@@ -70,7 +76,7 @@ public class NtPosUi6{
     if(info==null){ tick++; var w=FindWin(title); if(w!=null){ win=w; pid=w.Current.ProcessId; info=FindInfo(w); if(info!=null){ last=info.Current.Name; tick=0; Say("GRID info "+last); } } else { win=null; pid=0; } }
     else { string n=info.Current.Name??""; if(last!=null&&n!=last&&n.StartsWith("Retail:"))Say("ADD 1"); last=n; }
    }catch{ if(info!=null)Say("LOST"); info=null; last=null; }
-   Thread.Sleep(info!=null?150:(hadMsg?300:(win==null?2000:500)));
+   Thread.Sleep(info!=null?150:(hadMsg?300:500));   // v1.6: Sale screen par wapsi bhi 0.5 s mein (pehle 2 s)
   }}
 }
 "@ }

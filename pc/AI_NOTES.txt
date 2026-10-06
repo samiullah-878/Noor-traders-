@@ -1522,3 +1522,16 @@ User ka maqsad: larka aankh band kar ke scan kare aur koi cheez miss na ho. User
 * Agla (kal dukan par): patti test — wohi item dobara scan par patti badalti hai? phir PAKKI TASDEEQ (tik sirf jab POS mein item jure).
   Dhyan: agar khali bill par patti hoti hi nahi to pehle item par "patti nahi mili" ghalat tu-tu-tu aa sakti hai — log/app mein dekhein.
 * Abdurehman PC ko ab bhi ek dafa haath se NT-PRINT update chahiye.
+
+==================== nt-posui v1.6 (manifest 2026-10-07.2) + App v2.95.8 (gaari) ====================
+* nt-posui v1.6 (NtPosUi7.dll): error box SIRF asli — sab button OK/Yes/No/Cancel/Retry/Close/Help... (title bar Minimize/Maximize/Close bhi)
+  aur koi Edit/ComboBox/List/CheckBox/Radio/Grid/Tree/Tab/Menu/ToolBar NAHI, kam az kam ek OK/Yes/No/Retry. Settings / print / search window par bzzz nahi.
+  User: bill sirf Sale screen par banta hai, baqi windows sirf peeche khuli — is liye "report screen par scan = tu-tu-tu" NAHI banaya.
+  Sale window na ho to 0.5 s mein dobara dhoondo (pehle 2 s).
+* App v2.95.8 gaari.js (user ki Falcon screenshots: 2 tasveerein nahi lagti thin; bilty subha milti hain, reading ke baghair hisaab chahiye):
+  - 📸 Falcon screenshots input multiple (4 tak) -> ek AI call, prompt: har trip {t,km}, dohra ek dafa, kata hua km:null.
+    trackerTrips[{t,km,cut}] merge (tripKey = waqt parse "06 Oct 2026 05:26 PM"), baad ki screenshot jurti, kata hua poora ho jata.
+    trackerKm = jor. Chips (✕ hatao), ⚠️ kata hua trip. Rules badalne ki zaroorat NAHI (gaari doc par key pabandi nahi).
+  - pc(): mk (meter) || tk (tracker) = km, kmSrc; milan sirf jab dono. Diesel banta / average / mahine km tracker se bhi; card "(tracker)".
+  - Phera band: endR ya trackerKm ho to sawal nahi.
+  - User ki screenshots se: 11:48 AM 33.87 + 5:01 PM 7.74 + 5:26 PM 10.37 + 11:36 PM 5.1 + 12:14 AM 20.49 + 1:05 AM 7.26 = 84.83; 10:41 AM ka km kata hua.

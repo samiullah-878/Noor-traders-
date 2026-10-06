@@ -1,11 +1,13 @@
 // gaari.js — 🚚 GAARI KA HISAAB v3 (v2.94, 2026-10-06) — sab kuch "PHERA" ke gird
+// v2.95.8 (2026-10-07): 📸 Falcon ki KAI screenshots ek saath — AI har trip (waqt + km) alag, dohra trip ek dafa, trackerTrips[{t,km,cut}]
+//   jor = trackerKm; baad ki screenshot purane trips mein jurti. Meter reading na ho to hisaab (diesel banta, average, mahine km) Falcon km se.
 // Ek PHERA = ek page: biltiyan (kiraya, kahan se->tak, ☐ driver se le liya), kharche (chips + search), meter (shuru = pichhle
 // phere ki aakhri, aakhri + 📷 AI), Falcon tracker km (📸 AI) — dono ka milan, diesel (litre × rate, ☐ tanki full) aur
 // "km ÷ average = itna lagna chahiye tha" vs asal, phere ka nafa. Har khana khud save (intezar nahi — Firestore peeche).
 // Main screen: mahine ka hero, calendar (har din kitne pheray), chips (💰 driver se lena, ⛽ average, 🧾 kharche phera-wise…),
 // phera cards. Purani alag entries (bilty/diesel/kharch/reading/tracker/driver — v2.92) bhi jor mein rehti hain.
 // Data: businesses/noor-traders/gaari/{id} kind 'phera' {date, startR, endR, trackerKm, bilties[{id,from,to,party,kiraya,comm,col}],
-//   kharche[{n,a}], diesel[{l,rate,amount,full}], status open|closed, note, by, byName, at} + gaari/_config.
+//   kharche[{n,a}], diesel[{l,rate,amount,full}], status open|closed, note, by, byName, at, trackerTrips[{t,km,cut}] (v2.95.8)} + gaari/_config.
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (v, d = 0) => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: d });
@@ -58,12 +60,13 @@ function pc(p) {
   const B = p.bilties || [], K = p.kharche || [], D = p.diesel || [];
   const kiraya = B.reduce((s, b) => s + N(b.kiraya), 0), comm = B.reduce((s, b) => s + commOf(b), 0);
   const kh = K.reduce((s, k) => s + N(k.a), 0), dL = D.reduce((s, d) => s + N(d.l), 0), dRs = D.reduce((s, d) => s + N(d.amount), 0);
-  const km = N(p.endR) > N(p.startR) && N(p.startR) ? N(p.endR) - N(p.startR) : 0;
+  const mk = N(p.endR) > N(p.startR) && N(p.startR) ? N(p.endR) - N(p.startR) : 0;   // meter se
+  const tk = N(p.trackerKm), km = mk || tk, kmSrc = mk ? 'meter' : tk ? 'tracker' : '';   // v2.95.8: reading nahi to Falcon km
   const rate = dL ? dRs / dL : lastRate();
   const shouldL = km / avgOf(), shouldRs = shouldL * rate;
-  const tk = N(p.trackerKm), kmDiff = km && tk ? km - tk : 0, kmOk = !(km && tk) || Math.abs(kmDiff) <= Math.max(10, km * 0.05);
+  const kmDiff = mk && tk ? mk - tk : 0, kmOk = !(mk && tk) || Math.abs(kmDiff) <= Math.max(10, mk * 0.05);
   const pending = B.filter(b => !b.col).reduce((s, b) => s + N(b.kiraya), 0);
-  return { kiraya, comm, kh, dL, dRs, km, rate, shouldL, shouldRs, tk, kmDiff, kmOk, pending, nafa: kiraya - comm - kh - dRs, routes: B.map(b => `${b.from || '?'}→${b.to || '?'}`) };
+  return { kiraya, comm, kh, dL, dRs, km, mk, kmSrc, rate, shouldL, shouldRs, tk, kmDiff, kmOk, pending, nafa: kiraya - comm - kh - dRs, routes: B.map(b => `${b.from || '?'}→${b.to || '?'}`) };
 }
 // tanki full se tanki full: is phere ki full-fill par, pichhli full-fill (kisi bhi phere mein) ke baad se kitne km aur kitna diesel
 function fullCheck(p) {
@@ -140,7 +143,7 @@ function cardHTML(p) {
   const warn = [!c.kmOk ? '📍 km farq' : '', c.km && c.dL && c.dL - c.shouldL > Math.max(3, c.shouldL * 0.08) ? '⛽ diesel zyada' : '', c.pending ? '💰 ' + rs(c.pending) + ' lena' : ''].filter(Boolean);
   return `<button type="button" class="gp-card${p.status === 'closed' ? ' closed' : ''}" data-gp="${esc(p.id)}">
     <span class="gp-d"><b>${esc(d)}</b><small>${p.status === 'closed' ? '✅ band' : '🟢 khula'}</small></span>
-    <span class="gp-m"><b>${esc(c.routes.join(' · ') || 'Bilty abhi nahi')}</b><small>${c.km ? num(c.km) + ' km' : 'reading baqi'} · ${num(c.dL, 1)} L · kharche ${rs(c.kh)}</small>${warn.length ? `<em>${warn.join(' · ')}</em>` : ''}</span>
+    <span class="gp-m"><b>${esc(c.routes.join(' · ') || 'Bilty abhi nahi')}</b><small>${c.km ? num(c.km) + ' km' + (c.kmSrc === 'tracker' ? ' (tracker)' : '') : 'km baqi'} · ${num(c.dL, 1)} L · kharche ${rs(c.kh)}</small>${warn.length ? `<em>${warn.join(' · ')}</em>` : ''}</span>
     <span class="gp-v"><b class="${c.nafa >= 0 ? 'up' : 'down'}">${rs(c.nafa)}</b><small>kiraya ${rs(c.kiraya)}</small></span></button>`;
 }
 
@@ -186,17 +189,18 @@ function drawPhera() {
     ${ed ? `<input type="search" class="gk-q" placeholder="🔍 Kharcha dhoondein ya naya likh kar Enter" autocomplete="off"><div class="gk-chips">${kChips()}</div>` : ''}
     <div class="gk-lines">${(cur.kharche || []).map((k, i) => `<div class="gk-line" data-ki="${i}"><span>${esc(k.n)}</span><input class="gk-a" data-f="a" type="number" inputmode="decimal" step="any" value="${esc(k.a || '')}" placeholder="Rs"${dis}>${ed ? `<button type="button" class="gk-x" data-gdel="kharch" data-i="${i}">✕</button>` : ''}</div>`).join('')}</div>
   </div>
-  <div class="gp-sec"><div class="gp-h"><b>📍 Meter reading</b><span class="gp-mini">${c.km ? num(c.km) + ' km chali' : ''}</span></div>
+  <div class="gp-sec"><div class="gp-h"><b>📍 Meter reading</b><span class="gp-mini">${c.km ? num(c.km) + ' km chali' + (c.kmSrc === 'tracker' ? ' · 📍 tracker se' : '') : ''}</span></div>
     <div class="gp-2"><label>Shuru (pichhle phere se)${inp('startR', cur.startR || '', 'Shuru reading')}</label><label>Aakhri (wapsi par)${inp('endR', cur.endR || '', 'Aakhri reading')}</label></div>
-    ${ed && ai ? `<div class="gp-2"><label class="gr-photo">📷 Meter ki photo<input type="file" accept="image/*" capture="environment" data-gph="reading" hidden></label><label class="gr-photo">📸 Falcon screenshot<input type="file" accept="image/*" data-gph="tracker" hidden></label></div><p class="gr-ai" id="gpAi" hidden></p>` : ''}
+    ${ed && ai ? `<div class="gp-2"><label class="gr-photo">📷 Meter ki photo<input type="file" accept="image/*" capture="environment" data-gph="reading" hidden></label><label class="gr-photo">📸 Falcon screenshots (ek ya zyada)<input type="file" accept="image/*" multiple data-gph="tracker" hidden></label></div><p class="gr-ai" id="gpAi" hidden></p>` : ''}
+    ${tripsHTML(ed)}
     <label>Falcon tracker km${inp('trackerKm', cur.trackerKm || '', 'Tracker ke mutabiq km')}</label>
-    <p class="gp-match ${c.km && c.tk ? (c.kmOk ? 'ok' : 'bad') : ''}">${c.km && c.tk ? (c.kmOk ? `✅ Meter ${num(c.km)} km = tracker ${num(c.tk)} km` : `❌ Meter ${num(c.km)} km, tracker ${num(c.tk)} km — ${num(Math.abs(c.kmDiff))} km farq`) : 'Meter aur tracker dono likhein to milan dikhega'}</p>
+    <p class="gp-match ${c.mk && c.tk ? (c.kmOk ? 'ok' : 'bad') : c.kmSrc === 'tracker' ? 'trk' : ''}">${c.mk && c.tk ? (c.kmOk ? `✅ Meter ${num(c.mk)} km = tracker ${num(c.tk)} km` : `❌ Meter ${num(c.mk)} km, tracker ${num(c.tk)} km — ${num(Math.abs(c.kmDiff))} km farq`) : c.kmSrc === 'tracker' ? `📍 Meter reading nahi — hisaab Falcon ke <b>${num(c.tk, 2)} km</b> se. Reading baad mein likhein to milan bhi dikhega` : 'Meter aur tracker dono likhein to milan dikhega'}</p>
   </div>
   <div class="gp-sec"><div class="gp-h"><b>⛽ Diesel</b>${ed ? '<button type="button" data-ga="diesel">＋ Diesel</button>' : ''}</div>
     ${ed && ai ? '<label class="gr-photo">📷 Pump parchi ki photo — AI line bana dega<input type="file" accept="image/*" capture="environment" data-gph="diesel" hidden></label>' : ''}
     ${(cur.diesel || []).map((d, i) => `<div class="gp-diesel" data-di="${i}"><div class="gp-3">${inp('l', d.l || '', 'Litre')}${inp('rate', d.rate || '', 'Rate')}${inp('amount', d.amount || '', 'Rs')}</div>
       <div class="gp-row"><label class="gp-chk"><input type="checkbox" data-f="full"${d.full ? ' checked' : ''}${dis}> Tanki full karwayi</label>${ed ? `<button type="button" class="gp-x" data-gdel="diesel" data-i="${i}">🗑</button>` : ''}</div></div>`).join('')}
-    <p class="gp-dcheck">${c.km ? `${num(c.km)} km ÷ ${avgOf()} = <b>${num(c.shouldL, 1)} L lagna chahiye</b> (~${rs(c.shouldRs)}) · dala ${num(c.dL, 1)} L${c.dL ? (c.dL - c.shouldL > Math.max(3, c.shouldL * 0.08) ? ` · <b class="bad">${num(c.dL - c.shouldL, 1)} L zyada</b>` : ' ✓') : ''}` : 'Aakhri reading likhne par hisaab aayega'}</p>
+    <p class="gp-dcheck">${c.km ? `${num(c.km)} km ÷ ${avgOf()} = <b>${num(c.shouldL, 1)} L lagna chahiye</b> (~${rs(c.shouldRs)})${c.kmSrc === 'tracker' ? ' <small>(tracker km)</small>' : ''} · dala ${num(c.dL, 1)} L${c.dL ? (c.dL - c.shouldL > Math.max(3, c.shouldL * 0.08) ? ` · <b class="bad">${num(c.dL - c.shouldL, 1)} L zyada</b>` : ' ✓') : ''}` : 'Aakhri reading ya Falcon km likhne par hisaab aayega'}</p>
     ${fc ? `<p class="gp-dcheck ${fc.extra > Math.max(3, fc.should * 0.08) ? 'bad' : 'ok'}">🛢 Tanki full se full (${esc(fc.from)} se): ${num(fc.km)} km, ${num(fc.litre, 1)} L laga = average <b>${num(fc.avg, 2)}</b> · banta ${num(fc.should, 1)} L${fc.extra > 0 ? ` · ${num(fc.extra, 1)} L (${rs(fc.extraRs)}) zyada — driver se poochein` : ' ✓'}</p>` : ''}
   </div>
   <div class="gp-sec gp-net"><div class="gp-h"><b>🧮 Phere ka nichod</b></div>
@@ -240,14 +244,15 @@ function wirePhera(box) {
       if (k === 'diesel') { cur.diesel.splice(i, 1); save({ diesel: cur.diesel }); }
       drawPhera(); return; }
     const g = e.target.closest('[data-gk]'); if (g && cur) { addK(g.dataset.gk); return; }
+    const tx = e.target.closest('[data-gtrip]'); if (tx && cur) { const L = (cur.trackerTrips || []).filter(x => x.t !== tx.dataset.gtrip); saveTrips(L); drawPhera(); return; }
     const st = e.target.closest('[data-gst]'); if (st && cur) {
-      if (st.dataset.gst === 'closed' && !N(cur.endR) && !confirm('Aakhri meter reading abhi nahi likhi — phir bhi band karein?')) return;
+      if (st.dataset.gst === 'closed' && !N(cur.endR) && !N(cur.trackerKm) && !confirm('Aakhri meter reading abhi nahi likhi — phir bhi band karein?')) return;
       save({ status: st.dataset.gst }); drawPhera(); notice(st.dataset.gst === 'closed' ? '✅ Phera band' : '🔓 Phera khul gaya'); return; }
     if (e.target.closest('[data-gp-del]') && cur) { if (!confirm('Poora phera (sab biltiyan, kharche, diesel) hata dein?')) return; const id = cur.id; clearTimeout(curTimer); curTimer = null; rows = rows.filter(r => r.id !== id); cloud.delGaari(id).catch(er => notice('Nahi hua: ' + (er?.message || er))); closeModal(); notice('Phera hata diya'); }
   };
   const q = box.querySelector('.gk-q');
   if (q) { q.addEventListener('input', () => { box.querySelector('.gk-chips').innerHTML = kChips(q.value.trim()); }); q.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addK(q.value); } }); }
-  box.querySelectorAll('[data-gph]').forEach(x => x.addEventListener('change', ev => photoPhera(x.dataset.gph, ev.target.files?.[0])));
+  box.querySelectorAll('[data-gph]').forEach(x => x.addEventListener('change', ev => { const L = [...(ev.target.files || [])]; ev.target.value = ''; photoPhera(x.dataset.gph, x.dataset.gph === 'tracker' ? L : L[0]); }));
 }
 function addK(n) {
   n = String(n || '').trim(); if (!n || !cur) return;
@@ -265,7 +270,28 @@ function kNames() {
 const kChips = (q = '') => { const L = kNames().filter(n => !q || n.toLowerCase().includes(q.toLowerCase())).slice(0, 14);
   return L.map(n => `<button type="button" class="gk-chip" data-gk="${esc(n)}">${esc(n)}</button>`).join('') || (q ? `<button type="button" class="gk-chip gk-new" data-gk="${esc(q)}">＋ "${esc(q)}" naya</button>` : ''); };
 
+// v2.95.8: Falcon trips — waqt se pehchan (dohra trip ek dafa), jor = trackerKm
+const MI = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+function tripTime(t) {
+  const m = String(t || '').match(/(\d{1,2})\s+([a-z]{3})[a-z]*\.?\s+(\d{4})\D+(\d{1,2}):(\d{2})\s*([ap]\.?m)?/i); if (!m) return 0;
+  let h = Number(m[4]) % 12; if (m[6] && /^p/i.test(m[6])) h += 12; if (!m[6]) h = Number(m[4]);
+  const mo = MI[m[2].toLowerCase()]; return mo == null ? 0 : new Date(Number(m[3]), mo, Number(m[1]), h, Number(m[5])).getTime();
+}
+const tripKey = t => { const x = tripTime(t); return x ? String(x) : String(t || '').toUpperCase().replace(/\s+/g, ' ').trim(); };
+const tripLabel = t => { const x = tripTime(t); if (!x) return String(t || '?'); const d = new Date(x); return `${d.getDate()} ${MONTHS[d.getMonth()]} ${d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`; };
+function saveTrips(L) {
+  L = L.slice().sort((a, b) => tripTime(a.t) - tripTime(b.t));
+  const tot = r2(L.reduce((s, x) => s + N(x.km), 0));
+  save({ trackerTrips: L, trackerKm: tot });
+}
+function tripsHTML(ed) {
+  const L = cur?.trackerTrips || []; if (!L.length) return '';
+  const cut = L.filter(x => x.cut).length;
+  return `<div class="gp-trips">${L.map(x => `<span class="gp-trip${x.cut ? ' cut' : ''}">${x.cut ? '⚠️' : '🕒'} ${esc(tripLabel(x.t))} · <b>${x.cut ? 'km nazar nahi' : num(x.km, 2) + ' km'}</b>${ed ? `<button type="button" data-gtrip="${esc(x.t)}" title="Ye trip hatao">✕</button>` : ''}</span>`).join('')}</div>
+    <p class="gp-tsum">${L.length - cut} trip · jor <b>${num(L.reduce((s, x) => s + N(x.km), 0), 2)} km</b>${cut ? ` · <span class="bad">⚠️ ${cut} trip ka km screenshot mein kata hua — wo trip upar scroll kar ke dobara screenshot lein</span>` : ''}</p>`;
+}
 async function photoPhera(kind, file) {
+  if (kind === 'tracker' && Array.isArray(file)) return photoTrips(file);
   if (!file || !cur) return; const out = $('gpAi'); if (out) { out.hidden = false; out.textContent = '🤖 AI parh raha hai… (10-30 second)'; } else notice('🤖 AI parh raha hai…');
   const P = {
     reading: 'Ye gaari ke odometer (meter) ki photo hai. Kul km (ODO) parh kar sirf JSON do: {"reading":n}. Trip meter nahi.',
@@ -283,6 +309,38 @@ async function photoPhera(kind, file) {
   } catch (e) { const o2 = $('gpAi'); if (o2) { o2.hidden = false; o2.textContent = '⚠ ' + (e?.message || e) + ' — khud likh dein'; } else notice('⚠ ' + (e?.message || e)); }
 }
 
+async function photoTrips(files) {
+  files = (files || []).slice(0, 4); if (!files.length || !cur) return;
+  const out = $('gpAi'); const say = t => { const o = $('gpAi'); if (o) { o.hidden = false; o.textContent = t; } else notice(t); };
+  say(`🤖 AI ${files.length} screenshot parh raha hai… (10-40 second)`);
+  const P = 'Ye Falcon-i / TPL tracker app ke "Trips" screen ke ' + files.length + ' screenshot hain (ek hi list, upar-neeche scroll). ' +
+    'Har trip ka heading waqt (jaise "06 Oct 2026 05:26 PM") aur us ke neeche "Total Distance" ka km nikalo. ' +
+    'Jo trip ek se zyada screenshot mein dikhe usay SIRF EK DAFA likho. Jis trip ka Total Distance screenshot mein kata hua / nazar na aaye us ka "km": null. ' +
+    'Sirf JSON do: {"trips":[{"t":"06 Oct 2026 05:26 PM","km":10.37}]}. Agar trips ki list na ho aur sirf kul distance ho to {"km":n}.';
+  try {
+    const imgs = []; for (const f of files) imgs.push(await shrink(f, 1600, 0.85));
+    const txt = await ai(imgs, P);
+    const m = String(txt || '').match(/\{[\s\S]*\}/); if (!m) throw Error('AI ko kuch samajh nahi aaya');
+    const j = JSON.parse(m[0]);
+    if (!Array.isArray(j.trips) || !j.trips.length) {
+      if (N(j.km)) { save({ trackerKm: N(j.km) }); drawPhera(); say('✓ Tracker ' + num(j.km) + ' km — ek nazar dekh lein'); return; }
+      throw Error('Trips nazar nahi aaye');
+    }
+    const map = new Map((cur.trackerTrips || []).map(x => [tripKey(x.t), x]));
+    let added = 0, filled = 0;
+    for (const x of j.trips) {
+      const t = String(x?.t || '').slice(0, 40).trim(); if (!t) continue;
+      const k = tripKey(t), km = x.km == null || x.km === '' ? null : N(x.km), old = map.get(k);
+      if (km == null) { if (!old) { map.set(k, { t, km: 0, cut: true }); added++; } continue; }
+      if (!old) added++; else if (old.cut) filled++;
+      map.set(k, { t, km: r2(km) });   // purana kata hua ho to ab poora
+    }
+    const L = [...map.values()]; saveTrips(L); drawPhera();
+    const cut = L.filter(x => x.cut).length;
+    say(`✓ ${L.length - cut} trip = ${num(N(cur.trackerKm), 2)} km${added ? ` · ${added} naye` : ''}${filled ? ` · ${filled} kata hua poora hua` : ''}${!added && !filled ? ' · koi naya trip nahi (pehle se the)' : ''}${cut ? ` · ⚠️ ${cut} trip ka km kata hua` : ''} — ek nazar dekh lein`);
+  } catch (e) { say('⚠ ' + (e?.message || e) + ' — khud likh dein'); }
+}
+
 // ---------- windows (chips) ----------
 function openDetail(k) {
   const s = monthCalc(), own = isOwner();
@@ -297,7 +355,7 @@ function openDetail(k) {
     return;
   }
   if (k === 'km' || k === 'avg') {
-    modal(k === 'km' ? '🛣️ Km — phera-wise' : '⛽ Diesel / average', `<div class="gx-win">${kv([['Meter km', num(s.km)], ['Tracker km', s.tk ? num(s.tk) : '—'], ['Diesel', num(s.dL, 1) + ' L · ' + rs(s.dRs)], ['Average', s.realAvg ? num(s.realAvg, 2) + ' (chahiye ' + avgOf() + ')' : '—'], ['Banta tha', num(s.shouldL, 1) + ' L'], ['Farq', s.km ? num(s.dL - s.shouldL, 1) + ' L' : '—']])}${s.pheras.map(p => { const c = pc(p), f = fullCheck(p); return `<div class="gp-kcard${!c.kmOk ? ' bad' : ''}" data-gp="${esc(p.id)}"><b>${esc(String(p.date).slice(8))} ${esc(MONTHS[Number(String(p.date).slice(5, 7)) - 1])} · ${esc(c.routes.join(' · '))}</b><small>Meter ${num(c.km)} · tracker ${c.tk ? num(c.tk) : '—'} · diesel ${num(c.dL, 1)} L / banta ${num(c.shouldL, 1)}${f ? ` · full-se-full avg ${num(f.avg, 2)}` : ''}</small><em>${c.kmOk ? '✓' : '❌ ' + num(Math.abs(c.kmDiff)) + ' km'}</em></div>`; }).join('')}</div>`);
+    modal(k === 'km' ? '🛣️ Km — phera-wise' : '⛽ Diesel / average', `<div class="gx-win">${kv([['Km (meter, warna tracker)', num(s.km)], ['Tracker km', s.tk ? num(s.tk) : '—'], ['Diesel', num(s.dL, 1) + ' L · ' + rs(s.dRs)], ['Average', s.realAvg ? num(s.realAvg, 2) + ' (chahiye ' + avgOf() + ')' : '—'], ['Banta tha', num(s.shouldL, 1) + ' L'], ['Farq', s.km ? num(s.dL - s.shouldL, 1) + ' L' : '—']])}${s.pheras.map(p => { const c = pc(p), f = fullCheck(p); return `<div class="gp-kcard${!c.kmOk ? ' bad' : ''}" data-gp="${esc(p.id)}"><b>${esc(String(p.date).slice(8))} ${esc(MONTHS[Number(String(p.date).slice(5, 7)) - 1])} · ${esc(c.routes.join(' · '))}</b><small>${c.kmSrc === 'tracker' ? 'Meter — (tracker se ' + num(c.km) + ')' : 'Meter ' + num(c.km)} · tracker ${c.tk ? num(c.tk) : '—'} · diesel ${num(c.dL, 1)} L / banta ${num(c.shouldL, 1)}${f ? ` · full-se-full avg ${num(f.avg, 2)}` : ''}</small><em>${c.kmOk ? '✓' : '❌ ' + num(Math.abs(c.kmDiff)) + ' km'}</em></div>`; }).join('')}</div>`);
     return;
   }
   if (k === 'driver') {
