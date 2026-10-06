@@ -2795,3 +2795,4 @@ Test: C# stub UIA assembly ke saath mcs compile ✓. Asal POS par YAHAN test nah
 * nt-posui v1.0.1 (manifest .17): server log 18:24 "POS screen dekhna band (code 1) SOURCE_CODE_ERROR AddType" — Add-Type
   -ReferencedAssemblies chhote naam (UIAutomationClient) se assembly nahi milti -> namespace nahi. Ab pehle Add-Type -AssemblyName,
   phir [AutomationElement]/[ControlType]/[Rect].Assembly.Location poore raste. Log mein compile ki "error CS" lines (3 tak).
+* nt-posui v1.0.2 (manifest .18): asal error 'Warning as Error: variable miss never used' (Add-Type warnings = error) -> hataya. SABAQ: C# mein koi unused variable na chhoro. Raw GitHub CDN 1-2 min purana de sakta hai -> iwr mein ?t= cache-bust.

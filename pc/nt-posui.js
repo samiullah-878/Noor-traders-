@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-posui.js  v1.0.1 (2026-10-06: UIA assemblies poore raste se — pehle compile nahi hota tha) · v1.0 (2026-10-06) — 🔔 POS SCREEN DEKHO: POS (Cognitive "Retail Solution") ki Sale screen ki item-list (grid) ki
+//  nt-posui.js  v1.0.2 (2026-10-06: 'miss' variable hataya — Add-Type warning ko error ginta tha) · v1.0.1 (2026-10-06: UIA assemblies poore raste se — pehle compile nahi hota tha) · v1.0 (2026-10-06) — 🔔 POS SCREEN DEKHO: POS (Cognitive "Retail Solution") ki Sale screen ki item-list (grid) ki
 //  qataron ki ginti har 0.25 sec (Windows UI Automation, sirf PARHNA). Ginti barhi = item JURA (scan ho ya code likh kar) -> onAdd().
 //  POS SQL mein sirf SAVE par likhta hai (pos-live test), is liye screen dekhna hi raasta hai. POS ko haath nahi lagata.
 //  local-config: "posUi": false = band · "posTitle": "Retail Solution" (POS window ke naam ka hissa)
@@ -34,11 +34,11 @@ public class NtPosUi1{
   object p; if(g.TryGetCurrentPattern(GridPattern.Pattern,out p)) return ((GridPattern)p).Current.RowCount;
   return g.FindAll(TreeScope.Children,Condition.TrueCondition).Count;}
  public static void Run(string title){
-  Say("READY"); AutomationElement grid=null; int last=-1, miss=0;
+  Say("READY"); AutomationElement grid=null; int last=-1;
   while(true){
    try{
     if(grid==null){ var w=FindWin(title); if(w!=null){ grid=FindGrid(w); if(grid!=null){ last=Rows(grid); string nm="";try{nm=grid.Current.AutomationId+"/"+grid.Current.Name;}catch{} Say("GRID "+nm+" "+last); } } }
-    if(grid!=null){ int c=Rows(grid); if(last>=0&&c>last)Say("ADD "+(c-last)); last=c; miss=0; }
+    if(grid!=null){ int c=Rows(grid); if(last>=0&&c>last)Say("ADD "+(c-last)); last=c; }
    }catch{ if(grid!=null){Say("LOST");} grid=null; last=-1; }
    Thread.Sleep(grid==null?3000:250);
   }}
