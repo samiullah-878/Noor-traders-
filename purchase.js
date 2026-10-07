@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.97.2';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold } from './smart-search.js?v=2.97.2';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.98.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.98.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -356,7 +356,7 @@ function pcRows() {
   const t = todayStr(), y = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); })();
   const q = norm(pcQ);
   return pcBillsOf().filter(r => (isOwner() || r.date === t) && (pcWhen === 'all' || (pcWhen === 'today' ? r.date === t : r.date === y)))
-    .filter(r => !q || norm(r.billNo).includes(q) || norm(r.partyName).includes(q) || (/^[0-9.,\s]+$/.test(String(pcQ).trim()) && String(Math.round(Number(r.rs) || 0)).startsWith(String(pcQ).replace(/[^0-9]/g, ''))) || (matchesOf(partyOf(r.partyId) || { name: r.partyName }, pcQ)))   // v2.45: raqam se bhi
+    .filter(r => !q || smartHit(r.billNo + ' ' + r.partyName + ' ' + r.date, pcQ) || (/^[0-9.,\s]+$/.test(String(pcQ).trim()) && String(Math.round(Number(r.rs) || 0)).startsWith(String(pcQ).replace(/[^0-9]/g, ''))) || (matchesOf(partyOf(r.partyId) || { name: r.partyName }, pcQ)))   // v2.45: raqam se bhi
     .sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.billNo).localeCompare(String(a.billNo))).slice(0, 60);
 }
 function pcListHTML() {
@@ -435,6 +435,23 @@ async function openBillForEdit(id, partyId, minUpdated) {
   const m = ppLoadBill(b, { partyId }); if (m === 'cancel') return; if (m) { alert(m); return; }
   editSnap = cartSig();
   $('dialog')?.close(); rerender(); notice('✏️ Edit mode — party, godam, ginti, rates badal kar "💾 POS bill UPDATE" dabayein');
+}
+// v2.98.0: 📒 KHATE SE "🧾 Bill dekhein" — khula bill isi screen par chhoti patti mein (‹ › isi supplier ke khule bill). Posted / cancel /
+// tafseel na aayi / mulazim ka purana bill = false (app full-screen "Purchase bill" dikhati hai).
+export async function ppOpenFromKhata(id, partyId) {
+  const b = await cloud.purchaseBill(id).catch(() => null);
+  if (!billReady(b, 0)) return false;
+  const st = Number(b.docStatus ?? b.status);
+  if (st === 2 || st === 3 || (!isOwner() && b.date !== todayStr())) return false;
+  if (cart.length && (!edit || editSnap !== cartSig()) && !confirm('POS Purchase screen par ek bill adhoora hai (save nahi hua) — usay chhor kar yeh bill kholein?')) return 'cancel';
+  cart = []; edit = null;
+  const m = ppLoadBill(b, { partyId }); if (m === 'cancel') return 'cancel'; if (m) return false;
+  editSnap = cartSig();
+  const t = todayStr(), L = pcBillsOf().filter(r => r.partyId === partyId && !r.posted && (isOwner() || r.date === t))
+    .sort((x, y) => String(y.date).localeCompare(String(x.date)) || String(y.billNo).localeCompare(String(x.billNo)))
+    .map(r => ({ id: r.id, partyId: r.partyId, minUpd: 0, label: `Bill ${r.billNo || ''} · ${r.date} · Rs ${num(r.rs)}` }));
+  editNav = L.length > 1 ? { list: L, i: Math.max(0, L.findIndex(n => n.id === id)) } : null;
+  return true;
 }
 function openToday() {
   gallaWatch();   // v2.21: har bill par galla ka haal

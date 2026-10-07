@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.97.2';
-import { liveLabelsHTML } from './barcode.js?v=2.97.2';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit } from './smart-search.js?v=2.98.0';
+import { liveLabelsHTML } from './barcode.js?v=2.98.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1031,7 +1031,7 @@ function regRows() {
   const q = norm(regQ);
   return (ptList || []).filter(t => t && t.at >= since && t.at < till)
     .filter(t => regGodam === 'all' || String(t.from) === regGodam || String(t.to) === regGodam)
-    .filter(t => !q || norm(t.transferNo).includes(q) || (t.lines || []).some(l => norm(l.name).includes(q)))
+    .filter(t => !q || smartHit('TN ' + (t.transferNo || '') + ' ' + (t.note || '') + ' ' + (t.byName || ''), regQ) || (t.lines || []).some(l => smartHit(l.name, regQ)))
     .map(t => { let c = 0, p = 0, rs = 0; for (const l of t.lines || []) { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); c += x.c; p += x.p; rs += (Number(l.qty) || 0) * (Number(l.rate) || 0); } return { ...t, c, p: Math.round(p * 1000) / 1000, rs: Math.round(rs), n: (t.lines || []).length }; })
     .sort((a, b) => b.at - a.at);
 }

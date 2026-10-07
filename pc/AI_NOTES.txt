@@ -1709,3 +1709,32 @@ card ke andar "Baqi 1,450,800", "Aaj ~" dabba aur "🔄 Account reset" button ca
   -> Limit / Istemal / Baqi teen lines (naam baayen, raqam daayen, nowrap); .loan-int auto-fit minmax(118px) (tang mein upar-neeche);
   .loan-reset poori chaurai. Chromium 412px par check — koi cheez card se bahar nahi.
 * Login screen sawal: aaj ke updates ne login nahi chheda; update reload ke baad auto-login (⚡) waqt par poora na ho (slow net) to login page.
+
+==================== App v2.98.0 (2026-10-07) — ✨ premium entry screens + 🔎 smart search har jagah + 📒 khate se 🧾 Bill dekhein ====================
+User: (1) entry screens se "Computer (POS) mein daalni hai" hatao; party arrow ke saath; tareekh ka khana nahi chahiye (malik ke liye
+chhota "📅 Aaj ✎" chip — mashwara, "Ok"); sab screens premium (layout, chips). (2) smart search har search par (POS sale/purchase/transfer
+notes, har jagah). (3) khate ki POS purchase entry se purchase tab mein bill dekhna.
+* app.js efEnhance(o) — purane form ka sara logic wahi, modal ke baad upar se sajata hai (unifiedExpenseForm, entryForm, purchaseForm,
+  accountTransferForm, custodyForm): form.ef + #dialog[data-ef=out|in|give|take|sale|buy|tr|n] (rang). posPending label hidden (edit mein
+  purana nishan wahi; PC isay nahi parhta — sirf purani posPendingList). Tareekh label hidden; owner() ko .ef-bar mein "📅 Aaj ✎" / "📅 5 Oct"
+  (old = peela) — tap = showPicker (warna label khol do). Party: .ef-pick card (avatar initials, naam, tag Supplier/Customer/🏦 Bank/Kharcha,
+  baqaya "lene/dene hain", ⌄) — chuna ho to search + results chhupe; card tap = khule (+ input event se list); results click -> band.
+  o.get/o.q/o.res/o.sel/o.hide (hide = purana select / picked / changeAccount — required hata diya, warna chhupa required select Save
+  rok deta). Raqam .ef-amt bara; "✓ Poora baqaya Rs X" chip (payment & dena, collection & lena; naye par). 2-3 option wale select -> .ef-seg
+  chips (Cash / Credit). Note rows 2. Save .ef-save bara gradient sticky neeche (.ef-acts); flipKind / delete / parchi -> .ef-sec chhote chips.
+  modal() har dafa dataset.ef saaf. CSS theme (html.lt/html.dk !important) se upar: #dialog .ef …, vars --efbg/--efink/--efline (dk = glass).
+  checkbox label :not([hidden]):has(>input[type=checkbox]) (warna hidden POS label dikh jata).
+* smart-search.js smartHit(text, q): seedha includes pehle; phir fold (spelling), har lafz kahin bhi, 4+ harf 1 ghalti, hindse jore hue
+  (bill 00002586 = 2586, 1,470,000 = 1470000); memo 5000. Laga: app matches (khate ki entries, Purchase list, Daily), cashBookRows,
+  trashList, accountMatches (+), purchase.js pcRows (PC bills), pos-stock regHTML (transfer notes register: TN, note, byName, items),
+  sale.js aaj ke bills (bill no, party, where, by), pos-ledger matches (+), notes matchQ (+), audit (History), barcode report,
+  gaari kChips + extra kharcha chips. (Item search sale/purchase/transfer/stock pehle se smartSearch.) Naye imports: audit.js,
+  barcode.js, gaari.js -> './smart-search.js?v=X' (wahi URL jo baqi — ek module).
+* 📒 Khata: ledgerHTML isPosPurchase(e) par "🧾 Bill dekhein" (button.kbill, data-kbill). openKhataBill(id): canPP + unposted + (malik ya
+  aaj) -> purchase.js ppOpenFromKhata(id, partyId) (billReady(b,0), posted/cancel/mulazim purana = false; adhoora cart par confirm;
+  ppLoadBill; editSnap; editNav = isi supplier ke khule PC bills ‹ ›) -> route('ppurchase'), ppBackParty; ← back = route('khata', party).
+  Warna showBill(id, true) full-screen (items, khareed/sale rate, PDF/Share, Print, edit button jab mumkin).
+* Version bump ab sirf ?v=, APP_VER, "Blue Khata vX", sw CACHE — comments ke purane version tag nahi chhedte (pehle sed ne
+  v2.96.5 comments badal diye the — wapas theek).
+* Test: Chromium local-mode (recovery data) — Payment / Wasooli / Saman / Transfer / Purchase / Kharcha / Sale forms, save, card ⌄,
+  smart search "cemnt ahsn", "walid" (Waleed), "2586".

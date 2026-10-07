@@ -5,6 +5,7 @@
 //   Jo records PC ne likhe (POS sync) ya is update se PEHLE ke hain, un ka sirf "kab bani / kab badli / kis ne" record ke apne stamp se.
 // - Rules 2.12: auditLog sirf JOR sakte hain (create), badal/mita nahi (sirf malik mita sake). Parh sakte: malik + Full mulazim.
 // - 30 din: malik History kholta hai to purani (30 din se pehle) khud saaf; button bhi hai.
+import { smartHit } from './smart-search.js?v=2.98.0';   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -147,7 +148,7 @@ function filtered() {
     .filter(x => x.day >= from)
     .filter(x => fWho === 'all' || (x.by || 'pc') === fWho)
     .filter(x => fArea === 'all' || x.area === fArea)
-    .filter(x => !q || [x.what, x.party, x.note, x.byName, x.amount != null ? String(Math.round(x.amount)) : '', ...(x.diff || []).flatMap(d => [d.f, d.a, d.b])].join(' ').toLowerCase().includes(q))
+    .filter(x => !q || smartHit([x.what, x.party, x.note, x.byName, x.amount != null ? String(Math.round(x.amount)) : '', ...(x.diff || []).flatMap(d => [d.f, d.a, d.b])].join(' '), q))
     .sort((a, b) => (b.at || 0) - (a.at || 0));
 }
 export function renderHistory() {

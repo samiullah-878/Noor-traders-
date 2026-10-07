@@ -5,7 +5,7 @@
 //  Data: businesses/noor-traders/posLedger
 // ============================================================
 
-import { partyScore } from './smart-search.js?v=2.97.2';
+import { partyScore, smartHit } from './smart-search.js?v=2.98.0';
 import { money } from './model.js';
 
 const $ = id => document.getElementById(id);
@@ -67,7 +67,8 @@ function matches(r, q) {
   const s = q.toLowerCase();
   if (String(r.partyName || '').toLowerCase().includes(s)
       || String(r.partyPhone || '').includes(s)
-      || String(r.note || '').toLowerCase().includes(s)) return true;
+      || String(r.note || '').toLowerCase().includes(s)
+      || smartHit(`${r.partyName || ''} ${r.note || ''} ${r.voucher || r.code || ''}`, q)) return true;   // v2.98: spelling-maafi
   const k = (r.partyName || '') + '|' + (r.partyPhone || '');
   let o = pmemo.get(k); if (!o) { o = { name: r.partyName || '', phone: r.partyPhone || '' }; pmemo.set(k, o); }
   return partyScore(o, q) > 0;

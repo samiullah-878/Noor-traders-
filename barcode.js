@@ -4,6 +4,7 @@
 // v2.97: 🖨 LIVE patti upar — chhap raha (sent/total), line mein (#), pichhle 10 min khatam; ✕ Cancel / Sab cancel (labelJobs.cancelReq).
 // Screen: din ke hisaab se -> item -> har barcode (packet size) ki ginti. Chips: Aaj · Kal · 7 din · 30 din · status · search.
 // PDF: app ka openReportPreview (poori screen + WhatsApp / share).
+import { smartHit } from './smart-search.js?v=2.98.0';   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -29,7 +30,7 @@ function build() {
   const items = new Map((itemsOf() || []).map(r => [String(r.id), r]));
   const sel = jobs.filter(j => { const t = Number(j.doneAt) || Number(j.at) || 0; return t >= lo && t < hi; })
     .filter(j => fS === 'all' ? true : fS === 'done' ? j.status === 'done' : fS === 'wait' ? (j.status === 'new' || j.status === 'printing') : (j.status === 'failed' || j.status === 'skipped' || j.status === 'cancelled'))
-    .filter(j => !q || [j.name, j.code, items.get(String(j.itemId))?.name].join(' ').toLowerCase().includes(q));
+    .filter(j => !q || smartHit([j.name, j.code, items.get(String(j.itemId))?.name].join(' '), q));
   const days = new Map();
   for (const j of sel) {
     const d = jobDay(j); if (!days.has(d)) days.set(d, new Map());

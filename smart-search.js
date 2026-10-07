@@ -87,6 +87,22 @@ export function smartSearch(items, q, limit = 25, opts = null) {
   const out = pakka.length >= 3 ? pakka : pakka.concat(andaza);
   return out.slice(0, limit).map(x => x.r);
 }
+// v2.98.0: 🔎 LIST SEARCH (khate ki entries, bills, register, notes, history, barcode, gaari…) — item search wali spelling-maafi:
+// har lafz kisi bhi tarteeb mein, kahin bhi; 4+ harf par 1 harf ki ghalti; hindse jore hue (1,470,000 = 1470000; bill 00002586 = 2586)
+const hitMemo = new Map();
+export function smartHit(text, q) {
+  const qF = fold(q); if (!qF) return true;
+  const key = String(text ?? ''); if (key.toLowerCase().includes(String(q).trim().toLowerCase())) return true;   // seedha milan pehle
+  let h = hitMemo.get(key);
+  if (!h) { const f = fold(key); h = { f: ' ' + f + ' ', w: f.split(' ').filter(Boolean), d: f.replace(/[^0-9a-z]/gi, '') }; if (hitMemo.size > 5000) hitMemo.clear(); hitMemo.set(key, h); }
+  for (const t of qF.split(' ')) {
+    if (!t || h.f.includes(t)) continue;
+    if (/^\d+$/.test(t)) { if (h.d.includes(t)) continue; return false; }
+    if (t.length >= 4 && h.w.some(w => (Math.abs(w.length - t.length) <= 1 && ed1(w, t)) || (t.length >= 5 && w.length >= t.length && ed1(w.slice(0, t.length), t)))) continue;
+    return false;
+  }
+  return true;
+}
 // v2.18: jo harf match hue unhein <mark> mein — naam khud escape ho kar aata hai (HTML mehfooz)
 const SH_ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 const shEsc = s => String(s ?? '').replace(/[&<>"']/g, c => SH_ESC[c]);

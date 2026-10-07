@@ -2128,3 +2128,65 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .loan-card small.loan-warn{display:block;margin-top:6px;background:#fff1e6;border:1px solid #f5c89a;color:#8a4500;border-radius:10px;padding:5px 8px;font-size:11px}
 .loan-card{container-type:inline-size}
 @container (max-width:300px){.loan-row{grid-template-columns:1fr;gap:2px}.loan-row span{display:flex;justify-content:space-between;align-items:baseline;gap:6px}.loan-row b{font-size:13px;white-space:nowrap;overflow-wrap:normal}}
+/* v2.98.0: ✨ PREMIUM ENTRY SCREENS (payment / wasooli / saman / sale / purchase / transfer / cash) — theme (lt/dk) ke !important se upar */
+#dialog[data-ef]{--ef1:#1b3058;--ef2:#3a5fb0;--efc:#223b6d;--efs:#eef3ff;--efbg:#fff;--efink:#10192b;--efink2:#64748b;--efline:#dfe5f0}
+html.lt #dialog[data-ef]{--efbg:var(--surf,#fff);--efink:var(--ink,#10192b);--efink2:var(--ink2,#64748b);--efline:var(--line,#dfe5f0)}
+#dialog[data-ef="out"]{--ef1:#8e1b2c;--ef2:#d0413d;--efc:#b3261e;--efs:#fdecec}
+#dialog[data-ef="in"]{--ef1:#0d6b3e;--ef2:#1fb866;--efc:#0f7a44;--efs:#e8f7ef}
+#dialog[data-ef="give"]{--ef1:#8a4b00;--ef2:#e08a12;--efc:#9a5300;--efs:#fff4dc}
+#dialog[data-ef="take"]{--ef1:#26338a;--ef2:#4b5fd6;--efc:#2b3aa0;--efs:#eef0ff}
+#dialog[data-ef="sale"]{--ef1:#0b5f6b;--ef2:#14a3a8;--efc:#0b6f78;--efs:#e4f7f7}
+#dialog[data-ef="buy"]{--ef1:#3a2c8f;--ef2:#6a4fd8;--efc:#4a35b0;--efs:#f0ecff}
+#dialog[data-ef="tr"]{--ef1:#5b1f8a;--ef2:#a04fd8;--efc:#6c2aa6;--efs:#f6ecff}
+html.dk #dialog[data-ef]{--efs:rgba(255,255,255,.08);--efbg:var(--glass2,rgba(255,255,255,.09));--efink:var(--ink,#eef);--efink2:var(--ink2,#aab);--efline:var(--line,rgba(255,255,255,.14))}
+html.dk #dialog[data-ef] .ef-acts{background:var(--dlg,#13275A)}
+html.dk #dialog[data-ef] .ef-amt input{background:var(--glass,rgba(255,255,255,.06))!important}
+#dialog[data-ef] .dialog-head{background:linear-gradient(135deg,var(--ef1),var(--ef2))!important;border-bottom:0!important}
+#dialog[data-ef] .dialog-head h2{color:#fff!important;font-size:19px}
+#dialog[data-ef] .dialog-head #close{background:rgba(255,255,255,.2)!important;color:#fff!important;border-radius:12px;min-height:40px}
+#dialog .ef{gap:12px;grid-template-columns:minmax(0,1fr)}
+#dialog .ef>*{min-width:0}
+.ef-bar{display:flex;gap:8px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.ef-badge{margin-right:auto;font-weight:800;color:var(--efc);background:var(--efs);border-radius:999px;padding:5px 12px;font-size:13px;max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#dialog .ef .ef-chip{min-height:0!important;padding:6px 12px;border-radius:999px;background:var(--efbg)!important;border:1px solid var(--efline)!important;color:var(--efc)!important;font-weight:700;font-size:13px;line-height:1.3}
+#dialog .ef .ef-dchip small{opacity:.6;font-size:11px}
+#dialog .ef .ef-dchip.old{background:#fff4dc!important;border-color:#f3c46b!important;color:#7a4a00!important}
+#dialog .ef-pick .ef-card{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--efbg)!important;border:1.5px solid var(--efline)!important;border-radius:16px;padding:10px 12px;box-shadow:0 4px 14px rgba(16,28,53,.06);min-height:64px;color:var(--efink)!important}
+#dialog .ef-pick .ef-card.open{border-color:var(--efc)!important;box-shadow:0 0 0 3px var(--efs)}
+.ef-av{flex:none;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-weight:900;color:#fff;background:linear-gradient(135deg,var(--ef1),var(--ef2));font-size:16px}
+.ef-empty .ef-av{background:var(--efs);color:var(--efc);font-size:22px}
+.ef-nm{flex:1;min-width:0}.ef-nm b{display:block;font-size:16px;color:var(--efink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ef-nm small{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:12.5px;color:var(--efink2);font-weight:600}
+.ef-tag{font-style:normal;background:var(--efs);color:var(--efc);border-radius:999px;padding:1px 8px;font-weight:700;font-size:11.5px}
+.ef-arrow{font-style:normal;font-size:20px;color:var(--efc);transition:transform .2s;flex:none}
+.ef-card.open .ef-arrow{transform:rotate(180deg)}
+#dialog .ef .ef-q{font-size:0;gap:0}
+#dialog .ef .ef-q input{font-size:15px;border-radius:14px!important;padding:12px 14px;border:1.5px solid var(--efline)!important}
+#dialog .ef .ef-res{max-height:250px;border:0!important;border-radius:14px;background:var(--efs)!important;padding:6px;display:grid;gap:6px}
+#dialog .ef .ef-res:empty{display:none}
+#dialog .ef .ef-res button{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:46px;border:1px solid var(--efline)!important;border-radius:12px;background:var(--efbg)!important;padding:10px 12px;font-weight:700;color:var(--efink)!important;text-align:left}
+#dialog .ef .ef-res button::after{content:'›';font-size:22px;line-height:1;color:var(--efc);font-weight:900;flex:none}
+#dialog .ef .ef-res .pchip-h{padding:2px 4px}
+.ef-amt{font-weight:700;color:var(--efink2)}
+#dialog .ef .ef-amt input{font-size:28px;font-weight:900;text-align:center;padding:12px;border-radius:16px!important;border:2px solid var(--efline)!important;color:var(--efc)!important;font-variant-numeric:tabular-nums}
+#dialog .ef .ef-amt input:focus{border-color:var(--efc)!important;outline:0;box-shadow:0 0 0 3px var(--efs)}
+.ef-quick{display:flex;flex-wrap:wrap;gap:6px;margin-top:-4px}
+#dialog .ef .ef-quick .ef-chip{background:var(--efs)!important;border-color:transparent!important}
+.ef-seg{display:flex;gap:6px;background:var(--efs);border-radius:14px;padding:4px}
+#dialog .ef .ef-seg button{flex:1;min-height:40px;border-radius:11px;background:transparent!important;color:var(--efink2)!important;font-weight:800;padding:6px;font-size:14px}
+#dialog .ef .ef-seg button.on{background:var(--efbg)!important;color:var(--efc)!important;box-shadow:0 2px 8px rgba(16,28,53,.12)}
+#dialog .ef textarea,#dialog .ef input[type=file]{border-radius:14px!important}
+#dialog .ef input[type=file]{border-style:dashed!important}
+#dialog .ef>p{font-size:12.5px;color:var(--efink2);margin:0}
+#dialog .ef label:not([hidden]):has(>input[type=checkbox]){display:flex!important;align-items:center;gap:10px;background:var(--efs);border-radius:14px;padding:10px 12px;font-weight:600}
+#dialog .ef label:has(>input[type=checkbox]) input{width:22px;height:22px;flex:none;accent-color:var(--efc)}
+.ef-acts{position:sticky;bottom:-20px;background:linear-gradient(rgba(255,255,255,0),var(--efbg) 22%);padding:14px 0 6px;display:grid;gap:8px;margin-top:2px;z-index:2}
+#dialog .ef .ef-save{min-height:54px;border-radius:16px;font-size:17px;font-weight:900;color:#fff!important;background:linear-gradient(135deg,var(--ef1),var(--ef2))!important;box-shadow:0 8px 20px rgba(16,28,53,.2);width:100%}
+.ef-sec{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+#dialog .ef .ef-sec button{min-height:36px;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:700}
+.ef-gone{display:none!important}
+@media(max-width:460px){.ef-acts{bottom:-14px}}
+#dialog .ef-amt input::-webkit-inner-spin-button,#dialog .ef-amt input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+#dialog .ef-amt input{-moz-appearance:textfield}
+/* v2.98.0: 📒 khate mein POS purchase ka "🧾 Bill dekhein" chip */
+.ledger-item button.kbill{background:linear-gradient(135deg,#3a2c8f,#6a4fd8)!important;color:#fff!important;font-weight:800;border-radius:999px}
