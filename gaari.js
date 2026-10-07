@@ -315,6 +315,8 @@ function openPhera(id) {
   const onClose = () => { dlg?.removeEventListener('close', onClose); if (curTimer) { clearTimeout(curTimer); const data = { ...cur }; delete data.id; cloud.putGaari(cur.id, data).catch(() => {}); } cur = null; if (mounted) paint(); };
   dlg?.addEventListener('close', onClose);
 }
+// v2.96.5: tasveer — 📷 Camera YA 🖼 Gallery (pehle sirf camera khulta tha)
+const photoPick = (title, attr) => `<div class="gr-ph2"><span>${title}</span><div><label class="gr-pbtn">📷 Camera<input type="file" accept="image/*" capture="environment" ${attr} hidden></label><label class="gr-pbtn">🖼 Gallery<input type="file" accept="image/*" ${attr} hidden></label></div></div>`;
 const inp = (k, v, ph = '', type = 'number', cls = '') => `<input data-f="${k}" type="${type}" ${type === 'number' ? 'inputmode="decimal" step="any"' : ''} value="${esc(v ?? '')}" placeholder="${esc(ph)}" class="${cls}">`;
 function drawPhera() {
   const box = $('gpPage'); if (!box || !cur) return;
@@ -334,14 +336,14 @@ function drawPhera() {
   </div>
   <div class="gp-sec"><div class="gp-h"><b>📍 Meter reading</b><span class="gp-mini">${c.km ? num(c.km) + ' km chali' + (c.kmSrc === 'tracker' ? ' · 📍 tracker se' : '') : ''}</span></div>
     <div class="gp-2"><label>Shuru (pichhle phere se)${inp('startR', cur.startR || '', 'Shuru reading')}</label><label>Aakhri (wapsi par)${inp('endR', cur.endR || '', 'Aakhri reading')}</label></div>
-    ${ed && ai ? `<div class="gp-2"><label class="gr-photo">📷 Meter ki photo<input type="file" accept="image/*" capture="environment" data-gph="reading" hidden></label><label class="gr-photo">📸 Falcon screenshots (ek ya zyada)<input type="file" accept="image/*" multiple data-gph="tracker" hidden></label></div><p class="gr-ai" id="gpAi" hidden></p>` : ''}
+    ${ed && ai ? `<div class="gp-2">${photoPick('📷 Meter ki photo', 'data-gph="reading"')}<label class="gr-photo">📸 Falcon screenshots (ek ya zyada)<input type="file" accept="image/*" multiple data-gph="tracker" hidden></label></div><p class="gr-ai" id="gpAi" hidden></p>` : ''}
     ${tripsHTML(ed)}
     <label>Falcon tracker km${inp('trackerKm', cur.trackerKm || '', 'Tracker ke mutabiq km')}</label>
     <p class="gp-match ${c.mk && c.tk ? (c.kmOk ? 'ok' : 'bad') : c.kmSrc === 'tracker' ? 'trk' : ''}">${c.mk && c.tk ? (c.kmOk ? `✅ Meter ${num(c.mk)} km = tracker ${num(c.tk)} km` : `❌ Meter ${num(c.mk)} km, tracker ${num(c.tk)} km — ${num(Math.abs(c.kmDiff))} km farq`) : c.kmSrc === 'tracker' ? `📍 Meter reading nahi — hisaab Falcon ke <b>${num(c.tk, 2)} km</b> se. Reading baad mein likhein to milan bhi dikhega` : 'Meter aur tracker dono likhein to milan dikhega'}</p>
   </div>
   <div class="gp-sec"><div class="gp-h"><b>⛽ Diesel</b>${ed ? '<button type="button" data-ga="diesel">＋ Rastay mein dalwaya</button>' : ''}</div>
     <p class="gp-farzi">${c.km && !c.rate ? '<b class="gp-norate">⚠️ Diesel rate nahi — ⚙ Setting mein likhein ya tanki full ki parchi lagayein</b><br>' : ''}⛽ <b>Farzi diesel:</b> ${c.km ? `${num(c.km)} km ÷ ${num(c.avg, 2)} = <b>${num(c.shouldL, 1)} L</b> × Rs ${num(c.rate, 1)} = <b>${rs(c.shouldRs)}</b>${c.kmSrc === 'tracker' ? ' <small>(Falcon km)</small>' : ''}` : 'km likhne par lagega'}<br><small>Phere ke nafe mein yahi lagta hai. Asal diesel (tanki full / rastay mein) <u data-gt-open="1">tanki khata</u> mein jata hai — yahan plus/minus nahi.</small></p>
-    ${ed && ai ? '<label class="gr-photo">📷 Pump parchi ki photo — AI line bana dega<input type="file" accept="image/*" capture="environment" data-gph="diesel" hidden></label>' : ''}
+    ${ed && ai ? photoPick('🧾 Pump parchi ki photo — AI line bana dega', 'data-gph="diesel"') : ''}
     ${(cur.diesel || []).map((d, i) => `<div class="gp-diesel" data-di="${i}"><div class="gp-3">${inp('l', d.l || '', 'Litre')}${inp('rate', d.rate || '', 'Rate')}${inp('amount', d.amount || '', 'Rs')}</div>
       <div class="gp-row"><label class="gp-chk"><input type="checkbox" data-f="full"${d.full ? ' checked' : ''}${dis}> Tanki full karwayi</label>${ed ? `<button type="button" class="gp-x" data-gdel="diesel" data-i="${i}">🗑</button>` : ''}</div></div>`).join('')}
     ${c.dL ? `<p class="gp-dcheck">Is phere mein asal dalwaya: <b>${num(c.dL, 1)} L · ${rs(c.dRs)}</b> — tanki khata mein</p>` : ''}
@@ -544,7 +546,7 @@ function openFill(full) {
   const now = new Date(), hm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`, t = tankNow();
   modal(full ? '⛽ Tanki full karwa li' : '＋ Thora diesel dalwaya', `<form id="gtForm" class="gr-form">
     ${t && full ? `<p class="gt-need">Andaza: ~<b>${num(t.needL, 1)} L</b> ≈ <b>${rs(t.needRs)}</b> lagna chahiye (${t.pheras.length} phera · ${num(t.km)} km)</p>` : ''}
-    ${ai ? '<label class="gr-photo">📷 Pump parchi ki photo — AI litre / rate / Rs bhar dega<input type="file" accept="image/*" capture="environment" data-gt-ph="1" hidden></label><p class="gr-ai" id="gtAi" hidden></p>' : ''}
+    ${ai ? photoPick('🧾 Pump parchi ki photo — AI litre / rate / Rs bhar dega', 'data-gt-ph="1"') + '<p class="gr-ai" id="gtAi" hidden></p>' : ''}
     <div class="gr-2">${field('date', 'Tareekh', 'date', day || today())}${field('time', 'Waqt', 'time', hm)}</div>
     <div class="gr-2">${field('litre', 'Litre', 'number', '', 'required')}${field('rate', 'Rate (Rs/L)', 'number', curRate() || '')}</div>
     ${field('amount', 'Kul Rs', 'number', '')}
@@ -556,7 +558,7 @@ function openFill(full) {
   const calc = () => { const l = N(el('litre').value), r = N(el('rate').value); if (l && r) el('amount').value = Math.round(l * r); };
   el('litre').addEventListener('input', calc); el('rate').addEventListener('input', calc);
   el('amount').addEventListener('input', () => { const l = N(el('litre').value), a = N(el('amount').value); if (l && a && !N(el('rate').value)) el('rate').value = r2(a / l); });
-  f.querySelector('[data-gt-ph]')?.addEventListener('change', async ev => {
+  f.querySelectorAll('[data-gt-ph]').forEach(inp0 => inp0.addEventListener('change', async ev => {
     const file = ev.target.files?.[0]; if (!file) return; const out = $('gtAi'); out.hidden = false; out.textContent = '🤖 AI parchi parh raha hai…';
     try { const img = await shrink(file, 1600, 0.85); const txt = await ai([img], 'Ye petrol pump ki diesel parchi hai. Sirf JSON: {"litre":n,"rate":n,"amount":n}. Jo na dikhe 0.');
       const m = String(txt || '').match(/\{[\s\S]*\}/); if (!m) throw Error('AI ko samajh nahi aaya'); const j = JSON.parse(m[0]);
@@ -564,7 +566,7 @@ function openFill(full) {
       if (l) el('litre').value = l; if (r) el('rate').value = r; if (a) el('amount').value = a; else calc();
       out.textContent = `✓ ${num(l, 2)} L · Rs ${num(r, 2)} · ${rs(a || l * r)} — ek nazar dekh lein`; }
     catch (er) { out.textContent = '⚠ ' + (er?.message || er) + ' — khud likh dein'; }
-  });
+  }));
   f.onsubmit = e => { e.preventDefault(); const o = Object.fromEntries(new FormData(f));
     const l = N(o.litre), r = N(o.rate) || (l && N(o.amount) ? r2(N(o.amount) / l) : 0), a = N(o.amount) || Math.round(l * r);
     if (!(l > 0)) { f.querySelector('.gr-msg').textContent = 'Litre likhein'; return; }

@@ -2964,3 +2964,9 @@ User: bill baad mein check karna mushkil — har item poora page (30 items tang)
   1 item ho to hamesha khula. Khula card ki padding / chips thore chhote (.pp-line .pp-rgrp ...).
 * CTN↔PCS: main input handler + jaanch (jwc/jw/jrc/jr, pack wale): PCS -> CTN = round(PCS × pack); CTN -> PCS = upR(CTN ÷ pack)
   (1% andar poora rupee upar); dono taraf mode manual; paintRates (focus wala khana nahi chhedta).
+
+==================== App v2.96.5 (2026-10-07) — 🖼 gaari tasveer gallery se + 🕒 entry ka waqt ====================
+* gaari.js photoPick(title, attr): "📷 Camera" (capture) + "🖼 Gallery" (bina capture) — meter ki photo (data-gph=reading), phere ki
+  pump parchi (data-gph=diesel), tanki full form parchi (data-gt-ph; ab querySelectorAll — dono input). CSS .gr-ph2 / .gr-pbtn.
+* app.js timeTag(e): createdAt (ms) -> "🕒 2:47 PM"; createdAt ka din entry ki tareekh se alag -> "🕒 7 Oct 2:47 PM"; updatedAt 1 min se
+  zyada baad -> " · ✏️ 3:10 PM". Daily Sale sheets (sheet-entries), entryHTML, ledgerHTML, renderPurchases. CSS .e-time.

@@ -2086,3 +2086,7 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .pp-topbtns{display:inline-flex;gap:6px;align-items:center}.pp-fold{width:36px;height:36px;border-radius:12px;border:1px solid #d5dce9;background:#fff;color:#1d3b7a;font-size:14px;padding:0}
 .pp-line .pp-rates{padding:8px}.pp-line .pp-rgrps{gap:6px}.pp-line .pp-rgrp{padding:6px;gap:4px}.pp-line .pp-rates input{min-height:40px}.pp-line .pp-rate-grid small{font-size:10px}
 .pp-line .rate-chips.rc-inline .rc-set button{min-height:28px!important;height:28px!important;padding:0 9px!important;font-size:12px!important}.pp-line .pp-mrp-h{font-size:11px}
+/* v2.96.5: tasveer — Camera / Gallery */
+.gr-ph2{border:2px dashed #b9c6e0;border-radius:14px;padding:8px;text-align:center;background:#f8faff}.gr-ph2>span{display:block;font-weight:800;color:#1d3b7a;font-size:.88rem;margin-bottom:6px}
+.gr-ph2>div{display:grid;grid-template-columns:1fr 1fr;gap:6px}.gr-pbtn{display:block;cursor:pointer;border-radius:10px;padding:8px 4px;background:#fff;border:1px solid #d5dce9;font-weight:800;font-size:.85rem;color:#1d3b7a}
+.e-time{display:inline-block;font-size:.74rem;font-weight:700;color:#5b6b8a;background:#eef2fb;border-radius:999px;padding:1px 8px;margin:2px 0}
