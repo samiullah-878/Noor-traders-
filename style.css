@@ -2074,3 +2074,15 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 /* v2.96.3: 🏷 retail khana */
 .pp-mrp{grid-column:1/-1;background:linear-gradient(135deg,#fffaf0,#fff);border-color:#f1dfb8}.pp-mrp label{color:#8a5200}
 .pp-mrp-h{font-size:12px;color:#6b5a3a;line-height:1.35}.pp-mrp-h b.up{color:#b3261e}.pp-mrp-h b.dn{color:#b3261e}.pp-mrp-h b.up::before{content:'▲ '}
+/* v2.96.4: 📋 purchase — chhoti patti (30 items jaldi), filter, khula card thora chhota */
+.pp-fbar{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}.pp-fbar button{border:1px solid #d5dce9;background:#fff;border-radius:999px;padding:7px 12px;font-weight:800;font-size:13px;color:#1d3b7a}
+.pp-fbar button em{font-style:normal;font-weight:700;opacity:.7;margin-left:2px}.pp-fbar button.on{background:linear-gradient(135deg,#1d3b7a,#3a2c8f);color:#fff;border-color:transparent}.pp-fbar button.w:not(.on){border-color:#f3b3b3;background:#fff4f3;color:#a3221a}.pp-fbar .pp-lv{margin-left:auto}
+.pp-mini{display:block;width:100%;text-align:left;margin:0 0 6px;padding:9px 12px;border-radius:14px;background:#fff;border:1px solid #e3e8f2;border-left:4px solid #c9d3e6;box-shadow:0 2px 6px rgba(20,40,90,.04);color:#13244a;font:inherit}
+.pp-mini.chg{border-left-color:#1e9e4a}.pp-mini.warn{border-left-color:#d64545;background:#fffafa}
+.pm-top{display:flex;align-items:baseline;gap:6px}.pm-top b{flex:1;min-width:0;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.pm-top em{font-style:normal;font-weight:900;white-space:nowrap}
+.pm-sub{display:flex;flex-wrap:wrap;gap:3px 12px;margin-top:3px;font-size:12.5px;color:#4a5a7a}.pm-sub i{font-style:normal;font-weight:800;color:#17703c}.pm-sub i.low{color:#b26b00}.pm-sub i.neg{color:#c62828}
+.pm-sub u{text-decoration:none;font-weight:800;padding:0 4px;border-radius:6px}.pm-sub u.up{color:#c62828;background:#fdecec}.pm-sub u.dn{color:#0f7a44;background:#e7f8ee}.pm-c{margin-left:auto}
+.pm-w{display:block;margin-top:4px;font-size:12px;font-weight:800;color:#b3261e}
+.pp-topbtns{display:inline-flex;gap:6px;align-items:center}.pp-fold{width:36px;height:36px;border-radius:12px;border:1px solid #d5dce9;background:#fff;color:#1d3b7a;font-size:14px;padding:0}
+.pp-line .pp-rates{padding:8px}.pp-line .pp-rgrps{gap:6px}.pp-line .pp-rgrp{padding:6px;gap:4px}.pp-line .pp-rates input{min-height:40px}.pp-line .pp-rate-grid small{font-size:10px}
+.pp-line .rate-chips.rc-inline .rc-set button{min-height:28px!important;height:28px!important;padding:0 9px!important;font-size:12px!important}.pp-line .pp-mrp-h{font-size:11px}

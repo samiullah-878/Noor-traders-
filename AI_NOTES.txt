@@ -2954,3 +2954,13 @@ item add -> tik). Print, printPCs status, liveCarts beep, posBeep BAND. firebase
 firebase-key.json dekhta — aate hi exit(0) -> bat poora NT-PRINT chalata. nt-scan: base null = posStock listener nahi.
 Setup script: chaabi na mile to rukti NAHI (awaz-only), firebase-admin fail par bhi aage. Chaabi khud pohanchane ka tareeqa (pairing,
 malik ki ek tap) BAAD mein — abhi zaroorat nahi (Mithu ka bill server print karta hai).
+
+==================== App v2.96.4 (2026-10-07) — 📋 purchase CHHOTI PATTI + CTN↔PCS rate ek saath ====================
+User: bill baad mein check karna mushkil — har item poora page (30 items tang). Aur: PCS rate badlo to CTN khud, CTN badlo to PCS khud.
+* purchase.js: openKey (ek hi item khula), lineView one|all, lineFilter all|warn|chg. Rows: khula na ho to lineMiniHTML (button
+  .pp-mini data-pp-open): naam, Rs, "3 CTN × 533.33 +33.24", W/R rate + nafa % (low < 0.5 peela, manfi laal), 🏷 retail, ✏️ (badla),
+  ⚠ masle (khareed 0 / khareed barhi >0.2% / W-R 0 ya nuqsan / parchoon > retail). foldBarHTML: Sab · ⚠ Masle wale · ✏️ Badle hue ·
+  ▢ Sab kholo / ☰ Sab band. Khule card par ▲ (band). addItem (naya / dobara scan) = wohi khula; ppLoadBill (edit bill) = sab band.
+  1 item ho to hamesha khula. Khula card ki padding / chips thore chhote (.pp-line .pp-rgrp ...).
+* CTN↔PCS: main input handler + jaanch (jwc/jw/jrc/jr, pack wale): PCS -> CTN = round(PCS × pack); CTN -> PCS = upR(CTN ÷ pack)
+  (1% andar poora rupee upar); dono taraf mode manual; paintRates (focus wala khana nahi chhedta).

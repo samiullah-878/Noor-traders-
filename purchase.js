@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.96.3';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold } from './smart-search.js?v=2.96.3';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.96.4';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold } from './smart-search.js?v=2.96.4';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -210,13 +210,14 @@ function keepScan(el) {   // scan box upar nazar rahe; nayi line uske neeche —
   window.scrollTo({ top: Math.max(0, (window.scrollY || 0) + s.top - 8), behavior: 'smooth' });
 }
 let ppAddAt = 0, ppScrolled = 0;
+let openKey = '', lineView = 'one', lineFilter = 'all';   // v2.96.4: CHHOTI PATTI — sirf ek item khula (openKey), 'all' = sab khule; filter all | warn | chg
 function addItem(it, again = true) {
   ppAddAt = Date.now();
   noteHit(it.id);
   const had = again && [...cart].reverse().find(l => String(l.id) === String(it.id));
   if (had) {   // dobara scan / chunna = +1 Ctn (khula item ho to +1 Pcs)
     if (packOf(had)) had.ctn = (Number(had.ctn) || 0) + 1; else had.pcs = r3((Number(had.pcs) || 0) + 1);
-    keepDraft(); return { line: had, again: true };
+    openKey = had.k; keepDraft(); return { line: had, again: true };
   }
   const o = baseOf(it), pk = Number(it.pack) > 1 ? Number(it.pack) : 0;
   const l = {
@@ -225,7 +226,7 @@ function addItem(it, again = true) {
     wpcs: o.oldW, wctn: pk ? Math.round(o.oldW * pk) : 0, rpcs: pk ? o.oldR2 : o.oldR, rctn: pk ? Math.round(o.oldR * pk) : 0,
     wMode: 'old', rMode: 'old'
   };
-  cart.push(l); keepDraft();
+  cart.push(l); openKey = l.k; keepDraft();
   return { line: l, again: false };
 }
 
@@ -500,12 +501,14 @@ export function renderPP() {
   if (si2.length) found = `<div class="sale-found"><p class="stat-note" style="margin:0 0 4px">📦 Is supplier se aksar aane wale</p><div class="mchips">${si2.map(r => `<button type="button" data-pp-add="${esc(r.id)}">${esc(r.name)}</button>`).join('')}</div></div>`;
   const bar = cart.length ? `<div class="ws-chips"><small>Wholesale nafa SAB items par (naye khareed ke upar):</small>${W_CHIPS.map(p => `<button type="button" data-pp-wall="${p}">+${p}%</button>`).join('')}<input id="ppWCustom" type="number" inputmode="decimal" min="0" step="0.01" placeholder="apni %"><button type="button" data-pp-wall-custom="1">Lagao</button><button type="button" data-pp-old-all="1">↺ Sab par purana nafa</button></div>` : '';
   const rows = cart.map((l, i) => [l, i]).reverse().map(([l, i]) => {   // v2.33: nayi line upar (index wahi)
+    const fl = lineFlags(l), isOpen = lineView === 'all' || l.k === openKey || cart.length < 2;
+    if (!isOpen) return passFilter(l, fl) ? lineMiniHTML(l, i, fl) : '';   // v2.96.4: chhoti patti
     const pk = packOf(l), pcs = linePcs(l);
     const wN = nafaPct(l.oldW, l.oldCost), rN = nafaPct(l.oldR, l.oldCost);
     const hint = v => v > 0 ? `pehle ${num(v)}` : '—';
     const ch = (v, now) => v > 0 && Math.abs((Number(now) || 0) - v) > 0.004 ? ' changed' : '';
     return `<div class="sale-line pp-line${i === cart.length - 1 && Date.now() - ppAddAt < 1800 ? ' fresh' : ''}" data-pp-line="${i}">
-      <div class="sale-line-top"><b><span class="pp-no">${i + 1}.</span> ${esc(l.name)}${l.billName && l.billName !== l.name ? `<small class="pp-billname">bill: ${esc(l.billName)}</small>` : ''}</b><button type="button" class="danger sale-x" data-pp-del="${i}" aria-label="Hatao">✕</button></div>
+      <div class="sale-line-top"><b><span class="pp-no">${i + 1}.</span> ${esc(l.name)}${l.billName && l.billName !== l.name ? `<small class="pp-billname">bill: ${esc(l.billName)}</small>` : ''}</b><span class="pp-topbtns">${cart.length > 1 && lineView !== 'all' ? '<button type="button" class="pp-fold" data-pp-fold="1" title="Band karo" aria-label="Band karo">▲</button>' : ''}<button type="button" class="danger sale-x" data-pp-del="${i}" aria-label="Hatao">✕</button></span></div>
       <small>${esc(l.code)}${pk ? ' · 1 ' + esc(l.cName) + ' = ' + num(pk) : ''} · ${l.mem ? '<b>pichhli dafa</b> khareed' : 'purana khareed'} <b>${l.oldCost > 0 ? num(l.oldCost) + '/' + esc(l.uName) + (pk ? ' (' + num(r2(l.oldCost * pk)) + '/' + esc(l.cName) + ')' : '') : 'maloom nahi'}</b>${wN != null ? ' · nafa W ' + wN + '%' : ''}${rN != null ? ' · R ' + rN + '%' : ''}</small>
       <div class="sale-inputs pp-inputs">
         ${pk ? `<label>${esc(l.cName)} (${num(pk)})<input type="number" min="0" step="1" inputmode="numeric" data-pp-ctn="${i}" value="${l.ctn || ''}"></label>` : ''}
@@ -532,11 +535,37 @@ export function renderPP() {
     ${edit ? navHTML() : ''}
     <p class="stat-note">Bill POS mein baqi bills jaisa (credit, open) banega — post baad mein "📌 post" se. ${edit ? 'Payment ki entry pehle jaisi alag.' : 'Galla se cash chuna to galla wala "de diye" dabate hi supplier ko payment khata mein khud lag jayegi.'}</p></div>` : '';
   const pinned = billPin && billPics.length ? `<div class="pp-billbar" data-zoom="${billZoom}"><div class="pp-billwrap"><img src="${billPics[Math.min(billIx, billPics.length - 1)]}" alt="bill"></div><div class="pp-billacts"><button type="button" data-pp-zoom="-1">−</button><button type="button" data-pp-zoom="1">+</button>${billPics.length > 1 ? `<button type="button" data-pp-nextpic="1">${billIx + 1}/${billPics.length} ›</button>` : ''}<button type="button" data-pp-pic="${billIx}">⤢ Poori screen</button><button type="button" data-pp-pin="1">✕</button></div></div>` : '';
-  $('list').innerHTML = pinned + camRow + found + (cart.length ? bar + `<div class="sale-cart">${rows}</div>` + foot :
+  $('list').innerHTML = pinned + camRow + found + (cart.length ? bar + foldBarHTML() + `<div class="sale-cart">${rows || '<p class="stat-note">Is chunao mein koi item nahi</p>'}</div>` + foot :
     (q ? '' : (editNav ? navHTML(true) : '') + `<div class="empty"><strong>Naya purchase bill</strong><p>Upar supplier chunein, phir item ka naam likhein ya 📷 se scan karein.</p></div>`));
   if (Date.now() - ppAddAt < 1800 && ppAddAt !== ppScrolled) { ppScrolled = ppAddAt; requestAnimationFrame(() => keepScan(document.querySelector('.pp-line.fresh'))); }   // scan box upar rahe (nayi line us ke neeche)
   $('actions').innerHTML = cart.length ? `<button class="give" data-pp-clear="1">✕ Naya bill</button><button data-pp-camera="1" title="Barcode scan">📷</button>
     <button class="got" data-pp-save="1"${saving ? ' disabled' : ''}>${saving ? 'Bhej raha hoon…' : saveLabel(total)}</button>` : '';
+}
+// v2.96.4: 📋 CHHOTI PATTI — 30 items ka bill jaldi check: har item 2 line, tap = khule; masle / badle hue alag
+function lineFlags(l) {
+  const dc = l.oldCost > 0 && Number(l.costP) > 0 ? r2(Number(l.costP) - l.oldCost) : 0, wn = nafaNow(l, 'wp'), rn = nafaNow(l, 'rp'), m = mrpOf(l), warn = [];
+  if (!(Number(l.costP) > 0)) warn.push('khareed 0');
+  if (dc > 0 && dc / l.oldCost > 0.002) warn.push('khareed barhi');
+  if (!(Number(l.wpcs) > 0)) warn.push('W 0'); else if (wn != null && wn < 0) warn.push('W nuqsan');
+  if (!(Number(l.rpcs) > 0)) warn.push('R 0'); else if (rn != null && rn < 0) warn.push('R nuqsan');
+  if (m && Number(l.rpcs) > m) warn.push('parchoon > retail');
+  const chg = Math.abs(dc) > 0.004 || ['wp', 'wc', 'rp', 'rc'].some(sd => modeOf(l, sd) !== 'old') || (l.mrp != null && Math.abs((Number(l.mrp) || 0) - (Number(l.oldMrp) || 0)) > 0.004);
+  return { dc, wn, rn, warn, chg };
+}
+const passFilter = (l, f = lineFlags(l)) => lineFilter === 'all' || (lineFilter === 'warn' && f.warn.length > 0) || (lineFilter === 'chg' && f.chg);
+function lineMiniHTML(l, i, f = lineFlags(l)) {
+  const pk = packOf(l), q = pk ? `${num(l.ctn || 0)} ${esc(l.cName)}${Number(l.pcs) ? ' + ' + num(l.pcs) : ''}` : `${num(l.pcs || 0)} ${esc(l.uName)}`;
+  const nf = n => n == null ? '' : ` <i class="${n < 0 ? 'neg' : n < 0.5 ? 'low' : ''}">${n}%</i>`;
+  return `<button type="button" class="pp-mini${f.warn.length ? ' warn' : ''}${f.chg ? ' chg' : ''}" data-pp-open="${esc(l.k)}">
+    <span class="pm-top"><span class="pp-no">${i + 1}.</span><b>${esc(l.name)}</b><em>Rs ${num(r2(lineTotal(l)))}</em></span>
+    <span class="pm-sub"><span>${q} × ${num(r2(l.costP))}${f.dc ? ` <u class="${f.dc > 0 ? 'up' : 'dn'}">${f.dc > 0 ? '+' : ''}${num(f.dc)}</u>` : ''}</span><span>W ${num(l.wpcs)}${nf(f.wn)}</span><span>R ${num(l.rpcs)}${nf(f.rn)}</span>${mrpOf(l) ? `<span>🏷 ${num(mrpOf(l))}</span>` : ''}${f.chg ? '<span class="pm-c">✏️</span>' : ''}</span>
+    ${f.warn.length ? `<span class="pm-w">⚠ ${f.warn.join(' · ')}</span>` : ''}</button>`;
+}
+function foldBarHTML() {
+  if (cart.length < 2) return '';
+  const F = cart.map(l => lineFlags(l)), nw = F.filter(f => f.warn.length).length, nc = F.filter(f => f.chg).length;
+  const b = (k, lab, n) => `<button type="button" class="${lineFilter === k ? 'on' : ''}${k === 'warn' && n ? ' w' : ''}" data-pp-lf="${k}">${lab} <em>${n}</em></button>`;
+  return `<div class="pp-fbar">${b('all', 'Sab', cart.length)}${b('warn', '⚠ Masle wale', nw)}${b('chg', '✏️ Badle hue', nc)}<button type="button" class="pp-lv" data-pp-lv="1">${lineView === 'all' ? '☰ Sab band' : '▢ Sab kholo'}</button></div>`;
 }
 // v2.96.3: 🏷 RETAIL (company ki likhi qeemat) — app mein yaad: pehle X -> ab Y, parchoon se muqabla
 const mrpOf = l => Number(l.mrp ?? l.oldMrp) || 0;
@@ -603,10 +632,11 @@ document.addEventListener('input', e => {
     const l = cart[i], q = linePcs(l), amt = Number(t.value) || 0;
     if (q > 0 && amt > 0) { l.costP = r4(amt / q); recalc(l); paintRates(i); }
   }
-  else if ((i = d.ppWctn) != null) { cart[i].wctn = Number(t.value) || 0; setMode(cart[i], 'wc', 'manual'); paintChips(i); }   // v2.19: sirf wohi taraf
-  else if ((i = d.ppWpcs) != null) { cart[i].wpcs = Number(t.value) || 0; setMode(cart[i], 'wp', 'manual'); paintChips(i); }
-  else if ((i = d.ppRctn) != null) { cart[i].rctn = Number(t.value) || 0; setMode(cart[i], 'rc', 'manual'); paintChips(i); }
-  else if ((i = d.ppRpcs) != null) { cart[i].rpcs = Number(t.value) || 0; setMode(cart[i], 'rp', 'manual'); paintChips(i); paintMrp(i); }
+  // v2.96.4: CTN <-> PCS rate ek saath — PCS badlo to CTN = PCS × pack; CTN badlo to PCS = CTN ÷ pack (poora rupee upar)
+  else if ((i = d.ppWctn) != null) { const l = cart[i], pk = packOf(l); l.wctn = Number(t.value) || 0; setMode(l, 'wc', 'manual'); if (pk && l.wctn > 0) { l.wpcs = upR(l.wctn / pk); setMode(l, 'wp', 'manual'); } paintRates(i); }
+  else if ((i = d.ppWpcs) != null) { const l = cart[i], pk = packOf(l); l.wpcs = Number(t.value) || 0; setMode(l, 'wp', 'manual'); if (pk && l.wpcs > 0) { l.wctn = Math.round(l.wpcs * pk); setMode(l, 'wc', 'manual'); } paintRates(i); }
+  else if ((i = d.ppRctn) != null) { const l = cart[i], pk = packOf(l); l.rctn = Number(t.value) || 0; setMode(l, 'rc', 'manual'); if (pk && l.rctn > 0) { l.rpcs = upR(l.rctn / pk); setMode(l, 'rp', 'manual'); } paintRates(i); }
+  else if ((i = d.ppRpcs) != null) { const l = cart[i], pk = packOf(l); l.rpcs = Number(t.value) || 0; setMode(l, 'rp', 'manual'); if (pk && l.rpcs > 0) { l.rctn = Math.round(l.rpcs * pk); setMode(l, 'rc', 'manual'); } paintRates(i); }
   else if ((i = d.ppMrp) != null) { cart[i].mrp = r2(Number(t.value) || 0); paintMrp(i); }   // v2.96.3
   else if ((i = d.ppMrpc) != null) { const pk = packOf(cart[i]); cart[i].mrp = pk ? r2((Number(t.value) || 0) / pk) : r2(Number(t.value) || 0); paintMrp(i); }
   else if (d.ppXtra != null) { xtra = Math.max(0, Number(t.value) || 0); xtraApply(); cart.forEach((_, j) => paintRates(j)); }
@@ -661,10 +691,10 @@ document.addEventListener('input', e => {       // v2.4.1: Jaanch card ke khane 
   else if (d.ppJtot != null) { l.kul = v; if (v > 0 && linePcs(l) > 0) { l.costP = r4(v / linePcs(l)); recalc(l); } }        // v2.4.4: kul ÷ ginti = net khareed
   else if (d.ppJkc != null) { if (m) { l.costP = r4(v / m); recalc(l); } }
   else if (d.ppJcost != null) { l.costP = r4(v); l.kul = 0; recalc(l); }
-  else if (d.ppJwc != null) { if (pk) { l.wctn = v; setMode(l, 'wc', 'manual'); } else if (cs) { l.wpcs = r2(v / cs); setMode(l, 'wp', 'manual'); } else { l.wctn = v; l.wcOwn = true; setMode(l, 'wc', 'manual'); } }   // v2.19
-  else if (d.ppJw != null) { l.wpcs = v; if (pk && !l.wctn) l.wctn = Math.round(v * pk); if (!pk && l.one && !l.wcOwn) l.wctn = v; setMode(l, 'wp', 'manual'); }
-  else if (d.ppJrc != null) { if (pk) { l.rctn = v; setMode(l, 'rc', 'manual'); } else if (cs) { l.rpcs = r2(v / cs); setMode(l, 'rp', 'manual'); } else { l.rctn = v; l.rcOwn = true; setMode(l, 'rc', 'manual'); } }
-  else if (d.ppJr != null) { l.rpcs = v; if (pk && !l.rctn) l.rctn = Math.round(v * pk); if (!pk && l.one && !l.rcOwn) l.rctn = v; setMode(l, 'rp', 'manual'); }
+  else if (d.ppJwc != null) { if (pk) { l.wctn = v; setMode(l, 'wc', 'manual'); if (v > 0) { l.wpcs = upR(v / pk); setMode(l, 'wp', 'manual'); } } else if (cs) { l.wpcs = r2(v / cs); setMode(l, 'wp', 'manual'); } else { l.wctn = v; l.wcOwn = true; setMode(l, 'wc', 'manual'); } }   // v2.19
+  else if (d.ppJw != null) { l.wpcs = v; if (pk && v > 0) { l.wctn = Math.round(v * pk); setMode(l, 'wc', 'manual'); } if (!pk && l.one && !l.wcOwn) l.wctn = v; setMode(l, 'wp', 'manual'); }
+  else if (d.ppJrc != null) { if (pk) { l.rctn = v; setMode(l, 'rc', 'manual'); if (v > 0) { l.rpcs = upR(v / pk); setMode(l, 'rp', 'manual'); } } else if (cs) { l.rpcs = r2(v / cs); setMode(l, 'rp', 'manual'); } else { l.rctn = v; l.rcOwn = true; setMode(l, 'rc', 'manual'); } }
+  else if (d.ppJr != null) { l.rpcs = v; if (pk && v > 0) { l.rctn = Math.round(v * pk); setMode(l, 'rc', 'manual'); } if (!pk && l.one && !l.rcOwn) l.rctn = v; setMode(l, 'rp', 'manual'); }
   else return;
   jRepaint(); keepDraft(); refreshTotals();
 });
@@ -751,6 +781,11 @@ function focusLine(k) {
 }
 document.addEventListener('click', async e => {
   if (!document.querySelector('[data-pp-root]')) return;
+  const po = e.target.closest?.('[data-pp-open]');   // v2.96.4: patti tap = wohi item khule (baqi band)
+  if (po) { openKey = po.dataset.ppOpen; rerender(); requestAnimationFrame(() => { const i = cart.findIndex(l => l.k === openKey), el = document.querySelector(`.pp-line[data-pp-line="${i}"]`); if (el) el.scrollIntoView({ block: 'start', behavior: 'smooth' }); }); return; }
+  if (e.target.closest?.('[data-pp-fold]')) { openKey = ''; rerender(); return; }
+  const lf = e.target.closest?.('[data-pp-lf]'); if (lf) { lineFilter = lf.dataset.ppLf || 'all'; rerender(); return; }
+  if (e.target.closest?.('[data-pp-lv]')) { lineView = lineView === 'all' ? 'one' : 'all'; if (lineView === 'one') openKey = ''; rerender(); return; }
   const mic = e.target.closest?.('[data-pp-mic]');
   if (mic) { const ok = voiceSearch(t => { const s = $('search'); if (s) { s.value = t; s.dispatchEvent(new Event('input', { bubbles: true })); } }); if (!ok) notice('Is phone/browser mein awaz se search nahi chalti'); return; }
   const off = e.target.closest?.('[data-pp-edit-off]');
@@ -1864,7 +1899,7 @@ export function ppLoadBill(b, ent) {
     recalc(next[next.length - 1]);   // v2.1.0: bill ke naye khareed par pichhla NAFA khud lag jaye
   }
   if (missing.length) return 'Yeh items POS stock list mein nahi mile, is liye edit nahi ho sakta:\n' + missing.join('\n');
-  cart = next;
+  cart = next; openKey = ''; lineFilter = 'all';   // v2.96.4: khula bill = sab patti band (jaldi check)
   godam = [...gcount].sort((a, c) => c[1] - a[1])[0]?.[0] ?? BILL_BRANCH;
   supplier = String(ent?.partyId || ''); supOpen = !partyOf(supplier); supQuery = '';
   day = b.date || ''; invoiceNo = String(b.invoiceNo || ''); note = '';
