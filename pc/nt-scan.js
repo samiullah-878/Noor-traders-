@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-scan.js  v1.3 (2026-10-07: ⚠️ 'tu-tu-tu' (WARN) awaz — scan POS ke bajaye kisi AUR window mein gaya (scanWhere) to tu-tu-tu, tik/bzzz nahi;
+//  nt-scan.js  v1.3.1 (2026-10-07: base (Firestore) na ho to bhi chale — awaz-only) · v1.3 (2026-10-07: ⚠️ 'tu-tu-tu' (WARN) awaz — scan POS ke bajaye kisi AUR window mein gaya (scanWhere) to tu-tu-tu, tik/bzzz nahi;
 //                     onReady (PC on hote hi awazon ka test) · onScanOk/onScanBad ko code + window) · v1.2.1 (2026-10-06: onScanBad — ghalat scan ka waqt bahar batao, POS error box ki bzzz dohri na ho) · v1.2 (2026-10-06: ASLI awaz — WAV (SoundPlayer): sahi = chhoti oonchi tik, ghalat = 3 moti bzzz; Console.Beep Windows
 //                     ki 'ding' ban jati thi aur dono ek jaisi) · v1.1 (2026-10-06: beep() bahar se — POS item-add) · v1.0 (2026-10-06) — 🔔 SCAN AWAZ (POS ya koi bhi software): har scan par "tik", GHALAT scan (item POS mein nahi /
 //  band) par alag zor ki "bzzz bzzz bzzz" — larka screen dekhe baghair scan karta rahe.
@@ -27,10 +27,11 @@ function start({ dir, base, log, cfg, onScanOk, onScanBad, onReady, onDown, scan
       for (const x of it.sb || []) if (x && x.b) s.add(norm(x.b));
       for (const b of it.bs || []) s.add(norm(typeof b === 'string' ? b : b && b.b));
     } s.delete(''); codes = s; loaded = s.size > 50; };
-  base.collection('posStock').where('branch', '==', 1).onSnapshot(sn => {
+  if (base) base.collection('posStock').where('branch', '==', 1).onSnapshot(sn => {
     sn.docChanges().forEach(c => { if (c.type === 'removed') chunks.delete(c.doc.id); else chunks.set(c.doc.id, (c.doc.data() || {}).items || []); });
     rebuild();
   }, e => log('🔔 scan: items nahi mile — ' + e.message));
+  else log('🔔 scan: barcode list nahi (awaz-only) — har scan par tik, ghalat item ki bzzz POS ke error box se');   // v1.3.1
 
   const PS = path.join(dir, 'nt-scan.ps1');
   const TXT = `$ErrorActionPreference='Stop'

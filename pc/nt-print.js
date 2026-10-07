@@ -1,5 +1,6 @@
 // ============================================================
-//  nt-print.js  v1.14 (2026-10-07: 🔔 AANKH BAND SCAN — ⚠️ tu-tu-tu: scan ghalat window mein / POS awaz system band / Sale screen khuli magar
+//  nt-print.js  v1.15 (2026-10-07: AWAZ-ONLY — firebase-key.json na ho (naya counter PC) to bhi scan / POS awaz chalti (tik, POS error bzzz,
+//                   tu-tu-tu); print / app status band; chaabi aate hi khud poora NT-PRINT) · v1.14 (2026-10-07: 🔔 AANKH BAND SCAN — ⚠️ tu-tu-tu: scan ghalat window mein / POS awaz system band / Sale screen khuli magar
 //                   patti nahi (andha); PC on hote hi tik-bzzz-tu-tu-tu test; printPCs.snd = aaj ki ginti + ghalat barcode + POS errors (app: Counter Nazar)) · v1.13 (2026-10-06: POS ERROR box par bzzz (nt-posui v1.4) — ghalat scan ki bzzz abhi baji ho to dobara nahi) · v1.10 (2026-10-06: 🔔 nt-posui.js — POS ki screen par item judte hi tik, code likh kar bhi) · v1.9 (2026-10-06: 🔔 POS BEEP — posBeep/<is PC ka host> badle = POS mein item jura -> beep; tab scan ki 'tik' band, ghalat scan ki bzzz chalu) · v1.8 (2026-10-06: 🔔 SCAN AWAZ — nt-scan.js: POS mein har scan par tik, ghalat scan par bzzz) · v1.7 (2026-10-06: 🔄 KHUD-UPDATE — har 5 min GitHub manifest, nt-print.js / nt-parchi.js naye hon to sha jaanch kar
 //                   badal kar band; nt-print-auto.bat dobara chalata hai. local-config "autoUpdate": false = band) · v1.6 (2026-10-06: ⚡ TEZ PRINT — nt-parchi worker: PowerShell shuru se khula, bill aate hi seedha printer) · v1.4 (2026-10-05: 🔔 scan par beep — liveCarts, local-config beep/beepCounters) · v1.1 (2026-10-04) — 💻 NT-PRINT: app ka bill IS PC ke printer par, bina kisi window ke
 //
@@ -26,10 +27,11 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 const { execFile, execFileSync } = require('child_process');
-const { initializeApp, cert, getApps } = require('firebase-admin/app');
-const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+let FA = null, FF = null; try { FA = require('firebase-admin/app'); FF = require('firebase-admin/firestore'); } catch {}   // v1.15: na ho to AWAZ-ONLY
+const { initializeApp, cert, getApps } = FA || {};
+const { getFirestore, FieldValue } = FF || {};
 
-const VER = '1.14';
+const VER = '1.15';
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
@@ -178,11 +180,14 @@ if (process.argv.includes('--test')) {
 }
 
 // ---------------- Firestore ----------------
-if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
-const db = getFirestore();
-const base = db.collection('businesses').doc(BUSINESS_ID);
-const saleCol = base.collection('appSales');
-const pcDoc = base.collection('printPCs').doc(PC_ID);
+// v1.15: 🔔 AWAZ-ONLY — chaabi (firebase-key.json) ya firebase-admin na ho to sirf awaz (scan + POS screen), baqi band
+const KEY = path.join(DIR, 'firebase-key.json');
+const AWAZ_ONLY = !fs.existsSync(KEY) || !FA || !FF;
+if (!AWAZ_ONLY && !getApps().length) initializeApp({ credential: cert(require(KEY)) });
+const db = AWAZ_ONLY ? null : getFirestore();
+const base = db ? db.collection('businesses').doc(BUSINESS_ID) : null;
+const saleCol = base ? base.collection('appSales') : null;
+const pcDoc = base ? base.collection('printPCs').doc(PC_ID) : null;
 
 // v1.14: 🔔 COUNTER AWAZ — aaj ki ginti aur halat (app ka Counter Nazar printPCs.snd parhta hai)
 const SND = { ok: 0, add: 0, bad: 0, err: 0, warn: 0, wrong: 0, lastScan: 0, miss: [], errs: [], warns: [] };
@@ -195,6 +200,7 @@ function sndState() {
 const sndBump = () => { if (sndT) return; sndT = setTimeout(() => { sndT = null; beat(); }, 5000); };   // 5 sec mein ek dafa — Firestore par bojh nahi
 const keep = (arr, x, n) => { arr.unshift(x); if (arr.length > n) arr.length = n; };
 async function beat() {
+  if (!pcDoc) return;   // v1.15: awaz-only
   if (!prAt || Date.now() - prAt > 10 * 60000) scanPrinters();
   try { await pcDoc.set({ name: PC_NAME, host: os.hostname(), printer: printerName(), printers: PR_LIST.map(n => ({ n, h: h6(n) })), at: Date.now(), ver: VER, width: W, snd: sndState() }); }
   catch (e) { log('⚠ report: ' + e.message); if (unauth(e)) { log('Firebase rabta toota (UNAUTHENTICATED) — dobara shuru'); setTimeout(() => process.exit(1), 500); } }
@@ -259,7 +265,7 @@ function listenBeep() {
   }, e => log('liveCarts beep: ' + e.message));
 }
 function listen() {
-  listenBeep();
+  if (base) listenBeep();
   let scan = null;
   const posBeepOn = () => cfg().posBeep === true;   // v1.9.1: sirf jab local-config posBeep:true (POS live likhta hai ya nahi — pakka nahi)
   let posui = null;
@@ -312,7 +318,7 @@ function listen() {
     onDown: () => { if (cfg().posUi !== false) warn('POS awaz system band ho gaya — aankh se dekhein'); } }); } catch (e) { log('🔔 POS screen shuru nahi hua: ' + e.message); }
   posuiRef = posui;
   // v1.9: 🔔 POS BEEP — server (pos-sales-dekho v1.4) har nayi POS line par posBeep/<HOST> likhta hai
-  if (posBeepOn()) { let first = true, lastAt = 0;
+  if (posBeepOn() && base) { let first = true, lastAt = 0;
     base.collection('posBeep').doc(os.hostname().toUpperCase()).onSnapshot(d => {
       const at = Number((d.data() || {}).at) || 0;
       if (first) { first = false; lastAt = at; return; }
@@ -321,6 +327,10 @@ function listen() {
       if (!(scan && scan.beep && scan.beep('OK'))) beep('scan');
     }, e => log('🔔 POS beep listener: ' + e.message));
     log('🔔 POS beep sun raha hai: ' + os.hostname().toUpperCase()); }
+  if (!saleCol) {   // v1.15: AWAZ-ONLY — chaabi aate hi poora NT-PRINT (bat 30 sec mein dobara chalata hai)
+    setInterval(() => { if (fs.existsSync(KEY)) { log('🔑 firebase-key mil gayi — poora NT-PRINT shuru'); process.exit(0); } }, 60000);
+    return;
+  }
   const day = today();
   saleCol.where('date', '==', day).onSnapshot(s => {   // v1.2: aaj ke sab, phir counter 'pc:<id>[:printer]' khud chhanta (range + date ko index chahiye hota)
     s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => onDoc(c.doc)); });
@@ -375,7 +385,8 @@ lock.listen(LOCK_PORT, '127.0.0.1', async () => {
   scanPrinters();
   log(`💻 NT-PRINT v${VER} — PC "${PC_NAME}" (${COUNTER}) · printer: ${printerName() || 'NAHI MILA'} · ${W} harf / ${DOTS} dots`);
   try { P.warm(); } catch {}   // v1.6: print worker pehle se garam
-  await beat(); setInterval(beat, 60000);
+  if (AWAZ_ONLY) log('🔔 AWAZ-ONLY: ' + (FA ? 'firebase-key.json nahi' : 'firebase-admin nahi') + ' — sirf scan / POS awaz (tik, POS error bzzz, tu-tu-tu). Print aur app status band.');
+  else { await beat(); setInterval(beat, 60000); }
   listen();
   setTimeout(selfUpdate, 60000); setInterval(selfUpdate, 5 * 60000);   // v1.7
 });

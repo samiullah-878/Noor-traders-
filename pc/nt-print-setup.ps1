@@ -43,18 +43,15 @@ if (-not (Test-Path $key)) {
   }
 }
 if (-not (Test-Path $key)) {
-  Say "" ; Say "!!! firebase-key.json NAHI mili (server se network copy ki ijazat nahi)." Red
-  Say "    Server PC ($SERVER) ki C:\khata-sync\firebase-key.json pen drive / AnyDesk file transfer se" Yellow
-  Say "    is PC ki C:\khata-sync\ mein rakhein, phir YEHI command dobara chalayein." Yellow
-  Start-Process explorer.exe $K
-  return
+  Say "firebase-key.json nahi mili (server network se nahi deta) - koi baat nahi:" Yellow
+  Say "  NT-PRINT AWAZ-ONLY chalega: scan tik, POS error par bzzz, ghalat jagah tu-tu-tu. (App se print / status baad mein)" Yellow
 }
 # 6) firebase-admin
 if (-not (Test-Path (Join-Path $K 'node_modules\firebase-admin'))) {
   Say "firebase-admin install ho raha hai (1-3 minute)..." Yellow
   Push-Location $K; & npm.cmd install firebase-admin --no-audit --no-fund --loglevel=error; Pop-Location
 }
-if (-not (Test-Path (Join-Path $K 'node_modules\firebase-admin'))) { Say "firebase-admin install nahi hua - internet check kar ke dobara chalayein" Red; return }
+if (-not (Test-Path (Join-Path $K 'node_modules\firebase-admin'))) { Say "firebase-admin install nahi hua - awaz phir bhi chalegi (print / app status ke liye baad mein dobara chalayein)" Yellow }
 # 7) Startup
 $st = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Startup'
 $vbs = Join-Path $st 'NT-PRINT.vbs'
@@ -65,4 +62,4 @@ $run = Get-CimInstance Win32_Process -Filter "Name='node.exe'" | Where-Object { 
 if ($run) { Say "NT-PRINT pehle se chal raha hai" Green } else { Start-Process wscript.exe "`"$vbs`""; Say "NT-PRINT chalu kiya - 25 second intezar..." Yellow; Start-Sleep 25 }
 $lg = Join-Path $K 'nt-print-log.txt'
 if (Test-Path $lg) { Say "--- NT-PRINT log ---" Cyan; Get-Content $lg -Tail 12 -Encoding UTF8 | ForEach-Object { Write-Host $_ } }
-Say ""; Say "Ab POS par ek SAHI aur ek GHALAT barcode scan kar ke dekhein: tik / bzzz aani chahiye." Green
+Say ""; Say "Ab POS par ek SAHI aur ek GHALAT barcode scan kar ke dekhein: tik aani chahiye, ghalat par POS ka error aaye to bzzz." Green

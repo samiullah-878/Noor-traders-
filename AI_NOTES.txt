@@ -2946,3 +2946,11 @@ NT-PRINT wala likha tha — ghalat tha; Mithu ka bill print server (counterPrint
   (8BR23BF = "Mithu PC", KEIME1D = "Abdurehman PC"; pehle se ho to nahi chhedti); firebase-key.json: \\DESKTOP-Q1SLV77\khata-sync ya
   \c$\khata-sync se copy — na ho sake to rukti hai, folder kholti hai (haath se pen drive / AnyDesk se rakhna, phir dobara);
   npm firebase-admin; Startup NT-PRINT.vbs (doctor jaisa); chalu + 25 s baad log. Script ASCII.
+
+==================== nt-print v1.15 + nt-scan v1.3.1 (manifest 2026-10-07.4) + setup — 🔔 AWAZ-ONLY (chaabi ke baghair) ====================
+User: "khud server se utha lo, mujh se itna kaam nahi hota" — firebase-key haath se copy nahi karni. Hal: NT-PRINT chaabi ke baghair
+AWAZ-ONLY chalta hai (scan tik — barcode list nahi to har scan sahi; POS error box -> bzzz (nt-posui); ghalat window -> tu-tu-tu; POS
+item add -> tik). Print, printPCs status, liveCarts beep, posBeep BAND. firebase-admin lazy require (na ho to bhi). Har minute
+firebase-key.json dekhta — aate hi exit(0) -> bat poora NT-PRINT chalata. nt-scan: base null = posStock listener nahi.
+Setup script: chaabi na mile to rukti NAHI (awaz-only), firebase-admin fail par bhi aage. Chaabi khud pohanchane ka tareeqa (pairing,
+malik ki ek tap) BAAD mein — abhi zaroorat nahi (Mithu ka bill server print karta hai).
