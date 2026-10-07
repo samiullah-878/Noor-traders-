@@ -2071,3 +2071,6 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .nb-dayt{font-size:1rem;color:#13244a;white-space:nowrap}.nb-dayt em{font-style:normal;font-size:.72rem;font-weight:800;margin-left:4px;padding:2px 7px;border-radius:999px;background:#e7f8ee;color:#0f6b3d;vertical-align:middle}.nb-dayt em.old{background:#fff1d6;color:#8a5200}
 .nb-cal{position:relative;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:999px;border:1px solid #d5dce9;background:#fff;cursor:pointer;font-size:14px;overflow:hidden}.nb-cal input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .nb-past .nb-list{border-top:3px solid #f3c46b}.nb-odd{color:#b3261e;font-weight:800;background:#fff1f0;border-radius:6px;padding:0 4px}
+/* v2.96.3: 🏷 retail khana */
+.pp-mrp{grid-column:1/-1;background:linear-gradient(135deg,#fffaf0,#fff);border-color:#f1dfb8}.pp-mrp label{color:#8a5200}
+.pp-mrp-h{font-size:12px;color:#6b5a3a;line-height:1.35}.pp-mrp-h b.up{color:#b3261e}.pp-mrp-h b.dn{color:#b3261e}.pp-mrp-h b.up::before{content:'▲ '}
