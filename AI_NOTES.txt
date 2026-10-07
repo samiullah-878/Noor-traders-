@@ -2970,3 +2970,27 @@ User: bill baad mein check karna mushkil — har item poora page (30 items tang)
   pump parchi (data-gph=diesel), tanki full form parchi (data-gt-ph; ab querySelectorAll — dono input). CSS .gr-ph2 / .gr-pbtn.
 * app.js timeTag(e): createdAt (ms) -> "🕒 2:47 PM"; createdAt ka din entry ki tareekh se alag -> "🕒 7 Oct 2:47 PM"; updatedAt 1 min se
   zyada baad -> " · ✏️ 3:10 PM". Daily Sale sheets (sheet-entries), entryHTML, ledgerHTML, renderPurchases. CSS .e-time.
+
+==================== App v2.97.0 + label-print v4.0 + Rules 2.34 (manifest 2026-10-07.5) — 🏦 HBL sood/reset + 🖨 label live/✕ cancel ====================
+User: (1) "Barcode real time pata chalta rahe kaunsa chhap raha hai, cancel karna ho to app se command de kar cancel kar sakein"
+(2) HBL: "account reset ka option — reset dabate hi account mein poore 15 lac; 22000 interest ka hisaab, 30 din ka padta hai,
+jitne din payment account mein aaya per day ke hisaab se utna interest likh do aur update hota rahe".
+* app.js loanInterest(p, es): sirf bank wala khata (p.bank && p.limit). im = p.intMonth (cents) warna limit × 22000/15,00,000.
+  Roz ka sood = (us din ke akhir ka istemal) × im/30/limit. Shuru: aakhri loanReset entry ki tareekh, warna p.intFrom, warna pehli entry.
+  Return {start, days, tot, perDay, im, reset}. loanCardHTML: .loan-int (📈 Sood total · din · aaj ~/din · mahana) + .loan-due
+  ("Poora adjust karne ke liye" istemal + sood) + malik ka "🔄 Account reset" (data-loan-reset).
+* loanResetForm(pid): istemal + sood (badal sakte) = total, tareekh, ☐ "Cash se gaya" (band = dailyIncluded:false, Daily mein nahi).
+  Do entries: borrow {loanInt:true, note 📈 Sood (bank ne kaata)} + payment {loanReset:true} = istemal + sood -> balance poori limit,
+  sood ginti us din se dobara 0. Account form: limit ke saath "📈 Mahana sood poori limit par" (intMonth) + "Sood kab se ginein" (intFrom).
+  Test: 20 Sep se 11 din poore 15 lac, phir 7 din 7,89,200 -> Rs 10,767.44; reset ke baad 0.
+* 🖨 Label live: barcode.js liveLabelsHTML(list, opts) export — chal raha (printing pehle, phir new "line mein #n"), pichhle 10 min ke
+  khatam; progress bar sent/total; har job "✕ Cancel" (data-lv-cancel) + "✕ Sab cancel". Barcode screen ke upar panel; 'bad' filter mein
+  cancelled bhi. pos-stock.js printLabel popup mein .lv-pop (listenLabelJobs pichhle 3 ghante) + watchLabel 'cancelled'.
+  pos-stock.js import './barcode.js?v=X' HAMESHA app.js wale URL jaisa (warna module do dafa load).
+* cloud.cancelLabel(id): labelJobs/{id} par sirf {cancelReq:true, cancelBy:uid, cancelAt}. Rules 2.34: owner/blue/stock/sale staff,
+  status 'new'|'printing', sirf ye 3 keys.
+* pc/label-print.js v4.0: transaction mein cancelReq ho to seedha 'cancelled'; warna 'printing' sent:0,total. TSPL parts (rowsPerJob × cols)
+  ek ek bhejta — har agle part se pehle printer queue khali hone ka intezar (Get-PrintJob, 90 s) + cancelReq check; har part ke baad
+  {sent,total}. Cancel par purgeQueue (Remove-PrintJob) + 'cancelled' {sent,total,doneAt}. done mein bhi sent/total.
+  NOTE: jo part printer ki memory mein ja chuka woh chhap jayega (TSC buffer) — cancel agle part se rukta hai.
+* firestore-rules-2.34.html (copy button) — user ko publish karni hai.

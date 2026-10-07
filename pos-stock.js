@@ -1,7 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.96.5';
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName } from './smart-search.js?v=2.97.0';
+import { liveLabelsHTML } from './barcode.js?v=2.97.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -833,12 +834,16 @@ async function printLabel(btn) {
     const jids = [];
     for (const c of parts) jids.push(await cloud.requestLabel({ itemId: r.id, code: x.code, name: r.name, qty: x.qty, rate: x.price, copies: c }));
     btn.textContent = '⏳ PC...';
+    // v2.97: 🖨 live patti isi khirki mein — kitne chhape, line mein kaun, ✕ Cancel
+    { const dlg = btn.closest('dialog') || document; let box = dlg.querySelector('.lv-pop'); if (!box) { box = document.createElement('div'); box.className = 'lv-pop'; (btn.closest('form,.label-box,div') || dlg.body || dlg).insertAdjacentElement('afterend', box); }
+      if (cloud.listenLabelJobs && !box._un) { box._un = cloud.listenLabelJobs(Date.now() - 3 * 3600000, l => { if (!box.isConnected) { try { box._un?.(); } catch {} return; } box.innerHTML = liveLabelsHTML(l); }); } }
     const stops = []; let done = false, ok = 0;
     const end = (msg, good) => { if (done) return; done = true; stops.forEach(f => { try { f && f(); } catch {} }); btn.disabled = false; btn.textContent = good ? '✓ Chhap gaya' : old; notice(msg); setTimeout(() => { if (btn.isConnected) btn.textContent = old; }, 4000); };
     if (cloud.watchLabel) jids.forEach(jid => { let seen = false; stops.push(cloud.watchLabel(jid, j => {
       if (!j || seen) return;
       if (j.status === 'done') { seen = true; ok++; if (ok === jids.length) end(`✓ ${copies} label chhap gaye`, true); else btn.textContent = `⏳ ${ok}/${jids.length}`; }
       else if (j.status === 'failed' || j.status === 'skipped') { seen = true; end('Label nahi chhapa: ' + (j.error || j.status), false); }
+      else if (j.status === 'cancelled') { seen = true; end('✕ Label cancel' + (Number(j.sent) ? ' — ~' + j.sent + ' chhapne ke baad' : ''), false); }
     })); });
     setTimeout(() => end('PC se jawab nahi aaya — PC on hai aur label-print chal raha hai? (hukum mehfooz hai, PC on hote hi chhapega)', false), 45000 * parts.length);
   } catch (e) { btn.disabled = false; btn.textContent = old; notice('Label nahi bheja: ' + (e?.message || e)); }

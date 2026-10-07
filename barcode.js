@@ -1,6 +1,7 @@
 // barcode.js — v2.24.0: 🏷 BARCODE REPORT — asal data: labelJobs (app ka hukum -> PC label-print chhapta hai)
 // labelJobs/<id>: {itemId, code, name, qty (packet mein kitne), rate, copies (kitne label), status new|printing|done|failed|skipped,
 //                  by, at} + PC: {doneAt, numFrom, numTo, numCode, day}. Main barcode = item ka apna code, warna SUB-barcode.
+// v2.97: 🖨 LIVE patti upar — chhap raha (sent/total), line mein (#), pichhle 10 min khatam; ✕ Cancel / Sab cancel (labelJobs.cancelReq).
 // Screen: din ke hisaab se -> item -> har barcode (packet size) ki ginti. Chips: Aaj · Kal · 7 din · 30 din · status · search.
 // PDF: app ka openReportPreview (poori screen + WhatsApp / share).
 const $ = id => document.getElementById(id);
@@ -27,7 +28,7 @@ function build() {
   const lo = fromMs(), hi = fP === 'kal' ? back(0) : Infinity, q = fQ.trim().toLowerCase();
   const items = new Map((itemsOf() || []).map(r => [String(r.id), r]));
   const sel = jobs.filter(j => { const t = Number(j.doneAt) || Number(j.at) || 0; return t >= lo && t < hi; })
-    .filter(j => fS === 'all' ? true : fS === 'done' ? j.status === 'done' : fS === 'wait' ? (j.status === 'new' || j.status === 'printing') : (j.status === 'failed' || j.status === 'skipped'))
+    .filter(j => fS === 'all' ? true : fS === 'done' ? j.status === 'done' : fS === 'wait' ? (j.status === 'new' || j.status === 'printing') : (j.status === 'failed' || j.status === 'skipped' || j.status === 'cancelled'))
     .filter(j => !q || [j.name, j.code, items.get(String(j.itemId))?.name].join(' ').toLowerCase().includes(q));
   const days = new Map();
   for (const j of sel) {
@@ -56,12 +57,25 @@ export function renderBarcode() {
   paint();
 }
 const codeLine = c => `<div class="bc-code${c.sub ? ' sub' : ''}"><span class="bc-tag">${c.sub ? 'SUB' : 'MAIN'}</span><span class="bc-num">${esc(c.code)}</span><span class="bc-pack">📦 ${num(c.qty)} wala</span>${c.rate ? `<span class="bc-rate">Rs ${num(c.rate)}</span>` : ''}<b class="bc-cnt">× ${num(c.labels)}</b>${c.fail ? `<span class="bc-fail">⚠️ ${num(c.fail)} fail</span>` : ''}${c.nums.length ? `<small class="bc-nums">#${esc(c.nums.slice(0, 4).join(', '))}${c.nums.length > 4 ? '…' : ''}</small>` : ''}</div>`;
+export function liveLabelsHTML(list, opts = {}) {   // v2.97: pos-stock bhi istemal karta hai
+  const now = Date.now(), L = (list || []).filter(j => j && j.id);
+  const act = L.filter(j => j.status === 'new' || j.status === 'printing').sort((a, b) => (a.status === 'printing' ? 0 : 1) - (b.status === 'printing' ? 0 : 1) || (Number(a.at) || 0) - (Number(b.at) || 0));
+  const fin = opts.noRecent ? [] : L.filter(j => ['done', 'cancelled', 'failed', 'skipped'].includes(j.status) && now - (Number(j.doneAt) || 0) < 10 * 60000).sort((a, b) => (Number(b.doneAt) || 0) - (Number(a.doneAt) || 0)).slice(0, 5);
+  if (!act.length && !fin.length) return '';
+  let n = 0;
+  const row = j => { const tot = Number(j.total) || Number(j.copies) || 1, sent = Math.min(tot, Number(j.sent) || 0), pr = j.status === 'printing', cx = !!j.cancelReq;
+    return `<div class="lv-row ${j.status}${cx ? ' cx' : ''}"><div class="lv-t"><b>${esc(j.name || 'Item')}</b><small>${esc(j.code || '')}${Number(j.qty) > 1 ? ' · ' + num(j.qty) + ' wala' : ''}</small></div>
+      <div class="lv-s">${cx && (pr || j.status === 'new') ? '<em class="cx">✕ cancel ho raha…</em>' : pr ? `<em class="pr">🖨 ${num(sent)} / ${num(tot)}</em>` : j.status === 'new' ? `<em>⏳ line mein #${++n} · ${num(tot)}</em>` : j.status === 'done' ? `<em class="ok">✓ ${num(tot)} chhap gaye</em>` : j.status === 'cancelled' ? `<em class="cx">✕ cancel${Number(j.sent) ? ' · ~' + num(j.sent) + ' chhape' : ''}</em>` : `<em class="bad">⚠ ${esc(j.error || j.status)}</em>`}
+      ${pr ? `<i class="lv-bar"><u style="width:${Math.round(sent / tot * 100)}%"></u></i>` : ''}</div>
+      ${(pr || j.status === 'new') && !cx ? `<button type="button" class="lv-x" data-lv-cancel="${esc(j.id)}">✕ Cancel</button>` : ''}</div>`; };
+  return `<div class="lv-box"><div class="lv-h"><b>🖨 Label printer — abhi</b>${act.filter(j => !j.cancelReq).length > 1 ? `<button type="button" class="lv-x all" data-lv-cancel="${act.filter(j => !j.cancelReq).map(j => esc(j.id)).join(',')}">✕ Sab cancel</button>` : ''}</div>${act.map(row).join('')}${fin.map(row).join('')}</div>`;
+}
 function paint() {
   const root = $('bcRoot'); if (!root) return;
   const r = build();
-  root.innerHTML = `<div class="bc-head">
+  root.innerHTML = liveLabelsHTML(jobs) + `<div class="bc-head">
     <div class="mchips">${[['today', 'Aaj'], ['kal', 'Kal'], ['7', '7 din'], ['30', '30 din']].map(([k, l]) => `<button type="button" class="rc${fP === k ? ' on' : ''}" data-bc-p="${k}">${l}</button>`).join('')}</div>
-    <div class="mchips">${[['done', '✓ Chhap gaye'], ['wait', '⏳ Line mein'], ['bad', '⚠️ Fail'], ['all', 'Sab']].map(([k, l]) => `<button type="button" class="rc${fS === k ? ' on' : ''}" data-bc-s="${k}">${l}</button>`).join('')}</div>
+    <div class="mchips">${[['done', '✓ Chhap gaye'], ['wait', '⏳ Line mein'], ['bad', '⚠️ Fail / cancel'], ['all', 'Sab']].map(([k, l]) => `<button type="button" class="rc${fS === k ? ' on' : ''}" data-bc-s="${k}">${l}</button>`).join('')}</div>
     <label class="hs-search"><input type="search" placeholder="🔍 item ya barcode…" value="${esc(fQ)}" data-bc-q="1"></label>
     <div class="bc-kpis"><div><b>${num(r.labels)}</b><small>label</small></div><div><b>${num(r.items)}</b><small>items</small></div><div><b>${num(r.subs)}</b><small>sub-barcode</small></div><div><b>${num(r.jobs)}</b><small>hukum</small></div></div></div>
     ${r.days.map(d => `<div class="bc-day"><div class="bc-dayhead"><b>${esc(nice(d.day))}</b><span>${num(d.labels)} label · ${d.rows.length} items${d.subs ? ' · ' + num(d.subs) + ' sub' : ''}</span></div>
@@ -77,7 +91,12 @@ function pdfHTML() {
       ${d.rows.map(row => row.codes.map((c, i) => `<tr><td class="iv-item">${i ? '' : '<b>' + esc(row.name) + '</b>'}</td><td>${c.sub ? 'SUB ' : ''}${esc(c.code)}</td><td class="iv-n">${num(c.qty)}</td><td class="iv-n"><b>${num(c.labels)}</b></td></tr>`).join('') + `<tr><td></td><td></td><td class="iv-n"><small>kul</small></td><td class="iv-n"><b>${num(row.labels)}</b></td></tr>`).join('')}
       </tbody></table>`).join('')}`;
 }
-document.addEventListener('click', e => {
+document.addEventListener('click', async e => {
+  const cx = e.target.closest?.('[data-lv-cancel]');
+  if (cx) { const ids = String(cx.dataset.lvCancel || '').split(',').filter(Boolean); if (!ids.length || !cloud?.cancelLabel) return;
+    if (!confirm(ids.length > 1 ? `${ids.length} label hukum cancel karein?` : 'Ye label cancel karein? (jo printer mein pohanch chuke, woh 10-20 nikal sakte hain)')) return;
+    cx.disabled = true; let ok = 0; for (const id of ids) { try { await cloud.cancelLabel(id); ok++; } catch (er) { notice('Cancel nahi hua: ' + (/permission/i.test(String(er?.message)) ? 'Firestore Rules 2.34 publish karein' : (er?.message || er))); } }
+    if (ok) notice('✕ Cancel bhej diya — PC agle hisse se pehle rok dega'); return; }
   if (e.target.closest?.('[data-bc-pdf]')) { const r = build(); if (!r.labels) { notice('Is waqt mein koi label nahi'); return; } if (pdfOf) pdfOf(pdfHTML(), 'Barcode report ' + dayOf()); return; }
   if (!$('bcRoot')) return;
   const t = e.target.closest?.('[data-bc-p],[data-bc-s],[data-bc-open]'); if (!t) return;

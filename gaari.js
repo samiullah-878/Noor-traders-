@@ -315,7 +315,7 @@ function openPhera(id) {
   const onClose = () => { dlg?.removeEventListener('close', onClose); if (curTimer) { clearTimeout(curTimer); const data = { ...cur }; delete data.id; cloud.putGaari(cur.id, data).catch(() => {}); } cur = null; if (mounted) paint(); };
   dlg?.addEventListener('close', onClose);
 }
-// v2.96.5: tasveer — 📷 Camera YA 🖼 Gallery (pehle sirf camera khulta tha)
+// v2.97.0: tasveer — 📷 Camera YA 🖼 Gallery (pehle sirf camera khulta tha)
 const photoPick = (title, attr) => `<div class="gr-ph2"><span>${title}</span><div><label class="gr-pbtn">📷 Camera<input type="file" accept="image/*" capture="environment" ${attr} hidden></label><label class="gr-pbtn">🖼 Gallery<input type="file" accept="image/*" ${attr} hidden></label></div></div>`;
 const inp = (k, v, ph = '', type = 'number', cls = '') => `<input data-f="${k}" type="${type}" ${type === 'number' ? 'inputmode="decimal" step="any"' : ''} value="${esc(v ?? '')}" placeholder="${esc(ph)}" class="${cls}">`;
 function drawPhera() {
