@@ -1621,3 +1621,13 @@ pehle server par sirf-parhne wali script se POS ka retail column dhoondna hai.
 * cloud.js setItemRates: m / mt / mh bhi (pehle sirf c,w,r,t,s). Rules wahi (map).
 * pc/pos-retail-dhoondo.js (manifest mein NAHI, haath se): INFORMATION_SCHEMA se Items/ItemBranchRate/ItemSubCode ke rate/price/retail/mrp
   columns + ek item (default softlan 8886950018058) ki qeematein. Kuch nahi likhta. Jawab aane par purchase-post mein retail likhna (Plan B).
+
+==================== pc/nt-print-setup.ps1 (2026-10-07) — Mithu PC par NT-PRINT tha hi NAHI ====================
+awaz-check (Mithu, DESKTOP-8BR23BF): sound card OK, Windows Audio Running, VOLUME 6% (mute nahi) -> 80% kiya; nt-scan BAND; C:\khata-sync\
+nt-print-log.txt nahi. Doosri command: "NT-PRINT is PC par NAHI hai" (C:\khata-sync\nt-print.js nahi). Pehle ke notes mein Mithu ko
+NT-PRINT wala likha tha — ghalat tha; Mithu ka bill print server (counterPrinters \\DESKTOP-8BR23BF\Mithu-USB002) se hota hai.
+* Nayi script (manifest mein NAHI): irm .../pc/nt-print-setup.ps1 | iex — C:\khata-sync; Node na ho to v20.18.1 x64 MSI /passive;
+  GitHub se nt-print.js, nt-parchi.js, nt-scan.js, nt-posui.js, urdu-shape.js, nt-print-auto.bat, manifest.json; local-config pcName
+  (8BR23BF = "Mithu PC", KEIME1D = "Abdurehman PC"; pehle se ho to nahi chhedti); firebase-key.json: \\DESKTOP-Q1SLV77\khata-sync ya
+  \c$\khata-sync se copy — na ho sake to rukti hai, folder kholti hai (haath se pen drive / AnyDesk se rakhna, phir dobara);
+  npm firebase-admin; Startup NT-PRINT.vbs (doctor jaisa); chalu + 25 s baad log. Script ASCII.
