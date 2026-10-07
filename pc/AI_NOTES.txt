@@ -1587,3 +1587,10 @@ baqaya agle din ke phere ke saath jure. "Driver ko diye": user ne "khata hi bana
 * FIX commOf: kiraya 0 (khali bilty) par commission 0 — fixed fi bilty par khali bilty bhi 1000 kaat rahi thi (07 Oct band phera).
 * pc/auto-backup.js v1.2: shaam notification ka "driver se lena" isi khate se (bilty col nahi). Server KHATA-DOCTOR 30 min mein le lega.
 * Test (happy-dom): 18,000 − 5,100 − 1,000 = 11,900; 5,000 liye -> 6,900; agla phera 8,000 -> kul 14,900.
+
+==================== pc/awaz-check.ps1 (2026-10-07) — Mithu PC par speaker se koi awaz nahi ====================
+User: Mithu ke system par bzzz nahi — phir bataya "speaker hi nahi chal raha, awaz nahi aa rahi" (Windows ki awaz ka masla, program ka nahi).
+* Nayi script (sirf jaanch + chhota hal, manifest mein NAHI — haath se): irm .../pc/awaz-check.ps1 | iex
+  sound cards + Status, CoreAudio (NtVol C#) volume/mute: mute ho to hatao, <40% to 80%; Audiosrv chalu?; nt-scan.ps1 PowerShell chal raha?;
+  log ki aakhri awaz lines; 3 dafa test awaz (SystemSounds + console beep); "Awaz aayi?" n -> mmsys.cpl (Set as Default Device).
+  C# mcs -noconfig -warnaserror se compile-check. Script ASCII.
