@@ -3013,3 +3013,14 @@ dikhe mahine ka; mahina khatam to reset — agla mahina 0 se." (Mashware A: mobi
 * PDF: "− Extra: <naam>" lines + Extra kharcha table (tareekh, naam, note, Rs, kul). Kharcha table ka naam "Kharcha (phere)".
 * CSS .gx-fx .xk-* . Test (happy-dom): 41,400 kiraya phera + mobil 6,500 + naya tyre 52,000 + driver 3,000 -> extra 61,500, nafa sahi,
   driver lena 39,100 -> 36,100; edit / delete / PDF / agla mahina 0.
+
+==================== App v2.97.2 (2026-10-07) — 🏦 HBL sood limit tak + card bahar na nikle ====================
+User ka screenshot: 20 Sep se 18 din sood Rs 13,878.72 — jab ke poori limit par bhi 18 × 733.33 = 13,200 se zyada nahi ho sakta; aur
+card ke andar "Baqi 1,450,800", "Aaj ~" dabba aur "🔄 Account reset" button card se bahar.
+* app.js loanInterest: roz ka istemal = min(limit, −balance) — bank limit se upar sood nahi leta. raw > limit + Rs 1 wale din gine:
+  {over, overFirst}. loanCardHTML: .loan-warn "⚠️ N din khata limit se upar gaya (pehla 22 Sep) — sood sirf limit tak gina. Entries ki
+  tareekh dekh lein." (aam wajah: supplier ki payment pehle ki tareekh, bank jama baad ki).
+* style.css: .loan-card min-width 0 / overflow hidden / container-type inline-size; .loan-row minmax(0,1fr); @container (max-width 300px)
+  -> Limit / Istemal / Baqi teen lines (naam baayen, raqam daayen, nowrap); .loan-int auto-fit minmax(118px) (tang mein upar-neeche);
+  .loan-reset poori chaurai. Chromium 412px par check — koi cheez card se bahar nahi.
+* Login screen sawal: aaj ke updates ne login nahi chheda; update reload ke baad auto-login (⚡) waqt par poora na ho (slow net) to login page.

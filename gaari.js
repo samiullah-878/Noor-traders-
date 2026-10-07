@@ -1,5 +1,5 @@
 // gaari.js — 🚚 GAARI KA HISAAB v3 (v2.94, 2026-10-06) — sab kuch "PHERA" ke gird
-// v2.97.1 (2026-10-07): 🧾 EXTRA KHARCHA — phere se bahar (tyre, repair, token…) kind 'kharch' {extra:true, cat, amount, note, driver}.
+// v2.97.2 (2026-10-07): 🧾 EXTRA KHARCHA — phere se bahar (tyre, repair, token…) kind 'kharch' {extra:true, cat, amount, note, driver}.
 //   Yaad wale sab kharchon ke chips (aakhri raqam bhi). Mahine ka NAFA = bachat − fixed − tanki farq − EXTRA − qist; agle mahine 0 se.
 //   Mobil change (oil:true) bhi ab extra mein (phera-wise kharchon mein nahi). driver:true = driver ki jeb se → driver ke khate mein − (lena kam).
 // v2.96.1 (2026-10-07): 📒 DRIVER KA KHATA — har phera + (kiraya − kharche − commission), "💵 Driver se liya" − (adhoora bhi), "Driver ko diye"
@@ -124,7 +124,7 @@ function driverLedger() {
     if (c.driverDe) ev.push({ key: pKey(p), date: p.date, t: 'phera', amt: c.driverDe, p, c });
     const got = p.settled ? N(p.settled.amount) : c.colRs;   // purana tareeqa: bilty tick / "le liya"
     if (got) ev.push({ key: pKey(p) + '|y', date: p.date, t: 'liya', amt: -got, old: true, p }); }
-  for (const r of rows) if (r.kind === 'kharch' && r.driver && N(r.amount)) ev.push({ key: pKey(r), date: r.date, t: 'kharch', amt: -N(r.amount), r });   // v2.97.1: driver ki jeb se extra kharcha
+  for (const r of rows) if (r.kind === 'kharch' && r.driver && N(r.amount)) ev.push({ key: pKey(r), date: r.date, t: 'kharch', amt: -N(r.amount), r });   // v2.97.2: driver ki jeb se extra kharcha
   for (const r of rows) if (r.kind === 'driver') ev.push(r.dir === 'in' ? { key: pKey(r), date: r.date, t: 'liya', amt: -N(r.amount), r } : r.sal ? { key: pKey(r), date: r.date, t: 'salary', amt: 0, r } : { key: pKey(r), date: r.date, t: 'diya', amt: N(r.amount), r });
   ev.sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0);
   let bal = 0; for (const e of ev) { bal = r2(bal + e.amt); e.bal = bal; }
@@ -166,7 +166,7 @@ function monthCalc() {
   const inM = r => String(r.date || '').slice(0, 7) === month && (!day || r.date === day);
   const P = pheras().filter(inM), old0 = rows.filter(r => r.kind !== 'phera' && inM(r)), old = old0.filter(r => !isExtra(r));
   const s = { pheras: P, kiraya: 0, comm: 0, kh: 0, dL: 0, dRs: 0, km: 0, tk: 0, cat: {} };
-  // v2.97.1: 🧾 extra kharche (aur mobil) — phere se bahar, sirf is mahine (ya chune din) ke; naya pehle
+  // v2.97.2: 🧾 extra kharche (aur mobil) — phere se bahar, sirf is mahine (ya chune din) ke; naya pehle
   s.extraL = old0.filter(isExtra).sort((a, b) => pKey(a) < pKey(b) ? 1 : -1); s.extra = s.extraL.reduce((t, r) => t + N(r.amount), 0);
   s.extraCat = {}; s.extraL.forEach(r => { const n = r.cat || 'Doosra'; s.extraCat[n] = (s.extraCat[n] || 0) + N(r.amount); });
   for (const p of P) { const c = pc(p); s.kiraya += c.kiraya; s.comm += c.comm; s.kh += c.kh; s.dL += c.dL; s.dRs += c.dRs; s.km += c.km; s.tk += c.tk; (p.kharche || []).forEach(k => { s.cat[k.n] = (s.cat[k.n] || 0) + N(k.a); }); }
@@ -185,7 +185,7 @@ function monthCalc() {
   s.fillsM = T.F.filter(f => String(f.date).slice(0, 7) === month && (!day || f.date === day)); s.fillRs = s.fillsM.reduce((t, f) => t + f.rs, 0);
   s.fixedL = day ? [] : (Array.isArray(cfg.fixed) ? cfg.fixed : []).filter(x => x && N(x.a)); s.fixed = s.fixedL.reduce((t, x) => t + N(x.a), 0);
   s.qist = day ? 0 : N(cfg.qist);
-  s.beforeQist = s.safi - s.fixed - s.tankFarq - s.extra;   // v2.97.1: − extra kharche
+  s.beforeQist = s.safi - s.fixed - s.tankFarq - s.extra;   // v2.97.2: − extra kharche
   s.qistPaid = Math.max(0, Math.min(s.qist, s.beforeQist)); s.qistBaqi = s.qist - s.qistPaid;
   s.nafa = s.beforeQist - s.qist;
   s.realAvg = s.cycM.length ? s.cycM.reduce((t, o) => t + o.km, 0) / (s.cycM.reduce((t, o) => t + o.actL, 0) || 1) : 0;
@@ -324,7 +324,7 @@ function openPhera(id) {
   const onClose = () => { dlg?.removeEventListener('close', onClose); if (curTimer) { clearTimeout(curTimer); const data = { ...cur }; delete data.id; cloud.putGaari(cur.id, data).catch(() => {}); } cur = null; if (mounted) paint(); };
   dlg?.addEventListener('close', onClose);
 }
-// v2.97.1: tasveer — 📷 Camera YA 🖼 Gallery (pehle sirf camera khulta tha)
+// v2.97.2: tasveer — 📷 Camera YA 🖼 Gallery (pehle sirf camera khulta tha)
 const photoPick = (title, attr) => `<div class="gr-ph2"><span>${title}</span><div><label class="gr-pbtn">📷 Camera<input type="file" accept="image/*" capture="environment" ${attr} hidden></label><label class="gr-pbtn">🖼 Gallery<input type="file" accept="image/*" ${attr} hidden></label></div></div>`;
 const inp = (k, v, ph = '', type = 'number', cls = '') => `<input data-f="${k}" type="${type}" ${type === 'number' ? 'inputmode="decimal" step="any"' : ''} value="${esc(v ?? '')}" placeholder="${esc(ph)}" class="${cls}">`;
 function drawPhera() {
@@ -530,7 +530,7 @@ function openDetail(k) {
   }
 }
 
-// ---------- v2.97.1: 🧾 EXTRA KHARCHA (phere se bahar — mahine ke nafe se minus) ----------
+// ---------- v2.97.2: 🧾 EXTRA KHARCHA (phere se bahar — mahine ke nafe se minus) ----------
 const monthEnd = m => `${m}-${String(new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 0).getDate()).padStart(2, '0')}`;
 const xDate = () => day || (today().slice(0, 7) === month ? today() : month > today().slice(0, 7) ? month + '-01' : monthEnd(month));   // pichhla mahina khula ho to us ki aakhri tareekh
 function lastAmt() {   // har kharche ke naam ki aakhri raqam (extra pehle, warna phere wali) — chip par chhoti likhi + tap par bhar de
