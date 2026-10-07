@@ -2909,3 +2909,19 @@ User: Mithu ke system par bzzz nahi — phir bataya "speaker hi nahi chal raha, 
   sound cards + Status, CoreAudio (NtVol C#) volume/mute: mute ho to hatao, <40% to 80%; Audiosrv chalu?; nt-scan.ps1 PowerShell chal raha?;
   log ki aakhri awaz lines; 3 dafa test awaz (SystemSounds + console beep); "Awaz aayi?" n -> mmsys.cpl (Set as Default Device).
   C# mcs -noconfig -warnaserror se compile-check. Script ASCII.
+
+==================== App v2.96.2 (2026-10-07) — 🛒 purchase chips + ‹ › agla bill · 🧾 bills tareekh ====================
+* purchase.js chips: chipRow(l, ix, grp w|r, idp) — EK line Wholesale (Ctn+Pcs), EK line Parchoon (Ctn+Pcs), "abhi X%" (dono alag hon to
+  dono). data-pp-rch "ix|w|1.5" -> grpSides dono par setMode; dono pehle se usi % par = dobara tap -> purana (old). Purane "wc/wp/rc/rp" keys
+  bhi chalte. Main screen: .pp-rates-hrow (heading + ↺ id ppRcOld{i}) + .pp-rgrps [W grp: 2 khane + chips][R grp: 2 khane + chips]
+  (mobile neeche-neeche, PC par saath). Purani 4-line "NAFA CHIPS" table hati. Jaanch khirki: rateChipsHTML = head + do line (ids jcRc*).
+  paintChips: ppRcw/ppRcr{ix} + old button + jcRc{ix}.
+* purchase.js ‹ › AGLA BILL: editNav {list, i} — "Aaj ke app purchase" se Edit (navFromApp: done + purchaseId, purchaseId dohra nahi)
+  ya "PC ka bill edit" (navFromPc: pcRows na-posted). Foot mein (edit par) .pp-nav "‹ Pichhla · 2/6 · Agla: supplier · Rs ›".
+  Save ke baad khali screen par "✅ ... bhej diya" + wahi patti. navGo: tabdeeli (editSnap != cartSig) ho to poochta, phir
+  openBillForEdit. Edit chhodo / Naya bill / naya (non-edit) bill bhejna = editNav null.
+* sale.js 🧾 BILLS: head "‹ 🧾 Bills · Budh 7 Oct aaj › 📅" — billsDay ("" = aaj live), purane din par alag listeners (pastSales/pastPos,
+  watchPast). Tarteeb POS SaleID (bill number) se, POS mein na pohanche (intezar/ghalti) upar — pehle waqt se: 122563 (kal 6:04 pm, aaj
+  ki list mein) sab se upar tha. Bill ka din list ke din se alag ho to laal "kal 6:04 pm" / "6 Oct ...". todayLabel hamesha aaj ka.
+  Har minute: salesDay != aaj -> watchSales() (raat 12 ke baad PC screen khud naye din par). Un-posted print / dobara print view din ka.
+* Test (happy-dom): bills order 122668, 122667, 122563 + "kal 6:04 pm"; ‹ kal (122500) › aaj; chips text/btn keys; jaanch ids.

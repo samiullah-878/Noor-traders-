@@ -2052,3 +2052,22 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .dk-d{font-weight:800;color:#5b6b8a;font-size:.82rem}.dk-t{font-size:.92rem;font-weight:700;color:#13244a;min-width:0}.dk-t small{display:block;font-weight:500;color:#6b7a99;font-size:.75rem;overflow-wrap:anywhere}
 .dk-a{text-align:right;font-weight:900;white-space:nowrap}.dk-a.plus{color:#8a5200}.dk-a.minus{color:#0f7a44}.dk-a small{display:block;font-weight:600;color:#8a96ad;font-size:.72rem}
 .dk-mini{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:8px;padding:7px 10px;border-radius:10px;background:rgba(255,255,255,.7);font-size:.85rem}.dk-now{font-size:1rem}
+/* v2.96.2: 🛒 purchase — nafa chips rate ke khanon ke neeche (Wholesale / Parchoon ek line) */
+.pp-rates-hrow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}.pp-rates-hrow .pp-rates-h{margin:0}
+.pp-rates-hrow .rc-old{min-height:30px;width:32px;height:30px;padding:0;border-radius:999px;font-size:16px;line-height:1;background:#fff;border:1px solid #d5dce9;color:#223b6d}.pp-rates-hrow .rc-old.on{background:#223b6d;color:#fff;border-color:#223b6d}
+.pp-rgrps{display:grid;grid-template-columns:1fr 1fr;gap:10px}@media(max-width:760px){.pp-rgrps{grid-template-columns:1fr}}
+.pp-rgrp{display:grid;gap:6px;padding:8px;border-radius:12px;background:#fff;border:1px solid #e8edf6}
+.pp-rate-grid.pp-g2{grid-template-columns:1fr 1fr}
+.rate-chips.rc-inline{margin:0!important;padding:4px 6px!important;background:#f6f9ff;border-color:#e3e9f3}
+.rate-chips.rc-inline .rc-lab{width:76px!important}.rate-chips.rc-inline .rc-set button{min-height:32px!important;height:32px!important;padding:0 11px!important;font-size:13px!important}
+.pp-nav{margin:10px 0;padding:10px;border-radius:16px;background:linear-gradient(135deg,#eef3ff,#f7f9ff);border:1px solid #d6e0f5}.pp-nav.after{background:linear-gradient(135deg,#e8f7ee,#f4fbf7);border-color:#bfe5cc}
+.pp-nav p{margin:0 0 8px;font-weight:700;color:#0f6b3d}
+.pp-nav-row{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center}
+.pp-nav-row button{min-height:48px;padding:0 16px;border-radius:14px;border:1px solid #c9d3e6;background:#fff;font-weight:800;font-size:15px;color:#1d3b7a}
+.pp-nav-row button.got{border:0;color:#fff;background:linear-gradient(135deg,#1d3b7a,#3a2c8f);box-shadow:0 6px 14px rgba(29,59,122,.25)}.pp-nav-row button:disabled{opacity:.4;box-shadow:none}
+.pp-nav-row span{text-align:center;min-width:0}.pp-nav-row span b{display:block;color:#13244a}.pp-nav-row span small{display:block;color:#5b6b8a;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* v2.96.2: 🧾 bills — din (‹ tareekh ›), purana din, doosre din ka bill */
+.nb-day{display:inline-flex;align-items:center;gap:4px;min-width:0}.nb-day>button{width:30px;height:30px;border-radius:999px;border:1px solid #d5dce9;background:#fff;color:#1d3b7a;font-weight:900;font-size:16px;line-height:1;padding:0}.nb-day>button:disabled{opacity:.35}
+.nb-dayt{font-size:1rem;color:#13244a;white-space:nowrap}.nb-dayt em{font-style:normal;font-size:.72rem;font-weight:800;margin-left:4px;padding:2px 7px;border-radius:999px;background:#e7f8ee;color:#0f6b3d;vertical-align:middle}.nb-dayt em.old{background:#fff1d6;color:#8a5200}
+.nb-cal{position:relative;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:999px;border:1px solid #d5dce9;background:#fff;cursor:pointer;font-size:14px;overflow:hidden}.nb-cal input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.nb-past .nb-list{border-top:3px solid #f3c46b}.nb-odd{color:#b3261e;font-weight:800;background:#fff1f0;border-radius:6px;padding:0 4px}

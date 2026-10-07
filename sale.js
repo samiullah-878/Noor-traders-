@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.96.1';
-import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.96.1';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.96.2';
+import { smartSearch, topItems, noteHit, voiceSearch, fold } from './smart-search.js?v=2.96.2';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -358,13 +358,13 @@ const statusText = s => s.status === 'done' ? `✓ Sale ${esc(s.saleNo || '')}${
   : s.status === 'failed' ? `✕ Nahi bani: ${esc(s.error || '')}`
   : s.status === 'posting' ? '… PC bill bana raha hai' : '⏳ PC ka intezar';
 const todayLabel = () => {
-  const all = billsData(), wait = sales.filter(s => s.status === 'new' || s.status === 'posting').length, un = all.filter(b => b.ps === 1 && !b.cancelled && !b.farq).length;
+  const all = billsDataOf(sales, posSales), wait = sales.filter(s => s.status === 'new' || s.status === 'posting').length, un = all.filter(b => b.ps === 1 && !b.cancelled && !b.farq).length;
   return `📋 Aaj ke bills (${num(all.length)})${un ? ' · ⏳ ' + num(un) + ' un-posted' : ''}${wait ? ' · ' + num(wait) + ' intezar' : ''}`;
 };
 function openToday() {   // v2.95: mobile par bhi wahi "Aaj ke bills" (PC + app, rang, posted / un-posted, edit, print)
   const d = $('dialog'); if (!d) return;
   d.classList.remove('search-dialog');
-  $('dialogTitle').textContent = '🧾 Aaj ke bills';
+  $('dialogTitle').textContent = '🧾 Bills';
   $('dialogBody').innerHTML = '<div class="nb-wrap nb-dlg"></div>';
   if (!d.open) d.showModal();
   mountBills($('dialogBody').querySelector('.nb-wrap'));
@@ -781,7 +781,19 @@ setSaleGodamHook(() => { const st = saleStock(); const cur = st.branches.include
 const isFarq = b => /stock\s*['"]?\s*f[ae]?r?a?q/i.test(String(b.p || ''));
 const lineCache = new Map(), lineTried = new Set();   // posId -> lines [{i,n,q,r,g}]
 const ago = t => { if (!t) return '—'; const s0 = Math.max(0, Math.round((Date.now() - t) / 1000)); return s0 < 45 ? 'abhi' : s0 < 60 ? s0 + ' sec pehle' : s0 < 3600 ? Math.round(s0 / 60) + ' min pehle' : new Date(t).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }); };
-function billsData() {
+// v2.96.2: 📅 bills ka DIN — '' = aaj (live), warna purana din (alag listener). Tarteeb BILL NUMBER (POS SaleID) se — waqt ghalat ho tab bhi jagah sahi.
+let billsDay = '', pastSales = [], pastPos = [], pastStop = [], pastDay = '';
+const viewDay = () => billsDay || todayStr();
+function watchPast() {
+  if (!billsDay || billsDay === todayStr()) { billsDay = ''; pastStop.forEach(f => { try { f?.(); } catch {} }); pastStop = []; pastDay = ''; return; }
+  if (pastDay === billsDay) return;
+  pastStop.forEach(f => { try { f?.(); } catch {} }); pastStop = []; pastSales = []; pastPos = []; pastDay = billsDay;
+  try { if (cloud?.listenAppSales) pastStop.push(cloud.listenAppSales(billsDay, list => { pastSales = list || []; billsRepaint(); }, () => {})); } catch {}
+  try { if (cloud?.listenPosSales) pastStop.push(cloud.listenPosSales(billsDay, b => { pastPos = Array.isArray(b) ? b : []; billsRepaint(); })); } catch {}
+}
+const billsData = () => billsDataOf(billsDay ? pastSales : sales, billsDay ? pastPos : posSales);
+const salesOfView = () => billsDay ? pastSales : sales;
+function billsDataOf(sales, posSales) {
   const posByApp = new Map(posSales.filter(b => b.app).map(b => [b.app, b]));
   const app = sales.map(s => { const pb = posByApp.get(s.id);
     return { id: s.id, src: 'app', saleNo: s.saleNo || pb?.no || '', posId: Number(s.saleId || pb?.id) || 0, total: Number(pb ? pb.t : s.total) || 0, cash: Number(s.cash) || 0,
@@ -789,7 +801,8 @@ function billsData() {
       createdAt: s.createdAt || 0, where: '📱 App · ' + String(counterName(s.counter) || '').replace(/^💻 /, ''), by: '', party: '', lines: s.lines || [], edited: !!s.editedAt }; });
   const pos = posSales.filter(b => !b.app).map(b => ({ id: 'pos-' + b.id, src: 'pos', saleNo: b.no, posId: Number(b.id) || 0, total: Number(b.t) || 0, cash: b.cr ? Number(b.c) || 0 : Number(b.t) || 0,
     credit: !!b.cr, status: 'done', cancelled: !!b.x, ps: Number(b.ps) || 0, farq: isFarq(b), createdAt: b.tm || 0, where: '💻 ' + (b.pc || 'POS'), by: b.by || '', party: b.p || '', n: b.n || 0 }));
-  return [...app, ...pos].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  const ord = b => b.posId || 9e15;   // POS mein na pohancha (intezar / ghalti) sab se upar
+  return [...app, ...pos].sort((a, b) => (ord(b) - ord(a)) || ((b.createdAt || 0) - (a.createdAt || 0)));
 }
 const billPaid = b => !b.credit || b.cash >= b.total - 0.5;
 const billCls = b => b.farq ? 'fq' : b.cancelled ? 'cx' : b.status === 'failed' ? 'fl' : (b.status === 'new' || b.status === 'posting') ? 'wt' : billPaid(b) ? 'pd' : 'up';
@@ -809,11 +822,18 @@ function mountBills(box) {
   let open = '', filter = 'all';
   try { filter = localStorage.getItem('sam-bills-f') || 'all'; } catch {}
   box.classList.add('nb-wrap');
-  box.innerHTML = `<div class="nb-head"><b>🧾 Aaj ke bills</b><small class="nb-sync"></small></div>
+  box.innerHTML = `<div class="nb-head"><span class="nb-day"><button type="button" data-nb-day="-1" title="Pichhla din">‹</button><b class="nb-dayt"></b><button type="button" data-nb-day="1" title="Agla din">›</button><label class="nb-cal" title="Tareekh chunein">📅<input type="date" class="nb-date"></label></span><small class="nb-sync"></small></div>
     <div class="nb-top"><input type="search" class="nb-q" placeholder="🔍 Bill no, naam, raqam…" autocomplete="off"><button type="button" class="nb-unp" data-nb-unp="1">🖨 Un-posted</button></div>
     <div class="nb-f"></div><div class="nb-sum"></div><div class="nb-list"></div>`;
+  const dayT = box.querySelector('.nb-dayt'), dateIn = box.querySelector('.nb-date');
   const q = box.querySelector('.nb-q'), list = box.querySelector('.nb-list'), fbox = box.querySelector('.nb-f'), sum = box.querySelector('.nb-sum'), syncEl = box.querySelector('.nb-sync'), unpBtn = box.querySelector('.nb-unp');
   const paint = () => {
+    watchPast();
+    const vd = viewDay(), isToday = !billsDay, D = new Date(vd + 'T12:00:00');
+    const yd = (() => { const t = new Date(); t.setDate(t.getDate() - 1); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; })();
+    dayT.innerHTML = `🧾 Bills · ${['Itwar', 'Pir', 'Mangal', 'Budh', 'Jumerat', 'Juma', 'Hafta'][D.getDay()]} ${D.getDate()} ${D.toLocaleString('en-US', { month: 'short' })}${isToday ? ' <em>aaj</em>' : vd === yd ? ' <em class="old">kal</em>' : ' <em class="old">purana</em>'}`;
+    dateIn.value = vd; dateIn.max = todayStr(); box.querySelector('[data-nb-day="1"]').disabled = isToday;
+    box.classList.toggle('nb-past', !isToday);
     const all = billsData();
     const t = String(q.value || '').trim().toLowerCase(), dg = t.replace(/[^0-9]/g, '');
     const pass = b => filter === 'all' || (filter === 'pd' && billCls(b) === 'pd') || (filter === 'up' && billCls(b) === 'up') || (filter === 'un' && b.ps === 1 && !b.cancelled) || (filter === 'po' && b.ps === 2) || (filter === 'pc' && b.src === 'pos') || (filter === 'app' && b.src === 'app');
@@ -826,7 +846,8 @@ function mountBills(box) {
     const un = all.filter(b => b.ps === 1 && !b.cancelled && !b.farq).length; unpBtn.textContent = `🖨 Un-posted ${un}`; unpBtn.title = `${un} un-posted bills ka print`; unpBtn.disabled = !un;
     syncEl.innerHTML = posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : '';
     syncEl.className = 'nb-sync' + (posSyncAt && Date.now() - posSyncAt > 90000 ? ' old' : '');
-    list.innerHTML = rows.map(b => { const c = billCls(b), tm = new Date(b.createdAt || 0).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' });
+    list.innerHTML = rows.map(b => { const c = billCls(b), bd = new Date(b.createdAt || 0), bds = `${bd.getFullYear()}-${String(bd.getMonth() + 1).padStart(2, '0')}-${String(bd.getDate()).padStart(2, '0')}`;
+      const tm0 = bd.toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }), tm = !b.createdAt || bds === vd ? tm0 : `<b class="nb-odd">${bds === yd ? 'kal' : bd.getDate() + ' ' + bd.toLocaleString('en-US', { month: 'short' })} ${tm0}</b>`;
       const L = open === b.id ? (b.posId && lineCache.get(b.posId)) || (b.src === 'app' ? (b.lines || []).map(l => ({ n: l.name, q: l.qty, r: l.rate })) : null) : null;
       return `<div class="nb-bill ${c}${open === b.id ? ' open' : ''}" data-nb="${esc(b.id)}">
         <div class="nb-row"><i class="${b.ps === 1 && !b.cancelled ? 'unp' : b.ps === 2 ? 'pst' : ''}">${psIcon(b, c)}</i><b class="nb-no">${b.saleNo ? esc(String(b.saleNo).replace(/^0+(?=\d{4})/, '')) : (b.credit ? 'Wholesale' : 'Counter')}</b><b class="nb-amt">${num(b.total)}</b>
@@ -837,11 +858,14 @@ function mountBills(box) {
       </div>`; }).join('') || '<p class="stat-note">Koi bill nahi</p>';
   };
   q.oninput = paint;
+  const goDay = v => { open = ''; billsDay = !v || v >= todayStr() ? '' : v; billsRepaint(); };
+  dateIn.addEventListener('change', () => goDay(dateIn.value));
   box.addEventListener('click', async e => {
+    const dd = e.target.closest('[data-nb-day]'); if (dd) { const t = new Date(viewDay() + 'T12:00:00'); t.setDate(t.getDate() + Number(dd.dataset.nbDay)); goDay(`${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`); return; }
     const f = e.target.closest('[data-nb-f]'); if (f) { filter = f.dataset.nbF; try { localStorage.setItem('sam-bills-f', filter); } catch {} paint(); return; }
     if (e.target.closest('[data-nb-unp]')) { printUnposted(); return; }
     const ed = e.target.closest('[data-nb-edit]'); if (ed) { e.stopPropagation(); const b = billsData().find(x => x.id === ed.dataset.nbEdit); if (b) editBill(b); return; }
-    const pr = e.target.closest('[data-nb-print]'); if (pr) { e.stopPropagation(); const sl = sales.find(x => x.id === pr.dataset.nbPrint); try { if (counter === 'local' && sl) printLocal(sl, copies, sl.crates || 1); else { await cloud.reprintAppSale(pr.dataset.nbPrint, copies, counter); notice('🖨 Print ka hukam bhej diya'); } } catch (er) { notice('Print nahi hua: ' + (er?.message || er)); } return; }
+    const pr = e.target.closest('[data-nb-print]'); if (pr) { e.stopPropagation(); const sl = salesOfView().find(x => x.id === pr.dataset.nbPrint); try { if (counter === 'local' && sl) printLocal(sl, copies, sl.crates || 1); else { await cloud.reprintAppSale(pr.dataset.nbPrint, copies, counter); notice('🖨 Print ka hukam bhej diya'); } } catch (er) { notice('Print nahi hua: ' + (er?.message || er)); } return; }
     const c = e.target.closest('[data-nb]'); if (!c) return;
     open = open === c.dataset.nb ? '' : c.dataset.nb; paint();
     if (open) { const b = billsData().find(x => x.id === open); if (b && b.posId && !lineCache.has(b.posId)) { lineTried.delete(b.posId); await billLines(b); paint(); } }
@@ -850,6 +874,8 @@ function mountBills(box) {
   return setInterval(() => { if (!box.isConnected) return; syncEl.innerHTML = posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : ''; syncEl.className = 'nb-sync' + (posSyncAt && Date.now() - posSyncAt > 90000 ? ' old' : ''); }, 5000);
 }
 setSaleBillsHook(box => mountBills(box));   // PC scan screen ka baayan hissa
+// v2.96.2: raat 12 ke baad screen khuli rahe to bhi naya din khud (pehle refresh tak kal ki list rehti thi)
+setInterval(() => { if (salesDay && salesDay !== todayStr()) { watchSales(); if (billsDay && billsDay >= todayStr()) billsDay = ''; billsRepaint(); } }, 60000);
 
 // ✏️ un-posted bill -> wahi scan screen par items ke saath. Save = PC (sale-post) POS mein ISI bill ko badalta hai.
 async function editBill(b) {
@@ -875,7 +901,7 @@ async function printUnposted() {
   const L = billsData().filter(b => b.ps === 1 && !b.cancelled && !b.farq).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   if (!L.length) { notice('Koi un-posted bill nahi'); return; }
   notice('🖨 ' + L.length + ' un-posted bills ki report ban rahi hai…');
-  if (cloud?.listPosSaleLines) { try { const all = await cloud.listPosSaleLines(todayStr()); all.forEach(d => { if (d.id && Array.isArray(d.lines)) lineCache.set(Number(d.id), d.lines); }); } catch {} }
+  if (cloud?.listPosSaleLines) { try { const all = await cloud.listPosSaleLines(viewDay()); all.forEach(d => { if (d.id && Array.isArray(d.lines)) lineCache.set(Number(d.id), d.lines); }); } catch {} }
   for (const b of L) if (b.posId && !lineCache.has(b.posId)) await billLines(b);
   const kul = L.reduce((n, b) => n + b.total, 0), udh = L.filter(b => !billPaid(b)).reduce((n, b) => n + (b.total - b.cash), 0);
   const html = `<h1>NOOR TRADERS</h1><h2>⏳ Un-posted bills — ${esc(new Date().toLocaleDateString('en-GB'))}</h2>
