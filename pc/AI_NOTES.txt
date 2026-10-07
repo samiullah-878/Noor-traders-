@@ -1679,3 +1679,22 @@ jitne din payment account mein aaya per day ke hisaab se utna interest likh do a
   {sent,total}. Cancel par purgeQueue (Remove-PrintJob) + 'cancelled' {sent,total,doneAt}. done mein bhi sent/total.
   NOTE: jo part printer ki memory mein ja chuka woh chhap jayega (TSC buffer) — cancel agle part se rukta hai.
 * firestore-rules-2.34.html (copy button) — user ko publish karni hai.
+
+==================== App v2.97.1 (2026-10-07) + auto-backup v1.3 (manifest 2026-10-07.6) — 🧾 GAARI EXTRA KHARCHA ====================
+User: "Extra kharche ka option banao, us mein yaad wale sab kharchon ke chips, jo kharcha ho woh upar wale asal nafe se minus ho kar
+dikhe mahine ka; mahina khatam to reset — agla mahina 0 se." (Mashware A: mobil bhi extra mein · B: "driver ne diya" switch — user "Ok".)
+* Data: gaari/{id} kind 'kharch' {extra:true, cat, amount, date, note, driver:bool, at, by, byName} (rules wahi — 'kharch' pehle se).
+  Mobil (oil:true) bhi isExtra(). Edit par updatedAt.
+* monthCalc: old0 = phere ke ilawa is mahine/din ki; isExtra -> s.extraL (naya pehle), s.extra, s.extraCat; baqi purana loop (s.kh mein
+  ab mobil NAHI). s.beforeQist = safi − fixed − tankFarq − EXTRA; nafa = beforeQist − qist. s.old mein extra nahi ("Purani entries").
+* Main: hero .gx-flow mein laal "− Extra kharche ›" (data-gr-open="extra" -> list). gx-acts: "🧾 Extra kharcha · Rs X" (malik) -> form.
+* openExtra(id): naam search (gk-q) + chips kNames() (zyada istemal pehle) — har chip par aakhri raqam (lastAmt: extra/kharch docs, warna
+  phere wale); chip tap = naam + khali raqam mein aakhri raqam; likh kar Enter / "＋ naya". Raqam, tareekh (xDate: chuna din / aaj /
+  pichhla mahina = us ki aakhri tareekh), note, ☐ "👤 Driver ne apni jeb se diya". Hint: kis mahine ke NAFA se minus. "📋 is mahine ke extra" link.
+* openExtraList(): laal head (− kul, entries, "agle mahine khud 0 se"), ＋ button, naam-wise chips, rows ✏️ (data-gx-edit) / ✕ (delete ke
+  baad list dobara). Calendar ka din chuna ho to sirf us din ke.
+* driverLedger: kharch + driver:true -> t 'kharch' amt − (driver se lena kam). Driver khata label "🧾 Driver ne kharcha kiya".
+  pc/auto-backup.js v1.3 notification ka baqaya bhi yahi (kharch driver -).
+* PDF: "− Extra: <naam>" lines + Extra kharcha table (tareekh, naam, note, Rs, kul). Kharcha table ka naam "Kharcha (phere)".
+* CSS .gx-fx .xk-* . Test (happy-dom): 41,400 kiraya phera + mobil 6,500 + naya tyre 52,000 + driver 3,000 -> extra 61,500, nafa sahi,
+  driver lena 39,100 -> 36,100; edit / delete / PDF / agla mahina 0.

@@ -22,7 +22,7 @@ const zlib = require('zlib');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
-const VER = '1.2';   // v1.2 (2026-10-07): driver ka KHATA (app v2.96.1 jaisa) — phera + (kiraya − kharche − commission), liya −, advance + · v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
+const VER = '1.3';   // v1.3 (2026-10-07): driver ki jeb se EXTRA kharcha (kind 'kharch', driver:true) khate se − (app v2.97.1) · v1.2 (2026-10-07): driver ka KHATA (app v2.96.1 jaisa) — phera + (kiraya − kharche − commission), liya −, advance + · v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47832;
 const DIR = __dirname;
@@ -100,6 +100,7 @@ async function gaariNotify() {
       pend += kir - kh - cm - (p.settled ? N(p.settled.amount) : B.filter(b => b.col).reduce((t, b) => t + N(b.kiraya), 0));
       if (p.status !== 'closed') open++; if (p.date === day) { todayN++; if (!Number(p.endR)) noEnd++; }
     } else if (p.kind === 'driver') pend += p.dir === 'in' ? -N(p.amount) : p.sal ? 0 : N(p.amount);
+    else if (p.kind === 'kharch' && p.driver) pend -= N(p.amount);   // v1.3: driver ne apni jeb se extra kharcha kiya
   }
   pend = Math.round(pend);
   if (pend < 1 && !open) { log('🚚 gaari: hisaab saaf — notification nahi'); return; }
