@@ -1837,3 +1837,38 @@ TEST: node unit 19/19 (bill sr -> 5150/431/5150/435; cost +2% -> usi nafa; sr na
   440 -> posHand; 5 min grace; yaad wc/rc; CTN haath se 5200; khula item; ctnOf). happy-dom: bill 00002602 khola -> inputs 5150 / 431 /
   5150 / 435, hints "pehle" wahi, chip "🧾 POS bill ke rate", koi 'changed' nahi.
 VERSION BUMP: ?v=2.98.6 (12 files), APP_VER, "Blue Khata v2.98.6", sw CACHE, version.json. Manifest 2026-10-08.3 (sync-bills, sync-stock).
+
+==================== App v2.98.7 + item-post v1.1 + NT-PRINT v1.17 + nt-posui v1.8 (manifest 2026-10-08.4) ====================
+(1) User (mujhid ghee 1kg, code 000024, pack 16 — app "✏️ Item" se save): "yahan se rate change kiya to POS mein rate ghalat dale hain, sahi
+    karo". App: Kh/CTN 8450.08, R/CTN 8600, R/PCS 536, W/CTN 8550.08, W/PCS 534.38. POS form: Purchase 135,201.28 (8450.080), R Cotton
+    136,800 (8550), W Cotton 8550.08 (534.38) ✓.
+  WAJAH: POS Items mein sab rate FI PIECE hain — POS form ka CTN khana = rate × pack khud dikhata hai (Qty1inctn). item-post v1 SaleRate
+  mein poora R CTN aur PurchaseRate mein khareed × pack likhti thi ("POS Items mein carton wala" — ghalat andaza). (purchase-post / rate-lagao
+  pehle se sahi the: SaleRate = R CTN ÷ pack.)
+* pc/item-post.js v1.1: SaleRate = R CTN ÷ pack · SaleRate2 = R PCS · SaleRate3 = W CTN ÷ pack · SaleRateSize = W PCS · PurchaseRate =
+  khareed FI PIECE — ÷ pack 4 decimal (8600 ÷ 16 = 537.5; 8550 ÷ 16 = 534.375 taake POS ka CTN khana bilkul wohi). CTN khali (non-owner
+  edit) = purana POS rate (pack wahi ho), warna PCS. Phir item ki SAB ItemBranchRate rows bhi yahi rate + PurchaseRate (counter sale).
+  SystemNotes changes ab fi piece mein (SaleRateSize bhi).
+  repairV1() — shuru par EK dafa (item-fix-v1.done): itemJobs status 'done' mein har itemId ki AAKHRI job; pack > 1 par v1 wali ghalat
+  qeemat dobara nikalti hai (rBad = rctn || rpcs × pack, pBad = costP × pack); Items aur har ItemBranchRate row mein SIRF bilkul wohi
+  qeemat (±0.011) ho to theek (SaleRate = rBad ÷ pack, PurchaseRate = costP, SaleRate3 = wpcs tha aur wctn ÷ pack alag = wctn ÷ pack).
+  Haath se baad mein theek kiya = nahi chhedta; PackQty badla = nahi. Log "🔧 THEEK: <naam> — R CTN … -> …" + jama. Nakam = agli dafa phir.
+  TEST (mock mssql/firestore): ghee -> Items SaleRate 534.375, PurchaseRate 528.13, 2 godam rows theek; haath wala item nahi chheda;
+  naya save R CTN 8600 -> SaleRate 537.5, SaleRate2 536, SaleRate3 534.38, PurchaseRate 528.13 + ItemBranchRate; CTN khali -> purana.
+* pos-stock.js (app v2.98.7) item form: R/CTN, W/CTN, Kh/CTN = fi piece × pack (ctnR: 2-decimal gol-mol hata kar, 534.38 × 16 -> 8550);
+  W/PCS = ws (SaleRateSize) || wrate, W/CTN = wrate × pack (pehle W/CTN = W/PCS × pack); non-owner keep() W PCS = ws. Save: Kh/CTN aur
+  Kh/PCS mel khayen to costP = Kh/CTN ÷ pack 4 decimal (8450 ÷ 16 = 528.125).
+(2) User (Mithu PC DESKTOP-8BR23BF, POS "Search Items" khirki — barcode system mein nahi — awaz nahi): "agar firebase ki wajah se hai to
+    es ki file yahan rakh lete hain". Wajah: PC AWAZ-ONLY (chaabi nahi) — barcode list nahi, sirf POS Search khirki ka andaza; khirki
+    shayad Sale screen ke ANDAR (top-level nahi) isliye v1.7 ko nahi mili.
+* pc/nt-print.js v1.17: pickKey() — awaz-only mein har 20 s (pehle sirf C:\khata-sync, 60 s) Desktop / Downloads / Downloads\AnyDesk /
+  Documents / OneDrive / Public Desktop+Downloads / C:\khata-sync ki .json (500 B–20 KB) parhta hai; type service_account + project_id
+  note-traders-khata-7ccc1 + private_key + client_email ho to C:\khata-sync\firebase-key.json likh kar asal file MITA deta hai. firebase-admin
+  na ho to `npm.cmd install firebase-admin` (cwd C:\khata-sync) phir exit(0) -> bat poora NT-PRINT (barcode list = ghalat scan par foran bzzz).
+* pc/nt-posui.js v1.8 (NtPosUi9.dll): naam wali khirki upar na mile to FindSearchIn — Name == "Search Items" element andar (Sale window
+  + baqi khirkiyan), offscreen / 0 size nahi; upar 4 dabbe tak jis mein Table/DataGrid ho wohi khirki. Scan ke baad har 0.3 s, warna har
+  2 s (pehle se khuli pehchani rahe — scan se pehle khuli = report nahi). 'SRCHAT andar' -> log "🔎 Search khirki Sale screen ke ANDAR mili".
+  mcs compile check (stub9: IsOffscreen, TreeWalker.GetParent) ✓.
+* pc/awaz-check.ps1: chaabi HAI/NAHI, firebase-admin, NT-PRINT version, log mein bzzz / Search / AWAZ-ONLY / chaabi lines.
+SECURITY: firebase-key.json GitHub / chat mein KABHI nahi — sirf AnyDesk File Transfer se PC par.
+VERSION BUMP: ?v=2.98.7, APP_VER, "Blue Khata v2.98.7", sw CACHE, version.json. Manifest 2026-10-08.4 (item-post, nt-print, nt-posui).

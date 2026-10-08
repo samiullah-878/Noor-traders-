@@ -1,5 +1,8 @@
 // ============================================================
-//  nt-print.js  v1.16 (2026-10-08: 🔎 scan ke baad POS ki Search khirki = barcode NAHI -> bzzz (barcode 2 items par = awaz nahi) · list na ho
+//  nt-print.js  v1.17 (2026-10-08: 🔑 CHAABI KHUD UTHAO — awaz-only PC par firebase-key.json Desktop / Downloads / Documents (AnyDesk se)
+//                   kahin bhi rakh dein: har 20 s dekhta hai, asli chaabi (service_account, note-traders-khata-7ccc1) ho to C:\khata-sync mein
+//                   rakh kar wahan se mita deta hai; firebase-admin na ho to npm se khud install; phir poora NT-PRINT (barcode list = ghalat scan
+//                   par foran bzzz) · nt-posui v1.8 (andar wali Search khirki)) · v1.16 (2026-10-08: 🔎 scan ke baad POS ki Search khirki = barcode NAHI -> bzzz (barcode 2 items par = awaz nahi) · list na ho
 //                   to tik 0.75 s ruk kar (Search / error aaye to sirf bzzz) · 🔕 Windows ki apni awazein (ding / chime) band (local-config
 //                   "winSounds": true = wapas) · khud-update har 3 min (pehle 5)) · v1.15 (2026-10-07: AWAZ-ONLY — firebase-key.json na ho (naya counter PC) to bhi scan / POS awaz chalti (tik, POS error bzzz,
 //                   tu-tu-tu); print / app status band; chaabi aate hi khud poora NT-PRINT) · v1.14 (2026-10-07: 🔔 AANKH BAND SCAN — ⚠️ tu-tu-tu: scan ghalat window mein / POS awaz system band / Sale screen khuli magar
@@ -33,7 +36,7 @@ let FA = null, FF = null; try { FA = require('firebase-admin/app'); FF = require
 const { initializeApp, cert, getApps } = FA || {};
 const { getFirestore, FieldValue } = FF || {};
 
-const VER = '1.16';
+const VER = '1.17';
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
@@ -184,6 +187,32 @@ if (process.argv.includes('--test')) {
 // ---------------- Firestore ----------------
 // v1.15: 🔔 AWAZ-ONLY — chaabi (firebase-key.json) ya firebase-admin na ho to sirf awaz (scan + POS screen), baqi band
 const KEY = path.join(DIR, 'firebase-key.json');
+// v1.17: 🔑 chaabi AnyDesk se Desktop / Downloads / Documents mein aa gayi ho to khud utha kar C:\khata-sync mein (asli ho tab hi), wahan se mita do
+const KEY_PROJECT = 'note-traders-khata-7ccc1';
+function keyDirs() {
+  const h = os.homedir(), pub = process.env.PUBLIC || 'C:\\Users\\Public', od = process.env.OneDrive || path.join(h, 'OneDrive');
+  return [path.join(h, 'Desktop'), path.join(h, 'Downloads'), path.join(h, 'Downloads', 'AnyDesk'), path.join(h, 'Documents'), path.join(h, 'Documents', 'AnyDesk'),
+    path.join(od, 'Desktop'), path.join(od, 'Documents'), path.join(pub, 'Desktop'), path.join(pub, 'Downloads'), DIR];
+}
+function pickKey() {
+  for (const d of keyDirs()) {
+    let names = []; try { names = fs.readdirSync(d); } catch { continue; }
+    for (const n of names) {
+      if (!/\.json$/i.test(n) || (d === DIR && n.toLowerCase() === 'firebase-key.json')) continue;
+      const f = path.join(d, n);
+      try {
+        const st = fs.statSync(f); if (!st.isFile() || st.size < 500 || st.size > 20000) continue;
+        const txt = fs.readFileSync(f, 'utf8'), j = JSON.parse(txt.replace(/^\uFEFF/, ''));
+        if (j.type !== 'service_account' || j.project_id !== KEY_PROJECT || !/PRIVATE KEY/.test(String(j.private_key || '')) || !j.client_email) continue;
+        fs.writeFileSync(KEY, JSON.stringify(j, null, 2));
+        try { fs.unlinkSync(f); } catch (e) { log('🔑 ' + f + ' mita nahi saka: ' + e.message + ' — haath se mita dein'); }
+        log(`🔑 firebase-key mili (${d}) — C:\\khata-sync mein rakh di, wahan se hata di`);
+        return true;
+      } catch {}
+    }
+  }
+  return false;
+}
 const AWAZ_ONLY = !fs.existsSync(KEY) || !FA || !FF;
 if (!AWAZ_ONLY && !getApps().length) initializeApp({ credential: cert(require(KEY)) });
 const db = AWAZ_ONLY ? null : getFirestore();
@@ -351,8 +380,20 @@ function listen() {
       if (!(scan && scan.beep && scan.beep('OK'))) beep('scan');
     }, e => log('🔔 POS beep listener: ' + e.message));
     log('🔔 POS beep sun raha hai: ' + os.hostname().toUpperCase()); }
-  if (!saleCol) {   // v1.15: AWAZ-ONLY — chaabi aate hi poora NT-PRINT (bat 30 sec mein dobara chalata hai)
-    setInterval(() => { if (fs.existsSync(KEY)) { log('🔑 firebase-key mil gayi — poora NT-PRINT shuru'); process.exit(0); } }, 60000);
+  if (!saleCol) {   // v1.15: AWAZ-ONLY — chaabi aate hi poora NT-PRINT (bat 30 sec mein dobara chalata hai) · v1.17: Desktop/Downloads se khud uthao
+    let npmBusy = false;
+    const tick = () => {
+      if (!fs.existsSync(KEY) && !pickKey()) return;
+      if (!FA || !FF) {   // chaabi hai magar firebase-admin nahi — khud install, phir dobara shuru
+        if (npmBusy) return; npmBusy = true; log('🔑 chaabi hai — firebase-admin install ho raha hai (1-3 minute)…');
+        execFile('npm.cmd', ['install', 'firebase-admin', '--no-audit', '--no-fund', '--loglevel=error'], { cwd: DIR, windowsHide: true, timeout: 10 * 60000 }, e => {
+          if (e) { npmBusy = false; log('🔑 firebase-admin install nahi hua: ' + String(e.message).slice(0, 160) + ' — 20 sec mein phir'); return; }
+          log('🔑 firebase-admin aa gaya — poora NT-PRINT shuru'); process.exit(0); });
+        return;
+      }
+      log('🔑 firebase-key mil gayi — poora NT-PRINT shuru'); process.exit(0);
+    };
+    tick(); setInterval(tick, 20000);
     return;
   }
   const day = today();

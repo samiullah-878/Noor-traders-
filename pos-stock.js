@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit } from './smart-search.js?v=2.98.6';
-import { liveLabelsHTML } from './barcode.js?v=2.98.6';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit } from './smart-search.js?v=2.98.7';
+import { liveLabelsHTML } from './barcode.js?v=2.98.7';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -621,15 +621,19 @@ function applySub(r, op, x) {
 }
 // ---------- v2.5: ITEM — naam, barcode, 1 CTN = PCS, khareed + parchoon / wholesale rates ----------
 const itemDraft = new Map();
+const ctnR = (p, pk) => { const x = (Number(p) || 0) * pk, n = Math.round(x); return Math.abs(x - n) <= 0.005 * pk + 1e-6 ? n : r2(x); };   // v2.98.7
 function itemForm(r, pre) {
   const d = $('dialog'); if (!d) return;
   const isNew = !r;
+  // v2.98.7: POS fi PIECE rakhta hai — CTN = fi piece × pack (POS ki 2-decimal gol-mol hata kar: 534.38 × 16 = 8550.08 -> 8550).
+  //   W PCS = ws (SaleRateSize, sync-stock sirf farq par bhejti) warna wrate; W CTN = wrate (SaleRate3) × pack — dono alag
+  const pk1 = Number(r?.pack) > 1 ? Number(r.pack) : 0;
   const v = { name: r?.name || '', code: r?.code || '', pack: Number(r?.pack) || 0,
     costP: Number(r?.prate) || 0, rpcs: Number(r?.rate2) || Number(r?.rate) || 0,
-    rctn: (Number(r?.pack) > 1 ? (Number(r?.rate) || 0) * Number(r.pack) : 0) || 0,
-    wpcs: Number(r?.wrate) || 0, wctn: 0, costC: 0, ...(pre || {}) };
+    rctn: (pk1 ? ctnR(Number(r?.rate) || 0, pk1) : 0) || 0,
+    wpcs: Number(r?.ws) || Number(r?.wrate) || 0, wctn: (pk1 ? ctnR(Number(r?.wrate) || 0, pk1) : 0) || 0, costC: 0, ...(pre || {}) };
   const pk0 = Number(v.pack) > 0 ? Number(v.pack) : 1;
-  if (!v.costC) v.costC = r2(v.costP * pk0);
+  if (!v.costC) v.costC = pk0 > 1 ? ctnR(v.costP, pk0) : r2(v.costP);
   if (Number(v.pack) > 1) { if (!v.rctn) v.rctn = r2(v.rpcs * v.pack); if (!v.wctn) v.wctn = r2(v.wpcs * v.pack); }
   const rates = canEditItem();
   d.classList.remove('search-dialog');
@@ -670,9 +674,10 @@ async function itemSave(form, btn) {
   const v = itemRead(form), msg = form.querySelector('.it-msg');
   const pk = (Number(v.pack) > 0 ? Number(v.pack) : 1);
   if (!(v.costP > 0) && v.costC > 0) v.costP = r2(v.costC / pk);        // v2.5.1: sirf CTN likha to PCS khud
+  if (pk > 1 && v.costC > 0 && v.costP > 0 && Math.abs(v.costP * pk - v.costC) <= 0.005 * pk + 1e-6) v.costP = Math.round(v.costC / pk * 10000) / 10000;   // v2.98.7: POS ka CTN bilkul wohi (8450 ÷ 16 = 528.125)
   if (!v.name) { msg.textContent = 'Item ka naam likhein'; return; }
   if (!cloud?.requestItem) { msg.textContent = 'Item ke liye app update karein'; return; }
-  const keep = k => (v[k] == null ? (k === 'costP' ? Number(r?.prate) || 0 : k === 'rpcs' ? Number(r?.rate2) || Number(r?.rate) || 0 : k === 'wpcs' ? Number(r?.wrate) || 0 : 0) : v[k]);
+  const keep = k => (v[k] == null ? (k === 'costP' ? Number(r?.prate) || 0 : k === 'rpcs' ? Number(r?.rate2) || Number(r?.rate) || 0 : k === 'wpcs' ? Number(r?.ws) || Number(r?.wrate) || 0 : 0) : v[k]);   // v2.98.7: W PCS = ws
   const job = { op: isNew ? 'new' : 'edit', itemId: isNew ? '' : String(r.id), code: v.code, name: v.name, pack: v.pack,
     costP: keep('costP'), rctn: keep('rctn'), rpcs: keep('rpcs'), wctn: keep('wctn'), wpcs: keep('wpcs') };
   if (!isNew) job.subs = labelRows(r).filter(x => !x.main).map(x => ({ b: x.code, q: x.qty, r: x.rate || 0, s: x.show !== false }));

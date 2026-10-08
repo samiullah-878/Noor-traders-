@@ -1,14 +1,21 @@
 // =========================================================
 //  item-post.js  v1  (2026-09-23) — Blue Khata app se POS mein ITEM banana / badalna
+//  v1.1 (2026-10-08): ⚠️ RATE KI GHALTI THEEK — POS Items mein sab rate FI PIECE hain (POS form CTN khana = rate × pack khud
+//      dikhata hai). v1 SaleRate mein R CTN aur PurchaseRate mein khareed × pack likhti thi (mujhid ghee 1kg: R Cotton 136,800,
+//      Purchase 135,201). Ab: SaleRate = R CTN ÷ pack · SaleRate2 = R PCS · SaleRate3 = W CTN ÷ pack · SaleRateSize = W PCS ·
+//      PurchaseRate = khareed fi PIECE. CTN khali (app ne na bheja) ho to purana POS rate (pehle R PCS × pack ban jata tha).
+//      Phir item ki SAB ItemBranchRate rows bhi yahi (counter sale yahin se rate leta hai) — purchase-post jaisa.
+//      PURANE ghalat rate: shuru par EK dafa (item-fix-v1.done) har item ki aakhri 'done' job dekh kar SIRF woh khana theek jo
+//      bilkul v1 wali ghalat qeemat par hai (baad mein haath se theek kiya = nahi chhedte). SystemNotes + log mein list.
 //  App (Stock > "➕ Naya item" / "✏️ Item") itemJobs mein job likhti hai:
 //    { op:'new'|'edit', itemId?, code, name, pack, costP, rctn, rpcs, wctn, wpcs,
 //      subs:[{id?,b,q,r,s}], subsDel:[id], status:'new', by, at }
 //    (sab RUPAY; costP/rpcs/wpcs = fi PIECE, rctn/wctn = fi CARTON)
 //  POS ki APNI procedure se (POS form jaisa hi):
-//    usp_Items_InsertUpdate  ->  SaleRate = R carton (rctn, warna rpcs)
+//    usp_Items_InsertUpdate  ->  SaleRate = R CTN ÷ pack (v1.1; v1 mein ghalti se poora CTN)
 //                                SaleRate2 = R piece (rpcs)
-//                                SaleRate3 = W piece (wpcs)   SaleRateSize = W piece (wpcs)
-//                                PurchaseRate = khareed fi piece × pack (POS Items mein carton wala)
+//                                SaleRate3 = W CTN ÷ pack     SaleRateSize = W piece (wpcs)
+//                                PurchaseRate = khareed FI PIECE (v1.1; v1 mein ghalti se × pack)
 //                                PackQty, PackQtyName 'CTN', QtyName 'PCS', UOMID 2, Qty1inctn 1
 //    NAYA item: ItemCatID 80 (noor traders), ItemSubCatID 236 — naye items wahin jate hain.
 //  ⚠️ usp_Items_InsertUpdate ke andar "Delete From ItemSubCode WHERE ItemID" hai — is liye hum
@@ -48,6 +55,8 @@ const col = db.collection('businesses').doc(BUSINESS_ID).collection('itemJobs');
 let pool = null;
 async function getPool() { if (pool && pool.connected) return pool; pool = await new sql.ConnectionPool(SQL_CONFIG).connect(); return pool; }
 const n2 = v => Math.round((Number(v) || 0) * 10000) / 10000;
+const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
+const near = (a, b) => Math.abs((Number(a) || 0) - (Number(b) || 0)) < 0.011;
 const clean = (s, n) => String(s ?? '').replace(/[\r\n\t]/g, ' ').trim().slice(0, n);
 
 async function applyItem(j) {
@@ -61,8 +70,7 @@ async function applyItem(j) {
     if (!name) throw new Error('Item ka naam khali hai');
     const pack = Math.max(0, Number(j.pack) || 0);
     const costP = n2(j.costP), rpcs = n2(j.rpcs), wpcs = n2(j.wpcs);
-    const rctn = n2(j.rctn) || (pack > 1 ? n2(rpcs * pack) : rpcs);
-    const wctn = n2(j.wctn) || (pack > 1 ? n2(wpcs * pack) : wpcs);
+    const rctn = n2(j.rctn), wctn = n2(j.wctn);   // v1.1: fi CARTON (khali = app ne nahi bheja)
 
     // barcode kisi aur item ka to nahi
     if (code) {
@@ -85,15 +93,23 @@ async function applyItem(j) {
       keepSubs = s.recordset;
     }
 
+    // v1.1: POS Items mein sab FI PIECE (form ka CTN khana = × pack). CTN khali ho to purana POS rate (pack wahi ho), warna PCS.
+    //   ÷ pack 4 decimal tak — POS ka CTN khana bilkul wohi dikhaye jo app mein likha (8600 ÷ 16 = 537.5, 5150 ÷ 12 = 429.1667)
+    const samePack = old && Math.abs((Number(old.PackQty) || 0) - pack) < 0.001;
+    const sR = pack > 1 ? (rctn > 0 ? n2(rctn / pack) : (samePack && Number(old.SaleRate) > 0 ? Number(old.SaleRate) : rpcs)) : (rpcs || rctn);
+    const sR2 = rpcs || sR;
+    const sW = pack > 1 ? (wctn > 0 ? n2(wctn / pack) : (samePack && Number(old.SaleRate3) > 0 ? Number(old.SaleRate3) : wpcs)) : (wpcs || wctn);
+    const sWS = wpcs || sW;
+    const sP = costP;   // fi piece
+
     // SystemNotes — POS jaisa
     const stamp = `${new Date().toLocaleDateString('en-US')} ${new Date().toLocaleTimeString('en-US')}`;
     const noteLine = `>>${isNew ? 'Created' : 'Modified'} By:Blue Khata On:${stamp} at PC:${os.hostname()}`;
     const changes = [];
     if (old) {
-      const oldPP = Number(old.PackQty) > 1 ? Number(old.PurchaseRate) / Number(old.PackQty) : Number(old.PurchaseRate);
       const pairs = [['Name', String(old.ItemName).trim(), name], ['Code', old.ItemCode, code],
-        ['PackQty', old.PackQty, pack], ['Purchase', Math.round(oldPP * 100) / 100, costP],
-        ['SaleRate', old.SaleRate, rctn], ['SaleRate2', old.SaleRate2, rpcs], ['SaleRate3', old.SaleRate3, wpcs]];
+        ['PackQty', old.PackQty, pack], ['Purchase', r2(old.PurchaseRate), r2(sP)],
+        ['SaleRate', r2(old.SaleRate), r2(sR)], ['SaleRate2', r2(old.SaleRate2), r2(sR2)], ['SaleRate3', r2(old.SaleRate3), r2(sW)], ['SaleRateSize', r2(old.SaleRateSize), r2(sWS)]];
       for (const [k, a, b] of pairs) if (String(a ?? '') !== String(b ?? '')) changes.push(`${k}: ${a} -> ${b}`);
     }
     const notes = clean(String(old?.SystemNotes || '') + noteLine + (changes.length ? ' [' + changes.join('; ') + ']' : '') + '\r\n', 3800)
@@ -106,17 +122,17 @@ async function applyItem(j) {
       .input('ItemSubCatID', sql.Int, isNew ? NEW_SUBCAT : Number(old.ItemSubCatID) || NEW_SUBCAT)
       .input('ItemModelID', sql.Int, isNew ? 0 : Number(old.ItemModelID) || 0)
       .input('ItemName', sql.VarChar(150), name)
-      .input('SaleRate', sql.Float, rctn)
+      .input('SaleRate', sql.Float, sR)
       .input('UOMID', sql.Int, isNew ? 2 : Number(old.UOMID) || 2)
-      .input('PurchaseRate', sql.Float, pack > 1 ? n2(costP * pack) : costP)   // POS Items mein carton wala
+      .input('PurchaseRate', sql.Float, sP)   // v1.1: fi PIECE (v1 × pack likhti thi — ghalat)
       .input('OpenningBalance', sql.Float, isNew ? 0 : Number(old.OpenningBalance) || 0)
       .input('OpenningBalanceRate', sql.Float, isNew ? 0 : Number(old.OpenningBalanceRate) || 0)
       .input('OpenningDate', sql.DateTime, isNew ? new Date() : (old.OpenningDate || new Date()))
       .input('SystemNotes', sql.VarChar(sql.MAX), notes)
       .input('AutoCode', sql.Bit, isNew && !code ? 1 : 0)      // code khali -> POS khud banaye (000xxx)
       .input('ReOrderLevel', sql.Float, isNew ? 0 : Number(old.ReOrderLevel) || 0)
-      .input('SaleRate2', sql.Float, rpcs)
-      .input('SaleRate3', sql.Float, wpcs)
+      .input('SaleRate2', sql.Float, sR2)
+      .input('SaleRate3', sql.Float, sW)
       .input('IsTaxable', sql.Bit, isNew ? 0 : (old.IsTaxable ? 1 : 0))
       .input('IsActive', sql.Bit, 1)
       .input('PackQty', sql.Float, pack)
@@ -124,7 +140,7 @@ async function applyItem(j) {
       .input('PackQtyName', sql.NVarChar(200), 'CTN')
       .input('QtyName', sql.NVarChar(200), 'PCS')
       .input('PurchaseRateSize', sql.Float, isNew ? 0 : Number(old.PurchaseRateSize) || 0)
-      .input('SaleRateSize', sql.Float, wpcs)
+      .input('SaleRateSize', sql.Float, sWS)
       .input('SaleRate2Size', sql.Float, isNew ? 0 : Number(old.SaleRate2Size) || 0)
       .input('ItemDisc', sql.Float, isNew ? 0 : Number(old.ItemDisc) || 0)
       .input('ScheemOnQty', sql.Float, isNew ? 0 : Number(old.ScheemOnQty) || 0)
@@ -158,6 +174,11 @@ async function applyItem(j) {
         .input('SBItemQty', sql.Float, Number(x.q) || 1).input('IsShowOnLookup', sql.Bit, x.s === false ? 0 : 1)
         .execute('dbo.usp_ItemSubCode_InsertUpdate');
     }
+
+    // v1.1: item ki SAB godam rows (ItemBranchRate) — counter sale yahin se rate leta hai (purchase-post jaisa)
+    await rq().input('id', sql.Int, itemId).input('r', sql.Float, sR).input('r2', sql.Float, sR2).input('w', sql.Float, sW)
+      .input('ws', sql.Float, sWS).input('pc', sql.Float, sP)
+      .query(`UPDATE dbo.ItemBranchRate SET SaleRate = @r, SaleRate2 = @r2, SaleRate3 = @w, SaleRateSize = @ws${sP > 0 ? ', PurchaseRate = @pc' : ''} WHERE ItemID = @id`);
 
     const fin = await rq().input('id', sql.Int, itemId).query('SELECT ItemCode, ItemName FROM dbo.Items WHERE ItemID=@id');
     await tx.commit();
@@ -193,11 +214,64 @@ async function handleJob(doc) {
   } finally { busy.delete(doc.id); }
 }
 
+// v1.1: 🔧 PURANE GHALAT RATE — v1 ne pack wale items par SaleRate = poora R CTN aur PurchaseRate = khareed × pack likha tha.
+// Har item ki AAKHRI 'done' job se wohi ghalat qeemat dobara nikal kar milate hain; SIRF bilkul wohi qeemat ho to theek
+// (haath se baad mein badla = nahi chhedte). Items + ItemBranchRate. Ek dafa (item-fix-v1.done), nakam ho to agli dafa phir.
+const FIX_FLAG = path.join(DIR, 'item-fix-v1.done');
+async function repairV1() {
+  if (fs.existsSync(FIX_FLAG)) return;
+  const snap = await col.where('status', '==', 'done').get();
+  const last = new Map();
+  snap.forEach(d => { const j = d.data() || {}, id = Number(j.itemId) || 0; if (!id) return;
+    const t = Number(j.doneAt) || Number(j.at) || 0, p = last.get(id); if (!p || t > p.t) last.set(id, { t, j }); });
+  const p = await getPool(); let fixed = 0, seen = 0;
+  for (const [id, { j }] of last) {
+    const pack = Number(j.pack) || 0; if (!(pack > 1)) continue; seen++;
+    const costP = n2(j.costP), rpcs = n2(j.rpcs), wpcs = n2(j.wpcs), wctn = n2(j.wctn);
+    const rBad = n2(j.rctn) || n2(rpcs * pack), pBad = n2(costP * pack);      // v1 ne yahi likha tha
+    const rGood = n2(rBad / pack), pGood = costP, wGood = wctn > 0 ? n2(wctn / pack) : 0;   // 4 decimal: CTN wapas bilkul wohi (8550 ÷ 16 = 534.375)
+    const tx = new sql.Transaction(p); await tx.begin();
+    try {
+      const it = (await new sql.Request(tx).input('id', sql.Int, id).query('SELECT ItemID, ItemName, PackQty, SaleRate, SaleRate3, PurchaseRate FROM dbo.Items WHERE ItemID=@id')).recordset[0];
+      if (!it || Math.abs((Number(it.PackQty) || 0) - pack) > 0.001) { await tx.rollback(); continue; }
+      const fixRow = r => { const f = {};
+        if (rBad > 0 && near(r.SaleRate, rBad) && !near(rGood, rBad)) f.SaleRate = rGood;
+        if (pBad > 0 && near(r.PurchaseRate, pBad) && !near(pGood, pBad)) f.PurchaseRate = pGood;
+        if (wGood > 0 && near(r.SaleRate3, wpcs) && !near(wGood, wpcs)) f.SaleRate3 = wGood;
+        return f; };
+      const setSql = f => Object.keys(f).map(k => `${k} = @${k}`).join(', ');
+      const bind = (rq, f) => { for (const [k, v] of Object.entries(f)) rq.input(k, sql.Float, v); return rq; };
+      const fi = fixRow(it), parts = [];
+      if (Object.keys(fi).length) {
+        const nt = `\r\n>>Fixed By:Blue Khata item-post v1.1 On:${new Date().toLocaleString()} (v1 ne CTN wala rate PCS ke khane mein likha tha)` +
+          (fi.SaleRate != null ? `\r\nOld Sale Rate: ${r2(it.SaleRate)}\r\nNew Sale Rate: ${fi.SaleRate}` : '') +
+          (fi.PurchaseRate != null ? `\r\nOld Purchase Rate: ${r2(it.PurchaseRate)}\r\nNew Purchase Rate: ${fi.PurchaseRate}` : '') +
+          (fi.SaleRate3 != null ? `\r\nOld W Rate: ${r2(it.SaleRate3)}\r\nNew W Rate: ${fi.SaleRate3}` : '') + '\r\n';
+        await bind(new sql.Request(tx).input('id', sql.Int, id).input('nt', sql.NVarChar(sql.MAX), nt), fi)
+          .query(`UPDATE dbo.Items SET ${setSql(fi)}, SystemNotes = ISNULL(SystemNotes,'') + @nt WHERE ItemID=@id`);
+        if (fi.SaleRate != null) parts.push(`R CTN ${Math.round(it.SaleRate * pack)} -> ${Math.round(fi.SaleRate * pack * 100) / 100} (fi PCS ${fi.SaleRate})`);
+        if (fi.PurchaseRate != null) parts.push(`khareed ${r2(it.PurchaseRate)} -> ${fi.PurchaseRate} fi PCS`);
+        if (fi.SaleRate3 != null) parts.push(`W ${r2(it.SaleRate3)} -> ${fi.SaleRate3}`);
+      }
+      const brs = (await new sql.Request(tx).input('id', sql.Int, id).query('SELECT BranchID, SaleRate, SaleRate3, PurchaseRate FROM dbo.ItemBranchRate WHERE ItemID=@id')).recordset;
+      let nb = 0;
+      for (const b of brs) { const fb = fixRow(b); if (!Object.keys(fb).length) continue; nb++;
+        await bind(new sql.Request(tx).input('id', sql.Int, id).input('b', sql.Int, b.BranchID), fb)
+          .query(`UPDATE dbo.ItemBranchRate SET ${setSql(fb)} WHERE ItemID=@id AND BranchID=@b`); }
+      await tx.commit();
+      if (parts.length || nb) { fixed++; log(`🔧 THEEK: ${String(it.ItemName || '').trim()} (id ${id}) — ${parts.join(' · ') || 'Items theek tha'}${nb ? ` · ${nb} godam row` : ''}`); }
+    } catch (e) { try { await tx.rollback(); } catch {} throw e; }
+  }
+  log(`🔧 Purane ghalat rate ki jaanch: ${seen} pack wale items dekhe, ${fixed} theek kiye`);
+  try { fs.writeFileSync(FIX_FLAG, new Date().toISOString() + ' fixed ' + fixed); } catch {}
+}
+
 const lock = net.createServer().listen(LOCK_PORT, '127.0.0.1');
 lock.on('error', () => { console.log('item-post pehle se chal raha hai — yeh copy band.'); process.exit(3); });
 lock.on('listening', async () => {
   try { await getPool(); log('SQL se jur gaya'); } catch (e) { log('SQL masla: ' + e.message); process.exit(1); }
-  log('item-post chal raha hai — app se item banane / badalne ka intezar…');
+  try { await repairV1(); } catch (e) { log('🔧 purane rate theek nahi hue (agli dafa phir): ' + e.message); }
+  log('item-post v1.1 chal raha hai — app se item banane / badalne ka intezar…');
   col.where('status', '==', 'new').onSnapshot(
     s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handleJob(c.doc)); }); },
     e => { log('Firestore masla: ' + e.message); process.exit(1); });

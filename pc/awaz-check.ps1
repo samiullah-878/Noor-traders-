@@ -1,4 +1,5 @@
-# awaz-check.ps1 (2026-10-07) - NT AWAZ CHECK: is PC ka speaker / Windows awaz jaancho aur theek karo
+# awaz-check.ps1 (2026-10-08) - NT AWAZ CHECK: is PC ka speaker / Windows awaz jaancho aur theek karo
+#   2026-10-08: chaabi (firebase-key) hai ya nahi + NT-PRINT version + aakhri Search / bzzz / chaabi lines
 #   Chalana (AnyDesk, PowerShell): irm https://raw.githubusercontent.com/samiullah-878/Noor-traders-/main/pc/awaz-check.ps1 | iex
 #   1) sound card + haal  2) volume / mute (mute ho to hatao, 40% se kam ho to 80%)  3) test awaz  4) scan-awaz program chalu?
 #   5) log ki aakhri awaz wali lines  6) awaz na aaye to Windows "Sound" window khol do (sahi speaker = Set Default)
@@ -45,8 +46,16 @@ try {
 try { $as = Get-Service Audiosrv; Write-Host ("Windows Audio service: " + $as.Status); if ($as.Status -ne 'Running') { try { Start-Service Audiosrv; Write-Host "  -> Audio service chalu kar di" -ForegroundColor Yellow } catch { Write-Host "  -> Audio service band hai (chalane ke liye admin chahiye)" -ForegroundColor Red } } } catch {}
 $sc = @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object { $_.CommandLine -like '*nt-scan.ps1*' })
 if ($sc.Count) { Write-Host "Scan awaz program (nt-scan): CHALU ($($sc.Count))" -ForegroundColor Green } else { Write-Host "Scan awaz program (nt-scan): BAND - NT-PRINT chal raha hai?" -ForegroundColor Red }
+$K = 'C:\khata-sync'
+if (Test-Path (Join-Path $K 'firebase-key.json')) { Write-Host "Chaabi (firebase-key): HAI - barcode list se foran bzzz" -ForegroundColor Green }
+else { Write-Host "Chaabi (firebase-key): NAHI - AWAZ-ONLY (ghalat barcode ki bzzz POS ki Search khirki se). AnyDesk se file Desktop/Downloads mein rakh dein - NT-PRINT 20 sec mein khud utha lega" -ForegroundColor Yellow }
+if (Test-Path (Join-Path $K 'node_modules\firebase-admin')) { Write-Host "firebase-admin: HAI" } else { Write-Host "firebase-admin: NAHI (chaabi aate hi NT-PRINT khud install karega)" -ForegroundColor Yellow }
 $lg = 'C:\khata-sync\nt-print-log.txt'
-if (Test-Path $lg) { Write-Host "--- log (awaz) ---"; Get-Content $lg -Tail 600 -Encoding UTF8 | Select-String -Pattern 'scan|POS|awaz|tu-tu|NT-PRINT v' | Select-Object -Last 10 | ForEach-Object { Write-Host $_.Line } }
+if (Test-Path $lg) {
+  $all = Get-Content $lg -Tail 1500 -Encoding UTF8
+  $v = $all | Select-String -Pattern 'NT-PRINT v[0-9.]+' | Select-Object -Last 1; if ($v) { Write-Host ("Version: " + $v.Matches[0].Value) -ForegroundColor Cyan }
+  Write-Host "--- log (awaz) ---"; $all | Select-String -Pattern 'scan|POS|awaz|tu-tu|bzzz|Search|AWAZ-ONLY|NT-PRINT v' | Select-Object -Last 14 | ForEach-Object { Write-Host $_.Line }
+  $k = $all | Select-String -Pattern 'firebase-key|chaabi|firebase-admin' | Select-Object -Last 3; if ($k) { Write-Host "--- chaabi ---"; $k | ForEach-Object { Write-Host $_.Line } } }
 Write-Host ""
 Write-Host "TEST AWAZ baj rahi hai (3 dafa)..." -ForegroundColor Cyan
 for ($i = 0; $i -lt 3; $i++) { try { [System.Media.SystemSounds]::Exclamation.Play() } catch {}; Start-Sleep -Milliseconds 700; try { [console]::beep(1200, 250) } catch {}; Start-Sleep -Milliseconds 500 }

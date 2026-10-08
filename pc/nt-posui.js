@@ -1,5 +1,7 @@
 // ============================================================
-//  nt-posui.js  v1.7 (2026-10-08: 🔎 SEARCH KHIRKI — scan ke foran baad POS ki "Search Items" khule = barcode POS mein nahi -> 'SRCH MISS'
+//  nt-posui.js  v1.8 (2026-10-08: 🔎 Search khirki Sale screen ke ANDAR (child form / pane) ya bina naam ke dabbe mein bhi — 'Search Items'
+//                   likha element andar dhoondta hai (scan ke baad har 0.3 s, warna har 2 s), grid wala dabba = khirki · 'SRCHAT andar' log · NtPosUi9.dll)
+//                   · v1.7 (2026-10-08: 🔎 SEARCH KHIRKI — scan ke foran baad POS ki "Search Items" khule = barcode POS mein nahi -> 'SRCH MISS'
 //                   (bzzz); khirki mein wohi code kisi qatar ka Code ho (barcode 2 items par) = 'SRCH MULTI' (awaz nahi) · NT-PRINT stdin se 'CHK <code>'
 //                   bhejta hai · NtPosUi8.dll) · v1.6 (2026-10-07: error box sirf ASLI — likhai + OK/Yes/No; settings/print/search jaisi window (likhne ka khana, list,
 //                   checkbox) par bzzz nahi · Sale screen par wapsi 0.5 s mein (pehle 2 s)) · v1.5 (2026-10-07: NT-PRINT band ho to ye bhi band (purane bhatke posui processes shuru mein khatam) · 'PROC <naam>' (POS ka program — ghalat-window scan pakarne ko) · 'WIN 1/0' (Sale screen khuli/band) ·
@@ -21,12 +23,12 @@ function start({ dir, log, cfg, onAdd, onErr, onProc, onDown, onSrch }) {
   if (process.platform !== 'win32' || C().posUi === false) return { active: () => false };
   const PS = path.join(dir, 'nt-posui.ps1');
   const TXT = `$ErrorActionPreference='Stop'
-$dll=Join-Path $PSScriptRoot 'NtPosUi8.dll'
+$dll=Join-Path $PSScriptRoot 'NtPosUi9.dll'
 Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes,WindowsBase
 $refs=@([System.Windows.Automation.AutomationElement].Assembly.Location,[System.Windows.Automation.ControlType].Assembly.Location,[System.Windows.Rect].Assembly.Location)
 if(!(Test-Path $dll)){ Add-Type -ReferencedAssemblies $refs -OutputAssembly $dll -TypeDefinition @"
 using System;using System.Diagnostics;using System.Threading;using System.Text;using System.Collections.Generic;using System.Windows.Automation;
-public class NtPosUi8{
+public class NtPosUi9{
  static void Say(string s){try{Console.Out.WriteLine(s);Console.Out.Flush();}catch{}}
  static AutomationElement FindWin(string t){
   foreach(AutomationElement w in AutomationElement.RootElement.FindAll(TreeScope.Children,Condition.TrueCondition)){
@@ -53,6 +55,15 @@ public class NtPosUi8{
   string nm=""; try{ nm=d.Current.Name??""; }catch{}
   if(sb.Length==0&&nm.Length==0)return false;
   txt=(nm+": "+sb.ToString()).Replace((char)13,' ').Replace((char)10,' ').Trim(); return true; }
+ // v1.8: 'Search Items' likha element kisi dabbe ke ANDAR (Sale screen ka child form / bina naam ki khirki) — jis upar wale dabbe
+ //   mein grid (Table/DataGrid) ho wohi khirki (Codes us se parhe). Chhupa (offscreen / 0 size) = nahi.
+ static readonly Condition GRIDC=new OrCondition(new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.Table),new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.DataGrid));
+ static AutomationElement FindSearchIn(AutomationElement w,string st){
+  try{ var el=w.FindFirst(TreeScope.Descendants,new PropertyCondition(AutomationElement.NameProperty,st)); if(el==null)return null;
+   try{ if(el.Current.IsOffscreen)return null; var r=el.Current.BoundingRectangle; if(r.Width<=0||r.Height<=0)return null; }catch{ return null; }
+   var tw=TreeWalker.ControlViewWalker; var cur=el;
+   for(int i=0;i<4&&cur!=null;i++){ try{ if(cur.FindFirst(TreeScope.Descendants,GRIDC)!=null)return cur; }catch{} var up=tw.GetParent(cur); if(up==null||Automation.Compare(up,w))break; cur=up; }
+   return el; }catch{ return null; } }
  static List<AutomationElement> Dialogs(AutomationElement w,int pid){
   var L=new List<AutomationElement>();
   try{ foreach(AutomationElement t in AutomationElement.RootElement.FindAll(TreeScope.Children,new PropertyCondition(AutomationElement.ProcessIdProperty,pid))){ if(!Automation.Compare(t,w))L.Add(t); } }catch{}
@@ -79,6 +90,7 @@ public class NtPosUi8{
   // v1.5: NT-PRINT band ho (stdin toota) to ye bhi band — pehle peeche chalta rehta tha (har restart par ek aur, CPU khata)
   var tq=new Thread(()=>{ try{ string s; while((s=Console.In.ReadLine())!=null){ if(s.StartsWith("CHK")){ lock(ck){ chkCode=s.Length>4?s.Substring(4).Trim():""; } chkAt=Environment.TickCount; chkUntil=chkAt+2600; } } }catch{} Environment.Exit(0); }); tq.IsBackground=true; tq.Start();
   Say("READY"); AutomationElement win=null,info=null; string last=null; int tick=0,pid=0,lastPid=-1; var seen=new Dictionary<string,bool>(); bool hadMsg=false,winOn=false; string srchKey=""; int srchSeenAt=0,repAt=-1,srchTry=0;
+  string dKey=""; AutomationElement dEl=null; int dSeenAt=0,deepAt=-100000;   // v1.8: andar wali Search khirki
   while(true){
    try{
     if((win!=null)!=winOn){ winOn=win!=null; Say(winOn?"WIN 1":"WIN 0"); }
@@ -87,12 +99,20 @@ public class NtPosUi8{
     if(win!=null&&pid>0&&(tick%2==0||chk)){
      // har ~0.3 sec (scan ke baad har 0.15 sec): POS ka error/message box?  naya ho to ERR (bzzz) · v1.7: Search Items khirki?
      var now=new Dictionary<string,bool>();   // HashSet System.Core mein — PowerShell Add-Type ke default mein pakka nahi
-     AutomationElement sd=null; string sk="";
+     AutomationElement sd=null; string sk=""; var cands=new List<AutomationElement>();
      foreach(var d in Dialogs(win,pid)){ string k=Key(d); if(k.Length==0)continue; string dn=""; try{ dn=d.Current.Name??""; }catch{}
       if(dn.IndexOf(stitle,StringComparison.OrdinalIgnoreCase)>=0){ sd=d; sk=k; continue; }
+      cands.Add(d);
       string tx; if(!IsMsg(d,out tx))continue; now[k]=true; if(!seen.ContainsKey(k))Say("ERR "+tx); }
-     if(sd==null){ srchKey=""; }
-     else { if(sk!=srchKey){ srchKey=sk; srchSeenAt=Environment.TickCount; srchTry=0; }
+     if(sd==null){ srchKey="";
+      // v1.8: upar naam wali khirki nahi — andar dhoondo (scan ke baad har 0.3 s, warna har 2 s taake pehle se khuli pehchani rahe)
+      if(Environment.TickCount-deepAt>(chk?300:2000)){ deepAt=Environment.TickCount; cands.Add(win); AutomationElement x=null;
+       foreach(var c in cands){ x=FindSearchIn(c,stitle); if(x!=null)break; }
+       string kx=x==null?"":Key(x);
+       if(kx.Length==0){ dKey=""; dEl=null; } else { if(kx!=dKey){ dKey=kx; dSeenAt=Environment.TickCount; if(chk)Say("SRCHAT andar"); } dEl=x; } }
+      if(dEl!=null){ sd=dEl; if(srchKey!=dKey)srchTry=0; srchKey=dKey; srchSeenAt=dSeenAt; } }
+     else { dKey=""; dEl=null; if(sk!=srchKey){ srchKey=sk; srchSeenAt=Environment.TickCount; srchTry=0; } }
+     if(sd!=null){
       // scan ke aas paas khuli (scan se 0.5 s pehle tak) aur is scan ki report abhi nahi gayi
       if(chk&&repAt!=chkAt&&srchSeenAt-chkAt>-500){ var L=Codes(sd); srchTry++;
        if(L.Count>0||srchTry>=4){ string cc; lock(ck){ cc=chkCode; } int same=0; foreach(var x in L) if(string.Equals(x,cc,StringComparison.OrdinalIgnoreCase))same++;
@@ -110,7 +130,7 @@ public class NtPosUi8{
 }
 "@ }
 Add-Type -Path $dll
-[NtPosUi8]::Run([string]$args[0],[string]$args[1])
+[NtPosUi9]::Run([string]$args[0],[string]$args[1])
 `;
   let child = null, gridOn = false, winOn = false, fails = 0, stopped = false, swept = false;
   // v1.5: pehle ke NT-PRINT restarts se peeche reh gaye nt-posui PowerShell band karo (sirf ek dafa, apna naya chalane se pehle)
@@ -142,6 +162,7 @@ Add-Type -Path $dll
       else if (l.startsWith('PROC ')) { try { onProc && onProc(l.slice(5).trim()); } catch {} }   // v1.5
       else if (l === 'WIN 1' || l === 'WIN 0') { winOn = l === 'WIN 1'; if (!winOn) gridOn = false; }
       else if (l === 'BACK') { if (C().posUiLog) log('🔔 POS error band — patti dobara dhoond raha'); }
+      else if (l === 'SRCHAT andar') log('🔎 Search khirki Sale screen ke ANDAR mili');   // v1.8
       else if (l.startsWith('SRCH ')) { const [, kind, same, n, codes] = l.split(' '); log(`🔎 POS Search khirki: ${kind === 'MULTI' ? 'barcode ' + same + ' item(s) par — chunna hai' : 'barcode POS mein NAHI'} (qataren ${n}${codes ? ': ' + codes : ''})`); try { onSrch && onSrch({ kind, same: Number(same) || 0, n: Number(n) || 0, codes: codes || '' }); } catch {} }   // v1.7
       else if (l.startsWith('ADD ')) { try { onAdd(Number(l.slice(4)) || 1); } catch {} } } });
     w.stderr.on('data', d => { err = (err + d).slice(-2000); });

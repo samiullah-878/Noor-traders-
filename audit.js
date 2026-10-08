@@ -5,7 +5,7 @@
 //   Jo records PC ne likhe (POS sync) ya is update se PEHLE ke hain, un ka sirf "kab bani / kab badli / kis ne" record ke apne stamp se.
 // - Rules 2.12: auditLog sirf JOR sakte hain (create), badal/mita nahi (sirf malik mita sake). Parh sakte: malik + Full mulazim.
 // - 30 din: malik History kholta hai to purani (30 din se pehle) khud saaf; button bhi hai.
-import { smartHit } from './smart-search.js?v=2.98.6';   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.98.7';   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
