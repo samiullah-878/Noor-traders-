@@ -2221,3 +2221,8 @@ html.dk .gp-savebar{background:var(--glass2,#1b2a4a);border-color:var(--line,rgb
 .pp-src.bill{background:linear-gradient(135deg,#eef4ff,#e1ebff);color:#1d3f8a;border:1px solid #c5d5f5;box-shadow:0 3px 10px rgba(29,63,138,.10)}
 html.dk .pp-src.hand{background:#3a2a10;color:#ffd08a;border-color:#6b4a14}
 html.dk .pp-src.bill{background:#14244a;color:#b9ccff;border-color:#2c4688}
+/* v2.98.8: label atka hua / cancel ho raha */
+.lv-row.stuck{background:rgba(255,170,60,.14);box-shadow:inset 0 0 0 1px rgba(255,170,60,.45)}
+.lv-s em.stk{color:#ffb25a}
+.lv-row.cx{opacity:.85}.lv-row.cx .lv-s em.cx{animation:lvPulse 1.2s ease-in-out infinite}
+@keyframes lvPulse{50%{opacity:.45}}

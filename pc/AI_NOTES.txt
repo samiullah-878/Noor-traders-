@@ -1872,3 +1872,29 @@ VERSION BUMP: ?v=2.98.6 (12 files), APP_VER, "Blue Khata v2.98.6", sw CACHE, ver
 * pc/awaz-check.ps1: chaabi HAI/NAHI, firebase-admin, NT-PRINT version, log mein bzzz / Search / AWAZ-ONLY / chaabi lines.
 SECURITY: firebase-key.json GitHub / chat mein KABHI nahi — sirf AnyDesk File Transfer se PC par.
 VERSION BUMP: ?v=2.98.7, APP_VER, "Blue Khata v2.98.7", sw CACHE, version.json. Manifest 2026-10-08.4 (item-post, nt-print, nt-posui).
+
+==================== App v2.98.8 + label-print v4.1 (manifest 2026-10-08.5) — 🖨 label ✕ Cancel foran + atke hue hukum saaf ====================
+User (screenshot: live patti mein 3 label "chhap raha" — 96/150, 0/100, 0/40 — aur 1 line mein): "ye barcode cancel nahi ho rahe,
+yahan se cancel karta hoon magar nahi hote".
+WAJAH: (1) ZOMBIE — label-print beech mein band hui (PC restart / doctor restart) to hukum hamesha 'printing' par reh jata; PC sirf
+status 'new' sunta tha, is liye un ka cancelReq koi nahi dekhta tha (aur live patti mein hamesha "chhap raha"). (2) chhapte hukum ka
+cancel sirf agle hisse se pehle, aur us se pehle waitQueue 90 s tak; line wale ka cancel tab jab baari aaye. (3) rules 2.34 publish na
+hon to likha hi nahi jata — app sirf toast deti thi.
+* pc/label-print.js v4.1:
+  - live Map (id -> {cancel}) — handle() shuru mein; finally mein hatao. beatAt: shuru par + har 20 s (setInterval) + har hissa.
+  - CANCEL WATCHER: jobCol.where('cancelReq','==',true).onSnapshot -> onCancel: live mein = ctl.cancel = true (loop agla hissa nahi
+    bhejta; waitQueue(stopIf) foran tootta; aakhri hissa bhejte hi aaya ho to bhi line saaf); 'new' = transaction se foran 'cancelled'
+    (queue ke peeche nahi); 'printing' magar yahan nahi chal raha (is PC ka, ya doosre PC ka aur 3 min se beatAt nahi) = 'cancelled' +
+    purgeQueue (sirf jab koi aur hukum na chhap raha ho). Doosra PC zinda chhap raha = us par chhor do.
+  - sweepStuck(first): shuru par aur har 2 min — 'printing' jo live / busy mein nahi aur (is PC ka ya 3 min se dhadkan nahi) ->
+    'failed' error "ruk gaya — ~sent / total chhape, baqi ke liye dobara bhejein" (cancelReq tha to 'cancelled'). Periodic mein is PC
+    ka 60 s se naya = chhor do (race).
+  TEST (mock firestore + execFile): zombie (is PC) aur purana doosre PC wala -> failed; zinda doosre PC wala nahi chheda; chhapte
+  hukum ka cancel ~1 s mein + line saaf (purge 1); line wala foran cancelled (pehla abhi chhap raha tha).
+* barcode.js liveLabelsHTML: row data-lv-id; cxLocal (dabate hi "✕ cancel ho raha…", 3 min tak re-render par bhi); isStuck =
+  printing aur beatAt/pickedAt 3 min purana -> class stuck "⚠ atka hua · sent / total" (narangi), bar nahi, Cancel rehta (PC v4.1
+  foran saaf karta). "Sab cancel" sirf jo abhi cancel nahi. Click: pehle row par nishan, phir cloud.cancelLabel; nakam = row wapas
+  (purani likhai) + BARA alert (permission -> "Firebase rules 2.34 publish nahi hue … firestore-rules-2.34.html Copy → Publish",
+  warna internet). CSS .lv-row.stuck / em.stk / cx pulse. happy-dom test ✓.
+Rules change NAHI (2.34 wahi).
+VERSION BUMP: ?v=2.98.8, APP_VER, "Blue Khata v2.98.8", sw CACHE, version.json. Manifest 2026-10-08.5 (label-print).

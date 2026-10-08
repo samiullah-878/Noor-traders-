@@ -1,5 +1,9 @@
 // =========================================================
-//  label-print.js  v4.0 (2026-10-07: 🖨 LIVE + ✕ CANCEL — har hissa (8 qatar) bhejne se pehle labelJobs.cancelReq dekho; printer ki Windows
+//  label-print.js  v4.1 (2026-10-08: ✕ CANCEL FORAN — alag watcher (labelJobs cancelReq == true): line wala foran 'cancelled' (baari ka
+//                     intezar nahi), chhap raha = agla hissa nahi + 90 s line-intezar bhi foran tootta, atka hua (zombie: script beech mein band hui,
+//                     'printing' par reh gaya) = foran 'cancelled' + printer line saaf · beatAt har 20 s · ATKE HUE saaf: shuru par aur har 2 min
+//                     koi 'printing' jo yeh script nahi chhap rahi (is PC ka, ya 3 min se dhadkan nahi) = 'failed' "ruk gaya — ~X / Y chhape")
+//                     · v4.0 (2026-10-07: 🖨 LIVE + ✕ CANCEL — har hissa (8 qatar) bhejne se pehle labelJobs.cancelReq dekho; printer ki Windows
 //                     line mein 1 se zyada ho to ruko (ginti 'sent' asal chhapai ke qareeb, cancel foran); cancel = line saaf (Remove-PrintJob),
 //                     status 'cancelled'; line mein hi cancel = chhapega nahi) · v3.9 (2026-10-06: 🔤 urduMode 'ttf' — Urdu TASVEER nahi, TEXT: Windows ka TTF font (tahoma) ek dafa printer ke flash mein
 //                     (DOWNLOAD F,"UR.TTF"), harf urdu-shape.js se jure hue (presentation forms) + visual order; CODEPAGE UTF-8.
@@ -267,29 +271,33 @@ async function queueCount(printer) {   // abhi printer ki line mein kitne (chhap
   const o = await psRun(`@(Get-PrintJob -PrinterName ${psq(printer)} -ErrorAction SilentlyContinue | Where-Object { $_.JobStatus -notmatch 'Printed|Deleted' }).Count`);
   const n = Number(o); return Number.isFinite(n) ? n : 0;
 }
-async function waitQueue(printer, max = 1, ms = 90000) {   // agla hissa tab bhejo jab line mein <= max ho — ginti asal chhapai jaisi, cancel foran
-  const t0 = Date.now(); while (Date.now() - t0 < ms) { if (await queueCount(printer) <= max) return; await new Promise(r => setTimeout(r, 2500)); }
+async function waitQueue(printer, max = 1, ms = 90000, stopIf = () => false) {   // agla hissa tab bhejo jab line mein <= max ho — ginti asal chhapai jaisi, cancel foran
+  const t0 = Date.now(); while (Date.now() - t0 < ms) { if (stopIf()) return; if (await queueCount(printer) <= max) return; await new Promise(r => setTimeout(r, 2500)); }   // v4.1: cancel aaye to intezar foran khatam
 }
 async function purgeQueue(printer) { await psRun(`Get-PrintJob -PrinterName ${psq(printer)} -ErrorAction SilentlyContinue | Remove-PrintJob -ErrorAction SilentlyContinue`); }
 
 const busy = new Set();
+const live = new Map();   // v4.1: jo hukum ABHI yeh script chhap rahi hai -> { cancel } (cancel watcher yahin jhanda lagata hai)
 let queue = Promise.resolve();
 const later = fn => { queue = queue.then(fn).catch(e => { log('Masla: ' + e.message); if (e?.code === 16 || /UNAUTHENTICATED|invalid authentication credentials/i.test(String(e?.message))) { log('Firebase ka rabta toot gaya (UNAUTHENTICATED) — script 30 sec mein nayi chabi se dobara shuru hogi'); setTimeout(() => process.exit(1), 500); } }); };   // 2026-09-30: pehle bas likh kar aage chal padti thi, bill atak jate
 
 async function handle(doc) {
   if (busy.has(doc.id)) return;
   busy.add(doc.id);
+  const ctl = { cancel: false }; live.set(doc.id, ctl);
+  let beat = null;
   try {
     const ref = jobCol.doc(doc.id);
     const j = await db.runTransaction(async t => {
       const cur = (await t.get(ref)).data();
       if (!cur || cur.status !== 'new') return null;
       if (cur.cancelReq) { t.update(ref, { status: 'cancelled', sent: 0, doneAt: Date.now() }); return { cancelledEarly: true, ...cur }; }   // v4.0: line mein hi cancel
-      t.update(ref, { status: 'printing', pc: os.hostname(), pickedAt: Date.now(), sent: 0, total: Math.max(1, Math.min(200, Math.floor(Number(cur.copies) || 1))) });
+      t.update(ref, { status: 'printing', pc: os.hostname(), pickedAt: Date.now(), beatAt: Date.now(), sent: 0, total: Math.max(1, Math.min(200, Math.floor(Number(cur.copies) || 1))) });
       return cur;
     });
     if (!j) return;
     if (j.cancelledEarly) { log(`✕ Cancel (line mein): ${j.name} ${j.code}`); return; }
+    beat = setInterval(() => { ref.update({ beatAt: Date.now() }).catch(() => {}); }, 20000);   // v4.1: dhadkan — app / doosra sweep 'atka hua' na samjhe
     // bohat purana hukum (2 ghante se zyada) na chhapo â€” PC band raha ho to subah dher na nikle
     if (Date.now() - (Number(j.at) || 0) > 2 * 3600 * 1000) {
       await ref.update({ status: 'skipped', error: 'purana hukum (2 ghante se zyada) â€” dobara bhejein', doneAt: Date.now() });
@@ -304,11 +312,13 @@ async function handle(doc) {
     const parts = err ? [] : tspl(S, j, nums, ur), perPart = Math.max(1, Math.min(50, Math.floor(Number(S.rowsPerJob) || 8))) * Math.max(1, Number(S.cols) || 1);
     let sent = 0, cancelled = false;
     for (let k = 0; k < parts.length && !err; k++) {
-      if (k > 0) { await waitQueue(S.printer, 1); try { if (((await ref.get()).data() || {}).cancelReq) { cancelled = true; break; } } catch {} }
+      if (ctl.cancel) { cancelled = true; break; }   // v4.1: watcher ne jhanda lagaya
+      if (k > 0) { await waitQueue(S.printer, 1, 90000, () => ctl.cancel); if (ctl.cancel) { cancelled = true; break; } try { if (((await ref.get()).data() || {}).cancelReq) { cancelled = true; break; } } catch {} }
       err = await sendRaw(parts[k], S.printer); if (err) break;
       sent = Math.min(copies2, (k + 1) * perPart);
-      if (parts.length > 1) ref.update({ sent: Math.max(0, sent - perPart), total: copies2 }).catch(() => {});   // line mein abhi ek hissa — chhap chuke ≈ pichhle
+      if (parts.length > 1) ref.update({ sent: Math.max(0, sent - perPart), total: copies2, beatAt: Date.now() }).catch(() => {});   // line mein abhi ek hissa — chhap chuke ≈ pichhle
     }
+    if (!cancelled && !err && ctl.cancel) cancelled = true;   // v4.1: aakhri hissa bhejte hi cancel aaya — line saaf karo
     if (cancelled) {
       await purgeQueue(S.printer);
       const done0 = Math.max(0, sent - perPart);
@@ -317,7 +327,47 @@ async function handle(doc) {
     }
     if (err) { await ref.update({ status: 'failed', error: String(err.message).slice(0, 300), doneAt: Date.now() }); log(`Label NAHI chhapa: ${j.name} â€” ${err.message}`); }
     else { await ref.update({ status: 'done', sent: copies2, total: copies2, doneAt: Date.now(), error: FieldValue.delete(), numFrom: nums.from, numTo: nums.to, numCode: nums.code, day: dayKey() }); log(`Label chhapa: ${j.name}${Number(j.qty) !== 1 ? ' - ' + num(j.qty) : ''} x ${copies2} -> ${nums.code}-${nums.from}${copies2>1?' se '+nums.code+'-'+nums.to:''}`); }
-  } finally { busy.delete(doc.id); }
+  } finally { busy.delete(doc.id); live.delete(doc.id); if (beat) clearInterval(beat); }
+}
+
+// v4.1: ✕ CANCEL WATCHER — app ne cancelReq likha: chhap raha (yahin) = jhanda; line wala = foran cancelled; atka hua = cancelled + line saaf
+const STALE = 3 * 60 * 1000;
+const lastBeat = d => Number(d.beatAt) || Number(d.pickedAt) || Number(d.at) || 0;
+async function onCancel(doc) {
+  const id = doc.id, d = doc.data() || {};
+  if (!d.cancelReq || !['new', 'printing'].includes(d.status)) return;
+  if (live.has(id)) { if (!live.get(id).cancel) { live.get(id).cancel = true; log(`✕ Cancel aaya (chhap raha): ${d.name} — agla hissa nahi jayega`); } return; }
+  if (busy.has(id)) return;   // abhi uthaya ja raha hai — handle() khud dekh lega
+  if (d.status === 'printing' && d.pc && d.pc !== os.hostname() && Date.now() - lastBeat(d) < STALE) return;   // doosra PC zinda chhap raha — woh khud karega
+  const ref = jobCol.doc(id);
+  const r = await db.runTransaction(async t => {
+    const cur = (await t.get(ref)).data();
+    if (!cur || !cur.cancelReq || !['new', 'printing'].includes(cur.status) || live.has(id)) return null;
+    t.update(ref, { status: 'cancelled', sent: Number(cur.sent) || 0, doneAt: Date.now() });
+    return cur;
+  });
+  if (!r) return;
+  if (r.status === 'printing' && (!r.pc || r.pc === os.hostname()) && !live.size) { try { await purgeQueue(settings().printer); } catch {} }   // koi aur chhap raha ho to line nahi chhedte
+  log(`✕ Cancel (${r.status === 'new' ? 'line mein — foran' : 'atka hua'}): ${r.name} ${r.code}`);
+}
+// v4.1: ATKE HUE 'printing' — script beech mein band hui (PC restart / doctor) to hukum hamesha 'printing' par reh jata tha
+async function sweepStuck(first) {
+  const s = await jobCol.where('status', '==', 'printing').get();
+  for (const doc of s.docs) {
+    const id = doc.id, d = doc.data() || {};
+    if (live.has(id) || busy.has(id)) continue;
+    const mine = !d.pc || d.pc === os.hostname();
+    if (!(mine || Date.now() - lastBeat(d) > STALE)) continue;
+    if (!first && mine && Date.now() - lastBeat(d) < 60000) continue;   // abhi abhi shuru hua (race) — agli dafa
+    const ref = jobCol.doc(id), tot = Number(d.total) || Number(d.copies) || 0, sent = Number(d.sent) || 0;
+    const ok = await db.runTransaction(async t => {
+      const cur = (await t.get(ref)).data(); if (!cur || cur.status !== 'printing' || live.has(id)) return false;
+      t.update(ref, cur.cancelReq ? { status: 'cancelled', doneAt: Date.now() }
+        : { status: 'failed', error: `ruk gaya — ~${sent} / ${tot} chhape, baqi ke liye dobara bhejein`, doneAt: Date.now() });
+      return true;
+    }).catch(() => false);
+    if (ok) log(`⚠ Atka hua hukum saaf: ${d.name} ${d.code} (~${sent} / ${tot} chhape${d.cancelReq ? ', cancel' : ''})`);
+  }
 }
 
 if (process.argv.includes('--calibrate')) {   // v2.1: roll badalne ke baad printer khud label ka naap napta hai (gap sensor)
@@ -343,7 +393,12 @@ if (process.argv.includes('--calibrate')) {   // v2.1: roll badalne ke baad prin
   const lock = net.createServer();
   lock.once('error', () => { console.log('label-print pehle se chal raha hai.'); process.exit(3); });
   lock.listen(LOCK_PORT, '127.0.0.1', () => {
-    { const S = settings(); log(`label-print v4.0 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
+    { const S = settings(); log(`label-print v4.1 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
+    sweepStuck(true).catch(e => log('Atke hue dekhne mein masla: ' + e.message));   // v4.1
+    setInterval(() => { sweepStuck(false).catch(() => {}); }, 2 * 60000);
+    jobCol.where('cancelReq', '==', true).onSnapshot(s => {   // v4.1: cancel foran (queue ke peeche nahi)
+      s.docChanges().forEach(c => { if (c.type !== 'removed') onCancel(c.doc).catch(e => log('Cancel masla: ' + e.message)); });
+    }, e => log('Cancel listener: ' + e.message));
     jobCol.where('status', '==', 'new').onSnapshot(s => {
       s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handle(c.doc)); });
     }, e => { log('Listener toot gaya: ' + e.message + ' â€” band, bat 30 second mein dobara chalayega'); process.exit(1); });
