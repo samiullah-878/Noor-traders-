@@ -16,7 +16,9 @@ if (-not (Test-Path (Join-Path $K 'nt-print.js')) -or -not (Get-Command node -Er
 }
 # 1b) speaker / Windows awaz (mute hatao, volume, test awaz - awaz-check)
 Say "--- Speaker jaanch ---" Cyan
-try { Invoke-RestMethod ($RAW + 'awaz-check.ps1?t=' + [DateTimeOffset]::Now.ToUnixTimeSeconds()) | Invoke-Expression } catch { Say "awaz-check nahi chala: $($_.Exception.Message)" Red }
+# ALAG scope mein (& scriptblock) - awaz-check ka $k (chaabi lines) PowerShell mein $K hi hai (bara/chhota ek), pehle hamara $K bigad deta tha
+try { $ac = Invoke-RestMethod ($RAW + 'awaz-check.ps1?t=' + [DateTimeOffset]::Now.ToUnixTimeSeconds()); & ([scriptblock]::Create([string]$ac)) } catch { Say "awaz-check nahi chala: $($_.Exception.Message)" Red }
+$K = 'C:\khata-sync'
 Say "--- NT-PRINT taza ---" Cyan
 # 2) taza files
 $t = [DateTimeOffset]::Now.ToUnixTimeSeconds()

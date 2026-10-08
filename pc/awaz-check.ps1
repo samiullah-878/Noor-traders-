@@ -55,7 +55,7 @@ if (Test-Path $lg) {
   $all = Get-Content $lg -Tail 1500 -Encoding UTF8
   $v = $all | Select-String -Pattern 'NT-PRINT v[0-9.]+' | Select-Object -Last 1; if ($v) { Write-Host ("Version: " + $v.Matches[0].Value) -ForegroundColor Cyan }
   Write-Host "--- log (awaz) ---"; $all | Select-String -Pattern 'scan|POS|awaz|tu-tu|bzzz|Search|AWAZ-ONLY|NT-PRINT v' | Select-Object -Last 14 | ForEach-Object { Write-Host $_.Line }
-  $k = $all | Select-String -Pattern 'firebase-key|chaabi|firebase-admin' | Select-Object -Last 3; if ($k) { Write-Host "--- chaabi ---"; $k | ForEach-Object { Write-Host $_.Line } } }
+  $kl = $all | Select-String -Pattern 'firebase-key|chaabi|firebase-admin' | Select-Object -Last 3; if ($kl) { Write-Host "--- chaabi ---"; $kl | ForEach-Object { Write-Host $_.Line } } }
 Write-Host ""
 Write-Host "TEST AWAZ baj rahi hai (3 dafa)..." -ForegroundColor Cyan
 for ($i = 0; $i -lt 3; $i++) { try { [System.Media.SystemSounds]::Exclamation.Play() } catch {}; Start-Sleep -Milliseconds 700; try { [console]::beep(1200, 250) } catch {}; Start-Sleep -Milliseconds 500 }

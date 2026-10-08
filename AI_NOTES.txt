@@ -3308,3 +3308,7 @@ Is PC par bhi POS wale scan hook ko nahi milte ("scan NAHI pakra") — tik sirf 
   test awaz, "Awaz aayi?"); manifest se sha256 jaanch kar taza nt-print / parchi / scan / posui / urdu-shape / bat (adhoori file
   nahi lagti); Startup VBS na ho to lagao; node nt-print band -> bat / VBS se dobara; 35 s baad version + AWAZ-ONLY / POS screen log;
   phir "GHALAT barcode scan karein, Enter" -> Search / bzzz / GHALAT log. Window mein click = QuickEdit 'Select' rokta hai (Esc).
+* FIX (2026-10-08 19:00): nt-fix.ps1 awaz-check ko `| Invoke-Expression` se ISI scope mein chalata tha — awaz-check ka $k (chaabi log
+  lines) PowerShell mein $K hi hai (naam bara/chhota ek) -> hamara $K = "[08/10/2026, 18..." -> Join-Path "drive nahi mila", files
+  update nahi hui, log nahi parha (Abdurehman PC photo). Ab `& ([scriptblock]::Create(...))` (alag scope) + baad mein $K dobara set;
+  awaz-check mein $k -> $kl.
