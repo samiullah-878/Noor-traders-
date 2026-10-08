@@ -1979,3 +1979,17 @@ User: "thora sa time — awaz jaldi aaye, aur Abdurehman ke PC par bhi kar do". 
   nt-print-setup.ps1 (irm ... | iex). Photo: Node v20.18.1 install, files, pcName "Abdurehman PC", chaabi nahi (AWAZ-ONLY),
   firebase-admin install chal raha tha.
 * Teeno PCs (server, Mithu, Abdurehman) NT-PRINT khud-update (har 3 min, manifest) se v1.11 le lenge.
+
+==================== nt-posui v1.12 (manifest 2026-10-08.9) + pc/nt-fix.ps1 — 🔎 andar wali Search khirki ka SAHI khana ====================
+Abdurehman PC (KEIME1D) log (photo): v1.18 AWAZ-ONLY, "Scan awaz chalu — 0 barcode yaad"; 18:43:03 'bzzz — "00123402" POS mein nahi
+(Search khirki · scan NAHI pakra)' — "00123402" = us waqt ka SALE NO; 18:45:36 (v1.11 khud-update ke baad) 'Search khirki: "0" — naam
+se talaash'. Yani is PC par Search khirki POS ke ANDAR (child form) hai: v1.10/1.11 root == main window dekh kar dabba = GetParent(hit)
+= Sale screen leta tha -> us ka pehla EDIT (Sale No / 0). User: "Abdurehman par awaz nahi aa rahi search box mein — aur waise bhi nahi".
+Is PC par bhi POS wale scan hook ko nahi milte ("scan NAHI pakra") — tik sirf POS patti ADD se.
+* pc/nt-posui.js v1.12 (NtPosUi13.dll): dabba = hit KHUD (jo 'Search Items' hai — alag khirki ya andar ka form); hit STATIC label ho
+  to us ka parent. Khana na mile to root (sirf jab root != main window aur != dabba). Grid / UIA fallback sirf ISI dabbe mein (upar
+  Sale screen ki list / Sale No nahi — pehle 4 parent tak chadhta tha). mcs compile ✓.
+* pc/nt-fix.ps1 (NAYI — irm .../main/pc/nt-fix.ps1 | iex): NT-PRINT / Node na ho to nt-print-setup; awaz-check (mute / volume /
+  test awaz, "Awaz aayi?"); manifest se sha256 jaanch kar taza nt-print / parchi / scan / posui / urdu-shape / bat (adhoori file
+  nahi lagti); Startup VBS na ho to lagao; node nt-print band -> bat / VBS se dobara; 35 s baad version + AWAZ-ONLY / POS screen log;
+  phir "GHALAT barcode scan karein, Enter" -> Search / bzzz / GHALAT log. Window mein click = QuickEdit 'Select' rokta hai (Esc).

@@ -1,5 +1,8 @@
 // ============================================================
-//  nt-posui.js  v1.11 (2026-10-08: ⚡ bzzz TEZ — Search khirki ki nigrani ALAG thread par har 60 ms (pehle POS screen ke baqi kaam ke saath
+//  nt-posui.js  v1.12 (2026-10-08: 🔎 Abdurehman PC: Search khirki POS ke ANDAR (child form) — v1.10/1.11 us ka PARENT (Sale screen) parhta
+//                   tha -> likhai "00123402" (Sale No) / "0". Ab dabba = jo KHUD 'Search Items' hai (label ho to us ka parent); us mein khana na
+//                   mile to sirf alag root khirki · NtPosUi13.dll)
+//                   · v1.11 (2026-10-08: ⚡ bzzz TEZ — Search khirki ki nigrani ALAG thread par har 60 ms (pehle POS screen ke baqi kaam ke saath
 //                   ~150-500 ms); likhai milte hi FORAN faisla (grid bharne ka 600 ms intezar khatam) · NtPosUi12.dll)
 //                   · v1.10 (2026-10-08: 🔎 search khane ki likhai Win32 se — server ki jaanch (search-check.ps1): 'Search Items' alag khirki
 //                   [WindowsForms10.Window] mil rahi thi (log: Search khirki: "" — 5 dafa) magar UIA Edit/ValuePattern KHALI deta tha. Ab khirki
@@ -32,12 +35,12 @@ function start({ dir, log, cfg, onAdd, onErr, onProc, onDown, onSrch, onSbox }) 
   if (process.platform !== 'win32' || C().posUi === false) return { active: () => false };
   const PS = path.join(dir, 'nt-posui.ps1');
   const TXT = `$ErrorActionPreference='Stop'
-$dll=Join-Path $PSScriptRoot 'NtPosUi12.dll'
+$dll=Join-Path $PSScriptRoot 'NtPosUi13.dll'
 Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes,WindowsBase
 $refs=@([System.Windows.Automation.AutomationElement].Assembly.Location,[System.Windows.Automation.ControlType].Assembly.Location,[System.Windows.Rect].Assembly.Location)
 if(!(Test-Path $dll)){ Add-Type -ReferencedAssemblies $refs -OutputAssembly $dll -TypeDefinition @"
 using System;using System.Diagnostics;using System.Threading;using System.Text;using System.Collections.Generic;using System.Runtime.InteropServices;using System.Windows.Automation;
-public class NtPosUi12{
+public class NtPosUi13{
  static void Say(string s){try{Console.Out.WriteLine(s);Console.Out.Flush();}catch{}}
  static AutomationElement FindWin(string t){
   foreach(AutomationElement w in AutomationElement.RootElement.FindAll(TreeScope.Children,Condition.TrueCondition)){
@@ -100,11 +103,14 @@ public class NtPosUi12{
   if(sH!=IntPtr.Zero&&!cur.ContainsKey(sH.ToInt64()))sH=IntPtr.Zero;   // khirki band
   if(hit!=IntPtr.Zero&&hit!=sH){ sH=hit; sAt=Environment.TickCount; sDone=false; }
   if(sH==IntPtr.Zero||sDone)return;
-  // v1.10: khirki = 'Search Items' wale dabbe ki root window (POS main window nahi — wahan Sale ka Code khana hai); andar ho to us ka parent
-  IntPtr root=GetAncestor(sH,2), boxH=(root!=IntPtr.Zero&&root!=mainH)?root:GetParent(sH);
+  // v1.12: dabba = jo KHUD 'Search Items' hai (alag khirki ho ya POS ke andar ka form); 'Search Items...' likha LABEL ho to us ka parent.
+  //   (v1.10 andar wale form ka PARENT — Sale screen — parhta tha: Sale No "00123402" / "0" aata tha.) Khana na mile to alag root khirki.
+  IntPtr root=GetAncestor(sH,2);
+  IntPtr boxH=Cls(sH).IndexOf("STATIC",StringComparison.OrdinalIgnoreCase)>=0?GetParent(sH):sH;
   string text=boxH!=IntPtr.Zero?EditText(boxH):"";
+  if(text.Length==0&&root!=IntPtr.Zero&&root!=mainH&&root!=boxH)text=EditText(root);
   AutomationElement box=null; IntPtr c=boxH!=IntPtr.Zero?boxH:sH;   // grid wala dabba (barcode 2 items par ho to pehchan) — POS main window tak nahi
-  for(int i=0;i<4&&c!=IntPtr.Zero&&c!=mainH;i++){ AutomationElement e=null; try{ e=AutomationElement.FromHandle(c); }catch{}
+  for(int i=0;i<1&&c!=IntPtr.Zero&&c!=mainH;i++){ AutomationElement e=null; try{ e=AutomationElement.FromHandle(c); }catch{}   // v1.12: sirf wohi dabba (upar Sale screen ki list / Sale No nahi)
    if(e!=null){ if(box==null)box=e; try{ if(e.FindFirst(TreeScope.Descendants,GRIDC)!=null){ box=e; break; } }catch{} }
    c=GetParent(c); }
   if(text.Length==0&&box!=null){ try{ foreach(AutomationElement ed in box.FindAll(TreeScope.Descendants,new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.Edit))){ string v=Val(ed).Trim(); if(v.Length>0){ text=v; break; } } }catch{} }   // UIA fallback
@@ -174,7 +180,7 @@ public class NtPosUi12{
 }
 "@ }
 Add-Type -Path $dll
-[NtPosUi12]::Run([string]$args[0],[string]$args[1])
+[NtPosUi13]::Run([string]$args[0],[string]$args[1])
 `;
   let child = null, gridOn = false, winOn = false, fails = 0, stopped = false, swept = false;
   // v1.5: pehle ke NT-PRINT restarts se peeche reh gaye nt-posui PowerShell band karo (sirf ek dafa, apna naya chalane se pehle)
