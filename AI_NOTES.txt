@@ -3093,3 +3093,9 @@ nahi, "Search Items" khirki kholta hai; Mithu awaz-only (chaabi nahi = barcode l
 * doctor v2.7: har 3 min manifest version — NAYA (vn bara) ho to foran cycle (update); baasi/chhota version par kuch nahi. 30 min full
   jaanch wahi. (Purana doctor v2.6 ise ek dafa 30 min mein uthayega, phir 3 min.)
 * C# check: mcs -noconfig -r:System.dll + uia/stub8.cs (ValuePattern, TreeWalker, FindFirst, NameProperty) — warning bhi error.
+
+==================== App v2.98.2 (2026-10-08) — CTN rate badle to PCS rate NAHI badalta ====================
+User (jaanch screen photo, R/CTN 5150 likha to R/PCS 435 -> 430 ho gaya): "parchoon CTN aur PCS rates mein CTN ka rate badlein to PCS ka
+na ho, wholesale mein bhi". purchase.js: main handler ppWctn / ppRctn aur jaanch ppJwc / ppJrc (pack wale) se CTN -> PCS (upR(CTN ÷ pack))
+hata diya. PCS -> CTN (round(PCS × pack)) wahi. Pack na ho magar cs ho (jaanch) wala raasta (CTN se PCS = CTN ÷ cs) wahi — wahan CTN
+hi PCS rate likhne ka tareeqa hai.
