@@ -2201,3 +2201,5 @@ html.dk #dialog[data-ef] .ef-amt input{background:var(--glass,rgba(255,255,255,.
 .gp-savebar.dirty .gp-savebtn{animation:gpPulse 1.6s ease-in-out infinite}
 @keyframes gpPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
 html.dk .gp-savebar{background:var(--glass2,#1b2a4a);border-color:var(--line,rgba(255,255,255,.14))}html.dk .gp-savebar.dirty{background:rgba(255,200,80,.14)}
+/* v2.98.3: wholesale chips 7 (3/4/5% bhi) — chhupe scroll ke bajaye agli line mein */
+.rate-chips .rc-set{flex-wrap:wrap;overflow-x:visible}

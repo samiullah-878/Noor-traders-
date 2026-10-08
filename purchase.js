@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.98.2';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.98.2';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.98.3';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.98.3';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -51,7 +51,7 @@ const todayStr = () => { const d = new Date(), p = n => String(n).padStart(2, '0
 
 const BILL_BRANCH = 1;              // purchase bill hamesha NOOR TRADERS (branch 1); godam line par
 const DRAFT_KEY = 'sam-pp-draft';
-const W_CHIPS = [1, 1.25, 1.5, 2];
+const W_CHIPS = [1, 1.25, 1.5, 2, 3, 4, 5];   // v2.98.3: 3/4/5% bhi
 
 let cloud = null, rerender = () => {}, notice = () => {}, isOwner = () => false, uidOf = () => '', nameOf = () => '';   // v2.21: nameOf (galla ke liye)
 let partiesOf = () => [], partyOf = () => null, matchesOf = () => true, canUse = () => false, rankOf = null, billIdsOf = () => [], pcBillsOf = () => [];
@@ -168,7 +168,7 @@ function recalc(l) {
   if (!pk && l.one) { if (!l.wcOwn) l.wctn = r2(l.wpcs); if (!l.rcOwn) l.rctn = r2(l.rpcs); }   // v2.4.2: 1 ctn = 1 pcs
 }
 // ---------- v2.19: NAFA CHIPS — W/CTN · W/PCS · R/CTN · R/PCS alag alag ----------
-const W_PCT = [1, 1.25, 1.5, 2], R_PCT = [5, 10, 15, 20], PCT_CHIPS = [0.5, 1, 1.5, 2, 3];
+const W_PCT = [1, 1.25, 1.5, 2, 3, 4, 5], R_PCT = [5, 10, 15, 20], PCT_CHIPS = [0.5, 1, 1.5, 2, 3];
 const modeOf = (l, side) => side === 'wp' ? l.wMode : side === 'wc' ? (l.wcMode ?? l.wMode) : side === 'rp' ? l.rMode : (l.rcMode ?? l.rMode);
 function setMode(l, side, v) {          // sirf ek taraf badle — baqi teen ki maujooda halat pehle pakki
   if (l.wcMode == null) l.wcMode = l.wMode;
@@ -649,11 +649,11 @@ document.addEventListener('input', e => {
     const l = cart[i], q = linePcs(l), amt = Number(t.value) || 0;
     if (q > 0 && amt > 0) { l.costP = r4(amt / q); recalc(l); paintRates(i); }
   }
-  // v2.96.4: PCS badlo to CTN = PCS × pack · v2.98.2: CTN badlo to PCS NAHI badalta (user: "cotton ka rate badlein to pcs ka na ho")
+  // v2.98.3: PCS aur CTN rate BILKUL ALAG — ek badlo to doosra nahi badalta (v2.96.4 ka link hata diya)
   else if ((i = d.ppWctn) != null) { const l = cart[i], pk = packOf(l); l.wctn = Number(t.value) || 0; setMode(l, 'wc', 'manual'); paintRates(i); }   // v2.98.2: CTN badle to PCS NAHI badalta (sirf PCS -> CTN)
-  else if ((i = d.ppWpcs) != null) { const l = cart[i], pk = packOf(l); l.wpcs = Number(t.value) || 0; setMode(l, 'wp', 'manual'); if (pk && l.wpcs > 0) { l.wctn = Math.round(l.wpcs * pk); setMode(l, 'wc', 'manual'); } paintRates(i); }
+  else if ((i = d.ppWpcs) != null) { const l = cart[i], pk = packOf(l); l.wpcs = Number(t.value) || 0; setMode(l, 'wp', 'manual'); paintRates(i); }   // v2.98.3: PCS badle to CTN NAHI badalta
   else if ((i = d.ppRctn) != null) { const l = cart[i], pk = packOf(l); l.rctn = Number(t.value) || 0; setMode(l, 'rc', 'manual'); paintRates(i); }   // v2.98.2: CTN badle to PCS NAHI badalta
-  else if ((i = d.ppRpcs) != null) { const l = cart[i], pk = packOf(l); l.rpcs = Number(t.value) || 0; setMode(l, 'rp', 'manual'); if (pk && l.rpcs > 0) { l.rctn = Math.round(l.rpcs * pk); setMode(l, 'rc', 'manual'); } paintRates(i); }
+  else if ((i = d.ppRpcs) != null) { const l = cart[i], pk = packOf(l); l.rpcs = Number(t.value) || 0; setMode(l, 'rp', 'manual'); paintRates(i); }   // v2.98.3: PCS badle to CTN NAHI badalta
   else if ((i = d.ppMrp) != null) { cart[i].mrp = r2(Number(t.value) || 0); paintMrp(i); }   // v2.96.3
   else if ((i = d.ppMrpc) != null) { const pk = packOf(cart[i]); cart[i].mrp = pk ? r2((Number(t.value) || 0) / pk) : r2(Number(t.value) || 0); paintMrp(i); }
   else if (d.ppXtra != null) { xtra = Math.max(0, Number(t.value) || 0); xtraApply(); cart.forEach((_, j) => paintRates(j)); }
@@ -709,9 +709,9 @@ document.addEventListener('input', e => {       // v2.4.1: Jaanch card ke khane 
   else if (d.ppJkc != null) { if (m) { l.costP = r4(v / m); recalc(l); } }
   else if (d.ppJcost != null) { l.costP = r4(v); l.kul = 0; recalc(l); }
   else if (d.ppJwc != null) { if (pk) { l.wctn = v; setMode(l, 'wc', 'manual'); } else if (cs) { l.wpcs = r2(v / cs); setMode(l, 'wp', 'manual'); } else { l.wctn = v; l.wcOwn = true; setMode(l, 'wc', 'manual'); } }   // v2.19
-  else if (d.ppJw != null) { l.wpcs = v; if (pk && v > 0) { l.wctn = Math.round(v * pk); setMode(l, 'wc', 'manual'); } if (!pk && l.one && !l.wcOwn) l.wctn = v; setMode(l, 'wp', 'manual'); }
+  else if (d.ppJw != null) { l.wpcs = v; if (!pk && l.one && !l.wcOwn) l.wctn = v; setMode(l, 'wp', 'manual'); }
   else if (d.ppJrc != null) { if (pk) { l.rctn = v; setMode(l, 'rc', 'manual'); } else if (cs) { l.rpcs = r2(v / cs); setMode(l, 'rp', 'manual'); } else { l.rctn = v; l.rcOwn = true; setMode(l, 'rc', 'manual'); } }
-  else if (d.ppJr != null) { l.rpcs = v; if (pk && v > 0) { l.rctn = Math.round(v * pk); setMode(l, 'rc', 'manual'); } if (!pk && l.one && !l.rcOwn) l.rctn = v; setMode(l, 'rp', 'manual'); }
+  else if (d.ppJr != null) { l.rpcs = v; if (!pk && l.one && !l.rcOwn) l.rctn = v; setMode(l, 'rp', 'manual'); }
   else return;
   jRepaint(); keepDraft(); refreshTotals();
 });

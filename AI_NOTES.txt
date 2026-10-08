@@ -3099,3 +3099,10 @@ User (jaanch screen photo, R/CTN 5150 likha to R/PCS 435 -> 430 ho gaya): "parch
 na ho, wholesale mein bhi". purchase.js: main handler ppWctn / ppRctn aur jaanch ppJwc / ppJrc (pack wale) se CTN -> PCS (upR(CTN ÷ pack))
 hata diya. PCS -> CTN (round(PCS × pack)) wahi. Pack na ho magar cs ho (jaanch) wala raasta (CTN se PCS = CTN ÷ cs) wahi — wahan CTN
 hi PCS rate likhne ka tareeqa hai.
+
+==================== App v2.98.3 (2026-10-08) — PCS aur CTN rate bilkul alag + wholesale chips 3/4/5% ====================
+User: "agar PCS badlein to CTN nahi, CTN badlein to PCS bhi nahi; upar ki taraf wholesale ke chips 3 4 5 percent ke bhi add kar do".
+* purchase.js: ppWpcs / ppRpcs (main) aur ppJw / ppJr (jaanch) se PCS -> CTN (round(PCS × pack)) bhi hata diya (v2.98.2 mein CTN -> PCS
+  hata tha) — ab koi link nahi. Pack na ho + l.one wala purana raasta (CTN = PCS, wcOwn/rcOwn) wahi.
+* W_PCT (har item ki Wholesale chips) aur W_CHIPS ("Wholesale nafa SAB items par" patti) = [1, 1.25, 1.5, 2, 3, 4, 5].
+* CSS .rate-chips .rc-set flex-wrap (7 chips chhupe scroll mein nahi, agli line).
