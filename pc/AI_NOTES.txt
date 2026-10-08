@@ -1803,3 +1803,9 @@ User (ilachi kg: 100 = Rs 12,500 · 11+ = tadad 0.05 = Rs 625 · ila = 0.025 = R
   WHERE ItemID AND SBSaleRate > 0 AND farq > 0.004; pr = naya piece rate (newR2) jab rctn/rpcs aaye, warna ItemBranchRate/Items SaleRate2.
   Khali rate (0) wale barcode (POS khud item rate leta) nahi chhede. Log "🏷 N sub-barcode rate".
 * Jaanch khirki mein abhi nahi (sirf bill ki main screen par khule item mein).
+
+==================== App v2.98.5 (2026-10-08) — CTN rate ke neeche "= X fi PCS" ====================
+User: "jaise hi cotton ka rate likhein to neeche woh us ko taqseem kar ke kitne ka pad raha hai woh likha ho". (PCS / CTN ab alag — v2.98.3.)
+* purchase.js perHTML(l, 'w'|'r'): pack ho aur CTN rate > 0 -> "= <b>CTN ÷ pack</b> fi PCS" + PCS khane se farq ("PCS mein 435 — 5.83
+  zyada / kam", barabar = ✓). Main screen: Wholesale / Parchoon CTN label mein small.pp-per #ppPerW{i} / #ppPerR{i}, paintRates taza karta.
+  Jaanch card (pack wale): rates grid ke neeche .jc-per #jcPer (jPerHTML: W/CTN … · R/CTN …), jRepaint taza karta. PCS khud nahi badalta.

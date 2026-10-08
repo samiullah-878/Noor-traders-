@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.98.4';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.98.4';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.98.5';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.98.5';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -538,10 +538,10 @@ export function renderPP() {
       <div class="pp-rates">
         <div class="pp-rates-hrow"><small class="pp-rates-h">Naye rates (POS mein lagenge)${l.wMode === 'old' && l.rMode === 'old' ? ' · purane nafa se' : ''}</small>${oldBtn(l, i)}</div>
         <div class="pp-rgrps"><div class="pp-rgrp"><div class="pp-rate-grid pp-g2">
-          ${pk ? `<label>Wholesale ${esc(l.cName)}<input class="${ch(r2(l.oldW * pk), l.wctn)}" type="number" min="0" step="any" inputmode="decimal" data-pp-wctn="${i}" value="${l.wctn || ''}" placeholder="${hint(Math.round(l.oldW * pk))}"><small>${hint(Math.round(l.oldW * pk))}</small></label>` : ''}
+          ${pk ? `<label>Wholesale ${esc(l.cName)}<input class="${ch(r2(l.oldW * pk), l.wctn)}" type="number" min="0" step="any" inputmode="decimal" data-pp-wctn="${i}" value="${l.wctn || ''}" placeholder="${hint(Math.round(l.oldW * pk))}"><small>${hint(Math.round(l.oldW * pk))}</small><small class="pp-per" id="ppPerW${i}">${perHTML(l, 'w')}</small></label>` : ''}
           <label>Wholesale ${esc(l.uName)}<input class="${ch(l.oldW, l.wpcs)}" type="number" min="0" step="any" inputmode="decimal" data-pp-wpcs="${i}" value="${l.wpcs || ''}"><small>${hint(l.oldW)}</small></label>
         </div>${chipRow(l, i, 'w')}</div><div class="pp-rgrp"><div class="pp-rate-grid pp-g2">
-          ${pk ? `<label>Parchoon ${esc(l.cName)}<input class="${ch(Math.round(l.oldR * pk), l.rctn)}" type="number" min="0" step="any" inputmode="decimal" data-pp-rctn="${i}" value="${l.rctn || ''}"><small>${hint(Math.round(l.oldR * pk))}</small></label>` : ''}
+          ${pk ? `<label>Parchoon ${esc(l.cName)}<input class="${ch(Math.round(l.oldR * pk), l.rctn)}" type="number" min="0" step="any" inputmode="decimal" data-pp-rctn="${i}" value="${l.rctn || ''}"><small>${hint(Math.round(l.oldR * pk))}</small><small class="pp-per" id="ppPerR${i}">${perHTML(l, 'r')}</small></label>` : ''}
           <label>Parchoon ${esc(l.uName)}<input class="${ch(pk ? l.oldR2 : l.oldR, l.rpcs)}" type="number" min="0" step="any" inputmode="decimal" data-pp-rpcs="${i}" value="${l.rpcs || ''}"><small>${hint(pk ? l.oldR2 : l.oldR)}</small></label>
         </div>${chipRow(l, i, 'r')}${sbHTML(l, i)}</div>${mrpGroupHTML(l, i)}</div>
       </div>
@@ -634,6 +634,13 @@ function refreshTotals() {
   const b = document.querySelector('[data-pp-save]'); if (b && !saving) b.textContent = saveLabel(cartTotal());
   const g = $('ppGalla'); if (g && gallaMode !== 'own') g.outerHTML = gallaHTML();   // v2.21
 }
+// v2.98.5: CTN rate likho to neeche "= X fi PCS" (CTN ÷ pack) + PCS ke khane se farq — PCS khud NAHI badalta
+function perHTML(l, g) {
+  const pk = packOf(l), c = Number(g === 'w' ? l.wctn : l.rctn) || 0; if (!pk || !(c > 0)) return '';
+  const per = r2(c / pk), pcs = Number(g === 'w' ? l.wpcs : l.rpcs) || 0, d = r2(pcs - per), u = esc(l.uName || 'PCS');
+  return `= <b>${num(per)}</b> fi ${u}${pcs > 0 ? (Math.abs(d) < 0.01 ? ' ✓' : ` · <span class="pp-per-d">${u} mein ${num(pcs)} — ${num(Math.abs(d))} ${d > 0 ? 'zyada' : 'kam'}</span>`) : ''}`;
+}
+const jPerHTML = l => [['W', perHTML(l, 'w')], ['R', perHTML(l, 'r')]].filter(x => x[1]).map(([k, h]) => `<span>${k}/${esc(l.cName || 'CTN')} ${h}</span>`).join('');
 // rates ke khane (focus kharab kiye baghair) taza karo
 function paintRates(i) {
   const l = cart[i]; if (!l) return;
@@ -644,6 +651,7 @@ function paintRates(i) {
   paintChips(i);   // v2.19: chips par nafa % bhi taza
   paintMrp(i);   // v2.96.3
   paintSb(i);   // v2.98.4
+  for (const g of ['w', 'r']) { const e = $('ppPer' + g.toUpperCase() + i); if (e) e.innerHTML = perHTML(l, g); }   // v2.98.5
 }
 
 // ---------- events ----------
@@ -1461,7 +1469,7 @@ function jCard(i) {
         ${fld('W/' + esc(ln.uName || 'PCS'), 'jw', jF(ln.wpcs), oW)}
         ${fld('R/' + esc(ln.cName || 'CTN'), 'jrc', pk ? jF(ln.rctn) : cs ? jF(ln.rpcs * cs) : jF(ln.rctn), pk ? (Number(o.oldR) || 0) * pk : cs ? oR * cs : (ln.one ? oR : 0))}
         ${fld('R/' + esc(ln.uName || 'PCS'), 'jr', jF(ln.rpcs), oR)}
-      </div>
+      </div>${pk ? `<div class="jc-per" id="jcPer">${jPerHTML(ln)}</div>` : ''}
       ${rateChipsHTML(ln, cart.indexOf(ln), 'jcRc')}
       <small class="stat-note">Stock abhi ${num(Number(it?.stock) || 0)} ${esc(ln.uName)}${!pk && cs ? ' · POS mein carton size khali — CTN sirf app mein' : ''}</small>` :
       `<div class="jc-why"><small>🔴 Humare stock mein ye item nahi mila</small></div>`}
@@ -1487,6 +1495,7 @@ function jRepaint() {                 // card ke khane dobara bharo (jo khana li
   set('jwc', pk ? jF(l.wctn) : cs ? jF(l.wpcs * cs) : jF(l.wctn)); set('jw', jF(l.wpcs));
   set('jrc', pk ? jF(l.rctn) : cs ? jF(l.rpcs * cs) : jF(l.rctn)); set('jr', jF(l.rpcs));
   const a = $('jcAmt'); if (a) a.textContent = num(lineTotal(l));
+  const jp = $('jcPer'); if (jp) jp.innerHTML = jPerHTML(l);   // v2.98.5
   const mm = $('jcMilan'), tt = aiNum(r.ai).total; if (mm && tt) mm.innerHTML = jMilanHTML(l, tt);
   paintChips(cart.indexOf(l));   // v2.19
 }
