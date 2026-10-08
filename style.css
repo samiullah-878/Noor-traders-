@@ -2190,3 +2190,14 @@ html.dk #dialog[data-ef] .ef-amt input{background:var(--glass,rgba(255,255,255,.
 #dialog .ef-amt input{-moz-appearance:textfield}
 /* v2.98.0: 📒 khate mein POS purchase ka "🧾 Bill dekhein" chip */
 .ledger-item button.kbill{background:linear-gradient(135deg,#3a2c8f,#6a4fd8)!important;color:#fff!important;font-weight:800;border-radius:999px}
+/* v2.98.1: 💾 phera page — Save bar (khana khud save nahi) */
+.gp-savebar{position:sticky;bottom:-12px;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:12px 0 0;padding:10px 12px;border-radius:16px;background:#fff;border:1px solid #dfe5f0;box-shadow:0 -6px 20px rgba(16,28,53,.12)}
+.gp-savebar.dirty{background:#fff7e6;border-color:#f3c46b}
+.gp-unsaved{font-weight:800;color:#9a5300;font-size:13px}.gp-saved{font-weight:700;color:#0f7a44;font-size:13px}
+.gp-sbtns{display:flex;gap:8px;align-items:center;margin-left:auto}
+#dialog .gp-savebar .gp-savebtn{min-height:48px;padding:10px 24px;border-radius:14px;font-weight:900;font-size:16px;color:#fff!important;background:linear-gradient(135deg,#0d6b3e,#1fb866)!important;box-shadow:0 6px 16px rgba(15,122,68,.3)}
+#dialog .gp-savebar .gp-savebtn.off{background:#e9eef6!important;color:#7a879e!important;box-shadow:none}
+#dialog .gp-savebar .gp-undo{min-height:40px;padding:8px 12px;border-radius:12px;font-weight:700;font-size:13px;background:#fff!important;border:1px solid #e3c9a0!important;color:#7a4a00!important}
+.gp-savebar.dirty .gp-savebtn{animation:gpPulse 1.6s ease-in-out infinite}
+@keyframes gpPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+html.dk .gp-savebar{background:var(--glass2,#1b2a4a);border-color:var(--line,rgba(255,255,255,.14))}html.dk .gp-savebar.dirty{background:rgba(255,200,80,.14)}

@@ -1,4 +1,7 @@
 // gaari.js — 🚚 GAARI KA HISAAB v3 (v2.94, 2026-10-06) — sab kuch "PHERA" ke gird
+// v2.98.1 (2026-10-08): ⛽ km ka WAQT — phere ke km jab save hon (kmLog [{at, km}]) usi waqt tanki se diesel katta (edit se kam/zyada);
+//   phere ke andar ki diesel (tanki full) phere ke SHURU mein (us phere ke km nayi tanki se); purane din ka edit usi din mein (clamp).
+//   💾 Phera page: Save button — khana khud save nahi; bina save band = poochta; naya phera Save par hi banta.
 // v2.97.1 (2026-10-07): 🧾 EXTRA KHARCHA — phere se bahar (tyre, repair, token…) kind 'kharch' {extra:true, cat, amount, note, driver}.
 //   Yaad wale sab kharchon ke chips (aakhri raqam bhi). Mahine ka NAFA = bachat − fixed − tanki farq − EXTRA − qist; agle mahine 0 se.
 //   Mobil change (oil:true) bhi ab extra mein (phera-wise kharchon mein nahi). driver:true = driver ki jeb se → driver ke khate mein − (lena kam).
@@ -18,7 +21,7 @@
 // phera cards. Purani alag entries (bilty/diesel/kharch/reading/tracker/driver — v2.92) bhi jor mein rehti hain.
 // Data: businesses/noor-traders/gaari/{id} kind 'phera' {date, startR, endR, trackerKm, bilties[{id,from,to,party,kiraya,comm,col}],
 //   kharche[{n,a}], diesel[{l,rate,amount,full}], status open|closed, note, by, byName, at, trackerTrips[{t,km,cut}] (v2.95.8)} + gaari/_config.
-import { smartHit } from './smart-search.js?v=2.98.0';   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.98.1';   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (v, d = 0) => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: d });
@@ -33,7 +36,7 @@ const uid6 = () => Math.random().toString(36).slice(2, 8);
 
 let cloud = null, notice = () => {}, isOwner = () => false, byName = () => '', uidOf = () => '', modal = null, closeModal = () => {}, ai = null, pdf = null, shrink = null;
 let un = null, rows = [], cfg = { avg: 5.5, commType: 'pct', commVal: 10, driver: '', no: 'GJL640630' }, month = today().slice(0, 7), day = '', mounted = false, err = '';
-let cur = null, curTimer = null;   // khula phera page (local copy)
+let cur = null, curTimer = null, curDirty = false, curNew = false;   // khula phera page (local copy) · v2.98.1: Save button (dirty / naya)
 
 export function gaariSetup(o) {
   cloud = o.cloud; notice = o.notice || notice; isOwner = o.owner || isOwner; byName = o.byName || byName; uidOf = o.uid || uidOf;
@@ -65,10 +68,26 @@ const tankCap = () => N(cfg.tankL) || 76;
 const oilEvery = () => N(cfg.oilKm) || 5000;
 const pKey = r => `${r.date || ''}|${String(Math.round(N(r.at))).padStart(15, '0')}`;
 const keyAt = k => Number(String(k).split('|')[1]) || 0;
+// v2.98.1: phere ke waqt ko us ke din ke andar rakho (purane din ka edit aaj ki tanki mein na aaye)
+const dayEdge = d => { const [y, m, dd] = String(d || '').split('-').map(Number); if (!y) return null; return { s: new Date(y, m - 1, dd).getTime(), e: new Date(y, m - 1, dd, 23, 59, 59, 999).getTime() }; };
+const evKey = (date, at, tail = '') => { const b = dayEdge(date), t = b ? Math.min(b.e, Math.max(b.s, N(at) || b.s)) : N(at); return `${date || ''}|${String(Math.round(t)).padStart(15, '0')}${tail}`; };
+function kmEvents(p, c = pc(p)) {   // phere ke km — kab kitne save hue (purane phere: aakhri save par poore)
+  const km = N(c.km), L = Array.isArray(p.kmLog) ? p.kmLog.filter(x => x && N(x.at)) : [], ev = []; let prev = 0;
+  for (const x of L) { const d = N(x.km) - prev; if (Math.abs(d) > 1e-6) ev.push({ key: evKey(p.date, x.at, '|k'), km: d }); prev = N(x.km); }
+  if (Math.abs(km - prev) > 1e-6) ev.push({ key: evKey(p.date, N(p.updatedAt) || N(p.at), '|k'), km: km - prev });
+  return ev;
+}
+function withKmLog(next, prev) {   // Save par: km badle to {at, km} jor (purane phere ka pehla nishan bhi)
+  const now = Date.now(), kmNew = r2(pc(next).km); let L = Array.isArray(next.kmLog) ? next.kmLog.filter(x => x && N(x.at)).slice() : [];
+  if (!L.length && prev) { const k0 = r2(pc(prev).km); if (k0) L.push({ at: now, km: k0 }); }
+  const last = L.length ? N(L[L.length - 1].km) : 0;
+  if (Math.abs(kmNew - last) > 0.001) L.push({ at: now, km: kmNew });
+  next.kmLog = L.slice(-40);
+}
 const dmy = d => { d = String(d || ''); return d.slice(8, 10) + ' ' + (MONTHS[Number(d.slice(5, 7)) - 1] || ''); };
 function fills() {   // har diesel dalwana: phere ki diesel lines + alag 'diesel' docs (tanki full / thora)
   const F = [];
-  for (const p of pheras()) (p.diesel || []).forEach((d, i) => { if (N(d.l) || N(d.amount)) F.push({ key: pKey(p) + '|z' + String(i).padStart(3, '0'), date: p.date, l: N(d.l), rate: N(d.rate) || (N(d.l) ? r2(N(d.amount) / N(d.l)) : 0), rs: N(d.amount), full: !!d.full, src: 'phera', pid: p.id, i, marked: d.marked, mAvg: N(d.mAvg) }); });
+  for (const p of pheras()) (p.diesel || []).forEach((d, i) => { if (N(d.l) || N(d.amount)) F.push({ key: evKey(p.date, p.at, '|a' + String(i).padStart(3, '0')) /* v2.98.1: phere ke SHURU mein */, date: p.date, l: N(d.l), rate: N(d.rate) || (N(d.l) ? r2(N(d.amount) / N(d.l)) : 0), rs: N(d.amount), full: !!d.full, src: 'phera', pid: p.id, i, marked: d.marked, mAvg: N(d.mAvg) }); });
   for (const r of rows) if (r.kind === 'diesel' && (N(r.litre) || N(r.amount))) F.push({ key: pKey(r), date: r.date, l: N(r.litre), rate: N(r.rate) || (N(r.litre) ? r2(N(r.amount) / N(r.litre)) : 0), rs: N(r.amount), full: !!r.full, src: 'doc', id: r.id, odo: N(r.odo), marked: r.marked, mAvg: N(r.mAvg), note: r.note || '' });
   return F.sort((a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0);
 }
@@ -87,24 +106,25 @@ function avgFor(key) {   // cfg.avgHist [{at, avg}] — "farq mark" / setting se
   return a || avgOf();
 }
 const avgHistWith = (at, avg) => { const H = (Array.isArray(cfg.avgHist) && cfg.avgHist.length ? cfg.avgHist : [{ at: 0, avg: avgOf() }]).filter(h => N(h.at) !== at); H.push({ at, avg }); return H.sort((a, b) => N(a.at) - N(b.at)).slice(-60); };
-function tankCycles() {   // tanki full se tanki full
-  const F = fills(), P = pheras().map(p => ({ p, key: pKey(p), c: pc(p) }));
+function tankCycles() {   // tanki full se tanki full — v2.98.1: har phere ke km apne save-waqt (kmEvents) se cycle mein
+  const F = fills(), P = pheras().map(p => { const c = pc(p); return { p, key: pKey(p), c, ev: kmEvents(p, c), lpk: c.km ? c.shouldL / c.km : 0, rpk: c.km ? c.shouldRs / c.km : 0 }; });
   const fi = []; F.forEach((f, i) => { if (f.full) fi.push(i); });
   const sum = (L, f) => L.reduce((t, x) => t + f(x), 0), cyc = [];
+  const part = (a, b) => P.map(x => { const km = x.ev.filter(e => (a == null || e.key > a) && (b == null || e.key < b)).reduce((t, e) => t + e.km, 0); return Math.abs(km) > 1e-6 ? { ...x, km, L: km * x.lpk, Rs: km * x.rpk } : null; }).filter(Boolean);
   for (let k = 0; k < fi.length; k++) {
     const s0 = F[fi[k]], e = k + 1 < fi.length ? F[fi[k + 1]] : null;
-    const inP = P.filter(x => x.key > s0.key && (!e || x.key < e.key));
+    const inP = part(s0.key, e ? e.key : null);
     const tops = F.filter((f, i) => !f.full && i > fi[k] && (!e || i < fi[k + 1]));
-    const o = { start: s0, end: e, pheras: inP, km: sum(inP, x => x.c.km), farziL: sum(inP, x => x.c.shouldL), farziRs: sum(inP, x => x.c.shouldRs), topL: sum(tops, f => f.l), topRs: sum(tops, f => f.rs) };
+    const o = { start: s0, end: e, pheras: inP, km: sum(inP, x => x.km), farziL: sum(inP, x => x.L), farziRs: sum(inP, x => x.Rs), topL: sum(tops, f => f.l), topRs: sum(tops, f => f.rs) };
     if (e) { o.actL = o.topL + e.l; o.actRs = o.topRs + e.rs; o.farqL = o.actL - o.farziL; o.farq = o.actRs - o.farziRs; o.avg = o.actL ? o.km / o.actL : 0; }
     cyc.push(o);
   }
   const first = fi.length ? F[fi[0]] : null;
-  return { F, cyc, first, before: P.filter(x => !first || x.key < first.key), open: cyc.length && !cyc[cyc.length - 1].end ? cyc[cyc.length - 1] : null };
+  return { F, cyc, first, before: first ? part(null, first.key) : P, open: cyc.length && !cyc[cyc.length - 1].end ? cyc[cyc.length - 1] : null };
 }
 function tankNow(T = tankCycles()) {
   const o = T.open; if (!o) return null;
-  const cap = tankCap(), used = Math.max(0, o.farziL - o.topL), left = Math.max(0, Math.min(cap, cap - used));
+  const cap = tankCap(), used = Math.max(0, o.farziL - o.topL), left = Math.max(0, Math.min(cap, cap - used));   // thora diesel full tanki ko cap se upar nahi le jata
   return { ...o, cap, used, left, pct: cap ? left / cap : 0, needL: used, needRs: used * curRate() };
 }
 function odoNow() {   // aakhri meter reading + us ke baad ke km (Falcon)
@@ -304,25 +324,43 @@ function tankCard() {
 function newPhera() {
   const date = day || today();
   const p = { kind: 'phera', date, startR: lastEnd() || 0, endR: 0, trackerKm: 0, bilties: [{ id: uid6(), from: '', to: '', party: '', kiraya: 0, col: false }], kharche: [], diesel: [], status: 'open', note: '', by: uidOf(), byName: byName() || '', at: Date.now() };
-  const id = cloud.newGaariId(); p.id = id;
-  rows.push(p);   // foran screen par (Firestore peeche)
-  cloud.putGaari(id, p).catch(e => notice('❌ Phera save nahi hua: ' + (e?.message || e)));
-  openPhera(id);
+  const id = cloud.newGaariId();
+  openPhera(id, p);   // v2.98.1: abhi sirf screen par — 💾 Save dabane par hi banega
 }
 function canEdit(p) { return isOwner() || p.status !== 'closed'; }
-function save(fields) {
-  if (!cur) return; Object.assign(cur, fields); cur.updatedAt = Date.now();
-  const id = cur.id, data = { ...cur }; delete data.id;
-  const r = rows.find(x => x.id === id); if (r) Object.assign(r, data);
-  clearTimeout(curTimer); curTimer = setTimeout(() => cloud.putGaari(id, data).catch(e => notice('❌ Save nahi hua: ' + (e?.message || e))), 500);
+function save(fields) {   // v2.98.1: sirf screen par (dirty) — cloud par 💾 Save se
+  if (!cur) return; Object.assign(cur, fields); curDirty = true; paintSaveBar();
 }
-function openPhera(id) {
-  const p = rows.find(r => r.id === id); if (!p) return;
-  cur = JSON.parse(JSON.stringify(p)); cur.id = id;
-  modal(`🚚 Phera · ${cur.date.slice(8)} ${MONTHS[Number(cur.date.slice(5, 7)) - 1]}`, `<div id="gpPage" class="gp-page"></div>`, true);
-  drawPhera();
+function commitPhera(msg) {   // 💾 Save — rows + Firestore; km badle to kmLog (tanki usi waqt se)
+  if (!cur) return false;
+  const id = cur.id, prev = rows.find(x => x.id === id) || null;
+  const data = JSON.parse(JSON.stringify(cur)); delete data.id; data.updatedAt = Date.now(); withKmLog(data, prev);
+  if (prev) { for (const k of Object.keys(prev)) if (k !== 'id' && !(k in data)) delete prev[k]; Object.assign(prev, data); } else rows.push({ ...data, id });
+  cur.updatedAt = data.updatedAt; cur.kmLog = data.kmLog;
+  cloud.putGaari(id, data).catch(e => notice('❌ Phera save nahi hua: ' + (e?.message || e)));
+  curDirty = false; curNew = false; paintSaveBar(); if (msg !== false) notice(msg || '💾 Phera save ho gaya');
+  return true;
+}
+function paintSaveBar() {
+  const b = $('gpSave'); if (!b || !cur) return; const need = curDirty || curNew;
+  b.classList.toggle('dirty', need);
+  b.innerHTML = need ? `<span class="gp-unsaved">● ${curNew ? 'Naya phera — abhi save nahi hua' : 'Tabdeeli save nahi hui'}</span><div class="gp-sbtns">${curDirty && !curNew ? '<button type="button" class="gp-undo" data-gp-undo="1">↩ Chhor dein</button>' : ''}<button type="button" class="gp-savebtn" data-gp-save="1">💾 Save</button></div>`
+    : `<span class="gp-saved">✓ Sab save hai</span><button type="button" class="gp-savebtn off" data-gp-save="1">💾 Save</button>`;
+}
+function openPhera(id, fresh = null) {
+  const p = fresh || rows.find(r => r.id === id); if (!p) return;
+  cur = JSON.parse(JSON.stringify(p)); cur.id = id; curDirty = false; curNew = !!fresh;
+  modal(`🚚 Phera · ${cur.date.slice(8)} ${MONTHS[Number(cur.date.slice(5, 7)) - 1]}`, `<div id="gpPage" class="gp-page"></div><div id="gpSave" class="gp-savebar"></div>`, true);
+  drawPhera(); paintSaveBar();
+  $('gpSave').onclick = e => {
+    if (e.target.closest('[data-gp-save]')) { if (!curDirty && !curNew) { notice('✓ Sab pehle se save hai'); return; } commitPhera(); drawPhera(); return; }
+    if (e.target.closest('[data-gp-undo]') && cur) { if (!confirm('Is dafa ki saari tabdeeli chhor dein? (purana save wala phera wapas)')) return;
+      const r = rows.find(x => x.id === cur.id); if (r) { cur = JSON.parse(JSON.stringify(r)); cur.id = r.id; } curDirty = false; drawPhera(); paintSaveBar(); notice('↩ Tabdeeli chhor di'); }
+  };
   const dlg = $('dialog');
-  const onClose = () => { dlg?.removeEventListener('close', onClose); if (curTimer) { clearTimeout(curTimer); const data = { ...cur }; delete data.id; cloud.putGaari(cur.id, data).catch(() => {}); } cur = null; if (mounted) paint(); };
+  const onClose = () => { dlg?.removeEventListener('close', onClose);
+    if (cur && curDirty && canEdit(cur)) { if (confirm('⚠️ Phere mein tabdeeli SAVE nahi hui.\n\nOK = 💾 Save karein\nCancel = Chhor dein (purana hi rahega)')) commitPhera(); else notice(curNew ? 'Naya phera nahi bana — save nahi kiya' : '↩ Tabdeeli chhor di — purana phera wahi'); }
+    cur = null; curDirty = false; curNew = false; if (mounted) paint(); };
   dlg?.addEventListener('close', onClose);
 }
 // v2.96.5: tasveer — 📷 Camera YA 🖼 Gallery (pehle sirf camera khulta tha)
@@ -408,15 +446,15 @@ function wirePhera(box) {
     const st = e.target.closest('[data-gst]'); if (st && cur) {
       if (st.dataset.gst === 'closed' && !N(cur.endR) && !N(cur.trackerKm) && !confirm('Aakhri meter reading abhi nahi likhi — phir bhi band karein?')) return;
       // v2.96: band karte waqt diesel rate + average jama (baad mein badlein to purana phera na badle); kholne par phir live
-      save(st.dataset.gst === 'closed' ? { status: 'closed', dRate: rateFor(pKey(cur)), dAvg: avgFor(pKey(cur)) } : { status: 'open', dRate: 0, dAvg: 0 }); drawPhera(); notice(st.dataset.gst === 'closed' ? '✅ Phera band' : '🔓 Phera khul gaya'); return; }
+      save(st.dataset.gst === 'closed' ? { status: 'closed', dRate: rateFor(pKey(cur)), dAvg: avgFor(pKey(cur)) } : { status: 'open', dRate: 0, dAvg: 0 }); commitPhera(st.dataset.gst === 'closed' ? '✅ Phera band + 💾 save' : '🔓 Phera khul gaya + 💾 save'); drawPhera(); return; }
     if (e.target.closest('[data-gp-settle]') && cur && isOwner()) { const c = pc(cur);
       if (!confirm(`Driver se ${rs(c.lena)} le liye?\n(sab biltiyan "le liya" ho jayengi, commission ${rs(c.comm)} driver ne rakh li)`)) return;
       (cur.bilties || []).forEach(b => { if (!b.col) { b.col = true; b.colAt = Date.now(); } });
-      save({ bilties: cur.bilties, settled: { at: Date.now(), amount: Math.round(c.lena), comm: Math.round(c.comm), by: uidOf() } }); drawPhera(); notice('✅ ' + rs(c.lena) + ' le liye'); return; }
-    if (e.target.closest('[data-gp-get]') && cur && isOwner()) { closeModal(); setTimeout(openDriverGet, 30); return; }
-    if (e.target.closest('[data-gp-unsettle]') && cur && isOwner()) { if (!confirm('Hisaab wapas kholein?')) return; save({ settled: null }); drawPhera(); return; }
+      save({ bilties: cur.bilties, settled: { at: Date.now(), amount: Math.round(c.lena), comm: Math.round(c.comm), by: uidOf() } }); commitPhera('✅ ' + rs(c.lena) + ' le liye + 💾 save'); drawPhera(); return; }
+    if (e.target.closest('[data-gp-get]') && cur && isOwner()) { if (curDirty || curNew) commitPhera(false); closeModal(); setTimeout(openDriverGet, 30); return; }   // pehle phera save
+    if (e.target.closest('[data-gp-unsettle]') && cur && isOwner()) { if (!confirm('Hisaab wapas kholein?')) return; save({ settled: null }); commitPhera('↩ Hisaab khula + 💾 save'); drawPhera(); return; }
     if (e.target.closest('[data-gt-open]')) { closeModal(); setTimeout(openTank, 30); return; }
-    if (e.target.closest('[data-gp-del]') && cur) { if (!confirm('Poora phera (sab biltiyan, kharche, diesel) hata dein?')) return; const id = cur.id; clearTimeout(curTimer); curTimer = null; rows = rows.filter(r => r.id !== id); cloud.delGaari(id).catch(er => notice('Nahi hua: ' + (er?.message || er))); closeModal(); notice('Phera hata diya'); }
+    if (e.target.closest('[data-gp-del]') && cur) { if (!confirm('Poora phera (sab biltiyan, kharche, diesel) hata dein?')) return; const id = cur.id, wasNew = curNew; curDirty = false; curNew = false; rows = rows.filter(r => r.id !== id); if (wasNew) { closeModal(); return; } cloud.delGaari(id).catch(er => notice('Nahi hua: ' + (er?.message || er))); closeModal(); notice('Phera hata diya'); }
   };
   const q = box.querySelector('.gk-q');
   if (q) { q.addEventListener('input', () => { box.querySelector('.gk-chips').innerHTML = kChips(q.value.trim()); }); q.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addK(q.value); } }); }

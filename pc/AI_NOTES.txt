@@ -1738,3 +1738,24 @@ notes, har jagah). (3) khate ki POS purchase entry se purchase tab mein bill dek
   v2.96.5 comments badal diye the — wapas theek).
 * Test: Chromium local-mode (recovery data) — Payment / Wasooli / Saman / Transfer / Purchase / Kharcha / Sale forms, save, card ⌄,
   smart search "cemnt ahsn", "walid" (Waleed), "2586".
+
+==================== App v2.98.1 (2026-10-08) — ⛽ tanki km ke WAQT se + 💾 phera page Save button ====================
+User: "Tanki mein diesel ho aur phere mein km add hon ya edit hon to tanki mein utna diesel kam hona chahiye" (screenshot: 7 Oct phera
+118 km, tanki 100% "Full ke baad 0 phera") + "phera wali screen par Save button — Save dabaya to save ho warna na ho".
+Wajah: pehle phera us ke BANNE ke waqt (pKey = date|at) par ginta tha; tanki full baad mein likhi to phere ke km "full se pehle";
+aur phere ki apni diesel line (tanki full) phere ke AAKHIR mein (pKey|z) — us phere ke km purani tanki mein.
+* gaari.js: evKey(date, at, tail) — waqt ko phere ke DIN ke andar clamp (purane din ka edit aaj ki tanki mein nahi).
+  kmEvents(p): p.kmLog [{at, km}] (har Save par jab km badle) -> delta events '|k'; log na ho (purane) to poore km p.updatedAt (warna at)
+  par; log ke baad km badla (purani app) to farq updatedAt par. withKmLog(next, prev) Save par: purane phere ka pehla nishan {now, km}
+  (is liye "ek dafa Save" = km ab ki tanki mein), phir km badle to {now, km}; aakhri 40.
+  fills(): phere ki diesel lines ab evKey(p.date, p.at, '|a…') = phere ke SHURU mein ('a' < 'k').
+  tankCycles(): har cycle mein part(a, b) = har phere ke km events (a < key < b) ka jor — phera do tankiyon mein bat sakta; km kam (−)
+  ho to farzi wapas. o.pheras = [{p, c, km, L, Rs}], km/farziL/farziRs inhi se; before = pehli full se pehle ke hisse.
+* 💾 Phera page: save(fields) ab sirf cur (curDirty) + paintSaveBar; commitPhera(msg) = rows + putGaari + kmLog. #gpSave sticky bar:
+  "● Tabdeeli save nahi hui" + ↩ Chhor dein + 💾 Save (dirty = narangi + pulse) / "✓ Sab save hai". newPhera() = openPhera(id, fresh)
+  (curNew — rows/Firestore mein Save par hi). Band (dialog close) par dirty -> confirm OK = Save, Cancel = chhor do (naya = nahi bana).
+  ✅ band / 🔓 khol / settle / ↩ unsettle = khud commit; 💵 Driver se paisa liya = pehle commit; 🗑 naya (unsaved) = sirf band.
+* CSS .gp-savebar / .gp-savebtn / .gp-undo (dk theme bhi).
+* Test (happy-dom): purana phera 9 baje edit > full 8 baje = full ke baad; naya phera bina save = nahi bana; Save = kmLog [50];
+  100 -> 60 km edit = tanki 22 L (pehle 30); band par OK = save; phere ki apni full = us ke km nayi tanki se.
+* NOTE: `node --check file.js` ES module galti nahi pakarta — `node --input-type=module --check < file.js` chalao.
