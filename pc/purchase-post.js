@@ -1,5 +1,7 @@
 // =========================================================
 //  purchase-post.js  v4  (2026-09-22) — Blue Khata app ki "🧾 POS Purchase" -> POS PURCHASE BILL
+//  v4.2 (2026-10-08): 🏷 FARZI SUB-BARCODE — line par sbl:1 (app 'rate saath ✓') ho to us item ke apne-rate wale sub-barcode
+//      (SBSaleRate > 0, jaise 11+ = 0.05 kg = Rs 625) ka rate = ROUND(SBItemQty × naya PIECE rate, 2). Khali rate wale (0) nahi chhedte.
 //  v4.1 (2026-09-23): BILLS_FLAG / pokeBills ko DIR aur log ke BAAD kiya — v4 chalte hi gir jati thi.
 //  App Firestore "appPurchases" mein status "new" likhti hai:
 //    { partyId, partyName, date, branch:1, godam, invoiceNo, note,
@@ -316,6 +318,11 @@ async function applyRates(lines, jobId) {
       const doR = (rctn > 0 || rpcs > 0) && (diff(br.SaleRate, newR) || diff(br.SaleRate2, newR2));
       const doW = (wctn > 0 || wpcs > 0) && (diff(br.SaleRate3, newW) || diff(br.SaleRateSize, newWS));
       const doC = costP > 0 && diff(br.PurchaseRate, costP);
+      // v4.2: 🏷 farzi sub-barcode — rate badla ho ya na badla ho (purana baasi rate bhi theek), sirf app ne sbl bheja ho
+      if (l.sbl) { const pr = (rctn > 0 || rpcs > 0) ? newR2 : r2(Number(br.SaleRate2) || Number(cur.SaleRate2) || 0);
+        if (pr > 0) { const u = await new sql.Request(tx).input('i', sql.Int, l.ItemID).input('p', sql.Float, pr)
+            .query('UPDATE dbo.ItemSubCode SET SBSaleRate = ROUND(SBItemQty * @p, 2) WHERE ItemID = @i AND SBSaleRate > 0 AND ABS(SBSaleRate - ROUND(SBItemQty * @p, 2)) > 0.004');
+          const n = (u.rowsAffected || [])[0] || 0; if (n) log(`  🏷 ${n} sub-barcode rate: ${String(cur.ItemName || '').trim()} = tadad × ${pr}`); } }
       if (!doR && !doW && !doC) continue;
       const itemCost = r2(doC ? (costIsCarton(cur.PurchaseRate, pack, Number(cur.SaleRate) || newR) ? costP * pack : costP) : 0);
       let note = `\r\n>>Modified via Blue Khata POS Purchase On:${new Date().toLocaleString()} (job ${jobId})`;

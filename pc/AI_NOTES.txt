@@ -1791,3 +1791,15 @@ User: "agar PCS badlein to CTN nahi, CTN badlein to PCS bhi nahi; upar ki taraf 
   hata tha) — ab koi link nahi. Pack na ho + l.one wala purana raasta (CTN = PCS, wcOwn/rcOwn) wahi.
 * W_PCT (har item ki Wholesale chips) aur W_CHIPS ("Wholesale nafa SAB items par" patti) = [1, 1.25, 1.5, 2, 3, 4, 5].
 * CSS .rate-chips .rc-set flex-wrap (7 chips chhupe scroll mein nahi, agli line).
+
+==================== App v2.98.4 + purchase-post v4.2 (manifest 2026-10-08.2) — 🏷 farzi sub-barcode ka rate kg / PCS rate ke saath ====================
+User (ilachi kg: 100 = Rs 12,500 · 11+ = tadad 0.05 = Rs 625 · ila = 0.025 = Rs 312.5): "farzi sub barcode ka rate kg ke saath aaye,
+11+ ka jawab 625 hai, us ko bhi yahan connect karwa do; har item ke liye chip — show barcode with rates or not".
+* purchase.js: subsOf(l) = stock item ka sb (sync-stock v9: {id, b, q, r, s}) jin ka APNA rate (r > 0). sblOf(l) = l.sbl, warna itemRates
+  ki yaad .sl !== 0 (shuru mein ✓). sbHTML: Parchoon group mein chipRow ke neeche "🏷 N barcode · rate saath ✓/✕" (data-pp-sbl) —
+  ✓ par list: code · tadad uName · Rs purana → Rs naya (= r2(tadad × l.rpcs), badla ho to hara); ✕ = list chhupi. paintRates -> paintSb.
+  save(): line par sbl:1 (✓ aur subs hon). Rates yaad (saveRates) mein sl 1/0; cloud.setItemRates sl ko bhi rakhta hai.
+* pc/purchase-post.js v4.2 applyRates: l.sbl ho to (rate badla ho ya nahi) UPDATE dbo.ItemSubCode SET SBSaleRate = ROUND(SBItemQty × pr, 2)
+  WHERE ItemID AND SBSaleRate > 0 AND farq > 0.004; pr = naya piece rate (newR2) jab rctn/rpcs aaye, warna ItemBranchRate/Items SaleRate2.
+  Khali rate (0) wale barcode (POS khud item rate leta) nahi chhede. Log "🏷 N sub-barcode rate".
+* Jaanch khirki mein abhi nahi (sirf bill ki main screen par khule item mein).

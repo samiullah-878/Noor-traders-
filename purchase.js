@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.98.3';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.98.3';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.98.4';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.98.4';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -543,7 +543,7 @@ export function renderPP() {
         </div>${chipRow(l, i, 'w')}</div><div class="pp-rgrp"><div class="pp-rate-grid pp-g2">
           ${pk ? `<label>Parchoon ${esc(l.cName)}<input class="${ch(Math.round(l.oldR * pk), l.rctn)}" type="number" min="0" step="any" inputmode="decimal" data-pp-rctn="${i}" value="${l.rctn || ''}"><small>${hint(Math.round(l.oldR * pk))}</small></label>` : ''}
           <label>Parchoon ${esc(l.uName)}<input class="${ch(pk ? l.oldR2 : l.oldR, l.rpcs)}" type="number" min="0" step="any" inputmode="decimal" data-pp-rpcs="${i}" value="${l.rpcs || ''}"><small>${hint(pk ? l.oldR2 : l.oldR)}</small></label>
-        </div>${chipRow(l, i, 'r')}</div>${mrpGroupHTML(l, i)}</div>
+        </div>${chipRow(l, i, 'r')}${sbHTML(l, i)}</div>${mrpGroupHTML(l, i)}</div>
       </div>
     </div>`;
   }).join('');
@@ -596,6 +596,18 @@ function mrpHint(l) {
   if (v && rp) { const d = r2(v - rp); parts.push(d >= 0 ? `parchoon retail se ${num(d)} kam` : `<b class="dn">⚠ parchoon retail se ${num(-d)} zyada</b>`); }
   return parts.join(' · ') || 'Company ki likhi retail (ikhtiyari) — agli dafa yaad rahegi';
 }
+// v2.98.4: 🏷 FARZI SUB-BARCODE (apna rate — jaise ilachi 11+ = 0.05 kg = Rs 625) kg / PCS ke naye PARCHOON rate ke saath.
+// "rate saath ✓" = POS bill bhejte waqt PC (purchase-post v4.2) in ka rate = tadad × naya piece rate; ✕ = chhupe, nahi badlenge (yaad: itemRates.sl).
+function subsOf(l) { try { const it = (stock().items || []).find(r => String(r.id) === String(l.id)); return Array.isArray(it?.sb) ? it.sb.filter(x => x && String(x.b || '').trim() && Number(x.r) > 0) : []; } catch { return []; } }
+const sblOf = l => l.sbl != null ? !!l.sbl : (memOf(l.id) || {}).sl !== 0;
+function sbHTML(l, i) {
+  const S = subsOf(l); if (!S.length) return '';
+  const on = sblOf(l), rp = Number(l.rpcs) || 0;
+  const rows = on ? S.map(x => { const q = Number(x.q) || 1, old = r2(Number(x.r)), nw = rp ? r2(q * rp) : old, ch = Math.abs(nw - old) > 0.004;
+    return `<div class="pp-sb-row${ch ? ' ch' : ''}"><b>${esc(String(x.b).trim())}</b><small>${num(q)} ${esc(l.uName || 'Pcs')}</small><span>Rs ${num(old)}${ch ? ` → <b>Rs ${num(nw)}</b>` : ' ✓'}</span></div>`; }).join('') : '';
+  return `<div class="pp-sb" id="ppSb${i}"><button type="button" class="pp-sb-chip${on ? ' on' : ''}" data-pp-sbl="${i}">🏷 ${S.length} barcode · rate saath ${on ? '✓' : '✕'}</button>${rows ? `<div class="pp-sb-list">${rows}<small>Naya = tadad × parchoon ${esc(l.uName || 'Pcs')} rate · POS bill bhejte hi lagega</small></div>` : ''}</div>`;
+}
+function paintSb(i) { const l = cart[i], b = $('ppSb' + i); if (l && b) b.outerHTML = sbHTML(l, i); }
 function mrpGroupHTML(l, i) {
   const pk = packOf(l), v = mrpOf(l);
   return `<div class="pp-rgrp pp-mrp"><div class="pp-rate-grid pp-g2">
@@ -631,6 +643,7 @@ function paintRates(i) {
   }
   paintChips(i);   // v2.19: chips par nafa % bhi taza
   paintMrp(i);   // v2.96.3
+  paintSb(i);   // v2.98.4
 }
 
 // ---------- events ----------
@@ -738,6 +751,8 @@ document.addEventListener('click', async e => {
     if ($('jcCard')) jRepaint(); else rerender();
     return;
   }
+  const sbt = e.target.closest?.('[data-pp-sbl]');   // v2.98.4: 🏷 barcode rate saath ✓ / ✕
+  if (sbt) { const ix = Number(sbt.dataset.ppSbl), l = cart[ix]; if (!l) return; l.sbl = !sblOf(l); keepDraft(); paintSb(ix); return; }
   const ro = e.target.closest?.('[data-pp-rold]');
   if (ro) { const ix = Number(ro.dataset.ppRold), l = cart[ix]; if (!l) return; allModes(l, 'old'); recalc(l); keepDraft(); paintRates(ix); refreshTotals(); if ($('jcCard')) jRepaint(); else rerender(); notice('↺ Purana nafa'); return; }
   const gl = e.target.closest?.('[data-pp-gl]');   // v2.21: galla se cash
@@ -1810,7 +1825,7 @@ async function save() {
     if (!(Number(l.costP) > 0)) noCost.push(l.name);
     lines.push({ id: String(l.id), code: String(l.code || ''), name: String(l.name || '').slice(0, 120), pack: Number(l.pack) || 0,
       cName: String(l.cName || 'Ctn'), uName: String(l.uName || 'Pcs'), godam: Number(l.godam) || Number(godam) || BILL_BRANCH,
-      qty: r3(qty), costP: effCost(l), wctn: r2(l.wctn), wpcs: r2(l.wpcs), rctn: r2(l.rctn), rpcs: r2(l.rpcs) });
+      qty: r3(qty), costP: effCost(l), wctn: r2(l.wctn), wpcs: r2(l.wpcs), rctn: r2(l.rctn), rpcs: r2(l.rpcs), ...(sblOf(l) && subsOf(l).length ? { sbl: 1 } : {}) });   // v2.98.4: sbl = farzi barcode rate saath
   }
   if (!lines.length) { notice('Kisi item ki ginti likhein'); return; }
   if (noCost.length) { alert('In items ka khareed rate khali hai:\n\n' + noCost.join('\n')); return; }
@@ -1856,6 +1871,7 @@ async function save() {
       for (const l of lines) if (l.id) { const m0 = memOf(l.id) || {}; mem[String(l.id)] = { c: r4(l.costP), w: r2(l.wpcs), r: r2(l.rpcs), t: Date.now(), ...(sz[String(l.id)] || m0.s ? { s: sz[String(l.id)] || m0.s } : {}) };
         // v2.96.3: 🏷 retail yaad — badli ho to purani history mein (pehle X -> ab Y)
         const cl = cart.find(x => String(x.id) === String(l.id)), nv = cl ? mrpOf(cl) : 0, ov = Number(m0.m) || 0;
+        if (cl && subsOf(cl).length) mem[String(l.id)].sl = sblOf(cl) ? 1 : 0;   // v2.98.4: barcode rate saath ✓ / ✕ yaad
         if (nv > 0) { const H = Array.isArray(m0.mh) ? m0.mh.slice(-4) : []; const ch = ov > 0 && Math.abs(nv - ov) > 0.004; if (ch) H.push({ v: ov, t: Number(m0.mt) || Number(m0.t) || Date.now() });
           Object.assign(mem[String(l.id)], { m: r2(nv), mt: ch || !ov ? Date.now() : (Number(m0.mt) || Date.now()), ...(H.length ? { mh: H } : {}) }); }
         else if (ov > 0) Object.assign(mem[String(l.id)], { m: ov, ...(m0.mt ? { mt: m0.mt } : {}), ...(Array.isArray(m0.mh) && m0.mh.length ? { mh: m0.mh } : {}) }); }

@@ -2203,3 +2203,11 @@ html.dk #dialog[data-ef] .ef-amt input{background:var(--glass,rgba(255,255,255,.
 html.dk .gp-savebar{background:var(--glass2,#1b2a4a);border-color:var(--line,rgba(255,255,255,.14))}html.dk .gp-savebar.dirty{background:rgba(255,200,80,.14)}
 /* v2.98.3: wholesale chips 7 (3/4/5% bhi) — chhupe scroll ke bajaye agli line mein */
 .rate-chips .rc-set{flex-wrap:wrap;overflow-x:visible}
+/* v2.98.4: 🏷 farzi sub-barcode — parchoon rate ke saath */
+.pp-sb{display:grid;gap:6px;margin-top:2px}
+#list .pp-sb .pp-sb-chip,.pp-sb .pp-sb-chip{justify-self:start;min-height:32px;padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:800;background:#f1f4f9!important;color:#5b6b8a!important;border:1px dashed #c9d3e6!important}
+#list .pp-sb .pp-sb-chip.on,.pp-sb .pp-sb-chip.on{background:linear-gradient(135deg,#0d6b3e,#1fb866)!important;color:#fff!important;border:0!important;box-shadow:0 4px 12px rgba(15,122,68,.25)}
+.pp-sb-list{display:grid;gap:4px;background:#f2fbf6;border:1px solid #cdebd9;border-radius:12px;padding:6px 8px}
+.pp-sb-row{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;font-size:13px}
+.pp-sb-row b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#13244a}.pp-sb-row small{color:#6b7a99}.pp-sb-row span{font-weight:700;color:#33456b;white-space:nowrap}
+.pp-sb-row.ch span b{color:#0f7a44}.pp-sb-list>small{color:#5b7a66;font-size:11px}
