@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.98.8';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.98.8';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1182,7 +1182,7 @@ const logR = (a, b) => (a > 0 && b > 0) ? Math.abs(Math.log(a / b)) : null;
 function memOf(id) { try { return (lastRatesOf() || {})[String(id)] || null; } catch { return null; } }
 function aiNum(ai) {                          // AI ne jo ginti di: ctn + pcs, ya akeli qty
   const c = Number(ai.ctn) || 0, p = Number(ai.pcs) || 0, q = Number(ai.qty) || 0;
-  return { c, p, n: r3((c + p) || q), rate: Number(ai.rate) || 0, total: Number(ai.total) || 0 };
+  return { c, p, n: r3((c + p) || q), rate: Number(ai.rate) || 0, total: Number(ai.net) || Number(ai.total) || 0 };   // v2.99.0: distributor bill = net (discount / tax ke baad)
 }
 // v2.4.2: AI ki line — agar app ne bill ke hisaab se theek ki ho to wahi
 const aiOf = r => r.aiFix || r.ai;
@@ -1190,6 +1190,7 @@ const jNear = (a, b, t = 0.005) => b > 0 && Math.abs(a - b) / b <= t;
 function jFix(r, ln) {
   if (r.aiFixUser) return;                       // aap ne button se lagaya — chhedo mat
   r.aiFix = null; r.fixNote = ''; r.fixQ = 0; r.fixR = 0;
+  if (distOf(r.ai, ln)) return;                  // v2.99.0: distributor bill ka hisaab apna (Value ÷ Rate) — ginti / rate nahi chhedte
   const { c, p, n, rate, total } = aiNum(r.ai);
   if (!(total > 0) || !(rate > 0)) return;
   if (n > 0 && jNear(n * rate, total, 0.02)) return;              // hisaab pehle se theek
@@ -1215,6 +1216,24 @@ function jFix(r, ln) {
   if (q > 0 && clean) r.fixQ = r3(q);                             // button: bill se ginti
   if (n > 0) r.fixR = r4(total / n);                              // button: bill se rate
 }
+// v2.99.0: 🧾 DISTRIBUTOR BILL (Colgate / Unilever wale) — ginti CTN / PCS, rate FI PIECE (Trade Price), gross (Value Ex Tax) = pieces × rate,
+//   net = discount / sales tax / trade offer ke baad line ki aakhri raqam. AI sirf parhta hai, hisaab yahan:
+//   pieces = gross ÷ rate (poora number hona chahiye; CTN ho to bill ka 1 CTN = (pieces − pcs) ÷ ctn), khareed fi piece = net ÷ (pieces + free).
+//   Rate fi CARTON ho (gross ÷ rate = ctn, POS pack > 1) to pieces = ctn × pack. Kuch na mile = null (purana tareeqa).
+function distOf(A, ln) {
+  const rate = Number(A?.rate) || 0, gross = Number(A?.gross) || 0, net = Number(A?.net) || 0;
+  if (!(rate > 0 && gross > 0 && net > 0) || net < gross * 0.5 || net > gross * 2) return null;
+  const U = gross / rate, Ur = Math.round(U);
+  if (!(Ur >= 1) || Math.abs(U - Ur) > Math.max(0.02, Ur * 0.001)) return null;
+  const c = Number(A.ctn) || 0, p = Number(A.pcs) || 0, free = Math.max(0, Number(A.free) || 0), pk = ln ? packOf(ln) : 0;
+  let pieces = Ur, bpk = 0, perCtn = false;
+  if (c > 0 && !(p > 0) && Ur === Math.round(c) && pk > 1) { perCtn = true; pieces = r3(c * pk); bpk = pk; }   // rate fi CARTON tha
+  else if (c > 0) { const k = (Ur - p) / c; if (!(k >= 1) || Math.abs(k - Math.round(k)) > 0.01) return null; bpk = Math.round(k); }
+  else if (p > 0 && Math.abs(p - Ur) > 0.01) return null;
+  const all = r3(pieces + free);
+  const sure = (pk > 1 && bpk === pk) || (!(c > 0) && p > 0);   // ginti ka unit bill ke hisaab se pakka (POS pack se mila / sirf pieces)
+  return { pieces, free, all, bpk, pk, perCtn, sure, rate, gross, net, costP: r4(net / all) };
+}
 function jCandidates(ln, ai, cs0) {
   const pk = packOf(ln), { c, p, n, rate } = aiNum(ai);
   const band = Number(cs0) === -1 || (!(Number(cs0) > 1) && Number(memOf(ln.id)?.s) === 1);   // carton band
@@ -1226,13 +1245,16 @@ function jCandidates(ln, ai, cs0) {
     out.push({ mode: 'ctn', ctn: whole, pcs: r3((n - whole) * pk), costP: rate / pk });
   }
   if (size > 1 && !(pk > 1 && Math.abs(size - pk) < 0.01)) out.push({ mode: 'size', ctn: 0, pcs: r3(n * size), costP: rate / size, size });
+  const d = distOf(ai, ln);   // v2.99.0
+  if (d) { const w = pk > 1 ? Math.floor(d.all / pk + 1e-9) : 0;
+    out.unshift({ mode: 'net', ctn: w, pcs: pk > 1 ? r3(d.all - w * pk) : d.all, costP: d.costP, size: !(pk > 1) && d.bpk > 1 ? d.bpk : 0, d }); }
   return out;
 }
 // naqsha ek "tarjeeh" hai, zabardasti nahi — pichhla khareed wazeh bata de to wahi jeetega
 function jPrior(mode, fmt) {
   const q = fmt && fmt.q;
   if (!q || q === 'both') return 0;
-  if (q === mode || (q === 'ctn' && (mode === 'size' || mode === 'both'))) return -0.3;
+  if (q === mode || (q === 'ctn' && (mode === 'size' || mode === 'both')) || (q === 'dist' && mode === 'net')) return -0.3;
   return 0;
 }
 // v2.4.2: carton BAND kab — POS mein carton size khali ho aur: aap ne 1 likha / yaad hai / bill par سائز 1
@@ -1268,12 +1290,13 @@ function jJudge(r, fmt) {
   for (const cd of cands) {
     const lr = logR(cd.costP, old);
     let s = (lr == null ? 0.5 : lr) + jPrior(cd.mode, fmt);
+    if (cd.mode === 'net') s -= 1;                          // v2.99.0: bill ke apne hisaab (Value ÷ Rate) se pakka
     if (r.force && cd.mode === r.force) s -= 100;           // aap ne khud unit chuna
     if (s < bestS - 1e-9) { bestS = s; best = cd; }
   }
   if (!best) best = cands[0];
   // purana andaza (naqsha / pichhla khareed dono na hon): pack wale item par ctn di ho to CTN
-  if (!r.force && !(old > 0) && !(fmt && fmt.q)) {
+  if (!r.force && !(old > 0) && !(fmt && fmt.q) && best.mode !== 'net') {
     const { c } = aiNum(A);
     best = cands.find(x => x.mode === (packOf(ln) && c ? 'ctn' : 'pcs')) || best;
   }
@@ -1287,8 +1310,14 @@ function jJudge(r, fmt) {
     const d = Math.abs(ratio - 1);
     if (d > J_WARN) { conf = 'r'; why.push(`Khareed pichhle se ${ratio > 1 ? num(ratio) + ' guna zyada' : num(1 / ratio) + ' guna kam'} — unit / ginti check karein`); }
     else if (d > J_OK) { conf = 'y'; why.push(`Rate ${ratio > 1 ? '+' : '−'}${Math.round(d * 100)}% badla`); }
-  } else { conf = 'y'; why.push('Pichhla khareed maloom nahi (pehli dafa)'); }
-  if (total > 0 && n > 0 && rate > 0) {                       // hisaab ka pehra (tax / discount ki gunjaish 20%)
+  } else if (best.mode === 'net' && best.d.sure) { why.push(`Pehli dafa — magar bill ka hisaab pakka${best.d.bpk > 1 ? ` (1 ${esc(ln.cName || 'CTN')} = ${num(best.d.bpk)})` : ''}`); }
+  else { conf = 'y'; why.push('Pichhla khareed maloom nahi (pehli dafa)'); }
+  if (best.mode === 'net') {                                   // v2.99.0: distributor bill — Value ÷ Rate = pieces, Net ÷ pieces = khareed
+    const d = best.d, q0 = `${num(Number(A.ctn) || 0)} ${esc(ln.cName || 'CTN')}${Number(A.pcs) ? ' + ' + num(A.pcs) + ' ' + esc(ln.uName || 'PCS') : ''}`;
+    why.push(`🧾 Distributor bill: ${q0} = ${num(d.pieces)} ${esc(ln.uName || 'PCS')} (Value ${num(d.gross)} ÷ Rate ${num(d.rate)}${d.perCtn ? ' fi carton' : ''})${d.free ? ' + ' + num(d.free) + ' free' : ''} · khareed = Net ${num(d.net)} ÷ ${num(d.all)} = ${num(r2(d.costP))}`);
+    if (d.pk > 1 && d.bpk > 1 && d.bpk !== d.pk) { if (conf === 'g') conf = 'y'; why.push(`Bill ke hisaab se 1 ${esc(ln.cName || 'CTN')} = ${num(d.bpk)}, POS mein ${num(d.pk)} — pieces bill se lagaye`); }
+    if (!(d.pk > 1) && d.bpk > 1) why.push(`Bill: 1 CTN = ${num(d.bpk)} (POS mein carton size khali — app yaad rakhegi)`);
+  } else if (total > 0 && n > 0 && rate > 0) {                       // hisaab ka pehra (tax / discount ki gunjaish 20%)
     const calc = n * rate;
     if (Math.abs(calc - total) / total > 0.20) { conf = 'r'; why.push(`Hisaab nahi milta: ${num(n)} × ${num(rate)} = ${num(calc)}, bill par ${num(total)}`); }
   }
@@ -1311,18 +1340,18 @@ function jJudge(r, fmt) {
 function jJudgeAll() { const fmt = billFmtOf(supplier); for (const r of aiRows || []) if (!r.skip) jJudge(r, fmt); }
 // hari lines se naqsha KHUD pakro (aur yaad rakho) — sawal sirf tab jab pakra na ja sake
 function jAutoFmt() {
-  if (!aiRows || !supplier) return;
-  const fmt = billFmtOf(supplier); if (fmt && fmt.q) return;
-  const modes = new Set(aiRows.filter(r => !r.skip && r.j?.conf === 'g').map(r => r.j.mode === 'size' || r.j.mode === 'both' ? 'ctn' : r.j.mode));
+  if (!aiRows) return;
+  const fmt = supplier ? billFmtOf(supplier) : null; if (fmt && fmt.q) return;   // v2.99.0: supplier na chuna ho to bhi pakro (save baad mein)
+  const modes = new Set(aiRows.filter(r => !r.skip && (r.j?.conf === 'g' || r.j?.mode === 'net')).map(r => r.j.mode === 'size' || r.j.mode === 'both' ? 'ctn' : r.j.mode));
   if (!modes.size) return;
-  const q = modes.has('pcs') && modes.has('ctn') ? 'both' : [...modes][0];
-  try { Promise.resolve(saveBillFmtOf(supplier, { ...(fmt || {}), q, t: Date.now() })).catch(() => {}); } catch {}
+  const q = modes.has('net') ? 'dist' : modes.has('pcs') && modes.has('ctn') ? 'both' : [...modes][0];   // v2.99.0: distributor
+  if (supplier) try { Promise.resolve(saveBillFmtOf(supplier, { ...(fmt || {}), q, t: Date.now() })).catch(() => {}); } catch {}
   aiFmtAuto = q;
 }
 let aiFmtAuto = '', jView = 'list', jIx = -1, jForceAsk = false;
 const jMark = c => c === 'g' ? '🟢' : c === 'y' ? '🟡' : '🔴';
 const jUnit = (ln) => ln ? (packOf(ln) && Number(ln.ctn) ? `${num(ln.ctn)} ${esc(ln.cName)}${Number(ln.pcs) ? ' + ' + num(ln.pcs) : ''}` : `${num(linePcs(ln))} ${esc(ln.uName)}`) : '';
-const jModeName = m => ({ pcs: 'PCS', ctn: 'CTN', size: 'سائز', both: 'CTN + PCS' }[m] || m);
+const jModeName = m => ({ pcs: 'PCS', ctn: 'CTN', size: 'سائز', both: 'CTN + PCS', net: '🧾 Net ÷ pieces', dist: '🧾 Distributor (Net ÷ pieces)' }[m] || m);
 function jCounts() {
   const act = (aiRows || []).filter(r => !r.skip);
   return { all: act.length, g: act.filter(r => r.j?.conf === 'g').length, y: act.filter(r => r.j?.conf === 'y').length, r: act.filter(r => r.j?.conf === 'r').length,
@@ -1486,7 +1515,7 @@ function jCard(i) {
       <div class="jc-top"><b>${esc(r.ai.name || '')}${ln ? ' → ' + esc(ln.name) : ''}</b><span id="jcAmt">${ln ? num(lineTotal(ln)) : ''}</span></div>
       ${ln && total ? `<div class="jc-milan" id="jcMilan">${jMilanHTML(ln, total)}</div>` : ''}
       <div id="jcLearn">${jLearnHTML(r)}</div>
-      <div class="jc-bill">Bill: ${esc(aiQtyText(r.ai))}${size ? ' · سائز ' + num(size) : ''} · ریٹ ${num(aiNum(r.ai).rate)}${total ? ' · کل ' + num(total) : ''}</div>
+      <div class="jc-bill">Bill: ${esc(aiQtyText(r.ai))}${Number(r.ai.free) > 0 ? ' + free ' + num(r.ai.free) : ''}${size ? ' · سائز ' + num(size) : ''} · ریٹ ${num(aiNum(r.ai).rate)}${Number(r.ai.gross) > 0 ? ' · Value ' + num(r.ai.gross) : ''}${total ? (Number(r.ai.net) > 0 ? ' · Net ' : ' · کل ') + num(total) : ''}</div>
       ${r.j?.why?.length ? `<div class="jc-why">${r.j.why.map(w => `<small>${jMark(r.j.conf)} ${esc(w)}</small>`).join('')}</div>` : '<div class="jc-why"><small>🟢 Sab theek lag raha hai</small></div>'}
       ${ln ? `<div class="jc-units"><div class="mchips jc-modes">${modes.map(md => `<button type="button" class="${r.j?.mode === md ? 'on' : ''}" data-pp-jmode="${md}">${jModeName(md)}${md === 'size' ? ' ×' + num(size) : ''}</button>`).join('')}</div>
         ${!pk ? `<label class="jc-cs"><span>1 CTN =</span><input type="number" min="0" step="any" inputmode="decimal" data-pp-jcs="1" value="${r.band ? '1' : (cs || '')}" placeholder="?"></label>` : ''}</div>
@@ -1668,7 +1697,7 @@ function learnFromBill() {
   if (!act.length) return;
   const old = billFmtOf(supplier) || {};
   const modes = new Set(act.map(r => r.j?.mode === 'size' || r.j?.mode === 'both' ? 'ctn' : r.j?.mode).filter(Boolean));
-  const q = modes.has('pcs') && modes.has('ctn') ? 'both' : [...modes][0] || old.q || '';
+  const q = modes.has('net') ? 'dist' : modes.has('pcs') && modes.has('ctn') ? 'both' : [...modes][0] || old.q || '';   // v2.99.0
   const g = Math.round(act.filter(r => r.j?.conf === 'g').length * 100 / act.length);
   const b = (Number(old.b) || 0) + 1, avg = Math.round(((Number(old.g) || 0) * (b - 1) + g) / b);
   const ex = act.slice(0, 12).map(r => {

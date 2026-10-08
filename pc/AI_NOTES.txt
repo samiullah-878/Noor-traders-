@@ -1898,3 +1898,35 @@ hon to likha hi nahi jata — app sirf toast deti thi.
   warna internet). CSS .lv-row.stuck / em.stk / cx pulse. happy-dom test ✓.
 Rules change NAHI (2.34 wahi).
 VERSION BUMP: ?v=2.98.8, APP_VER, "Blue Khata v2.98.8", sw CACHE, version.json. Manifest 2026-10-08.5 (label-print).
+
+==================== App v2.99.0 (2026-10-08) — 🤖 DISTRIBUTOR BILL (Colgate / Waqas Traders jaisa) AI se sahi + saaf tasveer + soch kar parhna ====================
+User: "kya Meta AI bhi add kar sakte ho" -> (jawab: WhatsApp wala Meta AI ka API nahi; Llama 4 OpenRouter/Groq se ho sakta, magar bill
+parhne mein Gemini behtar — doosri raye / backup option diya). Phir Waqas Traders ka bill (22 lines × 12 khane, ORIGINAL INVOICE
+watermark, tah): "ye bill us se nahi parha gaya, WhatsApp ke Meta ne ek dam se parh liya".
+WAJAH: (1) ppAiBill tasveer 1400px / 0.75 — dense table ke hindse dhundle. (2) bill 'fast' (thinking band). (3) DISTRIBUTOR bill: ginti
+CTN mein, rate (Trade Price Ex. Tax) FI PIECE, line ki asal raqam (Net Rate After T.O) = Value Ex Tax − Disc + Sales Tax − Trade Offer;
+app ka jaanch ginti × rate = raqam maanta tha -> har line 🔴 / ghalat unit. (4) Advance tax 3,696 neeche alag (Net Payable 742,818).
+* app.js ppAiBill: shrinkForAI 2400px / 0.9 (2+ page: 2000px). billNote: f.q === 'dist' -> AI ko "DISTRIBUTOR bill: ctn, pcs, free, rate
+  (poore decimal), gross, net ZAROOR" line.
+* ai-tally.js: readPurchaseBill default fast = false (thinking ON — 20-40 s zyada, table sahi). BILL_PROMPT: total = Net Payable; xtra
+  mein Advance / Further Tax (236G/H) jo jor ke BAAD jama ho; DISTRIBUTOR hissa — rate = Trade Price bilkul (gol nahi), gross = Value Ex
+  Tax, net = aakhri khana (disc / tax / T.O. ke baad), free = Trade Offer Pcs / Bonus / FOC; Retail / MRP rate nahi; aam bill par gross
+  / net / free = 0; watermark / tah ke neeche bhi usi line ki raqam. JSON lines mein free, gross, net. parseBill: free, gross (r2), net (r2);
+  total khali ho to net.
+* purchase.js:
+  - aiNum total = ai.net || ai.total.
+  - distOf(A, ln): rate, gross, net > 0 aur net 0.5–2 × gross; U = gross ÷ rate poora (±0.1%); ctn > 0: bpk = (U − pcs) ÷ ctn poora,
+    warna null; sirf pcs: U = pcs; rate FI CARTON (U = ctn, POS pack > 1) -> pieces = ctn × pack (perCtn). all = pieces + free;
+    costP = net ÷ all (4 decimal); sure = (POS pack = bpk) ya sirf pcs.
+  - jCandidates: distOf ho to pehla candidate mode 'net' {ctn/pcs POS pack se, costP, size = bpk jab POS pack khali (carton size yaad)}.
+  - jJudge: 'net' score −1 (bill ka apna hisaab); "naqsha/pichhla khareed nahi" wala ctn/pcs override 'net' par nahi; pehli dafa magar
+    sure = 🟢 "bill ka hisaab pakka (1 CTN = n)"; why: "🧾 Distributor bill: 5 CTN = 120 PCS (Value ÷ Rate) + free · khareed = Net ÷
+    pieces"; bill pack ≠ POS pack = 🟡 "pieces bill se lagaye"; POS pack khali = "app yaad rakhegi". 20% hisaab-pehra 'net' par nahi.
+  - jFix 'net' lines ko nahi chhedta. jPrior: naqsha 'dist' -> 'net' −0.3. jModeName net / dist. jAutoFmt: 'net' line (conf kuch bhi)
+    -> naqsha 'dist'; supplier na chuna ho to bhi aiFmtAuto (save sirf supplier par). learnFromBill: 'net' -> q 'dist'.
+  - Jaanch card: "Bill: 5 ctn + free · ریٹ · Value … · Net …".
+  - Advance tax xtra (kharcha) se items par raqam ke hisaab se — "Mazdoori / kharcha Rs" khana khali karein to band.
+TEST (happy-dom, Waqas bill ke asal 22 lines + 3 POS pack ghalat/khali): 20 🟢 · 2 🟡 (Palmolive POS 72 vs bill 108; Colgate GRF POS
+pack khali) · 0 🔴; Brite 500gm 5 ctn = 120 · 280.6183; lines jama 739,122.17 + advance tax 3,696 = 742,818.17 ✓ bill 742,818; CTN 110 /
+PCS 96 ✓; naqsha khud "🧾 Distributor"; free 2 -> 26 pcs; rate fi carton -> 12 pcs. Purane tests (bill edit, rate base 19/19) ✓.
+VERSION BUMP: ?v=2.99.0, APP_VER, "Blue Khata v2.99.0", sw CACHE, version.json. PC files nahi badle.

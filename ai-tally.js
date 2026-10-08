@@ -1,4 +1,4 @@
-// Blue Khata v2.4.2 (ek number do khano mein nahi) · v2.4.1 (line ki jagah y + ginti ke total) · v2.4.0 (bill ka سائز bhi) — AI se PARHWANA (hisaab nahi). v2.3.0: bill ke liye "pro" model (pickProModel) aur prompt
+// Blue Khata v2.99.0 (DISTRIBUTOR bill: line par gross / net / free + advance tax xtra mein; bill 'soch kar' parhna) · v2.4.2 (ek number do khano mein nahi) · v2.4.1 (line ki jagah y + ginti ke total) · v2.4.0 (bill ka سائز bhi) — AI se PARHWANA (hisaab nahi). v2.3.0: bill ke liye "pro" model (pickProModel) aur prompt
 // ab ginti ka ANDAZA nahi lagata — column ke asal heading bhi wapas karta hai (supplier ka naqsha app khud banati hai).
 // v2.0.0: v2.0.0: (1) purchase bill parhte waqt humare items ki
 // list bhi saath jati hai taake AI khud sahi item ka id (itemId) laga de; (2) 'thinking' band (tez jawab).
@@ -145,19 +145,22 @@ export const BILL_PROMPT = [
   'Kaam: bill se yeh cheezein nikaal do. Hisaab mat karo, jo likha hai wohi do.',
   '- supplier: bill dene wali dukaan / company ka naam (na mile to "").',
   '- date: bill ki tareekh YYYY-MM-DD (na mile ya samajh na aaye to "").',
-  '- total: bill ka aakhri grand total, poore rupay, sirf hindse (na mile to 0).',
+  '- total: bill ka aakhri grand total (Net Payable / sab se neeche wali asal raqam), rupay, sirf hindse (na mile to 0).',
   '- lines: HAR item ki line: {"name": item ka naam BILKUL waisa jaisa likha hai (Urdu likha ho to Urdu hi), "roman": agar naam Urdu/Arabic rasm-ul-khat mein hai to wohi naam Roman Urdu (English harfon) mein — jaise "چینی" ka "cheeni" — warna "", "ctn": carton / peti / bora ki ginti (na mile to 0), "pcs": khule pieces / dozen se bahar ginti (na mile to 0), "rate": fi carton qeemat rupay agar ctn hai warna fi piece (na mile to 0), "total": us line ka total rupay (na mile to 0), "unsure": true agar hindsa saaf na ho}.',
   '- GINTI KA ANDAZA MAT LAGAO: bill par jo ek hi ginti likhi ho usay "qty" mein daalo aur "qtyLabel" mein us column ka asal heading likho (jaise "Qty.", "Pcs", "Ctn", "Packs"). Sirf tab "ctn" aur "pcs" alag alag bharo jab bill par SAAF do alag khane hon. "5+3" jaisi likhai ka matlab 5 carton aur 3 pieces hota hai (ctn 5, pcs 3).',
   '- size: agar bill par "سائز" / "Size" / "Packing" / "Wt" jaisa column ho (ek carton / bori mein kitne kg ya pieces) to us line ka wo number, warna 0. "من ریٹ" (fi 40 kg rate) ko rate MAT samjho — rate wohi hai jo ginti se zarb ho kar line ka total banta hai.',
   '- mr: agar bill par "من ریٹ" / "Man Rate" column ho to us line ka number (0.00 ho to 0), warna 0.',
   '- EK HI NUMBER KO "ctn" AUR "pcs" DONO MEIN MAT DAALO — jis khane (کارٹن / پیس) mein likha ho sirf usi mein. Bill ke hisaab se jaanch lo: ginti × rate = us line ki kul raqam.',
   '- y: har line tasveer par KAHAN hai — upar se kitni neeche, 0 se 1000 tak (0 = tasveer ka bilkul upar, 1000 = bilkul neeche). page: ek se zyada tasveerein hon to line kis tasveer par hai (1, 2, ...), warna 1.',
-  '- xtra: bill ke NEECHE items ke jor ke UPAR jo kharche JAMA kiye gaye hon — labour / لیبر / مزدوری / کرایہ / freight / loading / packing / cartage — har ek {"name": jaisa likha ho, "amount": raqam}. Discount, "previous balance", pichhla baqaya, tax number SHAMIL NA karo. Na hon to [].',
+  '- xtra: bill ke NEECHE items ke jor ke UPAR jo kharche JAMA kiye gaye hon — labour / لیبر / مزدوری / کرایہ / freight / loading / packing / cartage — har ek {"name": jaisa likha ho, "amount": raqam}. "Advance Tax" / "Further Tax" / 236G / 236H jo lines ke jor ke BAAD JAMA ho kar Net Payable banaye, woh bhi yahan ({"name":"Advance Tax","amount": jo raqam likhi ho}). Discount, trade offer, lines mein shamil sales tax, "previous balance", pichhla baqaya, tax number SHAMIL NA karo. Na hon to [].',
+  '- DISTRIBUTOR / COMPANY BILL (jaise Colgate, Unilever, P&G, Nestle ke distributor — khane: Ctn, Pcs, Trade Offer, Retail Price, Trade Price, Value Ex Tax, Disc, Sales Tax, Net Amount): har line par "ctn" aur "pcs" apne apne khane se; "rate" = "Trade Price" / "T.P" column BILKUL waisa jitne decimal likhe hain (248.5133 — gol mat karo; yeh aam taur par FI PIECE hota hai); "gross" = woh raqam jo ginti × rate se banti hai ("Value Ex Tax" / "Gross Amount" / "Value"); "net" = line ki AAKHRI raqam discount, sales tax aur trade offer ke BAAD ("Net Amount" / "Net Rate After T.O" / "Value Incl Tax" — aksar sab se dayen khana); "free" = muft pieces ("Trade Offer Pcs" / "Bonus" / "Scheme" / "FOC" — sirf ginti, Rs wala trade offer nahi); "total" = net hi. Retail Price / MRP ko rate MAT samjho.',
+  '- Aam bill (sirf ginti, rate, raqam — discount / tax ke alag khane nahi) par gross = 0, net = 0, free = 0.',
+  '- Lambi table mein har line ki raqmein USI line se lo (tah / mohar / watermark ke neeche bhi) — line chhorni nahi, upar neeche wali line se mat milao.',
   '- ctnTotal / pcsTotal: bill ke neeche agar ginti ke total likhe hon (carton / کارٹن ka jama, pieces / پیس ka jama) to wo numbers, warna 0.',
   '- Bill ke upar wale column headings jaisay ke likhe hain: qtyLabel (ginti ka heading), rateLabel (rate ka heading), amtLabel (aakhri raqam ka heading). Na dikhein to "".',
   '- Tareekh, mobile number, address, "previous balance", tax number waghera ko LINES mein SHAMIL NA karo.',
   '- itemId: agar neeche "HUMARE ITEMS" ki list di gayi ho to har line ka sab se milta julta item us list mein se dhoondo aur wahan likha hua id yahan do. Poora yaqeen na ho to itemId "" chhor do — ghalat item lagane se behtar khali chhorna hai. List se bahar ka koi id mat banao.',
-  'Sirf yeh JSON do, aur kuch nahi: {"supplier":"","date":"","total":0,"ctnTotal":0,"pcsTotal":0,"xtra":[{"name":"","amount":0}],"qtyLabel":"","rateLabel":"","amtLabel":"","lines":[{"name":"","roman":"","itemId":"","qty":0,"ctn":0,"pcs":0,"size":0,"mr":0,"rate":0,"total":0,"y":0,"page":1,"unsure":false}]}'
+  'Sirf yeh JSON do, aur kuch nahi: {"supplier":"","date":"","total":0,"ctnTotal":0,"pcsTotal":0,"xtra":[{"name":"","amount":0}],"qtyLabel":"","rateLabel":"","amtLabel":"","lines":[{"name":"","roman":"","itemId":"","qty":0,"ctn":0,"pcs":0,"free":0,"size":0,"mr":0,"rate":0,"gross":0,"net":0,"total":0,"y":0,"page":1,"unsure":false}]}'
 ].join('\n');
 
 // v2.0.0: humare POS items ki list — AI ko saath bhejte hain taake wohi sahi item chun le.
@@ -189,17 +192,21 @@ export function parseBill(text) {
     ctn: Math.max(0, num(l?.ctn)) || (Math.max(0, num(l?.qty)) || 0),   // purana "qty" bhi ctn ban jata hai
     pcs: Math.max(0, num(l?.pcs)),
     rate: Math.max(0, num(l?.rate)),
+    free: Math.max(0, num(l?.free)),                       // v2.99.0: distributor — muft pieces (Trade Offer Pcs / Bonus)
+    gross: Math.round(Math.max(0, num(l?.gross)) * 100) / 100,   // v2.99.0: ginti × rate wali raqam (Value Ex Tax)
+    net: Math.round(Math.max(0, num(l?.net)) * 100) / 100,       // v2.99.0: discount / tax / T.O. ke baad line ki aakhri raqam
     total: Math.round(Math.max(0, num(l?.total))),
     unsure: l?.unsure === true
   })).filter(l => l.name || l.total > 0).slice(0, 100);
-  for (const l of lines) { if (!l.ctn && !l.pcs) l.ctn = 1; if (!l.total && l.ctn && l.rate) l.total = Math.round(l.ctn * l.rate); }
+  for (const l of lines) { if (!l.ctn && !l.pcs) l.ctn = 1; if (!l.total && l.net) l.total = Math.round(l.net); if (!l.total && l.ctn && l.rate) l.total = Math.round(l.ctn * l.rate); }
   return { supplier: String(d.supplier || '').slice(0, 120), date: /^\d{4}-\d{2}-\d{2}$/.test(String(d.date || '')) ? d.date : '', total: Math.round(num(d.total)),
     ctnTotal: Math.max(0, num(d.ctnTotal)), pcsTotal: Math.max(0, num(d.pcsTotal)),   // v2.4.1: bill ke neeche ginti ke total
     xtra: (Array.isArray(d.xtra) ? d.xtra : []).map(x => ({ name: String(x?.name || '').slice(0, 30), amount: Math.round(Math.max(0, num(x?.amount))) })).filter(x => x.amount > 0).slice(0, 5),   // v2.4.6: labour / kiraya
     qtyLabel: String(d.qtyLabel || '').slice(0, 30), rateLabel: String(d.rateLabel || '').slice(0, 30), amtLabel: String(d.amtLabel || '').slice(0, 30), lines };
 }
 
-export async function readPurchaseBill({ key, model, images, onStatus, known = null, fast = true, note = '' }) {
+// v2.99.0: bill par default 'soch kar' (fast = false) — lambi / distributor table zyada sahi parhti hai (20-40 s zyada)
+export async function readPurchaseBill({ key, model, images, onStatus, known = null, fast = false, note = '' }) {
   if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
   if (!model) throw Error('Model ka naam khali hai — Settings > AI key > Test dabayein.');
   if (!images?.length) throw Error('Bill ki kam az kam 1 picture chunein');
