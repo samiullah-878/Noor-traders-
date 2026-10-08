@@ -1,5 +1,6 @@
 // ============================================================
-//  nt-scan.js  v1.3.1 (2026-10-07: base (Firestore) na ho to bhi chale — awaz-only) · v1.3 (2026-10-07: ⚠️ 'tu-tu-tu' (WARN) awaz — scan POS ke bajaye kisi AUR window mein gaya (scanWhere) to tu-tu-tu, tik/bzzz nahi;
+//  nt-scan.js  v1.4 (2026-10-08: ⏳ barcode list na ho (awaz-only) to tik ~0.75 s ruk kar — is dauran POS ki Search khirki / error box aaye
+//                     to veto() = tik nahi, sirf bzzz (local-config "scanHold": ms, 0 = foran) · v1.3.1 (2026-10-07: base (Firestore) na ho to bhi chale — awaz-only) · v1.3 (2026-10-07: ⚠️ 'tu-tu-tu' (WARN) awaz — scan POS ke bajaye kisi AUR window mein gaya (scanWhere) to tu-tu-tu, tik/bzzz nahi;
 //                     onReady (PC on hote hi awazon ka test) · onScanOk/onScanBad ko code + window) · v1.2.1 (2026-10-06: onScanBad — ghalat scan ka waqt bahar batao, POS error box ki bzzz dohri na ho) · v1.2 (2026-10-06: ASLI awaz — WAV (SoundPlayer): sahi = chhoti oonchi tik, ghalat = 3 moti bzzz; Console.Beep Windows
 //                     ki 'ding' ban jati thi aur dono ek jaisi) · v1.1 (2026-10-06: beep() bahar se — POS item-add) · v1.0 (2026-10-06) — 🔔 SCAN AWAZ (POS ya koi bhi software): har scan par "tik", GHALAT scan (item POS mein nahi /
 //  band) par alag zor ki "bzzz bzzz bzzz" — larka screen dekhe baghair scan karta rahe.
@@ -74,7 +75,9 @@ public class NtScan3{
 Add-Type -Path $dll
 [NtScan3]::Run([int]$args[0])
 `;
-  let child = null, fails = 0, stopped = false;
+  let child = null, fails = 0, stopped = false, pend = null;   // v1.4: ruki hui tik {t, code}
+  const holdMs = () => { const h = Number(C().scanHold); return Number.isFinite(h) && h >= 0 && C().scanHold !== '' && C().scanHold != null ? Math.min(1500, h) : (loaded ? 0 : 750); };
+  const flush = () => { if (!pend) return; clearTimeout(pend.t); pend = null; try { child && child.stdin.write('OK\n'); } catch {} };
   const skipList = () => { const s = C().scanSkip; return Array.isArray(s) ? s.map(x => String(x).toLowerCase()) : ['chrome', 'msedge', 'firefox']; };
   const run = () => {
     if (stopped || C().scanAwaz === false) return;
@@ -101,12 +104,17 @@ Add-Type -Path $dll
     let where = 'pos'; try { where = scanWhere ? scanWhere(fg) : 'pos'; } catch {}
     if (where === 'other') { try { w.stdin.write('WARN\n'); } catch {} log(`🔔 GHALAT JAGAH scan: "${code}" "${fg || '?'}" mein gaya — POS mein nahi`); try { onScanWrong && onScanWrong(code, fg); } catch {} return; }
     const ok = !loaded || codes.has(norm(code)) || codes.has(norm(code).replace(/^0+/, ''));
-    if (ok) { try { onScanOk && onScanOk(code, fg); } catch {} if (C().scanGood !== false) try { w.stdin.write('OK\n'); } catch {} }
+    if (ok) { try { onScanOk && onScanOk(code, fg); } catch {}
+      if (C().scanGood !== false) { const h = holdMs(); flush();   // pichhli ruki tik foran
+        if (h > 0) pend = { code, t: setTimeout(() => { pend = null; try { w.stdin.write('OK\n'); } catch {} }, h) };
+        else try { w.stdin.write('OK\n'); } catch {} } }
     else { try { onScanBad && onScanBad(code, fg); } catch {} try { w.stdin.write('BAD\n'); } catch {} log(`🔔 GHALAT scan: "${code}" (${fg || '?'}) — POS mein ye barcode nahi / item band`); }
   };
   setTimeout(run, 3000);
   // v1.1: bahar se awaz (POS beep) — worker chal raha ho to us se (foran), warna null
   const beep = kind => { if (!child) return false; try { child.stdin.write((kind || 'OK') + '\n'); return true; } catch { return false; } };
-  return { stop() { stopped = true; try { child && child.kill(); } catch {} }, size: () => codes.size, beep, alive: () => !!child };
+  // v1.4: POS ne kaha 'nahi mila' (Search khirki / error box) — ruki hui tik ki jagah bzzz. Ruki tik na ho to false.
+  const veto = () => { if (!pend) return false; clearTimeout(pend.t); const c = pend.code; pend = null; try { child && child.stdin.write('BAD\n'); } catch {} return c || true; };
+  return { stop() { stopped = true; try { child && child.kill(); } catch {} }, size: () => codes.size, beep, veto, loaded: () => loaded, alive: () => !!child };
 }
 module.exports = { start };

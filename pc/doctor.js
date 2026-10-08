@@ -1,5 +1,6 @@
 // =========================================================
-//  doctor.js  v2.6 (2026-10-04: sab scripts CHUPKE (chupa.vbs, koi window nahi) · ek dafa purani dikhti windows band kar ke chupke chalata hai ·
+//  doctor.js  v2.7 (2026-10-08: GitHub par NAYA manifest version har 3 min dekho — naya ho to foran poori jaanch + update (pehle sirf 30 min) ·
+//              purana / CDN ka baasi manifest (chhota version) par kuch nahi) · v2.6 (2026-10-04: sab scripts CHUPKE (chupa.vbs, koi window nahi) · ek dafa purani dikhti windows band kar ke chupke chalata hai ·
 //              PC ka waqt ghalat -> "NT Waqt Theek" task + w32tm, pcStatus.clockOff app ko) · v2.5 (non-periodic zinda = node) · v2.4 (taskkill /F)
 //              · v2.3 (2026-10-01: HEARTBEAT — latki script pakar kar dobara) · v2.2 (3 dafa ke baad bhi 30 min mein phir koshish) · v2.1 (UNAUTHENTICATED par doctor khud dobara · PC ka waqt jaanch) · v2 (2026-09-25) — KHATA PC DOCTOR
 //  v2: sirf ZINDA nahi, KAAM bhi dekhta hai — qataar (appPurchases, appSales, labelJobs...) mein koi kaam 3 min se
@@ -23,9 +24,10 @@ const crypto = require('crypto');
 const { execSync, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '2.6';
+const VER = '2.7';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
+const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
 const STUCK = 3 * 60 * 1000, REST_GAP = 10 * 60 * 1000;
 const hung = {};   // v2.3: heartbeat se pakri latki scripts
 const LOCK_PORT = 47830;
@@ -336,6 +338,9 @@ lock.on('listening', async () => {
   await cycle('shuru');
   setInterval(() => cycle('30 minute'), EVERY);
   setInterval(() => cycle('2 minute', false), QUICK);
+  // v2.7: har 3 min sirf manifest ka version — naya ho to foran update (30 min ka intezar nahi)
+  const vn = v => { const x = String(v || '').match(/^(\d{4}-\d{2}-\d{2})\.(\d+)$/); return x ? x[1] + '.' + x[2].padStart(4, '0') : ''; };
+  setInterval(async () => { if (busy) return; try { const m = await manifest(); const nv = vn(m && m.version); if (nv && (!manifestVer || nv > vn(manifestVer))) cycle('GitHub par naya version ' + m.version); } catch {} }, GITQ);
   let lastAsk = 0;
   const listen = () => {
     const ref = checkRef(); if (!ref) return setTimeout(listen, 60000);

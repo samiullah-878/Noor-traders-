@@ -1759,3 +1759,22 @@ aur phere ki apni diesel line (tanki full) phere ke AAKHIR mein (pKey|z) — us 
 * Test (happy-dom): purana phera 9 baje edit > full 8 baje = full ke baad; naya phera bina save = nahi bana; Save = kmLog [50];
   100 -> 60 km edit = tanki 22 L (pehle 30); band par OK = save; phere ki apni full = us ke km nayi tanki se.
 * NOTE: `node --check file.js` ES module galti nahi pakarta — `node --input-type=module --check < file.js` chalao.
+
+==================== PC: NT-PRINT v1.16 + nt-scan v1.4 + nt-posui v1.7 + doctor v2.7 (manifest 2026-10-08.1) — 🔎 Search khirki = bzzz ====================
+User (Mithu PC photo): "barcode system mein add nahi tha to system ne error wali awaz nahi di" — POS ghalat/naya barcode par error box
+nahi, "Search Items" khirki kholta hai; Mithu awaz-only (chaabi nahi = barcode list nahi) -> har scan tik. User: "2 items wala nahi karna"
+(barcode kai items par = bzzz NAHI), "update ka time 2-5 min", "yahan Windows ki apni awaz band honi chahiye".
+* nt-posui v1.7 (NtPosUi8.dll, naya arg posSearchTitle "Search Items"): stdin 'CHK <code>' (NT-PRINT har sahi scan par) -> 2.6 s tak har
+  0.15 s Dialogs() (pid ke top-level + main window ke Window children) mein naam "Search Items" — scan se 0.5 s pehle tak khuli ho to
+  Codes(d): Table/DataGrid -> TreeWalker rows ("Row", "Top" nahi) -> cell "Code…" ka ValuePattern (warna pehla cell), 60 qatar tak;
+  scan code == kisi qatar ka Code (case-insensitive, exact) -> 'SRCH MULTI same n codes' warna 'SRCH MISS 0 n codes' (rows 0 ho to 4
+  koshish ke baad MISS). Search khirki IsMsg mein nahi ginti. Log: "🔎 POS Search khirki: …" (codes bhi — baad mein sudhaar ke liye).
+* nt-scan v1.4: list na ho (loaded false) to sahi scan ki tik 750 ms ruk kar (pend); naya scan aaye to pichhli foran (flush);
+  veto() = ruki tik ki jagah BAD. local-config "scanHold" (ms, 0 = foran). List wale PC par hold 0 (pehle jaisa).
+* nt-print v1.16: onScanOk(code) -> posui.check(code); onSrch: 3 s ke andar scan ki — MULTI = log, awaz nahi; MISS = vetoTik (tik ->
+  bzzz) warna (list wale PC par bzzz pehle baj chuki ho to nahi) bzzz + SND.bad + miss list. onErr bhi pehle vetoTik.
+  "posSearchBeep": false = band. winSounds(): har start par HKCU\AppEvents\Schemes = .None aur har .Current = '' (Windows ding /
+  chime band); "winSounds": true = .Default se wapas. Khud-update har 3 min (pehle 5).
+* doctor v2.7: har 3 min manifest version — NAYA (vn bara) ho to foran cycle (update); baasi/chhota version par kuch nahi. 30 min full
+  jaanch wahi. (Purana doctor v2.6 ise ek dafa 30 min mein uthayega, phir 3 min.)
+* C# check: mcs -noconfig -r:System.dll + uia/stub8.cs (ValuePattern, TreeWalker, FindFirst, NameProperty) — warning bhi error.
