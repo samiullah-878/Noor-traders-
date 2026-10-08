@@ -1930,3 +1930,25 @@ TEST (happy-dom, Waqas bill ke asal 22 lines + 3 POS pack ghalat/khali): 20 🟢
 pack khali) · 0 🔴; Brite 500gm 5 ctn = 120 · 280.6183; lines jama 739,122.17 + advance tax 3,696 = 742,818.17 ✓ bill 742,818; CTN 110 /
 PCS 96 ✓; naqsha khud "🧾 Distributor"; free 2 -> 26 pcs; rate fi carton -> 12 pcs. Purane tests (bill edit, rate base 19/19) ✓.
 VERSION BUMP: ?v=2.99.0, APP_VER, "Blue Khata v2.99.0", sw CACHE, version.json. PC files nahi badle.
+
+==================== App v2.99.1 + NT-PRINT v1.18 + nt-posui v1.9 (manifest 2026-10-08.6) — 🔎 Search khirki ki bzzz (server) + 🧾 POS bill ki tarteeb ====================
+(1) User (SERVER PC DESKTOP-Q1SLV77): "jaise hi koi cheez scan nahi hoti aur search bar mein jati hai speaker se awaz nahi aati".
+  awaz-check photo: chaabi HAI, nt-scan CHALU, NT-PRINT v1.17, volume 68% — magar log mein ek bhi "GHALAT scan" / "🔎" line NAHI
+  (sirf POS patti mil/gum + 2 "POS ERROR box"). Yani Search khirki pakri hi nahi ja rahi thi (scan bhi shayad pakra nahi ja raha — server
+  par bojh / scanner ki raftar; OK scan log nahi hote).
+* pc/nt-posui.js v1.9 (NtPosUi10.dll): SboxTick(pid) HAR chakkar (scan ho ya nahi): EnumWindows (POS pid, visible) + EnumChildWindows
+  -> visible HWND set; sirf NAYE HWND ki likhai WM_GETTEXT (SendMessageTimeout 120 ms, SMTO_ABORTIFHUNG) — "Search Items" ho to khirki
+  khuli (pehla chakkar sirf yaad, report nahi). Dabba: HWND se 4 parent tak jis mein UIA Table/DataGrid ho (POS main window tak nahi).
+  Search khane (UIA Edit, ValuePattern) ki likhai (1.5 s tak intezar) + grid Codes (0.6 s) -> "SBOX\t<likhai>\t<same>\t<qataren>" ek
+  dafa fi khulna. v1.8 ki UIA andar-talaash (FindFirst Descendants — Sale list ginti thi, dheemi) HATA di. Purana CHK/SRCH raasta wahi.
+  mcs compile ✓ (stub: NativeWindowHandle, FromHandle).
+* pc/nt-print.js v1.18 onSbox: likhai barcode jaisi (/^[0-9A-Za-z.\-/]{6,40}$/ aur 5+ hindse) + same 0 -> vetoTik ya play BAD (2.5 s
+  mein dobara nahi), SND.bad/miss; log "🔔 bzzz — "<code>" POS mein nahi (Search khirki · scan pakra "<x>" / scan NAHI pakra (scanner
+  ki raftar?))". Naam se talaash = log, awaz nahi. same > 0 = 2 items par, awaz nahi. local-config posSearchBeep:false = band.
+(2) User (Waqas Traders bill POS mein — total 742,817.876 ✓ magar): "jis tarteeb se bill lagaya us tarteeb se POS mein nahi aaya".
+  WAJAH: aiPicked (jaanch mein item badla / chuna) aur jUnskip line ko cart ke AAKHIR mein daalte the; aiRead lines ko AI ke 'y' andaze
+  se sort karta tha (ghani table mein paas wali lines aage peeche).
+* purchase.js: aiRead sort sirf page se (stable — AI ki parhne ki tarteeb). cartBillOrder(): cart ko aiRows ki tarteeb mein (skip nahi),
+  haath wale items apne pichhle padosi ke baad (p = pichhla + 0.5, phir cart index) — aiPicked, jUnskip aur save() se pehle.
+  TEST (happy-dom): 22 lines y ulte-pulte -> cart 0..21 bill tarteeb; row 3 ka item badla -> wahi jagah 3 par.
+VERSION BUMP: ?v=2.99.1, APP_VER, "Blue Khata v2.99.1", sw CACHE, version.json. Manifest 2026-10-08.6 (nt-print, nt-posui).

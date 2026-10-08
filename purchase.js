@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.1';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.1';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1635,6 +1635,17 @@ async function jAccept(i, quiet = true) {
   if (r.itemId && learnOf && !['ok', 'pehle se', 'wait'].includes(r.learn)) await learnRow(r);   // ✓ = naam bhi yaad (v2.20: fail wala dobara, 2.5s se zyada nahi rukta)
   if (!quiet) notice('✓ ' + (r.ai.name || ''));
 }
+// v2.99.1: CART KI TARTEEB = BILL KI TARTEEB (aiRows) — jaanch mein item badla / chuna / chhori line wapas = apni jagah (pehle aakhir mein
+//   chali jati thi aur POS bill ulta pulta banta tha). Haath se jore items apne pichhle padosi ke saath (jahan jore the) rehte hain.
+function cartBillOrder() {
+  if (!aiRows || !aiRows.length || cart.length < 2) return;
+  const pos = new Map(); aiRows.forEach((r, i) => { if (r.key && !r.skip) pos.set(r.key, i); });
+  if (!pos.size) return;
+  let last = -1;
+  const k = cart.map((l, ci) => { const p = pos.get(l.k); if (p != null) last = p; return { l, ci, p: p != null ? p : last + 0.5 }; });
+  k.sort((a, b) => (a.p - b.p) || (a.ci - b.ci));
+  cart = k.map(x => x.l);
+}
 function jSkip(i) {
   const r = aiRows[i]; if (!r) return;
   if (r.key) { const ix = cart.findIndex(l => l.k === r.key); if (ix >= 0) { r.saved = cart[ix]; cart.splice(ix, 1); } }
@@ -1643,7 +1654,7 @@ function jSkip(i) {
 function jUnskip(i) {
   const r = aiRows[i]; if (!r) return;
   if (r.saved) { cart.push(r.saved); r.key = r.saved.k; r.saved = null; }
-  r.skip = false; jJudge(r, billFmtOf(supplier)); keepDraft(); rerender();
+  r.skip = false; cartBillOrder(); jJudge(r, billFmtOf(supplier)); keepDraft(); rerender();   // v2.99.1: apni jagah
 }
 // ek hi item bill par do dafa — mila do (ginti jama, khareed wazni ausat)
 function jDupes() {
@@ -1769,7 +1780,7 @@ async function aiRead(files) {
     aiBillInfo = bill; aiRows = [];
     const bx = (bill.xtra || []).reduce((n, x) => n + (Number(x.amount) || 0), 0);   // v2.4.6: labour / kiraya
     if (bx > 0 && !(xtra > 0)) { xtra = bx; xtraName = (bill.xtra || []).map(x => x.name).filter(Boolean).join(' + ').slice(0, 40); }
-    lines.sort((a, b) => ((Number(a.page) || 1) - (Number(b.page) || 1)) || ((Number(a.y) || 0) - (Number(b.y) || 0)));   // v2.10: bill ki tarteeb
+    lines.sort((a, b) => (Number(a.page) || 1) - (Number(b.page) || 1));   // v2.99.1: bill ki tarteeb = AI ke parhne ki tarteeb (page ke andar); 'y' andaza ghani table mein paas wali lines aage peeche kar deta tha
     const memIx = memIndex(items);   // v2.19: aap ke yaad karwaye naam — pehli tarjeeh
     for (const l of lines) {
       const q = aiNameOf(l);
@@ -1857,6 +1868,7 @@ async function aiPicked(i, id) {
   }
   const ln = addItem(it, false).line;
   r.key = ln.k; r.itemId = String(it.id); r.learn = ''; r.byAi = true; r.mem = false; r.memFz = false; r.force = ''; r.skip = false;   // aap ne khud chuna = pakka naam
+  cartBillOrder();   // v2.99.1: nayi line bill wali jagah par (aakhir mein nahi)
   jJudge(r, billFmtOf(supplier));
   if (jView !== 'sum') { jView = 'card'; jIx = i; }
   keepDraft(); rerender(); aiRender();
@@ -1890,6 +1902,7 @@ async function save() {
   if (!canUse()) { notice('Is login par POS purchase ki ijazat nahi'); return; }
   const p = partyOf(supplier);
   if (!p) { notice('Pehle supplier chunein'); supOpen = true; rerender(); return; }
+  cartBillOrder();   // v2.99.1: POS bill bilkul bill ki tarteeb mein
   const lines = [], zero = [], noCost = [];
   xtraApply();
   for (const l of cart) {

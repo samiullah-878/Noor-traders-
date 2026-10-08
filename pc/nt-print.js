@@ -1,5 +1,8 @@
 // ============================================================
-//  nt-print.js  v1.17 (2026-10-08: 🔑 CHAABI KHUD UTHAO — awaz-only PC par firebase-key.json Desktop / Downloads / Documents (AnyDesk se)
+//  nt-print.js  v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
+//                   (6+ harf, beech mein space nahi, 5+ hindse) aur grid mein wohi code nahi = bzzz — scan pakra gaya ho ya NAHI (server par scan
+//                   pakra hi nahi ja raha tha: log mein koi 'GHALAT scan' / '🔎' nahi tha). Naam se talaash = awaz nahi. Log mein 'scan pakra / NAHI')
+//                   · v1.17 (2026-10-08: 🔑 CHAABI KHUD UTHAO — awaz-only PC par firebase-key.json Desktop / Downloads / Documents (AnyDesk se)
 //                   kahin bhi rakh dein: har 20 s dekhta hai, asli chaabi (service_account, note-traders-khata-7ccc1) ho to C:\khata-sync mein
 //                   rakh kar wahan se mita deta hai; firebase-admin na ho to npm se khud install; phir poora NT-PRINT (barcode list = ghalat scan
 //                   par foran bzzz) · nt-posui v1.8 (andar wali Search khirki)) · v1.16 (2026-10-08: 🔎 scan ke baad POS ki Search khirki = barcode NAHI -> bzzz (barcode 2 items par = awaz nahi) · list na ho
@@ -36,7 +39,7 @@ let FA = null, FF = null; try { FA = require('firebase-admin/app'); FF = require
 const { initializeApp, cert, getApps } = FA || {};
 const { getFirestore, FieldValue } = FF || {};
 
-const VER = '1.17';
+const VER = '1.18';
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
@@ -367,6 +370,17 @@ function listen() {
       if (vetoTik('Search khirki — "' + lastScanCode + '" POS mein nahi')) return;
       if (Date.now() - lastScanBad < 2500) return;   // list wale PC par bzzz pehle hi baj chuki
       lastScanBad = Date.now(); SND.bad++; SND.lastScan = lastScanBad; missAdd(lastScanCode, lastScanBad); sndBump(); play('BAD', 'stop'); log(`🔔 bzzz — "${lastScanCode}" POS mein nahi (Search khirki)`); },
+    // v1.18: 🔎 Search khirki khuli (Win32) — search khane ki likhai barcode jaisi aur grid mein wohi code nahi = bzzz (scan pakra ho ya nahi)
+    onSbox: r => { const t = String(r.text || '').trim(), now = Date.now();
+      const bc = /^[0-9A-Za-z.\-\/]{6,40}$/.test(t) && (t.match(/\d/g) || []).length >= 5;
+      const sc = now - lastScanAt < 4000 ? `scan pakra "${lastScanCode}"` : 'scan NAHI pakra (scanner ki raftar?)';
+      if (!bc) { log(`🔎 Search khirki: "${t.slice(0, 30)}" — naam se talaash, awaz nahi`); return; }
+      if (r.same > 0) { log(`🔎 Search khirki: "${t}" ${r.same} items par — larka chune, awaz nahi`); return; }
+      if (cfg().posSearchBeep === false) { log(`🔎 Search khirki: "${t}" POS mein nahi (posSearchBeep band)`); return; }
+      if (vetoTik(`Search khirki — "${t}" POS mein nahi (${sc})`)) return;
+      if (now - lastScanBad < 2500) { log(`🔎 Search khirki: "${t}" — bzzz pehle hi baj chuki`); return; }
+      lastScanBad = now; SND.bad++; SND.lastScan = now; missAdd(t, now); sndBump(); play('BAD', 'stop');
+      log(`🔔 bzzz — "${t}" POS mein nahi (Search khirki · ${sc})`); },
     onProc: n => { n = String(n || '').toLowerCase(); if (!n || posProcs.has(n)) return; posProcs.add(n); try { fs.writeFileSync(PF, JSON.stringify([...posProcs])); } catch {} log('🔔 POS ka program: ' + n + ' (is ke ilawa kahin scan = tu-tu-tu)'); },
     onDown: () => { if (cfg().posUi !== false) warn('POS awaz system band ho gaya — aankh se dekhein'); } }); } catch (e) { log('🔔 POS screen shuru nahi hua: ' + e.message); }
   posuiRef = posui;
