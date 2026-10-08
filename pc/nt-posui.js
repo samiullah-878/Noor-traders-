@@ -1,5 +1,8 @@
 // ============================================================
-//  nt-posui.js  v1.9 (2026-10-08: 🔎 SEARCH KHIRKI Win32 se — EnumWindows / EnumChildWindows: POS ki har NAYI dikhne wali khirki / dabba
+//  nt-posui.js  v1.10 (2026-10-08: 🔎 search khane ki likhai Win32 se — server ki jaanch (search-check.ps1): 'Search Items' alag khirki
+//                   [WindowsForms10.Window] mil rahi thi (log: Search khirki: "" — 5 dafa) magar UIA Edit/ValuePattern KHALI deta tha. Ab khirki
+//                   (GetAncestor root, main POS window nahi) ke andar WindowsForms EDIT dabbe ki likhai WM_GETTEXT se; UIA sirf fallback · NtPosUi11.dll)
+//                   · v1.9 (2026-10-08: 🔎 SEARCH KHIRKI Win32 se — EnumWindows / EnumChildWindows: POS ki har NAYI dikhne wali khirki / dabba
 //                   (sirf naye dabbon ki likhai WM_GETTEXT se — POS par bojh nahi) jis mein "Search Items" -> us ke search khane ki likhai + grid
 //                   codes -> 'SBOX\t<likhai>\t<same>\t<qataren>' (scan pakra ho ya NAHI — server par scan pakra hi nahi ja raha tha) ·
 //                   v1.8 wali UIA andar-talaash (dheemi, poori Sale list ginti thi) hata di · NtPosUi10.dll)
@@ -27,12 +30,12 @@ function start({ dir, log, cfg, onAdd, onErr, onProc, onDown, onSrch, onSbox }) 
   if (process.platform !== 'win32' || C().posUi === false) return { active: () => false };
   const PS = path.join(dir, 'nt-posui.ps1');
   const TXT = `$ErrorActionPreference='Stop'
-$dll=Join-Path $PSScriptRoot 'NtPosUi10.dll'
+$dll=Join-Path $PSScriptRoot 'NtPosUi11.dll'
 Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes,WindowsBase
 $refs=@([System.Windows.Automation.AutomationElement].Assembly.Location,[System.Windows.Automation.ControlType].Assembly.Location,[System.Windows.Rect].Assembly.Location)
 if(!(Test-Path $dll)){ Add-Type -ReferencedAssemblies $refs -OutputAssembly $dll -TypeDefinition @"
 using System;using System.Diagnostics;using System.Threading;using System.Text;using System.Collections.Generic;using System.Runtime.InteropServices;using System.Windows.Automation;
-public class NtPosUi10{
+public class NtPosUi11{
  static void Say(string s){try{Console.Out.WriteLine(s);Console.Out.Flush();}catch{}}
  static AutomationElement FindWin(string t){
   foreach(AutomationElement w in AutomationElement.RootElement.FindAll(TreeScope.Children,Condition.TrueCondition)){
@@ -68,6 +71,12 @@ public class NtPosUi10{
  [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
  [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h,out uint pid);
  [DllImport("user32.dll")] static extern IntPtr GetParent(IntPtr h);
+ [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr h,uint f);
+ [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr h,StringBuilder s,int n);
+ static string Cls(IntPtr h){ try{ var sb=new StringBuilder(200); GetClassName(h,sb,200); return sb.ToString(); }catch{ return ""; } }
+ // v1.10: search khane ki likhai — khirki ke andar WindowsForms EDIT dabba (WM_GETTEXT). UIA ValuePattern is POS par khali deta tha.
+ static string EditText(IntPtr box){ string got=""; EnumProc f=(h,l)=>{ if(got.Length==0&&IsWindowVisible(h)&&Cls(h).IndexOf("EDIT",StringComparison.OrdinalIgnoreCase)>=0){ string t=WTxt(h).Trim(); if(t.Length>0)got=t; } return true; };
+  EnumChildWindows(box,f,IntPtr.Zero); GC.KeepAlive(f); return got; }
  [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern IntPtr SendMessageTimeout(IntPtr h,uint m,IntPtr w,StringBuilder l,uint f,uint t,out IntPtr r);
  static string WTxt(IntPtr h){ try{ var sb=new StringBuilder(260); IntPtr r; SendMessageTimeout(h,0x000D,(IntPtr)260,sb,0x0002,120,out r); return sb.ToString(); }catch{ return ""; } }
  static List<IntPtr> VisibleOf(int pid){
@@ -87,15 +96,17 @@ public class NtPosUi10{
   if(hit!=IntPtr.Zero&&hit!=sH){ sH=hit; sAt=Environment.TickCount; sDone=false; }
   if(sH==IntPtr.Zero||sDone)return;
   IntPtr mainH=IntPtr.Zero; try{ if(win!=null)mainH=new IntPtr(win.Current.NativeWindowHandle); }catch{}
-  AutomationElement box=null; IntPtr c=sH;           // dabba jis mein grid ho — POS ki main Sale window tak nahi (wahan Sale ki list hai)
+  // v1.10: khirki = 'Search Items' wale dabbe ki root window (POS main window nahi — wahan Sale ka Code khana hai); andar ho to us ka parent
+  IntPtr root=GetAncestor(sH,2), boxH=(root!=IntPtr.Zero&&root!=mainH)?root:GetParent(sH);
+  string text=boxH!=IntPtr.Zero?EditText(boxH):"";
+  AutomationElement box=null; IntPtr c=boxH!=IntPtr.Zero?boxH:sH;   // grid wala dabba (barcode 2 items par ho to pehchan) — POS main window tak nahi
   for(int i=0;i<4&&c!=IntPtr.Zero&&c!=mainH;i++){ AutomationElement e=null; try{ e=AutomationElement.FromHandle(c); }catch{}
    if(e!=null){ if(box==null)box=e; try{ if(e.FindFirst(TreeScope.Descendants,GRIDC)!=null){ box=e; break; } }catch{} }
    c=GetParent(c); }
-  if(box==null)return;
-  string text=""; try{ foreach(AutomationElement ed in box.FindAll(TreeScope.Descendants,new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.Edit))){ string v=Val(ed).Trim(); if(v.Length>0){ text=v; break; } } }catch{}
+  if(text.Length==0&&box!=null){ try{ foreach(AutomationElement ed in box.FindAll(TreeScope.Descendants,new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.Edit))){ string v=Val(ed).Trim(); if(v.Length>0){ text=v; break; } } }catch{} }   // UIA fallback
   int age=Environment.TickCount-sAt;
   if(text.Length==0&&age<1500)return;                 // likhai abhi nahi aayi
-  var L=Codes(box); if(L.Count==0&&age<600)return;    // grid bharne ka thora waqt
+  var L=box!=null?Codes(box):new List<string>(); if(L.Count==0&&age<600)return;    // grid bharne ka thora waqt
   int same=0; foreach(var x in L) if(string.Equals(x,text,StringComparison.OrdinalIgnoreCase))same++;
   sDone=true; Say("SBOX\t"+text.Replace((char)9,' ').Replace((char)10,' ').Replace((char)13,' ')+"\t"+same+"\t"+L.Count);
  }
@@ -158,7 +169,7 @@ public class NtPosUi10{
 }
 "@ }
 Add-Type -Path $dll
-[NtPosUi10]::Run([string]$args[0],[string]$args[1])
+[NtPosUi11]::Run([string]$args[0],[string]$args[1])
 `;
   let child = null, gridOn = false, winOn = false, fails = 0, stopped = false, swept = false;
   // v1.5: pehle ke NT-PRINT restarts se peeche reh gaye nt-posui PowerShell band karo (sirf ek dafa, apna naya chalane se pehle)

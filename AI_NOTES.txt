@@ -3267,3 +3267,18 @@ VERSION BUMP: ?v=2.99.0, APP_VER, "Blue Khata v2.99.0", sw CACHE, version.json. 
   haath wale items apne pichhle padosi ke baad (p = pichhla + 0.5, phir cart index) — aiPicked, jUnskip aur save() se pehle.
   TEST (happy-dom): 22 lines y ulte-pulte -> cart 0..21 bill tarteeb; row 3 ka item badla -> wahi jagah 3 par.
 VERSION BUMP: ?v=2.99.1, APP_VER, "Blue Khata v2.99.1", sw CACHE, version.json. Manifest 2026-10-08.6 (nt-print, nt-posui).
+
+==================== nt-posui v1.10 (manifest 2026-10-08.7) + pc/search-check.ps1 — 🔎 search khane ki likhai Win32 se ====================
+Server (DESKTOP-Q1SLV77) par v1.18 laga; user: "Windows wali screen par awaz aati hai magar search wali screen par nahi".
+pc/search-check.ps1 (NAYI, sirf parhti hai — irm ... | iex, Search khirki khuli rakh kar): setting keys (posBeep/scanGood/posUi/
+posSearchBeep/scanHold/scanAwaz — SQL password NAHI), NT-PRINT version, log (POS screen/Search/bzzz/GHALAT/Scan awaz chalu/CS####),
+aur POS process (MainWindowTitle *Retail Solution*) ki har khirki + andar ke dabbe jin ki likhai mein 'Search' (class ke saath).
+NATEEJA (photo): v1.18 ✓, "Scan awaz chalu — 2579 barcode yaad"; log mein 5 dafa 'Search khirki: "" — naam se talaash, awaz nahi'
+(SBOX khirki PAKAR rahi thi magar likhai KHALI); 'GHALAT JAGAH scan "8964003129880" searchapp' (Windows search mein = tu-tu-tu ✓);
+POS mein scan ka koi GHALAT / SRCH log NAHI (server par POS wale scan hook ko nahi milte — shayad POS elevated / UIPI; tik POS patti
+ADD se aati hai). Khirkiyan: 'Search Items' ALAG top-level [WindowsForms10.Window.8.app.0.13965fa_r8_ad1] (andar STATIC 'Search Items
+by Item Code or Name', 'Search'); main POS window mein bhi 'Search by Item Code or Item Name' / 'Search:' STATIC (permanent, 'Search
+Items' nahi) — kul 1034 dabbe.
+* pc/nt-posui.js v1.10 (NtPosUi11.dll): SboxTick — dabba = GetAncestor(hit, GA_ROOT) (main POS window ho to GetParent(hit)); likhai =
+  us ke andar pehla visible class *EDIT* (WindowsForms10.EDIT) dabba, WM_GETTEXT (EditText). UIA Edit/ValuePattern sirf fallback. Grid
+  (Codes) usi dabbe se (barcode 2 items par = MULTI). mcs compile ✓.
