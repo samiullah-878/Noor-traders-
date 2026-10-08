@@ -1809,3 +1809,31 @@ User: "jaise hi cotton ka rate likhein to neeche woh us ko taqseem kar ke kitne 
 * purchase.js perHTML(l, 'w'|'r'): pack ho aur CTN rate > 0 -> "= <b>CTN ÷ pack</b> fi PCS" + PCS khane se farq ("PCS mein 435 — 5.83
   zyada / kam", barabar = ✓). Main screen: Wholesale / Parchoon CTN label mein small.pp-per #ppPerW{i} / #ppPerR{i}, paintRates taza karta.
   Jaanch card (pack wale): rates grid ke neeche .jc-per #jcPer (jPerHTML: W/CTN … · R/CTN …), jRepaint taza karta. PCS khud nahi badalta.
+
+==================== App v2.98.6 + sync-bills v7 + sync-stock (manifest 2026-10-08.3) — POS bill Edit = BILKUL POS ke rate ====================
+User (POS bill 00002602, mujahid oil 900ml, pack 12): "POS mein hum ne is bill ke rate change kiye the, jab yahan open kiya to rates
+different hain". POS: R.CTN 5150.04 · R.PCS 435 · W.CTN 5150.04 · W.PCS 431. App: R CTN 5220 · W CTN 5172 (= PCS × 12).
+WAJAH: (1) baseOf() app ki YAAD (itemRates, pichhli app send) ko POS se upar rakhta tha — POS mein haath se badle rate nazar-andaz;
+(2) yaad mein sirf PCS rate (w, r) tha — CTN = round(PCS × pack) ban jata tha; (3) sync-stock W PCS (SaleRateSize) alag bhejti hi nahi thi.
+POS ke khane (fi PIECE): SaleRate = R CTN ÷ pack · SaleRate2 = R PCS · SaleRate3 = W CTN ÷ pack · SaleRateSize = W PCS.
+* pc/sync-bills.js v7: har line par sr = {r, r2, w, ws} (PurchaseDetail ke SaleRate / SaleRate2 / SaleRate3 / SaleRateSize, 4 decimal) —
+  POS purchase screen wale rate. Sab 0 / khana na ho to sr nahi. stamp par asar nahi. Pehli dafa 15-Sep ke baad ke sab bill ek dafa dobara.
+* pc/sync-stock.js: item par ws = W PCS (SaleRateSize) SIRF jab SaleRate3 se farq > 0.004 (writes kam). Root ki sync-stock.js copy bhi same.
+* purchase.js:
+  - oldOf(it): oldW = W PCS (pack ho to ws || wrate), NAYA oldWc = W CTN fi piece (wrate), oldR = R CTN fi piece, oldR2 = R PCS.
+  - ctnOf(p, pk): fi piece × pack, POS ki 2-decimal gol-mol hata kar (429.17 × 12 = 5150.04 -> 5150). wcBase(l) = oldWc || oldW (purane draft).
+  - baseOf(it, bl): bl = POS bill line (ppLoadBill) -> rate sr se (na ho to POS ke maujooda item rate), oldCost = bill ka ratePcs, YAAD NAHI;
+    src 'bill' | 'pos'. Nayi purchase: handMoved(o, m) — yaad 20 min (MEM_GRACE) se purani ho aur m.r≠POS R PCS, m.w≠W PCS, m.rc≠R CTN
+    ya m.wc≠W CTN (>0.02) -> POS mein haath se badla -> POS ke rate + POS khareed (posHand=1). Warna yaad (cost + PCS), CTN yaad ke rc/wc
+    se, woh na hon to POS ka maujooda CTN. Khula item (pack nahi): oldR = oldR2, oldWc = oldW.
+  - recalc / addItem / loadFromJob / ppLoadBill / hints (pehle X) / jaanch W/CTN R/CTN: CTN ab apne CTN rate se (ctnOf), PCS × pack nahi.
+    'R' nafa % line par ab R PCS se.
+  - srcChip(l): "✋ POS mein badla gaya — POS rate liye" (posHand) · "🧾 POS bill ke rate — bilkul POS jaise" (bill) · "🧾 POS ke maujooda
+    rate" (pos). Info line: "POS bill ka khareed" / "POS khareed" / "pichhli dafa khareed".
+  - save(): yaad mein ab wc / rc (CTN ÷ item pack, 2 decimal) bhi. cloud.js setItemRates wc/rc rakhta hai (rules mein entry keys par
+    pabandi nahi — rules change NAHI).
+* style.css .pp-src (hand = narangi, bill = neela pill; dk theme bhi).
+TEST: node unit 19/19 (bill sr -> 5150/431/5150/435; cost +2% -> usi nafa; sr nahi -> POS; purani yaad -> CTN POS se; R PCS haath se
+  440 -> posHand; 5 min grace; yaad wc/rc; CTN haath se 5200; khula item; ctnOf). happy-dom: bill 00002602 khola -> inputs 5150 / 431 /
+  5150 / 435, hints "pehle" wahi, chip "🧾 POS bill ke rate", koi 'changed' nahi.
+VERSION BUMP: ?v=2.98.6 (12 files), APP_VER, "Blue Khata v2.98.6", sw CACHE, version.json. Manifest 2026-10-08.3 (sync-bills, sync-stock).

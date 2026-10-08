@@ -2,6 +2,7 @@
 //  sync-stock.js  —  POS ka stock Firestore par bhejta hai
 //  SQL mein kuch LIKHTA nahi - sirf padhta hai.
 //  2026-10-04: har item ke saath category ka naam (cat) — Items ka '%ategor%ID' khana + category table khud dhoondta hai
+//  2026-10-08: ws = W PCS (SaleRateSize) jab W CTN÷pack (SaleRate3 = wrate) se alag ho — app CTN aur PCS alag dikhaye
 // =========================================================
 //
 //  Chalane ka tareeqa:   node sync-stock.js
@@ -278,6 +279,8 @@ async function readStock(pool, branch, lastRates, codes, subq, shows, subs) {
       //   PurchaseRate = khareed, pehle se EK PIECE ka
       rate: round2(Number(r.BRetail) || r.SaleRate),
       wrate: round2(Number(r.BWhole) || Number(r.BWholeSize) || 0),
+      // 2026-10-08: W PCS (SaleRateSize) alag — sirf jab W CTN÷pack (SaleRate3) se farq ho (warna wrate hi kaafi, writes kam)
+      ...(Number(r.BWhole) > 0 && Number(r.BWholeSize) > 0 && Math.abs(round2(r.BWholeSize) - round2(r.BWhole)) > 0.004 ? { ws: round2(r.BWholeSize) } : {}),
       ...(Number(r.BRetail2) > 0 ? { rate2: round2(r.BRetail2) } : {}),   // v6: POS "Peice Rate" (SaleRate2) — khula piece
       // Khareed ka bhao PER PIECE.
       // POS ke Items mein PurchaseRate poore carton/bore ka hota hai (misal 8500),

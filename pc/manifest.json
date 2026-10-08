@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-08.2",
+  "version": "2026-10-08.3",
   "note": "KHATA-DOCTOR manifest — sirf ye files PC par jati hain. local-config.json / firebase-key.json kabhi nahi.",
   "files": {
     "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -24,8 +24,8 @@
     "stock-auto.bat": "4d92cfa7495bf9bb0519228443e053537d1d6a096efecc97f3c999178790c47e",
     "subcode-auto.bat": "40d8530886748dc71c8139a70ce768922f2e3c9aae896d2ed13731948e9d9d3a",
     "subcode-sync.js": "8a63bd6ab7a9440253deb3ae5159e160dabb06e4158da091a0b05e60723ca0a1",
-    "sync-bills.js": "7ad67e89efbd5b221507fa1a7d5bb6b2fb7e4a4bba53c0cb58c53b09de87c777",
-    "sync-stock.js": "fa04e21bbaae4689541e7f15b8740f44282bcd0d68ca33e6a565a40b2379b8bb",
+    "sync-bills.js": "4fdb635cc204968eae022249e88831903c305b2bae02caf729d7928b78026522",
+    "sync-stock.js": "660159f3918ed5b0e8a89cc30cdb42e1f933ea279e758865a9ae16c501392891",
     "sync.js": "12537c97d798d20ab91a78e38dea6eb3e2853a0dc443093aa0de86bb964602fa",
     "transfer-auto.bat": "bc22e9e1dee01b646f4153fb971535dcf5c3fe8d4b84bb0bd55c451971ddb4f7",
     "transfer-dekho-auto.bat": "a7ea0955221df6e712737467a9d39e110c867f1f2526f8572fc76955625156ee",

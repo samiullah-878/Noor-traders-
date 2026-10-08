@@ -2,6 +2,10 @@
 //  sync-bills.js  v4.2 (2026-09-30: lines POS ki tarteeb se)  —  POS ke purchase bill ki poori tafseel
 //  item, godam, CTN rate, PCS rate, qty, total
 //  SQL mein kuch LIKHTA nahi - sirf padhta hai.
+//  v7 (2026-10-08): har line par sr = us BILL ke bechne ke rate, FI PIECE (PurchaseDetail ke khane — POS purchase screen
+//     wale R.CTN/R.PCS/W.CTN/W.PCS): { r: SaleRate (R CTN ÷ pack), r2: SaleRate2 (R PCS), w: SaleRate3 (W CTN ÷ pack),
+//     ws: SaleRateSize (W PCS) }. App bill Edit mein BILKUL yahi rate dikhati hai (pehle apni yaad se lagati thi).
+//     Khana na mile / sab 0 hon to sr nahi bhejte (app POS ke maujooda item rate leti hai). stamp par koi asar nahi.
 //  v6 (22-Sep-2026): bills-now.flag (purchase-post v4 likhta hai) har 5 second dekhti hai — ho to FORAN chakkar (2 minute
 //     ka intezar nahi). Baqi sab v5 jaisa.
 //  v5 (22-Sep-2026, ASAL v4 par): app ki "✏️ POS Purchase screen mein Edit" ke liye bill par purchaseId, posPartyId,
@@ -139,6 +143,10 @@ async function readBills(pool, names) {
     const bonus    = pick(l, ['Bonus','BonusQty']);
     const amount   = pick(l, ['Amount','NetAmount','TotalAmount','LineTotal']);
     const total    = amount != null ? Number(amount) : pcsRate * pcsQty;
+    // v7: is bill ke bechne ke rate (fi piece) — POS purchase screen par jo dikhte hain
+    const r4 = v => Math.round((Number(v) || 0) * 10000) / 10000;
+    const sr = { r: r4(pick(l, ['SaleRate'])), r2: r4(pick(l, ['SaleRate2'])), w: r4(pick(l, ['SaleRate3'])), ws: r4(pick(l, ['SaleRateSize'])) };
+    const hasSr = sr.r > 0 || sr.r2 > 0 || sr.w > 0 || sr.ws > 0;
 
     bill.lines.push({
       name: String(l.ItemName || '').trim(),
@@ -157,7 +165,8 @@ async function readBills(pool, names) {
       itemId: l.ItemID,                                   // v5
       qtyPcs: num(pcsQty),
       ratePcs: Math.round((pcsRate || 0) * 10000) / 10000,
-      godamId: branchId != null ? Number(branchId) : null
+      godamId: branchId != null ? Number(branchId) : null,
+      ...(hasSr ? { sr } : {})                            // v7
     });
     bill._raw.push(l);
   }

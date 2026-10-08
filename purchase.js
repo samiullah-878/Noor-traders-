@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.98.5';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.98.5';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.98.6';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.98.6';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -124,20 +124,53 @@ function findByCode(items, code) {
   return items.find(r => codesOf(r).includes(clean)) || items.find(r => bare && codesOf(r).some(x => x.replace(/^0+/, '') === bare)) || null;
 }
 
-// purane rates (POS abhi jo hain) — sab FI PIECE: prate khareed, wrate W, rate R (carton wala), rate2 khula piece
+// purane rates (POS abhi jo hain) — sab FI PIECE: prate khareed, rate R CTN÷pack (SaleRate), rate2 R PCS (SaleRate2),
+// wrate W CTN÷pack (SaleRate3), ws W PCS (SaleRateSize — sync-stock sirf farq ho to bhejti hai).
+// v2.98.6: oldW = W PCS, oldWc = W CTN fi piece (pehle dono ek hi the — CTN = PCS × pack ban jata tha)
 function oldOf(it) {
-  return { oldCost: r4(Number(it.prate) || 0), oldW: r2(Number(it.wrate) || 0), oldR: r2(Number(it.rate) || 0), oldR2: r2(Number(it.rate2) || Number(it.rate) || 0) };
+  const pk = Number(it.pack) > 1, wc = r2(Number(it.wrate) || 0);
+  return { oldCost: r4(Number(it.prate) || 0), oldW: pk ? r2(Number(it.ws) || wc) : wc, oldWc: wc, oldR: r2(Number(it.rate) || 0), oldR2: r2(Number(it.rate2) || Number(it.rate) || 0) };
+}
+// v2.98.6: CTN ka rate fi piece se wapas — POS fi piece 2 decimal rakhta hai (5150 ÷ 12 = 429.17 → × 12 = 5150.04 = asal 5150)
+const ctnOf = (p, pk) => { const v = (Number(p) || 0) * pk, n = Math.round(v); return Math.abs(v - n) <= 0.005 * pk + 1e-6 ? n : r2(v); };
+const wcBase = l => Number(l.oldWc) > 0 ? Number(l.oldWc) : (Number(l.oldW) || 0);   // W CTN fi piece (purani draft line par = W PCS)
+// v2.98.6: yaad ke rate POS mein ab nahi milte = kisi ne POS mein HAATH se badle (ya POS mein seedhi purchase hui).
+// Bhejne ke 20 minute tak yaad hi sahi (PC ne abhi POS mein lagaye na hon / stock sync baqi ho).
+const MEM_GRACE = 20 * 60 * 1000;
+function handMoved(o, m) {
+  if (Date.now() - (Number(m.t) || 0) < MEM_GRACE) return false;
+  const off = (a, b) => Number(a) > 0 && Number(b) > 0 && Math.abs(Number(a) - Number(b)) > 0.02;
+  return off(m.r, o.oldR2) || off(m.w, o.oldW) || off(m.rc, o.oldR) || off(m.wc, o.oldWc);
 }
 // v2.1.0: pehle PICHHLE purchase ki yaad (khareed + us waqt lage hue rates), warna POS ke maujooda rates.
 // Nafa isi se nikalta hai (recalc: oldW/oldCost), yani "jitna nafa pichhli dafa laga tha wohi is dafa bhi".
-function baseOf(it) {
-  const o = oldOf(it);
+// v2.98.6: bl = POS bill ki line (Edit) -> BILKUL POS jaisa: us bill ke apne rate (sync-bills v7 sr), warna POS ke maujooda
+//   item rate — yaad NAHI; nafa isi bill ke khareed par. Yaad ke rate POS se na milen (haath se badle) -> POS ke rate (posHand).
+function baseOf(it, bl) {
+  const o = oldOf(it), pk = Number(it.pack) > 1;
   let m = null; try { m = (lastRatesOf() || {})[String(it.id)] || null; } catch {}
   if (m && Number(m.m) > 0) { o.oldMrp = r2(Number(m.m)); o.mrpT = Number(m.mt) || 0; o.mrpH = Array.isArray(m.mh) ? m.mh.slice(-5) : []; }   // v2.96.3: 🏷 retail yaad (pehle / ab)
+  if (bl) {
+    const s = bl.sr && typeof bl.sr === 'object' ? bl.sr : null, n = v => r2(Number(v) || 0);
+    if (s) {
+      if (n(s.r) > 0) o.oldR = n(s.r);
+      if (n(s.r2) > 0 || n(s.r) > 0) o.oldR2 = n(s.r2) || n(s.r);
+      if (n(s.w) > 0) o.oldWc = n(s.w);
+      const wp = pk ? (n(s.ws) || n(s.w)) : (n(s.w) || n(s.ws)); if (wp > 0) o.oldW = wp;
+    }
+    if (Number(bl.ratePcs) > 0) o.oldCost = r4(Number(bl.ratePcs));
+    o.src = s ? 'bill' : 'pos';
+    return o;
+  }
   if (!m || !(Number(m.c) > 0)) return o;
+  if (handMoved(o, m)) { if (!(o.oldCost > 0)) o.oldCost = r4(Number(m.c)); o.posHand = 1; return o; }
   o.oldCost = r4(Number(m.c));
   if (Number(m.w) > 0) o.oldW = r2(Number(m.w));
-  if (Number(m.r) > 0) { o.oldR = r2(Number(m.r)); o.oldR2 = r2(Number(m.r)); }
+  if (Number(m.r) > 0) o.oldR2 = r2(Number(m.r));
+  // CTN: yaad mein ho (v2.98.6+) to woh; warna POS ka maujooda CTN rate (woh bhi pichhli dafa app ne hi lagaya tha); woh bhi na ho to PCS jaisa
+  if (Number(m.rc) > 0) o.oldR = r2(Number(m.rc)); else if (!(o.oldR > 0) && Number(m.r) > 0) o.oldR = r2(Number(m.r));
+  if (Number(m.wc) > 0) o.oldWc = r2(Number(m.wc)); else if (!(o.oldWc > 0) && Number(m.w) > 0) o.oldWc = r2(Number(m.w));
+  if (!pk) { o.oldR = o.oldR2; o.oldWc = o.oldW; }   // khula item: ek hi rate
   o.mem = 1;
   return o;
 }
@@ -152,17 +185,17 @@ function recalc(l) {
   const same = tinyCost(l) || (l.oldCost > 0 && c < l.oldCost);   // v2.10: khareed KAM ho to bhi purane rate (app khud kam nahi karti)
   // v2.19: char alag taraf — W/PCS (wMode) · W/CTN (wcMode) · R/PCS (rMode) · R/CTN (rcMode). CTN wala khali ho to PCS ke peeche chalta hai (purane draft)
   const wp = l.wMode, wc = l.wcMode ?? l.wMode, rp = l.rMode, rc = l.rcMode ?? l.rMode;
-  const oW = l.oldCost > 0 && l.oldW > 0, oR = l.oldCost > 0 && l.oldR > 0;
+  const oW = l.oldCost > 0 && l.oldW > 0, oWc = l.oldCost > 0 && wcBase(l) > 0, oR = l.oldCost > 0 && l.oldR > 0;
   if (wp === 'old' && oW) l.wpcs = same ? r2(l.oldW) : upR(c * (l.oldW / l.oldCost));
   else if (typeof wp === 'number') l.wpcs = upR(c * (1 + wp / 100));
-  if (pk) {
-    if (wc === 'old' && oW) l.wctn = same ? Math.round(l.oldW * pk) : upR(c * (l.oldW / l.oldCost) * pk);
+  if (pk) {   // v2.98.6: CTN apne purane CTN rate se (pehle W PCS × pack)
+    if (wc === 'old' && oWc) l.wctn = same ? ctnOf(wcBase(l), pk) : upR(c * (wcBase(l) / l.oldCost) * pk);
     else if (typeof wc === 'number') l.wctn = upR(c * (1 + wc / 100) * pk);
   } else if ((wp === 'old' && oW) || typeof wp === 'number') l.wctn = 0;
   if (rp === 'old' && oR) l.rpcs = same ? r2(pk ? l.oldR2 : l.oldR) : upR(c * ((pk ? l.oldR2 : l.oldR) / l.oldCost));
   else if (typeof rp === 'number') l.rpcs = upR(c * (1 + rp / 100));
   if (pk) {
-    if (rc === 'old' && oR) l.rctn = same ? Math.round(l.oldR * pk) : upR(c * (l.oldR / l.oldCost) * pk);
+    if (rc === 'old' && oR) l.rctn = same ? ctnOf(l.oldR, pk) : upR(c * (l.oldR / l.oldCost) * pk);
     else if (typeof rc === 'number') l.rctn = upR(c * (1 + rc / 100) * pk);
   } else if ((rp === 'old' && oR) || typeof rp === 'number') l.rctn = 0;
   if (!pk && l.one) { if (!l.wcOwn) l.wctn = r2(l.wpcs); if (!l.rcOwn) l.rctn = r2(l.rpcs); }   // v2.4.2: 1 ctn = 1 pcs
@@ -190,6 +223,8 @@ function chipRow(l, ix, grp, idp = 'ppRc') {
   const nTxt = !ns.length ? '' : Math.max(...ns) - Math.min(...ns) < 0.15 ? ns[0] + '%' : ns.join('% · ') + '%';
   return `<div class="rate-chips rc-inline" id="${idp}${grp}${ix}"><div class="rc-row"><span class="rc-lab">${grp === 'w' ? 'Wholesale' : 'Parchoon'}${nTxt ? `<i class="${Math.min(...ns) < 0 ? 'neg' : ''}">abhi ${nTxt}</i>` : ''}</span><span class="rc-set">${list.map(p => `<button type="button" class="rc${m === p ? ' on' : ''}" data-pp-rch="${ix}|${grp}|${p}">${p}%</button>`).join('')}</span></div></div>`;
 }
+// v2.98.6: rate kahan se aaye — POS bill ke apne / POS mein haath se badle (yaad chhor di)
+const srcChip = l => l.posHand ? '<div class="pp-src hand">✋ POS mein badla gaya — POS rate liye</div>' : l.src === 'bill' ? '<div class="pp-src bill">🧾 POS bill ke rate — bilkul POS jaise</div>' : l.src === 'pos' ? '<div class="pp-src bill">🧾 POS ke maujooda rate</div>' : '';
 const allOldOf = l => ['wp', 'wc', 'rp', 'rc'].every(sd => modeOf(l, sd) === 'old');
 const oldBtn = (l, ix, idp = 'ppRc') => l.oldCost > 0 ? `<button type="button" class="rc-old${allOldOf(l) ? ' on' : ''}" id="${idp}Old${ix}" data-pp-rold="${ix}" title="Purana nafa" aria-label="Purana nafa">↺</button>` : '';
 function rateChipsHTML(l, ix, idp = 'ppRc') {   // jaanch khirki: dono line ek dabbe mein
@@ -223,7 +258,7 @@ function addItem(it, again = true) {
   const l = {
     k: newKey(), id: it.id, code: it.code || '', name: it.name, pack: Number(it.pack) || 0, cName: it.cName || 'Ctn', uName: it.uName || 'Pcs',
     godam: Number(godam) || BILL_BRANCH, ctn: pk ? 1 : 0, pcs: pk ? 0 : 1, costP: o.oldCost, ...o,
-    wpcs: o.oldW, wctn: pk ? Math.round(o.oldW * pk) : 0, rpcs: pk ? o.oldR2 : o.oldR, rctn: pk ? Math.round(o.oldR * pk) : 0,
+    wpcs: o.oldW, wctn: pk ? ctnOf(wcBase(o), pk) : 0, rpcs: pk ? o.oldR2 : o.oldR, rctn: pk ? ctnOf(o.oldR, pk) : 0,   // v2.98.6: CTN apna rate
     wMode: 'old', rMode: 'old'
   };
   cart.push(l); openKey = l.k; keepDraft();
@@ -303,8 +338,8 @@ function loadFromJob(p) {
     next.push({ k: newKey(), id: it.id, code: it.code || '', name: it.name, pack: Number(it.pack) || 0, cName: it.cName || 'Ctn', uName: it.uName || 'Pcs',
       godam: Number(x.godam) || Number(p.godam) || BILL_BRANCH, ctn: pk ? Math.floor(q / pk + 1e-9) : 0, pcs: pk ? r3(q - Math.floor(q / pk + 1e-9) * pk) : q,
       costP: r4(Number(x.costP) || o.oldCost), ...o,
-      wpcs: hasW ? r2(x.wpcs) : o.oldW, wctn: hasW ? r2(x.wctn) : (pk ? Math.round(o.oldW * pk) : 0),
-      rpcs: hasR ? r2(x.rpcs) : (pk ? o.oldR2 : o.oldR), rctn: hasR ? r2(x.rctn) : (pk ? Math.round(o.oldR * pk) : 0),
+      wpcs: hasW ? r2(x.wpcs) : o.oldW, wctn: hasW ? r2(x.wctn) : (pk ? ctnOf(wcBase(o), pk) : 0),
+      rpcs: hasR ? r2(x.rpcs) : (pk ? o.oldR2 : o.oldR), rctn: hasR ? r2(x.rctn) : (pk ? ctnOf(o.oldR, pk) : 0),
       wMode: hasW ? 'manual' : 'old', rMode: hasR ? 'manual' : 'old' });
   }
   if (!next.length) return 'Is bill ka koi item POS stock list mein nahi mila.';
@@ -521,12 +556,12 @@ export function renderPP() {
     const fl = lineFlags(l), isOpen = lineView === 'all' || l.k === openKey || cart.length < 2;
     if (!isOpen) return passFilter(l, fl) ? lineMiniHTML(l, i, fl) : '';   // v2.96.4: chhoti patti
     const pk = packOf(l), pcs = linePcs(l);
-    const wN = nafaPct(l.oldW, l.oldCost), rN = nafaPct(l.oldR, l.oldCost);
+    const wN = nafaPct(l.oldW, l.oldCost), rN = nafaPct(pk ? l.oldR2 : l.oldR, l.oldCost), wcO = pk ? ctnOf(wcBase(l), pk) : 0, rcO = pk ? ctnOf(l.oldR, pk) : 0;   // v2.98.6: CTN apna
     const hint = v => v > 0 ? `pehle ${num(v)}` : '—';
     const ch = (v, now) => v > 0 && Math.abs((Number(now) || 0) - v) > 0.004 ? ' changed' : '';
     return `<div class="sale-line pp-line${i === cart.length - 1 && Date.now() - ppAddAt < 1800 ? ' fresh' : ''}" data-pp-line="${i}">
       <div class="sale-line-top"><b><span class="pp-no">${i + 1}.</span> ${esc(l.name)}${l.billName && l.billName !== l.name ? `<small class="pp-billname">bill: ${esc(l.billName)}</small>` : ''}</b><span class="pp-topbtns">${cart.length > 1 && lineView !== 'all' ? '<button type="button" class="pp-fold" data-pp-fold="1" title="Band karo" aria-label="Band karo">▲</button>' : ''}<button type="button" class="danger sale-x" data-pp-del="${i}" aria-label="Hatao">✕</button></span></div>
-      <small>${esc(l.code)}${pk ? ' · 1 ' + esc(l.cName) + ' = ' + num(pk) : ''} · ${l.mem ? '<b>pichhli dafa</b> khareed' : 'purana khareed'} <b>${l.oldCost > 0 ? num(l.oldCost) + '/' + esc(l.uName) + (pk ? ' (' + num(r2(l.oldCost * pk)) + '/' + esc(l.cName) + ')' : '') : 'maloom nahi'}</b>${wN != null ? ' · nafa W ' + wN + '%' : ''}${rN != null ? ' · R ' + rN + '%' : ''}</small>
+      <small>${esc(l.code)}${pk ? ' · 1 ' + esc(l.cName) + ' = ' + num(pk) : ''} · ${l.src === 'bill' ? '<b>POS bill</b> ka khareed' : l.posHand ? '<b>POS</b> khareed' : l.mem ? '<b>pichhli dafa</b> khareed' : 'purana khareed'} <b>${l.oldCost > 0 ? num(l.oldCost) + '/' + esc(l.uName) + (pk ? ' (' + num(r2(l.oldCost * pk)) + '/' + esc(l.cName) + ')' : '') : 'maloom nahi'}</b>${wN != null ? ' · nafa W ' + wN + '%' : ''}${rN != null ? ' · R ' + rN + '%' : ''}</small>
       <div class="sale-inputs pp-inputs">
         ${pk ? `<label>${esc(l.cName)} (${num(pk)})<input type="number" min="0" step="1" inputmode="numeric" data-pp-ctn="${i}" value="${l.ctn || ''}"></label>` : ''}
         <label>${esc(l.uName)}<input type="number" min="0" step="any" inputmode="decimal" data-pp-pcs="${i}" value="${l.pcs || ''}"></label>
@@ -536,12 +571,12 @@ export function renderPP() {
         <label class="sale-amt pp-amt"><small>${num(pcs)} ${esc(l.uName)} · bill ki raqam</small><input type="number" min="0" step="any" inputmode="decimal" data-pp-amt="${i}" id="ppAmt${i}" value="${lineTotal(l) ? r2(lineTotal(l)) : ''}" placeholder="raqam"></label>
       </div>
       <div class="pp-rates">
-        <div class="pp-rates-hrow"><small class="pp-rates-h">Naye rates (POS mein lagenge)${l.wMode === 'old' && l.rMode === 'old' ? ' · purane nafa se' : ''}</small>${oldBtn(l, i)}</div>
+        <div class="pp-rates-hrow"><small class="pp-rates-h">Naye rates (POS mein lagenge)${l.wMode === 'old' && l.rMode === 'old' ? ' · purane nafa se' : ''}</small>${oldBtn(l, i)}</div>${srcChip(l)}
         <div class="pp-rgrps"><div class="pp-rgrp"><div class="pp-rate-grid pp-g2">
-          ${pk ? `<label>Wholesale ${esc(l.cName)}<input class="${ch(r2(l.oldW * pk), l.wctn)}" type="number" min="0" step="any" inputmode="decimal" data-pp-wctn="${i}" value="${l.wctn || ''}" placeholder="${hint(Math.round(l.oldW * pk))}"><small>${hint(Math.round(l.oldW * pk))}</small><small class="pp-per" id="ppPerW${i}">${perHTML(l, 'w')}</small></label>` : ''}
+          ${pk ? `<label>Wholesale ${esc(l.cName)}<input class="${ch(wcO, l.wctn)}" type="number" min="0" step="any" inputmode="decimal" data-pp-wctn="${i}" value="${l.wctn || ''}" placeholder="${hint(wcO)}"><small>${hint(wcO)}</small><small class="pp-per" id="ppPerW${i}">${perHTML(l, 'w')}</small></label>` : ''}
           <label>Wholesale ${esc(l.uName)}<input class="${ch(l.oldW, l.wpcs)}" type="number" min="0" step="any" inputmode="decimal" data-pp-wpcs="${i}" value="${l.wpcs || ''}"><small>${hint(l.oldW)}</small></label>
         </div>${chipRow(l, i, 'w')}</div><div class="pp-rgrp"><div class="pp-rate-grid pp-g2">
-          ${pk ? `<label>Parchoon ${esc(l.cName)}<input class="${ch(Math.round(l.oldR * pk), l.rctn)}" type="number" min="0" step="any" inputmode="decimal" data-pp-rctn="${i}" value="${l.rctn || ''}"><small>${hint(Math.round(l.oldR * pk))}</small><small class="pp-per" id="ppPerR${i}">${perHTML(l, 'r')}</small></label>` : ''}
+          ${pk ? `<label>Parchoon ${esc(l.cName)}<input class="${ch(rcO, l.rctn)}" type="number" min="0" step="any" inputmode="decimal" data-pp-rctn="${i}" value="${l.rctn || ''}"><small>${hint(rcO)}</small><small class="pp-per" id="ppPerR${i}">${perHTML(l, 'r')}</small></label>` : ''}
           <label>Parchoon ${esc(l.uName)}<input class="${ch(pk ? l.oldR2 : l.oldR, l.rpcs)}" type="number" min="0" step="any" inputmode="decimal" data-pp-rpcs="${i}" value="${l.rpcs || ''}"><small>${hint(pk ? l.oldR2 : l.oldR)}</small></label>
         </div>${chipRow(l, i, 'r')}${sbHTML(l, i)}</div>${mrpGroupHTML(l, i)}</div>
       </div>
@@ -1465,9 +1500,9 @@ function jCard(i) {
       </div>
       <div class="jc-sub">Naye rates · pichhle nafa se${r.j?.old ? ` · khareed pichhli ${num(r.j.old)} <b class="${diff > 0 ? 'red' : 'green'}">${diff > 0 ? '+' : ''}${num(diff)}</b>` : ''}${Number(ln.xs) > 0 ? ` · kharcha +${num(r2(ln.xs))} (POS khareed ${num(r2(effCost(ln)))})` : ''}</div>
       <div class="jc-g4">
-        ${fld('W/' + esc(ln.cName || 'CTN'), 'jwc', pk ? jF(ln.wctn) : cs ? jF(ln.wpcs * cs) : jF(ln.wctn), pk ? oW * pk : cs ? oW * cs : (ln.one ? oW : 0))}
+        ${fld('W/' + esc(ln.cName || 'CTN'), 'jwc', pk ? jF(ln.wctn) : cs ? jF(ln.wpcs * cs) : jF(ln.wctn), pk ? ctnOf(wcBase(o), pk) : cs ? oW * cs : (ln.one ? oW : 0))}
         ${fld('W/' + esc(ln.uName || 'PCS'), 'jw', jF(ln.wpcs), oW)}
-        ${fld('R/' + esc(ln.cName || 'CTN'), 'jrc', pk ? jF(ln.rctn) : cs ? jF(ln.rpcs * cs) : jF(ln.rctn), pk ? (Number(o.oldR) || 0) * pk : cs ? oR * cs : (ln.one ? oR : 0))}
+        ${fld('R/' + esc(ln.cName || 'CTN'), 'jrc', pk ? jF(ln.rctn) : cs ? jF(ln.rpcs * cs) : jF(ln.rctn), pk ? ctnOf(Number(o.oldR) || 0, pk) : cs ? oR * cs : (ln.one ? oR : 0))}
         ${fld('R/' + esc(ln.uName || 'PCS'), 'jr', jF(ln.rpcs), oR)}
       </div>${pk ? `<div class="jc-per" id="jcPer">${jPerHTML(ln)}</div>` : ''}
       ${rateChipsHTML(ln, cart.indexOf(ln), 'jcRc')}
@@ -1880,6 +1915,8 @@ async function save() {
       for (const l of lines) if (l.id) { const m0 = memOf(l.id) || {}; mem[String(l.id)] = { c: r4(l.costP), w: r2(l.wpcs), r: r2(l.rpcs), t: Date.now(), ...(sz[String(l.id)] || m0.s ? { s: sz[String(l.id)] || m0.s } : {}) };
         // v2.96.3: 🏷 retail yaad — badli ho to purani history mein (pehle X -> ab Y)
         const cl = cart.find(x => String(x.id) === String(l.id)), nv = cl ? mrpOf(cl) : 0, ov = Number(m0.m) || 0;
+        { const ipk = Number((stock().items.find(x => String(x.id) === String(l.id)) || {}).pack) || 0;   // v2.98.6: CTN rate bhi yaad (fi piece, POS jaisa) — agli dafa CTN = PCS × pack nahi
+          if (ipk > 1) { if (Number(l.wctn) > 0) mem[String(l.id)].wc = r2(l.wctn / ipk); if (Number(l.rctn) > 0) mem[String(l.id)].rc = r2(l.rctn / ipk); } }
         if (cl && subsOf(cl).length) mem[String(l.id)].sl = sblOf(cl) ? 1 : 0;   // v2.98.4: barcode rate saath ✓ / ✕ yaad
         if (nv > 0) { const H = Array.isArray(m0.mh) ? m0.mh.slice(-4) : []; const ch = ov > 0 && Math.abs(nv - ov) > 0.004; if (ch) H.push({ v: ov, t: Number(m0.mt) || Number(m0.t) || Date.now() });
           Object.assign(mem[String(l.id)], { m: r2(nv), mt: ch || !ov ? Date.now() : (Number(m0.mt) || Date.now()), ...(H.length ? { mh: H } : {}) }); }
@@ -1933,12 +1970,12 @@ export function ppLoadBill(b, ent) {
   for (const x of b.lines) {
     const it = s.items.find(r => String(r.id) === String(x.itemId));
     if (!it) { missing.push(x.name); continue; }
-    const o = baseOf(it), pk = Number(it.pack) > 1 ? Number(it.pack) : 0, q = Number(x.qtyPcs) || 0;
+    const o = baseOf(it, x), pk = Number(it.pack) > 1 ? Number(it.pack) : 0, q = Number(x.qtyPcs) || 0;   // v2.98.6: bill ke apne rate (yaad nahi)
     const g = Number(x.godamId) || BILL_BRANCH; gcount.set(g, (gcount.get(g) || 0) + 1);
     next.push({ k: newKey(), id: it.id, code: it.code || '', name: it.name, pack: Number(it.pack) || 0, cName: it.cName || 'Ctn', uName: it.uName || 'Pcs',
       godam: g, ctn: pk ? Math.floor(q / pk + 1e-9) : 0, pcs: pk ? r3(q - Math.floor(q / pk + 1e-9) * pk) : q, costP: r4(Number(x.ratePcs) || o.oldCost), ...o,
-      wpcs: o.oldW, wctn: pk ? Math.round(o.oldW * pk) : 0, rpcs: pk ? o.oldR2 : o.oldR, rctn: pk ? Math.round(o.oldR * pk) : 0, wMode: 'old', rMode: 'old' });
-    recalc(next[next.length - 1]);   // v2.1.0: bill ke naye khareed par pichhla NAFA khud lag jaye
+      wpcs: o.oldW, wctn: pk ? ctnOf(wcBase(o), pk) : 0, rpcs: pk ? o.oldR2 : o.oldR, rctn: pk ? ctnOf(o.oldR, pk) : 0, wMode: 'old', rMode: 'old' });
+    recalc(next[next.length - 1]);   // v2.98.6: khareed wohi = rate BILKUL POS bill wale; khareed badlein to usi nafa % se
   }
   if (missing.length) return 'Yeh items POS stock list mein nahi mile, is liye edit nahi ho sakta:\n' + missing.join('\n');
   cart = next; openKey = ''; lineFilter = 'all';   // v2.96.4: khula bill = sab patti band (jaldi check)
