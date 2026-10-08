@@ -40,7 +40,7 @@ public class NtWinChk {
       EnumChildWindows(t, fc, IntPtr.Zero); GC.KeepAlive(fc);
     }
     GC.KeepAlive(ft);
-    o.Add("Kul khirkiyan " + tops.Count + " · andar ke dabbe " + n + " · '" + want + "' mila: " + hits);
+    o.Add("Kul khirkiyan " + tops.Count + " - andar ke dabbe " + n + " - '" + want + "' mila: " + hits);
     return o;
   }
 }
