@@ -3312,3 +3312,17 @@ Is PC par bhi POS wale scan hook ko nahi milte ("scan NAHI pakra") — tik sirf 
   lines) PowerShell mein $K hi hai (naam bara/chhota ek) -> hamara $K = "[08/10/2026, 18..." -> Join-Path "drive nahi mila", files
   update nahi hui, log nahi parha (Abdurehman PC photo). Ab `& ([scriptblock]::Create(...))` (alag scope) + baad mein $K dobara set;
   awaz-check mein $k -> $kl.
+
+==================== pc/speaker-fix.ps1 (2026-10-08) — 🔊 SPEAKER DHOONDO ====================
+User (Abdurehman PC): "speaker ki awaz nahi aa rahi ya system ka problem hai — isko sahi karna hai". Plan diya (haath ki jaanch +
+command), OK.
+* pc/speaker-fix.ps1 (irm .../main/pc/speaker-fix.ps1 | iex — sirf AnyDesk PowerShell, admin zaroori nahi):
+  1) AudioEndpointBuilder / Audiosrv band hon to chalu (admin na ho to batata). 2) Win32_SoundDevice (driver hai ya nahi).
+  3) C# Core Audio (NtSpk): IMMDeviceEnumerator.EnumAudioEndpoints(render, mask 0xF) — har raasta naam (PKEY_Device_FriendlyName
+     via IPropertyStore) + haalat (1 CHALU / 2 BAND disabled / 4 maujood nahi / 8 TAAR NAHI LAGA) + abhi ka default.
+  4) Har CHALU raasta (default pehle): IPolicyConfig.SetDefaultEndpoint (CPolicyConfigClient, teeno role) -> IAudioEndpointVolume
+     mute hatao, volume < 60% ho to 80% -> generated WAV (SoundPlayer — Windows ke system sounds NT-PRINT ne band kiye hain, is liye
+     SystemSounds nahi) + [console]::Beep x2 -> "Awaz aayi? (h/n)"; h = wahi default rehta hai.
+  5) Kisi par na aaye: unplugged = hare socket mein taar; disabled = Sound window -> Show Disabled -> Enable; chalu magar khamosh =
+     speaker batti / bijli / knob; kuch nahi mila = driver. mmsys.cpl khol deta hai.
+  mcs compile ✓, WAV mono se banaya (1 ch, 22050 Hz, 0.96 s) ✓.
