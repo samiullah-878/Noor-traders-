@@ -1,5 +1,7 @@
 // ============================================================
-//  nt-posui.js  v1.10 (2026-10-08: 🔎 search khane ki likhai Win32 se — server ki jaanch (search-check.ps1): 'Search Items' alag khirki
+//  nt-posui.js  v1.11 (2026-10-08: ⚡ bzzz TEZ — Search khirki ki nigrani ALAG thread par har 60 ms (pehle POS screen ke baqi kaam ke saath
+//                   ~150-500 ms); likhai milte hi FORAN faisla (grid bharne ka 600 ms intezar khatam) · NtPosUi12.dll)
+//                   · v1.10 (2026-10-08: 🔎 search khane ki likhai Win32 se — server ki jaanch (search-check.ps1): 'Search Items' alag khirki
 //                   [WindowsForms10.Window] mil rahi thi (log: Search khirki: "" — 5 dafa) magar UIA Edit/ValuePattern KHALI deta tha. Ab khirki
 //                   (GetAncestor root, main POS window nahi) ke andar WindowsForms EDIT dabbe ki likhai WM_GETTEXT se; UIA sirf fallback · NtPosUi11.dll)
 //                   · v1.9 (2026-10-08: 🔎 SEARCH KHIRKI Win32 se — EnumWindows / EnumChildWindows: POS ki har NAYI dikhne wali khirki / dabba
@@ -30,12 +32,12 @@ function start({ dir, log, cfg, onAdd, onErr, onProc, onDown, onSrch, onSbox }) 
   if (process.platform !== 'win32' || C().posUi === false) return { active: () => false };
   const PS = path.join(dir, 'nt-posui.ps1');
   const TXT = `$ErrorActionPreference='Stop'
-$dll=Join-Path $PSScriptRoot 'NtPosUi11.dll'
+$dll=Join-Path $PSScriptRoot 'NtPosUi12.dll'
 Add-Type -AssemblyName UIAutomationClient,UIAutomationTypes,WindowsBase
 $refs=@([System.Windows.Automation.AutomationElement].Assembly.Location,[System.Windows.Automation.ControlType].Assembly.Location,[System.Windows.Rect].Assembly.Location)
 if(!(Test-Path $dll)){ Add-Type -ReferencedAssemblies $refs -OutputAssembly $dll -TypeDefinition @"
 using System;using System.Diagnostics;using System.Threading;using System.Text;using System.Collections.Generic;using System.Runtime.InteropServices;using System.Windows.Automation;
-public class NtPosUi11{
+public class NtPosUi12{
  static void Say(string s){try{Console.Out.WriteLine(s);Console.Out.Flush();}catch{}}
  static AutomationElement FindWin(string t){
   foreach(AutomationElement w in AutomationElement.RootElement.FindAll(TreeScope.Children,Condition.TrueCondition)){
@@ -87,7 +89,10 @@ public class NtPosUi11{
   foreach(var t in tops){ all.Add(t); EnumChildWindows(t,fc,IntPtr.Zero); }
   GC.KeepAlive(ft); GC.KeepAlive(fc); return all; }
  static Dictionary<long,bool> visPrev=null; static IntPtr sH=IntPtr.Zero; static int sAt=0; static bool sDone=false; static int visPid=0;
- static void SboxTick(int pid,string st,AutomationElement win){
+ // v1.11: alag thread — main loop POS ka pid / main window batata hai, yeh har 60 ms naye dabbe dekhta hai
+ static volatile int sbPid=0; static IntPtr sbMain=IntPtr.Zero;
+ static void SboxLoop(string st){ while(true){ try{ int p=sbPid; if(p>0)SboxTick(p,st,sbMain); }catch{} Thread.Sleep(60); } }
+ static void SboxTick(int pid,string st,IntPtr mainH){
   var vis=VisibleOf(pid); var cur=new Dictionary<long,bool>(); IntPtr hit=IntPtr.Zero; bool first=visPrev==null||visPid!=pid;
   foreach(var h in vis){ long k=h.ToInt64(); if(cur.ContainsKey(k))continue; cur[k]=true; if(first||hit!=IntPtr.Zero||visPrev.ContainsKey(k))continue;
    string t=WTxt(h); if(t.IndexOf(st,StringComparison.OrdinalIgnoreCase)>=0)hit=h; }
@@ -95,7 +100,6 @@ public class NtPosUi11{
   if(sH!=IntPtr.Zero&&!cur.ContainsKey(sH.ToInt64()))sH=IntPtr.Zero;   // khirki band
   if(hit!=IntPtr.Zero&&hit!=sH){ sH=hit; sAt=Environment.TickCount; sDone=false; }
   if(sH==IntPtr.Zero||sDone)return;
-  IntPtr mainH=IntPtr.Zero; try{ if(win!=null)mainH=new IntPtr(win.Current.NativeWindowHandle); }catch{}
   // v1.10: khirki = 'Search Items' wale dabbe ki root window (POS main window nahi — wahan Sale ka Code khana hai); andar ho to us ka parent
   IntPtr root=GetAncestor(sH,2), boxH=(root!=IntPtr.Zero&&root!=mainH)?root:GetParent(sH);
   string text=boxH!=IntPtr.Zero?EditText(boxH):"";
@@ -106,7 +110,7 @@ public class NtPosUi11{
   if(text.Length==0&&box!=null){ try{ foreach(AutomationElement ed in box.FindAll(TreeScope.Descendants,new PropertyCondition(AutomationElement.ControlTypeProperty,ControlType.Edit))){ string v=Val(ed).Trim(); if(v.Length>0){ text=v; break; } } }catch{} }   // UIA fallback
   int age=Environment.TickCount-sAt;
   if(text.Length==0&&age<1500)return;                 // likhai abhi nahi aayi
-  var L=box!=null?Codes(box):new List<string>(); if(L.Count==0&&age<600)return;    // grid bharne ka thora waqt
+  var L=box!=null?Codes(box):new List<string>();      // v1.11: grid ka intezar nahi — likhai milte hi faisla (tez bzzz)
   int same=0; foreach(var x in L) if(string.Equals(x,text,StringComparison.OrdinalIgnoreCase))same++;
   sDone=true; Say("SBOX\t"+text.Replace((char)9,' ').Replace((char)10,' ').Replace((char)13,' ')+"\t"+same+"\t"+L.Count);
  }
@@ -135,13 +139,14 @@ public class NtPosUi11{
   if(string.IsNullOrEmpty(stitle))stitle="Search Items";
   // v1.5: NT-PRINT band ho (stdin toota) to ye bhi band — pehle peeche chalta rehta tha (har restart par ek aur, CPU khata)
   var tq=new Thread(()=>{ try{ string s; while((s=Console.In.ReadLine())!=null){ if(s.StartsWith("CHK")){ lock(ck){ chkCode=s.Length>4?s.Substring(4).Trim():""; } chkAt=Environment.TickCount; chkUntil=chkAt+2600; } } }catch{} Environment.Exit(0); }); tq.IsBackground=true; tq.Start();
+  var tsb=new Thread(()=>SboxLoop(stitle)); tsb.IsBackground=true; tsb.Start();   // v1.11: Search khirki ki tez nigrani
   Say("READY"); AutomationElement win=null,info=null; string last=null; int tick=0,pid=0,lastPid=-1; var seen=new Dictionary<string,bool>(); bool hadMsg=false,winOn=false; string srchKey=""; int srchSeenAt=0,repAt=-1,srchTry=0;
   while(true){
    try{
     if((win!=null)!=winOn){ winOn=win!=null; Say(winOn?"WIN 1":"WIN 0"); }
     if(pid>0&&pid!=lastPid){ lastPid=pid; try{ Say("PROC "+Process.GetProcessById(pid).ProcessName); }catch{} }
     bool chk=Environment.TickCount-chkUntil<0;
-    if(pid>0){ try{ SboxTick(pid,stitle,win); }catch{} }   // v1.9: Search khirki (Win32) — har chakkar, scan pakra ho ya nahi
+    sbPid=pid; if(win!=null){ try{ sbMain=new IntPtr(win.Current.NativeWindowHandle); }catch{} }   // v1.11: Search nigrani (alag thread) ko POS batao
     if(win!=null&&pid>0&&(tick%2==0||chk)){
      // har ~0.3 sec (scan ke baad har 0.15 sec): POS ka error/message box?  naya ho to ERR (bzzz) · v1.7: Search Items khirki?
      var now=new Dictionary<string,bool>();   // HashSet System.Core mein — PowerShell Add-Type ke default mein pakka nahi
@@ -169,7 +174,7 @@ public class NtPosUi11{
 }
 "@ }
 Add-Type -Path $dll
-[NtPosUi11]::Run([string]$args[0],[string]$args[1])
+[NtPosUi12]::Run([string]$args[0],[string]$args[1])
 `;
   let child = null, gridOn = false, winOn = false, fails = 0, stopped = false, swept = false;
   // v1.5: pehle ke NT-PRINT restarts se peeche reh gaye nt-posui PowerShell band karo (sirf ek dafa, apna naya chalane se pehle)

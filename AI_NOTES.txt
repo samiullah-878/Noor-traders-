@@ -3282,3 +3282,15 @@ Items' nahi) — kul 1034 dabbe.
 * pc/nt-posui.js v1.10 (NtPosUi11.dll): SboxTick — dabba = GetAncestor(hit, GA_ROOT) (main POS window ho to GetParent(hit)); likhai =
   us ke andar pehla visible class *EDIT* (WindowsForms10.EDIT) dabba, WM_GETTEXT (EditText). UIA Edit/ValuePattern sirf fallback. Grid
   (Codes) usi dabbe se (barcode 2 items par = MULTI). mcs compile ✓.
+
+==================== nt-posui v1.11 (manifest 2026-10-08.8) — ⚡ Search khirki ki bzzz TEZ + Abdurehman PC par NT-PRINT setup ====================
+User: "thora sa time — awaz jaldi aaye, aur Abdurehman ke PC par bhi kar do". (v1.10 se Mithu par bzzz aane lagi.)
+* pc/nt-posui.js v1.11 (NtPosUi12.dll): SboxTick ab ALAG background thread (SboxLoop) par har 60 ms (pehle main UIA loop ke saath
+  150-500 ms); main loop sirf sbPid (POS pid) + sbMain (main window HWND) batata hai. Likhai (Win32 EDIT) milte hi foran faisla —
+  grid bharne ka 600 ms intezar hata diya (khatra: barcode 2 items par aur grid der se bhare to bzzz baj sakti hai — bohat kam).
+  mcs compile ✓.
+* Abdurehman PC (DESKTOP-KEIME1D): C:\khata-sync tha hi NAHI (NT-PRINT kabhi laga nahi tha) — pehli update command ne 3 files
+  C:\Users\PC mein daal di thin. User ko diya: un 3 ko (sirf hamari — NT-PRINT|nt-posui|khata likhai wali) hata kar
+  nt-print-setup.ps1 (irm ... | iex). Photo: Node v20.18.1 install, files, pcName "Abdurehman PC", chaabi nahi (AWAZ-ONLY),
+  firebase-admin install chal raha tha.
+* Teeno PCs (server, Mithu, Abdurehman) NT-PRINT khud-update (har 3 min, manifest) se v1.11 le lenge.
