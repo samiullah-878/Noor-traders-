@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.6';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.6';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.7';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.7';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1423,7 +1423,7 @@ function jColTotals() {
 }
 // ---------- overview (pehli khirki) ----------
 function aiRender() {
-  if (!aiRows) return;
+  if (!aiRows || agentQuiet) return;   // v2.99.7: agent parh raha ho to jaanch ka dialog nahi (agent ki screen ke upar aa jata)
   if (jView === 'card' && jIx >= 0) return jCard(jIx);
   if (jView === 'sum') return jSummary();
   const k = jCounts(), fmt = billFmtOf(supplier), { mine, bill } = jBillTotals();
@@ -1766,11 +1766,11 @@ function camShow() {                      // li hui photos ki jhalak + agla page
       <button type="button" class="danger" data-pp-camx="1">✕ Chhor dein</button>
     </div>`);
 }
-async function aiRead(files) {
+async function aiRead(files, opt = {}) {   // v2.99.7: opt.agent = 🤖 agent se (dialog nahi, status opt.onStatus, galti throw)
   setBillPics(files);   // v2.2.0: wohi tasveerein screen par bhi
   aiBusy = true; aiRows = null; aiBillInfo = null; aiFmtAuto = ''; jView = 'list'; jIx = -1; jForceAsk = false;
-  dlg('🤖 Bill ki tasveer se items', '<p id="ppAiMsg" role="status">Tayyari…</p><div id="ppAiOut"></div>');
-  const say = x => { const m = $('ppAiMsg'); if (m) m.textContent = x; };
+  if (!opt.agent) dlg('🤖 Bill ki tasveer se items', '<p id="ppAiMsg" role="status">Tayyari…</p><div id="ppAiOut"></div>');
+  const say = x => { const m = $('ppAiMsg'); if (m) m.textContent = x; try { opt.onStatus?.(x); } catch {} };
   try {
     const bill = await aiBillOf({ files, onStatus: say, partyId: supplier });
     const lines = (bill && bill.lines) || [];
@@ -1800,6 +1800,7 @@ async function aiRead(files) {
     for (let i = 0; i < aiRows.length; i++) if (aiRows[i].byAi) await aiLearn(i, null, true);
   } catch (err) {
     say('❌ ' + ((err && err.message) || 'Nakam'));
+    if (opt.agent) throw err;
   } finally { aiBusy = false; }
 }
 // v2.99.2: BILL KI LINE TARTEEB (Jaanch ke cards + POS bill isi se) —
@@ -1943,11 +1944,12 @@ async function copyLast(btn) {
   finally { btn.disabled = false; }
 }
 
-async function save() {
-  if (saving) return;
-  if (!canUse()) { notice('Is login par POS purchase ki ijazat nahi'); return; }
+async function save(opt = {}) {
+  const auto = !!opt.auto, no = why => ({ ok: false, why: [why] });   // v2.99.7: 🤖 agent — har confirm / alert ki jagah "nahi bheja + wajah"
+  if (saving) return auto ? no('pehla bill abhi ja raha hai') : undefined;
+  if (!canUse()) { notice('Is login par POS purchase ki ijazat nahi'); return auto ? no('POS purchase ki ijazat nahi') : undefined; }
   const p = partyOf(supplier);
-  if (!p) { notice('Pehle supplier chunein'); supOpen = true; rerender(); return; }
+  if (!p) { if (auto) return no('supplier nahi chuna'); notice('Pehle supplier chunein'); supOpen = true; rerender(); return; }
   cartBillOrder();   // v2.99.1: POS bill bilkul bill ki tarteeb mein
   const lines = [], zero = [], noCost = [];
   xtraApply();
@@ -1959,27 +1961,32 @@ async function save() {
       cName: String(l.cName || 'Ctn'), uName: String(l.uName || 'Pcs'), godam: Number(l.godam) || Number(godam) || BILL_BRANCH,
       qty: r3(qty), costP: effCost(l), wctn: r2(l.wctn), wpcs: r2(l.wpcs), rctn: r2(l.rctn), rpcs: r2(l.rpcs), ...(sblOf(l) && subsOf(l).length ? { sbl: 1 } : {}) });   // v2.98.4: sbl = farzi barcode rate saath
   }
-  if (!lines.length) { notice('Kisi item ki ginti likhein'); return; }
+  if (!lines.length) { if (auto) return no('kisi item ki ginti nahi'); notice('Kisi item ki ginti likhein'); return; }
+  if (auto && noCost.length) return no('khareed rate khali: ' + noCost.slice(0, 3).join(', '));
+  if (auto && zero.length) return no('ginti khali: ' + zero.slice(0, 3).join(', '));
   if (noCost.length) { alert('In items ka khareed rate khali hai:\n\n' + noCost.join('\n')); return; }
   if (zero.length && !confirm('Jin items ki ginti khali hai woh bill mein nahi jayenge:\n' + zero.join('\n') + '\n\nTheek hai?')) return;
   const low = cart.filter(l => linePcs(l) > 0 && ((Number(l.wpcs) > 0 && Number(l.wpcs) < effCost(l)) || (Number(l.rpcs) > 0 && Number(l.rpcs) < effCost(l)))).map(l => l.name);
+  if (auto && low.length) return no('naya sale rate khareed se kam: ' + low.slice(0, 3).join(', '));
   if (low.length && !confirm('Dhyan: in items ka naya sale rate KHAREED SE KAM hai:\n\n' + low.join('\n') + '\n\nPhir bhi bhejein?')) return;
   const total = r2(lines.reduce((n, l) => n + l.qty * l.costP, 0));
   const date = todayStr();   // v1.97.0: tareekh ka khana nahi — naya bill hamesha AAJ ka
   const date2 = edit ? edit.date : date;   // edit: bill ki apni purani tareekh
   if (!edit) {   // v1.98.0: isi supplier ki photo wali purchase pehle se to nahi?
     const dup = (cashDupesOf(p.id, total) || []).slice(0, 5);
+    if (auto && dup.length) return no('isi supplier ki photo wali purchase pehle se maujood (' + dup.map(x => x.date + ' Rs ' + num(x.rs)).join(', ') + ')');
     if (dup.length && !confirm('Dhyan: isi supplier ki photo wali purchase pehle se maujood hai:\n\n' +
       dup.map(x => `${x.date} · Rs ${num(x.rs)}${x.note ? ' · ' + x.note : ''}`).join('\n') +
       '\n\nAgar yeh WAHI kharid hai to POS bill aate hi woh khud jur jayegi (do dafa nahi ginti) — warna "Milao" se jorein.\n\nBill bhejein?')) return;
   }
-  if (!confirm(`${edit ? 'POS BILL ' + edit.billNo + ' — UPDATE' : 'POS PURCHASE BILL'}\n${p.name}\n${lines.length} items · Rs ${num(total)}${invoiceNo ? '\nSupplier bill # ' + invoiceNo : ''}\n\n${edit ? 'POS mein yahi bill badlein (purani lines hat kar yeh lagengi) aur naye rates lagayein?' : 'POS mein bill banayein aur naye rates lagayein?'}`)) return;
+  if (!auto && !confirm(`${edit ? 'POS BILL ' + edit.billNo + ' — UPDATE' : 'POS PURCHASE BILL'}\n${p.name}\n${lines.length} items · Rs ${num(total)}${invoiceNo ? '\nSupplier bill # ' + invoiceNo : ''}\n\n${edit ? 'POS mein yahi bill badlein (purani lines hat kar yeh lagengi) aur naye rates lagayein?' : 'POS mein bill banayein aur naye rates lagayein?'}`)) return;
   const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const doc = { id, date: date2, at: new Date().toISOString(), branch: BILL_BRANCH, godam: Number(godam) || BILL_BRANCH,
     partyId: String(p.id), partyName: String(p.name || '').slice(0, 120), invoiceNo: invoiceNo.trim(), note: note.trim(),
     lines, total, role: isOwner() ? 'owner' : 'staff', by: uidOf(), status: 'new', createdAt: Date.now(),
     ...(edit ? { editOf: { purchaseId: Number(edit.purchaseId), billNo: String(edit.billNo || ''), stamp: String(edit.stamp || ''), partyId: String(edit.partyId || ''), posPartyId: Number(edit.posPartyId) || 0 } } : {}) };
   saving = true; rerender();
+  let sentOk = auto ? no('bheja nahi ja saka') : undefined;
   try {
     const w = cloud.saveAppPurchase(doc);
     const picsNow = billPics.filter(isData);   // v2.19: tasveer bill ke sath — cloud (3 tak) + phone (jaanch bhi)
@@ -2016,14 +2023,61 @@ async function save() {
     cart = []; note = ''; invoiceNo = ''; edit = null; day = ''; xtra = 0; xtraName = ''; pct = 0; setBillPics([]); billPin = false; keepDraft();   // v2.19: tasveer bill ke sath chali gayi
     aiRows = null; aiBillInfo = null; jView = 'list'; jIx = -1;   // v2.4.0: bheja hua bill — purani jaanch band
     notice(keep.edit ? 'Update PC ko bhej diya — PC POS mein wohi bill badal dega (Aaj ke app purchase mein status)' : 'Purchase bill bhej diya — PC POS mein bana dega (Aaj ke app purchase mein status)');
+    sentOk = { ok: true, id, total, n: lines.length, party: p.name };
     w.catch(err => {
       if (!cart.length) { cart = keep.cart; invoiceNo = keep.invoiceNo; note = keep.note; edit = keep.edit; day = keep.day; if (!billPics.length && keep.pics?.length) { billPics = keep.pics; if (keep.pics.every(isData)) picPut('draft', { pics: keep.pics, at: Date.now() }); } keepDraft(); rerender(); }
       alert('Purchase bill PC tak NAHI gaya: ' + (err?.message || err) + '\nBill wapas screen par hai — dobara bhejein.');
     });
-  } catch (err) { notice('Nahi gaya: ' + (err?.message || err)); }
+  } catch (err) { notice('Nahi gaya: ' + (err?.message || err)); sentOk = no(String(err?.message || err)); }
   finally { saving = false; rerender(); }
+  return sentOk;
 }
 
+// ---------- v2.99.7: 🤖 AGENT — bill ki tasveer -> parhna + zarb-taqseem jaanch (wohi aiRead / jJudge) -> sab hara aur total barabar
+//   ho to bina pooche POS (save auto: koi bhi confirm / shak = NAHI bhejta, wajah wapas). Warna agent "🧾 Jaanch kholo" deta hai.
+let agentQuiet = false;
+function jColOk() {
+  const b = aiBillInfo || {}, ct = Number(b.ctnTotal) || 0, pt = Number(b.pcsTotal) || 0, L = b.lines || [], tol = T => Math.max(1, T * 0.005);
+  if (!ct && !pt) return true;
+  if (ct && pt) { const sc = r3(L.reduce((n, l) => n + (Number(l.ctn) || 0), 0)), sp = r3(L.reduce((n, l) => n + (Number(l.pcs) || 0), 0)); return Math.abs(sc - ct) <= tol(ct) && Math.abs(sp - pt) <= tol(pt); }
+  const T = ct || pt, sn = r3(L.reduce((n, l) => n + aiNum(l).n, 0)); return Math.abs(sn - T) <= tol(T);
+}
+export function ppAgentSummary() {
+  if (!aiRows) return null;
+  const k = jCounts(), { mine, bill } = jBillTotals(), act = aiRows.filter(r => !r.skip);
+  const noItem = act.filter(r => !r.key).length, farq = r2((Number(bill) || 0) - mine), tol = Math.max(1, (Number(bill) || 0) * 0.001), why = [];
+  if (!supplier || !partyOf(supplier)) why.push('supplier nahi chuna');
+  if (noItem) why.push(noItem + ' line ka item app mein nahi mila');
+  if (k.y || k.r) why.push((k.y ? k.y + ' peeli ' : '') + (k.r ? k.r + ' laal ' : '') + 'line (zarb-taqseem / rate pakka nahi)');
+  if (!(Number(bill) > 0)) why.push('bill ka total nahi parha gaya');
+  else if (Math.abs(farq) > tol) why.push('bill total aur lines ke jama mein farq Rs ' + num(farq));
+  if (!jColOk()) why.push('bill par likhi ginti ka total lines se nahi mila');
+  return { lines: k.all, g: k.g, y: k.y, r: k.r, noItem, bill: Number(bill) || 0, mine, farq, supplierText: aiBillInfo?.supplier || '', supplierId: supplier || '',
+    supplierName: partyOf(supplier)?.name || '', date: aiBillInfo?.date || '', ready: !why.length, why,
+    rows: act.slice(0, 40).map(r => ({ name: String(r.ai?.name || ''), item: r.key ? (cart.find(l => l.k === r.key)?.name || '') : '', conf: r.key ? (r.j?.conf || 'r') : 'r', total: Number(aiNum(r.ai).total) || 0 })) };
+}
+export async function ppAgentBill(files, { onStatus } = {}) {
+  if (!canUse()) throw Error('Is login par POS purchase ki ijazat nahi');
+  if (aiBusy) throw Error('Purchase screen par pehle se ek bill parha ja raha hai');
+  if (edit) throw Error('Purchase screen par POS ka purana bill EDIT khula hai — pehle usay band ya save karein');
+  if (cart.length) throw Error('Purchase screen par pehle se ' + cart.length + ' items ka bill khula hai — pehle usay bhejein ya 🗑 saaf karein');
+  agentQuiet = true;
+  try { await aiRead(files, { agent: true, onStatus }); } finally { agentQuiet = false; }
+  return ppAgentSummary();
+}
+export function ppAgentSupplier(id) {
+  if (!partyOf(id)) return ppAgentSummary();
+  supplier = String(id); notePartyPick(supplier);
+  if (aiRows) { jJudgeAll(); jAutoFmt(); if (aiFmtAuto) jJudgeAll(); }
+  keepDraft(); rerender(); return ppAgentSummary();
+}
+export async function ppAgentPost() {
+  const s = ppAgentSummary(); if (!s) return { ok: false, why: ['koi bill nahi parha'] };
+  if (!s.ready) return { ok: false, why: s.why };
+  for (const r of aiRows || []) if (!r.skip && r.key && !r.done) r.done = true;
+  return await save({ auto: true });
+}
+export function ppAgentJaanch() { if (aiRows) { jView = 'list'; jIx = -1; aiRender(); } }
 // ---------- v1.87: is supplier se aksar aane wale items (app ke bills + POS ke pichhle 6 bills) ----------
 async function loadSupItems(pid) {
   if (!pid || supItems.has(pid) || !cloud) return;

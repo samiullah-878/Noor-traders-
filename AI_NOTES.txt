@@ -3466,3 +3466,31 @@ likhne ke khane par focus bhi kar deta tha (keyboard khul kar sunna toot sakta t
 TEST (happy-dom + naqli SpeechRecognition): bolte hue likhai + laal button, final par khud bheja, button wapas; not-allowed paigham;
   ur-PK nahi -> hi-IN se bheja; no-speech par paigham aur kuch nahi bheja; SR hi nahi -> paigham ✓. Agent t.mjs ALL OK.
 VERSION BUMP: ?v=2.99.6, APP_VER, "Blue Khata v2.99.6", sw CACHE, version.json.
+
+==================== App v2.99.7 (2026-10-09) — ⚡ Noor Agent TEZ + 📷 TASVEER (purchase bill / kharcha) ====================
+User: "jawab mein time bohat lagta hai — taiz tareen kar do", "pictures parhwana: purchase bill ki photo -> zarb-taqseem -> POS
+mein charhe", "kharche ki photo -> entry", "pictures yaad rakhna", "live camera + gallery, multiple photos", "OK nahi pochna (hara bill)".
+* ⚡ FAST PATH agent.js quick(t): aam sawal BAGHAIR AI (0 network, <300ms): "aaj/kal/parson ka hisaab", "due / guzar gaye",
+  "sab se zyada lene/dene", "X ka baqaya/khata/hisaab/len den", "X se 5000 wasooli/liye/mile", "X ko 5k udhaar", "X ko 2 lakh
+  payment/diye/bheje" (parseAmount: hazar/k/lakh/lac/crore, dedh/dhai/sawa/sarhe, commas, Rs). Naam pakka na ho -> chips
+  (pendingQuick: info/entry/supplier/kharcha). Mushkil sawal hi AI ko jata hai. askAI har tool ke baad flushShow (card foran).
+* ⚡ ai-tally.js agentStep thinking: gemini-3 = thinkingLevel 'minimal' (400 aaye to low -> band); 2.x = thinkingBudget 0.
+* 📷 agent.js: 📷 button -> menu (Live camera capture=environment / Gallery multiple), 8 photo tak strip (✕ hatao, ＋📸 ＋🖼).
+  Bheja -> lafz "bill/purchase" = bill, "kharcha/bijli…" = kharcha, warna classify() (1 askImage call, shrinkForAI 1400, JSON
+  {type,amount,what,date,vendor,account}).
+  BILL: purchase.js ppAgentBill(files) -> wahi aiRead + jJudgeAll (zarb-taqseem / rate jaanch), dlg ke baghair (agentQuiet).
+  Supplier bill ke naam se khud (findAccounts kind supplier, pakka) warna chips -> ppAgentSupplier(id). ppAgentSummary ready =
+  supplier + sab item mile + koi peeli/laal line nahi + bill>0 + farq <= max(1, 0.1%) + column theek. READY -> ppAgentPost ->
+  save({auto:true}) BAGHAIR confirm -> "✓ POS mein chala gaya". Ready nahi -> wajah + "🧾 Jaanch kholo" (Purchase screen +
+  ppAgentJaanch). Cart mein pehle se maal / edit khula / AI busy -> mana (purana kaam kharab na ho).
+  save(opt.auto): har confirm/alert ki jagah {ok:false, why:[…]} (dup, kam rate, zero, noCost, permission…), kamyabi {ok,id,total,n,party}.
+  KHARCHA: parchi -> propose kharcha card (raqam/tareekh/account) + thumbs -> ✓ par entry 'photos' (packPhotos) ke saath save.
+  Account na mile -> kharcha naam chips.
+  YAAD: tool show_photos (account ki entry photos + purchase billPhotos) — "Waqas ke bill ki tasveer dikhao".
+* style.css: .ag-pic .ag-cam-menu .ag-attach .ag-att .ag-att-more .ag-thumbs .ag-ph; .ag-in 4 column.
+TEST: agent t.mjs (12 tools) / m.mjs (mic) / q.mjs (fast path <300ms 0 fetch, chips, hara bill auto-POS, peela bill jaanch,
+  kharcha card + photo save, show_photos) ALL OK; hd/pa.mjs asal purchase.js ke saath (supplier nahi -> nahi bheja, supplier ->
+  ready -> auto POS, farq -> nahi bheja, khula bill -> mana) ALL OK; jord + give ALL OK; Playwright 412px photo strip theek.
+  ASAL Gemini se test NAHI hua (key yahan nahi). AI kahan kaam NAHI karega: dhundli / adhi photo, haath ka likha kacha bill ->
+  peela -> Jaanch mein khud dekhein.
+VERSION BUMP: ?v=2.99.7, APP_VER, "Blue Khata v2.99.7", sw CACHE (+ './agent.js?v='), version.json.

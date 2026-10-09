@@ -121,17 +121,24 @@ async function generate({ key, model, parts, onStatus, fast = false }) {
 export async function agentStep({ key, model, system, contents, tools, onStatus }) {
   if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
   if (!model) throw Error('Model ka naam khali hai — Settings > AI key > Test dabayein.');
-  let think = true;
+  // v2.99.7: ⚡ TEZ — "sochna" kam se kam: Gemini 3 = thinkingLevel minimal (na maane to low), 2.x = thinkingBudget 0; na maane to bina
+  let tcfg = /gemini-3/i.test(String(model || '')) ? { thinkingLevel: 'minimal' } : { thinkingBudget: 0 };
   const body = () => JSON.stringify({
     systemInstruction: { parts: [{ text: String(system || '') }] },
     contents, tools: [{ functionDeclarations: tools }],
     toolConfig: { functionCallingConfig: { mode: 'AUTO' } },
-    generationConfig: { temperature: 0.1, ...(think ? { thinkingConfig: { thinkingBudget: 512 } } : {}) }
+    generationConfig: { temperature: 0.1, ...(tcfg ? { thinkingConfig: tcfg } : {}) }
   });
   const once = m => api('/models/' + encodeURIComponent(m) + ':generateContent', key, { method: 'POST', body: body() });
   const call = async m => {
-    try { return await once(m); }
-    catch (e) { if (think && /thinking|thinking_budget|thinkingConfig|INVALID_ARGUMENT|HTTP 400/i.test(String(e?.message || ''))) { think = false; return await once(m); } throw e; }
+    for (let k = 0; k < 3; k++) {
+      try { return await once(m); }
+      catch (e) {
+        if (!tcfg || !/thinking|thinking_budget|thinkingConfig|thinking_level|INVALID_ARGUMENT|HTTP 400/i.test(String(e?.message || ''))) throw e;
+        tcfg = tcfg.thinkingLevel === 'minimal' ? { thinkingLevel: 'low' } : null;
+      }
+    }
+    return await once(m);
   };
   let out = null, lastErr = null;
   const delays = [2000, 5000];
