@@ -2252,3 +2252,25 @@ TEST agent/v.mjs (naqli mic + AudioContext): bolna -> chup -> khud WAV (RIFF 16k
   ASAL phone + Gemini par test NAHI hua. Kharcha: har command ki awaz Gemini ko (andaza: 1 rupay se kam, naapa nahi).
   Kahan kaam NAHI karega: internet ke baghair (phir phone ka Roman raasta); bohat shor / kai log ek saath.
 VERSION BUMP: ?v=2.99.10, APP_VER, "Blue Khata v2.99.10", sw CACHE, version.json.
+
+==================== App v2.99.11 (2026-10-10) — 🤖 Agent: ➕➕ KAI ENTRIES EK SAATH · 🤖 HAR SCREEN PAR · 📄 KHATE KI PDF · 📱 SCREEN KHOLNA ====================
+User: "ek time mein multiple entries kar sake", "kisi bhi khate ki PDF ya kisi screen ka kaam — AI ko har screen ke liye alag do". Plan diya, OK.
+* ➕➕ propose('batch'): EK card, har line {k, amt, date, p | exp, cash, need[] (naam pakka nahi), bad (samajh nahi aayi)}. batchBal: ek hi khate
+  ki kai lines ka baqaya silsile se. Line par 💵/🏦 (wasooli/payment), ✕ hatao / ↩ wapas, naam ke chips (data-ag-bpick). "✓ Sab save karo (N)"
+  — koi line ka naam baqi ho to band. Save ek ek kar ke (H.save); kuch fail = "x / N save — baqi dobara ✓" (save hui dobara nahi jati).
+  Tez raasta: text ko "," / "؛" / nayi line / " aur | or | and | phir | fir " par kaata ("20,000" nahi kat-ta); HAR tukra wasooli / payment /
+  udhaar ka hukum ho (parseCmd) to bina AI card; naam nahi mila / ek tukra bhi samajh na aaye = poori baat AI ko. AI: tool propose_entries
+  (prompt RULE 10b: 2+ entries = EK propose_entries).
+* 🤖 Har screen: paintAgentFab (app.js paintHomeBar: main khata screen par patti, baqi har jagah kone mein 🤖 gol button; agent khula ho to
+  chhupa). H.screen() = {view, partyId}: agWho mein "📒 <khata>" / "📱 <screen>"; system prompt mein SCREEN + khula khata ("is / iska" =
+  yahi). Chips har screen ke (suggFor): khata khula = 📄 Is khate ki PDF / 💬 Baqaya / ➕ Entry / 📅 Is mahine ki PDF / ⏰ Due date; Stock;
+  Sale; POS Purchase; Daily; Due; Notes; Akhrajat; Closing.
+* 📄 PDF: tool khata_pdf + tez raasta ("Waqas ka khata pdf", "is mahine / pichhle mahine ka", "is khate ki pdf" = khula khata). H.khataPdf:
+  route('khata', id) -> search saaf, from / to -> render -> report() (wohi app ki PDF: kholo / bhejo, poori screen).
+* 📱 Screen: tool open_screen + tez raasta "sale kholo", "stock screen par jao", "Waqas ka khata kholo" (screen naam na ho = khata).
+* style.css: .ag-brow* (kai entries), .ag-fab.
+TEST hd/p2.mjs + naye: 3 entries ek card bina AI, ✕ line, 💵->🏦, sab save (2) payload, ek khate ki 2 lines silsila, Hamza line chips ->
+  chuna -> ✓ khula, adhoori baat -> AI, AI propose_entries (kharcha bhi), Waqas PDF, is mahine (from 1 tareekh), is khate ki PDF (khula
+  khata), khate / stock ke chips, agWho, sale kholo, stock screen, khata kholo, screenOf, 27 tools, FAB dikha / chhupa — ALL OK.
+  t/m/q/v/pa/jord/give ALL OK. Playwright 412px light + dark: batch card + FAB theek, koi overflow nahi.
+VERSION BUMP: ?v=2.99.11, APP_VER, "Blue Khata v2.99.11", sw CACHE, version.json.
