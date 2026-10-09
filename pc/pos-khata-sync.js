@@ -357,14 +357,22 @@ function receipt({ title, code, date, lines, note, copy }) {
   const out = [ESC + '@', C + big('NOOR TRADERS'), SHOP_PHONE, '', tall(title)];
   if (copy) out.push('(Dobara print)');
   out.push(L + hr, row('Voucher No: ' + ascii(code), ''), row('Tareekh: ' + dt, 'Waqt: ' + tm), C + bar(code), L + hr);
-  let total = 0;
+  let total = 0; const bq = [];
   for (const l of lines) {
     total = Math.max(total, Number(l.amount) || 0);
     out.push(bold(ascii(l.name).slice(0, W) || '(naam Urdu mein)'));
     out.push(row('  ' + l.label, 'Rs.' + n(l.amount)));
-    if (l.after != null) out.push(row('  Ab baqaya:', (l.after > 0 ? 'Lene ' : l.after < 0 ? 'Dene ' : '') + 'Rs.' + n(Math.abs(l.after))));
+    if (l.after != null) bq.push(l);
   }
   out.push(hr, R + big('Rs.' + n(total)), L);
+  // 2026-10-09: AB BAQAYA bhi BARA (malik: "baqaya wali raqam bhi big size mein") — mota "Ab baqaya - LENE / DENE", raqam double size;
+  //   do party hon (transfer voucher) to har ek ka naam saath. Pehle chhoti line upar thi — ab sirf yahan (do dafa nahi).
+  for (const l of bq) {
+    const a = Number(l.after) || 0, side = a > 0 ? ' - LENE' : a < 0 ? ' - DENE' : ' - BARABAR';
+    const who = bq.length > 1 ? (ascii(l.name) || 'Party').slice(0, 16) + ': ' : '';
+    out.push(L + hr, bold((who + 'Ab baqaya' + side).slice(0, W)), R + big('Rs.' + n(Math.abs(a))));
+  }
+  if (bq.length) out.push(L + hr);
   const nl = wrap(note, W);
   if (nl.length) out.push('Tafseel:', ...nl, hr);
   out.push('', '', 'Dastakhat: ______________________', '', C + 'Blue Khata app', L, '', '', '');
