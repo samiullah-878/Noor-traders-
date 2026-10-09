@@ -3362,3 +3362,16 @@ size mein chahiye". Plan diya (preview ke saath), OK.
   nahi chhapta). 42 akshar chaurai par Rs.1,250,000 bhi bari likhai mein aata hai.
   TEST: receipt() ko alag chala kar CPV (1 party) aur JV (2 party, DENE + BARABAR) ki likhai dekhi ✓.
 * root + pc copy ek jaise; manifest sha256 + version 2026-10-09.1 — doctor 3 min mein khud laga kar "Khata vouchers" service dobara chalata hai.
+
+==================== pc/barcode-check.ps1 + pc/barcode-dhoondo.js (2026-10-09) — 🔎 EK BARCODE KAHAN HAI (sirf parhna) ====================
+User: "8964001187073 ... barcode add nahi hua — command se check karo ya kis item mein hai".
+* pc/barcode-check.ps1 (server PC, AnyDesk):  $bc='8964001187073'; irm .../pc/barcode-check.ps1 | iex
+  C:\khata-sync\sql-config.js na ho = "server PC par chalayein". barcode-dhoondo.js GitHub se C:\khata-sync mein (taake mssql /
+  firebase-admin wahin ke node_modules se), OutputEncoding UTF8, `node barcode-dhoondo.js <code>`, phir item-log.txt ki is barcode
+  wali aakhri 5 lines. Variables $bc* (iex same scope — $K waghera nahi chherta).
+* pc/barcode-dhoondo.js v1 (SIRF PARHTA HAI): POS — INFORMATION_SCHEMA se ItemID wali tables ke "%barcode%" khane + Items.ItemCode;
+  bilkul barabar -> item naam + ItemID + ASAL CODE / SUB-BARCODE (sub ki tadad / rate / Show); ek se zyada item par = ⚠️. Na mile to
+  milta-julta (aakhri ya pehla hindsa hata kar LIKE). APP — posStock docs mein code / bc / bq / sb; subcodeJobs where code == X
+  (aakhri 5: waqt, op, item, status, error); itemJobs pichhle 14 din (code ya subs[].b). SQL password / chaabi nahi chhapta.
+  TEST (mock mssql + firestore): mila (sub-barcode + app + failed hukum ka paigham) ✓; ghalat hindsa -> milta-julta ✓.
+* Manifest mein nahi (service nahi — ps1 har dafa taza laata hai).
