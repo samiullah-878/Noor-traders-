@@ -115,6 +115,38 @@ async function generate({ key, model, parts, onStatus, fast = false }) {
   throw Error('Google ke server par abhi bohat rush hai. 2-5 minute baad dobara koshish karein. (' + (lastErr?.message || '') + ')');
 }
 
+// v2.99.4: 🤖 NOOR AGENT — Gemini "function calling". contents = poori baat-cheet; model ka jawab (content) BILKUL waisa hi
+//   wapas history mein rakhna hai (Gemini 3 ke functionCall parts par 'thoughtSignature' hota hai — badla to 400).
+//   Rush (503) par 2 dafa ruk kar, phir doosra flash model. Thinking thori (tez + tools sahi); jo model na maane us par bina.
+export async function agentStep({ key, model, system, contents, tools, onStatus }) {
+  if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
+  if (!model) throw Error('Model ka naam khali hai — Settings > AI key > Test dabayein.');
+  let think = true;
+  const body = () => JSON.stringify({
+    systemInstruction: { parts: [{ text: String(system || '') }] },
+    contents, tools: [{ functionDeclarations: tools }],
+    toolConfig: { functionCallingConfig: { mode: 'AUTO' } },
+    generationConfig: { temperature: 0.1, ...(think ? { thinkingConfig: { thinkingBudget: 512 } } : {}) }
+  });
+  const once = m => api('/models/' + encodeURIComponent(m) + ':generateContent', key, { method: 'POST', body: body() });
+  const call = async m => {
+    try { return await once(m); }
+    catch (e) { if (think && /thinking|thinking_budget|thinkingConfig|INVALID_ARGUMENT|HTTP 400/i.test(String(e?.message || ''))) { think = false; return await once(m); } throw e; }
+  };
+  let out = null, lastErr = null;
+  const delays = [2000, 5000];
+  for (let i = 0; i <= delays.length && !out; i++) {
+    try { out = await call(model); }
+    catch (e) { lastErr = e; if (!busyError(e)) throw e; if (i < delays.length) { onStatus?.('Google par rush — dobara koshish…'); await wait(delays[i]); } }
+  }
+  if (!out) {
+    try { const m = await pickModel(key); const alt = m.all.find(n => n !== model && /flash/.test(n) && !/(lite|tts|image|live|audio|embedding)/.test(n)); if (alt) out = await call(alt); } catch { /* fallback bhi nakam */ }
+  }
+  if (!out) throw Error('Google ke server par abhi rush hai — thori der baad dobara. (' + (lastErr?.message || '') + ')');
+  const content = out.candidates?.[0]?.content;
+  if (!content || !Array.isArray(content.parts) || !content.parts.length) throw Error('AI ne jawab nahi diya' + (out.promptFeedback?.blockReason ? ' (' + out.promptFeedback.blockReason + ')' : '') + ' — dobara likhein.');
+  return { ...content, role: 'model' };
+}
 export async function askImage({ key, model, images, prompt }) {   // v2.92: tasveer + sawal (gaari: meter / parchi / tracker)
   if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
   const parts = (images || []).map(im => ({ inline_data: { mime_type: im.mime, data: im.data } })); parts.push({ text: String(prompt || '') });

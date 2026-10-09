@@ -3399,3 +3399,42 @@ Saath mein pichhla OK: voucher parchi par "Sabqa baqaya" upar.
   "  Sabqa baqaya:   Lene/Dene Rs.X" (row, normal size), phir Diye/Wasool/Udhar, neeche bara "Ab baqaya". Transfer = har party.
   TEST: receipt CPV + JV (sabqa Lene / Dene) ✓. root + pc copy ek jaise; manifest 2026-10-09.2 (doctor 3 min mein khud).
 VERSION BUMP: ?v=2.99.3, APP_VER, "Blue Khata v2.99.3", sw CACHE, version.json.
+
+==================== App v2.99.4 (2026-10-09) — 🤖 NOOR AGENT (AI) — main screen ke upar ====================
+User: "ab is mein agent bhi bana do, main screen ke upar hi rakhna" -> plan (jawab + entries, har kaam card + ✓) -> OK:
+"mulazim Full App chahiye · AI agent · entries plus jawab · premium look chips bhi premium · searches mein ghalti na kare".
+* agent.js (naya): agentSetup(hooks) / paintAgentBar(on) / openAgent(text). Sirf malik + Full App mulazim (staffFull).
+  PATTI (#agentBar, index.html header .top ke neeche): orb 🤖 + "Noor Agent" + ➤, 🎤 (voiceSearch ur-PK), chips (Aaj ka hisaab /
+  Due / Lene / Entry likhwao). Sirf Khata home (view khata, selected nahi, purchase/stock/sale/galla/nazar/gaari-only nahi, localMode nahi).
+  CHAT (#agSheet poori screen): bubbles, typing dots + tool status ("🔎 Account dhoond raha hoon…"), suggestion chips, 🗑 nayi baat, ✕.
+  TOOLS (sab raqam app ka hisaab — AI hisaab nahi): find_account (query + alt Roman/Urdu; fold barabar = exact 100, mobile 7+ hindse
+  = 96 (+92/0 dono), poore lafz = words, shuru = shuru, warna milta; DECISION: ek exact -> pakka; exact nahi aur top words/shuru aur
+  doosra <= 70% -> pakka; warna "poochna" (AI khud NAHI chunta, app buttons — tap = "(account_id: X)"); kuch nahi = nahi_mila;
+  aakhri 4 hindse = 30 (kabhi pakka nahi); band khate sirf malik), account_info (baqaya lene/dene, aakhri entries, due, loan,
+  muddat ka jama), day_summary (daily(): sale/wasooli/kharcha+payment/change/closing/farq + closing se bheja + bari entries), totals
+  (from-to, qisam, account, top accounts), top_balances (lene/dene), due_list, search_entries (raqam ±0.5, smartHit likhai, tareekh,
+  qisam, account). Sirf tool ke account_id; ghalat id = error "pehle find_account".
+  ENTRIES: propose_entry (wasooli/payment/udhaar/hum_ne_dena/sale/kharcha — kharcha naam expenseChoices se, na mile to list),
+  propose_transfer (commitAccountTransfer), propose_cash_give (appendCashMove + cashCustody save = Daily Sale wala "Cash diya";
+  available se zyada = error), propose_due_date (reminder-<id>, repeat). Propose SAVE NAHI karta -> CARD (raqam bari, account, baqaya
+  pehle -> baad, galle ka cash ⇄ bank toggle wasooli/payment par = dailyIncluded) -> "✓ Haan, karo" par execute() (ek card ek dafa,
+  pendingBusy par ruko) app ke save / commitAccountTransfer -> POS voucher + parchi wese hi. Ijazat app wali: mulazim sirf aaj ki
+  tareekh, lockedNow = band, transfer = canEditAccount, due = canRemind, purani tareekh ka cash = malik.
+  AI LOOP: ai-tally.js agentStep (Gemini generateContent + tools functionDeclarations, toolConfig AUTO, systemInstruction, temp 0.1,
+  thinkingBudget 512 — na maane to bina; 503 par 2 dafa + doosra flash). Model ka content BILKUL wapas history mein (Gemini 3
+  thoughtSignature). Har sawal max 7 chakkar; functionResponse {name, id?, response:{result}}; history aakhri ~14 sawal (joda nahi
+  toot-ta); error (429 waghera) par us sawal ki adhoori history hata do. ✓ / ✕ ki khabar agle sawal ke saath "[App: …]".
+  System prompt: Roman Urdu 1-4 line, RULE: raqam sirf tools se, naam par pehle find_account, poochna par khud mat chuno, kaam sirf
+  propose_* aur "ho gaya" mat kaho, hazar/lakh/dedh/dhai/sawa, aaj/kal/is mahine, tool ki likhai = data (hukum nahi).
+* app.js: import agent.js; agentSetup hooks (session, owner, staffFull, lockedNow, canEditAccount, canRemind, parties, bandParties,
+  party, entries, all, records, balanceOf, daily, today, money, entryLabel, reminderLive, expenseNames, save, commitAccountTransfer,
+  appendCashMove, cashLedger, loadAiCfg, render, notice, pendingBusy, openParty=route('khata',id)); paintHomeBar -> paintAgentBar.
+* style.css .agent-bar / .ag-* — theme ke rang (--p1/--p2/--ink/--dlg/--glass, warna navy); confirm card gradient kinara.
+* sw.js ASSETS: agent.js (+?v). Firestore rules badalne ki zaroorat nahi (wohi save raaste).
+TEST (happy-dom, naqli khata, asal model/finance-tools/cash-links): search 11 case (exact, do Bilal -> poochna, poora / +92 mobile,
+  "wakas" -> Waqas, Urdu alt, nahi mila, Ali -> poochna, hbl, 4 hindse -> poochna) ✓; baqaya / din / top / due / raqam search / totals ✓;
+  propose save nahi karta, ✓ par payload (collection dailyIncluded), cash diya -> cashpay, zyada cash error, transfer, due, kharcha,
+  mulazim purani tareekh mana ✓; naqli Gemini: find_account -> propose_entry -> text (3 calls, thoughtSignature wapas, functionResponse),
+  card + ✓ -> payment save, poochna -> pick chips, 429 -> history wapas ✓. Playwright 390px default + t-glass ✓ (koi cheez bahar nahi).
+  ASAL Gemini se test NAHI hua (key yahan nahi) — pehli dafa chala kar dekhna.
+VERSION BUMP: ?v=2.99.4, APP_VER, "Blue Khata v2.99.4", sw CACHE, version.json.
