@@ -5,8 +5,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep } from './ai-tally.js?v=2.99.5';
-import { fold, partyScore, notePartyPick, voiceSearch, smartHit } from './smart-search.js?v=2.99.5';
+import { agentStep } from './ai-tally.js?v=2.99.6';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.6';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -342,20 +342,60 @@ function sheet() {
   $('agForm').addEventListener('submit', e => { e.preventDefault(); const i = $('agInput'); const v = i.value; i.value = ''; ask(v); });
   return el;
 }
-export function openAgent(text) {
+export function openAgent(text, opt = {}) {
   if (!H?.session() || !canFull()) return;
   const el = sheet(); el.hidden = false; document.body.classList.add('ag-lock');
   $('agWho').textContent = who() + ' · ' + (H.owner() ? 'poori ijazat' : 'aaj ki entries / transfer');
   if (!$('agMsgs').children.length) addMsg('ai', 'Assalam o alaikum! Main Noor Agent hoon. Kisi bhi account ka baqaya, din ka hisaab, due dates poochein — ya entry likhwayein (har entry pehle card par dikhegi, aap ✓ karein).');
-  if (text) ask(text); else setTimeout(() => $('agInput')?.focus(), 60);
+  if (opt.mic) listen(); else if (text) ask(text); else setTimeout(() => $('agInput')?.focus(), 60);
 }
-function closeAgent() { const el = $('agSheet'); if (el) el.hidden = true; document.body.classList.remove('ag-lock'); }
+// v2.99.6: 🎤 APNA MIC — pehle smart-search ka voiceSearch: koi nishani / galti nahi batata tha ("mic kaam nahi kar raha").
+//   Ab: button laal + "Sun raha hoon…", bolte hue likhai khane mein, ruk-te hi khud bhejta hai; dobara tap = band.
+//   Zuban ur-PK, na chale to hi-IN, phir en-IN. Har galti saaf Roman Urdu mein (ijazat / awaz nahi aayi / internet / mic nahi mila).
+let rec = null;
+function micUI(on) { document.querySelectorAll('[data-ag-mic],[data-agb-mic]').forEach(b => { b.classList.toggle('rec', !!on); b.textContent = on ? '⏹' : '🎤'; b.setAttribute('aria-label', on ? 'Sunna band' : 'Bol kar'); }); }
+const MIC_ERR = {
+  'not-allowed': '🎤 Mic ki IJAZAT band hai. Chrome mein upar address bar ka 🔒 (ya ⋮) > Site settings > Microphone > Allow. App icon se khola ho to phone Settings > Apps > Chrome > Permissions > Microphone > Allow. Phir dobara 🎤 dabayein.',
+  'service-not-allowed': '🎤 Is phone / browser par awaz se likhna band hai. Chrome mein app kholein, ya keyboard (Gboard) ka 🎤 istemal karein.',
+  'no-speech': '🎤 Awaz nahi aayi — phone mic ke qareeb rakh kar 🎤 dabate hi foran bolein.',
+  'audio-capture': '🎤 Mic nahi mila — koi aur app (call / recorder) mic istemal to nahi kar rahi?',
+  'network': '🎤 Awaz ko likhai mein badalne ke liye internet chahiye — net check karein.',
+};
+function listen() {
+  if (rec) { try { rec.stop(); } catch {} return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { addMsg('err', '🎤 Is browser mein awaz se likhna nahi chalta. Keyboard (Gboard) ke 🎤 se bol kar likhein, ya app Chrome mein kholein.'); return; }
+  const langs = ['ur-PK', 'hi-IN', 'en-IN']; let li = 0, fin = '';
+  const start = () => {
+    const r = new SR(); rec = r; r.lang = langs[li]; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
+    r.onstart = () => { micUI(true); setTyping('🎤 Sun raha hoon — bolein… (rukne ke liye ⏹)'); };
+    r.onresult = ev => {
+      let tmp = '';
+      for (let k = ev.resultIndex; k < ev.results.length; k++) { const t = ev.results[k][0]?.transcript || ''; if (ev.results[k].isFinal) fin += (fin ? ' ' : '') + t.trim(); else tmp += t; }
+      const i = $('agInput'); if (i) i.value = (fin + ' ' + tmp).trim();
+    };
+    r.onerror = ev => {
+      if (rec !== r) return;
+      if (ev.error === 'language-not-supported' && li < langs.length - 1) { li++; rec = null; start(); return; }
+      if (ev.error !== 'aborted') addMsg('err', MIC_ERR[ev.error] || ('🎤 Masla: ' + ev.error));
+    };
+    r.onend = () => {
+      if (rec !== r) return;
+      rec = null; micUI(false); setTyping('');
+      const i = $('agInput'), t = (i?.value || fin).trim();
+      if (t) { if (i) i.value = ''; ask(t); }
+    };
+    try { r.start(); } catch (e) { rec = null; micUI(false); setTyping(''); addMsg('err', '🎤 Mic shuru nahi hua: ' + (e?.message || e)); }
+  };
+  start();
+}
+function closeAgent() { if (rec) { try { rec.abort(); } catch {} } const el = $('agSheet'); if (el) el.hidden = true; document.body.classList.remove('ag-lock'); }
 async function onClick(e) {
   const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
   if (d.agClose != null) return closeAgent();
   if (d.agClear != null) { history = []; notes = []; pending.clear(); $('agMsgs').innerHTML = ''; addMsg('ai', 'Nayi baat shuru — poochein.'); return; }
   if (d.agSay != null) return ask(d.agSay);
-  if (d.agMic != null) { const ok = voiceSearch(t => { const i = $('agInput'); if (i) { i.value = t; ask(t); i.value = ''; } }, 'ur-PK'); if (!ok) H.notice('Is phone par awaz se likhna nahi chalta — type karein'); else H.notice('🎤 Bolein…'); return; }
+  if (d.agMic != null) { if (busy) { H.notice('⏳ Pehla jawab aa raha hai…'); return; } listen(); return; }
   if (d.agPick) { notePartyPick(d.agPick); return ask(`${d.agName} (account_id: ${d.agPick})`, d.agName); }
   if (d.agOpen) { closeAgent(); H.openParty(d.agOpen); return; }
   if (d.agTog) { const c = pending.get(d.agTog); if (c && !c.done && !c.no) { c.cash = !c.cash; document.getElementById('agc-' + d.agTog).outerHTML = cardHTML(d.agTog); } return; }
@@ -382,7 +422,7 @@ export function paintAgentBar(on) {
     const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
     if (d.agbOpen != null) openAgent();
     else if (d.agbSay != null) openAgent(d.agbSay);
-    else if (d.agbMic != null) { openAgent(); const ok = voiceSearch(t => ask(t), 'ur-PK'); if (!ok) H.notice('Is phone par awaz se likhna nahi chalta — type karein'); }
+    else if (d.agbMic != null) openAgent('', { mic: true });
   });
 }
 // test ke liye (app mein istemal nahi)

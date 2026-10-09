@@ -2138,3 +2138,17 @@ chhota kar diya. Test (Playwright isMobile 412px): purana docW 811 / panel 589; 
   40px, stats 2 column, baqaya pehle -> baad 3 column, safe-area upar/neeche, patti ke harf bare.
   TEST: agent t.mjs ALL OK; Playwright 412x900 t-glass + default: panel 412x900, sirf suggestion chips (jaan-boojh kar scroll) bahar.
 VERSION BUMP: ?v=2.99.5, APP_VER, "Blue Khata v2.99.5", sw CACHE, version.json.
+
+==================== App v2.99.6 (2026-10-09) — 🎤 Noor Agent ka MIC ====================
+User: "mic kaam nahi kar raha". Pehle agent smart-search ka voiceSearch istemal karta tha: na koi nishani (sun raha hai ya nahi),
+na galti ka paigham (ijazat band / awaz nahi aayi / zuban) — sirf "Bolein…" notice, phir kuch nahi. Patti wala 🎤 chat kholte hi
+likhne ke khane par focus bhi kar deta tha (keyboard khul kar sunna toot sakta tha).
+* agent.js listen(): apna SpeechRecognition (webkit), interimResults — bolte hue likhai khane mein, ruk-te hi (onend) khud ask();
+  button laal ⏹ (.rec, dhadakta) + "🎤 Sun raha hoon — bolein…"; dobara tap = stop; chat band = abort. Zuban ur-PK -> na chale
+  (language-not-supported) hi-IN -> en-IN. Galti Roman Urdu: not-allowed (Chrome Site settings / Apps > Chrome > Microphone
+  Allow ka raasta), service-not-allowed, no-speech, audio-capture, network; aborted chup. SR na ho = Gboard 🎤 ka mashwara.
+  Patti 🎤 = openAgent('', {mic:true}) (focus nahi). Jawab aa raha ho to 🎤 = "Pehla jawab aa raha hai". voiceSearch import hata.
+* style.css .ag-mic.rec / .ag-bar-mic.rec (laal gradient + agRec pulse).
+TEST (happy-dom + naqli SpeechRecognition): bolte hue likhai + laal button, final par khud bheja, button wapas; not-allowed paigham;
+  ur-PK nahi -> hi-IN se bheja; no-speech par paigham aur kuch nahi bheja; SR hi nahi -> paigham ✓. Agent t.mjs ALL OK.
+VERSION BUMP: ?v=2.99.6, APP_VER, "Blue Khata v2.99.6", sw CACHE, version.json.
