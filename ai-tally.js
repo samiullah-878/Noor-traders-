@@ -151,6 +151,8 @@ export const BILL_PROMPT = [
   '- size: agar bill par "سائز" / "Size" / "Packing" / "Wt" jaisa column ho (ek carton / bori mein kitne kg ya pieces) to us line ka wo number, warna 0. "من ریٹ" (fi 40 kg rate) ko rate MAT samjho — rate wohi hai jo ginti se zarb ho kar line ka total banta hai.',
   '- mr: agar bill par "من ریٹ" / "Man Rate" column ho to us line ka number (0.00 ho to 0), warna 0.',
   '- EK HI NUMBER KO "ctn" AUR "pcs" DONO MEIN MAT DAALO — jis khane (کارٹن / پیس) mein likha ho sirf usi mein. Bill ke hisaab se jaanch lo: ginti × rate = us line ki kul raqam.',
+  '- TARTEEB: "lines" BILKUL usi tarteeb mein do jis mein bill par likhi hain — sab se UPAR wali line pehle, phir us ke foran neeche wali, aakhir tak (Urdu bill mein bhi upar se neeche). Lines ko naam, item, raqam ya rang se aage peeche MAT karo, koi line chhoro mat, do dafa mat likho. Ek se zyada tasveerein hon to pehli tasveer ki saari lines pehle.',
+  '- sn: agar bill par alag "S.No" / "Sr" / "#" / "نمبر شمار" / "نمبر" ka khana ho to us line ka wo number, warna 0. Ginti (qty / ctn / pcs) ko sn MAT samjho.',
   '- y: har line tasveer par KAHAN hai — upar se kitni neeche, 0 se 1000 tak (0 = tasveer ka bilkul upar, 1000 = bilkul neeche). page: ek se zyada tasveerein hon to line kis tasveer par hai (1, 2, ...), warna 1.',
   '- xtra: bill ke NEECHE items ke jor ke UPAR jo kharche JAMA kiye gaye hon — labour / لیبر / مزدوری / کرایہ / freight / loading / packing / cartage — har ek {"name": jaisa likha ho, "amount": raqam}. "Advance Tax" / "Further Tax" / 236G / 236H jo lines ke jor ke BAAD JAMA ho kar Net Payable banaye, woh bhi yahan ({"name":"Advance Tax","amount": jo raqam likhi ho}). Discount, trade offer, lines mein shamil sales tax, "previous balance", pichhla baqaya, tax number SHAMIL NA karo. Na hon to [].',
   '- DISTRIBUTOR / COMPANY BILL (jaise Colgate, Unilever, P&G, Nestle ke distributor — khane: Ctn, Pcs, Trade Offer, Retail Price, Trade Price, Value Ex Tax, Disc, Sales Tax, Net Amount): har line par "ctn" aur "pcs" apne apne khane se; "rate" = "Trade Price" / "T.P" column BILKUL waisa jitne decimal likhe hain (248.5133 — gol mat karo; yeh aam taur par FI PIECE hota hai); "gross" = woh raqam jo ginti × rate se banti hai ("Value Ex Tax" / "Gross Amount" / "Value"); "net" = line ki AAKHRI raqam discount, sales tax aur trade offer ke BAAD ("Net Amount" / "Net Rate After T.O" / "Value Incl Tax" — aksar sab se dayen khana); "free" = muft pieces ("Trade Offer Pcs" / "Bonus" / "Scheme" / "FOC" — sirf ginti, Rs wala trade offer nahi); "total" = net hi. Retail Price / MRP ko rate MAT samjho.',
@@ -160,7 +162,7 @@ export const BILL_PROMPT = [
   '- Bill ke upar wale column headings jaisay ke likhe hain: qtyLabel (ginti ka heading), rateLabel (rate ka heading), amtLabel (aakhri raqam ka heading). Na dikhein to "".',
   '- Tareekh, mobile number, address, "previous balance", tax number waghera ko LINES mein SHAMIL NA karo.',
   '- itemId: agar neeche "HUMARE ITEMS" ki list di gayi ho to har line ka sab se milta julta item us list mein se dhoondo aur wahan likha hua id yahan do. Poora yaqeen na ho to itemId "" chhor do — ghalat item lagane se behtar khali chhorna hai. List se bahar ka koi id mat banao.',
-  'Sirf yeh JSON do, aur kuch nahi: {"supplier":"","date":"","total":0,"ctnTotal":0,"pcsTotal":0,"xtra":[{"name":"","amount":0}],"qtyLabel":"","rateLabel":"","amtLabel":"","lines":[{"name":"","roman":"","itemId":"","qty":0,"ctn":0,"pcs":0,"free":0,"size":0,"mr":0,"rate":0,"gross":0,"net":0,"total":0,"y":0,"page":1,"unsure":false}]}'
+  'Sirf yeh JSON do, aur kuch nahi: {"supplier":"","date":"","total":0,"ctnTotal":0,"pcsTotal":0,"xtra":[{"name":"","amount":0}],"qtyLabel":"","rateLabel":"","amtLabel":"","lines":[{"name":"","roman":"","itemId":"","qty":0,"ctn":0,"pcs":0,"free":0,"size":0,"mr":0,"rate":0,"gross":0,"net":0,"total":0,"sn":0,"y":0,"page":1,"unsure":false}]}'
 ].join('\n');
 
 // v2.0.0: humare POS items ki list — AI ko saath bhejte hain taake wohi sahi item chun le.
@@ -188,6 +190,7 @@ export function parseBill(text) {
     size: Math.max(0, num(l?.size)),
     mr: Math.max(0, num(l?.mr)),            // v2.4.2: من ریٹ (fi 40 kg) — sirf saboot, rate nahi        // v2.4.0: bill ka سائز (ek carton mein kitne)
     y: Math.min(1000, Math.max(0, num(l?.y))),   // v2.4.1: tasveer par line ki jagah (0 upar .. 1000 neeche)
+    sn: Math.min(9999, Math.round(Math.max(0, num(l?.sn)))),   // v2.99.2: bill par S.No / # ka khana (na ho to 0) — line ki tarteeb
     page: Math.max(1, Math.round(num(l?.page)) || 1),          // v2.3.0: bill par likhi hui ek hi ginti (pcs ya ctn — naqsha faisla karta hai)
     ctn: Math.max(0, num(l?.ctn)) || (Math.max(0, num(l?.qty)) || 0),   // purana "qty" bhi ctn ban jata hai
     pcs: Math.max(0, num(l?.pcs)),

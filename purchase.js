@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.1';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.1';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.2';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.2';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -805,7 +805,7 @@ document.addEventListener('click', async e => {
   if (e.target.closest?.('[data-pp-jtabcard]')) {
     if (!aiRows) return;
     const q = jQueue();
-    const i = jLastIx >= 0 && aiRows[jLastIx] && !aiRows[jLastIx].skip ? jLastIx : (q.find(x => aiRows[x].j?.conf !== 'g') ?? q[0] ?? aiRows.findIndex(r => !r.skip));
+    const i = jLastIx >= 0 && aiRows[jLastIx] && !aiRows[jLastIx].skip ? jLastIx : (q[0] ?? aiRows.findIndex(r => !r.skip));   // v2.99.2: pehli baqi line
     if (i != null && i >= 0) jCard(i);
     return;
   }
@@ -922,7 +922,7 @@ document.addEventListener('click', async e => {
   const jb = e.target.closest?.('[data-pp-jgreen],[data-pp-jstart],[data-pp-jcard],[data-pp-jok],[data-pp-jskip],[data-pp-junskip],[data-pp-jmode],[data-pp-jsum],[data-pp-jsend],[data-pp-jlist],[data-pp-jmerge],[data-pp-jclose],[data-pp-packs]');
   if (jb) { const d = jb.dataset;
     if (d.ppJgreen) { for (let i = 0; i < aiRows.length; i++) if (!aiRows[i].skip && !aiRows[i].done && aiRows[i].j?.conf === 'g') await jAccept(i); notice('✓ Hari lines pakki'); jView = 'list'; aiRender(); }
-    else if (d.ppJstart) { const q = jQueue(); const first = q.find(x => aiRows[x].j?.conf !== 'g'); jIx = first != null ? first : (q[0] ?? -1); if (jIx < 0) jSummary(); else jCard(jIx); }
+    else if (d.ppJstart) { const q = jQueue(); jIx = q[0] ?? -1; if (jIx < 0) jSummary(); else jCard(jIx); }   // v2.99.2: hamesha bill ki pehli (baqi) line se — 1, 2, 3…
     else if (d.ppJcard != null) { jCard(Number(d.ppJcard)); }
     else if (d.ppJok) { const was = !!aiRows[jIx]?.done; await jAccept(jIx); jNext(was); }
     else if (d.ppJskip) { jSkip(jIx); jNext(); }
@@ -1445,7 +1445,7 @@ function aiRender() {
     ${sup ? `<p><button type="button" data-pp-sup="${esc(sup.id)}">👤 Supplier lagayein: ${esc(sup.name)}</button> <small>(tasveer par: ${esc(aiBillInfo.supplier)})</small></p>` : aiBillInfo?.supplier && !supplier ? `<p class="jz-supfind"><button type="button" data-pp-supfind="${esc(aiBillInfo.supplier)}">🔍 Supplier dhoondein: <b>${esc(aiBillInfo.supplier)}</b></button><small>khata na mila — tap karein, isi naam se list khulegi</small></p>` : ''}
     <div class="jz-acts">
       ${k.g && aiRows.some(r => !r.skip && !r.done && r.j?.conf === 'g') ? `<button type="button" class="got" data-pp-jgreen="1">✓ ${aiRows.filter(r => !r.skip && !r.done && r.j?.conf === 'g').length} hari pakki karein</button>` : ''}
-      ${k.openNotG || k.open ? `<button type="button" class="got" data-pp-jstart="1">Jaanch shuru (${k.openNotG || k.open}) ›</button>` : `<button type="button" class="got" data-pp-jsum="1">Khulasa ›</button>`}
+      ${k.open ? `<button type="button" class="got" data-pp-jstart="1">Jaanch shuru — line ${(jQueue()[0] ?? 0) + 1} se (${k.open}) ›</button>` : `<button type="button" class="got" data-pp-jsum="1">Khulasa ›</button>`}
     </div>
     ${jFilterHTML()}
     <div class="jz-list">${aiRows.map((r, i) => {
@@ -1453,7 +1453,7 @@ function aiRender() {
       const ln = r.key ? cart.find(l => l.k === r.key) : null;
       const it = r.itemId ? items.find(x => String(x.id) === String(r.itemId)) : null;
       return `<button type="button" class="jz-row ${r.skip ? 'skip' : r.j?.conf || 'r'}${r.done ? ' done' : ''}" data-pp-jcard="${i}">
-        <span class="jz-dot">${r.skip ? '✕' : r.done ? '✓' : jMark(r.j?.conf)}</span>
+        <span class="jz-n">${i + 1}</span><span class="jz-dot">${r.skip ? '✕' : r.done ? '✓' : jMark(r.j?.conf)}</span>
         <span class="jz-txt"><b>${esc(r.ai.name || '')}${r.memFz && !['ok', 'pehle se'].includes(r.learn) ? ' <em class="jz-mem fz">📌 milta</em>' : (r.mem || r.learn === 'ok' || r.learn === 'pehle se') ? ' <em class="jz-mem">📌 yaad</em>' : ''}</b><small>${it ? esc(it.name) + ' · ' + jUnit(ln) + ' · ' + num(ln?.costP || 0) + '/' + esc(ln?.uName || 'Pcs') : 'item nahi mila'}${r.j?.why?.length ? ' · ' + esc(r.j.why[0]) : ''}</small></span></button>`;
     }).join('') || '<p class="stat-note">Is filter mein koi line nahi</p>'}</div>
     <p class="stat-note">⚠️ AI hamesha theek nahi parhta. Hari lines par bhi nazar daal lein; ✓ dabane se naam, unit aur rate app yaad kar leti hai.</p>`);
@@ -1499,7 +1499,7 @@ const jF = v => (v || v === 0) && Number(v) ? r2(Number(v)) : '';
 function jCard(i) {
   const r = aiRows[i]; if (!r) { jView = 'list'; return aiRender(); }
   jView = 'card'; jIx = i; jLastIx = i;   // v2.19: tab-patti ke liye
-  const q = jQueue(), pos = q.indexOf(i), ln = r.key ? cart.find(l => l.k === r.key) : null;
+  const ln = r.key ? cart.find(l => l.k === r.key) : null;
   const { total } = aiNum(r.ai), pk = ln ? packOf(ln) : 0, cs = ln ? jCs(r, ln) : 0, m = pk || cs;
   const it = ln ? stock().items.find(x => String(x.id) === String(ln.id)) : null;
   const size = Number(r.cs) > 1 ? Number(r.cs) : r.band ? 0 : (Number(r.ai.size) || Number(memOf(r.itemId)?.s) || 0);
@@ -1510,9 +1510,9 @@ function jCard(i) {
   const fld = (lab, key, val, pehle, off) => `<label class="jc-f"><span>${lab}</span><input type="number" min="0" step="any" inputmode="decimal" data-pp-${key}="1" value="${val}"${off ? ' disabled placeholder="—"' : ''}>${ph(pehle)}</label>`;
   const patti = billPics.length ? `<div class="jc-patti" id="jcPatti" data-pp-pic="${jPageIx(r)}" data-pp-focus="${Math.round(jY(r))}" role="button" aria-label="Poori tasveer"><span class="jc-mark"></span><span class="jc-patti-z">⤢</span></div>` : '';
   const ctnVal = pk ? (ln.ctn || '') : cs ? jF(linePcs(ln) / cs) : '';
-  dlg(`🤖 Jaanch ${pos >= 0 ? (pos + 1) + '/' + q.length : ''}`, `${jTabsHTML('card')}${patti}
+  dlg(`🤖 Jaanch · Line ${i + 1}/${aiRows.length}`, `${jTabsHTML('card')}${patti}
     <div class="jc-card ${r.j?.conf || 'r'}" id="jcCard">
-      <div class="jc-top"><b>${esc(r.ai.name || '')}${ln ? ' → ' + esc(ln.name) : ''}</b><span id="jcAmt">${ln ? num(lineTotal(ln)) : ''}</span></div>
+      <div class="jc-top"><b><em class="jc-n" title="Bill ki line">${i + 1}</em>${esc(r.ai.name || '')}${ln ? ' → ' + esc(ln.name) : ''}</b><span id="jcAmt">${ln ? num(lineTotal(ln)) : ''}</span></div>
       ${ln && total ? `<div class="jc-milan" id="jcMilan">${jMilanHTML(ln, total)}</div>` : ''}
       <div id="jcLearn">${jLearnHTML(r)}</div>
       <div class="jc-bill">Bill: ${esc(aiQtyText(r.ai))}${Number(r.ai.free) > 0 ? ' + free ' + num(r.ai.free) : ''}${size ? ' · سائز ' + num(size) : ''} · ریٹ ${num(aiNum(r.ai).rate)}${Number(r.ai.gross) > 0 ? ' · Value ' + num(r.ai.gross) : ''}${total ? (Number(r.ai.net) > 0 ? ' · Net ' : ' · کل ') + num(total) : ''}</div>
@@ -1623,7 +1623,7 @@ function jNext(reopened) {
     if (nx >= 0) return jCard(nx);
     jView = 'sum'; jIx = -1; return jSummary();
   }
-  const q = jQueue().filter(x => aiRows[x].j?.conf !== 'g' || !aiRows.some(r => !r.skip && !r.done && r.j?.conf !== 'g'));
+  const q = jQueue();   // v2.99.2: bill ki tarteeb mein AGLI line (hari bhi) — pehle sirf peeli / laal par koodta tha
   const after = q.find(x => x > jIx);
   const nx = after != null ? after : q[0];
   if (nx == null) { jView = 'sum'; jIx = -1; return jSummary(); }
@@ -1780,7 +1780,7 @@ async function aiRead(files) {
     aiBillInfo = bill; aiRows = [];
     const bx = (bill.xtra || []).reduce((n, x) => n + (Number(x.amount) || 0), 0);   // v2.4.6: labour / kiraya
     if (bx > 0 && !(xtra > 0)) { xtra = bx; xtraName = (bill.xtra || []).map(x => x.name).filter(Boolean).join(' + ').slice(0, 40); }
-    lines.sort((a, b) => (Number(a.page) || 1) - (Number(b.page) || 1));   // v2.99.1: bill ki tarteeb = AI ke parhne ki tarteeb (page ke andar); 'y' andaza ghani table mein paas wali lines aage peeche kar deta tha
+    lines.splice(0, lines.length, ...billOrder(lines));   // v2.99.2: bill ki line tarteeb (S.No / AI ki tarteeb + door ja giri line wapas) — v2.99.1 sirf page se
     const memIx = memIndex(items);   // v2.19: aap ke yaad karwaye naam — pehli tarjeeh
     for (const l of lines) {
       const q = aiNameOf(l);
@@ -1801,6 +1801,52 @@ async function aiRead(files) {
   } catch (err) {
     say('❌ ' + ((err && err.message) || 'Nakam'));
   } finally { aiBusy = false; }
+}
+// v2.99.2: BILL KI LINE TARTEEB (Jaanch ke cards + POS bill isi se) —
+//   (1) bill par S.No / # ka khana ho aur number 1,2,3 jaisa silsila banayein (dohraaye nahi) to unhi se; har tasveer ke number aapas mein na
+//       takrayein to poore bill par (2 tasveerein ulti lagi hon tab bhi sahi). Bina number wali line apni pichhli line ke foran baad.
+//   (2) warna har tasveer (page) mein AI ki parhne ki tarteeb — magar jo line apni 'y' jagah se 3+ lines door ja giri ho (AI ne beech ki line
+//       aage / peeche likh di) sirf WOHI apni jagah par. Paas wali lines ka chhota aage peeche (y andaza ghani table mein) nahi chherta (v2.99.1 wajah).
+export function billOrder(lines) {
+  const L = (lines || []).map((l, i) => ({ l, i, pg: Number(l.page) || 1, sn: Math.round(Number(l.sn) || 0), y: Number(l.y) || 0 }));
+  const pages = new Map(); for (const x of L) { if (!pages.has(x.pg)) pages.set(x.pg, []); pages.get(x.pg).push(x); }
+  const snOk = L.length >= 2 && [...pages.values()].every(P => {
+    const S = P.filter(x => x.sn > 0).map(x => x.sn); if (!S.length || S.length < P.length * 0.6) return false;
+    const u = [...new Set(S)].sort((a, b) => a - b); let st = 0;
+    for (let k = 1; k < u.length; k++) if (u[k] - u[k - 1] === 1) st++;
+    return u.length >= S.length * 0.9 && (u.length < 2 || st >= (u.length - 1) * 0.7);   // dohraaye ya silsila nahi = ginti ko S.No samjha
+  });
+  if (snOk) {
+    const R = [...pages.entries()].map(([pg, P]) => { const s = P.filter(x => x.sn > 0).map(x => x.sn); return { pg, lo: Math.min(...s), hi: Math.max(...s) }; }).sort((a, b) => a.lo - b.lo);
+    const whole = R.every((r, k) => k === 0 || r.lo > R[k - 1].hi);
+    for (const [pg, P] of pages) { let last = R.find(r => r.pg === pg).lo - 0.5, b = 0; for (const x of P) { if (x.sn > 0) { last = x.sn; b = 0; x.k = x.sn; } else { b += 0.001; x.k = last + b; } } }
+    return L.sort((a, c) => (whole ? 0 : a.pg - c.pg) || (a.k - c.k) || (a.i - c.i)).map(x => x.l);
+  }
+  const out = [];
+  for (const pg of [...pages.keys()].sort((a, b) => a - b)) out.push(...yFix(pages.get(pg)).map(x => x.l));
+  return out;
+}
+function yFix(P) {
+  const n = P.length; if (n < 4) return P;
+  const ys = P.map(x => x.y);
+  if (ys.filter(y => y > 0).length < n * 0.8 || new Set(ys).size < n * 0.7) return P;   // y theek nahi diya — AI ki tarteeb hi
+  const lim = Math.max(3, Math.round(n / 6));
+  const yr = new Map([...P].sort((a, b) => (a.y - b.y) || (a.i - b.i)).map((x, k) => [x, k]));
+  const rho = 1 - 6 * P.reduce((s, x, k) => s + (k - yr.get(x)) ** 2, 0) / (n * (n * n - 1));
+  if (rho < 0.5) return P;   // y aur AI ki tarteeb bilkul alag — y andaza bekaar, AI ki tarteeb hi (bhool se poora bill ulta na ho)
+  let seq = P.slice(); const stuck = new Set();
+  for (let t = 0; t < n * 2; t++) {
+    let worst = null, wd = 0, wk = -1;
+    seq.forEach((x, k) => { const d = Math.abs(k - yr.get(x)); if (d > wd && !stuck.has(x)) { wd = d; worst = x; wk = k; } });
+    if (!worst || wd < lim) break;
+    const rest = seq.filter(x => x !== worst), want = yr.get(worst);
+    let a = rest.findIndex(x => x.y > worst.y); if (a < 0) a = rest.length;              // pehli bari y se pehle
+    let b = 0; rest.forEach((x, k) => { if (x.y < worst.y) b = k + 1; });                 // aakhri chhoti y ke baad
+    const at = Math.abs(a - want) <= Math.abs(b - want) ? a : b;
+    if (at === wk) { stuck.add(worst); continue; }
+    rest.splice(at, 0, worst); seq = rest;
+  }
+  return seq;
 }
 // v2.4.1: bill poori screen par — do ungliyon se zoom, khainchna, do dafa tap; Jaanch se aaye to "‹ Wapas Jaanch"
 function billView() {

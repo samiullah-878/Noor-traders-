@@ -2012,3 +2012,29 @@ command), OK.
   5) Kisi par na aaye: unplugged = hare socket mein taar; disabled = Sound window -> Show Disabled -> Enable; chalu magar khamosh =
      speaker batti / bijli / knob; kuch nahi mila = driver. mmsys.cpl khol deta hai.
   mcs compile ✓, WAV mono se banaya (1 ch, 22050 Hz, 0.96 s) ✓.
+
+==================== App v2.99.2 (2026-10-09) — 🧾 JAANCH LINE-WISE (1, 2, 3…) + bill ki line tarteeb ====================
+User (Jaanch card photo, "Card 9/15" par چار مغز jo bill par 4th line thi): "bill ki line char number par hai, card us ko first number
+par hona chahiye — tarteeb wise aaye: first, two, three, four, five, line wise". Plan diya, OK.
+WAJAH: (a) "Jaanch shuru" PEHLI PEELI/LAAL line se khulti thi aur "✓ Theek — agla" sirf peeli/laal par koodta tha (hari chhorta);
+  card ke title ka number = baqi lines mein ginti (bill ki line nahi). (b) aiRows = AI ki parhne ki tarteeb (v2.99.1) — AI kabhi beech
+  ki line aage / peeche likh deta hai; prompt mein tarteeb ka hukm hi nahi tha.
+* ai-tally.js BILL_PROMPT: "TARTEEB" hukm (upar se neeche bilkul bill jaisi, aage peeche nahi, pehli tasveer pehle) + naya "sn" field
+  (S.No / Sr / # / نمبر شمار ka khana — ginti ko sn nahi). parseBill: sn (0..9999).
+* purchase.js billOrder(lines) (export) — aiRead mein (v2.99.1 ka sirf-page sort hata):
+  (1) S.No: har tasveer mein 60%+ lines par sn, dohraaye nahi (90%+ alag), 1,2,3 jaisa silsila (70%+ qadam = 1) -> sn se. Tasveeron
+      ke number aapas mein na takrayein to poore bill par (2 tasveerein ulti lagi hon tab bhi), warna page phir sn. Bina sn wali line
+      apni pichhli line ke foran baad. Qty ko sn samjha (3,5,3,5) = rad.
+  (2) warna har page: AI ki tarteeb + yFix: y 80%+ lines par aur 70%+ alag, aur Spearman(AI tarteeb, y) >= 0.5 (y bekaar ho to AI
+      tarteeb hi). Jo line apni y-jagah se >= max(3, n/6) lines door ho sirf WOHI uthao aur y ke hisaab se rakho (pehli bari y se pehle
+      ya aakhri chhoti y ke baad — jo y-rank ke qareeb); jagah na badle to "stuck". Chhota aage-peeche (paas wali lines) nahi chherta.
+  FUZZ (3000): sirf chhota aage-peeche 1469 — ek bhi bigra nahi; 3+ door line 1054 — 969 theek / behtar, 0 bigre.
+* Jaanch: "Jaanch shuru — line N se (baqi)" = hamesha pehli baqi line (hari bhi); ✓ Theek — agla = bill ki tarteeb mein agli baqi line
+  (hari bhi; pakki ho chuki chhorta — "✓ hari pakki karein" pehle dabayein to sirf baqi); Card tab = pichhla card warna pehli baqi.
+  Title "🤖 Jaanch · Line 4/15" (aiRows index + 1 / kul lines — wahi number jo Card tab par). Card par naam se pehle number chip
+  (.jc-n, navy); List mein har line ke aage number chip (.jz-n; pakki = hara).
+* POS bill ki tarteeb pehle se isi aiRows tarteeb se (cartBillOrder v2.99.1) — ab sahi tarteeb wahan bhi.
+TEST (happy-dom hd/jord.mjs): billOrder 11 case (jitter rakha, door line wapas, 3-line block, y nahi, ghalat y, sn sort, ulti tasveerein,
+  qty-as-sn, har page sn dobara, bina sn line, parseBill sn) ✓; UI: AI ne line 3 ko 7th likha -> aiRows + cart 0..7; list 1..8; Jaanch
+  shuru = Line 1/8 (hari), agla 2,3,4,5; ‹ = 4 ✓. Purana Waqas test (ord.mjs) tarteeb 0..21 wesi hi ✓. Screenshot list + card ✓.
+VERSION BUMP: ?v=2.99.2, APP_VER, "Blue Khata v2.99.2", sw CACHE, version.json (2026-10-09).
