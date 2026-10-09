@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI } from './ai-tally.js?v=2.99.8';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.8';
+import { agentStep, askImage, shrinkForAI } from './ai-tally.js?v=2.99.9';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.9';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -473,7 +473,7 @@ function trimHistory() {             // aakhri ~14 user sawal; kaat sirf user ki
   }
 }
 async function ask(text, shown) {
-  if (busy) return; const t = String(text || '').trim();
+  if (busy) return; const t = String(text || '').trim(); camChips(false);
   if (!H?.session() || !canFull()) return;
   if (attach.length) { const files = attach.splice(0); paintAttach(); return askPhotos(t, files); }
   if (!t) return;
@@ -514,12 +514,12 @@ async function askAI(t) {
 // ---------------- ⚡ TEZ RAASTA (v2.99.7): aam sawal / seedhe hukum BINA AI — app khud samajh kar foran (1 second se kam) ----------------
 //   Jo pakka samajh na aaye (naam na mile, aur lafz hon) woh AI ko. Hukum par bhi wahi CARD + ✓ (bina card kuch save nahi).
 let pendingQuick = null;
-const FILL = new Set('ka ki ke ko se ne hai hain hy he kya kia kitna kitni kitne batao bata btao dikhao dikha do de zara please plz pls mujhe muje humein hamein bhai sahab tha thi the abhi ab'.split(' '));
+const FILL = new Set('ka ki ke ko se ne hai hain hy he ha kya kia kitna kitni kitne batao bata btao bta dikhao dikha dkhao dikhado dekhao dekha do de zara please plz pls mujhe muje mje humein hamein bhai sahab tha thi the abhi ab bhejo bhejain bhejen bhej bhejdo bjaho bjao bhjo send'.split(' '));
 const normQ = t => String(t || '').toLowerCase().replace(/[۰-۹]/g, d => String(d.charCodeAt(0) - 1776)).replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 1632)).replace(/[?؟!،"'“”]+/g, ' ').replace(/[.,](?!\d)|(?<!\d)[.,]/g, ' ').replace(/\s+/g, ' ').trim();
 const wordsOf = t => normQ(t).replace(/[.,]/g, ' ').split(' ').filter(w => w && !FILL.has(w));
 const shiftDay = n => { const d = new Date(H.today() + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 const subset = (ws, set) => ws.every(w => set.has(w));
-const DAYW = new Set('aaj aj today kal yesterday parson hisaab hisab hissab sale sales sell khulasa summary din report closing wasooli wasooliyan kharcha bari total poora pura galla tafseel hui hua hoi kul bill bills pos'.split(' '));
+const DAYW = new Set('aaj aj today kal yesterday parson hisaab hisab hissab sale sales sell khulasa summary din report closing wasooli wasooliyan kharcha bari total poora pura galla tafseel hui hua hoi kul bill bills pos kala kl kall kaal hesab hisb hsab hsb parso parsoon'.split(' '));
 const DUEW = new Set('due date dates guzar gayi gai guzri guzra reminder kis kin accounts account wale walay list aaj overdue khatam'.split(' '));
 const TOPW = new Set('sab se zyada ziada zyda top sabse kis kin lene lena dene dena udhaar udhar baqaya baqi wale walay log accounts account 5 10 15 20 hain'.split(' '));
 const DONE_W = new Set('likho likh likhdo do kar karo kardo kardein karein daal dal add entry diya diye de dein hai please plz pls ki ka jama'.split(' '));
@@ -562,8 +562,8 @@ async function quick(t) {
   // 📦 "stock add karna hai" -> raaste (purchase bol kar / bill photo / transfer / naya item)
   if (ws.some(w => STOCKW.test(w)) && ws.some(w => ADDW.test(w)) && !/\d/.test(n)) { stockMenu(); return true; }
   // 📊 din ka hisaab
-  if (subset(ws, DAYW) && ws.some(w => /^(hisaa?b|hissab|sales?|sell|bills?|khulasa|summary|report|din|closing|wasooliyan|tafseel)$/.test(w))) {
-    const date = ws.includes('parson') ? shiftDay(-2) : ws.some(w => w === 'kal' || w === 'yesterday') ? shiftDay(-1) : H.today();
+  if (subset(ws, DAYW) && ws.some(w => /^(hisaa?b|hissab|hesab|hisb|hsab|hsb|sales?|sell|bills?|khulasa|summary|report|din|closing|wasooliyan|tafseel)$/.test(w))) {
+    const date = ws.some(w => /^(parson|parso|parsoon)$/.test(w)) ? shiftDay(-2) : ws.some(w => /^(kal|kala|kl|kall|kaal|yesterday)$/.test(w)) ? shiftDay(-1) : H.today();
     const r = T.day_summary({ date }); showTool('day_summary', {}, r); flushShow();
     const lab = date === H.today() ? 'Aaj' : date === shiftDay(-1) ? 'Kal' : date;
     quickReply(`${lab}: Sale **${money(r.sale_rs * 100)}** · Wasooli **${money(r.wasooli_rs * 100)}** · Kharcha + payment ${money(r.kharcha_aur_payment_rs * 100)}${r.closing_gini_hui ? ` · Closing ${money(r.closing_cash_gina_rs * 100)} (farq ${money(r.farq_rs * 100)})` : ' · Closing abhi nahi gini'}.`, `app ne ${date} ka hisaab dikhaya`);
@@ -826,8 +826,7 @@ function sheet() {
     <div class="ag-head"><span class="ag-orb">🤖</span><div><b>Noor Agent</b><small id="agWho"></small></div><button type="button" class="ag-x" data-ag-clear title="Nayi baat">🗑</button><button type="button" class="ag-x" data-ag-close aria-label="Band">✕</button></div>
     <div id="agMsgs" class="ag-msgs"></div>
     <div id="agTyping" class="ag-typing" hidden><i></i><i></i><i></i><span></span></div>
-    <div class="ag-sugg">${SUGG.map(s => `<button type="button" data-ag-say="${esc(s.replace(/^\S+\s/, ''))}">${esc(s)}</button>`).join('')}</div>
-    <div id="agCamMenu" class="ag-cam-menu" hidden><button type="button" data-ag-cam>📸 Camera se kheenchein</button><button type="button" data-ag-gal>🖼 Gallery se (kai photo)</button></div>
+    <div class="ag-sugg" id="agSugg"><button type="button" class="ag-sg-cam" data-ag-cam hidden>📸 Camera</button><button type="button" class="ag-sg-cam" data-ag-gal hidden>🖼 Gallery</button>${SUGG.map(s => `<button type="button" data-ag-say="${esc(s.replace(/^\S+\s/, ''))}">${esc(s)}</button>`).join('')}</div>
     <div id="agAttach" class="ag-attach" hidden></div>
     <form class="ag-in" id="agForm" autocomplete="off"><input id="agInput" placeholder="Poochein ya hukum dein…" enterkeyhint="send" aria-label="Agent se baat"><button type="button" class="ag-pic" data-ag-pic aria-label="Photo">📷</button><button type="button" class="ag-mic" data-ag-mic aria-label="Bol kar">🎤</button><button type="submit" class="ag-send" aria-label="Bhejo">➤</button></form>
     <input type="file" id="agCamIn" accept="image/*" capture="environment" hidden><input type="file" id="agGalIn" accept="image/*" multiple hidden>
@@ -835,7 +834,7 @@ function sheet() {
   el = $('agSheet');
   el.addEventListener('click', onClick);
   $('agForm').addEventListener('submit', e => { e.preventDefault(); const i = $('agInput'); const v = i.value; i.value = ''; ask(v); });
-  for (const id of ['agCamIn', 'agGalIn']) $(id).addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; $('agCamMenu').hidden = true; });
+  for (const id of ['agCamIn', 'agGalIn']) $(id).addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; camChips(false); });
   return el;
 }
 export function openAgent(text, opt = {}) {
@@ -886,12 +885,20 @@ function listen() {
   start();
 }
 function closeAgent() { if (rec) { try { rec.abort(); } catch {} } const el = $('agSheet'); if (el) el.hidden = true; document.body.classList.remove('ag-lock'); }
+// v2.99.9: 📷 -> chips ki line mein hi "📸 Camera" / "🖼 Gallery" (pehle bare button neeche khule reh jate the — "har waqt lagna?")
+function camChips(on) {
+  const L = document.querySelectorAll('#agSugg .ag-sg-cam'); if (!L.length) return;
+  const show = on == null ? L[0].hidden : !!on;
+  L.forEach(x => { x.hidden = !show; }); document.querySelector('[data-ag-pic]')?.classList.toggle('on', show);
+  if (show) { const r = $('agSugg'); if (r) r.scrollLeft = 0; }
+}
 async function onClick(e) {
   const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
+  if (d.agPic == null && d.agCam == null && d.agGal == null) camChips(false);
   if (d.agClose != null) return closeAgent();
   if (d.agClear != null) { history = []; notes = []; pending.clear(); $('agMsgs').innerHTML = ''; addMsg('ai', 'Nayi baat shuru — poochein.'); return; }
   if (d.agSay != null) return ask(d.agSay);
-  if (d.agPic != null) { const m = $('agCamMenu'); m.hidden = !m.hidden; return; }
+  if (d.agPic != null) { camChips(); return; }
   if (d.agCam != null) { $('agCamIn').click(); return; }
   if (d.agGal != null) { $('agGalIn').click(); return; }
   if (d.agUnatt != null) { const f = attach.splice(Number(d.agUnatt), 1)[0]; try { if (f?._u) URL.revokeObjectURL(f._u); } catch {} paintAttach(); return; }

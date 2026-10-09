@@ -3533,3 +3533,16 @@ TEST (happy-dom, ASAL pos-stock/purchase/sale/notes/agent): hd/p2.mjs ALL OK —
   ASAL Gemini se test NAHI hua. AI kahan kaam NAHI karega: PC (server) band = rate / item / transfer POS mein der se (hukum mehfooz);
   milte julte item = chips (khud nahi chunta); stock utna hi taza jitni aakhri POS sync.
 VERSION BUMP: ?v=2.99.8, APP_VER, "Blue Khata v2.99.8", sw CACHE, version.json.
+
+==================== App v2.99.9 (2026-10-10) — 🤖 Agent: 📷 Camera / Gallery CHIPS ki line mein + aam ghalat hijje ====================
+User (agent ka photo, neeche "📸 Camera se kheenchein" / "🖼 Gallery se" ke bare button khule): "ye neeche camera / gallery wala option
+hide kar do — chips ke saath karo, kaun sa har waqt lagna hota hai". Wajah: 📷 dabane ke baad photo na chuni to menu khula hi rehta tha.
+* agent.js: agCamMenu (bare button) HATA. #agSugg chips ki line mein shuru mein 2 chhupe chips "📸 Camera" (data-ag-cam) / "🖼 Gallery"
+  (data-ag-gal). camChips(on): 📷 = khol / band (📷 button .on); photo chunte hi, koi bhi doosra button, ya sawal bhejte hi (ask) khud chhup.
+  ＋📸 ＋🖼 (attach strip) wahi.
+* Ghalat hijje (user: "Kala ka hisab bjaho" AI ko chala gaya tha): FILL + ha bta dkhao dikhado dekhao dekha bhejo bhejain bhejen bhej bhejdo
+  bjaho bjao bhjo send; DAYW + kala kl kall kaal hesab hisb hsab hsb parso parsoon; tareekh: kala/kl/kall/kaal = kal, parso/parsoon = parson.
+* style.css: .ag-sugg .ag-sg-cam (gradient chip, [hidden] display none), .ag-pic.on.
+TEST: hd/p2.mjs + naye: 📷 shuru band, 📷 -> 2 chips, bara menu nahi, doosra button -> chhup, 📷 dobara -> band, "Kala ka hisab bjaho" ->
+  Kal bina AI, "parso ka hesab" bina AI — ALL OK; t/m/q/pa/jord/give ALL OK; Playwright 412px chips theek (koi page overflow nahi).
+VERSION BUMP: ?v=2.99.9, APP_VER, "Blue Khata v2.99.9", sw CACHE, version.json (date 2026-10-10).

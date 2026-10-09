@@ -2434,3 +2434,7 @@ html.dk .ag-cf-st.ag-wn{color:#ffd28a}
   .ag-menu-g{grid-template-columns:1fr 1fr}.ag-menu-g button{min-height:84px!important}.ag-menu-g b{font-size:15px}.ag-menu-g small{font-size:12.5px}
   .ag-calc-eq b{font-size:32px}.ag-calc-ex{font-size:15px}.ag-tot b{font-size:20px}.ag-note-tx{font-size:16.5px}
 }
+/* v2.99.9: 📷 -> chips ki line mein "📸 Camera" / "🖼 Gallery" (bare button hata diye) */
+.ag-sugg .ag-sg-cam{background:linear-gradient(135deg,var(--p1,#5EE7FF),var(--p2,#7B6CFF))!important;color:var(--ontx,#081127)!important;border:0!important;font-weight:800!important;box-shadow:0 3px 10px rgba(123,108,255,.3)}
+.ag-sugg .ag-sg-cam[hidden]{display:none!important}
+.ag-pic.on{background:linear-gradient(135deg,rgba(94,231,255,.35),rgba(123,108,255,.38))!important;border-color:rgba(123,108,255,.55)!important}
