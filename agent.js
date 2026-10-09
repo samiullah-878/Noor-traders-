@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI } from './ai-tally.js?v=2.99.9';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.9';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.99.10';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.10';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -844,9 +844,94 @@ export function openAgent(text, opt = {}) {
   if (!$('agMsgs').children.length) addMsg('ai', 'Assalam o alaikum! Main Noor Agent hoon. Baqaya, din ka hisaab, **stock / rate**, **aaj ki sale**, due dates poochein — ya bol kar kaam karwayein: entry, **rate badalna**, **purchase**, **godam transfer**, **note**, **hisaab**. Har kaam pehle card par dikhega, aap ✓ karein.');
   if (opt.mic) listen(); else if (text) ask(text); else setTimeout(() => $('agInput')?.focus(), 60);
 }
-// v2.99.6: 🎤 APNA MIC — pehle smart-search ka voiceSearch: koi nishani / galti nahi batata tha ("mic kaam nahi kar raha").
-//   Ab: button laal + "Sun raha hoon…", bolte hue likhai khane mein, ruk-te hi khud bhejta hai; dobara tap = band.
-//   Zuban ur-PK, na chale to hi-IN, phir en-IN. Har galti saaf Roman Urdu mein (ijazat / awaz nahi aayi / internet / mic nahi mila).
+// v2.99.10: 🎤 GEMINI KHUD SUNTA HAI — malik: "awaz sahi nahi pehchanta, hum kuch bolte hain ye kuch samajhta hai".
+//   Wajah: phone ka awaz-system (ur-PK) Urdu harf likhta tha (khate Roman mein) aur naam ghalat. Ab: mic -> WAV (16k mono) -> Gemini
+//   (wohi AI key) -> Roman Urdu likhai, hindse digits, aap ke khaton / items / kharchon ke naam ki spelling. Ruk jayein (1.5s) = khud bhejta;
+//   ⏹ = abhi bhejo; 60s had. AI key / mic-raasta na ho -> phone ka system (en-IN = Roman).
+let recA = null, hearing = false;
+function listen() {
+  if (recA) { recA.stop(); return; }
+  if (rec) { try { rec.stop(); } catch {} return; }
+  if (hearing) { H.notice('⏳ Pichhli awaz likhi ja rahi hai…'); return; }
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!navigator.mediaDevices?.getUserMedia || !AC) return listenSR();
+  listenAI(AC).catch(e => { recA = null; micUI(false); setTyping(''); addMsg('err', '🎤 ' + (e?.message || e)); });
+}
+function hearPrompt() {
+  const U = usage();
+  const acc = pool().slice().sort((a, b) => (U.get(b.id) || 0) - (U.get(a.id) || 0)).slice(0, 250).map(p => p.name);
+  let items = []; try { items = H.stockNames?.(300) || []; } catch {}
+  let exp = []; try { exp = H.expenseNames().slice(0, 30); } catch {}
+  return [
+    'Yeh Pakistani wholesale dukan (Noor Traders) ke malik / mulazim ki AWAZ hai — Urdu, Punjabi aur English mili hui. Woh apni app (khata, stock, sale, purchase) ko hukum de raha hai.',
+    'Kaam: jo BOLA gaya hai usay bilkul waisa ROMAN URDU (sirf English harf) mein likho. Tarjuma nahi, khulasa nahi, jawab nahi, apni taraf se kuch nahi. Urdu / Hindi rasm-ul-khat KABHI nahi.',
+    'Hindse DIGITS mein: "bees hazar" = 20000, "dedh lakh" = 150000, "paanch carton" = 5 carton, "saadhe teen sau" = 350, "do sau pachaas" = 250.',
+    'Aam lafz aise likho: wasooli, payment, udhaar, baqaya, khata, hisaab, carton, piece, stock, rate, wholesale, parchoon, godam, dukan, kharcha, aaj, kal, parson, se, ko, ka.',
+    'Koi naam neeche ki list ke kisi naam jaisa suna jaye to list wali SPELLING likho; list se bahar ka naam ho to jaisa suna.',
+    acc.length ? 'Accounts: ' + acc.join(' | ') : '',
+    items.length ? 'Items: ' + items.join(' | ') : '',
+    exp.length ? 'Kharche: ' + exp.join(' | ') : '',
+    'Jawab sirf JSON: {"text": "<jo bola gaya>"}. Kuch samajh na aaye, sirf shor ya khamoshi ho to {"text": ""}.',
+  ].filter(Boolean).join('\n');
+}
+function wavB64(bufs, total, rate) {   // Float32 tukre -> 16 kHz mono 16-bit WAV (base64)
+  const tgt = 16000, ratio = rate > tgt ? rate / tgt : 1, outRate = rate > tgt ? tgt : Math.round(rate);
+  const all = new Float32Array(total); let o = 0; for (const b of bufs) { all.set(b.subarray(0, Math.min(b.length, total - o)), o); o += b.length; if (o >= total) break; }
+  const n = Math.floor(total / ratio), buf = new ArrayBuffer(44 + n * 2), dv = new DataView(buf), pcm = new Int16Array(buf, 44, n);
+  for (let i = 0; i < n; i++) { let v; if (ratio === 1) v = all[i]; else { const a = Math.floor(i * ratio), z = Math.min(total, Math.floor((i + 1) * ratio)); let sm = 0; for (let k = a; k < z; k++) sm += all[k]; v = sm / Math.max(1, z - a); } pcm[i] = Math.round(Math.max(-1, Math.min(1, v)) * 32767); }
+  const w = (at, t) => { for (let i = 0; i < t.length; i++) dv.setUint8(at + i, t.charCodeAt(i)); };
+  w(0, 'RIFF'); dv.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, outRate, true); dv.setUint32(28, outRate * 2, true); dv.setUint16(32, 2, true); dv.setUint16(34, 16, true); w(36, 'data'); dv.setUint32(40, n * 2, true);
+  const u8 = new Uint8Array(buf); let bin = ''; for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+  return { data: btoa(bin), sec: n / outRate };
+}
+async function listenAI(AC) {
+  let ac; try { ac = new AC({ sampleRate: 16000 }); } catch { ac = new AC(); }   // click ke andar hi (iPhone par awaz ki ijazat)
+  const pend = { stop() { pend.want = 'send'; }, abort() { pend.want = 'abort'; } }; recA = pend; micUI(true); setTyping('🎤 Mic khul raha hai…');
+  const cfg = await H.loadAiCfg().catch(() => null);
+  if (!cfg?.key || !cfg?.model) { try { ac.close(); } catch {} recA = null; micUI(false); setTyping(''); return listenSR(); }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } }); }
+  catch (e) {
+    try { ac.close(); } catch {} recA = null; micUI(false); setTyping('');
+    const n = e?.name || ''; addMsg('err', MIC_ERR[/NotAllowed|Security|Permission/i.test(n) ? 'not-allowed' : /NotFound|NotReadable|Overconstrained/i.test(n) ? 'audio-capture' : ''] || ('🎤 Mic nahi khula: ' + (e?.message || n))); return;
+  }
+  if (pend.want === 'abort') { stream.getTracks().forEach(t => t.stop()); try { ac.close(); } catch {} recA = null; micUI(false); setTyping(''); return; }
+  try { await ac.resume?.(); } catch {}
+  let src; try { src = ac.createMediaStreamSource(stream); } catch { try { ac.close(); } catch {} ac = new AC(); try { await ac.resume?.(); } catch {} src = ac.createMediaStreamSource(stream); }   // Firefox: 16k par na jure to asal rate
+  const rate = ac.sampleRate, node = ac.createScriptProcessor(4096, 1, 1);
+  const bufs = []; let total = 0, spoke = false, quietMs = 0, floor = null, fl = [], lvl = 0, done = false; const t0 = Date.now();
+  const bars = () => { const k = floor ? lvl / Math.max(0.02, floor * 3) : 0; return k > 1.6 ? '▁▃▅▇' : k > 1 ? '▁▃▅' : k > 0.5 ? '▁▃' : '▁'; };
+  const tick = setInterval(() => { if (!done) setTyping(`🎤 Sun raha hoon ${bars()} ${Math.round((Date.now() - t0) / 1000)}s — bolein, ruk jayein to khud bhej dunga (⏹ = abhi)`); if (pend.want) finish(pend.want); }, 150);
+  const cleanup = () => { clearInterval(tick); try { node.disconnect(); src.disconnect(); } catch {} try { stream.getTracks().forEach(t => t.stop()); } catch {} try { ac.close(); } catch {} };
+  async function finish(why) {
+    if (done) return; done = true; recA = null; cleanup(); micUI(false);
+    if (why === 'abort') { setTyping(''); return; }
+    if (!spoke || total < rate * 0.3) { setTyping(''); addMsg('err', MIC_ERR['no-speech']); return; }
+    hearing = true; setTyping('✍️ Awaz samajh raha hoon…');
+    let text = '';
+    try { const w = wavB64(bufs, total, rate); text = await hearAudio({ key: cfg.key, model: cfg.model, audio: { mime: 'audio/wav', data: w.data }, prompt: hearPrompt(), onStatus: m => setTyping('✍️ ' + m) }); }
+    catch (e) { hearing = false; setTyping(''); addMsg('err', '🎤 Awaz likhi nahi ja saki: ' + (e?.message || e)); return; }
+    hearing = false; setTyping('');
+    text = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!text) { addMsg('err', '🎤 Awaz samajh nahi aayi — phone mic ke qareeb rakh kar saaf bolein, phir dobara 🎤.'); return; }
+    const i = $('agInput'); if (i) i.value = text;
+    await new Promise(r => setTimeout(r, 300));
+    if (i && i.value === text) i.value = '';
+    ask(text);
+  }
+  node.onaudioprocess = ev => {
+    if (done) return;
+    const d = ev.inputBuffer.getChannelData(0); bufs.push(new Float32Array(d)); total += d.length;
+    let sm = 0; for (let k = 0; k < d.length; k++) sm += d[k] * d[k]; const rms = Math.sqrt(sm / d.length), ms = d.length / rate * 1000; lvl = rms;
+    if (floor == null) { fl.push(rms); if (fl.length * ms >= 250) { const f = fl.slice().sort((a, b) => a - b); floor = Math.max(0.004, f[f.length >> 1]); } if (rms > 0.05) spoke = true; return; }
+    if (rms > Math.max(0.02, floor * 3)) { spoke = true; quietMs = 0; } else if (spoke) quietMs += ms;
+    const el = Date.now() - t0;
+    if (spoke && quietMs >= 1500) finish('send'); else if (!spoke && el > 8000) finish('nospeech'); else if (el > 60000) finish('send');
+  };
+  src.connect(node); node.connect(ac.destination);
+}
+// purana raasta (AI key / mic-raasta na ho): phone ka awaz-system — pehle en-IN (Roman likhai), phir ur-PK
 let rec = null;
 function micUI(on) { document.querySelectorAll('[data-ag-mic],[data-agb-mic]').forEach(b => { b.classList.toggle('rec', !!on); b.textContent = on ? '⏹' : '🎤'; b.setAttribute('aria-label', on ? 'Sunna band' : 'Bol kar'); }); }
 const MIC_ERR = {
@@ -856,11 +941,11 @@ const MIC_ERR = {
   'audio-capture': '🎤 Mic nahi mila — koi aur app (call / recorder) mic istemal to nahi kar rahi?',
   'network': '🎤 Awaz ko likhai mein badalne ke liye internet chahiye — net check karein.',
 };
-function listen() {
+function listenSR() {
   if (rec) { try { rec.stop(); } catch {} return; }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { addMsg('err', '🎤 Is browser mein awaz se likhna nahi chalta. Keyboard (Gboard) ke 🎤 se bol kar likhein, ya app Chrome mein kholein.'); return; }
-  const langs = ['ur-PK', 'hi-IN', 'en-IN']; let li = 0, fin = '';
+  const langs = ['en-IN', 'ur-PK']; let li = 0, fin = '';
   const start = () => {
     const r = new SR(); rec = r; r.lang = langs[li]; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
     r.onstart = () => { micUI(true); setTyping('🎤 Sun raha hoon — bolein… (rukne ke liye ⏹)'); };
@@ -884,7 +969,7 @@ function listen() {
   };
   start();
 }
-function closeAgent() { if (rec) { try { rec.abort(); } catch {} } const el = $('agSheet'); if (el) el.hidden = true; document.body.classList.remove('ag-lock'); }
+function closeAgent() { if (rec) { try { rec.abort(); } catch {} } if (recA) recA.abort(); const el = $('agSheet'); if (el) el.hidden = true; document.body.classList.remove('ag-lock'); }
 // v2.99.9: 📷 -> chips ki line mein hi "📸 Camera" / "🖼 Gallery" (pehle bare button neeche khule reh jate the — "har waqt lagna?")
 function camChips(on) {
   const L = document.querySelectorAll('#agSugg .ag-sg-cam'); if (!L.length) return;

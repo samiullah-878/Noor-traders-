@@ -3546,3 +3546,23 @@ hide kar do — chips ke saath karo, kaun sa har waqt lagna hota hai". Wajah: �
 TEST: hd/p2.mjs + naye: 📷 shuru band, 📷 -> 2 chips, bara menu nahi, doosra button -> chhup, 📷 dobara -> band, "Kala ka hisab bjaho" ->
   Kal bina AI, "parso ka hesab" bina AI — ALL OK; t/m/q/pa/jord/give ALL OK; Playwright 412px chips theek (koi page overflow nahi).
 VERSION BUMP: ?v=2.99.9, APP_VER, "Blue Khata v2.99.9", sw CACHE, version.json (date 2026-10-10).
+
+==================== App v2.99.10 (2026-10-10) — 🎤 Agent ki AWAZ ab GEMINI khud sunta hai ====================
+User: "ye awaz sahi tareeqe se nahi pehchanta — hum kuch bolte hain ye kuch samajhta hai; Roman Urdu ka issue to nahi?" Wajah batayi:
+phone ka awaz-system (ur-PK) URDU HARF likhta tha (khate Roman mein) aur naam ghalat pakarta tha — agent ko pehle hi ghalat likhai. Plan OK.
+* ai-tally.js hearAudio({key, model, audio:{mime,data}, prompt}) — inline audio + JSON {"text"}; thinking minimal (gemini-3) / budget 0 (2.x),
+  na maane to low / bina; rush par 2 dafa, phir doosra flash.
+* agent.js: listen() -> listenAI(): AudioContext (click ke andar hi bana — iPhone), getUserMedia (echo / noise / gain), ScriptProcessor ->
+  Float32 tukre; khamoshi ka andaza (pehle 250ms ka shor = floor; bolna > max(0.02, floor×3)); bolne ke baad 1.5s chup = khud bhejo;
+  8s tak kuch na bola = "Awaz nahi aayi"; 60s had; ⏹ = abhi bhejo; chat band = abort (kuch nahi bheja). WAV 16 kHz mono 16-bit (wavB64,
+  48k ho to 16k par average). hearPrompt: Roman Urdu hi (Urdu/Hindi harf kabhi nahi), hindse digits (bees hazar = 20000), aam lafz ki
+  spelling, naam ki list: 250 accounts (zyada chalne wale pehle) + 300 items (pos-stock stockAgentNames: zyada bikne wale + dukan mein stock
+  wale) + kharche. Likhai pehle khane mein, phir khud ask(). Patti 🎤 bhi yahi. Firefox: 16k par na jure to asal rate.
+  AI key / mic-raasta na ho -> listenSR (phone ka) ab pehle en-IN (Roman), phir ur-PK (hi-IN hataya — Devanagari).
+* app.js hook stockNames.
+TEST agent/v.mjs (naqli mic + AudioContext): bolna -> chup -> khud WAV (RIFF 16k mono 16bit) Gemini ko, prompt mein naam + Roman,
+  likhai "Waqas ka baqaya" -> Waqas card; ⏹ -> foran; khamoshi -> paigham (Gemini nahi); khali likhai -> paigham; ijazat band -> raasta;
+  chat band = abort — ALL OK. m.mjs (purana raasta: en-IN -> ur-PK), t/q/p2/pa/jord/give ALL OK.
+  ASAL phone + Gemini par test NAHI hua. Kharcha: har command ki awaz Gemini ko (andaza: 1 rupay se kam, naapa nahi).
+  Kahan kaam NAHI karega: internet ke baghair (phir phone ka Roman raasta); bohat shor / kai log ek saath.
+VERSION BUMP: ?v=2.99.10, APP_VER, "Blue Khata v2.99.10", sw CACHE, version.json.

@@ -347,3 +347,31 @@ export function matchTally(book, rows, totals = []) {
     appSum: sum(rows.map(r => r.cents))
   };
 }
+
+// v2.99.10: 🎤 AWAZ -> LIKHAI — Gemini khud awaz sunta hai (phone ka purana awaz-system Urdu harf likhta tha aur naam ghalat pakarta tha).
+//   audio = { mime: 'audio/wav', data: base64 } · jawab JSON {"text": "..."} Roman Urdu mein. Sochna kam se kam (tez). Rush par 2 dafa, phir doosra flash.
+export async function hearAudio({ key, model, audio, prompt, onStatus }) {
+  if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
+  if (!model) throw Error('Model ka naam khali hai — Settings > AI key > Test dabayein.');
+  let tcfg = /gemini-3/i.test(String(model || '')) ? { thinkingLevel: 'minimal' } : { thinkingBudget: 0 };
+  const parts = [{ inline_data: { mime_type: audio.mime, data: audio.data } }, { text: String(prompt || '') }];
+  const once = m => api('/models/' + encodeURIComponent(m) + ':generateContent', key, { method: 'POST',
+    body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: { temperature: 0, responseMimeType: 'application/json', ...(tcfg ? { thinkingConfig: tcfg } : {}) } }) });
+  const call = async m => {
+    for (let k = 0; k < 3; k++) {
+      try { return await once(m); }
+      catch (e) { if (!tcfg || !/thinking|thinking_budget|thinkingConfig|thinking_level|INVALID_ARGUMENT|HTTP 400/i.test(String(e?.message || ''))) throw e; tcfg = tcfg.thinkingLevel === 'minimal' ? { thinkingLevel: 'low' } : null; }
+    }
+    return await once(m);
+  };
+  let out = null, lastErr = null;
+  for (const d of [0, 1500, 4000]) {
+    if (d) { onStatus?.('Google par rush — dobara koshish…'); await wait(d); }
+    try { out = await call(model); break; } catch (e) { lastErr = e; if (!busyError(e)) throw e; }
+  }
+  if (!out) { try { const m = await pickModel(key); const alt = m.all.find(n => n !== model && /flash/.test(n) && !/(lite|tts|image|live|embedding)/.test(n)); if (alt) out = await call(alt); } catch { /* nakam */ } }
+  if (!out) throw Error('Google ke server par abhi rush hai — thori der baad. (' + (lastErr?.message || '') + ')');
+  const txt = (out.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('').trim();
+  try { const a = txt.indexOf('{'), b = txt.lastIndexOf('}'); const j = JSON.parse(txt.slice(a, b + 1)); return String(j.text ?? '').trim(); }
+  catch { return txt.replace(/^["'`]+|["'`]+$/g, '').trim(); }
+}

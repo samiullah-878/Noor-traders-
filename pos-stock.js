@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold } from './smart-search.js?v=2.99.9';
-import { liveLabelsHTML } from './barcode.js?v=2.99.9';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.10';
+import { liveLabelsHTML } from './barcode.js?v=2.99.10';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -2559,4 +2559,12 @@ export async function stockAgentTransfer({ from, to, lines, note = '' }) {
     stopW = cloud.watchTransfer ? cloud.watchTransfer(jid, j => { if (!j) return; if (j.status === 'done') end({ ok: true, no: j.transferNo || '' }); else if (j.status === 'failed') end({ ok: false, why: j.error || 'masla' }); }) : null;
     setTimeout(() => end({ ok: false, pending: true, why: 'PC se 45 second mein jawab nahi aaya — hukum mehfooz hai (transfer-sync on hote hi banega)' }), 45000);
   });
+}
+// v2.99.10: 🎤 awaz ke liye naam (Gemini ko "yeh naam hain" — sahi spelling pakre): zyada chalne wale + dukan mein stock wale
+export function stockAgentNames(n = 350) {
+  start(false);
+  const P = agPool(); if (!P.list.length) return [];
+  const out = new Set(topItems(P.list, Math.min(150, n)).map(r => r.name));
+  for (const c of rows) { if (c.meta || c.branch !== P.main || !Array.isArray(c.items)) continue; for (const r of c.items) { if (out.size >= n) break; if ((Number(r.stock) || 0) > 0 && !hidden[String(r.id)]) out.add(r.name); } }
+  return [...out].filter(Boolean).slice(0, n);
 }
