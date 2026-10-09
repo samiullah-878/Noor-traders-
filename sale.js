@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.99.7';
-import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.99.7';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.99.8';
+import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.99.8';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -968,4 +968,40 @@ function printLocal(sl, cp = 1, cr = 1) {
     setTimeout(() => { try { w.focus(); w.print(); } catch {} setTimeout(() => f.remove(), 60000); }, 300); };
   jobs.forEach((b, k) => setTimeout(() => one(b, k), k * 1600));
   notice(`🖨 Bill ${sl.saleNo} · token ${tok || '-'} · ${n} parchi — isi device par`);
+}
+
+// ---------- v2.99.8: 🤖 NOOR AGENT — din ke bills (PC + app) ka khulasa, aur bol kar Sale screen ki cart bharna ----------
+export async function saleAgentDay(day) {
+  if (!cloud?.listenPosSales || !cloud?.listenAppSales) throw Error('Sale ke liye app update karein');
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(String(day || '')) ? day : todayStr();
+  let app = null, pos = null; const offs = [];
+  await new Promise(res => {
+    const t = setTimeout(res, 8000), chk = () => { if (app && pos) { clearTimeout(t); res(); } };
+    try { offs.push(cloud.listenAppSales(d, l => { app = Array.isArray(l) ? l : []; chk(); }, () => { app = app || []; chk(); })); } catch { app = []; }
+    try { offs.push(cloud.listenPosSales(d, b => { pos = Array.isArray(b) ? b : []; chk(); })); } catch { pos = []; }
+    chk();
+  });
+  offs.forEach(f => { try { f?.(); } catch {} });
+  if (app == null && pos == null) throw Error('Bills load nahi hue — internet dekhein');
+  const all = billsDataOf(app || [], pos || []), live = all.filter(b => !b.cancelled && !b.farq && b.status !== 'failed');
+  const sum = L => r2(L.reduce((n, b) => n + (Number(b.total) || 0), 0));
+  const udh = b => b.credit ? Math.max(0, r2((Number(b.total) || 0) - (Number(b.cash) || 0))) : 0;
+  const cr = live.filter(b => b.credit), co = live.filter(b => !b.credit);
+  return { date: d, bills: live.length, kul_rs: sum(live), counter: { bills: co.length, rs: sum(co) }, wholesale: { bills: cr.length, rs: sum(cr) },
+    udhaar_rs: r2(live.reduce((n, b) => n + udh(b), 0)), cancel: all.filter(b => b.cancelled).length, nakam: all.filter(b => b.status === 'failed').length,
+    intezar: live.filter(b => b.status === 'new' || b.status === 'posting').length, adhoora: app == null || pos == null,
+    bare: [...live].sort((a, b) => b.total - a.total).slice(0, 5).map(b => ({ bill: b.saleNo || '', rs: r2(b.total), party: b.party || '', kahan: b.where || '', udhaar: b.credit && udh(b) > 0 })) };
+}
+export function saleAgentFill(m, lines) {
+  if (editing) throw Error('Sale screen par purana bill EDIT khula hai — pehle usay band karein');
+  if (cart.length) throw Error('Sale screen par pehle se ' + cart.length + ' items ka bill khula hai — pehle usay save ya saaf karein');
+  mode = m === 'wholesale' ? 'wholesale' : 'counter'; godam = SALE_BRANCH; cash = null;
+  const st = stock(), added = [];
+  for (const x of lines || []) {
+    const it = st.items.find(r => String(r.id) === String(x.id)); if (!it) throw Error('Item dukan (NOOR TRADERS) mein nahi: ' + (x.name || x.id));
+    const pk = Number(it.pack) > 1 ? Number(it.pack) : 0, q = r3((Number(x.ctn) || 0) * (pk || 1) + (Number(x.pcs) || 0));
+    if (q > 0) added.push(addItem(it, q));
+  }
+  cash = null; keepDraft(); rerender();
+  return { n: added.length, total: cartTotal(), mode, lines: added.map(l => ({ name: l.name, ctn: Number(l.ctn) || 0, pcs: Number(l.pcs) || 0, total: lineTotal(l) })) };
 }

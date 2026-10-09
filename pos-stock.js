@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit } from './smart-search.js?v=2.99.7';
-import { liveLabelsHTML } from './barcode.js?v=2.99.7';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold } from './smart-search.js?v=2.99.8';
+import { liveLabelsHTML } from './barcode.js?v=2.99.8';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -2445,3 +2445,118 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && scanBox &&
 
 // v2.59: bill save ho gaya -> scanner screen khuli ho to list saaf, search par cursor (naya bill)
 export function scanNewBill() { if (!scanBox) return false; scanOrder = []; scanItems.clear(); scanQty.clear(); lastScan = null; lastKey = ''; saleSeen = []; scanBox._redraw?.(); const m = scanBox.querySelector('.scan-msg'); if (m) m.textContent = '✓ Bill save — naya bill: agla item scan karein'; const q = scanBox.querySelector('.scan-q'); if (q) { q.value = ''; setTimeout(() => q.focus(), 30); } return true; }
+
+// ---------- v2.99.8: 🤖 NOOR AGENT — stock dekhna / rate badalna / naya item / godam transfer ----------
+// Malik: "agent mein stock, sale, transfer, notes sab joro — bol kar rate change, purchase ke items bol kar chunwao".
+// Sab WAHI raaste jo Stock screen ke (requestItem / requestTransfer -> PC). Item dhoondna: naam (Roman), Urdu naam (AI wala), barcode.
+let agP = null, agKey = null, agUr = null;
+const r3 = n => Math.round((Number(n) || 0) * 1000) / 1000;
+function agPool() {
+  if (agP && agKey === rows && agUr === urdu) return agP;
+  const { branches, names } = collect();
+  const main = branches.includes(1) ? 1 : branches[0];
+  const chunks = rows.filter(r => !r.meta && Array.isArray(r.items)), byId = new Map();
+  for (const b of [main, ...branches.filter(x => x !== main)]) for (const c of chunks.filter(c => c.branch === b).sort((x, y) => (x.order || 0) - (y.order || 0))) for (const it of c.items) if (it && it.id != null && !byId.has(String(it.id))) byId.set(String(it.id), it);
+  const list = [...byId.values()];
+  const urList = Object.entries(urdu || {}).map(([id, ur]) => ({ id: 'u' + id, name: ur, _r: byId.get(String(id)) })).filter(x => x._r);
+  agP = { list, byId, urList, branches: branches.filter(b => b !== JAMA), names, main }; agKey = rows; agUr = urdu;
+  return agP;
+}
+export async function stockAgentReady(ms = 15000) {
+  start(false);
+  const t0 = Date.now();
+  while (!loaded && Date.now() - t0 < ms) await new Promise(r => setTimeout(r, 120));
+  if (failed) throw Error('Stock load nahi hua: ' + failed);
+  if (!loaded) throw Error('Stock abhi load nahi hua (internet?) — thori der baad dobara poochein');
+  return true;
+}
+export function stockAgentGodams() { const P = agPool(); return P.branches.map(b => ({ id: b, name: branchName(b, P.names), dukan: b === P.main })); }
+const agCodes = r => [r.code, ...(Array.isArray(r.bc) ? r.bc : [])].map(x => String(x || '').trim()).filter(Boolean);
+const agQtyTxt = (s, pk, cn = 'Ctn', un = 'Pcs') => { s = r2(s); if (pk > 1) { const neg = s < 0, a = Math.abs(s), c = Math.floor(a / pk + 1e-9), p = r2(a - c * pk); return (neg ? '-' : '') + (c ? num(c) + ' ' + cn + (p ? ' + ' : '') : '') + (p || !c ? num(p) + ' ' + un : ''); } return num(s) + ' ' + un; };
+export function stockAgentItem(id, { cost = true } = {}) {
+  const P = agPool(), r = P.byId.get(String(id)); if (!r) return null;
+  const pk = Number(r.pack) > 1 ? Number(r.pack) : 0, cn = r.cName || 'Ctn', un = r.uName || 'Pcs';
+  const per = P.branches.map(b => ({ godam_id: b, godam: branchName(b, P.names), dukan: b === P.main, pcs: r2(Number(saleStockItem(b, r.id)?.stock) || 0) }))
+    .filter(x => Math.abs(x.pcs) > 0.0005 || x.dukan).map(x => ({ ...x, text: agQtyTxt(x.pcs, pk, cn, un) }));
+  const total = r2(per.reduce((n, x) => n + x.pcs, 0));
+  const rp = Number(r.rate) || 0, wp = Number(r.wrate) || 0;
+  const out = { item_id: String(r.id), name: r.name, code: r.code || '', urdu: urduOf(r.id), pack: pk || 1, ctn_naam: cn, pcs_naam: un,
+    stock: per, stock_kul_pcs: total, stock_kul: agQtyTxt(total, pk, cn, un), band: !!hidden[String(r.id)],
+    rate: { parchoon_ctn: pk ? ctnR(rp, pk) : 0, parchoon_pcs: r2(Number(r.rate2) || rp), wholesale_ctn: pk ? ctnR(wp || rp, pk) : 0, wholesale_pcs: r2(Number(r.ws) || wp || rp),
+      ...(cost ? { khareed_ctn: pk ? ctnR(Number(r.prate) || 0, pk) : r2(r.prate), khareed_pcs: r2(Number(r.prate) || 0) } : {}) },
+    // Sale screen jaisa bhao (sale.js rateFor / crateFor) — fi piece
+    _sale: { wc: r2(wp || rp), wp: r2(wp || rp), cc: r2(rp), cp: r2(Number(r.rate2) || rp) } };
+  return out;
+}
+export function stockAgentFind(query, alt = [], n = 6, opt = {}) {
+  const P = agPool(), qs = [query, ...(Array.isArray(alt) ? alt : [])].map(s => String(s || '').trim()).filter(Boolean).slice(0, 5);
+  if (!qs.length) return { decision: 'nahi_mila', note: 'naam khali' };
+  const out = x => stockAgentItem(x.id, opt);
+  for (const s of qs) {   // barcode bilkul
+    const c = s.replace(/\s/g, ''); if (!/^\d{5,}$/.test(c)) continue;
+    const hit = P.list.filter(r => agCodes(r).some(x => x === c || x.replace(/^0+/, '') === c.replace(/^0+/, '')));
+    if (hit.length === 1) return { decision: 'pakka', item_id: String(hit[0].id), how: 'barcode', candidates: [out(hit[0])] };
+  }
+  const found = [];
+  for (const s of qs) {
+    const res = /[؀-ۿ]/.test(s) ? smartSearch(P.urList, s, n * 2).map(x => x._r) : smartSearch(P.list, s, n * 2);
+    for (const r of res) if (r && !found.includes(r)) found.push(r);
+  }
+  if (!found.length) return { decision: 'nahi_mila', searched: qs };
+  const fq = qs.map(s => fold(s)), exact = found.filter(r => fq.includes(fold(r.name)) || fq.includes(fold(urduOf(r.id))));
+  let id = '';
+  if (exact.length === 1) id = String(exact[0].id);
+  else if (found.length === 1) id = String(found[0].id);
+  else { const st = found.filter(r => fq.some(q => q && (fold(r.name) + ' ').startsWith(q + ' '))); if (st.length === 1) id = String(st[0].id); }
+  return { decision: id ? 'pakka' : 'poochna', ...(id ? { item_id: id } : {}), candidates: found.slice(0, n).map(out) };
+}
+export const stockAgentCanEdit = () => canEditItem();
+// rate badalna / naya item — itemSave jaisa job (POS fi PIECE rakhta hai; CTN = fi piece × pack)
+export async function stockAgentItemSave(id, patch = {}) {
+  if (!canEditItem()) throw Error('Rate / item sirf malik badal sakta hai (ya malik Stock screen par "Mulazim item aur rates badal sake" on kare)');
+  if (!cloud?.requestItem) throw Error('Item ke liye app update karein');
+  const isNew = !id, r = isNew ? null : agPool().byId.get(String(id));
+  if (!isNew && !r) throw Error('Item nahi mila');
+  const pk1 = Number(r?.pack) > 1 ? Number(r.pack) : 0;
+  const v = { name: r?.name || '', code: r?.code || '', pack: Number(r?.pack) || 0, costP: Number(r?.prate) || 0, rpcs: Number(r?.rate2) || Number(r?.rate) || 0,
+    rctn: (pk1 ? ctnR(Number(r?.rate) || 0, pk1) : 0) || 0, wpcs: Number(r?.ws) || Number(r?.wrate) || 0, wctn: (pk1 ? ctnR(Number(r?.wrate) || 0, pk1) : 0) || 0 };
+  const P = {}; for (const k of ['name', 'code', 'pack', 'costC', 'costP', 'rctn', 'rpcs', 'wctn', 'wpcs']) if (patch[k] != null && patch[k] !== '') P[k] = k === 'name' || k === 'code' ? String(patch[k]).trim() : Math.max(0, Number(patch[k]) || 0);
+  Object.assign(v, P);
+  const pk = Number(v.pack) > 0 ? Number(v.pack) : 1;
+  if (pk > 1) { if (!(v.rctn > 0) && v.rpcs > 0 && isNew) v.rctn = r2(v.rpcs * pk); if (!(v.wctn > 0) && v.wpcs > 0 && isNew) v.wctn = r2(v.wpcs * pk); }
+  if (P.costC > 0 && !(P.costP > 0)) v.costP = Math.abs(r2(P.costC / pk) * pk - P.costC) <= 0.005 * pk + 1e-6 ? r2(P.costC / pk) : Math.round(P.costC / pk * 10000) / 10000;
+  if (pk > 1 && P.costC > 0 && v.costP > 0 && Math.abs(v.costP * pk - P.costC) <= 0.005 * pk + 1e-6) v.costP = Math.round(P.costC / pk * 10000) / 10000;
+  if (!v.name) throw Error('Item ka naam chahiye');
+  const job = { op: isNew ? 'new' : 'edit', itemId: isNew ? '' : String(r.id), code: v.code, name: v.name, pack: v.pack, costP: v.costP, rctn: v.rctn, rpcs: v.rpcs, wctn: v.wctn, wpcs: v.wpcs };
+  if (!isNew) job.subs = labelRows(r).filter(x => !x.main).map(x => ({ b: x.code, q: x.qty, r: x.rate || 0, s: x.show !== false }));
+  const jid = await cloud.requestItem(job);
+  return await new Promise(res => {
+    let stopW = null, done = false;
+    const end = x => { if (done) return; done = true; try { stopW && stopW(); } catch {} if (x.ok) rerender(); res(x); };
+    stopW = cloud.watchItem ? cloud.watchItem(jid, j => { if (!j) return; if (j.status === 'done') end({ ok: true, code: j.code || '' }); else if (j.status === 'failed') end({ ok: false, why: j.error || 'nakam' }); }) : null;
+    setTimeout(() => end({ ok: false, pending: true, why: 'PC se 45 second mein jawab nahi aaya — hukum mehfooz hai, PC (item-post) on hote hi POS mein lag jayega' }), 45000);
+  });
+}
+// godam se godam — trSave jaisa (dukan / branch 1 ke ilawa "se" godam mein stock kam ho to mana)
+export async function stockAgentTransfer({ from, to, lines, note = '' }) {
+  if (!cloud?.requestTransfer) throw Error('Transfer ke liye app update karein');
+  const P = agPool(); from = Number(from); to = Number(to);
+  if (!P.branches.includes(from) || !P.branches.includes(to)) throw Error('Godam samajh nahi aaya');
+  if (from === to) throw Error('"Se" aur "Ko" alag godam hon');
+  const L = (lines || []).map(x => {
+    const it = P.byId.get(String(x.id)); if (!it) throw Error('Item nahi mila: ' + (x.name || x.id));
+    const pk = Number(it.pack) > 1 ? Number(it.pack) : 0, ctn = pk ? Math.max(0, Number(x.ctn) || 0) : 0, pcs = Math.max(0, Number(x.pcs) || 0) + (pk ? 0 : Math.max(0, Number(x.ctn) || 0));
+    const qty = r3(ctn * pk + pcs); if (!(qty > 0)) throw Error('Tadad 0 — ' + it.name);
+    return { itemId: it.id, name: it.name, qty, ctn, pcs, pack: Number(it.pack) || 0, cName: it.cName || 'Ctn', uName: it.uName || 'Pcs' };
+  });
+  if (!L.length) throw Error('Koi item nahi');
+  const short = from !== 1 ? L.filter(l => trStockOf(from, l.itemId) < l.qty - 0.0005) : [];
+  if (short.length) throw Error('⛔ ' + branchName(from, P.names) + ' mein stock kam: ' + short.map(l => l.name + ' (stock ' + num(trStockOf(from, l.itemId)) + ')').join(', '));
+  const jid = await cloud.requestTransfer({ op: 'create', copies: trCopies, from, to, lines: L, note: String(note || '').slice(0, 300), byName: '' });
+  return await new Promise(res => {
+    let stopW = null, done = false;
+    const end = x => { if (done) return; done = true; try { stopW && stopW(); } catch {} res(x); };
+    stopW = cloud.watchTransfer ? cloud.watchTransfer(jid, j => { if (!j) return; if (j.status === 'done') end({ ok: true, no: j.transferNo || '' }); else if (j.status === 'failed') end({ ok: false, why: j.error || 'masla' }); }) : null;
+    setTimeout(() => end({ ok: false, pending: true, why: 'PC se 45 second mein jawab nahi aaya — hukum mehfooz hai (transfer-sync on hote hi banega)' }), 45000);
+  });
+}

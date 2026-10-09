@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.7';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.7';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.8';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.8';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -2077,6 +2077,33 @@ export async function ppAgentPost() {
   for (const r of aiRows || []) if (!r.skip && r.key && !r.done) r.done = true;
   return await save({ auto: true });
 }
+// v2.99.8: 🤖 AGENT — bol kar purchase: "Waqas se 10 carton Brite 500, 5 carton Surf" -> agent ke card par ✓ -> yahi cart (supplier + items + tadad,
+//   khareed rate bola ho to woh, warna pichhla). Bhejna: user Purchase screen se, ya card ka "⬆️ POS bhejo" (save auto — har shak par NAHI bhejta).
+export function ppAgentFill(supplierId, lines) {
+  if (!canUse()) throw Error('Is login par POS purchase ki ijazat nahi');
+  if (aiBusy || aiRows) throw Error('Purchase screen par tasveer wale bill ki jaanch khuli hai — pehle usay mukammal ya saaf karein');
+  if (edit) throw Error('Purchase screen par POS ka purana bill EDIT khula hai — pehle usay band ya save karein');
+  if (!partyOf(supplierId)) throw Error('Supplier ka khata nahi mila');
+  if (cart.length && supplier && String(supplierId) !== String(supplier)) throw Error('Purchase screen par doosre supplier (' + (partyOf(supplier)?.name || '') + ') ka bill khula hai — pehle usay bhejein ya 🗑 saaf karein');
+  const { items } = stock();
+  const want = (lines || []).map(x => { const it = items.find(r => String(r.id) === String(x.id)); if (!it) throw Error('Item nahi mila: ' + (x.name || x.id)); return { x, it }; });
+  if (!want.length) throw Error('Koi item nahi');
+  supplier = String(supplierId); notePartyPick(supplier);
+  for (const { x, it } of want) {
+    const { line: l } = addItem(it, false), pk = packOf(l);
+    if (pk) { l.ctn = Math.max(0, Number(x.ctn) || 0); l.pcs = Math.max(0, Number(x.pcs) || 0); }
+    else { l.ctn = 0; l.pcs = r3(Math.max(0, Number(x.pcs) || 0) + Math.max(0, Number(x.ctn) || 0)); }
+    if (Number(x.costCtn) > 0) { l.costP = pk ? r4(Number(x.costCtn) / pk) : r4(Number(x.costCtn)); recalc(l); }
+    else if (Number(x.costPcs) > 0) { l.costP = r4(Number(x.costPcs)); recalc(l); }
+  }
+  keepDraft(); rerender();
+  return ppAgentCart();
+}
+export function ppAgentCart() {
+  return { supplierName: partyOf(supplier)?.name || '', n: cart.length, total: cartTotal(),
+    lines: cart.map(l => ({ name: l.name, ctn: Number(l.ctn) || 0, pcs: Number(l.pcs) || 0, pack: packOf(l), costCtn: packOf(l) ? r2(Number(l.costP) * packOf(l)) : r2(l.costP), total: lineTotal(l) })) };
+}
+export async function ppAgentSend() { if (aiRows) return { ok: false, why: ['tasveer wale bill ki jaanch khuli hai'] }; if (!cart.length) return { ok: false, why: ['cart khali hai'] }; return await save({ auto: true }); }
 export function ppAgentJaanch() { if (aiRows) { jView = 'list'; jIx = -1; aiRender(); } }
 // ---------- v1.87: is supplier se aksar aane wale items (app ke bills + POS ke pichhle 6 bills) ----------
 async function loadSupItems(pid) {

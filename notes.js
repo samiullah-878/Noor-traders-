@@ -6,8 +6,8 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { saleStock } from './pos-stock.js?v=2.99.7';
-import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.7';
+import { saleStock } from './pos-stock.js?v=2.99.8';
+import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.8';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -563,4 +563,23 @@ async function enablePush(quiet) {
     pushState = 'ok'; if (!quiet) notice('🔔 Notification chalu ho gayi');
   } catch (er) { pushState = ''; if (!quiet) notice('⚠️ Notification: ' + (er?.message || er)); }
   pushStatus();
+}
+
+// ---------- v2.99.8: 🤖 NOOR AGENT — bol kar note / reminder, aur notes dhoondna ----------
+export async function noteAgentSave({ text = '', day = '', time = '', partyId = '', items = [] } = {}) {
+  if (!canUseOf()) throw Error('Is login par notes ki ijazat nahi');
+  if (!cloud?.saveNote) throw Error('Notes ke liye app update karein');
+  const t = String(text || '').trim(); if (!t) throw Error('Note mein kuch likhein');
+  const p = partyId ? partyOf(partyId) : null;
+  const d = await saveNote({ kind: 'note', text: t, items: (items || []).slice(0, 20), partyId: p ? p.id : '', partyName: p ? p.name : '',
+    remindDay: /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : '', remindTime: /^\d{2}:\d{2}$/.test(time) ? time : '', allDay: false });
+  badge(); return d;
+}
+export function noteAgentFind(q = '', { open = true, n = 8 } = {}) {
+  const today = dayOf();
+  let l = notes.filter(x => matchQ(x, String(q || '').trim().toLowerCase()));
+  if (open) l = l.filter(x => !x.done);
+  const key = x => (x.done ? '2' : x.remindDay ? '0' + x.remindDay + (x.remindTime || '99') : '1') + String(9e15 - (x.updatedAt || 0));
+  return l.sort((a, b) => key(a).localeCompare(key(b))).slice(0, Math.max(1, Math.min(20, n))).map(x => ({ id: x.id, text: String(x.text || '').slice(0, 160),
+    reminder: x.remindDay || '', time: x.remindTime || '', account: x.partyName || '', items: (x.items || []).map(i => i.name).slice(0, 5), done: !!x.done, late: !!x.remindDay && !x.done && x.remindDay < today, by: x.byName || '' }));
 }

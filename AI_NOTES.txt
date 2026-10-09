@@ -3494,3 +3494,42 @@ TEST: agent t.mjs (12 tools) / m.mjs (mic) / q.mjs (fast path <300ms 0 fetch, ch
   ASAL Gemini se test NAHI hua (key yahan nahi). AI kahan kaam NAHI karega: dhundli / adhi photo, haath ka likha kacha bill ->
   peela -> Jaanch mein khud dekhein.
 VERSION BUMP: ?v=2.99.7, APP_VER, "Blue Khata v2.99.7", sw CACHE (+ './agent.js?v='), version.json.
+
+==================== App v2.99.8 (2026-10-09) — 🤖 Noor Agent PHASE 2: STOCK · RATE · NAYA ITEM · TRANSFER · PURCHASE · SALE · NOTES · HISAAB ====================
+User (agent ka photo: "Stock add karna ha" par agent ne kaha "Blue Khata mein stock ka option nahi" — GHALAT): "es mein stock, sale, transfer,
+notes sab screens joro … bol kar command, rate change, purchase ki items bol kar chunwao, hisaab bol kar". Plan diya, user "Oo" (OK).
+WAJAH: agent sirf khata janta tha (system prompt + tools). Ab prompt mein poori app + "NEVER say no stock option" + har kaam ka tool.
+* pos-stock.js (naye export): stockAgentReady (listenStock shuru + intezar), stockAgentFind(q, alt) — naam (smartSearch + aliases), URDU naam
+  (urduNames ki list alag search), barcode bilkul; pakka = naam bilkul / ek hi mila / sirf ek "shuru" wala; warna poochna (chips).
+  stockAgentItem(id,{cost}) — har godam ka stock (Ctn + Pcs), kul, rates (khareed sirf cost ijazat par), _sale (sale.js jaisa bhao).
+  stockAgentGodams, stockAgentCanEdit (= canEditItem), stockAgentItemSave(id|null, patch) = itemSave jaisa requestItem job (edit: baqi rates
+  wahi, subs saath; new: pack, costC -> costP, R/W CTN khali ho to PCS × pack) + watchItem 45s; stockAgentTransfer = trSave jaisa
+  requestTransfer (godam != dukan ho to stock kam par mana) + watchTransfer 45s. PC na ho = "hukum mehfooz, PC on hote hi".
+* sale.js: saleAgentDay(date) — listenAppSales + listenPosSales ek dafa (8s), billsDataOf: kul, counter / wholesale, udhaar, cancel, nakam,
+  intezar, bare 5 bills. saleAgentFill(mode, lines) — Sale cart (khali ho, edit na ho), addItem (wahi rates).
+* purchase.js: ppAgentFill(supplierId, lines) — cart mein (aiRows / edit / doosra supplier = mana), khareed rate bola ho to costP + recalc
+  (nafa wala), warna pichhla; ppAgentCart; ppAgentSend = save({auto:true}) (har shak par nahi bhejta, wajah).
+* notes.js: noteAgentSave({text, day, time, partyId, items}) (saveNote), noteAgentFind(q).
+* agent.js: 12 naye tools (kul 24): find_item, item_info, maal_value, sale_summary, search_notes, hisaab, propose_rate_change, propose_new_item,
+  propose_godam_transfer, propose_purchase, propose_sale, propose_note; propose_entry + items (maal udhaar: "Hamza ko 5 carton Brite" -> W rate
+  se raqam app khud, note mein items). Har kaam CARD -> ✓ (rate / item / transfer: "⏳ PC ko bheja"). Purchase card ke baad "🛒 Purchase kholo"
+  / "⬆️ POS bhejo"; sale card ke baad "🧾 Sale screen kholo". Day lock sirf khata cards par.
+  Ijazat: stock + sale rates sab Full; khareed = malik / purchase ijazat; rate + naya item = canEditItem; godam transfer = sirf malik
+  (Stock screen malik ki); purchase = canPP; sale = saleUser.
+  ⚡ Tez raasta (bina AI): "<item> ka stock / rate" (pakka -> card, warna item chips), "stock add karna hai" -> menu (🛒 bol kar purchase /
+  📷 bill photo / 🚚 transfer / ➕ naya item / 📦 stock), 🧮 hisaab "12 carton 1450 ke 3% kam" / "50000 se 2000 kam" / "1450 x 12" / "2 lakh
+  ka 3%" (calcParse: apna parser, eval nahi; anjaan lafz = calculator nahi), "aaj ki sale" -> khata ka din + POS/app bills card.
+  Prompt: godam list (id=naam), item rules, "poochna par naam ki list mat likho (buttons)", hisaab hamesha tool se.
+  UI: item card (kul stock bara, godam chips hara / laal minus, rates grid Carton/Piece, 💲🛒🚚🧾 chips jo khane mein jumla bhar dete),
+  menu grid, calc card, rate card (purana kata hua -> naya, khareed se kam / 50% farq = ⚠️), naya item, transfer, purchase, sale, note cards.
+  Suggestions + patti: 📦 Stock, 🧾 Sale.
+* app.js hooks: stockReady/stockFind/stockItem/godams/canEditItem/itemSave/stockTransfer, canSale/saleDay/saleFill, ppFill/ppSend,
+  noteSave/noteFind, route.
+TEST (happy-dom, ASAL pos-stock/purchase/sale/notes/agent): hd/p2.mjs ALL OK — 24 tools; calculator 9 sahi + 6 "nahi"; "Brite 500 ka stock"
+  bina AI card (12 Ctn + 2 Pcs, godam chips, rates); "brite ka rate" -> 2 chips -> card; Urdu naam; barcode 8964001187073; godam naam;
+  stock menu; rate job (wctn 1700, baqi wahi); kam rate warning; naya item job; transfer (stock kam mana, STN, PC fail par card khula);
+  mulazim: transfer / rate mana; purchase card -> cart -> ⬆️ POS (savedDoc); sale card -> cart; sale summary 25,000; maal udhaar 7,800;
+  note save; AI raasta: Hamza chips -> find_item -> udhaar card. Purane t/m/q/pa/jord/give ALL OK. Playwright 412px light + dark theek.
+  ASAL Gemini se test NAHI hua. AI kahan kaam NAHI karega: PC (server) band = rate / item / transfer POS mein der se (hukum mehfooz);
+  milte julte item = chips (khud nahi chunta); stock utna hi taza jitni aakhri POS sync.
+VERSION BUMP: ?v=2.99.8, APP_VER, "Blue Khata v2.99.8", sw CACHE, version.json.
