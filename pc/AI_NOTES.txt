@@ -2061,3 +2061,27 @@ User: "8964001187073 ... barcode add nahi hua — command se check karo ya kis i
   (aakhri 5: waqt, op, item, status, error); itemJobs pichhle 14 din (code ya subs[].b). SQL password / chaabi nahi chhapta.
   TEST (mock mssql + firestore): mila (sub-barcode + app + failed hukum ka paigham) ✓; ghalat hindsa -> milta-julta ✓.
 * Manifest mein nahi (service nahi — ps1 har dafa taza laata hai).
+
+==================== App v2.99.3 + pos-khata-sync (manifest 2026-10-09.2) — 💸 CLOSING CASH SE PAYMENT BHEJO + 🧾 parchi par SABQA BAQAYA ====================
+User (Daily Sale, Closing Cash ginti photo, Jama Rs 2,082,500): "cash ginti wale ke neeche ek khana — jo yahan likha ho jaise 2082500
+kisi bhi account mein bhej sakein" (pehle "closing hata do" kaha tha — phir saaf kiya: ginti wese hi, NEECHE naya khana). Plan, OK.
+Saath mein pichhla OK: voucher parchi par "Sabqa baqaya" upar.
+* app.js: giveBoxHTML(d) — dailySheet mein SIRF 'cash' (Closing Cash) column ke sheet-entries ke baad, sheet-total se pehle:
+  chips Gina (d.cash) / Bheja (aaj ke cashCustody moves from 'shop') / Baqi (gina − bheja; hara 0, laal manfi); kul available
+  (cashLedger) alag ho to chhoti line. owner() || date===today(): account search (rankList parties 'any', chips) -> chuna account
+  navy chip (balanceLabel, ✕), Raqam + "Poora Rs <baqi>" chip, Note (ikhtiyari), ✓ Bhejo. Neeche "Aaj bheja gaya" rows (naam, waqt,
+  note, raqam) + malik ko Edit/Delete (data-cash-edit/delete = record.id:index -> purana cashRecordAction). "✓ Sab bhej diya" / Baqi.
+  setupGive(): giveDraft (render ke baad bhi likha rahe), render() ka focus-bachao [data-give] bhi. Submit = custodyForm('out') jaisa:
+  appendCashMove(records, date, moves, {amount, at, from:'shop', note:'Closing cash se · <note>', ref:'cp'+uuid, to:pid}) ->
+  save cashCustody 'custody-<date>' -> cloud.js cashLinkChanges -> account mein 'cashpay-<ref>' entry (kind credit, "Cash diya · ...").
+  Available se zyada = "Total Available Cash mein itni raqam nahi hai". Firestore rules badalne ki zaroorat nahi (wohi raasta).
+  style.css .give-* (premium card, chips, hara Bhejo, laal raqam); day-locked par form chhupta.
+  TEST (happy-dom, asal finance-tools + model + cash-links): chips, search, pick, submit -> cashpay entry (credit, Bilal, 10 lac,
+  note), dobara render -> Bheja/Baqi + row + edit id custody-<day>:0 (ledger mein), Poora chip 1,082,500 -> "✓ Sab bhej diya",
+  zyada raqam -> error ✓. Playwright screenshot 380px — koi cheez bahar nahi ✓.
+* pc/pos-khata-sync.js: (1) 'cashpay-' + kind 'credit' entry -> base kind 'payment' = POS CPV (Cash Payment, parchi "Diye") jab tak
+  link na ho ya link.code CPV ho (pehle "UDHAR SALE" JV banta tha = POS sale mein ghalat; jo JV ban chuke wese hi, hash na badle).
+  (2) appBalance(partyId, skip) — parchi line par before = is voucher ki entries (docIds) ke baghair; receipt(): naam ke neeche mota
+  "  Sabqa baqaya:   Lene/Dene Rs.X" (row, normal size), phir Diye/Wasool/Udhar, neeche bara "Ab baqaya". Transfer = har party.
+  TEST: receipt CPV + JV (sabqa Lene / Dene) ✓. root + pc copy ek jaise; manifest 2026-10-09.2 (doctor 3 min mein khud).
+VERSION BUMP: ?v=2.99.3, APP_VER, "Blue Khata v2.99.3", sw CACHE, version.json.

@@ -328,11 +328,12 @@ function wrap(t, W) {
 // 2026-10-02: larke ki CASH purchase jo POS ke purchase bill se juri ho = us bill ki CASH ADAYGI (app mein payment jaisi, POS mein CPV)
 const CASH_LINK_FROM = '2026-09-20';
 const cashPays = e => e.kind === 'purchaseCash' && !e.deleted && String(e.date || '') >= CASH_LINK_FROM && ((Array.isArray(e.posBillIds) && e.posBillIds.length > 0) || !!e.posBill);
-function appBalance(partyId) {
+function appBalance(partyId, skip) {   // 2026-10-09: skip = in entries ke baghair (parchi ka "Sabqa baqaya")
   const p = app.get(partyId);
   let b = p?.opening || 0;
   for (const e of app.values()) {
     if (e.type !== 'entry' || e.deleted || e.partyId !== partyId) continue;
+    if (skip && skip.has(e.id)) continue;
     if (['credit', 'payment'].includes(e.kind) || cashPays(e)) b += e.amount;
     else if (['borrow', 'collection'].includes(e.kind)) b -= e.amount;
   }
@@ -361,6 +362,7 @@ function receipt({ title, code, date, lines, note, copy }) {
   for (const l of lines) {
     total = Math.max(total, Number(l.amount) || 0);
     out.push(bold(ascii(l.name).slice(0, W) || '(naam Urdu mein)'));
+    if (l.before != null) { const b0 = Number(l.before) || 0; out.push(bold(row('  Sabqa baqaya:', (b0 > 0 ? 'Lene ' : b0 < 0 ? 'Dene ' : '') + 'Rs.' + n(Math.abs(b0))))); }   // 2026-10-09: malik — sabqa raqam upar
     out.push(row('  ' + l.label, 'Rs.' + n(l.amount)));
     if (l.after != null) bq.push(l);
   }
@@ -672,6 +674,9 @@ async function syncEntries(pool, acct) {
         else continue;
       } else if (!['payment', 'collection', 'credit'].includes(e.kind)) continue;
       if (!acct.has(e.partyId)) { await noteSkip(e, e, false, notInPos(e.partyId)); continue; }
+      // 2026-10-09: "CASH DIYA" (cashpay-: Cash Khata / Daily Sale ke Closing Cash se payment) = dukan ka cash us account ko -> POS mein
+      //   CPV (Cash Payment, parchi "Diye"). Pehle 'credit' hone se "Udhar sale" JV banta tha (POS sale mein ghalat). Jo JV ban chuke, wese hi.
+      if (String(e.id).startsWith('cashpay-') && e.kind === 'credit') { const lk0 = links.get(key); if (!lk0 || /^CPV/i.test(String(lk0.code || ''))) base = { ...e, kind: 'payment' }; }
     }
     const link = links.get(key);
     const h = appHashEntry(base);
@@ -718,10 +723,10 @@ async function syncEntries(pool, acct) {
         const T = { CPV: VTITLE.CPV, CRV: VTITLE.CRV, JV: isTransfer ? VTITLE.JV : 'UDHAR SALE VOUCHER' }[spec.type] || spec.type;
         const amt = rupees(base.amount);
         const plines = isTransfer
-          ? [{ name: acct.get(base.fromPartyId).name, label: 'Se (nikla)', amount: amt, after: rupees(appBalance(base.fromPartyId)) },
-             { name: acct.get(base.toPartyId).name, label: 'Ko (gaya)', amount: amt, after: rupees(appBalance(base.toPartyId)) }]
+          ? [{ name: acct.get(base.fromPartyId).name, label: 'Se (nikla)', amount: amt, after: rupees(appBalance(base.fromPartyId)), before: rupees(appBalance(base.fromPartyId, new Set(docIds))) },
+             { name: acct.get(base.toPartyId).name, label: 'Ko (gaya)', amount: amt, after: rupees(appBalance(base.toPartyId)), before: rupees(appBalance(base.toPartyId, new Set(docIds))) }]
           : [{ name: acct.get(base.partyId).name, label: base.kind === 'payment' ? 'Diye' : base.kind === 'collection' ? 'Wasool kiye' : 'Udhar', amount: amt,
-               after: rupees(appBalance(base.partyId)) }];
+               after: rupees(appBalance(base.partyId)), before: rupees(appBalance(base.partyId, new Set(docIds))) }];   // 2026-10-09: sabqa = is voucher ke baghair
         const printed = await printReceipt(receipt({ title: T, code: r.code, date: base.date, lines: plines, note: String(base.note || '').trim() }));
         if (printed) await markApp(docIds, { posPrintedAt: Date.now() });
       }

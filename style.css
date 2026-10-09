@@ -2229,3 +2229,34 @@ html.dk .pp-src.bill{background:#14244a;color:#b9ccff;border-color:#2c4688}
 .lv-s em.stk{color:#ffb25a}
 .lv-row.cx{opacity:.85}.lv-row.cx .lv-s em.cx{animation:lvPulse 1.2s ease-in-out infinite}
 @keyframes lvPulse{50%{opacity:.45}}
+/* v2.99.3: 💸 Closing cash se payment bhejo (Daily Sale > Closing Cash khane ke neeche) */
+.give-box{margin-top:12px;display:grid;gap:8px;padding:12px;border-radius:16px;background:linear-gradient(180deg,#f7f9fd,#eef3fb);border:1px solid #d7dfee;box-shadow:0 6px 18px rgba(23,43,82,.08)}
+.give-head{display:grid;gap:6px}
+.give-head>b{font-size:15px;color:var(--navy)}
+.give-chips{display:flex;flex-wrap:wrap;gap:5px}
+.give-chips span{display:inline-flex;gap:4px;align-items:baseline;padding:4px 9px;border-radius:999px;background:#fff;border:1px solid var(--chip-bd);color:#5b6b86;font-size:11.5px;white-space:nowrap}
+.give-chips span b{color:var(--navy);font-size:12.5px;font-variant-numeric:tabular-nums}
+.give-chips span.ok{background:#e9f7ef;border-color:#bfe3cd}.give-chips span.ok b{color:#1f8a55}
+.give-chips span.neg{background:#fff1f1;border-color:#f3c4c4}.give-chips span.neg b{color:#c0392b}
+.give-av{display:block;color:#6b7c93;font-size:11.5px}
+.give-box input{min-height:42px;border-radius:12px!important;background:#fff}
+.give-sug{display:flex!important;flex-wrap:wrap;gap:6px;max-height:none!important}
+.give-sug button{width:auto!important;display:inline-block!important;border:1px solid #dfe3ec!important;border-radius:999px!important;background:#fff!important;color:#1a2d53!important;padding:5px 11px!important;min-height:32px!important;font-size:13px!important;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.give-pchip{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:14px;background:linear-gradient(180deg,#1d4f9c,#0d2b5e);color:#fff;font-weight:700;font-size:14px}
+.give-pchip small{font-weight:500;opacity:.85;font-size:11.5px;margin-left:auto}
+.give-pchip button{min-height:28px!important;width:28px;padding:0!important;border-radius:50%!important;background:rgba(255,255,255,.18)!important;color:#fff!important;border:0!important;font-size:13px!important}
+.give-amt{display:grid;gap:6px}
+.give-full{border-radius:999px!important;background:#fff!important;border:1px dashed #9fb2d6!important;color:var(--navy)!important;font-weight:700;min-height:36px!important;font-size:13px!important}
+.give-go{min-height:44px!important;border-radius:12px!important;background:linear-gradient(180deg,#1f9a5f,#167a4a)!important;color:#fff!important;font-weight:800;font-size:15px!important;border:0!important;box-shadow:0 4px 12px rgba(22,122,74,.25)}
+.give-list{display:grid;gap:6px;margin-top:2px}
+.give-lh{color:#6b7c93;font-size:11.5px;font-weight:700;letter-spacing:.02em;text-transform:uppercase}
+.give-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;align-items:center;padding:8px 10px;border-radius:12px;background:#fff;border:1px solid #e3e8f1}
+.give-who{display:grid;min-width:0}.give-who b{font-size:13.5px;color:var(--navy);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.give-who small{color:#6b7c93;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.give-row>strong{font-size:14px;color:#c0392b;font-variant-numeric:tabular-nums}
+.give-acts{grid-column:1/-1;display:flex;gap:6px}.give-acts button{min-height:28px!important;padding:3px 10px!important;font-size:11.5px!important;border-radius:999px!important}
+.give-baqi{text-align:center;padding:8px;border-radius:12px;background:#fff;border:1px solid #dfe3ec;color:var(--navy);font-size:13.5px}
+.give-baqi b{font-variant-numeric:tabular-nums}
+.give-baqi.ok{background:#e9f7ef;border-color:#bfe3cd;color:#1f8a55;font-weight:800}
+.give-baqi.neg{background:#fff1f1;border-color:#f3c4c4;color:#c0392b}
+body.day-locked [data-give] input,body.day-locked [data-give] .give-sug,body.day-locked [data-give] .give-amt,body.day-locked [data-give] .give-go,body.day-locked [data-give] .give-acts{display:none!important}
