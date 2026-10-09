@@ -2124,3 +2124,17 @@ TEST (happy-dom, naqli khata, asal model/finance-tools/cash-links): search 11 ca
   card + ✓ -> payment save, poochna -> pick chips, 429 -> history wapas ✓. Playwright 390px default + t-glass ✓ (koi cheez bahar nahi).
   ASAL Gemini se test NAHI hua (key yahan nahi) — pehli dafa chala kar dekhna.
 VERSION BUMP: ?v=2.99.4, APP_VER, "Blue Khata v2.99.4", sw CACHE, version.json.
+
+==================== App v2.99.5 (2026-10-09) — 🤖 Noor Agent MOBILE theek ====================
+User (asal phone par agent chala kar photo: "zabardast hai, bas layout mobile friendly nahi"). Photo mein chat beech mein patli,
+harf bohat chhote, peeche app bhi chhoti — yani poora page ZOOM-OUT.
+WAJAH: agent.js khulte waqt body par class "ag-open" lagata tha — aur style.css mein "📒 Khata kholo" button ki class bhi ".ag-open"
+(justify-self:start, padding/font-size !important…) -> body ki chaurai max-content (≈810px) ban gayi -> mobile Chrome ne page
+chhota kar diya. Test (Playwright isMobile 412px): purana docW 811 / panel 589; naya docW 412 / panel poora.
+* agent.js: body class "ag-lock"; button class "ag-khata". ✓ ke baad "ab:" baqaya card ke 'baad' (c.after) se — save ke foran
+  baad balance cache purana hota tha (photo: Rs 5 "hum ne dena" ke baad bhi purana 8,592,466.34 dikha). Cash diya par bhi "ab:".
+* style.css: .ag-sheet sirf inset:0 (html{zoom:.92} ki wajah se 100vw/100dvh 92% reh jata tha); panel height 100%, overflow-x
+  hidden, min-width 0. @media (max-width:700px): poori screen (backdrop nahi), bubble 16px, input 16px / 52px, ✓ / ✕ 52px, chips
+  40px, stats 2 column, baqaya pehle -> baad 3 column, safe-area upar/neeche, patti ke harf bare.
+  TEST: agent t.mjs ALL OK; Playwright 412x900 t-glass + default: panel 412x900, sirf suggestion chips (jaan-boojh kar scroll) bahar.
+VERSION BUMP: ?v=2.99.5, APP_VER, "Blue Khata v2.99.5", sw CACHE, version.json.

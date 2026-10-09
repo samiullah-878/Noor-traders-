@@ -5,8 +5,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep } from './ai-tally.js?v=2.99.4';
-import { fold, partyScore, notePartyPick, voiceSearch, smartHit } from './smart-search.js?v=2.99.4';
+import { agentStep } from './ai-tally.js?v=2.99.5';
+import { fold, partyScore, notePartyPick, voiceSearch, smartHit } from './smart-search.js?v=2.99.5';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -202,7 +202,7 @@ async function run(c) {
   if (c.type === 'entry') {
     await H.save({ type: 'entry', kind: c.k, amount: c.amt, date: c.date, partyId: c.p ? c.p.id : '', account: c.exp || '', note: c.note,
       ...(c.k === 'collection' || c.k === 'payment' ? { dailyIncluded: !!c.cash } : {}) }, null);
-    return c.p ? `${KNAME[c.k]} ${money(c.amt)} — ${c.p.name} · ab: ${money(Math.abs(H.balanceOf(c.p)))} ${sideTxt(H.balanceOf(c.p))}` : `${KNAME[c.k]} ${money(c.amt)}${c.exp ? ' — ' + c.exp : ''}`;
+    return c.p ? `${KNAME[c.k]} ${money(c.amt)} — ${c.p.name} · ab: ${money(Math.abs(c.after))} ${sideTxt(c.after)}` : `${KNAME[c.k]} ${money(c.amt)}${c.exp ? ' — ' + c.exp : ''}`;   // v2.99.5: card ka 'baad' (save ke foran baad cache purana)
   }
   if (c.type === 'transfer') {
     const ok = await H.commitAccountTransfer({ id: crypto.randomUUID(), rev: 0, fromPartyId: c.f.id, toPartyId: c.t.id, amount: c.amt, date: c.date, note: c.note, posPending: false, posVoucher: '' });
@@ -214,7 +214,7 @@ async function run(c) {
     const move = { amount: c.amt, at: Date.now(), from: 'shop', note: ('Agent · ' + (c.note || 'Closing cash se')).slice(0, 1000), ref: 'cp' + crypto.randomUUID(), to: c.p.id };
     const next = H.appendCashMove(H.records(), c.date, rec?.moves || [], move);
     await H.save({ ...rec, id: 'custody-' + c.date, type: 'cashCustody', date: c.date, moves: next }, rec);
-    return `Cash diya ${money(c.amt)} — ${c.p.name}`;
+    return `Cash diya ${money(c.amt)} — ${c.p.name} · ab: ${money(Math.abs(c.after))} ${sideTxt(c.after)}`;
   }
   if (c.type === 'due') {
     const old = H.records().find(r => r.id === 'reminder-' + c.p.id);
@@ -293,7 +293,7 @@ function showTool(name, args, res) {   // tool ke natije ka card (AI ke jawab se
     toShow.push({ kind: 'html', html: `<div class="ag-card ag-acc"><div class="ag-acc-top"><b>${esc(res.name)}</b><span class="ag-bal ${res.side}">${money(res.baqaya_rs * 100)}<small>${b > 0 ? 'Lene hain' : b < 0 ? 'Dene hain' : 'Barabar'}</small></span></div>
       <div class="ag-chips">${res.due_date ? `<span class="ag-chip ${res.due_date < H.today() ? 'bad' : ''}">⏰ Due ${esc(res.due_date)}</span>` : ''}${res.loan ? `<span class="ag-chip">🏦 Istemal ${money(res.loan.istemal_rs * 100)} / ${money(res.loan.limit_rs * 100)}</span>` : ''}${res.mobile ? `<span class="ag-chip">📱 ${esc(res.mobile)}</span>` : ''}</div>
       ${res.aakhri_entries?.length ? '<div class="ag-rows">' + res.aakhri_entries.slice(0, 5).map(e => `<div class="ag-row"><span><b>${esc(e.qisam)}</b><small>${esc(e.date)}${e.note ? ' · ' + esc(e.note) : ''}</small></span><strong>${money(e.raqam_rs * 100)}</strong></div>`).join('') + '</div>' : ''}
-      <button type="button" class="ag-open" data-ag-open="${esc(res.account_id)}">📒 Khata kholo</button></div>` });
+      <button type="button" class="ag-khata" data-ag-open="${esc(res.account_id)}">📒 Khata kholo</button></div>` });
     return;
   }
   if (name === 'day_summary') {
@@ -344,12 +344,12 @@ function sheet() {
 }
 export function openAgent(text) {
   if (!H?.session() || !canFull()) return;
-  const el = sheet(); el.hidden = false; document.body.classList.add('ag-open');
+  const el = sheet(); el.hidden = false; document.body.classList.add('ag-lock');
   $('agWho').textContent = who() + ' · ' + (H.owner() ? 'poori ijazat' : 'aaj ki entries / transfer');
   if (!$('agMsgs').children.length) addMsg('ai', 'Assalam o alaikum! Main Noor Agent hoon. Kisi bhi account ka baqaya, din ka hisaab, due dates poochein — ya entry likhwayein (har entry pehle card par dikhegi, aap ✓ karein).');
   if (text) ask(text); else setTimeout(() => $('agInput')?.focus(), 60);
 }
-function closeAgent() { const el = $('agSheet'); if (el) el.hidden = true; document.body.classList.remove('ag-open'); }
+function closeAgent() { const el = $('agSheet'); if (el) el.hidden = true; document.body.classList.remove('ag-lock'); }
 async function onClick(e) {
   const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
   if (d.agClose != null) return closeAgent();
