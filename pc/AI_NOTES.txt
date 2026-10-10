@@ -2385,3 +2385,30 @@ TEST give/cl.mjs (asal giveBox + cashRecordAction code, asal cash-links): purana
   account -> khata saath; khata entry deleted -> Edit se wapas; Delete haan = khata bhi, nahi = khata rehta — ALL OK. give/run, t, m, q, v,
   p2, sc, rt, pa, jord ALL OK. Screenshot: teeno haalat (laal/hara/peela) 380px par overflow nahi.
 VERSION BUMP: ?v=2.99.17, APP_VER, "Blue Khata v2.99.17", sw CACHE, version.json.
+
+==================== App v2.99.18 (2026-10-10) — ⚖️ TRANSFER REGISTER mein CARTON GINTI (4 = 1) · khata ke button khane ki taraf ====================
+MALIK: "Transfer register mein Sufi oil 4 carton ko 1 carton count karwa, aisa hi Dalda, Sufi ghee… list ka option de do jin ko aisa
+  karna ho" + "sirf Transfer register mein" + khata screen: "neeche button bhi oper wali patti jaise — Saman diya us side, Wasooli us side".
+1) KHATA BUTTONS (app.js, actions khata view): baayen khana Diye / Udhar (laal), daayen Liye / Wasooli (hara) — button bhi wahi:
+  Customer: [📦 Saman diya .give laal][💰 Paisa wasool kiya .got hara] (pehle ulta tha). Supplier: [💸 Payment di .give][📦 Saman liya .got]
+  (rang neela .saman -> hara). Baqi accounts: [Payment .give][Wasooli .got] + baqi (Cash se payment / HBL / +). Bank wahi (.got / .saman).
+  Sirf jagah / rang — data-entry kinds wahi, form / hisaab wahi.
+2) CARTON GINTI (pos-stock.js Transfer register; sirf register — POS / stock / labels / Aaya-gaya NAHI badalte):
+  * Data: blueAccess/stockConfig.ctnGinti = { itemId: { r: 4, n: 'NAAM' } }. cloud.js setCtnGinti(map) — sirf malik, poori list
+    {mergeFields:['ctnGinti','by','at']} (hatana bhi kaam kare), r 1-100, 3000 items hadd. Rules NAHI badle (owner generic blueAccess rule;
+    mulazim stockConfig get kar sakta hai).
+  * ctnOf(itemId, name): id se, warna naam (fold) se; ctnG(c, r) = c / r (2 decimal). regRows: t.c = ginti, t.ca = asal ctn. Khule pcs wahi.
+  * Register: "⚖️ Carton ginti · N item" chip (sona rang jab list ho); upar dabba "ctn (ginti)" + "asal X"; din ki patti + note ka total
+    + "asal"; note ke andar line: "8 ctn → 2 [4 = 1]". Malik ke liye har line button (data-reg-line) -> neeche kaala dabba 2/3/4/6/✏️/Hatao
+    (data-ctn-one) = seedha save.
+  * ⚖️ list view (regView 'ctn', wahi dialog): ← Transfer register · 1 naam likhein (smartHit, POS ke sab items agPool + register lines;
+    khali = register mein aaye items, ginti ke hisaab se) · ☑ Sab chuno / ✕ Saaf · 2 tick · 3 "2=1 / 3=1 / 4=1 / 6=1 / ✏️ Apna" (prompt,
+    2.5 jaisa bhi) · ✓ Save · N item · R = 1. Neeche "Chune hue items" number ke group (4 carton = 1 …) + ✕ (confirm). Mulazim: sirf dekhe.
+  * Save optimistic (fail = wapas + "Save nahi hua"); listenStockConfig -> register khula ho to dobara rang.
+  * PDF: line "8 ctn → 2 (4=1)", Kul ctn + asal, "⚖️ Carton ginti ke qaide: 4 carton = 1 — …".
+  * style.css .ctn-* / .reg-ln / .ctn-pop (light + html.dk).
+YAHAN AI NAHI: sab seedha hisaab.
+TEST hd/ctn.mjs (asal pos-stock): register 29 ctn -> sufi search, sab chuno, tin hataya, 3 item 4=1 save, dalda 2=1 -> 15.5 ctn (asal 29),
+  card 1.5 / 14+5, lines "6 ctn → 3 [2=1]", line tap surf 3=1 -> 9 → 3, apna 2.5, Hatao, din patti, ✕ hatao, save fail = wapas,
+  mulazim view-only, PDF qaide — ALL OK. t / m / q / v / p2 / sc / rt / pa / jord / give / cl ALL OK. Screenshots 380px light + dark, overflow nahi.
+VERSION BUMP: ?v=2.99.18, APP_VER, "Blue Khata v2.99.18", sw CACHE, version.json.

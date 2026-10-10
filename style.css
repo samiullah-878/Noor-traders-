@@ -2498,3 +2498,59 @@ html.dk .sc-banner.warn{color:#ffd28a}
 .cl-row.warn button{background:linear-gradient(135deg,#f59e0b,#c77806)!important}
 .cl-row button:disabled{opacity:.55}
 .cash-book-row .cl-chip,.cash-book-row .cl-row{margin:8px 0 2px}
+/* v2.99.18: ⚖️ CARTON GINTI — Transfer register (chhote carton: 4 = 1) */
+.reg-root .mchips button.ctn-chip{background:linear-gradient(180deg,#fffaf0,#fff2d6)!important;border-color:#efcf86!important;color:#7a5200!important;font-weight:800!important}
+.reg-root .mchips button.ctn-chip.has{background:linear-gradient(135deg,#f8c64a,#e9a515)!important;border-color:#d99a12!important;color:#3b2700!important;box-shadow:0 4px 12px rgba(217,154,18,.3)!important}
+.ctn-asal{display:block;color:#9a6b00;font-size:10.5px;font-weight:700}
+.bc-dayhead .ctn-asal{display:inline;margin-left:4px}
+.reg-lines .reg-ln{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;min-height:0;padding:5px 6px;margin:0 -6px;width:calc(100% + 12px);border-radius:8px;background:none;border-top:1px dashed #eef1f5;font-size:13px;font-weight:500;color:inherit;text-align:left}
+.reg-lines .reg-ln:active,.reg-lines .reg-ln.on{background:#fff8e6}
+.reg-lines .reg-ln.on{outline:2px dashed #efc04a;outline-offset:-2px}
+.reg-q{white-space:nowrap;color:#1b3058;display:inline-flex;align-items:center;gap:4px}
+.reg-q b{color:#1b3058}
+.reg-q .ctn-g{color:#17703c;font-size:14px}
+.ctn-r{font-style:normal;font-size:10.5px;font-weight:800;background:#fff7e0;border:1px solid #f1d27a;color:#8a5a00;border-radius:999px;padding:1px 7px;white-space:nowrap}
+.reg-lines .ctn-pop{display:block;border:0;margin:2px 0 6px;padding:10px 11px;border-radius:14px;background:linear-gradient(160deg,#1b3058,#22407a);color:#fff;box-shadow:0 8px 20px rgba(27,48,88,.28)}
+.ctn-pop p{margin:0 0 7px;font-size:12.5px;font-weight:800}
+.reg-lines .ctn-pop .mchips{display:flex;justify-content:flex-start;border:0;padding:0;gap:6px;flex-wrap:nowrap;overflow-x:auto}
+.reg-root .ctn-pop .mchips button.rc{min-width:46px;min-height:40px;justify-content:center;background:rgba(255,255,255,.12)!important;border-color:rgba(255,255,255,.25)!important;color:#fff!important;font-weight:800!important;box-shadow:none!important}
+.reg-root .ctn-pop .mchips button.rc.on{background:#f8c64a!important;border-color:#f8c64a!important;color:#2a1c00!important}
+.reg-root .ctn-pop .mchips button.rc.ctn-off{background:rgba(255,90,90,.22)!important;border-color:rgba(255,120,120,.45)!important}
+.ctn-tip{color:#9a6b00;font-size:11px;font-weight:700;margin-top:2px}
+.ctn-root{gap:10px}
+.ctn-back{justify-self:start;min-height:36px!important;padding:6px 14px!important;border-radius:999px!important;font-size:13px;font-weight:800;background:#eef2f9;border:1px solid #d6deeb}
+.ctn-help{margin:0;padding:10px 12px;border-radius:14px;background:#f4f7fd;border:1px solid #e1e8f4;color:#3c4f72;font-size:12.5px;line-height:1.5}
+.ctn-help.ctn-ro{text-align:center;font-weight:700}
+.ctn-help.ctn-foot{background:none;border:0;padding:0 2px;color:#6b7c93;font-size:11.5px}
+.ctn-step{display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:800;color:#1b3058;margin-top:2px}
+.ctn-step i{font-style:normal;width:22px;height:22px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;background:#f8c64a;color:#2a1c00;font-size:12px;font-weight:900;flex:none}
+.ctn-step{flex-wrap:wrap}.ctn-step small{flex-basis:100%;padding-left:29px;margin-top:-4px;font-weight:600;color:#7b8aa3;font-size:11.5px}
+.ctn-list{display:grid;gap:6px;max-height:46vh;overflow-y:auto;padding:2px}
+.ctn-it{display:flex;align-items:center;gap:10px;width:100%;min-height:0;padding:9px 11px;border-radius:14px;background:#fff;border:1.5px solid #e3e8f1;text-align:left;font-weight:500;color:#10192b}
+.ctn-it.on{border-color:#16a34a;background:#f0fbf4}
+.ctn-bx{width:24px;height:24px;border-radius:8px;border:2px solid #b9c4d6;flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:14px;color:#fff;font-weight:900;background:#fff}
+.ctn-it.on .ctn-bx{background:#16a34a;border-color:#16a34a}
+.ctn-nm{display:grid;min-width:0;flex:1}
+.ctn-nm b{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ctn-nm small{font-size:11px;color:#6b7c93}
+.reg-root .mchips button.ctn-all{background:#fff7e0!important;border-color:#f1d27a!important;color:#7a5200!important;font-weight:800!important}
+.reg-root .mchips button.ctn-all.on{background:#16a34a!important;border-color:#16a34a!important;color:#fff!important}
+.ctn-rs button{min-width:62px;font-weight:800}
+.ctn-save{min-height:52px;border-radius:14px;font-size:15.5px;font-weight:900;color:#fff;background:linear-gradient(135deg,#16a34a,#0f7a3a);box-shadow:0 8px 18px rgba(22,163,74,.3)}
+.ctn-save:disabled{background:#dfe5ee;color:#7b8aa3;box-shadow:none}
+.ctn-h{margin:8px 0 0;font-size:14px;color:#1b3058}
+.ctn-grp{background:#fff;border:1px solid #e3e8f1;border-radius:14px;padding:9px 12px;box-shadow:0 3px 10px #10192b0d}
+.ctn-gh{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.ctn-gh b{font-size:13.5px;color:#1b3058}
+.ctn-gh i{font-style:normal;background:#fff7e0;color:#8a5a00;border:1px solid #f1d27a;border-radius:999px;padding:2px 9px;font-size:11.5px;font-weight:800}
+.ctn-row{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12.5px;padding:4px 0;border-top:1px dashed #e6ebf3}
+.ctn-gh+.ctn-row{border-top:0}
+.ctn-del{min-height:30px!important;min-width:34px;padding:2px 8px!important;border-radius:999px!important;background:#fff1f1;color:#c0392b;font-weight:900;border:1px solid #f3c4c4}
+html.dk .ctn-help,html.dk .ctn-it,html.dk .ctn-grp,html.dk .ctn-back{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}
+html.dk .ctn-it.on{background:color-mix(in srgb,var(--good) 18%,transparent)!important;border-color:var(--good)!important}
+html.dk .ctn-step,html.dk .ctn-h,html.dk .ctn-gh b,html.dk .reg-q,html.dk .reg-q b{color:var(--ink)!important}
+html.dk .ctn-nm small,html.dk .ctn-step small,html.dk .ctn-help.ctn-foot{color:var(--ink2)!important}
+html.dk .reg-lines .reg-ln{background:transparent!important;border:0!important;border-top:1px dashed var(--line)!important;box-shadow:none!important;color:var(--ink)!important;border-radius:8px!important}
+html.dk .reg-lines .reg-ln.on,html.dk .reg-lines .reg-ln:active{background:rgba(248,198,74,.12)!important}
+html.dk .ctn-row{border-top-color:var(--line)!important}
+html.dk .reg-q .ctn-g{color:rgba(117,240,168,1)!important}

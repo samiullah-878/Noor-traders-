@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.17';
-import { liveLabelsHTML } from './barcode.js?v=2.99.17';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.18';
+import { liveLabelsHTML } from './barcode.js?v=2.99.18';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -56,7 +56,7 @@ export function stockSetup(opts) {
   aiText = opts?.ai || aiText;
   if (!urduStop && opts?.cloud?.listenUrdu) urduStop = opts.cloud.listenUrdu(m => { urdu = m || {}; if (stockActive) soft(); });
   if (!aliasStop && opts?.cloud?.listenAliases) aliasStop = opts.cloud.listenAliases(m => setAliases(m));   // v1.75: doosre naam
-  if (!cfgStop && opts?.cloud?.listenStockConfig) cfgStop = opts.cloud.listenStockConfig(c => { itemCfg = c || {}; if (stockActive) soft(); });
+  if (!cfgStop && opts?.cloud?.listenStockConfig) cfgStop = opts.cloud.listenStockConfig(c => { itemCfg = c || {}; if (stockActive) soft(); if (!ctnBusy && document.querySelector('.reg-root')) ctnPaint(); });   // v2.99.18: register khula ho to nayi carton ginti
   if (!trStop && opts?.cloud?.listenTransfers) trStop = opts.cloud.listenTransfers(list => { trList = list; const h = document.querySelector('[data-tr-hist]'); if (h) h.innerHTML = trHistHTML(); });   // v2.6: transfer shuru se (aaya hua maal ke liye)
   if (!ptStop && opts?.cloud?.listenPosTransfers) ptStop = opts.cloud.listenPosTransfers(list => { ptList = list || []; });   // v2.8: POS ke apne transfer (PC transfer-dekho.js)
   cloud = opts.cloud;
@@ -1030,6 +1030,83 @@ let regDays = 1, regGodam = 'all', regQ = '', regOpen = new Set(), regPdfOf = nu
 export function setRegPdf(fn) { regPdfOf = fn; }
 const regClock = ms => { try { return new Date(ms).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
 const regDay = ms => { const d = new Date(ms); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+// ---------- v2.99.18: ⚖️ CARTON GINTI — chhote carton (Sufi oil, Dalda…) register mein "4 carton = 1" gine jayein ----------
+// Data: blueAccess/stockConfig.ctnGinti = { itemId: { r: 4, n: 'NAAM' } } (sirf malik likhe — rules ka generic owner rule; mulazim sirf parhe).
+// Sirf Transfer register ki ginti (note ka total, din ka total, upar ke dabbe, PDF). POS / stock / labels kuch nahi badalta.
+let regView = 'list', ctnQ = '', ctnPick = new Set(), ctnRatio = 4, ctnLine = '', ctnBusy = false, ctnNames = {};
+const ctnMap = () => (itemCfg && itemCfg.ctnGinti && typeof itemCfg.ctnGinti === 'object') ? itemCfg.ctnGinti : {};
+const ctnNameKey = n => fold(String(n || '')).replace(/\s+/g, ' ').trim();
+function ctnOf(id, name) {
+  const m = ctnMap(), v = id != null ? m[String(id)] : null;
+  let r = Number(v?.r ?? v) || 0;
+  if (!(r > 1) && name) { const k = ctnNameKey(name); const hit = Object.values(m).find(x => x && x.n && ctnNameKey(x.n) === k); r = Number(hit?.r) || 0; }
+  return r > 1 ? r : 1;
+}
+const ctnG = (c, r) => r > 1 ? Math.round(c / r * 100) / 100 : c;
+const ctnCount = () => Object.values(ctnMap()).filter(v => Number(v?.r ?? v) > 1).length;
+async function ctnSave(next, msg) {
+  if (!isOwner()) { notice('Sirf malik carton ginti badal sakta hai'); return; }
+  if (!cloud?.setCtnGinti) { notice('App update karein'); return; }
+  if (ctnBusy) return; ctnBusy = true;
+  const before = itemCfg; itemCfg = { ...itemCfg, ctnGinti: next };
+  ctnPaint();
+  try { await cloud.setCtnGinti(next); if (msg) notice(msg); }
+  catch (err) { itemCfg = before; notice('Save nahi hua: ' + (err?.message || err)); }
+  finally { ctnBusy = false; ctnPaint(); }
+}
+function ctnSet(ids, r, names) {
+  const next = { ...ctnMap() };
+  for (const id of ids) { if (r > 1) next[String(id)] = { r, n: String(names[String(id)] || next[String(id)]?.n || '').slice(0, 120) }; else delete next[String(id)]; }
+  return next;
+}
+function ctnPool() {   // POS ke items (sab godam) + register mein aaye items (agar stock list mein na hon)
+  const P = agPool(), map = new Map();
+  for (const it of P.list) if (it && it.id != null && !hidden[String(it.id)]) map.set(String(it.id), { id: String(it.id), name: String(it.name || ''), pack: Number(it.pack) || 0, n: 0 });
+  for (const t of ptList || []) for (const l of t.lines || []) { if (l.itemId == null) continue; const k = String(l.itemId); const o = map.get(k) || { id: k, name: String(l.name || ''), pack: Number(l.pack) || 0, n: 0 }; o.n++; map.set(k, o); }
+  return [...map.values()];
+}
+function ctnRows() {
+  const pool = ctnPool(), q = ctnQ.trim();
+  if (!q) return pool.filter(x => x.n > 0).sort((a, b) => b.n - a.n || NAMEC.compare(a.name, b.name)).slice(0, 30);
+  return pool.filter(x => smartHit(x.name, q)).sort((a, b) => b.n - a.n || NAMEC.compare(a.name, b.name)).slice(0, 60);
+}
+function ctnHTML() {
+  const own = isOwner(), m = ctnMap(), rows = own ? ctnRows() : [], q = ctnQ.trim();
+  const groups = new Map(); for (const [id, v] of Object.entries(m)) { const r = Number(v?.r ?? v) || 0; if (r > 1) { if (!groups.has(r)) groups.set(r, []); groups.get(r).push({ id, n: v?.n || ('Item ' + id) }); } }
+  const R = [2, 3, 4, 6], custom = !R.includes(ctnRatio);
+  const picks = ctnPick.size, allOn = rows.length && rows.every(x => ctnPick.has(x.id));
+  return `<div class="reg-root ctn-root">
+    <button type="button" class="ctn-back" data-ctn-back="1">← Transfer register</button>
+    <div class="ctn-help">⚖️ Jin items ke <b>chhote carton</b> hain unko chunein aur batayein <b>kitne carton = 1 carton</b> gina jaye. Sirf Transfer register ki ginti badlegi — POS aur stock wahi rehte hain.</div>
+    ${own ? `<div class="ctn-step"><i>1</i>Naam likhein</div>
+    <label class="hs-search"><input type="search" data-ctn-q="1" placeholder="🔍 sufi, dalda, ghee…" value="${esc(ctnQ)}" autocomplete="off"></label>
+    ${rows.length ? `<div class="mchips"><button type="button" class="rc ctn-all${allOn ? ' on' : ''}" data-ctn-all="1">${allOn ? '☑ Sab chune hue' : '☑ Sab chuno'} (${rows.length})</button>${picks ? `<button type="button" class="rc" data-ctn-clear="1">✕ Saaf (${picks})</button>` : ''}</div>` : ''}
+    <div class="ctn-step"><i>2</i>Tick lagayein${q ? '' : '<small>Neeche register mein aaye items hain — ya upar naam likhein</small>'}</div>
+    <div class="ctn-list">${rows.map(x => { const on = ctnPick.has(x.id), cur = ctnOf(x.id); return `<button type="button" class="ctn-it${on ? ' on' : ''}" data-ctn-pick="${esc(x.id)}" data-ctn-name="${esc(x.name)}"><span class="ctn-bx">${on ? '✓' : ''}</span><span class="ctn-nm"><b>${hlName ? hlName(x.name, ctnQ) : esc(x.name)}</b><small>${x.pack > 1 ? num(x.pack) + ' pcs / ctn' : 'khula item'}${x.n ? ' · ' + x.n + ' transfer line' : ''}</small></span>${cur > 1 ? `<em class="ctn-r">abhi ${num(cur)} = 1</em>` : ''}</button>`; }).join('') || `<p class="muted">${q ? 'Is naam ka koi item nahi mila.' : 'Upar naam likhein — jaise "sufi".'}</p>`}</div>
+    <div class="ctn-step"><i>3</i>Kitne carton = 1 carton?</div>
+    <div class="mchips ctn-rs">${R.map(r => `<button type="button" class="rc${ctnRatio === r ? ' on' : ''}" data-ctn-r="${r}">${r} = 1</button>`).join('')}<button type="button" class="rc${custom ? ' on' : ''}" data-ctn-r="apna">✏️ ${custom ? num(ctnRatio) + ' = 1' : 'Apna'}</button></div>
+    <button type="button" class="ctn-save" data-ctn-save="1"${picks && !ctnBusy ? '' : ' disabled'}>${picks ? `✓ Save · ${picks} item · ${num(ctnRatio)} = 1` : 'Pehle upar item chunein'}</button>` : '<p class="ctn-help ctn-ro">👁 Yeh list sirf malik badal sakta hai.</p>'}
+    <h4 class="ctn-h">Chune hue items${groups.size ? '' : ''}</h4>
+    ${[...groups].sort((a, b) => b[0] - a[0]).map(([r, list]) => `<div class="ctn-grp"><div class="ctn-gh"><b>${num(r)} carton = 1</b><i>${list.length} item</i></div>${list.sort((a, b) => NAMEC.compare(a.n, b.n)).map(x => `<div class="ctn-row"><span>${esc(x.n)}</span>${own ? `<button type="button" class="ctn-del" data-ctn-del="${esc(x.id)}" aria-label="Hatao">✕</button>` : ''}</div>`).join('')}</div>`).join('') || '<p class="muted">Abhi koi item nahi — sab items 1 carton = 1 gine ja rahe hain.</p>'}
+    ${own && groups.size ? '<p class="ctn-help ctn-foot">✕ = us item ki ginti wapas normal (1 = 1). Number badalna ho to item dobara chun kar naya number Save karein.</p>' : ''}
+  </div>`;
+}
+function ctnPaint() {
+  if (!document.querySelector('.reg-root')) return;
+  const q = document.activeElement?.matches?.('[data-ctn-q]');
+  $('dialogTitle').textContent = regView === 'ctn' ? '⚖️ Carton ginti' : '📋 Transfer register';
+  $('dialogBody').innerHTML = regView === 'ctn' ? ctnHTML() : regHTML();
+  if (q) { const i = document.querySelector('[data-ctn-q]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+}
+function regLineHTML(t, l) {   // note ke andar ek line — ginti + (malik) tap se number
+  const x = cp(Number(l.qty) || 0, Number(l.pack) || 0), r = ctnOf(l.itemId, l.name), key = String(t.transferId || t.id) + '|' + String(l.itemId ?? l.name);
+  const qty = r > 1 && x.c ? `${num(x.c)} ctn → <b class="ctn-g">${num(ctnG(x.c, r))}</b>${x.p ? ' + ' + num(x.p) + ' pcs' : ''}<em class="ctn-r">${num(r)} = 1</em>` : `<b>${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}</b>`;
+  const open = isOwner() && ctnLine === key;
+  const row = isOwner() ? `<button type="button" class="reg-ln${open ? ' on' : ''}" data-reg-line="${esc(key)}"><span>${esc(l.name)}</span><span class="reg-q">${qty}</span></button>` : `<div><span>${esc(l.name)}</span><span class="reg-q">${qty}</span></div>`;
+  if (!open) return row;
+  const ids = `data-ctn-id="${esc(String(l.itemId ?? ''))}" data-ctn-name="${esc(l.name)}"`;
+  return row + `<div class="ctn-pop"><p>⚖️ ${esc(l.name)} — kitne carton = 1?</p><div class="mchips">${[2, 3, 4, 6].map(n => `<button type="button" class="rc${r === n ? ' on' : ''}" data-ctn-one="${n}" ${ids}>${n}</button>`).join('')}<button type="button" class="rc" data-ctn-one="apna" ${ids}>✏️</button>${r > 1 ? `<button type="button" class="rc ctn-off" data-ctn-one="1" ${ids}>Hatao</button>` : ''}</div></div>`;
+}
 function regRows() {
   const since = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (regDays === 2 ? 1 : regDays - 1)); return d.getTime(); })();
   const till = regDays === 2 ? (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); })() : Infinity;
@@ -1037,12 +1114,13 @@ function regRows() {
   return (ptList || []).filter(t => t && t.at >= since && t.at < till)
     .filter(t => regGodam === 'all' || String(t.from) === regGodam || String(t.to) === regGodam)
     .filter(t => !q || smartHit('TN ' + (t.transferNo || '') + ' ' + (t.note || '') + ' ' + (t.byName || ''), regQ) || (t.lines || []).some(l => smartHit(l.name, regQ)))
-    .map(t => { let c = 0, p = 0, rs = 0; for (const l of t.lines || []) { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); c += x.c; p += x.p; rs += (Number(l.qty) || 0) * (Number(l.rate) || 0); } return { ...t, c, p: Math.round(p * 1000) / 1000, rs: Math.round(rs), n: (t.lines || []).length }; })
+    .map(t => { let c = 0, ca = 0, p = 0, rs = 0; for (const l of t.lines || []) { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); c += ctnG(x.c, ctnOf(l.itemId, l.name)); ca += x.c; p += x.p; rs += (Number(l.qty) || 0) * (Number(l.rate) || 0); } return { ...t, c: r2(c), ca, p: Math.round(p * 1000) / 1000, rs: Math.round(rs), n: (t.lines || []).length }; })   // v2.99.18: c = ginti (⚖️), ca = asal ctn
     .sort((a, b) => b.at - a.at);
 }
 function regHTML() {
   const rows = regRows(), names = collect().names || {};
-  const tot = rows.reduce((s, t) => ({ n: s.n + 1, i: s.i + t.n, c: s.c + t.c, p: s.p + t.p, rs: s.rs + t.rs }), { n: 0, i: 0, c: 0, p: 0, rs: 0 });
+  const tot = rows.reduce((s, t) => ({ n: s.n + 1, i: s.i + t.n, c: s.c + t.c, ca: s.ca + t.ca, p: s.p + t.p, rs: s.rs + t.rs }), { n: 0, i: 0, c: 0, ca: 0, p: 0, rs: 0 }); tot.c = r2(tot.c);
+  const asal = (g, a) => r2(g) !== r2(a) ? `<small class="ctn-asal">asal ${num(a)}</small>` : '', nCtn = ctnCount();
   const days = new Map(); for (const t of rows) { const k = regDay(t.at); if (!days.has(k)) days.set(k, []); days.get(k).push(t); }
   const gods = [...new Set((ptList || []).flatMap(t => [t.from, t.to]))].filter(Boolean).sort((a, b) => a - b);
   const C = (on, k, v, lab) => `<button type="button" class="rc${on ? ' on' : ''}" data-reg-${k}="${esc(String(v))}">${lab}</button>`;
@@ -1050,21 +1128,23 @@ function regHTML() {
   return `<div class="reg-root">
     <div class="mchips">${C(regDays === 1, 'd', 1, 'Aaj')}${C(regDays === 2, 'd', 2, 'Kal')}${C(regDays === 7, 'd', 7, '7 din')}${C(regDays === 30, 'd', 30, '30 din')}${C(regDays === 60, 'd', 60, '60 din')}</div>
     <div class="mchips">${C(regGodam === 'all', 'g', 'all', 'Sab godam')}${gods.map(g => C(regGodam === String(g), 'g', g, esc(branchName(g, names)))).join('')}</div>
+    <div class="mchips"><button type="button" class="rc ctn-chip${nCtn ? ' has' : ''}" data-reg-ctn="1">⚖️ Carton ginti${nCtn ? ' · ' + nCtn + ' item' : isOwner() ? ' · lagayein' : ''}</button></div>
     <label class="hs-search"><input type="search" data-reg-q="1" placeholder="🔍 item ya TN number…" value="${esc(regQ)}"></label>
-    <div class="bc-kpis"><div><b>${num(tot.n)}</b><small>transfer note</small></div><div><b>${num(tot.i)}</b><small>items</small></div><div><b>${num(tot.c)}</b><small>ctn</small></div><div><b>${num(tot.p)}</b><small>pcs</small></div></div>
+    <div class="bc-kpis"><div><b>${num(tot.n)}</b><small>transfer note</small></div><div><b>${num(tot.i)}</b><small>items</small></div><div><b>${num(tot.c)}</b><small>ctn${nCtn ? ' (ginti)' : ''}</small>${asal(tot.c, tot.ca)}</div><div><b>${num(tot.p)}</b><small>pcs</small></div></div>
     ${tot.rs ? `<p class="iv-note">Kul maal: <b>Rs ${num(tot.rs)}</b></p>` : ''}
-    ${[...days].map(([d, list]) => { const dc = list.reduce((s, t) => s + t.c, 0), dp = list.reduce((s, t) => s + t.p, 0);
-      return `<div class="bc-day"><div class="bc-dayhead"><b>${d === today ? 'Aaj' : d === yest ? 'Kal' : esc(d)}</b><span>${list.length} note · ${num(dc)} ctn${dp ? ' + ' + num(dp) + ' pcs' : ''}</span></div>
+    ${[...days].map(([d, list]) => { const dc = r2(list.reduce((s, t) => s + t.c, 0)), dca = list.reduce((s, t) => s + t.ca, 0), dp = list.reduce((s, t) => s + t.p, 0);
+      return `<div class="bc-day"><div class="bc-dayhead"><b>${d === today ? 'Aaj' : d === yest ? 'Kal' : esc(d)}</b><span>${list.length} note · ${num(dc)} ctn${dp ? ' + ' + num(dp) + ' pcs' : ''}${dc !== dca ? ' <small class="ctn-asal">asal ' + num(dca) + '</small>' : ''}</span></div>
       ${list.map(t => { const op = regOpen.has(String(t.transferId || t.id));
         return `<div class="reg-card${op ? ' open' : ''}"><button type="button" class="reg-h" data-reg-open="${esc(String(t.transferId || t.id))}">
           <span class="reg-time">${esc(regClock(t.at))}</span><span class="reg-main"><b>${esc(t.transferNo || '—')}</b><small>${esc(branchName(t.from, names))} → ${esc(branchName(t.to, names))}</small></span>
-          <span class="reg-tot"><b>${num(t.c)} ctn${t.p ? ' + ' + num(t.p) : ''}</b><small>${t.n} items${t.rs ? ' · Rs ' + num(t.rs) : ''}</small></span><i class="reg-src">${t.app ? '📱 App' : '🖥 POS'}</i></button>
-          ${op ? `<div class="reg-lines">${(t.lines || []).map(l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); return `<div><span>${esc(l.name)}</span><b>${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}</b></div>`; }).join('')}${t.note ? `<small>📝 ${esc(t.note)}</small>` : ''}</div>` : ''}</div>`; }).join('')}</div>`; }).join('') || '<p class="muted">Is arse mein koi transfer note nahi.</p>'}
+          <span class="reg-tot"><b>${num(t.c)} ctn${t.p ? ' + ' + num(t.p) : ''}</b><small>${t.n} items${t.rs ? ' · Rs ' + num(t.rs) : ''}${t.c !== t.ca ? ' · asal ' + num(t.ca) : ''}</small></span><i class="reg-src">${t.app ? '📱 App' : '🖥 POS'}</i></button>
+          ${op ? `<div class="reg-lines">${(t.lines || []).map(l => regLineHTML(t, l)).join('')}${isOwner() ? '<small class="ctn-tip">👆 Item par tap = carton ginti (jaise 4 = 1)</small>' : ''}${t.note ? `<small>📝 ${esc(t.note)}</small>` : ''}</div>` : ''}</div>`; }).join('')}</div>`; }).join('') || '<p class="muted">Is arse mein koi transfer note nahi.</p>'}
     <div class="account-tools iv-acts"><button type="button" class="primary" data-reg-pdf="1">📄 PDF · WhatsApp</button><button type="button" data-in-close="1">✕ Band</button></div></div>`;
 }
 function openRegister() {
   const d = $('dialog'); if (!d) return;
   d.classList.remove('search-dialog'); d.classList.add('full-dialog');
+  regView = 'list'; ctnLine = '';   // v2.99.18
   $('dialogTitle').textContent = '📋 Transfer register';
   $('dialogBody').innerHTML = regHTML();
   if (!d.open) d.showModal();
@@ -1074,19 +1154,42 @@ function regPdf() {
   const lab = { 1: 'Aaj', 2: 'Kal', 7: 'Pichhle 7 din', 30: 'Pichhle 30 din', 60: 'Pichhle 60 din' }[regDays];
   const html = `<h1>NOOR TRADERS</h1><h2>📋 Transfer register — ${esc(lab)}${regGodam !== 'all' ? ' · ' + esc(branchName(Number(regGodam), names)) : ''}</h2><p>${rows.length} transfer note · ${esc(new Date().toLocaleString('en-PK'))}</p>
     <table class="iv-tbl"><thead><tr><th>Waqt</th><th>TN</th><th>Se → Ko</th><th>Items (naam · tadad)</th><th>Kul</th><th>Rs</th></tr></thead><tbody>
-    ${rows.map(t => `<tr><td>${esc(regDay(t.at))}<br><small>${esc(regClock(t.at))}</small></td><td><b>${esc(t.transferNo || '')}</b><br><small>${t.app ? 'App' : 'POS'}</small></td><td>${esc(branchName(t.from, names))} → ${esc(branchName(t.to, names))}</td><td class="reg-items">${(t.lines || []).map(l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); return `<div>${esc(l.name)} <b>${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}</b></div>`; }).join('') || t.n}</td><td class="iv-n">${num(t.c)} ctn${t.p ? ' + ' + num(t.p) : ''}</td><td class="iv-n">${t.rs ? num(t.rs) : ''}</td></tr>`).join('')}
-    </tbody></table>`;
+    ${rows.map(t => `<tr><td>${esc(regDay(t.at))}<br><small>${esc(regClock(t.at))}</small></td><td><b>${esc(t.transferNo || '')}</b><br><small>${t.app ? 'App' : 'POS'}</small></td><td>${esc(branchName(t.from, names))} → ${esc(branchName(t.to, names))}</td><td class="reg-items">${(t.lines || []).map(l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0), r = ctnOf(l.itemId, l.name); return `<div>${esc(l.name)} <b>${r > 1 && x.c ? num(x.c) + ' ctn → ' + num(ctnG(x.c, r)) + ' (' + num(r) + '=1)' : x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}</b></div>`; }).join('') || t.n}</td><td class="iv-n">${num(t.c)} ctn${t.p ? ' + ' + num(t.p) : ''}${t.c !== t.ca ? '<br><small>asal ' + num(t.ca) + '</small>' : ''}</td><td class="iv-n">${t.rs ? num(t.rs) : ''}</td></tr>`).join('')}
+    </tbody></table>${(() => { const tc = r2(rows.reduce((s, t) => s + t.c, 0)), ta = rows.reduce((s, t) => s + t.ca, 0), tp = rows.reduce((s, t) => s + t.p, 0); const g = new Map(); for (const v of Object.values(ctnMap())) { const r = Number(v?.r ?? v) || 0; if (r > 1) { if (!g.has(r)) g.set(r, []); g.get(r).push(v?.n || ''); } }
+      return `<p><b>Kul: ${num(tc)} ctn${tp ? ' + ' + num(r2(tp)) + ' pcs' : ''}</b>${tc !== ta ? ' (asal ' + num(ta) + ' ctn)' : ''}</p>${g.size ? `<p><b>⚖️ Carton ginti ke qaide:</b> ${[...g].sort((a, b) => b[0] - a[0]).map(([r, ns]) => num(r) + ' carton = 1 — ' + ns.map(esc).join(', ')).join(' · ')}</p>` : ''}`; })()}`;
   regPdfOf ? regPdfOf(html, 'Transfer register ' + regDay(Date.now())) : notice('PDF abhi nahi bana');
 }
 document.addEventListener('click', e => {
   if (e.target.closest?.('[data-stock-reg]')) { openRegister(); return; }
   if (!document.querySelector('.reg-root')) return;
+  if (ctnClick(e)) return;   // v2.99.18: ⚖️ carton ginti
   const t = e.target.closest?.('[data-reg-d],[data-reg-g],[data-reg-open],[data-reg-pdf]'); if (!t) return;
   const d = t.dataset;
   if (d.regD) regDays = Number(d.regD); else if (d.regG) regGodam = d.regG; else if (d.regOpen) { if (regOpen.has(d.regOpen)) regOpen.delete(d.regOpen); else regOpen.add(d.regOpen); } else if (d.regPdf != null) { regPdf(); return; }
   $('dialogBody').innerHTML = regHTML();
 });
-document.addEventListener('input', e => { if (!e.target.matches?.('[data-reg-q]')) return; regQ = e.target.value || ''; $('dialogBody').innerHTML = regHTML(); const q = document.querySelector('[data-reg-q]'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } });
+function ctnAsk(cur) { const v = prompt('Kitne carton = 1 carton? (jaise 4, 2.5)', cur > 1 ? String(cur) : ''); if (v == null) return 0; const n = Math.round(Number(String(v).replace(',', '.')) * 100) / 100; if (!(n > 1) || n > 100) { notice('1 se bara number likhein (jaise 4)'); return 0; } return n; }
+function ctnClick(e) {
+  const t = e.target.closest?.('[data-reg-ctn],[data-ctn-back],[data-reg-line],[data-ctn-one],[data-ctn-pick],[data-ctn-all],[data-ctn-clear],[data-ctn-r],[data-ctn-save],[data-ctn-del]'); if (!t) return false;
+  const d = t.dataset;
+  if (d.regCtn != null) { regView = 'ctn'; ctnLine = ''; ctnPaint(); document.querySelector('#dialogBody')?.scrollTo?.(0, 0); return true; }
+  if (d.ctnBack != null) { regView = 'list'; ctnPaint(); return true; }
+  if (d.regLine != null) { ctnLine = ctnLine === d.regLine ? '' : d.regLine; ctnPaint(); return true; }
+  if (d.ctnOne != null) {
+    const id = d.ctnId || Object.entries(ctnMap()).find(([, v]) => v && ctnNameKey(v.n) === ctnNameKey(d.ctnName))?.[0] || '';
+    if (!id) { notice('Is line ka item number nahi mila — list se chunein'); return true; }
+    let r = d.ctnOne === 'apna' ? ctnAsk(ctnOf(id)) : Number(d.ctnOne); if (!r) return true;
+    ctnLine = ''; ctnSave(ctnSet([id], r, { [id]: d.ctnName }), r > 1 ? `⚖️ ${d.ctnName}: ${num(r)} carton = 1` : `${d.ctnName}: ginti normal`); return true;
+  }
+  if (d.ctnPick != null) { if (ctnPick.has(d.ctnPick)) ctnPick.delete(d.ctnPick); else { ctnPick.add(d.ctnPick); ctnNames[d.ctnPick] = d.ctnName || ''; } ctnPaint(); return true; }
+  if (d.ctnAll != null) { const rows = ctnRows(), all = rows.every(x => ctnPick.has(x.id)); for (const x of rows) { if (all) ctnPick.delete(x.id); else { ctnPick.add(x.id); ctnNames[x.id] = x.name; } } ctnPaint(); return true; }
+  if (d.ctnClear != null) { ctnPick.clear(); ctnPaint(); return true; }
+  if (d.ctnR != null) { if (d.ctnR === 'apna') { const n = ctnAsk(ctnRatio); if (n) ctnRatio = n; } else ctnRatio = Number(d.ctnR); ctnPaint(); return true; }
+  if (d.ctnSave != null) { if (!ctnPick.size) return true; const ids = [...ctnPick], n = ids.length, r = ctnRatio; ctnPick.clear(); ctnQ = ''; ctnSave(ctnSet(ids, r, ctnNames), `✓ ${n} item: ${num(r)} carton = 1`); return true; }
+  if (d.ctnDel != null) { const nm = ctnMap()[d.ctnDel]?.n || ''; if (!confirm((nm || 'Is item') + ' ki carton ginti hata dein? (wapas 1 = 1)')) return true; ctnSave(ctnSet([d.ctnDel], 1, {}), (nm || 'Item') + ': ginti normal'); return true; }
+  return false;
+}
+document.addEventListener('input', e => { if (e.target.matches?.('[data-ctn-q]')) { ctnQ = e.target.value || ''; ctnPaint(); return; } if (!e.target.matches?.('[data-reg-q]')) return; regQ = e.target.value || ''; $('dialogBody').innerHTML = regHTML(); const q = document.querySelector('[data-reg-q]'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } });
 
 // app.js PDF banata hai — yahan se sirf data
 export function inReport() {
