@@ -2306,3 +2306,24 @@ TEST v.mjs + naye: chip, khana khula + hidayat, hidayat ek dafa, Bolo jumla -> 1
   t/m/q/p2/pa/jord/give ALL OK; Playwright chips line theek.
   Kahan nahi chalega: phone par Bolo keyboard chuna na ho; shop PC par Bolo nahi (wahan Phone / Gemini mic).
 VERSION BUMP: ?v=2.99.13, APP_VER, "Blue Khata v2.99.13", sw CACHE, version.json.
+
+==================== App v2.99.14 (2026-10-10) — 📋 MULAZIM KI STOCK GINTI: haal saaf · nayi ginti = counting ON · Chrome translate band ====================
+User: "Baqi aur ginti ka mulazim ko access chahiye — mulazim par kaam nahi kar raha" / "sirf mulazim ki stock screen par masla" (photo:
+iPhone par stock ginti, upar Google Translate on — "Kul PCS" -> "Cool PCS"). Wajah (code): countLocked() = counting OFF && !malik ->
+malik ki ginti chalti, mulazim ki Save / Tick / ginti ruk jati; "Nayi ginti shuru" counting ON nahi karti thi; mulazim ko sirf chhota notice.
+(Transfer note paid/unpaid + barcode wala kaam user ne abhi ROKA — "transfer note nahi, mulazim wala sahi karo".) Plan OK.
+* pos-stock.js countBanner() (summary ke upar, .sc-top poori chaurai): mulazim + OFF = laal patta "Malik ne counting band ki hui hai";
+  round nahi = peela "Abhi nayi ginti shuru nahi hui"; malik + OFF = laal + "🟢 Counting ON karo" (+ round nahi to "📋 Nayi ginti shuru");
+  haal ki line: 👤 Mulazim / 👑 Malik · 📋 Ginti <round> · 🟢/🔴 Counting · v<app>.
+* itemMsg(id, text, ok): item ke "count-live" (ya Baqi nishan) ke neeche laal / hara paigham + notice (+ halki vibrate). saveCount / tickCount /
+  setFlag: round nahi, OFF, ghalat hindse, "pehle ginti likhein", kamyabi ("✓ … ginti save (N Pcs)"), ghalti errTxt (permission ->
+  "Ijazat nahi mili…", internet -> "Internet nahi…", warna asal paigham).
+* startNewRound: setStockRound ke baad countOff ho to setStockLock(false) — "· 🟢 Counting ON (mulazim ginti kar sakte hain)".
+* index.html: <html translate="no" class="notranslate"> + <meta name="google" content="notranslate"> (Chrome Urdu -> English translate nahi).
+* style.css .sc-top .sc-banner(.bad/.warn) .sc-bb .sc-state .sc-msg(.ok/.bad).
+TEST hd/sc.mjs (asal pos-stock): mulazim ON -> haal line + khane; Save -> hara; permission -> laal "Ijazat nahi mili"; nishan fail -> laal;
+  OFF -> laal patta, khane nahi, Baqi button hai; round nahi -> peela; malik OFF -> ON button -> lock false; OFF + round nahi -> dono
+  button; nayi ginti -> lock false; ON ke baad patta gaya — ALL OK. p2 / pa / t / m / q / v / jord / give ALL OK. Playwright 412px theek.
+  Firestore rules mein koi tabdeeli NAHI (Full + Stock mulazim ko ginti / nishan ki ijazat pehle se).
+  Agar counting ON + ginti shuru ke baad bhi mulazim par na chale: ab card ke neeche asal ghalti likhi aayegi — us ka screenshot.
+VERSION BUMP: ?v=2.99.14, APP_VER, "Blue Khata v2.99.14", sw CACHE, version.json.

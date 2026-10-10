@@ -2467,3 +2467,19 @@ body.ag-lock .ag-fab{display:none!important}
 @media (max-width:700px){.ag-in{grid-template-columns:1fr 46px 50px 50px 52px;gap:5px}.ag-mic small{font-size:10px}.ag-mic i{font-size:20px}}
 /* v2.99.13: ⌨️ Bolo (keyboard) chip — hamesha chips ki line mein pehla */
 .ag-sugg .ag-sg-kb{background:linear-gradient(135deg,#10b981,#0f9f6e)!important;color:#fff!important;border:0!important;font-weight:800!important;box-shadow:0 3px 10px rgba(16,185,129,.35)}
+/* v2.99.14: Stock ginti ka haal — bara patta, haal ki line, har item ka paigham */
+.sc-banner{display:grid;gap:4px;margin:0 0 10px;padding:12px 14px;border-radius:16px;border:1.5px solid;font-size:14px}
+.sc-banner b{font-size:16px}.sc-banner small{font-size:13px;opacity:.9;line-height:1.4}
+.sc-banner.bad{background:rgba(255,92,122,.12);border-color:rgba(255,92,122,.55);color:var(--bad,#b4233b)}
+.sc-banner.warn{background:rgba(255,190,80,.14);border-color:rgba(255,170,60,.55);color:#8a5a00}
+.sc-banner button{justify-self:start;margin-top:4px;min-height:44px!important;padding:8px 16px!important;border-radius:999px!important;font-weight:800;background:linear-gradient(180deg,#1f9a5f,#167a4a)!important;color:#fff!important;border:0!important}
+.sc-state{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 10px}
+.sc-state span{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--glass,#f2f5fb);border:1px solid var(--line,rgba(34,59,109,.14))}
+.sc-state .good{color:var(--good,#14794f);border-color:rgba(46,230,176,.45)}.sc-state .bad{color:var(--bad,#c0392b);border-color:rgba(255,92,122,.45)}
+.sc-msg{flex-basis:100%;margin:4px 4px 6px;padding:8px 12px;border-radius:12px;font-size:13.5px;font-weight:700;line-height:1.35}
+.sc-msg.bad{background:rgba(255,92,122,.12);border:1px solid rgba(255,92,122,.45);color:var(--bad,#b4233b)}
+.sc-msg.ok{background:rgba(46,230,176,.14);border:1px solid rgba(46,230,176,.45);color:var(--good,#14794f)}
+html.dk .sc-banner.warn{color:#ffd28a}
+.sc-bb{display:flex;flex-wrap:wrap;gap:8px}
+.summary>.sc-top{grid-column:1/-1;display:block;background:none!important;box-shadow:none!important;padding:0!important;border:0!important;min-width:0}
+.sc-state{flex-direction:row}.sc-state span{display:inline-flex!important;width:auto!important;flex:none}

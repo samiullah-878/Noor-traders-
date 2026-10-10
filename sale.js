@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.99.13';
-import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.99.13';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.99.14';
+import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.99.14';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
