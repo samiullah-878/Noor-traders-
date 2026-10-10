@@ -4,6 +4,9 @@
 //     usp_StockTransferDetail_InsertUpdate (bilkul POS ki Transfer screen jaisa: STN no, dono godam ka stock, ledger, voucher).
 //     op 'delete' -> usp_StockTransfer_Delete. Note thermal printer (TM-T88IV) par bhi chhapta hai.
 //  2) printJobs (kind 'purchase'): POS purchase bill (posBills) ya larke ki cash purchase ki rasid TM-T88IV par.
+//  3) v4 (2026-10-10): 🖨 PURCHASE AUTO PRINT — purchase-parchi.js: POS mein naya purchase bill (POS / app) aate hi tafseeli
+//     parchi (stock pehle -> ab, pichla rate, nafa, din ka maal, DHYAN); badla = "BADLA HUA BILL" + tabdeeli; mita / cancel =
+//     chhoti parchi. App ka "Dobara print" bhi yahi tafseeli parchi. Setting: blueAccess/printConfig (malik). SQL sirf SELECT.
 //  Chalana:  node transfer-sync.js   (transfer-auto.bat loop mein)
 // =========================================================
 const fs = require('fs');
@@ -28,6 +31,8 @@ const DIR = __dirname;
 // 2026-10-01 HEARTBEAT: har 30 sec '<script>.alive' mein waqt — doctor 3 min purana dekhe to script ko latki samajh kar dobara chalata hai
 { const _hb = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive'); const _w = () => { try { require('fs').writeFileSync(_hb, String(Date.now())); } catch {} }; _w(); setInterval(_w, 30000).unref(); }
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
+let PP = null; try { PP = require('./purchase-parchi.js'); } catch (e) { log('purchase-parchi.js nahi mili (' + e.message + ') — purchase auto-print band, baqi sab chalta'); }   // v4
+let PW = null;
 const SQL_CONFIG = require('./sql-config.js');   // v2026-09-25: setting local-config.json se (PC Doctor)
 SQL_CONFIG.options = { ...(SQL_CONFIG.options || {}), useUTC: false };
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
@@ -241,6 +246,13 @@ async function handlePrint(doc) {
       let text = null;
       if (j.kind === 'purchase') {
         const bill = (await biz.collection('posBills').doc(String(j.id)).get()).data();
+        if (bill && Number(bill.purchaseId) > 0 && PW) {   // v4: tafseeli parchi (stock / rate / nafa)
+          try {
+            await PW.reprint(Number(bill.purchaseId), j.copies, sendRaw);
+            await ref.update({ status: 'done', doneAt: Date.now(), error: FieldValue.delete() });
+            log(`Print ho gaya (tafseeli): purchase ${j.id}`); return;
+          } catch (e) { log('Tafseeli parchi nahi bani (' + e.message + ') — purani saadi parchi'); }
+        }
         const entry = bill ? null : (await biz.collection('blueKhata').doc(String(j.id)).get()).data();
         if (!bill && !entry) throw new Error('Purchase nahi mili');
         if (entry && entry.partyId) { const pd = (await biz.collection('blueKhata').doc(entry.partyId).get()).data(); entry.partyName = pd?.name || j.partyName || ''; }
@@ -345,10 +357,20 @@ const lock = net.createServer();
 lock.once('error', () => { console.log('transfer-sync pehle se chal raha hai.'); process.exit(3); });
 lock.listen(LOCK_PORT, '127.0.0.1', async () => {
   try { await getPool(); } catch (e) { log('SQL se nahi jura: ' + e.message); process.exit(1); }
-  log('transfer-sync v3 chal raha hai — transfer note, print aur POSTING ka intezar. Band: Ctrl+C');
+  log('transfer-sync v4 chal raha hai — transfer note, print, POSTING aur 🖨 purchase auto-print. Band: Ctrl+C');
   const fail = name => e => { log(`${name} listener toot gaya: ${e.message} — band, bat 30 sec mein dobara chalayega`); process.exit(1); };
   trCol.where('status', '==', 'new').onSnapshot(s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handleTransfer(c.doc)); }); }, fail('transfer'));
   prCol.where('status', '==', 'new').onSnapshot(s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handlePrint(c.doc)); }); }, fail('print'));
   poCol.where('status', '==', 'new').onSnapshot(s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handlePost(c.doc)); }); }, fail('post'));
   setTimeout(() => later(sweepStatus), 20000); setInterval(() => later(sweepStatus), SWEEP_MS);
+  // v4: 🖨 purchase auto-print — printer ka kaam transfer / print jobs wali queue mein (ek waqt ek parchi, files na takrayein)
+  if (PP) {
+    try {
+      const sendQ = (text, docName) => new Promise(res => { later(async () => res(await sendRaw(text, docName))); });
+      PW = PP.createWatcher({ getPool, sql, log, sendRaw: sendQ, branchNames, cfgRef: biz.collection('blueAccess').doc('printConfig'),
+        stateFile: path.join(DIR, 'purchase-print.json'),
+        appWho: async id => { const d = (await biz.collection('appPurchases').doc(String(id)).get()).data(); return d ? (d.role === 'owner' ? 'Malik' : 'Mulazim') : ''; } });
+      PW.start();
+    } catch (e) { log('Purchase auto-print shuru nahi hua: ' + e.message); }
+  }
 });

@@ -2421,3 +2421,35 @@ KIYA (app.js): ledgerTitles(p) + ledgerHTML(rows, p) — khane ka naam account k
   · baqi: Payment / Diye | Wasooli / Liye. Baayen laal (payment, credit, expense, purchaseCash), daayen hara (collection, borrow, sale).
 YAHAN AI NAHI. TEST: ledgerTitles har qisam (node), screenshot 390px; t / m / q / v / p2 / sc / rt / pa / jord / ctn / give / cl ALL OK.
 VERSION BUMP: ?v=2.99.19, APP_VER, "Blue Khata v2.99.19", sw CACHE, version.json.
+
+==================== App v2.99.20 (2026-10-10) + PC transfer-sync v4 + purchase-parchi.js v1 — 🖨 PURCHASE BILL AUTO PRINT (tafseeli parchi) ====================
+MALIK: "jitne bhi purchase ke bill hain un ka print chahiye jaise hi larka add kare … pehle ka stock, abhi ka stock … aisi cheezein".
+PC (Server, manifest 2026-10-10.1 — KHATA-DOCTOR khud lagata hai, koi command nahi):
+* pc/purchase-parchi.js (NAYI, manifest mein): createWatcher — har 20 sec POS dbo.Purchase / PurchaseDetail (sirf SELECT).
+  - Pehli dafa: floor = MAX(PurchaseID) -> purane bill NAHI chhapte. state: C:\khata-sync\purchase-print.json {floor, done{id:{stamp,n,no,party,net,items,lines}}}.
+  - Naya bill: nishan (party + item|qty|rate|godam + disc + tax) 2 chakkar wohi rahe tab print (adhoora save nahi). Bina lines = intezar.
+  - Chhapa hua bill badla -> "BADLA HUA BILL (n)" + TABDEELI (qty / rate / naya item / HATA DIYA / supplier / NET).
+  - Chhapa hua bill CANCEL (DocStatusID 3) ya MITA (header / lines 2 chakkar gayab — POS edit ke pal bhar wala nahi) -> chhoti parchi.
+  - floor sirf wahan tak barhta hai jahan tak sab bill nipat gaye (chhape / cancel / 2 ghante se khali). done 3 din rakhte hain.
+  - Printer masla: app ko pehli ghalti batao, 2 min baad dobara (har 20 sec nahi).
+  - Parchi (42 harf, TM-T88IV): Bill / tareekh / Supplier / Supplier bill # / Daala (App se (Malik/Mulazim) — appPurchases.role,
+    ya POS (user naam — Users table INFORMATION_SCHEMA se dhoond, na mile to sirf POS)) / Maal aaya (ek godam) · har item:
+    tadad x ctn rate = raqam, Bonus, Stock pehle -> ab (ItemBranchRate.CurrStock us godam ka; pehle = ab - is bill ki tadad;
+    0 = khatam, manfi), Rate pichla (PurchaseDetail pichli khareed, cancel nahi) -> naya (+/-) ya "pehli dafa", Bechna (line ka
+    SaleRate x pack, warna branch 1 / Items) + nafa % (minNafa se kam = !! KAM, manfi = !! GHAATA), Andaza din (sab godam stock ÷
+    30 din ki bikri/30; noor traders / our factory bahar) · Kul item / ctn + pcs, Items ki raqam, Discount, Tax, NET (double) ·
+    DHYAN (mehngay / ghaata / kam nafa / saste) · Maal gina / Check kiya · Print waqt.
+  - Setting blueAccess/printConfig: purchaseAuto (default ON; BAND par floor aage — ON karne par purane nahi), purchaseCopies 1-2,
+    minNafa (default 3). PC wapas likhta: purchaseLast (aakhri 10: no, party, net, items, kind naya/badla/mita/cancel, at, ok, err),
+    purchaseAlive (har 5 min).
+* pc/transfer-sync.js v4: PP = require('./purchase-parchi.js') (na mile to baqi sab chalta); PW.start(); printer ka kaam usi
+  later() queue mein (transfer / print jobs ke saath files na takrayein). printJobs kind 'purchase' (app ka 🖨️ Print): posBills mein
+  purchaseId ho to wahi tafseeli parchi ("DOBARA PRINT"), masla ho to purani saadi parchi.
+APP: cloud.js listenPrintConfig / setPrintConfig (sirf malik; rules NAHI badle — owner generic blueAccess). Settings → 🔌 POS aur AI →
+  "🖨 Purchase bill auto print": ON / Band, 1-2 copy, nafa hadd 2/3/5/8%, parchi par kya aata hai, Server PC zinda?, aakhri parchiyan.
+YAHAN AI NAHI: sab seedha SQL hisaab.
+TEST pp/t.js (naqli SQL + Firestore): pehli dafa purane nahi, settle 2 chakkar, parchi text (stock 12 -> 20 ctn, pichla 4,500 ->
+  4,560 +60, nafa 5.3%, ~22 din, Dalda pehle 0 (khatam), !! KAM, Kul, Discount, NET, DHYAN, sab line <= 42), badla + TABDEELI,
+  bina lines, POS user, pal bhar gayab = kuch nahi, MITA slip, CANCEL slip, printer band = ek report + 2 min, OFF / ON purane nahi,
+  2 copies, reprint — ALL OK. set.mjs (settings HTML) + screenshot. t / m / q / v / p2 / sc / rt / pa / jord / ctn / give / cl ALL OK.
+VERSION BUMP: ?v=2.99.20, APP_VER, "Blue Khata v2.99.20", sw CACHE, version.json; pc/manifest 2026-10-10.1 (transfer-sync.js + purchase-parchi.js sha).
