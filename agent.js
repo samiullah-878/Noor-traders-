@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.99.15';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.15';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.99.16';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.16';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }

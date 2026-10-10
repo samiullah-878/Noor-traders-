@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.15';
-import { liveLabelsHTML } from './barcode.js?v=2.99.15';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.16';
+import { liveLabelsHTML } from './barcode.js?v=2.99.16';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -236,7 +236,7 @@ export function saleStock() {
   rows.forEach(r => { if (r.branch != null && r.name) names[r.branch] = r.name; });
   const itemsFor = b => chunks.filter(c => c.branch === b)
     .sort((x, y) => (x.order || 0) - (y.order || 0)).flatMap(c => c.items);
-  return { loaded, failed, branches, names, itemsFor, hidden, branchName };
+  return { loaded, failed, branches, names, itemsFor, hidden, branchName, syncedAt: b => Number(rows.find(r => r.meta && r.branch === b)?.syncedAt) || 0 };   // v2.99.16: POS rate kitne taza
 }
 let saleHook = null, saleSeen = [], saleQtyHook = null, saleFindHook = null;
 export function setSaleFindHook(fn) { saleFindHook = fn; }

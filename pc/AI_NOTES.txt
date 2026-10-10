@@ -2342,3 +2342,21 @@ ne "Computer (POS) mein daalni hai" tick bhi chhupaya hua hai — PC use nahi ka
 TEST q.mjs + naye: cash udhaar -> payment + galla, sirf udhaar -> credit, batch cash udhaar — ALL OK; t/m/v/p2/sc/pa/jord/give ALL OK;
   Playwright mock form tick theek. app.js form asal browser mein test NAHI (Firebase chahiye) — code dekh kar.
 VERSION BUMP: ?v=2.99.15, APP_VER, "Blue Khata v2.99.15", sw CACHE, version.json.
+
+==================== App v2.99.16 (2026-10-10) — 🧾 PURCHASE "PEHLE" = POS ke MAUJOODA rate · pc/rate-check.ps1 ====================
+User (NAILS jaanch card ka photo — pehle 95 / 101 / 120): "yahan pehle wale rates update nahi hote — jo purana rate POS mein hai woh;
+kisi bhi cheez ka jahan pehle rate likha hai woh ghalat rate batata hai". Wajah: baseOf() mein APP KI YAAD (blueAccess/itemRates — app
+se pichhli purchase) jeet-ti thi: khareed (m.c) hamesha yaad se; W / R yaad se jab tak handMoved na pakre. Khula item (pack <= 1) par
+R = SaleRate (Sale screen SaleRate2 "Peice Rate" leti hai). Plan OK.
+* purchase.js baseOf: yaad SIRF tab jab app ne 20 min (MEM_GRACE) ke andar bheje hon aur POS se farq na pakra ho (PC ka sync baqi);
+  warna POS (posStock, branch 1 = ItemBranchRate) ke rate — khareed bhi (POS khareed 0 ho to yaad). src 'pos' / mem 1.
+  oldOf: khula item -> oldR = rate2 || rate (POS Peice Rate). purchase-post (PC) khule item par SaleRate = SaleRate2 = rpcs — milta hai.
+  srcChip: "🧾 POS ke maujooda rate" (+ ⚠️ agar posStock meta syncedAt 70 min se purana = PC sync ruka), "📌 Abhi app se bheje rate".
+* pos-stock.js saleStock().syncedAt(branch).
+* pc/rate-dhoondo.js + pc/rate-check.ps1 (manifest mein NAHI — on-demand, barcode-check jaisa): ek item ke rate — 1) POS Items master,
+  2) har branch ItemBranchRate (+ stock) aur master vs branch 1 farq ⚠️, 3) aakhri 3 POS purchase rate, 4) app posStock (+ syncedAt),
+  5) app ki yaad. SIRF SELECT / get. Command: $it='NAILS'; irm .../pc/rate-check.ps1 | iex
+TEST hd/rt.mjs (asal purchase + pos-stock): purani yaad -> POS (khareed 95, W 105, R piece 130), taza yaad 5 min -> yaad, yaad nahi ->
+  POS carton item — ALL OK; rate-dhoondo naqli SQL / Firestore ke saath chala (master vs branch farq pakra). p2 / sc / pa / jord / t / m /
+  q / v / give ALL OK.
+VERSION BUMP: ?v=2.99.16, APP_VER, "Blue Khata v2.99.16", sw CACHE, version.json.

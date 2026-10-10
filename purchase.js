@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.15';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.15';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.16';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.16';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -128,8 +128,9 @@ function findByCode(items, code) {
 // wrate W CTN÷pack (SaleRate3), ws W PCS (SaleRateSize — sync-stock sirf farq ho to bhejti hai).
 // v2.98.6: oldW = W PCS, oldWc = W CTN fi piece (pehle dono ek hi the — CTN = PCS × pack ban jata tha)
 function oldOf(it) {
-  const pk = Number(it.pack) > 1, wc = r2(Number(it.wrate) || 0);
-  return { oldCost: r4(Number(it.prate) || 0), oldW: pk ? r2(Number(it.ws) || wc) : wc, oldWc: wc, oldR: r2(Number(it.rate) || 0), oldR2: r2(Number(it.rate2) || Number(it.rate) || 0) };
+  const pk = Number(it.pack) > 1, wc = r2(Number(it.wrate) || 0), rp = r2(Number(it.rate2) || Number(it.rate) || 0);
+  // v2.99.16: khula item (carton nahi) — R = POS "Peice Rate" (SaleRate2), bilkul Sale screen jaisa (pehle SaleRate aata tha)
+  return { oldCost: r4(Number(it.prate) || 0), oldW: pk ? r2(Number(it.ws) || wc) : wc, oldWc: wc, oldR: pk ? r2(Number(it.rate) || 0) : rp, oldR2: rp };
 }
 // v2.98.6: CTN ka rate fi piece se wapas — POS fi piece 2 decimal rakhta hai (5150 ÷ 12 = 429.17 → × 12 = 5150.04 = asal 5150)
 const ctnOf = (p, pk) => { const v = (Number(p) || 0) * pk, n = Math.round(v); return Math.abs(v - n) <= 0.005 * pk + 1e-6 ? n : r2(v); };
@@ -162,8 +163,11 @@ function baseOf(it, bl) {
     o.src = s ? 'bill' : 'pos';
     return o;
   }
-  if (!m || !(Number(m.c) > 0)) return o;
-  if (handMoved(o, m)) { if (!(o.oldCost > 0)) o.oldCost = r4(Number(m.c)); o.posHand = 1; return o; }
+  // v2.99.16 (malik: "jahan pehle rate likha hai woh ghalat rate batata hai — POS mein jo purana rate hai woh aaye"):
+  //   "pehle" = POS ke MAUJOODA rate (khareed bhi). App ki yaad SIRF tab jab app ne abhi (20 min) naye rate bheje hon aur
+  //   POS mein abhi na lage hon (PC ka sync baqi). Pehle yaad hamesha jeet-ti thi (khareed bhi) — POS ki purchase / haath ki tabdeeli chhup jati.
+  if (!m || !(Number(m.c) > 0)) { o.src = 'pos'; return o; }
+  if (Date.now() - (Number(m.t) || 0) >= MEM_GRACE || handMoved(o, m)) { if (!(o.oldCost > 0)) o.oldCost = r4(Number(m.c)); o.src = 'pos'; return o; }
   o.oldCost = r4(Number(m.c));
   if (Number(m.w) > 0) o.oldW = r2(Number(m.w));
   if (Number(m.r) > 0) o.oldR2 = r2(Number(m.r));
@@ -224,7 +228,10 @@ function chipRow(l, ix, grp, idp = 'ppRc') {
   return `<div class="rate-chips rc-inline" id="${idp}${grp}${ix}"><div class="rc-row"><span class="rc-lab">${grp === 'w' ? 'Wholesale' : 'Parchoon'}${nTxt ? `<i class="${Math.min(...ns) < 0 ? 'neg' : ''}">abhi ${nTxt}</i>` : ''}</span><span class="rc-set">${list.map(p => `<button type="button" class="rc${m === p ? ' on' : ''}" data-pp-rch="${ix}|${grp}|${p}">${p}%</button>`).join('')}</span></div></div>`;
 }
 // v2.98.6: rate kahan se aaye — POS bill ke apne / POS mein haath se badle (yaad chhor di)
-const srcChip = l => l.posHand ? '<div class="pp-src hand">✋ POS mein badla gaya — POS rate liye</div>' : l.src === 'bill' ? '<div class="pp-src bill">🧾 POS bill ke rate — bilkul POS jaise</div>' : l.src === 'pos' ? '<div class="pp-src bill">🧾 POS ke maujooda rate</div>' : '';
+const srcChip = l => l.posHand ? '<div class="pp-src hand">✋ POS mein badla gaya — POS rate liye</div>' : l.src === 'bill' ? '<div class="pp-src bill">🧾 POS bill ke rate — bilkul POS jaise</div>' : l.src === 'pos' ? `<div class="pp-src bill">🧾 POS ke maujooda rate${posAge()}</div>` : l.mem ? '<div class="pp-src">📌 Abhi app se bheje rate (POS mein lag rahe hain)</div>' : '';
+function posAge() {   // PC (sync-stock) kuch badle to likhta hai, warna ghante mein ek dafa — 70 min se purana = PC ka sync ruka hua
+  try { const t = saleStock().syncedAt?.(BILL_BRANCH) || 0; if (!t) return ''; const m = Math.round((Date.now() - t) / 60000); return m > 70 ? ` · ⚠️ PC se ${m < 120 ? m + ' min' : Math.round(m / 60) + ' ghante'} se rate nahi aaye (PC / sync-stock check karein)` : ''; } catch { return ''; }
+}
 const allOldOf = l => ['wp', 'wc', 'rp', 'rc'].every(sd => modeOf(l, sd) === 'old');
 const oldBtn = (l, ix, idp = 'ppRc') => l.oldCost > 0 ? `<button type="button" class="rc-old${allOldOf(l) ? ' on' : ''}" id="${idp}Old${ix}" data-pp-rold="${ix}" title="Purana nafa" aria-label="Purana nafa">↺</button>` : '';
 function rateChipsHTML(l, ix, idp = 'ppRc') {   // jaanch khirki: dono line ek dabbe mein
