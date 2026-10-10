@@ -2487,3 +2487,14 @@ html.dk .sc-banner.warn{color:#ffd28a}
 .cash-out-tick{display:flex!important;align-items:center;gap:10px;padding:12px 14px!important;margin:6px 0;border-radius:14px;border:1.5px dashed rgba(180,120,20,.5);background:rgba(255,190,80,.10);font-weight:800;font-size:14.5px;cursor:pointer}
 .cash-out-tick input{width:22px!important;height:22px!important;min-height:0!important;flex:none;accent-color:#16a34a}
 .cash-out-tick.on{border-style:solid;border-color:rgba(22,163,74,.6);background:rgba(46,230,176,.14);color:var(--good,#14794f)}
+/* v2.99.17: Cash diya card par khate ka nishan (✓ Khate mein / ⚠️ nahi + ➕ Khate mein daalo / 🔄 Khata theek karo) */
+.cl-chip{grid-column:1/-1;justify-self:start;display:inline-flex;align-items:center;gap:4px;margin-top:4px;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:800;background:#e9f7ef;border:1px solid #bfe3cd;color:#1f8a55}
+.cl-row{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 10px;margin-top:6px;padding:7px 8px 7px 12px;border-radius:12px;font-size:12px;font-weight:800}
+.cl-row span{min-width:0;flex:1 1 160px}
+.cl-row.bad{background:#fff1f1;border:1px solid #f3c4c4;color:#b4282a}
+.cl-row.warn{background:#fff7e6;border:1px solid #f1d39a;color:#94600b}
+.cl-row button{min-height:32px!important;width:auto!important;padding:5px 14px!important;margin:0!important;border-radius:999px!important;font-size:12.5px!important;font-weight:800!important;color:#fff!important;border:0!important;box-shadow:0 4px 12px rgba(16,40,90,.18)}
+.cl-row.bad button{background:linear-gradient(135deg,#16a34a,#0f7a3a)!important}
+.cl-row.warn button{background:linear-gradient(135deg,#f59e0b,#c77806)!important}
+.cl-row button:disabled{opacity:.55}
+.cash-book-row .cl-chip,.cash-book-row .cl-row{margin:8px 0 2px}

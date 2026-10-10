@@ -2360,3 +2360,28 @@ TEST hd/rt.mjs (asal purchase + pos-stock): purani yaad -> POS (khareed 95, W 10
   POS carton item — ALL OK; rate-dhoondo naqli SQL / Firestore ke saath chala (master vs branch farq pakra). p2 / sc / pa / jord / t / m /
   q / v / give ALL OK.
 VERSION BUMP: ?v=2.99.16, APP_VER, "Blue Khata v2.99.16", sw CACHE, version.json.
+
+==================== App v2.99.17 (2026-10-10) — 💵 CASH DIYA <-> KHATA jor (✓ Khate mein / ➕ Khate mein daalo / 🔄 Khata theek karo) ====================
+MALIK: Closing Cash mein "Cash diya · bilal alflah Rs 20,00,000 (2026-10-05)" tha magar bilal ke khate mein entry NAHI thi.
+WAJAH: cashCustody move {from:'shop', to:party} par ref nahi tha (ya khate wali 'cashpay-<ref>' entry delete ho chuki thi). cash-links.js
+  sirf NAYE ref par hi 'cashpay-<ref>' entry banata hai; purane Edit mein account lagane par ref nahi banta tha -> khata khali rehta.
+KIYA (sirf app.js + style.css; cash-links.js / cloud.js / rules NAHI badle — rules change nahi):
+* cashToParty(to) = to hai aur 'shop'/'external' nahi.
+* cashKhataOf(rowId 'recordId:index') -> {rec,ix,m,p,e,state}: 'none' (ref nahi / entry nahi / deleted), 'diff' (party ya raqam farq), 'ok'.
+  (NOTE: purana cashLinkChip(e) v2.48 POS bill / purchaseCash wala ALAG hai — naya naam cashKhata* rakha.)
+* cashKhataChip(rowId): ok = "✓ Khate mein" chip; none = laal row "⚠️ <naam> ke khate mein nahi" + (malik) "➕ Khate mein daalo";
+  diff = peeli row "⚠️ Khate mein farq: <raqam> · <naam>" + "🔄 Khata theek karo". Do jagah: Daily Sale Closing Cash ka
+  "Aaj bheja gaya" (giveBoxHTML) + Cash khata list (sirf r.source==='move' && outgoing).
+* cashKhataFix(rowId) (data-cash-link click, sirf malik, pending save ho to ruk jao): none -> move par naya ref 'cp'+uuid, custody
+  record save -> cash-links usi transaction mein 'cashpay-<ref>' (credit, "Cash diya · note", custody ki tareekh) banata hai;
+  diff -> khate wali entry ko party/raqam/tareekh/note se barabar. Cash total NAHI badalta (move wohi).
+* cashRecordAction Edit: shop -> account aur (ref nahi YA khate wali entry nahi/deleted) = naya ref (khate mein bhi aa jaye).
+  Save ke baad: entry maujood + account hata diya = poochta hai "khate wali entry bhi hatani hai?"; warna party/raqam/note farq ho
+  to khate wali entry bhi saath update. Delete: pehle cash book sawal, phir "…ke khate wali … ki entry bhi hatani hai?" (haan = deleted:true).
+* style.css .cl-chip / .cl-row(.bad/.warn) — premium chip + gradient button.
+YAHAN AI NAHI: yeh sab hisaab/jor seedha code hai (koi AI nahi).
+TEST give/cl.mjs (asal giveBox + cashRecordAction code, asal cash-links): purana bina-ref 20 lakh -> laal row -> dabaya -> khate mein
+  credit 20,00,000 (2026-10-05), cash total wohi, dobara dabane par duplicate nahi; khate mein raqam badli -> farq -> theek; Edit raqam /
+  account -> khata saath; khata entry deleted -> Edit se wapas; Delete haan = khata bhi, nahi = khata rehta — ALL OK. give/run, t, m, q, v,
+  p2, sc, rt, pa, jord ALL OK. Screenshot: teeno haalat (laal/hara/peela) 380px par overflow nahi.
+VERSION BUMP: ?v=2.99.17, APP_VER, "Blue Khata v2.99.17", sw CACHE, version.json.
