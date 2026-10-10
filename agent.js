@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.99.14';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.14';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.99.15';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.15';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -508,7 +508,7 @@ function system() {
     '  decision "pakka" -> use that account_id. decision "poochna" -> do NOT choose; ask the user which one (the app shows buttons with names). decision "nahi_mila" -> say not found and ask for the right name or mobile; never substitute a different account.',
     '  If the user taps a button, their message contains "(account_id: X)" — use that id.',
     'RULE 3 — actions (entry, transfer, cash bhejna, due date) ONLY through propose_* tools. They do NOT save; the app shows a confirm card and the user taps ✓. After propose_* never say saved/ho gaya — say "Card check kar ke ✓ dabayein". If kind, account or amount is unclear, ask first. One proposal per action.',
-    'RULE 4 — meanings: wasooli/paise liye/mile/jama karaye/received = wasooli. payment/diye/bheje/ada kiye = payment. udhaar diya/maal udhaar diya = udhaar. maal udhaar liya/qarz liya/hum ne dene = hum_ne_dena. kharcha = kharcha. Closing / galle ke cash se kisi ko bhejna = propose_cash_give. Ek account se doosre mein = propose_transfer.',
+    'RULE 4 — meanings: wasooli/paise liye/mile/jama karaye/received = wasooli. payment/diye/bheje/ada kiye = payment. udhaar diya/maal udhaar diya = udhaar (sirf khata). CASH udhaar diya / naqad udhaar = payment with galle_ka_cash true (Daily Sale ke Akhrajat mein lagta hai). maal udhaar liya/qarz liya/hum ne dene = hum_ne_dena. kharcha = kharcha. Closing / galle ke cash se kisi ko bhejna = propose_cash_give. Ek account se doosre mein = propose_transfer.',
     '  Baqaya side: "lene" = woh humein denge; "dene" = hum ne unhein dene hain. Numbers: hazar/k = 1,000; lakh/lac = 100,000; crore = 10,000,000; dedh = 1.5x, dhai = 2.5x, sawa = 1.25x, sarhe X = X + 0.5. amount is always in rupees (not paisa).',
     '  Dates: aaj = today; kal (past tense) = yesterday; "is mahine" = from the 1st of this month to today. If a date is ambiguous, ask.',
     'RULE 5 — the app shows cards for tool results (account, entries, lists, summaries). Do not repeat long lists — give the key number(s) in 1-3 lines.',
@@ -598,6 +598,7 @@ function parseAmount(str) {
 }
 const CMD = [
   { re: /^(.+?)\s+se\s+(.+?)\s+(wasooli|wasuli|vasooli|wasool|vasool|liye|lie|liya|mile|mila|received|wasool kiye)(?:\s+(.*))?$/, k: 'wasooli' },
+  { re: /^(.+?)\s+ko\s+(.+?)\s+(?:cash|naqad|nakad)\s+(?:udhaar|udhar|qarz|karz)(?:\s+(.*))?$/, k: 'payment', cash: true },   // v2.99.15: 💵 cash udhaar = Akhrajat mein
   { re: /^(.+?)\s+ko\s+(.+?)\s+(udhaar|udhar|udhaar diya|credit)(?:\s+(.*))?$/, k: 'udhaar' },
   { re: /^(.+?)\s+ko\s+(.+?)\s+(payment|pay|diye|diya|dye|bheje|bheja|ada|ada kiye)(?:\s+(.*))?$/, k: 'payment' },
 ];
@@ -708,7 +709,8 @@ async function quick(t) {
   for (const c of CMD) {
     const m = n.match(c.re); if (!m) continue;
     const amt = parseAmount(m[2]); if (!(amt > 0)) return false;
-    if (m[4] && !wordsOf(m[4]).every(w => DONE_W.has(w) || FILL.has(w))) return false;   // aur baatein (note / tareekh) — AI samjhe
+    const tail = c.cash ? m[3] : m[4];
+    if (tail && !wordsOf(tail).every(w => DONE_W.has(w) || FILL.has(w))) return false;   // aur baatein (note / tareekh) — AI samjhe
     const r = findAccounts({ query: m[1] });
     if (r.decision === 'pakka') { const pr = propose('entry', { kind: c.k, account_id: r.account_id, amount: amt }); flushShow(); quickReply(pr?.error ? '⚠️ ' + pr.error : 'Card check kar ke ✓ dabayein.'); return true; }
     if (r.decision === 'poochna') { pendingQuick = { type: 'entry', kind: c.k, amount: amt }; showTool('find_account', {}, r); flushShow(); quickReply('Kaun sa account? Tap karein — phir card aayega.'); return true; }
@@ -740,7 +742,8 @@ function parseCmd(n) {   // ek tukra -> {kind, amount, account_id | need[], said
   for (const c of CMD) {
     const m = n.match(c.re); if (!m) continue;
     const amt = parseAmount(m[2]); if (!(amt > 0)) return null;
-    if (m[4] && !wordsOf(m[4]).every(w => DONE_W.has(w) || FILL.has(w))) return null;
+    const tail = c.cash ? m[3] : m[4];
+    if (tail && !wordsOf(tail).every(w => DONE_W.has(w) || FILL.has(w))) return null;
     const r = findAccounts({ query: m[1] });
     if (r.decision === 'pakka') return { kind: c.k, amount: amt, account_id: r.account_id, said: m[1] };
     if (r.decision === 'poochna') return { kind: c.k, amount: amt, need: r.candidates, said: m[1] };

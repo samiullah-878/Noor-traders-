@@ -2327,3 +2327,18 @@ TEST hd/sc.mjs (asal pos-stock): mulazim ON -> haal line + khane; Save -> hara; 
   Firestore rules mein koi tabdeeli NAHI (Full + Stock mulazim ko ginti / nishan ki ijazat pehle se).
   Agar counting ON + ginti shuru ke baad bhi mulazim par na chale: ab card ke neeche asal ghalti likhi aayegi — us ka screenshot.
 VERSION BUMP: ?v=2.99.14, APP_VER, "Blue Khata v2.99.14", sw CACHE, version.json.
+
+==================== App v2.99.15 (2026-10-10) — 💵 "Saman diya (udhar)" mein CASH DIYA (Akhrajat) ka tick ====================
+User (Saman diya (udhar) form ka photo, customer Rasheed): "kharche mein daalne ka option nahi laga hua" / "pehle woh tick thi, ab khatam".
+Wajah: credit (Saman diya) = sirf khata, daily cash mein nahi; customer ko CASH dene ka koi Akhrajat wala raasta nahi tha. (v2.98 ef form
+ne "Computer (POS) mein daalni hai" tick bhi chhupaya hua hai — PC use nahi karta.) Plan OK.
+* app.js entryForm (kind credit): tick "💵 Cash diya — Akhrajat (Daily Sale) mein shamil karein" (.cash-out-tick, default band).
+  On = save kind 'payment' + dailyIncluded true (khata ka baqaya wahi barhta — SIGN payment = credit; Daily Sale Akhrajat + closing cash
+  mein lagta). Live: title "💵 Cash diya (udhar)", neeche ki likhai badalti. Purani credit entry edit par bhi tick -> payment ban jati.
+  (Payment wali entry edit = Akhrajat / Party payment form, wahan "Daily Sale ki Wasooli / Akhrajat" tick se wapas sirf-khata.)
+* agent.js CMD: "X ko 4000 cash / naqad udhaar (diya)" -> payment + galle ka cash (Akhrajat); sirf "udhaar" = credit. Batch mein bhi.
+  Prompt RULE 4: cash udhaar = payment galle_ka_cash true.
+* style.css .cash-out-tick (.on hara).
+TEST q.mjs + naye: cash udhaar -> payment + galla, sirf udhaar -> credit, batch cash udhaar — ALL OK; t/m/v/p2/sc/pa/jord/give ALL OK;
+  Playwright mock form tick theek. app.js form asal browser mein test NAHI (Firebase chahiye) — code dekh kar.
+VERSION BUMP: ?v=2.99.15, APP_VER, "Blue Khata v2.99.15", sw CACHE, version.json.
