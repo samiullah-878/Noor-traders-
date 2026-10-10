@@ -2290,3 +2290,19 @@ TEST: v.mjs (Gemini mic button, prompt mein "urdu" + list, khamoshi kati WAV < 2
   ALL OK; m.mjs (Phone: ur-PK -> hi-IN) ALL OK; t/q/p2/pa/jord/give ALL OK; Playwright 412px light + dark: do mic, input 193px, overflow nahi.
   ASAL phone par test NAHI hua — user dono aazma kar batayega.
 VERSION BUMP: ?v=2.99.12, APP_VER, "Blue Khata v2.99.12", sw CACHE, version.json.
+
+==================== App v2.99.13 (2026-10-10) — ⌨️ BOLO AI keyboard agent ke saath (bol kar ruk jayein = khud bhejo) ====================
+User (Bolo AI keyboard ka photo): "Bolo AI keyboard ka mic bohat acha hai, is ke andar daal do". Bataya: alag app ka keyboard web app ke andar
+nahi aa sakta, public API nahi mila — lekin keyboard agent ke khane mein chalta hai. Plan OK.
+* agent.js: chips ki line mein hamesha pehla hara "⌨️ Bolo" (data-ag-kb) + main patti chip (data-agb-kb -> openAgent({kb:true})):
+  kbOpen = khana focus (keyboard upar), placeholder "Keyboard ka 🎤 dabayein…", pehli dafa hidayat (localStorage sam-ag-kb).
+  kbWire(agInput): input event par kya juda (insertText = e.data, warna purani/nayi likhai ka farq). KAI LAFZ ek saath (>=4 harf + beech
+  mein space) = keyboard ki awaz -> armed -> 1.5s mein aur kuch na aaye to khud ask(). Ek ek harf (<=2) = haath se -> band (kabhi khud nahi).
+  Sirf space (keyboard awaz ke baad khud lagata hai) = kuch nahi badla. delete / paste / drop = band. Form submit (keyboard Return) foran.
+  agFill / ask / submit par kbStop (purani likhai ka hisaab saaf).
+* style.css .ag-sg-kb (hara chip).
+TEST v.mjs + naye: chip, khana khula + hidayat, hidayat ek dafa, Bolo jumla -> 1.5s -> khud (0.8s par abhi nahi), haath se harf harf ->
+  khud nahi, Gboard composition kai lafz -> khud, awaz ke baad haath -> khud nahi, awaz + space -> khud, paste -> khud nahi — ALL OK;
+  t/m/q/p2/pa/jord/give ALL OK; Playwright chips line theek.
+  Kahan nahi chalega: phone par Bolo keyboard chuna na ho; shop PC par Bolo nahi (wahan Phone / Gemini mic).
+VERSION BUMP: ?v=2.99.13, APP_VER, "Blue Khata v2.99.13", sw CACHE, version.json.

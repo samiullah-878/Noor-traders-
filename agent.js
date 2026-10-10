@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.99.12';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.12';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.99.13';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.13';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -535,7 +535,7 @@ function trimHistory() {             // aakhri ~14 user sawal; kaat sirf user ki
   }
 }
 async function ask(text, shown) {
-  if (busy) return; const t = String(text || '').trim(); camChips(false);
+  if (busy) return; const t = String(text || '').trim(); camChips(false); kbStop();
   if (!H?.session() || !canFull()) return;
   if (attach.length) { const files = attach.splice(0); paintAttach(); return askPhotos(t, files); }
   if (!t) return;
@@ -949,7 +949,8 @@ function sheet() {
     <small class="ag-foot">AI ghalti kar sakta hai — har entry card par ✓ se pehle naam aur raqam dekh lein.</small></div></div>`);
   el = $('agSheet');
   el.addEventListener('click', onClick);
-  $('agForm').addEventListener('submit', e => { e.preventDefault(); const i = $('agInput'); const v = i.value; i.value = ''; ask(v); });
+  $('agForm').addEventListener('submit', e => { e.preventDefault(); kbStop(); const i = $('agInput'); const v = i.value; i.value = ''; ask(v); });
+  kbWire($('agInput'));
   for (const id of ['agCamIn', 'agGalIn']) $(id).addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; camChips(false); });
   return el;
 }
@@ -969,10 +970,42 @@ function suggFor() {   // har screen ke apne chips — [label, kind(say|fill|hin
   };
   return M[c.view] || null;
 }
+// v2.99.13: ⌨️ BOLO AI (keyboard) — malik: "Bolo AI keyboard ka mic bohat acha hai, is ke andar daal do". Keyboard app ka mic web app ke
+//   andar nahi aa sakta (alag app; public API nahi mila) — lekin keyboard agent ke khane mein chalta hai. ⌨️ Bolo = khana khol do (keyboard
+//   upar), keyboard ke mic se bolein -> likhai EK SAATH (kai lafz) aati hai -> 1.5s ruk = khud bhejo. Haath se ek ek harf likhna = kabhi khud nahi.
+let kbT = null, kbArmed = false, kbPrev = '';
+function kbStop() { clearTimeout(kbT); kbT = null; kbArmed = false; const i = document.getElementById('agInput'); kbPrev = i ? i.value : ''; }
+function kbAdded(a, b) {   // purani -> nayi likhai mein kya juda
+  let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++;
+  let j = 0; while (j < a.length - i && j < b.length - i && a[a.length - 1 - j] === b[b.length - 1 - j]) j++;
+  return b.slice(i, b.length - j);
+}
+function kbWire(inp) {
+  if (!inp || inp.dataset.kb) return; inp.dataset.kb = '1'; kbPrev = inp.value;
+  inp.addEventListener('input', e => {
+    const v = inp.value, it = e.inputType || '', add = it === 'insertText' && typeof e.data === 'string' ? e.data : kbAdded(kbPrev, v);
+    kbPrev = v;
+    if (!v.trim() || /^delete/.test(it) || it === 'insertFromPaste' || it === 'insertFromDrop') { kbStop(); return; }
+    if (add && !add.trim()) { if (!kbArmed) return; }                               // sirf space (keyboard awaz ke baad khud lagata hai) — kuch nahi badla
+    else if (add.trim().length >= 4 && /\S\s+\S/.test(add.trim())) kbArmed = true;   // kai lafz ek saath = keyboard ki awaz
+    else if (add.length <= 2) { kbStop(); return; }                                // ek ek harf = haath se likh rahe hain
+    if (!kbArmed) return;
+    clearTimeout(kbT);
+    kbT = setTimeout(() => { if (!kbArmed || busy) return; const t = inp.value.trim(); kbStop(); if (!t) return; inp.value = ''; kbPrev = ''; ask(t); }, 1500);
+  });
+  inp.addEventListener('focus', () => { if (!kbArmed) kbPrev = inp.value; });
+}
+function kbOpen() {
+  const i = $('agInput'); if (!i) return;
+  i.focus(); try { i.setSelectionRange(i.value.length, i.value.length); } catch {}
+  i.placeholder = '⌨️ Keyboard ka 🎤 dabayein aur bolein…';
+  let seen = false; try { seen = localStorage.getItem('sam-ag-kb') === '1'; localStorage.setItem('sam-ag-kb', '1'); } catch {}
+  if (!seen) quickReply('⌨️ Keyboard khul gaya — **Bolo AI ka hara 🎤** dabayein aur bolein. Bol kar ruk jayein to main khud bhej dunga (ya keyboard ka **Return** dabayein).');
+}
 function paintSugg() {
   const box = $('agSugg'); if (!box) return;
   const L = suggFor(), cams = [...box.querySelectorAll('.ag-sg-cam')].map(x => x.outerHTML).join('');
-  box.innerHTML = cams + (L ? L.map(([lab, k, t]) => k === 'pic' ? `<button type="button" data-ag-pic>${esc(lab)}</button>` : `<button type="button" data-ag-${k === 'say' ? 'say' : k === 'fill' ? 'fill' : 'hint'}="${esc(t)}">${esc(lab)}</button>`).join('')
+  box.innerHTML = cams + '<button type="button" class="ag-sg-kb" data-ag-kb>⌨️ Bolo</button>' + (L ? L.map(([lab, k, t]) => k === 'pic' ? `<button type="button" data-ag-pic>${esc(lab)}</button>` : `<button type="button" data-ag-${k === 'say' ? 'say' : k === 'fill' ? 'fill' : 'hint'}="${esc(t)}">${esc(lab)}</button>`).join('')
     : SUGG.map(x => `<button type="button" data-ag-say="${esc(x.replace(/^\S+\s/, ''))}">${esc(x)}</button>`).join(''));
   box.scrollLeft = 0;
 }
@@ -988,7 +1021,7 @@ export function openAgent(text, opt = {}) {
   { const c = scr(), p = c.partyId ? H.party(c.partyId) : null; $('agWho').textContent = who() + ' · ' + (p ? '📒 ' + p.name : c.view && c.view !== 'khata' ? '📱 ' + (SCREEN_NAME[c.view] || c.view) : (H.owner() ? 'poori ijazat' : 'aaj ki entries / transfer')); }
   paintSugg();
   if (!$('agMsgs').children.length) addMsg('ai', 'Assalam o alaikum! Main Noor Agent hoon. Baqaya, din ka hisaab, **stock / rate**, **aaj ki sale**, due dates poochein — ya bol kar kaam karwayein: entry, **rate badalna**, **purchase**, **godam transfer**, **note**, **hisaab**. Har kaam pehle card par dikhega, aap ✓ karein.');
-  if (opt.mic) listen(); else if (text) ask(text); else setTimeout(() => $('agInput')?.focus(), 60);
+  if (opt.kb) kbOpen(); else if (opt.mic) listen(); else if (text) ask(text); else setTimeout(() => $('agInput')?.focus(), 60);
 }
 // v2.99.10: 🎤 GEMINI KHUD SUNTA HAI — malik: "awaz sahi nahi pehchanta, hum kuch bolte hain ye kuch samajhta hai".
 //   Wajah: phone ka awaz-system (ur-PK) Urdu harf likhta tha (khate Roman mein) aur naam ghalat. Ab: mic -> WAV (16k mono) -> Gemini
@@ -1154,6 +1187,7 @@ async function onClick(e) {
   if (d.agJaanch != null) { closeAgent(); H.openJaanch(); return; }
   if (d.agMic != null) { if (busy) { H.notice('⏳ Pehla jawab aa raha hai…'); return; } listen(); return; }
   if (d.agGmic != null) { if (busy) { H.notice('⏳ Pehla jawab aa raha hai…'); return; } listenG(); return; }
+  if (d.agKb != null) { kbOpen(); return; }
   if (d.agPick) { notePartyPick(d.agPick); return ask(`${d.agName} (account_id: ${d.agPick})`, d.agName); }
   if (d.agIpick) return ask(`${d.agName} (item_id: ${d.agIpick})`, d.agName);
   if (d.agBrm || d.agBtog || d.agBpick) {   // v2.99.11: kai entries wale card ki line: ✕ hatao / 💵🏦 / naam chuno
@@ -1165,7 +1199,7 @@ async function onClick(e) {
     batchBal(c); const el = document.getElementById('agc-' + cid); if (el) el.outerHTML = cardHTML(cid); return;
   }
   if (d.agHint) { const h = HINTS[d.agHint]; if (h) { quickReply(h[0]); const i = $('agInput'); if (i) { i.placeholder = h[1]; i.focus(); } } return; }
-  if (d.agFill != null) { const i = $('agInput'); if (i) { i.value = d.agFill; i.focus(); try { i.setSelectionRange(i.value.length, i.value.length); } catch {} } return; }
+  if (d.agFill != null) { const i = $('agInput'); if (i) { kbStop(); i.value = d.agFill; kbPrev = i.value; i.focus(); try { i.setSelectionRange(i.value.length, i.value.length); } catch {} } return; }
   if (d.agRoute) { closeAgent(); H.route(d.agRoute); return; }
   if (d.agPpsend) {
     const c = pending.get(d.agPpsend); if (!c || c.sentOk || c.sending) return;
@@ -1195,12 +1229,13 @@ export function paintAgentBar(on) {
   bar.dataset.ready = '1';
   bar.innerHTML = `<button type="button" class="ag-bar-main" data-agb-open><span class="ag-orb">🤖</span><span class="ag-bar-txt"><b>Noor Agent</b><small>Poochein ya hukum dein — "Bilal ka baqaya?" · "Aaj ki sale?"</small></span><span class="ag-bar-go">➤</span></button>
     <button type="button" class="ag-bar-mic" data-agb-mic aria-label="Bol kar poochein">🎤</button>
-    <div class="ag-bar-chips"><button type="button" data-agb-say="Aaj ka hisaab">📊 Aaj ka hisaab</button><button type="button" data-agb-say="Kis ki due date guzar gayi?">⏰ Due</button><button type="button" data-agb-say="Sab se zyada kis se lene hain?">💰 Lene</button><button type="button" data-agb-say="Stock add karna hai">📦 Stock</button><button type="button" data-agb-say="Aaj ki sale">🧾 Sale</button><button type="button" data-agb-say="">➕ Entry likhwao</button></div>`;
+    <div class="ag-bar-chips"><button type="button" data-agb-say="Aaj ka hisaab">📊 Aaj ka hisaab</button><button type="button" data-agb-say="Kis ki due date guzar gayi?">⏰ Due</button><button type="button" data-agb-say="Sab se zyada kis se lene hain?">💰 Lene</button><button type="button" data-agb-kb>⌨️ Bolo</button><button type="button" data-agb-say="Stock add karna hai">📦 Stock</button><button type="button" data-agb-say="Aaj ki sale">🧾 Sale</button><button type="button" data-agb-say="">➕ Entry likhwao</button></div>`;
   bar.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
     if (d.agbOpen != null) openAgent();
     else if (d.agbSay != null) openAgent(d.agbSay);
     else if (d.agbMic != null) openAgent('', { mic: true });
+    else if (d.agbKb != null) openAgent('', { kb: true });
   });
 }
 // test ke liye (app mein istemal nahi)

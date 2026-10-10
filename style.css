@@ -2465,3 +2465,5 @@ body.ag-lock .ag-fab{display:none!important}
 .ag-gmic small{color:var(--accent-ink,#4b3fd1)}
 .ag-mic.rec small{color:#fff}
 @media (max-width:700px){.ag-in{grid-template-columns:1fr 46px 50px 50px 52px;gap:5px}.ag-mic small{font-size:10px}.ag-mic i{font-size:20px}}
+/* v2.99.13: ⌨️ Bolo (keyboard) chip — hamesha chips ki line mein pehla */
+.ag-sugg .ag-sg-kb{background:linear-gradient(135deg,#10b981,#0f9f6e)!important;color:#fff!important;border:0!important;font-weight:800!important;box-shadow:0 3px 10px rgba(16,185,129,.35)}
