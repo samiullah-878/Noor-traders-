@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.99.23';
-import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.99.23';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.99.24';
+import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.99.24';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -50,6 +50,7 @@ function stock() {
 }
 // v1.61: POS jaisa — counter mein KHULA PIECE "Peice Rate" (SaleRate2 -> item.rate2) se, POORA CARTON "Cotton Rate"
 // (SaleRate -> item.rate, fi piece) se. rate2 na ho (purana sync) to dono item.rate. Wholesale pehle jaisa (ek hi rate).
+const can = k => { try { return typeof window.ntCan === 'function' ? window.ntCan(k) : true; } catch { return true; } };   // v2.99.24
 const rateFor = (it, m = mode) => r2(m === 'wholesale' ? (Number(it.wrate) || Number(it.rate) || 0) : (Number(it.rate2) || Number(it.rate) || 0));
 const crateFor = (it, m = mode) => r2(m === 'wholesale' ? (Number(it.wrate) || Number(it.rate) || 0) : (Number(it.rate) || 0));
 const setStd = (l, it) => { l.rate = rateFor(it); l.std = l.rate; l.crate = crateFor(it); l.cstd = l.crate; };
@@ -113,7 +114,7 @@ let gate = 0; try { gate = Number(localStorage.getItem('sam-sale-gate')) || 0; }
 const gateDiv = () => { const s = saleStock(); const br = (s.branches || []).filter(b => b !== 0); const on = gate > 0; return `<div class="sale-copies sale-gate"><small>🚪 Gate pass</small><button type="button" data-sale-gate="${on ? 0 : (SALE_BRANCH)}" class="${on ? 'on' : ''}">${on ? 'ON' : 'OFF'}</button>${on ? br.map(b => `<button type="button" data-sale-gate="${b}"${gate === b ? ' class="on"' : ''}>${esc(s.branchName ? s.branchName(b, s.names) : 'Godam ' + b)}</button>`).join('') : '<small class="sale-copies-h">off = sirf doosre godam ka</small>'}</div>`; };
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-sale-gate]'); if (!b) return; gate = Number(b.dataset.saleGate) || 0; try { localStorage.setItem('sam-sale-gate', String(gate)); } catch {} if (gate) for (const l of cart) { l.godam = gate; const it = itemIn(gate, l.id); if (it) setStd(l, it); } rerender(); });
 let copies = 1; try { copies = Math.min(3, Math.max(1, Number(localStorage.getItem('sam-sale-copies')) || 1)); } catch {}   // v2.40: bill kitni dafa chhape (gate pass ek hi)
-const counterDiv = () => `<div class="sale-copies sale-counter"><small>🖨 Counter</small>${COUNTERS.map(([k, n]) => `<button type="button" data-sale-counter="${k}"${isPC(k) ? ` class="pc-chip${pcLive(pcOf(k)) ? '' : ' off'}${counter === k ? ' on' : ''}" title="${pcLive(pcOf(k)) ? 'Is PC par bina window ke print — printer: ' + String(pcOf(k)?.printer || 'default').replace(/"/g, '') : 'PC band / agent nahi chal raha'}"` : (counter === k ? ' class="on"' : '')}>${n}</button>`).join('')}</div>`;
+const counterDiv = () => !can('sale.pc') ? '' : `<div class="sale-copies sale-counter"><small>🖨 Counter</small>${COUNTERS.map(([k, n]) => `<button type="button" data-sale-counter="${k}"${isPC(k) ? ` class="pc-chip${pcLive(pcOf(k)) ? '' : ' off'}${counter === k ? ' on' : ''}" title="${pcLive(pcOf(k)) ? 'Is PC par bina window ke print — printer: ' + String(pcOf(k)?.printer || 'default').replace(/"/g, '') : 'PC band / agent nahi chal raha'}"` : (counter === k ? ' class="on"' : '')}>${n}</button>`).join('')}</div>`;
 const printerDiv = () => { if (!isPC(counter)) return ''; const p = pcOf(counter); const list = Array.isArray(p?.printers) ? p.printers.filter(x => x && x.n && x.h) : []; if (!list.length) return ''; const cur = String(counter).split(':')[2] || '';
   return `<div class="sale-copies sale-prn"><small>🖨 Printer</small><button type="button" data-sale-printer=""${cur ? '' : ' class="on"'}>Default${p.printer ? ' (' + esc(String(p.printer).slice(0, 16)) + ')' : ''}</button>${list.map(x => `<button type="button" data-sale-printer="${esc(x.h)}"${cur === x.h ? ' class="on"' : ''}>${esc(x.n.slice(0, 22))}</button>`).join('')}</div>`; };
 const setPrinter = h => { if (!isPC(counter)) return; setCounter('pc:' + String(counter).split(':')[1] + (h ? ':' + h : ''), true); };
@@ -415,7 +416,7 @@ export function renderSale() {
     ${editing ? `<div class="sale-edit-bar"><b>✏️ Bill #${esc(String(editing.saleNo || ''))} edit ho raha hai</b><small>Purana Rs ${num(editing.oldTotal)} · items badlein, phir "Bill badlo" — POS mein wahi bill (number wahi) badlega</small><button type="button" data-sale-edit-x="1">✕ Edit chhoro</button></div>` : ''}
     <div class="account-tools">
       <button class="sale-mode${mode === 'counter' ? ' selected' : ''}" data-sale-mode="counter">🛒 Counter Sale</button>
-      <button class="sale-mode${mode === 'wholesale' ? ' selected' : ''}" data-sale-mode="wholesale">📦 Wholesale</button>
+      ${can('sale.wholesale') ? `<button class="sale-mode${mode === 'wholesale' ? ' selected' : ''}" data-sale-mode="wholesale">📦 Wholesale</button>` : ''}
     </div>
     <div class="sale-total"><small>${mode === 'wholesale' ? 'Wholesale (W rate)' : 'Counter (R rate)'} · ${num(cart.length)} items</small>
       <strong id="saleTotal">Rs ${num(total)}</strong></div>
@@ -809,7 +810,7 @@ const billCls = b => b.farq ? 'fq' : b.cancelled ? 'cx' : b.status === 'failed' 
 const billIcon = { fq: '🧮', cx: '⊘', fl: '⚠', wt: '⏳', pd: '✓', up: '✗' };
 // v2.95.2: nishan = POST haal — ✓ posted, ○ (khali) un-posted; rang = paid (hara) / udhaar (laal)
 const psIcon = (b, c) => (c === 'fq' || c === 'cx' || c === 'fl' || c === 'wt') ? billIcon[c] : b.ps === 2 ? '✓' : b.ps === 1 ? '' : '•';
-const canEditBill = b => !b.cancelled && !b.farq && b.ps === 1 && b.posId > 0 && (b.src === 'pos' || b.status === 'done');
+const canEditBill = b => can('sale.edit') && !b.cancelled && !b.farq && b.ps === 1 && b.posId > 0 && (b.src === 'pos' || b.status === 'done');
 async function billLines(b) {
   if (b.posId && lineCache.has(b.posId)) return lineCache.get(b.posId);
   if (b.posId && cloud?.getPosSaleLines) { try { const L = await cloud.getPosSaleLines(b.posId); if (L && L.length) { lineCache.set(b.posId, L); return L; } } catch {} lineTried.add(b.posId); }
@@ -917,7 +918,7 @@ function mountBills(box) {
   const m = { box, paint }; mounts.add(m); paint();
   return setInterval(() => { if (!box.isConnected) return; syncEl.innerHTML = posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : ''; syncEl.className = 'nb-sync' + (posSyncAt && Date.now() - posSyncAt > 90000 ? ' old' : ''); }, 5000);
 }
-setSaleBillsHook(box => mountBills(box));   // PC scan screen ka baayan hissa
+setSaleBillsHook(box => { if (!can('sale.bills')) { box.innerHTML = ''; return; } mountBills(box); });   // PC scan screen ka baayan hissa
 // v2.96.2: raat 12 ke baad screen khuli rahe to bhi naya din khud (pehle refresh tak kal ki list rehti thi)
 setInterval(() => { if (salesDay && salesDay !== todayStr()) { watchSales(); if (billsDay && billsDay >= todayStr()) billsDay = ''; billsRepaint(); } }, 60000);
 

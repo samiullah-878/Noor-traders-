@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.23';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.23';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.24';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.24';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1953,6 +1953,7 @@ async function copyLast(btn) {
 
 async function save(opt = {}) {
   const auto = !!opt.auto, no = why => ({ ok: false, why: [why] });   // v2.99.7: 🤖 agent — har confirm / alert ki jagah "nahi bheja + wajah"
+  { let ok = true; try { ok = typeof window.ntCan !== 'function' || window.ntCan('pur.post'); } catch {} if (!ok) { notice('POS mein bill bhejne ki ijazat nahi — malik se kahein'); return auto ? no('ijazat nahi') : undefined; } }   // v2.99.24
   if (saving) return auto ? no('pehla bill abhi ja raha hai') : undefined;
   if (!canUse()) { notice('Is login par POS purchase ki ijazat nahi'); return auto ? no('POS purchase ki ijazat nahi') : undefined; }
   const p = partyOf(supplier);

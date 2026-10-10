@@ -2547,3 +2547,19 @@ RULES v2.36 (firestore-rules-2.36.html, version.json rules 2.36 rulesChanged tru
 YAHAN AI NAHI. TEST hd/st.mjs: auth (ticket login, perm switch, perm nahi = scope-required, band = staff-disabled, ghalat cred =
   signOut), UI (naya mulazim -> link khud, WhatsApp link, perm tick, device card/hatao, band/chalu, ?join= se jorna) ALL OK; baqi sab ALL OK.
 VERSION BUMP: ?v=2.99.23, APP_VER, "Blue Khata v2.99.23", sw CACHE, version.json.
+
+==================== App v2.99.24 (2026-10-11) — 👥 mulazim: SCREEN KE ANDAR KE OPTION (deny list) ====================
+MALIK: "baqi screens bhi, aur har screen ke neeche ke option — kaunsa dena hai kaunsa nahi".
+* CAPS (app.js): sale [sale.wholesale, sale.edit, sale.bills, sale.pc] · stock [stock.transfer, stock.tc, stock.count, stock.in,
+  stock.reg, stock.demand, stock.tolai, stock.item] · purchase [pur.post, pur.cash] · full [v:daily, v:due, v:expenses, v:cash,
+  v:dasti, v:notes, v:barcode, v:history, kh.party, kh.entry, kh.edit, kh.pdf, kh.transfer]. Tick hata = deny[] (blueStaff + key doc;
+  cloud.saveStaff saaf karta). deny khali = sab. can(k) = owner / non-staff / deny mein nahi; window.ntCan (pos-stock / sale / purchase).
+* UI: Naya / edit form — screen tick karo to neeche us ke option (sab tick, hatao jo nahi dena); card par "<screen> ke andar · N band"
+  (details) chips (✓ / ✗ tap = foran save).
+* Enforce: app.js nav (full staff: CAP_VIEW se view buttons chhup), allowedView, report button (kh.pdf), Naya account (kh.party,
+  canEditAccount), entry buttons (kh.entry), Payment transfer (kh.transfer), canEditEntry (kh.edit), purchaseForm (pur.cash);
+  pos-stock: canEditItem (stock.item), transfer / in / reg / tc / demand / tolai buttons, countLocked (stock.count);
+  sale: Wholesale mode button, canEditBill (sale.edit), counterDiv (sale.pc), bills list (sale.bills); purchase save() (pur.post).
+  Rules nahi badle (deny app-side; screens rules perms se).
+TEST hd/st.mjs: form deny (stock.transfer) save, card sub chips, cap toggle -> deny — ALL OK; baqi sab ALL OK.
+VERSION BUMP: ?v=2.99.24, APP_VER, "Blue Khata v2.99.24", sw CACHE, version.json.

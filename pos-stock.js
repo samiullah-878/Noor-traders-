@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.23';
-import { liveLabelsHTML } from './barcode.js?v=2.99.23';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.24';
+import { liveLabelsHTML } from './barcode.js?v=2.99.24';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -24,11 +24,12 @@ let counts = new Map(), round = '', stopCount = null, isOwner = () => false;
 // v1.49: _flags (baqi / check nishan), _lock (malik ne ginti band ki)
 let flags = {}, countOff = false;
 const flagOf = id => flags[String(id)] || {};
-const countLocked = () => countOff && !isOwner();
+const countLocked = () => (countOff || !can('stock.count')) && !isOwner();
 
 let aliasStop = null;
 let itemCfg = {}, cfgStop = null, ptList = [], ptStop = null;                         // v2.5: stockConfig (mulazim item/rates badal sake)
-const canEditItem = () => isOwner() || itemCfg.itemEdit === true;
+const can = k => { try { return typeof window.ntCan === 'function' ? window.ntCan(k) : true; } catch { return true; } };   // v2.99.24: mulazim ke andar ke option (app.js can)
+const canEditItem = () => isOwner() || (itemCfg.itemEdit === true && can('stock.item'));
 let inPdfOf = null, tolaiOf = null, tolaiClickOf = null;
 export function setInPdf(fn) { inPdfOf = fn; }
 export function setTolai(open, click) { tolaiOf = open; tolaiClickOf = click; }   // v2.7
@@ -560,9 +561,9 @@ function summaryHTML(branches, pick, items, meta, names, canJama = false) {
            <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>`
         : `<div class="sh-scanrow"><button class="sh-wide sh-scan" data-stock-scan="1">${camMissing() ? '🔫 Scanner gun se scan karein (ek ya kai items)' : '📷 Barcode scan karein (ek ya kai items)'}</button><button type="button" class="sh-mic" data-stock-mic="1" title="Awaz se dhoondein">🎤</button></div>
            ${canEditItem() ? '<button class="sh-wide" data-stock-newitem="1">➕ Naya item</button>' : ''}
-           <button class="sh-wide" data-stock-in="1">📥 Aaya / gaya maal</button><button class="sh-wide" data-stock-reg="1">📋 Transfer register</button><button class="sh-wide sh-tc" data-stock-tc="1">🧾 Transfer check (scan)</button><button class="sh-wide dm-btn" data-demand="1">📢 Demand (khatam / kam)</button>
-           <button class="sh-wide sh-tolai" data-stock-tolai="1">⚖️ Tolai</button>${canEditItem() ? `<button class="sh-wide sh-urdu" data-stock-urdu="1">🔤 Urdu naam banao (AI)${Object.keys(urdu).length ? ' · ' + num(Object.keys(urdu).length) + ' bane' : ''}</button>` : ''}
-           <button class="sh-wide" data-stock-transfer="1">⇄ Transfer note (godam se godam)</button>
+           ${can('stock.in') ? '<button class="sh-wide" data-stock-in="1">📥 Aaya / gaya maal</button>' : ''}${can('stock.reg') ? '<button class="sh-wide" data-stock-reg="1">📋 Transfer register</button>' : ''}${can('stock.tc') ? '<button class="sh-wide sh-tc" data-stock-tc="1">🧾 Transfer check (scan)</button>' : ''}${can('stock.demand') ? '<button class="sh-wide dm-btn" data-demand="1">📢 Demand (khatam / kam)</button>' : ''}
+           ${can('stock.tolai') ? '<button class="sh-wide sh-tolai" data-stock-tolai="1">⚖️ Tolai</button>' : ''}${canEditItem() ? `<button class="sh-wide sh-urdu" data-stock-urdu="1">🔤 Urdu naam banao (AI)${Object.keys(urdu).length ? ' · ' + num(Object.keys(urdu).length) + ' bane' : ''}</button>` : ''}
+           ${can('stock.transfer') ? '<button class="sh-wide" data-stock-transfer="1">⇄ Transfer note (godam se godam)</button>' : ''}
            ${($('search')?.value || '').trim() ? '<button class="sh-wide" data-stock-clear="1">✕ Search saaf karein</button>' : ''}`}
     </div>
     ${isOwner() ? `<label class="sh-switch"><input type="checkbox" data-stock-itemedit="1"${itemCfg.itemEdit ? ' checked' : ''}> Mulazim item aur rates badal sake</label>` : ''}
