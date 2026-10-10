@@ -3767,3 +3767,32 @@ TEST pp/t.js (naqli SQL + Firestore): pehli dafa purane nahi, settle 2 chakkar, 
   bina lines, POS user, pal bhar gayab = kuch nahi, MITA slip, CANCEL slip, printer band = ek report + 2 min, OFF / ON purane nahi,
   2 copies, reprint — ALL OK. set.mjs (settings HTML) + screenshot. t / m / q / v / p2 / sc / rt / pa / jord / ctn / give / cl ALL OK.
 VERSION BUMP: ?v=2.99.20, APP_VER, "Blue Khata v2.99.20", sw CACHE, version.json; pc/manifest 2026-10-10.1 (transfer-sync.js + purchase-parchi.js sha).
+
+==================== App v2.99.21 (2026-10-10) + RULES v2.35 + PC transfer-dekho v1.2 — 🧾 TRANSFER CHECK (barcode scan = maal pahuncha) ====================
+MALIK: "transfer note par barcode lag gaya — do screen: jo barcode nikle un ka waqt, aur larka godam se maal laye to check kar ke scan /
+  number likhe; scan ke baad edit na ho (chori ruke) · mulazim bhi scan kare · neeche device ID jis device se scan hua".
+  (Parchi par barcode POS / app pehle se chhapte hain — humne print mein kuch nahi badla.)
+* Stock screen: "🧾 Transfer check (scan)" button (data-stock-tc) -> pos-stock.js openTransferCheck() (dialog, .tc-root).
+  - 📤 Nikle: posTransfers (Aaj / Kal / 7 / 30 din; Sab / Godam → Dukan (to = main) / Dukan → Godam). KPIs: nahi pahunche (der se),
+    check ho gaye, farq. Pehle "nahi pahunche" (purana upar), phir "check ho chuke" (taza upar). Nishan: ⏳ raste mein (peela),
+    ⏳ 2 ghante+ nahi pahuncha (laal, TC_LATE), ✓ pahunch gaya waqt · kaun · kitne min, ⚠️ farq "note". Card kholo = items + 👤 / 🕒 /
+    📱 Device; malik: "🗑 Check hatao" (confirm + history).
+  - 📷 Scan / Check: camera (scanPick -> dialog band, code ke baad wapas), scanner gun (pos-stock ka kb buffer: .tc-root khula ho to code
+    seedha tcLookup — input focus ke baghair bhi), ya number + ✓. tcFind: transferNo bilkul / sirf hindse (aage ke 0 chhor kar) /
+    transferId. Nahi mila = laal + "1-2 min baad". Pehle check = 🔒 laal (kaun, kab, device) + bzzz. Khula = items + "✓ Maal poora mila"
+    / "⚠️ Farq hai" (likhna lazmi). Save = runTransaction (doc ho to tc/done -> lock), beep, audit (stock / tr-check).
+  - Neeche: "Is device se aaj N note check hue · 📱 Device: XXX-XXX" (app ka deviceId / devShow).
+  - 📋 Transfer register ke har card par ✓ / ⏳ / ⚠️ (tcBadge).
+* Data: transferChecks/T<TransferID> {transferId, transferNo, from, to, issuedAt, status ok|farq, note, by, byName, device, lines, ts(server)}.
+  cloud.js listenTransferChecks(since) / saveTransferCheck (transaction) / deleteTransferCheck; serverTimestamp import.
+* RULES v2.35 (firestore.rules + firestore-rules-2.35.html; version.json rules 2.35 rulesChanged true): transferChecks read owner/staff;
+  create owner/staff, id ^T[0-9]{1,12}$, hasOnly keys, by == uid, ts == request.time, status ok/farq, farq = note lazmi, sizes;
+  UPDATE kisi ko nahi; delete sirf malik. Rules upload na hon to screen par peeli warning.
+* pc/transfer-dekho.js v1.2: createdOn (CreatedOn — note asal mein kab bana) + har 1 minute (pehle 2). manifest 2026-10-10.2.
+  App issue waqt = createdOn || at.
+* stockSetup ko app se: audit (auditEvent), name (Malik / mulazim naam), device (devShow(deviceId())).
+YAHAN AI NAHI. TEST hd/tc.mjs (asal pos-stock): tabs + ginti, tarteeb, late / ok text, device, godam chips, nahi mila, khula card,
+  save (Bilal, XYZ-789, issuedAt), saved card "25 min baad", audit, dobara = lock, aage 0 wala number, race (kisi aur ne pehle) = lock,
+  farq khali = mana, farq save, scanner gun (tez keys + Enter) = lookup, register ✓/⚠️, malik delete + audit, rules warning — ALL OK.
+  Screenshots light / dark 380px overflow nahi. t / m / q / v / p2 / sc / rt / pa / jord / ctn / give / cl / pp ALL OK.
+VERSION BUMP: ?v=2.99.21, APP_VER, "Blue Khata v2.99.21", sw CACHE, version.json (rules 2.35).

@@ -1,5 +1,5 @@
 // =========================================================
-//  transfer-dekho.js  v1.1  (2026-09-28: 60 din)  ·  v1  (2026-09-24) — POS ke STOCK TRANSFER app mein dikhane ke liye
+//  transfer-dekho.js  v1.2  (2026-10-10: 🧾 Transfer check — createdOn (asal banne ka waqt) + har 1 minute) · v1.1  (2026-09-28: 60 din)  ·  v1  (2026-09-24) — POS ke STOCK TRANSFER app mein dikhane ke liye
 //  POS ki dbo.StockTransfer + StockTransferDetail parhta hai (sirf SELECT — POS mein kuch nahi badalta)
 //  aur pichhle DIN din ke transfer Firestore `posTransfers` mein rakhta hai. App ki
 //  "📥 Aaya / gaya maal" screen wahi se dikhati hai — chahe transfer POS par bana ho ya app se.
@@ -17,7 +17,7 @@ const { getFirestore } = require('firebase-admin/firestore');
 
 const BUSINESS_ID = 'noor-traders';
 const DIN = 60;   // v1.1 (2026-09-28): 14 -> 60 — app ka 📋 Transfer register 60 din tak                 // kitne din ke transfer app mein rakhne hain
-const EVERY = 2 * 60 * 1000;    // har 2 minute
+const EVERY = 60 * 1000;        // v1.2: har 1 minute (pehle 2) — app ka 🧾 Transfer check jaldi note dekhe
 const LOCK_PORT = 47822;
 
 const DIR = __dirname;
@@ -77,6 +77,7 @@ async function once() {
       from: Number(h.FromBranchID) || 0,
       to: Number(h.ToBranchID) || 0,
       at, day: new Date(at).toISOString().slice(0, 10),
+      createdOn: h.CreatedOn ? new Date(h.CreatedOn).getTime() || 0 : 0,   // v1.2: note asal mein kab bana (TransferDate mein waqt na ho to bhi)
       app: /BK-APP/i.test(String(h.SystemNotes || '')) || String(h.Remarks || '').trim().toLowerCase() === 'app',
       note: String(h.Description || h.Remarks || '').slice(0, 120),
       lines: ls.slice(0, 200).map(l => ({
