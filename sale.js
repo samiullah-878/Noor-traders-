@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.99.21';
-import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.99.21';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.99.22';
+import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.99.22';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -815,6 +815,42 @@ async function billLines(b) {
   if (b.posId && cloud?.getPosSaleLines) { try { const L = await cloud.getPosSaleLines(b.posId); if (L && L.length) { lineCache.set(b.posId, L); return L; } } catch {} lineTried.add(b.posId); }
   return (b.lines || []).map(l => ({ i: Number(l.id), n: l.name, q: Number(l.qty) || 0, r: Number(l.rate) || 0, g: Number(l.godam) || SALE_BRANCH }));
 }
+// ---------- v2.99.22: 🏷 WHOLESALE BILLS KI NIGRANI (sirf malik) ----------
+// "whole sale" naam (blueAccess/reportConfig.wsNames — Settings se) wale POS bill + app ke wholesale bill + raat ki report ne jo
+// "counter par wholesale rate" pakre. Har line: retail (poora carton = rate, khula = rate2) vs diya gaya rate -> farq;
+// ⚠️ shak = aadhi ya zyada lines CHHOTI tadad (< wsSmall pcs, jaise 1-2 piece) — asal wholesale nahi lagta. Yahan AI nahi.
+let wsCfg = { names: ['whole sale'], small: 3 }, wsStop = null, wsRep = new Map(), wsRepTried = new Set();
+const wsNorm = x => String(x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+function wsWatch() {
+  if (wsStop || !isOwner() || !cloud?.listenReportConfig) return;
+  wsStop = cloud.listenReportConfig(c => { if (!c) return; wsCfg = { names: Array.isArray(c.wsNames) && c.wsNames.length ? c.wsNames : ['whole sale'], small: Math.max(1, Number(c.wsSmall) || 3) }; billsRepaint(); });
+}
+async function wsReport(day) {   // raat ki report ke "counter par W rate" bill
+  if (wsRep.has(day) || wsRepTried.has(day) || !cloud?.getReport) return; wsRepTried.add(day);
+  try { const r = await cloud.getReport(day); const m = new Map(); for (const x of r?.ws?.bills || []) if (x.counter) m.set(Number(x.id), x); wsRep.set(day, m); billsRepaint(); } catch {}
+}
+const wsNamed = b => (b.src === 'app' && b.credit) || (b.src === 'pos' && !!b.party && wsCfg.names.some(n => wsNorm(n) && wsNorm(b.party).includes(wsNorm(n))));
+const wsIs = (b, day) => !b.cancelled && !b.farq && (wsNamed(b) || !!wsRep.get(day)?.get(Number(b.posId)));
+function wsInfo(b) {   // lines aa gayi hon to farq / shak
+  const L = (b.posId && lineCache.get(b.posId)) || (b.src === 'app' ? (b.lines || []).map(l => ({ i: Number(l.id), q: Number(l.qty) || 0, r: Number(l.rate) || 0, g: Number(l.godam) || SALE_BRANCH })) : null);
+  if (!L) return null;
+  let farq = 0, retailRs = 0, small = 0, wsRate = 0; const per = [];
+  for (const l of L) {
+    const q = Number(l.q) || 0, r = Number(l.r) || 0, it = itemIn(Number(l.g) || SALE_BRANCH, l.i) || itemIn(SALE_BRANCH, l.i);
+    const pk = Number(it?.pack) || 0, full = pk > 1 && Math.abs(q / pk - Math.round(q / pk)) < 1e-6;
+    const retail = it ? (full ? crateFor(it, 'counter') : rateFor(it, 'counter')) : 0, wr = it ? Number(it.wrate) || 0 : 0;
+    if (q > 0 && retail > 0) { retailRs += retail * q; if (r < retail * 0.995) farq += (retail - r) * q; } else retailRs += r * q;
+    if (q > 0 && q < wsCfg.small) small++;
+    if (q > 0 && wr > 0 && r <= wr * 1.005 && retail > 0 && r < retail * 0.995) wsRate++;
+    per.push({ retail: r2(retail), small: q > 0 && q < wsCfg.small });
+  }
+  return { farq: r2(farq), retailRs: r2(retailRs), small, n: L.length, shak: L.length > 0 && small >= Math.ceil(L.length / 2), counter: !wsNamed(b) && L.length > 0 && wsRate >= Math.ceil(L.length / 2), per };
+}
+let wsLoading = false;
+async function wsLoadLines(list) {   // ws chip khula ho to sab wholesale bills ke items (cache) — farq / shak ke liye
+  if (wsLoading) return; const need = list.filter(b => b.posId && !lineCache.has(b.posId) && !lineTried.has(b.posId)); if (!need.length) return;
+  wsLoading = true; try { for (const b of need.slice(0, 60)) await billLines(b); } finally { wsLoading = false; billsRepaint(); }
+}
 const mounts = new Set();
 function billsRepaint() { for (const m of [...mounts]) { if (!m.box.isConnected) { mounts.delete(m); continue; } m.paint(); } const b = $('saleTodayBtn'); if (b) b.textContent = todayLabel(); }
 const FILTERS = [['all', 'Sab'], ['un', '○ Un-posted'], ['po', '✓ Posted'], ['pd', '🟢 Paid'], ['up', '🔴 Udhaar'], ['pc', '💻 PC'], ['app', '📱 App']];
@@ -836,13 +872,21 @@ function mountBills(box) {
     box.classList.toggle('nb-past', !isToday);
     const all = billsData();
     const t = String(q.value || '').trim().toLowerCase(), dg = t.replace(/[^0-9]/g, '');
-    const pass = b => filter === 'all' || (filter === 'pd' && billCls(b) === 'pd') || (filter === 'up' && billCls(b) === 'up') || (filter === 'un' && b.ps === 1 && !b.cancelled) || (filter === 'po' && b.ps === 2) || (filter === 'pc' && b.src === 'pos') || (filter === 'app' && b.src === 'app');
+    const pass = b => filter === 'all' || (filter === 'pd' && billCls(b) === 'pd') || (filter === 'up' && billCls(b) === 'up') || (filter === 'un' && b.ps === 1 && !b.cancelled) || (filter === 'po' && b.ps === 2) || (filter === 'pc' && b.src === 'pos') || (filter === 'app' && b.src === 'app') || (filter === 'ws' && wsIs(b, vd));
     const rows = all.filter(b => pass(b) && (!t || smartHit(`${b.saleNo || ''} ${b.party || ''} ${b.where || ''} ${b.by || ''}`, t) || (dg.length >= 2 && String(Math.round(Math.abs(b.total))).startsWith(dg))));
-    const cnt = k => all.filter(b => k === 'all' || (k === 'pd' && billCls(b) === 'pd') || (k === 'up' && billCls(b) === 'up') || (k === 'un' && b.ps === 1 && !b.cancelled) || (k === 'po' && b.ps === 2) || (k === 'pc' && b.src === 'pos') || (k === 'app' && b.src === 'app')).length;
-    fbox.innerHTML = FILTERS.map(([k, n]) => `<button type="button" data-nb-f="${k}" class="${filter === k ? 'on' : ''}">${n} <em>${cnt(k)}</em></button>`).join('');
+    const cnt = k => all.filter(b => k === 'all' || (k === 'pd' && billCls(b) === 'pd') || (k === 'up' && billCls(b) === 'up') || (k === 'un' && b.ps === 1 && !b.cancelled) || (k === 'po' && b.ps === 2) || (k === 'pc' && b.src === 'pos') || (k === 'app' && b.src === 'app') || (k === 'ws' && wsIs(b, vd))).length;
+    if (isOwner()) { wsWatch(); wsReport(vd); } else if (filter === 'ws') filter = 'all';
+    fbox.innerHTML = (isOwner() ? [...FILTERS, ['ws', '🏷 Wholesale']] : FILTERS).map(([k, n]) => `<button type="button" data-nb-f="${k}" class="${filter === k ? 'on' : ''}">${n} <em>${cnt(k)}</em></button>`).join('');
     const live = rows.filter(b => !b.cancelled && !b.farq);
     const tot = live.reduce((n, b) => n + b.total, 0), udh = live.filter(b => billCls(b) === 'up').reduce((n, b) => n + (b.total - b.cash), 0);
     sum.innerHTML = `${num(rows.length)} bills · <b>Rs ${num(tot)}</b>${udh > 0.5 ? ` · <span class="red">udhaar Rs ${num(udh)}</span>` : ''}`;
+    if (filter === 'ws') {   // v2.99.22: 🏷 wholesale ka khulasa
+      wsLoadLines(live);
+      const inf = live.map(b => [b, wsInfo(b)]), got = inf.filter(([, i]) => i), fq = got.reduce((n, [, i]) => n + i.farq, 0), rt = got.reduce((n, [, i]) => n + i.retailRs, 0), sk = got.filter(([, i]) => i.shak), ct = live.filter(b => !wsNamed(b)).length;
+      sum.innerHTML = `<div class="ws-sum"><b>🏷 ${num(live.length)} wholesale bill · Rs ${num(tot)}</b><span>Retail par hote: <b>Rs ${num(r2(rt + live.filter(b => !wsInfo(b)).reduce((n, b) => n + b.total, 0)))}</b> · farq <b class="red">Rs ${num(r2(fq))}</b></span>
+        <span>${sk.length ? `<b class="red">⚠️ ${sk.length} shak wale</b> (zyada lines ${wsCfg.small} pcs se kam) · farq Rs ${num(r2(sk.reduce((n, [, i]) => n + i.farq, 0)))}` : '✓ koi shak wala nahi'}${ct ? ` · 🔁 ${ct} counter par W rate (raat ki report se)` : ''}</span>
+        ${got.length < live.length ? `<small>⏳ ${live.length - got.length} bills ke items aa rahe hain…</small>` : ''}<small>Retail = aaj ka rate (purane din ka farq andaza)</small></div>`;
+    }
     const un = all.filter(b => b.ps === 1 && !b.cancelled && !b.farq).length; unpBtn.textContent = `🖨 Un-posted ${un}`; unpBtn.title = `${un} un-posted bills ka print`; unpBtn.disabled = !un;
     syncEl.innerHTML = posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : '';
     syncEl.className = 'nb-sync' + (posSyncAt && Date.now() - posSyncAt > 90000 ? ' old' : '');
@@ -851,8 +895,8 @@ function mountBills(box) {
       const L = open === b.id ? (b.posId && lineCache.get(b.posId)) || (b.src === 'app' ? (b.lines || []).map(l => ({ n: l.name, q: l.qty, r: l.rate })) : null) : null;
       return `<div class="nb-bill ${c}${open === b.id ? ' open' : ''}" data-nb="${esc(b.id)}">
         <div class="nb-row"><i class="${b.ps === 1 && !b.cancelled ? 'unp' : b.ps === 2 ? 'pst' : ''}">${psIcon(b, c)}</i><b class="nb-no">${b.saleNo ? esc(String(b.saleNo).replace(/^0+(?=\d{4})/, '')) : (b.credit ? 'Wholesale' : 'Counter')}</b><b class="nb-amt">${num(b.total)}</b>
-          <small class="nb-meta">${esc(b.where)}${b.by ? ' · ' + esc(b.by) : ''} · ${tm}${b.party && !/counter\s*sale/i.test(b.party) ? ' · ' + esc(b.party) : ''}</small><span class="nb-tags">${b.ps === 2 ? '<u class="ps2">✓ Posted</u>' : b.ps === 1 && !b.cancelled ? '<u class="ps1">○ Un-posted</u>' : ''}${b.farq ? '<u>farq</u>' : ''}${b.edited ? '<u>✏️</u>' : ''}${c === 'up' ? '<u class="ud">udhaar</u>' : ''}</span></div>
-        ${open === b.id ? `<div class="nb-det">${b.status === 'failed' ? `<p class="red">⚠ ${esc(b.error)}</p>` : ''}${L ? L.map(l => `<p><span>${esc(l.n)}</span><span>${num(l.q)} × ${num(l.r)} = <b>${num(r2(l.q * l.r))}</b></span></p>`).join('') : (b.posId && lineTried.has(b.posId) ? '<p class="stat-note">Items abhi PC se nahi aaye (PC sync chalu hai?) — thori dair baad kholein</p>' : '<p class="stat-note">Items aa rahe hain…</p>')}
+          <small class="nb-meta">${esc(b.where)}${b.by ? ' · ' + esc(b.by) : ''} · ${tm}${b.party && !/counter\s*sale/i.test(b.party) ? ' · ' + esc(b.party) : ''}</small><span class="nb-tags">${b.ps === 2 ? '<u class="ps2">✓ Posted</u>' : b.ps === 1 && !b.cancelled ? '<u class="ps1">○ Un-posted</u>' : ''}${b.farq ? '<u>farq</u>' : ''}${b.edited ? '<u>✏️</u>' : ''}${c === 'up' ? '<u class="ud">udhaar</u>' : ''}${filter === 'ws' ? (() => { const i = wsInfo(b); return i ? `${i.shak ? `<u class="ws-shak">⚠️ shak · ${i.small}/${i.n} chhoti</u>` : ''}${i.farq >= 1 ? `<u class="ws-farq">farq Rs ${num(i.farq)}</u>` : ''}${!wsNamed(b) ? '<u class="ws-ct">🔁 counter W rate</u>' : ''}` : '<u>⏳</u>'; })() : ''}</span></div>
+        ${open === b.id ? `<div class="nb-det">${b.status === 'failed' ? `<p class="red">⚠ ${esc(b.error)}</p>` : ''}${L ? L.map((l, li) => { const wi = filter === 'ws' ? wsInfo(b)?.per?.[li] : null; return `<p${wi?.small ? ' class="ws-sm"' : ''}><span>${esc(l.n)}</span><span>${num(l.q)} × ${num(l.r)}${wi && wi.retail > l.r * 1.005 ? ` <s class="ws-rt">retail ${num(wi.retail)}</s>` : ''} = <b>${num(r2(l.q * l.r))}</b></span></p>`; }).join('') : (b.posId && lineTried.has(b.posId) ? '<p class="stat-note">Items abhi PC se nahi aaye (PC sync chalu hai?) — thori dair baad kholein</p>' : '<p class="stat-note">Items aa rahe hain…</p>')}
           <p class="nb-pay">${b.credit ? `Cash Rs ${num(b.cash)}${b.total - b.cash > 0.5 ? ` · <b class="red">Udhaar Rs ${num(b.total - b.cash)}</b>` : ''}` : 'Cash · poora'}</p>
           <div class="nb-acts">${canEditBill(b) ? `<button type="button" class="nb-edit" data-nb-edit="${esc(b.id)}">✏️ Edit</button>` : b.ps === 2 ? '<small>📌 Post ho chuka — edit band</small>' : ''}${b.src === 'app' && b.status === 'done' ? `<button type="button" data-nb-print="${esc(b.id)}">🖨 Dobara print</button>` : ''}</div></div>` : ''}
       </div>`; }).join('') || '<p class="stat-note">Koi bill nahi</p>';
@@ -1005,3 +1049,4 @@ export function saleAgentFill(m, lines) {
   cash = null; keepDraft(); rerender();
   return { n: added.length, total: cartTotal(), mode, lines: added.map(l => ({ name: l.name, ctn: Number(l.ctn) || 0, pcs: Number(l.pcs) || 0, total: lineTotal(l) })) };
 }
+export const _saleTest = { mountBills, billsDataOf };   // test seam (v2.99.22)

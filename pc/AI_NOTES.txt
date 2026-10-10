@@ -2482,3 +2482,41 @@ YAHAN AI NAHI. TEST hd/tc.mjs (asal pos-stock): tabs + ginti, tarteeb, late / ok
   farq khali = mana, farq save, scanner gun (tez keys + Enter) = lookup, register ✓/⚠️, malik delete + audit, rules warning — ALL OK.
   Screenshots light / dark 380px overflow nahi. t / m / q / v / p2 / sc / rt / pa / jord / ctn / give / cl / pp ALL OK.
 VERSION BUMP: ?v=2.99.21, APP_VER, "Blue Khata v2.99.21", sw CACHE, version.json (rules 2.35).
+
+==================== App v2.99.22 (2026-10-11) + PC raat-report.js v1.0 — 🌙 RAAT KI REPORT · ⏰ MAAL KHATAM KHABAR · 🏷 WHOLESALE NIGRANI ====================
+MALIK: "4 number (maal khatam hone se pehle), 1 number (raat ki report), aur wholesale naam par jitne bill bane un ka data — kitne asal
+  wholesale nahi (shak)". Shak ki hadd = items ki TADAD chhoti (jaise 1-2 piece), raqam nahi.
+PC (Server; manifest 2026-10-11.1, naya service report-auto.bat / raat-report.js, lock 47833; SQL sirf SELECT; AI nahi):
+* 🌙 Raat (reportConfig.reportTime, default 22:30; ya app se reportNow): buildReport(day) -> blueAccess/report-<din> (62 din rakhte):
+  sale {n,total,cash,credit,creditN,cancelN,returnN,returnRs,profit (POS COGS ho to, warna line x khareed — perPiece+pieceCost app jaisa),
+  profitPct}, loss[] (khareed se kam par bika: bill, waqt, PC, kaun, items), ws {n,total,farq (retail = poora ctn SaleRate / khula
+  SaleRate2 — diya gaya), shakN/shakFarq (aadhi+ lines < wsSmall pcs), counterN (naam wholesale nahi magar aadhi+ lines W rate par),
+  bills[40]}, purchase {n,total,mehnga[] prev->now}, stock {value, per godam, prev (kal ki report), negN}, khata (blueKhata se app ke
+  daily() jaisa: sale/collection/expense/payment/credit/borrow/cash/difference paisa), transfer {pending (check nahi hue), farq},
+  ginti {n, farqN, farqRs}, alert (laal items), flags[] (DHYAN). Push malik ko: "🌙 Aaj ki report" link ?report=<din>.
+  Andar ka lena-dena (noor trader / our factory / stock fraq party) bikri mein nahi.
+* ⏰ Subah (alertTime default 09:00; ya alertNow): buildAlert -> blueAccess/stockAlert {redN, yellowN, items[150]: n, u, have, daily,
+  left (din), need (3 hafte, ctn), lvl, party (pichla supplier), phone (POS Phone1 -> 92…), lr, lq, ld}. Kul stock (sab godam) ÷
+  roz bikri (30 din / 90 din x .9). Band items + our factory nahi. Laal hon to push "⏰ N item jald khatam" link ?alert=1.
+* reportConfig: reportOn/Time, alertOn/Time, alertRed/Yellow, wsNames[], wsSmall, reportNow/reportDay, alertNow; PC likhta alive/ver.
+  State report-state.json (din mein ek dafa; 3 ghante guzar jayen = chhor do).
+APP:
+* report.js (naya): 🌙 Report (home bar chip "🌙 Report" + Settings row) — din ‹ › / date, hero (sale, nafa, cash/udhaar/bill/cancel),
+  DHYAN, ghaate wale bill, wholesale, khata, purchase (mehngay), stock maaliyat (kal se farq), transfer, ginti, khatam wala maal
+  (🛒 Order screen kholo), 📄 PDF · WhatsApp, 🔄 Abhi/Dobara banao (reportNow), ⚙️ Setting (ON/Band, waqt chips + apna, laal/peela
+  2/5 3/7 5/10, wholesale naam chips + ➕, shak hadd 3/6 pcs, ⏰ Abhi check karo), Server PC zinda. Push link: ?report=din / ?alert=1
+  (reportDeepLink — onSession ke 1.5 s baad; malik hi).
+* notes.js: 🛒 Purchase order ke upar "⏰ Khatam hone wala maal" (stockAlert): supplier-wise, har item stock / roz / pichli dafa /
+  din baqi / mangwao; 📲 WhatsApp order (wa.me/<phone>, text), ➕ Order mein daalo (mojooda / naya purchase order).
+* sale.js: 🧾 Bills mein "🏷 Wholesale" chip (sirf malik): wsNames wale POS bill + app wholesale + raat ki report ke "counter W rate";
+  khulasa (kul, retail par hote, farq, ⚠️ shak, 🔁 counter), har bill par shak/farq/counter tags, bill khol kar line par retail rate
+  (katta hua), chhoti line peeli. Items PC se (posSaleLines) khud load (60 tak). Retail = aaj ka rate.
+* cloud.js: listenReportConfig/setReportConfig/getReport/listenReport/listenStockAlert. Rules NAHI badle (owner blueAccess; staff
+  stockAlert nahi parhta — alert sirf malik/full ko dikhta hai jahan parh sake). version.json rulesChanged true RAKHA (2.35 abhi upload
+  karni ho sakti hai).
+TEST rr/t.js (naqli SQL+Firestore, raat-report): alert (din, need, supplier, phone), report (sale, profit, loss, ws shak/counter,
+  purchase mehnga, stock value/prev, khata difference, transfer, ginti, 9 flags), tick (push body/link, dobara nahi, alertNow) ALL OK.
+  hd/rp.mjs (report.js + notes alert: deep link, hero, cards, pdf, abhi banao, setting chips, naam add, WhatsApp, order mein) ALL OK.
+  hd/ws.mjs (sale bills wholesale chip, summary, tags, retail line) ALL OK. Baqi sab (t m q v p2 sc rt pa jord ctn tc give cl pp) ALL OK.
+  Screenshots 380px overflow nahi. tc.mjs ab 7 din chip se (aadhi raat ke baad test data kal mein chala gaya tha).
+VERSION BUMP: ?v=2.99.22, APP_VER, "Blue Khata v2.99.22", sw CACHE (+ report.js), version.json; pc/manifest 2026-10-11.1.

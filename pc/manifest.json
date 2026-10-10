@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-10.2",
+  "version": "2026-10-11.1",
   "note": "KHATA-DOCTOR manifest — sirf ye files PC par jati hain. local-config.json / firebase-key.json kabhi nahi.",
   "files": {
     "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -45,7 +45,9 @@
     "nt-scan.js": "543763e2d9dfe93b09bf7d48ca4509c24d76dda97bcbc15255d3085aed36cd61",
     "urdu-shape.js": "ebe13a89fa07b6cc827dcc8b30d527ffb4db214e8fd06bc7934e8535deaa7441",
     "nt-posui.js": "c7ae49561595a177415a7d8c00afb6418ddb8faff04ef022b0a1ba42c60760e2",
-    "purchase-parchi.js": "064a9986d96fc60c436c312c81ae5623a5004d7e62a9b86c1c47f8ac6a36dc78"
+    "purchase-parchi.js": "064a9986d96fc60c436c312c81ae5623a5004d7e62a9b86c1c47f8ac6a36dc78",
+    "raat-report.js": "240a1fa487a0434232f8802bbc7482d19cea655a9c93c300fb2fcdb21085714b",
+    "report-auto.bat": "867f58bc2fee20409d1682975ebaa305d5cf287a3dad6e1cd3e4f08708130af8"
   },
   "services": [
     {
@@ -213,6 +215,12 @@
       "script": "auto-backup.js",
       "bat": "auto-backup-auto.bat",
       "log": "auto-backup-log.txt"
+    },
+    {
+      "name": "🌙 Raat ki report + ⏰ khatam alert",
+      "script": "raat-report.js",
+      "bat": "report-auto.bat",
+      "log": "report-log.txt"
     }
   ]
 }

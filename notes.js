@@ -6,8 +6,8 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { saleStock } from './pos-stock.js?v=2.99.21';
-import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.21';
+import { saleStock } from './pos-stock.js?v=2.99.22';
+import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.22';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -28,6 +28,7 @@ export function notesSetup(o) {
   cloud = o.cloud || cloud; notice = o.notice || notice; whoOf = o.who || whoOf; recordsOf = o.records || recordsOf;
   partyOf = o.party || partyOf; partiesOf = o.parties || partiesOf; itemsOf = o.items || itemsOf; routeTo = o.route || routeTo;
   dlgOf = o.modal || dlgOf; closeDlg = o.close || closeDlg; payOf = o.pay || payOf; canUseOf = o.canUse || canUseOf; aiOf = o.ai || aiOf; stockOf = o.stock || stockOf; pdfOf = o.pdf || pdfOf; balanceOf = o.balance || balanceOf;
+  alWatch();
   if (!stop && cloud?.listenNotes) stop = cloud.listenNotes(list => { notes = (list || []).filter(n => n && n.id && !n.deleted); if ($('ntRoot')) paint(); badge(); });
   window.addEventListener('hashchange', hashGo);
   setTimeout(hashGo, 1800);
@@ -290,6 +291,43 @@ document.addEventListener('click', async e => {
   if (x) { const d = dmList.find(z => z.id === x.dataset.dmX); if (!d) return; d.st = 'done'; const b = $('dmBody'); if (b) b.innerHTML = dmHTML(); try { await cloud.saveDemand(d); } catch (er) { notice('⚠️ ' + (er?.message || er)); } }
 });
 
+// ---------- v2.99.22: ⏰ MAAL KHATAM HONE SE PEHLE (PC raat-report.js -> blueAccess/stockAlert) ----------
+// Har subah PC: kul stock ÷ roz ki bikri = kitne din baqi. 🔴 laal <= alertRed din, 🟡 peela <= alertYellow. Supplier ke hisaab se jama,
+// 📲 WhatsApp order (POS ka phone), ➕ Order mein daalo (mojooda purchase order mein). Yahan AI nahi.
+let alData = null, alStop = null, alOpen = true, alSupOpen = new Set();
+function alWatch() { if (alStop || !cloud?.listenStockAlert) return; alStop = cloud.listenStockAlert(d => { alData = d === undefined ? null : d; const b = $('ntAl'); if (b) b.innerHTML = alHTML(); }); }
+const alU = x => (x.u || 'Ctn').toLowerCase();
+function alGroups() {
+  const g = new Map();
+  for (const x of (alData?.items || [])) { const k = x.party || 'Supplier nahi pata'; if (!g.has(k)) g.set(k, { party: k, phone: '', items: [] }); const G = g.get(k); if (x.phone) G.phone = x.phone; G.items.push(x); }
+  return [...g.values()].sort((a, b) => b.items.filter(x => x.lvl === 'red').length - a.items.filter(x => x.lvl === 'red').length || b.items.length - a.items.length);
+}
+function alOrderText(G) { return `*NOOR TRADERS — Order*\n${new Date().toLocaleDateString('en-PK', { day: 'numeric', month: 'short' })}\n\n` + G.items.map(x => `• ${x.n} — ${num(x.need)} ${alU(x)}`).join('\n') + '\n\nShukriya'; }
+function alHTML() {
+  if (!alData) return '';
+  const can = (whoOf() || {}).role === 'owner' || (whoOf() || {}).scope === 'full';
+  const gs = alGroups(), red = Number(alData.redN) || 0, yel = Number(alData.yellowN) || 0;
+  const head = `<button type="button" class="al-head${red ? ' red' : ''}" data-al-toggle="1"><b>⏰ Khatam hone wala maal</b><span>${red ? `🔴 ${red}` : ''}${red && yel ? ' · ' : ''}${yel ? `🟡 ${yel}` : ''}${!red && !yel ? '✓ sab theek' : ''}</span><small>${esc(new Date(alData.at).toLocaleString('en-PK', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))} · ${alOpen ? '▲' : '▼'}</small></button>`;
+  if (!alOpen || !gs.length) return head + (!gs.length && alOpen ? `<p class="al-empty">Koi item ${alData.yellow || 7} din ke andar khatam nahi ho raha 🎉</p>` : '');
+  return head + gs.map(G => { const op = alSupOpen.has(G.party), rN = G.items.filter(x => x.lvl === 'red').length;
+    return `<div class="al-sup${rN ? ' red' : ''}"><button type="button" class="al-sh" data-al-sup="${esc(G.party)}"><b>🧾 ${esc(G.party)}</b><span>${rN ? `🔴 ${rN}` : ''}${G.items.length - rN ? ` 🟡 ${G.items.length - rN}` : ''}</span></button>
+      ${op || gs.length <= 2 ? `<div class="al-items">${G.items.map(x => `<div class="al-it ${x.lvl}"><span class="al-nm"><b>${esc(x.n)}</b><small>stock ${num(x.have)} ${esc(alU(x))} · roz ~${x.daily} · ${x.lq ? `pichli dafa ${num(x.lq)} ${esc(alU(x))}${x.ld ? ' (' + esc(x.ld.slice(5)) + ')' : ''}` : 'pehli dafa'}</small></span><span class="al-dn">${x.left <= 0 ? '<b>khatam</b>' : `<b>${x.left}</b> din`}</span><span class="al-need">mangwao <b>${num(x.need)}</b> ${esc(alU(x))}</span></div>`).join('')}
+      ${can ? `<div class="al-acts">${G.phone ? `<button type="button" class="al-wa" data-al-wa="${esc(G.party)}">📲 WhatsApp order</button>` : `<button type="button" class="al-wa" data-al-wa="${esc(G.party)}">📲 Order bhejo</button>`}<button type="button" class="al-add" data-al-add="${esc(G.party)}">➕ Order mein daalo</button></div>` : ''}</div>` : ''}</div>`; }).join('');
+}
+document.addEventListener('click', async e => {
+  if (e.target.closest?.('[data-al-toggle]')) { alOpen = !alOpen; const b = $('ntAl'); if (b) b.innerHTML = alHTML(); return; }
+  const sp = e.target.closest?.('[data-al-sup]'); if (sp) { const k = sp.dataset.alSup; if (alSupOpen.has(k)) alSupOpen.delete(k); else alSupOpen.add(k); const b = $('ntAl'); if (b) b.innerHTML = alHTML(); return; }
+  const wa = e.target.closest?.('[data-al-wa]'); if (wa) { const G = alGroups().find(g => g.party === wa.dataset.alWa); if (!G) return; const t = alOrderText(G); try { await navigator.clipboard?.writeText(t); } catch {} window.open('https://wa.me/' + (G.phone || '') + '?text=' + encodeURIComponent(t), '_blank'); return; }
+  const ad = e.target.closest?.('[data-al-add]'); if (ad) {
+    const G = alGroups().find(g => g.party === ad.dataset.alAdd); if (!G) return;
+    const w = whoOf() || {}; let o = poList[0];
+    if (!o || o.lines.every(l => l.items.every(x => x.st !== 'open'))) o = { id: 'po' + Date.now().toString(36), at: Date.now(), by: String(w.uid || ''), byName: String(w.name || '').slice(0, 60), note: '⏰ khatam alert', lines: [] };
+    let ln = o.lines.find(l => l.party === G.party); if (!ln) { ln = { party: G.party, items: [] }; o.lines.push(ln); }
+    let n = 0; for (const x of G.items) { if (ln.items.some(y => String(y.i) === String(x.i) && y.st === 'open')) continue; ln.items.push({ i: String(x.i), n: String(x.n).slice(0, 60), q: x.need, u: x.u || '', st: 'open' }); n++; }
+    try { await poSave(o); notice(n ? `✓ ${n} item order mein — neeche 🛒 Purchase order` : 'Yeh items pehle se order mein hain'); } catch (er) { notice('Nahi hua: ' + (er?.message || er)); }
+    return;
+  }
+});
 // ---------- v2.34: 🛒 PURCHASE ORDER — POS ki 6 mahine ki bikri/purchase (posStats) + stock -> AI -> supplier-wise chips ----------
 // purchaseOrders/<id> {id, at, by, byName, note, lines:[{party, items:[{i, n, q, u, st:'open'|'got'|'gone'}]}]}
 // Chip: DOUBLE TAP = "✓ Maal aa gaya" mein; wahan TAP = gayab. Ek tap = tadad badlo (0 = hatao).
@@ -501,7 +539,7 @@ function paint() {
   const root = $('ntRoot'); if (!root) return;
   const due = dueParty(), l = listFor(fTab), cnt = t => listFor(t).length;
   poWatch(); dmWatch();
-  root.innerHTML = `<div class="nt-push" id="ntPush"></div><div class="po-box" id="ntPo">${poHTML()}</div><div id="ntGc">${gcLoad().accounts.length ? gcCardHTML() : ''}</div>
+  root.innerHTML = `<div class="nt-push" id="ntPush"></div><div class="al-box" id="ntAl">${alHTML()}</div><div class="po-box" id="ntPo">${poHTML()}</div><div id="ntGc">${gcLoad().accounts.length ? gcCardHTML() : ''}</div>
     <label class="nt-search"><input type="search" placeholder="🔍 note, item, supplier, raqam…" value="${esc(fQ)}" data-nt-q="1"></label>
     <div class="mchips nt-tabs">${[['open', 'Sab khule'], ['today', '🔔 Aaj'], ['late', '⏰ Guzar gaye'], ['next', 'Aane wale'], ['order', '🧾 Order'], ['done', '✓ Ho gaye']].map(([k, lab]) => `<button type="button" class="rc${fTab === k ? ' on' : ''}" data-nt-tab="${k}">${lab} ${cnt(k)}</button>`).join('')}</div>
     ${due.length && fTab !== 'done' ? `<div class="nt-sec"><h3>📒 Accounts ke due</h3>${due.map(x => `<button type="button" class="nt-due${x.late ? ' late' : ''}" data-nt-party="${esc(x.p.id)}"><b>${esc(x.p.name)}</b><span>${esc(nice(x.r.dueDate))}${x.r.dueTime ? ' · ' + esc(t12(x.r.dueTime)) : ''}</span>${x.r.note ? `<small>${esc(x.r.note)}</small>` : ''}</button>`).join('')}</div>` : ''}
