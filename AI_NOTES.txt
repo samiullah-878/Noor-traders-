@@ -3726,3 +3726,12 @@ TEST hd/ctn.mjs (asal pos-stock): register 29 ctn -> sufi search, sab chuno, tin
   card 1.5 / 14+5, lines "6 ctn → 3 [2=1]", line tap surf 3=1 -> 9 → 3, apna 2.5, Hatao, din patti, ✕ hatao, save fail = wapas,
   mulazim view-only, PDF qaide — ALL OK. t / m / q / v / p2 / sc / rt / pa / jord / give / cl ALL OK. Screenshots 380px light + dark, overflow nahi.
 VERSION BUMP: ?v=2.99.18, APP_VER, "Blue Khata v2.99.18", sw CACHE, version.json.
+
+==================== App v2.99.19 (2026-10-10) — KHATA ke upar wale khanon ke naam = neeche ke button ====================
+MALIK (supplier khate ki tasveer): "Diya udhar liya wasooli ko sahi kar do" — supplier par "Diye / Udhar" (Payment di) aur
+  "Liye / Wasooli" (Saman liya) ghalat lagte the.
+KIYA (app.js): ledgerTitles(p) + ledgerHTML(rows, p) — khane ka naam account ki qisam se (kinds / rang / jagah WAHI):
+  Supplier: 💸 Payment di | 📦 Saman liya · Customer: 📦 Saman diya (Udhar) | 💰 Wasooli · Bank: ⬆ Bank mein jama | 💵 Cash nikaala
+  · baqi: Payment / Diye | Wasooli / Liye. Baayen laal (payment, credit, expense, purchaseCash), daayen hara (collection, borrow, sale).
+YAHAN AI NAHI. TEST: ledgerTitles har qisam (node), screenshot 390px; t / m / q / v / p2 / sc / rt / pa / jord / ctn / give / cl ALL OK.
+VERSION BUMP: ?v=2.99.19, APP_VER, "Blue Khata v2.99.19", sw CACHE, version.json.
