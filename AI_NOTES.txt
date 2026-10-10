@@ -3834,3 +3834,30 @@ TEST rr/t.js (naqli SQL+Firestore, raat-report): alert (din, need, supplier, pho
   hd/ws.mjs (sale bills wholesale chip, summary, tags, retail line) ALL OK. Baqi sab (t m q v p2 sc rt pa jord ctn tc give cl pp) ALL OK.
   Screenshots 380px overflow nahi. tc.mjs ab 7 din chip se (aadhi raat ke baad test data kal mein chala gaya tha).
 VERSION BUMP: ?v=2.99.22, APP_VER, "Blue Khata v2.99.22", sw CACHE (+ report.js), version.json; pc/manifest 2026-10-11.1.
+
+==================== App v2.99.23 (2026-10-11) + RULES v2.36 — 👥 MULAZIM NAAM SE: ijazat (perms) · 🔗 link se phone jorna · devices ====================
+MALIK: "har mulazim ki apni permission (kaunsi screen) · login ki jhanjhat khatam · sab ka same login magar har ek ko uska data ·
+  devices add, larkon ke naam, link bhej ke permission". Hazri app abhi nahi jori (repo ka naam aane par).
+MODEL (purana password wala login WAISA HI chalta hai — saath saath):
+* blueStaff/<id> {name, phone, perms[], active, cred, at} — sirf malik (rules). Secret = blueStaffKeys/<cred> ('st-' + 40 hex random)
+  {active, loginEnabled, name, scope: perms[0], perms[], staffId}. Rules acctIs(): a.scope == scope YA scope in a.perms -> ek key, kai screens.
+* 🔗 Link: deviceJoins/tk-<8 harf> {ticket, credentialId, staffId, name, scope, perms, at, by} (malik banata; 24 ghante). Phone
+  ?join=<ticket> khole -> cloud.joinByTicket: signInAnonymously -> ticket parho -> controller.loginWithCredential(cred, scope)
+  (blueStaffSessions/<uid> {credentialId, createdAt} — rules: key active) -> activate -> ticket delete. Agle din: Firebase ka
+  anonymous user yaad (🔄 restore) — na link na password. Device hatao = staffDevices doc delete (nishan); asal band = key active:false
+  (⛔ Band karo) ya mulazim hatao (key + doc delete) -> activate 'staff-disabled'.
+* staffDevices/<devShow id> {staffId, name, by, at, seen, ua, scope} — phone khud (join + har 10 min stSeen); malik list / ✕.
+* auth-controller: loginWithCredential(); activate(): expectedScope perms mein ho to wahi scope (account.scope = pehli).
+APP:
+* Settings → "👥 Mulazim (naam se)" (purana "🔑 Purane password" neeche): cards (naam, phone, devices), ijazat chips (tap = foran
+  saveStaff), ➕ Naya mulazim (form; save ke baad link khud), 🔗 Link bhejo (WhatsApp wa.me/92… + text, 📋 Copy), devices (✕),
+  ⛔ Band / 🟢 Chalu, ✏️ edit (🗑 hatao). Audit: staff-new/edit/perm/link/on/off/del, device-link.
+* Mulazim (perms wala): header mein perm-bar chips (Sale | Stock …) — tap = switchPerm -> controller.resume('staff', scope) (password
+  nahi, LAST_SCOPE yaad); "🔄 Screen badlein" bhi yahi chips; jo ijazat nahi wo dikhti hi nahi. Purani screens (saleOnly/stockOnly…)
+  wahi — scope ek waqt mein ek, isliye koi UI nahi toota.
+* Boot: ?join= ho to stJoinFromLink pehle (login page ke bajaye), phir resume.
+RULES v2.36 (firestore-rules-2.36.html, version.json rules 2.36 rulesChanged true): acctIs perms; deviceJoins keys + pw ikhtiyari;
+  blueStaff owner; staffDevices staff create/update (by == uid), owner read/delete.
+YAHAN AI NAHI. TEST hd/st.mjs: auth (ticket login, perm switch, perm nahi = scope-required, band = staff-disabled, ghalat cred =
+  signOut), UI (naya mulazim -> link khud, WhatsApp link, perm tick, device card/hatao, band/chalu, ?join= se jorna) ALL OK; baqi sab ALL OK.
+VERSION BUMP: ?v=2.99.23, APP_VER, "Blue Khata v2.99.23", sw CACHE, version.json.

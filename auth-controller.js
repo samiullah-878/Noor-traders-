@@ -83,7 +83,11 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       if (!account || account.active === false || account.loginEnabled === false) {
         throw failure('login/staff-disabled');
       }
-      const scope=account.scope||'full';
+      // v2.99.23: 👥 naam wala mulazim — key ke perms mein kai screens; expectedScope un mein ho to wahi scope (account.scope = pehli)
+      const perms = Array.isArray(account.perms) ? account.perms : [];
+      let scope = account.scope || 'full';
+      if (expectedScope && expectedScope !== scope && perms.includes(expectedScope)) scope = expectedScope;
+      else if (!expectedScope && account.last && perms.includes(account.last)) scope = account.last;
       if(!['full','purchase','stock','sale','galla','nazar','gaari'].includes(scope)||(expectedScope&&scope!==expectedScope))throw failure('login/scope-required');
       emit({ role: 'staff', scope, user, phone, account });
     } else {
@@ -181,6 +185,28 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       reset();
       try { await activate(u, ticket, role, role === 'staff' ? (scope || '') : ''); return true; }
       finally { pending = false; }
+    },
+    // v2.99.23: 🔗 TICKET LINK se login — password nahi; credentialId (blueStaffKeys/st-…) seedha session mein
+    async loginWithCredential(credentialId, scope) {
+      if (pending) throw failure('login/busy');
+      pending = true;
+      const ticket = ++epoch;
+      let attemptUser = null;
+      reset();
+      try {
+        if (auth.currentUser) await sdk.signOut(auth);
+        if (ticket !== epoch) throw failure('login/cancelled');
+        const credential = await sdk.signInAnonymously(auth);
+        attemptUser = credential.user;
+        check(ticket, credential.user);
+        await accounts.createSessionWithCredential(credential.user.uid, credentialId);
+        check(ticket, credential.user);
+        await activate(credential.user, ticket, 'staff', scope || '');
+      } catch (error) {
+        if (ticket === epoch) { reset(); if (auth.currentUser) await sdk.signOut(auth); }
+        else if (attemptUser && auth.currentUser?.uid === attemptUser.uid) await sdk.signOut(auth);
+        throw error;
+      } finally { pending = false; }
     },
     // v2.88: SCREEN BADALNA bina logout/login — wahi anonymous user, server par session ki credentialId badal kar (rules 2.29
     // nayi key active check karti hain = password ki jaanch), phir activate() se naya scope. Login screen nahi aati.

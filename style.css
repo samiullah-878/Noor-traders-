@@ -2693,3 +2693,34 @@ html.dk .rp-card h4,html.dk .rs-card h4,html.dk .rp-row b,html.dk .rp-big,html.d
 html.dk .rp-tip,html.dk .rp-foot,html.dk .rs-foot,html.dk .rp-bill small,html.dk .al-nm small,html.dk .al-head small,html.dk .rs-card>small,html.dk .ws-sum small,html.dk .rp-empty small{color:var(--ink2)!important}
 html.dk .rp-row,html.dk .rp-bill,html.dk .al-it{border-top-color:var(--line)!important}
 html.dk .rp-flags{color:#ffc46b!important}
+/* v2.99.23: 👥 MULAZIM NAAM SE — list, ijazat, link, devices · perm-bar */
+.perm-bar{display:flex;gap:6px;overflow-x:auto;padding:6px 12px;background:#eef2f9;border-bottom:1px solid #dfe5f0;scrollbar-width:none}
+.perm-bar button{flex:none;min-height:34px;padding:4px 14px;border-radius:999px;background:#fff;border:1px solid #d6deeb;font-weight:800;font-size:13px;color:#1b3058}
+.perm-bar button.on{background:linear-gradient(135deg,#2c5bb0,#1d3a75);color:#fff;border-color:transparent}
+.st-root{display:grid;gap:10px}
+.st-intro{margin:0;padding:10px 12px;border-radius:14px;background:#f4f7fd;border:1px solid #e1e8f4;color:#3c4f72;font-size:12.5px;line-height:1.5}
+.st-new{min-height:48px;border-radius:14px;font-weight:900;font-size:15px;color:#fff;background:linear-gradient(135deg,#16a34a,#0f7a3a);box-shadow:0 8px 18px rgba(22,163,74,.3)}
+.st-card{background:#fff;border:1px solid #e3e8f1;border-radius:16px;padding:11px 12px;display:grid;gap:8px;box-shadow:0 3px 10px #10192b0d}
+.st-card.off{opacity:.7;background:#f7f7f9}
+.st-h{display:flex;align-items:center;gap:10px}
+.st-av{width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#2c5bb0,#1d3a75);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:900;flex:none}
+.st-nm{display:grid;min-width:0;flex:1}.st-nm b{font-size:15px;color:#10192b}.st-nm small{font-size:11.5px;color:#6b7c93}
+.st-edit{min-height:36px!important;min-width:40px;padding:4px 10px!important;border-radius:999px!important;background:#eef2f9}
+.st-perms{display:flex;flex-wrap:wrap;gap:6px}
+.st-pm,.st-pml{min-height:34px;padding:5px 11px;border-radius:999px;background:#fff;border:1.5px solid #d6deeb;font-size:12.5px;font-weight:700;color:#4a5d80;display:inline-flex;align-items:center;gap:4px;cursor:pointer}
+.st-pm.on,.st-pml.on{background:#e3f7ea;border-color:#16a34a;color:#17703c}
+.st-pml input{width:16px;height:16px;min-height:0!important;margin:0}
+.st-dev{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 9px;border-radius:10px;background:#f4f7fd;font-size:12.5px}
+.st-dev span{display:grid;min-width:0}.st-dev small{font-size:11px;color:#6b7c93}
+.st-x{min-height:30px!important;min-width:32px;padding:2px 8px!important;border-radius:999px!important;background:#fff1f1!important;color:#b4282a!important;border:1px solid #f3c4c4}
+.st-tk{display:grid;gap:6px;padding:10px;border-radius:12px;background:#fff7e0;border:1.5px solid #f1d27a}
+.st-tk b{font-size:13px;color:#7a5200}.st-tk code{font-size:11px;word-break:break-all;color:#1b3058}.st-tk small{font-size:11.5px;color:#7a5200}
+.st-tkb{display:flex;gap:6px}.st-tkb a,.st-tkb button{flex:1;min-height:42px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;text-decoration:none}
+.st-wa{background:linear-gradient(135deg,#25d366,#128c7e);color:#fff}
+.st-acts{display:flex;gap:6px;flex-wrap:wrap}.st-acts button{flex:1;min-height:40px!important;border-radius:12px!important;font-weight:800;font-size:13px}
+.st-link{background:linear-gradient(135deg,#2c5bb0,#1d3a75)!important;color:#fff!important}
+.st-form{display:grid;gap:8px}.st-lab{margin:4px 0 0;font-size:13px;font-weight:800;color:#1b3058}
+html.dk .st-card,html.dk .st-intro,html.dk .st-dev,html.dk .st-pm,html.dk .st-pml,html.dk .perm-bar button{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}
+html.dk .st-pm.on,html.dk .st-pml.on{background:color-mix(in srgb,var(--good) 20%,transparent)!important;border-color:var(--good)!important}
+html.dk .st-nm b,html.dk .st-lab{color:var(--ink)!important}html.dk .st-nm small,html.dk .st-dev small{color:var(--ink2)!important}
+html.dk .perm-bar{background:var(--deep)!important;border-color:var(--line)!important}
