@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.99.11';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.11';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.99.12';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.12';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -944,7 +944,7 @@ function sheet() {
     <div id="agTyping" class="ag-typing" hidden><i></i><i></i><i></i><span></span></div>
     <div class="ag-sugg" id="agSugg"><button type="button" class="ag-sg-cam" data-ag-cam hidden>📸 Camera</button><button type="button" class="ag-sg-cam" data-ag-gal hidden>🖼 Gallery</button>${SUGG.map(s => `<button type="button" data-ag-say="${esc(s.replace(/^\S+\s/, ''))}">${esc(s)}</button>`).join('')}</div>
     <div id="agAttach" class="ag-attach" hidden></div>
-    <form class="ag-in" id="agForm" autocomplete="off"><input id="agInput" placeholder="Poochein ya hukum dein…" enterkeyhint="send" aria-label="Agent se baat"><button type="button" class="ag-pic" data-ag-pic aria-label="Photo">📷</button><button type="button" class="ag-mic" data-ag-mic aria-label="Bol kar">🎤</button><button type="submit" class="ag-send" aria-label="Bhejo">➤</button></form>
+    <form class="ag-in" id="agForm" autocomplete="off"><input id="agInput" placeholder="Poochein ya hukum dein…" enterkeyhint="send" aria-label="Agent se baat"><button type="button" class="ag-pic" data-ag-pic aria-label="Photo">📷</button><button type="button" class="ag-mic" data-ag-mic aria-label="Phone mic"><small>Phone</small><i>🎤</i></button><button type="button" class="ag-mic ag-gmic" data-ag-gmic aria-label="Gemini mic"><small>Gemini</small><i>✨</i></button><button type="submit" class="ag-send" aria-label="Bhejo">➤</button></form>
     <input type="file" id="agCamIn" accept="image/*" capture="environment" hidden><input type="file" id="agGalIn" accept="image/*" multiple hidden>
     <small class="ag-foot">AI ghalti kar sakta hai — har entry card par ✓ se pehle naam aur raqam dekh lein.</small></div></div>`);
   el = $('agSheet');
@@ -995,29 +995,37 @@ export function openAgent(text, opt = {}) {
 //   (wohi AI key) -> Roman Urdu likhai, hindse digits, aap ke khaton / items / kharchon ke naam ki spelling. Ruk jayein (1.5s) = khud bhejta;
 //   ⏹ = abhi bhejo; 60s had. AI key / mic-raasta na ho -> phone ka system (en-IN = Roman).
 let recA = null, hearing = false;
-function listen() {
+// v2.99.12: DO MIC — malik: "pehla wala acha tha (Gemini mein der + ghalti), dono rakho, upar naam likho".
+//   🎤 Phone = purana (phone ka awaz-system, Urdu pehle, bolte hue likhai) · ✨ Gemini = naya (tez kiya: 0.9s chup, khamoshi kaat, chhoti list, pehle Urdu phir Roman)
+function listen() {   // 🎤 Phone
+  if (recA) { recA.stop(); return; }
+  if (rec) { try { rec.stop(); } catch {} return; }
+  if (hearing) { H.notice('⏳ Pichhli awaz likhi ja rahi hai…'); return; }
+  listenSR();
+}
+function listenG() {   // ✨ Gemini
   if (recA) { recA.stop(); return; }
   if (rec) { try { rec.stop(); } catch {} return; }
   if (hearing) { H.notice('⏳ Pichhli awaz likhi ja rahi hai…'); return; }
   const AC = window.AudioContext || window.webkitAudioContext;
-  if (!navigator.mediaDevices?.getUserMedia || !AC) return listenSR();
-  listenAI(AC).catch(e => { recA = null; micUI(false); setTyping(''); addMsg('err', '🎤 ' + (e?.message || e)); });
+  if (!navigator.mediaDevices?.getUserMedia || !AC) { addMsg('err', '✨ Is phone / browser par Gemini mic nahi chalta — 🎤 Phone wala istemal karein.'); return; }
+  listenAI(AC).catch(e => { recA = null; micUI(false); setTyping(''); addMsg('err', '✨ ' + (e?.message || e)); });
 }
 function hearPrompt() {
   const U = usage();
-  const acc = pool().slice().sort((a, b) => (U.get(b.id) || 0) - (U.get(a.id) || 0)).slice(0, 250).map(p => p.name);
-  let items = []; try { items = H.stockNames?.(300) || []; } catch {}
+  const acc = pool().slice().sort((a, b) => (U.get(b.id) || 0) - (U.get(a.id) || 0)).slice(0, 100).map(p => p.name);
+  let items = []; try { items = H.stockNames?.(100) || []; } catch {}
   let exp = []; try { exp = H.expenseNames().slice(0, 30); } catch {}
   return [
     'Yeh Pakistani wholesale dukan (Noor Traders) ke malik / mulazim ki AWAZ hai — Urdu, Punjabi aur English mili hui. Woh apni app (khata, stock, sale, purchase) ko hukum de raha hai.',
-    'Kaam: jo BOLA gaya hai usay bilkul waisa ROMAN URDU (sirf English harf) mein likho. Tarjuma nahi, khulasa nahi, jawab nahi, apni taraf se kuch nahi. Urdu / Hindi rasm-ul-khat KABHI nahi.',
+    'Kaam do qadam mein: (1) "urdu": pehle jo BOLA gaya hai usay bilkul waisa Urdu rasm-ul-khat mein likho (jo suna — andaza nahi). (2) "text": phir USI ko ROMAN URDU (sirf English harf) mein likho. Tarjuma nahi, khulasa nahi, jawab nahi, apni taraf se kuch nahi.',
     'Hindse DIGITS mein: "bees hazar" = 20000, "dedh lakh" = 150000, "paanch carton" = 5 carton, "saadhe teen sau" = 350, "do sau pachaas" = 250.',
     'Aam lafz aise likho: wasooli, payment, udhaar, baqaya, khata, hisaab, carton, piece, stock, rate, wholesale, parchoon, godam, dukan, kharcha, aaj, kal, parson, se, ko, ka.',
-    'Koi naam neeche ki list ke kisi naam jaisa suna jaye to list wali SPELLING likho; list se bahar ka naam ho to jaisa suna.',
+    'Neeche ki list SIRF spelling ki madad hai: jab awaz mein SAAF wahi naam bola gaya ho tab list wali spelling likho. Milta julta lafz ho to usay zabardasti list ka naam MAT banao — jaisa suna waisa likho.',
     acc.length ? 'Accounts: ' + acc.join(' | ') : '',
     items.length ? 'Items: ' + items.join(' | ') : '',
     exp.length ? 'Kharche: ' + exp.join(' | ') : '',
-    'Jawab sirf JSON: {"text": "<jo bola gaya>"}. Kuch samajh na aaye, sirf shor ya khamoshi ho to {"text": ""}.',
+    'Jawab sirf JSON: {"urdu": "<Urdu mein jo suna>", "text": "<wohi Roman Urdu mein>"}. Kuch samajh na aaye, sirf shor ya khamoshi ho to {"urdu": "", "text": ""}.',
   ].filter(Boolean).join('\n');
 }
 function wavB64(bufs, total, rate) {   // Float32 tukre -> 16 kHz mono 16-bit WAV (base64)
@@ -1033,9 +1041,9 @@ function wavB64(bufs, total, rate) {   // Float32 tukre -> 16 kHz mono 16-bit WA
 }
 async function listenAI(AC) {
   let ac; try { ac = new AC({ sampleRate: 16000 }); } catch { ac = new AC(); }   // click ke andar hi (iPhone par awaz ki ijazat)
-  const pend = { stop() { pend.want = 'send'; }, abort() { pend.want = 'abort'; } }; recA = pend; micUI(true); setTyping('🎤 Mic khul raha hai…');
+  const pend = { stop() { pend.want = 'send'; }, abort() { pend.want = 'abort'; } }; recA = pend; micUI(true, true); setTyping('✨ Mic khul raha hai…');
   const cfg = await H.loadAiCfg().catch(() => null);
-  if (!cfg?.key || !cfg?.model) { try { ac.close(); } catch {} recA = null; micUI(false); setTyping(''); return listenSR(); }
+  if (!cfg?.key || !cfg?.model) { try { ac.close(); } catch {} recA = null; micUI(false); setTyping(''); addMsg('err', '✨ Gemini mic ke liye AI key chahiye (malik ⋮ Settings > AI key) — tab tak 🎤 Phone wala istemal karein.'); return; }
   let stream;
   try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } }); }
   catch (e) {
@@ -1045,18 +1053,21 @@ async function listenAI(AC) {
   if (pend.want === 'abort') { stream.getTracks().forEach(t => t.stop()); try { ac.close(); } catch {} recA = null; micUI(false); setTyping(''); return; }
   try { await ac.resume?.(); } catch {}
   let src; try { src = ac.createMediaStreamSource(stream); } catch { try { ac.close(); } catch {} ac = new AC(); try { await ac.resume?.(); } catch {} src = ac.createMediaStreamSource(stream); }   // Firefox: 16k par na jure to asal rate
-  const rate = ac.sampleRate, node = ac.createScriptProcessor(4096, 1, 1);
-  const bufs = []; let total = 0, spoke = false, quietMs = 0, floor = null, fl = [], lvl = 0, done = false; const t0 = Date.now();
+  const rate = ac.sampleRate, node = ac.createScriptProcessor(2048, 1, 1);
+  const bufs = [], loud = []; let total = 0, spoke = false, quietMs = 0, floor = null, fl = [], lvl = 0, done = false; const t0 = Date.now();
   const bars = () => { const k = floor ? lvl / Math.max(0.02, floor * 3) : 0; return k > 1.6 ? '▁▃▅▇' : k > 1 ? '▁▃▅' : k > 0.5 ? '▁▃' : '▁'; };
-  const tick = setInterval(() => { if (!done) setTyping(`🎤 Sun raha hoon ${bars()} ${Math.round((Date.now() - t0) / 1000)}s — bolein, ruk jayein to khud bhej dunga (⏹ = abhi)`); if (pend.want) finish(pend.want); }, 150);
+  const tick = setInterval(() => { if (!done) setTyping(`✨ Gemini sun raha hai ${bars()} ${Math.round((Date.now() - t0) / 1000)}s — bolein, ruk jayein to khud bhej dega (⏹ = abhi)`); if (pend.want) finish(pend.want); }, 150);
   const cleanup = () => { clearInterval(tick); try { node.disconnect(); src.disconnect(); } catch {} try { stream.getTracks().forEach(t => t.stop()); } catch {} try { ac.close(); } catch {} };
   async function finish(why) {
     if (done) return; done = true; recA = null; cleanup(); micUI(false);
     if (why === 'abort') { setTyping(''); return; }
     if (!spoke || total < rate * 0.3) { setTyping(''); addMsg('err', MIC_ERR['no-speech']); return; }
-    hearing = true; setTyping('✍️ Awaz samajh raha hoon…');
+    hearing = true; setTyping('✨ Gemini likh raha hai…');
     let text = '';
-    try { const w = wavB64(bufs, total, rate); text = await hearAudio({ key: cfg.key, model: cfg.model, audio: { mime: 'audio/wav', data: w.data }, prompt: hearPrompt(), onStatus: m => setTyping('✍️ ' + m) }); }
+    // khamoshi kaat: pehli awaz se 0.3s pehle -> aakhri awaz ke 0.35s baad tak (chhoti file = tez)
+    const per = bufs[0]?.length || 2048, fi = loud.indexOf(true), la = loud.lastIndexOf(true), pad = Math.ceil(rate * 0.3 / per), padE = Math.ceil(rate * 0.35 / per);
+    const a0 = Math.max(0, (fi < 0 ? 0 : fi) - pad), a1 = Math.min(bufs.length, (la < 0 ? bufs.length - 1 : la) + padE + 1), cut = bufs.slice(a0, a1), cutN = cut.reduce((n, b) => n + b.length, 0);
+    try { const w = wavB64(cut.length ? cut : bufs, cut.length ? cutN : total, rate); text = await hearAudio({ key: cfg.key, model: cfg.model, audio: { mime: 'audio/wav', data: w.data }, prompt: hearPrompt(), onStatus: m => setTyping('✍️ ' + m) }); }
     catch (e) { hearing = false; setTyping(''); addMsg('err', '🎤 Awaz likhi nahi ja saki: ' + (e?.message || e)); return; }
     hearing = false; setTyping('');
     text = String(text || '').replace(/\s+/g, ' ').trim();
@@ -1070,16 +1081,23 @@ async function listenAI(AC) {
     if (done) return;
     const d = ev.inputBuffer.getChannelData(0); bufs.push(new Float32Array(d)); total += d.length;
     let sm = 0; for (let k = 0; k < d.length; k++) sm += d[k] * d[k]; const rms = Math.sqrt(sm / d.length), ms = d.length / rate * 1000; lvl = rms;
-    if (floor == null) { fl.push(rms); if (fl.length * ms >= 250) { const f = fl.slice().sort((a, b) => a - b); floor = Math.max(0.004, f[f.length >> 1]); } if (rms > 0.05) spoke = true; return; }
-    if (rms > Math.max(0.02, floor * 3)) { spoke = true; quietMs = 0; } else if (spoke) quietMs += ms;
+    if (floor == null) { fl.push(rms); loud.push(rms > 0.05); if (fl.length * ms >= 250) { const f = fl.slice().sort((a, b) => a - b); floor = Math.max(0.004, f[f.length >> 1]); } if (rms > 0.05) spoke = true; return; }
+    const isLoud = rms > Math.max(0.02, floor * 3); loud.push(isLoud);
+    if (isLoud) { spoke = true; quietMs = 0; } else if (spoke) quietMs += ms;
     const el = Date.now() - t0;
-    if (spoke && quietMs >= 1500) finish('send'); else if (!spoke && el > 8000) finish('nospeech'); else if (el > 60000) finish('send');
+    if (spoke && quietMs >= 900) finish('send'); else if (!spoke && el > 8000) finish('nospeech'); else if (el > 60000) finish('send');
   };
   src.connect(node); node.connect(ac.destination);
 }
-// purana raasta (AI key / mic-raasta na ho): phone ka awaz-system — pehle en-IN (Roman likhai), phir ur-PK
+// 🎤 PHONE mic (purana, v2.99.6 jaisa): phone ka awaz-system — ur-PK, na chale to hi-IN, phir en-IN
 let rec = null;
-function micUI(on) { document.querySelectorAll('[data-ag-mic],[data-agb-mic]').forEach(b => { b.classList.toggle('rec', !!on); b.textContent = on ? '⏹' : '🎤'; b.setAttribute('aria-label', on ? 'Sunna band' : 'Bol kar'); }); }
+function micUI(on, g = false) {
+  document.querySelectorAll('[data-ag-mic],[data-agb-mic],[data-ag-gmic]').forEach(b => {
+    const mine = on && (b.hasAttribute('data-ag-gmic') ? g : !g), i = b.querySelector('i');
+    b.classList.toggle('rec', !!mine); b.setAttribute('aria-label', mine ? 'Sunna band' : b.hasAttribute('data-ag-gmic') ? 'Gemini mic' : 'Phone mic');
+    if (i) i.textContent = mine ? '⏹' : b.hasAttribute('data-ag-gmic') ? '✨' : '🎤'; else b.textContent = mine ? '⏹' : '🎤';
+  });
+}
 const MIC_ERR = {
   'not-allowed': '🎤 Mic ki IJAZAT band hai. Chrome mein upar address bar ka 🔒 (ya ⋮) > Site settings > Microphone > Allow. App icon se khola ho to phone Settings > Apps > Chrome > Permissions > Microphone > Allow. Phir dobara 🎤 dabayein.',
   'service-not-allowed': '🎤 Is phone / browser par awaz se likhna band hai. Chrome mein app kholein, ya keyboard (Gboard) ka 🎤 istemal karein.',
@@ -1091,7 +1109,7 @@ function listenSR() {
   if (rec) { try { rec.stop(); } catch {} return; }
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) { addMsg('err', '🎤 Is browser mein awaz se likhna nahi chalta. Keyboard (Gboard) ke 🎤 se bol kar likhein, ya app Chrome mein kholein.'); return; }
-  const langs = ['en-IN', 'ur-PK']; let li = 0, fin = '';
+  const langs = ['ur-PK', 'hi-IN', 'en-IN']; let li = 0, fin = '';
   const start = () => {
     const r = new SR(); rec = r; r.lang = langs[li]; r.interimResults = true; r.continuous = false; r.maxAlternatives = 1;
     r.onstart = () => { micUI(true); setTyping('🎤 Sun raha hoon — bolein… (rukne ke liye ⏹)'); };
@@ -1135,6 +1153,7 @@ async function onClick(e) {
   if (d.agUnatt != null) { const f = attach.splice(Number(d.agUnatt), 1)[0]; try { if (f?._u) URL.revokeObjectURL(f._u); } catch {} paintAttach(); return; }
   if (d.agJaanch != null) { closeAgent(); H.openJaanch(); return; }
   if (d.agMic != null) { if (busy) { H.notice('⏳ Pehla jawab aa raha hai…'); return; } listen(); return; }
+  if (d.agGmic != null) { if (busy) { H.notice('⏳ Pehla jawab aa raha hai…'); return; } listenG(); return; }
   if (d.agPick) { notePartyPick(d.agPick); return ask(`${d.agName} (account_id: ${d.agPick})`, d.agName); }
   if (d.agIpick) return ask(`${d.agName} (item_id: ${d.agIpick})`, d.agName);
   if (d.agBrm || d.agBtog || d.agBpick) {   // v2.99.11: kai entries wale card ki line: ✕ hatao / 💵🏦 / naam chuno

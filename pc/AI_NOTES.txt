@@ -2274,3 +2274,19 @@ TEST hd/p2.mjs + naye: 3 entries ek card bina AI, ✕ line, 💵->🏦, sab save
   khata), khate / stock ke chips, agWho, sale kholo, stock screen, khata kholo, screenOf, 27 tools, FAB dikha / chhupa — ALL OK.
   t/m/q/v/pa/jord/give ALL OK. Playwright 412px light + dark: batch card + FAB theek, koi overflow nahi.
 VERSION BUMP: ?v=2.99.11, APP_VER, "Blue Khata v2.99.11", sw CACHE, version.json.
+
+==================== App v2.99.12 (2026-10-10) — 🎤 DO MIC: "Phone" (purana) + "Gemini" (naya, tez + kam ghalti) ====================
+User (v2.99.10 ke baad): "is se acha to pehla wala tha" — Gemini mic mein DER lagti hai aur GHALAT likhta hai. Faisla (user): "purana with
+naya theek karo, upar likh do Gemini mic and other". Plan diya, OK.
+* agent.js: input mein DO button, upar naam: [PHONE 🎤] = listen() -> listenSR, bilkul v2.99.6 jaisa (ur-PK -> hi-IN -> en-IN, bolte hue
+  likhai); main patti ka 🎤 bhi yahi. [GEMINI ✨] = listenG() -> listenAI. micUI(on, g): sirf chalne wala button laal ⏹.
+  Gemini mic key na ho / mic-raasta na ho = saaf paigham (Phone wala istemal karein) — ab chup-chaap phone par nahi jata.
+* Gemini TEZ: bolne ke baad chup 1.5s -> 0.9s; ScriptProcessor 4096 -> 2048 (128ms, jaldi pata); har tukre ka "loud" nishan -> bhejne se
+  pehle khamoshi KAATI (pehli awaz se 0.3s pehle -> aakhri ke 0.35s baad) = chhoti WAV; naam ki list 250+300 -> 100 khate + 100 items.
+* Gemini SAHI: prompt do qadam — "urdu": pehle jo suna Urdu mein (asal sunna), "text": phir usi ko Roman Urdu; list SIRF spelling ki
+  madad — saaf wahi naam bola ho tab, milta julta lafz zabardasti list ka naam NAHI. hearAudio wahi (j.text).
+* style.css: .ag-in 5 khane (1fr 44 48 48 50; phone 1fr 46 50 50 52), .ag-mic small (naam), .ag-gmic gradient.
+TEST: v.mjs (Gemini mic button, prompt mein "urdu" + list, khamoshi kati WAV < 2.1s, ⏹, khamoshi, khali, ijazat, abort, do button naam)
+  ALL OK; m.mjs (Phone: ur-PK -> hi-IN) ALL OK; t/q/p2/pa/jord/give ALL OK; Playwright 412px light + dark: do mic, input 193px, overflow nahi.
+  ASAL phone par test NAHI hua — user dono aazma kar batayega.
+VERSION BUMP: ?v=2.99.12, APP_VER, "Blue Khata v2.99.12", sw CACHE, version.json.

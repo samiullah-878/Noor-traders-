@@ -2456,3 +2456,12 @@ html.dk .ag-cf-st.ag-wn{color:#ffd28a}
 .ag-fab[hidden]{display:none!important}
 body.ag-lock .ag-fab{display:none!important}
 @media (max-width:700px){.ag-brow{grid-template-columns:auto 1fr auto;row-gap:4px}.ag-brow>strong{grid-column:3}.ag-brow .ag-bt,.ag-brow .ag-bx{grid-row:2}.ag-brow .ag-bt{grid-column:2;justify-self:end}.ag-brow .ag-bx{grid-column:3;justify-self:end}.ag-bn b{font-size:15px}.ag-bn small{font-size:12px}.ag-bx,.ag-bt{width:40px;min-height:40px!important}}
+/* v2.99.12: do mic — 🎤 Phone (purana) · ✨ Gemini (naya); upar naam likha */
+.ag-in{grid-template-columns:1fr 44px 48px 48px 50px}
+.ag-mic{display:grid!important;place-items:center;align-content:center;gap:0;line-height:1.05}
+.ag-mic small{display:block;font-size:9.5px;font-weight:800;letter-spacing:.02em;color:var(--ink2,#5b6b86);text-transform:uppercase}
+.ag-mic i{font-style:normal;font-size:18px;line-height:1.1}
+.ag-gmic{background:linear-gradient(135deg,rgba(94,231,255,.18),rgba(123,108,255,.22))!important;border-color:rgba(123,108,255,.4)!important}
+.ag-gmic small{color:var(--accent-ink,#4b3fd1)}
+.ag-mic.rec small{color:#fff}
+@media (max-width:700px){.ag-in{grid-template-columns:1fr 46px 50px 50px 52px;gap:5px}.ag-mic small{font-size:10px}.ag-mic i{font-size:20px}}
