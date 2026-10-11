@@ -1,5 +1,5 @@
 // =========================================================
-//  purchase-parchi.js  v1 (2026-10-10) — 🖨 PURCHASE BILL KI TAFSEELI PARCHI (transfer-sync.js isay chalata hai)
+//  purchase-parchi.js  v1.1 (2026-10-11: fi piece khareed / bechna line; ek item ki kai lines jama) · v1 (2026-10-10) — 🖨 PURCHASE BILL KI TAFSEELI PARCHI (transfer-sync.js isay chalata hai)
 //  Malik: "jitne bhi purchase ke bill hain un ka print chahiye jaise hi larka add kare — pehle ka stock, abhi ka stock…"
 //  1) POS mein NAYA purchase bill (POS se ya app se — purchase-post) aate hi khud TM-T88IV par parchi:
 //     har item: tadad x rate = raqam · Stock pehle -> ab (us godam ka) · pichli khareed ka rate -> naya (+/-) ·
@@ -83,6 +83,7 @@ function parchiText(bill, o = {}) {
     else out.push(ESC + '!' + '\x08' + pad(nm, W - gd.length) + ESC + '!' + '\x00' + gd);
     const q = qtyStr(l.qtyPcs, l.pack, l.cName, l.uName);
     out.push(line(`   ${q} x ${money(l.costU)}`, '= ' + money(l.amount)));
+    if ((Number(l.pack) || 0) > 1 && l.ratePcs > 0) out.push((`   Piece: khareed ${money(l.ratePcs)}` + (l.salePiece > 0 ? ` - bechna ${money(l.salePiece)}` : l.salePcs > 0 ? ` - bechna ${money(l.salePcs)}` : '')).slice(0, W));   // v1.1
     if (l.bonus > 0) out.push(`   Bonus: ${qtyStr(l.bonus, l.pack, l.cName, l.uName)}`);
     if (l.after != null) {
       const pe = l.before <= 0 ? (l.before < 0 ? qtyStr(l.before, l.pack, l.cName, l.uName) + ' (manfi)' : '0 (khatam)') : qtyStr(l.before, l.pack, l.cName, l.uName);
@@ -187,6 +188,9 @@ async function readBill(p, sql, id, names = {}, getWho) {
       qtyPcs: r3(qtyPcs), ratePcs: Math.round(ratePcs * 10000) / 10000, bonus: r3(bonus), amount: r2(amt != null ? Number(amt) : qtyPcs * ratePcs),
       godamId: gid, godam: names[gid] || ('Branch ' + gid), _lr: lr, _lr2: lr2 };
     const k = L.itemId + '@' + gid; qtyAt[k] = (qtyAt[k] || 0) + qtyPcs + bonus;
+    // v1.1: ek hi item (wohi godam, wohi rate) kai lines mein = ek line (POS alag entries banata hai) — stock / DHYAN ek dafa
+    const same = lines.find(x => x.itemId === L.itemId && x.godamId === gid && Math.abs(x.ratePcs - L.ratePcs) < 0.00005);
+    if (same) { same.qtyPcs = r3(same.qtyPcs + L.qtyPcs); same.bonus = r3(same.bonus + L.bonus); same.amount = r2(same.amount + L.amount); same.n = (same.n || 1) + 1; continue; }
     lines.push(L);
   }
   const live = Number(h.DocStatusID) !== 3;
@@ -199,6 +203,7 @@ async function readBill(p, sql, id, names = {}, getWho) {
       L.totalStock = Number(st.T) || 0;
       // bechne ka rate (fi piece): bill ki line ka (POS purchase screen R.CTN ÷ pack), warna item ka maujooda
       L.salePcs = (L.pack > 1 ? (L._lr || Number(st.SR)) : (L._lr2 || L._lr || Number(st.SR2) || Number(st.SR))) || 0;
+      L.salePiece = L.pack > 1 ? (L._lr2 || Number(st.SR2) || 0) : 0;   // v1.1: POS "Peice Rate" (khula piece bechna) — carton wale item par alag line
       const pr = (await p.request().input('i', sql.Int, L.itemId).input('id', sql.Int, id).query(Q_PREV)).recordset[0];
       L.prevRate = pr ? Number(pr.Rate) || 0 : 0;
       L.s30 = Number((await p.request().input('i', sql.Int, L.itemId).query(Q_S30)).recordset[0]?.Q) || 0;

@@ -2563,3 +2563,10 @@ MALIK: "baqi screens bhi, aur har screen ke neeche ke option — kaunsa dena hai
   Rules nahi badle (deny app-side; screens rules perms se).
 TEST hd/st.mjs: form deny (stock.transfer) save, card sub chips, cap toggle -> deny — ALL OK; baqi sab ALL OK.
 VERSION BUMP: ?v=2.99.24, APP_VER, "Blue Khata v2.99.24", sw CACHE, version.json.
+VERSION BUMP: ?v=2.99.24, APP_VER, "Blue Khata v2.99.24", sw CACHE, version.json.
+
+==================== PC purchase-parchi.js v1.1 (2026-10-11, manifest 2026-10-11.2) — fi PIECE rate + ek item ki lines jama ====================
+MALIK (asal parchi ki tasveer): "pieces ke rates bhi chahiye bill par, sale / purchase jaise carton ka hai" + ek item (sunsilk) 3 lines mein.
+* Carton wale item ke neeche: "Piece: khareed <ratePcs> - bechna <SaleRate2 (POS Peice Rate) warna SaleRate>".
+* readBill: wohi item + wohi godam + wohi rate = ek line (qty/bonus/amount jama, n) -> stock pehle/ab, DHYAN ek dafa.
+TEST pp/t.js (2 lines jama, piece line, naam ek dafa) ALL OK.
