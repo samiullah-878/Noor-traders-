@@ -2733,3 +2733,10 @@ html.dk .perm-bar{background:var(--deep)!important;border-color:var(--line)!impo
 .st-pm.sm:not(.on){background:#fff1f1;border-color:#f3c4c4;color:#b4282a}
 .st-sub{border:1px dashed #d6deeb;border-radius:12px;padding:6px 10px}.st-sub summary{cursor:pointer;font-size:12.5px;font-weight:800;color:#4a5d80}.st-sub summary b{color:#b4282a}.st-sub .st-perms{margin-top:6px}
 html.dk .st-scr,html.dk .st-sub{border-color:var(--line)!important;background:transparent!important}
+/* v2.99.25: transfer check — tick se check (scan ke baghair) */
+.tc-n{position:relative}.tc-ck{position:absolute;right:10px;top:10px}.tc-ck input{width:24px;height:24px;min-height:0!important;accent-color:#16a34a;margin:0}
+.tc-n .tc-h{padding-right:40px}
+.tc-bulk{position:sticky;bottom:0;display:flex;align-items:center;gap:8px;padding:10px;border-radius:14px;background:#14284b;color:#fff;box-shadow:0 -6px 18px rgba(20,40,75,.25)}
+.tc-bulk b{flex:1;font-size:13px}.tc-bulk .tc-ok{min-height:42px!important;padding:6px 14px!important;border-radius:12px!important;font-weight:900!important;border:0!important;color:#fff!important}
+.tc-bulk button:last-child{min-height:38px!important;min-width:38px;border-radius:999px!important;background:rgba(255,255,255,.15)!important;color:#fff!important;border:0!important}
+.tc-hh small{font-weight:600;color:#6b7c93}

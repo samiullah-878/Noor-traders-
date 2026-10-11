@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.24';
-import { liveLabelsHTML } from './barcode.js?v=2.99.24';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.25';
+import { liveLabelsHTML } from './barcode.js?v=2.99.25';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1197,7 +1197,7 @@ document.addEventListener('input', e => { if (e.target.matches?.('[data-ctn-q]')
 // Malik: "transfer note par barcode — do screen: jo nikle (waqt ke saath) aur larka godam se maal laaye to check kar ke scan / number;
 //   scan ke baad edit na ho; neeche device ID". Data: transferChecks/T<TransferID> (rules v2.35: sirf create, ts = server waqt,
 //   koi update nahi; sirf malik ghalti par delete). Notes: posTransfers (PC transfer-dekho). Yahan AI nahi.
-let tcView = 'nikle', tcDays = 1, tcDir = 'all', tcChecks = new Map(), tcStop = null, tcErr = '', tcRes = null, tcBusy = false, tcFarq = false, tcOpen = new Set(), tcCode = '';
+let tcSel = new Set(), tcView = 'nikle', tcDays = 1, tcDir = 'all', tcChecks = new Map(), tcStop = null, tcErr = '', tcRes = null, tcBusy = false, tcFarq = false, tcOpen = new Set(), tcCode = '';
 let auditOf = null, nameOf = () => '', deviceOf = () => '';
 const TC_LATE = 120 * 60000;
 const tcKey = t => String(t?.id || ('T' + t?.transferId));
@@ -1214,7 +1214,7 @@ function tcStart() {
   });
 }
 function tcFind(code) {
-  const c = String(code || '').trim(), z = tcZ(c), L = ptList || [];
+  const c = String(code || '').trim(), z = tcZ(c), L = tcAll();
   if (!c) return null;
   return L.find(t => String(t.transferNo || '').trim().toLowerCase() === c.toLowerCase())
     || (z && L.find(t => tcZ(t.transferNo) === z)) || (z && L.find(t => String(t.transferId) === z)) || null;
@@ -1233,11 +1233,17 @@ function tcStatusText(t, s) {
 function tcSum(t) { let c = 0, p = 0; for (const l of t.lines || []) { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); c += x.c; p += x.p; } return `${(t.lines || []).length} item · ${c ? num(c) + ' ctn' : ''}${c && p ? ' + ' : ''}${p ? num(r2(p)) + ' pcs' : ''}${!c && !p ? '0' : ''}`; }
 function tcLines(t) { return (t.lines || []).map(l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); return `<div class="tc-ln"><span>${esc(l.name)}</span><b>${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}</b></div>`; }).join(''); }
 function tcWho(c) { return `<div class="tc-who"><span>👤 ${esc(c.byName || '—')}</span><span>🕒 ${tcClock(c.ts)} · ${esc(regDay(c.ts || Date.now()))}</span><span>📱 Device: <b>${esc(c.device || '—')}</b></span></div>`; }
+function tcAll() {   // v2.99.25: POS ke note + app ke bane note (transferJobs done) jo abhi POS list (transfer-dekho) mein nahi aaye
+  const L = [...(ptList || [])], ids = new Set(L.map(t => String(t.transferId)));
+  for (const j of trList || []) { if (j.op === 'delete' || j.status !== 'done' || !j.transferId || ids.has(String(j.transferId))) continue;
+    L.push({ id: 'T' + j.transferId, transferId: Number(j.transferId), transferNo: String(j.transferNo || ''), from: Number(j.from), to: Number(j.to), at: Number(j.doneAt) || Number(j.at) || 0, createdOn: Number(j.doneAt) || Number(j.at) || 0, app: true, lines: (j.lines || []).map(l => ({ itemId: String(l.itemId), name: l.name, qty: Number(l.qty) || 0, pack: Number(l.pack) || 0 })) }); }
+  return L;
+}
 function tcRows() {
   const since = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (tcDays === 2 ? 1 : tcDays - 1)); return d.getTime(); })();
   const till = tcDays === 2 ? (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); })() : Infinity;
   const main = agPool().main ?? 1;
-  return (ptList || []).filter(t => t && tcIssued(t) >= since && tcIssued(t) < till)
+  return tcAll().filter(t => t && tcIssued(t) >= since && tcIssued(t) < till)
     .filter(t => tcDir === 'all' || (tcDir === 'in' ? Number(t.to) === Number(main) : Number(t.from) === Number(main)));
 }
 function tcNikleHTML() {
@@ -1247,13 +1253,13 @@ function tcNikleHTML() {
   const late = pend.filter(x => x.s.k === 'late').length, farq = done.filter(x => x.s.k === 'farq').length;
   const C = (on, k, v, lab) => `<button type="button" class="rc${on ? ' on' : ''}" data-tc-${k}="${v}">${lab}</button>`;
   const card = ({ t, s }) => { const k = tcKey(t), op = tcOpen.has(k);
-    return `<div class="tc-n ${s.k}"><button type="button" class="tc-h" data-tc-open="${esc(k)}"><span class="tc-l"><b>TN ${esc(t.transferNo || t.transferId)}</b><small>${esc(branchName(t.from, names))} → ${esc(branchName(t.to, names))} · ${tcSum(t)}</small></span><span class="tc-t">${tcClock(tcIssued(t))}${regDay(tcIssued(t)) !== regDay(Date.now()) ? `<small>${esc(regDay(tcIssued(t)).slice(5))}</small>` : ''}</span></button>
+    return `<div class="tc-n ${s.k}">${(s.k === 'wait' || s.k === 'late') ? `<label class="tc-ck"><input type="checkbox" data-tc-sel="${esc(k)}"${tcSel.has(k) ? ' checked' : ''}></label>` : ''}<button type="button" class="tc-h" data-tc-open="${esc(k)}"><span class="tc-l"><b>TN ${esc(t.transferNo || t.transferId)}</b><small>${esc(branchName(t.from, names))} → ${esc(branchName(t.to, names))} · ${tcSum(t)}</small></span><span class="tc-t">${tcClock(tcIssued(t))}${regDay(tcIssued(t)) !== regDay(Date.now()) ? `<small>${esc(regDay(tcIssued(t)).slice(5))}</small>` : ''}</span></button>
       <span class="tc-st ${s.k}">${tcStatusText(t, s)}</span>
       ${op ? `<div class="tc-more">${tcLines(t)}${s.c ? tcWho(s.c) + (s.c.note ? `<p class="tc-note">📝 ${esc(s.c.note)}</p>` : '') + (isOwner() ? `<button type="button" class="tc-del" data-tc-del="${esc(k)}">🗑 Check hatao (sirf malik — ghalti par)</button>` : '') : '<p class="tc-note">Abhi kisi ne scan nahi kiya. Maal aane par "📷 Scan / Check" mein parchi scan karein.</p>'}</div>` : ''}</div>`; };
   return `<div class="mchips">${C(tcDays === 1, 'd', 1, 'Aaj')}${C(tcDays === 2, 'd', 2, 'Kal')}${C(tcDays === 7, 'd', 7, '7 din')}${C(tcDays === 30, 'd', 30, '30 din')}</div>
     <div class="mchips">${C(tcDir === 'all', 'dir', 'all', 'Sab')}${C(tcDir === 'in', 'dir', 'in', 'Godam → Dukan')}${C(tcDir === 'out', 'dir', 'out', 'Dukan → Godam')}</div>
     <div class="tc-kpis"><div class="${pend.length ? 'bad' : ''}"><b>${pend.length}</b><small>⏳ nahi pahunche${late ? ` · ${late} der se` : ''}</small></div><div class="good"><b>${done.length - farq}</b><small>✓ check ho gaye</small></div><div class="${farq ? 'warn' : ''}"><b>${farq}</b><small>⚠️ farq</small></div></div>
-    ${pend.length ? `<h4 class="tc-hh">⏳ Abhi nahi pahunche (${pend.length})</h4>${pend.map(card).join('')}` : ''}
+    ${pend.length ? `<h4 class="tc-hh">⏳ Abhi nahi pahunche (${pend.length}) <small>— tick lagao, neeche "✓ Check" (scan ke baghair)</small></h4>${pend.map(card).join('')}${tcSel.size ? `<div class="tc-bulk"><b>${tcSel.size} note chune</b><button type="button" class="tc-ok" data-tc-bulk="1"${tcBusy ? ' disabled' : ''}>✓ Maal poora mila — check karo</button><button type="button" data-tc-selclear="1">✕</button></div>` : ''}` : ''}
     ${done.length ? `<h4 class="tc-hh">✓ Check ho chuke (${done.length})</h4>${done.map(card).join('')}` : ''}
     ${rows.length ? '' : '<p class="muted">Is arse mein koi transfer note nahi nikla.</p>'}`;
 }
@@ -1310,6 +1316,19 @@ function tcLookup(code) {
   beep(!c); if (c && navigator.vibrate) navigator.vibrate([80, 60, 80]);
   tcPaint();
 }
+async function tcSaveOne(t, status, note) {
+  const key = tcKey(t), d = { transferId: t.transferId, transferNo: t.transferNo, from: t.from, to: t.to, issuedAt: tcIssued(t), status, note: String(note || '').trim(), byName: nameOf() || (isOwner() ? 'Malik' : 'Mulazim'), device: deviceOf(), lines: (t.lines || []).length };
+  await cloud.saveTransferCheck(key, d); if (!tcChecks.has(key)) tcChecks.set(key, { ...d, id: key, ts: Date.now() });
+  try { auditOf?.({ area: 'stock', act: 'tr-check', what: `TN ${t.transferNo || t.transferId} ${status === 'farq' ? '⚠️ farq' : '✓ poora'} (tick)`.slice(0, 120), ref: key, refType: 'transfer' }); } catch {}
+}
+async function tcBulk() {
+  if (tcBusy || !tcSel.size) return; if (!cloud?.saveTransferCheck) { notice('App update karein'); return; }
+  const list = tcRows().filter(t => tcSel.has(tcKey(t)) && !tcChecks.get(tcKey(t)));
+  if (!confirm(`${list.length} transfer note "✓ Maal poora mila" karna hai?\nSave ke baad badal nahi sakta.`)) return;
+  tcBusy = true; tcPaint(); let ok = 0, bad = 0;
+  for (const t of list) { try { await tcSaveOne(t, 'ok', ''); ok++; } catch (e) { if (e?.code === 'tc/done') ok++; else bad++; } }
+  tcBusy = false; tcSel.clear(); beep(!bad); notice(`✓ ${ok} note check${bad ? ` · ${bad} nahi hue` : ''}`); tcPaint();
+}
 async function tcSave(status, note) {
   const t = tcRes?.t; if (!t || tcBusy) return;
   if (!cloud?.saveTransferCheck) { notice('App update karein'); return; }
@@ -1330,8 +1349,11 @@ async function tcSave(status, note) {
 document.addEventListener('click', e => {
   if (e.target.closest?.('[data-stock-tc]')) { openTransferCheck(); return; }
   if (!document.querySelector('.tc-root')) return;
-  const t = e.target.closest?.('[data-tc-view],[data-tc-d],[data-tc-dir],[data-tc-open],[data-tc-cam],[data-tc-retry],[data-tc-ok],[data-tc-farq],[data-tc-fback],[data-tc-fsave],[data-tc-del]'); if (!t) return;
+  if (e.target.closest?.('.tc-ck')) return;   // checkbox: change par
+  const t = e.target.closest?.('[data-tc-view],[data-tc-d],[data-tc-dir],[data-tc-open],[data-tc-cam],[data-tc-retry],[data-tc-ok],[data-tc-farq],[data-tc-fback],[data-tc-fsave],[data-tc-del],[data-tc-bulk],[data-tc-selclear]'); if (!t) return;
   const d = t.dataset;
+  if (d.tcBulk != null) { tcBulk(); return; }
+  if (d.tcSelclear != null) { tcSel.clear(); tcPaint(); return; }
   if (d.tcView) { tcView = d.tcView; if (tcView === 'scan' && tcRes?.type !== 'open') tcRes = null; }
   else if (d.tcD) tcDays = Number(d.tcD);
   else if (d.tcDir) tcDir = d.tcDir;
@@ -1351,6 +1373,7 @@ document.addEventListener('click', e => {
   }
   tcPaint();
 });
+document.addEventListener('change', e => { if (!e.target.matches?.('[data-tc-sel]')) return; const k = e.target.dataset.tcSel; if (e.target.checked) tcSel.add(k); else tcSel.delete(k); tcPaint(); });
 document.addEventListener('submit', e => { if (!e.target.matches?.('[data-tc-form]')) return; e.preventDefault(); tcLookup(e.target.querySelector('[data-tc-code]')?.value || ''); });
 document.addEventListener('input', e => { if (e.target.matches?.('[data-tc-code]')) tcCode = e.target.value; });
 export function tcBadge(t) {   // 📋 Transfer register ke card par chhota nishan
