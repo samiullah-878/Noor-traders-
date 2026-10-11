@@ -19,7 +19,7 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 
-const VER = '1.0';
+const VER = '1.1';   // v1.1 (2026-10-11): sachi dhadkan + chowkidar (11-Oct 3 ghante khamosh, report nahi bani) · report waqt guzre to usi din baad mein bhi · default 18:30
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47833;
 const DIR = __dirname;
@@ -27,7 +27,7 @@ const LINK = 'https://samiullah-878.github.io/Noor-traders-/';
 const KEEP_DAYS = 62;
 const PC_DEFAULT = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-KEIME1D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
 const SKIP_RX = /noor\s*trader|our\s*factory|stock\s*['"]?\s*f[ae]?r?a?q/i;   // andar ka lena-dena (bikri / khareed nahi)
-const DEF = { reportOn: true, reportTime: '22:30', alertOn: true, alertTime: '09:00', alertRed: 3, alertYellow: 7, wsNames: ['whole sale'], wsSmall: 3 };
+const DEF = { reportOn: true, reportTime: '18:30', alertOn: true, alertTime: '09:00', alertRed: 3, alertYellow: 7, wsNames: ['whole sale'], wsSmall: 3 };
 
 const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
 const r3 = v => Math.round((Number(v) || 0) * 1000) / 1000;
@@ -68,7 +68,7 @@ function dailyOf(day, rows) {
     difference: t.sale + t.collection + opening - t.expense - t.payment - (close.change || 0) - (close.cash || 0) };   // paisa
 }
 
-function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DEFAULT, send = null, now = () => new Date() }) {
+function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DEFAULT, send = null, now = () => new Date(), onBeat = null }) {
   const access = biz.collection('blueAccess');
   async function cfgGet() { try { const d = await access.doc('reportConfig').get(); return { ...DEF, ...(d.exists ? d.data() || {} : {}) }; } catch { return { ...DEF }; } }
   async function branchNames(p) { try { const r = (await p.request().query('SELECT BranchID, BranchName FROM dbo.Branch')).recordset; const m = {}; r.forEach(x => { m[x.BranchID] = String(x.BranchName || '').trim(); }); return m; } catch { return {}; } }
@@ -258,16 +258,18 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
   let busy = false, lastAlive = 0;
   async function tick() {
     if (busy) return; busy = true;
+    const dog = setTimeout(() => { log('CHOWKIDAR: kaam 6 min se atka — script band, bat dobara chalayegi'); process.exit(4); }, 6 * 60000); dog.unref?.();   // v1.1
     try {
       const cfg = await cfgGet(), st = readSt(), t = now(), hm = `${pad2(t.getHours())}:${pad2(t.getMinutes())}`, day = dayOf(t);
-      const due = (time, key) => { const [h, m] = String(time || '').split(':').map(Number); if (!Number.isFinite(h)) return false; const d = new Date(t); d.setHours(h, m || 0, 0, 0); return hm >= `${pad2(h)}:${pad2(m || 0)}` && t.getTime() - d.getTime() < 3 * 3600e3 && st[key] !== day; };   // waqt guzre 3 ghante se zyada = chhor do (PC band tha)
+      const due = (time, key, win = 3) => { const [h, m] = String(time || '').split(':').map(Number); if (!Number.isFinite(h)) return false; const d = new Date(t); d.setHours(h, m || 0, 0, 0); return hm >= `${pad2(h)}:${pad2(m || 0)}` && t.getTime() - d.getTime() < win * 3600e3 && st[key] !== day; };   // alert: 3 ghante; report (v1.1): usi din jab bhi chale (PC band / atka tha)
       if (Number(cfg.alertNow) > (st.alertNow || 0)) { st.alertNow = Number(cfg.alertNow); saveSt(st); await runAlert(cfg, 'app se abhi'); }
       else if (cfg.alertOn !== false && due(cfg.alertTime, 'alertDay')) { st.alertDay = day; saveSt(st); await runAlert(cfg, 'subah'); }
       if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); await runReport(String(cfg.reportDay || day), cfg, 'app se abhi'); }
-      else if (cfg.reportOn !== false && due(cfg.reportTime, 'reportDay')) { st.reportDay = day; saveSt(st); await runReport(day, cfg, 'raat'); }
+      else if (cfg.reportOn !== false && due(cfg.reportTime, 'reportDay', 24)) { st.reportDay = day; saveSt(st); await runReport(day, cfg, 'raat'); }
       if (Date.now() - lastAlive > 5 * 60000) { lastAlive = Date.now(); try { await access.doc('reportConfig').set({ alive: Date.now(), ver: VER }, { merge: true }); } catch {} }   // app: "PC zinda"
+      onBeat?.();   // v1.1: dhadkan SIRF tab jab chakkar poora hua
     } catch (e) { log('masla: ' + e.message); if (e?.code === 16 || /UNAUTHENTICATED/.test(String(e?.message))) process.exit(1); }
-    finally { busy = false; }
+    finally { clearTimeout(dog); busy = false; }
   }
   return { buildAlert, buildReport, runAlert, runReport, tick, cfgGet };
 }
@@ -275,7 +277,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
 module.exports = { makeReporter, dailyOf, perPiece, pieceCost, isWs, phone92, DEF };
 
 if (require.main === module) {
-  { const hb = path.join(DIR, 'raat-report.alive'); const w = () => { try { fs.writeFileSync(hb, String(Date.now())); } catch {} }; w(); setInterval(w, 30000).unref(); }
+  const hb = path.join(DIR, 'raat-report.alive'), beat = () => { try { fs.writeFileSync(hb, String(Date.now())); } catch {} }; beat();   // v1.1: har kamyab chakkar par (30 sec) — atke to doctor 3 min mein dobara
   const log = (...a) => { const line = `[${new Date().toLocaleTimeString()}] ` + a.join(' '); console.log(line); };
   const sql = require('mssql');
   const { initializeApp, cert, getApps } = require('firebase-admin/app');
@@ -283,9 +285,9 @@ if (require.main === module) {
   const SQL_CONFIG = require('./sql-config.js'); SQL_CONFIG.options = { ...(SQL_CONFIG.options || {}), useUTC: false };
   if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
   const biz = getFirestore().collection('businesses').doc(BUSINESS_ID);
-  let pool = null; const getPool = async () => { if (pool && pool.connected) return pool; pool = await new sql.ConnectionPool(SQL_CONFIG).connect(); return pool; };
+  let pool = null; const getPool = async () => { if (pool && pool.connected) return pool; pool = await new sql.ConnectionPool({ requestTimeout: 120000, connectionTimeout: 15000, ...SQL_CONFIG }).connect(); return pool; };
   const pcNames = () => { try { return { ...PC_DEFAULT, ...(JSON.parse(fs.readFileSync(path.join(DIR, 'local-config.json'), 'utf8')).pcNames || {}) }; } catch { return PC_DEFAULT; } };
-  const R = makeReporter({ getPool, sql, biz, log, pcNames });
+  const R = makeReporter({ getPool, sql, biz, log, pcNames, onBeat: beat });
   const arg = process.argv;
   if (arg.includes('--report') || arg.includes('--alert')) {
     (async () => { const cfg = await R.cfgGet(); if (arg.includes('--alert')) await R.runAlert(cfg, 'test'); if (arg.includes('--report')) { const d = arg[arg.indexOf('--report') + 1]; await R.runReport(/^\d{4}-\d{2}-\d{2}$/.test(d || '') ? d : dayOf(new Date()), cfg, 'test'); } process.exit(0); })()

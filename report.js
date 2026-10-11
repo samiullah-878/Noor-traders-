@@ -12,12 +12,14 @@ const shift = (day, n) => { const d = new Date(day + 'T12:00:00'); d.setDate(d.g
 const dLabel = day => { const d = new Date(day + 'T12:00:00'); return `${['Itwar', 'Pir', 'Mangal', 'Budh', 'Jumerat', 'Juma', 'Hafta'][d.getDay()]} ${d.getDate()} ${d.toLocaleString('en-US', { month: 'short' })}`; };
 const clock = t => t ? new Date(t).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }) : '';
 const ago = t => { const m = Math.round((Date.now() - Number(t || 0)) / 60000); return !t ? '—' : m < 1 ? 'abhi' : m < 60 ? m + ' min pehle' : m < 1440 ? Math.round(m / 60) + ' ghante pehle' : Math.round(m / 1440) + ' din pehle'; };
-const DEF = { reportOn: true, reportTime: '22:30', alertOn: true, alertTime: '09:00', alertRed: 3, alertYellow: 7, wsNames: ['whole sale'], wsSmall: 3 };
+const DEF = { reportOn: true, reportTime: '18:30', alertOn: true, alertTime: '09:00', alertRed: 3, alertYellow: 7, wsNames: ['whole sale'], wsSmall: 3 };
 
 let cloud = null, notice = () => {}, isOwner = () => false, route = () => {}, pdfOf = null;
 let day = '', rep = undefined, repStop = null, cfg = { ...DEF }, cfgStop = null, waitNow = 0;
 export function reportSetup(o) { cloud = o.cloud; notice = o.notice || notice; isOwner = o.owner || isOwner; route = o.route || route; pdfOf = o.pdf || pdfOf; }
-function cfgWatch() { if (cfgStop || !cloud?.listenReportConfig) return; cfgStop = cloud.listenReportConfig(c => { if (c) cfg = { ...DEF, ...c }; paintIf(); paintSet(); }); }
+function cfgWatch() { if (cfgStop || !cloud?.listenReportConfig) return; cfgStop = cloud.listenReportConfig(c => { if (c) cfg = { ...DEF, ...c }; rt1830(c); paintIf(); paintSet(); }); }
+// v2.99.30: malik — "report 6:30 par ban jani chahie": ek dafa (is phone par) waqt 18:30 kar do; baad mein Setting se jo chahe
+function rt1830(c) { try { if (!c || !isOwner() || localStorage.getItem('rp-1830')) return; localStorage.setItem('rp-1830', '1'); if (c.reportTime !== '18:30') { cfg.reportTime = '18:30'; cloud.setReportConfig({ reportTime: '18:30' }).then(() => notice('🌙 Report ab roz 6:30 PM')).catch(() => localStorage.removeItem('rp-1830')); } } catch {} }
 const open = () => !!document.querySelector('#dialog[open] .rp-root');
 function paintIf() { if (open()) $('dialogBody').innerHTML = html(); }
 
@@ -98,7 +100,7 @@ document.addEventListener('change', e => { if (!e.target.matches?.('[data-rp-dat
 // ---------- ⚙️ setting ----------
 function setHTML() {
   const C = (on, attr, v, lab) => `<button type="button" class="${on ? 'on' : ''}" data-${attr}="${esc(v)}">${lab}</button>`;
-  const rt = ['21:00', '22:00', '22:30', '23:00'], at = ['08:00', '09:00', '10:00'], rd = [[2, 5], [3, 7], [5, 10]];
+  const rt = ['18:30', '19:00', '21:00', '22:30'], at = ['08:00', '09:00', '10:00'], rd = [[2, 5], [3, 7], [5, 10]];
   return `<div class="rs-root">
     <button type="button" class="rs-back" data-rs-back="1">← Report</button>
     <div class="rs-card"><h4>🌙 Raat ki report</h4><div class="mchips">${C(cfg.reportOn !== false, 'rs-on', 'reportOn:1', '🟢 ON')}${C(cfg.reportOn === false, 'rs-on', 'reportOn:0', '⚪ Band')}</div>
