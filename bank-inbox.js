@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.37';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.38';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -23,7 +23,7 @@ export function bankWatch() {
 const isOpen = () => !!document.querySelector('#dialogBody .bk-root');
 // sab docs -> parsed + dubara wale alag
 function rows() {
-  const all = (docs || []).map(d => { const r = parseBank(d.text, d.src, d.subj); return { d, r, k: r.ok ? bankKeyOf(r) : 'X' + d.id }; });
+  const all = (docs || []).filter(d => !('p' in d) || d.text).map(d => { const r = parseBank(d.text, d.src, d.subj); return { d, r, k: r.ok ? bankKeyOf(r) : 'X' + d.id }; });
   all.sort((a, b) => (b.r.day + b.r.time).localeCompare(a.r.day + a.r.time) || String(b.d.at || '').localeCompare(String(a.d.at || '')));
   const seen = new Map(); for (const x of all) if (x.d.st === 'done' || x.d.st === 'skip') seen.set(x.k, x);
   const pend = [], done = [], bad = [], dup = [];
@@ -178,6 +178,16 @@ async function rabtaTest() {
   // qadam 1: rules asal mein nayi hain? (malik ke login se _alias likhna sirf rules 2.38+ mein allowed)
   try { await O.cloud.bankAliasSet(alias || {}); }
   catch (e) { testOk = false; testMsg = `❌ Rules ASAL MEIN purani hain — Firebase ne malik ko bhi bankSms mein likhne nahi diya (${esc(e?.code || e?.message || e)}).<br><b>Hal:</b> Firebase → Firestore → Rules → poori purani mita kar nayi paste → <b>Publish</b> dabayein → upar "Rules published" aana chahiye. Agar laal error aaye to us ka screenshot bhejein.`; testBusy = false; paint(); return; }
+  // qadam 2: 4 jaanch darwaze (rules 2.40) — kaun sa khulta hai
+  const probes = [[1, 'bina shart'], [2, 'request.auth == null'], [3, 'exists(bankKey)'], [4, 'chaabi == bankKey.k']], res = [];
+  for (const [pn, lab] of probes) {
+    try {
+      const r = await fetch(restUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { p: { integerValue: String(pn) }, ...(pn === 4 ? { k: { stringValue: key } } : {}) } }) });
+      let j = {}; try { j = JSON.parse(await r.text()); } catch {}
+      res.push(`${r.ok ? '✅' : '❌'} ${pn}: ${lab}${r.ok ? '' : ' — ' + esc(String(j?.error?.message || r.status).slice(0, 80))}`);
+    } catch (e) { res.push(`❌ ${pn}: ${lab} — ${esc(e?.message || e)}`); }
+  }
+  const probeHTML = `<div class="bk-probe">${res.join('<br>')}</div>`;
   try {
     const body = JSON.parse(smsBody(key).replace('SMS_YAHAN', 'RABTA TEST — app se (is card ko ✕ kar dein)'));
     const r = await fetch(restUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -189,6 +199,7 @@ async function rabtaTest() {
     else if (r.status === 400) { testOk = false; testMsg = `❌ Body samajh nahi aayi (400): ${esc(msg)}`; }
     else { testOk = false; testMsg = `❌ ${r.status} ${esc(st)}: ${esc(msg)}`; }
   } catch (e) { testOk = false; testMsg = '❌ Internet / Google tak rasai nahi: ' + esc(e?.message || e); }
+  testMsg = probeHTML + testMsg;
   testBusy = false; paint();
 }
 async function copy(what) {

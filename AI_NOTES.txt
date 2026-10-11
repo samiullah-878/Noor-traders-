@@ -3993,3 +3993,5 @@ Setup tab mein "🔎 Rabta test": app khud wohi REST POST (smsBody, text "RABTA 
 v2.99.36: Rabta test ab Firebase ka asal message bhi dikhata (rules vs API key pehchan). Malik ke phone par 403 PERMISSION_DENIED = rules 2.38 Publish nahi hui (editor mein v2.38 tha).
 
 v2.99.37: Rabta test qadam 1 = malik SDK se bankSms/_alias likh kar dekhta ke rules asal mein 2.38+ live hain (TEST rules "allow create: if id != _alias" par bhi 403 aaya — shak: publish asal mein nahi lag raha).
+
+v2.99.38 + rules 2.40: bankSms create par 4 jaanch darwaze (p=1 bina shart, 2 auth==null, 3 exists bankKey, 4 k==bankKey.k) + asal rule bina request.auth shart. Rabta test har darwaza POST karta aur natija dikhata (programmatic rules playground). TEST rules (allow create: if id != _alias) par bhi 403 aaya tha — samajh nahi aayi; yeh pakka batayega.

@@ -2841,3 +2841,4 @@ html.dk .bk-who b,html.dk .bk-empty b{color:var(--ink)!important}html.dk .bk-sug
 html.dk .bk-live{color:var(--ink2)!important}
 .bk-test{display:grid;gap:6px;padding:10px;border-radius:14px;background:#f0fdf4;border:1px solid #bbf7d0}.bk-test small{color:#41536f}
 .bk-tres{padding:8px 10px;border-radius:10px;font-size:13px;line-height:1.45}.bk-tres.ok{background:#dcfce7;color:#166534}.bk-tres.bad{background:#fee2e2;color:#991b1b}
+.bk-probe{padding:8px 10px;border-radius:10px;background:#fff;border:1px dashed #94a3b8;font-size:12.5px;line-height:1.6;margin-bottom:6px}
