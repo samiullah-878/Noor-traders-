@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.45';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.46';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -19,6 +19,7 @@ export function bankWatch() {
     try { O.bankShared?.(alias['@hbl'] || ''); } catch {}
     docs = list.filter(d => d.id !== '_alias');
     onCount(rows().pend.length); if (live()) paint();
+    setTimeout(autoRun, 1500 + Math.random() * 2500);
   });
 }
 const isOpen = () => !!document.querySelector('#dialogBody .bk-root');
@@ -89,9 +90,9 @@ export function openBankInbox(t) {
   if (tab === 'setup') loadKey();
 }
 // ---------- ✓ lagao ----------
-async function apply(id) {
+async function apply(id, auto = false) {
   const x = rows().pend.find(z => z.d.id === id); if (!x || busy.has(id)) return;
-  const H = hbl(); if (!H) { O.notice?.('Pehle HBL khata chunein'); return; }
+  const H = hbl(); if (!H) { if (!auto) O.notice?.('Pehle HBL khata chunein'); return; }
   const r = x.r, w = who(), own = O.owner && O.owner(), today = O.today ? O.today() : '';
   const date = own && r.day && r.day <= today ? r.day : today;
   const note = (`HBL ${r.dir === 'in' ? 'aaye' : 'gaye'} · ${r.name}${r.bank ? ' (' + r.bank + ')' : ''}${r.via ? ' · ' + r.via : ''}${r.txn ? ' · TXN ' + r.txn : ''}${date !== r.day && r.day ? ' · asal din ' + r.day : ''}`).slice(0, 900);
@@ -104,16 +105,40 @@ async function apply(id) {
       partyId = H.id;
     } else {
       const s = sugOf(x); if (!s) throw Error('Khata chunein');
-      partyId = s.p.id; entryId = (crypto.randomUUID ? crypto.randomUUID() : 'bk' + Date.now());
-      const ok = await O.pay({ id: entryId, rev: 0, fromPartyId: r.dir === 'in' ? s.p.id : H.id, toPartyId: r.dir === 'in' ? H.id : s.p.id, amount: r.amt, date, note, posPending: false, posVoucher: '' });
-      if (ok === false) throw Error('Entry nahi lagi');
+      partyId = s.p.id;
+      if (O.post) {
+        // v2.99.46: Daily Sale mein dono taraf — aaye: party ki WASOOLI + HBL ko PAYMENT (Akhrajat column) · gaye: HBL ki WASOOLI + party ko PAYMENT.
+        // Galla barabar (wasooli = akhrajat), khaton ka baqaya transfer jaisa. Pakki ID (do phone ek saath lagayen to bhi do dafa nahi).
+        const wId = 'bk' + id + 'w', aId = 'bk' + id + 'a', base = { amount: r.amt, date, note, dailyIncluded: true, posPending: false, bankSms: id };
+        await O.post([{ ...base, id: wId, kind: 'collection', partyId: r.dir === 'in' ? s.p.id : H.id }, { ...base, id: aId, kind: 'payment', partyId: r.dir === 'in' ? H.id : s.p.id }]);
+        entryId = wId + '|' + aId;
+      } else {
+        entryId = (crypto.randomUUID ? crypto.randomUUID() : 'bk' + Date.now());
+        const ok = await O.pay({ id: entryId, rev: 0, fromPartyId: r.dir === 'in' ? s.p.id : H.id, toPartyId: r.dir === 'in' ? H.id : s.p.id, amount: r.amt, date, note, posPending: false, posVoucher: '' });
+        if (ok === false) throw Error('Entry nahi lagi');
+      }
       const k = aliasKey(r.name); if (k && alias[k] !== s.p.id) { alias = { ...alias, [k]: s.p.id }; O.cloud.bankAliasSet(alias).catch(() => {}); }
     }
     await O.cloud.bankSmsSet(id, { st: 'done', by: String(w.uid || ''), byName: String(w.name || '').slice(0, 60), doneAt: Date.now(), partyId, entryId: String(entryId || ''), kind: r.kind });
-    pick.delete(id); O.notice?.(`✓ ${m(r.amt)} — ${r.kind === 'cash' ? 'cash HBL mein jama' : (r.dir === 'in' ? r.name + ' → HBL' : 'HBL → ' + r.name)}`);
-  } catch (e) { O.notice?.('⚠️ ' + (e?.message || e)); }
+    pick.delete(id); O.notice?.(`${auto ? '🤖 Khud laga: ' : '✓ '}${m(r.amt)} — ${r.kind === 'cash' ? 'cash HBL mein jama' : (r.dir === 'in' ? r.name + ' → HBL' : 'HBL → ' + r.name)}`);
+  } catch (e) { if (auto) autoFail.add(id); O.notice?.('⚠️ ' + (auto ? 'Khud nahi laga (' + (r.name || '') + '): ' : '') + (e?.message || e)); }
   finally { busy.delete(id); paint(); onCount(rows().pend.length); }
 }
+// 🤖 v2.99.46: jo naam app ko YAAD hai (malik ne pehle khud khata chuna) — SMS / email aate hi khud lag jaye. Naya naam = ☐ hi rahe.
+const autoFail = new Set(); let autoBusy = false;
+async function autoRun() {
+  if (autoBusy || !docs || !canUse() || !O.post || !hbl()) return;
+  autoBusy = true;
+  try {
+    for (const x of rows().pend) {
+      if (x.r.kind === 'cash' || autoFail.has(x.d.id) || busy.has(x.d.id) || pick.has(x.d.id)) continue;
+      const s = guessParty(x.r.name, (O.parties ? O.parties() : []).filter(p => !p.bank), alias);
+      if (!s || s.why !== 'yaad') continue;
+      await apply(x.d.id, true);
+    }
+  } finally { autoBusy = false; }
+}
+setInterval(() => { try { autoRun(); } catch {} }, 45000);
 async function skip(id) {
   if (!confirm('Is SMS / email ko chhor dein? (khata mein kuch nahi lagega)')) return;
   const w = who(); busy.add(id); paint();
@@ -130,7 +155,7 @@ function search(inp) {
 // ---------- ⚙️ setup (malik) ----------
 async function loadKey() { if (key !== null || !O.cloud?.getBankKey) return; try { key = (await O.cloud.getBankKey()) || ''; } catch { key = ''; } paint(); }
 const restUrl = () => `https://firestore.googleapis.com/v1/projects/${O.projectId}/databases/(default)/documents/businesses/noor-traders/bankSms?key=${O.apiKey}`;
-const smsBody = k => `{"fields":{"k":{"stringValue":"${k}"},"src":{"stringValue":"sms"},"from":{"stringValue":"14250"},"text":{"stringValue":"{sms_message}"}}}`;   // v2.99.45: MacroDroid ka magic text seedha — copy = paste, kuch badalna nahi
+const smsBody = k => `{"fields":{"k":{"stringValue":"${k}"},"src":{"stringValue":"sms"},"from":{"stringValue":"14250"},"text":{"stringValue":"{sms_message}"}}}`;   // v2.99.46: MacroDroid ka magic text seedha — copy = paste, kuch badalna nahi
 function gasCode(k) {
   return `// Blue Khata — HBL email (paise GAYE) -> 📩 HBL Inbox. Google ke server par har 5 minute. Kuch mitata / bhejta nahi, sirf parhta hai.
 const KEY = '${k}';
@@ -215,7 +240,7 @@ async function copy(what) {
   try { await navigator.clipboard.writeText(t); O.notice?.('📋 Copy ho gaya'); } catch { prompt('Copy karein:', t); }
 }
 document.addEventListener('click', e => {
-  // v2.99.45: 📩 HBL chip / Settings -> POORI HBL screen (pehle chhota dialog khulta tha)
+  // v2.99.46: 📩 HBL chip / Settings -> POORI HBL screen (pehle chhota dialog khulta tha)
   if (e.target.closest?.('[data-hb="bank"],#bkOpenBtn')) { if (O.route) { try { $('dialog')?.close(); } catch {} O.route('hbl'); } else openBankInbox(); return; }
   if (e.target.closest?.('[data-bk-inbox]')) { openBankInbox(e.target.closest('[data-bk-inbox]').dataset.bkInbox || ''); return; }
   const t = e.target.closest?.('[data-bk-tab],[data-bk-ok],[data-bk-skip],[data-bk-chg],[data-bk-pick],[data-bk-copy],[data-bk-newkey],[data-bk-test]'); if (!t || !live()) return;
@@ -234,11 +259,11 @@ document.addEventListener('click', e => {
 document.addEventListener('input', e => { if (e.target.matches?.('[data-bk-q]')) { qOpen = e.target.dataset.bkQ; search(e.target); } });
 document.addEventListener('change', e => { if (e.target.matches?.('[data-bk-bank]') && e.target.value) { O.setBank?.(e.target.value); paint(); } });
 
-// ================= 🏦 HBL SCREEN (v2.99.45) — poori screen, din-war, Aaye / Gaye, HBL ka baqaya =================
+// ================= 🏦 HBL SCREEN (v2.99.46) — poori screen, din-war, Aaye / Gaye, HBL ka baqaya =================
 // Malik: "hbl ki tab khulna pr jaise baqi tabs hain … lena wala dena wala or current balance … jitna bi paisa aiya checkbox".
 // HBL khata = O.bankId() wala khata (purana "Hbl loan 7999 account"). Baqaya = khate ka baqaya + closing se diya cash (Cash diya → HBL).
 // ☐ = abhi khata mein nahi laga (SMS/email) · ☑ = lag gaya (khate ki asal entry). Tick = party ↔ HBL transfer (dono khaton mein).
-// Daily cash mein SHAMIL NAHI (transfer dailyIncluded:false) — Daily screen par alag "🏦 HBL" hissa sirf dikhane ke liye.
+// v2.99.46: tick = do entries (Wasooli + Akhrajat, dailyIncluded:true) — Daily Sale mein dikhti hain, galla barabar. Purane transfer waise hi.
 let range = 'mahina', stab = 'sab', pcfg = null, pstop = null;
 try { const v = JSON.parse(localStorage.getItem('sam-hbl-v') || '{}'); if (['aaj', '7', 'mahina', 'sab'].includes(v.range)) range = v.range; if (['sab', 'baqi'].includes(v.stab)) stab = v.stab; } catch {}
 const keepV = () => { try { localStorage.setItem('sam-hbl-v', JSON.stringify({ range, stab })); } catch {} };
@@ -250,7 +275,8 @@ function hblMoves(H) {
   for (const e of (O.entries ? O.entries() : [])) {
     if (!e || e.deleted || e.partyId !== H.id) continue;
     const sg = sgn(e); if (!sg) continue;
-    const other = e.transferId ? (sg > 0 ? e.fromName : e.toName) : '';
+    const bd = e.bankSms ? (docs || []).find(d => d.id === e.bankSms) : null, bp = bd && bd.partyId && O.party ? O.party(bd.partyId) : null;
+    const other = e.transferId ? (sg > 0 ? e.fromName : e.toName) : bp ? bp.name : '';
     out.push({ id: e.id, date: e.date, at: Number(e.updatedAt || e.createdAt || 0), amt: e.amount, dir: sg > 0 ? 'in' : 'out', name: other || (O.label ? O.label(e) : e.kind), note: e.note || '', e });
   }
   try {
@@ -261,7 +287,7 @@ function hblMoves(H) {
   } catch {}
   return out.sort((a, b) => String(b.date).localeCompare(String(a.date)) || b.at - a.at);
 }
-// v2.99.45: baqaya BILKUL khate jaisa (malik: "balance ka farq") — closing se diya cash (Closing Cash khata) alag dikhaya, jora nahi
+// v2.99.46: baqaya BILKUL khate jaisa (malik: "balance ka farq") — closing se diya cash (Closing Cash khata) alag dikhaya, jora nahi
 function hblBalance(H) { return H && O.balanceOf ? O.balanceOf(H.id) : 0; }
 function hblCash(H) { let c = 0; if (!H) return 0; try { for (const r of (O.cashRows ? O.cashRows() : [])) { if (r.from === 'shop' && r.to === H.id) c += r.outgoing; else if (r.to === 'shop' && r.from === H.id) c -= r.incoming; } } catch {} return c; }
 const fromDay = () => { const t = O.today ? O.today() : new Date().toISOString().slice(0, 10); if (range === 'sab') return ''; if (range === 'aaj') return t; const d = new Date(t + 'T12:00:00'); if (range === '7') d.setDate(d.getDate() - 6); else d.setDate(1); return d.toISOString().slice(0, 10); };
@@ -278,11 +304,11 @@ function tickCard(x, compact) {
     <div class="bk-side">${noteBtn(r.txn, 'p:' + x.d.id)}${compact ? '' : `<button type="button" class="bk-x" title="Chhoro" data-bk-skip="${id}">✕</button>`}</div></div>`;
 }
 function doneRow(v) {
-  const txn = (String(v.note).match(/TXN (\S+)/) || [])[1] || '', src = v.e && v.e.transferId ? (docs || []).find(d => d.st === 'done' && d.entryId === v.e.transferId) : null;
+  const txn = (String(v.note).match(/TXN (\S+)/) || [])[1] || '', src = v.e ? (docs || []).find(d => d.st === 'done' && d.entryId && (d.entryId === v.e.transferId || String(d.entryId).split('|').includes(v.e.id))) : null;
   const undo = src && O.owner && O.owner() ? `<button type="button" class="bk-x" title="Wapas lo" data-bk-undo="${esc(src.id)}">↩</button>` : '';
   return `<div class="bk-row done ${v.dir}"><label class="bk-tick on"><input type="checkbox" checked disabled><span></span></label><div class="bk-rw"><div class="bk-rl"><b>${esc(v.name)}</b><b class="bk-amt ${v.dir === 'in' ? 'green' : 'red'}">${v.dir === 'in' ? '+' : '−'}${m(v.amt)}</b></div><small>${esc(String(v.note).replace(/^HBL (aaye|gaye) · /, '').slice(0, 110))}</small></div><div class="bk-side">${v.cash ? '' : noteBtn(txn, 'v:' + v.id)}${undo}</div></div>`;
 }
-// ---------- 🔔 note + reminder (v2.99.45) — note ki pehchan us ke text mein "TXN <id>" ----------
+// ---------- 🔔 note + reminder (v2.99.46) — note ki pehchan us ke text mein "TXN <id>" ----------
 const notesNow = () => (O.notes ? O.notes() : []).filter(n => n && !n.deleted);
 const noteOf = txn => txn ? notesNow().find(n => String(n.text || '').includes('TXN ' + txn)) : null;
 function noteBtn(txn, ref) { if (!O.noteForm) return ''; const n = noteOf(txn); return `<button type="button" class="bk-nb${n ? ' has' : ''}" data-bk-note="${esc(ref)}" title="Note / reminder">${n ? (n.done ? '🔕 note' : '🔔 note hai') : '🔔 Note'}</button>`; }
@@ -302,10 +328,11 @@ async function undo(docId) {
   const d = (docs || []).find(z => z.id === docId); if (!d || !d.entryId) return;
   const e = (O.entries ? O.entries() : []).find(z => z && !z.deleted && z.transferId === d.entryId && z.transferRole === 'out') || (O.entries ? O.entries() : []).find(z => z && !z.deleted && z.transferId === d.entryId);
   const r = parseBank(d.text, d.src, d.subj);
-  if (!confirm(`↩ Wapas lein?\n\n${m(r.amt)} — ${r.name}\nDono khaton se yeh transfer hat jayega aur card dobara ☐ ban jayega.`)) return;
+  if (!confirm(`↩ Wapas lein?\n\n${m(r.amt)} — ${r.name}\nDono entries (khata + Daily) hat jayengi aur card dobara ☐ ban jayega.`)) return;
   busy.add(docId); paint();
   try {
-    if (e) { const ok = await O.pay({ id: e.transferId, rev: e.rev, remove: true, fromPartyId: e.fromPartyId, toPartyId: e.toPartyId, amount: e.amount, date: e.date, note: e.note }); if (ok === false) throw Error('Transfer nahi hata'); }
+    if (String(d.entryId).includes('|')) { await O.unpost(String(d.entryId).split('|')); }
+    else if (e) { const ok = await O.pay({ id: e.transferId, rev: e.rev, remove: true, fromPartyId: e.fromPartyId, toPartyId: e.toPartyId, amount: e.amount, date: e.date, note: e.note }); if (ok === false) throw Error('Transfer nahi hata'); }
     await O.cloud.bankSmsSet(docId, { st: '', by: '', byName: '', doneAt: 0, partyId: '', entryId: '', kind: '' });
     O.notice?.('↩ Wapas — ab sahi account mein ☐ tick karein');
   } catch (er) { O.notice?.('⚠️ ' + (er?.message || er)); }
@@ -355,7 +382,7 @@ export function renderHbl() {
   $('list').innerHTML = `<div class="bk-screen">${H ? '' : `<div class="bk-warn">⚠️ HBL khata chunein: ${banks.length ? `<select data-bk-bank><option value="">— chunein —</option>${banks.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select>` : 'pehle bank ka khata banayein'}</div>`}
     <div class="mchips">${chip('hbl-tab', 'sab', stab, '📅 Din-war')}${chip('hbl-tab', 'baqi', stab, `☐ Baqi ${R.pend.length}`)}</div>
     <div class="mchips">${[['aaj', 'Aaj'], ['7', '7 din'], ['mahina', 'Is mahine'], ['sab', 'Sab']].map(([v, l]) => chip('hbl-range', v, range, l)).join('')}</div>
-    <p class="bk-hint">☐ par tick = khata mein lag jayega (aaye: party → HBL · gaye: HBL → party). Daily cash hisaab mein shamil nahi hota.</p>${list}</div>`;
+    <p class="bk-hint">☐ tick = foran lag jata hai — aaye: party ki <b>Wasooli</b> + HBL ko <b>Akhrajat</b> · gaye: HBL ki Wasooli + party ko Akhrajat (Daily Sale mein dikhta hai, galla barabar). 🤖 Yaad wale naam khud lagte hain.</p>${list}</div>`;
   if (qOpen) { const i = $('list').querySelector(`[data-bk-q="${CSS.escape(qOpen)}"]`); if (i) { i.value = qv || ''; i.focus(); search(i); } }
   const own = O.owner && O.owner();
   if (own && !pstop && O.cloud?.listenPrintConfig) pstop = O.cloud.listenPrintConfig(c => { pcfg = c || {}; if (onScreen()) renderHbl(); });
@@ -372,7 +399,7 @@ export function hblDay(date) {
   const di = mv.filter(v => v.dir === 'in').reduce((n, v) => n + v.amt, 0), dO = mv.filter(v => v.dir === 'out').reduce((n, v) => n + v.amt, 0);
   return `<section class="bk-day"><div class="bk-dh"><b>🏦 ${esc(H.name)}</b><button type="button" class="bk-mini" data-hbl-open="1">Poori HBL screen ›</button></div>
     <div class="bk-dsum"><span>🟢 Aaye <b class="green">${m(di)}</b></span><span>🔴 Gaye <b class="red">${m(dO)}</b></span><span>Baqaya <b>${m(hblBalance(H))}</b></span></div>
-    ${pend.map(x => tickCard(x, false)).join('')}${mv.map(doneRow).join('')}<small class="bk-note">Bank ka paisa — Daily cash (Sale / Wasooli / Closing) mein shamil nahi.</small></section>`;
+    ${pend.map(x => tickCard(x, false)).join('')}${mv.map(doneRow).join('')}<small class="bk-note">Wasooli + Akhrajat dono taraf barabar — galle ka farq nahi badalta.</small></section>`;
 }
 function hblPdf() {
   const H = hbl(), from = fromDay(), mv = hblMoves(H).filter(v => !from || v.date >= from).slice().reverse();
@@ -395,11 +422,10 @@ document.addEventListener('click', e => {
   if (d.hblTab) stab = d.hblTab; else if (d.hblRange) range = d.hblRange;
   keepV(); renderHbl();
 });
-// Daily Sale ka "🏦 HBL" button: HBL column tak le jao (v2.99.45)
+// Daily Sale ka "🏦 HBL" button: HBL column tak le jao (v2.99.46)
 document.addEventListener('click', e => { if (!e.target.closest?.('[data-hbl-col]')) return; const c = document.querySelector('.hbl-col'); if (c) { c.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'start' }); c.classList.add('flash'); setTimeout(() => c.classList.remove('flash'), 1500); } else O.route?.('hbl'); });
 document.addEventListener('change', e => { const t = e.target; if (!t.matches?.('[data-bk-tick]')) return; if (!t.checked) { t.checked = true; return; }
   const x = rows().pend.find(z => z.d.id === t.dataset.bkTick); if (!x) return;
   const s = x.r.kind === 'cash' ? null : sugOf(x), H = hbl();
-  if (!confirm(`☑ Khata mein lagayein?\n\n${m(x.r.amt)} — ${x.r.kind === 'cash' ? 'Cash jama → ' + (H ? H.name : 'HBL') : x.r.dir === 'in' ? (s ? s.p.name : x.r.name) + ' → ' + (H ? H.name : 'HBL') : (H ? H.name : 'HBL') + ' → ' + (s ? s.p.name : x.r.name)}`)) { t.checked = false; return; }
   apply(x.d.id); });
-export const _bankTest = { undo, openNote, saveHbl, pickAcct, renderHbl, hblDay, hblMoves, hblBalance, hblPdf, setRange: v => { range = v; }, setStab: v => { stab = v; }, rows, html, apply, gasCode, smsBody, setDocs: d => { docs = d; alias = (d.find(x => x.id === '_alias') || {}).m || {}; docs = d.filter(x => x.id !== '_alias'); }, setKey: k => { key = k; }, setTab: t => { tab = t; } };
+export const _bankTest = { autoRun, undo, openNote, saveHbl, pickAcct, renderHbl, hblDay, hblMoves, hblBalance, hblPdf, setRange: v => { range = v; }, setStab: v => { stab = v; }, rows, html, apply, gasCode, smsBody, setDocs: d => { docs = d; alias = (d.find(x => x.id === '_alias') || {}).m || {}; docs = d.filter(x => x.id !== '_alias'); }, setKey: k => { key = k; }, setTab: t => { tab = t; } };

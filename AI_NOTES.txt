@@ -4038,3 +4038,12 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 == v2.99.45 (2026-10-12) Gaye laal · Daily mein 🏦 HBL button ==
 - Malik: "gaye wala paison ka color laal" — .bk-card/.bk-done/.bk-row .out = laal, .in = hara (Inbox dialog ke cards bhi, left border bhi).
 - Malik: "akhrajat wali tab jaisi HBL tab nahi aa rahi" — Daily Sale ke neeche buttons mein "🏦 HBL" (data-hbl-col): HBL column tak scroll + chamak; column na ho to HBL screen.
+
+== v2.99.46 (2026-10-12) HBL: Daily Sale mein Wasooli + Akhrajat · 🤖 yaad wale naam khud ==
+- Malik: "jo aaya wo akhrajat wali side, jo diya wo wasooli, jo account select ho wo aaye". Tick ab TRANSFER nahi — do aam entries (O.post):
+  aaye: collection (party, Wasooli) + payment (HBL, Akhrajat) · gaye: collection (HBL) + payment (party). dailyIncluded:true, field bankSms=<docId>.
+  Pakki ID 'bk<docId>w' / 'bk<docId>a' (do phone ek saath = dobara nahi). doc.entryId = 'w|a'. Galla barabar, baqaya transfer jaisa.
+- Tick par confirm hata diya (ek tap). ↩ undo: O.unpost(dono ids) (malik). Purane transfer wale ↩ pehle jaise (remove transfer).
+- 🤖 autoRun: naam alias ('yaad' — malik ne pehle khud chuna) ho to SMS/email aate hi khud lagta hai (snapshot ke 1.5-4 s baad + har 45 s).
+  Fail ho to us session mein dobara koshish nahi (autoFail). Cash deposit auto nahi. Koi phone (malik/Full) app khole to chalta hai.
+- Test: scratchpad hd/hbl2.mjs.
