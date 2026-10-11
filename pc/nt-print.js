@@ -43,7 +43,7 @@ const VER = '1.18';
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
-{ const hb = path.join(DIR, 'nt-print.alive'); const w = () => { try { fs.writeFileSync(hb, String(Date.now())); } catch {} }; w(); setInterval(w, 30000).unref(); }
+const ZINDA = (() => { try { return require('./zinda.js')(__filename, { sql: false }); } catch (e) { const f = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive'), w = () => { try { require('fs').writeFileSync(f, String(Date.now())); } catch {} }; w(); setInterval(w, 30000).unref(); return { beat: w, guard: fn => fn }; } })();   // 2026-10-11: 💓 sachi dhadkan (zinda.js) — purani 30-sec khud-likhne wali hatayi
 const log = (...a) => console.log(`[${new Date().toLocaleString('en-GB')}]`, ...a);
 const cfg = () => { try { return JSON.parse(fs.readFileSync(path.join(DIR, 'local-config.json'), 'utf8')) || {}; } catch { return {}; } };
 const slug = s => String(s || 'pc').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 8) || 'pc';   // v1.2: 8 harf (counter 'pc:<id>:<printer6>' <= 20)
@@ -407,7 +407,7 @@ function listen() {
       }
       log('🔑 firebase-key mil gayi — poora NT-PRINT shuru'); process.exit(0);
     };
-    tick(); setInterval(tick, 20000);
+    tick(); setInterval(ZINDA.guard(tick, 5 * 60000, 'print tick'), 20000);   // 2026-10-11: chowkidar
     return;
   }
   const day = today();
@@ -419,7 +419,7 @@ function listen() {
 
 // v1.7: 🔄 KHUD-UPDATE — counter PCs par haath se command nahi. GitHub (pc/manifest.json) ke sha256 se milata hai.
 const UPD_BASE = 'https://raw.githubusercontent.com/samiullah-878/Noor-traders-/main/pc/';
-const UPD_FILES = ['nt-print.js', 'nt-parchi.js', 'nt-scan.js', 'nt-posui.js'];
+const UPD_FILES = ['zinda.js', 'nt-print.js', 'nt-parchi.js', 'nt-scan.js', 'nt-posui.js'];   // 2026-10-11: zinda.js pehle (nt-print us ko chahta hai)
 const sha256 = b => require('crypto').createHash('sha256').update(b).digest('hex');
 function getBuf(url, n = 0) {
   return new Promise((res, rej) => {

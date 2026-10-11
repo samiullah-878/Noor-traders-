@@ -49,7 +49,7 @@ const SHOP_PHONE = '03450412515';
 
 const DIR = __dirname;
 // 2026-10-01 HEARTBEAT: har 30 sec '<script>.alive' mein waqt — doctor 3 min purana dekhe to script ko latki samajh kar dobara chalata hai
-{ const _hb = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive'); const _w = () => { try { require('fs').writeFileSync(_hb, String(Date.now())); } catch {} }; _w(); setInterval(_w, 30000).unref(); }
+const ZINDA = (() => { try { return require('./zinda.js')(__filename, { sql: true }); } catch (e) { const f = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive'), w = () => { try { require('fs').writeFileSync(f, String(Date.now())); } catch {} }; w(); setInterval(w, 30000).unref(); return { beat: w, guard: fn => fn }; } })();   // 2026-10-11: 💓 sachi dhadkan (zinda.js) — purani 30-sec khud-likhne wali hatayi
 const DRY = process.argv.includes('--dry');
 const AUTO = process.argv.includes('--auto');
 const WRITER = 'pos-sync';
@@ -883,5 +883,5 @@ async function once() {
   // app mein entry aayi: 3 second ruk kar (taake saath wali entries bhi aa jayein) foran sync
   kick = () => { if (timer) return; timer = setTimeout(() => { timer = null; tick(); }, 3000); };
   await tick();
-  setInterval(tick, LOOP_SECONDS * 1000);
+  setInterval(ZINDA.guard(tick, 10 * 60000, 'khata tick'), LOOP_SECONDS * 1000);   // 2026-10-11: chowkidar
 })().catch(e => { console.error('Nahi hua:', e.message); process.exit(1); });

@@ -20,7 +20,7 @@ const LOCK_PORT = 47824;
 const cfgLocal = () => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'local-config.json'), 'utf8')) || {}; } catch { return {}; } };
 const DIR = __dirname;
 // HEARTBEAT (doctor v2.3+): har 30 sec
-{ const _hb = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); const _w = () => { try { fs.writeFileSync(_hb, String(Date.now())); } catch {} }; _w(); setInterval(_w, 30000).unref(); }
+const ZINDA = (() => { try { return require('./zinda.js')(__filename, { sql: true }); } catch (e) { const f = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive'), w = () => { try { require('fs').writeFileSync(f, String(Date.now())); } catch {} }; w(); setInterval(w, 30000).unref(); return { beat: w, guard: fn => fn }; } })();   // 2026-10-11: 💓 sachi dhadkan (zinda.js) — purani 30-sec khud-likhne wali hatayi
 const log = (...a) => { const line = `[${new Date().toLocaleTimeString()}] ` + a.join(' '); console.log(line); try { fs.appendFileSync(path.join(DIR, 'pos-sales-log.txt'), line + '\r\n'); } catch {} };
 const SQL_CONFIG = require('./sql-config.js');
 SQL_CONFIG.options = { ...(SQL_CONFIG.options || {}), useUTC: false };
@@ -98,7 +98,7 @@ lock.on('listening', async () => {
     try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }
     finally { running = false; if (again) { again = false; setTimeout(tick, 50); } } };
   await tick();
-  setInterval(tick, EVERY);
+  setInterval(ZINDA.guard(tick, 5 * 60000, 'bills tick'), EVERY);   // 2026-10-11: chowkidar
   // v1.3: app ka bill POS mein bana (done) / edit hua -> foran dekho (2 sec ka intezar bhi nahi)
   const kick = () => setTimeout(() => { lastKey = ''; tick(); }, 150);
   const base = db.collection('businesses').doc(BUSINESS_ID), seen = new Map();

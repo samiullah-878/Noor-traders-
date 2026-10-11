@@ -27,7 +27,7 @@ const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47832;
 const DIR = __dirname;
 const KEEP = 60;
-{ const hb = path.join(DIR, 'auto-backup.alive'); const w = () => { try { fs.writeFileSync(hb, String(Date.now())); } catch {} }; w(); setInterval(w, 30000).unref(); }
+const ZINDA = (() => { try { return require('./zinda.js')(__filename, { sql: false }); } catch (e) { const f = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive'), w = () => { try { require('fs').writeFileSync(f, String(Date.now())); } catch {} }; w(); setInterval(w, 30000).unref(); return { beat: w, guard: fn => fn }; } })();   // 2026-10-11: 💓 sachi dhadkan (zinda.js) — purani 30-sec khud-likhne wali hatayi
 const log = (...a) => console.log(`[${new Date().toLocaleString('en-GB')}]`, ...a);
 const cfgLocal = () => { try { return JSON.parse(fs.readFileSync(path.join(DIR, 'local-config.json'), 'utf8')) || {}; } catch { return {}; } };
 const pad2 = n => String(n).padStart(2, '0');
@@ -185,6 +185,6 @@ if (process.env.NT_TEST) {} else if (process.argv.includes('--now')) {
   lock.once('error', () => { console.log('auto-backup pehle se chal raha hai.'); process.exit(3); });
   lock.listen(LOCK_PORT, '127.0.0.1', () => {
     log(`☁️ AUTO-BACKUP v${VER} chal raha hai — Drive folder: ${driveFolder() || 'NAHI MILA (Google Drive for Desktop install/login karein)'}`);
-    setInterval(tick, 60000); tick();
+    setInterval(ZINDA.guard(tick, 25 * 60000, 'backup tick'), 60000); tick();   // 2026-10-11: chowkidar
   });
 }

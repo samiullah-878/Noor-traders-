@@ -34,7 +34,7 @@ const LOCK_PORT = 47818;
 
 const DIR = __dirname;
 // 2026-10-01 HEARTBEAT: har 30 sec '<script>.alive' mein waqt — doctor 3 min purana dekhe to script ko latki samajh kar dobara chalata hai
-{ const _hb = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive'); const _w = () => { try { require('fs').writeFileSync(_hb, String(Date.now())); } catch {} }; _w(); setInterval(_w, 30000).unref(); }
+const ZINDA = (() => { try { return require('./zinda.js')(__filename, { sql: true }); } catch (e) { const f = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive'), w = () => { try { require('fs').writeFileSync(f, String(Date.now())); } catch {} }; w(); setInterval(w, 30000).unref(); return { beat: w, guard: fn => fn }; } })();   // 2026-10-11: 💓 sachi dhadkan (zinda.js) — purani 30-sec khud-likhne wali hatayi
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 let PP = null; try { PP = require('./purchase-parchi.js'); } catch (e) { log('purchase-parchi.js nahi mili (' + e.message + ') — purchase auto-print band, baqi sab chalta'); }   // v4
 let PW = null;

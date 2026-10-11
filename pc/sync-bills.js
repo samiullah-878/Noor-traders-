@@ -15,7 +15,7 @@
 
 const sql = require('mssql');
 // 2026-10-01 HEARTBEAT: har 30 sec '<script>.alive' mein waqt — doctor 3 min purana dekhe to script ko latki samajh kar dobara chalata hai
-{ const _hb = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive'); const _w = () => { try { require('fs').writeFileSync(_hb, String(Date.now())); } catch {} }; _w(); setInterval(_w, 30000).unref(); }
+const ZINDA = (() => { try { return require('./zinda.js')(__filename, { sql: true }); } catch (e) { const f = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive'), w = () => { try { require('fs').writeFileSync(f, String(Date.now())); } catch {} }; w(); setInterval(w, 30000).unref(); return { beat: w, guard: fn => fn }; } })();   // 2026-10-11: 💓 sachi dhadkan (zinda.js) — purani 30-sec khud-likhne wali hatayi
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const crypto = require('crypto');
@@ -243,7 +243,7 @@ async function runOnce() {
       setInterval(async () => {
         if (busy) { console.log('Pichla chakkar abhi chal raha hai — yeh chakkar chhora'); return; }
         busy = true;
-        try { await runOnce(); } catch (e) { console.error('Bill sync fail:', e.message); } finally { busy = false; }
+        try { await ZINDA.guard(runOnce, 15 * 60000, 'bill sync')(); } catch (e) { console.error('Bill sync fail:', e.message); } finally { busy = false; }   // 2026-10-11: chowkidar
       }, LOOP_MINUTES * 60 * 1000);
       // v6: purchase-post ne bill banaya/badla -> bills-now.flag -> foran chakkar
       const FLAG = require('path').join(__dirname, 'bills-now.flag');
@@ -252,7 +252,7 @@ async function runOnce() {
         try { fs.unlinkSync(FLAG); } catch {}
         busy = true;
         console.log(`[${new Date().toLocaleTimeString()}] App/PC ne naya bill bataya — foran sync`);
-        try { await runOnce(); } catch (e) { console.error('Bill sync fail:', e.message); } finally { busy = false; }
+        try { await ZINDA.guard(runOnce, 15 * 60000, 'bill sync')(); } catch (e) { console.error('Bill sync fail:', e.message); } finally { busy = false; }   // 2026-10-11: chowkidar
       }, 5000);
     } else { process.exit(0); }
   } catch (e) {

@@ -3950,3 +3950,11 @@ FIX raat-report v1.1: dhadkan (onBeat) sirf kamyab tick ke baad · CHOWKIDAR tic
 APP report.js: DEF 18:30; setting chips 6:30 / 7:00 / 9:00 / 10:30 PM + apna; malik ke phone par ek dafa (localStorage rp-1830) reportTime 18:30 khud save (malik ne kaha) — baad mein Setting se badal sakta.
 Test rr/t.js ALL OK (+dhadkan); hd rp/po/nb OK.
 NOTE: auto-backup, nt-print, pos-sales-dekho waghera mein bhi free 30-sec dhadkan hai — malik ko suggest kiya (sab mein sachi dhadkan).
+
+==================== PC 💓 zinda.js v1.0 — 14 scripts mein SACHI DHADKAN + chowkidar (2026-10-11, manifest 2026-10-11.12) ====================
+Malik: "Ha sb mein lga do" / "Kar do sab pr kaam". (stock sync + raat-report pehle hi theek — v2 / v1.1.)
+NAYI pc/zinda.js: zinda(__filename, {sql}) — .alive SIRF tab jab har 1 min POS SQL "SELECT 1" (apna 1-connection pool, 25s had) + har 5 min Firebase blueAccess/pcPing get (30s had) kamyab; fail = dhadkan ruki -> doctor 3 min mein dobara; 5 dafa lagatar fail = process.exit(5). Firebase library na ho (NT-PRINT awaz-only) = Firebase jaanch chhor. guard(fn, ms, naam) = chakkar had se lamba -> process.exit(4) (bat dobara). Reads: ~14 scripts x 288/din (5 min) — na hone ke barabar.
+Scripts (purani "{ const _hb ... setInterval(_w, 30000) }" ki jagah): sql:true — item-post, pos-khata-sync, pos-sales-dekho, post-farq, purchase-post, rate-lagao, sale-post, subcode-sync, sync-bills, transfer-dekho, transfer-sync · sql:false — auto-backup, label-print, nt-print. Har jagah try/catch: zinda.js na mile to PURANI dhadkan (script band na ho).
+Chowkidar: auto-backup tick 25 min · nt-print tick 5 min · pos-khata-sync 10 min · pos-sales-dekho 5 min · post-farq 10 min · transfer-dekho 5 min · sync-bills runOnce 15 min. Job wali (onSnapshot) scripts: doctor ki queue jaanch pehle se.
+nt-print UPD_FILES mein zinda.js (counter PCs khud update karte hain — pehle zinda.js).
+Tests: zd/t.js ALL OK (theek=dhadkan, SQL atka=nahi, 5 fail=exit 5, wapas theek, Firebase har 5, guard exit 4, sql:false) · nag/t.js zinda ke saath aur baghair OK · pp/rr OK. Sab pc/*.js node --check OK.
