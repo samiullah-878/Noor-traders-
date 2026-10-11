@@ -60,7 +60,7 @@ function dailyOf(day, rows) {
   for (const e of entries) {
     const a = Number(e.amount) || 0;
     if (e.kind === 'credit') t.credit += a; if (e.kind === 'borrow') t.borrow += a;
-    if (['collection', 'payment'].includes(e.kind) && e.dailyIncluded === false) continue;
+    if (['collection', 'payment', 'expense'].includes(e.kind) && e.dailyIncluded === false) continue;   // v1.3: kharcha bhi
     if (e.kind === 'purchaseCash') t.expense += a; else if (e.kind in { sale: 1, collection: 1, expense: 1, payment: 1 }) t[e.kind] += a;
   }
   const opening = prev?.change ?? close.opening ?? 0;

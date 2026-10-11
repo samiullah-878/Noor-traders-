@@ -2690,3 +2690,5 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
   Wahi TXN / doc do dafa nahi (bank-print.json, 400 yaad). Doc 30 min se purana ya len-den 3 ghante se purana = nahi chhapta (Gmail dobara ka dher nahi).
   printConfig.bankAuto (default ON), bankOut (paise GAYE bhi, default BAND). Chhapne par printConfig.bankLast likhta hai.
 - transfer-sync.js v4.5: watcher printer ki wahi `later` qataar se. Listener toote = fail() -> bat dobara.
+
+== 2026-10-12 manifest 2026-10-12.2: raat-report — kharcha (expense) bhi dailyIncluded:false par galle se bahar (app v2.99.42 jaisa) ==

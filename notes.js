@@ -6,9 +6,9 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.99.41';
-import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.99.41';   // v2.99.29: shaffaf order formula
-import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.41';
+import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.99.42';
+import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.99.42';   // v2.99.29: shaffaf order formula
+import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.42';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -32,7 +32,7 @@ export function notesSetup(o) {
   partyOf = o.party || partyOf; partiesOf = o.parties || partiesOf; itemsOf = o.items || itemsOf; routeTo = o.route || routeTo;
   dlgOf = o.modal || dlgOf; closeDlg = o.close || closeDlg; payOf = o.pay || payOf; canUseOf = o.canUse || canUseOf; aiOf = o.ai || aiOf; stockOf = o.stock || stockOf; pdfOf = o.pdf || pdfOf; balanceOf = o.balance || balanceOf;
   alWatch();
-  if (!stop && cloud?.listenNotes) stop = cloud.listenNotes(list => { notes = (list || []).filter(n => n && n.id && !n.deleted); if ($('ntRoot')) paint(); badge(); });
+  if (!stop && cloud?.listenNotes) stop = cloud.listenNotes(list => { notes = (list || []).filter(n => n && n.id && !n.deleted); if ($('ntRoot')) paint(); badge(); try { window.dispatchEvent(new Event('sam-notes')); } catch {} });
   window.addEventListener('hashchange', hashGo);
   setTimeout(hashGo, 1800);
 }
@@ -47,8 +47,13 @@ function hashGo() {
 }
 
 // ---------- HBL account ----------
+// v2.99.42: malik ka chuna HBL account sab phones par (bankSms/_alias m['@hbl']) — pehle sirf isi phone par yaad rehta tha
+let bankShared = '';
+export function setBankShared(id) { bankShared = String(id || ''); }
+export const notesList = () => notes;
 export function bankId() {
   const all = (partiesOf() || []).filter(p => p && !p.deleted);
+  if (bankShared && all.some(p => p.id === bankShared)) return bankShared;
   let id = ''; try { id = localStorage.getItem(BANK_KEY) || ''; } catch {}
   if (id && all.some(p => p.id === id)) return id;
   const flagged = all.filter(p => p.bank);   // v2.39: account edit mein "Bank / loan account" tick
@@ -65,7 +70,7 @@ function pickBank(then) {
   const paintB = () => { const q = $('bkQ')?.value || ''; const list = q ? all.map(p => [p, partyScore(p, q)]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 12).map(x => x[0]) : (hbl.length ? hbl : all.slice(0, 12));
     $('bkList').innerHTML = list.map(p => `<button type="button" data-bk="${esc(p.id)}">🏦 ${esc(p.name)}</button>`).join('') || '<small>Nahi mila</small>'; };
   paintB(); $('bkQ').oninput = paintB;
-  $('bkList').onclick = e => { const b = e.target.closest('[data-bk]'); if (!b) return; try { localStorage.setItem(BANK_KEY, b.dataset.bk); } catch {} notice('🏦 ' + (partyOf(b.dataset.bk)?.name || '') + ' = HBL account'); closeDlg(); then?.(b.dataset.bk); };
+  $('bkList').onclick = e => { const b = e.target.closest('[data-bk]'); if (!b) return; try { localStorage.setItem(BANK_KEY, b.dataset.bk); } catch {} bankShared = b.dataset.bk; try { window.dispatchEvent(new CustomEvent('sam-bank-pick', { detail: b.dataset.bk })); } catch {} notice('🏦 ' + (partyOf(b.dataset.bk)?.name || '') + ' = HBL account'); closeDlg(); then?.(b.dataset.bk); };
 }
 export function hblPayForm(forceBank) {
   const bid = forceBank || bankId();
@@ -494,6 +499,7 @@ function loadPics(n) {
 }
 export function noteForm(existing = null, preset = {}) {
   const n = existing || { kind: 'note', text: preset.text || '', items: [], remindDay: preset.day || '', remindTime: '', allDay: false };
+  const base = existing || { partyId: preset.partyId || '', partyName: preset.partyName || '', amount: preset.amount || 0 };   // v2.99.42: HBL card se
   let chosen = [...(n.items || [])], picsNow = existing ? [...(pics.get(existing.id) || [])] : [], picsDirty = false;
   dlgOf(existing ? '✏️ Note badlein' : '📝 Naya note', `<form class="nt-form">
     <label>Note<textarea name="text" maxlength="1000" rows="3" placeholder="kya yaad rakhna hai…">${esc(n.text || '')}</textarea></label>
@@ -530,7 +536,7 @@ export function noteForm(existing = null, preset = {}) {
     if (!text && !chosen.length && !picsNow.length && !f.elements.ctPhone.value.trim()) { notice('Kuch likhein'); return; }
     b.disabled = true;
     try {
-      const d = await saveNote({ ...(existing || {}), contactName: f.elements.ctName.value.trim(), contactPhone: f.elements.ctPhone.value, text, items: chosen, remindDay: f.elements.day.value || '', remindTime: f.elements.time.value || '', allDay: !!f.elements.allDay.checked, hasPic: picsNow.length > 0, nag: f.elements.day.value ? nagOk(f.elements.nag.value) : 0 }, existing);
+      const d = await saveNote({ ...base, contactName: f.elements.ctName.value.trim(), contactPhone: f.elements.ctPhone.value, text, items: chosen, remindDay: f.elements.day.value || '', remindTime: f.elements.time.value || '', allDay: !!f.elements.allDay.checked, hasPic: picsNow.length > 0, nag: f.elements.day.value ? nagOk(f.elements.nag.value) : 0 }, existing);
       if (picsDirty && cloud.putPhotos) { pics.set(d.id, picsNow); cloud.putPhotos('n-' + d.id, picsNow).catch(er => notice('⚠️ Tasveer save nahi hui: ' + (er?.message || er))); }
       closeDlg(); notice((existing ? '✓ Note badal gaya' : '📝 Note save') + (d.remindDay ? ' · 🔔 ' + nice(d.remindDay) + (d.remindTime ? ' ' + t12(d.remindTime) : '') : '') + (d.nag ? ' · 🔁 har ' + nagTxt(d.nag) : ''));
     } catch (er) { b.disabled = false; notice('⚠️ ' + (er?.message || er)); }

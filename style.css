@@ -2867,3 +2867,12 @@ html.dk .bk-live{color:var(--ink2)!important}
 .bk-tick.off span{border-color:#b9c2d0;background:#eef1f6}.bk-tick.off input{cursor:not-allowed}
 .bk-x{flex:none;width:30px;min-height:30px!important;padding:0!important;border-radius:10px!important;background:transparent!important;border:1px solid var(--line,rgba(34,59,109,.18))!important;color:inherit!important}
 html.dk .bk-tick span{background:rgba(255,255,255,.08);border-color:#7fb0ff}html.dk .bk-row.pend{background:rgba(255,193,7,.08)}
+/* v2.99.42 HBL: note / wapas / account badlo · Daily: sirf khata */
+.bk-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none}
+.bk-nb{min-height:28px!important;padding:3px 9px!important;border-radius:999px!important;font-size:11.5px!important;font-weight:700;background:rgba(11,61,107,.07)!important;border:1px solid rgba(11,61,107,.18)!important;color:#0b3d6b!important;white-space:nowrap}
+.bk-nb.has{background:#fff4d6!important;border-color:#e3b23c!important;color:#7a5200!important}
+.bk-acct{margin-left:6px;min-height:24px!important;padding:2px 10px!important;border-radius:999px!important;font-size:11.5px!important;background:rgba(255,255,255,.18)!important;border:1px solid rgba(255,255,255,.4)!important;color:#fff!important}
+.bk-acctpick{display:flex;flex-direction:column;gap:8px}.bk-acctpick input{width:100%}
+.bk-acctpick .bk-res{display:flex;flex-direction:column;gap:6px}.bk-acctpick .bk-res button{text-align:left;justify-content:flex-start}
+.day-out{margin-top:14px;padding:10px;border-radius:16px;border:1.5px dashed rgba(100,116,139,.45);background:rgba(100,116,139,.06)}.day-out h3{margin:0 0 2px;font-size:14px}.day-out>small{display:block;opacity:.75;margin-bottom:6px}
+html.dk .bk-nb{color:#bcd4ff!important;border-color:rgba(188,212,255,.3)!important}html.dk .bk-nb.has{background:rgba(227,178,60,.2)!important;color:#ffd98a!important}

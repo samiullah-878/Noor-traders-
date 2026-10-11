@@ -4013,3 +4013,14 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
   HBL screen par malik ke liye "⚙️ Setup" (data-bk-inbox="setup") = purana dialog (chaabi, MacroDroid, Gmail script, Rabta test).
 - bank-sms.js guessParty: jode hue harf ka farq (lev <= 2, ya shuru milta) — SAMIH ULLAH ~ Sami Ullah, YOUNAS ~ Younis.
 - Yaad rahe: bina ☐ tick koi entry khate mein nahi lagti (malik ka pehla hukum: "checkbox pr click karian wo khata mian bi").
+
+== v2.99.42 (2026-10-12) 🏦 HBL account sab phones par + ↩ wapas + 🔔 note · 💵 Daily tick har jagah ==
+- HBL account: malik HBL screen par "✏️ Badlo" -> khata chune -> bankSms/_alias m['@hbl'] (sab phones; rules wohi 2.42, m is map).
+  notes.js setBankShared()/bankId(): shared > localStorage > bank flag > naam "hbl". pickBank (HBL payment) bhi 'sam-bank-pick' event se shared save karta hai.
+- ↩ Wapas lo (malik): HBL se lagi transfer (inbox doc.entryId == transferId) -> commitAccountTransfer({remove:true, rev}) + doc st '' -> card phir ☐.
+- 🔔 Note: har HBL card (☐/☑, Daily hissa bhi) -> notes.noteForm(null, {text "HBL aaye Rs … · naam · TXN …", day aaj, partyId, amount}).
+  Pehchan text mein "TXN <id>" — note ho to "🔔 note hai" aur wohi note khulta hai. notes listener 'sam-notes' event bhejta hai.
+- "❓ Samajh nahi" mein khali SMS par wajah: MacroDroid body mein Magic Text (SMS message) nahi / Test actions.
+- 💵 Daily Sale mein shamil (dailyIncluded) ab Wasooli, Kharcha (expense), Party payment — har jagah (Daily / Akhrajat / khata).
+  model.inDaily ab 'expense' bhi (false = galle se bahar). Daily screen par "📒 Sirf khata — Daily cash se bahar" hissa (transfer ke ilawa).
+  pc/raat-report.js bhi expense ko bahar rakhti hai (manifest 2026-10-12.2).
