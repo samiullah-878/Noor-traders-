@@ -4024,3 +4024,9 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 - 💵 Daily Sale mein shamil (dailyIncluded) ab Wasooli, Kharcha (expense), Party payment — har jagah (Daily / Akhrajat / khata).
   model.inDaily ab 'expense' bhi (false = galle se bahar). Daily screen par "📒 Sirf khata — Daily cash se bahar" hissa (transfer ke ilawa).
   pc/raat-report.js bhi expense ko bahar rakhti hai (manifest 2026-10-12.2).
+
+== v2.99.43 (2026-10-12) HBL baqaya = khata jaisa · Daily Sale mein 🏦 HBL column ==
+- Malik: HBL screen 2,166,411 vs khata 120,411 — farq = closing se "Cash diya" (cashCustody) jo khate ke baqaye mein nahi aata.
+  Ab hblBalance = sirf khate ka balance (khata screen jaisa); closing ka diya cash alag line mein "alag (Closing Cash khata)". Daily HBL mein cash rows nahi.
+- Daily Sale: HBL ab neeche alag hissa nahi — sheet ka 7wa column "🏦 HBL Noor Traders" (Closing ke baad, data-col hbl).
+  Aaj ki tareekh par purane din ke ☐ bhi (taake wahin tick ho), poora card (khata search + ✕ + 🔔 + ↩).

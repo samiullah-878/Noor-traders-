@@ -2876,3 +2876,7 @@ html.dk .bk-tick span{background:rgba(255,255,255,.08);border-color:#7fb0ff}html
 .bk-acctpick .bk-res{display:flex;flex-direction:column;gap:6px}.bk-acctpick .bk-res button{text-align:left;justify-content:flex-start}
 .day-out{margin-top:14px;padding:10px;border-radius:16px;border:1.5px dashed rgba(100,116,139,.45);background:rgba(100,116,139,.06)}.day-out h3{margin:0 0 2px;font-size:14px}.day-out>small{display:block;opacity:.75;margin-bottom:6px}
 html.dk .bk-nb{color:#bcd4ff!important;border-color:rgba(188,212,255,.3)!important}html.dk .bk-nb.has{background:rgba(227,178,60,.2)!important;color:#ffd98a!important}
+/* v2.99.43 Daily Sale: 🏦 HBL ka apna column (Closing ke baad) */
+.cash-sheet:has(.hbl-col){grid-template-columns:repeat(6,minmax(145px,1fr)) minmax(270px,1.5fr)!important;min-width:1150px!important}
+.hbl-col .bk-day{margin-top:0;border:0;background:none;padding:0}.hbl-col .bk-day>.bk-dh b{display:none}
+.hbl-col h3{background:linear-gradient(120deg,#0f5a3c,#0b3d6b)!important}
