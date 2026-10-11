@@ -2791,3 +2791,23 @@ html.dk .nt-card.picked{background:rgba(76,110,245,.14)!important}
 html.dk .po-hrow{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}html.dk .po-hrow>span{color:var(--ink2)!important}
 html.dk .po-tr{background:var(--glass)!important;border-color:var(--line)!important}html.dk .po-tr .po-party,html.dk .po-trg>small{color:#93c5fd!important}
 html.dk .po-chip.tr{background:var(--glass)!important;border-color:#1e3a5f!important;color:var(--ink)!important}html.dk .po-set>small{color:var(--ink2)!important}
+/* v2.99.32: 😴 soye khate */
+.due-modes{margin:4px 0 10px}.due-modes .rc.on{background:linear-gradient(135deg,#1a2d53,#2c4a85)!important;color:#fff!important;border-color:#1a2d53!important}
+.soye-sum{display:grid;gap:2px}.soye-sum strong{font-size:22px;line-height:1.2}.soye-sum small b{font-weight:800}
+.soye-ctl{display:grid;gap:4px;margin-bottom:10px}.soye-ctl .mchips{align-items:center;flex-wrap:wrap}.soye-ctl small{font-weight:800;color:#41536f;margin-right:2px}
+.soye-ctl .rc.on{background:linear-gradient(135deg,#6d28d9,#4c1d95)!important;color:#fff!important;border-color:#4c1d95!important}
+.soye-list{display:grid;gap:10px}
+.soye-card{padding:12px;border-radius:18px;background:linear-gradient(180deg,#fff,#faf8ff);border:1px solid #e4defa;box-shadow:0 4px 14px rgba(76,29,149,.07)}
+.soye-card.old{border-left:5px solid #a32020}
+.soye-top{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;background:none!important;border:0!important;padding:0!important;text-align:left;box-shadow:none!important}
+.soye-n{display:grid;min-width:0}.soye-n b{font-size:15.5px;color:#10192b;overflow:hidden;text-overflow:ellipsis}.soye-n small{color:#6b7a92}
+.soye-b{display:grid;text-align:right}.soye-b b{font-size:16px}.soye-b small{color:#6b7a92;font-size:11px}
+.soye-meta{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;font-size:12px;color:#41536f}
+.soye-din{padding:3px 10px;border-radius:999px;background:#ede9fe;color:#4c1d95;font-weight:800}
+.soye-card.old .soye-din{background:#fde8e8;color:#a32020}
+.soye-acts{display:flex;flex-wrap:wrap;gap:6px}
+.soye-btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 12px;border-radius:12px;border:1px solid #d5dbe8;background:#fff;color:#1a2d53;font-weight:800;font-size:13px;text-decoration:none}
+.soye-btn.wa{background:linear-gradient(135deg,#25d366,#128c7e);color:#fff;border-color:#128c7e}
+html.dk .soye-card{background:var(--glass)!important;border-color:var(--line)!important}html.dk .soye-n b{color:var(--ink)!important}
+html.dk .soye-btn:not(.wa){background:var(--glass)!important;color:var(--ink)!important;border-color:var(--line)!important}html.dk .soye-din{background:#3b2a6b!important;color:#ddd6fe!important}
+html.dk .soye-ctl small{color:var(--ink2)!important}
