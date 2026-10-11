@@ -7,6 +7,7 @@
 //  3) v4 (2026-10-10): 🖨 PURCHASE AUTO PRINT — purchase-parchi.js: POS mein naya purchase bill (POS / app) aate hi tafseeli
 //     parchi (stock pehle -> ab, pichla rate, nafa, din ka maal, DHYAN); badla = "BADLA HUA BILL" + tabdeeli; mita / cancel =
 //     chhoti parchi. App ka "Dobara print" bhi yahi tafseeli parchi. Setting: blueAccess/printConfig (malik). SQL sirf SELECT.
+//  v4.1 (2026-10-11): app ke transfer note ki parchi par STN ka BARCODE (POS wali parchi jaisa) — Transfer check mein scan ho.
 //  Chalana:  node transfer-sync.js   (transfer-auto.bat loop mein)
 // =========================================================
 const fs = require('fs');
@@ -136,6 +137,7 @@ const qtyText = l => { const pk = Number(l.pack) || 0; if (pk > 1 && (Number(l.c
 function transferText(r, note, reprint) {
   const out = head('STOCK TRANSFER NOTE');
   out.push(line('STN No: ' + r.transferNo, stamp(r.at)));
+  { const c = String(r.transferNo || '').replace(/[^\x20-\x7e]/g, '').trim(); if (c) out.push(ESC + 'a' + '\x01' + GS + 'h' + '\x50' + GS + 'w' + '\x02' + GS + 'H' + '\x02' + GS + 'k' + '\x49' + String.fromCharCode(c.length + 2) + '{B' + c + '\n' + ESC + 'a' + '\x00'); }   // v4.1: barcode (CODE128) — app ka 🧾 Transfer check scan
   out.push(`Se : ${ascii(r.from)}`, `Ko : ${ascii(r.to)}`);
   if (note) out.push('Note: ' + ascii(note).slice(0, PRINT_WIDTH - 6));
   out.push('-'.repeat(PRINT_WIDTH), pad('Item', PRINT_WIDTH - 22) + pad('Qty', 22, true), '-'.repeat(PRINT_WIDTH));

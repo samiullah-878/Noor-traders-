@@ -2572,3 +2572,5 @@ MALIK (asal parchi ki tasveer): "pieces ke rates bhi chahiye bill par, sale / pu
 TEST pp/t.js (2 lines jama, piece line, naam ek dafa) ALL OK.
 
 PC purchase-parchi v1.2 (2026-10-11, manifest 2026-10-11.3): har item ke naam ke saath [godam] (hamesha) + "Stock (godam): pehle -> ab" — malik: "har item kis godam mein gayi". Test ALL OK.
+
+PC transfer-sync v4.1 (2026-10-11, manifest 2026-10-11.4): app se bane transfer note ki thermal parchi par STN ka CODE128 barcode (sale-post wali rasid jaisa) — Transfer check mein scan. POS wali parchi (POS khud chhapta) pehle se scan hoti hai: dono posTransfers se number milate hain.
