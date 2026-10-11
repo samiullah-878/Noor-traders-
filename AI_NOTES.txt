@@ -3982,3 +3982,6 @@ NAYI bank-inbox.js: openBankInbox — khulasa (aaj aaye / gaye / baqi; dubara ek
 app.js: bankSetup (cashGive = agent wala Cash diya), home bar chip "📩 HBL N" (hara jab baqi), settings row bkOpenBtn. cloud.js: listenBankSms, bankSmsSet, bankAliasSet, getBankKey, setBankKey. sw precache bank-inbox.js, bank-sms.js.
 Tests: bank/p.mjs (malik ke asli 3 SMS + email) ALL OK · hd/bk.mjs (dubara, andaza, search se chunna, transfer in/out, cash, alias, setup, body JSON, script syntax) ALL OK. Rules emulator yahan nahi chala (jar download block) — brackets OK.
 KAHAN NAHI: bina ✓ entry nahi; phone band / MacroDroid band = SMS nahi (email chalta); HBL likhai badle = "❓ Samajh nahi" (poora text dikhta). NOTE: rp.mjs test 11-Oct "aaj" par likha tha — tareekh badalne se fail, app theek.
+
+==================== v2.99.34 (2026-10-12) — Gmail script: BK label sirf kamyab bhejne par ====================
+Malik ne Apps Script chala diya (hblMail "Execution completed"), MacroDroid macro "Hbl sms" (SMS from 14250 -> HTTP POST) ON. Khatra: rules 2.38 se pehle chala to Firestore 403 deta magar thread par BK lag jata = email kabhi dobara nahi jati. Fix gasCode: har msg ka getResponseCode() — sab 200 hon tabhi addLabel(BK), warna console.log + agli dafa phir koshish; search newer_than:7d. (Malik ko naya Script copy dobara paste karna hoga.)

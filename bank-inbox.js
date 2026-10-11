@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.33';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.34';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let O = {}, docs = null, stop = null, alias = {}, tab = 'baqi', pick = new Map(), qOpen = '', busy = new Set(), key = null, onCount = () => {};
@@ -132,14 +132,16 @@ const KEY = '${k}';
 const URL = '${restUrl()}';
 function hblMail() {
   const label = GmailApp.getUserLabelByName('BK') || GmailApp.createLabel('BK');
-  const threads = GmailApp.search('from:digital.banking@hbl.com -label:BK newer_than:3d', 0, 30);
+  const threads = GmailApp.search('from:digital.banking@hbl.com -label:BK newer_than:7d', 0, 30);
   threads.forEach(t => {
+    let ok = true;
     t.getMessages().forEach(msg => {
       const doc = { fields: { k: { stringValue: KEY }, src: { stringValue: 'email' }, from: { stringValue: msg.getFrom().slice(0, 110) },
         subj: { stringValue: msg.getSubject().slice(0, 190) }, text: { stringValue: msg.getPlainBody().slice(0, 2900) }, at: { integerValue: String(msg.getDate().getTime()) } } };
-      UrlFetchApp.fetch(URL, { method: 'post', contentType: 'application/json', payload: JSON.stringify(doc), muteHttpExceptions: true });
+      const r = UrlFetchApp.fetch(URL, { method: 'post', contentType: 'application/json', payload: JSON.stringify(doc), muteHttpExceptions: true });
+      if (r.getResponseCode() !== 200) { ok = false; console.log('Nahi gaya (' + r.getResponseCode() + '): ' + r.getContentText().slice(0, 200)); }
     });
-    t.addLabel(label);
+    if (ok) t.addLabel(label);   // sirf kamyab ho to BK — warna agli dafa phir koshish
   });
 }
 function setup() {
