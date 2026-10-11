@@ -2,6 +2,7 @@
 //  sync-stock.js  —  POS ka stock Firestore par bhejta hai
 //  SQL mein kuch LIKHTA nahi - sirf padhta hai.
 //  2026-10-04: har item ke saath category ka naam (cat) — Items ka '%ategor%ID' khana + category table khud dhoondta hai
+//  v2 (2026-10-11): har 5 sec fingerprint -> tabdeeli par foran sync · sachi dhadkan · 90 sec chowkidar · posStock/_live (app chip)
 //  2026-10-08: ws = W PCS (SaleRateSize) jab W CTN÷pack (SaleRate3 = wrate) se alag ho — app CTN aur PCS alag dikhaye
 // =========================================================
 //
@@ -11,8 +12,11 @@
 //  Stock na badle to ZERO writes.
 
 const sql = require('mssql');
-// 2026-10-01 HEARTBEAT: har 30 sec '<script>.alive' mein waqt — doctor 3 min purana dekhe to script ko latki samajh kar dobara chalata hai
-{ const _hb = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive'); const _w = () => { try { require('fs').writeFileSync(_hb, String(Date.now())); } catch {} }; _w(); setInterval(_w, 30000).unref(); }
+// v2 (2026-10-11) SACHI DHADKAN: '<script>.alive' ab sirf tab likha jata hai jab kaam WAQAI hua (chakkar poora / 5-sec check kamyab).
+// Pehle har 30 sec khud likhta tha — chakkar atak jata to bhi doctor ko "zinda" dikhta (11-Oct shaam 12 min stock ruka raha). Ab atki to 3 min mein doctor dobara chalata hai.
+const HB_FILE = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive');
+const beat = () => { try { require('fs').writeFileSync(HB_FILE, String(Date.now())); } catch {} };
+beat();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const crypto = require('crypto');
@@ -41,6 +45,13 @@ const SKIP_INACTIVE = true;
 
 // 0 = ek dafa chala kar band. 2 = har 2 minute khud chalta rahega
 const LOOP_MINUTES = 2;
+
+// v2: har 5 second POS SQL se halki "fingerprint" (stock / rate badla?) — badla to foran poora chakkar
+const FAST_SECONDS = 5;
+// v2: ek chakkar is se zyada chale = atka hua -> script khud band, stock-auto.bat 30 sec mein dobara chalata hai
+const CYCLE_LIMIT_SEC = 90, FIRST_CYCLE_LIMIT_SEC = 300;
+// v2: app ke 🟢/🔴 chip ke liye posStock/_live (har chakkar par, takreeban 2 min — kam reads)
+const LIVE_DOC = '_live';
 
 // PC par hashon ki chhoti si list — is se har dafa Firestore parhna nahi parta
 const STATE_FILE = './last-stock.json';
@@ -386,9 +397,50 @@ async function pushBranch(branch, items, name) {
   return { written, skipped, removed, total: items.length, chunks: chunks.length, fullCheck };
 }
 
+// v2: ek hi pakka SQL connection (har 5 sec naya connect / close nahi) + query ki had (atke nahi)
+let poolP = null;
+async function getPool() {
+  if (poolP) { try { const p = await poolP; if (p.connected) return p; } catch {} }
+  poolP = new sql.ConnectionPool({ requestTimeout: 45000, connectionTimeout: 15000, ...SQL_CONFIG }).connect();
+  poolP.catch(() => { poolP = null; });
+  return poolP;
+}
+async function resetPool() { const p = poolP; poolP = null; try { (await p)?.close(); } catch {} }
+
+// v2: halki fingerprint — har godam ke stock + rates aur items ke naam/pack ka checksum (sirf parhta hai, ek line ka jawab)
+const Q_FP = `
+SELECT 'b' + CAST(BranchID AS varchar(10)) AS k, COUNT_BIG(*) AS n,
+       CHECKSUM_AGG(CHECKSUM(ItemID, CurrStock, SaleRate, SaleRate2, SaleRate3, SaleRateSize, PurchaseRate, PackQty)) AS c
+FROM dbo.ItemBranchRate GROUP BY BranchID
+UNION ALL
+SELECT 'items', COUNT_BIG(*), CHECKSUM_AGG(CHECKSUM(ItemID, ItemName, PackQty, PackQtyName, QtyName, SaleRate, PurchaseRate)) FROM dbo.Items`;
+// agar kisi POS version mein koi khana na ho to sirf stock wali halki query; woh bhi na chale to 5-sec check band (2 min wala chalta rahe)
+const Q_FP_SIMPLE = `SELECT 'b' + CAST(BranchID AS varchar(10)) AS k, COUNT_BIG(*) AS n, CHECKSUM_AGG(CHECKSUM(ItemID, CurrStock)) AS c FROM dbo.ItemBranchRate GROUP BY BranchID`;
+let fpMode = 0, fpFails = 0;
+async function fingerprint() {
+  if (fpMode > 1) return '';
+  const p = await getPool();
+  try {
+    const r = await p.request().query(fpMode ? Q_FP_SIMPLE : Q_FP);
+    fpFails = 0;
+    return r.recordset.map(x => `${x.k}:${x.n}:${x.c}`).sort().join('|');
+  } catch (e) {
+    if (/Invalid column|Invalid object|Operand type clash|not valid/i.test(e.message) || ++fpFails >= 5) { fpMode++; fpFails = 0; console.log(fpMode > 1 ? '5-sec check BAND (POS query nahi chali) — sirf 2 min wala chakkar' : '5-sec check: choti query par aa gaye'); }
+    throw e;
+  }
+}
+
+let lastChange = 0;
+async function markLive(changed) {
+  const now = Date.now();
+  if (changed) lastChange = now;
+  try { await stockCol.doc(LIVE_DOC).set({ live: true, checkedAt: now, ...(lastChange ? { changedAt: lastChange } : {}), fastSec: FAST_SECONDS, writer: 'pos-stock-sync v2' }, { merge: true }); } catch (e) { console.log('_live nahi likha:', e.message); }
+}
+
 async function runOnce() {
-  const pool = await sql.connect(SQL_CONFIG);
+  const pool = await getPool();
   cycle++;
+  let anyChange = false;
   try {
     const list = await branchList(pool);
     const names = await branchNames(pool);
@@ -402,30 +454,52 @@ async function runOnce() {
       const name = names[branch] || ('Branch ' + branch);
       const items = await readStock(pool, branch, lastRates, codes, subq, shows, subs);
       const r = await pushBranch(branch, items, name);
+      if (r.written || r.removed) anyChange = true;
+      beat();   // har godam ke baad = kaam chal raha hai
       const tag = r.fullCheck ? ' | poora milaan' : '';
       console.log(`[${new Date().toLocaleTimeString()}] ${name} (${branch}): ${r.total} items, ${r.chunks} chunks | likhe ${r.written} | chhore ${r.skipped} | hataye ${r.removed}${tag}`);
     }
-  } finally {
-    await pool.close();
-  }
+  } catch (e) { await resetPool(); throw e; }
+  await markLive(anyChange);
+  return anyChange;
 }
 
-(async () => {
+// v2: chakkar chalane wala — ek waqt mein ek; CHOWKIDAR: had se lamba chale to script band (bat dobara chalayega)
+let busy = false, lastFp = '', pendingFast = false;
+async function cycleNow(why) {
+  if (busy) { if (why === 'tabdeeli') pendingFast = true; return false; }
+  busy = true;
+  const limit = (cycle === 0 ? FIRST_CYCLE_LIMIT_SEC : CYCLE_LIMIT_SEC) * 1000;
+  const dog = setTimeout(() => { console.error(`[${new Date().toLocaleTimeString()}] CHOWKIDAR: chakkar ${limit / 1000} sec se atka (${why}) — script band, bat dobara chalayega`); process.exit(3); }, limit);
   try {
-    await runOnce();
-    if (LOOP_MINUTES > 0) {
-      console.log(`Har ${LOOP_MINUTES} minute par dobara chalega. Band karne ke liye Ctrl+C.`);
-      let busy = false;   // pichla chakkar khatam na hua ho to naya shuru na ho (SQL connection takrata tha)
-      setInterval(async () => {
-        if (busy) { console.log('Pichla chakkar abhi chal raha hai — yeh chakkar chhora'); return; }
-        busy = true;
-        try { await runOnce(); } catch (e) { console.error('Stock sync fail:', e.message); } finally { busy = false; }
-      }, LOOP_MINUTES * 60 * 1000);
-    } else {
-      process.exit(0);
-    }
-  } catch (e) {
-    console.error('Stock sync fail:', e);
-    process.exit(1);
-  }
+    let fp = ''; try { fp = await fingerprint(); } catch (e) { console.log('Fingerprint nahi mili:', e.message); }
+    const t0 = Date.now();
+    const ch = await runOnce();
+    if (fp) lastFp = fp;
+    beat();
+    if (why === 'tabdeeli') console.log(`[${new Date().toLocaleTimeString()}] ⚡ POS mein tabdeeli — ${((Date.now() - t0) / 1000).toFixed(1)} sec mein app tak${ch ? '' : ' (stock wahi, sirf doosri cheez badli)'}`);
+    return true;
+  } catch (e) { console.error('Stock sync fail:', e.message); return false; }
+  finally { clearTimeout(dog); busy = false; if (pendingFast) { pendingFast = false; setTimeout(() => fastTick(), 500); } }
+}
+async function fastTick() {
+  if (busy || fpMode > 1) return;
+  try {
+    const fp = await fingerprint();
+    if (!fp) return;
+    beat();   // SQL ne jawab diya = zinda
+    if (lastFp && fp !== lastFp) await cycleNow('tabdeeli');
+    else if (!lastFp) lastFp = fp;
+  } catch (e) { console.log('5-sec check fail:', e.message); if (!/Invalid|clash|not valid/i.test(e.message)) await resetPool(); }
+}
+module.exports._t = { fingerprint, runOnce, cycleNow, fastTick, markLive, getPool, Q_FP };
+
+if (require.main === module) (async () => {
+  const ok = await cycleNow('shuru');
+  if (!ok) { console.error('Pehla chakkar fail — 30 sec baad bat dobara chalayega'); process.exit(1); }
+  if (LOOP_MINUTES > 0) {
+    console.log(`Har ${FAST_SECONDS} sec POS check (tabdeeli par foran) + har ${LOOP_MINUTES} min poora chakkar. Band karne ke liye Ctrl+C.`);
+    setInterval(() => { cycleNow('2 min'); }, LOOP_MINUTES * 60 * 1000);
+    setInterval(() => { fastTick(); }, FAST_SECONDS * 1000);
+  } else process.exit(0);
 })();

@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.25';
-import { liveLabelsHTML } from './barcode.js?v=2.99.25';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.26';
+import { liveLabelsHTML } from './barcode.js?v=2.99.26';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -324,6 +324,24 @@ const passes = r => {
 let pickedBranch = null;
 const branchName = (b, names) => (names && names[b]) || (b === 9 ? 'Godam 1' : 'Branch ' + b);
 
+// v2.99.26: sync-stock v2 ka posStock/_live — PC POS se kitni dair pehle juri thi (har ~2 min likhta hai; tabdeeli par seconds mein)
+const liveDoc = () => rows.find(r => r.id === '_live' && r.live);
+const liveAge = () => { const L = liveDoc(); return L ? Date.now() - (Number(L.checkedAt) || 0) : null; };
+function liveChip() {
+  const a = liveAge(); if (a == null) return '';
+  const m = Math.floor(a / 60000), s = Math.max(0, Math.floor(a / 1000));
+  const t = s < 60 ? s + ' sec' : m < 60 ? m + ' min' : Math.floor(m / 60) + ' ghante';
+  const cls = a <= 3 * 60000 ? 'ok' : a <= 5 * 60000 ? 'warn' : 'bad';
+  const txt = cls === 'ok' ? `🟢 POS se juda · ${t} pehle check` : cls === 'warn' ? `🟡 POS check ${t} pehle` : `🔴 ${t} se POS ka stock nahi aaya — Server PC check karein`;
+  return `<span class="live-chip ${cls}" title="Server PC har 5 sec POS dekhta hai — bill / purchase / transfer ke chand second baad yahan stock badalta hai">${txt}</span>`;
+}
+// ginti save se pehle: stock 5 min se purana ho to poochho (10 min mein ek dafa)
+let staleAskedAt = 0;
+function staleOk() {
+  const a = liveAge(); if (a == null || a <= 5 * 60000 || Date.now() - staleAskedAt < 10 * 60000) return true;
+  staleAskedAt = Date.now();
+  return confirm(`⚠️ System stock ${Math.floor(a / 60000)} minute purana hai (Server PC se taza stock nahi aa raha).\nFarq ghalat aa sakta hai.\n\nPhir bhi ginti save karein?`);
+}
 function since(stamp) {
   if (!stamp) return '';
   const mins = Math.floor((Date.now() - stamp) / 60000);
@@ -553,7 +571,7 @@ function summaryHTML(branches, pick, items, meta, names, canJama = false) {
   return `${countBanner()}${isOwner() ? valueCardHTML(branches, names) : ''}<div class="stock-head">
     <div class="sh-title">
       <strong>${num(shownCount)} items</strong>
-      <small>${esc(branchName(pick, names))} · kul ${num(totalPcs)} pcs${stamp ? ' · ' + esc(since(stamp)) : ''}</small>
+      <small>${esc(branchName(pick, names))} · kul ${num(totalPcs)} pcs${stamp ? ' · aakhri tabdeeli ' + esc(since(stamp)) : ''}</small>${liveChip()}
     </div>
     <div class="account-tools">
       ${scanList.length
@@ -1937,6 +1955,7 @@ async function saveCount(itemId, button, mode = 'save') {
   } else if (jama && v.total === 0 && mode === 'save') {
     v = { ctn: Number(old.ctn) || 0, pcs: Number(old.pcs) || 0, total: countedPcs(old), bad: false };   // kuch nahi likha: pichhli ginti hi final
   }
+  if (!staleOk()) return;
   if (v.total === 0 && !confirm(`"${item.name}" ki ginti ZERO save karein?\n\n${zeroText(item)}`)) return;
   button.disabled = true;
   try {
@@ -1967,6 +1986,7 @@ async function tickCount(itemId, button) {
   const old = countOf(pickedBranch, item);
   if (old && countedPcs(old) !== sys && !confirm(`"${item.name}" ki pehle ginti ${num(countedPcs(old))} hai.\nTick se ginti system jaisi ${num(sys)} ho jayegi — theek?`)) return;
   if (sys === 0 && !confirm(`"${item.name}" — system mein 0 hai. Tick = ginti ZERO. Theek?`)) return;
+  if (!staleOk()) return;
   button.disabled = true;
   try {
     await writeCount(item, { ctn, pcs, total: sys, bad: false }, null, true);
@@ -1998,6 +2018,7 @@ async function saveAll(button) {
   const zeros = jobs.filter(([, v]) => v.total === 0);
   const lines = jobs.map(([it, v]) => `• ${it.name}: ${num(v.total)}${v.total === 0 ? '  ← ZERO (' + zeroText(it) + ')' : ''}`);
   if (!confirm(`${jobs.length} items ki ginti save karein?${zeros.length ? `\n\n${zeros.length} item ZERO hain!` : ''}\n\n${lines.join('\n')}`)) return;
+  if (!staleOk()) return;
   button.disabled = true;
   let ok = 0;
   const fail = [];
