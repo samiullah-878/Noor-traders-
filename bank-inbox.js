@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.43';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.44';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -130,7 +130,7 @@ function search(inp) {
 // ---------- ⚙️ setup (malik) ----------
 async function loadKey() { if (key !== null || !O.cloud?.getBankKey) return; try { key = (await O.cloud.getBankKey()) || ''; } catch { key = ''; } paint(); }
 const restUrl = () => `https://firestore.googleapis.com/v1/projects/${O.projectId}/databases/(default)/documents/businesses/noor-traders/bankSms?key=${O.apiKey}`;
-const smsBody = k => `{"fields":{"k":{"stringValue":"${k}"},"src":{"stringValue":"sms"},"from":{"stringValue":"14250"},"text":{"stringValue":"SMS_YAHAN"}}}`;
+const smsBody = k => `{"fields":{"k":{"stringValue":"${k}"},"src":{"stringValue":"sms"},"from":{"stringValue":"14250"},"text":{"stringValue":"{sms_message}"}}}`;   // v2.99.44: MacroDroid ka magic text seedha — copy = paste, kuch badalna nahi
 function gasCode(k) {
   return `// Blue Khata — HBL email (paise GAYE) -> 📩 HBL Inbox. Google ke server par har 5 minute. Kuch mitata / bhejta nahi, sirf parhta hai.
 const KEY = '${k}';
@@ -168,7 +168,7 @@ function setupHTML() {
     <li><b>Add Macro</b> → Trigger ➕ → <b>Call/SMS → SMS Received</b> → "Contact / number" mein <b>14250</b> → Any content → OK.</li>
     <li>Action ➕ → <b>Connectivity → HTTP Request</b> → Method <b>POST</b>.</li>
     <li>URL: ${copyBtn('url', 'URL copy')} → URL ke khane mein paste.</li>
-    <li>Content body → type <b>application/json</b> → ${copyBtn('body', 'Body copy')} → paste karein. Phir body mein <b>SMS_YAHAN</b> ko mita kar wahan <b>Magic Text (…)</b> se <b>"SMS message"</b> (message ka text) daalein.</li>
+    <li>Content body → type <b>application/json</b> → ${copyBtn('body', 'Body copy')} → purana sab mita kar <b>paste</b> karein. Bas — is mein chaabi aur <b>{sms_message}</b> (SMS ka text) pehle se hain, kuch badalna nahi.</li>
     <li>Macro ka naam "HBL → Blue Khata" → Save ✓.</li>
     <li>Phone Settings → Apps → MacroDroid → Battery → <b>Unrestricted</b> (warna phone band kar deta hai).</li>
     <li>Test: macro kholein → ⋮ → <b>Test actions</b> → yahan "❓ Samajh nahi" mein ek khali card aa jaye = rabta theek ✓ (use ✕ kar dein).</li></ol>
@@ -197,11 +197,11 @@ async function rabtaTest() {
   }
   const probeHTML = `<div class="bk-probe">${res.join('<br>')}</div>`;
   try {
-    const body = JSON.parse(smsBody(key).replace('SMS_YAHAN', 'RABTA TEST — app se (is card ko ✕ kar dein)'));
+    const body = JSON.parse(smsBody(key).replace('{sms_message}', 'RABTA TEST — app se (is card ko ✕ kar dein)'));
     const r = await fetch(restUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     const t = await r.text(); let j = {}; try { j = JSON.parse(t); } catch {}
     const msg = String(j?.error?.message || t).slice(0, 300), st = j?.error?.status || '';
-    if (r.ok) { testOk = true; testMsg = '✅ Rules nayi hain aur rabta theek — Firebase ne qabool kiya. Ab "❓ Samajh nahi" mein ek test card hoga, use ✕ kar dein. Agar MacroDroid se phir bhi nahi aata to masla sirf MacroDroid ki body mein hai (SMS_YAHAN / quotes).'; }
+    if (r.ok) { testOk = true; testMsg = '✅ Rules nayi hain aur rabta theek — Firebase ne qabool kiya. Ab "❓ Samajh nahi" mein ek test card hoga, use ✕ kar dein. Agar MacroDroid se phir bhi nahi aata to masla sirf MacroDroid ki body mein hai ({sms_message} / quotes).'; }
     else if (/API key|referer|blocked|forbidden|SERVICE_BLOCKED/i.test(msg) || /API_KEY/i.test(JSON.stringify(j?.error?.details || ''))) { testOk = false; testMsg = `❌ Google ne API key rok di (${r.status}): ${esc(msg)}<br><b>Hal:</b> console.cloud.google.com → APIs & Services → Credentials → Browser key → "Application restrictions" = None (ya is website ko allow) → Save.`; }
     else if (r.status === 403 || /PERMISSION_DENIED/.test(st)) { testOk = false; testMsg = `❌ Firebase ne mana kiya (${r.status} ${esc(st)}): <i>${esc(msg)}</i><br><b>Hal:</b> Firestore → Rules mein <b>v2.42</b> publish karein (doosri line mein "BLUE KHATA v2.42" likha ho). Rules theek hon to chaabi ka masla hai — "🔁 nayi chaabi" bana kar MacroDroid body dobara paste karein.`; }
     else if (r.status === 400) { testOk = false; testMsg = `❌ Body samajh nahi aayi (400): ${esc(msg)}`; }
@@ -215,7 +215,7 @@ async function copy(what) {
   try { await navigator.clipboard.writeText(t); O.notice?.('📋 Copy ho gaya'); } catch { prompt('Copy karein:', t); }
 }
 document.addEventListener('click', e => {
-  // v2.99.43: 📩 HBL chip / Settings -> POORI HBL screen (pehle chhota dialog khulta tha)
+  // v2.99.44: 📩 HBL chip / Settings -> POORI HBL screen (pehle chhota dialog khulta tha)
   if (e.target.closest?.('[data-hb="bank"],#bkOpenBtn')) { if (O.route) { try { $('dialog')?.close(); } catch {} O.route('hbl'); } else openBankInbox(); return; }
   if (e.target.closest?.('[data-bk-inbox]')) { openBankInbox(e.target.closest('[data-bk-inbox]').dataset.bkInbox || ''); return; }
   const t = e.target.closest?.('[data-bk-tab],[data-bk-ok],[data-bk-skip],[data-bk-chg],[data-bk-pick],[data-bk-copy],[data-bk-newkey],[data-bk-test]'); if (!t || !live()) return;
@@ -234,7 +234,7 @@ document.addEventListener('click', e => {
 document.addEventListener('input', e => { if (e.target.matches?.('[data-bk-q]')) { qOpen = e.target.dataset.bkQ; search(e.target); } });
 document.addEventListener('change', e => { if (e.target.matches?.('[data-bk-bank]') && e.target.value) { O.setBank?.(e.target.value); paint(); } });
 
-// ================= 🏦 HBL SCREEN (v2.99.43) — poori screen, din-war, Aaye / Gaye, HBL ka baqaya =================
+// ================= 🏦 HBL SCREEN (v2.99.44) — poori screen, din-war, Aaye / Gaye, HBL ka baqaya =================
 // Malik: "hbl ki tab khulna pr jaise baqi tabs hain … lena wala dena wala or current balance … jitna bi paisa aiya checkbox".
 // HBL khata = O.bankId() wala khata (purana "Hbl loan 7999 account"). Baqaya = khate ka baqaya + closing se diya cash (Cash diya → HBL).
 // ☐ = abhi khata mein nahi laga (SMS/email) · ☑ = lag gaya (khate ki asal entry). Tick = party ↔ HBL transfer (dono khaton mein).
@@ -261,7 +261,7 @@ function hblMoves(H) {
   } catch {}
   return out.sort((a, b) => String(b.date).localeCompare(String(a.date)) || b.at - a.at);
 }
-// v2.99.43: baqaya BILKUL khate jaisa (malik: "balance ka farq") — closing se diya cash (Closing Cash khata) alag dikhaya, jora nahi
+// v2.99.44: baqaya BILKUL khate jaisa (malik: "balance ka farq") — closing se diya cash (Closing Cash khata) alag dikhaya, jora nahi
 function hblBalance(H) { return H && O.balanceOf ? O.balanceOf(H.id) : 0; }
 function hblCash(H) { let c = 0; if (!H) return 0; try { for (const r of (O.cashRows ? O.cashRows() : [])) { if (r.from === 'shop' && r.to === H.id) c += r.outgoing; else if (r.to === 'shop' && r.from === H.id) c -= r.incoming; } } catch {} return c; }
 const fromDay = () => { const t = O.today ? O.today() : new Date().toISOString().slice(0, 10); if (range === 'sab') return ''; if (range === 'aaj') return t; const d = new Date(t + 'T12:00:00'); if (range === '7') d.setDate(d.getDate() - 6); else d.setDate(1); return d.toISOString().slice(0, 10); };
@@ -282,7 +282,7 @@ function doneRow(v) {
   const undo = src && O.owner && O.owner() ? `<button type="button" class="bk-x" title="Wapas lo" data-bk-undo="${esc(src.id)}">↩</button>` : '';
   return `<div class="bk-row done ${v.dir}"><label class="bk-tick on"><input type="checkbox" checked disabled><span></span></label><div class="bk-rw"><div class="bk-rl"><b>${esc(v.name)}</b><b class="bk-amt ${v.dir === 'in' ? 'green' : 'red'}">${v.dir === 'in' ? '+' : '−'}${m(v.amt)}</b></div><small>${esc(String(v.note).replace(/^HBL (aaye|gaye) · /, '').slice(0, 110))}</small></div><div class="bk-side">${v.cash ? '' : noteBtn(txn, 'v:' + v.id)}${undo}</div></div>`;
 }
-// ---------- 🔔 note + reminder (v2.99.43) — note ki pehchan us ke text mein "TXN <id>" ----------
+// ---------- 🔔 note + reminder (v2.99.44) — note ki pehchan us ke text mein "TXN <id>" ----------
 const notesNow = () => (O.notes ? O.notes() : []).filter(n => n && !n.deleted);
 const noteOf = txn => txn ? notesNow().find(n => String(n.text || '').includes('TXN ' + txn)) : null;
 function noteBtn(txn, ref) { if (!O.noteForm) return ''; const n = noteOf(txn); return `<button type="button" class="bk-nb${n ? ' has' : ''}" data-bk-note="${esc(ref)}" title="Note / reminder">${n ? (n.done ? '🔕 note' : '🔔 note hai') : '🔔 Note'}</button>`; }

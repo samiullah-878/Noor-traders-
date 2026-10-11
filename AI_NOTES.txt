@@ -4030,3 +4030,7 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
   Ab hblBalance = sirf khate ka balance (khata screen jaisa); closing ka diya cash alag line mein "alag (Closing Cash khata)". Daily HBL mein cash rows nahi.
 - Daily Sale: HBL ab neeche alag hissa nahi — sheet ka 7wa column "🏦 HBL Noor Traders" (Closing ke baad, data-col hbl).
   Aaj ki tareekh par purane din ke ☐ bhi (taake wahin tick ho), poora card (khata search + ✕ + 🔔 + ↩).
+
+== v2.99.44 (2026-10-12) MacroDroid body tayyar ==
+- smsBody() ab "text":{"stringValue":"{sms_message}"} (MacroDroid magic text curly brackets mein; [ ] wala kaam nahi karta).
+  Setup ka "📋 Body copy" = poori body chaabi samet — malik sirf paste kare. Chaabi chat mein kabhi nahi.
