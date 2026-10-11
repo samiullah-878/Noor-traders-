@@ -9,6 +9,7 @@
 //     chhoti parchi. App ka "Dobara print" bhi yahi tafseeli parchi. Setting: blueAccess/printConfig (malik). SQL sirf SELECT.
 //  v4.1 (2026-10-11): app ke transfer note ki parchi par STN ka BARCODE (POS wali parchi jaisa) — Transfer check mein scan ho.
 //  v4.2 (2026-10-11): har item ke neeche 'Baqi <se>: X | <ko>: Y' — transfer ke BAAD dono godam ka stock usi parchi par (alag parchi nahi). Reprint par bhi.
+//  v4.3 (2026-10-11): har item ke neeche dono godam ka stock PEHLE -> BAAD ("Godam 1: 15 Ctn + 3 Pcs -> 12 Ctn + 3 Pcs"). Pehle = baad +/- transfer ki qty.
 //  Chalana:  node transfer-sync.js   (transfer-auto.bat loop mein)
 // =========================================================
 const fs = require('fs');
@@ -147,14 +148,23 @@ function head(title) {
   return [ESC + '@', ESC + 'a' + '\x01', ESC + '!' + '\x30' + SHOP_NAME + ESC + '!' + '\x00', SHOP_PHONE, ESC + '!' + '\x08' + title + ESC + '!' + '\x00', ESC + 'a' + '\x00', '-'.repeat(PRINT_WIDTH)];
 }
 const qtyText = l => { const pk = Number(l.pack) || 0; if (pk > 1 && (Number(l.ctn) || Number(l.pcs) != null)) { const c = Number(l.ctn) || 0, p = Number(l.pcs) || 0; return (c ? n(c) + ' ' + ascii(l.cName || 'Ctn') : '') + (c && p ? ' + ' : '') + (p || !c ? n(p) + ' ' + ascii(l.uName || 'Pcs') : '') + ' (' + n(l.qty) + ')'; } return n(l.qty); };
-// v4.2: "  Baqi Godam 1: 12 Ctn + 3 Pcs | Dukan: 40 Ctn" — pack ho to ctn+pcs, warna seedha qty; 42 chars se lamba ho to chhota karo
+// v4.2: stock ka matn — pack ho to "12 Ctn + 3 Pcs", warna seedha qty
 const ctnPcs = (q, l) => { const pk = Number(l.pack) || 0, v = Number(q) || 0; if (pk > 1) { const c = Math.floor(v / pk + 1e-9), p = r3(v - c * pk); return (c ? n(c) + ' ' + ascii(l.cName || 'Ctn') : '') + (c && p ? ' + ' : '') + (p || !c ? n(p) + ' ' + ascii(l.uName || 'Pcs') : ''); } return n(v); };
+// v4.3: har godam ki line " <godam>: <pehle> -> <baad>" (transfer se pehle aur baad ka stock). Pehle = baad + qty (jahan se nikla) /
+// baad - qty (jahan gaya) — alag SQL nahi, reprint par bhi wahi. 42 chars se lamba ho to do lines: "<godam> pehle: .." / "<godam> baad : ..".
 function baqiText(x, r) {
   if (x.baqiFrom == null && x.baqiTo == null) return '';
-  const f = x.baqiFrom == null ? '?' : ctnPcs(x.baqiFrom, x), t = x.baqiTo == null ? '?' : ctnPcs(x.baqiTo, x), F = ascii(r.from), T = ascii(r.to);
-  const one = `  Baqi ${F}: ${f} | ${T}: ${t}`;
-  if (one.length <= PRINT_WIDTH) return one;
-  return [`  Baqi ${F}: ${f}`.slice(0, PRINT_WIDTH), `  Baqi ${T}: ${t}`.slice(0, PRINT_WIDTH)].join('\r\n');   // lamba ho to do lines (godam ke naam kabhi na giren)
+  const q = Number(x.qty) || 0, out = [];
+  const one = (name, after, before) => {
+    const N = ascii(name);
+    if (after == null) { out.push(` ${N}: ?`.slice(0, PRINT_WIDTH)); return; }
+    const b = ctnPcs(before, x), a = ctnPcs(after, x), l = ` ${N}: ${b} -> ${a}`;
+    if (l.length <= PRINT_WIDTH) out.push(l);
+    else out.push(` ${N} pehle: ${b}`.slice(0, PRINT_WIDTH), ` ${N} baad : ${a}`.slice(0, PRINT_WIDTH));   // godam ka naam kabhi na gire
+  };
+  one(r.from, x.baqiFrom, x.baqiFrom == null ? null : r3(Number(x.baqiFrom) + q));
+  one(r.to, x.baqiTo, x.baqiTo == null ? null : r3(Number(x.baqiTo) - q));
+  return out.join('\r\n');
 }
 function transferText(r, note, reprint) {
   const out = head('STOCK TRANSFER NOTE');
@@ -163,6 +173,7 @@ function transferText(r, note, reprint) {
   out.push(`Se : ${ascii(r.from)}`, `Ko : ${ascii(r.to)}`);
   if (note) out.push('Note: ' + ascii(note).slice(0, PRINT_WIDTH - 6));
   out.push('-'.repeat(PRINT_WIDTH), pad('Item', PRINT_WIDTH - 22) + pad('Qty', 22, true), '-'.repeat(PRINT_WIDTH));
+  if (r.rows.some(x => x.baqiFrom != null || x.baqiTo != null)) out.push('(har item ke neeche stock: pehle -> baad)');   // v4.3
   for (const x of r.rows) {
     const q = qtyText(x); if (ascii(x.name).length + q.length + 1 > PRINT_WIDTH) { out.push(ascii(x.name).slice(0, PRINT_WIDTH)); out.push(pad('', PRINT_WIDTH - q.length) + q); } else out.push(pad(ascii(x.name), PRINT_WIDTH - q.length) + q);
     const b = baqiText(x, r); if (b) out.push(...b.split('\r\n'));   // v4.2: baqi stock usi parchi par
