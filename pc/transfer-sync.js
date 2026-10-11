@@ -10,6 +10,8 @@
 //  v4.1 (2026-10-11): app ke transfer note ki parchi par STN ka BARCODE (POS wali parchi jaisa) — Transfer check mein scan ho.
 //  v4.2 (2026-10-11): har item ke neeche 'Baqi <se>: X | <ko>: Y' — transfer ke BAAD dono godam ka stock usi parchi par (alag parchi nahi). Reprint par bhi.
 //  v4.3 (2026-10-11): har item ke neeche dono godam ka stock PEHLE -> BAAD ("Godam 1: 15 Ctn + 3 Pcs -> 12 Ctn + 3 Pcs"). Pehle = baad +/- transfer ki qty.
+//  v4.4 (2026-10-11): POS MEIN BANE transfer note ki bhi yahi parchi (stock pehle -> baad) — POS apni parchi mein kuch jodne nahi deta, is liye
+//     naya POS note aate hi (10 s mein) hamari parchi alag se. Sirf SELECT. Purane note kabhi nahi chhapte. Band: POS_NOTE_PRINT = false.
 //  Chalana:  node transfer-sync.js   (transfer-auto.bat loop mein)
 // =========================================================
 const fs = require('fs');
@@ -171,6 +173,7 @@ function transferText(r, note, reprint) {
   out.push(line('STN No: ' + r.transferNo, stamp(r.at)));
   { const c = String(r.transferNo || '').replace(/[^\x20-\x7e]/g, '').trim(); if (c) out.push(ESC + 'a' + '\x01' + GS + 'h' + '\x50' + GS + 'w' + '\x02' + GS + 'H' + '\x02' + GS + 'k' + '\x49' + String.fromCharCode(c.length + 2) + '{B' + c + '\n' + ESC + 'a' + '\x00'); }   // v4.1: barcode (CODE128) — app ka 🧾 Transfer check scan
   out.push(`Se : ${ascii(r.from)}`, `Ko : ${ascii(r.to)}`);
+  if (r.pos) out.push('(POS se bana note - stock ki parchi)');   // v4.4
   if (note) out.push('Note: ' + ascii(note).slice(0, PRINT_WIDTH - 6));
   out.push('-'.repeat(PRINT_WIDTH), pad('Item', PRINT_WIDTH - 22) + pad('Qty', 22, true), '-'.repeat(PRINT_WIDTH));
   if (r.rows.some(x => x.baqiFrom != null || x.baqiTo != null)) out.push('(har item ke neeche stock: pehle -> baad)');   // v4.3
@@ -391,6 +394,63 @@ async function sweepStatus() {
   } catch (e) { log('Status sweep masla: ' + e.message); }
 }
 
+// ---------- v4.4: POS MEIN BANE transfer note ki bhi hamari parchi (har item ka stock pehle -> baad) ----------
+// POS apni parchi khud chhapta hai aur us mein hum kuch nahi jod sakte. Is liye POS mein naya note (dbo.StockTransfer, jis par app ka
+// nishan BK-APP nahi) aate hi yahi parchi alag se chhapti hai. POS mein sirf SELECT. Pehli dafa: aaj tak ke sab note "ho chuke"
+// (purane kabhi nahi chhapte). Stock = abhi ka CurrStock (transfer ke baad); pehle = baad +/- qty — is liye 15 minute se purana note
+// nahi chhapta (stock badal chuka hoga).
+const POS_NOTE_PRINT = true, TN_EVERY_MS = 10000, TN_SETTLE_SEC = 8, TN_MAX_AGE_SEC = 900;
+const TN_FILE = path.join(DIR, 'transfer-print.json');
+const tnRead = () => { try { const o = JSON.parse(fs.readFileSync(TN_FILE, 'utf8')); return Number.isFinite(Number(o.last)) ? { last: Number(o.last) } : null; } catch { return null; } };
+const tnSave = o => { try { fs.writeFileSync(TN_FILE, JSON.stringify(o)); } catch {} };
+let tnWarned = 0, tnErr = '';
+async function posNotesOnce(p, st, print) {
+  const heads = (await p.request().input('l', sql.Int, st.last).query(
+    `SELECT TOP 5 t.TransferID, t.FromBranchID, t.ToBranchID, t.TransferNo, t.Remarks, t.SystemNotes,
+            DATEDIFF(second, ISNULL(t.CreatedOn, t.TransferDate), GETDATE()) AS AgeSec
+     FROM dbo.StockTransfer t WHERE t.TransferID > @l ORDER BY t.TransferID`)).recordset;
+  for (const h of heads) {
+    const id = Number(h.TransferID), no = String(h.TransferNo ?? '').trim(), age = Number(h.AgeSec);
+    if (/BK-APP/.test(String(h.SystemNotes || ''))) { st = { last: id }; continue; }     // app ka note — us ki parchi handleTransfer chhap chuka
+    if (age >= 0 && age < TN_SETTLE_SEC) break;                                          // abhi ban raha hai — agli dafa
+    if (age > TN_MAX_AGE_SEC) { log(`POS transfer note ${no}: ${Math.round(age / 60)} minute purana — stock ki parchi nahi chhapi (script band thi?)`); st = { last: id }; continue; }
+    const det = (await p.request().input('i', sql.Int, id).input('f', sql.Int, Number(h.FromBranchID)).input('t', sql.Int, Number(h.ToBranchID)).query(
+      `SELECT d.ItemID, SUM(d.Qty) AS Qty, MAX(i.ItemName) AS ItemName, MAX(i.PackQty) AS PackQty, MAX(i.PackQtyName) AS PackQtyName, MAX(i.QtyName) AS QtyName,
+              (SELECT TOP 1 ISNULL(r.CurrStock,0) FROM dbo.ItemBranchRate r WHERE r.ItemID = d.ItemID AND r.BranchID = @f) AS F,
+              (SELECT TOP 1 ISNULL(r.CurrStock,0) FROM dbo.ItemBranchRate r WHERE r.ItemID = d.ItemID AND r.BranchID = @t) AS T
+       FROM dbo.StockTransferDetail d LEFT JOIN dbo.Items i ON i.ItemID = d.ItemID
+       WHERE d.TransferID = @i AND d.Qty > 0 GROUP BY d.ItemID ORDER BY MAX(i.ItemName)`)).recordset;
+    if (!det.length) { if (age >= 0 && age < 120) break; st = { last: id }; continue; }   // lines abhi nahi aayin — thora intezar; 2 minute baad chhor do
+    const names = await branchNames(p);
+    const rows = det.map(d => {
+      const qty = r3(d.Qty), pack = Number(d.PackQty) || 0, c = pack > 1 ? Math.floor(qty / pack + 1e-9) : 0;
+      return { itemId: Number(d.ItemID), name: String(d.ItemName || 'Item ' + d.ItemID).trim(), qty, pack, ctn: c, pcs: pack > 1 ? r3(qty - c * pack) : 0,
+        cName: String(d.PackQtyName || 'Ctn').trim(), uName: String(d.QtyName || 'Pcs').trim(), baqiFrom: d.F == null ? null : r3(d.F), baqiTo: d.T == null ? null : r3(d.T) };
+    });
+    const text = transferText({ transferNo: no, at: Date.now(), from: names[h.FromBranchID] || 'Godam ' + h.FromBranchID, to: names[h.ToBranchID] || 'Godam ' + h.ToBranchID, rows, pos: true }, String(h.Remarks || '').trim(), null);
+    const err = await print(text, 'Transfer ' + no);
+    if (err) { if (tnWarned !== id) { tnWarned = id; log(`POS transfer note ${no} ki stock parchi print NAHI hui: ${err.message} — dobara koshish hogi`); } break; }
+    log(`POS transfer note ${no} ki stock parchi chhapi (${rows.length} items)`);
+    st = { last: id };
+  }
+  return st;
+}
+async function posNotes() {
+  if (!POS_NOTE_PRINT) return;
+  try {
+    const p = await getPool(); const st = tnRead();
+    if (!st) {
+      const m = (await p.request().query('SELECT ISNULL(MAX(TransferID), 0) AS M FROM dbo.StockTransfer')).recordset[0];
+      const first = { last: Number(m && m.M) || 0 }; tnSave(first);
+      log(`POS transfer note ki stock parchi chalu — TransferID ${first.last} ke BAAD wale note chhapenge (purane nahi)`);
+      return;
+    }
+    const nx = await posNotesOnce(p, st, sendRaw);
+    if (nx.last !== st.last) tnSave(nx);
+    tnErr = '';
+  } catch (e) { const m = String(e && e.message).slice(0, 160); if (tnErr !== m) { tnErr = m; log('POS transfer note dekhne mein masla: ' + m); } }
+}
+
 const lock = net.createServer();
 lock.once('error', () => { console.log('transfer-sync pehle se chal raha hai.'); process.exit(3); });
 lock.listen(LOCK_PORT, '127.0.0.1', async () => {
@@ -401,6 +461,7 @@ lock.listen(LOCK_PORT, '127.0.0.1', async () => {
   prCol.where('status', '==', 'new').onSnapshot(s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handlePrint(c.doc)); }); }, fail('print'));
   poCol.where('status', '==', 'new').onSnapshot(s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handlePost(c.doc)); }); }, fail('post'));
   setTimeout(() => later(sweepStatus), 20000); setInterval(() => later(sweepStatus), SWEEP_MS);
+  if (POS_NOTE_PRINT) { setTimeout(() => later(posNotes), 15000); setInterval(() => later(posNotes), TN_EVERY_MS); }   // v4.4: POS ke note ki stock parchi (printer wali hi qataar)
   // v4: 🖨 purchase auto-print — printer ka kaam transfer / print jobs wali queue mein (ek waqt ek parchi, files na takrayein)
   if (PP) {
     try {
