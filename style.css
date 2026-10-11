@@ -2771,3 +2771,23 @@ html.dk .nt-nag-chip{background:#3b2a6b!important;color:#ddd6fe!important}
 html.dk .nt-bulk{background:rgba(20,28,48,.96)!important;border-color:var(--line)!important}html.dk .nt-bk-top b{color:var(--ink)!important}
 html.dk .nt-bk-in{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}html.dk .nt-bk-in input{color:var(--ink)!important}
 html.dk .nt-card.picked{background:rgba(76,110,245,.14)!important}
+/* v2.99.29: 🛒 order formula — bachat, band items, 🚚 godam se, 🧮 hisaab card */
+.po-set{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 8px}.po-set>small{font-weight:800;color:#41536f}
+.po-set .rc.on{background:linear-gradient(135deg,#1a2d53,#2c4a85)!important;color:#fff!important;border-color:#1a2d53!important}
+.po-set .po-hint{flex-basis:100%;font-weight:600;color:#6b7a92;font-size:11px}
+.po-sk2{margin-left:6px;font-weight:800;color:#a32020}.po-skipchip.it{border-color:#f3b4b4;background:#fff5f5;color:#a32020}
+.po-ai{display:block;color:#5b21b6!important;font-style:normal!important;font-weight:700}
+.po-tr{margin:10px 0;padding:10px;border-radius:16px;background:linear-gradient(135deg,#eef6ff,#e3f0ff);border:1px solid #bcd7f7}
+.po-tr .po-party{color:#1d4f91}.po-trg{margin-top:8px}.po-trg>small{font-weight:800;color:#1d4f91}
+.po-chip.tr{border-color:#9cc3ef;background:linear-gradient(180deg,#fff,#f0f7ff)}.po-chip.tr b{color:#1d4f91}
+.po-trgo{margin-top:8px;width:100%;min-height:44px;border-radius:12px;font-weight:800}
+.po-hcard{display:grid;gap:6px;margin-bottom:12px}
+.po-hrow{display:grid;grid-template-columns:118px 1fr;gap:8px;align-items:start;padding:8px 10px;border-radius:12px;background:#f6f8fc;border:1px solid #e3e8f2;font-size:13px;line-height:1.45}
+.po-hrow>span{font-weight:800;color:#41536f;font-size:12px}.po-hrow b.up{color:#17703c}.po-hrow b.dn{color:#a32020}.po-hrow i{color:#6b7a92}.po-hrow i.bad{color:#a32020;font-style:normal;font-weight:700}
+.po-hrow.dm{background:#fff8ea;border-color:#f1d9a6}.po-hrow.ai{background:#f3f0ff;border-color:#ddd6fe}
+.po-hrow:has(>span:only-child){grid-template-columns:1fr}
+.po-hform label{display:grid;gap:4px;font-weight:800}.po-hform input{font-size:20px;font-weight:800;padding:10px;border-radius:12px}
+.po-hacts{display:flex;gap:8px;margin-top:10px}.po-hacts button{flex:1;min-height:46px;border-radius:14px;font-weight:800}
+html.dk .po-hrow{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}html.dk .po-hrow>span{color:var(--ink2)!important}
+html.dk .po-tr{background:var(--glass)!important;border-color:var(--line)!important}html.dk .po-tr .po-party,html.dk .po-trg>small{color:#93c5fd!important}
+html.dk .po-chip.tr{background:var(--glass)!important;border-color:#1e3a5f!important;color:var(--ink)!important}html.dk .po-set>small{color:var(--ink2)!important}

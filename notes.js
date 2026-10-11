@@ -6,8 +6,9 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { saleStock } from './pos-stock.js?v=2.99.28';
-import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.28';
+import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.99.29';
+import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.99.29';   // v2.99.29: shaffaf order formula
+import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.29';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -335,79 +336,117 @@ document.addEventListener('click', async e => {
 // Chip: DOUBLE TAP = "✓ Maal aa gaya" mein; wahan TAP = gayab. Ek tap = tadad badlo (0 = hatao).
 let poList = [], poStop = null, poBusy = false, poTap = { id: '', t: 0 }, poStatsAt = 0, pdfOf = null;
 const PO_SKIP = 'sam-po-skip', poNorm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-function poSkip() { try { const a = JSON.parse(localStorage.getItem(PO_SKIP) || 'null'); return Array.isArray(a) ? a : ['our factory']; } catch { return ['our factory']; } }
-function poSkipSet(a) { try { localStorage.setItem(PO_SKIP, JSON.stringify(a)); } catch {} }
+// v2.99.29: order ki setting Firestore (stockConfig.po) mein — har phone par ek jaisi: {skipParties[], skipItems{id:naam}, safety}
+let poCfg = null, poCfgStop = null, poStats = null, poTr = [];
+try { poTr = JSON.parse(localStorage.getItem('sam-po-tr') || '[]') || []; } catch {}
+const poOwner = () => (whoOf() || {}).role === 'owner';
+function poCfgWatch() { if (poCfgStop || !cloud?.listenStockConfig) return; poCfgStop = cloud.listenStockConfig(c => { poCfg = (c && c.po) || {}; if (!Array.isArray(poCfg.skipParties) && poOwner() && cloud.setPoConfig) { const old = poSkipLocal(); cloud.setPoConfig({ ...poCfg, skipParties: old }).catch(() => {}); } const b = $('ntPo'); if (b) b.innerHTML = poHTML(); }); }
+function poSkipLocal() { try { const a = JSON.parse(localStorage.getItem(PO_SKIP) || 'null'); return Array.isArray(a) ? a : ['our factory']; } catch { return ['our factory']; } }
+function poSkip() { return Array.isArray(poCfg?.skipParties) ? poCfg.skipParties : poSkipLocal(); }
+const poSkipItems = () => (poCfg?.skipItems && typeof poCfg.skipItems === 'object') ? poCfg.skipItems : {};
+const poSafety = () => [3, 5, 7].includes(Number(poCfg?.safety)) ? Number(poCfg.safety) : 5;
+async function poCfgSet(patch) { const next = { skipParties: poSkip(), skipItems: poSkipItems(), safety: poSafety(), ...patch }; poCfg = next; const b = $('ntPo'); if (b) b.innerHTML = poHTML(); if (cloud?.setPoConfig && poOwner()) await cloud.setPoConfig(next); }
+function poSkipSet(a) { try { localStorage.setItem(PO_SKIP, JSON.stringify(a)); } catch {} poCfgSet({ skipParties: a }).catch(e => notice('⚠️ ' + (e?.message || e))); }
 const poSkipped = party => { const p = poNorm(party); return poSkip().some(s => poNorm(s) && (p === poNorm(s) || p.includes(poNorm(s))) ); };
 const poGodamTxt = it => it?.gs ? Object.entries(it.gs).map(([g, q]) => g + ': ' + num(q)).join(' · ') : '';
 const poUnit = it => (Number(it.pack) || 0) > 1 ? (it.cName || 'Ctn') : (it.uName || 'Pcs');
-function poWatch() { if (poStop || !cloud?.listenPurchaseOrders) return; poStop = cloud.listenPurchaseOrders(l => { poList = (l || []).sort((a, b) => (b.at || 0) - (a.at || 0)); const b = $('ntPo'); if (b) b.innerHTML = poHTML(); }); }
+function poWatch() { poCfgWatch(); if (poStop || !cloud?.listenPurchaseOrders) return; poStop = cloud.listenPurchaseOrders(l => { poList = (l || []).sort((a, b) => (b.at || 0) - (a.at || 0)); const b = $('ntPo'); if (b) b.innerHTML = poHTML(); }); }
 function poHTML() {
   const o = poList[0], can = (whoOf() || {}).role === 'owner' || (whoOf() || {}).scope === 'full';
   const head = `<div class="po-head"><b>🛒 Purchase order</b>${poStatsAt ? `<small>data: ${esc(new Date(poStatsAt).toLocaleString('en-PK', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))}</small>` : ''}${can ? `<button type="button" class="got po-make" data-po-make="1"${poBusy ? ' disabled' : ''}>${poBusy ? '⏳ AI soch raha hai…' : '🤖 Order banao'}</button>` : ''}</div>`;
-  const skipRow = `<div class="po-skip"><small>🚫 Order se bahar:</small>${poSkip().map(s => `<button type="button" class="po-skipchip" data-po-unskip="${esc(s)}">${esc(s)} ✕</button>`).join('') || '<small>koi nahi</small>'}</div>`;
+  const own = poOwner(), si = Object.entries(poSkipItems());
+  const skipRow = `<div class="po-skip"><small>🚫 Order se bahar:</small>${poSkip().map(s => `<button type="button" class="po-skipchip" data-po-unskip="${esc(s)}"${own ? '' : ' disabled'}>${esc(s)} ✕</button>`).join('') || '<small>koi nahi</small>'}${si.length ? `<small class="po-sk2">📦 Band items ${si.length}:</small>${si.slice(0, 30).map(([id, nm]) => `<button type="button" class="po-skipchip it" data-po-unitem="${esc(id)}"${own ? '' : ' disabled'}>${esc(nm || id)} ✕</button>`).join('')}` : ''}</div>`
+    + `<div class="po-set"><small>🛡 Bachat stock:</small>${[3, 5, 7].map(d => `<button type="button" class="rc${poSafety() === d ? ' on' : ''}" data-po-safety="${d}"${own ? '' : ' disabled'}>${d} din</button>`).join('')}<small class="po-hint">Formula: roz ki bikri (mahine ke rujhan ke saath) × (agla order + bachat) − stock · chip dabao = 🧮 poora hisaab</small></div>`;
+  const trBox = poTr.length ? `<div class="po-tr"><div class="po-party">🚚 Godam se dukan mangwao<small>${poTr.reduce((n, g) => n + g.items.length, 0)}</small></div>${poTr.map((g, gi) => `<div class="po-trg"><small>${esc(g.from)} → ${esc(g.to)}</small><div class="po-chips">${g.items.map(x => `<span class="po-chip tr">${esc(x.n)}<b>${esc(num(x.units))} ${esc(x.u)}</b><i>dukan ${esc(num(x.dk))} din</i></span>`).join('')}</div>${own || (whoOf() || {}).scope === 'full' ? `<button type="button" class="got po-trgo" data-po-tr="${gi}">🚚 Transfer note banao (${g.items.length})</button>` : ''}</div>`).join('')}</div>` : '';
   const dm = dmOpen().length ? `<small class="po-meta">📢 ${dmOpen().length} demand khuli — "Order banao" par sab se upar aayengi</small>` : '';
-  if (!o) return head + skipRow + dm + '<p class="po-empty">Abhi koi order nahi — "🤖 Order banao" dabayein.</p>';
+  if (!o) return head + skipRow + dm + trBox + '<p class="po-empty">Abhi koi order nahi — "🤖 Order banao" dabayein.</p>';
   const open = [], got = [];
   o.lines.forEach((ln, li) => ln.items.forEach((x, ii) => { if (x.st === 'got') got.push([li, ii, x, ln.party]); }));
   const lines = o.lines.map((ln, li) => { const its = ln.items.map((x, ii) => [ii, x]).filter(([, x]) => x.st === 'open'); if (!its.length) return '';
-    return `<div class="po-line${its.some(([, x]) => x.d) ? ' has-dm' : ''}"><div class="po-party">🧾 ${esc(ln.party || 'Supplier nahi pata')}<small>${its.length}</small><button type="button" class="po-noline" data-po-skip="${esc(ln.party || '')}" title="Is supplier ko order mein na lao">🚫</button></div><div class="po-chips">${its.map(([ii, x]) => `<button type="button" class="po-chip${x.d ? ' dm' : ''}" data-po-chip="${li}|${ii}">${esc(x.n)}<b>${esc(num(x.q))} ${esc(x.u || '')}</b>${x.d ? `<i>👦 ${esc(x.d)}</i>` : x.why ? `<i>${esc(x.why)}</i>` : ''}</button>`).join('')}</div></div>`; }).join('');
-  return head + skipRow + `<small class="po-meta">${esc(new Date(o.at).toLocaleString('en-PK', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))} · ${esc(o.byName || '')}${o.note ? ' · ' + esc(o.note) : ''} · <i>chip par DOUBLE TAP = maal aa gaya</i></small>`
-    + (lines || '<p class="po-empty">Sab maal aa gaya 🎉</p>')
+    return `<div class="po-line${its.some(([, x]) => x.d) ? ' has-dm' : ''}"><div class="po-party">🧾 ${esc(ln.party || 'Supplier nahi pata')}<small>${its.length}</small><button type="button" class="po-noline" data-po-skip="${esc(ln.party || '')}" title="Is supplier ko order mein na lao">🚫</button></div><div class="po-chips">${its.map(([ii, x]) => `<button type="button" class="po-chip${x.d ? ' dm' : ''}" data-po-chip="${li}|${ii}">${esc(x.n)}<b>${esc(num(x.q))} ${esc(x.u || '')}</b>${x.d ? `<i>👦 ${esc(x.d)}</i>` : x.why ? `<i>${esc(x.why)}</i>` : ''}${x.ai ? `<i class="po-ai">🤖 ${esc(x.ai)}</i>` : ''}</button>`).join('')}</div></div>`; }).join('');
+  return head + skipRow + `<small class="po-meta">${esc(new Date(o.at).toLocaleString('en-PK', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))} · ${esc(o.byName || '')}${o.note ? ' · ' + esc(o.note) : ''} · <i>chip: 1 tap = 🧮 hisaab / tadad · DOUBLE TAP = maal aa gaya</i></small>`
+    + (lines || '<p class="po-empty">Sab maal aa gaya 🎉</p>') + trBox
     + `<div class="po-acts"><button type="button" data-po-bazaar="1">🧾 Bazaar list · WhatsApp</button><button type="button" data-po-pdf="1">📄 PDF</button></div>`
     + (got.length ? `<div class="po-got"><div class="po-party">✓ Maal aa gaya<small>${got.length} · tap = hatao</small></div><div class="po-chips">${got.map(([li, ii, x]) => `<button type="button" class="po-chip got" data-po-gone="${li}|${ii}">${esc(x.n)}<b>${esc(num(x.q))} ${esc(x.u || '')}</b></button>`).join('')}</div></div>` : '');
 }
 async function poSave(o) { const i = poList.findIndex(x => x.id === o.id); if (i >= 0) poList[i] = o; else poList.unshift(o); const b = $('ntPo'); if (b) b.innerHTML = poHTML(); await cloud.savePurchaseOrder(o); }
+// v2.99.29: FORMULA se order (po-formula.js) — AI sirf "dhyan" ki baat likhta hai, tadad formula ki
+async function poStatsGet(force) { if (!force && poStats && Date.now() - poStats.got < 10 * 60000) return poStats; const st = await cloud.getPosStats(); poStatsAt = st.at || 0; poStats = { ...st, meta: st.meta || {}, byId: new Map(st.items.map(x => [String(x.i), x])), shop: shopIdx(st.items, st.meta || {}), got: Date.now() }; return poStats; }
+function poDukan() { try { return stockAgentGodams().find(g => g.dukan)?.name || ''; } catch { return ''; } }
+function poPlan(id, st) { const it = (stockOf() || new Map()).get(String(id)); if (!it) return null; return planItem(it, st.byId.get(String(id)) || {}, { meta: st.meta, shop: st.shop, safety: poSafety(), today: new Date(), dukan: poDukan() }); }
 async function poMake() {
   if (poBusy) return; poBusy = true; const box = $('ntPo'); if (box) box.innerHTML = poHTML();
   try {
-    const st = await cloud.getPosStats(); poStatsAt = st.at || 0;
+    const st = await poStatsGet(true);
     if (!st.items.length) throw Error('POS ka data abhi nahi aaya — dukan ke PC par SALE-DATA.bat ek dafa chalayein');
-    const stock = stockOf() || new Map(), cand = [], sById = new Map(st.items.map(s => [String(s.i), s]));
+    const stock = stockOf() || new Map(), skipI = poSkipItems(), hid = (() => { try { return saleStock().hidden || {}; } catch { return {}; } })();
+    const cand = [], trs = new Map();
+    const partyOf2 = (h, s) => h.bp.last?.party || s?.lp?.party || '';
     for (const d of dmOpen()) {   // 📢 mulazim ki demand — hamesha, sab se pehle
-      const it = stock.get(String(d.i)); if (!it) continue; const s = sById.get(String(d.i)) || {}; const pk = Number(it.pack) || 0, have = Math.max(0, Number(it.stock) || 0);
-      const daily = Math.max((s.s30 || 0) / 30, (s.s90 || 0) / 90 * 0.9, 0), lq = s.lp ? (pk > 1 ? Math.round(s.lp.q / pk * 10) / 10 : s.lp.q) : 0;
-      const needPcs = Math.max(daily * 21 - have, pk > 1 ? pk : 1);
-      cand.push({ id: String(d.i), name: it.name, pk, unit: poUnit(it), have: Math.round(have * 10) / 10, daily: Math.round(daily * 100) / 100, left: -1, need: Math.max(1, lq && (d.lvl === 'out' || !daily) ? Math.ceil(lq) : (pk > 1 ? Math.ceil(needPcs / pk) : Math.ceil(needPcs))), party: s.lp?.party || '', lq, ld: s.lp?.d || '', w: (s.w || []).slice(0, 8), d: (d.byName || 'mulazim') + ': ' + (d.lvl === 'out' ? 'khatam' : 'kam'), di: d.id });
+      const h = poPlan(d.i, st); if (!h) continue; const s = st.byId.get(String(d.i)) || {};
+      const q = Math.max(1, h.q || Math.ceil(h.bp.aam || h.bp.last?.q || 1));
+      cand.push({ h, q, party: partyOf2(h, s), d: (d.byName || 'mulazim') + ': ' + (d.lvl === 'out' ? 'khatam' : 'kam'), di: d.id });
     }
     for (const s of st.items) {
-      if (cand.some(c => c.id === String(s.i))) continue;
-      const it = stock.get(String(s.i)); if (!it) continue;
-      const daily = Math.max((s.s30 || 0) / 30, (s.s90 || 0) / 90 * 0.9, (s.s180 || 0) / 182 * 0.7); if (!(daily > 0)) continue;
-      const have = Math.max(0, Number(it.stock) || 0), left = have / daily; if (left >= 14) continue;
-      const pk = Number(it.pack) || 0, needPcs = Math.max(daily * 21 - have, pk > 1 ? pk : 1);
-      cand.push({ id: String(s.i), name: it.name, pk, unit: poUnit(it), have: Math.round(have * 10) / 10, daily: Math.round(daily * 100) / 100, left: Math.round(left * 10) / 10,
-        need: pk > 1 ? Math.ceil(needPcs / pk) : Math.ceil(needPcs), party: s.lp?.party || '', lq: s.lp ? (pk > 1 ? Math.round(s.lp.q / pk * 10) / 10 : s.lp.q) : 0, ld: s.lp?.d || '', w: (s.w || []).slice(0, 8) });
+      const id = String(s.i); if (cand.some(c => c.h.id === id) || skipI[id] || hid[id] || !stock.has(id)) continue;
+      const h = poPlan(id, st); if (!h || h.noSale) continue;
+      if (h.order) cand.push({ h, q: h.q, party: partyOf2(h, s) });
+      else if (h.transfer) { const k = h.transfer.from + '→' + h.transfer.to; if (!trs.has(k)) trs.set(k, { from: h.transfer.from, to: h.transfer.to, items: [] }); trs.get(k).items.push({ i: id, n: h.name.slice(0, 60), units: h.transfer.units, pcs: h.transfer.pcs, pk: h.pk, u: h.unit, dk: h.transfer.dkLeft }); }
     }
-    const cand2 = cand.filter(c => !poSkipped(c.party));   // 🚫 our factory waghera
-    cand2.sort((a, b) => a.left - b.left);
-    const top = cand2.slice(0, 90); if (!top.length) throw Error('Sab items ka 2 hafte se zyada stock hai — abhi order ki zaroorat nahi');
-    let groups = null;
+    poTr = [...trs.values()].map(g => ({ ...g, items: g.items.sort((a, b) => a.dk - b.dk).slice(0, 40) })); try { localStorage.setItem('sam-po-tr', JSON.stringify(poTr)); } catch {}
+    const cand2 = cand.filter(c => c.d || !poSkipped(c.party));   // 🚫 our factory waghera (demand phir bhi)
+    cand2.sort((a, b) => (b.d ? 1 : 0) - (a.d ? 1 : 0) || a.h.left - b.h.left);
+    const top = cand2.slice(0, 120);
+    if (!top.length) { notice(poTr.length ? '✓ Order ki zaroorat nahi — 🚚 godam se dukan mangwane wale items neeche' : 'Sab items ka stock kaafi hai — abhi order ki zaroorat nahi'); return; }
+    // 🤖 AI: tadad nahi badalta — sirf ajeeb baat pakarta hai (bikri ruki / achanak barhi / mausami)
+    const aiNote = new Map();
     if (aiOf) {
-      const table = top.map(c => [c.id, c.name, c.unit, c.have, c.daily, c.left < 0 ? 'DEMAND' : c.left, c.need, c.party, c.lq, c.ld, c.w.join('/'), c.d ? 'MULAZIM NE KAHA: ' + c.d : ''].join(' | ')).join('\n');
-      const prompt = ['Tum ek Pakistani wholesale / kiryana dukan ke purchase manager ho. Neeche wo items hain jin ka stock kam hai.',
-        'Columns: id | naam | unit (tadad ki ikai: carton ho to carton, warna pcs/kg) | stock abhi (PIECES) | roz ki bikri (pieces) | kitne din ka stock baqi | seedha hisaab ki tadad (unit mein) | pichhla supplier | pichhli dafa kitna (unit mein) | pichhli tareekh | aakhri 8 hafton ki bikri (pieces, naya pehle)',
-        'Kaam: har item ki munasib tadad (unit mein, poori ginti) tay karo — takriban 3 hafte ki zaroorat, pichhli purchase ki tadad aur hafton ka rujhan dekh kar. Jo item waqai zaroori nahi (bikri ruk gayi) chhor do. Jis item par "MULAZIM NE KAHA" likha hai wo LAZMI rakho (dukan ke larke ne khud dekh kar bataya hai).',
-        'Items ko SUPPLIER ke hisaab se jama karo (pichhla supplier; khali ho to "Supplier nahi pata").',
-        'SIRF JSON do, kuch aur nahi: [{"party":"...","items":[{"id":"...","q":10}]}]', '', table].join('\n');
-      try { const txt = await aiOf(prompt); const j = JSON.parse(String(txt).replace(/```json|```/g, '').trim().replace(/^[^\[]*/, '').replace(/[^\]]*$/, '')); if (Array.isArray(j)) groups = j; } catch (e) { notice('AI ka jawab samajh nahi aaya — seedha hisaab laga diya'); }
+      const table = top.slice(0, 80).map(c => [c.h.id, c.h.name, c.h.unit, 'stock ' + c.h.have, 'roz ' + c.h.daily, c.h.left + ' din', 'order ' + c.q, 'mahine ' + (c.h.mo || []).join('/'), 'hafte ' + ((st.byId.get(c.h.id)?.w) || []).slice(0, 8).map(x => Math.round(x / c.h.pk * 10) / 10).join('/'), c.h.trend].join(' | ')).join('\n');
+      const prompt = ['Tum Pakistani wholesale dukan ke purchase manager ho. Neeche order ki list hai — tadad formula ne nikali hai (roz ki bikri × din − stock).',
+        'Sirf woh items batao jin mein kuch AJEEB hai: bikri achanak ruk gayi (shayad mat mangwao), achanak bohat barhi (zyada chahiye), mausami / ek dafa ki bikri. Baqi chhor do. Max 15.',
+        'Har note 8 lafz tak, Roman Urdu. SIRF JSON: [{"id":"...","note":"..."}]', '', table].join('\n');
+      try { const txt = await aiOf(prompt); const j = JSON.parse(String(txt).replace(/```json|```/g, '').trim().replace(/^[^\[]*/, '').replace(/[^\]]*$/, '')); if (Array.isArray(j)) for (const x of j.slice(0, 15)) if (x && x.id && x.note) aiNote.set(String(x.id), String(x.note).slice(0, 60)); } catch {}
     }
-    const byId = new Map(top.map(c => [c.id, c]));
-    if (!groups) { const g = new Map(); for (const c of top) { const k = c.party || 'Supplier nahi pata'; if (!g.has(k)) g.set(k, []); g.get(k).push({ id: c.id, q: c.need }); } groups = [...g].map(([party, items]) => ({ party, items })); }
-    const seen = new Set();
-    let lines = groups.map(g => ({ party: String(g.party || 'Supplier nahi pata').slice(0, 80), items: (g.items || []).map(x => { const c = byId.get(String(x.id)); if (!c || seen.has(c.id)) return null; seen.add(c.id); const q = Math.max(1, Math.round(Number(x.q) || c.need)); return { i: c.id, n: String(c.name).slice(0, 60), q, u: c.unit, st: 'open', ...(c.d ? { d: c.d, di: c.di } : { why: c.have <= 0 ? 'stock 0' : Math.round(c.left) + ' din baqi' }) }; }).filter(Boolean).slice(0, 40) })).filter(l => l.items.length && !poSkipped(l.party)).slice(0, 30);
-    for (const c of top) if (c.d && !seen.has(c.id)) { seen.add(c.id); const k = c.party || 'Supplier nahi pata'; let ln = lines.find(l => l.party === k); if (!ln) { ln = { party: k, items: [] }; lines.push(ln); } ln.items.push({ i: c.id, n: String(c.name).slice(0, 60), q: c.need, u: c.unit, st: 'open', d: c.d, di: c.di }); }   // AI demand chhor de to bhi rakho
-    lines.sort((a, b) => (b.items.some(x => x.d) ? 1 : 0) - (a.items.some(x => x.d) ? 1 : 0));
-    if (!lines.length) throw Error('Order khali bana — dobara koshish karein');
+    const g = new Map();
+    for (const c of top) { const k = c.party || 'Supplier nahi pata'; if (!g.has(k)) g.set(k, []); const it = { i: c.h.id, n: String(c.h.name).slice(0, 60), q: c.q, u: c.h.unit, st: 'open', why: c.h.have <= 0 ? 'stock 0' : Math.round(c.h.left) + ' din baqi' }; if (c.d) { it.d = c.d; it.di = c.di; } if (aiNote.has(c.h.id)) it.ai = aiNote.get(c.h.id); g.get(k).push(it); }
+    const lines = [...g].map(([party, items]) => ({ party: party.slice(0, 80), items: items.slice(0, 40) })).sort((a, b) => (b.items.some(x => x.d) ? 1 : 0) - (a.items.some(x => x.d) ? 1 : 0) || b.items.length - a.items.length).slice(0, 30);
     const w = whoOf() || {};
-    await poSave({ id: 'po' + Date.now().toString(36), at: Date.now(), by: String(w.uid || ''), byName: String(w.name || '').slice(0, 60), note: (aiOf && groups ? 'AI' : 'hisaab') + ' · ' + lines.reduce((n, l) => n + l.items.length, 0) + ' items', lines });
-    notice('🛒 Order ban gaya — ' + lines.length + ' supplier');
+    await poSave({ id: 'po' + Date.now().toString(36), at: Date.now(), by: String(w.uid || ''), byName: String(w.name || '').slice(0, 60), note: 'formula · bachat ' + poSafety() + ' din · ' + lines.reduce((n, l) => n + l.items.length, 0) + ' items' + (aiNote.size ? ' · 🤖 ' + aiNote.size + ' dhyan' : ''), lines });
+    notice('🛒 Order ban gaya — ' + lines.length + ' supplier' + (poTr.length ? ' · 🚚 ' + poTr.reduce((n, x) => n + x.items.length, 0) + ' godam se' : ''));
   } catch (e) { notice('⚠️ ' + (e?.message || e)); }
   finally { poBusy = false; const b = $('ntPo'); if (b) b.innerHTML = poHTML(); }
+}
+// 🧮 ek item ka poora hisaab + tadad badlo + aainda band
+async function poCard(li, ii) {
+  const o = poList[0], x = o?.lines[li]?.items[ii]; if (!x) return;
+  let L = null; try { const st = await poStatsGet(); const h = poPlan(x.i, st); if (h) L = hisaabLines(h, st.meta, new Date()); } catch (e) { L = [['⚠️', esc(e?.message || e)]]; }
+  const it = (stockOf() || new Map()).get(String(x.i));
+  dlgOf('🧮 ' + x.n, `<div class="po-hcard">${x.d ? `<div class="po-hrow dm"><span>👦</span><div>${esc(x.d)}</div></div>` : ''}${x.ai ? `<div class="po-hrow ai"><span>🤖</span><div>${esc(x.ai)}</div></div>` : ''}${(L || [['📦', 'Stock — ' + esc(poGodamTxt(it) || num(it?.stock || 0))]]).map(([k, v]) => `<div class="po-hrow"><span>${k}</span><div>${v}</div></div>`).join('')}</div>
+    <form class="po-hform"><label>Kitna mangwana hai (${esc(x.u || '')})<input name="q" type="number" step="any" min="0" inputmode="decimal" value="${esc(String(x.q))}"></label><div class="po-hacts">${poOwner() ? `<button type="button" class="give" data-po-band="${esc(x.i)}">🚫 Aainda na mangwao</button>` : ''}<button type="submit" class="got">💾 Save</button></div><small class="stat-note">0 = is order se hatao</small></form>`);
+  const f = document.querySelector('#dialogBody .po-hform'); if (!f) return;
+  f.onsubmit = ev => { ev.preventDefault(); const n = Number(f.elements.q.value); if (!Number.isFinite(n) || n < 0) return; if (n === 0) x.st = 'gone'; else x.q = Math.round(n * 100) / 100; closeDlg(); poSave(o).catch(er => notice('⚠️ ' + (er?.message || er))); };
+  const band = f.querySelector('[data-po-band]'); if (band) band.onclick = async () => { if (!confirm('"' + x.n + '" aainda kisi order mein na aaye?\n(Upar "📦 Band items" se wapas la sakte hain)')) return; x.st = 'gone'; closeDlg(); try { await poCfgSet({ skipItems: { ...poSkipItems(), [x.i]: x.n } }); await poSave(o); notice('🚫 ' + x.n + ' — aainda order mein nahi aayega'); } catch (er) { notice('⚠️ ' + (er?.message || er)); } };
+}
+async function poTransfer(gi) {
+  const g = poTr[gi]; if (!g) return;
+  const gd = (() => { try { return stockAgentGodams(); } catch { return []; } })(), from = gd.find(x => x.name === g.from), to = gd.find(x => x.name === g.to);
+  if (!from || !to) { notice('Godam nahi mila — stock screen se transfer karein'); return; }
+  if (!confirm(`🚚 ${g.from} → ${g.to}\n\n${g.items.map(x => '• ' + x.n + ' — ' + num(x.units) + ' ' + x.u).join('\n')}\n\nTransfer note bana dein? (POS mein bhi banega)`)) return;
+  notice('⏳ Transfer note ban raha hai…');
+  try {
+    const r = await stockAgentTransfer({ from: from.id, to: to.id, lines: g.items.map(x => x.pk > 1 ? { id: x.i, name: x.n, ctn: Math.floor(x.pcs / x.pk), pcs: Math.round((x.pcs - Math.floor(x.pcs / x.pk) * x.pk) * 1000) / 1000 } : { id: x.i, name: x.n, pcs: x.pcs }), note: 'Order screen: godam se dukan' });
+    if (r.ok) { poTr.splice(gi, 1); try { localStorage.setItem('sam-po-tr', JSON.stringify(poTr)); } catch {} notice('✓ Transfer note ' + (r.no || '') + ' ban gaya'); }
+    else notice((r.pending ? '⏳ ' : '⚠️ ') + (r.why || 'Transfer nahi bana'));
+  } catch (e) { notice('⚠️ ' + (e?.message || e)); }
+  const b = $('ntPo'); if (b) b.innerHTML = poHTML();
 }
 function poBazaarText(o) { return '🧾 Bazaar list — ' + new Date(o.at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short' }) + '\n' + o.lines.map(ln => { const its = ln.items.filter(x => x.st === 'open'); return its.length ? '\n*' + (ln.party || 'Supplier nahi pata') + '*\n' + its.map(x => '• ' + x.n + ' — ' + num(x.q) + ' ' + (x.u || '') + (x.d ? ' (👦 ' + x.d + ')' : '')).join('\n') : ''; }).filter(Boolean).join('\n'); }
 document.addEventListener('click', async e => {
   if (e.target.closest?.('[data-po-make]')) { poMake(); return; }
   const sk = e.target.closest?.('[data-po-skip]'); if (sk) { const p = sk.dataset.poSkip || 'Supplier nahi pata'; if (!confirm('"' + p + '" ko aainda order se bahar rakhein?')) return; const a = poSkip(); if (!a.some(s => poNorm(s) === poNorm(p))) a.push(p); poSkipSet(a); const o = poList[0]; if (o) { o.lines = o.lines.filter(l => !poSkipped(l.party)); poSave(o).catch(() => {}); } else { const b = $('ntPo'); if (b) b.innerHTML = poHTML(); } return; }
+  const sf = e.target.closest?.('[data-po-safety]'); if (sf) { poCfgSet({ safety: Number(sf.dataset.poSafety) }).then(() => notice('🛡 Bachat ' + sf.dataset.poSafety + ' din — agla "Order banao" is se')).catch(er => notice('⚠️ ' + (er?.message || er))); return; }
+  const ui = e.target.closest?.('[data-po-unitem]'); if (ui) { const m = { ...poSkipItems() }; delete m[ui.dataset.poUnitem]; poCfgSet({ skipItems: m }).catch(er => notice('⚠️ ' + (er?.message || er))); return; }
+  const tg = e.target.closest?.('[data-po-tr]'); if (tg) { poTransfer(Number(tg.dataset.poTr)); return; }
   const us = e.target.closest?.('[data-po-unskip]'); if (us) { poSkipSet(poSkip().filter(s => s !== us.dataset.poUnskip)); const b = $('ntPo'); if (b) b.innerHTML = poHTML(); return; }
   if (e.target.closest?.('[data-po-bazaar]')) { const o = poList[0]; if (!o) return; const t = poBazaarText(o); try { await navigator.clipboard?.writeText(t); } catch {} if (navigator.share) { try { await navigator.share({ text: t }); return; } catch {} } window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank'); return; }
   if (e.target.closest?.('[data-po-pdf]')) { const o = poList[0]; if (!o || !pdfOf) return; pdfOf(`<h1>NOOR TRADERS</h1><h2>🧾 Bazaar list · ${esc(new Date(o.at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }))}</h2>` + o.lines.map(ln => { const its = ln.items.filter(x => x.st === 'open'); return its.length ? `<h3>${esc(ln.party || 'Supplier nahi pata')}</h3><table class="iv-tbl"><tbody>${its.map(x => `<tr><td>${esc(x.n)}${x.d ? ' <small>👦 ' + esc(x.d) + '</small>' : ''}</td><td class="iv-n">${esc(num(x.q))} ${esc(x.u || '')}</td><td>☐</td></tr>`).join('')}</tbody></table>` : ''; }).join(''), 'Bazaar list'); return; }
@@ -417,7 +456,7 @@ document.addEventListener('click', async e => {
   const now = Date.now();
   if (poTap.id === c.dataset.poChip && now - poTap.t < 400) { clearTimeout(poTap.timer); poTap = { id: '', t: 0 }; x.st = 'got'; if (x.di) { const d = dmList.find(z => z.id === x.di); if (d && d.st === 'open') { d.st = 'done'; cloud.saveDemand(d).catch(() => {}); } } try { navigator.vibrate?.(40); } catch {} poSave(o).then(() => notice('✓ ' + x.n + ' — maal aa gaya')).catch(er => notice('⚠️ ' + (er?.message || er))); return; }
   clearTimeout(poTap.timer);
-  poTap = { id: c.dataset.poChip, t: now, timer: setTimeout(() => { poTap = { id: '', t: 0 }; const it = (stockOf() || new Map()).get(String(x.i)); const v = prompt(x.n + (it ? '\nStock — ' + (poGodamTxt(it) || num(it.stock || 0)) : '') + (x.d ? '\n👦 ' + x.d : '') + '\n\nKitna mangwana hai? (0 = hatao)', String(x.q)); if (v == null) return; const n = Number(v); if (!Number.isFinite(n) || n < 0) return; if (n === 0) x.st = 'gone'; else x.q = Math.round(n * 100) / 100; poSave(o).catch(er => notice('⚠️ ' + (er?.message || er))); }, 420) };
+  poTap = { id: c.dataset.poChip, t: now, timer: setTimeout(() => { poTap = { id: '', t: 0 }; poCard(li, ii); }, 420) };   // v2.99.29: 1 tap = 🧮 hisaab card
 });
 
 // ---------- notes likhna ----------
