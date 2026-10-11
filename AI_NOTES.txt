@@ -4034,3 +4034,7 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 == v2.99.44 (2026-10-12) MacroDroid body tayyar ==
 - smsBody() ab "text":{"stringValue":"{sms_message}"} (MacroDroid magic text curly brackets mein; [ ] wala kaam nahi karta).
   Setup ka "📋 Body copy" = poori body chaabi samet — malik sirf paste kare. Chaabi chat mein kabhi nahi.
+
+== v2.99.45 (2026-10-12) Gaye laal · Daily mein 🏦 HBL button ==
+- Malik: "gaye wala paison ka color laal" — .bk-card/.bk-done/.bk-row .out = laal, .in = hara (Inbox dialog ke cards bhi, left border bhi).
+- Malik: "akhrajat wali tab jaisi HBL tab nahi aa rahi" — Daily Sale ke neeche buttons mein "🏦 HBL" (data-hbl-col): HBL column tak scroll + chamak; column na ho to HBL screen.
