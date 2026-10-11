@@ -12,6 +12,7 @@
 //  v4.3 (2026-10-11): har item ke neeche dono godam ka stock PEHLE -> BAAD ("Godam 1: 15 Ctn + 3 Pcs -> 12 Ctn + 3 Pcs"). Pehle = baad +/- transfer ki qty.
 //  v4.4 (2026-10-11): POS MEIN BANE transfer note ki bhi yahi parchi (stock pehle -> baad) — POS apni parchi mein kuch jodne nahi deta, is liye
 //     naya POS note aate hi (10 s mein) hamari parchi alag se. Sirf SELECT. Purane note kabhi nahi chhapte. Band: POS_NOTE_PRINT = false.
+//  v4.5 (2026-10-12): 💰 HBL parchi — bank-parchi.js: HBL Inbox mein naya SMS / email aate hi "PAISE AAYE" parchi. Setting printConfig.bankAuto.
 //  Chalana:  node transfer-sync.js   (transfer-auto.bat loop mein)
 // =========================================================
 const fs = require('fs');
@@ -472,4 +473,10 @@ lock.listen(LOCK_PORT, '127.0.0.1', async () => {
       PW.start();
     } catch (e) { log('Purchase auto-print shuru nahi hua: ' + e.message); }
   }
+  // v4.5: 💰 HBL parchi — naya SMS / email (bankSms) aate hi "PAISE AAYE" parchi (printConfig.bankAuto)
+  try {
+    const BP = require('./bank-parchi.js');
+    const sendQ2 = (text, docName) => new Promise(res => { later(async () => res(await sendRaw(text, docName))); });
+    BP.createBankWatcher({ biz, log, head, sendRaw: sendQ2, stateFile: path.join(DIR, 'bank-print.json'), cfgRef: biz.collection('blueAccess').doc('printConfig') }).start(fail('HBL parchi'));
+  } catch (e) { log('HBL parchi shuru nahi hui: ' + e.message); }
 });

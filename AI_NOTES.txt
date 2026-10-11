@@ -3997,3 +3997,13 @@ v2.99.37: Rabta test qadam 1 = malik SDK se bankSms/_alias likh kar dekhta ke ru
 v2.99.38 + rules 2.40: bankSms create par 4 jaanch darwaze (p=1 bina shart, 2 auth==null, 3 exists bankKey, 4 k==bankKey.k) + asal rule bina request.auth shart. Rabta test har darwaza POST karta aur natija dikhata (programmatic rules playground). TEST rules (allow create: if id != _alias) par bhi 403 aaya tha — samajh nahi aayi; yeh pakka batayega.
 
 RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (test card aaya) — 2.38/2.39/2.40 sab mein `id != _alias` thi aur sab deny: REST createDocument (server auto-id) par rules mein `id` shart deny deti hai (lagta hai). 2.42: unauth create bina `id`; 4 gates (p=1 data, 2 id, 3 hasOnly, 4 get) jaanch ke liye.
+
+== v2.99.40 (2026-10-12) 🏦 HBL SCREEN + Daily HBL hissa + Gmail dobara + PC parchi ==
+- bank-inbox.js: renderHbl() = poori screen (view 'hbl', nav #hblNav, DESK_NAV/BAR_VIEWS/allowedView: malik + Full mulazim).
+  Baqaya = HBL khate (bankId) ka balance + closing se "Cash diya" HBL ko (cashLedger moves). Din-war list: ☐ = abhi nahi laga (SMS/email), ☑ = khate ki entry.
+  Chips: Din-war / ☐ Baqi · Aaj / 7 din / Is mahine / Sab (localStorage sam-hbl-v). Tick -> confirm -> apply() (party<->HBL transfer, dailyIncluded:false).
+  hblDay(date) = Daily Sale screen ke neeche "🏦 HBL" hissa (us din aaye/gaye/baqaya + ☐) — cash totals mein SHAMIL NAHI.
+  Malik: "🖨 Parchi ON/BAND" = printConfig.bankAuto (cloud.setPrintConfig ab bankAuto/bankOut bhi leta hai). PDF: hblPdf().
+- Gmail script: hblMail() + dobara() (14 din, BK label ke bawajood) -> bhejo(q). App wahi TXN dobara nahi lagati.
+- Rules: koi tabdeeli nahi (2.42 hi). printConfig = blueAccess (malik likhta hai).
+- Tests: scratchpad hd/hbl.mjs, bp/t.js (pc/bank-parchi.js).

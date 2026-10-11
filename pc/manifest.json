@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-11.13",
+  "version": "2026-10-12.1",
   "note": "KHATA-DOCTOR manifest — sirf ye files PC par jati hain. local-config.json / firebase-key.json kabhi nahi.",
   "files": {
     "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -30,7 +30,7 @@
     "transfer-auto.bat": "bc22e9e1dee01b646f4153fb971535dcf5c3fe8d4b84bb0bd55c451971ddb4f7",
     "transfer-dekho-auto.bat": "a7ea0955221df6e712737467a9d39e110c867f1f2526f8572fc76955625156ee",
     "transfer-dekho.js": "ec04d1a06a311b2e48f01bc82ab6d35bbd5d05a1067f8b93fcd5c231d89a58a1",
-    "transfer-sync.js": "e77f833c4290ee34798baa27c23eb13aff6206c4b0787ba205b520b173043aea",
+    "transfer-sync.js": "82fedab05a1f860f23d80dbe03d696e7edb93ce9a488dc3769cda3d4352dbd79",
     "sales-stats.js": "face5f612afdeb0dbd4b67576cfaad3e4b644784b63ae4fe8172534e2d669391",
     "sales-stats-auto.bat": "a5f4f2546741d00fecd83d6db87e82af075cca1ed8e189d26e7075388c6a1212",
     "BARCODE-DOCTOR.bat": "b127ae24f3219d77288bb6a6ad17758d85376fe2ef1f50aeb6293a2ebfe7ccb4",
@@ -48,7 +48,8 @@
     "purchase-parchi.js": "3724d097919f96728ce4a4f3e390f23a22288b14d28b5c1d1cdf606abe7fbfe2",
     "raat-report.js": "bc58814f0fd8b152c14e5359e2d9d452479775d3ff394f17e9a363987e6677aa",
     "report-auto.bat": "867f58bc2fee20409d1682975ebaa305d5cf287a3dad6e1cd3e4f08708130af8",
-    "zinda.js": "de1e04f6906b66493dc3da2606ea0cf2ee200053841516e3e1fcf84a32a950a3"
+    "zinda.js": "de1e04f6906b66493dc3da2606ea0cf2ee200053841516e3e1fcf84a32a950a3",
+    "bank-parchi.js": "5806fe3b29c4a389209787d8419ab3200ff3221214a2755e9dcb4bbe8cda4968"
   },
   "services": [
     {
