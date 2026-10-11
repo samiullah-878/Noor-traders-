@@ -19,7 +19,7 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 
-const VER = '1.1';   // v1.1 (2026-10-11): sachi dhadkan + chowkidar (11-Oct 3 ghante khamosh, report nahi bani) · report waqt guzre to usi din baad mein bhi · default 18:30
+const VER = '1.2';   // v1.1 (2026-10-11): sachi dhadkan + chowkidar (11-Oct 3 ghante khamosh, report nahi bani) · report waqt guzre to usi din baad mein bhi · default 18:30
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47833;
 const DIR = __dirname;
@@ -97,7 +97,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
       SELECT d.ItemID, d.Qty, d.Rate, p.PurchaseDate, pt.PartyName, pt.Phone1 AS Phone, ROW_NUMBER() OVER (PARTITION BY d.ItemID ORDER BY p.PurchaseDate DESC, p.PurchaseID DESC) AS rn
       FROM dbo.PurchaseDetail d JOIN dbo.Purchase p ON p.PurchaseID = d.PurchaseID LEFT JOIN dbo.Party pt ON pt.PartyID = p.PartyID
       WHERE p.PurchaseDate >= DATEADD(day, -365, GETDATE()) AND ISNULL(p.DocStatusID, 0) <> 3 AND ISNULL(pt.PartyName, '') NOT LIKE '%noor%trader%') x WHERE x.rn = 1`)).recordset;
-    let hidden = {}; try { const h = await biz.collection('posStock').doc('_hidden').get(); hidden = (h.exists && h.data()?.items) || {}; } catch {}
+    let hidden = {}; try { const h = await biz.collection('stockCount').doc('_hidden').get(); hidden = (h.exists && h.data()?.items) || {}; } catch {}   // v1.2 (2026-10-11): chhupe items stockCount/_hidden mein hain (pehle ghalti se posStock dekhta tha)
     const sBy = new Map(sales.map(s => [Number(s.ItemID), s])), lBy = new Map(last.map(l => [Number(l.ItemID), l]));
     const items = [];
     for (const it of stock) {

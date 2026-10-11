@@ -2645,3 +2645,11 @@ Scripts (purani "{ const _hb ... setInterval(_w, 30000) }" ki jagah): sql:true �
 Chowkidar: auto-backup tick 25 min · nt-print tick 5 min · pos-khata-sync 10 min · pos-sales-dekho 5 min · post-farq 10 min · transfer-dekho 5 min · sync-bills runOnce 15 min. Job wali (onSnapshot) scripts: doctor ki queue jaanch pehle se.
 nt-print UPD_FILES mein zinda.js (counter PCs khud update karte hain — pehle zinda.js).
 Tests: zd/t.js ALL OK (theek=dhadkan, SQL atka=nahi, 5 fail=exit 5, wapas theek, Firebase har 5, guard exit 4, sql:false) · nag/t.js zinda ke saath aur baghair OK · pp/rr OK. Sab pc/*.js node --check OK.
+
+==================== v2.99.31 + raat-report v1.2 (2026-10-11, manifest 2026-10-11.13) — POORI APP KI JAANCH + 2 bug fix + safai ====================
+Malik: "package khatam hone wala — puri apps ki aik dafa jaanch kar lo". Jaanch: sab .js node --check · index.html se chalne wali 35 files sab sw.js precache mein + version 2.99.x ek jaisa · pc/manifest sha sab sahi · firebase-key/local-config repo mein NAHI · rules brackets theek · agent DECL enums sab string · tests: hd (ctn tc st ws sc rp rt po nb lc p2 pa jord) + agent (t m q v nb) + PC (rr pp nag zd ss ss2 ts po/f) ALL OK.
+(Purane tests pa/jord/p2 sirf test mein purana ?v= / tools 27 likha hone se fail the — app theek.)
+BUG 1 (v2.99.22 se): raat-report chhupe items posStock/_hidden se parhta tha — asal jagah stockCount/_hidden -> chhupe items subah ke alert + report mein aate the. Fix raat-report v1.2 (test: purana code fail, naya pass).
+BUG 2 (v2.99.29): Order banao mein saleStock().hidden sirf tab bharta jab stock screen (counts) khuli ho. Fix: cloud.getStockHidden() (stockCount/_hidden ek doc get) + saleStock().hidden jama. Test hd/po3.mjs.
+SAFAI: Hazri app ki bachi files hatayi (Blue Khata load nahi karti, kahin import nahi): core.js owner.js staffview.js tickets.js breaks.js ui.js pdf.js auth.js data.js notify.js push.js manager.js boot.js + app.dom.test.mjs sync.test.mjs test-fake-sdk.mjs. (pdf.mjs / pdf.worker.mjs / pdf-import / pdf-export / firebase-messaging-sw.js REHNE diye — istemal mein.)
+PC ke 6 "dhoondo" tools (barcode/pos/rate/pos-retail-dhoondo, counter-printer, pos-live) manifest mein nahi — haath se chalane wale jaanch tools, theek.

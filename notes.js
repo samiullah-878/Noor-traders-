@@ -6,9 +6,9 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.99.30';
-import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.99.30';   // v2.99.29: shaffaf order formula
-import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.30';
+import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.99.31';
+import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.99.31';   // v2.99.29: shaffaf order formula
+import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.31';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -379,7 +379,7 @@ async function poMake() {
   try {
     const st = await poStatsGet(true);
     if (!st.items.length) throw Error('POS ka data abhi nahi aaya — dukan ke PC par SALE-DATA.bat ek dafa chalayein');
-    const stock = stockOf() || new Map(), skipI = poSkipItems(), hid = (() => { try { return saleStock().hidden || {}; } catch { return {}; } })();
+    const stock = stockOf() || new Map(), skipI = poSkipItems(), hid = { ...((() => { try { return saleStock().hidden || {}; } catch { return {}; } })()), ...((cloud.getStockHidden ? await cloud.getStockHidden() : null) || {}) };   // v2.99.31: stock screen khuli na ho tab bhi chhupe items bahar
     const cand = [], trs = new Map();
     const partyOf2 = (h, s) => h.bp.last?.party || s?.lp?.party || '';
     for (const d of dmOpen()) {   // 📢 mulazim ki demand — hamesha, sab se pehle
