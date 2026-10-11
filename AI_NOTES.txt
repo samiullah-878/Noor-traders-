@@ -3991,3 +3991,5 @@ Malik: inbox khali, MacroDroid test par bhi kuch nahi — "asan tareeqa se hal k
 Setup tab mein "🔎 Rabta test": app khud wohi REST POST (smsBody, text "RABTA TEST…") bhejti hai aur jawab Roman Urdu mein: 200 = theek (card ❓ Samajh nahi mein, ✕ karo; phir masla MacroDroid body ka) · 403 PERMISSION_DENIED = rules 2.38 publish nahi / chaabi · API key blocked/referer = Google Cloud Credentials restriction = None · 400 = body. Test hd/bk.mjs (403 hint, 200 ok).
 
 v2.99.36: Rabta test ab Firebase ka asal message bhi dikhata (rules vs API key pehchan). Malik ke phone par 403 PERMISSION_DENIED = rules 2.38 Publish nahi hui (editor mein v2.38 tha).
+
+v2.99.37: Rabta test qadam 1 = malik SDK se bankSms/_alias likh kar dekhta ke rules asal mein 2.38+ live hain (TEST rules "allow create: if id != _alias" par bhi 403 aaya — shak: publish asal mein nahi lag raha).
