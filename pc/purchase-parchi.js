@@ -1,5 +1,5 @@
 // =========================================================
-//  purchase-parchi.js  v1.1 (2026-10-11: fi piece khareed / bechna line; ek item ki kai lines jama) · v1 (2026-10-10) — 🖨 PURCHASE BILL KI TAFSEELI PARCHI (transfer-sync.js isay chalata hai)
+//  purchase-parchi.js  v1.2 (2026-10-11: har item ke saath [godam] + Stock (godam)) · v1.1 (2026-10-11: fi piece khareed / bechna line; ek item ki kai lines jama) · v1 (2026-10-10) — 🖨 PURCHASE BILL KI TAFSEELI PARCHI (transfer-sync.js isay chalata hai)
 //  Malik: "jitne bhi purchase ke bill hain un ka print chahiye jaise hi larka add kare — pehle ka stock, abhi ka stock…"
 //  1) POS mein NAYA purchase bill (POS se ya app se — purchase-post) aate hi khud TM-T88IV par parchi:
 //     har item: tadad x rate = raqam · Stock pehle -> ab (us godam ka) · pichli khareed ka rate -> naya (+/-) ·
@@ -66,8 +66,8 @@ function parchiText(bill, o = {}) {
   for (const s of wrap('Supplier: ' + bill.party, W)) out.push(s);
   if (bill.invoice) out.push('Supplier bill #: ' + ascii(bill.invoice).slice(0, W - 17));
   if (bill.who) out.push(('Daala: ' + ascii(bill.who)).slice(0, W));
-  const gods = [...new Set(bill.lines.map(l => ascii(l.godam)))], oneGodam = gods.length === 1;
-  if (oneGodam && gods[0]) out.push(('Maal aaya: ' + gods[0]).slice(0, W));
+  const gods = [...new Set(bill.lines.map(l => ascii(l.godam)))], oneGodam = false;   // v1.2: har item ke saath godam (malik: "har item kis godam mein gayi")
+  if (gods.length === 1 && gods[0]) out.push(('Maal aaya: ' + gods[0]).slice(0, W));
   out.push('-'.repeat(W));
   if (kind === 'badla' && o.changes && o.changes.length) {
     out.push(ESC + '!' + '\x08' + 'TABDEELI (pichli parchi se):' + ESC + '!' + '\x00');
@@ -87,7 +87,7 @@ function parchiText(bill, o = {}) {
     if (l.bonus > 0) out.push(`   Bonus: ${qtyStr(l.bonus, l.pack, l.cName, l.uName)}`);
     if (l.after != null) {
       const pe = l.before <= 0 ? (l.before < 0 ? qtyStr(l.before, l.pack, l.cName, l.uName) + ' (manfi)' : '0 (khatam)') : qtyStr(l.before, l.pack, l.cName, l.uName);
-      const a = `   Stock: pehle ${pe}`, b = `-> ab ${qtyStr(l.after, l.pack, l.cName, l.uName)}`;
+      const gN = ascii(l.godam).slice(0, 14), a = `   Stock${gN ? ' (' + gN + ')' : ''}: pehle ${pe}`, b = `-> ab ${qtyStr(l.after, l.pack, l.cName, l.uName)}`;
       if (a.length + 1 + b.length <= W) out.push(a + ' ' + b); else { out.push(a.slice(0, W)); out.push(('          ' + b).slice(0, W)); }
     }
     if (l.prevU > 0) out.push((`   Rate : pichla ${money(l.prevU)} -> naya ${money(l.costU)}` + (l.diff ? ` (${l.diff > 0 ? '+' : ''}${money(l.diff)})` : ' (wohi)')).slice(0, W));

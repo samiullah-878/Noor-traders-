@@ -2570,3 +2570,5 @@ MALIK (asal parchi ki tasveer): "pieces ke rates bhi chahiye bill par, sale / pu
 * Carton wale item ke neeche: "Piece: khareed <ratePcs> - bechna <SaleRate2 (POS Peice Rate) warna SaleRate>".
 * readBill: wohi item + wohi godam + wohi rate = ek line (qty/bonus/amount jama, n) -> stock pehle/ab, DHYAN ek dafa.
 TEST pp/t.js (2 lines jama, piece line, naam ek dafa) ALL OK.
+
+PC purchase-parchi v1.2 (2026-10-11, manifest 2026-10-11.3): har item ke naam ke saath [godam] (hamesha) + "Stock (godam): pehle -> ab" — malik: "har item kis godam mein gayi". Test ALL OK.
