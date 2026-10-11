@@ -2672,3 +2672,7 @@ KAHAN NAHI: bina ✓ entry nahi; phone band / MacroDroid band = SMS nahi (email 
 
 ==================== v2.99.34 (2026-10-12) — Gmail script: BK label sirf kamyab bhejne par ====================
 Malik ne Apps Script chala diya (hblMail "Execution completed"), MacroDroid macro "Hbl sms" (SMS from 14250 -> HTTP POST) ON. Khatra: rules 2.38 se pehle chala to Firestore 403 deta magar thread par BK lag jata = email kabhi dobara nahi jati. Fix gasCode: har msg ka getResponseCode() — sab 200 hon tabhi addLabel(BK), warna console.log + agli dafa phir koshish; search newer_than:7d. (Malik ko naya Script copy dobara paste karna hoga.)
+
+==================== v2.99.35 (2026-10-12) — 📩 HBL Inbox: "🔎 Rabta test" button ====================
+Malik: inbox khali, MacroDroid test par bhi kuch nahi — "asan tareeqa se hal karo". Yahan se Firestore REST tak rasta band (proxy 403) — test nahi kar sakta.
+Setup tab mein "🔎 Rabta test": app khud wohi REST POST (smsBody, text "RABTA TEST…") bhejti hai aur jawab Roman Urdu mein: 200 = theek (card ❓ Samajh nahi mein, ✕ karo; phir masla MacroDroid body ka) · 403 PERMISSION_DENIED = rules 2.38 publish nahi / chaabi · API key blocked/referer = Google Cloud Credentials restriction = None · 400 = body. Test hd/bk.mjs (403 hint, 200 ok).

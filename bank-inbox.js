@@ -2,9 +2,10 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.34';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.35';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
+let testBusy = false, testMsg = '', testOk = false;
 let O = {}, docs = null, stop = null, alias = {}, tab = 'baqi', pick = new Map(), qOpen = '', busy = new Set(), key = null, onCount = () => {};
 export function bankSetup(o) { O = o || {}; onCount = o.onCount || onCount; }
 const m = v => (O.money ? O.money(v) : 'Rs ' + (v / 100).toLocaleString('en-PK'));
@@ -153,8 +154,9 @@ function setup() {
 const copyBtn = (what, lab) => `<button type="button" class="bk-copy" data-bk-copy="${what}">📋 ${lab}</button>`;
 function setupHTML() {
   if (key === null) return '<p class="bk-empty">⏳ …</p>';
+  const testBox = `<div class="bk-test"><button type="button" class="got" data-bk-test="1"${testBusy ? ' disabled' : ''}>${testBusy ? '⏳ Test ho raha hai…' : '🔎 Rabta test (app se Firebase)'}</button>${testMsg ? `<div class="bk-tres ${testOk ? 'ok' : 'bad'}">${testMsg}</div>` : ''}<small>Yeh wohi kaam karta hai jo MacroDroid / Gmail script karte hain — jawab yahin dikhega.</small></div>`;
   if (!key) return `<div class="bk-set"><h4>🔑 Pehle khufia chaabi</h4><p>Yeh chaabi sirf aap ke phone (MacroDroid) aur Gmail script mein jayegi — is ke baghair koi aur HBL Inbox mein kuch nahi daal sakta.</p><button type="button" class="got" data-bk-newkey="1">🔑 Chaabi banao</button></div>`;
-  return `<div class="bk-set"><h4>💬 1 · Paise AAYE — SMS (isi phone par, ek dafa)</h4><ol>
+  return `<div class="bk-set">${testBox}<h4>💬 1 · Paise AAYE — SMS (isi phone par, ek dafa)</h4><ol>
     <li>Play Store se <b>MacroDroid</b> install karein, kholein.</li>
     <li><b>Add Macro</b> → Trigger ➕ → <b>Call/SMS → SMS Received</b> → "Contact / number" mein <b>14250</b> → Any content → OK.</li>
     <li>Action ➕ → <b>Connectivity → HTTP Request</b> → Method <b>POST</b>.</li>
@@ -170,13 +172,29 @@ function setupHTML() {
     <li>Bas — ab har 5 minute HBL ki nayi email yahan aayegi (Gmail mein "BK" label lagta hai).</li></ol>
     <p class="bk-note">🔒 Chaabi kisi ko na bhejein. Shak ho to ${O.owner && O.owner() ? '<button type="button" class="bk-mini" data-bk-newkey="1">🔁 nayi chaabi</button>' : ''} — phir MacroDroid body aur script dobara lagani hogi.</p></div>`;
 }
+// 🔎 app se wahi REST POST — Firebase ka jawab Roman Urdu mein
+async function rabtaTest() {
+  if (testBusy || !key) return; testBusy = true; testMsg = ''; paint();
+  try {
+    const body = JSON.parse(smsBody(key).replace('SMS_YAHAN', 'RABTA TEST — app se (is card ko ✕ kar dein)'));
+    const r = await fetch(restUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const t = await r.text(); let j = {}; try { j = JSON.parse(t); } catch {}
+    const msg = String(j?.error?.message || t).slice(0, 300), st = j?.error?.status || '';
+    if (r.ok) { testOk = true; testMsg = '✅ Rabta theek — Firebase ne qabool kiya. Ab "❓ Samajh nahi" mein ek test card hoga, use ✕ kar dein. Agar MacroDroid se phir bhi nahi aata to masla sirf MacroDroid ki body mein hai (SMS_YAHAN / quotes).'; }
+    else if (/API key|referer|blocked|forbidden/i.test(msg) && !/PERMISSION_DENIED/.test(st)) { testOk = false; testMsg = `❌ Google ne API key rok di (${r.status}): ${esc(msg)}<br><b>Hal:</b> console.cloud.google.com → APIs & Services → Credentials → Browser key → "Application restrictions" = None (ya is website ko allow) → Save.`; }
+    else if (r.status === 403 || /PERMISSION_DENIED/.test(st)) { testOk = false; testMsg = `❌ Firebase ne mana kiya (${r.status} ${esc(st)}).<br><b>Hal:</b> Firestore → Rules mein <b>v2.38</b> publish karein (doosri line mein "BLUE KHATA v2.38" likha ho). Rules theek hon to chaabi ka masla hai — "🔁 nayi chaabi" bana kar MacroDroid body dobara paste karein.`; }
+    else if (r.status === 400) { testOk = false; testMsg = `❌ Body samajh nahi aayi (400): ${esc(msg)}`; }
+    else { testOk = false; testMsg = `❌ ${r.status} ${esc(st)}: ${esc(msg)}`; }
+  } catch (e) { testOk = false; testMsg = '❌ Internet / Google tak rasai nahi: ' + esc(e?.message || e); }
+  testBusy = false; paint();
+}
 async function copy(what) {
   const t = what === 'url' ? restUrl() : what === 'body' ? smsBody(key) : gasCode(key);
   try { await navigator.clipboard.writeText(t); O.notice?.('📋 Copy ho gaya'); } catch { prompt('Copy karein:', t); }
 }
 document.addEventListener('click', e => {
   if (e.target.closest?.('[data-hb="bank"],#bkOpenBtn')) { openBankInbox(); return; }
-  const t = e.target.closest?.('[data-bk-tab],[data-bk-ok],[data-bk-skip],[data-bk-chg],[data-bk-pick],[data-bk-copy],[data-bk-newkey]'); if (!t || !isOpen()) return;
+  const t = e.target.closest?.('[data-bk-tab],[data-bk-ok],[data-bk-skip],[data-bk-chg],[data-bk-pick],[data-bk-copy],[data-bk-newkey],[data-bk-test]'); if (!t || !isOpen()) return;
   const d = t.dataset;
   if (d.bkTab) { tab = d.bkTab; paint(); if (tab === 'setup') loadKey(); return; }
   if (d.bkOk) { apply(d.bkOk); return; }
@@ -184,6 +202,7 @@ document.addEventListener('click', e => {
   if (d.bkChg) { qOpen = d.bkChg; pick.delete(d.bkChg); paint(); return; }
   if (d.bkPick) { const [id, pid] = d.bkPick.split('|'); pick.set(id, pid); qOpen = ''; paint(); return; }
   if (d.bkCopy) { copy(d.bkCopy); return; }
+  if (d.bkTest) { rabtaTest(); return; }
   if (d.bkNewkey) { if (key && !confirm('Nayi chaabi? Purani wali MacroDroid aur Gmail script kaam karna band kar denge — dono dobara lagani hongi.')) return;
     const a = new Uint8Array(16); crypto.getRandomValues(a); const k = [...a].map(b => b.toString(16).padStart(2, '0')).join('');
     O.cloud.setBankKey(k).then(() => { key = k; paint(); O.notice?.('🔑 Chaabi ban gayi'); }).catch(er => O.notice?.('⚠️ ' + (er?.message || er))); }
