@@ -2616,3 +2616,8 @@ RULES 2.37: validNote hasOnly + nag; (!(nag) || nag int in [15,30,60]). firestor
 PC auto-backup.js v1.4 (Server PC, pehle se FCM bhejta — Cloud Function deploy NAHI chahiye): notes where done==false LISTENER (reads kam), nagDue: waqt (remindTime ya 09:00) + nag min ke baad, har nag min, subah 7 – raat 11, 3 din baad chup. Malik tokens + note likhne wala (uid==by). tag nag-<id> (purani ki jagah nayi), link #note=<id>. nag-state.json (PC par). Pehli khabar waqt par Cloud Function (remindPush) ki.
 Tests: hd/nb.mjs ALL OK (select, bulk, nag 0 = khana nahi, form, agent pick) · agent/nb.mjs ALL OK · agent t/m/q/v OK (t: tools 28) · nag/t.js ALL OK · lc/ctn/tc/st/ws/sc OK.
 KAHAN NAHI CHALTA: Server PC band = baar baar notification nahi (app mein late nishan phir bhi). Phone par notification Allow na ho to nahi aayegi.
+
+==================== v2.99.28 (2026-10-11) — AGENT FIX: Gemini "Invalid value ... enum (TYPE_STRING), 0/15/30/60" ====================
+v2.99.27 mein propose_note / propose_notes_bulk ka repeat_minutes INTEGER + enum [0,15,30,60] tha — Gemini enum sirf STRING maanta hai, poora agent har sawal par fail.
+Fix: enum hata kar description "sirf 0, 15, 30 ya 60" (code pehle hi Number() + [15,30,60] check karta hai). Test agent/nb.mjs mein guard: koi bhi DECL enum non-string ho to FAIL. Agent t/m/q/v/nb ALL OK.
+SABAQ: Gemini tool schema mein enum hamesha strings.

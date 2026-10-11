@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.99.27';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.27';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.99.28';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.28';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -318,8 +318,8 @@ DECL.push(
   { name: 'propose_purchase', description: 'Bol kar PURCHASE: supplier (find_account kind supplier) + items + tadad (+ khareed rate bola ho to). CARD -> ✓ par Purchase screen ki cart mein.', parameters: obj({ supplier_account_id: S, items: { type: 'ARRAY', items: obj({ item_id: S, ctn: N, pcs: N, khareed_ctn: N, khareed_pcs: N }, ['item_id']) } }, ['supplier_account_id', 'items']) },
   { name: 'propose_sale', description: 'Sale screen ki cart bharne ka CARD (wholesale ya counter). ✓ par Sale screen par items lag jate hain — bill wahin se.', parameters: obj({ mode: { type: 'STRING', enum: ['wholesale', 'counter'] }, items: QI }, ['items']) },
   { name: 'propose_entries', description: 'KAI entries ek saath (user ne ek baat mein 2 ya zyada entries kahi) — EK card, user "✓ Sab save karo" dabata hai. Har entry ka account pehle find_account se.', parameters: obj({ entries: { type: 'ARRAY', items: obj({ kind: { type: 'STRING', enum: Object.keys(KMAP) }, account_id: S, kharcha_account: S, amount: N, date: D, note: S, galle_ka_cash: B }, ['kind', 'amount']) } }, ['entries']) },
-  { name: 'propose_note', description: 'Note / reminder ka CARD. remind_date YYYY-MM-DD, remind_time HH:MM (ikhtiyari). Kisi account ka ho to account_id. repeat_minutes 15/30/60 = "baar baar / har 15 minute yaad dilao" (jab tak ✓ na ho, phone par notification).', parameters: obj({ text: S, remind_date: D, remind_time: S, account_id: S, item_ids: { type: 'ARRAY', items: S }, repeat_minutes: { type: 'INTEGER', enum: [0, 15, 30, 60] } }, ['text']) },
-  { name: 'propose_notes_bulk', description: 'KAI notes ek saath badalne ka CARD: sab ka reminder din / waqt, baar baar (repeat_minutes 15/30/60, 0 = band), ya sab "ho gaye" (mark_done). Kaun se: filter (open = sab khule, today, late, next, no_reminder) + text (lafz se), ya note_ids (search_notes se). User ✓ par save.', parameters: obj({ filter: { type: 'STRING', enum: ['open', 'today', 'late', 'next', 'no_reminder'] }, text: S, note_ids: { type: 'ARRAY', items: S }, remind_date: D, remind_time: S, repeat_minutes: { type: 'INTEGER', enum: [0, 15, 30, 60] }, mark_done: B }) },
+  { name: 'propose_note', description: 'Note / reminder ka CARD. remind_date YYYY-MM-DD, remind_time HH:MM (ikhtiyari). Kisi account ka ho to account_id. repeat_minutes 15/30/60 = "baar baar / har 15 minute yaad dilao" (jab tak ✓ na ho, phone par notification).', parameters: obj({ text: S, remind_date: D, remind_time: S, account_id: S, item_ids: { type: 'ARRAY', items: S }, repeat_minutes: { type: 'INTEGER', description: 'sirf 0, 15, 30 ya 60' } }, ['text']) },
+  { name: 'propose_notes_bulk', description: 'KAI notes ek saath badalne ka CARD: sab ka reminder din / waqt, baar baar (repeat_minutes 15/30/60, 0 = band), ya sab "ho gaye" (mark_done). Kaun se: filter (open = sab khule, today, late, next, no_reminder) + text (lafz se), ya note_ids (search_notes se). User ✓ par save.', parameters: obj({ filter: { type: 'STRING', enum: ['open', 'today', 'late', 'next', 'no_reminder'] }, text: S, note_ids: { type: 'ARRAY', items: S }, remind_date: D, remind_time: S, repeat_minutes: { type: 'INTEGER', description: 'sirf 0, 15, 30 ya 60' }, mark_done: B }) },
 );
 
 // ---------------- PROPOSALS -> CARD -> ✓ ----------------
