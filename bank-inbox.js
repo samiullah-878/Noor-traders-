@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.40';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.41';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -214,7 +214,9 @@ async function copy(what) {
   try { await navigator.clipboard.writeText(t); O.notice?.('📋 Copy ho gaya'); } catch { prompt('Copy karein:', t); }
 }
 document.addEventListener('click', e => {
-  if (e.target.closest?.('[data-hb="bank"],#bkOpenBtn')) { openBankInbox(); return; }
+  // v2.99.41: 📩 HBL chip / Settings -> POORI HBL screen (pehle chhota dialog khulta tha)
+  if (e.target.closest?.('[data-hb="bank"],#bkOpenBtn')) { if (O.route) { try { $('dialog')?.close(); } catch {} O.route('hbl'); } else openBankInbox(); return; }
+  if (e.target.closest?.('[data-bk-inbox]')) { openBankInbox(e.target.closest('[data-bk-inbox]').dataset.bkInbox || ''); return; }
   const t = e.target.closest?.('[data-bk-tab],[data-bk-ok],[data-bk-skip],[data-bk-chg],[data-bk-pick],[data-bk-copy],[data-bk-newkey],[data-bk-test]'); if (!t || !live()) return;
   const d = t.dataset;
   if (d.bkTab) { tab = d.bkTab; paint(); if (tab === 'setup') loadKey(); return; }
@@ -231,7 +233,7 @@ document.addEventListener('click', e => {
 document.addEventListener('input', e => { if (e.target.matches?.('[data-bk-q]')) { qOpen = e.target.dataset.bkQ; search(e.target); } });
 document.addEventListener('change', e => { if (e.target.matches?.('[data-bk-bank]') && e.target.value) { O.setBank?.(e.target.value); paint(); } });
 
-// ================= 🏦 HBL SCREEN (v2.99.40) — poori screen, din-war, Aaye / Gaye, HBL ka baqaya =================
+// ================= 🏦 HBL SCREEN (v2.99.41) — poori screen, din-war, Aaye / Gaye, HBL ka baqaya =================
 // Malik: "hbl ki tab khulna pr jaise baqi tabs hain … lena wala dena wala or current balance … jitna bi paisa aiya checkbox".
 // HBL khata = O.bankId() wala khata (purana "Hbl loan 7999 account"). Baqaya = khate ka baqaya + closing se diya cash (Cash diya → HBL).
 // ☐ = abhi khata mein nahi laga (SMS/email) · ☑ = lag gaya (khate ki asal entry). Tick = party ↔ HBL transfer (dono khaton mein).
@@ -309,7 +311,7 @@ export function renderHbl() {
   const own = O.owner && O.owner();
   if (own && !pstop && O.cloud?.listenPrintConfig) pstop = O.cloud.listenPrintConfig(c => { pcfg = c || {}; if (onScreen()) renderHbl(); });
   const pOn = !pcfg || pcfg.bankAuto !== false;
-  $('actions').innerHTML = `${own ? `<button type="button" data-hbl-print="${pOn ? '0' : '1'}" title="Paise aate hi Server PC se parchi">${pOn ? '🖨 Parchi ON' : '🖨 Parchi BAND'}</button>` : ''}${H ? '<button type="button" data-hbl-khata="1">📒 HBL khata</button>' : ''}<button type="button" data-hb="bank">📩 Inbox / Setup</button><button type="button" data-hbl-pdf="1">📄 PDF · bhejo</button>`;
+  $('actions').innerHTML = `${own ? `<button type="button" data-hbl-print="${pOn ? '0' : '1'}" title="Paise aate hi Server PC se parchi">${pOn ? '🖨 Parchi ON' : '🖨 Parchi BAND'}</button>` : ''}${H ? '<button type="button" data-hbl-khata="1">📒 HBL khata</button>' : ''}${own ? '<button type="button" data-bk-inbox="setup">⚙️ Setup</button>' : ''}<button type="button" data-hbl-pdf="1">📄 PDF · bhejo</button>`;
 }
 // Daily screen ka hissa — us din HBL mein kya aaya / gaya (cash hisaab se alag)
 export function hblDay(date) {

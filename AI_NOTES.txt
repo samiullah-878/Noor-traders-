@@ -4007,3 +4007,9 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 - Gmail script: hblMail() + dobara() (14 din, BK label ke bawajood) -> bhejo(q). App wahi TXN dobara nahi lagati.
 - Rules: koi tabdeeli nahi (2.42 hi). printConfig = blueAccess (malik likhta hai).
 - Tests: scratchpad hd/hbl.mjs, bp/t.js (pc/bank-parchi.js).
+
+== v2.99.41 (2026-10-12) HBL chip -> poori screen + naam ki spelling ==
+- Malik: "ya full screen bi nahi" — home chip "📩 HBL N" aur Settings ka HBL button ab route('hbl') (poori 🏦 HBL screen) kholte hain, chhota dialog nahi.
+  HBL screen par malik ke liye "⚙️ Setup" (data-bk-inbox="setup") = purana dialog (chaabi, MacroDroid, Gmail script, Rabta test).
+- bank-sms.js guessParty: jode hue harf ka farq (lev <= 2, ya shuru milta) — SAMIH ULLAH ~ Sami Ullah, YOUNAS ~ Younis.
+- Yaad rahe: bina ☐ tick koi entry khate mein nahi lagti (malik ka pehla hukum: "checkbox pr click karian wo khata mian bi").

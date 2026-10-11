@@ -78,8 +78,16 @@ export function guessParty(name, parties, alias = {}) {
   for (const p of parties) {
     const n = norm(p.name); if (!n) continue;
     let s = 0; if (n === k) s = 100; else { for (const w of words) if (n.split(' ').includes(w)) s += 30; else if (n.includes(w)) s += 15; if (words.length && words.every(w => n.includes(w))) s += 25; }
+    // v2.99.41: naam ki spelling thori alag (SAMIH ULLAH ~ Sami Ullah, YOUNAS ~ Younis) — jode hue harf ka farq
+    const a = k.replace(/ /g, ''), b = n.replace(/ /g, '');
+    if (a.length >= 6 && b.length >= 6) {
+      if (b.startsWith(a) || a.startsWith(b)) s = Math.max(s, 70);
+      else if (lev(a, b) <= 2) s = Math.max(s, 60);
+      else if (b.length > a.length && lev(a, b.slice(0, a.length)) <= 1) s = Math.max(s, 55);
+    }
     if (s > bs) { bs = s; best = p; }
   }
   return bs >= 45 ? { p: best, why: bs >= 100 ? 'pura naam' : 'naam milta' } : null;
 }
 export const aliasKey = norm;
+function lev(a, b) { if (Math.abs(a.length - b.length) > 2) return 9; let p = Array.from({ length: b.length + 1 }, (_, i) => i); for (let i = 1; i <= a.length; i++) { const c = [i]; for (let j = 1; j <= b.length; j++) c[j] = Math.min(p[j] + 1, c[j - 1] + 1, p[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); p = c; } return p[b.length]; }
