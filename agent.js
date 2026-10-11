@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.99.26';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.26';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.99.27';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.99.27';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -274,6 +274,7 @@ Object.assign(T, {
   propose_purchase: async a => { await stockOk(); return propose('purchase', a); },
   propose_sale: async a => { await stockOk(); return propose('sale', a); },
   propose_note: a => propose('note', a),
+  propose_notes_bulk: a => propose('notes', a),
   propose_entries: a => propose('batch', a),
 });
 // ---------------- v2.99.11: 🤖 HAR SCREEN PAR + 📄 KHATE KI PDF + 📱 SCREEN KHOLNA ----------------
@@ -317,7 +318,8 @@ DECL.push(
   { name: 'propose_purchase', description: 'Bol kar PURCHASE: supplier (find_account kind supplier) + items + tadad (+ khareed rate bola ho to). CARD -> ✓ par Purchase screen ki cart mein.', parameters: obj({ supplier_account_id: S, items: { type: 'ARRAY', items: obj({ item_id: S, ctn: N, pcs: N, khareed_ctn: N, khareed_pcs: N }, ['item_id']) } }, ['supplier_account_id', 'items']) },
   { name: 'propose_sale', description: 'Sale screen ki cart bharne ka CARD (wholesale ya counter). ✓ par Sale screen par items lag jate hain — bill wahin se.', parameters: obj({ mode: { type: 'STRING', enum: ['wholesale', 'counter'] }, items: QI }, ['items']) },
   { name: 'propose_entries', description: 'KAI entries ek saath (user ne ek baat mein 2 ya zyada entries kahi) — EK card, user "✓ Sab save karo" dabata hai. Har entry ka account pehle find_account se.', parameters: obj({ entries: { type: 'ARRAY', items: obj({ kind: { type: 'STRING', enum: Object.keys(KMAP) }, account_id: S, kharcha_account: S, amount: N, date: D, note: S, galle_ka_cash: B }, ['kind', 'amount']) } }, ['entries']) },
-  { name: 'propose_note', description: 'Note / reminder ka CARD. remind_date YYYY-MM-DD, remind_time HH:MM (ikhtiyari). Kisi account ka ho to account_id.', parameters: obj({ text: S, remind_date: D, remind_time: S, account_id: S, item_ids: { type: 'ARRAY', items: S } }, ['text']) },
+  { name: 'propose_note', description: 'Note / reminder ka CARD. remind_date YYYY-MM-DD, remind_time HH:MM (ikhtiyari). Kisi account ka ho to account_id. repeat_minutes 15/30/60 = "baar baar / har 15 minute yaad dilao" (jab tak ✓ na ho, phone par notification).', parameters: obj({ text: S, remind_date: D, remind_time: S, account_id: S, item_ids: { type: 'ARRAY', items: S }, repeat_minutes: { type: 'INTEGER', enum: [0, 15, 30, 60] } }, ['text']) },
+  { name: 'propose_notes_bulk', description: 'KAI notes ek saath badalne ka CARD: sab ka reminder din / waqt, baar baar (repeat_minutes 15/30/60, 0 = band), ya sab "ho gaye" (mark_done). Kaun se: filter (open = sab khule, today, late, next, no_reminder) + text (lafz se), ya note_ids (search_notes se). User ✓ par save.', parameters: obj({ filter: { type: 'STRING', enum: ['open', 'today', 'late', 'next', 'no_reminder'] }, text: S, note_ids: { type: 'ARRAY', items: S }, remind_date: D, remind_time: S, repeat_minutes: { type: 'INTEGER', enum: [0, 15, 30, 60] }, mark_done: B }) },
 );
 
 // ---------------- PROPOSALS -> CARD -> ✓ ----------------
@@ -436,7 +438,17 @@ function propose(type, a) {
     if (day && day < H.today()) throw Error('Reminder ki tareekh guzar chuki — aage ki tareekh batayein');
     const p = a.account_id ? needParty(a.account_id) : null;
     const items = (Array.isArray(a.item_ids) ? a.item_ids : []).slice(0, 10).map(id => { try { const it = H.stockItem(String(id), { cost: false }); return it ? { id: it.item_id, name: it.name } : null; } catch { return null; } }).filter(Boolean);
-    card = { type, text, day, time, p, items };
+    const nag = [15, 30, 60].includes(Number(a.repeat_minutes)) ? Number(a.repeat_minutes) : 0;
+    card = { type, text, day: day || (nag ? H.today() : ''), time, p, items, nag };
+  } else if (type === 'notes') {   // v2.99.27: kai notes ek saath
+    if (!H.notePick || !H.noteBulk) throw Error('Notes ke liye app update karein');
+    const day = isDate(a.remind_date) ? a.remind_date : '', tm = String(a.remind_time || '').match(/^(\d{1,2}):(\d{2})$/), time = tm && Number(tm[1]) < 24 ? tm[1].padStart(2, '0') + ':' + tm[2] : '';
+    if (day && day < H.today()) throw Error('Reminder ki tareekh guzar chuki — aage ki tareekh batayein');
+    const nag = a.repeat_minutes == null ? null : [0, 15, 30, 60].includes(Number(a.repeat_minutes)) ? Number(a.repeat_minutes) : null, done = a.mark_done === true;
+    if (!done && !day && !time && nag == null) throw Error('Kya badalna hai? din, waqt, baar baar ya ho gaye');
+    const list = H.notePick({ filter: a.filter || 'open', text: a.text || '', ids: Array.isArray(a.note_ids) ? a.note_ids : [] });
+    if (!list.length) throw Error('Aise koi khule notes nahi mile');
+    card = { type, list, day, time, nag, done };
   }
   pending.set(id, card);
   toShow.push({ kind: 'card', id });
@@ -488,7 +500,8 @@ async function run(c) {
   if (c.type === 'gtransfer') { const r = await H.stockTransfer({ from: c.f.id, to: c.t.id, lines: c.lines.map(l => ({ id: l.id, name: l.name, ctn: l.ctn, pcs: l.pcs })), note: c.note }); if (r.ok) return `Transfer note ${r.no || ''} ban gaya — ${c.f.name} → ${c.t.name}`; if (r.pending) return '⏳ ' + r.why; throw Error(r.why || 'Transfer nahi bana'); }
   if (c.type === 'purchase') { const r = H.ppFill(c.p.id, c.lines.map(l => ({ id: l.id, name: l.name, ctn: l.ctn, pcs: l.pcs, costCtn: l.costCtn, costPcs: l.costPcs }))); c.cart = r; return `Purchase screen par lag gaya — ${r.supplierName} · ${r.n} items · ${rs(r.total)}`; }
   if (c.type === 'sale') { const r = H.saleFill(c.mode, c.m.lines.map(l => ({ id: l.item_id, name: l.name, ctn: l.ctn, pcs: l.pcs }))); return `Sale screen par lag gaya — ${r.n} items · ${rs(r.total)} (${c.mode === 'wholesale' ? 'Wholesale' : 'Counter'})`; }
-  if (c.type === 'note') { await H.noteSave({ text: c.text, day: c.day, time: c.time, partyId: c.p?.id || '', items: c.items }); return `Note save${c.day ? ' · 🔔 ' + c.day + (c.time ? ' ' + c.time : '') : ''}`; }
+  if (c.type === 'notes') { const r = await H.noteBulk(c.list.map(x => x.id), { day: c.day, time: c.time, nag: c.nag, done: c.done }); if (r.fail.length && !r.ok) throw Error(r.fail[0]); return `${r.ok} notes ${c.done ? 'ho gaye' : 'badal gaye'}${r.fail.length ? ` · ${r.fail.length} nahi hue` : ''}`; }
+  if (c.type === 'note') { await H.noteSave({ text: c.text, day: c.day, time: c.time, partyId: c.p?.id || '', items: c.items, nag: c.nag || 0 }); return `Note save${c.day ? ' · 🔔 ' + c.day + (c.time ? ' ' + c.time : '') : ''}`; }
   if (c.type === 'due') {
     const old = H.records().find(r => r.id === 'reminder-' + c.p.id);
     await H.save({ ...old, id: 'reminder-' + c.p.id, type: 'reminder', partyId: c.p.id, date: H.today(), anchorDate: c.due, dueDate: c.due, dueTime: old?.dueTime || '', repeat: c.repeat, note: c.note || old?.note || '', deleted: false }, old);
@@ -522,11 +535,11 @@ function system() {
     'RULE 9 — "stock add karna / maal aaya / maal charhana": supplier se maal = find_account (kind supplier) + find_item for every item + propose_purchase; godam se dukan = propose_godam_transfer; bill ki tasveer = 📷 button. If unclear which one, ask (purchase / transfer / naya item).',
     'RULE 10 — "X ko N carton Y diya" (maal udhaar to a party) -> propose_entry kind udhaar with items (the app values it at wholesale rate; do not pass amount unless the user said one). "Bill banao / sale screen mein daalo" -> propose_sale. "Aaj ki sale / bills" -> sale_summary.',
     'RULE 10b — 2 ya zyada entries ek hi baat mein -> find_account har naam ke liye, phir EK propose_entries (alag alag propose_entry nahi).',
-    'RULE 11 — "yaad dilana / note likho" -> propose_note (for reminders "kal" = tomorrow, "parson" = day after tomorrow). Find notes -> search_notes.',
+    'RULE 11 — "yaad dilana / note likho" -> propose_note (for reminders "kal" = tomorrow, "parson" = day after tomorrow). "baar baar / har 15 minute / jab tak na karun yaad dilao" -> repeat_minutes (15/30/60). Find notes -> search_notes. "Sab notes / saare reminder kal par / ho gaye / har 15 min" (2 ya zyada notes) -> propose_notes_bulk — ek card, kabhi "feature nahi" mat kaho.',
     'RULE 12 — ANY arithmetic (jama, zarb, taqseem, %, discount, carton x rate) -> hisaab tool or maal_value. Never calculate in your head.',
   ].join('\n');
 }
-const TOOL_SAY = { find_account: '🔎 Account dhoond raha hoon', account_info: '📒 Khata dekh raha hoon', day_summary: '📊 Din ka hisaab', totals: '🧮 Jama nikal raha hoon', top_balances: '💰 Baqaye dekh raha hoon', due_list: '⏰ Due dates', search_entries: '🔍 Entries dhoond raha hoon', propose_entry: '📝 Card bana raha hoon', propose_transfer: '📝 Card bana raha hoon', propose_cash_give: '📝 Card bana raha hoon', propose_due_date: '📝 Card bana raha hoon', show_photos: '🖼 Tasveerein dhoond raha hoon', find_item: '📦 Item dhoond raha hoon', item_info: '📦 Stock dekh raha hoon', maal_value: '🧮 Maal ki qeemat', sale_summary: '🧾 POS bills dekh raha hoon', search_notes: '📝 Notes dhoond raha hoon', hisaab: '🧮 Hisaab', propose_rate_change: '📝 Card bana raha hoon', propose_new_item: '📝 Card bana raha hoon', propose_godam_transfer: '📝 Card bana raha hoon', propose_purchase: '📝 Card bana raha hoon', propose_sale: '📝 Card bana raha hoon', propose_note: '📝 Card bana raha hoon', propose_entries: '📝 Card bana raha hoon', khata_pdf: '📄 PDF bana raha hoon', open_screen: '📱 Screen khol raha hoon' };
+const TOOL_SAY = { find_account: '🔎 Account dhoond raha hoon', account_info: '📒 Khata dekh raha hoon', day_summary: '📊 Din ka hisaab', totals: '🧮 Jama nikal raha hoon', top_balances: '💰 Baqaye dekh raha hoon', due_list: '⏰ Due dates', search_entries: '🔍 Entries dhoond raha hoon', propose_entry: '📝 Card bana raha hoon', propose_transfer: '📝 Card bana raha hoon', propose_cash_give: '📝 Card bana raha hoon', propose_due_date: '📝 Card bana raha hoon', show_photos: '🖼 Tasveerein dhoond raha hoon', find_item: '📦 Item dhoond raha hoon', item_info: '📦 Stock dekh raha hoon', maal_value: '🧮 Maal ki qeemat', sale_summary: '🧾 POS bills dekh raha hoon', search_notes: '📝 Notes dhoond raha hoon', hisaab: '🧮 Hisaab', propose_rate_change: '📝 Card bana raha hoon', propose_new_item: '📝 Card bana raha hoon', propose_godam_transfer: '📝 Card bana raha hoon', propose_purchase: '📝 Card bana raha hoon', propose_sale: '📝 Card bana raha hoon', propose_note: '📝 Card bana raha hoon', propose_notes_bulk: '📝 Notes chun raha hoon', propose_entries: '📝 Card bana raha hoon', khata_pdf: '📄 PDF bana raha hoon', open_screen: '📱 Screen khol raha hoon' };
 function trimHistory() {             // aakhri ~14 user sawal; kaat sirf user ki LIKHAI par (functionCall/Response ka joda na toote)
   let users = 0;
   for (let i = history.length - 1; i >= 0; i--) {
@@ -923,7 +936,9 @@ function cardHTML(id) {
   if (c.type === 'gtransfer') { head = '🚚 Godam transfer'; body = `<div class="ag-cf-who">${esc(c.f.name)} → ${esc(c.t.name)}</div><div class="ag-rows">${c.lines.map(l => `<div class="ag-row"><span><b>${esc(l.name)}</b><small>${esc(c.f.name)} mein: ${esc(l.haveTxt)}</small></span><strong>${esc(l.txt)}</strong></div>`).join('')}</div>`; }
   if (c.type === 'purchase') { head = '🛒 Purchase (bol kar)'; body = `<div class="ag-cf-who">${esc(c.p.name)}</div><div class="ag-rows">${c.lines.map(l => `<div class="ag-row"><span><b>${esc(l.name)}</b><small>${esc(l.txt)} × ${esc(l.rateTxt)}${l.naya ? ' · naya rate' : ' · pichhla rate'}</small></span><strong>${l.total ? rs(l.total) : '—'}</strong></div>`).join('')}</div><small class="ag-cap">✓ par Purchase screen ki cart mein lagega — wahan rate / nafa dekh kar POS bhejein (ya yahin "⬆️ POS bhejo").</small>`; }
   if (c.type === 'sale') { head = '🧾 Sale — ' + (c.mode === 'wholesale' ? 'Wholesale' : 'Counter'); body = maalRows(c.m.lines) + '<small class="ag-cap">✓ par Sale screen ki cart mein lagega — bill / print wahin se.</small>'; }
-  if (c.type === 'note') { head = '📝 Note / reminder'; body = `<div class="ag-note-tx">${esc(c.text)}</div><div class="ag-chips">${c.day ? `<span class="ag-chip">🔔 ${esc(c.day)}${c.time ? ' · ' + esc(c.time) : ''}</span>` : '<span class="ag-chip">Reminder nahi</span>'}${c.p ? `<span class="ag-chip">👤 ${esc(c.p.name)}</span>` : ''}${c.items.map(i => `<span class="ag-chip">📦 ${esc(i.name)}</span>`).join('')}</div>`; }
+  if (c.type === 'note') { head = '📝 Note / reminder'; body = `<div class="ag-note-tx">${esc(c.text)}</div><div class="ag-chips">${c.day ? `<span class="ag-chip">🔔 ${esc(c.day)}${c.time ? ' · ' + esc(c.time) : ''}</span>` : '<span class="ag-chip">Reminder nahi</span>'}${c.p ? `<span class="ag-chip">👤 ${esc(c.p.name)}</span>` : ''}${c.items.map(i => `<span class="ag-chip">📦 ${esc(i.name)}</span>`).join('')}${c.nag ? `<span class="ag-chip">🔁 har ${c.nag === 60 ? '1 ghanta' : c.nag + ' min'}</span>` : ''}</div>`; }
+  if (c.type === 'notes') { const nt = v => v === 60 ? '1 ghanta' : v + ' min'; head = c.done ? `✓ ${c.list.length} notes "ho gaye"` : `🔔 ${c.list.length} notes ek saath`;
+    body = `${c.done ? '' : `<div class="ag-chips">${c.day ? `<span class="ag-chip">📅 ${esc(c.day)}</span>` : ''}${c.time ? `<span class="ag-chip">⏰ ${esc(c.time)}</span>` : ''}${c.nag != null ? `<span class="ag-chip">🔁 ${c.nag ? 'har ' + nt(c.nag) : 'baar baar band'}</span>` : ''}</div>`}<div class="ag-rows">${c.list.slice(0, 12).map(x => `<div class="ag-row"><span><b>${esc(x.text || '—')}</b><small>${x.reminder ? '🔔 ' + esc(x.reminder) + (x.time ? ' ' + esc(x.time) : '') : 'reminder nahi'}${x.nag ? ' · 🔁 ' + nt(x.nag) : ''}</small></span></div>`).join('')}${c.list.length > 12 ? `<small class="ag-cap">…aur ${c.list.length - 12}</small>` : ''}</div>`; }
   const amt = c.amt ? `<div class="ag-cf-amt">${money(c.amt)}</div>` : '';
   const after = c.done && c.type === 'purchase' ? (c.sent ? `<div class="ag-cf-st ${c.sentOk ? 'ok' : 'ag-wn'}">${esc(c.sent)}</div>${c.sentOk ? '' : '<button type="button" class="ag-ok" data-ag-route="ppurchase">🛒 Purchase kholo</button>'}` : `<div class="ag-cf-acts"><button type="button" class="ag-no" data-ag-route="ppurchase">🛒 Purchase kholo</button><button type="button" class="ag-ok" data-ag-ppsend="${id}">⬆️ POS bhejo</button></div>`)
     : c.done && c.type === 'sale' ? '<button type="button" class="ag-ok" data-ag-route="sale">🧾 Sale screen kholo</button>' : '';
@@ -967,7 +982,7 @@ function suggFor() {   // har screen ke apne chips — [label, kind(say|fill|hin
     purchase: [['📷 Bill ki photo', 'pic', ''], ['🎤 Bol kar purchase', 'hint', 'purchase']],
     daily: [['📊 Aaj ka hisaab', 'say', 'Aaj ka hisaab'], ['📊 Kal ka hisaab', 'say', 'Kal ka hisaab'], ['🧾 Aaj ki sale', 'say', 'Aaj ki sale']],
     due: [['⏰ Kis ki due guzar gayi?', 'say', 'Kis ki due date guzar gayi?'], ['💰 Sab se zyada lene', 'say', 'Sab se zyada kis se lene hain?']],
-    notes: [['📝 Naya reminder', 'fill', 'Kal yaad dilana: '], ['🔍 Notes dhoondo', 'fill', 'Notes mein dhoondo: ']],
+    notes: [['📝 Naya reminder', 'fill', 'Kal yaad dilana: '], ['🔁 Har 15 min yaad', 'fill', 'Har 15 minute yaad dilana: '], ['🔔 Sab notes kal', 'fill', 'Saare khule notes kal subah 10 baje ke reminder par laga do'], ['🔍 Notes dhoondo', 'fill', 'Notes mein dhoondo: ']],
     expenses: [['🧾 Kharcha likho', 'fill', 'Bijli ka kharcha '], ['📷 Kharche ki parchi', 'pic', '']],
     cash: [['📊 Aaj ka hisaab', 'say', 'Aaj ka hisaab'], ['💸 Cash bhejo', 'fill', 'Closing cash se  ko bhejo']],
   };

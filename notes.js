@@ -6,8 +6,8 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { saleStock } from './pos-stock.js?v=2.99.26';
-import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.26';
+import { saleStock } from './pos-stock.js?v=2.99.27';
+import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.27';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -22,6 +22,8 @@ const BANK_KEY = 'sam-bank-party-v1';
 let aiOf = null, stockOf = () => null, balanceOf = null;
 let cloud = null, notice = () => {}, whoOf = () => ({}), recordsOf = () => [], partyOf = () => null, partiesOf = () => [], itemsOf = () => [], routeTo = () => {}, dlgOf = null, closeDlg = () => {}, payOf = null, canUseOf = () => false;
 let notes = [], stop = null, fTab = 'open', fQ = '', pics = new Map(), picLoad = new Set(), animating = new Set();
+let selMode = false, sel = new Set(), bulkBusy = false;   // v2.99.27: ☑ kai notes ek saath
+const NAGS = [15, 30, 60], nagOk = v => NAGS.includes(Number(v)) ? Number(v) : 0, nagTxt = v => v === 60 ? '1 ghanta' : v + ' min';
 let pushCfg = null, pushState = '';
 
 export function notesSetup(o) {
@@ -433,6 +435,7 @@ async function saveNote(n, old) {
     hasPic: !!(n.hasPic ?? old?.hasPic), by: old?.by || String(w.uid || ''), byName: String(old?.byName || w.name || '').slice(0, 60),
     createdAt: old?.createdAt || now, updatedBy: String(w.uid || ''), updatedAt: now, deleted: !!n.deleted,
   };
+  { const g = nagOk(n.nag ?? old?.nag); if (g && d.remindDay) d.nag = g; }   // v2.99.27: 🔁 baar baar yaad (rules 2.37) — 0 ho to khana hi nahi
   const i = notes.findIndex(x => x.id === d.id); if (i >= 0) notes[i] = d; else notes.push(d);   // foran screen par
   if ($('ntRoot')) paint();
   await cloud.saveNote(d);
@@ -459,6 +462,7 @@ export function noteForm(existing = null, preset = {}) {
     <div class="nt-chips" id="nfItems"></div>
     <div class="nt-when"><label>Reminder din<input name="day" type="date" value="${esc(n.remindDay || '')}"></label><label>Waqt<input name="time" type="time" value="${esc(n.remindTime || '')}"></label></div>
     <div class="mchips">${[[0, 'Aaj'], [1, 'Kal'], [2, '2 din'], [7, 'Hafta'], ['x', 'Reminder nahi']].map(([d, l]) => `<button type="button" class="rc" data-nf-day="${d}">${l}</button>`).join('')}<label class="nt-allday"><input type="checkbox" name="allDay"${n.allDay ? ' checked' : ''}> Poora din</label></div>
+    <div class="nt-nag"><b>🔁 Baar baar yaad dilao</b><div class="mchips">${[0, ...NAGS].map(v => `<button type="button" class="rc${nagOk(n.nag) === v ? ' on' : ''}" data-nf-nag="${v}">${v ? 'Har ' + nagTxt(v) : 'Band'}</button>`).join('')}</div><small>Waqt aane ke baad jab tak ✓ na karein, phone par notification aati rahegi (subah 7 – raat 11).</small><input type="hidden" name="nag" value="${nagOk(n.nag)}"></div>
     ${contactBox('nf', n.contactName, n.contactPhone)}
     <label>Tasveer (2 tak)<input name="pics" type="file" accept="image/*" multiple></label><div class="nt-thumbs" id="nfPics"></div>
     <div class="nt-formacts">${existing ? '<button type="button" class="give" data-nf-del="1">🗑 Hatao</button>' : ''}<button type="submit" class="got">💾 Save</button></div></form>`);
@@ -471,10 +475,11 @@ export function noteForm(existing = null, preset = {}) {
     $('nfItemList').innerHTML = hits.map(r => `<button type="button" data-nf-it="${esc(r.id)}">${esc(r.name)}${r.code ? ' <small>' + esc(r.code) + '</small>' : ''}</button>`).join(''); };
   f.elements.pics.onchange = async () => { const fl = [...(f.elements.pics.files || [])].slice(0, 2 - picsNow.length); for (const x of fl) { const s = await shrink(x); if (s) picsNow.push(s); } picsNow = picsNow.slice(0, 2); picsDirty = true; paintPics(); f.elements.pics.value = ''; };
   f.addEventListener('click', async e => {
-    const t = e.target.closest('[data-nf-it],[data-nf-rm],[data-nf-day],[data-nf-prm],[data-nf-del]'); if (!t) return;
+    const t = e.target.closest('[data-nf-it],[data-nf-rm],[data-nf-day],[data-nf-prm],[data-nf-del],[data-nf-nag]'); if (!t) return;
     const d = t.dataset;
     if (d.nfIt) { const r = (itemsOf() || []).find(x => String(x.id) === d.nfIt); if (r && !chosen.some(c => c.id === String(r.id))) chosen.push({ id: String(r.id), name: String(r.name).slice(0, 80) }); $('nfItemQ').value = ''; $('nfItemList').innerHTML = ''; paintItems();
       const ta = f.elements.text; if (r && !ta.value.includes(r.name)) ta.value = (ta.value ? ta.value.replace(/\s*$/, ' ') : '') + r.name; return; }
+    if (d.nfNag != null) { f.elements.nag.value = d.nfNag; f.querySelectorAll('[data-nf-nag]').forEach(b => b.classList.toggle('on', b === t)); if (Number(d.nfNag) && !f.elements.day.value) f.elements.day.value = addDays(0); return; }
     if (d.nfRm != null) { chosen.splice(Number(d.nfRm), 1); paintItems(); return; }
     if (d.nfPrm != null) { picsNow.splice(Number(d.nfPrm), 1); picsDirty = true; paintPics(); return; }
     if (d.nfDay != null) { if (d.nfDay === 'x') { f.elements.day.value = ''; f.elements.time.value = ''; } else f.elements.day.value = addDays(Number(d.nfDay)); return; }
@@ -486,9 +491,9 @@ export function noteForm(existing = null, preset = {}) {
     if (!text && !chosen.length && !picsNow.length && !f.elements.ctPhone.value.trim()) { notice('Kuch likhein'); return; }
     b.disabled = true;
     try {
-      const d = await saveNote({ ...(existing || {}), contactName: f.elements.ctName.value.trim(), contactPhone: f.elements.ctPhone.value, text, items: chosen, remindDay: f.elements.day.value || '', remindTime: f.elements.time.value || '', allDay: !!f.elements.allDay.checked, hasPic: picsNow.length > 0 }, existing);
+      const d = await saveNote({ ...(existing || {}), contactName: f.elements.ctName.value.trim(), contactPhone: f.elements.ctPhone.value, text, items: chosen, remindDay: f.elements.day.value || '', remindTime: f.elements.time.value || '', allDay: !!f.elements.allDay.checked, hasPic: picsNow.length > 0, nag: f.elements.day.value ? nagOk(f.elements.nag.value) : 0 }, existing);
       if (picsDirty && cloud.putPhotos) { pics.set(d.id, picsNow); cloud.putPhotos('n-' + d.id, picsNow).catch(er => notice('⚠️ Tasveer save nahi hui: ' + (er?.message || er))); }
-      closeDlg(); notice(existing ? '✓ Note badal gaya' : '📝 Note save' + (d.remindDay ? ' · 🔔 ' + nice(d.remindDay) + (d.remindTime ? ' ' + t12(d.remindTime) : '') : ''));
+      closeDlg(); notice((existing ? '✓ Note badal gaya' : '📝 Note save') + (d.remindDay ? ' · 🔔 ' + nice(d.remindDay) + (d.remindTime ? ' ' + t12(d.remindTime) : '') : '') + (d.nag ? ' · 🔁 har ' + nagTxt(d.nag) : ''));
     } catch (er) { b.disabled = false; notice('⚠️ ' + (er?.message || er)); }
   };
 }
@@ -524,15 +529,15 @@ function card(n) {
   loadPics(n);
   const today = dayOf(), late = !n.done && n.remindDay && n.remindDay < today, now = !n.done && n.remindDay === today;
   const ph = pics.get(n.id) || [];
-  return `<div class="nt-card${n.done ? ' done' : ''}${animating.has(n.id) ? ' anim' : ''}${late ? ' late' : ''}${n.kind === 'order' ? ' order' : ''}" data-nt-id="${esc(n.id)}">
-    <label class="nt-check"><input type="checkbox" data-nt-done="${esc(n.id)}"${n.done ? ' checked' : ''}><span></span></label>
+  return `<div class="nt-card${n.done ? ' done' : ''}${selMode && sel.has(n.id) ? ' picked' : ''}${animating.has(n.id) ? ' anim' : ''}${late ? ' late' : ''}${n.kind === 'order' ? ' order' : ''}" data-nt-id="${esc(n.id)}">
+    ${selMode ? `<label class="nt-check nt-sel"><input type="checkbox" data-nt-sel="${esc(n.id)}"${sel.has(n.id) ? ' checked' : ''}><span></span></label>` : `<label class="nt-check"><input type="checkbox" data-nt-done="${esc(n.id)}"${n.done ? ' checked' : ''}><span></span></label>`}
     <div class="nt-body" data-nt-edit="${esc(n.id)}">
       ${n.kind === 'order' ? `<div class="nt-order">🧾 <b>${esc(n.partyName || '')}</b><span class="nt-amt">${rsP(n.amount)}</span><span class="nt-tag">HBL · maal aana baqi</span></div>` : ''}
       ${callBtns(n)}
       ${n.text ? `<div class="nt-text">${esc(n.text)}</div>` : ''}
       ${(n.items || []).length ? `<div class="nt-chips">${n.items.map(i => `<span class="nt-chip it">📦 ${esc(i.name)}</span>`).join('')}</div>` : ''}
       ${ph.length ? `<div class="nt-thumbs">${ph.map((p, i) => `<span class="nt-thumb" data-nt-pic="${esc(n.id)}|${i}"><img src="${p}" alt=""></span>`).join('')}</div>` : (n.hasPic ? '<small class="nt-meta">🖼 tasveer aa rahi hai…</small>' : '')}
-      <div class="nt-meta">${n.remindDay ? `<span class="nt-when-chip${late ? ' late' : now ? ' now' : ''}">🔔 ${esc(nice(n.remindDay))}${n.remindTime ? ' · ' + esc(t12(n.remindTime)) : n.allDay ? ' · poora din' : ''}</span>` : ''}<span>${esc(n.byName || '')}</span>${n.done && n.doneAt ? `<span>✓ ${esc(nice(dayOf(n.doneAt)))}</span>` : ''}</div>
+      <div class="nt-meta">${n.remindDay ? `<span class="nt-when-chip${late ? ' late' : now ? ' now' : ''}">🔔 ${esc(nice(n.remindDay))}${n.remindTime ? ' · ' + esc(t12(n.remindTime)) : n.allDay ? ' · poora din' : ''}</span>` : ''}${n.nag && !n.done ? `<span class="nt-nag-chip">🔁 har ${esc(nagTxt(n.nag))}</span>` : ''}<span>${esc(n.byName || '')}</span>${n.done && n.doneAt ? `<span>✓ ${esc(nice(dayOf(n.doneAt)))}</span>` : ''}</div>
     </div></div>`;
 }
 function paint() {
@@ -541,10 +546,46 @@ function paint() {
   poWatch(); dmWatch();
   root.innerHTML = `<div class="nt-push" id="ntPush"></div><div class="al-box" id="ntAl">${alHTML()}</div><div class="po-box" id="ntPo">${poHTML()}</div><div id="ntGc">${gcLoad().accounts.length ? gcCardHTML() : ''}</div>
     <label class="nt-search"><input type="search" placeholder="🔍 note, item, supplier, raqam…" value="${esc(fQ)}" data-nt-q="1"></label>
-    <div class="mchips nt-tabs">${[['open', 'Sab khule'], ['today', '🔔 Aaj'], ['late', '⏰ Guzar gaye'], ['next', 'Aane wale'], ['order', '🧾 Order'], ['done', '✓ Ho gaye']].map(([k, lab]) => `<button type="button" class="rc${fTab === k ? ' on' : ''}" data-nt-tab="${k}">${lab} ${cnt(k)}</button>`).join('')}</div>
+    <div class="mchips nt-tabs">${[['open', 'Sab khule'], ['today', '🔔 Aaj'], ['late', '⏰ Guzar gaye'], ['next', 'Aane wale'], ['order', '🧾 Order'], ['done', '✓ Ho gaye']].map(([k, lab]) => `<button type="button" class="rc${fTab === k ? ' on' : ''}" data-nt-tab="${k}">${lab} ${cnt(k)}</button>`).join('')}<button type="button" class="rc nt-selbtn${selMode ? ' on' : ''}" data-nt-selmode="1">${selMode ? '✕ Chunna band' : '☑ Kai chunein'}</button></div>
     ${due.length && fTab !== 'done' ? `<div class="nt-sec"><h3>📒 Accounts ke due</h3>${due.map(x => `<button type="button" class="nt-due${x.late ? ' late' : ''}" data-nt-party="${esc(x.p.id)}"><b>${esc(x.p.name)}</b><span>${esc(nice(x.r.dueDate))}${x.r.dueTime ? ' · ' + esc(t12(x.r.dueTime)) : ''}</span>${x.r.note ? `<small>${esc(x.r.note)}</small>` : ''}</button>`).join('')}</div>` : ''}
-    <div class="nt-list">${l.map(card).join('') || `<div class="nt-empty">📝<b>${fQ ? 'Kuch nahi mila' : fTab === 'done' ? 'Abhi koi ho gaya note nahi' : 'Koi khula note nahi'}</b><small>Neeche "📝 Naya note" dabayein</small></div>`}</div>`;
+    <div class="nt-list">${l.map(card).join('') || `<div class="nt-empty">📝<b>${fQ ? 'Kuch nahi mila' : fTab === 'done' ? 'Abhi koi ho gaya note nahi' : 'Koi khula note nahi'}</b><small>Neeche "📝 Naya note" dabayein</small></div>`}</div>${selMode ? bulkHTML(l) : ''}`;
   pushStatus();
+}
+// ---------- v2.99.27: ☑ KAI NOTES EK SAATH — din / waqt / baar baar / ho gaye ----------
+let bkDay = '', bkTime = '', bkNag = -1;   // -1 = jo hai wahi
+function bulkHTML(l) {
+  const n = [...sel].filter(id => notes.some(x => x.id === id)).length, all = l.length && l.every(x => sel.has(x.id));
+  const dayBtn = (v, lab) => `<button type="button" class="rc${bkDay === v ? ' on' : ''}" data-bk-day="${v}">${lab}</button>`;
+  return `<div class="nt-bulk"><div class="nt-bk-top"><b>☑ ${n} chune</b><button type="button" class="nt-link" data-bk-all="1">${all ? 'Koi nahi' : 'Sab chuno (' + l.length + ')'}</button></div>
+    <div class="mchips">${dayBtn(addDays(0), 'Aaj')}${dayBtn(addDays(1), 'Kal')}${dayBtn(addDays(2), 'Parson')}${dayBtn('', 'Din wahi')}<label class="nt-bk-in">📅<input type="date" data-bk-date="1" value="${esc(bkDay)}"></label><label class="nt-bk-in">⏰<input type="time" data-bk-time="1" value="${esc(bkTime)}"></label></div>
+    <div class="mchips"><span class="nt-bk-lab">🔁</span>${[[-1, 'Wahi'], [0, 'Band'], ...NAGS.map(v => [v, nagTxt(v)])].map(([v, lab]) => `<button type="button" class="rc${bkNag === v ? ' on' : ''}" data-bk-nag="${v}">${lab}</button>`).join('')}</div>
+    <div class="nt-bk-acts"><button type="button" class="give" data-bk-done="1"${n && !bulkBusy ? '' : ' disabled'}>✓ Sab ho gaye</button><button type="button" class="got" data-bk-go="1"${n && !bulkBusy ? '' : ' disabled'}>${bulkBusy ? '⏳ Lag raha hai…' : `🔔 ${n} notes par lagao`}</button></div></div>`;
+}
+// sab notes ek ek kar ke (har note apni rules check) — natija: kitne hue / kitne nahi
+export async function bulkApply(ids, { day = null, time = null, nag = -1, done = false } = {}) {
+  let ok = 0; const fail = [];
+  for (const id of ids) {
+    const o = notes.find(x => x.id === id); if (!o) continue;
+    const patch = { ...o };
+    if (done) { patch.done = true; patch.doneAt = Date.now(); }
+    else {
+      if (day) patch.remindDay = day;
+      if (time != null) { patch.remindTime = time; if (time) patch.allDay = false; }
+      if (nag >= 0) patch.nag = nag;
+      if (patch.done && day) { patch.done = false; patch.doneAt = 0; }   // naya din = phir khula
+    }
+    try { await saveNote(patch, o); ok++; } catch (e) { fail.push(String(o.text || o.partyName || id).slice(0, 30) + ': ' + (e?.message || e)); }
+  }
+  badge(); return { ok, fail };
+}
+async function bulkGo(done) {
+  const ids = [...sel].filter(id => notes.some(x => x.id === id)); if (!ids.length || bulkBusy) return;
+  if (!done && !bkDay && !bkTime && bkNag < 0) { notice('Pehle din, waqt ya 🔁 chunein'); return; }
+  if (done && !confirm(ids.length + ' notes "ho gaye" kar dein?')) return;
+  bulkBusy = true; paint();
+  const r = await bulkApply(ids, done ? { done: true } : { day: bkDay || null, time: bkTime || null, nag: bkNag });
+  bulkBusy = false; sel = new Set(); selMode = false; bkDay = ''; bkTime = ''; bkNag = -1; paint();
+  notice(r.fail.length ? `⚠️ ${r.ok} hue · ${r.fail.length} nahi: ${r.fail[0]}` : done ? `✓ ${r.ok} notes ho gaye` : `🔔 ${r.ok} notes badal gaye`);
 }
 async function toggleDone(id, on) {
   const n = notes.find(x => x.id === id); if (!n) return;
@@ -559,6 +600,15 @@ document.addEventListener('click', e => {
   const nw = e.target.closest?.('[data-nt-new],[data-nt-hbl],[data-hbl-pay]');
   if (nw) { if (nw.dataset.ntNew) noteForm(); else hblPayForm(); return; }
   if (!$('ntRoot')) return;
+  const bk = e.target.closest?.('[data-nt-selmode],[data-bk-all],[data-bk-day],[data-bk-nag],[data-bk-go],[data-bk-done]');
+  if (bk) { const b = bk.dataset;
+    if (b.ntSelmode) { selMode = !selMode; sel = new Set(); bkDay = ''; bkTime = ''; bkNag = -1; }
+    else if (b.bkAll) { const l = listFor(fTab); sel = l.length && l.every(x => sel.has(x.id)) ? new Set() : new Set(l.map(x => x.id)); }
+    else if (b.bkDay != null) bkDay = b.bkDay;
+    else if (b.bkNag != null) bkNag = Number(b.bkNag);
+    else if (b.bkGo) { bulkGo(false); return; }
+    else if (b.bkDone) { bulkGo(true); return; }
+    paint(); return; }
   const t = e.target.closest?.('[data-nt-tab],[data-nt-edit],[data-nt-party],[data-nt-pic],[data-nt-push],[data-nt-vapid]'); if (!t) return;
   const d = t.dataset;
   if (d.ntTab) { fTab = d.ntTab; paint(); return; }
@@ -566,9 +616,14 @@ document.addEventListener('click', e => {
   if (d.ntPic) { const [id, i] = d.ntPic.split('|'); const p = (pics.get(id) || [])[Number(i)]; if (p) dlgOf('🖼 Tasveer', `<img src="${p}" alt="" style="width:100%;border-radius:12px">`); return; }
   if (d.ntPush) { enablePush(); return; }
   if (d.ntVapid) { vapidForm(); return; }
+  if (d.ntEdit && selMode) { if (e.target.closest('[data-nt-stop]')) return; sel.has(d.ntEdit) ? sel.delete(d.ntEdit) : sel.add(d.ntEdit); paint(); return; }   // chunne mein card dabana = chuno
   if (d.ntEdit) { if (e.target.closest('.nt-thumb') || e.target.closest('[data-nt-stop]')) return; const n = notes.find(x => x.id === d.ntEdit); if (n) noteForm(n); }
 });
-document.addEventListener('change', e => { const c = e.target.closest?.('[data-nt-done]'); if (c) toggleDone(c.dataset.ntDone, c.checked); });
+document.addEventListener('change', e => {
+  const s = e.target.closest?.('[data-nt-sel]'); if (s) { s.checked ? sel.add(s.dataset.ntSel) : sel.delete(s.dataset.ntSel); paint(); return; }
+  if (e.target.matches?.('[data-bk-date]')) { bkDay = e.target.value || ''; paint(); return; }
+  if (e.target.matches?.('[data-bk-time]')) { bkTime = e.target.value || ''; paint(); return; }
+  const c = e.target.closest?.('[data-nt-done]'); if (c) toggleDone(c.dataset.ntDone, c.checked); });
 document.addEventListener('input', e => { if (e.target.matches?.('[data-nt-q]')) { fQ = e.target.value || ''; paint(); const q = document.querySelector('[data-nt-q]'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } } });
 
 // ---------- notification (push) ----------
@@ -604,13 +659,13 @@ async function enablePush(quiet) {
 }
 
 // ---------- v2.99.8: 🤖 NOOR AGENT — bol kar note / reminder, aur notes dhoondna ----------
-export async function noteAgentSave({ text = '', day = '', time = '', partyId = '', items = [] } = {}) {
+export async function noteAgentSave({ text = '', day = '', time = '', partyId = '', items = [], nag = 0 } = {}) {
   if (!canUseOf()) throw Error('Is login par notes ki ijazat nahi');
   if (!cloud?.saveNote) throw Error('Notes ke liye app update karein');
   const t = String(text || '').trim(); if (!t) throw Error('Note mein kuch likhein');
   const p = partyId ? partyOf(partyId) : null;
   const d = await saveNote({ kind: 'note', text: t, items: (items || []).slice(0, 20), partyId: p ? p.id : '', partyName: p ? p.name : '',
-    remindDay: /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : '', remindTime: /^\d{2}:\d{2}$/.test(time) ? time : '', allDay: false });
+    remindDay: /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : '', remindTime: /^\d{2}:\d{2}$/.test(time) ? time : '', allDay: false, nag: nagOk(nag) });
   badge(); return d;
 }
 export function noteAgentFind(q = '', { open = true, n = 8 } = {}) {
@@ -619,5 +674,23 @@ export function noteAgentFind(q = '', { open = true, n = 8 } = {}) {
   if (open) l = l.filter(x => !x.done);
   const key = x => (x.done ? '2' : x.remindDay ? '0' + x.remindDay + (x.remindTime || '99') : '1') + String(9e15 - (x.updatedAt || 0));
   return l.sort((a, b) => key(a).localeCompare(key(b))).slice(0, Math.max(1, Math.min(20, n))).map(x => ({ id: x.id, text: String(x.text || '').slice(0, 160),
-    reminder: x.remindDay || '', time: x.remindTime || '', account: x.partyName || '', items: (x.items || []).map(i => i.name).slice(0, 5), done: !!x.done, late: !!x.remindDay && !x.done && x.remindDay < today, by: x.byName || '' }));
+    reminder: x.remindDay || '', time: x.remindTime || '', account: x.partyName || '', items: (x.items || []).map(i => i.name).slice(0, 5), done: !!x.done, late: !!x.remindDay && !x.done && x.remindDay < today, by: x.byName || '', repeat_minutes: x.nag || 0 }));
+}
+// v2.99.27: agent ke liye — kaun se notes (filter / lafz / ids), aur sab par ek saath lagana
+export function noteAgentPick({ filter = 'open', text = '', ids = [] } = {}) {
+  const today = dayOf(), q = String(text || '').trim().toLowerCase();
+  let l = notes.filter(x => !x.done);
+  if (Array.isArray(ids) && ids.length) { const S = new Set(ids.map(String)); l = notes.filter(x => S.has(x.id)); }
+  else {
+    if (filter === 'today') l = l.filter(x => x.remindDay && x.remindDay <= today);
+    else if (filter === 'late') l = l.filter(x => x.remindDay && x.remindDay < today);
+    else if (filter === 'next') l = l.filter(x => x.remindDay > today);
+    else if (filter === 'no_reminder') l = l.filter(x => !x.remindDay);
+    if (q) l = l.filter(x => matchQ(x, q));
+  }
+  return l.slice(0, 40).map(x => ({ id: x.id, text: String(x.text || x.partyName || '').slice(0, 100), reminder: x.remindDay || '', time: x.remindTime || '', nag: x.nag || 0 }));
+}
+export async function noteAgentBulk(ids, o) {
+  if (!canUseOf()) throw Error('Is login par notes ki ijazat nahi');
+  return bulkApply(ids, { day: o.day || null, time: o.time != null && o.time !== '' ? o.time : null, nag: o.nag == null ? -1 : nagOk(o.nag) || (Number(o.nag) === 0 ? 0 : -1), done: !!o.done });
 }

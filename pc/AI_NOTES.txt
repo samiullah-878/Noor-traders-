@@ -2604,3 +2604,15 @@ APP v2.99.26 (pos-stock.js + style.css): stock head mein chip 🟢 "POS se juda 
  Test hd/lc.mjs ALL OK; ctn/tc/ws/st/sc regression ALL OK.
 KAHAN NAHI CHALTA: Server PC / internet band ho to seconds mein nahi aa sakta (🔴 chip dikhega). Asal PC par 5-sec timing malik pehle din dekh kar bataye.
 Firestore: 11-Oct console — mahina ~$4 (Read Ops Mumbai sab se zyada); Gemini ab PREPAID balance (AI Studio > Billing > top up).
+
+==================== v2.99.27 + RULES 2.37 + PC auto-backup v1.4 (2026-10-11, manifest 2026-10-11.9) — ☑ KAI NOTES EK SAATH + 🔁 BAAR BAAR YAAD ====================
+Malik (agent screenshot: "sab notes ek sath badalne ya har 15 minute notification ka feature mojood nahi") -> plan OK.
+APP notes.js:
+ - notes.nag (15/30/60) — form mein "🔁 Baar baar yaad dilao: Band / Har 15 min / 30 min / 1 ghanta" (din khali ho to aaj). saveNote: nag SIRF tab likha jata hai jab >0 aur remindDay ho (purani rules par baqi notes chalte rahein). Card par "🔁 har 15 min" chip.
+ - Tabs mein "☑ Kai chunein": card ka done-checkbox -> gol select checkbox (data-nt-sel), card dabana = chuno. Neeche sticky patti .nt-bulk: Aaj/Kal/Parson/Din wahi + date + time, 🔁 Wahi/Band/15/30/1 ghanta, "✓ Sab ho gaye", "🔔 N notes par lagao". bulkApply(ids,{day,time,nag,done}) ek ek saveNote (fail list). Naya din = done note phir khula.
+ - Agent: noteAgentPick({filter open/today/late/next/no_reminder, text, ids}), noteAgentBulk; noteAgentSave nag; noteAgentFind repeat_minutes.
+APP agent.js: propose_note + repeat_minutes; NAYA tool propose_notes_bulk (filter/text/note_ids + remind_date/time/repeat_minutes/mark_done) -> card "🔔 N notes ek saath" -> ✓ = H.noteBulk. RULE 11: kabhi "feature nahi" mat kaho. Quick chips: "🔁 Har 15 min yaad", "🔔 Sab notes kal". app.js H: notePick, noteBulk. (tools ab 28)
+RULES 2.37: validNote hasOnly + nag; (!(nag) || nag int in [15,30,60]). firestore-rules-2.37.html (malik ek dafa upload). Upload se pehle nag wala note save nahi hoga (permission) — baqi sab chalta.
+PC auto-backup.js v1.4 (Server PC, pehle se FCM bhejta — Cloud Function deploy NAHI chahiye): notes where done==false LISTENER (reads kam), nagDue: waqt (remindTime ya 09:00) + nag min ke baad, har nag min, subah 7 – raat 11, 3 din baad chup. Malik tokens + note likhne wala (uid==by). tag nag-<id> (purani ki jagah nayi), link #note=<id>. nag-state.json (PC par). Pehli khabar waqt par Cloud Function (remindPush) ki.
+Tests: hd/nb.mjs ALL OK (select, bulk, nag 0 = khana nahi, form, agent pick) · agent/nb.mjs ALL OK · agent t/m/q/v OK (t: tools 28) · nag/t.js ALL OK · lc/ctn/tc/st/ws/sc OK.
+KAHAN NAHI CHALTA: Server PC band = baar baar notification nahi (app mein late nishan phir bhi). Phone par notification Allow na ho to nahi aayegi.

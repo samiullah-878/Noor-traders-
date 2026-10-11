@@ -22,7 +22,7 @@ const zlib = require('zlib');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
-const VER = '1.3';   // v1.3 (2026-10-07): driver ki jeb se EXTRA kharcha (kind 'kharch', driver:true) khate se − (app v2.97.1) · v1.2 (2026-10-07): driver ka KHATA (app v2.96.1 jaisa) — phera + (kiraya − kharche − commission), liya −, advance + · v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
+const VER = '1.4';   // v1.4 (2026-10-11): 🔁 notes.nag — baar baar yaad (15/30/60 min) jab tak ✓ na ho · v1.3 (2026-10-07): driver ki jeb se EXTRA kharcha (kind 'kharch', driver:true) khate se − (app v2.97.1) · v1.2 (2026-10-07): driver ka KHATA (app v2.96.1 jaisa) — phera + (kiraya − kharche − commission), liya −, advance + · v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47832;
 const DIR = __dirname;
@@ -112,11 +112,52 @@ async function gaariNotify() {
   const r = await getMessaging().sendEachForMulticast({ tokens, data: { title: '🚚 Driver se hisaab lena hai', body, tag: 'gaari-' + day, link: 'https://samiullah-878.github.io/Noor-traders-/' }, webpush: { headers: { Urgency: 'high' } } });
   log(`🚚 gaari notification ${t}: ${r.successCount}/${tokens.length} phone — ${body}`);
 }
+// ---- v1.4: 🔁 BAAR BAAR YAAD (notes.nag 15/30/60 min) — waqt guzarne ke baad har nag minute, jab tak ✓ na ho. Subah 7 – raat 11.
+// Notes ko LISTENER se rakhta hai (har minute poori list nahi parhta — reads kam). Pehli khabar Cloud Function deti hai (waqt par);
+// yeh us ke nag minute baad se dohrata hai. Kis ko: malik + jis ne note likha. tag 'nag-<id>' = phone par purani ki jagah nayi.
+const NAG_FILE = path.join(DIR, 'nag-state.json');
+let nagNotes = new Map(), nagSent = {}, nagStop = null;
+try { nagSent = JSON.parse(fs.readFileSync(NAG_FILE, 'utf8')) || {}; } catch {}
+function nagWatch() {
+  if (nagStop) return;
+  nagStop = base.collection('notes').where('done', '==', false).onSnapshot(s => {
+    s.docChanges().forEach(c => { if (c.type === 'removed') nagNotes.delete(c.doc.id); else nagNotes.set(c.doc.id, { ...c.doc.data(), id: c.doc.id }); });
+  }, e => { log('🔁 notes listener masla: ' + e.message); nagStop = null; if (unauth(e)) process.exit(1); });
+}
+function nagDue(n, now = new Date()) {
+  const g = Number(n.nag); if (![15, 30, 60].includes(g) || n.done || n.deleted || !/^\d{4}-\d{2}-\d{2}$/.test(n.remindDay || '')) return null;
+  const at = new Date(n.remindDay + 'T' + (/^\d{2}:\d{2}$/.test(n.remindTime || '') ? n.remindTime : '09:00') + ':00').getTime();
+  const t = now.getTime(), h = now.getHours();
+  if (!(at > 0) || t < at + g * 60000 || t - at > 3 * 86400000 || h < 7 || h >= 23) return null;   // pehli khabar waqt par Cloud Function ki; 3 din baad chup
+  const last = Number(nagSent[n.id]) || 0;
+  return t - last >= g * 60000 - 20000 ? { g, mins: Math.round((t - at) / 60000) } : null;
+}
+async function nagNotify() {
+  nagWatch();
+  const now = new Date(), due = [...nagNotes.values()].map(n => ({ n, d: nagDue(n, now) })).filter(x => x.d);
+  if (!due.length) return;
+  const tk = (await base.collection('pushTokens').get()).docs.map(d => d.data()).filter(x => x.token);
+  const { getMessaging } = require('firebase-admin/messaging');
+  for (const { n, d } of due.slice(0, 10)) {
+    const tokens = [...new Set(tk.filter(x => x.role === 'owner' || x.role === 'malik' || (n.by && x.uid === n.by)).map(x => x.token))];
+    nagSent[n.id] = Date.now();
+    if (!tokens.length) { log(`🔁 "${String(n.text || '').slice(0, 30)}": koi push token nahi`); continue; }
+    const late = d.mins >= 60 ? Math.floor(d.mins / 60) + ' ghante' : d.mins + ' min';
+    const body = (String(n.text || n.partyName || 'Note').slice(0, 140)) + `\n⏰ ${late} se baqi · 🔁 har ${d.g === 60 ? '1 ghanta' : d.g + ' min'} — ✓ karein to band`;
+    try {
+      const r = await getMessaging().sendEachForMulticast({ tokens, data: { title: '🔁 Yaad dihani — abhi tak nahi hua', body, tag: 'nag-' + n.id, link: 'https://samiullah-878.github.io/Noor-traders-/#note=' + n.id }, webpush: { headers: { Urgency: 'high' } } });
+      log(`🔁 nag "${String(n.text || '').slice(0, 30)}" (${late} se): ${r.successCount}/${tokens.length} phone`);
+    } catch (e) { log('🔁 nag bhejna masla: ' + e.message); }
+  }
+  for (const k of Object.keys(nagSent)) if (Date.now() - nagSent[k] > 4 * 86400000) delete nagSent[k];
+  try { fs.writeFileSync(NAG_FILE, JSON.stringify(nagSent)); } catch {}
+}
 let doneKeys = new Set(), lastNow = 0, busy = false;
 async function tick() {
   if (busy) return;
   busy = true;
   try { await gaariNotify(); } catch (e) { log('gaari notification masla: ' + e.message); }
+  try { await nagNotify(); } catch (e) { log('🔁 nag masla: ' + e.message); }
   try {
     const cd = await base.collection('blueAccess').doc('backupConfig').get();
     const c = cd.exists ? cd.data() : {};
@@ -136,7 +177,8 @@ async function tick() {
   } finally { busy = false; if (doneKeys.size > 50) doneKeys = new Set([...doneKeys].slice(-20)); }
 }
 
-if (process.argv.includes('--now')) {
+module.exports._t = { nagDue, nagNotify, nagNotes: () => nagNotes, nagSent: () => nagSent };
+if (process.env.NT_TEST) {} else if (process.argv.includes('--now')) {
   makeBackup('--now test').then(s => { console.log(s); process.exit(0); }).catch(e => { console.error('Nahi hua:', e.message); process.exit(1); });
 } else {
   const lock = net.createServer();
