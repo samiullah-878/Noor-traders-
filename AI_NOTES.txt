@@ -3894,3 +3894,5 @@ MALIK: "app se nikle transfer note check mein nahi aa rahe" + "scan ke ilawa che
 * Nikle: har pending card par tick (right-top); neeche patti "N note chune · ✓ Maal poora mila — check karo" (confirm) = tcSaveOne har ek par (audit '(tick)'). tc/done = pehle se.
 TEST hd/tc.mjs ALL OK (app note, bulk). Baqi sab ALL OK.
 VERSION BUMP 2.99.25.
+
+PC transfer-sync v4.2 (2026-10-11, manifest 2026-10-11.5): app se bane transfer note ki parchi par HAR ITEM ke neeche "Baqi <se godam>: X | <ko godam>: Y" — transfer ke baad POS ItemBranchRate.CurrStock dono godam ka (addBaqi). Pack ho to Ctn + Pcs, warna qty; 42 chars se lamba ho to do lines (godam ka naam kabhi nahi girta). Baqi transferJobs doc mein bhi save (field baqi[]) taake DOBARA PRINT par bhi dikhe. Malik: "usi parchi par likha ho, alag parchi nahi". POS se bane notes (POS khud chhapta hai) par baqi NAHI aa sakta — wo POS ki apni report hai; option: Server PC POS wale note ki bhi hamari full parchi chhape (abhi nahi banaya, malik se poochna). Test ts/t.js ALL OK.

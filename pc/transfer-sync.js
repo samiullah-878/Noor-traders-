@@ -8,6 +8,7 @@
 //     parchi (stock pehle -> ab, pichla rate, nafa, din ka maal, DHYAN); badla = "BADLA HUA BILL" + tabdeeli; mita / cancel =
 //     chhoti parchi. App ka "Dobara print" bhi yahi tafseeli parchi. Setting: blueAccess/printConfig (malik). SQL sirf SELECT.
 //  v4.1 (2026-10-11): app ke transfer note ki parchi par STN ka BARCODE (POS wali parchi jaisa) — Transfer check mein scan ho.
+//  v4.2 (2026-10-11): har item ke neeche 'Baqi <se>: X | <ko>: Y' — transfer ke BAAD dono godam ka stock usi parchi par (alag parchi nahi). Reprint par bhi.
 //  Chalana:  node transfer-sync.js   (transfer-auto.bat loop mein)
 // =========================================================
 const fs = require('fs');
@@ -111,8 +112,20 @@ async function createTransfer(j) {
         .execute('dbo.usp_StockTransferDetail_InsertUpdate');
     }
     await tx.commit();
+    await addBaqi(p, rows, from, to);   // v4.2: har item ka baqi stock (se / ko) — usi parchi par chhapta hai
     return { transferId: h.TransferID, transferNo: String(h.TransferNo).trim(), from: names[from], to: names[to], rows, cogs, at: now };
   } catch (e) { try { await tx.rollback(); } catch {} throw e; }
+}
+// v4.2: transfer ke BAAD dono godam ka taza stock (POS ItemBranchRate.CurrStock) har row mein daal do: baqiFrom / baqiTo
+async function addBaqi(p, rows, from, to) {
+  for (const x of rows) {
+    try {
+      const q = (await p.request().input('i', sql.Int, x.itemId).input('f', sql.Int, from).input('t', sql.Int, to).query(
+        `SELECT (SELECT ISNULL(CurrStock,0) FROM dbo.ItemBranchRate WHERE ItemID = @i AND BranchID = @f) AS F,
+                (SELECT ISNULL(CurrStock,0) FROM dbo.ItemBranchRate WHERE ItemID = @i AND BranchID = @t) AS T`)).recordset[0] || {};
+      x.baqiFrom = r3(q.F); x.baqiTo = r3(q.T);
+    } catch (e) { log('Baqi stock nahi mila (' + x.name + '): ' + e.message); }
+  }
 }
 async function deleteTransfer(j) {
   const p = await getPool();
@@ -134,6 +147,15 @@ function head(title) {
   return [ESC + '@', ESC + 'a' + '\x01', ESC + '!' + '\x30' + SHOP_NAME + ESC + '!' + '\x00', SHOP_PHONE, ESC + '!' + '\x08' + title + ESC + '!' + '\x00', ESC + 'a' + '\x00', '-'.repeat(PRINT_WIDTH)];
 }
 const qtyText = l => { const pk = Number(l.pack) || 0; if (pk > 1 && (Number(l.ctn) || Number(l.pcs) != null)) { const c = Number(l.ctn) || 0, p = Number(l.pcs) || 0; return (c ? n(c) + ' ' + ascii(l.cName || 'Ctn') : '') + (c && p ? ' + ' : '') + (p || !c ? n(p) + ' ' + ascii(l.uName || 'Pcs') : '') + ' (' + n(l.qty) + ')'; } return n(l.qty); };
+// v4.2: "  Baqi Godam 1: 12 Ctn + 3 Pcs | Dukan: 40 Ctn" — pack ho to ctn+pcs, warna seedha qty; 42 chars se lamba ho to chhota karo
+const ctnPcs = (q, l) => { const pk = Number(l.pack) || 0, v = Number(q) || 0; if (pk > 1) { const c = Math.floor(v / pk + 1e-9), p = r3(v - c * pk); return (c ? n(c) + ' ' + ascii(l.cName || 'Ctn') : '') + (c && p ? ' + ' : '') + (p || !c ? n(p) + ' ' + ascii(l.uName || 'Pcs') : ''); } return n(v); };
+function baqiText(x, r) {
+  if (x.baqiFrom == null && x.baqiTo == null) return '';
+  const f = x.baqiFrom == null ? '?' : ctnPcs(x.baqiFrom, x), t = x.baqiTo == null ? '?' : ctnPcs(x.baqiTo, x), F = ascii(r.from), T = ascii(r.to);
+  const one = `  Baqi ${F}: ${f} | ${T}: ${t}`;
+  if (one.length <= PRINT_WIDTH) return one;
+  return [`  Baqi ${F}: ${f}`.slice(0, PRINT_WIDTH), `  Baqi ${T}: ${t}`.slice(0, PRINT_WIDTH)].join('\r\n');   // lamba ho to do lines (godam ke naam kabhi na giren)
+}
 function transferText(r, note, reprint) {
   const out = head('STOCK TRANSFER NOTE');
   out.push(line('STN No: ' + r.transferNo, stamp(r.at)));
@@ -141,7 +163,10 @@ function transferText(r, note, reprint) {
   out.push(`Se : ${ascii(r.from)}`, `Ko : ${ascii(r.to)}`);
   if (note) out.push('Note: ' + ascii(note).slice(0, PRINT_WIDTH - 6));
   out.push('-'.repeat(PRINT_WIDTH), pad('Item', PRINT_WIDTH - 22) + pad('Qty', 22, true), '-'.repeat(PRINT_WIDTH));
-  for (const x of r.rows) { const q = qtyText(x); if (ascii(x.name).length + q.length + 1 > PRINT_WIDTH) { out.push(ascii(x.name).slice(0, PRINT_WIDTH)); out.push(pad('', PRINT_WIDTH - q.length) + q); } else out.push(pad(ascii(x.name), PRINT_WIDTH - q.length) + q); }
+  for (const x of r.rows) {
+    const q = qtyText(x); if (ascii(x.name).length + q.length + 1 > PRINT_WIDTH) { out.push(ascii(x.name).slice(0, PRINT_WIDTH)); out.push(pad('', PRINT_WIDTH - q.length) + q); } else out.push(pad(ascii(x.name), PRINT_WIDTH - q.length) + q);
+    const b = baqiText(x, r); if (b) out.push(...b.split('\r\n'));   // v4.2: baqi stock usi parchi par
+  }
   out.push('-'.repeat(PRINT_WIDTH), line('Items: ' + r.rows.length, 'Kul pcs: ' + n(r.rows.reduce((s, x) => s + (Number(x.qty) || 0), 0))));
   if (reprint) {
     out.push('', ESC + 'a' + '\x01', ESC + '!' + '\x30' + 'DOBARA PRINT (' + reprint.n + ')' + ESC + '!' + '\x00', ESC + 'a' + '\x00');
@@ -230,7 +255,7 @@ async function handleTransfer(doc) {
         log(`Transfer note HATAYA: ${r.transferNo}`);
       } else {
         const r = await createTransfer({ ...j, id: doc.id });
-        await ref.update({ status: 'done', transferId: r.transferId, transferNo: r.transferNo, cogs: r.cogs, doneAt: Date.now(), error: FieldValue.delete() });
+        await ref.update({ status: 'done', transferId: r.transferId, transferNo: r.transferNo, cogs: r.cogs, doneAt: Date.now(), error: FieldValue.delete(), baqi: r.rows.map(x => ({ itemId: x.itemId, f: x.baqiFrom ?? null, t: x.baqiTo ?? null })) });   // v4.2: baqi save — reprint par bhi dikhe
         log(`Transfer note bana: ${r.transferNo} · ${r.from} -> ${r.to} · ${r.rows.length} items`);
         if (AUTO_PRINT || j.print) { const nC = Math.min(3, Math.max(1, Number(j.copies) || 1)), txt = transferText(r, j.note); let e = null; for (let i = 0; i < nC && !e; i++) e = await sendRaw(txt, 'STN ' + r.transferNo); if (e) log('Print masla: ' + e.message); else log('Transfer note print ho gaya' + (nC > 1 ? ' x' + nC : '')); }   // 2026-10-02: copies 1-3
       }
@@ -264,7 +289,7 @@ async function handlePrint(doc) {
         if (!tj || tj.status !== 'done') throw new Error('Transfer note nahi mila');
         const names = await branchNames(await getPool());
         const rp = { n: (Array.isArray(tj.reprints) ? tj.reprints.length : 0) + 1, reason: j.reason || '', at: Date.now(), by: j.byName || '' };
-        text = transferText({ transferNo: tj.transferNo, at: tj.doneAt || Date.now(), from: names[tj.from] || tj.from, to: names[tj.to] || tj.to, rows: tj.lines || [] }, tj.note, rp);
+        text = transferText({ transferNo: tj.transferNo, at: tj.doneAt || Date.now(), from: names[tj.from] || tj.from, to: names[tj.to] || tj.to, rows: (tj.lines || []).map(l => { const b = (tj.baqi || []).find(z => Number(z.itemId) === Number(l.itemId)); return b ? { ...l, baqiFrom: b.f, baqiTo: b.t } : l; }) }, tj.note, rp);   // v4.2: reprint par bhi baqi
         await tRef.update({ reprints: FieldValue.arrayUnion({ at: rp.at, reason: rp.reason, by: j.by || '', n: rp.n }) });
       } else throw new Error('Print ki qisam nahi pehchani: ' + j.kind);
       const nC = Math.min(3, Math.max(1, Number(j.copies) || 1)); let e = null; for (let i = 0; i < nC && !e; i++) e = await sendRaw(text, 'Print ' + j.kind);   // 2026-10-02: copies 1-3
