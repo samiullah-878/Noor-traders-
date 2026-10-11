@@ -2682,3 +2682,5 @@ v2.99.36: Rabta test ab Firebase ka asal message bhi dikhata (rules vs API key p
 v2.99.37: Rabta test qadam 1 = malik SDK se bankSms/_alias likh kar dekhta ke rules asal mein 2.38+ live hain (TEST rules "allow create: if id != _alias" par bhi 403 aaya — shak: publish asal mein nahi lag raha).
 
 v2.99.38 + rules 2.40: bankSms create par 4 jaanch darwaze (p=1 bina shart, 2 auth==null, 3 exists bankKey, 4 k==bankKey.k) + asal rule bina request.auth shart. Rabta test har darwaza POST karta aur natija dikhata (programmatic rules playground). TEST rules (allow create: if id != _alias) par bhi 403 aaya tha — samajh nahi aayi; yeh pakka batayega.
+
+RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (test card aaya) — 2.38/2.39/2.40 sab mein `id != _alias` thi aur sab deny: REST createDocument (server auto-id) par rules mein `id` shart deny deti hai (lagta hai). 2.42: unauth create bina `id`; 4 gates (p=1 data, 2 id, 3 hasOnly, 4 get) jaanch ke liye.

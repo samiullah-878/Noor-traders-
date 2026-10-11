@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.38';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.39';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -179,7 +179,7 @@ async function rabtaTest() {
   try { await O.cloud.bankAliasSet(alias || {}); }
   catch (e) { testOk = false; testMsg = `❌ Rules ASAL MEIN purani hain — Firebase ne malik ko bhi bankSms mein likhne nahi diya (${esc(e?.code || e?.message || e)}).<br><b>Hal:</b> Firebase → Firestore → Rules → poori purani mita kar nayi paste → <b>Publish</b> dabayein → upar "Rules published" aana chahiye. Agar laal error aaye to us ka screenshot bhejein.`; testBusy = false; paint(); return; }
   // qadam 2: 4 jaanch darwaze (rules 2.40) — kaun sa khulta hai
-  const probes = [[1, 'bina shart'], [2, 'request.auth == null'], [3, 'exists(bankKey)'], [4, 'chaabi == bankKey.k']], res = [];
+  const probes = [[1, 'sirf data'], [2, 'id != _alias'], [3, 'keys hasOnly'], [4, 'chaabi == bankKey.k']], res = [];
   for (const [pn, lab] of probes) {
     try {
       const r = await fetch(restUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { p: { integerValue: String(pn) }, ...(pn === 4 ? { k: { stringValue: key } } : {}) } }) });
@@ -195,7 +195,7 @@ async function rabtaTest() {
     const msg = String(j?.error?.message || t).slice(0, 300), st = j?.error?.status || '';
     if (r.ok) { testOk = true; testMsg = '✅ Rules nayi hain aur rabta theek — Firebase ne qabool kiya. Ab "❓ Samajh nahi" mein ek test card hoga, use ✕ kar dein. Agar MacroDroid se phir bhi nahi aata to masla sirf MacroDroid ki body mein hai (SMS_YAHAN / quotes).'; }
     else if (/API key|referer|blocked|forbidden|SERVICE_BLOCKED/i.test(msg) || /API_KEY/i.test(JSON.stringify(j?.error?.details || ''))) { testOk = false; testMsg = `❌ Google ne API key rok di (${r.status}): ${esc(msg)}<br><b>Hal:</b> console.cloud.google.com → APIs & Services → Credentials → Browser key → "Application restrictions" = None (ya is website ko allow) → Save.`; }
-    else if (r.status === 403 || /PERMISSION_DENIED/.test(st)) { testOk = false; testMsg = `❌ Firebase ne mana kiya (${r.status} ${esc(st)}): <i>${esc(msg)}</i><br><b>Hal:</b> Firestore → Rules mein <b>v2.38</b> publish karein (doosri line mein "BLUE KHATA v2.38" likha ho). Rules theek hon to chaabi ka masla hai — "🔁 nayi chaabi" bana kar MacroDroid body dobara paste karein.`; }
+    else if (r.status === 403 || /PERMISSION_DENIED/.test(st)) { testOk = false; testMsg = `❌ Firebase ne mana kiya (${r.status} ${esc(st)}): <i>${esc(msg)}</i><br><b>Hal:</b> Firestore → Rules mein <b>v2.42</b> publish karein (doosri line mein "BLUE KHATA v2.42" likha ho). Rules theek hon to chaabi ka masla hai — "🔁 nayi chaabi" bana kar MacroDroid body dobara paste karein.`; }
     else if (r.status === 400) { testOk = false; testMsg = `❌ Body samajh nahi aayi (400): ${esc(msg)}`; }
     else { testOk = false; testMsg = `❌ ${r.status} ${esc(st)}: ${esc(msg)}`; }
   } catch (e) { testOk = false; testMsg = '❌ Internet / Google tak rasai nahi: ' + esc(e?.message || e); }
