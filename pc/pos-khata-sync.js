@@ -20,6 +20,7 @@
 //    node pos-khata-sync.js           -> ek dafa sync
 //    node pos-khata-sync.js --auto    -> har 60 second (khata-sync-auto.vbs isi ko chalata hai)
 //    node pos-khata-sync.js --print-voucher CPV-000123  -> koi bhi voucher dobara print (kuch save nahi)
+//  2026-10-12: 🏦 HBL parchi — HBL account / HBL SMS-email wali entry: upar bara ulta "HBL", barcode nahi, raqam + baqaya lafzon mein (inWords, lakh/crore).
 //  v8: voucher rasid (CPV/CRV/Transfer/Udhar) notepad ki jagah seedha TM-T88IV par, sale rasid jaisi
 // ============================================================
 
@@ -339,7 +340,18 @@ function appBalance(partyId, skip) {   // 2026-10-09: skip = in entries ke bagha
   }
   return b;
 }
-function receipt({ title, code, date, lines, note, copy }) {
+// 2026-10-12: raqam LAFZON mein (Pakistani lakh / crore) — HBL parchi par (malik: "lambe lafzo main")
+function inWords(rs) {
+  let n = Math.floor(Math.abs(Number(rs) || 0)); if (!n) return 'Rupees Zero Only';
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const t = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const two = x => x < 20 ? a[x] : t[Math.floor(x / 10)] + (x % 10 ? ' ' + a[x % 10] : '');
+  const three = x => (x >= 100 ? a[Math.floor(x / 100)] + ' Hundred' + (x % 100 ? ' ' : '') : '') + (x % 100 ? two(x % 100) : '');
+  const parts = [], cr = Math.floor(n / 1e7); n %= 1e7; const lk = Math.floor(n / 1e5); n %= 1e5; const th = Math.floor(n / 1e3); n %= 1e3;
+  if (cr) parts.push((cr > 999 ? inWords(cr).replace(/^Rupees | Only$/g, '') : three(cr)) + ' Crore'); if (lk) parts.push(two(lk) + ' Lakh'); if (th) parts.push(two(th) + ' Thousand'); if (n) parts.push(three(n));
+  return 'Rupees ' + parts.join(' ') + ' Only';
+}
+function receipt({ title, code, date, lines, note, copy, bank }) {
   const W = PRINT_WIDTH;
   const n = v => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
   const row = (l, r) => { l = String(l); r = String(r); return (l + ' '.repeat(Math.max(1, W - l.length - r.length))).slice(0, W - r.length) + r; };
@@ -355,9 +367,15 @@ function receipt({ title, code, date, lines, note, copy }) {
   const now = new Date(), hh = now.getHours() % 12 || 12;
   const tm = `${hh}:${String(now.getMinutes()).padStart(2, '0')} ${now.getHours() < 12 ? 'am' : 'pm'}`;
 
-  const out = [ESC + '@', C + big('NOOR TRADERS'), SHOP_PHONE, '', tall(title)];
+  // 2026-10-12: 🏦 HBL PARCHI (sirf HBL account / HBL SMS-email wali entry) — upar bara ulta "HBL", barcode nahi, raqam + baqaya lafzon mein
+  const huge = t => GS + '!\x33' + t + GS + '!\x00', rev = t => GS + 'B\x01' + t + GS + 'B\x00';
+  const words = v => wrap(inWords(v), W - 2).map(x => '  ' + x.trim());
+  const out = bank
+    ? [ESC + '@', C + rev(huge(' HBL ')), '', bold('NOOR TRADERS') + '  ' + SHOP_PHONE, '', tall(bank.dir === 'out' ? 'HBL SE PAISE GAYE' : 'HBL MEIN PAISE AAYE')]
+    : [ESC + '@', C + big('NOOR TRADERS'), SHOP_PHONE, '', tall(title)];
   if (copy) out.push('(Dobara print)');
-  out.push(L + hr, row('Voucher No: ' + ascii(code), ''), row('Tareekh: ' + dt, 'Waqt: ' + tm), C + bar(code), L + hr);
+  if (bank) out.push(L + hr, row('Tareekh: ' + dt, 'Waqt: ' + tm), row('Voucher: ' + ascii(code), ''), L + hr);
+  else out.push(L + hr, row('Voucher No: ' + ascii(code), ''), row('Tareekh: ' + dt, 'Waqt: ' + tm), C + bar(code), L + hr);
   let total = 0; const bq = [];
   for (const l of lines) {
     total = Math.max(total, Number(l.amount) || 0);
@@ -367,12 +385,14 @@ function receipt({ title, code, date, lines, note, copy }) {
     if (l.after != null) bq.push(l);
   }
   out.push(hr, R + big('Rs.' + n(total)), L);
+  if (bank) out.push(...words(total));
   // 2026-10-09: AB BAQAYA bhi BARA (malik: "baqaya wali raqam bhi big size mein") — mota "Ab baqaya - LENE / DENE", raqam double size;
   //   do party hon (transfer voucher) to har ek ka naam saath. Pehle chhoti line upar thi — ab sirf yahan (do dafa nahi).
   for (const l of bq) {
     const a = Number(l.after) || 0, side = a > 0 ? ' - LENE' : a < 0 ? ' - DENE' : ' - BARABAR';
     const who = bq.length > 1 ? (ascii(l.name) || 'Party').slice(0, 16) + ': ' : '';
     out.push(L + hr, bold((who + 'Ab baqaya' + side).slice(0, W)), R + big('Rs.' + n(Math.abs(a))));
+    if (bank) out.push(L + words(a).join('\r\n'));
   }
   if (bq.length) out.push(L + hr);
   const nl = wrap(note, W);
@@ -438,6 +458,15 @@ async function reprintVoucher(code) {
       lines, note: String(rows[0].VoucherRemarks || ''), copy: true }));
     return ok;
   } finally { await pool.close(); }
+}
+// 2026-10-12: kya yeh HBL ka len-den hai? (bank account wala khata, ya HBL SMS / email se bani entry) -> { dir: 'in' | 'out' } warna null
+function bankSlip(base, isTransfer) {
+  const isB = id => !!(id && app.get(id) && app.get(id).bank);
+  if (isTransfer) { if (isB(base.fromPartyId)) return { dir: 'out' }; if (isB(base.toPartyId)) return { dir: 'in' }; }
+  else if (isB(base.partyId)) return { dir: base.kind === 'collection' || base.kind === 'borrow' ? 'out' : 'in' };
+  const nt = String(base.note || '');
+  if (base.bankSms || /^HBL (aaye|gaye) /.test(nt)) return { dir: /^HBL gaye/.test(nt) || (!isTransfer && base.kind === 'payment' && !isB(base.partyId)) ? 'out' : 'in' };
+  return null;
 }
 const VTITLE = { CPV: 'CASH PAYMENT VOUCHER', CRV: 'CASH RECEIPT VOUCHER', JV: 'TRANSFER VOUCHER' };
 
@@ -727,7 +756,8 @@ async function syncEntries(pool, acct) {
              { name: acct.get(base.toPartyId).name, label: 'Ko (gaya)', amount: amt, after: rupees(appBalance(base.toPartyId)), before: rupees(appBalance(base.toPartyId, new Set(docIds))) }]
           : [{ name: acct.get(base.partyId).name, label: base.kind === 'payment' ? 'Diye' : base.kind === 'collection' ? 'Wasool kiye' : 'Udhar', amount: amt,
                after: rupees(appBalance(base.partyId)), before: rupees(appBalance(base.partyId, new Set(docIds))) }];   // 2026-10-09: sabqa = is voucher ke baghair
-        const printed = await printReceipt(receipt({ title: T, code: r.code, date: base.date, lines: plines, note: String(base.note || '').trim() }));
+        const bank = bankSlip(base, isTransfer);   // 2026-10-12: HBL wali entry = HBL parchi
+        const printed = await printReceipt(receipt({ title: T, code: r.code, date: base.date, lines: plines, note: String(base.note || '').trim(), bank }));
         if (printed) await markApp(docIds, { posPrintedAt: Date.now() });
       }
       for (const [k2, l2] of links) if (k2 !== key && l2.voucherId === r.voucherId) await setLink(k2, { posHash: null });

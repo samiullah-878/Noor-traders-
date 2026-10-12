@@ -4058,3 +4058,5 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
   Themes ke !important ko haraane ke liye html .summary>div.bkp-hero.bkp-hero aur html body .bkp … double-class selectors.
 - Search: header #search (naam / raqam digits / TXN / note) HBL screen filter karta hai. Mic nahi (malik ne mana kiya).
 - Test: scratchpad hd/hbl3.mjs (hbl.mjs hata diya), hbl2.mjs.
+
+== 2026-10-12 (PC) HBL parchi: pc/pos-khata-sync.js — bara "HBL", barcode nahi, raqam/baqaya lafzon mein (manifest 2026-10-12.3). Tafseel pc/AI_NOTES.txt ==
