@@ -3149,3 +3149,9 @@ html.dk .pu-card{background:rgba(255,255,255,.05)}html.dk .pu-card.milao{backgro
 html body .mi-acts button:not(.pu-go){min-height:34px!important;padding:5px 12px!important;border-radius:11px!important;font-size:12.5px!important;font-weight:700;background:rgba(100,116,139,.09)!important;color:var(--ink,#0b2545)!important;border:1px solid rgba(100,116,139,.2)!important;box-shadow:none!important;margin:0!important}
 html body .mi-acts button[data-mi-gaari],html body .mi-acts button[data-mi-gsup]{background:rgba(99,102,241,.1)!important;color:#3730a3!important;border-color:rgba(99,102,241,.3)!important}
 .mi-ph{display:flex;flex-wrap:wrap;gap:6px}.mi-ph:empty{display:none}.mi-ph .entry-photo{width:58px;height:58px;object-fit:cover;border-radius:10px}
+
+/* v2.99.62 🔒 parchi chhap gayi — edit ki ijazat */
+html body button.lock-ask.lock-ask{min-height:28px!important;padding:3px 10px!important;border-radius:999px!important;font-size:11.5px!important;font-weight:700;background:#fff7e6!important;color:#7a4b00!important;border:1px solid #f3c969!important;box-shadow:none!important;margin:2px 0!important}
+.ea-root{display:flex;flex-direction:column;gap:8px}.ea-row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:14px;background:var(--surf,#fff);border:1px solid rgba(245,158,11,.4)}
+.ea-row>div:first-child{display:flex;flex-direction:column;gap:2px;min-width:0}.ea-row small{font-size:11.5px;color:var(--ink2,#64748b);overflow-wrap:anywhere}.ea-acts{display:flex;flex-direction:column;gap:6px;flex:none}
+.st-gh{display:block;width:100%;margin:8px 0 2px;font-size:12px;font-weight:800;letter-spacing:.3px;color:#0b3d6b;border-bottom:1px dashed rgba(11,61,107,.25);padding-bottom:3px}

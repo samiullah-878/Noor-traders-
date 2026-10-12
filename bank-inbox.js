@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.61';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.62';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -11,6 +11,7 @@ export function bankSetup(o) { O = o || {}; onCount = o.onCount || onCount; }
 const m = v => (O.money ? O.money(v) : 'Rs ' + (v / 100).toLocaleString('en-PK'));
 const who = () => (O.who ? O.who() : {}) || {};
 const canUse = () => (O.canUse ? O.canUse() : false);
+const capOk = k => (O.can ? O.can(k) !== false : true);   // v2.99.62: Settings → Mulazim (hbl.ok / hbl.skip / hbl.pdf)
 export function bankWatch() {
   if (stop || !O.cloud?.listenBankSms || !canUse()) return;
   stop = O.cloud.listenBankSms(list => {
@@ -120,6 +121,7 @@ export function openBankInbox(t) {
 // ---------- ✓ lagao ----------
 async function apply(id, auto = false) {
   const x = rows().pend.find(z => z.d.id === id); if (!x || busy.has(id)) return;
+  if (!auto && !capOk('hbl.ok')) { O.notice?.('Is kaam ki ijazat nahi — malik se kahein'); return; }
   const r = x.r, H = bankOf(r); if (!H) { if (!auto) O.notice?.(acctK(r.acct) ? 'Pehle chunein: yeh kaun sa account hai (A/C …' + acctK(r.acct) + ')' : 'Pehle HBL khata chunein'); return; }
   const w = who(), own = O.owner && O.owner(), today = O.today ? O.today() : '';
   const date = own && r.day && r.day <= today ? r.day : today;
@@ -375,14 +377,14 @@ const fromDay = () => { const t = O.today ? O.today() : new Date().toISOString()
 // ☐ card (abhi nahi laga) — chhota, tick ke saath
 function tickCard(x, compact) {
   const r = x.r, id = esc(x.d.id), cash = r.kind === 'cash', s = cash ? null : sugOf(x), q = qOpen === x.d.id, b = busy.has(x.d.id);
-  const can = !b && !!bankOf(r) && (r.kind === 'bill' ? !!billTo() : (r.dir === 'in' || (cash ? false : !!s)));
+  const can = !b && !!bankOf(r) && capOk('hbl.ok') && (r.kind === 'bill' ? !!billTo() : (r.dir === 'in' || (cash ? false : !!s)));
   const who = !bankOf(r) ? `<small>🏦 A/C …${esc(acctK(r.acct))} — kaun sa account? HBL screen par chunein</small>` : r.kind === 'bill' ? (billTo() ? `🧾 <b>${esc(billTo().name)}</b> <small>bank se · Daily mein nahi</small>` : '<small>🧾 kharcha khata HBL screen par chunein</small>') : r.dir === 'in' ? `🏦 <b>${esc(hbl() ? hbl().name : 'HBL')}</b> <small>Akhrajat</small>` : cash ? (r.dir === 'in' ? '🏦 Cash jama (branch) → "Cash diya" closing se' : '🏧 ATM — khata mein haath se')
     : s && !q ? `👤 <b>${esc(s.p.name)}</b> <small>${esc(s.why)}</small>${compact ? '' : ` <button type="button" class="bk-mini" data-bk-chg="${id}">✏️</button>`}`
     : compact ? '<small>❓ khata nahi mila — HBL screen par chunein</small>' : `<div class="bk-pick"><input type="search" placeholder="🔍 kis ka khata?" data-bk-q="${id}" autocomplete="off"><div class="bk-res" id="bkRes-${id}"></div></div>`;
   return `<div class="bk-row pend ${r.dir}"><label class="bk-tick${can ? '' : ' off'}"><input type="checkbox" data-bk-tick="${id}"${can ? '' : ' disabled'}${b ? ' checked' : ''}><span></span></label>
     <div class="bk-rw"><div class="bk-rl"><b>${esc(r.name || '—')}</b><b class="bk-amt ${r.dir === 'in' ? 'green' : 'red'}">${r.dir === 'in' ? '+' : '−'}${m(r.amt)}</b></div>
     <small>${x.d.src === 'email' ? '✉️' : '💬'} ${esc([r.bank, r.via, r.time, r.txn ? 'TXN ' + r.txn : ''].filter(Boolean).join(' · '))}</small><div class="bk-rs">${b ? '⏳ lag raha hai…' : who}</div></div>
-    <div class="bk-side">${noteBtn(r.txn, 'p:' + x.d.id)}${compact ? '' : `<button type="button" class="bk-x" title="Chhoro" data-bk-skip="${id}">✕</button>`}</div></div>`;
+    <div class="bk-side">${noteBtn(r.txn, 'p:' + x.d.id)}${compact || !capOk('hbl.skip') ? '' : `<button type="button" class="bk-x" title="Chhoro" data-bk-skip="${id}">✕</button>`}</div></div>`;
 }
 function doneRow(v) {
   const txn = (String(v.note).match(/TXN (\S+)/) || [])[1] || '', src = v.e ? (docs || []).find(d => d.st === 'done' && d.entryId && (d.entryId === v.e.transferId || String(d.entryId).split('|').includes(v.e.id))) : null;
@@ -449,7 +451,7 @@ function hitQ(q, parts, amt) { if (!q) return true; const dig = q.replace(/[^\d]
 function pPend(x) {
   const r = x.r, id = esc(x.d.id), cash = r.kind === 'cash', s = cash ? null : sugOf(x), q = qOpen === x.d.id, b = busy.has(x.d.id), t = O.today ? O.today() : '';
   const old = !!(r.day && r.day < t), inn = r.dir === 'in', bill = r.kind === 'bill', B = bankOf(r);
-  const can = !b && !!B && (bill ? !!billTo() : (inn || (cash ? false : !!s)));
+  const can = !b && !!B && capOk('hbl.ok') && (bill ? !!billTo() : (inn || (cash ? false : !!s)));
   const meta = [r.bank, r.via, r.time].filter(Boolean).map(esc).join(' · ');
   const who = acctAskHTML(x) + (bill ? billWhoHTML(x) : inn ? `<div class="bkp-who"><span class="bkp-pk">🏦 Khata</span><b>${esc(B ? B.name : (hbl() ? hbl().name : 'HBL'))}</b><small>Daily: Akhrajat</small></div>`
     : cash ? `<div class="bkp-who cash">🏦 ${r.dir === 'in' ? 'Branch mein cash jama → "Cash diya" (closing se)' : 'ATM se nikala — khata mein haath se'}</div>`
@@ -460,7 +462,7 @@ function pPend(x) {
     <div class="bkp-mid"><div class="bkp-top"><b class="bkp-nm">${esc(r.name || '—')}</b><span class="bkp-badge ${old ? 'old' : 'new'}">${old ? '📅 ' + esc(dShow(r).split(' · ')[0]) + ' · purana' : 'NAYA'}</span></div>
       <div class="bkp-meta">${x.d.src === 'email' ? '✉️' : '💬'} ${meta}${r.txn ? ` <span class="bkp-txn">${esc(r.txn)}</span>` : ''}</div>${who}
       ${old ? `<div class="bkp-q">📅 Yeh <b>${esc(dShow(r).split(' · ')[0])}</b> ka purana len-den hai — khate mein lagana hai?</div>` : ''}
-      <div class="bkp-acts"><button type="button" class="bkp-go" data-bk-ok="${id}"${can ? '' : ' disabled'}>${b ? '⏳ Lag raha hai…' : old ? '✓ Haan, lagao' : r.dir === 'out' ? '✓ Khate mein lagao' : '✓ Lagao'}</button><button type="button" class="bkp-no" data-bk-skip="${id}"${b ? ' disabled' : ''}>${old ? '✕ Nahi' : '✕'}</button>${noteBtn(r.txn, 'p:' + x.d.id).replace('bk-nb', 'bkp-ic bk-nb')}</div></div>
+      <div class="bkp-acts"><button type="button" class="bkp-go" data-bk-ok="${id}"${can ? '' : ' disabled'}>${b ? '⏳ Lag raha hai…' : old ? '✓ Haan, lagao' : r.dir === 'out' ? '✓ Khate mein lagao' : '✓ Lagao'}</button>${capOk('hbl.skip') ? `<button type="button" class="bkp-no" data-bk-skip="${id}"${b ? ' disabled' : ''}>${old ? '✕ Nahi' : '✕'}</button>` : ''}${noteBtn(r.txn, 'p:' + x.d.id).replace('bk-nb', 'bkp-ic bk-nb')}</div></div>
     <div class="bkp-amt ${r.dir}">${r.dir === 'in' ? '+' : '−'}${m(r.amt)}<small>⏳ Baqi</small></div></article>`;
 }
 function pDone(v) {
@@ -513,7 +515,7 @@ export function renderHbl() {
   if (qOpen) { const i = $('list').querySelector(`[data-bk-q="${CSS.escape(qOpen)}"]`); if (i) { i.value = qv || ''; i.focus(); search(i); } }
   if (own && !pstop && O.cloud?.listenPrintConfig) pstop = O.cloud.listenPrintConfig(c => { pcfg = c || {}; if (onScreen()) renderHbl(); if (prnOpen()) $('dialogBody').innerHTML = prnHTML(); });
   const pOn = !pcfg || pcfg.bankPost !== false;
-  $('actions').innerHTML = `${own ? `<button type="button" data-hbl-print="${pOn ? '0' : '1'}" title="Aaye paise Server PC khud HBL khate mein lagaye + parchi">${pOn ? '🤖 Auto ON' : '🤖 Auto BAND'}</button>` : ''}${H ? '<button type="button" data-hbl-khata="1">📒 HBL khata</button>' : ''}${own ? '<button type="button" data-prn-open="1">🖨 Printer</button><button type="button" data-bk-inbox="setup">⚙️ Setup</button>' : ''}<button type="button" data-hbl-pdf="1">📄 PDF · bhejo</button>`;
+  $('actions').innerHTML = `${own ? `<button type="button" data-hbl-print="${pOn ? '0' : '1'}" title="Aaye paise Server PC khud HBL khate mein lagaye + parchi">${pOn ? '🤖 Auto ON' : '🤖 Auto BAND'}</button>` : ''}${H ? '<button type="button" data-hbl-khata="1">📒 HBL khata</button>' : ''}${own ? '<button type="button" data-prn-open="1">🖨 Printer</button><button type="button" data-bk-inbox="setup">⚙️ Setup</button>' : ''}${capOk('hbl.pdf') ? '<button type="button" data-hbl-pdf="1">📄 PDF · bhejo</button>' : ''}`;
 }
 // ================= v2.99.58 🖨 PRINTER KI HAALAT (TM-T88IV) — printConfig.voucherLog / vLast / vErr / vAlive (pos-khata-sync likhta hai) =================
 const prnOpen = () => !!document.querySelector('#dialogBody .prn-root');

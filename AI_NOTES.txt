@@ -4177,3 +4177,21 @@ Malik: "Sale screen (Daily Sale) mein sale auto aani chahiye, farq wale account 
   (PC raat ko band ho to aakhri sale). Haath wala Sale khana wesa hi khula (malik ka faisla) — dhyan: haath se wohi POS sale dobara na likhein.
 - app: canEditEntry / canDeleteEntry — posAuto entry par Edit / Delete nahi (PC hi badalta hai).
 - Test: scratchpad ps.cjs (sum, likhna, dobara nahi, update, 0 = hata).
+
+2026-10-13 — app v2.99.62 · RULES 2.46 (firestore-rules-2.46.html — malik publish kare)
+Malik: (1) Settings → Mulazim mein Khata screen ka option nahi, Stock bhi Full app mein; "har screen aur har screen ke andar ke chips"
+(2) "jo aik baar print ho jaye wo malik ki ijazat ke bina edit na ho sake".
+- CAPS.full ab group wala: ['#','heading'] = screen ka sar (capRows() render, CAP_SCR naye prefix hb./d./fp./hbl. -> full). Naye keys:
+  v:khata, kh.totals, kh.band, kh.del, kh.reminder, kh.dasti, kh.photo · hb.agent/due/bank/day/sync · d.sale/wasooli/akhrajat/closing/ai/
+  pics/hbl · fp.pos/add/sup/milao/prn · hbl.ok/skip/pdf (bank-inbox O.can -> capOk). Purane keys wahi (deny list = band; default sab chalu).
+  stForm: Full ke neeche "🔁 Doosri screens" (name=pmx) = upar wale perms (stock, sale, purchase, galla, nazar, gaari) ka aaina — sync.
+  Full scope mulazim ke perms mein stock ho to stockNav dikhta hai; route() ab full se bhi switchQuiet (perms) karta hai.
+  v:khata band = khataNav chhupa + khali khata list ki jagah pehli ijazat wali screen (party detail phir bhi khulti hai, Due se).
+- 🔒 printLocked(e): mulazim + e.posPrintedAt + editOk 30 min se purana = canEditEntry / canDeleteEntry / canEditPurchase false.
+  printChip ke saath lockChip: "🔒 Chhap chuki — edit ki ijazat mangein" (data-edit-ask) -> notes doc 'ea<entryId>' (kind note, transferId
+  'edit:<id>', remindDay aaj, remindTime abhi = Reminder push ka raasta). Malik: upar chip "✏️ N edit ijazat" (data-hb="edit") -> modal ✓ Ijazat
+  (entry.editOk = Date.now(), editOkBy) / ✕ Nahi; note done. Rules 2.46 printOpen(): posPrintedAt ho to editOk > abhi-30min ya sirf
+  posBill/posBillIds/posDiffOk jorna — staff purchase update, delete (deleted=true) aur staffEditEntry teeno par.
+  Dhyan: Sirf Purchase wala mulazim notes nahi likh sakta (rules) — us ki ijazat request nahi jayegi (Full wala ja sakta hai).
+- Test: scratchpad lock.cjs (lock, chip, intezar, 30 min, malik azad, caps duplicate nahi). Rules emulator yahan nahi chal saka
+  (jar download band) — sirf qaus / brackets jaanche; Firebase console publish par khud jaanchta hai.
