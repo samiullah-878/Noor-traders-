@@ -4047,3 +4047,14 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 - 🤖 autoRun: naam alias ('yaad' — malik ne pehle khud chuna) ho to SMS/email aate hi khud lagta hai (snapshot ke 1.5-4 s baad + har 45 s).
   Fail ho to us session mein dobara koshish nahi (autoFail). Cash deposit auto nahi. Koi phone (malik/Full) app khole to chalta hai.
 - Test: scratchpad hd/hbl2.mjs.
+
+== v2.99.47 (2026-10-12) 💎 Premium HBL screen + GAYE seedha khate mein + purani tareekh pehle poocho + search ==
+- Malik: GAYE (HBL se kisi ko) Daily mein NAHI — "kis ko diya?" poochh kar seedha khate mein (O.pay transfer HBL -> party). AAYE pehle jaisa: Wasooli + Akhrajat jora (Daily).
+- 🤖 autoRun sirf AAJ ke (r.day === today) yaad naam. Purani tareekh: card par "📅 … purana — lagana hai?" + "✓ Haan, lagao" / "✕ Nahi"; Daily column tick par confirm().
+- fixOnce (malik phone, ek dafa, alias['@fix47']): gaye wale jore (w|a) -> transfer + jore delete; alias 'samih ullah' hataya.
+- Home chips: 📩 HBL N · 💸 Kis ko diya? N · 📅 Purane N (bankCounts()).
+- Premium sirf HBL screen (.bkp*): hero gradient card (account, baqaya, 7 din sparkline, Aaye/Gaye stats), segmented tabs, sticky din header, avatar rows,
+  pending = sunehri card (NAYA) / purana = neela, bara ✓ Lagao, chhote 🔔/↩ icons, ⓘ details. Daily ka HBL column purane tickCard/doneRow se.
+  Themes ke !important ko haraane ke liye html .summary>div.bkp-hero.bkp-hero aur html body .bkp … double-class selectors.
+- Search: header #search (naam / raqam digits / TXN / note) HBL screen filter karta hai. Mic nahi (malik ne mana kiya).
+- Test: scratchpad hd/hbl3.mjs (hbl.mjs hata diya), hbl2.mjs.
