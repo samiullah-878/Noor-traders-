@@ -2738,3 +2738,5 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
   + samaan ki tasveer (goodsPhotos[0] entry ya entryPhotos/<id>) chhoti 256 dots (aadha kaghaz) cut se pehle. Bill ki tasveer NAHI. pn>0 aur tasveer na mili = 3 min ruko.
   Dobara: printJobs id 'PUR:<entryId>'.
 - photo-print.js: data:image/jpeg -> grey -> contrast -> Floyd-Steinberg -> ESC/POS GS v 0 (beech mein). jpeg-decode.js = jpeg-js 0.4.4 decoder (BSD-3, license upar).
+
+2026-10-12 (manifest 2026-10-12.11) pos-khata-sync ⚡ TEZ RAASTA: nayi app entry (payment/wasooli/udhar) aate hi kick() -> quickRun() FORAN (poora sync chal raha ho tab bhi). quickEntries apne SQL pool (qPoolGet, max 2) se sirf usi entry ka voucher + parchi; inFlight/syncMine lock taake poora sync wohi entry dobara na banaye; posWriteVoucher ab lock (pwvLock) ke saath aik waqt mein aik. printExpenses/printPurchases bhi quickRun mein. Shart: lastAcct (pichhla poora sync), link nahi, POS mein [app:id] nahi, 30 min ke andar bani.

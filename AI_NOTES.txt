@@ -4125,3 +4125,5 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 == v2.99.58 (2026-10-12) 🔔 Reminder: notes upar · tab Khata ke saath ==
 - notes.js paint: search + tabs + NOTES list sab se upar, phir "Accounts ke due", phir al-box / po-box (order / bazaar list) / Google contacts.
 - index.html: notesNav (🔔 Reminder) ab khataNav ke foran baad.
+
+2026-10-12 (manifest 2026-10-12.11) pos-khata-sync ⚡ TEZ RAASTA: nayi app entry (payment/wasooli/udhar) aate hi kick() -> quickRun() FORAN (poora sync chal raha ho tab bhi). quickEntries apne SQL pool (qPoolGet, max 2) se sirf usi entry ka voucher + parchi; inFlight/syncMine lock taake poora sync wohi entry dobara na banaye; posWriteVoucher ab lock (pwvLock) ke saath aik waqt mein aik. printExpenses/printPurchases bhi quickRun mein. Shart: lastAcct (pichhla poora sync), link nahi, POS mein [app:id] nahi, 30 min ke andar bani.
