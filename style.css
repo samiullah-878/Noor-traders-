@@ -3155,3 +3155,4 @@ html body button.lock-ask.lock-ask{min-height:28px!important;padding:3px 10px!im
 .ea-root{display:flex;flex-direction:column;gap:8px}.ea-row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:14px;background:var(--surf,#fff);border:1px solid rgba(245,158,11,.4)}
 .ea-row>div:first-child{display:flex;flex-direction:column;gap:2px;min-width:0}.ea-row small{font-size:11.5px;color:var(--ink2,#64748b);overflow-wrap:anywhere}.ea-acts{display:flex;flex-direction:column;gap:6px;flex:none}
 .st-gh{display:block;width:100%;margin:8px 0 2px;font-size:12px;font-weight:800;letter-spacing:.3px;color:#0b3d6b;border-bottom:1px dashed rgba(11,61,107,.25);padding-bottom:3px}
+html body button.pu-more-btn{width:100%;min-height:44px!important;border-radius:14px!important;font-weight:800;background:var(--surf,#fff)!important;color:#0b2545!important;border:1px dashed rgba(11,37,69,.3)!important;box-shadow:none!important}

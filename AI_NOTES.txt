@@ -4195,3 +4195,13 @@ Malik: (1) Settings → Mulazim mein Khata screen ka option nahi, Stock bhi Full
   Dhyan: Sirf Purchase wala mulazim notes nahi likh sakta (rules) — us ki ijazat request nahi jayegi (Full wala ja sakta hai).
 - Test: scratchpad lock.cjs (lock, chip, intezar, 30 min, malik azad, caps duplicate nahi). Rules emulator yahan nahi chal saka
   (jar download band) — sirf qaus / brackets jaanche; Firebase console publish par khud jaanchta hai.
+
+2026-10-13 — app v2.99.63 ⚡ PURCHASE SCREEN TEZ (malik: "apps bahut slow, jis par bhi click karta hoon lag")
+- Wajah (meri v2.99.60 ki ghalti): har POS bill par puState / pickCandidates / cashLinkedTo / quickPair poori entries list baar baar chhaante
+  the + autoLinkMulti har render par O(n²). 6000 bill + 20k entries par purana render 170 s+ (node), naya ~0.1 s.
+- linkIx(): entries() (indexData ka cached array) badle tab aik dafa: linked (posId -> larke ki entry), open (khaali larke wali), openBy
+  (party), openAmt (raqam), posBy (party ke khule POS bill), cand / st cache (st gaariMap badle to saaf). cashLinkedTo / cashCandidates /
+  otherPartyCandidates / pickCandidates / puState / quickPair / autoLinkMulti sab isi se.
+- autoLinkPurchases + autoLinkMulti sirf data badle par aik dafa (X.auto, 400 ms baad). Hero ginti aik loop. List pehle 120 card
+  ("⬇ Aur N dikhao" +150, filter badle to 120).
+- Test: scratchpad pu/bench.cjs (naya ~100 ms / render), bench_old.cjs (purana 170 s mein khatam nahi), pu/logic.cjs.
