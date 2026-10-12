@@ -2698,3 +2698,10 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
   HBL parchi: upar GS B (ulta) + GS ! 0x33 bara " HBL ", "NOOR TRADERS 0345…", unwan "HBL MEIN PAISE AAYE" / "HBL SE PAISE GAYE",
   BARCODE NAHI (voucher no chhoti line), bari raqam ke neeche aur Ab baqaya ke neeche inWords() — "Rupees One Lakh … Only" (lakh/crore).
   Baqi sab vouchers pehle jaise (barcode ke saath). Asli HBL logo nahi (trademark) — sirf bare harf.
+
+== 2026-10-12 manifest 2026-10-12.4: bank-parchi v2.0 — 🤖 AAYE paise Server PC khud HBL khate mein ==
+- Malik: "jo bhi raqam account mein aa rahi hai wo isi default account HBL Noor Traders mein aaye … foran print". Aaj (PKT) ka AAYE SMS/email ->
+  blueKhata/bk<docId>a {type entry, kind payment, partyId = bankSms/_alias m['@hbl'], dailyIncluded true, bankSms, by/updatedBy 'pc-bank', rev 1}
+  + bankSms doc st 'done'. pos-khata-sync (updatedBy != pos-sync => kick foran) CPV banata hai aur HBL parchi chhapta hai.
+  PC band tha to chalu hote hi aaj ke reh gaye (freshness check post ke baad). Purani tareekh / GAYE = app mein malik.
+  printConfig.bankPost (default ON; app "🤖 Auto ON/BAND"). Chhoti "PAISE AAYE" parchi ab default BAND (printConfig.bankSlip=true par).

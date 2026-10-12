@@ -1,5 +1,5 @@
 // =========================================================
-//  bank-parchi.js  v1.0 (2026-10-12) — 💰 PAISE AAYE ki parchi (Server PC, TM-T88IV)
+//  bank-parchi.js  v2.0 (2026-10-12) — 🤖 aaye paise khud HBL khate mein (neeche) · v1.0 — 💰 PAISE AAYE ki parchi (Server PC, TM-T88IV)
 //  Malik: "jaise hi koi paisa aya usi time computer se print bi nikl aiya".
 //  📩 HBL Inbox (Firestore bankSms) mein naya SMS / email aate hi -> parchi: raqam (bara), kis se, bank, via, waqt, TXN.
 //  Sirf PARHTA hai (kuch nahi likhta, sirf printConfig.bankLast). Wahi TXN do dafa nahi chhapta (bank-print.json).
@@ -82,32 +82,58 @@ function slipText(r, head, W = 42) {
   out.push('-'.repeat(W), r.kind === 'cash' ? 'Branch mein cash jama hua' : 'App: HBL screen par [ ] tick karein', '(khata mein tab lagega)', '', '', '', GS + 'V' + '\x42' + '\x00');
   return out.join('\r\n');
 }
+// v2.0 (2026-10-12): 🤖 PAISE AAYE = Server PC KHUD khate mein — malik: "jo bhi raqam account mein aa rahi hai wo isi default account
+//   HBL Noor Traders mein aaye … jaise hi payment update ho foran print niklin". Aaj ka AAYE SMS/email aate hi blueKhata mein entry:
+//   id 'bk<docId>a', kind 'payment', partyId = HBL (bankSms/_alias m['@hbl']), dailyIncluded true (Daily: Akhrajat = galla ka paisa bank gaya).
+//   Phir pos-khata-sync isay POS voucher banata hai aur HBL wali parchi (bara HBL, lafzon mein) foran chhapta hai — is liye yahan ki chhoti
+//   "PAISE AAYE" parchi ab default BAND (printConfig.bankSlip = true ho to chhapti hai). Purani tareekh / gaye = app mein malik se poochho.
+//   Setting printConfig.bankPost (default ON). App bhi yahi ID likhti hai — dono likhen to bhi ek hi entry.
+const pktDay = ms => new Date(ms + 5 * 3600000).toISOString().slice(0, 10);
+const noteOf = r => (`HBL aaye · ${r.name}${r.bank ? ' (' + r.bank + ')' : ''}${r.via ? ' · ' + r.via : ''}${r.txn ? ' · TXN ' + r.txn : ''}`).slice(0, 900);
 function createBankWatcher({ biz, log, sendRaw, head, stateFile, cfgRef, now = () => Date.now(), freshMs = 30 * 60000 }) {
   let seen = {}; try { seen = JSON.parse(fs.readFileSync(stateFile, 'utf8')) || {}; } catch {}
   const save = () => { const ks = Object.entries(seen).sort((a, b) => b[1] - a[1]).slice(0, 400); seen = Object.fromEntries(ks); try { fs.writeFileSync(stateFile, JSON.stringify(seen)); } catch {} };
-  let cfg = { bankAuto: true, bankOut: false }, stopA = null, stopB = null;
+  let cfg = { bankAuto: true, bankOut: false, bankPost: true, bankSlip: false }, stopA = null, stopB = null, hblId = '';
+  const khata = () => biz.collection('blueKhata');
+  async function post(doc, d, r) {
+    if (!cfg.bankPost || !hblId || r.dir !== 'in' || d.st) return '';
+    if (!r.day || r.day !== pktDay(now())) return '';   // purani tareekh: app mein malik se poochho
+    const id = 'bk' + doc.id + 'a', ref = khata().doc(id);
+    const ex = await ref.get(); if (ex.exists && !ex.data().deleted) return 'pehle-se';
+    const t = now();
+    await ref.set({ id, type: 'entry', kind: 'payment', partyId: hblId, amount: r.amt, date: r.day, note: noteOf(r), dailyIncluded: true, posPending: false, bankSms: doc.id,
+      by: 'pc-bank', updatedBy: 'pc-bank', createdAt: t, updatedAt: t, rev: 1 });
+    await biz.collection('bankSms').doc(doc.id).set({ st: 'done', by: 'pc-bank', byName: 'Server PC', doneAt: t, partyId: hblId, entryId: id, kind: 'party' }, { merge: true });
+    log(`🤖 HBL khud laga: ${rs(r.amt)} — ${ascii(r.name)} -> HBL (Akhrajat)`);
+    return 'laga';
+  }
   async function handle(doc) {
     const d = doc.data ? doc.data() : doc; if (!d || !d.text || doc.id === '_alias') return 'skip';
-    const created = doc.createTime && doc.createTime.toMillis ? doc.createTime.toMillis() : Number(d.at) || now();
-    if (now() - created > freshMs) return 'purana';
     const r = parseBank(d.text, d.src, d.subj); if (!r.ok) return 'samajh-nahi';
+    let posted = '';
+    try { posted = await post(doc, d, r); } catch (e) { log('HBL khud nahi laga: ' + e.message); }   // aaj ka ho to PC band tha tab bhi (chalu hote hi)
+    const created = doc.createTime && doc.createTime.toMillis ? doc.createTime.toMillis() : Number(d.at) || now();
+    if (now() - created > freshMs) return posted || 'purana';
     // asal len-den ka waqt (email: d.at · SMS: din + waqt) — 'dobara' se aaye purane len-den nahi chhapte
     const tx = Number(d.at) || (r.day ? new Date(`${r.day}T${r.time || '12:00'}:00+05:00`).getTime() : 0);
-    if (tx && now() - tx > 3 * 3600000) return 'purana';
-    const k = bankKeyOf(r); if (seen[k] || seen['D' + doc.id]) return 'chhap-chuka';
+    if (tx && now() - tx > 3 * 3600000) return posted || 'purana';
+    const k = bankKeyOf(r); if (seen[k] || seen['D' + doc.id]) return posted || 'chhap-chuka';
     seen[k] = now(); seen['D' + doc.id] = now(); save();
-    if (!cfg.bankAuto) return 'band';
-    if (r.dir === 'out' && !cfg.bankOut) return 'gaye-band';
+    if (!cfg.bankAuto || !cfg.bankSlip) return posted || 'band';   // v2.0: asal parchi pos-khata-sync ki HBL parchi
+    if (r.dir === 'out' && !cfg.bankOut) return posted || 'gaye-band';
     await sendRaw(slipText(r, head), 'HBL ' + rs(r.amt));
     log(`💰 HBL parchi: ${r.dir === 'in' ? 'aaye' : 'gaye'} ${rs(r.amt)} — ${ascii(r.name)}`);
     try { cfgRef && await cfgRef.set({ bankLast: now() }, { merge: true }); } catch {}
     return 'chhapa';
   }
   function start(onFail) {
-    if (cfgRef && cfgRef.onSnapshot) stopA = cfgRef.onSnapshot(s => { const x = s.exists ? (s.data() || {}) : {}; cfg = { bankAuto: x.bankAuto !== false, bankOut: x.bankOut === true }; }, () => {});
-    stopB = biz.collection('bankSms').onSnapshot(s => { s.docChanges().forEach(c => { if (c.type === 'added') handle(c.doc).catch(e => log('HBL parchi masla: ' + e.message)); }); }, e => onFail && onFail(e));
-    log('💰 HBL parchi chalu — naya SMS / email aate hi parchi (setting: printConfig.bankAuto)');
+    if (cfgRef && cfgRef.onSnapshot) stopA = cfgRef.onSnapshot(s => { const x = s.exists ? (s.data() || {}) : {}; cfg = { bankAuto: x.bankAuto !== false, bankOut: x.bankOut === true, bankPost: x.bankPost !== false, bankSlip: x.bankSlip === true }; }, () => {});
+    stopB = biz.collection('bankSms').onSnapshot(s => {
+      for (const c of s.docChanges()) if (c.doc.id === '_alias' && c.type !== 'removed') hblId = String(((c.doc.data() || {}).m || {})['@hbl'] || '');
+      s.docChanges().forEach(c => { if (c.type === 'added' && c.doc.id !== '_alias') handle(c.doc).catch(e => log('HBL masla: ' + e.message)); });
+    }, e => onFail && onFail(e));
+    log('🤖 HBL chalu — aaj ke AAYE paise khud HBL Noor Traders mein (printConfig.bankPost), parchi pos-khata-sync se');
   }
-  return { start, stop: () => { stopA && stopA(); stopB && stopB(); }, handle, _cfg: c => { cfg = { ...cfg, ...c }; } };
+  return { start, stop: () => { stopA && stopA(); stopB && stopB(); }, handle, _cfg: c => { cfg = { ...cfg, ...c }; }, _hbl: id => { hblId = id; } };
 }
 module.exports = { createBankWatcher, parseBank, slipText, bankKeyOf };

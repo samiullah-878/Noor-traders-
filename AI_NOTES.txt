@@ -4060,3 +4060,10 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 - Test: scratchpad hd/hbl3.mjs (hbl.mjs hata diya), hbl2.mjs.
 
 == 2026-10-12 (PC) HBL parchi: pc/pos-khata-sync.js — bara "HBL", barcode nahi, raqam/baqaya lafzon mein (manifest 2026-10-12.3). Tafseel pc/AI_NOTES.txt ==
+
+== v2.99.48 (2026-10-12) AAYE = seedha HBL Noor Traders (koi khata nahi poochna) · Server PC khud lagata hai ==
+- Malik: "account select wala option payment aane par nahi … sirf payment dene par". AAYE (SMS/email, cash deposit bhi) = ek entry
+  bk<docId>a kind 'payment' partyId HBL, dailyIncluded true (Daily: Akhrajat). Pehle ke jore (Wasooli+Akhrajat) waise hi chhoRe ("jo ho gaya so ho gaya").
+- autoRun: aaj ke sab AAYE khud (4 s ruk kar — PC pehle laga de to dobara nahi); GAYE sirf yaad naam. Purani tareekh pehle poochho (pehle jaisa).
+- ↩ undo single entry (bk…a) bhi. Naam: SMS wala naam (HBL khud nahi). Action button "🤖 Auto ON/BAND" = printConfig.bankPost.
+- PC: pc/bank-parchi.js v2.0 (manifest 2026-10-12.4). Tests: hd/hbl3.mjs, bp/t2.js.
