@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.51';
-import { liveLabelsHTML } from './barcode.js?v=2.99.51';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.52';
+import { liveLabelsHTML } from './barcode.js?v=2.99.52';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -463,7 +463,7 @@ function renderStockInner() {
       <p class="stat-note">Ya naam / code search karein.</p>` : '');
 }
 
-// ================= v2.99.51 💎 FARQ TAB (premium) + 🧾 ginti ke baad bill ka nishan =================
+// ================= v2.99.52 💎 FARQ TAB (premium) + 🧾 ginti ke baad bill ka nishan =================
 // PC (post-farq v13) count doc par `later` likhta hai = ginti ke BAAD is item ki POS harkat (sale / purchase). Aisa item farq bill
 // mein tab tak NAHI jata jab tak dobara na gina jaye (recount) ya malik "Phir bhi shamil karo" (forceBill) na kare.
 const lateOf = c => (c && Array.isArray(c.later) && c.later.length && !c.recount && !c.forceBill && c.laterFor === c.at) ? c.later : null;
@@ -485,13 +485,13 @@ function farqCardHTML(r) {
       ${L.slice(0, 5).map(m => `<span>${m.kind === 'sale' ? '🛒 Sale' : m.kind === 'purchase' ? '📦 Purchase' : '⇄'} ${m.qty > 0 ? '+' : ''}${num(m.qty)} ${u} · ${esc(hm(m.at))}${m.ref ? ' · ' + esc(m.ref) : ''}</span>`).join('')}
       ${match ? '<small>⚠️ Farq aur bill ki tadad barabar — shayad late bill tha, asal farq nahi</small>' : ''}
       ${isOwner() ? `<button type="button" class="fq-force" data-fq-force="${esc(r.id)}">Phir bhi farq bill mein shamil karo</button>` : ''}</div>` : '';
-  const tag = c.recount ? '<i class="fq-tag ok">✓ Dobara gina</i>' : c.forceBill ? '<i class="fq-tag">Malik: bill mein shamil</i>' : '';
+  const tag = c.recount ? '<i class="fq-tag ok">✓ Dobara gin liya — theek hai</i>' : c.forceBill ? '<i class="fq-tag">Malik: bill mein shamil</i>' : '';
   return `<article class="fq-card ${d < 0 ? 'kam' : 'zy'}${L ? ' late' : ''}" data-stock-row="${esc(r.id)}">
     <div class="fq-top"><div class="fq-nm"><b>${esc(r.name)}</b><small>${[r.code || '', r.prate ? 'Khareed ' + num(r.prate) : '', 'Gina ' + stampText(c.at)].filter(Boolean).map(esc).join(' · ')}</small>${tag}</div>
       <div class="fq-amt"><b>${d > 0 ? '+' : ''}${num(d)} ${u}</b>${r.prate ? `<small>Rs ${d > 0 ? '+' : ''}${num(Math.round(d * r.prate))}</small>` : ''}</div></div>
     <div class="fq-chips"><span><small>Gina</small><b>${fmt(got)}</b></span><span><small>System (us waqt)</small><b>${fmt(sys)}</b>${sysSure(c) ? '' : '<em>PC tasdeeq baqi</em>'}</span><span><small>Abhi system</small><b>${fmt(Number(r.stock) || 0)}</b></span></div>
     ${lateBox}
-    <details class="fq-re"${L ? ' open' : ''}><summary>✏️ Dobara gino</summary>${countLocked() || !round ? '<small class="stat-note">Ginti abhi band hai</small>' : `<div class="pos-dates">
+    <details class="fq-re${L ? ' must' : ''}"${L ? ' open' : ''}><summary>${L ? '✏️ Dobara gino (zaroori)' : '✏️ Ginti badalni ho to (zaroori nahi)'}</summary>${countLocked() || !round ? '<small class="stat-note">Ginti abhi band hai</small>' : `<div class="pos-dates">
       <label>Ctn<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-ctn="${esc(r.id)}" value=""></label>
       <label>${u}<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-pcs="${esc(r.id)}" value=""></label>
       <label>Kul ${u}<input type="number" step="any" inputmode="decimal" style="width:5.6em" data-count-tot="${esc(r.id)}" value=""></label>
@@ -1962,7 +1962,7 @@ async function writeCount(item, v, add = null, tick = false) {
   if (add) { h.add = { ctn: add.ctn, pcs: add.pcs, total: add.total }; if (add.note) h.note = add.note; }
   if (tick) h.tick = true;
   const history = [...past, h].slice(-20);
-  // v2.99.51: ginti ke baad bill bana tha (later) aur ab dobara gina = recount (farq bill mein ab shamil ho sakta hai)
+  // v2.99.52: ginti ke baad bill bana tha (later) aur ab dobara gina = recount (farq bill mein ab shamil ho sakta hai)
   const re = !!(old && (old.recount || (Array.isArray(old.later) && old.later.length)));
   await cloud.saveStockCount({
     id: countId(pickedBranch, item.id),

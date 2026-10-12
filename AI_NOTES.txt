@@ -4087,3 +4087,7 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 == v2.99.51 (2026-10-12) 🧾 kharcha ki parchi bhi ==
 - Akhrajat entries POS mein nahi jati thi is liye parchi nahi nikalti thi. Ab Server PC (pos-khata-sync, manifest 2026-10-12.7) aaj ki har kharcha entry ki
   "KHARCHA VOUCHER" parchi khud nikalta hai. printChip: kharcha par code 'EXP:<id>' (✓ Chhapi / ⚠️ / ⏳ 10 min) + 🖨 Dobara print.
+
+== v2.99.52 (2026-10-12) farq card ke alfaaz saaf ==
+- Malik confuse hua (mujahid oil — na sale na purchase, phir "dobara gino" kyun). Ab: "✓ Dobara gin liya — theek hai" (pehle hi gina ja chuka),
+  aur bina bill wale card par neeche halka "✏️ Ginti badalni ho to (zaroori nahi)"; sirf 🧾 wale card par "✏️ Dobara gino (zaroori)".
