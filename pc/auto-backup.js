@@ -1,5 +1,5 @@
 // ============================================================
-//  auto-backup.js  v1.5 (2026-10-12: 🚚 transfer note 10 min mein check na ho = notification) · v1.0 (2026-10-05) — ☁️ AUTO BACKUP: din mein 2 dafa (app ki Settings se waqt) poora khata JSON mein,
+//  auto-backup.js  v1.6 (2026-10-12: cancel note par notification nahi, edit = nayi check) · v1.5 (🚚 transfer note 10 min mein check na ho = notification) · v1.0 (2026-10-05) — ☁️ AUTO BACKUP: din mein 2 dafa (app ki Settings se waqt) poora khata JSON mein,
 //  C:\khata-sync\backups mein + Google Drive for Desktop ke folder ("Blue Khata Backup") mein — Drive khud upload karta hai.
 //
 //  App (Settings -> 💾 Backup -> ☁️ Auto backup) blueAccess/backupConfig likhti hai: {on, email, times:['14:00','22:00'], now}
@@ -169,14 +169,15 @@ function trWatch() {
     base.collection('transferChecks').where('issuedAt', '>=', since).onSnapshot(s => s.docChanges().forEach(c => { if (c.type === 'removed') trChecks.delete(c.doc.id); else trChecks.add(c.doc.id); }), fail('transferChecks'))
   ];
 }
-function trList() {
-  const L = [...trPos.values()], ids = new Set(L.map(t => String(t.transferId)));
-  for (const j of trJobs.values()) { if (j.op === 'delete' || j.status !== 'done' || !j.transferId || ids.has(String(j.transferId))) continue;
+function trList() {   // v1.6: cancel (POS mein mita / app se delete) shamil nahi
+  const dels = new Set([...trJobs.values()].filter(j => j.op === 'delete' && j.status === 'done' && j.transferId).map(j => String(j.transferId)));
+  const L = [...trPos.values()].filter(t => !t.cancelled && !dels.has(String(t.transferId))), ids = new Set([...trPos.values()].map(t => String(t.transferId)));
+  for (const j of trJobs.values()) { if (j.op === 'delete' || j.status !== 'done' || !j.transferId || ids.has(String(j.transferId)) || dels.has(String(j.transferId))) continue;
     L.push({ id: 'T' + j.transferId, transferId: j.transferId, transferNo: String(j.transferNo || ''), from: j.from, to: j.to, createdOn: Number(j.doneAt) || Number(j.at) || 0, lines: j.lines || [] }); }
   return L;
 }
 function trDue(t, now = Date.now(), hour = new Date().getHours()) {
-  const key = String(t.id || ('T' + t.transferId)), age = now - trIssued(t);
+  const ed = Number(t.editCount) > 0, key = String(t.id || ('T' + t.transferId)) + (ed ? 'E' + Number(t.editCount) : ''), age = now - (ed && Number(t.editedAt) ? Number(t.editedAt) : trIssued(t));   // v1.6: edit = nayi check
   if (trChecks.has(key) || !(trIssued(t) > 0) || age < TR_FIRST || age > TR_MAX || hour < 7 || hour >= 23) return null;
   const last = Number(trSent[key]) || 0;
   return !last || now - last >= TR_EVERY - 20000 ? { key, mins: Math.round(age / 60000) } : null;
@@ -196,7 +197,7 @@ async function trNotify() {
     if (!tokens.length) { log('🚚 transfer check: koi push token nahi'); continue; }
     const late = d.mins >= 60 ? Math.floor(d.mins / 60) + ' ghante ' + (d.mins % 60) + ' min' : d.mins + ' min';
     const n = Array.isArray(t.lines) ? t.lines.length : 0;
-    const title = `🚚 ${t.transferNo ? 'TN ' + t.transferNo : 'Transfer note'} abhi tak check nahi hua`;
+    const title = Number(t.editCount) > 0 ? `✏️ ${t.transferNo ? 'TN ' + t.transferNo : 'Transfer note'} EDIT hua — maal dobara mila kar lo` : `🚚 ${t.transferNo ? 'TN ' + t.transferNo : 'Transfer note'} abhi tak check nahi hua`;
     const body = `⏳ ${late} · ${bn(t.from)} → ${bn(t.to)}${n ? ' · ' + n + ' items' : ''}\nTap karein — scan / ✓ karein`;
     try {
       const r = await getMessaging().sendEachForMulticast({ tokens, data: { title, body, tag: 'tc-' + d.key, link: 'https://samiullah-878.github.io/Noor-traders-/#tc=' + encodeURIComponent(d.key) }, webpush: { headers: { Urgency: 'high' } } });

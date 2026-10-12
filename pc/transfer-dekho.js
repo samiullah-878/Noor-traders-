@@ -1,5 +1,5 @@
 // =========================================================
-//  transfer-dekho.js  v1.2  (2026-10-10: 🧾 Transfer check — createdOn (asal banne ka waqt) + har 1 minute) · v1.1  (2026-09-28: 60 din)  ·  v1  (2026-09-24) — POS ke STOCK TRANSFER app mein dikhane ke liye
+//  transfer-dekho.js  v1.3 (2026-10-12: ❌ cancel + ✏️ edit pakadna) · v1.2  (2026-10-10: 🧾 Transfer check — createdOn (asal banne ka waqt) + har 1 minute) · v1.1  (2026-09-28: 60 din)  ·  v1  (2026-09-24) — POS ke STOCK TRANSFER app mein dikhane ke liye
 //  POS ki dbo.StockTransfer + StockTransferDetail parhta hai (sirf SELECT — POS mein kuch nahi badalta)
 //  aur pichhle DIN din ke transfer Firestore `posTransfers` mein rakhta hai. App ki
 //  "📥 Aaya / gaya maal" screen wahi se dikhati hai — chahe transfer POS par bana ho ya app se.
@@ -39,6 +39,11 @@ async function getPool() { if (pool && pool.connected) return pool; pool = await
 const r3 = v => Math.round((Number(v) || 0) * 1000) / 1000;
 
 let lastSent = new Map();       // TransferID -> kitni lines bheji thin (dobara na bhejein)
+// v1.3 (2026-10-12): ❌ CANCEL + ✏️ EDIT — malik: "transfer note cancel ho gaya tha abhi bhi yahan aa raha ha … edit wale par nishan, maal dobara mila kar lo".
+//   known: doc id -> {sig (itemId:qty), lines, cancelled, editCount} — shuru mein ek dafa Firestore se. Lines badli = edited (editCount++, prevLines, editedAt).
+//   POS mein note na mile (mita diya) ya sab qty 0 = cancelled:true, cancelledAt. Wapas aa jaye = cancelled false.
+let known = null;
+const sigOf = ls => ls.map(l => String(l.ItemID ?? l.itemId) + ':' + r3(l.Qty ?? l.qty)).sort().join('|');
 
 async function once() {
   const p = await getPool();
@@ -62,16 +67,29 @@ async function once() {
     const a = byId.get(l.TransferID) || []; a.push(l); byId.set(l.TransferID, a);
   }
 
+  if (!known) {
+    known = new Map();
+    const snap = await col.where('at', '>=', since.getTime()).get();
+    for (const d of snap.docs) { const x = d.data(); known.set(d.id, { sig: x.sig || sigOf(x.lines || []), lines: x.lines || [], cancelled: !!x.cancelled, editCount: Number(x.editCount) || 0, at: x.at }); }
+    log(`${known.size} purane transfer yaad kiye (cancel / edit pakadne ke liye)`);
+  }
   let n = 0, batch = db.batch(), inBatch = 0;
   const keep = new Set();
+  const flush = async () => { inBatch++; if (inBatch >= 400) { await batch.commit(); batch = db.batch(); inBatch = 0; } };
   for (const h of heads) {
     const ls = byId.get(h.TransferID) || [];
     if (!ls.length) continue;
     const id = 'T' + h.TransferID;
     keep.add(id);
-    if (lastSent.get(h.TransferID) === ls.length) continue;      // pehle jaisa hi hai
+    const sig = sigOf(ls), k = known.get(id);
+    const lines = ls.slice(0, 200).map(l => ({ itemId: String(l.ItemID), name: String(l.ItemName || '').trim().slice(0, 120), qty: r3(l.Qty), pack: Number(l.PackQty) || 0, rate: r3(l.TransferRate || l.Rate) }));
+    if (k && k.sig === sig && !k.cancelled) continue;      // pehle jaisa hi hai
+    const extra = {};
+    if (k && k.cancelled) { extra.cancelled = false; extra.cancelledAt = 0; }
+    if (k && k.sig && k.sig !== sig) { extra.edited = true; extra.editedAt = Date.now(); extra.editCount = (k.editCount || 0) + 1; extra.prevLines = k.lines.slice(0, 200); log(`✏️ TN ${String(h.TransferNo || '').trim()} POS mein EDIT hua (${extra.editCount})`); }
     const at = new Date(h.TransferDate || h.CreatedOn || Date.now()).getTime();
-    batch.set(col.doc(id), {
+    known.set(id, { sig, lines, cancelled: false, editCount: extra.editCount ?? (k ? k.editCount : 0), at });
+    batch.set(col.doc(id), { ...extra, sig,
       transferId: Number(h.TransferID),
       transferNo: String(h.TransferNo || '').trim(),
       from: Number(h.FromBranchID) || 0,
@@ -80,16 +98,16 @@ async function once() {
       createdOn: h.CreatedOn ? new Date(h.CreatedOn).getTime() || 0 : 0,   // v1.2: note asal mein kab bana (TransferDate mein waqt na ho to bhi)
       app: /BK-APP/i.test(String(h.SystemNotes || '')) || String(h.Remarks || '').trim().toLowerCase() === 'app',
       note: String(h.Description || h.Remarks || '').slice(0, 120),
-      lines: ls.slice(0, 200).map(l => ({
-        itemId: String(l.ItemID), name: String(l.ItemName || '').trim().slice(0, 120),
-        qty: r3(l.Qty), pack: Number(l.PackQty) || 0,
-        rate: r3(l.TransferRate || l.Rate),
-      })),
+      lines,
       syncedAt: Date.now(),
     }, { merge: true });
-    lastSent.set(h.TransferID, ls.length);
-    n++; inBatch++;
-    if (inBatch >= 400) { await batch.commit(); batch = db.batch(); inBatch = 0; }
+    n++; await flush();
+  }
+  // ❌ POS mein ab nahi (mita diya / sab qty 0) = cancel
+  for (const [id, k] of known) {
+    if (keep.has(id) || k.cancelled || !(k.at >= since.getTime())) continue;
+    k.cancelled = true; batch.set(col.doc(id), { cancelled: true, cancelledAt: Date.now() }, { merge: true }); n++; await flush();
+    log(`❌ ${id} POS mein nahi mila — cancel likha`);
   }
   if (inBatch) await batch.commit();
 

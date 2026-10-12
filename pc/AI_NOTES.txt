@@ -2728,3 +2728,7 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 - trWatch: listeners posTransfers (createdOn >= 2 din), transferJobs (doneAt >= 2 din, status done), transferChecks (issuedAt >= 2 din).
 - trNotify (har minute tick): note 10 min se zyada purana + check nahi = FCM push (malik + scope stock/full), phir har 30 min, 3 ghante tak, subah 7 – raat 11.
   tag 'tc-<key>', link '…/#tc=<key>'. State tr-check-state.json. Godam naam posStock select(branch,name) 6 ghante cache.
+
+== 2026-10-12 manifest 2026-10-12.9: transfer-dekho v1.3 (cancel/edit) + auto-backup v1.6 ==
+- transfer-dekho: known map (Firestore se ek dafa), sigOf lines; edit = edited/editedAt/editCount/prevLines; POS mein nahi = cancelled/cancelledAt; lastSent ab istemal nahi.
+- auto-backup trList: cancelled + delete job wale nahi; trDue key 'T..E<n>' aur age editedAt se.

@@ -3004,3 +3004,8 @@ html body .fq-force{align-self:flex-start;margin-top:4px;min-height:30px!importa
 html.dk .fq-card,html.dk .fq-head div{background:rgba(255,255,255,.05)}html.dk .fq-late,html.dk .fq-warn{background:rgba(245,158,11,.12);color:#fcd34d}html.dk .fq-re summary{color:#bcd4ff}
 .fq-re:not(.must) summary{color:#64748b!important;font-weight:600;font-size:12px}
 .tc-flash{box-shadow:0 0 0 3px #f59e0b!important;transition:box-shadow .4s}
+/* v2.99.54 transfer note edit / cancel */
+.tc-edit{margin:6px 0 2px;padding:8px 10px;border-radius:12px;background:#fff7e0;border:1px dashed #f59e0b;color:#7a5200;font-size:12.5px;display:flex;flex-direction:column;gap:4px}
+.tc-edit b{color:#92400e}.tc-ch{font-size:12px;line-height:1.5}.tc-edit small{opacity:.8}
+.tc-n.cancel{opacity:.6;filter:grayscale(.6)}.tc-n.cancel .tc-st{background:rgba(225,29,72,.1)!important;color:#be123c!important}
+html.dk .tc-edit{background:rgba(245,158,11,.12);color:#fcd34d}
