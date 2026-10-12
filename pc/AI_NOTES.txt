@@ -2740,3 +2740,24 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 - photo-print.js: data:image/jpeg -> grey -> contrast -> Floyd-Steinberg -> ESC/POS GS v 0 (beech mein). jpeg-decode.js = jpeg-js 0.4.4 decoder (BSD-3, license upar).
 
 2026-10-12 (manifest 2026-10-12.11) pos-khata-sync ⚡ TEZ RAASTA: nayi app entry (payment/wasooli/udhar) aate hi kick() -> quickRun() FORAN (poora sync chal raha ho tab bhi). quickEntries apne SQL pool (qPoolGet, max 2) se sirf usi entry ka voucher + parchi; inFlight/syncMine lock taake poora sync wohi entry dobara na banaye; posWriteVoucher ab lock (pwvLock) ke saath aik waqt mein aik. printExpenses/printPurchases bhi quickRun mein. Shart: lastAcct (pichhla poora sync), link nahi, POS mein [app:id] nahi, 30 min ke andar bani.
+
+2026-10-12 raat — app v2.99.59 · PC manifest 2026-10-12.12 (bank-parchi v2.1, pos-khata-sync posNo)
+Malik: (1) "kisi dosre account (loan) ka HBL SMS aya to HBL purana mein entry to nahi aayegi?" (2) "HBL se bill (GEPCO) jama karwaya to wo
+bhi khud minus ho aur shop kharcha account mein lag jaye" (3) loan account ka design "bahut bura" — premium.
+- bank-sms.js + pc/bank-parchi.js parseBank (dono ek jaise): amtOf "PKR." bhi; acct = SMS "A/C 0257*****46303" YA email "From Account
+  No. /IBAN 02577900846303". 🧾 BILL email (subj "Bill Payment" ya Company + Consumer ID): dir out, kind 'bill', name "<Company> bill",
+  consumer, via 'Bill Payment', Date-Time, txn "Transaction ID." se.
+- 🏦 KAUN SA ACCOUNT: acctK = aakhri 4 number. bankSms/_alias m['@a:<4>'] = khata id. bank-inbox bankOf(r): number nahi = hbl() (Raast);
+  number yaad = wo khata; anjaan = null -> card "Yeh kaun sa account hai?" (bank / loan khaton ke chips, data-bk-acmap) — khud nahi lagta.
+  autoRun pehli dafa (malik ke phone) '@a:6303' = '@hbl' khud (HBL purana ka number cash deposit SMS + bill email se). Server PC
+  bank-parchi v2.1: number ho aur amap['@a:k'] !== hblId = khud nahi (app poochegi).
+- 🧾 BILL: alias '@bill' = 'expense:<naam>' ya 'party:<id>' (pehli dafa card par chips + search, data-bk-bill; ✏️ data-bk-billchg).
+  Lagana: expense -> do entries bk<doc>b (kind collection, partyId bank, posNo:true, dailyIncluded:false) + bk<doc>x (kind expense,
+  account naam, dailyIncluded:false) · party -> transfer bank -> party. Note "HBL bill · GEPCO bill · Consumer … · TXN …". Daily (galla)
+  mein nahi; pos-khata-sync posNo:true wali entry ka POS voucher nahi banata (syncEntries + quickEntries). Kharcha parchi printExpenses
+  se chhapti hai (pehle jaisa). autoRun: aaj ka bill + '@bill' + account maloom = khud. undo -> autoFail (us phone par dobara khud nahi).
+- 💎 Loan account (party.bank): #summary mein loanHeroHTML (poora chaurra .lnh card) — head, istemal bara + % ring (hara / <85, narangi,
+  laal), patti, Limit/Istemal/Baqi chips, Jama/Nikaala, Sood + aaj/din, ⚠️ warning, safed "Poora adjust" + 🔄 Reset. Hisaab wahi
+  (loanInterest). Purana loanCardHTML hataya. CSS style.css aakhir mein (.lnh, themes ko haraane ko html .summary>div.lnh.lnh).
+- Tests (scratchpad hd/bill.mjs, hbl3.mjs, bk.mjs, bp/t2.js): bill parse, anjaan / loan account ruka, chunne par loan mein, bill do
+  entries, undo; PC: anjaan / loan account khud nahi, apna + Raast khud. Asal email / phone par test baqi.

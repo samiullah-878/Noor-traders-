@@ -9,7 +9,7 @@
 const MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
 const BANK_TAIL = { IBAN: '', TMFB: 'Telenor Microfinance (Easypaisa)', EP: 'Easypaisa', EASYPAISA: 'Easypaisa', JAZZCASH: 'JazzCash', JC: 'JazzCash', MMBL: 'Mobilink (JazzCash)', HBL: 'HBL', UBL: 'UBL', MCB: 'MCB', ABL: 'Allied', BAFL: 'Bank Alfalah', MEEZAN: 'Meezan', NBP: 'NBP', SADAPAY: 'SadaPay', NAYAPAY: 'NayaPay', KONNECT: 'HBL Konnect', BOP: 'Bank of Punjab' };
 const p2 = n => String(n).padStart(2, '0');
-const amtOf = s => { const m = String(s || '').match(/(?:PKR|Rs\.?)\s*([\d,]+(?:\.\d{1,2})?)/i); return m ? Math.round(Number(m[1].replace(/,/g, '')) * 100) : 0; };
+const amtOf = s => { const m = String(s || '').match(/(?:PKR\.?|Rs\.?)\s*([\d,]+(?:\.\d{1,2})?)/i); return m ? Math.round(Number(m[1].replace(/,/g, '')) * 100) : 0; };
 function whenOf(t) {
   let m = t.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::\d{2})?)?/);   // 08/10/2026 16:38:44 (din/mahina/saal)
   if (m) return { day: `${m[3]}-${p2(m[2])}-${p2(m[1])}`, time: m[4] ? `${p2(m[4])}:${m[5]}` : '' };
@@ -31,9 +31,20 @@ export function parseBank(text, src = 'sms', subj = '') {
   if (!t.trim()) return out;
   Object.assign(out, whenOf(t));
   out.txn = (t.match(/(?:TXN|Transaction)\s*(?:ID|No\.?|#)?\s*[:\-]?\s*([A-Z0-9]{6,})/i) || [])[1] || '';
-  out.acct = (t.match(/A\/C\s*([0-9*]{6,})/i) || [])[1] || '';
+  out.acct = (t.match(/A\/C\s*([0-9*]{6,})/i) || t.match(/From\s+Account\s+(?:No|Number)\.?\s*(?:\/\s*IBAN)?\s*[:\-]?\s*(?:PK\d\d[A-Z]{4})?([0-9*]{6,})/i) || [])[1] || '';   // v2.99.59: email ka "From Account No. /IBAN" bhi
   const via = t.match(/via\s+(?:your\s+)?(Raast(?:\s+ID)?|IBFT|Cash Deposit|Cheque(?: Deposit)?|ATM|Mobile|Internet Banking|[A-Za-z][A-Za-z ]{1,25}?)(?=\s+(?:in|on|TXN|from|to)\b|[.,\n]|$)/i);
   if (via) out.via = via[1].replace(/\s+ID$/i, '').trim();
+  // ---- v2.99.59 email: 🧾 BILL PAYMENT (HBL Mobile | Bill Payment) — Company GEPCO · Consumer ID · From Account No. /IBAN · Date-Time ----
+  if (src === 'email' && !/Receiver Account Title/i.test(t) && (/Bill\s*Payment/i.test(subj) || (/\bCompany\b/i.test(t) && /Consumer\s*(?:ID|No|Number)/i.test(t)))) {
+    out.amt = amtOf(lineVal(t, 'Amount') || t);
+    const co = lineVal(t, 'Company').replace(/\s+(Consumer|From|Date|Transaction).*/i, '').trim();
+    out.consumer = (lineVal(t, 'Consumer\\s*(?:ID|No\\.?|Number)').match(/[A-Z0-9-]{4,}/i) || [''])[0];
+    out.name = (co || 'Utility') + ' bill'; out.bank = ''; out.via = 'Bill Payment'; out.kind = 'bill'; out.dir = 'out';
+    const dt = lineVal(t, 'Date[-\\s]*(?:and\\s*)?Time'); if (dt) Object.assign(out, whenOf(dt));
+    out.txn = (t.match(/Transaction\s*ID\.?\s*[:\-]?\s*([A-Z0-9]{4,})/i) || [])[1] || out.txn;
+    out.ok = out.amt > 0;
+    return out;
+  }
   // ---- email: paise GAYE (Transfer to Other Bank / funds transfer) ----
   if (src === 'email' || /Receiver Account Title|funds transfer was successful/i.test(t)) {
     out.amt = amtOf(lineVal(t, 'Amount') || t);

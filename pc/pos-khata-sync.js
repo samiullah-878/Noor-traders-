@@ -719,6 +719,7 @@ async function syncEntries(pool, acct) {
     done.add(key);
     const fromPos = String(e.id).startsWith('posv-') || String(e.transferId || '').startsWith('posv');
     if ((e.purchase && e.kind !== 'purchaseCash') || String(e.id).startsWith('pos-')) continue;          // sync.js wali purchase / sabqa (cash purchase neeche)
+    if (e.posNo === true) continue;   // 2026-10-12: HBL se bill (GEPCO) — bank se kharcha, POS mein voucher nahi (galla / cash ka nahi)
     let base = e;
     if (isTransfer) {
       base = app.get(`transfer-${e.transferId}-out`) || e;
@@ -1008,7 +1009,7 @@ async function runVoucherJobs() {
 async function quickEntries() {
   if (DRY || !lastAcct || !fresh.size) return;
   const ids = [...fresh]; fresh.clear();
-  const todo = ids.map(id => app.get(id)).filter(e => e && e.type === 'entry' && !e.deleted && !e.transferId && !e.purchase && ['payment', 'collection', 'credit'].includes(e.kind)
+  const todo = ids.map(id => app.get(id)).filter(e => e && e.type === 'entry' && !e.deleted && !e.transferId && !e.purchase && e.posNo !== true && ['payment', 'collection', 'credit'].includes(e.kind)
     && !/^(pos|cashpay-)/.test(String(e.id)) && !links.has('entry:' + e.id) && lastAcct.has(e.partyId) && ms(e.createdAt) >= ENABLED_AT && Date.now() - ms(e.createdAt) < 30 * 60000);
   if (!todo.length) return;
   const t0 = Date.now(), pool = await qPoolGet();

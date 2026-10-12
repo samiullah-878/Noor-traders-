@@ -1,5 +1,5 @@
 // =========================================================
-//  bank-parchi.js  v2.0 (2026-10-12) — 🤖 aaye paise khud HBL khate mein (neeche) · v1.0 — 💰 PAISE AAYE ki parchi (Server PC, TM-T88IV)
+//  bank-parchi.js  v2.1 (2026-10-12) — 🏦 sirf apne HBL account ke (A/C ke aakhri 4 number app mein yaad) · v2.0 (2026-10-12) — 🤖 aaye paise khud HBL khate mein (neeche) · v1.0 — 💰 PAISE AAYE ki parchi (Server PC, TM-T88IV)
 //  Malik: "jaise hi koi paisa aya usi time computer se print bi nikl aiya".
 //  📩 HBL Inbox (Firestore bankSms) mein naya SMS / email aate hi -> parchi: raqam (bara), kis se, bank, via, waqt, TXN.
 //  Sirf PARHTA hai (kuch nahi likhta, sirf printConfig.bankLast). Wahi TXN do dafa nahi chhapta (bank-print.json).
@@ -11,7 +11,7 @@ const fs = require('fs');
 const MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
 const BANK_TAIL = { IBAN: '', TMFB: 'Telenor Microfinance (Easypaisa)', EP: 'Easypaisa', EASYPAISA: 'Easypaisa', JAZZCASH: 'JazzCash', JC: 'JazzCash', MMBL: 'Mobilink (JazzCash)', HBL: 'HBL', UBL: 'UBL', MCB: 'MCB', ABL: 'Allied', BAFL: 'Bank Alfalah', MEEZAN: 'Meezan', NBP: 'NBP', SADAPAY: 'SadaPay', NAYAPAY: 'NayaPay', KONNECT: 'HBL Konnect', BOP: 'Bank of Punjab' };
 const p2 = n => String(n).padStart(2, '0');
-const amtOf = s => { const m = String(s || '').match(/(?:PKR|Rs\.?)\s*([\d,]+(?:\.\d{1,2})?)/i); return m ? Math.round(Number(m[1].replace(/,/g, '')) * 100) : 0; };
+const amtOf = s => { const m = String(s || '').match(/(?:PKR\.?|Rs\.?)\s*([\d,]+(?:\.\d{1,2})?)/i); return m ? Math.round(Number(m[1].replace(/,/g, '')) * 100) : 0; };
 function whenOf(t) {
   let m = t.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::\d{2})?)?/);   // 08/10/2026 16:38:44 (din/mahina/saal)
   if (m) return { day: `${m[3]}-${p2(m[2])}-${p2(m[1])}`, time: m[4] ? `${p2(m[4])}:${m[5]}` : '' };
@@ -33,9 +33,20 @@ function parseBank(text, src = 'sms', subj = '') {
   if (!t.trim()) return out;
   Object.assign(out, whenOf(t));
   out.txn = (t.match(/(?:TXN|Transaction)\s*(?:ID|No\.?|#)?\s*[:\-]?\s*([A-Z0-9]{6,})/i) || [])[1] || '';
-  out.acct = (t.match(/A\/C\s*([0-9*]{6,})/i) || [])[1] || '';
+  out.acct = (t.match(/A\/C\s*([0-9*]{6,})/i) || t.match(/From\s+Account\s+(?:No|Number)\.?\s*(?:\/\s*IBAN)?\s*[:\-]?\s*(?:PK\d\d[A-Z]{4})?([0-9*]{6,})/i) || [])[1] || '';   // v2.99.59: email ka "From Account No. /IBAN" bhi
   const via = t.match(/via\s+(?:your\s+)?(Raast(?:\s+ID)?|IBFT|Cash Deposit|Cheque(?: Deposit)?|ATM|Mobile|Internet Banking|[A-Za-z][A-Za-z ]{1,25}?)(?=\s+(?:in|on|TXN|from|to)\b|[.,\n]|$)/i);
   if (via) out.via = via[1].replace(/\s+ID$/i, '').trim();
+  // ---- v2.99.59 email: 🧾 BILL PAYMENT (HBL Mobile | Bill Payment) — Company GEPCO · Consumer ID · From Account No. /IBAN · Date-Time ----
+  if (src === 'email' && !/Receiver Account Title/i.test(t) && (/Bill\s*Payment/i.test(subj) || (/\bCompany\b/i.test(t) && /Consumer\s*(?:ID|No|Number)/i.test(t)))) {
+    out.amt = amtOf(lineVal(t, 'Amount') || t);
+    const co = lineVal(t, 'Company').replace(/\s+(Consumer|From|Date|Transaction).*/i, '').trim();
+    out.consumer = (lineVal(t, 'Consumer\\s*(?:ID|No\\.?|Number)').match(/[A-Z0-9-]{4,}/i) || [''])[0];
+    out.name = (co || 'Utility') + ' bill'; out.bank = ''; out.via = 'Bill Payment'; out.kind = 'bill'; out.dir = 'out';
+    const dt = lineVal(t, 'Date[-\\s]*(?:and\\s*)?Time'); if (dt) Object.assign(out, whenOf(dt));
+    out.txn = (t.match(/Transaction\s*ID\.?\s*[:\-]?\s*([A-Z0-9]{4,})/i) || [])[1] || out.txn;
+    out.ok = out.amt > 0;
+    return out;
+  }
   // ---- email: paise GAYE (Transfer to Other Bank / funds transfer) ----
   if (src === 'email' || /Receiver Account Title|funds transfer was successful/i.test(t)) {
     out.amt = amtOf(lineVal(t, 'Amount') || t);
@@ -88,16 +99,19 @@ function slipText(r, head, W = 42) {
 //   Phir pos-khata-sync isay POS voucher banata hai aur HBL wali parchi (bara HBL, lafzon mein) foran chhapta hai — is liye yahan ki chhoti
 //   "PAISE AAYE" parchi ab default BAND (printConfig.bankSlip = true ho to chhapti hai). Purani tareekh / gaye = app mein malik se poochho.
 //   Setting printConfig.bankPost (default ON). App bhi yahi ID likhti hai — dono likhen to bhi ek hi entry.
+const acctK = a => { const d = String(a || '').replace(/\D/g, ''); return d.length >= 4 ? d.slice(-4) : ''; };   // v2.1: account ke aakhri 4 number
 const pktDay = ms => new Date(ms + 5 * 3600000).toISOString().slice(0, 10);
 const noteOf = r => (`HBL aaye · ${r.name}${r.bank ? ' (' + r.bank + ')' : ''}${r.via ? ' · ' + r.via : ''}${r.txn ? ' · TXN ' + r.txn : ''}`).slice(0, 900);
 function createBankWatcher({ biz, log, sendRaw, head, stateFile, cfgRef, now = () => Date.now(), freshMs = 30 * 60000 }) {
   let seen = {}; try { seen = JSON.parse(fs.readFileSync(stateFile, 'utf8')) || {}; } catch {}
   const save = () => { const ks = Object.entries(seen).sort((a, b) => b[1] - a[1]).slice(0, 400); seen = Object.fromEntries(ks); try { fs.writeFileSync(stateFile, JSON.stringify(seen)); } catch {} };
-  let cfg = { bankAuto: true, bankOut: false, bankPost: true, bankSlip: false }, stopA = null, stopB = null, hblId = '';
+  let cfg = { bankAuto: true, bankOut: false, bankPost: true, bankSlip: false }, stopA = null, stopB = null, hblId = '', amap = {};
   const khata = () => biz.collection('blueKhata');
   async function post(doc, d, r) {
     if (!cfg.bankPost || !hblId || r.dir !== 'in' || d.st) return '';
     if (!r.day || r.day !== pktDay(now())) return '';   // purani tareekh: app mein malik se poochho
+    // v2.1: SMS / email mein account number ho (maslan loan wala) aur app ne us number ko HBL Noor Traders ka nahi maana = khud nahi — app poochegi
+    const k = acctK(r.acct); if (k && amap['@a:' + k] !== hblId) return '';
     const id = 'bk' + doc.id + 'a', ref = khata().doc(id);
     const ex = await ref.get(); if (ex.exists && !ex.data().deleted) return 'pehle-se';
     const t = now();
@@ -129,11 +143,11 @@ function createBankWatcher({ biz, log, sendRaw, head, stateFile, cfgRef, now = (
   function start(onFail) {
     if (cfgRef && cfgRef.onSnapshot) stopA = cfgRef.onSnapshot(s => { const x = s.exists ? (s.data() || {}) : {}; cfg = { bankAuto: x.bankAuto !== false, bankOut: x.bankOut === true, bankPost: x.bankPost !== false, bankSlip: x.bankSlip === true }; }, () => {});
     stopB = biz.collection('bankSms').onSnapshot(s => {
-      for (const c of s.docChanges()) if (c.doc.id === '_alias' && c.type !== 'removed') hblId = String(((c.doc.data() || {}).m || {})['@hbl'] || '');
+      for (const c of s.docChanges()) if (c.doc.id === '_alias' && c.type !== 'removed') { amap = (c.doc.data() || {}).m || {}; hblId = String(amap['@hbl'] || ''); }
       s.docChanges().forEach(c => { if (c.type === 'added' && c.doc.id !== '_alias') handle(c.doc).catch(e => log('HBL masla: ' + e.message)); });
     }, e => onFail && onFail(e));
     log('🤖 HBL chalu — aaj ke AAYE paise khud HBL Noor Traders mein (printConfig.bankPost), parchi pos-khata-sync se');
   }
-  return { start, stop: () => { stopA && stopA(); stopB && stopB(); }, handle, _cfg: c => { cfg = { ...cfg, ...c }; }, _hbl: id => { hblId = id; } };
+  return { start, stop: () => { stopA && stopA(); stopB && stopB(); }, handle, _cfg: c => { cfg = { ...cfg, ...c }; }, _hbl: id => { hblId = id; }, _amap: m => { amap = m || {}; } };
 }
 module.exports = { createBankWatcher, parseBank, slipText, bankKeyOf };
