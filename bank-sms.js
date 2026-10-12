@@ -78,7 +78,7 @@ export function guessParty(name, parties, alias = {}) {
   for (const p of parties) {
     const n = norm(p.name); if (!n) continue;
     let s = 0; if (n === k) s = 100; else { for (const w of words) if (n.split(' ').includes(w)) s += 30; else if (n.includes(w)) s += 15; if (words.length && words.every(w => n.includes(w))) s += 25; }
-    // v2.99.48: naam ki spelling thori alag (SAMIH ULLAH ~ Sami Ullah, YOUNAS ~ Younis) — jode hue harf ka farq
+    // v2.99.49: naam ki spelling thori alag (SAMIH ULLAH ~ Sami Ullah, YOUNAS ~ Younis) — jode hue harf ka farq
     const a = k.replace(/ /g, ''), b = n.replace(/ /g, '');
     if (a.length >= 6 && b.length >= 6) {
       if (b.startsWith(a) || a.startsWith(b)) s = Math.max(s, 70);

@@ -20,6 +20,7 @@
 //    node pos-khata-sync.js           -> ek dafa sync
 //    node pos-khata-sync.js --auto    -> har 60 second (khata-sync-auto.vbs isi ko chalata hai)
 //    node pos-khata-sync.js --print-voucher CPV-000123  -> koi bhi voucher dobara print (kuch save nahi)
+//  2026-10-12: 🖨 printer ki haalat — printConfig.voucherLog / vLast / vErr / vAlive, entry par posPrintedAt / posPrintErr, printJobs kind voucher = dobara print.
 //  2026-10-12: 🏦 HBL parchi — HBL account / HBL SMS-email wali entry: upar bara ulta "HBL", barcode nahi, raqam + baqaya lafzon mein (inWords, lakh/crore).
 //  v8: voucher rasid (CPV/CRV/Transfer/Udhar) notepad ki jagah seedha TM-T88IV par, sale rasid jaisi
 // ============================================================
@@ -427,6 +428,20 @@ public class RawCached{
 Add-Type -Path $dll
 [RawCached]::Send($Printer,$bytes,'Voucher')
 `;
+// 2026-10-12: 🖨 PRINTER KI HAALAT (TSC label jaisa) — har parchi blueAccess/printConfig.voucherLog (aakhri 20) + vLast / vErr / vAlive.
+//   App har entry par chip dikhati hai (posPrintedAt / posPrintErr) aur "🖨 Dobara print" = printJobs {kind:'voucher', id: CPV-…} (yahi script chhapta hai).
+let lastPrintErr = '', vlog = null;
+const cfgDoc = () => biz.collection('blueAccess').doc('printConfig');
+async function logPrint(e) {
+  if (DRY) return;
+  try {
+    if (!vlog) { const s = await cfgDoc().get(); vlog = (s.exists && Array.isArray(s.data().voucherLog)) ? s.data().voucherLog : []; }
+    vlog = vlog.concat([{ code: String(e.code || ''), name: ascii(e.name).slice(0, 40), amt: Number(e.amt) || 0, at: Date.now(), ok: !!e.ok, err: e.ok ? '' : String(e.err || lastPrintErr || 'print nahi hua').slice(0, 120), again: !!e.again, bank: !!e.bank }]).slice(-20);
+    await cfgDoc().set({ voucherLog: vlog, vLast: Date.now(), vErr: e.ok ? '' : String(e.err || lastPrintErr || '').slice(0, 160), vAlive: Date.now() }, { merge: true });
+  } catch (er) { log('printConfig haalat nahi likhi: ' + er.message); }
+}
+let aliveAt = 0;
+async function beatPrinter() { if (DRY || Date.now() - aliveAt < 5 * 60000) return; aliveAt = Date.now(); try { await cfgDoc().set({ vAlive: aliveAt }, { merge: true }); } catch {} }
 async function printReceipt(text) {
   if (!AUTO_PRINT || DRY) return false;
   const bin = path.join(DIR, 'khata-print.bin'), ps = path.join(DIR, 'khata-raw-print.ps1');
@@ -434,12 +449,13 @@ async function printReceipt(text) {
   fs.writeFileSync(ps, RAW_PS.replace(/\r?\n/g, '\r\n'));
   return new Promise(res => require('child_process').execFile('powershell.exe',
     ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ps, '-Printer', PRINTER_NAME, '-Bin', bin], { timeout: 30000 }, (err, so, se) => {
-      log(err ? 'Print nahi hua: ' + (String(se || '').trim().split(/\r?\n/)[0] || err.message) : 'Voucher rasid print ho gayi');
+      lastPrintErr = err ? (String(se || '').trim().split(/\r?\n/)[0] || err.message).slice(0, 160) : '';
+      log(err ? 'Print nahi hua: ' + lastPrintErr : 'Voucher rasid print ho gayi');
       res(!err);
     }));
 }
 // node pos-khata-sync.js --print-voucher CPV-000123  -> POS ka koi bhi voucher dobara print (kuch save nahi hota)
-async function reprintVoucher(code) {
+async function reprintVoucher(code, copies = 1, fromJob = false) {
   const pool = await sql.connect(SQL_CONFIG);
   try {
     const rows = (await pool.request().input('c', sql.VarChar(30), String(code || '').trim()).query(`
@@ -454,8 +470,15 @@ async function reprintVoucher(code) {
       const label = type === 'CPV' ? (dr ? 'Diye' : 'Wapas') : type === 'CRV' ? (cr ? 'Wasool kiye' : 'Wapas') : (cr ? 'Se (nikla)' : 'Ko (gaya)');
       return { name: String(r.AccountName || '').trim(), label, amount: dr || cr };
     });
-    const ok = await printReceipt(receipt({ title: VTITLE[type] || type + ' VOUCHER', code: rows[0].VoucherCode, date: rows[0].VoucherDate,
-      lines, note: String(rows[0].VoucherRemarks || ''), copy: true }));
+    const rem = String(rows[0].VoucherRemarks || ''), bank = /^HBL (aaye|gaye)/.test(rem.trim()) ? { dir: /^HBL gaye/.test(rem.trim()) ? 'out' : 'in' } : null;   // 2026-10-12: HBL design
+    let ok = false;
+    for (let i = 0; i < Math.min(3, Math.max(1, Number(copies) || 1)); i++) ok = await printReceipt(receipt({ title: VTITLE[type] || type + ' VOUCHER', code: rows[0].VoucherCode, date: rows[0].VoucherDate,
+      lines, note: rem, copy: true, bank }));
+    if (fromJob) {
+      const ids = [...app.values()].filter(e => e.type === 'entry' && String(e.posCode || '').trim() === String(code).trim()).map(e => e.id);
+      if (ok && ids.length) await markApp(ids, { posPrintedAt: Date.now(), posPrintErr: '' });
+      await logPrint({ code, name: lines.map(l => l.name).join(' / '), amt: Math.max(0, ...lines.map(l => Number(l.amount) || 0)), ok, again: true, bank: !!bank });
+    }
     return ok;
   } finally { await pool.close(); }
 }
@@ -758,7 +781,9 @@ async function syncEntries(pool, acct) {
                after: rupees(appBalance(base.partyId)), before: rupees(appBalance(base.partyId, new Set(docIds))) }];   // 2026-10-09: sabqa = is voucher ke baghair
         const bank = bankSlip(base, isTransfer);   // 2026-10-12: HBL wali entry = HBL parchi
         const printed = await printReceipt(receipt({ title: T, code: r.code, date: base.date, lines: plines, note: String(base.note || '').trim(), bank }));
-        if (printed) await markApp(docIds, { posPrintedAt: Date.now() });
+        if (printed) await markApp(docIds, { posPrintedAt: Date.now(), posPrintErr: '' });
+        else await markApp(docIds, { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
+        await logPrint({ code: r.code, name, amt, ok: printed, bank: !!bank });
       }
       for (const [k2, l2] of links) if (k2 !== key && l2.voucherId === r.voucherId) await setLink(k2, { posHash: null });
       appMade.set(isTransfer ? 't-' + e.transferId : e.id, { VoucherID: r.voucherId });
@@ -876,6 +901,28 @@ async function syncEntries(pool, acct) {
   }
 }
 
+// ---------- 🖨 "Dobara print" hukum (app -> printJobs kind 'voucher') — tick ke andar, SQL pool ek waqt ek ----------
+const vJobs = new Map();
+function listenVoucherJobs() {
+  biz.collection('printJobs').where('kind', '==', 'voucher').where('status', '==', 'new').onSnapshot(s => {
+    for (const c of s.docChanges()) if (c.type !== 'removed') vJobs.set(c.doc.id, c.doc.data());
+    if (vJobs.size && kick) kick();
+  }, e => log('Dobara-print listener masla: ' + e.message));
+}
+async function runVoucherJobs() {
+  for (const [id, j] of [...vJobs]) {
+    vJobs.delete(id);
+    const ref = biz.collection('printJobs').doc(id);
+    try {
+      const mine = await db.runTransaction(async tx => { const s = await tx.get(ref); if (!s.exists || s.data().status !== 'new') return false; tx.update(ref, { status: 'printing', startedAt: Date.now() }); return true; });
+      if (!mine) continue;
+      log(`🖨 Dobara print: ${j.id} (${j.byName || ''})`);
+      const ok = await reprintVoucher(j.id, j.copies, true);
+      await ref.update(ok ? { status: 'done', doneAt: Date.now() } : { status: 'error', doneAt: Date.now(), error: (lastPrintErr || 'print nahi hua').slice(0, 200) });
+    } catch (e) { log('Dobara print masla: ' + e.message); try { await ref.update({ status: 'error', error: String(e.message).slice(0, 200), doneAt: Date.now() }); } catch {} }
+  }
+}
+
 // ============================================================
 async function once() {
   if (fs.existsSync(path.join(DIR, 'khata-sync.pause'))) { log('Ruka hua (khata-sync.pause file mojood hai)'); return; }
@@ -898,6 +945,7 @@ async function once() {
   console.log(`pos-khata-sync v8${DRY ? ' (DRY — kuch nahi likhega)' : ''}`);
   await listenApp();
   await loadLinks();
+  if (AUTO && !DRY) listenVoucherJobs();   // 2026-10-12: 🖨 dobara print
   log(`App records: ${app.size} · links: ${links.size}`);
   if (!AUTO) { await once(); log('Ho gaya.'); process.exit(0); }
   let busy = false, again = false, timer = null;
@@ -907,6 +955,7 @@ async function once() {
     do {
       again = false;
       try { await once(); } catch (e) { log('Masla: ' + e.message); }
+      try { await runVoucherJobs(); await beatPrinter(); } catch (e) { log('Print kaam masla: ' + e.message); }
     } while (again);
     busy = false;
   };

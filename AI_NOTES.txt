@@ -4067,3 +4067,9 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 - autoRun: aaj ke sab AAYE khud (4 s ruk kar — PC pehle laga de to dobara nahi); GAYE sirf yaad naam. Purani tareekh pehle poochho (pehle jaisa).
 - ↩ undo single entry (bk…a) bhi. Naam: SMS wala naam (HBL khud nahi). Action button "🤖 Auto ON/BAND" = printConfig.bankPost.
 - PC: pc/bank-parchi.js v2.0 (manifest 2026-10-12.4). Tests: hd/hbl3.mjs, bp/t2.js.
+
+== v2.99.49 + rules 2.43 (2026-10-12) 🖨 TM-T88IV parchi ki haalat (TSC label jaisa) ==
+- printChip(e) receiptButton ke saath (Daily, khata, HBL screen): ✓ Chhapi waqt · CPV / ⚠️ Print nahi hua / ❌ POS error / ⏳ (bank entry 15 min) / 🧾 code.
+  "🖨 Dobara print" (malik + Full) -> cloud.requestPrint({kind:'voucher', id: posCode}) + watchPrint -> button par ⏳ / ✓ / ❌.
+- 🖨 Printer ki haalat (bank-inbox openPrinter): Settings row #prnStatusBtn + HBL screen "🖨 Printer" — dhadkan (vAlive ≤10 min hara), aakhri error, aaj chhapi/nahi, 20 ki list + 🖨 har ek par.
+- Rules 2.43 publish zaroori (printJobs 'voucher'). PC: manifest 2026-10-12.5.

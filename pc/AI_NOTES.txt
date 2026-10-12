@@ -2705,3 +2705,11 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
   + bankSms doc st 'done'. pos-khata-sync (updatedBy != pos-sync => kick foran) CPV banata hai aur HBL parchi chhapta hai.
   PC band tha to chalu hote hi aaj ke reh gaye (freshness check post ke baad). Purani tareekh / GAYE = app mein malik.
   printConfig.bankPost (default ON; app "🤖 Auto ON/BAND"). Chhoti "PAISE AAYE" parchi ab default BAND (printConfig.bankSlip=true par).
+
+== 2026-10-12 manifest 2026-10-12.5: 🖨 TM-T88IV printer ki haalat + dobara print ==
+- pos-khata-sync: har voucher parchi ke baad logPrint -> blueAccess/printConfig {voucherLog (aakhri 20: code,name,amt,at,ok,err,again,bank), vLast, vErr, vAlive}.
+  Print fail = entry par posPrintErr + posPrintTry (kamyab = posPrintedAt, posPrintErr ''). beatPrinter: vAlive har 5 min (tick mein).
+  printJobs {kind:'voucher', id: CPV-…, status new} -> listenVoucherJobs + runVoucherJobs (tick ke andar, SQL ek waqt ek) -> reprintVoucher(code, copies, true)
+  (HBL remarks = HBL design) -> status done / error + entries par posPrintedAt.
+- transfer-sync v4.6: printJobs kind 'voucher' chhor deta hai.
+- Rules 2.43: printJobs kind mein 'voucher'. (firestore-rules-2.43.html)

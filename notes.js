@@ -6,9 +6,9 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.99.48';
-import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.99.48';   // v2.99.29: shaffaf order formula
-import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.48';
+import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.99.49';
+import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.99.49';   // v2.99.29: shaffaf order formula
+import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.49';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -47,7 +47,7 @@ function hashGo() {
 }
 
 // ---------- HBL account ----------
-// v2.99.48: malik ka chuna HBL account sab phones par (bankSms/_alias m['@hbl']) — pehle sirf isi phone par yaad rehta tha
+// v2.99.49: malik ka chuna HBL account sab phones par (bankSms/_alias m['@hbl']) — pehle sirf isi phone par yaad rehta tha
 let bankShared = '';
 export function setBankShared(id) { bankShared = String(id || ''); }
 export const notesList = () => notes;
@@ -499,7 +499,7 @@ function loadPics(n) {
 }
 export function noteForm(existing = null, preset = {}) {
   const n = existing || { kind: 'note', text: preset.text || '', items: [], remindDay: preset.day || '', remindTime: '', allDay: false };
-  const base = existing || { partyId: preset.partyId || '', partyName: preset.partyName || '', amount: preset.amount || 0 };   // v2.99.48: HBL card se
+  const base = existing || { partyId: preset.partyId || '', partyName: preset.partyName || '', amount: preset.amount || 0 };   // v2.99.49: HBL card se
   let chosen = [...(n.items || [])], picsNow = existing ? [...(pics.get(existing.id) || [])] : [], picsDirty = false;
   dlgOf(existing ? '✏️ Note badlein' : '📝 Naya note', `<form class="nt-form">
     <label>Note<textarea name="text" maxlength="1000" rows="3" placeholder="kya yaad rakhna hai…">${esc(n.text || '')}</textarea></label>

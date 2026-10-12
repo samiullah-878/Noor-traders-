@@ -12,6 +12,7 @@
 //  v4.3 (2026-10-11): har item ke neeche dono godam ka stock PEHLE -> BAAD ("Godam 1: 15 Ctn + 3 Pcs -> 12 Ctn + 3 Pcs"). Pehle = baad +/- transfer ki qty.
 //  v4.4 (2026-10-11): POS MEIN BANE transfer note ki bhi yahi parchi (stock pehle -> baad) — POS apni parchi mein kuch jodne nahi deta, is liye
 //     naya POS note aate hi (10 s mein) hamari parchi alag se. Sirf SELECT. Purane note kabhi nahi chhapte. Band: POS_NOTE_PRINT = false.
+//  v4.6 (2026-10-12): printJobs kind 'voucher' chhor deta hai (pos-khata-sync chhapta hai).
 //  v4.5 (2026-10-12): 💰 HBL parchi — bank-parchi.js: HBL Inbox mein naya SMS / email aate hi "PAISE AAYE" parchi. Setting printConfig.bankAuto.
 //  Chalana:  node transfer-sync.js   (transfer-auto.bat loop mein)
 // =========================================================
@@ -281,6 +282,7 @@ async function handleTransfer(doc) {
   } finally { busy.delete(doc.id); }
 }
 async function handlePrint(doc) {
+  if ((doc.data() || {}).kind === 'voucher') return;   // v4.6: voucher dobara print pos-khata-sync karta hai
   if (busy.has('p' + doc.id)) return; busy.add('p' + doc.id);
   try {
     const ref = prCol.doc(doc.id), j = await claim(ref, 'printing'); if (!j) return;
