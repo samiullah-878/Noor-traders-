@@ -1,5 +1,5 @@
 // =========================================================
-//  pos-sales-dekho.js  v1.4 (2026-10-06: 🔔 POS mein item judte hi (scan ya code) us PC ko beep — posBeep/<PC host>, har 0.4 sec) · v1.3 (2026-10-06: ⚡ har 2 sec + app ka bill bante / edit hote hi foran) · v1.2 (2026-10-06: ps = DocStatusID (1 un-posted / 2 posted), pc + by (SystemNotes se), items posSaleLines/<SaleID>, _sync har 30 sec) · v1.1 (2026-10-03: har 10 sec, pehle chhota sawal) · v1  (2026-10-03) — POS par bane AAJ ke SALE BILLS app mein (sirf SELECT, POS mein kuch nahi badalta)
+//  pos-sales-dekho.js  v1.5 (2026-10-12: 🖥 POS KI SALE (AUTO) -> Daily Sale ka Sale khana, blueKhata 'possale-<din>'; "stock fraq" account ke bill nahi) · v1.4 (2026-10-06: 🔔 POS mein item judte hi (scan ya code) us PC ko beep — posBeep/<PC host>, har 0.4 sec) · v1.3 (2026-10-06: ⚡ har 2 sec + app ka bill bante / edit hote hi foran) · v1.2 (2026-10-06: ps = DocStatusID (1 un-posted / 2 posted), pc + by (SystemNotes se), items posSaleLines/<SaleID>, _sync har 30 sec) · v1.1 (2026-10-03: har 10 sec, pehle chhota sawal) · v1  (2026-10-03) — POS par bane AAJ ke SALE BILLS app mein (sirf SELECT, POS mein kuch nahi badalta)
 //  Har 1 minute dbo.Sale (aaj) parhta hai -> Firestore posSales/<YYYY-MM-DD> (ek doc, sirf badle to likhta hai).
 //  App: scanner screen ke baayein "Aaj ke bills" mein chips — ✓ cash/poora · ✗ udhaar · ⊘ cancel (DocStatusID 3).
 //  App se bani sale (Description = "BK-APP <id>") ko app:<id> nishan — app wali chip se jod deta hai (do dafa na dikhe).
@@ -37,6 +37,42 @@ async function getPool() { if (pool && pool.connected) return pool; pool = await
 const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
 const dayOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 let lastHash = '';
+
+// v1.5 (2026-10-12): 🖥 POS KI SALE (AUTO) — malik: "Sale screen (Daily Sale) mein sale auto aani chahiye, us mein farq wale account ki entry
+// nahi aani chahiye. Khana abhi khula hi rahe, sale auto aati jaye". blueKhata/possale-<YYYY-MM-DD>: kind 'sale', posAuto (app mein edit /
+// delete nahi), posNo (POS mein voucher nahi). Raqam = cash bill ka TotalSale + udhar bill mein jitna cash mila (min CashReceived, Total);
+// cancel (DocStatusID 3) nahi; "stock fraq" party (ginti ka farq) bilkul nahi. Badle to likhta hai; har 5 min jaanch; shuru par kal ka bhi.
+const KHATA = db.collection('businesses').doc(BUSINESS_ID).collection('blueKhata');
+const isFarqName = n => /stock\s*['"]?\s*f[ae]?r?a?q/i.test(String(n || ''));
+function saleSum(rows) {
+  let cash = 0, n = 0, fq = 0, fqRs = 0, cx = 0;
+  for (const r of rows) {
+    if (Number(r.DocStatusID) === 3) { cx++; continue; }
+    if (isFarqName(r.PartyName)) { fq++; fqRs += Number(r.TotalSale) || 0; continue; }
+    const t = Number(r.TotalSale) || 0, c = Number(r.CashReceived) || 0;
+    cash += r.IsCreditSale ? Math.max(0, Math.min(c, t)) : t; n++;
+  }
+  return { amt: Math.round(cash * 100), n, fq, fqRs: Math.round(fqRs), cx };
+}
+const saleSeen = new Map();
+async function writeSale(day, s, force = false) {
+  const key = `${s.amt}|${s.n}|${s.fq}|${s.cx}`, prev = saleSeen.get(day);
+  if (!force && prev && prev.key === key && Date.now() - prev.at < 5 * 60000) return;
+  const ref = KHATA.doc('possale-' + day), ex = await ref.get(), old = ex.exists ? ex.data() : null, t = Date.now();
+  saleSeen.set(day, { key, at: t }); if (saleSeen.size > 10) saleSeen.delete(saleSeen.keys().next().value);
+  if (s.amt <= 0) { if (old && !old.deleted) { await ref.set({ deleted: true, updatedAt: t, updatedBy: 'pc-sale' }, { merge: true }); log(`🖥 ${day}: POS sale 0 — auto entry hatayi`); } return; }
+  const note = `🖥 POS ki sale (auto) · ${s.n} bill${s.cx ? ' · ' + s.cx + ' cancel' : ''}${s.fq ? ` · stock fraq ke ${s.fq} bill (Rs ${s.fqRs.toLocaleString('en-US')}) nahi gine` : ''}`;
+  if (old && !old.deleted && old.amount === s.amt && old.note === note) return;
+  await ref.set({ id: 'possale-' + day, type: 'entry', kind: 'sale', amount: s.amt, date: day, note, partyId: '', account: '', posAuto: true, posNo: true, deleted: false,
+    by: 'pc-sale', updatedBy: 'pc-sale', createdAt: Number(old && old.createdAt) || t, updatedAt: t, rev: (Number(old && old.rev) || 0) + 1 }, { merge: true });
+  log(`🖥 ${day}: Daily Sale mein POS sale Rs ${(s.amt / 100).toLocaleString('en-US')} (${s.n} bill${s.fq ? ', stock fraq ' + s.fq + ' nahi' : ''})`);
+}
+async function saleFor(p, d0, d1) {
+  const rows = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
+    SELECT s.TotalSale, s.CashReceived, s.IsCreditSale, s.DocStatusID, pt.PartyName FROM dbo.Sale s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
+    WHERE s.SaleDate >= @a AND s.SaleDate < @b`)).recordset;
+  return saleSum(rows);
+}
 
 // v1.2: aaj ke har bill ke items -> posSaleLines/<SaleID> {day, no, at, lines:[{i,n,q,r,g}]} — sirf badle hue likhe
 async function syncLines(p, d0, d1, day) {
@@ -81,6 +117,7 @@ async function once() {
       ps: Number(r.DocStatusID) || 0, pc: String(names[host] || host.replace(/^DESKTOP-/i, '') || '').slice(0, 30), by: /blue khata/i.test(by) ? '' : String(by).trim().slice(0, 20) };
   });
   const day = dayOf(d0), hash = day + JSON.stringify(bills);
+  await writeSale(day, saleSum(rows)).catch(e => log('POS sale (auto) masla: ' + e.message));   // v1.5
   await syncLines(p, d0, d1, day).catch(e => log('Items masla: ' + e.message));
   if (hash === lastHash) return;
   await col.doc(day).set({ day, at: Date.now(), bills });
@@ -92,7 +129,9 @@ const lock = net.createServer().listen(LOCK_PORT, '127.0.0.1');
 lock.on('error', () => { console.log('pos-sales-dekho pehle se chal raha hai — yeh copy band.'); process.exit(3); });
 lock.on('listening', async () => {
   try { await getPool(); log('SQL se jur gaya'); } catch (e) { log('SQL masla: ' + e.message); process.exit(1); }
-  log('pos-sales-dekho v1.4 chal raha hai — har 2 second (sirf badlaav par likhta hai)…');
+  try { const p = await getPool(), y1 = new Date(); y1.setHours(0, 0, 0, 0); const y0 = new Date(y1); y0.setDate(y0.getDate() - 1);   // v1.5: kal ki aakhri sale bhi (PC raat ko band ho gaya ho)
+    await writeSale(dayOf(y0), await saleFor(p, y0, y1), true); } catch (e) { log('Kal ki POS sale: ' + e.message); }
+  log('pos-sales-dekho v1.5 chal raha hai — har 2 second (sirf badlaav par likhta hai)…');
   let running = false, again = false;
   const tick = async () => { if (running) { again = true; return; } running = true;
     try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }

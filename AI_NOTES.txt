@@ -4168,3 +4168,12 @@ Malik: "purchase wali screen premium" + "milana asaan — apni gaari wale bills 
 - autoLinkMulti: aik larke ki entry = isi supplier ke 2-3 khule POS bill ka jama (nearAmt), sirf aik hi jor bane to khud posBillIds.
 - CAPS purchase mein 'pur.milao' (Settings → Mulazim).
 - Test: scratchpad pu/mock.cjs (screenshot), pu/logic.cjs (states, gaari bill/supplier, quickPair, multi). Asal phone par dekhna baqi.
+
+2026-10-12 raat — app v2.99.61 · PC manifest 2026-10-12.13 (pos-sales-dekho v1.5)
+Malik: "Sale screen (Daily Sale) mein sale auto aani chahiye, farq wale account ki entry nahi" + "khana abhi khula hi rahe, sale auto aati jaye".
+- pos-sales-dekho v1.5: har badlaav par (aur har 5 min) blueKhata/possale-<din> {kind 'sale', amount paise, posAuto:true, posNo:true,
+  note "🖥 POS ki sale (auto) · N bill · X cancel · stock fraq ke Y bill (Rs Z) nahi gine"}. Raqam = cash bill TotalSale + udhar bill mein
+  min(CashReceived, Total); DocStatusID 3 (cancel) nahi; party naam /stock fraq|farq/ bilkul nahi. 0 ho to deleted. Shuru par kal ka bhi
+  (PC raat ko band ho to aakhri sale). Haath wala Sale khana wesa hi khula (malik ka faisla) — dhyan: haath se wohi POS sale dobara na likhein.
+- app: canEditEntry / canDeleteEntry — posAuto entry par Edit / Delete nahi (PC hi badalta hai).
+- Test: scratchpad ps.cjs (sum, likhna, dobara nahi, update, 0 = hata).
