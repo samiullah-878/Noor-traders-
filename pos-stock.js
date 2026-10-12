@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.52';
-import { liveLabelsHTML } from './barcode.js?v=2.99.52';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.53';
+import { liveLabelsHTML } from './barcode.js?v=2.99.53';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -463,7 +463,7 @@ function renderStockInner() {
       <p class="stat-note">Ya naam / code search karein.</p>` : '');
 }
 
-// ================= v2.99.52 💎 FARQ TAB (premium) + 🧾 ginti ke baad bill ka nishan =================
+// ================= v2.99.53 💎 FARQ TAB (premium) + 🧾 ginti ke baad bill ka nishan =================
 // PC (post-farq v13) count doc par `later` likhta hai = ginti ke BAAD is item ki POS harkat (sale / purchase). Aisa item farq bill
 // mein tab tak NAHI jata jab tak dobara na gina jaye (recount) ya malik "Phir bhi shamil karo" (forceBill) na kare.
 const lateOf = c => (c && Array.isArray(c.later) && c.later.length && !c.recount && !c.forceBill && c.laterFor === c.at) ? c.later : null;
@@ -1359,6 +1359,17 @@ function tcPaint() {
   const nt = document.querySelector('[data-tc-note]'); if (nt && note) nt.value = note;
   if (tcView === 'scan' && (focus || !nt) && !matchMedia?.('(pointer:coarse)')?.matches) document.querySelector('[data-tc-code]')?.focus();
 }
+// v2.99.53: 🔔 notification se seedha — '#tc=<key>' (Server PC auto-backup v1.5: transfer 10 min mein check na ho)
+function tcHashGo(tries = 0) {
+  const m = String(location.hash || '').match(/^#tc=([^&]+)/); if (!m) return;
+  if (!cloud?.listenTransferChecks) { if (tries < 20) setTimeout(() => tcHashGo(tries + 1), 1000); return; }
+  const key = decodeURIComponent(m[1]);
+  try { history.replaceState(null, '', location.pathname + location.search); } catch {}
+  tcDays = 1; tcDir = 'all'; tcOpen.add(key); openTransferCheck('nikle');
+  setTimeout(() => { const el = [...document.querySelectorAll('[data-tc-open]')].find(b => b.dataset.tcOpen === key); if (el) { el.scrollIntoView({ block: 'center' }); el.closest('.tc-n')?.classList.add('tc-flash'); } }, 900);
+}
+window.addEventListener?.('hashchange', () => tcHashGo());
+setTimeout(() => tcHashGo(), 2500);
 export function openTransferCheck(view) {
   const d = $('dialog'); if (!d) return;
   tcStart(); if (view) tcView = view;
@@ -1962,7 +1973,7 @@ async function writeCount(item, v, add = null, tick = false) {
   if (add) { h.add = { ctn: add.ctn, pcs: add.pcs, total: add.total }; if (add.note) h.note = add.note; }
   if (tick) h.tick = true;
   const history = [...past, h].slice(-20);
-  // v2.99.52: ginti ke baad bill bana tha (later) aur ab dobara gina = recount (farq bill mein ab shamil ho sakta hai)
+  // v2.99.53: ginti ke baad bill bana tha (later) aur ab dobara gina = recount (farq bill mein ab shamil ho sakta hai)
   const re = !!(old && (old.recount || (Array.isArray(old.later) && old.later.length)));
   await cloud.saveStockCount({
     id: countId(pickedBranch, item.id),

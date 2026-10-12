@@ -4091,3 +4091,7 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 == v2.99.52 (2026-10-12) farq card ke alfaaz saaf ==
 - Malik confuse hua (mujahid oil — na sale na purchase, phir "dobara gino" kyun). Ab: "✓ Dobara gin liya — theek hai" (pehle hi gina ja chuka),
   aur bina bill wale card par neeche halka "✏️ Ginti badalni ho to (zaroori nahi)"; sirf 🧾 wale card par "✏️ Dobara gino (zaroori)".
+
+== v2.99.53 (2026-10-12) 🚚 transfer note 10 min mein check na ho = phone par notification ==
+- PC: auto-backup v1.5 (manifest 2026-10-12.8) push bhejta hai. App pos-stock tcHashGo: '#tc=<key>' -> Transfer check (Nikle, aaj) khulta hai,
+  wahi note khula + peela chamak (tc-flash). Notification par tap = app seedha wahan.

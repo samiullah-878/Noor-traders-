@@ -3003,3 +3003,4 @@ html body .fq-force{align-self:flex-start;margin-top:4px;min-height:30px!importa
 .fq-re{margin-top:8px}.fq-re summary{cursor:pointer;font-weight:700;font-size:13px;color:#0b3d6b;padding:4px 0}.fq-re .pos-dates{margin-top:6px}
 html.dk .fq-card,html.dk .fq-head div{background:rgba(255,255,255,.05)}html.dk .fq-late,html.dk .fq-warn{background:rgba(245,158,11,.12);color:#fcd34d}html.dk .fq-re summary{color:#bcd4ff}
 .fq-re:not(.must) summary{color:#64748b!important;font-weight:600;font-size:12px}
+.tc-flash{box-shadow:0 0 0 3px #f59e0b!important;transition:box-shadow .4s}

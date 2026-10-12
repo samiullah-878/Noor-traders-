@@ -1,5 +1,5 @@
 // ============================================================
-//  auto-backup.js  v1.0 (2026-10-05) — ☁️ AUTO BACKUP: din mein 2 dafa (app ki Settings se waqt) poora khata JSON mein,
+//  auto-backup.js  v1.5 (2026-10-12: 🚚 transfer note 10 min mein check na ho = notification) · v1.0 (2026-10-05) — ☁️ AUTO BACKUP: din mein 2 dafa (app ki Settings se waqt) poora khata JSON mein,
 //  C:\khata-sync\backups mein + Google Drive for Desktop ke folder ("Blue Khata Backup") mein — Drive khud upload karta hai.
 //
 //  App (Settings -> 💾 Backup -> ☁️ Auto backup) blueAccess/backupConfig likhti hai: {on, email, times:['14:00','22:00'], now}
@@ -152,12 +152,67 @@ async function nagNotify() {
   for (const k of Object.keys(nagSent)) if (Date.now() - nagSent[k] > 4 * 86400000) delete nagSent[k];
   try { fs.writeFileSync(NAG_FILE, JSON.stringify(nagSent)); } catch {}
 }
+// ---- v1.5 (2026-10-12): 🚚 TRANSFER NOTE CHECK NAHI HUA — 10 min baad notification, phir har 30 min (3 ghante tak), subah 7 – raat 11 ----
+// Malik: "10 minute se oper koi bi transfer check agr na ho to usi time notification … click karian to apps open ho jaya direct".
+// Note: posTransfers (POS ke) + transferJobs done (app ke, abhi POS list mein nahi). Check: transferChecks/<key> (key = posTransfers id ya 'T'+transferId).
+// Kis ko: malik + mulazim jin ka scope stock / full. Tap = app '#tc=<key>' (Transfer check khulta hai, wahi note khula).
+const TR_FILE = path.join(DIR, 'tr-check-state.json'), TR_FIRST = 10 * 60000, TR_EVERY = 30 * 60000, TR_MAX = 3 * 3600000;
+let trNames = {}, trNamesAt = 0, trPos = new Map(), trJobs = new Map(), trChecks = new Set(), trSent = {}, trStops = null;
+try { trSent = JSON.parse(fs.readFileSync(TR_FILE, 'utf8')) || {}; } catch {}
+const trIssued = t => Number(t.createdOn) || Number(t.at) || 0;
+function trWatch() {
+  if (trStops) return;
+  const since = Date.now() - 2 * 86400000, fail = name => e => { log(`🚚 ${name} listener masla: ` + e.message); trStops = null; if (unauth(e)) process.exit(1); };
+  trStops = [
+    base.collection('posTransfers').where('createdOn', '>=', since).onSnapshot(s => s.docChanges().forEach(c => { if (c.type === 'removed') trPos.delete(c.doc.id); else trPos.set(c.doc.id, { ...c.doc.data(), id: c.doc.id }); }), fail('posTransfers')),
+    base.collection('transferJobs').where('doneAt', '>=', since).onSnapshot(s => s.docChanges().forEach(c => { if (c.type === 'removed') trJobs.delete(c.doc.id); else trJobs.set(c.doc.id, c.doc.data()); }), fail('transferJobs')),
+    base.collection('transferChecks').where('issuedAt', '>=', since).onSnapshot(s => s.docChanges().forEach(c => { if (c.type === 'removed') trChecks.delete(c.doc.id); else trChecks.add(c.doc.id); }), fail('transferChecks'))
+  ];
+}
+function trList() {
+  const L = [...trPos.values()], ids = new Set(L.map(t => String(t.transferId)));
+  for (const j of trJobs.values()) { if (j.op === 'delete' || j.status !== 'done' || !j.transferId || ids.has(String(j.transferId))) continue;
+    L.push({ id: 'T' + j.transferId, transferId: j.transferId, transferNo: String(j.transferNo || ''), from: j.from, to: j.to, createdOn: Number(j.doneAt) || Number(j.at) || 0, lines: j.lines || [] }); }
+  return L;
+}
+function trDue(t, now = Date.now(), hour = new Date().getHours()) {
+  const key = String(t.id || ('T' + t.transferId)), age = now - trIssued(t);
+  if (trChecks.has(key) || !(trIssued(t) > 0) || age < TR_FIRST || age > TR_MAX || hour < 7 || hour >= 23) return null;
+  const last = Number(trSent[key]) || 0;
+  return !last || now - last >= TR_EVERY - 20000 ? { key, mins: Math.round(age / 60000) } : null;
+}
+async function trNotify() {
+  trWatch();
+  const due = trList().map(t => ({ t, d: trDue(t) })).filter(x => x.d);
+  if (!due.length) return;
+  const tk = (await base.collection('pushTokens').get()).docs.map(d => d.data()).filter(x => x.token && (x.role === 'owner' || x.role === 'malik' || ['stock', 'full'].includes(x.scope)));
+  const tokens = [...new Set(tk.map(x => x.token))];
+  if (Date.now() - trNamesAt > 6 * 3600000) { trNamesAt = Date.now(); try { for (const d of (await base.collection('posStock').select('branch', 'name').get()).docs) { const x = d.data(); if (x && x.branch != null && x.name) trNames[x.branch] = x.name; } } catch {} }
+  const names = trNames;
+  const bn = b => names[b] || (Number(b) === 1 ? 'Noor Traders' : 'Godam ' + b);
+  const { getMessaging } = require('firebase-admin/messaging');
+  for (const { t, d } of due.slice(0, 10)) {
+    trSent[d.key] = Date.now();
+    if (!tokens.length) { log('🚚 transfer check: koi push token nahi'); continue; }
+    const late = d.mins >= 60 ? Math.floor(d.mins / 60) + ' ghante ' + (d.mins % 60) + ' min' : d.mins + ' min';
+    const n = Array.isArray(t.lines) ? t.lines.length : 0;
+    const title = `🚚 ${t.transferNo ? 'TN ' + t.transferNo : 'Transfer note'} abhi tak check nahi hua`;
+    const body = `⏳ ${late} · ${bn(t.from)} → ${bn(t.to)}${n ? ' · ' + n + ' items' : ''}\nTap karein — scan / ✓ karein`;
+    try {
+      const r = await getMessaging().sendEachForMulticast({ tokens, data: { title, body, tag: 'tc-' + d.key, link: 'https://samiullah-878.github.io/Noor-traders-/#tc=' + encodeURIComponent(d.key) }, webpush: { headers: { Urgency: 'high' } } });
+      log(`🚚 transfer check yaad (${t.transferNo || d.key}, ${late}): ${r.successCount}/${tokens.length} phone`);
+    } catch (e) { log('🚚 transfer notification masla: ' + e.message); }
+  }
+  for (const k of Object.keys(trSent)) if (Date.now() - trSent[k] > 2 * 86400000) delete trSent[k];
+  try { fs.writeFileSync(TR_FILE, JSON.stringify(trSent)); } catch {}
+}
 let doneKeys = new Set(), lastNow = 0, busy = false;
 async function tick() {
   if (busy) return;
   busy = true;
   try { await gaariNotify(); } catch (e) { log('gaari notification masla: ' + e.message); }
   try { await nagNotify(); } catch (e) { log('🔁 nag masla: ' + e.message); }
+  try { await trNotify(); } catch (e) { log('🚚 transfer check masla: ' + e.message); }
   try {
     const cd = await base.collection('blueAccess').doc('backupConfig').get();
     const c = cd.exists ? cd.data() : {};
@@ -177,7 +232,7 @@ async function tick() {
   } finally { busy = false; if (doneKeys.size > 50) doneKeys = new Set([...doneKeys].slice(-20)); }
 }
 
-module.exports._t = { nagDue, nagNotify, nagNotes: () => nagNotes, nagSent: () => nagSent };
+module.exports._t = { trDue, trList, trNotify, trSet: (p, j, c) => { trPos = p; trJobs = j; trChecks = c; trStops = []; }, trSent: () => trSent, nagDue, nagNotify, nagNotes: () => nagNotes, nagSent: () => nagSent };
 if (process.env.NT_TEST) {} else if (process.argv.includes('--now')) {
   makeBackup('--now test').then(s => { console.log(s); process.exit(0); }).catch(e => { console.error('Nahi hua:', e.message); process.exit(1); });
 } else {
