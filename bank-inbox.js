@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.57';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.58';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -100,7 +100,7 @@ async function apply(id, auto = false) {
   try {
     let partyId = '', entryId = '';
     if (r.dir === 'in' && O.post) {
-      // v2.99.57: AAYE = koi khata nahi poochna — seedha HBL Noor Traders: ek entry 'payment' (Daily: Akhrajat = galla ka paisa bank mein).
+      // v2.99.58: AAYE = koi khata nahi poochna — seedha HBL Noor Traders: ek entry 'payment' (Daily: Akhrajat = galla ka paisa bank mein).
       // Server PC (bank-parchi v2) bhi yahi ID likhta hai — dono likhen to ek hi. Cash deposit bhi isi tarah.
       entryId = 'bk' + id + 'a'; partyId = H.id;
       await O.post([{ id: entryId, kind: 'payment', partyId: H.id, amount: r.amt, date, note, dailyIncluded: true, posPending: false, bankSms: id }]);
@@ -112,14 +112,14 @@ async function apply(id, auto = false) {
       const s = sugOf(x); if (!s) throw Error('Khata chunein');
       partyId = s.p.id;
       if (O.post && r.dir === 'in') {
-        // v2.99.57 (v2.99.57: sirf AAYE): Daily Sale mein dono taraf — aaye: party ki WASOOLI + HBL ko PAYMENT (Akhrajat column) · gaye: HBL ki WASOOLI + party ko PAYMENT.
+        // v2.99.58 (v2.99.58: sirf AAYE): Daily Sale mein dono taraf — aaye: party ki WASOOLI + HBL ko PAYMENT (Akhrajat column) · gaye: HBL ki WASOOLI + party ko PAYMENT.
         // Galla barabar (wasooli = akhrajat), khaton ka baqaya transfer jaisa. Pakki ID (do phone ek saath lagayen to bhi do dafa nahi).
         const wId = 'bk' + id + 'w', aId = 'bk' + id + 'a', base = { amount: r.amt, date, note, dailyIncluded: true, posPending: false, bankSms: id };
         await O.post([{ ...base, id: wId, kind: 'collection', partyId: r.dir === 'in' ? s.p.id : H.id }, { ...base, id: aId, kind: 'payment', partyId: r.dir === 'in' ? H.id : s.p.id }]);
         entryId = wId + '|' + aId;
       } else {
         entryId = (crypto.randomUUID ? crypto.randomUUID() : 'bk' + Date.now());
-        // v2.99.57: GAYE = seedha khate mein (HBL -> party transfer), Daily Sale mein NAHI (malik: "wasooli main nahi aiyega")
+        // v2.99.58: GAYE = seedha khate mein (HBL -> party transfer), Daily Sale mein NAHI (malik: "wasooli main nahi aiyega")
         const ok = await O.pay({ id: entryId, rev: 0, fromPartyId: r.dir === 'in' ? s.p.id : H.id, toPartyId: r.dir === 'in' ? H.id : s.p.id, amount: r.amt, date, note, posPending: false, posVoucher: '' });
         if (ok === false) throw Error('Entry nahi lagi');
       }
@@ -130,7 +130,7 @@ async function apply(id, auto = false) {
   } catch (e) { if (auto) autoFail.add(id); O.notice?.('⚠️ ' + (auto ? 'Khud nahi laga (' + (r.name || '') + '): ' : '') + (e?.message || e)); }
   finally { busy.delete(id); paint(); onCount(rows().pend.length); }
 }
-// 🤖 v2.99.57: jo naam app ko YAAD hai (malik ne pehle khud khata chuna) — SMS / email aate hi khud lag jaye. Naya naam = ☐ hi rahe.
+// 🤖 v2.99.58: jo naam app ko YAAD hai (malik ne pehle khud khata chuna) — SMS / email aate hi khud lag jaye. Naya naam = ☐ hi rahe.
 const autoFail = new Set(); let autoBusy = false;
 async function autoRun() {
   if (autoBusy || !docs || !canUse() || !O.post || !hbl()) return;
@@ -139,7 +139,7 @@ async function autoRun() {
     await fixOnce();
     for (const x of rows().pend) {
       if ((x.r.kind === 'cash' && x.r.dir !== 'in') || autoFail.has(x.d.id) || busy.has(x.d.id) || pick.has(x.d.id)) continue;
-      if (!x.r.day || x.r.day !== (O.today ? O.today() : '')) continue;   // v2.99.57: purani tareekh = pehle poocho, khud nahi
+      if (!x.r.day || x.r.day !== (O.today ? O.today() : '')) continue;   // v2.99.58: purani tareekh = pehle poocho, khud nahi
       if (x.r.dir !== 'in') { const s = guessParty(x.r.name, (O.parties ? O.parties() : []).filter(p => !p.bank), alias); if (!s || s.why !== 'yaad') continue; }
       else await new Promise(res => setTimeout(res, 4000));   // PC pehle laga de to yahan dobara nahi (rows() mein done aa jata hai)
       if (!rows().pend.some(z => z.d.id === x.d.id)) continue;
@@ -148,7 +148,7 @@ async function autoRun() {
   } finally { autoBusy = false; }
 }
 setInterval(() => { try { autoRun(); } catch {} }, 45000);
-// v2.99.57 ek dafa (malik ke phone par): (1) GAYE jo Wasooli+Akhrajat jore ban kar lage — Daily se nikal kar transfer (seedha khata)
+// v2.99.58 ek dafa (malik ke phone par): (1) GAYE jo Wasooli+Akhrajat jore ban kar lage — Daily se nikal kar transfer (seedha khata)
 // (2) SAMIH ULLAH ka khud-yaad jor tora (malik: "ghalat jor") — agli dafa app poochhe. Nishan: alias['@fix47'].
 async function fixOnce() {
   if (!(O.owner && O.owner()) || alias['@fix47'] || !O.post || !O.unpost || !O.pay) return;
@@ -184,7 +184,7 @@ function search(inp) {
 // ---------- ⚙️ setup (malik) ----------
 async function loadKey() { if (key !== null || !O.cloud?.getBankKey) return; try { key = (await O.cloud.getBankKey()) || ''; } catch { key = ''; } paint(); }
 const restUrl = () => `https://firestore.googleapis.com/v1/projects/${O.projectId}/databases/(default)/documents/businesses/noor-traders/bankSms?key=${O.apiKey}`;
-const smsBody = k => `{"fields":{"k":{"stringValue":"${k}"},"src":{"stringValue":"sms"},"from":{"stringValue":"14250"},"text":{"stringValue":"{sms_message}"}}}`;   // v2.99.57: MacroDroid ka magic text seedha — copy = paste, kuch badalna nahi
+const smsBody = k => `{"fields":{"k":{"stringValue":"${k}"},"src":{"stringValue":"sms"},"from":{"stringValue":"14250"},"text":{"stringValue":"{sms_message}"}}}`;   // v2.99.58: MacroDroid ka magic text seedha — copy = paste, kuch badalna nahi
 function gasCode(k) {
   return `// Blue Khata — HBL email (paise GAYE) -> 📩 HBL Inbox. Google ke server par har 5 minute. Kuch mitata / bhejta nahi, sirf parhta hai.
 const KEY = '${k}';
@@ -269,7 +269,7 @@ async function copy(what) {
   try { await navigator.clipboard.writeText(t); O.notice?.('📋 Copy ho gaya'); } catch { prompt('Copy karein:', t); }
 }
 document.addEventListener('click', e => {
-  // v2.99.57: 📩 HBL chip / Settings -> POORI HBL screen (pehle chhota dialog khulta tha)
+  // v2.99.58: 📩 HBL chip / Settings -> POORI HBL screen (pehle chhota dialog khulta tha)
   if (e.target.closest?.('[data-hb="bank"],#bkOpenBtn')) { if (O.route) { try { $('dialog')?.close(); } catch {} O.route('hbl'); } else openBankInbox(); return; }
   if (e.target.closest?.('[data-bk-inbox]')) { openBankInbox(e.target.closest('[data-bk-inbox]').dataset.bkInbox || ''); return; }
   const t = e.target.closest?.('[data-bk-tab],[data-bk-ok],[data-bk-skip],[data-bk-chg],[data-bk-pick],[data-bk-copy],[data-bk-newkey],[data-bk-test]'); if (!t || !live()) return;
@@ -288,11 +288,11 @@ document.addEventListener('click', e => {
 document.addEventListener('input', e => { if (e.target.matches?.('[data-bk-q]')) { qOpen = e.target.dataset.bkQ; search(e.target); } });
 document.addEventListener('change', e => { if (e.target.matches?.('[data-bk-bank]') && e.target.value) { O.setBank?.(e.target.value); paint(); } });
 
-// ================= 🏦 HBL SCREEN (v2.99.57) — poori screen, din-war, Aaye / Gaye, HBL ka baqaya =================
+// ================= 🏦 HBL SCREEN (v2.99.58) — poori screen, din-war, Aaye / Gaye, HBL ka baqaya =================
 // Malik: "hbl ki tab khulna pr jaise baqi tabs hain … lena wala dena wala or current balance … jitna bi paisa aiya checkbox".
 // HBL khata = O.bankId() wala khata (purana "Hbl loan 7999 account"). Baqaya = khate ka baqaya + closing se diya cash (Cash diya → HBL).
 // ☐ = abhi khata mein nahi laga (SMS/email) · ☑ = lag gaya (khate ki asal entry). Tick = party ↔ HBL transfer (dono khaton mein).
-// v2.99.57: tick = do entries (Wasooli + Akhrajat, dailyIncluded:true) — Daily Sale mein dikhti hain, galla barabar. Purane transfer waise hi.
+// v2.99.58: tick = do entries (Wasooli + Akhrajat, dailyIncluded:true) — Daily Sale mein dikhti hain, galla barabar. Purane transfer waise hi.
 let range = 'mahina', stab = 'sab', pcfg = null, pstop = null;
 try { const v = JSON.parse(localStorage.getItem('sam-hbl-v') || '{}'); if (['aaj', '7', 'mahina', 'sab'].includes(v.range)) range = v.range; if (['sab', 'baqi'].includes(v.stab)) stab = v.stab; } catch {}
 const keepV = () => { try { localStorage.setItem('sam-hbl-v', JSON.stringify({ range, stab })); } catch {} };
@@ -316,7 +316,7 @@ function hblMoves(H) {
   } catch {}
   return out.sort((a, b) => String(b.date).localeCompare(String(a.date)) || b.at - a.at);
 }
-// v2.99.57: baqaya BILKUL khate jaisa (malik: "balance ka farq") — closing se diya cash (Closing Cash khata) alag dikhaya, jora nahi
+// v2.99.58: baqaya BILKUL khate jaisa (malik: "balance ka farq") — closing se diya cash (Closing Cash khata) alag dikhaya, jora nahi
 function hblBalance(H) { return H && O.balanceOf ? O.balanceOf(H.id) : 0; }
 function hblCash(H) { let c = 0; if (!H) return 0; try { for (const r of (O.cashRows ? O.cashRows() : [])) { if (r.from === 'shop' && r.to === H.id) c += r.outgoing; else if (r.to === 'shop' && r.from === H.id) c -= r.incoming; } } catch {} return c; }
 const fromDay = () => { const t = O.today ? O.today() : new Date().toISOString().slice(0, 10); if (range === 'sab') return ''; if (range === 'aaj') return t; const d = new Date(t + 'T12:00:00'); if (range === '7') d.setDate(d.getDate() - 6); else d.setDate(1); return d.toISOString().slice(0, 10); };
@@ -337,7 +337,7 @@ function doneRow(v) {
   const undo = src && O.owner && O.owner() ? `<button type="button" class="bk-x" title="Wapas lo" data-bk-undo="${esc(src.id)}">↩</button>` : '';
   return `<div class="bk-row done ${v.dir}"><label class="bk-tick on"><input type="checkbox" checked disabled><span></span></label><div class="bk-rw"><div class="bk-rl"><b>${esc(v.name)}</b><b class="bk-amt ${v.dir === 'in' ? 'green' : 'red'}">${v.dir === 'in' ? '+' : '−'}${m(v.amt)}</b></div><small>${esc(String(v.note).replace(/^HBL (aaye|gaye) · /, '').slice(0, 110))}</small></div><div class="bk-side">${v.cash ? '' : noteBtn(txn, 'v:' + v.id)}${undo}</div></div>`;
 }
-// ---------- 🔔 note + reminder (v2.99.57) — note ki pehchan us ke text mein "TXN <id>" ----------
+// ---------- 🔔 note + reminder (v2.99.58) — note ki pehchan us ke text mein "TXN <id>" ----------
 const notesNow = () => (O.notes ? O.notes() : []).filter(n => n && !n.deleted);
 const noteOf = txn => txn ? notesNow().find(n => String(n.text || '').includes('TXN ' + txn)) : null;
 function noteBtn(txn, ref) { if (!O.noteForm) return ''; const n = noteOf(txn); return `<button type="button" class="bk-nb${n ? ' has' : ''}" data-bk-note="${esc(ref)}" title="Note / reminder">${n ? (n.done ? '🔕 note' : '🔔 note hai') : '🔔 Note'}</button>`; }
@@ -388,7 +388,7 @@ function pickAcct() {
 window.addEventListener?.('sam-bank-pick', e => { if (e.detail && O.owner && O.owner() && alias['@hbl'] !== e.detail) saveHbl(e.detail); });
 window.addEventListener?.('sam-notes', () => { if (onScreen()) renderHbl(); });
 const dHead = d => { if (!d) return 'Tareekh nahi'; const t = O.today ? O.today() : ''; if (d === t) return 'Aaj · ' + d; const y = new Date(t + 'T12:00:00'); y.setDate(y.getDate() - 1); if (d === y.toISOString().slice(0, 10)) return 'Kal · ' + d; return new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }); };
-// ================= v2.99.57 💎 PREMIUM HBL screen (sirf yahan — Daily column purane tickCard/doneRow se) =================
+// ================= v2.99.58 💎 PREMIUM HBL screen (sirf yahan — Daily column purane tickCard/doneRow se) =================
 const initials = n => String(n || '?').replace(/[^A-Za-z0-9؀-ۿ ]/g, ' ').trim().split(/\s+/).slice(0, 2).map(w => w[0] || '').join('').toUpperCase() || '?';
 const nameFromNote = n => (String(n || '').match(/^HBL (?:aaye|gaye) · ([^·(]+)/) || [])[1]?.trim() || '';
 const qOf = () => String(($('search') && $('search').value) || '').trim().toLowerCase();
@@ -461,7 +461,7 @@ export function renderHbl() {
   const pOn = !pcfg || pcfg.bankPost !== false;
   $('actions').innerHTML = `${own ? `<button type="button" data-hbl-print="${pOn ? '0' : '1'}" title="Aaye paise Server PC khud HBL khate mein lagaye + parchi">${pOn ? '🤖 Auto ON' : '🤖 Auto BAND'}</button>` : ''}${H ? '<button type="button" data-hbl-khata="1">📒 HBL khata</button>' : ''}${own ? '<button type="button" data-prn-open="1">🖨 Printer</button><button type="button" data-bk-inbox="setup">⚙️ Setup</button>' : ''}<button type="button" data-hbl-pdf="1">📄 PDF · bhejo</button>`;
 }
-// ================= v2.99.57 🖨 PRINTER KI HAALAT (TM-T88IV) — printConfig.voucherLog / vLast / vErr / vAlive (pos-khata-sync likhta hai) =================
+// ================= v2.99.58 🖨 PRINTER KI HAALAT (TM-T88IV) — printConfig.voucherLog / vLast / vErr / vAlive (pos-khata-sync likhta hai) =================
 const prnOpen = () => !!document.querySelector('#dialogBody .prn-root');
 function prnHTML() {
   const c = pcfg || {}, L = (Array.isArray(c.voucherLog) ? c.voucherLog : []).slice().reverse(), now = Date.now(), alive = Number(c.vAlive) || 0, age = alive ? Math.round((now - alive) / 60000) : null;
@@ -517,7 +517,7 @@ document.addEventListener('click', e => {
   if (d.hblTab) stab = d.hblTab; else if (d.hblRange) range = d.hblRange;
   keepV(); renderHbl();
 });
-// Daily Sale ka "🏦 HBL" button: HBL column tak le jao (v2.99.57)
+// Daily Sale ka "🏦 HBL" button: HBL column tak le jao (v2.99.58)
 document.addEventListener('click', e => { if (!e.target.closest?.('[data-hbl-col]')) return; const c = document.querySelector('.hbl-col'); if (c) { c.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'start' }); c.classList.add('flash'); setTimeout(() => c.classList.remove('flash'), 1500); } else O.route?.('hbl'); });
 document.addEventListener('change', e => { const t = e.target; if (!t.matches?.('[data-bk-tick]')) return; if (!t.checked) { t.checked = true; return; }
   const x = rows().pend.find(z => z.d.id === t.dataset.bkTick); if (!x) return;

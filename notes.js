@@ -6,9 +6,9 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.99.57';
-import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.99.57';   // v2.99.29: shaffaf order formula
-import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.57';
+import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.99.58';
+import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.99.58';   // v2.99.29: shaffaf order formula
+import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.99.58';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -47,7 +47,7 @@ function hashGo() {
 }
 
 // ---------- HBL account ----------
-// v2.99.57: malik ka chuna HBL account sab phones par (bankSms/_alias m['@hbl']) — pehle sirf isi phone par yaad rehta tha
+// v2.99.58: malik ka chuna HBL account sab phones par (bankSms/_alias m['@hbl']) — pehle sirf isi phone par yaad rehta tha
 let bankShared = '';
 export function setBankShared(id) { bankShared = String(id || ''); }
 export const notesList = () => notes;
@@ -499,7 +499,7 @@ function loadPics(n) {
 }
 export function noteForm(existing = null, preset = {}) {
   const n = existing || { kind: 'note', text: preset.text || '', items: [], remindDay: preset.day || '', remindTime: '', allDay: false };
-  const base = existing || { partyId: preset.partyId || '', partyName: preset.partyName || '', amount: preset.amount || 0 };   // v2.99.57: HBL card se
+  const base = existing || { partyId: preset.partyId || '', partyName: preset.partyName || '', amount: preset.amount || 0 };   // v2.99.58: HBL card se
   let chosen = [...(n.items || [])], picsNow = existing ? [...(pics.get(existing.id) || [])] : [], picsDirty = false;
   dlgOf(existing ? '✏️ Note badlein' : '📝 Naya note', `<form class="nt-form">
     <label>Note<textarea name="text" maxlength="1000" rows="3" placeholder="kya yaad rakhna hai…">${esc(n.text || '')}</textarea></label>
@@ -589,11 +589,12 @@ function paint() {
   const root = $('ntRoot'); if (!root) return;
   const due = dueParty(), l = listFor(fTab), cnt = t => listFor(t).length;
   poWatch(); dmWatch();
-  root.innerHTML = `<div class="nt-push" id="ntPush"></div><div class="al-box" id="ntAl">${alHTML()}</div><div class="po-box" id="ntPo">${poHTML()}</div><div id="ntGc">${gcLoad().accounts.length ? gcCardHTML() : ''}</div>
+  root.innerHTML = `<div class="nt-push" id="ntPush"></div>
     <label class="nt-search"><input type="search" placeholder="🔍 note, item, supplier, raqam…" value="${esc(fQ)}" data-nt-q="1"></label>
     <div class="mchips nt-tabs">${[['open', 'Sab khule'], ['today', '🔔 Aaj'], ['late', '⏰ Guzar gaye'], ['next', 'Aane wale'], ['order', '🧾 Order'], ['done', '✓ Ho gaye']].map(([k, lab]) => `<button type="button" class="rc${fTab === k ? ' on' : ''}" data-nt-tab="${k}">${lab} ${cnt(k)}</button>`).join('')}<button type="button" class="rc nt-selbtn${selMode ? ' on' : ''}" data-nt-selmode="1">${selMode ? '✕ Chunna band' : '☑ Kai chunein'}</button></div>
+    <div class="nt-list">${l.map(card).join('') || `<div class="nt-empty">📝<b>${fQ ? 'Kuch nahi mila' : fTab === 'done' ? 'Abhi koi ho gaya note nahi' : 'Koi khula note nahi'}</b><small>Neeche "📝 Naya note" dabayein</small></div>`}</div>${selMode ? bulkHTML(l) : ''}
     ${due.length && fTab !== 'done' ? `<div class="nt-sec"><h3>📒 Accounts ke due</h3>${due.map(x => `<button type="button" class="nt-due${x.late ? ' late' : ''}" data-nt-party="${esc(x.p.id)}"><b>${esc(x.p.name)}</b><span>${esc(nice(x.r.dueDate))}${x.r.dueTime ? ' · ' + esc(t12(x.r.dueTime)) : ''}</span>${x.r.note ? `<small>${esc(x.r.note)}</small>` : ''}</button>`).join('')}</div>` : ''}
-    <div class="nt-list">${l.map(card).join('') || `<div class="nt-empty">📝<b>${fQ ? 'Kuch nahi mila' : fTab === 'done' ? 'Abhi koi ho gaya note nahi' : 'Koi khula note nahi'}</b><small>Neeche "📝 Naya note" dabayein</small></div>`}</div>${selMode ? bulkHTML(l) : ''}`;
+    <div class="al-box" id="ntAl">${alHTML()}</div><div class="po-box" id="ntPo">${poHTML()}</div><div id="ntGc">${gcLoad().accounts.length ? gcCardHTML() : ''}</div>`;
   pushStatus();
 }
 // ---------- v2.99.27: ☑ KAI NOTES EK SAATH — din / waqt / baar baar / ho gaye ----------
