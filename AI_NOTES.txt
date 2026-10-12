@@ -4219,3 +4219,7 @@ sirf us godam ka maal, zero nahi; tadad Ctn mein, marzi se Pcs; sara stock ka op
   note mit jata tha — BUG). Search: zero stock bilkul nahi ("phir bhi dikhayein" hataya). Camera (trScanOpen): saleFindHook ab sirf trHas
   (pehle sab items + zero aate the — BUG), padUnit 'ctn', search se chunne par cursor Ctn khane mein, khali Enter = 1 Ctn (khula item = 1 Pcs).
 - Test: scratchpad hd/tr.mjs (happy-dom: hub, search mein zero wala nahi, ⤓ Sara 30 pcs = 2 ctn + 6) + th1/th2.png.
+
+2026-10-13 — app v2.99.65: Transfer note — malik: "aik hi carton select hota hai, 5 karne ke liye ✕ kar ke neeche ja kar likhna parta hai".
+- trPick ab hamesha trFocus.qty = true: item chunte hi list band, cursor us ke Ctn khane par (select — "5" likho = 5 Ctn), scrollIntoView.
+- Ctn / Pcs khane mein Enter = save + wapas search (trQuiet: "aksar bheje jane wale" list khud na khule). Test: scratchpad hd/tr2.mjs.

@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.64';
-import { liveLabelsHTML } from './barcode.js?v=2.99.64';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.65';
+import { liveLabelsHTML } from './barcode.js?v=2.99.65';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -929,7 +929,7 @@ function trStockOf(b, id) { return Number(saleStockItem(b, id)?.stock || 0); }
 // - poora barcode likhte hi item khud lag jata hai aur cursor seedha tadad par
 // - khali khana: "aksar bheje jane wale" (isi phone ki yaad-dasht se)
 const TR_REC_KEY = 'sam-tr-recent-v1';
-let trRecent = null, trFocus = null, trZeroShow = false, trFindTimer = null;
+let trRecent = null, trFocus = null, trZeroShow = false, trFindTimer = null, trQuiet = false;
 let trCopies = 1; try { trCopies = Math.min(3, Math.max(1, Number(localStorage.getItem('sam-tr-copies')) || 1)); } catch {}   // v2.43: note kitni dafa chhape
 const trCopyChips = () => `<div class="sale-copies"><small>🖨 Note print</small>${[1, 2, 3].map(n => `<button type="button" data-tr-copies="${n}"${trCopies === n ? ' class="on"' : ''}>×${n}</button>`).join('')}</div>`;
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-tr-copies]'); if (!b) return; trCopies = Number(b.dataset.trCopies) || 1; try { localStorage.setItem('sam-tr-copies', String(trCopies)); } catch {} document.querySelectorAll('[data-tr-copies]').forEach(x => x.classList.toggle('on', Number(x.dataset.trCopies) === trCopies)); });
@@ -971,7 +971,7 @@ function trShowRecent(hits) {
   trMark(hits, -1);
   hits.hidden = false;
 }
-function trPick(r, qtyFocus) { if (!r) return; trRecNote(r.id); trFocus = { id: r.id, qty: !!qtyFocus }; trAdd(r); }
+function trPick(r, qtyFocus) { if (!r) return; trRecNote(r.id); trFocus = { id: r.id, qty: true }; trAdd(r); }   // v2.99.65: chunte hi cursor Ctn par (5 likho = 5 Ctn) — pehle ✕ kar ke neeche jana parta tha
 function saleStockItem(b, id) { const chunks = rows.filter(r => !r.meta && Array.isArray(r.items) && r.branch === Number(b)); for (const c of chunks) { const it = c.items.find(x => String(x.id) === String(id)); if (it) return it; } return null; }
 // ---------- v2.6: 📥 AAYA HUA MAAL — transfer + purchase bill se aaye items, dono taraf ka stock ----------
 let inDays = 1, inKind = 'all', inRows = null, inFilter = false, inPick = null, inHere = false;
@@ -1487,6 +1487,7 @@ export function inReport() {
         from: r.from ? { name: branchName(r.from.b, names), pehle: cell(r.from.pehle, r.pack), ab: cell(r.from.ab, r.pack) } : null,
         to: { name: branchName(r.to.b, names), pehle: cell(r.to.pehle, r.pack), ab: cell(r.to.ab, r.pack) } })) })) };
 }
+document.addEventListener('keydown', e => { if (e.key !== 'Enter' || !e.target.matches?.('[data-tr-ctn],[data-tr-pcs]')) return; e.preventDefault(); trFocus = { id: null, qty: false }; e.target.blur(); setTimeout(() => { if (trFocus && trFocus.id === null) { trFocus = null; const q = document.querySelector('[data-tr-q]'); trQuiet = true; try { q?.focus(); } catch {} trQuiet = false; } }, 60); });   // v2.99.65: tadad likh kar Enter = wapas search (agla item)
 document.addEventListener('pointerdown', e => { const h = document.querySelector('[data-tr-hits]'); if (!h || h.hidden) return; if (e.target.closest?.('[data-tr-hits],[data-tr-q]')) return; h.hidden = true; }, true);   // v2.41: list ke bahar tap = band
 // ===== v2.42: transfer note ka camera = Sale wali screen (wahi hooks, wahi list, wahi Tadad/Pcs/Ctn pad) =====
 let trRootMark = null, trHooksSaved = null;
@@ -1558,7 +1559,7 @@ function openTransfer() {
     trPaint(hits, list, raw, 0, gname);
   };
   q.oninput = () => { trZeroShow = false; clearTimeout(trFindTimer); trFindTimer = setTimeout(trFind, 70); };
-  q.onfocus = () => { if (!norm(q.value)) trShowRecent(hits); };
+  q.onfocus = () => { if (!trQuiet && !norm(q.value)) trShowRecent(hits); };
   hits.onclick = e => {
     if (e.target.closest('[data-tr-close]')) { hits.hidden = true; q.blur(); return; }   // v2.41: ✕ se list band
     if (e.target.closest('[data-tr-zero]')) { trZeroShow = true; trFind(); return; }
@@ -1582,8 +1583,8 @@ function openTransfer() {
     const f = trFocus; trFocus = null;
     const i = trLines.findIndex(l => String(l.id) === String(f.id));
     const cell = f.qty && i >= 0 ? ($('dialogBody').querySelector(`[data-tr-ctn="${i}"]`) || $('dialogBody').querySelector(`[data-tr-pcs="${i}"]`)) : null;
-    if (cell) { try { cell.focus(); cell.select(); } catch {} }
-    else { try { q.focus(); } catch {} }
+    if (cell) { try { hits.hidden = true; cell.focus(); cell.select(); cell.scrollIntoView({ block: 'center' }); } catch {} }
+    else { trQuiet = true; try { q.focus(); } catch {} trQuiet = false; }
   }
 }
 function trCalc(l) { const pk = Number(l.pack) || 0; l.qty = Math.round(((pk > 1 ? (Number(l.ctn) || 0) * pk : 0) + (Number(l.pcs) || 0)) * 1000) / 1000; return l; }
