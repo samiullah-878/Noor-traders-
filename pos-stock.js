@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.55';
-import { liveLabelsHTML } from './barcode.js?v=2.99.55';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.56';
+import { liveLabelsHTML } from './barcode.js?v=2.99.56';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -28,7 +28,7 @@ const countLocked = () => (countOff || !can('stock.count')) && !isOwner();
 
 let aliasStop = null;
 let itemCfg = {}, cfgStop = null, ptList = [], ptStop = null;
-const ptLive = () => (ptList || []).filter(t => t && !t.cancelled);   // v2.99.55: POS mein cancel (mita diya) note register / aaya maal mein nahi                         // v2.5: stockConfig (mulazim item/rates badal sake)
+const ptLive = () => (ptList || []).filter(t => t && !t.cancelled);   // v2.99.56: POS mein cancel (mita diya) note register / aaya maal mein nahi                         // v2.5: stockConfig (mulazim item/rates badal sake)
 const can = k => { try { return typeof window.ntCan === 'function' ? window.ntCan(k) : true; } catch { return true; } };   // v2.99.24: mulazim ke andar ke option (app.js can)
 const canEditItem = () => isOwner() || (itemCfg.itemEdit === true && can('stock.item'));
 let inPdfOf = null, tolaiOf = null, tolaiClickOf = null;
@@ -464,7 +464,7 @@ function renderStockInner() {
       <p class="stat-note">Ya naam / code search karein.</p>` : '');
 }
 
-// ================= v2.99.55 💎 FARQ TAB (premium) + 🧾 ginti ke baad bill ka nishan =================
+// ================= v2.99.56 💎 FARQ TAB (premium) + 🧾 ginti ke baad bill ka nishan =================
 // PC (post-farq v13) count doc par `later` likhta hai = ginti ke BAAD is item ki POS harkat (sale / purchase). Aisa item farq bill
 // mein tab tak NAHI jata jab tak dobara na gina jaye (recount) ya malik "Phir bhi shamil karo" (forceBill) na kare.
 const lateOf = c => (c && Array.isArray(c.later) && c.later.length && !c.recount && !c.forceBill && c.laterFor === c.at) ? c.later : null;
@@ -1264,7 +1264,7 @@ let tcSel = new Set(), tcView = 'nikle', tcDays = 1, tcDir = 'all', tcChecks = n
 let auditOf = null, nameOf = () => '', deviceOf = () => '';
 const TC_LATE = 120 * 60000;
 const tcBase = t => String(t?.id || ('T' + t?.transferId));
-// v2.99.55: POS mein note EDIT hua (transfer-dekho v1.3: editCount) -> nayi check chahiye: key 'T123E2' (purani check edit se pehle ki)
+// v2.99.56: POS mein note EDIT hua (transfer-dekho v1.3: editCount) -> nayi check chahiye: key 'T123E2' (purani check edit se pehle ki)
 const tcKey = t => tcBase(t) + (Number(t?.editCount) > 0 ? 'E' + Number(t.editCount) : '');
 const tcIssued = t => Number(t?.createdOn) || Number(t?.at) || 0;
 const tcClock = ms => ms ? regClock(ms) : '';
@@ -1291,7 +1291,7 @@ function tcState(t) {
   const age = Date.now() - tcIssued(t);
   return { k: age > TC_LATE ? 'late' : 'wait', age };
 }
-// v2.99.55: edit ka nishan + kya badla (pehle -> ab)
+// v2.99.56: edit ka nishan + kya badla (pehle -> ab)
 function tcEditHTML(t) {
   if (!(Number(t?.editCount) > 0)) return '';
   const fmt = l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); return `${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p || !x.c ? num(x.p) + ' pcs' : ''}`; };
@@ -1311,7 +1311,7 @@ function tcSum(t) { let c = 0, p = 0; for (const l of t.lines || []) { const x =
 function tcLines(t) { return (t.lines || []).map(l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); return `<div class="tc-ln"><span>${esc(l.name)}</span><b>${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}</b></div>`; }).join(''); }
 function tcWho(c) { return `<div class="tc-who"><span>👤 ${esc(c.byName || '—')}</span><span>🕒 ${tcClock(c.ts)} · ${esc(regDay(c.ts || Date.now()))}</span><span>📱 Device: <b>${esc(c.device || '—')}</b></span></div>`; }
 function tcAll() {   // v2.99.25: POS ke note + app ke bane note (transferJobs done) jo abhi POS list (transfer-dekho) mein nahi aaye
-  const dels = new Set((trList || []).filter(j => j.op === 'delete' && j.status === 'done' && j.transferId).map(j => String(j.transferId)));   // v2.99.55: app se cancel
+  const dels = new Set((trList || []).filter(j => j.op === 'delete' && j.status === 'done' && j.transferId).map(j => String(j.transferId)));   // v2.99.56: app se cancel
   const L = (ptList || []).map(t => dels.has(String(t.transferId)) && !t.cancelled ? { ...t, cancelled: true, cancelledAt: t.cancelledAt || 0 } : t), ids = new Set(L.map(t => String(t.transferId)));
   for (const j of trList || []) { if (j.op === 'delete' || j.status !== 'done' || !j.transferId || ids.has(String(j.transferId)) || dels.has(String(j.transferId))) continue;
     L.push({ id: 'T' + j.transferId, transferId: Number(j.transferId), transferNo: String(j.transferNo || ''), from: Number(j.from), to: Number(j.to), at: Number(j.doneAt) || Number(j.at) || 0, createdOn: Number(j.doneAt) || Number(j.at) || 0, app: true, lines: (j.lines || []).map(l => ({ itemId: String(l.itemId), name: l.name, qty: Number(l.qty) || 0, pack: Number(l.pack) || 0 })) }); }
@@ -1378,7 +1378,7 @@ function tcPaint() {
   const nt = document.querySelector('[data-tc-note]'); if (nt && note) nt.value = note;
   if (tcView === 'scan' && (focus || !nt) && !matchMedia?.('(pointer:coarse)')?.matches) document.querySelector('[data-tc-code]')?.focus();
 }
-// v2.99.55: 🔔 notification se seedha — '#tc=<key>' (Server PC auto-backup v1.5: transfer 10 min mein check na ho)
+// v2.99.56: 🔔 notification se seedha — '#tc=<key>' (Server PC auto-backup v1.5: transfer 10 min mein check na ho)
 function tcHashGo(tries = 0) {
   const m = String(location.hash || '').match(/^#tc=([^&]+)/); if (!m) return;
   if (!cloud?.listenTransferChecks) { if (tries < 20) setTimeout(() => tcHashGo(tries + 1), 1000); return; }
@@ -1403,7 +1403,7 @@ function tcLookup(code) {
   if (!tcCode) { tcRes = null; tcPaint(); return; }
   const t = tcFind(tcCode);
   if (!t) { tcRes = { type: 'none', code: tcCode }; beep(false); tcPaint(); return; }
-  if (tcState(t).k === 'cancel') { tcRes = { type: 'cancel', t }; beep(false); tcPaint(); return; }   // v2.99.55
+  if (tcState(t).k === 'cancel') { tcRes = { type: 'cancel', t }; beep(false); tcPaint(); return; }   // v2.99.56
   const c = tcChecks.get(tcKey(t));
   tcRes = c ? { type: 'done', t, c } : { type: 'open', t };
   beep(!c); if (c && navigator.vibrate) navigator.vibrate([80, 60, 80]);
@@ -1993,7 +1993,7 @@ async function writeCount(item, v, add = null, tick = false) {
   if (add) { h.add = { ctn: add.ctn, pcs: add.pcs, total: add.total }; if (add.note) h.note = add.note; }
   if (tick) h.tick = true;
   const history = [...past, h].slice(-20);
-  // v2.99.55: ginti ke baad bill bana tha (later) aur ab dobara gina = recount (farq bill mein ab shamil ho sakta hai)
+  // v2.99.56: ginti ke baad bill bana tha (later) aur ab dobara gina = recount (farq bill mein ab shamil ho sakta hai)
   const re = !!(old && (old.recount || (Array.isArray(old.later) && old.later.length)));
   await cloud.saveStockCount({
     id: countId(pickedBranch, item.id),

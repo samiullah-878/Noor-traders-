@@ -4111,3 +4111,9 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 - Masla 2: jis phone par pehle se login tha wahan naya link kaam nahi karta tha (boot mein !session shart). Ab joinPending() par session ho tab bhi:
   mulazim login = seedha naya jorna (loginWithCredential purana hata deta hai); malik login = confirm -> controller.logout -> jorna; "nahi" = malik hi.
   Session ho to login page upar nahi aata. Test: scratchpad hd/jn.mjs.
+
+== v2.99.56 (2026-10-12) 📱 device + naam · nayi screens Settings → Mulazim mein ==
+- index.html #whoLine (Sync / Update ke neeche, har device): "📱 Device: KCK-J7Y · 👤 Mithu · Sale" — app.js whoLine() har render.
+- CAPS.full mein nayi: v:hbl (🏦 HBL), v:purchase (🛒 Purchase), v:soye (😴 Soye khate), v:prn (🖨 Dobara print). CAP_VIEW hbl/purchase.
+  HBL chip / screen / bankSetup canUse, soye chip, dobara print button — sab can() se.
+- ⚠️ MALIK KA HUKAM (hamesha): jab bhi koi NAYI screen ya feature bane, Settings → Mulazim (CAPS / CAP_VIEW) mein us ka on/off LAZMI lagao.

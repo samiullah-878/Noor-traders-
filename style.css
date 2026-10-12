@@ -3009,3 +3009,5 @@ html.dk .fq-card,html.dk .fq-head div{background:rgba(255,255,255,.05)}html.dk .
 .tc-edit b{color:#92400e}.tc-ch{font-size:12px;line-height:1.5}.tc-edit small{opacity:.8}
 .tc-n.cancel{opacity:.6;filter:grayscale(.6)}.tc-n.cancel .tc-st{background:rgba(225,29,72,.1)!important;color:#be123c!important}
 html.dk .tc-edit{background:rgba(245,158,11,.12);color:#fcd34d}
+/* v2.99.56 device + naam, Sync / Update ke neeche */
+.who-line{margin:2px 0 12px;text-align:center;font-size:12px;color:var(--ink2,#64748b)}.who-line b{color:var(--ink,#1a2d53)}
