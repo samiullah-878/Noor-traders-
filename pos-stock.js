@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.65';
-import { liveLabelsHTML } from './barcode.js?v=2.99.65';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.66';
+import { liveLabelsHTML } from './barcode.js?v=2.99.66';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -923,6 +923,9 @@ async function printLabel(btn) {
 let trLines = [], trFrom = null, trTo = null, trStop = null, trList = [], trNote = '';   // v2.99.64: note re-render par na mite
 function trBranches() { const { branches, names } = collect(); return branches.map(b => ({ id: b, name: branchName(b, names) })); }
 function trStockOf(b, id) { return Number(saleStockItem(b, id)?.stock || 0); }
+// v2.99.66: ✏️ edit mein purana note pehle hatega — us ka maal "Se" godam mein wapas aayega, is liye majood = stock + purani tadad
+let trEdit = null;
+function trAvail(id) { const base = trStockOf(trFrom, id); if (!trEdit || Number(trEdit.from) !== Number(trFrom)) return base; const o = (trEdit.lines || []).filter(l => String(l.itemId) === String(id)).reduce((n, l) => n + (Number(l.qty) || 0), 0); return Math.round((base + o) * 1000) / 1000; }
 // ---------- v2.18: Transfer note ki SMART search ----------
 // - jis godam se maal nikalna hai wahan STOCK 0 / minus wale items DIKHTE HI NAHI (chahein to ek tap se dikha lein)
 // - bade chips: godam · stock (green/amber/red) · 1 Ctn = ? · code | match hue harf highlight
@@ -939,9 +942,9 @@ function trRecRank(id) { const i = trRecLoad().indexOf(String(id)); return i < 0
 function trRecItems(items, n = 6) { const out = [];
   for (const id of trRecLoad()) { const r = items.find(x => String(x.id) === String(id)); if (r && trHas(r)) out.push(r); if (out.length >= n) break; }
   return out; }
-const trHas = r => trStockOf(trFrom, r.id) > 0.0005;
+const trHas = r => trAvail(r.id) > 0.0005;
 function trStockChip(r) {
-  const s = trStockOf(trFrom, r.id), pk = Number(r.pack) || 0;
+  const s = trAvail(r.id), pk = Number(r.pack) || 0;
   const cls = s <= 0.0005 ? 'red' : (pk > 1 ? (s < pk ? 'amber' : 'green') : (s < 5 ? 'amber' : 'green'));
   const ctn = pk > 1 && s >= pk ? ` · ${num(Math.floor(s / pk))} ${esc(r.cName || 'Ctn')}` : '';
   return `<span class="sh-chip ${cls}">📦 ${num(s)} ${esc(r.uName || 'Pcs')}${ctn}</span>`;
@@ -1311,7 +1314,7 @@ function tcSum(t) { let c = 0, p = 0; for (const l of t.lines || []) { const x =
 function tcLines(t) { return (t.lines || []).map(l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); return `<div class="tc-ln"><span>${esc(l.name)}</span><b>${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}</b></div>`; }).join(''); }
 function tcWho(c) { return `<div class="tc-who"><span>👤 ${esc(c.byName || '—')}</span><span>🕒 ${tcClock(c.ts)} · ${esc(regDay(c.ts || Date.now()))}</span><span>📱 Device: <b>${esc(c.device || '—')}</b></span></div>`; }
 function tcAll() {   // v2.99.25: POS ke note + app ke bane note (transferJobs done) jo abhi POS list (transfer-dekho) mein nahi aaye
-  const dels = new Set((trList || []).filter(j => j.op === 'delete' && j.status === 'done' && j.transferId).map(j => String(j.transferId)));   // v2.99.58: app se cancel
+  const dels = new Set((trList || []).filter(j => (j.op === 'delete' && j.transferId || j.op === 'edit' && j.oldId) && j.status === 'done').map(j => String(j.op === 'edit' ? j.oldId : j.transferId)));   // v2.99.58: app se cancel · v2.99.66: edit = purana cancel
   const L = (ptList || []).map(t => dels.has(String(t.transferId)) && !t.cancelled ? { ...t, cancelled: true, cancelledAt: t.cancelledAt || 0 } : t), ids = new Set(L.map(t => String(t.transferId)));
   for (const j of trList || []) { if (j.op === 'delete' || j.status !== 'done' || !j.transferId || ids.has(String(j.transferId)) || dels.has(String(j.transferId))) continue;
     L.push({ id: 'T' + j.transferId, transferId: Number(j.transferId), transferNo: String(j.transferNo || ''), from: Number(j.from), to: Number(j.to), at: Number(j.doneAt) || Number(j.at) || 0, createdOn: Number(j.doneAt) || Number(j.at) || 0, app: true, lines: (j.lines || []).map(l => ({ itemId: String(l.itemId), name: l.name, qty: Number(l.qty) || 0, pack: Number(l.pack) || 0 })) }); }
@@ -1498,7 +1501,7 @@ function trScanOpen() {
   trHooksSaved = { saleHook, saleQtyHook, saleCartHook, saleDelHook, saleFindHook };
   saleDelHook = key => { const i = trLines.findIndex(l => l.k === key); if (i >= 0) trLines.splice(i, 1); };
   saleCartHook = () => trLines.map(l => ({ key: trKey(l), item: { id: l.id, code: l.code || '', name: l.name, pack: Number(l.pack) || 0, cName: l.cName, uName: l.uName, rate: 0, rate2: 0 }, pcs: Number(l.pcs) || 0, ctn: Number(l.ctn) || 0 }));
-  saleFindHook = q => smartSearch(collect().items, q, 40).filter(trHas).slice(0, 12).map(r => ({ ...r, stock: trStockOf(trFrom, r.id) }));   // stock = jis godam SE nikal raha hai · v2.99.64: sirf us godam ka majood maal (zero nahi)
+  saleFindHook = q => smartSearch(collect().items, q, 40).filter(trHas).slice(0, 12).map(r => ({ ...r, stock: trAvail(r.id) }));   // stock = jis godam SE nikal raha hai · v2.99.64: sirf us godam ka majood maal (zero nahi)
   saleQtyHook = (it, q, key) => { const l = (key && trLines.find(x => x.k === key)) || [...trLines].reverse().find(x => String(x.id) === String(it.id)); if (!l) return; l.pcs = Number(q.pcs) || 0; l.ctn = Number(q.ctn) || 0; trCalc(l); };
   saleHook = (code, direct, qty) => {
     const { items, names } = collect(), c = String(code || '').trim();
@@ -1508,7 +1511,7 @@ function trScanOpen() {
     trRecNote(it.id);
     const l = trAddLine(it); trKey(l);
     if (Number(qty) > 0) { const pk = Number(it.pack) || 0, q = Math.round(Number(qty) * 1000) / 1000; if (pk > 1) { l.ctn = Math.floor(q / pk + 1e-9); l.pcs = Math.round((q - l.ctn * pk) * 1000) / 1000; } else { l.pcs = q; l.ctn = 0; } trCalc(l); }
-    const have = trStockOf(trFrom, it.id); if (l.qty > have + 0.0005) notice(`⚠️ ${it.name}: stock ${num(have)} — ${num(l.qty)} nahi ja sakte`);
+    const have = trAvail(it.id); if (l.qty > have + 0.0005) notice(`⚠️ ${it.name}: stock ${num(have)} — ${num(l.qty)} nahi ja sakte`);
     return { state: 'added', item: it, line: l.k, pcs: Number(l.pcs) || 0, ctn: Number(l.ctn) || 0 };
   };
   pickHook = null; pickMulti = { done: () => { trRootMark?.remove(); trRootMark = null; padUnit = 'pcs'; if (trHooksSaved) ({ saleHook, saleQtyHook, saleCartHook, saleDelHook, saleFindHook } = trHooksSaved); trHooksSaved = null; openTransfer(); } };
@@ -1526,11 +1529,11 @@ function openTransfer() {
   const kul = trLines.reduce((s, l) => s + l.qty, 0);
   const names0 = collect().names, gN = esc(branchName(trFrom, names0)), cpTxt = (q, pk, l) => { q = Math.max(0, Number(q) || 0); if (!(pk > 1)) return num(q) + ' ' + esc(l.uName || 'Pcs'); const c = Math.floor(q / pk + 1e-9), p = Math.round((q - c * pk) * 1000) / 1000; return (c ? num(c) + ' ' + esc(l.cName || 'Ctn') : '') + (c && p ? ' + ' : '') + (p || !c ? num(p) + ' ' + esc(l.uName || 'Pcs') : ''); };
   const totC = trLines.reduce((n, l) => n + (Number(l.pack) > 1 ? Number(l.ctn) || 0 : 0), 0), totP = trLines.reduce((n, l) => n + (Number(l.pcs) || 0), 0);
-  $('dialogBody').innerHTML = `<div class="tn-root">
+  $('dialogBody').innerHTML = `<div class="tn-root">${trEdit ? `<div class="tn-edit">✏️ <b>Edit — TN ${esc(trEdit.no)}</b><small>Save par purana note cancel ho kar naya banega (naya TN number)</small><button type="button" data-tr-editx="1">✕ Edit chhoro</button></div>` : ''}
     <div class="tn-route"><label class="tn-g from"><small>📤 Se (nikle)</small>${sel('from', trFrom)}</label><span class="tn-arrow">➜</span><label class="tn-g to"><small>📥 Ko (jaye)</small>${sel('to', trTo)}</label></div>
     <div class="tn-find"><div class="scan-find"><input class="scan-q" data-tr-q type="search" placeholder="🔍 ${gN} ka item — naam / code" autocomplete="off"><div class="scan-hits" data-tr-hits hidden></div></div><button type="button" class="tn-scan" data-tr-scan="1">${camMissing() ? '🔫' : '📷'}<small>${camMissing() ? 'Gun' : 'Scan'}</small></button></div>
     <p class="tn-hint">Sirf <b>${gN}</b> ke woh items jin ka stock hai · tadad pehle <b>Ctn</b> mein</p>
-    <div class="tn-lines">${trLines.map((l, i) => [l, i]).reverse().map(([l, i]) => { const have = trStockOf(trFrom, l.id); const short = trFrom !== 1 && have < l.qty - 0.0005; const pk = Number(l.pack) || 0; const full = Math.abs(have - l.qty) < 0.0005;
+    <div class="tn-lines">${trLines.map((l, i) => [l, i]).reverse().map(([l, i]) => { const have = trAvail(l.id); const short = trFrom !== 1 && have < l.qty - 0.0005; const pk = Number(l.pack) || 0; const full = Math.abs(have - l.qty) < 0.0005;
       return `<div class="tn-line${short ? ' short' : ''}"><div class="tn-top"><span class="tn-no">${i + 1}</span><div class="tn-nm"><b>${esc(l.name)}</b><small>📦 ${gN} mein: <b>${cpTxt(have, pk, l)}</b>${pk > 1 ? ' · 1 ' + esc(l.cName || 'Ctn') + ' = ' + num(pk) : ''}${short ? ' · <b class="red">⛔ stock kam</b>' : ''}</small></div><button type="button" class="tn-x" data-tr-del="${i}" aria-label="Hatao">✕</button></div>
       <div class="tn-qty">${pk > 1 ? `<label class="tn-q ctn"><span>${esc(l.cName || 'Ctn')}</span><input type="text" inputmode="decimal" value="${num(l.ctn || 0)}" data-tr-ctn="${i}"></label>` : ''}<label class="tn-q"><span>${esc(l.uName || 'Pcs')}</span><input type="text" inputmode="decimal" value="${num(l.pcs ?? l.qty)}" data-tr-pcs="${i}"></label>
       <button type="button" class="tn-all${full ? ' on' : ''}" data-tr-all="${i}"${have > 0.0005 ? '' : ' disabled'}>⤓ Sara<small>${cpTxt(have, pk, l)}</small></button></div>${pk > 1 ? `<small class="tn-eq">= ${num(l.qty)} ${esc(l.uName || 'Pcs')}</small>` : ''}</div>`; }).join('') || `<div class="tn-empty">⇄<b>Upar se item likhein ya 📷 scan karein</b><small>${gN} ka sirf majood maal dikhega</small></div>`}</div>
@@ -1604,29 +1607,31 @@ function trHistHTML() {
 async function trSave(btn) {
   const msg = $('dialogBody').querySelector('.tr-msg'), note = $('dialogBody').querySelector('[data-tr-note]')?.value || '';
   if (trFrom === trTo) { msg.textContent = '⚠️ "Se" aur "Ko" alag godam chunein'; return; }
-  const short = trLines.filter(l => trFrom !== 1 && trStockOf(trFrom, l.id) < l.qty - 0.0005);
+  const short = trLines.filter(l => trFrom !== 1 && trAvail(l.id) < l.qty - 0.0005);
   if (short.length) { msg.textContent = '⛔ Godam mein stock kam: ' + short.map(l => l.name).join(', '); return; }
-  if (!confirm(`${trLines.length} items · ${branchName(trFrom, collect().names)} → ${branchName(trTo, collect().names)}\nPOS mein transfer note banayein?`)) return;
+  if (!confirm(`${trEdit ? '✏️ EDIT — purana TN ' + trEdit.no + ' cancel ho kar naya banega\n' : ''}${trLines.length} items · ${branchName(trFrom, collect().names)} → ${branchName(trTo, collect().names)}\nPOS mein transfer note banayein?`)) return;
   btn.disabled = true; msg.textContent = '🖥 PC ko ja raha hai…';
   try {
     if (trLines.some(l => !(l.qty > 0))) { msg.textContent = '⚠️ Har item ki tadad 0 se zyada likhein'; return; }
-    const jid = await cloud.requestTransfer({ op: 'create', copies: trCopies, from: trFrom, to: trTo, lines: trLines.map(l => ({ itemId: l.id, name: l.name, qty: l.qty, ctn: Number(l.ctn) || 0, pcs: Number(l.pcs) || 0, pack: Number(l.pack) || 0, cName: l.cName || 'Ctn', uName: l.uName || 'Pcs' })), note, byName: '' });
+    const ed = trEdit;
+    const jid = await cloud.requestTransfer({ op: ed ? 'edit' : 'create', ...(ed ? { transferId: ed.id, force: true, reason: 'Edit' } : {}), copies: trCopies, from: trFrom, to: trTo, lines: trLines.map(l => ({ itemId: l.id, name: l.name, qty: l.qty, ctn: Number(l.ctn) || 0, pcs: Number(l.pcs) || 0, pack: Number(l.pack) || 0, cName: l.cName || 'Ctn', uName: l.uName || 'Pcs' })), note, byName: '' });
     let stop = null, done = false; const t0 = Date.now(), tick = setInterval(() => { if (!done && msg) msg.textContent = `🖥 PC bana raha hai… ${Math.round((Date.now() - t0) / 1000)}s`; }, 1000);   // v2.46: kitna waqt lag raha hai
     const end = (ok, t) => { if (done) return; done = true; clearInterval(tick); try { stop && stop(); } catch {} btn.disabled = false;
-      if (ok) { trLines = []; trNote = ''; notice('✓ Transfer note ' + t + ' ban gaya (' + Math.round((Date.now() - t0) / 1000) + 's)'); openTransfer(); } else { msg.textContent = '⚠️ ' + t; notice('Transfer nahi bana: ' + t); } };
+      if (ok) { trLines = []; trNote = ''; const was = trEdit; trEdit = null; notice((was ? '✏️ TN ' + was.no + ' badal kar naya ' : '✓ Transfer note ') + t + ' ban gaya (' + Math.round((Date.now() - t0) / 1000) + 's)'); openTransfer(); } else { msg.textContent = '⚠️ ' + t; notice('Transfer nahi bana: ' + t); } };
     stop = cloud.watchTransfer(jid, j => { if (!j) return; if (j.status === 'done') end(true, j.transferNo || ''); else if (j.status === 'failed') end(false, j.error || 'masla'); });
     setTimeout(() => end(false, 'PC se jawab nahi aaya — PC on hai aur transfer-sync chal raha hai? (hukum mehfooz hai)'), 45000);
   } catch (e) { btn.disabled = false; msg.textContent = '⚠️ ' + (e?.message || e); }
 }
 document.addEventListener('click', e => {
-  const t = e.target.closest?.('[data-tr-del],[data-tr-all],[data-tr-save],[data-tr-clear],[data-tr-scan],[data-tr-print],[data-tr-undo]');
+  const t = e.target.closest?.('[data-tr-editx],[data-tr-del],[data-tr-all],[data-tr-save],[data-tr-clear],[data-tr-scan],[data-tr-print],[data-tr-undo]');
   if (!t) return;
   if (t.dataset.trDel) { trLines.splice(Number(t.dataset.trDel), 1); openTransfer(); }
-  else if (t.dataset.trAll) { const l = trLines[Number(t.dataset.trAll)]; if (!l) return; const have = trStockOf(trFrom, l.id), pk = Number(l.pack) || 0;   // v2.99.64: ⤓ sara majood stock
+  else if (t.dataset.trAll) { const l = trLines[Number(t.dataset.trAll)]; if (!l) return; const have = trAvail(l.id), pk = Number(l.pack) || 0;   // v2.99.64: ⤓ sara majood stock
     if (!(have > 0.0005)) { notice('Is godam mein stock nahi'); return; }
     if (pk > 1) { l.ctn = Math.floor(have / pk + 1e-9); l.pcs = Math.round((have - l.ctn * pk) * 1000) / 1000; } else { l.ctn = 0; l.pcs = Math.round(have * 1000) / 1000; } trCalc(l); openTransfer(); }
-  else if (t.dataset.trClear) { trLines = []; trNote = ''; openTransfer(); }
-  else if (t.dataset.trSave) { const bad = trFrom !== 1 ? trLines.filter(l => l.qty > trStockOf(trFrom, l.id) + 0.0005) : []; if (bad.length) { notice(`⚠️ Stock se zyada: ${bad.slice(0, 3).map(l => l.name + ' (stock ' + num(trStockOf(trFrom, l.id)) + ')').join(', ')}${bad.length > 3 ? ' …' : ''} — pehle theek karein`); return; } trSave(t); }   // v2.42
+  else if (t.dataset.trClear) { trLines = []; trNote = ''; trEdit = null; openTransfer(); }
+  else if (t.dataset.trEditx) { trLines = []; trNote = ''; trEdit = null; openTransfer(); }
+  else if (t.dataset.trSave) { const bad = trFrom !== 1 ? trLines.filter(l => l.qty > trAvail(l.id) + 0.0005) : []; if (bad.length) { notice(`⚠️ Stock se zyada: ${bad.slice(0, 3).map(l => l.name + ' (stock ' + num(trAvail(l.id)) + ')').join(', ')}${bad.length > 3 ? ' …' : ''} — pehle theek karein`); return; } trSave(t); }   // v2.42
   else if (t.dataset.trScan) trScanOpen();   // v2.42: Sale wali camera screen (search + Tadad + Pcs/Ctn + list)
   else if (t.dataset.trPrint) {   // v1.75: dobara print — wajah zaroori, note par bara "DOBARA PRINT" chhapta hai
     const j = trList.find(x => x.id === t.dataset.trPrint); const n = (j?.reprints?.length || 0) + 1;
@@ -3019,11 +3024,41 @@ export function renderTransferHub(canDo = () => true) {
     <div class="thh-bal"><strong>${num(T.c)} <small>Ctn</small>${T.p ? ` + ${num(T.p)} <small>Pcs</small>` : ''}</strong><span>aaj ${td.length} note · ${td.reduce((n, t) => n + (t.lines || []).length, 0)} items</span></div>
     <div class="thh-stats"><div class="${pend ? 'w' : 'ok'}"><span>${pend ? '⏳' : '✓'}</span><div><small>Check baqi</small><b>${pend}</b></div></div><div class="${late ? 'bad' : 'ok'}"><span>⏰</span><div><small>Late (2 ghante+)</small><b>${late}</b></div></div><div class="${farq ? 'bad' : 'ok'}"><span>⚠️</span><div><small>Farq</small><b>${farq}</b></div></div></div></div>`;
   const stChip = t => { const s = tcState(t); return s.k === 'ok' ? '<span class="th-chip ok">✓ Pohancha</span>' : s.k === 'farq' ? '<span class="th-chip bad">⚠️ Farq</span>' : s.k === 'late' ? `<span class="th-chip bad">⏰ ${tcAgo(s.age)}</span>` : `<span class="th-chip w">⏳ ${tcAgo(s.age)}</span>`; };
-  const row = t => { const x = tot([t]); return `<button type="button" class="th-row" data-th-reg="1"><span class="th-tn">TN<b>${esc(String(t.transferNo || '').replace(/^0+/, '') || '—')}</b></span><span class="th-mid"><b>${esc(branchName(t.from, names))} ➜ ${esc(branchName(t.to, names))}</b><small>${(t.lines || []).length} items · ${num(x.c)} ctn${x.p ? ' + ' + num(x.p) + ' pcs' : ''} · ${esc(regClock(t.at))}${t.app ? ' · 📱' : ''}</small></span>${stChip(t)}</button>`; };
-  const grp = [[today, 'Aaj'], [yest, 'Kal']].map(([d, l]) => { const g = all.filter(t => regDay(t.at) === d); return g.length ? `<section class="th-day"><div class="th-dh"><b>${l}</b><span>${g.length} note</span></div>${g.slice(0, 40).map(row).join('')}</section>` : ''; }).join('');
+  const own = isOwner();
+  const row = (t, dd) => { const x = tot([t]); const k = esc(tcKey(t)); return `<div class="th-rw"><button type="button" class="th-row" data-th-tc="${k}" data-th-d="${dd}"><span class="th-tn">TN<b>${esc(String(t.transferNo || '').replace(/^0+/, '') || '—')}</b></span><span class="th-mid"><b>${esc(branchName(t.from, names))} ➜ ${esc(branchName(t.to, names))}</b><small>${(t.lines || []).length} items · ${num(x.c)} ctn${x.p ? ' + ' + num(x.p) + ' pcs' : ''} · ${esc(regClock(t.at))}${t.app ? ' · 📱' : ''}${Number(t.editCount) > 0 ? ' · ✏️' : ''}</small></span>${stChip(t)}</button>${own ? `<details class="th-more"><summary aria-label="Aur">⋯</summary><div><button type="button" data-th-prn="${esc(String(t.transferId))}">🖨 Dobara print</button><button type="button" data-th-edit="${esc(String(t.transferId))}">✏️ Edit</button><button type="button" class="danger" data-th-cancel="${esc(String(t.transferId))}">❌ Cancel</button></div></details>` : ''}</div>`; };
+  const grp = [[today, 'Aaj'], [yest, 'Kal']].map(([d, l]) => { const g = all.filter(t => regDay(t.at) === d); return g.length ? `<section class="th-day"><div class="th-dh"><b>${l}</b><span>${g.length} note</span></div>${g.slice(0, 40).map(t => row(t, d === today ? 1 : 2)).join('')}</section>` : ''; }).join('');
   const tile = (k, ic, t, sub, cls) => `<button type="button" class="th-tile ${cls}" data-th="${k}"><span>${ic}</span><b>${t}</b><small>${sub}</small></button>`;
   $('list').innerHTML = `<div class="th-root"><div class="th-tiles">${canDo('stock.transfer') ? tile('new', '➕', 'Naya transfer note', 'Sirf majood maal · Ctn mein · ⤓ Sara', 'a') : ''}${canDo('stock.tc') ? tile('tc', '🧾', 'Transfer check', pend ? pend + ' baqi · scan karein' : 'Maal pohancha? Scan', 'b') : ''}${canDo('stock.reg') ? tile('reg', '📋', 'Transfer register', 'Din-war · PDF', 'c') : ''}</div>
     ${grp || '<div class="th-empty">⇄<b>Aaj / kal koi transfer note nahi</b><small>"Naya transfer note" se banayein</small></div>'}</div>`;
 }
-document.addEventListener('click', e => { const b = e.target.closest?.('[data-th],[data-th-reg]'); if (!b) return; const k = b.dataset.th || 'reg';
-  if (k === 'new') openTransfer(); else if (k === 'tc') openTransferCheck(); else openRegister(); });
+document.addEventListener('click', e => { const b = e.target.closest?.('[data-th],[data-th-reg],[data-th-tc],[data-th-prn],[data-th-edit],[data-th-cancel]'); if (!b) return; const d = b.dataset;
+  if (d.thTc) { tcDays = Number(d.thD) === 2 ? 2 : 1; tcDir = 'all'; tcOpen.add(d.thTc); openTransferCheck('nikle');   // v2.99.66: note par tap = us ka check
+    setTimeout(() => { const el = [...document.querySelectorAll('[data-tc-open]')].find(x => x.dataset.tcOpen === d.thTc); if (el) { el.scrollIntoView({ block: 'center' }); el.closest('.tc-n')?.classList.add('tc-flash'); } }, 500); return; }
+  if (d.thPrn || d.thEdit || d.thCancel) { thAct(d, b); return; }
+  const k = d.th || 'reg';
+  if (k === 'new') { if (trEdit) { trEdit = null; trLines = []; } openTransfer(); } else if (k === 'tc') openTransferCheck(); else openRegister(); });
+// v2.99.66: 🖨 / ✏️ / ❌ — sirf malik. App ka note: job id se print (dobara-print ginti) · POS ka: 'pos:<TransferID>' (transfer-sync v4.7)
+function thAct(d, b) {
+  if (!isOwner()) { notice('Sirf malik'); return; }
+  const id = String(d.thPrn || d.thEdit || d.thCancel), t = tcAll().find(x => String(x.transferId) === id); if (!t) { notice('Note nahi mila'); return; }
+  b.closest('details')?.removeAttribute('open');
+  const job = (trList || []).find(j => j.status === 'done' && j.op !== 'delete' && String(j.transferId) === id);
+  if (d.thPrn) {
+    const reason = prompt(`TN ${t.transferNo} — dobara print ki wajah:`); if (reason == null) return; if (!reason.trim()) { notice('Wajah likhna zaroori hai'); return; }
+    const cps = Math.min(3, Math.max(1, Number(prompt('Kitni dafa chhapein? (1-3)', String(trCopies))) || 1));
+    cloud.requestPrint({ kind: 'transfer', id: job ? job.id : 'pos:' + id, reason: reason.trim().slice(0, 100), copies: cps }).then(() => notice('🖨 Dobara print PC ko bheja')).catch(er => notice(er?.message || 'Nahi hua'));
+    return;
+  }
+  if (d.thCancel) {
+    const reason = prompt(`❌ TN ${t.transferNo} cancel karein?\n${branchName(t.from, collect().names)} → ${branchName(t.to, collect().names)} · ${(t.lines || []).length} items\nDono godam ka stock wapas ho jayega.\n\nWajah likhein:`); if (reason == null) return; if (!reason.trim()) { notice('Wajah likhna zaroori hai'); return; }
+    cloud.requestTransfer({ op: 'delete', from: t.from, to: t.to, transferId: t.transferId, lines: t.lines || [], force: !t.app, reason: reason.trim().slice(0, 150) }).then(() => notice('❌ Cancel ka hukum PC ko bheja')).catch(er => notice(er?.message || 'Nahi hua'));
+    return;
+  }
+  // ✏️ edit: wahi form, items bhare hue
+  const { items } = collect();
+  trFrom = Number(t.from); trTo = Number(t.to); trNote = '';
+  trEdit = { id: Number(t.transferId), no: String(t.transferNo || '').replace(/^0+/, ''), from: Number(t.from), lines: (t.lines || []).map(l => ({ itemId: String(l.itemId), qty: Number(l.qty) || 0 })) };
+  trLines = (t.lines || []).map(l => { const it = items.find(x => String(x.id) === String(l.itemId)) || {}; const pk = Number(l.pack ?? it.pack) || 0, q = Number(l.qty) || 0, c = pk > 1 ? Math.floor(q / pk + 1e-9) : 0;
+    return trCalc({ id: l.itemId, name: l.name || it.name || 'Item', pack: pk, cName: it.cName || 'Ctn', uName: it.uName || 'Pcs', ctn: c, pcs: pk > 1 ? Math.round((q - c * pk) * 1000) / 1000 : q, qty: 0 }); });
+  openTransfer();
+}

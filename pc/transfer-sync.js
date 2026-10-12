@@ -13,6 +13,9 @@
 //  v4.4 (2026-10-11): POS MEIN BANE transfer note ki bhi yahi parchi (stock pehle -> baad) — POS apni parchi mein kuch jodne nahi deta, is liye
 //     naya POS note aate hi (10 s mein) hamari parchi alag se. Sirf SELECT. Purane note kabhi nahi chhapte. Band: POS_NOTE_PRINT = false.
 //  v4.6 (2026-10-12): printJobs kind 'voucher' chhor deta hai (pos-khata-sync chhapta hai).
+//  v4.7 (2026-10-13): MALIK ke liye (app ki ⇄ Transfer screen): (1) 🖨 POS par bane note ka bhi dobara print — printJobs id 'pos:<TransferID>'
+//     (POS se lines + dono godam ka abhi ka stock, upar "DOBARA PRINT"). (2) ❌ Cancel POS wala note bhi — job.force (sirf malik, rules 2.47).
+//     (3) ✏️ op 'edit' = purana note usp_StockTransfer_Delete + naya createTransfer (naya STN). Naya na bane to saaf error (purana hat chuka).
 //  v4.5 (2026-10-12): 💰 HBL parchi — bank-parchi.js: HBL Inbox mein naya SMS / email aate hi "PAISE AAYE" parchi. Setting printConfig.bankAuto.
 //  Chalana:  node transfer-sync.js   (transfer-auto.bat loop mein)
 // =========================================================
@@ -137,7 +140,7 @@ async function deleteTransfer(j) {
   const id = Number(j.transferId);
   const h = (await p.request().input('i', sql.Int, id).query('SELECT TransferID, TransferNo, SystemNotes, TransferDate FROM dbo.StockTransfer WHERE TransferID = @i')).recordset[0];
   if (!h) throw new Error('Transfer note POS mein nahi mila (pehle se hata hua?)');
-  if (!/BK-APP/.test(String(h.SystemNotes || ''))) throw new Error('Yeh note POS se bana tha — POS mein hi delete karein');
+  if (!/BK-APP/.test(String(h.SystemNotes || '')) && j.force !== true) throw new Error('Yeh note POS se bana tha — POS mein hi delete karein');   // v4.7: malik (force) app se bhi
   await p.request().input('i', sql.Int, id).execute('dbo.usp_StockTransfer_Delete');
   return { transferNo: String(h.TransferNo).trim() };
 }
@@ -267,8 +270,17 @@ async function handleTransfer(doc) {
     try {
       if (j.op === 'delete') {
         const r = await deleteTransfer(j);
-        await ref.update({ status: 'done', doneAt: Date.now(), error: FieldValue.delete() });
-        log(`Transfer note HATAYA: ${r.transferNo}`);
+        await ref.update({ status: 'done', doneAt: Date.now(), error: FieldValue.delete(), oldNo: r.transferNo });
+        log(`Transfer note HATAYA: ${r.transferNo}${j.reason ? ' · wajah: ' + j.reason : ''}`);
+      } else if (j.op === 'edit') {   // v4.7: purana hatao, naya banao
+        const old = await deleteTransfer(j);
+        log(`✏️ Edit: purana note ${old.transferNo} hataya — naya bana raha hoon`);
+        let r;
+        try { r = await createTransfer({ ...j, id: doc.id }); }
+        catch (e) { throw new Error(`Purana note ${old.transferNo} cancel ho gaya magar naya NAHI bana: ${e.message} — app se naya note dobara banayein`); }
+        await ref.update({ status: 'done', transferId: r.transferId, transferNo: r.transferNo, oldNo: old.transferNo, oldId: Number(j.transferId) || 0, cogs: r.cogs, doneAt: Date.now(), error: FieldValue.delete(), baqi: r.rows.map(x => ({ itemId: x.itemId, f: x.baqiFrom ?? null, t: x.baqiTo ?? null })) });
+        log(`✏️ Edit ho gaya: ${old.transferNo} -> naya ${r.transferNo} · ${r.rows.length} items`);
+        { const nC = Math.min(3, Math.max(1, Number(j.copies) || 1)), txt = transferText(r, (j.note ? j.note + ' · ' : '') + 'EDIT (purana ' + old.transferNo + ')'); let e = null; for (let i = 0; i < nC && !e; i++) e = await sendRaw(txt, 'STN ' + r.transferNo); if (e) log('Print masla: ' + e.message); }
       } else {
         const r = await createTransfer({ ...j, id: doc.id });
         await ref.update({ status: 'done', transferId: r.transferId, transferNo: r.transferNo, cogs: r.cogs, doneAt: Date.now(), error: FieldValue.delete(), baqi: r.rows.map(x => ({ itemId: x.itemId, f: x.baqiFrom ?? null, t: x.baqiTo ?? null })) });   // v4.2: baqi save — reprint par bhi dikhe
@@ -301,6 +313,9 @@ async function handlePrint(doc) {
         if (!bill && !entry) throw new Error('Purchase nahi mili');
         if (entry && entry.partyId) { const pd = (await biz.collection('blueKhata').doc(entry.partyId).get()).data(); entry.partyName = pd?.name || j.partyName || ''; }
         text = purchaseText(bill, entry);
+      } else if (j.kind === 'transfer' && /^pos:\d+$/.test(String(j.id))) {   // v4.7: POS par bana note — dobara print
+        const d = await posNoteData(await getPool(), Number(String(j.id).slice(4)));
+        text = transferText(d.r, d.note, { n: 1, reason: j.reason || '', at: Date.now(), by: j.byName || '' });
       } else if (j.kind === 'transfer') {
         const tRef = trCol.doc(String(j.id)), tj = (await tRef.get()).data();
         if (!tj || tj.status !== 'done') throw new Error('Transfer note nahi mila');
@@ -407,6 +422,22 @@ const TN_FILE = path.join(DIR, 'transfer-print.json');
 const tnRead = () => { try { const o = JSON.parse(fs.readFileSync(TN_FILE, 'utf8')); return Number.isFinite(Number(o.last)) ? { last: Number(o.last) } : null; } catch { return null; } };
 const tnSave = o => { try { fs.writeFileSync(TN_FILE, JSON.stringify(o)); } catch {} };
 let tnWarned = 0, tnErr = '';
+// v4.7: POS ke kisi bhi note ki lines + dono godam ka abhi ka stock (dobara print ke liye)
+async function posNoteData(p, id) {
+  const h = (await p.request().input('i', sql.Int, id).query('SELECT TransferID, FromBranchID, ToBranchID, TransferNo, Remarks, TransferDate FROM dbo.StockTransfer WHERE TransferID = @i')).recordset[0];
+  if (!h) throw new Error('Transfer note POS mein nahi mila (hata diya gaya?)');
+  const det = (await p.request().input('i', sql.Int, id).input('f', sql.Int, Number(h.FromBranchID)).input('t', sql.Int, Number(h.ToBranchID)).query(
+    `SELECT d.ItemID, SUM(d.Qty) AS Qty, MAX(i.ItemName) AS ItemName, MAX(i.PackQty) AS PackQty, MAX(i.PackQtyName) AS PackQtyName, MAX(i.QtyName) AS QtyName,
+            (SELECT TOP 1 ISNULL(r.CurrStock,0) FROM dbo.ItemBranchRate r WHERE r.ItemID = d.ItemID AND r.BranchID = @f) AS F,
+            (SELECT TOP 1 ISNULL(r.CurrStock,0) FROM dbo.ItemBranchRate r WHERE r.ItemID = d.ItemID AND r.BranchID = @t) AS T
+     FROM dbo.StockTransferDetail d LEFT JOIN dbo.Items i ON i.ItemID = d.ItemID
+     WHERE d.TransferID = @i AND d.Qty > 0 GROUP BY d.ItemID ORDER BY MAX(i.ItemName)`)).recordset;
+  const names = await branchNames(p);
+  const rows = det.map(d => { const qty = r3(d.Qty), pack = Number(d.PackQty) || 0, c = pack > 1 ? Math.floor(qty / pack + 1e-9) : 0;
+    return { itemId: Number(d.ItemID), name: String(d.ItemName || 'Item ' + d.ItemID).trim(), qty, pack, ctn: c, pcs: pack > 1 ? r3(qty - c * pack) : 0,
+      cName: String(d.PackQtyName || 'Ctn').trim(), uName: String(d.QtyName || 'Pcs').trim(), baqiFrom: d.F == null ? null : r3(d.F), baqiTo: d.T == null ? null : r3(d.T) }; });
+  return { r: { transferNo: String(h.TransferNo ?? '').trim(), at: h.TransferDate ? new Date(h.TransferDate).getTime() : Date.now(), from: names[h.FromBranchID] || 'Godam ' + h.FromBranchID, to: names[h.ToBranchID] || 'Godam ' + h.ToBranchID, rows, pos: true }, note: String(h.Remarks || '').trim() };
+}
 async function posNotesOnce(p, st, print) {
   const heads = (await p.request().input('l', sql.Int, st.last).query(
     `SELECT TOP 5 t.TransferID, t.FromBranchID, t.ToBranchID, t.TransferNo, t.Remarks, t.SystemNotes,
@@ -458,7 +489,7 @@ const lock = net.createServer();
 lock.once('error', () => { console.log('transfer-sync pehle se chal raha hai.'); process.exit(3); });
 lock.listen(LOCK_PORT, '127.0.0.1', async () => {
   try { await getPool(); } catch (e) { log('SQL se nahi jura: ' + e.message); process.exit(1); }
-  log('transfer-sync v4 chal raha hai — transfer note, print, POSTING aur 🖨 purchase auto-print. Band: Ctrl+C');
+  log('transfer-sync v4.7 chal raha hai — transfer note, print, POSTING aur 🖨 purchase auto-print. Band: Ctrl+C');
   const fail = name => e => { log(`${name} listener toot gaya: ${e.message} — band, bat 30 sec mein dobara chalayega`); process.exit(1); };
   trCol.where('status', '==', 'new').onSnapshot(s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handleTransfer(c.doc)); }); }, fail('transfer'));
   prCol.where('status', '==', 'new').onSnapshot(s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handlePrint(c.doc)); }); }, fail('print'));

@@ -3214,3 +3214,12 @@ html body #dialogBody button.tn-save.tn-save:disabled{opacity:.45;box-shadow:non
 html body #dialogBody button.tn-clear.tn-clear{flex:none;min-height:48px!important;padding:6px 12px!important;border-radius:14px!important;background:transparent!important;color:var(--ink2,#64748b)!important;border:1px solid rgba(100,116,139,.3)!important;box-shadow:none!important;margin:0!important}
 .tn-hist summary{cursor:pointer;font-weight:700;font-size:13px;padding:6px 2px}
 html.dk .tn-line,html.dk .th-row{background:rgba(255,255,255,.05)!important}html.dk .tn-nm b,html.dk .th-mid b,html.dk .tn-sum b{color:#e6edf7}
+/* v2.99.66 ⇄ transfer: row + malik ka ⋯ menu, edit patti */
+.th-rw{position:relative;display:flex;gap:6px;align-items:stretch}.th-rw>button.th-row{flex:1;min-width:0}
+.th-more{position:relative;flex:none}.th-more summary{list-style:none;cursor:pointer;height:100%;min-height:58px;width:38px;display:grid;place-items:center;border-radius:14px;font-size:20px;font-weight:900;color:#312e81;background:#eef2ff;border:1px solid #c7d2fe}
+.th-more summary::-webkit-details-marker{display:none}.th-more[open] summary{background:#312e81;color:#fff}
+.th-more>div{position:absolute;right:0;top:calc(100% + 6px);z-index:20;display:flex;flex-direction:column;gap:6px;padding:8px;min-width:170px;border-radius:14px;background:var(--surf,#fff);border:1px solid rgba(34,59,109,.15);box-shadow:0 16px 36px -12px rgba(11,37,69,.45)}
+html body .th-more>div>button{min-height:38px!important;border-radius:10px!important;text-align:left;padding:6px 10px!important;font-weight:700;font-size:13px!important;background:rgba(100,116,139,.08)!important;color:#0b2545!important;border:1px solid rgba(100,116,139,.18)!important;box-shadow:none!important;margin:0!important}
+html body .th-more>div>button.danger{color:#be123c!important;background:rgba(225,29,72,.07)!important;border-color:rgba(225,29,72,.25)!important}
+.tn-edit{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:10px 12px;border-radius:14px;background:#fff7e6;border:1.5px solid #f3c969;color:#7a4b00}.tn-edit small{flex:1 1 100%;font-size:11.5px}
+html body #dialogBody .tn-edit button{margin-left:auto!important;min-height:30px!important;padding:3px 10px!important;border-radius:999px!important;font-size:12px!important;background:#fff!important;color:#7a4b00!important;border:1px solid #f3c969!important;box-shadow:none!important}

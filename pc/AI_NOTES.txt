@@ -2774,3 +2774,15 @@ Malik: "Sale screen (Daily Sale) mein sale auto aani chahiye, farq wale account 
 - Test: scratchpad ps.cjs (sum, likhna, dobara nahi, update, 0 = hata).
 
 2026-10-13 — app v2.99.62 (Settings → Mulazim poori list + 🔒 chhapi parchi ka tala, rules 2.46). PC scripts nahi badle. Tafseel root AI_NOTES.txt.
+
+2026-10-13 — app v2.99.66 · RULES 2.47 · PC manifest 2026-10-13.1 (transfer-sync v4.7)
+Malik: "note par click = transfer check khule (register nahi)" + "dobara print, edit, cancel ka option malik ke liye nahi".
+- Hub row (.th-rw): tap = openTransferCheck('nikle') usi note ke saath (tcOpen + aaj/kal tcDays, scroll + flash). Malik: ⋯ (details.th-more)
+  -> 🖨 Dobara print (wajah + 1-3 copy; app note = transferJobs id, POS note = printJobs id 'pos:<TransferID>'), ✏️ Edit, ❌ Cancel
+  (wajah; op delete + force agar POS wala). thAct().
+- ✏️ Edit: trEdit {id, no, from, lines} -> wahi form bhara hua, upar narangi patti; trAvail(id) = godam stock + purane note ki tadad (purana
+  pehle hatega). Save = op 'edit' (transferId, force, reason 'Edit'). tcAll(): edit job ka oldId = cancel.
+- transfer-sync v4.7: op 'edit' = deleteTransfer + createTransfer (naya STN, job oldNo/oldId; naya na bane to saaf error), deleteTransfer
+  POS wala note bhi agar job.force, printJobs 'pos:<id>' = posNoteData() (POS lines + dono godam ka abhi stock) + DOBARA PRINT.
+- Rules 2.47 transferJobs: keys + reason, force; op + 'edit'; delete / edit / force sirf malik.
+- Test: scratchpad hd/tr3.mjs (tap -> check, print pos:1, cancel force, edit 36 pcs: Sara = 30 + 36 = 5 Ctn + 6, save op edit).

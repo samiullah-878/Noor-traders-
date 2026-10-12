@@ -4223,3 +4223,15 @@ sirf us godam ka maal, zero nahi; tadad Ctn mein, marzi se Pcs; sara stock ka op
 2026-10-13 — app v2.99.65: Transfer note — malik: "aik hi carton select hota hai, 5 karne ke liye ✕ kar ke neeche ja kar likhna parta hai".
 - trPick ab hamesha trFocus.qty = true: item chunte hi list band, cursor us ke Ctn khane par (select — "5" likho = 5 Ctn), scrollIntoView.
 - Ctn / Pcs khane mein Enter = save + wapas search (trQuiet: "aksar bheje jane wale" list khud na khule). Test: scratchpad hd/tr2.mjs.
+
+2026-10-13 — app v2.99.66 · RULES 2.47 · PC manifest 2026-10-13.1 (transfer-sync v4.7)
+Malik: "note par click = transfer check khule (register nahi)" + "dobara print, edit, cancel ka option malik ke liye nahi".
+- Hub row (.th-rw): tap = openTransferCheck('nikle') usi note ke saath (tcOpen + aaj/kal tcDays, scroll + flash). Malik: ⋯ (details.th-more)
+  -> 🖨 Dobara print (wajah + 1-3 copy; app note = transferJobs id, POS note = printJobs id 'pos:<TransferID>'), ✏️ Edit, ❌ Cancel
+  (wajah; op delete + force agar POS wala). thAct().
+- ✏️ Edit: trEdit {id, no, from, lines} -> wahi form bhara hua, upar narangi patti; trAvail(id) = godam stock + purane note ki tadad (purana
+  pehle hatega). Save = op 'edit' (transferId, force, reason 'Edit'). tcAll(): edit job ka oldId = cancel.
+- transfer-sync v4.7: op 'edit' = deleteTransfer + createTransfer (naya STN, job oldNo/oldId; naya na bane to saaf error), deleteTransfer
+  POS wala note bhi agar job.force, printJobs 'pos:<id>' = posNoteData() (POS lines + dono godam ka abhi stock) + DOBARA PRINT.
+- Rules 2.47 transferJobs: keys + reason, force; op + 'edit'; delete / edit / force sirf malik.
+- Test: scratchpad hd/tr3.mjs (tap -> check, print pos:1, cancel force, edit 36 pcs: Sara = 30 + 36 = 5 Ctn + 6, save op edit).
