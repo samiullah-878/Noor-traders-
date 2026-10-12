@@ -2732,3 +2732,9 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 == 2026-10-12 manifest 2026-10-12.9: transfer-dekho v1.3 (cancel/edit) + auto-backup v1.6 ==
 - transfer-dekho: known map (Firestore se ek dafa), sigOf lines; edit = edited/editedAt/editCount/prevLines; POS mein nahi = cancelled/cancelledAt; lastSent ab istemal nahi.
 - auto-backup trList: cancelled + delete job wale nahi; trDue key 'T..E<n>' aur age editedAt se.
+
+== 2026-10-12 manifest 2026-10-12.10: 🛒 app purchase ki parchi + samaan ki tasveer ==
+- pos-khata-sync printPurchases (har tick): aaj ki purchase:true (purchaseCash / borrow) entry -> "PURCHASE - CASH / UDHAR" parchi (supplier, sabqa/ab baqaya)
+  + samaan ki tasveer (goodsPhotos[0] entry ya entryPhotos/<id>) chhoti 256 dots (aadha kaghaz) cut se pehle. Bill ki tasveer NAHI. pn>0 aur tasveer na mili = 3 min ruko.
+  Dobara: printJobs id 'PUR:<entryId>'.
+- photo-print.js: data:image/jpeg -> grey -> contrast -> Floyd-Steinberg -> ESC/POS GS v 0 (beech mein). jpeg-decode.js = jpeg-js 0.4.4 decoder (BSD-3, license upar).

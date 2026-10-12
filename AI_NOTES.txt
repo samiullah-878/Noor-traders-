@@ -4117,3 +4117,7 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 - CAPS.full mein nayi: v:hbl (🏦 HBL), v:purchase (🛒 Purchase), v:soye (😴 Soye khate), v:prn (🖨 Dobara print). CAP_VIEW hbl/purchase.
   HBL chip / screen / bankSetup canUse, soye chip, dobara print button — sab can() se.
 - ⚠️ MALIK KA HUKAM (hamesha): jab bhi koi NAYI screen ya feature bane, Settings → Mulazim (CAPS / CAP_VIEW) mein us ka on/off LAZMI lagao.
+
+== v2.99.57 (2026-10-12) 🛒 app purchase ki auto parchi + samaan ki chhoti tasveer ==
+- Server PC (manifest 2026-10-12.10) har app purchase (cash / udhar) ki parchi nikalta hai, neeche samaan ki tasveer chhoti (bill ki nahi).
+- printChip: purchase entry par 'PUR:<id>' (✓ Chhapi / ⚠️ / ⏳ 10 min) + 🖨 Dobara print (Settings → Mulazim v:prn).

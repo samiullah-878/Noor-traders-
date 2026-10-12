@@ -20,6 +20,7 @@
 //    node pos-khata-sync.js           -> ek dafa sync
 //    node pos-khata-sync.js --auto    -> har 60 second (khata-sync-auto.vbs isi ko chalata hai)
 //    node pos-khata-sync.js --print-voucher CPV-000123  -> koi bhi voucher dobara print (kuch save nahi)
+//  2026-10-12: 🛒 app purchase ki parchi + samaan ki chhoti tasveer (photo-print.js, jpeg-decode.js).
 //  2026-10-12: 🖨 printer ki haalat — printConfig.voucherLog / vLast / vErr / vAlive, entry par posPrintedAt / posPrintErr, printJobs kind voucher = dobara print.
 //  2026-10-12: 🏦 HBL parchi — HBL account / HBL SMS-email wali entry: upar bara ulta "HBL", barcode nahi, raqam + baqaya lafzon mein (inWords, lakh/crore).
 //  v8: voucher rasid (CPV/CRV/Transfer/Udhar) notepad ki jagah seedha TM-T88IV par, sale rasid jaisi
@@ -922,6 +923,43 @@ async function printExpenses() {
   }
 }
 
+// ---------- 2026-10-12: 🛒 APP PURCHASE KI PARCHI + samaan ki chhoti tasveer (malik) ----------
+// App ke Purchase screen ki entry (purchase:true, purchaseCash = cash / borrow = udhar), aaj ki, posPrintedAt / posPrintErr nahi.
+// Samaan ki tasveer (goodsPhotos[0] — entry par ya entryPhotos/<id>) chhoti (aadha kaghaz) parchi ke neeche. Bill ki tasveer NAHI.
+// Tasveer abhi upload ho rahi ho (pn > 0, 3 min tak) to agle chakkar tak ruko. Dobara = printJobs id 'PUR:<entryId>'.
+let PH = null; try { PH = require('./photo-print.js'); } catch (e) { log('photo-print.js nahi mili — purchase parchi tasveer ke baghair'); }
+async function goodsPhoto(e) {
+  let a = Array.isArray(e.goodsPhotos) ? e.goodsPhotos : [];
+  if (!a.length) { try { const d = await biz.collection('entryPhotos').doc(String(e.id)).get(); a = (d.exists && Array.isArray(d.data().goodsPhotos)) ? d.data().goodsPhotos : []; } catch {} }
+  return a.find(x => /^data:image\/jpe?g;base64,/i.test(String(x))) || '';
+}
+async function purchaseSlip(e, copy) {
+  const p = app.get(e.partyId), cash = e.kind === 'purchaseCash';
+  const txt = receipt({ title: cash ? 'PURCHASE - CASH' : 'PURCHASE - UDHAR', code: 'PU-' + String(e.id).replace(/[^A-Za-z0-9]/g, '').slice(-8).toUpperCase(), date: e.date,
+    lines: [{ name: (p && p.name) || 'Supplier', label: cash ? 'Cash diya (maal liya)' : 'Udhar maal liya', amount: rupees(e.amount),
+      before: e.partyId ? rupees(appBalance(e.partyId, new Set([e.id]))) : null, after: e.partyId ? rupees(appBalance(e.partyId)) : null }],
+    note: String(e.note || '').trim(), copy });
+  let photo = '';
+  if (PH) { const u = await goodsPhoto(e); if (u) photo = PH.photoRaster(u, 256, 320); }
+  if (!photo) return { text: txt, photo: false };
+  const cut = '\x1dV\x42\x00', k = txt.lastIndexOf(cut);
+  return { text: k >= 0 ? txt.slice(0, k) + 'Samaan ki tasveer:\r\n' + photo + '\r\n\r\n\r\n' + txt.slice(k) : txt + photo, photo: true };
+}
+async function printPurchases() {
+  if (DRY || !AUTO_PRINT) return;
+  const day = todayPk();
+  for (const e of [...app.values()]) {
+    if (e.type !== 'entry' || e.purchase !== true || !['purchaseCash', 'borrow'].includes(e.kind) || e.deleted || e.date !== day || e.posPrintedAt || e.posPrintErr) continue;
+    const age = Date.now() - tsOf(e.createdAt); if (age > 20 * 3600000) continue;
+    const sl = await purchaseSlip(e);
+    if (!sl.photo && Number(e.pn) > 0 && age < 3 * 60000) continue;   // tasveer abhi aa rahi hai
+    const ok = await printReceipt(sl.text);
+    if (ok) await markApp([e.id], { posPrintedAt: Date.now(), posPrintErr: '' });
+    else await markApp([e.id], { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
+    const p = app.get(e.partyId); await logPrint({ code: 'Purchase', name: (p && p.name) || 'Purchase', amt: rupees(e.amount), ok });
+  }
+}
+
 // ---------- 🖨 "Dobara print" hukum (app -> printJobs kind 'voucher') — tick ke andar, SQL pool ek waqt ek ----------
 const vJobs = new Map();
 function listenVoucherJobs() {
@@ -939,7 +977,12 @@ async function runVoucherJobs() {
       if (!mine) continue;
       log(`🖨 Dobara print: ${j.id} (${j.byName || ''})`);
       let ok;
-      if (String(j.id).startsWith('EXP:')) {   // kharcha parchi dobara
+      if (String(j.id).startsWith('PUR:')) {   // purchase parchi dobara (tasveer ke saath)
+        const e = app.get(String(j.id).slice(4)); if (!e) throw new Error('Purchase entry nahi mili');
+        ok = false; for (let i = 0; i < Math.min(3, Math.max(1, Number(j.copies) || 1)); i++) ok = await printReceipt((await purchaseSlip(e, true)).text);
+        if (ok) await markApp([e.id], { posPrintedAt: Date.now(), posPrintErr: '' });
+        const p = app.get(e.partyId); await logPrint({ code: 'Purchase', name: (p && p.name) || 'Purchase', amt: rupees(e.amount), ok, again: true });
+      } else if (String(j.id).startsWith('EXP:')) {   // kharcha parchi dobara
         const e = app.get(String(j.id).slice(4)); if (!e) throw new Error('Kharcha entry nahi mili');
         ok = false; for (let i = 0; i < Math.min(3, Math.max(1, Number(j.copies) || 1)); i++) ok = await printReceipt(expenseSlip(e, true));
         if (ok) await markApp([e.id], { posPrintedAt: Date.now(), posPrintErr: '' });
@@ -982,7 +1025,7 @@ async function once() {
     do {
       again = false;
       try { await once(); } catch (e) { log('Masla: ' + e.message); }
-      try { await printExpenses(); await runVoucherJobs(); await beatPrinter(); } catch (e) { log('Print kaam masla: ' + e.message); }
+      try { await printExpenses(); await printPurchases(); await runVoucherJobs(); await beatPrinter(); } catch (e) { log('Print kaam masla: ' + e.message); }
     } while (again);
     busy = false;
   };
