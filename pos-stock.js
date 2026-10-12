@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.63';
-import { liveLabelsHTML } from './barcode.js?v=2.99.63';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.64';
+import { liveLabelsHTML } from './barcode.js?v=2.99.64';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -920,7 +920,7 @@ async function printLabel(btn) {
 }
 
 // ---------- v1.73: STOCK TRANSFER NOTE (godam se godam) — PC transfer-sync.js POS mein STN banata hai ----------
-let trLines = [], trFrom = null, trTo = null, trStop = null, trList = [];
+let trLines = [], trFrom = null, trTo = null, trStop = null, trList = [], trNote = '';   // v2.99.64: note re-render par na mite
 function trBranches() { const { branches, names } = collect(); return branches.map(b => ({ id: b, name: branchName(b, names) })); }
 function trStockOf(b, id) { return Number(saleStockItem(b, id)?.stock || 0); }
 // ---------- v2.18: Transfer note ki SMART search ----------
@@ -1254,7 +1254,7 @@ function ctnClick(e) {
   if (d.ctnDel != null) { const nm = ctnMap()[d.ctnDel]?.n || ''; if (!confirm((nm || 'Is item') + ' ki carton ginti hata dein? (wapas 1 = 1)')) return true; ctnSave(ctnSet([d.ctnDel], 1, {}), (nm || 'Item') + ': ginti normal'); return true; }
   return false;
 }
-document.addEventListener('input', e => { if (e.target.matches?.('[data-ctn-q]')) { ctnQ = e.target.value || ''; ctnPaint(); return; } if (!e.target.matches?.('[data-reg-q]')) return; regQ = e.target.value || ''; $('dialogBody').innerHTML = regHTML(); const q = document.querySelector('[data-reg-q]'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } });
+document.addEventListener('input', e => { if (e.target.matches?.('[data-tr-note]')) { trNote = e.target.value || ''; return; } if (e.target.matches?.('[data-ctn-q]')) { ctnQ = e.target.value || ''; ctnPaint(); return; } if (!e.target.matches?.('[data-reg-q]')) return; regQ = e.target.value || ''; $('dialogBody').innerHTML = regHTML(); const q = document.querySelector('[data-reg-q]'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } });
 
 // ---------- v2.99.21: 🧾 TRANSFER CHECK — parchi ka barcode scan = maal pahuncha (chori rokne ke liye) ----------
 // Malik: "transfer note par barcode — do screen: jo nikle (waqt ke saath) aur larka godam se maal laaye to check kar ke scan / number;
@@ -1497,7 +1497,7 @@ function trScanOpen() {
   trHooksSaved = { saleHook, saleQtyHook, saleCartHook, saleDelHook, saleFindHook };
   saleDelHook = key => { const i = trLines.findIndex(l => l.k === key); if (i >= 0) trLines.splice(i, 1); };
   saleCartHook = () => trLines.map(l => ({ key: trKey(l), item: { id: l.id, code: l.code || '', name: l.name, pack: Number(l.pack) || 0, cName: l.cName, uName: l.uName, rate: 0, rate2: 0 }, pcs: Number(l.pcs) || 0, ctn: Number(l.ctn) || 0 }));
-  saleFindHook = q => smartSearch(collect().items, q, 12).map(r => ({ ...r, stock: trStockOf(trFrom, r.id) }));   // stock = jis godam SE nikal raha hai
+  saleFindHook = q => smartSearch(collect().items, q, 40).filter(trHas).slice(0, 12).map(r => ({ ...r, stock: trStockOf(trFrom, r.id) }));   // stock = jis godam SE nikal raha hai · v2.99.64: sirf us godam ka majood maal (zero nahi)
   saleQtyHook = (it, q, key) => { const l = (key && trLines.find(x => x.k === key)) || [...trLines].reverse().find(x => String(x.id) === String(it.id)); if (!l) return; l.pcs = Number(q.pcs) || 0; l.ctn = Number(q.ctn) || 0; trCalc(l); };
   saleHook = (code, direct, qty) => {
     const { items, names } = collect(), c = String(code || '').trim();
@@ -1510,8 +1510,8 @@ function trScanOpen() {
     const have = trStockOf(trFrom, it.id); if (l.qty > have + 0.0005) notice(`⚠️ ${it.name}: stock ${num(have)} — ${num(l.qty)} nahi ja sakte`);
     return { state: 'added', item: it, line: l.k, pcs: Number(l.pcs) || 0, ctn: Number(l.ctn) || 0 };
   };
-  pickHook = null; pickMulti = { done: () => { trRootMark?.remove(); trRootMark = null; if (trHooksSaved) ({ saleHook, saleQtyHook, saleCartHook, saleDelHook, saleFindHook } = trHooksSaved); trHooksSaved = null; openTransfer(); } };
-  saleSeen = []; openScanner();
+  pickHook = null; pickMulti = { done: () => { trRootMark?.remove(); trRootMark = null; padUnit = 'pcs'; if (trHooksSaved) ({ saleHook, saleQtyHook, saleCartHook, saleDelHook, saleFindHook } = trHooksSaved); trHooksSaved = null; openTransfer(); } };
+  saleSeen = []; padUnit = 'ctn'; openScanner();   // v2.99.64: transfer mein tadad pehle Ctn
 }
 function openTransfer() {
   const d = $('dialog'); if (!d) return;
@@ -1519,22 +1519,25 @@ function openTransfer() {
   const bs = trBranches();
   if (trFrom == null) trFrom = bs.find(b => b.id !== 1)?.id ?? bs[0]?.id;
   if (trTo == null) trTo = 1;
-  d.classList.remove('search-dialog');
+  d.classList.remove('search-dialog'); d.classList.add('full-dialog');   // v2.99.64: poori screen
   $('dialogTitle').textContent = '⇄ Transfer note';
   const sel = (name, val) => `<select data-tr-${name}>${bs.map(b => `<option value="${b.id}"${b.id === val ? ' selected' : ''}>${esc(b.name)}</option>`).join('')}</select>`;
   const kul = trLines.reduce((s, l) => s + l.qty, 0);
-  $('dialogBody').innerHTML = `<div class="tr-head"><label>Se (nikle)${sel('from', trFrom)}</label><label>Ko (jaye)${sel('to', trTo)}</label></div>
-    <div class="scan-find" style="margin:8px 0"><input class="scan-q" data-tr-q type="search" placeholder="🔍 Item ka naam / code likhein" autocomplete="off"><div class="scan-hits" data-tr-hits hidden></div></div>
-    <div class="account-tools"><button type="button" data-tr-scan="1">${camMissing() ? '🔫 Scanner gun' : '📷 Scan'}</button></div>
-    <div class="tr-lines">${trLines.map((l, i) => [l, i]).reverse().map(([l, i]) => { const have = trStockOf(trFrom, l.id); const short = trFrom !== 1 && have < l.qty - 0.0005; const pk = Number(l.pack) || 0;
-      return `<div class="tr-line${short ? ' short' : ''}"><div class="tr-name">${pk > 1 ? `<span class="tr-pack">1 ${esc(l.cName || 'Ctn')} = ${num(pk)} ${esc(l.uName || 'Pcs')}</span>` : ''}<b><span class="tr-no">${i + 1}.</span> ${esc(l.name)}</b><small>${esc(branchName(trFrom, collect().names))} mein stock ${num(have)}${pk > 1 ? ' · 1 ' + esc(l.cName || 'Ctn') + ' = ' + num(pk) : ''}${short ? ' · <b class="red">⛔ kam hai</b>' : ''}</small>${pk > 1 ? `<small>= ${num(l.qty)} ${esc(l.uName || 'Pcs')}</small>` : ''}</div>
-      ${pk > 1 ? `<label class="tr-q"><span>${esc(l.cName || 'Ctn')}</span><input type="text" inputmode="decimal" value="${num(l.ctn || 0)}" data-tr-ctn="${i}"></label>` : ''}
-      <label class="tr-q"><span>${esc(l.uName || 'Pcs')}</span><input type="text" inputmode="decimal" value="${num(l.pcs ?? l.qty)}" data-tr-pcs="${i}"></label><button type="button" class="danger" data-tr-del="${i}">✕</button></div>`; }).join('') || '<p class="muted">Upar se item chunein ya scan karein.</p>'}</div>
-    ${trLines.length ? `<p class="tr-sum">${trLines.length} items · ${(() => { const c = trLines.reduce((n, l) => n + (Number(l.pack) > 1 ? Number(l.ctn) || 0 : 0), 0), p = trLines.reduce((n, l) => n + (Number(l.pcs) || 0), 0); return [c ? num(c) + ' CTN' : '', p ? num(p) + ' PCS' : ''].filter(Boolean).join(' + ') || '0'; })()} · kul ${num(kul)} pcs</p>` : ''}
-    <label>Note<input type="text" data-tr-note maxlength="150" placeholder="ikhtiyari"></label>
-    ${trLines.length ? trCopyChips() : ''}<div class="account-tools tr-sticky"><button type="button" class="primary" data-tr-save="1"${trLines.length ? '' : ' disabled'}>✓ POS mein transfer note banao</button>${trLines.length ? '<button type="button" data-tr-clear="1">Saaf</button>' : ''}</div>
+  const names0 = collect().names, gN = esc(branchName(trFrom, names0)), cpTxt = (q, pk, l) => { q = Math.max(0, Number(q) || 0); if (!(pk > 1)) return num(q) + ' ' + esc(l.uName || 'Pcs'); const c = Math.floor(q / pk + 1e-9), p = Math.round((q - c * pk) * 1000) / 1000; return (c ? num(c) + ' ' + esc(l.cName || 'Ctn') : '') + (c && p ? ' + ' : '') + (p || !c ? num(p) + ' ' + esc(l.uName || 'Pcs') : ''); };
+  const totC = trLines.reduce((n, l) => n + (Number(l.pack) > 1 ? Number(l.ctn) || 0 : 0), 0), totP = trLines.reduce((n, l) => n + (Number(l.pcs) || 0), 0);
+  $('dialogBody').innerHTML = `<div class="tn-root">
+    <div class="tn-route"><label class="tn-g from"><small>📤 Se (nikle)</small>${sel('from', trFrom)}</label><span class="tn-arrow">➜</span><label class="tn-g to"><small>📥 Ko (jaye)</small>${sel('to', trTo)}</label></div>
+    <div class="tn-find"><div class="scan-find"><input class="scan-q" data-tr-q type="search" placeholder="🔍 ${gN} ka item — naam / code" autocomplete="off"><div class="scan-hits" data-tr-hits hidden></div></div><button type="button" class="tn-scan" data-tr-scan="1">${camMissing() ? '🔫' : '📷'}<small>${camMissing() ? 'Gun' : 'Scan'}</small></button></div>
+    <p class="tn-hint">Sirf <b>${gN}</b> ke woh items jin ka stock hai · tadad pehle <b>Ctn</b> mein</p>
+    <div class="tn-lines">${trLines.map((l, i) => [l, i]).reverse().map(([l, i]) => { const have = trStockOf(trFrom, l.id); const short = trFrom !== 1 && have < l.qty - 0.0005; const pk = Number(l.pack) || 0; const full = Math.abs(have - l.qty) < 0.0005;
+      return `<div class="tn-line${short ? ' short' : ''}"><div class="tn-top"><span class="tn-no">${i + 1}</span><div class="tn-nm"><b>${esc(l.name)}</b><small>📦 ${gN} mein: <b>${cpTxt(have, pk, l)}</b>${pk > 1 ? ' · 1 ' + esc(l.cName || 'Ctn') + ' = ' + num(pk) : ''}${short ? ' · <b class="red">⛔ stock kam</b>' : ''}</small></div><button type="button" class="tn-x" data-tr-del="${i}" aria-label="Hatao">✕</button></div>
+      <div class="tn-qty">${pk > 1 ? `<label class="tn-q ctn"><span>${esc(l.cName || 'Ctn')}</span><input type="text" inputmode="decimal" value="${num(l.ctn || 0)}" data-tr-ctn="${i}"></label>` : ''}<label class="tn-q"><span>${esc(l.uName || 'Pcs')}</span><input type="text" inputmode="decimal" value="${num(l.pcs ?? l.qty)}" data-tr-pcs="${i}"></label>
+      <button type="button" class="tn-all${full ? ' on' : ''}" data-tr-all="${i}"${have > 0.0005 ? '' : ' disabled'}>⤓ Sara<small>${cpTxt(have, pk, l)}</small></button></div>${pk > 1 ? `<small class="tn-eq">= ${num(l.qty)} ${esc(l.uName || 'Pcs')}</small>` : ''}</div>`; }).join('') || `<div class="tn-empty">⇄<b>Upar se item likhein ya 📷 scan karein</b><small>${gN} ka sirf majood maal dikhega</small></div>`}</div>
+    <label class="tn-note">📝 Note<input type="text" data-tr-note maxlength="150" placeholder="ikhtiyari" value="${esc(trNote)}"></label>
+    ${trLines.length ? trCopyChips() : ''}
+    <div class="tn-bar"><div class="tn-sum"><b>${trLines.length} item</b><small>${[totC ? num(totC) + ' Ctn' : '', totP ? num(totP) + ' Pcs' : ''].filter(Boolean).join(' + ') || '0'}</small></div>${trLines.length ? '<button type="button" class="tn-clear" data-tr-clear="1">Saaf</button>' : ''}<button type="button" class="tn-save primary" data-tr-save="1"${trLines.length ? '' : ' disabled'}>✓ Transfer note banao</button></div>
     <p class="muted tr-msg" style="font-size:.85em"></p>
-    <div class="tr-hist"><b>Pichhle 14 din ke transfer (app se)</b><div data-tr-hist>${trHistHTML()}</div></div>`;
+    <details class="tr-hist tn-hist"><summary>🕘 Pichhle 14 din (app se) — ${trList.length}</summary><div data-tr-hist>${trHistHTML()}</div></details></div>`;
   if (!d.open) d.showModal();
   if (!trStop && cloud?.listenTransfers) trStop = cloud.listenTransfers(list => { trList = list; const h = document.querySelector('[data-tr-hist]'); if (h) h.innerHTML = trHistHTML(); });
   const q = $('dialogBody').querySelector('[data-tr-q]'), hits = $('dialogBody').querySelector('[data-tr-hits]');
@@ -1551,8 +1554,8 @@ function openTransfer() {
     const all = smartSearch(items, raw, 30, { bonus: r => trRecRank(r.id) });
     const ok = [], zero = [];
     for (const r of all) (trHas(r) ? ok : zero).push(r);
-    const list = (trZeroShow ? ok.concat(zero) : ok).slice(0, 8);
-    trPaint(hits, list, raw, trZeroShow ? 0 : zero.length, gname);
+    const list = ok.slice(0, 8);   // v2.99.64: malik — zero stock wala item bilkul nahi (pehle "phir bhi dikhayein" tha)
+    trPaint(hits, list, raw, 0, gname);
   };
   q.oninput = () => { trZeroShow = false; clearTimeout(trFindTimer); trFindTimer = setTimeout(trFind, 70); };
   q.onfocus = () => { if (!norm(q.value)) trShowRecent(hits); };
@@ -1609,16 +1612,19 @@ async function trSave(btn) {
     const jid = await cloud.requestTransfer({ op: 'create', copies: trCopies, from: trFrom, to: trTo, lines: trLines.map(l => ({ itemId: l.id, name: l.name, qty: l.qty, ctn: Number(l.ctn) || 0, pcs: Number(l.pcs) || 0, pack: Number(l.pack) || 0, cName: l.cName || 'Ctn', uName: l.uName || 'Pcs' })), note, byName: '' });
     let stop = null, done = false; const t0 = Date.now(), tick = setInterval(() => { if (!done && msg) msg.textContent = `🖥 PC bana raha hai… ${Math.round((Date.now() - t0) / 1000)}s`; }, 1000);   // v2.46: kitna waqt lag raha hai
     const end = (ok, t) => { if (done) return; done = true; clearInterval(tick); try { stop && stop(); } catch {} btn.disabled = false;
-      if (ok) { trLines = []; notice('✓ Transfer note ' + t + ' ban gaya (' + Math.round((Date.now() - t0) / 1000) + 's)'); openTransfer(); } else { msg.textContent = '⚠️ ' + t; notice('Transfer nahi bana: ' + t); } };
+      if (ok) { trLines = []; trNote = ''; notice('✓ Transfer note ' + t + ' ban gaya (' + Math.round((Date.now() - t0) / 1000) + 's)'); openTransfer(); } else { msg.textContent = '⚠️ ' + t; notice('Transfer nahi bana: ' + t); } };
     stop = cloud.watchTransfer(jid, j => { if (!j) return; if (j.status === 'done') end(true, j.transferNo || ''); else if (j.status === 'failed') end(false, j.error || 'masla'); });
     setTimeout(() => end(false, 'PC se jawab nahi aaya — PC on hai aur transfer-sync chal raha hai? (hukum mehfooz hai)'), 45000);
   } catch (e) { btn.disabled = false; msg.textContent = '⚠️ ' + (e?.message || e); }
 }
 document.addEventListener('click', e => {
-  const t = e.target.closest?.('[data-tr-del],[data-tr-save],[data-tr-clear],[data-tr-scan],[data-tr-print],[data-tr-undo]');
+  const t = e.target.closest?.('[data-tr-del],[data-tr-all],[data-tr-save],[data-tr-clear],[data-tr-scan],[data-tr-print],[data-tr-undo]');
   if (!t) return;
   if (t.dataset.trDel) { trLines.splice(Number(t.dataset.trDel), 1); openTransfer(); }
-  else if (t.dataset.trClear) { trLines = []; openTransfer(); }
+  else if (t.dataset.trAll) { const l = trLines[Number(t.dataset.trAll)]; if (!l) return; const have = trStockOf(trFrom, l.id), pk = Number(l.pack) || 0;   // v2.99.64: ⤓ sara majood stock
+    if (!(have > 0.0005)) { notice('Is godam mein stock nahi'); return; }
+    if (pk > 1) { l.ctn = Math.floor(have / pk + 1e-9); l.pcs = Math.round((have - l.ctn * pk) * 1000) / 1000; } else { l.ctn = 0; l.pcs = Math.round(have * 1000) / 1000; } trCalc(l); openTransfer(); }
+  else if (t.dataset.trClear) { trLines = []; trNote = ''; openTransfer(); }
   else if (t.dataset.trSave) { const bad = trFrom !== 1 ? trLines.filter(l => l.qty > trStockOf(trFrom, l.id) + 0.0005) : []; if (bad.length) { notice(`⚠️ Stock se zyada: ${bad.slice(0, 3).map(l => l.name + ' (stock ' + num(trStockOf(trFrom, l.id)) + ')').join(', ')}${bad.length > 3 ? ' …' : ''} — pehle theek karein`); return; } trSave(t); }   // v2.42
   else if (t.dataset.trScan) trScanOpen();   // v2.42: Sale wali camera screen (search + Tadad + Pcs/Ctn + list)
   else if (t.dataset.trPrint) {   // v1.75: dobara print — wajah zaroori, note par bara "DOBARA PRINT" chhapta hai
@@ -2562,8 +2568,9 @@ async function openScanner() {
     }
     if (saleRoot() && saleHook) {
       chosen = r; qBox.value = r.name; hitBox.hidden = true; nBox.value = ''; setUnit('pcs', r);
-      msg.textContent = `${r.name} — tadad likh kar Enter dabayein (khali = 1)`;
-      nBox.focus();
+      const cB0 = scanBox.querySelector('.scan-c'), ctnFirst = !!trRootMark && Number(r.pack) > 1 && cB0 && !cB0.disabled;   // v2.99.64: transfer = pehle Ctn
+      msg.textContent = `${r.name} — ${ctnFirst ? (r.cName || 'Ctn') + ' likh kar Enter (Pcs ke liye saath wala khana)' : 'tadad likh kar Enter dabayein (khali = 1)'}`;
+      (ctnFirst ? cB0 : nBox).focus();
       return;
     }
     addHit(r, 0);
@@ -2581,7 +2588,7 @@ async function openScanner() {
     let q = Number(String(nBox.value || '').replace(',', '.').trim()) || 0, cq = Math.floor(Number(String(cBox?.value || '').replace(',', '.').trim()) || 0);
     const r = chosen, pk = Number(r.pack) || 0;
     if (!(pk > 1)) cq = 0;
-    if (!(q > 0) && !(cq > 0)) q = 1;
+    if (!(q > 0) && !(cq > 0)) { if (trRootMark && pk > 1) cq = 1; else q = 1; }   // v2.99.64: transfer mein khali = 1 Ctn
     chosen = null; nBox.value = ''; if (cBox) cBox.value = '';
     addHit(r, cq * pk + q);   // Ctn = pack se zarb (bill khud carton mein badal deta hai)
     beep(true);
@@ -2986,3 +2993,36 @@ export function stockAgentNames(n = 350) {
   for (const c of rows) { if (c.meta || c.branch !== P.main || !Array.isArray(c.items)) continue; for (const r of c.items) { if (out.size >= n) break; if ((Number(r.stock) || 0) > 0 && !hidden[String(r.id)]) out.add(r.name); } }
   return [...out].filter(Boolean).slice(0, n);
 }
+
+// ================= v2.99.64 ⇄ TRANSFER SCREEN (Khata ke saath chip) — naya note · 🧾 check · 📋 register aik jagah =================
+// Malik: "transfer notes wali screen khata ke neeche chips mein, us ke andar hi transfer check aur register, premium". Data: tcAll() (POS +
+// app ke notes), tcState (check), trList (app jobs). Halka: sirf aaj / kal ke notes ginta hai (purchase screen wali susti nahi).
+let thRetry = false;
+function thWatch() {
+  start(false); tcStart();
+  if (cloud && !thRetry && !(ptList || []).length) {   // pehli dafa login se pehle listener ruk gaya ho to aik dafa dobara
+    thRetry = true;
+    try { ptStop?.(); } catch {} ptStop = cloud.listenPosTransfers ? cloud.listenPosTransfers(list => { ptList = list || []; if (document.querySelector('.th-root')) rerender(); }) : null;
+    try { trStop?.(); } catch {} trStop = cloud.listenTransfers ? cloud.listenTransfers(list => { trList = list; const h = document.querySelector('[data-tr-hist]'); if (h) h.innerHTML = trHistHTML(); if (document.querySelector('.th-root')) rerender(); }) : null;
+  }
+}
+export function renderTransferHub(canDo = () => true) {
+  thWatch();
+  const names = collect().names || {}, today = regDay(Date.now()), y = new Date(); y.setDate(y.getDate() - 1); const yest = regDay(y.getTime());
+  const all = tcAll().filter(t => t && !t.cancelled && t.at >= Date.now() - 3 * 864e5).sort((a, b) => b.at - a.at);
+  const tot = list => { let c = 0, p = 0; for (const t of list) for (const l of t.lines || []) { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); c += x.c; p += x.p; } return { c: r2(c), p: Math.round(p * 1000) / 1000 }; };
+  const td = all.filter(t => regDay(t.at) === today), T = tot(td);
+  const st = all.filter(t => Date.now() - tcIssued(t) < 2 * 864e5).map(t => tcState(t).k), pend = st.filter(k => k === 'wait' || k === 'late').length, late = st.filter(k => k === 'late').length, farq = st.filter(k => k === 'farq').length;
+  const job = (trList || []).find(j => j.status !== 'done' && j.status !== 'failed' && Date.now() - j.at < 10 * 60000);
+  $('summary').innerHTML = `<div class="thh"><div class="thh-head"><span class="thh-ic">⇄</span><div><small>GODAM SE GODAM</small><b>Transfer notes</b></div>${job ? '<span class="thh-pill wait">⏳ PC bana raha hai</span>' : `<span class="thh-pill">${td.length} aaj</span>`}</div>
+    <div class="thh-bal"><strong>${num(T.c)} <small>Ctn</small>${T.p ? ` + ${num(T.p)} <small>Pcs</small>` : ''}</strong><span>aaj ${td.length} note · ${td.reduce((n, t) => n + (t.lines || []).length, 0)} items</span></div>
+    <div class="thh-stats"><div class="${pend ? 'w' : 'ok'}"><span>${pend ? '⏳' : '✓'}</span><div><small>Check baqi</small><b>${pend}</b></div></div><div class="${late ? 'bad' : 'ok'}"><span>⏰</span><div><small>Late (2 ghante+)</small><b>${late}</b></div></div><div class="${farq ? 'bad' : 'ok'}"><span>⚠️</span><div><small>Farq</small><b>${farq}</b></div></div></div></div>`;
+  const stChip = t => { const s = tcState(t); return s.k === 'ok' ? '<span class="th-chip ok">✓ Pohancha</span>' : s.k === 'farq' ? '<span class="th-chip bad">⚠️ Farq</span>' : s.k === 'late' ? `<span class="th-chip bad">⏰ ${tcAgo(s.age)}</span>` : `<span class="th-chip w">⏳ ${tcAgo(s.age)}</span>`; };
+  const row = t => { const x = tot([t]); return `<button type="button" class="th-row" data-th-reg="1"><span class="th-tn">TN<b>${esc(String(t.transferNo || '').replace(/^0+/, '') || '—')}</b></span><span class="th-mid"><b>${esc(branchName(t.from, names))} ➜ ${esc(branchName(t.to, names))}</b><small>${(t.lines || []).length} items · ${num(x.c)} ctn${x.p ? ' + ' + num(x.p) + ' pcs' : ''} · ${esc(regClock(t.at))}${t.app ? ' · 📱' : ''}</small></span>${stChip(t)}</button>`; };
+  const grp = [[today, 'Aaj'], [yest, 'Kal']].map(([d, l]) => { const g = all.filter(t => regDay(t.at) === d); return g.length ? `<section class="th-day"><div class="th-dh"><b>${l}</b><span>${g.length} note</span></div>${g.slice(0, 40).map(row).join('')}</section>` : ''; }).join('');
+  const tile = (k, ic, t, sub, cls) => `<button type="button" class="th-tile ${cls}" data-th="${k}"><span>${ic}</span><b>${t}</b><small>${sub}</small></button>`;
+  $('list').innerHTML = `<div class="th-root"><div class="th-tiles">${canDo('stock.transfer') ? tile('new', '➕', 'Naya transfer note', 'Sirf majood maal · Ctn mein · ⤓ Sara', 'a') : ''}${canDo('stock.tc') ? tile('tc', '🧾', 'Transfer check', pend ? pend + ' baqi · scan karein' : 'Maal pohancha? Scan', 'b') : ''}${canDo('stock.reg') ? tile('reg', '📋', 'Transfer register', 'Din-war · PDF', 'c') : ''}</div>
+    ${grp || '<div class="th-empty">⇄<b>Aaj / kal koi transfer note nahi</b><small>"Naya transfer note" se banayein</small></div>'}</div>`;
+}
+document.addEventListener('click', e => { const b = e.target.closest?.('[data-th],[data-th-reg]'); if (!b) return; const k = b.dataset.th || 'reg';
+  if (k === 'new') openTransfer(); else if (k === 'tc') openTransferCheck(); else openRegister(); });

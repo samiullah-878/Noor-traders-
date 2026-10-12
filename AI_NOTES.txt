@@ -4205,3 +4205,17 @@ Malik: (1) Settings → Mulazim mein Khata screen ka option nahi, Stock bhi Full
 - autoLinkPurchases + autoLinkMulti sirf data badle par aik dafa (X.auto, 400 ms baad). Hero ginti aik loop. List pehle 120 card
   ("⬇ Aur N dikhao" +150, filter badle to 120).
 - Test: scratchpad pu/bench.cjs (naya ~100 ms / render), bench_old.cjs (purana 170 s mein khatam nahi), pu/logic.cjs.
+
+2026-10-13 — app v2.99.64 ⇄ TRANSFER SCREEN (malik: "transfer notes khata ke neeche chips mein, andar hi transfer check + register;
+sirf us godam ka maal, zero nahi; tadad Ctn mein, marzi se Pcs; sara stock ka option; premium")
+- index.html: transferNav "⇄ Transfer" (Khata ke baad). app.js view 'transfer' -> pos-stock renderTransferHub(canDo): #summary .thh hero
+  (aaj ke notes Ctn + Pcs, Check baqi / Late 2 ghante+ / Farq — tcAll + tcState, sirf 3 din ke notes = halka), #list .th tiles (➕ Naya ·
+  🧾 Check · 📋 Register -> openTransfer / openTransferCheck / openRegister) + Aaj / Kal ke notes (.th-row, tap = register). thWatch(): stock
+  + checks + agar ptList khali to posTransfers / transferJobs listener aik dafa dobara (login se pehle ruk gaya ho).
+  CAPS full: '#⇄ Transfer' v:transfer, tr.new, tr.tc, tr.reg (CAP_SCR tr -> full); canDo = can(stock.*) && can(tr.*). allowedView transfer =
+  malik / Full mulazim (rules: blueStaff posStock parh + transferJobs bana sakta hai).
+- openTransfer premium (.tn-*): full-dialog, Se ➜ Ko patti, search + 📷, item card (godam stock "2 Ctn + 6 Pcs", Ctn hara khana pehle,
+  Pcs, ⤓ Sara = poora majood stock data-tr-all), sticky neeche patti (items · Ctn + Pcs · ✓ banao). trNote state (pehle qty badalne par
+  note mit jata tha — BUG). Search: zero stock bilkul nahi ("phir bhi dikhayein" hataya). Camera (trScanOpen): saleFindHook ab sirf trHas
+  (pehle sab items + zero aate the — BUG), padUnit 'ctn', search se chunne par cursor Ctn khane mein, khali Enter = 1 Ctn (khula item = 1 Pcs).
+- Test: scratchpad hd/tr.mjs (happy-dom: hub, search mein zero wala nahi, ⤓ Sara 30 pcs = 2 ctn + 6) + th1/th2.png.
