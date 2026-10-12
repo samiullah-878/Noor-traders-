@@ -487,7 +487,7 @@ function farqCardHTML(r) {
       ${isOwner() ? `<button type="button" class="fq-force" data-fq-force="${esc(r.id)}">Phir bhi farq bill mein shamil karo</button>` : ''}</div>` : '';
   const tag = c.recount ? '<i class="fq-tag ok">✓ Dobara gina</i>' : c.forceBill ? '<i class="fq-tag">Malik: bill mein shamil</i>' : '';
   return `<article class="fq-card ${d < 0 ? 'kam' : 'zy'}${L ? ' late' : ''}" data-stock-row="${esc(r.id)}">
-    <div class="fq-top"><div class="fq-nm"><b>${esc(r.name)}</b><small>${esc(r.code || '')}${r.prate ? ' · Khareed ' + num(r.prate) : ''} · ${esc(stampText(c.at))}</small>${tag}</div>
+    <div class="fq-top"><div class="fq-nm"><b>${esc(r.name)}</b><small>${[r.code || '', r.prate ? 'Khareed ' + num(r.prate) : '', 'Gina ' + stampText(c.at)].filter(Boolean).map(esc).join(' · ')}</small>${tag}</div>
       <div class="fq-amt"><b>${d > 0 ? '+' : ''}${num(d)} ${u}</b>${r.prate ? `<small>Rs ${d > 0 ? '+' : ''}${num(Math.round(d * r.prate))}</small>` : ''}</div></div>
     <div class="fq-chips"><span><small>Gina</small><b>${fmt(got)}</b></span><span><small>System (us waqt)</small><b>${fmt(sys)}</b>${sysSure(c) ? '' : '<em>PC tasdeeq baqi</em>'}</span><span><small>Abhi system</small><b>${fmt(Number(r.stock) || 0)}</b></span></div>
     ${lateBox}
