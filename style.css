@@ -2985,3 +2985,20 @@ html body .prn-again:disabled{opacity:.6}
 .prn-it>span{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:900;color:#fff;background:#10b981}.prn-it.bad>span{background:#e11d48}
 .prn-it div{flex:1;min-width:0;display:flex;flex-direction:column}.prn-it b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.prn-it small{font-size:11px;opacity:.7}
 .prn-it i{font-style:normal;font-size:9.5px;padding:1px 6px;border-radius:999px;background:#0b3d6b;color:#fff;margin-left:4px}.prn-it em{font-style:normal;font-weight:800;font-size:13px;white-space:nowrap}
+/* v2.99.50 💎 FARQ tab + 🧾 ginti ke baad bill */
+.fq-head{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:4px 0 10px}
+.fq-head div{padding:10px 6px;border-radius:14px;background:var(--surf,#fff);border:1px solid var(--line,rgba(34,59,109,.1));text-align:center;display:flex;flex-direction:column;box-shadow:0 4px 12px -8px rgba(11,37,69,.25)}
+.fq-head small{font-size:10.5px;opacity:.7}.fq-head b{font-size:16px;font-variant-numeric:tabular-nums}.fq-head .red b{color:#e11d48}.fq-head .green b{color:#059669}
+.fq-warn{margin:0 0 10px;padding:10px 12px;border-radius:14px;background:linear-gradient(135deg,#fff7e0,#fff1c2);border:1px solid #f3c969;color:#7a5200;font-size:13px;line-height:1.45}
+.fq-card{margin:0 0 10px;padding:12px;border-radius:18px;background:var(--surf,#fff);border:1px solid var(--line,rgba(34,59,109,.08));border-left:5px solid #e11d48;box-shadow:0 1px 2px rgba(11,37,69,.04),0 8px 20px -14px rgba(11,37,69,.3)}
+.fq-card.zy{border-left-color:#10b981}.fq-card.late{border-color:#f3c969;border-left-color:#f59e0b;box-shadow:0 0 0 4px rgba(245,158,11,.08)}
+.fq-top{display:flex;justify-content:space-between;gap:10px}.fq-nm{min-width:0;display:flex;flex-direction:column;gap:2px}.fq-nm b{font-size:14.5px}.fq-nm small{font-size:11px;opacity:.65}
+.fq-tag{align-self:flex-start;font-style:normal;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:999px;background:rgba(99,102,241,.12);color:#3730a3}.fq-tag.ok{background:rgba(16,185,129,.12);color:#047857}
+.fq-amt{flex:none;text-align:right;display:flex;flex-direction:column}.fq-amt b{font-size:17px;font-weight:800;font-variant-numeric:tabular-nums}.fq-card.kam .fq-amt b{color:#e11d48}.fq-card.zy .fq-amt b{color:#059669}.fq-amt small{font-size:11.5px;opacity:.75}
+.fq-chips{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.fq-chips span{padding:7px 8px;border-radius:12px;background:var(--glass2,#f1f5f9);display:flex;flex-direction:column;min-width:0}.fq-chips small{font-size:10px;opacity:.65}.fq-chips b{font-size:12.5px}.fq-chips em{font-style:normal;font-size:9.5px;color:#b45309}
+.fq-late{margin-top:10px;padding:10px;border-radius:12px;background:#fffbeb;border:1px dashed #f59e0b;display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:#7a5200}
+.fq-late.match{background:#fef3c7}.fq-late span{font-size:12px}.fq-late small{font-weight:700;color:#92400e}
+html body .fq-force{align-self:flex-start;margin-top:4px;min-height:30px!important;padding:4px 12px!important;border-radius:999px!important;font-size:11.5px!important;background:transparent!important;border:1px solid #d97706!important;color:#92400e!important;box-shadow:none!important}
+.fq-re{margin-top:8px}.fq-re summary{cursor:pointer;font-weight:700;font-size:13px;color:#0b3d6b;padding:4px 0}.fq-re .pos-dates{margin-top:6px}
+html.dk .fq-card,html.dk .fq-head div{background:rgba(255,255,255,.05)}html.dk .fq-late,html.dk .fq-warn{background:rgba(245,158,11,.12);color:#fcd34d}html.dk .fq-re summary{color:#bcd4ff}

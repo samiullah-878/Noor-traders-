@@ -4073,3 +4073,13 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
   "🖨 Dobara print" (malik + Full) -> cloud.requestPrint({kind:'voucher', id: posCode}) + watchPrint -> button par ⏳ / ✓ / ❌.
 - 🖨 Printer ki haalat (bank-inbox openPrinter): Settings row #prnStatusBtn + HBL screen "🖨 Printer" — dhadkan (vAlive ≤10 min hara), aakhri error, aaj chhapi/nahi, 20 ki list + 🖨 har ek par.
 - Rules 2.43 publish zaroori (printJobs 'voucher'). PC: manifest 2026-10-12.5.
+
+== v2.99.50 (2026-10-12) ⚖️ FARQ tab premium + 🧾 ginti ke baad bill (late bill) ==
+- Masla: maal ginti se pehle bika, bill baad mein bana -> farq "kam" ghalat + farq bill se stock do dafa katta. Malik ka hal: jis item ka ginti ke
+  baad bill bane us par nishan, wahin dobara gino.
+- PC post-farq v13: fillLater (har 2 min, sirf farq wale, 48 ghante tak) count doc par later [{at,qty,kind sale/purchase/other,ref}], laterFor=at, laterSig.
+  buildList: farq wala item jis ki ginti ke baad StockLedger harkat ho aur recount/forceBill na ho = skipped {late:true, why 'ginti ke baad bill bana — dobara gino'}.
+- App pos-stock: chip "⚖️ Farq wale (N) · 🧾 M dobara gino" (filter farq). Farq tab = premium cards (fq-*): Gina / System us waqt / Abhi system,
+  farq ± + Rs, 🧾 late box (har harkat; farq = bill qty ho to "shayad late bill"), ✏️ Dobara gino (wahi data-count-* save), malik "Phir bhi shamil karo"
+  (cloud.patchStockCount forceBill). writeCount: purani ginti par later/recount ho to recount:true, recountAt. Bill preview mein late items alag peela dabba.
+- Rules: koi tabdeeli nahi (stockCount mein keys ki shart nahi). Tests: hd/fq.mjs, pf/t.js.

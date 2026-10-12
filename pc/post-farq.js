@@ -1,3 +1,4 @@
+// v13 (2026-10-12): 🧾 ginti ke baad bill — farq wale item par `later` (StockLedger ginti ke baad) + bill mein chhoro jab tak recount / forceBill nahi.
 // post-farq.js v2.1 — farq pehle jaisa "stock fraq" party par (khate mein). Adjustment sirf local-config farqMode "adjust". Purana:
 // post-farq.js — stock ginti ka farq POS mein darj karta hai: KAM nikla = udhaar Sale, ZYADA nikla = usi Sale se jura Return.
 // Bill POS ke apne procedures se banta hai (usp_Sale_InsertUpdate, usp_SaleReturn_InsertUpdate),
@@ -82,6 +83,45 @@ async function stockAt(pool, it, branch, c) {
     .query(`SELECT ISNULL(SUM(QtyIn),0) AS qi, ISNULL(SUM(QtyOut),0) AS qo
       FROM dbo.StockLedger WHERE ItemID = @id AND BranchID = @b AND LedgerDate > @t`)).recordset[0];
   return round3(Number(it.CurrStock || 0) - Number(r.qi) + Number(r.qo));
+}
+
+// ---- v13 (2026-10-12): 🧾 GINTI KE BAAD BILL — late bill ka pata (malik: "jis item ka bill ban gaya … dobara count kar lena") ----
+// Ginti ke BAAD jis farq wale item ki POS mein harkat hui (sale / purchase / transfer) us par count doc mein `later` likho -> app nishan
+// dikhati hai "🧾 Ginti ke baad bill: 5 pcs — dobara gino". Bill (buildList) mein aise item CHHOR diye jate hain jab tak dobara na gine
+// jayein (recount) ya malik "Phir bhi shamil karo" (forceBill) na kare — taake late bill + farq bill se stock do dafa na kate.
+const REF_KEY = /^(document(no|type|code)|docno|doctype|refno|ref|voucherno|vouchercode|billno|saleno|purchaseno|transactiontype|trantype|type|remarks)$/i;
+async function movesAfter(pool, it, branch, c) {
+  if (!c.at) return [];
+  const rs = (await pool.request()
+    .input('id', sql.Int, it.ItemID).input('b', sql.Int, branch).input('t', sql.DateTime, new Date(Number(c.at)))
+    .query(`SELECT TOP 10 * FROM dbo.StockLedger WHERE ItemID = @id AND BranchID = @b AND LedgerDate > @t ORDER BY LedgerDate`)).recordset;
+  return rs.map(r => {
+    const qi = Number(r.QtyIn) || 0, qo = Number(r.QtyOut) || 0, qty = round3(qi - qo);
+    const refs = Object.keys(r).filter(k => REF_KEY.test(k) && r[k] != null && String(r[k]).trim()).slice(0, 2).map(k => String(r[k]).trim().slice(0, 24));
+    const at = r.LedgerDate instanceof Date ? r.LedgerDate.getTime() : Date.parse(r.LedgerDate) || 0;
+    return { at, qty, kind: qo > 0 && !qi ? 'sale' : qi > 0 && !qo ? 'purchase' : 'other', ref: refs.join(' ').slice(0, 40) };
+  }).filter(m => Math.abs(m.qty) > 0.0005);
+}
+const sysOfC = c => (c.sysPos != null && c.sysPosAt === c.at) ? Number(c.sysPos) : Number(c.sys) || 0;
+const farqOfC = c => round3(Number(c.total) - sysOfC(c));
+const needsRecount = c => !c.recount && !c.forceBill;
+let laterAt = 0;
+async function fillLater(pool) {
+  if (Date.now() - laterAt < 2 * 60000) return;   // har 2 minute (sirf farq wale items — sasta)
+  laterAt = Date.now();
+  let n = 0;
+  for (const d of [...roundDocs.values()]) {
+    const c = d.data(); if (String(d.id).startsWith('_') || !c.at) continue;
+    const old = Array.isArray(c.later) ? c.later : [];
+    const want = Math.abs(farqOfC(c)) > 0.001 && needsRecount(c) && Date.now() - Number(c.at) < 48 * 3600000;
+    if (!want) { if (old.length) { await d.ref.set({ later: [], laterFor: c.at, laterAt: Date.now() }, { merge: true }); n++; } continue; }
+    const it = await findItem(pool, c, c.branch); if (!it) continue;
+    const mv = await movesAfter(pool, it, c.branch, c);
+    const sig = mv.map(m => m.at + ':' + m.qty).join('|');
+    if (c.laterFor === c.at && (c.laterSig || '') === sig) continue;
+    await d.ref.set({ later: mv, laterSig: sig, laterFor: c.at, laterAt: Date.now() }, { merge: true }); n++;
+  }
+  if (n) log(`🧾 ${n} farq wale items par "ginti ke baad bill" ka nishan likha`);
 }
 
 // ---- _round aur _post: LISTENER (v10). Pehle har 20 second get() hota tha = roz ~8,600 reads ----
@@ -170,6 +210,8 @@ async function buildList(pool, req) {
       const sysAt = await stockAt(pool, it, branch, c);
       const diff = round3(Number(c.total) - sysAt);
       if (Math.abs(diff) < 0.001) continue;
+      // v13: ginti ke baad bill bana aur dobara nahi gina -> abhi bill mein NAHI (late bill ho sakta hai)
+      if (needsRecount(c)) { const mv = await movesAfter(pool, it, branch, c); if (mv.length) { skipped.push({ name: c.name, why: 'ginti ke baad bill bana — dobara gino', late: true, qty: round3(mv.reduce((s, m) => s + m.qty, 0)) }); continue; } }
       const cost = Number(it.Cost) || 0;
       const rate = RATE_MODE === 'sale' ? (Number(it.SaleRate) || 0) : cost;
       // kam nikla = sale (key: ItemID) · zyada nikla = return (key: R + ItemID)
@@ -556,7 +598,7 @@ async function manual() {
 // ---- Tareeqa 2: khud chalta rahe, OK mobile se ----
 async function autoOnce() {
   const pool0 = await sql.connect(SQL_CONFIG);
-  try { await fillSysPos(pool0); } finally { await pool0.close(); }
+  try { await fillSysPos(pool0); await fillLater(pool0); } finally { await pool0.close(); }
   const ref = countCol.doc('_post');
   const snap = ctlPost || await ref.get();   // listener wala snapshot; "posting" ka taala transaction mein taaza parhta hai
   const req = snap.exists ? snap.data() : null;
@@ -799,7 +841,7 @@ async function bandOld(yes) {
 }
 
 async function autoLoop() {
-  log(`post-farq v12 --auto chal raha hai. App ka hukam listener se (foran), SQL kaam har ${POLL_SECONDS} second. Band: Ctrl+C`);
+  log(`post-farq v13 --auto chal raha hai. App ka hukam listener se (foran), SQL kaam har ${POLL_SECONDS} second. Band: Ctrl+C`);
   let busy = false, again = false, timer = null;
   const tick = async () => {
     if (busy) { again = true; return; }

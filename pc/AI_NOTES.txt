@@ -2713,3 +2713,8 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
   (HBL remarks = HBL design) -> status done / error + entries par posPrintedAt.
 - transfer-sync v4.6: printJobs kind 'voucher' chhor deta hai.
 - Rules 2.43: printJobs kind mein 'voucher'. (firestore-rules-2.43.html)
+
+== 2026-10-12 manifest 2026-10-12.6: post-farq v13 — 🧾 ginti ke baad bill ==
+- movesAfter(pool,it,branch,c): SELECT TOP 10 * FROM StockLedger WHERE LedgerDate > count.at (qty = QtyIn-QtyOut, ref = DocumentNo/Type/RefNo jaisi columns).
+- fillLater (autoOnce mein fillSysPos ke baad, har 2 min): farq wale + recount/forceBill nahi + 48h -> count doc {later, laterSig, laterFor, laterAt}; farq khatam / recount = later [].
+- buildList: needsRecount(c) && movesAfter.length -> skipped {late:true} (bill mein nahi). Stock do dafa nahi katta.

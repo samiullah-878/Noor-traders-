@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.49';
-import { liveLabelsHTML } from './barcode.js?v=2.99.49';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.50';
+import { liveLabelsHTML } from './barcode.js?v=2.99.50';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -458,10 +458,53 @@ function renderStockInner() {
   $('list').innerHTML =
     (inPick && inPick.size ? `<div class="in-strip">📥 Aaye hue maal ki ginti — ${num(shown.length)} items <button type="button" data-in-clear="1">✕ saaf karein</button></div>` : '') +
     (q ? `<p class="stat-note">${shown.length} item mile${wide && filter !== 'all' ? ` · ${num(wide)} filter ke bahar se bhi (poore stock mein dhoonda)` : ''}</p>` : '') +
-    list.map(rowHTML).join('') +
+    (filter === 'farq' && !q ? farqHeadHTML(shown) + list.map(farqCardHTML).join('') : list.map(rowHTML).join('')) +
     (extra > 0 ? `<div class="account-tools"><button data-stock-more="1">Aur ${num(Math.min(extra, PAGE))} dikhao (${num(extra)} baqi)</button></div>
       <p class="stat-note">Ya naam / code search karein.</p>` : '');
 }
+
+// ================= v2.99.50 💎 FARQ TAB (premium) + 🧾 ginti ke baad bill ka nishan =================
+// PC (post-farq v13) count doc par `later` likhta hai = ginti ke BAAD is item ki POS harkat (sale / purchase). Aisa item farq bill
+// mein tab tak NAHI jata jab tak dobara na gina jaye (recount) ya malik "Phir bhi shamil karo" (forceBill) na kare.
+const lateOf = c => (c && Array.isArray(c.later) && c.later.length && !c.recount && !c.forceBill && c.laterFor === c.at) ? c.later : null;
+const hm = ms => { const d = new Date(Number(ms) || 0); return isNaN(d) ? '' : d.toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }); };
+function farqHeadHTML(shown) {
+  let kam = 0, zy = 0, rs = 0, late = 0;
+  for (const r of shown) { const c = countOf(pickedBranch, r); if (!c) continue; const d = countedPcs(c) - Number(sysOf(c, r)); if (d < 0) kam++; else if (d > 0) zy++; if (r.prate) rs += d * r.prate; if (lateOf(c)) late++; }
+  return `<div class="fq-head"><div><small>Farq wale items</small><b>${num(kam + zy)}</b></div><div class="red"><small>Kam</small><b>${num(kam)}</b></div><div class="green"><small>Zyada</small><b>${num(zy)}</b></div><div class="${rs < 0 ? 'red' : 'green'}"><small>Kul farq</small><b>Rs ${rs > 0 ? '+' : ''}${num(Math.round(rs))}</b></div></div>
+    ${late ? `<div class="fq-warn">🧾 <b>${num(late)} items</b> ka ginti ke baad bill bana — inhein <b>dobara gino</b>. Tab tak yeh farq bill mein nahi jayenge (late bill ho sakta hai).</div>` : ''}`;
+}
+function farqCardHTML(r) {
+  rowCache.set(String(r.id), r);
+  const c = countOf(pickedBranch, r); if (!c) return rowHTML(r);
+  const sys = Number(sysOf(c, r)), got = countedPcs(c), d = Math.round((got - sys) * 100) / 100, u = esc(r.uName || 'Pcs'), L = lateOf(c);
+  const pack = Number(r.pack) || 0, fmt = q => pack > 1 ? `${num(Math.trunc(q / pack))} ${esc(r.cName || 'Ctn')} + ${num(Math.round((q % pack) * 100) / 100)} ${u}` : `${num(q)} ${u}`;
+  const lsum = L ? Math.round(L.reduce((n, m) => n + Number(m.qty || 0), 0) * 100) / 100 : 0;
+  const match = L && Math.abs(Math.abs(lsum) - Math.abs(d)) < 0.01 && Math.sign(lsum) === Math.sign(d);
+  const lateBox = L ? `<div class="fq-late${match ? ' match' : ''}"><b>🧾 Ginti (${esc(hm(c.at))}) ke baad bill bana — dobara gino</b>
+      ${L.slice(0, 5).map(m => `<span>${m.kind === 'sale' ? '🛒 Sale' : m.kind === 'purchase' ? '📦 Purchase' : '⇄'} ${m.qty > 0 ? '+' : ''}${num(m.qty)} ${u} · ${esc(hm(m.at))}${m.ref ? ' · ' + esc(m.ref) : ''}</span>`).join('')}
+      ${match ? '<small>⚠️ Farq aur bill ki tadad barabar — shayad late bill tha, asal farq nahi</small>' : ''}
+      ${isOwner() ? `<button type="button" class="fq-force" data-fq-force="${esc(r.id)}">Phir bhi farq bill mein shamil karo</button>` : ''}</div>` : '';
+  const tag = c.recount ? '<i class="fq-tag ok">✓ Dobara gina</i>' : c.forceBill ? '<i class="fq-tag">Malik: bill mein shamil</i>' : '';
+  return `<article class="fq-card ${d < 0 ? 'kam' : 'zy'}${L ? ' late' : ''}" data-stock-row="${esc(r.id)}">
+    <div class="fq-top"><div class="fq-nm"><b>${esc(r.name)}</b><small>${esc(r.code || '')}${r.prate ? ' · Khareed ' + num(r.prate) : ''} · ${esc(stampText(c.at))}</small>${tag}</div>
+      <div class="fq-amt"><b>${d > 0 ? '+' : ''}${num(d)} ${u}</b>${r.prate ? `<small>Rs ${d > 0 ? '+' : ''}${num(Math.round(d * r.prate))}</small>` : ''}</div></div>
+    <div class="fq-chips"><span><small>Gina</small><b>${fmt(got)}</b></span><span><small>System (us waqt)</small><b>${fmt(sys)}</b>${sysSure(c) ? '' : '<em>PC tasdeeq baqi</em>'}</span><span><small>Abhi system</small><b>${fmt(Number(r.stock) || 0)}</b></span></div>
+    ${lateBox}
+    <details class="fq-re"${L ? ' open' : ''}><summary>✏️ Dobara gino</summary>${countLocked() || !round ? '<small class="stat-note">Ginti abhi band hai</small>' : `<div class="pos-dates">
+      <label>Ctn<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-ctn="${esc(r.id)}" value=""></label>
+      <label>${u}<input type="number" step="any" inputmode="decimal" style="width:4.6em" data-count-pcs="${esc(r.id)}" value=""></label>
+      <label>Kul ${u}<input type="number" step="any" inputmode="decimal" style="width:5.6em" data-count-tot="${esc(r.id)}" value=""></label>
+      <button type="button" data-count-save="${esc(r.id)}">💾 Save</button>
+      <div class="count-live" data-count-live="${esc(r.id)}"></div></div>`}</details>
+  </article>`;
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest?.('[data-fq-force]'); if (!b || !isOwner()) return;
+  const r = rowCache.get(String(b.dataset.fqForce)); if (!r) return;
+  if (!confirm(`"${r.name}" — ginti ke baad bill bana tha.\nPhir bhi is ka farq bill mein shamil karein? (late bill tha to stock do dafa kat sakta hai)`)) return;
+  try { await cloud.patchStockCount(countId(pickedBranch, r.id), { forceBill: true }); notice('✓ Farq bill mein shamil hoga'); } catch (er) { notice('Nahi hua: ' + (er?.message || er)); }
+});
 
 // v1.67: ginti ka sirf ek line ka khulasa; poori tafseel "📋 Dekhein" khirki mein. Counting ON/OFF, Nayi ginti,
 // Farq wale / Check wale ab samne nahi (malik ki farmaish). Nayi ginti sirf khirki ke andar (malik) — bill ke baad.
@@ -592,6 +635,7 @@ function summaryHTML(branches, pick, items, meta, names, canJama = false) {
       ${btn('data-stock-filter', 'all', filter, `Sab (${num(live.length)})`)}
       ${btn('data-stock-filter', 'minus', filter, `Minus stock (${num(minus)})`)}
       ${btn('data-stock-filter', 'baqi', filter, `Ginti baqi (${num(items.length - done)})`)}
+      ${gap ? btn('data-stock-filter', 'farq', filter, `⚖️ Farq wale (${num(gap)})${(() => { const n = items.filter(r => lateOf(countOf(pick, r))).length; return n ? ' · 🧾 ' + num(n) + ' dobara gino' : ''; })()}`) : ''}
       ${btn('data-stock-filter', 'nishan', filter, `⏳ Baqi nishan (${num(nishanN)})`)}
       ${hiddenN ? btn('data-stock-filter', 'hidden', filter, `Band items (${num(hiddenN)})`) : ''}
     </div>
@@ -1777,8 +1821,9 @@ function postLine(pick) {
     const table = (title, list, sign) => list.length ? `<p><b>${esc(title)}</b></p>
       <div style="overflow-x:auto"><table><thead><tr><th>Item</th><th>Qty</th><th>Bhao</th><th>Rs</th></tr></thead>
       <tbody>${rows(list, sign)}</tbody></table></div>` : '';
-    const skipped = (v.skipped || []).length
-      ? `<p><small>Chhor diye: ${esc(v.skipped.map(x => x.name).join(', '))}</small></p>` : '';
+    const lateS = (v.skipped || []).filter(x => x.late), othS = (v.skipped || []).filter(x => !x.late);
+    const skipped = (lateS.length ? `<div class="fq-warn">🧾 <b>${num(lateS.length)} items dobara ginne baqi — bill mein shamil nahi:</b> ${esc(lateS.map(x => x.name).join(', '))}</div>` : '')
+      + (othS.length ? `<p><small>Chhor diye: ${esc(othS.map(x => x.name).join(', '))}</small></p>` : '');
     return `<div style="margin:8px 0;padding:10px;border:1px solid #9bb7e8;border-radius:10px">
       <p><b>PC ne bill ki list bheji hai — account ${esc(v.party || '')}</b></p>
       ${p.note ? `<p><small><b>${esc(p.note)}</b></small></p>` : ''}
@@ -1917,11 +1962,13 @@ async function writeCount(item, v, add = null, tick = false) {
   if (add) { h.add = { ctn: add.ctn, pcs: add.pcs, total: add.total }; if (add.note) h.note = add.note; }
   if (tick) h.tick = true;
   const history = [...past, h].slice(-20);
+  // v2.99.50: ginti ke baad bill bana tha (later) aur ab dobara gina = recount (farq bill mein ab shamil ho sakta hai)
+  const re = !!(old && (old.recount || (Array.isArray(old.later) && old.later.length)));
   await cloud.saveStockCount({
     id: countId(pickedBranch, item.id),
     round, branch: pickedBranch, itemId: item.id,
     name: item.name, sys: item.stock,
-    ctn: v.ctn, pcs: v.pcs, total: v.total, at, history
+    ctn: v.ctn, pcs: v.pcs, total: v.total, at, history, ...(re ? { recount: true, recountAt: at } : {})
   });
 }
 
