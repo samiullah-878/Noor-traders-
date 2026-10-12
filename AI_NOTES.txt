@@ -4148,3 +4148,23 @@ bhi khud minus ho aur shop kharcha account mein lag jaye" (3) loan account ka de
   (loanInterest). Purana loanCardHTML hataya. CSS style.css aakhir mein (.lnh, themes ko haraane ko html .summary>div.lnh.lnh).
 - Tests (scratchpad hd/bill.mjs, hbl3.mjs, bk.mjs, bp/t2.js): bill parse, anjaan / loan account ruka, chunne par loan mein, bill do
   entries, undo; PC: anjaan / loan account khud nahi, apna + Raast khud. Asal email / phone par test baqi.
+
+2026-10-12 raat — app v2.99.60 · RULES 2.45 (firestore-rules-2.45.html — malik publish kare)
+Malik: "purchase wali screen premium" + "milana asaan — apni gaari wale bills ki larke wali tasveer nahi aati, supplier wale ki bill + saman ki aati hai".
+- renderPurchases naya (app.js, "v2.99.60 💎 PURCHASE SCREEN" block): #summary .puh hero (filter ki purchase, cash/credit patti, chips
+  🔗 milane / 📌 post baqi / 🚚 gaari / ❔ bina entry — data-pu-f), #list .pu: "Milao screen" banner, range seg (Aaj/7 din/Mahina/Sab — default
+  Aaj, localStorage sam-pu-f), filter chips (Cash/Credit/Milane/Post/Gaari — Aaj par Milane/Gaari chuno to range Sab), din-war sticky
+  headings, .pu-card (initials avatar hara=cash/juri, neela=credit; chips POS no · waqt · Credit/✓ Cash ada · 🚚 · 🔗 Milana baqi · ❔).
+  Buttons: 🧾 Bill · 🖨 Print · 🔗 Milao · 🚚 Gaari (malik) + "⋯ Aur" (<details>: Parchi, Tasveer se items, Edit, Delete). Purane data-*
+  wahi (main click listener). Gaari / Milao handler alag document listener.
+- 🚚 GAARI: blueAccess/gaariBills {map:{'b:<posId>':ts,'p:<partyId>':ts}} — cloud.listenGaari / setGaari (deleteField se hatana). Sirf
+  malik likhe (generic owner rule); mulazim parhe (rules 2.45 get list mein 'gaariBills'). Lazy gaariWatch() (purchase screen / Milao par),
+  error par 60 s ruk kar dobara. puState: linked / gaari / milao (candidates hain) / none (7 din mein larke ki entry nahi).
+  lastPurchasePending = sirf 'milao' (gaari wale nahi).
+- 🔗 Milao screen (openMilao, data-hb="milao" chip bhi): tabs Milane · Bina entry · ⚠️ POS bill nahi (30 din ki larke wali khaali entries
+  — tasveer aayi, POS bill nahi juda) · Gaari. Har bill ke saath bestCand (isi party, raqam qareeb) + ✓ Jor do (linkQuick) / Aur chunein
+  (linkForm) / 🚚 Gaari ka maal / 🚚 Supplier hamesha.
+- 💡 quickPair: isi party ki 7 din mein AIK khaali entry + AIK khula bill = card par "Yeh jor dein? ✓ Jor do" (raqam alag ho tab bhi).
+- autoLinkMulti: aik larke ki entry = isi supplier ke 2-3 khule POS bill ka jama (nearAmt), sirf aik hi jor bane to khud posBillIds.
+- CAPS purchase mein 'pur.milao' (Settings → Mulazim).
+- Test: scratchpad pu/mock.cjs (screenshot), pu/logic.cjs (states, gaari bill/supplier, quickPair, multi). Asal phone par dekhna baqi.

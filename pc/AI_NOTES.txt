@@ -2761,3 +2761,5 @@ bhi khud minus ho aur shop kharcha account mein lag jaye" (3) loan account ka de
   (loanInterest). Purana loanCardHTML hataya. CSS style.css aakhir mein (.lnh, themes ko haraane ko html .summary>div.lnh.lnh).
 - Tests (scratchpad hd/bill.mjs, hbl3.mjs, bk.mjs, bp/t2.js): bill parse, anjaan / loan account ruka, chunne par loan mein, bill do
   entries, undo; PC: anjaan / loan account khud nahi, apna + Raast khud. Asal email / phone par test baqi.
+
+2026-10-12 raat — app v2.99.60 (purchase screen premium + Milao screen + 🚚 gaari bills, rules 2.45). PC scripts nahi badle. Tafseel root AI_NOTES.txt mein.
