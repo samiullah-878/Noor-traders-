@@ -901,6 +901,27 @@ async function syncEntries(pool, acct) {
   }
 }
 
+// ---------- 2026-10-12: 🧾 KHARCHA PARCHI — akhrajat (Ghar kharcha, Dukan ka kharcha…) POS mein nahi jate, phir bhi parchi nikle (malik) ----------
+// Sirf AAJ ki kharcha entry, jis par posPrintedAt / posPrintErr nahi. Kamyab = posPrintedAt; nakam = posPrintErr. Dobara = printJobs id 'EXP:<entryId>'.
+const tsOf = v => typeof v === 'number' ? v : Date.parse(v) || 0;
+const todayPk = () => { const d = new Date(Date.now() + 5 * 3600000); return d.toISOString().slice(0, 10); };
+function expenseSlip(e, copy) {
+  return receipt({ title: 'KHARCHA VOUCHER', code: 'KH-' + String(e.id).replace(/[^A-Za-z0-9]/g, '').slice(-8).toUpperCase(), date: e.date,
+    lines: [{ name: e.account || 'Kharcha', label: 'Kharcha diya', amount: rupees(e.amount) }], note: String(e.note || '').trim(), copy });
+}
+async function printExpenses() {
+  if (DRY || !AUTO_PRINT) return;
+  const day = todayPk();
+  for (const e of [...app.values()]) {
+    if (e.type !== 'entry' || e.kind !== 'expense' || e.deleted || e.date !== day || e.posPrintedAt || e.posPrintErr) continue;
+    if (Date.now() - tsOf(e.createdAt) > 20 * 3600000) continue;
+    const ok = await printReceipt(expenseSlip(e));
+    if (ok) await markApp([e.id], { posPrintedAt: Date.now(), posPrintErr: '' });
+    else await markApp([e.id], { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
+    await logPrint({ code: 'Kharcha', name: e.account || 'Kharcha', amt: rupees(e.amount), ok });
+  }
+}
+
 // ---------- 🖨 "Dobara print" hukum (app -> printJobs kind 'voucher') — tick ke andar, SQL pool ek waqt ek ----------
 const vJobs = new Map();
 function listenVoucherJobs() {
@@ -917,7 +938,13 @@ async function runVoucherJobs() {
       const mine = await db.runTransaction(async tx => { const s = await tx.get(ref); if (!s.exists || s.data().status !== 'new') return false; tx.update(ref, { status: 'printing', startedAt: Date.now() }); return true; });
       if (!mine) continue;
       log(`🖨 Dobara print: ${j.id} (${j.byName || ''})`);
-      const ok = await reprintVoucher(j.id, j.copies, true);
+      let ok;
+      if (String(j.id).startsWith('EXP:')) {   // kharcha parchi dobara
+        const e = app.get(String(j.id).slice(4)); if (!e) throw new Error('Kharcha entry nahi mili');
+        ok = false; for (let i = 0; i < Math.min(3, Math.max(1, Number(j.copies) || 1)); i++) ok = await printReceipt(expenseSlip(e, true));
+        if (ok) await markApp([e.id], { posPrintedAt: Date.now(), posPrintErr: '' });
+        await logPrint({ code: 'Kharcha', name: e.account || 'Kharcha', amt: rupees(e.amount), ok, again: true });
+      } else ok = await reprintVoucher(j.id, j.copies, true);
       await ref.update(ok ? { status: 'done', doneAt: Date.now() } : { status: 'error', doneAt: Date.now(), error: (lastPrintErr || 'print nahi hua').slice(0, 200) });
     } catch (e) { log('Dobara print masla: ' + e.message); try { await ref.update({ status: 'error', error: String(e.message).slice(0, 200), doneAt: Date.now() }); } catch {} }
   }
@@ -955,7 +982,7 @@ async function once() {
     do {
       again = false;
       try { await once(); } catch (e) { log('Masla: ' + e.message); }
-      try { await runVoucherJobs(); await beatPrinter(); } catch (e) { log('Print kaam masla: ' + e.message); }
+      try { await printExpenses(); await runVoucherJobs(); await beatPrinter(); } catch (e) { log('Print kaam masla: ' + e.message); }
     } while (again);
     busy = false;
   };

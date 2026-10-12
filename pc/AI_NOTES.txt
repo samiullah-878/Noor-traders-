@@ -2718,3 +2718,8 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
 - movesAfter(pool,it,branch,c): SELECT TOP 10 * FROM StockLedger WHERE LedgerDate > count.at (qty = QtyIn-QtyOut, ref = DocumentNo/Type/RefNo jaisi columns).
 - fillLater (autoOnce mein fillSysPos ke baad, har 2 min): farq wale + recount/forceBill nahi + 48h -> count doc {later, laterSig, laterFor, laterAt}; farq khatam / recount = later [].
 - buildList: needsRecount(c) && movesAfter.length -> skipped {late:true} (bill mein nahi). Stock do dafa nahi katta.
+
+== 2026-10-12 manifest 2026-10-12.7: pos-khata-sync — 🧾 KHARCHA PARCHI ==
+- Malik: kharcha (Ghar kharcha…) ki bhi parchi auto, setting nahi. printExpenses() har tick: aaj ki kind 'expense' entry (20h ke andar bani) jis par
+  posPrintedAt/posPrintErr nahi -> receipt 'KHARCHA VOUCHER' (KH-<id>) -> posPrintedAt ya posPrintErr + logPrint. POS mein kuch nahi jata.
+- Dobara: printJobs {kind voucher, id 'EXP:<entryId>'} -> expenseSlip(e, true).

@@ -4083,3 +4083,7 @@ RULES 2.42 + v2.99.39: 2.41-TEST (allow create: if true) par REST POST chala (te
   farq ± + Rs, 🧾 late box (har harkat; farq = bill qty ho to "shayad late bill"), ✏️ Dobara gino (wahi data-count-* save), malik "Phir bhi shamil karo"
   (cloud.patchStockCount forceBill). writeCount: purani ginti par later/recount ho to recount:true, recountAt. Bill preview mein late items alag peela dabba.
 - Rules: koi tabdeeli nahi (stockCount mein keys ki shart nahi). Tests: hd/fq.mjs, pf/t.js.
+
+== v2.99.51 (2026-10-12) 🧾 kharcha ki parchi bhi ==
+- Akhrajat entries POS mein nahi jati thi is liye parchi nahi nikalti thi. Ab Server PC (pos-khata-sync, manifest 2026-10-12.7) aaj ki har kharcha entry ki
+  "KHARCHA VOUCHER" parchi khud nikalta hai. printChip: kharcha par code 'EXP:<id>' (✓ Chhapi / ⚠️ / ⏳ 10 min) + 🖨 Dobara print.
