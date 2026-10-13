@@ -1,5 +1,6 @@
 // =========================================================
-//  label-print.js  v4.3 (2026-10-13 sham: malik — printer baar baar rukta/chalta (2 qatar ke hisse) + 3rd column khali (sirf number).
+//  label-print.js  v4.4 (2026-10-13: Urdu TEXT (ttf) — font printer mein sirf ek dafa (label-font.json), bhejne ke baad 20 s intezar;
+//                     --send-font = LABEL-URDU-FONT.bat) · v4.3 (2026-10-13 sham: malik — printer baar baar rukta/chalta (2 qatar ke hisse) + 3rd column khali (sirf number).
 //                     Hissa wapas 8 qatar (rowsMax 8) aur line mein 1 tak (agla hissa printer ke chalte chalte line mein — rukta nahi),
 //                     0.8 s intezar hata. Naye bat: LABEL-URDU-TEXT (urduMode ttf) / LABEL-URDU-BAND (urdu false) / LABEL-URDU-TASVEER
 //                     (bitmap) + LABEL-NAAP (--test: teeno par dabba). --show-settings) · v4.2 (2026-10-13: 🧯 LABEL ZAYA NA HON — malik: kisi label par sirf naam, kisi par sirf barcode, kuch khali / Urdu kharab.
@@ -236,11 +237,22 @@ function fontJob(S) {
   const f = String(S.urduTtf || DEFAULTS.urduTtf); const b = fs.readFileSync(f);
   return 'KILL F,"UR.TTF"\r\n' + `DOWNLOAD F,"UR.TTF",${b.length},` + b.toString('latin1') + '\r\nEOP\r\n';
 }
-async function ensureFont(S) {
-  if (S.urduMode !== 'ttf' || ttfSent) return null;
+// v4.4: font printer ke FLASH mein sirf EK dafa (label-font.json yaad rakhti hai: printer + font + size). Pehle har script-start par
+//       KILL + DOWNLOAD hota tha — printer flash likhte waqt aaye hukum CHHOR deta tha (malik: U wali 2 qatar bilkul khali).
+//       Bhejne ke baad line khali + 20 s intezar, phir label. Dobara bhejna ho: LABEL-URDU-FONT.bat (--send-font).
+const FONT_FILE = path.join(DIR, 'label-font.json');
+const fontSig = S => { const f = String(S.urduTtf || DEFAULTS.urduTtf); let n = 0; try { n = fs.statSync(f).size; } catch {} return { printer: S.printer, font: f, size: n }; };
+async function ensureFont(S, force = false) {
+  if (S.urduMode !== 'ttf' && !force) return null;
+  if (ttfSent && !force) return null;
+  const sig = fontSig(S);
+  if (!force) { try { const o = JSON.parse(fs.readFileSync(FONT_FILE, 'utf8')); if (o && o.printer === sig.printer && o.font === sig.font && o.size === sig.size && sig.size > 0) { ttfSent = true; return null; } } catch {} }
   let err = null; try { err = await sendRaw(fontJob(S), S.printer); } catch (e) { err = e; }
   if (err) { log('Urdu font printer mein nahi gaya: ' + err.message); return err; }
-  ttfSent = true; log(`Urdu font printer mein daal diya (${path.basename(String(S.urduTtf || DEFAULTS.urduTtf))})`); return null;
+  log(`Urdu font printer ko bheja (${path.basename(sig.font)}, ${Math.round(sig.size / 1024)} KB) — printer flash mein likh raha hai, 20 s intezar…`);
+  await waitQueue(S.printer, 0, 120000); await new Promise(r => setTimeout(r, 20000));
+  try { fs.writeFileSync(FONT_FILE, JSON.stringify({ ...sig, at: Date.now() })); } catch {}
+  ttfSent = true; log('Urdu font tayyar'); return null;
 }
 function sendRaw(text, printerName) {
   const PRINTER_NAME = printerName;
@@ -394,6 +406,14 @@ if (process.argv.includes('--calibrate')) {   // v2.1: roll badalne ke baad prin
   const rowW = S.cols * S.w + (S.cols - 1) * S.colGap;
   sendRaw([`SIZE ${rowW} mm,${S.h} mm`, `GAP ${S.rowGap} mm,0 mm`, 'GAPDETECT', 'AUTODETECT', ''].join('\r\n'), S.printer)
     .then(e => { console.log(e ? 'Nahi hua: ' + e.message : 'Calibrate ka hukum bhej diya â€” printer 2-3 khali labels nikalega, yeh theek hai.'); process.exit(e ? 1 : 0); });
+} else if (process.argv.includes('--send-font')) {   // v4.4: LABEL-URDU-FONT.bat — font dobara bhejo (20 s) phir U/N test
+  const S = { ...settings(), urdu: true, urduMode: 'ttf' };
+  (async () => { console.log('Font bhej raha hoon: ' + S.urduTtf + ' (20-30 second lagenge, printer ko na chhedein)…');
+    const e = await ensureFont(S, true); if (e) { console.log('Font NAHI gaya: ' + e.message); process.exit(1); }
+    console.log('Font chala gaya. Ab test chhap raha hoon…');
+    const j = { name: 'JAANCH harpic 1+1', code: '4979564544530', qty: 1, rate: 0, copies: 3 }; let e2 = null;
+    for (const part of tspl(S, j, { code: 'U', from: 1 }, 'ہارپک 1+1 فری')) { e2 = await sendRaw(part, S.printer); if (e2) break; }
+    console.log(e2 ? 'Nahi hua: ' + e2.message : 'Ek qatar U-1..3 (Urdu font) bheji — photo bhej dein.'); process.exit(e2 ? 1 : 0); })();
 } else if (process.argv.includes('--show-settings')) {   // v4.3: bat files ke liye — abhi ki setting
   const S = settings(); console.log(`Printer: ${S.printer} · ${S.cols} column · label ${S.w}x${S.h} mm · gap ${S.colGap}/${S.rowGap} mm · khiskao (offset) ${S.xOffset}/${S.yOffset} mm · Urdu: ${S.urdu ? (S.urduMode === 'ttf' ? 'TEXT (font)' : 'TASVEER') : 'BAND'} · density ${S.density} speed ${S.speed}`); process.exit(0);
 } else if (process.argv.includes('--test-mix')) {   // v4.2: LABEL-JAANCH.bat — Urdu ke saath vs baghair (wajah pakarne ke liye)
@@ -425,7 +445,7 @@ if (process.argv.includes('--calibrate')) {   // v2.1: roll badalne ke baad prin
   const lock = net.createServer();
   lock.once('error', () => { console.log('label-print pehle se chal raha hai.'); process.exit(3); });
   lock.listen(LOCK_PORT, '127.0.0.1', () => {
-    { const S = settings(); log(`label-print v4.3 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
+    { const S = settings(); log(`label-print v4.4 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
     sweepStuck(true).catch(e => log('Atke hue dekhne mein masla: ' + e.message));   // v4.1
     setInterval(() => { sweepStuck(false).catch(() => {}); }, 2 * 60000);
     jobCol.where('cancelReq', '==', true).onSnapshot(s => {   // v4.1: cancel foran (queue ke peeche nahi)

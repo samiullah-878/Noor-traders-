@@ -2814,3 +2814,11 @@ printer har 6 label baad rukta / chalta (v4.2 ke 2-qatar hisse + line BILKUL kha
   LABEL-URDU-TASVEER.bat (bitmap, pehle jaisa) · LABEL-NAAP.bat (--show-settings + --test: teeno label par BOX).
 AGLA QADAM: malik ki photo — NAAP ka 3rd dabba kata/khali = offset / roll ki jagah (label-settings xOffset / cols); TEXT par 3rd theek = Urdu
   bitmap ka data masla (TTF rakhein); dono theek magar asal hukum kharab = data / hukm ki tarteeb dekhni.
+
+=== label-print v4.4 (manifest 2026-10-13.5) — Urdu TEXT (ttf) font sirf ek dafa ===
+Malik ki photo (LABEL-NAAP + LABEL-URDU-TEXT): N qatar (Urdu baghair) teeno label theek; U ki 2 qatar (ttf) BILKUL khali — ensureFont har
+script-start par KILL + DOWNLOAD (tahomabd ~ sau KB) aur foran label: printer flash likhte waqt hukum chhor deta. NAAP qatar ka 3rd label
+bhi kata (sirf daayan kinara + "3") — wajah pakki nahi (N qatar mein 3rd theek tha).
+* ensureFont(S, force): label-font.json {printer, font, size} mile to dobara nahi bhejta; bhejne ke baad waitQueue 0 + 20 s.
+* --send-font + LABEL-URDU-FONT.bat: urduMode ttf, font zabardasti bhejo, 20 s, phir ek U qatar.
+Malik ko kaha: abhi LABEL-URDU-TASVEER.bat (bitmap) + asal 15-20 label ki photo — 3rd column dekhna.
