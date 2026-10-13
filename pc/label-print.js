@@ -1,5 +1,8 @@
 // =========================================================
-//  label-print.js  v4.2 (2026-10-13: 🧯 LABEL ZAYA NA HON — malik: kisi label par sirf naam, kisi par sirf barcode, kuch khali / Urdu kharab.
+//  label-print.js  v4.3 (2026-10-13 sham: malik — printer baar baar rukta/chalta (2 qatar ke hisse) + 3rd column khali (sirf number).
+//                     Hissa wapas 8 qatar (rowsMax 8) aur line mein 1 tak (agla hissa printer ke chalte chalte line mein — rukta nahi),
+//                     0.8 s intezar hata. Naye bat: LABEL-URDU-TEXT (urduMode ttf) / LABEL-URDU-BAND (urdu false) / LABEL-URDU-TASVEER
+//                     (bitmap) + LABEL-NAAP (--test: teeno par dabba). --show-settings) · v4.2 (2026-10-13: 🧯 LABEL ZAYA NA HON — malik: kisi label par sirf naam, kisi par sirf barcode, kuch khali / Urdu kharab.
 //                     (1) Urdu tasveer ke data mein ESC (0x1B) / '~' (0x7E) byte nahi jata — TSC inhein FORAN hukum (reset / pause) samajh leta
 //                     hai; ek pixel safed kar dete hain (aankh ko farq nahi). (2) hissa 8 qatar ki jagah 2 qatar (rowsMax, default 2) aur agla hissa
 //                     tab jab Windows line BILKUL khali (0) + 0.8 s. (3) number ('3J-463') barcode ke code par nahi chadhta: barcode ka apna
@@ -53,8 +56,8 @@ const DEFAULTS = {
   urduTtf: 'C:\\Windows\\Fonts\\tahomabd.ttf',   // v3.9: urduMode 'ttf' ke liye font (bold Tahoma); 'arialbd.ttf' bhi chal sakta
   urduPt: 10,                   // v3.9.1: TTF Urdu ka size (POINT — TSC mein TTF ka size point mein, 26 = bohat bara tha)
   urduReverse: false,           // v3.9.1: false = printer khud RTL karta hai (test: ulta aaya tha)
-  rowsPerJob: 2,                // v3.8: itni qataron (x cols label) ka EK print job · v4.2: 8 -> 2 (data kam, beech mein kat-ta nahi)
-  rowsMax: 2                    // v4.2: purani label-settings.json mein rowsPerJob 8 likha ho to bhi zyada se zyada itna
+  rowsPerJob: 8,                // v3.8: itni qataron (x cols label) ka EK print job · v4.3: wapas 8 (2 par printer har 6 label baad rukta tha)
+  rowsMax: 8                    // v4.3
 };
 const LOCK_PORT = 47816;
 // -----------------------------------------------------------------
@@ -199,7 +202,7 @@ function rowHead(S) {
 }
 // Ek hukum ke copies ko qataron mein baant kar TSPL (har qatar = ek PRINT)
 // v3.8: ek hukum -> kai CHHOTE print jobs (har job rowsPerJob qataren), taake TSC ka buffer na bhare
-const rowsPer = S => Math.max(1, Math.min(Number(S.rowsMax) || 2, Math.floor(Number(S.rowsPerJob) || 2)));   // v4.2: 2 qatar (6 label) fi hissa
+const rowsPer = S => Math.max(1, Math.min(Number(S.rowsMax) || 8, Math.floor(Number(S.rowsPerJob) || 8)));   // v4.3: 8 qatar fi hissa
 function tspl(S, j, nums, ur) {
   const copies = Math.max(1, Math.min(200, Math.floor(Number(j.copies) || 1)));
   const per = rowsPer(S);
@@ -328,7 +331,7 @@ async function handle(doc) {
     let sent = 0, cancelled = false;
     for (let k = 0; k < parts.length && !err; k++) {
       if (ctl.cancel) { cancelled = true; break; }   // v4.1: watcher ne jhanda lagaya
-      if (k > 0) { await waitQueue(S.printer, 0, 120000, () => ctl.cancel); await new Promise(r => setTimeout(r, 800));   // v4.2: line BILKUL khali (pehle 1)
+      if (k > 0) { await waitQueue(S.printer, 1, 120000, () => ctl.cancel);   // v4.3: line mein 1 tak — printer chalta rahe
          if (ctl.cancel) { cancelled = true; break; } try { if (((await ref.get()).data() || {}).cancelReq) { cancelled = true; break; } } catch {} }
       err = await sendRaw(parts[k], S.printer); if (err) break;
       sent = Math.min(copies2, (k + 1) * perPart);
@@ -391,6 +394,8 @@ if (process.argv.includes('--calibrate')) {   // v2.1: roll badalne ke baad prin
   const rowW = S.cols * S.w + (S.cols - 1) * S.colGap;
   sendRaw([`SIZE ${rowW} mm,${S.h} mm`, `GAP ${S.rowGap} mm,0 mm`, 'GAPDETECT', 'AUTODETECT', ''].join('\r\n'), S.printer)
     .then(e => { console.log(e ? 'Nahi hua: ' + e.message : 'Calibrate ka hukum bhej diya â€” printer 2-3 khali labels nikalega, yeh theek hai.'); process.exit(e ? 1 : 0); });
+} else if (process.argv.includes('--show-settings')) {   // v4.3: bat files ke liye — abhi ki setting
+  const S = settings(); console.log(`Printer: ${S.printer} · ${S.cols} column · label ${S.w}x${S.h} mm · gap ${S.colGap}/${S.rowGap} mm · khiskao (offset) ${S.xOffset}/${S.yOffset} mm · Urdu: ${S.urdu ? (S.urduMode === 'ttf' ? 'TEXT (font)' : 'TASVEER') : 'BAND'} · density ${S.density} speed ${S.speed}`); process.exit(0);
 } else if (process.argv.includes('--test-mix')) {   // v4.2: LABEL-JAANCH.bat — Urdu ke saath vs baghair (wajah pakarne ke liye)
   const S = settings(); const ai = process.argv.indexOf('--test-mix'), ua = process.argv[ai + 1];
   const ur = ua && !ua.startsWith('--') ? ua : 'ہارپک 1+1 فری';
@@ -420,7 +425,7 @@ if (process.argv.includes('--calibrate')) {   // v2.1: roll badalne ke baad prin
   const lock = net.createServer();
   lock.once('error', () => { console.log('label-print pehle se chal raha hai.'); process.exit(3); });
   lock.listen(LOCK_PORT, '127.0.0.1', () => {
-    { const S = settings(); log(`label-print v4.2 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
+    { const S = settings(); log(`label-print v4.3 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
     sweepStuck(true).catch(e => log('Atke hue dekhne mein masla: ' + e.message));   // v4.1
     setInterval(() => { sweepStuck(false).catch(() => {}); }, 2 * 60000);
     jobCol.where('cancelReq', '==', true).onSnapshot(s => {   // v4.1: cancel foran (queue ke peeche nahi)

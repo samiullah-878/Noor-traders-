@@ -4334,3 +4334,14 @@ style.css: .pp-head premium (segment modes, supplier card, meta khane, sunehri +
   .pp-head ×4. Dark (html.dk) overrides.
 Rules: koi tabdeeli nahi. Test: scratchpad hd/kul/pp.mjs (godam 0 par nahi bhejta, chunte hi line, = Retail 300/7500, bhejne ke baad
 supplier/godam/cart khali) + run.mjs (Jaanch 11 ALL OK) + screenshots pp-*.png / card.png.
+
+=== label-print v4.3 (manifest 2026-10-13.4) — printer baar baar nahi rukega + Urdu ke 3 tareeqe ek click par ===
+Malik (photo rice 350 SHAEEN BADSHA, 32x25 mm roll): har qatar mein 3rd label khali (sirf number 99/96/93…), 1-2 poore;
+printer har 6 label baad rukta / chalta (v4.2 ke 2-qatar hisse + line BILKUL khali + 0.8 s ki wajah se).
+* rowsPerJob / rowsMax wapas 8; waitQueue(printer, 1) (agla hissa printer ke chalte line mein), 0.8 s hata. safeBits + code/number
+  alag (v4.2) wahi.
+* --show-settings: printer, column, naap, gap, offset, Urdu ka tareeqa, density/speed ek line.
+* Naye bat (manifest mein): LABEL-URDU-TEXT.bat (urdu true + urduMode ttf, phir --test-mix) · LABEL-URDU-BAND.bat (urdu false + test) ·
+  LABEL-URDU-TASVEER.bat (bitmap, pehle jaisa) · LABEL-NAAP.bat (--show-settings + --test: teeno label par BOX).
+AGLA QADAM: malik ki photo — NAAP ka 3rd dabba kata/khali = offset / roll ki jagah (label-settings xOffset / cols); TEXT par 3rd theek = Urdu
+  bitmap ka data masla (TTF rakhein); dono theek magar asal hukum kharab = data / hukm ki tarteeb dekhni.
