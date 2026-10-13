@@ -4353,3 +4353,13 @@ bhi kata (sirf daayan kinara + "3") — wajah pakki nahi (N qatar mein 3rd theek
 * ensureFont(S, force): label-font.json {printer, font, size} mile to dobara nahi bhejta; bhejne ke baad waitQueue 0 + 20 s.
 * --send-font + LABEL-URDU-FONT.bat: urduMode ttf, font zabardasti bhejo, 20 s, phir ek U qatar.
 Malik ko kaha: abhi LABEL-URDU-TASVEER.bat (bitmap) + asal 15-20 label ki photo — 3rd column dekhna.
+
+=== pos-sales-dekho v1.6 (manifest 2026-10-13.6) — 📦 Wholesale bill ka cash bhi Daily Sale (auto) mein ===
+Malik: "wholesale wala bill bhi sale mein add kar do". Wajah: wholesale = POS mein "whole sale" party ka UDHAAR bill (CashReceived 0),
+cash alag CRV (DocumentNo = SaleID, PartyID = bill ki party — sale-post.js / POS). saleSum sirf min(CashReceived, Total) ginta tha = 0.
+* crvFor(p, d0, d1): CRV (DocumentNo > 0, VoucherStatusID <> 3, Debit > 0) JOIN Sale (SaleID = DocumentNo, PartyID barabar, IsCreditSale 1,
+  isi din) -> SaleID -> cash. saleSum(rows, crv): udhaar bill = max(CashReceived, CRV) (bill se zyada nahi). Har udhaar bill par lagu.
+* Malik ne "OK" kaha bina A/B chune -> A (sirf MILA HUA cash; udhaar whole sale khate mein). Note: "📦 Wholesale N bill Rs X (cash Y · udhaar Z)".
+* Do dafa nahi: pos-khata-sync sirf DocumentNo 0 wale voucher laata hai — bill wale CRV app mein wasooli nahi bante.
+* saleFor (kal ki sale) mein bhi SaleID + crv. writeSale key mein ws / wsRs.
+Test: saleSum (counter 1000 + ws 10000 cash 6000 + ws 5000 CRV 9000 -> 5000 + udhaar 0 + fraq + cancel) = 12,000.

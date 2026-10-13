@@ -1,5 +1,6 @@
 // =========================================================
-//  pos-sales-dekho.js  v1.5 (2026-10-12: 🖥 POS KI SALE (AUTO) -> Daily Sale ka Sale khana, blueKhata 'possale-<din>'; "stock fraq" account ke bill nahi) · v1.4 (2026-10-06: 🔔 POS mein item judte hi (scan ya code) us PC ko beep — posBeep/<PC host>, har 0.4 sec) · v1.3 (2026-10-06: ⚡ har 2 sec + app ka bill bante / edit hote hi foran) · v1.2 (2026-10-06: ps = DocStatusID (1 un-posted / 2 posted), pc + by (SystemNotes se), items posSaleLines/<SaleID>, _sync har 30 sec) · v1.1 (2026-10-03: har 10 sec, pehle chhota sawal) · v1  (2026-10-03) — POS par bane AAJ ke SALE BILLS app mein (sirf SELECT, POS mein kuch nahi badalta)
+//  pos-sales-dekho.js  v1.6 (2026-10-13: 📦 WHOLESALE / udhaar bill ka usi waqt mila cash (CRV, DocumentNo = SaleID) bhi Sale mein; note mein
+//                     wholesale bill / cash / udhaar alag) · v1.5 (2026-10-12: 🖥 POS KI SALE (AUTO) -> Daily Sale ka Sale khana, blueKhata 'possale-<din>'; "stock fraq" account ke bill nahi) · v1.4 (2026-10-06: 🔔 POS mein item judte hi (scan ya code) us PC ko beep — posBeep/<PC host>, har 0.4 sec) · v1.3 (2026-10-06: ⚡ har 2 sec + app ka bill bante / edit hote hi foran) · v1.2 (2026-10-06: ps = DocStatusID (1 un-posted / 2 posted), pc + by (SystemNotes se), items posSaleLines/<SaleID>, _sync har 30 sec) · v1.1 (2026-10-03: har 10 sec, pehle chhota sawal) · v1  (2026-10-03) — POS par bane AAJ ke SALE BILLS app mein (sirf SELECT, POS mein kuch nahi badalta)
 //  Har 1 minute dbo.Sale (aaj) parhta hai -> Firestore posSales/<YYYY-MM-DD> (ek doc, sirf badle to likhta hai).
 //  App: scanner screen ke baayein "Aaj ke bills" mein chips — ✓ cash/poora · ✗ udhaar · ⊘ cancel (DocStatusID 3).
 //  App se bani sale (Description = "BK-APP <id>") ko app:<id> nishan — app wali chip se jod deta hai (do dafa na dikhe).
@@ -44,24 +45,45 @@ let lastHash = '';
 // cancel (DocStatusID 3) nahi; "stock fraq" party (ginti ka farq) bilkul nahi. Badle to likhta hai; har 5 min jaanch; shuru par kal ka bhi.
 const KHATA = db.collection('businesses').doc(BUSINESS_ID).collection('blueKhata');
 const isFarqName = n => /stock\s*['"]?\s*f[ae]?r?a?q/i.test(String(n || ''));
-function saleSum(rows) {
-  let cash = 0, n = 0, fq = 0, fqRs = 0, cx = 0;
+// v1.6: malik — "wholesale wala bill bhi sale mein". Wholesale (party "whole sale") = POS mein UDHAAR bill (CashReceived 0); jo cash usi
+// waqt mila wo alag CRV (DocumentNo = SaleID, isi party ka — sale-post.js / POS jaisa). Ab udhaar bill ka cash = max(CashReceived, CRV)
+// (bill se zyada nahi) — galla jaisa: sirf MILA HUA cash (malik ne A chuna), udhaar 'whole sale' khate mein hi. Khata-sync DocumentNo 0
+// wale voucher hi laata hai — yeh CRV app mein wasooli nahi bante, do dafa nahi gine jate.
+const isWsName = n => /whole\s*sale/i.test(String(n || ''));
+function saleSum(rows, crv = new Map()) {
+  let cash = 0, n = 0, fq = 0, fqRs = 0, cx = 0, ws = 0, wsRs = 0, wsCash = 0;
   for (const r of rows) {
     if (Number(r.DocStatusID) === 3) { cx++; continue; }
     if (isFarqName(r.PartyName)) { fq++; fqRs += Number(r.TotalSale) || 0; continue; }
-    const t = Number(r.TotalSale) || 0, c = Number(r.CashReceived) || 0;
-    cash += r.IsCreditSale ? Math.max(0, Math.min(c, t)) : t; n++;
+    const t = Number(r.TotalSale) || 0, c = Number(r.CashReceived) || 0, v = Number(crv.get(Number(r.SaleID))) || 0;
+    const got = r.IsCreditSale ? Math.max(0, Math.min(Math.max(c, v), t)) : t;
+    cash += got; n++;
+    if (isWsName(r.PartyName)) { ws++; wsRs += t; wsCash += got; }
   }
-  return { amt: Math.round(cash * 100), n, fq, fqRs: Math.round(fqRs), cx };
+  return { amt: Math.round(cash * 100), n, fq, fqRs: Math.round(fqRs), cx, ws, wsRs: Math.round(wsRs), wsCash: Math.round(wsCash) };
+}
+async function crvFor(p, d0, d1) {   // v1.6: udhaar bill ke saath usi bill ka CRV (cash) — SaleID -> raqam
+  const m = new Map();
+  try {
+    const rs = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
+      SELECT v.DocumentNo AS SaleID, SUM(CAST(d.Debit AS FLOAT)) AS Cash
+      FROM dbo.Voucher v JOIN dbo.VoucherDetail d ON d.VoucherID = v.VoucherID
+      JOIN dbo.Sale s ON s.SaleID = v.DocumentNo AND s.PartyID = v.PartyID
+      WHERE v.VoucherType = 'CRV' AND ISNULL(v.DocumentNo, 0) > 0 AND ISNULL(v.VoucherStatusID, 1) <> 3 AND d.Debit > 0
+        AND s.SaleDate >= @a AND s.SaleDate < @b AND s.IsCreditSale = 1
+      GROUP BY v.DocumentNo`)).recordset;
+    for (const r of rs) m.set(Number(r.SaleID), Number(r.Cash) || 0);
+  } catch (e) { log('Wholesale CRV nahi parhe: ' + e.message); }
+  return m;
 }
 const saleSeen = new Map();
 async function writeSale(day, s, force = false) {
-  const key = `${s.amt}|${s.n}|${s.fq}|${s.cx}`, prev = saleSeen.get(day);
+  const key = `${s.amt}|${s.n}|${s.fq}|${s.cx}|${s.ws}|${s.wsRs}`, prev = saleSeen.get(day);
   if (!force && prev && prev.key === key && Date.now() - prev.at < 5 * 60000) return;
   const ref = KHATA.doc('possale-' + day), ex = await ref.get(), old = ex.exists ? ex.data() : null, t = Date.now();
   saleSeen.set(day, { key, at: t }); if (saleSeen.size > 10) saleSeen.delete(saleSeen.keys().next().value);
   if (s.amt <= 0) { if (old && !old.deleted) { await ref.set({ deleted: true, updatedAt: t, updatedBy: 'pc-sale' }, { merge: true }); log(`🖥 ${day}: POS sale 0 — auto entry hatayi`); } return; }
-  const note = `🖥 POS ki sale (auto) · ${s.n} bill${s.cx ? ' · ' + s.cx + ' cancel' : ''}${s.fq ? ` · stock fraq ke ${s.fq} bill (Rs ${s.fqRs.toLocaleString('en-US')}) nahi gine` : ''}`;
+  const note = `🖥 POS ki sale (auto) · ${s.n} bill${s.cx ? ' · ' + s.cx + ' cancel' : ''}${s.ws ? ` · 📦 Wholesale ${s.ws} bill Rs ${s.wsRs.toLocaleString('en-US')} (cash ${s.wsCash.toLocaleString('en-US')}${s.wsRs - s.wsCash > 0 ? ' · udhaar ' + (s.wsRs - s.wsCash).toLocaleString('en-US') : ''})` : ''}${s.fq ? ` · stock fraq ke ${s.fq} bill (Rs ${s.fqRs.toLocaleString('en-US')}) nahi gine` : ''}`;
   if (old && !old.deleted && old.amount === s.amt && old.note === note) return;
   await ref.set({ id: 'possale-' + day, type: 'entry', kind: 'sale', amount: s.amt, date: day, note, partyId: '', account: '', posAuto: true, posNo: true, deleted: false,
     by: 'pc-sale', updatedBy: 'pc-sale', createdAt: Number(old && old.createdAt) || t, updatedAt: t, rev: (Number(old && old.rev) || 0) + 1 }, { merge: true });
@@ -69,9 +91,9 @@ async function writeSale(day, s, force = false) {
 }
 async function saleFor(p, d0, d1) {
   const rows = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
-    SELECT s.TotalSale, s.CashReceived, s.IsCreditSale, s.DocStatusID, pt.PartyName FROM dbo.Sale s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
+    SELECT s.SaleID, s.TotalSale, s.CashReceived, s.IsCreditSale, s.DocStatusID, pt.PartyName FROM dbo.Sale s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
     WHERE s.SaleDate >= @a AND s.SaleDate < @b`)).recordset;
-  return saleSum(rows);
+  return saleSum(rows, await crvFor(p, d0, d1));
 }
 
 // v1.2: aaj ke har bill ke items -> posSaleLines/<SaleID> {day, no, at, lines:[{i,n,q,r,g}]} — sirf badle hue likhe
@@ -117,7 +139,7 @@ async function once() {
       ps: Number(r.DocStatusID) || 0, pc: String(names[host] || host.replace(/^DESKTOP-/i, '') || '').slice(0, 30), by: /blue khata/i.test(by) ? '' : String(by).trim().slice(0, 20) };
   });
   const day = dayOf(d0), hash = day + JSON.stringify(bills);
-  await writeSale(day, saleSum(rows)).catch(e => log('POS sale (auto) masla: ' + e.message));   // v1.5
+  await writeSale(day, saleSum(rows, await crvFor(p, d0, d1))).catch(e => log('POS sale (auto) masla: ' + e.message));   // v1.5 · v1.6 wholesale CRV
   await syncLines(p, d0, d1, day).catch(e => log('Items masla: ' + e.message));
   if (hash === lastHash) return;
   await col.doc(day).set({ day, at: Date.now(), bills });
