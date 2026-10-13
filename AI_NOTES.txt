@@ -4363,3 +4363,9 @@ cash alag CRV (DocumentNo = SaleID, PartyID = bill ki party — sale-post.js / P
 * Do dafa nahi: pos-khata-sync sirf DocumentNo 0 wale voucher laata hai — bill wale CRV app mein wasooli nahi bante.
 * saleFor (kal ki sale) mein bhi SaleID + crv. writeSale key mein ws / wsRs.
 Test: saleSum (counter 1000 + ws 10000 cash 6000 + ws 5000 CRV 9000 -> 5000 + udhaar 0 + fraq + cancel) = 12,000.
+
+=== pos-sales-dekho v1.7 (manifest 2026-10-13.7) — wholesale bill POORA Daily Sale mein (POS "Total Sale" jaisa) ===
+Malik ne POS Sale Register Summary bheji (counter 1,614,600.80 + Credit "whole sale (purana) 01-0475" 197,164.65 = Total Sale 1,811,765.46):
+"wholesale ka bill sale mein add karo — system ki sale". Is liye v1.6 ka "A (sirf cash)" badal kar: isWsName party ka TotalSale POORA;
+baqi udhaar bill (doosre customer) pehle jaisa = max(CashReceived, CRV). Note: "📦 Wholesale N bill Rs X POORA shamil (cash mila Y · udhaar Z)".
+Test: 1,614,600.80 + 197,164.65 = 1,811,765.45 (POS jaisa). Dhyan: galla mein wholesale udhaar jitna farq dikh sakta hai (malik ki marzi).
