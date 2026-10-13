@@ -374,9 +374,13 @@ service cloud.firestore {
     // v2.35: 🧾 TRANSFER CHECK — larka godam se maal laye, parchi ka barcode scan = "pahunch gaya" (ya farq).
     // Ek dafa likha = BAS: update kisi ko nahi (malik ko bhi nahi), waqt server ka (ts == request.time), sirf malik ghalti par delete.
     // v2.48: 📦 godam wala (pehla tick / godam mein "mil gaya") — login ke naam mein stockConfig.tcGiver (default Zeeshan), ya malik
+    function tcGiverName() {   // stockConfig na ho to bhi 'zeeshan' (get() missing doc par error deta hai)
+      return exists(/databases/$(database)/documents/businesses/noor-traders/blueAccess/stockConfig)
+        ? string(get(/databases/$(database)/documents/businesses/noor-traders/blueAccess/stockConfig).data.get('tcGiver', 'Zeeshan')).lower()
+        : 'zeeshan';
+    }
     function tcGiverOk() {
-      return isOwner() || (isStaff() && staffAccount().get('name', '').lower().matches('.*' +
-        get(/databases/$(database)/documents/businesses/noor-traders/blueAccess/stockConfig).data.get('tcGiver', 'Zeeshan').lower() + '.*'));
+      return isOwner() || (isStaff() && string(staffAccount().get('name', '')).lower().matches('.*' + tcGiverName() + '.*'));
     }
     match /businesses/noor-traders/transferChecks/{id} {
       allow read: if isOwner() || isStaff();

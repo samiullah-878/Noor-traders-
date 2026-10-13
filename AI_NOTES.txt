@@ -4419,3 +4419,8 @@ Malik: "email late aati hai — live notification wala kaam bhi kar do, wahan se
 * Rules 2.49: bankSms src in [sms, email, notif]. firestore-rules-2.49.html.
 Test: scratchpad hd/nf.mjs (5 namoone, app = PC parser), bp/t3.js (notif laga -> SMS jurwan, alag SMS laga), bp/t2.js, hd/tw.mjs ALL OK.
 AGLA: malik se "aaye" aur "bill" wali notification ki screenshot — qaide pakke karne.
+
+=== Rules 2.49 (dobara jaanch, malik: "rules dekh lena, kal bhi bohat tapaya") ===
+Emulator ab bhi nahi chalta (jar 403). Haath se jaanch: brackets / () / [] barabar, har allow ';' par khatam, ternary + string() + .get()
+pehle se published rules mein chalte hain (padDay, acctIs). Mazboot kiya: tcGiverName() — stockConfig na ho to get() error ki jagah
+'zeeshan'; string(...).lower() dono taraf. firestore-rules-2.49.html dobara bana (wahi version, sab 2.47 + 2.48 + 2.49 shamil).
