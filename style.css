@@ -3223,3 +3223,19 @@ html body .th-more>div>button{min-height:38px!important;border-radius:10px!impor
 html body .th-more>div>button.danger{color:#be123c!important;background:rgba(225,29,72,.07)!important;border-color:rgba(225,29,72,.25)!important}
 .tn-edit{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;padding:10px 12px;border-radius:14px;background:#fff7e6;border:1.5px solid #f3c969;color:#7a4b00}.tn-edit small{flex:1 1 100%;font-size:11.5px}
 html body #dialogBody .tn-edit button{margin-left:auto!important;min-height:30px!important;padding:3px 10px!important;border-radius:999px!important;font-size:12px!important;background:#fff!important;color:#7a4b00!important;border:1px solid #f3c969!important;box-shadow:none!important}
+/* v2.99.67: 💰 Kul raqam (har item par) + taqseem patti + bill ki bori */
+.jc-kulrow{display:flex;gap:8px;align-items:stretch;margin:2px 0 4px}
+.jc-kulrow .jc-kul{flex:1;min-width:0}
+.jc-kulrow .jc-kul span{color:#7a5409;font-weight:800;letter-spacing:.2px}
+.jc-kulrow .jc-kul span b{font-weight:400}
+html body .jc-kulrow .jc-kul input{height:44px!important;font-size:19px!important;font-weight:800;color:#5a3d05;border:1.5px solid #d69e1c!important;background:linear-gradient(180deg,#fffdf6,#fff6df)!important;border-radius:12px!important;box-shadow:inset 0 1px 0 #fff,0 2px 8px rgba(214,158,28,.12)}
+html body .jc-kulrow button.jc-kulb{flex:none;align-self:flex-end;height:44px;min-height:44px!important;padding:2px 12px!important;border-radius:12px!important;border:1px solid #d69e1c!important;background:linear-gradient(135deg,#fff3d1,#f7dd95)!important;color:#5a3d05!important;font-weight:800!important;font-size:12.5px!important;line-height:1.1;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(214,158,28,.18)}
+.jc-kulb small{font-size:10px;font-weight:600;opacity:.75}
+.jc-div{margin:0 0 6px;padding:5px 10px;border-radius:10px;background:#fbf6e9;border:1px dashed #e4c472;color:#6b5420;font-size:12px;white-space:nowrap;overflow-x:auto;scrollbar-width:none}
+.jc-div::-webkit-scrollbar{display:none}
+.jc-div b{color:#3d2a02}
+.jc-bs em{font-style:normal;font-size:11px;color:#7a5409}
+.jc-bsnote{margin:0 0 6px;padding:5px 10px;border-radius:10px;background:#eaf3ff;color:#1f4f8f;font-size:12px;font-weight:700}
+.jaanch-dlg .jc-div,.jaanch-dlg .jc-bsnote{font-size:11px;padding:4px 9px;margin-bottom:4px}
+html body .jaanch-dlg .jc-kulrow .jc-kul input{height:42px!important}
+@media (prefers-color-scheme:dark){html:not([data-theme="light"]) .jc-div{background:#2a2414;border-color:#6b5420;color:#e9d39a}html:not([data-theme="light"]) .jc-div b{color:#fff2c9}html:not([data-theme="light"]) .jc-bsnote{background:#14263d;color:#a9cdfa}}

@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.66';
-import { liveLabelsHTML } from './barcode.js?v=2.99.66';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.67';
+import { liveLabelsHTML } from './barcode.js?v=2.99.67';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -923,7 +923,7 @@ async function printLabel(btn) {
 let trLines = [], trFrom = null, trTo = null, trStop = null, trList = [], trNote = '';   // v2.99.64: note re-render par na mite
 function trBranches() { const { branches, names } = collect(); return branches.map(b => ({ id: b, name: branchName(b, names) })); }
 function trStockOf(b, id) { return Number(saleStockItem(b, id)?.stock || 0); }
-// v2.99.66: ✏️ edit mein purana note pehle hatega — us ka maal "Se" godam mein wapas aayega, is liye majood = stock + purani tadad
+// v2.99.67: ✏️ edit mein purana note pehle hatega — us ka maal "Se" godam mein wapas aayega, is liye majood = stock + purani tadad
 let trEdit = null;
 function trAvail(id) { const base = trStockOf(trFrom, id); if (!trEdit || Number(trEdit.from) !== Number(trFrom)) return base; const o = (trEdit.lines || []).filter(l => String(l.itemId) === String(id)).reduce((n, l) => n + (Number(l.qty) || 0), 0); return Math.round((base + o) * 1000) / 1000; }
 // ---------- v2.18: Transfer note ki SMART search ----------
@@ -1314,7 +1314,7 @@ function tcSum(t) { let c = 0, p = 0; for (const l of t.lines || []) { const x =
 function tcLines(t) { return (t.lines || []).map(l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); return `<div class="tc-ln"><span>${esc(l.name)}</span><b>${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}</b></div>`; }).join(''); }
 function tcWho(c) { return `<div class="tc-who"><span>👤 ${esc(c.byName || '—')}</span><span>🕒 ${tcClock(c.ts)} · ${esc(regDay(c.ts || Date.now()))}</span><span>📱 Device: <b>${esc(c.device || '—')}</b></span></div>`; }
 function tcAll() {   // v2.99.25: POS ke note + app ke bane note (transferJobs done) jo abhi POS list (transfer-dekho) mein nahi aaye
-  const dels = new Set((trList || []).filter(j => (j.op === 'delete' && j.transferId || j.op === 'edit' && j.oldId) && j.status === 'done').map(j => String(j.op === 'edit' ? j.oldId : j.transferId)));   // v2.99.58: app se cancel · v2.99.66: edit = purana cancel
+  const dels = new Set((trList || []).filter(j => (j.op === 'delete' && j.transferId || j.op === 'edit' && j.oldId) && j.status === 'done').map(j => String(j.op === 'edit' ? j.oldId : j.transferId)));   // v2.99.58: app se cancel · v2.99.67: edit = purana cancel
   const L = (ptList || []).map(t => dels.has(String(t.transferId)) && !t.cancelled ? { ...t, cancelled: true, cancelledAt: t.cancelledAt || 0 } : t), ids = new Set(L.map(t => String(t.transferId)));
   for (const j of trList || []) { if (j.op === 'delete' || j.status !== 'done' || !j.transferId || ids.has(String(j.transferId)) || dels.has(String(j.transferId))) continue;
     L.push({ id: 'T' + j.transferId, transferId: Number(j.transferId), transferNo: String(j.transferNo || ''), from: Number(j.from), to: Number(j.to), at: Number(j.doneAt) || Number(j.at) || 0, createdOn: Number(j.doneAt) || Number(j.at) || 0, app: true, lines: (j.lines || []).map(l => ({ itemId: String(l.itemId), name: l.name, qty: Number(l.qty) || 0, pack: Number(l.pack) || 0 })) }); }
@@ -3032,12 +3032,12 @@ export function renderTransferHub(canDo = () => true) {
     ${grp || '<div class="th-empty">⇄<b>Aaj / kal koi transfer note nahi</b><small>"Naya transfer note" se banayein</small></div>'}</div>`;
 }
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-th],[data-th-reg],[data-th-tc],[data-th-prn],[data-th-edit],[data-th-cancel]'); if (!b) return; const d = b.dataset;
-  if (d.thTc) { tcDays = Number(d.thD) === 2 ? 2 : 1; tcDir = 'all'; tcOpen.add(d.thTc); openTransferCheck('nikle');   // v2.99.66: note par tap = us ka check
+  if (d.thTc) { tcDays = Number(d.thD) === 2 ? 2 : 1; tcDir = 'all'; tcOpen.add(d.thTc); openTransferCheck('nikle');   // v2.99.67: note par tap = us ka check
     setTimeout(() => { const el = [...document.querySelectorAll('[data-tc-open]')].find(x => x.dataset.tcOpen === d.thTc); if (el) { el.scrollIntoView({ block: 'center' }); el.closest('.tc-n')?.classList.add('tc-flash'); } }, 500); return; }
   if (d.thPrn || d.thEdit || d.thCancel) { thAct(d, b); return; }
   const k = d.th || 'reg';
   if (k === 'new') { if (trEdit) { trEdit = null; trLines = []; } openTransfer(); } else if (k === 'tc') openTransferCheck(); else openRegister(); });
-// v2.99.66: 🖨 / ✏️ / ❌ — sirf malik. App ka note: job id se print (dobara-print ginti) · POS ka: 'pos:<TransferID>' (transfer-sync v4.7)
+// v2.99.67: 🖨 / ✏️ / ❌ — sirf malik. App ka note: job id se print (dobara-print ginti) · POS ka: 'pos:<TransferID>' (transfer-sync v4.7)
 function thAct(d, b) {
   if (!isOwner()) { notice('Sirf malik'); return; }
   const id = String(d.thPrn || d.thEdit || d.thCancel), t = tcAll().find(x => String(x.transferId) === id); if (!t) { notice('Note nahi mila'); return; }

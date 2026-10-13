@@ -4235,3 +4235,26 @@ Malik: "note par click = transfer check khule (register nahi)" + "dobara print, 
   POS wala note bhi agar job.force, printJobs 'pos:<id>' = posNoteData() (POS lines + dono godam ka abhi stock) + DOBARA PRINT.
 - Rules 2.47 transferJobs: keys + reason, force; op + 'edit'; delete / edit / force sirf malik.
 - Test: scratchpad hd/tr3.mjs (tap -> check, print pos:1, cancel force, edit 36 pcs: Sara = 30 + 36 = 5 Ctn + 6, save op edit).
+
+=== v2.99.67 (2026-10-13) — 💰 Jaanch card par KUL RAQAM + 📦 bill ki BORI yaad ===
+Malik: "kul raqam ka khana — cotton / pieces par taqseem se rate nikle" + "AI ki yaaddasht check karo".
+Yaaddasht ka audit (code): naam (blueAccess/itemAliases) ✓, pichhla khareed/nafa (itemRates, POS bhejte waqt) ✓,
+supplier naqsha + misalein (billFormats) ✓, carton size jab POS mein khali (itemRates.s) ✓.
+KAMI mili: POS mein carton pehle se ho (Mongi daal CTN 25) aur supplier ki bori alag (40 kg) — app bori ko POS
+carton samajhti thi (408/kg, "1.7 guna" 🔴) aur na poochhti na yaad rakhti. Misalein bhi har bill par purani mit jati thin (12).
+purchase.js:
+- jCard: har item par poori line ka "💰 Kul raqam" (data-pp-jtot; 🔒 jab aap ne likhi = l.kul) + chip "🧾 Bill: X lagao"
+  (data-pp-jtotb, kul = bill ka total) + taqseem patti #jcDiv (jDivHTML: kul ÷ bori / ÷ CTN / ÷ PCS). Kh/CTN khana ab hamesha
+  (carton na ho to band). Kul khali ho to line ka total (ginti × rate) dikhta hai.
+- Input: CTN badle aur kul 🔒 ho to rate = kul ÷ nayi ginti (PCS mein pehle se tha); Kh/CTN ya Kh/PCS khud likha = kul khula (0).
+- jJudge: ln.kul > 0 ho to costP = kul ÷ ginti (mode chip / bori badalne par bhi kul sach).
+- POS carton wale item par "Bill ki 1 bori = [ ] Pcs" (data-pp-jbs -> r.cs; change par r.force 'size', khali = r.bsSet -1).
+  jCandidates 'size' mode ab POS carton ke saath bhi: 10 bori × 40 = 400 = 16 CTN + 0 (pcs ctn mein normalize).
+  memSize(id, pk): pack wale item par itemRates.b, warna .s. Note patti .jc-bsnote "📦 Bill ki 1 bori = 40 … 📌 yaad hai".
+- boriMemFromBill(): POS bhejte waqt size mode wali line -> mem.b = size; aap ne khali kiya -> b 0 (bhool jao). s alag hi rehta
+  (packGaps "carton alag" list b ko nahi dekhti — POS ka carton badalne ka mashwara nahi).
+- learnFromBill: misalein (ex) naye + purane jama (ek naam ek dafa), 30 tak.
+cloud.js setItemRates: field b (>=0). setBillFormat ex 30. app.js billNote ex 30.
+style.css: .jc-kulrow/.jc-kulb/.jc-div/.jc-bs/.jc-bsnote (sunehri, dark mode bhi).
+Rules: koi tabdeeli nahi (2.47 hi). Yaad sirf POS bill BHEJNE par pakki hoti hai (pehle jaisa).
+Test: scratchpad hd/kul/run.mjs (happy-dom, asal purchase.js) — 11 jaanch ALL OK; card.png screenshot.
