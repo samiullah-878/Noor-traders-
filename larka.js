@@ -1,9 +1,9 @@
-// larka.js — v2.99.73: 👦 LARKA SALE REPORT (sirf malik) — PC ki larka-report (larka-report.html) ab app mein
+// larka.js — v2.99.74: 👦 LARKA SALE REPORT (sirf malik) — PC ki larka-report (larka-report.html) ab app mein
 // Data: PC ki larka-stats.js har 5 minute POS se nikaal kar posStats/larka (din-wise total, shuru se) aur posStats/larka-bills
 //       (bills ki list: larka 90 din, POS user 3 din) likhti hai — dono mein j = JSON ki string. Screen khuli ho to khud taza hoti hai.
 //   sum:   { larka: { men:[{id,name}], days:[[din,id,bills,total]], bina:[[din,bills,total]] }, user: { men, days } }
 //   bills: { larka: { from, days, bills:[[billNo,din,waqt,id,total,udhaar,customer]] }, user: {...} }
-// v2.99.73: 📦 WHOLESALE — chip "Wholesale ke baghair" (default) / "Wholesale ke saath" (malik). PC larka-stats v2: wdays / wbina
+// v2.99.74: 📦 WHOLESALE — chip "Wholesale ke baghair" (default) / "Wholesale ke saath" (malik). PC larka-stats v2: wdays / wbina
 //   (sirf wholesale ka hissa, yahan minus) + bill ka 8th khana ws. Purana PC data (v1) = wdays nahi -> chip par note.
 // Larka (SP Man) = POS Sale screen par chuna hua larka · POS user = jis login se bill bana. Cancel bills nahi ginay jate.
 // Screen: Larka / POS user · naam · tareekh (se / tak) + Aaj / Kal / hafta / mahina chips · kul · Din / Hafta / Mahina-wise · bills.
@@ -55,7 +55,7 @@ const today = () => dayOf(new Date());
 const S = () => {
   const s = data.sum?.[st.by] || {}, b = data.bills?.[st.by] || {};
   const A = x => Array.isArray(x) ? x : [], hasWs = Array.isArray(s.wdays);
-  // v2.99.73: wholesale ke baghair = din ki ginti MINUS wholesale ka hissa (PC v2 deta hai)
+  // v2.99.74: wholesale ke baghair = din ki ginti MINUS wholesale ka hissa (PC v2 deta hai)
   const less = (rows, w, k) => { if (st.ws || !w.length) return rows; const m = new Map(w.map(r => [k(r), r]));
     return rows.map(r => { const x = m.get(k(r)); return x ? (r.length === 4 ? [r[0], r[1], r[2] - x[2], r[3] - x[3]] : [r[0], r[1] - x[1], r[2] - x[2]]) : r; }).filter(r => (r.length === 4 ? r[2] : r[1]) > 0); };
   return { ...MODES[st.by], hasWs, wsCount: A(s.wdays).length, men: A(s.men), days: less(A(s.days), A(s.wdays), r => r[0] + '|' + r[1]), bina: less(A(s.bina), A(s.wbina), r => r[0]),

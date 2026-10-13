@@ -34,6 +34,30 @@ export function parseBank(text, src = 'sms', subj = '') {
   out.acct = (t.match(/A\/C\s*([0-9*]{6,})/i) || t.match(/From\s+Account\s+(?:No|Number)\.?\s*(?:\/\s*IBAN)?\s*[:\-]?\s*(?:PK\d\d[A-Z]{4})?([0-9*]{6,})/i) || [])[1] || '';   // v2.99.59: email ka "From Account No. /IBAN" bhi
   const via = t.match(/via\s+(?:your\s+)?(Raast(?:\s+ID)?|IBFT|Cash Deposit|Cheque(?: Deposit)?|ATM|Mobile|Internet Banking|[A-Za-z][A-Za-z ]{1,25}?)(?=\s+(?:in|on|TXN|from|to)\b|[.,\n]|$)/i);
   if (via) out.via = via[1].replace(/\s+ID$/i, '').trim();
+  // ---- v2.99.74 🔔 HBL Mobile app ki LIVE NOTIFICATION (MacroDroid: "{not_title} — {notification}") — email / SMS se pehle ----
+  //  "Transaction Alert: Fund Transfer — PKR 10,000 sent to HASEEB CORPORAT HBL from your HBL A/C *6303 on 13-Oct-2026 23:21 via HBL Mobile,Tx ID 1300557247. UAN: …"
+  if (src === 'notif' || /^\s*Transaction Alert/i.test(t)) {
+    out.src = 'notif'; out.amt = amtOf(t);
+    out.txn = (t.match(/\bT(?:x|XN|rx)\s*(?:ID|No\.?|#)\s*[:\-]?\s*([A-Z0-9]{4,})/i) || t.match(/Transaction\s*(?:ID|No\.?|#)\s*[:\-]?\s*([A-Z0-9]{4,})/i) || [])[1] || '';
+    out.acct = (t.match(/A\/C\s*(?:No\.?\s*)?\*?\s*([0-9*]{4,})/i) || [])[1] || '';
+    const vv = t.match(/via\s+(.+?)(?=\s*[,.]\s*(?:T(?:x|XN|rx)\b|UAN|Transaction)|\s+(?:on|from|to)\b|$)/i); out.via = vv ? vv[1].trim().slice(0, 40) : '';
+    if (/bill\s*payment/i.test(t)) {
+      const co = (t.match(/(?:paid\s+(?:to|for)|payment\s+(?:to|of|for))\s+(.+?)(?=\s+(?:bill|from|on|via|against|for\s+consumer|consumer)\b|[,.]|$)/i) || [])[1] || '';
+      out.consumer = (t.match(/Consumer\s*(?:ID|No\.?|Number|#)?\s*[:\-]?\s*([A-Z0-9-]{4,})/i) || [])[1] || '';
+      out.name = (co.trim() || 'Utility') + ' bill'; out.kind = 'bill'; out.dir = 'out'; out.via = 'Bill Payment';
+    } else if (/\b(?:sent|transferred|paid)\s+to\b|\bdebited\b/i.test(t)) {
+      out.dir = 'out';
+      const m = t.match(/(?:sent|transferred|paid)\s+to\s+(.+?)(?=\s+(?:from\s+your|from\s+A\/C|on|via)\b|[,.]\s|$)/i);
+      if (m) { const s = splitName(m[1]); out.name = s.name; out.bank = s.bank; }
+      if (/ATM|withdraw/i.test(t)) { out.kind = 'cash'; out.name = out.name || 'ATM se nikala'; }
+    } else if (/\breceived\b|\bcredited\b|\bdeposit/i.test(t)) {
+      out.dir = 'in';
+      if (/cash\s*deposit/i.test(t)) { out.kind = 'cash'; out.via = 'Cash Deposit'; out.name = 'Cash jama (branch)'; }
+      else { const m = t.match(/(?:received\s+from|credited\s+(?:by|from)|from)\s+(.+?)(?=\s+(?:in|into|to)\s+your\b|\s+(?:on|via)\b|[,.]\s|$)/i); if (m) { const s = splitName(m[1]); out.name = s.name; out.bank = s.bank; } }
+    }
+    out.ok = out.amt > 0 && !!out.dir && (out.kind !== 'party' || !!out.name);
+    return out;
+  }
   // ---- v2.99.59 email: 🧾 BILL PAYMENT (HBL Mobile | Bill Payment) — Company GEPCO · Consumer ID · From Account No. /IBAN · Date-Time ----
   if (src === 'email' && !/Receiver Account Title/i.test(t) && (/Bill\s*Payment/i.test(subj) || (/\bCompany\b/i.test(t) && /Consumer\s*(?:ID|No|Number)/i.test(t)))) {
     out.amt = amtOf(lineVal(t, 'Amount') || t);

@@ -6,7 +6,7 @@
 //          'printing' jis ki dhadkan (beatAt, label-print v4.1) 3 min se nahi = "⚠ atka hua" (Cancel = PC foran saaf karta hai).
 // Screen: din ke hisaab se -> item -> har barcode (packet size) ki ginti. Chips: Aaj · Kal · 7 din · 30 din · status · search.
 // PDF: app ka openReportPreview (poori screen + WhatsApp / share).
-import { smartHit } from './smart-search.js?v=2.99.73';   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.99.74';   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -63,7 +63,7 @@ const codeLine = c => `<div class="bc-code${c.sub ? ' sub' : ''}"><span class="b
 const cxLocal = new Map();   // v2.98.8: abhi cancel dabaya (id -> waqt) — snapshot aane se pehle bhi "cancel ho raha" dikhe
 const isCx = j => !!j.cancelReq || (cxLocal.has(j.id) && Date.now() - cxLocal.get(j.id) < 3 * 60000);
 const isStuck = (j, now) => j.status === 'printing' && now - (Number(j.beatAt) || Number(j.pickedAt) || Number(j.at) || 0) > 3 * 60000;
-// v2.99.73: 🔁 kharab nikle labels dobara — sirf utne (naye number ke saath). Mulazim: Settings → Mulazim → Stock → 'stock.lblagain'
+// v2.99.74: 🔁 kharab nikle labels dobara — sirf utne (naye number ke saath). Mulazim: Settings → Mulazim → Stock → 'stock.lblagain'
 const lvJobs = new Map(), agVals = new Map();   // agVals: likhi hui ginti (live patti dobara bane to bhi rahe)
 document.addEventListener('input', e => { const t = e.target; if (t?.dataset?.lvN) agVals.set(t.dataset.lvN, t.value); });
 const canAgain = () => { try { return typeof window.ntCan === 'function' ? window.ntCan('stock.lblagain') : true; } catch { return true; } };
@@ -106,7 +106,7 @@ function pdfHTML() {
       </tbody></table>`).join('')}`;
 }
 document.addEventListener('click', async e => {
-  const ab = e.target.closest?.('[data-lv-again]');   // v2.99.73: 🔁 kharab label dobara
+  const ab = e.target.closest?.('[data-lv-again]');   // v2.99.74: 🔁 kharab label dobara
   if (ab) { const id = ab.dataset.lvAgain, j = lvJobs.get(id); if (!j || !cloud?.requestLabel) { notice('Label ke liye app update karein'); return; }
     if (!canAgain()) { notice('Is kaam ki ijazat nahi — malik se kahein'); return; }
     const box = ab.closest('.lv-ag'), inp = box?.querySelector('[data-lv-n]'), n = Math.floor(Number(inp?.value) || 0);

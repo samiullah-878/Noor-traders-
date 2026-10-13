@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.73';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.74';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -28,15 +28,32 @@ const onScreen = () => !!document.querySelector('#list .bk-screen');
 const onDaily = () => !!document.querySelector('#list .bk-day');
 const live = () => isOpen() || onScreen() || onDaily();
 // sab docs -> parsed + dubara wale alag
+const srcIc = s => s === 'email' ? '✉️' : s === 'notif' ? '🔔' : '💬';   // v2.99.74
+// v2.99.74: 🔔 notification + baad mein usi len-den ka SMS / email = EK. TXN alag ho sakti hai (Raast) — is liye: aaye/gaye + raqam barabar
+// aur waqt 30 min ke andar, aur zariya alag (notification vs SMS/email) -> ek hi key. Do asal alag len-den (dono SMS) kabhi nahi jurte.
+const minOf = r => r && r.day && r.time ? Math.round(Date.parse(r.day + 'T' + r.time + ':00Z') / 60000) : null;
+function twinKeys(all) {
+  const isDone = x => x.d.st === 'done' || x.d.st === 'skip';
+  for (const x of all) {
+    if (!x.r.ok || x.d.src !== 'notif' || x.tw) continue;
+    const m = minOf(x.r); if (m == null) continue;
+    const y = all.find(z => z !== x && !z.tw && z.r.ok && z.d.src !== 'notif' && z.r.dir === x.r.dir && z.r.amt === x.r.amt && minOf(z.r) != null && Math.abs(minOf(z.r) - m) <= 30);
+    if (!y) continue;
+    x.tw = y; y.tw = x;
+    if (isDone(x) && !isDone(y)) y.k = x.k; else x.k = y.k;   // jo lag chuka us ki key · dono baqi: SMS / email ki (TXN + poora naam)
+  }
+}
 function rows() {
   const all = (docs || []).filter(d => !('p' in d) || d.text).map(d => { const r = parseBank(d.text, d.src, d.subj); return { d, r, k: r.ok ? bankKeyOf(r) : 'X' + d.id }; });
   all.sort((a, b) => (b.r.day + b.r.time).localeCompare(a.r.day + a.r.time) || String(b.d.at || '').localeCompare(String(a.d.at || '')));
+  twinKeys(all);
   const seen = new Map(); for (const x of all) if (x.d.st === 'done' || x.d.st === 'skip') seen.set(x.k, x);
   const pend = [], done = [], bad = [], dup = [];
   for (const x of all) {
     if (x.d.st === 'done' || x.d.st === 'skip') { done.push(x); continue; }
     if (!x.r.ok) { bad.push(x); continue; }
-    if (seen.has(x.k)) { dup.push(x); continue; }
+    if (seen.has(x.k)) { const o = seen.get(x.k);   // v2.99.74: dono baqi — SMS / email wala dikhe, notification jurwan mein
+      if (o.d.src === 'notif' && x.d.src !== 'notif' && pend.includes(o) && !(o.d.st)) { pend.splice(pend.indexOf(o), 1, x); dup.push(o); seen.set(x.k, x); } else dup.push(x); continue; }
     seen.set(x.k, x); pend.push(x);
   }
   return { pend, done, bad, dup, all };
@@ -84,7 +101,7 @@ function cardHTML(x) {
     : `<div class="bk-pick"><input type="search" placeholder="🔍 kis ka khata? naam likhein…" data-bk-q="${id}" autocomplete="off"><div class="bk-res" id="bkRes-${id}"></div></div>`;
   const okDis = busy.has(x.d.id) || !bankOf(r) || (r.kind === 'bill' ? !billTo() : (r.dir !== 'in' && (cash || !s)));
   return `<article class="bk-card ${r.dir}">
-    <div class="bk-top"><span class="bk-dir">${r.dir === 'in' ? '🟢 Aaye' : '🔴 Gaye'}</span><b class="bk-amt">${m(r.amt)}</b><span class="bk-src">${x.d.src === 'email' ? '✉️' : '💬'}</span></div>
+    <div class="bk-top"><span class="bk-dir">${r.dir === 'in' ? '🟢 Aaye' : '🔴 Gaye'}</span><b class="bk-amt">${m(r.amt)}</b><span class="bk-src">${srcIc(x.d.src)}</span></div>
     <div class="bk-who"><b>${esc(r.name || '—')}</b><small>${meta}</small></div>${sug}
     <div class="bk-acts"><button type="button" class="give" data-bk-skip="${id}"${busy.has(x.d.id) ? ' disabled' : ''}>✕ Chhoro</button><button type="button" class="got" data-bk-ok="${id}"${okDis ? ' disabled' : ''}>${busy.has(x.d.id) ? '⏳ Lag raha hai…' : '✓ Lagao'}</button></div></article>`;
 }
@@ -101,11 +118,11 @@ function html() {
   let body = '';
   if (tab === 'setup') body = setupHTML();
   else if (tab === 'done') body = R.done.slice(0, 80).map(doneHTML).join('') || '<p class="bk-empty">Abhi kuch nahi lagaya</p>';
-  else if (tab === 'bad') body = R.bad.slice(0, 40).map(x => `<div class="bk-raw"><small>${x.d.src === 'email' ? '✉️ ' + esc(x.d.subj || '') : '💬 ' + esc(x.d.from || '')}</small><p>${x.d.text ? esc(String(x.d.text).slice(0, 400)) : '<b>⚠️ SMS ka text KHALI aaya.</b> MacroDroid ki body mein "text" ke quotes ke beech <b>Magic Text → SMS message</b> nahi laga — ya macro "Test actions" se chalaya (us mein SMS hota hi nahi). ⚙️ Setup mein tareeqa dekhein.'}</p><button type="button" class="give" data-bk-skip="${esc(x.d.id)}">✕ Hatao</button></div>`).join('') || '<p class="bk-empty">Sab samajh aa gaye 👍</p>';
+  else if (tab === 'bad') body = R.bad.slice(0, 40).map(x => `<div class="bk-raw"><small>${x.d.src === 'email' ? '✉️ ' + esc(x.d.subj || '') : srcIc(x.d.src) + ' ' + esc(x.d.from || '')}</small><p>${x.d.text ? esc(String(x.d.text).slice(0, 400)) : '<b>⚠️ SMS ka text KHALI aaya.</b> MacroDroid ki body mein "text" ke quotes ke beech <b>Magic Text → SMS message</b> nahi laga — ya macro "Test actions" se chalaya (us mein SMS hota hi nahi). ⚙️ Setup mein tareeqa dekhein.'}</p><button type="button" class="give" data-bk-skip="${esc(x.d.id)}">✕ Hatao</button></div>`).join('') || '<p class="bk-empty">Sab samajh aa gaye 👍</p>';
   else body = (H ? '' : `<div class="bk-warn">⚠️ HBL khata nahi chuna. ${banks.length ? `<select data-bk-bank><option value="">— chunein —</option>${banks.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select>` : 'Pehle bank ka khata banayein.'}</div>`)
     + (R.pend.map(cardHTML).join('') || `<div class="bk-empty">🎉<b>Sab lag gaye</b><small>Naya SMS / email aate hi yahan aayega</small></div>`) + (R.dup.length ? `<small class="bk-note">${R.dup.length} dubara aaye hue (wahi TXN) chhupaye</small>` : '');
   return `<div class="bk-root"><div class="bk-sum"><div><small>Aaj aaye</small><b class="green">${m(inT)}</b></div><div><small>Aaj gaye</small><b class="red">${m(outT)}</b></div><div><small>Baqi</small><b>${R.pend.length}</b></div></div>
-    <div class="bk-live">💬 aakhri SMS: ${esc(last('sms'))} · ✉️ aakhri email: ${esc(last('email'))}${H ? ' · 🏦 ' + esc(H.name) : ''}</div>
+    <div class="bk-live">🔔 aakhri notification: ${esc(last('notif'))} · 💬 aakhri SMS: ${esc(last('sms'))} · ✉️ aakhri email: ${esc(last('email'))}${H ? ' · 🏦 ' + esc(H.name) : ''}</div>
     <div class="mchips bk-tabs">${tabs.map(([k, l]) => `<button type="button" class="rc${tab === k ? ' on' : ''}" data-bk-tab="${k}">${l}</button>`).join('')}</div>${body}</div>`;
 }
 function paint() { if (onScreen()) renderHbl(); else if (onDaily() && O.rerender) O.rerender(); const b = $('dialogBody'); if (b && isOpen()) { const q = qOpen && b.querySelector(`[data-bk-q="${CSS.escape(qOpen)}"]`)?.value; b.innerHTML = html(); if (qOpen) { const i = b.querySelector(`[data-bk-q="${CSS.escape(qOpen)}"]`); if (i) { i.value = q || ''; i.focus(); search(i); } } } }
@@ -234,6 +251,7 @@ function search(inp) {
 // ---------- ⚙️ setup (malik) ----------
 async function loadKey() { if (key !== null || !O.cloud?.getBankKey) return; try { key = (await O.cloud.getBankKey()) || ''; } catch { key = ''; } paint(); }
 const restUrl = () => `https://firestore.googleapis.com/v1/projects/${O.projectId}/databases/(default)/documents/businesses/noor-traders/bankSms?key=${O.apiKey}`;
+const notifBody = k => `{"fields":{"k":{"stringValue":"${k}"},"src":{"stringValue":"notif"},"from":{"stringValue":"HBL Mobile"},"text":{"stringValue":"{not_title} — {notification}"}}}`;   // v2.99.74: 🔔 MacroDroid Notification Received
 const smsBody = k => `{"fields":{"k":{"stringValue":"${k}"},"src":{"stringValue":"sms"},"from":{"stringValue":"14250"},"text":{"stringValue":"{sms_message}"}}}`;   // v2.99.58: MacroDroid ka magic text seedha — copy = paste, kuch badalna nahi
 function gasCode(k) {
   return `// Blue Khata — HBL email (paise GAYE) -> 📩 HBL Inbox. Google ke server par har 5 minute. Kuch mitata / bhejta nahi, sirf parhta hai.
@@ -276,6 +294,13 @@ function setupHTML() {
     <li>Macro ka naam "HBL → Blue Khata" → Save ✓.</li>
     <li>Phone Settings → Apps → MacroDroid → Battery → <b>Unrestricted</b> (warna phone band kar deta hai).</li>
     <li>Test: macro kholein → ⋮ → <b>Test actions</b> → yahan "❓ Samajh nahi" mein ek khali card aa jaye = rabta theek ✓ (use ✕ kar dein).</li></ol>
+    <h4>🔔 1-B · LIVE — HBL Mobile app ki notification (sab se tez · isi phone par jahan HBL app login hai)</h4><ol>
+    <li>MacroDroid → <b>Add Macro</b> → Trigger ➕ → <b>Device Events → Notification</b> (Notification Received) → Application: <b>HBL Mobile</b> chunein → Any content → OK. (Pehli dafa MacroDroid "Notification access" maangega → Allow.)</li>
+    <li>Action ➕ → <b>Connectivity → HTTP Request</b> → Method <b>POST</b> → URL: ${copyBtn('url', 'URL copy')} paste.</li>
+    <li>Content body → <b>application/json</b> → ${copyBtn('nbody', 'Notification body copy')} → purana mita kar <b>paste</b>. Is mein <b>{not_title}</b> aur <b>{notification}</b> pehle se hain.</li>
+    <li>Naam "HBL Notification → Blue Khata" → Save ✓. Battery: MacroDroid <b>Unrestricted</b> (upar wala qadam).</li>
+    <li>Check: agla len-den hote hi yahan 🔔 card aaye. Card khali / "❓ Samajh nahi" mein aaye to us ki screenshot bhej dein.</li>
+    <li>Baad mein usi len-den ka SMS / email aaye to <b>do dafa nahi lagta</b> — app jor deti hai (raqam + 30 min).</li></ol>
     <h4>✉️ 2 · Paise GAYE — Gmail (NOORTRADERS145@gmail.com, ek dafa)</h4><ol>
     <li>Browser mein <b>script.google.com</b> kholein (NOORTRADERS145 se login) → <b>New project</b>.</li>
     <li>Wahan likha sab mita kar ${copyBtn('gas', 'Script copy')} paste → 💾 Save.</li>
@@ -315,7 +340,7 @@ async function rabtaTest() {
   testBusy = false; paint();
 }
 async function copy(what) {
-  const t = what === 'url' ? restUrl() : what === 'body' ? smsBody(key) : gasCode(key);
+  const t = what === 'url' ? restUrl() : what === 'body' ? smsBody(key) : what === 'nbody' ? notifBody(key) : gasCode(key);
   try { await navigator.clipboard.writeText(t); O.notice?.('📋 Copy ho gaya'); } catch { prompt('Copy karein:', t); }
 }
 document.addEventListener('click', e => {
@@ -383,7 +408,7 @@ function tickCard(x, compact) {
     : compact ? '<small>❓ khata nahi mila — HBL screen par chunein</small>' : `<div class="bk-pick"><input type="search" placeholder="🔍 kis ka khata?" data-bk-q="${id}" autocomplete="off"><div class="bk-res" id="bkRes-${id}"></div></div>`;
   return `<div class="bk-row pend ${r.dir}"><label class="bk-tick${can ? '' : ' off'}"><input type="checkbox" data-bk-tick="${id}"${can ? '' : ' disabled'}${b ? ' checked' : ''}><span></span></label>
     <div class="bk-rw"><div class="bk-rl"><b>${esc(r.name || '—')}</b><b class="bk-amt ${r.dir === 'in' ? 'green' : 'red'}">${r.dir === 'in' ? '+' : '−'}${m(r.amt)}</b></div>
-    <small>${x.d.src === 'email' ? '✉️' : '💬'} ${esc([r.bank, r.via, r.time, r.txn ? 'TXN ' + r.txn : ''].filter(Boolean).join(' · '))}</small><div class="bk-rs">${b ? '⏳ lag raha hai…' : who}</div></div>
+    <small>${srcIc(x.d.src)} ${esc([r.bank, r.via, r.time, r.txn ? 'TXN ' + r.txn : ''].filter(Boolean).join(' · '))}</small><div class="bk-rs">${b ? '⏳ lag raha hai…' : who}</div></div>
     <div class="bk-side">${noteBtn(r.txn, 'p:' + x.d.id)}${compact || !capOk('hbl.skip') ? '' : `<button type="button" class="bk-x" title="Chhoro" data-bk-skip="${id}">✕</button>`}</div></div>`;
 }
 function doneRow(v) {
@@ -460,7 +485,7 @@ function pPend(x) {
   return `<article class="bkp-row pend ${r.dir}${old ? ' old' : ''}">
     <div class="bkp-av ${r.dir}">${r.dir === 'in' ? '↓' : '↑'}<i>${esc(initials(r.name))}</i></div>
     <div class="bkp-mid"><div class="bkp-top"><b class="bkp-nm">${esc(r.name || '—')}</b><span class="bkp-badge ${old ? 'old' : 'new'}">${old ? '📅 ' + esc(dShow(r).split(' · ')[0]) + ' · purana' : 'NAYA'}</span></div>
-      <div class="bkp-meta">${x.d.src === 'email' ? '✉️' : '💬'} ${meta}${r.txn ? ` <span class="bkp-txn">${esc(r.txn)}</span>` : ''}</div>${who}
+      <div class="bkp-meta">${srcIc(x.d.src)} ${meta}${r.txn ? ` <span class="bkp-txn">${esc(r.txn)}</span>` : ''}</div>${who}
       ${old ? `<div class="bkp-q">📅 Yeh <b>${esc(dShow(r).split(' · ')[0])}</b> ka purana len-den hai — khate mein lagana hai?</div>` : ''}
       <div class="bkp-acts"><button type="button" class="bkp-go" data-bk-ok="${id}"${can ? '' : ' disabled'}>${b ? '⏳ Lag raha hai…' : old ? '✓ Haan, lagao' : r.dir === 'out' ? '✓ Khate mein lagao' : '✓ Lagao'}</button>${capOk('hbl.skip') ? `<button type="button" class="bkp-no" data-bk-skip="${id}"${b ? ' disabled' : ''}>${old ? '✕ Nahi' : '✕'}</button>` : ''}${noteBtn(r.txn, 'p:' + x.d.id).replace('bk-nb', 'bkp-ic bk-nb')}</div></div>
     <div class="bkp-amt ${r.dir}">${r.dir === 'in' ? '+' : '−'}${m(r.amt)}<small>⏳ Baqi</small></div></article>`;

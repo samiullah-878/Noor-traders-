@@ -1,5 +1,5 @@
 // =========================================================
-//  bank-parchi.js  v2.1 (2026-10-12) — 🏦 sirf apne HBL account ke (A/C ke aakhri 4 number app mein yaad) · v2.0 (2026-10-12) — 🤖 aaye paise khud HBL khate mein (neeche) · v1.0 — 💰 PAISE AAYE ki parchi (Server PC, TM-T88IV)
+//  bank-parchi.js  v2.2 (2026-10-13: 🔔 HBL Mobile app ki NOTIFICATION (src 'notif') bhi parhta hai + notification / SMS / email jurwan = ek) · v2.1 (2026-10-12) — 🏦 sirf apne HBL account ke (A/C ke aakhri 4 number app mein yaad) · v2.0 (2026-10-12) — 🤖 aaye paise khud HBL khate mein (neeche) · v1.0 — 💰 PAISE AAYE ki parchi (Server PC, TM-T88IV)
 //  Malik: "jaise hi koi paisa aya usi time computer se print bi nikl aiya".
 //  📩 HBL Inbox (Firestore bankSms) mein naya SMS / email aate hi -> parchi: raqam (bara), kis se, bank, via, waqt, TXN.
 //  Sirf PARHTA hai (kuch nahi likhta, sirf printConfig.bankLast). Wahi TXN do dafa nahi chhapta (bank-print.json).
@@ -36,6 +36,30 @@ function parseBank(text, src = 'sms', subj = '') {
   out.acct = (t.match(/A\/C\s*([0-9*]{6,})/i) || t.match(/From\s+Account\s+(?:No|Number)\.?\s*(?:\/\s*IBAN)?\s*[:\-]?\s*(?:PK\d\d[A-Z]{4})?([0-9*]{6,})/i) || [])[1] || '';   // v2.99.59: email ka "From Account No. /IBAN" bhi
   const via = t.match(/via\s+(?:your\s+)?(Raast(?:\s+ID)?|IBFT|Cash Deposit|Cheque(?: Deposit)?|ATM|Mobile|Internet Banking|[A-Za-z][A-Za-z ]{1,25}?)(?=\s+(?:in|on|TXN|from|to)\b|[.,\n]|$)/i);
   if (via) out.via = via[1].replace(/\s+ID$/i, '').trim();
+  // ---- v2.99.74 🔔 HBL Mobile app ki LIVE NOTIFICATION (MacroDroid: "{not_title} — {notification}") — email / SMS se pehle ----
+  //  "Transaction Alert: Fund Transfer — PKR 10,000 sent to HASEEB CORPORAT HBL from your HBL A/C *6303 on 13-Oct-2026 23:21 via HBL Mobile,Tx ID 1300557247. UAN: …"
+  if (src === 'notif' || /^\s*Transaction Alert/i.test(t)) {
+    out.src = 'notif'; out.amt = amtOf(t);
+    out.txn = (t.match(/\bT(?:x|XN|rx)\s*(?:ID|No\.?|#)\s*[:\-]?\s*([A-Z0-9]{4,})/i) || t.match(/Transaction\s*(?:ID|No\.?|#)\s*[:\-]?\s*([A-Z0-9]{4,})/i) || [])[1] || '';
+    out.acct = (t.match(/A\/C\s*(?:No\.?\s*)?\*?\s*([0-9*]{4,})/i) || [])[1] || '';
+    const vv = t.match(/via\s+(.+?)(?=\s*[,.]\s*(?:T(?:x|XN|rx)\b|UAN|Transaction)|\s+(?:on|from|to)\b|$)/i); out.via = vv ? vv[1].trim().slice(0, 40) : '';
+    if (/bill\s*payment/i.test(t)) {
+      const co = (t.match(/(?:paid\s+(?:to|for)|payment\s+(?:to|of|for))\s+(.+?)(?=\s+(?:bill|from|on|via|against|for\s+consumer|consumer)\b|[,.]|$)/i) || [])[1] || '';
+      out.consumer = (t.match(/Consumer\s*(?:ID|No\.?|Number|#)?\s*[:\-]?\s*([A-Z0-9-]{4,})/i) || [])[1] || '';
+      out.name = (co.trim() || 'Utility') + ' bill'; out.kind = 'bill'; out.dir = 'out'; out.via = 'Bill Payment';
+    } else if (/\b(?:sent|transferred|paid)\s+to\b|\bdebited\b/i.test(t)) {
+      out.dir = 'out';
+      const m = t.match(/(?:sent|transferred|paid)\s+to\s+(.+?)(?=\s+(?:from\s+your|from\s+A\/C|on|via)\b|[,.]\s|$)/i);
+      if (m) { const s = splitName(m[1]); out.name = s.name; out.bank = s.bank; }
+      if (/ATM|withdraw/i.test(t)) { out.kind = 'cash'; out.name = out.name || 'ATM se nikala'; }
+    } else if (/\breceived\b|\bcredited\b|\bdeposit/i.test(t)) {
+      out.dir = 'in';
+      if (/cash\s*deposit/i.test(t)) { out.kind = 'cash'; out.via = 'Cash Deposit'; out.name = 'Cash jama (branch)'; }
+      else { const m = t.match(/(?:received\s+from|credited\s+(?:by|from)|from)\s+(.+?)(?=\s+(?:in|into|to)\s+your\b|\s+(?:on|via)\b|[,.]\s|$)/i); if (m) { const s = splitName(m[1]); out.name = s.name; out.bank = s.bank; } }
+    }
+    out.ok = out.amt > 0 && !!out.dir && (out.kind !== 'party' || !!out.name);
+    return out;
+  }
   // ---- v2.99.59 email: 🧾 BILL PAYMENT (HBL Mobile | Bill Payment) — Company GEPCO · Consumer ID · From Account No. /IBAN · Date-Time ----
   if (src === 'email' && !/Receiver Account Title/i.test(t) && (/Bill\s*Payment/i.test(subj) || (/\bCompany\b/i.test(t) && /Consumer\s*(?:ID|No|Number)/i.test(t)))) {
     out.amt = amtOf(lineVal(t, 'Amount') || t);
@@ -89,7 +113,7 @@ function slipText(r, head, W = 42) {
   out.push(ESC + 'a' + '\x01' + ESC + '!' + '\x38' + (r.dir === 'in' ? '+ ' : '- ') + rs(r.amt) + ESC + '!' + '\x00' + ESC + 'a' + '\x00', '');
   row(r.dir === 'in' ? 'Kis se' : 'Kis ko', r.name); row('Bank', r.bank); row('Via', r.via);
   const [y, mo, d] = String(r.day || '').split('-'); row('Waqt', r.day ? `${d}-${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(mo) - 1]}-${y}${r.time ? ' ' + r.time : ''}` : '');
-  row('TXN', r.txn); row('Zariya', r.src === 'email' ? 'HBL email' : 'HBL SMS');
+  row('TXN', r.txn); row('Zariya', r.src === 'email' ? 'HBL email' : r.src === 'notif' ? 'HBL notification' : 'HBL SMS');
   out.push('-'.repeat(W), r.kind === 'cash' ? 'Branch mein cash jama hua' : 'App: HBL screen par [ ] tick karein', '(khata mein tab lagega)', '', '', '', GS + 'V' + '\x42' + '\x00');
   return out.join('\r\n');
 }
@@ -106,6 +130,7 @@ function createBankWatcher({ biz, log, sendRaw, head, stateFile, cfgRef, now = (
   let seen = {}; try { seen = JSON.parse(fs.readFileSync(stateFile, 'utf8')) || {}; } catch {}
   const save = () => { const ks = Object.entries(seen).sort((a, b) => b[1] - a[1]).slice(0, 400); seen = Object.fromEntries(ks); try { fs.writeFileSync(stateFile, JSON.stringify(seen)); } catch {} };
   let cfg = { bankAuto: true, bankOut: false, bankPost: true, bankSlip: false }, stopA = null, stopB = null, hblId = '', amap = {};
+  let hq = Promise.resolve();   // v2.2
   const khata = () => biz.collection('blueKhata');
   async function post(doc, d, r) {
     if (!cfg.bankPost || !hblId || r.dir !== 'in' || d.st) return '';
@@ -124,6 +149,17 @@ function createBankWatcher({ biz, log, sendRaw, head, stateFile, cfgRef, now = (
   async function handle(doc) {
     const d = doc.data ? doc.data() : doc; if (!d || !d.text || doc.id === '_alias') return 'skip';
     const r = parseBank(d.text, d.src, d.subj); if (!r.ok) return 'samajh-nahi';
+    // v2.2: 🔔 notification + usi len-den ka SMS / email = jurwan (aaye/gaye + raqam + 30 min, zariya alag) — doosra na post, na parchi
+    const zc = r.day && r.time ? Math.round(Date.parse(r.day + 'T' + r.time + ':00+05:00') / 60000) : 0, cls = d.src === 'notif' ? 'n' : 's', pre = 'Z' + r.dir + r.amt + '|';
+    const twin = zc ? Object.keys(seen).find(k => { if (!k.startsWith(pre)) return false; const [, m, c, id] = k.split('|'); return c !== cls && id !== doc.id && !seen['P' + id] && Math.abs(Number(m) - zc) <= 30; }) : '';   // P = pehle hi jor ban chuka
+    if (zc && !seen[pre + zc + '|' + cls + '|' + doc.id]) { seen[pre + zc + '|' + cls + '|' + doc.id] = now(); save(); }
+    if (twin) {
+      const tid = twin.split('|')[3]; seen['P' + tid] = now(); seen['P' + doc.id] = now(); save();
+      try { const tw = await biz.collection('bankSms').doc(tid).get(), x = tw.exists ? tw.data() : null;
+        if (x && x.st === 'done' && !d.st) await biz.collection('bankSms').doc(doc.id).set({ st: 'done', by: 'pc-bank', byName: 'Server PC', doneAt: now(), partyId: x.partyId || '', entryId: '', kind: 'dup', dupOf: tid }, { merge: true });
+      } catch (e) { log('HBL jurwan masla: ' + e.message); }
+      return 'jurwan';
+    }
     let posted = '';
     try { posted = await post(doc, d, r); } catch (e) { log('HBL khud nahi laga: ' + e.message); }   // aaj ka ho to PC band tha tab bhi (chalu hote hi)
     const created = doc.createTime && doc.createTime.toMillis ? doc.createTime.toMillis() : Number(d.at) || now();
@@ -144,7 +180,7 @@ function createBankWatcher({ biz, log, sendRaw, head, stateFile, cfgRef, now = (
     if (cfgRef && cfgRef.onSnapshot) stopA = cfgRef.onSnapshot(s => { const x = s.exists ? (s.data() || {}) : {}; cfg = { bankAuto: x.bankAuto !== false, bankOut: x.bankOut === true, bankPost: x.bankPost !== false, bankSlip: x.bankSlip === true }; }, () => {});
     stopB = biz.collection('bankSms').onSnapshot(s => {
       for (const c of s.docChanges()) if (c.doc.id === '_alias' && c.type !== 'removed') { amap = (c.doc.data() || {}).m || {}; hblId = String(amap['@hbl'] || ''); }
-      s.docChanges().forEach(c => { if (c.type === 'added' && c.doc.id !== '_alias') handle(c.doc).catch(e => log('HBL masla: ' + e.message)); });
+      s.docChanges().forEach(c => { if (c.type === 'added' && c.doc.id !== '_alias') { const dc = c.doc; hq = hq.then(() => handle(dc)).catch(e => log('HBL masla: ' + e.message)); } });   // v2.2: ek ke baad ek (jurwan ki daud na ho)
     }, e => onFail && onFail(e));
     log('🤖 HBL chalu — aaj ke AAYE paise khud HBL Noor Traders mein (printConfig.bankPost), parchi pos-khata-sync se');
   }

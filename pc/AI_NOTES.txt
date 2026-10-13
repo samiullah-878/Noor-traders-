@@ -2849,3 +2849,20 @@ without wholesale / with wholesale".
   Bill par "📦 wholesale" tag; PDF par "wholesale ke BAGHAIR / SAATH".
 * Daily Sale ki auto entry (pos-sales-dekho v1.7: wholesale POORA) waisi hi.
 Rules: koi tabdeeli nahi (2.48 hi). Test: scratchpad hd/lk/t.mjs (baghair 40,000 = 70k-30k, bina, bills, saath 70k, user 45k) ALL OK.
+
+=== v2.99.74 + bank-parchi v2.2 + Rules 2.49 (manifest 2026-10-13.9) — 🔔 HBL Mobile app ki LIVE notification -> HBL Inbox ===
+Malik: "email late aati hai — live notification wala kaam bhi kar do, wahan se pick kar lein". Asal namoona (screenshot):
+ title "Transaction Alert: Fund Transfer" · "PKR 10,000 sent to HASEEB CORPORAT HBL from your HBL A/C *6303 on 13-Oct-2026 23:21 via HBL
+ Mobile,Tx ID 1300557247. UAN: 021111111425." (aaye / bill wali notification ka namoona abhi NAHI mila — qaide andaze se, generic).
+* MacroDroid: Trigger Notification Received (app HBL Mobile) -> HTTP POST, body notifBody(k): src "notif", from "HBL Mobile",
+  text "{not_title} — {notification}" (MacroDroid magic text). App Setup mein "🔔 1-B" qadam + "Notification body copy" (data-bk-copy nbody).
+* bank-sms.js + pc/bank-parchi.js parseBank (DONO mein wahi): src notif ya /^Transaction Alert/ -> Tx ID (txn), A/C *6303 (acct -> alias
+  @a:6303), via, sent/transferred/paid to = gaye, received/credited = aaye, Bill Payment = kind bill (company + Consumer), cash deposit.
+* JURWAN (ek len-den, do zariye): notification ki TXN SMS / email se alag ho sakti (Raast). App rows(): twinKeys — notif + (sms|email)
+  aaye/gaye + raqam barabar + 30 min, har ek sirf EK jor; jo lag chuka us ki key, dono baqi = SMS/email pend (poora naam), notif dup.
+  PC (bank-parchi v2.2): seen keys "Z<dir><amt>|<minute>|n/s|<docId>" + "P<docId>" (jor ban chuka); jurwan = na post na parchi; twin done
+  ho to is doc par st done, kind dup, dupOf, entryId '' (app ka ↩ asal entry na mitaye). handle() ab qatar mein (hq) — daud nahi.
+* srcIc: 🔔 / ✉️ / 💬; bk-live mein "aakhri notification". Parchi "Zariya: HBL notification".
+* Rules 2.49: bankSms src in [sms, email, notif]. firestore-rules-2.49.html.
+Test: scratchpad hd/nf.mjs (5 namoone, app = PC parser), bp/t3.js (notif laga -> SMS jurwan, alag SMS laga), bp/t2.js, hd/tw.mjs ALL OK.
+AGLA: malik se "aaye" aur "bill" wali notification ki screenshot — qaide pakke karne.
