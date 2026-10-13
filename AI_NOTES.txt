@@ -4391,3 +4391,14 @@ firestore.rules 2.48: tcGiverOk() = isOwner || staffAccount().name.lower() match
   sirf bracket balance.
 DHYAN: Zeeshan ke login ka naam mein "zeeshan" hona chahiye (blueStaffKeys.name) — warna sirf malik tick kar sakega; malik ✎ se naam badle.
 Test: scratchpad hd/tc2.mjs (Mithu / Zeeshan / malik, T5 godam->dukan, T6 dukan->godam, T4 purana) ALL OK + tce.mjs ALL OK + tc2.png.
+
+=== v2.99.73 + larka-stats v2 (manifest 2026-10-13.8) — 👦 Larka Sale: Wholesale ke baghair / saath (chip) ===
+Malik: "larkon ki sale screen par wholesale ke bills ka data sale mein shamil na ho — larkon mein bhi, user mein bhi" -> phir "check box:
+without wholesale / with wholesale".
+* pc/larka-stats.js v2: wsIds = Party LIKE %whole%sale%; sum.larka.wdays / wbina, sum.user.wdays = SIRF wholesale ka hissa (din, id,
+  bills, total); har bill ka 8th khana ws (1/0). posStats v: 2.
+* larka.js: st.ws (localStorage lk-ws, default false = BAGHAIR). S(): less() = days minus wdays (din|id), bina minus wbina; bills filter
+  !ws. Chips "☑ Wholesale ke baghair" / "📦 Wholesale ke saath" (data-lk-ws). PC v1 data (wdays nahi) = note "PC ka naya data aayega".
+  Bill par "📦 wholesale" tag; PDF par "wholesale ke BAGHAIR / SAATH".
+* Daily Sale ki auto entry (pos-sales-dekho v1.7: wholesale POORA) waisi hi.
+Rules: koi tabdeeli nahi (2.48 hi). Test: scratchpad hd/lk/t.mjs (baghair 40,000 = 70k-30k, bina, bills, saath 70k, user 45k) ALL OK.

@@ -1,8 +1,10 @@
-// larka.js — v2.99.72: 👦 LARKA SALE REPORT (sirf malik) — PC ki larka-report (larka-report.html) ab app mein
+// larka.js — v2.99.73: 👦 LARKA SALE REPORT (sirf malik) — PC ki larka-report (larka-report.html) ab app mein
 // Data: PC ki larka-stats.js har 5 minute POS se nikaal kar posStats/larka (din-wise total, shuru se) aur posStats/larka-bills
 //       (bills ki list: larka 90 din, POS user 3 din) likhti hai — dono mein j = JSON ki string. Screen khuli ho to khud taza hoti hai.
 //   sum:   { larka: { men:[{id,name}], days:[[din,id,bills,total]], bina:[[din,bills,total]] }, user: { men, days } }
 //   bills: { larka: { from, days, bills:[[billNo,din,waqt,id,total,udhaar,customer]] }, user: {...} }
+// v2.99.73: 📦 WHOLESALE — chip "Wholesale ke baghair" (default) / "Wholesale ke saath" (malik). PC larka-stats v2: wdays / wbina
+//   (sirf wholesale ka hissa, yahan minus) + bill ka 8th khana ws. Purana PC data (v1) = wdays nahi -> chip par note.
 // Larka (SP Man) = POS Sale screen par chuna hua larka · POS user = jis login se bill bana. Cancel bills nahi ginay jate.
 // Screen: Larka / POS user · naam · tareekh (se / tak) + Aaj / Kal / hafta / mahina chips · kul · Din / Hafta / Mahina-wise · bills.
 // PDF: app ka openReportPreview (poori screen + WhatsApp / share). App kuch LIKHTI nahi — sirf parhti hai.
@@ -36,7 +38,7 @@ const MAX_ROWS = 120, MAX_BILLS = 300, STALE = 20 * 60000;
 
 let cloud = null, notice = () => {}, pdfOf = null;
 let data = { sum: null, bills: null, at: 0 }, stop = null, tick = null, loaded = false, err = '';
-const st = { by: 'larka', man: 'all', from: '', to: '', view: 'din', bills: false };
+const st = { by: 'larka', man: 'all', from: '', to: '', view: 'din', bills: false, ws: (() => { try { return localStorage.getItem('lk-ws') === '1'; } catch { return false; } })() };
 
 export function larkaSetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; pdfOf = o.pdf || pdfOf; }
 export function larkaStop() { if (stop) { try { stop(); } catch {} stop = null; } clearInterval(tick); tick = null; }
@@ -52,8 +54,12 @@ function watch() {
 const today = () => dayOf(new Date());
 const S = () => {
   const s = data.sum?.[st.by] || {}, b = data.bills?.[st.by] || {};
-  return { ...MODES[st.by], men: Array.isArray(s.men) ? s.men : [], days: Array.isArray(s.days) ? s.days : [], bina: Array.isArray(s.bina) ? s.bina : [],
-    bills: Array.isArray(b.bills) ? b.bills : [], billsFrom: isDay(b.from) ? b.from : '', billDays: Number(b.days) || 0 };
+  const A = x => Array.isArray(x) ? x : [], hasWs = Array.isArray(s.wdays);
+  // v2.99.73: wholesale ke baghair = din ki ginti MINUS wholesale ka hissa (PC v2 deta hai)
+  const less = (rows, w, k) => { if (st.ws || !w.length) return rows; const m = new Map(w.map(r => [k(r), r]));
+    return rows.map(r => { const x = m.get(k(r)); return x ? (r.length === 4 ? [r[0], r[1], r[2] - x[2], r[3] - x[3]] : [r[0], r[1] - x[1], r[2] - x[2]]) : r; }).filter(r => (r.length === 4 ? r[2] : r[1]) > 0); };
+  return { ...MODES[st.by], hasWs, wsCount: A(s.wdays).length, men: A(s.men), days: less(A(s.days), A(s.wdays), r => r[0] + '|' + r[1]), bina: less(A(s.bina), A(s.wbina), r => r[0]),
+    bills: (Array.isArray(b.bills) ? b.bills : []).filter(x => st.ws || !x[7]), billsFrom: isDay(b.from) ? b.from : '', billDays: Number(b.days) || 0 };
 };
 const bounds = s => { const t = today(); return [s.days.reduce((a, r) => (r[0] < a ? r[0] : a), t), s.days.reduce((a, r) => (r[0] > a ? r[0] : a), t)]; };
 const quick = s => { const t = today(), [first, last] = bounds(s); return [
@@ -117,6 +123,8 @@ function paint() {
       <label>Tareekh tak<input type="date" data-lk-to value="${esc(st.to)}"></label>
     </div>
     ${chips(q.map((x, i) => [i, x[0]]), 'data-lk-q', i => q[i][1] === st.from && q[i][2] === st.to)}
+    <div class="mchips lk-ws"><button type="button" class="rc${st.ws ? '' : ' on'}" data-lk-ws="0">${st.ws ? '☐' : '☑'} Wholesale ke baghair</button><button type="button" class="rc${st.ws ? ' on' : ''}" data-lk-ws="1">${st.ws ? '☑' : '☐'} 📦 Wholesale ke saath</button></div>
+    ${s.hasWs ? '' : '<p class="lk-idle">⏳ Wholesale alag karne ke liye PC ka naya data (larka-stats v2) 5-10 minute mein aayega — abhi sab bill shamil hain.</p>'}
     <div class="bc-kpis lk-kpis"><div><b>Rs ${num(r.all.t)}</b><small>total sale</small></div><div><b>${num(r.all.n)}</b><small>bills</small></div><div><b>${r.all.n ? num(r.all.t / r.all.n) : '–'}</b><small>fi bill</small></div></div>
     <p class="lk-age${old ? ' warn' : ''}" id="lkAge">${esc(age)}</p></div>
   <div class="bc-day"><div class="bc-dayhead"><b>${esc(r.who)}</b><span>${esc(span(st.from, st.to))}</span></div>
@@ -134,13 +142,13 @@ function paint() {
   ${s.billsFrom && st.from < s.billsFrom ? `<p class="lk-idle">Bills ki list sirf ${esc(nice(s.billsFrom))} se hai (pichhle ${num(s.billDays)} din). Upar ke total poore hain.</p>` : ''}
   ${!st.bills ? '' : !data.bills ? '<p class="lk-idle">Bills ki list aa rahi hai…</p>' : !list.length ? '<p class="lk-idle">In tareekhon mein list mein koi bill nahi.</p>'
     : `${r.bills.length > list.length ? `<p class="lk-idle">Pehle ${MAX_BILLS} bills dikhaye gaye hain — tareekh ya ${esc(s.word.toLowerCase())} chun kar chhota karein.</p>` : ''}
-      <div class="bc-item lk-lines">${list.map(b => `<div class="lk-bill"><b>${esc(b[0])}</b><span>${esc(r.nameOf.get(b[3]) || '')}</span><b>Rs ${num(b[4])}</b><small>${esc(short(b[1]))} ${esc(b[2])} · ${esc(b[6])}${b[5] ? ' · <em>udhaar</em>' : ''}</small></div>`).join('')}</div>`}`;
+      <div class="bc-item lk-lines">${list.map(b => `<div class="lk-bill"><b>${esc(b[0])}</b><span>${esc(r.nameOf.get(b[3]) || '')}</span><b>Rs ${num(b[4])}</b><small>${esc(short(b[1]))} ${esc(b[2])} · ${esc(b[6])}${b[7] ? ' · <em>📦 wholesale</em>' : b[5] ? ' · <em>udhaar</em>' : ''}</small></div>`).join('')}</div>`}`;
 }
 
 function pdfHTML() {
   const r = build(), s = r.s, multi = r.men.length > 1;
   return `<h1>NOOR TRADERS</h1><h2>👦 Larka sale report — ${esc(s.label.replace(/^\S+\s/, ''))} · ${esc(r.who)}</h2>
-    <p>${esc(span(st.from, st.to))} · ${num(r.all.n)} bills · Rs ${num(r.all.t)} · ${esc(new Date().toLocaleString('en-PK'))}</p>
+    <p>${esc(span(st.from, st.to))} · ${num(r.all.n)} bills · Rs ${num(r.all.t)} · ${st.ws ? '📦 wholesale ke SAATH' : 'wholesale ke BAGHAIR'} · ${esc(new Date().toLocaleString('en-PK'))}</p>
     <table class="iv-tbl"><thead><tr><th>${esc(s.word)}</th><th>Bills</th><th>Total sale</th><th>Hissa</th></tr></thead><tbody>
       ${r.sold.map(m => { const o = r.per.get(m.id); return `<tr><td class="iv-item"><b>${esc(m.name)}</b></td><td class="iv-n">${num(o.n)}</td><td class="iv-n"><b>${num(o.t)}</b></td><td class="iv-n">${r.all.t > 0 ? Math.round(o.t / r.all.t * 100) + '%' : ''}</td></tr>`; }).join('')}
       ${multi ? `<tr><td class="iv-item"><b>Kul</b></td><td class="iv-n"><b>${num(r.all.n)}</b></td><td class="iv-n"><b>${num(r.all.t)}</b></td><td></td></tr>` : ''}</tbody></table>
@@ -164,8 +172,9 @@ export function renderLarka() {
 document.addEventListener('click', e => {
   if (e.target.closest?.('[data-lk-pdf]')) { if (!data.sum) { notice('Report abhi nahi aayi'); return; } const r = build(); if (!r.all.n) { notice('In tareekhon mein koi bill nahi'); return; } if (pdfOf) pdfOf(pdfHTML(), `Larka sale ${st.from} se ${st.to}`); return; }
   if (!$('lkRoot')) return;
-  const t = e.target.closest?.('[data-lk-by],[data-lk-q],[data-lk-v],[data-lk-bills]'); if (!t) return;
+  const t = e.target.closest?.('[data-lk-by],[data-lk-q],[data-lk-v],[data-lk-bills],[data-lk-ws]'); if (!t) return;
   const d = t.dataset;
+  if (d.lkWs != null) { st.ws = d.lkWs === '1'; try { localStorage.setItem('lk-ws', st.ws ? '1' : '0'); } catch {} paint(); return; }
   if (d.lkBy && MODES[d.lkBy]) { if (st.by !== d.lkBy) { st.by = d.lkBy; st.man = 'all'; } }
   else if (d.lkQ != null) { const q = quick(S())[+d.lkQ]; if (q) { st.from = q[1]; st.to = q[2]; } }
   else if (d.lkV && KEY[d.lkV]) st.view = d.lkV;

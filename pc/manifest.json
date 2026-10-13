@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-13.7",
+  "version": "2026-10-13.8",
   "note": "KHATA-DOCTOR manifest — sirf ye files PC par jati hain. local-config.json / firebase-key.json kabhi nahi.",
   "files": {
     "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -52,7 +52,7 @@
     "bank-parchi.js": "59fd1ab5e203f02f4f498ef7ed3b66d4813215e327d0262ecc8b0c5306dd5caa",
     "photo-print.js": "c4bbe5755cfe099282180564060f284afe103803a46949b21c5d6408bfabab47",
     "jpeg-decode.js": "412c390c80f81adea63c0a926825a771fbc6b745276ba8f5aea742b5a0f4466e",
-    "larka-stats.js": "d520d14cc7b173cc947994f105be8b0459bb007215f6aec69180b7ec347e77cd",
+    "larka-stats.js": "1cf3cacfe087288fe81210f2b09507a5d2f50afa3d19e94a9a6e2ba79ec5edbd",
     "larka-auto.bat": "6e5fb05d9f276d058b34404eba6de40e7d26189469c097873dce19682a3c43fa",
     "LABEL-JAANCH.bat": "a0cb24c0d582021691bda4bfe7afb6735d7afe28cbe32e48b1085e853e57893b",
     "LABEL-URDU-TEXT.bat": "9512e92ba1ce5c89a43ee8cd11241c15d1b46da0552b3316863a107dd66939af",

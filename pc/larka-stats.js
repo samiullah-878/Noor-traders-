@@ -1,5 +1,7 @@
 // =========================================================
-//  larka-stats.js  v1 (2026-10-13) — LARKA SALE REPORT app ke liye: POS -> Firestore posStats (har 5 minute, larka-auto.bat)
+//  larka-stats.js  v2 (2026-10-13 raat: 📦 WHOLESALE alag — malik: "larkon ki sale screen par wholesale ke bill ke baghair / saath, check box".
+//                     'whole sale' party ke bill: sum.larka.wdays / wbina, sum.user.wdays (sirf wholesale ka hissa — app minus karti hai)
+//                     aur har bill ke aakhir mein 8th khana ws (1 = wholesale). v: 2) · v1 (2026-10-13) — LARKA SALE REPORT app ke liye: POS -> Firestore posStats (har 5 minute, larka-auto.bat)
 //  Wohi hisaab jo larka-report\larka-report.js v3 (larka-report.html) banata hai — ab app ki "👦 Larka Sale" screen mein bhi.
 //    Larka (SP Man) = Sale.SupplyManID · POS user = Sale.CreatedBy -> Users.FullName. Cancel (DocStatusID 3) nahi ginay jate;
 //    POS user mein "stock fraq" party ke bills bhi nahi.
@@ -40,6 +42,16 @@ async function read(p) {
   const bina = first ? (await p.request().input('a', sql.DateTime, toDate(first)).query(`
     SELECT CONVERT(char(10), SaleDate, 120) AS D, COUNT(*) AS N, SUM(CAST(TotalSale AS FLOAT)) AS T FROM dbo.Sale
     WHERE SaleDate >= @a AND ISNULL(SupplyManID, 0) = 0 AND DocStatusID <> 3 GROUP BY CONVERT(char(10), SaleDate, 120)`)).recordset : [];
+  // v2: wholesale party ("whole sale", "whole sale (purana)" …) — un ka hissa alag, app "baghair / saath" chun le
+  const wsIds = (await p.request().query(`SELECT PartyID FROM dbo.Party WHERE LOWER(PartyName) LIKE '%whole%sale%'`)).recordset.map(r => Number(r.PartyID)).filter(Boolean);
+  const inWs = `ISNULL(s.PartyID, 0) IN (${wsIds.length ? wsIds.join(',') : '0'})`;
+  const wdays = wsIds.length ? (await p.request().query(`
+    SELECT CONVERT(char(10), s.SaleDate, 120) AS D, s.SupplyManID AS M, COUNT(*) AS N, SUM(CAST(s.TotalSale AS FLOAT)) AS T
+    FROM dbo.Sale s WHERE ISNULL(s.SupplyManID, 0) <> 0 AND s.DocStatusID <> 3 AND ${inWs}
+    GROUP BY CONVERT(char(10), s.SaleDate, 120), s.SupplyManID`)).recordset : [];
+  const wbina = wsIds.length && first ? (await p.request().input('a', sql.DateTime, toDate(first)).query(`
+    SELECT CONVERT(char(10), s.SaleDate, 120) AS D, COUNT(*) AS N, SUM(CAST(s.TotalSale AS FLOAT)) AS T FROM dbo.Sale s
+    WHERE s.SaleDate >= @a AND ISNULL(s.SupplyManID, 0) = 0 AND s.DocStatusID <> 3 AND ${inWs} GROUP BY CONVERT(char(10), s.SaleDate, 120)`)).recordset : [];
   const since = ago(BILL_DAYS);
   const bills = (await p.request().input('b', sql.DateTime, since).query(`
     SELECT TOP ${MAX_BILLS} s.SaleNo, CONVERT(char(16), s.SaleDate, 120) AS W, s.SupplyManID AS M, s.TotalSale, s.IsCreditSale, pt.PartyName
@@ -54,6 +66,10 @@ async function read(p) {
     SELECT CONVERT(char(10), s.SaleDate, 120) AS D, ISNULL(s.CreatedBy, 0) AS M, COUNT(*) AS N, SUM(CAST(s.TotalSale AS FLOAT)) AS T
     FROM dbo.Sale s WHERE s.DocStatusID <> 3 AND ${notFarq}
     GROUP BY CONVERT(char(10), s.SaleDate, 120), ISNULL(s.CreatedBy, 0)`)).recordset;
+  const uwdays = wsIds.length ? (await p.request().query(`
+    SELECT CONVERT(char(10), s.SaleDate, 120) AS D, ISNULL(s.CreatedBy, 0) AS M, COUNT(*) AS N, SUM(CAST(s.TotalSale AS FLOAT)) AS T
+    FROM dbo.Sale s WHERE s.DocStatusID <> 3 AND ${notFarq} AND ${inWs}
+    GROUP BY CONVERT(char(10), s.SaleDate, 120), ISNULL(s.CreatedBy, 0)`)).recordset : [];
   const usince = ago(USER_BILL_DAYS - 1);
   const ubills = (await p.request().input('b', sql.DateTime, usince).query(`
     SELECT TOP ${MAX_BILLS} s.SaleNo, CONVERT(char(16), s.SaleDate, 120) AS W, ISNULL(s.CreatedBy, 0) AS M, s.TotalSale, s.IsCreditSale, pt.PartyName
@@ -66,11 +82,12 @@ async function read(p) {
 
   for (const r of days) if (!men.some(m => m.id === r.M)) men.push({ id: r.M, name: 'ID ' + r.M });   // list se mita hua naam
   for (const r of udays) if (!users.some(m => m.id === r.M)) users.push({ id: r.M, name: 'ID ' + r.M });
-  const bill = r => [String(r.SaleNo || '').trim(), r.W.slice(0, 10), r.W.slice(11, 16), r.M, rs(r.TotalSale), r.IsCreditSale ? 1 : 0, String(r.PartyName || '').trim().slice(0, 30)];
+  const bill = r => [String(r.SaleNo || '').trim(), r.W.slice(0, 10), r.W.slice(11, 16), r.M, rs(r.TotalSale), r.IsCreditSale ? 1 : 0, String(r.PartyName || '').trim().slice(0, 30), /whole\s*sale/i.test(String(r.PartyName || '')) ? 1 : 0];   // v2: 8th = wholesale
   const srt = (a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : a[1] - b[1]);   // hamesha ek hi tarteeb (na badle to hash bhi na badle)
   return {
-    sum: { larka: { men, days: days.map(r => [r.D, r.M, r.N, rs(r.T)]).sort(srt), bina: bina.map(r => [r.D, r.N, rs(r.T)]).sort(srt) },
-           user: { men: users, days: udays.map(r => [r.D, r.M, r.N, rs(r.T)]).sort(srt) } },
+    sum: { larka: { men, days: days.map(r => [r.D, r.M, r.N, rs(r.T)]).sort(srt), bina: bina.map(r => [r.D, r.N, rs(r.T)]).sort(srt),
+                    wdays: wdays.map(r => [r.D, r.M, r.N, rs(r.T)]).sort(srt), wbina: wbina.map(r => [r.D, r.N, rs(r.T)]).sort(srt) },
+           user: { men: users, days: udays.map(r => [r.D, r.M, r.N, rs(r.T)]).sort(srt), wdays: uwdays.map(r => [r.D, r.M, r.N, rs(r.T)]).sort(srt) } },
     bills: { larka: { from: dayOf(since), days: BILL_DAYS, bills: bills.map(bill) },
              user: { from: dayOf(usince), days: USER_BILL_DAYS, bills: ubills.map(bill) } } };
 }
@@ -94,9 +111,9 @@ async function read(p) {
     const col = getFirestore().collection('businesses').doc('noor-traders').collection('posStats');
     let st = {}; try { st = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')) || {}; } catch {}
     const at = Date.now(), hb = hashOf(jb);
-    await col.doc('larka').set({ at, v: 1, j: js });
+    await col.doc('larka').set({ at, v: 2, j: js });
     const billsNew = st.bills !== hb;
-    if (billsNew) await col.doc('larka-bills').set({ at, v: 1, j: jb });
+    if (billsNew) await col.doc('larka-bills').set({ at, v: 2, j: jb });
     try { fs.writeFileSync(STATE_FILE, JSON.stringify({ bills: hb, at })); } catch {}
     console.log(new Date().toLocaleString('en-PK') + ' — ' + line + (billsNew ? '' : ' (bills wahi)') + ', ' + Math.round((Date.now() - t0) / 1000) + 's');
     process.exit(0);
