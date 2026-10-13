@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.67';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.67';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.68';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.68';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -766,11 +766,11 @@ document.addEventListener('input', e => {       // v2.4.1: Jaanch card ke khane 
   const r = aiRows && aiRows[jIx]; const l = r && r.key ? cart.find(x => x.k === r.key) : null; if (!l) return;
   const v = Number(t.value) || 0, pk = packOf(l), cs = jCs(r, l), m = pk || cs;
   if (d.ppJcs != null) { r.cs = v > 1 ? v : -1; return; }                // 1 ya khali = carton BAND (change par card dobara)
-  if (d.ppJbs != null) { r.cs = v > 1 ? v : 0; return; }                 // v2.99.67: bill ki 1 bori = ? (POS carton wale item) — change par card dobara
-  if (d.ppJctn != null) { if (pk) l.ctn = Math.max(0, Math.floor(v)); else if (cs) l.pcs = r3(v * cs); if (l.kul > 0 && linePcs(l) > 0) { l.costP = r4(l.kul / linePcs(l)); recalc(l); } }   // v2.99.67: kul pakki ho to rate dobara
+  if (d.ppJbs != null) { r.cs = v > 1 ? v : 0; return; }                 // v2.99.68: bill ki 1 bori = ? (POS carton wale item) — change par card dobara
+  if (d.ppJctn != null) { if (pk) l.ctn = Math.max(0, Math.floor(v)); else if (cs) l.pcs = r3(v * cs); if (l.kul > 0 && linePcs(l) > 0) { l.costP = r4(l.kul / linePcs(l)); recalc(l); } }   // v2.99.68: kul pakki ho to rate dobara
   else if (d.ppJpcs != null) { l.pcs = Math.max(0, v); if (l.kul > 0 && linePcs(l) > 0) { l.costP = r4(l.kul / linePcs(l)); recalc(l); } }   // kul raqam pakki, rate dobara
   else if (d.ppJtot != null) { l.kul = v; if (v > 0 && linePcs(l) > 0) { l.costP = r4(v / linePcs(l)); recalc(l); } }        // v2.4.4: kul ÷ ginti = net khareed
-  else if (d.ppJkc != null) { if (m) { l.costP = r4(v / m); l.kul = 0; recalc(l); } }   // v2.99.67: khud rate likha = kul ka 🔒 khula
+  else if (d.ppJkc != null) { if (m) { l.costP = r4(v / m); l.kul = 0; recalc(l); } }   // v2.99.68: khud rate likha = kul ka 🔒 khula
   else if (d.ppJcost != null) { l.costP = r4(v); l.kul = 0; recalc(l); }
   else if (d.ppJwc != null) { if (pk) { l.wctn = v; setMode(l, 'wc', 'manual'); } else if (cs) { l.wpcs = r2(v / cs); setMode(l, 'wp', 'manual'); } else { l.wctn = v; l.wcOwn = true; setMode(l, 'wc', 'manual'); } }   // v2.19
   else if (d.ppJw != null) { l.wpcs = v; if (!pk && l.one && !l.wcOwn) l.wctn = v; setMode(l, 'wp', 'manual'); }
@@ -779,14 +779,14 @@ document.addEventListener('input', e => {       // v2.4.1: Jaanch card ke khane 
   else return;
   jRepaint(); keepDraft(); refreshTotals();
 });
-document.addEventListener('change', e => {      // v2.99.67: "Bill ki 1 bori =" (POS carton wale item) likh kar chhora -> card naye size se
+document.addEventListener('change', e => {      // v2.99.68: "Bill ki 1 bori =" (POS carton wale item) likh kar chhora -> card naye size se
   const t = e.target; if (!t?.dataset || t.dataset.ppJbs == null || !t.closest?.('.jc-card')) return;
   const r = aiRows && aiRows[jIx]; if (!r) return;
   r.force = Number(r.cs) > 1 ? 'size' : ''; r.bsSet = Number(r.cs) > 1 ? Number(r.cs) : -1;   // -1 = aap ne khali kiya (yaad se hatao)
   if (r.force) { const l = r.key ? cart.find(x => x.k === r.key) : null; if (l) l.kul = 0; }
   jJudge(r, billFmtOf(supplier)); keepDraft(); rerender(); jCard(jIx);
 });
-document.addEventListener('click', e => {       // v2.99.67: "Bill: X lagao" — kul raqam bill se, rate = kul ÷ ginti
+document.addEventListener('click', e => {       // v2.99.68: "Bill: X lagao" — kul raqam bill se, rate = kul ÷ ginti
   const b = e.target.closest?.('[data-pp-jtotb]'); if (!b || !b.closest('.jc-card')) return;
   const r = aiRows && aiRows[jIx]; const l = r && r.key ? cart.find(x => x.k === r.key) : null; if (!l) return;
   const v = Number(b.dataset.ppJtotb) || 0; if (!(v > 0)) return;
@@ -1202,7 +1202,7 @@ function packsView() {
 const J_OK = 0.10, J_WARN = 0.50;          // ±10% = hara, ±50% tak = peela, us se door = unit ka shak
 const logR = (a, b) => (a > 0 && b > 0) ? Math.abs(Math.log(a / b)) : null;
 function memOf(id) { try { return (lastRatesOf() || {})[String(id)] || null; } catch { return null; } }
-// v2.99.67: yaad kiya bill ka size — POS carton wale item par 'b' (bill ki bori / peti, jaise 40 kg; POS ka carton 25 alag), warna 's'
+// v2.99.68: yaad kiya bill ka size — POS carton wale item par 'b' (bill ki bori / peti, jaise 40 kg; POS ka carton 25 alag), warna 's'
 function memSize(id, pk) { const m = memOf(id) || {}; return pk > 1 ? (Number(m.b) > 1 ? Number(m.b) : 0) : (Number(m.s) || 0); }
 function aiNum(ai) {                          // AI ne jo ginti di: ctn + pcs, ya akeli qty
   const c = Number(ai.ctn) || 0, p = Number(ai.pcs) || 0, q = Number(ai.qty) || 0;
@@ -1269,7 +1269,7 @@ function jCandidates(ln, ai, cs0) {
     out.push({ mode: 'ctn', ctn: whole, pcs: r3((n - whole) * pk), costP: rate / pk });
   }
   if (size > 1 && !(pk > 1 && Math.abs(size - pk) < 0.01)) {
-    const all = r3(n * size), w = pk > 1 ? Math.floor(all / pk + 1e-9) : 0;   // v2.99.67: POS carton ho to 400 kg = 16 CTN (25)
+    const all = r3(n * size), w = pk > 1 ? Math.floor(all / pk + 1e-9) : 0;   // v2.99.68: POS carton ho to 400 kg = 16 CTN (25)
     out.push({ mode: 'size', ctn: w, pcs: pk > 1 ? r3(all - w * pk) : all, costP: rate / size, size });
   }
   const d = distOf(ai, ln);   // v2.99.0
@@ -1328,7 +1328,7 @@ function jJudge(r, fmt) {
     best = cands.find(x => x.mode === (packOf(ln) && c ? 'ctn' : 'pcs')) || best;
   }
   ln.ctn = best.ctn; ln.pcs = best.pcs;
-  if (Number(ln.kul) > 0 && linePcs(ln) > 0) { ln.costP = r4(ln.kul / linePcs(ln)); recalc(ln); }   // v2.99.67: 🔒 kul raqam aap ne likhi — wahi sach, rate = kul ÷ nayi ginti
+  if (Number(ln.kul) > 0 && linePcs(ln) > 0) { ln.costP = r4(ln.kul / linePcs(ln)); recalc(ln); }   // v2.99.68: 🔒 kul raqam aap ne likhi — wahi sach, rate = kul ÷ nayi ginti
   else if (best.costP > 0) { ln.costP = r4(best.costP); recalc(ln); }
   const why = [], { n, rate, total } = aiNum(A);
   let conf = 'g';
@@ -1596,7 +1596,7 @@ function jRepaint() {                 // card ke khane dobara bharo (jo khana li
   const mm = $('jcMilan'), tt = aiNum(r.ai).total; if (mm && tt) mm.innerHTML = jMilanHTML(l, tt);
   paintChips(cart.indexOf(l));   // v2.19
 }
-// v2.99.67: kul raqam ki taqseem — ÷ CTN = Kh/CTN, ÷ PCS = Kh/PCS (zarb: ginti × rate = kul)
+// v2.99.68: kul raqam ki taqseem — ÷ CTN = Kh/CTN, ÷ PCS = Kh/PCS (zarb: ginti × rate = kul)
 function jDivHTML(l) {
   const t = l.kul > 0 ? Number(l.kul) : lineTotal(l), q = linePcs(l), pk = packOf(l), r = aiRows && aiRows[jIx], cs = r ? jCs(r, l) : 0, m = pk || cs;
   if (!(t > 0) || !(q > 0)) return '<small>Kul raqam likhein — CTN aur PCS par khud taqseem ho jayegi</small>';
@@ -1756,7 +1756,7 @@ function learnFromBill() {
     const ln = cart.find(l => l.k === r.key);
     return `${String(r.ai.name || '').slice(0, 40)} => ${String(ln?.name || '').slice(0, 40)} | ${jModeName(r.j?.mode || '')}${r.j?.size ? ' x' + r.j.size : ''}`;
   });
-  const exKey = x => String(x).split(' => ')[0].trim().toLowerCase();   // v2.99.67: purani misalein bhi (naye pehle, ek naam ek dafa) — 30 tak
+  const exKey = x => String(x).split(' => ')[0].trim().toLowerCase();   // v2.99.68: purani misalein bhi (naye pehle, ek naam ek dafa) — 30 tak
   const ex = []; for (const x of [...ex0, ...(Array.isArray(old.ex) ? old.ex : [])]) if (x && !ex.some(y => exKey(y) === exKey(x))) ex.push(x);
   ex.splice(30);
   const rr = q === 'pcs' ? 'pcs' : q === 'ctn' ? 'ctn' : '';
@@ -1771,7 +1771,7 @@ function sizeMemFromBill() {           // bill ka سائز item ke sath yaad (ca
   }
   return m;
 }
-function boriMemFromBill() {           // v2.99.67: POS carton wale item par bill ki bori ka size (b) — 0 = aap ne khali kiya, yaad se hatao
+function boriMemFromBill() {           // v2.99.68: POS carton wale item par bill ki bori ka size (b) — 0 = aap ne khali kiya, yaad se hatao
   const m = {};
   for (const r of aiRows || []) {
     if (r.skip || !r.key) continue;
@@ -2061,7 +2061,7 @@ async function save(opt = {}) {
     try { learnFromBill(); } catch {}   // v2.4.0: naqsha + misalein + hari ka % seekho
     try {   // v2.1.0: is bill ke rates yaad — agli dafa wohi nafa khud lagega
       const mem = {};
-      const sz = sizeMemFromBill(), bz = boriMemFromBill();   // v2.4.0: bill ka سائز (carton size) bhi · v2.99.67: bori (b)
+      const sz = sizeMemFromBill(), bz = boriMemFromBill();   // v2.4.0: bill ka سائز (carton size) bhi · v2.99.68: bori (b)
       for (const l of lines) if (l.id) { const m0 = memOf(l.id) || {}; mem[String(l.id)] = { c: r4(l.costP), w: r2(l.wpcs), r: r2(l.rpcs), t: Date.now(), ...(sz[String(l.id)] || m0.s ? { s: sz[String(l.id)] || m0.s } : {}), ...(String(l.id) in bz ? { b: bz[String(l.id)] } : Number(m0.b) > 1 ? { b: Number(m0.b) } : {}) };
         // v2.96.3: 🏷 retail yaad — badli ho to purani history mein (pehle X -> ab Y)
         const cl = cart.find(x => String(x.id) === String(l.id)), nv = cl ? mrpOf(cl) : 0, ov = Number(m0.m) || 0;

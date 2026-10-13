@@ -4258,3 +4258,11 @@ cloud.js setItemRates: field b (>=0). setBillFormat ex 30. app.js billNote ex 30
 style.css: .jc-kulrow/.jc-kulb/.jc-div/.jc-bs/.jc-bsnote (sunehri, dark mode bhi).
 Rules: koi tabdeeli nahi (2.47 hi). Yaad sirf POS bill BHEJNE par pakki hoti hai (pehle jaisa).
 Test: scratchpad hd/kul/run.mjs (happy-dom, asal purchase.js) — 11 jaanch ALL OK; card.png screenshot.
+
+=== v2.99.68 (2026-10-13) — HBL khata: "Payment di" ki jagah "Payment aai" (sirf alfaaz) ===
+Malik: HBL mein aaye paise khate mein "💸 Payment di / Party ko payment" dikhte the. Hisaab THEEK tha (kind 'payment' =
+HBL ka Lena barhta = bank balance barhta; POS CPV = cash -> bank) — sirf HBL khate ki category 'Supplier' hone se supplier wale alfaaz.
+app.js: hblAcc(id) = isBank(id) && !party.bank (loan wale bank ke apne alfaaz pehle se). Sirf HBL khate par:
+ ledgerTitles ['💰 Payment aai (HBL mein)','💸 Payment gayi (HBL se)'] · entryLabel payment '💰 HBL mein aaye', borrow/collection
+ '💸 HBL se gaye' (transfer wali entries waisi) · entryTitle (form) · neeche ke button '💰 Payment aai' (payment) / '💸 Payment gayi' (borrow).
+Data, baqaya, POS, rules — kuch nahi badla.
