@@ -1,4 +1,4 @@
-// larka.js — v2.99.69: 👦 LARKA SALE REPORT (sirf malik) — PC ki larka-report (larka-report.html) ab app mein
+// larka.js — v2.99.70: 👦 LARKA SALE REPORT (sirf malik) — PC ki larka-report (larka-report.html) ab app mein
 // Data: PC ki larka-stats.js har 5 minute POS se nikaal kar posStats/larka (din-wise total, shuru se) aur posStats/larka-bills
 //       (bills ki list: larka 90 din, POS user 3 din) likhti hai — dono mein j = JSON ki string. Screen khuli ho to khud taza hoti hai.
 //   sum:   { larka: { men:[{id,name}], days:[[din,id,bills,total]], bina:[[din,bills,total]] }, user: { men, days } }

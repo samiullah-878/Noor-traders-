@@ -4296,3 +4296,20 @@ Test: test/larka.html (asal larka.js + style.css + themes.css, asal POS data lar
   Larka / POS user, Aaj / Kal / Shuru se, Hafta-wise, ek larka, bills, PDF, purana data ⚠, khali data — sab theek. 12-Oct ka larka-wise
   hisaab seedha SQL se mila (8 naam, 326 bill, Rs 1,749,561 — bilkul barabar). node --check: app.js, cloud.js, larka.js, sw.js.
   Asal app mein login kar ke (Firebase) test NAHI hua — pehli dafa malik dekhe.
+
+=== v2.99.70 + label-print v4.2 (manifest 2026-10-13.3) — 🧯 barcode label zaya na hon + 🔁 kharab label dobara ===
+Malik (photo, harpic 1+1 free, 3 column roll): kisi label par sirf naam+Urdu, kisi par sirf barcode, kuch khali, Urdu dhaari-dar; number
+"3J-463" barcode ke code par chadha hua. Wajah (andaza, PC tak pahunch nahi): label ka beech ka hissa ghayab = Urdu BITMAP ka data kata ->
+printer agle hukm (BARCODE / TEXT / agle label ka naam) ko tasveer samajh kar kha jata. Ya tasveer ke bytes mein ESC ! (TSC foran hukm reset/pause).
+pc/label-print.js v4.2:
+ * safeBits(): Urdu raster (data + crop) mein 0x1B -> 0x1F, 0x7E -> 0x7F (1 = safed; sirf ek pixel aur safed).
+ * rowsPer(S) = min(rowsMax 2, rowsPerJob 2): har print job 2 qatar (6 label) — pehle 8 (24). Agla hissa waitQueue(printer, 0) + 0.8 s
+   (pehle line mein 1 tak). perPart bhi rowsPer se.
+ * BARCODE readable 0; neeche TEXT code BAYEN (font 2, jagah kam to font 1) + number DAYEN (font 1, 8 dot). Bina number: code beech mein.
+ * --test-mix [urdu]: 2 qatar U-1..6 (Urdu ke saath) + 2 qatar N-1..6 (baghair) — pc/LABEL-JAANCH.bat (manifest mein).
+   Agar sirf U kharab -> Urdu bitmap hi wajah: urduMode "ttf" (data bohat kam) ya urdu false aazmayein.
+App (barcode.js liveLabelsHTML): done row (ab 30 min tak dikhti) par "Kharab nikle? [n] 🔁 Dobara chhapo" -> cloud.requestLabel(wahi itemId/
+ code/name/qty/rate, copies n) — naya hukum, naye number. agVals (likhi ginti live patti dobara banne par bhi rahe). Ijazat: CAPS stock
+ "stock.lblagain" (window.ntCan). style.css .lv-ag. Rules: koi tabdeeli nahi (requestLabel ke wahi khane).
+Test: scratchpad lbl42/t.cjs (asal label-print tspl/labelCmds, naqli firebase + naqli raster ESC/~ ke saath: 15 label = 3 hisse, koi ESC/~ nahi,
+ code/number alag) · lbl42/lv.mjs (Chromium: dobara 3 -> requestLabel copies 3).

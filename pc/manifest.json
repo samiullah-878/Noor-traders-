@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-13.2",
+  "version": "2026-10-13.3",
   "note": "KHATA-DOCTOR manifest — sirf ye files PC par jati hain. local-config.json / firebase-key.json kabhi nahi.",
   "files": {
     "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -11,7 +11,7 @@
     "khata-auto.bat": "c6f019335516b837d486e8c47bd5d1acb753628b80669795df7bad51e9f718d7",
     "khata-sync-auto.bat": "7006262d6b2e395b6212aa2b130c191bb3284b1a2bf60793ee537fd845f69905",
     "label-auto.bat": "7094351892e48c7a2d4a32b2ac49e96e8d39e66856a3ff276d36b27b91368824",
-    "label-print.js": "fd045fc960813a4e5523174f972ea7de7c06b79aea41678a908160da5f07a137",
+    "label-print.js": "b7722766c3f1b0616f31618a211ec9e9588378855d9a65659cb053893d2e0036",
     "pos-khata-sync.js": "5ee1d8cf892b94e67406908e860192c813f86fc9732ef93209eee8170a5b5c13",
     "post-farq.js": "28254eb2db53154140fe3f1d466bccd3f4f7d322aba6be8cafcce8aa1ccba522",
     "purchase-auto.bat": "f877f7a5c14ad0a654b499396e8661c20a1140c2b99d68c1a91b18cae440fb85",
@@ -53,7 +53,8 @@
     "photo-print.js": "c4bbe5755cfe099282180564060f284afe103803a46949b21c5d6408bfabab47",
     "jpeg-decode.js": "412c390c80f81adea63c0a926825a771fbc6b745276ba8f5aea742b5a0f4466e",
     "larka-stats.js": "d520d14cc7b173cc947994f105be8b0459bb007215f6aec69180b7ec347e77cd",
-    "larka-auto.bat": "6e5fb05d9f276d058b34404eba6de40e7d26189469c097873dce19682a3c43fa"
+    "larka-auto.bat": "6e5fb05d9f276d058b34404eba6de40e7d26189469c097873dce19682a3c43fa",
+    "LABEL-JAANCH.bat": "a0cb24c0d582021691bda4bfe7afb6735d7afe28cbe32e48b1085e853e57893b"
   },
   "services": [
     {

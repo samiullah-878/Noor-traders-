@@ -6,7 +6,7 @@
 //          'printing' jis ki dhadkan (beatAt, label-print v4.1) 3 min se nahi = "⚠ atka hua" (Cancel = PC foran saaf karta hai).
 // Screen: din ke hisaab se -> item -> har barcode (packet size) ki ginti. Chips: Aaj · Kal · 7 din · 30 din · status · search.
 // PDF: app ka openReportPreview (poori screen + WhatsApp / share).
-import { smartHit } from './smart-search.js?v=2.99.69';   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.99.70';   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -63,17 +63,24 @@ const codeLine = c => `<div class="bc-code${c.sub ? ' sub' : ''}"><span class="b
 const cxLocal = new Map();   // v2.98.8: abhi cancel dabaya (id -> waqt) — snapshot aane se pehle bhi "cancel ho raha" dikhe
 const isCx = j => !!j.cancelReq || (cxLocal.has(j.id) && Date.now() - cxLocal.get(j.id) < 3 * 60000);
 const isStuck = (j, now) => j.status === 'printing' && now - (Number(j.beatAt) || Number(j.pickedAt) || Number(j.at) || 0) > 3 * 60000;
+// v2.99.70: 🔁 kharab nikle labels dobara — sirf utne (naye number ke saath). Mulazim: Settings → Mulazim → Stock → 'stock.lblagain'
+const lvJobs = new Map(), agVals = new Map();   // agVals: likhi hui ginti (live patti dobara bane to bhi rahe)
+document.addEventListener('input', e => { const t = e.target; if (t?.dataset?.lvN) agVals.set(t.dataset.lvN, t.value); });
+const canAgain = () => { try { return typeof window.ntCan === 'function' ? window.ntCan('stock.lblagain') : true; } catch { return true; } };
+const againHTML = j => `<div class="lv-ag"><small>Kharab nikle?</small><input type="number" min="1" max="200" step="1" inputmode="numeric" placeholder="3" value="${esc(agVals.get(j.id) || '')}" data-lv-n="${esc(j.id)}" aria-label="Kitne label dobara"><button type="button" data-lv-again="${esc(j.id)}">🔁 Dobara chhapo</button></div>`;
 export function liveLabelsHTML(list, opts = {}) {   // v2.97: pos-stock bhi istemal karta hai
   const now = Date.now(), L = (list || []).filter(j => j && j.id);
+  for (const j of L) lvJobs.set(j.id, j); if (lvJobs.size > 400) { const k = [...lvJobs.keys()].slice(0, 200); k.forEach(x => lvJobs.delete(x)); }
+  const ag = canAgain();
   const act = L.filter(j => j.status === 'new' || j.status === 'printing').sort((a, b) => (a.status === 'printing' ? 0 : 1) - (b.status === 'printing' ? 0 : 1) || (Number(a.at) || 0) - (Number(b.at) || 0));
-  const fin = opts.noRecent ? [] : L.filter(j => ['done', 'cancelled', 'failed', 'skipped'].includes(j.status) && now - (Number(j.doneAt) || 0) < 10 * 60000).sort((a, b) => (Number(b.doneAt) || 0) - (Number(a.doneAt) || 0)).slice(0, 5);
+  const fin = opts.noRecent ? [] : L.filter(j => ['done', 'cancelled', 'failed', 'skipped'].includes(j.status) && now - (Number(j.doneAt) || 0) < (j.status === 'done' ? 30 : 10) * 60000).sort((a, b) => (Number(b.doneAt) || 0) - (Number(a.doneAt) || 0)).slice(0, 5);
   if (!act.length && !fin.length) return '';
   let n = 0;
   const row = j => { const tot = Number(j.total) || Number(j.copies) || 1, sent = Math.min(tot, Number(j.sent) || 0), pr = j.status === 'printing', cx = isCx(j), st = isStuck(j, now);
     return `<div class="lv-row ${j.status}${cx ? ' cx' : ''}${st ? ' stuck' : ''}" data-lv-id="${esc(j.id)}"><div class="lv-t"><b>${esc(j.name || 'Item')}</b><small>${esc(j.code || '')}${Number(j.qty) > 1 ? ' · ' + num(j.qty) + ' wala' : ''}</small></div>
       <div class="lv-s">${cx && (pr || j.status === 'new') ? '<em class="cx">✕ cancel ho raha…</em>' : st ? `<em class="stk">⚠ atka hua · ${num(sent)} / ${num(tot)}</em>` : pr ? `<em class="pr">🖨 ${num(sent)} / ${num(tot)}</em>` : j.status === 'new' ? `<em>⏳ line mein #${++n} · ${num(tot)}</em>` : j.status === 'done' ? `<em class="ok">✓ ${num(tot)} chhap gaye</em>` : j.status === 'cancelled' ? `<em class="cx">✕ cancel${Number(j.sent) ? ' · ~' + num(j.sent) + ' chhape' : ''}</em>` : `<em class="bad">⚠ ${esc(j.error || j.status)}</em>`}
       ${pr && !st ? `<i class="lv-bar"><u style="width:${Math.round(sent / tot * 100)}%"></u></i>` : ''}</div>
-      ${(pr || j.status === 'new') && !cx ? `<button type="button" class="lv-x" data-lv-cancel="${esc(j.id)}">✕ Cancel</button>` : ''}</div>`; };
+      ${(pr || j.status === 'new') && !cx ? `<button type="button" class="lv-x" data-lv-cancel="${esc(j.id)}">✕ Cancel</button>` : ''}${j.status === 'done' && ag ? againHTML(j) : ''}</div>`; };
   const open = act.filter(j => !isCx(j));
   return `<div class="lv-box"><div class="lv-h"><b>🖨 Label printer — abhi</b>${open.length > 1 ? `<button type="button" class="lv-x all" data-lv-cancel="${open.map(j => esc(j.id)).join(',')}">✕ Sab cancel</button>` : ''}</div>${act.map(row).join('')}${fin.map(row).join('')}</div>`;
 }
@@ -99,6 +106,18 @@ function pdfHTML() {
       </tbody></table>`).join('')}`;
 }
 document.addEventListener('click', async e => {
+  const ab = e.target.closest?.('[data-lv-again]');   // v2.99.70: 🔁 kharab label dobara
+  if (ab) { const id = ab.dataset.lvAgain, j = lvJobs.get(id); if (!j || !cloud?.requestLabel) { notice('Label ke liye app update karein'); return; }
+    if (!canAgain()) { notice('Is kaam ki ijazat nahi — malik se kahein'); return; }
+    const box = ab.closest('.lv-ag'), inp = box?.querySelector('[data-lv-n]'), n = Math.floor(Number(inp?.value) || 0);
+    if (!(n >= 1 && n <= 200)) { notice('Kitne label kharab nikle? 1 se 200 tak likhein'); inp?.focus(); return; }
+    if (!confirm(`${n} label dobara chhapein?\n${j.name || ''} · ${j.code || ''}\n(naye number ke saath)`)) return;
+    ab.disabled = true; ab.textContent = '⏳ Bhej rahe…';
+    try { await cloud.requestLabel({ itemId: j.itemId, code: j.code, name: j.name, qty: Number(j.qty) || 1, rate: Number(j.rate) || 0, copies: n });
+      ab.textContent = '✓ Bhej diya'; if (inp) inp.value = ''; agVals.delete(id); notice(`🔁 ${n} label dobara line mein — ${j.name || ''}`); }
+    catch (er) { ab.disabled = false; ab.textContent = '🔁 Dobara chhapo'; alert('Dobara nahi gaya: ' + (er?.message || er)); }
+    setTimeout(() => { if (ab.isConnected) { ab.disabled = false; ab.textContent = '🔁 Dobara chhapo'; } }, 4000);
+    return; }
   const cx = e.target.closest?.('[data-lv-cancel]');
   if (cx) { const ids = String(cx.dataset.lvCancel || '').split(',').filter(Boolean); if (!ids.length || !cloud?.cancelLabel) return;
     if (!confirm(ids.length > 1 ? `${ids.length} label hukum cancel karein?` : 'Ye label cancel karein? (jo printer mein pohanch chuke, woh 10-20 nikal sakte hain)')) return;
