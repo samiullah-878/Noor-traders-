@@ -4424,3 +4424,21 @@ AGLA: malik se "aaye" aur "bill" wali notification ki screenshot — qaide pakke
 Emulator ab bhi nahi chalta (jar 403). Haath se jaanch: brackets / () / [] barabar, har allow ';' par khatam, ternary + string() + .get()
 pehle se published rules mein chalte hain (padDay, acctIs). Mazboot kiya: tcGiverName() — stockConfig na ho to get() error ki jagah
 'zeeshan'; string(...).lower() dono taraf. firestore-rules-2.49.html dobara bana (wahi version, sab 2.47 + 2.48 + 2.49 shamil).
+
+=== v2.99.75 (2026-10-14) — 🏦 BANK ALFALAH + 💳 2 CREDIT CARD (HBL Inbox screen mein) ===
+Malik: A/C *0294 = Alfalah Noor Traders (app mein khata hai) · *5826 = Samiullah (zaati) · card 4917 limit 15,00,000 (due 26, outstanding 14,53,961) ·
+card 0605 limit 10,00,000 (due 6, outstanding 9,70,314). MacroDroid: SMS 8287 -> wahi POST (Setup "🏦 1-C" ka body, src sms).
+* Parser (bank-sms.js = pc/bank-parchi.js EK JAISE): bankAc 'alfalah' — "received in BAF A/C" (aaye) · "Card ending xxxx used" (kind card, card, merchant, avl)
+  · fee (kind fee, merchant 'BANK FEE') · statement (kind stmt: amt, minPmt, due, dueDay). Raast naam ke saath BIC (HABBPKKA…) -> bank naam.
+* bank-inbox.js: account chips (localStorage sam-bank-cur) — HBL · Alfalah NT · Samiullah · 💳 cards. Card hero: limit / istemal / bachi / SMS Avl (farq warning)
+  / statement + due din. ➕ Naya khata (malik): card par outstanding = opening (dena), alias @c:<card>, @lim:<card>, @dd:<card>. ✏️ Limit / due tareekh.
+* Alias naye: @a:<acct4> (account -> khata), @c:<card4>, @m:<MERCHANT> (expense:<naam> / party:<id>), @lim, @dd, @pcin:<acct> (PC khud lagaye), @alf1 (seed).
+  autoRun ek dafa: @a:0294 = "Alfalah Noor Traders" khata (naam se) + @pcin:0294.
+* ⇄ APNA TRANSFER: HBL se gaye + Alfalah mein "from Noor Traders/Samiullah" aaye (same raqam, 40 min) = EK O.pay transfer A->B, dono done (kind self).
+  Apne naam se aaye paise ~40 min jurwan ka intezar.
+* 💳 card istemal / fee: card (ya bank) khate par 'borrow' / 'collection' + kharcha entry (merchant yaad @m:). Note ka pehla lafz Card / Alfalah / HBL.
+* Twin dedupe ab sirf same bankAc mein. CAPS: hbl.alf. style.css: .bkp-accts (ek line, scroll) .bkp-card .bkp-cbar .bkp-stmt.
+* PC bank-parchi v2.3: post() target = HBL ya @a:k jab @pcin:k == '1'; apne naam se aaye = khud nahi (app transfer banati hai); Z key 'A' Alfalah. manifest 2026-10-14.1.
+* Rules: koi badlav nahi (2.49 hi — src 'sms' Alfalah ke liye bhi; update keys kind/note pehle se allowed).
+Test: hd/alf2.mjs (self transfer, statement, card khata opening, merchant, borrow+kharcha, hero), hd/tw.mjs, bp/t2.js, bp/t3.js ALL OK.
+AGLA: 0605 statement SMS (malik subha bhejega) · card PAYMENT ka SMS namoona · purane card SMS (aaj se pehle) skip karna.

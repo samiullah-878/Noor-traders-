@@ -18,9 +18,12 @@ function whenOf(t) {
   return { day: '', time: '' };
 }
 // "USAMA USAM TMFB" -> naam "USAMA USAM", bank "Telenor Microfinance (Easypaisa)"
+// v2.99.75: Raast / IBFT mein naam ke saath bank ka BIC code ("Noor Traders HABBPKKARTG") — pehle 4 harf = bank
+const BIC = { HABB: 'HBL', UNIL: 'UBL', BPUN: 'Bank of Punjab', MEZN: 'Meezan', ALFH: 'Bank Alfalah', MUCB: 'MCB', ABPA: 'Allied', NBPA: 'NBP', MPBL: 'Habib Metro', FAYS: 'Faysal', SCBL: 'Standard Chartered', BKIP: 'BankIslami', DUIB: 'Dubai Islamic', JSBL: 'JS Bank', SONE: 'Soneri', BAHL: 'Habib Metro', SMBC: 'Summit', TMFB: 'Easypaisa', MMBL: 'JazzCash', NAYA: 'NayaPay', SADA: 'SadaPay', KHYB: 'Bank of Khyber', SNDB: 'Sindh Bank', ASCM: 'Askari', AKBL: 'Askari' };
 function splitName(raw) {
   const w = String(raw || '').replace(/\s+/g, ' ').trim().split(' ');
   let bank = '';
+  if (w.length > 1 && /^[A-Z]{4}PK[A-Z0-9]{2}(?:[A-Z0-9]{3})?$/.test(w[w.length - 1])) { const c = w.pop(); bank = BIC[c.slice(0, 4)] || c.slice(0, 4); return { name: w.join(' ').trim(), bank }; }   // v2.99.75: BIC
   if (w.length > 1) { const last = w[w.length - 1].toUpperCase().replace(/[^A-Z]/g, ''); if (last in BANK_TAIL) { bank = BANK_TAIL[last]; w.pop(); } }
   return { name: w.join(' ').trim(), bank };
 }
@@ -56,6 +59,43 @@ export function parseBank(text, src = 'sms', subj = '') {
       else { const m = t.match(/(?:received\s+from|credited\s+(?:by|from)|from)\s+(.+?)(?=\s+(?:in|into|to)\s+your\b|\s+(?:on|via)\b|[,.]\s|$)/i); if (m) { const s = splitName(m[1]); out.name = s.name; out.bank = s.bank; } }
     }
     out.ok = out.amt > 0 && !!out.dir && (out.kind !== 'party' || !!out.name);
+    return out;
+  }
+  // ---- v2.99.75 🏦 BANK ALFALAH (SMS 8287) — paise aaye (BAF A/C *0294 / *5826) · 💳 card istemal (Avl Limit) · fee kati · 📄 statement ----
+  //  "PKR 1000 received from Noor Traders HABBPKKARTG in your BAF A/C *0294 via your Raast ID on 14-10-26 at 00:20 Tx ID FT262870YT65C2VK"
+  //  "Your Bank Alfalah card (54917) used for PKR 6,000.00 on 13/10/2026 at 11:19 at JINN-BEGA P/S KHARIAN PK. Avl Limit: 4,429.70"
+  //  "SMS Alerts Monthly Fee PKR 250.00 & Tax 40.00 Debited from A/C: 5797-5***5826 on 12-Oct-2026"
+  //  "Your Bank Alfalah Card Stmt.Summary. Amt Due: 1,453,960.50 Min Pmt: 21,285.00 Due Date: 26/10/2026."
+  if (src !== 'email' && src !== 'notif' && /BAF\s*A\/C|Bank\s*Alfalah|021111225111|Stmt\.?\s*Summary|Avl\s*Limit/i.test(t)) {
+    out.bankAc = 'alfalah';
+    const n2 = s => Math.round(Number(String(s || '0').replace(/,/g, '')) * 100);
+    let m = t.match(/Stmt\.?\s*Summary\.?\s*Amt\s*Due:?\s*([\d,]+(?:\.\d+)?)\s*Min\s*Pmt:?\s*([\d,]+(?:\.\d+)?)\s*Due\s*Date:?\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+    if (m) { Object.assign(out, { kind: 'stmt', dir: 'out', amt: n2(m[1]), minPmt: n2(m[2]), due: `${m[5]}-${p2(m[4])}-${p2(m[3])}`, dueDay: Number(m[3]), name: 'Card statement', day: '', time: '', ok: n2(m[1]) > 0 }); return out; }
+    m = t.match(/card\s*\((\d{3,6})\)\s*used\s+for\s+PKR\s*([\d,]+(?:\.\d+)?)\s+on\s+(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+at\s+(\d{1,2}):(\d{2}))?\s+at\s+(.+?)\.\s*Avl\s*Limit:?\s*([\d,]+(?:\.\d+)?)/i);
+    if (m) {
+      const merch = m[8].replace(/\s+/g, ' ').replace(/(\s+[A-Z]{2}){1,2}$/, '').trim();
+      Object.assign(out, { kind: 'card', dir: 'out', card: m[1].slice(-4), amt: n2(m[2]), day: `${m[5]}-${p2(m[4])}-${p2(m[3])}`, time: m[6] ? `${p2(m[6])}:${m[7]}` : '', name: merch, merchant: merch, avl: n2(m[9]), via: 'Card', ok: n2(m[2]) > 0 });
+      return out;
+    }
+    m = t.match(/(.{0,40}?)(?:Fee|Charges?)\s+PKR\s*([\d,]+(?:\.\d+)?)(?:\s*&\s*Tax\s*([\d,]+(?:\.\d+)?))?\s*Debited\s+from\s+A\/C:?\s*([0-9*\-]{4,})(?:\s+on\s+(\d{1,2}-[A-Za-z]{3}-\d{4}))?/i);
+    if (m) {
+      const what = (m[1] || '').replace(/^\s*Dear Customer,?\s*/i, '').trim();
+      Object.assign(out, { kind: 'fee', dir: 'out', amt: n2(m[2]) + n2(m[3]), acct: m[4].replace(/\D/g, '').slice(-4), name: 'Bank fee' + (what ? ': ' + what.slice(0, 30) : ''), merchant: 'BANK FEE', via: 'Bank charges', ok: n2(m[2]) > 0 });
+      if (m[5]) Object.assign(out, whenOf(m[5]));
+      return out;
+    }
+    const tx = (t.match(/Tx\s*ID\s*[:\-]?\s*([A-Z0-9]{4,})/i) || [])[1] || '';
+    const dd = t.match(/on\s+(\d{1,2})-(\d{1,2})-(\d{2,4})(?:\s+at\s+(\d{1,2}):(\d{2}))?/i);
+    if (dd) { const y = dd[3].length === 2 ? '20' + dd[3] : dd[3]; out.day = `${y}-${p2(dd[2])}-${p2(dd[1])}`; out.time = dd[4] ? `${p2(dd[4])}:${dd[5]}` : ''; }
+    out.txn = tx; out.amt = amtOf(t);
+    out.acct = (t.match(/A\/C:?\s*\*?\s*([0-9*\-]{3,})/i) || [])[1] || ''; out.acct = out.acct.replace(/\D/g, '').slice(-4);
+    const vv = t.match(/via\s+(?:your\s+)?(Raast(?:\s+ID)?|IBFT|[A-Za-z][A-Za-z ]{1,20}?)(?=\s+on\b|$)/i); if (vv) out.via = vv[1].replace(/\s+ID$/i, '');
+    m = t.match(/received\s+from\s+(.+?)\s+in\s+your\s+BAF/i);
+    if (m) { const s = splitName(m[1]); Object.assign(out, { dir: 'in', name: s.name, bank: s.bank, ok: out.amt > 0 }); return out; }
+    m = t.match(/(?:sent|transferred|paid)\s+to\s+(.+?)\s+(?:from\s+your\s+BAF|from\s+A\/C)/i);
+    if (m) { const s = splitName(m[1]); Object.assign(out, { dir: 'out', name: s.name, bank: s.bank, ok: out.amt > 0 }); return out; }
+    if (/credited/i.test(t)) { Object.assign(out, { dir: 'in', name: (t.match(/from\s+(.+?)(?:\s+(?:on|via)\b|[.,]|$)/i) || [])[1] || 'Alfalah mein aaye', ok: out.amt > 0 }); return out; }
+    if (/debited/i.test(t)) { Object.assign(out, { dir: 'out', name: 'Alfalah se gaye', ok: out.amt > 0 }); return out; }
     return out;
   }
   // ---- v2.99.59 email: 🧾 BILL PAYMENT (HBL Mobile | Bill Payment) — Company GEPCO · Consumer ID · From Account No. /IBAN · Date-Time ----

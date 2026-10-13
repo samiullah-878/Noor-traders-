@@ -2866,3 +2866,8 @@ Malik: "email late aati hai — live notification wala kaam bhi kar do, wahan se
 * Rules 2.49: bankSms src in [sms, email, notif]. firestore-rules-2.49.html.
 Test: scratchpad hd/nf.mjs (5 namoone, app = PC parser), bp/t3.js (notif laga -> SMS jurwan, alag SMS laga), bp/t2.js, hd/tw.mjs ALL OK.
 AGLA: malik se "aaye" aur "bill" wali notification ki screenshot — qaide pakke karne.
+
+=== bank-parchi.js v2.3 (2026-10-14, manifest 2026-10-14.1) — 🏦 BANK ALFALAH ===
+* Parser = app ka bank-sms.js (EK JAISA rakho): Alfalah SMS 8287 — aaye / card / fee / statement. BIC naam se bank.
+* post(): HBL khata, YA alias @a:<acct4> wala khata jab @pcin:<acct4> == '1' (Alfalah NT *0294). Apne naam (Noor Traders / Samiullah) se aaye
+  = PC khud NAHI lagata (app apna transfer banati hai). Card / fee / stmt PC nahi lagata (sirf app). Parchi note: Zariya Alfalah / HBL. Z key 'A' prefix.

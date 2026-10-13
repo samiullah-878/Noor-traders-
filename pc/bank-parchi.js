@@ -1,5 +1,6 @@
 // =========================================================
-//  bank-parchi.js  v2.2 (2026-10-13: 🔔 HBL Mobile app ki NOTIFICATION (src 'notif') bhi parhta hai + notification / SMS / email jurwan = ek) · v2.1 (2026-10-12) — 🏦 sirf apne HBL account ke (A/C ke aakhri 4 number app mein yaad) · v2.0 (2026-10-12) — 🤖 aaye paise khud HBL khate mein (neeche) · v1.0 — 💰 PAISE AAYE ki parchi (Server PC, TM-T88IV)
+//  bank-parchi.js  v2.3 (2026-10-14: 🏦 BANK ALFALAH SMS (8287) parhna — aaye / 💳 card / fee / statement; Alfalah NT (@pcin) mein aaye
+//                     paise khud; apne naam (Noor Traders / Samiullah) se aaye = khud nahi, app EK transfer banati hai) · v2.2 (2026-10-13: 🔔 HBL Mobile app ki NOTIFICATION (src 'notif') bhi parhta hai + notification / SMS / email jurwan = ek) · v2.1 (2026-10-12) — 🏦 sirf apne HBL account ke (A/C ke aakhri 4 number app mein yaad) · v2.0 (2026-10-12) — 🤖 aaye paise khud HBL khate mein (neeche) · v1.0 — 💰 PAISE AAYE ki parchi (Server PC, TM-T88IV)
 //  Malik: "jaise hi koi paisa aya usi time computer se print bi nikl aiya".
 //  📩 HBL Inbox (Firestore bankSms) mein naya SMS / email aate hi -> parchi: raqam (bara), kis se, bank, via, waqt, TXN.
 //  Sirf PARHTA hai (kuch nahi likhta, sirf printConfig.bankLast). Wahi TXN do dafa nahi chhapta (bank-print.json).
@@ -20,9 +21,12 @@ function whenOf(t) {
   return { day: '', time: '' };
 }
 // "USAMA USAM TMFB" -> naam "USAMA USAM", bank "Telenor Microfinance (Easypaisa)"
+// v2.99.75: Raast / IBFT mein naam ke saath bank ka BIC code ("Noor Traders HABBPKKARTG") — pehle 4 harf = bank
+const BIC = { HABB: 'HBL', UNIL: 'UBL', BPUN: 'Bank of Punjab', MEZN: 'Meezan', ALFH: 'Bank Alfalah', MUCB: 'MCB', ABPA: 'Allied', NBPA: 'NBP', MPBL: 'Habib Metro', FAYS: 'Faysal', SCBL: 'Standard Chartered', BKIP: 'BankIslami', DUIB: 'Dubai Islamic', JSBL: 'JS Bank', SONE: 'Soneri', BAHL: 'Habib Metro', SMBC: 'Summit', TMFB: 'Easypaisa', MMBL: 'JazzCash', NAYA: 'NayaPay', SADA: 'SadaPay', KHYB: 'Bank of Khyber', SNDB: 'Sindh Bank', ASCM: 'Askari', AKBL: 'Askari' };
 function splitName(raw) {
   const w = String(raw || '').replace(/\s+/g, ' ').trim().split(' ');
   let bank = '';
+  if (w.length > 1 && /^[A-Z]{4}PK[A-Z0-9]{2}(?:[A-Z0-9]{3})?$/.test(w[w.length - 1])) { const c = w.pop(); bank = BIC[c.slice(0, 4)] || c.slice(0, 4); return { name: w.join(' ').trim(), bank }; }   // v2.99.75: BIC
   if (w.length > 1) { const last = w[w.length - 1].toUpperCase().replace(/[^A-Z]/g, ''); if (last in BANK_TAIL) { bank = BANK_TAIL[last]; w.pop(); } }
   return { name: w.join(' ').trim(), bank };
 }
@@ -58,6 +62,43 @@ function parseBank(text, src = 'sms', subj = '') {
       else { const m = t.match(/(?:received\s+from|credited\s+(?:by|from)|from)\s+(.+?)(?=\s+(?:in|into|to)\s+your\b|\s+(?:on|via)\b|[,.]\s|$)/i); if (m) { const s = splitName(m[1]); out.name = s.name; out.bank = s.bank; } }
     }
     out.ok = out.amt > 0 && !!out.dir && (out.kind !== 'party' || !!out.name);
+    return out;
+  }
+  // ---- v2.99.75 🏦 BANK ALFALAH (SMS 8287) — paise aaye (BAF A/C *0294 / *5826) · 💳 card istemal (Avl Limit) · fee kati · 📄 statement ----
+  //  "PKR 1000 received from Noor Traders HABBPKKARTG in your BAF A/C *0294 via your Raast ID on 14-10-26 at 00:20 Tx ID FT262870YT65C2VK"
+  //  "Your Bank Alfalah card (54917) used for PKR 6,000.00 on 13/10/2026 at 11:19 at JINN-BEGA P/S KHARIAN PK. Avl Limit: 4,429.70"
+  //  "SMS Alerts Monthly Fee PKR 250.00 & Tax 40.00 Debited from A/C: 5797-5***5826 on 12-Oct-2026"
+  //  "Your Bank Alfalah Card Stmt.Summary. Amt Due: 1,453,960.50 Min Pmt: 21,285.00 Due Date: 26/10/2026."
+  if (src !== 'email' && src !== 'notif' && /BAF\s*A\/C|Bank\s*Alfalah|021111225111|Stmt\.?\s*Summary|Avl\s*Limit/i.test(t)) {
+    out.bankAc = 'alfalah';
+    const n2 = s => Math.round(Number(String(s || '0').replace(/,/g, '')) * 100);
+    let m = t.match(/Stmt\.?\s*Summary\.?\s*Amt\s*Due:?\s*([\d,]+(?:\.\d+)?)\s*Min\s*Pmt:?\s*([\d,]+(?:\.\d+)?)\s*Due\s*Date:?\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
+    if (m) { Object.assign(out, { kind: 'stmt', dir: 'out', amt: n2(m[1]), minPmt: n2(m[2]), due: `${m[5]}-${p2(m[4])}-${p2(m[3])}`, dueDay: Number(m[3]), name: 'Card statement', day: '', time: '', ok: n2(m[1]) > 0 }); return out; }
+    m = t.match(/card\s*\((\d{3,6})\)\s*used\s+for\s+PKR\s*([\d,]+(?:\.\d+)?)\s+on\s+(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+at\s+(\d{1,2}):(\d{2}))?\s+at\s+(.+?)\.\s*Avl\s*Limit:?\s*([\d,]+(?:\.\d+)?)/i);
+    if (m) {
+      const merch = m[8].replace(/\s+/g, ' ').replace(/(\s+[A-Z]{2}){1,2}$/, '').trim();
+      Object.assign(out, { kind: 'card', dir: 'out', card: m[1].slice(-4), amt: n2(m[2]), day: `${m[5]}-${p2(m[4])}-${p2(m[3])}`, time: m[6] ? `${p2(m[6])}:${m[7]}` : '', name: merch, merchant: merch, avl: n2(m[9]), via: 'Card', ok: n2(m[2]) > 0 });
+      return out;
+    }
+    m = t.match(/(.{0,40}?)(?:Fee|Charges?)\s+PKR\s*([\d,]+(?:\.\d+)?)(?:\s*&\s*Tax\s*([\d,]+(?:\.\d+)?))?\s*Debited\s+from\s+A\/C:?\s*([0-9*\-]{4,})(?:\s+on\s+(\d{1,2}-[A-Za-z]{3}-\d{4}))?/i);
+    if (m) {
+      const what = (m[1] || '').replace(/^\s*Dear Customer,?\s*/i, '').trim();
+      Object.assign(out, { kind: 'fee', dir: 'out', amt: n2(m[2]) + n2(m[3]), acct: m[4].replace(/\D/g, '').slice(-4), name: 'Bank fee' + (what ? ': ' + what.slice(0, 30) : ''), merchant: 'BANK FEE', via: 'Bank charges', ok: n2(m[2]) > 0 });
+      if (m[5]) Object.assign(out, whenOf(m[5]));
+      return out;
+    }
+    const tx = (t.match(/Tx\s*ID\s*[:\-]?\s*([A-Z0-9]{4,})/i) || [])[1] || '';
+    const dd = t.match(/on\s+(\d{1,2})-(\d{1,2})-(\d{2,4})(?:\s+at\s+(\d{1,2}):(\d{2}))?/i);
+    if (dd) { const y = dd[3].length === 2 ? '20' + dd[3] : dd[3]; out.day = `${y}-${p2(dd[2])}-${p2(dd[1])}`; out.time = dd[4] ? `${p2(dd[4])}:${dd[5]}` : ''; }
+    out.txn = tx; out.amt = amtOf(t);
+    out.acct = (t.match(/A\/C:?\s*\*?\s*([0-9*\-]{3,})/i) || [])[1] || ''; out.acct = out.acct.replace(/\D/g, '').slice(-4);
+    const vv = t.match(/via\s+(?:your\s+)?(Raast(?:\s+ID)?|IBFT|[A-Za-z][A-Za-z ]{1,20}?)(?=\s+on\b|$)/i); if (vv) out.via = vv[1].replace(/\s+ID$/i, '');
+    m = t.match(/received\s+from\s+(.+?)\s+in\s+your\s+BAF/i);
+    if (m) { const s = splitName(m[1]); Object.assign(out, { dir: 'in', name: s.name, bank: s.bank, ok: out.amt > 0 }); return out; }
+    m = t.match(/(?:sent|transferred|paid)\s+to\s+(.+?)\s+(?:from\s+your\s+BAF|from\s+A\/C)/i);
+    if (m) { const s = splitName(m[1]); Object.assign(out, { dir: 'out', name: s.name, bank: s.bank, ok: out.amt > 0 }); return out; }
+    if (/credited/i.test(t)) { Object.assign(out, { dir: 'in', name: (t.match(/from\s+(.+?)(?:\s+(?:on|via)\b|[.,]|$)/i) || [])[1] || 'Alfalah mein aaye', ok: out.amt > 0 }); return out; }
+    if (/debited/i.test(t)) { Object.assign(out, { dir: 'out', name: 'Alfalah se gaye', ok: out.amt > 0 }); return out; }
     return out;
   }
   // ---- v2.99.59 email: 🧾 BILL PAYMENT (HBL Mobile | Bill Payment) — Company GEPCO · Consumer ID · From Account No. /IBAN · Date-Time ----
@@ -125,7 +166,7 @@ function slipText(r, head, W = 42) {
 //   Setting printConfig.bankPost (default ON). App bhi yahi ID likhti hai — dono likhen to bhi ek hi entry.
 const acctK = a => { const d = String(a || '').replace(/\D/g, ''); return d.length >= 4 ? d.slice(-4) : ''; };   // v2.1: account ke aakhri 4 number
 const pktDay = ms => new Date(ms + 5 * 3600000).toISOString().slice(0, 10);
-const noteOf = r => (`HBL aaye · ${r.name}${r.bank ? ' (' + r.bank + ')' : ''}${r.via ? ' · ' + r.via : ''}${r.txn ? ' · TXN ' + r.txn : ''}`).slice(0, 900);
+const noteOf = r => (`${r.bankAc === 'alfalah' ? 'Alfalah' : 'HBL'} aaye · ${r.name}${r.bank ? ' (' + r.bank + ')' : ''}${r.via ? ' · ' + r.via : ''}${r.txn ? ' · TXN ' + r.txn : ''}`).slice(0, 900);
 function createBankWatcher({ biz, log, sendRaw, head, stateFile, cfgRef, now = () => Date.now(), freshMs = 30 * 60000 }) {
   let seen = {}; try { seen = JSON.parse(fs.readFileSync(stateFile, 'utf8')) || {}; } catch {}
   const save = () => { const ks = Object.entries(seen).sort((a, b) => b[1] - a[1]).slice(0, 400); seen = Object.fromEntries(ks); try { fs.writeFileSync(stateFile, JSON.stringify(seen)); } catch {} };
@@ -133,16 +174,21 @@ function createBankWatcher({ biz, log, sendRaw, head, stateFile, cfgRef, now = (
   let hq = Promise.resolve();   // v2.2
   const khata = () => biz.collection('blueKhata');
   async function post(doc, d, r) {
-    if (!cfg.bankPost || !hblId || r.dir !== 'in' || d.st) return '';
+    if (!cfg.bankPost || r.dir !== 'in' || d.st || r.kind === 'stmt') return '';
     if (!r.day || r.day !== pktDay(now())) return '';   // purani tareekh: app mein malik se poochho
     // v2.1: SMS / email mein account number ho (maslan loan wala) aur app ne us number ko HBL Noor Traders ka nahi maana = khud nahi — app poochegi
-    const k = acctK(r.acct); if (k && amap['@a:' + k] !== hblId) return '';
+    // v2.3: Alfalah bhi — account ka khata app mein chuna ho aur malik ne PC ko ijazat di ho (@pcin:<4 number>, Alfalah NT 0294 = haan)
+    const k = acctK(r.acct); let tgt = hblId;
+    if (k) { const a = amap['@a:' + k]; if (!a || (a !== hblId && amap['@pcin:' + k] !== '1')) return ''; tgt = a; }
+    else if (r.bankAc === 'alfalah') return '';
+    if (!tgt) return '';
+    if (/noor\s*traders|sami\s*ullah|samiullah/i.test(r.name)) return '';   // v2.3: apna paisa (HBL <-> Alfalah) — app dono taraf jor kar EK transfer banati hai
     const id = 'bk' + doc.id + 'a', ref = khata().doc(id);
     const ex = await ref.get(); if (ex.exists && !ex.data().deleted) return 'pehle-se';
     const t = now();
-    await ref.set({ id, type: 'entry', kind: 'payment', partyId: hblId, amount: r.amt, date: r.day, note: noteOf(r), dailyIncluded: true, posPending: false, bankSms: doc.id,
+    await ref.set({ id, type: 'entry', kind: 'payment', partyId: tgt, amount: r.amt, date: r.day, note: noteOf(r), dailyIncluded: true, posPending: false, bankSms: doc.id,
       by: 'pc-bank', updatedBy: 'pc-bank', createdAt: t, updatedAt: t, rev: 1 });
-    await biz.collection('bankSms').doc(doc.id).set({ st: 'done', by: 'pc-bank', byName: 'Server PC', doneAt: t, partyId: hblId, entryId: id, kind: 'party' }, { merge: true });
+    await biz.collection('bankSms').doc(doc.id).set({ st: 'done', by: 'pc-bank', byName: 'Server PC', doneAt: t, partyId: tgt, entryId: id, kind: 'party' }, { merge: true });
     log(`🤖 HBL khud laga: ${rs(r.amt)} — ${ascii(r.name)} -> HBL (Akhrajat)`);
     return 'laga';
   }
@@ -150,7 +196,7 @@ function createBankWatcher({ biz, log, sendRaw, head, stateFile, cfgRef, now = (
     const d = doc.data ? doc.data() : doc; if (!d || !d.text || doc.id === '_alias') return 'skip';
     const r = parseBank(d.text, d.src, d.subj); if (!r.ok) return 'samajh-nahi';
     // v2.2: 🔔 notification + usi len-den ka SMS / email = jurwan (aaye/gaye + raqam + 30 min, zariya alag) — doosra na post, na parchi
-    const zc = r.day && r.time ? Math.round(Date.parse(r.day + 'T' + r.time + ':00+05:00') / 60000) : 0, cls = d.src === 'notif' ? 'n' : 's', pre = 'Z' + r.dir + r.amt + '|';
+    const zc = r.day && r.time ? Math.round(Date.parse(r.day + 'T' + r.time + ':00+05:00') / 60000) : 0, cls = d.src === 'notif' ? 'n' : 's', pre = 'Z' + (r.bankAc === 'alfalah' ? 'A' : '') + r.dir + r.amt + '|';
     const twin = zc ? Object.keys(seen).find(k => { if (!k.startsWith(pre)) return false; const [, m, c, id] = k.split('|'); return c !== cls && id !== doc.id && !seen['P' + id] && Math.abs(Number(m) - zc) <= 30; }) : '';   // P = pehle hi jor ban chuka
     if (zc && !seen[pre + zc + '|' + cls + '|' + doc.id]) { seen[pre + zc + '|' + cls + '|' + doc.id] = now(); save(); }
     if (twin) {
