@@ -3275,3 +3275,49 @@ html body .lv-ag input{width:64px;min-height:34px!important;height:34px;padding:
 html body .lv-ag button{flex:1;min-height:34px!important;padding:4px 10px!important;border:0!important;border-radius:9px!important;background:linear-gradient(135deg,#ffd27a,#f0a93a)!important;color:#3b2500!important;font-weight:900!important;font-size:12.5px!important;box-shadow:0 3px 10px rgba(240,169,58,.3)}
 html body .lv-ag button:disabled{opacity:.7}
 .lv-row.done{opacity:1}.lv-row.done .lv-t,.lv-row.done .lv-s{opacity:.75}
+/* ===== v2.99.71: 💎 POS PURCHASE — premium (layout wahi) ===== */
+html body .pp-head{--ppn:#172b52;--ppb:#2e5194;--ppg:#d69e1c;position:relative}
+html body .pp-head .pp-modes{gap:4px;padding:4px;border-radius:16px;background:var(--surf2,rgba(255,255,255,.06));border:1px solid var(--line,#dfe5f0)}
+html body .pp-head .pp-modes button{border:0!important;border-radius:12px!important;min-height:42px;font-weight:800!important;background:transparent!important;color:var(--ink2,#5d6b88)!important;box-shadow:none!important}
+html body .pp-head.pp-head.pp-head.pp-head .pp-modes button.on{background:linear-gradient(135deg,var(--ppn),var(--ppb))!important;color:#fff!important;box-shadow:0 6px 16px rgba(23,43,82,.28)!important}
+html body .pp-head .pp-sup{padding:10px 12px;gap:12px;border-radius:16px;background:linear-gradient(135deg,var(--surf,#fff),var(--surf2,#f6f8fc));border:1px solid var(--line,#dfe5f0);box-shadow:0 4px 14px rgba(23,43,82,.07)}
+.pp-av{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:16px;letter-spacing:.5px;color:#fff;background:linear-gradient(135deg,#223b6d,#3d66b5);box-shadow:0 4px 12px rgba(34,59,109,.35),inset 0 0 0 2px rgba(255,255,255,.35)}
+.pp-sup-t{flex:1;min-width:0}.pp-sup-t b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body .pp-head .pp-sup small{text-transform:uppercase;letter-spacing:.6px;font-size:10.5px;font-weight:800;color:var(--ink2,#64748b)}
+html body .pp-head .pp-sup b{font-size:17px;font-weight:900;color:var(--ink,#13213f)}
+html body .pp-head .pp-sup button{flex:none;min-height:38px!important;padding:6px 14px!important;border-radius:999px!important;border:1px solid var(--line,#d5dce9)!important;font-weight:800!important;font-size:13px!important}
+html body .pp-head .pp-meta label{font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--ink2,#5d6b88);gap:4px}
+html body .pp-head .pp-meta input,html body .pp-head .pp-meta select{height:46px;min-height:46px;border-radius:13px!important;border:1px solid var(--line,#dfe5f0)!important;background:var(--surf2,#f6f8fc)!important;font-size:15px!important;font-weight:700;text-transform:none;letter-spacing:0;color:var(--ink,#13213f)!important;box-shadow:inset 0 1px 2px rgba(23,43,82,.05)}
+html body .pp-head .pp-meta.pp-add input{background:linear-gradient(180deg,#fffdf6,#fff6df)!important;border-color:#ecd49a!important;text-align:center;font-size:17px!important;color:#5a3d05!important}
+/* zaroori: supplier / godam abhi nahi chuna */
+html body .pp-head .pp-sup-pick.pp-need{padding:10px;border-radius:16px;border:1.5px dashed var(--ppg);background:linear-gradient(180deg,#fffaf0,#fff4dc)}
+html body .pp-head .pp-sup-pick.pp-need>label{font-weight:900;color:#7a5409}
+html body .pp-head .pp-meta label.pp-need{color:#7a5409}
+html body .pp-head .pp-meta label.pp-need select{border:1.5px solid var(--ppg)!important;background:#fffaf0!important;color:#7a5409!important;animation:ppNeed 1.8s ease-in-out infinite}
+@keyframes ppNeed{0%,100%{box-shadow:0 0 0 0 rgba(214,158,28,.0)}50%{box-shadow:0 0 0 4px rgba(214,158,28,.22)}}
+@media (prefers-reduced-motion:reduce){html body .pp-head .pp-meta label.pp-need select{animation:none}}
+html body .pp-head .pct-chips .rc{border-radius:999px!important;min-height:34px;padding:4px 12px!important;font-weight:800!important;border:1px solid var(--line,#dfe5f0)!important}
+html body .pp-head.pp-head.pp-head.pp-head .pct-chips .rc.on{background:linear-gradient(135deg,var(--ppn),var(--ppb))!important;color:#fff!important;border-color:transparent!important}
+html body .pp-head .sale-total{padding:12px 14px;border-radius:16px!important;background:linear-gradient(135deg,#172b52,#2e5194)!important;color:#fff!important;box-shadow:0 8px 20px rgba(23,43,82,.25);border:0!important}
+html body .pp-head.pp-head.pp-head.pp-head .sale-total small{color:rgba(255,255,255,.75)!important;font-weight:700;letter-spacing:.3px}
+html body .pp-head .sale-total strong{color:#fff!important;font-size:22px;font-weight:900}
+html body .pp-head .account-tools{display:grid;gap:8px}
+html body .pp-head .account-tools .sh-wide{min-height:46px!important;border-radius:14px!important;border:1px solid var(--line,#dfe5f0)!important;background:linear-gradient(180deg,var(--surf,#fff),var(--surf2,#f6f8fc))!important;color:var(--accent-ink,#2b4a86)!important;font-weight:800!important;font-size:14px!important;box-shadow:0 3px 10px rgba(23,43,82,.06)!important;position:relative;overflow:hidden}
+html body .pp-head .account-tools .sh-wide::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:4px;border-radius:0 4px 4px 0;background:linear-gradient(180deg,#d69e1c,#f0c45a)}
+html body .pp-head .account-tools .sh-wide:active{transform:scale(.985)}
+html body .pp-head .account-tools .sh-wide[data-pp-ai]{background:linear-gradient(135deg,#eef3ff,#e3ecff)!important;color:#1f3f86!important}
+/* Jaanch card: retail */
+.jc-g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:6px 0 2px}
+.jc-mrp .jc-f span{color:#7a3e9d;font-weight:800}
+html body .jc-mrp .jc-f input{border-color:#cdb4e6!important;background:#fbf7ff!important}
+.jc-mrph{display:block;font-size:11px;color:#6b5a80;margin:0 0 4px}
+.jc-mrph b.up{color:#b42318}.jc-mrph b.dn{color:#b42318}
+html body .rate-chips .rc.rc-mrp{border:1px solid #cdb4e6!important;background:linear-gradient(135deg,#faf5ff,#efe3ff)!important;color:#5b2a86!important;font-weight:800!important;white-space:nowrap}
+html body .rate-chips .rc.rc-mrp.on{background:linear-gradient(135deg,#6b3fa0,#8e5cc8)!important;color:#fff!important;border-color:transparent!important}
+/* dark looks */
+html.dk body .pp-head .pp-sup-pick.pp-need,html.dk body .pp-head .pp-meta label.pp-need select{background:rgba(214,158,28,.12)!important;color:#ffd27a!important}
+html.dk body .pp-head .pp-sup-pick.pp-need>label,html.dk body .pp-head .pp-meta label.pp-need{color:#ffd27a}
+html.dk body .pp-head .pp-meta input,html.dk body .pp-head .pp-meta select{background:var(--glass2,rgba(255,255,255,.08))!important;color:var(--ink,#e8eeff)!important}
+html.dk body .pp-head .pp-meta.pp-add input{background:rgba(214,158,28,.12)!important;color:#ffd27a!important;border-color:rgba(214,158,28,.4)!important}
+html.dk body .pp-head .account-tools .sh-wide,html.dk body .pp-head .account-tools .sh-wide[data-pp-ai]{background:var(--glass2,rgba(255,255,255,.08))!important;color:var(--accent-ink,#8fd8ff)!important}
+html.dk body .jc-mrp .jc-f input{background:rgba(142,92,200,.14)!important;color:var(--ink,#e8eeff)!important}

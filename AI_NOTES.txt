@@ -4313,3 +4313,24 @@ App (barcode.js liveLabelsHTML): done row (ab 30 min tak dikhti) par "Kharab nik
  "stock.lblagain" (window.ntCan). style.css .lv-ag. Rules: koi tabdeeli nahi (requestLabel ke wahi khane).
 Test: scratchpad lbl42/t.cjs (asal label-print tspl/labelCmds, naqli firebase + naqli raster ESC/~ ke saath: 15 label = 3 hisse, koi ESC/~ nahi,
  code/number alag) · lbl42/lv.mjs (Chromium: dobara 3 -> requestLabel copies 3).
+
+=== v2.99.71 (2026-10-13) — 🧾 POS Purchase: bill bhejte hi screen bilkul saaf + 💎 premium + 🏷 Retail (Jaanch) ===
+Malik: "har bill save par page saaf — godam, supplier sab; agla bill hum khud select karein · screen premium · AI tasveer wali screen
+mein retail ka khana + chips mein retail".
+purchase.js:
+- godam ab 0 = "abhi nahi chuna" (pehle default Godam 1). stock(): ek hi godam ho to khud wahi. gopts: 0 par "— Godam chunein —"
+  (disabled, selected). label.pp-need (sunehri, halki dhadkan). addItem line godam = godam || 0. Godam chunte hi khali lines ko khud;
+  confirm sirf jab koi line alag godam par ho.
+- save(): supplier ke baad: godam 0 aur koi line bina godam -> "⚠️ Pehle godam chunein" (select par focus). 🤖 agent (auto) = Godam 1.
+- Bhejne ke baad (aur "✕ Naya bill" par) supplier = '', godam = 0, supQuery, supOpen, openKey, galla reset — PC tak na pahunche to
+  keep se supplier / godam bhi wapas.
+- supplierBox: .pp-av gol nishan (naam ke 2 harf) + .pp-sup-t; khali ho to .pp-sup-pick.pp-need "👤 Supplier chunein".
+- Jaanch card: "🏷 Retail/PCS" (data-pp-jmrp) + "🏷 Retail/CTN" (jmrpc, pack ho to) -> l.mrp; hint #jcMrpH (mrpHint); jRepaint bhi.
+- chipRow 'r': "🏷 = Retail X" (data-pp-r2m) — parchoon PCS = retail, CTN = ctnOf(retail, pack); setMode rp/rc manual. Main screen
+  par bhi (shared chipRow); paintMrp ab paintChips bhi (retail likhte hi chip).
+- Ijazat: CAPS purchase 'pur.retail' (canRetail = window.ntCan) — Jaanch retail khane + chip.
+style.css: .pp-head premium (segment modes, supplier card, meta khane, sunehri +%/kharcha, navy total patti, tiles sunehri kinara),
+  .pp-need, .jc-g2/.jc-mrp/.jc-mrph, .rc-mrp (jamni). Theme 'html.lt.lt.lt.lt header .on' (0,5,3) ko harane ke liye .on rules par
+  .pp-head ×4. Dark (html.dk) overrides.
+Rules: koi tabdeeli nahi. Test: scratchpad hd/kul/pp.mjs (godam 0 par nahi bhejta, chunte hi line, = Retail 300/7500, bhejne ke baad
+supplier/godam/cart khali) + run.mjs (Jaanch 11 ALL OK) + screenshots pp-*.png / card.png.
