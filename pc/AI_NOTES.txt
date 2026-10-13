@@ -2871,3 +2871,8 @@ AGLA: malik se "aaye" aur "bill" wali notification ki screenshot — qaide pakke
 * Parser = app ka bank-sms.js (EK JAISA rakho): Alfalah SMS 8287 — aaye / card / fee / statement. BIC naam se bank.
 * post(): HBL khata, YA alias @a:<acct4> wala khata jab @pcin:<acct4> == '1' (Alfalah NT *0294). Apne naam (Noor Traders / Samiullah) se aaye
   = PC khud NAHI lagata (app apna transfer banati hai). Card / fee / stmt PC nahi lagata (sirf app). Parchi note: Zariya Alfalah / HBL. Z key 'A' prefix.
+
+=== bank-parchi.js v2.4 (2026-10-14, manifest 2026-10-14.2) — ✉️ ALFALAH EMAIL ===
+* Parser = app bank-sms.js (EK JAISA): Alfalah ibanking ("Dear X … sent to … Ref FT…") + email.notification (Account/IBAN, Tax/Charges, Amount).
+* handle(): wahi Ref / TXN do alag docs mein (SMS 8287 + email) — pehla 'done' ho to doosra kind 'dup' (dupOf), na post na parchi. seen key 'R<TXN>|<docId>'.
+* post(): Alfalah email mein account na ho to "Dear SAMI ULLAH" = 5826, "Dear NOOR TRADERS" = 0294 (sirf @pcin wale mein khud).

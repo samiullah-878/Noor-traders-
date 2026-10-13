@@ -61,6 +61,33 @@ export function parseBank(text, src = 'sms', subj = '') {
     out.ok = out.amt > 0 && !!out.dir && (out.kind !== 'party' || !!out.name);
     return out;
   }
+  // ---- v2.99.76 ✉️ BANK ALFALAH EMAIL — do qism, dono mein wahi Ref (FT…) = ek len-den (app jorti hai: naam ek se, account / charges doosri se) ----
+  //  ibanking@ (hp6235):  "Dear SAMI ULLAH PKR 1,000.00 sent to NOOR TRADERS -RAAST ID **03**-***2515 on 14-Oct-2026 00:21 Ref FT2628701MRXNP2Y via RAAST"
+  //  email.notification@ (googel6235): "Transaction Successful Wednesday, September 30, 2026 | 8:42 AM Ref# FT2627309F8SXZ54 | Account Title SAMI ULLAH |
+  //     Account/IBAN *****5826 | … Transaction Type Debit | Tax/Charges PKR 268/- | … Amount | PKR 2,500.00/-"   (naam NAHI hota)
+  {
+    const tt = t.replace(/\|/g, ' ').replace(/\s+/g, ' ').trim(), n2 = s => Math.round(Number(String(s || '0').replace(/,/g, '')) * 100);
+    let m = tt.match(/Dear\s+(.+?)\s+PKR\.?\s*([\d,]+(?:\.\d+)?)\s+(sent|transferred|paid|received)\s+(to|from)\s+(.+?)\s+on\s+(\d{1,2}-[A-Za-z]{3}-\d{4})(?:\s+(\d{1,2}):(\d{2}))?/i);
+    if (m && (/^\s*ALFA/i.test(subj) || /\bRef\s*#?\s*[:\-]?\s*FT[A-Z0-9]{6,}/i.test(tt))) {
+      const inn = /received/i.test(m[3]), raw = m[5].replace(/\s*-\s*(?:RAAST\s*ID|A\/C|IBAN|Account)\b.*$/i, '').trim(), s = splitName(raw);
+      Object.assign(out, whenOf(m[6] + (m[7] ? ' ' + m[7] + ':' + m[8] : '')));
+      Object.assign(out, { bankAc: 'alfalah', src: 'email', dir: inn ? 'in' : 'out', amt: n2(m[2]), name: s.name, bank: s.bank, holder: m[1].trim().slice(0, 60), acct: '',
+        txn: (tt.match(/\bRef\s*#?\s*[:\-]?\s*([A-Z0-9]{6,})/i) || [])[1] || '', via: ((tt.match(/\bvia\s+([A-Za-z]+)/i) || [])[1] || (/RAAST/i.test(m[5]) ? 'Raast' : '')).replace(/^RAAST$/i, 'Raast') });
+      out.ok = out.amt > 0 && !!out.name; return out;
+    }
+    if (/Transaction\s+Successful/i.test(tt) && /Account\s*\/\s*IBAN/i.test(tt) && (/Alfalah/i.test(subj) || /8287|021111225111|Orbits/i.test(tt))) {
+      const MN = { january: 1, february: 2, march: 3, april: 4, may: 5, june: 6, july: 7, august: 8, september: 9, october: 10, november: 11, december: 12 };
+      const dm = tt.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s*(\d{4})(?:\s*(\d{1,2}):(\d{2})\s*(AM|PM)?)?/i);
+      if (dm) { let h = Number(dm[4] || 0); if (dm[6]) { if (/PM/i.test(dm[6]) && h < 12) h += 12; if (/AM/i.test(dm[6]) && h === 12) h = 0; }
+        out.day = `${dm[3]}-${p2(MN[dm[1].toLowerCase()])}-${p2(dm[2])}`; out.time = dm[4] ? `${p2(h)}:${dm[5]}` : ''; }
+      const typ = ((tt.match(/Transaction\s+Type\s+(.+?)\s+(?:Tax\s*\/\s*Charges|Orbits|Available|Amount)\b/i) || [])[1] || '').trim();
+      Object.assign(out, { bankAc: 'alfalah', src: 'email', dir: /credit|received|deposit/i.test(typ) ? 'in' : 'out', name: '', noName: true, via: typ.slice(0, 30),
+        txn: (tt.match(/\bRef\s*#?\s*[:\-]?\s*([A-Z0-9]{6,})/i) || [])[1] || '', acct: ((tt.match(/Account\s*\/\s*IBAN\s*[*\s]*([0-9][0-9\-]{2,})/i) || [])[1] || '').replace(/\D/g, '').slice(-4),
+        holder: ((tt.match(/Account\s+Title\s+(.+?)\s+Account\s*\/\s*IBAN/i) || [])[1] || '').trim().slice(0, 60),
+        fee: n2((tt.match(/Tax\s*\/\s*Charges\s*(?:PKR|Rs\.?)\s*([\d,]+(?:\.\d+)?)/i) || [])[1]), amt: n2((tt.match(/\bAmount\s*(?:PKR|Rs\.?)\s*([\d,]+(?:\.\d+)?)/i) || [])[1]) });
+      out.ok = out.amt > 0; return out;
+    }
+  }
   // ---- v2.99.75 🏦 BANK ALFALAH (SMS 8287) — paise aaye (BAF A/C *0294 / *5826) · 💳 card istemal (Avl Limit) · fee kati · 📄 statement ----
   //  "PKR 1000 received from Noor Traders HABBPKKARTG in your BAF A/C *0294 via your Raast ID on 14-10-26 at 00:20 Tx ID FT262870YT65C2VK"
   //  "Your Bank Alfalah card (54917) used for PKR 6,000.00 on 13/10/2026 at 11:19 at JINN-BEGA P/S KHARIAN PK. Avl Limit: 4,429.70"

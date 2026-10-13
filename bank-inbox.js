@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.75';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.99.76';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -58,10 +58,26 @@ function selfPairs(all) {
     if (dn(x) && !dn(y)) y.k = x.k; else if (!dn(x) && !dn(y)) { x.self = y; y.selfHide = true; }
   }
 }
+// v2.99.76: ✉️ Alfalah ki do emails (ibanking = naam · email.notification = account + charges) + SMS — wahi Ref (FT…) = EK len-den.
+// Key pehle hi ek (bankKeyOf = 'T' + Ref). Yahan maloomat jorte hain taake jo bhi card dikhe us mein naam + account + charges sab hon.
+function refMerge(all) {
+  const g = new Map();
+  for (const x of all) if (x.r.ok && x.r.bankAc === 'alfalah' && x.r.txn) { const k = x.r.txn.toUpperCase(); if (!g.has(k)) g.set(k, []); g.get(k).push(x); }
+  for (const xs of g.values()) {
+    if (xs.length < 2) continue;
+    const nm = xs.find(z => z.r.name && !z.r.noName), ac = xs.find(z => z.r.acct), fe = xs.find(z => z.r.fee > 0), ho = xs.find(z => z.r.holder);
+    for (const x of xs) {
+      if (nm && (x.r.noName || !x.r.name)) Object.assign(x.r, { name: nm.r.name, bank: nm.r.bank || x.r.bank, noName: false });
+      if (ac && !x.r.acct) x.r.acct = ac.r.acct;
+      if (fe && !(x.r.fee > 0)) x.r.fee = fe.r.fee;
+      if (ho && !x.r.holder) x.r.holder = ho.r.holder;
+    }
+  }
+}
 function rows() {
   const all = (docs || []).filter(d => !('p' in d) || d.text).map(d => { const r = parseBank(d.text, d.src, d.subj); return { d, r, k: r.ok ? bankKeyOf(r) : 'X' + d.id }; });
   all.sort((a, b) => (b.r.day + b.r.time).localeCompare(a.r.day + a.r.time) || String(b.d.at || '').localeCompare(String(a.d.at || '')));
-  twinKeys(all); selfPairs(all);
+  refMerge(all); twinKeys(all); selfPairs(all);
   const seen = new Map(); for (const x of all) if (x.d.st === 'done' || x.d.st === 'skip') seen.set(x.k, x);
   const pend = [], done = [], bad = [], dup = [], info = [];
   for (const x of all) {
@@ -81,9 +97,12 @@ const hbl = () => { const id = O.bankId ? O.bankId() : ''; return id && O.party 
 // number se khata (alias '@a:6303' — malik / mulazim ne aik dafa chuna). Number na ho (Raast "in your HBL A/C") = HBL Noor Traders.
 // Anjaan number = null: khud nahi lagta, card par "kaun sa account?" (maslan loan 7999 ka SMS ghalti se HBL purana mein na jaye).
 const acctK = a => { const d = String(a || '').replace(/\D/g, ''); return d.length >= 4 ? d.slice(-4) : ''; };
+// v2.99.76: Alfalah ibanking email mein account number nahi — "Dear SAMI ULLAH" = *5826, "Dear NOOR TRADERS" = *0294 (malik ne bataya)
+const ALF_HOLDER = { SAMIULLAH: '5826', NOORTRADERS: '0294' };
+const holderAcct = r => r && r.bankAc === 'alfalah' && r.holder ? ALF_HOLDER[String(r.holder).toUpperCase().replace(/[^A-Z]/g, '')] || '' : '';
 function bankOf(r) {
   if (r && r.kind === 'card') { const id = alias['@c:' + r.card]; return id && O.party ? O.party(id) || null : null; }   // v2.99.75: 💳 card ka khata
-  const k = acctK(r && r.acct); if (!k) return r && r.bankAc === 'alfalah' ? null : hbl(); const id = alias['@a:' + k]; return id && O.party ? O.party(id) || null : null; }
+  const k = acctK(r && r.acct) || holderAcct(r); if (!k) return r && r.bankAc === 'alfalah' ? null : hbl(); const id = alias['@a:' + k]; return id && O.party ? O.party(id) || null : null; }
 // v2.99.75: apne bank / card khate (alias se) — screen ki chips + apna transfer pehchanna
 const ownIds = () => { const ids = []; for (const [k, v] of Object.entries(alias)) if ((k === '@hbl' || k.startsWith('@a:') || k.startsWith('@c:')) && v && !ids.includes(v) && O.party && O.party(v)) ids.push(v); return ids; };
 const isOwn = id => !!id && ownIds().includes(id);
@@ -143,7 +162,7 @@ function acctAskHTML(x) {
   if (bankOf(x.r)) return '';
   if (x.r.kind === 'card') { const c = x.r.card;
     return `<div class="bkp-ask acct">💳 <b>Card …${esc(c)} kis khate ka?</b> <small>aik dafa — phir har card SMS khud</small><div class="bkp-opts">${O.addParty && O.owner && O.owner() ? `<button type="button" class="bkp-ic new" data-bk-newacct="c|${esc(c)}">➕ Naya khata: Alfalah Card ${esc(c)}</button>` : ''}${bankChoices().map(p => `<button type="button" class="bkp-ic" data-bk-cmap="${esc(c)}|${esc(p.id)}">💳 ${esc(p.name)}</button>`).join('')}</div></div>`; }
-  const k = acctK(x.r.acct); if (!k) return x.r.bankAc === 'alfalah' ? '<div class="bkp-ask acct">🏦 <b>Alfalah ka kaun sa account?</b> <small>SMS mein number nahi</small></div>' : '';
+  const k = acctK(x.r.acct) || holderAcct(x.r); if (!k) return x.r.bankAc === 'alfalah' ? '<div class="bkp-ask acct">🏦 <b>Alfalah ka kaun sa account?</b> <small>SMS mein number nahi</small></div>' : '';
   return `<div class="bkp-ask acct">🏦 <b>Yeh kaun sa account hai?</b> <small>A/C …${esc(k)} — aik dafa chunein, phir yaad</small><div class="bkp-opts">${O.addParty && O.owner && O.owner() ? `<button type="button" class="bkp-ic new" data-bk-newacct="a|${esc(k)}">➕ Naya khata: ${x.r.bankAc === 'alfalah' ? 'Alfalah' : 'Bank'} ${esc(k)}</button>` : ''}${bankChoices().map(p => `<button type="button" class="bkp-ic" data-bk-acmap="${esc(k)}|${esc(p.id)}">🏦 ${esc(p.name)}</button>`).join('')}</div></div>`;
 }
 // 💳 / fee: kharcha kis khate mein (dukan ke naam se yaad)
@@ -206,15 +225,27 @@ export function openBankInbox(t) {
   if (!dl.open) dl.showModal();
   if (tab === 'setup') loadKey();
 }
+// v2.99.76 🏦 Alfalah email ka "Tax/Charges" — bank (H) se minus + kharcha. Khata: 'BANK FEE' wala yaad (@m:BANKFEE) warna "Bank charges".
+// Pakki ID bk<doc>f / bk<doc>g — do dafa chale to bhi ek hi entry.
+const feeTo = () => mTo({ merchant: 'BANK FEE' }) || { kind: 'expense', name: ((O.expenseChoices ? O.expenseChoices() : []).find(a => a.kind === 'expense' && /bank\s*(charge|fee)/i.test(String(a.name))) || {}).name || 'Bank charges' };
+async function postFee(id, r, H, date) {
+  if (!(r.fee > 0) || r.dir !== 'out' || !H) return '';
+  const F = feeTo(), fn = (`🏦 ${H.name} · charges${r.name ? ' · ' + r.name : ''}${r.txn ? ' · TXN ' + r.txn : ''}`).slice(0, 900);
+  if (F.kind === 'party') { const fid = 'bk' + id + 'f'; const ok = await O.pay({ id: fid, rev: 0, fromPartyId: H.id, toPartyId: F.p.id, amount: r.fee, date, note: fn, posPending: false, posVoucher: '' }); if (ok === false) throw Error('Charges nahi lage'); return fid; }
+  if (!O.post) return '';
+  const base = { amount: r.fee, date, note: fn, dailyIncluded: false, posPending: false, bankSms: id };
+  await O.post([{ ...base, id: 'bk' + id + 'f', kind: 'collection', partyId: H.id, posNo: true }, { ...base, id: 'bk' + id + 'g', kind: 'expense', account: F.name, partyId: '' }]);
+  return 'bk' + id + 'f|bk' + id + 'g';
+}
 // ---------- ✓ lagao ----------
 async function apply(id, auto = false) {
   const x = rows().pend.find(z => z.d.id === id); if (!x || busy.has(id)) return;
   if (!auto && !capOk('hbl.ok')) { O.notice?.('Is kaam ki ijazat nahi — malik se kahein'); return; }
-  const r = x.r, H = bankOf(r); if (!H) { if (!auto) O.notice?.(r.kind === 'card' ? 'Pehle chunein: card …' + r.card + ' kis khate ka' : acctK(r.acct) ? 'Pehle chunein: yeh kaun sa account hai (A/C …' + acctK(r.acct) + ')' : 'Pehle HBL khata chunein'); return; }
+  const r = x.r, H = bankOf(r); if (!H) { if (!auto) O.notice?.(r.kind === 'card' ? 'Pehle chunein: card …' + r.card + ' kis khate ka' : (acctK(r.acct) || holderAcct(r)) ? 'Pehle chunein: yeh kaun sa account hai (A/C …' + (acctK(r.acct) || holderAcct(r)) + ')' : r.bankAc === 'alfalah' ? 'Pehle chunein: Alfalah ka kaun sa account' : 'Pehle HBL khata chunein'); return; }
   const BW = r.kind === 'card' ? 'Card' : r.bankAc === 'alfalah' ? 'Alfalah' : 'HBL';   // v2.99.75: note ka pehla lafz
   const w = who(), own = O.owner && O.owner(), today = O.today ? O.today() : '';
   const date = own && r.day && r.day <= today ? r.day : today;
-  const note = (`${BW} ${r.dir === 'in' ? 'aaye' : 'gaye'} · ${r.name}${r.bank ? ' (' + r.bank + ')' : ''}${r.via ? ' · ' + r.via : ''}${r.txn ? ' · TXN ' + r.txn : ''}${date !== r.day && r.day ? ' · asal din ' + r.day : ''}`).slice(0, 900);
+  const note = (`${BW} ${r.dir === 'in' ? 'aaye' : 'gaye'} · ${r.name || 'naam nahi'}${r.bank ? ' (' + r.bank + ')' : ''}${r.via ? ' · ' + r.via : ''}${r.txn ? ' · TXN ' + r.txn : ''}${date !== r.day && r.day ? ' · asal din ' + r.day : ''}`).slice(0, 900);
   busy.add(id); paint();
   try {
     let partyId = '', entryId = '';
@@ -283,13 +314,14 @@ async function apply(id, auto = false) {
       }
       const k = aliasKey(r.name); if (k && alias[k] !== s.p.id) { alias = { ...alias, [k]: s.p.id }; O.cloud.bankAliasSet(alias).catch(() => {}); }
     }
+    const fe = await postFee(id, r, H, date); if (fe) entryId = (entryId ? entryId + '|' : '') + fe;   // v2.99.76: Alfalah charges
     await O.cloud.bankSmsSet(id, { st: 'done', by: String(w.uid || ''), byName: String(w.name || '').slice(0, 60), doneAt: Date.now(), partyId, entryId: String(entryId || ''), kind: r.kind });
     pick.delete(id); O.notice?.(`${auto ? '🤖 Khud laga: ' : '✓ '}${m(r.amt)} — ${x.self ? '⇄ ' + H.name + ' → ' + (bankOf(x.self.r)?.name || '') : (r.kind === 'card' || r.kind === 'fee') ? r.name + ' → ' + (mTo(r)?.name || 'kharcha') : r.kind === 'bill' ? r.name + ' → ' + (billTo()?.name || 'kharcha') : r.kind === 'cash' ? 'cash HBL mein jama' : (r.dir === 'in' ? r.name + ' → HBL' : 'HBL → ' + r.name)}`);
   } catch (e) { if (auto) autoFail.add(id); O.notice?.('⚠️ ' + (auto ? 'Khud nahi laga (' + (r.name || '') + '): ' : '') + (e?.message || e)); }
   finally { busy.delete(id); paint(); onCount(rows().pend.length); }
 }
 // 🤖 v2.99.58: jo naam app ko YAAD hai (malik ne pehle khud khata chuna) — SMS / email aate hi khud lag jaye. Naya naam = ☐ hi rahe.
-const autoFail = new Set(); let autoBusy = false;
+const autoFail = new Set(), feeFail = new Set(); let autoBusy = false;
 async function autoRun() {
   if (autoBusy || !docs || !canUse() || !O.post || !hbl()) return;
   autoBusy = true;
@@ -301,6 +333,14 @@ async function autoRun() {
     // v2.99.75 ek dafa (malik): Alfalah Noor Traders ka khata = A/C …0294 (malik ne bataya) + Server PC us mein aaye paise khud lagaye
     if (O.owner && O.owner() && !alias['@alf1']) { const p = (O.parties ? O.parties() : []).find(z => z && !z.deleted && /alfalah|alflah/i.test(z.name || '') && /noor|traders|\bnt\b/i.test(z.name || ''));
       alias = { ...alias, '@alf1': '1', ...(p && !alias['@a:0294'] ? { '@a:0294': p.id, '@pcin:0294': '1' } : {}) }; try { await O.cloud.bankAliasSet(alias); } catch {} }
+    // v2.99.76: len-den pehle lag gaya (naam wali email se) aur charges wali email baad mein aayi — charges ab laga do (ek dafa, pakki ID)
+    for (const x of rows().done) {
+      if (!(x.r.fee > 0) || x.r.dir !== 'out' || x.d.st !== 'done' || x.d.kind === 'dup' || String(x.d.entryId || '').includes('bk' + x.d.id + 'f') || feeFail.has(x.d.id)) continue;
+      if (!x.r.day || x.r.day < '2026-10-14' || !bankOf(x.r)) continue;
+      try { const date = x.r.day <= (O.today ? O.today() : '') && O.owner && O.owner() ? x.r.day : (O.today ? O.today() : x.r.day);
+        const fe = await postFee(x.d.id, x.r, bankOf(x.r), date);
+        if (fe) await O.cloud.bankSmsSet(x.d.id, { entryId: (x.d.entryId ? x.d.entryId + '|' : '') + fe }); } catch { feeFail.add(x.d.id); }
+    }
     for (const x of rows().pend) {
       if ((x.r.kind === 'cash' && x.r.dir !== 'in') || autoFail.has(x.d.id) || busy.has(x.d.id) || pick.has(x.d.id)) continue;
       if (!x.r.day || x.r.day !== (O.today ? O.today() : '')) continue;   // v2.99.58: purani tareekh = pehle poocho, khud nahi
@@ -356,12 +396,15 @@ const restUrl = () => `https://firestore.googleapis.com/v1/projects/${O.projectI
 const notifBody = k => `{"fields":{"k":{"stringValue":"${k}"},"src":{"stringValue":"notif"},"from":{"stringValue":"HBL Mobile"},"text":{"stringValue":"{not_title} — {notification}"}}}`;   // v2.99.74: 🔔 MacroDroid Notification Received
 const smsBody = k => `{"fields":{"k":{"stringValue":"${k}"},"src":{"stringValue":"sms"},"from":{"stringValue":"14250"},"text":{"stringValue":"{sms_message}"}}}`;   // v2.99.58: MacroDroid ka magic text seedha — copy = paste, kuch badalna nahi
 function gasCode(k) {
-  return `// Blue Khata — HBL email (paise GAYE) -> 📩 HBL Inbox. Google ke server par har 5 minute. Kuch mitata / bhejta nahi, sirf parhta hai.
+  return `// Blue Khata v2 — HBL + Bank Alfalah emails -> 📩 Bank Inbox. Google ke server par har 5 minute. Kuch mitata / bhejta nahi, sirf parhta hai.
+// Yehi EK code har us Gmail mein jahan bank ki email aati hai (NOORTRADERS145 · googel6235 · hp6235) — jo email us Gmail mein nahi, woh bas nahi milti.
 const KEY = '${k}';
 const URL = '${restUrl()}';
-function hblMail() { bhejo('from:digital.banking@hbl.com -label:BK newer_than:7d'); }
-// ▶ dobara: pichhle 14 din ki SAB HBL emails phir bhejo (BK label ho tab bhi) — app wahi TXN dobara nahi lagati
-function dobara() { bhejo('from:digital.banking@hbl.com newer_than:14d'); }
+const HBL = 'from:digital.banking@hbl.com';
+const ALF = 'from:(email.notification@bankalfalah.com OR ibanking@bankalfalah.com) after:2026/10/13';   // Alfalah: sirf len-den wali (statement nahi) · purani nahi
+function hblMail() { bhejo(HBL + ' -label:BK newer_than:7d'); bhejo(ALF + ' -label:BK newer_than:7d'); }
+// ▶ dobara: pichhle 14 din ki SAB emails phir bhejo (BK label ho tab bhi) — app wahi TXN / Ref dobara nahi lagati
+function dobara() { bhejo(HBL + ' newer_than:14d'); bhejo(ALF + ' newer_than:14d'); }
 function bhejo(q) {
   const label = GmailApp.getUserLabelByName('BK') || GmailApp.createLabel('BK');
   const threads = GmailApp.search(q, 0, 100);
@@ -408,11 +451,12 @@ function setupHTML() {
     <li>Action ➕ → <b>HTTP Request</b> → <b>POST</b> → URL: ${copyBtn('url', 'URL copy')} paste.</li>
     <li>Content body → <b>application/json</b> → ${copyBtn('abody', 'Alfalah body copy')} → purana mita kar <b>paste</b>.</li>
     <li>Naam "Alfalah → Blue Khata" → Save ✓. Pehla SMS aate hi yahan "kaun sa account / card?" — aik dafa chunein (➕ naya khata bhi).</li></ol>
-    <h4>✉️ 2 · Paise GAYE — Gmail (NOORTRADERS145@gmail.com, ek dafa)</h4><ol>
-    <li>Browser mein <b>script.google.com</b> kholein (NOORTRADERS145 se login) → <b>New project</b>.</li>
+    <h4>✉️ 2 · Gmail — HBL + Alfalah emails (har Gmail mein ek dafa)</h4><ol>
+    <li><b>Kaun si Gmail:</b> HBL → <b>NOORTRADERS145</b> · Alfalah account / charges → <b>googel6235</b> · Alfalah "sent to …" (naam) → <b>hp6235</b>. <b>Yehi ek script</b> teeno mein.</li>
+    <li>Browser mein <b>script.google.com</b> kholein (us Gmail se login) → <b>New project</b>. Jahan pehle se script lagi hai wahan wohi project kholein.</li>
     <li>Wahan likha sab mita kar ${copyBtn('gas', 'Script copy')} paste → 💾 Save.</li>
     <li>Upar function list mein <b>setup</b> chunein → <b>▶ Run</b> → Review permissions → apna account → Advanced → "Go to … (unsafe)" → <b>Allow</b>.</li>
-    <li>Bas — ab har 5 minute HBL ki nayi email yahan aayegi (Gmail mein "BK" label lagta hai).</li>
+    <li>Bas — ab har 5 minute nayi email yahan aayegi (Gmail mein "BK" label lagta hai). Alfalah ki do emails (naam wali + charges wali) ka Ref ek = <b>ek hi len-den</b>.</li>
     <li>Purani emails nahi aayin? Naya script paste → Save → function list mein <b>dobara</b> chunein → <b>▶ Run</b> = pichhle 14 din ki sab dobara (wahi TXN do dafa nahi lagta).</li></ol>
     <p class="bk-note">🔒 Chaabi kisi ko na bhejein. Shak ho to ${O.owner && O.owner() ? '<button type="button" class="bk-mini" data-bk-newkey="1">🔁 nayi chaabi</button>' : ''} — phir MacroDroid body aur script dobara lagani hogi.</p></div>`;
 }
@@ -518,7 +562,7 @@ const fromDay = () => { const t = O.today ? O.today() : new Date().toISOString()
 function tickCard(x, compact) {
   const r = x.r, id = esc(x.d.id), cash = r.kind === 'cash', s = cash ? null : sugOf(x), q = qOpen === x.d.id, b = busy.has(x.d.id);
   const can = !b && !!bankOf(r) && capOk('hbl.ok') && (x.self ? true : isKh(r) ? !!kTo(r) : (r.dir === 'in' || (cash ? false : !!s)));
-  const who = !bankOf(r) ? `<small>🏦 A/C …${esc(acctK(r.acct))} — kaun sa account? HBL screen par chunein</small>` : r.kind === 'bill' ? (billTo() ? `🧾 <b>${esc(billTo().name)}</b> <small>bank se · Daily mein nahi</small>` : '<small>🧾 kharcha khata HBL screen par chunein</small>') : r.dir === 'in' ? `🏦 <b>${esc(hbl() ? hbl().name : 'HBL')}</b> <small>Akhrajat</small>` : cash ? (r.dir === 'in' ? '🏦 Cash jama (branch) → "Cash diya" closing se' : '🏧 ATM — khata mein haath se')
+  const who = !bankOf(r) ? `<small>🏦 A/C …${esc(acctK(r.acct) || holderAcct(r))} — kaun sa account? HBL screen par chunein</small>` : r.kind === 'bill' ? (billTo() ? `🧾 <b>${esc(billTo().name)}</b> <small>bank se · Daily mein nahi</small>` : '<small>🧾 kharcha khata HBL screen par chunein</small>') : r.dir === 'in' ? `🏦 <b>${esc(hbl() ? hbl().name : 'HBL')}</b> <small>Akhrajat</small>` : cash ? (r.dir === 'in' ? '🏦 Cash jama (branch) → "Cash diya" closing se' : '🏧 ATM — khata mein haath se')
     : s && !q ? `👤 <b>${esc(s.p.name)}</b> <small>${esc(s.why)}</small>${compact ? '' : ` <button type="button" class="bk-mini" data-bk-chg="${id}">✏️</button>`}`
     : compact ? '<small>❓ khata nahi mila — HBL screen par chunein</small>' : `<div class="bk-pick"><input type="search" placeholder="🔍 kis ka khata?" data-bk-q="${id}" autocomplete="off"><div class="bk-res" id="bkRes-${id}"></div></div>`;
   return `<div class="bk-row pend ${r.dir}"><label class="bk-tick${can ? '' : ' off'}"><input type="checkbox" data-bk-tick="${id}"${can ? '' : ' disabled'}${b ? ' checked' : ''}><span></span></label>
@@ -549,12 +593,15 @@ function openNote(ref) {
 // ---------- ↩ wapas lo (malik) — dono khaton se transfer hatao, card phir ☐ ----------
 async function undo(docId) {
   const d = (docs || []).find(z => z.id === docId); if (!d || !d.entryId) return;
-  const e = (O.entries ? O.entries() : []).find(z => z && !z.deleted && z.transferId === d.entryId && z.transferRole === 'out') || (O.entries ? O.entries() : []).find(z => z && !z.deleted && z.transferId === d.entryId);
+  const ids = String(d.entryId).split('|'), feeIds = ids.filter(i => i === 'bk' + docId + 'f' || i === 'bk' + docId + 'g'), main = ids.filter(i => !feeIds.includes(i)).join('|');   // v2.99.76: charges alag
+  const e = (O.entries ? O.entries() : []).find(z => z && !z.deleted && z.transferId === main && z.transferRole === 'out') || (O.entries ? O.entries() : []).find(z => z && !z.deleted && z.transferId === main);
   const r = parseBank(d.text, d.src, d.subj);
   if (!confirm(`↩ Wapas lein?\n\n${m(r.amt)} — ${r.name}\nDono entries (khata + Daily) hat jayengi aur card dobara ☐ ban jayega.`)) return;
   busy.add(docId); paint();
   try {
-    if (String(d.entryId).includes('|') || /^bk.+a$/.test(String(d.entryId))) { await O.unpost(String(d.entryId).split('|')); }
+    if (feeIds.length) await O.unpost(feeIds);
+    if (!main) { /* sirf charges the */ }
+    else if (main.includes('|') || /^bk.+a$/.test(main)) { await O.unpost(main.split('|')); }
     else if (e) { const ok = await O.pay({ id: e.transferId, rev: e.rev, remove: true, fromPartyId: e.fromPartyId, toPartyId: e.toPartyId, amount: e.amount, date: e.date, note: e.note }); if (ok === false) throw Error('Transfer nahi hata'); }
     await O.cloud.bankSmsSet(docId, { st: '', by: '', byName: '', doneAt: 0, partyId: '', entryId: '', kind: '' });
     autoFail.add(docId);   // v2.99.59: wapas liya = is phone par khud dobara nahi lagega

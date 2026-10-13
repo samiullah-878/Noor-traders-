@@ -4442,3 +4442,22 @@ card 0605 limit 10,00,000 (due 6, outstanding 9,70,314). MacroDroid: SMS 8287 ->
 * Rules: koi badlav nahi (2.49 hi — src 'sms' Alfalah ke liye bhi; update keys kind/note pehle se allowed).
 Test: hd/alf2.mjs (self transfer, statement, card khata opening, merchant, borrow+kharcha, hero), hd/tw.mjs, bp/t2.js, bp/t3.js ALL OK.
 AGLA: 0605 statement SMS (malik subha bhejega) · card PAYMENT ka SMS namoona · purane card SMS (aaj se pehle) skip karna.
+
+=== v2.99.76 (2026-10-14) — ✉️ BANK ALFALAH EMAILS (Gmail script) ===
+Malik: Alfalah ki email bhi aati hai. Do qism (dono mein wahi Ref FT…):
+  ibanking@bankalfalah.com -> hp6235@gmail.com: "Dear SAMI ULLAH PKR 1,000.00 sent to NOOR TRADERS -RAAST ID **03**-***2515 on 14-Oct-2026 00:21 Ref FT… via RAAST" (naam hai, account nahi)
+  email.notification@bankalfalah.com -> googel6235@gmail.com: "Transaction Successful … Ref# FT… Account Title · Account/IBAN *****5826 · Transaction Type Debit/Funds Transfer · Tax/Charges PKR 268/- · Amount PKR …" (account + charges, naam NAHI)
+  HBL email -> NOORTRADERS145. Noor Traders Raast ID (03…2515) abhi HBL par — malik badlega; app hardcode nahi karti (selfPairs doosri taraf khud dhoondta hai).
+* Parser (bank-sms.js = pc/bank-parchi.js EK JAISE): naya hissa Alfalah SMS se pehle — ibanking ("Dear X … sent/received to/from … Ref FT…", sirf jab subj ALFA ya Ref FT…)
+  -> holder, name, txn=Ref · notification ("Transaction Successful" + Account/IBAN) -> acct 4, fee (paise), via = Transaction Type, name '' + noName.
+  Credit wali notification ka namoona abhi NAHI dekha (qiyas: Type mein credit/received = aaye).
+* bank-inbox.js: refMerge(all) — Alfalah, wahi txn: naam / account / charges / holder sab docs mein bhar do (key pehle hi 'T'+Ref = ek).
+  ALF_HOLDER {SAMIULLAH:'5826', NOORTRADERS:'0294'} — email mein account na ho to "Dear X" se (bankOf, acctAsk, apply notice).
+  postFee(): r.fee > 0 + gaye = bank khate par 'collection' (bk<doc>f) + expense (bk<doc>g) — khata @m:BANKFEE yaad ho to wo, warna kharcha "Bank charges".
+  Party ho to O.pay id bk<doc>f. entryId mein '|bk…f|bk…g' jurta hai; undo() charges alag hatata hai.
+  autoRun: pehle naam wali email se lag gaya + charges wali baad mein aayi -> charges khud (feeFail alag set, sirf 2026-10-14 se).
+  gasCode v2: HBL + Alfalah (from:(email.notification OR ibanking) after:2026/10/13) — yehi code teeno Gmail mein. Setup "✉️ 2" text naya.
+* PC bank-parchi v2.4: wahi Ref/TXN do docs = pehla done ho to doosra 'dup' (seen 'R<txn>|<doc>'), na post na parchi. Alfalah holder -> account. manifest 2026-10-14.2.
+* Rules: koi badlav nahi (src 'email' pehle se).
+Test: hd/alf3.mjs (Ref jor + self transfer Samiullah->HBL + charges + undo + charges baad mein), bp/t4.js (PC Ref jurwan), alf2/tw/t2/t3 ALL OK.
+AGLA: malik teeno Gmail mein naya script (hp6235 naya project + setup). "Alfalah Samiullah" khata (*5826) banana. Credit email namoona.
