@@ -3321,3 +3321,19 @@ html.dk body .pp-head .pp-meta input,html.dk body .pp-head .pp-meta select{backg
 html.dk body .pp-head .pp-meta.pp-add input{background:rgba(214,158,28,.12)!important;color:#ffd27a!important;border-color:rgba(214,158,28,.4)!important}
 html.dk body .pp-head .account-tools .sh-wide,html.dk body .pp-head .account-tools .sh-wide[data-pp-ai]{background:var(--glass2,rgba(255,255,255,.08))!important;color:var(--accent-ink,#8fd8ff)!important}
 html.dk body .jc-mrp .jc-f input{background:rgba(142,92,200,.14)!important;color:var(--ink,#e8eeff)!important}
+/* v2.99.72: 📦 transfer check — do tick (dene wala / lene wala) */
+.tc-2{display:grid;gap:6px;margin:8px 0 2px}
+.tc-stp{display:grid;grid-template-columns:26px 1fr;gap:2px 8px;align-items:center;padding:8px 10px;border-radius:12px;background:#f5f7fb;border:1px solid #e1e7f2}
+.tc-stp i{grid-row:1/3;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:900;font-size:13px;background:#dfe6f3;color:#3d4f72}
+.tc-stp b{font-size:13px;color:#1a2d53}
+.tc-stp.done{background:linear-gradient(135deg,#ecfdf3,#dcfce7);border-color:#9ee6b8}.tc-stp.done i{background:#16a34a;color:#fff}
+.tc-stp.next{border-color:#93b4f5;box-shadow:0 0 0 3px rgba(59,110,220,.10)}.tc-stp.next i{background:#2e5194;color:#fff}
+.tc-sd{font-size:12px;font-weight:700;color:#15803d}
+.tc-sw{font-size:12px;color:#6b7c93}.tc-sw.lock{color:#9a6a08}
+html body .tc-stp button.tc-give,html body .tc-res button.tc-give{justify-self:start;min-height:38px!important;margin-top:4px;padding:6px 14px!important;border-radius:999px!important;border:0!important;background:linear-gradient(135deg,#d69e1c,#f0c45a)!important;color:#3b2500!important;font-weight:900!important;font-size:13px!important;box-shadow:0 4px 12px rgba(214,158,28,.3)}
+.tc-n.ng{box-shadow:inset 4px 0 0 #d69e1c}
+.tc-st.ng{color:#9a6a08!important;font-weight:800}
+html body button.tc-giver{width:100%;margin:4px 0 8px;min-height:40px!important;border-radius:12px!important;border:1px dashed #d69e1c!important;background:#fffaf0!important;color:#7a5409!important;font-weight:700!important;font-size:13px!important}
+@media (prefers-color-scheme:dark){html:not([data-theme="light"]) .tc-stp{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.12)}html:not([data-theme="light"]) .tc-stp b{color:inherit}}
+html.dk .tc-stp{background:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.12)!important}html.dk .tc-stp b{color:var(--ink,#e8eeff)}html.dk .tc-stp.done{background:rgba(22,163,74,.16)!important}
+html.dk button.tc-giver{background:rgba(214,158,28,.12)!important;color:#ffd27a!important}

@@ -4369,3 +4369,25 @@ Malik ne POS Sale Register Summary bheji (counter 1,614,600.80 + Credit "whole s
 "wholesale ka bill sale mein add karo — system ki sale". Is liye v1.6 ka "A (sirf cash)" badal kar: isWsName party ka TotalSale POORA;
 baqi udhaar bill (doosre customer) pehle jaisa = max(CashReceived, CRV). Note: "📦 Wholesale N bill Rs X POORA shamil (cash mila Y · udhaar Z)".
 Test: 1,614,600.80 + 197,164.65 = 1,811,765.45 (POS jaisa). Dhyan: galla mein wholesale udhaar jitna farq dikh sakta hai (malik ki marzi).
+
+=== v2.99.72 + Rules 2.48 (2026-10-13) — 📦 Transfer check: DO TICK (Zeeshan "maal de diya" -> dukan "mil gaya") ===
+Malik: "transfer note ki screen par bill check mein do check box — ek par Zeeshan: pehle wo tick kare maine samaan de diya, phir shop mein
+koi larka tick kare. Mazeed security, koi larka awein transfer note nahi banayega". Malik ne plan OK kiya (Zeeshan ka apna login maana).
+pos-stock.js (TRANSFER CHECK block):
+- TC2_FROM = 1791903600000 (13 Oct 8:00 pm PKT) — is se pehle ke note purane (ek tick). TC_SHOP = 1 (dukan; rules mein bhi 1).
+- tcGKey = tcKey + 'G' (transferChecks/<T123[E2]>G, status 'diya'). tcState: g (pehla tick), ng (chahiye magar nahi).
+- tcGiver = stockConfig.tcGiver || 'Zeeshan'; tcIsGiver = malik ya login naam mein giver (lowercase includes). tcGodamSide(t, step):
+  step 1 = from != 1, step 2 = to != 1. tcCanStep = godam ki taraf sirf giver + step 1 par CAPS 'stock.tcgive'.
+- Card: tcStepsHTML (1 / 2 qadam, naam + waqt, "☐ Tick — maal de diya" data-tc-give), checkbox (bulk step 2) sirf jab ng nahi + tcCanStep 2.
+  Status: "📦 Zeeshan ne abhi tick nahi kiya" / "🚚 X se raste mein (diya HH:MM)". KPI "📦 de diya tick nahi". Malik: tc-giver chip ✎
+  (prompt -> cloud.setTcGiver). tc-more: 1 number ka naam / device + malik ke liye "De diya tick hatao".
+- Scan: ng -> tcRes 'nogive' (dene wala khud ho to wahin tick button), step 2 ki ijazat nahi -> 'noside'. tcSave / tcSaveOne / tcBulk guards.
+- tcGive(key): confirm, saveTransferCheck(gk, status diya), audit 'tr-give'. tcBadge 📦, hub stChip "📦 De diya tick nahi".
+cloud.js: saveTransferCheck id regex G?; G = status 'diya', note ''. setTcGiver(n) -> blueAccess/stockConfig {tcGiver} merge (sirf malik).
+app.js CAPS stock: ['stock.tcgive','📦 Transfer: "maal de diya" tick'].
+firestore.rules 2.48: tcGiverOk() = isOwner || staffAccount().name.lower() matches '.*'+stockConfig.tcGiver.lower()+'.*' (default Zeeshan);
+  transferChecks create: id '^T..(E..)?G?$'; G: status 'diya', note '', (from == 1 || tcGiverOk()); baqi: ok/farq, (issuedAt < TC2_FROM ||
+  exists(id+'G')), (to == 1 || tcGiverOk()). firestore-rules-2.48.html (copy button) — malik ko bheji. Emulator nahi chala (jar blocked) —
+  sirf bracket balance.
+DHYAN: Zeeshan ke login ka naam mein "zeeshan" hona chahiye (blueStaffKeys.name) — warna sirf malik tick kar sakega; malik ✎ se naam badle.
+Test: scratchpad hd/tc2.mjs (Mithu / Zeeshan / malik, T5 godam->dukan, T6 dukan->godam, T4 purana) ALL OK + tce.mjs ALL OK + tc2.png.
