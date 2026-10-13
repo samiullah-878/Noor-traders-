@@ -3239,3 +3239,32 @@ html body .jc-kulrow button.jc-kulb{flex:none;align-self:flex-end;height:44px;mi
 .jaanch-dlg .jc-div,.jaanch-dlg .jc-bsnote{font-size:11px;padding:4px 9px;margin-bottom:4px}
 html body .jaanch-dlg .jc-kulrow .jc-kul input{height:42px!important}
 @media (prefers-color-scheme:dark){html:not([data-theme="light"]) .jc-div{background:#2a2414;border-color:#6b5420;color:#e9d39a}html:not([data-theme="light"]) .jc-div b{color:#fff2c9}html:not([data-theme="light"]) .jc-bsnote{background:#14263d;color:#a9cdfa}}
+/* ===== v2.99.69: 👦 LARKA SALE REPORT (larka.js) — card / chips / kpi barcode report wale (bc-*, mchips, rc): looks khud lagti hain ===== */
+.lk-filter{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.lk-filter label{display:grid;gap:2px;font-size:11.5px;font-weight:700;opacity:.85}
+.lk-filter label:first-child{grid-column:1/-1}
+.lk-filter select,.lk-filter input{width:100%;min-height:42px;border-radius:12px;padding:0 10px;font-size:14px}
+.lk-kpis{grid-template-columns:1.5fr 1fr 1fr}
+.lk-kpis b{font-size:18px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.lk-age{margin:0;font-size:12px;text-align:center;opacity:.75}
+.lk-age.warn{opacity:1;color:#c0392b;font-weight:800}
+.lk-man{display:grid;gap:6px;padding:10px 12px}
+.lk-row{display:grid;grid-template-columns:1fr auto;gap:2px 8px;align-items:center}
+.lk-row small{grid-column:1;font-size:12px;font-weight:700;opacity:.7}
+.lk-row .bc-cnt{grid-row:1/3;grid-column:2;white-space:nowrap}
+.lk-bar{display:block;height:6px;border-radius:99px;background:rgba(127,140,160,.25);overflow:hidden}
+.lk-bar u{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#2b4a86,#22a862)}
+.lk-lines{padding:2px 12px}
+.lk-line{display:grid;grid-template-columns:1fr auto minmax(96px,auto);gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid rgba(127,140,160,.22);font-size:13.5px}
+.lk-line:last-child,.lk-bill:last-child{border-bottom:0}
+.lk-line small{font-size:12px;opacity:.7}
+.lk-line b,.lk-bill b{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.lk-bill{display:grid;grid-template-columns:auto 1fr auto;gap:2px 10px;align-items:baseline;padding:8px 0;border-bottom:1px solid rgba(127,140,160,.22);font-size:13.5px}
+.lk-bill b:first-child{text-align:left;font-family:ui-monospace,monospace}
+.lk-bill span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lk-bill small{grid-column:1/-1;font-size:12px;opacity:.7}
+.lk-bill em{font-style:normal;font-weight:800;color:#c0392b}
+.lk-sec{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px;margin-top:8px}
+.lk-sec>b{font-size:15px}
+.lk-idle{margin:0;font-size:12.5px;opacity:.75}
+.lk-note{margin:0;padding:8px 12px;border-radius:12px;border-left:4px solid #c9792b;background:rgba(201,121,43,.12);font-size:12.5px}

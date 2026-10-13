@@ -4266,3 +4266,33 @@ app.js: hblAcc(id) = isBank(id) && !party.bank (loan wale bank ke apne alfaaz pe
  ledgerTitles ['💰 Payment aai (HBL mein)','💸 Payment gayi (HBL se)'] · entryLabel payment '💰 HBL mein aaye', borrow/collection
  '💸 HBL se gaye' (transfer wali entries waisi) · entryTitle (form) · neeche ke button '💰 Payment aai' (payment) / '💸 Payment gayi' (borrow).
 Data, baqaya, POS, rules — kuch nahi badla.
+
+=== v2.99.69 (2026-10-13) — 👦 LARKA SALE REPORT: nayi screen (sirf malik) + PC larka-stats.js (Claude Code chat, server PC par) ===
+Malik: "larka sale report app mein ek nayi screen bana kar daal do aur update bhi hoti rahe". (PC par yeh report pehle se thi:
+C:\khata-sync\larka-report\larka-report.js v3 -> larka-report.html, sirf double-click par.)
+PC (pc/ folder, KHATA-DOCTOR manifest 2026-10-13.2):
+- larka-stats.js v1 (NAYI): wohi SELECT jo larka-report.js v3 — Larka (SP Man) = Sale.SupplyManID, POS user = Sale.CreatedBy -> Users.FullName;
+  cancel (DocStatusID 3) nahi; POS user mein "stock fraq" party nahi. SQL mein kuch nahi likhti.
+  posStats/larka {at, v, j}: j = JSON string {larka:{men,days:[[din,id,bills,total]],bina:[[din,bills,total]]}, user:{men,days}} (din-wise, shuru se; ~14 KB)
+  posStats/larka-bills {at, v, j}: j = JSON string {larka:{from,days,bills:[[no,din,waqt,id,total,udhaar,customer]]}, user:{...}} (larka 90 din, POS user 3 din; ~120 KB;
+  na badle to dobara nahi likhti — last-larka.json mein hash). j string is liye ke Firestore list ke andar list nahi rakhta.
+  "--dekho" = Firestore mein kuch nahi, data larka-dekho.json mein. Total poore rupay (round).
+- larka-auto.bat (NAYI): har 5 minute (ping 301), log larka-log.txt. manifest services mein "👦 Larka sale report (har 5 min)" periodic:true
+  (sales-stats ke baad) + files mein dono ke sha. Doctor khud utha kar chalata hai; server PC par loop haath se bhi chala di gayi.
+App:
+- larka.js (NAYI): renderLarka / larkaSetup / larkaStop. Chips Larka (SP Man) / POS user · naam ki list · tareekh se / tak + Aaj / Kal / Is hafte /
+  Pichhla hafta / Is mahine / Pichhla mahina / Shuru se · KPI (total sale, bills, fi bill) · naam-wise card (hissa % + patti) · "naam ke baghair" note ·
+  Tafseel Din / Hafta (Peer-Itwaar) / Mahina-wise (120 tak) · Bills ki list (Dikhayein, 300 tak) · "PC se update: … min pehle" (20 min se purana = laal ⚠) ·
+  📄 PDF · WhatsApp (openReportPreview). Shakal barcode report wali classes (bc-*, mchips, rc, nt-empty) par — looks / dark khud lagti hain;
+  apni lk-* classes style.css ke aakhir mein (rang sirf opacity / rgba — themes.css dobara banane ki zaroorat nahi).
+- cloud.js: listenLarka(cb) — posStats/larka + posStats/larka-bills par onSnapshot (screen khuli ho to khud taza), j ko JSON.parse; wapas unsubscribe.
+  getPosStats in dono docs ko chhor deta hai (un mein 'items' list nahi).
+- app.js: import; view 'larka' sirf owner() (route + allowedView + nav larkaNav chhupa); title '👦 Larka Sale Report'; renderSurface mein
+  larkaStop / renderLarka; larkaSetup({cloud, notice, pdf}); BAR_VIEWS, DESK_NAV mein larka; ⇩ PDF button is screen par chhupa.
+- index.html: nav button "👦 Larka Sale" (Counter Nazar ke baad) + modulepreload. sw.js: ASSETS mein larka.js.
+Rules: koi tabdeeli nahi (2.47 hi) — posStats read pehle se isOwner() || blueStaff(). Mulazim ko dikhana ho to app.js mein owner() ki jagah
+  can('v:larka') + PERM_LIST / CAP_VIEW mein 'v:larka' (abhi malik ne nahi kaha).
+Test: test/larka.html (asal larka.js + style.css + themes.css, asal POS data larka-dekho.json, naqli cloud) — frost + glass (dark), mobile 375:
+  Larka / POS user, Aaj / Kal / Shuru se, Hafta-wise, ek larka, bills, PDF, purana data ⚠, khali data — sab theek. 12-Oct ka larka-wise
+  hisaab seedha SQL se mila (8 naam, 326 bill, Rs 1,749,561 — bilkul barabar). node --check: app.js, cloud.js, larka.js, sw.js.
+  Asal app mein login kar ke (Firebase) test NAHI hua — pehli dafa malik dekhe.
