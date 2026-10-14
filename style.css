@@ -3357,3 +3357,9 @@ html body header .bkp-accts button.on,html body .bkp-accts button.on{background:
 .bkp-card .bkp-chip{margin-top:2px}
 .bkp-who.self{background:linear-gradient(135deg,#eef6ff,#e0edff)!important;border-color:#a9c4f5!important}
 html body .bkp-ic.new{border:1px dashed #16a34a!important;color:#15803d!important;background:#f0fdf4!important;font-weight:800!important}
+/* v2.99.77: 🔗 link WhatsApp ke andar khula — Chrome mein kholo */
+.wv-warn{display:grid;gap:8px;margin:0 0 14px;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,#fff1f1,#ffe4e4);border:1.5px solid #f3a3a3;color:#7a1414;box-shadow:0 6px 18px rgba(180,30,30,.12);text-align:left}
+.wv-warn b{font-size:16px}.wv-warn small{font-size:13px;line-height:1.45;color:#8a2a2a}
+.wv-warn .wv-go{display:block;text-align:center;padding:12px;border-radius:12px;background:linear-gradient(135deg,#1a73e8,#0b57d0);color:#fff;font-weight:800;text-decoration:none;font-size:15px}
+.wv-warn .wv-row{display:flex;gap:8px}.wv-warn .wv-row button{flex:1;min-height:40px;border-radius:10px;border:1px solid #e7b4b4;background:#fff;color:#7a1414;font-weight:700}
+.wv-warn .wv-tip{font-size:12px;opacity:.85}

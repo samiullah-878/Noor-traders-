@@ -4461,3 +4461,18 @@ Malik: Alfalah ki email bhi aati hai. Do qism (dono mein wahi Ref FT…):
 * Rules: koi badlav nahi (src 'email' pehle se).
 Test: hd/alf3.mjs (Ref jor + self transfer Samiullah->HBL + charges + undo + charges baad mein), bp/t4.js (PC Ref jurwan), alf2/tw/t2/t3 ALL OK.
 AGLA: malik teeno Gmail mein naya script (hp6235 naya project + setup). "Alfalah Samiullah" khata (*5826) banana. Credit email namoona.
+
+=== v2.99.77 (2026-10-14) — 👥 ZEESHAN (naam wala mulazim): FULL APP ke andar hi saari di hui screens + logout bug ===
+Malik: "Zeeshan ka link expire ho jata ha, apps nahi khul rahi, login aa raha ha" -> "Full app ke andar saari screens daal do (jaise malik ke paas),
+baaqi alag screens waise hi rahein".
+* BUG (asal wajah): cloud.js onSession revoke — key.scope (= perms[0]) !== session.scope par LOGOUT. Naam wala mulazim Full se Stock dabata
+  (switchQuiet -> resume('stock')) ya app pichhli screen (sam-staff-last) par khulti = foran logout -> login page. Ab: scope key.scope ho YA key.perms mein ho.
+  Band / hataya / screen hata di = ab bhi foran logout.
+* app.js permIn(k): staff + Full scope + account.perms mein k. allowedView: stock / nazar / galla = owner || permIn. route(): permIn ho to scope switch NAHI
+  (Full ke andar hi view). Nav: nazarNav + naya 💰 gallaNav (malik + perm wale). switchPerm(): Full mein ho aur perm in-place = route(SW_VIEW[k]) (perm-bar chips
+  bhi), LAST_SCOPE='full'. Perm chip 'on' = jo view khula. Purchase / Sale / Gaari pehle se Full mein. Larka sirf malik.
+  Alag screen wale login (Sirf Stock / Sale / Galla …) bilkul waise hi. CAPS (andar ke on/off) wahi. Rules: koi badlav nahi (acctIs perms pehle se).
+* Link (?join=) 24 ghante -> 7 din (cloud.joinByTicket). WhatsApp / FB andar wala browser (UA '; wv)' / WhatsApp / FBAN) = link istemal NAHI:
+  laal box #wvWarn "🌐 Chrome mein kholo" (intent:// … package=com.android.chrome) · 📋 copy · "Phir bhi yahin" (sessionStorage sam-wv-ok). style.css .wv-warn.
+Test: hd/perm.mjs (Zeeshan Full+stock/nazar/galla, Full bina perm, Sirf Stock, malik, purana Full), hd/jn2.mjs (WhatsApp box), hd/jn.mjs (+document), hd/st.mjs ALL OK.
+AGLA: Zeeshan ko naya link (Chrome mein) — ek dafa.
