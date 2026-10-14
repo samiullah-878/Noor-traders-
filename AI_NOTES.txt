@@ -4506,3 +4506,13 @@ MALIK KI STANDING BAAT: "speed wala kaam jo kaam bhi karo us mein yaad rakho" �
   POS software ki apni chhapi parchi mein Urdu NAHI ho sakta. App: ⋮ → "🖨 Print setting (purchase · Urdu)" → 🔤 ON/Band (cloud.setPrintConfig urduSlip).
   manifest 2026-10-14.3 (+ urdu-names.js). Test scratchpad ur/t.js, g.js, n.js.
 Rules: koi badlav nahi.
+=== pc/gate-check.ps1 (2026-10-14) — POS (Retail Solution) ka APNA gate pass: kaunsi report file? (SIRF PARHTA) ===
+Malik: "POS wale system mein jo bhi gate pass ban raha hai godam 1 2 3 ka wo bhi isi tarah (sirf item + quantity, bara gehra)";
+POS mein F5 par bill + gate pass khud chhapte hain, edit par dobara — theek hai; "gate pass POS wala nikalna chahiye".
+* POS ka gate pass POS company ka program banata hai (hamara code nahi). Design badalna = us ki report file (rpt / rdlc / repx...)
+  pehchanni hai. gate-check.ps1: khuli "Retail Solution" window se exe ka folder, report engine DLL (Crystal / ReportViewer /
+  DevExpress / FastReport...), report files (gate/pass/store naam waali alag), andar "Gate Pass" likha (text wali), aur POS DB mein
+  gate / GetStore / print khane + setting tables (TOP 1). Natija C:\khata-sync\_gate.txt (notepad). Manifest mein NAHI (haath se jaanch).
+* AGLA: natija dekh kar: (a) rdlc / repx jaisi text file = wahi file naye design mein (backup ke saath), (b) rpt (Crystal) = designer
+  chahiye — ya (c) hamara watcher (purchase-parchi.js jaisa, dbo.Sale/SaleDetail GBranchID) F5 ke baad naya gate pass chhape aur POS
+  wala band ho (agar POS mein option ho).
