@@ -3376,3 +3376,5 @@ html body .pp-aimode button.on{background:linear-gradient(135deg,#172b52,#2e5194
 .urp-list{display:grid;gap:6px;margin-top:10px;max-height:62vh;overflow:auto}
 .urp-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line,#dfe5f0);background:var(--surf,#fff);text-align:left;font-weight:700}
 .urp-row b{font-family:'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',serif;font-size:18px;color:var(--accent-ink,#2b4a86)}.urp-row b i{font-family:inherit;font-size:13px;opacity:.6}
+/* v2.99.80: transfer hub — asal carton (ginti ke saath) */
+.thh-asal{font-style:normal;opacity:.75;font-size:.9em}

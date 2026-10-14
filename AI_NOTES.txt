@@ -4531,3 +4531,8 @@ Malik ne Transfer Voucher (JV) ki photo bheji — Urdu nahi tha (us waqt sirf it
 === 2026-10-14 (PC manifest 2026-10-14.5, app version wahi 2.99.79) — 🔤 Urdu bara + party naam Server PC khud ===
 Voucher Urdu: title 40, party 44, baqaya 36 · transfer note 40 · gate pass 48. Server PC (pos-khata-sync + urdu-names v1.2) har 10 min baqi
 parties ke Urdu naam AI se khud bana deta hai (app kholne ki zaroorat nahi). Malik: "Only parchi" — app ki khata list mein Urdu NAHI.
+
+=== v2.99.80 (2026-10-14) — ⇄ Transfer notes screen: carton REGISTER wali ginti se ===
+Malik: "yahan transfer register wala data" -> "nahi, only register se carton piece". renderTransferHub tot(): ctnG(x.c, ctnOf(item)) — ⚖️ carton
+ginti (jaise 4 = 1) wahi jo Transfer register mein; upar bara number + har note ki line. Farq ho to chhota "asal N ctn" (.thh-asal). Baqi screen wahi.
+Test scratchpad hd/th.mjs. (Purchase card par alag "✏️ Edit" button ka plan malik ke OK ka intezar — abhi 🧾 Bill = edit mode.)
