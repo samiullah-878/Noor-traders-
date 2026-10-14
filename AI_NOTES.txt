@@ -4551,3 +4551,10 @@ Malik: "poore month ka actual data — 1–10, 10–20, 20–30, poora mahina, w
   dark alag). CSS .ir-* (header ke andar safed card: html body .ir-root .ir-sec !important).
 * Nafa = abhi ka khareed rate — purane din ka andaza (malik ko bataya). Test scratchpad hd/ir.mjs (nakli data, patterns), irep/pc.js (PC fake SQL).
 * (Purchase auto-jor plan + card par ✏️ Edit plan abhi malik ke OK ka intezar.)
+
+=== v2.99.82 (2026-10-14) — 📊 Item report FIX: Firestore nested array ===
+item-report.js v1.1: Firestore list-ke-andar-list NAHI leta (d:[[...]] save hi nahi hota tha) — ab irep-<k> = {j: JSON string, n, at}, hissa ~600 KB
+tak (size se), wholesale 0 = [di,q,rs] (chhota). cloud.listenItemReport j parse (purana items bhi chalega). manifest 2026-10-14.7.
+BOJH (malik ne poocha): ~2,500 items × 75 din ≈ 1.1 MB JSON (≈0.4 MB gzip) = 2 hisse + meta. Likhai: 3 docs / ghanta = ~72 / din.
+Parhai: sirf report screen khuli ho — kholne par 3 docs, PC ka naya data aaye (ghante mein ek) to 3 aur. Free hadd: 50k parhai / 20k likhai roz,
+10 GiB / mahina download, 1 GiB storage — is report ka hissa 1% se bhi kam.

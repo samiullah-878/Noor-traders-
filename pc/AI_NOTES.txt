@@ -2904,3 +2904,6 @@ Malik: "font barha kar do or parties ka naam bi urdu main likh diya karo" (sirf 
 === 2026-10-14 · manifest 2026-10-14.6 — 📊 item-report.js (NAYA) ===
 * sales-stats.js v1.3 aakhir mein item-report.run({pool, sql, db}) — ghalti ho to sales-stats ka apna kaam phir bhi (try/catch).
 * 3 mahine, item × din × wholesale: posStats/irep-meta + irep-<k> (300 items / doc). Sirf SELECT. App "📊 Item report".
+
+=== 2026-10-14 · manifest 2026-10-14.7 — item-report.js v1.1 ===
+Firestore nested arrays ki ijazat nahi — irep-<k> ab {j: JSON string, n, at} (~600 KB / doc), wq/wrs 0 ho to nahi likhte. meta.bytes = kul size.

@@ -1,15 +1,16 @@
 // =====================================================================================================
-//  item-report.js  v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
+//  item-report.js  v1.1 (2026-10-14: Firestore list-ke-andar-list nahi leta — items ab JSON string 'j' mein, hissa ~600 KB tak) · v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
 //  Malik: "poore month ka actual data — 1–10, 10–20, 20–30, poora mahina, week wise; har item kaun si bik rahi, kin dino / hafton
 //         mein zyada, un par nafa kitna — chart, click par aage data".
 //  sales-stats.js (har ghante) ke aakhir mein chalta hai: run({ pool, sql, db }). SQL mein KUCH NAHI likhta — sirf SELECT.
 //  Arsa: 3 calendar mahine (do pichhle + ye mahina, aaj tak). Noor Traders / our factory / stock farq ke bill bahar, cancel (3) bahar.
 //  Wholesale: party ka naam blueAccess/reportConfig.wsNames (default "whole sale") — us ka hissa alag (app chip: saath / baghair).
 //  Nafa: har item ka ABHI ka khareed rate fi piece (raat-report jaisa perPiece / pieceCost) × ginti — purane din ka andaza.
-//  Firestore posStats/irep-meta {at, from, to, days[], n, chunks, ver} · posStats/irep-<k> {items:[{i, n, c, pk, d:[[dayIdx, q, rs, wq, wrs]]}]}
+//  Firestore posStats/irep-meta {at, from, to, days[], n, chunks, ver} · posStats/irep-<k> {j: JSON string of [{i, n, c, pk, d:[[dayIdx, q, rs, wq?, wrs?]]}]}
+//    (v1.1: wholesale 0 ho to wq/wrs nahi likhte — chhota). Har hissa ~600 KB tak (Firestore doc hadd 1 MB).
 //    q = ginti (pieces), rs = Rs (Qty × Rate), wq / wrs = us mein se wholesale. c = fi piece khareed (Rs). Bilkul chhota (har ghante).
 // =====================================================================================================
-const CHUNK = 300;
+const MAXB = 600000;   // v1.1: ek doc mein itne bytes tak
 const SKIP_RX = /noor\s*trader|our\s*factory|stock\s*['"]?\s*f[ae]?r?a?q/i;
 const r2 = n => Math.round((Number(n) || 0) * 100) / 100, r3 = n => Math.round((Number(n) || 0) * 1000) / 1000;
 const p2 = n => String(n).padStart(2, '0');
@@ -65,13 +66,15 @@ async function run({ pool, sql, db, log = console.log, now = new Date() }) {
     x[1] += q; x[2] += rs; if (Number(r.ws) === 1) { x[3] += q; x[4] += rs; }
     e.m.set(d, x);
   }
-  const all = [...M.values()].map(e => ({ i: e.i, n: e.n, c: e.c, pk: e.pk, d: [...e.m.values()].sort((a, b) => a[0] - b[0]).map(x => [x[0], r3(x[1]), Math.round(x[2]), r3(x[3]), Math.round(x[4])]) }))
+  const all = [...M.values()].map(e => ({ i: e.i, n: e.n, c: e.c, pk: e.pk, d: [...e.m.values()].sort((a, b) => a[0] - b[0]).map(x => x[3] || x[4] ? [x[0], r3(x[1]), Math.round(x[2]), r3(x[3]), Math.round(x[4])] : [x[0], r3(x[1]), Math.round(x[2])]) }))
     .filter(e => e.d.some(x => x[1] || x[2]))
     .sort((a, b) => b.d.reduce((s, x) => s + x[2], 0) - a.d.reduce((s, x) => s + x[2], 0));
-  const chunks = []; for (let k = 0; k < all.length; k += CHUNK) chunks.push(all.slice(k, k + CHUNK));
+  const chunks = []; let cur = [], size = 2;
+  for (const e of all) { const n = Buffer.byteLength(JSON.stringify(e)) + 1; if (cur.length && size + n > MAXB) { chunks.push(cur); cur = []; size = 2; } cur.push(e); size += n; }
+  if (cur.length) chunks.push(cur);
   const b = db.batch();
-  chunks.forEach((items, k) => b.set(col.doc('irep-' + k), { items, at: Date.now() }));
-  b.set(col.doc('irep-meta'), { at: Date.now(), from: days[0], to: days[days.length - 1], days, n: all.length, chunks: chunks.length, ws: wsNames.slice(0, 10), ver: '1.0' });
+  chunks.forEach((items, k) => b.set(col.doc('irep-' + k), { j: JSON.stringify(items), n: items.length, at: Date.now() }));
+  b.set(col.doc('irep-meta'), { at: Date.now(), from: days[0], to: days[days.length - 1], days, n: all.length, chunks: chunks.length, ws: wsNames.slice(0, 10), ver: '1.1', bytes: chunks.reduce((s, c) => s + Buffer.byteLength(JSON.stringify(c)), 0) });
   await b.commit();
   try { const old = await col.get(); for (const d of old.docs) { const m = /^irep-(\d+)$/.exec(d.id); if (m && Number(m[1]) >= chunks.length) await d.ref.delete(); } } catch {}
   log(new Date().toLocaleString('en-PK') + ' — 📊 item report: ' + all.length + ' items, ' + days.length + ' din, ' + chunks.length + ' hisse, ' + Math.round((Date.now() - t0) / 1000) + 's');
