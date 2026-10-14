@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-print.js  v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
+//  nt-print.js  v1.19 (2026-10-14: 🚪 GATE PASS sirf item + quantity, bara gehra font) · v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
 //                   (6+ harf, beech mein space nahi, 5+ hindse) aur grid mein wohi code nahi = bzzz — scan pakra gaya ho ya NAHI (server par scan
 //                   pakra hi nahi ja raha tha: log mein koi 'GHALAT scan' / '🔎' nahi tha). Naam se talaash = awaz nahi. Log mein 'scan pakra / NAHI')
 //                   · v1.17 (2026-10-08: 🔑 CHAABI KHUD UTHAO — awaz-only PC par firebase-key.json Desktop / Downloads / Documents (AnyDesk se)
@@ -39,7 +39,7 @@ let FA = null, FF = null; try { FA = require('firebase-admin/app'); FF = require
 const { initializeApp, cert, getApps } = FA || {};
 const { getFirestore, FieldValue } = FF || {};
 
-const VER = '1.18';
+const VER = '1.19';
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
@@ -135,28 +135,23 @@ function billJob(d) {
   for (const x of SHOP.lines) s.ln(x);
   return s.end();
 }
+// v1.19 (2026-10-14): GATE PASS — malik: "sab kuch khatam, sirf item ki quantity" + bara, gehra font. Heading / godam / Sale No /
+//   waqt / barcode / customer / total / dastakhat hata diye. Har item: naam (mota + do guna ooncha; Urdu naam bari mota tasveer),
+//   neeche daayein quantity (mota + do guna bara). Godam-wise alag parchi pehle jaisi (names ab chhapte nahi).
+const wrapW = (t, w) => { const o = []; let cur = ''; for (const x of String(t || '').trim().split(/\s+/).filter(Boolean)) { for (let y = x; y; y = y.slice(w)) { const c = y.slice(0, w); if (!cur) cur = c; else if ((cur + ' ' + c).length <= w) cur += ' ' + c; else { o.push(cur); cur = c; } } } if (cur) o.push(cur); return o.length ? o : ['']; };
+const gateQty = l => { const { ctn, pcs } = ctnPcs(l); return ctn && pcs ? num(ctn) + ' CTN + ' + n3(pcs) + ' PCS' : ctn ? num(ctn) + ' CTN' : n3(pcs) + ' PCS'; };
 function gateJobs(d, names) {
   const gp = {}; for (const l of Array.isArray(d.lines) ? d.lines : []) { const g = Number(l.godam) || 1; if (g !== Number(d.branch || 1)) (gp[g] = gp[g] || []).push(l); }
-  const t = when(d);
-  return Object.entries(gp).map(([g, ls]) => {
-    const s = Seg(); const gn = names[g] || ('Godam ' + g);
-    s.raw(ESC + '@' + ESC + 'a\x01'); s.ln(big('GATE PASS'));
-    if (ascii(gn)) s.ln(big(gn.slice(0, Math.floor(W / 2)))); else s.img(gn, 34, true);
-    s.raw(ESC + 'a\x00'); s.ln(hr());
-    s.ln(bold('Sale No: ' + String(d.saleNo || '').trim()));
-    s.ln(whenStr(t));
-    s.raw(ESC + 'a\x01'); s.ln(barcode(String(d.saleNo || '').trim())); s.raw(ESC + 'a\x00');
-    s.ln('Customer: ' + custName(d));
-    s.ln(hr());
-    s.ln(bold(pad('Items', W - 12) + pad('CTN', 5, true) + pad('PCS', 7, true)));
-    s.ln(hr());
-    let pcsSum = 0, ctnSum = 0;
-    for (const l of ls) { const { ctn, pcs } = ctnPcs(l); pcsSum = r3(pcsSum + pcs); ctnSum += ctn;
-      s.ln(String(l.name || '').trim().slice(0, ascii(l.name) ? W : 60)); s.ln(pad('', W - 12) + pad(num(ctn), 5, true) + pad(n3(pcs), 7, true)); }
-    s.ln(hr());
-    s.ln(bold(line('Total', 'CTN ' + num(ctnSum) + ' / PCS ' + n3(pcsSum))));
-    s.ln(hr());
-    s.ln('Dene wale ke dastakhat: ________');
+  return Object.values(gp).map(ls => {
+    const s = Seg();
+    s.raw(ESC + '@' + ESC + 'G\x01');   // ESC G 1 = double-strike (gehra)
+    ls.forEach((l, i) => {
+      if (i) s.ln(ESC + '!\x00' + hr());
+      const nm = String(l.name || '').trim(), q = gateQty(l);
+      if (ascii(nm)) for (const t of wrapW(nm, W)) s.ln(ESC + '!\x18' + t); else s.img(nm, 44, true, 2);
+      s.raw(ESC + 'a\x02'); s.ln(ESC + '!' + (q.length * 2 <= W ? '\x38' : '\x18') + q + ESC + '!\x00'); s.raw(ESC + 'a\x00');
+    });
+    s.raw(ESC + 'G\x00');
     return s.end();
   });
 }

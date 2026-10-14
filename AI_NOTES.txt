@@ -4476,3 +4476,15 @@ baaqi alag screens waise hi rahein".
   laal box #wvWarn "🌐 Chrome mein kholo" (intent:// … package=com.android.chrome) · 📋 copy · "Phir bhi yahin" (sessionStorage sam-wv-ok). style.css .wv-warn.
 Test: hd/perm.mjs (Zeeshan Full+stock/nazar/galla, Full bina perm, Sirf Stock, malik, purana Full), hd/jn2.mjs (WhatsApp box), hd/jn.mjs (+document), hd/st.mjs ALL OK.
 AGLA: Zeeshan ko naya link (Chrome mein) — ek dafa.
+
+=== v2.99.78 + nt-print v1.19 / sale-post v1.10 (manifest 2026-10-14.3) — 🚪 GATE PASS: SIRF ITEM + QUANTITY, BARA GEHRA FONT ===
+Malik: "gate pass se sab kuch khatam kar ke sirf item ki quantity likhni hai" + "font bara ho, gehre rang ka, sab systems par".
+* Teeno gate pass ek jaise: pc/sale-post.js gatePassText · pc/nt-print.js gateJobs · sale.js printLocal (🖥 Yehi device).
+* HATAYA: "GATE PASS" heading, godam ka naam, Sale No / Bill #, Token, tareekh/waqt, barcode, Customer, Items/CTN/PCS heading,
+  Total, "Dene wale ke dastakhat", "Maal de kar parchi rakh lein".
+* BAQI: har item — naam (ESC ! 0x18 = mota + do guna ooncha, W par wrap; Urdu naam nt-print mein s.img 44px bold daayein),
+  neeche daayein quantity "2 CTN + 3 PCS" / "2 CTN" / "12 PCS" (ESC ! 0x38 = mota + do guna bara; W/2 se lambi ho to 0x18).
+  Items ke beech '-' line. Poori parchi ESC G 1 (double-strike = gehra). Browser: .gn 22px/900, .gq 28px/900, #000.
+* Godam-wise alag parchi aur kis line ka gate pass banta hai (godam != branch, sale.js mein sl.gate switch) — pehle jaisa.
+  POS ka IsGetStore bhi waisa hi. Bill rasid aur TOKEN parchi par koi asar NAHI.
+* Root sale-post.js (purani v1.6 copy, manifest mein nahi) nahi chheri.

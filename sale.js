@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.99.77';
-import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.99.77';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.99.78';
+import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.99.78';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -992,7 +992,9 @@ function printLocal(sl, cp = 1, cr = 1) {
     ${lines.map(l => `<div class="it"><b>${esc(l.name)}</b><p class="row"><span>${qtxt(l)} × ${num(l.rate)}</span><span>${num(Math.round(l.qty * l.rate))}</span></p></div>`).join('')}<hr>
     <p class="row big"><b>KUL</b><b>Rs ${num(total)}</b></p>${sl.mode === 'wholesale' ? `<p class="row"><span>Cash</span><span>${num(cash)}</span></p>${total - cash > 0.5 ? `<p class="row"><b>Udhaar</b><b>${num(total - cash)}</b></p>` : ''}` : ''}<p class="c sm">Shukriya · Blue Khata</p></section>`;
   const gp = {}; for (const l of lines) { const g = Number(l.godam) || 1; if (sl.gate || g !== Number(sl.branch || 1)) (gp[g] = gp[g] || []).push(l); }   // v2.89: gate switch = har godam ka
-  const gates = Object.entries(gp).map(([g, ls]) => `<section class="pg gate"><h1>GATE PASS</h1><p class="c big">${esc(gname(Number(g)))}</p><p class="row"><b>Bill # ${esc(sl.saleNo || '')}</b><b>Token ${tok || '-'}</b></p><p class="row"><span>${d8}</span><span>${tm}</span></p><hr>${ls.map(l => `<p class="row"><span>${esc(l.name)}</span><b>${qtxt(l)}</b></p>`).join('')}<hr><p class="c sm">Maal de kar parchi rakh lein</p></section>`).join('');
+  const gqt = l => { const pk = Number(l.pack) || 0, q = Number(l.qty) || 0, c = pk > 1 ? Math.floor(q / pk + 1e-9) : 0, p = pk > 1 ? Math.round((q - c * pk) * 1000) / 1000 : q; return c && p ? `${num(c)} CTN + ${num(p)} PCS` : c ? `${num(c)} CTN` : `${num(p)} PCS`; };   // PC gate pass jaisa
+  // v2.99.78: GATE PASS — malik: sirf item + quantity, bara aur gehra (heading / godam / bill # / token / waqt / neeche likhai hata di)
+  const gates = Object.values(gp).map(ls => `<section class="pg gate">${ls.map(l => `<div class="gi"><p class="gn" dir="auto">${esc(l.name)}</p><p class="gq">${gqt(l)}</p></div>`).join('<hr>')}</section>`).join('');
   const n = Math.max(1, cr | 0);
   const toks = Array.from({ length: n }, (_, i) => `<section class="pg tok"><p class="tl">TOKEN</p><p class="tn">${tok || '-'}</p><p class="ur" dir="rtl" lang="ur">اس بل کے ${n} کریٹ ہیں</p><p class="tc">Crate ${i + 1} / ${n}</p><p class="row sm"><span>Bill # ${esc(sl.saleNo || '')}</span><span>${tm}</span></p></section>`).join('');
   // v2.77: har hissa ALAG print job (printer har job ke baad khud cut karta hai) — bill copies, gate pass, har crate ka token.
@@ -1005,6 +1007,7 @@ function printLocal(sl, cp = 1, cr = 1) {
     .it{margin:3px 0}.it>b{font-size:13px}hr{border:0;border-top:1px dashed #000;margin:4px 0}
     .tok{text-align:center;padding:2mm 0 1mm}.tl{font-size:14px;font-weight:700;letter-spacing:3px;margin:0}.tn{font-size:64px;font-weight:900;line-height:1;margin:2px 0}
     .ur{font-size:24px;font-weight:700;margin:4px 0;font-family:'Noto Nastaliq Urdu','Jameel Noori Nastaleeq','Urdu Typesetting',Tahoma,Arial,sans-serif}.tc{font-size:18px;font-weight:800;margin:2px 0}
+    .gate{color:#000}.gate hr{border-top:2px dashed #000;margin:6px 0}.gi{margin:2px 0}.gn{font-size:22px;font-weight:900;line-height:1.2;margin:0;overflow-wrap:anywhere}.gq{font-size:28px;font-weight:900;text-align:right;margin:2px 0 0}
   `;
   const parts = h => String(h || '').split('</section>').filter(x => x.trim()).map(x => x + '</section>');
   const jobs = [...Array.from({ length: Math.max(1, cp | 0) }, () => bill), ...parts(gates), ...parts(toks)];

@@ -1,5 +1,6 @@
 // ============================================================
 //  sale-post.js — Blue Khata app ki "Nayi Sale" -> POS Sale bill (v1)
+//  v1.10 (2026-10-14): 🚪 GATE PASS sirf item + quantity, bara aur gehra font (heading / bill no / barcode / total / dastakhat hata diye)
 //  v1.9.1 (2026-10-06): ✏️ edit — doosre counter ka naya bill (beech mein) ab edit nahi rokta; sirf APNE notes wala naya bill = wapas
 //  v1.9 (2026-10-06): ⚡ TEZ PRINT — rasid/gate pass bhi nt-parchi worker se (PowerShell ek dafa khula), status 'done' aur print saath saath
 //  v1.8 (2026-10-06): ✏️ BILL EDIT (saleEdits) — sirf UN-POSTED (DocStatusID 1) POS bill, wahi SaleID / SaleNo; minus (wapsi) lines
@@ -500,52 +501,28 @@ Add-Type -Path $dll
       { timeout: 20000 }, err => res(err));
   });
 }
-// ---- v1.6: GATE PASS (godam ke liye alag rasid — rate NAHI likha jata) ----
+// ---- v1.10 (2026-10-14): GATE PASS — malik: "sab kuch khatam, sirf item ki quantity" + bara, gehra font.
+//      Heading / godam / Sale No / waqt / barcode / customer / total / dastakhat SAB hata diye. Har item: naam (mota + do guna
+//      ooncha), neeche daayein quantity (mota + do guna bara). Signature wahi (godamName, saleNo, partyName, when ab istemal nahi).
 function gatePassText(godamName, rows, saleNo, partyName, when) {
   const ESC = '\x1b', GS = '\x1d', W = PRINT_WIDTH;
-  const n = v => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: 2 });
   const n3 = v => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: 3 });
-  const pad = (t, w, right) => { t = String(t ?? ''); if (t.length > w) t = t.slice(0, w); return right ? t.padStart(w) : t.padEnd(w); };
-  const line = (l, r) => { l = String(l); r = String(r); return (l + ' '.repeat(Math.max(1, W - l.length - r.length))).slice(0, W - r.length) + r; };
-  const hr = '-'.repeat(W);
-  const big = t => ESC + '!' + '\x30' + t + ESC + '!' + '\x00';
-  const bold = t => ESC + 'E' + '\x01' + t + ESC + 'E' + '\x00';
-  const barcode = code => { const c = String(code || '').trim(); if (!c) return '';
-    return GS + 'h' + '\x50' + GS + 'w' + '\x02' + GS + 'H' + '\x02' + GS + 'k' + '\x49' + String.fromCharCode(c.length + 2) + '{B' + c + '\n'; };
   const r3v = v => Math.round((Number(v) || 0) * 1000) / 1000;
-  const out = [];
-  out.push(ESC + '@');
-  out.push(ESC + 'a' + '\x01');
-  out.push(big('GATE PASS'));
-  out.push(big(String(godamName || '').trim()));
-  out.push(ESC + 'a' + '\x00');
-  out.push(hr);
-  out.push(bold('Sale No: ' + String(saleNo || '').trim()));
-  out.push(when.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }));
-  out.push(ESC + 'a' + '\x01');
-  out.push(barcode(String(saleNo || '').trim()));
-  out.push(ESC + 'a' + '\x00');
-  out.push('Customer: ' + String(partyName || '').trim());
-  out.push(hr);
-  out.push(bold(pad('Items', W - 12) + pad('CTN', 5, true) + pad('PCS', 7, true)));
-  out.push(hr);
-  let pcsSum = 0, ctnSum = 0;
-  // ek item ki carton/piece wali do lines jama kar ke ek qatar
-  const byItem = new Map();
+  const wrap = (t, w) => { const o = []; let cur = ''; for (const x of String(t || '').trim().split(/\s+/).filter(Boolean)) { for (let y = x; y; y = y.slice(w)) { const c = y.slice(0, w); if (!cur) cur = c; else if ((cur + ' ' + c).length <= w) cur += ' ' + c; else { o.push(cur); cur = c; } } } if (cur) o.push(cur); return o.length ? o : ['']; };
+  const out = [ESC + '@', ESC + 'G' + '\x01'];   // ESC G 1 = double-strike (gehra)
+  const byItem = new Map();   // ek item ki carton/piece wali do lines jama kar ke ek qatar
   for (const l of rows) { const k = l.ItemID; const o = byItem.get(k) || { name: l.name, pack: l.pack, qty: 0 }; o.qty = r3v(o.qty + l.qty); byItem.set(k, o); }
+  let i = 0;
   for (const o of byItem.values()) {
     const pack = Number(o.pack) || 0, qty = o.qty;
     const ctn = pack > 1 ? Math.floor(qty / pack + 1e-9) : 0;
     const pcs = pack > 1 ? r3v(qty - ctn * pack) : qty;
-    pcsSum = r3v(pcsSum + pcs); ctnSum += ctn;
-    out.push(String(o.name || '').trim().slice(0, W));
-    out.push(pad('', W - 12) + pad(n(ctn), 5, true) + pad(n3(pcs), 7, true));
+    const q = ctn && pcs ? ctn + ' CTN + ' + n3(pcs) + ' PCS' : ctn ? ctn + ' CTN' : n3(pcs) + ' PCS';
+    if (i++) out.push(ESC + '!' + '\x00' + '-'.repeat(W));
+    for (const t of wrap(o.name, W)) out.push(ESC + '!' + '\x18' + t);   // mota + do guna ooncha
+    out.push(ESC + 'a' + '\x02' + ESC + '!' + (q.length * 2 <= W ? '\x38' : '\x18') + q + ESC + '!' + '\x00' + ESC + 'a' + '\x00');   // mota + do guna bara
   }
-  out.push(hr);
-  out.push(bold(line('Total', 'CTN ' + n(ctnSum) + ' / PCS ' + n3(pcsSum))));
-  out.push(hr);
-  out.push('Dene wale ke dastakhat: ________');
-  out.push('', '', '');
+  out.push(ESC + 'G' + '\x00', '', '', '');
   out.push(GS + 'V' + '\x42' + '\x00');
   return out.join('\r\n');
 }
