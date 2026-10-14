@@ -3372,3 +3372,7 @@ html body .bkp-ic.new{border:1px dashed #16a34a!important;color:#15803d!importan
 .pp-aimode button small{font-weight:600;font-size:11px;opacity:.75}
 html body .pp-aimode button.on{background:linear-gradient(135deg,#172b52,#2e5194)!important;color:#fff!important;border-color:transparent!important;box-shadow:0 6px 16px rgba(23,43,82,.25)}
 .pp-airepro{margin:6px 0 0;padding:8px 12px;border-radius:999px;border:1px dashed #c58a1a;background:#fff8e6;color:#8a5a00;font-weight:800;font-size:13px}
+/* v2.99.79: 🔤 party ke Urdu naam */
+.urp-list{display:grid;gap:6px;margin-top:10px;max-height:62vh;overflow:auto}
+.urp-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid var(--line,#dfe5f0);background:var(--surf,#fff);text-align:left;font-weight:700}
+.urp-row b{font-family:'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',serif;font-size:18px;color:var(--accent-ink,#2b4a86)}.urp-row b i{font-family:inherit;font-size:13px;opacity:.6}

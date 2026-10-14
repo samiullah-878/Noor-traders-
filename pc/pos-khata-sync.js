@@ -65,6 +65,8 @@ SQL_CONFIG.options = { ...(SQL_CONFIG.options || {}), useUTC: false };
 
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore();
+const UR = require('./urdu-names.js'); UR.watch(db, BUSINESS_ID, m => log(m));   // 2026-10-14: 🔤 voucher par party ke Urdu naam
+let PARCHI = null; const getParchi = () => PARCHI || (PARCHI = require('./nt-parchi.js').make({ dir: DIR, width: PRINT_WIDTH, dots: 512 }));
 const biz = db.collection('businesses').doc(BUSINESS_ID);
 const khata = biz.collection('blueKhata');
 const linksCol = biz.collection('posLinks');
@@ -359,6 +361,16 @@ function inWords(rs) {
   if (cr) parts.push((cr > 999 ? inWords(cr).replace(/^Rupees | Only$/g, '') : three(cr)) + ' Crore'); if (lk) parts.push(two(lk) + ' Lakh'); if (th) parts.push(two(th) + ' Thousand'); if (n) parts.push(three(n));
   return 'Rupees ' + parts.join(' ') + ' Only';
 }
+// 2026-10-14: 🔤 voucher par URDU — malik: "jitna bhi print … urdu bhi saath". Party ka Urdu naam blueAccess/urduParties (app: 🖨 Print setting),
+//   pid na ho (POS se dobara print) to app ke khaton mein naam se. Setting printConfig.urduSlip. Urdu wali parchi nt-parchi worker se (tasveer).
+const UR_TITLE = { 'TRANSFER VOUCHER': 'ٹرانسفر واؤچر', 'CASH PAYMENT VOUCHER': 'رقم دی گئی', 'CASH RECEIPT VOUCHER': 'رقم وصول ہوئی', 'UDHAR SALE VOUCHER': 'ادھار سیل', 'KHARCHA VOUCHER': 'خرچہ', 'PURCHASE - CASH': 'خریداری — نقد', 'PURCHASE - UDHAR': 'خریداری — ادھار' };
+const nameKey = t => String(t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+function urPartyOf(l) {
+  if (!UR.isOn() || !l) return '';
+  let ur = l.pid ? UR.party(l.pid) : '';
+  if (!ur && l.name) { const k = nameKey(l.name); if (k) for (const r of app.values()) if (r && r.type === 'party' && !r.deleted && nameKey(r.name) === k) { ur = UR.party(r.id); if (ur) break; } }
+  return ur;
+}
 function receipt({ title, code, date, lines, note, copy, bank }) {
   const W = PRINT_WIDTH;
   const n = v => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -381,6 +393,7 @@ function receipt({ title, code, date, lines, note, copy, bank }) {
   const out = bank
     ? [ESC + '@', C + rev(huge(' HBL ')), '', bold('NOOR TRADERS') + '  ' + SHOP_PHONE, '', tall(bank.dir === 'out' ? 'HBL SE PAISE GAYE' : 'HBL MEIN PAISE AAYE')]
     : [ESC + '@', C + big('NOOR TRADERS'), SHOP_PHONE, '', tall(title)];
+  if (!bank && UR.isOn() && UR_TITLE[title]) out.push(UR.line(UR_TITLE[title], 30));   // 2026-10-14: 🔤 Urdu
   if (copy) out.push('(Dobara print)');
   if (bank) out.push(L + hr, row('Tareekh: ' + dt, 'Waqt: ' + tm), row('Voucher: ' + ascii(code), ''), L + hr);
   else out.push(L + hr, row('Voucher No: ' + ascii(code), ''), row('Tareekh: ' + dt, 'Waqt: ' + tm), C + bar(code), L + hr);
@@ -388,6 +401,7 @@ function receipt({ title, code, date, lines, note, copy, bank }) {
   for (const l of lines) {
     total = Math.max(total, Number(l.amount) || 0);
     out.push(bold(ascii(l.name).slice(0, W) || '(naam Urdu mein)'));
+    { const ur = urPartyOf(l); if (ur) out.push(UR.line(ur, 32)); }   // 2026-10-14: 🔤 party ka Urdu naam
     if (l.before != null) { const b0 = Number(l.before) || 0; out.push(bold(row('  Sabqa baqaya:', (b0 > 0 ? 'Lene ' : b0 < 0 ? 'Dene ' : '') + 'Rs.' + n(Math.abs(b0))))); }   // 2026-10-09: malik — sabqa raqam upar
     out.push(row('  ' + l.label, 'Rs.' + n(l.amount)));
     if (l.after != null) bq.push(l);
@@ -399,7 +413,9 @@ function receipt({ title, code, date, lines, note, copy, bank }) {
   for (const l of bq) {
     const a = Number(l.after) || 0, side = a > 0 ? ' - LENE' : a < 0 ? ' - DENE' : ' - BARABAR';
     const who = bq.length > 1 ? (ascii(l.name) || 'Party').slice(0, 16) + ': ' : '';
-    out.push(L + hr, bold((who + 'Ab baqaya' + side).slice(0, W)), R + big('Rs.' + n(Math.abs(a))));
+    out.push(L + hr, bold((who + 'Ab baqaya' + side).slice(0, W)));
+    if (UR.isOn()) out.push(UR.line((bq.length > 1 && urPartyOf(l) ? urPartyOf(l) + ': ' : '') + 'اب بقایا — ' + (a > 0 ? 'لینے ہیں' : a < 0 ? 'دینے ہیں' : 'برابر'), 28));   // 2026-10-14
+    out.push(R + big('Rs.' + n(Math.abs(a))));
     if (bank) out.push(L + words(a).join('\r\n'));
   }
   if (bq.length) out.push(L + hr);
@@ -451,6 +467,11 @@ let aliveAt = 0;
 async function beatPrinter() { if (DRY || Date.now() - aliveAt < 5 * 60000) return; aliveAt = Date.now(); try { await cfgDoc().set({ vAlive: aliveAt }, { merge: true }); } catch {} }
 async function printReceipt(text) {
   if (!AUTO_PRINT || DRY) return false;
+  if (UR.has(text)) {   // 2026-10-14: 🔤 Urdu tasveer — nt-parchi worker (tez). Exception = bina Urdu purana tareeqa. Printer ki ghalti = dobara nahi.
+    try { const P = getParchi(), e = await P.sendJobs([UR.toJob(text, { font: P.FONT_UR, dots: 512 })], PRINTER_NAME);
+      lastPrintErr = e ? String(e.message || e).slice(0, 160) : ''; log(e ? 'Print nahi hua: ' + lastPrintErr : 'Voucher rasid print ho gayi (Urdu)'); return !e; }
+    catch (er) { log('Urdu parchi masla: ' + er.message + ' — bina Urdu'); text = UR.strip(text); }
+  }
   const bin = path.join(DIR, 'khata-print.bin'), ps = path.join(DIR, 'khata-raw-print.ps1');
   fs.writeFileSync(bin, Buffer.from(text, 'latin1'));
   fs.writeFileSync(ps, RAW_PS.replace(/\r?\n/g, '\r\n'));
@@ -785,9 +806,9 @@ async function syncEntries(pool, acct) {
         const T = { CPV: VTITLE.CPV, CRV: VTITLE.CRV, JV: isTransfer ? VTITLE.JV : 'UDHAR SALE VOUCHER' }[spec.type] || spec.type;
         const amt = rupees(base.amount);
         const plines = isTransfer
-          ? [{ name: acct.get(base.fromPartyId).name, label: 'Se (nikla)', amount: amt, after: rupees(appBalance(base.fromPartyId)), before: rupees(appBalance(base.fromPartyId, new Set(docIds))) },
-             { name: acct.get(base.toPartyId).name, label: 'Ko (gaya)', amount: amt, after: rupees(appBalance(base.toPartyId)), before: rupees(appBalance(base.toPartyId, new Set(docIds))) }]
-          : [{ name: acct.get(base.partyId).name, label: base.kind === 'payment' ? 'Diye' : base.kind === 'collection' ? 'Wasool kiye' : 'Udhar', amount: amt,
+          ? [{ pid: base.fromPartyId, name: acct.get(base.fromPartyId).name, label: 'Se (nikla)', amount: amt, after: rupees(appBalance(base.fromPartyId)), before: rupees(appBalance(base.fromPartyId, new Set(docIds))) },
+             { pid: base.toPartyId, name: acct.get(base.toPartyId).name, label: 'Ko (gaya)', amount: amt, after: rupees(appBalance(base.toPartyId)), before: rupees(appBalance(base.toPartyId, new Set(docIds))) }]
+          : [{ pid: base.partyId, name: acct.get(base.partyId).name, label: base.kind === 'payment' ? 'Diye' : base.kind === 'collection' ? 'Wasool kiye' : 'Udhar', amount: amt,
                after: rupees(appBalance(base.partyId)), before: rupees(appBalance(base.partyId, new Set(docIds))) }];   // 2026-10-09: sabqa = is voucher ke baghair
         const bank = bankSlip(base, isTransfer);   // 2026-10-12: HBL wali entry = HBL parchi
         const printed = await printReceipt(receipt({ title: T, code: r.code, date: base.date, lines: plines, note: String(base.note || '').trim(), bank }));
@@ -945,7 +966,7 @@ async function goodsPhoto(e) {
 async function purchaseSlip(e, copy) {
   const p = app.get(e.partyId), cash = e.kind === 'purchaseCash';
   const txt = receipt({ title: cash ? 'PURCHASE - CASH' : 'PURCHASE - UDHAR', code: 'PU-' + String(e.id).replace(/[^A-Za-z0-9]/g, '').slice(-8).toUpperCase(), date: e.date,
-    lines: [{ name: (p && p.name) || 'Supplier', label: cash ? 'Cash diya (maal liya)' : 'Udhar maal liya', amount: rupees(e.amount),
+    lines: [{ pid: e.partyId, name: (p && p.name) || 'Supplier', label: cash ? 'Cash diya (maal liya)' : 'Udhar maal liya', amount: rupees(e.amount),
       before: e.partyId ? rupees(appBalance(e.partyId, new Set([e.id]))) : null, after: e.partyId ? rupees(appBalance(e.partyId)) : null }],
     note: String(e.note || '').trim(), copy });
   let photo = '';
@@ -1027,7 +1048,7 @@ async function quickEntries() {
       await markApp([e.id], { posCode: r.code, posError: null });
       log(`⚡ POS mein bana (tez): ${spec.type} · ${name} · Rs ${rupees(e.amount)} · ${r.code} (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
       const T = { CPV: VTITLE.CPV, CRV: VTITLE.CRV, JV: 'UDHAR SALE VOUCHER' }[spec.type] || spec.type, amt = rupees(e.amount), docIds = [e.id];
-      const plines = [{ name, label: e.kind === 'payment' ? 'Diye' : e.kind === 'collection' ? 'Wasool kiye' : 'Udhar', amount: amt, after: rupees(appBalance(e.partyId)), before: rupees(appBalance(e.partyId, new Set(docIds))) }];
+      const plines = [{ pid: e.partyId, name, label: e.kind === 'payment' ? 'Diye' : e.kind === 'collection' ? 'Wasool kiye' : 'Udhar', amount: amt, after: rupees(appBalance(e.partyId)), before: rupees(appBalance(e.partyId, new Set(docIds))) }];
       const bank = bankSlip(e, false);
       const printed = await printReceipt(receipt({ title: T, code: r.code, date: e.date, lines: plines, note: String(e.note || '').trim(), bank }));
       if (printed) await markApp(docIds, { posPrintedAt: Date.now(), posPrintErr: '' });

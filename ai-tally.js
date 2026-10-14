@@ -161,9 +161,9 @@ export async function askImage({ key, model, images, prompt }) {   // v2.92: tas
   const parts = (images || []).map(im => ({ inline_data: { mime_type: im.mime, data: im.data } })); parts.push({ text: String(prompt || '') });
   return textOf(await generate({ key, model, parts, fast: true }));
 }
-export async function askText({ key, model, prompt }) {   // v2.34: sirf likhai (purchase order)
+export async function askText({ key, model, prompt, fast = false }) {   // v2.34: sirf likhai (purchase order) · v2.99.79: fast = bina soche (tez)
   if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
-  return textOf(await generate({ key, model, parts: [{ text: String(prompt || '') }] }));
+  return textOf(await generate({ key, model, parts: [{ text: String(prompt || '') }], fast }));
 }
 function textOf(out) {
   const text = (out.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');

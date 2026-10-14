@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  urdu-names.js  v1.0 (2026-10-14) — 🔤 PARCHI PAR URDU NAAM (transfer note + gate pass)
+//  urdu-names.js  v1.1 (2026-10-14: + PARTY ke Urdu naam blueAccess/urduParties — voucher parchi) · v1.0 (2026-10-14) — 🔤 PARCHI PAR URDU NAAM (transfer note + gate pass)
 //  Malik: "jitna bi gate pass or transfer notes print kar rahe hain un sb ko urdu bi sath ani chahie".
 //  Naam wahi jo app mein (Stock → 🔤 Urdu naam / labels): Firestore blueAccess/urduNames {map: itemId -> Urdu} — LIVE (onSnapshot),
 //  har print par Firestore nahi parhta (tez). Setting blueAccess/printConfig.urduSlip (default ON; app: 🖨 Print setting).
@@ -8,15 +8,18 @@
 //  Istemal: transfer-sync.js (STOCK TRANSFER NOTE) · sale-post.js + nt-print.js (GATE PASS).
 // =====================================================================================================
 const MARK = '\u0001UR\u0001';
-let map = {}, on = true, started = false;
+let map = {}, pmap = {}, on = true, started = false;
 
 function watch(db, businessId, log = () => {}) {
   if (started || !db) return; started = true;
   const ba = db.collection('businesses').doc(businessId).collection('blueAccess');
   try { ba.doc('urduNames').onSnapshot(s => { map = (s.exists && (s.data() || {}).map) || {}; }, e => log('Urdu naam nahi mile: ' + e.message)); } catch (e) { log('Urdu naam nahi mile: ' + e.message); }
+  try { ba.doc('urduParties').onSnapshot(s => { pmap = (s.exists && (s.data() || {}).map) || {}; }, () => {}); } catch {}   // v1.1
   try { ba.doc('printConfig').onSnapshot(s => { on = !(s.exists && (s.data() || {}).urduSlip === false); }, () => {}); } catch {}
 }
 const get = id => (on && id != null ? String(map[String(id)] || '').replace(/[\u0001\r\n]+/g, ' ').trim() : '');
+const party = id => (on && id ? String(pmap[String(id)] || '').replace(/[\u0001\r\n]+/g, ' ').trim() : '');   // v1.1
+const isOn = () => on;
 const line = (ur, px = 32) => MARK + String(ur).replace(/[\u0001\r\n]+/g, ' ') + '\u0001' + (Number(px) || 32);
 const has = t => String(t || '').includes(MARK);
 const strip = t => String(t || '').split('\r\n').filter(l => !l.startsWith(MARK)).join('\r\n');   // tasveer na ban sake to bina Urdu
@@ -32,4 +35,4 @@ function toJob(text, { font = 'Jameel Noori Nastaleeq,Urdu Typesetting,Segoe UI,
   flush();
   return { s };
 }
-module.exports = { watch, get, line, has, strip, toJob, MARK, _set: (m, o = true) => { map = m || {}; on = o; } };
+module.exports = { watch, get, party, isOn, line, has, strip, toJob, MARK, _set: (m, o = true, pm) => { map = m || {}; on = o; if (pm) pmap = pm; } };

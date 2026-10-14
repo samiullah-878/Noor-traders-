@@ -4516,3 +4516,14 @@ POS mein F5 par bill + gate pass khud chhapte hain, edit par dobara — theek ha
 * AGLA: natija dekh kar: (a) rdlc / repx jaisi text file = wahi file naye design mein (backup ke saath), (b) rpt (Crystal) = designer
   chahiye — ya (c) hamara watcher (purchase-parchi.js jaisa, dbo.Sale/SaleDetail GBranchID) F5 ke baad naya gate pass chhape aur POS
   wala band ho (agar POS mein option ho).
+
+=== v2.99.79 (2026-10-14) — 🔤 VOUCHER PARCHI PAR URDU (party ke naam) ===
+Malik ne Transfer Voucher (JV) ki photo bheji — Urdu nahi tha (us waqt sirf item wali parchiyan). "Ok" = voucher par bhi.
+* blueAccess/urduParties {map: partyId -> Urdu} (malik likhta hai, generic blueAccess owner rule — rules badlav NAHI).
+  cloud.listenUrduParties / setUrduParties (merge). ai-tally askText(fast) = bina soche.
+* app.js: urPMake (AI 80 naam ek dafa, "cus=کسٹمر, lalamusa=لالہ موسیٰ" misalein) · urPAuto (malik login ke ~35 s baad, 6 ghante mein ek
+  dafa, sirf missing — nayi party khud) · 🖨 Print setting mein card "🔤 Party ke Urdu naam N / M" + "🤖 Baqi AI se banao" + "✏️ Dekho / theek
+  karo" (list, tap = prompt). setRow naam "Print setting (purchase · Urdu)". CSS .urp-list/.urp-row.
+* PC pos-khata-sync: receipt() — title ke neeche Urdu (UR_TITLE), har party ke naam ke neeche Urdu naam (pid se, warna app ke khaton mein naam
+  se — POS reprint), "Ab baqaya" ke neeche "اب بقایا — لینے ہیں / دینے ہیں". HBL parchi par title Urdu nahi. printReceipt: Urdu = nt-parchi
+  worker (tez), exception = bina Urdu. urdu-names.js v1.1 (party(), isOn()). manifest 2026-10-14.4. Test scratchpad ur/v.js.
