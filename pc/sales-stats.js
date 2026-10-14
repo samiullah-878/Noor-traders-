@@ -1,5 +1,5 @@
 // =========================================================
-//  sales-stats.js  v1.2 (2026-10-11: purchase history + mahina-war + mahine ke 4 hisse) · v1.1 (2026-09-28: Noor Traders ke apne bill bahar) · v1 (2026-09-28) — POS ki 6 MAHINE ki BIKRI + PURCHASE, har item ka khulasa -> Firestore posStats
+//  sales-stats.js  v1.3 (2026-10-14: + 📊 item-report.js — 3 mahine har item har din ginti / Rs / nafa) · v1.2 (2026-10-11: purchase history + mahina-war + mahine ke 4 hisse) · v1.1 (2026-09-28: Noor Traders ke apne bill bahar) · v1 (2026-09-28) — POS ki 6 MAHINE ki BIKRI + PURCHASE, har item ka khulasa -> Firestore posStats
 //  App ka "🛒 Purchase order" isi se andaza lagata hai (roz kitna bikta hai, kitne din ka stock baqi, pichhli dafa kis se liya).
 //  SQL mein KUCH NAHI likhti — sirf SELECT. Chalana: node sales-stats.js  (SALE-DATA.bat har ghante chalata hai)
 //  posStats/meta {at, days, n, chunks, ptDays[4], months[7], parties[]}  ·  posStats/items-<k> {items:[{i, w[26 hafte], s30, s90, s180, p180, pn, lp{d,q,r,party}, ph, mo, pt}]}
@@ -102,6 +102,7 @@ if (require.main === module) (async () => {
     const old = await col.get();                                     // purane zyada chunks mitao
     for (const d of old.docs) { const m = /^items-(\d+)$/.exec(d.id); if (m && Number(m[1]) >= chunks.length) await d.ref.delete(); }
     console.log(new Date().toLocaleString('en-PK') + ' — posStats: ' + all.length + ' items, ' + chunks.length + ' hisse, ' + Math.round((Date.now() - t0) / 1000) + 's');
+    try { await require('./item-report.js').run({ pool, sql, db }); } catch (e) { console.log('📊 item report nahi bani: ' + (e?.message || e)); }   // v1.3: 📊 Item Sale Report (app)
     await pool.close(); process.exit(0);
   } catch (e) { console.log(new Date().toLocaleString('en-PK') + ' — GALTI: ' + (e?.message || e)); try { await pool?.close(); } catch {} process.exit(1); }
 })();

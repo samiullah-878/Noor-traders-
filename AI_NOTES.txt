@@ -4536,3 +4536,18 @@ parties ke Urdu naam AI se khud bana deta hai (app kholne ki zaroorat nahi). Mal
 Malik: "yahan transfer register wala data" -> "nahi, only register se carton piece". renderTransferHub tot(): ctnG(x.c, ctnOf(item)) — ⚖️ carton
 ginti (jaise 4 = 1) wahi jo Transfer register mein; upar bara number + har note ki line. Farq ho to chhota "asal N ctn" (.thh-asal). Baqi screen wahi.
 Test scratchpad hd/th.mjs. (Purchase card par alag "✏️ Edit" button ka plan malik ke OK ka intezar — abhi 🧾 Bill = edit mode.)
+
+=== v2.99.81 (2026-10-14) — 📊 ITEM SALE REPORT (sirf malik) ===
+Malik: "poore month ka actual data — 1–10, 10–20, 20–30, poora mahina, week wise; har item; kin dino / hafton mein zyada; nafa; chart, click par aage data".
+* PC pc/item-report.js v1.0 (naya) — sales-stats.js v1.3 ke aakhir mein (har ghante): 3 calendar mahine, har item har din ginti / Rs (Qty×Rate) /
+  wholesale hissa (reportConfig.wsNames + "whole sale") · Noor Traders / our factory / stock farq + cancel bahar · c = ABHI ka khareed fi piece
+  (raat-report perPiece/pieceCost). posStats/irep-meta {days[], chunks} + irep-<k> {items:[{i,n,c,pk,d:[[dayIdx,q,rs,wq,wrs]]}]}. Sirf SELECT.
+* App irep.js (naya) + cloud.listenItemReport (meta badle to chunks parhta) · view 'irep' · nav "📊 Item report" (sirf malik, larka jaisa).
+  Chips: mahina · 1–10 / 11–20 / 21–31 / poora / Hafta 1–5 (1–7, 8–14 …) / apni tareekh · wholesale saath (default) / baghair. KPI: sale, nafa, %, roz.
+  Charts (SVG, bina library): top 12 items (tap = item dialog) · hafta-war (tap = woh hafta) · mahine ke hisse (tap = woh hissa) · din-war ausat
+  (tap = us weekday ki top items) · roz ki sale (tap = us din ki items). Item dialog: roz, hisse, hafte, weekday, 3 mahine + "sab se zyada … ko".
+  Patterns: hissa / weekday jahan roz ki sale BAQI hisson / dino se 1.6× / 1.8× · pichhle mahine se barh / gir (±30%) · kam nafa (<5%) · ghaata.
+  Table: sort sale / nafa / % / ginti + search + "aur". PDF (openReportPreview). Rang: dataviz palette (sale #2a78d6 / nafa #1baf7a / ghaata #e34948;
+  dark alag). CSS .ir-* (header ke andar safed card: html body .ir-root .ir-sec !important).
+* Nafa = abhi ka khareed rate — purane din ka andaza (malik ko bataya). Test scratchpad hd/ir.mjs (nakli data, patterns), irep/pc.js (PC fake SQL).
+* (Purchase auto-jor plan + card par ✏️ Edit plan abhi malik ke OK ka intezar.)

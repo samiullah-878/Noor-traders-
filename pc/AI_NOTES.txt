@@ -2900,3 +2900,7 @@ Malik: "font barha kar do or parties ka naam bi urdu main likh diya karo" (sirf 
 * urdu-names.js v1.2 fillParties(): jin parties ka Urdu naam nahi — Gemini (blueAccess/aiConfig key + model, https, thinkingBudget 0; 400 = bina)
   80 ek dafa (har chakkar max 240) -> blueAccess/urduParties merge (by 'pc'). Key nahi / ghalti = 1 ghanta ruko.
   pos-khata-sync: urFill 1 min baad, phir har 10 min (timer unref). Print ke waqt AI NAHI (tez). Test scratchpad ur/f.js.
+
+=== 2026-10-14 · manifest 2026-10-14.6 — 📊 item-report.js (NAYA) ===
+* sales-stats.js v1.3 aakhir mein item-report.run({pool, sql, db}) — ghalti ho to sales-stats ka apna kaam phir bhi (try/catch).
+* 3 mahine, item × din × wholesale: posStats/irep-meta + irep-<k> (300 items / doc). Sirf SELECT. App "📊 Item report".
