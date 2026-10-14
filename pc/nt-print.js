@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-print.js  v1.19 (2026-10-14: 🚪 GATE PASS sirf item + quantity, bara gehra font) · v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
+//  nt-print.js  v1.20 (2026-10-14: 🔤 GATE PASS par har item ke neeche URDU naam — urdu-names.js) · v1.19 (2026-10-14: 🚪 GATE PASS sirf item + quantity, bara gehra font) · v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
 //                   (6+ harf, beech mein space nahi, 5+ hindse) aur grid mein wohi code nahi = bzzz — scan pakra gaya ho ya NAHI (server par scan
 //                   pakra hi nahi ja raha tha: log mein koi 'GHALAT scan' / '🔎' nahi tha). Naam se talaash = awaz nahi. Log mein 'scan pakra / NAHI')
 //                   · v1.17 (2026-10-08: 🔑 CHAABI KHUD UTHAO — awaz-only PC par firebase-key.json Desktop / Downloads / Documents (AnyDesk se)
@@ -72,6 +72,7 @@ const mine = c => c === COUNTER || String(c || '').startsWith(COUNTER + ':');
 const hashOf = c => (String(c || '').split(':')[2] || '');
 
 // ---------------- ESC/POS parchi ----------------
+const UR = require('./urdu-names.js');   // v1.20: 🔤 gate pass par Urdu
 const P = require('./nt-parchi.js').make({ dir: DIR, width: W, dots: DOTS, fontUr: FONT_UR });
 const { ESC, GS, Seg, line, hr, when, dstr, tstr, num, tokenJobs, sendJobs } = P;
 const ascii = t => !/[^\x00-\x7f]/.test(String(t));
@@ -149,6 +150,7 @@ function gateJobs(d, names) {
       if (i) s.ln(ESC + '!\x00' + hr());
       const nm = String(l.name || '').trim(), q = gateQty(l);
       if (ascii(nm)) for (const t of wrapW(nm, W)) s.ln(ESC + '!\x18' + t); else s.img(nm, 44, true, 2);
+      { const ur = UR.get(l.id ?? l.itemId); if (ur && ur !== nm) s.img(ur, 44, true, 2); }   // v1.20: 🔤 Urdu naam
       s.raw(ESC + 'a\x02'); s.ln(ESC + '!' + (q.length * 2 <= W ? '\x38' : '\x18') + q + ESC + '!\x00'); s.raw(ESC + 'a\x00');
     });
     s.raw(ESC + 'G\x00');
@@ -214,6 +216,7 @@ function pickKey() {
 const AWAZ_ONLY = !fs.existsSync(KEY) || !FA || !FF;
 if (!AWAZ_ONLY && !getApps().length) initializeApp({ credential: cert(require(KEY)) });
 const db = AWAZ_ONLY ? null : getFirestore();
+UR.watch(db, BUSINESS_ID, m => log(m));   // v1.20
 const base = db ? db.collection('businesses').doc(BUSINESS_ID) : null;
 const saleCol = base ? base.collection('appSales') : null;
 const pcDoc = base ? base.collection('printPCs').doc(PC_ID) : null;

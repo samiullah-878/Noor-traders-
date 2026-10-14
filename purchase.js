@@ -905,6 +905,10 @@ document.addEventListener('click', async e => {
   if (pc) { const d = pc.dataset; if (d.ppPcbills) openPcBills(); else if (d.ppPcwhen) { pcWhen = d.ppPcwhen; openPcBills(); } else if (d.ppPcbill) openPcBill(d.ppPcbill, pc); return; }
   const px = e.target.closest?.('[data-pp-photo],[data-pp-ai]');
   if (px) { if (px.dataset.ppPhoto != null) { if (photoFormOf) photoFormOf(); } else aiItems(); return; }
+  const am = e.target.closest?.('[data-pp-aimode],[data-pp-airepro]');   // v2.99.78
+  if (am) { if (am.dataset.ppAimode) { try { localStorage.setItem('pp-ai-mode', am.dataset.ppAimode); } catch {} document.querySelectorAll('.pp-aimode').forEach(x => { x.outerHTML = aiModeHTML(); }); }
+    else if (aiLastFiles && !aiBusy) aiRead(aiLastFiles, { mode: 'pakka' });
+    return; }
   const cm = e.target.closest?.('[data-pp-aicam],[data-pp-aigal],[data-pp-camgo],[data-pp-camnext],[data-pp-camredo],[data-pp-camx]');
   if (cm) { const d = cm.dataset;          // v2.4.5: camera / gallery
     if (d.ppAicam != null || d.ppCamnext != null) aiPick(true);
@@ -1478,7 +1482,8 @@ function aiRender() {
       : `<div class="pp-ask"><b>Is supplier ke bill par ginti kya hoti hai?</b><small>Pichhla khareed maloom na hone ki wajah se app khud nahi pakar saki${aiBillInfo?.qtyLabel ? ' (bill par column: ' + esc(aiBillInfo.qtyLabel) + ')' : ''}. Ek dafa bata dein.</small>
          <div class="mchips"><button type="button" data-pp-fmt="pcs">PCS (pieces)</button><button type="button" data-pp-fmt="ctn">CTN (carton / peti)</button><button type="button" data-pp-fmt="both">Dono (alag khane)</button></div></div>`;
   dlg('🤖 Bill ki jaanch', `${jTabsHTML('list')}<div class="jz-head">
-      <div class="jz-count"><b>${k.all}</b> lines · 🟢 ${k.g} · 🟡 ${k.y} · 🔴 ${k.r}</div>
+      <div class="jz-count"><b>${k.all}</b> lines · 🟢 ${k.g} · 🟡 ${k.y} · 🔴 ${k.r}${aiBillInfo?.mode === 'tez' ? ' · ⚡ tez' : aiBillInfo?.mode === 'pakka' ? ' · 🎯 pakka' : ''}</div>
+      ${aiBillInfo?.mode === 'tez' && aiLastFiles && canPakka() ? '<button type="button" class="pp-airepro" data-pp-airepro="1">🎯 Ghalat lage? Pakka se dobara parho</button>' : ''}
       ${bill ? `<div class="jz-tot">${farqHTML(bill, mine)}</div>${jRsSuspects(bill, mine)}` : ''}
     </div>
     ${jColTotals()}
@@ -1801,11 +1806,16 @@ function boriMemFromBill() {           // v2.99.68: POS carton wale item par bil
 
 // v2.4.5: 🤖 Bill ki tasveer se items — pehle raasta chunein: 📷 camera (page ba page) ya 🖼️ gallery
 let camPages = [], camUrls = [];
+// v2.99.78: ⚡ TEZ (flash, 10-15 s) / 🎯 PAKKA (pro, 25-35 s) — malik: "AI bht time la rha ha". Phone yaad rakhta hai. 'pur.aipakka' band = sirf Tez.
+const canPakka = () => { try { return typeof window.ntCan !== 'function' || window.ntCan('pur.aipakka'); } catch { return true; } };
+const aiModeNow = () => { let m = 'tez'; try { m = localStorage.getItem('pp-ai-mode') || 'tez'; } catch {} return m === 'pakka' && canPakka() ? 'pakka' : 'tez'; };
+const aiModeHTML = () => { const m = aiModeNow(); return `<div class="pp-aimode"><button type="button" class="${m === 'tez' ? 'on' : ''}" data-pp-aimode="tez">⚡ Tez<small>10–15 sec</small></button>${canPakka() ? `<button type="button" class="${m === 'pakka' ? 'on' : ''}" data-pp-aimode="pakka">🎯 Pakka<small>25–35 sec · lamba bill</small></button>` : ''}</div>`; };
+let aiLastFiles = null;
 function aiItems() {
   if (aiBusy) { notice('AI abhi bill parh raha hai…'); return; }
   if (!aiBillOf) { notice('Is login par AI nahi chalta'); return; }
   camClear();
-  dlg('🤖 Bill ki tasveer se items', `<div class="pp-aichoose">
+  dlg('🤖 Bill ki tasveer se items', `${aiModeHTML()}<div class="pp-aichoose">
       <button type="button" class="got" data-pp-aicam="1">📷 Camera se photo lo</button>
       <button type="button" data-pp-aigal="1">🖼️ Gallery se chunein</button>
     </div><p class="stat-note">Lamba bill ho to camera se ek ek page lein (4 tak) — sab ek saath parhe jayenge.</p>`);
@@ -1829,7 +1839,7 @@ function camShow() {                      // li hui photos ki jhalak + agla page
   camUrls = camPages.map(f => { try { return URL.createObjectURL(f); } catch { return ''; } });
   const n = camPages.length;
   dlg(`📷 Bill ke page (${n})`, `<div class="pp-camthumbs">${camUrls.map((u, i) => `<div class="pp-camthumb">${u ? `<img src="${u}" alt="page ${i + 1}">` : ''}<small>Page ${i + 1}</small></div>`).join('')}</div>
-    <p class="stat-note">Photo saaf aur seedhi ho — sab likha nazar aaye. Dhundli ho to "Dobara lo".</p>
+    ${aiModeHTML()}<p class="stat-note">Photo saaf aur seedhi ho — sab likha nazar aaye. Dhundli ho to "Dobara lo".</p>
     <div class="pp-camacts">
       <button type="button" class="got" data-pp-camgo="1">✓ Bas, parho (${n} page)</button>
       ${n < 4 ? '<button type="button" data-pp-camnext="1">📷 Agla page</button>' : ''}
@@ -1839,11 +1849,12 @@ function camShow() {                      // li hui photos ki jhalak + agla page
 }
 async function aiRead(files, opt = {}) {   // v2.99.7: opt.agent = 🤖 agent se (dialog nahi, status opt.onStatus, galti throw)
   setBillPics(files);   // v2.2.0: wohi tasveerein screen par bhi
+  aiLastFiles = files; const mode = opt.mode || aiModeNow();   // v2.99.78
   aiBusy = true; aiRows = null; aiBillInfo = null; aiFmtAuto = ''; jView = 'list'; jIx = -1; jForceAsk = false;
   if (!opt.agent) dlg('🤖 Bill ki tasveer se items', '<p id="ppAiMsg" role="status">Tayyari…</p><div id="ppAiOut"></div>');
   const say = x => { const m = $('ppAiMsg'); if (m) m.textContent = x; try { opt.onStatus?.(x); } catch {} };
   try {
-    const bill = await aiBillOf({ files, onStatus: say, partyId: supplier });
+    const bill = await aiBillOf({ files, onStatus: say, partyId: supplier, mode });
     const lines = (bill && bill.lines) || [];
     if (!lines.length) throw Error('Tasveer se koi item nahi parha gaya. Saaf photo (seedhi, poori bill) lagayein.');
     const { items } = stock();

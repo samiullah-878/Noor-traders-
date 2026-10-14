@@ -4488,3 +4488,21 @@ Malik: "gate pass se sab kuch khatam kar ke sirf item ki quantity likhni hai" + 
 * Godam-wise alag parchi aur kis line ka gate pass banta hai (godam != branch, sale.js mein sl.gate switch) — pehle jaisa.
   POS ka IsGetStore bhi waisa hi. Bill rasid aur TOKEN parchi par koi asar NAHI.
 * Root sale-post.js (purani v1.6 copy, manifest mein nahi) nahi chheri.
+
+=== v2.99.78 (2026-10-14) — ⚡ TEZ TICK · ⚡/🎯 AI BILL · 🔤 PARCHI PAR URDU ===
+MALIK KI STANDING BAAT: "speed wala kaam jo kaam bhi karo us mein yaad rakho" — har feature / tick / button TEZ ho.
+* ⚡ Transfer check tick (pos-stock.js): confirm() popup hata — DO TAP (pehla = "✓ Pakka? dobara dabao", 3 s, tcArm). Tick usi second ✓
+  (tcFast: tcChecks mein pend, beep) aur save peeche: cloud.saveTransferCheckFast = seedha setDoc (transaction nahi — wo internet ka
+  jawab maangta tha, kamzor signal par 3-10 s). Rules create-only: pehle se ho = permission -> getDocFromServer -> 'tc/done'. Fail = ✓ hat jata
+  + laal notice. Step 1 (maal de diya), step 2 bulk (✓ Maal poora mila) aur scan ✓ teeno. listenTransferChecks: serverTimestamps 'estimate' + pend.
+  CSS .tc-give.arm / .tc-ok.arm. Test hd/tc3.mjs.
+* ⚡/🎯 AI bill (purchase.js + app.js aiReadBill + ai-tally generate): chips .pp-aimode (localStorage pp-ai-mode, default ⚡ Tez).
+  Tez = cfg.model (flash) fast:true (thinkingBudget 0) ~10-15 s. Pakka = pro, think 'low' (Gemini 3 thinkingLevel low / 2.x budget 1024;
+  na maane to bina had) — pehle pro BE-HAD sochta tha (1-2 min). Jaanch par "🎯 Ghalat lage? Pakka se dobara parho" (aiLastFiles).
+  CAPS 'pur.aipakka' (band = sirf Tez). bill.mode 'tez'/'pakka'. Test hd/ait.mjs (fetch mock).
+* 🔤 Urdu: pc/urdu-names.js v1.0 (naya) — blueAccess/urduNames LIVE + printConfig.urduSlip (default ON). Text parchi mein Urdu line nishan
+  (MARK) -> toJob() nt-parchi raster (daayein, mota). transfer-sync v4.8 (STOCK TRANSFER NOTE: English ke neeche Urdu, 32px; Urdu wali parchi
+  nt-parchi worker se, exception par bina Urdu), sale-post v1.11 (GATE PASS 44px), nt-print v1.20 (GATE PASS 44px). Urdu naam na ho = sirf English.
+  POS software ki apni chhapi parchi mein Urdu NAHI ho sakta. App: ⋮ → "🖨 Print setting (purchase · Urdu)" → 🔤 ON/Band (cloud.setPrintConfig urduSlip).
+  manifest 2026-10-14.3 (+ urdu-names.js). Test scratchpad ur/t.js, g.js, n.js.
+Rules: koi badlav nahi.

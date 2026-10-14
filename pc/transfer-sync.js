@@ -17,6 +17,8 @@
 //     (POS se lines + dono godam ka abhi ka stock, upar "DOBARA PRINT"). (2) ❌ Cancel POS wala note bhi — job.force (sirf malik, rules 2.47).
 //     (3) ✏️ op 'edit' = purana note usp_StockTransfer_Delete + naya createTransfer (naya STN). Naya na bane to saaf error (purana hat chuka).
 //  v4.5 (2026-10-12): 💰 HBL parchi — bank-parchi.js: HBL Inbox mein naya SMS / email aate hi "PAISE AAYE" parchi. Setting printConfig.bankAuto.
+//  v4.8 (2026-10-14): 🔤 TRANSFER NOTE PAR URDU — har item ke English naam ke neeche Urdu naam (urdu-names.js: blueAccess/urduNames LIVE,
+//     printConfig.urduSlip). Urdu wali parchi nt-parchi ke tez worker se (tasveer); Urdu na ho to pehle jaisa RAW.
 //  Chalana:  node transfer-sync.js   (transfer-auto.bat loop mein)
 // =========================================================
 const fs = require('fs');
@@ -47,6 +49,8 @@ const SQL_CONFIG = require('./sql-config.js');   // v2026-09-25: setting local-c
 SQL_CONFIG.options = { ...(SQL_CONFIG.options || {}), useUTC: false };
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore();
+const UR = require('./urdu-names.js'); UR.watch(db, BUSINESS_ID, m => { try { log(m); } catch { console.log(m); } });   // v4.8
+let PARCHI = null; const getParchi = () => PARCHI || (PARCHI = require('./nt-parchi.js').make({ dir: DIR, width: PRINT_WIDTH, dots: 512 }));
 const biz = db.collection('businesses').doc(BUSINESS_ID);
 const trCol = biz.collection('transferJobs'), prCol = biz.collection('printJobs'), poCol = biz.collection('postJobs');
 const khataCol = biz.collection('blueKhata'), linksCol = biz.collection('posLinks'), billsCol = biz.collection('posBills');
@@ -184,6 +188,7 @@ function transferText(r, note, reprint) {
   if (r.rows.some(x => x.baqiFrom != null || x.baqiTo != null)) out.push('(har item ke neeche stock: pehle -> baad)');   // v4.3
   for (const x of r.rows) {
     const q = qtyText(x); if (ascii(x.name).length + q.length + 1 > PRINT_WIDTH) { out.push(ascii(x.name).slice(0, PRINT_WIDTH)); out.push(pad('', PRINT_WIDTH - q.length) + q); } else out.push(pad(ascii(x.name), PRINT_WIDTH - q.length) + q);
+    { const ur = UR.get(x.itemId); if (ur) out.push(UR.line(ur, 32)); }   // v4.8: 🔤 Urdu naam
     const b = baqiText(x, r); if (b) out.push(...b.split('\r\n'));   // v4.2: baqi stock usi parchi par
   }
   out.push('-'.repeat(PRINT_WIDTH), line('Items: ' + r.rows.length, 'Kul pcs: ' + n(r.rows.reduce((s, x) => s + (Number(x.qty) || 0), 0))));
@@ -217,6 +222,10 @@ function purchaseText(b, entry) {
   return out.join('\r\n');
 }
 function sendRaw(text, docName) {
+  if (UR.has(text)) {   // v4.8: Urdu tasveer wali parchi — nt-parchi worker (tez). Na chale to bina Urdu purana tareeqa (parchi kabhi na ruke)
+    return Promise.resolve().then(() => getParchi().sendJobs([UR.toJob(text, { font: getParchi().FONT_UR, dots: 512 })], PRINTER_NAME))
+      .catch(e => (log('Urdu parchi masla: ' + e.message + ' — bina Urdu'), sendRaw(UR.strip(text), docName)));   // printer ki ghalti (Error wapas) = wahi lautao, dobara mat chhapo
+  }
   const file = path.join(DIR, 'transfer-print.bin');
   fs.writeFileSync(file, Buffer.from(text, 'binary'));
   const ps = `

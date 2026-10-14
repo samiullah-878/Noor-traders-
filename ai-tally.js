@@ -79,11 +79,13 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
 const busyError = e => /overloaded|high demand|try again later|temporar|unavailable|503/i.test(String(e?.message || ''));
 
 // v1.82: Google par rush (503) ho to khud 2 dafa ruk kar dobara koshish; phir bhi na chale to doosra flash model aazmao.
-async function generate({ key, model, parts, onStatus, fast = false }) {
+async function generate({ key, model, parts, onStatus, fast = false, think = '' }) {
   // v2.0.0: Gemini 2.5 flash har jawab se pehle "sochta" hai — parhne ke kaam mein us ki zarurat nahi.
   // thinkingBudget 0 se jawab kaafi tez aata hai. Jo model yeh na maane (400) us par khud purane tareeqe se dobara.
   let noThink = fast;
-  const cfg = () => ({ temperature: 0, responseMimeType: 'application/json', ...(noThink ? { thinkingConfig: { thinkingBudget: 0 } } : {}) });
+  // v2.99.78: 🎯 PAKKA (pro) — sochna HAD ke saath (pehle be-had = 1-2 minute): Gemini 3 = thinkingLevel 'low', 2.x pro = 1024 budget
+  let lim = !fast && think === 'low' ? (/gemini-3/i.test(String(model || '')) ? { thinkingLevel: 'low' } : { thinkingBudget: 1024 }) : null;
+  const cfg = () => ({ temperature: 0, responseMimeType: 'application/json', ...(noThink ? { thinkingConfig: { thinkingBudget: 0 } } : lim ? { thinkingConfig: lim } : {}) });
   const once = m => api('/models/' + encodeURIComponent(m) + ':generateContent', key, {
     method: 'POST',
     body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: cfg() })
@@ -91,8 +93,8 @@ async function generate({ key, model, parts, onStatus, fast = false }) {
   const call = async m => {
     try { return await once(m); }
     catch (e) {
-      if (noThink && /thinking|thinking_budget|thinkingConfig|generation_?config|INVALID_ARGUMENT|HTTP 400/i.test(String(e?.message || ''))) {
-        noThink = false; return await once(m);          // yeh model thinking band nahi karta — purane tareeqe se
+      if ((noThink || lim) && /thinking|thinking_budget|thinkingConfig|thinking_level|generation_?config|INVALID_ARGUMENT|HTTP 400/i.test(String(e?.message || ''))) {
+        if (noThink) noThink = false; else lim = null; return await call(m);   // yeh model yeh had nahi maanta — agla tareeqa (aakhir mein bina had)
       }
       throw e;
     }
@@ -248,7 +250,7 @@ export function parseBill(text) {
 }
 
 // v2.99.0: bill par default 'soch kar' (fast = false) — lambi / distributor table zyada sahi parhti hai (20-40 s zyada)
-export async function readPurchaseBill({ key, model, images, onStatus, known = null, fast = false, note = '' }) {
+export async function readPurchaseBill({ key, model, images, onStatus, known = null, fast = false, note = '', think = '' }) {
   if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
   if (!model) throw Error('Model ka naam khali hai — Settings > AI key > Test dabayein.');
   if (!images?.length) throw Error('Bill ki kam az kam 1 picture chunein');
@@ -257,7 +259,7 @@ export async function readPurchaseBill({ key, model, images, onStatus, known = n
   if (note) parts.push({ text: note });       // v2.3.0: is supplier ke bill ka naqsha (app ne seekha hua)
   const list = knownItemsText(known);
   if (list) parts.push({ text: list });
-  return parseBill(textOf(await generate({ key, model, parts, onStatus, fast })));
+  return parseBill(textOf(await generate({ key, model, parts, onStatus, fast, think })));
 }
 
 // ---------- v2.7: TOLAI — label ki tasveer se number parhna ----------

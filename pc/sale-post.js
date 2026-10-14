@@ -1,5 +1,6 @@
 // ============================================================
 //  sale-post.js — Blue Khata app ki "Nayi Sale" -> POS Sale bill (v1)
+//  v1.11 (2026-10-14): 🔤 GATE PASS par har item ke neeche URDU naam (urdu-names.js, app ke Urdu naam) — tasveer, nt-parchi worker se
 //  v1.10 (2026-10-14): 🚪 GATE PASS sirf item + quantity, bara aur gehra font (heading / bill no / barcode / total / dastakhat hata diye)
 //  v1.9.1 (2026-10-06): ✏️ edit — doosre counter ka naya bill (beech mein) ab edit nahi rokta; sirf APNE notes wala naya bill = wapas
 //  v1.9 (2026-10-06): ⚡ TEZ PRINT — rasid/gate pass bhi nt-parchi worker se (PowerShell ek dafa khula), status 'done' aur print saath saath
@@ -62,6 +63,7 @@ SQL_CONFIG.options = { ...(SQL_CONFIG.options || {}), useUTC: false };
 
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore();
+const UR = require('./urdu-names.js'); UR.watch(db, BUSINESS_ID, m => log(m));   // v1.11
 const saleCol = db.collection('businesses').doc(BUSINESS_ID).collection('appSales');
 const editCol = db.collection('businesses').doc(BUSINESS_ID).collection('saleEdits');   // v1.8
 
@@ -462,6 +464,7 @@ async function receiptFor(saleNo, saleId) {
 
 // RAW print: ESC/POS bytes seedha printer ko (barcode/bara text chalta hai)
 function printText(text, printer = PRINTER_NAME) {   // v1.9: worker se (tez); worker na chale to nt-parchi khud purana tareeqa
+  if (UR.has(text)) { try { const P = getParchi(); return P.sendJobs([UR.toJob(text, { font: P.FONT_UR, dots: P.DOTS })], printer || PRINTER_NAME); } catch (e) { text = UR.strip(text); } }   // v1.11: Urdu tasveer
   try { return getParchi().sendRaw(text, printer || PRINTER_NAME); } catch (e) { return printTextOld(text, printer); }
 }
 function printTextOld(text, printer = PRINTER_NAME) {
@@ -511,7 +514,7 @@ function gatePassText(godamName, rows, saleNo, partyName, when) {
   const wrap = (t, w) => { const o = []; let cur = ''; for (const x of String(t || '').trim().split(/\s+/).filter(Boolean)) { for (let y = x; y; y = y.slice(w)) { const c = y.slice(0, w); if (!cur) cur = c; else if ((cur + ' ' + c).length <= w) cur += ' ' + c; else { o.push(cur); cur = c; } } } if (cur) o.push(cur); return o.length ? o : ['']; };
   const out = [ESC + '@', ESC + 'G' + '\x01'];   // ESC G 1 = double-strike (gehra)
   const byItem = new Map();   // ek item ki carton/piece wali do lines jama kar ke ek qatar
-  for (const l of rows) { const k = l.ItemID; const o = byItem.get(k) || { name: l.name, pack: l.pack, qty: 0 }; o.qty = r3v(o.qty + l.qty); byItem.set(k, o); }
+  for (const l of rows) { const k = l.ItemID; const o = byItem.get(k) || { name: l.name, pack: l.pack, qty: 0, ur: UR.get(k) }; o.qty = r3v(o.qty + l.qty); byItem.set(k, o); }
   let i = 0;
   for (const o of byItem.values()) {
     const pack = Number(o.pack) || 0, qty = o.qty;
@@ -520,6 +523,7 @@ function gatePassText(godamName, rows, saleNo, partyName, when) {
     const q = ctn && pcs ? ctn + ' CTN + ' + n3(pcs) + ' PCS' : ctn ? ctn + ' CTN' : n3(pcs) + ' PCS';
     if (i++) out.push(ESC + '!' + '\x00' + '-'.repeat(W));
     for (const t of wrap(o.name, W)) out.push(ESC + '!' + '\x18' + t);   // mota + do guna ooncha
+    if (o.ur) out.push(UR.line(o.ur, 44));   // v1.11: 🔤 Urdu naam (bara, mota)
     out.push(ESC + 'a' + '\x02' + ESC + '!' + (q.length * 2 <= W ? '\x38' : '\x18') + q + ESC + '!' + '\x00' + ESC + 'a' + '\x00');   // mota + do guna bara
   }
   out.push(ESC + 'G' + '\x00', '', '', '');

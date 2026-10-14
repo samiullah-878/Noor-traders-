@@ -190,6 +190,7 @@ function ppPrintHTML(c){const on=c.purchaseAuto!==false,cp=Math.min(2,Math.max(1
  return `<div class="ppp"><div class="ppp-hero ${on?'on':'off'}"><b>${on?'🟢 Auto print ON':'⚪ Auto print BAND'}</b><small>${on?'Larka purchase bill POS mein daale ya app se — bill aate hi Server PC ke printer (TM-T88IV) par parchi nikalti hai.':'Abhi koi purchase parchi khud nahi nikalegi.'}</small></div>
  <div class="ppp-lab">Auto print</div><div class="mchips"><button type="button" class="${on?'on':''}" data-ppp-on="1">🟢 ON</button><button type="button" class="${on?'':'on'}" data-ppp-on="0">⚪ Band</button></div>
  <div class="ppp-lab">Kitni copies</div><div class="mchips">${[1,2].map(n=>`<button type="button" class="${cp===n?'on':''}" data-ppp-cp="${n}">${n} copy</button>`).join('')}</div>
+ <div class="ppp-lab">🔤 Transfer note + Gate pass par Urdu naam</div><div class="mchips"><button type="button" class="${c.urduSlip!==false?'on':''}" data-ppp-ur="1">🟢 ON</button><button type="button" class="${c.urduSlip===false?'on':''}" data-ppp-ur="0">⚪ Band</button></div><p class="set-sub">Har item ke English naam ke neeche Urdu (Stock → 🔤 Urdu naam wale). Jis item ka Urdu naam nahi wahan sirf English.</p>
  <div class="ppp-lab">Nafa itne % se kam ho to "!! KAM"</div><div class="mchips">${[2,3,5,8].map(n=>`<button type="button" class="${mn===n?'on':''}" data-ppp-nafa="${n}">${n}%</button>`).join('')}</div>
  <div class="ppp-card"><div class="ppp-row"><span>Parchi par kya aata hai</span></div><ul><li>Har item: tadad × rate = raqam</li><li>📦 Stock: pehle → ab (us godam ka)</li><li>💲 Pichli khareed ka rate → naya (+/−)</li><li>🏷 Bechne ka rate aur nafa % (kam / ghaata = !!)</li><li>⏳ Andaza: kitne din ka maal (30 din ki bikri)</li><li>⚠️ DHYAN: mehngay / kam nafa wale items</li><li>✏️ Bill badla = "BADLA HUA BILL" + kya badla · 🗑 mita / cancel = chhoti parchi</li></ul></div>
  <div class="ppp-card"><div class="ppp-row"><span>🖥 Server PC</span><b class="${fresh?'ok':'bad'}">${alive?(fresh?'✓ chal raha hai':'⚠️ khamosh')+' · '+agoTxt(alive):'⏳ abhi update nahi pahuncha'}</b></div>
@@ -198,8 +199,8 @@ function ppPrintHTML(c){const on=c.purchaseAuto!==false,cp=Math.min(2,Math.max(1
 function ppPrintForm(){if(!owner()){notice('Sirf malik');return}modal('🖨 Purchase bill auto print','<div id="pppBody"><p class="set-sub">Setting parh rahe hain…</p></div>');ppPrintStop?.();let cur={};
  const body=()=>$('pppBody');ppPrintStop=cloud.listenPrintConfig?cloud.listenPrintConfig(c=>{if(!body()?.isConnected){ppPrintStop?.();ppPrintStop=null;return}if(c==null){body().innerHTML='<p class="warning">Setting nahi parh sake (internet?)</p>';return}cur=c;body().innerHTML=ppPrintHTML(c)}):null;
  if(!ppPrintStop){body().innerHTML='<p class="warning">App update karein</p>';return}
- body().onclick=async e=>{const b=e.target.closest('[data-ppp-on],[data-ppp-cp],[data-ppp-nafa]');if(!b)return;const d=b.dataset,patch='pppOn'in d?{purchaseAuto:d.pppOn==='1'}:'pppCp'in d?{purchaseCopies:Number(d.pppCp)}:{minNafa:Number(d.pppNafa)};
-  body().innerHTML=ppPrintHTML({...cur,...patch});try{await cloud.setPrintConfig(patch);notice('purchaseAuto'in patch?(patch.purchaseAuto?'🖨 Purchase auto print ON':'Purchase auto print BAND'):'✓ Save')}catch(er){body().innerHTML=ppPrintHTML(cur);notice('Save nahi hua: '+(er.message||er))}}}
+ body().onclick=async e=>{const b=e.target.closest('[data-ppp-on],[data-ppp-cp],[data-ppp-nafa],[data-ppp-ur]');if(!b)return;const d=b.dataset,patch='pppOn'in d?{purchaseAuto:d.pppOn==='1'}:'pppCp'in d?{purchaseCopies:Number(d.pppCp)}:'pppUr'in d?{urduSlip:d.pppUr==='1'}:{minNafa:Number(d.pppNafa)};
+  body().innerHTML=ppPrintHTML({...cur,...patch});try{await cloud.setPrintConfig(patch);notice('purchaseAuto'in patch?(patch.purchaseAuto?'🖨 Purchase auto print ON':'Purchase auto print BAND'):'urduSlip'in patch?(patch.urduSlip?'🔤 Parchi par Urdu ON':'Parchi par Urdu BAND'):'✓ Save')}catch(er){body().innerHTML=ppPrintHTML(cur);notice('Save nahi hua: '+(er.message||er))}}}
 document.addEventListener('click',e=>{if(e.target.closest?.('#ppPrintBtn'))ppPrintForm()});
 // v2.14: 🗂️ Purani tasveerein alag karein — pehle BACKUP (zaroori), phir 1-1 karke: naye khane mein pakki -> tab purani jagah se hatao
 document.addEventListener('click',async e=>{if(!e.target.closest?.('#photoMoveBtn'))return;if(!owner()||localMode)return;
@@ -1033,7 +1034,7 @@ function tolaiPdf(){const r=tolaiReport();if(!r){notice('Kuch nahi mila');return
    <td><small>${esc(x.waqt)}</small></td><td class="iv-n">${esc(x.packets)}</td><td class="iv-n">${esc(x.mins)} / ${esc(x.duty)}</td><td class="iv-n">${x.pc}%</td></tr>`).join('')}
   </tbody></table>`;
  openReportPreview('Tolai '+r.title);}
-async function ppAiBill({files,onStatus=()=>{},partyId=''}){
+async function ppAiBill({files,onStatus=()=>{},partyId='',mode='pakka'}){
  if(!canTally())throw Error('Is login par AI nahi chalta');
  onStatus('Key parh raha hoon…');
  const cfg=await loadAiCfg(true);
@@ -1042,7 +1043,7 @@ async function ppAiBill({files,onStatus=()=>{},partyId=''}){
  // v2.99.0: 1400px/0.75 par lambe distributor bill (22 lines × 12 khane + watermark) ke hindse dhundle the — ab 2400px/0.9 (2+ page: 2000px)
  const fl=[...files].slice(0,4),px=fl.length>1?2000:2400;
  const images=[];for(const f of fl)images.push(await shrinkForAI(f,px,0.9));
- return await aiReadBill({cfg,images,onStatus,partyId});
+ return await aiReadBill({cfg,images,onStatus,partyId,mode});
 }
 // v2.3.0: bill ke liye behtar (pro) model — ek dafa dhoond kar rakh liya jata hai; na mile to wahi flash
 async function billModelOf(cfg){
@@ -1067,19 +1068,21 @@ function billNote(partyId){
  return l.join('\n');
 }
 // v2.0.0: bill parhwana — humare items ki list saath, aur screen par second ki ginti
-async function aiReadBill({cfg,images,onStatus,partyId}){
+async function aiReadBill({cfg,images,onStatus,partyId,mode='pakka'}){
  let base='AI bill parh raha hai…',t0=Date.now();
  const tick=()=>onStatus(base+' ('+Math.round((Date.now()-t0)/1000)+'s)');
  const iv=setInterval(tick,1000);tick();
  const args={key:cfg.key,images,known:knownItems(partyId),note:billNote(partyId),onStatus:x=>{base=x;t0=Date.now();tick()}};
  try{
+  /* v2.99.78: ⚡ TEZ = flash, bina soche (10-15 s) · 🎯 PAKKA = pro, sochna had ke saath (pehle be-had = 1-2 min) */
+  if(mode==='tez'&&cfg.model){base='⚡ AI bill parh raha hai (tez)…';t0=Date.now();tick();const b=await readPurchaseBill({...args,model:cfg.model,fast:true});if(b&&typeof b==='object')b.mode='tez';return b}
   const pro=await billModelOf(cfg);
-  try{return await readPurchaseBill({...args,model:pro})}
+  try{const b=await readPurchaseBill({...args,model:pro,think:'low'});if(b&&typeof b==='object')b.mode='pakka';return b}
   catch(err){
    if(!pro||pro===cfg.model)throw err;
    proModel=cfg.model;   // pro nahi chala (key par ijazat / hadd) — aage flash hi
    base='Behtar model nahi chala — flash se parh raha hoon…';t0=Date.now();tick();
-   return await readPurchaseBill({...args,model:cfg.model});
+   const b=await readPurchaseBill({...args,model:cfg.model});if(b&&typeof b==='object')b.mode='pakka';return b;
   }
  }
  finally{clearInterval(iv)}
@@ -1609,7 +1612,7 @@ $('settings').onclick=()=>{if(purchaseOnly()){modal('Settings',`<div class="set-
 <div class="ab-btns"><button type="button" id="abSave">💾 Save</button><button type="button" id="abNow">⬆️ Abhi backup lo</button></div>
 <p class="set-sub">Server PC par <b>Google Drive for Desktop</b> isi email se login ho — backup file wahan "Blue Khata Backup" folder mein jati hai aur Drive par khud chali jati hai.</p></div>`:'')+(owner()?`<div class="set-block"><label>♻️ Backup se wapas (Restore)<input id="restore" type="file" accept="application/json,.json"></label><p id="restorePreview" role="status" class="set-sub">JSON backup choose karein, phir Restore / Save Backup dabayein.</p><button type="button" id="restoreSave" disabled>Restore / Save Backup</button></div>`+setRow('imports','📄','Saved PDF reports','Import ki hui PDF files')+setRow('trashBtn','🗑','Deleted entries','Ghalti se mitayi entries wapas layein'):''))}
 ${setGrp('👥 Mulazim aur hifazat',(owner()?setRow('staffList','👥','Mulazim (naam se)','Har larke ka naam · ijazat · 🔗 link se phone jorna')+setRow('staffPass','🔑','Purane password (screen-wise)','Purana tareeqa — password · access')+setRow('devJoin','📱','Mulazim ka device jorain','Device ID likho — us par phir kabhi password nahi lagega')+setRow('devList','📋','Jude hue devices','Kaunse phone/laptop jude hain — hatana bhi yahin se')+setRow('geoBtn','📍','Dukan location · Chhoot · Mulazim band','App sirf dukan ke andar chale'):'')+setRow('loginCheck','🔎','Login check','Ijazat (permission) ka masla dekhein')+setRow('remOff','🔓',remOff()?'Password yaad rakhna: BAND':'Password yaad rakhna: ON',remOff()?'Har dafa password maangega — dabane se ON':'Login ek dafa, phir Logout tak nahi maangega — dabane se BAND')+(owner()?setRow('changePass','🔑','Malik password change','Apna login password badlein'):''))}
-${owner()?setGrp('🔌 POS aur AI',setRow('aiKeyBtn','🤖','AI key','Sham ka milan (Gemini key)')+setRow('syncSuppliers','🔄','Purchase supplier list update','Purchase mulazim ke liye suppliers ki list')+setRow('ppPrintBtn','🖨','Purchase bill auto print','Bill aate hi parchi — stock, rate, nafa')+setRow('rpOpenBtn','🌙','Raat ki report · ⏰ Maal khatam khabar','Har raat phone par · setting bhi yahin')+setRow('bkOpenBtn','📩','HBL Inbox · SMS / email','Paise aaye / gaye khud aate hain · setup yahin')+setRow('prnStatusBtn','🖨','Printer ki haalat (TM-T88IV)','Kaun si parchi nikli · aakhri error')):''}
+${owner()?setGrp('🔌 POS aur AI',setRow('aiKeyBtn','🤖','AI key','Sham ka milan (Gemini key)')+setRow('syncSuppliers','🔄','Purchase supplier list update','Purchase mulazim ke liye suppliers ki list')+setRow('ppPrintBtn','🖨','Print setting (purchase · Urdu)','Purchase bill auto parchi · transfer note / gate pass par Urdu')+setRow('rpOpenBtn','🌙','Raat ki report · ⏰ Maal khatam khabar','Har raat phone par · setting bhi yahin')+setRow('bkOpenBtn','📩','HBL Inbox · SMS / email','Paise aaye / gaye khud aate hain · setup yahin')+setRow('prnStatusBtn','🖨','Printer ki haalat (TM-T88IV)','Kaun si parchi nikli · aakhri error')):''}
 ${(true)?(/Android/i.test(navigator.userAgent)?setGrp('🔋 Battery / background',setRow('batApp','🔋','Chrome ki battery setting','App peeche band na ho — "Unrestricted" chunein')+setRow('batList','📋','Battery optimization list','Chrome ko "Not optimized" karein')):'')+setGrp('🔫 Scanner',setRow('scanTest','🔫','Scanner test','USB scanner se kya aur kitni tezi se aata hai'))+setGrp('🎨 Look'+(owner()?'':' (malik set karta hai)'),`<div class="look-grid${owner()?'':' look-ro'}"><button type="button" class="look-chip" data-look="old"><i style="background:linear-gradient(135deg,#223b6d,#223b6d)"></i>Purana</button><button type="button" class="look-chip" data-look="frost"><i style="background:linear-gradient(135deg,#223B6D,#2B4A86)"></i>Navy Frost</button><button type="button" class="look-chip" data-look="royal"><i style="background:linear-gradient(135deg,#0E1F45,#1B3A7A)"></i>Royal Navy</button><button type="button" class="look-chip" data-look="teal"><i style="background:linear-gradient(135deg,#102A43,#0D7F78)"></i>Navy + Teal</button><button type="button" class="look-chip" data-look="graphite"><i style="background:linear-gradient(135deg,#111827,#4F46E5)"></i>Graphite</button><button type="button" class="look-chip" data-look="ocean"><i style="background:linear-gradient(135deg,#1E40AF,#2563EB)"></i>Ocean Light</button><button type="button" class="look-chip" data-look="paper"><i style="background:linear-gradient(135deg,#3E2F24,#6A4E3A)"></i>Soft Paper</button><button type="button" class="look-chip" data-look="glass"><i style="background:linear-gradient(135deg,#081127,#5EE7FF)"></i>Glass (B)</button><button type="button" class="look-chip" data-look="gold"><i style="background:linear-gradient(135deg,#0B0A09,#F1D27A)"></i>Midnight Gold</button><button type="button" class="look-chip" data-look="emerald"><i style="background:linear-gradient(135deg,#06120F,#6EE7B7)"></i>Emerald Night</button><button type="button" class="look-chip" data-look="cyber"><i style="background:linear-gradient(135deg,#07040F,#FF3DF2)"></i>Cyber Neon</button></div>`)+setGrp('🔗 Update',setRow('updLinks','🔗','Update ke links','GitHub · Firebase · rules · version check')+setRow('pcBtn','🖥️','PC scripts','Kaunsi chal rahi · nayi lagi · abhi check')+setRow('dataSizeBtn','📊','Data ka size','Kitni entries · tasveerein · kitne MB — app dheemi kyun')):''}
 ${setGrp('Account',setRow('logout','🚪','Logout','Is phone se bahar',' set-danger'))}
 <p class="set-foot">PDF report pehle preview mein khulti hai. Naye mobile par pehla login internet se karein. Pending entries Sync hone tak isi device par rehti hain.</p></div>`);$('logout').onclick=()=>{try{sessionStorage.setItem('sam-no-auto','1')}catch{}cloud.controller.logout()};$('backup').onclick=()=>downloadDailyBackup($('backup').querySelector('b')||$('backup'));if(owner()){if($('trashBtn'))$('trashBtn').onclick=()=>trashView();
@@ -1824,7 +1827,7 @@ const PERM_LIST=[['sale','🧾 Sale'],['stock','📦 Stock'],['purchase','🧾 P
 /* har screen ke andar ke option (v2.99.24) — tick hata = deny list mein; deny khali = sab. can(k) app mein jaanchta hai. */
 const CAPS={sale:[['sale.wholesale','📦 Wholesale bill'],['sale.edit','✏️ Bill edit'],['sale.bills','🧾 Bills ki list'],['sale.pc','💻 PC / printer chunna']],
  stock:[['stock.transfer','⇄ Transfer note'],['stock.tc','🧾 Transfer check (scan)'],['stock.tcgive','📦 Transfer: "maal de diya" tick'],['stock.count','📋 Stock ginti'],['stock.in','📥 Aaya / gaya maal'],['stock.reg','📋 Transfer register'],['stock.demand','📢 Demand'],['stock.tolai','⚖️ Tolai'],['stock.item','➕ Naya item / rate (malik ka switch bhi)'],['stock.lblagain','🔁 Kharab label dobara']],
- purchase:[['pur.post','🧾 POS mein bill bhejna'],['pur.cash','💵 Cash purchase'],['pur.milao','🔗 Milao screen (bill ↔ larke ki entry)'],['pur.retail','🏷 Retail khana + "= Retail" chip (Jaanch)']],
+ purchase:[['pur.post','🧾 POS mein bill bhejna'],['pur.cash','💵 Cash purchase'],['pur.milao','🔗 Milao screen (bill ↔ larke ki entry)'],['pur.retail','🏷 Retail khana + "= Retail" chip (Jaanch)'],['pur.aipakka','🎯 AI bill: "Pakka" (Pro) chip — band = sirf ⚡ Tez']],
  full:[['#','📒 Khata (main screen)'],['v:khata','📒 Khata list (sab accounts)'],['kh.totals','👁 Customers / Suppliers ki raqam'],['kh.band','📕 Band khate tab'],['kh.pdf','📄 PDF / report'],['kh.party','➕ Naya account'],['kh.entry','➕ Entry (udhaar / wasooli)'],['kh.edit','✏️ Entry edit'],['kh.del','🗑 Entry delete'],['kh.transfer','⇄ Payment transfer'],['kh.reminder','⏰ Reminder / Due date'],['kh.dasti','🤝 Dasti mein shamil'],['kh.photo','📷 Khate ki picture'],
   ['#','⬆️ Upar ke chips'],['hb.agent','🤖 Noor Agent'],['hb.due','🔔 Late / Due chip'],['hb.bank','📩 HBL / Kis ko diya chip'],['hb.day','🔒 Din band chip'],['hb.sync','☁️ Sync chip'],
   ['#','📅 Daily Sale'],['v:daily','📅 Daily Sale screen'],['d.sale','🧾 Sale likhna'],['d.wasooli','💰 Wasooli likhna'],['d.akhrajat','💸 Akhrajat likhna'],['d.closing','🧮 Closing cash ginti'],['d.ai','🤖 AI se milao'],['d.pics','📷 Sale + Roznamcha pictures'],['d.hbl','🏦 HBL khana'],

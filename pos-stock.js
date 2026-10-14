@@ -1309,7 +1309,7 @@ function tcState(t) {
 function tcStepsHTML(t, s) {
   if (s.k === 'cancel' || !tcNeedG(t)) return '';
   const g = s.g, rc = s.c, k = esc(tcKey(t));
-  const one = g ? `<span class="tc-sd">✓ ${esc(g.byName || '')} · ${tcClock(g.ts)}</span>` : tcCanStep(t, 1) ? `<button type="button" class="tc-give" data-tc-give="${k}">☐ Tick — maal de diya</button>` : `<span class="tc-sw">⏳ ${tcSide(t, 1)} ka tick baqi</span>`;
+  const one = g ? `<span class="tc-sd">✓ ${esc(g.byName || '')} · ${tcClock(g.ts)}${g.pend ? ' · ⏳' : ''}</span>` : tcCanStep(t, 1) ? `<button type="button" class="tc-give${tcArmed('g:' + k) ? ' arm' : ''}" data-tc-give="${k}">${tcArmed('g:' + k) ? '✓ Pakka? dobara dabao' : '☐ Tick — maal de diya'}</button>` : `<span class="tc-sw">⏳ ${tcSide(t, 1)} ka tick baqi</span>`;
   const two = rc ? `<span class="tc-sd">${rc.status === 'farq' ? '⚠️' : '✓'} ${esc(rc.byName || '')} · ${tcClock(rc.ts)}</span>` : !g ? '<span class="tc-sw lock">🔒 pehle 1 number tick</span>' : tcCanStep(t, 2) ? '<span class="tc-sw">☐ upar tick ya 📷 scan</span>' : `<span class="tc-sw">⏳ ${tcSide(t, 2)} ka tick baqi</span>`;
   return `<div class="tc-2"><div class="tc-stp${g ? ' done' : ''}"><i>1</i><b>${tcSide(t, 1)} — maal de diya</b>${one}</div><div class="tc-stp${rc ? ' done' : g ? ' next' : ''}"><i>2</i><b>${tcSide(t, 2)} — maal mil gaya</b>${two}</div></div>`;
 }
@@ -1363,7 +1363,7 @@ function tcNikleHTML() {
     <div class="mchips">${C(tcDir === 'all', 'dir', 'all', 'Sab')}${C(tcDir === 'in', 'dir', 'in', 'Godam → Dukan')}${C(tcDir === 'out', 'dir', 'out', 'Dukan → Godam')}</div>
     ${isOwner() ? `<button type="button" class="tc-giver" data-tc-giver="1">📦 Godam wala (pehla tick): <b>${esc(tcGiver())}</b> ✎</button>` : ''}
     <div class="tc-kpis">${(() => { const ng = pend.filter(x => x.s.ng).length; return ng ? `<div class="bad"><b>${ng}</b><small>📦 de diya tick nahi</small></div>` : ''; })()}<div class="${pend.length ? 'bad' : ''}"><b>${pend.length}</b><small>⏳ nahi pahunche${late ? ` · ${late} der se` : ''}</small></div><div class="good"><b>${done.length - farq}</b><small>✓ check ho gaye</small></div><div class="${farq ? 'warn' : ''}"><b>${farq}</b><small>⚠️ farq</small></div></div>
-    ${pend.length ? `<h4 class="tc-hh">⏳ Abhi nahi pahunche (${pend.length}) <small>— tick lagao, neeche "✓ Check" (scan ke baghair)</small></h4>${pend.map(card).join('')}${tcSel.size ? `<div class="tc-bulk"><b>${tcSel.size} note chune</b><button type="button" class="tc-ok" data-tc-bulk="1"${tcBusy ? ' disabled' : ''}>✓ Maal poora mila — check karo</button><button type="button" data-tc-selclear="1">✕</button></div>` : ''}` : ''}
+    ${pend.length ? `<h4 class="tc-hh">⏳ Abhi nahi pahunche (${pend.length}) <small>— tick lagao, neeche "✓ Check" (scan ke baghair)</small></h4>${pend.map(card).join('')}${tcSel.size ? `<div class="tc-bulk"><b>${tcSel.size} note chune</b><button type="button" class="tc-ok${tcArmed('bulk') ? ' arm' : ''}" data-tc-bulk="1"${tcBusy ? ' disabled' : ''}>${tcArmed('bulk') ? '✓ Pakka? dobara dabao' : '✓ Maal poora mila — check karo'}</button><button type="button" data-tc-selclear="1">✕</button></div>` : ''}` : ''}
     ${done.length ? `<h4 class="tc-hh">✓ Check ho chuke (${done.length})</h4>${done.map(card).join('')}` : ''}
     ${canc.length ? `<h4 class="tc-hh">❌ Cancel ho gaye (${canc.length}) <small>— POS mein mita diye, check nahi karne</small></h4>${canc.map(card).join('')}` : ''}
     ${rows.length ? '' : '<p class="muted">Is arse mein koi transfer note nahi nikla.</p>'}`;
@@ -1436,6 +1436,22 @@ function tcLookup(code) {
   beep(!c); if (c && navigator.vibrate) navigator.vibrate([80, 60, 80]);
   tcPaint();
 }
+// v2.99.78: ⚡ TEZ TICK — malik: "Zeeshan jab tick kare to speed se ho". Do tap (pehla = "Pakka? dobara dabao", 3 second) — popup nahi.
+// Tick usi second screen par ✓ (tcChecks mein), save peeche (cloud.saveTransferCheckFast = seedha setDoc, transaction nahi). Na hua to ✓ hat jata hai + notice.
+let tcArm = { k: '', until: 0 }, tcArmT = 0;
+const tcArmed = k => tcArm.k === k && Date.now() < tcArm.until;
+function tcArmSet(k) { tcArm = { k, until: Date.now() + 3000 }; clearTimeout(tcArmT); tcArmT = setTimeout(() => { tcArm = { k: '', until: 0 }; tcPaint(); }, 3000); if (navigator.vibrate) navigator.vibrate(25); tcPaint(); }
+const tcErrMsg = e => /permission|insufficient/i.test(String(e?.code || '') + String(e?.message || '')) ? 'ijazat nahi / rules' : /offline|unavailable|network/i.test(String(e?.code || '') + String(e?.message || '')) ? 'internet' : (e?.message || String(e));
+function tcFast(key, d, { onOk, onErr } = {}) {
+  tcChecks.set(key, { ...d, id: key, ts: Date.now(), pend: true }); beep(true); if (navigator.vibrate) navigator.vibrate(40); tcPaint();
+  const save = cloud.saveTransferCheckFast || cloud.saveTransferCheck;
+  return save(key, d).then(() => { try { onOk?.(); } catch {} }).catch(e => {
+    if (e?.code === 'tc/done') { if (e.done) tcChecks.set(key, e.done); notice('Pehle hi tick ho chuka'); }
+    else { const c = tcChecks.get(key); if (c && c.pend) tcChecks.delete(key); beep(false); notice('⚠️ Tick save nahi hua (TN ' + (d.transferNo || d.transferId) + ') — dobara lagao: ' + tcErrMsg(e)); }
+    try { onErr?.(e); } catch {}
+    tcPaint();
+  });
+}
 async function tcSaveOne(t, status, note) {
   if (tcNeedG(t) && !tcChecks.get(tcGKey(t))) throw Object.assign(Error('pehle maal de diya tick'), { code: 'tc/nogive' });   // v2.99.74
   if (!tcCanStep(t, 2)) throw Object.assign(Error('sirf ' + tcSide(t, 2)), { code: 'tc/noside' });
@@ -1446,10 +1462,12 @@ async function tcSaveOne(t, status, note) {
 async function tcBulk() {
   if (tcBusy || !tcSel.size) return; if (!cloud?.saveTransferCheck) { notice('App update karein'); return; }
   const list = tcRows().filter(t => tcSel.has(tcKey(t)) && !tcChecks.get(tcKey(t)) && !tcState(t).ng && tcCanStep(t, 2));
-  if (!confirm(`${list.length} transfer note "✓ Maal poora mila" karna hai?\nSave ke baad badal nahi sakta.`)) return;
-  tcBusy = true; tcPaint(); let ok = 0, bad = 0;
-  for (const t of list) { try { await tcSaveOne(t, 'ok', ''); ok++; } catch (e) { if (e?.code === 'tc/done') ok++; else bad++; } }
-  tcBusy = false; tcSel.clear(); beep(!bad); notice(`✓ ${ok} note check${bad ? ` · ${bad} nahi hue` : ''}`); tcPaint();
+  if (!list.length) return;
+  if (!tcArmed('bulk')) { tcArmSet('bulk'); return; }   // v2.99.78: popup ki jagah doosra tap
+  tcArm = { k: '', until: 0 };
+  for (const t of list) { const key = tcKey(t), d = { transferId: t.transferId, transferNo: t.transferNo, from: t.from, to: t.to, issuedAt: tcIssued(t), status: 'ok', note: '', byName: nameOf() || (isOwner() ? 'Malik' : 'Mulazim'), device: deviceOf(), lines: (t.lines || []).length };
+    tcFast(key, d, { onOk: () => { try { auditOf?.({ area: 'stock', act: 'tr-check', what: `TN ${t.transferNo || t.transferId} ✓ poora (tick)`.slice(0, 120), ref: key, refType: 'transfer' }); } catch {} } }); }
+  tcSel.clear(); notice(`✓ ${list.length} note check`); tcPaint();
 }
 async function tcSave(status, note) {
   const t = tcRes?.t; if (!t || tcBusy) return;
@@ -1457,18 +1475,11 @@ async function tcSave(status, note) {
   if (status === 'farq' && !String(note || '').trim()) { notice('Farq likhein — kya kam / zyada aaya'); return; }
   if (tcState(t).ng) { notice('🔒 Pehle ' + tcSide(t, 1) + ' "maal de diya" tick kare'); return; }   // v2.99.74
   if (!tcCanStep(t, 2)) { notice('🔒 Yeh check sirf ' + tcSide(t, 2) + ' kar sakta hai'); return; }
-  tcBusy = true; tcPaint();
+  if (tcChecks.get(tcKey(t)) && !tcChecks.get(tcKey(t)).pend) { tcRes = { type: 'done', t, c: tcChecks.get(tcKey(t)) }; beep(false); tcPaint(); return; }
   const key = tcKey(t), d = { transferId: t.transferId, transferNo: t.transferNo, from: t.from, to: t.to, issuedAt: tcIssued(t), status, note: String(note || '').trim(), byName: nameOf() || (isOwner() ? 'Malik' : 'Mulazim'), device: deviceOf(), lines: (t.lines || []).length };
-  try {
-    await cloud.saveTransferCheck(key, d);
-    const c = { ...d, id: key, ts: Date.now() };
-    if (!tcChecks.has(key)) tcChecks.set(key, c);
-    tcRes = { type: 'saved', t, c: tcChecks.get(key) }; tcCode = ''; beep(true);
-    try { auditOf?.({ area: 'stock', act: 'tr-check', what: `TN ${t.transferNo || t.transferId} ${status === 'farq' ? '⚠️ farq' : '✓ poora'}`.slice(0, 120), ref: key, refType: 'transfer', note: d.note.slice(0, 200) }); } catch {}
-  } catch (e) {
-    if (e?.code === 'tc/done') { tcRes = { type: 'done', t, c: e.done }; beep(false); }
-    else notice('Save nahi hua: ' + (/permission|insufficient/i.test(String(e?.code || '') + String(e?.message || '')) ? 'rules v2.48 upload nahi hue (ya pehle "maal de diya" tick nahi)' : /offline|unavailable|network/i.test(String(e?.code || '') + String(e?.message || '')) ? 'internet chahiye' : (e?.message || e)));
-  } finally { tcBusy = false; tcFarq = false; tcPaint(); }
+  tcRes = { type: 'saved', t, c: { ...d, id: key, ts: Date.now() } }; tcCode = ''; tcFarq = false;   // v2.99.78: ⚡ foran
+  tcFast(key, d, { onOk: () => { try { auditOf?.({ area: 'stock', act: 'tr-check', what: `TN ${t.transferNo || t.transferId} ${status === 'farq' ? '⚠️ farq' : '✓ poora'}`.slice(0, 120), ref: key, refType: 'transfer', note: d.note.slice(0, 200) }); } catch {} },
+    onErr: e => { tcRes = e?.code === 'tc/done' ? { type: 'done', t, c: e.done } : { type: 'open', t }; } });
 }
 document.addEventListener('click', e => {
   if (e.target.closest?.('[data-stock-tc]')) { openTransferCheck(); return; }
@@ -1506,14 +1517,12 @@ async function tcGive(key, btn) {
   if (!cloud?.saveTransferCheck) { notice('App update karein'); return; }
   if (!tcCanStep(t, 1)) { notice('🔒 Yeh tick sirf ' + tcSide(t, 1) + ' (apne login se) laga sakta hai'); return; }
   if (tcChecks.get(tcGKey(t))) { notice('Pehle hi tick ho chuka'); return; }
-  if (!confirm(`TN ${t.transferNo || t.transferId} — ${tcSide(t, 1)}: "maal de diya"?\n${tcSum(t)}\nSave ke baad badal nahi sakta.`)) return;
-  tcBusy = true; if (btn) { btn.disabled = true; btn.textContent = '⏳ Save…'; }
+  if (!tcArmed('g:' + key)) { tcArmSet('g:' + key); return; }   // v2.99.78: popup ki jagah doosra tap (3 second)
+  tcArm = { k: '', until: 0 };
   const gk = tcGKey(t), d = { transferId: t.transferId, transferNo: t.transferNo, from: t.from, to: t.to, issuedAt: tcIssued(t), status: 'diya', note: '', byName: nameOf() || (isOwner() ? 'Malik' : 'Mulazim'), device: deviceOf(), lines: (t.lines || []).length };
-  try { await cloud.saveTransferCheck(gk, d); if (!tcChecks.has(gk)) tcChecks.set(gk, { ...d, id: gk, ts: Date.now() }); beep(true); notice('✓ "Maal de diya" — TN ' + (t.transferNo || t.transferId));
-    try { auditOf?.({ area: 'stock', act: 'tr-give', what: `TN ${t.transferNo || t.transferId} 📦 maal de diya`.slice(0, 120), ref: gk, refType: 'transfer' }); } catch {}
-    if (tcRes?.type === 'nogive' && tcRes.t === t) tcRes = tcCanStep(t, 2) ? { type: 'open', t } : null; }
-  catch (e) { notice('Save nahi hua: ' + (e?.code === 'tc/done' ? 'pehle hi tick ho chuka' : /permission|insufficient/i.test(String(e?.code || '') + String(e?.message || '')) ? 'ijazat nahi (sirf ' + tcSide(t, 1) + ' ka login) / rules v2.48' : (e?.message || e))); }
-  finally { tcBusy = false; tcPaint(); }
+  if (tcRes?.type === 'nogive' && tcRes.t === t) tcRes = tcCanStep(t, 2) ? { type: 'open', t } : null;
+  notice('✓ "Maal de diya" — TN ' + (t.transferNo || t.transferId));
+  tcFast(gk, d, { onOk: () => { try { auditOf?.({ area: 'stock', act: 'tr-give', what: `TN ${t.transferNo || t.transferId} 📦 maal de diya`.slice(0, 120), ref: gk, refType: 'transfer' }); } catch {} } });   // v2.99.78: ⚡ foran ✓
 }
 document.addEventListener('change', e => { if (!e.target.matches?.('[data-tc-sel]')) return; const k = e.target.dataset.tcSel; if (e.target.checked) tcSel.add(k); else tcSel.delete(k); tcPaint(); });
 document.addEventListener('submit', e => { if (!e.target.matches?.('[data-tc-form]')) return; e.preventDefault(); tcLookup(e.target.querySelector('[data-tc-code]')?.value || ''); });

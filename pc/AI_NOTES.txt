@@ -2880,3 +2880,11 @@ AGLA: malik se "aaye" aur "bill" wali notification ki screenshot — qaide pakke
 === 2026-10-14 — nt-print v1.19 / sale-post v1.10 (manifest 2026-10-14.3) — 🚪 GATE PASS sirf item + quantity, bara gehra font ===
 * gatePassText (sale-post) / gateJobs (nt-print): heading, godam, Sale No, waqt, barcode, customer, total, dastakhat HATA diye.
   Har item: naam ESC ! 0x18 (mota + do guna ooncha), quantity daayein ESC ! 0x38 ("2 CTN + 3 PCS"); ESC G 1 gehra. Tafseel: ../AI_NOTES.txt v2.99.78.
+
+=== 2026-10-14 · manifest 2026-10-14.3 — 🔤 TRANSFER NOTE + GATE PASS PAR URDU ===
+* urdu-names.js v1.0 (NAYA, saanjha): watch(db) = blueAccess/urduNames {map itemId->Urdu} + printConfig.urduSlip LIVE (onSnapshot, print par Firestore nahi).
+  get(id) · line(ur, px) = text parchi mein Urdu nishan · toJob(text) = nt-parchi job (raw + raster tasveer) · strip(text) = bina Urdu.
+* transfer-sync.js v4.8: transferText har item ke neeche Urdu (32px). sendRaw: Urdu ho to nt-parchi worker (tez), exception par bina Urdu RAW.
+  Printer ki ghalti (Error) par dobara NAHI chhapta.
+* sale-post.js v1.11 + nt-print.js v1.20: GATE PASS har item ke naam ke neeche Urdu (44px, mota). sale-post printText: Urdu = sendJobs(toJob).
+* Speed: Urdu tasveer usi PowerShell worker se (ek dafa khula) — print slow nahi.
