@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  item-report.js  v1.1 (2026-10-14: Firestore list-ke-andar-list nahi leta — items ab JSON string 'j' mein, hissa ~600 KB tak) · v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
+//  item-report.js  v1.2 (2026-10-14: 💰 COMMISSION items (blueAccess/commission) — har din har Supply Man kitne packet -> posStats/irep-comm) · v1.1 (2026-10-14: Firestore list-ke-andar-list nahi leta — items ab JSON string 'j' mein, hissa ~600 KB tak) · v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
 //  Malik: "poore month ka actual data — 1–10, 10–20, 20–30, poora mahina, week wise; har item kaun si bik rahi, kin dino / hafton
 //         mein zyada, un par nafa kitna — chart, click par aage data".
 //  sales-stats.js (har ghante) ke aakhir mein chalta hai: run({ pool, sql, db }). SQL mein KUCH NAHI likhta — sirf SELECT.
@@ -72,9 +72,26 @@ async function run({ pool, sql, db, log = console.log, now = new Date() }) {
   const chunks = []; let cur = [], size = 2;
   for (const e of all) { const n = Buffer.byteLength(JSON.stringify(e)) + 1; if (cur.length && size + n > MAXB) { chunks.push(cur); cur = []; size = 2; } cur.push(e); size += n; }
   if (cur.length) chunks.push(cur);
+  // v1.2: 💰 COMMISSION — malik ki tick ki hui items (Biryani 100g, Qorma 100g …): har din × Supply Man (Sale.SupplyManID, 0 = bina) × item = packet
+  let comm = null;
+  try {
+    const cd = await db.collection('businesses').doc('noor-traders').collection('blueAccess').doc('commission').get();
+    const cids = Object.keys((cd.exists && cd.data().items) || {}).map(Number).filter(n => Number.isInteger(n) && n > 0).slice(0, 200);
+    if (cids.length) {
+      const men = (await pool.request().query('SELECT SupplyManID, SupplyManName FROM dbo.SupplyMan')).recordset.map(r => [Number(r.SupplyManID), String(r.SupplyManName || '').trim().slice(0, 40)]);
+      const cr = (await pool.request().input('a', sql.DateTime, from).input('b', sql.DateTime, to).query(`
+        SELECT d.ItemID, CONVERT(char(10), s.SaleDate, 23) AS dy, ISNULL(s.SupplyManID, 0) AS m, SUM(d.Qty) AS q
+        FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID
+        WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(s.PartyID, -2) NOT IN (${inList(skipIds)}) AND d.ItemID IN (${cids.join(',')})
+        GROUP BY d.ItemID, CONVERT(char(10), s.SaleDate, 23), ISNULL(s.SupplyManID, 0)`)).recordset;
+      const rows = []; for (const r of cr) { const d = di.get(String(r.dy).trim()), q = r3(r.q); if (d != null && q) rows.push([d, Number(r.m) || 0, Number(r.ItemID), q]); }
+      comm = { men, ids: cids, rows };
+    }
+  } catch (e) { log('💰 commission data nahi bana: ' + e.message); }
   const b = db.batch();
+  if (comm) b.set(col.doc('irep-comm'), { j: JSON.stringify(comm), at: Date.now() });
   chunks.forEach((items, k) => b.set(col.doc('irep-' + k), { j: JSON.stringify(items), n: items.length, at: Date.now() }));
-  b.set(col.doc('irep-meta'), { at: Date.now(), from: days[0], to: days[days.length - 1], days, n: all.length, chunks: chunks.length, ws: wsNames.slice(0, 10), ver: '1.1', bytes: chunks.reduce((s, c) => s + Buffer.byteLength(JSON.stringify(c)), 0) });
+  b.set(col.doc('irep-meta'), { at: Date.now(), from: days[0], to: days[days.length - 1], days, n: all.length, chunks: chunks.length, ws: wsNames.slice(0, 10), ver: '1.2', comm: !!comm, bytes: chunks.reduce((s, c) => s + Buffer.byteLength(JSON.stringify(c)), 0) });
   await b.commit();
   try { const old = await col.get(); for (const d of old.docs) { const m = /^irep-(\d+)$/.exec(d.id); if (m && Number(m[1]) >= chunks.length) await d.ref.delete(); } } catch {}
   log(new Date().toLocaleString('en-PK') + ' — 📊 item report: ' + all.length + ' items, ' + days.length + ' din, ' + chunks.length + ' hisse, ' + Math.round((Date.now() - t0) / 1000) + 's');

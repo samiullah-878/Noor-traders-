@@ -3435,3 +3435,20 @@ html body .ir-root .ir-sec input[type=search]{background:var(--ir-surf)!importan
 #summary:has(.ir-root){min-width:0;max-width:100%}
 .ir-root .ir-head,.ir-root .ir-head .mchips{min-width:0;max-width:100%}
 .ir-sh small{max-width:55%}
+/* v2.99.83 💰 Commission — Supply Man wise (Item report) */
+.ir-comm .ir-sh{align-items:center}
+.ir-cbtn{flex:none;padding:6px 10px;border-radius:999px;border:1px solid var(--ir-grid);background:transparent;font-size:12px;font-weight:800;color:inherit}
+.ir-ctot{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;margin:4px 0 10px}
+.ir-ctot>div{padding:10px;border-radius:14px;background:linear-gradient(135deg,rgba(27,175,122,.14),rgba(27,175,122,.05));border:1px solid rgba(27,175,122,.25)}
+.ir-ctot b{display:block;font-size:17px;font-weight:900}.ir-ctot small{font-size:11px}
+html body .ir-root .ir-sec .ir-ctot>div:first-child b{color:var(--ir-p)!important}
+.ir-tb.ir-cb{background:var(--ir-p)}
+.ir-crow{display:flex;align-items:center;gap:6px;flex:none}
+.ir-crow input{width:74px;padding:7px 8px;border-radius:10px;border:1px solid var(--ir-grid);background:var(--ir-surf);color:var(--ir-ink);font-weight:800;text-align:right;font-size:14px}
+.ir-cx{width:32px;height:32px;border-radius:10px;border:1px solid rgba(227,73,72,.35);background:rgba(227,73,72,.08);color:var(--ir-l);font-weight:900}
+.ir-cset .hs-search{display:block;margin:12px 0 4px}.ir-cset .hs-search input{width:100%;box-sizing:border-box}
+.ir-cset .ir-row b{color:var(--ir-ink)}.ir-cset .ir-num b{color:var(--ir-p)}
+.ir-cc.one .ir-bars{max-width:22px}.ir-cc.one .ir-bars i{max-width:22px}
+.ir-cc.one.dense .ir-v{display:block;font-size:9px}
+html body .ir-root .ir-sec .ir-cx{color:var(--ir-l)!important;border-color:rgba(227,73,72,.35)!important;background:rgba(227,73,72,.08)!important}
+html body .ir-root .ir-cset .ir-num b{color:var(--ir-p)!important}

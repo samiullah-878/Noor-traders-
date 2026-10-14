@@ -4558,3 +4558,14 @@ tak (size se), wholesale 0 = [di,q,rs] (chhota). cloud.listenItemReport j parse 
 BOJH (malik ne poocha): ~2,500 items × 75 din ≈ 1.1 MB JSON (≈0.4 MB gzip) = 2 hisse + meta. Likhai: 3 docs / ghanta = ~72 / din.
 Parhai: sirf report screen khuli ho — kholne par 3 docs, PC ka naya data aaye (ghante mein ek) to 3 aur. Free hadd: 50k parhai / 20k likhai roz,
 10 GiB / mahina download, 1 GiB storage — is report ka hissa 1% se bhi kam.
+
+=== v2.99.83 (2026-10-14) — 💰 COMMISSION Supply Man wise (Item report ke andar) ===
+Malik: "Biryani 100 gm, chaat 100 gm, qorma 100 gm … in par commission hai fi packet 10 — reports mein supply man wise data aaye, ×10 paisa bhi ban jaye".
+* Setup: 📊 Item report → 💰 Commission → ⚙️ items: search (sirf 3 mahine mein biki items) → ➕ (default Rs 10) · rate khana badlo · ✕ hatao.
+  Firestore blueAccess/commission {items:{itemId:{r,n}}, at, by} (sirf malik; max 200). cloud.listenCommission / setCommission.
+* Data: PC item-report.js v1.2 → posStats/irep-comm {j: JSON {men:[[id,name]], ids, rows:[[dayIdx, supplyManId(0=bina), itemId, packet]]}};
+  meta.comm = true ho to cloud.listenItemReport irep-comm bhi parhta hai (+1 read). Naya item jora = agle ghante PC ka data (screen par ⏳ note).
+* irep.js: commAgg(a,b) waqt ki chip (1–10 / hafta / mahina…) ke hisaab se — larka × packet × rate; "Bina SP Man" aakhir mein.
+  Larke par tap = item-wise + din-war commission chart (colChart one:true = sirf aqua bar). PDF mein commission table.
+* Packet = POS Qty (wapsi minus; cancel + Noor Traders / our factory / stock farq bahar). Item report sirf malik — mulazim CAPS ki zaroorat nahi.
+* Test: scratchpad hd/ir.mjs (commission 13 checks).

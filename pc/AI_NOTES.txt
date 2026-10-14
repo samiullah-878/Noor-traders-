@@ -2907,3 +2907,7 @@ Malik: "font barha kar do or parties ka naam bi urdu main likh diya karo" (sirf 
 
 === 2026-10-14 · manifest 2026-10-14.7 — item-report.js v1.1 ===
 Firestore nested arrays ki ijazat nahi — irep-<k> ab {j: JSON string, n, at} (~600 KB / doc), wq/wrs 0 ho to nahi likhte. meta.bytes = kul size.
+
+=== 2026-10-14 · manifest 2026-10-14.8 — item-report.js v1.2 ===
+💰 COMMISSION: blueAccess/commission ki item ids (max 200) → SQL SaleDetail × Sale.SupplyManID (ISNULL 0) × din → posStats/irep-comm {j, at}
++ dbo.SupplyMan naam. meta.comm = true. Ghalti ho to sirf log ("commission data nahi bana") — baqi report chalti rahe. Sirf SELECT.

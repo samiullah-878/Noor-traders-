@@ -4,6 +4,8 @@
 //   d: [[dayIdx, ginti, Rs, wholesale ginti, wholesale Rs]] · c = fi piece khareed (ABHI ka rate — purane din ka nafa andaza).
 // Screen: mahina + waqt chips (1–10 / 11–20 / 21–31 / poora / hafta 1–5 / apni tareekh) · wholesale saath / baghair · KPI ·
 //   charts (top items, hafta-war, din-war, mahine ke hisse, roz ki sale) — har bar par tap = aage tafseel · patterns · saari items ki table · PDF.
+// v2.99.83: 💰 COMMISSION — malik items tick kare (blueAccess/commission {items:{id:{r,n}}}, Rs 10 / packet default); PC irep-comm:
+//   rows [[dayIdx, supplyManId (0 = bina), itemId, packet]] -> Supply Man wise packet × rate. Setup aur commission ke ilawa app kuch LIKHTI nahi.
 // App kuch LIKHTI nahi — sirf parhti hai. Rang: dataviz reference palette (sale = neela, nafa = aqua, ghaata = laal) — style.css .ir-*.
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -23,14 +25,15 @@ const lastDay = m => new Date(+m.slice(0, 4), +m.slice(5, 7), 0).getDate();
 const isDay = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
 const pct = (a, b) => b ? Math.round(a / b * 1000) / 10 : 0;
 
-let cloud = null, notice = () => {}, pdfOf = null, stop = null, data = null, err = '', loaded = false;
+let cloud = null, notice = () => {}, pdfOf = null, stop = null, data = null, err = '', loaded = false, cStop = null, commCfg = {}, cq = '';
 const LS = 'sam-irep';
 const st = (() => { let v = {}; try { v = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch {} return { mon: v.mon || '', per: v.per || 'm', from: v.from || '', to: v.to || '', ws: v.ws !== false, sort: v.sort || 'rs', q: '', lim: 60 }; })();
 const keep = () => { try { localStorage.setItem(LS, JSON.stringify({ mon: st.mon, per: st.per, from: st.from, to: st.to, ws: st.ws, sort: st.sort })); } catch {} };
 
 export function irepSetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; pdfOf = o.pdf || pdfOf; }
-export function irepStop() { if (stop) { try { stop(); } catch {} stop = null; } }
+export function irepStop() { if (stop) { try { stop(); } catch {} stop = null; } if (cStop) { try { cStop(); } catch {} cStop = null; } }
 function watch() {
+  if (!cStop && cloud?.listenCommission) cStop = cloud.listenCommission(m => { commCfg = m || {}; if ($('irRoot')) paint(); if (document.querySelector('.ir-cset')) commSetPaint(); });
   if (stop || !cloud?.listenItemReport) return;
   stop = cloud.listenItemReport((d, e) => { loaded = true; if (d) { data = d; err = ''; ix = null; } else err = e?.code || e?.message || 'masla'; if ($('irRoot')) paint(); });
 }
@@ -85,11 +88,11 @@ const fmtQty = (q, pk) => { q = Math.round(q * 1000) / 1000; if (pk > 1 && Math.
 
 // ---------- chart (SVG, bina library) ----------
 // cols: [{label, a (sale), b (nafa), act, sub}] — sale + nafa saath saath, aik hi axis. Tap = act (aage tafseel).
-function colChart(cols, { h = 150, unit = '', dense = false } = {}) {
+function colChart(cols, { h = 150, unit = '', dense = false, one = false } = {}) {
   if (!cols.length) return '';
   const max = Math.max(1, ...cols.map(c => Math.max(c.a, c.b, 0))), W = 100 / cols.length;
-  return `<div class="ir-cc${dense || cols.length > 12 ? ' dense' : ''}" style="--n:${cols.length}">${cols.map(c => { const ha = Math.max(0, c.a) / max * 100, hb = Math.max(0, c.b) / max * 100, neg = c.b < 0;
-    return `<button type="button" class="ir-col" ${c.act || ''} title="${esc(c.label)} · sale Rs ${num(c.a)} · nafa Rs ${num(c.b)}"><span class="ir-v">${k1(c.a)}</span><span class="ir-bars" style="height:${h}px"><i class="s" style="height:${ha}%"></i><i class="${neg ? 'l' : 'p'}" style="height:${neg ? 6 : hb}%"></i></span><span class="ir-lab">${esc(c.label)}</span>${c.sub ? `<small>${esc(c.sub)}</small>` : ''}</button>`; }).join('')}</div>${unit ? `<p class="ir-unit">${esc(unit)}</p>` : ''}`;
+  return `<div class="ir-cc${dense || cols.length > 12 ? ' dense' : ''}${one ? ' one' : ''}" style="--n:${cols.length}">${cols.map(c => { const ha = Math.max(0, c.a) / max * 100, hb = Math.max(0, c.b) / max * 100, neg = c.b < 0;
+    return `<button type="button" class="ir-col" ${c.act || ''} title="${esc(c.label)} · ${one ? '' : 'sale '}Rs ${num(c.a)}${one ? '' : ' · nafa Rs ' + num(c.b)}"><span class="ir-v">${k1(c.a)}</span><span class="ir-bars" style="height:${h}px"><i class="${one ? 'p' : 's'}" style="height:${ha}%"></i>${one ? '' : `<i class="${neg ? 'l' : 'p'}" style="height:${neg ? 6 : hb}%"></i>`}</span><span class="ir-lab">${esc(c.label)}</span>${c.sub ? `<small>${esc(c.sub)}</small>` : ''}</button>`; }).join('')}</div>${unit ? `<p class="ir-unit">${esc(unit)}</p>` : ''}`;
 }
 const legend = () => '<div class="ir-leg"><span><i class="s"></i>Sale</span><span><i class="p"></i>Nafa</span><span><i class="l"></i>Ghaata</span></div>';
 // top items: list-chart (naam + sale bar + nafa hissa), tap = item ki poori kahani
@@ -128,6 +131,52 @@ function patterns(m) {
 }
 const pchip = (r, txt) => `<button type="button" class="ir-pc" data-ir-item="${esc(String(r.it.i))}"><b>${esc(r.it.n)}</b><small>${esc(txt)}</small></button>`;
 
+// ---------- 💰 commission ----------
+const cRate = id => Number(commCfg[String(id)]?.r) || 0;
+function commAgg(a, b) {
+  const X = index(), C = data?.comm; if (!C || !Object.keys(commCfg).length) return null;
+  const ia = X.di.has(a) ? X.di.get(a) : (a < (X.days[0] || '') ? 0 : X.days.length), ib = X.di.has(b) ? X.di.get(b) : (b < (X.days[0] || '') ? -1 : X.days.length - 1);
+  const names = new Map((C.men || []).map(([id, n]) => [Number(id), n])), per = new Map(); let tq = 0, trs = 0;
+  for (const [d, m, it, q] of C.rows || []) { if (d < ia || d > ib) continue; const r = cRate(it); if (!r) continue;
+    const o = per.get(m) || { id: m, name: m ? (names.get(m) || 'SP Man ' + m) : 'Bina SP Man', q: 0, rs: 0, items: new Map(), days: new Map() };
+    o.q += q; o.rs += q * r; o.items.set(it, (o.items.get(it) || 0) + q); o.days.set(d, (o.days.get(d) || 0) + q * r); per.set(m, o); tq += q; trs += q * r; }
+  const miss = Object.keys(commCfg).filter(id => !(C.ids || []).map(String).includes(id));
+  return { men: [...per.values()].sort((x, y) => (y.id ? 1 : 0) - (x.id ? 1 : 0) || y.rs - x.rs), tq, trs, miss };
+}
+const cName = id => commCfg[String(id)]?.n || index().items.find(x => String(x.i) === String(id))?.n || 'Item ' + id;
+function commHTML(a, b) {
+  const nItems = Object.keys(commCfg).length;
+  if (!nItems) return `<section class="ir-sec ir-comm"><div class="ir-sh"><b>💰 Commission — Supply Man wise</b></div><p class="lk-note">Jin items par fi packet commission hai (jaise Biryani 100g, Qorma 100g — Rs 10) un ko tick karein — phir har larke ka packet × Rs = commission yahan.</p><button type="button" class="sh-wide" data-ir-cset="1">💰 Commission items chunein</button></section>`;
+  const C = commAgg(a, b);
+  const head = `<div class="ir-sh"><b>💰 Commission — Supply Man wise</b><button type="button" class="ir-cbtn" data-ir-cset="1">⚙️ ${nItems} items</button></div>`;
+  if (!C) return `<section class="ir-sec ir-comm">${head}<p class="lk-note">⏳ PC agle ghante tak in items ka Supply Man wise data bhejega.</p></section>`;
+  const max = Math.max(1, ...C.men.map(m => m.rs));
+  return `<section class="ir-sec ir-comm">${head}
+    <div class="ir-ctot"><div><b>Rs ${num(C.trs)}</b><small>kul commission</small></div><div><b>${num(C.tq)}</b><small>packet</small></div><div><b>${C.men.filter(m => m.id).length}</b><small>larke</small></div></div>
+    <div class="ir-top">${C.men.map(m => `<button type="button" class="ir-tr" data-ir-man="${m.id}"><span class="ir-rk">${m.id ? '👦' : '❔'}</span><span class="ir-tn"><b>${esc(m.name)}</b><i class="ir-tb ir-cb" style="width:${Math.max(2, m.rs / max * 100)}%"></i><small>${num(m.q)} packet · ${[...m.items].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([it, q]) => esc(cName(it).replace(/\s+\d+\s*g(m|ram)?\b/i, '')) + ' ' + num(q)).join(' · ')}</small></span><b class="ir-ta">Rs ${num(m.rs)}</b></button>`).join('') || '<div class="nt-empty">🧾<b>In tareekhon mein in items ki sale nahi</b></div>'}</div>
+    ${C.miss.length ? `<p class="lk-note">⏳ ${C.miss.length} naye item ka data PC agle ghante tak bhejega.</p>` : ''}
+    <p class="lk-note">Packet = POS ki ginti (wapas aaye minus, cancel / Noor Traders ke andar ke bill bahar). Rate: ⚙️ mein har item ka.</p></section>`;
+}
+function manDlg(id) {
+  const [a, b0] = range(), b = clipEnd(b0), C = commAgg(a, b), m = C?.men.find(x => String(x.id) === String(id)); if (!m) return;
+  const X = index(), dcols = [...m.days].sort((x, y) => x[0] - y[0]).map(([d, rs]) => ({ label: String(+X.days[d].slice(8)), a: rs, b: 0 }));
+  dlg('💰 ' + m.name, `<div class="ir-hero"><small>${esc(short(a))} – ${esc(short(b))}</small><strong>Rs ${num(m.rs)}</strong><span>commission · ${num(m.q)} packet</span></div>
+    <section class="ir-sec"><div class="ir-sh"><b>Item-wise</b></div><div class="ir-tbl">${[...m.items].sort((x, y) => y[1] - x[1]).map(([it, q]) => `<div class="ir-row"><span><b>${esc(cName(it))}</b><small>Rs ${num(cRate(it))} / packet</small></span><span class="ir-num"><b>${num(q)} packet</b><small class="pos">Rs ${num(q * cRate(it))}</small></span></div>`).join('')}</div></section>
+    ${dcols.length ? `<section class="ir-sec"><div class="ir-sh"><b>📈 Din-war commission</b></div><div class="ir-scroll">${colChart(dcols, { h: 110, one: true, unit: 'Har din ka commission (Rs) — bar chhoo kar raqam' })}</div></section>` : ''}`);
+}
+// ⚙️ commission items — malik: tick + rate (default Rs 10)
+function commSetHTML() {
+  const cur = Object.entries(commCfg), qn = cq.trim().toLowerCase();
+  const hits = qn.length < 2 ? [] : index().items.filter(x => !commCfg[String(x.i)] && x.n.toLowerCase().includes(qn)).slice(0, 20);
+  return `<div class="ir-sec ir-cset"><p class="ir-say">Jin items par <b>fi packet commission</b> hai un ko yahan jorein. Rate badalne ke liye khana chhoo kar likhein.</p>
+    <div class="ir-tbl">${cur.map(([id, v]) => `<div class="ir-row"><span><b>${esc(v.n || cName(id))}</b><small>Rs / packet</small></span><span class="ir-crow"><input type="number" inputmode="decimal" min="0" step="0.5" value="${esc(String(v.r))}" data-ir-crate="${esc(id)}"><button type="button" class="ir-cx" data-ir-cdel="${esc(id)}">✕</button></span></div>`).join('') || '<p class="lk-note">Abhi koi item nahi.</p>'}</div>
+    <label class="hs-search"><input type="search" data-ir-cq="1" placeholder="🔍 item ka naam (jaise biryani)…" value="${esc(cq)}"></label>
+    <div class="ir-tbl">${hits.map(x => `<button type="button" class="ir-row" data-ir-cadd="${esc(String(x.i))}"><span><b>${esc(x.n)}</b></span><span class="ir-num"><b>➕ Rs 10</b></span></button>`).join('')}</div>
+    <p class="lk-note">Sirf wahi items dikhti hain jo pichhle 3 mahine mein biki hain.</p></div>`;
+}
+function commSetPaint() { const el = document.querySelector('.ir-cset'); if (!el) return; const f = document.activeElement?.matches?.('[data-ir-cq]'); el.outerHTML = commSetHTML(); if (f) { const i = document.querySelector('[data-ir-cq]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } } }
+async function commSave(next, msg) { if (!cloud?.setCommission) { notice('App update karein'); return; } try { await cloud.setCommission(next); commCfg = next; notice(msg); commSetPaint(); if ($('irRoot')) paint(); } catch (e) { notice('Save nahi hua: ' + (e?.message || e)); } }
+
 // ---------- screen ----------
 export function renderIrep() {
   watch();
@@ -163,6 +212,7 @@ function paint() {
     <div class="ir-hero"><small>${esc(perLabel)}</small><strong>Rs ${num(T.rs)}</strong><span>sale · ${num(T.n)} items</span>
       <div class="ir-kp"><div><b class="${T.pf < 0 ? 'neg' : ''}">Rs ${num(T.pf)}</b><small>nafa (andaza)</small></div><div><b>${pct(T.pf, T.rs)}%</b><small>nafa %</small></div><div><b>${num(pd.length ? T.rs / pd.length : 0)}</b><small>roz ki sale</small></div></div></div>
     <p class="lk-age${old ? ' warn' : ''}">${esc(age)}${T.noCost ? ` · ${T.noCost} items ka khareed rate nahi (nafa mein nahi)` : ''}</p></div>
+  ${commHTML(a, b)}
   <section class="ir-sec"><div class="ir-sh"><b>🏆 Sab se zyada bikne wali</b><small>tap = item ki poori kahani</small></div>${legend()}${topChart(rows)}</section>
   <section class="ir-sec"><div class="ir-sh"><b>📅 Hafta-war — ${esc(monLabel(m))}</b><small>tap = woh hafta</small></div>${legend()}${colChart(wkCols)}</section>
   <section class="ir-sec"><div class="ir-sh"><b>🗓 Mahine ke hisse</b><small>1–10 · 11–20 · 21–${L} — tap = woh hissa</small></div>${colChart(ptCols)}</section>
@@ -227,6 +277,7 @@ function pdfHTML() {
     <p><b>Kul sale Rs ${num(T.rs)}</b> · nafa (andaza) Rs ${num(T.pf)} (${pct(T.pf, T.rs)}%) · ${num(T.n)} items · ${esc(new Date().toLocaleString('en-PK'))}</p>
     ${sec('🌅 Shuru (1–10) mein zyada', P.part[0], x => esc(x.r.it.n))}${sec('🌤 Darmiyan (11–20) mein zyada', P.part[1], x => esc(x.r.it.n))}${sec(`🌙 Aakhir (21–${L}) mein zyada`, P.part[2], x => esc(x.r.it.n))}
     ${WD_ORDER.map(g => sec(`📆 ${WD[g]} ko zyada`, P.wd[g], x => esc(x.r.it.n))).join('')}${sec('⚠️ Zyada sale, kam nafa', P.thin, x => `${esc(x.r.it.n)} (${x.x}%)`)}${sec('🔻 Ghaate mein', P.loss, x => `${esc(x.r.it.n)} (Rs ${num(x.x)})`)}
+    ${(() => { const C = commAgg(a, b); return C && C.men.length ? `<h3>💰 Commission — Supply Man wise (kul Rs ${num(C.trs)} · ${num(C.tq)} packet)</h3><table class="iv-tbl"><thead><tr><th>Supply Man</th><th>Items (packet)</th><th>Packet</th><th>Commission Rs</th></tr></thead><tbody>${C.men.map(m => `<tr><td><b>${esc(m.name)}</b></td><td>${[...m.items].sort((x, y) => y[1] - x[1]).map(([it, q]) => esc(cName(it)) + ' ' + num(q)).join(', ')}</td><td>${num(m.q)}</td><td><b>${num(m.rs)}</b></td></tr>`).join('')}</tbody></table>` : ''; })()}
     <table class="iv-tbl"><thead><tr><th>#</th><th>Item</th><th>Ginti</th><th>Sale Rs</th><th>Nafa Rs</th><th>Nafa %</th></tr></thead><tbody>
     ${rows.sort((x, y) => y.rs - x.rs).slice(0, 400).map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.it.n)}</td><td>${fmtQty(r.q, r.it.pk)}</td><td>${num(r.rs)}</td><td>${r.noCost ? '—' : num(r.pf)}</td><td>${r.noCost ? '—' : pct(r.pf, r.rs) + '%'}</td></tr>`).join('')}</tbody></table>
     <p><small>Nafa = abhi ka khareed rate × ginti (andaza). Data: POS (Noor Traders ke andar ke bill aur cancel bahar).</small></p>`;
@@ -235,6 +286,12 @@ function pdfHTML() {
 // ---------- clicks ----------
 document.addEventListener('click', e => {
   if (e.target.closest?.('[data-ir-pdf]')) { if (!data?.meta) { notice('Report abhi nahi aayi'); return; } const [a, b0] = range(); if (pdfOf) pdfOf(pdfHTML(), `Item sale ${a} se ${clipEnd(b0)}`); return; }
+  const c = e.target.closest?.('[data-ir-cset],[data-ir-cadd],[data-ir-cdel],[data-ir-man]');
+  if (c && c.closest('.ir-root')) { const d = c.dataset;
+    if (d.irMan != null) { manDlg(d.irMan); return; }
+    if (d.irCset != null) { cq = ''; dlg('💰 Commission items', commSetHTML()); return; }
+    if (d.irCadd) { const it = index().items.find(x => String(x.i) === d.irCadd); if (!it) return; cq = ''; commSave({ ...commCfg, [d.irCadd]: { r: 10, n: it.n } }, '✓ ' + it.n + ' — Rs 10 / packet'); return; }
+    if (d.irCdel) { const n = commCfg[d.irCdel]?.n || ''; if (!confirm((n || 'Yeh item') + ' commission list se hatana hai?')) return; const nx = { ...commCfg }; delete nx[d.irCdel]; commSave(nx, 'Hata diya'); return; } }
   const t = e.target.closest?.('[data-ir-item],[data-ir-mon],[data-ir-p],[data-ir-ws],[data-ir-sort],[data-ir-more],[data-ir-per],[data-ir-day],[data-ir-wd]'); if (!t) return;
   if (!t.closest('.ir-root')) return;
   const d = t.dataset;
@@ -250,10 +307,12 @@ document.addEventListener('click', e => {
   keep(); paint();
 });
 document.addEventListener('change', e => {
-  const t = e.target; if (!t?.matches || !$('irRoot')) return;
+  const t = e.target;
+  if (t?.matches?.('[data-ir-crate]')) { const id = t.dataset.irCrate, r = Math.round(Number(t.value) * 100) / 100; if (!(r > 0)) { notice('Rate 0 se zyada likhein'); return; } commSave({ ...commCfg, [id]: { ...(commCfg[id] || {}), r } }, '✓ Rs ' + r + ' / packet'); return; }
+  if (!t?.matches || !$('irRoot')) return;
   if (t.matches('[data-ir-from]')) { if (isDay(t.value)) st.from = t.value; } else if (t.matches('[data-ir-to]')) { if (isDay(t.value)) st.to = t.value; } else return;
   keep(); paint();
 });
 let qT = 0;
-document.addEventListener('input', e => { if (!e.target.matches?.('[data-ir-q]')) return; st.q = e.target.value || ''; st.lim = 60; clearTimeout(qT); qT = setTimeout(() => { paint(); const i = document.querySelector('[data-ir-q]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); });
-export const _irTest = { agg, range, patterns, partRange, setData: d => { data = d; loaded = true; ix = null; }, st, pdfHTML };
+document.addEventListener('input', e => { if (e.target.matches?.('[data-ir-cq]')) { cq = e.target.value || ''; clearTimeout(qT); qT = setTimeout(commSetPaint, 200); return; } if (!e.target.matches?.('[data-ir-q]')) return; st.q = e.target.value || ''; st.lim = 60; clearTimeout(qT); qT = setTimeout(() => { paint(); const i = document.querySelector('[data-ir-q]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); });
+export const _irTest = { agg, range, patterns, partRange, setData: d => { data = d; loaded = true; ix = null; }, st, pdfHTML, commAgg, setComm: c => { commCfg = c; } };
