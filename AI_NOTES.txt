@@ -4527,3 +4527,7 @@ Malik ne Transfer Voucher (JV) ki photo bheji — Urdu nahi tha (us waqt sirf it
 * PC pos-khata-sync: receipt() — title ke neeche Urdu (UR_TITLE), har party ke naam ke neeche Urdu naam (pid se, warna app ke khaton mein naam
   se — POS reprint), "Ab baqaya" ke neeche "اب بقایا — لینے ہیں / دینے ہیں". HBL parchi par title Urdu nahi. printReceipt: Urdu = nt-parchi
   worker (tez), exception = bina Urdu. urdu-names.js v1.1 (party(), isOn()). manifest 2026-10-14.4. Test scratchpad ur/v.js.
+
+=== 2026-10-14 (PC manifest 2026-10-14.5, app version wahi 2.99.79) — 🔤 Urdu bara + party naam Server PC khud ===
+Voucher Urdu: title 40, party 44, baqaya 36 · transfer note 40 · gate pass 48. Server PC (pos-khata-sync + urdu-names v1.2) har 10 min baqi
+parties ke Urdu naam AI se khud bana deta hai (app kholne ki zaroorat nahi). Malik: "Only parchi" — app ki khata list mein Urdu NAHI.

@@ -2893,3 +2893,10 @@ AGLA: malik se "aaye" aur "bill" wali notification ki screenshot — qaide pakke
 * urdu-names.js v1.1: + blueAccess/urduParties LIVE -> party(id), isOn().
 * pos-khata-sync.js: voucher rasid (Transfer / Cash payment / Cash receipt / Udhar / Kharcha / Purchase) — title Urdu, party naam ke neeche Urdu
   (lines[].pid; POS reprint = naam se app party), "Ab baqaya" Urdu line. Urdu wali parchi nt-parchi worker se; printConfig.urduSlip band = pehle jaisi.
+
+=== 2026-10-14 · manifest 2026-10-14.5 — 🔤 URDU BARA + PARTY NAAM KHUD ===
+Malik: "font barha kar do or parties ka naam bi urdu main likh diya karo" (sirf parchi — app list mein nahi).
+* Font: voucher title 40 · party naam 44 · "اب بقایا" 36 · transfer note item 40 · gate pass 48 (pehle 30/32/28/32/44).
+* urdu-names.js v1.2 fillParties(): jin parties ka Urdu naam nahi — Gemini (blueAccess/aiConfig key + model, https, thinkingBudget 0; 400 = bina)
+  80 ek dafa (har chakkar max 240) -> blueAccess/urduParties merge (by 'pc'). Key nahi / ghalti = 1 ghanta ruko.
+  pos-khata-sync: urFill 1 min baad, phir har 10 min (timer unref). Print ke waqt AI NAHI (tez). Test scratchpad ur/f.js.

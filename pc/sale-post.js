@@ -523,7 +523,7 @@ function gatePassText(godamName, rows, saleNo, partyName, when) {
     const q = ctn && pcs ? ctn + ' CTN + ' + n3(pcs) + ' PCS' : ctn ? ctn + ' CTN' : n3(pcs) + ' PCS';
     if (i++) out.push(ESC + '!' + '\x00' + '-'.repeat(W));
     for (const t of wrap(o.name, W)) out.push(ESC + '!' + '\x18' + t);   // mota + do guna ooncha
-    if (o.ur) out.push(UR.line(o.ur, 44));   // v1.11: 🔤 Urdu naam (bara, mota)
+    if (o.ur) out.push(UR.line(o.ur, 48));   // v1.11: 🔤 Urdu naam (bara, mota)
     out.push(ESC + 'a' + '\x02' + ESC + '!' + (q.length * 2 <= W ? '\x38' : '\x18') + q + ESC + '!' + '\x00' + ESC + 'a' + '\x00');   // mota + do guna bara
   }
   out.push(ESC + 'G' + '\x00', '', '', '');

@@ -188,7 +188,7 @@ function transferText(r, note, reprint) {
   if (r.rows.some(x => x.baqiFrom != null || x.baqiTo != null)) out.push('(har item ke neeche stock: pehle -> baad)');   // v4.3
   for (const x of r.rows) {
     const q = qtyText(x); if (ascii(x.name).length + q.length + 1 > PRINT_WIDTH) { out.push(ascii(x.name).slice(0, PRINT_WIDTH)); out.push(pad('', PRINT_WIDTH - q.length) + q); } else out.push(pad(ascii(x.name), PRINT_WIDTH - q.length) + q);
-    { const ur = UR.get(x.itemId); if (ur) out.push(UR.line(ur, 32)); }   // v4.8: 🔤 Urdu naam
+    { const ur = UR.get(x.itemId); if (ur) out.push(UR.line(ur, 40)); }   // v4.8: 🔤 Urdu naam
     const b = baqiText(x, r); if (b) out.push(...b.split('\r\n'));   // v4.2: baqi stock usi parchi par
   }
   out.push('-'.repeat(PRINT_WIDTH), line('Items: ' + r.rows.length, 'Kul pcs: ' + n(r.rows.reduce((s, x) => s + (Number(x.qty) || 0), 0))));

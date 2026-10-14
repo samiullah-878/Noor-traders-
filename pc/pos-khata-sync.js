@@ -66,6 +66,9 @@ SQL_CONFIG.options = { ...(SQL_CONFIG.options || {}), useUTC: false };
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore();
 const UR = require('./urdu-names.js'); UR.watch(db, BUSINESS_ID, m => log(m));   // 2026-10-14: 🔤 voucher par party ke Urdu naam
+// 2026-10-14: 🤖 jin parties ka Urdu naam nahi — Server PC khud AI se (har 10 min, pehli dafa 1 min baad). Print ke waqt AI nahi.
+const urFill = () => UR.fillParties({ db, businessId: BUSINESS_ID, parties: [...app.values()].filter(r => r && r.type === 'party' && !r.deleted), log }).catch(() => {});
+setTimeout(urFill, 60000).unref?.(); setInterval(urFill, 10 * 60000).unref?.();   // unref: --print-voucher jaise ek-dafa kaam par script na atke
 let PARCHI = null; const getParchi = () => PARCHI || (PARCHI = require('./nt-parchi.js').make({ dir: DIR, width: PRINT_WIDTH, dots: 512 }));
 const biz = db.collection('businesses').doc(BUSINESS_ID);
 const khata = biz.collection('blueKhata');
@@ -393,7 +396,7 @@ function receipt({ title, code, date, lines, note, copy, bank }) {
   const out = bank
     ? [ESC + '@', C + rev(huge(' HBL ')), '', bold('NOOR TRADERS') + '  ' + SHOP_PHONE, '', tall(bank.dir === 'out' ? 'HBL SE PAISE GAYE' : 'HBL MEIN PAISE AAYE')]
     : [ESC + '@', C + big('NOOR TRADERS'), SHOP_PHONE, '', tall(title)];
-  if (!bank && UR.isOn() && UR_TITLE[title]) out.push(UR.line(UR_TITLE[title], 30));   // 2026-10-14: 🔤 Urdu
+  if (!bank && UR.isOn() && UR_TITLE[title]) out.push(UR.line(UR_TITLE[title], 40));   // 2026-10-14: 🔤 Urdu
   if (copy) out.push('(Dobara print)');
   if (bank) out.push(L + hr, row('Tareekh: ' + dt, 'Waqt: ' + tm), row('Voucher: ' + ascii(code), ''), L + hr);
   else out.push(L + hr, row('Voucher No: ' + ascii(code), ''), row('Tareekh: ' + dt, 'Waqt: ' + tm), C + bar(code), L + hr);
@@ -401,7 +404,7 @@ function receipt({ title, code, date, lines, note, copy, bank }) {
   for (const l of lines) {
     total = Math.max(total, Number(l.amount) || 0);
     out.push(bold(ascii(l.name).slice(0, W) || '(naam Urdu mein)'));
-    { const ur = urPartyOf(l); if (ur) out.push(UR.line(ur, 32)); }   // 2026-10-14: 🔤 party ka Urdu naam
+    { const ur = urPartyOf(l); if (ur) out.push(UR.line(ur, 44)); }   // malik: font bara   // 2026-10-14: 🔤 party ka Urdu naam
     if (l.before != null) { const b0 = Number(l.before) || 0; out.push(bold(row('  Sabqa baqaya:', (b0 > 0 ? 'Lene ' : b0 < 0 ? 'Dene ' : '') + 'Rs.' + n(Math.abs(b0))))); }   // 2026-10-09: malik — sabqa raqam upar
     out.push(row('  ' + l.label, 'Rs.' + n(l.amount)));
     if (l.after != null) bq.push(l);
@@ -414,7 +417,7 @@ function receipt({ title, code, date, lines, note, copy, bank }) {
     const a = Number(l.after) || 0, side = a > 0 ? ' - LENE' : a < 0 ? ' - DENE' : ' - BARABAR';
     const who = bq.length > 1 ? (ascii(l.name) || 'Party').slice(0, 16) + ': ' : '';
     out.push(L + hr, bold((who + 'Ab baqaya' + side).slice(0, W)));
-    if (UR.isOn()) out.push(UR.line((bq.length > 1 && urPartyOf(l) ? urPartyOf(l) + ': ' : '') + 'اب بقایا — ' + (a > 0 ? 'لینے ہیں' : a < 0 ? 'دینے ہیں' : 'برابر'), 28));   // 2026-10-14
+    if (UR.isOn()) out.push(UR.line((bq.length > 1 && urPartyOf(l) ? urPartyOf(l) + ': ' : '') + 'اب بقایا — ' + (a > 0 ? 'لینے ہیں' : a < 0 ? 'دینے ہیں' : 'برابر'), 36));   // 2026-10-14
     out.push(R + big('Rs.' + n(Math.abs(a))));
     if (bank) out.push(L + words(a).join('\r\n'));
   }

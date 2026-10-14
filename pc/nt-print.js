@@ -150,7 +150,7 @@ function gateJobs(d, names) {
       if (i) s.ln(ESC + '!\x00' + hr());
       const nm = String(l.name || '').trim(), q = gateQty(l);
       if (ascii(nm)) for (const t of wrapW(nm, W)) s.ln(ESC + '!\x18' + t); else s.img(nm, 44, true, 2);
-      { const ur = UR.get(l.id ?? l.itemId); if (ur && ur !== nm) s.img(ur, 44, true, 2); }   // v1.20: 🔤 Urdu naam
+      { const ur = UR.get(l.id ?? l.itemId); if (ur && ur !== nm) s.img(ur, 48, true, 2); }   // v1.20: 🔤 Urdu naam
       s.raw(ESC + 'a\x02'); s.ln(ESC + '!' + (q.length * 2 <= W ? '\x38' : '\x18') + q + ESC + '!\x00'); s.raw(ESC + 'a\x00');
     });
     s.raw(ESC + 'G\x00');
