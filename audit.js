@@ -5,7 +5,7 @@
 //   Jo records PC ne likhe (POS sync) ya is update se PEHLE ke hain, un ka sirf "kab bani / kab badli / kis ne" record ke apne stamp se.
 // - Rules 2.12: auditLog sirf JOR sakte hain (create), badal/mita nahi (sirf malik mita sake). Parh sakte: malik + Full mulazim.
 // - 30 din: malik History kholta hai to purani (30 din se pehle) khud saaf; button bhi hai.
-import { smartHit } from './smart-search.js?v=2.99.91';   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.99.92';   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -104,6 +104,8 @@ const MAP = {
   stopGallaCall: ([id, n]) => ({ area: 'galla', act: 'cancel', what: '💰 Galla payment ROKI (' + (n || '') + ')', ref: id, refType: 'galla' }),
   retryGallaPrint: ([id]) => ({ area: 'galla', act: 'print', what: '💰 Galla parchi phir bheji (pehli nahi nikli)', ref: id, refType: 'galla' }),
   setGallaCheck: ([p]) => ({ area: 'galla', act: 'setting', what: 'Galla check ' + (p?.on === false ? 'band' : 'chalu') + ': ' + (p?.people || []).map(x => x.n).join(', ') }),
+  editItemJob: ([id, d]) => ({ area: 'stock', act: 'edit', what: '⏳ PC baqi item badla: ' + (d?.name || ''), ref: id, refType: 'item' }),
+  cancelItemJob: ([id]) => ({ area: 'stock', act: 'cancel', what: '⏳ PC baqi item cancel', ref: id, refType: 'item' }),
   setItemNew: ([v]) => ({ area: 'stock', act: 'setting', what: 'Mulazim naya item bana sake: ' + (v ? 'haan' : 'nahi') }),
   setItemEdit: ([v]) => ({ area: 'stock', act: 'setting', what: 'Mulazim item badal sake: ' + (v ? 'haan' : 'nahi') }),
   setAlias: ([id, txt]) => ({ area: 'stock', act: 'edit', what: 'Doosre naam yaad', ref: id, refType: 'item', note: String(txt || '').slice(0, 120) }),

@@ -4670,3 +4670,13 @@ jaye, PC on hote hi pata chal jaye".
 * PC item-post v1.2: job 2 min+ purani (PC band / atka) ho to natija 20 s ikattha -> EK push (malik + jis ne daala, pushTokens uid):
   "✓ 3 item POS mein ban gaye: …" / "❌ … (wajah)". Aam foran wali job par notification nahi.
 * Test: scratchpad fct/t.mjs (+3 checks). Rules wahi (2.53).
+
+=== v2.99.92 (2026-10-15) — ⏳ PC baqi item: ✏️ EDIT + ✕ CANCEL · Rules 2.54 ===
+Malik ("Slaphate 50 kg" PC band hone par line mein tha): "ye cancel kar sakte ho" + "edit bhi".
+* Stock → "⏳ N item PC baqi" list: har 'new' job par ✏️ Edit (op new) + ✕ Cancel — malik ya jis ne daala (stockSetup uid).
+  Edit = wahi "Naya item" form (itemForm(null, pre, jobId), data-job-id) bhara hua -> cloud.editItemJob (code, name, pack, costP, rctn,
+  rpcs, wctn, wpcs, editAt, editBy) — wahi darkhwast (do item nahi). 🏭 tick: ntFacPend / ntFacPendDel / ntFacPendHas (factory.js).
+  Cancel = cloud.cancelItemJob -> status 'cancelled' (PC claim sirf 'new' uthata hai). 'working' = "⚙️ PC bana raha — ab nahi".
+* Rules 2.54: itemJobs update — (malik || (Full / Stock && by == uid)) && status 'new' && (cancelled [status, cancelBy, cancelAt] ||
+  new [wahi khane + editAt, editBy]). firestore-rules-2.54.html. History: editItemJob / cancelItemJob.
+* Test: scratchpad fct/ij.mjs (5 checks — pos-stock asal module happy-dom par).

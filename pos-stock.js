@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.91';
-import { liveLabelsHTML } from './barcode.js?v=2.99.91';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.92';
+import { liveLabelsHTML } from './barcode.js?v=2.99.92';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -60,7 +60,7 @@ async function urduMake(items, onlyMissing = true) {
 // v2.99.91: ⏳ PC BAND HO TAB BHI NAYA ITEM (malik: "koi item add karni ho to bhi ho jaye, PC on hote hi pata chal jaye").
 //   itemJobs (7 din) ka listener: 'new' / 'working' = "⏳ PC baqi" chip + list; is session mein done / failed hua to patti (notice).
 //   PC item-post v1.2 der wali job par phone notification bhejta hai. onItemJobs(fn) — factory.js (🏭 pend jorna).
-let ijobs = [], ijStop = null; const ijSeen = new Map(), ijHooks = [];
+let ijobs = [], ijStop = null, uidOf = () => ''; const ijSeen = new Map(), ijHooks = [];
 const ijPend = () => ijobs.filter(j => j.status === 'new' || j.status === 'working');
 const ijBad = () => ijobs.filter(j => j.status === 'failed' && Date.now() - (Number(j.doneAt) || 0) < 86400000);
 export function onItemJobs(fn) { ijHooks.push(fn); if (ijobs.length) try { fn(ijobs); } catch {} }
@@ -76,7 +76,8 @@ function ijGot(l) {
 function ijDlg() { const d = $('dialog'); if (!d) return; d.classList.remove('search-dialog'); $('dialogTitle').textContent = '⏳ PC baqi items'; $('dialogBody').innerHTML = '<div id="ijList"></div>'; if (!d.open) d.showModal(); ijPaint(); }
 function ijPaint() {
   const el = $('ijList'); if (!el) return; const P = ijPend(), B = ijBad();
-  const row = (j, bad) => `<div class="ij-row${bad ? ' bad' : ''}"><b>${esc(j.name || 'Item')}</b><small>${j.op === 'new' ? '➕ Naya' : '✏️ Badla'}${j.rpcs ? ' · R ' + num(j.rpcs) : ''}${j.code ? ' · ' + esc(j.code) : ''} · ${esc(stampText(j.at))}${bad ? ' · ❌ ' + esc(j.error || '') : j.status === 'working' ? ' · ⚙️ PC bana raha' : ' · ⏳ PC on hote hi'}</small></div>`;
+  const mine = j => isOwner() || (j.by && j.by === uidOf());   // v2.99.92: ✏️ / ✕ — malik ya jis ne daala (rules 2.54)
+  const row = (j, bad) => `<div class="ij-row${bad ? ' bad' : ''}"><b>${esc(j.name || 'Item')}</b><small>${j.op === 'new' ? '➕ Naya' : '✏️ Badla'}${j.rpcs ? ' · R ' + num(j.rpcs) : ''}${j.code ? ' · ' + esc(j.code) : ''} · ${esc(stampText(j.at))}${j.editAt ? ' · ✏️ ' + esc(stampText(j.editAt)) : ''}${bad ? ' · ❌ ' + esc(j.error || '') : j.status === 'working' ? ' · ⚙️ PC bana raha — ab nahi badal sakta' : ' · ⏳ PC on hote hi'}</small>${!bad && j.status === 'new' && mine(j) ? `<div class="ij-acts">${j.op === 'new' ? `<button type="button" data-ij-edit="${esc(j.id)}">✏️ Edit</button>` : ''}<button type="button" class="x" data-ij-cancel="${esc(j.id)}">✕ Cancel</button></div>` : ''}</div>`;
   el.innerHTML = `<p class="stat-note">Ye items line mein mehfooz hain — Server PC on hote hi khud POS mein ban jayengi aur phone par khabar aayegi.</p>${P.map(j => row(j)).join('') || '<p class="stat-note">✓ Koi item baqi nahi</p>'}${B.length ? '<h4>❌ Nahi bane (24 ghante)</h4>' + B.map(j => row(j, true)).join('') : ''}`;
 }
 export function stockSetup(opts) {
@@ -92,6 +93,7 @@ export function stockSetup(opts) {
   rerender = opts.rerender || (() => {});
   notice = opts.notice || (() => {});
   isOwner = opts.owner || (() => false);
+  uidOf = opts.uid || uidOf;   // v2.99.92
 }
 
 // Snapshot par poori screen foran na banao: thora ruko, aur jab koi ginti likh raha ho to us ke baad
@@ -736,7 +738,7 @@ function applySub(r, op, x) {
 // ---------- v2.5: ITEM — naam, barcode, 1 CTN = PCS, khareed + parchoon / wholesale rates ----------
 const itemDraft = new Map();
 const ctnR = (p, pk) => { const x = (Number(p) || 0) * pk, n = Math.round(x); return Math.abs(x - n) <= 0.005 * pk + 1e-6 ? n : r2(x); };   // v2.98.7
-function itemForm(r, pre) {
+function itemForm(r, pre, jobId) {   // v2.99.92: jobId = ⏳ PC baqi item ka edit
   const d = $('dialog'); if (!d) return;
   const isNew = !r;
   // v2.98.7: POS fi PIECE rakhta hai — CTN = fi piece × pack (POS ki 2-decimal gol-mol hata kar: 534.38 × 16 = 8550.08 -> 8550).
@@ -754,7 +756,8 @@ function itemForm(r, pre) {
   $('dialogTitle').textContent = isNew ? '➕ Naya item' : '✏️ ' + r.name;
   const f = (lab, k) => `<label class="it-f"><span>${lab}</span><input type="number" min="0" step="any" inputmode="decimal" name="${k}" value="${v[k] ? r2(v[k]) : ''}" placeholder="0"${rates ? '' : ' disabled'}></label>`;
   const subs = r ? labelRows(r).filter(x => !x.main) : [];
-  $('dialogBody').innerHTML = `<form class="item-form" data-item-form="${r ? esc(r.id) : 'new'}">
+  if (jobId) $('dialogTitle').textContent = '✏️ PC baqi item';
+  $('dialogBody').innerHTML = `<form class="item-form" data-item-form="${r ? esc(r.id) : 'new'}"${jobId ? ` data-job-id="${esc(jobId)}"` : ''}>
     <label class="it-wide"><span>Item ka naam</span><input name="name" required maxlength="150" autocomplete="off" value="${esc(v.name)}" placeholder="misal: marhaba honey 80gm"></label>
     <label class="it-wide"><span>Barcode</span><div class="it-code"><input name="code" maxlength="50" autocomplete="off" value="${esc(v.code)}" placeholder="${isNew ? 'Khali chhorein to POS khud banayega' : ''}"><button type="button" data-item-scan="1">📷</button></div></label>
     <label class="it-wide"><span>1 CTN = kitne PCS</span><input type="number" min="0" step="any" inputmode="decimal" name="pack" value="${v.pack || ''}" placeholder="misal: 12"></label>
@@ -771,7 +774,7 @@ function itemForm(r, pre) {
         <button type="button" data-sub-edit="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Badlein">✏️</button>
         <button type="button" class="danger" data-sub-del="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Hatao">🗑️</button></div>`).join('') || '<p class="muted">Koi sub-barcode nahi</p>'}</div>
       <div class="account-tools"><button type="button" data-sub-new="${esc(r.id)}">➕ Naya barcode</button></div>` : ''}
-    ${isNew && isOwner() && typeof window.ntFacPend === 'function' ? '<label class="it-fac"><input type="checkbox" name="fac"> 🏭 Factory item (factory list mein bhi)</label>' : ''}
+    ${isNew && isOwner() && typeof window.ntFacPend === 'function' ? `<label class="it-fac"><input type="checkbox" name="fac"${jobId && window.ntFacPendHas?.(jobId) ? ' checked' : ''}> 🏭 Factory item (factory list mein bhi)</label>` : ''}
     <div class="account-tools it-acts"><button type="submit" class="primary">${isNew ? '➕ POS mein banao' : '💾 POS mein save'}</button><button type="button" data-item-close="1">Wapas</button></div>
     <p class="muted it-msg" role="status"></p></form>`;
   if (!d.open) d.showModal();
@@ -796,6 +799,17 @@ async function itemSave(form, btn) {
   const job = { op: isNew ? 'new' : 'edit', itemId: isNew ? '' : String(r.id), code: v.code, name: v.name, pack: v.pack,
     costP: keep('costP'), rctn: keep('rctn'), rpcs: keep('rpcs'), wctn: keep('wctn'), wpcs: keep('wpcs') };
   if (!isNew) job.subs = labelRows(r).filter(x => !x.main).map(x => ({ b: x.code, q: x.qty, r: x.rate || 0, s: x.show !== false }));
+  if (form.dataset.jobId) {   // v2.99.92: ⏳ PC baqi item badalna — wahi darkhwast (naya item nahi)
+    const jid = form.dataset.jobId, cur = ijobs.find(j => j.id === jid);
+    if (!cur || cur.status !== 'new') { msg.textContent = '⚙️ PC bana raha hai / ho gaya — ab yahan se nahi badal sakta'; return; }
+    if (!cloud?.editItemJob) { msg.textContent = 'App update karein'; return; }
+    btn.disabled = true;
+    try { await cloud.editItemJob(jid, job);
+      if (form.elements.fac?.checked) window.ntFacPend?.(jid, v.name); else window.ntFacPendDel?.(jid);
+      notice('✓ Badal diya — PC on hote hi yahi banega'); $('dialog')?.close(); }
+    catch (e) { btn.disabled = false; msg.textContent = 'Nahi hua: ' + (e?.code === 'permission-denied' ? 'ijazat nahi (rules 2.54? ya PC ne utha liya)' : (e?.message || e)); }
+    return;
+  }
   btn.disabled = true; const old = btn.textContent; btn.textContent = '⏳ PC ko bhej raha hoon…';
   try {
     const jid = await cloud.requestItem(job);
@@ -1888,6 +1902,13 @@ document.addEventListener('click', e => {
     return;
   }
   if (e.target.closest?.('[data-stock-ijobs]')) { ijDlg(); return; }   // v2.99.91
+  { const ie = e.target.closest?.('[data-ij-edit],[data-ij-cancel]');   // v2.99.92
+    if (ie) { const j = ijobs.find(x => x.id === (ie.dataset.ijEdit || ie.dataset.ijCancel)); if (!j) return;
+      if (j.status !== 'new') { notice('⚙️ PC bana raha hai — ab nahi badal sakta'); return; }
+      if (ie.dataset.ijEdit) { itemForm(null, { name: j.name || '', code: j.code || '', pack: Number(j.pack) || 0, costP: Number(j.costP) || 0, rctn: Number(j.rctn) || 0, rpcs: Number(j.rpcs) || 0, wctn: Number(j.wctn) || 0, wpcs: Number(j.wpcs) || 0 }, j.id); return; }
+      if (!confirm(`"${j.name}" cancel karna hai? PC isay kabhi nahi banayega.`)) return;
+      Promise.resolve(cloud?.cancelItemJob?.(j.id)).then(() => { notice('✕ ' + j.name + ' cancel'); window.ntFacPendDel?.(j.id); }).catch(er => notice('Nahi hua: ' + (er?.code === 'permission-denied' ? 'ijazat nahi (rules 2.54?)' : (er?.message || er))));
+      return; } }
   const ib = e.target.closest?.('[data-stock-item],[data-stock-newitem],[data-item-close]');
   if (ib) { const d = ib.dataset;
     if (d.itemClose != null) $('dialog')?.close();
