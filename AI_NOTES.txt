@@ -4584,3 +4584,9 @@ Wajah: "Asif factry wala" ki Rs 72,750 payment POS mein nahi gayi — account ap
 * Rules 2.50: blueStaff party update affectedKeys + 'posSync', shart: posSync wahi rahe ya true ho (false karna = deny). firestore-rules-2.50.html.
   (Emulator yahan download nahi hota — rule haath se jaancha.) Purchase-only mulazim ko ye nahi (us ke rule mein party update hai hi nahi).
 * Yahan AI nahi. Test: scratchpad pm/t.mjs (7 checks).
+
+=== v2.99.85 (2026-10-15) — 📊 Item report phone par daayein se kat raha tha (malik ki screenshot) ===
+Wajah: .ir-root par .bc-root ka display:grid jeet raha tha (zyada specific rule) — grid column andar ke chart (.ir-scroll min-width) / chips se
+~440px ho jata, screen 390px -> Rs, chips, pattern note sab daayein se kate. Fix: html body .ir-root.ir-root {display:block!important; width/max 100%},
+bachon par min-width:0 / max-width:100%, .ir-sec overflow hidden. Hero ke chhote label safaid (pehle dhundle). Jaanch: asal index.html shell 412px,
+koi element screen se bahar nahi (scratchpad hd/shot3.mjs).
