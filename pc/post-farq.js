@@ -1,3 +1,4 @@
+// v14 (2026-10-16): 🧾 malik app mein items TICK kar ke alag Sale (kam) / Return (zyada) banata hai — _post {status approved, direct, kind, items}.
 // v13 (2026-10-12): 🧾 ginti ke baad bill — farq wale item par `later` (StockLedger ginti ke baad) + bill mein chhoro jab tak recount / forceBill nahi.
 // post-farq.js v2.1 — farq pehle jaisa "stock fraq" party par (khate mein). Adjustment sirf local-config farqMode "adjust". Purana:
 // post-farq.js — stock ginti ka farq POS mein darj karta hai: KAM nikla = udhaar Sale, ZYADA nikla = usi Sale se jura Return.
@@ -198,7 +199,11 @@ async function buildList(pool, req) {
   const P = party[0];
 
     const kam = [], zyada = [], skipped = [];
+    // v14 (2026-10-16): malik app mein items chun kar "Sale (kam)" ya "Return (zyada)" alag alag banata hai — req.items / req.kind
+    const only = Array.isArray(req.items) && req.items.length ? new Set(req.items.map(String)) : null, kind = req.kind === 'kam' || req.kind === 'zyada' ? req.kind : '';
     for (const c of counts) {
+      if (c.del) continue;
+      if (only && !only.has(String(c.itemId))) continue;
       if (hidden[String(c.itemId)]) { skipped.push({ name: c.name, why: 'band item (safai ho chuki)' }); continue; }
       const it = await findItem(pool, c, branch);
       if (!it) {
@@ -210,6 +215,7 @@ async function buildList(pool, req) {
       const sysAt = await stockAt(pool, it, branch, c);
       const diff = round3(Number(c.total) - sysAt);
       if (Math.abs(diff) < 0.001) continue;
+      if ((kind === 'kam' && diff > 0) || (kind === 'zyada' && diff < 0)) continue;
       // v13: ginti ke baad bill bana aur dobara nahi gina -> abhi bill mein NAHI (late bill ho sakta hai)
       if (needsRecount(c)) { const mv = await movesAfter(pool, it, branch, c); if (mv.length) { skipped.push({ name: c.name, why: 'ginti ke baad bill bana — dobara gino', late: true, qty: round3(mv.reduce((s, m) => s + m.qty, 0)) }); continue; } }
       const cost = Number(it.Cost) || 0;
@@ -617,8 +623,8 @@ async function autoOnce() {
       return;
     }
 
-    // approved: list wahi honi chahiye jo malik ne dekhi thi
-    if (req.sig !== sig(L)) {
+    // approved: list wahi honi chahiye jo malik ne dekhi thi (v14: req.direct = app mein items chun kar seedha OK — preview nahi)
+    if (!req.direct && req.sig !== sig(L)) {
       await ref.set({ ...base, status: 'preview', preview: brief(L), sig: sig(L), previewAt: Date.now(),
         note: 'Ginti badal gayi thi — nayi list dekh kar dobara OK karein' });
       log('Ginti badal gayi, nayi list mobile par bhej di');
@@ -627,7 +633,7 @@ async function autoOnce() {
     // Do dafa na bane: pehle "posting" par taala lagao
     const locked = await db.runTransaction(async t => {
       const cur = (await t.get(ref)).data();
-      if (!cur || cur.status !== 'approved' || cur.sig !== req.sig) return false;
+      if (!cur || cur.status !== 'approved' || (!req.direct && cur.sig !== req.sig)) return false;
       t.set(ref, { ...cur, status: 'posting', postingAt: Date.now() });
       return true;
     });

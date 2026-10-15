@@ -2946,10 +2946,8 @@ Foran wali (2 min se kam) job par push nahi. Log: item-log.txt "🔔 item khabar
 mein asli itemId / lines / labels (khali barcode = job.code) likh kar post; 'new' / 'working' -> waitItem true (WaitItem), waiting set,
 har 60 s handle() dobara; cancelled / failed -> status 'error' + wajah.
 
-=== 2026-10-16 — ginti-post.js v1.0 (📋 app ki ginti -> POS Adjustment khud) · manifest 2026-10-16.1 ===
-* Naya service: ginti-post.js + ginti-auto.bat (lock 47835, ginti-log.txt). App Stock ⚙️ "Ginti khud POS mein" ON ho to har Save
-  (stockCount doc auto:true, pfAt != at) par: delta = total − stock ginti ke waqt (CurrStock − StockLedger baad ki harkat) -> roz ka EK
-  Adjustment "Ginti DD-MM-YYYY NT" (Description se dhoondta hai, na ho to naya) mein line; dobara gina = agla delta; del = −pfQ wapas.
-  Doc par pfAt / pfQ / pfAdj / sysPos likhta hai. Transaction + CurrStock jaanch (na badla = rollback). Sale / khata par koi asar nahi.
-* post-farq.js (purana "Farq ka bill" flow) waisa hi — auto OFF ho to wahi chalta hai. Dono ek saath chal sakte hain.
-* Pehli dafa: KHATA-DOCTOR.bat chalayein (nayi files) -> ginti-auto.bat start. firebase-key.json wahi (haath se).
+=== 2026-10-16 — post-farq.js v14 (🧾 malik app mein items tick kar ke alag Sale / Return) · manifest 2026-10-16.2 ===
+* _post {status:'approved', direct:true, kind:'kam'|'zyada', items:[itemId…]} — buildList sirf un items ka, sirf us kind ka (kam = Sale,
+  zyada = Return, "stock fraq" khata, pehle jaisa print). direct par preview / sig nahi — app mein malik ne items dekh kar OK kiya.
+  Purana pending -> preview -> approved flow bhi waisa hi chalta hai. c.del wale counts nahi.
+* (ginti-post.js / Adjustment wala auto tareeqa malik ne mana kar diya — hata diya, kabhi PC par nahi gaya.)

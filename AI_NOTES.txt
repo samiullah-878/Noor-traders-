@@ -4756,42 +4756,43 @@ wagaira sab kuch formula khud add ho jaye, hum bas item uthayein".
   sirf khareed, sale rate / barcode nahi. ⏳ pending item par sirf factory.
 * Raw tab / formula hits bhi rateOf (✎). Test fct/t.mjs (63 ✓, 'hafta' se aadhi raat safe). Rules nahi badle.
 
-=== v2.100.0 (2026-10-16) — 📦 STOCK SCREEN NAYI TARTEEB + 📋 GINTI KHUD POS MEIN + 🏭 factory cancel/edit foran + 📊 Ginti tab · RULES 2.55 ===
-Malik: "search tak scroll bohat, chips bohat zyada — premium banao" + "simple current − physical, Save par PC bill saath saath banata rahe,
-nayi ginti nahi, dobara gino to edit" + "factory batch yahan se foran cancel / edit" + "factory mein alag tab: har item ka current stock,
-physical likho (minus wale mein maal ho to plus), farq / history / tick wagaira" — demo artifact "Stock screen demo" OK ke baad.
+=== v2.100.0 → v2.100.1 (2026-10-16) — 📦 STOCK SCREEN NAYI TARTEEB · 📋 ginti session = din, BILL MALIK KI MARZI (Sale / Return alag) ·
+    👁 stock sirf jise malik dikhaye · 🏭 batch 'hold' (POS baad mein) + foran cancel / edit + 📊 Ginti tab · RULES 2.55 ===
+Malik: "search tak scroll bohat, chips zyada — premium" · "simple current − physical, Save; dobara gino = edit" · "Adjustment NAHI — stock
+fraq khata, do bill (kam = Sale, zyada = Return) HAMARI MARZI se, kin items ka" · "stock sirf Zeeshan dekhe, baqi larka sirf ginti kare" ·
+"factory batch POS mein jane se pehle cancel / edit — ghalti se POS mein na jaye" · "factory items ki ginti tab factory mein bhi". Demo
+artifact "Stock screen demo" OK ke baad. (v2.100.0 mein pehle Adjustment-auto bana tha (ginti-post.js) — malik ne mana kiya, hata diya.)
 1) pos-stock.js summaryHTML (poora naya, .stock-head.sk): .sk-top CHIPKI (position:sticky; main.sk-screen .toolbar chhupa — app.js render
    mein class) = godam naam + ⚙️ (malik, data-sk-set) · search data-sk-q (asli #search ko mirror: input -> #search.value + input event;
    renderStockInner: focus data-sk-q mein ho to sirf .sk-body badalta hai — keyboard na toote) · 📷 scan · 🎤 · godam chips (data-stock-branch).
-   .sk-body: liveChip · gintiBig() (data-stock-ginti) · 8 tiles (.sk-tile, wahi data attrs) · ⏳ PC baqi · postLine · 3 chips Sab/Stock/Minus
-   + laga hua extra chip ✕ + "☰ Filter" (data-sk-filter). Purane sh-label sections (Branch/Dikhao/history/Ginti/Tarteeb) hat gaye:
-   * openSkFilter() dialog #skFilter: Ginti baqi / Farq wale / Baqi nishan / Check / Band (data-stock-filter — sheet band ho kar lagta),
+   .sk-body: liveChip · gintiBig() (data-stock-ginti) · 8 tiles (.sk-tile, wahi data attrs) · ⏳ PC baqi · postLine · chips Sab/Stock/Minus
+   (Stock/Minus sirf seeStock) + laga hua extra chip ✕ + "☰ Filter" (data-sk-filter). Purane sh-label sections hat gaye:
+   * openSkFilter() #skFilter: Ginti baqi / Farq wale (seeStock) / Baqi nishan / Check / Band (data-stock-filter — sheet band ho kar lagta),
      kis din ki (data-stock-hday / hdate), tarteeb (data-stock-sort), Sab saaf (data-sk-reset).
-   * openSkSet() dialog #skSet (malik): Counting ON (data-sk-lock -> toggleLock(box)), 📋 Ginti khud POS mein (data-sk-auto -> setAuto),
-     mulazim naya item / rate switches (wahi data-stock-itemnew/itemedit), purana flow (Nayi ginti / Farq ka bill) sirf auto OFF par,
-     Farq bills history, valueCardHTML (maaliyat).
-   * openGinti() naya: KPIs (gine / kam Rs / zyada Rs / kul farq), chips Sab/Kam/Zyada/Barabar (data-ginti-f), rows (data-ginti-row ->
-     openRecount): status ✓ POS mein #adj / ⏳ POS ko ja raha (auto) · PDF (data-ginti-pdf) · auto OFF par purane buttons.
-   * openRecount(itemId) #skRe: history (aakhri 5), Ctn/Pcs input (data-re-ctn/pcs), live farq, "✓ Ye ginti Save" (reSave -> writeCount),
-     "🗑 ginti hatao" (reDel, malik: doc del:true, total = sys0 -> PC ulta).
-2) 📋 AUTO (stockCount/_auto {on} — cloud.setStockAuto, malik): autoOn -> round = aaj ka din (dayStr) khud (roundNow()), _round doc ki
-   zaroorat nahi. writeCount(…, br): auto docs mein {auto:true, day, sys0 (din ki pehli ginti ka system), pfQ/pfAt/pfAdj (PC ke, barqarar),
-   del:false, byName}. countOf: del wale nahi. posted(c) = pfAt === at. countHTML / gintiBig / dialog sab "✓ POS mein #adj" dikhate hain.
-   Exports factory ke liye: stockCountsOn, stockCountState, stockCountInfo(id), stockCountSet(id,{ctn,pcs}) (dukan godam = agPool().main),
-   stockCountDel(id).
-3) PC pc/ginti-post.js v1.0 (+ ginti-auto.bat, manifest service "Ginti (app -> POS)", lock 47835, ginti-log.txt): stockCount where auto==true
-   listener; har doc jis ka pfAt != at: delta = total − stockAt(c.at) (CurrStock − StockLedger baad ki harkat; del: −pfQ) -> roz ke EK
-   Adjustment "Ginti DD-MM-YYYY NT" (findAdj by Description, warna naya header) mein line (usp_AdjustmentDetail_InsertUpdate, CurrStock
-   jaanch, transaction) -> doc {pfAt, pfQ += delta, pfAdj, sysPos = total − delta, sysPosAt = at}. delta 0 = sirf pfAt. pfErr par 5 min
-   baad dobara. Rate = POS khareed fi piece (pieceCost). KHATA-DOCTOR manifest 2026-10-16.1.
-   ⚠️ Pehle din: C:\khata-sync mein KHATA-DOCTOR chalayein (ginti-post.js + ginti-auto.bat aayenge) phir ginti-auto.bat shuru.
-4) factory.js: ✕ Cancel (foran) + ✏️ Edit jab status 'new' aur adjNo nahi (malik ya jis ne banaya — uidOf = factorySetup.uid):
-   cloud.factoryBatchAct(id,'cancelNow') -> status cancelled; openBatch(editId) prefilled (fb.edit) -> cloud.editFactoryBatch(id, d).
-   Posted par malik "✏️ Edit (wapas + naya)" = cancelReq + addFactoryBatch (no + 'E'). batchDlg: "POS stock badla" sirf adjNo par (pehle
-   cancelReq par bhi ✓ dikhta tha — bug). 📊 GINTI TAB (TABS 'ginti', CAP fac.ginti — Settings → Mulazim): factory items (pending nahi),
-   system stock, Ctn/Pcs input + Save (stockCountSet), status ✓ POS / ⏳, 🕘 history, 🗑 hatao (malik), chips Sab/Baqi/Gine/Farq, search.
-5) firestore.rules v2.55 (firestore-rules-2.55.html): factoryBatches update — status 'new' par (malik ya by == uid): cancelled
-   (status/cancelBy/cancelAt) ya edit (n/out/lines/cost/oh/labels/editAt/editBy). stockCount/_auto malik ka generic owner write.
-6) style.css .sk-* (sticky top, tiles, chips, sheets, ginti table, recount) + .fc-g* (factory ginti) + .fc-tabs auto-fit.
-* Test: scratchpad sk/t.mjs (16 ✓ — sticky search mirror / input wahi, filter sheet, settings, ginti dialog, recount auto fields, card
-  save, exports), fct/t.mjs (69 ✓ — ginti tab, edit, cancelNow), screenshots sk/all.png. AI nahi.
+   * openSkSet() #skSet (malik): Counting ON (data-sk-lock -> toggleLock(box)), 📅 "Ginti ka session = din (khud shuru)" (data-sk-auto ->
+     setAuto: stockCount/_auto {on} + _round = aaj), mulazim switches, "Nayi ginti (haath se)" sirf auto OFF, Farq bills history, maaliyat.
+2) 📋 GINTI (openGinti #skGinti): KPIs (seeStock), postLine (PC ka haal), 🧾 BILL BANAO dabba (malik, sirf jab PC busy na ho): har "bill
+   baqi" line par ☑ (gSel; default sab baqi), "Kam wale ka Sale bill (N · Rs)" / "Zyada wale ka Return bill" (data-ginti-bill -> gintiBill:
+   confirm -> cloud.requestFarqPost({round, branch, status:'approved', direct:true, kind, items:[ids], at}) — PC post-farq v14 sirf un items
+   ka us kind ka bill, preview nahi). Chips Sab / Bill baqi / Kam / Zyada / Barabar. Row status billOf(r,c): _posted-<round>-<branch>.items
+   (PC) + _bill-* docs -> ✓ Sale #512 / Return #88 / part / bill baqi. Row tap -> openRecount (#skRe: history aakhri 5 + ctn/pcs + Save
+   reSave -> writeCount; 🗑 reDel sirf jab bill na bana). Session = din: roundNow() -> round = aaj (autoOn), countOf del wale nahi,
+   writeCount {auto, day, sys0, del:false, byName}.
+3) 👁 CAP stock.see (Settings → Mulazim: "System stock / farq dikhe (band = sirf ginti likhe)"): seeStock() = malik || can('stock.see').
+   Band: rowHTML mein stock nahi, Khareed nahi, countHTML mein ✓ Tick / farq / system nahi (sirf "✓ Gina N · waqt · naam"), liveCount sirf
+   ginti, chips Stock/Minus nahi, gintiBig farq nahi, ginti dialog sirf ITEM / GINA (SYSTEM / FARQ / bill nahi), recount sheet bhi.
+4) factory.js: batch 'hold' (cfg.autoSend false = default): OK par app mein ruka (status hold, PC nahi uthata) -> batch kholo "📤 POS mein
+   bhejo" (malik ya CAP fac.send -> factoryBatchAct 'send' -> status new). ⚙️ mein "Batch OK ke baad: App mein ruke / Seedha POS mein"
+   (data-fc-autosend -> cfg.autoSend). Jab tak adjNo nahi (hold / new / cancelReq): ✏️ Edit (editFactoryBatch) + ✕ Cancel (foran,
+   'cancelNow' -> cancelled) — malik ya jis ne banaya (uidOf). Posted par "✏️ Edit (wapas + naya)" = cancelReq + naya (no + 'E').
+   batchDlg: "POS stock badla" sirf adjNo par; cancelReq bina adjNo = "POS mein gaya hi nahi — ✕ Cancel (foran)". STAT hold.
+   📊 GINTI TAB (CAP fac.ginti): factory items (pending nahi) — system (seeStock), Ctn/Pcs + Save (stockCountSet), status ✓ Sale # / bill
+   baqi, 🕘 history, 🗑 (malik), "🧾 Bill banao / aaj ki ginti" (malik -> stockOpenGinti = wahi stock dialog). Dono jagah wahi docs.
+5) firestore.rules v2.55 (firestore-rules-2.55.html — UPLOAD): factoryBatches create status in ['new','hold']; update (malik ya by == uid)
+   jab status in [new, hold, cancelReq] aur adjNo nahi: cancelled / hold->new (sendBy, sendAt) / edit (n/out/lines/cost/oh/labels/editAt/editBy).
+6) PC pc/post-farq.js v14: req.items (sirf ye) + req.kind (kam = Sale only / zyada = Return only) + req.direct (sig / preview nahi);
+   c.del chhoro. manifest 2026-10-16.2 (KHATA-DOCTOR chalayein). ginti-post.js hata diya (kabhi PC par nahi gaya).
+7) cloud.js: setStockAuto, factoryBatchAct 'cancelNow' / 'send', editFactoryBatch. app.js: CAPS stock.see, fac.ginti, fac.send; factorySetup.uid.
+8) style.css .sk-* (sticky top, tiles, chips, sheets, ginti table (.own / .nosee), bill dabba, recount) + .fc-g* + .fc-tabs auto-fit + hold.
+* Test: scratchpad sk/t.mjs (23 ✓ — sticky search mirror, filter/settings sheets, ginti dialog + Return bill request, recount, staff
+  👁 band), fct/t.mjs (71 ✓ — ginti tab, hold -> send, edit, cancelNow). Screenshots sk/ginti.png, sk/staff.png. AI nahi.

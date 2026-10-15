@@ -1,4 +1,4 @@
-// nav.js — v2.100.0: ☰ SAB SCREENS (malik: "screens bohat zyada ho gayi hain — screen dhoondni parti hai").
+// nav.js — v2.100.1: ☰ SAB SCREENS (malik: "screens bohat zyada ho gayi hain — screen dhoondni parti hai").
 // Phone par upar ki patti mein sirf: ⭐ pin ki hui (har phone apni, localStorage) + aakhri 2 kholi hui + abhi wali + "☰ Sab screens".
 // "☰ Sab screens" = poori screen par bare dabbe, groups mein (Rozana / Maal / Sale-Galla / Report), search, ⭐ pin.
 // Ijazat wahi jo app.js .app-nav buttons ke `hidden` se deti hai (mulazim ko sirf apni). Computer (1100px+) par baayein list pehle jaisi.
