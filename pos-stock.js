@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.90';
-import { liveLabelsHTML } from './barcode.js?v=2.99.90';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.91';
+import { liveLabelsHTML } from './barcode.js?v=2.99.91';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -57,12 +57,35 @@ async function urduMake(items, onlyMissing = true) {
   }
   return done;
 }
+// v2.99.91: ⏳ PC BAND HO TAB BHI NAYA ITEM (malik: "koi item add karni ho to bhi ho jaye, PC on hote hi pata chal jaye").
+//   itemJobs (7 din) ka listener: 'new' / 'working' = "⏳ PC baqi" chip + list; is session mein done / failed hua to patti (notice).
+//   PC item-post v1.2 der wali job par phone notification bhejta hai. onItemJobs(fn) — factory.js (🏭 pend jorna).
+let ijobs = [], ijStop = null; const ijSeen = new Map(), ijHooks = [];
+const ijPend = () => ijobs.filter(j => j.status === 'new' || j.status === 'working');
+const ijBad = () => ijobs.filter(j => j.status === 'failed' && Date.now() - (Number(j.doneAt) || 0) < 86400000);
+export function onItemJobs(fn) { ijHooks.push(fn); if (ijobs.length) try { fn(ijobs); } catch {} }
+function ijGot(l) {
+  if (!Array.isArray(l)) return;
+  for (const j of l) { const p = ijSeen.get(j.id);
+    if (p && (p === 'new' || p === 'working') && j.status === 'done') notice('✓ ' + (j.name || 'Item') + ' POS mein ' + (j.op === 'new' ? 'ban gaya' : 'save ho gaya') + (j.code ? ' · ' + j.code : ''));
+    else if (p && (p === 'new' || p === 'working') && j.status === 'failed') notice('❌ ' + (j.name || 'Item') + ' POS mein nahi bana: ' + (j.error || ''));
+    ijSeen.set(j.id, j.status); }
+  ijobs = l; ijHooks.forEach(f => { try { f(l); } catch {} });
+  if (stockActive) soft(); if ($('ijList')) ijPaint();
+}
+function ijDlg() { const d = $('dialog'); if (!d) return; d.classList.remove('search-dialog'); $('dialogTitle').textContent = '⏳ PC baqi items'; $('dialogBody').innerHTML = '<div id="ijList"></div>'; if (!d.open) d.showModal(); ijPaint(); }
+function ijPaint() {
+  const el = $('ijList'); if (!el) return; const P = ijPend(), B = ijBad();
+  const row = (j, bad) => `<div class="ij-row${bad ? ' bad' : ''}"><b>${esc(j.name || 'Item')}</b><small>${j.op === 'new' ? '➕ Naya' : '✏️ Badla'}${j.rpcs ? ' · R ' + num(j.rpcs) : ''}${j.code ? ' · ' + esc(j.code) : ''} · ${esc(stampText(j.at))}${bad ? ' · ❌ ' + esc(j.error || '') : j.status === 'working' ? ' · ⚙️ PC bana raha' : ' · ⏳ PC on hote hi'}</small></div>`;
+  el.innerHTML = `<p class="stat-note">Ye items line mein mehfooz hain — Server PC on hote hi khud POS mein ban jayengi aur phone par khabar aayegi.</p>${P.map(j => row(j)).join('') || '<p class="stat-note">✓ Koi item baqi nahi</p>'}${B.length ? '<h4>❌ Nahi bane (24 ghante)</h4>' + B.map(j => row(j, true)).join('') : ''}`;
+}
 export function stockSetup(opts) {
   aiText = opts?.ai || aiText;
   if (!urduStop && opts?.cloud?.listenUrdu) urduStop = opts.cloud.listenUrdu(m => { urdu = m || {}; if (stockActive) soft(); });
   if (!aliasStop && opts?.cloud?.listenAliases) aliasStop = opts.cloud.listenAliases(m => setAliases(m));   // v1.75: doosre naam
   if (!cfgStop && opts?.cloud?.listenStockConfig) cfgStop = opts.cloud.listenStockConfig(c => { itemCfg = c || {}; if (stockActive) soft(); if (!ctnBusy && document.querySelector('.reg-root')) ctnPaint(); });   // v2.99.18: register khula ho to nayi carton ginti
   if (!trStop && opts?.cloud?.listenTransfers) trStop = opts.cloud.listenTransfers(list => { trList = list; const h = document.querySelector('[data-tr-hist]'); if (h) h.innerHTML = trHistHTML(); });   // v2.6: transfer shuru se (aaya hua maal ke liye)
+  if (!ijStop && opts?.cloud?.listenItemJobs) ijStop = opts.cloud.listenItemJobs(Date.now() - 7 * 86400000, ijGot);   // v2.99.91: ⏳ PC baqi items
   if (!ptStop && opts?.cloud?.listenPosTransfers) ptStop = opts.cloud.listenPosTransfers(list => { ptList = list || []; });   // v2.8: POS ke apne transfer (PC transfer-dekho.js)
   cloud = opts.cloud;
   auditOf = opts.audit || auditOf; nameOf = opts.name || nameOf; deviceOf = opts.device || deviceOf;   // v2.99.21: transfer check
@@ -641,7 +664,7 @@ function summaryHTML(branches, pick, items, meta, names, canJama = false) {
         ? `<button class="sh-wide sh-scan" data-stock-scan="1">${camIco()} Aur scan karein (${num(scanList.length)} list mein)</button>
            <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>`
         : `<div class="sh-scanrow"><button class="sh-wide sh-scan" data-stock-scan="1">${camMissing() ? '🔫 Scanner gun se scan karein (ek ya kai items)' : '📷 Barcode scan karein (ek ya kai items)'}</button><button type="button" class="sh-mic" data-stock-mic="1" title="Awaz se dhoondein">🎤</button></div>
-           ${canNewItem() ? '<button class="sh-wide" data-stock-newitem="1">➕ Naya item</button>' : ''}${facBtnOk() ? '<button class="sh-wide sh-fac" data-fac-open="1">🏭 Factory batch (OK)</button>' : ''}
+           ${canNewItem() ? '<button class="sh-wide" data-stock-newitem="1">➕ Naya item</button>' : ''}${ijPend().length || ijBad().length ? `<button class="sh-wide sh-pend${ijBad().length && !ijPend().length ? ' bad' : ''}" data-stock-ijobs="1">${ijPend().length ? '⏳ ' + num(ijPend().length) + ' item PC baqi' : ''}${ijPend().length && ijBad().length ? ' · ' : ''}${ijBad().length ? '❌ ' + num(ijBad().length) + ' nahi bane' : ''}</button>` : ''}${facBtnOk() ? '<button class="sh-wide sh-fac" data-fac-open="1">🏭 Factory batch (OK)</button>' : ''}
            ${can('stock.in') ? '<button class="sh-wide" data-stock-in="1">📥 Aaya / gaya maal</button>' : ''}${can('stock.reg') ? '<button class="sh-wide" data-stock-reg="1">📋 Transfer register</button>' : ''}${can('stock.tc') ? '<button class="sh-wide sh-tc" data-stock-tc="1">🧾 Transfer check (scan)</button>' : ''}${can('stock.demand') ? '<button class="sh-wide dm-btn" data-demand="1">📢 Demand (khatam / kam)</button>' : ''}
            ${can('stock.tolai') ? '<button class="sh-wide sh-tolai" data-stock-tolai="1">⚖️ Tolai</button>' : ''}${canEditItem() ? `<button class="sh-wide sh-urdu" data-stock-urdu="1">🔤 Urdu naam banao (AI)${Object.keys(urdu).length ? ' · ' + num(Object.keys(urdu).length) + ' bane' : ''}</button>` : ''}
            ${can('stock.transfer') ? '<button class="sh-wide" data-stock-transfer="1">⇄ Transfer note (godam se godam)</button>' : ''}
@@ -748,6 +771,7 @@ function itemForm(r, pre) {
         <button type="button" data-sub-edit="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Badlein">✏️</button>
         <button type="button" class="danger" data-sub-del="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Hatao">🗑️</button></div>`).join('') || '<p class="muted">Koi sub-barcode nahi</p>'}</div>
       <div class="account-tools"><button type="button" data-sub-new="${esc(r.id)}">➕ Naya barcode</button></div>` : ''}
+    ${isNew && isOwner() && typeof window.ntFacPend === 'function' ? '<label class="it-fac"><input type="checkbox" name="fac"> 🏭 Factory item (factory list mein bhi)</label>' : ''}
     <div class="account-tools it-acts"><button type="submit" class="primary">${isNew ? '➕ POS mein banao' : '💾 POS mein save'}</button><button type="button" data-item-close="1">Wapas</button></div>
     <p class="muted it-msg" role="status"></p></form>`;
   if (!d.open) d.showModal();
@@ -775,7 +799,9 @@ async function itemSave(form, btn) {
   btn.disabled = true; const old = btn.textContent; btn.textContent = '⏳ PC ko bhej raha hoon…';
   try {
     const jid = await cloud.requestItem(job);
-    msg.textContent = '⏳ PC ke jawab ka intezar… (PC on ho aur item-post chal raha ho)';
+    if (isNew && form.elements.fac?.checked) { try { window.ntFacPend?.(jid, v.name); } catch {} }   // v2.99.91: 🏭
+    btn.textContent = '✓ Line mein lag gaya';
+    msg.textContent = '✓ Line mein lag gaya — PC on hote hi POS mein banega (phone par khabar aayegi). Form band kar sakte hain.';
     let stop = null, done = false;
     const end = (m, ok) => { if (done) return; done = true; try { stop && stop(); } catch {}
       btn.disabled = false; btn.textContent = old; msg.textContent = m;
@@ -785,7 +811,7 @@ async function itemSave(form, btn) {
       if (j.status === 'done') end('✓ POS mein ho gaya' + (j.code ? ' — code ' + j.code : ''), true);
       else if (j.status === 'failed') end('Nahi hua: ' + (j.error || 'nakam'), false);
     }) : null;
-    setTimeout(() => end('PC se jawab nahi aaya — PC on hai aur item-post chal raha hai? (hukum mehfooz hai, PC on hote hi lag jayega)', false), 45000);
+    setTimeout(() => end('⏳ PC abhi jawab nahi de raha (shayad band hai) — item line mein mehfooz hai, PC on hote hi banega aur phone par khabar aayegi. Stock screen par "⏳ PC baqi" mein dekh sakte hain.', false), 45000);
   } catch (e) { btn.disabled = false; btn.textContent = old; msg.textContent = 'Nahi bheja: ' + (e?.message || e); }
 }
 function subForm(r, edit) {
@@ -1861,6 +1887,7 @@ document.addEventListener('click', e => {
     urduMake(items, true).then(n => notice(`✓ ${n} Urdu naam ban gaye — ghalat ho to naam par tap kar ke theek karein`)).catch(er => notice('Nahi hua: ' + (er?.message || er))).finally(() => { urduBusy = false; soft(); });
     return;
   }
+  if (e.target.closest?.('[data-stock-ijobs]')) { ijDlg(); return; }   // v2.99.91
   const ib = e.target.closest?.('[data-stock-item],[data-stock-newitem],[data-item-close]');
   if (ib) { const d = ib.dataset;
     if (d.itemClose != null) $('dialog')?.close();

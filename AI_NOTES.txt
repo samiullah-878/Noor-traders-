@@ -4657,3 +4657,16 @@ Udhaar supplier / customer / baqi cash entries par NAHI.
   lafzon mein · چیک کیا: <naam> · بل نمبر · Urdu tareekh / waqt · یہ پرچی صرف ایک بار نکلتی ہے) -> 'done' / 'err'. Party Urdu naam:
   urduParties, na ho to AI (urdu-names v1.3 fillParties force). Printer ek waqt ek kaam (withPrinter).
 * AI sirf party ke Urdu naam ke liye (agar pehle se na ho). Test: scratchpad fct/g.mjs (6 checks) + slip text test.
+
+=== v2.99.91 (2026-10-15) — ⏳ PC BAND HO TAB BHI NAYA ITEM + 🔔 PC on hote hi khabar + 🏭 factory tick (naye item par) ===
+Malik (raat, PC band): "abhi ke liye factory items mein item aa jaye, subah PC par chali jayegi" + "koi aur item bhi add karni ho to ho
+jaye, PC on hote hi pata chal jaye".
+* pos-stock: itemSave — job bhejte hi "✓ Line mein lag gaya — PC on hote hi POS mein banega" (form atakta nahi); 45 s mein jawab na aaye
+  to "PC band — mehfooz". itemJobs listener (7 din, cloud.listenItemJobs): stock screen chip "⏳ N item PC baqi · ❌ N nahi bane" -> list;
+  is session mein new/working -> done / failed hua to notice. onItemJobs(fn) export.
+* Naya item form (sirf malik): "☐ 🏭 Factory item" -> window.ntFacPend(jobId, naam) -> factory/cfg.pend {jobId: {n, at}} (factory list mein
+  "⏳ PC baqi"); job done + itemId -> malik ka app cfg.items[itemId] = true, pend null (linkCheck — cfg / jobs dono par). Failed -> pend null.
+  Formula / batch sirf asli POS item par.
+* PC item-post v1.2: job 2 min+ purani (PC band / atka) ho to natija 20 s ikattha -> EK push (malik + jis ne daala, pushTokens uid):
+  "✓ 3 item POS mein ban gaye: …" / "❌ … (wajah)". Aam foran wali job par notification nahi.
+* Test: scratchpad fct/t.mjs (+3 checks). Rules wahi (2.53).

@@ -1,5 +1,5 @@
 // =========================================================
-//  item-post.js  v1  (2026-09-23) — Blue Khata app se POS mein ITEM banana / badalna
+//  item-post.js  v1.2 (2026-10-15: 🔔 PC band tha to item banne / na banne ki phone par khabar) · v1  (2026-09-23) — Blue Khata app se POS mein ITEM banana / badalna
 //  v1.1 (2026-10-08): ⚠️ RATE KI GHALTI THEEK — POS Items mein sab rate FI PIECE hain (POS form CTN khana = rate × pack khud
 //      dikhata hai). v1 SaleRate mein R CTN aur PurchaseRate mein khareed × pack likhti thi (mujhid ghee 1kg: R Cotton 136,800,
 //      Purchase 135,201). Ab: SaleRate = R CTN ÷ pack · SaleRate2 = R PCS · SaleRate3 = W CTN ÷ pack · SaleRateSize = W PCS ·
@@ -190,6 +190,29 @@ async function applyItem(j) {
 const busy = new Set();
 let queue = Promise.resolve();
 const later = fn => { queue = queue.then(fn).catch(e => { log('Masla: ' + e.message); if (e?.code === 16 || /UNAUTHENTICATED|invalid authentication credentials/i.test(String(e?.message))) { log('Firebase ka rabta toot gaya (UNAUTHENTICATED) — script 30 sec mein nayi chabi se dobara shuru hogi'); setTimeout(() => process.exit(1), 500); } }); };   // 2026-09-30: pehle bas likh kar aage chal padti thi, bill atak jate
+// v1.2 (2026-10-15): 🔔 malik — "agar koi item add karni ho (PC band ho) to PC on hote hi pata chal jaye". Jo job 2 min se purani thi
+//   (PC band / atka tha) us ka natija 20 s ikattha kar ke EK notification: malik + jis ne item daala (pushTokens uid). Aam foran wale par nahi.
+let lateBag = [], lateT = null;
+function notifyLate(j, ok, name, err) {
+  if (Date.now() - Number(j.at || 0) < 120000) return;
+  lateBag.push({ ok, name: String(name || '').slice(0, 40), err: String(err || '').slice(0, 80), by: j.by || '', op: j.op });
+  if (!lateT) lateT = setTimeout(sendLate, 20000);
+}
+async function sendLate() {
+  const bag = lateBag; lateBag = []; lateT = null; if (!bag.length) return;
+  try {
+    const tk = await db.collection('businesses').doc(BUSINESS_ID).collection('pushTokens').get();
+    const by = new Set(bag.map(x => x.by).filter(Boolean));
+    const tokens = [...new Set(tk.docs.map(d => d.data()).filter(x => x.token && (x.role === 'owner' || x.role === 'malik' || by.has(x.uid))).map(x => x.token))];
+    if (!tokens.length) { log('🔔 item khabar: koi push token nahi'); return; }
+    const ok = bag.filter(x => x.ok), bad = bag.filter(x => !x.ok);
+    const title = ok.length ? `✓ ${ok.length} item POS mein ${ok.every(x => x.op === 'new') ? 'ban gaye' : 'save ho gaye'}` : `❌ ${bad.length} item POS mein nahi bane`;
+    const body = [ok.length ? ok.map(x => x.name).slice(0, 6).join(', ') : '', bad.length ? '❌ ' + bad.map(x => x.name + (x.err ? ' (' + x.err + ')' : '')).slice(0, 3).join(', ') : ''].filter(Boolean).join(' · ');
+    const { getMessaging } = require('firebase-admin/messaging');
+    const r = await getMessaging().sendEachForMulticast({ tokens, data: { title, body, tag: 'items-' + Date.now(), link: 'https://samiullah-878.github.io/Noor-traders-/' }, webpush: { headers: { Urgency: 'high' } } });
+    log(`🔔 item khabar: ${r.successCount}/${tokens.length} phone — ${title}: ${body}`);
+  } catch (e) { log('🔔 item khabar nahi gayi: ' + e.message); }
+}
 async function claim(ref) {
   return db.runTransaction(async t => {
     const s = await t.get(ref); const cur = s.exists ? s.data() : null;
@@ -206,10 +229,12 @@ async function handleJob(doc) {
       if (Date.now() - Number(j.at || 0) > MAX_JOB_DIN * 86400000) throw new Error(`Job ${MAX_JOB_DIN} din se purani thi — dobara bhejein`);
       const r = await applyItem(j);
       await ref.update({ status: 'done', itemId: r.itemId, code: r.code, doneAt: Date.now(), error: FieldValue.delete() });
+      notifyLate(j, true, r.name || j.name);   // v1.2: PC band tha (job 2 min+ purani) -> phone par khabar
       log(`ITEM ${j.op === 'new' ? 'BAN GAYA' : 'BADAL GAYA'}: ${r.name} (id ${r.itemId}, code ${r.code})${r.changes.length ? ' — ' + r.changes.join('; ') : ''}`);
     } catch (e) {
       await ref.update({ status: 'failed', error: String(e.message).slice(0, 250), doneAt: Date.now() });
       log(`ITEM NAHI laga: ${e.message}`);
+      notifyLate(j, false, j.name, e.message);
     }
   } finally { busy.delete(doc.id); }
 }
@@ -271,7 +296,7 @@ lock.on('error', () => { console.log('item-post pehle se chal raha hai — yeh c
 lock.on('listening', async () => {
   try { await getPool(); log('SQL se jur gaya'); } catch (e) { log('SQL masla: ' + e.message); process.exit(1); }
   try { await repairV1(); } catch (e) { log('🔧 purane rate theek nahi hue (agli dafa phir): ' + e.message); }
-  log('item-post v1.1 chal raha hai — app se item banane / badalne ka intezar…');
+  log('item-post v1.2 chal raha hai — app se item banane / badalne ka intezar…');
   col.where('status', '==', 'new').onSnapshot(
     s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handleJob(c.doc)); }); },
     e => { log('Firestore masla: ' + e.message); process.exit(1); });
