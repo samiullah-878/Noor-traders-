@@ -4740,3 +4740,10 @@ wagaira sab kuch formula khud add ho jaye, hum bas item uthayein".
 * 📷 matchItem: pehle factory items (⏳ pending bhi) mein srch — ek hit aur (pending ya dl<=2) = ✓ khud; warna stockAgentFind; candidates
   mein factory wale pehle. "Acid slury" -> "Acid slurry" ab khud milta hai.
 * Test fct/t.mjs (53 ✓). Rules nahi badle.
+
+=== v2.99.97 (2026-10-15 raat) — ⚖️ 1 pcs = X gram (malik: "kala tail POS mein 200 gm dabba R 280, kg ka rate 1130 — rate badla to barcode ghalat") ===
+* POS item / rate / barcode ko HAATH NAHI lagaya. factory/cfg.conv {itemId: g} (sirf malik): formula ki raw line par "1 pcs = [200] g"
+  (data-fe-g, sirf un jo kg/L nahi). Likh do to us line ki ginti KG mein likhi jati hai (data-fe-q = kg -> pcsOfKg -> l.q pcs mein save,
+  purana format wahi); small mein "kg × Rs 1130 (Rs 226 / pcs) · 12.5 pcs". Stock / batch / raw tab / batch dlg: qk() = "2.5 kg (12.5 pcs)".
+  Khareed rate fi kg = prate × 1000 / g. 📷 photo: line unit g/kg + conv -> pcs khud.
+* factory.js helpers gOf / kgOf / pcsOfKg / qk (_fcTest mein). CSS .fc-fl / .fc-gline. Rules nahi badle. Test fct/t.mjs (57 ✓), fct/form.png.
