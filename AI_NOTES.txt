@@ -4569,3 +4569,18 @@ Malik: "Biryani 100 gm, chaat 100 gm, qorma 100 gm … in par commission hai fi 
   Larke par tap = item-wise + din-war commission chart (colChart one:true = sirf aqua bar). PDF mein commission table.
 * Packet = POS Qty (wapsi minus; cancel + Noor Traders / our factory / stock farq bahar). Item report sirf malik — mulazim CAPS ki zaroorat nahi.
 * Test: scratchpad hd/ir.mjs (commission 13 checks).
+
+=== v2.99.84 (2026-10-15) — 🖥 MULAZIM BHI ACCOUNT POS MEIN BHEJ SAKE · Rules 2.50 ===
+Wajah: "Asif factry wala" ki Rs 72,750 payment POS mein nahi gayi — account app mein bana tha, "POS mein bhi banayein" tick nahi
+(PC: "<naam> POS mein nahi hai — Account edit > POS mein bhi banao", posError). Malik: "mulazim ko bhi POS mein dalne ka option add kar do".
+* Laal chip "❌ POS: … POS mein nahi hai" (printChip) ke saath "➕ POS mein account banao" (posMakeHTML) — 1 tap = save({...p, posSync:true}).
+  PC (pos-khata-sync) agle chakkar mein POS Party + Account banata hai (ya bilkul isi naam ka khali POS account jor deta hai), phir ruki entry
+  khud post (posError null). Beech mein chip: "⏳ POS mein account ban raha hai…".
+* Do account na banein: posSimilar(name) — similarParties + lafz (asif ~ asif; muhammad / malik / traders wagera chhor kar) — sirf POS se jure
+  khate (posLinkedP: posSync / posLinked / pos-party-*). Mile to dialog: list + "naya banda hai — banao" / "ruk jao, entry edit". Account form mein bhi confirm.
+* Account edit form: "POS mein bhi banayein" ab mulazim (Full) ko bhi — sirf ON; jura ho to disabled. Malik ka OFF pehle jaisa.
+* On/off: Settings → Mulazim → Full → "🖥 Account POS mein banana (sirf ON)" (kh.pos). canPosMake() = malik || (staffFull && can('kh.pos')).
+* 🕘 History: party diff mein "🖥 POS mein: nahi → haan" (audit.js FIELDS.party posSync).
+* Rules 2.50: blueStaff party update affectedKeys + 'posSync', shart: posSync wahi rahe ya true ho (false karna = deny). firestore-rules-2.50.html.
+  (Emulator yahan download nahi hota — rule haath se jaancha.) Purchase-only mulazim ko ye nahi (us ke rule mein party update hai hi nahi).
+* Yahan AI nahi. Test: scratchpad pm/t.mjs (7 checks).

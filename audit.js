@@ -5,7 +5,7 @@
 //   Jo records PC ne likhe (POS sync) ya is update se PEHLE ke hain, un ka sirf "kab bani / kab badli / kis ne" record ke apne stamp se.
 // - Rules 2.12: auditLog sirf JOR sakte hain (create), badal/mita nahi (sirf malik mita sake). Parh sakte: malik + Full mulazim.
 // - 30 din: malik History kholta hai to purani (30 din se pehle) khud saaf; button bhi hai.
-import { smartHit } from './smart-search.js?v=2.99.83';   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.99.84';   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -49,7 +49,7 @@ export function auditEvent(ev) {   // {area, act, what, ref, refType, party, amo
 const KINDS = { purchaseCash: 'Cash purchase', sale: 'Daily sale', collection: 'Wasooli', payment: 'Party ko payment', expense: 'Akhrajat', credit: 'Udhar diya', borrow: 'Hum ne dena hai' };
 const FIELDS = {
   entry: [['amount', 'raqam', v => rs((Number(v) || 0) / 100)], ['partyId', 'party', v => partyNameOf(v) || v], ['kind', 'qism', v => KINDS[v] || v], ['date', 'tareekh'], ['note', 'note'], ['account', 'account'], ['dailyIncluded', 'daily mein', v => v === false ? 'nahi' : 'haan'], ['posPending', 'POS mein daalni', v => v ? 'haan' : 'nahi'], ['deleted', 'delete', v => v ? 'haan' : 'nahi']],
-  party: [['name', 'naam'], ['phone', 'phone'], ['category', 'qism'], ['opening', 'opening', v => rs((Number(v) || 0) / 100)], ['note', 'note'], ['dasti', 'dasti', v => v ? 'haan' : 'nahi'], ['deleted', 'delete', v => v ? 'haan' : 'nahi']],
+  party: [['name', 'naam'], ['phone', 'phone'], ['category', 'qism'], ['opening', 'opening', v => rs((Number(v) || 0) / 100)], ['note', 'note'], ['dasti', 'dasti', v => v ? 'haan' : 'nahi'], ['posSync', '🖥 POS mein', v => v ? 'haan' : 'nahi'], ['deleted', 'delete', v => v ? 'haan' : 'nahi']],
   closing: [['cash', 'cash', v => rs((Number(v) || 0) / 100)], ['change', 'change', v => rs((Number(v) || 0) / 100)], ['opening', 'opening', v => rs((Number(v) || 0) / 100)]],
   reminder: [['dueDate', 'due date'], ['note', 'note'], ['repeat', 'repeat'], ['deleted', 'delete', v => v ? 'haan' : 'nahi']],
   cashCustody: [['moves', 'harkatein', v => (Array.isArray(v) ? v.length : 0) + ' move']],

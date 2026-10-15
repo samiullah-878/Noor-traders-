@@ -3452,3 +3452,13 @@ html body .ir-root .ir-sec .ir-ctot>div:first-child b{color:var(--ir-p)!importan
 .ir-cc.one.dense .ir-v{display:block;font-size:9px}
 html body .ir-root .ir-sec .ir-cx{color:var(--ir-l)!important;border-color:rgba(227,73,72,.35)!important;background:rgba(227,73,72,.08)!important}
 html body .ir-root .ir-cset .ir-num b{color:var(--ir-p)!important}
+/* v2.99.84 🖥 mulazim: POS mein account banao (laal note par) */
+html body .pos-make{min-height:30px!important;padding:4px 12px!important;border-radius:999px!important;font-size:11.5px!important;font-weight:800;background:linear-gradient(135deg,#047857,#065f46)!important;color:#fff!important;border:0!important;box-shadow:0 3px 10px rgba(4,120,87,.25)!important;width:auto!important}
+html body .pos-make:disabled{opacity:.6}
+.pm-box{display:flex;flex-direction:column;gap:10px}
+.pm-say{margin:0;padding:12px;border-radius:14px;background:#fff7e0;border:1px solid #f3c969;color:#7a5200;font-size:13.5px;line-height:1.5}
+.pm-list{display:flex;flex-direction:column;gap:6px}
+.pm-row{display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:12px;background:rgba(4,120,87,.07);border:1px solid rgba(4,120,87,.2)}
+.pm-row b{font-size:14px}.pm-row small{font-size:11.5px;opacity:.75}
+html body .pm-box .pm-go{min-height:48px;border-radius:14px;border:0;font-weight:800;background:linear-gradient(135deg,#047857,#065f46)!important;color:#fff!important}
+html body .pm-box .pm-no{min-height:44px;border-radius:14px;font-weight:700;background:transparent!important;border:1px solid rgba(100,116,139,.35)!important;color:inherit!important}
