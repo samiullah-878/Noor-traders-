@@ -4732,3 +4732,11 @@ wagaira sab kuch formula khud add ho jaye, hum bas item uthayein".
 * Rules: koi tabdeeli nahi (2.54 hi). Firestore: factory/cfg.pend[jid].c + formulas lines[].n (naye field, purane docs theek).
 * Test: fct/t.mjs (51 ✓ — tabs, 3 qadam, chooser, settings, picker, pend/dup/link, photo flow), fct/boot.mjs. Screenshots fct/*.png.
 * Agli AI: asli Excel photo test malik karega; agar AI lines ghalat parhe to FORMULA_PROMPT mein misaal daalna.
+
+=== v2.99.96 (2026-10-15 raat) — 🏭 factory search spelling-maafi (malik: "Slaphate 50 kg" ⏳ item search mein nahi aata) ===
+* Wajah: factory ki saari search seedha substring thi — POS job mein naam "Slaphate", malik "sulphate" likhta. factory.js srch(list, q, n):
+  smart-search.js smartSearch (Sale / Stock wali) + dl() Damerau (2 harf ki ghalti / ulat-palat 6+ harf par, 1 harf 4–5 par). Jagah:
+  naya formula chooser (⏳ pending pehle, pendFirst), formula raw search, 📷 product / line pick, raw maal tab, ☑ picker.
+* 📷 matchItem: pehle factory items (⏳ pending bhi) mein srch — ek hit aur (pending ya dl<=2) = ✓ khud; warna stockAgentFind; candidates
+  mein factory wale pehle. "Acid slury" -> "Acid slurry" ab khud milta hai.
+* Test fct/t.mjs (53 ✓). Rules nahi badle.

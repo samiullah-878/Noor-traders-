@@ -1,17 +1,18 @@
-// factory.js — v2.99.95: 🏭 FACTORY PRODUCTION (malik: "apni factory ki items — formula, batch, larka OK kare to POS stock khud +/−, rates khud,
+// factory.js — v2.99.96: 🏭 FACTORY PRODUCTION (malik: "apni factory ki items — formula, batch, larka OK kare to POS stock khud +/−, rates khud,
 //   batch ka barcode label, raw maal ki purchase"). Naqsha: Design artifact "Factory Production — naqsha".
 // Items: POS ki category mein 'factory' (pos-stock isFactory) ya malik ka ☑ — jis ka FORMULA bana = tayyar maal, baqi = raw maal. Stock / rate POS se.
 // Firestore: factory/cfg {formulas:{itemId:{per, lines:[{id,q,n}], lab, gas, cpp, at} | null}, items:{id:true|false|null}, pend:{jobId:{n,at,c}|null}, wm, rm, lbl} (sirf malik) ·
 //   factoryBatches/<id> {no, itemId, n (1–10), per, out, lines:[{id,name,q,c}], cost, oh, labels:[…], status 'new'} — larka (Full / Stock) banaye;
 //   PC factory-post.js: POS Adjustment (+ tayyar maal, − raw maal; dukan godam) -> status 'posted' + adjNo, phir label jobs (batch no ke saath).
 //   Malik: 'cancelReq' (ulta Adjustment) / 'new' dobara. Rate: pos-stock stockAgentItemSave (itemJobs, PC item-post) — malik dabaye tab.
-// v2.99.95: NAYI TARTEEB (malik: "sahi tarteeb se nahi, bohat masail, easy + premium") — 4 tab (📋 Batches · 🧪 Formulas · 🏷 Rates · 📦 Raw maal),
+// v2.99.96: NAYI TARTEEB (malik: "sahi tarteeb se nahi, bohat masail, easy + premium") — 4 tab (📋 Batches · 🧪 Formulas · 🏷 Rates · 📦 Raw maal),
 //   ⚙️ Settings sheet (☑ items chunna + nafa % + label default), batch 3 qadam (① item ② batch 1–10 ③ OK; "Aur…" mein asal ginti / label / raw list).
 //   Bugs: (1) ⏳ pending ka naam POS mein pehle se = ⚠️ alert (2) larke ke phone par bhi done job = factory item (3) ⏳ item par rate nahi
 //   (4) ❌ masla alert tap se batch khule (5) raw ka naam formula mein mehfooz (n) — item hat jaye to bhi dikhe (6) formula chooser mein raw alag (7) mara hua code hata.
 //   📷 PHOTO SE FORMULA (AI sirf tasveer parhne ke liye — Excel / parchi): lines -> POS items se milao (stockAgentFind) -> na mile to naya item
 //   (stockNewItemQuick, ⏳ job:) -> formula save. Fi piece packing × pieces; labour -> mazdoori. Tez: OK = setDoc foran. AI aur kahin NAHI.
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick } from './pos-stock.js?v=2.99.95';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick } from './pos-stock.js?v=2.99.96';
+import { smartSearch, fold } from './smart-search.js?v=2.99.96';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -24,8 +25,25 @@ const today = () => dayOf(new Date());
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const clock = t => new Date(t).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' });
 const short = t => { const d = new Date(t); return d.getDate() + ' ' + MON[d.getMonth()] + ' · ' + clock(t); };
-const fold = s => String(s || '').toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g, ' ').trim();
 const un = it => (it?.un || 'pcs').toLowerCase();
+// v2.99.96: 🔍 SPELLING-MAAFI search (malik: "Slaphate" likha tha, "sulphate" se nahi mila) — Sale / Stock wali smartSearch + 2 harf ki
+//   ghalti / ulat-palat (Damerau) 6+ harf ke lafz par. q khali = poori list (⏳ pending pehle).
+function dl(a, b) {   // optimal string alignment distance
+  const m = a.length, n = b.length; if (Math.abs(m - n) > 2) return 9; const d = [];
+  for (let i = 0; i <= m; i++) { d[i] = [i]; for (let j = 1; j <= n; j++) d[i][j] = i ? 0 : j; }
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++) { const c = a[i - 1] === b[j - 1] ? 0 : 1; d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + c);
+    if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1); }
+  return d[m][n];
+}
+function srch(list, q, n = 20) {
+  const s = String(q || '').trim(); if (!s) return list.slice(0, n);
+  let out = []; try { out = smartSearch(list, s, n); } catch { out = list.filter(x => String(x.name || '').toLowerCase().includes(s.toLowerCase())); }
+  if (out.length < n) { const toks = fold(s).split(' ').filter(t => t.length >= 4), seen = new Set(out.map(x => x.id));
+    if (toks.length) for (const x of list) { if (seen.has(x.id)) continue; const ws = fold(x.name).split(' ').filter(Boolean);
+      if (toks.every(t => ws.some(w => dl(w, t) <= (t.length >= 6 ? 2 : 1)))) { out.push(x); if (out.length >= n) break; } } }
+  return out.slice(0, n);
+}
+const pendFirst = (a, b) => (b.pending ? 1 : 0) - (a.pending ? 1 : 0);
 // ginti -> "5 ctn + 3" (POS jaisa)
 function qt(q, it) {
   q = r3(q); const pk = Number(it?.pack) || 0, cn = (it?.cn || 'Ctn').toLowerCase(), u = un(it);
@@ -212,7 +230,7 @@ function formulasHTML() {
 function fnewDlg() { if (!isOwner()) return; fn = { q: '' }; dlg('➕ Naya formula — item chunein', '<div id="fcNew"></div>'); fnewPaint(); }
 function fnewPaint(only) {
   const el = $('fcNew'); if (!el || !fn) return; const F = forms(), used = rawUsed(), q = fn.q.trim().toLowerCase();
-  const all = items.filter(x => !F[x.id] && (!q || x.name.toLowerCase().includes(q) || x.code.includes(q)));
+  const all = srch(items.filter(x => !F[x.id]).sort(pendFirst), q, 40);
   const A = all.filter(x => !used.has(x.id)).slice(0, 15), R = all.filter(x => used.has(x.id)).slice(0, 8);
   const row = x => `<button type="button" class="ir-row" data-fc-f="${esc(x.id)}"><span><b>${esc(x.name)}${isPend(x) ? ' ⏳' : ''}</b><small>${esc(x.cat)} · stock ${esc(qt(x.stock, x))}</small></span><span class="ir-num"><b>➕</b></span></button>`;
   const html = `<p class="ir-say">Jis <b>tayyar maal</b> ka nuskha banana hai wo chunein. ${aiFormula ? 'Ya <b>📷 Photo se formula</b> — Excel / parchi ki tasveer.' : ''}</p>
@@ -232,7 +250,7 @@ function openFormula(id) {
 function formPaint(only) {
   const el = $('fcForm'); if (!el || !fe) return; const it = byId.get(fe.id); if (!it) return;
   const c = costOf(fe), sg = suggest(it, c.cpp), cr = curRates(it);
-  const hits = fe.q.trim().length >= 2 ? items.filter(x => x.id !== fe.id && !fe.lines.some(l => l.id === x.id) && x.name.toLowerCase().includes(fe.q.trim().toLowerCase())).slice(0, 10) : [];
+  const hits = fe.q.trim().length >= 2 ? srch(items.filter(x => x.id !== fe.id && !fe.lines.some(l => l.id === x.id)), fe.q, 10) : [];
   const html = `<section class="ir-sec"><div class="fc-batchrow"><span>1 batch =</span><input type="number" inputmode="decimal" min="1" step="any" data-fe-per="1" value="${esc(String(fe.per))}"><span>${esc(un(it))}${it.pack > 1 ? ' (' + esc(qt(fe.per, it)) + ')' : ''}</span></div></section>
     <section class="ir-sec"><div class="ir-sh"><b>Raw maal (1 batch)</b><small>rate = abhi ka khareed</small></div>
       <div class="ir-tbl">${c.lines.map((l, i) => `<div class="ir-row"><span><b>${esc(l.name)}</b><small>${l.gone ? '⚠️ factory items mein nahi — ⚙️ se ☑ karein' : esc(un(l.it)) + ' × ' + (l.c ? rs(l.c) : '⚠️ rate nahi')}</small></span><span class="fc-crow"><input type="number" inputmode="decimal" min="0" step="any" data-fe-q="${i}" value="${esc(String(fe.lines[i].q))}"><b>${rs(l.rs)}</b><button type="button" class="ir-cx" data-fe-del="${i}">✕</button></span></div>`).join('') || '<p class="lk-note">Neeche se raw maal jorein.</p>'}</div>
@@ -287,13 +305,16 @@ async function photoFormula(files) {
 function matchItem(name) {
   const f = fold(name); if (!f) return { id: '', status: 'new', cands: [] };
   const ex = items.find(x => fold(x.name) === f); if (ex) return { id: ex.id, status: 'ok', hit: ex.name, cands: [] };
+  const near = srch(items, name, 3), nc = near.map(x => ({ id: x.id, name: x.name, pack: x.pack, rate: x.prate, un: x.un }));   // ⏳ pending bhi yahin
+  if (near.length === 1 && (isPend(near[0]) || dl(fold(near[0].name), f) <= 2)) return { id: near[0].id, status: 'ok', hit: near[0].name, cand: nc[0], cands: nc };
   let r = null; try { r = stockAgentFind(name, [], 5); } catch { r = null; }
   const cands = (r?.candidates || []).map(c => ({ id: String(c.item_id), name: c.name, pack: Number(c.pack) || 0, rate: Number(c.rate?.khareed_pcs) || 0, un: c.pcs_naam || 'Pcs' }));
   if (r?.decision === 'pakka' && r.item_id) { const c = cands.find(x => x.id === String(r.item_id)) || cands[0]; return { id: String(r.item_id), status: 'ok', hit: c?.name || name, cand: c, cands }; }
-  if (cands.length) { const sub = cands.find(c => fold(c.name).includes(f) || f.includes(fold(c.name))); return { id: sub ? sub.id : '', status: 'maybe', hit: sub?.name || '', cand: sub || null, cands }; }
+  const all = [...nc, ...cands.filter(c => !nc.some(x => x.id === c.id))];
+  if (all.length) { const sub = all.find(c => fold(c.name).includes(f) || f.includes(fold(c.name))) || (near.length ? nc[0] : null); return { id: sub ? sub.id : '', status: 'maybe', hit: sub?.name || '', cand: sub || null, cands: all }; }
   return { id: '', status: 'new', cands: [] };
 }
-const pfProdHits = q => { const F = forms(), s = String(q || '').trim().toLowerCase(); return items.filter(x => !F[x.id] && (!s || x.name.toLowerCase().includes(s) || x.code.includes(s))).slice(0, 8); };
+const pfProdHits = q => { const F = forms(); return srch(items.filter(x => !F[x.id]).sort(pendFirst), q, 8); };
 const pfOutside = l => l.id && !byId.has(l.id);   // POS mein hai magar factory items mein nahi — save par ☑
 function pfLineQ(l) {   // tasveer ki miqdaar -> formula (1 batch) — fi piece × pieces; g / ml -> kg / L agar item kg / L mein ho
   let q = Number(l.qty) || 0; if (l.per === 'piece') q *= pf.pieces || 0;
@@ -308,7 +329,7 @@ function pfPaint(el0) {
   const r = pf.res, prod = byId.get(pf.prodId);
   if (pf.pick >= 0) {   // ek line ka item badalna
     const l = pf.lines[pf.pick], s = pf.sq.trim(); let hits = [];
-    if (s.length >= 2) { hits = items.filter(x => x.name.toLowerCase().includes(s.toLowerCase())).slice(0, 8).map(x => ({ id: x.id, name: x.name, un: x.un, rate: x.prate }));
+    if (s.length >= 2) { hits = srch(items, s, 8).map(x => ({ id: x.id, name: x.name + (isPend(x) ? ' ⏳' : ''), un: x.un, rate: x.prate }));
       try { const rr = stockAgentFind(s, [], 6); for (const c of rr?.candidates || []) if (!hits.some(h => h.id === String(c.item_id))) hits.push({ id: String(c.item_id), name: c.name, un: c.pcs_naam, rate: Number(c.rate?.khareed_pcs) || 0, out: true }); } catch {} }
     else hits = (l.cands || []).map(c => ({ ...c, out: !byId.has(c.id) }));
     el.innerHTML = `<div class="fc-bhead"><b>${esc(l.name)}</b><small>${num(l.qty)} ${esc(l.unit)} ${l.per === 'piece' ? 'fi piece' : '1 batch'}</small></div>
@@ -396,7 +417,8 @@ function rawRows() {
 }
 const rawKam = () => rawRows().filter(r => r.kam);
 function rawHTML() {
-  const list = rawRows().filter(({ x }) => !rq || x.name.toLowerCase().includes(rq.toLowerCase())).sort((a, b) => (b.kam ? 1 : 0) - (a.kam ? 1 : 0) || (b.u.length ? 1 : 0) - (a.u.length ? 1 : 0) || a.x.name.localeCompare(b.x.name));
+  const rqIds = rq.trim() ? new Set(srch(rawItems(), rq, 80).map(x => x.id)) : null;
+  const list = rawRows().filter(({ x }) => !rqIds || rqIds.has(x.id)).sort((a, b) => (b.kam ? 1 : 0) - (a.kam ? 1 : 0) || (b.u.length ? 1 : 0) - (a.u.length ? 1 : 0) || a.x.name.localeCompare(b.x.name));
   return `<section class="ir-sec"><div class="ir-sh"><b>📦 Raw maal (dukan godam)</b><small>${num(list.length)}</small></div>
     ${goPurchase && (isOwner() || canOf('v:purchase')) ? '<button type="button" class="fc-go sm" data-fc-pur="1">🧾 Raw maal ki purchase daalein</button>' : ''}
     <label class="hs-search"><input type="search" data-fc-rq="1" placeholder="🔍 raw maal…" value="${esc(rq)}" autocomplete="off"></label>
@@ -432,7 +454,7 @@ function pickPaint(only) {
   let all = []; try { all = stockPickList(); } catch {}
   const isOn = x => { const v = cfg?.items?.[x.id]; return v === true || (v !== false && (x.catFac || doneReal.has(x.id))); };
   const q = pk.q.trim().toLowerCase(), F = forms();
-  const list = all.filter(x => (pk.f === 'on' ? isOn(x) : pk.f === 'cat' ? x.catFac : true) && (!q || x.name.toLowerCase().includes(q) || x.code.includes(q)))
+  const list = srch(all.filter(x => (pk.f === 'on' ? isOn(x) : pk.f === 'cat' ? x.catFac : true)), q, 400)
     .sort((a, b) => (isOn(b) ? 1 : 0) - (isOn(a) ? 1 : 0) || a.name.localeCompare(b.name));
   const nOn = all.filter(isOn).length;
   const html = `<p class="ir-say">Jis item par <b>☑</b> lagayein wo factory mein aa jayegi — formula wali = <b>tayyar maal</b>, baqi = <b>raw maal</b>.</p>
