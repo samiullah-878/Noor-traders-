@@ -36,8 +36,8 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.89';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.89';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.99.90';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.99.90';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -2084,7 +2084,8 @@ async function save(opt = {}) {
     const gRs = !edit ? gallaRs() : 0;   // v2.21: galla wale ko "itne paise do" — bill cloud par pohanchne ke BAAD hi
     if (gRs > 0 && cloud.addGallaCall) {
       const gdoc = { id: 'p' + String(id).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 60), kind: 'payment', amount: Math.round(gRs * 100), partyId: String(p.id), partyName: String(p.name || '').slice(0, 120),
-        note: (invoiceNo ? 'Bill # ' + invoiceNo : 'POS purchase').slice(0, 300), billId: String(id), by: uidOf(), byName: String(nameOf() || (isOwner() ? 'Malik' : 'Mulazim')).slice(0, 60), at: Date.now(), date: todayStr(), status: 'new' };
+        note: (invoiceNo ? 'Bill # ' + invoiceNo : 'POS purchase').slice(0, 300), billId: String(id), by: uidOf(), byName: String(nameOf() || (isOwner() ? 'Malik' : 'Mulazim')).slice(0, 60), at: Date.now(), date: todayStr(), status: 'new',
+        ...((() => { try { return typeof window.ntGallaNeedCheck !== 'function' || window.ntGallaNeedCheck(); } catch { return true; } })() ? { needCheck: true } : {}) };   // v2.99.90: 💰 naqad supplier — pehle check + Urdu parchi
       Promise.resolve(w).then(() => cloud.addGallaCall(gdoc)).then(() => notice('💵 Galla wale ko awaaz chali gayi — Rs ' + num(gRs))).catch(er => notice('⚠️ Galla ko awaaz nahi gayi: ' + (er?.message || er)));
     }
     gallaMode = 'none'; gallaOwn = 0;

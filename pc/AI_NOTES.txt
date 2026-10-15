@@ -2928,3 +2928,10 @@ usp_AdjustmentDetail_InsertUpdate — post-farq createAdjustment jaisa, transact
 fi job, by 'pc-factory', batch = no) + lblDone. 'cancelReq' -> asal AdjustmentDetail ulta ("Prod WAPAS …") -> 'cancelled' (POS mein delete
 kuch nahi). Ghalti: 'error' + err (malik "dobara bhejo"). Service manifest mein (doctor khud chalata hai). Log factory-log.txt.
 label-print.js v4.5: job.batch ho to daayein kone par batch no (running number ki jagah).
+
+=== 2026-10-15 · manifest 2026-10-15.3 — 💰 galla parchi (galla-parchi.js NAYA, pos-khata-sync, urdu-names v1.3) ===
+pos-khata-sync: listenGallaChecks() (gallaCalls needCheck == true && status == 'new'; checkAt hai aur prnState khali) -> runGalla():
+transaction se prnState 'printing' (sirf EK dafa), party Urdu naam UR.partyAny (na ho to UR.fillParties force — AI), checkUr app se;
+galla-parchi.js slipJob(Seg, ESC, call, partyUr, checkUr) — sirf Urdu raster (koi Latin nahi; hasLatin jaanch) -> TM-T88IV.
+Kamyab: prnState 'done' + prnAt (phir kabhi nahi); nakam: 'err' + prnErr (malik app se '' = phir bhejo). printReceipt ab withPrinter
+queue se (voucher + galla parchi aapas mein nahi takrate). urdu-names v1.3: partyAny (urduSlip band ho tab bhi), fillParties({force}).

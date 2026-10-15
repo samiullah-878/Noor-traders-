@@ -4638,3 +4638,22 @@ Malik: "check box de do items list mein factory mein — items aa jayein".
   checkbox (data-fac-tick) — foran (optimistic) + setFactoryCfg({items:{id:v}}); formula wali hatane par confirm.
 * Stock screen: har item card par (sirf malik) "☐ 🏭 Factory" (window.ntFacIs — factory.js; cfg listener ab factoryStop par band nahi, 1 doc).
 * Test: scratchpad fct/t.mjs (+5 checks), pick.png.
+
+=== v2.99.90 (2026-10-15) — 💰 GALLA CHECK + EK DAFA URDU PARCHI (naqad supplier) · Rules 2.53 ===
+Malik: "galla par cash payment tab de ga jab Mubeen / Sonu / Zeeshan / Malik ne check kar liya ho — phir payment dene ka EK print
+nikle (dobara na nikle), parchi par party ka naam bara, check karne wale ka naam, koi English nahi — sirf Urdu, lafz bare".
+Sirf NAQAD supplier: purchase "💵 Galla se abhi cash" (gallaCalls kind payment, needCheck true jab blueAccess/gallaCheck.on != false).
+Udhaar supplier / customer / baqi cash entries par NAHI.
+* galla.js: gcfg = blueAccess/gallaCheck {on, people:[{n, ur}]} (default Mubeen مبین / Sonu سونو / Zeeshan زیشان / Malik مالک).
+  meChecker(): malik = Malik; mulazim = session naam people.n se mile. gallaWarm() (app renderSurface) — checker / malik ke liye
+  gallaCalls (aaj) listener + fixed bar "💰 Galla check (n)" (har screen par, stock / purchase login bhi) -> dialog: ✓ Check kar liya /
+  ✕ Rok do; malik: ❌ parchi nahi nikli -> 🖨 Phir bhejo. Galla screen: needCheck card par "⏳ Check baqi" / "🖨 parchi nikal rahi" —
+  "Paise de diye" sirf prnState 'done' par; malik ke liye ⚙️ Galla check (on / off, naam + Urdu naam).
+* cloud: listenGallaCheck, setGallaCheck, checkGallaCall(id, name, ur), stopGallaCall, retryGallaPrint. History: audit MAP.
+* Rules 2.53: gallaCalls needCheck key; read + stockStaff; check (ek dafa, checkAt na ho) owner / full / purchase / stock; stop;
+  malik prnState '' (err / printing se); "paid" sirf needCheck != true ya prnState == 'done'. blueAccess get list + gallaCheck.
+* PC: pos-khata-sync listenGallaChecks (needCheck + status new; checkAt && !prnState) -> transaction prnState 'printing' ->
+  galla-parchi.js slipJob (nt-parchi raster, server TM-T88IV, sirf Urdu: ادائیگی پرچی · party (72px) · raqam Urdu hindse (84px) ·
+  lafzon mein · چیک کیا: <naam> · بل نمبر · Urdu tareekh / waqt · یہ پرچی صرف ایک بار نکلتی ہے) -> 'done' / 'err'. Party Urdu naam:
+  urduParties, na ho to AI (urdu-names v1.3 fillParties force). Printer ek waqt ek kaam (withPrinter).
+* AI sirf party ke Urdu naam ke liye (agar pehle se na ho). Test: scratchpad fct/g.mjs (6 checks) + slip text test.

@@ -23,6 +23,7 @@
 //  2026-10-12: ⚡ tez raasta (quickEntries) — nayi payment / wasooli / udhar entry ka voucher + parchi seconds mein, poora sync baad mein.
 //  2026-10-12: 🛒 app purchase ki parchi + samaan ki chhoti tasveer (photo-print.js, jpeg-decode.js).
 //  2026-10-12: 🖨 printer ki haalat — printConfig.voucherLog / vLast / vErr / vAlive, entry par posPrintedAt / posPrintErr, printJobs kind voucher = dobara print.
+//  2026-10-15: 💰 galla ki Urdu parchi (galla-parchi.js) — naqad supplier ki payment check hone par EK dafa (gallaCalls prnState).
 //  2026-10-12: 🏦 HBL parchi — HBL account / HBL SMS-email wali entry: upar bara ulta "HBL", barcode nahi, raqam + baqaya lafzon mein (inWords, lakh/crore).
 //  v8: voucher rasid (CPV/CRV/Transfer/Udhar) notepad ki jagah seedha TM-T88IV par, sale rasid jaisi
 // ============================================================
@@ -468,7 +469,11 @@ async function logPrint(e) {
 }
 let aliveAt = 0;
 async function beatPrinter() { if (DRY || Date.now() - aliveAt < 5 * 60000) return; aliveAt = Date.now(); try { await cfgDoc().set({ vAlive: aliveAt }, { merge: true }); } catch {} }
-async function printReceipt(text) {
+// 2026-10-15: printer ek waqt ek kaam (voucher + 💰 galla parchi aapas mein na takrayein)
+let prQ = Promise.resolve();
+const withPrinter = fn => { const p = prQ.then(fn, fn); prQ = p.catch(() => {}); return p; };
+const printReceipt = text => withPrinter(() => printReceipt0(text));
+async function printReceipt0(text) {
   if (!AUTO_PRINT || DRY) return false;
   if (UR.has(text)) {   // 2026-10-14: 🔤 Urdu tasveer — nt-parchi worker (tez). Exception = bina Urdu purana tareeqa. Printer ki ghalti = dobara nahi.
     try { const P = getParchi(), e = await P.sendJobs([UR.toJob(text, { font: P.FONT_UR, dots: 512 })], PRINTER_NAME);
@@ -1026,6 +1031,43 @@ async function runVoucherJobs() {
   }
 }
 
+// ---------- 2026-10-15: 💰 GALLA KI ADAIGI PARCHI (sirf Urdu, EK dafa) — galla-parchi.js ----------
+// Malik: naqad supplier ki payment (purchase "Galla se abhi cash" -> gallaCalls needCheck) — Mubeen / Sonu / Zeeshan / Malik "✓ check" kare
+// (app: checkBy / checkName / checkUr / checkAt) -> yahan TM-T88IV par EK Urdu parchi; prnState 'printing' -> 'done' (phir kabhi nahi) / 'err'.
+// 'err' par sirf malik app se prnState '' (phir bhejo). Party ka Urdu naam: urduParties; na ho to pehle AI (urdu-names fillParties force).
+const GP = require('./galla-parchi.js');
+const gJobs = new Set(); let gRun = false;
+function listenGallaChecks() {
+  biz.collection('gallaCalls').where('needCheck', '==', true).where('status', '==', 'new').onSnapshot(s => {
+    for (const d of s.docs) { const c = d.data(); if (c.checkAt && !c.prnState) gJobs.add(d.id); }
+    if (gJobs.size) runGalla();
+  }, e => log('Galla parchi listener masla: ' + e.message));
+}
+async function runGalla() {
+  if (gRun) return; gRun = true;
+  try {
+    while (gJobs.size) {
+      const id = [...gJobs][0]; gJobs.delete(id);
+      const ref = biz.collection('gallaCalls').doc(id);
+      try {
+        const c = await db.runTransaction(async tx => { const s = await tx.get(ref); const d = s.exists ? s.data() : null;
+          if (!d || d.status !== 'new' || !d.needCheck || !d.checkAt || d.prnState) return null; tx.update(ref, { prnState: 'printing', prnStart: Date.now() }); return d; });
+        if (!c) continue;
+        let pu = UR.partyAny(c.partyId);
+        if (!pu || GP.hasLatin(pu)) { try { await UR.fillParties({ db, businessId: BUSINESS_ID, parties: [{ id: c.partyId, name: c.partyName }], log, force: true }); } catch {} pu = UR.partyAny(c.partyId); }
+        const cu = String(c.checkUr || '').trim();
+        if (!pu || GP.hasLatin(pu)) throw new Error('Party ka Urdu naam nahi bana — app mein party ka Urdu naam likh kar malik "phir bhejo" dabaye');
+        if (!cu || GP.hasLatin(cu)) throw new Error('Check karne wale ka Urdu naam nahi — galla setting mein likhein');
+        const P = getParchi(), job = GP.slipJob(P.Seg, P.ESC, c, pu, cu);
+        const e = AUTO_PRINT && !DRY ? await withPrinter(() => P.sendJobs([job], PRINTER_NAME)) : null;
+        if (e) throw new Error('Printer: ' + String(e.message || e).slice(0, 140));
+        await ref.update({ prnState: 'done', prnAt: Date.now(), prnErr: '' });
+        log(`💰 Galla parchi: ${c.partyName} Rs ${Math.round(c.amount / 100)} · check ${c.checkName || ''}`);
+      } catch (er) { log('💰 Galla parchi NAHI: ' + er.message); try { await ref.update({ prnState: 'err', prnErr: String(er.message).slice(0, 200) }); } catch {} }
+    }
+  } finally { gRun = false; }
+}
+
 // ---------- 2026-10-12: ⚡ TEZ RAASTA — nayi app entry (payment / wasooli / udhar) seconds mein POS voucher + parchi ----------
 // Malik: "printing bohat late hoti hai, seconds mein karo". Poora sync (sab accounts + sab vouchers) 1 min+ leta tha. Ab app mein nayi
 // entry aate hi (0.8 s) sirf USI ka voucher + parchi; baqi milan pehle jaisa poore sync mein. Shart: pichhle poore sync ka accounts naqsha
@@ -1110,6 +1152,7 @@ async function once() {
   await listenApp();
   await loadLinks();
   if (AUTO && !DRY) listenVoucherJobs();   // 2026-10-12: 🖨 dobara print
+  if (AUTO && !DRY) listenGallaChecks();   // 2026-10-15: 💰 galla ki Urdu parchi
   log(`App records: ${app.size} · links: ${links.size}`);
   if (!AUTO) { await once(); log('Ho gaya.'); process.exit(0); }
   let busy = false, again = false, timer = null;

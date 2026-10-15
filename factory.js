@@ -6,7 +6,7 @@
 //   PC factory-post.js: POS Adjustment (+ tayyar maal, − raw maal; dukan godam) -> status 'posted' + adjNo, phir label jobs (batch no ke saath).
 //   Malik: 'cancelReq' (ulta Adjustment) / 'new' dobara. Rate: pos-stock stockAgentItemSave (itemJobs, PC item-post) — malik dabaye tab.
 // Tez: OK = setDoc foran (intezar nahi) — list mein "⏳ PC ko ja raha" foran. Yahan AI NAHI.
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat } from './pos-stock.js?v=2.99.89';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat } from './pos-stock.js?v=2.99.90';
 // v2.99.89: ☑ FACTORY ITEMS TICK SE (malik: "check box de do items list mein — factory mein items aa jayein") — factory/cfg.items {id: true | false | null}:
 //   true = malik ne ☑ kiya, false = category wali ko hataya, null = category ke hisaab se. Factory screen "☑ Factory items chunein" + stock screen har item par ☐ 🏭 Factory.
 

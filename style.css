@@ -3558,3 +3558,23 @@ html body #dialogBody .ir-root .fc-pk.pk-on{border-color:#9FD6B9!important;backg
 .fc-pk span{display:grid;gap:2px;min-width:0}.fc-pk b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fc-pk small{font-size:11px;color:var(--ir-ink2)}
 html.dk body #dialogBody .ir-root .fc-pk.pk-on{background:rgba(23,129,86,.18)}
 .fac-tick{display:block;font-size:.85em;white-space:nowrap;color:#13693F;font-weight:700;margin-top:2px}.fac-tick input{width:auto;accent-color:#178156}
+/* v2.99.90 💰 galla check + Urdu parchi */
+.gl-chkbar{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:60;display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:56px;padding:10px 16px;border:0;border-radius:18px;background:linear-gradient(135deg,#b45309,#d97706);color:#fff;box-shadow:0 10px 26px rgba(180,83,9,.35);font:inherit;text-align:left;animation:glPulse 1.6s ease-in-out infinite}
+.gl-chkbar span{font-size:13px;font-weight:800;white-space:nowrap}.gl-chkbar b{font-size:14px;font-weight:800;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gl-chkbar.bad{background:linear-gradient(135deg,#9f1239,#be123c);animation:none}
+@keyframes glPulse{50%{transform:translateY(-2px);box-shadow:0 14px 30px rgba(180,83,9,.45)}}
+.gl-chk{display:grid;gap:12px}
+.gl-ccard{padding:14px;border-radius:18px;background:var(--surf,#fff);border:1px solid var(--line,#dfe5f0);box-shadow:0 4px 14px rgba(23,43,82,.06);display:grid;gap:6px}
+.gl-ccard .gl-who{font-size:17px;font-weight:800}.gl-ccard .gl-amt{font-size:30px;font-weight:900}
+.gl-cst{padding:10px 12px;border-radius:12px;background:#FFF7E6;color:#6B4300;font-size:13px;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.gl-cst.ok{background:#E3F4EC;color:#13693F}.gl-cst.bad{background:#FBE4E6;color:#7a1820}
+.gl-cst button{min-height:36px;padding:0 12px;border-radius:999px;border:0;background:#be123c;color:#fff;font-weight:800}
+.gl-lock{margin:10px 0 4px;padding:12px 14px;border-radius:14px;background:#FFF1D6;color:#7a4a00;font-size:15px;font-weight:800;text-align:center;display:grid;gap:3px}
+.gl-lock small{font-size:12px;font-weight:600;opacity:.85}.gl-lock.ok{background:#E3F4EC;color:#13693F}.gl-lock.bad{background:#FBE4E6;color:#7a1820}
+.gl-set{margin:0 0 12px}
+.gl-sethead{width:100%;min-height:44px;border-radius:14px;border:1px dashed rgba(255,255,255,.45);background:rgba(255,255,255,.1);color:#fff;font-weight:700;font-size:13px;text-align:left;padding:0 14px}
+.gl-setbody{margin-top:8px;padding:12px;border-radius:16px;background:var(--surf,#fff);color:var(--ink,#13213F);display:grid;gap:8px}
+.gl-setbody small{font-size:12px;opacity:.75}
+.gl-prow{display:grid;grid-template-columns:1fr 1fr 40px;gap:6px}.gl-prow input{min-height:42px;border-radius:10px;border:1px solid #dfe5f0;padding:0 10px;font-size:14px}
+.gl-prow input[dir=rtl]{font-family:'Jameel Noori Nastaleeq','Noto Nastaliq Urdu',serif;font-size:16px}
+.gl-prow button{border-radius:10px;border:1px solid #f2c4c8;background:#fbe4e6;color:#9e1f28;font-weight:900}

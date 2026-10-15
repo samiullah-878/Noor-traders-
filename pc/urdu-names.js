@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  urdu-names.js  v1.2 (2026-10-14: fillParties — Server PC khud AI (Gemini, blueAccess/aiConfig) se baqi parties ke Urdu naam, har 10 min) · v1.1 (2026-10-14: + PARTY ke Urdu naam blueAccess/urduParties — voucher parchi) · v1.0 (2026-10-14) — 🔤 PARCHI PAR URDU NAAM (transfer note + gate pass)
+//  urdu-names.js  v1.3 (2026-10-15: partyAny + fillParties force — 💰 galla parchi) · v1.2 (2026-10-14: fillParties — Server PC khud AI (Gemini, blueAccess/aiConfig) se baqi parties ke Urdu naam, har 10 min) · v1.1 (2026-10-14: + PARTY ke Urdu naam blueAccess/urduParties — voucher parchi) · v1.0 (2026-10-14) — 🔤 PARCHI PAR URDU NAAM (transfer note + gate pass)
 //  Malik: "jitna bi gate pass or transfer notes print kar rahe hain un sb ko urdu bi sath ani chahie".
 //  Naam wahi jo app mein (Stock → 🔤 Urdu naam / labels): Firestore blueAccess/urduNames {map: itemId -> Urdu} — LIVE (onSnapshot),
 //  har print par Firestore nahi parhta (tez). Setting blueAccess/printConfig.urduSlip (default ON; app: 🖨 Print setting).
@@ -20,6 +20,7 @@ function watch(db, businessId, log = () => {}) {
 const get = id => (on && id != null ? String(map[String(id)] || '').replace(/[\u0001\r\n]+/g, ' ').trim() : '');
 const party = id => (on && id ? String(pmap[String(id)] || '').replace(/[\u0001\r\n]+/g, ' ').trim() : '');   // v1.1
 const isOn = () => on;
+const partyAny = id => (id ? String(pmap[String(id)] || '').replace(/[\u0001\r\n]+/g, ' ').trim() : '');   // v1.3: galla parchi — urduSlip band ho tab bhi
 const line = (ur, px = 32) => MARK + String(ur).replace(/[\u0001\r\n]+/g, ' ') + '\u0001' + (Number(px) || 32);
 const has = t => String(t || '').includes(MARK);
 const strip = t => String(t || '').split('\r\n').filter(l => !l.startsWith(MARK)).join('\r\n');   // tasveer na ban sake to bina Urdu
@@ -48,8 +49,8 @@ function gem(key, model, prompt, noThink = true) {
   });
 }
 let fillBusy = false, fillWaitTill = 0;
-async function fillParties({ db, businessId, parties, log = () => {} }) {
-  if (fillBusy || !on || Date.now() < fillWaitTill || !db) return 0;
+async function fillParties({ db, businessId, parties, log = () => {}, force = false }) {
+  if (fillBusy || (!on && !force) || (Date.now() < fillWaitTill && !force) || !db) return 0;
   const todo = (parties || []).filter(p => p && p.id && String(p.name || '').trim() && !String(pmap[String(p.id)] || '').trim());
   if (!todo.length) return 0;
   fillBusy = true; let done = 0;
@@ -72,4 +73,4 @@ async function fillParties({ db, businessId, parties, log = () => {} }) {
   finally { fillBusy = false; }
   return done;
 }
-module.exports = { fillParties, watch, get, party, isOn, line, has, strip, toJob, MARK, _set: (m, o = true, pm) => { map = m || {}; on = o; if (pm) pmap = pm; } };
+module.exports = { fillParties, watch, get, party, partyAny, isOn, line, has, strip, toJob, MARK, _set: (m, o = true, pm) => { map = m || {}; on = o; if (pm) pmap = pm; } };
