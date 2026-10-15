@@ -3468,3 +3468,8 @@ html body .ir-root>*{min-width:0;max-width:100%;box-sizing:border-box}
 html body .ir-root .ir-sec{overflow:hidden}
 .ir-pcs{min-width:0}.ir-pc{min-width:0}.ir-pc b{max-width:min(220px,70vw)}
 html body .ir-root .ir-hero :is(small,span,.ir-kp small,.ir-hint){color:rgba(255,255,255,.88)!important}html body .ir-root .ir-hero :is(strong,.ir-kp b){color:#fff!important}html body .ir-root .ir-hero .ir-kp b.neg{color:#ffb4b4!important}
+/* v2.99.87 🕘 stock: ginti / tick history din ke hisaab se */
+.stock-head .sh-hday .sh-hdate{position:relative;flex:1 1 calc(33.33% - 6px);min-width:0;min-height:44px;display:flex;align-items:center;justify-content:center;gap:4px;padding:6px 10px;border-radius:999px;border:1.5px solid #DFE5F0;background:#fff;color:#13213F;font-size:14px;font-weight:600;cursor:pointer;box-sizing:border-box;white-space:nowrap}
+.stock-head .sh-hday .sh-hdate.selected{background:linear-gradient(135deg,#172b52,#2e5194);border-color:transparent;color:#fff}
+.stock-head .sh-hday .sh-hdate input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0;margin:0}
+html.dk .stock-head .sh-hday .sh-hdate:not(.selected){background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.18);color:inherit}

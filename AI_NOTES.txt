@@ -4600,3 +4600,11 @@ Malik: "mulazim ko access de do naya item ki" — pehle ek hi switch (stockConfi
 * CAPS: stock.itemnew (naya) + stock.item (purana rate / naam) — Settings → Mulazim → Stock.
 * Rules 2.51: itemJobs create — mulazim (Full / Stock): itemEditOn() || (op == 'new' && itemNewOn()); itemEditOn ab .get('itemEdit', false).
   firestore-rules-2.51.html (2.50 wala bhi shamil). History: setItemNew.
+
+=== v2.99.87 (2026-10-15) — 🕘 Stock: ginti / tick history DIN ke hisaab se + 🔎 POS sale farq check (PC) ===
+Malik: "stock screen par stock ki tick save history hain us ke upar day wise kar do — jo selected days hon un ki hi history samne aaye".
+* pos-stock.js: "🕘 Ginti / tick history — kis din ki?" chips: Sab · Aaj (n) · Kal (n) · Pichhle 7 din (n) · 📅 Tareekh (date input, label ke
+  upar invisible). hDay (localStorage sam-stock-hday): '' = pehle jaisa. historyHTML / oldHistoryHTML sirf chune din ki lines (h.at).
+  (n) = is godam (pickedBranch) ke kitne items ki us din ginti / tick hui. Dikhao mein naya filter 'hday': "🕘 Aaj mein gine (n)".
+  Sab phone par — Firebase par koi naya read / write nahi. Test: scratchpad hd/hday.mjs.
+* POS sale farq (malik: app aur POS report mein ~Rs 3,000 farq): pc/sale-farq-check.js (sirf parhta) — dekhein pc/AI_NOTES.txt.

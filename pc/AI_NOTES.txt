@@ -2911,3 +2911,11 @@ Firestore nested arrays ki ijazat nahi — irep-<k> ab {j: JSON string, n, at} (
 === 2026-10-14 · manifest 2026-10-14.8 — item-report.js v1.2 ===
 💰 COMMISSION: blueAccess/commission ki item ids (max 200) → SQL SaleDetail × Sale.SupplyManID (ISNULL 0) × din → posStats/irep-comm {j, at}
 + dbo.SupplyMan naam. meta.comm = true. Ghalti ho to sirf log ("commission data nahi bana") — baqi report chalti rahe. Sirf SELECT.
+
+=== 2026-10-15 · manifest 2026-10-15.1 — sale-farq-check.js v1.0 (NAYA, sirf PARHTA hai) ===
+Malik: "POS ki sale mein 3000 ka farq hai jo app par hai aur jo wahan report mein hai". App (pos-sales-dekho saleSum) = cash bill + wholesale
+POORA + udhaar ka sirf mila cash (CashReceived / CRV), cancel + "stock fraq" bahar; POS report shayad poore bill / Sale Return minus.
+Chalana: node sale-farq-check.js [kal | YYYY-MM-DD] [POS report ki raqam] — us din: cash / wholesale / udhaar (mila) / stock fraq / cancel /
+↩ dbo.SaleReturn (TotalSaleReturn, DocStatusID 3 bahar) + app ki raqam (hisaab + Firestore possale-<din>) + 4 mumkin POS hisaab ka farq;
+POS raqam di ho to hisson ka jor dhoondta hai. Saath mein SaleReturn / SaleReturnDetail ke khane (agla kaam: Item report / commission /
+sale stats mein wapsi minus). SQL password print nahi. Koi task (bat) nahi — sirf manifest files.

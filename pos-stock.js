@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.86';
-import { liveLabelsHTML } from './barcode.js?v=2.99.86';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.87';
+import { liveLabelsHTML } from './barcode.js?v=2.99.87';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -146,6 +146,21 @@ const countOf = (b, r) => {
   return c && c.round === round && round ? c : null;
 };
 const countedPcs = c => Number(c?.total) || 0;
+// v2.99.87: 🕘 GINTI / TICK HISTORY DIN KE HISAAB SE (malik: "stock ki tick save history ke upar day wise kar do — jo selected days hon un ki hi
+//   history samne aaye"). hDay: '' = sab (pehle jaisa) · 'aaj' · 'kal' · '7' (pichhle 7 din) · 'YYYY-MM-DD'. Sirf phone par chhaanta — Firebase par kuch nahi.
+let hDay = (() => { try { return localStorage.getItem('sam-stock-hday') || ''; } catch { return ''; } })();
+const hDayKeep = () => { try { localStorage.setItem('sam-stock-hday', hDay); } catch {} };
+const dStart = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x.getTime(); };
+function hRange(k = hDay) {
+  if (!k) return null; const t0 = dStart(Date.now()), D = 86400000;
+  if (k === 'aaj') return [t0, t0 + D]; if (k === 'kal') return [t0 - D, t0]; if (k === '7') return [t0 - 6 * D, t0 + D];
+  if (/^\d{4}-\d{2}-\d{2}$/.test(k)) { const a = new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, +k.slice(8, 10)).getTime(); return [a, a + D]; }
+  return null;
+}
+const hIn = (h, R) => { const t = Number(h?.at) || 0; return !R || (t >= R[0] && t < R[1]); };
+const hHas = (c, R) => !!R && Array.isArray(c?.history) && c.history.some(h => hIn(h, R));
+function hCount(k) { const R = hRange(k); if (!R) return 0; const pre = `c-${pickedBranch}-`; let n = 0; for (const [id, c] of counts) if (id.startsWith(pre) && hHas(c, R)) n++; return n; }
+const hDayLabel = k => k === 'aaj' ? 'Aaj' : k === 'kal' ? 'Kal' : k === '7' ? 'Pichhle 7 din' : /^\d{4}-/.test(k) ? new Date(+k.slice(0, 4), +k.slice(5, 7) - 1, +k.slice(8, 10)).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : 'Sab';
 const stampText = t => {
   const d = new Date(t);
   return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) + ' ' +
@@ -321,6 +336,7 @@ const passes = r => {
   if (filter === 'baqi') return !countOf(pickedBranch, r);
   if (filter === 'farq') { const c = countOf(pickedBranch, r); return c && Math.abs(countedPcs(c) - Number(sysOf(c, r))) > 0.001; }
   if (filter === 'nishan') return !!flagOf(r.id).baqi;
+  if (filter === 'hday') return hHas(counts.get(countId(pickedBranch, r.id)), hRange());   // v2.99.87
   if (filter === 'check') return !!flagOf(r.id).check;
   return true;
 };
@@ -640,7 +656,14 @@ function summaryHTML(branches, pick, items, meta, names, canJama = false) {
       ${btn('data-stock-filter', 'baqi', filter, `Ginti baqi (${num(items.length - done)})`)}
       ${gap ? btn('data-stock-filter', 'farq', filter, `⚖️ Farq wale (${num(gap)})${(() => { const n = items.filter(r => lateOf(countOf(pick, r))).length; return n ? ' · 🧾 ' + num(n) + ' dobara gino' : ''; })()}`) : ''}
       ${btn('data-stock-filter', 'nishan', filter, `⏳ Baqi nishan (${num(nishanN)})`)}
+      ${hDay ? btn('data-stock-filter', 'hday', filter, `🕘 ${hDayLabel(hDay)} mein gine (${num(hCount(hDay))})`) : ''}
       ${hiddenN ? btn('data-stock-filter', 'hidden', filter, `Band items (${num(hiddenN)})`) : ''}
+    </div>
+    <div class="sh-label">🕘 Ginti / tick history — kis din ki?</div>
+    <div class="account-tools sh-hday">
+      ${btn('data-stock-hday', '', hDay, 'Sab')}
+      ${['aaj', 'kal', '7'].map(k => btn('data-stock-hday', k, hDay, `${hDayLabel(k)} (${num(hCount(k))})`)).join('')}
+      <label class="sh-hdate${/^\d{4}-/.test(hDay) ? ' selected' : ''}">📅 ${/^\d{4}-/.test(hDay) ? esc(hDayLabel(hDay)) + ' (' + num(hCount(hDay)) + ')' : 'Tareekh'}<input type="date" data-stock-hdate="1" value="${/^\d{4}-/.test(hDay) ? esc(hDay) : ''}" max="${new Date().toISOString().slice(0, 10)}"></label>
     </div>
     <div class="sh-label">Ginti</div>
     ${gintiLine(pick, done)}
@@ -1700,6 +1723,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', e => {
   const t = e.target;
+  if (t.matches?.('[data-stock-hdate]')) { if (/^\d{4}-\d{2}-\d{2}$/.test(t.value)) { hDay = t.value; hDayKeep(); limit = PAGE; rerender(); } return; }   // v2.99.87
   if (t.matches?.('[data-stock-itemnew]')) {                           // v2.99.86: sirf NAYA item ka switch
     const on = t.checked;
     (cloud?.setItemNew ? cloud.setItemNew(on) : Promise.reject(Error('app update karein')))
@@ -1774,13 +1798,14 @@ function countHTML(r) {
 // v2.61: is round mein abhi nahi gina — pichhli gintiyon ki history (wahi jo gine hue par neeche aati hai), tap se khule
 function oldHistoryHTML(r) {
   const old = counts.get(countId(pickedBranch, r.id));
-  const n = Array.isArray(old?.history) ? old.history.length : 0;
+  const R = hRange(), n = Array.isArray(old?.history) ? old.history.filter(h => hIn(h, R)).length : 0;   // v2.99.87
   if (!n) return '';
   return `<details class="old-hist"><summary>🕘 Pichhli ginti ki history (${n})</summary>${historyHTML(r, old)}</details>`;
 }
 
 function historyHTML(r, c) {
-  const list = Array.isArray(c?.history) ? c.history.slice().reverse() : [];
+  const R = hRange();   // v2.99.87: sirf chune din ki history
+  const list = Array.isArray(c?.history) ? c.history.filter(h => hIn(h, R)).reverse() : [];
   if (!list.length) return '';
   return `<div class="stat-note" style="margin:0 4px 12px">${list.map(h => {
     const d = Math.round((Number(h.total) - Number(h.sys)) * 100) / 100;
@@ -1882,6 +1907,8 @@ document.addEventListener('click', e => {
   if (s) { sort = s.dataset.stockSort; rerender(); return; }
   const f = e.target.closest?.('[data-stock-filter]');
   if (f) { filter = f.dataset.stockFilter; if (filter === 'all') godamAll = true; limit = PAGE; rerender(); return; }
+  const hd = e.target.closest?.('[data-stock-hday]');   // v2.99.87: history ke din
+  if (hd) { hDay = hd.dataset.stockHday || ''; hDayKeep(); if (!hDay && filter === 'hday') filter = 'all'; limit = PAGE; rerender(); return; }
 
   const nr = e.target.closest?.('[data-stock-round]');
   if (nr) { startNewRound(); return; }
