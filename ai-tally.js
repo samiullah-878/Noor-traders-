@@ -378,7 +378,7 @@ export async function hearAudio({ key, model, audio, prompt, onStatus }) {
   catch { return txt.replace(/^["'`]+|["'`]+$/g, '').trim(); }
 }
 
-// v2.99.97: 🏭 FACTORY FORMULA photo se (Excel / haath ki parchi) — malik: "excel ki pic lagayein, items wagaira sab kuch formula khud add ho jaye"
+// v2.99.98: 🏭 FACTORY FORMULA photo se (Excel / haath ki parchi) — malik: "excel ki pic lagayein, items wagaira sab kuch formula khud add ho jaye"
 export const FORMULA_PROMPT = `Ye ek factory ke FORMULA (nuskha / recipe) ki tasveer hai — Excel sheet ya haath ki likhi parchi (Pakistan, Urdu / Roman Urdu / English naam).
 Is mein ek BATCH ka raw material (naam, miqdaar, rate / kharcha) hota hai, phir kul, phir aksar packing (bottle, dakan / cap, rapper / label, labour / mazdoori) FI PIECE.
 Sirf JSON do, aur kuch nahi:

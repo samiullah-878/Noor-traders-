@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.97';
-import { liveLabelsHTML } from './barcode.js?v=2.99.97';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.98';
+import { liveLabelsHTML } from './barcode.js?v=2.99.98';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -3223,7 +3223,7 @@ export const stockFactoryCanRate = () => canEditItem();
 export function stockPickList() { const P = agPool(); return P.list.map(r => ({ id: String(r.id), name: String(r.name || ''), code: String(r.code || ''), cat: String(r.cat || ''), catFac: isFactory(r), stock: Number(saleStockItem(P.main, r.id)?.stock) || 0, pack: Number(r.pack) > 1 ? Number(r.pack) : 0, cn: r.cName || 'Ctn', un: r.uName || 'Pcs' })); }
 export function stockRepaint() { if (stockActive) soft(); }
 export const stockIsFactoryCat = r => isFactory(r);
-// v2.99.97: 🏭 factory "photo se formula" — naya item FORAN line mein (intezar nahi) -> jobId (PC band ho tab bhi theek: ⏳ job:)
+// v2.99.98: 🏭 factory "photo se formula" — naya item FORAN line mein (intezar nahi) -> jobId (PC band ho tab bhi theek: ⏳ job:)
 export async function stockNewItemQuick(v) {
   if (!canNewItem()) throw Error('Naya item — malik ki ijazat chahiye');
   if (!cloud?.requestItem) throw Error('App update karein');

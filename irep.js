@@ -211,7 +211,7 @@ function paint() {
   const dayCols = pd.map(x => ({ label: String(+x.day.slice(8)), a: x.rs, b: x.pf, act: `data-ir-day="${x.day}"` }));
   const P = patterns(m), PO = P.out;
   const srt = { rs: (x, y) => y.rs - x.rs, pf: (x, y) => y.pf - x.pf, pm: (x, y) => pct(y.pf, y.rs) - pct(x.pf, x.rs), q: (x, y) => y.q - x.q }[st.sort] || ((x, y) => y.rs - x.rs);
-  lastRows = { sorted, srt };   // v2.99.97: search par sirf list badle (keyboard na toote)
+  lastRows = { sorted, srt };   // v2.99.98: search par sirf list badle (keyboard na toote)
   const { tbl, shown, html: rowsH } = rowsOf();
   const chips = (list, attr, on) => `<div class="mchips">${list.map(([k, l]) => `<button type="button" class="rc${on(k) ? ' on' : ''}" ${attr}="${esc(k)}">${esc(l)}</button>`).join('')}</div>`;
   const perLabel = st.per === 'c' ? `${short(a)} – ${short(b)}` : `${(PERS.find(p => p[0] === st.per) || PERS[3])[1]} · ${short(a)} – ${short(b)}`;
@@ -324,7 +324,7 @@ document.addEventListener('change', e => {
   keep(); paint();
 });
 let qT = 0;
-document.addEventListener('input', e => {   // v2.99.97: search par sirf neeche ki list badalti hai — input wahi rehta hai (mobile keyboard / Urdu-English keyboard theek)
+document.addEventListener('input', e => {   // v2.99.98: search par sirf neeche ki list badalti hai — input wahi rehta hai (mobile keyboard / Urdu-English keyboard theek)
   if (e.target.matches?.('[data-ir-cq]')) { cq = e.target.value || ''; clearTimeout(qT); qT = setTimeout(() => { const h = document.getElementById('irCHits'); if (h) h.innerHTML = commHitsHTML(); }, 150); return; }
   if (!e.target.matches?.('[data-ir-q]')) return; st.q = e.target.value || ''; st.lim = 60; clearTimeout(qT);
   qT = setTimeout(() => { const r = rowsOf(), el = document.getElementById('irRows'), n = document.getElementById('irTblN'); if (el) el.innerHTML = r.html; if (n) n.textContent = num(r.tbl.length); }, 200);

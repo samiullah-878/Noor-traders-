@@ -4747,3 +4747,11 @@ wagaira sab kuch formula khud add ho jaye, hum bas item uthayein".
   purana format wahi); small mein "kg × Rs 1130 (Rs 226 / pcs) · 12.5 pcs". Stock / batch / raw tab / batch dlg: qk() = "2.5 kg (12.5 pcs)".
   Khareed rate fi kg = prate × 1000 / g. 📷 photo: line unit g/kg + conv -> pcs khud.
 * factory.js helpers gOf / kgOf / pcsOfKg / qk (_fcTest mein). CSS .fc-fl / .fc-gline. Rules nahi badle. Test fct/t.mjs (57 ✓), fct/form.png.
+
+=== v2.99.98 (2026-10-16) — ✎ FORMULA MEIN KHAREED RATE BADLO (malik: "kg rate / carton rate yahan se bhi change ho") ===
+* factory/cfg.rate {itemId: Rs fi PCS | null} = sirf factory laagat (costOf: rateOf = fRate || POS prate). Formula raw line nayi shakal
+  (.fc-fl: naam + Rs + ✕ / Ginti · Rate / unit · 1 pcs = g): rate unit rUnit() = kg (gram likha ho, pcs fi kg = 1000/g) | ctn (pack > 1) |
+  pcs. data-fe-r -> setRate(id, v): fi pcs = v / per; POS ke barabar ho to null. "✎ factory rate" + "↺ POS wala Rs X" (data-fe-rpos).
+* "☐ POS mein bhi khareed rate lagao" (posRate, data-fe-posr, har dafa off se shuru): stockAgentItemSave(id, {costP}) — PC item-post;
+  sirf khareed, sale rate / barcode nahi. ⏳ pending item par sirf factory.
+* Raw tab / formula hits bhi rateOf (✎). Test fct/t.mjs (63 ✓, 'hafta' se aadhi raat safe). Rules nahi badle.
