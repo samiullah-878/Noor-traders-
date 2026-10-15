@@ -4796,3 +4796,38 @@ artifact "Stock screen demo" OK ke baad. (v2.100.0 mein pehle Adjustment-auto ba
 8) style.css .sk-* (sticky top, tiles, chips, sheets, ginti table (.own / .nosee), bill dabba, recount) + .fc-g* + .fc-tabs auto-fit + hold.
 * Test: scratchpad sk/t.mjs (23 ✓ — sticky search mirror, filter/settings sheets, ginti dialog + Return bill request, recount, staff
   👁 band), fct/t.mjs (71 ✓ — ginti tab, hold -> send, edit, cancelNow). Screenshots sk/ginti.png, sk/staff.png. AI nahi.
+
+=== v2.101.0 (2026-10-16 raat) — 🏭 FACTORY: 🎁 PACKING (bulk → 4 kg / 700 g) · 📤/📝 POS chip + 🖨 2 parchi · 🏷 rate khud · ➕ naya item /
+    📦 packing maal factory se · 📦 STOCK tab (raw + ginti ek jagah) · RULES 2.56 · PC factory-post v1.2 ===
+Malik: "batch par POS ka option — jaye ya na jaye; POS mein jaye to print: bana, baqi maal, kam — 2 print (factory larka + munshi)" ·
+"sale / wholesale rate % ke ilawa khud bhi" · "naya item factory se, baad mein POS (tick se), cancel / edit — stock screen par na jana pare" ·
+"factory stock ka khana yahan — stock screen jaisa" · "surf batch — packing 4 kg aur 0.700 g kaise" · "packing material ek dafa ☑ + rate +
+qty; rate POS purchase se; baar baar chunna na pare; packing material bhi baqi items ki tarah naam + rate likh kar save / cancel / edit".
+1) 🎁 PACKING (factory.js): cfg.pack {itemId: true} = packing maal (☑ picker mein 📦 data-fac-mat -> matToggle; ya naya item form "📦 Packing
+   material" tick -> ntFacPend(jid, name, costP, true) -> pend.p -> linkCheck: pack[real] = true). cfg.packs {packItemId: {src, g, mats:[{id,q,n}]}}
+   = packing item (Surf 4 kg = 4000 g Surf bulk + 1 bag) — 🧪 Formulas tab "🎁 Packing items" -> pkDefOpen / pkDefPaint (#fcPkDef: item chuno ->
+   bulk (formula item) -> 1 pcs = g -> packing maal ☑ + fi pcs qty) -> pkDefSave. packUnit = g / (gOf(src) || 1000) (bulk kg), bulkCpp (formula
+   cpp), matCost (rateOf = factory rate || POS khareed — purchase se khud), packCpp. linkCheck 'job:' ids packs mein bhi badalta hai.
+   Batch form (batchCalc / batchPaint / batchOk naye): mode 'make' | 'pack'. make: ① item ② 1–10 ③ 🎁 Packing (bulk ke packing items, larka
+   pcs likhe data-fb-pk, change) -> k.used bulk, rem = bana − used (manfi = laal, OK band), packing maal lines mein jama; ④ POS chip
+   (data-fb-send: 📝 app / 📤 POS + 🖨 — fac.send ijazat; default cfg.autoSend). Doc: out = baqi bulk (0 ho sakta), outs [{id,name,q,c}],
+   kind, labels (pack items ke barcode, itemId ke saath). 'pack' mode ("🎁 Bulk se packing" — batches tab / form chip data-fb-mode): purane bulk
+   stock se: lines = bulk −used + maal, outs = packs, out 0. batchDlg / card / PDF mein outs + PC ka `after` (baqi stock, manfi ⚠️) + 🖨 haal.
+2) 🏷 RATES khud: rateRows(scope 'tayyar' = formula + packing items (packCpp) | 'raw' = raw / packing maal (khareed)) · har W/R CTN/PCS
+   input (data-fr / data-fr-id -> rEd) — % sirf raye, peela = khud likha, "↺ % wala" (data-fr-reset) · applyRate rateWant (fire-and-forget).
+3) 📦 STOCK tab (TABS: batches · stock · formulas · rates; purane 'raw' / 'ginti' -> stock): stockTabHTML / sRow — kind badge (tayyar / packing
+   item / packing maal / raw), stock (seeStock), use / ~batch, ginti (data-fg-* — wahi stockCount), history, 🏷 Label (stockLabelOpen),
+   ✏️ Item (stockItemOpen), top: ➕ Naya item (stockNewItemOpen {fac}) · ⏳ PC baqi (stockIjobsOpen — wahan ✏️ / ✕) · 🧾 Purchase · 📋 Ginti
+   bill. Chips Sab/Tayyar/Raw/Packing/Minus/Batch se kam/Gine/Ginti baqi/Farq.
+4) pos-stock.js: itemForm "📦 Packing material" tick (name pk) + pre {_fac,_pack}; itemSave -> ntFacPend(jid, name, costP, pk).
+   Exports stockNewItemOpen, stockItemOpen / stockLabelOpen (agPool row -> rowCache, stock screen ke baghair), stockIjobsOpen, stockIjCounts, stockCanItem.
+5) ⚙️ settings: "🖨 POS mein jane par parchi" 2 copy (factory + munshi) / 1 / band -> cfg.prn.
+6) PC pc/factory-post.js v1.2: NET rows (+out itemId, +outs, −lines; 'pack' mein bulk line bhi) ek Adjustment; outs ki laagat o.c; resolveJobs
+   outs bhi; labels L.itemId. Post ke baad slip(): CurrStock (dukan) -> doc.after [{id,name,s}] -> cfg.prn copies "COPY: FACTORY (LARKA)" +
+   "MUNSHI" TM-T88IV raw (RawCached.dll, fac-print-a/b.ps1) -> prnAt / prnN / prnErr. Manifest 2026-10-16.3 (KHATA-DOCTOR).
+7) cloud.js addFactoryBatch / editFactoryBatch: outs, kind, labels.itemId. firestore.rules v2.56 (firestore-rules-2.56.html): create keys +outs
+   +kind, out >= 0 (out 0 tab jab outs), outs ≤ 20; edit keys +outs.
+8) app.js CAP fac.ginti = "📊 Factory stock tab mein ginti (physical likhna)". style.css v2.101 block + .fc-pf chips summary mein bhi.
+* Test: fct/t.mjs (90 ✓ — packing calc 25×4 + 140×0.7 = 198, baqi 2, zyada = OK band, POS chip, pack batch, rate khud -> POS, raw scope,
+  📦 tick, print setting, packing setup save, stock tab buttons), sk/t.mjs (23 ✓ + factory naya item 📦 tick, item / label open), boot.
+  Screenshots fct/new4.png. AI nahi.

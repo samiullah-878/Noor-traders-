@@ -2951,3 +2951,10 @@ har 60 s handle() dobara; cancelled / failed -> status 'error' + wajah.
   zyada = Return, "stock fraq" khata, pehle jaisa print). direct par preview / sig nahi — app mein malik ne items dekh kar OK kiya.
   Purana pending -> preview -> approved flow bhi waisa hi chalta hai. c.del wale counts nahi.
 * (ginti-post.js / Adjustment wala auto tareeqa malik ne mana kar diya — hata diya, kabhi PC par nahi gaya.)
+
+=== 2026-10-16 raat — factory-post.js v1.2 (🎁 packing outs + 🖨 2 parchi) · manifest 2026-10-16.3 ===
+* Batch doc ab outs [{id,name,q,c}] (Surf 4 kg / 700 g) + kind ('make' | 'pack') + out 0 ho sakta. Post: NET per item (+out, +outs, −lines)
+  ek Adjustment (pehle jaisa transaction + CurrStock jaanch). Outs ki laagat app wali (o.c).
+* Post ke baad slip(): dukan CurrStock -> batch.after; factory/cfg.prn (2 = FACTORY (LARKA) + MUNSHI, 1, 0 band) -> TM-T88IV raw print
+  (RawCached.dll — post-farq wala; files fac-print-a/b.bin/.ps1). Parchi: batch, adj #, bana (+) / baqi, laga (−) / baqi, KAM PAD GAYA, laagat.
+* KHATA-DOCTOR.bat chalayein; factory-auto.bat restart (doctor khud karta hai).

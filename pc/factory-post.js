@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  factory-post.js  v1.1 (2026-10-15 raat: ⏳ 'job:' naye item — pehle item bane, phir batch) · v1.0 (2026-10-15) — 🏭 FACTORY PRODUCTION -> POS STOCK (app "🏭 Factory" / stock screen "Factory batch (OK)")
+//  factory-post.js  v1.2 (2026-10-16: 🎁 packing outs (4 kg / 700 g) + 🖨 2 parchi (factory + munshi) bana / laga / BAQI stock) · v1.1 (2026-10-15 raat: ⏳ 'job:' naye item — pehle item bane, phir batch) · v1.0 (2026-10-15) — 🏭 FACTORY PRODUCTION -> POS STOCK (app "🏭 Factory" / stock screen "Factory batch (OK)")
 //  Malik: "apni factory ki items — formula ke saath batch, larka OK kare to production auto stock mein aa jaye aur raw maal auto minus;
 //          shop ki sale se stock minus hota rahe; batch ka barcode label OK par khud chhap jaye (sub barcode bhi)".
 //  Firestore factoryBatches/<id> status 'new' -> POS mein EK Adjustment (dukan godam, BranchID 1):
@@ -88,7 +88,7 @@ async function writeAdj(p, desc, remarks, rows) {
 const waiting = new Set();
 class WaitItem extends Error {}
 async function resolveJobs(ref, b) {
-  const ids = [String(b.itemId), ...(b.lines || []).map(l => String(l.id))].filter(x => x.startsWith('job:'));
+  const ids = [String(b.itemId), ...(b.lines || []).map(l => String(l.id)), ...(b.outs || []).map(o => String(o.id))].filter(x => x.startsWith('job:'));
   if (!ids.length) return b;
   const map = new Map(), codes = new Map();
   for (const x of [...new Set(ids)]) {
@@ -99,9 +99,9 @@ async function resolveJobs(ref, b) {
     throw new Error(`Naya item "${j.name || x}" POS mein nahi bana (${j.status}${j.error ? ': ' + j.error : ''}) — item theek kar ke dobara`);
   }
   const m = id => map.get(String(id)) || String(id);
-  const nb = { ...b, itemId: m(b.itemId), lines: (b.lines || []).map(l => ({ ...l, id: m(l.id) })),
-    labels: (b.labels || []).map(L => ({ ...L, code: L.code || codes.get(m(b.itemId)) || '' })).filter(L => L.code) };
-  await ref.update({ itemId: nb.itemId, lines: nb.lines, labels: nb.labels, waitItem: FieldValue.delete(), resolvedAt: Date.now() });
+  const nb = { ...b, itemId: m(b.itemId), lines: (b.lines || []).map(l => ({ ...l, id: m(l.id) })), outs: (b.outs || []).map(o => ({ ...o, id: m(o.id) })),
+    labels: (b.labels || []).map(L => { const lid = m(L.itemId || b.itemId); return { ...L, itemId: lid, code: L.code || codes.get(lid) || '' }; }).filter(L => L.code) };
+  await ref.update({ itemId: nb.itemId, lines: nb.lines, outs: nb.outs, labels: nb.labels, waitItem: FieldValue.delete(), resolvedAt: Date.now() });
   log(`⏳ -> ✓ ${b.no}: naye item POS mein ban gaye, asli id lag gayi`);
   return nb;
 }
@@ -114,26 +114,32 @@ async function post(ref, b) {
   let adj = await findAdj(p, desc);
   if (adj) log(`Pehle se POS mein mila: ${b.no} (# ${adj.no}) — dobara nahi`);
   else {
-    const out = r3(b.out), lines = Array.isArray(b.lines) ? b.lines : [];
-    if (!(out > 0)) throw new Error('Kitne bane — 0');
-    const ids = [...new Set([String(b.itemId), ...lines.map(l => String(l.id))])].map(Number).filter(n => Number.isInteger(n) && n > 0);
+    // v1.2: NET — +out (bulk / tayyar), +outs (packing items), −lines (raw + packing maal + 'pack' batch mein bulk) — har item ek line
+    const out = r3(b.out), lines = Array.isArray(b.lines) ? b.lines : [], outs = Array.isArray(b.outs) ? b.outs : [];
+    if (!(out > 0) && !outs.some(o => r3(o.q) > 0)) throw new Error('Kitne bane — 0');
+    const ids = [...new Set([...(out > 0 ? [String(b.itemId)] : []), ...lines.map(l => String(l.id)), ...outs.map(o => String(o.id))])].map(Number).filter(n => Number.isInteger(n) && n > 0);
     if (!ids.length) throw new Error('Item nahi');
     const info = new Map((await p.request().input('b', sql.Int, MAIN_BRANCH).query(`
       SELECT i.ItemID, i.ItemName, ISNULL(NULLIF(r.PurchaseRate,0), i.PurchaseRate) AS PR, r.ItemID AS RB
       FROM dbo.Items i LEFT JOIN dbo.ItemBranchRate r ON r.ItemID = i.ItemID AND r.BranchID = @b WHERE i.ItemID IN (${ids.join(',')})`)).recordset.map(x => [Number(x.ItemID), x]));
     const miss = ids.filter(id => !info.get(id) || info.get(id).RB == null);
     if (miss.length) throw new Error('Ye item POS ki dukan godam mein nahi: ' + miss.join(', '));
-    const raw = new Map();
-    for (const l of lines) { const id = Number(l.id), q = r3(l.q); if (!(q > 0) || id === Number(b.itemId)) continue; raw.set(id, r3((raw.get(id) || 0) + q)); }
-    const rows = [], fin = info.get(Number(b.itemId));
+    const net = new Map(), cst = new Map(), add = (id, q, c) => { id = Number(id); q = r3(q); if (!id || !q) return; net.set(id, r3((net.get(id) || 0) + q)); if (q > 0 && c != null) cst.set(id, c); };
     let rawCost = 0;
-    for (const [id, q] of raw) { const x = info.get(id), c = Number(x.PR) || 0; rawCost += q * c; rows.push({ ItemID: id, sq: -q, cost: c, name: String(x.ItemName || '').trim() }); }
+    for (const l of lines) { const id = Number(l.id), q = r3(l.q); if (!(q > 0)) continue; if (id === Number(b.itemId) && b.kind !== 'pack' && out > 0) continue; add(id, -q); rawCost += q * (Number(info.get(id)?.PR) || 0); }
+    let outsCost = 0;
+    for (const o of outs) { const q = r3(o.q); if (!(q > 0)) continue; add(o.id, q, r2(Number(o.c) || 0)); outsCost += q * (Number(o.c) || 0); }
     const total = Math.max(Number(b.cost) || 0, rawCost + (Number(b.oh) || 0));
-    rows.unshift({ ItemID: Number(b.itemId), sq: out, cost: r2(total / out), name: String(fin.ItemName || '').trim() });
-    adj = await writeAdj(p, desc, `Production ${b.no} · ${b.n} batch · ${b.byName || ''}`, rows);
-    log(`✓ ${b.no} ${b.name}: +${out} · ${raw.size} raw − · Adjustment # ${adj.no}`);
+    if (out > 0) add(b.itemId, out, r2(Math.max(0, total - outsCost) / out || total / out));
+    const rows = [...net].filter(([, q]) => Math.abs(q) > 0.0005).map(([id, q]) => ({ ItemID: id, sq: q, cost: q > 0 ? (cst.get(id) ?? (Number(info.get(id)?.PR) || 0)) : (Number(info.get(id)?.PR) || 0), name: String(info.get(id)?.ItemName || '').trim() }))
+      .sort((x, y) => (y.sq > 0) - (x.sq > 0));
+    if (!rows.length) throw new Error('Kuch nahi badla (sab barabar)');
+    adj = await writeAdj(p, desc, `Production ${b.no} · ${b.kind === 'pack' ? 'packing' : b.n + ' batch'} · ${b.byName || ''}`, rows);
+    log(`✓ ${b.no} ${b.name}: ${rows.filter(r => r.sq > 0).length} plus · ${rows.filter(r => r.sq < 0).length} minus · Adjustment # ${adj.no}`);
   }
   await ref.update({ status: 'posted', adjNo: adj.no, adjId: adj.id, postedAt: Date.now(), err: FieldValue.delete() });
+  // v1.2: 🖨 parchi (sirf ek dafa) — bana / laga / POS mein ab BAQI (CurrStock), kam pad gaya = ⚠️
+  try { const f0 = (await ref.get()).data() || {}; if (!f0.prnAt && !f0.after) await slip(ref, { ...b, adjNo: adj.no }); } catch (e) { log('🖨 parchi masla: ' + e.message); try { await ref.update({ prnErr: clean(e.message, 200) }); } catch {} }
   // 🏷 labels (sirf ek dafa)
   const fresh = (await ref.get()).data() || {};
   if (!fresh.lblDone && Array.isArray(b.labels) && b.labels.length) {
@@ -142,12 +148,81 @@ async function post(ref, b) {
       let left = Math.max(0, Math.floor(Number(L.copies) || 0));
       while (left > 0) { const c = Math.min(200, left); left -= c;
         const id = 'fb' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-        await labels.doc(id).set({ itemId: String(b.itemId), code: clean(L.code, 60), name: clean(L.name || b.name, 120), qty: Number(L.qty) || 1, rate: Number(L.rate) || 0, copies: c, status: 'new', by: 'pc-factory', at: Date.now(), batch: clean(b.no, 20) });
+        await labels.doc(id).set({ itemId: String(L.itemId || b.itemId), code: clean(L.code, 60), name: clean(L.name || b.name, 120), qty: Number(L.qty) || 1, rate: Number(L.rate) || 0, copies: c, status: 'new', by: 'pc-factory', at: Date.now(), batch: clean(b.no, 20) });
         made.push(id); }
     }
     await ref.update({ lblDone: true, lblIds: made.slice(0, 50) });
     if (made.length) log(`🏷 ${b.no}: ${made.length} label job printer ko`);
   }
+}
+// ---------- 🖨 PARCHI (v1.2) — server ka TM-T88IV, raw ESC/POS (post-farq jaisa RawCached.dll) ----------
+const PRINTER_NAME = 'TM-T88IV', W = 32;
+let cfgCache = null, cfgAt = 0;
+async function facCfg() { if (Date.now() - cfgAt < 60000 && cfgCache) return cfgCache; const d = await biz.collection('factory').doc('cfg').get(); cfgCache = d.exists ? d.data() : {}; cfgAt = Date.now(); return cfgCache; }
+const asc = t => String(t ?? '').normalize('NFKD').replace(/[^\x20-\x7e]/g, '').replace(/\s+/g, ' ').trim();
+const nf = v => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: 3 });
+function slipText(b, after, copy) {
+  const ESC = '\x1b', GS = '\x1d', big = t => ESC + '!' + '\x30' + t + ESC + '!' + '\x00', bold = t => ESC + 'E\x01' + t + ESC + 'E\x00';
+  const line = (l, r) => { l = asc(l); r = asc(r); return (l + ' '.repeat(Math.max(1, W - l.length - r.length))).slice(0, W - r.length) + r; };
+  const hr = '-'.repeat(W), A = new Map(after.map(a => [String(a.id), a]));
+  const out = [ESC + '@', ESC + 'a\x01', big('NOOR TRADERS'), bold('FACTORY PRODUCTION'), bold('COPY: ' + copy), ESC + 'a\x00', hr,
+    line('Batch:', b.no || ''), line('POS Adj #:', b.adjNo || ''), line('Tareekh:', new Date().toLocaleString('en-GB', { hour12: true }).replace(',', '')), line('Kis ne:', b.byName || ''),
+    line('Kaam:', b.kind === 'pack' ? 'bulk se packing' : (b.n || 1) + ' batch'), hr, bold('BANA (+)  /  POS mein ab baqi')];
+  const row = (name, q, id) => { const a = A.get(String(id)); out.push(asc(name).slice(0, W), line('  ' + (q > 0 ? '+' : '-') + nf(Math.abs(q)), a ? 'baqi ' + nf(a.s) + (a.s < 0 ? ' KAM!' : '') : '')); };
+  if (r3(b.out) > 0) row(b.itemName || b.name, r3(b.out), b.itemId);
+  for (const o of b.outs || []) if (r3(o.q) > 0) row(o.name, r3(o.q), o.id);
+  out.push(hr, bold('LAGA (-)  /  POS mein ab baqi'));
+  for (const l of b.lines || []) if (r3(l.q) > 0) row(l.name, -r3(l.q), l.id);
+  const kam = (b.lines || []).filter(l => (A.get(String(l.id))?.s ?? 0) < 0);
+  if (kam.length) out.push(hr, bold('!! KAM PAD GAYA (stock minus):'), ...kam.map(l => '  ' + asc(l.name).slice(0, W - 2)));
+  out.push(hr, line('Laagat:', 'Rs ' + nf(Math.round(b.cost || 0))));
+  for (const o of b.outs || []) out.push(line('  ' + asc(o.name).slice(0, 18) + ' fi pcs', 'Rs ' + nf(o.c)));
+  out.push(hr, '', copy.startsWith('MUNSHI') ? 'Munshi dastakhat: ____________' : 'Factory dastakhat: ___________', '', '', '', GS + 'V\x42\x00');
+  return out.join('\r\n');
+}
+function printRaw(text, tag) {
+  const file = path.join(DIR, `fac-print-${tag}.bin`), psFile = path.join(DIR, `fac-print-${tag}.ps1`);
+  fs.writeFileSync(file, Buffer.from(text, 'binary'));
+  fs.writeFileSync(psFile, `$ErrorActionPreference='Stop'
+$name='${PRINTER_NAME}'
+$bytes=[System.IO.File]::ReadAllBytes('${file.replace(/'/g, "''")}')
+$dll=Join-Path '${DIR.replace(/'/g, "''")}' 'RawCached.dll'
+if(!(Test-Path $dll)){ Add-Type -TypeDefinition @"
+using System;using System.Runtime.InteropServices;
+public class RawCached{
+ [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)] public struct DI{[MarshalAs(UnmanagedType.LPWStr)]public string n;[MarshalAs(UnmanagedType.LPWStr)]public string o;[MarshalAs(UnmanagedType.LPWStr)]public string t;}
+ [DllImport("winspool.Drv",EntryPoint="OpenPrinterW",SetLastError=true,CharSet=CharSet.Unicode)] public static extern bool OpenPrinter(string p,out IntPtr h,IntPtr d);
+ [DllImport("winspool.Drv",EntryPoint="ClosePrinter")] public static extern bool ClosePrinter(IntPtr h);
+ [DllImport("winspool.Drv",EntryPoint="StartDocPrinterW",SetLastError=true,CharSet=CharSet.Unicode)] public static extern bool StartDocPrinter(IntPtr h,int l,ref DI di);
+ [DllImport("winspool.Drv",EntryPoint="EndDocPrinter")] public static extern bool EndDocPrinter(IntPtr h);
+ [DllImport("winspool.Drv",EntryPoint="StartPagePrinter")] public static extern bool StartPagePrinter(IntPtr h);
+ [DllImport("winspool.Drv",EntryPoint="EndPagePrinter")] public static extern bool EndPagePrinter(IntPtr h);
+ [DllImport("winspool.Drv",EntryPoint="WritePrinter")] public static extern bool WritePrinter(IntPtr h,IntPtr b,int c,out int w);
+ public static void Send(string printer,byte[] data,string doc){IntPtr h;if(!OpenPrinter(printer,out h,IntPtr.Zero))throw new Exception("printer nahi mila: "+printer);
+  DI di=new DI();di.n=doc;di.t="RAW";StartDocPrinter(h,1,ref di);StartPagePrinter(h);
+  IntPtr p=Marshal.AllocCoTaskMem(data.Length);Marshal.Copy(data,0,p,data.Length);int w;WritePrinter(h,p,data.Length,out w);
+  Marshal.FreeCoTaskMem(p);EndPagePrinter(h);EndDocPrinter(h);ClosePrinter(h);}
+}
+"@ -OutputAssembly $dll }
+Add-Type -Path $dll
+[RawCached]::Send($name,$bytes,'Factory')
+`);
+  return new Promise(res => require('child_process').execFile('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', psFile], { timeout: 25000 }, err => res(err)));
+}
+async function slip(ref, b) {
+  const p = await getPool(), ids = [...new Set([...(r3(b.out) > 0 ? [b.itemId] : []), ...(b.outs || []).map(o => o.id), ...(b.lines || []).map(l => l.id)].map(Number).filter(n => Number.isInteger(n) && n > 0))];
+  if (!ids.length) return;
+  const rs = (await p.request().input('b', sql.Int, MAIN_BRANCH).query(`SELECT i.ItemID, i.ItemName, ISNULL(r.CurrStock,0) AS S FROM dbo.Items i LEFT JOIN dbo.ItemBranchRate r ON r.ItemID = i.ItemID AND r.BranchID = @b WHERE i.ItemID IN (${ids.join(',')})`)).recordset;
+  const after = rs.map(x => ({ id: String(x.ItemID), name: clean(x.ItemName, 80), s: r3(x.S) }));
+  const itemName = after.find(a => a.id === String(b.itemId))?.name;
+  await ref.update({ after });
+  const c = await facCfg().catch(() => ({})), copies = c?.prn === 0 || c?.prn === 1 ? c.prn : 2;
+  if (!copies) { log(`🖨 ${b.no}: parchi band (setting)`); return; }
+  const tags = copies === 2 ? ['FACTORY (LARKA)', 'MUNSHI'] : ['MUNSHI'];
+  let ok = 0;
+  for (const [i, t] of tags.entries()) { const err = await printRaw(slipText({ ...b, itemName }, after, t), i ? 'b' : 'a'); if (err) throw new Error('printer: ' + (err.message || err)); ok++; }
+  await ref.update({ prnAt: Date.now(), prnN: ok, prnErr: FieldValue.delete() });
+  log(`🖨 ${b.no}: ${ok} parchi ${PRINTER_NAME} par`);
 }
 async function reverse(ref, b) {
   const p = await getPool();
@@ -178,7 +253,7 @@ const lock = net.createServer().listen(LOCK_PORT, '127.0.0.1');
 lock.on('error', () => { console.log('factory-post pehle se chal raha hai — yeh copy band.'); process.exit(3); });
 lock.on('listening', async () => {
   try { await getPool(); log('SQL se jur gaya'); } catch (e) { log('SQL masla: ' + e.message); process.exit(1); }
-  log('factory-post v1.1 chal raha hai — factory batch ka intezar…');
+  log('factory-post v1.2 chal raha hai — factory batch ka intezar (🎁 packing + 🖨 parchi)…');
   col.where('status', 'in', ['new', 'cancelReq']).onSnapshot(
     s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handle(c.doc.id)); }); },
     e => { log('Firestore masla: ' + e.message); process.exit(1); });

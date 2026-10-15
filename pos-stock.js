@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.100.1';
-import { liveLabelsHTML } from './barcode.js?v=2.100.1';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.101.0';
+import { liveLabelsHTML } from './barcode.js?v=2.101.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -21,13 +21,13 @@ let godamAll = false;   // v1.97: godam par 'Sab' khud chuna ho tabhi sab items 
 let postReq = null;
 let hidden = {};   // item id -> true (Band kiye hue items, sab branches mein chhupe)
 let counts = new Map(), round = '', stopCount = null, isOwner = () => false;
-// v2.100.1: 📋 GINTI KHUD POS MEIN (malik: "physical likhein, Save — PC bill saath saath banata rahe, dobara gino to edit") —
+// v2.101.0: 📋 GINTI KHUD POS MEIN (malik: "physical likhein, Save — PC bill saath saath banata rahe, dobara gino to edit") —
 //   stockCount/_auto {on}: round = aaj ka din (YYYY-MM-DD) khud; har count doc {auto, sys0, pfAt, pfAdj, pfQ, del} — PC ginti-post.js
 //   roz ke ek POS Adjustment "Ginti <din> NT" mein har Save ka farq (delta) jorta hai; dobara gino = agla delta, hatao = ulta.
 let autoOn = false, roundDoc = '', roundFixT = 0, postedMap = new Map();
 const dayStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const roundNow = () => { if (autoOn) { round = dayStr(); if (isOwner() && roundDoc !== round && cloud?.setStockRound && Date.now() - roundFixT > 60000) { roundFixT = Date.now(); cloud.setStockRound(round).catch(() => {}); } } return round; };
-// v2.100.1: malik ki marzi ka bill (Sale = kam, Return = zyada) — "_posted-<round>-<branch>" (PC post-farq) batata hai kitna bill mein ja chuka
+// v2.101.0: malik ki marzi ka bill (Sale = kam, Return = zyada) — "_posted-<round>-<branch>" (PC post-farq) batata hai kitna bill mein ja chuka
 function billOf(r, c, b = pickedBranch) {
   if (!c) return { k: 'none' }; const f = Math.round((countedPcs(c) - Number(sysOf(c, r))) * 1000) / 1000;
   if (Math.abs(f) < 0.001) return { k: 'eq', f };
@@ -36,7 +36,7 @@ function billOf(r, c, b = pickedBranch) {
   const bl = bills.find(x => x.round === round && Number(x.branch) === Number(b) && (f < 0 ? x.kam : x.zyada || []).some(y => String(y.id) === key));
   return { k: q >= Math.abs(f) - 0.001 ? 'done' : 'part', f, q, no: bl ? (f < 0 ? 'Sale #' + (bl.saleNo || '') : 'Return #' + (bl.returnNo || '')) : 'bill' };
 }
-// v2.100.1: 👁 stock sirf jis mulazim ko malik dikhaye (CAP stock.see) — baqi sirf ginti likhein
+// v2.101.0: 👁 stock sirf jis mulazim ko malik dikhaye (CAP stock.see) — baqi sirf ginti likhein
 const seeStock = () => isOwner() || can('stock.see');
 // v1.49: _flags (baqi / check nishan), _lock (malik ne ginti band ki)
 let flags = {}, countOff = false;
@@ -127,7 +127,7 @@ function soft() {
     rerender();
   }, 300);
 }
-document.addEventListener('input', e => {   // v2.100.1: upar chipki search = asli #search
+document.addEventListener('input', e => {   // v2.101.0: upar chipki search = asli #search
   const t = e.target; if (!t?.matches?.('[data-sk-q]')) return; const g = $('search'); if (!g || g.value === t.value) return; g.value = t.value; g.dispatchEvent(new Event('input', { bubbles: true }));
 });
 document.addEventListener('focusout', e => {
@@ -482,7 +482,7 @@ function renderStockInner() {
   pickedBranch = pick;
 
   $('actions').innerHTML = '';
-  { // v2.100.1: upar chipki search mein likhte waqt sirf neeche ka hissa badle (input wahi rahe — keyboard na toote)
+  { // v2.101.0: upar chipki search mein likhte waqt sirf neeche ka hissa badle (input wahi rahe — keyboard na toote)
     const html = summaryHTML(branches, pick, items, meta, names, canJama), sm = $('summary'), a = document.activeElement;
     if (a?.matches?.('[data-sk-q]') && sm.querySelector('.sk-body')) { const t = document.createElement('div'); t.innerHTML = html; const nb = t.querySelector('.sk-body'), ob = sm.querySelector('.sk-body'); if (nb && ob) ob.innerHTML = nb.innerHTML; const ne = t.querySelector('.sk-hrow em'), oe = sm.querySelector('.sk-hrow em'); if (ne && oe) oe.textContent = ne.textContent; }
     else sm.innerHTML = html;
@@ -722,7 +722,7 @@ function valueCardHTML(branches, names) {
 }
 document.addEventListener('click', e => { const c = e.target.closest?.('[data-val-toggle]'); if (!c || !isOwner()) return; valShowUntil = Date.now() < valShowUntil ? 0 : Date.now() + 30000; rerender(); if (valShowUntil) setTimeout(() => { if (Date.now() >= valShowUntil) rerender(); }, 30500); });
 function summaryHTML(branches, pick, items, meta, names, canJama = false) {
-  // v2.100.1: NAYI TARTEEB (malik: "search tak scroll, chips bohat zyada") — upar CHIPKI patti (search · scan · mic · godam),
+  // v2.101.0: NAYI TARTEEB (malik: "search tak scroll, chips bohat zyada") — upar CHIPKI patti (search · scan · mic · godam),
   //   ginti ka ek bara button, 8 tiles, 3 chips + Filter (baqi filter / din / tarteeb sheet mein), ⚙️ (malik: switches / purana bill flow).
   const totalPcs = meta?.totalPcs ?? items.reduce((s, r) => s + (r.stock || 0), 0);
   const stamp = meta?.syncedAt;
@@ -885,7 +885,7 @@ function itemForm(r, pre, jobId) {   // v2.99.92: jobId = ⏳ PC baqi item ka ed
         <button type="button" data-sub-edit="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Badlein">✏️</button>
         <button type="button" class="danger" data-sub-del="${x.subId}" data-sub-item="${esc(r.id)}" aria-label="Hatao">🗑️</button></div>`).join('') || '<p class="muted">Koi sub-barcode nahi</p>'}</div>
       <div class="account-tools"><button type="button" data-sub-new="${esc(r.id)}">➕ Naya barcode</button></div>` : ''}
-    ${isNew && isOwner() && typeof window.ntFacPend === 'function' ? `<label class="it-fac"><input type="checkbox" name="fac"${jobId && window.ntFacPendHas?.(jobId) ? ' checked' : ''}> 🏭 Factory item (factory list mein bhi)</label>` : ''}
+    ${isNew && isOwner() && typeof window.ntFacPend === 'function' ? `<label class="it-fac"><input type="checkbox" name="fac"${(jobId && window.ntFacPendHas?.(jobId)) || v._fac ? ' checked' : ''}> 🏭 Factory item (factory list mein bhi)</label><label class="it-fac"><input type="checkbox" name="pk"${(jobId && window.ntFacPendPack?.(jobId)) || v._pack ? ' checked' : ''}> 📦 Packing material (bag / pouch / dakan — factory packing mein)</label>` : ''}
     <div class="account-tools it-acts"><button type="submit" class="primary">${isNew ? '➕ POS mein banao' : '💾 POS mein save'}</button><button type="button" data-item-close="1">Wapas</button></div>
     <p class="muted it-msg" role="status"></p></form>`;
   if (!d.open) d.showModal();
@@ -916,7 +916,7 @@ async function itemSave(form, btn) {
     if (!cloud?.editItemJob) { msg.textContent = 'App update karein'; return; }
     btn.disabled = true;
     try { await cloud.editItemJob(jid, job);
-      if (form.elements.fac?.checked) window.ntFacPend?.(jid, v.name); else window.ntFacPendDel?.(jid);
+      if (form.elements.fac?.checked || form.elements.pk?.checked) window.ntFacPend?.(jid, v.name, job.costP, !!form.elements.pk?.checked); else window.ntFacPendDel?.(jid);
       notice('✓ Badal diya — PC on hote hi yahi banega'); $('dialog')?.close(); }
     catch (e) { btn.disabled = false; msg.textContent = 'Nahi hua: ' + (e?.code === 'permission-denied' ? 'ijazat nahi (rules 2.54? ya PC ne utha liya)' : (e?.message || e)); }
     return;
@@ -924,7 +924,7 @@ async function itemSave(form, btn) {
   btn.disabled = true; const old = btn.textContent; btn.textContent = '⏳ PC ko bhej raha hoon…';
   try {
     const jid = await cloud.requestItem(job);
-    if (isNew && form.elements.fac?.checked) { try { window.ntFacPend?.(jid, v.name); } catch {} }   // v2.99.91: 🏭
+    if (isNew && (form.elements.fac?.checked || form.elements.pk?.checked)) { try { window.ntFacPend?.(jid, v.name, job.costP, !!form.elements.pk?.checked); } catch {} }   // v2.99.91: 🏭 · v2.101: 📦 packing
     btn.textContent = '✓ Line mein lag gaya';
     msg.textContent = '✓ Line mein lag gaya — PC on hote hi POS mein banega (phone par khabar aayegi). Form band kar sakte hain.';
     let stop = null, done = false;
@@ -2048,7 +2048,7 @@ document.addEventListener('click', e => {
   if (e.target.closest?.('[data-stock-more]')) { limit += PAGE; rerender(); return; }
   if (e.target.closest?.('[data-stock-bills]')) { openBills(); return; }
   if (e.target.closest?.('[data-stock-ginti]')) { openGinti(); return; }
-  if (e.target.closest?.('[data-sk-set]')) { openSkSet(); return; }   // v2.100.1: nayi stock screen
+  if (e.target.closest?.('[data-sk-set]')) { openSkSet(); return; }   // v2.101.0: nayi stock screen
   if (e.target.closest?.('[data-sk-filter]')) { openSkFilter(); return; }
   if (e.target.closest?.('[data-sk-close]')) { $('dialog')?.close(); return; }
   if (e.target.closest?.('[data-sk-reset]')) { filter = 'all'; hDay = ''; hDayKeep(); sort = 'name'; limit = PAGE; $('dialog')?.close(); rerender(); return; }
@@ -2281,7 +2281,7 @@ async function writeCount(item, v, add = null, tick = false, br = pickedBranch) 
   const history = [...past, h].slice(-20);
   // v2.99.58: ginti ke baad bill bana tha (later) aur ab dobara gina = recount (farq bill mein ab shamil ho sakta hai)
   const re = !!(old && (old.recount || (Array.isArray(old.later) && old.later.length)));
-  // v2.100.1: auto — sys0 = is din ki pehli ginti ke waqt ka system (farq isi se); PC ka pfQ (ab tak POS mein gaya) wahi rahe
+  // v2.101.0: auto — sys0 = is din ki pehli ginti ke waqt ka system (farq isi se); PC ka pfQ (ab tak POS mein gaya) wahi rahe
   const same = old && old.round === round && !old.del, sys0 = same && old.sys0 != null ? old.sys0 : item.stock;
   await cloud.saveStockCount({
     id: countId(br, item.id),
@@ -3359,7 +3359,7 @@ export const stockFactoryCanRate = () => canEditItem();
 export function stockPickList() { const P = agPool(); return P.list.map(r => ({ id: String(r.id), name: String(r.name || ''), code: String(r.code || ''), cat: String(r.cat || ''), catFac: isFactory(r), stock: Number(saleStockItem(P.main, r.id)?.stock) || 0, pack: Number(r.pack) > 1 ? Number(r.pack) : 0, cn: r.cName || 'Ctn', un: r.uName || 'Pcs' })); }
 export function stockRepaint() { if (stockActive) soft(); }
 export const stockIsFactoryCat = r => isFactory(r);
-// v2.100.1: 🏭 factory "photo se formula" — naya item FORAN line mein (intezar nahi) -> jobId (PC band ho tab bhi theek: ⏳ job:)
+// v2.101.0: 🏭 factory "photo se formula" — naya item FORAN line mein (intezar nahi) -> jobId (PC band ho tab bhi theek: ⏳ job:)
 export async function stockNewItemQuick(v) {
   if (!canNewItem()) throw Error('Naya item — malik ki ijazat chahiye');
   if (!cloud?.requestItem) throw Error('App update karein');
@@ -3369,7 +3369,7 @@ export async function stockNewItemQuick(v) {
   return await cloud.requestItem(job);
 }
 
-// v2.100.1: 🏭 FACTORY ki 📊 Ginti tab (factory.js) — wahi stockCount docs, dukan godam (main); PC ginti-post wahi
+// v2.101.0: 🏭 FACTORY ki 📊 Ginti tab (factory.js) — wahi stockCount docs, dukan godam (main); PC ginti-post wahi
 export function stockCountsOn() { try { start(true); } catch {} }
 export function stockCountState() { return { round: roundNow(), autoOn, locked: countLocked(), owner: isOwner(), see: seeStock() }; }
 export const stockOpenGinti = () => openGinti();
@@ -3394,3 +3394,12 @@ export async function stockCountDel(itemId) {
   if (!isOwner()) throw Error('Sirf malik'); const r = fcItem(itemId); if (!r) throw Error('Item nahi mila'); const P = agPool(), c = countOf(P.main, r); if (!c) return;
   await cloud.saveStockCount({ ...c, id: countId(P.main, r.id), del: true, delAt: Date.now(), at: Date.now(), total: Number(c.sys0 ?? c.sys) || 0, ctn: 0, pcs: 0 });
 }
+
+// v2.101.0: 🏭 factory se seedha (stock screen par jaye baghair) — naya item (🏭 / 📦 tick laga hua), item edit, label, ⏳ PC baqi list
+export function stockNewItemOpen(o = {}) { if (!canNewItem()) { notice('🔒 Naya item — malik ki ijazat chahiye'); return; } itemForm(null, { _fac: !!o.fac, _pack: !!o.pack }); }
+function fcRow(id) { const P = agPool(), r = P.byId.get(String(id)); if (!r) return null; const x = { ...r, stock: Number(saleStockItem(P.main, r.id)?.stock) || 0 }; rowCache.set(String(r.id), x); return x; }
+export function stockItemOpen(id) { const r = fcRow(id); if (!r) { notice('Item POS mein nahi mila (⏳ PC baqi ho to "PC baqi" list se edit)'); return; } itemForm(r, null); }
+export function stockLabelOpen(id) { const r = fcRow(id); if (!r) { notice('Item POS mein nahi mila'); return; } openLabels(String(r.id)); }
+export function stockIjobsOpen() { ijDlg(); }
+export const stockIjCounts = () => ({ pend: ijPend().length, bad: ijBad().length });
+export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
