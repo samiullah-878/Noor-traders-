@@ -2940,3 +2940,8 @@ queue se (voucher + galla parchi aapas mein nahi takrate). urdu-names v1.3: part
 🔔 notifyLate(job, ok, naam, err): job.at 2 min se purana ho (PC band tha / atka) to natija lateBag mein; 20 s baad sendLate() EK push
 (firebase-admin messaging, pushTokens: role owner/malik + job.by ka uid) — "✓ N item POS mein ban gaye: …" / "❌ N item nahi bane".
 Foran wali (2 min se kam) job par push nahi. Log: item-log.txt "🔔 item khabar".
+
+=== 2026-10-15 · manifest 2026-10-15.5 — factory-post.js v1.1 ===
+⏳ 'job:<itemJobId>' (app ka naya item jo POS mein abhi nahi bana): resolveJobs() itemJobs/<id> parhta hai — done + itemId -> batch doc
+mein asli itemId / lines / labels (khali barcode = job.code) likh kar post; 'new' / 'working' -> waitItem true (WaitItem), waiting set,
+har 60 s handle() dobara; cancelled / failed -> status 'error' + wajah.

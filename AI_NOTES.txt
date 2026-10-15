@@ -4680,3 +4680,13 @@ Malik ("Slaphate 50 kg" PC band hone par line mein tha): "ye cancel kar sakte ho
 * Rules 2.54: itemJobs update — (malik || (Full / Stock && by == uid)) && status 'new' && (cancelled [status, cancelBy, cancelAt] ||
   new [wahi khane + editAt, editBy]). firestore-rules-2.54.html. History: editItemJob / cancelItemJob.
 * Test: scratchpad fct/ij.mjs (5 checks — pos-stock asal module happy-dom par).
+
+=== v2.99.93 (2026-10-15 raat) — ⏳ PC baqi item ABHI se factory mein (formula + batch), POS mein baad mein ===
+Malik: "yahan aa jaye, POS mein baad mein chali jaye".
+* factory.js pendItems(): cfg.pend (🏭 tick wale naye item) + itemJobs (onItemJobs) -> naqli item id 'job:<jobId>' (naam / pack / barcode /
+  costP / rpcs / wpcs job se, stock 0, cat "⏳ PC baqi"). Formula (tayyar ya raw) aur batch abhi. cancelled / failed job = list se bahar.
+* linkCheck: job done + itemId -> items[itemId] true, pend null, formulas 'job:<id>' -> asli itemId (key aur doosre formulon ki lines).
+* Batch card: waitItem -> "⏳ Item POS mein banne ka intezar".
+* PC factory-post v1.1: resolveJobs — 'job:' ids ke itemJobs: done -> asli id (batch doc itemId / lines / labels update, khali label code =
+  bana hua code); new / working -> waitItem true, har 60 s dobara; cancelled / failed -> 'error'. Manifest 2026-10-15.5.
+* Test: fct/t.mjs (+2 checks).

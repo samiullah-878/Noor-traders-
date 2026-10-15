@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  factory-post.js  v1.0 (2026-10-15) — 🏭 FACTORY PRODUCTION -> POS STOCK (app "🏭 Factory" / stock screen "Factory batch (OK)")
+//  factory-post.js  v1.1 (2026-10-15 raat: ⏳ 'job:' naye item — pehle item bane, phir batch) · v1.0 (2026-10-15) — 🏭 FACTORY PRODUCTION -> POS STOCK (app "🏭 Factory" / stock screen "Factory batch (OK)")
 //  Malik: "apni factory ki items — formula ke saath batch, larka OK kare to production auto stock mein aa jaye aur raw maal auto minus;
 //          shop ki sale se stock minus hota rahe; batch ka barcode label OK par khud chhap jaye (sub barcode bhi)".
 //  Firestore factoryBatches/<id> status 'new' -> POS mein EK Adjustment (dukan godam, BranchID 1):
@@ -82,7 +82,33 @@ async function writeAdj(p, desc, remarks, rows) {
   } catch (e) { await tx.rollback().catch(() => {}); throw e; }
 }
 
+// v1.1 (2026-10-15): ⏳ 'job:<itemJobId>' — app ka naya item jo abhi POS mein nahi bana (PC band tha). item-post pehle banata hai;
+//   yahan itemJobs/<id> done + itemId -> asli id (batch doc mein bhi likh deta hai). Abhi 'new' / 'working' = waitItem (har 60 s dobara);
+//   cancelled / failed = 'error'. Label ka khali barcode = bana hua item ka code.
+const waiting = new Set();
+class WaitItem extends Error {}
+async function resolveJobs(ref, b) {
+  const ids = [String(b.itemId), ...(b.lines || []).map(l => String(l.id))].filter(x => x.startsWith('job:'));
+  if (!ids.length) return b;
+  const map = new Map(), codes = new Map();
+  for (const x of [...new Set(ids)]) {
+    const s = await biz.collection('itemJobs').doc(x.slice(4)).get(), j = s.exists ? s.data() : null;
+    if (!j) throw new Error('Naya item ki darkhwast nahi mili (' + x + ')');
+    if (j.status === 'done' && j.itemId) { map.set(x, String(j.itemId)); codes.set(String(j.itemId), String(j.code || '')); continue; }
+    if (j.status === 'new' || j.status === 'working') throw new WaitItem(String(j.name || x));
+    throw new Error(`Naya item "${j.name || x}" POS mein nahi bana (${j.status}${j.error ? ': ' + j.error : ''}) — item theek kar ke dobara`);
+  }
+  const m = id => map.get(String(id)) || String(id);
+  const nb = { ...b, itemId: m(b.itemId), lines: (b.lines || []).map(l => ({ ...l, id: m(l.id) })),
+    labels: (b.labels || []).map(L => ({ ...L, code: L.code || codes.get(m(b.itemId)) || '' })).filter(L => L.code) };
+  await ref.update({ itemId: nb.itemId, lines: nb.lines, labels: nb.labels, waitItem: FieldValue.delete(), resolvedAt: Date.now() });
+  log(`⏳ -> ✓ ${b.no}: naye item POS mein ban gaye, asli id lag gayi`);
+  return nb;
+}
 async function post(ref, b) {
+  try { b = await resolveJobs(ref, b); }
+  catch (e) { if (e instanceof WaitItem) { waiting.add(ref.id); if (!b.waitItem) { await ref.update({ waitItem: true, waitAt: Date.now() }); log(`⏳ ${b.no}: "${e.message}" abhi POS mein nahi bana — intezar`); } return; } throw e; }
+  waiting.delete(ref.id);
   const p = await getPool();
   const desc = clean(`Prod ${b.id} ${b.no}`, 150);
   let adj = await findAdj(p, desc);
@@ -152,8 +178,9 @@ const lock = net.createServer().listen(LOCK_PORT, '127.0.0.1');
 lock.on('error', () => { console.log('factory-post pehle se chal raha hai — yeh copy band.'); process.exit(3); });
 lock.on('listening', async () => {
   try { await getPool(); log('SQL se jur gaya'); } catch (e) { log('SQL masla: ' + e.message); process.exit(1); }
-  log('factory-post v1.0 chal raha hai — factory batch ka intezar…');
+  log('factory-post v1.1 chal raha hai — factory batch ka intezar…');
   col.where('status', 'in', ['new', 'cancelReq']).onSnapshot(
     s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handle(c.doc.id)); }); },
     e => { log('Firestore masla: ' + e.message); process.exit(1); });
+  setInterval(() => { for (const id of [...waiting]) later(() => handle(id)); }, 60000).unref?.();   // v1.1: ⏳ naye item ka intezar
 });

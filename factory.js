@@ -6,7 +6,7 @@
 //   PC factory-post.js: POS Adjustment (+ tayyar maal, − raw maal; dukan godam) -> status 'posted' + adjNo, phir label jobs (batch no ke saath).
 //   Malik: 'cancelReq' (ulta Adjustment) / 'new' dobara. Rate: pos-stock stockAgentItemSave (itemJobs, PC item-post) — malik dabaye tab.
 // Tez: OK = setDoc foran (intezar nahi) — list mein "⏳ PC ko ja raha" foran. Yahan AI NAHI.
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs } from './pos-stock.js?v=2.99.92';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs } from './pos-stock.js?v=2.99.93';
 // v2.99.89: ☑ FACTORY ITEMS TICK SE (malik: "check box de do items list mein — factory mein items aa jayein") — factory/cfg.items {id: true | false | null}:
 //   true = malik ne ☑ kiya, false = category wali ko hataya, null = category ke hisaab se. Factory screen "☑ Factory items chunein" + stock screen har item par ☐ 🏭 Factory.
 
@@ -54,13 +54,30 @@ window.ntFacPend = (jid, name) => { if (!isOwner() || !cloud?.setFactoryCfg) ret
 window.ntFacPendHas = jid => !!(cfg?.pend?.[jid]);
 window.ntFacPendDel = jid => { if (!isOwner() || !cloud?.setFactoryCfg || !cfg?.pend?.[jid]) return; cfg = { ...cfg, pend: { ...(cfg.pend || {}), [jid]: null } }; repaint(); cloud.setFactoryCfg({ pend: { [jid]: null } }).catch(() => {}); };
 let linking = new Set(), lastJobs = [];
-onItemJobs(list => { lastJobs = list; linkCheck(); });
+let jobsById = new Map();
+onItemJobs(list => { lastJobs = list; jobsById = new Map(list.map(j => [j.id, j])); loadItemsQuiet(); linkCheck(); repaint(); });
+// v2.99.93: ⏳ PC baqi item ABHI se factory mein (malik: "yahan aa jaye, POS mein baad mein chali jaye") — naqli item id 'job:<jobId>',
+//   rate / pack / barcode job se, stock 0. Formula / batch abhi; PC factory-post item bante hi asli id se post karta hai; app formulas
+//   'job:<id>' -> asli itemId khud badalti hai (linkCheck).
+function pendItems() {
+  return pendList().map(p => { const j = jobsById.get(p.id); if (j && (j.status === 'cancelled' || j.status === 'failed')) return null;
+    const pk = Number(j?.pack) > 1 ? Number(j.pack) : 0, rp = Number(j?.rpcs) || 0;
+    return { id: 'job:' + p.id, name: j?.name || p.n, code: String(j?.code || ''), pack: pk, cn: 'Ctn', un: 'Pcs', cat: '⏳ PC baqi', stock: 0, prate: Number(j?.costP) || 0,
+      rate: pk && j?.rctn ? Number(j.rctn) / pk : rp, rate2: rp, wrate: pk && j?.wctn ? Number(j.wctn) / pk : Number(j?.wpcs) || rp, ws: Number(j?.wpcs) || rp, urdu: '', pending: true,
+      labels: [{ code: String(j?.code || ''), qty: 1, price: rp, main: true }] };
+  }).filter(Boolean);
+}
 function linkCheck() {
   const list = lastJobs;
   if (!isOwner() || !cfg || !cloud?.setFactoryCfg || !list.length) return;
   for (const j of list) { const p = cfg.pend?.[j.id]; if (!p || linking.has(j.id)) continue;
-    if (j.status === 'done' && j.itemId) { linking.add(j.id); cfg = { ...cfg, items: { ...(cfg.items || {}), [String(j.itemId)]: true }, pend: { ...(cfg.pend || {}), [j.id]: null } };
-      cloud.setFactoryCfg({ items: { [String(j.itemId)]: true }, pend: { [j.id]: null } }).then(() => { notice('🏭 ' + p.n + ' factory mein jur gaya'); loadItemsQuiet(); repaint(); }).catch(() => linking.delete(j.id)); }
+    if (j.status === 'done' && j.itemId) { linking.add(j.id);
+      const real = String(j.itemId), fake = 'job:' + j.id, F = cfg.formulas || {}, fp = {};
+      for (const [fid, f] of Object.entries(F)) { if (!f) continue; const lines = (f.lines || []).map(l => String(l.id) === fake ? { ...l, id: real } : l), ch = lines.some((l, i) => l !== f.lines[i]);
+        if (fid === fake) { if (!F[real]) fp[real] = { ...f, lines }; fp[fake] = null; } else if (ch) fp[fid] = { ...f, lines }; }
+      const patch = { items: { [real]: true }, pend: { [j.id]: null }, ...(Object.keys(fp).length ? { formulas: fp } : {}) };
+      cfg = { ...cfg, items: { ...(cfg.items || {}), [real]: true }, pend: { ...(cfg.pend || {}), [j.id]: null }, formulas: { ...F, ...fp } };
+      cloud.setFactoryCfg(patch).then(() => { notice('🏭 ' + p.n + ' POS mein ban gaya — factory mein asli item se jur gaya'); loadItemsQuiet(); repaint(); }).catch(() => linking.delete(j.id)); }
     else if (j.status === 'failed') { linking.add(j.id); cloud.setFactoryCfg({ pend: { [j.id]: null } }).catch(() => linking.delete(j.id)); }
   }
 }
@@ -73,7 +90,7 @@ function watch() {
   bStop = cloud?.listenFactoryBatches ? cloud.listenFactoryBatches(from, (l, e) => { if (l) batches = l; else if (e) notice('Factory batch nahi parhe: ' + (e.code || e.message || e)); repaint(); }) : null;
 }
 function loadItems() {
-  try { items = stockFactoryList(facPick); byId = new Map(items.map(x => [x.id, x])); itemsOk = true; } catch (e) { itemsErr = e?.message || String(e); }
+  try { items = [...stockFactoryList(facPick), ...pendItems()]; byId = new Map(items.map(x => [x.id, x])); itemsOk = true; } catch (e) { itemsErr = e?.message || String(e); }
 }
 async function ensureItems() {
   if (itemsOk) { loadItems(); return true; }
@@ -109,7 +126,7 @@ const inPer = b => { const [a, z] = perRange(); return b.at >= a && b.at < z; };
 const STAT = {
   new: ['wait', '⏳ PC ko ja raha'], posted: ['ok', '✓ POS mein'], error: ['bad', '❌ Masla'], cancelReq: ['wait', '↩ Wapas ho raha'], cancelled: ['off', '↩ Wapas ho gaya'],
 };
-const statOf = b => b._pend ? ['wait', '⏳ Bhej raha…'] : (STAT[b.status] || ['wait', b.status]);
+const statOf = b => b._pend ? ['wait', '⏳ Bhej raha…'] : b.status === 'new' && b.waitItem ? ['wait', '⏳ Item POS mein banne ka intezar'] : (STAT[b.status] || ['wait', b.status]);
 
 // ---------- screen ----------
 export function renderFactory() {
@@ -143,7 +160,7 @@ function paint() {
     ${own ? `<button type="button" class="fc-act" data-fc-pg="rates"><span class="fc-ic">🏷</span><b>Rates</b><small>${up.length ? num(up.length) + ' ki laagat barhi' : 'laagat + nafa'}</small></button>` : ''}
     <button type="button" class="fc-act" data-fc-pg="raw"><span class="fc-ic">📦</span><b>Raw maal</b><small>${itemsOk ? num(rawItems().length) + ' cheezen' : '…'}</small></button>
   </div>
-  ${pendList().length ? `<div class="fc-pend">${pendList().map(p => `<span>⏳ ${esc(p.n)} <small>PC se POS mein banne ke baad formula / batch</small></span>`).join('')}</div>` : ''}
+  ${pendList().length ? `<div class="fc-pend">${pendList().map(p => `<span>⏳ ${esc(p.n)} <small>POS mein subah banega — formula / batch abhi ban sakta hai</small></span>`).join('')}</div>` : ''}
   ${own ? `<button type="button" class="fc-pickbtn" data-fc-pick="1">☑ Factory items chunein <small>${itemsOk ? num(items.length) + ' factory mein' : ''}</small></button>` : ''}
   ${itemsOk && !items.length ? `<p class="ir-say">Abhi factory mein koi item nahi — upar <b>☑ Factory items chunein</b> se tick lagayein (ya POS mein category mein "factory").</p>` : ''}
   ${'' && itemsOk && !items.length ? `<p class="ir-say">POS mein abhi koi item <b>"factory"</b> wali category mein nahi. Tayyar maal aur raw maal ko POS mein category <b>apni factory</b> / <b>factory raw</b> mein daalein — 2 min mein yahan aa jayengi.</p>` : ''}
@@ -262,7 +279,7 @@ function pickPaint() {
   el.innerHTML = `<p class="ir-say">Jis item par <b>☑</b> lagayein wo factory mein aa jayegi — formula wali = <b>tayyar maal</b>, baqi = <b>raw maal</b>.</p>
     <div class="fc-per fc-pf">${[['sab', 'Sab (' + num(all.length) + ')'], ['on', '☑ Chuni hui (' + num(nOn) + ')'], ['cat', 'Category wali (' + num(all.filter(x => x.catFac).length) + ')']].map(([k, l]) => `<button type="button" class="${pk.f === k ? 'on' : ''}" data-fp-f="${k}">${l}</button>`).join('')}</div>
     <label class="hs-search"><input type="search" data-fc-pq="1" placeholder="🔍 naam ya barcode…" value="${esc(pk.q)}"></label>
-    ${pendList().map(p => `<div class="fc-pk pk-on"><span>⏳</span><span><b>${esc(p.n)}</b><small>PC baqi — POS mein bante hi khud jur jayega</small></span></div>`).join('')}
+    ${pendList().map(p => `<div class="fc-pk pk-on"><span>⏳</span><span><b>${esc(p.n)}</b><small>PC baqi — formula / batch abhi; POS mein bante hi asli item se jur jayega</small></span></div>`).join('')}
     <div class="fc-picks">${list.slice(0, pk.lim).map(x => `<label class="fc-pk${isOn(x) ? ' pk-on' : ''}"><input type="checkbox" data-fac-tick="${esc(x.id)}"${isOn(x) ? ' checked' : ''}><span><b>${esc(x.name)}</b><small>${esc(x.cat || '—')} · stock ${esc(qt(x.stock, x))}${F[x.id] ? ' · 🧪 formula' : ''}</small></span></label>`).join('') || '<p class="lk-note">Kuch nahi mila.</p>'}</div>
     ${list.length > pk.lim ? `<button type="button" class="fc-no" data-fp-more="1">Aur dikhao (${num(list.length - pk.lim)})</button>` : ''}`;
   if (keepF) { const i = el.querySelector('[data-fc-pq]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
@@ -319,7 +336,7 @@ function batchPaint() {
     <div class="fc-raw">${c.lines.map(l => `<div><span>${esc(l.name)}</span><b>${esc(qt(l.q, l.it))}</b><em class="${l.stock < l.q ? 'bad' : 'ok'}">${esc(qt(l.stock, l.it))}${l.stock < l.q ? ' kam' : ' ✓'}</em></div>`).join('')}</div>
     <div class="fc-lab">BARCODE LABEL <small>batch no ke saath</small></div>
     <div class="fc-lbl">${[['pcs', 'Packet'], ...(ctnOk ? [['ctn', 'Carton (sub)'], ['both', 'Dono']] : []), ['none', 'Nahi']].map(([k, l]) => `<button type="button" class="${fb.lbl === k ? 'on' : ''}" data-fb-lbl="${k}">${l}</button>`).join('')}</div>
-    <small class="fc-lnote">${L.length ? L.map(x => `${num(x.copies)} label × ${esc(x.code)}${x.qty > 1 ? ' (' + num(x.qty) + ')' : ''}`).join(' · ') + ' — OK par khud chhapenge' : fb.lbl === 'none' ? 'Label nahi chhapenge' : '⚠️ Is item ka barcode nahi mila'}</small>
+    <small class="fc-lnote">${L.length ? L.map(x => `${num(x.copies)} label × ${esc(x.code || 'naya barcode (POS dega)')}${x.qty > 1 ? ' (' + num(x.qty) + ')' : ''}`).join(' · ') + ' — OK par khud chhapenge' : fb.lbl === 'none' ? 'Label nahi chhapenge' : '⚠️ Is item ka barcode nahi mila'}</small>
     <div class="fc-cost">Laagat ${rs(c.total)} · fi ${esc((it.un || 'pcs').toLowerCase())} ${rs(out ? c.total / out : 0)}</div>
     <button type="button" class="fc-ok-btn" data-fb-ok="1"${fb.busy ? ' disabled' : ''}>✓ OK — production darj karo</button>
     ${kam.length ? `<small class="fc-lnote bad">⚠️ ${kam.length} raw maal stock mein kam hai — POS mein minus ho jayega</small>` : ''}` : '<p class="lk-note">Upar se item chunein.</p>'}`;
