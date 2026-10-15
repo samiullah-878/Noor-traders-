@@ -4701,3 +4701,34 @@ Malik: "yahan aa jaye, POS mein baad mein chali jaye".
    "☰ Sab screens (N)" -> dialog: groups (Rozana / Maal / Sale-Galla / Report / Aur), search, ⭐ pin, tile = asli nav button click.
    Ijazat wahi: app.js button.hidden (MutationObserver). window.ntCurNav (DESK_NAV[view]), window.ntNavBadges (due). Computer par pehle jaisa.
 * Test: fct/nv.mjs (5), fct/t.mjs + hd/ir.mjs (input wahi rahe). Screenshot fct/nv.png.
+
+=== v2.99.95 (2026-10-15 raat) — 🏭 FACTORY NAYI TARTEEB (4 tab + ⚙️ + 3 qadam batch + 7 bug) + 📷 PHOTO SE FORMULA (AI) ===
+Malik: "factory wala pura kaam ek dafa dekho — sahi tarteeb se nahi, bohat masail, easy banao premium look" + "Excel ki pic lagayein, items
+wagaira sab kuch formula khud add ho jaye, hum bas item uthayein".
+1) factory.js (poora dobara likha, exports wahi: factorySetup / renderFactory / factoryStop / openBatch / canFacBatch / _fcTest):
+   * Screen: hero (⚙️ gear sirf malik) + Aaj/7 din/Mahina + 4 tab `.fc-tabs` data-fc-tab: 📋 Batches (sab) · 🧪 Formulas (malik) ·
+     🏷 Rates (malik) · 📦 Raw maal (sab). Tab badge: ❌ error batch / formulas ginti / ⚠ naye rate / ⚠ kam raw. st.tab localStorage (sam-fac).
+   * ⚙️ Settings dialog (data-fc-set, #fcSet): ☑ Factory items chunein (picker), nafa W/R % (data-fc-wm/rm), batch label default
+     (data-fc-lbldef -> cfg.lbl), ⏳ PC baqi items list (✕ data-fc-penddel). Nafa inputs Rates tab se yahan aa gaye.
+   * Batch form 3 qadam (.fc-stepn): ① Kya banaya ② Kitne batch (1–10) + "+ 25 ctn · laagat" + .fc-rawsum (✓ sab stock / ⚠️ N kam) ③ OK.
+     "▾ Aur…" (data-fb-more, fb.more) mein asal ginti / raw list / label chips — larke ko roz sirf 3 tap.
+   * 🧪 "➕ Naya formula" = alag chooser dialog (#fcNew, fn.q, data-fc-fq -> swap #fcFqList): tayyar maal pehle, jo items kisi formula
+     mein RAW hain wo neeche alag "raw maal ki tarah lagti hain" (bug 6).
+   * Bugs: (1) pendItems(real).dup — ⏳ pending ka naam POS mein pehle se = ⚠️ alert + ✕ Hatao (PC item-post warna dobara banata)
+     (2) doneReal: job 'done'+itemId jab tak malik ka app link na kare, HAR phone (larka) facPick -> true (3) rateRows() mein ⏳ isPend
+     nahi (POS mein rate ban hi nahi sakta) (4) ❌ error alert = <button data-fc-b=pehla error> (tap -> batch dlg, retry)
+     (5) formula line mein `n` (naam) save; costOf: it?.name || l.n, `gone` flag ("⚠️ factory items mein nahi") (6) upar (7) mara code hata.
+   * 📷 PHOTO SE FORMULA (sirf malik, factorySetup.aiFormula = app.js: loadAiCfg + shrinkForAI + ai-tally readFormula):
+     pickPhoto() file input -> photoFormula(files) -> pf state -> pfPaint(): tayyar maal (AI ka product naam -> items mein / "➕ Naya item"),
+     "1 batch = N piece" (AI pieces ya malik likhe), har line: ✓ mili / ? shak (data-pf-pick -> search screen, data-pf-set=id|new|del) /
+     ➕ naya; labour lines -> mazdoori (fi piece × pieces). pfSave(): naya item = stockNewItemQuick (job foran, intezar nahi) + ntFacPend
+     (name, costP) -> id 'job:<jid>'; POS item jo factory mein nahi -> cfg.items[id]=true; qty: per 'piece' × pieces, g/ml -> kg/L agar
+     item kg/L; phir fe = {...} formSave(false). matchItem(name): factory items exact -> stockAgentFind pakka -> substring candidate -> new.
+   * ntFacPend(jid, name, c): pend {n, at, c (khareed)} — pendItems prate = job.costP || p.c.
+2) pos-stock.js: stockNewItemQuick(v) (export) — requestItem job foran, jobId wapas (stockAgentItemSave 45 s wait nahi karta).
+   ai-tally.js: FORMULA_PROMPT + readFormula({key, model, images}) -> {product, packSize, totalQty, totalCost, pieces, lines[{name, qty,
+   unit, rate, amount, per batch|piece, kind raw|packing|labour|other}]}. AI SIRF tasveer parhta hai — items milana / banana app code.
+3) style.css: .fc-tabs .fc-hrow .fc-gear .fc-big(.alt) .fc-stepn .fc-rawsum .fc-moreb .fc-more .fc-pf* .fc-link .ir-row.kam button.fc-alert.
+* Rules: koi tabdeeli nahi (2.54 hi). Firestore: factory/cfg.pend[jid].c + formulas lines[].n (naye field, purane docs theek).
+* Test: fct/t.mjs (51 ✓ — tabs, 3 qadam, chooser, settings, picker, pend/dup/link, photo flow), fct/boot.mjs. Screenshots fct/*.png.
+* Agli AI: asli Excel photo test malik karega; agar AI lines ghalat parhe to FORMULA_PROMPT mein misaal daalna.

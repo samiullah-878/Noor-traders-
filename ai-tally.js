@@ -377,3 +377,23 @@ export async function hearAudio({ key, model, audio, prompt, onStatus }) {
   try { const a = txt.indexOf('{'), b = txt.lastIndexOf('}'); const j = JSON.parse(txt.slice(a, b + 1)); return String(j.text ?? '').trim(); }
   catch { return txt.replace(/^["'`]+|["'`]+$/g, '').trim(); }
 }
+
+// v2.99.95: 🏭 FACTORY FORMULA photo se (Excel / haath ki parchi) — malik: "excel ki pic lagayein, items wagaira sab kuch formula khud add ho jaye"
+export const FORMULA_PROMPT = `Ye ek factory ke FORMULA (nuskha / recipe) ki tasveer hai — Excel sheet ya haath ki likhi parchi (Pakistan, Urdu / Roman Urdu / English naam).
+Is mein ek BATCH ka raw material (naam, miqdaar, rate / kharcha) hota hai, phir kul, phir aksar packing (bottle, dakan / cap, rapper / label, labour / mazdoori) FI PIECE.
+Sirf JSON do, aur kuch nahi:
+{"product":"<tayyar maal ka naam agar likha ho, warna \"\">","pack_size":"<ek piece kitna, jaise 1.5 L / 1 kg, warna \"\">",
+ "batch_total_qty":<raw maal ka kul wazan/miqdaar agar likha ho warna 0>,"batch_total_cost":<kul kharcha warna 0>,"pieces_per_batch":<ek batch se kitne piece bante hain agar likha ya saaf ho warna 0>,
+ "lines":[{"name":"<jaisa likha hai>","qty":<number>,"unit":"<kg|g|L|ml|pcs|bori|ctn|->","rate":<fi unit rate, 0 agar nahi>,"amount":<line ka kul kharcha, 0 agar nahi>,"per":"batch"|"piece","kind":"raw"|"packing"|"labour"|"other"}]}
+Qaide: per = "batch" jo ek poore batch mein lagta hai (raw material, pani, chemical); per = "piece" jo HAR piece / bottle par lagta hai (dakan, bottle, rapper, label, labour fi piece).
+kind: labour / mazdoori / bijli / gas = "labour"; bottle, dakan, cap, rapper, label, carton = "packing"; baqi = "raw". Pani (water) bhi raw, rate 0.
+Kul / total / sum wali line "lines" mein NA daalein. Hindse theek parho (3 aur 8 mein farq). Naam waisa hi rakho jaisa likha hai (spelling na badlo).`;
+export async function readFormula({ key, model, images }) {
+  const t = await askImage({ key, model, images, prompt: FORMULA_PROMPT });
+  const m = String(t || '').match(/\{[\s\S]*\}/); if (!m) throw Error('AI ne formula nahi parha — saaf tasveer lein');
+  let j; try { j = JSON.parse(m[0]); } catch { throw Error('AI ka jawab samajh nahi aaya — dobara'); }
+  const lines = (Array.isArray(j.lines) ? j.lines : []).map(l => ({ name: String(l.name || '').trim().slice(0, 80), qty: Number(l.qty) || 0, unit: String(l.unit || '').trim().slice(0, 8), rate: Number(l.rate) || 0, amount: Number(l.amount) || 0,
+    per: l.per === 'piece' ? 'piece' : 'batch', kind: ['raw', 'packing', 'labour', 'other'].includes(l.kind) ? l.kind : 'raw' })).filter(l => l.name && (l.qty > 0 || l.amount > 0));
+  if (!lines.length) throw Error('Tasveer mein koi line nahi mili');
+  return { product: String(j.product || '').trim().slice(0, 80), packSize: String(j.pack_size || '').trim().slice(0, 20), totalQty: Number(j.batch_total_qty) || 0, totalCost: Number(j.batch_total_cost) || 0, pieces: Number(j.pieces_per_batch) || 0, lines };
+}
