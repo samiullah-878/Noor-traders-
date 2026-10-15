@@ -165,13 +165,16 @@ function manDlg(id) {
     ${dcols.length ? `<section class="ir-sec"><div class="ir-sh"><b>📈 Din-war commission</b></div><div class="ir-scroll">${colChart(dcols, { h: 110, one: true, unit: 'Har din ka commission (Rs) — bar chhoo kar raqam' })}</div></section>` : ''}`);
 }
 // ⚙️ commission items — malik: tick + rate (default Rs 10)
+function commHitsHTML() {
+  const qn = cq.trim().toLowerCase(), hits = qn.length < 2 ? [] : index().items.filter(x => !commCfg[String(x.i)] && x.n.toLowerCase().includes(qn)).slice(0, 20);
+  return hits.map(x => `<button type="button" class="ir-row" data-ir-cadd="${esc(String(x.i))}"><span><b>${esc(x.n)}</b></span><span class="ir-num"><b>➕ Rs 10</b></span></button>`).join('');
+}
 function commSetHTML() {
   const cur = Object.entries(commCfg), qn = cq.trim().toLowerCase();
-  const hits = qn.length < 2 ? [] : index().items.filter(x => !commCfg[String(x.i)] && x.n.toLowerCase().includes(qn)).slice(0, 20);
   return `<div class="ir-sec ir-cset"><p class="ir-say">Jin items par <b>fi packet commission</b> hai un ko yahan jorein. Rate badalne ke liye khana chhoo kar likhein.</p>
     <div class="ir-tbl">${cur.map(([id, v]) => `<div class="ir-row"><span><b>${esc(v.n || cName(id))}</b><small>Rs / packet</small></span><span class="ir-crow"><input type="number" inputmode="decimal" min="0" step="0.5" value="${esc(String(v.r))}" data-ir-crate="${esc(id)}"><button type="button" class="ir-cx" data-ir-cdel="${esc(id)}">✕</button></span></div>`).join('') || '<p class="lk-note">Abhi koi item nahi.</p>'}</div>
     <label class="hs-search"><input type="search" data-ir-cq="1" placeholder="🔍 item ka naam (jaise biryani)…" value="${esc(cq)}"></label>
-    <div class="ir-tbl">${hits.map(x => `<button type="button" class="ir-row" data-ir-cadd="${esc(String(x.i))}"><span><b>${esc(x.n)}</b></span><span class="ir-num"><b>➕ Rs 10</b></span></button>`).join('')}</div>
+    <div class="ir-tbl" id="irCHits">${commHitsHTML()}</div>
     <p class="lk-note">Sirf wahi items dikhti hain jo pichhle 3 mahine mein biki hain.</p></div>`;
 }
 function commSetPaint() { const el = document.querySelector('.ir-cset'); if (!el) return; const f = document.activeElement?.matches?.('[data-ir-cq]'); el.outerHTML = commSetHTML(); if (f) { const i = document.querySelector('[data-ir-cq]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } } }
@@ -186,6 +189,13 @@ export function renderIrep() {
   paint();
 }
 function ageText() { const at = Number(data?.meta?.at) || 0; if (!at) return ['', false]; const m = Math.round((Date.now() - at) / 60000); return [`🖥 PC ka data: ${m < 1 ? 'abhi' : m < 60 ? m + ' min pehle' : Math.round(m / 60) + ' ghante pehle'} (har ghante taza)`, m > 150]; }
+let lastRows = null;
+function rowsOf() {
+  const { sorted, srt } = lastRows || { sorted: [], srt: () => 0 };
+  const qn = st.q.trim().toLowerCase(), tbl = sorted.filter(r => !qn || r.it.n.toLowerCase().includes(qn)).sort(srt), shown = tbl.slice(0, st.lim);
+  return { tbl, shown, html: `<div class="ir-tbl">${shown.map(r => `<button type="button" class="ir-row" data-ir-item="${esc(String(r.it.i))}"><span><b>${esc(r.it.n)}</b><small>${fmtQty(r.q, r.it.pk)}</small></span><span class="ir-num"><b>Rs ${num(r.rs)}</b><small class="${r.pf < 0 ? 'neg' : 'pos'}">${r.noCost ? 'nafa —' : 'Rs ' + num(r.pf) + ' · ' + pct(r.pf, r.rs) + '%'}</small></span></button>`).join('') || '<div class="nt-empty">🔍<b>Kuch nahi mila</b></div>'}</div>
+    ${tbl.length > shown.length ? `<button type="button" class="sh-wide" data-ir-more="1">⬇️ Aur dikhao (${num(tbl.length - shown.length)})</button>` : ''}` };
+}
 function paint() {
   const root = $('irRoot'); if (!root) return;
   if (!loaded) { root.innerHTML = '<div class="nt-empty">⏳<b>Report aa rahi hai…</b></div>'; return; }
@@ -201,7 +211,8 @@ function paint() {
   const dayCols = pd.map(x => ({ label: String(+x.day.slice(8)), a: x.rs, b: x.pf, act: `data-ir-day="${x.day}"` }));
   const P = patterns(m), PO = P.out;
   const srt = { rs: (x, y) => y.rs - x.rs, pf: (x, y) => y.pf - x.pf, pm: (x, y) => pct(y.pf, y.rs) - pct(x.pf, x.rs), q: (x, y) => y.q - x.q }[st.sort] || ((x, y) => y.rs - x.rs);
-  const qn = st.q.trim().toLowerCase(), tbl = sorted.filter(r => !qn || r.it.n.toLowerCase().includes(qn)).sort(srt), shown = tbl.slice(0, st.lim);
+  lastRows = { sorted, srt };   // v2.99.94: search par sirf list badle (keyboard na toote)
+  const { tbl, shown, html: rowsH } = rowsOf();
   const chips = (list, attr, on) => `<div class="mchips">${list.map(([k, l]) => `<button type="button" class="rc${on(k) ? ' on' : ''}" ${attr}="${esc(k)}">${esc(l)}</button>`).join('')}</div>`;
   const perLabel = st.per === 'c' ? `${short(a)} – ${short(b)}` : `${(PERS.find(p => p[0] === st.per) || PERS[3])[1]} · ${short(a)} – ${short(b)}`;
   root.innerHTML = `<div class="bc-head ir-head">
@@ -227,11 +238,10 @@ function paint() {
     ${PO.loss.length ? `<h5 class="neg">🔻 GHAATE mein bik rahi</h5><div class="ir-pcs">${PO.loss.slice(0, 10).map(x => pchip(x.r, `Rs ${num(x.x)}`)).join('')}</div>` : ''}
     ${![...PO.part, ...PO.wd, PO.up, PO.down, PO.thin, PO.loss].some(l => l.length) ? '<p class="lk-note">Abhi koi khaas pattern nahi — mahina aage barhega to saaf hoga.</p>' : ''}
     <p class="lk-note">Pattern = item ki us hisse / din ki roz ki sale baqi hisson / dino se kitne guna zyada. Nafa = abhi ka khareed rate × ginti (andaza).</p></section>
-  <section class="ir-sec"><div class="ir-sh"><b>📋 Saari items (${num(tbl.length)})</b><small>tap = tafseel</small></div>
+  <section class="ir-sec"><div class="ir-sh"><b>📋 Saari items (<span id="irTblN">${num(tbl.length)}</span>)</b><small>tap = tafseel</small></div>
     ${chips([['rs', 'Sale'], ['pf', 'Nafa'], ['pm', 'Nafa %'], ['q', 'Ginti']], 'data-ir-sort', k => k === st.sort)}
     <label class="hs-search"><input type="search" data-ir-q="1" placeholder="🔍 item dhoondo…" value="${esc(st.q)}"></label>
-    <div class="ir-tbl">${shown.map(r => `<button type="button" class="ir-row" data-ir-item="${esc(String(r.it.i))}"><span><b>${esc(r.it.n)}</b><small>${fmtQty(r.q, r.it.pk)}</small></span><span class="ir-num"><b>Rs ${num(r.rs)}</b><small class="${r.pf < 0 ? 'neg' : 'pos'}">${r.noCost ? 'nafa —' : 'Rs ' + num(r.pf) + ' · ' + pct(r.pf, r.rs) + '%'}</small></span></button>`).join('') || '<div class="nt-empty">🔍<b>Kuch nahi mila</b></div>'}</div>
-    ${tbl.length > shown.length ? `<button type="button" class="sh-wide" data-ir-more="1">⬇️ Aur dikhao (${num(tbl.length - shown.length)})</button>` : ''}</section>`;
+    <div id="irRows">${rowsH}</div></section>`;
 }
 
 // ---------- tafseel (dialog) ----------
@@ -314,5 +324,9 @@ document.addEventListener('change', e => {
   keep(); paint();
 });
 let qT = 0;
-document.addEventListener('input', e => { if (e.target.matches?.('[data-ir-cq]')) { cq = e.target.value || ''; clearTimeout(qT); qT = setTimeout(commSetPaint, 200); return; } if (!e.target.matches?.('[data-ir-q]')) return; st.q = e.target.value || ''; st.lim = 60; clearTimeout(qT); qT = setTimeout(() => { paint(); const i = document.querySelector('[data-ir-q]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 250); });
+document.addEventListener('input', e => {   // v2.99.94: search par sirf neeche ki list badalti hai — input wahi rehta hai (mobile keyboard / Urdu-English keyboard theek)
+  if (e.target.matches?.('[data-ir-cq]')) { cq = e.target.value || ''; clearTimeout(qT); qT = setTimeout(() => { const h = document.getElementById('irCHits'); if (h) h.innerHTML = commHitsHTML(); }, 150); return; }
+  if (!e.target.matches?.('[data-ir-q]')) return; st.q = e.target.value || ''; st.lim = 60; clearTimeout(qT);
+  qT = setTimeout(() => { const r = rowsOf(), el = document.getElementById('irRows'), n = document.getElementById('irTblN'); if (el) el.innerHTML = r.html; if (n) n.textContent = num(r.tbl.length); }, 200);
+});
 export const _irTest = { agg, range, patterns, partRange, setData: d => { data = d; loaded = true; ix = null; }, st, pdfHTML, commAgg, setComm: c => { commCfg = c; } };

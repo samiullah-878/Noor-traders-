@@ -4690,3 +4690,14 @@ Malik: "yahan aa jaye, POS mein baad mein chali jaye".
 * PC factory-post v1.1: resolveJobs — 'job:' ids ke itemJobs: done -> asli id (batch doc itemId / lines / labels update, khali label code =
   bana hua code); new / working -> waitItem true, har 60 s dobara; cancelled / failed -> 'error'. Manifest 2026-10-15.5.
 * Test: fct/t.mjs (+2 checks).
+
+=== v2.99.94 (2026-10-15 raat) — ⌨️ search mein keyboard theek + ☰ SAB SCREENS (nav.js) ===
+1) Malik (Formula ki raw maal search mein "SSalS" — harf double / ghaib): har harf par poora form dobara banta tha (input bhi naya) ->
+   mobile keyboard (Urdu+English, autocorrect) toot jata tha. Ab search par sirf neeche ki LIST badalti hai, input wahi rehta hai:
+   factory.js swapParts(root, html, ids) — paint(['fcFqList' | 'fcRqList']), formPaint(['feHits']), pickPaint(['fcPickList']); repaint() bhi
+   likhte waqt sirf list. irep.js: item search -> #irRows (rowsOf()), commission search -> #irCHits (commHitsHTML()).
+2) Malik: "multiple screen par jane ka koi hal — screen dhoondni parti hai". nav.js (naya): phone (<1100px) par .app-nav mein sirf
+   abhi wali + ⭐ pin (localStorage sam-nav-pins, default Khata / Daily Sale / Stock / Purchase, 6 tak) + aakhri 2 (sam-nav-recent) +
+   "☰ Sab screens (N)" -> dialog: groups (Rozana / Maal / Sale-Galla / Report / Aur), search, ⭐ pin, tile = asli nav button click.
+   Ijazat wahi: app.js button.hidden (MutationObserver). window.ntCurNav (DESK_NAV[view]), window.ntNavBadges (due). Computer par pehle jaisa.
+* Test: fct/nv.mjs (5), fct/t.mjs + hd/ir.mjs (input wahi rahe). Screenshot fct/nv.png.

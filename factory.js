@@ -6,7 +6,7 @@
 //   PC factory-post.js: POS Adjustment (+ tayyar maal, − raw maal; dukan godam) -> status 'posted' + adjNo, phir label jobs (batch no ke saath).
 //   Malik: 'cancelReq' (ulta Adjustment) / 'new' dobara. Rate: pos-stock stockAgentItemSave (itemJobs, PC item-post) — malik dabaye tab.
 // Tez: OK = setDoc foran (intezar nahi) — list mein "⏳ PC ko ja raha" foran. Yahan AI NAHI.
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs } from './pos-stock.js?v=2.99.93';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs } from './pos-stock.js?v=2.99.94';
 // v2.99.89: ☑ FACTORY ITEMS TICK SE (malik: "check box de do items list mein — factory mein items aa jayein") — factory/cfg.items {id: true | false | null}:
 //   true = malik ne ☑ kiya, false = category wali ko hataya, null = category ke hisaab se. Factory screen "☑ Factory items chunein" + stock screen har item par ☐ 🏭 Factory.
 
@@ -128,6 +128,9 @@ const STAT = {
 };
 const statOf = b => b._pend ? ['wait', '⏳ Bhej raha…'] : b.status === 'new' && b.waitItem ? ['wait', '⏳ Item POS mein banne ka intezar'] : (STAT[b.status] || ['wait', b.status]);
 
+// v2.99.94: search likhte waqt input dobara na bane (mobile keyboard / Urdu-English keyboard ke harf double ya ghaib ho jate the) —
+//   poora html bana kar sirf diye gaye #id dabbon ka andar badlo.
+function swapParts(root, html, ids) { const t = document.createElement('div'); t.innerHTML = html; for (const id of ids) { const a = t.querySelector('#' + id), b = root.querySelector('#' + id); if (a && b) b.innerHTML = a.innerHTML; } }
 // ---------- screen ----------
 export function renderFactory() {
   watch();
@@ -138,9 +141,11 @@ export function renderFactory() {
   ensureItems().then(ok => { if (ok) paint(); });
 }
 let rpT = 0;
-function repaint() { clearTimeout(rpT); rpT = setTimeout(() => { if ($('fcRoot')) { loadItemsQuiet(); paint(); } if (fb && $('fcBatch')) batchPaint(); if (fe && $('fcForm')) formPaint(); }, 30); }
+function repaint() { clearTimeout(rpT); rpT = setTimeout(() => { const ad = document.activeElement?.dataset || {};   // v2.99.94: likhte waqt input na toote
+  if ($('fcRoot')) { loadItemsQuiet(); paint(ad.fcFq != null ? ['fcFqList'] : ad.fcRq != null ? ['fcRqList'] : undefined); }
+  if (fb && $('fcBatch') && ad.fbReal == null) batchPaint(); if (fe && $('fcForm')) formPaint(ad.fcFq2 != null ? ['feHits'] : undefined); if (pk && $('fcPick')) pickPaint(ad.fcPq != null ? ['fcPickList'] : undefined); }, 30); }
 const loadItemsQuiet = () => { if (itemsOk) loadItems(); };
-function paint() {
+function paint(only) {
   const root = $('fcRoot'); if (!root) return;
   const B = batches.filter(inPer), live = B.filter(b => b.status !== 'cancelled' && b.status !== 'cancelReq');
   const tot = live.reduce((s, b) => s + (Number(b.cost) || 0), 0), nb = live.reduce((s, b) => s + (Number(b.n) || 0), 0);
@@ -149,7 +154,7 @@ function paint() {
   const up = itemsOk ? finished().map(it => { const f = F[it.id], c = costOf(f).cpp; return { it, c, old: Number(f.cpp) || 0 }; }).filter(x => x.old > 0 && x.c >= x.old * 1.03) : [];
   const errs = batches.filter(b => b.status === 'error');
   const kp = (b, s) => `<div><b>${b}</b><small>${s}</small></div>`;
-  root.innerHTML = `
+  const html = `
   <div class="ir-hero fc-hero"><small>NOOR TRADERS · APNI FACTORY</small><strong>🏭 Factory Production</strong>
     <div class="fc-per">${PER.map(([k, l]) => `<button type="button" class="${st.per === k ? 'on' : ''}" data-fc-per="${k}">${l}</button>`).join('')}</div>
     <div class="ir-kp">${kp(num(live.length), 'batch slip')}${kp(num(nb), 'batch (1–10)')}${kp(rs(tot), 'laagat')}</div></div>
@@ -169,6 +174,8 @@ function paint() {
   ${st.pg === 'formulas' && own ? formulasHTML() : st.pg === 'rates' && own ? ratesHTML() : st.pg === 'raw' ? rawHTML() : ''}
   <section class="ir-sec"><div class="ir-sh"><b>${PER.find(p => p[0] === st.per)?.[1] || ''} ke batch</b><small>${num(B.length)}</small></div>
     <div class="fc-list">${B.map(batchCard).join('') || `<div class="nt-empty">🏭<b>Is waqt mein koi batch nahi</b>${canFacBatch() ? '<small>Upar "➕ Naya batch" dabayein</small>' : ''}</div>`}</div></section>`;
+  if (only) { swapParts(root, html, only); return; }
+  root.innerHTML = html;
 }
 function batchCard(b) {
   const [c, t] = statOf(b), it = byId.get(String(b.itemId));
@@ -182,7 +189,7 @@ function formulasHTML() {
     <div class="ir-tbl">${fin.map(it => { const c = costOf(F[it.id]); return `<button type="button" class="ir-row" data-fc-f="${esc(it.id)}"><span><b>${esc(it.name)}</b><small>1 batch = ${esc(qt(F[it.id].per, it))} · ${num(F[it.id].lines?.length || 0)} raw${c.noRate ? ' · ⚠️ ' + c.noRate + ' ka rate nahi' : ''}</small></span><span class="ir-num"><b>${rs(c.cpp)} / ${esc((it.un || 'pcs').toLowerCase())}</b><small>${it.pack > 1 ? rs(c.cpp * it.pack) + ' / ctn' : ''}</small></span></button>`; }).join('') || '<p class="lk-note">Abhi koi formula nahi.</p>'}</div>
     <div class="fc-sub">Formula banao — tayyar maal chunein:</div>
     <label class="hs-search"><input type="search" data-fc-fq="1" placeholder="🔍 item ka naam…" value="${esc(fq)}"></label>
-    <div class="ir-tbl">${items.filter(x => !F[x.id] && (!fq || x.name.toLowerCase().includes(fq.toLowerCase()))).slice(0, 12).map(x => `<button type="button" class="ir-row" data-fc-f="${esc(x.id)}"><span><b>${esc(x.name)}</b><small>${esc(x.cat)}</small></span><span class="ir-num"><b>➕ Formula</b></span></button>`).join('')}</div></section>`;
+    <div class="ir-tbl" id="fcFqList">${items.filter(x => !F[x.id] && (!fq || x.name.toLowerCase().includes(fq.toLowerCase()))).slice(0, 12).map(x => `<button type="button" class="ir-row" data-fc-f="${esc(x.id)}"><span><b>${esc(x.name)}</b><small>${esc(x.cat)}</small></span><span class="ir-num"><b>➕ Formula</b></span></button>`).join('')}</div></section>`;
 }
 let fq = '', rq = '';
 function openFormula(id) {
@@ -191,23 +198,23 @@ function openFormula(id) {
   fe = { id: it.id, per: f?.per || (it.pack > 1 ? it.pack * 5 : 100), lines: (f?.lines || []).map(l => ({ id: String(l.id), q: Number(l.q) || 0 })), lab: Number(f?.lab) || 0, gas: Number(f?.gas) || 0, q: '' };
   dlg('🧪 Formula — ' + it.name, '<div id="fcForm"></div>'); formPaint();
 }
-function formPaint() {
+function formPaint(only) {
   const el = $('fcForm'); if (!el || !fe) return; const it = byId.get(fe.id); if (!it) return;
   const c = costOf(fe), sg = suggest(it, c.cpp), cr = curRates(it);
   const hits = fe.q.trim().length >= 2 ? items.filter(x => x.id !== fe.id && !fe.lines.some(l => l.id === x.id) && x.name.toLowerCase().includes(fe.q.trim().toLowerCase())).slice(0, 10) : [];
-  const keepF = document.activeElement?.dataset?.fcFq2 != null;
-  el.innerHTML = `<section class="ir-sec"><div class="fc-batchrow"><span>1 batch =</span><input type="number" inputmode="decimal" min="1" step="any" data-fe-per="1" value="${esc(String(fe.per))}"><span>${esc((it.un || 'pcs').toLowerCase())}${it.pack > 1 ? ' (' + esc(qt(fe.per, it)) + ')' : ''}</span></div></section>
+  const html = `<section class="ir-sec"><div class="fc-batchrow"><span>1 batch =</span><input type="number" inputmode="decimal" min="1" step="any" data-fe-per="1" value="${esc(String(fe.per))}"><span>${esc((it.un || 'pcs').toLowerCase())}${it.pack > 1 ? ' (' + esc(qt(fe.per, it)) + ')' : ''}</span></div></section>
     <section class="ir-sec"><div class="ir-sh"><b>Raw maal (1 batch)</b><small>rate = abhi ka khareed</small></div>
       <div class="ir-tbl">${c.lines.map((l, i) => `<div class="ir-row"><span><b>${esc(l.name)}</b><small>${esc((l.it?.un || 'pcs').toLowerCase())} × ${l.c ? rs(l.c) : '⚠️ rate nahi'}</small></span><span class="fc-crow"><input type="number" inputmode="decimal" min="0" step="any" data-fe-q="${i}" value="${esc(String(fe.lines[i].q))}"><b>${rs(l.rs)}</b><button type="button" class="ir-cx" data-fe-del="${i}">✕</button></span></div>`).join('') || '<p class="lk-note">Neeche se raw maal jorein.</p>'}</div>
       <label class="hs-search"><input type="search" data-fc-fq2="1" placeholder="➕ raw maal ka naam (factory category)…" value="${esc(fe.q)}"></label>
-      <div class="ir-tbl">${hits.map(x => `<button type="button" class="ir-row" data-fe-add="${esc(x.id)}"><span><b>${esc(x.name)}</b><small>stock ${esc(qt(x.stock, x))} · ${x.prate ? rs(x.prate) + ' / ' + esc((x.un || 'pcs').toLowerCase()) : 'rate nahi'}</small></span><span class="ir-num"><b>➕</b></span></button>`).join('')}</div></section>
+      <div class="ir-tbl" id="feHits">${hits.map(x => `<button type="button" class="ir-row" data-fe-add="${esc(x.id)}"><span><b>${esc(x.name)}</b><small>stock ${esc(qt(x.stock, x))} · ${x.prate ? rs(x.prate) + ' / ' + esc((x.un || 'pcs').toLowerCase()) : 'rate nahi'}</small></span><span class="ir-num"><b>➕</b></span></button>`).join('')}</div></section>
     <section class="ir-sec"><div class="ir-sh"><b>Batch ka baqi kharcha</b></div>
       <div class="fc-two"><label>Mazdoori Rs<input type="number" inputmode="decimal" min="0" data-fe-lab="1" value="${fe.lab || ''}" placeholder="0"></label><label>Gas / bijli Rs<input type="number" inputmode="decimal" min="0" data-fe-gas="1" value="${fe.gas || ''}" placeholder="0"></label></div></section>
     <section class="ir-sec fc-sum"><div class="fc-sumrow"><span>Laagat 1 batch</span><b>${rs(c.total)}</b></div><div class="fc-sumrow"><span>Laagat fi ${esc((it.un || 'pcs').toLowerCase())}</span><b>${rs(c.cpp)}${it.pack > 1 ? ' · ' + rs(c.cpp * it.pack) + ' / ctn' : ''}</b></div>
       <div class="fc-sumrow"><span>Naye rate (W ${wm()}% · R ${rm()}%)</span><b>${it.pack > 1 ? 'W ' + num(sg.wctn) + '/' + num(sg.wpcs) + ' · R ' + num(sg.rctn) + '/' + num(sg.rpcs) : 'W ' + num(sg.wpcs) + ' · R ' + num(sg.rpcs)}</b></div>
       <div class="fc-sumrow"><span>Abhi POS mein</span><b>${it.pack > 1 ? 'W ' + num(cr.wctn) + '/' + num(cr.wpcs) + ' · R ' + num(cr.rctn) + '/' + num(cr.rpcs) : 'W ' + num(cr.wpcs) + ' · R ' + num(cr.rpcs)}</b></div></section>
     <div class="fc-btns">${forms()[fe.id] ? '<button type="button" class="fc-no" data-fe-rm="1">🗑 Formula hatao</button>' : ''}<button type="button" class="fc-go" data-fe-save="1">✓ Formula save</button></div>`;
-  if (keepF) { const i = el.querySelector('[data-fc-fq2]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+  if (only) { swapParts(el, html, only); return; }
+  el.innerHTML = html;
 }
 async function formSave(del) {
   if (!fe) return; if (!cloud?.setFactoryCfg) { notice('App update karein'); return; }
@@ -257,7 +264,7 @@ function rawHTML() {
   return `<section class="ir-sec"><div class="ir-sh"><b>📦 Raw maal (dukan godam)</b><button type="button" class="fc-x" data-fc-pg="home">✕</button></div>
     ${goPurchase && (isOwner() || canOf('v:purchase')) ? '<button type="button" class="fc-go" data-fc-pur="1">🧾 Raw maal ki purchase daalein</button>' : ''}
     <label class="hs-search"><input type="search" data-fc-rq="1" placeholder="🔍 raw maal…" value="${esc(rq)}"></label>
-    <div class="ir-tbl">${list.slice(0, 80).map(({ x, u, need, kam }) => `<div class="ir-row"><span><b>${esc(x.name)}</b><small>${u.length ? u.length + ' formula mein · 1 batch = ' + esc(qt(need, x)) : 'kisi formula mein nahi'}${x.prate ? ' · ' + rs(x.prate) + ' / ' + esc((x.un || 'pcs').toLowerCase()) : ''}</small></span><span class="ir-num"><b class="${x.stock < 0 || kam ? 'fc-neg' : ''}">${esc(qt(x.stock, x))}</b><small class="${kam ? 'neg' : 'pos'}">${kam ? 'kam — 1 batch se kam' : need ? '~' + num(Math.floor(x.stock / need)) + ' batch ka' : ''}</small></span></div>`).join('') || '<p class="lk-note">Raw maal nahi mila (POS mein category "factory raw").</p>'}</div></section>`;
+    <div class="ir-tbl" id="fcRqList">${list.slice(0, 80).map(({ x, u, need, kam }) => `<div class="ir-row"><span><b>${esc(x.name)}</b><small>${u.length ? u.length + ' formula mein · 1 batch = ' + esc(qt(need, x)) : 'kisi formula mein nahi'}${x.prate ? ' · ' + rs(x.prate) + ' / ' + esc((x.un || 'pcs').toLowerCase()) : ''}</small></span><span class="ir-num"><b class="${x.stock < 0 || kam ? 'fc-neg' : ''}">${esc(qt(x.stock, x))}</b><small class="${kam ? 'neg' : 'pos'}">${kam ? 'kam — 1 batch se kam' : need ? '~' + num(Math.floor(x.stock / need)) + ' batch ka' : ''}</small></span></div>`).join('') || '<p class="lk-note">Raw maal nahi mila (POS mein category "factory raw").</p>'}</div></section>`;
 }
 
 // ---------- ☑ factory items chunna (malik) ----------
@@ -268,21 +275,22 @@ async function openPicker() {
   dlg('☑ Factory items chunein', '<div id="fcPick"><p class="lk-note">⏳ Items aa rahi hain…</p></div>');
   if (!(await ensureItems())) return; pickPaint();
 }
-function pickPaint() {
+function pickPaint(only) {
   const el = $('fcPick'); if (!el || !pk) return;
   let all = []; try { all = stockPickList(); } catch {}
   const isOn = x => { const v = cfg?.items?.[x.id]; return v === true || (v !== false && x.catFac); };
   const q = pk.q.trim().toLowerCase(), F = forms();
   const list = all.filter(x => (pk.f === 'on' ? isOn(x) : pk.f === 'cat' ? x.catFac : true) && (!q || x.name.toLowerCase().includes(q) || x.code.includes(q)))
     .sort((a, b) => (isOn(b) ? 1 : 0) - (isOn(a) ? 1 : 0) || a.name.localeCompare(b.name));
-  const nOn = all.filter(isOn).length, keepF = document.activeElement?.dataset?.fcPq != null;
-  el.innerHTML = `<p class="ir-say">Jis item par <b>☑</b> lagayein wo factory mein aa jayegi — formula wali = <b>tayyar maal</b>, baqi = <b>raw maal</b>.</p>
+  const nOn = all.filter(isOn).length;
+  const html = `<p class="ir-say">Jis item par <b>☑</b> lagayein wo factory mein aa jayegi — formula wali = <b>tayyar maal</b>, baqi = <b>raw maal</b>.</p>
     <div class="fc-per fc-pf">${[['sab', 'Sab (' + num(all.length) + ')'], ['on', '☑ Chuni hui (' + num(nOn) + ')'], ['cat', 'Category wali (' + num(all.filter(x => x.catFac).length) + ')']].map(([k, l]) => `<button type="button" class="${pk.f === k ? 'on' : ''}" data-fp-f="${k}">${l}</button>`).join('')}</div>
     <label class="hs-search"><input type="search" data-fc-pq="1" placeholder="🔍 naam ya barcode…" value="${esc(pk.q)}"></label>
-    ${pendList().map(p => `<div class="fc-pk pk-on"><span>⏳</span><span><b>${esc(p.n)}</b><small>PC baqi — formula / batch abhi; POS mein bante hi asli item se jur jayega</small></span></div>`).join('')}
+    <div id="fcPickList">${pendList().map(p => `<div class="fc-pk pk-on"><span>⏳</span><span><b>${esc(p.n)}</b><small>PC baqi — formula / batch abhi; POS mein bante hi asli item se jur jayega</small></span></div>`).join('')}
     <div class="fc-picks">${list.slice(0, pk.lim).map(x => `<label class="fc-pk${isOn(x) ? ' pk-on' : ''}"><input type="checkbox" data-fac-tick="${esc(x.id)}"${isOn(x) ? ' checked' : ''}><span><b>${esc(x.name)}</b><small>${esc(x.cat || '—')} · stock ${esc(qt(x.stock, x))}${F[x.id] ? ' · 🧪 formula' : ''}</small></span></label>`).join('') || '<p class="lk-note">Kuch nahi mila.</p>'}</div>
-    ${list.length > pk.lim ? `<button type="button" class="fc-no" data-fp-more="1">Aur dikhao (${num(list.length - pk.lim)})</button>` : ''}`;
-  if (keepF) { const i = el.querySelector('[data-fc-pq]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+    ${list.length > pk.lim ? `<button type="button" class="fc-no" data-fp-more="1">Aur dikhao (${num(list.length - pk.lim)})</button>` : ''}</div>`;
+  if (only) { swapParts(el, html, only); return; }
+  el.innerHTML = html;
 }
 async function facToggle(id, on, box) {
   if (!isOwner() || !cloud?.setFactoryCfg) { if (box) box.checked = !on; notice('Sirf malik'); return; }
@@ -418,10 +426,10 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('input', e => {
   const t = e.target; if (!t?.dataset || !t.closest?.('.fc-root')) return; const d = t.dataset;
-  if (d.fcFq != null) { fq = t.value || ''; clearTimeout(qT); qT = setTimeout(() => { paint(); const i = document.querySelector('[data-fc-fq]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 200); return; }
-  if (d.fcRq != null) { rq = t.value || ''; clearTimeout(qT); qT = setTimeout(() => { paint(); const i = document.querySelector('[data-fc-rq]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 200); return; }
-  if (d.fcPq != null && pk) { pk.q = t.value || ''; pk.lim = 60; clearTimeout(qT); qT = setTimeout(pickPaint, 180); return; }
-  if (d.fcFq2 != null && fe) { fe.q = t.value || ''; clearTimeout(qT); qT = setTimeout(formPaint, 180); return; }
+  if (d.fcFq != null) { fq = t.value || ''; clearTimeout(qT); qT = setTimeout(() => paint(['fcFqList']), 180); return; }
+  if (d.fcRq != null) { rq = t.value || ''; clearTimeout(qT); qT = setTimeout(() => paint(['fcRqList']), 180); return; }
+  if (d.fcPq != null && pk) { pk.q = t.value || ''; pk.lim = 60; clearTimeout(qT); qT = setTimeout(() => pickPaint(['fcPickList']), 180); return; }
+  if (d.fcFq2 != null && fe) { fe.q = t.value || ''; clearTimeout(qT); qT = setTimeout(() => formPaint(['feHits']), 180); return; }
 });
 let qT = 0;
 document.addEventListener('change', e => {
