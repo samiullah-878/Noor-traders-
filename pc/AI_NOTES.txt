@@ -2945,3 +2945,11 @@ Foran wali (2 min se kam) job par push nahi. Log: item-log.txt "🔔 item khabar
 ⏳ 'job:<itemJobId>' (app ka naya item jo POS mein abhi nahi bana): resolveJobs() itemJobs/<id> parhta hai — done + itemId -> batch doc
 mein asli itemId / lines / labels (khali barcode = job.code) likh kar post; 'new' / 'working' -> waitItem true (WaitItem), waiting set,
 har 60 s handle() dobara; cancelled / failed -> status 'error' + wajah.
+
+=== 2026-10-16 — ginti-post.js v1.0 (📋 app ki ginti -> POS Adjustment khud) · manifest 2026-10-16.1 ===
+* Naya service: ginti-post.js + ginti-auto.bat (lock 47835, ginti-log.txt). App Stock ⚙️ "Ginti khud POS mein" ON ho to har Save
+  (stockCount doc auto:true, pfAt != at) par: delta = total − stock ginti ke waqt (CurrStock − StockLedger baad ki harkat) -> roz ka EK
+  Adjustment "Ginti DD-MM-YYYY NT" (Description se dhoondta hai, na ho to naya) mein line; dobara gina = agla delta; del = −pfQ wapas.
+  Doc par pfAt / pfQ / pfAdj / sysPos likhta hai. Transaction + CurrStock jaanch (na badla = rollback). Sale / khata par koi asar nahi.
+* post-farq.js (purana "Farq ka bill" flow) waisa hi — auto OFF ho to wahi chalta hai. Dono ek saath chal sakte hain.
+* Pehli dafa: KHATA-DOCTOR.bat chalayein (nayi files) -> ginti-auto.bat start. firebase-key.json wahi (haath se).

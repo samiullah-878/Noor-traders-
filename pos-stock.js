@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.98';
-import { liveLabelsHTML } from './barcode.js?v=2.99.98';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.100.0';
+import { liveLabelsHTML } from './barcode.js?v=2.100.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -21,6 +21,13 @@ let godamAll = false;   // v1.97: godam par 'Sab' khud chuna ho tabhi sab items 
 let postReq = null;
 let hidden = {};   // item id -> true (Band kiye hue items, sab branches mein chhupe)
 let counts = new Map(), round = '', stopCount = null, isOwner = () => false;
+// v2.100.0: 📋 GINTI KHUD POS MEIN (malik: "physical likhein, Save — PC bill saath saath banata rahe, dobara gino to edit") —
+//   stockCount/_auto {on}: round = aaj ka din (YYYY-MM-DD) khud; har count doc {auto, sys0, pfAt, pfAdj, pfQ, del} — PC ginti-post.js
+//   roz ke ek POS Adjustment "Ginti <din> NT" mein har Save ka farq (delta) jorta hai; dobara gino = agla delta, hatao = ulta.
+let autoOn = false;
+const dayStr = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const roundNow = () => { if (autoOn) round = dayStr(); return round; };
+const posted = c => !!(c && c.pfAt && c.pfAt === c.at);
 // v1.49: _flags (baqi / check nishan), _lock (malik ne ginti band ki)
 let flags = {}, countOff = false;
 const flagOf = id => flags[String(id)] || {};
@@ -80,7 +87,10 @@ function ijPaint() {
   const row = (j, bad) => `<div class="ij-row${bad ? ' bad' : ''}"><b>${esc(j.name || 'Item')}</b><small>${j.op === 'new' ? '➕ Naya' : '✏️ Badla'}${j.rpcs ? ' · R ' + num(j.rpcs) : ''}${j.code ? ' · ' + esc(j.code) : ''} · ${esc(stampText(j.at))}${j.editAt ? ' · ✏️ ' + esc(stampText(j.editAt)) : ''}${bad ? ' · ❌ ' + esc(j.error || '') : j.status === 'working' ? ' · ⚙️ PC bana raha — ab nahi badal sakta' : ' · ⏳ PC on hote hi'}</small>${!bad && j.status === 'new' && mine(j) ? `<div class="ij-acts">${j.op === 'new' ? `<button type="button" data-ij-edit="${esc(j.id)}">✏️ Edit</button>` : ''}<button type="button" class="x" data-ij-cancel="${esc(j.id)}">✕ Cancel</button></div>` : ''}</div>`;
   el.innerHTML = `<p class="stat-note">Ye items line mein mehfooz hain — Server PC on hote hi khud POS mein ban jayengi aur phone par khabar aayegi.</p>${P.map(j => row(j)).join('') || '<p class="stat-note">✓ Koi item baqi nahi</p>'}${B.length ? '<h4>❌ Nahi bane (24 ghante)</h4>' + B.map(j => row(j, true)).join('') : ''}`;
 }
+const whoName = () => { try { return String(setupName?.() || '').slice(0, 40); } catch { return ''; } };
+let setupName = null;
 export function stockSetup(opts) {
+  if (opts.name) setupName = opts.name;
   aiText = opts?.ai || aiText;
   if (!urduStop && opts?.cloud?.listenUrdu) urduStop = opts.cloud.listenUrdu(m => { urdu = m || {}; if (stockActive) soft(); });
   if (!aliasStop && opts?.cloud?.listenAliases) aliasStop = opts.cloud.listenAliases(m => setAliases(m));   // v1.75: doosre naam
@@ -107,6 +117,9 @@ function soft() {
     rerender();
   }, 300);
 }
+document.addEventListener('input', e => {   // v2.100.0: upar chipki search = asli #search
+  const t = e.target; if (!t?.matches?.('[data-sk-q]')) return; const g = $('search'); if (!g || g.value === t.value) return; g.value = t.value; g.dispatchEvent(new Event('input', { bubbles: true }));
+});
 document.addEventListener('focusout', e => {
   if (softWaiting && e.target.closest?.('#list')) setTimeout(soft, 50);
 });
@@ -134,6 +147,7 @@ function start(withCounts = true) {
     stopCount = cloud.listenStockCount(list => {
       counts = new Map();
       round = list.find(r => r.id === '_round')?.round || '';
+      autoOn = !!list.find(r => r.id === '_auto')?.on; roundNow();
       postReq = list.find(r => r.id === '_post') || null;
       hidden = list.find(r => r.id === '_hidden')?.items || {};
       flags = list.find(r => r.id === '_flags')?.items || {};
@@ -169,7 +183,7 @@ const sysSure = c => !!(c && c.sysPos != null && c.sysPosAt === c.at);
 const countId = (b, itemId) => `c-${b}-${itemId}`;
 const countOf = (b, r) => {
   const c = counts.get(countId(b, r.id));
-  return c && c.round === round && round ? c : null;
+  return c && c.round === round && round && !c.del ? c : null;
 };
 const countedPcs = c => Number(c?.total) || 0;
 // v2.99.87: 🕘 GINTI / TICK HISTORY DIN KE HISAAB SE (malik: "stock ki tick save history ke upar day wise kar do — jo selected days hon un ki hi
@@ -457,7 +471,11 @@ function renderStockInner() {
   pickedBranch = pick;
 
   $('actions').innerHTML = '';
-  $('summary').innerHTML = summaryHTML(branches, pick, items, meta, names, canJama);
+  { // v2.100.0: upar chipki search mein likhte waqt sirf neeche ka hissa badle (input wahi rahe — keyboard na toote)
+    const html = summaryHTML(branches, pick, items, meta, names, canJama), sm = $('summary'), a = document.activeElement;
+    if (a?.matches?.('[data-sk-q]') && sm.querySelector('.sk-body')) { const t = document.createElement('div'); t.innerHTML = html; const nb = t.querySelector('.sk-body'), ob = sm.querySelector('.sk-body'); if (nb && ob) ob.innerHTML = nb.innerHTML; const ne = t.querySelector('.sk-hrow em'), oe = sm.querySelector('.sk-hrow em'); if (ne && oe) oe.textContent = ne.textContent; }
+    else sm.innerHTML = html;
+  }
 
   if (failed) {
     $('list').innerHTML = `<div class="empty"><strong>Stock nahi mila</strong><p>${esc(failed)}</p></div>`;
@@ -579,26 +597,69 @@ export function gintiReport() {
 }
 let gintiPdfOf = null;
 export function setGintiPdf(fn) { gintiPdfOf = fn; }
+let gf = 'all';
 function openGinti() {
   const d = $('dialog'); if (!d) return;
   const { pick, items, names } = collect();
-  const list = items.map(r => ({ r, c: countOf(pick, r) })).filter(x => x.c)
-    .sort((a, b) => (Number(b.c.at) || 0) - (Number(a.c.at) || 0));
-  let net = 0;
-  const rows = list.map(({ r, c }) => {
-    const f = countedPcs(c) - Number(sysOf(c, r)); const rs = r.prate ? f * r.prate : 0; net += rs;
-    return `<tr><td>${esc(r.name)}<br><small>${esc(stampText(c.at))}</small></td><td>${num(c.ctn)}+${num(c.pcs)}<br><small>${num(countedPcs(c))}</small></td><td>${num(sysOf(c, r))}</td><td>${f > 0 ? '+' : ''}${num(f)}${rs ? `<br><small>Rs ${rs > 0 ? '+' : ''}${num(rs)}</small>` : ''}</td></tr>`;
-  }).join('');
-  d.classList.remove('search-dialog');
-  $('dialogTitle').textContent = `📋 Ginti ${round || ''} — ${branchName(pick, names)}`;
-  $('dialogBody').innerHTML = (list.length
-    ? `<p>${num(list.length)} items gine gaye · Kul farq <b>Rs ${net > 0 ? '+' : ''}${num(net)}</b></p>
-       <div style="overflow-x:auto"><table><thead><tr><th>Item</th><th>Gina</th><th>System</th><th>Farq</th></tr></thead><tbody>${rows}</tbody></table></div>`
-    : '<p>Is branch mein abhi koi item nahi gina gaya.</p>')
-    + (list.length ? `<div class="account-tools"><button type="button" class="primary" data-ginti-pdf="1">⇩ PDF · WhatsApp</button></div>` : '')   // v2.13
-    + (isOwner() ? `<p class="muted" style="margin-top:12px;font-size:.85em">Farq ka bill banne ke baad nayi ginti shuru karein, taake purani ginti dobara na gine.</p>
-       <div class="account-tools"><button data-stock-round="new">Nayi ginti shuru</button></div>` : '');
+  const list = items.map(r => ({ r, c: countOf(pick, r) })).filter(x => x.c).sort((a, b) => (Number(b.c.at) || 0) - (Number(a.c.at) || 0));
+  let net = 0, kam = 0, zy = 0, kr = 0, zr = 0, w = 0;
+  for (const { r, c } of list) { const f = countedPcs(c) - Number(sysOf(c, r)); const rs = r.prate ? f * r.prate : 0; net += rs; if (f < 0) { kam++; kr += rs; } else if (f > 0) { zy++; zr += rs; } if (autoOn && !posted(c)) w++; }
+  const L = list.filter(({ r, c }) => { const f = countedPcs(c) - Number(sysOf(c, r)); return gf === 'all' || (gf === 'kam' ? f < 0 : gf === 'zy' ? f > 0 : Math.abs(f) < 0.001); });
+  const st = c => autoOn ? (posted(c) ? `<span class="ok">✓ POS mein${c.pfAdj ? ' #' + esc(c.pfAdj) : ''} · ${esc(stampText(c.at))}${c.byName ? ' · ' + esc(c.byName) : ''}</span>` : `<span class="w">⏳ POS ko ja raha · ${esc(stampText(c.at))}</span>`) : `<span class="e">${esc(stampText(c.at))}${(c.history || []).length > 1 ? ' · ✏️ ' + (c.history.length) + ' dafa' : ''}</span>`;
+  const rows = L.map(({ r, c }) => { const f = Math.round((countedPcs(c) - Number(sysOf(c, r))) * 100) / 100, rs = r.prate ? f * r.prate : 0, k = f < 0 ? 'r' : f > 0 ? 'g' : 'z';
+    return `<button type="button" class="sk-tr" data-ginti-row="${esc(r.id)}"><span class="nm"><b>${esc(r.name)}</b>${st(c)}</span><span class="n">${num(sysOf(c, r))}</span><span class="n"><b>${num(countedPcs(c))}</b></span><span class="fq"><b class="${k}">${f > 0 ? '+' : ''}${num(f)}</b><span class="${k}">${rs ? 'Rs ' + (rs > 0 ? '+' : '') + num(Math.round(rs)) : 'barabar'}</span></span></button>`; }).join('');
+  d.classList.remove('search-dialog'); d.classList.add('full-dialog');
+  $('dialogTitle').textContent = (autoOn ? '📋 Aaj ki ginti' : `📋 Ginti ${round || ''}`) + ' — ' + branchName(pick, names);
+  $('dialogBody').innerHTML = `<div class="sk-sheet" id="skGinti">
+    ${!round ? `<div class="sc-banner warn"><b>⏳ Abhi ginti shuru nahi</b><small>${isOwner() ? '"📋 Ginti khud POS mein" on karein (⚙️) — ya neeche nayi ginti shuru.' : 'Malik shuru kare.'}</small></div>${isOwner() ? '<div class="sk-two"><button type="button" class="sk-btn p" data-sk-auto-on="1">📋 Khud POS mein — ON</button><button type="button" class="sk-btn" data-stock-round="new">Nayi ginti (purana)</button></div>' : ''}` : `
+    <div class="sk-ghead"><div class="sk-kp"><div><b>${num(list.length)}</b><span>items gine</span></div><div><b>${num(kam)} kam</b><span>Rs ${num(Math.round(kr))}</span></div><div><b>${num(zy)} zyada</b><span>Rs +${num(Math.round(zr))}</span></div></div>
+      <div class="sk-kul"><span>Kul farq (khareed rate)</span><b class="${net < 0 ? 'r' : net > 0 ? 'g' : ''}">Rs ${net > 0 ? '+' : ''}${num(Math.round(net))}</b></div></div>
+    ${autoOn ? `<div class="sk-info">ℹ️ Har <b>Save</b> ka farq khud POS ke aaj ke Adjustment <b>"Ginti ${esc(round.slice(8, 10) + '-' + round.slice(5, 7))} ${esc(branchName(pick, names))}"</b> mein jata hai${w ? ` — <b>${num(w)} abhi ja rahe</b> (PC 30 sec)` : ''}. Line par tap = dobara gino / edit.</div>` : postLine(pick)}
+    <div class="sk-chips">${[['all', 'Sab'], ['kam', 'Kam ' + num(kam)], ['zy', 'Zyada ' + num(zy)], ['eq', 'Barabar']].map(([k, l]) => `<button type="button" class="sk-chip${gf === k ? ' on' : ''}" data-ginti-f="${k}">${l}</button>`).join('')}</div>
+    <div class="sk-tbl"><div class="sk-th"><span>ITEM</span><span>SYSTEM</span><span>GINA</span><span>FARQ</span></div>${rows || '<p class="sk-note">Is mein koi item nahi.</p>'}</div>
+    <div class="sk-two">${list.length ? '<button type="button" class="sk-btn p" data-ginti-pdf="1">📄 PDF · WhatsApp</button>' : ''}${isOwner() && !autoOn && round ? '<button type="button" class="sk-btn" data-stock-post="1">🧾 Farq ka bill PC par</button>' : ''}${isOwner() && !autoOn ? '<button type="button" class="sk-btn" data-stock-round="new">Nayi ginti shuru</button>' : ''}</div>`}
+    </div>`;
   if (!d.open) d.showModal();
+}
+// ✏️ dobara gino / edit (ginti dialog ki line par tap) — pichhli ginti + nayi; auto: POS mein agla delta
+function openRecount(itemId) {
+  const d = $('dialog'); if (!d) return;
+  const { pick, items } = collect(); const r = items.find(x => String(x.id) === String(itemId)); if (!r) return;
+  const c = countOf(pick, r), per = Number(r.pack) || 0, H = Array.isArray(c?.history) ? c.history.slice(-5).reverse() : [];
+  const f = c ? Math.round((countedPcs(c) - Number(sysOf(c, r))) * 100) / 100 : 0;
+  d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = '✏️ Dobara gino — ' + r.name;
+  $('dialogBody').innerHTML = `<div class="sk-sheet" id="skRe" data-re-item="${esc(r.id)}">
+    <div class="sk-rehead"><b>${esc(r.name)}</b><small>system ${num(r.stock)} ${esc(r.uName || 'Pcs')}${per > 1 ? ' · 1 ' + esc(r.cName || 'Ctn') + ' = ' + num(per) : ''}${r.prate ? ' · khareed Rs ' + num(r.prate) : ''}</small></div>
+    ${H.length ? `<div class="sk-list"><div class="sk-lh">AAJ KI GINTI</div>${H.map((h, i) => `<div class="sk-hist${i === 0 ? ' cur' : ''}"><span class="t"><b>${esc(stampText(h.at))}${i === 0 ? ' (abhi lagi hui)' : ''}${h.tick ? ' · ✓ tick' : ''}</b><span>system ${num(h.sys)} · gina ${num(h.total)}</span></span><b class="${h.total - h.sys < 0 ? 'r' : h.total - h.sys > 0 ? 'g' : 'z'}">${h.total - h.sys > 0 ? '+' : ''}${num(Math.round((h.total - h.sys) * 100) / 100)}</b></div>`).join('')}</div>` : ''}
+    <div class="sk-lab">Nayi ginti (physical)</div>
+    <div class="sk-phy">${per > 1 ? `<label>${esc(r.cName || 'Ctn')}<input type="number" step="any" inputmode="decimal" data-re-ctn="1" value="${c ? esc(String(c.ctn ?? '')) : ''}"></label>` : ''}<label>${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" data-re-pcs="1" value="${c ? esc(String(c.pcs ?? '')) : ''}"></label></div>
+    <div class="sk-farq ${f < 0 ? 'r' : f > 0 ? 'g' : 'z'}" id="reFarq">${c ? `${num(countedPcs(c))} ${esc(r.uName || 'Pcs')} · farq ${f > 0 ? '+' : ''}${num(f)}${r.prate ? ' · Rs ' + (f > 0 ? '+' : '') + num(Math.round(f * r.prate)) : ''}` : 'Ginti likhein'}</div>
+    ${autoOn ? '<div class="sk-info">↻ Save par POS ke aaj ke Adjustment mein is item ka <b>agla farq</b> jata hai (pehla wapas nahi hota, stock do dafa nahi katta).</div>' : ''}
+    <button type="button" class="sk-gbig" data-re-save="1">✓ Ye ginti Save</button>
+    ${c && isOwner() ? '<button type="button" class="sk-rbtn" data-re-del="1">🗑 Is item ki ginti hatao (farq 0) — sirf malik</button>' : ''}
+    <button type="button" class="sk-btn" data-stock-ginti="1">‹ Wapas list</button></div>`;
+  if (!d.open) d.showModal();
+}
+function reRead(r) {
+  const per = Number(r.pack) || 0, ctn = Number($('skRe')?.querySelector('[data-re-ctn]')?.value || 0), pcs = Number($('skRe')?.querySelector('[data-re-pcs]')?.value || 0);
+  const total = Math.round((ctn * (per > 0 ? per : 1) + pcs) * 100) / 100;
+  return { ctn: per > 1 ? ctn : 0, pcs, total, bad: !Number.isFinite(total) };
+}
+async function reSave() {
+  const box = $('skRe'); if (!box) return; const { items } = collect(); const r = items.find(x => String(x.id) === box.dataset.reItem); if (!r) return;
+  if (!roundNow()) { notice('Ginti shuru nahi'); return; } if (countLocked()) { notice('🔴 Counting band hai'); return; }
+  const v = reRead(r); if (v.bad) { notice('Sirf hindse'); return; }
+  if (v.total === 0 && !confirm(`"${r.name}" ki ginti ZERO save karein?`)) return;
+  try { await writeCount(r, v, null); if (flagOf(r.id).baqi) await setFlag(r.id, { baqi: false }); notice(`✓ ${r.name} — ${num(v.total)} ${r.uName || 'Pcs'}${autoOn ? ' · POS ko ja raha' : ''}`); openGinti(); }
+  catch (e) { notice('⚠️ Save nahi hui: ' + errTxt(e)); }
+}
+// 🗑 ginti hatao (malik): auto = PC ulta delta (pfQ wapas); purana = doc del
+async function reDel() {
+  const box = $('skRe'); if (!box || !isOwner()) return; const { items, pick } = collect(); const r = items.find(x => String(x.id) === box.dataset.reItem); if (!r) return;
+  const c = countOf(pick, r); if (!c) return;
+  if (!confirm(`"${r.name}" ki aaj ki ginti hatani hai?${autoOn && c.pfQ ? '\nPOS mein ' + (c.pfQ > 0 ? '−' : '+') + num(Math.abs(c.pfQ)) + ' wapas hoga.' : ''}`)) return;
+  try { await cloud.saveStockCount({ ...c, id: countId(pick, r.id), del: true, delAt: Date.now(), at: Date.now(), total: Number(c.sys0 ?? c.sys) || 0, ctn: 0, pcs: 0 }); notice('Ginti hata di' + (autoOn ? ' — PC POS mein wapas karega' : '')); openGinti(); }
+  catch (e) { notice('Nahi hua: ' + errTxt(e)); }
 }
 
 // v2.76: MALIK ONLY — stock ki kul maaliyat (khareed rate se), bechne par, nafa; har godam alag. Minus / rate-ke-baghair alag gine.
@@ -626,81 +687,95 @@ function valueCardHTML(branches, names) {
 }
 document.addEventListener('click', e => { const c = e.target.closest?.('[data-val-toggle]'); if (!c || !isOwner()) return; valShowUntil = Date.now() < valShowUntil ? 0 : Date.now() + 30000; rerender(); if (valShowUntil) setTimeout(() => { if (Date.now() >= valShowUntil) rerender(); }, 30500); });
 function summaryHTML(branches, pick, items, meta, names, canJama = false) {
+  // v2.100.0: NAYI TARTEEB (malik: "search tak scroll, chips bohat zyada") — upar CHIPKI patti (search · scan · mic · godam),
+  //   ginti ka ek bara button, 8 tiles, 3 chips + Filter (baqi filter / din / tarteeb sheet mein), ⚙️ (malik: switches / purana bill flow).
   const totalPcs = meta?.totalPcs ?? items.reduce((s, r) => s + (r.stock || 0), 0);
   const stamp = meta?.syncedAt;
-
-  const branchBar = branches.length > 1
-    ? `<div class="account-tools">${branches.map(b =>
-        `<button data-stock-branch="${b}"${b === pick ? ' class="selected"' : ''}>${esc(branchName(b, names))}</button>`
-      ).join('')}${canJama ? `<button data-stock-branch="${JAMA}" class="jama-chip${pick === JAMA ? ' selected' : ''}" title="NOOR TRADERS + Godam 2 ek jagah (farzi jama — POS mein kuch nahi badalta); apni factory ka minus shamil nahi">🧮 NT + G2 (jama)</button>` : ''}</div>${pick === JAMA ? '<p class="stat-note jama-note">🧮 Farzi jama: NOOR TRADERS + Godam 2 · apni factory (surf, soda, kala soap) ka minus 0 gina gaya · POS mein kuch nahi badla</p>' : ''}`
-    : '';
-
   const minus = items.filter(r => r.stock < 0 && !isHidden(r)).length;
   const live = items.filter(r => !isHidden(r));
   const hasN = live.filter(r => Math.abs(Number(r.stock) || 0) > 0.001 || countOf(pick, r)).length;
   const hiddenN = items.length - live.length;
-  const done = items.filter(r => countOf(pick, r)).length;
-  const gap = items.filter(r => { const c = countOf(pick, r); return c && Math.abs(countedPcs(c) - Number(sysOf(c, r))) > 0.001; }).length;
-  const netRs = items.reduce((n, r) => {
-    const c = countOf(pick, r);
-    if (!c || !r.prate) return n;
-    return n + (countedPcs(c) - Number(sysOf(c, r))) * r.prate;
-  }, 0);
   const shownCount = items.filter(passes).length;
-  const btn = (attr, val, cur, label) => `<button ${attr}="${val}"${cur === val ? ' class="selected"' : ''}>${label}</button>`;
-  const roundText = round ? 'Ginti ' + esc(round) + ' — ' + num(done) + ' / ' + num(items.length) + ' hue' : 'Ginti shuru nahi hui';
-  const farqText = Math.abs(netRs) > 0.5
-    ? `<br><b>Kul farq: Rs ${netRs > 0 ? '+' : ''}${num(netRs)}</b> ${netRs < 0 ? '(nuqsan)' : '(zyada nikla)'}` : '';
-  const roundBtns = (isOwner() ? '<button data-stock-round="new">Nayi ginti shuru</button>' : '')
-    + (isOwner() && round ? '<button data-stock-post="1">Farq ka bill PC par banao</button>' : '')
-    + (isOwner() ? `<button data-stock-lock="1" class="${countOff ? 'sh-lock off' : 'sh-lock'}">${countOff ? '🔴 Counting OFF — mulazim save nahi kar sakta' : '🟢 Counting ON'}</button>` : '')
-    + (countLocked() ? '<p class="stat-note sh-locked">🔴 Malik ne counting band ki hui hai — ginti save nahi ho sakti, sirf dekh sakte hain.</p>' : '');
-  const nishanN = items.filter(r => flagOf(r.id).baqi).length, checkN = items.filter(r => flagOf(r.id).check).length;
-  return `${countBanner()}${isOwner() ? valueCardHTML(branches, names) : ''}<div class="stock-head">
-    <div class="sh-title">
-      <strong>${num(shownCount)} items</strong>
-      <small>${esc(branchName(pick, names))} · kul ${num(totalPcs)} pcs${stamp ? ' · aakhri tabdeeli ' + esc(since(stamp)) : ''}</small>${liveChip()}
+  const q = $('search')?.value || '';
+  const gd = branches.length > 1 ? `<div class="sk-gd">${branches.map(b => `<button type="button" data-stock-branch="${b}"${b === pick ? ' class="on"' : ''}>${esc(branchName(b, names))}</button>`).join('')}${canJama ? `<button type="button" data-stock-branch="${JAMA}"${pick === JAMA ? ' class="on"' : ''}>🧮 NT + G2</button>` : ''}</div>` : '';
+  const tile = (attr, ic, lab, cls = '') => `<button type="button" class="sk-tile${cls ? ' ' + cls : ''}" ${attr}="1"><span>${ic}</span>${lab}</button>`;
+  const tiles = [
+    canNewItem() ? tile('data-stock-newitem', '➕', 'Naya item') : '',
+    can('stock.in') ? tile('data-stock-in', '📥', 'Aaya / gaya') : '',
+    can('stock.reg') ? tile('data-stock-reg', '📋', 'Register') : '',
+    can('stock.tc') ? tile('data-stock-tc', '🧾', 'Note check') : '',
+    can('stock.demand') ? tile('data-demand', '📢', 'Demand') : '',
+    can('stock.tolai') ? tile('data-stock-tolai', '⚖️', 'Tolai') : '',
+    can('stock.transfer') ? tile('data-stock-transfer', '⇄', 'Transfer') : '',
+    canEditItem() ? tile('data-stock-urdu', '🔤', 'Urdu naam') : '',
+  ].filter(Boolean);
+  const extra = filter === 'baqi' ? 'Ginti baqi' : filter === 'farq' ? '⚖️ Farq wale' : filter === 'nishan' ? '⏳ Baqi nishan' : filter === 'check' ? '🔍 Check wale' : filter === 'hidden' ? 'Band items' : filter === 'hday' && hDay ? '🕘 ' + hDayLabel(hDay) : '';
+  const fN = (hDay ? 1 : 0) + (sort !== 'name' ? 1 : 0) + (extra ? 1 : 0);
+  return `${countBanner()}<div class="stock-head sk">
+    <div class="sk-top">
+      <div class="sk-hrow"><div><small>${esc(branchName(pick, names))}${autoOn ? ' · 📋 ginti khud POS mein' : round ? ' · ginti ' + esc(round) : ''}</small><strong>Stock <em>${num(shownCount)} items</em></strong></div>
+        ${isOwner() ? '<button type="button" class="sk-ico" data-sk-set="1" aria-label="Settings">⚙️</button>' : ''}</div>
+      <div class="sk-srow"><label class="sk-sbox"><span>🔍</span><input type="search" data-sk-q="1" placeholder="Naam ya barcode…" value="${esc(q)}" autocomplete="off"></label>
+        <button type="button" class="sk-ico go" data-stock-scan="1" aria-label="Scan">${camMissing() ? '🔫' : '📷'}</button><button type="button" class="sk-ico" data-stock-mic="1" aria-label="Awaz">🎤</button></div>
+      ${gd}
     </div>
-    <div class="account-tools">
-      ${scanList.length
-        ? `<button class="sh-wide sh-scan" data-stock-scan="1">${camIco()} Aur scan karein (${num(scanList.length)} list mein)</button>
-           <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>`
-        : `<div class="sh-scanrow"><button class="sh-wide sh-scan" data-stock-scan="1">${camMissing() ? '🔫 Scanner gun se scan karein (ek ya kai items)' : '📷 Barcode scan karein (ek ya kai items)'}</button><button type="button" class="sh-mic" data-stock-mic="1" title="Awaz se dhoondein">🎤</button></div>
-           ${canNewItem() ? '<button class="sh-wide" data-stock-newitem="1">➕ Naya item</button>' : ''}${ijPend().length || ijBad().length ? `<button class="sh-wide sh-pend${ijBad().length && !ijPend().length ? ' bad' : ''}" data-stock-ijobs="1">${ijPend().length ? '⏳ ' + num(ijPend().length) + ' item PC baqi' : ''}${ijPend().length && ijBad().length ? ' · ' : ''}${ijBad().length ? '❌ ' + num(ijBad().length) + ' nahi bane' : ''}</button>` : ''}${facBtnOk() ? '<button class="sh-wide sh-fac" data-fac-open="1">🏭 Factory batch (OK)</button>' : ''}
-           ${can('stock.in') ? '<button class="sh-wide" data-stock-in="1">📥 Aaya / gaya maal</button>' : ''}${can('stock.reg') ? '<button class="sh-wide" data-stock-reg="1">📋 Transfer register</button>' : ''}${can('stock.tc') ? '<button class="sh-wide sh-tc" data-stock-tc="1">🧾 Transfer check (scan)</button>' : ''}${can('stock.demand') ? '<button class="sh-wide dm-btn" data-demand="1">📢 Demand (khatam / kam)</button>' : ''}
-           ${can('stock.tolai') ? '<button class="sh-wide sh-tolai" data-stock-tolai="1">⚖️ Tolai</button>' : ''}${canEditItem() ? `<button class="sh-wide sh-urdu" data-stock-urdu="1">🔤 Urdu naam banao (AI)${Object.keys(urdu).length ? ' · ' + num(Object.keys(urdu).length) + ' bane' : ''}</button>` : ''}
-           ${can('stock.transfer') ? '<button class="sh-wide" data-stock-transfer="1">⇄ Transfer note (godam se godam)</button>' : ''}
-           ${($('search')?.value || '').trim() ? '<button class="sh-wide" data-stock-clear="1">✕ Search saaf karein</button>' : ''}`}
-    </div>
-    ${isOwner() ? `<label class="sh-switch"><input type="checkbox" data-stock-itemnew="1"${itemCfg.itemNew || itemCfg.itemEdit ? ' checked' : ''}${itemCfg.itemEdit ? ' disabled' : ''}> ➕ Mulazim NAYA item bana sake</label><label class="sh-switch"><input type="checkbox" data-stock-itemedit="1"${itemCfg.itemEdit ? ' checked' : ''}> ✏️ Mulazim purane item ka rate / naam bhi badal sake</label>` : ''}
-    ${branchBar ? `<div class="sh-label">Branch</div>${branchBar}` : ''}
-    <div class="sh-label">Dikhao</div>
-    <div class="account-tools">
-      ${btn('data-stock-filter', 'has', filter, pick !== 1 ? `📦 Is godam ka stock (${num(hasN)})` : `Stock wale (${num(hasN)})`)}
-      ${btn('data-stock-filter', 'all', filter, `Sab (${num(live.length)})`)}
-      ${btn('data-stock-filter', 'minus', filter, `Minus stock (${num(minus)})`)}
-      ${btn('data-stock-filter', 'baqi', filter, `Ginti baqi (${num(items.length - done)})`)}
-      ${gap ? btn('data-stock-filter', 'farq', filter, `⚖️ Farq wale (${num(gap)})${(() => { const n = items.filter(r => lateOf(countOf(pick, r))).length; return n ? ' · 🧾 ' + num(n) + ' dobara gino' : ''; })()}`) : ''}
-      ${btn('data-stock-filter', 'nishan', filter, `⏳ Baqi nishan (${num(nishanN)})`)}
-      ${hDay ? btn('data-stock-filter', 'hday', filter, `🕘 ${hDayLabel(hDay)} mein gine (${num(hCount(hDay))})`) : ''}
-      ${hiddenN ? btn('data-stock-filter', 'hidden', filter, `Band items (${num(hiddenN)})`) : ''}
-    </div>
-    <div class="sh-label">🕘 Ginti / tick history — kis din ki?</div>
-    <div class="account-tools sh-hday">
-      ${btn('data-stock-hday', '', hDay, 'Sab')}
-      ${['aaj', 'kal', '7'].map(k => btn('data-stock-hday', k, hDay, `${hDayLabel(k)} (${num(hCount(k))})`)).join('')}
-      <label class="sh-hdate${/^\d{4}-/.test(hDay) ? ' selected' : ''}">📅 ${/^\d{4}-/.test(hDay) ? esc(hDayLabel(hDay)) + ' (' + num(hCount(hDay)) + ')' : 'Tareekh'}<input type="date" data-stock-hdate="1" value="${/^\d{4}-/.test(hDay) ? esc(hDay) : ''}" max="${new Date().toISOString().slice(0, 10)}"></label>
-    </div>
-    <div class="sh-label">Ginti</div>
-    ${gintiLine(pick, done)}
-    ${postLine(pick)}
-    ${bills.length ? `<div class="account-tools"><button class="sh-wide" data-stock-bills="1">📋 Farq bills ki history (${num(bills.length)})</button></div>` : ''}
-    <div class="sh-label">Tarteeb</div>
-    <div class="account-tools">
-      ${btn('data-stock-sort', 'name', sort, 'Naam se')}
-      ${btn('data-stock-sort', 'stock', sort, 'Zyada stock pehle')}
+    <div class="sk-body">
+      <small class="sk-meta">kul ${num(totalPcs)} pcs${stamp ? ' · aakhri tabdeeli ' + esc(since(stamp)) : ''}</small>${liveChip()}
+      ${scanList.length ? `<div class="sk-scan"><button type="button" class="sh-wide sh-scan" data-stock-scan="1">${camIco()} Aur scan karein (${num(scanList.length)} list mein)</button><button type="button" class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button></div>` : ''}
+      ${can('stock.count') || isOwner() ? gintiBig(pick, items) : ''}
+      ${tiles.length ? `<div class="sk-tiles">${tiles.join('')}</div>` : ''}
+      ${ijPend().length || ijBad().length ? `<button type="button" class="sk-pend${ijBad().length && !ijPend().length ? ' bad' : ''}" data-stock-ijobs="1">${ijPend().length ? '⏳ ' + num(ijPend().length) + ' item PC baqi' : ''}${ijPend().length && ijBad().length ? ' · ' : ''}${ijBad().length ? '❌ ' + num(ijBad().length) + ' nahi bana' : ''} — dekhein</button>` : ''}
+      ${postLine(pick)}
+      <div class="sk-chips"><button type="button" class="sk-chip${filter === 'all' ? ' on' : ''}" data-stock-filter="all">Sab ${num(live.length)}</button><button type="button" class="sk-chip${filter === 'has' ? ' on' : ''}" data-stock-filter="has">${pick !== 1 ? '📦 Is godam ka' : 'Stock'} ${num(hasN)}</button><button type="button" class="sk-chip${filter === 'minus' ? ' on' : ''}" data-stock-filter="minus">Minus ${num(minus)}</button>${extra ? `<button type="button" class="sk-chip x" data-stock-filter="all">${esc(extra)} ✕</button>` : ''}<button type="button" class="sk-chip f" data-sk-filter="1">☰ Filter${fN ? ' <i>' + fN + '</i>' : ''}</button></div>
+      ${($('search')?.value || '').trim() ? '<button type="button" class="sk-clear" data-stock-clear="1">✕ Search saaf karein</button>' : ''}
     </div>
   </div>`;
+}
+// 📋 ginti ka bara button (auto: aaj ki ginti · farq · POS mein kitne)
+function gintiBig(pick, items) {
+  const C = items.map(r => ({ r, c: countOf(pick, r) })).filter(x => x.c);
+  let net = 0, w = 0; for (const { r, c } of C) { const f = countedPcs(c) - Number(sysOf(c, r)); net += r.prate ? f * r.prate : 0; if (autoOn && !posted(c)) w++; }
+  const billed = postReq && postReq.round === round && postReq.branch === pick && postReq.status === 'done';
+  if (!round) return `<button type="button" class="sk-big warn" data-stock-ginti="1"><span class="bi">📋</span><span><b>Ginti abhi shuru nahi</b><small>${isOwner() ? 'tap karein — nayi ginti shuru / khud POS mein' : 'malik shuru kare'}</small></span><em>›</em></button>`;
+  const t = autoOn ? 'Aaj ki ginti' : 'Ginti ' + round.slice(5, 10).replace('-', '/');
+  return `<button type="button" class="sk-big" data-stock-ginti="1"><span class="bi">📋</span><span><b>${esc(t)} · ${num(C.length)} items</b><small>Farq Rs ${net > 0 ? '+' : ''}${num(Math.round(net))}${autoOn ? ` · POS mein ${num(C.length - w)} ✓${w ? ' · ' + num(w) + ' ja rahe' : ''}` : billed ? ' · bill ban gaya' : ' · bill abhi nahi bana'}</small></span><em>›</em></button>`;
+}
+// ☰ filter sheet: baqi filter / check / band · kis din ki history · tarteeb
+function openSkFilter() {
+  const d = $('dialog'); if (!d) return;
+  const { pick, items } = collect();
+  const done = items.filter(r => countOf(pick, r)).length, gap = items.filter(r => { const c = countOf(pick, r); return c && Math.abs(countedPcs(c) - Number(sysOf(c, r))) > 0.001; }).length;
+  const nishanN = items.filter(r => flagOf(r.id).baqi).length, checkN = items.filter(r => flagOf(r.id).check).length, hiddenN = items.filter(isHidden).length;
+  const row = (k, t, sub, n) => `<button type="button" class="sk-li${filter === k ? ' on' : ''}" data-stock-filter="${k}"><span class="t"><b>${t}</b><span>${sub}</span></span><b>${num(n)}</b></button>`;
+  d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = '☰ Kya dikhayein?';
+  $('dialogBody').innerHTML = `<div class="sk-sheet" id="skFilter">
+    <div class="sk-list">${row('baqi', 'Ginti baqi', 'Is ginti mein abhi nahi gine', items.length - done)}${gap ? row('farq', '⚖️ Farq wale', 'Gine magar system se kam / zyada', gap) : ''}${row('nishan', '⏳ Baqi nishan', 'Larke ne "aur ginna hai" lagaya', nishanN)}${checkN ? row('check', '🔍 Check wale', 'Dobara check karne ka nishan', checkN) : ''}${hiddenN ? row('hidden', 'Band items', 'POS mein inactive', hiddenN) : ''}</div>
+    <div class="sk-lab">🕘 Kis din ki ginti / tick?</div>
+    <div class="sk-seg c4"><button type="button" class="${!hDay ? 'on' : ''}" data-stock-hday="">Sab</button>${['aaj', 'kal', '7'].map(k => `<button type="button" class="${hDay === k ? 'on' : ''}" data-stock-hday="${k}">${hDayLabel(k)} (${num(hCount(k))})</button>`).join('')}</div>
+    <label class="sk-date${/^\d{4}-/.test(hDay) ? ' on' : ''}">📅 ${/^\d{4}-/.test(hDay) ? esc(hDayLabel(hDay)) + ' (' + num(hCount(hDay)) + ')' : 'Koi tareekh chunein'}<input type="date" data-stock-hdate="1" value="${/^\d{4}-/.test(hDay) ? esc(hDay) : ''}" max="${dayStr()}"></label>
+    ${hDay ? `<button type="button" class="sk-li on" data-stock-filter="hday"><span class="t"><b>🕘 ${esc(hDayLabel(hDay))} mein gine</b><span>sirf wo items jo us din gine / tick hue</span></span><b>${num(hCount(hDay))}</b></button>` : ''}
+    <div class="sk-lab">Tarteeb</div>
+    <div class="sk-seg c2"><button type="button" class="${sort === 'name' ? 'on' : ''}" data-stock-sort="name">Naam se</button><button type="button" class="${sort === 'stock' ? 'on' : ''}" data-stock-sort="stock">Zyada stock pehle</button></div>
+    <div class="sk-two"><button type="button" class="sk-btn" data-sk-reset="1">Sab saaf</button><button type="button" class="sk-btn p" data-sk-close="1">Dikhao</button></div></div>`;
+  if (!d.open) d.showModal();
+}
+// ⚙️ malik: switches · counting · ginti khud POS mein · purana bill flow · maaliyat
+function openSkSet() {
+  const d = $('dialog'); if (!d || !isOwner()) return;
+  const { branches, names, pick } = collect();
+  d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = '⚙️ Stock settings (malik)';
+  $('dialogBody').innerHTML = `<div class="sk-sheet" id="skSet">
+    <div class="sk-list">
+      <label class="sk-li"><span class="t"><b>🟢 Counting ON</b><span>Band ho to mulazim ginti save nahi kar sakta (sirf ⏳ nishan)</span></span><input type="checkbox" data-sk-lock="1"${countOff ? '' : ' checked'}></label>
+      <label class="sk-li"><span class="t"><b>📋 Ginti khud POS mein</b><span>Har Save par farq aaj ke POS Adjustment "Ginti &lt;din&gt; NT" mein (PC ginti-post). Band = pehle jaisa: malik "Farq ka bill" dabaye.</span></span><input type="checkbox" data-sk-auto="1"${autoOn ? ' checked' : ''}></label>
+      <label class="sk-li"><span class="t"><b>➕ Mulazim NAYA item bana sake</b></span><input type="checkbox" data-stock-itemnew="1"${itemCfg.itemNew || itemCfg.itemEdit ? ' checked' : ''}${itemCfg.itemEdit ? ' disabled' : ''}></label>
+      <label class="sk-li"><span class="t"><b>✏️ Mulazim purane item ka rate / naam badle</b></span><input type="checkbox" data-stock-itemedit="1"${itemCfg.itemEdit ? ' checked' : ''}></label>
+    </div>
+    ${autoOn ? '' : `<div class="sk-lab">Purana tareeqa (ginti → malik bill banaye)</div><div class="sk-list"><button type="button" class="sk-li" data-stock-round="new"><span class="t"><b>📋 Nayi ginti shuru</b><span>${round ? 'Abhi: ' + esc(round) : 'Abhi koi ginti nahi'}</span></span><em>›</em></button>${round ? `<button type="button" class="sk-li" data-stock-post="1"><span class="t"><b>🧾 Farq ka bill PC par banao</b><span>PC list bhejega, phir "Bill banao"</span></span><em>›</em></button>` : ''}</div>`}
+    <div class="sk-list">${bills.length ? `<button type="button" class="sk-li" data-stock-bills="1"><span class="t"><b>📋 Farq bills ki history</b><span>${num(bills.length)} bill</span></span><em>›</em></button>` : ''}<button type="button" class="sk-li" data-stock-ginti="1"><span class="t"><b>📊 Ginti dekhein</b><span>aaj ki ginti · PDF</span></span><em>›</em></button></div>
+    ${valueCardHTML(branches, names)}
+    <p class="sk-note">Mulazim ko ⚙️ nazar nahi aata.</p></div>`;
+  if (!d.open) d.showModal();
 }
 
 // ---------- v1.66: BARCODE LABEL — item ke saare barcode, har ek ki tadad; PC ka TSC printer chhapta hai ----------
@@ -1764,7 +1839,9 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', e => {
   const t = e.target;
-  if (t.matches?.('[data-stock-hdate]')) { if (/^\d{4}-\d{2}-\d{2}$/.test(t.value)) { hDay = t.value; hDayKeep(); limit = PAGE; rerender(); } return; }   // v2.99.87
+  if (t.matches?.('[data-stock-hdate]')) { if (/^\d{4}-\d{2}-\d{2}$/.test(t.value)) { hDay = t.value; hDayKeep(); limit = PAGE; if (t.closest('#skFilter')) openSkFilter(); rerender(); } return; }   // v2.99.87
+  if (t.matches?.('[data-sk-lock]')) { toggleLock(t); return; }
+  if (t.matches?.('[data-sk-auto]')) { setAuto(t.checked, t); return; }
   if (t.matches?.('[data-stock-itemnew]')) {                           // v2.99.86: sirf NAYA item ka switch
     const on = t.checked;
     (cloud?.setItemNew ? cloud.setItemNew(on) : Promise.reject(Error('app update karein')))
@@ -1830,8 +1907,8 @@ function countHTML(r) {
     <button type="button" data-count-save="${esc(r.id)}">Save</button>
     <button type="button" class="count-tick" data-count-tick="${esc(r.id)}" title="Jitna system mein hai utna hi maal hai">✓ Tick</button>
     <div class="count-live" data-count-live="${esc(r.id)}"></div>
-    ${c ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Us waqt system ${num(sysOf(c, r))}${sysSure(c) ? ' ✓' : ' (PC tasdeeq baqi)'} · Farq ${diff > 0 ? '+' : ''}${num(diff)}${
-      r.prate ? ' · Rs ' + (diff > 0 ? '+' : '') + num(diff * r.prate) : ''}</small>` : ''}
+    ${c ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Us waqt system ${num(sysOf(c, r))}${sysSure(c) ? ' ✓' : autoOn ? '' : ' (PC tasdeeq baqi)'} · Farq ${diff > 0 ? '+' : ''}${num(diff)}${
+      r.prate ? ' · Rs ' + (diff > 0 ? '+' : '') + num(diff * r.prate) : ''}${autoOn ? (posted(c) ? ` · <b class="sk-ok">✓ POS mein${c.pfAdj ? ' #' + esc(c.pfAdj) : ''}</b>` : ' · <b class="sk-w">⏳ POS ko ja raha</b>') : ''}</small>` : ''}
   </div>
   ${flagHTML(r)}
   ${c ? historyHTML(r, c) : oldHistoryHTML(r)}`;
@@ -1933,6 +2010,15 @@ document.addEventListener('click', e => {
   if (e.target.closest?.('[data-stock-more]')) { limit += PAGE; rerender(); return; }
   if (e.target.closest?.('[data-stock-bills]')) { openBills(); return; }
   if (e.target.closest?.('[data-stock-ginti]')) { openGinti(); return; }
+  if (e.target.closest?.('[data-sk-set]')) { openSkSet(); return; }   // v2.100.0: nayi stock screen
+  if (e.target.closest?.('[data-sk-filter]')) { openSkFilter(); return; }
+  if (e.target.closest?.('[data-sk-close]')) { $('dialog')?.close(); return; }
+  if (e.target.closest?.('[data-sk-reset]')) { filter = 'all'; hDay = ''; hDayKeep(); sort = 'name'; limit = PAGE; $('dialog')?.close(); rerender(); return; }
+  if (e.target.closest?.('[data-sk-auto-on]')) { setAuto(true); return; }
+  const gr = e.target.closest?.('[data-ginti-row]'); if (gr) { openRecount(gr.dataset.gintiRow); return; }
+  const gfb = e.target.closest?.('[data-ginti-f]'); if (gfb) { gf = gfb.dataset.gintiF; openGinti(); return; }
+  if (e.target.closest?.('[data-re-save]')) { reSave(); return; }
+  if (e.target.closest?.('[data-re-del]')) { reDel(); return; }
   if (e.target.closest?.('[data-stock-transfer]')) { openTransfer(); return; }
   if (e.target.closest?.('[data-stock-in]')) { openIn(true); return; }
   if (e.target.closest?.('[data-ginti-pdf]')) { gintiPdfOf?.(); return; }       // v2.13
@@ -1954,11 +2040,11 @@ document.addEventListener('click', e => {
   const lp = e.target.closest?.('[data-label-print]');
   if (lp) { printLabel(lp); return; }
   const s = e.target.closest?.('[data-stock-sort]');
-  if (s) { sort = s.dataset.stockSort; rerender(); return; }
+  if (s) { sort = s.dataset.stockSort; if (s.closest('#skFilter')) openSkFilter(); rerender(); return; }
   const f = e.target.closest?.('[data-stock-filter]');
-  if (f) { filter = f.dataset.stockFilter; if (filter === 'all') godamAll = true; limit = PAGE; rerender(); return; }
+  if (f) { filter = f.dataset.stockFilter; if (filter === 'all') godamAll = true; limit = PAGE; if (f.closest('#skFilter')) $('dialog')?.close(); rerender(); return; }
   const hd = e.target.closest?.('[data-stock-hday]');   // v2.99.87: history ke din
-  if (hd) { hDay = hd.dataset.stockHday || ''; hDayKeep(); if (!hDay && filter === 'hday') filter = 'all'; limit = PAGE; rerender(); return; }
+  if (hd) { hDay = hd.dataset.stockHday || ''; hDayKeep(); if (!hDay && filter === 'hday') filter = 'all'; limit = PAGE; if (hd.closest('#skFilter')) openSkFilter(); rerender(); return; }
 
   const nr = e.target.closest?.('[data-stock-round]');
   if (nr) { startNewRound(); return; }
@@ -1986,12 +2072,18 @@ async function setFlag(id, patch) {
   try { await cloud.setStockFlag(String(id), { ...flagOf(id), ...patch }); }
   catch (e) { itemMsg(id, '⚠️ Nishan save nahi hua: ' + errTxt(e)); }
 }
-async function toggleLock() {
-  if (!isOwner() || !cloud?.setStockLock) return;
+async function setAuto(on, box) {
+  if (!isOwner() || !cloud?.setStockAuto) { if (box) box.checked = !on; notice('App update karein'); return; }
+  if (!confirm(on ? 'Ginti KHUD POS mein? Har Save ka farq PC roz ke ek Adjustment "Ginti <din> NT" mein daalega (PC par ginti-post chalu ho).' : 'Band karein? Phir pehle jaisa — malik "Farq ka bill PC par banao" dabayega.')) { if (box) box.checked = !on; return; }
+  try { await cloud.setStockAuto(on); if (on && countOff && cloud.setStockLock) { try { await cloud.setStockLock(false); } catch {} } notice(on ? '✓ Ginti khud POS mein — aaj ki ginti shuru' : 'Band — purana tareeqa'); if ($('skSet')) openSkSet(); else $('dialog')?.close(); }
+  catch (e) { if (box) box.checked = !on; notice('Nahi hua: ' + errTxt(e)); }
+}
+async function toggleLock(box) {
+  if (!isOwner() || !cloud?.setStockLock) { if (box) box.checked = !box.checked; return; }
   const off = !countOff;
-  if (!confirm(off ? 'Counting OFF karein? Mulazim koi ginti save nahi kar sakega (nishan laga sakega).' : 'Counting ON karein? Mulazim phir ginti save kar sakega.')) return;
-  try { await cloud.setStockLock(off); notice(off ? 'Counting OFF' : 'Counting ON'); }
-  catch (e) { notice(e?.message || 'Nahi hua'); }
+  if (!confirm(off ? 'Counting OFF karein? Mulazim koi ginti save nahi kar sakega (nishan laga sakega).' : 'Counting ON karein? Mulazim phir ginti save kar sakega.')) { if (box) box.checked = !box.checked; return; }
+  try { await cloud.setStockLock(off); notice(off ? 'Counting OFF' : 'Counting ON'); if ($('skSet')) setTimeout(openSkSet, 400); }
+  catch (e) { if (box) box.checked = !box.checked; notice(e?.message || 'Nahi hua'); }
 }
 
 function postLine(pick) {
@@ -2098,7 +2190,7 @@ async function startNewRound() {
 function countBanner() {
   const own = isOwner(), ver = ((document.querySelector('.storage')?.textContent || '').match(/v\d+\.\d+\.\d+/) || [''])[0];
   let big = '';
-  const nb = own && !round ? '<button type="button" data-stock-round="new">📋 Nayi ginti shuru</button>' : '';
+  const nb = own && !round ? '<button type="button" data-stock-round="new">📋 Nayi ginti shuru</button><button type="button" data-sk-auto-on="1">📋 Ginti khud POS mein (ON)</button>' : '';
   if (own && countOff) big = `<div class="sc-banner bad"><b>🔴 Counting OFF hai</b><small>Mulazim ginti, Save aur ✓ Tick nahi kar sakte (sirf ⏳ Baqi ka nishan).</small><span class="sc-bb"><button type="button" data-stock-lock="1">🟢 Counting ON karo</button>${nb}</span></div>`;
   else if (!own && countOff) big = `<div class="sc-banner bad"><b>🔴 Malik ne counting band ki hui hai</b><small>Abhi ginti / Save / ✓ Tick nahi ho sakti — sirf ⏳ Baqi ka nishan lag sakta hai. Malik se "Counting ON" karwayein.</small></div>`;
   else if (!round) big = `<div class="sc-banner warn"><b>⏳ Abhi nayi ginti shuru nahi hui</b><small>${own ? 'Neeche ka button dabayein — phir aap aur mulazim ginti kar sakenge.' : 'Malik Stock screen par "Nayi ginti shuru" dabaye — phir ginti save hogi.'}</small>${nb ? `<span class="sc-bb">${nb}</span>` : ''}</div>`;
@@ -2138,9 +2230,9 @@ function readCount(item, skipBlank) {
   return { ctn, pcs, total, bad: !Number.isFinite(total) || !Number.isFinite(ctn) || !Number.isFinite(pcs) };
 }
 
-async function writeCount(item, v, add = null, tick = false) {
+async function writeCount(item, v, add = null, tick = false, br = pickedBranch) {
   const at = Date.now();
-  const old = counts.get(countId(pickedBranch, item.id));
+  const old = counts.get(countId(br, item.id));
   const past = Array.isArray(old?.history) ? old.history : [];
   const h = { at, ctn: v.ctn, pcs: v.pcs, total: v.total, sys: item.stock };
   if (add) { h.add = { ctn: add.ctn, pcs: add.pcs, total: add.total }; if (add.note) h.note = add.note; }
@@ -2148,11 +2240,14 @@ async function writeCount(item, v, add = null, tick = false) {
   const history = [...past, h].slice(-20);
   // v2.99.58: ginti ke baad bill bana tha (later) aur ab dobara gina = recount (farq bill mein ab shamil ho sakta hai)
   const re = !!(old && (old.recount || (Array.isArray(old.later) && old.later.length)));
+  // v2.100.0: auto — sys0 = is din ki pehli ginti ke waqt ka system (farq isi se); PC ka pfQ (ab tak POS mein gaya) wahi rahe
+  const same = old && old.round === round && !old.del, sys0 = same && old.sys0 != null ? old.sys0 : item.stock;
   await cloud.saveStockCount({
-    id: countId(pickedBranch, item.id),
-    round, branch: pickedBranch, itemId: item.id,
+    id: countId(br, item.id),
+    round, branch: br, itemId: item.id,
     name: item.name, sys: item.stock,
-    ctn: v.ctn, pcs: v.pcs, total: v.total, at, history, ...(re ? { recount: true, recountAt: at } : {})
+    ctn: v.ctn, pcs: v.pcs, total: v.total, at, history, ...(re ? { recount: true, recountAt: at } : {}),
+    ...(autoOn ? { auto: true, day: round, sys0, del: false, pfQ: same ? (Number(old.pfQ) || 0) : 0, pfAt: same ? (old.pfAt || 0) : 0, pfAdj: same ? (old.pfAdj || '') : '', byName: whoName() } : {})
   });
 }
 
@@ -3223,7 +3318,7 @@ export const stockFactoryCanRate = () => canEditItem();
 export function stockPickList() { const P = agPool(); return P.list.map(r => ({ id: String(r.id), name: String(r.name || ''), code: String(r.code || ''), cat: String(r.cat || ''), catFac: isFactory(r), stock: Number(saleStockItem(P.main, r.id)?.stock) || 0, pack: Number(r.pack) > 1 ? Number(r.pack) : 0, cn: r.cName || 'Ctn', un: r.uName || 'Pcs' })); }
 export function stockRepaint() { if (stockActive) soft(); }
 export const stockIsFactoryCat = r => isFactory(r);
-// v2.99.98: 🏭 factory "photo se formula" — naya item FORAN line mein (intezar nahi) -> jobId (PC band ho tab bhi theek: ⏳ job:)
+// v2.100.0: 🏭 factory "photo se formula" — naya item FORAN line mein (intezar nahi) -> jobId (PC band ho tab bhi theek: ⏳ job:)
 export async function stockNewItemQuick(v) {
   if (!canNewItem()) throw Error('Naya item — malik ki ijazat chahiye');
   if (!cloud?.requestItem) throw Error('App update karein');
@@ -3231,4 +3326,28 @@ export async function stockNewItemQuick(v) {
   const job = { op: 'new', itemId: '', code: String(v.code || '').trim(), name: String(v.name || '').trim().slice(0, 150), pack: pk, costP, rctn: pk ? r2(rp * pk) : 0, rpcs: rp, wctn: pk ? r2(wp * pk) : 0, wpcs: wp };
   if (!job.name) throw Error('Item ka naam chahiye');
   return await cloud.requestItem(job);
+}
+
+// v2.100.0: 🏭 FACTORY ki 📊 Ginti tab (factory.js) — wahi stockCount docs, dukan godam (main); PC ginti-post wahi
+export function stockCountsOn() { try { start(true); } catch {} }
+export function stockCountState() { return { round: roundNow(), autoOn, locked: countLocked(), owner: isOwner() }; }
+function fcItem(itemId) { const P = agPool(); const r = P.byId.get(String(itemId)); if (!r) return null; return { ...r, stock: Number(saleStockItem(P.main, r.id)?.stock) || 0 }; }
+export function stockCountInfo(itemId) {
+  const r = fcItem(itemId); if (!r) return null; const P = agPool(); const c = countOf(P.main, r);
+  const sys = c ? Number(sysOf(c, r)) : r.stock, total = c ? countedPcs(c) : null, farq = c ? Math.round((total - sys) * 100) / 100 : 0;
+  return { c, sys, stock: r.stock, total, farq, rs: c && r.prate ? Math.round(farq * r.prate) : 0, posted: posted(c), at: c?.at || 0, hist: Array.isArray(c?.history) ? c.history : [], pfAdj: c?.pfAdj || '', byName: c?.byName || '' };
+}
+export async function stockCountSet(itemId, v) {
+  const r = fcItem(itemId); if (!r) throw Error('Item nahi mila');
+  if (!roundNow()) throw Error(isOwner() ? 'Ginti shuru nahi — Stock screen ⚙️ "Ginti khud POS mein" ON karein' : 'Malik ne ginti shuru nahi ki');
+  if (countLocked()) throw Error('🔴 Malik ne counting band ki hui hai');
+  const per = Number(r.pack) || 0, ctn = per > 1 ? Number(v.ctn) || 0 : 0, pcs = Number(v.pcs) || 0, total = Math.round((ctn * (per > 1 ? per : 1) + pcs) * 100) / 100;
+  if (!Number.isFinite(total) || total < 0) throw Error('Sirf hindse');
+  await writeCount(r, { ctn, pcs, total, bad: false }, null, false, agPool().main);
+  if (flagOf(r.id).baqi) await setFlag(r.id, { baqi: false });
+  return total;
+}
+export async function stockCountDel(itemId) {
+  if (!isOwner()) throw Error('Sirf malik'); const r = fcItem(itemId); if (!r) throw Error('Item nahi mila'); const P = agPool(), c = countOf(P.main, r); if (!c) return;
+  await cloud.saveStockCount({ ...c, id: countId(P.main, r.id), del: true, delAt: Date.now(), at: Date.now(), total: Number(c.sys0 ?? c.sys) || 0, ctn: 0, pcs: 0 });
 }

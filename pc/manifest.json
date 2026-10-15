@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-15.5",
+  "version": "2026-10-16.1",
   "note": "KHATA-DOCTOR manifest — sirf ye files PC par jati hain. local-config.json / firebase-key.json kabhi nahi.",
   "files": {
     "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -65,7 +65,9 @@
     "sale-farq-check.js": "02400f160dfeecd7d572a5e8d1321c9653a0526fbe16afad3cb635d79f5c83f3",
     "factory-post.js": "457bb4e7d4b2df2eaf62c92061dcebd2c74512a4222cfc579e2d10834655b1a1",
     "factory-auto.bat": "9ee1ce9bc65004a10e719de271a0ba5ce1c942f430c47e83fc1052e2319a95c3",
-    "galla-parchi.js": "e64cf7cd1c18b1be97d0062681d436b60f7c494d0195bd0d8d7e6e76eca7760c"
+    "galla-parchi.js": "e64cf7cd1c18b1be97d0062681d436b60f7c494d0195bd0d8d7e6e76eca7760c",
+    "ginti-post.js": "66dfbecfbce0e44192049b59370df78fe0e0dcdcedc76c4dd4bc69bab7ab35c9",
+    "ginti-auto.bat": "8e28c694afff95b59707ee31fd9eb0babd0db67cc3f36d577f6eb87aa68d5be3"
   },
   "services": [
     {
@@ -252,6 +254,12 @@
       "script": "factory-post.js",
       "bat": "factory-auto.bat",
       "log": "factory-log.txt"
+    },
+    {
+      "name": "Ginti (app -> POS)",
+      "script": "ginti-post.js",
+      "bat": "ginti-auto.bat",
+      "log": "ginti-log.txt"
     }
   ]
 }
