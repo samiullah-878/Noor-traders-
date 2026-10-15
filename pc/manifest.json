@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-15.1",
+  "version": "2026-10-15.2",
   "note": "KHATA-DOCTOR manifest — sirf ye files PC par jati hain. local-config.json / firebase-key.json kabhi nahi.",
   "files": {
     "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -11,7 +11,7 @@
     "khata-auto.bat": "c6f019335516b837d486e8c47bd5d1acb753628b80669795df7bad51e9f718d7",
     "khata-sync-auto.bat": "7006262d6b2e395b6212aa2b130c191bb3284b1a2bf60793ee537fd845f69905",
     "label-auto.bat": "7094351892e48c7a2d4a32b2ac49e96e8d39e66856a3ff276d36b27b91368824",
-    "label-print.js": "e33e6e84f585225cffefc1c763669f0077f653eede01b64322ae39a259f53d2b",
+    "label-print.js": "a78a4bfbfb25e5a61e6bf72c16ebc4d62e8a1af4bd285cd587c6a54e19154e10",
     "pos-khata-sync.js": "47934a8ff85bbe503f8cd41ef2c0e51961548b7ecbf1aee24ed6df8cd72da63d",
     "post-farq.js": "28254eb2db53154140fe3f1d466bccd3f4f7d322aba6be8cafcce8aa1ccba522",
     "purchase-auto.bat": "f877f7a5c14ad0a654b499396e8661c20a1140c2b99d68c1a91b18cae440fb85",
@@ -62,7 +62,9 @@
     "LABEL-URDU-TASVEER.bat": "c5c374b1ffffd269ce0508188d9b26c3275d73bdc9916419ccec330a544b573d",
     "LABEL-NAAP.bat": "123ac0c0f7cc137541e909b1c6dd1c1ec2563e8da5d1de9fb6c538f831852da8",
     "LABEL-URDU-FONT.bat": "f780e334b69b848c41117a487ea1cf26698649686145e485a1acabb60a3618df",
-    "sale-farq-check.js": "02400f160dfeecd7d572a5e8d1321c9653a0526fbe16afad3cb635d79f5c83f3"
+    "sale-farq-check.js": "02400f160dfeecd7d572a5e8d1321c9653a0526fbe16afad3cb635d79f5c83f3",
+    "factory-post.js": "f5a01e3c62dd1679a64ec1f201d45aa586deb8f09b00fce0dc9f120d20c67bb9",
+    "factory-auto.bat": "9ee1ce9bc65004a10e719de271a0ba5ce1c942f430c47e83fc1052e2319a95c3"
   },
   "services": [
     {
@@ -243,6 +245,12 @@
       "script": "raat-report.js",
       "bat": "report-auto.bat",
       "log": "report-log.txt"
+    },
+    {
+      "name": "🏭 Factory batch → POS stock + label",
+      "script": "factory-post.js",
+      "bat": "factory-auto.bat",
+      "log": "factory-log.txt"
     }
   ]
 }

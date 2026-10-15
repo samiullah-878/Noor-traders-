@@ -2919,3 +2919,12 @@ Chalana: node sale-farq-check.js [kal | YYYY-MM-DD] [POS report ki raqam] — us
 ↩ dbo.SaleReturn (TotalSaleReturn, DocStatusID 3 bahar) + app ki raqam (hisaab + Firestore possale-<din>) + 4 mumkin POS hisaab ka farq;
 POS raqam di ho to hisson ka jor dhoondta hai. Saath mein SaleReturn / SaleReturnDetail ke khane (agla kaam: Item report / commission /
 sale stats mein wapsi minus). SQL password print nahi. Koi task (bat) nahi — sirf manifest files.
+
+=== 2026-10-15 · manifest 2026-10-15.2 — factory-post.js v1.0 (NAYA service) + label-print.js v4.5 ===
+🏭 factory-post.js: Firestore factoryBatches status 'new' -> POS dbo.Adjustment (BranchID 1, usp_Adjustment_InsertUpdate +
+usp_AdjustmentDetail_InsertUpdate — post-farq createAdjustment jaisa, transaction + ItemBranchRate.CurrStock pehle / baad jaanch):
++ tayyar maal (out, rate = max(batch.cost, raw POS rate + oh) / out), − raw (ItemBranchRate / Items PurchaseRate fi piece). Description
+"Prod <docId> <batch no>" — pehle dhoondta hai, mile to dobara nahi. status 'posted' + adjNo/adjId; phir batch.labels -> labelJobs (≤200 copies
+fi job, by 'pc-factory', batch = no) + lblDone. 'cancelReq' -> asal AdjustmentDetail ulta ("Prod WAPAS …") -> 'cancelled' (POS mein delete
+kuch nahi). Ghalti: 'error' + err (malik "dobara bhejo"). Service manifest mein (doctor khud chalata hai). Log factory-log.txt.
+label-print.js v4.5: job.batch ho to daayein kone par batch no (running number ki jagah).

@@ -1,5 +1,5 @@
 // =========================================================
-//  label-print.js  v4.4 (2026-10-13: Urdu TEXT (ttf) — font printer mein sirf ek dafa (label-font.json), bhejne ke baad 20 s intezar;
+//  label-print.js  v4.5 (2026-10-15: 🏭 factory batch label — job.batch ho to daayein kone par batch no (running number ki jagah)) · v4.4 (2026-10-13: Urdu TEXT (ttf) — font printer mein sirf ek dafa (label-font.json), bhejne ke baad 20 s intezar;
 //                     --send-font = LABEL-URDU-FONT.bat) · v4.3 (2026-10-13 sham: malik — printer baar baar rukta/chalta (2 qatar ke hisse) + 3rd column khali (sirf number).
 //                     Hissa wapas 8 qatar (rowsMax 8) aur line mein 1 tak (agla hissa printer ke chalte chalte line mein — rukta nahi),
 //                     0.8 s intezar hata. Naye bat: LABEL-URDU-TEXT (urduMode ttf) / LABEL-URDU-BAND (urdu false) / LABEL-URDU-TASVEER
@@ -213,7 +213,7 @@ function tspl(S, j, nums, ur) {
     if (!out) { out = head(); rows = 0; }
     out.push('CLS');
     for (let c = 0; c < S.cols && done < copies; c++, done++)
-      out.push(...labelCmds(S, j, c * (S.w + S.colGap) * DOT, nums ? `${nums.code}-${nums.from + done}` : '', ur));
+      out.push(...labelCmds(S, j, c * (S.w + S.colGap) * DOT, j.batch ? clean(j.batch, 16) : nums ? `${nums.code}-${nums.from + done}` : '', ur));   // v4.5: 🏭 factory batch no (factory-post.js) number ki jagah
     out.push('PRINT 1,1'); rows++;
     if (rows >= per || done >= copies) { out.push(''); jobs.push(out.join('\r\n')); out = null; }
   }

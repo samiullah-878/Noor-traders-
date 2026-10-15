@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.87';
-import { liveLabelsHTML } from './barcode.js?v=2.99.87';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.88';
+import { liveLabelsHTML } from './barcode.js?v=2.99.88';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -32,6 +32,7 @@ const ptLive = () => (ptList || []).filter(t => t && !t.cancelled);   // v2.99.5
 const can = k => { try { return typeof window.ntCan === 'function' ? window.ntCan(k) : true; } catch { return true; } };   // v2.99.24: mulazim ke andar ke option (app.js can)
 const canEditItem = () => isOwner() || (itemCfg.itemEdit === true && can('stock.item'));
 // v2.99.86: malik — "mulazim ko naya item ki access" — ALAG switch (itemNew): sirf NAYA item; purane ka rate / naam nahi (wo itemEdit). itemEdit ON = naya bhi.
+const facBtnOk = () => { try { return typeof window.ntFacBatch === 'function' && window.ntFacBatch() && rows.some(c => !c.meta && Array.isArray(c.items) && c.items.some(isFactory)); } catch { return false; } };   // v2.99.88
 const canNewItem = () => isOwner() || ((itemCfg.itemNew === true || itemCfg.itemEdit === true) && can('stock.itemnew'));
 let inPdfOf = null, tolaiOf = null, tolaiClickOf = null;
 export function setInPdf(fn) { inPdfOf = fn; }
@@ -640,7 +641,7 @@ function summaryHTML(branches, pick, items, meta, names, canJama = false) {
         ? `<button class="sh-wide sh-scan" data-stock-scan="1">${camIco()} Aur scan karein (${num(scanList.length)} list mein)</button>
            <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>`
         : `<div class="sh-scanrow"><button class="sh-wide sh-scan" data-stock-scan="1">${camMissing() ? '🔫 Scanner gun se scan karein (ek ya kai items)' : '📷 Barcode scan karein (ek ya kai items)'}</button><button type="button" class="sh-mic" data-stock-mic="1" title="Awaz se dhoondein">🎤</button></div>
-           ${canNewItem() ? '<button class="sh-wide" data-stock-newitem="1">➕ Naya item</button>' : ''}
+           ${canNewItem() ? '<button class="sh-wide" data-stock-newitem="1">➕ Naya item</button>' : ''}${facBtnOk() ? '<button class="sh-wide sh-fac" data-fac-open="1">🏭 Factory batch (OK)</button>' : ''}
            ${can('stock.in') ? '<button class="sh-wide" data-stock-in="1">📥 Aaya / gaya maal</button>' : ''}${can('stock.reg') ? '<button class="sh-wide" data-stock-reg="1">📋 Transfer register</button>' : ''}${can('stock.tc') ? '<button class="sh-wide sh-tc" data-stock-tc="1">🧾 Transfer check (scan)</button>' : ''}${can('stock.demand') ? '<button class="sh-wide dm-btn" data-demand="1">📢 Demand (khatam / kam)</button>' : ''}
            ${can('stock.tolai') ? '<button class="sh-wide sh-tolai" data-stock-tolai="1">⚖️ Tolai</button>' : ''}${canEditItem() ? `<button class="sh-wide sh-urdu" data-stock-urdu="1">🔤 Urdu naam banao (AI)${Object.keys(urdu).length ? ' · ' + num(Object.keys(urdu).length) + ' bane' : ''}</button>` : ''}
            ${can('stock.transfer') ? '<button class="sh-wide" data-stock-transfer="1">⇄ Transfer note (godam se godam)</button>' : ''}
@@ -3154,3 +3155,17 @@ function thAct(d, b) {
     return trCalc({ id: l.itemId, name: l.name || it.name || 'Item', pack: pk, cName: it.cName || 'Ctn', uName: it.uName || 'Pcs', ctn: c, pcs: pk > 1 ? Math.round((q - c * pk) * 1000) / 1000 : q, qty: 0 }); });
   openTransfer();
 }
+// v2.99.88: 🏭 FACTORY (factory.js) — "apni factory" category (isFactory: category mein 'factory') ki items, dukan (main godam) ka stock,
+//   rates fi PIECE (POS jaisa: rate = CTN wala fi piece, rate2 = khula piece, wrate = W CTN fi piece, ws = W piece) + label ke barcode.
+export function stockFactoryList() {
+  const P = agPool();
+  return P.list.filter(isFactory).map(r => {
+    const s = saleStockItem(P.main, r.id), pk = Number(r.pack) > 1 ? Number(r.pack) : 0;
+    return { id: String(r.id), name: String(r.name || ''), code: String(r.code || ''), pack: pk, cn: r.cName || 'Ctn', un: r.uName || 'Pcs', cat: String(r.cat || ''),
+      stock: Number(s?.stock) || 0, prate: Number(r.prate) || 0, rate: Number(r.rate) || 0, rate2: Number(r.rate2) || Number(r.rate) || 0,
+      wrate: Number(r.wrate) || Number(r.rate) || 0, ws: Number(r.ws) || Number(r.wrate) || Number(r.rate) || 0, urdu: urduOf(r.id),
+      labels: labelRows(r).filter(x => x.show !== false).map(x => ({ code: x.code, qty: Number(x.qty) || 1, price: Number(x.price) || 0, main: !!x.main })) };
+  });
+}
+export const stockFactoryMain = () => agPool().main;
+export const stockFactoryCanRate = () => canEditItem();

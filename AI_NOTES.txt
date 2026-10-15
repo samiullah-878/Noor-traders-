@@ -4608,3 +4608,24 @@ Malik: "stock screen par stock ki tick save history hain us ke upar day wise kar
   (n) = is godam (pickedBranch) ke kitne items ki us din ginti / tick hui. Dikhao mein naya filter 'hday': "🕘 Aaj mein gine (n)".
   Sab phone par — Firebase par koi naya read / write nahi. Test: scratchpad hd/hday.mjs.
 * POS sale farq (malik: app aur POS report mein ~Rs 3,000 farq): pc/sale-farq-check.js (sirf parhta) — dekhein pc/AI_NOTES.txt.
+
+=== v2.99.88 (2026-10-15) — 🏭 FACTORY PRODUCTION (naya: factory.js) · Rules 2.52 · PC factory-post.js ===
+Malik: "apni factory ki items — formula ke saath, batch bana kar, larka production mein OK kare to auto stock mein + aur raw maal −; sale par
+POS khud minus (shop minus ho to production + se barabar); rates auto (laagat se); batch 1 se 10; batch ka barcode label OK par khud
+(sub barcode bhi); items wholesale / cotton / piece jaise; raw maal ki purchase". Naqsha: Design artifact "Factory Production — naqsha".
+* Items: POS category mein 'factory' (pos-stock isFactory) — "apni factory" / "factory raw". Jis ka formula = tayyar maal, baqi = raw maal.
+  pos-stock.js exports: stockFactoryList() (dukan godam stock, rate fi PIECE: rate=CTN wala, rate2=piece, wrate=W CTN, ws=W piece, labels),
+  stockFactoryCanRate(). Stock screen: "🏭 Factory batch (OK)" (window.ntFacBatch) — Stock-only mulazim bhi.
+* factory.js: screen (nav 🏭 Factory; malik + Full mulazim v:factory): Aaj / 7 din / Is mahina · KPI · ➕ Naya batch · 🧪 Formulas · 🏷 Rates ·
+  📦 Raw maal (purchase button -> purchase screen) · batch list (⏳ / ✓ POS mein / ❌ / ↩) · PDF (open + WhatsApp).
+  Batch (dialog): item chips (stock ctn + pcs) · batch 1–10 chips · "asal ginti alag?" · raw lagega / stock (kam laal) · label: Packet / Carton
+  (sub barcode jis ki qty = pack) / Dono / Nahi · OK = setDoc foran (tez). Formula: 1 batch = X pcs, raw lines (q fi batch), mazdoori, gas;
+  laagat fi pcs; naye rate W% / R% (cfg.wm / rm, default 10 / 15): pcs upar 1 Rs, ctn upar 5 Rs. Rates: 4 khane purana / naya, "lagao" =
+  stockAgentItemSave (itemJobs -> PC item-post). Alert: laagat formula save se ≥3% barhi.
+* Firestore: factory/cfg (sirf malik) · factoryBatches (Full / Stock mulazim / malik create 'new', n 1–10; malik cancelReq / error->new).
+  cloud: listenFactory, setFactoryCfg, listenFactoryBatches, addFactoryBatch (returns {id, done}), factoryBatchAct. History: audit MAP.
+* CAPS: full 'v:factory', 'fac.batch' · stock 'stock.factory'.
+* PC factory-post.js v1.0 (task "🏭 Factory batch → POS stock + label", factory-auto.bat, lock 47834): POS Adjustment (dukan BranchID 1):
+  + tayyar maal (rate = laagat / out), − raw (POS khareed fi piece) — transaction, CurrStock jaanch; Description "Prod <id> <no>" (dobara nahi).
+  Phir labelJobs (≤200 / job, job.batch). Wapas = asal AdjustmentDetail ki ulti lines ("Prod WAPAS …"). label-print v4.5: job.batch daayein kone.
+* Test: scratchpad fct/t.mjs (21 checks, stub pos-stock). Screenshots fct/all.png.
