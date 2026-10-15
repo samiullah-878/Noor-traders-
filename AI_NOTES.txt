@@ -4629,3 +4629,12 @@ POS khud minus (shop minus ho to production + se barabar); rates auto (laagat se
   + tayyar maal (rate = laagat / out), − raw (POS khareed fi piece) — transaction, CurrStock jaanch; Description "Prod <id> <no>" (dobara nahi).
   Phir labelJobs (≤200 / job, job.batch). Wapas = asal AdjustmentDetail ki ulti lines ("Prod WAPAS …"). label-print v4.5: job.batch daayein kone.
 * Test: scratchpad fct/t.mjs (21 checks, stub pos-stock). Screenshots fct/all.png.
+
+=== v2.99.89 (2026-10-15) — ☑ FACTORY ITEMS TICK SE (category ki zaroorat nahi) ===
+Malik: "check box de do items list mein factory mein — items aa jayein".
+* factory/cfg.items {itemId: true | false | null} (sirf malik; rules 2.52 wahi): true = ☑ kiya, false = "factory" category wali ko hataya,
+  null = category ke hisaab se. pos-stock stockFactoryList(pick) · stockPickList() (dukan ki saari items, catFac) · stockRepaint() · stockIsFactoryCat.
+* Factory screen (malik): "☑ Factory items chunein" -> dialog: chips Sab / ☑ Chuni hui / Category wali · search (naam / barcode) · har item par
+  checkbox (data-fac-tick) — foran (optimistic) + setFactoryCfg({items:{id:v}}); formula wali hatane par confirm.
+* Stock screen: har item card par (sirf malik) "☐ 🏭 Factory" (window.ntFacIs — factory.js; cfg listener ab factoryStop par band nahi, 1 doc).
+* Test: scratchpad fct/t.mjs (+5 checks), pick.png.

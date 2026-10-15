@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.88';
-import { liveLabelsHTML } from './barcode.js?v=2.99.88';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.89';
+import { liveLabelsHTML } from './barcode.js?v=2.99.89';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1838,6 +1838,7 @@ function rowHTML(r) {
       ${r._jama ? `<small class="jama-sum">NT ${r._fac ? `<s>${num(r._nt)}</s> 0` : num(r._nt)} + G2 ${num(r._g2)} = ${num(r.stock)}${r._fac ? ' 🏭' : ''}</small>` : ''}
       <button type="button" class="stock-label-btn" data-stock-label="${esc(r.id)}">🏷️ Label</button>
       ${canEditItem() ? `<button type="button" class="stock-item-btn" data-stock-item="${esc(r.id)}">✏️ Item</button>` : ''}
+      ${isOwner() && typeof window.ntFacIs === 'function' ? `<label class="fac-tick"><input type="checkbox" data-fac-tick="${esc(r.id)}"${window.ntFacIs(r) ? ' checked' : ''}> 🏭 Factory</label>` : ''}
       ${isOwner() ? `<label style="display:block;font-size:.85em;white-space:nowrap"><input type="checkbox" style="width:auto" data-stock-hide="${esc(r.id)}"${isHidden(r) ? ' checked' : ''}> Band</label>` : ''}
     </div>
     </div>
@@ -3157,9 +3158,10 @@ function thAct(d, b) {
 }
 // v2.99.88: 🏭 FACTORY (factory.js) — "apni factory" category (isFactory: category mein 'factory') ki items, dukan (main godam) ka stock,
 //   rates fi PIECE (POS jaisa: rate = CTN wala fi piece, rate2 = khula piece, wrate = W CTN fi piece, ws = W piece) + label ke barcode.
-export function stockFactoryList() {
+// v2.99.89: pick(r) -> true (malik ne ☑ kiya) / false (hataya) / null (category se: isFactory)
+export function stockFactoryList(pick) {
   const P = agPool();
-  return P.list.filter(isFactory).map(r => {
+  return P.list.filter(r => { const v = pick ? pick(r) : null; return v == null ? isFactory(r) : !!v; }).map(r => {
     const s = saleStockItem(P.main, r.id), pk = Number(r.pack) > 1 ? Number(r.pack) : 0;
     return { id: String(r.id), name: String(r.name || ''), code: String(r.code || ''), pack: pk, cn: r.cName || 'Ctn', un: r.uName || 'Pcs', cat: String(r.cat || ''),
       stock: Number(s?.stock) || 0, prate: Number(r.prate) || 0, rate: Number(r.rate) || 0, rate2: Number(r.rate2) || Number(r.rate) || 0,
@@ -3169,3 +3171,7 @@ export function stockFactoryList() {
 }
 export const stockFactoryMain = () => agPool().main;
 export const stockFactoryCanRate = () => canEditItem();
+// v2.99.89: ☑ factory items chunne ke liye — dukan ki saari items (halki) + category wali pehchaan · stock screen dobara
+export function stockPickList() { const P = agPool(); return P.list.map(r => ({ id: String(r.id), name: String(r.name || ''), code: String(r.code || ''), cat: String(r.cat || ''), catFac: isFactory(r), stock: Number(saleStockItem(P.main, r.id)?.stock) || 0, pack: Number(r.pack) > 1 ? Number(r.pack) : 0, cn: r.cName || 'Ctn', un: r.uName || 'Pcs' })); }
+export function stockRepaint() { if (stockActive) soft(); }
+export const stockIsFactoryCat = r => isFactory(r);

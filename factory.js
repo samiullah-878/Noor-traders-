@@ -6,7 +6,9 @@
 //   PC factory-post.js: POS Adjustment (+ tayyar maal, − raw maal; dukan godam) -> status 'posted' + adjNo, phir label jobs (batch no ke saath).
 //   Malik: 'cancelReq' (ulta Adjustment) / 'new' dobara. Rate: pos-stock stockAgentItemSave (itemJobs, PC item-post) — malik dabaye tab.
 // Tez: OK = setDoc foran (intezar nahi) — list mein "⏳ PC ko ja raha" foran. Yahan AI NAHI.
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave } from './pos-stock.js?v=2.99.88';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat } from './pos-stock.js?v=2.99.89';
+// v2.99.89: ☑ FACTORY ITEMS TICK SE (malik: "check box de do items list mein — factory mein items aa jayein") — factory/cfg.items {id: true | false | null}:
+//   true = malik ne ☑ kiya, false = category wali ko hataya, null = category ke hisaab se. Factory screen "☑ Factory items chunein" + stock screen har item par ☐ 🏭 Factory.
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -35,13 +37,17 @@ let fb = null;   // batch form ki haalat
 let fe = null;   // formula editor ki haalat
 
 export function factorySetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; pdfOf = o.pdf || pdfOf; canOf = o.can || canOf; ownerOf = o.owner || ownerOf; whoOf = o.who || whoOf; goPurchase = o.purchase || goPurchase; batchOf = o.batch || batchOf; }
-export function factoryStop() { if ($('fcBatch') || $('fcForm')) return;   // stock screen se khula batch / formula — listener zinda rahe
-  if (bStop) { try { bStop(); } catch {} bStop = null; } if (cfgStop) { try { cfgStop(); } catch {} cfgStop = null; } }
+export function factoryStop() { if ($('fcBatch') || $('fcForm') || $('fcPick')) return;   // stock screen se khula batch / formula — listener zinda rahe
+  if (bStop) { try { bStop(); } catch {} bStop = null; } }   // v2.99.89: cfg (1 doc) zinda — stock screen ke ☐ 🏭 Factory ke liye
 const isOwner = () => { try { return !!ownerOf(); } catch { return false; } };
 export const canFacBatch = () => { try { return isOwner() || (batchOf ? !!batchOf() : false); } catch { return false; } };
 
+function watchCfg() { if (!cfgStop && cloud?.listenFactory) cfgStop = cloud.listenFactory(c => { if (c) cfg = c; else if (!cfg) cfg = {}; repaint(); try { stockRepaint(); } catch {} }); }
+const facPick = r => { const v = cfg?.items?.[String(r.id)]; return v === true ? true : v === false ? false : null; };
+const facIs = r => { const v = facPick(r); return v == null ? stockIsFactoryCat(r) : v; };
+window.ntFacIs = r => { watchCfg(); return facIs(r); };
 function watch() {
-  if (!cfgStop && cloud?.listenFactory) cfgStop = cloud.listenFactory(c => { cfg = c || {}; repaint(); });
+  watchCfg();
   const d = new Date(); d.setHours(0, 0, 0, 0); const wk = new Date(d); wk.setDate(wk.getDate() - 6); const mo = new Date(d.getFullYear(), d.getMonth(), 1);
   const from = Math.min(wk.getTime(), mo.getTime());
   if (bStop && bFrom === from) return;
@@ -49,7 +55,7 @@ function watch() {
   bStop = cloud?.listenFactoryBatches ? cloud.listenFactoryBatches(from, (l, e) => { if (l) batches = l; else if (e) notice('Factory batch nahi parhe: ' + (e.code || e.message || e)); repaint(); }) : null;
 }
 function loadItems() {
-  try { items = stockFactoryList(); byId = new Map(items.map(x => [x.id, x])); itemsOk = true; } catch (e) { itemsErr = e?.message || String(e); }
+  try { items = stockFactoryList(facPick); byId = new Map(items.map(x => [x.id, x])); itemsOk = true; } catch (e) { itemsErr = e?.message || String(e); }
 }
 async function ensureItems() {
   if (itemsOk) { loadItems(); return true; }
@@ -119,7 +125,9 @@ function paint() {
     ${own ? `<button type="button" class="fc-act" data-fc-pg="rates"><span class="fc-ic">🏷</span><b>Rates</b><small>${up.length ? num(up.length) + ' ki laagat barhi' : 'laagat + nafa'}</small></button>` : ''}
     <button type="button" class="fc-act" data-fc-pg="raw"><span class="fc-ic">📦</span><b>Raw maal</b><small>${itemsOk ? num(rawItems().length) + ' cheezen' : '…'}</small></button>
   </div>
-  ${itemsOk && !items.length ? `<p class="ir-say">POS mein abhi koi item <b>"factory"</b> wali category mein nahi. Tayyar maal aur raw maal ko POS mein category <b>apni factory</b> / <b>factory raw</b> mein daalein — 2 min mein yahan aa jayengi.</p>` : ''}
+  ${own ? `<button type="button" class="fc-pickbtn" data-fc-pick="1">☑ Factory items chunein <small>${itemsOk ? num(items.length) + ' factory mein' : ''}</small></button>` : ''}
+  ${itemsOk && !items.length ? `<p class="ir-say">Abhi factory mein koi item nahi — upar <b>☑ Factory items chunein</b> se tick lagayein (ya POS mein category mein "factory").</p>` : ''}
+  ${'' && itemsOk && !items.length ? `<p class="ir-say">POS mein abhi koi item <b>"factory"</b> wali category mein nahi. Tayyar maal aur raw maal ko POS mein category <b>apni factory</b> / <b>factory raw</b> mein daalein — 2 min mein yahan aa jayengi.</p>` : ''}
   ${up.length && own ? `<div class="fc-alert"><span>⚠️</span><div><b>${up.map(x => esc(x.it.name)).slice(0, 3).join(', ')}</b> ki laagat barh gayi (+${Math.round((up[0].c / up[0].old - 1) * 100)}%) — rate dekh lein.</div><button type="button" data-fc-pg="rates">Dekhein</button></div>` : ''}
   ${errs.length ? `<div class="fc-alert bad"><span>❌</span><div><b>${num(errs.length)} batch POS mein nahi gaye</b> — tap kar ke wajah dekhein.</div></div>` : ''}
   ${st.pg === 'formulas' && own ? formulasHTML() : st.pg === 'rates' && own ? ratesHTML() : st.pg === 'raw' ? rawHTML() : ''}
@@ -214,6 +222,40 @@ function rawHTML() {
     ${goPurchase && (isOwner() || canOf('v:purchase')) ? '<button type="button" class="fc-go" data-fc-pur="1">🧾 Raw maal ki purchase daalein</button>' : ''}
     <label class="hs-search"><input type="search" data-fc-rq="1" placeholder="🔍 raw maal…" value="${esc(rq)}"></label>
     <div class="ir-tbl">${list.slice(0, 80).map(({ x, u, need, kam }) => `<div class="ir-row"><span><b>${esc(x.name)}</b><small>${u.length ? u.length + ' formula mein · 1 batch = ' + esc(qt(need, x)) : 'kisi formula mein nahi'}${x.prate ? ' · ' + rs(x.prate) + ' / ' + esc((x.un || 'pcs').toLowerCase()) : ''}</small></span><span class="ir-num"><b class="${x.stock < 0 || kam ? 'fc-neg' : ''}">${esc(qt(x.stock, x))}</b><small class="${kam ? 'neg' : 'pos'}">${kam ? 'kam — 1 batch se kam' : need ? '~' + num(Math.floor(x.stock / need)) + ' batch ka' : ''}</small></span></div>`).join('') || '<p class="lk-note">Raw maal nahi mila (POS mein category "factory raw").</p>'}</div></section>`;
+}
+
+// ---------- ☑ factory items chunna (malik) ----------
+let pk = null;
+async function openPicker() {
+  if (!isOwner()) { notice('Sirf malik'); return; }
+  watchCfg(); pk = { q: '', f: 'sab', lim: 60 };
+  dlg('☑ Factory items chunein', '<div id="fcPick"><p class="lk-note">⏳ Items aa rahi hain…</p></div>');
+  if (!(await ensureItems())) return; pickPaint();
+}
+function pickPaint() {
+  const el = $('fcPick'); if (!el || !pk) return;
+  let all = []; try { all = stockPickList(); } catch {}
+  const isOn = x => { const v = cfg?.items?.[x.id]; return v === true || (v !== false && x.catFac); };
+  const q = pk.q.trim().toLowerCase(), F = forms();
+  const list = all.filter(x => (pk.f === 'on' ? isOn(x) : pk.f === 'cat' ? x.catFac : true) && (!q || x.name.toLowerCase().includes(q) || x.code.includes(q)))
+    .sort((a, b) => (isOn(b) ? 1 : 0) - (isOn(a) ? 1 : 0) || a.name.localeCompare(b.name));
+  const nOn = all.filter(isOn).length, keepF = document.activeElement?.dataset?.fcPq != null;
+  el.innerHTML = `<p class="ir-say">Jis item par <b>☑</b> lagayein wo factory mein aa jayegi — formula wali = <b>tayyar maal</b>, baqi = <b>raw maal</b>.</p>
+    <div class="fc-per fc-pf">${[['sab', 'Sab (' + num(all.length) + ')'], ['on', '☑ Chuni hui (' + num(nOn) + ')'], ['cat', 'Category wali (' + num(all.filter(x => x.catFac).length) + ')']].map(([k, l]) => `<button type="button" class="${pk.f === k ? 'on' : ''}" data-fp-f="${k}">${l}</button>`).join('')}</div>
+    <label class="hs-search"><input type="search" data-fc-pq="1" placeholder="🔍 naam ya barcode…" value="${esc(pk.q)}"></label>
+    <div class="fc-picks">${list.slice(0, pk.lim).map(x => `<label class="fc-pk${isOn(x) ? ' pk-on' : ''}"><input type="checkbox" data-fac-tick="${esc(x.id)}"${isOn(x) ? ' checked' : ''}><span><b>${esc(x.name)}</b><small>${esc(x.cat || '—')} · stock ${esc(qt(x.stock, x))}${F[x.id] ? ' · 🧪 formula' : ''}</small></span></label>`).join('') || '<p class="lk-note">Kuch nahi mila.</p>'}</div>
+    ${list.length > pk.lim ? `<button type="button" class="fc-no" data-fp-more="1">Aur dikhao (${num(list.length - pk.lim)})</button>` : ''}`;
+  if (keepF) { const i = el.querySelector('[data-fc-pq]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+}
+async function facToggle(id, on, box) {
+  if (!isOwner() || !cloud?.setFactoryCfg) { if (box) box.checked = !on; notice('Sirf malik'); return; }
+  let cat = false; try { const x = stockPickList().find(y => y.id === String(id)); cat = !!x?.catFac; } catch {}
+  if (!on && forms()[String(id)] && !confirm('Is item ka formula bana hua hai — factory se hatana hai?')) { if (box) box.checked = true; return; }
+  const v = on ? (cat ? null : true) : (cat ? false : null), prev = cfg?.items?.[String(id)];
+  cfg = { ...(cfg || {}), items: { ...(cfg?.items || {}), [String(id)]: v } };   // foran (tez)
+  loadItemsQuiet(); repaint(); if ($('fcPick')) pickPaint(); try { stockRepaint(); } catch {}
+  try { await cloud.setFactoryCfg({ items: { [String(id)]: v } }); }
+  catch (e) { cfg = { ...(cfg || {}), items: { ...(cfg?.items || {}), [String(id)]: prev ?? null } }; loadItemsQuiet(); repaint(); if ($('fcPick')) pickPaint(); notice('Save nahi hua: ' + (e?.message || e)); }
 }
 
 // ---------- ➕ naya batch (larka) ----------
@@ -312,6 +354,8 @@ function dlg(title, html) { const d = $('dialog'); if (!d) return; d.classList.r
 // ---------- clicks ----------
 document.addEventListener('click', e => {
   const o = e.target.closest?.('[data-fac-open]'); if (o) { e.preventDefault(); openBatch(); return; }
+  const pq = e.target.closest?.('[data-fc-pick],[data-fp-f],[data-fp-more]');
+  if (pq) { const d = pq.dataset; if (d.fcPick != null) { openPicker(); return; } if (!pk) return; if (d.fpF) { pk.f = d.fpF; pk.lim = 60; } else pk.lim += 100; pickPaint(); return; }
   const t = e.target.closest?.('[data-fc-per],[data-fc-pg],[data-fc-batch],[data-fc-b],[data-fc-f],[data-fc-rate],[data-fc-pdf],[data-fc-bpdf],[data-fc-act],[data-fc-pur],[data-fb-it],[data-fb-n],[data-fb-lbl],[data-fb-ok],[data-fe-del],[data-fe-add],[data-fe-save],[data-fe-rm]');
   if (!t) return; const d = t.dataset;
   if (d.fcPdf != null) { if (!pdfOf) return; const l = batches.filter(inPer); pdfOf(pdfHTML(l, 'Factory production — ' + (PER.find(p => p[0] === st.per)?.[1] || '')), 'Factory production ' + today()); return; }
@@ -339,11 +383,14 @@ document.addEventListener('input', e => {
   const t = e.target; if (!t?.dataset || !t.closest?.('.fc-root')) return; const d = t.dataset;
   if (d.fcFq != null) { fq = t.value || ''; clearTimeout(qT); qT = setTimeout(() => { paint(); const i = document.querySelector('[data-fc-fq]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 200); return; }
   if (d.fcRq != null) { rq = t.value || ''; clearTimeout(qT); qT = setTimeout(() => { paint(); const i = document.querySelector('[data-fc-rq]'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 200); return; }
+  if (d.fcPq != null && pk) { pk.q = t.value || ''; pk.lim = 60; clearTimeout(qT); qT = setTimeout(pickPaint, 180); return; }
   if (d.fcFq2 != null && fe) { fe.q = t.value || ''; clearTimeout(qT); qT = setTimeout(formPaint, 180); return; }
 });
 let qT = 0;
 document.addEventListener('change', e => {
-  const t = e.target; if (!t?.dataset || !t.closest?.('.fc-root')) return; const d = t.dataset, v = Number(t.value);
+  const t = e.target;
+  if (t?.dataset?.facTick) { facToggle(t.dataset.facTick, t.checked, t); return; }   // v2.99.89: stock screen + picker
+  if (!t?.dataset || !t.closest?.('.fc-root')) return; const d = t.dataset, v = Number(t.value);
   if (d.fbReal != null && fb) { fb.real = v > 0 ? v : ''; batchPaint(); return; }
   if (fe) {
     if (d.fePer != null) { fe.per = v > 0 ? v : fe.per; formPaint(); return; }

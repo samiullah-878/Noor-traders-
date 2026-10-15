@@ -3546,3 +3546,15 @@ html body :is(#summary,#dialogBody) .ir-root .fc-sd.ok{color:#fff!important}html
 .fc-mv{margin:4px 0 6px 40px;padding:8px 10px;border-radius:12px;background:rgba(43,74,134,.05)}.fc-mv>div{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;padding:2px 0}
 html body :is(#summary,#dialogBody) .ir-root .fc-mv b.plus{color:#13693F!important}html body :is(#summary,#dialogBody) .ir-root .fc-mv b.minus{color:#9E1F28!important}
 .stock-head .account-tools button.sh-fac{flex-basis:100%;background:linear-gradient(135deg,#178156,#0F6A45)!important;color:#fff!important;border-color:transparent!important;font-weight:800}
+/* v2.99.89 ☑ factory items tick se */
+html body :is(#summary,#dialogBody) .ir-root .fc-pickbtn{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:50px;margin:0 0 12px;padding:0 16px;border-radius:16px;border:1.5px dashed #9FB2D6!important;background:rgba(43,74,134,.06)!important;color:#2B4A86!important;font-size:14.5px;font-weight:800}
+html body :is(#summary,#dialogBody) .ir-root .fc-pickbtn small{font-size:12px;font-weight:600;color:var(--ir-ink2)!important}
+html body #dialogBody .ir-root .fc-pf button{border:1px solid var(--ir-grid)!important;background:var(--ir-surf)!important;color:var(--ir-ink)!important}
+html body #dialogBody .ir-root .fc-pf button.on{background:#223B6D!important;color:#fff!important;border-color:#223B6D!important}
+.fc-picks{display:grid;gap:6px;margin:6px 0 10px}
+.fc-pk{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;border:1px solid var(--ir-grid);background:var(--ir-surf);cursor:pointer}
+html body #dialogBody .ir-root .fc-pk.pk-on{border-color:#9FD6B9!important;background:#EEF8F2!important}html body #dialogBody .ir-root .fc-pk :is(b){color:var(--ir-ink)!important}html body #dialogBody .ir-root .fc-pk small{color:var(--ir-ink2)!important}
+.fc-pk input{flex:none;width:22px;height:22px;accent-color:#178156;margin:0}
+.fc-pk span{display:grid;gap:2px;min-width:0}.fc-pk b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.fc-pk small{font-size:11px;color:var(--ir-ink2)}
+html.dk body #dialogBody .ir-root .fc-pk.pk-on{background:rgba(23,129,86,.18)}
+.fac-tick{display:block;font-size:.85em;white-space:nowrap;color:#13693F;font-weight:700;margin-top:2px}.fac-tick input{width:auto;accent-color:#178156}
