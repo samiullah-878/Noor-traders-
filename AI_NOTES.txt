@@ -4590,3 +4590,13 @@ Wajah: .ir-root par .bc-root ka display:grid jeet raha tha (zyada specific rule)
 ~440px ho jata, screen 390px -> Rs, chips, pattern note sab daayein se kate. Fix: html body .ir-root.ir-root {display:block!important; width/max 100%},
 bachon par min-width:0 / max-width:100%, .ir-sec overflow hidden. Hero ke chhote label safaid (pehle dhundle). Jaanch: asal index.html shell 412px,
 koi element screen se bahar nahi (scratchpad hd/shot3.mjs).
+
+=== v2.99.86 (2026-10-15) — ➕ MULAZIM SIRF NAYA ITEM (alag switch) · Rules 2.51 ===
+Malik: "mulazim ko access de do naya item ki" — pehle ek hi switch (stockConfig.itemEdit) = naya item + purane ka rate / naam + Urdu naam.
+* Ab Stock screen (sirf malik ko) do switch: "➕ Mulazim NAYA item bana sake" (stockConfig.itemNew, cloud.setItemNew) aur
+  "✏️ Mulazim purane item ka rate / naam bhi badal sake" (itemEdit — pehle jaisa; ON ho to naya bhi, pehla switch disabled-checked).
+* pos-stock.js canNewItem() = malik || ((itemNew || itemEdit) && can('stock.itemnew')) — ➕ Naya item button, naye form ke rate khane,
+  Noor Agent ka naya item. Purana item / ✏️ / rates / Urdu naam = canEditItem() (badla nahi).
+* CAPS: stock.itemnew (naya) + stock.item (purana rate / naam) — Settings → Mulazim → Stock.
+* Rules 2.51: itemJobs create — mulazim (Full / Stock): itemEditOn() || (op == 'new' && itemNewOn()); itemEditOn ab .get('itemEdit', false).
+  firestore-rules-2.51.html (2.50 wala bhi shamil). History: setItemNew.

@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.85';
-import { liveLabelsHTML } from './barcode.js?v=2.99.85';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.99.86';
+import { liveLabelsHTML } from './barcode.js?v=2.99.86';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -31,6 +31,8 @@ let itemCfg = {}, cfgStop = null, ptList = [], ptStop = null;
 const ptLive = () => (ptList || []).filter(t => t && !t.cancelled);   // v2.99.58: POS mein cancel (mita diya) note register / aaya maal mein nahi                         // v2.5: stockConfig (mulazim item/rates badal sake)
 const can = k => { try { return typeof window.ntCan === 'function' ? window.ntCan(k) : true; } catch { return true; } };   // v2.99.24: mulazim ke andar ke option (app.js can)
 const canEditItem = () => isOwner() || (itemCfg.itemEdit === true && can('stock.item'));
+// v2.99.86: malik — "mulazim ko naya item ki access" — ALAG switch (itemNew): sirf NAYA item; purane ka rate / naam nahi (wo itemEdit). itemEdit ON = naya bhi.
+const canNewItem = () => isOwner() || ((itemCfg.itemNew === true || itemCfg.itemEdit === true) && can('stock.itemnew'));
 let inPdfOf = null, tolaiOf = null, tolaiClickOf = null;
 export function setInPdf(fn) { inPdfOf = fn; }
 export function setTolai(open, click) { tolaiOf = open; tolaiClickOf = click; }   // v2.7
@@ -622,13 +624,13 @@ function summaryHTML(branches, pick, items, meta, names, canJama = false) {
         ? `<button class="sh-wide sh-scan" data-stock-scan="1">${camIco()} Aur scan karein (${num(scanList.length)} list mein)</button>
            <button class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button>`
         : `<div class="sh-scanrow"><button class="sh-wide sh-scan" data-stock-scan="1">${camMissing() ? '🔫 Scanner gun se scan karein (ek ya kai items)' : '📷 Barcode scan karein (ek ya kai items)'}</button><button type="button" class="sh-mic" data-stock-mic="1" title="Awaz se dhoondein">🎤</button></div>
-           ${canEditItem() ? '<button class="sh-wide" data-stock-newitem="1">➕ Naya item</button>' : ''}
+           ${canNewItem() ? '<button class="sh-wide" data-stock-newitem="1">➕ Naya item</button>' : ''}
            ${can('stock.in') ? '<button class="sh-wide" data-stock-in="1">📥 Aaya / gaya maal</button>' : ''}${can('stock.reg') ? '<button class="sh-wide" data-stock-reg="1">📋 Transfer register</button>' : ''}${can('stock.tc') ? '<button class="sh-wide sh-tc" data-stock-tc="1">🧾 Transfer check (scan)</button>' : ''}${can('stock.demand') ? '<button class="sh-wide dm-btn" data-demand="1">📢 Demand (khatam / kam)</button>' : ''}
            ${can('stock.tolai') ? '<button class="sh-wide sh-tolai" data-stock-tolai="1">⚖️ Tolai</button>' : ''}${canEditItem() ? `<button class="sh-wide sh-urdu" data-stock-urdu="1">🔤 Urdu naam banao (AI)${Object.keys(urdu).length ? ' · ' + num(Object.keys(urdu).length) + ' bane' : ''}</button>` : ''}
            ${can('stock.transfer') ? '<button class="sh-wide" data-stock-transfer="1">⇄ Transfer note (godam se godam)</button>' : ''}
            ${($('search')?.value || '').trim() ? '<button class="sh-wide" data-stock-clear="1">✕ Search saaf karein</button>' : ''}`}
     </div>
-    ${isOwner() ? `<label class="sh-switch"><input type="checkbox" data-stock-itemedit="1"${itemCfg.itemEdit ? ' checked' : ''}> Mulazim item aur rates badal sake</label>` : ''}
+    ${isOwner() ? `<label class="sh-switch"><input type="checkbox" data-stock-itemnew="1"${itemCfg.itemNew || itemCfg.itemEdit ? ' checked' : ''}${itemCfg.itemEdit ? ' disabled' : ''}> ➕ Mulazim NAYA item bana sake</label><label class="sh-switch"><input type="checkbox" data-stock-itemedit="1"${itemCfg.itemEdit ? ' checked' : ''}> ✏️ Mulazim purane item ka rate / naam bhi badal sake</label>` : ''}
     ${branchBar ? `<div class="sh-label">Branch</div>${branchBar}` : ''}
     <div class="sh-label">Dikhao</div>
     <div class="account-tools">
@@ -700,7 +702,7 @@ function itemForm(r, pre) {
   const pk0 = Number(v.pack) > 0 ? Number(v.pack) : 1;
   if (!v.costC) v.costC = pk0 > 1 ? ctnR(v.costP, pk0) : r2(v.costP);
   if (Number(v.pack) > 1) { if (!v.rctn) v.rctn = r2(v.rpcs * v.pack); if (!v.wctn) v.wctn = r2(v.wpcs * v.pack); }
-  const rates = canEditItem();
+  const rates = isNew ? canNewItem() : canEditItem();
   d.classList.remove('search-dialog');
   $('dialogTitle').textContent = isNew ? '➕ Naya item' : '✏️ ' + r.name;
   const f = (lab, k) => `<label class="it-f"><span>${lab}</span><input type="number" min="0" step="any" inputmode="decimal" name="${k}" value="${v[k] ? r2(v[k]) : ''}" placeholder="0"${rates ? '' : ' disabled'}></label>`;
@@ -1698,6 +1700,13 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', e => {
   const t = e.target;
+  if (t.matches?.('[data-stock-itemnew]')) {                           // v2.99.86: sirf NAYA item ka switch
+    const on = t.checked;
+    (cloud?.setItemNew ? cloud.setItemNew(on) : Promise.reject(Error('app update karein')))
+      .then(() => { itemCfg = { ...itemCfg, itemNew: on }; notice(on ? '✓ Mulazim ab naya item bana sakta hai (purane ka rate nahi)' : 'Mulazim ab naya item nahi bana sakta'); })
+      .catch(err => { t.checked = !on; notice('Nahi hua: ' + (err?.message || err)); });
+    return;
+  }
   if (t.matches?.('[data-stock-itemedit]')) {                          // v2.5: malik ka switch
     const on = t.checked;
     (cloud?.setItemEdit ? cloud.setItemEdit(on) : Promise.reject(Error('app update karein')))
@@ -1828,7 +1837,7 @@ document.addEventListener('click', e => {
   const ib = e.target.closest?.('[data-stock-item],[data-stock-newitem],[data-item-close]');
   if (ib) { const d = ib.dataset;
     if (d.itemClose != null) $('dialog')?.close();
-    else if (d.stockNewitem != null) itemForm(null, null);
+    else if (d.stockNewitem != null) { if (canNewItem()) itemForm(null, null); else notice('🔒 Naya item — malik ki ijazat chahiye'); }
     else itemForm(rowCache.get(String(d.stockItem)), null);
     return; }
   const isc = e.target.closest?.('[data-item-scan]');
@@ -2999,7 +3008,7 @@ export function stockAgentFind(query, alt = [], n = 6, opt = {}) {
 export const stockAgentCanEdit = () => canEditItem();
 // rate badalna / naya item — itemSave jaisa job (POS fi PIECE rakhta hai; CTN = fi piece × pack)
 export async function stockAgentItemSave(id, patch = {}) {
-  if (!canEditItem()) throw Error('Rate / item sirf malik badal sakta hai (ya malik Stock screen par "Mulazim item aur rates badal sake" on kare)');
+  if (!id ? !canNewItem() : !canEditItem()) throw Error(!id ? 'Naya item — malik Stock screen par "➕ Mulazim NAYA item bana sake" on kare' : 'Rate / item sirf malik badal sakta hai (ya malik Stock screen par "✏️ Mulazim purane item ka rate / naam bhi badal sake" on kare)');
   if (!cloud?.requestItem) throw Error('Item ke liye app update karein');
   const isNew = !id, r = isNew ? null : agPool().byId.get(String(id));
   if (!isNew && !r) throw Error('Item nahi mila');
