@@ -3899,3 +3899,23 @@ html.dk .fc-selall{background:var(--glass);border-color:var(--line)}html.dk .fc-
 .fc-pkq small{font-size:10.5px;color:#7a5200}.fc-pkq b{font-size:18px;color:#10192b}.fc-pkq em{font-style:normal;font-size:10.5px;color:#7a5200}
 .fc-pktot{margin-top:8px;padding:8px 10px;border-radius:12px;background:#fff7e0;color:#7a5200}
 html.dk .fc-pksec{background:var(--glass);border-color:var(--line)}html.dk .fc-pkq,html.dk .fc-pktot{background:color-mix(in srgb,#f1b44a 14%,transparent);border-color:var(--line);color:var(--ink)}
+/* v2.102.0: 🧴 nuskha (ml) + kis mein bhara */
+.fc-nus .fc-mlrow,.fc-mlrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:800;font-size:13.5px;color:#1b3058}
+.fc-mlrow input{width:110px;min-height:44px;text-align:center;font-size:17px;font-weight:900;border-radius:12px}
+.fc-mlrow.sm input{width:90px;min-height:38px;font-size:15px}.fc-mlrow span:last-child{font-size:12px;color:#55627a;font-weight:700}
+.fc-sugml{width:100%;margin-top:8px;min-height:46px;border-radius:14px!important;background:linear-gradient(135deg,#2c5bb0,#1d3a75)!important;color:#fff!important;font-weight:900;font-size:14px}
+.fc-sugml small{display:block;font-size:11px;font-weight:700;opacity:.85}
+.fc-autob{display:grid;gap:2px;margin-top:10px;padding:12px 14px;border-radius:16px;background:linear-gradient(135deg,#e9f8ef,#f4fff8);border:1.5px solid #bfe6cc}
+.fc-autob small{font-size:11.5px;color:#17703c;font-weight:700}.fc-autob b{font-size:22px;color:#10192b}.fc-autob .fc-link{justify-self:start}
+.fc-form1{display:grid;gap:6px;padding:10px;border-radius:14px;background:#fff;border:1px solid #f1d27a;margin-top:8px}
+.fc-form1.alt{border-color:#c9d7f2;background:#f8fbff}
+.fc-f1h{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.fc-f1h b{font-size:14px;color:#10192b}.fc-f1h small{font-size:11.5px;color:#7a5200}.fc-f1h .ir-cx{margin-left:auto}
+.fc-mrow{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:12px;background:#fffaf0}
+.fc-mrow>span{display:grid;flex:1;min-width:0}.fc-mrow b{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fc-mrow small{font-size:11px;color:#6b7c93}
+.fc-mrow label{display:flex;align-items:center;gap:4px}.fc-mrow input{width:64px;min-height:38px;text-align:center;font-weight:800;border-radius:10px}.fc-mrow em{font-style:normal;font-size:10.5px;color:#7a5200}
+.fc-mchips{display:flex;flex-wrap:wrap;gap:6px}
+.fc-mchips button{min-height:34px!important;padding:4px 10px!important;border-radius:999px!important;font-size:12px;font-weight:800;background:#fff!important;border:1.5px dashed #d9b45a!important;color:#7a5200!important}
+.fc-addf .fc-mchips button{border-style:solid!important;border-color:#c9d7f2!important;color:#1b3058!important}
+.fc-pkr.self{background:#fff7e0;border-color:#f1d27a}
+.fc-pkr em{font-style:normal;font-size:11px;color:#55627a}
+html.dk .fc-form1,html.dk .fc-mrow,html.dk .fc-autob,html.dk .fc-mchips button{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}

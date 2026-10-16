@@ -4928,3 +4928,21 @@ bajaye neeche aani chahiye". Plan OK.
   Purani save line (bottle / dhakan q 1 ya q = per) formula kholte hi pp 1. "↓ Packing mein (har pcs)" / "↑ Raw mein" (data-fe-mv).
 - Laagat: 🧪 Raw maal / 📦 Packing / Mazdoori + gas alag, phir kul + fi pcs. batchCalc: "Asal ginti alag" ho to packing = pp × asal.
 - Rules / AI — kuch nahi. Test fct/t.mjs 124 ✓.
+
+=== v2.102.0 (2026-10-16 raat) — 🧴 NUSKHA (BATCH KHUD JAMA) + "KIS MEIN BHARA?" (BOTTLE / PACKET) ===
+Malik (liquid 1.5 ltr formula): "batch quantity raw maal jama kar ke aaye · batch banate waqt pooche bottle hai ya packet" + "deep socho,
+dimagh khap raha hai". Pehle wala v2.101.9 "📦 har pcs mein (pp)" tareeqa HATA — ek hi tareeqa. Plan (kam se kam malik ka kaam) OK.
+- formula: ml (1 pcs = ml / g; naya formula naam se khud — "1.5/ liter" = 1500, "Surf 4 kg" = 4000, "700 g"; purane par "🧪 Naam se ✓ Lagao"
+  button), auto (default) = per = raw maal ka JAMA (lineVol: unit kg/ltr = ginti, g/ml ÷ 1000, "1 pcs = g" conv) × 1000 ÷ ml. Jo raw ka
+  wazan nahi = ⚠️ list ("1 pcs = g likhein"). "✎ haath se" / "↺ khud jama". self.mats = isi item ke har pcs ke saath (bottle 1 + dhakan 1).
+  Doosri packing = cfg.packs {pid: {src: formula item, g: ml, mats}} — formula screen ke "🧴 Kis mein bharte hain?" mein (➕ Doosri
+  packing -> item chips, ml naam se, maal chips). packUnit = g / srcMl. Save: formulas (har key: ml, auto, self) + packs (hata = null).
+- normF: purani pp lines (v2.101.9) = self.mats; formula kholte hi bottle / dhakan / pouch raw line (ginti 1 ya = per) -> self.
+  Tick list: looksPack (isMat / naam bottle-dhakan-cap-pouch-label-sticker-carton-shopper-bag-jar-dabba-lid-tube) -> self; "↓ bharne ka
+  maal" / "↑ raw". linkCheck self.mats ki job: id bhi.
+- Batch (make): fill = ml ya self.mats. fillStep "Kis mein bhara?" — 🧴 yahi item (fb.self; khali = baqi sab, floor) + har packing ke pcs;
+  "Bhara X L · bacha khula Y L (POS mein nahi)"; zyada = over (OK band). out = selfN, outs = packs, lines = raw + pack mats + self mats ×
+  selfN, labels yahi item bhi. 'Bulk se packing' mode ab nuskha (ml) wale src ke liye nahi. Edit: fb.self = eb.out.
+  PC factory-post: wahi (+out, +outs, −lines) — koi badlaav nahi; rules 2.57 keys wahi.
+- Rates tab tayyar cpp = nuskha cpp + self maal. volU: naam mein kg/g = kg warna L.
+- Test fct/t.mjs 134 ✓ (nuskha jama, doosri packing, batch bhara / bacha / over, batch doc, purana pp).
