@@ -3920,3 +3920,25 @@ html.dk .fc-pksec{background:var(--glass);border-color:var(--line)}html.dk .fc-p
 .fc-pkr em{font-style:normal;font-size:11px;color:#55627a}
 html.dk .fc-form1,html.dk .fc-mrow,html.dk .fc-autob,html.dk .fc-mchips button{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}
 .fc-fl input.fc-gauto{color:#8a94a8;font-style:italic;background:#f6f8fc}
+/* v2.102.3: 🔔 entry par reminder + 🔍 khata search kyun mila */
+.rem-row{display:grid;gap:6px;margin:4px 0 8px;padding:10px;border-radius:14px;background:#fff8e6;border:1px solid #f1d27a}
+.rem-lab{font-size:12.5px;font-weight:900;color:#7a5200}
+.rem-chips{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rem-chips button{min-height:34px!important;padding:3px 12px!important;border-radius:999px!important;font-size:12.5px;font-weight:800;background:#fff!important;border:1.5px solid #e8cf86!important;color:#7a5200!important}
+.rem-row .rem-chips button.on{background:linear-gradient(135deg,#f5b700,#d99a00)!important;border-color:transparent!important;color:#fff!important}
+.rem-in{display:inline-flex;align-items:center;gap:4px;font-size:13px}.rem-in input{min-height:34px!important;padding:2px 6px!important;border-radius:10px;font-size:12.5px;max-width:130px}
+.rem-hint{font-size:11.5px;color:#7a5200;font-weight:700}
+.rem-chip,.rem-add{display:inline-flex;align-items:center;gap:4px;margin:4px 6px 0 0;min-height:30px!important;padding:2px 10px!important;border-radius:999px!important;font-size:12px;font-weight:800;background:#fff8e6!important;border:1px solid #f1d27a!important;color:#7a5200!important}
+.rem-chip.late{background:#fff1f1!important;border-color:#f3c4c4!important;color:#b4282a!important}.rem-chip.done{background:#e9f8ef!important;border-color:#bfe6cc!important;color:#17703c!important}
+.rem-add{padding:2px 8px!important;opacity:.85}
+.nt-elink{display:block;width:100%;margin:4px 0;min-height:34px!important;padding:4px 10px!important;border-radius:10px!important;text-align:left;font-size:12.5px;font-weight:800;background:#eef4ff!important;border:1px solid #c9d7f2!important;color:#1d3a75!important}
+.ks-cnt{margin:6px 0;font-size:12.5px;color:#55627a}.ks-cnt b{color:#1b3058}
+.ks-h{margin:12px 2px 4px;font-size:12.5px;font-weight:900;color:#1b3058;display:flex;align-items:center;gap:6px}.ks-h i{font-style:normal;padding:1px 8px;border-radius:999px;background:#eef2f9;font-size:11px}
+.ks-h.ks-s-milte{color:#6b7c93}.ks-h.ks-s-milte~.party{opacity:.8}
+.ks-pn{border-radius:16px;background:#fffdf5;border:1px solid #f4e3b0;margin-bottom:6px;overflow:hidden}
+.ks-notes{display:grid;gap:4px;padding:0 10px 10px}
+.ks-note{display:grid;gap:2px;text-align:left;min-height:0!important;padding:7px 10px!important;border-radius:12px!important;background:#fff!important;border:1px solid #efe2bb!important;color:#10192b!important}
+.ks-note small{font-size:11px;color:#6b7c93}.ks-note span{font-size:13px}.ks-note mark,.party .name mark{background:#ffe58a;color:inherit;border-radius:4px;padding:0 1px}
+.ks-more{min-height:30px!important;padding:2px 10px!important;border-radius:10px!important;font-size:12px;font-weight:800;background:#fff8e6!important;color:#7a5200!important}
+.ks-flash{animation:ksFlash 1.6s ease 2}@keyframes ksFlash{50%{box-shadow:0 0 0 4px #f5b70088;background:#fff8e6}}
+html.dk .rem-row,html.dk .rem-chips button,html.dk .rem-chip,html.dk .rem-add,html.dk .ks-pn,html.dk .ks-note,html.dk .nt-elink{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}

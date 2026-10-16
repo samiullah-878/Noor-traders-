@@ -4963,3 +4963,21 @@ Malik (surf soda kg formula: jama 1,315 = Slaphate 25 pcs × 50 kg galat): "OK" 
 - Raw line ka "1 pcs =" khana ab khud bhara (grey italic .fc-gauto + "khud"); badlein to conv save (pehle jaisa).
 - volU: "surf soda kg" (number ke baghair kg) bhi kg; liter / ml naam = L.
 - Test fct/t.mjs 142 ✓.
+
+=== v2.102.3 (2026-10-17) — 🔔 HAR ENTRY PAR REMINDER + 🔍 KHATA SEARCH "KYUN MILA" ===
+Malik: (1) "Raper" search mein Saim / haseeb (note mein "raper") aur "pindi shaper" (spelling) aaye — samajh nahi aaya kyun. (2) Payment
+transfer form: "yahan se entry ka reminder tab khule — kisi bhi entry ka reminder lag sake". Dono plan OK.
+- 🔍 app.js khSearchHTML (sirf jab search likha ho): khWhy = naam (naam / phone / details / raqam ka seedha milan) · notes (entries ke
+  note index partyNotes) · milte (smartHit / partyScore spelling). Upar "naam X · notes Y · milte julte Z"; 👤 Naam se mile (naam mein lafz
+  peela) · 📝 Notes mein mila (account + 3 taaza notes, lafz <mark>, tap = data-ks-entry -> wahi khata + entry chamke (data-eid, .ks-flash),
+  "+N aur") · 🔎 Milte julte naam (halke). partyRowHTML alag function (wahi purani row). Matching wahi accountMatches.
+- 🔔 Entry reminder: formSave -> remInject (har form jisme amount + note ho, canERem = owner / Full mulazim + CAP kh.erem) Note ke neeche
+  .rem-row (Nahi / Aaj / Kal / 2 din / Hafta / 📅 / ⏰). save() -> lastSaved = payload; transfer form -> remCtx. Save ke baad remAfter ->
+  notes.entryRemSave({transferId: 'entry:<id>' | 'transfer:<id>', text = note ya label + party, partyId, partyName, amount, day, time}) —
+  wahi link ka khula note ho to wahi update. Rules 2.57 ka purana khana transferId (naya key nahi).
+  Entry card (ledgerHTML / entryHTML): remChip = khula / ho gaya chip "🔔 Kal 10:00 AM" (late laal, done hara; tap = noteOpen) ya 🔔 (naya
+  -> entryRemForm = noteForm prefilled, din Kal). 'sam-notes' event par party screen dobara (dialog band ho to).
+  notes.js: noteForm base.transferId (preset), card par "📒 party · Rs — entry dekhein ›" (data-nt-elink -> us khate par + entry chamke).
+  Exports remFor / remWhen / remLate / noteOpen / entryRemForm / entryRemSave. CAPS.full kh.erem "🔔 Entry par reminder".
+- PC / rules / AI — kuch nahi. Test: scratchpad rem/t.js 10 ✓ (asal app, local recovery mode: search sections, snippet, entry flash,
+  🔔, form row, save ke baad remAfter), rem/n/t.mjs 6 ✓ (entryRemSave / remFor / update / form link).

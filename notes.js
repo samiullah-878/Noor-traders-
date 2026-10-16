@@ -6,9 +6,9 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.102.2';
-import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.102.2';   // v2.99.29: shaffaf order formula
-import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.102.2';
+import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.102.3';
+import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.102.3';   // v2.99.29: shaffaf order formula
+import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.102.3';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -499,7 +499,7 @@ function loadPics(n) {
 }
 export function noteForm(existing = null, preset = {}) {
   const n = existing || { kind: 'note', text: preset.text || '', items: [], remindDay: preset.day || '', remindTime: '', allDay: false };
-  const base = existing || { partyId: preset.partyId || '', partyName: preset.partyName || '', amount: preset.amount || 0 };   // v2.99.58: HBL card se
+  const base = existing || { partyId: preset.partyId || '', partyName: preset.partyName || '', amount: preset.amount || 0, transferId: preset.transferId || '' };   // v2.99.58: HBL card se · v2.102.3: entry ka link
   let chosen = [...(n.items || [])], picsNow = existing ? [...(pics.get(existing.id) || [])] : [], picsDirty = false;
   dlgOf(existing ? '✏️ Note badlein' : '📝 Naya note', `<form class="nt-form">
     <label>Note<textarea name="text" maxlength="1000" rows="3" placeholder="kya yaad rakhna hai…">${esc(n.text || '')}</textarea></label>
@@ -579,6 +579,7 @@ function card(n) {
     <div class="nt-body" data-nt-edit="${esc(n.id)}">
       ${n.kind === 'order' ? `<div class="nt-order">🧾 <b>${esc(n.partyName || '')}</b><span class="nt-amt">${rsP(n.amount)}</span><span class="nt-tag">HBL · maal aana baqi</span></div>` : ''}
       ${callBtns(n)}
+      ${/^(entry|transfer):/.test(n.transferId || '') ? `<button type="button" class="nt-elink" data-nt-elink="${esc(n.id)}">📒 ${esc(n.partyName || 'Entry')}${n.amount ? ' · ' + rsP(n.amount) : ''} — entry dekhein ›</button>` : ''}
       ${n.text ? `<div class="nt-text">${esc(n.text)}</div>` : ''}
       ${(n.items || []).length ? `<div class="nt-chips">${n.items.map(i => `<span class="nt-chip it">📦 ${esc(i.name)}</span>`).join('')}</div>` : ''}
       ${ph.length ? `<div class="nt-thumbs">${ph.map((p, i) => `<span class="nt-thumb" data-nt-pic="${esc(n.id)}|${i}"><img src="${p}" alt=""></span>`).join('')}</div>` : (n.hasPic ? '<small class="nt-meta">🖼 tasveer aa rahi hai…</small>' : '')}
@@ -655,6 +656,7 @@ document.addEventListener('click', e => {
     else if (b.bkGo) { bulkGo(false); return; }
     else if (b.bkDone) { bulkGo(true); return; }
     paint(); return; }
+  const el = e.target.closest?.('[data-nt-elink]'); if (el) { e.stopPropagation(); const n = notes.find(x => x.id === el.dataset.ntElink); if (n) openEntryOf(n); return; }   // v2.102.3
   const t = e.target.closest?.('[data-nt-tab],[data-nt-edit],[data-nt-party],[data-nt-pic],[data-nt-push],[data-nt-vapid]'); if (!t) return;
   const d = t.dataset;
   if (d.ntTab) { fTab = d.ntTab; paint(); return; }
@@ -703,6 +705,26 @@ async function enablePush(quiet) {
   } catch (er) { pushState = ''; if (!quiet) notice('⚠️ Notification: ' + (er?.message || er)); }
   pushStatus();
 }
+
+
+// ---------- v2.102.3: 🔔 ENTRY PAR REMINDER (malik: "entry se reminder tab khule — kisi bhi entry ka reminder lag sake") ----------
+//   Link note.transferId = 'entry:<entryId>' ya 'transfer:<transferId>' (rules ka purana khana — naya key nahi). Entry card par chip / 🔔.
+export function remFor(link) { if (!link) return null; const l = notes.filter(n => n.transferId === link); return l.sort((a, b) => (a.done ? 1 : 0) - (b.done ? 1 : 0) || (b.updatedAt || 0) - (a.updatedAt || 0))[0] || null; }
+export const remWhen = n => n ? (n.done ? '✓ ho gaya' : n.remindDay ? nice(n.remindDay) + (n.remindTime ? ' ' + t12(n.remindTime) : '') : 'note') : '';
+export const remLate = n => !!n && !n.done && !!n.remindDay && n.remindDay < dayOf();
+export function noteOpen(id) { const n = notes.find(x => x.id === id); if (n) noteForm(n); }
+export function entryRemForm(pre = {}) { const ex = remFor(pre.transferId); if (ex && !ex.done) { noteForm(ex); return; } noteForm(null, { day: addDays(1), ...pre }); }
+export async function entryRemSave({ transferId, text = '', partyId = '', partyName = '', amount = 0, day = '', time = '' } = {}) {
+  if (!cloud?.saveNote) throw Error('Notes ke liye app update karein');
+  const old = remFor(transferId), keep = old && !old.done ? old : null;
+  const d = await saveNote({ ...(keep || {}), kind: 'note', text: String(text || partyName || 'Reminder').slice(0, 1000), items: keep?.items || [], partyId, partyName, amount: Math.round(Number(amount) || 0), transferId,
+    remindDay: /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : '', remindTime: /^\d{2}:\d{2}$/.test(time) ? time : '', allDay: false, done: false }, keep || undefined);
+  badge(); return d;
+}
+function openEntryOf(n) { const m = /^(entry|transfer):(.+)$/.exec(n.transferId || ''); if (!m) return;
+  const r = (recordsOf() || []).find(x => x && !x.deleted && (m[1] === 'entry' ? x.id === m[2] : x.transferId === m[2]));
+  const pid = r?.partyId || r?.fromPartyId || n.partyId; if (!pid) { notice('Entry nahi mili (shayad delete ho gayi)'); return; }
+  closeDlg(); routeTo('khata', pid); if (r) setTimeout(() => { const el = document.querySelector(`[data-eid="${CSS.escape(r.id)}"]`); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('ks-flash'); } }, 300); }
 
 // ---------- v2.99.8: 🤖 NOOR AGENT — bol kar note / reminder, aur notes dhoondna ----------
 export async function noteAgentSave({ text = '', day = '', time = '', partyId = '', items = [], nag = 0 } = {}) {
