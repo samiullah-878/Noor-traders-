@@ -3797,3 +3797,27 @@ html body :is(#summary,#dialogBody) .ir-root .fc-send button.on[data-fb-send="1"
 .code-join button{flex:none;min-height:48px;padding:0 14px;font-weight:800}
 .st-code{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #F0C86A}
 .st-code b{font-size:26px;font-weight:900;letter-spacing:.12em;color:#223B6D}.st-code small{flex-basis:100%;font-size:11.5px;opacity:.8}.st-code button{min-height:36px;padding:0 10px}
+/* v2.101.3: 🔍 MULAZIM SEARCH — chipki search, filter chips, band / khula card */
+.st-bar{position:sticky;top:-1px;z-index:5;display:grid;gap:8px;margin:0 -2px;padding:8px 2px;background:linear-gradient(#fff 82%,#fff0)}
+.st-q{display:flex;align-items:center;gap:8px;min-height:48px;padding:0 6px 0 14px;border-radius:16px;background:#f4f7fd;border:1.5px solid #d6deeb;box-shadow:0 4px 14px #10192b10}
+.st-q:focus-within{border-color:#2c5bb0;background:#fff;box-shadow:0 0 0 4px #2c5bb022}
+.st-q span{font-size:17px;opacity:.7}
+.st-q input{flex:1;min-width:0;min-height:44px!important;border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;font-size:15.5px;font-weight:700;color:#10192b;outline:none}
+.st-q button{min-height:34px!important;min-width:34px;padding:0!important;border-radius:999px!important;background:#e3e9f4!important;color:#3c4f72!important;font-weight:900}
+.st-fchips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}.st-fchips::-webkit-scrollbar{display:none}
+.st-fchips button{flex:none;min-height:34px!important;padding:4px 12px!important;border-radius:999px!important;background:#fff!important;border:1.5px solid #d6deeb!important;color:#1b3058!important;font-weight:800;font-size:12.5px}
+.st-fchips button i{font-style:normal;margin-left:3px;padding:1px 7px;border-radius:999px;background:#eef2f9;font-size:11px}
+.st-fchips button.on{background:linear-gradient(135deg,#2c5bb0,#1d3a75)!important;border-color:transparent!important;color:#fff!important}
+.st-fchips button.on i{background:#ffffff2e;color:#fff}
+.st-cards{display:grid;gap:10px}
+.st-cnt{margin:0;font-size:12.5px;color:#55627a}.st-cnt b{color:#1b3058}
+.st-h{cursor:pointer}
+.st-nm mark{background:#ffe58a;color:inherit;border-radius:4px;padding:0 1px}
+.st-pm.hit{box-shadow:0 0 0 3px #f5b70066;border-color:#d99a00!important;animation:stHit 1.2s ease 2}
+@keyframes stHit{50%{box-shadow:0 0 0 6px #f5b70033}}
+.st-more-btn{min-height:36px!important;padding:4px 12px!important;border-radius:12px!important;background:#f4f7fd!important;border:1px dashed #cfd9ea!important;color:#3c4f72!important;font-size:12.5px;font-weight:800;text-align:left;justify-content:flex-start}
+.st-more-btn b{color:#b4282a}
+.st-more-btn.up{text-align:center;justify-content:center;border-style:solid!important}
+html.dk .st-bar{background:linear-gradient(var(--bg,#0f172a) 82%,transparent)}
+html.dk .st-q,html.dk .st-fchips button,html.dk .st-more-btn{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}
+html.dk .st-q input{color:var(--ink)}html.dk .st-cnt{color:var(--ink2)}

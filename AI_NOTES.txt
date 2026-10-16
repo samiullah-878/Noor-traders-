@@ -4852,3 +4852,14 @@ Malik (CPV parchi ki photo): "Arman palydar 500 bara ho, baqi lafz chhote — ga
 - pc/urdu-names.js v1.4: line(ur, px, a) — a=1 beech, a=0 baayein (purani lines daayein, pehle jaisi).
 - app: 🖨 Print setting → "🔠 Voucher par party ka naam + raqam BARA" ON/Band (cloud.setPrintConfig bigSlip). Rules wahi 2.57.
 - Manifest 2026-10-16.4 (KHATA-DOCTOR). AI nahi — sirf print ka naqsha.
+
+=== v2.101.3 (2026-10-16 dopahar) — 🔍 MULAZIM (naam se) SCREEN MEIN SEARCH ===
+Malik (screenshot): "yahan search ka option do, bohat problem hoti, naam zyada hain". Plan (4 hisse) OK.
+- app.js stHTML: upar CHIPKI .st-bar (sticky) — #stQ input (naam spelling-maafi smartHit; 3+ hindse = phone seedha milan),
+  ✕ saaf, filter chips Sab / 🟢 Chalu / ⛔ Band / 📵 Device nahi (ginti ke saath).
+- IJAZAT se dhoondo: naam na mile to query ijazat ke naam se (stCapHit = seedha / fold milan, ed1 nahi — "galla" ~ "gaya" na mile);
+  sirf wo larke jin ke paas wo screen / option KHULA hai, chip .hit chamakta, details khud khulti, "in ke paas X khula hai".
+- Card BAND (stExp Set): sirf naam + screens chips + "▾ Andar ki ijazat · N band · device"; naam / button tap = khula
+  (andar ki ijazat, devices, link, Chalu/Band); ek hi mile ya link bana ho to khud khula. "▴ Chhota karo".
+- Listener (listenStaffList / Devices) ab stPaint() — sirf #stCards badalta, search input wahi (keyboard nahi toot-ta).
+- style.css .st-bar/.st-q/.st-fchips/.st-cnt/.st-more-btn/.st-pm.hit + dark. Rules / PC / AI — kuch nahi. Test 26/26 (browser).
