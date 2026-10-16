@@ -3878,3 +3878,13 @@ html.dk .pos-ref .pr-g b{color:var(--ink)}
 .item-form .it-dupbox .it-duprow button[data-dup-pick]{flex:none;min-height:34px!important;padding:3px 10px!important;border-radius:10px!important;font-size:12px;font-weight:800;background:linear-gradient(135deg,#2c5bb0,#1d3a75)!important;color:#fff!important}
 html.dk .fc-arow,html.dk .it-duprow,html.dk .fc-abtn button,html.dk .fc-anew{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}
 html.dk .it-dupbox,html.dk .fc-acnt{background:color-mix(in srgb,#f1b44a 14%,transparent);border-color:var(--line)}
+/* v2.101.7: 🧪 formula raw maal — list + multiple ☑ */
+.fc-fehd{margin-top:12px}
+.fc-fepick{max-height:none}
+.fc-fepick .fc-pk{cursor:pointer}
+.fc-fepick .fc-pk.fe-in{background:#eefaf2;border-color:#bfe6cc}
+.fc-fepick .fc-pkl{display:flex;align-items:center;gap:10px;width:100%}
+.fc-fepick input[type=checkbox]{width:22px;height:22px;min-height:0!important;flex:none;accent-color:#16a34a;margin:0}
+.fc-picks .fc-pk .fc-pos-add{flex:none;min-height:36px!important;min-width:44px;border-radius:10px!important;background:linear-gradient(135deg,#16a34a,#0f7a3a)!important;color:#fff!important;font-weight:900}
+#fcForm .fc-addsel{position:sticky;bottom:8px;z-index:4;width:100%;margin-top:10px;min-height:52px;border-radius:16px!important;font-size:15px;font-weight:900;color:#fff!important;background:linear-gradient(135deg,#16a34a,#0f7a3a)!important;box-shadow:0 10px 24px rgba(22,163,74,.35)}
+html.dk .fc-fepick .fc-pk.fe-in{background:color-mix(in srgb,var(--good) 18%,transparent)}

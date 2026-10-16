@@ -4898,3 +4898,14 @@ Malik (factory stock tab): "Naya item mein agar pehle se koi item ho to kaise se
   confirm ("Phir bhi NAYA?" Cancel = nahi bheja). Stock screen ka Naya item bhi yahi.
 - style.css .fc-aq/.fc-arow(.is-in — '.on' theme se takrata tha)/.fc-anew/.it-dupbox. PC / rules / AI — kuch nahi.
 - Test: fct/t.mjs 101 ✓ (stub mein scanPick), sk/t.mjs ALL OK (dohra 10 naye).
+
+=== v2.101.7 (2026-10-16 raat) — 🧪 FORMULA: RAW MAAL LIST + MULTIPLE ☑ ===
+Malik (formula screen, khali "➕ raw maal ka naam…"): "yahan multiple selection; add hui items ki list ho to asani — search mein problem;
+chhoti chhoti cheezein khud kyun yaad nahi rakhta". Plan OK. Malik ne kaha YAAD RAKHO: jo bhi chhoti suhulat (list pehle se, multiple tick,
+search, dohra rokna) ek jagah lagi hai, har nayi jagah KHUD lagao (memory preferences mein bhi).
+- factory.js feListHTML (#feHits): list FORAN (likhna nahi) — chips Raw / 📦 Packing / Sab (fe.pf), ⭐ aksar (doosre formulon mein kitni
+  dafa) upar, stock + rate; ☑ data-fe-tick = fe.sel (search badle tab bhi yaad) -> sticky "➕ N items formula mein jorein" (data-fe-addsel,
+  ginti 1, phir pehli ginti par scroll). Formula wali = ✓ (fe-in); untick = confirm -> hata. 2+ harf search par POS ki baqi items
+  "🔎 POS mein (factory mein nahi)" -> ➕ (malik: facToggle + formula line). "⬇️ Aur dikhao" (fe.lim). Purana data-fe-add raasta wesa.
+- Batch "Aur…" ki maal list sirf dikhati hai (jorna nahi) — wahan picker ki zaroorat nahi; 📦 packing setup pehle se tick list.
+- PC / rules / AI — kuch nahi. Test fct/t.mjs 109 ✓.
