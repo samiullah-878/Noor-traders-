@@ -4873,3 +4873,15 @@ Malik (Daily Sale ki photo, "Sale khud se aa gayi"): "haath se likhi jaye, auto 
   ke upar #posRef SIRF MALIK: band = "🖥 POS ke hisaab se · ✍️ Aap ne likha · farq (✓ Barabar / ⬆ Zyada / ⬇ Kam)" — ginti mein nahi;
   ON = "Auto ON" patti. ⚙️ = setting. Mulazim ko POS ka hisaab nahi dikhta (khud likhe). Rules wahi 2.57. AI nahi.
 - Manifest 2026-10-16.5 (doctor khud). Test: scratchpad ps2.cjs (10 ✓ PC), psa/t.js (15 ✓ browser).
+
+=== v2.101.5 (2026-10-16 raat) — 📊 ITEM REPORT: SAARI ITEMS + 💰 NAFA KAHAN SE (RUPEES MEIN) ===
+Malik (item report "Sab se zyada bikne wali" — sirf 12): "yahan tamam items chahiye" + "nafa kahan se aa raha hai" + "nafa % ke ilawa
+Rupees mein, sum amount ke saath". Plan OK (neeche wali "📋 Saari items" table abhi rakhi — malik ne hatane ka nahi kaha).
+- irep.js topHTML (#irTop): chips Sale / Nafa Rs / Nafa % / Ginti (st.tsort, yaad), 🔍 data-ir-tq (sirf #irTop badalta, keyboard nahi
+  toot-ta), asal rank #, pehle 12 + "⬇️ Saari N items dikhao" (st.tAll) / "▴ Sirf top 12". Har item: sale Rs · nafa Rs · % · fi pc nafa
+  (ausat bechne ka rate − khareed). Upar .ir-tsum = jo list mein hain un ka JAMA (sale Rs · nafa Rs · nafa %).
+- nafaHTML: kul sale / kul nafa Rs / % · wsSplit (retail vs wholesale nafa, sirf "Wholesale ke saath" par) · "top 10 = X% nafa · 80% nafa
+  N items se" · top 10 nafa (hissa %) · "📋 Saari items nafa ke hisaab se" (tsort pf + tAll) · 🔻 ghaate wali (kul ghaata) · ⚠️ khareed rate
+  nahi (sale Rs jo nafa mein nahi gini). Nafa = sale − abhi ka khareed × ginti (andaza) — note screen par.
+- PDF: saari items (pehle 400) + "Fi pc nafa" column + "💰 Nafa kahan se" (retail / wholesale, ghaata, top 15 hissa).
+- PC / rules / AI — kuch nahi. Test scratchpad ir5/t.js 20 ✓ (320 items, retail+wholesale = kul).

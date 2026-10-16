@@ -3835,3 +3835,21 @@ html.dk .st-q input{color:var(--ink)}html.dk .st-cnt{color:var(--ink2)}
 .pos-ref .pr-n{font-size:11px;color:#6b7c93;padding-right:38px}
 html.dk .pos-ref,html.dk .pos-ref .pr-g span,html.dk .pos-ref>button{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}
 html.dk .pos-ref .pr-g b{color:var(--ink)}
+/* v2.101.5: 🏆 saari items + 💰 nafa kahan se (Rupees) */
+.ir-tr{grid-template-columns:30px minmax(0,1fr) auto}
+.ir-ta{display:grid;justify-items:end;gap:2px;white-space:nowrap}.ir-ta b{font-size:13.5px}.ir-ta small{font-size:11px;font-weight:800;color:var(--ir-ink2)}
+.ir-ta small.pos,.ir-tsum b.pos,.ir-split b.pos,.ir-ta b.pos{color:var(--ir-p)}.ir-ta small.neg,.ir-tsum b.neg{color:var(--ir-l)}
+.ir-tr.loss .ir-rk{background:color-mix(in srgb,var(--ir-l) 18%,transparent);color:var(--ir-l)}
+.ir-tb.pf{background:color-mix(in srgb,var(--ir-p) 25%,transparent)}
+.ir-rk{width:auto;min-width:24px;padding:0 4px}
+.ir-tsum{display:grid;grid-template-columns:1.3fr 1fr .7fr;gap:6px;margin:8px 0 6px}
+.ir-tsum span{display:grid;gap:1px;padding:8px 10px;border-radius:12px;background:var(--ir-grid);min-width:0}
+.ir-tsum small{font-size:10.5px;color:var(--ir-ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.ir-tsum b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ir-tsum.big b{font-size:16px}
+.ir-split{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+.ir-split>div{display:grid;gap:2px;padding:9px 10px;border-radius:12px;border:1px solid var(--ir-grid)}
+.ir-split small{font-size:11px;color:var(--ir-ink2)}.ir-split b{font-size:15px}.ir-split span{font-size:11px;color:var(--ir-ink2)}
+.ir-nafa h5{margin:10px 0 2px;font-size:12.5px}
+.ir-det{margin-top:8px;border:1px solid var(--ir-grid);border-radius:12px;padding:6px 8px}
+.ir-det summary{font-size:12.5px;font-weight:800;cursor:pointer;padding:4px 0}.ir-det.neg summary b{color:var(--ir-l)}
+.ir-tall{margin-top:6px}
