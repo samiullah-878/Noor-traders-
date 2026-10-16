@@ -4909,3 +4909,11 @@ search, dohra rokna) ek jagah lagi hai, har nayi jagah KHUD lagao (memory prefer
   "🔎 POS mein (factory mein nahi)" -> ➕ (malik: facToggle + formula line). "⬇️ Aur dikhao" (fe.lim). Purana data-fe-add raasta wesa.
 - Batch "Aur…" ki maal list sirf dikhati hai (jorna nahi) — wahan picker ki zaroorat nahi; 📦 packing setup pehle se tick list.
 - PC / rules / AI — kuch nahi. Test fct/t.mjs 109 ✓.
+
+=== v2.101.8 (2026-10-16 raat) — 🧪 FORMULA LIST: SAARI FACTORY ITEMS + ⏳ ABHI SAVE KI + ☑ SAB CHUNEIN ===
+Malik (v2.101.7 ki list mein sirf 4 raw): "yahan items hi nahi — jo maine save ki hain · yahan SIRF factory items aani chahiye, SAARI,
+aur checkbox se sab select kar sakein — wo hai hi nahi". Galti: list mein ⏳ PC baqi (abhi save ki) items nikal di thi aur default 'Raw'.
+- feListHTML: default chip "Sab" (saari factory items — tayyar / raw / packing + ⏳ pending, pending sab se upar, phir ⭐ aksar), chips
+  Sab / Raw / 📦 Packing; POS ki baqi items yahan NAHI (malik: sirf factory). "☑ Sab chunein (N)" (data-fe-all) = list / search ki saari
+  (formula wali chhor kar) fe.sel mein; untick = sab hata. lim 300.
+- PC / rules / AI — kuch nahi. Test fct/t.mjs 116 ✓.

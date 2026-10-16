@@ -3888,3 +3888,6 @@ html.dk .it-dupbox,html.dk .fc-acnt{background:color-mix(in srgb,#f1b44a 14%,tra
 .fc-picks .fc-pk .fc-pos-add{flex:none;min-height:36px!important;min-width:44px;border-radius:10px!important;background:linear-gradient(135deg,#16a34a,#0f7a3a)!important;color:#fff!important;font-weight:900}
 #fcForm .fc-addsel{position:sticky;bottom:8px;z-index:4;width:100%;margin-top:10px;min-height:52px;border-radius:16px!important;font-size:15px;font-weight:900;color:#fff!important;background:linear-gradient(135deg,#16a34a,#0f7a3a)!important;box-shadow:0 10px 24px rgba(22,163,74,.35)}
 html.dk .fc-fepick .fc-pk.fe-in{background:color-mix(in srgb,var(--good) 18%,transparent)}
+.fc-selall{display:flex;align-items:center;gap:10px;margin:8px 0 6px;padding:10px 12px;border-radius:14px;background:#eef4ff;border:1.5px solid #c9d7f2;cursor:pointer}
+.fc-selall input{width:22px;height:22px;min-height:0!important;margin:0;accent-color:#1d3a75}.fc-selall b{font-size:14px;color:#1b3058}.fc-selall small{margin-left:auto;font-size:12px;color:#55627a;font-weight:700}
+html.dk .fc-selall{background:var(--glass);border-color:var(--line)}html.dk .fc-selall b{color:var(--ink)}

@@ -11,8 +11,8 @@
 //   (4) ❌ masla alert tap se batch khule (5) raw ka naam formula mein mehfooz (n) — item hat jaye to bhi dikhe (6) formula chooser mein raw alag (7) mara hua code hata.
 //   📷 PHOTO SE FORMULA (AI sirf tasveer parhne ke liye — Excel / parchi): lines -> POS items se milao (stockAgentFind) -> na mile to naya item
 //   (stockNewItemQuick, ⏳ job:) -> formula save. Fi piece packing × pieces; labour -> mazdoori. Tez: OK = setDoc foran. AI aur kahin NAHI.
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.101.7';
-import { smartSearch, fold } from './smart-search.js?v=2.101.7';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.101.8';
+import { smartSearch, fold } from './smart-search.js?v=2.101.8';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -334,28 +334,27 @@ function fnewPaint(only) {
 function openFormula(id) {
   const it = byId.get(String(id)); if (!it) return;
   const f = forms()[it.id]; fn = null;
-  fe = { id: it.id, per: f?.per || (it.pack > 1 ? it.pack * 5 : 100), lines: (f?.lines || []).map(l => ({ id: String(l.id), q: Number(l.q) || 0, n: l.n || '' })), lab: Number(f?.lab) || 0, gas: Number(f?.gas) || 0, q: '', sel: new Set(), pf: 'raw', lim: 60 };
+  fe = { id: it.id, per: f?.per || (it.pack > 1 ? it.pack * 5 : 100), lines: (f?.lines || []).map(l => ({ id: String(l.id), q: Number(l.q) || 0, n: l.n || '' })), lab: Number(f?.lab) || 0, gas: Number(f?.gas) || 0, q: '', sel: new Set(), pf: 'sab', lim: 300 };
   dlg('🧪 Formula — ' + it.name, '<div id="fcForm"></div>'); formPaint();
 }
 // v2.101.7: 🧪 RAW MAAL — LIST + MULTIPLE ☑ (malik: "yahan multiple selection, add hui items ki list ho to asani — search mein problem")
 //   List foran (likhna nahi): chips Raw / 📦 Packing / Sab, ⭐ aksar (doosre formulon mein jitni dafa), stock + rate. ☑ = fe.sel (yaad, search
 //   badle tab bhi) -> neeche "➕ N items jorein" (sab ek dafa, ginti 1). Formula mein pehle se = ✓ (tick hatao = puchh kar hatao).
 //   Factory mein na mile (2+ harf) = POS ki saari items se "➕ factory + formula" (malik).
-function feListHTML() {
+function feListHTML() {   // v2.101.8: malik — "yahan SIRF factory items, SAARI (abhi save ki ⏳ bhi), aur ☑ Sab chunein" (POS wali yahan nahi)
   if (!fe) return ''; const F = forms(), use = new Map(), inF = new Set(fe.lines.map(l => String(l.id)));
   for (const [fid, f] of Object.entries(F)) if (fid !== fe.id) for (const l of f.lines || []) use.set(String(l.id), (use.get(String(l.id)) || 0) + 1);
-  const pool = items.filter(x => x.id !== fe.id && !isPend(x)), q = fe.q.trim(), kOk = x => fe.pf === 'sab' || (fe.pf === 'mat' ? kindOf(x) === 'mat' : kindOf(x) === 'raw');
-  const n = k => pool.filter(x => k === 'sab' || (k === 'mat' ? kindOf(x) === 'mat' : kindOf(x) === 'raw')).length;
-  let L = q ? srch(pool, q, 200) : pool.filter(kOk).sort((a, b) => (use.get(b.id) || 0) - (use.get(a.id) || 0) || a.name.localeCompare(b.name));
-  const shown = L.slice(0, fe.lim), on = x => inF.has(x.id) || fe.sel.has(x.id);
-  let extra = '';
-  if (q.length >= 2) { let all = []; try { all = stockPickList(); } catch {} const have = new Set(items.map(x => x.id)), P = srch(all.filter(x => !have.has(x.id)), q, 8);
-    if (P.length) extra = `<div class="fc-lab">🔎 POS mein (factory mein nahi) <small>${isOwner() ? 'tap = factory + formula' : 'malik factory mein jorega'}</small></div><div class="fc-picks">${P.map(x => `<div class="fc-pk"><span class="fc-pkl"><span><b>${esc(x.name)}</b><small>${x.code ? '🏷 ' + esc(x.code) + ' · ' : ''}stock ${esc(qt(x.stock, x))}${x.cat ? ' · ' + esc(x.cat) : ''}</small></span></span>${isOwner() ? `<button type="button" class="fc-pos-add" data-fe-pos="${esc(x.id)}">➕</button>` : ''}</div>`).join('')}</div>`; }
-  return `${q ? `<p class="fc-acnt">🔍 "${esc(q)}" — ${num(L.length)} mili</p>` : `<div class="fc-per fc-pf">${[['raw', 'Raw ' + num(n('raw'))], ['mat', '📦 Packing ' + num(n('mat'))], ['sab', 'Sab ' + num(n('sab'))]].map(([k, l]) => `<button type="button" class="${fe.pf === k ? 'on' : ''}" data-fe-pf="${k}">${l}</button>`).join('')}</div>`}
-    <div class="fc-picks fc-fepick">${shown.map(x => { const inn = inF.has(x.id), u = use.get(x.id) || 0, r = rateOf(x.id, x);
-      return `<label class="fc-pk${on(x) ? ' pk-on' : ''}${inn ? ' fe-in' : ''}"><span class="fc-pkl"><input type="checkbox" data-fe-tick="${esc(x.id)}"${on(x) ? ' checked' : ''}><span><b>${u ? '⭐ ' : ''}${esc(x.name)}</b><small>${inn ? '✓ formula mein · ' : ''}stock ${esc(qk(x.stock, x))} · ${r ? rs(r) + ' / ' + esc(un(x)) : 'rate nahi'}${u ? ' · ' + u + ' formula' : ''}</small></span></span></label>`; }).join('') || '<p class="lk-note">Kuch nahi — 🔎 neeche POS wali dekhein ya Stock tab se ➕ Item jorein.</p>'}</div>
+  const fac = items.filter(x => x.id !== fe.id), q = fe.q.trim(), kOk = x => fe.pf === 'sab' || (fe.pf === 'mat' ? kindOf(x) === 'mat' : kindOf(x) !== 'mat');
+  const n = k => fac.filter(x => k === 'sab' || (k === 'mat' ? kindOf(x) === 'mat' : kindOf(x) !== 'mat')).length;
+  const srt = (a, b) => (isPend(b) ? 1 : 0) - (isPend(a) ? 1 : 0) || (use.get(b.id) || 0) - (use.get(a.id) || 0) || a.name.localeCompare(b.name);   // nayi save ki (⏳) sab se upar
+  const L = q ? srch(fac, q, 300) : fac.filter(kOk).sort(srt), shown = L.slice(0, fe.lim), on = x => inF.has(x.id) || fe.sel.has(x.id);
+  const free = L.filter(x => !inF.has(x.id)), allOn = free.length > 0 && free.every(x => fe.sel.has(x.id));
+  const row = x => { const inn = inF.has(x.id), u = use.get(x.id) || 0, r = rateOf(x.id, x);
+    return `<label class="fc-pk${on(x) ? ' pk-on' : ''}${inn ? ' fe-in' : ''}"><span class="fc-pkl"><input type="checkbox" data-fe-tick="${esc(x.id)}"${on(x) ? ' checked' : ''}><span><b>${u ? '⭐ ' : ''}${esc(x.name)}${isPend(x) ? ' ⏳' : ''}</b><small>${inn ? '✓ formula mein · ' : ''}${isPend(x) ? '⏳ abhi save ki — PC POS mein bana raha · ' : ''}stock ${esc(qk(x.stock, x))} · ${r ? rs(r) + ' / ' + esc(un(x)) : 'rate nahi'}${u ? ' · ' + u + ' formula' : ''}</small></span></span></label>`; };
+  return `${q ? `<p class="fc-acnt">🔍 "${esc(q)}" — ${num(L.length)} mili</p>` : `<div class="fc-per fc-pf">${[['sab', 'Sab ' + num(n('sab'))], ['raw', 'Raw ' + num(n('raw'))], ['mat', '📦 Packing ' + num(n('mat'))]].map(([k, l]) => `<button type="button" class="${fe.pf === k ? 'on' : ''}" data-fe-pf="${k}">${l}</button>`).join('')}</div>`}
+    ${free.length ? `<label class="fc-selall"><input type="checkbox" data-fe-all="1"${allOn ? ' checked' : ''}><b>☑ Sab chunein</b><small>${num(free.length)} item${q ? ' (jo mili)' : ''}</small></label>` : ''}
+    <div class="fc-picks fc-fepick">${shown.map(row).join('') || '<p class="lk-note">Factory mein koi item nahi — Stock tab se ➕ Item jorein.</p>'}</div>
     ${L.length > shown.length ? `<button type="button" class="fc-no" data-fe-more="1">⬇️ Aur dikhao (${num(L.length - shown.length)})</button>` : ''}
-    ${extra}
     ${fe.sel.size ? `<button type="button" class="fc-addsel" data-fe-addsel="1">➕ ${num(fe.sel.size)} item${fe.sel.size > 1 ? 's' : ''} formula mein jorein</button>` : ''}`;
 }
 function formPaint(only) {
@@ -848,9 +847,12 @@ document.addEventListener('click', e => {
   const o = e.target.closest?.('[data-fac-open]'); if (o) { e.preventDefault(); openBatch(); return; }
   const fx = e.target.closest?.('[data-fe-pf],[data-fe-more],[data-fe-addsel],[data-fe-pos]');   // v2.101.7: 🧪 raw maal list
   if (fx && fe && fx.closest('#fcForm')) { const d = fx.dataset;
-    if (d.fePf) { fe.pf = d.fePf; fe.lim = 60; formPaint(['feHits']); return; }
+    if (d.fePf) { fe.pf = d.fePf; fe.lim = 300; formPaint(['feHits']); return; }
     if (d.feMore != null) { fe.lim += 100; formPaint(['feHits']); return; }
-    if (d.feAddsel != null) { const ids = [...fe.sel].filter(id => !fe.lines.some(l => l.id === id)); for (const id of ids) fe.lines.push({ id, q: 1, n: byId.get(id)?.name || '' }); fe.sel.clear(); fe.q = ''; formPaint(); notice('✓ ' + ids.length + ' items jur gayi — ab har ek ki ginti likhein'); setTimeout(() => document.querySelector('#fcForm [data-fe-q]')?.scrollIntoView?.({ block: 'center', behavior: 'smooth' }), 60); return; }
+    if (d.feAddsel != null) { const ids = [...fe.sel].filter(id => !fe.lines.some(l => l.id === id)), P = new Map((() => { try { return stockPickList(); } catch { return []; } })().map(x => [x.id, x])), newF = ids.filter(id => !byId.has(id));
+      if (newF.length && !isOwner()) { notice('🏪 POS wali items factory mein sirf malik jor sakta hai'); return; }
+      for (const id of newF) facToggle(id, true);   // v2.101.8: POS wali = factory mein bhi (foran, cfg)
+      for (const id of ids) fe.lines.push({ id, q: 1, n: byId.get(id)?.name || P.get(id)?.name || '' }); fe.sel.clear(); fe.q = ''; formPaint(); notice('✓ ' + ids.length + ' items jur gayi' + (newF.length ? ' (' + newF.length + ' factory mein bhi)' : '') + ' — ab har ek ki ginti likhein'); setTimeout(() => document.querySelector('#fcForm [data-fe-q]')?.scrollIntoView?.({ block: 'center', behavior: 'smooth' }), 60); return; }
     if (d.fePos) { const x = (stockPickList() || []).find(y => y.id === d.fePos); facToggle(d.fePos, true).then(() => { if (fe && !fe.lines.some(l => l.id === d.fePos)) fe.lines.push({ id: d.fePos, q: 1, n: x?.name || '' }); fe.q = ''; formPaint(); notice('✓ ' + (x?.name || 'Item') + ' factory + formula mein'); }); return; } }
   const fq = e.target.closest?.('[data-fa-on],[data-fa-mat],[data-fa-new],[data-fa-scan]');   // v2.101.6: ➕ item jorein
   if (fq && fa && fq.closest('#fcAdd')) { const d = fq.dataset;
@@ -931,7 +933,7 @@ document.addEventListener('input', e => {
   if (d.fcPdq != null && pd) { pd.q = t.value || ''; clearTimeout(qT); qT = setTimeout(() => pkDefPaint(['fcPdHits']), 180); return; }
   if (d.faQ != null && fa) { fa.q = t.value || ''; clearTimeout(qT); qT = setTimeout(() => addPaint(true), 180); return; }   // v2.101.6
   if (d.fcPq != null && pk) { pk.q = t.value || ''; pk.lim = 60; clearTimeout(qT); qT = setTimeout(() => pickPaint(['fcPickList']), 180); return; }
-  if (d.fcFq2 != null && fe) { fe.q = t.value || ''; fe.lim = 60; clearTimeout(qT); qT = setTimeout(() => formPaint(['feHits']), 180); return; }
+  if (d.fcFq2 != null && fe) { fe.q = t.value || ''; fe.lim = 300; clearTimeout(qT); qT = setTimeout(() => formPaint(['feHits']), 180); return; }
   if (d.pfPq != null && pf) { pf.prodQ = t.value || ''; clearTimeout(qT); qT = setTimeout(() => pfSwap(['pfProd']), 180); return; }
   if (d.pfSq != null && pf) { pf.sq = t.value || ''; clearTimeout(qT); qT = setTimeout(() => pfSwap(['pfHits']), 180); return; }
 });
@@ -941,6 +943,9 @@ document.addEventListener('change', e => {
   const t = e.target;
   if (t?.dataset?.facTick) { facToggle(t.dataset.facTick, t.checked, t); return; }   // stock screen + picker
   if (t?.dataset?.facMat) { matToggle(t.dataset.facMat, t.checked, t); return; }   // v2.101: 📦
+  if (t?.dataset?.feAll != null && fe) { const inF = new Set(fe.lines.map(l => String(l.id))), q = fe.q.trim(), fac = items.filter(x => x.id !== fe.id && !inF.has(x.id));   // v2.101.8: ☑ Sab chunein
+    const L = q ? srch(fac, q, 300) : fac.filter(x => fe.pf === 'sab' || (fe.pf === 'mat' ? kindOf(x) === 'mat' : kindOf(x) !== 'mat'));
+    for (const x of L) { if (t.checked) fe.sel.add(x.id); else fe.sel.delete(x.id); } formPaint(['feHits']); return; }
   if (t?.dataset?.feTick && fe) { const id = t.dataset.feTick, inn = fe.lines.findIndex(l => l.id === id);   // v2.101.7
     if (t.checked) { if (inn < 0) fe.sel.add(id); } else if (fe.sel.has(id)) fe.sel.delete(id); else if (inn >= 0) { if (confirm((byId.get(id)?.name || 'Yeh item') + ' formula se hatana hai?')) { fe.lines.splice(inn, 1); formPaint(); return; } t.checked = true; return; }
     formPaint(['feHits']); return; }
