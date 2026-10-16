@@ -4917,3 +4917,14 @@ aur checkbox se sab select kar sakein — wo hai hi nahi". Galti: list mein ⏳ 
   Sab / Raw / 📦 Packing; POS ki baqi items yahan NAHI (malik: sirf factory). "☑ Sab chunein (N)" (data-fe-all) = list / search ki saari
   (formula wali chhor kar) fe.sel mein; untick = sab hata. lim 300.
 - PC / rules / AI — kuch nahi. Test fct/t.mjs 116 ✓.
+
+=== v2.101.9 (2026-10-16 raat) — 📦 FORMULA: PACKING (HAR PCS MEIN) ALAG HISSA, GINTI BATCH SE KHUD ===
+Malik (liquid 1.5 ltr formula — bottle / dhakan "1 pcs"): "packing items ki ginti batch khud bane" + "packing wali items upar batch ki
+bajaye neeche aani chahiye". Plan OK.
+- Formula line {id, q, n, pp?}: pp = har pcs mein (bottle 1, dhakan 1) -> q = pp × per (ppSync jab "1 batch =" badle). Save mein pp.
+  PC factory-post wahi lines q (fi batch) parhta — PC mein koi badlaav nahi.
+- Khud pehchaan (newLine / looksPack): isMat (📦) ya naam PACK_RX (bottle/bottel/botal/dhakan/cap/pouch/label/sticker/carton/box/shopper/
+  bag/jar/dabba/lid/tube) -> tick karte hi neeche "📦 Packing (har pcs mein)" (.fc-pksec): Har pcs mein · Rate · 1 batch = pp×per; fi pcs laagat.
+  Purani save line (bottle / dhakan q 1 ya q = per) formula kholte hi pp 1. "↓ Packing mein (har pcs)" / "↑ Raw mein" (data-fe-mv).
+- Laagat: 🧪 Raw maal / 📦 Packing / Mazdoori + gas alag, phir kul + fi pcs. batchCalc: "Asal ginti alag" ho to packing = pp × asal.
+- Rules / AI — kuch nahi. Test fct/t.mjs 124 ✓.
