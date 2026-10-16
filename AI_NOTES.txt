@@ -4831,3 +4831,13 @@ qty; rate POS purchase se; baar baar chunna na pare; packing material bhi baqi i
 * Test: fct/t.mjs (90 ✓ — packing calc 25×4 + 140×0.7 = 198, baqi 2, zyada = OK band, POS chip, pack batch, rate khud -> POS, raw scope,
   📦 tick, print setting, packing setup save, stock tab buttons), sk/t.mjs (23 ✓ + factory naya item 📦 tick, item / label open), boot.
   Screenshots fct/new4.png. AI nahi.
+
+=== v2.101.1 (2026-10-16 din) — 📱 MULAZIM 6 HINDSE KA CODE (link na khule to) · RULES 2.57 ===
+Malik: "link se kisi time nahi khula to 6 digit auto password ban jaye — wo lagayein to app khul jaye, wohi access jo hum ne di".
+* cloud.makeJoinCode(st): deviceJoins/pc-<6 hindse> (wahi fields jo tk- link: credentialId, staffId, name, scope, perms, at, by) — us mulazim
+  ke purane pc- code mita kar. cloud.joinByCode(c): anonymous sign-in -> get pc-<c> -> 30 min se purana = khatam -> loginWithCredential
+  (wahi ijazat / screens) -> doc delete (ek dafa).
+* app.js stLink: link ke saath code bhi banta hai; mulazim card ".st-code" bara code + 📋, WhatsApp text mein code bhi. Login screen
+  (index.html .code-join): #joinCode + #joinCodeBtn (Enter bhi) -> codeJoin() -> sam-dev-joined, audit 'device-code'.
+* firestore.rules v2.57 (firestore-rules-2.57.html): deviceJoins get / delete signedIn, LIST sirf malik (pehle koi bhi anonymous poori
+  fehrist parh sakta tha — ab sirf apna doc id). Test: boot (login par code UI, 5 hindse = "6 hindse ka code likhein"). AI nahi.
