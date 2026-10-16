@@ -3821,3 +3821,17 @@ html body :is(#summary,#dialogBody) .ir-root .fc-send button.on[data-fb-send="1"
 html.dk .st-bar{background:linear-gradient(var(--bg,#0f172a) 82%,transparent)}
 html.dk .st-q,html.dk .st-fchips button,html.dk .st-more-btn{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}
 html.dk .st-q input{color:var(--ink)}html.dk .st-cnt{color:var(--ink2)}
+/* v2.101.4: 🔘 POS sale auto ON / Band — Sale khane ke upar milane wali patti (sirf malik) */
+.pos-ref{position:relative;display:grid;gap:6px;margin:0 0 10px;padding:10px 46px 10px 12px;border-radius:16px;background:#f4f7fd;border:1px solid #dfe6f2;font-size:12.5px;color:#3c4f72}
+.pos-ref.on{background:#e9f8ef;border-color:#bfe6cc;color:#17703c}
+.pos-ref>button{position:absolute;top:8px;right:8px;min-height:32px!important;min-width:32px;padding:0!important;border-radius:10px!important;background:#fff!important;border:1px solid #d6deeb!important}
+.pos-ref .pr-g{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.pos-ref .pr-g span{display:grid;gap:1px;padding:7px 8px;border-radius:12px;background:#fff;border:1px solid #e3e8f1;min-width:0}
+.pos-ref .pr-g small{font-size:10.5px;color:#6b7c93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pos-ref .pr-g b{font-size:14px;color:#10192b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pos-ref.cmp{padding-right:12px}.pos-ref.cmp>button{top:auto;bottom:6px}
+.pos-ref.ok .pr-g span:last-child{background:#e9f8ef;border-color:#bfe6cc}.pos-ref.ok .pr-g span:last-child b{color:#17703c}
+.pos-ref.bad .pr-g span:last-child{background:#fff1f1;border-color:#f3c4c4}.pos-ref.bad .pr-g span:last-child b{color:#b4282a}
+.pos-ref .pr-n{font-size:11px;color:#6b7c93;padding-right:38px}
+html.dk .pos-ref,html.dk .pos-ref .pr-g span,html.dk .pos-ref>button{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}
+html.dk .pos-ref .pr-g b{color:var(--ink)}

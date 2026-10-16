@@ -1,5 +1,7 @@
 // =========================================================
-//  pos-sales-dekho.js  v1.7 (2026-10-13 sham: malik (POS Sale Register Summary ki photo) — "wholesale ka bill sale mein, SYSTEM ki sale":
+//  pos-sales-dekho.js  v1.8 (2026-10-16: malik — "haath se likhi jaye, auto sale band / on ka option": blueAccess/saleConfig.posAuto
+//                     (default BAND) — band = possale-<aaj> hata do, kuch na likho (pichhle din wese hi); posSales/<din>.sum hamesha (app: sirf
+//                     malik ko "POS ke hisaab se" milane ke liye, ginti mein nahi)) · v1.7 (2026-10-13 sham: malik (POS Sale Register Summary ki photo) — "wholesale ka bill sale mein, SYSTEM ki sale":
 //                     'whole sale' party ka bill POORA (TotalSale) Sale mein, POS ke Total Sale jaisa; baqi udhaar bill pehle jaisa (cash)) · v1.6 (2026-10-13: 📦 WHOLESALE / udhaar bill ka usi waqt mila cash (CRV, DocumentNo = SaleID) bhi Sale mein; note mein
 //                     wholesale bill / cash / udhaar alag) · v1.5 (2026-10-12: 🖥 POS KI SALE (AUTO) -> Daily Sale ka Sale khana, blueKhata 'possale-<din>'; "stock fraq" account ke bill nahi) · v1.4 (2026-10-06: 🔔 POS mein item judte hi (scan ya code) us PC ko beep — posBeep/<PC host>, har 0.4 sec) · v1.3 (2026-10-06: ⚡ har 2 sec + app ka bill bante / edit hote hi foran) · v1.2 (2026-10-06: ps = DocStatusID (1 un-posted / 2 posted), pc + by (SystemNotes se), items posSaleLines/<SaleID>, _sync har 30 sec) · v1.1 (2026-10-03: har 10 sec, pehle chhota sawal) · v1  (2026-10-03) — POS par bane AAJ ke SALE BILLS app mein (sirf SELECT, POS mein kuch nahi badalta)
 //  Har 1 minute dbo.Sale (aaj) parhta hai -> Firestore posSales/<YYYY-MM-DD> (ek doc, sirf badle to likhta hai).
@@ -78,7 +80,21 @@ async function crvFor(p, d0, d1) {   // v1.6: udhaar bill ke saath usi bill ka C
   return m;
 }
 const saleSeen = new Map();
+// v1.8: 🔘 AUTO SALE ON / BAND — blueAccess/saleConfig {posAuto} (app: Settings → 🖥 Daily Sale: POS ki sale khud). Default BAND.
+//   Setting aane se pehle kuch nahi likhte / hatate (cfgReady). Band = sirf AAJ ki auto entry hatao (pichhle din ki wesi).
+let AUTO = false, cfgReady = false;
+try { db.collection('businesses').doc(BUSINESS_ID).collection('blueAccess').doc('saleConfig').onSnapshot(sn => {
+  const v = !!(sn.exists && (sn.data() || {}).posAuto === true); const ch = !cfgReady || v !== AUTO; AUTO = v; cfgReady = true;
+  if (ch) { saleSeen.clear(); lastKey = ''; log(`🔘 POS sale auto: ${AUTO ? 'ON — Daily Sale mein khud' : 'BAND — haath se (aaj ki auto entry hat jayegi)'}`); }
+}, e => log('saleConfig nahi parha: ' + e.message)); } catch (e) { log('saleConfig: ' + e.message); }
 async function writeSale(day, s, force = false) {
+  if (!cfgReady) return;
+  if (!AUTO) {
+    if (day !== dayOf(new Date())) return;
+    const ref = KHATA.doc('possale-' + day), ex = await ref.get(), old = ex.exists ? ex.data() : null;
+    if (old && !old.deleted && old.posAuto) { await ref.set({ deleted: true, offBand: true, updatedAt: Date.now(), updatedBy: 'pc-sale' }, { merge: true }); log(`🔘 ${day}: auto sale BAND — POS sale entry hatayi (haath se likhein)`); }
+    return;
+  }
   const key = `${s.amt}|${s.n}|${s.fq}|${s.cx}|${s.ws}|${s.wsRs}`, prev = saleSeen.get(day);
   if (!force && prev && prev.key === key && Date.now() - prev.at < 5 * 60000) return;
   const ref = KHATA.doc('possale-' + day), ex = await ref.get(), old = ex.exists ? ex.data() : null, t = Date.now();
@@ -139,11 +155,13 @@ async function once() {
       tm: r.SaleDate ? new Date(r.SaleDate).getTime() : 0, app: m ? m[1] : '',
       ps: Number(r.DocStatusID) || 0, pc: String(names[host] || host.replace(/^DESKTOP-/i, '') || '').slice(0, 30), by: /blue khata/i.test(by) ? '' : String(by).trim().slice(0, 20) };
   });
-  const day = dayOf(d0), hash = day + JSON.stringify(bills);
-  await writeSale(day, saleSum(rows, await crvFor(p, d0, d1))).catch(e => log('POS sale (auto) masla: ' + e.message));   // v1.5 · v1.6 wholesale CRV
+  const day = dayOf(d0), sm = saleSum(rows, await crvFor(p, d0, d1));
+  const sum = { amt: sm.amt, n: sm.n, cx: sm.cx, fq: sm.fq, fqRs: sm.fqRs, ws: sm.ws, wsRs: sm.wsRs, wsCash: sm.wsCash, auto: AUTO };   // v1.8: app milane ke liye (ginti nahi)
+  const hash = day + JSON.stringify(bills) + JSON.stringify(sum);
+  await writeSale(day, sm).catch(e => log('POS sale (auto) masla: ' + e.message));   // v1.5 · v1.6 wholesale CRV · v1.8 band = hata
   await syncLines(p, d0, d1, day).catch(e => log('Items masla: ' + e.message));
   if (hash === lastHash) return;
-  await col.doc(day).set({ day, at: Date.now(), bills });
+  await col.doc(day).set({ day, at: Date.now(), bills, sum });
   lastHash = hash;
   log(`Aaj ke ${bills.length} POS bills app mein (cancel ${bills.filter(b => b.x).length}, udhaar ${bills.filter(b => b.cr && !b.x).length})`);
 }
@@ -152,9 +170,10 @@ const lock = net.createServer().listen(LOCK_PORT, '127.0.0.1');
 lock.on('error', () => { console.log('pos-sales-dekho pehle se chal raha hai — yeh copy band.'); process.exit(3); });
 lock.on('listening', async () => {
   try { await getPool(); log('SQL se jur gaya'); } catch (e) { log('SQL masla: ' + e.message); process.exit(1); }
+  for (let i = 0; i < 50 && !cfgReady; i++) await new Promise(r => setTimeout(r, 200));   // v1.8: setting (10 sec tak)
   try { const p = await getPool(), y1 = new Date(); y1.setHours(0, 0, 0, 0); const y0 = new Date(y1); y0.setDate(y0.getDate() - 1);   // v1.5: kal ki aakhri sale bhi (PC raat ko band ho gaya ho)
     await writeSale(dayOf(y0), await saleFor(p, y0, y1), true); } catch (e) { log('Kal ki POS sale: ' + e.message); }
-  log('pos-sales-dekho v1.5 chal raha hai — har 2 second (sirf badlaav par likhta hai)…');
+  log('pos-sales-dekho v1.8 chal raha hai — har 2 second (sirf badlaav par likhta hai)…');
   let running = false, again = false;
   const tick = async () => { if (running) { again = true; return; } running = true;
     try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }

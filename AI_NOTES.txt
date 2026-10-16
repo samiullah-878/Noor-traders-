@@ -4863,3 +4863,13 @@ Malik (screenshot): "yahan search ka option do, bohat problem hoti, naam zyada h
   (andar ki ijazat, devices, link, Chalu/Band); ek hi mile ya link bana ho to khud khula. "▴ Chhota karo".
 - Listener (listenStaffList / Devices) ab stPaint() — sirf #stCards badalta, search input wahi (keyboard nahi toot-ta).
 - style.css .st-bar/.st-q/.st-fchips/.st-cnt/.st-more-btn/.st-pm.hit + dark. Rules / PC / AI — kuch nahi. Test 26/26 (browser).
+
+=== v2.101.4 (2026-10-16 dopahar) — 🔘 DAILY SALE: POS KI SALE AUTO ON / BAND (haath se likhna) ===
+Malik (Daily Sale ki photo, "Sale khud se aa gayi"): "haath se likhi jaye, auto sale band / on ka option laga hona chahiye". Plan + mashwara 4 OK.
+- blueAccess/saleConfig {posAuto} — default BAND (doc nahi = band). cloud.listenSaleConfig / setSaleConfig (sirf malik) / listenPosDay.
+- PC pos-sales-dekho v1.8: saleConfig onSnapshot (cfgReady se pehle kuch nahi likhta / hatata). BAND = sirf AAJ ki possale-<din>
+  (posAuto) deleted:true + offBand; pichhle din wese. ON = pehle jaisa (wapas likhta). posSales/<din>.sum {amt,n,cx,fq,fqRs,ws,wsRs,wsCash,auto} hamesha.
+- app: Settings → 🔌 POS aur AI → "🖥 Daily Sale: POS ki sale khud" (posSaleForm: 🟢 ON / ✍️ Band, confirm). Daily Sale ke Sale khane
+  ke upar #posRef SIRF MALIK: band = "🖥 POS ke hisaab se · ✍️ Aap ne likha · farq (✓ Barabar / ⬆ Zyada / ⬇ Kam)" — ginti mein nahi;
+  ON = "Auto ON" patti. ⚙️ = setting. Mulazim ko POS ka hisaab nahi dikhta (khud likhe). Rules wahi 2.57. AI nahi.
+- Manifest 2026-10-16.5 (doctor khud). Test: scratchpad ps2.cjs (10 ✓ PC), psa/t.js (15 ✓ browser).

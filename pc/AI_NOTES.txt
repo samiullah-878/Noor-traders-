@@ -2963,3 +2963,7 @@ har 60 s handle() dobara; cancelled / failed -> status 'error' + wajah.
 Malik: voucher (CPV) par party ka naam aur raqam bare, baqi chhote — galle wala dekh kar paise de. receiptBig(): naam ESC ! 0x38
 (2x mota), Urdu 60px beech (UR.line(ur,60,1)), raqam GS ! 0x22 (3x), baqi Font B (ESC ! 0x01 / 0x09). printConfig.bigSlip
 (default ON, false = purani receipt). HBL parchi purani. urdu-names line() ka 3rd arg a (1 beech / 0 baayein), purana default daayein.
+
+=== 2026-10-16 dopahar — pos-sales-dekho.js v1.8 🔘 auto sale ON / BAND · manifest 2026-10-16.5 ===
+blueAccess/saleConfig.posAuto (default band). Band = aaj ki possale-<din> (posAuto) hatao, kuch na likho; ON = pehle jaisa.
+posSales/<din>.sum hamesha likhta (app malik ko "POS ke hisaab se" milane ke liye). Setting aane tak (10 sec) writeSale kuch nahi karta.
