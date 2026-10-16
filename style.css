@@ -3853,3 +3853,28 @@ html.dk .pos-ref .pr-g b{color:var(--ink)}
 .ir-det{margin-top:8px;border:1px solid var(--ir-grid);border-radius:12px;padding:6px 8px}
 .ir-det summary{font-size:12.5px;font-weight:800;cursor:pointer;padding:4px 0}.ir-det.neg summary b{color:var(--ir-l)}
 .ir-tall{margin-top:6px}
+/* v2.101.6: ➕ Item jorein (pehle dhoondo) + 🔁 naya item form mein dohra */
+.fc-aq{display:flex;gap:8px;align-items:center}.fc-aq .hs-search{flex:1;margin:0}
+.fc-ascan{flex:none;min-width:48px;min-height:48px!important;border-radius:14px!important;font-size:20px;background:#eef2f9!important;border:1px solid #d6deeb!important}
+.fc-acnt{margin:10px 0 6px;font-size:12.5px;color:#7a5200;background:#fff7e0;border:1px solid #f1d27a;border-radius:12px;padding:8px 10px}
+.fc-alist{display:grid;gap:6px}
+.fc-arow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border-radius:14px;border:1px solid #e3e8f1;background:#fff}
+.fc-arow.is-in{background:#eefaf2;border-color:#bfe6cc}.fc-arow.code{border-color:#2c5bb0;box-shadow:0 0 0 2px #2c5bb022}
+.fc-arow>span:first-child{display:grid;gap:2px;min-width:0}.fc-arow b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc-arow small{font-size:11px;color:#6b7c93}.fc-arow i{font-style:normal;font-weight:800;color:#1d3a75}
+.fc-abtn{display:flex;gap:5px;flex:none;align-items:center}
+.fc-alist .fc-abtn button{min-height:36px!important;padding:4px 10px!important;border-radius:10px!important;font-size:12.5px;font-weight:800;background:#fff!important;border:1.5px solid #d6deeb!important;color:#1b3058!important}
+.fc-alist .fc-abtn button.pri{background:linear-gradient(135deg,#16a34a,#0f7a3a)!important;border-color:transparent!important;color:#fff!important}
+.fc-aok{font-style:normal;font-size:12px;font-weight:800;color:#17703c!important}
+.fc-anone{margin:10px 0;padding:10px 12px;border-radius:12px;background:#eefaf2;border:1px solid #bfe6cc;color:#17703c;font-weight:700;font-size:13px}
+.fc-anew{width:100%;margin-top:10px;min-height:44px;border-radius:14px!important;font-weight:800;background:#f4f7fd!important;border:1.5px dashed #b9c6dc!important;color:#1b3058!important}
+.fc-anew.big{min-height:52px;background:linear-gradient(135deg,#2c5bb0,#1d3a75)!important;border:0!important;color:#fff!important;font-size:15px}
+.it-dup:empty{display:none}.it-dup{grid-column:1/-1}
+.it-dupbox{display:grid;gap:6px;padding:10px;border-radius:14px;background:#f4f7fd;border:1.5px solid #cfd9ea}
+.it-dupbox.hard{background:#fff7e0;border-color:#f1b44a}.it-dupbox>b{font-size:13px;color:#7a5200}
+.it-duprow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;border-radius:10px;background:#fff}
+.it-duprow>span{display:grid;min-width:0}.it-duprow b{font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.it-duprow small{font-size:11px;color:#6b7c93}
+.it-duprow i{font-style:normal;font-weight:800;color:#b4282a}
+.item-form .it-dupbox .it-duprow button[data-dup-pick]{flex:none;min-height:34px!important;padding:3px 10px!important;border-radius:10px!important;font-size:12px;font-weight:800;background:linear-gradient(135deg,#2c5bb0,#1d3a75)!important;color:#fff!important}
+html.dk .fc-arow,html.dk .it-duprow,html.dk .fc-abtn button,html.dk .fc-anew{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}
+html.dk .it-dupbox,html.dk .fc-acnt{background:color-mix(in srgb,#f1b44a 14%,transparent);border-color:var(--line)}

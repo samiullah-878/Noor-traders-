@@ -11,8 +11,8 @@
 //   (4) ❌ masla alert tap se batch khule (5) raw ka naam formula mein mehfooz (n) — item hat jaye to bhi dikhe (6) formula chooser mein raw alag (7) mara hua code hata.
 //   📷 PHOTO SE FORMULA (AI sirf tasveer parhne ke liye — Excel / parchi): lines -> POS items se milao (stockAgentFind) -> na mile to naya item
 //   (stockNewItemQuick, ⏳ job:) -> formula save. Fi piece packing × pieces; labour -> mazdoori. Tez: OK = setDoc foran. AI aur kahin NAHI.
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem } from './pos-stock.js?v=2.101.5';
-import { smartSearch, fold } from './smart-search.js?v=2.101.5';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.101.6';
+import { smartSearch, fold } from './smart-search.js?v=2.101.6';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -545,7 +545,7 @@ function stockTabHTML() {
   const ic = stockIjCounts(), ci = stockCanItem(), n = k => all.filter(y => y.k === k).length;
   const chips = [['sab', 'Sab ' + num(all.length)], ['tayyar', 'Tayyar ' + num(n('tayyar') + n('pkitem'))], ['raw', 'Raw ' + num(n('raw'))], ['mat', 'Packing ' + num(n('mat'))], ...(see ? [['minus', 'Minus ' + num(all.filter(y => y.x.stock < 0).length)], ['kam', 'Batch se kam ' + num(all.filter(y => y.r?.kam).length)]] : []), ['gine', 'Gine ' + num(C.length)], ['baqi', 'Ginti baqi'], ...(see ? [['farq', 'Farq wale']] : [])];
   return `<section class="ir-sec"><div class="ir-sh"><b>📦 Factory stock</b><small>dukan godam · ${S.round ? 'ginti ' + (S.autoOn ? 'aaj' : esc(S.round)) : 'ginti band'}</small></div>
-    <div class="fc-sacts">${ci.add ? '<button type="button" class="fc-sa" data-fc-newitem="1"><span>➕</span>Naya item</button>' : ''}${ic.pend || ic.bad ? `<button type="button" class="fc-sa warn" data-fc-ijobs="1"><span>⏳</span>${num(ic.pend)} PC baqi${ic.bad ? ' · ❌ ' + num(ic.bad) : ''}</button>` : ''}${goPurchase && (isOwner() || canOf('v:purchase')) ? '<button type="button" class="fc-sa" data-fc-pur="1"><span>🧾</span>Purchase</button>' : ''}${S.owner ? `<button type="button" class="fc-sa" data-fg-bills="1"><span>📋</span>Ginti bill${w ? ' · ' + num(w) : ''}</button>` : ''}</div>
+    <div class="fc-sacts">${ci.add ? '<button type="button" class="fc-sa" data-fc-newitem="1"><span>➕</span>Item jorein</button>' : ''}${ic.pend || ic.bad ? `<button type="button" class="fc-sa warn" data-fc-ijobs="1"><span>⏳</span>${num(ic.pend)} PC baqi${ic.bad ? ' · ❌ ' + num(ic.bad) : ''}</button>` : ''}${goPurchase && (isOwner() || canOf('v:purchase')) ? '<button type="button" class="fc-sa" data-fc-pur="1"><span>🧾</span>Purchase</button>' : ''}${S.owner ? `<button type="button" class="fc-sa" data-fg-bills="1"><span>📋</span>Ginti bill${w ? ' · ' + num(w) : ''}</button>` : ''}</div>
     ${see && C.length ? `<div class="ir-kp fc-gkp"><div><b>${num(C.length)}</b><small>aaj gine</small></div><div><b class="${net < 0 ? 'neg' : ''}">Rs ${net > 0 ? '+' : ''}${num(net)}</b><small>farq</small></div><div><b>${num(w)}</b><small>bill baqi</small></div></div>` : ''}
     ${!S.round && canCount() ? `<div class="fc-alert"><span>⏳</span><div>Ginti abhi shuru nahi — ${S.owner ? 'Stock screen ⚙️ mein <b>"📅 Session = din"</b> ON karein.' : 'malik shuru kare.'}</div></div>` : S.locked ? '<div class="fc-alert bad"><span>🔴</span><div>Malik ne counting band ki hui hai.</div></div>' : ''}
     <div class="fc-chips">${chips.map(([k, l]) => `<button type="button" class="${gfl === k ? 'on' : ''}" data-fg-f="${k}">${l}</button>`).join('')}</div>
@@ -619,7 +619,7 @@ async function matToggle(id, on, box) {   // v2.101: 📦 packing material tick
   if (!isOwner() || !cloud?.setFactoryCfg) { if (box) box.checked = !on; notice('Sirf malik'); return; }
   const isIn = items.some(x => x.id === String(id)), patch = { pack: { [String(id)]: on ? true : null }, ...(on && !isIn ? { items: { [String(id)]: true } } : {}) };
   cfg = { ...(cfg || {}), pack: { ...(cfg?.pack || {}), [String(id)]: on ? true : null }, ...(patch.items ? { items: { ...(cfg?.items || {}), ...patch.items } } : {}) };
-  loadItemsQuiet(); repaint(); if ($('fcPick')) pickPaint(); if ($('fcPkDef')) pkDefPaint();
+  loadItemsQuiet(); repaint(); if ($('fcPick')) pickPaint(); if ($('fcPkDef')) pkDefPaint(); if ($('fcAdd')) addPaint(true);
   try { await cloud.setFactoryCfg(patch); } catch (e) { if (box) box.checked = !on; notice('Save nahi hua: ' + (e?.message || e)); }
 }
 async function facToggle(id, on, box) {
@@ -628,10 +628,39 @@ async function facToggle(id, on, box) {
   if (!on && forms()[String(id)] && !confirm('Is item ka formula bana hua hai — factory se hatana hai?')) { if (box) box.checked = true; return; }
   const v = on ? (cat ? null : true) : (cat || doneReal.has(String(id)) ? false : null), prev = cfg?.items?.[String(id)];
   cfg = { ...(cfg || {}), items: { ...(cfg?.items || {}), [String(id)]: v } };   // foran (tez)
-  loadItemsQuiet(); repaint(); if ($('fcPick')) pickPaint(); try { stockRepaint(); } catch {}
+  loadItemsQuiet(); repaint(); if ($('fcPick')) pickPaint(); if ($('fcAdd')) addPaint(true); try { stockRepaint(); } catch {}
   try { await cloud.setFactoryCfg({ items: { [String(id)]: v } }); }
   catch (e) { cfg = { ...(cfg || {}), items: { ...(cfg?.items || {}), [String(id)]: prev ?? null } }; loadItemsQuiet(); repaint(); if ($('fcPick')) pickPaint(); notice('Save nahi hua: ' + (e?.message || e)); }
 }
+
+// ---------- v2.101.6: ➕ ITEM JOREIN (malik: "naya item mein agar pehle se koi item ho to kaise select karein, do baar add ho jayegi") ----------
+//   Pehle POS ki saari items mein dhoondo (naam spelling-maafi / barcode / 📷 scan). Mil jaye = ☑ Factory / 📦 Packing (wahi asli item,
+//   cfg.items / cfg.pack — sirf malik). Na mile = "➕ Naya item banayein" (naam pehle se bhara; form khud bhi dohra jaanchta hai).
+let fa = null;
+const facIsOn = x => { const v = cfg?.items?.[x.id]; return v === true || (v !== false && (x.catFac || doneReal.has(x.id))); };
+async function openAdd(q0 = '') {
+  watchCfg(); fa = { q: String(q0 || '') };
+  dlg('➕ Item jorein', '<div id="fcAdd"><p class="lk-note">⏳ Items aa rahi hain…</p></div>');
+  if (!(await ensureItems())) return; addPaint(); setTimeout(() => { const i = document.querySelector('[data-fa-q]'); if (i) { i.focus(); try { i.setSelectionRange(i.value.length, i.value.length); } catch {} } }, 60);
+}
+function addListHTML() {
+  let all = []; try { all = stockPickList(); } catch {}
+  const q = fa.q.trim(), ci = stockCanItem(), own = isOwner();
+  if (!q) return '<p class="lk-note">Naam ya barcode likhein (ya 📷 scan) — POS mein pehle se ho to yahin mil jayegi.</p>';
+  const byCode = all.filter(x => x.code && x.code === q), L = byCode.length && /^\d{3,}$/.test(q) ? byCode : [...byCode, ...srch(all, q, 30).filter(x => !byCode.includes(x))].slice(0, 30);
+  return (L.length ? `<p class="fc-acnt">🔎 <b>${num(L.length)}</b> POS mein pehle se — naya mat banayein, inhi mein se chunein:</p><div class="fc-alist">${L.map(x => { const on = facIsOn(x), mat = !!cfg?.pack?.[x.id];
+      return `<div class="fc-arow${on ? ' is-in' : ''}${byCode.includes(x) ? ' code' : ''}"><span><b>${esc(x.name)}</b><small>${x.code ? '🏷 ' + esc(x.code) + ' · ' : ''}stock ${esc(qt(x.stock, x))}${x.cat ? ' · ' + esc(x.cat) : ''}${byCode.includes(x) ? ' · <i>wahi barcode</i>' : ''}</small></span><span class="fc-abtn">${on ? `<i class="fc-aok">✓ Factory mein${mat ? ' · 📦' : ''}</i>${own && !mat ? `<button type="button" data-fa-mat="${esc(x.id)}">📦</button>` : ''}` : own ? `<button type="button" class="pri" data-fa-on="${esc(x.id)}">☑ Factory</button><button type="button" data-fa-mat="${esc(x.id)}">📦 Packing</button>` : '<small>malik factory mein jorega</small>'}</span></div>`; }).join('')}</div>`
+    : `<div class="fc-anone">✓ "${esc(q)}" — POS mein aisi koi item nahi mili.</div>`)
+    + (ci.add ? `<button type="button" class="fc-anew${L.length ? '' : ' big'}" data-fa-new="1">➕ ${L.length ? 'Phir bhi naya item banayein' : 'Naya item banayein'}: "${esc(q)}"</button>` : '<p class="lk-note">🔒 Naya item — malik ki ijazat chahiye.</p>');
+}
+function addPaint(onlyList) {
+  const el = $('fcAdd'); if (!el || !fa) return;
+  if (onlyList && $('fcAddList')) { $('fcAddList').innerHTML = addListHTML(); return; }
+  el.innerHTML = `<p class="ir-say">Pehle <b>dhoondein</b> — item POS mein pehle se ho to <b>☑ Factory</b> (ya <b>📦 Packing</b>) dabayein, wahi item jur jayegi. Na mile tab neeche <b>➕ Naya</b>.</p>
+    <div class="fc-aq"><label class="hs-search"><input type="search" data-fa-q="1" placeholder="🔍 naam ya barcode…" value="${esc(fa.q)}" autocomplete="off"></label><button type="button" class="fc-ascan" data-fa-scan="1" aria-label="Barcode scan">📷</button></div>
+    <div id="fcAddList">${addListHTML()}</div>`;
+}
+window.ntFacAdd = async (id, pkg) => { if (!isOwner()) { notice('Factory mein jorna sirf malik'); return false; } watchCfg(); if (pkg) await matToggle(id, true); else await facToggle(id, true); return true; };   // pos-stock item form "Yahi chunein"
 
 // ---------- ➕ naya batch (larka) — 3 qadam ----------
 export async function openBatch(editId, mode) {
@@ -796,6 +825,12 @@ function dlg(title, html) { const d = $('dialog'); if (!d) return; d.classList.r
 // ---------- clicks ----------
 document.addEventListener('click', e => {
   const o = e.target.closest?.('[data-fac-open]'); if (o) { e.preventDefault(); openBatch(); return; }
+  const fq = e.target.closest?.('[data-fa-on],[data-fa-mat],[data-fa-new],[data-fa-scan]');   // v2.101.6: ➕ item jorein
+  if (fq && fa && fq.closest('#fcAdd')) { const d = fq.dataset;
+    if (d.faOn) { const x = (stockPickList() || []).find(y => y.id === d.faOn); facToggle(d.faOn, true).then(() => notice('✓ ' + (x?.name || 'Item') + ' factory mein jur gayi (naya nahi bana)')); return; }
+    if (d.faMat) { const x = (stockPickList() || []).find(y => y.id === d.faMat); matToggle(d.faMat, true).then(() => notice('📦 ' + (x?.name || 'Item') + ' packing maal mein')); return; }
+    if (d.faNew != null) { const q = fa.q.trim(); stockNewItemOpen(/^\d{5,}$/.test(q) ? { fac: true, code: q } : { fac: true, name: q }); return; }
+    if (d.faScan != null) { scanPick(code => openAdd(code)); return; } }
   const pq = e.target.closest?.('[data-fc-pick],[data-fp-f],[data-fp-more]');
   if (pq) { const d = pq.dataset; if (d.fcPick != null) { openPicker(); return; } if (!pk) return; if (d.fpF) { pk.f = d.fpF; pk.lim = 60; } else pk.lim += 100; pickPaint(); return; }
   const t = e.target.closest?.('[data-fc-per],[data-fc-tab],[data-fc-set],[data-fc-batch],[data-fc-b],[data-fc-f],[data-fc-fnew],[data-fc-photo],[data-fc-rate],[data-fc-pdf],[data-fc-bpdf],[data-fc-act],[data-fc-edit],[data-fc-pur],[data-fc-lbldef],[data-fc-autosend],[data-fc-prn],[data-fc-newitem],[data-fc-ijobs],[data-fc-lbl],[data-fc-item],[data-fr-scope],[data-fr-reset],[data-fc-pkdef],[data-pd-it],[data-pd-src],[data-pd-save],[data-pd-del],[data-fb-send],[data-fb-mode],[data-fc-penddel],[data-fg-f],[data-fg-bills],[data-fg-save],[data-fg-hist],[data-fg-del],[data-fb-it],[data-fb-n],[data-fb-lbl],[data-fb-more],[data-fb-ok],[data-fe-del],[data-fe-add],[data-fe-save],[data-fe-rpos],[data-fe-rm],[data-pf-prod],[data-pf-prodnew],[data-pf-pick],[data-pf-set],[data-pf-del],[data-pf-back],[data-pf-save]');
@@ -816,7 +851,7 @@ document.addEventListener('click', e => {
   if (d.fcAutosend != null) { if (!cloud?.setFactoryCfg) return; cfg = { ...(cfg || {}), autoSend: d.fcAutosend === '1' }; setPaint(); cloud.setFactoryCfg({ autoSend: d.fcAutosend === '1' }).catch(er => notice('Save nahi hua: ' + (er?.message || er))); return; }
   if (d.fcLbldef) { if (!cloud?.setFactoryCfg) return; cfg = { ...(cfg || {}), lbl: d.fcLbldef }; setPaint(); cloud.setFactoryCfg({ lbl: d.fcLbldef }).catch(er => notice('Save nahi hua: ' + (er?.message || er))); return; }
   if (d.fgF) { gfl = d.fgF; paint(); return; }
-  if (d.fcNewitem != null) { stockNewItemOpen({ fac: true }); return; }
+  if (d.fcNewitem != null) { openAdd(); return; }   // v2.101.6: pehle dhoondo (pehle se ho to jorein — do dafa nahi)
   if (d.fcIjobs != null) { stockIjobsOpen(); return; }
   if (d.fcLbl) { stockLabelOpen(d.fcLbl); return; }
   if (d.fcItem) { stockItemOpen(d.fcItem); return; }
@@ -867,6 +902,7 @@ document.addEventListener('input', e => {
   if (d.fcFq != null && fn) { fn.q = t.value || ''; clearTimeout(qT); qT = setTimeout(() => fnewPaint(['fcFqList']), 180); return; }
   if (d.fcRq != null) { rq = t.value || ''; clearTimeout(qT); qT = setTimeout(() => paint(['fcRqList']), 180); return; }
   if (d.fcPdq != null && pd) { pd.q = t.value || ''; clearTimeout(qT); qT = setTimeout(() => pkDefPaint(['fcPdHits']), 180); return; }
+  if (d.faQ != null && fa) { fa.q = t.value || ''; clearTimeout(qT); qT = setTimeout(() => addPaint(true), 180); return; }   // v2.101.6
   if (d.fcPq != null && pk) { pk.q = t.value || ''; pk.lim = 60; clearTimeout(qT); qT = setTimeout(() => pickPaint(['fcPickList']), 180); return; }
   if (d.fcFq2 != null && fe) { fe.q = t.value || ''; clearTimeout(qT); qT = setTimeout(() => formPaint(['feHits']), 180); return; }
   if (d.pfPq != null && pf) { pf.prodQ = t.value || ''; clearTimeout(qT); qT = setTimeout(() => pfSwap(['pfProd']), 180); return; }
@@ -903,4 +939,4 @@ document.addEventListener('change', e => {
   }
   if ((d.fcWm != null || d.fcRm != null) && cloud?.setFactoryCfg) { if (!(v >= 0)) return; cfg = { ...(cfg || {}), ...(d.fcWm != null ? { wm: v } : { rm: v }) }; cloud.setFactoryCfg(d.fcWm != null ? { wm: v } : { rm: v }).then(() => notice('✓ Nafa ' + v + '% save')).catch(er => notice('Save nahi hua: ' + (er?.message || er))); }
 });
-export const _fcTest = { packCalc, packDefs, packUnit, packCpp, bulkCpp, batchCalc: () => batchCalc(), fb: () => fb, rEd, rateRows, isMat, fRate, rateOf, setRate, posRate: v => { posRate = v; }, gOf, kgOf, pcsOfKg, qk, costOf, suggest, labelSpecs, qt, set: (c, b, it) => { cfg = c; batches = b || []; items = it || []; byId = new Map(items.map(x => [x.id, x])); itemsOk = true; }, batchNo, pdfHTML, st, matchItem, photoFormula, pf: () => pf, pendItems: () => pendItems(items.filter(x => !x.pending)) };
+export const _fcTest = { openAdd, addListHTML, get fa() { return fa; }, packCalc, packDefs, packUnit, packCpp, bulkCpp, batchCalc: () => batchCalc(), fb: () => fb, rEd, rateRows, isMat, fRate, rateOf, setRate, posRate: v => { posRate = v; }, gOf, kgOf, pcsOfKg, qk, costOf, suggest, labelSpecs, qt, set: (c, b, it) => { cfg = c; batches = b || []; items = it || []; byId = new Map(items.map(x => [x.id, x])); itemsOk = true; }, batchNo, pdfHTML, st, matchItem, photoFormula, pf: () => pf, pendItems: () => pendItems(items.filter(x => !x.pending)) };

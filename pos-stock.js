@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.101.5';
-import { liveLabelsHTML } from './barcode.js?v=2.101.5';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.101.6';
+import { liveLabelsHTML } from './barcode.js?v=2.101.6';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -871,6 +871,7 @@ function itemForm(r, pre, jobId) {   // v2.99.92: jobId = ⏳ PC baqi item ka ed
   $('dialogBody').innerHTML = `<form class="item-form" data-item-form="${r ? esc(r.id) : 'new'}"${jobId ? ` data-job-id="${esc(jobId)}"` : ''}>
     <label class="it-wide"><span>Item ka naam</span><input name="name" required maxlength="150" autocomplete="off" value="${esc(v.name)}" placeholder="misal: marhaba honey 80gm"></label>
     <label class="it-wide"><span>Barcode</span><div class="it-code"><input name="code" maxlength="50" autocomplete="off" value="${esc(v.code)}" placeholder="${isNew ? 'Khali chhorein to POS khud banayega' : ''}"><button type="button" data-item-scan="1">📷</button></div></label>
+    ${isNew && !jobId ? '<div class="it-dup" data-it-dup="1"></div>' : ''}
     <label class="it-wide"><span>1 CTN = kitne PCS</span><input type="number" min="0" step="any" inputmode="decimal" name="pack" value="${v.pack || ''}" placeholder="misal: 12"></label>
     <div class="it-head">Khareed</div>
     <div class="it-grid">${f('Kh / CTN', 'costC')}${f('Kh / PCS', 'costP')}</div>
@@ -890,7 +891,36 @@ function itemForm(r, pre, jobId) {   // v2.99.92: jobId = ⏳ PC baqi item ka ed
     <p class="muted it-msg" role="status"></p></form>`;
   if (!d.open) d.showModal();
   setTimeout(() => $('dialogBody').querySelector('input[name=name]')?.focus(), 50);
+  if (isNew && !jobId && (v.name || v.code)) dupPaint($('dialogBody').querySelector('form[data-item-form]'));   // v2.101.6
 }
+// v2.101.6: 🔁 DOHRA ROKNA (malik: "pehle se item ho to do baar add ho jayegi") — naya item likhte waqt POS mein wahi barcode / wahi naam /
+//   milti julti items + ⏳ PC baqi line mein wahi naam. "Yahi chunein" = factory form se aaye to wahi item factory mein (window.ntFacAdd),
+//   warna us item ka edit form. Save par wahi naam / barcode = poochta hai (phir bhi naya?).
+function dupFind(name, code) {
+  const P = agPool(), out = [], seen = new Set(), add = (r, why) => { const id = String(r.id); if (seen.has(id)) return; seen.add(id); out.push({ r, why }); };
+  const c = String(code || '').trim(); if (c) for (const r of P.list) if (String(r.code || '') === c) add(r, 'code');
+  const fn = fold(name);
+  if (fn.length >= 3) { for (const r of P.list) if (fold(r.name) === fn) add(r, 'same'); try { for (const r of smartSearch(P.list, String(name), 4)) if (r && r.id != null && P.byId.has(String(r.id))) add(P.byId.get(String(r.id)), 'like'); } catch {} }
+  const pend = fn ? ijobs.filter(j => j.op === 'new' && (j.status === 'new' || j.status === 'working') && fold(j.name) === fn) : [];
+  return { list: out.slice(0, 4), hard: out.filter(x => x.why !== 'like'), pend };
+}
+function dupPaint(form) {
+  const box = form?.querySelector('[data-it-dup]'); if (!box) return;
+  const v = itemRead(form), { list, hard, pend } = dupFind(v.name, v.code), P = agPool();
+  if (!list.length && !pend.length) { box.innerHTML = ''; return; }
+  const st = r => { try { return num(Number(saleStockItem(P.main, r.id)?.stock) || 0); } catch { return '—'; } };
+  box.innerHTML = `<div class="it-dupbox${hard.length || pend.length ? ' hard' : ''}"><b>${hard.length || pend.length ? '⚠️ Yeh item pehle se hai — naya mat banayein' : '🔎 Milti julti items pehle se hain'}</b>
+    ${list.map(({ r, why }) => `<div class="it-duprow"><span><b>${esc(r.name)}</b><small>${r.code ? '🏷 ' + esc(r.code) + ' · ' : ''}stock ${st(r)}${why === 'code' ? ' · <i>wahi barcode</i>' : why === 'same' ? ' · <i>wahi naam</i>' : ''}</small></span><button type="button" data-dup-pick="${esc(String(r.id))}">Yahi chunein</button></div>`).join('')}
+    ${pend.map(j => `<div class="it-duprow"><span><b>${esc(j.name)}</b><small>⏳ PC baqi — pehle se line mein (POS mein ban raha)</small></span></div>`).join('')}</div>`;
+}
+let dupT = 0;
+document.addEventListener('input', e => { const f = e.target?.closest?.('form[data-item-form="new"]'); if (!f || !/^(name|code)$/.test(e.target.name || '')) return; clearTimeout(dupT); dupT = setTimeout(() => dupPaint(f), 250); });
+document.addEventListener('click', async e => {
+  const b = e.target.closest?.('[data-dup-pick]'); if (!b) return; const f = b.closest('form'), id = b.dataset.dupPick, r = agPool().byId.get(String(id));
+  const fac = !!f?.elements?.fac?.checked, pkg = !!f?.elements?.pk?.checked;
+  if ((fac || pkg) && typeof window.ntFacAdd === 'function') { const ok = await window.ntFacAdd(id, pkg); if (ok) { notice('✓ ' + (r?.name || 'Item') + (pkg ? ' packing maal mein' : ' factory mein') + ' jur gayi — naya nahi bana'); $('dialog')?.close(); } return; }
+  stockItemOpen(id);
+});
 function itemRead(form) {
   const g = k => form.querySelector('[name=' + k + ']');
   const nv = k => { const e = g(k); return e && !e.disabled ? Math.max(0, Number(e.value) || 0) : null; };
@@ -906,6 +936,8 @@ async function itemSave(form, btn) {
   if (pk > 1 && v.costC > 0 && v.costP > 0 && Math.abs(v.costP * pk - v.costC) <= 0.005 * pk + 1e-6) v.costP = Math.round(v.costC / pk * 10000) / 10000;   // v2.98.7: POS ka CTN bilkul wohi (8450 ÷ 16 = 528.125)
   if (!v.name) { msg.textContent = 'Item ka naam likhein'; return; }
   if (!cloud?.requestItem) { msg.textContent = 'Item ke liye app update karein'; return; }
+  if (isNew && !form.dataset.jobId) { const D = dupFind(v.name, v.code), h = D.hard[0];   // v2.101.6: dohra
+    if ((h || D.pend.length) && !confirm(`"${h ? h.r.name : D.pend[0].name}" ${h ? 'POS mein pehle se hai' + (h.why === 'code' ? ' (wahi barcode)' : ' (wahi naam)') : 'pehle se line mein hai (⏳ PC baqi)'}.\n\nPhir bhi NAYA item banana hai? (Cancel = nahi — "Yahi chunein" se purana lein)`)) { dupPaint(form); return; } }
   const keep = k => (v[k] == null ? (k === 'costP' ? Number(r?.prate) || 0 : k === 'rpcs' ? Number(r?.rate2) || Number(r?.rate) || 0 : k === 'wpcs' ? Number(r?.ws) || Number(r?.wrate) || 0 : 0) : v[k]);   // v2.98.7: W PCS = ws
   const job = { op: isNew ? 'new' : 'edit', itemId: isNew ? '' : String(r.id), code: v.code, name: v.name, pack: v.pack,
     costP: keep('costP'), rctn: keep('rctn'), rpcs: keep('rpcs'), wctn: keep('wctn'), wpcs: keep('wpcs') };
@@ -3396,7 +3428,7 @@ export async function stockCountDel(itemId) {
 }
 
 // v2.101.1: 🏭 factory se seedha (stock screen par jaye baghair) — naya item (🏭 / 📦 tick laga hua), item edit, label, ⏳ PC baqi list
-export function stockNewItemOpen(o = {}) { if (!canNewItem()) { notice('🔒 Naya item — malik ki ijazat chahiye'); return; } itemForm(null, { _fac: !!o.fac, _pack: !!o.pack }); }
+export function stockNewItemOpen(o = {}) { if (!canNewItem()) { notice('🔒 Naya item — malik ki ijazat chahiye'); return; } itemForm(null, { _fac: !!o.fac, _pack: !!o.pack, ...(o.name ? { name: String(o.name) } : {}), ...(o.code ? { code: String(o.code) } : {}) }); }   // v2.101.6: naam / barcode pehle se
 function fcRow(id) { const P = agPool(), r = P.byId.get(String(id)); if (!r) return null; const x = { ...r, stock: Number(saleStockItem(P.main, r.id)?.stock) || 0 }; rowCache.set(String(r.id), x); return x; }
 export function stockItemOpen(id) { const r = fcRow(id); if (!r) { notice('Item POS mein nahi mila (⏳ PC baqi ho to "PC baqi" list se edit)'); return; } itemForm(r, null); }
 export function stockLabelOpen(id) { const r = fcRow(id); if (!r) { notice('Item POS mein nahi mila'); return; } openLabels(String(r.id)); }

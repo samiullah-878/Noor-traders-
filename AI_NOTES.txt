@@ -4885,3 +4885,16 @@ Rupees mein, sum amount ke saath". Plan OK (neeche wali "📋 Saari items" table
   nahi (sale Rs jo nafa mein nahi gini). Nafa = sale − abhi ka khareed × ginti (andaza) — note screen par.
 - PDF: saari items (pehle 400) + "Fi pc nafa" column + "💰 Nafa kahan se" (retail / wholesale, ghaata, top 15 hissa).
 - PC / rules / AI — kuch nahi. Test scratchpad ir5/t.js 20 ✓ (320 items, retail+wholesale = kul).
+
+=== v2.101.6 (2026-10-16 raat) — ➕ ITEM JOREIN (pehle dhoondo) + 🔁 NAYA ITEM MEIN DOHRA ROKNA ===
+Malik (factory stock tab): "Naya item mein agar pehle se koi item ho to kaise select karein — do baar add ho jayegi". Plan OK.
+- factory.js: stock tab ka "➕ Naya item" ab "➕ Item jorein" -> openAdd(): 🔍 data-fa-q (srch spelling-maafi / barcode — hindse wala
+  barcode mile to sirf wahi) + 📷 scanPick. Mili = "☑ Factory" (facToggle -> cfg.items) / "📦 Packing" (matToggle) — sirf malik, warna
+  "malik factory mein jorega"; pehle se factory mein = "✓ Factory mein". Na mili = "➕ Naya item banayein: '<q>'" (stockNewItemOpen
+  {fac, name} ya hindse = {fac, code}). window.ntFacAdd(id, pkg) = pos-stock "Yahi chunein" ke liye.
+- pos-stock.js: stockNewItemOpen naam / code pehle se bharta. itemForm (sirf NAYA, PC-baqi edit nahi) mein [data-it-dup]: dupFind =
+  wahi barcode / wahi naam (fold) / milti julti (smartSearch 4) + ⏳ ijobs wahi naam. Peeli "⚠️ pehle se hai" (hard) ya neeli "milti julti";
+  "Yahi chunein" = factory / packing tick laga ho to ntFacAdd (form band), warna us item ka edit (stockItemOpen). Save par hard / pend =
+  confirm ("Phir bhi NAYA?" Cancel = nahi bheja). Stock screen ka Naya item bhi yahi.
+- style.css .fc-aq/.fc-arow(.is-in — '.on' theme se takrata tha)/.fc-anew/.it-dupbox. PC / rules / AI — kuch nahi.
+- Test: fct/t.mjs 101 ✓ (stub mein scanPick), sk/t.mjs ALL OK (dohra 10 naye).
