@@ -11,8 +11,8 @@
 //   (4) ❌ masla alert tap se batch khule (5) raw ka naam formula mein mehfooz (n) — item hat jaye to bhi dikhe (6) formula chooser mein raw alag (7) mara hua code hata.
 //   📷 PHOTO SE FORMULA (AI sirf tasveer parhne ke liye — Excel / parchi): lines -> POS items se milao (stockAgentFind) -> na mile to naya item
 //   (stockNewItemQuick, ⏳ job:) -> formula save. Fi piece packing × pieces; labour -> mazdoori. Tez: OK = setDoc foran. AI aur kahin NAHI.
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.102.0';
-import { smartSearch, fold } from './smart-search.js?v=2.102.0';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.102.1';
+import { smartSearch, fold } from './smart-search.js?v=2.102.1';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -150,16 +150,21 @@ async function ensureItems() {
 const normF = f => { const pp = (f.lines || []).filter(l => Number(l.pp) > 0); if (!pp.length) return f; const mats = [...(f.self?.mats || [])];
   for (const l of pp) if (!mats.some(m => String(m.id) === String(l.id))) mats.push({ id: String(l.id), q: Number(l.pp), n: l.n || '' });
   return { ...f, lines: (f.lines || []).filter(l => !(Number(l.pp) > 0)), self: { ...(f.self || {}), mats } }; };
-const forms = () => Object.fromEntries(Object.entries(cfg?.formulas || {}).filter(([, v]) => v && v.per > 0).map(([k, v]) => [k, normF(v)]));
+const forms = () => Object.fromEntries(Object.entries(cfg?.formulas || {}).filter(([, v]) => v && v.per > 0).map(([k, v]) => [k, normF(Number(v.ml) > 0 && Number(v.ml) < 50 ? { ...v, ml: fixMl(v.ml) } : v)]));
 // v2.102.0: 🧴 NUSKHA + KIS MEIN BHARA (malik: "batch quantity khud jama ho · batch banate waqt pooche bottle hai ya packet")
 //   formula.ml = 1 pcs mein kitna (ml / g) -> raw maal (liter / kg) ka JAMA ÷ ml = 1 batch ke pcs (auto). formula.self.mats = is item ke
 //   har pcs ke saath packing maal (bottle 1 + dhakan 1). Doosri packing = cfg.packs {pid: {src: formula item, g: ml, mats}} (packet 500 ml).
 //   Batch: "Kis mein bhara?" — yahi item (bottle) + har packing ke pcs; bacha khula liquid sirf dikhta hai (POS mein nahi).
 const mlFromName = n => { const t = String(n || ''); let m = t.match(/(\d+(?:\.\d+)?)\s*(?:ml|g|gm|gms|gram|grams)\b/i); if (m) return r3(Number(m[1]));
   m = t.match(/(\d+(?:\.\d+)?)\s*\/?\s*(?:l|ltr|ltrs|liter|litre|liters|lit|kg|kgs)\b/i); return m ? r3(Number(m[1]) * 1000) : 0; };
-const lineVol = (id, q) => { const it = byId.get(String(id)), u = un(it), g = gOf(id); if (g) return r3((Number(q) || 0) * g / 1000);   // liter / kg
-  if (/^(kg|kgs|l|ltr|ltrs|liter|litre|lit|liters)$/.test(u)) return Number(q) || 0; if (/^(ml|g|gm|gms|gram)$/.test(u)) return r3((Number(q) || 0) / 1000); return null; };
-const volOf = lines => { let v = 0; const miss = []; for (const l of lines || []) { const x = lineVol(l.id, l.q); if (x == null) miss.push(l); else v += x; } return { v: r3(v), miss }; };
+// v2.102.1: malik — "coco batain 1 kg, pani 165 kg khud jama ho; sirf kala tail 200 g ka piece" -> pcs wala raw = naam ka wazan ya 1 pcs = 1 kg
+const pcsG = (id, name) => gOf(id) || mlFromName(name || byId.get(String(id))?.name) || 1000;
+const lineVolHow = id => { const it = byId.get(String(id)), u = un(it); if (gOf(id)) return 'g'; if (/^(kg|kgs|l|ltr|ltrs|liter|litre|lit|liters)$/.test(u)) return 'kg'; if (/^(ml|g|gm|gms|gram)$/.test(u)) return 'ml'; return mlFromName(it?.name) ? 'name' : 'khud'; };
+const lineVol = (id, q, name) => { const it = byId.get(String(id)), u = un(it), g = gOf(id); if (g) return r3((Number(q) || 0) * g / 1000);   // liter / kg
+  if (/^(kg|kgs|l|ltr|ltrs|liter|litre|lit|liters)$/.test(u)) return Number(q) || 0; if (/^(ml|g|gm|gms|gram)$/.test(u)) return r3((Number(q) || 0) / 1000);
+  return r3((Number(q) || 0) * pcsG(id, name || it?.name) / 1000); };
+const volOf = lines => { let v = 0; const miss = []; for (const l of lines || []) { const x = lineVol(l.id, l.q, l.n); if (x == null) miss.push(l); else v += x; } return { v: r3(v), miss }; };
+const fixMl = m => { m = Number(m) || 0; return m > 0 && m < 50 ? r3(m * 1000) : m; };   // v2.102.1: 1.5 likha = 1.5 liter (ml nahi)
 const selfMats = f => (Array.isArray(f?.self?.mats) ? f.self.mats : []).filter(m => m && m.id && Number(m.q) > 0);
 const selfMatCost = f => selfMats(f).reduce((t, m) => t + Number(m.q) * rateOf(m.id, byId.get(String(m.id))), 0);
 const srcMl = id => Number(forms()[String(id)]?.ml) || 0;
@@ -358,7 +363,7 @@ function openFormula(id) {
 // v2.102.0: formula editor ki haalat — lines = sirf raw (fi batch) · self {matId: har pcs} · fms = doosri packing [{id, g, mats{}}] · ml / auto
 function feInit(it, f) {
   const x = { id: it.id, per: f?.per || (it.pack > 1 ? it.pack * 5 : 100), lines: (f?.lines || []).map(l => ({ id: String(l.id), q: Number(l.q) || 0, n: l.n || '' })), lab: Number(f?.lab) || 0, gas: Number(f?.gas) || 0, q: '', sel: new Set(), pf: 'sab', lim: 300,
-    ml: Number(f?.ml) || 0, auto: f?.auto !== false, self: Object.fromEntries(selfMats(f).map(m => [String(m.id), Number(m.q)])), fms: packsOf(it.id).map(p => ({ id: p.id, g: p.g, mats: Object.fromEntries(p.mats.map(m => [String(m.id), Number(m.q) || 1])) })), fms0: packsOf(it.id).map(p => p.id), addF: false, saved: !!f };
+    ml: fixMl(f?.ml), auto: f?.auto !== false, self: Object.fromEntries(selfMats(f).map(m => [String(m.id), Number(m.q)])), fms: packsOf(it.id).map(p => ({ id: p.id, g: p.g, mats: Object.fromEntries(p.mats.map(m => [String(m.id), Number(m.q) || 1])) })), fms0: packsOf(it.id).map(p => p.id), addF: false, saved: !!f };
   // purani bottle / dhakan / pouch line (ginti 1 ya = per) -> bharne ka maal (har pcs 1)
   x.lines = x.lines.filter(l => { if (looksPack(l.id, l.n) && (l.q === 1 || Math.abs(l.q - x.per) < 0.001)) { x.self[l.id] = 1; return false; } return true; });
   if (!x.ml && !f) { const m = mlFromName(it.name); if (m) x.ml = m; }   // naya formula: naam se (1.5 liter = 1500)
@@ -407,8 +412,8 @@ function formPaint(only) {
     return `<div class="fc-mrow"><span><b>${esc(m?.name || 'Item ' + id)}</b><small>${r ? rs(r) + ' / ' + esc(un(m)) : 'rate nahi'}</small></span><label><input type="number" inputmode="decimal" min="0" step="any" data-fe-mq="${esc(key + '|' + id)}" value="${esc(String(q))}"><em>har pcs</em></label>${key === 'self' ? `<button type="button" class="fc-link fc-mraw" data-fe-mraw="${esc(id)}" title="Raw maal mein">↑ raw</button>` : ''}<button type="button" class="ir-cx" data-fe-mdel="${esc(key + '|' + id)}">✕</button></div>`; }).join('');
   const addChips = (mats, key) => { const C = pkCands(new Set(Object.keys(mats))); return C.length ? `<div class="fc-mchips">${C.map(x => `<button type="button" data-fe-madd="${esc(key + '|' + x.id)}">+ ${esc(x.name)}</button>`).join('')}</div>` : ''; };
   const html = `<section class="ir-sec fc-nus">
-      <div class="fc-mlrow"><span>1 ${esc(U)} ${esc(it.name)} =</span><input type="number" inputmode="decimal" min="0" step="any" data-fe-ml="1" value="${vol ? esc(String(fe.ml)) : ''}" placeholder="${mlSug || '—'}"><span>ml / g</span></div>
-      ${!vol && mlSug ? `<button type="button" class="fc-sugml" data-fe-mlset="${mlSug}">🧪 Naam se: 1 ${esc(U)} = ${num(mlSug)} ml / g — ✓ Lagao <small>(batch khud jama hoga)</small></button>` : ''}
+      <div class="fc-mlrow"><span>1 ${esc(U)} ${esc(it.name)} =</span><input type="number" inputmode="decimal" min="0" step="any" data-fe-ml="1" value="${vol ? esc(String(r3(fe.ml / 1000))) : ''}" placeholder="${mlSug ? num(r3(mlSug / 1000)) : '—'}"><span>${volU(it) === 'kg' ? 'kg' : 'liter'}</span></div>
+      ${!vol && mlSug ? `<button type="button" class="fc-sugml" data-fe-mlset="${mlSug}">🧪 Naam se: 1 ${esc(U)} = ${num(r3(mlSug / 1000))} ${volU(it) === 'kg' ? 'kg' : 'liter'} — ✓ Lagao <small>(batch khud jama hoga)</small></button>` : ''}
       ${vol && fe.auto ? `<div class="fc-autob"><small>1 batch = raw maal ka jama</small><b>${Lt(V.v)} = ${num(nPcs)} ${esc(U)}</b>${extra > 0.0005 ? `<small>+ ${Lt(extra)} bacha</small>` : ''}<button type="button" class="fc-link" data-fe-auto="0">✎ haath se</button></div>
         ${V.miss.length ? `<p class="fc-fln bad">⚠️ ${V.miss.map(l => esc(byId.get(l.id)?.name || l.n)).join(', ')} — "1 pcs = g" likhein, warna jama mein nahi</p>` : ''}${!(V.v > 0) ? '<p class="lk-note">Neeche raw maal ki ginti (liter / kg) likhein — batch khud jama hoga.</p>' : ''}`
       : `<div class="fc-batchrow"><span>1 batch =</span><input type="number" inputmode="decimal" min="1" step="any" data-fe-per="1" value="${esc(String(fe.per))}"><span>${esc(U)}${it.pack > 1 ? ' (' + esc(qt(fe.per, it)) + ')' : ''}</span></div>${vol ? `<button type="button" class="fc-link" data-fe-auto="1">↺ Khud jama karo (${Lt(V.v)})</button>` : ''}`}</section>
@@ -419,18 +424,18 @@ function formPaint(only) {
         ${l.gone ? '<small class="fc-fln bad">⚠️ factory items mein nahi — ⚙️ se ☑ karein</small>' : ''}
         <div class="fc-flg"><label><small>Ginti</small><span><input type="number" inputmode="decimal" min="0" step="any" data-fe-q="${i}" value="${esc(String(g ? kgOf(fe.lines[i].q, l.id) : fe.lines[i].q))}"><em>${g ? 'kg / L' : esc(un(l.it))}</em></span></label>
           <label class="${l.own ? 'own' : ''}"><small>Rate / ${esc(ru)}</small><span><input type="number" inputmode="decimal" min="0" step="any" data-fe-r="${esc(l.id)}" value="${l.c ? r2(l.c * per) : ''}" placeholder="⚠️"></span></label>
-          ${canG ? `<label><small>1 ${esc(un(l.it))} =</small><span><input type="number" inputmode="decimal" min="0" step="any" data-fe-g="${esc(l.id)}" value="${g || ''}" placeholder="—"><em>g/ml</em></span></label>` : ''}</div>
-        <small class="fc-fln">${g ? esc(qt(l.q, l.it)) + ' · ' : ''}${l.c ? rs(l.c) + ' / ' + esc(un(l.it)) : 'rate nahi — likhein'}${l.own ? ` · <b>✎ factory rate</b>${pr ? ` <button type="button" class="fc-link" data-fe-rpos="${esc(l.id)}">↺ POS wala ${rs(pr * per)}</button>` : ''}` : ''}${!g && canG ? ' · g/ml likhein to ginti kg / liter mein' : ''} <button type="button" class="fc-link" data-fe-mv="${i}">↓ bharne ka maal</button></small></div>`; }).join('') || '<p class="lk-note">Neeche list se raw maal ☑ karein.</p>'}</div>
+          ${canG ? `<label><small>1 ${esc(un(l.it))} =</small><span><input type="number" inputmode="decimal" min="0" step="any" data-fe-g="${esc(l.id)}" value="${g || ''}" placeholder="${vol ? num(pcsG(l.id, l.name)) : '—'}"><em>g/ml</em></span></label>` : ''}</div>
+        <small class="fc-fln">${g ? esc(qt(l.q, l.it)) + ' · ' : ''}${l.c ? rs(l.c) + ' / ' + esc(un(l.it)) : 'rate nahi — likhein'}${l.own ? ` · <b>✎ factory rate</b>${pr ? ` <button type="button" class="fc-link" data-fe-rpos="${esc(l.id)}">↺ POS wala ${rs(pr * per)}</button>` : ''}` : ''}${vol && !g ? (() => { const h = lineVolHow(l.id), x = lineVol(l.id, l.q, l.name); return h === 'khud' ? ` · <b>= ${num(x)} kg (1 pcs = 1 kg, khud)</b>` : h === 'name' ? ` · <b>= ${num(x)} kg (naam se)</b>` : ''; })() : ''} <button type="button" class="fc-link" data-fe-mv="${i}">↓ bharne ka maal</button></small></div>`; }).join('') || '<p class="lk-note">Neeche list se raw maal ☑ karein.</p>'}</div>
       <div class="fc-lab fc-fehd">➕ MAAL CHUNEIN <small>☑ kai ek saath — bottle / dhakan khud neeche jayenge</small></div>
       <label class="hs-search"><input type="search" data-fc-fq2="1" placeholder="🔍 dhoondein (naam / barcode)…" value="${esc(fe.q)}" autocomplete="off"></label>
       <div id="feHits">${feListHTML()}</div></section>
     <section class="ir-sec fc-pksec"><div class="ir-sh"><b>🧴 Kis mein bharte hain?</b><small>batch par poochega</small></div>
-      <div class="fc-form1"><div class="fc-f1h"><b>🧴 ${esc(it.name)}</b><small>yahi item${vol ? ' · 1 = ' + num(fe.ml) + ' ml/g' : ''} · har pcs ke saath:</small></div>
+      <div class="fc-form1"><div class="fc-f1h"><b>🧴 ${esc(it.name)}</b><small>yahi item${vol ? ' · 1 = ' + num(r3(fe.ml / 1000)) + ' ' + volU(it) : ''} · har pcs ke saath:</small></div>
         ${matRows(fe.self || {}, 'self') || '<p class="lk-note">Bottle / dhakan / label neeche se + karein (ek dafa).</p>'}${addChips(fe.self || {}, 'self')}
         ${Object.keys(fe.self || {}).length ? `<small class="fc-fln">Fi pcs packing ${rs(smC)} · laagat fi pcs ${rs(cppAll)}</small>` : ''}</div>
       ${(fe.fms || []).map((fm, k) => { const m = byId.get(fm.id), mc = Object.entries(fm.mats).reduce((t, [id, q]) => t + Number(q) * rateOf(id, byId.get(id)), 0), cp = vol && fm.g ? c.cpp * fm.g / fe.ml + mc : 0;
         return `<div class="fc-form1 alt"><div class="fc-f1h"><b>🛍 ${esc(m?.name || 'Item ' + fm.id)}</b><button type="button" class="ir-cx" data-fe-fdel="${k}">✕</button></div>
-        <div class="fc-mlrow sm"><span>1 pcs =</span><input type="number" inputmode="decimal" min="0" step="any" data-fe-fg="${k}" value="${fm.g || ''}" placeholder="${mlFromName(m?.name) || 'ml'}"><span>ml / g${vol && fm.g ? ' = ' + num(r3(fm.g / fe.ml)) + ' ' + esc(it.name) : ''}</span></div>
+        <div class="fc-mlrow sm"><span>1 pcs =</span><input type="number" inputmode="decimal" min="0" step="any" data-fe-fg="${k}" value="${fm.g ? r3(fm.g / 1000) : ''}" placeholder="${mlFromName(m?.name) ? num(r3(mlFromName(m?.name) / 1000)) : '0.5'}"><span>${volU(it) === 'kg' ? 'kg' : 'liter'}${vol && fm.g ? ' = ' + num(r3(fm.g / fe.ml)) + ' ' + esc(it.name) : ''}</span></div>
         ${matRows(fm.mats, 'f' + k)}${addChips(fm.mats, 'f' + k)}${cp ? `<small class="fc-fln">Laagat fi pcs ${rs(cp)}</small>` : ''}</div>`; }).join('')}
       ${vol ? (fe.addF ? `<div class="fc-addf"><div class="fc-lab">DOOSRI PACKING KA ITEM <small>jaise packet / chhoti bottle</small></div><div class="fc-mchips">${items.filter(x => x.id !== fe.id && !feUsed().has(x.id) && !looksPack(x.id, x.name)).sort((a, b) => (fold(b.name).split(' ')[0] === fold(it.name).split(' ')[0] ? 1 : 0) - (fold(a.name).split(' ')[0] === fold(it.name).split(' ')[0] ? 1 : 0) || a.name.localeCompare(b.name)).slice(0, 40).map(x => `<button type="button" data-fe-fadd="${esc(x.id)}">${esc(x.name)}</button>`).join('') || '<p class="lk-note">Factory mein aur item nahi — Stock tab se ➕ Item jorein.</p>'}</div></div>`
         : '<button type="button" class="fc-anew" data-fe-addf="1">➕ Doosri packing (packet / chhoti bottle)</button>') : '<p class="lk-note">Packet jaisi doosri packing ke liye upar "1 pcs = ml / g" likhein.</p>'}</section>
@@ -808,8 +813,8 @@ function fillStep(no, z) {   // v2.102.0: 🧴 Kis mein bhara?
   const it = z.it, P = packsOf(it.id), U = un(it), ml = Number(z.f.ml) || 0, L = x => ml ? num(r3(x * ml / 1000)) + ' ' + volU(it) : num(r3(x)) + ' ' + esc(U);
   const used = r3(z.k.used + z.selfN);
   return `${stepn(no, 'Kis mein bhara?', 'bana ' + L(z.made))}
-    <div class="fc-pkg"><label class="fc-pkr self"><span><b>🧴 ${esc(it.name)}</b><small>${ml ? '1 = ' + num(ml) + ' ml' : 'yahi item'}${z.SM.length ? ' · ' + z.SM.map(m => esc(byId.get(String(m.id))?.name || m.n || '')).join(' + ') : ''}</small></span><input type="number" inputmode="numeric" min="0" step="1" data-fb-self="1" value="${fb.self === '' || fb.self == null ? '' : esc(String(fb.self))}" placeholder="${num(z.auto)}"><em>pcs</em></label>
-    ${P.map(p => { const pit = byId.get(p.id), n = Number(fb.pk[p.id]) || 0; return `<label class="fc-pkr"><span><b>🛍 ${esc(pit.name)}</b><small>1 = ${num(p.g)} ml${p.mats.length ? ' · ' + p.mats.map(m => esc(byId.get(String(m.id))?.name || m.n || '')).join(' + ') : ''}</small></span><input type="number" inputmode="numeric" min="0" step="1" data-fb-pk="${esc(p.id)}" value="${n || ''}" placeholder="0"><em>pcs</em></label>`; }).join('')}</div>
+    <div class="fc-pkg"><label class="fc-pkr self"><span><b>🧴 ${esc(it.name)}</b><small>${ml ? '1 = ' + num(r3(ml / 1000)) + ' ' + volU(it) : 'yahi item'}${z.SM.length ? ' · ' + z.SM.map(m => esc(byId.get(String(m.id))?.name || m.n || '')).join(' + ') : ''}</small></span><input type="number" inputmode="numeric" min="0" step="1" data-fb-self="1" value="${fb.self === '' || fb.self == null ? '' : esc(String(fb.self))}" placeholder="${num(z.auto)}"><em>pcs</em></label>
+    ${P.map(p => { const pit = byId.get(p.id), n = Number(fb.pk[p.id]) || 0; return `<label class="fc-pkr"><span><b>🛍 ${esc(pit.name)}</b><small>1 = ${num(r3(p.g / 1000))} ${volU(it)}${p.mats.length ? ' · ' + p.mats.map(m => esc(byId.get(String(m.id))?.name || m.n || '')).join(' + ') : ''}</small></span><input type="number" inputmode="numeric" min="0" step="1" data-fb-pk="${esc(p.id)}" value="${n || ''}" placeholder="0"><em>pcs</em></label>`; }).join('')}</div>
     <div class="fc-rawsum ${z.over ? 'bad' : 'ok'}">${z.over ? `⚠️ Bhara ${L(used)} — bana sirf ${L(z.made)}! Ginti kam karein` : `Bhara ${L(used)}${z.left > 0.0005 ? ` · <b>bacha khula ${L(z.left)}</b> (POS mein nahi)` : ' · sab bhar gaya ✓'}`}${fb.self === '' || fb.self == null ? `<br><small>🧴 khali = baqi sab ${esc(it.name)} (${num(z.auto)})</small>` : ''}</div>`;
 }
 function packStep(no, src, z) {
@@ -1053,8 +1058,8 @@ document.addEventListener('change', e => {
   }
   if (fe) {
     if (d.fePer != null) { fe.per = v > 0 ? v : fe.per; formPaint(); return; }
-    if (d.feMl != null) { fe.ml = v > 0 ? v : 0; if (fe.ml) fe.auto = true; formPaint(); return; }   // v2.102.0
-    if (d.feFg != null) { const fm = fe.fms[Number(d.feFg)]; if (fm) fm.g = v > 0 ? v : 0; formPaint(); return; }
+    if (d.feMl != null) { fe.ml = v > 0 ? (v < 50 ? r3(v * 1000) : v) : 0; if (fe.ml) fe.auto = true; formPaint(); return; }   // v2.102.1: liter / kg likhte hain
+    if (d.feFg != null) { const fm = fe.fms[Number(d.feFg)]; if (fm) fm.g = v > 0 ? (v < 50 ? r3(v * 1000) : v) : 0; formPaint(); return; }
     if (d.feMq) { const [k, id] = String(d.feMq).split('|'), M = k === 'self' ? fe.self : fe.fms[Number(k.slice(1))]?.mats; if (M) { if (v > 0) M[id] = v; else delete M[id]; } formPaint(); return; }
     if (d.feQ != null) { const l = fe.lines[Number(d.feQ)]; if (l) l.q = v >= 0 ? (gOf(l.id) ? pcsOfKg(v, l.id) : v) : 0; formPaint(); return; }
     if (d.feG != null) { if (!cloud?.setFactoryCfg || !isOwner()) return; const g = v > 0 ? r2(v) : null; cfg = { ...(cfg || {}), conv: { ...(cfg?.conv || {}), [d.feG]: g } }; formPaint();
@@ -1070,4 +1075,4 @@ document.addEventListener('change', e => {
   }
   if ((d.fcWm != null || d.fcRm != null) && cloud?.setFactoryCfg) { if (!(v >= 0)) return; cfg = { ...(cfg || {}), ...(d.fcWm != null ? { wm: v } : { rm: v }) }; cloud.setFactoryCfg(d.fcWm != null ? { wm: v } : { rm: v }).then(() => notice('✓ Nafa ' + v + '% save')).catch(er => notice('Save nahi hua: ' + (er?.message || er))); }
 });
-export const _fcTest = { looksPack, get fe() { return fe; }, forms, selfMats, mlFromName, volOf, openAdd, addListHTML, get fa() { return fa; }, packCalc, packDefs, packUnit, packCpp, bulkCpp, batchCalc: () => batchCalc(), fb: () => fb, rEd, rateRows, isMat, fRate, rateOf, setRate, posRate: v => { posRate = v; }, gOf, kgOf, pcsOfKg, qk, costOf, suggest, labelSpecs, qt, set: (c, b, it) => { cfg = c; batches = b || []; items = it || []; byId = new Map(items.map(x => [x.id, x])); itemsOk = true; }, batchNo, pdfHTML, st, matchItem, photoFormula, pf: () => pf, pendItems: () => pendItems(items.filter(x => !x.pending)) };
+export const _fcTest = { lineVol, fixMl, looksPack, get fe() { return fe; }, forms, selfMats, mlFromName, volOf, openAdd, addListHTML, get fa() { return fa; }, packCalc, packDefs, packUnit, packCpp, bulkCpp, batchCalc: () => batchCalc(), fb: () => fb, rEd, rateRows, isMat, fRate, rateOf, setRate, posRate: v => { posRate = v; }, gOf, kgOf, pcsOfKg, qk, costOf, suggest, labelSpecs, qt, set: (c, b, it) => { cfg = c; batches = b || []; items = it || []; byId = new Map(items.map(x => [x.id, x])); itemsOk = true; }, batchNo, pdfHTML, st, matchItem, photoFormula, pf: () => pf, pendItems: () => pendItems(items.filter(x => !x.pending)) };

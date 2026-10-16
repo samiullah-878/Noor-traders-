@@ -4946,3 +4946,12 @@ dimagh khap raha hai". Pehle wala v2.101.9 "📦 har pcs mein (pp)" tareeqa HATA
   PC factory-post: wahi (+out, +outs, −lines) — koi badlaav nahi; rules 2.57 keys wahi.
 - Rates tab tayyar cpp = nuskha cpp + self maal. volU: naam mein kg/g = kg warna L.
 - Test fct/t.mjs 134 ✓ (nuskha jama, doosri packing, batch bhara / bacha / over, batch doc, purana pp).
+
+=== v2.102.1 (2026-10-16 raat) — 🧴 NUSKHA: LITER / KG MEIN LIKHNA + PCS WALA RAW = 1 KG KHUD ===
+Malik (screenshot: "1 pcs = 1.5" ml khane mein -> 23 L = 15,333 pcs; raw par laal "1 pcs = g likhein"): "coco batain 1 kg, pani 165 kg —
+khud jama ho; kala tail ka hi 200 g ka piece tha". Plan OK.
+- "1 pcs =" khana ab LITER / KG (andar ml); 50 se kam = liter (×1000) — fixMl: saved ml 1.5 bhi 1500 (forms() + feInit). Doosri packing
+  bhi liter (0.5). Batch / formula labels liter / kg (volU).
+- lineVol: conv (1 pcs = g, jaise kala tail 200) > unit kg/ltr > g/ml > pcs = naam ka wazan (mlFromName) ya 1000 g (1 pcs = 1 kg).
+  Raw line par "= X kg (1 pcs = 1 kg, khud)" / "(naam se)". "1 pcs =" placeholder = khud wala g. Laal miss list ab nahi aati.
+- Laagat / rate / PC — wahi. Test fct/t.mjs 140 ✓.
