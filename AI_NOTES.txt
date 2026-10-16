@@ -4841,3 +4841,14 @@ Malik: "link se kisi time nahi khula to 6 digit auto password ban jaye — wo la
   (index.html .code-join): #joinCode + #joinCodeBtn (Enter bhi) -> codeJoin() -> sam-dev-joined, audit 'device-code'.
 * firestore.rules v2.57 (firestore-rules-2.57.html): deviceJoins get / delete signedIn, LIST sirf malik (pehle koi bhi anonymous poori
   fehrist parh sakta tha — ab sirf apna doc id). Test: boot (login par code UI, 5 hindse = "6 hindse ka code likhein"). AI nahi.
+
+=== v2.101.2 (2026-10-16 dopahar) — 🔠 VOUCHER PAR BARA NAAM + BARI RAQAM (galle wale ke liye) ===
+Malik (CPV parchi ki photo): "Arman palydar 500 bara ho, baqi lafz chhote — galle wala banda paise de de". Plan OK.
+- pc/pos-khata-sync.js: receiptBig() — non-HBL parchi (CPV / CRV / JV transfer / udhar / kharcha / purchase): party naam English
+  2 guna + mota (21 harf/line, max 3 line), Urdu naam 60px BEECH mein, raqam 3 guna (14 harf se lambi = 2 guna). Voucher no +
+  tareekh + waqt ek chhoti line (Font B, 56 harf), NOOR TRADERS / title chhote, barcode chhota (HRI nahi), sabqa / ab baqaya
+  chhote (Font B, ab baqaya mota). Transfer = har party ka label (SE NIKLA / KO GAYA) + bara naam, raqam ek dafa.
+  Setting blueAccess/printConfig.bigSlip (default ON) — band = purani receipt(). HBL parchi purani hi.
+- pc/urdu-names.js v1.4: line(ur, px, a) — a=1 beech, a=0 baayein (purani lines daayein, pehle jaisi).
+- app: 🖨 Print setting → "🔠 Voucher par party ka naam + raqam BARA" ON/Band (cloud.setPrintConfig bigSlip). Rules wahi 2.57.
+- Manifest 2026-10-16.4 (KHATA-DOCTOR). AI nahi — sirf print ka naqsha.

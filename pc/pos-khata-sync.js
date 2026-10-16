@@ -375,7 +375,58 @@ function urPartyOf(l) {
   if (!ur && l.name) { const k = nameKey(l.name); if (k) for (const r of app.values()) if (r && r.type === 'party' && !r.deleted && nameKey(r.name) === k) { ur = UR.party(r.id); if (ur) break; } }
   return ur;
 }
+// 2026-10-16: 🔠 BARA NAAM + BARI RAQAM (malik: "Arman palydar 500 bara ho, baqi lafz chhote — galle wala banda paise de de").
+//   Party ka naam 2 guna (English) + Urdu 60px, raqam 3 guna; voucher no / tareekh / sabqa / ab baqaya chhote (Font B).
+//   Setting blueAccess/printConfig.bigSlip (default ON; app: 🖨 Print setting). Band = purani parchi. HBL parchi wahi purani.
+let BIG_SLIP = true;
+function receiptBig({ title, code, date, lines, note, copy }) {
+  const W = PRINT_WIDTH, WB = 56;                                  // Font A 42 / Font B 56 akshar (TM-T88IV 80mm)
+  const n = v => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
+  const rowW = (w, l, r) => { l = String(l); r = String(r); return (l + ' '.repeat(Math.max(1, w - l.length - r.length))).slice(0, w - r.length) + r; };
+  const ESC = '\x1b', GS = '\x1d';
+  const C = ESC + 'a\x01', L = ESC + 'a\x00';
+  const sm = t => ESC + '!\x01' + t + ESC + '!\x00';               // chhota (Font B)
+  const smb = t => ESC + '!\x09' + t + ESC + '!\x00';              // chhota mota
+  const bold = t => ESC + 'E\x01' + t + ESC + 'E\x00';
+  const big2 = t => ESC + '!\x38' + t + ESC + '!\x00';              // 2 guna + mota (naam)
+  const huge = t => GS + '!' + (t.length <= 14 ? '\x22' : '\x11') + ESC + 'E\x01' + t + ESC + 'E\x00' + GS + '!\x00';   // 3 guna raqam (lambi ho to 2 guna)
+  const hr = '-'.repeat(W), hrB = sm('-'.repeat(WB));
+  const bar = c => { c = ascii(c); return c ? GS + 'h\x40' + GS + 'w\x02' + GS + 'H\x00' + GS + 'k\x49' + String.fromCharCode(c.length + 2) + '{B' + c : ''; };
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(String(date)) ? new Date(date + 'T00:00:00') : new Date(date);
+  const dt = isNaN(d) ? String(date) : `${String(d.getDate()).padStart(2, '0')}-${MON[d.getMonth()]}-${d.getFullYear()}`;
+  const now = new Date(), hh = now.getHours() % 12 || 12;
+  const tm = `${hh}:${String(now.getMinutes()).padStart(2, '0')} ${now.getHours() < 12 ? 'am' : 'pm'}`;
+  const out = [ESC + '@', C + bold('NOOR TRADERS') + sm('  ' + SHOP_PHONE), bold(title)];
+  if (UR.isOn() && UR_TITLE[title]) out.push(UR.line(UR_TITLE[title], 30, 1));
+  if (copy) out.push(sm('(Dobara print)'));
+  out.push(L + sm(rowW(WB, ascii(code), dt + '  ' + tm)), C + bar(code), L + hr);
+  let total = 0; const many = lines.length > 1;
+  for (const l of lines) {
+    total = Math.max(total, Number(l.amount) || 0);
+    const nm = ascii(l.name);
+    if (many) out.push(L + smb(String(l.label || '').toUpperCase()));
+    for (const x of (nm ? wrap(nm.toUpperCase(), Math.floor(W / 2)).slice(0, 3) : ['(NAAM URDU MEIN)'])) out.push(C + big2(x.trim()));
+    { const ur = urPartyOf(l); if (ur) out.push(UR.line(ur, 60, 1)); }
+    if (many) out.push(hr);
+  }
+  if (!many && lines[0]) out.push(L + hr, C + smb(String(lines[0].label || '').toUpperCase()));
+  out.push(C + huge('Rs.' + n(total)), '', L + hr);
+  // sabqa + ab baqaya — chhote (Font B), do party hon to naam saath
+  for (const l of lines) {
+    if (l.before == null && l.after == null) continue;
+    const who = many ? (ascii(l.name) || 'Party').slice(0, 20) + ': ' : '';
+    const side = v => (v > 0 ? 'Lene ' : v < 0 ? 'Dene ' : '') + 'Rs.' + n(Math.abs(v));
+    if (l.before != null) out.push(sm(rowW(WB, who + 'Sabqa baqaya:', side(Number(l.before) || 0))));
+    if (l.after != null) { const a = Number(l.after) || 0; out.push(smb(rowW(WB, who + 'Ab baqaya - ' + (a > 0 ? 'LENE' : a < 0 ? 'DENE' : 'BARABAR') + ':', 'Rs.' + n(Math.abs(a))))); }
+  }
+  const nl = wrap(note, WB);
+  if (nl.length) out.push(hrB, sm('Tafseel:'), ...nl.map(sm));
+  out.push(hrB, '', sm('Dastakhat: ______________________'), '', C + sm('Blue Khata app'), L, '', '');
+  out.push(GS + 'V\x42\x00');                                    // kaghaz kaato
+  return out.join('\r\n');
+}
 function receipt({ title, code, date, lines, note, copy, bank }) {
+  if (!bank && BIG_SLIP) return receiptBig({ title, code, date, lines, note, copy });
   const W = PRINT_WIDTH;
   const n = v => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
   const row = (l, r) => { l = String(l); r = String(r); return (l + ' '.repeat(Math.max(1, W - l.length - r.length))).slice(0, W - r.length) + r; };
@@ -459,6 +510,7 @@ Add-Type -Path $dll
 //   App har entry par chip dikhati hai (posPrintedAt / posPrintErr) aur "🖨 Dobara print" = printJobs {kind:'voucher', id: CPV-…} (yahi script chhapta hai).
 let lastPrintErr = '', vlog = null;
 const cfgDoc = () => biz.collection('blueAccess').doc('printConfig');
+try { cfgDoc().onSnapshot(s => { BIG_SLIP = !(s.exists && (s.data() || {}).bigSlip === false); }, () => {}); } catch {}   // 2026-10-16: 🔠 bara naam + raqam
 async function logPrint(e) {
   if (DRY) return;
   try {

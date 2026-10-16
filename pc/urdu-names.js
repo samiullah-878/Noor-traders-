@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  urdu-names.js  v1.3 (2026-10-15: partyAny + fillParties force — 💰 galla parchi) · v1.2 (2026-10-14: fillParties — Server PC khud AI (Gemini, blueAccess/aiConfig) se baqi parties ke Urdu naam, har 10 min) · v1.1 (2026-10-14: + PARTY ke Urdu naam blueAccess/urduParties — voucher parchi) · v1.0 (2026-10-14) — 🔤 PARCHI PAR URDU NAAM (transfer note + gate pass)
+//  urdu-names.js  v1.4 (2026-10-16: line(ur, px, a) — a=1 beech mein, voucher ka bara Urdu naam) · v1.3 (2026-10-15: partyAny + fillParties force — 💰 galla parchi) · v1.2 (2026-10-14: fillParties — Server PC khud AI (Gemini, blueAccess/aiConfig) se baqi parties ke Urdu naam, har 10 min) · v1.1 (2026-10-14: + PARTY ke Urdu naam blueAccess/urduParties — voucher parchi) · v1.0 (2026-10-14) — 🔤 PARCHI PAR URDU NAAM (transfer note + gate pass)
 //  Malik: "jitna bi gate pass or transfer notes print kar rahe hain un sb ko urdu bi sath ani chahie".
 //  Naam wahi jo app mein (Stock → 🔤 Urdu naam / labels): Firestore blueAccess/urduNames {map: itemId -> Urdu} — LIVE (onSnapshot),
 //  har print par Firestore nahi parhta (tez). Setting blueAccess/printConfig.urduSlip (default ON; app: 🖨 Print setting).
@@ -21,7 +21,7 @@ const get = id => (on && id != null ? String(map[String(id)] || '').replace(/[\u
 const party = id => (on && id ? String(pmap[String(id)] || '').replace(/[\u0001\r\n]+/g, ' ').trim() : '');   // v1.1
 const isOn = () => on;
 const partyAny = id => (id ? String(pmap[String(id)] || '').replace(/[\u0001\r\n]+/g, ' ').trim() : '');   // v1.3: galla parchi — urduSlip band ho tab bhi
-const line = (ur, px = 32) => MARK + String(ur).replace(/[\u0001\r\n]+/g, ' ') + '\u0001' + (Number(px) || 32);
+const line = (ur, px = 32, a) => MARK + String(ur).replace(/[\u0001\r\n]+/g, ' ') + '\u0001' + (Number(px) || 32) + (a === 1 || a === 0 ? '\u0001' + a : '');   // v1.4: a = 1 beech mein (bara naam)
 const has = t => String(t || '').includes(MARK);
 const strip = t => String(t || '').split('\r\n').filter(l => !l.startsWith(MARK)).join('\r\n');   // tasveer na ban sake to bina Urdu
 
@@ -30,7 +30,7 @@ function toJob(text, { font = 'Jameel Noori Nastaleeq,Urdu Typesetting,Segoe UI,
   const s = [], ls = String(text || '').split('\r\n'); let buf = '';
   const flush = () => { if (buf) { s.push({ r: Buffer.from(buf, 'latin1').toString('base64') }); buf = ''; } };
   ls.forEach((l, i) => {
-    if (l.startsWith(MARK)) { const [ur, px] = l.slice(MARK.length).split('\u0001'); flush(); s.push({ i: ur, f: font, px: Number(px) || 32, b: true, w: dots, a: 2 }); }
+    if (l.startsWith(MARK)) { const [ur, px, al] = l.slice(MARK.length).split('\u0001'); flush(); s.push({ i: ur, f: font, px: Number(px) || 32, b: true, w: dots, a: al === '1' ? 1 : al === '0' ? 0 : 2 }); }
     else buf += l + (i < ls.length - 1 ? '\r\n' : '');
   });
   flush();

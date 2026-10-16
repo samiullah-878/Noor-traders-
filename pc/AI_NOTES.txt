@@ -2958,3 +2958,8 @@ har 60 s handle() dobara; cancelled / failed -> status 'error' + wajah.
 * Post ke baad slip(): dukan CurrStock -> batch.after; factory/cfg.prn (2 = FACTORY (LARKA) + MUNSHI, 1, 0 band) -> TM-T88IV raw print
   (RawCached.dll — post-farq wala; files fac-print-a/b.bin/.ps1). Parchi: batch, adj #, bana (+) / baqi, laga (−) / baqi, KAM PAD GAYA, laagat.
 * KHATA-DOCTOR.bat chalayein; factory-auto.bat restart (doctor khud karta hai).
+
+=== 2026-10-16 dopahar — pos-khata-sync.js 🔠 bara naam + raqam · urdu-names.js v1.4 · manifest 2026-10-16.4 ===
+Malik: voucher (CPV) par party ka naam aur raqam bare, baqi chhote — galle wala dekh kar paise de. receiptBig(): naam ESC ! 0x38
+(2x mota), Urdu 60px beech (UR.line(ur,60,1)), raqam GS ! 0x22 (3x), baqi Font B (ESC ! 0x01 / 0x09). printConfig.bigSlip
+(default ON, false = purani receipt). HBL parchi purani. urdu-names line() ka 3rd arg a (1 beech / 0 baayein), purana default daayein.
