@@ -11,8 +11,8 @@
 //   (4) ❌ masla alert tap se batch khule (5) raw ka naam formula mein mehfooz (n) — item hat jaye to bhi dikhe (6) formula chooser mein raw alag (7) mara hua code hata.
 //   📷 PHOTO SE FORMULA (AI sirf tasveer parhne ke liye — Excel / parchi): lines -> POS items se milao (stockAgentFind) -> na mile to naya item
 //   (stockNewItemQuick, ⏳ job:) -> formula save. Fi piece packing × pieces; labour -> mazdoori. Tez: OK = setDoc foran. AI aur kahin NAHI.
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.102.1';
-import { smartSearch, fold } from './smart-search.js?v=2.102.1';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.102.2';
+import { smartSearch, fold } from './smart-search.js?v=2.102.2';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -158,7 +158,8 @@ const forms = () => Object.fromEntries(Object.entries(cfg?.formulas || {}).filte
 const mlFromName = n => { const t = String(n || ''); let m = t.match(/(\d+(?:\.\d+)?)\s*(?:ml|g|gm|gms|gram|grams)\b/i); if (m) return r3(Number(m[1]));
   m = t.match(/(\d+(?:\.\d+)?)\s*\/?\s*(?:l|ltr|ltrs|liter|litre|liters|lit|kg|kgs)\b/i); return m ? r3(Number(m[1]) * 1000) : 0; };
 // v2.102.1: malik — "coco batain 1 kg, pani 165 kg khud jama ho; sirf kala tail 200 g ka piece" -> pcs wala raw = naam ka wazan ya 1 pcs = 1 kg
-const pcsG = (id, name) => gOf(id) || mlFromName(name || byId.get(String(id))?.name) || 1000;
+const pcsG = (id, name) => { const g = gOf(id); if (g) return g; const it = byId.get(String(id)), n = mlFromName(name || it?.name), pk = Number(it?.pack) || 0;
+  return n ? (pk > 1 && Math.abs(n / 1000 - pk) < 0.001 ? 1000 : n) : 1000; };   // v2.102.2: naam "50 kg" + ctn = 50 pcs = poori bori (1 pcs = 1 kg); "Surf 1kg" (ctn 20) = piece 1 kg
 const lineVolHow = id => { const it = byId.get(String(id)), u = un(it); if (gOf(id)) return 'g'; if (/^(kg|kgs|l|ltr|ltrs|liter|litre|lit|liters)$/.test(u)) return 'kg'; if (/^(ml|g|gm|gms|gram)$/.test(u)) return 'ml'; return mlFromName(it?.name) ? 'name' : 'khud'; };
 const lineVol = (id, q, name) => { const it = byId.get(String(id)), u = un(it), g = gOf(id); if (g) return r3((Number(q) || 0) * g / 1000);   // liter / kg
   if (/^(kg|kgs|l|ltr|ltrs|liter|litre|lit|liters)$/.test(u)) return Number(q) || 0; if (/^(ml|g|gm|gms|gram)$/.test(u)) return r3((Number(q) || 0) / 1000);
@@ -168,7 +169,7 @@ const fixMl = m => { m = Number(m) || 0; return m > 0 && m < 50 ? r3(m * 1000) :
 const selfMats = f => (Array.isArray(f?.self?.mats) ? f.self.mats : []).filter(m => m && m.id && Number(m.q) > 0);
 const selfMatCost = f => selfMats(f).reduce((t, m) => t + Number(m.q) * rateOf(m.id, byId.get(String(m.id))), 0);
 const srcMl = id => Number(forms()[String(id)]?.ml) || 0;
-const volU = it => /\d\s*(kg|kgs|g|gm|gms|gram|grams)\b/i.test(String(it?.name || '')) ? 'kg' : 'L';   // surf = kg · liquid = L
+const volU = it => /\d\s*(kg|kgs|g|gm|gms|gram|grams)\b|\b(kg|kgs|gm|gms|gram|grams)\b/i.test(String(it?.name || '')) && !/\b(l|ltr|liter|litre|ml)\b|\d\s*l\b/i.test(String(it?.name || '')) ? 'kg' : 'L';   // surf = kg · liquid = L (v2.102.2: 'surf soda kg' bhi kg)
 const finished = () => { const F = forms(); return items.filter(x => F[x.id]); };
 const rawItems = () => { const F = forms(); return items.filter(x => !F[x.id]); };
 const rawUsed = () => { const s = new Set(); for (const f of Object.values(forms())) for (const l of f.lines || []) s.add(String(l.id)); return s; };
@@ -424,8 +425,8 @@ function formPaint(only) {
         ${l.gone ? '<small class="fc-fln bad">⚠️ factory items mein nahi — ⚙️ se ☑ karein</small>' : ''}
         <div class="fc-flg"><label><small>Ginti</small><span><input type="number" inputmode="decimal" min="0" step="any" data-fe-q="${i}" value="${esc(String(g ? kgOf(fe.lines[i].q, l.id) : fe.lines[i].q))}"><em>${g ? 'kg / L' : esc(un(l.it))}</em></span></label>
           <label class="${l.own ? 'own' : ''}"><small>Rate / ${esc(ru)}</small><span><input type="number" inputmode="decimal" min="0" step="any" data-fe-r="${esc(l.id)}" value="${l.c ? r2(l.c * per) : ''}" placeholder="⚠️"></span></label>
-          ${canG ? `<label><small>1 ${esc(un(l.it))} =</small><span><input type="number" inputmode="decimal" min="0" step="any" data-fe-g="${esc(l.id)}" value="${g || ''}" placeholder="${vol ? num(pcsG(l.id, l.name)) : '—'}"><em>g/ml</em></span></label>` : ''}</div>
-        <small class="fc-fln">${g ? esc(qt(l.q, l.it)) + ' · ' : ''}${l.c ? rs(l.c) + ' / ' + esc(un(l.it)) : 'rate nahi — likhein'}${l.own ? ` · <b>✎ factory rate</b>${pr ? ` <button type="button" class="fc-link" data-fe-rpos="${esc(l.id)}">↺ POS wala ${rs(pr * per)}</button>` : ''}` : ''}${vol && !g ? (() => { const h = lineVolHow(l.id), x = lineVol(l.id, l.q, l.name); return h === 'khud' ? ` · <b>= ${num(x)} kg (1 pcs = 1 kg, khud)</b>` : h === 'name' ? ` · <b>= ${num(x)} kg (naam se)</b>` : ''; })() : ''} <button type="button" class="fc-link" data-fe-mv="${i}">↓ bharne ka maal</button></small></div>`; }).join('') || '<p class="lk-note">Neeche list se raw maal ☑ karein.</p>'}</div>
+          ${canG ? `<label><small>1 ${esc(un(l.it))} =</small><span><input type="number" inputmode="decimal" min="0" step="any" data-fe-g="${esc(l.id)}" value="${g || (vol ? r3(pcsG(l.id, l.name)) : '')}" placeholder="—" class="${!g && vol ? 'fc-gauto' : ''}"><em>g/ml${!g && vol ? ' · khud' : ''}</em></span></label>` : ''}</div>
+        <small class="fc-fln">${g ? esc(qt(l.q, l.it)) + ' · ' : ''}${l.c ? rs(l.c) + ' / ' + esc(un(l.it)) : 'rate nahi — likhein'}${l.own ? ` · <b>✎ factory rate</b>${pr ? ` <button type="button" class="fc-link" data-fe-rpos="${esc(l.id)}">↺ POS wala ${rs(pr * per)}</button>` : ''}` : ''}${vol && !g ? (() => { const h = lineVolHow(l.id), x = lineVol(l.id, l.q, l.name); return h === 'khud' ? ` · <b>= ${num(x)} kg (1 pcs = 1 kg, khud)</b>` : h === 'name' ? ` · <b>= ${num(x)} kg (${pcsG(l.id, l.name) === 1000 && Number(l.it?.pack) > 1 ? 'bori = ' + num(l.it.pack) + ' kg, 1 pcs = 1 kg' : 'naam se'})</b>` : ''; })() : ''} <button type="button" class="fc-link" data-fe-mv="${i}">↓ bharne ka maal</button></small></div>`; }).join('') || '<p class="lk-note">Neeche list se raw maal ☑ karein.</p>'}</div>
       <div class="fc-lab fc-fehd">➕ MAAL CHUNEIN <small>☑ kai ek saath — bottle / dhakan khud neeche jayenge</small></div>
       <label class="hs-search"><input type="search" data-fc-fq2="1" placeholder="🔍 dhoondein (naam / barcode)…" value="${esc(fe.q)}" autocomplete="off"></label>
       <div id="feHits">${feListHTML()}</div></section>
@@ -1075,4 +1076,4 @@ document.addEventListener('change', e => {
   }
   if ((d.fcWm != null || d.fcRm != null) && cloud?.setFactoryCfg) { if (!(v >= 0)) return; cfg = { ...(cfg || {}), ...(d.fcWm != null ? { wm: v } : { rm: v }) }; cloud.setFactoryCfg(d.fcWm != null ? { wm: v } : { rm: v }).then(() => notice('✓ Nafa ' + v + '% save')).catch(er => notice('Save nahi hua: ' + (er?.message || er))); }
 });
-export const _fcTest = { lineVol, fixMl, looksPack, get fe() { return fe; }, forms, selfMats, mlFromName, volOf, openAdd, addListHTML, get fa() { return fa; }, packCalc, packDefs, packUnit, packCpp, bulkCpp, batchCalc: () => batchCalc(), fb: () => fb, rEd, rateRows, isMat, fRate, rateOf, setRate, posRate: v => { posRate = v; }, gOf, kgOf, pcsOfKg, qk, costOf, suggest, labelSpecs, qt, set: (c, b, it) => { cfg = c; batches = b || []; items = it || []; byId = new Map(items.map(x => [x.id, x])); itemsOk = true; }, batchNo, pdfHTML, st, matchItem, photoFormula, pf: () => pf, pendItems: () => pendItems(items.filter(x => !x.pending)) };
+export const _fcTest = { pcsG, volU, lineVol, fixMl, looksPack, get fe() { return fe; }, forms, selfMats, mlFromName, volOf, openAdd, addListHTML, get fa() { return fa; }, packCalc, packDefs, packUnit, packCpp, bulkCpp, batchCalc: () => batchCalc(), fb: () => fb, rEd, rateRows, isMat, fRate, rateOf, setRate, posRate: v => { posRate = v; }, gOf, kgOf, pcsOfKg, qk, costOf, suggest, labelSpecs, qt, set: (c, b, it) => { cfg = c; batches = b || []; items = it || []; byId = new Map(items.map(x => [x.id, x])); itemsOk = true; }, batchNo, pdfHTML, st, matchItem, photoFormula, pf: () => pf, pendItems: () => pendItems(items.filter(x => !x.pending)) };

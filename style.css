@@ -3919,3 +3919,4 @@ html.dk .fc-pksec{background:var(--glass);border-color:var(--line)}html.dk .fc-p
 .fc-pkr.self{background:#fff7e0;border-color:#f1d27a}
 .fc-pkr em{font-style:normal;font-size:11px;color:#55627a}
 html.dk .fc-form1,html.dk .fc-mrow,html.dk .fc-autob,html.dk .fc-mchips button{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}
+.fc-fl input.fc-gauto{color:#8a94a8;font-style:italic;background:#f6f8fc}

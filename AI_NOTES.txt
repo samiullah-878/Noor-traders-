@@ -4955,3 +4955,11 @@ khud jama ho; kala tail ka hi 200 g ka piece tha". Plan OK.
 - lineVol: conv (1 pcs = g, jaise kala tail 200) > unit kg/ltr > g/ml > pcs = naam ka wazan (mlFromName) ya 1000 g (1 pcs = 1 kg).
   Raw line par "= X kg (1 pcs = 1 kg, khud)" / "(naam se)". "1 pcs =" placeholder = khud wala g. Laal miss list ab nahi aati.
 - Laagat / rate / PC — wahi. Test fct/t.mjs 140 ✓.
+
+=== v2.102.2 (2026-10-17) — 🧴 NUSKHA: BORI KA WAZAN (Slaphate 50 kg) + KHANE MEIN WAZAN KHUD + kg LABEL ===
+Malik (surf soda kg formula: jama 1,315 = Slaphate 25 pcs × 50 kg galat): "OK" + "wazan bhi auto khane mein likha ho".
+- pcsG: naam ka wazan == ctn pcs (Slaphate "50 kg", ctn = 50 pcs, Rs 92 / pcs) = poori bori -> 1 pcs = 1 kg; "Surf 1kg" (ctn 20) = piece
+  1 kg; conv (haath se) sab se pehle. Line note "(bori = 50 kg, 1 pcs = 1 kg)".
+- Raw line ka "1 pcs =" khana ab khud bhara (grey italic .fc-gauto + "khud"); badlein to conv save (pehle jaisa).
+- volU: "surf soda kg" (number ke baghair kg) bhi kg; liter / ml naam = L.
+- Test fct/t.mjs 142 ✓.
