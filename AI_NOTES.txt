@@ -5009,3 +5009,11 @@ kiraya − kharcha = safi bachat, safi bachat upar alag chip mein jama, qist aur
   (purani fixed 'Driver salary' line isSalName se tankhwa khane mein; salary > 0 ho to fixed se hat jati — dohra na kate), lowKm, rangeChk, drvMeter.
   monthCalc: s.salary / s.fixedOther. PDF: meter + diesel bacha / aur chal sakti line.
 - AI: sirf meter photo + pump parchi. Test: scratchpad gx/t.mjs (26 ✓) + gx.png screenshot.
+
+=== v2.102.6 (2026-10-17) — 🐞 GAARI KA DATA REFRESH PAR GHAYAB (asal wajah: naam takrana) ===
+Malik: "tanki full ki, app refresh ki to tanki full khatam ho gayi".
+- cloud.js mein DO 'listenGaari' the: gaari collection (v2.92) aur blueAccess/gaariBills (v2.99.60 — 🚚 apni gaari wale POS bill).
+  Object mein baad wala jeet jata → gaari.js ko gaariBills ka map milta, list.find fail → rows kabhi load nahi hote. Likhna (putGaari) theek
+  tha, isliye sab Firestore mein mehfooz; sirf screen par nazar nahi aata tha (refresh ke baad local rows khatam).
+- Fix: gaari collection listener ka naam listenGaariRows (gaari.js isi ko use kare + Array check). app.js gaariWatch wala listenGaari (bills) wahi.
+- Ab purane phere / diesel / readings bhi wapas dikhenge. Test gx/t.mjs ALL OK.
