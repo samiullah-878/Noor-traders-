@@ -5113,3 +5113,21 @@ jati (kal 00:00 PKT = aaj 19:00) to sham 7 ke baad ki sale raat 12 tak nahi aati
   ke din bhi); naye items. meta.tAt / tDay. ageText: "⚡ Aaj ka data: X min pehle (har 10 min)"; 40 min se purana (ya bina aaj 150 min) =
   laal "⚠️ PC ka sale script ruka". 10 sec tak na aaye = "📶 Net kamzor" + 🔄 Dobara (data-ir-retry: irepStop + watch). Chip CSS .ir-root .lk-age.
 - Test: scratchpad itd/t.cjs (runToday + run mock SQL, 8 ✓) · ir5/t.js mergeToday (37 ✓). AI: koi nahi.
+
+=== v2.103.7 (2026-10-17) — 🛢 KHULA TAIL (sirf factory raw) + 🔔 DAILY SALE REMINDER + 🔁 DIN WALA REMINDER HAR GHANTE ===
+Malik: "kala tail bottle ek item hai jis ka naam kala tail — formula kaise banaye" · "khula banayenge to POS mein larkon ko batana / tag?"
+(jawab: nahi — khula 📱 sirf factory, POS mein nahi). Aur: "Sale screen mein khata ki tarah reminder entries mein" · "din select kiya to
+jab tak band na karein har ghante reminder".
+- factory.js: khulaBtn(it) / khulaAdd() — formula editor "🧪 Raw maal" ke upar (malik, item ka 1 pcs = g / ml): "➕ <naam> khula (kg/liter)
+  banao" = locNew('<naam> khula', 0, {un Kg/Ltr}) + line q 10 + fe.ml = g, auto. Pehle se ho to sirf "formula mein jorein".
+- POS mode mein 📱 sirf factory item ka STOCK (pehle 0 / "batch mein minus nahi"): batch doc 'loc: true' (hasLoc: itemId / lines / outs
+  mein 'loc:'), cloud.listenFactoryLocBatches (where loc == true) -> locB; fEvents mein in ke SIRF loc ids (cancelled / cancelReq nahi,
+  'app' dohra nahi). loadItems POS mode: loc item stock = fStocks. Stock tab: loc row = appRow (locRowPos) + "📱 Sirf factory maal"
+  📥 aaya / 📤 diya (mvPaint POS mode = sirf loc items) · gSave loc = factoryMove ginti. PC factory-post loc ids pehle hi chhorta hai.
+  cloud add/edit/app2pos 'loc'. Rules 2.61: factoryBatches keys + edit affectedKeys 'loc'.
+- app.js Daily Sale (dailySheet) Sale / Wasooli / Akhrajat entries par remChip(e) (khata wala 🔔 — entryRemForm, CAP kh.erem).
+- notes.js: nagBand / nagEff — din wala reminder nag na likha = KHUD 60 (chip "🔁 har 1 ghanta"); form default 60, "🔕 Band (sirf ek
+  dafa)" = nag 0 (rules 2.61 nag in [0,15,30,60]); noteAgentSave nag na ho = default. 
+- PC auto-backup.js v1.8: nagDue nag na likha = 60, 0 = band, 3 din hadd khatam; har phone ki list 4+ = EK khulasa ("🔁 N kaam abhi baqi",
+  tag 'nag-sum', link #note=<pehla>), warna har note alag. Manifest 2026-10-17.5.
+- Test: fct/t.mjs (khula + loc stock, ALL OK) · scratchpad nag/t.cjs (8 ✓). AI: koi nahi.

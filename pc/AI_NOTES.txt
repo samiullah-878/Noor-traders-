@@ -2998,3 +2998,9 @@ Malik: "mulazim ka reminder malik ke phone par bhi aane chahiye".
 - item-report.js v1.3: collect({pool, sql, db, log, from, to}) -> {all, comm, days, wsNames}; run() 3 mahine (wahi); runToday() sirf aaj ->
   posStats/irep-today (hash wahi to nahi likhta, 30 min baad 'at' taza).
 - Naya irep-today.js (sirf SELECT) + irep-today-auto.bat (har 10 min) — manifest services mein periodic "⚡ Item report — aaj ka data".
+
+=== auto-backup.js v1.8 (2026-10-17.5, app v2.103.7) — 🔁 DIN WALA REMINDER HAR GHANTE ===
+Malik: "din select kiya to jab tak band na karein har ghante reminder".
+- nagDue: nag na likha = 60 (khud), nag 0 = 🔕 band, 15/30 wese; 3 din ki hadd khatam (jab tak ✓ na ho), subah 7 – raat 11.
+- nagNotify: har token ki apni list; 4+ = ek khulasa (title "🔁 N kaam abhi baqi", 6 tak naam, tag 'nag-sum'); warna har note alag (tag nag-<id>).
+- firestore factoryBatches 'loc' (factory-post pehle hi 'loc:' ids chhorta hai — koi badlav nahi).

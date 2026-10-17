@@ -6,9 +6,9 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.103.6';
-import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.103.6';   // v2.99.29: shaffaf order formula
-import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.103.6';
+import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.103.7';
+import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.103.7';   // v2.99.29: shaffaf order formula
+import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.103.7';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -25,6 +25,9 @@ let cloud = null, notice = () => {}, whoOf = () => ({}), recordsOf = () => [], p
 let notes = [], stop = null, fTab = 'open', fQ = '', pics = new Map(), picLoad = new Set(), animating = new Set();
 let selMode = false, sel = new Set(), bulkBusy = false;   // v2.99.27: ☑ kai notes ek saath
 const NAGS = [15, 30, 60], nagOk = v => NAGS.includes(Number(v)) ? Number(v) : 0, nagTxt = v => v === 60 ? '1 ghanta' : v + ' min';
+// v2.103.7: malik — "din chuna to jab tak band na karein har ghante yaad" — din wala reminder KHUD har 1 ghanta; nag 0 (rules 2.61) = 🔁 band
+const nagBand = n => n != null && n.nag != null && n.nag !== '' && Number(n.nag) === 0;
+const nagEff = n => !n?.remindDay || nagBand(n) ? 0 : (nagOk(n.nag) || 60);
 let pushCfg = null, pushState = '';
 
 export function notesSetup(o) {
@@ -479,7 +482,7 @@ async function saveNote(n, old) {
     hasPic: !!(n.hasPic ?? old?.hasPic), by: old?.by || String(w.uid || ''), byName: String(old?.byName || w.name || '').slice(0, 60),
     createdAt: old?.createdAt || now, updatedBy: String(w.uid || ''), updatedAt: now, deleted: !!n.deleted,
   };
-  { const g = nagOk(n.nag ?? old?.nag); if (g && d.remindDay) d.nag = g; }   // v2.99.27: 🔁 baar baar yaad (rules 2.37) — 0 ho to khana hi nahi
+  { const raw = n.nag !== undefined ? n.nag : old?.nag, g = nagOk(raw); if (d.remindDay) { if (g) d.nag = g; else if (raw != null && raw !== '' && Number(raw) === 0) d.nag = 0; } }   // v2.99.27: 🔁 · v2.103.7: na likha = khud har 1 ghanta, 0 = band
   const i = notes.findIndex(x => x.id === d.id); if (i >= 0) notes[i] = d; else notes.push(d);   // foran screen par
   if ($('ntRoot')) paint();
   await cloud.saveNote(d);
@@ -500,6 +503,7 @@ function loadPics(n) {
 export function noteForm(existing = null, preset = {}) {
   const n = existing || { kind: 'note', text: preset.text || '', items: [], remindDay: preset.day || '', remindTime: '', allDay: false };
   const base = existing || { partyId: preset.partyId || '', partyName: preset.partyName || '', amount: preset.amount || 0, transferId: preset.transferId || '' };   // v2.99.58: HBL card se · v2.102.3: entry ka link
+  const fNag = nagBand(n) ? 0 : (nagOk(n.nag) || 60);   // v2.103.7: default har 1 ghanta
   let chosen = [...(n.items || [])], picsNow = existing ? [...(pics.get(existing.id) || [])] : [], picsDirty = false;
   dlgOf(existing ? '✏️ Note badlein' : '📝 Naya note', `<form class="nt-form">
     <label>Note<textarea name="text" maxlength="1000" rows="3" placeholder="kya yaad rakhna hai…">${esc(n.text || '')}</textarea></label>
@@ -507,7 +511,7 @@ export function noteForm(existing = null, preset = {}) {
     <div class="nt-chips" id="nfItems"></div>
     <div class="nt-when"><label>Reminder din<input name="day" type="date" value="${esc(n.remindDay || '')}"></label><label>Waqt<input name="time" type="time" value="${esc(n.remindTime || '')}"></label></div>
     <div class="mchips">${[[0, 'Aaj'], [1, 'Kal'], [2, '2 din'], [7, 'Hafta'], ['x', 'Reminder nahi']].map(([d, l]) => `<button type="button" class="rc" data-nf-day="${d}">${l}</button>`).join('')}<label class="nt-allday"><input type="checkbox" name="allDay"${n.allDay ? ' checked' : ''}> Poora din</label></div>
-    <div class="nt-nag"><b>🔁 Baar baar yaad dilao</b><div class="mchips">${[0, ...NAGS].map(v => `<button type="button" class="rc${nagOk(n.nag) === v ? ' on' : ''}" data-nf-nag="${v}">${v ? 'Har ' + nagTxt(v) : 'Band'}</button>`).join('')}</div><small>Waqt aane ke baad jab tak ✓ na karein, phone par notification aati rahegi (subah 7 – raat 11).</small><input type="hidden" name="nag" value="${nagOk(n.nag)}"></div>
+    <div class="nt-nag"><b>🔁 Baar baar yaad dilao</b><div class="mchips">${[...NAGS, 0].map(v => `<button type="button" class="rc${fNag === v ? ' on' : ''}" data-nf-nag="${v}">${v ? 'Har ' + nagTxt(v) : '🔕 Band (sirf ek dafa)'}</button>`).join('')}</div><small>Din lagaya to <b>khud har 1 ghanta</b> — waqt aane ke baad jab tak ✓ na karein (subah 7 – raat 11).</small><input type="hidden" name="nag" value="${fNag}"></div>
     ${contactBox('nf', n.contactName, n.contactPhone)}
     <label>Tasveer (2 tak)<input name="pics" type="file" accept="image/*" multiple></label><div class="nt-thumbs" id="nfPics"></div>
     <div class="nt-formacts">${existing ? '<button type="button" class="give" data-nf-del="1">🗑 Hatao</button>' : ''}<button type="submit" class="got">💾 Save</button></div></form>`);
@@ -536,7 +540,7 @@ export function noteForm(existing = null, preset = {}) {
     if (!text && !chosen.length && !picsNow.length && !f.elements.ctPhone.value.trim()) { notice('Kuch likhein'); return; }
     b.disabled = true;
     try {
-      const d = await saveNote({ ...base, contactName: f.elements.ctName.value.trim(), contactPhone: f.elements.ctPhone.value, text, items: chosen, remindDay: f.elements.day.value || '', remindTime: f.elements.time.value || '', allDay: !!f.elements.allDay.checked, hasPic: picsNow.length > 0, nag: f.elements.day.value ? nagOk(f.elements.nag.value) : 0 }, existing);
+      const d = await saveNote({ ...base, contactName: f.elements.ctName.value.trim(), contactPhone: f.elements.ctPhone.value, text, items: chosen, remindDay: f.elements.day.value || '', remindTime: f.elements.time.value || '', allDay: !!f.elements.allDay.checked, hasPic: picsNow.length > 0, nag: f.elements.day.value ? (f.elements.nag.value === '0' ? 0 : (nagOk(f.elements.nag.value) || 60)) : undefined }, existing);
       if (picsDirty && cloud.putPhotos) { pics.set(d.id, picsNow); cloud.putPhotos('n-' + d.id, picsNow).catch(er => notice('⚠️ Tasveer save nahi hui: ' + (er?.message || er))); }
       closeDlg(); notice((existing ? '✓ Note badal gaya' : '📝 Note save') + (d.remindDay ? ' · 🔔 ' + nice(d.remindDay) + (d.remindTime ? ' ' + t12(d.remindTime) : '') : '') + (d.nag ? ' · 🔁 har ' + nagTxt(d.nag) : ''));
     } catch (er) { b.disabled = false; notice('⚠️ ' + (er?.message || er)); }
@@ -583,7 +587,7 @@ function card(n) {
       ${n.text ? `<div class="nt-text">${esc(n.text)}</div>` : ''}
       ${(n.items || []).length ? `<div class="nt-chips">${n.items.map(i => `<span class="nt-chip it">📦 ${esc(i.name)}</span>`).join('')}</div>` : ''}
       ${ph.length ? `<div class="nt-thumbs">${ph.map((p, i) => `<span class="nt-thumb" data-nt-pic="${esc(n.id)}|${i}"><img src="${p}" alt=""></span>`).join('')}</div>` : (n.hasPic ? '<small class="nt-meta">🖼 tasveer aa rahi hai…</small>' : '')}
-      <div class="nt-meta">${n.remindDay ? `<span class="nt-when-chip${late ? ' late' : now ? ' now' : ''}">🔔 ${esc(nice(n.remindDay))}${n.remindTime ? ' · ' + esc(t12(n.remindTime)) : n.allDay ? ' · poora din' : ''}</span>` : ''}${n.nag && !n.done ? `<span class="nt-nag-chip">🔁 har ${esc(nagTxt(n.nag))}</span>` : ''}<span>${esc(n.byName || '')}</span>${n.done && n.doneAt ? `<span>✓ ${esc(nice(dayOf(n.doneAt)))}</span>` : ''}</div>
+      <div class="nt-meta">${n.remindDay ? `<span class="nt-when-chip${late ? ' late' : now ? ' now' : ''}">🔔 ${esc(nice(n.remindDay))}${n.remindTime ? ' · ' + esc(t12(n.remindTime)) : n.allDay ? ' · poora din' : ''}</span>` : ''}${nagEff(n) && !n.done ? `<span class="nt-nag-chip">🔁 har ${esc(nagTxt(nagEff(n)))}</span>` : ''}<span>${esc(n.byName || '')}</span>${n.done && n.doneAt ? `<span>✓ ${esc(nice(dayOf(n.doneAt)))}</span>` : ''}</div>
     </div></div>`;
 }
 function paint() {
@@ -739,13 +743,13 @@ function openEntryOf(n) { const m = /^(entry|transfer):(.+)$/.exec(n.transferId 
   closeDlg(); routeTo('khata', pid); if (r) setTimeout(() => { const el = document.querySelector(`[data-eid="${CSS.escape(r.id)}"]`); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('ks-flash'); } }, 300); }
 
 // ---------- v2.99.8: 🤖 NOOR AGENT — bol kar note / reminder, aur notes dhoondna ----------
-export async function noteAgentSave({ text = '', day = '', time = '', partyId = '', items = [], nag = 0 } = {}) {
+export async function noteAgentSave({ text = '', day = '', time = '', partyId = '', items = [], nag } = {}) {
   if (!canUseOf()) throw Error('Is login par notes ki ijazat nahi');
   if (!cloud?.saveNote) throw Error('Notes ke liye app update karein');
   const t = String(text || '').trim(); if (!t) throw Error('Note mein kuch likhein');
   const p = partyId ? partyOf(partyId) : null;
   const d = await saveNote({ kind: 'note', text: t, items: (items || []).slice(0, 20), partyId: p ? p.id : '', partyName: p ? p.name : '',
-    remindDay: /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : '', remindTime: /^\d{2}:\d{2}$/.test(time) ? time : '', allDay: false, nag: nagOk(nag) });
+    remindDay: /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : '', remindTime: /^\d{2}:\d{2}$/.test(time) ? time : '', allDay: false, nag: nagOk(nag) || undefined });   // v2.103.7: na bataya = khud har 1 ghanta
   badge(); return d;
 }
 export function noteAgentFind(q = '', { open = true, n = 8 } = {}) {

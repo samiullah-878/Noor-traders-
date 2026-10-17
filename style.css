@@ -4058,3 +4058,7 @@ html body :is(#summary,#dialogBody) .ir-root .fc-sa.out{border-color:#f3c79b!imp
 /* v2.103.6: ⚡ item report — data kitna taza (chip) */
 .ir-root .lk-age{display:table;margin:6px auto 0;padding:5px 12px;border-radius:999px;background:#e8f7ee;color:#17663a;font-weight:800;opacity:1}
 .ir-root .lk-age.warn{background:#fdecea;color:#b3261e}
+/* v2.103.7: 🛢 khula maal (kala tail) — ek tap */
+.fc-khula{display:flex;gap:10px;align-items:center;width:100%;margin:8px 0;padding:11px 13px;border-radius:16px;border:1.5px dashed #b07b1c;background:linear-gradient(135deg,#fff7e6,#ffefcc);color:#5a3d06;text-align:left;font:inherit;cursor:pointer}
+.fc-khula>span:first-child{font-size:24px}.fc-khula b{display:block;font-size:15px}.fc-khula small{display:block;font-size:12px;opacity:.85;margin-top:2px}
+.fc-locacts{flex-wrap:wrap;align-items:center;padding:8px 10px;border-radius:14px;background:#f2f6ff}.fc-locacts small{flex-basis:100%;font-weight:700;color:#2c4a85}

@@ -22,7 +22,7 @@ const zlib = require('zlib');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
-const VER = '1.7';   // v1.7 (2026-10-17): 🔔 MULAZIM ka reminder MALIK ke phone par bhi — waqt aate hi pehli khabar (malik + likhne wala), sirf mulazim ke likhe notes · v1.4 (2026-10-11): 🔁 notes.nag — baar baar yaad (15/30/60 min) jab tak ✓ na ho · v1.3 (2026-10-07): driver ki jeb se EXTRA kharcha (kind 'kharch', driver:true) khate se − (app v2.97.1) · v1.2 (2026-10-07): driver ka KHATA (app v2.96.1 jaisa) — phera + (kiraya − kharche − commission), liya −, advance + · v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
+const VER = '1.8';   // v1.8 (2026-10-17): 🔁 din wala har reminder KHUD har 1 ghanta (nag na likha = 60, 0 = band), 3 din ki hadd khatam (jab tak ✓ na ho), 4+ ek saath = ek khulasa notification · v1.7: v1.7 (2026-10-17): 🔔 MULAZIM ka reminder MALIK ke phone par bhi — waqt aate hi pehli khabar (malik + likhne wala), sirf mulazim ke likhe notes · v1.4 (2026-10-11): 🔁 notes.nag — baar baar yaad (15/30/60 min) jab tak ✓ na ho · v1.3 (2026-10-07): driver ki jeb se EXTRA kharcha (kind 'kharch', driver:true) khate se − (app v2.97.1) · v1.2 (2026-10-07): driver ka KHATA (app v2.96.1 jaisa) — phera + (kiraya − kharche − commission), liya −, advance + · v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47832;
 const DIR = __dirname;
@@ -125,10 +125,12 @@ function nagWatch() {
   }, e => { log('🔁 notes listener masla: ' + e.message); nagStop = null; if (unauth(e)) process.exit(1); });
 }
 function nagDue(n, now = new Date()) {
-  const g = Number(n.nag); if (![15, 30, 60].includes(g) || n.done || n.deleted || !/^\d{4}-\d{2}-\d{2}$/.test(n.remindDay || '')) return null;
+  if (n.done || n.deleted || !/^\d{4}-\d{2}-\d{2}$/.test(n.remindDay || '')) return null;
+  if (n.nag != null && n.nag !== '' && Number(n.nag) === 0) return null;   // v1.8: 🔕 band
+  const g = [15, 30, 60].includes(Number(n.nag)) ? Number(n.nag) : 60;      // v1.8: na likha = khud har 1 ghanta
   const at = new Date(n.remindDay + 'T' + (/^\d{2}:\d{2}$/.test(n.remindTime || '') ? n.remindTime : '09:00') + ':00').getTime();
   const t = now.getTime(), h = now.getHours();
-  if (!(at > 0) || t < at + g * 60000 || t - at > 3 * 86400000 || h < 7 || h >= 23) return null;   // pehli khabar waqt par Cloud Function ki; 3 din baad chup
+  if (!(at > 0) || t < at + g * 60000 || h < 7 || h >= 23) return null;   // pehli khabar waqt par (Cloud Function / firstDue); v1.8: jab tak ✓ na ho
   const last = Number(nagSent[n.id]) || 0;
   return t - last >= g * 60000 - 20000 ? { g, mins: Math.round((t - at) / 60000) } : null;
 }
@@ -161,15 +163,26 @@ async function nagNotify() {
       log(`🔔 ${who} ka reminder "${String(n.text || '').slice(0, 30)}": ${r.successCount}/${tokens.length} phone`);
     } catch (e) { log('🔔 reminder bhejna masla: ' + e.message); }
   }
-  for (const { n, d } of due.slice(0, 10)) {
-    const tokens = [...new Set(tk.filter(x => x.role === 'owner' || x.role === 'malik' || (n.by && x.uid === n.by)).map(x => x.token))];
-    nagSent[n.id] = Date.now();
-    if (!tokens.length) { log(`🔁 "${String(n.text || '').slice(0, 30)}": koi push token nahi`); continue; }
-    const late = d.mins >= 60 ? Math.floor(d.mins / 60) + ' ghante' : d.mins + ' min';
-    const body = (String(n.text || n.partyName || 'Note').slice(0, 140)) + `\n⏰ ${late} se baqi · 🔁 har ${d.g === 60 ? '1 ghanta' : d.g + ' min'} — ✓ karein to band`;
+  // v1.8: har phone ki apni list — 4+ baqi = EK khulasa notification (dher nahi), warna har note alag (tag 'nag-<id>' = purani ki jagah nayi)
+  const per = new Map();   // token -> [{n, d}]
+  for (const x of due) { nagSent[x.n.id] = Date.now();
+    const tokens = [...new Set(tk.filter(y => isBoss(y) || (x.n.by && y.uid === x.n.by)).map(y => y.token))];
+    if (!tokens.length) { log(`🔁 "${String(x.n.text || '').slice(0, 30)}": koi push token nahi`); continue; }
+    for (const t of tokens) { if (!per.has(t)) per.set(t, []); per.get(t).push(x); } }
+  const late = m => m >= 1440 ? Math.floor(m / 1440) + ' din' : m >= 60 ? Math.floor(m / 60) + ' ghante' : m + ' min';
+  const groups = new Map();   // key -> {tokens, msg}
+  for (const [t, L] of per) {
+    if (L.length >= 4) { const key = 'S|' + L.map(x => x.n.id).sort().join(','); if (!groups.has(key)) groups.set(key, { tokens: [], L, sum: true }); groups.get(key).tokens.push(t); }
+    else for (const x of L) { const key = 'N|' + x.n.id; if (!groups.has(key)) groups.set(key, { tokens: [], L: [x], sum: false }); groups.get(key).tokens.push(t); } }
+  for (const g of groups.values()) {
+    let data;
+    if (g.sum) { const L = g.L.slice().sort((a, b) => b.d.mins - a.d.mins);
+      data = { title: `🔁 ${L.length} kaam abhi baqi`, body: L.slice(0, 6).map(x => '• ' + String(x.n.text || x.n.partyName || 'Note').replace(/\s+/g, ' ').slice(0, 40) + ' (' + late(x.d.mins) + ')').join('\n') + (L.length > 6 ? `\n+ ${L.length - 6} aur` : '') + '\n✓ karein to band', tag: 'nag-sum', link: 'https://samiullah-878.github.io/Noor-traders-/#note=' + L[0].n.id }; }   // Reminder screen khulti hai
+    else { const { n, d } = g.L[0];
+      data = { title: '🔁 Yaad dihani — abhi tak nahi hua', body: (String(n.text || n.partyName || 'Note').slice(0, 140)) + `\n⏰ ${late(d.mins)} se baqi · 🔁 har ${d.g === 60 ? '1 ghanta' : d.g + ' min'} — ✓ karein to band`, tag: 'nag-' + n.id, link: 'https://samiullah-878.github.io/Noor-traders-/#note=' + n.id }; }
     try {
-      const r = await getMessaging().sendEachForMulticast({ tokens, data: { title: '🔁 Yaad dihani — abhi tak nahi hua', body, tag: 'nag-' + n.id, link: 'https://samiullah-878.github.io/Noor-traders-/#note=' + n.id }, webpush: { headers: { Urgency: 'high' } } });
-      log(`🔁 nag "${String(n.text || '').slice(0, 30)}" (${late} se): ${r.successCount}/${tokens.length} phone`);
+      const r = await getMessaging().sendEachForMulticast({ tokens: g.tokens, data, webpush: { headers: { Urgency: 'high' } } });
+      log(`🔁 ${g.sum ? 'khulasa ' + g.L.length + ' kaam' : 'nag "' + String(g.L[0].n.text || '').slice(0, 30) + '"'}: ${r.successCount}/${g.tokens.length} phone`);
     } catch (e) { log('🔁 nag bhejna masla: ' + e.message); }
   }
   for (const k of Object.keys(nagSent)) if (Date.now() - nagSent[k] > 4 * 86400000) delete nagSent[k];

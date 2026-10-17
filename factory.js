@@ -16,8 +16,8 @@
 //   ginti / 📥 maal aaya / 📤 maal diya = factoryMoves, naya item = cfg.local ('loc:<id>' — POS mein nahi), rate sirf factory (POS "lagao" band).
 //   Factory ka STOCK = app ka apna: har item ke waqia (ginti = itna hai · aaya + · diya − · batch: tayyar + / raw −) waqt ke hisaab se.
 //   cfg.posOn true = purana tareeqa (POS Adjustment, POS ginti, POS item). ⚙️ mein on / off (sirf malik).
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.103.6';
-import { smartSearch, fold } from './smart-search.js?v=2.103.6';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.103.7';
+import { smartSearch, fold } from './smart-search.js?v=2.103.7';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -62,9 +62,10 @@ const rUnit = (id, it) => gOf(id) ? ['kg', 1000 / gOf(id)] : (Number(it?.pack) >
 const r4 = n => Math.round((Number(n) || 0) * 10000) / 10000;
 let posRate = false;
 const posOn = () => cfg?.posOn !== false;   // v2.103.2: malik — "factory wala kaam POS mein wapis" — default POS (sirf app = ⚙️ mein chunein) · v2.103.0 default app tha
-let moves = [], mStop = null, appB = [], aStop = null, fsCache = null, mv = null;
+let moves = [], mStop = null, appB = [], aStop = null, fsCache = null, mv = null, locB = [], lStop = null;   // v2.103.7: locB = POS wale batch jin mein 📱 sirf factory item (loc: true)
 function watchApp() {
   if (!mStop && cloud?.listenFactoryMoves) mStop = cloud.listenFactoryMoves((l, e) => { if (l) { moves = l; fsCache = null; loadItemsQuiet(); repaint(); if (mv && $('fcMv')) mvPaint(); } else if (e) notice('Factory stock nahi parha: ' + (e.code || e.message || e)); });
+  if (!lStop && cloud?.listenFactoryLocBatches) lStop = cloud.listenFactoryLocBatches((l, e) => { if (l) { locB = l; fsCache = null; loadItemsQuiet(); repaint(); } else if (e) console.warn('factory loc batches', e); });
   if (!aStop && cloud?.listenFactoryAppBatches) aStop = cloud.listenFactoryAppBatches((l, e) => { if (l) { appB = l; fsCache = null; loadItemsQuiet(); repaint(); } else if (e) notice('Factory batch nahi parhe: ' + (e.code || e.message || e)); });
 }
 // har item ke waqia — waqt ki tarteeb: ginti = itna hai (seedha) · aaya + · diya − · batch bana + / laga −
@@ -75,6 +76,12 @@ function fEvents() {
     if (Number(b.out) > 0) E.push({ at, id: String(b.itemId), t: 'bana', q: Number(b.out), b });
     for (const o of b.outs || []) if (Number(o.q) > 0) E.push({ at, id: String(o.id), t: 'bana', q: Number(o.q), b });
     for (const l of b.lines || []) if (Number(l.q) > 0) E.push({ at, id: String(l.id), t: 'laga', q: -Number(l.q), b }); }
+  // v2.103.7: POS mode — batch POS mein jata hai, magar 📱 sirf factory item (khula tail kg) ka hisaab yahin: bana + / laga −
+  const seen = new Set(appB.map(b => b?.id));
+  for (const b of locB) { if (!b || seen.has(b.id) || b.status === 'app' || ['cancelled', 'cancelReq'].includes(b.status)) continue; const at = Number(b.at) || 0, L = id => String(id).startsWith('loc:');
+    if (Number(b.out) > 0 && L(b.itemId)) E.push({ at, id: String(b.itemId), t: 'bana', q: Number(b.out), b });
+    for (const o of b.outs || []) if (Number(o.q) > 0 && L(o.id)) E.push({ at, id: String(o.id), t: 'bana', q: Number(o.q), b });
+    for (const l of b.lines || []) if (Number(l.q) > 0 && L(l.id)) E.push({ at, id: String(l.id), t: 'laga', q: -Number(l.q), b }); }
   return E.sort((a, b) => a.at - b.at);
 }
 function fStocks() {
@@ -88,6 +95,7 @@ const fStock = id => fStocks().get(String(id))?.stock || 0;
 // 📱 sirf factory ke item (POS mein nahi) — cfg.local {lid: {n, un, pk, r, at}} -> id 'loc:<lid>'
 const locList = () => Object.entries(cfg?.local || {}).filter(([, v]) => v && v.n).map(([lid, v]) => ({ id: 'loc:' + lid, lid, name: String(v.n), code: '', pack: Number(v.pk) > 1 ? Number(v.pk) : 0, cn: 'Ctn', un: v.un || 'Pcs', cat: '📱 sirf factory', stock: 0, prate: Number(v.r) || 0, rate: 0, rate2: 0, wrate: 0, ws: 0, urdu: '', local: true, labels: [] }));
 const isLoc = it => !!it?.local || String(it?.id || '').startsWith('loc:');
+const hasLoc = d => [d?.itemId, ...(d?.lines || []).map(l => l.id), ...(d?.outs || []).map(o => o.id)].some(id => String(id || '').startsWith('loc:'));
 const canMove = () => isOwner() || canOf('fac.ginti') || canOf('stock.count') || canFacBatch();
 const qk = (q, it) => { const g = it ? gOf(it.id) : 0; return g ? num(kgOf(q, it.id)) + ' kg (' + qt(q, it) + ')' : qt(q, it); };   // "2.5 kg (12.5 pcs)"
 // ginti -> "5 ctn + 3" (POS jaisa)
@@ -175,6 +183,7 @@ function watch() {
 function loadItems() {
   try { const real = stockFactoryList(facPick); let L = [...real, ...pendItems(real), ...locList()];
     if (!posOn()) { const M = fStocks(); L = L.map(x => ({ ...x, posStock: x.stock, stock: M.get(String(x.id))?.stock || 0 })); }   // v2.103.0: factory ka apna stock
+    else { const M = fStocks(); L = L.map(x => isLoc(x) ? { ...x, stock: M.get(String(x.id))?.stock || 0 } : x); }   // v2.103.7: POS mode mein bhi 📱 sirf factory item ka apna stock
     items = L; byId = new Map(items.map(x => [x.id, x])); itemsOk = true; } catch (e) { itemsErr = e?.message || String(e); }
 }
 async function ensureItems() {
@@ -472,6 +481,26 @@ async function locToPos(id) {   // 📱 'loc:' item -> POS (job:) — har formul
     await cloud.setFactoryCfg(patch); notice('🖥 ' + v.n + ' — PC ko bheja, 1 min mein POS mein (formulas khud jur jayenge)');
   } catch (e) { notice('Nahi hua: ' + (e?.message || e)); }
 }
+// v2.103.7: 🛢 KHULA MAAL (malik: "kala tail bottle ek item hai jis ka naam kala tail — formula kaise banaye") — wahi item apne formula mein
+//   nahi aa sakta, to ek tap: "<naam> khula" 📱 sirf factory raw (kg / ltr, POS mein nahi — larkon ko kuch nahi dikhta) + formula mein 10 + 1 pcs = g.
+const khulaName = it => String(it?.name || '').trim() + ' khula';
+const khulaOf = it => items.find(x => isLoc(x) && fold(x.name) === fold(khulaName(it)));
+function khulaBtn(it) {
+  if (!fe || !isOwner() || !it || isLoc(it)) return ''; const k = khulaOf(it); if (k && fe.lines.some(l => l.id === k.id)) return '';
+  const g = fe.ml || gOf(it.id) || mlFromName(it.name); if (!g) return ''; const u = volU(it) === 'kg' ? 'kg' : 'liter';
+  return `<button type="button" class="fc-khula" data-fe-khula="1"><span>🛢</span><span><b>${k ? '➕ "' + esc(k.name) + '" formula mein jorein' : '➕ "' + esc(khulaName(it)) + '" (' + u + ') banao'}</b><small>📱 sirf factory raw — POS mein nahi · 1 ${esc(un(it))} = ${num(r3(g / 1000))} ${u} · batch khud jama</small></span></button>`;
+}
+async function khulaAdd() {
+  if (!fe || !isOwner()) return; const it = byId.get(String(fe.id)); if (!it) return;
+  const g = fe.ml || gOf(it.id) || mlFromName(it.name); if (!g) { notice('Pehle "1 pcs = kg" likhein'); return; }
+  let k = khulaOf(it);
+  if (!k) { const { id, patch } = locNew(khulaName(it), 0, { un: volU(it) === 'kg' ? 'Kg' : 'Ltr' }); loadItemsQuiet(); k = byId.get(id);
+    try { await cloud.setFactoryCfg(patch); } catch (e) { notice('Save nahi hua: ' + (e?.message || e)); return; } }
+  if (!k || !fe) return;
+  if (!fe.lines.some(l => l.id === k.id)) fe.lines.push({ id: k.id, q: 10, n: k.name });
+  fe.ml = g; fe.auto = true; formPaint();
+  notice(`✓ ${k.name} — 10 ${volU(it) === 'kg' ? 'kg' : 'ltr'} likha (badal sakte hain) · rate fi ${volU(it) === 'kg' ? 'kg' : 'ltr'} likhein · 📥 drum aaye to Stock → Maal aaya`);
+}
 function formPaint(only) {
   const el = $('fcForm'); if (!el || !fe) return; const it = byId.get(fe.id); if (!it) return;
   feSync();
@@ -489,11 +518,11 @@ function formPaint(only) {
       ${vol && fe.auto ? `<div class="fc-autob"><small>1 batch = raw maal ka jama</small><b>${Lt(V.v)} = ${num(nPcs)} ${esc(U)}</b>${extra > 0.0005 ? `<small>+ ${Lt(extra)} bacha</small>` : ''}<button type="button" class="fc-link" data-fe-auto="0">✎ haath se</button></div>
         ${V.miss.length ? `<p class="fc-fln bad">⚠️ ${V.miss.map(l => esc(byId.get(l.id)?.name || l.n)).join(', ')} — "1 pcs = g" likhein, warna jama mein nahi</p>` : ''}${!(V.v > 0) ? '<p class="lk-note">Neeche raw maal ki ginti (liter / kg) likhein — batch khud jama hoga.</p>' : ''}`
       : `<div class="fc-batchrow"><span>1 batch =</span><input type="number" inputmode="decimal" min="1" step="any" data-fe-per="1" value="${esc(String(fe.per))}"><span>${esc(U)}${it.pack > 1 ? ' (' + esc(qt(fe.per, it)) + ')' : ''}</span></div>${vol ? `<button type="button" class="fc-link" data-fe-auto="1">↺ Khud jama karo (${Lt(V.v)})</button>` : ''}`}</section>
-    <section class="ir-sec"><div class="ir-sh"><b>🧪 Raw maal (1 batch)</b><small>khareed rate</small></div>
+    <section class="ir-sec"><div class="ir-sh"><b>🧪 Raw maal (1 batch)</b><small>khareed rate</small></div>${khulaBtn(it)}
       ${posOn() ? `<label class="fc-posr"><input type="checkbox" data-fe-posr="1"${posRate ? ' checked' : ''}> <span>POS mein bhi khareed rate lagao<small>sale rate / barcode nahi badlega</small></span></label>` : ''}
       <div class="ir-tbl">${c.lines.map((l, i) => { const g = gOf(l.id), [ru, per] = rUnit(l.id, l.it), canG = !(/kg|ltr|lit|^l$/.test(un(l.it)) && !g), pr = Number(l.it?.prate) || 0;
         return `<div class="ir-row fc-fl"><div class="fc-flh"><b>${esc(l.name)}</b><b class="fc-flrs">${rs(l.rs)}</b><button type="button" class="ir-cx" data-fe-del="${i}">✕</button></div>
-        ${l.gone ? goneFix(l, i) : isLoc(l.it) && posOn() ? `<div class="fc-gone"><small>📱 sirf factory item — POS mein nahi (batch mein minus nahi hoga)</small>${isOwner() ? `<button type="button" class="fc-go sm" data-fe-locpos="${esc(l.id)}">🖥 POS mein banayein</button>` : ''}</div>` : ''}
+        ${l.gone ? goneFix(l, i) : isLoc(l.it) && posOn() ? `<div class="fc-gone"><small>📱 sirf factory item — POS mein nahi · batch mein app ke factory stock se minus</small>${isOwner() ? `<button type="button" class="fc-go sm" data-fe-locpos="${esc(l.id)}">🖥 POS mein banayein</button>` : ''}</div>` : ''}
         <div class="fc-flg"><label><small>Ginti</small><span><input type="number" inputmode="decimal" min="0" step="any" data-fe-q="${i}" value="${esc(String(g ? kgOf(fe.lines[i].q, l.id) : fe.lines[i].q))}"><em>${g ? 'kg / L' : esc(un(l.it))}</em></span></label>
           <label class="${l.own ? 'own' : ''}"><small>Rate / ${esc(ru)}</small><span><input type="number" inputmode="decimal" min="0" step="any" data-fe-r="${esc(l.id)}" value="${l.c ? r2(l.c * per) : ''}" placeholder="⚠️"></span></label>
           ${canG ? `<label><small>1 ${esc(un(l.it))} =</small><span><input type="number" inputmode="decimal" min="0" step="any" data-fe-g="${esc(l.id)}" value="${g || (vol ? r3(pcsG(l.id, l.name)) : '')}" placeholder="—" class="${!g && vol ? 'fc-gauto' : ''}"><em>g/ml${!g && vol ? ' · khud' : ''}</em></span></label>` : ''}</div>
@@ -745,7 +774,7 @@ function mvOpen(kind) {
 const mvTot = (id, v) => { const x = byId.get(id); if (!v) return 0; if (gOf(id) && Number(v.kg) > 0) return pcsOfKg(v.kg, id); return r3((Number(v.ctn) || 0) * (Number(x?.pack) || 0) + (Number(v.pcs) || 0)); };
 function mvPaint(only) {
   const el = $('fcMv'); if (!el || !mv) return;
-  const all = items.filter(x => !isPend(x)), q = mv.q.trim(), sel = mv.sel, nSel = Object.keys(sel).length;
+  const all = items.filter(x => !isPend(x) && (!posOn() || isLoc(x))), q = mv.q.trim(), sel = mv.sel, nSel = Object.keys(sel).length;
   const base = q ? srch(all, q, 300) : all.filter(x => mv.f === 'sab' || (mv.f === 'tayyar' ? ['tayyar', 'pkitem'].includes(kindOf(x)) : kindOf(x) === mv.f));
   const L = [...all.filter(x => sel[x.id] && !base.includes(x)), ...base].sort((a, b) => (sel[b.id] ? 1 : 0) - (sel[a.id] ? 1 : 0) || a.name.localeCompare(b.name));
   const tot = Object.keys(sel).filter(id => mvTot(id, sel[id]) > 0).length;
@@ -774,7 +803,7 @@ async function mvSave() {
 }
 function stockTabHTML() {
   if (!posOn()) return appStockTabHTML();   // v2.103.0
-  stockCountsOn(); const S = stockCountState(), see = S.see !== false, R = new Map(rawRows().map(r => [r.x.id, r]));
+  stockCountsOn(); const S = stockCountState(), see = S.see !== false, R = new Map(rawRows().map(r => [r.x.id, r])), hasLocIt = items.some(x => isLoc(x));
   const all = items.filter(x => !isPend(x)).map(x => ({ x, k: kindOf(x), i: stockCountInfo(x.id), r: R.get(x.id) }));
   const C = all.filter(y => y.i?.c), net = C.reduce((t, y) => t + (y.i.rs || 0), 0), w = C.filter(y => y.i.bill?.k === 'baqi' || y.i.bill?.k === 'part').length;
   const ids = rq.trim() ? new Set(srch(items, rq, 200).map(x => x.id)) : null;
@@ -788,8 +817,11 @@ function stockTabHTML() {
     ${!S.round && canCount() ? `<div class="fc-alert"><span>⏳</span><div>Ginti abhi shuru nahi — ${S.owner ? 'Stock screen ⚙️ mein <b>"📅 Session = din"</b> ON karein.' : 'malik shuru kare.'}</div></div>` : S.locked ? '<div class="fc-alert bad"><span>🔴</span><div>Malik ne counting band ki hui hai.</div></div>' : ''}
     <div class="fc-chips">${chips.map(([k, l]) => `<button type="button" class="${gfl === k ? 'on' : ''}" data-fg-f="${k}">${l}</button>`).join('')}</div>
     <label class="hs-search"><input type="search" data-fc-rq="1" placeholder="🔍 item / barcode…" value="${esc(rq)}" autocomplete="off"></label>
-    <div id="fcRqList">${L.slice(0, 120).map(y => sRow(y, S)).join('') || '<p class="lk-note">Kuch nahi — ⚙️ mein ☑ Factory items chunein ya ➕ Naya item.</p>'}</div></section>`;
+    ${hasLocIt ? `<div class="fc-sacts fc-locacts"><small>📱 Sirf factory maal (khula tail jaisa — POS mein nahi):</small>${canMove() ? '<button type="button" class="fc-sa in" data-fm-open="aaya"><span>📥</span>Maal aaya</button><button type="button" class="fc-sa out" data-fm-open="diya"><span>📤</span>Maal diya</button>' : ''}</div>` : ''}
+    <div id="fcRqList">${L.slice(0, 120).map(y => isLoc(y.x) ? locRowPos(y) : sRow(y, S)).join('') || '<p class="lk-note">Kuch nahi — ⚙️ mein ☑ Factory items chunein ya ➕ Naya item.</p>'}</div></section>`;
 }
+// v2.103.7: POS mode mein 📱 sirf factory item — app wali row (ginti / 📥 / history = factoryMoves + batch)
+function locRowPos({ x, k, r }) { const s = fStocks().get(String(x.id)), td = today(), gi = s?.ginti && dayOf(new Date(s.ginti.at)) === td ? s.ginti : null; return appRow({ x, k, s, r, gi }); }
 function sRow({ x, k, i, r }, S) {
   const see = S.see !== false, pk = Number(x.pack) || 0, c = i?.c, f = i?.farq || 0, kk = c ? (f < 0 ? 'bad' : f > 0 ? 'ok' : '') : '', bi = i?.bill || { k: 'none' };
   const use = r?.u?.length ? (r.need ? r.u.filter(y => !y.pk).length + ' formula · 1 batch = ' + esc(qk(r.need, x)) : '') + (r.u.some(y => y.pk) ? (r.need ? ' · ' : '') + 'packing mein' : '') : '';
@@ -806,7 +838,7 @@ async function gSave(id, btn) {
   if ((v.ctn ?? '') === '' && (v.pcs ?? '') === '') { notice('Physical ginti likhein'); return; }
   const x = byId.get(String(id)); if (Number(v.ctn || 0) + Number(v.pcs || 0) === 0 && !confirm(`"${x?.name}" ki ginti ZERO save karein?`)) return;
   btn.disabled = true;
-  if (!posOn()) {   // v2.103.0: ginti = factory ka stock (POS mein nahi)
+  if (!posOn() || isLoc(x)) {   // v2.103.0: ginti = factory ka stock (POS mein nahi) · v2.103.7: POS mode mein 📱 sirf factory item bhi
     const q = r3((Number(v.ctn) || 0) * (Number(x?.pack) || 0) + (Number(v.pcs) || 0)), sys = fStock(id);
     try { const r = cloud.addFactoryMove({ itemId: String(id), name: x?.name || '', kind: 'ginti', q, sys, byName: whoOf() || '', day: today() });
       moves = [...moves, { id: r.id, itemId: String(id), name: x?.name || '', kind: 'ginti', q, sys, byName: whoOf() || '', at: Date.now(), day: today() }]; fsCache = null; loadItemsQuiet();
@@ -1074,7 +1106,8 @@ function batchOk() {
   const outs = z.k.rows.map(r => ({ id: r.it.id, name: r.it.name, q: r.n, c: r2(r.c) }));
   const lbl = [...(!pack && (z.fill || !packsOf(it.id).length) ? labelSpecs(it, z.out, fb.lbl) : []), ...z.k.rows.flatMap(r => labelSpecs(r.it, r.n, fb.lbl))].slice(0, 6);
   const d = { no: batchNo(), itemId: it.id, name: pack ? '🎁 ' + it.name + ' → packing' : it.name, n: pack ? 1 : fb.n, per: pack ? 0 : z.f.per, out: z.out, outs, kind: pack ? 'pack' : 'make',
-    lines: z.lines.map(l => ({ id: l.id, name: l.name, q: r3(l.q), c: r2(l.c) })), cost: Math.round(z.total), oh: z.oh, labels: lbl, byName: whoOf() || '', day: today(), hold: posOn() && !fb.send, app: !posOn() };   // v2.103.0: 'app' = POS mein kuch nahi
+    lines: z.lines.map(l => ({ id: l.id, name: l.name, q: r3(l.q), c: r2(l.c) })), cost: Math.round(z.total), oh: z.oh, labels: lbl, byName: whoOf() || '', day: today(), hold: posOn() && !fb.send, app: !posOn() };
+  d.loc = posOn() && hasLoc(d);   // v2.103.7: POS batch mein khula (loc) — app us ka stock ghatati hai   // v2.103.0: 'app' = POS mein kuch nahi
   if (fb.edit) {   // ✏️ edit — POS mein nahi gaya = wahi doc badlo; posted = purana wapas (cancelReq) + naya
     const eb = fb.edit, fresh = ['new', 'hold', 'cancelReq', 'app'].includes(eb.status) && !eb.adjNo;
     (async () => { if (fresh) { await cloud.editFactoryBatch(eb.id, d); notice(`✓ ${eb.no} edit`); }
@@ -1102,7 +1135,7 @@ async function app2pos(id) {
   const b = batches.find(x => x.id === id) || appB.find(x => x.id === id); if (!b || b.status !== 'app') return;
   if (!confirm(`${b.no} POS mein bhejein? PC 1 min mein POS stock badlega (tayyar maal +, raw maal −). Label dobara nahi chhapenge.`)) return;
   try { const r = cloud.addFactoryBatch({ no: b.no, itemId: b.itemId, name: b.name, n: Math.max(1, Math.min(10, Math.floor(Number(b.n) || 1))), per: Number(b.per) || 0, out: Number(b.out) || 0, outs: b.outs || [], kind: b.kind === 'pack' ? 'pack' : 'make',
-      lines: b.lines || [], cost: Number(b.cost) || 0, oh: Number(b.oh) || 0, labels: [], byName: b.byName || whoOf() || '', day: b.day || today(), hold: false });
+      lines: b.lines || [], cost: Number(b.cost) || 0, oh: Number(b.oh) || 0, labels: [], byName: b.byName || whoOf() || '', day: b.day || today(), hold: false, loc: hasLoc(b) });
     await r?.done; await cloud.factoryBatchAct(id, 'cancelNow'); appB = appB.filter(x => x.id !== id); fsCache = null;
     notice(`📤 ${b.no} POS ko bheja — PC 1 min mein stock badlega`); $('dialog')?.close(); repaint(); }
   catch (e) { notice('Nahi hua: ' + (e?.message || e)); }
@@ -1149,6 +1182,7 @@ function dlg(title, html) { const d = $('dialog'); if (!d) return; d.classList.r
 // ---------- clicks ----------
 document.addEventListener('click', e => {
   const o = e.target.closest?.('[data-fac-open]'); if (o) { e.preventDefault(); openBatch(); return; }
+  const kh = e.target.closest?.('[data-fe-khula]'); if (kh && fe && kh.closest('#fcForm')) { khulaAdd(); return; }   // v2.103.7
   const fx = e.target.closest?.('[data-fe-pf],[data-fe-more],[data-fe-addsel],[data-fe-pos],[data-fe-mlset],[data-fe-auto],[data-fe-mdel],[data-fe-madd],[data-fe-addf],[data-fe-fadd],[data-fe-fdel],[data-fe-mraw]');   // v2.101.7: 🧪 raw maal list · v2.102.0 🧴
   if (fx && fe && fx.closest('#fcForm')) { const d = fx.dataset;
     if (d.feMlset) { fe.ml = Number(d.feMlset) || 0; fe.auto = true; formPaint(); return; }
