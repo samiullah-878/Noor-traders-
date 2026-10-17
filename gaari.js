@@ -21,7 +21,7 @@
 // phera cards. Purani alag entries (bilty/diesel/kharch/reading/tracker/driver — v2.92) bhi jor mein rehti hain.
 // Data: businesses/noor-traders/gaari/{id} kind 'phera' {date, startR, endR, trackerKm, bilties[{id,from,to,party,kiraya,comm,col}],
 //   kharche[{n,a}], diesel[{l,rate,amount,full}], status open|closed, note, by, byName, at, trackerTrips[{t,km,cut}] (v2.95.8)} + gaari/_config.
-import { smartHit } from './smart-search.js?v=2.102.4';   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.102.5';   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (v, d = 0) => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: d });
@@ -125,7 +125,8 @@ function tankCycles() {   // tanki full se tanki full — v2.98.1: har phere ke 
 function tankNow(T = tankCycles()) {
   const o = T.open; if (!o) return null;
   const cap = tankCap(), used = Math.max(0, o.farziL - o.topL), left = Math.max(0, Math.min(cap, cap - used));   // thora diesel full tanki ko cap se upar nahi le jata
-  return { ...o, cap, used, left, pct: cap ? left / cap : 0, needL: used, needRs: used * curRate() };
+  const avg = avgFor(null);   // v2.102.5: 🛣 aur chal sakti = bacha diesel × average
+  return { ...o, cap, used, left, pct: cap ? left / cap : 0, needL: used, needRs: used * curRate(), avg, rangeKm: left * avg, fullKm: cap * avg, over: Math.max(0, used - cap) };
 }
 function odoNow() {   // aakhri meter reading + us ke baad ke km (Falcon)
   const ev = [];
@@ -169,7 +170,7 @@ function pc(p) {
   const B = p.bilties || [], K = p.kharche || [], D = p.diesel || [];
   const kiraya = B.reduce((s, b) => s + N(b.kiraya), 0), comm = B.reduce((s, b) => s + commOf(b), 0);
   const kh = K.reduce((s, k) => s + N(k.a), 0), dL = D.reduce((s, d) => s + N(d.l), 0), dRs = D.reduce((s, d) => s + N(d.amount), 0);
-  const mk = N(p.endR) > N(p.startR) && N(p.startR) ? N(p.endR) - N(p.startR) : 0;   // meter se
+  const mk = N(p.endR) > N(p.startR) && N(p.startR) ? N(p.endR) - N(p.startR) : N(p.kmMan);   // meter se · v2.102.5: shuru reading na ho to 'seedha km'
   const tk = N(p.trackerKm), km = mk || tk, kmSrc = mk ? 'meter' : tk ? 'tracker' : '';   // v2.95.8: reading nahi to Falcon km
   // v2.96: FARZI diesel = km ÷ average × rate (band phere par us waqt ka rate/average jam jata: dRate/dAvg). Asal diesel (dL/dRs) nafe mein NAHI.
   const avg = N(p.dAvg) || avgFor(pKey(p)), rate = N(p.dRate) || rateFor(pKey(p));
@@ -183,6 +184,7 @@ function pc(p) {
 // v2.96: is phere ki 'tanki full' line par khatam hone wala cycle (warna null)
 function fullCheck(p) { const T = tankCycles(); return T.cyc.find(o => o.end && o.end.src === 'phera' && o.end.pid === p.id) || null; }
 const isExtra = r => r.kind === 'kharch' && (r.extra || r.oil);
+const isSalName = n => /driver|salary|tankh|tankhwa|tanakh/i.test(String(n || ''));   // v2.102.5: purani fixed list ki 'Driver salary'
 function monthCalc() {
   const inM = r => String(r.date || '').slice(0, 7) === month && (!day || r.date === day);
   const P = pheras().filter(inM), old0 = rows.filter(r => r.kind !== 'phera' && inM(r)), old = old0.filter(r => !isExtra(r));
@@ -204,7 +206,9 @@ function monthCalc() {
   s.cycM = T.cyc.filter(o => o.end && String(o.end.date).slice(0, 7) === month && (!day || o.end.date === day));
   s.tankFarq = s.cycM.reduce((t, o) => t + o.farq, 0);
   s.fillsM = T.F.filter(f => String(f.date).slice(0, 7) === month && (!day || f.date === day)); s.fillRs = s.fillsM.reduce((t, f) => t + f.rs, 0);
-  s.fixedL = day ? [] : (Array.isArray(cfg.fixed) ? cfg.fixed : []).filter(x => x && N(x.a)); s.fixed = s.fixedL.reduce((t, x) => t + N(x.a), 0);
+  s.fixedL = day ? [] : (Array.isArray(cfg.fixed) ? cfg.fixed : []).filter(x => x && N(x.a)).map(x => ({ ...x, sal: x.sal || isSalName(x.n) }));
+  if (!day && N(cfg.salary)) s.fixedL.unshift({ n: 'Driver ki tankhwa', a: N(cfg.salary), sal: true });   // v2.102.5: 👤 tankhwa ka alag khana
+  s.fixed = s.fixedL.reduce((t, x) => t + N(x.a), 0); s.salary = s.fixedL.filter(x => x.sal).reduce((t, x) => t + N(x.a), 0); s.fixedOther = s.fixed - s.salary;
   s.qist = day ? 0 : N(cfg.qist);
   s.beforeQist = s.safi - s.fixed - s.tankFarq - s.extra;   // v2.97.1: − extra kharche
   s.qistPaid = Math.max(0, Math.min(s.qist, s.beforeQist)); s.qistBaqi = s.qist - s.qistPaid;
@@ -236,19 +240,22 @@ function paint() {
   const chip = (k, ic, v, l, cls = '') => `<button type="button" class="gx-chip ${cls}" data-gr-open="${k}"><i>${ic}</i><b>${v}</b><small>${l}</small></button>`;
   const P = s.pheras.slice().reverse();
   sum.innerHTML = `<div class="gx">
+    ${dashHTML()}
     <div class="gx-hero" style="background:linear-gradient(135deg,#0b1a3a 0%,#1d3b7a 55%,#3a2c8f 100%);color:#fff">
       <div class="gx-top"><span class="gx-tag">🚚 ${esc(cfg.no || 'Gaari')}${cfg.driver ? ' · ' + esc(cfg.driver) : ''}</span>
         <span class="gx-month"><button type="button" data-gr-m="-1" style="color:#fff">‹</button><b style="color:#fff">${esc(monthName(month))}</b><button type="button" data-gr-m="1" style="color:#fff">›</button></span></div>
-      <small style="color:rgba(255,255,255,.7)">${day ? esc(day.slice(8) + ' ' + monthName(month)) + ' ka ' : 'Is mahine ka '}${up ? 'NAFA' : 'GHATA'} · ${s.pheras.length} phera${s.qist ? ' · qist ke baad' : ''}</small>
+      <small style="color:rgba(255,255,255,.7)">${day ? esc(day.slice(8) + ' ' + monthName(month)) + ' ki ' : 'Is mahine ki '}${up ? 'ASAL BACHAT' : 'GHATA'} · ${s.pheras.length} phera${s.qist || s.salary ? ' · qist / tankhwa ke baad' : ''}</small>
       <strong class="gx-big" style="color:${up ? '#6dffb0' : '#ff9a9a'}">${up ? '' : '− '}${rs(Math.abs(s.nafa))}</strong>
       ${s.qist ? `<div class="gx-qist"><div class="gx-qbar"><span style="width:${Math.round(s.qistPaid / s.qist * 100)}%"></span></div>
         <small>🏦 Qist ${rs(s.qist)} · <b>${rs(s.qistPaid)}</b> pura${s.qistBaqi > 0 ? ` · <b class="q-baqi">${rs(s.qistBaqi)} baqi</b>` : ' ✓'}</small></div>` : ''}
-      <div class="gx-flow">
-        <span><small>Pheron ki bachat</small><b>${rs(s.safi)}</b></span>
-        ${s.fixed ? `<span><small>− Fixed kharche</small><b>${rs(s.fixed)}</b></span>` : ''}
-        ${s.tankFarq ? `<span><small>${s.tankFarq > 0 ? '− Tanki farq' : '+ Tanki bachat'}</small><b>${rs(Math.abs(s.tankFarq))}</b></span>` : ''}
-        ${s.extra ? `<button type="button" class="gx-fx" data-gr-open="extra"><small>− Extra kharche ›</small><b>${rs(s.extra)}</b></button>` : ''}
-        ${s.qist ? `<span><small>− Qist</small><b>${rs(s.qist)}</b></span>` : ''}
+      <div class="gj">   <!-- v2.102.5: 💰 pheron ki bachat jama → − qist − tankhwa … = asal bachat -->
+        <span class="gj-c gj-in"><small>💚 Pheron ki bachat · ${s.pheras.length}</small><b>${rs(s.safi)}</b></span>
+        ${s.qist ? `<i>−</i><span class="gj-c"><small>🏦 Qist</small><b>${rs(s.qist)}</b></span>` : ''}
+        ${s.salary ? `<i>−</i><span class="gj-c"><small>👤 Driver tankhwa</small><b>${rs(s.salary)}</b></span>` : ''}
+        ${s.fixedOther ? `<i>−</i><span class="gj-c"><small>📋 Fixed</small><b>${rs(s.fixedOther)}</b></span>` : ''}
+        ${s.extra ? `<i>−</i><button type="button" class="gj-c gj-x" data-gr-open="extra"><small>🧾 Extra ›</small><b>${rs(s.extra)}</b></button>` : ''}
+        ${s.tankFarq ? `<i>${s.tankFarq > 0 ? '−' : '+'}</i><span class="gj-c"><small>⛽ Tanki ${s.tankFarq > 0 ? 'farq' : 'bachat'}</small><b>${rs(Math.abs(s.tankFarq))}</b></span>` : ''}
+        <i>=</i><span class="gj-c gj-out ${up ? 'up' : 'down'}"><small>${up ? '✅ Asal bachat' : '🔻 Ghata'}</small><b>${up ? '' : '− '}${rs(Math.abs(s.nafa))}</b></span>
       </div>
       <small style="color:rgba(255,255,255,.75)">Kiraya ${rs(s.kiraya)} · Kharche ${rs(s.kh)} · Comm ${rs(s.comm)} · Diesel (farzi) ${rs(s.farziRs)}</small>
       ${err ? `<p class="gx-err">⚠ ${/permission/i.test(err) ? 'Ijazat nahi — Firebase mein Rules 2.32 publish karein' : esc(err)}</p>` : ''}
@@ -256,7 +263,6 @@ function paint() {
     <button type="button" class="gx-new" data-gp-new="1">＋ Naya phera${day ? ' (' + esc(day.slice(8)) + ' tareekh)' : ''}</button>
     ${(() => { const L = driverLedger(); if (Math.abs(L.bal) < 1) return ''; const li = L.lastIn;
       return `<button type="button" class="gx-collect${L.bal < 0 ? ' gx-give' : ''}" data-gr-open="collect"><b>${L.bal > 0 ? '💰 Driver se lena hai' : '👤 Driver ko dena hai'}</b><strong>${rs(Math.abs(L.bal))}</strong><small>${li ? 'Aakhri dafa liya ' + rs(-li.amt) + ' · ' + esc(dmy(li.date)) + ' · ' : ''}tap = khata / 💵 paisa liya</small></button>`; })()}
-    ${tankCard()}
     <div class="gx-chips">
       ${chip('km', '🛣️', s.km ? num(s.km) + ' km' : '—', 'Chali · tracker ' + (s.tk ? num(s.tk) : '—'))}
       ${(() => { const o = oilNow(); return o ? chip('oil', '🛢', num(o.km) + ' / ' + num(o.every), o.lvl === 'bad' ? 'Mobil badalwao!' : 'km · Mobil', o.lvl === 'bad' ? 'gx-bad' : o.lvl === 'warn' ? 'gx-warn' : '') : chip('oil', '🛢', '—', 'Mobil kab badla? likhein'); })()}
@@ -269,13 +275,20 @@ function paint() {
   </div>`;
   const list = $('list'); if (list) list.innerHTML = '';
 }
+// v2.102.5: 📋 PHERA CARD — malik ke naqshe jaisa: [💚 safi bachat] [kahan se → kahan tak · kiraya / kharchon ki chips raqam ke saath] [🚚 meter]
 function cardHTML(p) {
-  const c = pc(p), d = String(p.date || '').slice(8, 10) + ' ' + (MONTHS[Number(String(p.date).slice(5, 7)) - 1] || '');
-  const warn = [!c.kmOk ? '📍 km farq' : '', c.driverDe ? '💰 driver ka ' + rs(c.driverDe) : ''].filter(Boolean);
-  return `<button type="button" class="gp-card${p.status === 'closed' ? ' closed' : ''}" data-gp="${esc(p.id)}">
-    <span class="gp-d"><b>${esc(d)}</b><small>${p.status === 'closed' ? '✅ band' : '🟢 khula'}</small></span>
-    <span class="gp-m"><b>${esc(c.routes.join(' · ') || 'Bilty abhi nahi')}</b><small>${c.km ? num(c.km) + ' km' + (c.kmSrc === 'tracker' ? ' (tracker)' : '') : 'km baqi'} · ⛽ ${num(c.shouldL, 1)} L farzi · kharche ${rs(c.kh)}</small>${warn.length ? `<em>${warn.join(' · ')}</em>` : ''}</span>
-    <span class="gp-v"><b class="${c.nafa >= 0 ? 'up' : 'down'}">${rs(c.nafa)}</b><small>bachat · kiraya ${rs(c.kiraya)}</small></span></button>`;
+  const c = pc(p), d = dmy(p.date), closed = p.status === 'closed';
+  const warn = [!c.kmOk ? '📍 km farq' : '', c.driverDe && !p.settled ? '💰 driver se ' + rs(c.driverDe) : ''].filter(Boolean);
+  const ks = [];
+  if (c.shouldRs) ks.push(`<i class="gc-k gc-d">⛽ Diesel <b>${num(c.shouldRs)}</b><small>${num(c.shouldL, 1)} L</small></i>`);
+  (p.kharche || []).forEach(k => { if (N(k.a)) ks.push(`<i class="gc-k">${esc(k.n)} <b>${num(k.a)}</b></i>`); });
+  if (c.comm) ks.push(`<i class="gc-k gc-c">👤 Comm <b>${num(c.comm)}</b></i>`);
+  const rd = N(p.startR) && N(p.endR) > N(p.startR) ? `${num(p.startR)}<br>→ ${num(p.endR)}` : c.kmSrc === 'tracker' ? '📍 tracker' : c.km ? 'seedha km' : 'reading baqi';
+  return `<button type="button" class="gp-card gc${closed ? ' closed' : ''}" data-gp="${esc(p.id)}">
+    <span class="gc-bach ${c.nafa >= 0 ? 'up' : 'down'}"><small>${c.nafa >= 0 ? '💚 Safi bachat' : '🔻 Nuqsan'}</small><b>${rs(Math.abs(c.nafa))}</b><em>${closed ? '✅ band' : '🟢 khula'}</em></span>
+    <span class="gc-mid"><span class="gc-route"><b>${esc(c.routes.filter(r => r !== '?→?').join(' · ') || 'Rasta abhi nahi likha')}</b><i class="gc-kir">💰 Kiraya ${rs(c.kiraya)}</i></span>
+      <span class="gc-ks">${ks.join('') || '<i class="gc-k gc-none">kharcha nahi</i>'}</span>${warn.length ? `<em class="gc-w">${warn.join(' · ')}</em>` : ''}</span>
+    <span class="gc-mtr"><small>${esc(d)}</small><b>${c.km ? num(c.km) : '—'}</b><em>km</em><small class="gc-rd">${rd}</small></span></button>`;
 }
 
 // ---------- v2.96: ⛽ dashboard (fuel dial + tanki + meter) ----------
@@ -312,18 +325,78 @@ function tankSVG(pct) {
   </svg>`;
 }
 const odoHTML = o => { const d = String(Math.max(0, Math.round(o.odo || 0))).padStart(6, '0').split(''); return `<div class="gt-odo" title="${o.est ? 'Aakhri reading + Falcon km (andaza)' : 'Meter reading'}">${d.map(x => `<i>${x}</i>`).join('')}<em>km${o.est ? ' ≈' : ''}</em></div>`; };
-function tankCard() {
-  const t = tankNow(), o = odoNow();
-  if (!t) return `<button type="button" class="gt-card gt-empty" data-gt-open="1"><span class="gt-mini">${dialSVG(0)}</span><span class="gt-txt"><b>⛽ Tanki khata</b><small>Pehli dafa: <u>Tanki full karwa li</u> dabayein — phir har phere ka farzi diesel yahan jurega</small></span></button>`;
-  return `<button type="button" class="gt-card${t.pct < .2 ? ' low' : ''}" data-gt-open="1"><span class="gt-mini">${dialSVG(t.pct)}</span>
-    <span class="gt-txt"><b>⛽ ${Math.round(t.pct * 100)}% · ${num(t.left, 0)} L bacha</b><small>Full ke baad ${t.pheras.length} phera · ${num(t.km)} km · farzi ${rs(t.farziRs)}</small>
-    <small>Bharwana hai ~${num(t.needL, 1)} L ≈ <b>${rs(t.needRs)}</b></small>${o.odo ? odoHTML(o) : ''}</span></button>`;
+// v2.102.5: ⛽ GAARI DASHBOARD (malik: "upar dashboard meter mein wohi reading — tanki full 80 L × 5.5 = 440 km likha ho, phera add ho to
+//   meter se km minus, diesel minus — sab khud") — meter (aakhri reading + pheron ke km), diesel bacha, 🛣 aur chal sakti = bacha × average.
+//   A) cfg.lowKm (60) se kam = laal + "diesel dalwao" · B) hisaab se tanki khali (used > cap) = "rastay mein diesel dalwaya? likhein".
+const lowKm = () => cfg.lowKm == null || cfg.lowKm === '' ? 60 : N(cfg.lowKm);
+const canRead = () => isOwner() || cfg.drvMeter !== false;
+function dashHTML() {
+  const t = tankNow(), o = odoNow(), low = t && lowKm() > 0 && t.rangeKm < lowKm();
+  const meter = o.odo ? odoHTML(o) : `<em class="gd-noodo">Meter reading abhi nahi</em>`;
+  const readBtn = canRead() ? `<button type="button" class="gd-read" data-godo="1">📍 Meter reading</button>` : '';
+  if (!t) return `<div class="gd gd-first"><div class="gd-top"><span class="gd-no">⛽ Gaari dashboard</span>${readBtn}</div>
+    <div class="gd-main"><span class="gd-dial">${dialSVG(0)}<b>— / ${num(tankCap())} L</b></span>
+      <span class="gd-info"><small>Meter</small>${meter}<small>🛣 Aur chal sakti</small><strong>—</strong></span></div>
+    <p class="gd-hint">Pehli dafa: <b>⛽ Tanki full karwa li</b> dabayein — ${num(tankCap())} L × ${num(avgFor(null), 2)} = <b>${num(tankCap() * avgFor(null))} km</b> se ginti shuru, har phere ke km khud minus.</p>
+    <button type="button" class="gd-full" data-gt-fill="full">⛽ Tanki full karwa li</button></div>`;
+  return `<div class="gd${low ? ' low' : ''}"><div class="gd-top"><span class="gd-no">⛽ Gaari dashboard</span>${readBtn}</div>
+    <button type="button" class="gd-main" data-gt-open="1"><span class="gd-dial">${dialSVG(t.pct)}<b>${num(t.left, 0)} / ${num(t.cap)} L</b><small>diesel bacha</small></span>
+      <span class="gd-info"><small>Meter</small>${meter}<small>🛣 Aur chal sakti</small><strong>${num(t.rangeKm)} <em>km</em></strong>
+        <i>Full ${num(t.cap)} L × ${num(t.avg, 2)} = ${num(t.fullKm)} km · chal li ${num(t.km)} km</i></span></button>
+    ${low ? `<p class="gd-low">⛽ Diesel dalwao — sirf <b>${num(t.rangeKm)} km</b> ka bacha</p>` : ''}
+    ${t.over > 1 ? `<button type="button" class="gd-over" data-gt-fill="part">⚠️ Hisaab se tanki ${num(t.over, 1)} L pehle khali ho chuki — rastay mein diesel dalwaya? <b>＋ Likhein</b></button>` : ''}</div>`;
+}
+function openReading() {
+  if (!canRead()) return;
+  const o = odoNow(), own = isOwner();
+  const R = rows.filter(r => r.kind === 'reading' && N(r.reading)).sort((a, b) => pKey(a) < pKey(b) ? 1 : -1).slice(0, 6);
+  modal('📍 Gaari ki meter reading', `<form id="goRead" class="gr-form">
+    <div class="gd-now"><small>Dashboard par abhi</small>${o.odo ? odoHTML(o) : '<em class="gd-noodo">— reading nahi</em>'}</div>
+    ${ai ? photoPick('📷 Meter ki photo — AI reading parh lega', 'data-go-ph="1"') + '<p class="gr-ai" id="goAi" hidden></p>' : ''}
+    ${field('reading', 'Meter reading (km)', 'number', '', `required placeholder="${o.odo ? 'jaise ' + o.odo : 'jaise 123770'}"`)}
+    ${own ? field('date', 'Tareekh', 'date', today()) : ''}
+    ${field('note', 'Note (ikhtiyari)', 'text', '', 'placeholder="jaise: gaari khadi thi"')}
+    <p class="gr-ai">Ye reading upar dashboard par aayegi — naye phere ki "shuru reading" bhi yahi.</p>
+    <p class="gr-msg"></p><button type="submit" class="primary">💾 Save</button>
+    ${R.length ? `<h4 class="gt-h">Pichhli readings</h4><div class="gr-list">${R.map(r => `<div class="gr-row"><span class="gr-d">${esc(dmy(r.date))}</span><span class="gr-t">📍 ${num(r.reading)} km${r.note ? `<small>${esc(r.note)}</small>` : ''}${r.byName ? `<small>${esc(r.byName)}</small>` : ''}</span>${own ? `<button type="button" class="gr-x" data-gr-del="${esc(r.id)}">✕</button>` : ''}</div>`).join('')}</div>` : ''}</form>`);
+  const f = $('goRead'), el = f.elements.reading;
+  f.querySelectorAll('[data-go-ph]').forEach(x => x.addEventListener('change', async ev => {
+    const file = ev.target.files?.[0]; ev.target.value = ''; if (!file) return; const out = $('goAi'); out.hidden = false; out.textContent = '🤖 AI meter parh raha hai… (10-30 second)';
+    try { const img = await shrink(file, 1600, 0.85); const txt = await ai([img], 'Ye gaari ke odometer (meter) ki photo hai. Kul km (ODO) parh kar sirf JSON do: {"reading":n}. Trip meter nahi.');
+      const m = String(txt || '').match(/\{[\s\S]*\}/); if (!m) throw Error('AI ko samajh nahi aaya'); const j = JSON.parse(m[0]);
+      if (!N(j.reading)) throw Error('Reading saaf nazar nahi aayi'); el.value = Math.round(N(j.reading)); out.textContent = '✓ ' + num(j.reading) + ' km — ek nazar dekh lein'; }
+    catch (er) { out.textContent = '⚠ ' + (er?.message || er) + ' — khud likh dein'; }
+  }));
+  setTimeout(() => el.focus(), 60);
+  f.onsubmit = e => { e.preventDefault(); const x = Object.fromEntries(new FormData(f)), v = Math.round(N(x.reading)), msg = f.querySelector('.gr-msg');
+    if (!(v > 0)) { msg.textContent = 'Reading likhein'; el.focus(); return; }
+    if (o.odo && !o.est && v < o.odo && !confirm(`Ye reading (${num(v)}) pichhli (${num(o.odo)}) se KAM hai — phir bhi save karein?`)) return;
+    if (o.odo && v > o.odo + 3000 && !confirm(`Pichhli ${num(o.odo)} se ${num(v - o.odo)} km zyada — sahi hai?`)) return;
+    const date = own ? String(x.date || today()).slice(0, 10) : today(), id = cloud.newGaariId();
+    const d = { kind: 'reading', date, at: date === today() ? Date.now() : dayEdge(date).e - 1, reading: v, note: String(x.note || '').trim().slice(0, 120), by: uidOf(), byName: byName() || '' };
+    rows.push({ ...d, id }); cloud.putGaari(id, d).catch(er => notice('❌ Reading save nahi hui: ' + (er?.message || er)));
+    closeModal(); notice('📍 Meter ' + num(v) + ' km — dashboard par'); paint(); };
+}
+let askedOver = new Set();
+function rangeAsk(id) {   // v2.102.5: phera save ke baad — B) tanki khali? A) diesel kam?
+  const t = tankNow(); if (!t || !t.pheras.some(x => x.p.id === id)) return;
+  if (cfg.rangeChk !== false && t.over > 1 && !askedOver.has(id)) {
+    const p = cur && cur.id === id ? cur : rows.find(r => r.id === id);
+    if (!(p?.diesel || []).some(d => N(d.l) || N(d.amount))) { askedOver.add(id);
+      if (cur && cur.id === id && canEdit(cur)) {
+        if (confirm(`⚠️ Hisaab se tanki ${num(t.over, 1)} L pehle hi khali ho chuki thi (full ke baad ${num(t.km)} km).\n\nRastay mein diesel dalwaya hoga — abhi is phere mein likhein?`)) {
+          cur.diesel = cur.diesel || []; cur.diesel.push({ l: 0, rate: curRate() || lastRate() || 0, amount: 0, full: false }); save({ diesel: cur.diesel }); drawPhera();
+          setTimeout(() => { const L = $('gpPage')?.querySelectorAll('.gp-diesel [data-f="l"]'); L?.[L.length - 1]?.focus(); L?.[L.length - 1]?.scrollIntoView({ block: 'center' }); }, 50); }
+      } else notice('⚠️ Hisaab se tanki khali ho chuki — rastay mein diesel dalwaya to likhein');
+      return; }
+  }
+  if (lowKm() > 0 && t.rangeKm < lowKm()) notice(`⛽ Sirf ${num(t.rangeKm)} km ka diesel bacha — dalwao`);
 }
 
 // ---------- PHERA page ----------
 function newPhera() {
   const date = day || today();
-  const p = { kind: 'phera', date, startR: lastEnd() || 0, endR: 0, trackerKm: 0, bilties: [{ id: uid6(), from: '', to: '', party: '', kiraya: 0, col: false }], kharche: [], diesel: [], status: 'open', note: '', by: uidOf(), byName: byName() || '', at: Date.now() };
+  const p = { kind: 'phera', date, startR: odoNow().odo || lastEnd() || 0,   /* v2.102.5: dashboard meter se */ endR: 0, trackerKm: 0, bilties: [{ id: uid6(), from: '', to: '', party: '', kiraya: 0, col: false }], kharche: [], diesel: [], status: 'open', note: '', by: uidOf(), byName: byName() || '', at: Date.now() };
   const id = cloud.newGaariId();
   openPhera(id, p);   // v2.98.1: abhi sirf screen par — 💾 Save dabane par hi banega
 }
@@ -339,6 +412,7 @@ function commitPhera(msg) {   // 💾 Save — rows + Firestore; km badle to kmL
   cur.updatedAt = data.updatedAt; cur.kmLog = data.kmLog;
   cloud.putGaari(id, data).catch(e => notice('❌ Phera save nahi hua: ' + (e?.message || e)));
   curDirty = false; curNew = false; paintSaveBar(); if (msg !== false) notice(msg || '💾 Phera save ho gaya');
+  setTimeout(() => rangeAsk(id), 400);   // v2.102.5
   return true;
 }
 function paintSaveBar() {
@@ -366,6 +440,14 @@ function openPhera(id, fresh = null) {
 // v2.96.5: tasveer — 📷 Camera YA 🖼 Gallery (pehle sirf camera khulta tha)
 const photoPick = (title, attr) => `<div class="gr-ph2"><span>${title}</span><div><label class="gr-pbtn">📷 Camera<input type="file" accept="image/*" capture="environment" ${attr} hidden></label><label class="gr-pbtn">🖼 Gallery<input type="file" accept="image/*" ${attr} hidden></label></div></div>`;
 const inp = (k, v, ph = '', type = 'number', cls = '') => `<input data-f="${k}" type="${type}" ${type === 'number' ? 'inputmode="decimal" step="any"' : ''} value="${esc(v ?? '')}" placeholder="${esc(ph)}" class="${cls}">`;
+// v2.102.5: phere ke andar — save ke baad dashboard kya dikhayega (meter / diesel / aur chal sakti)
+function afterHTML(c) {
+  const t = tankNow(); if (!t || !c.km) return '';
+  const prev = rows.find(r => r.id === cur.id), inCyc = prev && t.pheras.some(x => x.p.id === cur.id), pL = prev ? pc(prev).shouldL : 0;
+  const dL = c.shouldL - (inCyc ? pL : 0), left = Math.max(0, Math.min(t.cap, t.left - dL)), o = odoNow();
+  const odo = N(cur.endR) > N(cur.startR) && N(cur.startR) ? N(cur.endR) : o.odo + (c.km - (prev ? pc(prev).km : 0));
+  return `<p class="gp-after${left * t.avg < lowKm() ? ' low' : ''}">Save ke baad dashboard: 📍 <b>${num(odo)}</b> · ⛽ <b>${num(left, 0)} L</b> · 🛣 <b>${num(left * t.avg)} km</b> aur<br><small>is phere ka diesel ${num(c.km)} km ÷ ${num(c.avg, 2)} = ${num(c.shouldL, 1)} L tanki se minus</small></p>`;
+}
 function drawPhera() {
   const box = $('gpPage'); if (!box || !cur) return;
   const ed = canEdit(cur), own = isOwner(), c = pc(cur), fc = fullCheck(cur);
@@ -383,7 +465,9 @@ function drawPhera() {
     <div class="gk-lines">${(cur.kharche || []).map((k, i) => `<div class="gk-line" data-ki="${i}"><span>${esc(k.n)}</span><input class="gk-a" data-f="a" type="number" inputmode="decimal" step="any" value="${esc(k.a || '')}" placeholder="Rs"${dis}>${ed ? `<button type="button" class="gk-x" data-gdel="kharch" data-i="${i}">✕</button>` : ''}</div>`).join('')}</div>
   </div>
   <div class="gp-sec"><div class="gp-h"><b>📍 Meter reading</b><span class="gp-mini">${c.km ? num(c.km) + ' km chali' + (c.kmSrc === 'tracker' ? ' · 📍 tracker se' : '') : ''}</span></div>
-    <div class="gp-2"><label>Shuru (pichhle phere se)${inp('startR', cur.startR || '', 'Shuru reading')}</label><label>Aakhri (wapsi par)${inp('endR', cur.endR || '', 'Aakhri reading')}</label></div>
+    <div class="gp-2"><label>Shuru (dashboard meter se)${inp('startR', cur.startR || '', 'Shuru reading')}</label><label>Aakhri (wapsi par)${inp('endR', cur.endR || '', 'Aakhri reading')}</label></div>
+    <label class="gp-kmd">🛣 Ya seedha km likhein (kitne chali)${inp('kmd', c.mk || '', 'jaise 120')}</label>
+    ${afterHTML(c)}
     ${ed && ai ? `<div class="gp-2">${photoPick('📷 Meter ki photo', 'data-gph="reading"')}<label class="gr-photo">📸 Falcon screenshots (ek ya zyada)<input type="file" accept="image/*" multiple data-gph="tracker" hidden></label></div><p class="gr-ai" id="gpAi" hidden></p>` : ''}
     ${tripsHTML(ed)}
     <label>Falcon tracker km${inp('trackerKm', cur.trackerKm || '', 'Tracker ke mutabiq km')}</label>
@@ -428,6 +512,8 @@ function wirePhera(box) {
       if (f === 'l' || f === 'rate') { if (N(d.l) && N(d.rate)) { d.amount = Math.round(N(d.l) * N(d.rate)); const a = di.querySelector('[data-f="amount"]'); if (a) a.value = d.amount; } }
       if (f === 'amount' && N(d.l) && !N(d.rate)) d.rate = r2(N(d.amount) / N(d.l));
       save({ diesel: cur.diesel }); }
+    else if (f === 'kmd') {   // v2.102.5: seedha km → aakhri reading = shuru + km (shuru na ho to kmMan)
+      const km = N(v); if (N(cur.startR)) { const er = km ? N(cur.startR) + km : 0; save({ endR: er, kmMan: 0 }); const ei = box.querySelector('[data-f="endR"]'); if (ei) ei.value = er || ''; } else save({ kmMan: km }); }
     else { save({ [f]: typeof v === 'string' ? v.slice(0, 200) : v }); }
     clearTimeout(t); t = setTimeout(() => liveNet(box), el.type === 'checkbox' ? 0 : 900);
   };
@@ -748,12 +834,23 @@ function openDriverPay() {
     rows.push({ ...d, id }); cloud.putGaari(id, d).catch(er => notice('❌ ' + (er?.message || er))); closeModal(); notice('✓ Save'); paint(); };
 }
 function openCfg() {
-  modal('⚙ Gaari setting', `<form id="grCfg" class="gr-form">${field('no', 'Gaari number', 'text', cfg.no || '')}${field('driver', 'Driver ka naam', 'text', cfg.driver || '')}${field('avg', 'Sahi average (km fi litre)', 'number', cfg.avg ?? 5.5)}
+  const fx0 = Array.isArray(cfg.fixed) ? cfg.fixed : [], hasSal = cfg.salary != null && cfg.salary !== '';   // v2.102.5: purani 'Driver salary' line tankhwa ke khane mein
+  const sal0 = hasSal ? N(cfg.salary) : fx0.filter(x => isSalName(x.n)).reduce((t, x) => t + N(x.a), 0), fxShow = hasSal ? fx0 : fx0.filter(x => !isSalName(x.n)), o0 = odoNow();
+  modal('⚙ Gaari setting', `<form id="grCfg" class="gr-form">
+    <div class="gs-first"><b>1️⃣ Sab se pehle</b>
+      <div class="gr-2">${field('avg', '⛽ Average (km fi litre)', 'number', cfg.avg ?? 5.5)}${field('tankL', 'Tanki (litre)', 'number', cfg.tankL ?? 76)}</div>
+      <p class="gs-calc" id="gsCalc"></p>
+      <button type="button" class="gs-odo" data-godo="1"><span>📍 Abhi meter reading</span>${o0.odo ? odoHTML(o0) : '<em>— likhein (📷 AI ya haath se)</em>'}</button></div>
+    ${field('no', 'Gaari number', 'text', cfg.no || '')}${field('driver', 'Driver ka naam', 'text', cfg.driver || '')}
+    <div class="gr-2">${field('salary', '👤 Driver ki tankhwa (mahana)', 'number', sal0 || '')}${field('qist', '🏦 Gaari ki qist (mahana)', 'number', cfg.qist ?? '')}</div>
     <label>Driver commission<select name="commType"><option value="pct"${cfg.commType !== 'fixed' ? ' selected' : ''}>% kiraya ka</option><option value="fixed"${cfg.commType === 'fixed' ? ' selected' : ''}>Fixed fi bilty (Rs)</option></select></label>
     ${field('commVal', 'Commission (% ya Rs)', 'number', cfg.commVal ?? 10)}
-    <div class="gr-2">${field('dieselRate', '⛽ Diesel rate (Rs/L)', 'number', N(cfg.dieselRate) || curRate() || '')}${field('tankL', 'Tanki (litre)', 'number', cfg.tankL ?? 76)}</div>
-    <div class="gr-2">${field('qist', '🏦 Gaari ki qist (mahana Rs)', 'number', cfg.qist ?? '')}${field('oilKm', '🛢 Mobil har (km)', 'number', cfg.oilKm ?? 5000)}</div>
-    <b>👤 Fixed mahana kharche</b><div id="gfRows" class="gf-rows">${((Array.isArray(cfg.fixed) && cfg.fixed.length) ? cfg.fixed : [{ n: 'Driver salary', a: '' }]).map(x => `<div class="gf-row"><input data-gf="n" type="text" value="${esc(x.n || '')}" placeholder="Naam (jaise driver salary)"><input data-gf="a" type="number" inputmode="decimal" step="any" value="${esc(x.a || '')}" placeholder="Rs"><button type="button" class="gr-x" data-gf-del="1">✕</button></div>`).join('')}</div>
+    <div class="gr-2">${field('dieselRate', '⛽ Diesel rate (Rs/L)', 'number', N(cfg.dieselRate) || curRate() || '')}${field('oilKm', '🛢 Mobil har (km)', 'number', cfg.oilKm ?? 5000)}</div>
+    <b>⛽ Dashboard</b>
+    <div class="gr-2">${field('lowKm', '🔴 Laal jab km is se kam (0 = band)', 'number', lowKm())}<span></span></div>
+    <label class="gp-chk"><input type="checkbox" name="rangeChk"${cfg.rangeChk !== false ? ' checked' : ''}> ⚠️ Tanki hisaab se khali ho jaye to poochho "rastay mein diesel dalwaya?"</label>
+    <label class="gp-chk"><input type="checkbox" name="drvMeter"${cfg.drvMeter !== false ? ' checked' : ''}> 📍 Driver (Sirf Gaari / mulazim) bhi meter reading laga sake</label>
+    <b>📋 Doosre fixed mahana kharche</b><div id="gfRows" class="gf-rows">${(fxShow.length ? fxShow : [{ n: '', a: '' }]).map(x => `<div class="gf-row"><input data-gf="n" type="text" value="${esc(x.n || '')}" placeholder="Naam (jaise insurance / token)"><input data-gf="a" type="number" inputmode="decimal" step="any" value="${esc(x.a || '')}" placeholder="Rs"><button type="button" class="gr-x" data-gf-del="1">✕</button></div>`).join('')}</div>
     <button type="button" class="gf-add" data-gf-add="1">＋ Kharcha</button>
     <label class="gp-chk"><input type="checkbox" name="notifyOn"${cfg.notifyOn !== false ? ' checked' : ''}> 🔔 Roz sham notification: "driver se hisaab lena hai"</label>
     ${field('notifyTimes', 'Waqt (comma se)', 'text', (cfg.notifyTimes || ['18:00', '19:30', '21:00']).join(', '))}
@@ -761,17 +858,22 @@ function openCfg() {
     <b>🧾 Yaad wale kharchon ke naam</b><div class="gk-chips">${kNames().map(n => `<button type="button" class="gk-chip" data-gk-hide="${esc(n)}">${esc(n)} ✕</button>`).join('')}</div>
     <p class="gr-msg"></p><button type="submit" class="primary">💾 Save</button></form>`);
   const f = $('grCfg');
+  const calc = () => { const a = N(f.elements.avg.value) || 5.5, l = N(f.elements.tankL.value) || 76; $('gsCalc').innerHTML = `Tanki full = ${num(l)} L × ${num(a, 2)} = <b>${num(l * a)} km</b> — dashboard par yahi se minus hoga`; };
+  f.elements.avg.addEventListener('input', calc); f.elements.tankL.addEventListener('input', calc); calc();
+  let goRead = false;   // 📍 meter reading: pehle setting save, phir reading ka form (likha hua zaya na ho)
+  f.addEventListener('click', e => { if (!e.target.closest('[data-godo]')) return; e.stopPropagation(); goRead = true; if (f.requestSubmit) f.requestSubmit(); else f.onsubmit({ preventDefault() {} }); });
   f.addEventListener('click', e => { if (e.target.closest('[data-gf-add]')) { const r = document.createElement('div'); r.className = 'gf-row'; r.innerHTML = '<input data-gf="n" type="text" placeholder="Naam"><input data-gf="a" type="number" inputmode="decimal" step="any" placeholder="Rs"><button type="button" class="gr-x" data-gf-del="1">✕</button>'; $('gfRows').appendChild(r); r.querySelector('input').focus(); }
     const x = e.target.closest('[data-gf-del]'); if (x) x.closest('.gf-row')?.remove(); });
   f.addEventListener('click', async e => { const b = e.target.closest('[data-gk-hide]'); if (!b) return; const h = new Set(Array.isArray(cfg.hideK) ? cfg.hideK : []); h.add(b.dataset.gkHide); cloud.setGaariConfig({ hideK: [...h].slice(0, 200) }).catch(() => {}); cfg.hideK = [...h]; b.remove(); });
   f.onsubmit = async e => { e.preventDefault(); const o = Object.fromEntries(new FormData(f));
     const times = String(o.notifyTimes || '').split(/[,\s]+/).map(x => x.trim()).filter(x => /^\d{1,2}:\d{2}$/.test(x)).map(x => x.padStart(5, '0')).slice(0, 6);
-    const fixed = [...f.querySelectorAll('.gf-row')].map(r => ({ n: String(r.querySelector('[data-gf="n"]').value || '').trim().slice(0, 40), a: N(r.querySelector('[data-gf="a"]').value) })).filter(x => x.n && x.a > 0).slice(0, 20);
+    const salary = N(o.salary);
+    const fixed = [...f.querySelectorAll('.gf-row')].map(r => ({ n: String(r.querySelector('[data-gf="n"]').value || '').trim().slice(0, 40), a: N(r.querySelector('[data-gf="a"]').value) })).filter(x => x.n && x.a > 0 && !(salary > 0 && isSalName(x.n))).slice(0, 20);   // v2.102.5: tankhwa dobara na kate
     const patch = { no: String(o.no || '').slice(0, 30), driver: String(o.driver || '').slice(0, 40), avg: N(o.avg) || 5.5, commType: o.commType === 'fixed' ? 'fixed' : 'pct', commVal: N(o.commVal), notifyOn: !!o.notifyOn, notifyTimes: times.length ? times : ['18:00', '19:30', '21:00'],
-      tankL: N(o.tankL) || 76, qist: N(o.qist), oilKm: N(o.oilKm) || 5000, fixed, updatedAt: Date.now() };
+      tankL: N(o.tankL) || 76, qist: N(o.qist), oilKm: N(o.oilKm) || 5000, fixed, salary, lowKm: Math.max(0, N(o.lowKm)), rangeChk: !!o.rangeChk, drvMeter: !!o.drvMeter, updatedAt: Date.now() };
     if (N(o.dieselRate) && N(o.dieselRate) !== curRate()) { patch.dieselRate = r2(N(o.dieselRate)); patch.rateAt = Date.now(); }   // v2.96: naya rate aaj se
     if (patch.avg !== avgOf()) patch.avgHist = avgHistWith(Date.now(), patch.avg);   // nayi average sirf aage ke pheron par
-    try { await cloud.setGaariConfig(patch); Object.assign(cfg, patch); closeModal(); notice('✓ Setting save'); paint(); }
+    try { await cloud.setGaariConfig(patch); Object.assign(cfg, patch); closeModal(); notice('✓ Setting save'); paint(); if (goRead) setTimeout(openReading, 40); }
     catch (er) { f.querySelector('.gr-msg').textContent = 'Nahi hua: ' + (er?.message || er); } };
 }
 
@@ -781,7 +883,7 @@ function makePdf() {
   pdf(`🚚 Gaari ${cfg.no || ''} — ${monthName(month)}`, `<h1>NOOR TRADERS</h1><h2>Gaari ${esc(cfg.no || '')} — ${esc(day ? day : monthName(month))}${cfg.driver ? ' · Driver: ' + esc(cfg.driver) : ''}</h2>
     <table class="iv-tbl"><tbody>${line('Pheray', s.pheras.length)}${line('Kiraya', rs(s.kiraya))}${line('− Kharche', rs(s.kh))}${line('− Driver commission', rs(s.comm))}${line('− Diesel farzi (' + num(s.shouldL, 1) + ' L)', rs(s.farziRs))}
     ${line('<b>Pheron ki bachat</b>', '<b>' + rs(s.safi) + '</b>')}${s.fixedL.map(x => line('− ' + esc(x.n), rs(x.a))).join('')}${s.tankFarq ? line(s.tankFarq > 0 ? '− Tanki farq (zyada laga)' : '+ Tanki bachat', rs(Math.abs(s.tankFarq))) : ''}${Object.entries(s.extraCat).sort((a, b) => b[1] - a[1]).map(([n, v]) => line('− Extra: ' + esc(n), rs(v))).join('')}${s.qist ? line('− Qist (' + rs(s.qistPaid) + ' pura, ' + rs(s.qistBaqi) + ' baqi)', rs(s.qist)) : ''}
-    ${line('<b>' + (s.nafa >= 0 ? 'NAFA' : 'GHATA') + '</b>', '<b>' + rs(Math.abs(s.nafa)) + '</b>')}${line('Km (meter / Falcon)', num(s.km) + ' / ' + (s.tk ? num(s.tk) : '—'))}${line('Asal diesel dalwaya', rs(s.fillRs))}${line('Average', s.realAvg ? num(s.realAvg, 2) + ' (setting ' + num(avgOf(), 2) + ')' : num(avgOf(), 2) + ' (setting)')}${(() => { const L = driverLedger(); return line(L.bal >= 0 ? 'Driver se lena (kul baqaya)' : 'Driver ko dena', rs(Math.abs(L.bal))); })()}${line('Commission (driver ne rakhi)', rs(s.comm))}</tbody></table>
+    ${line('<b>' + (s.nafa >= 0 ? 'NAFA' : 'GHATA') + '</b>', '<b>' + rs(Math.abs(s.nafa)) + '</b>')}${line('Km (meter / Falcon)', num(s.km) + ' / ' + (s.tk ? num(s.tk) : '—'))}${(() => { const o = odoNow(), t = tankNow(); return (o.odo ? line('📍 Meter (abhi)', num(o.odo) + ' km' + (o.est ? ' ≈' : '')) : '') + (t ? line('⛽ Diesel bacha · 🛣 aur chal sakti', num(t.left, 0) + ' / ' + num(t.cap) + ' L · ' + num(t.rangeKm) + ' km') : ''); })()}${line('Asal diesel dalwaya', rs(s.fillRs))}${line('Average', s.realAvg ? num(s.realAvg, 2) + ' (setting ' + num(avgOf(), 2) + ')' : num(avgOf(), 2) + ' (setting)')}${(() => { const L = driverLedger(); return line(L.bal >= 0 ? 'Driver se lena (kul baqaya)' : 'Driver ko dena', rs(Math.abs(L.bal))); })()}${line('Commission (driver ne rakhi)', rs(s.comm))}</tbody></table>
     <table class="iv-tbl"><thead><tr><th>Tareekh</th><th>Biltiyan</th><th>Kharche</th><th>Km</th><th>Diesel</th><th>Nafa</th></tr></thead><tbody>
     ${s.pheras.map(p => { const c = pc(p); return `<tr><td>${esc(p.date)}</td><td>${(p.bilties || []).map(b => `${esc(b.from)}→${esc(b.to)} ${rs(b.kiraya)}${b.col ? '' : ' (lena)'}`).join('<br>')}</td><td>${(p.kharche || []).map(k => esc(k.n) + ' ' + num(k.a)).join('<br>')}<br><b>${rs(c.kh)}</b></td><td class="iv-n">${num(c.km)}${c.tk ? '<br>trk ' + num(c.tk) : ''}${c.kmOk ? '' : ' ❌'}</td><td class="iv-n">farzi ${num(c.shouldL, 1)} L<br>${rs(c.shouldRs)}${c.dL ? '<br>asal ' + num(c.dL, 1) + ' L' : ''}</td><td class="iv-n"><b>${rs(c.nafa)}</b></td></tr>`; }).join('')}</tbody></table>
     ${s.extraL.length ? `<table class="iv-tbl"><thead><tr><th>Tareekh</th><th>Extra kharcha</th><th>Note</th><th>Rs</th></tr></thead><tbody>${s.extraL.slice().reverse().map(r => `<tr><td>${esc(r.date)}</td><td>${r.oil ? '🛢 ' : ''}${esc(r.cat || 'Doosra')}${r.driver ? ' (driver ki jeb)' : ''}</td><td>${esc(r.note || '')}</td><td class="iv-n">${rs(r.amount)}</td></tr>`).join('')}<tr><td colspan="3"><b>Kul extra (NAFA se minus)</b></td><td class="iv-n"><b>${rs(s.extra)}</b></td></tr></tbody></table>` : ''}
@@ -803,6 +905,7 @@ document.addEventListener('click', e => {
   const gxe = e.target.closest?.('[data-gx-edit]'); if (gxe) { if (isOwner()) openExtra(gxe.dataset.gxEdit); return; }
   if (e.target.closest?.('[data-gr-cfg]')) { if (isOwner()) openCfg(); return; }
   if (e.target.closest?.('[data-gr-pdf]')) { makePdf(); return; }
+  if (e.target.closest?.('[data-godo]')) { if ($('dialog')?.open) closeModal(); setTimeout(openReading, 30); return; }   // v2.102.5
   if (e.target.closest?.('[data-gt-open]')) { openTank(); return; }
   if (e.target.closest?.('[data-dk-get]')) { if (isOwner()) openDriverGet(); return; }
   const gf = e.target.closest?.('[data-gt-fill]'); if (gf) { openFill(gf.dataset.gtFill === 'full'); return; }

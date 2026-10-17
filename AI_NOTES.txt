@@ -4990,3 +4990,22 @@ Malik: "Godam mein zeeshan ke sath kisi aur larke ko bhi godam ka tick mein add 
 - firestore.rules v2.58: tcGiverOk = staffAccount name lower matches '.*(' + tcGiverName() + ').*' — '|' regex mein "ya" ban jata hai. tcClean sirf harf/hindse/urdu/space rakhta hai → regex injection nahi.
 - Rules upload: firestore-rules-2.58.html (nahi kiya to dusre larke ka "maal de diya" tick DENIED).
 - Tests: scratchpad sk/tcg.cjs (rules regex sim) + sk/tcg.mjs (chooser UI) + sk/t.mjs — ALL OK.
+
+=== v2.102.5 (2026-10-17) — ⛽ GAARI DASHBOARD + 📋 PHERE KA NAYA NAQSHA (rules wahi 2.58, PC tabdeeli nahi) ===
+Malik: "setting mein average set ho, phir meter ki photo AI se ya haath se · upar dashboard meter mein wohi reading · tanki full 80 L × 5.5 = 440 km
+likha ho · phera add ho to km aur diesel khud minus · neeche phere ka naqsha: kiraya, kahan se kahan tak, kharche ki chips raqam ke saath,
+kiraya − kharcha = safi bachat, safi bachat upar alag chip mein jama, qist aur driver tankhwa se minus".
+- gaari.js dashHTML(): sab se upar — 📍 meter (odoNow: aakhri reading + pheron ke km), dial "58 / 80 L", 🛣 "aur chal sakti" = tankNow().rangeKm
+  (bacha L × avgFor(null)), "Full 80 L × 5.5 = 440 km · chal li X km". tankNow ab {avg, rangeKm, fullKm, over} bhi deta.
+  A) cfg.lowKm (default 60, 0 = band) se kam = laal (.gd.low) + "diesel dalwao". B) over = used − cap > 1 L → banner + phera save par
+  rangeAsk(): confirm "rastay mein diesel dalwaya?" → phere mein diesel line (cfg.rangeChk, har phera ek dafa — askedOver).
+- openReading(): 📍 meter reading form (📷/🖼 AI {"reading":n} ya haath) → doc kind 'reading' (rules mein pehle se; mulazim sirf aaj).
+  cfg.drvMeter (default ON) = driver / mulazim bhi laga sake. Kam reading / +3000 km par confirm. Pichhli 6 readings (malik ✕).
+- newPhera startR = odoNow().odo. Phera page: "🛣 Ya seedha km likhein" (data-f kmd) → endR = startR + km; shuru na ho to p.kmMan (pc() mein mk fallback).
+  gp-after: "Save ke baad dashboard: meter · L · km aur".
+- cardHTML (.gc): [💚 safi bachat] [route + 💰 kiraya chip / ⛽ diesel, har kharcha, 👤 comm chips] [🚚 meter: tareekh, km, start→end].
+- Hero .gj chips: 💚 Pheron ki bachat − 🏦 Qist − 👤 Driver tankhwa − 📋 Fixed − 🧾 Extra ± ⛽ Tanki farq = ✅ Asal bachat.
+- Setting: "1️⃣ Sab se pehle" (average, tanki litre, 440 km calc, 📍 meter button — pehle setting save phir reading form), cfg.salary
+  (purani fixed 'Driver salary' line isSalName se tankhwa khane mein; salary > 0 ho to fixed se hat jati — dohra na kate), lowKm, rangeChk, drvMeter.
+  monthCalc: s.salary / s.fixedOther. PDF: meter + diesel bacha / aur chal sakti line.
+- AI: sirf meter photo + pump parchi. Test: scratchpad gx/t.mjs (26 ✓) + gx.png screenshot.
