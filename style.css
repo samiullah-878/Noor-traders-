@@ -4016,3 +4016,15 @@ html.dk .tc-ged,html.dk .tc-gn{background:var(--glass)!important;border-color:va
 /* v2.102.7: ⚖️ factory ginti — kg khana */
 .fc-gin .fc-gkg{flex:1.15}.fc-root .fc-gin .fc-gkg input{border-color:#e7b94a;background:#fffaf0}
 .fc-kgh{display:block;margin-top:4px;font-size:11.5px;color:var(--ir-ink2)}.fc-kgh b{color:#0f6b3d}
+/* v2.103.0: 📱 factory sirf app — maal aaya / diya, note */
+.fc-appnote{margin:8px 0;padding:10px 12px;border-radius:14px;background:linear-gradient(180deg,#eef9f2,#e2f5ea);border:1px solid #a9dcbd;color:#0f5132;font-size:13px;line-height:1.4}
+html body :is(#summary,#dialogBody) .ir-root .fc-sa.in{border-color:#9fd8b6!important;background:linear-gradient(180deg,#f2fbf6,#e3f6ea)!important;color:#0f6b3d!important}
+html body :is(#summary,#dialogBody) .ir-root .fc-sa.out{border-color:#f3c79b!important;background:linear-gradient(180deg,#fff8f0,#ffecd8)!important;color:#8a4b00!important}
+.fc-mvr{padding:8px 10px;border:1px solid var(--ir-line,#e3e8f3);border-radius:14px;margin:6px 0;background:#fff}
+.fc-mvr.is-in{border-color:#7fb3ff;background:linear-gradient(180deg,#f5f9ff,#eaf2ff);box-shadow:0 4px 12px rgba(29,59,122,.08)}
+.fc-mvr .fc-pkl{display:flex;gap:10px;align-items:center}.fc-mvr .fc-pkl input{width:22px;height:22px;flex:0 0 auto}
+.fc-mvr .fc-pkl b{display:block}.fc-mvr .fc-pkl small{display:block;font-size:11.5px;color:var(--ir-ink2,#5d6f8f)}
+.fc-mvr .fc-gin{margin-top:8px}
+.fc-mvfoot{position:sticky;bottom:0;padding:10px 0 4px;background:linear-gradient(180deg,rgba(255,255,255,0),#fff 30%);display:grid;gap:8px}
+.fc-mvfoot label{display:grid;gap:3px;font-size:11px;font-weight:700;color:var(--ir-ink2,#5d6f8f)}
+#fcLoc{display:grid;gap:10px}#fcLoc label{display:grid;gap:3px;font-size:12px;font-weight:700}

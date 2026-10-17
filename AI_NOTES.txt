@@ -5027,3 +5027,24 @@ Malik: (1) "purchase cash ka koi bhi print dobara print karne se waisa nahi hoga
 - (2) factory.js sRow: gOf(id) (cfg.conv g/pcs) ho to "⚖️ Physical KG" khana (data-fg-kg) → pcs = pcsOfKg (ctn khali), pcs likho to kg;
   hint data-fg-kgh "2 kg = 40 pcs — yahi save honge". Save pcs mein (POS wahi). Gina / farq bhi qk() "3 kg (60 pcs)". repaint fgKg par list na toote.
 - Test: fct/t.mjs 146 ✓ (+4 kg), pay/t.cjs 9 ✓. Rules wahi.
+
+=== v2.103.0 (2026-10-17) — 📱 FACTORY SIRF APP (POS mein kuch nahi) · Rules 2.59 ===
+Malik: "factory ka data only app mein reh sakta hai, POS mein na jaye — POS se only items uthaye, baqi kuch bhi na jaye". (a) maal aaya haath se.
+* cfg.posOn !== true (DEFAULT) = sirf app. ⚙️ "🔌 Factory ka data": 📱 Sirf app / 🖥 POS mein bhi (purana — sirf malik, confirm).
+* Batch: cloud.addFactoryBatch({app:true}) -> status 'app' (PC factory-post sirf 'new'/'cancelReq' sunta — chhoota bhi nahi). Form mein POS
+  choice nahi ("📱 Sirf app" note). Label: app khud sendLabels -> cloud.requestLabel({..., batch: no}) (200 fi job). Edit / ✕ cancel (foran)
+  = malik ya jis ne banaya (status 'app'). Purana 'hold' batch app mode mein "📤 POS" nahi — cancel kar ke dobara.
+* FACTORY KA APNA STOCK: fEvents() = factoryMoves (ginti = itna hai · aaya + · diya −) + app batches (bana + / laga −) waqt ki tarteeb;
+  fStocks() Map {stock, ginti, ev[after]}; loadItems mein x.stock = app stock (x.posStock = POS wala). Sab hisaab (kam, batch, raw) isi se.
+* Stock tab (appStockTabHTML / appRow): 📥 Maal aaya · 📤 Maal diya · ➕ Item jorein (malik) · 🧾 Purchase; chips (… Aaj gine, Kabhi nahi gine);
+  "N item ki ginti kabhi nahi hui" alert; ginti Save = addFactoryMove kind 'ginti' {q, sys}; history (🔢/📥/📤/🏭/🧪 → baad ka stock, malik ✕).
+* mvOpen(kind) dialog: list pehle se (Raw / Packing / Tayyar / Sab + search), ☑ tick, KG / Ctn / Pcs, "= N · stock ab", note, "✓ N item jorein".
+  diya par stock se zyada = confirm.
+* Naya item (app mode): ➕ Item jorein -> POS mein na mile -> "➕ Naya item — sirf factory" (locForm: naam, Pcs/Kg/Ltr, rate, ctn, gram, 📦)
+  -> cfg.local {lid: {n, un, pk, r, at}} id 'loc:<lid>' (+ cfg.conv / cfg.pack). Photo formula ke naye items bhi 'loc:' (POS job nahi).
+* Rates: app mode mein "POS mein lagao" band (alert), formula ka "☐ POS mein bhi khareed rate" chhupa, applyRate rok.
+* cloud: listenFactoryAppBatches (status == 'app'), listenFactoryMoves, addFactoryMove, delFactoryMove (malik), requestLabel batch.
+* Rules 2.59: factoryBatches create status + 'app'; update (malik / banane wala) statuses + 'app'; factoryMoves (read malik/Full/Stock; create
+  keys hasOnly, kind aaya|diya|ginti; delete malik); labelJobs keys + 'batch'. firestore-rules-2.59.html.
+* Asar: POS mein factory items ka stock ab production se nahi badalta (raw khareed se barhta, tayyar sale se ghatta) — malik ko bataya.
+* Test: fct/t.mjs 165 ✓ (146 purane POS mode + 19 naye app). Screenshots fct/app-stock.png, app-mv.png. AI kahin nahi (photo formula wahi).
