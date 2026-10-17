@@ -3010,3 +3010,8 @@ Malik: "din select kiya to jab tak band na karein har ghante reminder".
   wapsi (total < 0) = laagat minus. Cancel / Noor Traders / factory / stock farq bahar. Mahina-war posStats/nafa-<YYYY-MM>-<k>
   {j: {p: [party], b: [[din, 'HH:MM', billNo, pIdx, total, cost, ws, est]]}} (~700 KB hisse) + irep-meta.nafa {mahina: hisse}, ver 1.4.
 - runToday: irep-today.nb = aaj ke bills (wahi shakal). Test scratchpad itd/t.cjs (14 ✓).
+
+=== rack-bharo.js v1.0 (2026-10-18.1, app v2.103.14) — 🧺 RACK BHARO ===
+- Har 2 min (rack-auto.bat, ping 121): aakhri transfer godam -> dukan (branch 1) har item ka + us ke baad dukan ki bikri
+  (ISNULL(NULLIF(d.GBranchID,0), s.BranchID) = 1) + godam / dukan CurrStock -> posStats/rack (hash wahi = na likho, 10 min 'at').
+- Sirf SELECT. App qaida lagati hai (carton = pk, pieces = median, malik ✏️).

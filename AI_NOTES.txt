@@ -5184,3 +5184,19 @@ entries bataye" · "kuch entries milti julti, kuch paise ka farq" · "multiple p
 === v2.103.13 (2026-10-18) — 🐞 "effect is not defined" (khata milao) ===
 - app.js ka `effect` report() ke andar local tha; milanSetup rows / balanceAt mein ReferenceError. Ab top-level mlEffect (balance() jaisa:
   skipsBalance -> 0, credit / payment / cashPaysBill +, borrow / collection −).
+
+=== v2.103.14 (2026-10-18) — 🧺 RACK BHARO (godam se lao) + 💸 PAISA PHANSA STOCK ===
+Malik: "rack par carton hi lagay to faida — open stock godam se nahi aata. Pichhla data dekh kar: transfer note ke baad ek carton jitna
+bik jaye to Transfer notes screen par, ek click mein transfer note print" · "data har 1-2 minute" · "kuch ctn = 1 pcs wale" · "10 baje
+notification nahi" · "layout / chips premium". Aur: #3 paisa phansa stock.
+- PC rack-bharo.js v1.0 (rack-auto.bat har 2 min, manifest 2026-10-18.1 periodic): har item ka AAKHRI transfer godam -> dukan (180 din,
+  CreatedOn / TransferDate) + kis godam + pichhle 5 ki median; us ke baad DUKAN se bika (SaleDetail.GBranchID, warna Sale.BranchID = 1,
+  cancel nahi; VALUES join 800 hisse); godam / dukan CurrStock. posStats/rack {at, h, n, j:[{i,n,pk,g,gs,ss,w,s,m}]} — bika > 0 + godam > 0.
+- Rules 2.62: posStats get id 'rack' -> isStaff (stock wale). firestore-rules-2.62.html.
+- pos-stock.js: Transfer hub tile "🧺 Rack bharo" (CAP stock.rack, badge N) -> #rkBody: rackCalc — carton wala unit = pk (poore carton),
+  pieces wala unit = m; malik ✏️ stockConfig.rack {id: {u, q}} (cloud.setRackCfg, merge / deleteField); godam stock LIVE se cap + ⚠️.
+  Godam-war group, ✓ sab, qty (ctn / pcs), "🖨 N items — transfer note print" = stockAgentTransfer(from g, to 1) — PC note + print;
+  rackSent (30 min) jab tak PC naya transfer na dekhe. cloud.listenRack.
+- irep.js 💸 phHTML (nafa ke neeche): POS kul stock (app stockPools, irepSetup.stock) × item c. 😴 60 din se nahi bika (ya data mein
+  kabhi nahi) · 📦 90 din ki bikri se zyada (zaid hissa). Tabs is-in, aur dikhao, item tap = item dlg, PDF phPdf.
+- Test: sk/rk.mjs (8 ✓), rk/t.cjs (PC 3 ✓), ir5/t2.js (13 ✓), t.js (37 ✓). AI: koi nahi.

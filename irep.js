@@ -31,7 +31,8 @@ const LS = 'sam-irep';
 const st = (() => { let v = {}; try { v = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch {} return { mon: v.mon || '', per: v.per || 'm', from: v.from || '', to: v.to || '', ws: v.ws !== false, sort: v.sort || 'rs', q: '', lim: 60, tsort: v.tsort || 'rs', tq: '', tAll: false, rev: !!v.rev, trev: !!v.trev }; })();   // v2.103.3: ⇅ ulta
 const keep = () => { try { localStorage.setItem(LS, JSON.stringify({ mon: st.mon, per: st.per, from: st.from, to: st.to, ws: st.ws, sort: st.sort, tsort: st.tsort, rev: st.rev, trev: st.trev })); } catch {} };
 
-export function irepSetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; pdfOf = o.pdf || pdfOf; }
+let stockOf = () => null;
+export function irepSetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; pdfOf = o.pdf || pdfOf; stockOf = o.stock || stockOf; }
 export function irepStop() { if (stop) { try { stop(); } catch {} stop = null; } if (tStop) { try { tStop(); } catch {} tStop = null; } clearTimeout(slowT); slowT = 0; if (cStop) { try { cStop(); } catch {} cStop = null; } }
 function watch() {
   if (!cStop && cloud?.listenCommission) cStop = cloud.listenCommission(m => { commCfg = m || {}; if ($('irRoot')) paint(); if (document.querySelector('.ir-cset')) commSetPaint(); });
@@ -302,6 +303,7 @@ function paint() {
     <label class="hs-search"><input type="search" data-ir-tq="1" placeholder="🔍 item dhoondo (number bhi dikhega)…" value="${esc(st.tq)}"></label></div>
     <div id="irTop">${topHTML()}</div></section>
   ${nafaHTML(rows, T, a, b)}
+  ${phHTML()}
   <section class="ir-sec"><div class="ir-sh"><b>📅 Hafta-war — ${esc(monLabel(m))}</b><small>tap = woh hafta</small></div>${legend()}${colChart(wkCols)}</section>
   <section class="ir-sec"><div class="ir-sh"><b>🗓 Mahine ke hisse</b><small>1–10 · 11–20 · 21–${L} — tap = woh hissa</small></div>${colChart(ptCols)}</section>
   <section class="ir-sec"><div class="ir-sh"><b>📆 Kis din zyada bikta hai</b><small>ek din ki ausat sale — tap = us din ki top items</small></div>${colChart(wdCols, { h: 120 })}</section>
@@ -405,6 +407,43 @@ function nfPdf(a, b) { const M = data?.meta?.nafa; if (!M || nfState(a, b) !== '
     <table class="iv-tbl"><thead><tr><th>#</th><th>Party</th><th>Bill</th><th>Sale Rs</th><th>Nafa Rs</th></tr></thead><tbody>${[...P.values()].sort((x, y) => y.nafa - x.nafa).slice(0, 20).map((o, i) => `<tr><td>${i + 1}</td><td>${esc(o.name)}</td><td>${num(o.n)}</td><td>${num(o.sale)}</td><td>${num(o.nafa)}</td></tr>`).join('')}</tbody></table>
     ${loss.length ? `<table class="iv-tbl"><thead><tr><th>🔴 Ghaate wala bill</th><th>Din</th><th>Party</th><th>Sale Rs</th><th>Nafa Rs</th></tr></thead><tbody>${loss.slice(0, 25).map(x => `<tr><td>#${esc(x.no)}</td><td>${esc(short(x.day))} ${esc(x.t)}</td><td>${esc(x.party || 'Cash')}</td><td>${num(x.sale)}</td><td>${num(x.nafa)}</td></tr>`).join('')}</tbody></table>` : ''}`; }
 
+// ---------- 💸 v2.103.14: PAISA PHANSA STOCK (malik: "jo maal nahi bik raha / zyada para hai — kitna paisa phansa") ----------
+//   POS ka kul stock (sab godam) × fi pcs khareed (item report ka c). 😴 = 60 din se ek bhi nahi bika · 📦 = 90 din ki bikri se zyada para
+//   (zaid hissa). Bikri = item report ke saare din (3 mahine). Aaj tak — tareekh ke chips se nahi badalta.
+let phTab = 'dead', phLim = 40;
+function phAgg() {
+  const S = stockOf(); if (!S || !S.size) return null; const X = index(), td = today(), N = X.days.length || 1;
+  const byI = new Map(X.items.map(it => [String(it.i), it])), dead = [], over = [];
+  for (const [id, st] of S) { const q = Number(st.stock) || 0; if (!(q > 0)) continue; const it = byI.get(id), c = Number(it?.c) || 0;
+    let li = -1, sold = 0; for (const x of it?.d || []) { if (x[1] > 0 && x[0] > li) li = x[0]; sold += Number(x[1]) || 0; }
+    const lastDay = li >= 0 ? X.days[li] : '', ago = lastDay ? Math.round((toDate(td) - toDate(lastDay)) / 864e5) : null;
+    const name = it?.n || st.name || 'Item ' + id, pk = Number(it?.pk || st.pack) || 0, row = { id, it, name, pk, q, c, ago, sold };
+    if (ago == null ? N >= 60 : ago >= 60) { dead.push({ ...row, rs: q * c }); continue; }
+    const per = sold / N; if (per > 0 && q / per > 90) { const extra = q - per * 90; over.push({ ...row, extra, cover: Math.round(q / per), rs: extra * c }); } }
+  dead.sort((a, b) => b.rs - a.rs || b.q - a.q); over.sort((a, b) => b.rs - a.rs);
+  const sum = l => l.reduce((t, r) => t + r.rs, 0); return { dead, over, D: sum(dead), O: sum(over), noC: [...dead, ...over].filter(r => !r.c).length, N };
+}
+function phHTML() {
+  const A = phAgg(), sh = '<div class="ir-sh"><b>💸 Paisa phansa stock</b><small>aaj tak · POS ka kul stock</small></div>';
+  if (!A) return `<section class="ir-sec ir-ph">${sh}<p class="lk-note">⏳ Stock aa raha hai…</p></section>`;
+  const L = phTab === 'dead' ? A.dead : A.over, shown = L.slice(0, phLim);
+  return `<section class="ir-sec ir-ph">${sh}
+    <div class="ir-phhero"><small>Kul phansa paisa</small><strong>Rs ${num(Math.round(A.D + A.O))}</strong><span>${num(A.dead.length + A.over.length)} items · khareed rate se</span></div>
+    <div class="ir-phtabs"><button type="button" class="${phTab === 'dead' ? 'is-in' : ''}" data-ir-ph="dead"><b>😴 Nahi bik raha</b><small>${num(A.dead.length)} items · Rs ${k1(A.D)}</small></button><button type="button" class="${phTab === 'over' ? 'is-in' : ''}" data-ir-ph="over"><b>📦 Zarurat se zyada</b><small>${num(A.over.length)} items · Rs ${k1(A.O)}</small></button></div>
+    <p class="lk-note">${phTab === 'dead' ? '60 din se ek bhi nahi bika — maal para hai.' : '3 mahine (90 din) ki bikri se zyada para hai — sirf zaid hissa gina.'}</p>
+    <div class="ir-tbl">${shown.map(r => `<button type="button" class="ir-row ir-phr" ${r.it ? `data-ir-item="${esc(String(r.it.i))}"` : 'disabled'}><span><b>${esc(r.name)}</b><small>stock ${fmtQty(r.q, r.pk)}${phTab === 'dead' ? ` · ${r.ago == null ? `${A.N}+ din se nahi bika` : `aakhri sale ${r.ago} din pehle`}` : ` · ${r.cover} din ka · zaid ${fmtQty(Math.round(r.extra), r.pk)}`}</small></span><span class="ir-num"><b>${r.c ? 'Rs ' + num(Math.round(r.rs)) : '—'}</b><small>${r.c ? 'phansa' : 'rate nahi'}</small></span></button>`).join('') || `<div class="nt-empty">✓<b>${phTab === 'dead' ? 'Sab maal bik raha hai' : 'Koi item zyada nahi para'}</b></div>`}</div>
+    ${L.length > shown.length ? `<button type="button" class="sh-wide" data-ir-phmore="1">⬇️ Aur dikhao (${num(L.length - shown.length)})</button>` : ''}
+    ${A.noC ? `<p class="lk-note">⚠️ ${num(A.noC)} items ka khareed rate POS mein nahi — un ka paisa nahi gina.</p>` : ''}</section>`;
+}
+document.addEventListener('click', e => { const t = e.target.closest?.('[data-ir-ph],[data-ir-phmore]'); if (!t || !t.closest('.ir-root')) return;
+  if (t.dataset.irPh) { phTab = t.dataset.irPh; phLim = 40; paint(); return; } phLim += 80; paint(); });
+function phPdf() { const A = phAgg(); if (!A || !(A.dead.length + A.over.length)) return '';
+  const tb = (h, l, f) => l.length ? `<table class="iv-tbl"><thead><tr>${h.map(x => `<th>${x}</th>`).join('')}</tr></thead><tbody>${l.slice(0, 40).map(f).join('')}</tbody></table>` : '';
+  return `<h3>💸 Paisa phansa stock — kul Rs ${num(Math.round(A.D + A.O))}</h3>
+    <p>😴 Nahi bik raha (60 din+): ${num(A.dead.length)} items · Rs ${num(Math.round(A.D))} · 📦 Zarurat se zyada (90 din+ ka): ${num(A.over.length)} items · Rs ${num(Math.round(A.O))}</p>
+    ${tb(['😴 Item', 'Stock', 'Aakhri sale', 'Phansa Rs'], A.dead, r => `<tr><td>${esc(r.name)}</td><td>${fmtQty(r.q, r.pk)}</td><td>${r.ago == null ? A.N + '+ din' : r.ago + ' din pehle'}</td><td>${r.c ? num(Math.round(r.rs)) : '—'}</td></tr>`)}
+    ${tb(['📦 Item', 'Stock', 'Kitne din ka', 'Zaid Rs'], A.over, r => `<tr><td>${esc(r.name)}</td><td>${fmtQty(r.q, r.pk)}</td><td>${r.cover} din</td><td>${r.c ? num(Math.round(r.rs)) : '—'}</td></tr>`)}`; }
+
 // ---------- tafseel (dialog) ----------
 function dlg(title, html) { const d = $('dialog'); if (!d) return; d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = title; $('dialogBody').innerHTML = `<div class="ir-root ir-dlg">${html}</div>`; if (!d.open) d.showModal(); }
 function itemDlg(id) {
@@ -447,6 +486,7 @@ function pdfHTML() {
   return `<h1>NOOR TRADERS</h1><h2>📊 Item Sale Report — ${esc(short(a))} se ${esc(short(b))} ${esc(b.slice(0, 4))}${st.ws ? '' : ' (wholesale ke baghair)'}</h2>
     <p><b>Kul sale Rs ${num(T.rs)}</b> · nafa (andaza) Rs ${num(T.pf)} (${pct(T.pf, T.rs)}%) · ${num(T.n)} items · ${esc(new Date().toLocaleString('en-PK'))}</p>
     ${nfPdf(a, b)}
+    ${phPdf()}
     ${(() => { const W = wsSplit(a, b), has = rows.filter(r => !r.noCost), plus = has.filter(r => r.pf > 0).sort((x, y) => y.pf - x.pf), loss = has.filter(r => r.pf < 0), P = plus.reduce((t, r) => t + r.pf, 0), Lr = loss.reduce((t, r) => t + r.pf, 0), none = rows.filter(r => r.noCost);   // v2.101.5: 💰 nafa kahan se
       return `<h3>💰 Nafa kahan se (Rupees)</h3><p>Kul nafa <b>Rs ${num(T.pf)}</b>${st.ws ? ` · Retail Rs ${num(W.r.pf)} (sale Rs ${num(W.r.rs)}) · Wholesale Rs ${num(W.w.pf)} (sale Rs ${num(W.w.rs)})` : ''}${loss.length ? ` · ghaata ${loss.length} items Rs ${num(Math.abs(Lr))}` : ''}${none.length ? ` · ${none.length} items ka khareed rate nahi` : ''}</p>
         <table class="iv-tbl"><thead><tr><th>#</th><th>Sab se zyada nafa</th><th>Sale Rs</th><th>Nafa Rs</th><th>Hissa</th></tr></thead><tbody>${plus.slice(0, 15).map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.it.n)}</td><td>${num(r.rs)}</td><td>${num(r.pf)}</td><td>${pct(r.pf, P)}%</td></tr>`).join('')}</tbody></table>`; })()}
@@ -501,4 +541,4 @@ document.addEventListener('input', e => {   // v2.101.1: search par sirf neeche 
   if (!e.target.matches?.('[data-ir-q]')) return; st.q = e.target.value || ''; st.lim = 60; clearTimeout(qT);
   qT = setTimeout(() => { const r = rowsOf(), el = document.getElementById('irRows'), n = document.getElementById('irTblN'); if (el) el.innerHTML = r.html; if (n) n.textContent = num(r.tbl.length); }, 200);
 });
-export const _irTest = { nfBills, nfSum, nfHTML, nfC, nfSetT: t => { tdoc = t; }, nfSetFull: f => { full = f; }, mergeToday, ageText, setFull: (f, t) => { full = f; tdoc = t; remerge(); }, fmtQty, topHTML, nafaHTML, wsSplit, setRows: r => { lastRows = { sorted: r, srt: () => 0 }; }, agg, range, patterns, partRange, setData: d => { data = d; loaded = true; ix = null; }, st, pdfHTML, commAgg, setComm: c => { commCfg = c; } };
+export const _irTest = { phAgg, setStock: f => { stockOf = f; }, nfBills, nfSum, nfHTML, nfC, nfSetT: t => { tdoc = t; }, nfSetFull: f => { full = f; }, mergeToday, ageText, setFull: (f, t) => { full = f; tdoc = t; remerge(); }, fmtQty, topHTML, nafaHTML, wsSplit, setRows: r => { lastRows = { sorted: r, srt: () => 0 }; }, agg, range, patterns, partRange, setData: d => { data = d; loaded = true; ix = null; }, st, pdfHTML, commAgg, setComm: c => { commCfg = c; } };
