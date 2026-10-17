@@ -2967,3 +2967,14 @@ Malik: voucher (CPV) par party ka naam aur raqam bare, baqi chhote — galle wal
 === 2026-10-16 dopahar — pos-sales-dekho.js v1.8 🔘 auto sale ON / BAND · manifest 2026-10-16.5 ===
 blueAccess/saleConfig.posAuto (default band). Band = aaj ki possale-<din> (posAuto) hatao, kuch na likho; ON = pehle jaisa.
 posSales/<din>.sum hamesha likhta (app malik ko "POS ke hisaab se" milane ke liye). Setting aane tak (10 sec) writeSale kuch nahi karta.
+
+=== 2026-10-17 — pos-khata-sync.js 💵 PAYMENT DE DO (pehli) / COPY-PAYMENT NAHI (dobara) · manifest 2026-10-17.1 ===
+Malik: "purchase cash ka koi bhi print dobara print karne se waisa nahi hoga jis par likha ho payment de do bara sa".
+- receipt / receiptBig ko `pay` ('do' | 'copy'): payMark() — Urdu (64px "ادائیگی کر دیں" / 50px "کاپی — ادائیگی نہیں") + ulta (GS B)
+  2-guna "PAYMENT DE DO" / "COPY-PAYMENT NAHI"; copy par raqam ke neeche "*** COPY - IS PAR PAISE NA DEIN ***". HBL parchi par kabhi nahi.
+- purchaseSlip(e, copy): cash par pay = copy && e.posPrintedAt ? 'copy' : 'do' (pehli kabhi chhapi hi nahi = agli 'do'). Udhaar par kuch nahi.
+- POS bill se juri cash purchase ka CPV (pehli rasid, syncEntries + quick): e.kind purchaseCash → posPrintedAt ho (purchase parchi
+  pehle chhap chuki) to 'copy' warna 'do' — do dafa "payment de do" nahi.
+- reprintVoucher: har CPV dobara = 'copy'; sirf cash purchase jis ki pehli chhapi nahi = 'do'. Baqi CRV / JV waise.
+- Setting blueAccess/printConfig.payDo (default ON) — app 🖨 Print setting chip. Band = purani parchi.
+- Test: scratchpad pay/t.cjs (9 ✓ — big / normal / HBL / band).

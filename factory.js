@@ -11,8 +11,8 @@
 //   (4) ❌ masla alert tap se batch khule (5) raw ka naam formula mein mehfooz (n) — item hat jaye to bhi dikhe (6) formula chooser mein raw alag (7) mara hua code hata.
 //   📷 PHOTO SE FORMULA (AI sirf tasveer parhne ke liye — Excel / parchi): lines -> POS items se milao (stockAgentFind) -> na mile to naya item
 //   (stockNewItemQuick, ⏳ job:) -> formula save. Fi piece packing × pieces; labour -> mazdoori. Tez: OK = setDoc foran. AI aur kahin NAHI.
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.102.6';
-import { smartSearch, fold } from './smart-search.js?v=2.102.6';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.102.7';
+import { smartSearch, fold } from './smart-search.js?v=2.102.7';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -247,7 +247,7 @@ export function renderFactory() {
 }
 let rpT = 0;
 function repaint() { clearTimeout(rpT); rpT = setTimeout(() => { const ad = document.activeElement?.dataset || {};   // likhte waqt input na toote
-  if ($('fcRoot')) { loadItemsQuiet(); paint(ad.fcRq != null || ad.fgCtn != null || ad.fgPcs != null ? ['fcRqList'] : ad.fr != null ? ['fcRates'] : undefined); }
+  if ($('fcRoot')) { loadItemsQuiet(); paint(ad.fcRq != null || ad.fgCtn != null || ad.fgPcs != null || ad.fgKg != null ? ['fcRqList'] : ad.fr != null ? ['fcRates'] : undefined); }
   if (fb && $('fcBatch') && ad.fbReal == null && ad.fbPk == null && ad.fbSelf == null) batchPaint(); if (fe && $('fcForm')) formPaint(ad.fcFq2 != null ? ['feHits'] : undefined); if (pk && $('fcPick')) pickPaint(ad.fcPq != null ? ['fcPickList'] : undefined);
   if (fn && $('fcNew')) fnewPaint(ad.fcFq != null ? ['fcFqList'] : undefined); if (pf && $('fcPhoto') && ad.pfPq == null && ad.pfSq == null && ad.pfPieces == null && ad.pfQ == null) pfPaint(); }, 30); }
 const loadItemsQuiet = () => { if (itemsOk) loadItems(); };
@@ -654,8 +654,8 @@ function sRow({ x, k, i, r }, S) {
   const pd = packOf(x.id);
   return `<div class="fc-g${c ? ' done' : ''}${r?.kam ? ' kam' : ''}"><div class="fc-gh"><div><b>${esc(x.name)}</b><small><i class="fc-kind k-${k}">${KIND[k]}</i>${pd ? ' · ' + num(pd.g) + ' g ' + esc(byId.get(String(pd.src))?.name || '') : ''}${use ? ' · ' + use : ''}${see && rateOf(x.id, x) ? ' · ' + rs(rateOf(x.id, x)) + ' / ' + esc(un(x)) : ''}</small></div>
       ${see ? `<div class="fc-gst"><b class="${x.stock < 0 || r?.kam ? 'bad' : ''}">${esc(qk(x.stock, x))}</b><small>${r?.kam ? 'kam — 1 batch se kam' : r?.need ? '~' + num(Math.floor(Math.max(0, x.stock) / r.need)) + ' batch ka' : 'system'}</small></div>` : ''}</div>
-    ${c ? `<div class="fc-gdone">${see ? `<b class="${kk}">Gina ${num(i.total)} · farq ${f > 0 ? '+' : ''}${num(f)}</b>${i.rs ? ' · Rs ' + (i.rs > 0 ? '+' : '') + num(i.rs) : ''} · ${bi.k === 'done' ? '✓ ' + esc(bi.no) : bi.k === 'part' ? esc(bi.no) + ' · baqi' : bi.k === 'baqi' ? 'bill baqi' : 'barabar'}` : `<b>✓ Gina ${num(i.total)}</b>`} · ${esc(clock(i.at))}${i.byName ? ' · ' + esc(i.byName) : ''}</div>` : ''}
-    ${S.round && !S.locked && canCount() ? `<div class="fc-gin">${pk > 1 ? `<label>${esc(x.cn || 'Ctn')}<input type="number" inputmode="decimal" min="0" step="any" data-fg-ctn="${esc(x.id)}" value="${c ? esc(String(c.ctn ?? '')) : ''}"></label>` : ''}<label>Physical ${esc(x.un || 'Pcs')}<input type="number" inputmode="decimal" min="0" step="any" data-fg-pcs="${esc(x.id)}" value="${c ? esc(String(c.pcs ?? '')) : ''}"></label><button type="button" class="fc-gsave" data-fg-save="${esc(x.id)}">${c ? '✏️ Save' : 'Save'}</button></div>` : ''}
+    ${c ? `<div class="fc-gdone">${see ? `<b class="${kk}">Gina ${gOf(x.id) ? esc(qk(i.total, x)) : num(i.total)} · farq ${f > 0 ? '+' : ''}${gOf(x.id) ? esc(qk(f, x)) : num(f)}</b>${i.rs ? ' · Rs ' + (i.rs > 0 ? '+' : '') + num(i.rs) : ''} · ${bi.k === 'done' ? '✓ ' + esc(bi.no) : bi.k === 'part' ? esc(bi.no) + ' · baqi' : bi.k === 'baqi' ? 'bill baqi' : 'barabar'}` : `<b>✓ Gina ${gOf(x.id) ? esc(qk(i.total, x)) : num(i.total)}</b>`} · ${esc(clock(i.at))}${i.byName ? ' · ' + esc(i.byName) : ''}</div>` : ''}
+    ${S.round && !S.locked && canCount() ? `<div class="fc-gin">${gOf(x.id) ? `<label class="fc-gkg">⚖️ Physical KG<input type="number" inputmode="decimal" min="0" step="any" data-fg-kg="${esc(x.id)}" value="${c && Number(c.pcs) && !Number(c.ctn) ? esc(String(kgOf(c.pcs, x.id))) : ''}" placeholder="kg"></label>` : ''}${pk > 1 ? `<label>${esc(x.cn || 'Ctn')}<input type="number" inputmode="decimal" min="0" step="any" data-fg-ctn="${esc(x.id)}" value="${c ? esc(String(c.ctn ?? '')) : ''}"></label>` : ''}<label>Physical ${esc(x.un || 'Pcs')}<input type="number" inputmode="decimal" min="0" step="any" data-fg-pcs="${esc(x.id)}" value="${c ? esc(String(c.pcs ?? '')) : ''}"></label><button type="button" class="fc-gsave" data-fg-save="${esc(x.id)}">${c ? '✏️ Save' : 'Save'}</button></div>${gOf(x.id) ? `<small class="fc-kgh" data-fg-kgh="${esc(x.id)}">1 ${esc(un(x))} = ${num(gOf(x.id))} g — kg likhein, ${esc(un(x))} khud ban jayenge</small>` : ''}` : ''}
     <div class="fc-gbtn">${c ? `<button type="button" class="fc-link" data-fg-hist="${esc(x.id)}">🕘 history (${i.hist.length})${gOpen.has(x.id) ? ' ▴' : ' ▾'}</button>` : ''}<button type="button" class="fc-link" data-fc-lbl="${esc(x.id)}">🏷 Label</button>${stockCanItem().edit ? `<button type="button" class="fc-link" data-fc-item="${esc(x.id)}">✏️ Item</button>` : ''}</div>
     ${c && gOpen.has(x.id) ? `<div class="fc-ghist">${i.hist.slice(-6).reverse().map(h => `<div><span>${esc(short(h.at))}${h.tick ? ' ✓ tick' : ''}</span><span>gina ${num(h.total)}${see ? ' · system ' + num(h.sys) : ''}</span>${see ? `<b class="${h.total - h.sys < 0 ? 'bad' : h.total - h.sys > 0 ? 'ok' : ''}">${h.total - h.sys > 0 ? '+' : ''}${num(r2(h.total - h.sys))}</b>` : ''}</div>`).join('')}${S.owner && bi.k !== 'done' ? `<button type="button" class="fc-link" data-fg-del="${esc(x.id)}">🗑 ginti hatao</button>` : ''}</div>` : ''}</div>`;
 }
@@ -1027,6 +1027,11 @@ let qT = 0;
 document.addEventListener('input', e => {
   const t = e.target; if (!t?.dataset || !t.closest?.('.fc-root')) return; const d = t.dataset;
   if (d.fcFq != null && fn) { fn.q = t.value || ''; clearTimeout(qT); qT = setTimeout(() => fnewPaint(['fcFqList']), 180); return; }
+  if (d.fgKg != null || (d.fgPcs != null && gOf(d.fgPcs))) { const row = t.closest('.fc-g'), id = d.fgKg ?? d.fgPcs, h = row?.querySelector('[data-fg-kgh]'), x = byId.get(String(id));   // v2.102.7: ⚖️ kg <-> pcs
+    if (d.fgKg != null) { const p = row?.querySelector('[data-fg-pcs]'), c0 = row?.querySelector('[data-fg-ctn]'); const v = t.value === '' ? '' : String(pcsOfKg(t.value, id)); if (p) p.value = v; if (c0 && v !== '') c0.value = '';
+      if (h) h.innerHTML = v === '' ? `1 ${esc(un(x))} = ${num(gOf(id))} g` : `${num(t.value)} kg = <b>${num(Number(v))} ${esc(un(x))}</b> — yahi save honge`; }
+    else { const k = row?.querySelector('[data-fg-kg]'); if (k) k.value = t.value === '' ? '' : String(kgOf(t.value, id)); if (h) h.innerHTML = t.value === '' ? `1 ${esc(un(x))} = ${num(gOf(id))} g` : `${num(t.value)} ${esc(un(x))} = <b>${num(kgOf(t.value, id))} kg</b>`; }
+    return; }
   if (d.fcRq != null) { rq = t.value || ''; clearTimeout(qT); qT = setTimeout(() => paint(['fcRqList']), 180); return; }
   if (d.fcPdq != null && pd) { pd.q = t.value || ''; clearTimeout(qT); qT = setTimeout(() => pkDefPaint(['fcPdHits']), 180); return; }
   if (d.faQ != null && fa) { fa.q = t.value || ''; clearTimeout(qT); qT = setTimeout(() => addPaint(true), 180); return; }   // v2.101.6

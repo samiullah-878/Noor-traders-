@@ -379,7 +379,19 @@ function urPartyOf(l) {
 //   Party ka naam 2 guna (English) + Urdu 60px, raqam 3 guna; voucher no / tareekh / sabqa / ab baqaya chhote (Font B).
 //   Setting blueAccess/printConfig.bigSlip (default ON; app: 🖨 Print setting). Band = purani parchi. HBL parchi wahi purani.
 let BIG_SLIP = true;
-function receiptBig({ title, code, date, lines, note, copy }) {
+// 2026-10-17: 💵 PAYMENT DE DO / COPY (malik: "purchase cash ka koi bhi print dobara print karne se waisa nahi hoga jis par likha ho
+//   payment de do bara sa"). Cash purchase (PURCHASE - CASH, ya POS bill se juri cash purchase ka CPV) ki PEHLI parchi = bara
+//   "ادائیگی کر دیں · PAYMENT DE DO" — galla isi se paise de. Dobara print (aur har CPV ki dobara) = bara "کاپی — ادائیگی نہیں ·
+//   COPY - PAYMENT NAHI". Pehli parchi chhapi hi nahi thi (posPrintedAt nahi) to agli = pehli. printConfig.payDo (default ON).
+let PAY_DO = true;
+const payMark = (pay, ur, big, C) => {   // pay 'do' | 'copy' — ulta (kala) bara patta + Urdu
+  if (pay !== 'do' && pay !== 'copy') return [];
+  const GS = '\x1d', rv = t => GS + 'B\x01' + t + GS + 'B\x00', o = [''];
+  if (UR.isOn()) o.push(UR.line(pay === 'do' ? 'ادائیگی کر دیں' : 'کاپی — ادائیگی نہیں', pay === 'do' ? 64 : 50, 1));
+  o.push(C + rv(big(pay === 'do' ? ' PAYMENT DE DO ' : ' COPY-PAYMENT NAHI ')), '');
+  return o;
+};
+function receiptBig({ title, code, date, lines, note, copy, pay }) {
   const W = PRINT_WIDTH, WB = 56;                                  // Font A 42 / Font B 56 akshar (TM-T88IV 80mm)
   const n = v => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
   const rowW = (w, l, r) => { l = String(l); r = String(r); return (l + ' '.repeat(Math.max(1, w - l.length - r.length))).slice(0, w - r.length) + r; };
@@ -399,6 +411,7 @@ function receiptBig({ title, code, date, lines, note, copy }) {
   const out = [ESC + '@', C + bold('NOOR TRADERS') + sm('  ' + SHOP_PHONE), bold(title)];
   if (UR.isOn() && UR_TITLE[title]) out.push(UR.line(UR_TITLE[title], 30, 1));
   if (copy) out.push(sm('(Dobara print)'));
+  out.push(...payMark(pay, true, big2, C));
   out.push(L + sm(rowW(WB, ascii(code), dt + '  ' + tm)), C + bar(code), L + hr);
   let total = 0; const many = lines.length > 1;
   for (const l of lines) {
@@ -410,7 +423,9 @@ function receiptBig({ title, code, date, lines, note, copy }) {
     if (many) out.push(hr);
   }
   if (!many && lines[0]) out.push(L + hr, C + smb(String(lines[0].label || '').toUpperCase()));
-  out.push(C + huge('Rs.' + n(total)), '', L + hr);
+  out.push(C + huge('Rs.' + n(total)), '');
+  if (pay === 'copy') out.push(C + smb('*** COPY - IS PAR PAISE NA DEIN ***'), '');
+  out.push(L + hr);
   // sabqa + ab baqaya — chhote (Font B), do party hon to naam saath
   for (const l of lines) {
     if (l.before == null && l.after == null) continue;
@@ -425,8 +440,9 @@ function receiptBig({ title, code, date, lines, note, copy }) {
   out.push(GS + 'V\x42\x00');                                    // kaghaz kaato
   return out.join('\r\n');
 }
-function receipt({ title, code, date, lines, note, copy, bank }) {
-  if (!bank && BIG_SLIP) return receiptBig({ title, code, date, lines, note, copy });
+function receipt({ title, code, date, lines, note, copy, bank, pay }) {
+  if (bank || !PAY_DO) pay = '';
+  if (!bank && BIG_SLIP) return receiptBig({ title, code, date, lines, note, copy, pay });
   const W = PRINT_WIDTH;
   const n = v => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
   const row = (l, r) => { l = String(l); r = String(r); return (l + ' '.repeat(Math.max(1, W - l.length - r.length))).slice(0, W - r.length) + r; };
@@ -450,6 +466,7 @@ function receipt({ title, code, date, lines, note, copy, bank }) {
     : [ESC + '@', C + big('NOOR TRADERS'), SHOP_PHONE, '', tall(title)];
   if (!bank && UR.isOn() && UR_TITLE[title]) out.push(UR.line(UR_TITLE[title], 40));   // 2026-10-14: 🔤 Urdu
   if (copy) out.push('(Dobara print)');
+  out.push(...payMark(pay, false, big, C));   // 2026-10-17: 💵 payment de do / copy
   if (bank) out.push(L + hr, row('Tareekh: ' + dt, 'Waqt: ' + tm), row('Voucher: ' + ascii(code), ''), L + hr);
   else out.push(L + hr, row('Voucher No: ' + ascii(code), ''), row('Tareekh: ' + dt, 'Waqt: ' + tm), C + bar(code), L + hr);
   let total = 0; const bq = [];
@@ -462,6 +479,7 @@ function receipt({ title, code, date, lines, note, copy, bank }) {
     if (l.after != null) bq.push(l);
   }
   out.push(hr, R + big('Rs.' + n(total)), L);
+  if (pay === 'copy') out.push(C + bold('*** COPY - IS PAR PAISE NA DEIN ***'), L);
   if (bank) out.push(...words(total));
   // 2026-10-09: AB BAQAYA bhi BARA (malik: "baqaya wali raqam bhi big size mein") — mota "Ab baqaya - LENE / DENE", raqam double size;
   //   do party hon (transfer voucher) to har ek ka naam saath. Pehle chhoti line upar thi — ab sirf yahan (do dafa nahi).
@@ -510,7 +528,7 @@ Add-Type -Path $dll
 //   App har entry par chip dikhati hai (posPrintedAt / posPrintErr) aur "🖨 Dobara print" = printJobs {kind:'voucher', id: CPV-…} (yahi script chhapta hai).
 let lastPrintErr = '', vlog = null;
 const cfgDoc = () => biz.collection('blueAccess').doc('printConfig');
-try { cfgDoc().onSnapshot(s => { BIG_SLIP = !(s.exists && (s.data() || {}).bigSlip === false); }, () => {}); } catch {}   // 2026-10-16: 🔠 bara naam + raqam
+try { cfgDoc().onSnapshot(s => { BIG_SLIP = !(s.exists && (s.data() || {}).bigSlip === false); PAY_DO = !(s.exists && (s.data() || {}).payDo === false); }, () => {}); } catch {}   // 2026-10-17: 💵 payDo   // 2026-10-16: 🔠 bara naam + raqam
 async function logPrint(e) {
   if (DRY) return;
   try {
@@ -559,9 +577,12 @@ async function reprintVoucher(code, copies = 1, fromJob = false) {
       return { name: String(r.AccountName || '').trim(), label, amount: dr || cr };
     });
     const rem = String(rows[0].VoucherRemarks || ''), bank = /^HBL (aaye|gaye)/.test(rem.trim()) ? { dir: /^HBL gaye/.test(rem.trim()) ? 'out' : 'in' } : null;   // 2026-10-12: HBL design
+    // 2026-10-17: 💵 CPV dobara = COPY-PAYMENT NAHI; sirf cash purchase jis ki pehli parchi chhapi hi nahi thi = PAYMENT DE DO
+    const e0 = [...app.values()].find(e => e.type === 'entry' && !e.deleted && String(e.posCode || '').trim() === String(code).trim());
+    const pay = type !== 'CPV' ? '' : e0 && e0.kind === 'purchaseCash' && !e0.posPrintedAt ? 'do' : 'copy';
     let ok = false;
     for (let i = 0; i < Math.min(3, Math.max(1, Number(copies) || 1)); i++) ok = await printReceipt(receipt({ title: VTITLE[type] || type + ' VOUCHER', code: rows[0].VoucherCode, date: rows[0].VoucherDate,
-      lines, note: rem, copy: true, bank }));
+      lines, note: rem, copy: true, bank, pay }));
     if (fromJob) {
       const ids = [...app.values()].filter(e => e.type === 'entry' && String(e.posCode || '').trim() === String(code).trim()).map(e => e.id);
       if (ok && ids.length) await markApp(ids, { posPrintedAt: Date.now(), posPrintErr: '' });
@@ -871,7 +892,7 @@ async function syncEntries(pool, acct) {
           : [{ pid: base.partyId, name: acct.get(base.partyId).name, label: base.kind === 'payment' ? 'Diye' : base.kind === 'collection' ? 'Wasool kiye' : 'Udhar', amount: amt,
                after: rupees(appBalance(base.partyId)), before: rupees(appBalance(base.partyId, new Set(docIds))) }];   // 2026-10-09: sabqa = is voucher ke baghair
         const bank = bankSlip(base, isTransfer);   // 2026-10-12: HBL wali entry = HBL parchi
-        const printed = await printReceipt(receipt({ title: T, code: r.code, date: base.date, lines: plines, note: String(base.note || '').trim(), bank }));
+        const printed = await printReceipt(receipt({ title: T, code: r.code, date: base.date, lines: plines, note: String(base.note || '').trim(), bank, pay: e.kind !== 'purchaseCash' ? '' : e.posPrintedAt ? 'copy' : 'do' }));   // 2026-10-17: 💵 juri cash purchase ka CPV — purchase parchi pehle chhap chuki to COPY (do dafa paise nahi)
         if (printed) await markApp(docIds, { posPrintedAt: Date.now(), posPrintErr: '' });
         else await markApp(docIds, { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
         await logPrint({ code: r.code, name, amt, ok: printed, bank: !!bank });
@@ -1025,10 +1046,11 @@ async function goodsPhoto(e) {
 }
 async function purchaseSlip(e, copy) {
   const p = app.get(e.partyId), cash = e.kind === 'purchaseCash';
+  const pay = !cash ? '' : copy && e.posPrintedAt ? 'copy' : 'do';   // 2026-10-17: 💵 pehli = payment de do, dobara = copy
   const txt = receipt({ title: cash ? 'PURCHASE - CASH' : 'PURCHASE - UDHAR', code: 'PU-' + String(e.id).replace(/[^A-Za-z0-9]/g, '').slice(-8).toUpperCase(), date: e.date,
     lines: [{ pid: e.partyId, name: (p && p.name) || 'Supplier', label: cash ? 'Cash diya (maal liya)' : 'Udhar maal liya', amount: rupees(e.amount),
       before: e.partyId ? rupees(appBalance(e.partyId, new Set([e.id]))) : null, after: e.partyId ? rupees(appBalance(e.partyId)) : null }],
-    note: String(e.note || '').trim(), copy });
+    note: String(e.note || '').trim(), copy, pay });
   let photo = '';
   if (PH) { const u = await goodsPhoto(e); if (u) photo = PH.photoRaster(u, 256, 320); }
   if (!photo) return { text: txt, photo: false };
@@ -1147,7 +1169,7 @@ async function quickEntries() {
       const T = { CPV: VTITLE.CPV, CRV: VTITLE.CRV, JV: 'UDHAR SALE VOUCHER' }[spec.type] || spec.type, amt = rupees(e.amount), docIds = [e.id];
       const plines = [{ pid: e.partyId, name, label: e.kind === 'payment' ? 'Diye' : e.kind === 'collection' ? 'Wasool kiye' : 'Udhar', amount: amt, after: rupees(appBalance(e.partyId)), before: rupees(appBalance(e.partyId, new Set(docIds))) }];
       const bank = bankSlip(e, false);
-      const printed = await printReceipt(receipt({ title: T, code: r.code, date: e.date, lines: plines, note: String(e.note || '').trim(), bank }));
+      const printed = await printReceipt(receipt({ title: T, code: r.code, date: e.date, lines: plines, note: String(e.note || '').trim(), bank, pay: e.kind !== 'purchaseCash' ? '' : e.posPrintedAt ? 'copy' : 'do' }));   // 2026-10-17: 💵
       if (printed) await markApp(docIds, { posPrintedAt: Date.now(), posPrintErr: '' });
       else await markApp(docIds, { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
       await logPrint({ code: r.code, name, amt, ok: printed, bank: !!bank });

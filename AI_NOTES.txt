@@ -5017,3 +5017,13 @@ Malik: "tanki full ki, app refresh ki to tanki full khatam ho gayi".
   tha, isliye sab Firestore mein mehfooz; sirf screen par nazar nahi aata tha (refresh ke baad local rows khatam).
 - Fix: gaari collection listener ka naam listenGaariRows (gaari.js isi ko use kare + Array check). app.js gaariWatch wala listenGaari (bills) wahi.
 - Ab purane phere / diesel / readings bhi wapas dikhenge. Test gx/t.mjs ALL OK.
+
+=== v2.102.7 (2026-10-17) — 💵 CASH PURCHASE PARCHI "PAYMENT DE DO" / DOBARA = COPY + ⚖️ FACTORY GINTI KG MEIN · PC manifest 2026-10-17.1 ===
+Malik: (1) "purchase cash ka koi bhi print dobara print karne se waisa nahi hoga jis par likha ho payment de do bara sa"
+(2) factory stock screenshot: "kala tail kg ka bhi physical stock jaise hi likhein".
+- (1) PC pos-khata-sync (tafseel pc/AI_NOTES): pehli cash purchase parchi = bara "ادائیگی کر دیں · PAYMENT DE DO"; dobara = bara
+  "کاپی — ادائیگی نہیں · COPY-PAYMENT NAHI" + "IS PAR PAISE NA DEIN". App: 🖨 Print setting chip data-ppp-pay → printConfig.payDo
+  (cloud.setPrintConfig 'payDo'). Pichhla plan (card par "Galla se payment" + check) malik ke kehne par chhora — parchi khud hukum.
+- (2) factory.js sRow: gOf(id) (cfg.conv g/pcs) ho to "⚖️ Physical KG" khana (data-fg-kg) → pcs = pcsOfKg (ctn khali), pcs likho to kg;
+  hint data-fg-kgh "2 kg = 40 pcs — yahi save honge". Save pcs mein (POS wahi). Gina / farq bhi qk() "3 kg (60 pcs)". repaint fgKg par list na toote.
+- Test: fct/t.mjs 146 ✓ (+4 kg), pay/t.cjs 9 ✓. Rules wahi.

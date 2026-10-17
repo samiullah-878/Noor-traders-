@@ -4013,3 +4013,6 @@ html.dk .tc-ged,html.dk .tc-gn{background:var(--glass)!important;border-color:va
 .gp-kmd{display:block;margin-top:6px}
 .gp-after{margin:6px 0 2px;padding:8px 10px;border-radius:12px;background:#eef4ff;border:1px solid #d6e2fb;font-size:.84rem;color:#1d3b7a}.gp-after small{color:#5d6f8f}
 .gp-after.low{background:#fff0f0;border-color:#f3a9a9;color:#9b2c2c}
+/* v2.102.7: ⚖️ factory ginti — kg khana */
+.fc-gin .fc-gkg{flex:1.15}.fc-root .fc-gin .fc-gkg input{border-color:#e7b94a;background:#fffaf0}
+.fc-kgh{display:block;margin-top:4px;font-size:11.5px;color:var(--ir-ink2)}.fc-kgh b{color:#0f6b3d}
