@@ -16,8 +16,8 @@
 //   ginti / 📥 maal aaya / 📤 maal diya = factoryMoves, naya item = cfg.local ('loc:<id>' — POS mein nahi), rate sirf factory (POS "lagao" band).
 //   Factory ka STOCK = app ka apna: har item ke waqia (ginti = itna hai · aaya + · diya − · batch: tayyar + / raw −) waqt ke hisaab se.
 //   cfg.posOn true = purana tareeqa (POS Adjustment, POS ginti, POS item). ⚙️ mein on / off (sirf malik).
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.103.7';
-import { smartSearch, fold } from './smart-search.js?v=2.103.7';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.103.8';
+import { smartSearch, fold } from './smart-search.js?v=2.103.8';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -235,9 +235,18 @@ const curRates = it => { const pk = Number(it.pack) || 0, c = x => pk > 1 ? Math
 // v2.101: rates — tayyar (formula) + packing items (packCpp) · 'raw' scope = raw / packing material (khareed + nafa) · rEd = malik ke haath ke rate
 let rScope = 'tayyar'; const rEd = {};
 const rateRows = (scope = 'tayyar') => { const F = forms();
-  if (scope === 'raw') return items.filter(it => !isPend(it) && !F[it.id] && !packOf(it.id)).map(it => { const cpp = rateOf(it.id, it); return { it, c: { cpp }, sg: suggest(it, cpp), cr: curRates(it), raw: true }; });
+  if (scope === 'raw') return items.filter(it => !isPend(it) && !F[it.id] && !packOf(it.id) && !cfg?.mcost?.[it.id]).map(it => { const cpp = rateOf(it.id, it); return { it, c: { cpp }, sg: suggest(it, cpp), cr: curRates(it), raw: true }; });
   return [...finished().filter(it => !isPend(it)).map(it => { const c0 = costOf(F[it.id]), c = { ...c0, cpp: c0.cpp + selfMatCost(F[it.id]) }; return { it, c, sg: suggest(it, c.cpp), cr: curRates(it) }; }),
-    ...packDefs().map(p => byId.get(p.id)).filter(it => it && !isPend(it) && !F[it.id]).map(it => { const cpp = packCpp(packOf(it.id)); return { it, c: { cpp }, sg: suggest(it, cpp), cr: curRates(it), pk: true }; })]; };
+    ...packDefs().map(p => byId.get(p.id)).filter(it => it && !isPend(it) && !F[it.id]).map(it => { const cpp = packCpp(packOf(it.id)); return { it, c: { cpp }, sg: suggest(it, cpp), cr: curRates(it), pk: true }; }),
+    ...mcList().filter(([id]) => byId.has(id) && !F[id] && !packOf(id)).map(([id, v]) => { const it = byId.get(id), cpp = mcCpp(v); return { it, c: { cpp }, sg: suggest(it, cpp), cr: curRates(it), mc: v }; })]; };
+// v2.103.8: 🧴 WAZAN SE LAAGAT (malik: "item uthaya, app pooche kitna wazan pack karwana — kala tail 200 g; fi kg rate × 200 g, phir harcha,
+//   complete") — formula nahi. cfg.mcost {itemId: {g, kg, mats: [{id, q, n}], x: [{n, rs}]}} -> laagat fi pcs = kg × g / 1000 + packing maal + harcha.
+const mcList = () => Object.entries(cfg?.mcost || {}).filter(([, v]) => v && Number(v.g) > 0);
+const mcOil = v => r2((Number(v?.kg) || 0) * (Number(v?.g) || 0) / 1000);
+const mcMat = v => (v?.mats || []).reduce((t, m) => t + (Number(m.q) || 0) * rateOf(String(m.id), byId.get(String(m.id))), 0);
+const mcX = v => (v?.x || []).reduce((t, x) => t + (Number(x.rs) || 0), 0);
+const mcCpp = v => r2(mcOil(v) + mcMat(v) + mcX(v));
+const gTxt = g => g >= 1000 ? num(r3(g / 1000)) + ' kg' : num(g) + ' g';
 const rateWant = x => ({ ...x.sg, ...(rEd[x.it.id] || {}) });
 // ---------- v2.101.1: 📦 PACKING (malik: "surf ka batch — ek packing 4 kg, ek 0.700 g — kaise maintain") ----------
 //   cfg.pack {itemId: true} = packing material (bag / pouch / dakan — ☑ picker ya naya item form) · cfg.packs {packItemId: {src: bulk itemId,
@@ -345,6 +354,57 @@ function formulasHTML() {
     <p class="lk-note">Bulk (jaise Surf kg) se packing — 4 kg, 700 g. <b>Ek dafa</b> set karein: kitne gram + kaun sa packing maal. Batch mein larka sirf pcs likhe.</p>
     <div class="ir-tbl">${packDefs().map(p => { const it = byId.get(p.id), sr = byId.get(String(p.src)); return `<button type="button" class="ir-row" data-fc-pkdef="${esc(p.id)}"><span><b>${esc(it?.name || 'Item ' + p.id)}${it ? '' : ' ⚠️'}</b><small>${num(p.g)} g ${esc(sr?.name || '?')}${p.mats.length ? ' + ' + p.mats.map(m => num(m.q) + ' ' + esc(byId.get(String(m.id))?.name || m.n || '')).join(', ') : ' · packing maal nahi'}</small></span><span class="ir-num"><b>${it && sr ? rs(packCpp(p)) : '—'}</b><small>laagat / pcs</small></span></button>`; }).join('')}</div>
     <button type="button" class="fc-go sm" data-fc-pkdef="">➕ Packing item set karein</button></section>`;
+}
+// ---------- 🧴 v2.103.8: wazan se laagat — ek hi khirki (① item ② wazan ③ fi kg ④ harcha ⑤ laagat) ----------
+let mc = null;
+const MC_G = [100, 200, 250, 500, 1000], MC_X = ['🧴 Bottle', '🔩 Dhakkan', '🏷 Label', '👷 Mazdoori', '➕ Aur'];
+function mcOpen(id) {
+  if (!isOwner()) return; const v = id ? cfg?.mcost?.[id] : null;
+  mc = { id: id || '', q: '', g: v?.g || '', kg: v?.kg ?? '', mats: Object.fromEntries((v?.mats || []).map(m => [String(m.id), Number(m.q) || 1])), x: (v?.x || []).map(x => ({ n: x.n, rs: x.rs })), old: !!v };
+  if (id && !v) mcPick(id);
+  dlg('🧴 Packing item — wazan se laagat', '<div id="fcMc"></div>'); mcPaint();
+}
+function mcPick(id) {   // item chuna — wazan / fi kg pehle se bharo
+  const it = byId.get(String(id)); mc.id = String(id); mc.q = '';
+  if (!(Number(mc.g) > 0)) mc.g = gOf(id) || mlFromName(it?.name) || '';
+  if (mc.kg === '' || mc.kg == null) { const r = rateOf(id, it), g0 = gOf(id) || mlFromName(it?.name) || 1000; mc.kg = r ? r2(r * 1000 / g0) : ''; mc.kgAuto = !!r; }   // POS khareed fi pcs -> fi kg (item ke apne 1 pcs = g se)
+}
+const mcTmp = () => ({ g: Number(mc.g) || 0, kg: Number(mc.kg) || 0, mats: Object.entries(mc.mats).filter(([, q]) => Number(q) > 0).map(([id, q]) => ({ id, q: Number(q) })), x: mc.x.filter(x => Number(x.rs) > 0) });
+function mcPaint(only) {
+  const el = $('fcMc'); if (!el || !mc) return; const F = forms(), it = byId.get(mc.id);
+  const pool = items.filter(x => !isPend(x) && !F[x.id] && !packOf(x.id) && !isMat(x.id) && !isLoc(x)), used = new Set(mcList().map(([id]) => id));
+  const hits = (mc.q.trim() ? srch(pool, mc.q, 60) : pool.slice().sort((a, b) => (used.has(a.id) ? 1 : 0) - (used.has(b.id) ? 1 : 0) || a.name.localeCompare(b.name)).slice(0, 80));
+  const mats = items.filter(x => (isMat(x.id) || looksPack(x.id, x.name)) && x.id !== mc.id), T = mcTmp(), oil = mcOil(T), mt = mcMat(T), xx = mcX(T), cpp = mcCpp(T), sg = it ? suggest(it, cpp) : null;
+  const html = !mc.id ? `<div class="fc-lab">① KAUN SA ITEM? <small>jo bikta hai — jaise "kala tail"</small></div>
+      <label class="hs-search"><input type="search" data-mc-q="1" placeholder="🔍 item ka naam / barcode…" value="${esc(mc.q)}" autocomplete="off"></label>
+      <div class="ir-tbl" id="fcMcHits">${hits.map(x => `<button type="button" class="ir-row" data-mc-it="${esc(x.id)}"><span><b>${esc(x.name)}</b><small>${used.has(x.id) ? '✓ pehle se set · ' : ''}${gOf(x.id) ? '1 pcs = ' + gTxt(gOf(x.id)) + ' · ' : ''}khareed ${rs(rateOf(x.id, x))}</small></span><span class="ir-num"><b>${used.has(x.id) ? '✏️' : '➕'}</b></span></button>`).join('') || '<p class="lk-note">Nahi mila — Stock tab se ➕ Item jorein.</p>'}</div>`
+    : `<div class="fc-bhead"><b>${esc(it?.name || mc.id)}</b><small>${esc(it?.code || '')} · POS khareed ${rs(rateOf(mc.id, it))} / ${esc(un(it))}${mc.old ? '' : ` · <button type="button" class="fc-link" data-mc-it="">badlein</button>`}</small></div>
+      <div class="fc-lab">② KITNE WAZAN KI PACKING? <small>1 ${esc(un(it))} mein</small></div>
+      <div class="fc-mcg">${MC_G.map(g => `<button type="button" class="${Number(mc.g) === g ? 'is-in' : ''}" data-mc-g="${g}">${gTxt(g)}</button>`).join('')}<label><input type="number" inputmode="decimal" min="1" step="any" data-mc-gin="1" value="${MC_G.includes(Number(mc.g)) ? '' : esc(String(mc.g || ''))}" placeholder="apna"><em>g</em></label></div>
+      <div class="fc-lab">③ FI KG RATE <small>khula maal ka</small></div>
+      <div class="fc-batchrow"><span>1 kg =</span><input type="number" inputmode="decimal" min="0" step="any" data-mc-kg="1" value="${esc(String(mc.kg ?? ''))}" placeholder="Rs"><span>Rs</span></div>
+      ${mc.kgAuto ? `<p class="lk-note">POS khareed ${rs(rateOf(mc.id, it))} fi ${esc(un(it))}${gOf(mc.id) ? ' (' + gTxt(gOf(mc.id)) + ')' : ''} se nikala — khule maal ka fi kg rate alag ho to yahan badlein.</p>` : ''}
+      ${T.g && T.kg ? `<div class="fc-mcoil">${gTxt(T.g)} = <b>${rs(oil)}</b> <small>(${rs(T.kg)} × ${num(r3(T.g / 1000))} kg)</small></div>` : ''}
+      <div class="fc-lab">④ HARCHA FI PCS <small>bottle, dhakkan, mazdoori…</small></div>
+      ${mats.length ? `<div class="fc-picks">${mats.map(x => { const on = mc.mats[x.id] != null; return `<div class="fc-pk${on ? ' pk-on' : ''}"><label class="fc-pkl"><input type="checkbox" data-mc-mat="${esc(x.id)}"${on ? ' checked' : ''}><span><b>${esc(x.name)}</b><small>${rs(rateOf(x.id, x))} / ${esc(un(x))}</small></span></label>${on ? `<input type="number" inputmode="decimal" min="0" step="any" class="fc-pkq" data-mc-mq="${esc(x.id)}" value="${mc.mats[x.id]}">` : ''}</div>`; }).join('')}</div>` : ''}
+      <div id="fcMcX">${mc.x.map((x, i) => `<div class="fc-mcx"><input type="text" maxlength="40" data-mc-xn="${i}" value="${esc(x.n)}" placeholder="kya"><label><em>Rs</em><input type="number" inputmode="decimal" min="0" step="any" data-mc-xr="${i}" value="${esc(String(x.rs ?? ''))}" placeholder="0"></label><button type="button" class="ir-cx" data-mc-xdel="${i}">✕</button></div>`).join('')}</div>
+      <div class="fc-mchips">${MC_X.map(n => `<button type="button" data-mc-xadd="${esc(n.replace(/^\S+\s/, '').replace('Aur', ''))}">${n}</button>`).join('')}</div>
+      <section class="ir-sec fc-sum" id="fcMcSum"><div class="fc-sumrow"><span>Maal ${gTxt(T.g)}</span><b>${rs(oil)}</b></div>${mt ? `<div class="fc-sumrow"><span>Packing maal</span><b>${rs(mt)}</b></div>` : ''}${xx ? `<div class="fc-sumrow"><span>Harcha</span><b>${rs(xx)}</b></div>` : ''}<div class="fc-sumrow fc-mctot"><span>Laagat fi ${esc(un(it))}</span><b>${rs(cpp)}</b></div>${sg && cpp ? `<div class="fc-sumrow"><span>Raye: W ${wm()}% · R ${rm()}%</span><b>W ${num(sg.wpcs)} · R ${num(sg.rpcs)}</b></div>` : ''}</section>
+      <div class="fc-btns">${mc.old ? '<button type="button" class="fc-no" data-mc-del="1">🗑 Hatao</button>' : ''}<button type="button" class="fc-go" data-mc-save="1">✓ Save — Rates mein</button></div>`;
+  if (only) { swapParts(el, html, only); return; }
+  el.innerHTML = html;
+}
+function mcSum() { const el = $('fcMc'); if (!el || !mc?.id) return; mcPaint(['fcMcSum']); }   // likhte waqt sirf jama (keyboard na toote)
+async function mcSave(del) {
+  if (!mc?.id || !cloud?.setFactoryCfg) return; const T = mcTmp();
+  if (del) { if (!confirm('Is item ki wazan wali laagat hatani hai?')) return; }
+  else { if (!(T.g > 0)) { notice('Kitne gram — chunein'); return; } if (!(T.kg > 0)) { notice('Fi kg rate likhein'); return; } }
+  const v = del ? null : { g: r3(T.g), kg: r2(T.kg), mats: T.mats.map(m => ({ id: m.id, q: r3(m.q), n: String(byId.get(m.id)?.name || '').slice(0, 80) })), x: T.x.map(x => ({ n: String(x.n || 'Harcha').slice(0, 40), rs: r2(x.rs) })), at: Date.now() };
+  const patch = { mcost: { [mc.id]: v } }; if (!del && gOf(mc.id) !== r3(T.g)) patch.conv = { [mc.id]: r3(T.g) };   // 1 pcs = g (ginti / formula kg mein bhi)
+  cfg = { ...(cfg || {}), mcost: { ...(cfg?.mcost || {}), [mc.id]: v }, ...(patch.conv ? { conv: { ...(cfg?.conv || {}), ...patch.conv } } : {}) };
+  const nm = byId.get(mc.id)?.name || '';
+  try { await cloud.setFactoryCfg(patch); notice(del ? 'Hata diya' : `✓ ${nm} — laagat ${rs(mcCpp(v))} fi pcs · Rates mein`); mc = null; $('dialog')?.close(); st.tab = 'rates'; rScope = 'tayyar'; keep(); repaint(); }
+  catch (e) { notice('Save nahi hua: ' + (e?.message || e)); }
 }
 // ---------- 🎁 packing item ki setting (ek dafa) ----------
 let pd = null;
@@ -703,11 +763,12 @@ function ratesHTML(up) {
   return `<section class="ir-sec"><div class="ir-sh"><b>🏷 Rates — laagat + nafa</b><small>W ${wm()}% · R ${rm()}% <button type="button" class="fc-link" data-fc-set="1">⚙️ badlein</button></small></div>
     <div class="fc-per fc-pf">${[['tayyar', '🧪 Tayyar / packing items'], ['raw', '📦 Raw / packing maal']].map(([k, l]) => `<button type="button" class="${rScope === k ? 'on' : ''}" data-fr-scope="${k}">${l}</button>`).join('')}</div>
     ${posOn() ? '' : '<div class="fc-alert"><span>📱</span><div><b>Factory sirf app mein</b> — yahan laagat + nafa ka hisaab hai; rate POS mein nahi lagta (⚙️ mein POS ON karein to "lagao" wapas).</div></div>'}
+    ${rScope === 'tayyar' && isOwner() ? '<button type="button" class="fc-mcnew" data-mc-open=""><span>🧴</span><span><b>➕ Packing item — wazan se laagat</b><small>formula ke baghair: kitne gram × fi kg rate + harcha (bottle, dhakkan, mazdoori)</small></span></button>' : ''}
     <p class="lk-note">Dabbe mein rate <b>khud likh sakte hain</b> — % wala sirf raye hai. Peela = aap ka likha.</p>
     ${todo.length > 1 && can ? `<button type="button" class="fc-go" data-fc-rate="*">✓ Sab ${num(todo.length)} naye rate POS mein lagao</button>` : ''}
-    <div id="fcRates">${rows.map(x => `<div class="fc-rc${rateDiff(x) ? '' : ' same'}"><div class="fc-rh"><b>${esc(x.it.name)}${x.pk ? ' <i class="fc-kind">📦 packing</i>' : ''}</b><small>${x.raw ? 'khareed' : 'laagat'} ${rs(x.c.cpp)}${x.it.pack > 1 ? ' · ' + rs(x.c.cpp * x.it.pack) + ' / ctn' : ''}${up?.some(u => u.it.id === x.it.id) ? ' · ⚠️ barhi' : ''}</small></div>
+    <div id="fcRates">${rows.map(x => `<div class="fc-rc${rateDiff(x) ? '' : ' same'}"><div class="fc-rh"><b>${esc(x.it.name)}${x.pk ? ' <i class="fc-kind">📦 packing</i>' : ''}${x.mc ? ' <i class="fc-kind">🧴 wazan se</i>' : ''}</b><small>${x.raw ? 'khareed' : 'laagat'} ${rs(x.c.cpp)}${x.mc ? ' · ' + gTxt(x.mc.g) + ' × ' + rs(x.mc.kg) + '/kg = ' + rs(mcOil(x.mc)) + (mcMat(x.mc) + mcX(x.mc) ? ' + harcha ' + rs(mcMat(x.mc) + mcX(x.mc)) : '') : ''}${x.it.pack > 1 ? ' · ' + rs(x.c.cpp * x.it.pack) + ' / ctn' : ''}${up?.some(u => u.it.id === x.it.id) ? ' · ⚠️ barhi' : ''}</small></div>
       <div class="fc-rg">${cell('wctn', 'W CTN', x)}${cell('wpcs', 'W PCS', x)}${cell('rctn', 'R CTN', x)}${cell('rpcs', 'R PCS', x)}</div>
-      <div class="fc-rbtn">${rEd[x.it.id] ? `<button type="button" class="fc-link" data-fr-reset="${esc(x.it.id)}">↺ % wala rate</button>` : ''}${rateDiff(x) ? (can ? `<button type="button" class="fc-go sm" data-fc-rate="${esc(x.it.id)}">Ye rate POS mein lagao</button>` : posOn() ? '<small class="lk-note">Rate sirf malik laga sakta hai</small>' : '<small class="lk-note">📱 POS band</small>') : '<small class="fc-ok">✓ POS mein yahi rate hai</small>'}</div></div>`).join('') || `<p class="lk-note">${rScope === 'raw' ? 'Raw maal nahi.' : 'Pehle formula / packing item banayein.'}</p>`}</div>
+      <div class="fc-rbtn">${x.mc && isOwner() ? `<button type="button" class="fc-link" data-mc-open="${esc(x.it.id)}">✏️ laagat</button>` : ''}${rEd[x.it.id] ? `<button type="button" class="fc-link" data-fr-reset="${esc(x.it.id)}">↺ % wala rate</button>` : ''}${rateDiff(x) ? (can ? `<button type="button" class="fc-go sm" data-fc-rate="${esc(x.it.id)}">Ye rate POS mein lagao</button>` : posOn() ? '<small class="lk-note">Rate sirf malik laga sakta hai</small>' : '<small class="lk-note">📱 POS band</small>') : '<small class="fc-ok">✓ POS mein yahi rate hai</small>'}</div></div>`).join('') || `<p class="lk-note">${rScope === 'raw' ? 'Raw maal nahi.' : 'Pehle formula / packing item banayein.'}</p>`}</div>
     ${posOn() ? '<p class="lk-note">Rate tab tak nahi badalta jab tak aap "lagao" na dabayein. PC 1 min mein POS mein lagata hai.</p>' : ''}</section>`;
 }
 async function applyRate(id) {
@@ -1182,6 +1243,14 @@ function dlg(title, html) { const d = $('dialog'); if (!d) return; d.classList.r
 // ---------- clicks ----------
 document.addEventListener('click', e => {
   const o = e.target.closest?.('[data-fac-open]'); if (o) { e.preventDefault(); openBatch(); return; }
+  const mcq = e.target.closest?.('[data-mc-open],[data-mc-it],[data-mc-g],[data-mc-xadd],[data-mc-xdel],[data-mc-save],[data-mc-del]');   // v2.103.8: 🧴
+  if (mcq && mcq.closest('.fc-root')) { const d = mcq.dataset;
+    if (d.mcOpen != null) { mcOpen(d.mcOpen); return; } if (!mc) return;
+    if (d.mcIt != null) { if (d.mcIt) { if (cfg?.mcost?.[d.mcIt]) { mcOpen(d.mcIt); return; } mcPick(d.mcIt); } else { mc.id = ''; mc.g = ''; mc.kg = ''; mc.kgAuto = false; } mcPaint(); return; }
+    if (d.mcG) { mc.g = Number(d.mcG); mcPaint(); return; }
+    if (d.mcXadd != null) { mc.x.push({ n: d.mcXadd, rs: '' }); mcPaint(); const k = mc.x.length - 1; setTimeout(() => document.querySelector(`#fcMc [data-mc-${d.mcXadd ? 'xr' : 'xn'}="${k}"]`)?.focus(), 30); return; }
+    if (d.mcXdel != null) { mc.x.splice(Number(d.mcXdel), 1); mcPaint(); return; }
+    if (d.mcSave != null) { mcSave(false); return; } if (d.mcDel != null) { mcSave(true); return; } }
   const kh = e.target.closest?.('[data-fe-khula]'); if (kh && fe && kh.closest('#fcForm')) { khulaAdd(); return; }   // v2.103.7
   const fx = e.target.closest?.('[data-fe-pf],[data-fe-more],[data-fe-addsel],[data-fe-pos],[data-fe-mlset],[data-fe-auto],[data-fe-mdel],[data-fe-madd],[data-fe-addf],[data-fe-fadd],[data-fe-fdel],[data-fe-mraw]');   // v2.101.7: 🧪 raw maal list · v2.102.0 🧴
   if (fx && fe && fx.closest('#fcForm')) { const d = fx.dataset;
@@ -1307,6 +1376,12 @@ document.addEventListener('input', e => {
   if (d.flN != null && fl) { fl[d.flN] = t.value; return; }
   if (d.fcRq != null) { rq = t.value || ''; clearTimeout(qT); qT = setTimeout(() => paint(['fcRqList']), 180); return; }
   if (d.fcPdq != null && pd) { pd.q = t.value || ''; clearTimeout(qT); qT = setTimeout(() => pkDefPaint(['fcPdHits']), 180); return; }
+  if (mc && d.mcQ != null) { mc.q = t.value || ''; clearTimeout(qT); qT = setTimeout(() => mcPaint(['fcMcHits']), 180); return; }   // v2.103.8
+  if (mc && d.mcKg != null) { mc.kg = t.value; mc.kgAuto = false; mcSum(); return; }
+  if (mc && d.mcGin != null) { mc.g = Number(t.value) > 0 ? Number(t.value) : ''; mcSum(); return; }
+  if (mc && d.mcXn != null) { const x = mc.x[Number(d.mcXn)]; if (x) x.n = t.value; return; }
+  if (mc && d.mcXr != null) { const x = mc.x[Number(d.mcXr)]; if (x) x.rs = t.value; mcSum(); return; }
+  if (mc && d.mcMq != null) { mc.mats[d.mcMq] = Number(t.value) > 0 ? Number(t.value) : 0; mcSum(); return; }
   if (d.faQ != null && fa) { fa.q = t.value || ''; clearTimeout(qT); qT = setTimeout(() => addPaint(true), 180); return; }   // v2.101.6
   if (d.fcPq != null && pk) { pk.q = t.value || ''; pk.lim = 60; clearTimeout(qT); qT = setTimeout(() => pickPaint(['fcPickList']), 180); return; }
   if (d.fcFq2 != null && fe) { fe.q = t.value || ''; fe.lim = 300; clearTimeout(qT); qT = setTimeout(() => formPaint(['feHits']), 180); return; }
@@ -1332,6 +1407,10 @@ document.addEventListener('change', e => {
   if (d.fbPk != null && fb) { fb.pk[d.fbPk] = v > 0 ? Math.floor(v) : 0; batchPaint(); return; }
   if (d.fbSelf != null && fb) { fb.self = t.value === '' ? '' : Math.max(0, Math.floor(v) || 0); batchPaint(); return; }   // v2.102.0
   if (d.fr != null) { const id = d.frId; rEd[id] = { ...(rEd[id] || {}), [d.fr]: v >= 0 ? v : 0 }; paint(); return; }
+  if (mc) {   // v2.103.8
+    if (d.mcMat != null) { if (t.checked) mc.mats[d.mcMat] = mc.mats[d.mcMat] || 1; else delete mc.mats[d.mcMat]; mcPaint(); return; }
+    if (d.mcGin != null) { mcPaint(); return; }
+  }
   if (pd) {
     if (d.pdG != null) { pd.g = v > 0 ? v : ''; pkDefPaint(); return; }
     if (d.pdMat != null) { if (t.checked) pd.mats[d.pdMat] = pd.mats[d.pdMat] || 1; else delete pd.mats[d.pdMat]; pkDefPaint(); return; }
@@ -1356,4 +1435,4 @@ document.addEventListener('change', e => {
   }
   if ((d.fcWm != null || d.fcRm != null) && cloud?.setFactoryCfg) { if (!(v >= 0)) return; cfg = { ...(cfg || {}), ...(d.fcWm != null ? { wm: v } : { rm: v }) }; cloud.setFactoryCfg(d.fcWm != null ? { wm: v } : { rm: v }).then(() => notice('✓ Nafa ' + v + '% save')).catch(er => notice('Save nahi hua: ' + (er?.message || er))); }
 });
-export const _fcTest = { items: () => items, fStocks: () => fStocks(), pcsG, volU, lineVol, fixMl, looksPack, get fe() { return fe; }, forms, selfMats, mlFromName, volOf, openAdd, addListHTML, get fa() { return fa; }, packCalc, packDefs, packUnit, packCpp, bulkCpp, batchCalc: () => batchCalc(), fb: () => fb, rEd, rateRows, isMat, fRate, rateOf, setRate, posRate: v => { posRate = v; }, gOf, kgOf, pcsOfKg, qk, costOf, suggest, labelSpecs, qt, set: (c, b, it) => { cfg = c; batches = b || []; items = it || []; byId = new Map(items.map(x => [x.id, x])); itemsOk = true; }, batchNo, pdfHTML, st, matchItem, photoFormula, pf: () => pf, pendItems: () => pendItems(items.filter(x => !x.pending)) };
+export const _fcTest = { mcCpp, mcOpen, get mc() { return mc; }, rateRows, items: () => items, fStocks: () => fStocks(), pcsG, volU, lineVol, fixMl, looksPack, get fe() { return fe; }, forms, selfMats, mlFromName, volOf, openAdd, addListHTML, get fa() { return fa; }, packCalc, packDefs, packUnit, packCpp, bulkCpp, batchCalc: () => batchCalc(), fb: () => fb, rEd, rateRows, isMat, fRate, rateOf, setRate, posRate: v => { posRate = v; }, gOf, kgOf, pcsOfKg, qk, costOf, suggest, labelSpecs, qt, set: (c, b, it) => { cfg = c; batches = b || []; items = it || []; byId = new Map(items.map(x => [x.id, x])); itemsOk = true; }, batchNo, pdfHTML, st, matchItem, photoFormula, pf: () => pf, pendItems: () => pendItems(items.filter(x => !x.pending)) };

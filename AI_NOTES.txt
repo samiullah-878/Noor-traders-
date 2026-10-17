@@ -5131,3 +5131,14 @@ jab tak band na karein har ghante reminder".
 - PC auto-backup.js v1.8: nagDue nag na likha = 60, 0 = band, 3 din hadd khatam; har phone ki list 4+ = EK khulasa ("🔁 N kaam abhi baqi",
   tag 'nag-sum', link #note=<pehla>), warna har note alag. Manifest 2026-10-17.5.
 - Test: fct/t.mjs (khula + loc stock, ALL OK) · scratchpad nag/t.cjs (8 ✓). AI: koi nahi.
+
+=== v2.103.8 (2026-10-17) — 🧴 WAZAN SE LAAGAT (formula ke baghair) ===
+Malik: "kala tail ka formula ki bajaye — 200 g par cost kitni aayegi wo likhein aur Rates mein aa jaye" · "item uthaya, app pooche kitna
+wazan pack karwana (200 g), fi kg rate × 200 g, phir harcha add, complete". (1 pcs kala tail = 200 g — malik ne pakka kiya; 875 kg ginti = 4,375 pcs sahi.)
+- factory.js: Rates → 🧪 Tayyar tab button "🧴 ➕ Packing item — wazan se laagat" (malik). Ek khirki (#fcMc): ① item list pehle se + search
+  (formula / packing item / packing maal / loc nahi) ② wazan chips 100 / 200 / 250 / 500 g / 1 kg + apna (item ka 1 pcs = g khud) ③ fi kg rate
+  (POS khareed fi pcs × 1000 / item ka g se khud, badal sakte) + "200 g = Rs 50" ④ harcha: packing maal ☑ (rate khud) + chips Bottle / Dhakkan /
+  Label / Mazdoori / Aur (naam + Rs) ⑤ jama + W/R raye. Save = cfg.mcost {id: {g, kg, mats, x, at}} (+ conv id = g agar badla). Koi rules badlav nahi.
+- rateRows('tayyar') mein mcost items (formula / packing na ho) — card "🧴 wazan se", "200 g × Rs 250/kg = Rs 50 + harcha", ✏️ laagat;
+  raw list se bahar. Chips class is-in (theme "on" se takrao nahi) + html body :is(#summary,#dialogBody) !important pattern.
+- Test fct/t.mjs ALL OK (mc flow). AI: koi nahi.
