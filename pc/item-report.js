@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  item-report.js  v1.3 (2026-10-17: ⚡ runToday — sirf AAJ ka data har 10 min posStats/irep-today (irep-today.js) · collect() alag) · v1.2 (2026-10-14: 💰 COMMISSION items (blueAccess/commission) — har din har Supply Man kitne packet -> posStats/irep-comm) · v1.1 (2026-10-14: Firestore list-ke-andar-list nahi leta — items ab JSON string 'j' mein, hissa ~600 KB tak) · v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
+//  item-report.js  v1.4 (2026-10-17: 💰 asal nafa — har sale bill TotalSale − COGS -> posStats/nafa-<mahina>-<k>, aaj ka irep-today.nb) · v1.3 (2026-10-17: ⚡ runToday — sirf AAJ ka data har 10 min posStats/irep-today (irep-today.js) · collect() alag) · v1.2 (2026-10-14: 💰 COMMISSION items (blueAccess/commission) — har din har Supply Man kitne packet -> posStats/irep-comm) · v1.1 (2026-10-14: Firestore list-ke-andar-list nahi leta — items ab JSON string 'j' mein, hissa ~600 KB tak) · v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
 //  Malik: "poore month ka actual data — 1–10, 10–20, 20–30, poora mahina, week wise; har item kaun si bik rahi, kin dino / hafton
 //         mein zyada, un par nafa kitna — chart, click par aage data".
 //  sales-stats.js (har ghante) ke aakhir mein chalta hai: run({ pool, sql, db }). SQL mein KUCH NAHI likhta — sirf SELECT.
@@ -83,22 +83,53 @@ async function collect({ pool, sql, db, log, from, to }) {
       comm = { men, ids: cids, rows };
     }
   } catch (e) { log('💰 commission data nahi bana: ' + e.message); }
-  return { all, comm, days, wsNames };
+  return { all, comm, days, wsNames, skipIds, wsIds, info, inList };
 }
+// v1.4: 💰 ASAL NAFA — sale bills se (malik: "sale bills ke data ke hisaab se profit"). Har bill: Sale.TotalSale − Sale.COGS (POS ne bill ke
+//   waqt ki laagat khud likhi). COGS 0 = lines × item ka abhi ka fi pcs khareed (andaza, est 1). Wapsi (total < 0) = laagat bhi minus.
+//   Mahine ke hisab: { p: [party naam], b: [[din (1-31), 'HH:MM', billNo, pIdx, total, cost, ws, est]] } -> posStats/nafa-<YYYY-MM>-<k>
+async function nafaCollect({ pool, sql, from, to, skipIds, wsIds, info, inList }) {
+  const bills = (await pool.request().input('a', sql.DateTime, from).input('b', sql.DateTime, to).query(`
+    SELECT s.SaleID, s.SaleNo, CONVERT(char(16), s.SaleDate, 120) AS W, CAST(s.TotalSale AS FLOAT) AS T, CAST(ISNULL(s.COGS, 0) AS FLOAT) AS C, s.PartyID, pt.PartyName
+    FROM dbo.Sale s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
+    WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(s.PartyID, -2) NOT IN (${inList(skipIds)})`)).recordset;
+  const est = new Map();   // COGS nahi = lines se andaza
+  if (bills.some(b => !(Math.abs(Number(b.C)) > 0))) {
+    const L = (await pool.request().input('a', sql.DateTime, from).input('b', sql.DateTime, to).query(`
+      SELECT d.SaleID, d.ItemID, SUM(d.Qty) AS q FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID
+      WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(s.COGS, 0) = 0 AND ISNULL(s.PartyID, -2) NOT IN (${inList(skipIds)})
+      GROUP BY d.SaleID, d.ItemID`)).recordset;
+    for (const r of L) { const k = Number(r.SaleID); est.set(k, (est.get(k) || 0) + (Number(r.q) || 0) * (info.get(Number(r.ItemID))?.c || 0)); }
+  }
+  const ws = new Set(wsIds.map(Number)), M = new Map();
+  for (const b of bills) {
+    const w = String(b.W || ''), mon = w.slice(0, 7); if (!/^\d{4}-\d{2}$/.test(mon)) continue;
+    if (!M.has(mon)) M.set(mon, { p: [], pi: new Map(), b: [] }); const o = M.get(mon);
+    const pn = String(b.PartyName || '').trim().slice(0, 40) || 'Cash'; if (!o.pi.has(pn)) { o.pi.set(pn, o.p.length); o.p.push(pn); }
+    const t = Number(b.T) || 0, c0 = Math.abs(Number(b.C) || 0), e = !(c0 > 0), cost = e ? (est.get(Number(b.SaleID)) || 0) : (t < 0 ? -c0 : c0);
+    o.b.push([Number(w.slice(8, 10)), w.slice(11, 16), String(b.SaleNo || '').trim().slice(0, 16), o.pi.get(pn), Math.round(t), Math.round(cost), ws.has(Number(b.PartyID)) ? 1 : 0, e ? 1 : 0]);
+  }
+  for (const o of M.values()) { o.b.sort((x, y) => x[0] - y[0] || String(x[1]).localeCompare(String(y[1]))); delete o.pi; }
+  return M;
+}
+const nafaChunks = o => { const out = []; let cur = [], size = 0; for (const r of o.b) { const n = JSON.stringify(r).length + 1; if (cur.length && size + n > 700000) { out.push(cur); cur = []; size = 0; } cur.push(r); size += n; } out.push(cur); return out.map(b => JSON.stringify({ p: o.p, b })); };
 async function run({ pool, sql, db, log = console.log, now = new Date() }) {
   const t0 = Date.now();
   const col = db.collection('businesses').doc('noor-traders').collection('posStats');
   const from = new Date(now.getFullYear(), now.getMonth() - 2, 1), to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  const { all, comm, days, wsNames } = await collect({ pool, sql, db, log, from, to });
+  const C = await collect({ pool, sql, db, log, from, to }), { all, comm, days, wsNames } = C;
+  let NF = null; try { NF = await nafaCollect({ pool, sql, from, to, ...C }); } catch (e) { log('💰 bills ka nafa nahi bana: ' + e.message); }
   const chunks = []; let cur = [], size = 2;
   for (const e of all) { const n = Buffer.byteLength(JSON.stringify(e)) + 1; if (cur.length && size + n > MAXB) { chunks.push(cur); cur = []; size = 2; } cur.push(e); size += n; }
   if (cur.length) chunks.push(cur);
   const b = db.batch();
   if (comm) b.set(col.doc('irep-comm'), { j: JSON.stringify(comm), at: Date.now() });
   chunks.forEach((items, k) => b.set(col.doc('irep-' + k), { j: JSON.stringify(items), n: items.length, at: Date.now() }));
-  b.set(col.doc('irep-meta'), { at: Date.now(), from: days[0], to: days[days.length - 1], days, n: all.length, chunks: chunks.length, ws: wsNames.slice(0, 10), ver: '1.2', comm: !!comm, bytes: chunks.reduce((s, c) => s + Buffer.byteLength(JSON.stringify(c)), 0) });
+  const nafa = {};   // v1.4: { 'YYYY-MM': hisse }
+  if (NF) { const nb = db.batch(); for (const [mon, o] of NF) { const J = nafaChunks(o); nafa[mon] = J.length; J.forEach((j, k) => nb.set(col.doc(`nafa-${mon}-${k}`), { j, at: Date.now() })); } await nb.commit(); }
+  b.set(col.doc('irep-meta'), { at: Date.now(), from: days[0], to: days[days.length - 1], days, n: all.length, chunks: chunks.length, ws: wsNames.slice(0, 10), ver: '1.4', comm: !!comm, ...(NF ? { nafa } : {}), bytes: chunks.reduce((s, c) => s + Buffer.byteLength(JSON.stringify(c)), 0) });
   await b.commit();
-  try { const old = await col.get(); for (const d of old.docs) { const m = /^irep-(\d+)$/.exec(d.id); if (m && Number(m[1]) >= chunks.length) await d.ref.delete(); } } catch {}
+  try { const old = await col.get(); for (const d of old.docs) { const m = /^irep-(\d+)$/.exec(d.id), n = /^nafa-(\d{4}-\d{2})-(\d+)$/.exec(d.id); if ((m && Number(m[1]) >= chunks.length) || (n && NF && !(Number(n[2]) < (nafa[n[1]] || 0)))) await d.ref.delete(); } } catch {}
   log(new Date().toLocaleString('en-PK') + ' — 📊 item report: ' + all.length + ' items, ' + days.length + ' din, ' + chunks.length + ' hisse, ' + Math.round((Date.now() - t0) / 1000) + 's');
   return { n: all.length, days: days.length };
 }
@@ -108,15 +139,16 @@ async function run({ pool, sql, db, log = console.log, now = new Date() }) {
 async function runToday({ pool, sql, db, log = console.log, now = new Date() }) {
   const t0 = Date.now(), ref = db.collection('businesses').doc('noor-traders').collection('posStats').doc('irep-today');
   const from = new Date(now.getFullYear(), now.getMonth(), now.getDate()), to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
-  const { all, comm, days } = await collect({ pool, sql, db, log, from, to });
+  const C = await collect({ pool, sql, db, log, from, to }), { all, comm, days } = C;
+  let nb = ''; try { const NF = await nafaCollect({ pool, sql, from, to, ...C }), o = [...NF.values()][0]; if (o) nb = JSON.stringify(o); } catch (e) { log('💰 aaj ka nafa nahi bana: ' + e.message); }   // v1.4
   const items = all.map(e => { const x = e.d[0] || [0, 0, 0]; const o = { i: e.i, n: e.n, c: e.c, pk: e.pk, q: x[1], rs: x[2] }; if (x[3] || x[4]) { o.wq = x[3]; o.wrs = x[4]; } return o; });
   let j = JSON.stringify(items); while (Buffer.byteLength(j) > 850000 && items.length > 50) { items.length = Math.floor(items.length * 0.8); j = JSON.stringify(items); }
   const cj = comm ? JSON.stringify({ men: comm.men, rows: comm.rows.map(r => [r[1], r[2], r[3]]) }) : '';
-  const h = require('crypto').createHash('sha1').update(days[0] + j + cj).digest('hex');
+  const h = require('crypto').createHash('sha1').update(days[0] + j + cj + nb).digest('hex');
   let old = null; try { const o = await ref.get(); old = o.exists ? o.data() : null; } catch {}
   if (old && old.h === h && Date.now() - (Number(old.at) || 0) < 30 * 60000) { log(new Date().toLocaleString('en-PK') + ' — ⚡ aaj: wahi (' + items.length + ' items)'); return { n: items.length, same: true }; }
-  await ref.set({ at: Date.now(), day: days[0], n: items.length, h, j, cj });
+  await ref.set({ at: Date.now(), day: days[0], n: items.length, h, j, cj, nb });
   log(new Date().toLocaleString('en-PK') + ' — ⚡ aaj ' + days[0] + ': ' + items.length + ' items, Rs ' + Math.round(items.reduce((s, x) => s + x.rs, 0)) + ', ' + Math.round((Date.now() - t0) / 1000) + 's');
   return { n: items.length };
 }
-module.exports = { run, runToday, collect, perPiece, pieceCost };
+module.exports = { run, runToday, collect, nafaCollect, perPiece, pieceCost };

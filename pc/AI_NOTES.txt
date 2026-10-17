@@ -3004,3 +3004,9 @@ Malik: "din select kiya to jab tak band na karein har ghante reminder".
 - nagDue: nag na likha = 60 (khud), nag 0 = 🔕 band, 15/30 wese; 3 din ki hadd khatam (jab tak ✓ na ho), subah 7 – raat 11.
 - nagNotify: har token ki apni list; 4+ = ek khulasa (title "🔁 N kaam abhi baqi", 6 tak naam, tag 'nag-sum'); warna har note alag (tag nag-<id>).
 - firestore factoryBatches 'loc' (factory-post pehle hi 'loc:' ids chhorta hai — koi badlav nahi).
+
+=== item-report.js v1.4 (2026-10-17.6) — 💰 ASAL NAFA sale bills se (app hissa abhi baqi — malik ne pehle "📌 upar patti" kaam kaha) ===
+- nafaCollect(): har bill Sale.TotalSale − Sale.COGS (bill ke waqt ki laagat); COGS 0 = lines × item ka abhi ka fi pcs khareed (est 1);
+  wapsi (total < 0) = laagat minus. Cancel / Noor Traders / factory / stock farq bahar. Mahina-war posStats/nafa-<YYYY-MM>-<k>
+  {j: {p: [party], b: [[din, 'HH:MM', billNo, pIdx, total, cost, ws, est]]}} (~700 KB hisse) + irep-meta.nafa {mahina: hisse}, ver 1.4.
+- runToday: irep-today.nb = aaj ke bills (wahi shakal). Test scratchpad itd/t.cjs (14 ✓).

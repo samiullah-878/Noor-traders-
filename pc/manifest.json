@@ -1,6 +1,6 @@
 {
-  "version": "2026-10-17.5",
-  "note": "auto-backup v1.8: din wala reminder khud har 1 ghanta, 4+ = ek khulasa",
+  "version": "2026-10-17.6",
+  "note": "item-report v1.4: asal nafa — sale bills (TotalSale - COGS) -> posStats/nafa-*",
   "files": {
     "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
     "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
@@ -31,7 +31,7 @@
     "transfer-dekho-auto.bat": "a7ea0955221df6e712737467a9d39e110c867f1f2526f8572fc76955625156ee",
     "transfer-dekho.js": "d30502e0190fa92f4ecd65000446718d84a3c52ed7daa90dc46279c28052a461",
     "transfer-sync.js": "a588cf6eef63c08e4279ea9e4a1aaf3e02d3e396eaa072a98bedcdc79e7d8458",
-    "item-report.js": "930a02f209c1e3eb6ebc110a6ec8815881793ecba34fd5183de2f8acd71f4e4b",
+    "item-report.js": "0a8124c8787cc2e92292aeac47c353a662e3841c0bcfd1cd642997085ec50faf",
     "sales-stats.js": "3b69da9e444da7b5786952aefab1ec7ca74963d996e4ad64b94a151e51e0519b",
     "sales-stats-auto.bat": "a5f4f2546741d00fecd83d6db87e82af075cca1ed8e189d26e7075388c6a1212",
     "BARCODE-DOCTOR.bat": "b127ae24f3219d77288bb6a6ad17758d85376fe2ef1f50aeb6293a2ebfe7ccb4",
