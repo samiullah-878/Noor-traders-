@@ -5054,3 +5054,12 @@ Malik: "nahi to hum direct POS ko order de kar printer se parchi nikalwa sakte h
 - PC factory-post v1.3 (tafseel pc/AI_NOTES): 'app' batch -> parchi (factory ka app stock "baqi").
 - factory.js: ⚙️ parchi setting (2 / 1 / Band) ab dono mode mein ("Batch ki parchi (sirf printer — POS nahi)"); batch form note "🖨 N parchi";
   batch dlg: "🖨 Parchi nikal rahi…" (app, 12 ghante) / nikli / nahi nikli / band. Test fct/t.mjs 166 ✓. Rules wahi 2.59.
+
+=== v2.103.2 (2026-10-17) — 📅 KHATA SEARCH MEIN SE – TAK + 🏭 FACTORY WAPAS POS (default) ===
+Malik: (1) "search mein kahan se kahan tak ka option — dates ke hisaab se filter kar ke search" (2) "factory wala kaam POS mein le aao wapis".
+- (1) app.js: ksR {k: sab|aaj|kal|7|mah|apni, from, to} (yaad nahi — app kholo to Sab). ksRangeHTML (sort-chips class, "📅 Tareekh" chips +
+  Se / Tak date inputs data-ksr-from / -to). render(): range ho to ps = sirf jin ki entry muddat mein (likha na ho = zyada entries upar),
+  topChips / zero-chip nahi; likha + range = ksEntriesHTML (account naam / note / amtHit raqam; 150 tak; ginti + jama; tap = data-ks-entry
+  khata khol kar entry chamke) + khSearchHTML (filtered accounts). CAP kh.sdate (Settings → Mulazim). Test scratchpad ksd/t2.js 9 ✓.
+- (2) factory.js posOn = cfg.posOn !== false (default POS; ⚙️ "📱 Sirf app" chunein to app). POS mode mein 'app' batch par "📤 POS mein bhejo"
+  (app2pos: wahi data naya batch hold:false labels [] + purana cancelNow — dohra stock nahi, label dobara nahi). Test fct/t.mjs 169 ✓.

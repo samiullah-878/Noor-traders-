@@ -16,8 +16,8 @@
 //   ginti / 📥 maal aaya / 📤 maal diya = factoryMoves, naya item = cfg.local ('loc:<id>' — POS mein nahi), rate sirf factory (POS "lagao" band).
 //   Factory ka STOCK = app ka apna: har item ke waqia (ginti = itna hai · aaya + · diya − · batch: tayyar + / raw −) waqt ke hisaab se.
 //   cfg.posOn true = purana tareeqa (POS Adjustment, POS ginti, POS item). ⚙️ mein on / off (sirf malik).
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.103.1';
-import { smartSearch, fold } from './smart-search.js?v=2.103.1';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.103.2';
+import { smartSearch, fold } from './smart-search.js?v=2.103.2';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -61,7 +61,7 @@ const rateOf = (id, it) => fRate(id) || Number(it?.prate) || 0;
 const rUnit = (id, it) => gOf(id) ? ['kg', 1000 / gOf(id)] : (Number(it?.pack) > 1 ? [String(it?.cn || 'ctn').toLowerCase(), Number(it.pack)] : [un(it), 1]);   // [naam, pcs fi unit]
 const r4 = n => Math.round((Number(n) || 0) * 10000) / 10000;
 let posRate = false;
-const posOn = () => cfg?.posOn === true;   // v2.103.0: false (default) = factory sirf app
+const posOn = () => cfg?.posOn !== false;   // v2.103.2: malik — "factory wala kaam POS mein wapis" — default POS (sirf app = ⚙️ mein chunein) · v2.103.0 default app tha
 let moves = [], mStop = null, appB = [], aStop = null, fsCache = null, mv = null;
 function watchApp() {
   if (!mStop && cloud?.listenFactoryMoves) mStop = cloud.listenFactoryMoves((l, e) => { if (l) { moves = l; fsCache = null; loadItemsQuiet(); repaint(); if (mv && $('fcMv')) mvPaint(); } else if (e) notice('Factory stock nahi parha: ' + (e.code || e.message || e)); });
@@ -1061,6 +1061,16 @@ async function sendLabels(L, no) {
       try { await cloud.requestLabel({ itemId: String(x.itemId || ''), code: x.code, name: x.name, qty: Number(x.qty) || 1, rate: Number(x.rate) || 0, copies: c, batch: no }); n += c; } catch (e) { notice('🏷 Label nahi gaya: ' + (e?.message || e)); return; } } }
   if (n) notice(`🏷 ${num(n)} label printer ko gaye (${no})`);
 }
+// v2.103.2: "sirf app" wala batch -> POS (naya 'new' batch wahi data, label nahi; app wala cancel — dohra stock nahi)
+async function app2pos(id) {
+  const b = batches.find(x => x.id === id) || appB.find(x => x.id === id); if (!b || b.status !== 'app') return;
+  if (!confirm(`${b.no} POS mein bhejein? PC 1 min mein POS stock badlega (tayyar maal +, raw maal −). Label dobara nahi chhapenge.`)) return;
+  try { const r = cloud.addFactoryBatch({ no: b.no, itemId: b.itemId, name: b.name, n: Math.max(1, Math.min(10, Math.floor(Number(b.n) || 1))), per: Number(b.per) || 0, out: Number(b.out) || 0, outs: b.outs || [], kind: b.kind === 'pack' ? 'pack' : 'make',
+      lines: b.lines || [], cost: Number(b.cost) || 0, oh: Number(b.oh) || 0, labels: [], byName: b.byName || whoOf() || '', day: b.day || today(), hold: false });
+    await r?.done; await cloud.factoryBatchAct(id, 'cancelNow'); appB = appB.filter(x => x.id !== id); fsCache = null;
+    notice(`📤 ${b.no} POS ko bheja — PC 1 min mein stock badlega`); $('dialog')?.close(); repaint(); }
+  catch (e) { notice('Nahi hua: ' + (e?.message || e)); }
+}
 // ---------- batch tafseel ----------
 function batchDlg(id) {
   const b = batches.find(x => x.id === id); if (!b) return;
@@ -1081,6 +1091,7 @@ function batchDlg(id) {
     </section>
     <section class="ir-sec fc-sum"><div class="fc-sumrow"><span>Laagat</span><b>${rs(b.cost)}</b></div>${(b.outs || []).length ? (b.outs || []).map(o => `<div class="fc-sumrow"><span>${esc(o.name)} fi pcs</span><b>${rs(o.c)}</b></div>`).join('') : `<div class="fc-sumrow"><span>Fi ${esc(un(it))}</span><b>${rs(b.out ? b.cost / b.out : 0)}</b></div>`}${b.oh ? `<div class="fc-sumrow"><span>Mazdoori / gas</span><b>${rs(b.oh)}</b></div>` : ''}</section>
     <div class="fc-btns">${own && b.status === 'error' ? `<button type="button" class="fc-go" data-fc-act="retry" data-id="${esc(b.id)}">↻ Dobara bhejo</button>` : ''}
+      ${b.status === 'app' && posOn() && (mine || canSend) ? `<button type="button" class="fc-go" data-fc-app2pos="${esc(b.id)}">📤 POS mein bhejo</button><small class="lk-note">Ye batch "sirf app" mein bana tha — POS mein bhejne se POS stock badlega (label dobara nahi chhapenge).</small>` : ''}
       ${b.status === 'hold' && canSend && posOn() ? `<button type="button" class="fc-go" data-fc-act="send" data-id="${esc(b.id)}">📤 POS mein bhejo</button>` : ''}${b.status === 'hold' && !posOn() ? '<small class="lk-note">📱 Ye purana ruka batch hai (factory stock mein nahi) — ✕ Cancel kar ke dobara banayein, ab sirf app mein darj hoga.</small>' : ''}
       ${fresh && mine ? `<button type="button" class="fc-no" data-fc-edit="${esc(b.id)}">✏️ Edit</button><button type="button" class="fc-no" data-fc-act="cancelNow" data-id="${esc(b.id)}">✕ Cancel (foran)</button>` : ''}${b.status === 'app' && fresh && !mine ? '<small class="lk-note">Edit / cancel — malik ya jis ne banaya</small>' : ''}
       ${own && !fresh && ['posted', 'error'].includes(b.status) ? `<button type="button" class="fc-no" data-fc-edit="${esc(b.id)}">✏️ Edit (wapas + naya)</button><button type="button" class="fc-no" data-fc-act="cancel" data-id="${esc(b.id)}">↩ Ghalti — wapas lo</button>` : ''}
@@ -1136,7 +1147,7 @@ document.addEventListener('click', e => {
     if (d.fcPoson != null) { setPosOn(d.fcPoson === '1'); return; } }
   const pq = e.target.closest?.('[data-fc-pick],[data-fp-f],[data-fp-more]');
   if (pq) { const d = pq.dataset; if (d.fcPick != null) { openPicker(); return; } if (!pk) return; if (d.fpF) { pk.f = d.fpF; pk.lim = 60; } else pk.lim += 100; pickPaint(); return; }
-  const t = e.target.closest?.('[data-fc-per],[data-fc-tab],[data-fc-set],[data-fc-batch],[data-fc-b],[data-fc-f],[data-fc-fnew],[data-fc-photo],[data-fc-rate],[data-fc-pdf],[data-fc-bpdf],[data-fc-act],[data-fc-edit],[data-fc-pur],[data-fc-lbldef],[data-fc-autosend],[data-fc-prn],[data-fc-newitem],[data-fc-ijobs],[data-fc-lbl],[data-fc-item],[data-fr-scope],[data-fr-reset],[data-fc-pkdef],[data-pd-it],[data-pd-src],[data-pd-save],[data-pd-del],[data-fb-send],[data-fb-mode],[data-fc-penddel],[data-fg-f],[data-fg-bills],[data-fg-save],[data-fg-hist],[data-fg-del],[data-fb-it],[data-fb-n],[data-fb-lbl],[data-fb-more],[data-fb-ok],[data-fe-del],[data-fe-mv],[data-fe-add],[data-fe-save],[data-fe-rpos],[data-fe-rm],[data-pf-prod],[data-pf-prodnew],[data-pf-pick],[data-pf-set],[data-pf-del],[data-pf-back],[data-pf-save]');
+  const t = e.target.closest?.('[data-fc-per],[data-fc-tab],[data-fc-set],[data-fc-batch],[data-fc-b],[data-fc-f],[data-fc-fnew],[data-fc-photo],[data-fc-rate],[data-fc-pdf],[data-fc-bpdf],[data-fc-act],[data-fc-app2pos],[data-fc-edit],[data-fc-pur],[data-fc-lbldef],[data-fc-autosend],[data-fc-prn],[data-fc-newitem],[data-fc-ijobs],[data-fc-lbl],[data-fc-item],[data-fr-scope],[data-fr-reset],[data-fc-pkdef],[data-pd-it],[data-pd-src],[data-pd-save],[data-pd-del],[data-fb-send],[data-fb-mode],[data-fc-penddel],[data-fg-f],[data-fg-bills],[data-fg-save],[data-fg-hist],[data-fg-del],[data-fb-it],[data-fb-n],[data-fb-lbl],[data-fb-more],[data-fb-ok],[data-fe-del],[data-fe-mv],[data-fe-add],[data-fe-save],[data-fe-rpos],[data-fe-rm],[data-pf-prod],[data-pf-prodnew],[data-pf-pick],[data-pf-set],[data-pf-del],[data-pf-back],[data-pf-save]');
   if (!t) return; const d = t.dataset;
   if (d.fcPdf != null) { if (!pdfOf) return; const l = batches.filter(inPer); pdfOf(pdfHTML(l, 'Factory production — ' + (PER.find(p => p[0] === st.per)?.[1] || '')), 'Factory production ' + today()); return; }
   if (!t.closest('.fc-root')) return;
@@ -1178,6 +1189,7 @@ document.addEventListener('click', e => {
     if (d.fcAct === 'cancelNow') { appB = appB.filter(x => x.id !== id); fsCache = null; }   // v2.103.0: foran stock wapas
     if (d.fcAct === 'send' && !confirm('POS mein bhejein? PC 1 min mein stock badlega — us ke baad edit sirf "wapas + naya".')) return;
     Promise.resolve(cloud?.factoryBatchAct?.(id, d.fcAct)).then(() => { notice(d.fcAct === 'cancel' ? '↩ Wapas ho raha — PC 1 min' : d.fcAct === 'cancelNow' ? '✕ Batch cancel' : d.fcAct === 'send' ? '📤 POS ko bheja — PC 1 min' : '↻ Dobara bheja'); $('dialog')?.close(); }).catch(er => notice('Nahi hua: ' + (er?.message || er))); return; }
+  if (d.fcApp2pos) { app2pos(d.fcApp2pos); return; }   // v2.103.2
   if (d.fcEdit) { openBatch(d.fcEdit); return; }
   if (d.fbIt && fb) { fb.id = d.fbIt; fb.real = ''; fb.pk = {}; batchPaint(); return; }
   if (d.fbN && fb) { fb.n = Number(d.fbN); fb.real = ''; batchPaint(); return; }
