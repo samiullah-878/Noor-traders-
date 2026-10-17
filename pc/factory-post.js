@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  factory-post.js  v1.2 (2026-10-16: 🎁 packing outs (4 kg / 700 g) + 🖨 2 parchi (factory + munshi) bana / laga / BAQI stock) · v1.1 (2026-10-15 raat: ⏳ 'job:' naye item — pehle item bane, phir batch) · v1.0 (2026-10-15) — 🏭 FACTORY PRODUCTION -> POS STOCK (app "🏭 Factory" / stock screen "Factory batch (OK)")
+//  factory-post.js  v1.3 (2026-10-17: 📱 SIRF APP batch (status 'app') ki parchi — POS / SQL ko haath nahi, sirf printer; baqi = app ka factory stock) · v1.2 (2026-10-16: 🎁 packing outs (4 kg / 700 g) + 🖨 2 parchi (factory + munshi) bana / laga / BAQI stock) · v1.1 (2026-10-15 raat: ⏳ 'job:' naye item — pehle item bane, phir batch) · v1.0 (2026-10-15) — 🏭 FACTORY PRODUCTION -> POS STOCK (app "🏭 Factory" / stock screen "Factory batch (OK)")
 //  Malik: "apni factory ki items — formula ke saath batch, larka OK kare to production auto stock mein aa jaye aur raw maal auto minus;
 //          shop ki sale se stock minus hota rahe; batch ka barcode label OK par khud chhap jaye (sub barcode bhi)".
 //  Firestore factoryBatches/<id> status 'new' -> POS mein EK Adjustment (dukan godam, BranchID 1):
@@ -161,20 +161,21 @@ let cfgCache = null, cfgAt = 0;
 async function facCfg() { if (Date.now() - cfgAt < 60000 && cfgCache) return cfgCache; const d = await biz.collection('factory').doc('cfg').get(); cfgCache = d.exists ? d.data() : {}; cfgAt = Date.now(); return cfgCache; }
 const asc = t => String(t ?? '').normalize('NFKD').replace(/[^\x20-\x7e]/g, '').replace(/\s+/g, ' ').trim();
 const nf = v => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: 3 });
-function slipText(b, after, copy) {
+function slipText(b, after, copy, app) {
   const ESC = '\x1b', GS = '\x1d', big = t => ESC + '!' + '\x30' + t + ESC + '!' + '\x00', bold = t => ESC + 'E\x01' + t + ESC + 'E\x00';
   const line = (l, r) => { l = asc(l); r = asc(r); return (l + ' '.repeat(Math.max(1, W - l.length - r.length))).slice(0, W - r.length) + r; };
   const hr = '-'.repeat(W), A = new Map(after.map(a => [String(a.id), a]));
-  const out = [ESC + '@', ESC + 'a\x01', big('NOOR TRADERS'), bold('FACTORY PRODUCTION'), bold('COPY: ' + copy), ESC + 'a\x00', hr,
-    line('Batch:', b.no || ''), line('POS Adj #:', b.adjNo || ''), line('Tareekh:', new Date().toLocaleString('en-GB', { hour12: true }).replace(',', '')), line('Kis ne:', b.byName || ''),
-    line('Kaam:', b.kind === 'pack' ? 'bulk se packing' : (b.n || 1) + ' batch'), hr, bold('BANA (+)  /  POS mein ab baqi')];
+  const where = app ? 'Factory mein ab' : 'POS mein ab';
+  const out = [ESC + '@', ESC + 'a\x01', big('NOOR TRADERS'), bold(app ? 'FACTORY BATCH - SIRF APP' : 'FACTORY PRODUCTION'), bold('COPY: ' + copy), ESC + 'a\x00', hr,
+    line('Batch:', b.no || ''), ...(app ? [] : [line('POS Adj #:', b.adjNo || '')]), line('Tareekh:', new Date().toLocaleString('en-GB', { hour12: true }).replace(',', '')), line('Kis ne:', b.byName || ''),
+    line('Kaam:', b.kind === 'pack' ? 'bulk se packing' : (b.n || 1) + ' batch'), hr, bold('BANA (+)  /  ' + where + ' baqi')];
   const row = (name, q, id) => { const a = A.get(String(id)); out.push(asc(name).slice(0, W), line('  ' + (q > 0 ? '+' : '-') + nf(Math.abs(q)), a ? 'baqi ' + nf(a.s) + (a.s < 0 ? ' KAM!' : '') : '')); };
   if (r3(b.out) > 0) row(b.itemName || b.name, r3(b.out), b.itemId);
   for (const o of b.outs || []) if (r3(o.q) > 0) row(o.name, r3(o.q), o.id);
-  out.push(hr, bold('LAGA (-)  /  POS mein ab baqi'));
+  out.push(hr, bold('LAGA (-)  /  ' + where + ' baqi'));
   for (const l of b.lines || []) if (r3(l.q) > 0) row(l.name, -r3(l.q), l.id);
   const kam = (b.lines || []).filter(l => (A.get(String(l.id))?.s ?? 0) < 0);
-  if (kam.length) out.push(hr, bold('!! KAM PAD GAYA (stock minus):'), ...kam.map(l => '  ' + asc(l.name).slice(0, W - 2)));
+  if (kam.length) out.push(hr, bold('!! KAM PAD GAYA (' + (app ? 'factory ' : '') + 'stock minus):'), ...kam.map(l => '  ' + asc(l.name).slice(0, W - 2)));
   out.push(hr, line('Laagat:', 'Rs ' + nf(Math.round(b.cost || 0))));
   for (const o of b.outs || []) out.push(line('  ' + asc(o.name).slice(0, 18) + ' fi pcs', 'Rs ' + nf(o.c)));
   out.push(hr, '', copy.startsWith('MUNSHI') ? 'Munshi dastakhat: ____________' : 'Factory dastakhat: ___________', '', '', '', GS + 'V\x42\x00');
@@ -224,6 +225,41 @@ async function slip(ref, b) {
   await ref.update({ prnAt: Date.now(), prnN: ok, prnErr: FieldValue.delete() });
   log(`🖨 ${b.no}: ${ok} parchi ${PRINTER_NAME} par`);
 }
+// ---------- 2026-10-17 v1.3: 📱 SIRF APP batch ki parchi (malik: "POS ko order de kar printer se parchi nikalwa sakte hain") ----------
+//   status 'app' + prnAt nahi + 12 ghante ke andar -> transaction prnState 'printing' (ek dafa) -> factory ka APP stock (factoryMoves:
+//   ginti = itna · aaya + · diya −, aur sab 'app' batch: bana + / laga −; waqt ki tarteeb — app ka fStocks jaisa) -> parchi. SQL / POS nahi.
+async function appStock() {
+  const [mv, bs] = await Promise.all([biz.collection('factoryMoves').get(), col.where('status', '==', 'app').get()]);
+  const E = [];
+  for (const d of mv.docs) { const m = d.data(); if (m && m.itemId) E.push({ at: Number(m.at) || 0, id: String(m.itemId), t: m.kind, q: Number(m.q) || 0 }); }
+  for (const d of bs.docs) { const b = d.data(), at = Number(b.at) || 0;
+    if (Number(b.out) > 0) E.push({ at, id: String(b.itemId), t: 'bana', q: Number(b.out) });
+    for (const o of b.outs || []) if (Number(o.q) > 0) E.push({ at, id: String(o.id), t: 'bana', q: Number(o.q) });
+    for (const l of b.lines || []) if (Number(l.q) > 0) E.push({ at, id: String(l.id), t: 'laga', q: -Number(l.q) }); }
+  E.sort((a, b) => a.at - b.at); const S = new Map();
+  for (const e of E) { const v = S.get(e.id) || 0; S.set(e.id, e.t === 'ginti' ? r3(e.q) : r3(v + (e.t === 'diya' ? -Math.abs(e.q) : e.t === 'aaya' ? Math.abs(e.q) : e.q))); }
+  return S;
+}
+const appBusy = new Set();
+async function appSlip(id) {
+  if (appBusy.has(id)) return; appBusy.add(id);
+  const ref = col.doc(id);
+  try {
+    const mine = await db.runTransaction(async tx => { const s = await tx.get(ref); const b = s.exists ? s.data() : null;
+      if (!b || b.status !== 'app' || b.prnAt || b.prnState || Date.now() - (Number(b.at) || 0) > 12 * 3600000) return null;
+      tx.update(ref, { prnState: 'printing' }); return b; });
+    if (!mine) return;
+    const b = { ...mine, id }, c = await facCfg().catch(() => ({})), copies = c?.prn === 0 || c?.prn === 1 ? c.prn : 2;
+    if (!copies) { await ref.update({ prnState: 'off' }); log(`🖨 ${b.no}: parchi band (setting)`); return; }
+    const S = await appStock(), nm = new Map([[String(b.itemId), b.name], ...(b.outs || []).map(o => [String(o.id), o.name]), ...(b.lines || []).map(l => [String(l.id), l.name])]);
+    const after = [...nm.keys()].map(k => ({ id: k, name: clean(nm.get(k), 80), s: r3(S.get(k) || 0) }));
+    const tags = copies === 2 ? ['FACTORY (LARKA)', 'MUNSHI'] : ['MUNSHI']; let ok = 0;
+    for (const [i, t] of tags.entries()) { const err = await printRaw(slipText({ ...b, itemName: b.name }, after, t, true), i ? 'b' : 'a'); if (err) throw new Error('printer: ' + (err.message || err)); ok++; }
+    await ref.update({ prnAt: Date.now(), prnN: ok, prnState: 'done', prnErr: FieldValue.delete() });
+    log(`🖨 ${b.no} (sirf app): ${ok} parchi ${PRINTER_NAME} par`);
+  } catch (e) { log(`❌ ${id} parchi: ${e.message}`); try { await ref.update({ prnState: 'err', prnErr: clean(e.message, 200) }); } catch {} }
+  finally { appBusy.delete(id); }
+}
 async function reverse(ref, b) {
   const p = await getPool();
   const orig = await findAdj(p, clean(`Prod ${b.id} ${b.no}`, 150));
@@ -253,7 +289,10 @@ const lock = net.createServer().listen(LOCK_PORT, '127.0.0.1');
 lock.on('error', () => { console.log('factory-post pehle se chal raha hai — yeh copy band.'); process.exit(3); });
 lock.on('listening', async () => {
   try { await getPool(); log('SQL se jur gaya'); } catch (e) { log('SQL masla: ' + e.message); process.exit(1); }
-  log('factory-post v1.2 chal raha hai — factory batch ka intezar (🎁 packing + 🖨 parchi)…');
+  log('factory-post v1.3 chal raha hai — factory batch ka intezar (🎁 packing + 🖨 parchi · 📱 sirf app batch = sirf parchi)…');
+  col.where('status', '==', 'app').onSnapshot(   // v1.3: 📱 sirf app batch — sirf parchi (POS / SQL nahi)
+    s => { s.docChanges().forEach(c => { if (c.type === 'removed') return; const b = c.doc.data(); if (!b.prnAt && !b.prnState) later(() => appSlip(c.doc.id)); }); },
+    e => log('Firestore (app batch) masla: ' + e.message));
   col.where('status', 'in', ['new', 'cancelReq']).onSnapshot(
     s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handle(c.doc.id)); }); },
     e => { log('Firestore masla: ' + e.message); process.exit(1); });

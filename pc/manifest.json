@@ -1,5 +1,5 @@
 {
-  "version": "2026-10-17.1",
+  "version": "2026-10-17.2",
   "note": "KHATA-DOCTOR manifest — sirf ye files PC par jati hain. local-config.json / firebase-key.json kabhi nahi.",
   "files": {
     "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -63,7 +63,7 @@
     "LABEL-NAAP.bat": "123ac0c0f7cc137541e909b1c6dd1c1ec2563e8da5d1de9fb6c538f831852da8",
     "LABEL-URDU-FONT.bat": "f780e334b69b848c41117a487ea1cf26698649686145e485a1acabb60a3618df",
     "sale-farq-check.js": "02400f160dfeecd7d572a5e8d1321c9653a0526fbe16afad3cb635d79f5c83f3",
-    "factory-post.js": "5a1dc9524e3a35f60641ab19f743cf8434f84c24739aa32b675aaa4b0de5c027",
+    "factory-post.js": "d614f523bb4b1a3b4c08c8035f6b464aabb73c3c9e655a550b32013814bf6597",
     "factory-auto.bat": "9ee1ce9bc65004a10e719de271a0ba5ce1c942f430c47e83fc1052e2319a95c3",
     "galla-parchi.js": "e64cf7cd1c18b1be97d0062681d436b60f7c494d0195bd0d8d7e6e76eca7760c"
   },

@@ -2978,3 +2978,11 @@ Malik: "purchase cash ka koi bhi print dobara print karne se waisa nahi hoga jis
 - reprintVoucher: har CPV dobara = 'copy'; sirf cash purchase jis ki pehli chhapi nahi = 'do'. Baqi CRV / JV waise.
 - Setting blueAccess/printConfig.payDo (default ON) — app 🖨 Print setting chip. Band = purani parchi.
 - Test: scratchpad pay/t.cjs (9 ✓ — big / normal / HBL / band).
+
+=== 2026-10-17 — factory-post.js v1.3 📱 SIRF APP batch ki parchi (POS / SQL ko haath nahi) · manifest 2026-10-17.2 ===
+Malik: "POS ko order de kar printer se parchi nikalwa sakte hain na" (factory sirf app — v2.103.0).
+- Naya listener: factoryBatches status 'app' (prnAt / prnState nahi) -> appSlip(): transaction prnState 'printing' (ek dafa; 12 ghante se
+  purana nahi) -> appStock() = factoryMoves (ginti = itna · aaya + · diya −) + sab 'app' batch (bana + / laga −) waqt ki tarteeb (app ka
+  fStocks jaisa) -> slipText(b, after, copy, app=true): "FACTORY BATCH - SIRF APP", POS Adj line nahi, "Factory mein ab baqi", KAM (factory
+  stock minus). Copies factory/cfg.prn (2 / 1 / 0 -> prnState 'off'). Natija prnAt / prnN / prnState 'done' ya prnState 'err' + prnErr.
+- 'new' / 'cancelReq' (POS mode) wese hi. Test: scratchpad fpost/t.cjs (8 ✓).

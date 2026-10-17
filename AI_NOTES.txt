@@ -5048,3 +5048,9 @@ Malik: "factory ka data only app mein reh sakta hai, POS mein na jaye — POS se
   keys hasOnly, kind aaya|diya|ginti; delete malik); labelJobs keys + 'batch'. firestore-rules-2.59.html.
 * Asar: POS mein factory items ka stock ab production se nahi badalta (raw khareed se barhta, tayyar sale se ghatta) — malik ko bataya.
 * Test: fct/t.mjs 165 ✓ (146 purane POS mode + 19 naye app). Screenshots fct/app-stock.png, app-mv.png. AI kahin nahi (photo formula wahi).
+
+=== v2.103.1 (2026-10-17) — 🖨 SIRF APP batch ki parchi server printer se · PC manifest 2026-10-17.2 (factory-post v1.3) ===
+Malik: "nahi to hum direct POS ko order de kar printer se parchi nikalwa sakte hain na" -> haan: sirf printer, POS data nahi.
+- PC factory-post v1.3 (tafseel pc/AI_NOTES): 'app' batch -> parchi (factory ka app stock "baqi").
+- factory.js: ⚙️ parchi setting (2 / 1 / Band) ab dono mode mein ("Batch ki parchi (sirf printer — POS nahi)"); batch form note "🖨 N parchi";
+  batch dlg: "🖨 Parchi nikal rahi…" (app, 12 ghante) / nikli / nahi nikli / band. Test fct/t.mjs 166 ✓. Rules wahi 2.59.
