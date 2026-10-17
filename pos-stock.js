@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.17';
-import { liveLabelsHTML } from './barcode.js?v=2.103.17';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.18';
+import { liveLabelsHTML } from './barcode.js?v=2.103.18';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -3461,19 +3461,25 @@ function rkPaint(only) {
 }
 // ⚙️ packet-war items chunna (malik) — list pehle se, search, har item ke barcode / packet, godam chip, hadd
 function pkSetHTML(names) {
-  const P = agPool(), q = rk.pq.trim(), cand = P.list.filter(it => (Array.isArray(it.bq) && it.bq.length) || pkCfg(it.id));
-  const L = (q ? smartSearch(cand, q, 80) : cand.slice().sort((a, b) => (pkCfg(b.id) ? 1 : 0) - (pkCfg(a.id) ? 1 : 0) || String(a.name).localeCompare(String(b.name)))).slice(0, 80);
-  const gods = collect().branches.filter(b => b !== 1);
+  const P = agPool(), q = rk.pq.trim(), gods = collect().branches.filter(b => b !== 1), g0 = gods.includes(2) ? 2 : gods[0];
+  // v2.103.18: ⇄ Godam 2 -> Noor Traders ke transfer notes ke items SAB SE UPAR (malik: "pehle wo items aayein, phir stock saath likha
+  //   aaye, re-order baad mein upar likhte jayenge") — naye pehle, har item ka TN # + tareekh; stock LIVE (dukan · godam)
+  const tn = new Map(); for (const t of tcAll().filter(t => t && !t.cancelled && Number(t.from) === g0 && Number(t.to) === 1).sort((a, b) => (Number(b.createdOn) || Number(b.at) || 0) - (Number(a.createdOn) || Number(a.at) || 0)))
+    for (const l of t.lines || []) { const id = String(l.itemId); if (!tn.has(id)) tn.set(id, { no: String(t.transferNo || '').replace(/^0+/, ''), at: Number(t.createdOn) || Number(t.at) || 0 }); }
+  const cand = P.list.filter(it => (Array.isArray(it.bq) && it.bq.length) || pkCfg(it.id) || tn.has(String(it.id)));
+  const TN = q ? [] : [...tn.keys()].map(id => P.byId.get(id)).filter(Boolean);
+  const L = (q ? smartSearch(cand, q, 80) : cand.filter(it => !tn.has(String(it.id))).sort((a, b) => (pkCfg(b.id) ? 1 : 0) - (pkCfg(a.id) ? 1 : 0) || String(a.name).localeCompare(String(b.name)))).slice(0, 80);
   const row = it => { const id = String(it.id), cf = pkCfg(id), open = rk.pEd === id, sizes = [{ z: 1, b: it.code }, ...(it.bq || []).map(x => ({ z: Number(x.q) || 1, b: x.b }))].filter((x, i, a) => x.z > 0 && a.findIndex(y => Math.abs(y.z - x.z) < 1e-9) === i);
     const dr = rk.pDraft.get(id) || { g: Number(cf?.g) || (gods.includes(2) ? 2 : gods[0]), p: Object.fromEntries(Object.entries(cf?.p || {}).map(([z, o]) => [z, { n: o.n, a: o.a || o.n }])) };
     if (open && !rk.pDraft.has(id)) rk.pDraft.set(id, dr);
-    return `<div class="rk-ps${cf ? ' is-in' : ''}"><button type="button" class="rk-psh" data-rkp-ed="${esc(id)}"><span><b>${cf ? '✓ ' : ''}${esc(it.name)}</b><small>${sizes.map(x => `${esc(pkName(x.z, it))}${x.b ? ' · ' + esc(String(x.b)) : ''}`).join('  ·  ')}</small></span><i>${open ? '▴' : '▾'}</i></button>
+    const t0 = tn.get(id), sS = saleStockItem(1, id), gS = saleStockItem(dr.g || g0, id), hs = Object.entries(cf?.p || {}).map(([z, o]) => `${pkName(Number(z), it)} ${o.n}`).join(' · ');
+    return `<div class="rk-ps${cf ? ' is-in' : ''}"><button type="button" class="rk-psh" data-rkp-ed="${esc(id)}"><span><b>${cf ? '✓ ' : ''}${esc(it.name)}</b><span class="rk-chips">${t0 ? `<i class="rk-c pc">⇄ TN #${esc(t0.no || '—')} · ${esc(rkWhen(t0.at))}</i>` : ''}${hs ? `<i class="rk-c own">🔁 re-order: ${esc(hs)}</i>` : t0 ? '<i class="rk-c kh">re-order baqi</i>' : ''}</span><small>📦 dukan <b>${num(r3(Number(sS?.stock) || 0))}</b> · ${esc(branchName(dr.g || g0, names))} <b>${num(r3(Number(gS?.stock) || 0))}</b> ${esc(it.uName || '')}</small><small>${sizes.map(x => `${esc(pkName(x.z, it))}${x.b ? ' · ' + esc(String(x.b)) : ''}`).join('  ·  ')}</small></span><i>${open ? '▴' : '▾'}</i></button>
       ${open ? `<div class="rk-psb"><div class="rk-mode">${gods.map(g => `<button type="button" class="${dr.g === g ? 'is-in' : ''}" data-rkp-g="${esc(id)}|${g}">🏬 ${esc(branchName(g, names))}</button>`).join('')}</div>
-        ${sizes.map(x => { const k = String(+x.z.toFixed(4)), o = dr.p[k]; return `<div class="rk-psr"><label class="rk-tk"><input type="checkbox" data-rkp-z="${esc(id)}|${k}"${o ? ' checked' : ''}><span><b>${esc(pkName(x.z, it))}</b><small>${esc(String(x.b || ''))}</small></span></label>${o ? `<label><small>itne bikein</small><input type="number" inputmode="numeric" min="1" step="1" data-rkp-n="${esc(id)}|${k}" value="${o.n || 10}"></label><label><small>itne lao</small><input type="number" inputmode="numeric" min="1" step="1" data-rkp-a="${esc(id)}|${k}" value="${o.a || o.n || 10}"></label>` : ''}</div>`; }).join('')}
+        ${sizes.map(x => { const k = String(+x.z.toFixed(4)), o = dr.p[k]; return `<div class="rk-psr"><label class="rk-tk"><input type="checkbox" data-rkp-z="${esc(id)}|${k}"${o ? ' checked' : ''}><span><b>${esc(pkName(x.z, it))}</b><small>${esc(String(x.b || ''))}</small></span></label>${o ? `<label><small>🔁 re-order: itne bikein</small><input type="number" inputmode="numeric" min="1" step="1" data-rkp-n="${esc(id)}|${k}" value="${o.n || ''}" placeholder="likhein"></label><label><small>itne lao</small><input type="number" inputmode="numeric" min="1" step="1" data-rkp-a="${esc(id)}|${k}" value="${o.a || ''}" placeholder="${o.n || 'utne hi'}"></label>` : ''}</div>`; }).join('')}
         <div class="rk-ed">${cf ? `<button type="button" class="rk-au" data-rkp-del="${esc(id)}">🗑 Hatao</button>` : ''}<button type="button" class="rk-sv" data-rkp-sv="${esc(id)}">✓ Save</button></div></div>` : ''}</div>`; };
   return `<section class="rk-g rk-pset"><div class="rk-gh"><b>⚙️ Packet-war items</b><button type="button" class="rk-all" data-rkp-set="0">✕ Band</button></div>
     <label class="hs-search"><input type="search" data-rkp-qs="1" placeholder="🔍 item (garam masala, ilaichi…)" value="${esc(rk.pq)}" autocomplete="off"></label>
-    <div id="rkPkList">${L.map(row).join('') || '<p class="rk-note">Kai barcode wala koi item nahi mila.</p>'}</div></section>`;
+    <div id="rkPkList">${TN.length ? `<div class="rk-tnh">⇄ ${esc(branchName(g0, names))} → ${esc(branchName(1, names))} transfer notes se <b>${num(TN.length)}</b> items <small>tap = re-order likhein</small></div>${TN.map(row).join('')}<div class="rk-tnh rk-tnh2">Baqi kai barcode wale items</div>` : ''}${L.map(row).join('') || (TN.length ? '' : '<p class="rk-note">Kai barcode wala koi item nahi mila.</p>')}</div></section>`;
 }
 async function rkpGo(g) {
   if (!rk || rk.busy) return; const ys = pkDue().filter(y => String(y.g) === String(g) && !rk.pOff.has(String(y.r.i)));
@@ -3511,7 +3517,8 @@ document.addEventListener('click', e => {
   if (d.rkpEd) { rk.pEd = rk.pEd === d.rkpEd ? '' : d.rkpEd; rkPaint(); return; }
   if (d.rkpG) { const [id, g] = d.rkpG.split('|'); const dr = rk.pDraft.get(id); if (dr) dr.g = Number(g); rkPaint(); return; }
   if (d.rkpSv || d.rkpDel) { const id = d.rkpSv || d.rkpDel, dr = rk.pDraft.get(id), old = pkCfg(id);
-    const p = Object.fromEntries(Object.entries(dr?.p || {}).filter(([, o]) => o).map(([z, o]) => [z, { n: Math.max(1, Math.round(Number(o.n) || 10)), a: Math.max(1, Math.round(Number(o.a) || Number(o.n) || 10)) }]));
+    const p = Object.fromEntries(Object.entries(dr?.p || {}).filter(([, o]) => o && Number(o.n) > 0).map(([z, o]) => [z, { n: Math.max(1, Math.round(Number(o.n))), a: Math.max(1, Math.round(Number(o.a) || Number(o.n))) }]));
+    if (d.rkpSv && !Object.keys(p).length) { notice('Re-order likhein — kitne bikein to lao'); return; }
     const v = d.rkpDel || !Object.keys(p).length ? null : { g: dr.g, at: old?.at || Date.now(), p };
     if (!cloud?.setRackPk) { notice('App update karein'); return; }
     itemCfg = { ...(itemCfg || {}), rackPk: { ...(itemCfg?.rackPk || {}), [id]: v ? JSON.stringify(v) : null } }; rk.pDraft.delete(id); rk.pEd = ''; rkPaint();
@@ -3529,8 +3536,8 @@ document.addEventListener('change', e => { const t = e.target; if (!rk || !t.clo
   if (d.rkT) { if (t.checked) rk.off.delete(d.rkT); else rk.off.add(d.rkT); rkPaint(); return; }
   if (d.rkpT) { if (t.checked) rk.pOff.delete(d.rkpT); else rk.pOff.add(d.rkpT); rkPaint(); return; }
   if (d.rkpQ) { rk.pQ.set(d.rkpQ, Math.max(0, Math.floor(Number(t.value) || 0))); return; }
-  if (d.rkpZ) { const [id, z] = d.rkpZ.split('|'), dr = rk.pDraft.get(id); if (dr) { if (t.checked) dr.p[z] = dr.p[z] || { n: 10, a: 10 }; else delete dr.p[z]; } rkPaint(); return; }
-  if (d.rkpN || d.rkpA) { const [id, z] = (d.rkpN || d.rkpA).split('|'), dr = rk.pDraft.get(id); if (dr?.p[z]) dr.p[z][d.rkpN ? 'n' : 'a'] = Math.max(1, Math.floor(Number(t.value) || 1)); return; }
+  if (d.rkpZ) { const [id, z] = d.rkpZ.split('|'), dr = rk.pDraft.get(id); if (dr) { if (t.checked) dr.p[z] = dr.p[z] || { n: '', a: '' }; else delete dr.p[z]; } rkPaint(); return; }
+  if (d.rkpN || d.rkpA) { const [id, z] = (d.rkpN || d.rkpA).split('|'), dr = rk.pDraft.get(id); if (dr?.p[z]) dr.p[z][d.rkpN ? 'n' : 'a'] = Number(t.value) > 0 ? Math.floor(Number(t.value)) : ''; return; }
   if (d.rkQty) { const y = rackDue().find(z => String(z.x.i) === d.rkQty); if (!y) return; const n = Math.max(0, Math.floor(Number(t.value) || 0)), pcs = y.c.pk ? n * y.c.pk : n; rk.sel.set(d.rkQty, Math.min(pcs, y.c.pk ? Math.floor(y.c.gs / y.c.pk) * y.c.pk : Math.floor(y.c.gs))); if (pcs > 0) rk.off.delete(d.rkQty); rkPaint(); } });
 document.addEventListener('input', e => { const t = e.target; if (rk && t?.dataset?.rkpQs != null) { rk.pq = t.value || ''; clearTimeout(rkQT); rkQT = setTimeout(() => rkPaint('pk'), 160); return; } if (rk && t?.dataset?.rkQ != null) { rk.q = t.value || ''; clearTimeout(rkQT); rkQT = setTimeout(() => rkPaint(true), 160); } });
 let rkQT = 0;

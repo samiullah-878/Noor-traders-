@@ -5233,3 +5233,11 @@ wahan se data liya ja sakta hai?" · "Godam 2 ke liye hi rakh lein, baqi wese hi
   "⚙️ Items chunein" (malik): kai barcode wale items (bq) list + search, har item ke packet (main 1 + bq q) + barcode, godam chip (default
   Godam 2), ✓ packet + "itne bikein / itne lao", Save / 🗑 -> cloud.setRackPk (JSON string merge / deleteField).
 - Test rk/t2.cjs (PC 3 ✓) · sk/rk.mjs (21 ✓) · rk2.mjs. AI: koi nahi.
+
+=== v2.103.18 (2026-10-18) — 📦 PACKET-WAR: Godam 2 ke transfer notes ke items upar + live stock + re-order baad mein ===
+Malik: "godam 2 se noor traders ka jo transfer note app se dala — wo items auto yahan aa jayein · pehle wo items, phir stock saath likha,
+re-order upar baad mein likhte jayenge".
+- pos-stock.js pkSetHTML: g0 = Godam 2 (warna pehla godam); tcAll() g0 -> 1 (cancel nahi, naye pehle) ke items SAB SE UPAR ("⇄ … transfer
+  notes se N items"), har row: chip ⇄ TN #no · waqt, "re-order baqi" / "🔁 re-order: 250 gm 10", 📦 dukan X · Godam 2 Y (LIVE). Ek barcode
+  wale items bhi (1 pcs). Packet ✓ par re-order KHALI (placeholder "likhein"), Save bina re-order = roko.
+- Test sk/rk.mjs (22 ✓). AI: koi nahi.
