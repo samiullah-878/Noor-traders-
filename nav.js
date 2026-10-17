@@ -43,7 +43,7 @@ let q = '';
 function open() {
   const d = $('dialog'); if (!d) return; q = '';
   d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = '☰ Sab screens';
-  $('dialogBody').innerHTML = `<div class="nv-root"><label class="hs-search nv-search"><input type="search" data-nv-q="1" placeholder="🔍 screen ka naam (jaise fac, galla, stock)…" autocomplete="off"></label><div id="nvGrid"></div><p class="nv-tip">⭐ dabayein = upar ki patti mein hamesha (har phone apni)</p></div>`;
+  $('dialogBody').innerHTML = `<div class="nv-root"><label class="hs-search nv-search"><input type="search" data-nv-q="1" placeholder="🔍 screen ka naam (jaise fac, galla, stock)…" autocomplete="off"></label><div id="nvGrid"></div><p class="nv-tip">⭐ dabayein = upar ki patti mein hamesha (har phone apni)</p><button type="button" class="nv-ftg" data-nv-float="1">${floatTxt()}</button></div>`;
   if (!d.open) d.showModal(); grid();
 }
 function grid() {
@@ -69,4 +69,36 @@ const obs = new MutationObserver(later);
 function hook() { const nav = document.querySelector('.app-nav'); if (!nav) { setTimeout(hook, 300); return; } obs.observe(nav, { attributes: true, subtree: true, attributeFilter: ['hidden'] }); later(); }
 hook();
 try { mq.addEventListener('change', later); } catch {}
+// ---------- v2.103.9: 📌 UPAR PATTI (malik: "ek tab khula ho aur doosri jagah jana ho to upar jana parta hai") ----------
+// Neeche scroll kiya hua ho aur ungli zara neeche khiskayein (page upar chale) = upar patli patti: wahi chips jo upar hain (⭐ pin,
+// aakhri kholi, abhi wali) + ☰. Phir neeche parhein = chhup jaye. Ek tap = wahi screen (asal .app-nav button click — ijazat wahi).
+// Har phone ki apni on / off (☰ Sab screens mein). Computer (baayein list) par nahi.
+const LS_F = 'sam-nav-float', floatOn = () => rd(LS_F) !== false;
+let fl = null, lastY = 0, shown = false, fT = 0;
+function navBottom() { const n = document.querySelector('.app-nav'); if (!n) return 0; const r = n.getBoundingClientRect(); return r.bottom + window.scrollY; }
+function flPaint() {
+  if (!fl) return; const nav = document.querySelector('.app-nav'); if (!nav) return;
+  const c = cur(), btns = [...nav.querySelectorAll('button')].filter(b => !b.hidden && b.id && b.id !== 'switchNav' && (b.id === 'navAll' || !b.classList.contains('nav-off')))
+    .sort((a, b) => (Number(a.style.order) || 0) - (Number(b.style.order) || 0));
+  fl.innerHTML = `<div class="nvf-row">${btns.map(b => `<button type="button" class="nvf-b${b.id === c ? ' is-in' : ''}${b.id === 'navAll' ? ' nvf-all' : ''}" data-nvf="${esc(b.id)}">${esc(b.id === 'navAll' ? '☰ Sab' : label(b))}${badge(b.id) ? `<i>${esc(badge(b.id))}</i>` : ''}</button>`).join('')}</div>`;
+}
+function flShow(on) {
+  if (!fl || shown === on) return; shown = on; if (on) flPaint(); fl.classList.toggle('nvf-on', on); fl.setAttribute('aria-hidden', on ? 'false' : 'true');
+}
+function onScroll() {
+  if (!fl) return; const y = window.scrollY || 0, dy = y - lastY;
+  if (!floatOn() || mq.matches || !document.querySelector('main:not([hidden]) .app-nav') || y < navBottom() + 20) { flShow(false); lastY = y; return; }
+  if (dy < -8) flShow(true); else if (dy > 8) flShow(false);
+  if (Math.abs(dy) > 8) lastY = y;
+}
+function flInit() {
+  if (fl || !document.body) return; fl = document.createElement('nav'); fl.id = 'navFloat'; fl.className = 'nv-float'; fl.setAttribute('aria-hidden', 'true'); document.body.appendChild(fl);
+  window.addEventListener('scroll', () => { if (!fT) fT = requestAnimationFrame(() => { fT = 0; onScroll(); }); }, { passive: true });
+}
+document.addEventListener('click', e => {
+  const f = e.target.closest?.('[data-nvf]'); if (f) { e.preventDefault(); const id = f.dataset.nvf; flShow(false); if (id === 'navAll') { open(); return; } const b = $(id); touch(id); if (b) b.click(); window.scrollTo(0, 0); later(); return; }
+  const t = e.target.closest?.('[data-nv-float]'); if (t) { wr(LS_F, !floatOn()); t.textContent = floatTxt(); if (!floatOn()) flShow(false); }
+});
+const floatTxt = () => `📌 Upar patti (scroll karte waqt): ${floatOn() ? 'ON ✓' : 'OFF'}`;
+flInit(); if (!fl) document.addEventListener('DOMContentLoaded', flInit);
 export const navPaint = later;

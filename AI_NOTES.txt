@@ -5142,3 +5142,10 @@ wazan pack karwana (200 g), fi kg rate × 200 g, phir harcha add, complete". (1 
 - rateRows('tayyar') mein mcost items (formula / packing na ho) — card "🧴 wazan se", "200 g × Rs 250/kg = Rs 50 + harcha", ✏️ laagat;
   raw list se bahar. Chips class is-in (theme "on" se takrao nahi) + html body :is(#summary,#dialogBody) !important pattern.
 - Test fct/t.mjs ALL OK (mc flow). AI: koi nahi.
+
+=== v2.103.9 (2026-10-17) — 📌 UPAR PATTI (scroll karte waqt screens) ===
+Malik: "ek tab khula ho aur doosri jagah jana ho to upar jana parta hai — pehle is ka hal".
+- nav.js: #navFloat (fixed top). Window scroll: .app-nav nazar se bahar + ungli neeche (page 8px+ upar) = patti; neeche parhna (8px+) =
+  chhup. Chips = wahi jo .app-nav mein nazar (nav-off nahi, order), abhi wali is-in, ☰ Sab (open launcher), badge. Tap = asal button click
+  (ijazat wahi) + scrollTo(0,0). Har phone on/off: localStorage 'sam-nav-float' — "☰ Sab screens" mein "📌 Upar patti: ON/OFF". Computer (mq) par nahi.
+- Test scratchpad nvf/t.cjs (playwright, 8 ✓). AI: koi nahi. Agla: 💰 asal nafa ki app screen (PC data v1.4 pehle se).

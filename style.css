@@ -4077,3 +4077,12 @@ html body .fc-root .fc-mcg button.is-in{background:#1b3058;color:#fff;border-col
 html body .fc-root .fc-bhead .fc-link{color:#fff;opacity:.9}
 html body :is(#summary,#dialogBody) .ir-root .fc-mcg button.is-in{background:#223B6D!important;border-color:#223B6D!important;color:#fff!important}
 html body :is(#summary,#dialogBody) .ir-root .fc-bhead .fc-link{color:#fff!important;background:none!important}
+/* v2.103.9: 📌 upar patti — scroll karte waqt screens */
+.nv-float{position:fixed;left:0;right:0;top:0;z-index:60;padding:calc(env(safe-area-inset-top,0px) + 6px) 8px 7px;background:linear-gradient(180deg,#1b3058f2,#223b6dee);box-shadow:0 6px 18px rgba(16,28,53,.28);transform:translateY(-110%);transition:transform .18s ease;pointer-events:none}
+.nv-float.nvf-on{transform:none;pointer-events:auto}
+.nvf-row{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;max-width:850px;margin:0 auto}.nvf-row::-webkit-scrollbar{display:none}
+html body .nv-float .nvf-b{flex:none;position:relative;padding:8px 13px;border-radius:999px;border:1.5px solid rgba(255,255,255,.35)!important;background:rgba(255,255,255,.12)!important;color:#fff!important;font:inherit;font-weight:800;font-size:14px;white-space:nowrap}
+html body .nv-float .nvf-b.is-in{background:#fff!important;color:#1b3058!important;border-color:#fff!important}
+html body .nv-float .nvf-b.nvf-all{background:#ffd76a!important;color:#3d2a00!important;border-color:#ffd76a!important}
+.nvf-b i{position:absolute;top:-5px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#e53935;color:#fff;font-size:11px;font-style:normal;line-height:18px;text-align:center}
+.nv-ftg{display:block;width:100%;margin:10px 0 4px;padding:11px 14px;border-radius:14px;border:1.5px dashed #9fb2d8;background:#f2f6ff;color:#1b3058;font:inherit;font-weight:800}
