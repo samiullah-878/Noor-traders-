@@ -4097,3 +4097,5 @@ html body :is(#summary,#dialogBody) .ir-root .ir-nfbad{padding:8px 12px;border-r
 .ir-nfb.bad{background:#fff3f2!important;border-color:#f2b8b5!important}.ir-nfb .pos{color:#11753f}.ir-nfb .neg{color:#c0392b;font-weight:800}
 .ir-nfp .neg{color:#c0392b}
 html body .ir-root .ir-nfkp b.neg{color:#c0392b!important;opacity:1!important}html body .ir-root .ir-nfkp b.pos{color:#11753f!important}
+/* v2.103.11: 🪟 khirki (dialog) ke andar upar patti */
+dialog .nv-floatd{position:absolute;left:0;right:0;top:0;padding-top:8px;border-radius:0}

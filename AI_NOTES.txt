@@ -5159,3 +5159,10 @@ Malik: "sale bills ke data ke hisaab se profit chahiye" (nafa = (sale − kharee
   ~ andaza note (POS COGS 0), roz ka chart (tap = us din ke bill), party-war nafa top 10 / saari. nfDlg: tarteeb Nafa / Sale / % / Waqt + ⇅,
   search (bill no / party), 150 + aur, ghaate laal. PDF mein nfPdf (din-war, party top 20, ghaate wale 25). Purana "Nafa kahan se" = "(andaza — aaj ke rate se)".
 - Test ir5/t2.js (11 ✓) + t.js (37 ✓). Sirf malik (item report). AI: koi nahi.
+
+=== v2.103.11 (2026-10-17) — 🪟 UPAR PATTI KHIRKI (dialog) KE ANDAR BHI ===
+Malik (formula khirki ka screenshot): "yahan par chips nahi aate upar wala".
+- nav.js: #navFloatD dialog ka bachcha (absolute top) — #dialogBody scroll (document scroll capture) par wahi patti; ☰ Sab launcher par nahi.
+  Tap = dirty ho to confirm "⚠️ Badlav save nahi hua — chhor kar jayein?" -> dialog.close() -> asal nav button. dirty: dialog 'open' attr
+  MutationObserver par saaf; #dialogBody input / change (type=search ya placeholder 🔍 / dhoond nahi) = true; submit = saaf. Wahi ON/OFF.
+- Test nvf/t.cjs (11 ✓). AI: koi nahi.
