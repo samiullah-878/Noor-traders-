@@ -3018,3 +3018,6 @@ Malik: "din select kiya to jab tak band na karein har ghante reminder".
 
 === rack-bharo.js v1.1 (2026-10-18.2) ===
 - fc (poore carton aaye?) — 0 = pcs wala item (masale); k = rack khali: 180 din mein dukan par bika + dukan CurrStock <= 0 + godam mein maal.
+
+=== rack-bharo.js v1.2 (2026-10-18.3) — 📦 packet-war ===
+- stockConfig.rackPk ke items: aakhri transfer (ya chunne) ke baad dukan ki har sale line ki miqdaar se packet ginti (0.250 = 250 gm) -> posStats/rack.pj.

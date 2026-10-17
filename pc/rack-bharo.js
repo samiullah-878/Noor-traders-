@@ -1,5 +1,6 @@
 // =========================================================
-//  rack-bharo.js  v1.1 (2026-10-18: fc = hamesha poore carton aaya? (warna pcs wala — masale) · k = 🔴 rack khali: dukan stock <= 0, godam mein maal,
+//  rack-bharo.js  v1.2 (2026-10-18: 📦 PACKET-WAR (Godam 2) — malik ke chune items (stockConfig.rackPk {id: JSON {g, at, p: {q: {n, a}}}}):
+//                  dukan ki har sale LINE ki miqdaar = kaun sa packet (0.250 = 250 gm, 0.050 = ilaichi) — shuru = max(at, aakhri transfer) -> pj) · v1.1 (2026-10-18: fc = hamesha poore carton aaya? (warna pcs wala — masale) · k = 🔴 rack khali: dukan stock <= 0, godam mein maal,
 //                  aur 180 din mein DUKAN par kabhi bika (godam wala ata / maida kabhi nahi)) · v1.0 (2026-10-18) — 🧺 RACK BHARO: dukan (branch 1) ka maal jitna bika, utna godam se poore carton mein wapas
 //  Malik: "rack par carton hi lagay to faida — open stock godam se nahi aata. Noor Traders ka pichhla data dekh kar: jab jab transfer
 //          note bana, us ke baad jitna bika — jaise hi ek carton jitna bik jaye to Transfer notes screen par aa jaye, ek click mein print"
@@ -57,7 +58,32 @@ async function read(p, now = new Date()) {
   }
   return out.sort((a, b) => a.n.localeCompare(b.n));
 }
-module.exports = { read, med };
+// v1.2: 📦 packet-war — line ki miqdaar se packet: barabar = 1 · poora guna (bara packet pehle) = utne · warna khula
+function packOf(qty, sizes) {
+  const q = Math.abs(Number(qty) || 0); if (!(q > 0)) return null;
+  for (const z of sizes) if (Math.abs(q - z) < 1e-6) return { z, n: 1 };
+  for (const z of sizes) { const k = q / z; if (k >= 1 && Math.abs(k - Math.round(k)) < 1e-6) return { z, n: Math.round(k) }; }
+  return null;
+}
+async function readPk(p, cfg, now = new Date()) {
+  const items = Object.entries(cfg || {}).map(([id, v]) => { try { const o = typeof v === 'string' ? JSON.parse(v) : v; return o && o.p ? { id: Number(id), g: Number(o.g) || 2, at: Number(o.at) || 0, sizes: Object.keys(o.p).map(Number).filter(z => z > 0).sort((a, b) => b - a) } : null; } catch { return null; } })
+    .filter(x => x && Number.isInteger(x.id) && x.sizes.length).slice(0, 300);
+  if (!items.length) return [];
+  const ids = items.map(x => x.id), since = new Date(now); since.setDate(since.getDate() - 60);
+  const lt = new Map((await p.request().input('a', sql.DateTime, since).query(`SELECT d.ItemID, MAX(ISNULL(t.CreatedOn, t.TransferDate)) AS W FROM dbo.StockTransferDetail d JOIN dbo.StockTransfer t ON t.TransferID = d.TransferID
+    WHERE t.ToBranchID = ${SHOP} AND t.FromBranchID <> ${SHOP} AND t.TransferDate >= @a AND d.Qty > 0 AND d.ItemID IN (${ids.join(',')}) GROUP BY d.ItemID`)).recordset.map(r => [Number(r.ItemID), new Date(r.W).getTime()]));
+  for (const x of items) x.from = Math.max(x.at || 0, lt.get(x.id) || 0, since.getTime());
+  const minT = new Date(Math.min(...items.map(x => x.from)));
+  const lines = (await p.request().input('a', sql.DateTime, minT).query(`SELECT d.ItemID, d.Qty, s.SaleDate FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID
+    WHERE s.SaleDate >= @a AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(NULLIF(d.GBranchID, 0), s.BranchID) = ${SHOP} AND d.ItemID IN (${ids.join(',')})`)).recordset;
+  const st = new Map((await p.request().query(`SELECT r.ItemID, r.BranchID, ISNULL(r.CurrStock, 0) AS St, i.ItemName FROM dbo.ItemBranchRate r JOIN dbo.Items i ON i.ItemID = r.ItemID WHERE r.ItemID IN (${ids.join(',')})`)).recordset
+    .reduce((m, r) => { const k = Number(r.ItemID); if (!m.has(k)) m.set(k, { n: String(r.ItemName || '').trim().slice(0, 70), st: {} }); m.get(k).st[Number(r.BranchID)] = Number(r.St) || 0; return m; }, new Map()).entries());
+  const by = new Map(items.map(x => [x.id, { ...x, sold: {}, kh: 0 }]));
+  for (const l of lines) { const x = by.get(Number(l.ItemID)); if (!x || new Date(l.SaleDate).getTime() < x.from) continue; const q = Number(l.Qty) || 0, m = packOf(q, x.sizes), sg = q < 0 ? -1 : 1;
+    if (m) x.sold[m.z] = r3((x.sold[m.z] || 0) + sg * m.n); else x.kh = r3(x.kh + q); }
+  return [...by.values()].map(x => { const S = st.get(x.id) || { n: 'Item ' + x.id, st: {} }; return { i: x.id, n: S.n, g: x.g, gs: r3(S.st[x.g] || 0), ss: r3(S.st[SHOP] || 0), from: x.from, sold: x.sold, kh: x.kh }; });
+}
+module.exports = { read, readPk, packOf, med };
 
 if (require.main === module) (async () => {
   let pool; const t0 = Date.now();
@@ -66,12 +92,14 @@ if (require.main === module) (async () => {
     const { getFirestore } = require('firebase-admin/firestore');
     if (!getApps().length) initializeApp({ credential: cert(require('./firebase-key.json')) });
     pool = await new sql.ConnectionPool(SQL_CONFIG).connect();
-    const rows = await read(pool); await pool.close(); pool = null;
+    const rows = await read(pool);
+    let pk = []; try { const c = await getFirestore().collection('businesses').doc('noor-traders').collection('blueAccess').doc('stockConfig').get(); pk = await readPk(pool, c.exists ? c.data().rackPk : null); } catch (e) { console.log('📦 packet-war masla: ' + (e?.message || e)); }
+    await pool.close(); pool = null;
     const ref = getFirestore().collection('businesses').doc('noor-traders').collection('posStats').doc('rack');
-    const j = JSON.stringify(rows), h = crypto.createHash('sha1').update(j).digest('hex');
+    const j = JSON.stringify(rows), pj = JSON.stringify(pk), h = crypto.createHash('sha1').update(j + pj).digest('hex');
     let old = null; try { const o = await ref.get(); old = o.exists ? o.data() : null; } catch {}
     if (old && old.h === h && Date.now() - (Number(old.at) || 0) < 10 * 60000) { console.log(new Date().toLocaleString('en-PK') + ' — 🧺 wahi (' + rows.length + ')'); process.exit(0); }
-    await ref.set({ at: Date.now(), h, n: rows.length, j });
+    await ref.set({ at: Date.now(), h, n: rows.length, j, pj });
     console.log(new Date().toLocaleString('en-PK') + ' — 🧺 rack: ' + rows.length + ' items (bike + godam mein), ' + Math.round((Date.now() - t0) / 1000) + 's');
     process.exit(0);
   } catch (e) { console.log(new Date().toLocaleString('en-PK') + ' — GALTI: ' + (e?.message || e)); try { await pool?.close(); } catch {} process.exit(1); }

@@ -5220,3 +5220,16 @@ sewaiyan ka rack khali tha magar nahi aaye" · "kuch items pcs mein aate hain (m
   Hero ke neeche "🖥 PC data: 4:06 AM · 2 min pehle · har 2 min" (10 min+ = ⚠️ ruka?) · local = "⚠️ Andaza — godam ki sale bhi shamil".
   Local rows bhi fc + k (dukan 0). cloud.setRackCfg: u / q / mode / off (merge + deleteField har khana).
 - Test: rk/t.cjs (PC 5 ✓) · sk/rk.mjs (13 ✓) · sk/rk2.mjs. AI: koi nahi.
+
+=== v2.103.17 (2026-10-18) — 📦 PACKET-WAR (Godam 2) — ek item ke kai barcode ===
+Malik: "dal chana kg / 500 gm — ek hi item ke 2 barcode" · "ilaichi 0.05 ka packet, garam masala 0.250 — sale mein 0.250 hi show hota hai,
+wahan se data liya ja sakta hai?" · "Godam 2 ke liye hi rakh lein, baqi wese hi chalta rahe". (Godam 2 ki ginti malik khud karenge.)
+- PC rack-bharo v1.2 (manifest 2026-10-18.3): stockConfig.rackPk {id: JSON {g, at, p: {q: {n, a}}}} -> readPk: shuru = max(at, aakhri
+  transfer godam -> dukan, 60 din); dukan ki har sale LINE (GBranchID / BranchID = 1): packOf(qty, sizes) — barabar = 1, poora guna (bara
+  pehle) = utne, warna khula (kh); wapsi minus. posStats/rack.pj [{i, n, g, gs, ss, from, sold{q}, kh}].
+- pos-stock.js: pkCfg / pkDue (sold >= n -> a packet, godam LIVE); packet-war items auto list se bahar. Rack khirki mein "📦 Packet-war"
+  section (godam-war, item ✓, har packet "12 bike · hadd 10" + packet input) -> "🖨 packet transfer note" = stockAgentTransfer(from g, pcs =
+  Σ packet × q wazan, note "📦 Garam masala 250 gm×10"); pkSent jab tak PC naya 'from' na dekhe. Tile / hero ginti mein shamil.
+  "⚙️ Items chunein" (malik): kai barcode wale items (bq) list + search, har item ke packet (main 1 + bq q) + barcode, godam chip (default
+  Godam 2), ✓ packet + "itne bikein / itne lao", Save / 🗑 -> cloud.setRackPk (JSON string merge / deleteField).
+- Test rk/t2.cjs (PC 3 ✓) · sk/rk.mjs (21 ✓) · rk2.mjs. AI: koi nahi.
