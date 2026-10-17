@@ -5180,3 +5180,7 @@ entries bataye" · "kuch entries milti julti, kuch paise ka farq" · "multiple p
 - app.js: milanSetup (ai = askImage + loadAiCfg, rows = entries effect paise, balanceAt), milanChipHTML. sw.js ASSETS milan.js.
 - Test scratchpad ml/t.mjs (asli Naeem Bega data: 9 mili, 2 farq (516.6 · 26,000), 2 sirf unke, 8 sirf hamare, paise 0.04) + ml/pw.cjs (UI 6 ✓).
 - AI: sirf photo / PDF parhna. Milan / hisaab code. Kuch khud nahi badalta.
+
+=== v2.103.13 (2026-10-18) — 🐞 "effect is not defined" (khata milao) ===
+- app.js ka `effect` report() ke andar local tha; milanSetup rows / balanceAt mein ReferenceError. Ab top-level mlEffect (balance() jaisa:
+  skipsBalance -> 0, credit / payment / cashPaysBill +, borrow / collection −).
