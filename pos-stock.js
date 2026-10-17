@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.14';
-import { liveLabelsHTML } from './barcode.js?v=2.103.14';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.15';
+import { liveLabelsHTML } from './barcode.js?v=2.103.15';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -3364,7 +3364,33 @@ function thWatch() {
 // pieces wala = m (pichhle 5 transfer ki aam miqdaar) · malik ka ✏️ stockConfig.rack {id: {u (kitna bikne par), q (kitna lana)}}.
 // Godam ka stock LIVE (app) — us se zyada nahi. Bhejne ke baad item chhupa (rackSent) jab tak PC naya transfer na dekhe.
 let rackRows = [], rackAt = 0, rackStop = null, rk = null, canDoRk = () => true; const rackSent = new Map();
-function rackWatch() { if (rackStop || !cloud?.listenRack) return; rackStop = cloud.listenRack(d => { rackRows = Array.isArray(d?.rows) ? d.rows : []; rackAt = Number(d?.at) || 0; if (document.querySelector('.th-root') && !rk) rerender(); if (rk && $('rkBody')) rkPaint(); }); }
+// v2.103.15: malik — "live data zaroori; tumhare paas stock bhi hai, sale bhi — abhi ke liye kaafi". PC ka rack data (posStats/rack)
+//   aane tak APP KE APNE data se: transfer notes (tcAll — 60 din, POS + app) + item report ki din-war bikri (+ aaj irep-today) + LIVE stock.
+//   Transfer wale din ki baqi bikri nahi gini (din ka hisaab) — PC data aate hi khud us par.
+let irData = null, irStop = null, irT = null, irTStop = null, rlCache = null, rlKey = '';
+function rackLocalWatch() { if (irStop || !cloud?.listenItemReport) return;
+  irStop = cloud.listenItemReport(d => { if (d) { irData = d; rlCache = null; rkKick(); } });
+  if (cloud.listenItemToday) irTStop = cloud.listenItemToday(t => { irT = t; rlCache = null; rkKick(); }); }
+function rkKick() { if (rackAt) return; if (rk && $('rkBody')) rkPaint(); else if (document.querySelector('.th-root')) rerender(); }
+const msDay = ms => { const d = new Date(ms); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const medN = a => { const x = a.filter(v => v > 0).sort((p, q) => p - q); if (!x.length) return 0; const k = x.length >> 1; return x.length % 2 ? x[k] : (x[k - 1] + x[k]) / 2; };
+function rackLocalRows() {
+  if (!irData?.meta?.days) return [];
+  const T = tcAll().filter(t => t && !t.cancelled && Number(t.to) === 1 && Number(t.from) !== 1), key = [irData.meta.at, irT?.at || 0, T.length, rows.length].join('|');
+  if (rlCache && rlKey === key) return rlCache;
+  const days = irData.meta.days, byI = new Map((irData.items || []).map(it => [String(it.i), it])), tdDay = irT?.day || '', tdMap = new Map((irT?.items || []).map(r => [String(r.i), Number(r.q) || 0]));
+  T.sort((a, b) => (Number(b.createdOn) || Number(b.at) || 0) - (Number(a.createdOn) || Number(a.at) || 0));
+  const last = new Map(); for (const t of T) { const w = Number(t.createdOn) || Number(t.at) || 0; for (const l of t.lines || []) { const id = String(l.itemId), q = Number(l.qty) || 0; if (!(q > 0)) continue; const o = last.get(id); if (!o) last.set(id, { g: Number(t.from), w, qs: [q] }); else if (o.qs.length < 5) o.qs.push(q); } }
+  const out = [];
+  for (const [id, L] of last) { const wd = msDay(L.w), it = byI.get(id); let sold = 0;
+    for (const x of it?.d || []) { const day = days[x[0]]; if (day > wd && !(tdDay && day === tdDay)) sold += Number(x[1]) || 0; }
+    if (tdDay && tdDay > wd) sold += tdMap.get(id) || 0;
+    if (!(sold > 0)) continue; const gI = saleStockItem(L.g, id), sI = saleStockItem(1, id), gs = Number(gI?.stock) || 0; if (!(gs > 0)) continue;
+    out.push({ i: id, n: it?.n || sI?.name || gI?.name || 'Item ' + id, pk: Number(sI?.pack || gI?.pack || it?.pk) || 0, g: L.g, gs, ss: Number(sI?.stock) || 0, w: L.w, s: Math.round(sold * 1000) / 1000, m: medN(L.qs) }); }
+  rlKey = key; return (rlCache = out.sort((a, b) => a.n.localeCompare(b.n)));
+}
+const rackSrc = () => rackAt ? rackRows : rackLocalRows();
+function rackWatch() { rackLocalWatch(); if (rackStop || !cloud?.listenRack) return; rackStop = cloud.listenRack(d => { rackRows = Array.isArray(d?.rows) ? d.rows : []; rackAt = Number(d?.at) || 0; if (document.querySelector('.th-root') && !rk) rerender(); if (rk && $('rkBody')) rkPaint(); }); }
 const rackCfg = id => itemCfg?.rack?.[String(id)] || null;
 function rackCalc(x) {
   const pk = Number(x.pk) > 1 ? Number(x.pk) : 0, c = rackCfg(x.i), unit = Number(c?.u) > 0 ? Number(c.u) : (pk || Math.max(1, Math.round(Number(x.m) || 1)));
@@ -3375,7 +3401,7 @@ function rackCalc(x) {
 }
 function rackDue() {
   const now = Date.now(); for (const [k, t] of rackSent) if (now - t > 30 * 60000) rackSent.delete(k);
-  return rackRows.filter(x => !(rackSent.get(String(x.i)) > (Number(x.w) || 0))).map(x => ({ x, c: rackCalc(x) })).filter(y => y.c.due);
+  return rackSrc().filter(x => !(rackSent.get(String(x.i)) > (Number(x.w) || 0))).map(x => ({ x, c: rackCalc(x) })).filter(y => y.c.due);
 }
 const rkQty = (q, pk) => pk ? `${num(Math.floor(q / pk))} ctn` : `${num(q)} pcs`;
 const rkWhen = ms => { const d = new Date(ms); return `${d.getDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()]} ${d.toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' })}`; };
@@ -3392,11 +3418,11 @@ function rkPaint(only) {
     return `<div class="rk-r${on(y) ? ' is-in' : ''}"><label class="rk-tk"><input type="checkbox" data-rk-t="${esc(id)}"${on(y) ? ' checked' : ''}><span><b>${esc(x.n)}</b><small>${esc(rkWhen(x.w))} ke transfer ke baad <b>${esc(rkQty(x.s, 0))}</b> bike${c.pk ? ` (1 ctn = ${num(c.pk)})` : ''} · godam ${esc(rkQty(c.gs, c.pk))}${c.pk && c.gs % c.pk ? ' + ' + num(r3(c.gs % c.pk)) + ' pcs' : ''} · dukan ${num(x.ss)} pcs${c.own ? ' · ✏️ apna qaida' : ''}</small>${c.short ? `<em class="rk-warn">⚠️ ${esc(rkQty(c.want, c.pk))} chahiye — godam mein itna hi</em>` : ''}</span></label>
       <div class="rk-q"><input type="number" inputmode="numeric" min="0" step="1" data-rk-qty="${esc(id)}" value="${c.pk ? Math.floor(v / c.pk) : v}"><small>${c.pk ? 'ctn' : 'pcs'}</small></div>${isOwner() ? `<button type="button" class="rk-e" data-rk-e="${esc(id)}" aria-label="Qaida">✏️</button>` : ''}
       ${ed ? `<div class="rk-ed"><label>Kitna bikne par lana<input type="number" inputmode="numeric" min="0" step="1" data-rk-u="${esc(id)}" value="${cf?.u || ''}" placeholder="${c.unit}"><small>pcs</small></label><label>Kitna lana<input type="number" inputmode="numeric" min="0" step="1" data-rk-w="${esc(id)}" value="${cf?.q || ''}" placeholder="khud"><small>pcs</small></label><button type="button" class="rk-sv" data-rk-sv="${esc(id)}">✓ Save</button>${cf ? `<button type="button" class="rk-au" data-rk-au="${esc(id)}">↺ Khud</button>` : ''}</div>` : ''}</div>`; };
-  const html = `<div class="rk-hero"><div><small>DUKAN KA RACK</small><b>${num(all.length)} items godam se lane</b><span>${ctn ? num(ctn) + ' carton' : ''}${age != null ? ` · 🖥 data ${age < 1 ? 'abhi' : age + ' min pehle'}` : ''}</span></div><span class="rk-ic">🧺</span></div>
+  const html = `<div class="rk-hero"><div><small>DUKAN KA RACK</small><b>${num(all.length)} items godam se lane</b><span>${ctn ? num(ctn) + ' carton' : ''}${age != null ? ` · 🖥 data ${age < 1 ? 'abhi' : age + ' min pehle'}` : irData ? ' · 📱 app ke data se (PC ka intezar)' : ''}</span></div><span class="rk-ic">🧺</span></div>
     ${all.length > 6 ? `<label class="hs-search"><input type="search" data-rk-q="1" placeholder="🔍 item dhoondo…" value="${esc(rk.q)}" autocomplete="off"></label>` : ''}
     <div id="rkList">${[...G].map(([g, ys]) => { const n = ys.filter(on).length; return `<section class="rk-g"><div class="rk-gh"><b>🏬 ${esc(branchName(Number(g), names))} ➜ ${esc(branchName(1, names))}</b><button type="button" class="rk-all" data-rk-all="${esc(String(g))}">${ys.every(on) ? '☐ koi nahi' : '☑ sab'}</button></div>
       ${ys.map(row).join('')}
-      <button type="button" class="rk-go" data-rk-go="${esc(String(g))}"${n && !rk.busy ? '' : ' disabled'}>${rk.busy === String(g) ? '⏳ PC note bana raha hai…' : `🖨 ${num(n)} items — transfer note print`}</button></section>`; }).join('') || `<div class="th-empty">🧺<b>${rackRows.length || rackAt ? 'Sab rack bhare hain' : 'PC se data aa raha hai'}</b><small>${rackAt ? 'Jaise hi kisi item ka ek carton bikega, yahan aa jayega' : 'Shop PC update ke baad 2–5 minute'}</small></div>`}</div>
+      <button type="button" class="rk-go" data-rk-go="${esc(String(g))}"${n && !rk.busy ? '' : ' disabled'}>${rk.busy === String(g) ? '⏳ PC note bana raha hai…' : `🖨 ${num(n)} items — transfer note print`}</button></section>`; }).join('') || `<div class="th-empty">🧺<b>${rackAt || irData ? 'Sab rack bhare hain' : 'Data aa raha hai'}</b><small>${rackAt || irData ? 'Jaise hi kisi item ka ek carton bikega, yahan aa jayega' : 'Shop PC update ke baad 2–5 minute'}</small></div>`}</div>
     <p class="rk-note">Qaida: carton wala = ek carton bika to poore carton · sirf pieces wala = jitna aam taur par godam se aata hai · ✏️ malik apna qaida. Khula maal godam se nahi.</p>`;
   if (only) { const t = document.createElement('div'); t.innerHTML = html; const a = t.querySelector('#rkList'), b = el.querySelector('#rkList'); if (a && b) { b.innerHTML = a.innerHTML; return; } }
   el.innerHTML = html;
@@ -3429,7 +3455,7 @@ document.addEventListener('change', e => { const t = e.target; if (!rk || !t.clo
 document.addEventListener('input', e => { const t = e.target; if (rk && t?.dataset?.rkQ != null) { rk.q = t.value || ''; clearTimeout(rkQT); rkQT = setTimeout(() => rkPaint(true), 160); } });
 let rkQT = 0;
 document.addEventListener('close', e => { if (e.target?.id === 'dialog' && rk) { rk = null; if (document.querySelector('.th-root')) rerender(); } }, true);
-export const _rkTest = { rackCalc, rackDue, set rows(v) { rackRows = v; }, set cfg(v) { itemCfg = v; } };
+export const _rkTest = { rackCalc, rackDue, rackLocalRows, set rows(v) { rackRows = v; }, set cfg(v) { itemCfg = v; } };
 export function renderTransferHub(canDo = () => true) {
   thWatch(); rackWatch(); canDoRk = canDo;
   const names = collect().names || {}, today = regDay(Date.now()), y = new Date(); y.setDate(y.getDate() - 1); const yest = regDay(y.getTime());
@@ -3447,7 +3473,7 @@ export function renderTransferHub(canDo = () => true) {
   const row = (t, dd) => { const x = tot([t]); const k = esc(tcKey(t)); return `<div class="th-rw"><button type="button" class="th-row" data-th-tc="${k}" data-th-d="${dd}"><span class="th-tn">TN<b>${esc(String(t.transferNo || '').replace(/^0+/, '') || '—')}</b></span><span class="th-mid"><b>${esc(branchName(t.from, names))} ➜ ${esc(branchName(t.to, names))}</b><small>${(t.lines || []).length} items · ${num(x.c)} ctn${x.p ? ' + ' + num(x.p) + ' pcs' : ''}${x.c !== x.ca ? ' (asal ' + num(x.ca) + ')' : ''} · ${esc(regClock(t.at))}${t.app ? ' · 📱' : ''}${Number(t.editCount) > 0 ? ' · ✏️' : ''}</small></span>${stChip(t)}</button>${own ? `<details class="th-more"><summary aria-label="Aur">⋯</summary><div><button type="button" data-th-prn="${esc(String(t.transferId))}">🖨 Dobara print</button><button type="button" data-th-edit="${esc(String(t.transferId))}">✏️ Edit</button><button type="button" class="danger" data-th-cancel="${esc(String(t.transferId))}">❌ Cancel</button></div></details>` : ''}</div>`; };
   const grp = [[today, 'Aaj'], [yest, 'Kal']].map(([d, l]) => { const g = all.filter(t => regDay(t.at) === d); return g.length ? `<section class="th-day"><div class="th-dh"><b>${l}</b><span>${g.length} note</span></div>${g.slice(0, 40).map(t => row(t, d === today ? 1 : 2)).join('')}</section>` : ''; }).join('');
   const tile = (k, ic, t, sub, cls) => `<button type="button" class="th-tile ${cls}" data-th="${k}"><span>${ic}</span><b>${t}</b><small>${sub}</small></button>`;
-  $('list').innerHTML = `<div class="th-root"><div class="th-tiles">${canDo('stock.transfer') ? tile('new', '➕', 'Naya transfer note', 'Sirf majood maal · Ctn mein · ⤓ Sara', 'a') : ''}${canDo('stock.rack') ? (() => { const n = rackDue().length; return tile('rack', '🧺', 'Rack bharo', n ? `${n} items godam se lane` : rackAt ? 'Sab rack bhare ✓' : 'Data aa raha hai', 'c' + (n ? ' rk-hot' : '')).replace('</button>', n ? `<i class="rk-badge">${n}</i></button>` : '</button>'); })() : ''}${canDo('stock.tc') ? tile('tc', '🧾', 'Transfer check', pend ? pend + ' baqi · scan karein' : 'Maal pohancha? Scan', 'b') : ''}${canDo('stock.reg') ? tile('reg', '📋', 'Transfer register', 'Din-war · PDF', 'c') : ''}</div>
+  $('list').innerHTML = `<div class="th-root"><div class="th-tiles">${canDo('stock.transfer') ? tile('new', '➕', 'Naya transfer note', 'Sirf majood maal · Ctn mein · ⤓ Sara', 'a') : ''}${canDo('stock.rack') ? (() => { const n = rackDue().length; return tile('rack', '🧺', 'Rack bharo', n ? `${n} items godam se lane` : rackAt || irData ? 'Sab rack bhare ✓' : 'Data aa raha hai', 'c' + (n ? ' rk-hot' : '')).replace('</button>', n ? `<i class="rk-badge">${n}</i></button>` : '</button>'); })() : ''}${canDo('stock.tc') ? tile('tc', '🧾', 'Transfer check', pend ? pend + ' baqi · scan karein' : 'Maal pohancha? Scan', 'b') : ''}${canDo('stock.reg') ? tile('reg', '📋', 'Transfer register', 'Din-war · PDF', 'c') : ''}</div>
     ${grp || '<div class="th-empty">⇄<b>Aaj / kal koi transfer note nahi</b><small>"Naya transfer note" se banayein</small></div>'}</div>`;
 }
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-th],[data-th-reg],[data-th-tc],[data-th-prn],[data-th-edit],[data-th-cancel]'); if (!b) return; const d = b.dataset;

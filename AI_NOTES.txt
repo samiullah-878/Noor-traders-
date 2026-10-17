@@ -5200,3 +5200,10 @@ notification nahi" · "layout / chips premium". Aur: #3 paisa phansa stock.
 - irep.js 💸 phHTML (nafa ke neeche): POS kul stock (app stockPools, irepSetup.stock) × item c. 😴 60 din se nahi bika (ya data mein
   kabhi nahi) · 📦 90 din ki bikri se zyada (zaid hissa). Tabs is-in, aur dikhao, item tap = item dlg, PDF phPdf.
 - Test: sk/rk.mjs (8 ✓), rk/t.cjs (PC 3 ✓), ir5/t2.js (13 ✓), t.js (37 ✓). AI: koi nahi.
+
+=== v2.103.15 (2026-10-18) — 🧺 RACK BHARO: PC data aane tak APP KE DATA se ===
+Malik: "live data zaroori — tumhare paas stock bhi hai, sale bhi, abhi ke liye kaafi do".
+- pos-stock.js rackLocalRows (jab rackAt 0): tcAll() (60 din POS + app transfer notes, cancel nahi) se har item ka aakhri godam -> dukan
+  + 5 ki median; bikri = item report din-war (transfer ke DIN ke baad) + aaj irep-today; LIVE godam / dukan stock. rackSrc = PC ho to PC.
+  Hero "📱 app ke data se (PC ka intezar)". Item report sirf malik / Full parh sakte (posStats) — stock wale ko PC data tak "Data aa raha hai".
+- Test sk/rk2.mjs (9 ✓) + rk.mjs. AI: koi nahi.
