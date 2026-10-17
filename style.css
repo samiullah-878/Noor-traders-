@@ -4035,3 +4035,12 @@ html body :is(#summary,#dialogBody) .ir-root .fc-sa.out{border-color:#f3c79b!imp
 .ks-rcnt{border-left:4px solid #2c6bed}
 .ks-ents .ks-note small b{color:inherit;font-weight:800}
 .ks-none{margin:8px 2px;color:#64748b;font-size:13px}
+/* v2.103.3: 📊 item report — sort patti upar chipki + ⇅ */
+.ir-sticky{position:sticky;top:0;z-index:6;margin:0 -12px 6px;padding:8px 12px 6px;background:var(--ir-surf,#fff);border-radius:14px;box-shadow:0 6px 14px rgba(23,43,82,.08)}
+.ir-sortb{display:flex;gap:6px;align-items:center}
+.ir-sortb .mchips{flex:1;display:flex;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;margin:0}
+.ir-sortb .mchips::-webkit-scrollbar{display:none}
+.ir-sortb .mchips button{flex:none;white-space:nowrap}
+.ir-sortb .ir-rev{flex:none;white-space:nowrap;font-weight:800}
+.ir-sticky .hs-search{margin:6px 0 0}
+@supports (overflow:clip){html body .ir-root.ir-root{overflow-x:clip}html body .ir-root .ir-sec{overflow:clip}}   /* v2.103.3: hidden = sticky nahi chalta; clip wahi kaate magar sticky chale */

@@ -5063,3 +5063,12 @@ Malik: (1) "search mein kahan se kahan tak ka option — dates ke hisaab se filt
   khata khol kar entry chamke) + khSearchHTML (filtered accounts). CAP kh.sdate (Settings → Mulazim). Test scratchpad ksd/t2.js 9 ✓.
 - (2) factory.js posOn = cfg.posOn !== false (default POS; ⚙️ "📱 Sirf app" chunein to app). POS mode mein 'app' batch par "📤 POS mein bhejo"
   (app2pos: wahi data naya batch hold:false labels [] + purana cancelNow — dohra stock nahi, label dobara nahi). Test fct/t.mjs 169 ✓.
+
+=== v2.103.3 (2026-10-17) — 📊 ITEM REPORT SORTING (chipki patti + 6 tarteeb + ⇅) ===
+Malik (item report, neeche scroll kiya hua): "yahan par sorting honi chahiye" — chips upar the, scroll par ghayab + sirf zyada se kam.
+- irep.js: SORTS = Sale · Nafa Rs · Nafa % · Fi pc nafa (pp, perPc) · Ginti · Naam A–Z (n); sorter(k, rev) — ⇅ ulta (st.rev / st.trev,
+  localStorage); dono list (🏆 #irTopSec data-ir-tsort / data-ir-trev aur 📋 Saari items data-ir-sort / data-ir-rev) ki patti .ir-sticky
+  (chips + search, position sticky top 0). PDF ki item table isi tarteeb (st.sort / st.rev).
+- fmtQty: numQ (3 decimal) — "ilachi kg 0 pcs" ab 0.25 pcs.
+- CSS: .ir-root / .ir-sec overflow hidden -> clip (@supports) — hidden ke andar sticky nahi chalta tha (factory par bhi wahi dikhawat).
+- Test scratchpad ir5/t.js 27 ✓ + sticky.png.
