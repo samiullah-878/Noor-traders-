@@ -4055,3 +4055,6 @@ html body :is(#summary,#dialogBody) .ir-root .fc-sa.out{border-color:#f3c79b!imp
 .who-av{flex:none;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:18px;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.4)}
 .who-tx{display:grid;gap:2px;min-width:0}.who-tx b{font-size:18px;color:#fff}.who-tx small{font-size:12px;color:rgba(255,255,255,.85)}
 .who-push.ok{color:#9ff0c4!important}.who-push.bad{color:#ffd0d0!important}
+/* v2.103.6: ⚡ item report — data kitna taza (chip) */
+.ir-root .lk-age{display:table;margin:6px auto 0;padding:5px 12px;border-radius:999px;background:#e8f7ee;color:#17663a;font-weight:800;opacity:1}
+.ir-root .lk-age.warn{background:#fdecea;color:#b3261e}

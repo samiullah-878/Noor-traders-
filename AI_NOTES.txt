@@ -5100,3 +5100,16 @@ karna hai, itna khapna nahi hota — wo khud chalu ho" · "mulazim ka reminder m
   7–23) EK dafa malik ke sab phone + likhne wala; nagSent['f'+id]; tag 'nag-'+id (Cloud Function wali khabar ho to bhi phone par ek).
   Malik ke apne notes = Cloud Function (remindPush, repo mein nahi). Manifest 2026-10-17.3.
 - AI: is kaam mein kahin AI nahi.
+
+=== v2.103.6 (2026-10-17) — 📊 ITEM REPORT: AAJ KA DATA + 📶 KAMZOR NET ===
+Malik: "yahan aaj ka data nahi aa raha" (screenshot: "Report aa rahi hai…" atka, upar "offline").
+Wajah: (a) poori report PC sales-stats.js har GHANTE (bat 1 ghanta rukti) · (b) 🐞 sales-stats.js mein useUTC nahi tha — JS date UTC ban kar
+jati (kal 00:00 PKT = aaj 19:00) to sham 7 ke baad ki sale raat 12 tak nahi aati · (c) chunk getDoc kamzor net par hamesha intezar.
+- PC sales-stats.js v1.4: useUTC false + day() local (toISOString ek din peeche karta). item-report.js v1.3: collect() alag; run() wahi;
+  runToday() = sirf aaj -> posStats/irep-today {at, day, n, h, j:[{i,n,c,pk,q,rs,wq?,wrs?}], cj:{men, rows:[[m,item,q]]}} (hash wahi = na likho,
+  30 min mein ek dafa 'at'). Naya irep-today.js + irep-today-auto.bat (har 10 min, ping 601), manifest service periodic. Manifest 2026-10-17.4.
+- App cloud.js: listenItemToday (j / cj parse) · listenItemReport chunks: 8 sec race, phir getDocFromCache.
+- irep.js: full + tdoc -> mergeToday(F, T): T.at > meta.at ho to us din (k) ki lines / comm rows T se; naya din = days mein jorna (beech
+  ke din bhi); naye items. meta.tAt / tDay. ageText: "⚡ Aaj ka data: X min pehle (har 10 min)"; 40 min se purana (ya bina aaj 150 min) =
+  laal "⚠️ PC ka sale script ruka". 10 sec tak na aaye = "📶 Net kamzor" + 🔄 Dobara (data-ir-retry: irepStop + watch). Chip CSS .ir-root .lk-age.
+- Test: scratchpad itd/t.cjs (runToday + run mock SQL, 8 ✓) · ir5/t.js mergeToday (37 ✓). AI: koi nahi.

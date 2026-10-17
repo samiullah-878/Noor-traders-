@@ -2992,3 +2992,9 @@ Malik: "mulazim ka reminder malik ke phone par bhi aane chahiye".
 - firstDue(n, tk): note (done false, remindDay) jo malik ne nahi likha (by malik token ka uid nahi, byName 'Malik' nahi) — waqt
   (remindTime warna 09:00) aa gaya, 2 ghante se purana nahi, subah 7 – raat 11, nagSent['f'+id] nahi -> malik ke sab token + likhne wala,
   title "🔔 Yaad dihani — <naam>", tag 'nag-'+id, link #note=<id>. Phir nag (15/30/60) pehle jaisa. Manifest 2026-10-17.3.
+
+=== 2026-10-17.4 — ⚡ ITEM REPORT ka AAJ ka data har 10 min (app v2.103.6) ===
+- sales-stats.js v1.4: SQL_CONFIG.options.useUTC = false (🐞 sham 7 ke baad ki sale item report mein nahi aati thi) + day() local din.
+- item-report.js v1.3: collect({pool, sql, db, log, from, to}) -> {all, comm, days, wsNames}; run() 3 mahine (wahi); runToday() sirf aaj ->
+  posStats/irep-today (hash wahi to nahi likhta, 30 min baad 'at' taza).
+- Naya irep-today.js (sirf SELECT) + irep-today-auto.bat (har 10 min) — manifest services mein periodic "⚡ Item report — aaj ka data".

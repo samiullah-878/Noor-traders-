@@ -1,5 +1,5 @@
 // =========================================================
-//  sales-stats.js  v1.3 (2026-10-14: + 📊 item-report.js — 3 mahine har item har din ginti / Rs / nafa) · v1.2 (2026-10-11: purchase history + mahina-war + mahine ke 4 hisse) · v1.1 (2026-09-28: Noor Traders ke apne bill bahar) · v1 (2026-09-28) — POS ki 6 MAHINE ki BIKRI + PURCHASE, har item ka khulasa -> Firestore posStats
+//  sales-stats.js  v1.4 (2026-10-17: useUTC false — sham ki sale) · v1.3 (2026-10-14: + 📊 item-report.js — 3 mahine har item har din ginti / Rs / nafa) · v1.2 (2026-10-11: purchase history + mahina-war + mahine ke 4 hisse) · v1.1 (2026-09-28: Noor Traders ke apne bill bahar) · v1 (2026-09-28) — POS ki 6 MAHINE ki BIKRI + PURCHASE, har item ka khulasa -> Firestore posStats
 //  App ka "🛒 Purchase order" isi se andaza lagata hai (roz kitna bikta hai, kitne din ka stock baqi, pichhli dafa kis se liya).
 //  SQL mein KUCH NAHI likhti — sirf SELECT. Chalana: node sales-stats.js  (SALE-DATA.bat har ghante chalata hai)
 //  posStats/meta {at, days, n, chunks, ptDays[4], months[7], parties[]}  ·  posStats/items-<k> {items:[{i, w[26 hafte], s30, s90, s180, p180, pn, lp{d,q,r,party}, ph, mo, pt}]}
@@ -12,6 +12,7 @@ const sql = require('mssql');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const SQL_CONFIG = require('./sql-config.js');
+SQL_CONFIG.options = { ...(SQL_CONFIG.options || {}), useUTC: false };   // v1.4 (2026-10-17): 🐞 Pakistan ka waqt — pehle UTC jata tha, sham 7 ke baad ki sale item report mein raat 12 tak nahi aati thi
 if (!getApps().length) initializeApp({ credential: cert(require('./firebase-key.json')) });
 const db = getFirestore(), col = db.collection('businesses').doc('noor-traders').collection('posStats');
 const SKIP = "AND ISNULL(pt.PartyName, '') NOT LIKE '%noor%trader%' AND ISNULL(pt.PartyName, '') NOT LIKE '%our factory%'";   // andar ka lena-dena bikri/khareed nahi
@@ -78,7 +79,7 @@ function addExtra(get, { ph = [], mo = [], pt = [] }, now = new Date()) {
   return { parties, months, ptDays: ptDaysOf(now) };
 }
 module.exports = { addExtra, ptDaysOf, monthsOf, partOf };
-const day = d => { try { return new Date(d).toISOString().slice(0, 10); } catch { return ''; } };
+const day = d => { try { const x = new Date(d); if (isNaN(x)) return ''; return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; } catch { return ''; } };   // v1.4: useUTC false = Pakistan ka din (toISOString ek din peeche karta)
 if (require.main === module) (async () => {
   const t0 = Date.now(); let pool;
   try {

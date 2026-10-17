@@ -26,16 +26,38 @@ const isDay = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
 const pct = (a, b) => b ? Math.round(a / b * 1000) / 10 : 0;
 
 let cloud = null, notice = () => {}, pdfOf = null, stop = null, data = null, err = '', loaded = false, cStop = null, commCfg = {}, cq = '';
+let full = null, tdoc = null, tStop = null, slowT = 0, slow = false;   // v2.103.6: ⚡ aaj ka data (irep-today) alag aata hai, data = full + aaj
 const LS = 'sam-irep';
 const st = (() => { let v = {}; try { v = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch {} return { mon: v.mon || '', per: v.per || 'm', from: v.from || '', to: v.to || '', ws: v.ws !== false, sort: v.sort || 'rs', q: '', lim: 60, tsort: v.tsort || 'rs', tq: '', tAll: false, rev: !!v.rev, trev: !!v.trev }; })();   // v2.103.3: ⇅ ulta
 const keep = () => { try { localStorage.setItem(LS, JSON.stringify({ mon: st.mon, per: st.per, from: st.from, to: st.to, ws: st.ws, sort: st.sort, tsort: st.tsort, rev: st.rev, trev: st.trev })); } catch {} };
 
 export function irepSetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; pdfOf = o.pdf || pdfOf; }
-export function irepStop() { if (stop) { try { stop(); } catch {} stop = null; } if (cStop) { try { cStop(); } catch {} cStop = null; } }
+export function irepStop() { if (stop) { try { stop(); } catch {} stop = null; } if (tStop) { try { tStop(); } catch {} tStop = null; } clearTimeout(slowT); slowT = 0; if (cStop) { try { cStop(); } catch {} cStop = null; } }
 function watch() {
   if (!cStop && cloud?.listenCommission) cStop = cloud.listenCommission(m => { commCfg = m || {}; if ($('irRoot')) paint(); if (document.querySelector('.ir-cset')) commSetPaint(); });
+  if (!tStop && cloud?.listenItemToday) tStop = cloud.listenItemToday(t => { tdoc = t; remerge(); });
   if (stop || !cloud?.listenItemReport) return;
-  stop = cloud.listenItemReport((d, e) => { loaded = true; if (d) { data = d; err = ''; ix = null; } else err = e?.code || e?.message || 'masla'; if ($('irRoot')) paint(); });
+  slow = false; clearTimeout(slowT); slowT = setTimeout(() => { if (!loaded) { slow = true; if ($('irRoot')) paint(); } }, 10000);   // v2.103.6: 📶 hamesha ghoomta na rahe
+  stop = cloud.listenItemReport((d, e) => { loaded = true; clearTimeout(slowT); if (d) { full = d; err = ''; remerge(); return; } err = e?.code || e?.message || 'masla'; if ($('irRoot')) paint(); });
+}
+function remerge() { data = mergeToday(full, tdoc); ix = null; if (data) loaded = true; if ($('irRoot')) paint(); }
+// v2.103.6: ⚡ poori report (har ghante) + aaj ka hissa (har 10 min). Aaj ka doc naya ho to us din ki lines us se badal do.
+function mergeToday(F, T) {
+  if (!T?.day || !Array.isArray(T.items) || !isDay(T.day)) return F;
+  if (F?.meta && Number(F.meta.at) >= Number(T.at) && (F.meta.days || []).includes(T.day)) return F;   // poori report hi nayi hai
+  const days = (F?.meta?.days || []).slice();
+  if (days.length && T.day < days[0]) return F;
+  let k = days.indexOf(T.day);
+  if (k < 0) { const last = days[days.length - 1]; if (last) { const d = toDate(last); for (let n = 0; n < 7; n++) { d.setDate(d.getDate() + 1); const s = dayOf(d); if (s >= T.day) break; days.push(s); } } days.push(T.day); k = days.length - 1; }
+  const M = new Map();
+  for (const it of F?.items || []) M.set(String(it.i), { ...it, d: (it.d || []).filter(x => x[0] !== k) });
+  for (const t of T.items) { if (!t || t.i == null) continue; const e = M.get(String(t.i)) || { i: t.i, n: t.n, c: t.c, pk: t.pk, d: [] }; if (!M.has(String(t.i))) M.set(String(t.i), e);
+    e.d.push(t.wq || t.wrs ? [k, Number(t.q) || 0, Number(t.rs) || 0, Number(t.wq) || 0, Number(t.wrs) || 0] : [k, Number(t.q) || 0, Number(t.rs) || 0]); e.d.sort((a, b) => a[0] - b[0]); }
+  const items = [...M.values()].filter(e => e.d.length);
+  let comm = F?.comm || null;
+  if (T.comm) { const men = new Map((comm?.men || []).map(x => [Number(x[0]), x])); for (const x of T.comm.men || []) if (!men.has(Number(x[0]))) men.set(Number(x[0]), x);
+    comm = { ...(comm || {}), ids: comm?.ids || [], men: [...men.values()], rows: [...(comm?.rows || []).filter(r => r[0] !== k), ...(T.comm.rows || []).map(r => [k, r[0], r[1], r[2]])] }; }
+  return { ...(F || {}), meta: { ...(F?.meta || { from: T.day, n: items.length }), days, to: days[days.length - 1], at: Number(F?.meta?.at) || 0, tAt: Number(T.at) || 0, tDay: T.day }, items, comm };
 }
 
 // ---------- hisaab ----------
@@ -232,7 +254,13 @@ export function renderIrep() {
   $('actions').innerHTML = '<button class="got" data-ir-pdf="1">📄 PDF · WhatsApp</button>';
   paint();
 }
-function ageText() { const at = Number(data?.meta?.at) || 0; if (!at) return ['', false]; const m = Math.round((Date.now() - at) / 60000); return [`🖥 PC ka data: ${m < 1 ? 'abhi' : m < 60 ? m + ' min pehle' : Math.round(m / 60) + ' ghante pehle'} (har ghante taza)`, m > 150]; }
+const agoT = at => { const m = Math.round((Date.now() - at) / 60000); return m < 1 ? 'abhi' : m < 60 ? m + ' min pehle' : m < 1440 ? Math.round(m / 60) + ' ghante pehle' : Math.round(m / 1440) + ' din pehle'; };
+function ageText() {   // v2.103.6: ⚡ aaj ka data har 10 min — 40 min se purana = PC ka script ruka
+  const at = Number(data?.meta?.at) || 0, tAt = Number(data?.meta?.tAt) || 0, tOk = tAt && data?.meta?.tDay === today();
+  if (tOk) { const m = (Date.now() - tAt) / 60000; return [m > 40 ? `⚠️ PC ka sale script ruka — aaj ka data ${agoT(tAt)}` : `⚡ Aaj ka data: ${agoT(tAt)} (har 10 min)`, m > 40]; }
+  if (!at) return ['', false]; const m = (Date.now() - at) / 60000;
+  return [m > 150 ? `⚠️ PC ka sale script ruka — data ${agoT(at)}` : `🖥 PC ka data: ${agoT(at)} (har ghante taza)`, m > 150];
+}
 let lastRows = null;
 function rowsOf() {
   const { sorted, srt } = lastRows || { sorted: [], srt: () => 0 };
@@ -242,8 +270,8 @@ function rowsOf() {
 }
 function paint() {
   const root = $('irRoot'); if (!root) return;
-  if (!loaded) { root.innerHTML = '<div class="nt-empty">⏳<b>Report aa rahi hai…</b></div>'; return; }
-  if (!data?.meta || !index().items.length) { root.innerHTML = `<div class="nt-empty">📊<b>${err ? 'Report nahi khuli' : 'PC se abhi data nahi aaya'}</b><small>${err ? esc(err === 'permission-denied' ? 'Is login ko ijazat nahi' : err) : 'Server PC par "Sale / purchase data" (KHATA-DOCTOR) har ghante chalti hai — pehli dafa 1 ghante tak lag sakta hai'}</small></div>`; return; }
+  if (!loaded) { root.innerHTML = slow ? '<div class="nt-empty">📶<b>Net kamzor — report abhi nahi aayi</b><small>PC ki report server se aa rahi hai; net theek hote hi khud aa jayegi</small><button type="button" class="sh-wide" data-ir-retry="1">🔄 Dobara</button></div>' : '<div class="nt-empty">⏳<b>Report aa rahi hai…</b></div>'; return; }
+  if (!data?.meta || !index().items.length) { root.innerHTML = `<div class="nt-empty">📊<b>${err ? (err === 'net' || /offline|unavailable|cache|net/i.test(err) ? '📶 Net nahi — report nahi aayi' : 'Report nahi khuli') : 'PC se abhi data nahi aaya'}</b>${err ? '<button type="button" class="sh-wide" data-ir-retry="1">🔄 Dobara</button>' : ''}<small>${err ? esc(err === 'permission-denied' ? 'Is login ko ijazat nahi' : err) : 'Server PC par "Sale / purchase data" (KHATA-DOCTOR) har ghante chalti hai — pehli dafa 1 ghante tak lag sakta hai'}</small></div>`; return; }
   const X = index(), m = monthOf(), [a, b0] = range(), b = clipEnd(b0), [age, old] = ageText();
   const { rows, T } = agg(a, b), sorted = rows.slice();
   const L = lastDay(m), weeks = [1, 2, 3, 4, 5].map(w => [w, partRange(m, 'w' + w)]).filter(x => x[1] && x[1][0] <= clipEnd(x[1][1]));   // aane wale hafte nahi
@@ -346,6 +374,7 @@ function pdfHTML() {
 
 // ---------- clicks ----------
 document.addEventListener('click', e => {
+  if (e.target.closest?.('[data-ir-retry]')) { irepStop(); loaded = false; err = ''; slow = false; watch(); paint(); return; }   // v2.103.6: 🔄 dobara
   if (e.target.closest?.('[data-ir-pdf]')) { if (!data?.meta) { notice('Report abhi nahi aayi'); return; } const [a, b0] = range(); if (pdfOf) pdfOf(pdfHTML(), `Item sale ${a} se ${clipEnd(b0)}`); return; }
   const c = e.target.closest?.('[data-ir-cset],[data-ir-cadd],[data-ir-cdel],[data-ir-man]');
   if (c && c.closest('.ir-root')) { const d = c.dataset;
@@ -386,4 +415,4 @@ document.addEventListener('input', e => {   // v2.101.1: search par sirf neeche 
   if (!e.target.matches?.('[data-ir-q]')) return; st.q = e.target.value || ''; st.lim = 60; clearTimeout(qT);
   qT = setTimeout(() => { const r = rowsOf(), el = document.getElementById('irRows'), n = document.getElementById('irTblN'); if (el) el.innerHTML = r.html; if (n) n.textContent = num(r.tbl.length); }, 200);
 });
-export const _irTest = { fmtQty, topHTML, nafaHTML, wsSplit, setRows: r => { lastRows = { sorted: r, srt: () => 0 }; }, agg, range, patterns, partRange, setData: d => { data = d; loaded = true; ix = null; }, st, pdfHTML, commAgg, setComm: c => { commCfg = c; } };
+export const _irTest = { mergeToday, ageText, setFull: (f, t) => { full = f; tdoc = t; remerge(); }, fmtQty, topHTML, nafaHTML, wsSplit, setRows: r => { lastRows = { sorted: r, srt: () => 0 }; }, agg, range, patterns, partRange, setData: d => { data = d; loaded = true; ix = null; }, st, pdfHTML, commAgg, setComm: c => { commCfg = c; } };

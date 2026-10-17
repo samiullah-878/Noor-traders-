@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  item-report.js  v1.2 (2026-10-14: 💰 COMMISSION items (blueAccess/commission) — har din har Supply Man kitne packet -> posStats/irep-comm) · v1.1 (2026-10-14: Firestore list-ke-andar-list nahi leta — items ab JSON string 'j' mein, hissa ~600 KB tak) · v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
+//  item-report.js  v1.3 (2026-10-17: ⚡ runToday — sirf AAJ ka data har 10 min posStats/irep-today (irep-today.js) · collect() alag) · v1.2 (2026-10-14: 💰 COMMISSION items (blueAccess/commission) — har din har Supply Man kitne packet -> posStats/irep-comm) · v1.1 (2026-10-14: Firestore list-ke-andar-list nahi leta — items ab JSON string 'j' mein, hissa ~600 KB tak) · v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
 //  Malik: "poore month ka actual data — 1–10, 10–20, 20–30, poora mahina, week wise; har item kaun si bik rahi, kin dino / hafton
 //         mein zyada, un par nafa kitna — chart, click par aage data".
 //  sales-stats.js (har ghante) ke aakhir mein chalta hai: run({ pool, sql, db }). SQL mein KUCH NAHI likhta — sirf SELECT.
@@ -28,13 +28,11 @@ function pieceCost(cost, pack, rate) {
   return gap(whole) < gap(cost) ? whole : cost;
 }
 
-async function run({ pool, sql, db, log = console.log, now = new Date() }) {
-  const t0 = Date.now();
-  const col = db.collection('businesses').doc('noor-traders').collection('posStats');
+// v1.3: hisaab alag (collect) — run() 3 mahine (har ghante) · runToday() sirf AAJ (irep-today.js har 10 min) -> posStats/irep-today
+async function collect({ pool, sql, db, log, from, to }) {
   let wsNames = ['whole sale'];
   try { const c = await db.collection('businesses').doc('noor-traders').collection('blueAccess').doc('reportConfig').get(); const w = c.exists && c.data().wsNames; if (Array.isArray(w) && w.length) wsNames = w; } catch {}
   const isWs = name => { const p = norm(name); return !!p && (/whole\s*sale/.test(p) || wsNames.some(n => norm(n) && p.includes(norm(n)))); };
-  const from = new Date(now.getFullYear(), now.getMonth() - 2, 1), to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   const days = []; for (let d = new Date(from); d < to; d.setDate(d.getDate() + 1)) days.push(dayOf(d));
   const di = new Map(days.map((d, i) => [d, i]));
   // 1) is arse ki parties — andar wali bahar, wholesale ka nishan
@@ -69,9 +67,6 @@ async function run({ pool, sql, db, log = console.log, now = new Date() }) {
   const all = [...M.values()].map(e => ({ i: e.i, n: e.n, c: e.c, pk: e.pk, d: [...e.m.values()].sort((a, b) => a[0] - b[0]).map(x => x[3] || x[4] ? [x[0], r3(x[1]), Math.round(x[2]), r3(x[3]), Math.round(x[4])] : [x[0], r3(x[1]), Math.round(x[2])]) }))
     .filter(e => e.d.some(x => x[1] || x[2]))
     .sort((a, b) => b.d.reduce((s, x) => s + x[2], 0) - a.d.reduce((s, x) => s + x[2], 0));
-  const chunks = []; let cur = [], size = 2;
-  for (const e of all) { const n = Buffer.byteLength(JSON.stringify(e)) + 1; if (cur.length && size + n > MAXB) { chunks.push(cur); cur = []; size = 2; } cur.push(e); size += n; }
-  if (cur.length) chunks.push(cur);
   // v1.2: 💰 COMMISSION — malik ki tick ki hui items (Biryani 100g, Qorma 100g …): har din × Supply Man (Sale.SupplyManID, 0 = bina) × item = packet
   let comm = null;
   try {
@@ -88,6 +83,16 @@ async function run({ pool, sql, db, log = console.log, now = new Date() }) {
       comm = { men, ids: cids, rows };
     }
   } catch (e) { log('💰 commission data nahi bana: ' + e.message); }
+  return { all, comm, days, wsNames };
+}
+async function run({ pool, sql, db, log = console.log, now = new Date() }) {
+  const t0 = Date.now();
+  const col = db.collection('businesses').doc('noor-traders').collection('posStats');
+  const from = new Date(now.getFullYear(), now.getMonth() - 2, 1), to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const { all, comm, days, wsNames } = await collect({ pool, sql, db, log, from, to });
+  const chunks = []; let cur = [], size = 2;
+  for (const e of all) { const n = Buffer.byteLength(JSON.stringify(e)) + 1; if (cur.length && size + n > MAXB) { chunks.push(cur); cur = []; size = 2; } cur.push(e); size += n; }
+  if (cur.length) chunks.push(cur);
   const b = db.batch();
   if (comm) b.set(col.doc('irep-comm'), { j: JSON.stringify(comm), at: Date.now() });
   chunks.forEach((items, k) => b.set(col.doc('irep-' + k), { j: JSON.stringify(items), n: items.length, at: Date.now() }));
@@ -97,4 +102,21 @@ async function run({ pool, sql, db, log = console.log, now = new Date() }) {
   log(new Date().toLocaleString('en-PK') + ' — 📊 item report: ' + all.length + ' items, ' + days.length + ' din, ' + chunks.length + ' hisse, ' + Math.round((Date.now() - t0) / 1000) + 's');
   return { n: all.length, days: days.length };
 }
-module.exports = { run, perPiece, pieceCost };
+// v1.3: ⚡ AAJ KA DATA (malik: "aaj ka data nahi aa raha") — sirf aaj, chhota doc. App poore report mein aaj ki jagah yeh jorti hai
+//   (jab yeh irep-meta se naya ho). posStats/irep-today { at, day, n, h, j: JSON [{i, n, c, pk, q, rs, wq?, wrs?}], cj: JSON {men, rows:[[m, item, q]]} | '' }
+//   h = hash — badla na ho to dobara nahi likhta (sirf 'at' har 30 min, taake app ko pata ho PC zinda hai).
+async function runToday({ pool, sql, db, log = console.log, now = new Date() }) {
+  const t0 = Date.now(), ref = db.collection('businesses').doc('noor-traders').collection('posStats').doc('irep-today');
+  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate()), to = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+  const { all, comm, days } = await collect({ pool, sql, db, log, from, to });
+  const items = all.map(e => { const x = e.d[0] || [0, 0, 0]; const o = { i: e.i, n: e.n, c: e.c, pk: e.pk, q: x[1], rs: x[2] }; if (x[3] || x[4]) { o.wq = x[3]; o.wrs = x[4]; } return o; });
+  let j = JSON.stringify(items); while (Buffer.byteLength(j) > 850000 && items.length > 50) { items.length = Math.floor(items.length * 0.8); j = JSON.stringify(items); }
+  const cj = comm ? JSON.stringify({ men: comm.men, rows: comm.rows.map(r => [r[1], r[2], r[3]]) }) : '';
+  const h = require('crypto').createHash('sha1').update(days[0] + j + cj).digest('hex');
+  let old = null; try { const o = await ref.get(); old = o.exists ? o.data() : null; } catch {}
+  if (old && old.h === h && Date.now() - (Number(old.at) || 0) < 30 * 60000) { log(new Date().toLocaleString('en-PK') + ' — ⚡ aaj: wahi (' + items.length + ' items)'); return { n: items.length, same: true }; }
+  await ref.set({ at: Date.now(), day: days[0], n: items.length, h, j, cj });
+  log(new Date().toLocaleString('en-PK') + ' — ⚡ aaj ' + days[0] + ': ' + items.length + ' items, Rs ' + Math.round(items.reduce((s, x) => s + x.rs, 0)) + ', ' + Math.round((Date.now() - t0) / 1000) + 's');
+  return { n: items.length };
+}
+module.exports = { run, runToday, collect, perPiece, pieceCost };
