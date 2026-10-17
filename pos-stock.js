@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.102.3';
-import { liveLabelsHTML } from './barcode.js?v=2.102.3';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.102.4';
+import { liveLabelsHTML } from './barcode.js?v=2.102.4';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1503,8 +1503,13 @@ function tcFind(code) {
 const TC2_FROM = 1791903600000, TC_SHOP = 1;   // 2026-10-13 8:00 pm PKT · dukan = branch 1 (rules mein bhi 1)
 const tcGKey = t => tcKey(t) + 'G';
 const tcNeedG = t => tcIssued(t) >= TC2_FROM;
-const tcGiver = () => String(itemCfg.tcGiver || 'Zeeshan').trim() || 'Zeeshan';
-const tcIsGiver = () => isOwner() || String(nameOf() || '').toLowerCase().includes(tcGiver().toLowerCase());
+// v2.102.4: 📦 GODAM WALE KAI (malik: "Zeeshan ke saath kisi aur larke ko bhi godam ke tick mein") — stockConfig.tcGiver = "Zeeshan|Bilal"
+//   (rules 2.58: naam matches '.*(zeeshan|bilal).*'). Naam sirf harf / hindse / space (regex mehfooz). Purana akela naam bhi chalta.
+const tcClean = n => String(n || '').replace(/[^A-Za-z0-9\u0600-\u06FF ]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 30);
+const tcGivers = () => { const l = String(itemCfg.tcGiver || 'Zeeshan').split('|').map(tcClean).filter(Boolean); return l.length ? l : ['Zeeshan']; };
+const tcGiver = () => tcGivers().join(', ');
+const tcIsGiver = () => isOwner() || tcGivers().some(g => String(nameOf() || '').toLowerCase().includes(g.toLowerCase()));
+let tcGEd = null;   // { sel: Set, staff: [names], extra: '' } — malik ka chooser khula
 const tcGodamSide = (t, step) => step === 1 ? Number(t.from) !== TC_SHOP : Number(t.to) !== TC_SHOP;
 const tcCanStep = (t, step) => (!tcGodamSide(t, step) || tcIsGiver()) && (step !== 1 || isOwner() || can('stock.tcgive'));
 const tcSide = (t, step) => tcGodamSide(t, step) ? '📦 ' + tcGiver() : '🏪 Dukan';
@@ -1570,7 +1575,7 @@ function tcNikleHTML() {
       ${op ? `<div class="tc-more">${tcLines(t)}${s.g && tcNeedG(t) ? `<p class="tc-note">📦 1 number: ${esc(s.g.byName || '')} · ${tcClock(s.g.ts)} · 📱 ${esc(s.g.device || '—')}</p>${isOwner() && !s.c ? `<button type="button" class="tc-del" data-tc-del="${esc(tcGKey(t))}">🗑 "De diya" tick hatao (sirf malik)</button>` : ''}` : ''}${s.c ? tcWho(s.c) + (s.c.note ? `<p class="tc-note">📝 ${esc(s.c.note)}</p>` : '') + (isOwner() ? `<button type="button" class="tc-del" data-tc-del="${esc(k)}">🗑 Check hatao (sirf malik — ghalti par)</button>` : '') : '<p class="tc-note">Abhi kisi ne scan nahi kiya. Maal aane par "📷 Scan / Check" mein parchi scan karein.</p>'}</div>` : ''}</div>`; };
   return `<div class="mchips">${C(tcDays === 1, 'd', 1, 'Aaj')}${C(tcDays === 2, 'd', 2, 'Kal')}${C(tcDays === 7, 'd', 7, '7 din')}${C(tcDays === 30, 'd', 30, '30 din')}</div>
     <div class="mchips">${C(tcDir === 'all', 'dir', 'all', 'Sab')}${C(tcDir === 'in', 'dir', 'in', 'Godam → Dukan')}${C(tcDir === 'out', 'dir', 'out', 'Dukan → Godam')}</div>
-    ${isOwner() ? `<button type="button" class="tc-giver" data-tc-giver="1">📦 Godam wala (pehla tick): <b>${esc(tcGiver())}</b> ✎</button>` : ''}
+    ${isOwner() ? (tcGEd ? tcGEdHTML() : `<button type="button" class="tc-giver" data-tc-giver="1">📦 Godam wale (pehla tick): <b>${esc(tcGiver())}</b> ✎</button>`) : ''}
     <div class="tc-kpis">${(() => { const ng = pend.filter(x => x.s.ng).length; return ng ? `<div class="bad"><b>${ng}</b><small>📦 de diya tick nahi</small></div>` : ''; })()}<div class="${pend.length ? 'bad' : ''}"><b>${pend.length}</b><small>⏳ nahi pahunche${late ? ` · ${late} der se` : ''}</small></div><div class="good"><b>${done.length - farq}</b><small>✓ check ho gaye</small></div><div class="${farq ? 'warn' : ''}"><b>${farq}</b><small>⚠️ farq</small></div></div>
     ${pend.length ? `<h4 class="tc-hh">⏳ Abhi nahi pahunche (${pend.length}) <small>— tick lagao, neeche "✓ Check" (scan ke baghair)</small></h4>${pend.map(card).join('')}${tcSel.size ? `<div class="tc-bulk"><b>${tcSel.size} note chune</b><button type="button" class="tc-ok${tcArmed('bulk') ? ' arm' : ''}" data-tc-bulk="1"${tcBusy ? ' disabled' : ''}>${tcArmed('bulk') ? '✓ Pakka? dobara dabao' : '✓ Maal poora mila — check karo'}</button><button type="button" data-tc-selclear="1">✕</button></div>` : ''}` : ''}
     ${done.length ? `<h4 class="tc-hh">✓ Check ho chuke (${done.length})</h4>${done.map(card).join('')}` : ''}
@@ -1606,6 +1611,14 @@ function tcHTML() {
     ${tcErr === 'rules' ? '<p class="warning">⚠️ Transfer check ke Firestore rules abhi upload nahi hue (v2.35) — malik rules wali html file upload kare.</p>' : tcErr === 'net' ? '<p class="warning">⚠️ Internet / server se check ki list nahi aayi — dobara kholein.</p>' : ''}
     ${tcView === 'scan' ? tcScanHTML() : tcNikleHTML()}
     <div class="account-tools iv-acts"><button type="button" data-in-close="1">✕ Band</button></div></div>`;
+}
+function tcGEdHTML() {
+  const all = [...new Set([...tcGEd.staff, ...tcGEd.sel])].sort((a, b) => a.localeCompare(b));
+  return `<div class="tc-ged"><b>📦 Godam wale — kaun "maal de diya" / godam ka "mil gaya" tick kare?</b>
+    <div class="tc-gl">${all.map(n => `<label class="tc-gn${tcGEd.sel.has(n) ? ' on' : ''}"><input type="checkbox" data-tc-gn="${esc(n)}"${tcGEd.sel.has(n) ? ' checked' : ''}> ${esc(n)}</label>`).join('') || '<small>Mulazim ki list nahi mili — neeche naam likhein</small>'}</div>
+    <div class="tc-gadd"><input type="text" data-tc-gx="1" placeholder="➕ aur naam (login wala)" value="${esc(tcGEd.extra || '')}" maxlength="30"><button type="button" data-tc-gxadd="1">Jorein</button></div>
+    <small class="tc-ghint">Login ke naam mein yeh lafz ho to tick chalega (jaise "Bilal" = "Bilal Ahmed").</small>
+    <div class="tc-gbtns"><button type="button" class="tc-gno" data-tc-gcancel="1">Wapas</button><button type="button" class="tc-gok" data-tc-gsave="1"${tcGEd.sel.size ? '' : ' disabled'}>✓ Save (${tcGEd.sel.size})</button></div></div>`;
 }
 function tcPaint() {
   if (!document.querySelector('.tc-root')) return;
@@ -1694,11 +1707,16 @@ document.addEventListener('click', e => {
   if (e.target.closest?.('[data-stock-tc]')) { openTransferCheck(); return; }
   if (!document.querySelector('.tc-root')) return;
   if (e.target.closest?.('.tc-ck')) return;   // checkbox: change par
-  const t = e.target.closest?.('[data-tc-view],[data-tc-d],[data-tc-dir],[data-tc-open],[data-tc-cam],[data-tc-retry],[data-tc-ok],[data-tc-farq],[data-tc-fback],[data-tc-fsave],[data-tc-del],[data-tc-bulk],[data-tc-selclear],[data-tc-give],[data-tc-giver]'); if (!t) return;
+  const t = e.target.closest?.('[data-tc-view],[data-tc-d],[data-tc-dir],[data-tc-open],[data-tc-cam],[data-tc-retry],[data-tc-ok],[data-tc-farq],[data-tc-fback],[data-tc-fsave],[data-tc-del],[data-tc-bulk],[data-tc-selclear],[data-tc-give],[data-tc-giver],[data-tc-gxadd],[data-tc-gcancel],[data-tc-gsave]'); if (!t) return;
   const d = t.dataset;
   if (d.tcGive) { tcGive(d.tcGive, t); return; }   // v2.99.74
-  if (d.tcGiver != null) { if (!isOwner()) return; const n = prompt('Godam wale mulazim ka naam (jo naam us ke LOGIN mein hai) — "maal de diya" / godam ka "mil gaya" sirf woh kar sakega:', tcGiver()); if (n == null || !String(n).trim()) return;
-    if (!cloud?.setTcGiver) { notice('App update karein'); return; } cloud.setTcGiver(String(n).trim()).then(() => { itemCfg = { ...itemCfg, tcGiver: String(n).trim() }; notice('📦 Godam wala: ' + String(n).trim()); tcPaint(); }).catch(er => notice('Nahi hua: ' + (er?.message || er))); return; }
+  if (d.tcGiver != null) { if (!isOwner()) return; tcGEd = { sel: new Set(tcGivers()), staff: [], extra: '' }; tcPaint();   // v2.102.4: ☑ kai godam wale
+    if (cloud?.listenStaffList) { let stop = null; stop = cloud.listenStaffList(l => { if (tcGEd) { tcGEd.staff = [...new Set((l || []).filter(x => x && x.active !== false && x.name).map(x => tcClean(x.name)).filter(Boolean))]; tcPaint(); } setTimeout(() => { try { stop && stop(); } catch {} }, 0); }); }
+    return; }
+  if (d.tcGxadd != null && tcGEd) { const n = tcClean(document.querySelector('[data-tc-gx]')?.value); if (!n) { notice('Naam likhein'); return; } tcGEd.sel.add(n); tcGEd.extra = ''; tcPaint(); return; }
+  if (d.tcGcancel != null) { tcGEd = null; tcPaint(); return; }
+  if (d.tcGsave != null && tcGEd) { const l = [...tcGEd.sel].map(tcClean).filter(Boolean); if (!l.length) { notice('Kam se kam ek naam'); return; } if (!cloud?.setTcGiver) { notice('App update karein'); return; }
+    const v = l.join('|'); cloud.setTcGiver(v).then(() => { itemCfg = { ...itemCfg, tcGiver: v }; tcGEd = null; notice('📦 Godam wale: ' + l.join(', ')); tcPaint(); }).catch(er => notice('Nahi hua: ' + (er?.message || er) + (/permission/i.test(String(er?.message || er)) ? ' — rules 2.58 upload karein' : ''))); return; }
   if (d.tcBulk != null) { tcBulk(); return; }
   if (d.tcSelclear != null) { tcSel.clear(); tcPaint(); return; }
   if (d.tcView) { tcView = d.tcView; if (tcView === 'scan' && tcRes?.type !== 'open') tcRes = null; }
@@ -1733,7 +1751,7 @@ async function tcGive(key, btn) {
   notice('✓ "Maal de diya" — TN ' + (t.transferNo || t.transferId));
   tcFast(gk, d, { onOk: () => { try { auditOf?.({ area: 'stock', act: 'tr-give', what: `TN ${t.transferNo || t.transferId} 📦 maal de diya`.slice(0, 120), ref: gk, refType: 'transfer' }); } catch {} } });   // v2.99.78: ⚡ foran ✓
 }
-document.addEventListener('change', e => { if (!e.target.matches?.('[data-tc-sel]')) return; const k = e.target.dataset.tcSel; if (e.target.checked) tcSel.add(k); else tcSel.delete(k); tcPaint(); });
+document.addEventListener('change', e => { if (e.target.matches?.('[data-tc-gn]') && tcGEd) { const n = e.target.dataset.tcGn; if (e.target.checked) tcGEd.sel.add(n); else tcGEd.sel.delete(n); tcPaint(); return; } if (!e.target.matches?.('[data-tc-sel]')) return; const k = e.target.dataset.tcSel; if (e.target.checked) tcSel.add(k); else tcSel.delete(k); tcPaint(); });
 document.addEventListener('submit', e => { if (!e.target.matches?.('[data-tc-form]')) return; e.preventDefault(); tcLookup(e.target.querySelector('[data-tc-code]')?.value || ''); });
 document.addEventListener('input', e => { if (e.target.matches?.('[data-tc-code]')) tcCode = e.target.value; });
 export function tcBadge(t) {   // 📋 Transfer register ke card par chhota nishan

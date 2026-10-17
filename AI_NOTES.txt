@@ -4981,3 +4981,12 @@ transfer form: "yahan se entry ka reminder tab khule — kisi bhi entry ka remin
   Exports remFor / remWhen / remLate / noteOpen / entryRemForm / entryRemSave. CAPS.full kh.erem "🔔 Entry par reminder".
 - PC / rules / AI — kuch nahi. Test: scratchpad rem/t.js 10 ✓ (asal app, local recovery mode: search sections, snippet, entry flash,
   🔔, form row, save ke baad remAfter), rem/n/t.mjs 6 ✓ (entryRemSave / remFor / update / form link).
+
+=== v2.102.4 (2026-10-17) — 📦 GODAM WALE KAI LARKE (rules 2.58) ===
+Malik: "Godam mein zeeshan ke sath kisi aur larke ko bhi godam ka tick mein add karna hai".
+- itemConfig.tcGiver ab '|' se kai naam: "Zeeshan|Bilal Ahmed" (pehle sirf ek naam). Purana ek-naam wala data wese hi chalta hai.
+- pos-stock.js: tcClean / tcGivers() / tcGiver() (", " se dikhaye) / tcIsGiver() = malik YA naam mein koi bhi giver.
+- Transfer check screen "📦 Godam wale ✎" → chooser (tcGEdHTML): mulazim list checkbox (data-tc-gn) + haath se naam (data-tc-gx) → Save = cloud.setTcGiver(l.join('|')) (limit 200 chars).
+- firestore.rules v2.58: tcGiverOk = staffAccount name lower matches '.*(' + tcGiverName() + ').*' — '|' regex mein "ya" ban jata hai. tcClean sirf harf/hindse/urdu/space rakhta hai → regex injection nahi.
+- Rules upload: firestore-rules-2.58.html (nahi kiya to dusre larke ka "maal de diya" tick DENIED).
+- Tests: scratchpad sk/tcg.cjs (rules regex sim) + sk/tcg.mjs (chooser UI) + sk/t.mjs — ALL OK.

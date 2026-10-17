@@ -3942,3 +3942,14 @@ html.dk .fc-form1,html.dk .fc-mrow,html.dk .fc-autob,html.dk .fc-mchips button{b
 .ks-more{min-height:30px!important;padding:2px 10px!important;border-radius:10px!important;font-size:12px;font-weight:800;background:#fff8e6!important;color:#7a5200!important}
 .ks-flash{animation:ksFlash 1.6s ease 2}@keyframes ksFlash{50%{box-shadow:0 0 0 4px #f5b70088;background:#fff8e6}}
 html.dk .rem-row,html.dk .rem-chips button,html.dk .rem-chip,html.dk .rem-add,html.dk .ks-pn,html.dk .ks-note,html.dk .nt-elink{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}
+/* v2.102.4: 📦 godam wale kai — chooser */
+.tc-ged{display:grid;gap:8px;margin:8px 0;padding:12px;border-radius:16px;background:#fff8e6;border:1.5px solid #f1d27a}
+.tc-ged>b{font-size:13.5px;color:#7a5200}
+.tc-gl{display:flex;flex-wrap:wrap;gap:6px}
+.tc-gn{display:inline-flex;align-items:center;gap:6px;min-height:38px;padding:4px 12px;border-radius:999px;background:#fff;border:1.5px solid #e8cf86;font-weight:800;font-size:13px;color:#4a3a10;cursor:pointer}
+.tc-gn.on{background:#e9f8ef;border-color:#16a34a;color:#17703c}.tc-gn input{width:18px;height:18px;min-height:0!important;margin:0;accent-color:#16a34a}
+.tc-gadd{display:flex;gap:6px}.tc-gadd input{flex:1;min-height:42px}.tc-gadd button{min-height:42px!important;padding:0 14px!important;border-radius:12px!important;font-weight:800}
+.tc-ghint{font-size:11.5px;color:#7a5200}
+.tc-gbtns{display:flex;gap:8px}.tc-gbtns button{flex:1;min-height:46px!important;border-radius:14px!important;font-weight:900}
+.tc-gok{background:linear-gradient(135deg,#16a34a,#0f7a3a)!important;color:#fff!important}
+html.dk .tc-ged,html.dk .tc-gn{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}
