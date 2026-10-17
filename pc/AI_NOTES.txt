@@ -3015,3 +3015,6 @@ Malik: "din select kiya to jab tak band na karein har ghante reminder".
 - Har 2 min (rack-auto.bat, ping 121): aakhri transfer godam -> dukan (branch 1) har item ka + us ke baad dukan ki bikri
   (ISNULL(NULLIF(d.GBranchID,0), s.BranchID) = 1) + godam / dukan CurrStock -> posStats/rack (hash wahi = na likho, 10 min 'at').
 - Sirf SELECT. App qaida lagati hai (carton = pk, pieces = median, malik ✏️).
+
+=== rack-bharo.js v1.1 (2026-10-18.2) ===
+- fc (poore carton aaye?) — 0 = pcs wala item (masale); k = rack khali: 180 din mein dukan par bika + dukan CurrStock <= 0 + godam mein maal.

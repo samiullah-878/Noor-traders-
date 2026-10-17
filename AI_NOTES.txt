@@ -5207,3 +5207,16 @@ Malik: "live data zaroori — tumhare paas stock bhi hai, sale bhi, abhi ke liye
   + 5 ki median; bikri = item report din-war (transfer ke DIN ke baad) + aaj irep-today; LIVE godam / dukan stock. rackSrc = PC ho to PC.
   Hero "📱 app ke data se (PC ka intezar)". Item report sirf malik / Full parh sakte (posStats) — stock wale ko PC data tak "Data aa raha hai".
 - Test sk/rk2.mjs (9 ✓) + rk.mjs. AI: koi nahi.
+
+=== v2.103.16 (2026-10-18) — 🧺 RACK: 🔹 pcs wale (masale) · 🔴 rack khali · 🚫 sirf godam · 🖥 PC data ka waqt ===
+Malik: "ata / maida / cheeni / rice / Mujahid oil dukan par bikte hi nahi (godam se) — data nahi aana chahiye tha; Lovely jar, pasta,
+sewaiyan ka rack khali tha magar nahi aaye" · "kuch items pcs mein aate hain (masale) — un ka transfer note pcs mein" · "PC data ka time likha ho".
+- PC rack-bharo.js v1.1 (manifest 2026-10-18.2): fc = pichhle transfer hamesha poore carton (warna 0 = pcs wala); 180 din mein DUKAN par
+  bike items (DISTINCT, GBranchID / BranchID = 1) — dukan CurrStock <= 0 + godam mein maal = k:1 (transfer na ho to bhi, sab se zyada
+  stock wala godam). Godam wala maal (dukan par kabhi nahi bika) kabhi nahi aata.
+- pos-stock.js rackCalc: cm = carton mode (cfg.mode 'ctn' / 'pcs' warna fc), pcs mode unit = median; khali = x.k + LIVE dukan <= 0 ->
+  kam se kam 1 unit (carton); off (cfg.off) = kabhi nahi. Sort: khali upar. Chips 🔴 Rack khali / 🔹 pcs wala / ✏️ apna qaida.
+  ✏️: Khud / 📦 Carton / 🔹 Pcs + "🚫 Sirf godam — rack par nahi" (confirm); neeche "🚫 Sirf godam (N)" details + ↺ Wapas.
+  Hero ke neeche "🖥 PC data: 4:06 AM · 2 min pehle · har 2 min" (10 min+ = ⚠️ ruka?) · local = "⚠️ Andaza — godam ki sale bhi shamil".
+  Local rows bhi fc + k (dukan 0). cloud.setRackCfg: u / q / mode / off (merge + deleteField har khana).
+- Test: rk/t.cjs (PC 5 ✓) · sk/rk.mjs (13 ✓) · sk/rk2.mjs. AI: koi nahi.

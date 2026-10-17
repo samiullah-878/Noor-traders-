@@ -1,5 +1,6 @@
 // =========================================================
-//  rack-bharo.js  v1.0 (2026-10-18) — 🧺 RACK BHARO: dukan (branch 1) ka maal jitna bika, utna godam se poore carton mein wapas
+//  rack-bharo.js  v1.1 (2026-10-18: fc = hamesha poore carton aaya? (warna pcs wala — masale) · k = 🔴 rack khali: dukan stock <= 0, godam mein maal,
+//                  aur 180 din mein DUKAN par kabhi bika (godam wala ata / maida kabhi nahi)) · v1.0 (2026-10-18) — 🧺 RACK BHARO: dukan (branch 1) ka maal jitna bika, utna godam se poore carton mein wapas
 //  Malik: "rack par carton hi lagay to faida — open stock godam se nahi aata. Noor Traders ka pichhla data dekh kar: jab jab transfer
 //          note bana, us ke baad jitna bika — jaise hi ek carton jitna bik jaye to Transfer notes screen par aa jaye, ek click mein print"
 //          · "data har 1-2 minute".
@@ -28,7 +29,6 @@ async function read(p, now = new Date()) {
   const last = new Map();   // ItemID -> {g, w, qs[]}
   for (const r of tr) { const id = Number(r.ItemID); if (!Number.isFinite(id)) continue; const w = new Date(r.W);
     const o = last.get(id); if (!o) last.set(id, { g: Number(r.F), w, qs: [Number(r.Qty) || 0] }); else if (o.qs.length < 5) o.qs.push(Number(r.Qty) || 0); }
-  if (!last.size) return [];
   const ids = [...last.keys()], sold = new Map();
   for (let k = 0; k < ids.length; k += 800) {   // har item apne aakhri transfer ke baad se
     const vals = ids.slice(k, k + 800).map(id => `(${Math.trunc(id)}, '${sqlDt(last.get(id).w)}')`).join(',');
@@ -39,15 +39,21 @@ async function read(p, now = new Date()) {
       GROUP BY v.ItemID`)).recordset;
     for (const r of rs) sold.set(Number(r.ItemID), Number(r.q) || 0);
   }
-  const want = ids.filter(id => (sold.get(id) || 0) > 0); if (!want.length) return [];
+  // v1.1: 🔴 rack khali — 180 din mein dukan par bike items (ata / maida jaisa sirf godam wala maal yahan nahi aata)
+  const ever = new Set((await p.request().input('a', sql.DateTime, since).query(`SELECT DISTINCT d.ItemID FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID
+    WHERE s.SaleDate >= @a AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(NULLIF(d.GBranchID, 0), s.BranchID) = ${SHOP}`)).recordset.map(r => Number(r.ItemID)).filter(Number.isFinite));
+  const want = [...new Set([...ids.filter(id => (sold.get(id) || 0) > 0), ...ever])]; if (!want.length) return [];
   const out = [];
   for (let k = 0; k < want.length; k += 800) {
     const part = want.slice(k, k + 800);
     const rs = (await p.request().query(`SELECT i.ItemID, i.ItemName, ISNULL(i.PackQty, 0) AS Pack, r.BranchID, ISNULL(r.CurrStock, 0) AS St
       FROM dbo.Items i LEFT JOIN dbo.ItemBranchRate r ON r.ItemID = i.ItemID WHERE i.ItemID IN (${part.join(',')})`)).recordset;
     const by = new Map(); for (const r of rs) { const id = Number(r.ItemID); if (!by.has(id)) by.set(id, { n: String(r.ItemName || '').trim().slice(0, 70), pk: Number(r.Pack) || 0, st: {} }); if (r.BranchID != null) by.get(id).st[Number(r.BranchID)] = Number(r.St) || 0; }
-    for (const id of part) { const L = last.get(id), I = by.get(id); if (!I) continue; const gs = I.st[L.g] || 0; if (!(gs > 0)) continue;
-      out.push({ i: id, n: I.n, pk: I.pk, g: L.g, gs: r3(gs), ss: r3(I.st[SHOP] || 0), w: L.w.getTime(), s: r3(sold.get(id)), m: med(L.qs) }); }
+    for (const id of part) { const L = last.get(id), I = by.get(id); if (!I) continue; const ss = I.st[SHOP] || 0, s0 = sold.get(id) || 0, khali = ever.has(id) && ss <= 0;
+      if (!(s0 > 0) && !khali) continue;
+      const g = L ? L.g : Number(Object.entries(I.st).filter(([b]) => Number(b) !== SHOP).sort((a, b) => b[1] - a[1])[0]?.[0]) || 0, gs = I.st[g] || 0; if (!g || !(gs > 0)) continue;
+      const fc = !L || !(I.pk > 1) ? 1 : (L.qs.every(q => Math.abs(q / I.pk - Math.round(q / I.pk)) < 1e-6) ? 1 : 0);
+      out.push({ i: id, n: I.n, pk: I.pk, g, gs: r3(gs), ss: r3(ss), w: L ? L.w.getTime() : 0, s: r3(s0), m: L ? med(L.qs) : 0, fc, ...(khali ? { k: 1 } : {}) }); }
   }
   return out.sort((a, b) => a.n.localeCompare(b.n));
 }
