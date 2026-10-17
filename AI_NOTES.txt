@@ -5166,3 +5166,17 @@ Malik (formula khirki ka screenshot): "yahan par chips nahi aate upar wala".
   Tap = dirty ho to confirm "⚠️ Badlav save nahi hua — chhor kar jayein?" -> dialog.close() -> asal nav button. dirty: dialog 'open' attr
   MutationObserver par saaf; #dialogBody input / change (type=search ya placeholder 🔍 / dhoond nahi) = true; submit = saaf. Wahi ON/OFF.
 - Test nvf/t.cjs (11 ✓). AI: koi nahi.
+
+=== v2.103.12 (2026-10-18) — 🤖 SUPPLIER KA KHATA MILAO (photo / PDF — AI sirf parhta hai) ===
+Malik (Naeem Bega ke computer ledger ki photo + hamara naeembega PDF): "khata mein AI daalo jo ek PDF mein entries ke saath farq wali
+entries bataye" · "kuch entries milti julti, kuch paise ka farq" · "multiple photos ka option".
+- Naya milan.js: party khata ke upar chip "🤖 Supplier / Party ka khata milao" (data-milan; malik + Full mulazim, CAP kh.milan, bank nahi).
+  Khirki: 📷 Camera (➕ aur photo) + 🖼 Gallery / PDF (multiple, 10 tak), thumbs + ✕. "🤖 Milao" -> shrinkForAI (2200 px) / PDF base64
+  (application/pdf seedha Gemini) -> askImage(MILAN_PROMPT) -> JSON {account, pages[{rows[date,type,no,desc,debit,credit,balance,side]}], closing}.
+  theirRows: dd/mm -> ISO, paise mein, opening / grand total bahar, page kinare ki dohri line (3 tak) ek.
+- milanMatch (code): dono rukh aazma kar (unka DEBIT = hamara liye / ulta) jis mein zyada exact mile; pass 1: wahi taraf, ±5 din, farq < Rs 1
+  (paise = mili); pass 2: ±3 din, farq <= 2% ya Rs 2,000 = ⚠️ raqam farq. Baqi 🔴 sirf unke / 🔵 sirf hamare (unke arse + hamari mili hui
+  aakhri tareekh tak). Balance: unka closing (DR/CR, rukh ke hisaab) vs hamara balanceAt(upto). "👁 AI ne kya parha" list. PDF (open/WhatsApp).
+- app.js: milanSetup (ai = askImage + loadAiCfg, rows = entries effect paise, balanceAt), milanChipHTML. sw.js ASSETS milan.js.
+- Test scratchpad ml/t.mjs (asli Naeem Bega data: 9 mili, 2 farq (516.6 · 26,000), 2 sirf unke, 8 sirf hamare, paise 0.04) + ml/pw.cjs (UI 6 ✓).
+- AI: sirf photo / PDF parhna. Milan / hisaab code. Kuch khud nahi badalta.
