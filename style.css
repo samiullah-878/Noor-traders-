@@ -4086,3 +4086,14 @@ html body .nv-float .nvf-b.is-in{background:#fff!important;color:#1b3058!importa
 html body .nv-float .nvf-b.nvf-all{background:#ffd76a!important;color:#3d2a00!important;border-color:#ffd76a!important}
 .nvf-b i{position:absolute;top:-5px;right:-4px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#e53935;color:#fff;font-size:11px;font-style:normal;line-height:18px;text-align:center}
 .nv-ftg{display:block;width:100%;margin:10px 0 4px;padding:11px 14px;border-radius:14px;border:1.5px dashed #9fb2d8;background:#f2f6ff;color:#1b3058;font:inherit;font-weight:800}
+/* v2.103.10: 💰 asal nafa — sale bills se */
+.ir-nf{border:1.5px solid #bfe6cf;background:linear-gradient(180deg,#f3fbf6,#fff)}
+html body .ir-root .ir-nfkp{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ir-nfkp .pos{color:#11753f}.ir-nfkp .neg{color:#c0392b}
+.ir-nfch{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+html body :is(#summary,#dialogBody) .ir-root .ir-nfbad{padding:8px 12px;border-radius:999px;border:1.5px solid #f2b8b5!important;background:#fdecea!important;color:#b3261e!important;font:inherit;font-weight:800}
+.ir-nfok{padding:7px 12px;border-radius:999px;background:#e8f7ee;color:#17663a;font-weight:800;font-size:13px}
+.ir-nfh{margin:12px 0 4px;font-size:14px}.ir-nfh small{font-weight:600;opacity:.7}
+.ir-nfb.bad{background:#fff3f2!important;border-color:#f2b8b5!important}.ir-nfb .pos{color:#11753f}.ir-nfb .neg{color:#c0392b;font-weight:800}
+.ir-nfp .neg{color:#c0392b}
+html body .ir-root .ir-nfkp b.neg{color:#c0392b!important;opacity:1!important}html body .ir-root .ir-nfkp b.pos{color:#11753f!important}

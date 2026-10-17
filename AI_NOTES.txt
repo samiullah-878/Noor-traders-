@@ -5149,3 +5149,13 @@ Malik: "ek tab khula ho aur doosri jagah jana ho to upar jana parta hai — pehl
   chhup. Chips = wahi jo .app-nav mein nazar (nav-off nahi, order), abhi wali is-in, ☰ Sab (open launcher), badge. Tap = asal button click
   (ijazat wahi) + scrollTo(0,0). Har phone on/off: localStorage 'sam-nav-float' — "☰ Sab screens" mein "📌 Upar patti: ON/OFF". Computer (mq) par nahi.
 - Test scratchpad nvf/t.cjs (playwright, 8 ✓). AI: koi nahi. Agla: 💰 asal nafa ki app screen (PC data v1.4 pehle se).
+
+=== v2.103.10 (2026-10-17) — 💰 ASAL NAFA — SALE BILLS SE (item report ke upar) ===
+Malik: "sale bills ke data ke hisaab se profit chahiye" (nafa = (sale − khareed) × ginti; purane din ka khareed rate usi din ka — POS COGS).
+- PC item-report v1.4 (pehle commit): posStats/nafa-<YYYY-MM>-<k> + irep-meta.nafa + irep-today.nb.
+- cloud.js: getNafaMonth(mon, n) (8 sec race -> cache) · listenItemToday nb parse.
+- irep.js: nfC cache (mahina -> {at, d}), nfNeed / monsIn / nfBills (aaj = tdoc.nb jab tdoc.at > full.meta.at; st.ws wholesale chip) / nfSum.
+  nfHTML (hero ke neeche, commission se upar): 4 dabbe (sale · laagat · asal nafa · %), "🔴 N bill ghaate mein" + "🧾 Saare bill",
+  ~ andaza note (POS COGS 0), roz ka chart (tap = us din ke bill), party-war nafa top 10 / saari. nfDlg: tarteeb Nafa / Sale / % / Waqt + ⇅,
+  search (bill no / party), 150 + aur, ghaate laal. PDF mein nfPdf (din-war, party top 20, ghaate wale 25). Purana "Nafa kahan se" = "(andaza — aaj ke rate se)".
+- Test ir5/t2.js (11 ✓) + t.js (37 ✓). Sirf malik (item report). AI: koi nahi.
