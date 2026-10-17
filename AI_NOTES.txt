@@ -5084,3 +5084,19 @@ Malik: (1) "har time live data dikhta rahe jaise jaise bill bante jayen — yaha
   (line id badlo + ☑) · warna "🖥 POS mein banayein" (mkPos: stockNewItemQuick + ntFacPend, line 'job:' — linkCheck asli id khud).
   POS mode mein 'loc:' (📱 sirf factory) item: formula line + stock row par "🖥 POS mein banayein" (locToPos: job + har formula / packs /
   conv / pack mein loc -> job, local null). Test fct/t.mjs 174 ✓.
+
+=== v2.103.5 (2026-10-17) — 👤 MULAZIM KA NAAM OOPER + 🔔 SAB KI NOTIFICATION KHUD + MULAZIM KA REMINDER MALIK KO ===
+Malik: "mulazim jis naam se login kare wo naam ooper panel par aana chahiye aur us ki notification chalu karni hai" · "sab ka hi chalu
+karna hai, itna khapna nahi hota — wo khud chalu ho" · "mulazim ka reminder malik ke phone par bhi aana chahiye".
+- (1) app.js whoLine(): header <small> (main>header .top small) = "👑 Malik · NOOR TRADERS" / "👤 <naam> · NOOR TRADERS" (purana bina naam
+  = "👤 Mulazim · <scope>"). #whoLine na ho tab bhi header likhta hai. Settings sheet ke ooper whoCardHTML(): initials gol, naam, scope,
+  device, notification haal (pushInfo: on / granted / denied / default / none) — denied par phone Settings ka rasta.
+- (2) notes.js pushAuto() (export, ek dafa, cloud ke baad): permission granted = chup chaap enablePush(true) (token naam/role/scope ke saath
+  har app khulne par taaza); 'default' = pehli pointerdown par phone khud "Allow" poochta hai (browser tap ke baghair nahi poochne deta);
+  denied = kuch nahi. whoLine se 2.5 sec debounce. Koi button / banner nahi. Sab scopes (sale / stock / galla / purchase / gaari bhi).
+- (3) Rules 2.60: pushTokens create/update (isOwner() || isStaff()) — pehle sirf blueStaff tha, is liye stock/sale wale token nahi likh sakte the.
+  firestore-rules-2.60.html (2.59 + 2.58 shamil).
+- (4) PC auto-backup.js v1.7 firstDue(): mulazim ke likhe note (by != malik ka uid, byName != Malik) ka waqt aate hi (2 ghante ke andar,
+  7–23) EK dafa malik ke sab phone + likhne wala; nagSent['f'+id]; tag 'nag-'+id (Cloud Function wali khabar ho to bhi phone par ek).
+  Malik ke apne notes = Cloud Function (remindPush, repo mein nahi). Manifest 2026-10-17.3.
+- AI: is kaam mein kahin AI nahi.

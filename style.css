@@ -4050,3 +4050,8 @@ html body :is(#summary,#dialogBody) .ir-root .fc-sa.out{border-color:#f3c79b!imp
 .fc-gone{margin:6px 0;padding:8px 10px;border-radius:12px;background:#fff6f0;border:1px solid #f3c79b}
 .fc-gone small{display:block;color:#9a3b00;font-weight:700;font-size:12px;margin-bottom:6px}
 .fc-gbtns{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.fc-gbtns .fc-rel{font-weight:700}
+/* v2.103.5: 👤 Settings mein kaun login hai */
+.who-card{display:flex;gap:12px;align-items:center;margin:0 0 12px;padding:12px 14px;border-radius:18px;background:linear-gradient(135deg,#1b3058,#2c4a85);color:#fff;box-shadow:0 8px 20px rgba(27,48,88,.25)}
+.who-av{flex:none;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-weight:900;font-size:18px;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.4)}
+.who-tx{display:grid;gap:2px;min-width:0}.who-tx b{font-size:18px;color:#fff}.who-tx small{font-size:12px;color:rgba(255,255,255,.85)}
+.who-push.ok{color:#9ff0c4!important}.who-push.bad{color:#ffd0d0!important}

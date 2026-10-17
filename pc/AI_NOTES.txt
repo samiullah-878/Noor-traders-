@@ -2986,3 +2986,9 @@ Malik: "POS ko order de kar printer se parchi nikalwa sakte hain na" (factory si
   fStocks jaisa) -> slipText(b, after, copy, app=true): "FACTORY BATCH - SIRF APP", POS Adj line nahi, "Factory mein ab baqi", KAM (factory
   stock minus). Copies factory/cfg.prn (2 / 1 / 0 -> prnState 'off'). Natija prnAt / prnN / prnState 'done' ya prnState 'err' + prnErr.
 - 'new' / 'cancelReq' (POS mode) wese hi. Test: scratchpad fpost/t.cjs (8 ✓).
+
+=== auto-backup.js v1.7 (2026-10-17, app v2.103.5) — 🔔 MULAZIM KA REMINDER MALIK KE PHONE PAR ===
+Malik: "mulazim ka reminder malik ke phone par bhi aane chahiye".
+- firstDue(n, tk): note (done false, remindDay) jo malik ne nahi likha (by malik token ka uid nahi, byName 'Malik' nahi) — waqt
+  (remindTime warna 09:00) aa gaya, 2 ghante se purana nahi, subah 7 – raat 11, nagSent['f'+id] nahi -> malik ke sab token + likhne wala,
+  title "🔔 Yaad dihani — <naam>", tag 'nag-'+id, link #note=<id>. Phir nag (15/30/60) pehle jaisa. Manifest 2026-10-17.3.

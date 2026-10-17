@@ -22,7 +22,7 @@ const zlib = require('zlib');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
-const VER = '1.4';   // v1.4 (2026-10-11): 🔁 notes.nag — baar baar yaad (15/30/60 min) jab tak ✓ na ho · v1.3 (2026-10-07): driver ki jeb se EXTRA kharcha (kind 'kharch', driver:true) khate se − (app v2.97.1) · v1.2 (2026-10-07): driver ka KHATA (app v2.96.1 jaisa) — phera + (kiraya − kharche − commission), liya −, advance + · v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
+const VER = '1.7';   // v1.7 (2026-10-17): 🔔 MULAZIM ka reminder MALIK ke phone par bhi — waqt aate hi pehli khabar (malik + likhne wala), sirf mulazim ke likhe notes · v1.4 (2026-10-11): 🔁 notes.nag — baar baar yaad (15/30/60 min) jab tak ✓ na ho · v1.3 (2026-10-07): driver ki jeb se EXTRA kharcha (kind 'kharch', driver:true) khate se − (app v2.97.1) · v1.2 (2026-10-07): driver ka KHATA (app v2.96.1 jaisa) — phera + (kiraya − kharche − commission), liya −, advance + · v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47832;
 const DIR = __dirname;
@@ -132,12 +132,35 @@ function nagDue(n, now = new Date()) {
   const last = Number(nagSent[n.id]) || 0;
   return t - last >= g * 60000 - 20000 ? { g, mins: Math.round((t - at) / 60000) } : null;
 }
+// ---- v1.7: 🔔 MULAZIM KA REMINDER MALIK KO BHI (malik: "mulazim ka reminder malik ke phone par bhi aane chahiye") ----
+// Waqt (remindDay + remindTime, warna 09:00) aate hi EK dafa: malik ke sab phone + likhne wala. Sirf mulazim ke likhe notes —
+// malik ke apne notes Cloud Function pehle se deta hai. 2 ghante se purana = chup (PC band tha). tag 'nag-<id>' = ek hi khabar badalti hai.
+const isBoss = x => x.role === 'owner' || x.role === 'malik';
+function firstDue(n, tk, now = new Date()) {
+  if (n.done || n.deleted || !/^\d{4}-\d{2}-\d{2}$/.test(n.remindDay || '') || nagSent['f' + n.id]) return false;
+  if (String(n.byName || '').trim().toLowerCase() === 'malik' || (n.by && tk.some(x => isBoss(x) && x.uid === n.by))) return false;
+  const at = new Date(n.remindDay + 'T' + (/^\d{2}:\d{2}$/.test(n.remindTime || '') ? n.remindTime : '09:00') + ':00').getTime();
+  const t = now.getTime(), h = now.getHours();
+  return at > 0 && t >= at && t - at < 2 * 3600000 && h >= 7 && h < 23;
+}
 async function nagNotify() {
   nagWatch();
   const now = new Date(), due = [...nagNotes.values()].map(n => ({ n, d: nagDue(n, now) })).filter(x => x.d);
-  if (!due.length) return;
+  const maybe = [...nagNotes.values()].filter(n => !n.done && !n.deleted && /^\d{4}-\d{2}-\d{2}$/.test(n.remindDay || '') && !nagSent['f' + n.id]);
+  if (!due.length && !maybe.length) return;
   const tk = (await base.collection('pushTokens').get()).docs.map(d => d.data()).filter(x => x.token);
   const { getMessaging } = require('firebase-admin/messaging');
+  for (const n of maybe.filter(n => firstDue(n, tk, now)).slice(0, 10)) {
+    nagSent['f' + n.id] = Date.now();
+    const tokens = [...new Set(tk.filter(x => isBoss(x) || (n.by && x.uid === n.by)).map(x => x.token))];
+    if (!tokens.length) { log(`🔔 "${String(n.text || '').slice(0, 30)}": malik ka push token nahi`); continue; }
+    const who = String(n.byName || 'Mulazim').slice(0, 30), tm = /^\d{2}:\d{2}$/.test(n.remindTime || '') ? n.remindTime : '';
+    const body = (String(n.text || n.partyName || 'Note').slice(0, 140)) + `\n👤 ${who} ka reminder${tm ? ' · ⏰ ' + tm : ''}`;
+    try {
+      const r = await getMessaging().sendEachForMulticast({ tokens, data: { title: '🔔 Yaad dihani — ' + who, body, tag: 'nag-' + n.id, link: 'https://samiullah-878.github.io/Noor-traders-/#note=' + n.id }, webpush: { headers: { Urgency: 'high' } } });
+      log(`🔔 ${who} ka reminder "${String(n.text || '').slice(0, 30)}": ${r.successCount}/${tokens.length} phone`);
+    } catch (e) { log('🔔 reminder bhejna masla: ' + e.message); }
+  }
   for (const { n, d } of due.slice(0, 10)) {
     const tokens = [...new Set(tk.filter(x => x.role === 'owner' || x.role === 'malik' || (n.by && x.uid === n.by)).map(x => x.token))];
     nagSent[n.id] = Date.now();
@@ -233,7 +256,7 @@ async function tick() {
   } finally { busy = false; if (doneKeys.size > 50) doneKeys = new Set([...doneKeys].slice(-20)); }
 }
 
-module.exports._t = { trDue, trList, trNotify, trSet: (p, j, c) => { trPos = p; trJobs = j; trChecks = c; trStops = []; }, trSent: () => trSent, nagDue, nagNotify, nagNotes: () => nagNotes, nagSent: () => nagSent };
+module.exports._t = { trDue, trList, trNotify, trSet: (p, j, c) => { trPos = p; trJobs = j; trChecks = c; trStops = []; }, trSent: () => trSent, nagDue, firstDue, nagNotify, nagNotes: () => nagNotes, nagSent: () => nagSent };
 if (process.env.NT_TEST) {} else if (process.argv.includes('--now')) {
   makeBackup('--now test').then(s => { console.log(s); process.exit(0); }).catch(e => { console.error('Nahi hua:', e.message); process.exit(1); });
 } else {
