@@ -5072,3 +5072,15 @@ Malik (item report, neeche scroll kiya hua): "yahan par sorting honi chahiye" �
 - fmtQty: numQ (3 decimal) — "ilachi kg 0 pcs" ab 0.25 pcs.
 - CSS: .ir-root / .ir-sec overflow hidden -> clip (@supports) — hidden ke andar sticky nahi chalta tha (factory par bhi wahi dikhawat).
 - Test scratchpad ir5/t.js 27 ✓ + sticky.png.
+
+=== v2.103.4 (2026-10-17) — 🟢 AAYA / GAYA MAAL LIVE + ⚠️ "factory items mein nahi" ka ek-tap ilaaj ===
+Malik: (1) "har time live data dikhta rahe jaise jaise bill bante jayen — yahan live data" (Stock → 📥 Aaya / gaya) (2) formula screenshot
+"Dada powder ⚠️ factory items mein nahi" — "ye POS mein lao ya button de do koi".
+- (1) pos-stock.js: inOpenNow / inFrozen / inLiveAt / inTimer. listenStock callback -> inLive(): sirf "ab" (to / from) + rang (r / y / g) dobara,
+  tarteeb / "pehle" wahi (inFrozen key group|item|qty — pehli dafa ka andaza jama, sale se nahi hilta); badlav ho to openIn(false, keepScroll).
+  Har 60 sec khuli khirki naye transfer / bill (openIn(true, true)). Sirf jab title "Aaya / gaya" ho (item tafseel par nahi likhta); close = band.
+  "🟢 Live · waqt" + "ab 🟢". Test scratchpad sk/live.mjs.
+- (2) factory.js goneFix(l, i) (sirf malik): POS mein yahi id = "☑ Factory mein jorein" (facToggle) · milte julte naam (srch 3) = "🔗 Yahi hai"
+  (line id badlo + ☑) · warna "🖥 POS mein banayein" (mkPos: stockNewItemQuick + ntFacPend, line 'job:' — linkCheck asli id khud).
+  POS mode mein 'loc:' (📱 sirf factory) item: formula line + stock row par "🖥 POS mein banayein" (locToPos: job + har formula / packs /
+  conv / pack mein loc -> job, local null). Test fct/t.mjs 174 ✓.

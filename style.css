@@ -4044,3 +4044,9 @@ html body :is(#summary,#dialogBody) .ir-root .fc-sa.out{border-color:#f3c79b!imp
 .ir-sortb .ir-rev{flex:none;white-space:nowrap;font-weight:800}
 .ir-sticky .hs-search{margin:6px 0 0}
 @supports (overflow:clip){html body .ir-root.ir-root{overflow-x:clip}html body .ir-root .ir-sec{overflow:clip}}   /* v2.103.3: hidden = sticky nahi chalta; clip wahi kaate magar sticky chale */
+/* v2.103.4: 🟢 aaya / gaya live */
+.iv-live{color:#0f8a4b;font-weight:800}
+/* v2.103.4: ⚠️ factory mein nahi — ilaaj buttons */
+.fc-gone{margin:6px 0;padding:8px 10px;border-radius:12px;background:#fff6f0;border:1px solid #f3c79b}
+.fc-gone small{display:block;color:#9a3b00;font-weight:700;font-size:12px;margin-bottom:6px}
+.fc-gbtns{display:flex;flex-wrap:wrap;gap:6px;align-items:center}.fc-gbtns .fc-rel{font-weight:700}

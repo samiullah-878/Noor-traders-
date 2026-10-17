@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.3';
-import { liveLabelsHTML } from './barcode.js?v=2.103.3';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.4';
+import { liveLabelsHTML } from './barcode.js?v=2.103.4';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -149,7 +149,7 @@ function start(withCounts = true) {
     loaded = false; failed = ''; stockT0 = Date.now();
     clearInterval(stockTick); stockTick = setInterval(() => { if (loaded) { clearInterval(stockTick); stockTick = null; return; } const w = Date.now() - stockT0; if (w > 30000 && !stockRetried) { stockRetried = true; stockRetry(); return; } if (w > 12000) rerender(); }, 6000);
     stop = cloud.listenStock(
-      list => { rows = list.map(fixCost); loaded = true; failed = ''; soft(); },
+      list => { rows = list.map(fixCost); loaded = true; failed = ''; soft(); try { inLive(); } catch {} },   // v2.103.4: 🟢 aaya/gaya live
       e => { failed = e?.message || 'Stock load nahi hua'; loaded = true; stop = null; rerender(); }
     );
   }
@@ -1187,6 +1187,9 @@ function trPick(r, qtyFocus) { if (!r) return; trRecNote(r.id); trFocus = { id: 
 function saleStockItem(b, id) { const chunks = rows.filter(r => !r.meta && Array.isArray(r.items) && r.branch === Number(b)); for (const c of chunks) { const it = c.items.find(x => String(x.id) === String(id)); if (it) return it; } return null; }
 // ---------- v2.6: 📥 AAYA HUA MAAL — transfer + purchase bill se aaye items, dono taraf ka stock ----------
 let inDays = 1, inKind = 'all', inRows = null, inFilter = false, inPick = null, inHere = false;
+// v2.103.4: 🟢 LIVE (malik: "har time live data dikhta rahe jaise jaise bill bante jayen") — khirki khuli = "ab" stock listener se khud
+//   (POS ~5 sec), "pehle" pehli dafa ka andaza jama (inFrozen — sale se nahi hilta), har 1 min naye transfer / bill, tarteeb + scroll wahi.
+let inOpenNow = false, inFrozen = new Map(), inLiveAt = 0, inTimer = null;
 const dayAgo = n => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (n - 1)); return d.getTime(); };
 const dmy = t => { const d = new Date(t); return String(d.getDate()).padStart(2, '0') + '-' + ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]; };
 async function inCollect() {
@@ -1235,12 +1238,14 @@ async function inCollect() {
       const it = items.find(x => String(x.id) === e.id) || {};
       const pack = Number(it.pack) || 0, rate = Number(it.prate) || 0;
       const to = { b: g.to, ab: stockOf(g.to, e.id) };
-      to.pehle = r2(to.ab - e.qty);                                    // andaza: ab − jo aaya
+      const fz = `${g.key}|${e.id}|${e.qty}`, f0 = inFrozen.get(fz);   // v2.103.4: pehle jama (live sale se nahi hilta)
+      to.pehle = f0 ? f0.t : r2(to.ab - e.qty);                        // andaza: ab − jo aaya
       const from = g.kind === 'tr' ? { b: g.from, ab: stockOf(g.from, e.id) } : null;
-      if (from) from.pehle = r2(from.ab + e.qty);                      // andaza: ab + jo gaya
+      if (from) from.pehle = f0 && f0.f != null ? f0.f : r2(from.ab + e.qty);   // andaza: ab + jo gaya
+      if (!f0) inFrozen.set(fz, { t: to.pehle, f: from ? from.pehle : null });
       const bad = to.ab <= 0.001 && e.qty > 0;
       const tez = !bad && e.qty > 0 && to.ab / e.qty < 0.1;
-      return { ...e, pack, rate, uName: it.uName || 'Pcs', cName: it.cName || 'Ctn',
+      return { ...e, gkey: g.key, pack, rate, uName: it.uName || 'Pcs', cName: it.cName || 'Ctn',
         to, from, conf: bad ? 'r' : tez ? 'y' : 'g' };
     }).sort((x, y) => (x.conf === y.conf ? y.qty * y.rate - x.qty * x.rate : x.conf === 'r' ? -1 : y.conf === 'r' ? 1 : x.conf === 'y' ? -1 : 1));
     return { ...g, rows,
@@ -1270,18 +1275,31 @@ function inRowHTML(r, names) {
       <div class="iv-head"><small></small><span>${esc(r.cName).toUpperCase()}</span><span>${esc(r.uName).toUpperCase()}</span></div>
       ${line(r.from ? 'Gaya' : 'Bill se', r.qty, false, 'go')}
       ${r.from ? `<div class="iv-sub">${esc(branchName(r.from.b, names))}</div>
-        ${line('pehle', r.from.pehle, true)}${line('ab', r.from.ab, false, 'now')}` : ''}
+        ${line('pehle', r.from.pehle, true)}${line('ab 🟢', r.from.ab, false, 'now')}` : ''}
       <div class="iv-sub">${esc(branchName(r.to.b, names))}</div>
-      ${line('pehle', r.to.pehle, true)}${line('ab', r.to.ab, false, 'now')}
+      ${line('pehle', r.to.pehle, true)}${line('ab 🟢', r.to.ab, false, 'now')}
     </div>
     ${r.conf === 'r' ? '<div class="iv-warn">⚠ Stock mein nahi — POS mein chadha?</div>'
       : r.conf === 'y' ? '<div class="iv-warn amber">Qareeb qareeb khatam</div>' : ''}</button>`;
 }
-async function openIn(refresh = true) {
+function inLive() {   // sirf "ab" + rang dobara (tarteeb / pehle wahi)
+  if (!inOpenNow || !inRows || !$('dialog')?.open || !/Aaya \/ gaya/.test($('dialogTitle')?.textContent || '')) return;   // doosri khirki (item tafseel) par na likhe
+  const stockOf = (b, id) => Number(saleStockItem(b, id)?.stock || 0); let ch = false;
+  for (const g of inRows.groups) { for (const r of g.rows) {
+    const ab = stockOf(r.to.b, r.id); if (ab !== r.to.ab) { r.to.ab = ab; ch = true; }
+    if (r.from) { const fa = stockOf(r.from.b, r.id); if (fa !== r.from.ab) { r.from.ab = fa; ch = true; } }
+    const bad = r.to.ab <= 0.001 && r.qty > 0, tez = !bad && r.qty > 0 && r.to.ab / r.qty < 0.1; r.conf = bad ? 'r' : tez ? 'y' : 'g'; }
+    g.red = g.rows.filter(r => r.conf === 'r').length; }
+  inLiveAt = Date.now(); if (ch) openIn(false, true); else { const n = document.getElementById('ivLive'); if (n) n.textContent = '🟢 Live · ' + new Date(inLiveAt).toLocaleTimeString('en-PK'); }
+}
+async function openIn(refresh = true, keepScroll = false) {
+  const sc = keepScroll ? ($('dialogBody')?.scrollTop || 0) : 0, scD = keepScroll ? ($('dialog')?.scrollTop || 0) : 0;
   const d = $('dialog'); if (!d) return;
   d.classList.remove('search-dialog'); d.classList.add('full-dialog');
   $('dialogTitle').textContent = '📥 Aaya / gaya maal';
-  if (refresh || !inRows) { $('dialogBody').innerHTML = '<p class="stat-note">Taza data le raha hoon…</p>'; if (!d.open) d.showModal(); await inCollect(); }
+  if (refresh || !inRows) { if (!keepScroll) $('dialogBody').innerHTML = '<p class="stat-note">Taza data le raha hoon…</p>'; if (!d.open) d.showModal(); await inCollect(); inLiveAt = Date.now(); }
+  if (!inOpenNow) { inOpenNow = true; clearInterval(inTimer); inTimer = setInterval(() => { if (!inOpenNow || !$('dialog')?.open || !/Aaya \/ gaya/.test($('dialogTitle')?.textContent || '')) { inOpenNow = false; inFrozen.clear(); clearInterval(inTimer); return; } openIn(true, true); }, 60000);
+    d.addEventListener('close', () => { inOpenNow = false; inFrozen.clear(); clearInterval(inTimer); }, { once: true }); }
   const { groups, pick, names, at } = inRows;
   const show = groups.map(g => ({ ...g, rows: inFilter ? g.rows.filter(r => r.conf !== 'g') : g.rows })).filter(g => g.rows.length);
   const nItems = groups.reduce((n, g) => n + g.rows.length, 0), red = groups.reduce((n, g) => n + g.red, 0);
@@ -1292,7 +1310,7 @@ async function openIn(refresh = true) {
       ${C(inKind === 'all', 'k', 'all', 'Sab')}${C(inKind === 'tr', 'k', 'tr', '⇄ Transfer')}${C(inKind === 'bill', 'k', 'bill', '🧾 Bill')}
       ${C(inHere, 'here', '1', '📍 Sirf yahan')}${red ? C(inFilter, 'red', '1', `🔴 ${red}`) : ''}
     </div>
-    <p class="iv-note">${esc(branchName(pick, names))} · ${num(nItems)} items · ⟳ ${new Date(at).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })} par liya gaya</p>
+    <p class="iv-note">${esc(branchName(pick, names))} · ${num(nItems)} items · <b id="ivLive" class="iv-live">🟢 Live · ${new Date(inLiveAt || at).toLocaleTimeString('en-PK')}</b> <small>bill bante hi "ab" khud badle</small></p>
     ${show.map(g => `<div class="iv-group">
       <div class="iv-gh ${g.kind}"><span>${g.kind === 'tr' ? '⇄' : '🧾'}</span><b>${esc(g.title)}</b><small>${g.rows.length}</small></div>
       ${g.rows.map(r => inRowHTML(r, names)).join('')}
@@ -1301,6 +1319,7 @@ async function openIn(refresh = true) {
       ${nItems ? `<button type="button" class="sh-wide" data-in-count="1">📋 Poori list ginti mein kholein (${nItems})</button>` : ''}
       <button type="button" class="primary" data-in-pdf="1">⇩ PDF</button><button type="button" data-in-close="1">✕ Band</button></div>`;
   if (!d.open) d.showModal();
+  if (keepScroll) { const b = $('dialogBody'); if (b) b.scrollTop = sc; if (d) d.scrollTop = scD; }
 }
 // ---------- v2.35: 📋 TRANSFER REGISTER — har transfer note, waqt ke sath (POS + app), din-wise jor ----------
 let regDays = 1, regGodam = 'all', regQ = '', regOpen = new Set(), regPdfOf = null;
