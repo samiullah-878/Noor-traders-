@@ -1,6 +1,6 @@
 {
- "version": "2026-10-18.5",
- "note": "item-post v1.3: PackQty kabhi 0 nahi (POS Divide by zero) + purane app-bane items 0 -> 1",
+ "version": "2026-10-18.6",
+ "note": "rack-bharo v1.4: 🟠 rack kam (dukan 1 carton se kam) + godam fallback",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
   "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
@@ -68,7 +68,7 @@
   "galla-parchi.js": "e64cf7cd1c18b1be97d0062681d436b60f7c494d0195bd0d8d7e6e76eca7760c",
   "irep-today.js": "21a64a1a92de3bf226a69131419fc898bc606b77bd6bbfc7b75f2f8793c301ac",
   "irep-today-auto.bat": "8f7842cfabb15e6ceb5c4f9cbe55ea6433d7c609b8d346d2490deec4da716d23",
-  "rack-bharo.js": "83cd789e8536da9f9677ac38564aed061cede040a873757128856e1d1b5694f3",
+  "rack-bharo.js": "888ec0eb51065fbc7f59cec82862af1e8fc5b669282fbf70efd9ebf3eca9963c",
   "rack-auto.bat": "7844767d490b117c8660fb0aaede09f418a6cdda0decb145ae8ce5fa996b38ed"
  },
  "services": [

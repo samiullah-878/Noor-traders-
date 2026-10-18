@@ -5273,3 +5273,15 @@ v2.103.21 (2026-10-18) — 🖨 Rack bharo 5-5 ki PATTI + 🧾 Transfer check me
   CAP stock.tcall = "har item gin kar ✓ zaroori" (deny = zaroori nahi). Tests sk/rk4.mjs. PC/POS/rules wahi. AI nahi.
 
 2026-10-18 — CLAUDE.md (repo root) + project doc claude/MALIK-KE-QAIDE.md: malik ke saare pakke qaide ek jagah (har AI pehle parhe). App mein koi badlav nahi.
+
+v2.103.22 (2026-10-18) — 🟠 RACK KAM + 🔍 "Ye list mein kyun nahi?" + ➕ Phir bhi lao
+- Malik: Clear shampoo 400ml (1 ctn = 12) rack list mein nahi aaya — dukan 2 pcs, Godam 1 12 pcs. POS stock ledger: 25 Sep Godam 1 -> dukan +12,
+  11 Oct 12 pcs dukan se WAPAS Godam 1 (STN 26040437), phir bikri -> 2. App sirf andar aane wale note ke baad ki bikri ginti thi (10 < 12) -> due nahi.
+- PC rack-bharo.js v1.4 (manifest 2026-10-18.6): lo = dukan par 180 din mein bika (ever) && PackQty > 1 && dukan stock < 1 carton (aur > 0) -> row bhejta
+  hai (lo:1) chahe bikri kam ho / transfer note na ho. Godam: aakhri transfer wale godam mein 0 ho to jis godam mein sab se zyada maal (best).
+- App rackCalc: lo = carton mode (pk) && 0 < dukan LIVE stock < pk && (x.lo || x.k || sold > 0 || add) -> want = 1 unit (carton). Sort: 🔴 khali, 🟠 kam,
+  ➕ khud, baqi. Chip "🟠 Rack kam (2 pcs)". Pcs wale (masale) par lo nahi.
+- Rack search ab hamesha; search par list se bahar items (smartSearch agPool, 4) ka card #rkWhy: rkWhy(id) wajah — packet-war / 🚫 sirf godam /
+  abhi patti nikli / kisi godam mein stock nahi / godam mein poora carton nahi / aakhri note ke baad X bike hadd Y / 6 mahine dukan par nahi bika —
+  + dukan/godam stock + "➕ Phir bhi lao" (rk.extra; rkSynth = stock se farzi row, sab se zyada maal wala godam, 1 carton). Print ke baad extra hat-ta hai.
+- Tests rk/t4.cjs, sk/rk5.mjs (+ purane rk..rk4 pass). POS mein kuch nahi likhta. AI nahi.

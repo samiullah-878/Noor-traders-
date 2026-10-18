@@ -4214,3 +4214,12 @@ html body :is(#summary,#dialogBody) .tc-lck input{width:22px;height:22px;flex:0 
 html body :is(#summary,#dialogBody) .tc-lck>span{flex:1}
 html body :is(#summary,#dialogBody) .tc-lck.is-in{background:#f0fdf4}html body :is(#summary,#dialogBody) .tc-lck.is-in>span{color:#166534;text-decoration:line-through;text-decoration-color:rgba(22,101,52,.35)}
 html body :is(#summary,#dialogBody) .tc-ok:disabled{opacity:.75;filter:grayscale(.3)}
+
+/* v2.103.22: 🟠 rack kam + 🔍 kyun nahi aaya */
+html body :is(#summary,#dialogBody) .rk-c.lo{background:#ffedd5;color:#c2410c}
+html body :is(#summary,#dialogBody) .rk-why{background:linear-gradient(135deg,#f8fafc,#eef2ff)}
+html body :is(#summary,#dialogBody) .rk-wy{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid #e0e7ff}
+html body :is(#summary,#dialogBody) .rk-wy>span{flex:1;display:flex;flex-direction:column;gap:4px;min-width:0}
+html body :is(#summary,#dialogBody) .rk-wy .rk-c{align-self:flex-start;white-space:normal}
+html body :is(#summary,#dialogBody) .rk-wy small{color:#5b6386;font-size:12px}
+html body :is(#summary,#dialogBody) .rk-wy .rk-sv{flex:0 0 auto;white-space:nowrap}

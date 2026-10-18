@@ -1,5 +1,7 @@
 // =========================================================
-//  rack-bharo.js  v1.3 (2026-10-18: ⚠️ z = carton pcs 0 wale items (POS 'Divide by zero' bill rok deta hai) — jo 30 din mein bike ya dukan mein stock; sirf parhna) · v1.2 (2026-10-18: 📦 PACKET-WAR (Godam 2) — malik ke chune items (stockConfig.rackPk {id: JSON {g, at, p: {q: {n, a}}}}):
+//  rack-bharo.js  v1.4 (2026-10-18: 🟠 lo = rack KAM: dukan par bikta (180 din) aur dukan stock 1 carton se kam -> row bhejo
+//                  (Clear shampoo 400ml: 12 pcs dukan se WAPAS Godam 1 gaye, phir 10 bike = 2 bache, list mein nahi aaya tha) · godam: aakhri
+//                  transfer wale godam mein 0 ho to jis godam mein sab se zyada maal) · v1.3 (2026-10-18: ⚠️ z = carton pcs 0 wale items (POS 'Divide by zero' bill rok deta hai) — jo 30 din mein bike ya dukan mein stock; sirf parhna) · v1.2 (2026-10-18: 📦 PACKET-WAR (Godam 2) — malik ke chune items (stockConfig.rackPk {id: JSON {g, at, p: {q: {n, a}}}}):
 //                  dukan ki har sale LINE ki miqdaar = kaun sa packet (0.250 = 250 gm, 0.050 = ilaichi) — shuru = max(at, aakhri transfer) -> pj) · v1.1 (2026-10-18: fc = hamesha poore carton aaya? (warna pcs wala — masale) · k = 🔴 rack khali: dukan stock <= 0, godam mein maal,
 //                  aur 180 din mein DUKAN par kabhi bika (godam wala ata / maida kabhi nahi)) · v1.0 (2026-10-18) — 🧺 RACK BHARO: dukan (branch 1) ka maal jitna bika, utna godam se poore carton mein wapas
 //  Malik: "rack par carton hi lagay to faida — open stock godam se nahi aata. Noor Traders ka pichhla data dekh kar: jab jab transfer
@@ -50,11 +52,12 @@ async function read(p, now = new Date()) {
     const rs = (await p.request().query(`SELECT i.ItemID, i.ItemName, ISNULL(i.PackQty, 0) AS Pack, r.BranchID, ISNULL(r.CurrStock, 0) AS St
       FROM dbo.Items i LEFT JOIN dbo.ItemBranchRate r ON r.ItemID = i.ItemID WHERE i.ItemID IN (${part.join(',')})`)).recordset;
     const by = new Map(); for (const r of rs) { const id = Number(r.ItemID); if (!by.has(id)) by.set(id, { n: String(r.ItemName || '').trim().slice(0, 70), pk: Number(r.Pack) || 0, st: {} }); if (r.BranchID != null) by.get(id).st[Number(r.BranchID)] = Number(r.St) || 0; }
-    for (const id of part) { const L = last.get(id), I = by.get(id); if (!I) continue; const ss = I.st[SHOP] || 0, s0 = sold.get(id) || 0, khali = ever.has(id) && ss <= 0;
-      if (!(s0 > 0) && !khali) continue;
-      const g = L ? L.g : Number(Object.entries(I.st).filter(([b]) => Number(b) !== SHOP).sort((a, b) => b[1] - a[1])[0]?.[0]) || 0, gs = I.st[g] || 0; if (!g || !(gs > 0)) continue;
+    for (const id of part) { const L = last.get(id), I = by.get(id); if (!I) continue; const ss = I.st[SHOP] || 0, s0 = sold.get(id) || 0, khali = ever.has(id) && ss <= 0, lo = !khali && ever.has(id) && I.pk > 1 && ss < I.pk;
+      if (!(s0 > 0) && !khali && !lo) continue;
+      const best = Number(Object.entries(I.st).filter(([b, v]) => Number(b) !== SHOP && v > 0).sort((a, b) => b[1] - a[1])[0]?.[0]) || 0;
+      const g = L && (I.st[L.g] || 0) > 0 ? L.g : best, gs = I.st[g] || 0; if (!g || !(gs > 0)) continue;
       const fc = !L || !(I.pk > 1) ? 1 : (L.qs.every(q => Math.abs(q / I.pk - Math.round(q / I.pk)) < 1e-6) ? 1 : 0);
-      out.push({ i: id, n: I.n, pk: I.pk, g, gs: r3(gs), ss: r3(ss), w: L ? L.w.getTime() : 0, s: r3(s0), m: L ? med(L.qs) : 0, fc, ...(khali ? { k: 1 } : {}) }); }
+      out.push({ i: id, n: I.n, pk: I.pk, g, gs: r3(gs), ss: r3(ss), w: L ? L.w.getTime() : 0, s: r3(s0), m: L ? med(L.qs) : 0, fc, ...(khali ? { k: 1 } : {}), ...(lo ? { lo: 1 } : {}) }); }
   }
   return out.sort((a, b) => a.n.localeCompare(b.n));
 }
