@@ -4223,3 +4223,6 @@ html body :is(#summary,#dialogBody) .rk-wy>span{flex:1;display:flex;flex-directi
 html body :is(#summary,#dialogBody) .rk-wy .rk-c{align-self:flex-start;white-space:normal}
 html body :is(#summary,#dialogBody) .rk-wy small{color:#5b6386;font-size:12px}
 html body :is(#summary,#dialogBody) .rk-wy .rk-sv{flex:0 0 auto;white-space:nowrap}
+
+/* v2.103.23: 📉 hadd chips */
+html body :is(#summary,#dialogBody) .rk-hd{color:#9a3412}html body :is(#summary,#dialogBody) .rk-hd button{border-color:#fed7aa;color:#9a3412}html body :is(#summary,#dialogBody) .rk-hd button.is-in{background:linear-gradient(135deg,#f97316,#ea580c)!important;color:#fff!important;box-shadow:0 4px 12px rgba(234,88,12,.3)}

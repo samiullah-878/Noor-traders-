@@ -5291,3 +5291,14 @@ v2.103.22 (2026-10-18) — 🟠 RACK KAM + 🔍 "Ye list mein kyun nahi?" + ➕ 
 - dateInfo(date)/dateMark(date, big, C, 'top'|'bot')/printStamp(): voucher tareekh upar (payMark ke neeche) aur neeche (Dastakhat se pehle) 2 guna;
   aaj = "AAJ - 18 OCT 2026"; warna kala patta "KAL KA BILL" / "N DIN PURANA" (+ Urdu کل کا بل / N دن پرانا بل upar). Code line: "Tareekh: 17-Oct-2026",
   alag line "Print: 18-Oct 1:06 pm". Bari (receiptBig) + purani (receipt) dono; HBL parchi wahi. App mein badlav nahi. AI nahi. Test scratchpad vd/t.cjs.
+
+v2.103.23 (2026-10-18) — 📤 NIKLA (bika + wapas godam) + 📉 malik ki hadd chips · "🟠 Rack kam (1 carton se kam)" HATA
+- Malik: Dettol (aaj 9:52 aaya, 3 bike, dukan 15.25/18) ko list mein nahi aana chahiye tha. "¼ carton" aur "kitne din ka maal" dono idea malik ne
+  rad kiye. Pakka: malik ka asal qaida — maal aane par rack bhara; us ke baad jitna NIKLA (bika + wapas godam gaya − seedha dukan par purchase)
+  1 carton ho to lao. Clear shampoo: 10 bike + 12 wapas = 22 ✓; Dettol 3 ✗.
+- PC rack-bharo.js v1.5 (manifest 2026-10-18.8): aakhri aamad (w) ke baad o = StockTransfer FromBranch 1 -> doosra (CreatedOn > w), p = PurchaseDetail
+  (Qty+Bonus) GBranch/Branch 1, PurchaseDate >= w, cancel nahi. Row mein o, p; shart nik = s + o − p > 0 (ya khali / lo candidate).
+- App rackCalc: sold = max(0, s + o − p) (c.nik). Row: "25 Sep ke transfer ke baad 22 pcs nikle (10 bike · 12 wapas godam · − N purchase aayi)".
+  📉 Hadd: stockConfig.rackLo (0 = sirf khali [default], 0.25, 0.5) — malik chips "Dukan mein itna reh jaye to lao: Khali (0) · ¼ ctn · ½ ctn"
+  (cloud.setRackLo, sab phones). lo = carton wala && 0 < dukan stock ≤ pk × hadd -> 1 carton, chip "📉 Dukan mein 4 bache (hadd ¼ ctn)".
+- Tests rk/t*.cjs (OUT/PUR mocks), sk/rk5.mjs. Rules wahi (blueAccess malik likhta). POS mein kuch nahi likha. AI nahi.

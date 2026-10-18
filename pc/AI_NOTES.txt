@@ -3043,3 +3043,6 @@ rack-bharo.js v1.4 (2026-10-18, manifest 2026-10-18.6): 🟠 lo:1 = dukan par bi
 - dateInfo(date)/dateMark(date, big, C, 'top'|'bot')/printStamp(): voucher tareekh upar (payMark ke neeche) aur neeche (Dastakhat se pehle) 2 guna;
   aaj = "AAJ - 18 OCT 2026"; warna kala patta "KAL KA BILL" / "N DIN PURANA" (+ Urdu کل کا بل / N دن پرانا بل upar). Code line: "Tareekh: 17-Oct-2026",
   alag line "Print: 18-Oct 1:06 pm". Bari (receiptBig) + purani (receipt) dono; HBL parchi wahi. App mein badlav nahi. AI nahi. Test scratchpad vd/t.cjs.
+
+rack-bharo.js v1.5 (2026-10-18, manifest 2026-10-18.8): NIKLA = aakhri aamad ke baad dukan sale (s) + wapas godam transfer (o) − dukan par purchase (p).
+  Row fields o, p. Sirf parhna.
