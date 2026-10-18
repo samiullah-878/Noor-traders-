@@ -5302,3 +5302,12 @@ v2.103.23 (2026-10-18) — 📤 NIKLA (bika + wapas godam) + 📉 malik ki hadd 
   📉 Hadd: stockConfig.rackLo (0 = sirf khali [default], 0.25, 0.5) — malik chips "Dukan mein itna reh jaye to lao: Khali (0) · ¼ ctn · ½ ctn"
   (cloud.setRackLo, sab phones). lo = carton wala && 0 < dukan stock ≤ pk × hadd -> 1 carton, chip "📉 Dukan mein 4 bache (hadd ¼ ctn)".
 - Tests rk/t*.cjs (OUT/PUR mocks), sk/rk5.mjs. Rules wahi (blueAccess malik likhta). POS mein kuch nahi likha. AI nahi.
+
+v2.103.24 (2026-10-18) — 📊 Rack % chips (extra) + 🔧 PC transfer note cancel/edit error
+- Malik: "jaise hain waise hi chale, bas % chips extra" — 100% = maal aane ke foran baad (dukan abhi + nikla); chips "📊 Itna % reh jaye to lao:
+  Sab · 10% · 20% · 30% · 40%" (stockConfig.rackPct, cloud.setRackPct, default Sab = purana qaida). % chuna ho to item sirf tab jab bacha % <= chip
+  (khali / ➕ khud par shart nahi; transfer history na ho to shart nahi). Row chip "📊 28% bacha (46 mein se 13)" (≤20 laal, ≤40 orange).
+  ¼/½ ctn chips waisi hi. Test sk/rk5.mjs.
+- PC (manifest 2026-10-18.9): app par "Procedure or function 'usp_StockTransfer_Delete' expects parameter '@TransferID'" — transfer-sync deleteTransfer
+  '@i' bhejta tha (cancel + ✏️ edit kabhi nahi chale). execById(p, proc, id): sys.parameters se pehla parameter naam parh kar bind. Wahi galti
+  subcode-sync (usp_ItemSubCode_Delete '@s') — wahan bhi execById. AI nahi.

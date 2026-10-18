@@ -26,6 +26,12 @@ const db = getFirestore();
 const jobCol = db.collection('businesses').doc(BUSINESS_ID).collection('subcodeJobs');
 
 let pool = null;
+// 2026-10-18: 🔧 DELETE procedure ka parameter naam POS se khud parho (pehle '@i' / '@s' bhejte the -> "expects parameter '@TransferID'")
+async function execById(p, proc, id) {
+  const ps = (await p.request().input('n', sql.NVarChar(200), proc).query('SELECT name FROM sys.parameters WHERE object_id = OBJECT_ID(@n) ORDER BY parameter_id')).recordset.map(r => String(r.name || '').replace(/^@/, ''));
+  if (!ps.length) throw new Error(proc + ' — POS mein parameter nahi mile');
+  return p.request().input(ps[0], sql.Int, id).execute(proc);
+}
 async function getPool() { if (pool && pool.connected) return pool; pool = await new sql.ConnectionPool(SQL_CONFIG).connect(); return pool; }
 const r3 = n => Math.round((Number(n) || 0) * 1000) / 1000;
 const r2 = n => Math.round((Number(n) || 0) * 100) / 100;
@@ -54,7 +60,7 @@ async function run(j) {
     const own = (await p.request().input('s', sql.Int, subId).input('i', sql.Int, itemId).query(
       'SELECT SBBarCode FROM dbo.ItemSubCode WHERE ItemSubCodeID = @s AND ItemID = @i')).recordset[0];
     if (!own) throw new Error('Yeh barcode is item ka nahi / pehle se hata hua hai');
-    await p.request().input('s', sql.Int, subId).execute('dbo.usp_ItemSubCode_Delete');
+    await execById(p, 'dbo.usp_ItemSubCode_Delete', subId);   // 2026-10-18: asal parameter naam POS se
     return { subId, code: String(own.SBBarCode).trim(), name };
   }
   const code = cleanCode(j.code);

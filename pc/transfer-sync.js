@@ -139,13 +139,19 @@ async function addBaqi(p, rows, from, to) {
     } catch (e) { log('Baqi stock nahi mila (' + x.name + '): ' + e.message); }
   }
 }
+// 2026-10-18: 🔧 DELETE procedure ka parameter naam POS se khud parho (pehle '@i' / '@s' bhejte the -> "expects parameter '@TransferID'")
+async function execById(p, proc, id) {
+  const ps = (await p.request().input('n', sql.NVarChar(200), proc).query('SELECT name FROM sys.parameters WHERE object_id = OBJECT_ID(@n) ORDER BY parameter_id')).recordset.map(r => String(r.name || '').replace(/^@/, ''));
+  if (!ps.length) throw new Error(proc + ' — POS mein parameter nahi mile');
+  return p.request().input(ps[0], sql.Int, id).execute(proc);
+}
 async function deleteTransfer(j) {
   const p = await getPool();
   const id = Number(j.transferId);
   const h = (await p.request().input('i', sql.Int, id).query('SELECT TransferID, TransferNo, SystemNotes, TransferDate FROM dbo.StockTransfer WHERE TransferID = @i')).recordset[0];
   if (!h) throw new Error('Transfer note POS mein nahi mila (pehle se hata hua?)');
   if (!/BK-APP/.test(String(h.SystemNotes || '')) && j.force !== true) throw new Error('Yeh note POS se bana tha — POS mein hi delete karein');   // v4.7: malik (force) app se bhi
-  await p.request().input('i', sql.Int, id).execute('dbo.usp_StockTransfer_Delete');
+  await execById(p, 'dbo.usp_StockTransfer_Delete', id);   // 2026-10-18: @TransferID (pehle @i = error)
   return { transferNo: String(h.TransferNo).trim() };
 }
 
