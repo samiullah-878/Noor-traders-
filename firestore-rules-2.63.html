@@ -1,0 +1,918 @@
+<!doctype html><html lang="ur"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blue Khata — Firestore Rules 2.63</title><style>
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#eef1f7;color:#1a2d53}
+.top{position:sticky;top:0;background:linear-gradient(135deg,#1a2d53,#2c4a85);color:#fff;padding:14px 16px;box-shadow:0 2px 10px rgba(0,0,0,.2)}
+h1{margin:0 0 6px;font-size:19px}.chips span{display:inline-block;margin:3px 4px 0 0;padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.16);font-size:12px}
+button{margin-top:10px;width:100%;min-height:52px;border:0;border-radius:14px;background:#22c55e;color:#062;font-size:18px;font-weight:800}
+ol{background:#fff;margin:12px;padding:12px 12px 12px 30px;border-radius:14px;line-height:1.6;font-size:14px}
+textarea{display:block;width:calc(100% - 24px);margin:0 12px 24px;height:60vh;border-radius:14px;border:1px solid #c9d3e6;padding:10px;font:12px monospace;box-sizing:border-box}
+</style></head><body><div class="top"><h1>🔐 Firestore Rules 2.63</h1><div class="chips"><span>🧮 Godam 2 milao — mulazim packet % save kar sake (2.63)</span><span>🧺 Rack bharo — stock wale bhi dekhein (2.62)</span><span>🛢 Khula tail (sirf factory) + 🔁 reminder band (2.61)</span><span>🔔 Sab mulazim ki notification khud chalu (2.60)</span><span>🏭 Factory sirf app — POS mein kuch nahi (2.59)</span><span>📦 Godam wale kai (Zeeshan + aur) (2.58)</span><span>📱 6 hindse ka code (2.57)</span><span>⏳ PC baqi item edit / cancel (2.57)</span><span>💰 Galla check + Urdu parchi (2.53)</span><span>🏭 Factory batch (2.52)</span><span>➕ Mulazim sirf naya item (2.51)</span><span>🖥 Mulazim: account POS mein (2.50)</span><span>🔔 HBL notification (2.49)</span><span>📦 Transfer: Zeeshan ka "maal de diya" tick (2.48)</span><span>⇄ Transfer edit / cancel (2.47)</span><span>🔒 Chhapi parchi ka tala (2.46)</span><span>🚚 Gaari ke bill (2.45)</span><span>🧾 Edit hua transfer note dobara check (2.44)</span><span>🖨 Voucher dobara print (2.43)</span><span>📩 HBL Inbox (2.42)</span><span>🔁 Notes baar baar (2.37)</span></div>
+<button id="cp">📋 Poori rules copy</button></div>
+<ol><li>Upar wala hara button dabayein — rules copy ho jayengi.</li><li>Firebase console → project <b>note-traders-khata-7ccc1</b> → Firestore → <b>Rules</b>.</li><li>Purani sab mita kar paste → <b>Publish</b>.</li></ol>
+<textarea id="t" readonly>rules_version = '2';
+// BLUE KHATA v2.63 (🧮 Godam 2 milao: stock / full mulazim stockConfig mein SIRF rackPk (packet %) likh sake) · v2.62 (🧺 posStats/rack — har mulazim get) · v2.61 (🏭 factoryBatches 'loc' (khula tail jaisa 📱 sirf factory item) · 🔁 notes.nag 0 = band) · v2.60 (🔔 pushTokens: har mulazim — isStaff — apna token likhe, notification sab ke khud chalu) · v2.59 (🏭 factory sirf app: factoryBatches status 'app' (POS mein nahi) + edit / cancel · factoryMoves (📥 maal aaya / 📤 diya / ginti) · labelJobs 'batch') · v2.58 (📦 godam wale kai: stockConfig.tcGiver 'zeeshan|bilal' — naam matches '.*(…).*') · v2.57 (📱 deviceJoins: 6 hindse ka code (pc-…) · list sirf malik) · v2.56 (🏭 factoryBatches: outs (packing — 4 kg / 700 g) + kind ('make' / 'pack'), out 0 tab jab outs hon) · v2.55 (🏭 factoryBatches: 'hold' = app mein ruka (POS baqi) -&gt; 📤 bhejo; POS mein jane se pehle malik / banane wala foran cancel ya ✏️ edit) · v2.54 (⏳ itemJobs: PC baqi item ka ✏️ edit / ✕ cancel — malik ya jis ne daala, sirf status new) · v2.53 (💰 gallaCalls: naqad supplier needCheck — checker ek dafa check / rok do, malik parchi phir bhejo, "de diye" sirf parchi (prnState done) ke baad · blueAccess/gallaCheck staff get) · v2.52 (🏭 factory/cfg sirf malik likhe · factoryBatches: Full / Stock mulazim batch banaye (n 1–10, status new), malik wapas / dobara; PC admin POS mein) · v2.51 (➕ itemJobs: malik ka alag switch stockConfig.itemNew — mulazim sirf NAYA item, purana rate / naam sirf itemEdit se) · v2.50 (🖥 Full mulazim khata ko "POS mein bhi banayein" sirf ON kar sake — OFF / POS se hatana sirf malik) · v2.49 (🔔 bankSms src 'notif' — HBL Mobile app ki live notification) · v2.48 (📦 transferChecks: do tick — '&lt;key&gt;G' = dene wala "maal de diya" (godam ki taraf sirf stockConfig.tcGiver / malik); "mil gaya" G ke baghair nahi) · v2.47 (⇄ transferJobs: malik ka op 'edit' + 'reason' + 'force' (POS wala note bhi cancel / edit)) · v2.46 (🔒 parchi chhap gayi (posPrintedAt) = mulazim edit / delete sirf malik ki ijazat (editOk, 30 min) se; jorna phir bhi) · v2.45 (🚚 blueAccess/gaariBills: apni gaari wale POS bill — malik likhe, mulazim parhe) · v2.44 (🧾 transferChecks id 'T123E2' — POS mein edit hua note dobara check) · v2.43 (🖨 printJobs kind 'voucher' — app se TM-T88IV par voucher dobara print) · v2.42 (📩 bankSms create: `id` ki shart hatayi — REST auto-id par deny hoti thi; 2.41-TEST if true chala) · v2.40 (📩 bankSms: 4 jaanch darwaze p=1..4 + asal rule bina request.auth shart) · v2.39 (📩 bankSms create saada: request.auth == null + chaabi, alag allow) · v2.38 (📩 bankSms: HBL ke SMS / email — phone (MacroDroid) aur Gmail script khufia chaabi (blueAccess/bankKey) se sirf NAYA likh sakte; app parhti / ✓ karti) · v2.37 (🔁 notes.nag: baar baar yaad dilana — 15 / 30 / 60 min, jab tak ✓ na ho) · v2.36 (👥 mulazim naam se: blueStaffKeys.perms (ek key, kai screens) · blueStaff (list) · staffDevices (jude phone) · deviceJoins ticket link) · v2.35 (transferChecks: 🧾 transfer note ka barcode scan — maal pahuncha; sirf create, waqt server ka, koi edit nahi, sirf malik ghalti par hataye) · v2.34 (labelJobs: ✕ label cancel — app sirf cancelReq likhe) · v2.33 (saleEdits: 🧾 un-posted bill ka edit PC ko · posSaleLines: POS bill ki lines parhna · appSales: minus/wapsi bill) · v2.32 (gaari phera: khula phera mulazim/driver update) · v2.31 (gaari: 🚚 gaari ka hisaab + Sirf Gaari login) · v2.30 (appSales.gate: 🚪 gate pass switch — NT ka bhi) · v2.29 (blueStaffSessions update: screen badalna bina logout) · v2.28 (urduNames: items ke Urdu naam label ke liye; blueAccess get list mein) · v2.27 (liveCarts: 📺 Counter Nazar — bill bante waqt live lines, nigrani wala sirf 'stop' likhe; nazarStaff) · v2.26 (printPCs: 💻 PC chunein — har PC ka NT-PRINT agent report likhta hai, app sirf parhti hai) · v2.25 (blueAccess/look: malik ka theme sab devices par) · v2.24 (deviceJoins: mulazim ka device jorna) · v2.23 (token number + crates; tokens/{day}) · v2.22 (appSales counter: bill kis counter ke printer par) · v2.21 (posSales: POS ke aaj ke bills parhna) · v2.20 (har mulazim: party.dasti on/off) · v2.19 (transferJobs/printJobs copies: note ×1-3) · v2.18 (appSales copies: bill ×1-3) · v2.17 (mulazim: purane khate — rev na ho to 0; Dasti mein shamil) · v2.16 (demands: 📢 mulazim ki khatam/kam demand) · v2.15 (posStats: PC ki 6 mahine ki bikri · purchaseOrders: 🛒 order) · v2.14 (notes: contactName/contactPhone) · v2.13 (notes + tasveer · pushTokens · reminder dueTime · pushConfig) · v2.12 (auditLog: 🕘 history — har harkat, sirf jorna) · v2.11 (gallaCalls: purchase wala "itne paise do" -&gt; galla wala "de diye" + supplier ki payment · Sirf Galla login) · v2.10 (posBillIds: ek entry ke saath kai POS bill) · v2.9 (entryPhotos: tasveerein alag · pn) · v2.8 (reminder: full mulazim bhi) · v2.7 (aiConfig stock/sale ko bhi — tolai) · v2.6 (tolai mein `who` — har mulazim ka apna hisaab) · v2.5 (posTransfers: POS par bane transfer bhi app mein) · v2.4 (tolai: label ki tasveer se ginti + tolaiConfig) · v2.3 (itemJobs: app se POS ka item banana / badalna; mulazim ko ijazat stockConfig.itemEdit se) · v2.2 (billFormats: har supplier ke bill ka naqsha — ginti PCS ya CTN, rate fi PCS ya fi CTN) · v2.1 (itemRates: har item ka pichhla khareed aur nafa yaad) · v2.0 (itemAliases: Full / Purchase mulazim bhi bill ka naam "yaad" karwa sake — naam sirf barh sakte hain, mit nahi sakte) · v1.94 (app purchase: dobara / cancel) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Match the explicitly provisioned owner identities in auth-controller.js.
+    // An arbitrary Firebase email account must never gain business-owner access.
+    function isOwner() {
+      return signedIn()
+        &amp;&amp; request.auth.token.firebase.sign_in_provider == 'password'
+        &amp;&amp; request.auth.token.email in ['googel6235@gmail.com','hp6235@gmail.com'];
+    }
+
+    function isStaff() {
+      return signedIn() &amp;&amp; request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    function padDay(n) { return n &lt; 10 ? '0' + string(n) : string(n); }
+    function todayStr() {
+      let local = request.time + duration.value(5, 'h');
+      return string(local.year()) + '-' + padDay(local.month()) + '-' + padDay(local.day());
+    }
+    function isToday(date) { return date == todayStr(); }
+    // Din band (day closing): mulazim ka aaj ka kaam band. Malik par koi rok nahi.
+    function dayOpen() {
+      return !exists(/databases/$(database)/documents/businesses/noor-traders/blueAccess/dayLock)
+        || get(/databases/$(database)/documents/businesses/noor-traders/blueAccess/dayLock).data.get('closed', '') != todayStr();
+    }
+    function staffAccount() {
+      let session = get(/databases/$(database)/documents/businesses/noor-traders/blueStaffSessions/$(request.auth.uid)).data;
+      return get(/databases/$(database)/documents/businesses/noor-traders/blueStaffKeys/$(session.credentialId)).data;
+    }
+    // v1.79.12: Firestore ki hadd = 1000 expressions fi request. Pehle blueStaff() ke andar staffAccount()
+    // 3 dafa (har dafa 2 get) chalta tha aur blueKhata ki har allow line use dobara bulati thi — mulazim ki
+    // sada entry hadd paar kar ke "permission denied" ho jati thi. Ab account EK dafa parh kar acctIs() ko diya jata hai.
+    function acctIs(a, scope) {
+      return a.active == true &amp;&amp; ((scope == 'full' ? (!('scope' in a) || a.scope == 'full') : a.scope == scope) || (('perms' in a) &amp;&amp; scope in a.perms));   // v2.36: perms = ek mulazim, kai screens
+    }
+    function blueStaff() { return isStaff() &amp;&amp; acctIs(staffAccount(), 'full'); }
+    function purchaseStaff() { return isStaff() &amp;&amp; acctIs(staffAccount(), 'purchase'); }
+    function stockStaff() { return isStaff() &amp;&amp; acctIs(staffAccount(), 'stock'); }
+    // v2.3: malik ki ijazat — mulazim item / rates badal sake (Stock screen ka switch)
+    function itemEditOn() {
+      return get(/databases/$(database)/documents/businesses/noor-traders/blueAccess/stockConfig).data.get('itemEdit', false) == true;
+    }
+    // v2.51: malik ka alag switch — mulazim sirf NAYA item (itemJobs op 'new'); purane ka rate / naam sirf itemEdit se
+    function itemNewOn() {
+      return get(/databases/$(database)/documents/businesses/noor-traders/blueAccess/stockConfig).data.get('itemNew', false) == true;
+    }
+    function saleStaff() { return isStaff() &amp;&amp; acctIs(staffAccount(), 'sale'); }
+    function gallaStaff() { return isStaff() &amp;&amp; acctIs(staffAccount(), 'galla'); }   // v2.11: 💰 Sirf Galla
+    function nazarStaff() { return isStaff() &amp;&amp; acctIs(staffAccount(), 'nazar'); }   // v2.27: 📺 Sirf Nigrani
+    function gaariStaff() { return isStaff() &amp;&amp; acctIs(staffAccount(), 'gaari'); }   // v2.31: 🚚 Sirf Gaari (driver)
+    match /businesses/noor-traders/{collectionName}/{docId} {
+      allow read: if isOwner() &amp;&amp; collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount'];
+      // Linked transfers have a paired-write rule below, including for older app versions.
+      allow create: if isOwner() &amp;&amp; collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount']
+        &amp;&amp; (collectionName != 'blueKhata' || !('transferId' in request.resource.data));
+      // v1.79.2: POSTED record par sirf POS-link ke do field badal sakte hain (posBill / posDiffOk).
+      // Raqam, tareekh, party, kind, delete — sab POSTED ke baad band hi rehte hain.
+      function linkOnlyEdit() {
+        return request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['posBill','posBillIds','posDiffOk','updatedAt','updatedBy','rev','pn','photos','billPhotos','goodsPhotos']);   // v2.9: tasveerein alag khane mein (sirf hatana / ginti)
+      }
+      allow update: if isOwner() &amp;&amp; collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount']
+        &amp;&amp; (collectionName != 'blueKhata' || (!('transferId' in resource.data) &amp;&amp; !('transferId' in request.resource.data)))
+        &amp;&amp; (collectionName != 'blueKhata' || resource.data.get('posStatus', 1) != 2 || linkOnlyEdit());   // v1.78: POS mein posted = band · v1.79.2: sirf link ki ijazat
+      allow delete: if isOwner() &amp;&amp; collectionName in ['blueKhata','blueAccess','blueStaffSessions','blueStaffKeys','purchaseSuppliers','posLedger','posStock','posBills','stockCount']
+        &amp;&amp; (collectionName != 'blueKhata' || !('transferId' in resource.data))
+        &amp;&amp; (collectionName != 'blueKhata' || resource.data.get('posStatus', 1) != 2);
+    }
+    // Serializes cash changes across dates/devices; contains no money or login settings.
+    match /businesses/noor-traders/blueAccess/cashRevision {
+      allow get: if blueStaff();
+      allow create: if blueStaff() &amp;&amp; request.resource.data.keys().hasOnly(['rev'])
+        &amp;&amp; request.resource.data.rev == 1;
+      allow update: if blueStaff() &amp;&amp; request.resource.data.keys().hasOnly(['rev'])
+        &amp;&amp; request.resource.data.rev is int &amp;&amp; request.resource.data.rev == resource.data.rev + 1;
+    }
+    // v1.81: AI key (Gemini) — malik upar wale generic rule se likhta / parhta hai; sirf FULL APP mulazim parh sakta hai.
+    // Purchase / Stock / Sale logins ko yeh key nahi milti (neeche wali list mein 'aiConfig' jaan boojh kar NAHI hai).
+    match /businesses/noor-traders/blueAccess/aiConfig {
+      // v1.84: Purchase wala mulazim bhi (bill AI ke liye)
+      allow get: if blueStaff() || purchaseStaff() || stockStaff() || saleStaff();   // v2.7: tolai (label ki tasveer) ke liye stock/sale bhi
+    }
+    // v1.83: naye rates ka job — SIRF MALIK bhejta hai; PC (admin key) status done/error likhta hai. Sasti shart pehle.
+    match /businesses/noor-traders/rateJobs/{id} {
+      allow read: if isOwner() || blueStaff();
+      allow create: if request.resource.data.status == 'new'
+        &amp;&amp; request.resource.data.keys().hasOnly(['lines','status','by','at'])
+        &amp;&amp; request.resource.data.lines is list &amp;&amp; request.resource.data.lines.size() &lt;= 100
+        &amp;&amp; request.resource.data.by == request.auth.uid
+        &amp;&amp; isOwner();
+    }
+
+    // v1.81: sham ke milan ka natija (AI ki parhi hui raqmein) — din ke hisaab se ek doc. Sasti shart pehle.
+    match /businesses/noor-traders/dayTally/{day} {
+      allow read: if isOwner() || blueStaff();
+      allow create, update: if request.resource.data.keys().hasOnly(['date','items','model','by','at'])
+        &amp;&amp; request.resource.data.date == day
+        &amp;&amp; request.resource.data.items is list &amp;&amp; request.resource.data.items.size() &lt;= 300
+        &amp;&amp; request.resource.data.by == request.auth.uid
+        &amp;&amp; (isOwner() || (isToday(day) &amp;&amp; blueStaff() &amp;&amp; dayOpen()));
+    }
+    // v2.63: 🧮 Godam 2 milao — stock / full mulazim packet-war % (stockConfig.rackPk) save kar sake; baqi khane sirf malik
+    match /businesses/noor-traders/blueAccess/stockConfig {
+      allow update: if (stockStaff() || blueStaff())
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rackPk']);
+    }
+    match /businesses/noor-traders/blueAccess/{id} {
+      allow get: if isOwner() || (isStaff() &amp;&amp; id in ['config','purchaseConfig','stockConfig','saleConfig','dayLock','itemAliases','itemRates','billFormats','geo','tolaiConfig','pushConfig','look','urduNames','gaariBills','gallaCheck']);   // v2.53: gallaCheck   // v2.45: gaariBills (🚚 apni gaari ka maal — milana nahi)   // v2.28: urduNames (items ke Urdu naam — label par)   // v2.25: look (malik ka theme sab par)   // v2.4: tolaiConfig   // v1.88: geo (dukan location / chhoot / sab band)   // v1.75: itemAliases (items ke doosre naam)
+    }
+    // v2.0: items ke "Doosre naam" (bill par likha hua naam -&gt; humara item). Malik upar wale generic rule se likhta hai.
+    // Ab Full aur Purchase wala mulazim bhi naam JOR sakta hai — magar naam KAM nahi kar sakta (map chhota na ho),
+    // aur sirf yahi do khane badal sakta hai. Baqi blueAccess ke docs par mulazim ka likhna pehle jaisa band hai.
+    match /businesses/noor-traders/blueAccess/itemAliases {
+      allow create: if (blueStaff() || purchaseStaff())
+        &amp;&amp; request.resource.data.keys().hasOnly(['map','updatedAt'])
+        &amp;&amp; request.resource.data.map is map
+        &amp;&amp; request.resource.data.map.size() &lt;= 5000;
+      allow update: if (blueStaff() || purchaseStaff())
+        &amp;&amp; request.resource.data.keys().hasOnly(['map','updatedAt'])
+        &amp;&amp; request.resource.data.map is map
+        &amp;&amp; request.resource.data.map.size() &lt;= 5000
+        &amp;&amp; request.resource.data.map.size() &gt;= resource.data.map.size();
+    }
+    // v2.28: items ke URDU naam (AI se bane / malik ne theek kiye) — label par English ke saath. Malik + Full + Stock likhein.
+    match /businesses/noor-traders/blueAccess/urduNames {
+      allow create, update: if (isOwner() || blueStaff() || stockStaff())
+        &amp;&amp; request.resource.data.keys().hasOnly(['map','updatedAt'])
+        &amp;&amp; request.resource.data.map is map
+        &amp;&amp; request.resource.data.map.size() &lt;= 8000;
+    }
+    // v2.1: har item ka PICHHLA khareed aur nafa (POS purchase bhejte waqt save hota hai) — taake agli dafa
+    // wohi nafa khud lag jaye. Shartein itemAliases jaisi: sirf yeh do khane, aur entries kam na hon.
+    match /businesses/noor-traders/blueAccess/itemRates {
+      allow create: if (blueStaff() || purchaseStaff())
+        &amp;&amp; request.resource.data.keys().hasOnly(['map','updatedAt'])
+        &amp;&amp; request.resource.data.map is map
+        &amp;&amp; request.resource.data.map.size() &lt;= 6000;
+      allow update: if (blueStaff() || purchaseStaff())
+        &amp;&amp; request.resource.data.keys().hasOnly(['map','updatedAt'])
+        &amp;&amp; request.resource.data.map is map
+        &amp;&amp; request.resource.data.map.size() &lt;= 6000
+        &amp;&amp; request.resource.data.map.size() &gt;= resource.data.map.size();
+    }
+    // v2.2: har supplier ke bill ka naqsha (ginti PCS/CTN, rate fi PCS/CTN) — app khud seekhti hai.
+    match /businesses/noor-traders/blueAccess/billFormats {
+      allow create: if (blueStaff() || purchaseStaff())
+        &amp;&amp; request.resource.data.keys().hasOnly(['map','updatedAt'])
+        &amp;&amp; request.resource.data.map is map
+        &amp;&amp; request.resource.data.map.size() &lt;= 3000;
+      allow update: if (blueStaff() || purchaseStaff())
+        &amp;&amp; request.resource.data.keys().hasOnly(['map','updatedAt'])
+        &amp;&amp; request.resource.data.map is map
+        &amp;&amp; request.resource.data.map.size() &lt;= 3000
+        &amp;&amp; request.resource.data.map.size() &gt;= resource.data.map.size();
+    }
+    // Din band ka nishan: mulazim sirf AAJ ka din band kar sakta hai (khol nahi sakta). Malik upar wale rule se sab kuch.
+    match /businesses/noor-traders/blueAccess/dayLock {
+      allow create, update: if blueStaff()
+        &amp;&amp; request.resource.data.keys().hasOnly(['closed','by','at'])
+        &amp;&amp; request.resource.data.closed == todayStr()
+        &amp;&amp; request.resource.data.by == request.auth.uid;
+    }
+    match /businesses/noor-traders/blueStaffSessions/{uid} {
+      allow get: if isOwner() || (isStaff() &amp;&amp; request.auth.uid == uid);
+      // v2.29: 🔄 SCREEN BADALNA bina logout — apni session ki credentialId nayi (active) key par; password ghalat = key nahi = inkaar
+      allow update: if isStaff() &amp;&amp; request.auth.uid == uid
+        &amp;&amp; request.resource.data.keys().hasOnly(['credentialId','createdAt','switchedAt'])
+        &amp;&amp; request.resource.data.createdAt == resource.data.createdAt
+        &amp;&amp; request.resource.data.credentialId is string
+        &amp;&amp; get(/databases/$(database)/documents/businesses/noor-traders/blueStaffKeys/$(request.resource.data.credentialId)).data.active == true;
+      allow create: if isStaff() &amp;&amp; request.auth.uid == uid
+        &amp;&amp; request.resource.data.keys().hasOnly(['credentialId','createdAt'])
+        &amp;&amp; request.resource.data.credentialId is string
+        &amp;&amp; get(/databases/$(database)/documents/businesses/noor-traders/blueStaffKeys/$(request.resource.data.credentialId)).data.active == true;
+    }
+    match /businesses/noor-traders/blueStaffKeys/{key} {
+      allow get: if isOwner() || (isStaff()
+        &amp;&amp; get(/databases/$(database)/documents/businesses/noor-traders/blueStaffSessions/$(request.auth.uid)).data.credentialId == key);
+    }
+
+    // POS ka stock: sirf parhne ke liye. Likhta sirf PC wala sync-stock.js hai (admin key).
+    // v1.66: barcode label ka hukum (app likhti hai, PC ka label-print.js admin key se chhap kar status likhta hai)
+    // v2.52: 🏭 FACTORY — factory/cfg (formula / nafa %, sirf malik likhe) · factoryBatches (larka: Full / Stock mulazim ya malik banaye,
+    // sirf 'new'; PC factory-post.js admin se POS Adjustment + status). Malik: wapas (cancelReq) / dobara (new).
+    match /businesses/noor-traders/factory/{docId} {
+      allow read: if isOwner() || blueStaff() || stockStaff();
+      allow write: if isOwner();
+    }
+    match /businesses/noor-traders/factoryBatches/{bId} {
+      allow read: if isOwner() || blueStaff() || stockStaff();
+      allow create: if (isOwner() || blueStaff() || stockStaff())
+        &amp;&amp; request.resource.data.id == bId &amp;&amp; request.resource.data.status in ['new','hold','app'] &amp;&amp; request.resource.data.by == request.auth.uid
+        &amp;&amp; request.resource.data.keys().hasOnly(['id','no','itemId','name','n','per','out','lines','cost','oh','labels','outs','kind','byName','day','status','by','at','loc'])   // v2.61: loc = 📱 sirf factory item (khula) — app stock
+        &amp;&amp; request.resource.data.n is int &amp;&amp; request.resource.data.n &gt;= 1 &amp;&amp; request.resource.data.n &lt;= 10
+        &amp;&amp; request.resource.data.out is number &amp;&amp; request.resource.data.out &gt;= 0
+        &amp;&amp; (request.resource.data.out &gt; 0 || (request.resource.data.get('outs', []) is list &amp;&amp; request.resource.data.get('outs', []).size() &gt; 0))
+        &amp;&amp; request.resource.data.get('outs', []) is list &amp;&amp; request.resource.data.get('outs', []).size() &lt;= 20
+        &amp;&amp; request.resource.data.lines is list &amp;&amp; request.resource.data.lines.size() &lt;= 40
+        &amp;&amp; request.resource.data.labels is list &amp;&amp; request.resource.data.labels.size() &lt;= 6
+        &amp;&amp; request.resource.data.itemId is string &amp;&amp; request.resource.data.itemId.size() &gt; 0;
+      allow update: if isOwner() &amp;&amp; resource.data.status in ['new','posted','error']
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','cancelBy','cancelAt','retryAt'])
+        &amp;&amp; (request.resource.data.status == 'cancelReq' || (request.resource.data.status == 'new' &amp;&amp; resource.data.status == 'error'));
+      // v2.55: 'hold' = app mein ruka hua (POS baqi). Abhi POS mein nahi gaya (adjNo nahi; hold / new / cancelReq) -&gt; malik ya jis ne banaya:
+      //   FORAN cancel (cancelled) · ✏️ edit (n / out / lines / labels) · 📤 POS mein bhejo (hold -&gt; new)
+      allow update: if (isOwner() || resource.data.by == request.auth.uid) &amp;&amp; resource.data.status in ['new','hold','cancelReq','app'] &amp;&amp; !('adjNo' in resource.data)
+        &amp;&amp; ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','cancelBy','cancelAt']) &amp;&amp; request.resource.data.status == 'cancelled')
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','sendBy','sendAt']) &amp;&amp; request.resource.data.status == 'new' &amp;&amp; resource.data.status == 'hold')
+          || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['n','out','lines','cost','oh','labels','outs','editAt','editBy','loc']) &amp;&amp; request.resource.data.status == resource.data.status
+              &amp;&amp; request.resource.data.n is int &amp;&amp; request.resource.data.n &gt;= 1 &amp;&amp; request.resource.data.n &lt;= 10 &amp;&amp; request.resource.data.out is number &amp;&amp; request.resource.data.out &gt;= 0
+              &amp;&amp; request.resource.data.get('outs', []) is list &amp;&amp; request.resource.data.get('outs', []).size() &lt;= 20
+              &amp;&amp; request.resource.data.lines is list &amp;&amp; request.resource.data.lines.size() &lt;= 40 &amp;&amp; request.resource.data.labels is list &amp;&amp; request.resource.data.labels.size() &lt;= 6));
+    }
+    // v2.59: 🏭 FACTORY KA APNA STOCK (sirf app — POS mein kuch nahi): 📥 maal aaya / 📤 maal diya / ginti (q = gina hua, sys = us waqt app stock).
+    //   Likhe: malik / Full / Stock mulazim — sirf naya; badalna nahi; ghalti par sirf malik hataye.
+    match /businesses/noor-traders/factoryMoves/{mId} {
+      allow read: if isOwner() || blueStaff() || stockStaff();
+      allow create: if (isOwner() || blueStaff() || stockStaff())
+        &amp;&amp; request.resource.data.id == mId &amp;&amp; request.resource.data.by == request.auth.uid
+        &amp;&amp; request.resource.data.keys().hasOnly(['id','itemId','name','kind','q','sys','note','by','byName','at','day'])
+        &amp;&amp; request.resource.data.kind in ['aaya','diya','ginti'] &amp;&amp; request.resource.data.q is number
+        &amp;&amp; request.resource.data.itemId is string &amp;&amp; request.resource.data.itemId.size() &gt; 0 &amp;&amp; request.resource.data.itemId.size() &lt;= 80;
+      allow delete: if isOwner();
+    }
+    match /businesses/noor-traders/labelJobs/{jobId} {
+      allow read: if isOwner() || blueStaff() || stockStaff() || saleStaff();
+      allow create: if (isOwner() || blueStaff() || stockStaff() || saleStaff())
+        &amp;&amp; request.resource.data.keys().hasOnly(['itemId','code','name','qty','rate','copies','status','by','at','batch'])   // v2.59: batch no (factory app batch ka label)
+        &amp;&amp; request.resource.data.status == 'new' &amp;&amp; request.resource.data.by == request.auth.uid
+        &amp;&amp; request.resource.data.code is string &amp;&amp; request.resource.data.code.size() &gt; 0 &amp;&amp; request.resource.data.code.size() &lt;= 60
+        &amp;&amp; request.resource.data.name is string &amp;&amp; request.resource.data.name.size() &lt;= 120
+        &amp;&amp; request.resource.data.copies is int &amp;&amp; request.resource.data.copies &gt;= 1 &amp;&amp; request.resource.data.copies &lt;= 200;
+      // v2.34: ✕ CANCEL — app sirf cancelReq / cancelBy / cancelAt likh sakti hai (line mein ya chhap raha ho); PC (admin) baqi
+      allow update: if (isOwner() || blueStaff() || stockStaff() || saleStaff())
+        &amp;&amp; resource.data.status in ['new','printing']
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['cancelReq','cancelBy','cancelAt'])
+        &amp;&amp; request.resource.data.cancelReq == true &amp;&amp; request.resource.data.cancelBy == request.auth.uid;
+    }
+
+    // v1.70: app se POS sub-barcode banana / badalna / hatana (PC subcode-sync.js admin key se karta hai)
+    match /businesses/noor-traders/subcodeJobs/{jobId} {
+      allow read: if isOwner() || blueStaff() || stockStaff();
+      allow create: if (isOwner() || blueStaff() || stockStaff())
+        &amp;&amp; request.resource.data.keys().hasOnly(['op','itemId','subId','code','qty','rate','show','status','by','at'])
+        &amp;&amp; request.resource.data.op in ['add','edit','delete'] &amp;&amp; request.resource.data.status == 'new'
+        &amp;&amp; request.resource.data.by == request.auth.uid &amp;&amp; request.resource.data.code is string &amp;&amp; request.resource.data.code.size() &lt;= 50;
+    }
+
+    // v2.3: POS ka item banana / badalna (itemJobs) — PC item-post.js admin key se status likhta hai.
+    // Malik hamesha; Full / Stock mulazim tabhi jab malik ne stockConfig.itemEdit ON kiya ho.
+    match /businesses/noor-traders/itemJobs/{jobId} {
+      allow read: if isOwner() || blueStaff() || stockStaff();
+      allow create: if request.resource.data.status == 'new'
+        &amp;&amp; request.resource.data.keys().hasOnly(['op','itemId','code','name','pack','costP','rctn','rpcs','wctn','wpcs','subs','subsDel','status','by','at'])
+        &amp;&amp; request.resource.data.op in ['new','edit']
+        &amp;&amp; request.resource.data.by == request.auth.uid
+        &amp;&amp; request.resource.data.name is string &amp;&amp; request.resource.data.name.size() &lt;= 150
+        &amp;&amp; request.resource.data.subs is list &amp;&amp; request.resource.data.subs.size() &lt;= 50
+        &amp;&amp; (isOwner() || ((blueStaff() || stockStaff()) &amp;&amp; (itemEditOn() || (request.resource.data.op == 'new' &amp;&amp; itemNewOn()))));
+      // v2.54: ⏳ PC baqi item — malik ya jis ne daala: ✏️ edit (sirf 'new', wahi khane) / ✕ cancel. PC claim 'new' hi uthata hai.
+      allow update: if (isOwner() || ((blueStaff() || stockStaff()) &amp;&amp; resource.data.by == request.auth.uid))
+        &amp;&amp; resource.data.status == 'new'
+        &amp;&amp; ((request.resource.data.status == 'cancelled'
+             &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','cancelBy','cancelAt'])
+             &amp;&amp; request.resource.data.cancelBy == request.auth.uid)
+          || (request.resource.data.status == 'new'
+             &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['code','name','pack','costP','rctn','rpcs','wctn','wpcs','editAt','editBy'])
+             &amp;&amp; request.resource.data.editBy == request.auth.uid
+             &amp;&amp; request.resource.data.name is string &amp;&amp; request.resource.data.name.size() &gt; 0 &amp;&amp; request.resource.data.name.size() &lt;= 150));
+    }
+
+    // v2.9: TASVEEREIN (entry ki) — alag khana, taake app kholte waqt saari tasveerein na aayen
+    // v2.11: 💰 GALLA — purchase wala (malik / full / Sirf Purchase) likhta hai "is supplier ko itne paise do";
+    // galla wala (Sirf Galla / malik) sirf "de diye" kar sakta hai — raqam / supplier badal nahi sakta.
+    // kind 'payment' = POS bill (udhaar) ka cash: "de diye" ke SATH hi blueKhata/galla-&lt;id&gt; payment entry (neeche rule).
+    // kind 'cash'    = photo wali cash purchase: khata entry pehle se hai, sirf 'paid'.
+    // v2.16: 📢 DEMAND — koi bhi mulazim "khatam / kam" likhe (apne naam se); malik + Full parhein/band karein; apni khud.
+    match /businesses/noor-traders/demands/{id} {
+      allow read: if isOwner() || blueStaff() || stockStaff() || saleStaff() || purchaseStaff();
+      allow create: if (isOwner() || blueStaff() || stockStaff() || saleStaff() || purchaseStaff()) &amp;&amp; id.matches('^[a-zA-Z0-9_-]{1,60}$')
+        &amp;&amp; request.resource.data.keys().hasOnly(['id','i','n','lvl','by','byName','at','st'])
+        &amp;&amp; request.resource.data.id == id &amp;&amp; request.resource.data.i is string &amp;&amp; request.resource.data.i.size() &lt;= 40
+        &amp;&amp; request.resource.data.n is string &amp;&amp; request.resource.data.n.size() &lt;= 60
+        &amp;&amp; request.resource.data.lvl in ['out','low'] &amp;&amp; request.resource.data.at is int &amp;&amp; request.resource.data.st == 'open'
+        &amp;&amp; request.resource.data.by == request.auth.uid &amp;&amp; request.resource.data.byName is string &amp;&amp; request.resource.data.byName.size() &lt;= 40;
+      allow update: if (isOwner() || blueStaff() || resource.data.by == request.auth.uid)
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st']) &amp;&amp; request.resource.data.st in ['open','done'];
+      allow delete: if isOwner();
+    }
+    // v2.15: 📊 POS ki 6 mahine ki bikri / purchase — PC (admin) likhta hai; malik + Full mulazim parhte hain.
+    match /businesses/noor-traders/posStats/{id} {
+      allow read: if isOwner() || blueStaff();
+      allow get: if id == 'rack' &amp;&amp; isStaff();   // v2.62: 🧺 rack bharo — stock wale mulazim bhi
+    }
+    // v2.15: 🛒 PURCHASE ORDER — supplier-wise items; malik + Full mulazim bana / badal sakte hain, mitana malik.
+    match /businesses/noor-traders/purchaseOrders/{id} {
+      allow read: if isOwner() || blueStaff();
+      allow create, update: if (isOwner() || blueStaff()) &amp;&amp; id.matches('^[a-zA-Z0-9_-]{1,60}$')
+        &amp;&amp; request.resource.data.keys().hasOnly(['id','at','by','byName','note','lines'])
+        &amp;&amp; request.resource.data.id == id &amp;&amp; request.resource.data.at is int
+        &amp;&amp; request.resource.data.lines is list &amp;&amp; request.resource.data.lines.size() &lt;= 30
+        &amp;&amp; request.resource.data.byName is string &amp;&amp; request.resource.data.byName.size() &lt;= 60
+        &amp;&amp; request.resource.data.note is string &amp;&amp; request.resource.data.note.size() &lt;= 200;
+      allow delete: if isOwner();
+    }
+    // v2.38: 📩 HBL INBOX — SMS (phone par MacroDroid) aur email (Gmail Apps Script) Firestore REST se, BINA login: sirf tab jab
+    // chaabi (k) blueAccess/bankKey wali ho. Sirf create — badalna / mitana nahi. App (malik / Full mulazim) parhti aur ✓ (st) likhti hai.
+    match /businesses/noor-traders/bankSms/{id} {
+      allow read: if isOwner() || blueStaff();
+      // bina login (phone / Gmail script): sirf nayi entry, sirf sahi chaabi ke saath — alag alag allow (OR), koi pech nahi
+      // 🔎 JAANCH (app ka Rabta test): REST (phone / Gmail) se aane wali entry ka naam Firebase khud banata hai — is liye yahan `id` par koi shart NAHI.
+      allow create: if request.resource.data.p == 1;
+      allow create: if request.resource.data.p == 2 &amp;&amp; id != '_alias';
+      allow create: if request.resource.data.p == 3 &amp;&amp; request.resource.data.keys().hasOnly(['p']);
+      allow create: if request.resource.data.p == 4 &amp;&amp; request.resource.data.k == get(/databases/$(database)/documents/businesses/noor-traders/blueAccess/bankKey).data.k;
+      // asal: bina login (phone / Gmail script) — sirf nayi entry, sirf sahi chaabi ke saath
+      allow create: if request.resource.data.src in ['sms', 'email', 'notif']   // v2.49: 🔔 HBL Mobile app ki notification (MacroDroid)
+          &amp;&amp; request.resource.data.k is string
+          &amp;&amp; request.resource.data.text is string &amp;&amp; request.resource.data.text.size() &lt;= 3000
+          &amp;&amp; request.resource.data.keys().hasOnly(['k','src','from','subj','text','at'])
+          &amp;&amp; request.resource.data.k == get(/databases/$(database)/documents/businesses/noor-traders/blueAccess/bankKey).data.k;
+      // app (malik / Full mulazim): naam -&gt; khata yaad (_alias)
+      allow create: if id == '_alias' &amp;&amp; signedIn() &amp;&amp; (isOwner() || blueStaff()) &amp;&amp; request.resource.data.keys().hasOnly(['m','at']) &amp;&amp; request.resource.data.m is map;
+      allow update: if signedIn() &amp;&amp; (isOwner() || blueStaff()) &amp;&amp; (
+          (id == '_alias' &amp;&amp; request.resource.data.keys().hasOnly(['m','at']) &amp;&amp; request.resource.data.m is map)
+          || (id != '_alias' &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st','by','byName','doneAt','partyId','entryId','kind','note'])
+              &amp;&amp; request.resource.data.get('st', '') in ['', 'done', 'skip']));
+      allow delete: if isOwner();
+    }
+    // v2.13: 📝 NOTES / order reminders (HBL payment ke sath). Malik + Full mulazim likh / parh sakte hain; mitana sirf malik.
+    match /businesses/noor-traders/notes/{id} {
+      function validNote() {
+        let d = request.resource.data;
+        return id.matches('^[a-zA-Z0-9_-]{1,80}$') &amp;&amp; d.id == id
+          &amp;&amp; d.keys().hasOnly(['id','kind','text','items','partyId','partyName','amount','transferId','remindDay','remindTime','allDay','done','doneAt','hasPic','contactName','contactPhone','by','byName','createdAt','updatedBy','updatedAt','deleted','nag'])
+          &amp;&amp; (!('nag' in d) || (d.nag is int &amp;&amp; d.nag in [0, 15, 30, 60]))   // v2.61: 0 = 🔁 band (warna din wala reminder har 1 ghanta)   // v2.37: 🔁 baar baar yaad
+          &amp;&amp; (!('contactName' in d) || (d.contactName is string &amp;&amp; d.contactName.size() &lt;= 80))
+          &amp;&amp; (!('contactPhone' in d) || (d.contactPhone is string &amp;&amp; d.contactPhone.size() &lt;= 20))   // v2.14: contact
+          &amp;&amp; d.kind in ['note','order'] &amp;&amp; d.text is string &amp;&amp; d.text.size() &lt;= 1000
+          &amp;&amp; d.items is list &amp;&amp; d.items.size() &lt;= 20
+          &amp;&amp; d.partyId is string &amp;&amp; d.partyId.size() &lt;= 120 &amp;&amp; d.partyName is string &amp;&amp; d.partyName.size() &lt;= 120
+          &amp;&amp; d.amount is int &amp;&amp; d.amount &gt;= 0 &amp;&amp; d.transferId is string &amp;&amp; d.transferId.size() &lt;= 100
+          &amp;&amp; d.remindDay is string &amp;&amp; d.remindDay.size() &lt;= 10 &amp;&amp; d.remindTime is string &amp;&amp; d.remindTime.size() &lt;= 5
+          &amp;&amp; d.allDay is bool &amp;&amp; d.done is bool &amp;&amp; d.doneAt is int &amp;&amp; d.hasPic is bool &amp;&amp; d.deleted is bool
+          &amp;&amp; d.byName is string &amp;&amp; d.byName.size() &lt;= 60 &amp;&amp; d.updatedBy == request.auth.uid &amp;&amp; d.updatedAt is int;
+      }
+      allow read: if isOwner() || blueStaff();
+      allow create: if validNote() &amp;&amp; request.resource.data.by == request.auth.uid &amp;&amp; (isOwner() || blueStaff());
+      allow update: if validNote() &amp;&amp; request.resource.data.by == resource.data.by &amp;&amp; request.resource.data.createdAt == resource.data.createdAt
+        &amp;&amp; (isOwner() || (blueStaff() &amp;&amp; !resource.data.deleted));
+      allow delete: if isOwner();
+    }
+    // v2.13: 🔔 PUSH tokens — har phone apna token likhe; parhta sirf Cloud Function (admin). Mitana malik.
+    match /businesses/noor-traders/pushTokens/{id} {
+      allow create, update: if (isOwner() || isStaff()) &amp;&amp; id.matches('^[a-f0-9]{16,64}$')   // v2.60: har mulazim (stock / sale / galla / purchase / gaari bhi) ka phone khud token likhe
+        &amp;&amp; request.resource.data.keys().hasOnly(['token','uid','name','role','scope','at','ua'])
+        &amp;&amp; request.resource.data.token is string &amp;&amp; request.resource.data.token.size() &gt; 20 &amp;&amp; request.resource.data.token.size() &lt;= 400
+        &amp;&amp; request.resource.data.uid == request.auth.uid &amp;&amp; request.resource.data.at is int
+        &amp;&amp; request.resource.data.name is string &amp;&amp; request.resource.data.name.size() &lt;= 60
+        &amp;&amp; request.resource.data.ua is string &amp;&amp; request.resource.data.ua.size() &lt;= 160;
+      allow delete: if isOwner();
+    }
+    // v2.12: 🕘 HISTORY — poori app ki harkatein. Sirf JOR sakte hain (create); badal/mita nahi. Malik + Full mulazim parhte hain.
+    match /businesses/noor-traders/auditLog/{id} {
+      function validAudit() {
+        let d = request.resource.data;
+        return id.matches('^[a-zA-Z0-9_-]{1,80}$') &amp;&amp; d.id == id
+          &amp;&amp; d.keys().hasOnly(['id','at','day','by','byName','role','scope','area','act','what','ref','refType','party','amount','diff','note'])
+          &amp;&amp; d.at is int &amp;&amp; d.day is string &amp;&amp; d.day.size() == 10
+          &amp;&amp; d.by == request.auth.uid &amp;&amp; d.byName is string &amp;&amp; d.byName.size() &lt;= 60
+          &amp;&amp; d.role is string &amp;&amp; d.role.size() &lt;= 12 &amp;&amp; d.scope is string &amp;&amp; d.scope.size() &lt;= 12
+          &amp;&amp; d.area is string &amp;&amp; d.area.size() &lt;= 20 &amp;&amp; d.act is string &amp;&amp; d.act.size() &lt;= 20
+          &amp;&amp; d.what is string &amp;&amp; d.what.size() &lt;= 120 &amp;&amp; d.ref is string &amp;&amp; d.ref.size() &lt;= 120
+          &amp;&amp; d.refType is string &amp;&amp; d.refType.size() &lt;= 20 &amp;&amp; d.party is string &amp;&amp; d.party.size() &lt;= 120
+          &amp;&amp; d.note is string &amp;&amp; d.note.size() &lt;= 200 &amp;&amp; d.diff is list &amp;&amp; d.diff.size() &lt;= 12
+          &amp;&amp; (!('amount' in d) || d.amount is number);
+      }
+      allow read: if isOwner() || blueStaff();
+      allow create: if validAudit() &amp;&amp; (isOwner()
+        || (isStaff() &amp;&amp; exists(/databases/$(database)/documents/businesses/noor-traders/blueStaffSessions/$(request.auth.uid))));
+      allow delete: if isOwner();
+    }
+    match /businesses/noor-traders/gallaCalls/{id} {
+      function validCall() {
+        let d = request.resource.data;
+        return id.matches('^[a-zA-Z0-9_-]{1,80}$') &amp;&amp; d.id == id
+          &amp;&amp; d.keys().hasOnly(['id','kind','amount','partyId','partyName','note','billId','date','by','byName','at','status','needCheck'])
+          &amp;&amp; (!('needCheck' in d) || d.needCheck is bool)
+          &amp;&amp; d.kind in ['payment','cash'] &amp;&amp; d.status == 'new' &amp;&amp; isToday(d.date)
+          &amp;&amp; d.amount is int &amp;&amp; d.amount &gt; 0 &amp;&amp; d.amount &lt;= 100000000000
+          &amp;&amp; d.partyId is string &amp;&amp; d.partyId.size() &gt; 0 &amp;&amp; d.partyId.size() &lt;= 120
+          &amp;&amp; d.partyName is string &amp;&amp; d.partyName.size() &lt;= 120
+          &amp;&amp; d.note is string &amp;&amp; d.note.size() &lt;= 300
+          &amp;&amp; d.billId is string &amp;&amp; d.billId.size() &lt;= 120
+          &amp;&amp; d.byName is string &amp;&amp; d.byName.size() &lt;= 60 &amp;&amp; d.at is int
+          &amp;&amp; d.by == request.auth.uid;
+      }
+      allow read: if isOwner() || blueStaff() || purchaseStaff() || gallaStaff() || stockStaff();
+      // v2.53: 💰 GALLA CHECK — naqad supplier (needCheck): Mubeen / Sonu / Zeeshan / Malik "✓ check" (ek dafa) · "✕ rok do" · malik parchi "phir bhejo"
+      allow update: if (isOwner() || blueStaff() || purchaseStaff() || stockStaff())
+        &amp;&amp; resource.data.status == 'new' &amp;&amp; resource.data.get('needCheck', false) == true &amp;&amp; !('checkAt' in resource.data)
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['checkBy','checkName','checkUr','checkAt'])
+        &amp;&amp; request.resource.data.checkBy == request.auth.uid &amp;&amp; request.resource.data.checkAt is int
+        &amp;&amp; request.resource.data.checkName is string &amp;&amp; request.resource.data.checkName.size() &lt;= 40
+        &amp;&amp; request.resource.data.checkUr is string &amp;&amp; request.resource.data.checkUr.size() &lt;= 40;
+      allow update: if (isOwner() || blueStaff() || purchaseStaff() || stockStaff())
+        &amp;&amp; resource.data.status == 'new' &amp;&amp; resource.data.get('needCheck', false) == true &amp;&amp; resource.data.get('prnState', '') != 'done'
+        &amp;&amp; request.resource.data.status == 'stop' &amp;&amp; request.resource.data.stopBy == request.auth.uid
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','stopBy','stopName','stopAt']);
+      allow update: if isOwner() &amp;&amp; resource.data.status == 'new' &amp;&amp; resource.data.get('prnState', '') in ['err','printing']
+        &amp;&amp; request.resource.data.prnState == ''
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['prnState','prnRetry']);
+      allow create: if validCall() &amp;&amp; (isOwner() || blueStaff() || purchaseStaff());
+      allow update: if resource.data.status == 'new' &amp;&amp; request.resource.data.status == 'paid'
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','paidAt','paidBy','paidName','entryId'])
+        &amp;&amp; request.resource.data.paidBy == request.auth.uid &amp;&amp; request.resource.data.paidAt is int
+        &amp;&amp; request.resource.data.paidName is string &amp;&amp; request.resource.data.paidName.size() &lt;= 60
+        &amp;&amp; request.resource.data.entryId is string
+        &amp;&amp; (resource.data.kind != 'payment' || (request.resource.data.entryId == 'galla-' + id
+            &amp;&amp; existsAfter(/databases/$(database)/documents/businesses/noor-traders/blueKhata/$('galla-' + id))))
+        &amp;&amp; (resource.data.get('needCheck', false) != true || resource.data.get('prnState', '') == 'done')   // v2.53: check + parchi ke baad hi
+        &amp;&amp; (isOwner() || gallaStaff());
+      allow delete: if isOwner();
+    }
+    match /businesses/noor-traders/entryPhotos/{id} {
+      allow read: if isOwner() || blueStaff() || purchaseStaff();
+      function validPhotos() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['photos','billPhotos','goodsPhotos','by','at'])
+          &amp;&amp; (!('photos' in d) || (d.photos is list &amp;&amp; d.photos.size() &lt;= 3))
+          &amp;&amp; (!('billPhotos' in d) || (d.billPhotos is list &amp;&amp; d.billPhotos.size() &lt;= 3))
+          &amp;&amp; (!('goodsPhotos' in d) || (d.goodsPhotos is list &amp;&amp; d.goodsPhotos.size() &lt;= 3));
+      }
+      allow create, update: if validPhotos() &amp;&amp; (isOwner()
+        || ((blueStaff() || purchaseStaff()) &amp;&amp; request.resource.data.by == request.auth.uid));
+      allow delete: if isOwner();
+    }
+
+    // v2.5: POS ke apne STOCK TRANSFER (PC transfer-dekho.js admin key se likhta hai) — app sirf parhti hai
+    match /businesses/noor-traders/posTransfers/{id} {
+      allow read: if isOwner() || blueStaff() || stockStaff() || saleStaff() || purchaseStaff();
+    }
+    // v2.35: 🧾 TRANSFER CHECK — larka godam se maal laye, parchi ka barcode scan = "pahunch gaya" (ya farq).
+    // Ek dafa likha = BAS: update kisi ko nahi (malik ko bhi nahi), waqt server ka (ts == request.time), sirf malik ghalti par delete.
+    // v2.48: 📦 godam wala (pehla tick / godam mein "mil gaya") — login ke naam mein stockConfig.tcGiver (default Zeeshan), ya malik
+    function tcGiverName() {   // stockConfig na ho to bhi 'zeeshan' (get() missing doc par error deta hai)
+      return exists(/databases/$(database)/documents/businesses/noor-traders/blueAccess/stockConfig)
+        ? string(get(/databases/$(database)/documents/businesses/noor-traders/blueAccess/stockConfig).data.get('tcGiver', 'Zeeshan')).lower()
+        : 'zeeshan';
+    }
+    function tcGiverOk() {
+      return isOwner() || (isStaff() &amp;&amp; string(staffAccount().get('name', '')).lower().matches('.*(' + tcGiverName() + ').*'));   // v2.58: 'zeeshan|bilal' = kai godam wale
+    }
+    match /businesses/noor-traders/transferChecks/{id} {
+      allow read: if isOwner() || isStaff();
+      allow create: if (isOwner() || isStaff())
+        &amp;&amp; id.matches('^T[0-9]{1,12}(E[0-9]{1,3})?G?$')   // v2.44: 'E2' = note edit hone ke baad nayi check · v2.48: 'G' = pehla tick (maal de diya)
+        &amp;&amp; request.resource.data.keys().hasOnly(['transferId','transferNo','from','to','issuedAt','status','note','by','byName','device','lines','ts'])
+        &amp;&amp; request.resource.data.by == request.auth.uid
+        &amp;&amp; request.resource.data.ts == request.time
+        &amp;&amp; request.resource.data.note is string &amp;&amp; request.resource.data.note.size() &lt;= 300
+        &amp;&amp; request.resource.data.from is int &amp;&amp; request.resource.data.to is int
+        &amp;&amp; (id.matches('.*G$')
+          ? (request.resource.data.status == 'diya' &amp;&amp; request.resource.data.note == ''
+             &amp;&amp; (request.resource.data.from == 1 || tcGiverOk()))
+          : (request.resource.data.status in ['ok','farq']
+             &amp;&amp; (request.resource.data.status == 'ok' || request.resource.data.note.size() &gt; 0)
+             &amp;&amp; (request.resource.data.issuedAt &lt; 1791903600000
+                 || exists(/databases/$(database)/documents/businesses/noor-traders/transferChecks/$(id + 'G')))
+             &amp;&amp; (request.resource.data.to == 1 || tcGiverOk())))
+        &amp;&amp; request.resource.data.byName is string &amp;&amp; request.resource.data.byName.size() &lt;= 60
+        &amp;&amp; request.resource.data.device is string &amp;&amp; request.resource.data.device.size() &lt;= 40
+        &amp;&amp; request.resource.data.transferNo is string &amp;&amp; request.resource.data.transferNo.size() &lt;= 40
+        &amp;&amp; request.resource.data.transferId is int &amp;&amp; request.resource.data.issuedAt is int &amp;&amp; request.resource.data.lines is int;
+      allow delete: if isOwner();
+    }
+    // v2.21: POS par bane aaj ke sale bills (PC pos-sales-dekho.js likhta hai) — app sirf parhti hai
+    match /businesses/noor-traders/posSales/{day} {
+      allow read: if isOwner() || blueStaff() || stockStaff() || saleStaff() || purchaseStaff();
+    }
+
+    // v2.4: ⚖️ TOLAI — label ki tasveer se ginti. Koi bhi login likhta hai (apni), malik sab parhta hai.
+    match /businesses/noor-traders/tolai/{id} {
+      allow read: if isOwner() || blueStaff() || stockStaff() || saleStaff() || purchaseStaff();
+      allow create: if (isOwner() || blueStaff() || stockStaff() || saleStaff())
+        &amp;&amp; request.resource.data.keys().hasOnly(['day','itemId','name','packets','lastN','at','by','who'])
+        &amp;&amp; request.resource.data.by == request.auth.uid
+        &amp;&amp; request.resource.data.packets is int &amp;&amp; request.resource.data.packets &gt; 0 &amp;&amp; request.resource.data.packets &lt;= 5000
+        &amp;&amp; request.resource.data.name is string &amp;&amp; request.resource.data.name.size() &lt;= 120
+        &amp;&amp; (isOwner() || isToday(request.resource.data.day));
+      allow delete: if isOwner() || ((blueStaff() || stockStaff() || saleStaff())
+        &amp;&amp; resource.data.by == request.auth.uid &amp;&amp; isToday(resource.data.day));
+    }
+
+    // v1.73: stock transfer note (transferJobs) aur thermal print (printJobs) — PC transfer-sync.js admin key se
+    match /businesses/noor-traders/transferJobs/{jobId} {
+      allow read: if isOwner() || blueStaff() || stockStaff();
+      allow create: if (isOwner() || blueStaff() || stockStaff())
+        &amp;&amp; request.resource.data.keys().hasOnly(['op','from','to','lines','note','transferId','byName','status','by','at','copies','reason','force'])   // v2.19: copies (note kitni dafa, 1-3) · v2.47: reason, force
+        &amp;&amp; (!('copies' in request.resource.data) || (request.resource.data.copies is int &amp;&amp; request.resource.data.copies &gt;= 1 &amp;&amp; request.resource.data.copies &lt;= 3))
+        &amp;&amp; request.resource.data.op in ['create','delete','edit'] &amp;&amp; request.resource.data.status == 'new'
+        &amp;&amp; request.resource.data.by == request.auth.uid &amp;&amp; request.resource.data.lines.size() &lt;= 100
+        &amp;&amp; ((request.resource.data.op != 'delete' &amp;&amp; request.resource.data.op != 'edit' &amp;&amp; !('force' in request.resource.data)) || isOwner())
+        &amp;&amp; (!('reason' in request.resource.data) || (request.resource.data.reason is string &amp;&amp; request.resource.data.reason.size() &lt;= 150));
+    }
+    match /businesses/noor-traders/printJobs/{jobId} {
+      allow read: if isOwner() || blueStaff() || stockStaff() || purchaseStaff();
+      allow create: if (isOwner() || blueStaff() || stockStaff() || purchaseStaff())
+        &amp;&amp; request.resource.data.keys().hasOnly(['kind','id','partyName','reason','byName','status','by','at','copies'])   // v2.19
+        &amp;&amp; (!('copies' in request.resource.data) || (request.resource.data.copies is int &amp;&amp; request.resource.data.copies &gt;= 1 &amp;&amp; request.resource.data.copies &lt;= 3))
+        &amp;&amp; request.resource.data.kind in ['purchase','transfer','voucher'] &amp;&amp; request.resource.data.status == 'new'   // v2.43: voucher = TM-T88IV dobara print
+        &amp;&amp; request.resource.data.by == request.auth.uid;
+    }
+
+    // v1.78: POS posting ka hukum (sirf malik) — PC transfer-sync usp_Voucher_Post chalata hai
+    match /businesses/noor-traders/postJobs/{jobId} {
+      allow read: if isOwner();
+      allow create: if isOwner() &amp;&amp; request.resource.data.keys().hasOnly(['op','items','status','by','at'])
+        &amp;&amp; request.resource.data.op in ['post','unpost'] &amp;&amp; request.resource.data.status == 'new'
+        &amp;&amp; request.resource.data.by == request.auth.uid &amp;&amp; request.resource.data.items.size() &lt;= 100;
+    }
+
+    match /businesses/noor-traders/posStock/{docId} {
+      // v1.84: purchaseStaff bhi — bill AI mein item naam/rates ka milan isi se hota hai
+      allow read: if isOwner() || stockStaff() || saleStaff() || blueStaff() || purchaseStaff();
+    }
+
+    // Stock taking ki ginti — malik aur mulazim dono likh sakte hain
+    match /businesses/noor-traders/stockCount/{docId} {
+      allow read: if isOwner() || blueStaff() || stockStaff();
+      allow write: if isOwner();
+      // Mulazim: sirf item ki ginti (docId "_" se shuru na ho) aur jab malik ne counting OFF na ki ho (_lock.off)
+      allow write: if (blueStaff() || stockStaff()) &amp;&amp; !docId.matches('^_.*')
+        &amp;&amp; (!exists(/databases/$(database)/documents/businesses/noor-traders/stockCount/_lock)
+            || get(/databases/$(database)/documents/businesses/noor-traders/stockCount/_lock).data.get('off', false) != true);
+      // Nishan (baqi / check) mulazim bhi laga sakta hai, counting OFF ho tab bhi
+      allow write: if (blueStaff() || stockStaff()) &amp;&amp; docId == '_flags'
+        &amp;&amp; request.resource.data.keys().hasOnly(['items','updatedAt']);
+    }
+
+    // App se sale (Counter / Wholesale). App sirf "new" sale likhta hai; POS bill PC ka sale-post.js banata hai
+    // (admin key se status/saleNo likhta hai). Mulazim ki sale PC par POS ke rate se hi banti hai.
+    // v1.88: mulazim ki location/chhoot LOG — sirf faasla + waqt (asal jagah nahi). Malik parhta, mulazim sirf likhta.
+    match /businesses/noor-traders/geoLog/{id} {
+      allow read: if isOwner();
+      allow create: if request.resource.data.by == request.auth.uid
+        &amp;&amp; request.resource.data.keys().hasOnly(['by','who','kind','dist','acc','at','day'])
+        &amp;&amp; request.resource.data.kind in ['outside','chhoot','wrongpass','noloc']
+        &amp;&amp; isStaff();
+    }
+
+    // v1.86: POS PURCHASE (phone se POS purchase bill + naye rates). Malik + Full + Purchase mulazim.
+    // Sasti shartein pehle. Status/purchaseNo sirf PC (admin key) likhta hai.
+    match /businesses/noor-traders/appPurchases/{pid} {
+      function purUser() { return isOwner() || blueStaff() || purchaseStaff(); }
+      function validPur() {
+        let d = request.resource.data;
+        return d.status == 'new' &amp;&amp; d.by == request.auth.uid
+          &amp;&amp; d.keys().hasOnly(['id','date','at','branch','godam','partyId','partyName','invoiceNo','note','lines','total','role','by','status','createdAt','editOf'])
+          &amp;&amp; (!('editOf' in d) || d.editOf is map)
+          &amp;&amp; d.id == pid &amp;&amp; pid.matches('^[a-zA-Z0-9_-]{6,60}$')
+          &amp;&amp; d.lines is list &amp;&amp; d.lines.size() &gt; 0 &amp;&amp; d.lines.size() &lt;= 150
+          &amp;&amp; d.total is number &amp;&amp; d.total &gt; 0
+          &amp;&amp; d.branch is int &amp;&amp; d.godam is int &amp;&amp; d.partyId is string &amp;&amp; d.partyId.size() &gt; 0
+          &amp;&amp; (d.role == 'owner' ? isOwner() : (d.role == 'staff' &amp;&amp; isToday(d.date)));
+      }
+      allow read: if purUser();
+      allow create: if validPur() &amp;&amp; purUser();
+      // v1.94: ✕ -&gt; dobara (new) / screen par (replaced), ⏳ new -&gt; cancelled. Sirf status wale khane. Sasti shartein pehle.
+      allow update: if ((resource.data.status == 'failed' &amp;&amp; request.resource.data.status in ['new','replaced'])
+            || (resource.data.status == 'new' &amp;&amp; request.resource.data.status == 'cancelled'))
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','retryAt','error','replacedAt','cancelledAt'])
+        &amp;&amp; (isOwner() || (resource.data.by == request.auth.uid &amp;&amp; isToday(resource.data.date) &amp;&amp; purUser()));
+    }
+
+    // v2.24: mulazim ka DEVICE jorna — malik likhta hai (device ki ID = doc id), device (anonymous) parh kar mita deta hai; 10 min baad bekaar
+    match /businesses/noor-traders/deviceJoins/{deviceId} {
+      // v2.57: list (poori fehrist) sirf malik — mulazim / anjaan sirf apna link / code (doc id) parh sake (pc- = 6 hindse ka code, 30 min)
+      allow get, delete: if signedIn();
+      allow list: if isOwner();
+      allow create, update: if isOwner() &amp;&amp; request.resource.data.keys().hasOnly(['scope','pw','name','at','by','credentialId','staffId','perms','ticket']) &amp;&amp; (!('pw' in request.resource.data) || (request.resource.data.pw is string &amp;&amp; request.resource.data.pw.size() &lt;= 400));   // v2.36: ticket link (credentialId)
+    }
+    // v2.36: 👥 MULAZIM KI LIST (naam, phone, ijazat) — sirf malik. Key (secret) blueStaffKeys/st-… mein, yahan sirf credId ka hawala.
+    match /businesses/noor-traders/blueStaff/{id} {
+      allow read, write: if isOwner();
+    }
+    // v2.36: 📱 JUDE HUE DEVICES — phone khud likhta hai (join par + har kuch der 'seen'); malik parhe / hataye
+    match /businesses/noor-traders/staffDevices/{deviceId} {
+      allow read, delete: if isOwner();
+      allow create, update: if isStaff() &amp;&amp; request.resource.data.by == request.auth.uid
+        &amp;&amp; request.resource.data.keys().hasOnly(['staffId','name','by','at','seen','ua','scope','cred']);
+    }
+    // v2.23: roz ka TOKEN number (1, 2, 3…) — har bill par ek, sirf +1 badh sakta hai
+    match /businesses/noor-traders/tokens/{day} {
+      allow read: if isOwner() || blueStaff() || saleStaff();
+      allow create: if (isOwner() || blueStaff() || saleStaff()) &amp;&amp; request.resource.data.keys().hasOnly(['n','at']) &amp;&amp; request.resource.data.n == 1;
+      allow update: if (isOwner() || blueStaff() || saleStaff()) &amp;&amp; request.resource.data.keys().hasOnly(['n','at']) &amp;&amp; request.resource.data.n == resource.data.n + 1;
+    }
+    // v2.31: 🚚 GAARI ka hisaab — bilty / diesel / kharch / reading / tracker / driver. Malik sab; Full + Sirf Gaari likh/parh sakein,
+    // sirf apni AAJ ki entry "hata" (deleted:true) sakein. _config sirf malik.
+    match /businesses/noor-traders/gaari/{id} {
+      allow read: if isOwner() || blueStaff() || gaariStaff();
+      allow create: if (isOwner() || ((blueStaff() || gaariStaff()) &amp;&amp; id != '_config'))
+        &amp;&amp; (id == '_config' || (request.resource.data.kind in ['bilty','diesel','kharch','reading','tracker','driver','phera']
+          &amp;&amp; request.resource.data.date is string &amp;&amp; request.resource.data.date.size() == 10
+          &amp;&amp; request.resource.data.by == request.auth.uid
+          &amp;&amp; (isOwner() || (request.resource.data.kind != 'driver' &amp;&amp; isToday(request.resource.data.date)))));
+      allow update: if isOwner() || ((blueStaff() || gaariStaff()) &amp;&amp; resource.data.by == request.auth.uid &amp;&amp; isToday(resource.data.date)
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted']) &amp;&amp; request.resource.data.deleted == true)
+        || ((blueStaff() || gaariStaff()) &amp;&amp; resource.data.kind == 'phera' &amp;&amp; resource.data.get('status', 'open') == 'open'
+          &amp;&amp; request.resource.data.kind == 'phera' &amp;&amp; request.resource.data.by == resource.data.by &amp;&amp; request.resource.data.date == resource.data.date
+          &amp;&amp; request.resource.data.status in ['open','closed']);   // v2.32: KHULA phera driver/Full baad mein bhi bhare; band sirf malik
+      allow delete: if isOwner();
+    }
+    // v2.26: 💻 PC chunein — NT-PRINT agent (firebase-admin) har minute {name, host, printer, printers, at, ver} likhta hai. App sirf parhti hai.
+    // v2.27: 📺 COUNTER NAZAR — counter wala (sale) bill bante waqt apni lines likhta hai; nigrani wala (nazar) sirf stop/status.
+    match /businesses/noor-traders/liveCarts/{counter} {
+      allow read: if isOwner() || blueStaff() || saleStaff() || nazarStaff();
+      allow create, update: if (isOwner() || blueStaff() || saleStaff())
+        &amp;&amp; request.resource.data.keys().hasOnly(['counter','by','byName','lines','n','total','status','at','saleId','token','crates','stop','last','mode'])
+        &amp;&amp; request.resource.data.lines is list &amp;&amp; request.resource.data.lines.size() &lt;= 150
+        &amp;&amp; request.resource.data.status in ['open','saved','idle','stopped']
+        &amp;&amp; (isOwner() || resource == null || !('stop' in resource.data) || resource.data.stop == null || request.resource.data.get('stop', null) == resource.data.stop);   // mulazim roka hua nahi hata sakta
+      allow update: if nazarStaff()
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stop','status','at'])
+        &amp;&amp; request.resource.data.status in ['open','saved','idle','stopped'];
+      allow delete: if isOwner();
+    }
+    match /businesses/noor-traders/printPCs/{pc} {
+      allow read: if isOwner() || blueStaff() || saleStaff();
+    }
+    match /businesses/noor-traders/appSales/{saleId} {
+      function saleUser() { return isOwner() || blueStaff() || saleStaff(); }
+      function validSale() {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['id','date','at','mode','branch','godam','lines','total','cash','note','role','by','status','createdAt','printReq','copies','counter','token','crates','gate'])   // v2.18: copies · v2.22: counter · v2.23: token, crates · v2.30: gate
+          &amp;&amp; (!('gate' in d) || (d.gate is int &amp;&amp; d.gate &gt;= 0 &amp;&amp; d.gate &lt; 1000))
+          &amp;&amp; (!('token' in d) || (d.token is int &amp;&amp; d.token &gt;= 0 &amp;&amp; d.token &lt; 100000))
+          &amp;&amp; (!('crates' in d) || (d.crates is int &amp;&amp; d.crates &gt;= 1 &amp;&amp; d.crates &lt;= 20))
+          &amp;&amp; (!('counter' in d) || (d.counter is string &amp;&amp; d.counter.size() &lt;= 20))
+          &amp;&amp; (!('copies' in d) || (d.copies is int &amp;&amp; d.copies &gt;= 1 &amp;&amp; d.copies &lt;= 3))
+          &amp;&amp; d.id == saleId &amp;&amp; saleId.matches('^[a-zA-Z0-9_-]{6,60}$')
+          &amp;&amp; isToday(d.date) &amp;&amp; d.mode in ['counter','wholesale']
+          &amp;&amp; d.branch is int &amp;&amp; d.godam is int
+          &amp;&amp; d.lines is list &amp;&amp; d.lines.size() &gt; 0 &amp;&amp; d.lines.size() &lt;= 150
+          &amp;&amp; d.total is number &amp;&amp; d.total != 0 &amp;&amp; d.cash is number   // v2.33: wapsi (minus) bill bhi
+          &amp;&amp; d.status == 'new' &amp;&amp; d.by == request.auth.uid
+          &amp;&amp; d.role == (isOwner() ? 'owner' : 'staff');
+      }
+      allow read: if saleUser();
+      allow create: if saleUser() &amp;&amp; validSale();
+      // sirf "dobara print" ka hukam
+      allow update: if saleUser()
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['printReq','copies','counter'])
+        &amp;&amp; request.resource.data.printReq is int &amp;&amp; (!('copies' in request.resource.data) || (request.resource.data.copies is int &amp;&amp; request.resource.data.copies &gt;= 1 &amp;&amp; request.resource.data.copies &lt;= 3));
+    }
+
+    // v2.33: 🧾 AAJ KE BILLS — un-posted POS bill ka edit. App sirf hukam likhti hai (status 'new'); server PC (sale-post.js) POS mein
+    // check kar ke (un-posted, wahi SaleNo) badalta hai aur done/failed likhta hai. Posted bill PC khud mana kar deta hai.
+    match /businesses/noor-traders/saleEdits/{id} {
+      allow read: if isOwner() || blueStaff() || saleStaff();
+      allow create: if (isOwner() || blueStaff() || saleStaff())
+        &amp;&amp; request.resource.data.keys().hasOnly(['id','posId','saleNo','appId','mode','lines','total','cash','note','by','byName','role','status','at','date'])
+        &amp;&amp; request.resource.data.id == id &amp;&amp; id.matches('^[a-zA-Z0-9_-]{6,60}$')
+        &amp;&amp; request.resource.data.status == 'new' &amp;&amp; request.resource.data.by == request.auth.uid
+        &amp;&amp; request.resource.data.posId is int &amp;&amp; request.resource.data.posId &gt; 0
+        &amp;&amp; request.resource.data.mode in ['counter','wholesale']
+        &amp;&amp; request.resource.data.lines is list &amp;&amp; request.resource.data.lines.size() &gt; 0 &amp;&amp; request.resource.data.lines.size() &lt;= 150
+        &amp;&amp; request.resource.data.total is number &amp;&amp; request.resource.data.cash is number
+        &amp;&amp; request.resource.data.role == (isOwner() ? 'owner' : 'staff');
+    }
+    // v2.33: POS bill ki lines (PC likhta hai) — bill kholne / edit ke liye sirf parhna
+    match /businesses/noor-traders/posSaleLines/{id} {
+      allow read: if isOwner() || blueStaff() || saleStaff();
+    }
+
+    // Khate ki picture (alag, sirf khata kholne par parhi jati hai). Malik aur full mulazim.
+    match /businesses/noor-traders/partyPhotos/{partyId} {
+      allow read: if isOwner() || blueStaff();
+      allow delete: if isOwner() || (blueStaff() &amp;&amp; dayOpen());
+      allow create, update: if isOwner() || (blueStaff() &amp;&amp; dayOpen()
+        &amp;&amp; request.resource.data.keys().hasOnly(['photo','updatedAt','by'])
+        &amp;&amp; request.resource.data.photo is string &amp;&amp; request.resource.data.photo.size() &lt;= 90000);
+    }
+
+    // POS ke purchase bill ki tafseel: sirf parhne ke liye.
+    match /businesses/noor-traders/posBills/{docId} {
+      allow read: if isOwner() || blueStaff() || purchaseStaff();
+    }
+
+    match /businesses/noor-traders/purchaseSuppliers/{id} {
+      allow read: if blueStaff() || purchaseStaff();
+      allow create: if (blueStaff() || purchaseStaff())
+        &amp;&amp; request.resource.data.keys().hasOnly(['id','name','phone'])
+        &amp;&amp; request.resource.data.id == id &amp;&amp; request.resource.data.name is string &amp;&amp; request.resource.data.phone is string
+        &amp;&amp; getAfter(/databases/$(database)/documents/businesses/noor-traders/blueKhata/$(id)).data.type == 'party'
+        &amp;&amp; getAfter(/databases/$(database)/documents/businesses/noor-traders/blueKhata/$(id)).data.by == request.auth.uid
+        &amp;&amp; getAfter(/databases/$(database)/documents/businesses/noor-traders/blueKhata/$(id)).data.name == request.resource.data.name
+        &amp;&amp; getAfter(/databases/$(database)/documents/businesses/noor-traders/blueKhata/$(id)).data.phone == request.resource.data.phone;
+    }
+
+    // Blue Khata: existing verified employees can view/create ledger entries.
+    // Staff may soft-delete any current-day entry; other edits remain owner-only.
+    match /businesses/noor-traders/blueKhata/{recordId} {
+      function validTransfer() {
+        let d = request.resource.data;
+        let mateId = 'transfer-' + d.transferId + (d.transferRole == 'out' ? '-in' : '-out');
+        let mate = getAfter(/databases/$(database)/documents/businesses/noor-traders/blueKhata/$(mateId)).data;
+        return d.type == 'entry' &amp;&amp; d.transferId is string &amp;&amp; d.transferId.matches('^[a-zA-Z0-9_-]{1,100}$')
+          &amp;&amp; d.transferRole in ['out','in']
+          &amp;&amp; recordId == 'transfer-' + d.transferId + '-' + d.transferRole &amp;&amp; d.id == recordId
+          &amp;&amp; d.kind == (d.transferRole == 'out' ? 'collection' : 'payment')
+          &amp;&amp; d.partyId == (d.transferRole == 'out' ? d.fromPartyId : d.toPartyId)
+          &amp;&amp; d.fromPartyId is string &amp;&amp; d.toPartyId is string &amp;&amp; d.fromPartyId != d.toPartyId
+          &amp;&amp; d.amount is int &amp;&amp; d.amount &gt; 0 &amp;&amp; d.amount &lt;= 10000000000000
+          &amp;&amp; d.dailyIncluded == false &amp;&amp; d.date is string &amp;&amp; d.note is string &amp;&amp; d.note.size() &lt;= 1000
+          &amp;&amp; d.rev is int &amp;&amp; d.rev &gt; 0
+          &amp;&amp; mate.id == mateId &amp;&amp; mate.type == 'entry' &amp;&amp; mate.transferId == d.transferId
+          &amp;&amp; mate.transferRole == (d.transferRole == 'out' ? 'in' : 'out')
+          &amp;&amp; mate.kind == (d.transferRole == 'out' ? 'payment' : 'collection')
+          &amp;&amp; mate.partyId == (d.transferRole == 'out' ? d.toPartyId : d.fromPartyId)
+          &amp;&amp; mate.dailyIncluded == false &amp;&amp; mate.fromPartyId == d.fromPartyId &amp;&amp; mate.toPartyId == d.toPartyId
+          &amp;&amp; mate.amount == d.amount &amp;&amp; mate.date == d.date &amp;&amp; mate.note == d.note &amp;&amp; mate.rev == d.rev
+          &amp;&amp; d.get('deleted', false) is bool &amp;&amp; d.get('deleted', false) == mate.get('deleted', false);
+      }
+      allow create: if isOwner() &amp;&amp; validTransfer();
+      // v1.61: mulazim (full, din khula) sirf AAJ ka naya transfer bana sakta hai; edit/delete sirf malik
+      allow create: if ('transferId' in request.resource.data) &amp;&amp; blueStaff() &amp;&amp; dayOpen() &amp;&amp; validTransfer()
+        &amp;&amp; isToday(request.resource.data.date) &amp;&amp; request.resource.data.rev == 1
+        &amp;&amp; request.resource.data.by == request.auth.uid &amp;&amp; request.resource.data.updatedBy == request.auth.uid
+        &amp;&amp; !request.resource.data.get('deleted', false);
+      allow update: if resource.data.get('posStatus', 1) != 2 &amp;&amp; isOwner() &amp;&amp; 'transferId' in resource.data &amp;&amp; validTransfer()
+        &amp;&amp; request.resource.data.transferId == resource.data.transferId
+        &amp;&amp; request.resource.data.transferRole == resource.data.transferRole
+        &amp;&amp; request.resource.data.fromPartyId == resource.data.fromPartyId
+        &amp;&amp; request.resource.data.rev == resource.data.rev + 1
+        &amp;&amp; !resource.data.get('deleted', false);
+
+      allow read: if isOwner() || blueStaff() || (purchaseStaff() &amp;&amp; resource.data.type == 'entry' &amp;&amp; resource.data.purchase == true);
+      // v2.11: GALLA ki payment — sirf galla-&lt;id&gt; entry, bilkul galla ki darkhwast jitni raqam / wohi supplier / aaj,
+      // aur usi batch mein darkhwast 'paid' ho (getAfter). Galla wala koi aur entry nahi bana sakta.
+      function validGallaPay() {
+        let d = request.resource.data;
+        let g = getAfter(/databases/$(database)/documents/businesses/noor-traders/gallaCalls/$(d.galla)).data;
+        return d.type == 'entry' &amp;&amp; d.kind == 'payment' &amp;&amp; d.galla is string &amp;&amp; d.galla.matches('^[a-zA-Z0-9_-]{1,80}$')
+          &amp;&amp; recordId == 'galla-' + d.galla &amp;&amp; d.id == recordId &amp;&amp; isToday(d.date)
+          &amp;&amp; d.keys().hasOnly(['id','type','kind','partyId','account','amount','date','note','posPending','galla','by','createdAt','updatedBy','updatedAt','rev'])
+          &amp;&amp; d.amount is int &amp;&amp; d.amount &gt; 0 &amp;&amp; d.note is string &amp;&amp; d.note.size() &lt;= 300
+          &amp;&amp; d.by == request.auth.uid &amp;&amp; d.updatedBy == request.auth.uid &amp;&amp; d.rev == 1
+          &amp;&amp; g.kind == 'payment' &amp;&amp; g.status == 'paid' &amp;&amp; g.entryId == recordId
+          &amp;&amp; g.amount == d.amount &amp;&amp; g.partyId == d.partyId &amp;&amp; g.date == d.date;
+      }
+      allow create: if request.resource.data.get('galla', '') != '' &amp;&amp; gallaStaff() &amp;&amp; dayOpen() &amp;&amp; validGallaPay();
+      function validPurchase() {
+        let d = request.resource.data;
+        return d.type == 'entry' &amp;&amp; d.purchase == true &amp;&amp; d.id == recordId
+          &amp;&amp; d.kind in ['purchaseCash','borrow'] &amp;&amp; isToday(d.date)
+          &amp;&amp; d.amount is int &amp;&amp; d.amount &gt; 0 &amp;&amp; d.partyId is string
+          &amp;&amp; (blueStaff() || exists(/databases/$(database)/documents/businesses/noor-traders/purchaseSuppliers/$(d.partyId)))
+          &amp;&amp; d.updatedBy == request.auth.uid
+          &amp;&amp; (!('items' in d) || (d.items is list &amp;&amp; d.items.size() &lt;= 100))   // v1.82: bill ke items (AI ya haath se) — sasti shart
+          &amp;&amp; d.keys().hasOnly(['id','type','kind','purchase','partyId','amount','date','note','goodsPhotos','billPhotos','photos','pn','account','items','by','createdAt','updatedBy','updatedAt','rev','deleted']);
+      }
+      allow create: if request.resource.data.get('purchase', false) == true &amp;&amp; purchaseStaff() &amp;&amp; validPurchase() &amp;&amp; request.resource.data.by == request.auth.uid
+        &amp;&amp; request.resource.data.rev == 1 &amp;&amp; !('deleted' in request.resource.data);
+      // v2.46: 🔒 parchi chhap gayi = mulazim sirf malik ki ijazat (editOk = waqt, 30 min) ke baad badle / hataye; POS bill jorna phir bhi
+      function printOpen() {
+        return !('posPrintedAt' in resource.data) || resource.data.get('editOk', 0) &gt; request.time.toMillis() - 1800000
+          || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['posBill','posBillIds','posDiffOk','updatedAt','updatedBy','rev']);
+      }
+      allow update: if resource.data.get('posStatus', 1) != 2 &amp;&amp; ((blueStaff() &amp;&amp; dayOpen()) || purchaseStaff()) &amp;&amp; resource.data.type == 'entry' &amp;&amp; printOpen()
+        &amp;&amp; resource.data.purchase == true &amp;&amp; isToday(resource.data.date) &amp;&amp; validPurchase()
+        &amp;&amp; (!('deleted' in resource.data) || resource.data.deleted == false)
+        &amp;&amp; request.resource.data.date == resource.data.date
+        &amp;&amp; request.resource.data.rev == resource.data.rev + 1
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['kind','partyId','amount','note','goodsPhotos','billPhotos','photos','pn','account','items','deleted','posPending','posVoucher','posBill','posBillIds','updatedAt','updatedBy','rev']);   // v1.82: +items · v1.71: posBill (mulazim aaj ki cash purchase ko POS bill se jor sakta hai)
+      allow create: if request.resource.data.type == 'party' &amp;&amp; purchaseStaff()
+        &amp;&amp; request.resource.data.id == recordId &amp;&amp; request.resource.data.category == 'Supplier'
+        &amp;&amp; request.resource.data.opening == 0 &amp;&amp; request.resource.data.rev == 1
+        &amp;&amp; request.resource.data.by == request.auth.uid &amp;&amp; request.resource.data.updatedBy == request.auth.uid
+        &amp;&amp; request.resource.data.name is string &amp;&amp; request.resource.data.phone is string
+        &amp;&amp; request.resource.data.keys().hasOnly(['id','type','name','phone','category','opening','by','createdAt','updatedAt','updatedBy','rev']);
+
+      // Staff may count today's cash; historical closing stays owner-only.
+      function validClosing() {
+        let d = request.resource.data;
+        return d.type == 'closing' &amp;&amp; isToday(d.date)
+          &amp;&amp; recordId == 'closing-' + d.date &amp;&amp; d.id == recordId
+          &amp;&amp; d.keys().hasOnly(['id','type','date','opening','change','cash','openingRows','changeRows','cashRows','by','createdAt','updatedBy','updatedAt','rev'])
+          &amp;&amp; d.updatedBy == request.auth.uid
+          &amp;&amp; (('cash' in d) || ('change' in d) || ('opening' in d))
+          &amp;&amp; (!('cash' in d) || (d.cash is int &amp;&amp; d.cash &gt;= 0))
+          &amp;&amp; (!('change' in d) || (d.change is int &amp;&amp; d.change &gt;= 0))
+          &amp;&amp; (!('opening' in d) || (d.opening is int &amp;&amp; d.opening &gt;= 0))
+          &amp;&amp; (!('cashRows' in d) || d.cashRows is list)
+          &amp;&amp; (!('changeRows' in d) || d.changeRows is list)
+          &amp;&amp; (!('openingRows' in d) || d.openingRows is list);
+      }
+      allow create: if request.resource.data.type == 'closing' &amp;&amp; blueStaff() &amp;&amp; dayOpen() &amp;&amp; validClosing()
+        &amp;&amp; request.resource.data.by == request.auth.uid &amp;&amp; request.resource.data.rev == 1;
+      allow update: if resource.data.type == 'closing' &amp;&amp; resource.data.get('posStatus', 1) != 2 &amp;&amp; blueStaff() &amp;&amp; dayOpen()
+        &amp;&amp; isToday(resource.data.date) &amp;&amp; validClosing()
+        &amp;&amp; request.resource.data.rev == resource.data.rev + 1
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['opening','change','cash','openingRows','changeRows','cashRows','updatedAt','updatedBy','rev']);
+
+      function validCustody() {
+        let d = request.resource.data;
+        return d.type == 'cashCustody' &amp;&amp; isToday(d.date)
+          &amp;&amp; d.id == recordId &amp;&amp; recordId == 'custody-' + d.date
+          &amp;&amp; d.keys().hasOnly(['id','type','date','moves','by','createdAt','updatedBy','updatedAt','rev'])
+          &amp;&amp; d.moves is list &amp;&amp; d.moves.size() &gt; 0 &amp;&amp; d.moves.size() &lt;= 200
+          &amp;&amp; d.updatedBy == request.auth.uid;
+      }
+      function validLastMove() {
+        let d = request.resource.data;
+        let m = d.moves[d.moves.size() - 1];
+        return m.keys().hasOnly(['from','to','amount','note','at'])
+          &amp;&amp; m.from is string &amp;&amp; m.to is string &amp;&amp; m.from != m.to
+          &amp;&amp; m.amount is int &amp;&amp; m.amount &gt; 0
+          &amp;&amp; m.note is string &amp;&amp; m.note.size() &lt;= 1000 &amp;&amp; m.at is int;
+      }
+      allow create: if request.resource.data.type == 'cashCustody' &amp;&amp; blueStaff() &amp;&amp; dayOpen() &amp;&amp; validCustody() &amp;&amp; validLastMove()
+        &amp;&amp; request.resource.data.moves.size() == 1
+        &amp;&amp; request.resource.data.by == request.auth.uid &amp;&amp; request.resource.data.rev == 1;
+      allow update: if resource.data.type == 'cashCustody' &amp;&amp; resource.data.get('posStatus', 1) != 2 &amp;&amp; blueStaff() &amp;&amp; dayOpen()
+        &amp;&amp; isToday(resource.data.date) &amp;&amp; validCustody() &amp;&amp; validLastMove()
+        &amp;&amp; request.resource.data.moves == resource.data.moves.concat([request.resource.data.moves[resource.data.moves.size()]])
+        &amp;&amp; request.resource.data.rev == resource.data.rev + 1
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['moves','updatedAt','updatedBy','rev']);
+
+      allow update: if resource.data.get('posStatus', 1) != 2 &amp;&amp; ((blueStaff() &amp;&amp; dayOpen()) || (purchaseStaff() &amp;&amp; resource.data.purchase == true))
+        &amp;&amp; resource.data.type == 'entry' &amp;&amp; printOpen()
+        &amp;&amp; !('transferId' in resource.data)
+        &amp;&amp; isToday(resource.data.date)
+        &amp;&amp; (!('deleted' in resource.data) || resource.data.deleted == false)
+        &amp;&amp; request.resource.data.deleted == true
+        &amp;&amp; request.resource.data.updatedBy == request.auth.uid
+        &amp;&amp; request.resource.data.rev == resource.data.rev + 1
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleted','updatedAt','updatedBy','rev']);
+
+      // Mulazim (full): AAJ ki apni entry poori badal sakta hai (raqam, party, kind, note, account).
+      // Purani tareekh sirf malik — resource.data.date aur nayi date dono aaj ki honi chahiyein.
+      function staffEditEntry() {
+        let d = request.resource.data;
+        return d.type == 'entry' &amp;&amp; resource.data.type == 'entry'
+          &amp;&amp; !('transferId' in resource.data) &amp;&amp; !('transferId' in d)
+          &amp;&amp; isToday(resource.data.date) &amp;&amp; isToday(d.date)
+          &amp;&amp; d.amount is int &amp;&amp; d.amount &gt; 0
+          &amp;&amp; d.kind in ['sale','collection','payment','expense','credit','borrow','purchaseCash']
+          &amp;&amp; d.updatedBy == request.auth.uid &amp;&amp; d.rev == resource.data.rev + 1
+          &amp;&amp; d.diff(resource.data).affectedKeys().hasOnly(['kind','partyId','amount','date','note','account','dailyIncluded',
+              'photos','goodsPhotos','billPhotos','pn','purchase','items','posPending','posVoucher','posBill','posBillIds','posDiffOk','deleted','updatedAt','updatedBy','rev']);   // v1.82: +items · v1.79.2: posBill / posDiffOk (full mulazim bhi aaj ki cash purchase ko POS bill se jor sake — purchase-scope ko yeh ijazat pehle se thi)
+      }
+      allow update: if resource.data.get('posStatus', 1) != 2 &amp;&amp; blueStaff() &amp;&amp; dayOpen() &amp;&amp; staffEditEntry() &amp;&amp; printOpen();
+      // v2.8: REMINDER (due date) — full mulazim bhi bana / badal / hata sake, kisi bhi khate par. Paisa nahi badalta.
+      function validReminder() {
+        let d = request.resource.data;
+        return d.type == 'reminder' &amp;&amp; d.partyId is string &amp;&amp; d.dueDate is string &amp;&amp; d.dueDate.size() == 10
+          &amp;&amp; d.updatedBy == request.auth.uid
+          &amp;&amp; d.keys().hasOnly(['id','type','partyId','date','anchorDate','dueDate','dueTime','repeat','note','deleted','by','createdAt','updatedAt','updatedBy','rev'])
+          &amp;&amp; (!('dueTime' in d) || (d.dueTime is string &amp;&amp; d.dueTime.size() &lt;= 5))   // v2.13: notification ka waqt
+          &amp;&amp; (!('note' in d) || (d.note is string &amp;&amp; d.note.size() &lt;= 1000));
+      }
+      allow create: if blueStaff() &amp;&amp; dayOpen() &amp;&amp; validReminder();
+      allow update: if resource.data.type == 'reminder' &amp;&amp; blueStaff() &amp;&amp; dayOpen() &amp;&amp; validReminder()
+        &amp;&amp; request.resource.data.rev == resource.data.rev + 1;
+      // Khate ka naam / phone / category (baqaya nahi badalta — opening sirf malik)
+      allow update: if resource.data.type in ['party','expenseAccount'] &amp;&amp; resource.data.get('posStatus', 1) != 2 &amp;&amp; blueStaff() &amp;&amp; dayOpen()
+        &amp;&amp; request.resource.data.type == resource.data.type
+        &amp;&amp; request.resource.data.rev == resource.data.get('rev', 0) + 1   // v2.17: purane khaton mein rev nahi hota
+        &amp;&amp; request.resource.data.updatedBy == request.auth.uid
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['name','phone','category','note','dasti','hasPhoto','posSync','updatedAt','updatedBy','rev'])
+        &amp;&amp; (request.resource.data.get('posSync', false) == resource.data.get('posSync', false) || request.resource.data.get('posSync', false) == true);   // v2.50: 🖥 mulazim POS mein account sirf ON kar sake (band sirf malik)
+      // v2.20: HAR mulazim (sale / stock / purchase / galla bhi) sirf "Dasti payment mein shamil" on/off kar sakta hai — aur kuch nahi
+      allow update: if resource.data.type == 'party' &amp;&amp; isStaff() &amp;&amp; staffAccount().active == true &amp;&amp; dayOpen()
+        &amp;&amp; request.resource.data.type == 'party'
+        &amp;&amp; request.resource.data.rev == resource.data.get('rev', 0) + 1
+        &amp;&amp; request.resource.data.updatedBy == request.auth.uid
+        &amp;&amp; request.resource.data.diff(resource.data).affectedKeys().hasOnly(['dasti','updatedAt','updatedBy','rev']);
+
+      allow create: if request.resource.data.type in ['entry', 'party', 'expenseAccount', 'dayPhoto']
+        &amp;&amp; !('transferId' in request.resource.data)
+        &amp;&amp; blueStaff() &amp;&amp; dayOpen()
+        &amp;&amp; request.resource.data.by == request.auth.uid
+        &amp;&amp; request.resource.data.updatedBy == request.auth.uid
+        &amp;&amp; request.resource.data.rev == 1
+        &amp;&amp; !('deleted' in request.resource.data)
+        &amp;&amp; (!(request.resource.data.type in ['entry','dayPhoto']) || isToday(request.resource.data.date))
+        &amp;&amp; (request.resource.data.type != 'entry' ||
+          (request.resource.data.amount is int &amp;&amp; request.resource.data.amount &gt; 0
+          &amp;&amp; request.resource.data.kind in ['sale','collection','payment','expense','credit','borrow','purchaseCash']))
+        &amp;&amp; (request.resource.data.type != 'party' || request.resource.data.opening == 0);
+    }
+
+  }
+}
+</textarea>
+<script>document.getElementById('cp').onclick=async()=>{const t=document.getElementById('t');try{await navigator.clipboard.writeText(t.value)}catch(e){t.select();document.execCommand('copy')}const b=document.getElementById('cp');b.textContent='✅ Copy ho gayi — ab Firebase mein paste karein';setTimeout(()=>b.textContent='📋 Poori rules copy',4000)};</script></body></html>

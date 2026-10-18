@@ -5331,3 +5331,10 @@ v2.103.26 (2026-10-18) — 🧮 GODAM 2 MILAO (dukan stock packet ki ginti se + 
   "stock fraq") raaste se; round nahi to sirf notice. (2) cloud.setRackPk(id, {g: Godam 2, at: abhi, p[z] = {b, pct, n = b − floor(b·pct%), a = n}}) —
   PC rack-bharo readPk wahi (sold since max(at, aakhri transfer)); n se pakket-war due. pkDue ab b/pct/left bhi; chip "3 / 10 bache (30% · hadd 30%)".
 - Test sk/gm.mjs (+ rk..rk5). PC / rules wahi. AI nahi.
+
+v2.103.27 + RULES 2.63 (2026-10-18) — 🧮 Godam 2 milao mulazim ke liye
+- Malik (mulazim ke phone ka screenshot): tile nazar nahi aata — mulazim ko access dena hai.
+- CAP stock.g2milao ("🧮 Godam 2 milao (dukan stock + packet %)") Settings → Mulazim → Stock; tile ab canDo('stock.g2milao') (pehle sirf malik);
+  gmSave: malik ya can('stock.g2milao'). cloud.setRackPk: ab sirf login (pehle 'Sirf malik').
+- Rules 2.63: match blueAccess/stockConfig — allow update (stockStaff() || blueStaff()) && affectedKeys().hasOnly(['rackPk']). Baqi khane sirf malik.
+  firestore-rules-2.63.html (2.62 ke chips + naya). Ginti (stockCount) mulazim pehle se likh sakta. AI nahi.
