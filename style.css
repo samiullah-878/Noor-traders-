@@ -4198,3 +4198,19 @@ html body :is(#summary,#dialogBody) .rk-z0{display:flex;flex-direction:column;ga
 html body :is(#summary,#dialogBody) .rk-z0>b{font-size:14px}html body :is(#summary,#dialogBody) .rk-z0>small{font-size:12px;color:#7c2d12;line-height:1.4}
 html body :is(#summary,#dialogBody) .rk-z0 .rk-chips{margin-top:2px}html body :is(#summary,#dialogBody) .rk-z0 .rk-zm{border:0;cursor:pointer;font:inherit;font-weight:800}
 html body :is(#summary,#dialogBody) .rk-pgs{margin:0 0 8px}
+
+/* v2.103.21: 🖨 5-5 patti + 🧾 transfer check item checkbox */
+html body :is(#summary,#dialogBody) .rk-nb{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12.5px;font-weight:700;color:#3730a3}
+html body :is(#summary,#dialogBody) .rk-nb>span{margin-right:2px}
+html body :is(#summary,#dialogBody) .rk-nb button{min-width:44px;padding:7px 12px;border-radius:999px;border:1px solid #c7d2fe;background:#fff;color:#3730a3;font:inherit;font-weight:800;cursor:pointer}
+html body :is(#summary,#dialogBody) .rk-nb button.is-in{background:linear-gradient(135deg,#4f46e5,#6d28d9)!important;color:#fff!important;border-color:transparent;box-shadow:0 4px 12px rgba(79,70,229,.3)}
+html body :is(#summary,#dialogBody) .rk-left{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 6px}
+html body :is(#summary,#dialogBody) .tc-tkh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 0 6px}
+html body :is(#summary,#dialogBody) .tc-tkc{font-style:normal;font-size:12.5px;font-weight:800;padding:5px 11px;border-radius:999px;background:#fff7ed;color:#9a3412}
+html body :is(#summary,#dialogBody) .tc-tkc.ok{background:#dcfce7;color:#166534}
+html body :is(#summary,#dialogBody) .tc-tka{padding:6px 12px;border-radius:999px;border:1px solid #c7d2fe;background:#fff;color:#3730a3;font:inherit;font-size:12.5px;font-weight:800;cursor:pointer}
+html body :is(#summary,#dialogBody) .tc-lck{display:flex!important;align-items:center;gap:10px;padding:10px 8px!important;border-radius:12px;cursor:pointer;transition:background .15s}
+html body :is(#summary,#dialogBody) .tc-lck input{width:22px;height:22px;flex:0 0 auto;accent-color:#16a34a}
+html body :is(#summary,#dialogBody) .tc-lck>span{flex:1}
+html body :is(#summary,#dialogBody) .tc-lck.is-in{background:#f0fdf4}html body :is(#summary,#dialogBody) .tc-lck.is-in>span{color:#166534;text-decoration:line-through;text-decoration-color:rgba(22,101,52,.35)}
+html body :is(#summary,#dialogBody) .tc-ok:disabled{opacity:.75;filter:grayscale(.3)}

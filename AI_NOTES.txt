@@ -5259,3 +5259,15 @@ v2.103.20 (2026-10-18) — 🔧 ASAL WAJAH: "kala tail khula" (app se bana item)
   wale items jin ka POS PackQty <= 0 hai -> Items + ItemBranchRate PackQty = 1, SystemNotes mein likh kar, log mein naam. (POS mein likhne wala script
   pehle se yahi hai — rack/irep/stats ab bhi sirf parhte hain.)
 - App .rk-z0 card ka text: "App se bane items PC khud 1 kar deta hai; baqi POS Item master mein likhein". AI nahi.
+
+v2.103.21 (2026-10-18) — 🖨 Rack bharo 5-5 ki PATTI + 🧾 Transfer check mein har item ka ☐ checkbox
+- Malik: "transfer notes har 5 ki patti print phir agle 5 — larkon par bojh na bane" + "show saara stock ho, checkbox se 5 khud select ya auto".
+  pos-stock.js: poori list wahi; har godam group mein upar ke N par khud ✓ (khali pehle) — rkPick(key, ids) (rk.man Map = apna chunav, warna pehle N),
+  rkToggle, rkGroups(all, qOf), rkQOf. Chips "🖨 Ek patti mein 3 · 5 · 10 · Sab" (rk.n, localStorage sam-rk-n, default 5; chip badle = rk.man.clear()).
+  Group mein chips "✓ N is patti mein · ⏳ M agli patti mein". Print (rkGo) sirf chune; kamyab = rk.man.delete -> bache hue items mein agle N par khud ✓
+  (bheje items rackSent se chhupte hain), notice "agle N par ✓ lag gaya". Packet-war (rkpGo) bhi isi tarah (key 'p'+g); rk.off/pOff ab checkbox mein nahi.
+- 🧾 Transfer check: note khule (scan result + Nikle card ka tc-more jab check kar sakta ho) to tcLinesCk(t) = har line ☐ (data-tc-tk "key|idx"),
+  chip "✓ n/N gine", malik ke liye "☑ sab". ✓ phone par yaad: localStorage sam-tc-tick {key:[idx]} (aakhri 40). "✓ Maal poora mila" band jab tak
+  saare ✓ ("☐ Pehle sab gin kar ✓ (k baqi)"), tcSave bhi rokta hai. "⚠️ Farq hai" textarea mein khud "Nahi mila: <baghair ✓ items + qty>".
+  Bulk (Nikle list ka note ✓): sirf wo note jin ke saare item ✓; adhoora note ✓ karne par card khulta hai + notice. Saare ✓ hote hi note khud chun leta.
+  CAP stock.tcall = "har item gin kar ✓ zaroori" (deny = zaroori nahi). Tests sk/rk4.mjs. PC/POS/rules wahi. AI nahi.

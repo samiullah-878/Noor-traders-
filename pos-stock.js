@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.20';
-import { liveLabelsHTML } from './barcode.js?v=2.103.20';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.21';
+import { liveLabelsHTML } from './barcode.js?v=2.103.21';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1565,6 +1565,18 @@ function tcStatusText(t, s) {
   return s.k === 'late' ? `⏳ ${tcAgo(s.age)} se nahi pahuncha` : `⏳ ${tcAgo(s.age)} se raste mein`;
 }
 function tcSum(t) { let c = 0, p = 0; for (const l of t.lines || []) { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); c += x.c; p += x.p; } return `${(t.lines || []).length} item · ${c ? num(c) + ' ctn' : ''}${c && p ? ' + ' : ''}${p ? num(r2(p)) + ' pcs' : ''}${!c && !p ? '0' : ''}`; }
+// v2.103.21: ☐ HAR ITEM KA CHECKBOX (malik: "stock transfer check par item select karne ka checkbox") — larka gin kar ✓ lagaye; "✓ Maal poora mila"
+//   tab hi jab saare ✓ (CAP stock.tcall band = zaroori nahi). Farq par baghair ✓ wale khud likhe aate hain. ✓ phone par yaad (sam-tc-tick).
+const TC_TK = 'sam-tc-tick';
+function tcTk() { try { if (!tcTk.m) { const o = JSON.parse(localStorage.getItem(TC_TK) || '{}'); tcTk.m = new Map(Object.entries(o).map(([k, v]) => [k, new Set(v)])); } } catch { tcTk.m = new Map(); } return tcTk.m; }
+function tcTkSave() { try { const m = tcTk(), o = {}; [...m.entries()].slice(-40).forEach(([k, v]) => { if (v.size) o[k] = [...v]; }); localStorage.setItem(TC_TK, JSON.stringify(o)); } catch {} }
+function tcTkOf(t) { return tcTk().get(tcKey(t)) || new Set(); }
+function tcTkAll(t) { const n = (t.lines || []).length, S = tcTkOf(t); return !n || (t.lines || []).every((_, i) => S.has(i)); }
+const tcNeedAll = () => can('stock.tcall');
+function tcMissing(t) { const S = tcTkOf(t); return (t.lines || []).filter((_, i) => !S.has(i)).map(l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); return `${l.name} ${x.c ? x.c + ' ctn' : ''}${x.c && x.p ? '+' : ''}${x.p ? x.p + ' pcs' : ''}`.trim(); }); }
+function tcLinesCk(t) { const k = tcKey(t), S = tcTkOf(t), L = t.lines || [], n = L.filter((_, i) => S.has(i)).length;
+  return `<div class="tc-tkh"><i class="tc-tkc${n === L.length ? ' ok' : ''}">✓ ${num(n)}/${num(L.length)} gine</i>${isOwner() ? `<button type="button" class="tc-tka" data-tc-tka="${esc(k)}">${n === L.length ? '☐ koi nahi' : '☑ sab'}</button>` : ''}</div>`
+    + L.map((l, i) => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0), on = S.has(i); return `<label class="tc-ln tc-lck${on ? ' is-in' : ''}"><input type="checkbox" data-tc-tk="${esc(k)}|${i}"${on ? ' checked' : ''}><span>${esc(l.name)}</span><b>${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}</b></label>`; }).join(''); }
 function tcLines(t) { return (t.lines || []).map(l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); return `<div class="tc-ln"><span>${esc(l.name)}</span><b>${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}</b></div>`; }).join(''); }
 function tcWho(c) { return `<div class="tc-who"><span>👤 ${esc(c.byName || '—')}</span><span>🕒 ${tcClock(c.ts)} · ${esc(regDay(c.ts || Date.now()))}</span><span>📱 Device: <b>${esc(c.device || '—')}</b></span></div>`; }
 function tcAll() {   // v2.99.25: POS ke note + app ke bane note (transferJobs done) jo abhi POS list (transfer-dekho) mein nahi aaye
@@ -1591,7 +1603,7 @@ function tcNikleHTML() {
   const card = ({ t, s }) => { const k = tcKey(t), op = tcOpen.has(k);
     return `<div class="tc-n ${s.k}${s.ng ? ' ng' : ''}">${(s.k === 'wait' || s.k === 'late') && !s.ng && tcCanStep(t, 2) ? `<label class="tc-ck"><input type="checkbox" data-tc-sel="${esc(k)}"${tcSel.has(k) ? ' checked' : ''}></label>` : ''}<button type="button" class="tc-h" data-tc-open="${esc(k)}"><span class="tc-l"><b>TN ${esc(t.transferNo || t.transferId)}</b><small>${esc(branchName(t.from, names))} → ${esc(branchName(t.to, names))} · ${tcSum(t)}</small></span><span class="tc-t">${tcClock(tcIssued(t))}${regDay(tcIssued(t)) !== regDay(Date.now()) ? `<small>${esc(regDay(tcIssued(t)).slice(5))}</small>` : ''}</span></button>
       <span class="tc-st ${s.k}${s.ng ? ' ng' : ''}">${tcStatusText(t, s)}</span>${tcStepsHTML(t, s)}${s.k === 'cancel' ? '' : tcEditHTML(t)}
-      ${op ? `<div class="tc-more">${tcLines(t)}${s.g && tcNeedG(t) ? `<p class="tc-note">📦 1 number: ${esc(s.g.byName || '')} · ${tcClock(s.g.ts)} · 📱 ${esc(s.g.device || '—')}</p>${isOwner() && !s.c ? `<button type="button" class="tc-del" data-tc-del="${esc(tcGKey(t))}">🗑 "De diya" tick hatao (sirf malik)</button>` : ''}` : ''}${s.c ? tcWho(s.c) + (s.c.note ? `<p class="tc-note">📝 ${esc(s.c.note)}</p>` : '') + (isOwner() ? `<button type="button" class="tc-del" data-tc-del="${esc(k)}">🗑 Check hatao (sirf malik — ghalti par)</button>` : '') : '<p class="tc-note">Abhi kisi ne scan nahi kiya. Maal aane par "📷 Scan / Check" mein parchi scan karein.</p>'}</div>` : ''}</div>`; };
+      ${op ? `<div class="tc-more">${(s.k === 'wait' || s.k === 'late') && !s.ng && tcCanStep(t, 2) ? tcLinesCk(t) : tcLines(t)}${s.g && tcNeedG(t) ? `<p class="tc-note">📦 1 number: ${esc(s.g.byName || '')} · ${tcClock(s.g.ts)} · 📱 ${esc(s.g.device || '—')}</p>${isOwner() && !s.c ? `<button type="button" class="tc-del" data-tc-del="${esc(tcGKey(t))}">🗑 "De diya" tick hatao (sirf malik)</button>` : ''}` : ''}${s.c ? tcWho(s.c) + (s.c.note ? `<p class="tc-note">📝 ${esc(s.c.note)}</p>` : '') + (isOwner() ? `<button type="button" class="tc-del" data-tc-del="${esc(k)}">🗑 Check hatao (sirf malik — ghalti par)</button>` : '') : '<p class="tc-note">Abhi kisi ne scan nahi kiya. Maal aane par "📷 Scan / Check" mein parchi scan karein.</p>'}</div>` : ''}</div>`; };
   return `<div class="mchips">${C(tcDays === 1, 'd', 1, 'Aaj')}${C(tcDays === 2, 'd', 2, 'Kal')}${C(tcDays === 7, 'd', 7, '7 din')}${C(tcDays === 30, 'd', 30, '30 din')}</div>
     <div class="mchips">${C(tcDir === 'all', 'dir', 'all', 'Sab')}${C(tcDir === 'in', 'dir', 'in', 'Godam → Dukan')}${C(tcDir === 'out', 'dir', 'out', 'Dukan → Godam')}</div>
     ${isOwner() ? (tcGEd ? tcGEdHTML() : `<button type="button" class="tc-giver" data-tc-giver="1">📦 Godam wale (pehla tick): <b>${esc(tcGiver())}</b> ✎</button>`) : ''}
@@ -1613,10 +1625,10 @@ function tcScanHTML() {
   else if (r?.type === 'open') { const t = r.t, age = Date.now() - tcIssued(t);
     res = `<div class="tc-res open"><div class="tc-rh"><b>TN ${esc(t.transferNo || t.transferId)}</b><span class="tc-st ${age > TC_LATE ? 'late' : 'wait'}">⏳ ${tcAgo(age)}</span></div>
       <small>${esc(branchName(t.from, names))} → ${esc(branchName(t.to, names))} · nikla ${tcClock(tcIssued(t))} · ${esc(regDay(tcIssued(t)))}</small>
-      ${tcEditHTML(t)}<div class="tc-lines">${tcLines(t)}</div>
-      ${tcFarq ? `<label class="tc-fl">Kya farq hai? (jaise "cheeni 1 bori kam")<textarea data-tc-note="1" maxlength="300" rows="2" placeholder="Kya kam / zyada / toota aaya…"></textarea></label>
+      ${tcEditHTML(t)}<div class="tc-lines">${tcLinesCk(t)}</div>
+      ${tcFarq ? `<label class="tc-fl">Kya farq hai? (jaise "cheeni 1 bori kam")<textarea data-tc-note="1" maxlength="300" rows="2" placeholder="Kya kam / zyada / toota aaya…">${esc((() => { const m = tcMissing(t); return m.length && m.length < (t.lines || []).length ? ('Nahi mila: ' + m.join(', ')).slice(0, 280) : ''; })())}</textarea></label>
         <div class="tc-btns"><button type="button" class="tc-fsave" data-tc-fsave="1"${tcBusy ? ' disabled' : ''}>⚠️ Farq save karo</button><button type="button" class="tc-back" data-tc-fback="1">Wapas</button></div>`
-      : `<div class="tc-btns"><button type="button" class="tc-ok" data-tc-ok="1"${tcBusy ? ' disabled' : ''}>${tcBusy ? '⏳ Save…' : '✓ Maal poora mila'}</button><button type="button" class="tc-farq" data-tc-farq="1"${tcBusy ? ' disabled' : ''}>⚠️ Farq hai</button></div>`}
+      : `<div class="tc-btns"><button type="button" class="tc-ok" data-tc-ok="1"${tcBusy || (tcNeedAll() && !tcTkAll(t)) ? ' disabled' : ''}>${tcBusy ? '⏳ Save…' : tcNeedAll() && !tcTkAll(t) ? `☐ Pehle sab gin kar ✓ (${num((t.lines || []).length - tcTkOf(t).size)} baqi)` : '✓ Maal poora mila'}</button><button type="button" class="tc-farq" data-tc-farq="1"${tcBusy ? ' disabled' : ''}>⚠️ Farq hai</button></div>`}
       <p class="tc-warn">Save ke baad yeh check <b>koi badal nahi sakta</b>. Pehle maal gin lein.</p></div>`; }
   return `<div class="tc-scan"><button type="button" class="tc-cam" data-tc-cam="1">${camMissing() ? '🔫 Scanner gun se scan karein' : '📷 Camera se barcode scan'}</button><small>Ya scanner gun chalayein / parchi ka number neeche likhein</small></div>
     <form class="tc-inp" data-tc-form="1"><input data-tc-code="1" inputmode="numeric" autocomplete="off" enterkeyhint="go" placeholder="Transfer note number / barcode" value="${esc(tcCode)}"><button type="submit">✓</button></form>
@@ -1702,8 +1714,8 @@ async function tcSaveOne(t, status, note) {
 }
 async function tcBulk() {
   if (tcBusy || !tcSel.size) return; if (!cloud?.saveTransferCheck) { notice('App update karein'); return; }
-  const list = tcRows().filter(t => tcSel.has(tcKey(t)) && !tcChecks.get(tcKey(t)) && !tcState(t).ng && tcCanStep(t, 2));
-  if (!list.length) return;
+  const list = tcRows().filter(t => tcSel.has(tcKey(t)) && !tcChecks.get(tcKey(t)) && !tcState(t).ng && tcCanStep(t, 2) && (!tcNeedAll() || tcTkAll(t)));
+  if (!list.length) { notice('☐ Pehle har note ke items gin kar ✓ lagayein'); return; }
   if (!tcArmed('bulk')) { tcArmSet('bulk'); return; }   // v2.99.78: popup ki jagah doosra tap
   tcArm = { k: '', until: 0 };
   for (const t of list) { const key = tcKey(t), d = { transferId: t.transferId, transferNo: t.transferNo, from: t.from, to: t.to, issuedAt: tcIssued(t), status: 'ok', note: '', byName: nameOf() || (isOwner() ? 'Malik' : 'Mulazim'), device: deviceOf(), lines: (t.lines || []).length };
@@ -1716,6 +1728,7 @@ async function tcSave(status, note) {
   if (status === 'farq' && !String(note || '').trim()) { notice('Farq likhein — kya kam / zyada aaya'); return; }
   if (tcState(t).ng) { notice('🔒 Pehle ' + tcSide(t, 1) + ' "maal de diya" tick kare'); return; }   // v2.99.74
   if (!tcCanStep(t, 2)) { notice('🔒 Yeh check sirf ' + tcSide(t, 2) + ' kar sakta hai'); return; }
+  if (status === 'ok' && tcNeedAll() && !tcTkAll(t)) { notice('☐ Pehle har item gin kar ✓ lagayein'); return; }   // v2.103.21
   if (tcChecks.get(tcKey(t)) && !tcChecks.get(tcKey(t)).pend) { tcRes = { type: 'done', t, c: tcChecks.get(tcKey(t)) }; beep(false); tcPaint(); return; }
   const key = tcKey(t), d = { transferId: t.transferId, transferNo: t.transferNo, from: t.from, to: t.to, issuedAt: tcIssued(t), status, note: String(note || '').trim(), byName: nameOf() || (isOwner() ? 'Malik' : 'Mulazim'), device: deviceOf(), lines: (t.lines || []).length };
   tcRes = { type: 'saved', t, c: { ...d, id: key, ts: Date.now() } }; tcCode = ''; tcFarq = false;   // v2.99.78: ⚡ foran
@@ -1725,7 +1738,8 @@ async function tcSave(status, note) {
 document.addEventListener('click', e => {
   if (e.target.closest?.('[data-stock-tc]')) { openTransferCheck(); return; }
   if (!document.querySelector('.tc-root')) return;
-  if (e.target.closest?.('.tc-ck')) return;   // checkbox: change par
+  if (e.target.closest?.('.tc-ck,.tc-lck')) return;   // checkbox: change par
+  const ta = e.target.closest?.('[data-tc-tka]'); if (ta) { const k = ta.dataset.tcTka, t = tcAll().find(x => tcKey(x) === k); if (!t) return; const m = tcTk(), all = tcTkAll(t); m.delete(k); m.set(k, all ? new Set() : new Set((t.lines || []).map((_, i) => i))); tcTkSave(); tcPaint(); return; }
   const t = e.target.closest?.('[data-tc-view],[data-tc-d],[data-tc-dir],[data-tc-open],[data-tc-cam],[data-tc-retry],[data-tc-ok],[data-tc-farq],[data-tc-fback],[data-tc-fsave],[data-tc-del],[data-tc-bulk],[data-tc-selclear],[data-tc-give],[data-tc-giver],[data-tc-gxadd],[data-tc-gcancel],[data-tc-gsave]'); if (!t) return;
   const d = t.dataset;
   if (d.tcGive) { tcGive(d.tcGive, t); return; }   // v2.99.74
@@ -1770,7 +1784,11 @@ async function tcGive(key, btn) {
   notice('✓ "Maal de diya" — TN ' + (t.transferNo || t.transferId));
   tcFast(gk, d, { onOk: () => { try { auditOf?.({ area: 'stock', act: 'tr-give', what: `TN ${t.transferNo || t.transferId} 📦 maal de diya`.slice(0, 120), ref: gk, refType: 'transfer' }); } catch {} } });   // v2.99.78: ⚡ foran ✓
 }
-document.addEventListener('change', e => { if (e.target.matches?.('[data-tc-gn]') && tcGEd) { const n = e.target.dataset.tcGn; if (e.target.checked) tcGEd.sel.add(n); else tcGEd.sel.delete(n); tcPaint(); return; } if (!e.target.matches?.('[data-tc-sel]')) return; const k = e.target.dataset.tcSel; if (e.target.checked) tcSel.add(k); else tcSel.delete(k); tcPaint(); });
+document.addEventListener('change', e => { if (e.target.matches?.('[data-tc-gn]') && tcGEd) { const n = e.target.dataset.tcGn; if (e.target.checked) tcGEd.sel.add(n); else tcGEd.sel.delete(n); tcPaint(); return; } if (e.target.matches?.('[data-tc-tk]')) { const [k, i] = e.target.dataset.tcTk.split('|'), m = tcTk(); if (!m.has(k)) m.set(k, new Set()); const S = m.get(k); if (e.target.checked) S.add(Number(i)); else S.delete(Number(i)); m.delete(k); m.set(k, S); tcTkSave();
+    const t = tcAll().find(x => tcKey(x) === k); if (t && tcTkAll(t) && tcOpen.has(k) && !tcChecks.get(k)) tcSel.add(k); else if (t && !tcTkAll(t)) tcSel.delete(k); tcPaint(); return; }
+  if (!e.target.matches?.('[data-tc-sel]')) return; const k = e.target.dataset.tcSel, t = tcAll().find(x => tcKey(x) === k);
+  if (e.target.checked && t && tcNeedAll() && !tcTkAll(t)) { e.target.checked = false; tcOpen.add(k); notice('☐ Pehle is note ke har item ko gin kar ✓ lagayein'); tcPaint(); return; }
+  if (e.target.checked) tcSel.add(k); else tcSel.delete(k); tcPaint(); });
 document.addEventListener('submit', e => { if (!e.target.matches?.('[data-tc-form]')) return; e.preventDefault(); tcLookup(e.target.querySelector('[data-tc-code]')?.value || ''); });
 document.addEventListener('input', e => { if (e.target.matches?.('[data-tc-code]')) tcCode = e.target.value; });
 export function tcBadge(t) {   // 📋 Transfer register ke card par chhota nishan
@@ -3402,6 +3420,13 @@ function rackCalc(x) {   // v2.103.16: 🔹 pcs wala (masale) · 🔴 rack khali
   const cap = pk ? Math.floor(gs / pk) * pk : Math.floor(gs), q = Math.max(0, Math.min(want, cap));
   return { pk, P, unit, want, q, gs, ss, khali, short: q < want, due: !cf.off && (sold >= unit || khali) && q > 0, own: !!rackCfg(x.i), off: !!cf.off };
 }
+// v2.103.21: 5-5 ki PATTI (malik: "har 5 ki patti print phir agle 5 — larkon par bojh na bane"). Poori list dikhti hai, upar ke N par khud ✓
+//   (khali pehle); malik/larka ✓ badal sakte hain (rk.man[key] = apna chunav). Print ke baad item list se hat-ta hai -> agle N par khud ✓.
+function rkNGet() { try { const v = localStorage.getItem('sam-rk-n'); return v == null ? 5 : Math.max(0, Number(v) || 0); } catch { return 5; } }
+function rkPick(key, ids) { const m = rk?.man?.get(key); if (m) return new Set(ids.filter(id => m.has(id))); return new Set(rk?.n ? ids.slice(0, rk.n) : ids); }
+function rkToggle(key, ids, id, on) { const cur = rkPick(key, ids); if (on) cur.add(id); else cur.delete(id); rk.man.set(key, cur); }
+function rkGroups(all, qOf) { const G = new Map(); for (const y of all) { if (!(qOf(y) > 0)) continue; const g = String(y.x.g); if (!G.has(g)) G.set(g, []); G.get(g).push(String(y.x.i)); } return G; }
+function rkQOf(y) { return rk.sel.has(String(y.x.i)) ? rk.sel.get(String(y.x.i)) : y.c.q; }
 function rackDue() {
   const now = Date.now(); for (const [k, t] of rackSent) if (now - t > 30 * 60000) rackSent.delete(k);
   return rackSrc().filter(x => !pkCfg(x.i) && !(rackSent.get(String(x.i)) > (Number(x.w) || 0))).map(x => ({ x, c: rackCalc(x) })).filter(y => y.c.due).sort((a, b) => (b.c.khali ? 1 : 0) - (a.c.khali ? 1 : 0));
@@ -3426,13 +3451,13 @@ function pkDue() {
   return out;
 }
 function rackOpen() {
-  rackWatch(); start(false); rk = { q: '', sel: new Map(), off: new Set(), ed: '', busy: '', pOff: new Set(), pQ: new Map(), pset: false, pq: '', pEd: '', pDraft: new Map(), pg: Number(localStorage.getItem('sam-rk-pg')) || 0, zAll: false };
+  rackWatch(); start(false); rk = { q: '', sel: new Map(), off: new Set(), ed: '', busy: '', pOff: new Set(), pQ: new Map(), pset: false, pq: '', pEd: '', pDraft: new Map(), pg: Number(localStorage.getItem('sam-rk-pg')) || 0, zAll: false, man: new Map(), n: rkNGet() };
   const d = $('dialog'); if (!d) return; d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = '🧺 Rack bharo — godam se lao'; $('dialogBody').innerHTML = '<div class="rk-root" id="rkBody"></div>'; if (!d.open) d.showModal(); rkPaint();
 }
 function rkPaint(only) {
   const el = $('rkBody'); if (!el || !rk) return; const names = collect().names || {}, all = rackDue(), q = rk.q.trim(), hit = q ? new Set(smartSearch(all.map(y => ({ ...y, id: String(y.x.i), name: y.x.n })), q, 300).map(r => r.id)) : null;
   const L = all.filter(y => !hit || hit.has(String(y.x.i))), G = new Map(); for (const y of L) { if (!G.has(y.x.g)) G.set(y.x.g, []); G.get(y.x.g).push(y); }
-  const qOf = y => rk.sel.has(String(y.x.i)) ? rk.sel.get(String(y.x.i)) : y.c.q, on = y => !rk.off.has(String(y.x.i)) && qOf(y) > 0;
+  const qOf = y => rk.sel.has(String(y.x.i)) ? rk.sel.get(String(y.x.i)) : y.c.q, PK = new Map(); for (const [g, ys] of rkGroups(all, qOf)) PK.set(g, rkPick('r' + g, ys)); const on = y => !!PK.get(String(y.x.g))?.has(String(y.x.i)) && qOf(y) > 0;
   const ctn = all.reduce((t, y) => t + (y.c.pk ? Math.floor(qOf(y) / y.c.pk) : 0), 0), age = rackAt ? Math.round((Date.now() - rackAt) / 60000) : null;
   const row = y => { const x = y.x, c = y.c, id = String(x.i), v = qOf(y), ed = rk.ed === id, cf = rackCfg(id);
     return `<div class="rk-r${on(y) ? ' is-in' : ''}${c.khali ? ' rk-kh' : ''}"><label class="rk-tk"><input type="checkbox" data-rk-t="${esc(id)}"${on(y) ? ' checked' : ''}><span><b>${esc(x.n)}</b><span class="rk-chips">${c.khali ? '<i class="rk-c kh">🔴 Rack khali</i>' : ''}${c.P && !c.pk ? '<i class="rk-c pc">🔹 pcs wala</i>' : ''}${c.own ? '<i class="rk-c own">✏️ apna qaida</i>' : ''}</span><small>${x.w ? `${esc(rkWhen(x.w))} ke transfer ke baad <b>${esc(rkQty(x.s, 0))}</b> bike` : 'transfer note nahi mila'}${c.P ? ` (1 ctn = ${num(c.P)})` : ''} · godam ${esc(rkQty(c.gs, c.pk))}${c.pk && c.gs % c.pk ? ' + ' + num(r3(c.gs % c.pk)) + ' pcs' : ''} · dukan ${num(c.ss)} pcs</small>${c.short ? `<em class="rk-warn">⚠️ ${esc(rkQty(c.want, c.pk))} chahiye — godam mein itna hi</em>` : ''}</span></label>
@@ -3442,17 +3467,19 @@ function rkPaint(only) {
     ${rackAt ? `<div class="rk-time${age > 10 ? ' old' : ''}">🖥 PC data: <b>${esc(new Date(rackAt).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }))}</b> · ${age < 1 ? 'abhi' : age + ' min pehle'}${age > 10 ? ' — ⚠️ PC ka rack script ruka?' : ' · har 2 min'}</div>` : irData ? '<div class="rk-time old">⚠️ Andaza — PC data abhi nahi aaya (is mein godam ki sale bhi shamil). PC data aate hi khud sahi.</div>' : ''}
     ${rackZero.length && isOwner() ? (() => { const Z = rk.zAll ? rackZero : rackZero.slice(0, 8); return `<div class="rk-z0"><b>⚠️ ${num(rackZero.length)} items ka carton pcs <u>0</u> hai</b><small>POS mein in ka bill "Divide by zero" rok sakta hai. App se bane items PC khud 1 kar deta hai (item-post v1.3); baqi POS Item master mein Cotton/packing likhein (kam az kam 1).</small><span class="rk-chips">${Z.map(x => `<i class="rk-c kh" title="dukan ${num(x.ss)} · 30 din mein ${num(x.s)} bike">${esc(x.n)}${x.s ? ` · ${num(x.s)} bike` : ''}</i>`).join('')}${rackZero.length > 8 ? `<button type="button" class="rk-c pc rk-zm" data-rk-zall="1">${rk.zAll ? '▴ kam' : `+${num(rackZero.length - 8)} aur`}</button>` : ''}</span></div>`; })() : ''}
     ${all.length > 6 ? `<label class="hs-search"><input type="search" data-rk-q="1" placeholder="🔍 item dhoondo…" value="${esc(rk.q)}" autocomplete="off"></label>` : ''}
-    <div id="rkList">${[...G].map(([g, ys]) => { const n = ys.filter(on).length; return `<section class="rk-g"><div class="rk-gh"><b>🏬 ${esc(branchName(Number(g), names))} ➜ ${esc(branchName(1, names))}</b><button type="button" class="rk-all" data-rk-all="${esc(String(g))}">${ys.every(on) ? '☐ koi nahi' : '☑ sab'}</button></div>
+    ${all.length + pkDue().length > 3 ? `<div class="rk-nb"><span>🖨 Ek patti mein</span>${[3, 5, 10, 0].map(n => `<button type="button" class="${rk.n === n ? 'is-in' : ''}" data-rk-n="${n}">${n || 'Sab'}</button>`).join('')}</div>` : ''}
+    <div id="rkList">${[...G].map(([g, ys]) => { const n = ys.filter(on).length; return `<section class="rk-g"><div class="rk-gh"><b>🏬 ${esc(branchName(Number(g), names))} ➜ ${esc(branchName(1, names))}</b><button type="button" class="rk-all" data-rk-all="${esc(String(g))}">${ys.every(on) ? '☐ koi nahi' : '☑ sab'}</button></div>${ys.length > n ? `<div class="rk-left"><i class="rk-c pc">✓ ${num(n)} is patti mein</i><i class="rk-c own">⏳ ${num(ys.length - n)} agli patti mein</i></div>` : ''}
       ${ys.map(row).join('')}
-      <button type="button" class="rk-go" data-rk-go="${esc(String(g))}"${n && !rk.busy ? '' : ' disabled'}>${rk.busy === String(g) ? '⏳ PC note bana raha hai…' : `🖨 ${num(n)} items — transfer note print`}</button></section>`; }).join('') || `<div class="th-empty">🧺<b>${rackAt || irData ? 'Sab rack bhare hain' : 'Data aa raha hai'}</b><small>${rackAt || irData ? 'Jaise hi kisi item ka ek carton bikega, yahan aa jayega' : 'Shop PC update ke baad 2–5 minute'}</small></div>`}</div>
+      <button type="button" class="rk-go" data-rk-go="${esc(String(g))}"${n && !rk.busy ? '' : ' disabled'}>${rk.busy === String(g) ? '⏳ PC note bana raha hai…' : `🖨 ${num(n)} items — patti print${ys.length > n ? ' · phir agle' : ''}`}</button></section>`; }).join('') || `<div class="th-empty">🧺<b>${rackAt || irData ? 'Sab rack bhare hain' : 'Data aa raha hai'}</b><small>${rackAt || irData ? 'Jaise hi kisi item ka ek carton bikega, yahan aa jayega' : 'Shop PC update ke baad 2–5 minute'}</small></div>`}</div>
     ${(() => { const P = pkDue(), cnt = Object.keys(itemCfg?.rackPk || {}).filter(k => pkCfg(k)).length; if (!P.length && !cnt && !isOwner()) return '';
       const G = new Map(); for (const y of P) { if (!G.has(y.g)) G.set(y.g, []); G.get(y.g).push(y); }
       return `<section class="rk-g rk-pw"><div class="rk-gh"><b>📦 Packet-war${cnt ? ` · ${num(cnt)} items` : ''}</b>${isOwner() ? '<button type="button" class="rk-all" data-rkp-set="1">⚙️ Items chunein</button>' : ''}</div>
         ${!rackAt ? '<p class="rk-note">PC data aate hi (2 min) packet ki ginti aayegi.</p>' : !P.length ? `<p class="rk-note">${cnt ? '✓ Abhi koi packet hadd tak nahi bika.' : 'Ek item ke kai barcode (garam masala 250 gm · 1 kg, ilaichi 50 gm) — "⚙️ Items chunein" se packet-war hadd lagayein.'}</p>` : ''}
         ${[...G].map(([g, ys]) => `<div class="rk-pg"><b class="rk-pgh">🏬 ${esc(branchName(g, names))} ➜ ${esc(branchName(1, names))}</b>
-          ${ys.map(y => { const id = String(y.r.i), offI = rk.pOff.has(id); return `<div class="rk-r${offI ? '' : ' is-in'}"><label class="rk-tk"><input type="checkbox" data-rkp-t="${esc(id)}"${offI ? '' : ' checked'}><span><b>${esc(y.name)}</b><small>godam ${num(r3(y.gs))} · dukan ${num(r3(y.r.ss))}${y.r.kh ? ` · khula ${num(y.r.kh)}` : ''}</small></span></label>
+          ${(() => { rk._pp = rkPick('p' + g, ys.map(y => String(y.r.i))); return ''; })()}${ys.length > (rk.n || 1e9) ? `<div class="rk-left"><i class="rk-c pc">✓ ${num(rk._pp.size)} is patti mein</i><i class="rk-c own">⏳ ${num(ys.length - rk._pp.size)} baqi</i></div>` : ''}
+          ${ys.map(y => { const id = String(y.r.i), offI = !rk._pp.has(id); return `<div class="rk-r${offI ? '' : ' is-in'}"><label class="rk-tk"><input type="checkbox" data-rkp-t="${esc(id)}"${offI ? '' : ' checked'}><span><b>${esc(y.name)}</b><small>godam ${num(r3(y.gs))} · dukan ${num(r3(y.r.ss))}${y.r.kh ? ` · khula ${num(y.r.kh)}` : ''}</small></span></label>
             <div class="rk-packs">${y.packs.map(p => { const k = id + '|' + p.z, v = rk.pQ.has(k) ? rk.pQ.get(k) : p.a; return `<div class="rk-pk"><span><b>${esc(p.name)}</b><small>${num(p.sold)} bike · hadd ${num(p.n)}</small></span><label><input type="number" inputmode="numeric" min="0" step="1" data-rkp-q="${esc(k)}" value="${v}"><small>packet</small></label></div>`; }).join('')}</div></div>`; }).join('')}
-          <button type="button" class="rk-go" data-rkp-go="${esc(String(g))}"${rk.busy ? ' disabled' : ''}>${rk.busy === 'p' + g ? '⏳ PC note bana raha hai…' : `🖨 ${num(ys.filter(y => !rk.pOff.has(String(y.r.i))).length)} items — packet transfer note`}</button></div>`).join('')}</section>`; })()}
+          <button type="button" class="rk-go" data-rkp-go="${esc(String(g))}"${rk.busy ? ' disabled' : ''}>${rk.busy === 'p' + g ? '⏳ PC note bana raha hai…' : `🖨 ${num(rk._pp.size)} items — packet patti print`}</button></div>`).join('')}</section>`; })()}
     ${rk.pset ? pkSetHTML(names) : ''}
     ${(() => { const offs = rackSrc().filter(x => rackCfg(x.i)?.off); return offs.length && isOwner() ? `<details class="rk-offs"><summary>🚫 Sirf godam (${num(offs.length)}) — rack list se hatay hue</summary>${offs.map(x => `<div class="rk-or"><span>${esc(x.n)}</span><button type="button" data-rk-on="${esc(String(x.i))}">↺ Wapas</button></div>`).join('')}</details>` : ''; })()}
     <p class="rk-note">Qaida: 📦 carton wala = ek carton bika to poore carton · 🔹 pcs wala (masale) = jitna aam taur par aata hai · 🔴 rack khali = foran · 📦 packet-war = har packet ki apni hadd · ✏️ malik apna qaida. Khula maal godam se nahi.</p>`;
@@ -3485,30 +3512,30 @@ function pkSetHTML(names) {
     <div id="rkPkList">${TN.length ? `<div class="rk-tnh">⇄ ${esc(branchName(g0, names))} → ${esc(branchName(1, names))} transfer notes se <b>${num(TN.length)}</b> items <small>tap = re-order likhein</small></div>${TN.map(row).join('')}<div class="rk-tnh rk-tnh2">Baqi kai barcode wale items</div>` : ''}${L.map(row).join('') || (TN.length ? '' : '<p class="rk-note">Is godam mein kai barcode wala koi item nahi mila.</p>')}</div></section>`;
 }
 async function rkpGo(g) {
-  if (!rk || rk.busy) return; const ys = pkDue().filter(y => String(y.g) === String(g) && !rk.pOff.has(String(y.r.i)));
+  if (!rk || rk.busy) return; const all = pkDue().filter(y => String(y.g) === String(g)), P = rkPick('p' + g, all.map(y => String(y.r.i))), ys = all.filter(y => P.has(String(y.r.i)));
   const lines = [], noteP = [];
   for (const y of ys) { let qty = 0; const parts = []; for (const p of y.packs) { const k = String(y.r.i) + '|' + p.z, n = Math.max(0, Math.floor(rk.pQ.has(k) ? rk.pQ.get(k) : p.a)); if (!n) continue; qty += n * p.z; parts.push(`${p.name}×${n}`); }
     qty = r3(qty); if (!(qty > 0)) continue; lines.push({ id: String(y.r.i), name: y.name, ctn: 0, pcs: qty }); noteP.push(`${y.name} ${parts.join(', ')}`); }
   if (!lines.length) { notice('Koi packet nahi chuna'); return; }
   rk.busy = 'p' + g; rkPaint();
   try { const r = await stockAgentTransfer({ from: Number(g), to: 1, lines, note: ('📦 ' + noteP.join(' · ')).slice(0, 300) });
-    if (r?.ok || r?.pending) { const t = Date.now(); for (const l of lines) pkSent.set(l.id, t); notice(r.ok ? `🖨 Packet transfer note ${r.no ? '#' + r.no + ' ' : ''}bana — printer par` : '⏳ ' + r.why); } else notice('⚠️ Nahi bana: ' + (r?.why || 'masla'));
+    if (r?.ok || r?.pending) { const t = Date.now(); for (const l of lines) pkSent.set(l.id, t); rk.man.delete('p' + g); notice(r.ok ? `🖨 Packet transfer note ${r.no ? '#' + r.no + ' ' : ''}bana — printer par` : '⏳ ' + r.why); } else notice('⚠️ Nahi bana: ' + (r?.why || 'masla'));
   } catch (e) { notice('⚠️ ' + (e?.message || e)); }
   if (rk) { rk.busy = ''; rkPaint(); }
 }
 async function rkGo(g) {
-  if (!rk || rk.busy) return; const ys = rackDue().filter(y => String(y.x.g) === String(g) && !rk.off.has(String(y.x.i)));
+  if (!rk || rk.busy) return; const P = rkGroups(rackDue(), rkQOf).get(String(g)) || [], S = rkPick('r' + g, P), ys = rackDue().filter(y => String(y.x.g) === String(g) && S.has(String(y.x.i)));
   const lines = ys.map(y => { const v = rk.sel.has(String(y.x.i)) ? rk.sel.get(String(y.x.i)) : y.c.q; return y.c.pk ? { id: String(y.x.i), name: y.x.n, ctn: Math.floor(v / y.c.pk), pcs: 0 } : { id: String(y.x.i), name: y.x.n, ctn: 0, pcs: v }; }).filter(l => l.ctn > 0 || l.pcs > 0);
   if (!lines.length) { notice('Koi item nahi chuna'); return; }
   rk.busy = String(g); rkPaint();
   try { const r = await stockAgentTransfer({ from: Number(g), to: 1, lines, note: '🧺 Rack bharo' });
-    if (r?.ok || r?.pending) { const t = Date.now(); for (const l of lines) rackSent.set(String(l.id), t); notice(r.ok ? `🖨 Transfer note ${r.no ? '#' + r.no + ' ' : ''}bana — printer par (${lines.length} items)` : '⏳ ' + r.why); }
+    if (r?.ok || r?.pending) { const t = Date.now(); for (const l of lines) rackSent.set(String(l.id), t); rk.man.delete('r' + g); const left = (rkGroups(rackDue(), rkQOf).get(String(g)) || []).length; notice(r.ok ? `🖨 Patti ${r.no ? '#' + r.no + ' ' : ''}printer par (${lines.length} items)${left ? ` — agle ${Math.min(left, rk.n || left)} par ✓ lag gaya` : ' — sab ho gaya ✓'}` : '⏳ ' + r.why); }
     else notice('⚠️ Nahi bana: ' + (r?.why || 'masla'));
   } catch (e) { notice('⚠️ ' + (e?.message || e)); }
   if (rk) { rk.busy = ''; rkPaint(); }
 }
 document.addEventListener('click', e => {
-  const t = e.target.closest?.('[data-rk-all],[data-rk-go],[data-rk-e],[data-rk-sv],[data-rk-au],[data-rk-md],[data-rk-off],[data-rk-on],[data-rkp-set],[data-rkp-go],[data-rkp-ed],[data-rkp-g],[data-rkp-sv],[data-rkp-del],[data-rkp-pg],[data-rk-zall]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
+  const t = e.target.closest?.('[data-rk-all],[data-rk-go],[data-rk-e],[data-rk-sv],[data-rk-au],[data-rk-md],[data-rk-off],[data-rk-on],[data-rkp-set],[data-rkp-go],[data-rkp-ed],[data-rkp-g],[data-rkp-sv],[data-rkp-del],[data-rkp-pg],[data-rk-zall],[data-rk-n]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
   if (d.rkMd || d.rkOff || d.rkOn) { const id = d.rkMd ? d.rkMd.split('|')[0] : (d.rkOff || d.rkOn), old = rackCfg(id) || {};
     const v = d.rkMd ? { ...old, mode: d.rkMd.split('|')[1] || undefined } : d.rkOff ? { ...old, off: true } : { ...old, off: undefined };
     const clean = Object.fromEntries(Object.entries(v).filter(([, x]) => x !== undefined && x !== '' && x !== false)), nv = Object.keys(clean).length ? clean : null;
@@ -3528,7 +3555,8 @@ document.addEventListener('click', e => {
     if (!cloud?.setRackPk) { notice('App update karein'); return; }
     itemCfg = { ...(itemCfg || {}), rackPk: { ...(itemCfg?.rackPk || {}), [id]: v ? JSON.stringify(v) : null } }; rk.pDraft.delete(id); rk.pEd = ''; rkPaint();
     cloud.setRackPk(id, v).then(() => notice(v ? '✓ Packet-war save — PC 2 min mein ginna shuru' : '🗑 Hata diya')).catch(er => notice('Save nahi hua: ' + (er?.message || er))); return; }
-  if (d.rkAll) { const ys = rackDue().filter(y => String(y.x.g) === d.rkAll), allOn = ys.every(y => !rk.off.has(String(y.x.i))); for (const y of ys) { if (allOn) rk.off.add(String(y.x.i)); else rk.off.delete(String(y.x.i)); } rkPaint(); return; }
+  if (d.rkAll) { const ids = rkGroups(rackDue(), rkQOf).get(d.rkAll) || [], cur = rkPick('r' + d.rkAll, ids); rk.man.set('r' + d.rkAll, cur.size === ids.length ? new Set() : new Set(ids)); rkPaint(); return; }
+  if (d.rkN != null) { rk.n = Math.max(0, Number(d.rkN) || 0); try { localStorage.setItem('sam-rk-n', String(rk.n)); } catch {} rk.man.clear(); rkPaint(); return; }
   if (d.rkGo) { rkGo(d.rkGo); return; }
   if (d.rkE) { rk.ed = rk.ed === d.rkE ? '' : d.rkE; rkPaint(); return; }
   if (d.rkSv || d.rkAu) { const id = d.rkSv || d.rkAu, u = Number($('rkBody').querySelector(`[data-rk-u="${CSS.escape(id)}"]`)?.value) || 0, w = Number($('rkBody').querySelector(`[data-rk-w="${CSS.escape(id)}"]`)?.value) || 0;
@@ -3538,8 +3566,8 @@ document.addEventListener('click', e => {
     cloud.setRackCfg(id, v).then(() => notice(v ? '✓ Qaida save' : '↺ Ab khud hisaab')).catch(er => notice('Save nahi hua: ' + (er?.message || er))); }
 });
 document.addEventListener('change', e => { const t = e.target; if (!rk || !t.closest?.('#rkBody')) return; const d = t.dataset;
-  if (d.rkT) { if (t.checked) rk.off.delete(d.rkT); else rk.off.add(d.rkT); rkPaint(); return; }
-  if (d.rkpT) { if (t.checked) rk.pOff.delete(d.rkpT); else rk.pOff.add(d.rkpT); rkPaint(); return; }
+  if (d.rkT) { const y = rackDue().find(z => String(z.x.i) === d.rkT); if (y) { const g = String(y.x.g); rkToggle('r' + g, rkGroups(rackDue(), rkQOf).get(g) || [], d.rkT, t.checked); } rkPaint(); return; }
+  if (d.rkpT) { const y = pkDue().find(z => String(z.r.i) === d.rkpT); if (y) { const g = String(y.g); rkToggle('p' + g, pkDue().filter(z => String(z.g) === g).map(z => String(z.r.i)), d.rkpT, t.checked); } rkPaint(); return; }
   if (d.rkpQ) { rk.pQ.set(d.rkpQ, Math.max(0, Math.floor(Number(t.value) || 0))); return; }
   if (d.rkpZ) { const [id, z] = d.rkpZ.split('|'), dr = rk.pDraft.get(id); if (dr) { if (t.checked) dr.p[z] = dr.p[z] || { n: '', a: '' }; else delete dr.p[z]; } rkPaint(); return; }
   if (d.rkpN || d.rkpA) { const [id, z] = (d.rkpN || d.rkpA).split('|'), dr = rk.pDraft.get(id); if (dr?.p[z]) dr.p[z][d.rkpN ? 'n' : 'a'] = Number(t.value) > 0 ? Math.floor(Number(t.value)) : ''; return; }
