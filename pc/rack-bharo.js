@@ -1,5 +1,5 @@
 // =========================================================
-//  rack-bharo.js  v1.2 (2026-10-18: 📦 PACKET-WAR (Godam 2) — malik ke chune items (stockConfig.rackPk {id: JSON {g, at, p: {q: {n, a}}}}):
+//  rack-bharo.js  v1.3 (2026-10-18: ⚠️ z = carton pcs 0 wale items (POS 'Divide by zero' bill rok deta hai) — jo 30 din mein bike ya dukan mein stock; sirf parhna) · v1.2 (2026-10-18: 📦 PACKET-WAR (Godam 2) — malik ke chune items (stockConfig.rackPk {id: JSON {g, at, p: {q: {n, a}}}}):
 //                  dukan ki har sale LINE ki miqdaar = kaun sa packet (0.250 = 250 gm, 0.050 = ilaichi) — shuru = max(at, aakhri transfer) -> pj) · v1.1 (2026-10-18: fc = hamesha poore carton aaya? (warna pcs wala — masale) · k = 🔴 rack khali: dukan stock <= 0, godam mein maal,
 //                  aur 180 din mein DUKAN par kabhi bika (godam wala ata / maida kabhi nahi)) · v1.0 (2026-10-18) — 🧺 RACK BHARO: dukan (branch 1) ka maal jitna bika, utna godam se poore carton mein wapas
 //  Malik: "rack par carton hi lagay to faida — open stock godam se nahi aata. Noor Traders ka pichhla data dekh kar: jab jab transfer
@@ -83,7 +83,17 @@ async function readPk(p, cfg, now = new Date()) {
     if (m) x.sold[m.z] = r3((x.sold[m.z] || 0) + sg * m.n); else x.kh = r3(x.kh + q); }
   return [...by.values()].map(x => { const S = st.get(x.id) || { n: 'Item ' + x.id, st: {} }; return { i: x.id, n: S.n, g: x.g, gs: r3(S.st[x.g] || 0), ss: r3(S.st[SHOP] || 0), from: x.from, sold: x.sold, kh: x.kh }; });
 }
-module.exports = { read, readPk, packOf, med };
+// v1.3: ⚠️ PackQty 0/NULL wale items — POS counter sale "Divide by zero error" (rate ÷ carton pcs). Sirf wo jo 30 din mein bike ya dukan mein stock > 0.
+async function readZero(p, now = new Date()) {
+  const since = new Date(now); since.setDate(since.getDate() - 30);
+  const rs = (await p.request().input('a', sql.DateTime, since).query(`SELECT TOP 200 i.ItemID, i.ItemName, ISNULL(r.CurrStock, 0) AS St,
+      (SELECT ISNULL(SUM(d.Qty), 0) FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID WHERE d.ItemID = i.ItemID AND s.SaleDate >= @a AND ISNULL(s.DocStatusID, 0) <> 3) AS Sold
+    FROM dbo.Items i LEFT JOIN dbo.ItemBranchRate r ON r.ItemID = i.ItemID AND r.BranchID = ${SHOP}
+    WHERE ISNULL(i.PackQty, 0) <= 0 AND (ISNULL(r.CurrStock, 0) > 0 OR EXISTS (SELECT 1 FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID WHERE d.ItemID = i.ItemID AND s.SaleDate >= @a))
+    ORDER BY Sold DESC, i.ItemName`)).recordset;
+  return rs.map(r => ({ i: Number(r.ItemID), n: String(r.ItemName || '').trim().slice(0, 70), ss: r3(Number(r.St) || 0), s: r3(Number(r.Sold) || 0) }));
+}
+module.exports = { read, readPk, readZero, packOf, med };
 
 if (require.main === module) (async () => {
   let pool; const t0 = Date.now();
@@ -94,13 +104,14 @@ if (require.main === module) (async () => {
     pool = await new sql.ConnectionPool(SQL_CONFIG).connect();
     const rows = await read(pool);
     let pk = []; try { const c = await getFirestore().collection('businesses').doc('noor-traders').collection('blueAccess').doc('stockConfig').get(); pk = await readPk(pool, c.exists ? c.data().rackPk : null); } catch (e) { console.log('📦 packet-war masla: ' + (e?.message || e)); }
+    let z = []; try { z = await readZero(pool); } catch (e) { console.log('⚠️ pcs-0 masla: ' + (e?.message || e)); }
     await pool.close(); pool = null;
     const ref = getFirestore().collection('businesses').doc('noor-traders').collection('posStats').doc('rack');
-    const j = JSON.stringify(rows), pj = JSON.stringify(pk), h = crypto.createHash('sha1').update(j + pj).digest('hex');
+    const j = JSON.stringify(rows), pj = JSON.stringify(pk), zj = JSON.stringify(z), h = crypto.createHash('sha1').update(j + pj + zj).digest('hex');
     let old = null; try { const o = await ref.get(); old = o.exists ? o.data() : null; } catch {}
     if (old && old.h === h && Date.now() - (Number(old.at) || 0) < 10 * 60000) { console.log(new Date().toLocaleString('en-PK') + ' — 🧺 wahi (' + rows.length + ')'); process.exit(0); }
-    await ref.set({ at: Date.now(), h, n: rows.length, j, pj });
-    console.log(new Date().toLocaleString('en-PK') + ' — 🧺 rack: ' + rows.length + ' items (bike + godam mein), ' + Math.round((Date.now() - t0) / 1000) + 's');
+    await ref.set({ at: Date.now(), h, n: rows.length, j, pj, z: zj });
+    console.log(new Date().toLocaleString('en-PK') + ' — 🧺 rack: ' + rows.length + ' items (bike + godam mein)' + (z.length ? ', ⚠️ pcs-0: ' + z.length : '') + ', ' + Math.round((Date.now() - t0) / 1000) + 's');
     process.exit(0);
   } catch (e) { console.log(new Date().toLocaleString('en-PK') + ' — GALTI: ' + (e?.message || e)); try { await pool?.close(); } catch {} process.exit(1); }
 })();

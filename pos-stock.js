@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.18';
-import { liveLabelsHTML } from './barcode.js?v=2.103.18';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.19';
+import { liveLabelsHTML } from './barcode.js?v=2.103.19';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -3363,7 +3363,7 @@ function thWatch() {
 // PC rack-bharo.js (har 2 min) -> posStats/rack {at, j: [{i, n, pk, g, gs, ss, w, s, m}]}. Qaida: carton wala = pk pcs bike -> poore carton;
 // pieces wala = m (pichhle 5 transfer ki aam miqdaar) · malik ka ✏️ stockConfig.rack {id: {u (kitna bikne par), q (kitna lana)}}.
 // Godam ka stock LIVE (app) — us se zyada nahi. Bhejne ke baad item chhupa (rackSent) jab tak PC naya transfer na dekhe.
-let rackPk = [], rackRows = [], rackAt = 0, rackStop = null, rk = null, canDoRk = () => true; const rackSent = new Map();
+let rackPk = [], rackRows = [], rackZero = [], rackAt = 0, rackStop = null, rk = null, canDoRk = () => true; const rackSent = new Map();
 // v2.103.15: malik — "live data zaroori; tumhare paas stock bhi hai, sale bhi — abhi ke liye kaafi". PC ka rack data (posStats/rack)
 //   aane tak APP KE APNE data se: transfer notes (tcAll — 60 din, POS + app) + item report ki din-war bikri (+ aaj irep-today) + LIVE stock.
 //   Transfer wale din ki baqi bikri nahi gini (din ka hisaab) — PC data aate hi khud us par.
@@ -3391,7 +3391,7 @@ function rackLocalRows() {
   rlKey = key; return (rlCache = out.sort((a, b) => a.n.localeCompare(b.n)));
 }
 const rackSrc = () => rackAt ? rackRows : rackLocalRows();
-function rackWatch() { rackLocalWatch(); if (rackStop || !cloud?.listenRack) return; rackStop = cloud.listenRack(d => { rackRows = Array.isArray(d?.rows) ? d.rows : []; rackPk = Array.isArray(d?.pk) ? d.pk : []; rackAt = Number(d?.at) || 0; if (document.querySelector('.th-root') && !rk) rerender(); if (rk && $('rkBody')) rkPaint(); }); }
+function rackWatch() { rackLocalWatch(); if (rackStop || !cloud?.listenRack) return; rackStop = cloud.listenRack(d => { rackRows = Array.isArray(d?.rows) ? d.rows : []; rackPk = Array.isArray(d?.pk) ? d.pk : []; rackZero = Array.isArray(d?.z) ? d.z : []; rackAt = Number(d?.at) || 0; if (document.querySelector('.th-root') && !rk) rerender(); if (rk && $('rkBody')) rkPaint(); }); }
 const rackCfg = id => itemCfg?.rack?.[String(id)] || null;
 function rackCalc(x) {   // v2.103.16: 🔹 pcs wala (masale) · 🔴 rack khali · 🚫 sirf godam
   const P = Number(x.pk) > 1 ? Number(x.pk) : 0, cf = rackCfg(x.i) || {}, cm = !!P && (cf.mode ? cf.mode === 'ctn' : x.fc !== 0), pk = cm ? P : 0;
@@ -3426,7 +3426,7 @@ function pkDue() {
   return out;
 }
 function rackOpen() {
-  rackWatch(); start(false); rk = { q: '', sel: new Map(), off: new Set(), ed: '', busy: '', pOff: new Set(), pQ: new Map(), pset: false, pq: '', pEd: '', pDraft: new Map() };
+  rackWatch(); start(false); rk = { q: '', sel: new Map(), off: new Set(), ed: '', busy: '', pOff: new Set(), pQ: new Map(), pset: false, pq: '', pEd: '', pDraft: new Map(), pg: Number(localStorage.getItem('sam-rk-pg')) || 0, zAll: false };
   const d = $('dialog'); if (!d) return; d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = '🧺 Rack bharo — godam se lao'; $('dialogBody').innerHTML = '<div class="rk-root" id="rkBody"></div>'; if (!d.open) d.showModal(); rkPaint();
 }
 function rkPaint(only) {
@@ -3440,6 +3440,7 @@ function rkPaint(only) {
       ${ed ? `<div class="rk-ed"><div class="rk-mode">${c.P ? [['', 'Khud'], ['ctn', '📦 Carton'], ['pcs', '🔹 Pcs']].map(([k, l]) => `<button type="button" class="${(cf?.mode || '') === k ? 'is-in' : ''}" data-rk-md="${esc(id)}|${k}">${l}</button>`).join('') : ''}<button type="button" class="rk-off" data-rk-off="${esc(id)}">🚫 Sirf godam — rack par nahi</button></div><label>Kitna bikne par lana<input type="number" inputmode="numeric" min="0" step="1" data-rk-u="${esc(id)}" value="${cf?.u || ''}" placeholder="${c.unit}"><small>pcs</small></label><label>Kitna lana<input type="number" inputmode="numeric" min="0" step="1" data-rk-w="${esc(id)}" value="${cf?.q || ''}" placeholder="khud"><small>pcs</small></label><button type="button" class="rk-sv" data-rk-sv="${esc(id)}">✓ Save</button>${cf ? `<button type="button" class="rk-au" data-rk-au="${esc(id)}">↺ Khud</button>` : ''}</div>` : ''}</div>`; };
   const html = `<div class="rk-hero"><div><small>DUKAN KA RACK</small><b>${num(all.length + pkDue().length)} items godam se lane</b><span>${ctn ? num(ctn) + ' carton' : ''}</span></div><span class="rk-ic">🧺</span></div>
     ${rackAt ? `<div class="rk-time${age > 10 ? ' old' : ''}">🖥 PC data: <b>${esc(new Date(rackAt).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }))}</b> · ${age < 1 ? 'abhi' : age + ' min pehle'}${age > 10 ? ' — ⚠️ PC ka rack script ruka?' : ' · har 2 min'}</div>` : irData ? '<div class="rk-time old">⚠️ Andaza — PC data abhi nahi aaya (is mein godam ki sale bhi shamil). PC data aate hi khud sahi.</div>' : ''}
+    ${rackZero.length && isOwner() ? (() => { const Z = rk.zAll ? rackZero : rackZero.slice(0, 8); return `<div class="rk-z0"><b>⚠️ ${num(rackZero.length)} items ka carton pcs <u>0</u> hai</b><small>POS mein in ka bill "Divide by zero" rok sakta hai — POS Item master mein Cotton/packing likhein (kam az kam 1). App kuch nahi badalti.</small><span class="rk-chips">${Z.map(x => `<i class="rk-c kh" title="dukan ${num(x.ss)} · 30 din mein ${num(x.s)} bike">${esc(x.n)}${x.s ? ` · ${num(x.s)} bike` : ''}</i>`).join('')}${rackZero.length > 8 ? `<button type="button" class="rk-c pc rk-zm" data-rk-zall="1">${rk.zAll ? '▴ kam' : `+${num(rackZero.length - 8)} aur`}</button>` : ''}</span></div>`; })() : ''}
     ${all.length > 6 ? `<label class="hs-search"><input type="search" data-rk-q="1" placeholder="🔍 item dhoondo…" value="${esc(rk.q)}" autocomplete="off"></label>` : ''}
     <div id="rkList">${[...G].map(([g, ys]) => { const n = ys.filter(on).length; return `<section class="rk-g"><div class="rk-gh"><b>🏬 ${esc(branchName(Number(g), names))} ➜ ${esc(branchName(1, names))}</b><button type="button" class="rk-all" data-rk-all="${esc(String(g))}">${ys.every(on) ? '☐ koi nahi' : '☑ sab'}</button></div>
       ${ys.map(row).join('')}
@@ -3461,16 +3462,17 @@ function rkPaint(only) {
 }
 // ⚙️ packet-war items chunna (malik) — list pehle se, search, har item ke barcode / packet, godam chip, hadd
 function pkSetHTML(names) {
-  const P = agPool(), q = rk.pq.trim(), gods = collect().branches.filter(b => b !== 1), g0 = gods.includes(2) ? 2 : gods[0];
+  const C = collect(), P = agPool(), q = rk.pq.trim(), gods = C.branches.filter(b => b !== 1), g0 = gods.includes(rk.pg) ? rk.pg : (C.g2 != null ? C.g2 : gods[0]);   // v2.103.19: Godam 2 NAAM se (branch 2 = "Godam 1" tha) + malik ki chip
   // v2.103.18: ⇄ Godam 2 -> Noor Traders ke transfer notes ke items SAB SE UPAR (malik: "pehle wo items aayein, phir stock saath likha
   //   aaye, re-order baad mein upar likhte jayenge") — naye pehle, har item ka TN # + tareekh; stock LIVE (dukan · godam)
   const tn = new Map(); for (const t of tcAll().filter(t => t && !t.cancelled && Number(t.from) === g0 && Number(t.to) === 1).sort((a, b) => (Number(b.createdOn) || Number(b.at) || 0) - (Number(a.createdOn) || Number(a.at) || 0)))
     for (const l of t.lines || []) { const id = String(l.itemId); if (!tn.has(id)) tn.set(id, { no: String(t.transferNo || '').replace(/^0+/, ''), at: Number(t.createdOn) || Number(t.at) || 0 }); }
-  const cand = P.list.filter(it => (Array.isArray(it.bq) && it.bq.length) || pkCfg(it.id) || tn.has(String(it.id)));
+  const inG = it => tn.has(String(it.id)) || pkCfg(it.id) || (Number(saleStockItem(g0, it.id)?.stock) || 0) > 0;   // v2.103.19: sirf is godam ka maal
+  const cand = P.list.filter(it => ((Array.isArray(it.bq) && it.bq.length) || pkCfg(it.id) || tn.has(String(it.id))) && inG(it));
   const TN = q ? [] : [...tn.keys()].map(id => P.byId.get(id)).filter(Boolean);
   const L = (q ? smartSearch(cand, q, 80) : cand.filter(it => !tn.has(String(it.id))).sort((a, b) => (pkCfg(b.id) ? 1 : 0) - (pkCfg(a.id) ? 1 : 0) || String(a.name).localeCompare(String(b.name)))).slice(0, 80);
   const row = it => { const id = String(it.id), cf = pkCfg(id), open = rk.pEd === id, sizes = [{ z: 1, b: it.code }, ...(it.bq || []).map(x => ({ z: Number(x.q) || 1, b: x.b }))].filter((x, i, a) => x.z > 0 && a.findIndex(y => Math.abs(y.z - x.z) < 1e-9) === i);
-    const dr = rk.pDraft.get(id) || { g: Number(cf?.g) || (gods.includes(2) ? 2 : gods[0]), p: Object.fromEntries(Object.entries(cf?.p || {}).map(([z, o]) => [z, { n: o.n, a: o.a || o.n }])) };
+    const dr = rk.pDraft.get(id) || { g: Number(cf?.g) || g0, p: Object.fromEntries(Object.entries(cf?.p || {}).map(([z, o]) => [z, { n: o.n, a: o.a || o.n }])) };
     if (open && !rk.pDraft.has(id)) rk.pDraft.set(id, dr);
     const t0 = tn.get(id), sS = saleStockItem(1, id), gS = saleStockItem(dr.g || g0, id), hs = Object.entries(cf?.p || {}).map(([z, o]) => `${pkName(Number(z), it)} ${o.n}`).join(' · ');
     return `<div class="rk-ps${cf ? ' is-in' : ''}"><button type="button" class="rk-psh" data-rkp-ed="${esc(id)}"><span><b>${cf ? '✓ ' : ''}${esc(it.name)}</b><span class="rk-chips">${t0 ? `<i class="rk-c pc">⇄ TN #${esc(t0.no || '—')} · ${esc(rkWhen(t0.at))}</i>` : ''}${hs ? `<i class="rk-c own">🔁 re-order: ${esc(hs)}</i>` : t0 ? '<i class="rk-c kh">re-order baqi</i>' : ''}</span><small>📦 dukan <b>${num(r3(Number(sS?.stock) || 0))}</b> · ${esc(branchName(dr.g || g0, names))} <b>${num(r3(Number(gS?.stock) || 0))}</b> ${esc(it.uName || '')}</small><small>${sizes.map(x => `${esc(pkName(x.z, it))}${x.b ? ' · ' + esc(String(x.b)) : ''}`).join('  ·  ')}</small></span><i>${open ? '▴' : '▾'}</i></button>
@@ -3478,8 +3480,9 @@ function pkSetHTML(names) {
         ${sizes.map(x => { const k = String(+x.z.toFixed(4)), o = dr.p[k]; return `<div class="rk-psr"><label class="rk-tk"><input type="checkbox" data-rkp-z="${esc(id)}|${k}"${o ? ' checked' : ''}><span><b>${esc(pkName(x.z, it))}</b><small>${esc(String(x.b || ''))}</small></span></label>${o ? `<label><small>🔁 re-order: itne bikein</small><input type="number" inputmode="numeric" min="1" step="1" data-rkp-n="${esc(id)}|${k}" value="${o.n || ''}" placeholder="likhein"></label><label><small>itne lao</small><input type="number" inputmode="numeric" min="1" step="1" data-rkp-a="${esc(id)}|${k}" value="${o.a || ''}" placeholder="${o.n || 'utne hi'}"></label>` : ''}</div>`; }).join('')}
         <div class="rk-ed">${cf ? `<button type="button" class="rk-au" data-rkp-del="${esc(id)}">🗑 Hatao</button>` : ''}<button type="button" class="rk-sv" data-rkp-sv="${esc(id)}">✓ Save</button></div></div>` : ''}</div>`; };
   return `<section class="rk-g rk-pset"><div class="rk-gh"><b>⚙️ Packet-war items</b><button type="button" class="rk-all" data-rkp-set="0">✕ Band</button></div>
+    ${gods.length > 1 ? `<div class="rk-mode rk-pgs">${gods.map(g => `<button type="button" class="${g === g0 ? 'is-in' : ''}" data-rkp-pg="${g}">🏬 ${esc(branchName(g, names))}</button>`).join('')}</div>` : ''}
     <label class="hs-search"><input type="search" data-rkp-qs="1" placeholder="🔍 item (garam masala, ilaichi…)" value="${esc(rk.pq)}" autocomplete="off"></label>
-    <div id="rkPkList">${TN.length ? `<div class="rk-tnh">⇄ ${esc(branchName(g0, names))} → ${esc(branchName(1, names))} transfer notes se <b>${num(TN.length)}</b> items <small>tap = re-order likhein</small></div>${TN.map(row).join('')}<div class="rk-tnh rk-tnh2">Baqi kai barcode wale items</div>` : ''}${L.map(row).join('') || (TN.length ? '' : '<p class="rk-note">Kai barcode wala koi item nahi mila.</p>')}</div></section>`;
+    <div id="rkPkList">${TN.length ? `<div class="rk-tnh">⇄ ${esc(branchName(g0, names))} → ${esc(branchName(1, names))} transfer notes se <b>${num(TN.length)}</b> items <small>tap = re-order likhein</small></div>${TN.map(row).join('')}<div class="rk-tnh rk-tnh2">Baqi kai barcode wale items</div>` : ''}${L.map(row).join('') || (TN.length ? '' : '<p class="rk-note">Is godam mein kai barcode wala koi item nahi mila.</p>')}</div></section>`;
 }
 async function rkpGo(g) {
   if (!rk || rk.busy) return; const ys = pkDue().filter(y => String(y.g) === String(g) && !rk.pOff.has(String(y.r.i)));
@@ -3505,7 +3508,7 @@ async function rkGo(g) {
   if (rk) { rk.busy = ''; rkPaint(); }
 }
 document.addEventListener('click', e => {
-  const t = e.target.closest?.('[data-rk-all],[data-rk-go],[data-rk-e],[data-rk-sv],[data-rk-au],[data-rk-md],[data-rk-off],[data-rk-on],[data-rkp-set],[data-rkp-go],[data-rkp-ed],[data-rkp-g],[data-rkp-sv],[data-rkp-del]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
+  const t = e.target.closest?.('[data-rk-all],[data-rk-go],[data-rk-e],[data-rk-sv],[data-rk-au],[data-rk-md],[data-rk-off],[data-rk-on],[data-rkp-set],[data-rkp-go],[data-rkp-ed],[data-rkp-g],[data-rkp-sv],[data-rkp-del],[data-rkp-pg],[data-rk-zall]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
   if (d.rkMd || d.rkOff || d.rkOn) { const id = d.rkMd ? d.rkMd.split('|')[0] : (d.rkOff || d.rkOn), old = rackCfg(id) || {};
     const v = d.rkMd ? { ...old, mode: d.rkMd.split('|')[1] || undefined } : d.rkOff ? { ...old, off: true } : { ...old, off: undefined };
     const clean = Object.fromEntries(Object.entries(v).filter(([, x]) => x !== undefined && x !== '' && x !== false)), nv = Object.keys(clean).length ? clean : null;
@@ -3513,6 +3516,8 @@ document.addEventListener('click', e => {
     itemCfg = { ...(itemCfg || {}), rack: { ...(itemCfg?.rack || {}), [id]: nv } }; rk.sel.delete(id); if (!d.rkMd) rk.ed = ''; rkPaint();
     cloud?.setRackCfg?.(id, nv).then(() => notice(d.rkOff ? '🚫 Rack list se hata diya' : d.rkOn ? '↺ Wapas list mein' : '✓ Badal diya')).catch(er => notice('Save nahi hua: ' + (er?.message || er))); return; }
   if (d.rkpSet != null) { rk.pset = d.rkpSet === '1'; rkPaint(); return; }
+  if (d.rkpPg) { rk.pg = Number(d.rkpPg); try { localStorage.setItem('sam-rk-pg', String(rk.pg)); } catch {} rk.pEd = ''; rkPaint(); return; }   // v2.103.19: packet-war ka godam
+  if (d.rkZall) { rk.zAll = !rk.zAll; rkPaint(); return; }
   if (d.rkpGo) { rkpGo(d.rkpGo); return; }
   if (d.rkpEd) { rk.pEd = rk.pEd === d.rkpEd ? '' : d.rkpEd; rkPaint(); return; }
   if (d.rkpG) { const [id, g] = d.rkpG.split('|'); const dr = rk.pDraft.get(id); if (dr) dr.g = Number(g); rkPaint(); return; }
@@ -3560,7 +3565,7 @@ export function renderTransferHub(canDo = () => true) {
   const row = (t, dd) => { const x = tot([t]); const k = esc(tcKey(t)); return `<div class="th-rw"><button type="button" class="th-row" data-th-tc="${k}" data-th-d="${dd}"><span class="th-tn">TN<b>${esc(String(t.transferNo || '').replace(/^0+/, '') || '—')}</b></span><span class="th-mid"><b>${esc(branchName(t.from, names))} ➜ ${esc(branchName(t.to, names))}</b><small>${(t.lines || []).length} items · ${num(x.c)} ctn${x.p ? ' + ' + num(x.p) + ' pcs' : ''}${x.c !== x.ca ? ' (asal ' + num(x.ca) + ')' : ''} · ${esc(regClock(t.at))}${t.app ? ' · 📱' : ''}${Number(t.editCount) > 0 ? ' · ✏️' : ''}</small></span>${stChip(t)}</button>${own ? `<details class="th-more"><summary aria-label="Aur">⋯</summary><div><button type="button" data-th-prn="${esc(String(t.transferId))}">🖨 Dobara print</button><button type="button" data-th-edit="${esc(String(t.transferId))}">✏️ Edit</button><button type="button" class="danger" data-th-cancel="${esc(String(t.transferId))}">❌ Cancel</button></div></details>` : ''}</div>`; };
   const grp = [[today, 'Aaj'], [yest, 'Kal']].map(([d, l]) => { const g = all.filter(t => regDay(t.at) === d); return g.length ? `<section class="th-day"><div class="th-dh"><b>${l}</b><span>${g.length} note</span></div>${g.slice(0, 40).map(t => row(t, d === today ? 1 : 2)).join('')}</section>` : ''; }).join('');
   const tile = (k, ic, t, sub, cls) => `<button type="button" class="th-tile ${cls}" data-th="${k}"><span>${ic}</span><b>${t}</b><small>${sub}</small></button>`;
-  $('list').innerHTML = `<div class="th-root"><div class="th-tiles">${canDo('stock.transfer') ? tile('new', '➕', 'Naya transfer note', 'Sirf majood maal · Ctn mein · ⤓ Sara', 'a') : ''}${canDo('stock.rack') ? (() => { const n = rackDue().length + pkDue().length; return tile('rack', '🧺', 'Rack bharo', n ? `${n} items godam se lane` : rackAt || irData ? 'Sab rack bhare ✓' : 'Data aa raha hai', 'c' + (n ? ' rk-hot' : '')).replace('</button>', n ? `<i class="rk-badge">${n}</i></button>` : '</button>'); })() : ''}${canDo('stock.tc') ? tile('tc', '🧾', 'Transfer check', pend ? pend + ' baqi · scan karein' : 'Maal pohancha? Scan', 'b') : ''}${canDo('stock.reg') ? tile('reg', '📋', 'Transfer register', 'Din-war · PDF', 'c') : ''}</div>
+  $('list').innerHTML = `<div class="th-root"><div class="th-tiles">${canDo('stock.transfer') ? tile('new', '➕', 'Naya transfer note', 'Sirf majood maal · Ctn mein · ⤓ Sara', 'a') : ''}${canDo('stock.rack') ? (() => { const n = rackDue().length + pkDue().length; return tile('rack', '🧺', 'Rack bharo', (n ? `${n} items godam se lane` : rackAt || irData ? 'Sab rack bhare ✓' : 'Data aa raha hai') + (rackZero.length && isOwner() ? ` · ⚠️ ${rackZero.length} pcs 0` : ''), 'c' + (n ? ' rk-hot' : '')).replace('</button>', n ? `<i class="rk-badge">${n}</i></button>` : '</button>'); })() : ''}${canDo('stock.tc') ? tile('tc', '🧾', 'Transfer check', pend ? pend + ' baqi · scan karein' : 'Maal pohancha? Scan', 'b') : ''}${canDo('stock.reg') ? tile('reg', '📋', 'Transfer register', 'Din-war · PDF', 'c') : ''}</div>
     ${grp || '<div class="th-empty">⇄<b>Aaj / kal koi transfer note nahi</b><small>"Naya transfer note" se banayein</small></div>'}</div>`;
 }
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-th],[data-th-reg],[data-th-tc],[data-th-prn],[data-th-edit],[data-th-cancel]'); if (!b) return; const d = b.dataset;
