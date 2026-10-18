@@ -1,5 +1,6 @@
 // =========================================================
-//  item-post.js  v1.2 (2026-10-15: 🔔 PC band tha to item banne / na banne ki phone par khabar) · v1  (2026-09-23) — Blue Khata app se POS mein ITEM banana / badalna
+//  item-post.js  v1.3 (2026-10-18: ⚠️ PackQty kabhi 0 nahi — POS counter sale 'Divide by zero' (kala tail khula). Ab kam az kam 1; purane app-bane items
+//                                   jin ka PackQty 0 hai EK dafa 1 kar deta hai (item-fix-pack0.done) + log) · v1.2 (2026-10-15: 🔔 PC band tha to item banne / na banne ki phone par khabar) · v1  (2026-09-23) — Blue Khata app se POS mein ITEM banana / badalna
 //  v1.1 (2026-10-08): ⚠️ RATE KI GHALTI THEEK — POS Items mein sab rate FI PIECE hain (POS form CTN khana = rate × pack khud
 //      dikhata hai). v1 SaleRate mein R CTN aur PurchaseRate mein khareed × pack likhti thi (mujhid ghee 1kg: R Cotton 136,800,
 //      Purchase 135,201). Ab: SaleRate = R CTN ÷ pack · SaleRate2 = R PCS · SaleRate3 = W CTN ÷ pack · SaleRateSize = W PCS ·
@@ -68,7 +69,7 @@ async function applyItem(j) {
     const isNew = j.op === 'new';
     const code = clean(j.code, 50), name = clean(j.name, 150);
     if (!name) throw new Error('Item ka naam khali hai');
-    const pack = Math.max(0, Number(j.pack) || 0);
+    const pack = Math.max(1, Number(j.pack) || 0);   // v1.3: 0 kabhi nahi (POS bill mein rate ÷ pack = Divide by zero)
     const costP = n2(j.costP), rpcs = n2(j.rpcs), wpcs = n2(j.wpcs);
     const rctn = n2(j.rctn), wctn = n2(j.wctn);   // v1.1: fi CARTON (khali = app ne nahi bheja)
 
@@ -291,12 +292,31 @@ async function repairV1() {
   try { fs.writeFileSync(FIX_FLAG, new Date().toISOString() + ' fixed ' + fixed); } catch {}
 }
 
+// v1.3: 🔧 PackQty 0 — app ke bane items (itemJobs done) jin ka POS mein PackQty 0/NULL hai -> 1 (Items + ItemBranchRate). Ek dafa.
+const FIX0 = path.join(DIR, 'item-fix-pack0.done');
+async function repairPack0() {
+  if (fs.existsSync(FIX0)) return;
+  const snap = await col.where('status', '==', 'done').get(); const ids = new Set(); snap.forEach(d => { const id = Number((d.data() || {}).itemId) || 0; if (id) ids.add(id); });
+  const p = await getPool(); let fixed = 0; const names = [];
+  for (const id of ids) {
+    const it = (await p.request().input('id', sql.Int, id).query('SELECT ItemName, ISNULL(PackQty, 0) AS Pk FROM dbo.Items WHERE ItemID=@id')).recordset[0];
+    if (!it || Number(it.Pk) > 0) continue;
+    const nt = `\r\n>>Fixed By:Blue Khata item-post v1.3 On:${new Date().toLocaleString()} PackQty 0 -> 1 (POS Divide by zero)\r\n`;
+    await p.request().input('id', sql.Int, id).input('nt', sql.NVarChar(sql.MAX), nt).query("UPDATE dbo.Items SET PackQty = 1, SystemNotes = ISNULL(SystemNotes,'') + @nt WHERE ItemID=@id AND ISNULL(PackQty, 0) <= 0");
+    await p.request().input('id', sql.Int, id).query('UPDATE dbo.ItemBranchRate SET PackQty = 1 WHERE ItemID=@id AND ISNULL(PackQty, 0) <= 0');
+    fixed++; names.push(String(it.ItemName || '').trim()); log(`🔧 PackQty 0 -> 1: ${String(it.ItemName || '').trim()} (id ${id})`);
+  }
+  log(`🔧 PackQty-0 jaanch: ${ids.size} app-bane items, ${fixed} theek`);
+  try { fs.writeFileSync(FIX0, new Date().toISOString() + ' fixed ' + fixed + (names.length ? ' ' + names.join(', ') : '')); } catch {}
+}
+
 const lock = net.createServer().listen(LOCK_PORT, '127.0.0.1');
 lock.on('error', () => { console.log('item-post pehle se chal raha hai — yeh copy band.'); process.exit(3); });
 lock.on('listening', async () => {
   try { await getPool(); log('SQL se jur gaya'); } catch (e) { log('SQL masla: ' + e.message); process.exit(1); }
   try { await repairV1(); } catch (e) { log('🔧 purane rate theek nahi hue (agli dafa phir): ' + e.message); }
-  log('item-post v1.2 chal raha hai — app se item banane / badalne ka intezar…');
+  try { await repairPack0(); } catch (e) { log('🔧 PackQty-0 theek nahi hua (agli dafa phir): ' + e.message); }
+  log('item-post v1.3 chal raha hai — app se item banane / badalne ka intezar…');
   col.where('status', '==', 'new').onSnapshot(
     s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handleJob(c.doc)); }); },
     e => { log('Firestore masla: ' + e.message); process.exit(1); });

@@ -5251,3 +5251,11 @@ v2.103.19 (2026-10-18) — ⚠️ carton pcs 0 + packet-war godam NAAM se
 - Packet-war ⚙️ Items chunein: pehle "Godam 2" = branch 2 samjha tha, magar POS mein branch 2 ka naam "Godam 1" hai -> ab collect().g2 (naam se, jama wala tareeqa).
   Upar godam chips (🏬 Godam 1 · 🏬 Godam 2), rk.pg + localStorage sam-rk-pg. Sirf chune godam -> Noor Traders ke TN items upar; neeche sirf wo items jin ka us godam mein stock > 0 (ya TN/cfg). Stock line + default godam = chuna hua.
 - Tests: sk/rk3.mjs (naam se godam, chips, z0 card), rk/t3.cjs (readZero). manifest 2026-10-18.4. Rules 2.62 wahi. AI nahi.
+
+v2.103.20 (2026-10-18) — 🔧 ASAL WAJAH: "kala tail khula" (app se bana item) ka PackQty 0 -> POS Divide by zero
+- Malik: "Kala tail khula ka tha divided by zero" — ye item app ne (factory khula -> POS item, item-post) banaya tha aur item-post pack = max(0, …) likhta tha.
+  POS counter sale rate ÷ PackQty karta hai -> 0 par bill nahi banta. Malik ne POS mein haath se theek kar diya. "Aainda dhyan rakhna".
+- PC item-post.js v1.3 (manifest 2026-10-18.5): pack = Math.max(1, …) — PackQty kabhi 0 nahi. repairPack0(): ek dafa (item-fix-pack0.done) itemJobs done
+  wale items jin ka POS PackQty <= 0 hai -> Items + ItemBranchRate PackQty = 1, SystemNotes mein likh kar, log mein naam. (POS mein likhne wala script
+  pehle se yahi hai — rack/irep/stats ab bhi sirf parhte hain.)
+- App .rk-z0 card ka text: "App se bane items PC khud 1 kar deta hai; baqi POS Item master mein likhein". AI nahi.

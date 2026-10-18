@@ -3031,3 +3031,6 @@ v2.103.19 (2026-10-18) — ⚠️ carton pcs 0 + packet-war godam NAAM se
 - Packet-war ⚙️ Items chunein: pehle "Godam 2" = branch 2 samjha tha, magar POS mein branch 2 ka naam "Godam 1" hai -> ab collect().g2 (naam se, jama wala tareeqa).
   Upar godam chips (🏬 Godam 1 · 🏬 Godam 2), rk.pg + localStorage sam-rk-pg. Sirf chune godam -> Noor Traders ke TN items upar; neeche sirf wo items jin ka us godam mein stock > 0 (ya TN/cfg). Stock line + default godam = chuna hua.
 - Tests: sk/rk3.mjs (naam se godam, chips, z0 card), rk/t3.cjs (readZero). manifest 2026-10-18.4. Rules 2.62 wahi. AI nahi.
+
+item-post.js v1.3 (2026-10-18, manifest 2026-10-18.5): PackQty kabhi 0 nahi (Math.max(1)) — POS counter sale "Divide by zero" (kala tail khula). repairPack0() ek dafa:
+  app ke bane items (itemJobs done) jin ka PackQty 0/NULL -> 1 (Items + ItemBranchRate), flag item-fix-pack0.done.
