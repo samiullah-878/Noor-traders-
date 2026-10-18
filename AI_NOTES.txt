@@ -5271,3 +5271,5 @@ v2.103.21 (2026-10-18) — 🖨 Rack bharo 5-5 ki PATTI + 🧾 Transfer check me
   saare ✓ ("☐ Pehle sab gin kar ✓ (k baqi)"), tcSave bhi rokta hai. "⚠️ Farq hai" textarea mein khud "Nahi mila: <baghair ✓ items + qty>".
   Bulk (Nikle list ka note ✓): sirf wo note jin ke saare item ✓; adhoora note ✓ karne par card khulta hai + notice. Saare ✓ hote hi note khud chun leta.
   CAP stock.tcall = "har item gin kar ✓ zaroori" (deny = zaroori nahi). Tests sk/rk4.mjs. PC/POS/rules wahi. AI nahi.
+
+2026-10-18 — CLAUDE.md (repo root) + project doc claude/MALIK-KE-QAIDE.md: malik ke saare pakke qaide ek jagah (har AI pehle parhe). App mein koi badlav nahi.
