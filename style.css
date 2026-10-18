@@ -4229,3 +4229,8 @@ html body :is(#summary,#dialogBody) .rk-hd{color:#9a3412}html body :is(#summary,
 
 /* v2.103.24: 📊 % chips */
 html body :is(#summary,#dialogBody) .rk-pct{color:#065f46}html body :is(#summary,#dialogBody) .rk-pct button{border-color:#a7f3d0;color:#065f46}html body :is(#summary,#dialogBody) .rk-pct button.is-in{background:linear-gradient(135deg,#10b981,#047857)!important;color:#fff!important;box-shadow:0 4px 12px rgba(4,120,87,.3)}
+
+/* v2.103.25: ▶ baqi chhapo + printer ruka */
+html body .lv-row .lv-hint{display:block;margin-top:3px;font-size:11.5px;color:#fde68a;opacity:.9}
+html body .lv-row .lv-bq{margin-top:8px;width:100%;padding:11px 14px;border:0;border-radius:14px;background:linear-gradient(135deg,#22c55e,#15803d);color:#fff;font:inherit;font-weight:800;font-size:15px;box-shadow:0 6px 16px rgba(21,128,61,.35);cursor:pointer}
+html body .lv-row .lv-bq:disabled{opacity:.7}

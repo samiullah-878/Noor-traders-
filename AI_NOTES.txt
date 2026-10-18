@@ -5311,3 +5311,12 @@ v2.103.24 (2026-10-18) — 📊 Rack % chips (extra) + 🔧 PC transfer note can
 - PC (manifest 2026-10-18.9): app par "Procedure or function 'usp_StockTransfer_Delete' expects parameter '@TransferID'" — transfer-sync deleteTransfer
   '@i' bhejta tha (cancel + ✏️ edit kabhi nahi chale). execById(p, proc, id): sys.parameters se pehla parameter naam parh kar bind. Wahi galti
   subcode-sync (usp_ItemSubCode_Delete '@s') — wahan bhi execById. AI nahi.
+
+v2.103.25 (2026-10-18) — 🖨 LABEL PRINTER RUKA: wajah app mein + ▶ Baqi chhapo · PC label-print v4.6 (manifest 2026-10-18.10)
+- Malik: rice 350 SHAEEN BADSHA label 48/100 par atka (pehle jaisa). sent = bheje − ek hissa, yani printer ne line chhorna band kiya.
+- PC label-print v4.6: waitMove(printer, ref, ctl) — agla hissa tab jab Windows line <= 1; 30 s line na chale -> printerWhy() (Get-Printer
+  PrinterStatus + Get-PrintJob JobStatus -> "Label / paper khatam", "offline", "error — laal batti? FEED", "PAUSE") -> labelJobs.stuck {at, why};
+  ek dafa resumePaused (Resume-PrintJob sirf Paused — dohra nahi); chal pare to stuck delete; 10 min ruka = err -> purgeQueue + status failed,
+  sent = asal chhape (sent − perPart). Pehle 120 s baad agla hissa phir bhi bhej deta tha (dher). Urdu tasveer wale item: hissa 4 qatar (12 label).
+- App barcode.js liveLabelsHTML: printing + stuck = "⚠️ Printer ruk gaya — <wajah> · 48 / 100" + "FEED dabayein" hint. failed / cancelled aur
+  sent < total = button "▶ Baqi chhapo (N)" -> cloud.requestLabel copies N (agle number se, batch bhi). CAP stock.lblbaqi. Rules wahi. AI nahi.

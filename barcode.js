@@ -6,7 +6,7 @@
 //          'printing' jis ki dhadkan (beatAt, label-print v4.1) 3 min se nahi = "⚠ atka hua" (Cancel = PC foran saaf karta hai).
 // Screen: din ke hisaab se -> item -> har barcode (packet size) ki ginti. Chips: Aaj · Kal · 7 din · 30 din · status · search.
 // PDF: app ka openReportPreview (poori screen + WhatsApp / share).
-import { smartHit } from './smart-search.js?v=2.103.24';   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.103.25';   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -67,6 +67,10 @@ const isStuck = (j, now) => j.status === 'printing' && now - (Number(j.beatAt) |
 const lvJobs = new Map(), agVals = new Map();   // agVals: likhi hui ginti (live patti dobara bane to bhi rahe)
 document.addEventListener('input', e => { const t = e.target; if (t?.dataset?.lvN) agVals.set(t.dataset.lvN, t.value); });
 const canAgain = () => { try { return typeof window.ntCan === 'function' ? window.ntCan('stock.lblagain') : true; } catch { return true; } };
+// v2.103.25: ▶ BAQI CHHAPO — printer ruk gaya / cancel / fail ho to sirf baqi labels (agle number se). Mulazim CAP 'stock.lblbaqi'
+const canBaqi = () => { try { return typeof window.ntCan === 'function' ? window.ntCan('stock.lblbaqi') : true; } catch { return true; } };
+const baqiOf = j => { const tot = Number(j.total) || Number(j.copies) || 0, s = Math.max(0, Number(j.sent) || 0); return ['failed', 'cancelled'].includes(j.status) && !j.baqiSent && tot > s ? tot - s : 0; };
+const baqiDone = new Set();
 const againHTML = j => `<div class="lv-ag"><small>Kharab nikle?</small><input type="number" min="1" max="200" step="1" inputmode="numeric" placeholder="3" value="${esc(agVals.get(j.id) || '')}" data-lv-n="${esc(j.id)}" aria-label="Kitne label dobara"><button type="button" data-lv-again="${esc(j.id)}">🔁 Dobara chhapo</button></div>`;
 export function liveLabelsHTML(list, opts = {}) {   // v2.97: pos-stock bhi istemal karta hai
   const now = Date.now(), L = (list || []).filter(j => j && j.id);
@@ -76,11 +80,11 @@ export function liveLabelsHTML(list, opts = {}) {   // v2.97: pos-stock bhi iste
   const fin = opts.noRecent ? [] : L.filter(j => ['done', 'cancelled', 'failed', 'skipped'].includes(j.status) && now - (Number(j.doneAt) || 0) < (j.status === 'done' ? 30 : 10) * 60000).sort((a, b) => (Number(b.doneAt) || 0) - (Number(a.doneAt) || 0)).slice(0, 5);
   if (!act.length && !fin.length) return '';
   let n = 0;
-  const row = j => { const tot = Number(j.total) || Number(j.copies) || 1, sent = Math.min(tot, Number(j.sent) || 0), pr = j.status === 'printing', cx = isCx(j), st = isStuck(j, now);
+  const row = j => { const tot = Number(j.total) || Number(j.copies) || 1, sent = Math.min(tot, Number(j.sent) || 0), pr = j.status === 'printing', cx = isCx(j), st = isStuck(j, now), sk = pr && j.stuck && j.stuck.why ? j.stuck : null, bq = canBaqi() && !baqiDone.has(j.id) ? baqiOf(j) : 0;
     return `<div class="lv-row ${j.status}${cx ? ' cx' : ''}${st ? ' stuck' : ''}" data-lv-id="${esc(j.id)}"><div class="lv-t"><b>${esc(j.name || 'Item')}</b><small>${esc(j.code || '')}${Number(j.qty) > 1 ? ' · ' + num(j.qty) + ' wala' : ''}</small></div>
-      <div class="lv-s">${cx && (pr || j.status === 'new') ? '<em class="cx">✕ cancel ho raha…</em>' : st ? `<em class="stk">⚠ atka hua · ${num(sent)} / ${num(tot)}</em>` : pr ? `<em class="pr">🖨 ${num(sent)} / ${num(tot)}</em>` : j.status === 'new' ? `<em>⏳ line mein #${++n} · ${num(tot)}</em>` : j.status === 'done' ? `<em class="ok">✓ ${num(tot)} chhap gaye</em>` : j.status === 'cancelled' ? `<em class="cx">✕ cancel${Number(j.sent) ? ' · ~' + num(j.sent) + ' chhape' : ''}</em>` : `<em class="bad">⚠ ${esc(j.error || j.status)}</em>`}
+      <div class="lv-s">${cx && (pr || j.status === 'new') ? '<em class="cx">✕ cancel ho raha…</em>' : st ? `<em class="stk">⚠ atka hua · ${num(sent)} / ${num(tot)}</em>` : sk ? `<em class="stk">⚠️ Printer ruk gaya — ${esc(sk.why)} · ${num(sent)} / ${num(tot)}</em><small class="lv-hint">Printer par FEED dabayein — chal pare to khud aage chhapega</small>` : pr ? `<em class="pr">🖨 ${num(sent)} / ${num(tot)}</em>` : j.status === 'new' ? `<em>⏳ line mein #${++n} · ${num(tot)}</em>` : j.status === 'done' ? `<em class="ok">✓ ${num(tot)} chhap gaye</em>` : j.status === 'cancelled' ? `<em class="cx">✕ cancel${Number(j.sent) ? ' · ~' + num(j.sent) + ' chhape' : ''}</em>` : `<em class="bad">⚠ ${esc(j.error || j.status)}</em>`}
       ${pr && !st ? `<i class="lv-bar"><u style="width:${Math.round(sent / tot * 100)}%"></u></i>` : ''}</div>
-      ${(pr || j.status === 'new') && !cx ? `<button type="button" class="lv-x" data-lv-cancel="${esc(j.id)}">✕ Cancel</button>` : ''}${j.status === 'done' && ag ? againHTML(j) : ''}</div>`; };
+      ${(pr || j.status === 'new') && !cx ? `<button type="button" class="lv-x" data-lv-cancel="${esc(j.id)}">✕ Cancel</button>` : ''}${j.status === 'done' && ag ? againHTML(j) : ''}${bq ? `<button type="button" class="lv-bq" data-lv-baqi="${esc(j.id)}">▶ Baqi chhapo (${num(Math.min(200, bq))})</button>` : ''}</div>`; };
   const open = act.filter(j => !isCx(j));
   return `<div class="lv-box"><div class="lv-h"><b>🖨 Label printer — abhi</b>${open.length > 1 ? `<button type="button" class="lv-x all" data-lv-cancel="${open.map(j => esc(j.id)).join(',')}">✕ Sab cancel</button>` : ''}</div>${act.map(row).join('')}${fin.map(row).join('')}</div>`;
 }
@@ -117,6 +121,16 @@ document.addEventListener('click', async e => {
       ab.textContent = '✓ Bhej diya'; if (inp) inp.value = ''; agVals.delete(id); notice(`🔁 ${n} label dobara line mein — ${j.name || ''}`); }
     catch (er) { ab.disabled = false; ab.textContent = '🔁 Dobara chhapo'; alert('Dobara nahi gaya: ' + (er?.message || er)); }
     setTimeout(() => { if (ab.isConnected) { ab.disabled = false; ab.textContent = '🔁 Dobara chhapo'; } }, 4000);
+    return; }
+  const bb = e.target.closest?.('[data-lv-baqi]');   // v2.103.25: ▶ baqi chhapo
+  if (bb) { const id = bb.dataset.lvBaqi, j = lvJobs.get(id); if (!j || !cloud?.requestLabel) { notice('Label ke liye app update karein'); return; }
+    if (!canBaqi()) { notice('Is kaam ki ijazat nahi — malik se kahein'); return; }
+    const n = Math.min(200, baqiOf(j)); if (!n) return;
+    if (!confirm(`Baqi ${n} label chhapein?\n${j.name || ''} · ${j.code || ''}\n(agle number se — pehle wale dobara nahi)`)) return;
+    bb.disabled = true; bb.textContent = '⏳ Bhej rahe…';
+    try { await cloud.requestLabel({ itemId: j.itemId, code: j.code, name: j.name, qty: Number(j.qty) || 1, rate: Number(j.rate) || 0, copies: n, ...(j.batch ? { batch: j.batch } : {}) });
+      baqiDone.add(id); bb.textContent = '✓ Line mein'; notice(`▶ Baqi ${n} label line mein — ${j.name || ''}`); }
+    catch (er) { bb.disabled = false; bb.textContent = `▶ Baqi chhapo (${n})`; alert('Nahi gaya: ' + (er?.message || er)); }
     return; }
   const cx = e.target.closest?.('[data-lv-cancel]');
   if (cx) { const ids = String(cx.dataset.lvCancel || '').split(',').filter(Boolean); if (!ids.length || !cloud?.cancelLabel) return;

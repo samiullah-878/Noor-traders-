@@ -1,5 +1,8 @@
 // =========================================================
-//  label-print.js  v4.5 (2026-10-15: 🏭 factory batch label — job.batch ho to daayein kone par batch no (running number ki jagah)) · v4.4 (2026-10-13: Urdu TEXT (ttf) — font printer mein sirf ek dafa (label-font.json), bhejne ke baad 20 s intezar;
+//  label-print.js  v4.6 (2026-10-18: 🖨 PRINTER RUKA — malik: rice 350 SHAEEN BADSHA 48/100 par atka. Agla hissa bhejne se pehle line 30 s na
+//                     chale to Windows se printer / job ka haal (Paper khatam / Error / Offline / Ruka hua) -> labelJobs.stuck {at, why} (app mein dikhe);
+//                     Paused job ek dafa Resume-PrintJob (dohra nahi chhapta); chal pare to stuck hatao; 10 min ruka rahe to 'failed' + sent = asal
+//                     chhape (app: ▶ Baqi chhapo). Urdu wale item ke hisse 4 qatar (12 label) — printer memory na bhare) · v4.5 (2026-10-15: 🏭 factory batch label — job.batch ho to daayein kone par batch no (running number ki jagah)) · v4.4 (2026-10-13: Urdu TEXT (ttf) — font printer mein sirf ek dafa (label-font.json), bhejne ke baad 20 s intezar;
 //                     --send-font = LABEL-URDU-FONT.bat) · v4.3 (2026-10-13 sham: malik — printer baar baar rukta/chalta (2 qatar ke hisse) + 3rd column khali (sirf number).
 //                     Hissa wapas 8 qatar (rowsMax 8) aur line mein 1 tak (agla hissa printer ke chalte chalte line mein — rukta nahi),
 //                     0.8 s intezar hata. Naye bat: LABEL-URDU-TEXT (urduMode ttf) / LABEL-URDU-BAND (urdu false) / LABEL-URDU-TASVEER
@@ -304,6 +307,32 @@ async function queueCount(printer) {   // abhi printer ki line mein kitne (chhap
 async function waitQueue(printer, max = 1, ms = 90000, stopIf = () => false) {   // agla hissa tab bhejo jab line mein <= max ho — ginti asal chhapai jaisi, cancel foran
   const t0 = Date.now(); while (Date.now() - t0 < ms) { if (stopIf()) return; if (await queueCount(printer) <= max) return; await new Promise(r => setTimeout(r, 2500)); }   // v4.1: cancel aaye to intezar foran khatam
 }
+// v4.6: printer ka haal (Windows) — Roman Urdu wajah
+async function printerWhy(printer) {
+  const o = String(await psRun(`$p = Get-Printer -Name ${psq(printer)} -ErrorAction SilentlyContinue; $j = @(Get-PrintJob -PrinterName ${psq(printer)} -ErrorAction SilentlyContinue | Select-Object -First 3 | ForEach-Object { [string]$_.JobStatus }) -join ','; "$($p.PrinterStatus)|$j"`) || '');
+  const t = o.toLowerCase();
+  if (/paper|toner|out/.test(t)) return 'Label / paper khatam ya roll atka';
+  if (/offline|notavailable|not available/.test(t)) return 'Printer offline — taar / bijli dekhein';
+  if (/error/.test(t)) return 'Printer mein error — laal batti? FEED dabayein';
+  if (/pause/.test(t)) return 'Printer ruka hua (PAUSE) — FEED / PAUSE dabayein';
+  if (/block|retained/.test(t)) return 'Print line atki hui';
+  return 'Printer aage nahi chal raha — FEED dabayein (' + o.slice(0, 40) + ')';
+}
+async function resumePaused(printer) { await psRun(`Get-PrintJob -PrinterName ${psq(printer)} -ErrorAction SilentlyContinue | Where-Object { [string]$_.JobStatus -match 'Paused' } | Resume-PrintJob -ErrorAction SilentlyContinue`); }
+// v4.6: agla hissa tab jab line <= 1; 30 s tak line na chale = stuck (app ko wajah), 10 min = haar (err)
+async function waitMove(printer, ref, ctl) {
+  let last = -1, moved = Date.now(), stuck = false, tried = false; const t0 = Date.now();
+  while (!ctl.cancel) {
+    const n = await queueCount(printer); if (n <= 1) { if (stuck) await ref.update({ stuck: FieldValue.delete(), beatAt: Date.now() }).catch(() => {}); return null; }
+    if (n !== last) { if (last >= 0 && stuck) { stuck = false; await ref.update({ stuck: FieldValue.delete() }).catch(() => {}); } last = n; moved = Date.now(); }
+    if (!stuck && Date.now() - moved > 30000) { stuck = true; const why = await printerWhy(printer).catch(() => 'Printer aage nahi chal raha'); await ref.update({ stuck: { at: Date.now(), why } }).catch(() => {}); log('⚠️ Label printer ruka: ' + why);
+      if (!tried) { tried = true; await resumePaused(printer).catch(() => {}); } }
+    if (stuck && Date.now() - moved > 10 * 60000) return new Error('Printer 10 min se ruka — ' + ((await printerWhy(printer).catch(() => '')) || ''));
+    if (Date.now() - t0 > 40 * 60000) return new Error('Printer bahut der se ruka');
+    await new Promise(r => setTimeout(r, 2500));
+  }
+  return null;
+}
 async function purgeQueue(printer) { await psRun(`Get-PrintJob -PrinterName ${psq(printer)} -ErrorAction SilentlyContinue | Remove-PrintJob -ErrorAction SilentlyContinue`); }
 
 const busy = new Set();
@@ -339,11 +368,12 @@ async function handle(doc) {
     const ur = S.urdu ? (await urduNames())[String(j.itemId)] || '' : '';   // v3.4: Urdu naam (ho to)
     let err = (S.urdu && ur) ? await ensureFont(S) : null;   // v3.9
     // v3.8: chhote jobs ek ke baad ek · v4.0: har hisse se pehle cancel dekho, line khali hone tak ruko (ginti = asal chhapai), ginti likho
-    const parts = err ? [] : tspl(S, j, nums, ur), perPart = rowsPer(S) * Math.max(1, Number(S.cols) || 1);
+    const SX = ur && S.urduMode !== 'ttf' ? { ...S, rowsPerJob: Math.min(rowsPer(S), 4), rowsMax: Math.min(Number(S.rowsMax) || 8, 4) } : S;   // v4.6: Urdu tasveer = chhote hisse
+    const parts = err ? [] : tspl(SX, j, nums, ur), perPart = rowsPer(SX) * Math.max(1, Number(S.cols) || 1);
     let sent = 0, cancelled = false;
     for (let k = 0; k < parts.length && !err; k++) {
       if (ctl.cancel) { cancelled = true; break; }   // v4.1: watcher ne jhanda lagaya
-      if (k > 0) { await waitQueue(S.printer, 1, 120000, () => ctl.cancel);   // v4.3: line mein 1 tak — printer chalta rahe
+      if (k > 0) { const we = await waitMove(S.printer, ref, ctl); if (we) { err = we; break; }   // v4.6: ruka = wajah app ko, 10 min = haar
          if (ctl.cancel) { cancelled = true; break; } try { if (((await ref.get()).data() || {}).cancelReq) { cancelled = true; break; } } catch {} }
       err = await sendRaw(parts[k], S.printer); if (err) break;
       sent = Math.min(copies2, (k + 1) * perPart);
@@ -356,7 +386,7 @@ async function handle(doc) {
       await ref.update({ status: 'cancelled', sent: done0, total: copies2, doneAt: Date.now() });
       log(`✕ Cancel: ${j.name} — ~${done0} / ${copies2} chhapne ke baad, printer ki line saaf`); return;
     }
-    if (err) { await ref.update({ status: 'failed', error: String(err.message).slice(0, 300), doneAt: Date.now() }); log(`Label NAHI chhapa: ${j.name} â€” ${err.message}`); }
+    if (err) { if (sent > 0) await purgeQueue(S.printer).catch(() => {}); await ref.update({ status: 'failed', error: String(err.message).slice(0, 300), sent: Math.max(0, sent - perPart), total: copies2, stuck: FieldValue.delete(), doneAt: Date.now() }); /* v4.6: sent = asal chhape (app: ▶ Baqi chhapo) */ log(`Label NAHI chhapa: ${j.name} â€” ${err.message}`); }
     else { await ref.update({ status: 'done', sent: copies2, total: copies2, doneAt: Date.now(), error: FieldValue.delete(), numFrom: nums.from, numTo: nums.to, numCode: nums.code, day: dayKey() }); log(`Label chhapa: ${j.name}${Number(j.qty) !== 1 ? ' - ' + num(j.qty) : ''} x ${copies2} -> ${nums.code}-${nums.from}${copies2>1?' se '+nums.code+'-'+nums.to:''}`); }
   } finally { busy.delete(doc.id); live.delete(doc.id); if (beat) clearInterval(beat); }
 }
