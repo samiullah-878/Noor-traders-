@@ -5320,3 +5320,14 @@ v2.103.25 (2026-10-18) — 🖨 LABEL PRINTER RUKA: wajah app mein + ▶ Baqi ch
   sent = asal chhape (sent − perPart). Pehle 120 s baad agla hissa phir bhi bhej deta tha (dher). Urdu tasveer wale item: hissa 4 qatar (12 label).
 - App barcode.js liveLabelsHTML: printing + stuck = "⚠️ Printer ruk gaya — <wajah> · 48 / 100" + "FEED dabayein" hint. failed / cancelled aur
   sent < total = button "▶ Baqi chhapo (N)" -> cloud.requestLabel copies N (agle number se, batch bhi). CAP stock.lblbaqi. Rules wahi. AI nahi.
+
+v2.103.26 (2026-10-18) — 🧮 GODAM 2 MILAO (dukan stock packet ki ginti se + har barcode ka %)
+- Malik: Godam 2 mein items add kar liye (pehle sab Noor Traders mein tha) — ab wohi items dukan ka stock adjust, aur har barcode ka % (itna reh jaye
+  to transfer note). POS ek hi stock (kg) rakhta hai; packet ginti app rakhti hai.
+- pos-stock.js: Transfer hub tile 'g2m' (sirf malik, collect().g2 ho): gmList() = Godam 2 (naam se) chunk ke stock > 0 items (agPool item: bq);
+  gmOpen() dialog #gmBody — hero, chips ⏳ Baqi / ✓ Ho gaye (gmDone = rackPk cfg mein koi p.b > 0), search. Item kholo: har barcode gmSizes (main z 1 +
+  bq) — "packet" input + "% reh jaye to lao 10·20·30·40" (default rackPct || 20); live "Rack par kul X · POS dukan Y · Farq Z"; andaza = POS dukan − Godam 2.
+  gmSave: (1) round chalu (roundNow) aur lock nahi to writeCount({id, name, stock: dukan POS, pack}, kul, branch 1) — farq purane farq-bill (post-farq,
+  "stock fraq") raaste se; round nahi to sirf notice. (2) cloud.setRackPk(id, {g: Godam 2, at: abhi, p[z] = {b, pct, n = b − floor(b·pct%), a = n}}) —
+  PC rack-bharo readPk wahi (sold since max(at, aakhri transfer)); n se pakket-war due. pkDue ab b/pct/left bhi; chip "3 / 10 bache (30% · hadd 30%)".
+- Test sk/gm.mjs (+ rk..rk5). PC / rules wahi. AI nahi.
