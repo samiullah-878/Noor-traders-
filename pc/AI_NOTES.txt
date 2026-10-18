@@ -3037,3 +3037,9 @@ item-post.js v1.3 (2026-10-18, manifest 2026-10-18.5): PackQty kabhi 0 nahi (Mat
 
 rack-bharo.js v1.4 (2026-10-18, manifest 2026-10-18.6): 🟠 lo:1 = dukan par bikne wala item jis ka dukan stock 1 carton se kam (Clear shampoo: 12 pcs
   wapas godam gaye the) — bikri/transfer note ke baghair bhi row. Godam fallback: aakhri transfer wala godam 0 -> sab se zyada maal wala godam. Sirf parhna.
+
+2026-10-18 — PC pos-khata-sync.js 📅 BARI TAREEKH (manifest 2026-10-18.7)
+- Malik: CPV-1425 (17 Oct) ki copy 18 Oct ko nikli — tareekh chhoti thi, aur "17-Oct-2026 12:50 pm" mein 12:50 AAJ print ka waqt tha (dhoka).
+- dateInfo(date)/dateMark(date, big, C, 'top'|'bot')/printStamp(): voucher tareekh upar (payMark ke neeche) aur neeche (Dastakhat se pehle) 2 guna;
+  aaj = "AAJ - 18 OCT 2026"; warna kala patta "KAL KA BILL" / "N DIN PURANA" (+ Urdu کل کا بل / N دن پرانا بل upar). Code line: "Tareekh: 17-Oct-2026",
+  alag line "Print: 18-Oct 1:06 pm". Bari (receiptBig) + purani (receipt) dono; HBL parchi wahi. App mein badlav nahi. AI nahi. Test scratchpad vd/t.cjs.

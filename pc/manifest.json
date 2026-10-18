@@ -1,6 +1,6 @@
 {
- "version": "2026-10-18.6",
- "note": "rack-bharo v1.4: 🟠 rack kam (dukan 1 carton se kam) + godam fallback",
+ "version": "2026-10-18.7",
+ "note": "pos-khata-sync: voucher par bari tareekh upar+neeche, KAL KA BILL / N DIN PURANA, print waqt alag",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
   "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
@@ -12,7 +12,7 @@
   "khata-sync-auto.bat": "7006262d6b2e395b6212aa2b130c191bb3284b1a2bf60793ee537fd845f69905",
   "label-auto.bat": "7094351892e48c7a2d4a32b2ac49e96e8d39e66856a3ff276d36b27b91368824",
   "label-print.js": "a78a4bfbfb25e5a61e6bf72c16ebc4d62e8a1af4bd285cd587c6a54e19154e10",
-  "pos-khata-sync.js": "19dbccc7716308d69e51c3d38a4476a6f1663f18437527f4d9b4b7fe91a0b131",
+  "pos-khata-sync.js": "f45a29ccca6e012d89c7dbf7732fe223e9461831fd42f577437bbf9a0805ef2e",
   "post-farq.js": "45e4536c872168c013e402207e0f3b5b6b46c71a7a4ab780b39a64b8f6233b52",
   "purchase-auto.bat": "f877f7a5c14ad0a654b499396e8661c20a1140c2b99d68c1a91b18cae440fb85",
   "purchase-post.js": "ba933ae898f9b19c9ab6cf9ca218dbd34635a50916f98acb477438f9dc47af2c",

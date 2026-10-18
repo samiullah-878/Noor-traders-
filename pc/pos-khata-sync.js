@@ -391,6 +391,26 @@ const payMark = (pay, ur, big, C) => {   // pay 'do' | 'copy' — ulta (kala) ba
   o.push(C + rv(big(pay === 'do' ? ' PAYMENT DE DO ' : ' COPY-PAYMENT NAHI ')), '');
   return o;
 };
+// 2026-10-18: 📅 BARI TAREEKH (malik: "ya bill kal ki date ka hai — upar likha ho bara sa aur neeche"). Voucher ki tareekh upar aur neeche 2 guna;
+//   aaj ka nahi to kala patta "KAL KA BILL" / "N DIN PURANA" + Urdu. Print ka waqt ALAG ("Print: 18-Oct 12:50 pm") — pehle voucher ki tareekh ke
+//   saath aaj ka waqt chhapta tha (17-Oct 12:50 pm = dhoka).
+function dateInfo(date, now = new Date()) {
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(String(date)) ? new Date(date + 'T00:00:00') : new Date(date);
+  if (isNaN(d)) return null;
+  const d0 = new Date(d.getFullYear(), d.getMonth(), d.getDate()), n0 = new Date(now.getFullYear(), now.getMonth(), now.getDate()), age = Math.round((n0 - d0) / 864e5);
+  return { age, txt: `${String(d.getDate()).padStart(2, '0')} ${MON[d.getMonth()].toUpperCase()} ${d.getFullYear()}` };
+}
+const printStamp = (now = new Date()) => { const hh = now.getHours() % 12 || 12; return `Print: ${String(now.getDate()).padStart(2, '0')}-${MON[now.getMonth()]} ${hh}:${String(now.getMinutes()).padStart(2, '0')} ${now.getHours() < 12 ? 'am' : 'pm'}`; };
+const dateMark = (date, big, C, where) => {   // where 'top' | 'bot'
+  const I = dateInfo(date); if (!I) return [];
+  const GS = '\x1d', rv = t => GS + 'B\x01' + t + GS + 'B\x00', o = [];
+  if (I.age === 0) { o.push(C + big('AAJ - ' + I.txt)); return o; }
+  const tag = I.age === 1 ? 'KAL KA BILL' : I.age > 1 ? I.age + ' DIN PURANA' : 'AAGE KI TAREEKH';
+  if (where === 'top') { if (UR.isOn()) o.push(UR.line(I.age === 1 ? 'کل کا بل' : I.age > 1 ? I.age + ' دن پرانا بل' : 'آگے کی تاریخ', 46, 1)); o.push(C + rv(big(' ' + tag + ' '))); }
+  o.push(C + big(I.txt));
+  if (where === 'bot') o.push(C + rv(' ' + tag + ' '));
+  return o;
+};
 function receiptBig({ title, code, date, lines, note, copy, pay }) {
   const W = PRINT_WIDTH, WB = 56;                                  // Font A 42 / Font B 56 akshar (TM-T88IV 80mm)
   const n = v => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -412,7 +432,8 @@ function receiptBig({ title, code, date, lines, note, copy, pay }) {
   if (UR.isOn() && UR_TITLE[title]) out.push(UR.line(UR_TITLE[title], 30, 1));
   if (copy) out.push(sm('(Dobara print)'));
   out.push(...payMark(pay, true, big2, C));
-  out.push(L + sm(rowW(WB, ascii(code), dt + '  ' + tm)), C + bar(code), L + hr);
+  out.push(...dateMark(date, big2, C, 'top'));   // 2026-10-18: 📅 bari tareekh
+  out.push(L + sm(rowW(WB, ascii(code), 'Tareekh: ' + dt)), L + sm(rowW(WB, '', printStamp(now))), C + bar(code), L + hr);
   let total = 0; const many = lines.length > 1;
   for (const l of lines) {
     total = Math.max(total, Number(l.amount) || 0);
@@ -436,7 +457,7 @@ function receiptBig({ title, code, date, lines, note, copy, pay }) {
   }
   const nl = wrap(note, WB);
   if (nl.length) out.push(hrB, sm('Tafseel:'), ...nl.map(sm));
-  out.push(hrB, '', sm('Dastakhat: ______________________'), '', C + sm('Blue Khata app'), L, '', '');
+  out.push(hrB, ...dateMark(date, big2, C, 'bot'), L + '', sm('Dastakhat: ______________________'), '', C + sm('Blue Khata app'), L, '', '');
   out.push(GS + 'V\x42\x00');                                    // kaghaz kaato
   return out.join('\r\n');
 }
@@ -467,8 +488,9 @@ function receipt({ title, code, date, lines, note, copy, bank, pay }) {
   if (!bank && UR.isOn() && UR_TITLE[title]) out.push(UR.line(UR_TITLE[title], 40));   // 2026-10-14: 🔤 Urdu
   if (copy) out.push('(Dobara print)');
   out.push(...payMark(pay, false, big, C));   // 2026-10-17: 💵 payment de do / copy
+  if (!bank) out.push(...dateMark(date, big, C, 'top'));   // 2026-10-18: 📅 bari tareekh
   if (bank) out.push(L + hr, row('Tareekh: ' + dt, 'Waqt: ' + tm), row('Voucher: ' + ascii(code), ''), L + hr);
-  else out.push(L + hr, row('Voucher No: ' + ascii(code), ''), row('Tareekh: ' + dt, 'Waqt: ' + tm), C + bar(code), L + hr);
+  else out.push(L + hr, row('Voucher No: ' + ascii(code), ''), row('Tareekh: ' + dt, ''), row('', printStamp(now)), C + bar(code), L + hr);
   let total = 0; const bq = [];
   for (const l of lines) {
     total = Math.max(total, Number(l.amount) || 0);
@@ -494,6 +516,7 @@ function receipt({ title, code, date, lines, note, copy, bank, pay }) {
   if (bq.length) out.push(L + hr);
   const nl = wrap(note, W);
   if (nl.length) out.push('Tafseel:', ...nl, hr);
+  if (!bank) out.push(...dateMark(date, big, C, 'bot'), L + hr);
   out.push('', '', 'Dastakhat: ______________________', '', C + 'Blue Khata app', L, '', '', '');
   out.push(GS + 'V\x42\x00');                                    // kaghaz kaato
   return out.join('\r\n');

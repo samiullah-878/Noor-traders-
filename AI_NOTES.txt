@@ -5285,3 +5285,9 @@ v2.103.22 (2026-10-18) — 🟠 RACK KAM + 🔍 "Ye list mein kyun nahi?" + ➕ 
   abhi patti nikli / kisi godam mein stock nahi / godam mein poora carton nahi / aakhri note ke baad X bike hadd Y / 6 mahine dukan par nahi bika —
   + dukan/godam stock + "➕ Phir bhi lao" (rk.extra; rkSynth = stock se farzi row, sab se zyada maal wala godam, 1 carton). Print ke baad extra hat-ta hai.
 - Tests rk/t4.cjs, sk/rk5.mjs (+ purane rk..rk4 pass). POS mein kuch nahi likhta. AI nahi.
+
+2026-10-18 — PC pos-khata-sync.js 📅 BARI TAREEKH (manifest 2026-10-18.7)
+- Malik: CPV-1425 (17 Oct) ki copy 18 Oct ko nikli — tareekh chhoti thi, aur "17-Oct-2026 12:50 pm" mein 12:50 AAJ print ka waqt tha (dhoka).
+- dateInfo(date)/dateMark(date, big, C, 'top'|'bot')/printStamp(): voucher tareekh upar (payMark ke neeche) aur neeche (Dastakhat se pehle) 2 guna;
+  aaj = "AAJ - 18 OCT 2026"; warna kala patta "KAL KA BILL" / "N DIN PURANA" (+ Urdu کل کا بل / N دن پرانا بل upar). Code line: "Tareekh: 17-Oct-2026",
+  alag line "Print: 18-Oct 1:06 pm". Bari (receiptBig) + purani (receipt) dono; HBL parchi wahi. App mein badlav nahi. AI nahi. Test scratchpad vd/t.cjs.
