@@ -3238,3 +3238,6 @@ v2.103.49 (2026-10-20, PC/rules nahi) — ⚡ AGENT TEZ — malik: "time bohat l
   "sab packets 20%", "<item> ka packet 30%", "<item> kitna hai", "patti baqi / rack bhara?", "kya lana hai (godam se)", "kya mangwana (20%)",
   "demand", "rate list [category]", "<item> ke N label". extSay(name, r) = read ka natija Roman Urdu likhai.
 - Settings → AI key: "🤖 Agent ki raftar" chips lite / flash / pro (aiConfig.agentModel; agModel(cfg) naam badalta hai). Test sk/ag.mjs. AI wahi.
+
+v2.103.50 (2026-10-20) — BUG FIX ⚖️ Tolai har screen par chhap jata tha: tolai.js listenTolaiDay har update par $(dialog).open dekh kar paint() karta tha —
+  chahe khirki mein rack bharo / koi aur ho. Ab sirf jab dialogTitle "⚖️ Tolai" ho. (Ek dafa Tolai khulne ke baad masla shuru hota tha.) AI nahi.

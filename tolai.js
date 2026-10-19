@@ -2,7 +2,7 @@
 // Har label par PC (label-print v3) number chhapta hai: "3I-47" = 23 tareekh, September, us item ka 47wan label.
 // Ginti = aaj ka aakhri number (pichhla number nahi ghatate — number roz 1 se shuru hota hai).
 // Data: blueAccess/tolaiConfig (duty + har size ka waqt) aur tolai/<din> (har din ka hisaab).
-import { blurScore } from './pic-check.js?v=2.103.49';   // v2.103.43: 📷 dhundli check
+import { blurScore } from './pic-check.js?v=2.103.50';   // v2.103.43: 📷 dhundli check
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const NUMF = new Intl.NumberFormat('en-PK');
@@ -31,7 +31,7 @@ export function tolaiSetup(o) {
 function watchDay(day) {
   if (cur.day === day && dayStop) return;
   dayStop?.(); cur = { day, rows: [] };
-  if (cloud?.listenTolaiDay) dayStop = cloud.listenTolaiDay(day, rows => { cur = { day, rows: rows || [] }; if ($('dialog')?.open) paint(); });
+  if (cloud?.listenTolaiDay) dayStop = cloud.listenTolaiDay(day, rows => { cur = { day, rows: rows || [] }; if ($('dialog')?.open && /^⚖️ Tolai/.test($('dialogTitle')?.textContent || '')) paint(); });   // v2.103.50 BUG FIX: pehle har khuli khirki par Tolai chhap jata tha (doosri screen gayab)
 }
 
 // ---------- hisaab ----------
