@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.60';
-import { liveLabelsHTML } from './barcode.js?v=2.103.60';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.61';
+import { liveLabelsHTML } from './barcode.js?v=2.103.61';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -627,7 +627,7 @@ let gintiPdfOf = null;
 export function setGintiPdf(fn) { gintiPdfOf = fn; }
 let gf = 'all', gSel = null;   // gSel: null = sab farq wale tick
 function openGinti() {
-  const d = $('dialog'); if (!d) return;
+  const d = $('dialog'); if (!d) return; recentPush({ key: 'ginti', icon: '📋', label: 'Ginti', open: { kind: 'stock', screen: 'ginti' } });
   const { pick, items, names } = collect(); roundNow();
   const list = items.map(r => ({ r, c: countOf(pick, r) })).filter(x => x.c).sort((a, b) => (Number(b.c.at) || 0) - (Number(a.c.at) || 0));
   const see = seeStock(), own = isOwner();
@@ -1348,7 +1348,7 @@ export function setRegPdf(fn) { regPdfOf = fn; }
 //   Chips: Sab / sirf stock wale / category · Rate chhupao (sirf naam + pcs) · barcode bhi. regPdfOf (printArea + openReportPreview = kholo + bhejo).
 let rp = null;
 function rpItems() { return agPool().list.filter(it => !isHidden(it)); }
-function rpOpen() { if (!can('stock.ratepdf') && !isOwner()) { notice('Ijazat nahi'); return; } rp = rp || { who: 'all', cat: '', hide: false, bc: false, q: '' };
+function rpOpen() { if (!can('stock.ratepdf') && !isOwner()) { notice('Ijazat nahi'); return; } rp = rp || { who: 'all', cat: '', hide: false, bc: false, q: '' }; recentPush({ key: 'ratelist', icon: '📄', label: 'Rate list PDF', open: { kind: 'stock', screen: 'ratelist' } });
   const d = $('dialog'); if (!d) return; d.classList.remove('full-dialog'); d.classList.add('search-dialog'); $('dialogTitle').textContent = '📄 Rate list PDF'; $('dialogBody').innerHTML = '<div id="rpBody"></div>'; if (!d.open) d.showModal(); rpPaint(); }
 function rpList() { const all = rpItems(), st1 = id => Number(saleStockItem(1, id)?.stock) || 0;
   let L = all.filter(it => rp.who !== 'stock' || st1(it.id) > 0 || Number(it.stock) > 0); if (rp.cat) L = L.filter(it => String(it.cat || '').trim() === rp.cat);
@@ -1486,7 +1486,7 @@ function regHTML() {
           ${op ? `<div class="reg-lines">${(t.lines || []).map(l => regLineHTML(t, l)).join('')}${isOwner() ? '<small class="ctn-tip">👆 Item par tap = carton ginti (jaise 4 = 1)</small>' : ''}${t.note ? `<small>📝 ${esc(t.note)}</small>` : ''}</div>` : ''}</div>`; }).join('')}</div>`; }).join('') || '<p class="muted">Is arse mein koi transfer note nahi.</p>'}
     <div class="account-tools iv-acts"><button type="button" class="primary" data-reg-pdf="1">📄 PDF · WhatsApp</button><button type="button" data-in-close="1">✕ Band</button></div></div>`;
 }
-function openRegister() {
+function openRegister() { recentPush({ key: 'register', icon: '📋', label: 'Transfer register', open: { kind: 'stock', screen: 'register' } });
   const d = $('dialog'); if (!d) return;
   d.classList.remove('search-dialog'); d.classList.add('full-dialog');
   regView = 'list'; ctnLine = ''; tcStart();   // v2.99.18 · v2.99.21: ✓/⏳ nishan
@@ -1748,7 +1748,7 @@ window.addEventListener?.('hashchange', () => tcHashGo());
 setTimeout(() => tcHashGo(), 2500);
 export function openTransferCheck(view) {
   const d = $('dialog'); if (!d) return;
-  tcStart(); if (view) tcView = view;
+  tcStart(); if (view) tcView = view; recentPush({ key: 'tc', icon: '🧾', label: 'Transfer check', open: { kind: 'stock', screen: 'check', view: tcView } });
   d.classList.remove('search-dialog'); d.classList.add('full-dialog');
   $('dialogTitle').textContent = '🧾 Transfer check';
   $('dialogBody').innerHTML = tcHTML();
@@ -1917,7 +1917,7 @@ function trScanOpen() {
   saleSeen = []; padUnit = 'ctn'; openScanner();   // v2.99.64: transfer mein tadad pehle Ctn
 }
 function openTransfer() {
-  const d = $('dialog'); if (!d) return;
+  const d = $('dialog'); if (!d) return; recentPush({ key: 'transfer', icon: '⇄', label: 'Transfer note', open: { kind: 'stock', screen: 'transfer' } });
   trZeroShow = false;   // v2.18
   const bs = trBranches();
   if (trFrom == null) trFrom = bs.find(b => b.id !== 1)?.id ?? bs[0]?.id;
@@ -3720,7 +3720,7 @@ document.addEventListener('toggle', e => { if (rk && e.target?.matches?.('.rk-se
 function rkGDefault() { const { names, branches } = collect(); const G = (branches || []).filter(b => b !== 1); return G.find(b => /godam\s*1/i.test(String(names?.[b] || ''))) ?? G[0] ?? 0; }
 function rackOpen() {
   rackWatch(); start(false); rk = { q: '', sel: new Map(), off: new Set(), ed: '', busy: '', pOff: new Set(), pQ: new Map(), pset: false, pq: '', pEd: '', pDraft: new Map(), pg: Number(localStorage.getItem('sam-rk-pg')) || 0, zAll: false, man: new Map(), n: rkNGet(), extra: new Map(), plOpen: false, plq: '', plEd: '', plDr: new Map(), dt: new Map(), g: 0, tab: 'lane', lbOff: new Set(), lbOn: new Set(), roF: (v => /^\d+$/.test(v) ? Number(v) : v || 'all')(localStorage.getItem('sam-ro-f')), roQ: new Map(), roQs: '', roEd: '', roP: localStorage.getItem('sam-ro-p') || '', roPq: '' };   // roP = supplier chip (v2.103.53) · lbOff = packet (default label ✓) · lbOn = carton (default ✗)
-  { const v = Number(localStorage.getItem('sam-rk-g')); rk.g = v >= 0 && (v === 0 || collect().branches.includes(v)) && localStorage.getItem('sam-rk-g') != null ? v : rkGDefault(); }   // v2.103.37: godam chip
+  { const v = Number(localStorage.getItem('sam-rk-g')); rk.g = v >= 0 && (v === 0 || collect().branches.includes(v)) && localStorage.getItem('sam-rk-g') != null ? v : rkGDefault(); } setTimeout(rkRecent, 0);   // v2.103.37: godam chip
   if (!trStop && cloud?.listenTransfers) trStop = cloud.listenTransfers(trGot);
   if (!rackDoneStop && cloud?.listenRackDone) rackDoneStop = cloud.listenRackDone(d => { rackDone = d || {}; if (rk && $('rkBody')) rkPaint(); }); tcStart();
   if (!roStop && cloud?.listenReorder) roStop = cloud.listenReorder(d => { ro = d || { rows: [], at: 0 }; if (rk && $('rkBody')) rkPaint(); }); if (!roDmStop && cloud?.listenDemands) roDmStop = cloud.listenDemands(l => { roDm = l || []; if (rk && $('rkBody')) rkPaint(); });   // v2.103.45
@@ -3826,7 +3826,7 @@ function gmList() {
 }
 const gmIsDone = (br, id) => { const c = gmCnt(br, id); return !!(c && c.round === roundNow()) || (br === 1 && gmDone(id)); };
 export function gmOpen() {
-  start(true); rackWatch(); let v = {}; try { v = JSON.parse(localStorage.getItem(GM_LS) || '{}') || {}; } catch {}
+  start(true); rackWatch(); recentPush({ key: 'milao', icon: '🧮', label: 'Stock milao', open: { kind: 'stock', screen: 'milao' } }); let v = {}; try { v = JSON.parse(localStorage.getItem(GM_LS) || '{}') || {}; } catch {}
   gm = { q: '', tab: 'baqi', ed: '', dr: new Map(), busy: '', br: Number(v.br) || 1, src: Number(v.src) || 0, pct: Number(v.pct) || 0, dirty: false };
   const d = $('dialog'); if (!d) return; d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = '🧮 Stock milao — ginti + %'; $('dialogBody').innerHTML = '<div class="rk-root" id="gmBody"></div>'; if (!d.open) d.showModal(); gmPaint();
 }
@@ -4037,8 +4037,8 @@ async function rkGo(g) {
 }
 document.addEventListener('click', e => {
   const t = e.target.closest?.('[data-rk-all],[data-rk-go],[data-rk-e],[data-rk-sv],[data-rk-au],[data-rk-md],[data-rk-off],[data-rk-on],[data-rkp-set],[data-rkp-go],[data-rkp-ed],[data-rkp-g],[data-rkp-sv],[data-rkp-del],[data-rkp-pg],[data-rk-zall],[data-rk-n],[data-rk-add],[data-rk-hd],[data-rk-pct],[data-rk-pc],[data-rk-g],[data-rk-tab]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
-  if (d.rkTab) { rk.tab = d.rkTab; rkPaint(); return; }
-  if (d.rkG != null) { rk.g = Number(d.rkG) || 0; try { localStorage.setItem('sam-rk-g', String(rk.g)); } catch {} rkPaint(); return; }   // v2.103.37
+  if (d.rkTab) { rk.tab = d.rkTab; rkPaint(); rkRecent(); return; }
+  if (d.rkG != null) { rk.g = Number(d.rkG) || 0; try { localStorage.setItem('sam-rk-g', String(rk.g)); } catch {} rkPaint(); rkRecent(); return; }   // v2.103.37
   if (d.rkMd || d.rkOff || d.rkOn) { const id = d.rkMd ? d.rkMd.split('|')[0] : (d.rkOff || d.rkOn), old = rackCfg(id) || {};
     const v = d.rkMd ? { ...old, mode: d.rkMd.split('|')[1] || undefined } : d.rkOff ? { ...old, off: true } : { ...old, off: undefined };
     const clean = Object.fromEntries(Object.entries(v).filter(([, x]) => x !== undefined && x !== '' && x !== false)), nv = Object.keys(clean).length ? clean : null;
@@ -4208,7 +4208,14 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.103.60';
+import { agentRegister } from './agent.js?v=2.103.61';
+import { recentPush } from './recent.js?v=2.103.61';   // v2.103.61: 🕘 haal hi ki khirkiyan
+const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
+function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
+// v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)
+export function stockScreenOpen(o = {}) { try { $('dialog')?.close(); } catch {}
+  if (o.screen === 'rack') { rackOpen(); if (o.g != null && collect().branches.includes(Number(o.g))) rk.g = Number(o.g); if (o.tab && RK_TABN[o.tab]) rk.tab = o.tab; rkPaint(); rkRecent(); }
+  else if (o.screen === 'milao') gmOpen(); else if (o.screen === 'ratelist') rpOpen(); else if (o.screen === 'transfer') openTransfer(); else if (o.screen === 'check') openTransferCheck(o.view || 'nikle'); else if (o.screen === 'register') openRegister(); else if (o.screen === 'ginti') openGinti(); else if (o.screen === 'ijobs') ijDlg(); }
 const AG = (() => {
   const S_ = { type: 'STRING' }, N_ = { type: 'NUMBER' }, B_ = { type: 'BOOLEAN' }, A_ = it => ({ type: 'ARRAY', items: it }), O_ = (p, r = []) => ({ type: 'OBJECT', properties: p, required: r });
   const names = () => collect().names || {};
