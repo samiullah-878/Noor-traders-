@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.40';
-import { liveLabelsHTML } from './barcode.js?v=2.103.40';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.41';
+import { liveLabelsHTML } from './barcode.js?v=2.103.41';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -754,6 +754,7 @@ function summaryHTML(branches, pick, items, meta, names, canJama = false) {
     can('stock.tolai') ? tile('data-stock-tolai', '⚖️', 'Tolai') : '',
     can('stock.transfer') ? tile('data-stock-transfer', '⇄', 'Transfer') : '',
     canEditItem() ? tile('data-stock-urdu', '🔤', 'Urdu naam') : '',
+    can('stock.ratepdf') ? tile('data-stock-ratepdf', '📄', 'Rate list PDF') : '',   // v2.103.41
   ].filter(Boolean);
   const extra = filter === 'baqi' ? 'Ginti baqi' : filter === 'farq' ? '⚖️ Farq wale' : filter === 'nishan' ? '⏳ Baqi nishan' : filter === 'check' ? '🔍 Check wale' : filter === 'hidden' ? 'Band items' : filter === 'hday' && hDay ? '🕘 ' + hDayLabel(hDay) : '';
   const fN = (hDay ? 1 : 0) + (sort !== 'name' ? 1 : 0) + (extra ? 1 : 0);
@@ -1337,6 +1338,35 @@ async function openIn(refresh = true, keepScroll = false) {
 // ---------- v2.35: 📋 TRANSFER REGISTER — har transfer note, waqt ke sath (POS + app), din-wise jor ----------
 let regDays = 1, regGodam = 'all', regQ = '', regOpen = new Set(), regPdfOf = null;
 export function setRegPdf(fn) { regPdfOf = fn; }
+// ---- v2.103.41: 📄 RATE LIST PDF — malik: "all items ki ek PDF: names, rates, wholesale, carton pieces — kisi ko bhejni hai".
+//   Chips: Sab / sirf stock wale / category · Rate chhupao (sirf naam + pcs) · barcode bhi. regPdfOf (printArea + openReportPreview = kholo + bhejo).
+let rp = null;
+function rpItems() { return agPool().list.filter(it => !isHidden(it)); }
+function rpOpen() { if (!can('stock.ratepdf') && !isOwner()) { notice('Ijazat nahi'); return; } rp = rp || { who: 'all', cat: '', hide: false, bc: false, q: '' };
+  const d = $('dialog'); if (!d) return; d.classList.remove('full-dialog'); d.classList.add('search-dialog'); $('dialogTitle').textContent = '📄 Rate list PDF'; $('dialogBody').innerHTML = '<div id="rpBody"></div>'; if (!d.open) d.showModal(); rpPaint(); }
+function rpList() { const all = rpItems(), st1 = id => Number(saleStockItem(1, id)?.stock) || 0;
+  let L = all.filter(it => rp.who !== 'stock' || st1(it.id) > 0 || Number(it.stock) > 0); if (rp.cat) L = L.filter(it => String(it.cat || '').trim() === rp.cat);
+  if (rp.q.trim()) L = smartSearch(L, rp.q, 500); return L.sort((a, b) => String(a.cat || '').localeCompare(String(b.cat || '')) || String(a.name).localeCompare(String(b.name))); }
+function rpPaint() { const el = $('rpBody'); if (!el || !rp) return; const all = rpItems(), cats = [...new Set(all.map(it => String(it.cat || '').trim()).filter(Boolean))].sort(), L = rpList();
+  el.innerHTML = `<div class="rk-root"><p class="rk-note">Jis ko bhejni ho utne items chunein — PDF mein naam, retail, wholesale, 1 ctn = pcs, ctn rate.</p>
+    <div class="rk-nb"><span>Items</span>${[['all', 'Sab'], ['stock', 'Sirf stock wale']].map(([k, l]) => `<button type="button" class="${rp.who === k ? 'is-in' : ''}" data-rp-who="${k}">${l}</button>`).join('')}</div>
+    ${cats.length ? `<div class="rk-nb"><span>Category</span><button type="button" class="${!rp.cat ? 'is-in' : ''}" data-rp-cat="">Sab</button>${cats.map(c => `<button type="button" class="${rp.cat === c ? 'is-in' : ''}" data-rp-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>` : ''}
+    <div class="rk-nb"><span>Dikhao</span><button type="button" class="${rp.hide ? 'is-in' : ''}" data-rp-hide="1">${rp.hide ? '🙈 Rate chhupe hain' : '🙈 Rate chhupao'}</button><button type="button" class="${rp.bc ? 'is-in' : ''}" data-rp-bc="1">🏷 Barcode bhi</button></div>
+    <label class="hs-search"><input type="search" data-rp-q="1" placeholder="🔍 naam se chhanto (ikhtiyari)" value="${esc(rp.q)}" autocomplete="off"></label>
+    <div class="rk-ed"><button type="button" class="rk-sv" data-rp-go="1"${L.length ? '' : ' disabled'}>📄 PDF banao — ${num(L.length)} items</button></div>
+    <p class="rk-note">Rate = POS ke aaj ke rate (retail = piece, wholesale = W). Pehle 5: ${esc(L.slice(0, 5).map(it => it.name).join(' · '))}${L.length > 5 ? ' …' : ''}</p></div>`; }
+function rpPdf() { const L = rpList(); if (!L.length || !regPdfOf) { notice('Koi item nahi'); return; } const h = rp.hide, r2 = v => Math.round(v * 100) / 100, fmt = v => Number(v) > 0 ? num(r2(Number(v))) : '—';
+  let cat = null, n = 0; const rows = L.map(it => { const pk = Number(it.pack) || 0, rt = Number(it.rate2) || Number(it.rate) || 0, cr = pk > 1 ? (Number(it.rate) || 0) * pk : 0, wr = Number(it.ws) || Number(it.wrate) || 0, wc = pk > 1 && Number(it.wrate) > 0 ? Number(it.wrate) * pk : 0, c = String(it.cat || '').trim();
+      const head = c !== cat ? (cat = c, `<tr class="rp-cat"><td colspan="${h ? 3 : 6}">${esc(c || 'Baqi items')}</td></tr>`) : ''; n++;
+      return head + `<tr><td class="rp-n">${n}</td><td class="rp-item"><b>${esc(it.name)}</b>${rp.bc && it.code ? `<br><small>${esc(String(it.code))}</small>` : ''}</td>${h ? '' : `<td class="rp-r">${fmt(rt)}</td><td class="rp-r">${fmt(wr)}</td>`}<td class="rp-r">${pk > 1 ? num(pk) + ' ' + esc(it.uName || 'pcs') : '—'}</td>${h ? '' : `<td class="rp-r">${cr ? fmt(cr) : '—'}${wc ? `<br><small>W ${fmt(wc)}</small>` : ''}</td>`}</tr>`; }).join('');
+  const html = `<h1>NOOR TRADERS</h1><h2>${h ? 'Items ki list' : 'Rate list'}${rp.cat ? ' — ' + esc(rp.cat) : ''}</h2><p>${num(L.length)} items · ${esc(new Date().toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }))}${h ? '' : ' · Rate fi piece (Rs) · Ctn rate = poore carton ka'}</p>
+    <table class="iv-tbl rp-tbl"><thead><tr><th>#</th><th>Item</th>${h ? '' : '<th>Retail</th><th>Wholesale</th>'}<th>1 Ctn</th>${h ? '' : '<th>Ctn rate</th>'}</tr></thead><tbody>${rows}</tbody></table>
+    <p style="font-size:11px;color:#666">Noor Traders · 0345-0412515 · rate badal sakte hain</p>`;
+  regPdfOf(html, (h ? 'Items-list' : 'Rate-list') + (rp.cat ? '-' + rp.cat : '')); }
+document.addEventListener('click', e => { const t = e.target.closest?.('[data-rp-who],[data-rp-cat],[data-rp-hide],[data-rp-bc],[data-rp-go]'); if (!t || !rp || !t.closest('#rpBody')) return; const d = t.dataset;
+  if (d.rpWho) rp.who = d.rpWho; else if (d.rpCat != null) rp.cat = d.rpCat; else if (d.rpHide) rp.hide = !rp.hide; else if (d.rpBc) rp.bc = !rp.bc; else if (d.rpGo) { rpPdf(); return; } rpPaint(); });
+document.addEventListener('input', e => { const t = e.target; if (rp && t?.dataset?.rpQ != null) { rp.q = t.value || ''; clearTimeout(rpPaint.t); rpPaint.t = setTimeout(() => { const b = document.querySelector('[data-rp-go]'), L = rpList(); if (b) { b.textContent = `📄 PDF banao — ${num(L.length)} items`; b.disabled = !L.length; } }, 120); } });
+
 const regClock = ms => { try { return new Date(ms).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }); } catch { return ''; } };
 const regDay = ms => { const d = new Date(ms); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 // ---------- v2.99.18: ⚖️ CARTON GINTI — chhote carton (Sufi oil, Dalda…) register mein "4 carton = 1" gine jayein ----------
@@ -2180,6 +2210,7 @@ document.addEventListener('click', e => {
   if (e.target.closest?.('[data-stock-transfer]')) { openTransfer(); return; }
   if (e.target.closest?.('[data-stock-in]')) { openIn(true); return; }
   if (e.target.closest?.('[data-ginti-pdf]')) { gintiPdfOf?.(); return; }       // v2.13
+  if (e.target.closest?.('[data-stock-ratepdf]')) { rpOpen(); return; }   // v2.103.41
   if (e.target.closest?.('[data-stock-tolai]')) { tolaiOf?.(); return; }        // v2.7
   if (tolaiClickOf && tolaiClickOf(e)) return;          // v2.6
   const inb = e.target.closest?.('[data-in-d],[data-in-k],[data-in-red],[data-in-item],[data-in-count],[data-in-pdf],[data-in-close]');

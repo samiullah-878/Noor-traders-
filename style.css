@@ -4323,3 +4323,5 @@ html body :is(#summary,#dialogBody) .rk-set{border-radius:14px;background:#fff;b
 /* v2.103.39: 🏷 label chip */
 html body :is(#summary,#dialogBody) .rk-lb{grid-column:1/-1;display:inline-flex;align-items:center;gap:6px;justify-self:start;padding:5px 10px;border-radius:999px;border:1px dashed #c7cdfb;background:#fff;color:#4b5280;font-size:12px;font-weight:800;cursor:pointer}
 html body :is(#summary,#dialogBody) .rk-lb input{width:16px;height:16px;margin:0;accent-color:#4f46e5}html body :is(#summary,#dialogBody) .rk-lb.is-in{background:#eef2ff;border-style:solid;border-color:#a5b4fc;color:#3730a3}
+/* v2.103.41: 📄 rate list pdf */
+.report-document .rp-tbl td.rp-r{text-align:right;white-space:nowrap}.report-document .rp-tbl td.rp-n{color:#888;width:28px}.report-document .rp-tbl tr.rp-cat td{background:#f1f5f9;font-weight:800;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#334155}.report-document .rp-tbl td.rp-item small{color:#666}
