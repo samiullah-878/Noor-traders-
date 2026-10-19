@@ -6,9 +6,9 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.103.58';
-import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.103.58';   // v2.99.29: shaffaf order formula
-import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.103.58';
+import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.103.59';
+import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.103.59';   // v2.99.29: shaffaf order formula
+import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.103.59';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -743,13 +743,14 @@ function openEntryOf(n) { const m = /^(entry|transfer):(.+)$/.exec(n.transferId 
   closeDlg(); routeTo('khata', pid); if (r) setTimeout(() => { const el = document.querySelector(`[data-eid="${CSS.escape(r.id)}"]`); if (el) { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('ks-flash'); } }, 300); }
 
 // ---------- v2.99.8: 🤖 NOOR AGENT — bol kar note / reminder, aur notes dhoondna ----------
-export async function noteAgentSave({ text = '', day = '', time = '', partyId = '', items = [], nag } = {}) {
+export async function noteAgentSave({ text = '', day = '', time = '', partyId = '', items = [], nag, pics: photos = [] } = {}) {   // v2.103.59: pics = dataURL (2 tak) — agent photo note
   if (!canUseOf()) throw Error('Is login par notes ki ijazat nahi');
   if (!cloud?.saveNote) throw Error('Notes ke liye app update karein');
   const t = String(text || '').trim(); if (!t) throw Error('Note mein kuch likhein');
   const p = partyId ? partyOf(partyId) : null;
   const d = await saveNote({ kind: 'note', text: t, items: (items || []).slice(0, 20), partyId: p ? p.id : '', partyName: p ? p.name : '',
-    remindDay: /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : '', remindTime: /^\d{2}:\d{2}$/.test(time) ? time : '', allDay: false, nag: nagOk(nag) || undefined });   // v2.103.7: na bataya = khud har 1 ghanta
+    remindDay: /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : '', remindTime: /^\d{2}:\d{2}$/.test(time) ? time : '', allDay: false, nag: nagOk(nag) || undefined, hasPic: Array.isArray(photos) && photos.length > 0 });   // v2.103.7: na bataya = khud har 1 ghanta
+  if (Array.isArray(photos) && photos.length && cloud?.putPhotos) { const P = photos.slice(0, 2).filter(x => typeof x === 'string' && x.startsWith('data:')); pics.set(d.id, P); cloud.putPhotos('n-' + d.id, P).catch(er => notice('⚠️ Tasveer save nahi hui: ' + (er?.message || er))); }
   badge(); return d;
 }
 export function noteAgentFind(q = '', { open = true, n = 8 } = {}) {

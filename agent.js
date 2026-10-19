@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.103.58';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.103.58';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.103.59';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.103.59';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -537,7 +537,7 @@ async function run(c) {
   if (c.type === 'purchase') { const r = H.ppFill(c.p.id, c.lines.map(l => ({ id: l.id, name: l.name, ctn: l.ctn, pcs: l.pcs, costCtn: l.costCtn, costPcs: l.costPcs }))); c.cart = r; return `Purchase screen par lag gaya — ${r.supplierName} · ${r.n} items · ${rs(r.total)}`; }
   if (c.type === 'sale') { const r = H.saleFill(c.mode, c.m.lines.map(l => ({ id: l.item_id, name: l.name, ctn: l.ctn, pcs: l.pcs }))); return `Sale screen par lag gaya — ${r.n} items · ${rs(r.total)} (${c.mode === 'wholesale' ? 'Wholesale' : 'Counter'})`; }
   if (c.type === 'notes') { const r = await H.noteBulk(c.list.map(x => x.id), { day: c.day, time: c.time, nag: c.nag, done: c.done }); if (r.fail.length && !r.ok) throw Error(r.fail[0]); return `${r.ok} notes ${c.done ? 'ho gaye' : 'badal gaye'}${r.fail.length ? ` · ${r.fail.length} nahi hue` : ''}`; }
-  if (c.type === 'note') { await H.noteSave({ text: c.text, day: c.day, time: c.time, partyId: c.p?.id || '', items: c.items, nag: c.nag || 0 }); return `Note save${c.day ? ' · 🔔 ' + c.day + (c.time ? ' ' + c.time : '') : ''}`; }
+  if (c.type === 'note') { await H.noteSave({ text: c.text, day: c.day, time: c.time, partyId: c.p?.id || '', items: c.items, nag: c.nag || 0, pics: c.pics || [] }); return `Note save${c.day ? ' · 🔔 ' + c.day + (c.time ? ' ' + c.time : '') : ''}`; }
   if (c.type === 'act') { const r = await c.a.run(c.args); try { H.audit?.({ area: 'agent', act: 'act', what: ('🤖 ' + (c.a.label || c.a.name) + ': ' + c.sum).slice(0, 120), note: String(c.said || '').slice(0, 200) }); } catch {} return typeof r === 'string' ? r : (r?.msg || r?.ok === false ? (r?.why || 'Nahi hua') : 'Ho gaya'); }
   if (c.type === 'due') {
     const old = H.records().find(r => r.id === 'reminder-' + c.p.id);
@@ -597,6 +597,9 @@ async function ask(text, shown) {
   try { await askAI(t); } finally { busy = false; setTyping(''); }
 }
 let lastAsk = '';
+// v2.103.59: 🧰 malik — "agent mein sirf reminder wala on rakho, baqi sab off (time lag raha hai); neeche wale chips on rahein" → AI ko sirf notes/reminder tools; stock ke ⚡ quick chips (extQuick, bina AI) phir bhi chalte hain
+const REM_TOOLS = new Set(['search_notes', 'propose_note', 'propose_notes_bulk', 'due_list', 'propose_due_date', 'find_account', 'hisaab']);
+const agTools = cfg => (cfg.agentTools || 'reminder') === 'all' ? (extOn() ? DECL.concat(extDeclFor(lastAsk)) : DECL) : DECL.filter(d => REM_TOOLS.has(d.name));
 const agModel = cfg => { const m = String(cfg.model || ''); if (cfg.agentModel === 'lite') return m.includes('lite') ? m : m.replace(/-flash(?!-lite)/, '-flash-lite') || m; if (cfg.agentModel === 'pro') return m.replace(/-flash(-lite)?/, '-pro'); return m; };   // v2.103.49: ⚡ agent ki raftar (Settings → AI key)
 async function askAI(t) {
   lastAsk = t; setTyping('Soch raha hoon…');
@@ -607,7 +610,7 @@ async function askAI(t) {
     const pre = notes.length ? '[App: ' + notes.join(' · ') + ']\n' : ''; notes = [];
     userMsg = { role: 'user', parts: [{ text: pre + t }] }; history.push(userMsg); trimHistory();
     for (let step = 0; step < 7; step++) {
-      const content = await agentStep({ key: cfg.key, model: agModel(cfg), system: system(), contents: history, tools: extOn() ? DECL.concat(extDeclFor(lastAsk)) : DECL, onStatus: s => setTyping(s) });
+      const content = await agentStep({ key: cfg.key, model: agModel(cfg), system: system(), contents: history, tools: agTools(cfg), onStatus: s => setTyping(s) });
       history.push(content);
       const calls = content.parts.filter(p => p.functionCall);
       const say = content.parts.filter(p => p.text && !p.thought).map(p => p.text).join('').trim();
@@ -856,6 +859,20 @@ function addFiles(list) {
   for (const f of [...(list || [])]) { if (attach.length >= 8) { H.notice('Zyada se zyada 8 photo'); break; } if (/^image\//.test(f.type || 'image/')) attach.push(f); }
   paintAttach();
 }
+const NOTEW = /\b(note|notes|yaad|yad|reminder|remind|likh)\b/;   // v2.103.59
+// v2.103.59: 📝 photo + "kal ke liye note" → note card: din (kal/parson/aaj/tareekh), waqt (10 baje / 10:30), text = jo likha; tasveer 2 tak (notes.js jaisa 1280px jpeg)
+async function noteFromPhotos(t, files) {
+  if (!H.noteSave) throw Error('Notes ke liye app update karein');
+  const q = normQ(t), add = (d, n) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); }, today = H.today();
+  let day = /\b(parson|parsun)\b/.test(q) ? add(today, 2) : /\b(kal|kl|tomorrow)\b/.test(q) ? add(today, 1) : /\b(aaj|aj|today)\b/.test(q) ? today : '';
+  const dm = q.match(/\b(\d{4}-\d{2}-\d{2})\b/); if (dm && dm[1] >= today) day = dm[1];
+  const tm = q.match(/\b(\d{1,2})(?::(\d{2}))?\s*(baje|bje|am|pm)\b/); let time = ''; if (tm) { let h = Number(tm[1]) % 24; if (tm[3] === 'pm' && h < 12) h += 12; if (tm[3] !== 'am' && tm[3] !== 'pm' && h >= 1 && h <= 7) h += 12; time = String(h).padStart(2, '0') + ':' + (tm[2] || '00'); }
+  const text = String(t || '').trim().replace(/\b(es|is|iss|us) ka (note|reminder) bana ?do\b/i, '').replace(/\bnote bana ?do\b/i, '').replace(/\s+/g, ' ').trim() || 'Tasveer wala note';
+  const pics = []; for (const f of files.slice(0, 2)) { try { const im = await shrinkForAI(f, 1280, 0.7); pics.push('data:' + im.mime + ';base64,' + im.data); } catch {} }
+  const id = 'pa' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  pending.set(id, { type: 'note', text, day, time, p: null, items: [], nag: 0, pics }); toShow.push({ kind: 'card', id }); flushShow();
+  quickReply(`📝 Note ka card bana diya${day ? ' · 🔔 ' + day : ' (reminder ka din nahi likha — "kal" / "parson" likhein)'} — ✓ dabayein.`); return true;
+}
 const BILLW = /\b(bill|purchase|khareed|kharid|maal|invoice|supplier|bil)\b/, KHARW = /\b(kharcha|kharch|expense|bijli|kiraya|parchi|receipt|petrol|diesel|chai|khana)\b/;
 async function classify(files, cfg) {   // ek chhota AI sawal: bill hai ya kharcha — kharcha ho to usi mein parh bhi lo (doosra chakkar nahi)
   const im = await shrinkForAI(files[0], 1400, 0.8);
@@ -874,11 +891,12 @@ async function askPhotos(t, files) {
   addRaw(`<div class="ag-msg me"><div><div class="ag-thumbs">${urls.map(u => `<img src="${esc(u)}" alt="photo">`).join('')}</div>${t ? esc(t) : ''}</div></div>`);
   try {
     const cfg = await H.loadAiCfg(); if (!cfg?.key) throw Error('AI key nahi lagi — malik ⋮ Settings mein "AI key" save kare.');
-    let type = BILLW.test(normQ(t)) ? 'bill' : KHARW.test(normQ(t)) ? 'kharcha' : '', info = null;
+    let type = NOTEW.test(normQ(t)) ? 'note' : BILLW.test(normQ(t)) ? 'bill' : KHARW.test(normQ(t)) ? 'kharcha' : '', info = null;
+    if (type === 'note') return await noteFromPhotos(t, files);   // v2.103.59: "note bana do / yaad dilana" + photo → seedha card (AI nahi, foran)
     if (type !== 'bill') { setTyping('📷 Photo pehchan raha hoon…'); info = await classify(files, cfg); if (!type) type = info.type; }
     if (type === 'bill') return await billFromPhotos(files);
     if (type === 'kharcha') return kharchaFromPhoto(files, urls, info || {});
-    quickReply('Yeh photo bill ya kharcha ki parchi nahi lagti. Dobara bhejein aur saath likhein: "bill" ya "kharcha".');
+    return await noteFromPhotos(t, files);   // v2.103.59: baqi sab = 📝 note / reminder card (tasveer ke saath), AI ke baghair
   } catch (e) { addMsg('err', '⚠️ ' + (e?.message || e)); }
   finally { busy = false; setTyping(''); }
 }
@@ -1010,7 +1028,7 @@ function cardHTML(id) {
   if (c.type === 'gtransfer') { head = '🚚 Godam transfer'; body = `<div class="ag-cf-who">${esc(c.f.name)} → ${esc(c.t.name)}</div><div class="ag-rows">${c.lines.map(l => `<div class="ag-row"><span><b>${esc(l.name)}</b><small>${esc(c.f.name)} mein: ${esc(l.haveTxt)}</small></span><strong>${esc(l.txt)}</strong></div>`).join('')}</div>`; }
   if (c.type === 'purchase') { head = '🛒 Purchase (bol kar)'; body = `<div class="ag-cf-who">${esc(c.p.name)}</div><div class="ag-rows">${c.lines.map(l => `<div class="ag-row"><span><b>${esc(l.name)}</b><small>${esc(l.txt)} × ${esc(l.rateTxt)}${l.naya ? ' · naya rate' : ' · pichhla rate'}</small></span><strong>${l.total ? rs(l.total) : '—'}</strong></div>`).join('')}</div><small class="ag-cap">✓ par Purchase screen ki cart mein lagega — wahan rate / nafa dekh kar POS bhejein (ya yahin "⬆️ POS bhejo").</small>`; }
   if (c.type === 'sale') { head = '🧾 Sale — ' + (c.mode === 'wholesale' ? 'Wholesale' : 'Counter'); body = maalRows(c.m.lines) + '<small class="ag-cap">✓ par Sale screen ki cart mein lagega — bill / print wahin se.</small>'; }
-  if (c.type === 'note') { head = '📝 Note / reminder'; body = `<div class="ag-note-tx">${esc(c.text)}</div><div class="ag-chips">${c.day ? `<span class="ag-chip">🔔 ${esc(c.day)}${c.time ? ' · ' + esc(c.time) : ''}</span>` : '<span class="ag-chip">Reminder nahi</span>'}${c.p ? `<span class="ag-chip">👤 ${esc(c.p.name)}</span>` : ''}${c.items.map(i => `<span class="ag-chip">📦 ${esc(i.name)}</span>`).join('')}${c.nag ? `<span class="ag-chip">🔁 har ${c.nag === 60 ? '1 ghanta' : c.nag + ' min'}</span>` : ''}</div>`; }
+  if (c.type === 'note') { head = '📝 Note / reminder'; body = `${c.pics?.length ? `<div class="ag-thumbs">${c.pics.map(u => `<img src="${esc(u)}" alt="photo">`).join('')}</div>` : ''}<div class="ag-note-tx">${esc(c.text)}</div><div class="ag-chips">${c.day ? `<span class="ag-chip">🔔 ${esc(c.day)}${c.time ? ' · ' + esc(c.time) : ''}</span>` : '<span class="ag-chip">Reminder nahi</span>'}${c.p ? `<span class="ag-chip">👤 ${esc(c.p.name)}</span>` : ''}${c.items.map(i => `<span class="ag-chip">📦 ${esc(i.name)}</span>`).join('')}${c.nag ? `<span class="ag-chip">🔁 har ${c.nag === 60 ? '1 ghanta' : c.nag + ' min'}</span>` : ''}</div>`; }
   if (c.type === 'notes') { const nt = v => v === 60 ? '1 ghanta' : v + ' min'; head = c.done ? `✓ ${c.list.length} notes "ho gaye"` : `🔔 ${c.list.length} notes ek saath`;
     body = `${c.done ? '' : `<div class="ag-chips">${c.day ? `<span class="ag-chip">📅 ${esc(c.day)}</span>` : ''}${c.time ? `<span class="ag-chip">⏰ ${esc(c.time)}</span>` : ''}${c.nag != null ? `<span class="ag-chip">🔁 ${c.nag ? 'har ' + nt(c.nag) : 'baar baar band'}</span>` : ''}</div>`}<div class="ag-rows">${c.list.slice(0, 12).map(x => `<div class="ag-row"><span><b>${esc(x.text || '—')}</b><small>${x.reminder ? '🔔 ' + esc(x.reminder) + (x.time ? ' ' + esc(x.time) : '') : 'reminder nahi'}${x.nag ? ' · 🔁 ' + nt(x.nag) : ''}</small></span></div>`).join('')}${c.list.length > 12 ? `<small class="ag-cap">…aur ${c.list.length - 12}</small>` : ''}</div>`; }
   const amt = c.amt ? `<div class="ag-cf-amt">${money(c.amt)}</div>` : '';

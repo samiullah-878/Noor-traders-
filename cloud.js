@@ -7,7 +7,7 @@ import {planImport} from './import-plan.js';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import * as authSDK from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
 import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,memoryLocalCache,collection,query,where,doc,getDoc,getDocFromServer,getDocs,getDocsFromServer,getDocsFromCache,getDocFromCache,setDoc,deleteDoc,updateDoc,deleteField,onSnapshot,runTransaction,writeBatch,waitForPendingWrites,orderBy,limit,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.103.58';
+import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.103.59';
 import {firebaseConfig,BUSINESS_ID} from './config.js?v=1.79.1';
 export {loginErrorMessage};
 export async function connect(callbacks){const app=initializeApp(firebaseConfig,'blue-khata'),auth=authSDK.getAuth(app);try{await authSDK.setPersistence(auth,authSDK.browserLocalPersistence)}catch(e){console.warn('Auth persistence nahi mili',e)}let db;try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})})}catch(e){console.warn('Offline storage nahi mili — memory mode',e);db=initializeFirestore(app,{localCache:memoryLocalCache()})}const col=collection(db,'businesses',BUSINESS_ID,'blueKhata'),ref=id=>doc(col,id),other=(name,id)=>doc(db,'businesses',BUSINESS_ID,name,id);
@@ -52,7 +52,7 @@ const authReady=new Promise(resolve=>{const off=authSDK.onAuthStateChanged(auth,
 return {authReady,currentUid:()=>auth.currentUser?.uid||'',
  // v1.81: AI key (malik likhta hai; malik + Full App mulazim parhte hain) aur sham ke milan ka natija
  async getAiConfig(){const d=await getDoc(other('blueAccess','aiConfig'));return d.exists()?d.data():null},
- async setAiConfig(cfg){await setDoc(other('blueAccess','aiConfig'),{provider:'gemini',key:String(cfg.key||'').trim(),model:String(cfg.model||'').trim(),agentModel:['lite','pro'].includes(cfg.agentModel)?cfg.agentModel:'',updatedAt:Date.now(),by:auth.currentUser?.uid||''})},
+ async setAiConfig(cfg){await setDoc(other('blueAccess','aiConfig'),{provider:'gemini',key:String(cfg.key||'').trim(),model:String(cfg.model||'').trim(),agentModel:['lite','pro'].includes(cfg.agentModel)?cfg.agentModel:'',agentTools:cfg.agentTools==='all'?'all':'reminder',updatedAt:Date.now(),by:auth.currentUser?.uid||''})},
  async requestRates(d){if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('Rates sirf malik badal sakta hai');const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7);await setDoc(other('rateJobs',id),{lines:(d.lines||[]).slice(0,100),status:'new',by:auth.currentUser.uid,at:Date.now()});return id},
  watchRates(id,cb){return onSnapshot(other('rateJobs',id),s=>cb(s.exists()?s.data():null),()=>cb(null))},
  async getTally(day){const d=await getDoc(other('dayTally',day));return d.exists()?d.data():null},
