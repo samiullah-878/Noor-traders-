@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.52';
-import { liveLabelsHTML } from './barcode.js?v=2.103.52';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.53';
+import { liveLabelsHTML } from './barcode.js?v=2.103.53';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -3583,11 +3583,15 @@ function roRows() { const g = rk?.g || 0, dm = new Map(roDm.map(d => [String(d.i
 function roList() { const f = rk.roF, L = roRows().filter(r => !hidden[r.id] && (!rk.g || Number(r.x.st?.[rk.g] || 0) > 0 || r.dm) && (f === 'dm' ? !!r.dm : f === 'all' ? r.t > 0 : r.t > 0 && r.pct != null && r.pct <= f) || (f !== 'dm' && r.dm));
   const q = (rk.roQs || '').trim(); const out = q ? smartSearch(L.map(r => ({ ...r, name: r.x.n })), q, 200) : L; return out.sort((a, b) => (b.dm ? 1 : 0) - (a.dm ? 1 : 0) || (a.pct ?? 999) - (b.pct ?? 999)); }
 const roWhen = at => { const d = Math.round((Date.now() - at) / 864e5); return d <= 0 ? 'aaj' : d === 1 ? 'kal' : d + ' din pehle'; };
-function roHTML(names) { const L = roList(), G = new Map(); for (const r of L) { const k = r.party || 'Supplier nahi pata'; if (!G.has(k)) G.set(k, []); G.get(k).push(r); }
+function roHTML(names) { const L0 = roList(), G0 = new Map(); for (const r of L0) { const k = r.party || 'Supplier nahi pata'; if (!G0.has(k)) G0.set(k, []); G0.get(k).push(r); }
+  if (rk.roP && !G0.has(rk.roP)) rk.roP = '';   // v2.103.53: supplier chip — jo is % mein hai hi nahi, khud "Sab"
+  const G = rk.roP ? new Map([[rk.roP, G0.get(rk.roP)]]) : G0, L = rk.roP ? G0.get(rk.roP) : L0;
+  const supChips = G0.size > 1 ? `<div class="rk-nb rk-sup"><button type="button" class="${rk.roP ? '' : 'is-in'}" data-ro-p="">Sab ${num(L0.length)}</button>${[...G0].sort((a, b) => b[1].length - a[1].length).map(([k, ys]) => `<button type="button" class="${rk.roP === k ? 'is-in' : ''}" data-ro-p="${esc(k)}">🏪 ${esc(k)} ${num(ys.length)}</button>`).join('')}</div>` : '';
   const P = new Map(); for (const [k, ys] of G) P.set(k, rkPick('o' + k, ys.map(r => r.id))); const on = r => P.get(r.party || 'Supplier nahi pata')?.has(r.id) && r.q > 0; const nOn = L.filter(on).length, ed = rk.roEd;
   const unit = r => r.pk > 1 ? `${num(r.q / r.pk)} ctn` : `${num(r.q)} pcs`;
   return `<div class="rk-nb rk-pct"><span>📊 Itna % reh gaya</span>${[[10, '10%'], [20, '20%'], [30, '30%'], [40, '40%'], ['all', 'Sab'], ['dm', '📢 Demand' + (roDm.length ? ' ' + num(roDm.length) : '')]].map(([v, l]) => `<button type="button" class="${String(rk.roF) === String(v) ? 'is-in' : ''}" data-ro-f="${v}">${l}</button>`).join('')}</div>
     ${!ro.at ? '<div class="th-empty">🛒<b>PC data aa raha hai</b><small>Shop PC update ke baad 10 min — "🛒 Mangwao" script</small></div>' : `<p class="rk-note">🖥 PC ${esc(new Date(ro.at).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }))} · kul = ${rk.g ? esc(branchName(rk.g, names)) + ' + baqi sab' : 'dukan + sab godam'} · poora = aakhri purchase par "us waqt tha + aaya" (✏️ se badlein)</p>`}
+    ${supChips}
     <label class="hs-search"><input type="search" data-ro-q="1" placeholder="🔍 item dhoondo…" value="${esc(rk.roQs || '')}" autocomplete="off"></label>
     ${[...G].map(([k, ys]) => { const S = P.get(k), n = ys.filter(on).length; return `<section class="rk-g rk-ro"><div class="rk-gh"><b>🏪 ${esc(k)}</b><button type="button" class="rk-all" data-ro-all="${esc(k)}">${ys.every(r => S.has(r.id)) ? '☐ koi nahi' : '☑ sab'}</button></div>
       ${ys.map(r => { const x = r.x, st = Object.entries(x.st || {}).filter(([, v]) => v).map(([b, v]) => `${esc(branchName(Number(b), names))} ${num(v)}`).join(' · ');
@@ -3610,7 +3614,8 @@ async function roGo(k) { if (!rk || rk.busy) return; const L = roList().filter(r
 async function bandAsk(id, on) { if (!isOwner()) return false; const want = String(itemCfg?.bandPw || '7183'), got = prompt((on ? 'Item BAND karne' : 'Item dobara CHALU karne') + ' ka password:');
   if (got === null) return false; if (got !== want) { notice('❌ Password ghalat'); return false; }
   const box = { checked: on, disabled: false }; await toggleHidden(id, on, box); if (rk) rkPaint(); return box.checked === on; }
-document.addEventListener('click', e => { const t = e.target.closest?.('[data-ro-f],[data-ro-all],[data-ro-go],[data-ro-e],[data-ro-ban],[data-ro-tsv],[data-ro-tdel]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
+document.addEventListener('click', e => { const t = e.target.closest?.('[data-ro-f],[data-ro-p],[data-ro-all],[data-ro-go],[data-ro-e],[data-ro-ban],[data-ro-tsv],[data-ro-tdel]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
+  if (d.roP != null) { rk.roP = d.roP; try { localStorage.setItem('sam-ro-p', rk.roP); } catch {} rkPaint(); return; }
   if (d.roF != null) { rk.roF = /^\d+$/.test(d.roF) ? Number(d.roF) : d.roF; try { localStorage.setItem('sam-ro-f', String(rk.roF)); } catch {} rkPaint(); return; }
   if (d.roAll != null) { const ids = roList().filter(r => (r.party || 'Supplier nahi pata') === d.roAll).map(r => r.id), cur = rkPick('o' + d.roAll, ids); rk.man.set('o' + d.roAll, cur.size === ids.length ? new Set() : new Set(ids)); rkPaint(); return; }
   if (d.roGo != null) { roGo(d.roGo); return; }
@@ -3659,7 +3664,7 @@ document.addEventListener('toggle', e => { if (rk && e.target?.matches?.('.rk-se
 // godam chips: default naam "Godam 1" (number se nahi) · localStorage
 function rkGDefault() { const { names, branches } = collect(); const G = (branches || []).filter(b => b !== 1); return G.find(b => /godam\s*1/i.test(String(names?.[b] || ''))) ?? G[0] ?? 0; }
 function rackOpen() {
-  rackWatch(); start(false); rk = { q: '', sel: new Map(), off: new Set(), ed: '', busy: '', pOff: new Set(), pQ: new Map(), pset: false, pq: '', pEd: '', pDraft: new Map(), pg: Number(localStorage.getItem('sam-rk-pg')) || 0, zAll: false, man: new Map(), n: rkNGet(), extra: new Map(), plOpen: false, plq: '', plEd: '', plDr: new Map(), dt: new Map(), g: 0, tab: 'lane', lbOff: new Set(), lbOn: new Set(), roF: (v => /^\d+$/.test(v) ? Number(v) : v || 'all')(localStorage.getItem('sam-ro-f')), roQ: new Map(), roQs: '', roEd: '' };   // lbOff = packet (default label ✓) · lbOn = carton (default ✗)
+  rackWatch(); start(false); rk = { q: '', sel: new Map(), off: new Set(), ed: '', busy: '', pOff: new Set(), pQ: new Map(), pset: false, pq: '', pEd: '', pDraft: new Map(), pg: Number(localStorage.getItem('sam-rk-pg')) || 0, zAll: false, man: new Map(), n: rkNGet(), extra: new Map(), plOpen: false, plq: '', plEd: '', plDr: new Map(), dt: new Map(), g: 0, tab: 'lane', lbOff: new Set(), lbOn: new Set(), roF: (v => /^\d+$/.test(v) ? Number(v) : v || 'all')(localStorage.getItem('sam-ro-f')), roQ: new Map(), roQs: '', roEd: '', roP: localStorage.getItem('sam-ro-p') || '' };   // roP = supplier chip (v2.103.53) · lbOff = packet (default label ✓) · lbOn = carton (default ✗)
   { const v = Number(localStorage.getItem('sam-rk-g')); rk.g = v >= 0 && (v === 0 || collect().branches.includes(v)) && localStorage.getItem('sam-rk-g') != null ? v : rkGDefault(); }   // v2.103.37: godam chip
   if (!trStop && cloud?.listenTransfers) trStop = cloud.listenTransfers(trGot);
   if (!rackDoneStop && cloud?.listenRackDone) rackDoneStop = cloud.listenRackDone(d => { rackDone = d || {}; if (rk && $('rkBody')) rkPaint(); }); tcStart();
@@ -4148,7 +4153,7 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.103.52';
+import { agentRegister } from './agent.js?v=2.103.53';
 const AG = (() => {
   const S_ = { type: 'STRING' }, N_ = { type: 'NUMBER' }, B_ = { type: 'BOOLEAN' }, A_ = it => ({ type: 'ARRAY', items: it }), O_ = (p, r = []) => ({ type: 'OBJECT', properties: p, required: r });
   const names = () => collect().names || {};

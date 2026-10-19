@@ -4340,3 +4340,4 @@ html body #dialogBody .pf-tbl td.rp-r{text-align:right;white-space:nowrap}html b
 html body #dialogBody .pf-tbl td.pf-v{font-weight:800;color:#15803d}html body #dialogBody .pf-tbl tr.neg td.pf-v{color:#b91c1c}
 .report-document .pf-tbl tr.neg td{color:#b91c1c}.report-document .pf-tbl td.pf-nm small{color:#666;display:block}
 .rk-c.ok{background:#dcfce7;color:#15803d}
+html body :is(#summary,#dialogBody) .rk-nb.rk-sup{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}html body :is(#summary,#dialogBody) .rk-nb.rk-sup button{white-space:nowrap;flex:0 0 auto}

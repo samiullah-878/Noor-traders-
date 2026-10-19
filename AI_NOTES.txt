@@ -5531,3 +5531,5 @@ v2.103.50 (2026-10-20) — BUG FIX ⚖️ Tolai har screen par chhap jata tha: t
 v2.103.51 (20 Oct 2026): Rack bharo → Mangwao: har item par 🚫 Band (sirf malik) — stock screen wala password (stockConfig.bandPw, default 7183) + wahi confirm → item POS inactive/stock 0, mangwao+rack list se foran ghaib (bandAsk(id,on) pos-stock.js). Wapas chalu: Stock screen "Band items". Agent action item_band {item, band} (danger → "Pakka?"); EXT_KW band/chalu routing. AI nahi.
 
 v2.103.52: Mangwao row par 📦 abhi <kul stock> chip (sabz >0 / laal 0) + 📍 jagah-war line hamesha ("kahin nahi (0)" bhi); ✏️/🚫 ek column (.rk-eb). AI nahi.
+
+v2.103.53: Mangwao → % chips ke neeche supplier chips (scroll patti: Sab N · 🏪 supplier N …, sirf jo chune % mein hain); chip = sirf us supplier ke items; phone yaad (sam-ro-p, rk.roP). Agent mangwao_list{supplier} pehle se. AI nahi.
