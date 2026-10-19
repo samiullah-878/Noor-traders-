@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.103.48';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.103.48';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.103.49';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.103.49';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -20,6 +20,24 @@ export function agentRegister(list) { for (const a of list || []) if (a && a.nam
 export const agentActions = () => [...EXT.values()];
 const extDecl = () => [...EXT.values()].map(a => ({ name: a.name, description: (a.read ? '[PARHO] ' : a.danger ? '[KHATARNAK — card + pakka ✓] ' : '[CARD → ✓] ') + a.desc, parameters: a.params || { type: 'OBJECT', properties: {} } }));
 const extOn = () => !!H?.owner?.();
+// v2.103.49: ⚡ TEZ — har sawal par 55 tools nahi: lafz dekh kar sirf matlab ke action tools (baqi DECL sab). Koi lafz na mile = sab read + 0 write.
+const EXT_KW = [
+  [/rack|patti|lane|lana|lao|godam|dukan|bhar|packet|paket|hadd|%|percent|fisad|khali|carton|ctn/, ['rack_list', 'rack_pending', 'rack_patti', 'packet_patti', 'rack_bhar_diya', 'packet_pct', 'packet_pct_all', 'packet_list', 'rack_hadd', 'item_rack_off', 'godam_list', 'transfer_list']],
+  [/mangwa|mangw|order|supplier|poora|pura|demand|khatam|kam hai|re.?order/, ['mangwao_list', 'mangwao_order', 'mangwao_poora', 'demand_list', 'demand_done']],
+  [/stock|kitna|kitne|kitni|hai\b|milao|ginti|gino|gina/, ['stock_dekho', 'stock_milao', 'godam_list', 'packet_list', 'mangwao_list']],
+  [/label|barcode|chhap|print|tn\b|note/, ['label_print', 'note_dobara_print', 'transfer_list', 'rack_pending']],
+  [/check|mila|farq|poora mil/, ['transfer_check_list', 'transfer_check_ok', 'transfer_list']],
+  [/pdf|rate list|ratelist|list bhej/, ['rate_list_pdf', 'nafa_pdf', 'sale_report_pdf']],
+  [/nafa|profit|munafa|bikri|bika|sale|report/, ['nafa_report', 'item_sale', 'nafa_pdf', 'sale_report_pdf']],
+  [/factory|batch|packing/, ['factory_batches', 'factory_batch_kholo']],
+  [/mulazim|larka|larke|cap|ijazat|band|chalu|on\b|off\b|setting|print|parchi|copy|auto/, ['mulazim_list', 'caps_list', 'cap_set', 'mulazim_band', 'pos_sale_auto', 'print_setting']],
+  [/khol|open|screen/, ['screen_kholo']],
+];
+function extPick(text) { const t = fold(String(text || '')), pick = new Set(); for (const [re, L] of EXT_KW) if (re.test(t)) for (const n of L) pick.add(n);
+  const all = [...EXT.values()]; if (!pick.size) return all.filter(a => a.read);   // kuch na mile = sirf parhne wale
+  for (const a of all) if (a.read && pick.size < 14) pick.add(a.name);   // parhne wale sasti hain
+  return all.filter(a => pick.has(a.name)); }
+const extDeclFor = text => extPick(text).map(a => ({ name: a.name, description: (a.read ? '[PARHO] ' : a.danger ? '[KHATARNAK — card + pakka ✓] ' : '[CARD → ✓] ') + a.desc, parameters: a.params || { type: 'OBJECT', properties: {} } }));
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
@@ -577,8 +595,10 @@ async function ask(text, shown) {
   if (done) { busy = false; setTyping(''); return; }
   try { await askAI(t); } finally { busy = false; setTyping(''); }
 }
+let lastAsk = '';
+const agModel = cfg => { const m = String(cfg.model || ''); if (cfg.agentModel === 'lite') return m.includes('lite') ? m : m.replace(/-flash(?!-lite)/, '-flash-lite') || m; if (cfg.agentModel === 'pro') return m.replace(/-flash(-lite)?/, '-pro'); return m; };   // v2.103.49: ⚡ agent ki raftar (Settings → AI key)
 async function askAI(t) {
-  setTyping('Soch raha hoon…');
+  lastAsk = t; setTyping('Soch raha hoon…');
   const keepNotes = notes.slice(); let userMsg = null;
   try {
     const cfg = await H.loadAiCfg();
@@ -586,7 +606,7 @@ async function askAI(t) {
     const pre = notes.length ? '[App: ' + notes.join(' · ') + ']\n' : ''; notes = [];
     userMsg = { role: 'user', parts: [{ text: pre + t }] }; history.push(userMsg); trimHistory();
     for (let step = 0; step < 7; step++) {
-      const content = await agentStep({ key: cfg.key, model: cfg.model, system: system(), contents: history, tools: extOn() ? DECL.concat(extDecl()) : DECL, onStatus: s => setTyping(s) });
+      const content = await agentStep({ key: cfg.key, model: agModel(cfg), system: system(), contents: history, tools: extOn() ? DECL.concat(extDeclFor(lastAsk)) : DECL, onStatus: s => setTyping(s) });
       history.push(content);
       const calls = content.parts.filter(p => p.functionCall);
       const say = content.parts.filter(p => p.text && !p.thought).map(p => p.text).join('').trim();
@@ -656,6 +676,7 @@ async function quick(t) {
   if (idm || iid) return false;
   const n = normQ(t), ws = wordsOf(t);
   if (!ws.length) return false;
+  if (extOn() && EXT.size) { const q = await extQuick(n); if (q) return true; }   // v2.103.49: ⚡ malik ke aam stock hukum bina AI
   // 📦 "stock add karna hai" -> raaste (purchase bol kar / bill photo / transfer / naya item)
   if (ws.some(w => STOCKW.test(w)) && ws.some(w => ADDW.test(w)) && !/\d/.test(n)) { stockMenu(); return true; }
   // 📊 din ka hisaab
@@ -765,6 +786,37 @@ const HINTS = {
   newitem: ['➕ Bolein: **"Naya item Dalda 1kg, carton mein 12, khareed 5400 carton, wholesale 5600 carton, parchoon 480 piece"** — card par ✓ se POS mein banega.', 'Naya item … carton mein …'],
   stock: ['📦 Bolein: **"Brite 500 ka stock"** ya **"Surf 1kg ka rate"**.', '… ka stock'],
 };
+// v2.103.49: ⚡ bina AI — malik ke seedhe hukum (card wahi, ✓ wahi). Pakka na ho to false = AI.
+async function extQuick(n) {
+  const act = async (name, args, say) => { const a = EXT.get(name); if (!a) return false; try { const r = await extCall(a, args); flushShow(); if (a.read) quickReply(extSay(name, r)); else quickReply(say || 'Card check kar ke ✓ dabayein.'); } catch (e) { toShow = []; quickReply('⚠️ ' + (e?.message || e)); } return true; };
+  let m;
+  if ((m = n.match(/^(?:(.+?) (?:ki|ka) )?rack (?:ki )?patti(?: nikalo| banao| print| do)?(?: (.+?) (?:se|ki|ka))?$/))) { const g = (m[1] || m[2] || '').trim(); if (g) return act('rack_patti', { godam: g }); }
+  if ((m = n.match(/^packet (?:ki )?patti(?: nikalo| banao| print)?(?: (.+?) (?:se|ki|ka))?$/))) return act('packet_patti', m[1] ? { godam: m[1].trim() } : {});
+  if ((m = n.match(/^(?:tn|t n|note) ?(\d{3,}) rack bhar (?:diya|gaya|di)$/))) return act('rack_bhar_diya', { tn: m[1] });
+  if (/^sab rack bhar (?:diya|gaya|diye)$/.test(n)) return act('rack_bhar_diya', { sab: true });
+  if ((m = n.match(/^sab packets? (?:ka )?(\d\d) ?%$/)) || (m = n.match(/^sab packets? (?:ka )?(\d\d) ?(?:percent|fisad)$/))) return act('packet_pct_all', { pct: Number(m[1]) });
+  if ((m = n.match(/^(.+?) (?:ka|ki|ke) packet (?:ka )?(\d\d) ?(?:%|percent|fisad)(?: kar do| karo| kardo)?$/))) return act('packet_pct', { item: m[1].trim(), pct: Number(m[2]) });
+  if ((m = n.match(/^(.+?) kitn[aie] (?:hai|hain|he|ha|hy|stock)?$/)) || (m = n.match(/^(.+?) (?:ka|ki) stock$/))) { const q = m[1].replace(/\b(stock|ka|ki)\b/g, ' ').trim(); if (q && !/^(sab|total|kul)$/.test(q)) return act('stock_dekho', { item: q }, ''); }
+  if (/^(?:kaun si|konsi|kon si)? ?patti (?:baqi|pending)|^rack bhara\??$|^rack bhar gaya\??$|rack bhar diya baqi/.test(n)) return act('rack_pending', {}, '');
+  if ((m = n.match(/^(?:kya|kia)? ?(?:lana|lane wala|lane wale) (?:hai|hain)?(?: (.+?) se)?$/))) return act('rack_list', m[1] ? { godam: m[1] } : {}, '');
+  if ((m = n.match(/^(?:kya|kia)? ?mangwa(?:na|ni|ne)(?: (?:hai|hain))?(?: \(?(\d\d) ?%\)? ?(?:tak)?)?$/))) return act('mangwao_list', m[1] ? { pct: Number(m[1]) } : {}, '');
+  if (/^demand(?: kya hai| list)?$/.test(n)) return act('demand_list', {}, '');
+  if ((m = n.match(/^rate list(?: pdf)?(?: (.+))?$/))) return act('rate_list_pdf', m[1] ? { category: m[1].replace(/\b(banao|bhejo|do|ki)\b/g, '').trim() } : {});
+  if ((m = n.match(/^(.+?) (?:ke|ka|ki) (\d+) label$/))) return act('label_print', { item: m[1].trim(), kitne: Number(m[2]) });
+  return false;
+}
+function extSay(name, r) {   // read ka natija — chhoti Roman Urdu likhai (bina AI)
+  const L = (arr, f, n = 12) => (arr || []).slice(0, n).map(f).join('\n') + ((arr || []).length > n ? `\n… aur ${arr.length - n}` : '');
+  if (name === 'stock_dekho') return `**${r.name}**${r.ctn_pcs > 1 ? ` (1 ctn = ${r.ctn_pcs})` : ''}\n` + Object.entries(r.stock || {}).map(([k, v]) => `${k}: **${v}**`).join(' · ') + `\nRetail ${r.rate_retail || '—'}${r.rate_wholesale ? ' · W ' + r.rate_wholesale : ''}`;
+  if (name === 'rack_list') return (r.carton?.length ? `🧺 Lane wale:\n` + L(r.carton, x => `• ${x.name} — ${x.lao} (${x.godam}, ${x.wajah})`) : '🧺 Carton wala kuch nahi') + (r.packet?.length ? `\n📦 Packet:\n` + L(r.packet, x => `• ${x.name} — ${x.packets.join(', ')}`) : '') + (r.pending_patti ? `\n⏳ ${r.pending_patti} patti ka ✓ baqi` : '');
+  if (name === 'rack_pending') return r.list?.length ? L(r.list, x => `• TN ${x.tn} (${x.se}): ${x.baqi_items.map(i => i.name).join(', ')}`) : '✓ Koi patti baqi nahi';
+  if (name === 'mangwao_list') return r.list?.length ? L(r.list, x => `• ${x.name} — ${x.kul}/${x.poora} (${x.pct}%) · lao ${x.lao} · ${x.supplier}${x.demand ? ' · 📢 ' + x.demand : ''}`) : 'Abhi kuch mangwane wala nahi';
+  if (name === 'demand_list') return r.list?.length ? L(r.list, x => `• ${x.name} — ${x.kya} (${x.kis_ne})`) : 'Koi demand nahi';
+  if (name === 'packet_list') return L(r.list, x => `• ${x.name}: ` + x.packets.map(p => `${p.packet} ${p.bacha ?? '?'}/${p.poora} (${p.pct_bacha ?? '?'}%, hadd ${p.hadd}%)`).join(' · '));
+  if (name === 'transfer_check_list') return r.list?.length ? L(r.list, x => `• TN ${x.tn} ${x.se} → ${x.ko} — ${x.haal}`) : '✓ Sab check ho gaye';
+  if (r && typeof r === 'object') { if (r.khul_gayi || r.khul_gaya) return '📱 Khul gayi'; const k = Object.keys(r); return k.slice(0, 8).map(x => `${x}: ${typeof r[x] === 'object' ? JSON.stringify(r[x]).slice(0, 160) : r[x]}`).join('\n'); }
+  return String(r ?? 'Ho gaya');
+}
 function stockMenu() {
   const b = (k, ic, t, sm, extra = '') => `<button type="button" ${extra || `data-ag-hint="${k}"`}><span>${ic}</span><b>${t}</b><small>${sm}</small></button>`;
   addRaw(`<div class="ag-card ag-menu"><small class="ag-cap">📦 Stock kaise barhana hai? Chunein</small><div class="ag-menu-g">${H.canPP?.() ? b('purchase', '🛒', 'Supplier se maal aaya', 'Bol kar purchase') + b('', '📷', 'Bill ki photo', 'Khud parh kar POS', 'data-ag-pic') : ''}${H.owner() ? b('transfer', '🚚', 'Godam se dukan', 'Transfer note') : ''}${H.canEditItem?.() ? b('newitem', '➕', 'Naya item', 'POS mein banao') : ''}${b('stock', '📦', 'Stock dekhna', 'Kis item ka?')}</div></div>`);

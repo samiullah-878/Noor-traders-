@@ -3230,3 +3230,11 @@ v2.103.48 (2026-10-20, PC/rules nahi) — 🤖 AGENT hissa 2: aur actions
 - app.js (agentSetup se pehle): mulazim_list, caps_list, cap_set {mulazim, cap, on} (danger — saveStaff deny), mulazim_band {mulazim, on} (danger),
   pos_sale_auto {on}, print_setting {purchaseAuto, purchaseCopies, bankAuto, urduSlip, bigSlip}. agSt(naam) / agCap(key ya naam ka hissa).
   Khata / purchase / sale / notes / due: pehle se agent ke apne tools (propose_*). AI nahi (samajhna Gemini).
+
+v2.103.49 (2026-10-20, PC/rules nahi) — ⚡ AGENT TEZ — malik: "time bohat lag raha hai".
+- agent.js extPick(text) / EXT_KW: lafz dekh kar sirf matlab ke action tools Gemini ko (rack/mangwao/stock/label/check/pdf/nafa/factory/mulazim/khol);
+  lafz na mile = sirf read tools. extDeclFor(lastAsk).
+- extQuick(n): malik ke aam hukum BINA AI (regex): "<godam> ki rack patti", "packet patti", "tn 123 rack bhar diya", "sab rack bhar diya",
+  "sab packets 20%", "<item> ka packet 30%", "<item> kitna hai", "patti baqi / rack bhara?", "kya lana hai (godam se)", "kya mangwana (20%)",
+  "demand", "rate list [category]", "<item> ke N label". extSay(name, r) = read ka natija Roman Urdu likhai.
+- Settings → AI key: "🤖 Agent ki raftar" chips lite / flash / pro (aiConfig.agentModel; agModel(cfg) naam badalta hai). Test sk/ag.mjs. AI wahi.
