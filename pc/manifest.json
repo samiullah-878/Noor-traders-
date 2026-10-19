@@ -1,6 +1,6 @@
 {
- "version": "2026-10-19.3",
- "note": "post-farq v15: chhore hue items (wajah) app ko",
+ "version": "2026-10-19.4",
+ "note": "post-farq v16: ginti ke baad sale par rok sirf _late on (default band)",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
   "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
@@ -13,7 +13,7 @@
   "label-auto.bat": "7094351892e48c7a2d4a32b2ac49e96e8d39e66856a3ff276d36b27b91368824",
   "label-print.js": "563858a225f97aa6295154a9b1f6a6e8f7f751e891a0eee2d2accbe935219865",
   "pos-khata-sync.js": "f45a29ccca6e012d89c7dbf7732fe223e9461831fd42f577437bbf9a0805ef2e",
-  "post-farq.js": "82441721e10c6de94ce9c06d0c56baddbd2e826ae897fa2cd2c9a86088fce682",
+  "post-farq.js": "8443f4c7335feb725d4cac3403c3391984f7a46701c5fe9c0356e78ccf0b60c3",
   "purchase-auto.bat": "f877f7a5c14ad0a654b499396e8661c20a1140c2b99d68c1a91b18cae440fb85",
   "purchase-post.js": "ba933ae898f9b19c9ab6cf9ca218dbd34635a50916f98acb477438f9dc47af2c",
   "rate-auto.bat": "5ef8ee9e5dab8c93513083444c472c8be819e6c5e21973008a31552f8c23152f",

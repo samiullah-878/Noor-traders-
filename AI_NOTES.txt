@@ -5377,3 +5377,15 @@ v2.103.30 + PC post-farq v15 (2026-10-19, manifest 2026-10-19.3) — 🧾 farq b
 - App postLine: status nothing + skipped -> .fq-warn "⚠️ N items PC ne chhore" (late naam, baqi naam — wajah) + malik button data-fq-forceall
   "⚡ Sab ko phir bhi bill mein shamil karo" -> har id patchStockCount(countId(_post.branch, id), {forceBill: true}); phir "Bill banao" dobara.
   Preview ke late warning mein bhi wahi button. Test sk/fq.mjs. Rules wahi (patchStockCount forceBill pehle se). AI nahi.
+
+v2.103.31 + PC post-farq v16 (2026-10-19, manifest 2026-10-19.4) — 📊 packet % list + item ka apna % + 100% tak lao + ginti ke baad sale par rok band
+- Malik: packet-war item par click se %, poori list ka % ek click, har item alag; mangwani list mein % ke saath kitna lana; aur (pichhla OK)
+  ginti ke baad sale ho to bhi bill bane.
+- post-farq v16: lateRule() = stockCount/_late {on} (1 min cache); buildList late skip sirf on; fillLater want = lateOn && … (band = later saaf).
+  stockAt pehle se ginti ke lamhe ka POS stock (ledger) — baad ki sale farq nahi bigarti.
+- App: ⚙️ Stock settings: checkbox data-sk-late "🧾 Ginti ke baad sale ho to farq bill roko" (default band) -> cloud.setLateRule(on) (stockCount/_late).
+  Rack: cfg.pct (setRackCfg pct 10–40, 0 = deleteField) — ✏️ mein ".rk-ipc 📊 Is item ka %: Sab wala / 10–40" (data-rk-pc); rackCalc pc = cf.pct || rackPct();
+  chip "📊 28% bacha (46 mein se 13) → 2 ctn lao (100% tak)" (want = nikla = full − dukan, carton mein) + "📊 apna % 30".
+  Packet-war: pkAllHTML() "📋 Sab packet items (N) — % dekho / badlo" (rk.plOpen): "📊 Sab ka % ek click 10–40" (data-rkp-allpct ->
+  cloud.setRackPkMany ek write; jin ka b nahi wo chhore), search, har item chips "250 gm: 3/10 (30%) · hadd 20%" (kam % pehle), tap = har packet
+  b ("100% = kitne packet") + % chips + Save (cloud.setRackPk, at wahi). n = b − floor(b·pct%). Test sk/pl.mjs (+ rk..rk5, gm, gm2). Rules 2.63 wahi. AI nahi.

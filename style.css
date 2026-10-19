@@ -4257,3 +4257,9 @@ html body :is(#summary,#dialogBody) .gm-cp{display:flex;gap:8px}html body :is(#s
 /* v2.103.30: ⚡ sab chhore hue items shamil */
 html body .fq-warn .fq-forceall{display:block;width:100%;margin-top:8px;padding:11px 14px;border:0;border-radius:14px;background:linear-gradient(135deg,#f97316,#c2410c);color:#fff;font:inherit;font-weight:800;cursor:pointer}
 html body .fq-warn .fq-forceall+small{display:block;margin-top:4px;color:#9a3412}
+
+/* v2.103.31: 📋 sab packet items + item ka apna % */
+html body :is(#summary,#dialogBody) .rk-pl{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+html body :is(#summary,#dialogBody) .rk-plh{display:flex;justify-content:space-between;align-items:center;width:100%;padding:12px 14px;border-radius:14px;border:1px dashed #93c5fd;background:#eff6ff;color:#1e3a8a;font:inherit;font-weight:800;cursor:pointer}
+html body :is(#summary,#dialogBody) .rk-ipc{align-items:center}html body :is(#summary,#dialogBody) .rk-ipc small{color:#065f46;font-weight:800;margin-right:4px}
+html body :is(#summary,#dialogBody) .rk-ipc button.is-in{background:linear-gradient(135deg,#10b981,#047857)!important;color:#fff!important}

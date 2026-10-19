@@ -1,3 +1,5 @@
+// v16 (2026-10-19): malik — "ginti ke baad sale ho to bhi bill bane": late rok sirf jab stockCount/_late {on: true} (app ⚙️ chip, default BAND).
+//   stockAt pehle se ginti ke lamhe ka POS stock (ledger) nikalta hai — baad ki sale farq nahi bigarti.
 // v15 (2026-10-19): 'nothing' par bhi chhore hue items (skipped: id, naam, wajah) app ko — malik: "bill baqi 10 magar POS mein bill nahi ban raha". App: "⚠️ N items chhore" + ⚡ Sab ko phir bhi shamil karo (forceBill).
 // v14 (2026-10-16): 🧾 malik app mein items TICK kar ke alag Sale (kam) / Return (zyada) banata hai — _post {status approved, direct, kind, items}.
 // v13 (2026-10-12): 🧾 ginti ke baad bill — farq wale item par `later` (StockLedger ginti ke baad) + bill mein chhoro jab tak recount / forceBill nahi.
@@ -107,15 +109,17 @@ async function movesAfter(pool, it, branch, c) {
 const sysOfC = c => (c.sysPos != null && c.sysPosAt === c.at) ? Number(c.sysPos) : Number(c.sys) || 0;
 const farqOfC = c => round3(Number(c.total) - sysOfC(c));
 const needsRecount = c => !c.recount && !c.forceBill;
+let lateOn = false, lateAtT = 0;   // v16
+async function lateRule() { if (Date.now() - lateAtT < 60000) return lateOn; lateAtT = Date.now(); try { const d = await countCol.doc('_late').get(); lateOn = d.exists && d.data().on === true; } catch {} return lateOn; }
 let laterAt = 0;
 async function fillLater(pool) {
   if (Date.now() - laterAt < 2 * 60000) return;   // har 2 minute (sirf farq wale items — sasta)
-  laterAt = Date.now();
+  laterAt = Date.now(); await lateRule();
   let n = 0;
   for (const d of [...roundDocs.values()]) {
     const c = d.data(); if (String(d.id).startsWith('_') || !c.at) continue;
     const old = Array.isArray(c.later) ? c.later : [];
-    const want = Math.abs(farqOfC(c)) > 0.001 && needsRecount(c) && Date.now() - Number(c.at) < 48 * 3600000;
+    const want = lateOn && Math.abs(farqOfC(c)) > 0.001 && needsRecount(c) && Date.now() - Number(c.at) < 48 * 3600000;   // v16: rok band = later saaf
     if (!want) { if (old.length) { await d.ref.set({ later: [], laterFor: c.at, laterAt: Date.now() }, { merge: true }); n++; } continue; }
     const it = await findItem(pool, c, c.branch); if (!it) continue;
     const mv = await movesAfter(pool, it, c.branch, c);
@@ -188,7 +192,7 @@ async function buildList(pool, req) {
   const snap = await countCol.where('round', '==', round).get();
   const hidDoc = await countCol.doc('_hidden').get();
   const hidden = hidDoc.exists ? hidDoc.data().items || {} : {};
-  const counts = snap.docs.map(d => d.data()).filter(c => c.branch === branch);
+  const counts = snap.docs.map(d => d.data()).filter(c => c.branch === branch), late = await lateRule();   // v16
 
   const party = (await pool.request()
     .query(`SELECT PartyID, PartyName, AccountID FROM dbo.Party
@@ -218,7 +222,7 @@ async function buildList(pool, req) {
       if (Math.abs(diff) < 0.001) continue;
       if ((kind === 'kam' && diff > 0) || (kind === 'zyada' && diff < 0)) continue;
       // v13: ginti ke baad bill bana aur dobara nahi gina -> abhi bill mein NAHI (late bill ho sakta hai)
-      if (needsRecount(c)) { const mv = await movesAfter(pool, it, branch, c); if (mv.length) { skipped.push({ id: String(c.itemId), name: c.name, why: 'ginti ke baad bill bana — dobara gino', late: true, qty: round3(mv.reduce((s, m) => s + m.qty, 0)) }); continue; } }
+      if (late && needsRecount(c)) { const mv = await movesAfter(pool, it, branch, c); if (mv.length) { skipped.push({ id: String(c.itemId), name: c.name, why: 'ginti ke baad bill bana — dobara gino', late: true, qty: round3(mv.reduce((s, m) => s + m.qty, 0)) }); continue; } }
       const cost = Number(it.Cost) || 0;
       const rate = RATE_MODE === 'sale' ? (Number(it.SaleRate) || 0) : cost;
       // kam nikla = sale (key: ItemID) · zyada nikla = return (key: R + ItemID)
