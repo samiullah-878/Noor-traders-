@@ -3103,3 +3103,15 @@ v2.103.31 + PC post-farq v16 (2026-10-19, manifest 2026-10-19.4) — 📊 packet
   Packet-war: pkAllHTML() "📋 Sab packet items (N) — % dekho / badlo" (rk.plOpen): "📊 Sab ka % ek click 10–40" (data-rkp-allpct ->
   cloud.setRackPkMany ek write; jin ka b nahi wo chhore), search, har item chips "250 gm: 3/10 (30%) · hadd 20%" (kam % pehle), tap = har packet
   b ("100% = kitne packet") + % chips + Save (cloud.setRackPk, at wahi). n = b − floor(b·pct%). Test sk/pl.mjs (+ rk..rk5, gm, gm2). Rules 2.63 wahi. AI nahi.
+
+v2.103.32 (2026-10-19, PC badla nahi, rules 2.63) — 🧺 packet %: "poora rack" + "abhi rack par" do khane
+- Masla: elbow macroni 246/250 (98%) dikha jabke rack aadha khali — b (100%) setup ke waqt ki ginti thi, larka ko pata nahi tha kya likhe.
+- rackPk p[z] ab {b = rack POORA bhara (100%), c = set karte waqt abhi rack par (cf.at), pct, n, a}.
+- pos-stock.js pkLeft(o, r, z, at): base = c (agar PC row r.from <= at+60s, yani setup ke baad refill nahi) warna b; left = base − sold;
+  due = left <= floor(b·pct%); lao = b − left (wapas 100%). Purane cfg (c nahi) = b se, jaise pehle. pkDue + pkAllRows dono isi se.
+- pkN(b,c,pct) = c − hadd (PC n parhta nahi, sirf purani app ke liye).
+- Packet list editor (pkRowHTML): 🧺 Rack POORA (data-rkp-pb) + 👀 Abhi rack par (data-rkp-pc) + % chips + live line pkPrevHTML
+  "Abhi 125/250 = 50% bacha · 30% (75) par list mein aayega · tab 175 packet aayenge". Abhi likha = at = Date.now() (ginti wahin se). "Sab ka %" c rakhta hai.
+- Stock milao dukan (gmEdHTML): har packet ginti (= abhi) + 🧺 poora rack (data-gm-f, dr.f) + % + live line; save p[k] = {b: poora||gina, c: gina, pct, n, a}.
+- CSS .gm-f .gm-prev .gm-r2. Test: scratchpad pk2.mjs (macaroni 250/125/30% → 50 bike = due, 175 lao; refill = 250 se).
+- AI: koi nahi.
