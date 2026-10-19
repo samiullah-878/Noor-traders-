@@ -3064,3 +3064,10 @@ v2.103.25 (2026-10-18) — 🖨 LABEL PRINTER RUKA: wajah app mein + ▶ Baqi ch
   sent = asal chhape (sent − perPart). Pehle 120 s baad agla hissa phir bhi bhej deta tha (dher). Urdu tasveer wale item: hissa 4 qatar (12 label).
 - App barcode.js liveLabelsHTML: printing + stuck = "⚠️ Printer ruk gaya — <wajah> · 48 / 100" + "FEED dabayein" hint. failed / cancelled aur
   sent < total = button "▶ Baqi chhapo (N)" -> cloud.requestLabel copies N (agle number se, batch bhi). CAP stock.lblbaqi. Rules wahi. AI nahi.
+
+2026-10-19 — PC item-report.js v1.5 (manifest 2026-10-19.1): 🧾 stock fraq bill nafa / bikri se bahar
+- Malik (Item report screenshot): "stock fraq ka jo data aa raha hai wo profit ke andar nahi aana chahiye".
+- skipName(n): SKIP_RX ke ilawa naam ke sirf harf (stock-fraq / Stock Farq A/C) par /stock.{0,12}f(a?r|r)a?q/ + noortrader / ourfactory.
+  NOFARQ: har Sale query (bikri, item lines, nafa bills, COGS-0 andaza) mein Description NOT LIKE 'Stock ginti farq%' (post-farq ka desc) —
+  party naam kuch bhi ho, ginti farq ka bill bahar. Aaj (irep-today, runToday) aur 3 mahine dono — agli run (10 min / ghanta) par purana bhi saaf.
+  App mein badlav nahi. Test itd/t.cjs. AI nahi.

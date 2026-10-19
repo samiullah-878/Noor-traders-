@@ -5338,3 +5338,10 @@ v2.103.27 + RULES 2.63 (2026-10-18) — 🧮 Godam 2 milao mulazim ke liye
   gmSave: malik ya can('stock.g2milao'). cloud.setRackPk: ab sirf login (pehle 'Sirf malik').
 - Rules 2.63: match blueAccess/stockConfig — allow update (stockStaff() || blueStaff()) && affectedKeys().hasOnly(['rackPk']). Baqi khane sirf malik.
   firestore-rules-2.63.html (2.62 ke chips + naya). Ginti (stockCount) mulazim pehle se likh sakta. AI nahi.
+
+2026-10-19 — PC item-report.js v1.5 (manifest 2026-10-19.1): 🧾 stock fraq bill nafa / bikri se bahar
+- Malik (Item report screenshot): "stock fraq ka jo data aa raha hai wo profit ke andar nahi aana chahiye".
+- skipName(n): SKIP_RX ke ilawa naam ke sirf harf (stock-fraq / Stock Farq A/C) par /stock.{0,12}f(a?r|r)a?q/ + noortrader / ourfactory.
+  NOFARQ: har Sale query (bikri, item lines, nafa bills, COGS-0 andaza) mein Description NOT LIKE 'Stock ginti farq%' (post-farq ka desc) —
+  party naam kuch bhi ho, ginti farq ka bill bahar. Aaj (irep-today, runToday) aur 3 mahine dono — agli run (10 min / ghanta) par purana bhi saaf.
+  App mein badlav nahi. Test itd/t.cjs. AI nahi.

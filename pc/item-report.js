@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  item-report.js  v1.4 (2026-10-17: 💰 asal nafa — har sale bill TotalSale − COGS -> posStats/nafa-<mahina>-<k>, aaj ka irep-today.nb) · v1.3 (2026-10-17: ⚡ runToday — sirf AAJ ka data har 10 min posStats/irep-today (irep-today.js) · collect() alag) · v1.2 (2026-10-14: 💰 COMMISSION items (blueAccess/commission) — har din har Supply Man kitne packet -> posStats/irep-comm) · v1.1 (2026-10-14: Firestore list-ke-andar-list nahi leta — items ab JSON string 'j' mein, hissa ~600 KB tak) · v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
+//  item-report.js  v1.5 (2026-10-19: 🧾 stock fraq / ginti farq bill nafa + bikri se BAHAR — party naam saaf karke + Description "Stock ginti farq") · v1.4 (2026-10-17: 💰 asal nafa — har sale bill TotalSale − COGS -> posStats/nafa-<mahina>-<k>, aaj ka irep-today.nb) · v1.3 (2026-10-17: ⚡ runToday — sirf AAJ ka data har 10 min posStats/irep-today (irep-today.js) · collect() alag) · v1.2 (2026-10-14: 💰 COMMISSION items (blueAccess/commission) — har din har Supply Man kitne packet -> posStats/irep-comm) · v1.1 (2026-10-14: Firestore list-ke-andar-list nahi leta — items ab JSON string 'j' mein, hissa ~600 KB tak) · v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
 //  Malik: "poore month ka actual data — 1–10, 10–20, 20–30, poora mahina, week wise; har item kaun si bik rahi, kin dino / hafton
 //         mein zyada, un par nafa kitna — chart, click par aage data".
 //  sales-stats.js (har ghante) ke aakhir mein chalta hai: run({ pool, sql, db }). SQL mein KUCH NAHI likhta — sirf SELECT.
@@ -12,6 +12,10 @@
 // =====================================================================================================
 const MAXB = 600000;   // v1.1: ek doc mein itne bytes tak
 const SKIP_RX = /noor\s*trader|our\s*factory|stock\s*['"]?\s*f[ae]?r?a?q/i;
+// v1.5 (2026-10-19): malik — "stock fraq ka data profit mein nahi aana chahiye". Ginti farq ke bill (post-farq: Description "Stock ginti farq <round>",
+//   party "stock fraq") hamesha bahar — party naam kisi bhi likhai mein (stock-fraq / Stock Farq A/C) + Description se bhi.
+const skipName = n => { const t = String(n || '').toLowerCase().replace(/[^a-z]/g, ''); return SKIP_RX.test(String(n || '')) || /stock.{0,12}f(a?r|r)a?q/.test(t) || /noortrader|ourfactory/.test(t); };
+const NOFARQ = "AND ISNULL(CAST(s.Description AS NVARCHAR(200)), '') NOT LIKE 'Stock ginti farq%'";
 const r2 = n => Math.round((Number(n) || 0) * 100) / 100, r3 = n => Math.round((Number(n) || 0) * 1000) / 1000;
 const p2 = n => String(n).padStart(2, '0');
 const dayOf = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
@@ -38,14 +42,14 @@ async function collect({ pool, sql, db, log, from, to }) {
   // 1) is arse ki parties — andar wali bahar, wholesale ka nishan
   const parties = (await pool.request().input('a', sql.DateTime, from).query(`SELECT DISTINCT s.PartyID, pt.PartyName FROM dbo.Sale s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID WHERE s.SaleDate >= @a`)).recordset;
   const skipIds = [], wsIds = [];
-  for (const p of parties) { const id = Number(p.PartyID); if (!Number.isFinite(id)) continue; if (SKIP_RX.test(String(p.PartyName || ''))) skipIds.push(id); else if (isWs(p.PartyName)) wsIds.push(id); }
+  for (const p of parties) { const id = Number(p.PartyID); if (!Number.isFinite(id)) continue; if (skipName(p.PartyName)) skipIds.push(id); else if (isWs(p.PartyName)) wsIds.push(id); }
   const inList = ids => ids.length ? ids.map(n => Math.trunc(n)).join(',') : '-1';
   // 2) item × din × (wholesale?) — ginti aur Rs
   const rows = (await pool.request().input('a', sql.DateTime, from).input('b', sql.DateTime, to).query(`
     SELECT d.ItemID, CONVERT(char(10), s.SaleDate, 23) AS dy, CASE WHEN s.PartyID IN (${inList(wsIds)}) THEN 1 ELSE 0 END AS ws,
            SUM(d.Qty) AS q, SUM(CAST(d.Qty AS FLOAT) * CAST(d.Rate AS FLOAT)) AS rs
     FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID
-    WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(s.PartyID, -2) NOT IN (${inList(skipIds)})
+    WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(s.PartyID, -2) NOT IN (${inList(skipIds)}) ${NOFARQ}
     GROUP BY d.ItemID, CONVERT(char(10), s.SaleDate, 23), CASE WHEN s.PartyID IN (${inList(wsIds)}) THEN 1 ELSE 0 END`)).recordset;
   // 3) items ka naam + fi piece khareed
   const ids = [...new Set(rows.map(r => Number(r.ItemID)).filter(Number.isFinite))];
@@ -77,7 +81,7 @@ async function collect({ pool, sql, db, log, from, to }) {
       const cr = (await pool.request().input('a', sql.DateTime, from).input('b', sql.DateTime, to).query(`
         SELECT d.ItemID, CONVERT(char(10), s.SaleDate, 23) AS dy, ISNULL(s.SupplyManID, 0) AS m, SUM(d.Qty) AS q
         FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID
-        WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(s.PartyID, -2) NOT IN (${inList(skipIds)}) AND d.ItemID IN (${cids.join(',')})
+        WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(s.PartyID, -2) NOT IN (${inList(skipIds)}) ${NOFARQ} AND d.ItemID IN (${cids.join(',')})
         GROUP BY d.ItemID, CONVERT(char(10), s.SaleDate, 23), ISNULL(s.SupplyManID, 0)`)).recordset;
       const rows = []; for (const r of cr) { const d = di.get(String(r.dy).trim()), q = r3(r.q); if (d != null && q) rows.push([d, Number(r.m) || 0, Number(r.ItemID), q]); }
       comm = { men, ids: cids, rows };
@@ -92,12 +96,12 @@ async function nafaCollect({ pool, sql, from, to, skipIds, wsIds, info, inList }
   const bills = (await pool.request().input('a', sql.DateTime, from).input('b', sql.DateTime, to).query(`
     SELECT s.SaleID, s.SaleNo, CONVERT(char(16), s.SaleDate, 120) AS W, CAST(s.TotalSale AS FLOAT) AS T, CAST(ISNULL(s.COGS, 0) AS FLOAT) AS C, s.PartyID, pt.PartyName
     FROM dbo.Sale s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
-    WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(s.PartyID, -2) NOT IN (${inList(skipIds)})`)).recordset;
+    WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(s.PartyID, -2) NOT IN (${inList(skipIds)}) ${NOFARQ}`)).recordset;
   const est = new Map();   // COGS nahi = lines se andaza
   if (bills.some(b => !(Math.abs(Number(b.C)) > 0))) {
     const L = (await pool.request().input('a', sql.DateTime, from).input('b', sql.DateTime, to).query(`
       SELECT d.SaleID, d.ItemID, SUM(d.Qty) AS q FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID
-      WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(s.COGS, 0) = 0 AND ISNULL(s.PartyID, -2) NOT IN (${inList(skipIds)})
+      WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(s.COGS, 0) = 0 AND ISNULL(s.PartyID, -2) NOT IN (${inList(skipIds)}) ${NOFARQ}
       GROUP BY d.SaleID, d.ItemID`)).recordset;
     for (const r of L) { const k = Number(r.SaleID); est.set(k, (est.get(k) || 0) + (Number(r.q) || 0) * (info.get(Number(r.ItemID))?.c || 0)); }
   }
