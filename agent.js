@@ -6,11 +6,20 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.103.46';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.103.46';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.103.47';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.103.47';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
+// ---------------- v2.103.47: 🧩 ACTION REGISTRY — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam, jaise Claude ko hukum".
+//   Har screen apne kaam register karti hai: { name, desc, params (Gemini schema), read:true|false, danger:true, run(args) -> natija (object/string),
+//   summary(args) -> card ka matn, label }. SIRF MALIK ko ye tools milte hain. read = foran chale (card nahi); write = CARD -> ✓ -> run;
+//   danger = doosra ✓ ("haan, pakka"). run = WAHI functions jo buttons chalate hain (sab purane check khud). Har chala hua action 🕘 audit.
+const EXT = new Map();
+export function agentRegister(list) { for (const a of list || []) if (a && a.name && typeof a.run === 'function') EXT.set(String(a.name), a); }
+export const agentActions = () => [...EXT.values()];
+const extDecl = () => [...EXT.values()].map(a => ({ name: a.name, description: (a.read ? '[PARHO] ' : a.danger ? '[KHATARNAK — card + pakka ✓] ' : '[CARD → ✓] ') + a.desc, parameters: a.params || { type: 'OBJECT', properties: {} } }));
+const extOn = () => !!H?.owner?.();
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
@@ -456,6 +465,12 @@ function propose(type, a) {
   toShow.push({ kind: 'card', id });
   return { status: 'card_dikhaya', card_id: id, hidayat: 'Abhi SAVE NAHI hua. User card dekh kar ✓ dabayega. "Ho gaya" mat kaho — kaho card check kar ke ✓ dabayein.' };
 }
+async function extCall(a, args) {   // v2.103.47
+  if (a.read) { const r = await a.run(args || {}); return r == null ? { ok: true } : r; }
+  const id = 'pa' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); let sum = ''; try { sum = a.summary ? String(a.summary(args || {})) : ''; } catch (e) { throw Error(e?.message || e); }
+  pending.set(id, { type: 'act', a, args: args || {}, sum, danger: !!a.danger, ask: !!a.danger }); toShow.push({ kind: 'card', id });
+  return { card_dikhaya: true, action: a.name, matn: sum, note: 'User ✓ dabaye to chalega. Natija card par aayega — ab sirf ek chhoti line likho.' };
+}
 function batchBal(c) {   // ek hi khate ki kai lines -> baqaya silsile se (pehli ka baad = doosri ka pehle)
   const run = new Map();
   for (const r of c.rows) { if (r.bad || r.off || !r.p) continue; const b0 = run.has(r.p.id) ? run.get(r.p.id) : H.balanceOf(r.p); r.before = b0; r.after = b0 + (SIGN[r.k] || 0) * r.amt; run.set(r.p.id, r.after); }
@@ -504,6 +519,7 @@ async function run(c) {
   if (c.type === 'sale') { const r = H.saleFill(c.mode, c.m.lines.map(l => ({ id: l.item_id, name: l.name, ctn: l.ctn, pcs: l.pcs }))); return `Sale screen par lag gaya — ${r.n} items · ${rs(r.total)} (${c.mode === 'wholesale' ? 'Wholesale' : 'Counter'})`; }
   if (c.type === 'notes') { const r = await H.noteBulk(c.list.map(x => x.id), { day: c.day, time: c.time, nag: c.nag, done: c.done }); if (r.fail.length && !r.ok) throw Error(r.fail[0]); return `${r.ok} notes ${c.done ? 'ho gaye' : 'badal gaye'}${r.fail.length ? ` · ${r.fail.length} nahi hue` : ''}`; }
   if (c.type === 'note') { await H.noteSave({ text: c.text, day: c.day, time: c.time, partyId: c.p?.id || '', items: c.items, nag: c.nag || 0 }); return `Note save${c.day ? ' · 🔔 ' + c.day + (c.time ? ' ' + c.time : '') : ''}`; }
+  if (c.type === 'act') { const r = await c.a.run(c.args); try { H.audit?.({ area: 'agent', act: 'act', what: ('🤖 ' + (c.a.label || c.a.name) + ': ' + c.sum).slice(0, 120), note: String(c.said || '').slice(0, 200) }); } catch {} return typeof r === 'string' ? r : (r?.msg || r?.ok === false ? (r?.why || 'Nahi hua') : 'Ho gaya'); }
   if (c.type === 'due') {
     const old = H.records().find(r => r.id === 'reminder-' + c.p.id);
     await H.save({ ...old, id: 'reminder-' + c.p.id, type: 'reminder', partyId: c.p.id, date: H.today(), anchorDate: c.due, dueDate: c.due, dueTime: old?.dueTime || '', repeat: c.repeat, note: c.note || old?.note || '', deleted: false }, old);
@@ -517,6 +533,7 @@ function system() {
   return [
     'You are "Noor Agent", the assistant inside Blue Khata — the app of Noor Traders, a wholesale shop in Pakistan. The app has: KHATA (party accounts, entries, daily sale, closing cash, due dates), POS STOCK (items, stock in every godam, khareed / parchoon / wholesale rates, via the shop PC), SALE (POS + app bills, Sale screen cart), PURCHASE (POS purchase bills), godam TRANSFER notes, NOTES / reminders and a CALCULATOR. NEVER say the app has no stock / inventory / sale / purchase option — use the tools.',
     'Today is ' + H.today() + ' (Asia/Karachi). Current user: ' + who() + '.',
+    ...(extOn() ? ['MALIK MODE: you also have the app\'s own ACTION tools ([PARHO] = read now and answer; [CARD → ✓] = it shows a card, the user confirms; [KHATARNAK] = extra confirm). Use them for any shop task — rack patti, packet %, stock milao, mangwao order, label, transfer note, PDF, caps, settings. For items/godams pass NAMES as the user said; the app matches them (if ambiguous the result lists candidates — ask the user with those names). You MAY call several action tools in one turn for a multi-step order (each shows its own card, in order). After a card, reply in ONE short line. Never invent numbers — read tools give the real data.'] : []),
     'LANGUAGE: Always reply in simple Roman Urdu (Latin letters only, never Urdu/Hindi script), short: 1-4 lines. Amounts like "Rs 20,000".',
     'RULE 1 — never guess or calculate numbers yourself. Every number must come from a tool result. If no tool gives it, say you don\'t know.',
     'RULE 2 — accounts: whenever the user names a person/party/bank or gives a mobile number, FIRST call find_account (query = exactly as said; alt = other spellings in Roman AND Urdu script). Use ONLY account_id values returned by tools.',
@@ -569,7 +586,7 @@ async function askAI(t) {
     const pre = notes.length ? '[App: ' + notes.join(' · ') + ']\n' : ''; notes = [];
     userMsg = { role: 'user', parts: [{ text: pre + t }] }; history.push(userMsg); trimHistory();
     for (let step = 0; step < 7; step++) {
-      const content = await agentStep({ key: cfg.key, model: cfg.model, system: system(), contents: history, tools: DECL, onStatus: s => setTyping(s) });
+      const content = await agentStep({ key: cfg.key, model: cfg.model, system: system(), contents: history, tools: extOn() ? DECL.concat(extDecl()) : DECL, onStatus: s => setTyping(s) });
       history.push(content);
       const calls = content.parts.filter(p => p.functionCall);
       const say = content.parts.filter(p => p.text && !p.thought).map(p => p.text).join('').trim();
@@ -577,7 +594,7 @@ async function askAI(t) {
       const resp = [];
       for (const p of calls) {
         const { name, args = {} } = p.functionCall; setTyping((TOOL_SAY[name] || '⚙️ ' + name) + '…');
-        let res; try { if (!T[name]) throw Error('Yeh tool nahi: ' + name); res = await T[name](args); } catch (e) { res = { error: String(e?.message || e) }; }
+        let res; try { if (T[name]) res = await T[name](args); else if (extOn() && EXT.has(name)) res = await extCall(EXT.get(name), args); else throw Error('Yeh tool nahi: ' + name); } catch (e) { res = { error: String(e?.message || e) }; }
         showTool(name, args, res);
         flushShow();   // ⚡ card foran — AI ki aakhri line ka intezar nahi
         resp.push({ functionResponse: { name, ...(p.functionCall.id ? { id: p.functionCall.id } : {}), response: { result: res } } });
@@ -925,6 +942,7 @@ function cardHTML(id) {
   if (c.type === 'entry') { head = KNAME[c.k]; body = `${c.maal ? maalRows(c.maal.lines) : ''}${c.thumbs?.length ? `<div class="ag-thumbs">${c.thumbs.map(u => `<img src="${esc(u)}" alt="parchi">`).join('')}</div>` : ''}<div class="ag-cf-who">${c.p ? esc(c.p.name) : c.exp ? '🧾 ' + esc(c.exp) : 'Cash sale (bina account)'}</div>${c.p ? bal('Baqaya', c.before, c.after) : ''}${c.k === 'collection' || c.k === 'payment' ? `<button type="button" class="ag-tog ${c.cash ? 'on' : ''}" data-ag-tog="${id}">${c.cash ? '💵 Galle ka cash — Daily Sale mein shamil' : '🏦 Bank / online — Daily Sale mein NAHI'}</button>` : ''}`; }
   if (c.type === 'transfer') { head = '⇄ Transfer'; body = `<div class="ag-cf-who">${esc(c.f.name)} → ${esc(c.t.name)}</div>${bal(c.f.name, c.bf, c.af)}${bal(c.t.name, c.bt, c.at)}`; }
   if (c.type === 'cash') { head = '💸 Cash diya (closing se)'; body = `<div class="ag-cf-who">${esc(c.p.name)}</div>${bal('Baqaya', c.before, c.after)}<small class="ag-cap">Available cash: ${money(c.avail)} → ${money(c.avail - c.amt)}</small>`; }
+  if (c.type === 'act') { head = (c.a.icon || '🧩') + ' ' + (c.a.label || c.a.name); body = `<div class="ag-note-tx">${esc(c.sum)}</div>${c.danger ? '<small class="ag-cap" style="color:#b91c1c">⚠️ Khatarnak kaam — ✓ par pooch kar chalega</small>' : ''}`; }
   if (c.type === 'due') { head = '⏰ Due date'; body = `<div class="ag-cf-who">${esc(c.p.name)}</div><div class="ag-chips"><span class="ag-chip">📅 ${esc(c.due)}</span><span class="ag-chip">${{ once: 'Aik dafa', daily: 'Rozana', weekly: 'Har hafta', fortnightly: 'Har 14 din', monthly: 'Har mahina' }[c.repeat]}</span></div>`; }
   if (c.type === 'batch') {
     const L = batchLive(c), sums = {};
@@ -979,7 +997,7 @@ function suggFor() {   // har screen ke apne chips — [label, kind(say|fill|hin
   const c = scr(), p = c.partyId ? H.party(c.partyId) : null;
   if (p) return [['📄 Is khate ki PDF', 'say', p.name + ' ka khata PDF'], ['💬 Baqaya', 'say', p.name + ' ka baqaya'], ['➕ Entry', 'fill', p.name + ' se '], ['📅 Is mahine ki PDF', 'say', p.name + ' ka is mahine ka khata PDF'], ['⏰ Due date', 'fill', p.name + ' ki due date ']];
   const M = {
-    stock: [['📦 Item ka stock', 'hint', 'stock'], ['💲 Rate badlo', 'fill', 'ka wholesale carton rate '], ['🚚 Godam se dukan', 'hint', 'transfer'], ['➕ Naya item', 'hint', 'newitem'], ['🧮 Hisaab', 'fill', '12 carton 1450 ke ']],
+    stock: [...(H.owner() ? [['🧺 Rack patti', 'say', 'Godam 1 ki rack patti nikalo'], ['⏳ Rack bhara?', 'say', 'Kaun si patti ka rack bhar diya baqi hai?'], ['🛒 Mangwao', 'say', 'Kya kya mangwana hai (20% tak)?'], ['📄 Rate list', 'say', 'Rate list PDF banao']] : []), ['📦 Item ka stock', 'hint', 'stock'], ['💲 Rate badlo', 'fill', 'ka wholesale carton rate '], ['🚚 Godam se dukan', 'hint', 'transfer'], ['➕ Naya item', 'hint', 'newitem'], ['🧮 Hisaab', 'fill', '12 carton 1450 ke ']],
     sale: [['🧾 Aaj ki sale', 'say', 'Aaj ki sale'], ['🧾 Kal ki sale', 'say', 'Kal ki sale'], ['🛒 Cart mein daalo', 'fill', 'Sale screen mein 1 carton '], ['📦 Item ka rate', 'hint', 'stock']],
     ppurchase: [['📷 Bill ki photo', 'pic', ''], ['🎤 Bol kar purchase', 'hint', 'purchase'], ['📦 Item ka stock', 'hint', 'stock']],
     purchase: [['📷 Bill ki photo', 'pic', ''], ['🎤 Bol kar purchase', 'hint', 'purchase']],
@@ -1236,7 +1254,8 @@ async function onClick(e) {
   if (d.agNo) { const c = pending.get(d.agNo); if (c && !c.done) { c.no = true; notes.push('user ne card ' + d.agNo + ' mana kar diya (save nahi hua)'); document.getElementById('agc-' + d.agNo).outerHTML = cardHTML(d.agNo); } return; }
   if (d.agOk) {
     const c = pending.get(d.agOk); if (!c || c.done || c.no || c.busy) return;
-    c.busy = true; b.disabled = true; b.textContent = ['rate', 'newitem', 'gtransfer'].includes(c.type) ? '⏳ PC ko bheja — jawab ka intezar…' : '⏳ Save…';
+    if (c.type === 'act' && c.ask && !confirm('⚠️ Pakka? ' + c.sum)) return;   // v2.103.47: khatarnak = doosra ✓
+    c.busy = true; b.disabled = true; b.textContent = ['rate', 'newitem', 'gtransfer'].includes(c.type) || c.type === 'act' ? '⏳ Chal raha hai…' : '⏳ Save…';
     try { await execute(d.agOk); notes.push('user ne ✓ dabaya — SAVE HO GAYA: ' + c.done); H.notice('✓ ' + c.done); H.render(); }
     catch (err) { H.notice('⚠️ ' + (err?.message || err)); b.disabled = false; b.textContent = '✓ Haan, karo'; }
     finally { c.busy = false; const el = document.getElementById('agc-' + d.agOk); if (el && (c.done || c.type === 'batch')) el.outerHTML = cardHTML(d.agOk); }

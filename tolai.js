@@ -2,7 +2,7 @@
 // Har label par PC (label-print v3) number chhapta hai: "3I-47" = 23 tareekh, September, us item ka 47wan label.
 // Ginti = aaj ka aakhri number (pichhla number nahi ghatate — number roz 1 se shuru hota hai).
 // Data: blueAccess/tolaiConfig (duty + har size ka waqt) aur tolai/<din> (har din ka hisaab).
-import { blurScore } from './pic-check.js?v=2.103.46';   // v2.103.43: 📷 dhundli check
+import { blurScore } from './pic-check.js?v=2.103.47';   // v2.103.43: 📷 dhundli check
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const NUMF = new Intl.NumberFormat('en-PK');

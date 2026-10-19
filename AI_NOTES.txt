@@ -5497,3 +5497,14 @@ PC item-report v1.6 (2026-10-19, manifest 2026-10-19.8) — FIX 3 din se "INVALI
 
 v2.103.46 (2026-10-19) — 💰 NAFA ITEM-WAR TABLE: Item report ke "nafa (andaza)" khane par tap (data-ir-nafa) → dialog: # · item (tap = item ka detail) ·
   bika Rs · nafa Rs · % (zyada nafa upar); chips Top 20 / Sab / 🔴 Minus; search; kul; PDF (pfPdf → pdfOf). Wholesale chip wahi jo upar. AI nahi.
+
+v2.103.47 (2026-10-20, PC/rules nahi) — 🤖 AGENT = POORI APP (hissa 1) — malik: "agent ko har chip / har qaida ka access, likh kar kaam, jaise Claude".
+- agent.js: ACTION REGISTRY — agentRegister([{name, desc, params, read, danger, icon, label, summary(args), run(args)}]), agentActions(). SIRF MALIK
+  (extOn) ko ye tools Gemini ko jate hain (DECL + extDecl, desc par [PARHO] / [CARD → ✓] / [KHATARNAK]). read = foran run; write = extCall → pending
+  card type "act" (summary ka matn) → ✓ → run (danger = confirm "Pakka?"); natija card par; 🕘 audit area agent "🤖 label: summary". System prompt
+  mein MALIK MODE hidayat (naam do, app match kare; kai actions ek turn mein; ek line jawab). Malik ke stock chips: Rack patti / Rack bhara? / Mangwao / Rate list.
+- pos-stock.js (aakhir mein, import agentRegister): 24 actions — PARHO: stock_dekho, godam_list, rack_list, rack_pending, mangwao_list, packet_list,
+  demand_list, transfer_list, screen_kholo · KAAM: rack_patti, packet_patti, rack_bhar_diya, packet_pct, packet_pct_all, rack_hadd, item_rack_off,
+  stock_milao, mangwao_order, mangwao_poora, label_print, note_dobara_print, rate_list_pdf, demand_done. item(v) = smartSearch + exact/full-word, warna
+  error "kaun sa item? a / b / c" (e.cands). godam(v) naam se. Har run = wahi functions (stockAgentTransfer, rkLabelsGo, writeCount, setRackPk…).
+- CLAUDE.md qaida: har naya feature apna agent action register kare. Tests sk/ag.mjs (actions + card raasta, mock agentStep). AI: samajhna Gemini (malik ki key), kaam app.

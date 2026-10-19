@@ -23,6 +23,7 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 - Har PDF ke saath **kholo + bhejo** option; kholne par poori screen.
 - Har naya feature/screen = **Settings → Mulazim mein on/off CAP** (`can(k)` deny-list).
 - **Speed pehle** — har tick/button foran (pehle UI, server baad mein).
+- **🤖 Agent action**: har naya feature / chip / qaida apna agent action bhi register kare (`agentRegister([...])` — pos-stock.js ke aakhir mein namoona): `name, desc, params, read|write, danger, summary(args), run(args)`; `run` WAHI function jo button chalata hai. Malik likh kar poori app chalata hai (v2.103.47).
 - Shop ki parchiyon par English ke saath **Urdu** bhi.
 - Theme CSS se bachne ke liye: naye widget mein class `on` nahi, `is-in`; `html body :is(#summary,#dialogBody) .x { … !important }`.
 
