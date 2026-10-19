@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.39';
-import { liveLabelsHTML } from './barcode.js?v=2.103.39';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.40';
+import { liveLabelsHTML } from './barcode.js?v=2.103.40';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -3462,7 +3462,8 @@ function rackCalc(x) {   // v2.103.16: 🔹 pcs wala (masale) · 🔴 rack khali
 // v2.103.21: 5-5 ki PATTI (malik: "har 5 ki patti print phir agle 5 — larkon par bojh na bane"). Poori list dikhti hai, upar ke N par khud ✓
 //   (khali pehle); malik/larka ✓ badal sakte hain (rk.man[key] = apna chunav). Print ke baad item list se hat-ta hai -> agle N par khud ✓.
 function rkNGet() { try { const v = localStorage.getItem('sam-rk-n'); return v == null ? 5 : Math.max(0, Number(v) || 0); } catch { return 5; } }
-function rkPick(key, ids) { const m = rk?.man?.get(key); if (m) return new Set(ids.filter(id => m.has(id))); return new Set(rk?.n ? ids.slice(0, rk.n) : ids); }
+function rkPick(key, ids) { const m = rk?.man?.get(key); if (m) { const S = new Set(ids.filter(id => m.has(id))); if (S.size || !m.size || !ids.length) return S; rk.man.delete(key); }   // v2.103.40: purani (patti nikal chuki) chunai = wapas default
+  return new Set(rk?.n ? ids.slice(0, rk.n) : ids); }
 function rkToggle(key, ids, id, on) { const cur = rkPick(key, ids); if (on) cur.add(id); else cur.delete(id); rk.man.set(key, cur); }
 function rkGroups(all, qOf) { const G = new Map(); for (const y of all) { if (!(qOf(y) > 0)) continue; const g = String(y.x.g); if (!G.has(g)) G.set(g, []); G.get(g).push(String(y.x.i)); } return G; }
 function rkQOf(y) { return rk.sel.has(String(y.x.i)) ? rk.sel.get(String(y.x.i)) : y.c.q; }

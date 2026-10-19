@@ -5457,3 +5457,5 @@ v2.103.39 (2026-10-19, PC/rules nahi) — 🏷 BARCODE LABEL transfer note ke sa
 - Packet-war row: chip "🏷 barcode label bhi" default ✓ (rk.lbOff); packet patti print ke baad labels. Carton row: chip "🏷 barcode label × N" default ✗ (rk.lbOn);
   patti print ke baad labels. ⏳ box: har TN par 🏷 button (confirm "N label chhapein?") → us note ke sab items ke label dobara.
 - labelRows: bs/bc na ho to bq ke codes (sub-barcode) bhi. Tests sk/rk.mjs, rk2.mjs. AI nahi.
+
+v2.103.40 (2026-10-19) — rkPick: purani chunai (rk.man) jis ke items ab list mein nahi (patti nikal chuki / pending) = hata kar default (upar ke N ✓). Pehle packet-war sab ☐ reh jate the → "0 items" / "Koi packet nahi chuna". AI nahi.
