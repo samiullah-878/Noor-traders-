@@ -5482,3 +5482,13 @@ v2.103.43 (2026-10-19, PC/rules nahi) — 📷 DHUNDLI TASVEER CHECK (pic-check.
 
 v2.103.44 (2026-10-19, PC/rules nahi) — 🔗 Khata: juri hui larke ki credit entry (skipsBalance) alag card NAHI — POS bill ke card mein "📷 Larke ki entry"
   (tasveerein, receipt, edit). cashLinkChip: larke ki credit entry ke liye "🔗 Larke ki entry juri · farq" (pehle ghalat "💵 Cash se ada … purana jor"). AI nahi.
+
+v2.103.45 + PC reorder.js v1.0 (2026-10-19, manifest 2026-10-19.7, rules nahi) — 🛒 MANGWAO (supplier se re-order) — rack bharo ka 4th tab
+- Malik: "godam ka stock sahi — usi ka re-order supplier se: aakhri purchase kab, kitna aaya, us waqt kitna tha → poora; chips %; Demand yahin; NT bhi".
+- PC reorder.js (har 10 min, reorder-auto.bat, sirf SELECT): har item (365 din mein khareeda) aakhri 3 purchase {at, q, pre (us waqt sab branches ka kul =
+  abhi − StockLedger net LedgerDate >= PurchaseDate), p party}, st branch-war, s30. posStats/reorder {at, h, n, j}.
+- App: cloud.listenReorder / setReorderCfg (stockConfig.reorder[id] = {t}, malik). roTarget = malik ka t warna max(pre+q). Row: 📊 kul/poora (%),
+  "🛒 aakhri N din pehle: Q aaya, us waqt P tha → poora T · pichhli", 📍 branch-war, 30 din bika, 📢 demand (listenDemands). lao = poora − kul (carton
+  round up), badal sakte. Chips 10/20/30/40/Sab/📢 Demand (sam-ro-f). Godam chip = us godam mein stock wale (kul phir bhi sab jagah). Supplier-war
+  group, ☑ sab, 5-5 (rkPick "o"+party). ✏️ poora (malik). 🛒 order = purchaseOrders doc (Notes → 🛒 Bazaar list / PDF) + yahin PDF (kholo/bhejo).
+  CAP stock.mangwao (tab tabhi). Test sk/ro.mjs. AI nahi.

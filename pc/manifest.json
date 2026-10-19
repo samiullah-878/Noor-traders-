@@ -1,5 +1,5 @@
 {
- "version": "2026-10-19.6",
+ "version": "2026-10-19.7",
  "note": "post-farq v16: ginti ke baad sale par rok sirf _late on (default band)",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -69,7 +69,9 @@
   "irep-today.js": "40ed10c821a2ce0938e8940a583728bcd8473e110a571d8665e6cdbdd71b4584",
   "irep-today-auto.bat": "8f7842cfabb15e6ceb5c4f9cbe55ea6433d7c609b8d346d2490deec4da716d23",
   "rack-bharo.js": "a76416c5d06d0dd3527915e35bc603eaf1803cf60747ce234c85200506defcf2",
-  "rack-auto.bat": "7844767d490b117c8660fb0aaede09f418a6cdda0decb145ae8ce5fa996b38ed"
+  "rack-auto.bat": "7844767d490b117c8660fb0aaede09f418a6cdda0decb145ae8ce5fa996b38ed",
+  "reorder.js": "f7d267e0d1169b4d750af215741f46b942173c79c6752ae4beb5d0edb00a6c01",
+  "reorder-auto.bat": "2c00c5c92fe3284e8c77e1fd173e111555cdb60f65d829f5da81859247698a56"
  },
  "services": [
   {
@@ -211,6 +213,13 @@
    "script": "rack-bharo.js",
    "bat": "rack-auto.bat",
    "log": "rack-log.txt",
+   "periodic": true
+  },
+  {
+   "name": "🛒 Mangwao (har 10 min)",
+   "script": "reorder.js",
+   "bat": "reorder-auto.bat",
+   "log": "reorder-log.txt",
    "periodic": true
   },
   {
