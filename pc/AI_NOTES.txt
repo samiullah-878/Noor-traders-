@@ -3247,3 +3247,5 @@ v2.103.51 (20 Oct 2026): Rack bharo → Mangwao: har item par 🚫 Band (sirf ma
 v2.103.52: Mangwao row par 📦 abhi <kul stock> chip (sabz >0 / laal 0) + 📍 jagah-war line hamesha ("kahin nahi (0)" bhi); ✏️/🚫 ek column (.rk-eb). AI nahi.
 
 v2.103.53: Mangwao → % chips ke neeche supplier chips (scroll patti: Sab N · 🏪 supplier N …, sirf jo chune % mein hain); chip = sirf us supplier ke items; phone yaad (sam-ro-p, rk.roP). Agent mangwao_list{supplier} pehle se. AI nahi.
+
+v2.103.54 (20 Oct 2026): 🛒 Mangwao supplier qaida — PC reorder.js v1.1: aakhri 6 purchase (KEEP=6) + har bill ka avg rate (h[].r), reorder-auto.bat har 1 MIN (badla na ho to 10 min tak Firestore nahi likhta). App roParty(x): supplier = zyada dafa (6 mein), barabar → sasta avg rate; malik ka pakka supplier stockConfig.reorder[id].p (cloud.setReorderCfg {t,p}); row par 🏪 party ×n @ rate line, 💰 sasta chip (doosri party sasti ho), 📌 malik ka supplier chip; ✏️ mein Supplier khana (datalist); roTarget sirf aakhri 3 se. Order PDF mein "Aakhri rate" column. Agent mangwao_list: rate/parties/sasta; mangwao_poora {supplier}. AI nahi.
