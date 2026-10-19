@@ -4332,3 +4332,9 @@ html body :is(#summary,#dialogBody) .rk-lb input{width:16px;height:16px;margin:0
 html body :is(#summary,#dialogBody) .rk-tabs.four{grid-template-columns:1fr 1fr 1fr 1fr}html body :is(#summary,#dialogBody) .rk-tabs.four button{font-size:11px}
 html body :is(#summary,#dialogBody) .rk-ro{background:#fff7ed;border-color:#fed7aa}html body :is(#summary,#dialogBody) .rk-ro .rk-gh b{color:#9a3412}
 html body :is(#summary,#dialogBody) .rk-ro .rk-ed label{display:block;font-size:12px;font-weight:700;color:#3730a3}html body :is(#summary,#dialogBody) .rk-ro .rk-ed input{display:block;width:120px;margin-top:4px;padding:8px;border-radius:12px;border:1.5px solid #c7d2fe;font-size:17px;font-weight:800;text-align:center}
+/* v2.103.46: 💰 nafa item-war */
+.ir-kp>div.ir-tap{cursor:pointer;outline:1.5px dashed rgba(255,255,255,.45)}.ir-kp>div.ir-tap:active{background:rgba(255,255,255,.25)}
+html body #dialogBody .pf-tbl{width:100%;border-collapse:collapse;font-size:13px}html body #dialogBody .pf-tbl th{text-align:left;font-size:11px;color:#64748b;padding:6px 4px;border-bottom:1px solid #e2e8f0}html body #dialogBody .pf-tbl td{padding:7px 4px;border-bottom:1px solid #f1f5f9;vertical-align:top}
+html body #dialogBody .pf-tbl td.rp-r{text-align:right;white-space:nowrap}html body #dialogBody .pf-tbl td.rp-n{color:#94a3b8;width:24px}html body #dialogBody .pf-tbl td.pf-nm button{border:0!important;background:none!important;padding:0!important;margin:0!important;min-height:0!important;line-height:1.25;font:inherit;font-weight:800;color:#1f2550!important;text-align:left;display:block;width:100%}html body #dialogBody .pf-tbl td.pf-nm small{display:block;color:#64748b;font-size:11px}
+html body #dialogBody .pf-tbl td.pf-v{font-weight:800;color:#15803d}html body #dialogBody .pf-tbl tr.neg td.pf-v{color:#b91c1c}
+.report-document .pf-tbl tr.neg td{color:#b91c1c}.report-document .pf-tbl td.pf-nm small{color:#666;display:block}

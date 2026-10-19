@@ -5494,3 +5494,6 @@ v2.103.45 + PC reorder.js v1.0 (2026-10-19, manifest 2026-10-19.7, rules nahi) �
   CAP stock.mangwao (tab tabhi). Test sk/ro.mjs. AI nahi.
 
 PC item-report v1.6 (2026-10-19, manifest 2026-10-19.8) — FIX 3 din se "INVALID_ARGUMENT: Property array contains an array": wsNames flat+String; meta commit fail = ws ke baghair dobara. AI nahi.
+
+v2.103.46 (2026-10-19) — 💰 NAFA ITEM-WAR TABLE: Item report ke "nafa (andaza)" khane par tap (data-ir-nafa) → dialog: # · item (tap = item ka detail) ·
+  bika Rs · nafa Rs · % (zyada nafa upar); chips Top 20 / Sab / 🔴 Minus; search; kul; PDF (pfPdf → pdfOf). Wholesale chip wahi jo upar. AI nahi.
