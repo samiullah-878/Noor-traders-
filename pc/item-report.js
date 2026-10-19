@@ -12,6 +12,8 @@
 // =====================================================================================================
 const MAXB = 600000;   // v1.1: ek doc mein itne bytes tak
 const SKIP_RX = /noor\s*trader|our\s*factory|stock\s*['"]?\s*f[ae]?r?a?q/i;
+// v1.6 (2026-10-19): FIX — 3 din se report fail: 'INVALID_ARGUMENT: Property array contains an array' (reportConfig.wsNames mein nested array → irep-meta.ws).
+//   wsNames flat + String; meta commit fail ho to ws ke baghair dobara.
 // v1.5 (2026-10-19): malik — "stock fraq ka data profit mein nahi aana chahiye". Ginti farq ke bill (post-farq: Description "Stock ginti farq <round>",
 //   party "stock fraq") hamesha bahar — party naam kisi bhi likhai mein (stock-fraq / Stock Farq A/C) + Description se bhi.
 const skipName = n => { const t = String(n || '').toLowerCase().replace(/[^a-z]/g, ''); return SKIP_RX.test(String(n || '')) || /stock.{0,12}f(a?r|r)a?q/.test(t) || /noortrader|ourfactory/.test(t); };
@@ -35,7 +37,7 @@ function pieceCost(cost, pack, rate) {
 // v1.3: hisaab alag (collect) — run() 3 mahine (har ghante) · runToday() sirf AAJ (irep-today.js har 10 min) -> posStats/irep-today
 async function collect({ pool, sql, db, log, from, to }) {
   let wsNames = ['whole sale'];
-  try { const c = await db.collection('businesses').doc('noor-traders').collection('blueAccess').doc('reportConfig').get(); const w = c.exists && c.data().wsNames; if (Array.isArray(w) && w.length) wsNames = w; } catch {}
+  try { const c = await db.collection('businesses').doc('noor-traders').collection('blueAccess').doc('reportConfig').get(); const w = c.exists && c.data().wsNames; if (Array.isArray(w) && w.length) wsNames = w.flat(3).map(x => String(x ?? '').trim()).filter(Boolean); } catch {}   // v1.6: array ke andar array = Firestore INVALID_ARGUMENT
   const isWs = name => { const p = norm(name); return !!p && (/whole\s*sale/.test(p) || wsNames.some(n => norm(n) && p.includes(norm(n)))); };
   const days = []; for (let d = new Date(from); d < to; d.setDate(d.getDate() + 1)) days.push(dayOf(d));
   const di = new Map(days.map((d, i) => [d, i]));
@@ -132,8 +134,8 @@ async function run({ pool, sql, db, log = console.log, now = new Date() }) {
   const nafa = {};   // v1.4: { 'YYYY-MM': hisse }
   // v1.5: nafa ALAG (pehle nafa commit fail = poori report ruk jati thi) — report pehle, nafa baad mein apni try mein
   if (NF) for (const [mon, o] of NF) nafa[mon] = nafaChunks(o).length;
-  b.set(col.doc('irep-meta'), { at: Date.now(), from: days[0], to: days[days.length - 1], days, n: all.length, chunks: chunks.length, ws: wsNames.slice(0, 10), ver: '1.4', comm: !!comm, ...(NF ? { nafa } : {}), bytes: chunks.reduce((s, c) => s + Buffer.byteLength(JSON.stringify(c)), 0) });
-  await b.commit();
+  b.set(col.doc('irep-meta'), { at: Date.now(), from: days[0], to: days[days.length - 1], days, n: all.length, chunks: chunks.length, ws: wsNames.flat(3).map(String).slice(0, 10), ver: '1.6', comm: !!comm, ...(NF ? { nafa } : {}), bytes: chunks.reduce((s, c) => s + Buffer.byteLength(JSON.stringify(c)), 0) });
+  try { await b.commit(); } catch (e) { if (!/INVALID_ARGUMENT/.test(String(e?.message))) throw e; log('⚠️ meta commit: ' + e.message + ' — ws ke baghair dobara'); const b2 = db.batch(); if (comm) b2.set(col.doc('irep-comm'), { j: JSON.stringify(comm), at: Date.now() }); chunks.forEach((items, k) => b2.set(col.doc('irep-' + k), { j: JSON.stringify(items), n: items.length, at: Date.now() })); b2.set(col.doc('irep-meta'), { at: Date.now(), from: days[0], to: days[days.length - 1], days: days.map(String), n: all.length, chunks: chunks.length, ws: [], ver: '1.6', comm: !!comm, ...(NF ? { nafa } : {}) }); await b2.commit(); }   // v1.6
   if (NF) { try { const nb = db.batch(); for (const [mon, o] of NF) nafaChunks(o).forEach((j, k) => nb.set(col.doc(`nafa-${mon}-${k}`), { j, at: Date.now() })); await nb.commit(); } catch (e) { log('💰 nafa save nahi hua (report ban gayi): ' + e.message); NF = null; } }
   try { const old = await col.get(); for (const d of old.docs) { const m = /^irep-(\d+)$/.exec(d.id), n = /^nafa-(\d{4}-\d{2})-(\d+)$/.exec(d.id); if ((m && Number(m[1]) >= chunks.length) || (n && NF && !(Number(n[2]) < (nafa[n[1]] || 0)))) await d.ref.delete(); } } catch {}
   log(new Date().toLocaleString('en-PK') + ' — 📊 item report: ' + all.length + ' items, ' + days.length + ' din, ' + chunks.length + ' hisse, ' + Math.round((Date.now() - t0) / 1000) + 's');

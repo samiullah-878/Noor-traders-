@@ -5492,3 +5492,5 @@ v2.103.45 + PC reorder.js v1.0 (2026-10-19, manifest 2026-10-19.7, rules nahi) �
   round up), badal sakte. Chips 10/20/30/40/Sab/📢 Demand (sam-ro-f). Godam chip = us godam mein stock wale (kul phir bhi sab jagah). Supplier-war
   group, ☑ sab, 5-5 (rkPick "o"+party). ✏️ poora (malik). 🛒 order = purchaseOrders doc (Notes → 🛒 Bazaar list / PDF) + yahin PDF (kholo/bhejo).
   CAP stock.mangwao (tab tabhi). Test sk/ro.mjs. AI nahi.
+
+PC item-report v1.6 (2026-10-19, manifest 2026-10-19.8) — FIX 3 din se "INVALID_ARGUMENT: Property array contains an array": wsNames flat+String; meta commit fail = ws ke baghair dobara. AI nahi.
