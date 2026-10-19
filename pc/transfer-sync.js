@@ -17,6 +17,8 @@
 //     (POS se lines + dono godam ka abhi ka stock, upar "DOBARA PRINT"). (2) ❌ Cancel POS wala note bhi — job.force (sirf malik, rules 2.47).
 //     (3) ✏️ op 'edit' = purana note usp_StockTransfer_Delete + naya createTransfer (naya STN). Naya na bane to saaf error (purana hat chuka).
 //  v4.5 (2026-10-12): 💰 HBL parchi — bank-parchi.js: HBL Inbox mein naya SMS / email aate hi "PAISE AAYE" parchi. Setting printConfig.bankAuto.
+//  v4.9 (2026-10-19): 📦 SUB-BARCODE PACKET — line.pk [{z,n,nm}] (app ka transfer / rack bharo): item ke neeche '> 500 gm x 20 packet' (mota),
+//     qty ki jagah 'POS: 10' (POS mein wazan); neeche 'Kul POS' + 'Kul packet'. Reprint (tj.lines) mein bhi pk.
 //  v4.8 (2026-10-14): 🔤 TRANSFER NOTE PAR URDU — har item ke English naam ke neeche Urdu naam (urdu-names.js: blueAccess/urduNames LIVE,
 //     printConfig.urduSlip). Urdu wali parchi nt-parchi ke tez worker se (tasveer); Urdu na ho to pehle jaisa RAW.
 //  Chalana:  node transfer-sync.js   (transfer-auto.bat loop mein)
@@ -78,7 +80,7 @@ async function createTransfer(j) {
   const rows = [];
   for (const l of lines) {
     const itemId = Number(l.itemId), qty = r3(l.qty);
-    l._ui = { ctn: Number(l.ctn) || 0, pcs: Number(l.pcs) || 0, pack: Number(l.pack) || 0, cName: l.cName, uName: l.uName };
+    l._ui = { ctn: Number(l.ctn) || 0, pcs: Number(l.pcs) || 0, pack: Number(l.pack) || 0, cName: l.cName, uName: l.uName, ...(Array.isArray(l.pk) && l.pk.length ? { pk: l.pk.filter(p => Number(p.z) > 0 && Number(p.n) > 0).slice(0, 8) } : {}) };   // v4.9: 📦 packet
     if (!itemId || !(qty > 0)) throw new Error('Item / tadad ghalat');
     const r = (await p.request().input('i', sql.Int, itemId).input('b', sql.Int, from).query(
       `SELECT i.ItemName, ISNULL(r.CurrStock,0) AS Stock, ISNULL(NULLIF(r.PurchaseRate,0), i.PurchaseRate) AS PRate, ISNULL(NULLIF(r.SaleRate,0), i.SaleRate) AS SRate,
@@ -193,11 +195,14 @@ function transferText(r, note, reprint) {
   out.push('-'.repeat(PRINT_WIDTH), pad('Item', PRINT_WIDTH - 22) + pad('Qty', 22, true), '-'.repeat(PRINT_WIDTH));
   if (r.rows.some(x => x.baqiFrom != null || x.baqiTo != null)) out.push('(har item ke neeche stock: pehle -> baad)');   // v4.3
   for (const x of r.rows) {
-    const q = qtyText(x); if (ascii(x.name).length + q.length + 1 > PRINT_WIDTH) { out.push(ascii(x.name).slice(0, PRINT_WIDTH)); out.push(pad('', PRINT_WIDTH - q.length) + q); } else out.push(pad(ascii(x.name), PRINT_WIDTH - q.length) + q);
+    const pkL = Array.isArray(x.pk) && x.pk.length ? x.pk : null;   // v4.9: 📦 sub-barcode packet — "500 gm x 20 packet" + POS ka wazan
+    const q = pkL ? 'POS: ' + n(x.qty) + (ascii(x.uName) && !/^pcs$/i.test(ascii(x.uName)) ? ' ' + ascii(x.uName) : '') : qtyText(x); if (ascii(x.name).length + q.length + 1 > PRINT_WIDTH) { out.push(ascii(x.name).slice(0, PRINT_WIDTH)); out.push(pad('', PRINT_WIDTH - q.length) + q); } else out.push(pad(ascii(x.name), PRINT_WIDTH - q.length) + q);
+    if (pkL) for (const p of pkL) out.push(ESC + '!' + '\x08' + `  > ${ascii(p.nm || n(p.z))} x ${n(p.n)} packet`.slice(0, PRINT_WIDTH) + ESC + '!' + '\x00');   // v4.9: mota
     { const ur = UR.get(x.itemId); if (ur) out.push(UR.line(ur, 40)); }   // v4.8: 🔤 Urdu naam
     const b = baqiText(x, r); if (b) out.push(...b.split('\r\n'));   // v4.2: baqi stock usi parchi par
   }
-  out.push('-'.repeat(PRINT_WIDTH), line('Items: ' + r.rows.length, 'Kul pcs: ' + n(r.rows.reduce((s, x) => s + (Number(x.qty) || 0), 0))));
+  out.push('-'.repeat(PRINT_WIDTH), line('Items: ' + r.rows.length, 'Kul POS: ' + n(r.rows.reduce((s, x) => s + (Number(x.qty) || 0), 0))));
+  { const kp = r.rows.reduce((s, x) => s + (Array.isArray(x.pk) ? x.pk.reduce((t, p) => t + (Number(p.n) || 0), 0) : 0), 0); if (kp) out.push(line('', 'Kul packet: ' + n(kp))); }   // v4.9
   if (reprint) {
     out.push('', ESC + 'a' + '\x01', ESC + '!' + '\x30' + 'DOBARA PRINT (' + reprint.n + ')' + ESC + '!' + '\x00', ESC + 'a' + '\x00');
     out.push('Wajah: ' + ascii(reprint.reason).slice(0, PRINT_WIDTH - 7), stamp(reprint.at) + (reprint.by ? ' · ' + ascii(reprint.by) : ''));

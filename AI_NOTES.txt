@@ -5401,3 +5401,23 @@ v2.103.32 (2026-10-19, PC badla nahi, rules 2.63) — 🧺 packet %: "poora rack
 - Stock milao dukan (gmEdHTML): har packet ginti (= abhi) + 🧺 poora rack (data-gm-f, dr.f) + % + live line; save p[k] = {b: poora||gina, c: gina, pct, n, a}.
 - CSS .gm-f .gm-prev .gm-r2. Test: scratchpad pk2.mjs (macaroni 250/125/30% → 50 bike = due, 175 lao; refill = 250 se).
 - AI: koi nahi.
+
+v2.103.33 + PC transfer-sync v4.9 (2026-10-19, manifest 2026-10-19.5, rules 2.63 — badle nahi) — 👀 abhi = POS · har sub-barcode · packet transfer note
+- Malik: "jitna stock pehle se hai wo likha ho (dobara na ginna pare) — POS ka data · jo likhein wahi stock kam/zyada POS mein · har sub-barcode
+  ka poora/% · rack bharo / transfer note / parchi par sub-barcode ka naam + packet, neeche POS mein kitna gaya".
+- pos-stock.js packet list (📋 Sab packet items → item tap):
+  · pkSizesOf(it, cf) = SAARE barcode (gmSizes main + bq) + cfg wale; jin ka % nahi = chip "500 gm: % nahi laga" (rk-c mu).
+  · pkDraftOf: 👀 khud bhara (pkPosFill): ek packet = POS dukan ÷ size; kai = sab se bara floor(POS ÷ size), baqi khaali "gino". Chip "🏪 POS se" → likhte hi "✏️ aap ne likha".
+  · Upar gm-sum (pkSumHTML): POS dukan · aap ki ginti · Farq → POS mein.
+  · Save: c = 👀 (chhua: khaali = 0 · na chhua: khaali = app ka bacha left); at = abhi; chhua + farq ≠ 0 + ginti round chalu → writeCount(…, br 1)
+    (Stock milao wala farq-bill raasta). Round nahi = notice "farq POS mein NAHI gaya". Editor kholte hi start(true) (round/counts).
+  · 👀 > poora = button "⚠️ … Poora X kar dein?" (data-rkp-full) ek tap.
+  · pkLeft: PC row from < at−1s (PC ne naya at nahi dekha) = bika 0.
+- Transfer line pk [{z, n, nm}] (sub-barcode packet): cloud.requestTransfer saaf kar ke rakhta hai; stockAgentTransfer pass; rkpGo (packet rack bharo)
+  har line par pk, note sirf "📦 Packet rack bharo".
+- ➕ Naya transfer note: item ke kai barcode hon to chips "📦 Packet 1 kg · 250 gm" (data-tr-pk) → packet rows ➖ n ➕ (data-tr-pkm/pkp/pkn),
+  "= POS mein 6 kg · 21 packet"; sab hatao = wapas Ctn/Pcs. Sub-barcode scan/likha (8+ hindse) = seedha wohi packet. Neeche kul "N packet".
+  trCalc pk mode: qty = Σ z·n (ctn 0). Edit (✏️) mein pk wapas. History mein "250 gm×20".
+- PC transfer-sync v4.9: _ui.pk; parchi: item line par "POS: 10 kg", neeche mota "  > 500 gm x 20 packet"; footer "Kul POS" + "Kul packet". Reprint bhi.
+- Tests: scratchpad sk/pl.mjs (macaroni POS 103, poora chip, ginti 90 → count), sk/tn.mjs (transfer packet), tsp.cjs (parchi), gm/rk updated.
+- AI: koi nahi.

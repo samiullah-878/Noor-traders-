@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.32';
-import { liveLabelsHTML } from './barcode.js?v=2.103.32';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.33';
+import { liveLabelsHTML } from './barcode.js?v=2.103.33';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1859,18 +1859,20 @@ function openTransfer() {
   const sel = (name, val) => `<select data-tr-${name}>${bs.map(b => `<option value="${b.id}"${b.id === val ? ' selected' : ''}>${esc(b.name)}</option>`).join('')}</select>`;
   const kul = trLines.reduce((s, l) => s + l.qty, 0);
   const names0 = collect().names, gN = esc(branchName(trFrom, names0)), cpTxt = (q, pk, l) => { q = Math.max(0, Number(q) || 0); if (!(pk > 1)) return num(q) + ' ' + esc(l.uName || 'Pcs'); const c = Math.floor(q / pk + 1e-9), p = Math.round((q - c * pk) * 1000) / 1000; return (c ? num(c) + ' ' + esc(l.cName || 'Ctn') : '') + (c && p ? ' + ' : '') + (p || !c ? num(p) + ' ' + esc(l.uName || 'Pcs') : ''); };
-  const totC = trLines.reduce((n, l) => n + (Number(l.pack) > 1 ? Number(l.ctn) || 0 : 0), 0), totP = trLines.reduce((n, l) => n + (Number(l.pcs) || 0), 0);
+  const totC = trLines.reduce((n, l) => n + (Number(l.pack) > 1 && !l.pk?.length ? Number(l.ctn) || 0 : 0), 0), totP = trLines.reduce((n, l) => n + (l.pk?.length ? 0 : Number(l.pcs) || 0), 0), totK = trLines.reduce((n, l) => n + (l.pk?.length ? l.pk.reduce((t, p) => t + p.n, 0) : 0), 0);
   $('dialogBody').innerHTML = `<div class="tn-root">${trEdit ? `<div class="tn-edit">✏️ <b>Edit — TN ${esc(trEdit.no)}</b><small>Save par purana note cancel ho kar naya banega (naya TN number)</small><button type="button" data-tr-editx="1">✕ Edit chhoro</button></div>` : ''}
     <div class="tn-route"><label class="tn-g from"><small>📤 Se (nikle)</small>${sel('from', trFrom)}</label><span class="tn-arrow">➜</span><label class="tn-g to"><small>📥 Ko (jaye)</small>${sel('to', trTo)}</label></div>
     <div class="tn-find"><div class="scan-find"><input class="scan-q" data-tr-q type="search" placeholder="🔍 ${gN} ka item — naam / code" autocomplete="off"><div class="scan-hits" data-tr-hits hidden></div></div><button type="button" class="tn-scan" data-tr-scan="1">${camMissing() ? '🔫' : '📷'}<small>${camMissing() ? 'Gun' : 'Scan'}</small></button></div>
     <p class="tn-hint">Sirf <b>${gN}</b> ke woh items jin ka stock hai · tadad pehle <b>Ctn</b> mein</p>
     <div class="tn-lines">${trLines.map((l, i) => [l, i]).reverse().map(([l, i]) => { const have = trAvail(l.id); const short = trFrom !== 1 && have < l.qty - 0.0005; const pk = Number(l.pack) || 0; const full = Math.abs(have - l.qty) < 0.0005;
       return `<div class="tn-line${short ? ' short' : ''}"><div class="tn-top"><span class="tn-no">${i + 1}</span><div class="tn-nm"><b>${esc(l.name)}</b><small>📦 ${gN} mein: <b>${cpTxt(have, pk, l)}</b>${pk > 1 ? ' · 1 ' + esc(l.cName || 'Ctn') + ' = ' + num(pk) : ''}${short ? ' · <b class="red">⛔ stock kam</b>' : ''}</small></div><button type="button" class="tn-x" data-tr-del="${i}" aria-label="Hatao">✕</button></div>
-      <div class="tn-qty">${pk > 1 ? `<label class="tn-q ctn"><span>${esc(l.cName || 'Ctn')}</span><input type="text" inputmode="decimal" value="${num(l.ctn || 0)}" data-tr-ctn="${i}"></label>` : ''}<label class="tn-q"><span>${esc(l.uName || 'Pcs')}</span><input type="text" inputmode="decimal" value="${num(l.pcs ?? l.qty)}" data-tr-pcs="${i}"></label>
-      <button type="button" class="tn-all${full ? ' on' : ''}" data-tr-all="${i}"${have > 0.0005 ? '' : ' disabled'}>⤓ Sara<small>${cpTxt(have, pk, l)}</small></button></div>${pk > 1 ? `<small class="tn-eq">= ${num(l.qty)} ${esc(l.uName || 'Pcs')}</small>` : ''}</div>`; }).join('') || `<div class="tn-empty">⇄<b>Upar se item likhein ya 📷 scan karein</b><small>${gN} ka sirf majood maal dikhega</small></div>`}</div>
+      ${(() => { const S = trSizes(l); return S.length > 1 ? `<div class="tn-pkc"><span>📦 Packet</span>${S.map(x => `<button type="button" class="${l.pk?.some(y => Math.abs(y.z - x.z) < 1e-9) ? 'is-in' : ''}" data-tr-pk="${i}|${x.z}">${esc(x.nm)}</button>`).join('')}</div>` : ''; })()}
+      ${l.pk?.length ? `<div class="tn-pks">${l.pk.map(p => `<div class="tn-pkr"><b>${esc(p.nm)}</b><span><button type="button" data-tr-pkm="${i}|${p.z}">➖</button><input type="text" inputmode="numeric" value="${num(p.n)}" data-tr-pkn="${i}|${p.z}"><button type="button" data-tr-pkp="${i}|${p.z}">➕</button></span><small>packet</small></div>`).join('')}<small class="tn-eq">= POS mein <b>${num(l.qty)} ${esc(l.uName || 'Pcs')}</b> · ${num(l.pk.reduce((t, p) => t + p.n, 0))} packet</small></div>` :
+      `<div class="tn-qty">${pk > 1 ? `<label class="tn-q ctn"><span>${esc(l.cName || 'Ctn')}</span><input type="text" inputmode="decimal" value="${num(l.ctn || 0)}" data-tr-ctn="${i}"></label>` : ''}<label class="tn-q"><span>${esc(l.uName || 'Pcs')}</span><input type="text" inputmode="decimal" value="${num(l.pcs ?? l.qty)}" data-tr-pcs="${i}"></label>
+      <button type="button" class="tn-all${full ? ' on' : ''}" data-tr-all="${i}"${have > 0.0005 ? '' : ' disabled'}>⤓ Sara<small>${cpTxt(have, pk, l)}</small></button></div>${pk > 1 ? `<small class="tn-eq">= ${num(l.qty)} ${esc(l.uName || 'Pcs')}</small>` : ''}`}</div>`; }).join('') || `<div class="tn-empty">⇄<b>Upar se item likhein ya 📷 scan karein</b><small>${gN} ka sirf majood maal dikhega</small></div>`}</div>
     <label class="tn-note">📝 Note<input type="text" data-tr-note maxlength="150" placeholder="ikhtiyari" value="${esc(trNote)}"></label>
     ${trLines.length ? trCopyChips() : ''}
-    <div class="tn-bar"><div class="tn-sum"><b>${trLines.length} item</b><small>${[totC ? num(totC) + ' Ctn' : '', totP ? num(totP) + ' Pcs' : ''].filter(Boolean).join(' + ') || '0'}</small></div>${trLines.length ? '<button type="button" class="tn-clear" data-tr-clear="1">Saaf</button>' : ''}<button type="button" class="tn-save primary" data-tr-save="1"${trLines.length ? '' : ' disabled'}>✓ Transfer note banao</button></div>
+    <div class="tn-bar"><div class="tn-sum"><b>${trLines.length} item</b><small>${[totC ? num(totC) + ' Ctn' : '', totP ? num(totP) + ' Pcs' : '', totK ? num(totK) + ' packet' : ''].filter(Boolean).join(' + ') || '0'}</small></div>${trLines.length ? '<button type="button" class="tn-clear" data-tr-clear="1">Saaf</button>' : ''}<button type="button" class="tn-save primary" data-tr-save="1"${trLines.length ? '' : ' disabled'}>✓ Transfer note banao</button></div>
     <p class="muted tr-msg" style="font-size:.85em"></p>
     <details class="tr-hist tn-hist"><summary>🕘 Pichhle 14 din (app se) — ${trList.length}</summary><div data-tr-hist>${trHistHTML()}</div></details></div>`;
   if (!d.open) d.showModal();
@@ -1885,6 +1887,8 @@ function openTransfer() {
     if (/^[0-9]{8,}$/.test(t)) {   // poora barcode — seedha lag jaye, cursor tadad par
       const exact = items.find(x => String(x.code || '').trim() === t || (Array.isArray(x.bc) && x.bc.some(b => String(b).trim() === t)));
       if (exact) { hits.hidden = true; q.value = ''; trPick(exact, true); return; }
+      const sub = items.find(x => Array.isArray(x.bq) && x.bq.some(b => String(b?.b || '').trim() === t));   // v2.103.33: sub-barcode = wohi packet
+      if (sub && trHas(sub)) { hits.hidden = true; q.value = ''; trRecNote(sub.id); const z = Number(sub.bq.find(b => String(b?.b || '').trim() === t).q) || 1; let l = trLines.find(x => String(x.id) === String(sub.id)); if (!l) l = trAddLine(sub); if (!l.pk?.length) l.pk = []; trPkAdd(l, z, 1); openTransfer(); return; }
     }
     const all = smartSearch(items, raw, 30, { bonus: r => trRecRank(r.id) });
     const ok = [], zero = [];
@@ -1921,10 +1925,17 @@ function openTransfer() {
     else { trQuiet = true; try { q.focus(); } catch {} trQuiet = false; }
   }
 }
-function trCalc(l) { const pk = Number(l.pack) || 0; l.qty = Math.round(((pk > 1 ? (Number(l.ctn) || 0) * pk : 0) + (Number(l.pcs) || 0)) * 1000) / 1000; return l; }
+// v2.103.33: 📦 SUB-BARCODE PACKET — line.pk [{z, n, nm}] (500 gm × 20); POS mein wazan (Σ z·n), parchi par packet. Khaali = wapas Ctn / Pcs.
+function trPkAdd(l, z, d = 1, set = null) { if (!l) return l; const it = collect().items.find(x => String(x.id) === String(l.id)) || {}; l.pk = Array.isArray(l.pk) ? l.pk : [];
+  let p = l.pk.find(y => Math.abs(y.z - z) < 1e-9); if (!p) { p = { z, n: 0, nm: pkName(z, it) }; l.pk.push(p); l.pk.sort((a, b) => b.z - a.z); }
+  p.n = Math.max(0, set != null ? Math.floor(Number(set) || 0) : (Number(p.n) || 0) + d); if (!p.n) l.pk = l.pk.filter(y => y !== p);
+  if (!l.pk.length) { delete l.pk; const pk = Number(l.pack) || 0; l.ctn = pk > 1 ? 1 : 0; l.pcs = pk > 1 ? 0 : 1; } return trCalc(l); }
+const trSizes = l => { const it = collect().items.find(x => String(x.id) === String(l.id)); return it ? gmSizes(it).map(x => ({ ...x, nm: pkName(x.z, it) })) : []; };
+function trCalc(l) { if (Array.isArray(l.pk) && l.pk.length) { l.ctn = 0; l.pcs = Math.round(l.pk.reduce((t, p) => t + p.z * (Number(p.n) || 0), 0) * 1000) / 1000; l.qty = l.pcs; return l; } const pk = Number(l.pack) || 0; l.qty = Math.round(((pk > 1 ? (Number(l.ctn) || 0) * pk : 0) + (Number(l.pcs) || 0)) * 1000) / 1000; return l; }
 // v2.17: naya item = 1 CTN (carton ho to), warna 1 PCS; wahi dobara aaye to +1 CTN. Naya neeche jurta hai.
 function trAddLine(r) { if (!r) return null; const pk = Number(r.pack) || 0; let l = trLines.find(x => String(x.id) === String(r.id));
-  if (l) { if (pk > 1) l.ctn = (Number(l.ctn) || 0) + 1; else l.pcs = Math.round(((Number(l.pcs) || 0) + 1) * 1000) / 1000; trCalc(l); }
+  if (l?.pk?.length) { l.pk[0].n = (Number(l.pk[0].n) || 0) + 1; trCalc(l); }
+  else if (l) { if (pk > 1) l.ctn = (Number(l.ctn) || 0) + 1; else l.pcs = Math.round(((Number(l.pcs) || 0) + 1) * 1000) / 1000; trCalc(l); }
   else { l = trCalc({ id: r.id, name: r.name, pack: pk, cName: r.cName || 'Ctn', uName: r.uName || 'Pcs', ctn: pk > 1 ? 1 : 0, pcs: pk > 1 ? 0 : 1, qty: 0 }); trLines.push(l); }
   return l; }
 function trAdd(r) { if (trAddLine(r)) openTransfer(); }
@@ -1932,7 +1943,7 @@ function trQtyText(l) { const pk = Number(l.pack) || 0; return pk > 1 ? `${num(l
 function trHistHTML() {
   if (!trList.length) return '<p class="muted">Koi nahi.</p>';
   const names = collect().names;
-  return trList.slice(0, 20).map(j => `<div class="tr-hist-row"><div><b>${j.status === 'done' ? (j.op === 'delete' ? 'Hataya' : 'STN ' + esc(j.transferNo || '')) : j.status === 'failed' ? '⚠️ Nahi bana' : '⏳ PC...'}</b> · ${esc(branchName(j.from, names))} → ${esc(branchName(j.to, names))} · ${(j.lines || []).length} items<br><small>${esc(new Date(j.at).toLocaleString('en-PK'))}${j.error ? ' · <span class="red">' + esc(j.error) + '</span>' : ''}${(j.lines || []).slice(0, 4).map(l => ' · ' + esc(l.name) + ' ' + (Number(l.pack) > 1 && (l.ctn || l.pcs != null) ? num(l.ctn || 0) + ' ' + esc(l.cName || 'Ctn') + (l.pcs ? ' + ' + num(l.pcs) + ' ' + esc(l.uName || 'Pcs') : '') : num(l.qty))).join('')}${j.reprints?.length ? ` · <b>dobara print ${j.reprints.length}x</b>` : ''}</small></div>
+  return trList.slice(0, 20).map(j => `<div class="tr-hist-row"><div><b>${j.status === 'done' ? (j.op === 'delete' ? 'Hataya' : 'STN ' + esc(j.transferNo || '')) : j.status === 'failed' ? '⚠️ Nahi bana' : '⏳ PC...'}</b> · ${esc(branchName(j.from, names))} → ${esc(branchName(j.to, names))} · ${(j.lines || []).length} items<br><small>${esc(new Date(j.at).toLocaleString('en-PK'))}${j.error ? ' · <span class="red">' + esc(j.error) + '</span>' : ''}${(j.lines || []).slice(0, 4).map(l => ' · ' + esc(l.name) + ' ' + (Array.isArray(l.pk) && l.pk.length ? l.pk.map(p => esc(p.nm || '') + '×' + num(p.n)).join(', ') : Number(l.pack) > 1 && (l.ctn || l.pcs != null) ? num(l.ctn || 0) + ' ' + esc(l.cName || 'Ctn') + (l.pcs ? ' + ' + num(l.pcs) + ' ' + esc(l.uName || 'Pcs') : '') : num(l.qty))).join('')}${j.reprints?.length ? ` · <b>dobara print ${j.reprints.length}x</b>` : ''}</small></div>
     ${j.status === 'done' && j.op !== 'delete' ? `<button type="button" data-tr-print="${esc(j.id)}">🖨️</button>${isOwner() && Date.now() - j.at < 86400000 ? `<button type="button" class="danger" data-tr-undo="${esc(j.id)}">🗑️</button>` : ''}` : ''}</div>`).join('');
 }
 async function trSave(btn) {
@@ -1945,7 +1956,7 @@ async function trSave(btn) {
   try {
     if (trLines.some(l => !(l.qty > 0))) { msg.textContent = '⚠️ Har item ki tadad 0 se zyada likhein'; return; }
     const ed = trEdit;
-    const jid = await cloud.requestTransfer({ op: ed ? 'edit' : 'create', ...(ed ? { transferId: ed.id, force: true, reason: 'Edit' } : {}), copies: trCopies, from: trFrom, to: trTo, lines: trLines.map(l => ({ itemId: l.id, name: l.name, qty: l.qty, ctn: Number(l.ctn) || 0, pcs: Number(l.pcs) || 0, pack: Number(l.pack) || 0, cName: l.cName || 'Ctn', uName: l.uName || 'Pcs' })), note, byName: '' });
+    const jid = await cloud.requestTransfer({ op: ed ? 'edit' : 'create', ...(ed ? { transferId: ed.id, force: true, reason: 'Edit' } : {}), copies: trCopies, from: trFrom, to: trTo, lines: trLines.map(l => ({ itemId: l.id, name: l.name, qty: l.qty, ctn: Number(l.ctn) || 0, pcs: Number(l.pcs) || 0, pack: Number(l.pack) || 0, cName: l.cName || 'Ctn', uName: l.uName || 'Pcs', ...(l.pk?.length ? { pk: l.pk } : {}) })), note, byName: '' });
     let stop = null, done = false; const t0 = Date.now(), tick = setInterval(() => { if (!done && msg) msg.textContent = `🖥 PC bana raha hai… ${Math.round((Date.now() - t0) / 1000)}s`; }, 1000);   // v2.46: kitna waqt lag raha hai
     const end = (ok, t) => { if (done) return; done = true; clearInterval(tick); try { stop && stop(); } catch {} btn.disabled = false;
       if (ok) { trLines = []; trNote = ''; const was = trEdit; trEdit = null; notice((was ? '✏️ TN ' + was.no + ' badal kar naya ' : '✓ Transfer note ') + t + ' ban gaya (' + Math.round((Date.now() - t0) / 1000) + 's)'); openTransfer(); } else { msg.textContent = '⚠️ ' + t; notice('Transfer nahi bana: ' + t); } };
@@ -1996,9 +2007,14 @@ document.addEventListener('change', e => {
   if (t.matches?.('[data-tr-from]')) { trFrom = Number(t.value); openTransfer(); }
   else if (t.matches?.('[data-tr-to]')) { trTo = Number(t.value); openTransfer(); }
   else if (t.matches?.('[data-tr-ctn]')) { const l = trLines[Number(t.dataset.trCtn)]; if (l) { l.ctn = Math.max(0, Math.floor(Number(t.value) || 0)); trCalc(l); } openTransfer(); }
+  else if (t.matches?.('[data-tr-pkn]')) { const [i, z] = t.dataset.trPkn.split('|'), l = trLines[Number(i)]; if (l) trPkAdd(l, Number(z), 0, t.value); openTransfer(); }   // v2.103.33
   else if (t.matches?.('[data-tr-pcs]')) { const l = trLines[Number(t.dataset.trPcs)]; if (l) { l.pcs = Math.max(0, Math.round((Number(String(t.value).replace(',', '.')) || 0) * 1000) / 1000); trCalc(l); } openTransfer(); }
 });
 
+document.addEventListener('click', e => { const t = e.target.closest?.('[data-tr-pk],[data-tr-pkm],[data-tr-pkp]'); if (!t || !t.closest('.tn-root')) return;   // v2.103.33: 📦 packet
+  const d = t.dataset, [i, zs] = (d.trPk || d.trPkm || d.trPkp).split('|'), l = trLines[Number(i)], z = Number(zs); if (!l) return;
+  if (d.trPk) { const has = l.pk?.find(y => Math.abs(y.z - z) < 1e-9); if (has) trPkAdd(l, z, 0, 0); else { if (!l.pk?.length) l.pk = []; trPkAdd(l, z, 1); } } else trPkAdd(l, z, d.trPkm ? -1 : 1);
+  openTransfer(); });
 // v1.45.8: history ab alag khirki (dialog) mein — pehle list ke upar khulti thi aur search bohat neeche chala jata tha
 function openBills() {
   const d = $('dialog');
@@ -3357,9 +3373,10 @@ export async function stockAgentTransfer({ from, to, lines, note = '' }) {
   if (from === to) throw Error('"Se" aur "Ko" alag godam hon');
   const L = (lines || []).map(x => {
     const it = P.byId.get(String(x.id)); if (!it) throw Error('Item nahi mila: ' + (x.name || x.id));
-    const pk = Number(it.pack) > 1 ? Number(it.pack) : 0, ctn = pk ? Math.max(0, Number(x.ctn) || 0) : 0, pcs = Math.max(0, Number(x.pcs) || 0) + (pk ? 0 : Math.max(0, Number(x.ctn) || 0));
+    const pkL = Array.isArray(x.pk) ? x.pk.filter(p => Number(p.z) > 0 && Number(p.n) > 0).map(p => ({ z: Number(p.z), n: Number(p.n), nm: String(p.nm || pkName(p.z, it)) })) : [];   // v2.103.33: 📦 packet
+    const pk = Number(it.pack) > 1 && !pkL.length ? Number(it.pack) : 0, ctn = pk ? Math.max(0, Number(x.ctn) || 0) : 0, pcs = pkL.length ? r3(pkL.reduce((t, p) => t + p.z * p.n, 0)) : Math.max(0, Number(x.pcs) || 0) + (pk ? 0 : Math.max(0, Number(x.ctn) || 0));
     const qty = r3(ctn * pk + pcs); if (!(qty > 0)) throw Error('Tadad 0 — ' + it.name);
-    return { itemId: it.id, name: it.name, qty, ctn, pcs, pack: Number(it.pack) || 0, cName: it.cName || 'Ctn', uName: it.uName || 'Pcs' };
+    return { itemId: it.id, name: it.name, qty, ctn, pcs, pack: Number(it.pack) || 0, cName: it.cName || 'Ctn', uName: it.uName || 'Pcs', ...(pkL.length ? { pk: pkL } : {}) };
   });
   if (!L.length) throw Error('Koi item nahi');
   const short = from !== 1 ? L.filter(l => trStockOf(from, l.itemId) < l.qty - 0.0005) : [];
@@ -3484,7 +3501,7 @@ const pkSent = new Map();
 const pkName = (z, it) => { const u = String(it?.uName || '').toLowerCase(), kg = /kg|kilo/.test(u) || !u || u === 'pcs'; z = Number(z); return kg && z < 1 ? `${Math.round(z * 1000)} gm` : `${+z.toFixed(3)} ${it?.uName || (kg ? 'kg' : '')}`.trim(); };
 // v2.103.32: 📦 packet ka haal — b = rack POORA bhara (100%), c = set karte waqt rack par ABHI (at); refill (transfer at ke baad) = wapas b se.
 //   left = base − bika (from se); due = left <= b·pct%; lao = b − left (wapas 100%). Purane cfg (b nahi) = n/a wala tareeqa.
-function pkLeft(o, r, z, at) { const b = Number(o?.b) || 0; if (!b) return null; const sold = Number(r?.sold?.[z] ?? r?.sold?.[String(Number(z))]) || 0;
+function pkLeft(o, r, z, at) { const b = Number(o?.b) || 0; if (!b) return null; const stale = Number(r?.from) > 0 && Number(r.from) < (Number(at) || 0) - 1000, sold = stale ? 0 : Number(r?.sold?.[z] ?? r?.sold?.[String(Number(z))]) || 0;   // v2.103.33: PC ne naya at abhi nahi dekha = bika 0
   const refill = Number(r?.from) > (Number(at) || 0) + 60000, base = !refill && o?.c != null && o.c !== '' ? Number(o.c) : b;
   const left = Math.max(0, r3(base - sold)), lim = Math.floor(b * (Number(o?.pct) || 20) / 100);
   return { b, sold, left, now: Math.round(left / b * 100), lim, due: left <= lim + 1e-9, lao: Math.max(1, Math.round(b - left)) }; }
@@ -3699,27 +3716,39 @@ document.addEventListener('focusout', e => { if (gm?.dirty && e.target?.closest?
 const pkIds = () => Object.keys(itemCfg?.rackPk || {}).filter(k => pkCfg(k));
 const pkCan = () => isOwner() || can('stock.g2milao');
 function pkNcalc(b, pct) { return Math.max(1, Math.round(b - Math.floor(b * pct / 100))); }
+// v2.103.33: malik — "har sub-barcode alag · 👀 abhi = POS dukan stock (dobara na ginna pare) · jo likhein wahi stock (kam / zyada POS mein)".
+//   pkSizesOf = item ke SAARE barcode (main + sub) + cfg wale. Editor ka 👀 khud bhara: ek packet = POS dukan ÷ size; kai = sab se bara
+//   floor(POS ÷ size), baqi khaali (gino). _t = 👀 chhua → Save par ginti (writeCount dukan) — farq farq-bill raaste se POS mein; khaali = 0.
+//   Na chhua: khaali packet = app ka bacha (left) — % badalne se halat nahi tootti. Save = at abhi (ginti wahin se).
+function pkSizesOf(it, cf) { const S = gmSizes(it).map(x => ({ z: x.z, k: gmKey(x.z) })); for (const k of Object.keys(cf?.p || {})) if (!S.some(y => Math.abs(y.z - Number(k)) < 1e-9)) S.push({ z: Number(k), k }); return S.sort((a, b) => b.z - a.z); }
 function pkAllRows() {
   const P = agPool(), by = new Map((rackPk || []).map(r => [String(r.i), r]));
   const L = pkIds().map(id => { const cf = pkCfg(id), r = by.get(id), it = P.byId.get(id) || { name: r?.n || 'Item ' + id };
-    const packs = Object.entries(cf.p || {}).map(([z, o]) => { const L = pkLeft(o, r, z, cf.at);
-      return { z: Number(z), k: z, b: L ? L.b : 0, pct: Number(o?.pct) || 0, n: Number(o?.n) || 0, sold: L ? L.sold : 0, left: L ? L.left : null, now: L ? L.now : null, lao: L ? L.lao : 0 }; }).sort((a, b) => b.z - a.z);
+    const packs = pkSizesOf(it, cf).map(({ z, k }) => { const ck = Object.keys(cf.p || {}).find(y => Math.abs(Number(y) - z) < 1e-9), o = ck != null ? cf.p[ck] : null, L = o && Number(o.b) ? pkLeft(o, r, ck, cf.at) : null;
+      return { z, k: ck ?? k, has: !!o, b: L ? L.b : 0, pct: Number(o?.pct) || 0, n: Number(o?.n) || 0, sold: L ? L.sold : 0, left: L ? L.left : null, now: L ? L.now : null, lao: L ? L.lao : 0 }; });
     const low = Math.min(999, ...packs.filter(p => p.now != null).map(p => p.now)); return { id, cf, it, packs, low }; });
   return L.sort((a, b) => a.low - b.low || String(a.it.name).localeCompare(String(b.it.name)));
 }
+function pkPosFill(packs, pos) { const o = {}; pos = Math.max(0, Number(pos) || 0); packs.forEach((p, i) => { o[p.k] = i ? '' : String(packs.length === 1 ? r3(pos / p.z) : Math.floor(pos / p.z + 1e-9)); }); return o; }
+function pkDraftOf(id, x) { let dr = rk.plDr.get(id); if (dr) return dr; x = x || pkAllRows().find(y => y.id === id); if (!x) return null;
+  dr = { _t: false, _pos: gmNow(1, id) }; const pre = pkPosFill(x.packs, dr._pos);
+  for (const p of x.packs) dr[p.k] = { b: p.b || '', c: pre[p.k], pct: p.pct || rackPct() || 20 }; rk.plDr.set(id, dr); return dr; }
+function pkTot(x, dr) { return r3(x.packs.reduce((t, p) => t + (Number(dr[p.k]?.c) || 0) * p.z, 0)); }
+function pkSumHTML(x, dr) { const pos = gmNow(1, x.id), tot = pkTot(x, dr), far = r3(tot - pos), multi = x.packs.length > 1;
+  return `<span>🏪 POS dukan <b>${gmQ(pos, x.it)}</b></span>${dr._t ? `<span>👀 aap ki ginti <b>${gmQ(tot, x.it)}</b></span><span class="${far < 0 ? 'neg' : far > 0 ? 'pos' : ''}">Farq <b>${far > 0 ? '+' : far < 0 ? '−' : ''}${gmQ(Math.abs(far), x.it)}</b>${Math.abs(far) > 0.0005 ? ' → POS mein' : ' ✓'}</span>` : `<span class="mut">👀 POS se bhara${multi ? ' (bara packet) — chhote gin kar likhein' : ''} · sahi ho to bas Save</span>`}`; }
 function pkRowHTML(x, ed) {
-  const open = rk.plEd === x.id, dr = rk.plDr.get(x.id);
-  return `<div class="rk-ps${open ? ' is-in' : ''}"><button type="button" class="rk-psh" data-rkp-ped="${esc(x.id)}"><span><b>${esc(x.it.name)}</b><span class="rk-chips">${x.packs.map(p => p.b ? `<i class="rk-c ${p.now <= p.pct ? 'kh' : p.now <= 40 ? 'lo' : 'pc'}">${esc(pkName(p.z, x.it))}: ${num(p.left)}/${num(p.b)} (${p.now}%) · hadd ${num(p.pct)}%</i>` : `<i class="rk-c pc">${esc(pkName(p.z, x.it))}: hadd ${num(p.n)} bikne par</i>`).join('')}</span></span><i>${open ? '▴' : '▾'}</i></button>
-    ${open && ed ? `<div class="rk-psb">${x.packs.map(p => { const d = dr?.[p.k] || { b: p.b || '', c: '', pct: p.pct || rackPct() || 20 }; return `<div class="gm-r gm-r2"><div class="gm-l"><b>${esc(pkName(p.z, x.it))}</b></div>
-      <label class="gm-f"><small>🧺 Rack POORA bhara ho to (100%)</small><span><input type="number" inputmode="numeric" min="1" step="1" data-rkp-pb="${esc(x.id)}|${esc(p.k)}" value="${esc(String(d.b))}" placeholder="jaise 250"><em>packet</em></span></label>
-      <label class="gm-f"><small>👀 Abhi rack par (gin kar)</small><span><input type="number" inputmode="numeric" min="0" step="1" data-rkp-pc="${esc(x.id)}|${esc(p.k)}" value="${esc(String(d.c ?? ''))}" placeholder="${p.left != null ? 'app ke hisaab se ' + num(p.left) : 'jaise 125'}"><em>packet</em></span></label>
-      <div class="gm-pc"><small>% reh jaye to lao</small><span>${[10, 20, 30, 40].map(v => `<button type="button" class="${Number(d.pct) === v ? 'is-in' : ''}" data-rkp-pp="${esc(x.id)}|${esc(p.k)}|${v}">${v}%</button>`).join('')}</span></div>
-      <div class="gm-prev" id="pkPrev-${esc(x.id)}-${esc(String(p.k)).replace('.', '_')}">${pkPrevHTML(d, p)}</div></div>`; }).join('')}
-      <div class="rk-ed"><button type="button" class="rk-sv" data-rkp-psv="${esc(x.id)}">✓ Save</button></div></div>` : ''}</div>`;
+  const open = rk.plEd === x.id, dr = open && ed ? pkDraftOf(x.id, x) : null;
+  return `<div class="rk-ps${open ? ' is-in' : ''}"><button type="button" class="rk-psh" data-rkp-ped="${esc(x.id)}"><span><b>${esc(x.it.name)}</b><span class="rk-chips">${x.packs.map(p => p.b ? `<i class="rk-c ${p.now <= p.pct ? 'kh' : p.now <= 40 ? 'lo' : 'pc'}">${esc(pkName(p.z, x.it))}: ${num(p.left)}/${num(p.b)} (${p.now}%) · hadd ${num(p.pct)}%</i>` : p.has ? `<i class="rk-c pc">${esc(pkName(p.z, x.it))}: hadd ${num(p.n)} bikne par</i>` : `<i class="rk-c mu">${esc(pkName(p.z, x.it))}: % nahi laga</i>`).join('')}</span></span><i>${open ? '▴' : '▾'}</i></button>
+    ${dr ? `<div class="rk-psb"><div class="gm-sum" id="pkSum-${esc(x.id)}">${pkSumHTML(x, dr)}</div>${x.packs.map(p => { const d = dr[p.k], sk = esc(x.id) + '|' + esc(p.k); return `<div class="gm-r gm-r2"><div class="gm-l"><b>${esc(pkName(p.z, x.it))}</b>${p.b ? `<small>app: ${num(p.left)}/${num(p.b)} bacha</small>` : '<small>naya — 🧺 poora likhein</small>'}</div>
+      <label class="gm-f"><small>🧺 Rack POORA bhara ho to (100%)</small><span><input type="number" inputmode="numeric" min="1" step="1" data-rkp-pb="${sk}" value="${esc(String(d.b))}" placeholder="jaise 250"><em>packet</em></span></label>
+      <label class="gm-f"><small>👀 Abhi rack par <i class="gm-src">${dr._t ? '✏️ aap ne likha' : d.c !== '' ? '🏪 POS se' : 'gin kar'}</i></small><span><input type="number" inputmode="decimal" min="0" step="any" data-rkp-pc="${sk}" value="${esc(String(d.c ?? ''))}" placeholder="gino"><em>packet</em></span></label>
+      <div class="gm-pc"><small>% reh jaye to lao</small><span>${[10, 20, 30, 40].map(v => `<button type="button" class="${Number(d.pct) === v ? 'is-in' : ''}" data-rkp-pp="${sk}|${v}">${v}%</button>`).join('')}</span></div>
+      <div class="gm-prev" id="pkPrev-${esc(x.id)}-${esc(String(p.k)).replace('.', '_')}">${pkPrevHTML(d, { left: dr._t ? 0 : p.left }, sk)}</div></div>`; }).join('')}
+      <div class="rk-ed"><button type="button" class="rk-sv" data-rkp-psv="${esc(x.id)}">✓ Save${dr._t ? ' — ginti + %' : ''}</button></div></div>` : open ? '<p class="rk-note">Is kaam ki ijazat nahi</p>' : ''}</div>`;
 }
-function pkPrevHTML(d, p) { const b = Number(d.b) || 0, pct = Number(d.pct) || 20; if (!b) return '<small>🧺 rack poora bhara ho to kitne packet — likhein</small>';
+function pkPrevHTML(d, p, sk) { const b = Number(d.b) || 0, pct = Number(d.pct) || 20; if (!b) return '<small>🧺 rack poora bhara ho to kitne packet — likhein</small>';
   const now = d.c !== '' && d.c != null ? Number(d.c) : (p.left != null ? p.left : b), lim = Math.floor(b * pct / 100), pc = Math.round(now / b * 100);
-  return `<small>Abhi <b>${num(now)}/${num(b)} = ${pc}%</b> bacha · <b>${pct}% (${num(lim)})</b> par list mein aayega · tab <b>${num(b - lim)} packet</b> aayenge (wapas 100%)${now <= lim ? ' · ⚠️ abhi se list mein' : ''}</small>`; }
+  return `<small>Abhi <b>${num(now)}/${num(b)} = ${pc}%</b> bacha · <b>${pct}% (${num(lim)})</b> par list mein aayega · tab <b>${num(b - lim)} packet</b> aayenge (wapas 100%)${now <= lim ? ' · ⚠️ abhi se list mein' : ''}</small>${sk && now > b ? `<button type="button" class="gm-full" data-rkp-full="${sk}">⚠️ Abhi ${num(now)} — poore ${num(b)} se zyada · Poora ${num(Math.ceil(now))} kar dein?</button>` : ''}`; }
 function pkAllHTML() {
   const ids = pkIds(); if (!ids.length) return ''; const ed = pkCan(), q = String(rk.plq || '').trim();
   let L = pkAllRows(); if (q) L = smartSearch(L.map(x => ({ ...x, name: x.it.name })), q, 120);
@@ -3729,16 +3758,26 @@ function pkAllHTML() {
       <div id="rkPl">${L.slice(0, 150).map(x => pkRowHTML(x, ed)).join('') || '<p class="rk-note">Nahi mila</p>'}</div>` : ''}</div>`;
 }
 document.addEventListener('click', e => {
-  const t = e.target.closest?.('[data-rkp-plo],[data-rkp-ped],[data-rkp-pp],[data-rkp-psv],[data-rkp-allpct]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
+  const t = e.target.closest?.('[data-rkp-plo],[data-rkp-ped],[data-rkp-pp],[data-rkp-psv],[data-rkp-allpct],[data-rkp-full]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
   if (d.rkpPlo) { rk.plOpen = !rk.plOpen; rkPaint(); return; }
-  if (d.rkpPed) { rk.plEd = rk.plEd === d.rkpPed ? '' : d.rkpPed; rkPaint(); return; }
-  const draft = id => { let dr = rk.plDr.get(id); if (!dr) { dr = {}; const cf = pkCfg(id); for (const [k, o] of Object.entries(cf?.p || {})) dr[k] = { b: Number(o?.b) || '', c: '', pct: Number(o?.pct) || rackPct() || 20 }; rk.plDr.set(id, dr); } return dr; };
-  if (d.rkpPp) { const [id, k, v] = d.rkpPp.split('|'); draft(id)[k].pct = Number(v); rkPaint(); return; }
-  if (d.rkpPsv) { const id = d.rkpPsv, cf = pkCfg(id), dr = draft(id); if (!cf || !cloud?.setRackPk) return; if (!pkCan()) { notice('Ijazat nahi'); return; }
-    const p = {}; let reset = false; for (const [k, o] of Object.entries(cf.p || {})) { const x = dr[k] || {}, b = Math.max(0, Math.round(Number(x.b) || 0)), pct = Number(x.pct) || 20, hasC = x.c !== '' && x.c != null, c = hasC ? Math.max(0, Number(x.c) || 0) : (o?.c ?? null);
-      if (hasC) reset = true; p[k] = b > 0 ? { n: Math.max(1, pkN(b, c, pct)), a: Math.max(1, b - Math.floor(b * pct / 100)), b, pct, ...(c != null ? { c } : {}) } : o; }
-    const v = { ...cf, p, ...(reset ? { at: Date.now() } : {}) };   // v2.103.32: abhi gina = ginti wahin se itemCfg = { ...(itemCfg || {}), rackPk: { ...(itemCfg?.rackPk || {}), [id]: JSON.stringify(v) } }; rk.plDr.delete(id); rk.plEd = ''; rkPaint();
-    cloud.setRackPk(id, v).then(() => notice('✓ Packet % save')).catch(er => notice('Save nahi hua: ' + (er?.message || er))); return; }
+  if (d.rkpPed) { rk.plEd = rk.plEd === d.rkpPed ? '' : d.rkpPed; if (rk.plEd) start(true); rkPaint(); return; }   // v2.103.33: ginti round chahiye (👀 = ginti)
+  if (d.rkpFull) { const [id, k] = d.rkpFull.split('|'), dr = pkDraftOf(id); if (!dr?.[k]) return; dr[k].b = String(Math.ceil(Number(dr[k].c) || 0)); rkPaint(); return; }
+  if (d.rkpPp) { const [id, k, v] = d.rkpPp.split('|'), dr = pkDraftOf(id); if (!dr?.[k]) return; dr[k].pct = Number(v); rkPaint(); return; }
+  if (d.rkpPsv) { const id = d.rkpPsv, cf = pkCfg(id), x = pkAllRows().find(y => y.id === id), dr = pkDraftOf(id, x); if (!cf || !x || !dr || !cloud?.setRackPk) return; if (!pkCan()) { notice('Ijazat nahi'); return; }
+    const p = {}, t = dr._t; let bad = '';
+    for (const pp of x.packs) { const q = dr[pp.k] || {}, o = cf.p?.[pp.k], b = Math.max(0, Math.round(Number(q.b) || 0)), pct = Number(q.pct) || 20, blank = String(q.c ?? '').trim() === '';
+      const c = !blank ? Math.max(0, Number(q.c) || 0) : t ? 0 : pp.left;   // v2.103.33: chhua = khaali 0 · na chhua = app ka bacha
+      if (!(b > 0)) { if (o) p[pp.k] = o; else if (!blank && Number(q.c) > 0 && t) bad = pkName(pp.z, x.it); continue; }
+      p[pp.k] = { n: Math.max(1, pkN(b, c, pct)), a: Math.max(1, b - Math.floor(b * pct / 100)), b, pct, ...(c != null ? { c: r3(c) } : {}) }; }
+    if (bad) { notice(`${bad}: 🧺 rack poora bhi likhein`); return; }
+    if (!Object.keys(p).length) { notice('🧺 Rack poora — kam az kam ek packet ka likhein'); return; }
+    const v = { ...cf, p, at: Date.now() };   // ginti wahin se
+    const tot = pkTot(x, dr), pos = gmNow(1, id), far = r3(tot - pos), per = Number(x.it.pack) || 0, ctn = per > 1 ? Math.floor(tot / per + 1e-9) : 0, pcs = r3(tot - ctn * (per > 1 ? per : 0));
+    itemCfg = { ...(itemCfg || {}), rackPk: { ...(itemCfg?.rackPk || {}), [id]: JSON.stringify(v) } }; rk.plDr.delete(id); rk.plEd = ''; rkPaint();
+    const go = t && Math.abs(far) > 0.0005, cnt = go && roundNow() && !countLocked();
+    Promise.all([cloud.setRackPk(id, v), cnt ? writeCount({ id, name: x.it.name, stock: pos, pack: per }, { ctn, pcs, total: tot }, null, false, 1) : null])
+      .then(() => notice(`✓ ${x.it.name} — packet % save${cnt ? ` · ginti ${gmQ(tot, x.it)} (farq ${far > 0 ? '+' : '−'}${gmQ(Math.abs(far), x.it)} POS mein jayega)` : go ? ' · ⚠️ stock ginti chalu nahi — farq POS mein NAHI gaya (Stock → 📋 Nayi ginti)' : ''}`))
+      .catch(er => notice('Save nahi hua: ' + (er?.message || er))); return; }
   if (d.rkpAllpct) { const v = Number(d.rkpAllpct); if (!pkCan() || !cloud?.setRackPkMany) { notice('App update karein'); return; }
     const m = {}; let skip = 0; for (const id of pkIds()) { const cf = pkCfg(id), p = {}; let any = false; for (const [k, o] of Object.entries(cf.p || {})) { const b = Number(o?.b) || 0; if (b > 0) { any = true; p[k] = { ...o, pct: v, n: Math.max(1, pkN(b, o?.c, v)), a: Math.max(1, b - Math.floor(b * v / 100)) }; } else p[k] = o; } if (any) m[id] = { ...cf, p }; else skip++; }
     const n = Object.keys(m).length; if (!n) { notice('Kisi item ka "100% = kitne packet" nahi — pehle Stock milao se gino'); return; }
@@ -3748,17 +3787,20 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('input', e => { const t = e.target; if (!rk) return;
   if (t?.dataset?.rkpPlq != null) { rk.plq = t.value || ''; clearTimeout(rk.plT); rk.plT = setTimeout(() => { const el = document.getElementById('rkPl'); if (!el) return; let L = pkAllRows(); const q = rk.plq.trim(); if (q) L = smartSearch(L.map(x => ({ ...x, name: x.it.name })), q, 120); el.innerHTML = L.slice(0, 150).map(x => pkRowHTML(x, pkCan())).join('') || '<p class="rk-note">Nahi mila</p>'; }, 160); return; }
-  if (t?.dataset?.rkpPb || t?.dataset?.rkpPc) { const [id, k] = (t.dataset.rkpPb || t.dataset.rkpPc).split('|'); let dr = rk.plDr.get(id); if (!dr) { dr = {}; const cf = pkCfg(id); for (const [kk, o] of Object.entries(cf?.p || {})) dr[kk] = { b: Number(o?.b) || '', c: '', pct: Number(o?.pct) || rackPct() || 20 }; rk.plDr.set(id, dr); }
-    if (dr[k]) { if (t.dataset.rkpPb) dr[k].b = t.value; else dr[k].c = t.value; const x = pkAllRows().find(y => y.id === id), pp = x?.packs.find(y => String(y.k) === String(k)), el = document.getElementById(`pkPrev-${id}-${String(k).replace('.', '_')}`); if (el && pp) el.innerHTML = pkPrevHTML(dr[k], pp); } }
+  if (t?.dataset?.rkpPb || t?.dataset?.rkpPc) { const [id, k] = (t.dataset.rkpPb || t.dataset.rkpPc).split('|'), x = pkAllRows().find(y => y.id === id), dr = x && pkDraftOf(id, x); if (!dr?.[k]) return;
+    if (t.dataset.rkpPb) dr[k].b = t.value; else { dr[k].c = t.value; dr._t = true; document.querySelectorAll('#rkBody .gm-src').forEach(x => { if (x.closest('.rk-ps.is-in')) x.textContent = '✏️ aap ne likha'; }); }
+    for (const pp of x.packs) { const el = document.getElementById(`pkPrev-${id}-${String(pp.k).replace('.', '_')}`); if (el) el.innerHTML = pkPrevHTML(dr[pp.k], { left: dr._t ? 0 : pp.left }, id + '|' + pp.k); }
+    const sm = document.getElementById('pkSum-' + id); if (sm) sm.innerHTML = pkSumHTML(x, dr);
+    const sv = document.querySelector(`[data-rkp-psv="${CSS.escape(id)}"]`); if (sv) sv.textContent = '✓ Save' + (dr._t ? ' — ginti + %' : ''); }
 });
 async function rkpGo(g) {
   if (!rk || rk.busy) return; const all = pkDue().filter(y => String(y.g) === String(g)), P = rkPick('p' + g, all.map(y => String(y.r.i))), ys = all.filter(y => P.has(String(y.r.i)));
   const lines = [], noteP = [];
-  for (const y of ys) { let qty = 0; const parts = []; for (const p of y.packs) { const k = String(y.r.i) + '|' + p.z, n = Math.max(0, Math.floor(rk.pQ.has(k) ? rk.pQ.get(k) : p.a)); if (!n) continue; qty += n * p.z; parts.push(`${p.name}×${n}`); }
-    qty = r3(qty); if (!(qty > 0)) continue; lines.push({ id: String(y.r.i), name: y.name, ctn: 0, pcs: qty }); noteP.push(`${y.name} ${parts.join(', ')}`); }
+  for (const y of ys) { let qty = 0; const parts = [], pk = []; for (const p of y.packs) { const k = String(y.r.i) + '|' + p.z, n = Math.max(0, Math.floor(rk.pQ.has(k) ? rk.pQ.get(k) : p.a)); if (!n) continue; qty += n * p.z; parts.push(`${p.name}×${n}`); pk.push({ z: p.z, n, nm: p.name }); }
+    qty = r3(qty); if (!(qty > 0)) continue; lines.push({ id: String(y.r.i), name: y.name, ctn: 0, pcs: qty, pk }); noteP.push(`${y.name} ${parts.join(', ')}`); }
   if (!lines.length) { notice('Koi packet nahi chuna'); return; }
   rk.busy = 'p' + g; rkPaint();
-  try { const r = await stockAgentTransfer({ from: Number(g), to: 1, lines, note: ('📦 ' + noteP.join(' · ')).slice(0, 300) });
+  try { const r = await stockAgentTransfer({ from: Number(g), to: 1, lines, note: '📦 Packet rack bharo' });   // v2.103.33: packet har line par (parchi)
     if (r?.ok || r?.pending) { const t = Date.now(); for (const l of lines) pkSent.set(l.id, t); rk.man.delete('p' + g); notice(r.ok ? `🖨 Packet transfer note ${r.no ? '#' + r.no + ' ' : ''}bana — printer par` : '⏳ ' + r.why); } else notice('⚠️ Nahi bana: ' + (r?.why || 'masla'));
   } catch (e) { notice('⚠️ ' + (e?.message || e)); }
   if (rk) { rk.busy = ''; rkPaint(); }
@@ -3872,7 +3914,7 @@ function thAct(d, b) {
   trFrom = Number(t.from); trTo = Number(t.to); trNote = '';
   trEdit = { id: Number(t.transferId), no: String(t.transferNo || '').replace(/^0+/, ''), from: Number(t.from), lines: (t.lines || []).map(l => ({ itemId: String(l.itemId), qty: Number(l.qty) || 0 })) };
   trLines = (t.lines || []).map(l => { const it = items.find(x => String(x.id) === String(l.itemId)) || {}; const pk = Number(l.pack ?? it.pack) || 0, q = Number(l.qty) || 0, c = pk > 1 ? Math.floor(q / pk + 1e-9) : 0;
-    return trCalc({ id: l.itemId, name: l.name || it.name || 'Item', pack: pk, cName: it.cName || 'Ctn', uName: it.uName || 'Pcs', ctn: c, pcs: pk > 1 ? Math.round((q - c * pk) * 1000) / 1000 : q, qty: 0 }); });
+    return trCalc({ id: l.itemId, name: l.name || it.name || 'Item', pack: pk, cName: it.cName || 'Ctn', uName: it.uName || 'Pcs', ctn: c, pcs: pk > 1 ? Math.round((q - c * pk) * 1000) / 1000 : q, qty: 0, ...(Array.isArray(l.pk) && l.pk.length ? { pk: l.pk.map(p => ({ ...p })) } : {}) }); });
   openTransfer();
 }
 // v2.99.88: 🏭 FACTORY (factory.js) — "apni factory" category (isFactory: category mein 'factory') ki items, dukan (main godam) ka stock,

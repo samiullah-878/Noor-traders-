@@ -1,5 +1,5 @@
 {
- "version": "2026-10-19.4",
+ "version": "2026-10-19.5",
  "note": "post-farq v16: ginti ke baad sale par rok sirf _late on (default band)",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -30,7 +30,7 @@
   "transfer-auto.bat": "bc22e9e1dee01b646f4153fb971535dcf5c3fe8d4b84bb0bd55c451971ddb4f7",
   "transfer-dekho-auto.bat": "a7ea0955221df6e712737467a9d39e110c867f1f2526f8572fc76955625156ee",
   "transfer-dekho.js": "d30502e0190fa92f4ecd65000446718d84a3c52ed7daa90dc46279c28052a461",
-  "transfer-sync.js": "f50c030220cd3056f00a87486f46b85b346e5644de863267cea58469c5e21ee1",
+  "transfer-sync.js": "6100317173d6858bc69fa910493c223885eb4fe052298d66672bbfbb917091ec",
   "item-report.js": "b4a82603ff083ffd2750d023cc63a25465ff87ab81db14c177c7f3ef8d9cbe91",
   "sales-stats.js": "1b04c029b375aa22eadc139c9b38c693705553b64f9591c65ddab457ca94c505",
   "sales-stats-auto.bat": "a5f4f2546741d00fecd83d6db87e82af075cca1ed8e189d26e7075388c6a1212",
