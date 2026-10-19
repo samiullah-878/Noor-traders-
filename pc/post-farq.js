@@ -1,3 +1,4 @@
+// v17 (2026-10-20): band ka jawab app ko — stockCount/_bandDone {items:{id:{at,code,name,bills}}, fail:{id:n}} har bandOnce ke baad (badla ho to). App: '⏳ PC baqi' list, ✓ POS inactive, ❌ 3 dafa fail.
 // v16 (2026-10-19): malik — "ginti ke baad sale ho to bhi bill bane": late rok sirf jab stockCount/_late {on: true} (app ⚙️ chip, default BAND).
 //   stockAt pehle se ginti ke lamhe ka POS stock (ledger) nikalta hai — baad ki sale farq nahi bigarti.
 // v15 (2026-10-19): 'nothing' par bhi chhore hue items (skipped: id, naam, wajah) app ko — malik: "bill baqi 10 magar POS mein bill nahi ban raha". App: "⚠️ N items chhore" + ⚡ Sab ko phir bhi shamil karo (forceBill).
@@ -671,6 +672,14 @@ const PARTY_SQL_TEXT = `SELECT PartyID, PartyName, AccountID FROM dbo.Party
   WHERE (LOWER(PartyName) LIKE '%stock%fraq%' OR LOWER(PartyName) LIKE '%stock%farq%')`;
 const readBand = () => { try { return JSON.parse(fs.readFileSync(BAND_STATE, 'utf8')); } catch { return null; } };
 const writeBand = v => fs.writeFileSync(BAND_STATE, JSON.stringify(v, null, 1));
+let bandDoneLast = '';
+async function pushBandDone(st) {   // v17: app ko batao kis ka kaam ho gaya (purane = feature se pehle ke, unhe bhi "done" gino)
+  const items = {}; for (const id of st.old || []) items[id] = { at: 0, note: 'purana' };
+  for (const [id, d] of Object.entries(st.done || {})) items[id] = { at: Number(d.at) || 0, code: String(d.code || ''), name: String(d.name || '').slice(0, 80), bills: (d.bills || []).slice(0, 5).map(String), ...(d.note ? { note: String(d.note) } : {}) };
+  const fail = {}; for (const [id, n] of Object.entries(st.fail || {})) fail[id] = Number(n) || 0;
+  const j = JSON.stringify({ items, fail }); if (j === bandDoneLast) return; bandDoneLast = j;
+  try { await countCol.doc('_bandDone').set({ items, fail, updatedAt: Date.now() }); } catch (e) { bandDoneLast = ''; log('_bandDone likhne mein masla: ' + e.message); }
+}
 const bandDay = () => { const x = new Date(), q = n => String(n).padStart(2, '0'); return `${x.getFullYear()}-${q(x.getMonth() + 1)}-${q(x.getDate())}`; };
 const hiddenIds = d => { const m = d.exists ? d.data().items || {} : {}; return new Set(Object.keys(m).filter(k => m[k])); };
 let bandHidden = null;
@@ -799,7 +808,7 @@ async function bandOnce() {
   for (const id of Object.keys(st.fail)) if (!bandHidden.has(id)) delete st.fail[id];
   const old = new Set(st.old);
   const fresh = [...bandHidden].filter(id => !old.has(id) && !st.done[id] && (st.fail[id] || 0) < 3);
-  if (!fresh.length && !back.length) { if (JSON.stringify(st) !== before) writeBand(st); return; }
+  if (!fresh.length && !back.length) { if (JSON.stringify(st) !== before) writeBand(st); await pushBandDone(st); return; }
   const pool = await sql.connect(SQL_CONFIG);
   try {
     for (const id of back) {
@@ -816,6 +825,7 @@ async function bandOnce() {
   } finally {
     writeBand(st);
     await pool.close();
+    await pushBandDone(st);
   }
 }
 
@@ -852,7 +862,7 @@ async function bandOld(yes) {
 }
 
 async function autoLoop() {
-  log(`post-farq v13 --auto chal raha hai. App ka hukam listener se (foran), SQL kaam har ${POLL_SECONDS} second. Band: Ctrl+C`);
+  log(`post-farq v17 --auto chal raha hai. App ka hukam listener se (foran), SQL kaam har ${POLL_SECONDS} second. Band: Ctrl+C`);
   let busy = false, again = false, timer = null;
   const tick = async () => {
     if (busy) { again = true; return; }
