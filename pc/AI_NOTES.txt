@@ -3187,3 +3187,9 @@ v2.103.42 + PC label-print v4.7 + factory-post v1.4 (2026-10-19, manifest 2026-1
   wahi hissa dobara (2 dafa, ctl.retry), hisson ke beech 400 ms.
 - PC factory-post v1.4: parchi par har item ke neeche Urdu naam (urdu-names.js UR.get/line, KAM PAD GAYA mein bhi); Urdu ho to nt-parchi tasveer
   (printAny), na chale to UR.strip + RAW. AI nahi.
+
+v2.103.43 (2026-10-19, PC/rules nahi) — 📷 DHUNDLI TASVEER CHECK (pic-check.js, bina AI)
+- Malik: "photo blur ho jati hai — AI wale khane par dekhna". blurScore(file): 700px grey, Laplacian variance, beech ka 80%; asal photo saaf ~1300–1700,
+  2px blur ~235, 3px ~35 → limit 250 (label 200). Galti = blur false (kabhi na roke).
+- purchase.js camera pages: har page ke neeche "✓ Saaf (n)" / "⚠️ Dhundli (n) — dobara lein" (camQ, camCheck), thumbnail lal, note + "Phir bhi parho".
+  Gallery wali: dhundli ho to confirm. tolai.js label photo: dhundli = confirm. sw.js cache mein pic-check.js. AI image size pehle se 2400px/0.9.

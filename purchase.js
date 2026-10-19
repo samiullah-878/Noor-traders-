@@ -36,8 +36,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.103.42';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.103.42';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.103.43';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.103.43';
+import { blurScore, blurText } from './pic-check.js?v=2.103.43';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1828,20 +1829,24 @@ function aiPick(cam) {                    // cam: seedha peeche wala camera (cap
   inp.onchange = async () => {
     const files = [...(inp.files || [])].slice(0, 4); inp.remove();
     if (!files.length) return;
-    if (cam) { camPages.push(files[0]); camPages = camPages.slice(0, 4); camShow(); return; }
+    if (cam) { camPages.push(files[0]); camPages = camPages.slice(0, 4); camShow(); camCheck(); return; }
+    const bad = (await Promise.all(files.map(f => blurScore(f)))).filter(r => r.blur).length;   // v2.103.43: gallery wali bhi
+    if (bad && !confirm(`⚠️ ${bad} tasveer dhundli lag rahi hai — AI ghalat parh sakta hai. Phir bhi parhein?`)) return;
     await aiRead(files);
   };
   inp.click();
 }
+let camQ = [];   // v2.103.43: har page ka blur natija
+async function camCheck() { const i = camPages.length - 1, f = camPages[i]; if (!f) return; const r = await blurScore(f); if (camPages[i] !== f) return; camQ[i] = r; const el = document.getElementById('ppCamq' + i); if (el) { el.textContent = blurText(r); el.className = 'pp-camq ' + (r.blur ? 'bad' : 'ok'); } const go = document.querySelector('[data-pp-camgo]'); if (go && r.blur) go.textContent = `✓ Phir bhi parho (${camPages.length} page)`; const nt = document.getElementById('ppCamnote'); if (nt && r.blur) nt.innerHTML = '<b>⚠️ Aakhri photo dhundli hai</b> — 🔁 Dobara lo: bill par tap kar ke focus karein, phone seedha, roshni achhi.'; }
 function camClear() { for (const u of camUrls) { try { URL.revokeObjectURL(u); } catch {} } camUrls = []; camPages = []; }
 function camShow() {                      // li hui photos ki jhalak + agla page / dobara / parho
   for (const u of camUrls) { try { URL.revokeObjectURL(u); } catch {} }
-  camUrls = camPages.map(f => { try { return URL.createObjectURL(f); } catch { return ''; } });
+  camUrls = camPages.map(f => { try { return URL.createObjectURL(f); } catch { return ''; } }); camQ = camQ.slice(0, camPages.length);
   const n = camPages.length;
-  dlg(`📷 Bill ke page (${n})`, `<div class="pp-camthumbs">${camUrls.map((u, i) => `<div class="pp-camthumb">${u ? `<img src="${u}" alt="page ${i + 1}">` : ''}<small>Page ${i + 1}</small></div>`).join('')}</div>
-    ${aiModeHTML()}<p class="stat-note">Photo saaf aur seedhi ho — sab likha nazar aaye. Dhundli ho to "Dobara lo".</p>
+  dlg(`📷 Bill ke page (${n})`, `<div class="pp-camthumbs">${camUrls.map((u, i) => `<div class="pp-camthumb${camQ[i]?.blur ? ' blur' : ''}">${u ? `<img src="${u}" alt="page ${i + 1}">` : ''}<small>Page ${i + 1}</small><span class="pp-camq ${camQ[i] ? (camQ[i].blur ? 'bad' : 'ok') : ''}" id="ppCamq${i}">${camQ[i] ? blurText(camQ[i]) : '⏳ dekh raha…'}</span></div>`).join('')}</div>
+    ${aiModeHTML()}<p class="stat-note" id="ppCamnote">${camQ.some(r => r?.blur) ? '<b>⚠️ Dhundli photo hai</b> — 🔁 Dobara lo: bill par tap kar ke focus karein, phone seedha, roshni achhi.' : 'Photo saaf aur seedhi ho — sab likha nazar aaye. Dhundli ho to "Dobara lo".'}</p>
     <div class="pp-camacts">
-      <button type="button" class="got" data-pp-camgo="1">✓ Bas, parho (${n} page)</button>
+      <button type="button" class="got" data-pp-camgo="1">${camQ.some(r => r?.blur) ? '✓ Phir bhi parho' : '✓ Bas, parho'} (${n} page)</button>
       ${n < 4 ? '<button type="button" data-pp-camnext="1">📷 Agla page</button>' : ''}
       <button type="button" data-pp-camredo="1">🔁 Aakhri dobara lo</button>
       <button type="button" class="danger" data-pp-camx="1">✕ Chhor dein</button>

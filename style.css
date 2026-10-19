@@ -4325,3 +4325,5 @@ html body :is(#summary,#dialogBody) .rk-lb{grid-column:1/-1;display:inline-flex;
 html body :is(#summary,#dialogBody) .rk-lb input{width:16px;height:16px;margin:0;accent-color:#4f46e5}html body :is(#summary,#dialogBody) .rk-lb.is-in{background:#eef2ff;border-style:solid;border-color:#a5b4fc;color:#3730a3}
 /* v2.103.41: 📄 rate list pdf */
 .report-document .rp-tbl td.rp-r{text-align:right;white-space:nowrap}.report-document .rp-tbl td.rp-n{color:#888;width:28px}.report-document .rp-tbl tr.rp-cat td{background:#f1f5f9;font-weight:800;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#334155}.report-document .rp-tbl td.rp-item small{color:#666}
+/* v2.103.43: 📷 dhundli check */
+.pp-camthumb{position:relative}.pp-camthumb.blur img{outline:3px solid #ef4444;outline-offset:-3px}.pp-camq{display:block;font-size:11px;font-weight:800;margin-top:3px;color:#6b7280}.pp-camq.ok{color:#15803d}.pp-camq.bad{color:#b91c1c}
