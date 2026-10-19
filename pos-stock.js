@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.51';
-import { liveLabelsHTML } from './barcode.js?v=2.103.51';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.52';
+import { liveLabelsHTML } from './barcode.js?v=2.103.52';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -3591,9 +3591,9 @@ function roHTML(names) { const L = roList(), G = new Map(); for (const r of L) {
     <label class="hs-search"><input type="search" data-ro-q="1" placeholder="🔍 item dhoondo…" value="${esc(rk.roQs || '')}" autocomplete="off"></label>
     ${[...G].map(([k, ys]) => { const S = P.get(k), n = ys.filter(on).length; return `<section class="rk-g rk-ro"><div class="rk-gh"><b>🏪 ${esc(k)}</b><button type="button" class="rk-all" data-ro-all="${esc(k)}">${ys.every(r => S.has(r.id)) ? '☐ koi nahi' : '☑ sab'}</button></div>
       ${ys.map(r => { const x = r.x, st = Object.entries(x.st || {}).filter(([, v]) => v).map(([b, v]) => `${esc(branchName(Number(b), names))} ${num(v)}`).join(' · ');
-        return `<div class="rk-r${on(r) ? ' is-in' : ''}"><label class="rk-tk"><input type="checkbox" data-ro-t="${esc(r.id)}"${S.has(r.id) ? ' checked' : ''}><span><b>${esc(x.n)}</b><span class="rk-chips">${r.t > 0 ? `<i class="rk-c ${r.pct <= 20 ? 'kh' : r.pct <= 40 ? 'lo' : 'pc'}">📊 ${num(r.tot)} / ${num(r.t)} (${r.pct}%)</i>` : '<i class="rk-c mu">poora nahi pata</i>'}${r.dm ? `<i class="rk-c own">📢 ${esc(r.dm.byName || 'larka')}: ${r.dm.lvl === 'out' ? 'khatam' : 'kam'}</i>` : ''}${r.own ? '<i class="rk-c pc">✏️ malik ka poora</i>' : ''}</span>
-          <small>${r.last ? `🛒 aakhri ${esc(roWhen(r.last.at))}: <b>${num(r.last.q)} aaya</b>, us waqt <b>${num(Math.max(0, r.last.pre))} tha</b> → poora ${num(r.t)}${x.h.length > 1 ? ' · pichhli: ' + x.h.map(h => num(h.q)).join(' · ') : ''}` : ''}${st ? `<br>📍 ${st}` : ''}${x.s30 ? ` · 30 din bika ${num(x.s30)}` : ''}</small></span></label>
-          <div class="rk-q"><input type="number" inputmode="numeric" min="0" step="${r.pk > 1 ? r.pk : 1}" data-ro-qty="${esc(r.id)}" value="${r.q}"><small>${r.pk > 1 ? 'pcs (' + unit(r) + ')' : 'pcs'}</small></div>${isOwner() ? `<button type="button" class="rk-e" data-ro-e="${esc(r.id)}" aria-label="Poora">✏️</button><button type="button" class="rk-e rk-ban" data-ro-ban="${esc(r.id)}" aria-label="Band">🚫</button>` : ''}
+        return `<div class="rk-r${on(r) ? ' is-in' : ''}"><label class="rk-tk"><input type="checkbox" data-ro-t="${esc(r.id)}"${S.has(r.id) ? ' checked' : ''}><span><b>${esc(x.n)}</b><span class="rk-chips"><i class="rk-c ${r.tot > 0 ? 'ok' : 'kh'}">📦 abhi ${num(r.tot)}</i>${r.t > 0 ? `<i class="rk-c ${r.pct <= 20 ? 'kh' : r.pct <= 40 ? 'lo' : 'pc'}">📊 ${num(r.tot)} / ${num(r.t)} (${r.pct}%)</i>` : '<i class="rk-c mu">poora nahi pata</i>'}${r.dm ? `<i class="rk-c own">📢 ${esc(r.dm.byName || 'larka')}: ${r.dm.lvl === 'out' ? 'khatam' : 'kam'}</i>` : ''}${r.own ? '<i class="rk-c pc">✏️ malik ka poora</i>' : ''}</span>
+          <small>${r.last ? `🛒 aakhri ${esc(roWhen(r.last.at))}: <b>${num(r.last.q)} aaya</b>, us waqt <b>${num(Math.max(0, r.last.pre))} tha</b> → poora ${num(r.t)}${x.h.length > 1 ? ' · pichhli: ' + x.h.map(h => num(h.q)).join(' · ') : ''}` : ''}<br>📍 ${st || '<b>kahin nahi (0)</b>'}${x.s30 ? ` · 30 din bika ${num(x.s30)}` : ''}</small></span></label>
+          <div class="rk-q"><input type="number" inputmode="numeric" min="0" step="${r.pk > 1 ? r.pk : 1}" data-ro-qty="${esc(r.id)}" value="${r.q}"><small>${r.pk > 1 ? 'pcs (' + unit(r) + ')' : 'pcs'}</small></div>${isOwner() ? `<div class="rk-eb"><button type="button" class="rk-e" data-ro-e="${esc(r.id)}" aria-label="Poora">✏️</button><button type="button" class="rk-e rk-ban" data-ro-ban="${esc(r.id)}" aria-label="Band">🚫</button></div>` : ''}
           ${ed === r.id ? `<div class="rk-ed"><label>🧺 Poora (100%) — godam + dukan mein kul kitna hona chahiye<input type="number" inputmode="numeric" min="0" data-ro-tv="${esc(r.id)}" value="${r.t || ''}"></label><div class="rk-mode"><button type="button" class="rk-sv" data-ro-tsv="${esc(r.id)}">✓ Save</button>${r.own ? `<button type="button" data-ro-tdel="${esc(r.id)}">↺ Khud (aakhri purchase se)</button>` : ''}</div></div>` : ''}</div>`; }).join('')}
       <button type="button" class="rk-go" data-ro-go="${esc(k)}"${n && !rk.busy ? '' : ' disabled'}>${rk.busy === 'o' + k ? '⏳…' : `🛒 ${num(n)} items — order (PDF · WhatsApp)`}</button></section>`; }).join('') || (ro.at ? `<div class="th-empty">✓<b>${rk.roF === 'dm' ? 'Koi demand nahi' : 'Is hadd tak koi item nahi'}</b><small>Chip badal kar dekhein</small></div>` : '')}
     ${nOn ? `<p class="rk-note">Chune hue: <b>${num(nOn)}</b> items</p>` : ''}`; }
@@ -4148,7 +4148,7 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.103.51';
+import { agentRegister } from './agent.js?v=2.103.52';
 const AG = (() => {
   const S_ = { type: 'STRING' }, N_ = { type: 'NUMBER' }, B_ = { type: 'BOOLEAN' }, A_ = it => ({ type: 'ARRAY', items: it }), O_ = (p, r = []) => ({ type: 'OBJECT', properties: p, required: r });
   const names = () => collect().names || {};

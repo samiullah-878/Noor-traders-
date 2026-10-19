@@ -4143,7 +4143,7 @@ html body .rk-all{padding:6px 12px;min-height:0;border-radius:999px;border:1.5px
 .rk-warn{font-style:normal;font-size:12px;font-weight:800;color:#b45309}
 .rk-q{display:grid;justify-items:center;gap:1px}.rk-q input{width:64px;padding:8px 4px;border-radius:12px;border:2px solid #c7cdfb;font:inherit;font-weight:900;font-size:17px;text-align:center;color:#312e81}.rk-q small{font-size:11px;font-weight:800;color:#5b6386}
 html body .rk-e{width:38px;height:38px;min-height:0;padding:0;border-radius:12px;border:1.5px solid #e4e7f5!important;background:#fff!important;font-size:16px}
-html body .rk-e.rk-ban{border-color:#f3c5c5!important;background:#fff5f5!important;margin-top:4px}
+html body .rk-e.rk-ban{border-color:#f3c5c5!important;background:#fff5f5!important}.rk-eb{display:grid;gap:6px;align-self:start}
 .rk-ed{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;padding-top:8px;border-top:1px dashed #d7dbf5}
 .rk-ed label{display:grid;gap:3px;font-size:12px;font-weight:800;color:#5b6386}.rk-ed input{width:96px;padding:8px;border-radius:10px;border:1.5px solid #c7cdfb;font:inherit}
 html body .rk-sv{padding:9px 14px;border-radius:12px;border:0!important;background:#4f46e5!important;color:#fff!important;font:inherit;font-weight:800}
@@ -4339,3 +4339,4 @@ html body #dialogBody .pf-tbl{width:100%;border-collapse:collapse;font-size:13px
 html body #dialogBody .pf-tbl td.rp-r{text-align:right;white-space:nowrap}html body #dialogBody .pf-tbl td.rp-n{color:#94a3b8;width:24px}html body #dialogBody .pf-tbl td.pf-nm button{border:0!important;background:none!important;padding:0!important;margin:0!important;min-height:0!important;line-height:1.25;font:inherit;font-weight:800;color:#1f2550!important;text-align:left;display:block;width:100%}html body #dialogBody .pf-tbl td.pf-nm small{display:block;color:#64748b;font-size:11px}
 html body #dialogBody .pf-tbl td.pf-v{font-weight:800;color:#15803d}html body #dialogBody .pf-tbl tr.neg td.pf-v{color:#b91c1c}
 .report-document .pf-tbl tr.neg td{color:#b91c1c}.report-document .pf-tbl td.pf-nm small{color:#666;display:block}
+.rk-c.ok{background:#dcfce7;color:#15803d}
