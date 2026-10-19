@@ -3082,3 +3082,12 @@ v2.103.28 (2026-10-19) — 📅 Item report: kal ka data hamesha + bari report m
 - App: cloud.listenItemKal; irep.js remerge = mergeToday(mergeToday(full, kdoc), tdoc); nfBills kal + aaj (jo full se naye); ageText: bari report
   > 3 ghante purani = " · ⚠️ 3 mahine wali report X pehle — PC: "<sales-stats aakhri log line>"" (cloud.listenPcStatus, malik). Tests itd (16),
   ir5 t/t2, sk/irk. Rules wahi. AI nahi.
+
+v2.103.30 + PC post-farq v15 (2026-10-19, manifest 2026-10-19.3) — 🧾 farq bill: chhore hue items ki wajah + ⚡ sab shamil
+- Malik: "Bill baqi 10" magar POS mein bill nahi banta; app: "PC ne dekha: bill banane ke liye koi naya farq wala item nahi".
+  Wajah: buildList v13 — ginti ke BAAD item ki POS harkat (sale / transfer) = needsRecount (recount / forceBill nahi) -> skipped late; 'nothing' status
+  par skipped app ko jata hi nahi tha (sirf preview par).
+- post-farq v15: skipped mein id (itemId); 'nothing' (manual + auto) par skipped (80 tak) _post doc mein.
+- App postLine: status nothing + skipped -> .fq-warn "⚠️ N items PC ne chhore" (late naam, baqi naam — wajah) + malik button data-fq-forceall
+  "⚡ Sab ko phir bhi bill mein shamil karo" -> har id patchStockCount(countId(_post.branch, id), {forceBill: true}); phir "Bill banao" dobara.
+  Preview ke late warning mein bhi wahi button. Test sk/fq.mjs. Rules wahi (patchStockCount forceBill pehle se). AI nahi.

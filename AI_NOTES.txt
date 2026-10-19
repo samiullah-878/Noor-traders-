@@ -5368,3 +5368,12 @@ v2.103.29 (2026-10-19) — 🧮 STOCK MILAO (Godam 2 milao ka bara roop): dukan 
   (rackPk g = src) — pehle jaisa; godam = carton wale ka Ctn + Pcs (main barcode) + sub packets; live "Gina · POS · Farq". gmSave -> writeCount(br).
   Done = is round mein us jagah gina (dukan par packet % bhi). Live: counts listener -> gmLive() (khana likha ja raha ho to focusout tak ruko).
   Tile "🧮 Stock milao" (canDo stock.g2milao). CAP label badla. Tests sk/gm.mjs + gm2.mjs. PC / rules wahi. AI nahi.
+
+v2.103.30 + PC post-farq v15 (2026-10-19, manifest 2026-10-19.3) — 🧾 farq bill: chhore hue items ki wajah + ⚡ sab shamil
+- Malik: "Bill baqi 10" magar POS mein bill nahi banta; app: "PC ne dekha: bill banane ke liye koi naya farq wala item nahi".
+  Wajah: buildList v13 — ginti ke BAAD item ki POS harkat (sale / transfer) = needsRecount (recount / forceBill nahi) -> skipped late; 'nothing' status
+  par skipped app ko jata hi nahi tha (sirf preview par).
+- post-farq v15: skipped mein id (itemId); 'nothing' (manual + auto) par skipped (80 tak) _post doc mein.
+- App postLine: status nothing + skipped -> .fq-warn "⚠️ N items PC ne chhore" (late naam, baqi naam — wajah) + malik button data-fq-forceall
+  "⚡ Sab ko phir bhi bill mein shamil karo" -> har id patchStockCount(countId(_post.branch, id), {forceBill: true}); phir "Bill banao" dobara.
+  Preview ke late warning mein bhi wahi button. Test sk/fq.mjs. Rules wahi (patchStockCount forceBill pehle se). AI nahi.

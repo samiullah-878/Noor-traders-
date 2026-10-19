@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.29';
-import { liveLabelsHTML } from './barcode.js?v=2.103.29';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.30';
+import { liveLabelsHTML } from './barcode.js?v=2.103.30';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -574,6 +574,14 @@ function farqCardHTML(r) {
       <div class="count-live" data-count-live="${esc(r.id)}"></div></div>`}</details>
   </article>`;
 }
+document.addEventListener('click', async e => {   // v2.103.30: ⚡ sab chhore hue (late) items ek dafa
+  const b = e.target.closest?.('[data-fq-forceall]'); if (!b || !isOwner()) return;
+  const ids = String(b.dataset.fqForceall || '').split(',').filter(Boolean), br = Number(postReq?.branch) || pickedBranch; if (!ids.length) { notice('Items ki pehchan nahi — PC update ka intezar'); return; }
+  if (!confirm(`${ids.length} items — ginti ke baad bill bana tha.\nPhir bhi sab ka farq bill mein shamil karein? (late bill tha to stock do dafa kat sakta hai)`)) return;
+  b.disabled = true; b.textContent = '⏳ …'; let ok = 0;
+  for (const id of ids) { try { await cloud.patchStockCount(countId(br, id), { forceBill: true }); ok++; } catch {} }
+  notice(`✓ ${ok} items bill mein shamil honge — ab "Bill banao" dobara dabayein`); b.textContent = `✓ ${ok} shamil`;
+});
 document.addEventListener('click', async e => {
   const b = e.target.closest?.('[data-fq-force]'); if (!b || !isOwner()) return;
   const r = rowCache.get(String(b.dataset.fqForce)); if (!r) return;
@@ -2227,7 +2235,7 @@ function postLine(pick) {
       <div style="overflow-x:auto"><table><thead><tr><th>Item</th><th>Qty</th><th>Bhao</th><th>Rs</th></tr></thead>
       <tbody>${rows(list, sign)}</tbody></table></div>` : '';
     const lateS = (v.skipped || []).filter(x => x.late), othS = (v.skipped || []).filter(x => !x.late);
-    const skipped = (lateS.length ? `<div class="fq-warn">🧾 <b>${num(lateS.length)} items dobara ginne baqi — bill mein shamil nahi:</b> ${esc(lateS.map(x => x.name).join(', '))}</div>` : '')
+    const skipped = (lateS.length ? `<div class="fq-warn">🧾 <b>${num(lateS.length)} items dobara ginne baqi — bill mein shamil nahi:</b> ${esc(lateS.map(x => x.name).join(', '))}${isOwner() && lateS.some(x => x.id) ? `<button type="button" class="fq-force fq-forceall" data-fq-forceall="${esc(lateS.map(x => x.id).filter(Boolean).join(','))}">⚡ Sab ko phir bhi bill mein shamil karo (${num(lateS.length)})</button><small>Phir "Cancel" kar ke bill dobara bhejein</small>` : ''}</div>` : '')
       + (othS.length ? `<p><small>Chhor diye: ${esc(othS.map(x => x.name).join(', '))}</small></p>` : '');
     return `<div style="margin:8px 0;padding:10px;border:1px solid #9bb7e8;border-radius:10px">
       <p><b>PC ne bill ki list bheji hai — account ${esc(v.party || '')}</b></p>
@@ -2251,7 +2259,11 @@ function postLine(pick) {
     cancelled: 'Bill cancel kar diya gaya',
     failed: 'PC par bill nahi bana: ' + (p.error || '')
   }[p.status] || '';
-  return msg ? `<div class="account-tools"><small><b>${esc(msg)}</b>${t ? ' · ' + esc(t) : ''}</small></div>` : '';
+  // v2.103.30: PC ne jo items CHHORE (wajah ke saath) — late = "ginti ke baad bill" -> malik ek tap mein sab shamil (forceBill)
+  const SK = Array.isArray(p.skipped) ? p.skipped : [], lateS = SK.filter(x => x.late), othS = SK.filter(x => !x.late);
+  const skH = p.status === 'nothing' && SK.length ? `<div class="fq-warn">⚠️ <b>${num(SK.length)} items PC ne chhore</b>${lateS.length ? `<br>🧾 Ginti ke baad bill bana (${num(lateS.length)}): ${esc(lateS.map(x => x.name).join(', '))}` : ''}${othS.length ? `<br>${othS.map(x => `${esc(x.name)} — ${esc(x.why || '')}`).join('<br>')}` : ''}
+    ${lateS.length && isOwner() ? `<button type="button" class="fq-force fq-forceall" data-fq-forceall="${esc(lateS.map(x => x.id).filter(Boolean).join(','))}">⚡ Sab ko phir bhi bill mein shamil karo (${num(lateS.length)})</button><small>Phir upar "Bill banao" dobara dabayein</small>` : ''}</div>` : '';
+  return msg ? `<div class="account-tools"><small><b>${esc(msg)}</b>${t ? ' · ' + esc(t) : ''}</small>${skH}</div>` : '';
 }
 
 async function answerPost(ok) {

@@ -4253,3 +4253,7 @@ html body :is(#summary,#dialogBody) .gm-pl{display:flex;flex-wrap:wrap;align-ite
 html body :is(#summary,#dialogBody) .gm-pl.is-in{background:#eef2ff;border-color:#c7d2fe}html body :is(#summary,#dialogBody) .gm-pl>span:first-child{font-weight:800;color:#1e293b}
 html body :is(#summary,#dialogBody) .gm-pl small{color:#64748b}html body :is(#summary,#dialogBody) .gm-pl .mut{color:#94a3b8}html body :is(#summary,#dialogBody) .gm-pl .rk-c{margin-left:auto}
 html body :is(#summary,#dialogBody) .gm-cp{display:flex;gap:8px}html body :is(#summary,#dialogBody) .gm-cp input{width:74px!important}
+
+/* v2.103.30: ⚡ sab chhore hue items shamil */
+html body .fq-warn .fq-forceall{display:block;width:100%;margin-top:8px;padding:11px 14px;border:0;border-radius:14px;background:linear-gradient(135deg,#f97316,#c2410c);color:#fff;font:inherit;font-weight:800;cursor:pointer}
+html body .fq-warn .fq-forceall+small{display:block;margin-top:4px;color:#9a3412}
