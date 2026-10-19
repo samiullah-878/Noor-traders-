@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.36';
-import { liveLabelsHTML } from './barcode.js?v=2.103.36';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.37';
+import { liveLabelsHTML } from './barcode.js?v=2.103.37';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -106,7 +106,7 @@ export function stockSetup(opts) {
   if (!urduStop && opts?.cloud?.listenUrdu) urduStop = opts.cloud.listenUrdu(m => { urdu = m || {}; if (stockActive) soft(); });
   if (!aliasStop && opts?.cloud?.listenAliases) aliasStop = opts.cloud.listenAliases(m => setAliases(m));   // v1.75: doosre naam
   if (!cfgStop && opts?.cloud?.listenStockConfig) cfgStop = opts.cloud.listenStockConfig(c => { itemCfg = c || {}; if (stockActive) soft(); if (!ctnBusy && document.querySelector('.reg-root')) ctnPaint(); });   // v2.99.18: register khula ho to nayi carton ginti
-  if (!trStop && opts?.cloud?.listenTransfers) trStop = opts.cloud.listenTransfers(list => { trList = list; const h = document.querySelector('[data-tr-hist]'); if (h) h.innerHTML = trHistHTML(); });   // v2.6: transfer shuru se (aaya hua maal ke liye)
+  if (!trStop && opts?.cloud?.listenTransfers) trStop = opts.cloud.listenTransfers(trGot);   // v2.6: transfer shuru se (aaya hua maal ke liye)
   if (!ijStop && opts?.cloud?.listenItemJobs) ijStop = opts.cloud.listenItemJobs(Date.now() - 7 * 86400000, ijGot);   // v2.99.91: ⏳ PC baqi items
   if (!ptStop && opts?.cloud?.listenPosTransfers) ptStop = opts.cloud.listenPosTransfers(list => { ptList = list || []; });   // v2.8: POS ke apne transfer (PC transfer-dekho.js)
   cloud = opts.cloud;
@@ -1141,7 +1141,8 @@ async function printLabel(btn) {
 }
 
 // ---------- v1.73: STOCK TRANSFER NOTE (godam se godam) — PC transfer-sync.js POS mein STN banata hai ----------
-let trLines = [], trFrom = null, trTo = null, trStop = null, trList = [], trNote = '';   // v2.99.64: note re-render par na mite
+let trLines = [], trFrom = null, trTo = null, trStop = null, trList = [], trNote = '';
+function trGot(list) { trList = list || []; const h = document.querySelector('[data-tr-hist]'); if (h) h.innerHTML = trHistHTML(); if (rk && $('rkBody')) rkPaint(); }   // v2.103.37: rack bharo ka ⏳ box bhi   // v2.99.64: note re-render par na mite
 function trBranches() { const { branches, names } = collect(); return branches.map(b => ({ id: b, name: branchName(b, names) })); }
 function trStockOf(b, id) { return Number(saleStockItem(b, id)?.stock || 0); }
 // v2.99.68: ✏️ edit mein purana note pehle hatega — us ka maal "Se" godam mein wapas aayega, is liye majood = stock + purani tadad
@@ -1876,7 +1877,7 @@ function openTransfer() {
     <p class="muted tr-msg" style="font-size:.85em"></p>
     <details class="tr-hist tn-hist"><summary>🕘 Pichhle 14 din (app se) — ${trList.length}</summary><div data-tr-hist>${trHistHTML()}</div></details></div>`;
   if (!d.open) d.showModal();
-  if (!trStop && cloud?.listenTransfers) trStop = cloud.listenTransfers(list => { trList = list; const h = document.querySelector('[data-tr-hist]'); if (h) h.innerHTML = trHistHTML(); });
+  if (!trStop && cloud?.listenTransfers) trStop = cloud.listenTransfers(trGot);
   const q = $('dialogBody').querySelector('[data-tr-q]'), hits = $('dialogBody').querySelector('[data-tr-hits]');
   hits.classList.add('sh-hits');   // v2.18: premium rows + chips
   const trFind = () => {
@@ -3407,7 +3408,7 @@ function thWatch() {
   if (cloud && !thRetry && !(ptList || []).length) {   // pehli dafa login se pehle listener ruk gaya ho to aik dafa dobara
     thRetry = true;
     try { ptStop?.(); } catch {} ptStop = cloud.listenPosTransfers ? cloud.listenPosTransfers(list => { ptList = list || []; if (document.querySelector('.th-root')) rerender(); }) : null;
-    try { trStop?.(); } catch {} trStop = cloud.listenTransfers ? cloud.listenTransfers(list => { trList = list; const h = document.querySelector('[data-tr-hist]'); if (h) h.innerHTML = trHistHTML(); if (document.querySelector('.th-root')) rerender(); }) : null;
+    try { trStop?.(); } catch {} trStop = cloud.listenTransfers ? cloud.listenTransfers(list => { trGot(list); if (document.querySelector('.th-root')) rerender(); }) : null;
   }
 }
 // ================= v2.103.14: 🧺 RACK BHARO — dukan se jitna bika, utna godam se poore carton (malik: "open stock godam se nahi aata;
@@ -3474,6 +3475,7 @@ function rkSynth(id) { const P = agPool(), it = P.byId.get(String(id)); if (!it)
   return { i: String(id), n: it.name, pk, g: g ? g[0] : 0, gs: g ? g[1] : 0, ss: Number(sI?.stock) || 0, w: 0, s: 0, m: pk > 1 ? pk : 1, fc: 1, add: 1 }; }
 // 🔍 Ye kyun nahi aaya? — rack list mein na hone ki wajah
 function rkWhy(id) { id = String(id); const names = collect().names || {}, x = rackSrc().find(r => String(r.i) === id), cf = rackCfg(id) || {}, gods = collect().branches.filter(b => b !== 1);
+  if (rkPendIds().has(id)) return { w: '⏳ Patti nikli — upar "rack bhar diya" ✓ baqi', stk: x ? `dukan ${num(r3(x.ss))}` : '', can: false };
   const gst = gods.map(b => [b, Number(saleStockItem(b, id)?.stock) || 0]).filter(z => z[1] > 0), ss = Number(saleStockItem(1, id)?.stock) || 0;
   const stk = `dukan ${num(r3(ss))} · ${gst.length ? gst.map(([b, v]) => esc(branchName(b, names)) + ' ' + num(r3(v))).join(' · ') : 'godam 0'}`;
   if (pkCfg(id)) return { w: '📦 Packet-war mein hai — wahan se aata hai', stk, can: false };
@@ -3489,7 +3491,8 @@ function rackDue() {
   const L = src.map(x => ex.has(String(x.i)) ? { ...x, add: 1 } : x);
   for (const id of ex.keys()) if (!have.has(id)) { const x = rkSynth(id); if (x) L.push(x); }
   const rank = c => c.khali ? 3 : c.lo ? 2 : c.add ? 1 : 0;
-  return L.filter(x => (x.add || !pkCfg(x.i)) && !(rackSent.get(String(x.i)) > (Number(x.w) || 0))).map(x => ({ x, c: rackCalc(x) })).filter(y => y.c.due).sort((a, b) => rank(b.c) - rank(a.c));
+  const pend = rkPendIds();
+  return L.filter(x => (x.add || !pkCfg(x.i)) && !pend.has(String(x.i)) && !(rackSent.get(String(x.i)) > (Number(x.w) || 0))).map(x => ({ x, c: rackCalc(x) })).filter(y => y.c.due).sort((a, b) => rank(b.c) - rank(a.c));
 }
 const rkQty = (q, pk) => pk ? `${num(Math.floor(q / pk))} ctn` : `${num(q)} pcs`;
 const rkWhen = ms => { const d = new Date(ms); return `${d.getDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()]} ${d.toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' })}`; };
@@ -3508,7 +3511,7 @@ function pkLeft(o, r, z, at) { const b = Number(o?.b) || 0; if (!b) return null;
 function pkN(b, c, pct) { const base = c != null && c !== '' ? Number(c) : b; return Math.max(0, Math.round(base - Math.floor(b * pct / 100))); }
 function pkDue() {
   const out = [];
-  for (const r of rackPk) { const cf = pkCfg(r.i); if (!cf || cf.tn) continue; if (pkSent.get(String(r.i)) > (Number(r.from) || 0)) continue;   // v2.103.36: tn = note bana, larke ka ✓ baqi
+  const pend = rkPendIds(); for (const r of rackPk) { const cf = pkCfg(r.i); if (!cf || pend.has(String(r.i))) continue; if (pkSent.get(String(r.i)) > (Number(r.from) || 0)) continue;   // v2.103.37: patti nikli, larke ka ✓ baqi
     const it = saleStockItem(1, String(r.i)) || saleStockItem(Number(r.g), String(r.i)), gI = saleStockItem(Number(cf.g || r.g), String(r.i)), gs = gI ? Number(gI.stock) || 0 : Number(r.gs) || 0;
     const packs = Object.entries(cf.p || {}).map(([z, o]) => { const zz = Number(z); const sold = Number(r.sold?.[z] ?? r.sold?.[String(zz)]) || 0, n = Math.max(1, Number(o?.n) || 10), b = Number(o?.b) || 0, pct = Number(o?.pct) || 0, L = pkLeft(o, r, z, cf.at), a = L ? L.lao : Math.max(1, Number(o?.a) || n);
       return { z: zz, sold, n, a, b, pct, left: L ? L.left : null, due: L ? L.due : sold >= n, name: pkName(zz, it) }; }).filter(p => p.due);
@@ -3517,13 +3520,55 @@ function pkDue() {
   }
   return out;
 }
+// ---- v2.103.37: ⏳ PATTI NIKLI — RACK BHAR GAYA? — malik: "note ban jaye to item tab gayab ho jab larka shop par check kar ke ✓ kare ·
+//   dobara note bhi · checkbox · barcode · note print · stock aaya check wahin · godam ke chips (default Godam 1)".
+//   Source = transferJobs (trList, 14 din) jo rack bharo / packet se bane (note 🧺 / 📦), status done. ✓ = blueAccess/rackDone {jobs:{jobId:{ids,at,by}}}
+//   (staff likh sakta — rules 2.64). Transfer check mein TN "✓ poora mila" (tcChecks ok) = sab items khud ✓. Pending item due list mein nahi.
+let rackDone = {}, rackDoneStop = null;
+const rkIsRackJob = j => j && j.status === 'done' && j.op === 'create' && /^(🧺|📦)/.test(String(j.note || '')) && (j.lines || []).length;
+function rkDoneIds(j) { const S = new Set((rackDone?.jobs?.[j.id]?.ids || []).map(String)); if (!S.size || S.size < (j.lines || []).length) { const c = tcChecks.get('T' + String(j.transferId)); if (c?.status === 'ok') for (const l of j.lines || []) S.add(String(l.itemId)); } return S; }
+function rkPend() { const g = rk?.g || 0; return (trList || []).filter(rkIsRackJob).map(j => { const done = rkDoneIds(j), lines = (j.lines || []).filter(l => !done.has(String(l.itemId))); return { j, lines, done, n: (j.lines || []).length }; }).filter(x => x.lines.length && (!g || Number(x.j.from) === g)).sort((a, b) => b.j.at - a.j.at); }
+function rkPendIds() { const S = new Set(); for (const j of trList || []) { if (!rkIsRackJob(j)) continue; const done = rkDoneIds(j); for (const l of j.lines) if (!done.has(String(l.itemId))) S.add(String(l.itemId)); } return S; }
+const rkLineQ = l => Array.isArray(l.pk) && l.pk.length ? l.pk.map(p => `${p.nm}×${num(p.n)}`).join(' · ') : Number(l.pack) > 1 && (l.ctn || l.pcs) ? `${num(l.ctn || 0)} ${l.cName || 'Ctn'}${l.pcs ? ' + ' + num(l.pcs) + ' ' + (l.uName || 'Pcs') : ''}` : `${num(l.qty)} ${l.uName || 'Pcs'}`;
+function rkDt(jid) { if (!rk.dt.has(jid)) rk.dt.set(jid, new Set()); return rk.dt.get(jid); }
+function rkPendHTML(names) { const L = rkPend(); if (!L.length) return '';
+  return `<section class="rk-g rk-pend"><div class="rk-gh"><b>⏳ Patti nikli — rack bhar gaya? (${num(L.reduce((t, x) => t + x.lines.length, 0))})</b></div><p class="rk-note">Larka shop par dekh kar ☑ kare → "✓ rack bhar diye". Maal na aaya ho to 🖨 naya note. Jab tak ✓ nahi, item neeche list mein nahi aayega.</p>
+    ${L.map(({ j, lines, n }) => { const jid = String(j.id), T = rkDt(jid), on = l => T.has(String(l.itemId)), k = lines.filter(on).length, ago = Math.max(0, Math.round((Date.now() - (j.at || 0)) / 60000)), pk = /^📦/.test(String(j.note || ''));
+      return `<div class="rk-pj"><div class="rk-pjh"><span><b>${pk ? '📦' : '🧺'} TN ${esc(String(j.transferNo || '').replace(/^0+/, ''))}</b><small>${ago < 60 ? ago + ' min' : Math.round(ago / 60) + ' ghante'} pehle · ${esc(branchName(Number(j.from), names))} ➜ ${esc(branchName(Number(j.to), names))}${n > lines.length ? ` · ✓ ${num(n - lines.length)}/${num(n)} ho gaye` : ''}</small></span>
+          <span class="rk-pb"><button type="button" class="rk-ag" data-rkd-prn="${esc(jid)}" title="Note dobara print">🖨</button><button type="button" class="rk-ag" data-rkd-tc="${esc(jid)}" title="Stock aaya — check">🧾 Check</button><button type="button" class="rk-all" data-rkd-all="${esc(jid)}">${k === lines.length ? '☐ koi nahi' : '☑ sab'}</button></span></div>
+        <div class="rk-bc">▌▌▌ ${esc(String(j.transferNo || ''))} <i class="rk-c pc">✓ ${num(k)}/${num(lines.length)}</i></div>
+        ${lines.map(l => `<label class="rk-r rk-tk rk-pl${on(l) ? ' is-in' : ''}"><input type="checkbox" data-rkd-t="${esc(jid)}|${esc(String(l.itemId))}"${on(l) ? ' checked' : ''}><span><b>${esc(l.name)}</b><small>${esc(rkLineQ(l))}</small></span></label>`).join('')}
+        <div class="rk-pb rk-pbb"><button type="button" class="rk-sv" data-rkd-ok="${esc(jid)}"${k && !rk.busy ? '' : ' disabled'}>✓ ${num(k)} rack bhar diye</button><button type="button" class="rk-ag" data-rkd-again="${esc(jid)}"${lines.length - k && !rk.busy ? '' : ' disabled'}>${rk.busy === 'd' + jid ? '⏳' : `🖨 Naya note — baqi ${num(lines.length - k)}`}</button></div></div>`; }).join('')}</section>`; }
+async function rkDoneSave(j, ids, msg) { if (!cloud?.setRackDone) { notice('App update karein'); return false; } const all = [...new Set([...(rackDone?.jobs?.[j.id]?.ids || []).map(String), ...ids])];
+  rackDone = { ...(rackDone || {}), jobs: { ...(rackDone?.jobs || {}), [j.id]: { ids: all, at: Date.now() } } }; rk.dt.delete(String(j.id)); rkPaint();
+  try { await cloud.setRackDone(j.id, all); if (msg) notice(msg); return true; } catch (e) { notice('Save nahi hua: ' + (e?.message || e)); return false; } }
+async function rkAgain(j, lines) { if (!rk || rk.busy) return; const L = lines.map(l => ({ id: String(l.itemId), name: l.name, ctn: Number(l.ctn) || 0, pcs: Number(l.pcs) || 0, ...(Array.isArray(l.pk) && l.pk.length ? { pk: l.pk } : {}) }));
+  rk.busy = 'd' + j.id; rkPaint();
+  try { const r = await stockAgentTransfer({ from: Number(j.from), to: Number(j.to) || 1, lines: L, note: (/^📦/.test(String(j.note || '')) ? '📦 Packet rack bharo' : '🧺 Rack bharo') + ' (dobara)' });
+    if (r?.ok || r?.pending) { await rkDoneSave(j, L.map(l => l.id), null); notice(r.ok ? `🖨 Naya note ${r.no ? '#' + r.no + ' ' : ''}— ${L.length} items (purana ✓)` : '⏳ ' + r.why); } else notice('⚠️ Nahi bana: ' + (r?.why || 'masla'));
+  } catch (e) { notice('⚠️ ' + (e?.message || e)); }
+  if (rk) { rk.busy = ''; rkPaint(); } }
+document.addEventListener('click', e => { const t = e.target.closest?.('[data-rkd-all],[data-rkd-ok],[data-rkd-again],[data-rkd-prn],[data-rkd-tc]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
+  const jid = d.rkdAll || d.rkdOk || d.rkdAgain || d.rkdPrn || d.rkdTc, x = rkPend().find(y => String(y.j.id) === jid); if (!x) return; const T = rkDt(jid);
+  if (d.rkdAll) { if (T.size === x.lines.length) T.clear(); else for (const l of x.lines) T.add(String(l.itemId)); rkPaint(); return; }
+  if (!canDoRk()) { notice('Ijazat nahi'); return; }
+  if (d.rkdOk) { const ids = x.lines.filter(l => T.has(String(l.itemId))).map(l => String(l.itemId)); if (!ids.length) return; rkDoneSave(x.j, ids, `✓ ${ids.length} rack bhar diye`); return; }
+  if (d.rkdAgain) { rkAgain(x.j, x.lines.filter(l => !T.has(String(l.itemId)))); return; }
+  if (d.rkdPrn) { if (!cloud?.requestPrint) return; cloud.requestPrint({ kind: 'transfer', id: x.j.id, reason: 'Rack bharo — dobara', copies: 1 }).then(() => notice('🖨 Note dobara print — PC ko bheja')).catch(er => notice(er?.message || 'Nahi hua')); return; }
+  if (d.rkdTc) { openTransferCheck('scan'); tcLookup(String(x.j.transferNo || '')); return; } });
+document.addEventListener('change', e => { const t = e.target; if (!rk || !t.matches?.('[data-rkd-t]')) return; const [jid, id] = t.dataset.rkdT.split('|'), T = rkDt(jid); if (t.checked) T.add(id); else T.delete(id); rkPaint(); });
+// godam chips: default naam "Godam 1" (number se nahi) · localStorage
+function rkGDefault() { const { names, branches } = collect(); const G = (branches || []).filter(b => b !== 1); return G.find(b => /godam\s*1/i.test(String(names?.[b] || ''))) ?? G[0] ?? 0; }
 function rackOpen() {
-  rackWatch(); start(false); rk = { q: '', sel: new Map(), off: new Set(), ed: '', busy: '', pOff: new Set(), pQ: new Map(), pset: false, pq: '', pEd: '', pDraft: new Map(), pg: Number(localStorage.getItem('sam-rk-pg')) || 0, zAll: false, man: new Map(), n: rkNGet(), extra: new Map(), plOpen: false, plq: '', plEd: '', plDr: new Map() };
+  rackWatch(); start(false); rk = { q: '', sel: new Map(), off: new Set(), ed: '', busy: '', pOff: new Set(), pQ: new Map(), pset: false, pq: '', pEd: '', pDraft: new Map(), pg: Number(localStorage.getItem('sam-rk-pg')) || 0, zAll: false, man: new Map(), n: rkNGet(), extra: new Map(), plOpen: false, plq: '', plEd: '', plDr: new Map(), dt: new Map(), g: 0 };
+  { const v = Number(localStorage.getItem('sam-rk-g')); rk.g = v >= 0 && (v === 0 || collect().branches.includes(v)) && localStorage.getItem('sam-rk-g') != null ? v : rkGDefault(); }   // v2.103.37: godam chip
+  if (!trStop && cloud?.listenTransfers) trStop = cloud.listenTransfers(trGot);
+  if (!rackDoneStop && cloud?.listenRackDone) rackDoneStop = cloud.listenRackDone(d => { rackDone = d || {}; if (rk && $('rkBody')) rkPaint(); }); tcStart();
   const d = $('dialog'); if (!d) return; d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = '🧺 Rack bharo — godam se lao'; $('dialogBody').innerHTML = '<div class="rk-root" id="rkBody"></div>'; if (!d.open) d.showModal(); rkPaint();
 }
 function rkPaint(only) {
   const el = $('rkBody'); if (!el || !rk) return; const names = collect().names || {}, all = rackDue(), q = rk.q.trim(), hit = q ? new Set(smartSearch(all.map(y => ({ ...y, id: String(y.x.i), name: y.x.n })), q, 300).map(r => r.id)) : null;
-  const L = all.filter(y => !hit || hit.has(String(y.x.i))), G = new Map(); for (const y of L) { if (!G.has(y.x.g)) G.set(y.x.g, []); G.get(y.x.g).push(y); }
+  const L = all.filter(y => (!hit || hit.has(String(y.x.i))) && (!rk.g || Number(y.x.g) === rk.g)), G = new Map(); for (const y of L) { if (!G.has(y.x.g)) G.set(y.x.g, []); G.get(y.x.g).push(y); }
   const qOf = y => rk.sel.has(String(y.x.i)) ? rk.sel.get(String(y.x.i)) : y.c.q, PK = new Map(); for (const [g, ys] of rkGroups(all, qOf)) PK.set(g, rkPick('r' + g, ys)); const on = y => !!PK.get(String(y.x.g))?.has(String(y.x.i)) && qOf(y) > 0;
   const ctn = all.reduce((t, y) => t + (y.c.pk ? Math.floor(qOf(y) / y.c.pk) : 0), 0), age = rackAt ? Math.round((Date.now() - rackAt) / 60000) : null;
   const row = y => { const x = y.x, c = y.c, id = String(x.i), v = qOf(y), ed = rk.ed === id, cf = rackCfg(id);
@@ -3533,6 +3578,8 @@ function rkPaint(only) {
   const html = `<div class="rk-hero"><div><small>DUKAN KA RACK</small><b>${num(all.length + pkDue().length)} items godam se lane</b><span>${ctn ? num(ctn) + ' carton' : ''}</span></div><span class="rk-ic">🧺</span></div>
     ${rackAt ? `<div class="rk-time${age > 10 ? ' old' : ''}">🖥 PC data: <b>${esc(new Date(rackAt).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }))}</b> · ${age < 1 ? 'abhi' : age + ' min pehle'}${age > 10 ? ' — ⚠️ PC ka rack script ruka?' : ' · har 2 min'}</div>` : irData ? '<div class="rk-time old">⚠️ Andaza — PC data abhi nahi aaya (is mein godam ki sale bhi shamil). PC data aate hi khud sahi.</div>' : ''}
     ${rackZero.length && isOwner() ? (() => { const Z = rk.zAll ? rackZero : rackZero.slice(0, 8); return `<div class="rk-z0"><b>⚠️ ${num(rackZero.length)} items ka carton pcs <u>0</u> hai</b><small>POS mein in ka bill "Divide by zero" rok sakta hai. App se bane items PC khud 1 kar deta hai (item-post v1.3); baqi POS Item master mein Cotton/packing likhein (kam az kam 1).</small><span class="rk-chips">${Z.map(x => `<i class="rk-c kh" title="dukan ${num(x.ss)} · 30 din mein ${num(x.s)} bike">${esc(x.n)}${x.s ? ` · ${num(x.s)} bike` : ''}</i>`).join('')}${rackZero.length > 8 ? `<button type="button" class="rk-c pc rk-zm" data-rk-zall="1">${rk.zAll ? '▴ kam' : `+${num(rackZero.length - 8)} aur`}</button>` : ''}</span></div>`; })() : ''}
+    <div class="rk-nb rk-gch"><span>🏬 Godam</span>${[...collect().branches.filter(b => b !== 1), 0].map(b => `<button type="button" class="${rk.g === b ? 'is-in' : ''}" data-rk-g="${b}">${b ? esc(branchName(b, names)) : 'Sab'}</button>`).join('')}</div>
+    ${rkPendHTML(names)}
     <label class="hs-search"><input type="search" data-rk-q="1" placeholder="🔍 item dhoondo… (list mein nahi? wajah bhi)" value="${esc(rk.q)}" autocomplete="off"></label>
     ${isOwner() ? `<div class="rk-nb rk-pct"><span>📊 Itna % reh jaye to lao</span>${[[0, 'Sab'], [10, '10%'], [20, '20%'], [30, '30%'], [40, '40%']].map(([v, l]) => `<button type="button" class="${rackPct() === v ? 'is-in' : ''}" data-rk-pct="${v}">${l}</button>`).join('')}</div>` : ''}
     ${isOwner() ? `<div class="rk-nb rk-hd"><span>📉 Dukan mein itna reh jaye to lao</span>${[[0, 'Khali (0)'], [0.25, '¼ ctn'], [0.5, '½ ctn']].map(([v, l]) => `<button type="button" class="${rackLo() === v ? 'is-in' : ''}" data-rk-hd="${v}">${l}</button>`).join('')}</div>` : ''}
@@ -3543,9 +3590,9 @@ function rkPaint(only) {
     <div id="rkWhy">${q ? (() => { const due = new Set(all.map(y => String(y.x.i))), H = smartSearch(agPool().list.filter(it => !due.has(String(it.id))), q, 4); if (!H.length) return '';
       return `<section class="rk-g rk-why"><div class="rk-gh"><b>🔍 Ye list mein kyun nahi?</b></div>${H.map(it => { const w = rkWhy(it.id); return `<div class="rk-wy"><span><b>${esc(it.name)}</b><i class="rk-c pc">${w.w}</i><small>📦 ${w.stk}</small></span>${w.can ? `<button type="button" class="rk-sv" data-rk-add="${esc(String(it.id))}">➕ Phir bhi lao</button>` : ''}</div>`; }).join('')}</section>`; })() : ''}</div>
     ${(() => { const P = pkDue(), cnt = Object.keys(itemCfg?.rackPk || {}).filter(k => pkCfg(k)).length; if (!P.length && !cnt && !isOwner()) return '';
-      const G = new Map(); for (const y of P) { if (!G.has(y.g)) G.set(y.g, []); G.get(y.g).push(y); }
+      const G = new Map(); for (const y of P) { if (rk.g && Number(y.g) !== rk.g) continue; if (!G.has(y.g)) G.set(y.g, []); G.get(y.g).push(y); }
       return `<section class="rk-g rk-pw"><div class="rk-gh"><b>📦 Packet-war${cnt ? ` · ${num(cnt)} items` : ''}</b>${isOwner() ? '<button type="button" class="rk-all" data-rkp-set="1">⚙️ Items chunein</button>' : ''}</div>
-        ${pkPendHTML(names)}${!rackAt ? '<p class="rk-note">PC data aate hi (2 min) packet ki ginti aayegi.</p>' : !P.length ? `<p class="rk-note">${cnt ? '✓ Abhi koi packet hadd tak nahi bika.' : 'Ek item ke kai barcode (garam masala 250 gm · 1 kg, ilaichi 50 gm) — "⚙️ Items chunein" se packet-war hadd lagayein.'}</p>` : ''}
+        ${!rackAt ? '<p class="rk-note">PC data aate hi (2 min) packet ki ginti aayegi.</p>' : !P.length ? `<p class="rk-note">${cnt ? '✓ Abhi koi packet hadd tak nahi bika.' : 'Ek item ke kai barcode (garam masala 250 gm · 1 kg, ilaichi 50 gm) — "⚙️ Items chunein" se packet-war hadd lagayein.'}</p>` : ''}
         ${[...G].map(([g, ys]) => `<div class="rk-pg"><b class="rk-pgh">🏬 ${esc(branchName(g, names))} ➜ ${esc(branchName(1, names))}</b>
           ${(() => { rk._pp = rkPick('p' + g, ys.map(y => String(y.r.i))); return ''; })()}${ys.length > (rk.n || 1e9) ? `<div class="rk-left"><i class="rk-c pc">✓ ${num(rk._pp.size)} is patti mein</i><i class="rk-c own">⏳ ${num(ys.length - rk._pp.size)} baqi</i></div>` : ''}
           ${ys.map(y => { const id = String(y.r.i), offI = !rk._pp.has(id); return `<div class="rk-r${offI ? '' : ' is-in'}"><label class="rk-tk"><input type="checkbox" data-rkp-t="${esc(id)}"${offI ? '' : ' checked'}><span><b>${esc(y.name)}</b><small>godam ${num(r3(y.gs))} · dukan ${num(r3(y.r.ss))}${y.r.kh ? ` · khula ${num(y.r.kh)}` : ''}</small></span></label>
@@ -3755,27 +3802,6 @@ function pkRowHTML(x, ed) {
 function pkPrevHTML(d, p, sk) { const b = Number(d.b) || 0, pct = Number(d.pct) || 20; if (!b) return '<small>🧺 rack poora bhara ho to kitne packet — likhein</small>';
   const now = d.c !== '' && d.c != null ? Number(d.c) : (p.left != null ? p.left : b), lim = Math.floor(b * pct / 100), pc = Math.round(now / b * 100);
   return `<small>Abhi <b>${num(now)}/${num(b)} = ${pc}%</b> bacha · <b>${pct}% (${num(lim)})</b> par list mein aayega · tab <b>${num(b - lim)} packet</b> aayenge (wapas 100%)${now <= lim ? ' · ⚠️ abhi se list mein' : ''}</small>${sk && now > b ? `<button type="button" class="gm-full" data-rkp-full="${sk}">⚠️ Abhi ${num(now)} — poore ${num(b)} se zyada · Poora ${num(Math.ceil(now))} kar dein?</button>` : ''}`; }
-// v2.103.36: malik — "note ban jaye to item list se tab gayab ho jab larka shop par check kar ke ✓ kare · dobara note bhi ban sake".
-//   rackPk cfg.tn = {at, no, q} (note bana — sab phones par, staff likh sakta: rules 2.63). Jab tak tn: due list mein nahi, "⏳ Note bana" mein:
-//   ✓ Rack bhar diya = tn hatao + at abhi + c hatao (wapas 100%, ginti wahin se) · 🖨 Dobara note = wahi packets (lao) ka naya note.
-function pkPend() { const P = agPool(), by = new Map((rackPk || []).map(r => [String(r.i), r])); return pkIds().map(id => ({ id, cf: pkCfg(id), it: P.byId.get(id) || { name: by.get(id)?.n || 'Item ' + id }, r: by.get(id) })).filter(x => x.cf.tn).sort((a, b) => (b.cf.tn.at || 0) - (a.cf.tn.at || 0)); }
-async function pkMarkSent(lines, no) { if (!cloud?.setRackPkMany) return; const t = Date.now(), m = {}; for (const l of lines) { const cf = pkCfg(l.id); if (!cf) continue; const q = (l.pk || []).map(p => `${p.nm}×${num(p.n)}`).join(' · '); m[l.id] = { ...cf, tn: { at: t, no: String(no || ''), q } }; }
-  if (!Object.keys(m).length) return; const all = { ...(itemCfg?.rackPk || {}) }; for (const [id, x] of Object.entries(m)) all[id] = JSON.stringify(x); itemCfg = { ...(itemCfg || {}), rackPk: all }; try { await cloud.setRackPkMany(m); } catch (e) { notice('⚠️ "note bana" yaad nahi rakha: ' + (e?.message || e)); } }
-function pkPendHTML(names) { const L = pkPend(); if (!L.length) return '';
-  return `<div class="rk-pend"><b class="rk-pgh">⏳ Note bana — rack bhar gaya? (${num(L.length)})</b><p class="rk-note">Larka shop par dekh kar ✓ kare — tab item list se jayega. Maal na aaya ho to 🖨 dobara note.</p>
-    ${L.map(x => { const tn = x.cf.tn, ago = Math.max(0, Math.round((Date.now() - (tn.at || 0)) / 60000)); return `<div class="rk-r rk-pr"><span><b>${esc(x.it.name)}</b><small>🖨 ${tn.no ? 'TN ' + esc(tn.no) + ' · ' : ''}${ago < 60 ? ago + ' min' : Math.round(ago / 60) + ' ghante'} pehle${tn.q ? ' · ' + esc(tn.q) : ''} · ${esc(branchName(Number(x.cf.g), names))}</small></span>
-      <span class="rk-pb"><button type="button" class="rk-sv" data-rkp-ok="${esc(x.id)}"${rk.busy ? ' disabled' : ''}>✓ Rack bhar diya</button><button type="button" class="rk-ag" data-rkp-again="${esc(x.id)}"${rk.busy ? ' disabled' : ''}>${rk.busy === 'a' + x.id ? '⏳' : '🖨 Dobara'}</button></span></div>`; }).join('')}</div>`; }
-async function pkOk(id) { const cf = pkCfg(id); if (!cf?.tn || !cloud?.setRackPk) return; const p = {}; for (const [k, o] of Object.entries(cf.p || {})) { const { c, ...rest } = o || {}; p[k] = rest; }
-  const v = { ...cf, p, at: Date.now() }; delete v.tn; itemCfg = { ...(itemCfg || {}), rackPk: { ...(itemCfg?.rackPk || {}), [id]: JSON.stringify(v) } }; rkPaint();
-  try { await cloud.setRackPk(id, v); notice('✓ Rack bhar diya — ginti wapas 100% se'); } catch (e) { notice('Save nahi hua: ' + (e?.message || e)); } }
-async function pkAgain(id) { if (!rk || rk.busy) return; const cf = pkCfg(id), r = (rackPk || []).find(x => String(x.i) === id), it = agPool().byId.get(id); if (!cf) return;
-  const pk = [], parts = []; let qty = 0; for (const [z, o] of Object.entries(cf.p || {})) { const L = pkLeft(o, r, z, cf.at), n = L ? L.lao : Math.max(1, Number(o?.a) || Number(o?.n) || 1); if (!n) continue; const nm = pkName(Number(z), it); pk.push({ z: Number(z), n, nm }); parts.push(`${nm}×${n}`); qty += n * Number(z); }
-  if (!(qty > 0)) { notice('Packet nahi'); return; } const lines = [{ id, name: it?.name || cf.n || 'Item', ctn: 0, pcs: r3(qty), pk }];
-  rk.busy = 'a' + id; rkPaint();
-  try { const x = await stockAgentTransfer({ from: Number(cf.g), to: 1, lines, note: '📦 Packet rack bharo (dobara)' });
-    if (x?.ok || x?.pending) { await pkMarkSent(lines, x.no); notice(x.ok ? `🖨 Dobara note ${x.no ? '#' + x.no + ' ' : ''}— ${parts.join(' · ')}` : '⏳ ' + x.why); } else notice('⚠️ Nahi bana: ' + (x?.why || 'masla'));
-  } catch (e) { notice('⚠️ ' + (e?.message || e)); }
-  if (rk) { rk.busy = ''; rkPaint(); } }
 function pkAllHTML() {
   const ids = pkIds(); if (!ids.length) return ''; const ed = pkCan(), q = String(rk.plq || '').trim();
   let L = pkAllRows(); if (q) L = smartSearch(L.map(x => ({ ...x, name: x.it.name })), q, 120);
@@ -3785,10 +3811,8 @@ function pkAllHTML() {
       <div id="rkPl">${L.slice(0, 150).map(x => pkRowHTML(x, ed)).join('') || '<p class="rk-note">Nahi mila</p>'}</div>` : ''}</div>`;
 }
 document.addEventListener('click', e => {
-  const t = e.target.closest?.('[data-rkp-plo],[data-rkp-ped],[data-rkp-pp],[data-rkp-psv],[data-rkp-allpct],[data-rkp-full],[data-rkp-ok],[data-rkp-again]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
+  const t = e.target.closest?.('[data-rkp-plo],[data-rkp-ped],[data-rkp-pp],[data-rkp-psv],[data-rkp-allpct],[data-rkp-full]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
   if (d.rkpPlo) { rk.plOpen = !rk.plOpen; rkPaint(); return; }
-  if (d.rkpOk) { if (!canDoRk()) { notice('Ijazat nahi'); return; } pkOk(d.rkpOk); return; }
-  if (d.rkpAgain) { if (!canDoRk()) { notice('Ijazat nahi'); return; } pkAgain(d.rkpAgain); return; }
   if (d.rkpPed) { rk.plEd = rk.plEd === d.rkpPed ? '' : d.rkpPed; if (rk.plEd) start(true); rkPaint(); return; }   // v2.103.33: ginti round chahiye (👀 = ginti)
   if (d.rkpFull) { const [id, k] = d.rkpFull.split('|'), dr = pkDraftOf(id); if (!dr?.[k]) return; dr[k].b = String(Math.ceil(Number(dr[k].c) || 0)); rkPaint(); return; }
   if (d.rkpPp) { const [id, k, v] = d.rkpPp.split('|'), dr = pkDraftOf(id); if (!dr?.[k]) return; dr[k].pct = Number(v); rkPaint(); return; }
@@ -3830,7 +3854,7 @@ async function rkpGo(g) {
   if (!lines.length) { notice('Koi packet nahi chuna'); return; }
   rk.busy = 'p' + g; rkPaint();
   try { const r = await stockAgentTransfer({ from: Number(g), to: 1, lines, note: '📦 Packet rack bharo' });   // v2.103.33: packet har line par (parchi)
-    if (r?.ok || r?.pending) { const t = Date.now(); for (const l of lines) pkSent.set(l.id, t); rk.man.delete('p' + g); await pkMarkSent(lines, r.no); notice(r.ok ? `🖨 Packet transfer note ${r.no ? '#' + r.no + ' ' : ''}bana — printer par · larka rack bhar ke ✓ kare` : '⏳ ' + r.why); } else notice('⚠️ Nahi bana: ' + (r?.why || 'masla'));
+    if (r?.ok || r?.pending) { const t = Date.now(); for (const l of lines) pkSent.set(l.id, t); rk.man.delete('p' + g); notice(r.ok ? `🖨 Packet transfer note ${r.no ? '#' + r.no + ' ' : ''}bana — printer par · larka rack bhar ke ✓ kare` : '⏳ ' + r.why); } else notice('⚠️ Nahi bana: ' + (r?.why || 'masla'));
   } catch (e) { notice('⚠️ ' + (e?.message || e)); }
   if (rk) { rk.busy = ''; rkPaint(); }
 }
@@ -3846,7 +3870,8 @@ async function rkGo(g) {
   if (rk) { rk.busy = ''; rkPaint(); }
 }
 document.addEventListener('click', e => {
-  const t = e.target.closest?.('[data-rk-all],[data-rk-go],[data-rk-e],[data-rk-sv],[data-rk-au],[data-rk-md],[data-rk-off],[data-rk-on],[data-rkp-set],[data-rkp-go],[data-rkp-ed],[data-rkp-g],[data-rkp-sv],[data-rkp-del],[data-rkp-pg],[data-rk-zall],[data-rk-n],[data-rk-add],[data-rk-hd],[data-rk-pct],[data-rk-pc]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
+  const t = e.target.closest?.('[data-rk-all],[data-rk-go],[data-rk-e],[data-rk-sv],[data-rk-au],[data-rk-md],[data-rk-off],[data-rk-on],[data-rkp-set],[data-rkp-go],[data-rkp-ed],[data-rkp-g],[data-rkp-sv],[data-rkp-del],[data-rkp-pg],[data-rk-zall],[data-rk-n],[data-rk-add],[data-rk-hd],[data-rk-pct],[data-rk-pc],[data-rk-g]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
+  if (d.rkG != null) { rk.g = Number(d.rkG) || 0; try { localStorage.setItem('sam-rk-g', String(rk.g)); } catch {} rkPaint(); return; }   // v2.103.37
   if (d.rkMd || d.rkOff || d.rkOn) { const id = d.rkMd ? d.rkMd.split('|')[0] : (d.rkOff || d.rkOn), old = rackCfg(id) || {};
     const v = d.rkMd ? { ...old, mode: d.rkMd.split('|')[1] || undefined } : d.rkOff ? { ...old, off: true } : { ...old, off: undefined };
     const clean = Object.fromEntries(Object.entries(v).filter(([, x]) => x !== undefined && x !== '' && x !== false)), nv = Object.keys(clean).length ? clean : null;

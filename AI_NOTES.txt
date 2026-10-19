@@ -5431,3 +5431,16 @@ v2.103.36 (2026-10-19, PC/rules nahi) — 📦 packet note bana → "⏳ Note ba
 - rackPk cfg.tn = {at, no, q} (pkMarkSent, setRackPkMany ek write — staff likh sakta, rules 2.63). tn ho to pkDue mein nahi; packet-war ke upar
   amber box pkPendHTML: item · TN · kitni der pehle · packets · godam; ✓ Rack bhar diya (pkOk: tn hatao, at abhi, c hatao = wapas 100%) ·
   🖨 Dobara (pkAgain: wahi packets lao ka naya note, note "(dobara)", tn update). CAP wahi (canDoRk / stock.rack). Test sk/rk.mjs. AI nahi.
+
+v2.103.37 + rules 2.64 (2026-10-19, PC nahi) — ⏳ PATTI NIKLI — RACK BHAR GAYA? (carton + packet, TN-war) + 🏬 godam chips
+- Malik: "baqi (carton) items ka bhi aisa hi · checkbox · barcode · note print · stock aaya check wahin · godam ke chips (jo chunein wohi, default Godam 1)".
+- v2.103.36 ka rackPk.tn tareeqa HATA diya. Ab source = transferJobs (trList, 14 din) jo rack bharo se bane (note 🧺 Rack bharo / 📦 Packet rack bharo,
+  status done, op create). ✓ = blueAccess/rackDone {jobs:{<jobId>:{ids,at,by}}} (cloud.listenRackDone / setRackDone; staff likh sakta — rules 2.64).
+  Transfer check mein TN "✓ poora mila" (tcChecks T<transferId> ok) = sab items khud ✓. rkPendIds() → rackDue + pkDue dono se bahar; rkWhy "⏳ patti nikli".
+- Box (rkPendHTML, search ke upar): har TN: 📦/🧺 TN no · kitni der · godam ➜ dukan · ✓ n/N ho gaye; 🖨 (requestPrint transfer job.id, reason
+  "Rack bharo — dobara") · 🧾 Check (openTransferCheck scan + tcLookup TN) · ☑ sab; barcode line ▌▌▌ TN; har item ☐ (data-rkd-t) + qty (pk / ctn / pcs);
+  "✓ N rack bhar diye" (rkDoneSave) · "🖨 Naya note — baqi N" (rkAgain: baqi ☐ items wahi qty/pk, note "(dobara)", purana ✓).
+- 🏬 Godam chips (rk.g, localStorage sam-rk-g): default naam "godam 1" wala (rkGDefault), warna pehla; "Sab" = 0. Carton groups, packet-war, ⏳ box sab filter.
+- trGot(list) ek jagah (setup / thRetry / rackOpen / openTransfer) — rack khula ho to rkPaint. rackOpen: tcStart + listenRackDone.
+- Rules 2.64: blueAccess/rackDone create/update stockStaff|blueStaff keys hasOnly [jobs]; get list mein rackDone. File firestore-rules-2.64.html.
+- Tests: sk/rk.mjs (pending box, ✓, naya note, print, godam chip), gm/rk2 "Sab" chip. AI nahi.
