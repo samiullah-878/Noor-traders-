@@ -5421,3 +5421,5 @@ v2.103.33 + PC transfer-sync v4.9 (2026-10-19, manifest 2026-10-19.5, rules 2.63
 - PC transfer-sync v4.9: _ui.pk; parchi: item line par "POS: 10 kg", neeche mota "  > 500 gm x 20 packet"; footer "Kul POS" + "Kul packet". Reprint bhi.
 - Tests: scratchpad sk/pl.mjs (macaroni POS 103, poora chip, ginti 90 → count), sk/tn.mjs (transfer packet), tsp.cjs (parchi), gm/rk updated.
 - AI: koi nahi.
+
+v2.103.34 (2026-10-19, PC/rules nahi) — 👀 POS ka stock us packet mein jis ka % laga (rack wala): pkPosFill tg = packs.find(has) || packs[0]; 125 gm × 2 kg = 16. AI nahi.

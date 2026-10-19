@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.33';
-import { liveLabelsHTML } from './barcode.js?v=2.103.33';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.34';
+import { liveLabelsHTML } from './barcode.js?v=2.103.34';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -3729,7 +3729,8 @@ function pkAllRows() {
     const low = Math.min(999, ...packs.filter(p => p.now != null).map(p => p.now)); return { id, cf, it, packs, low }; });
   return L.sort((a, b) => a.low - b.low || String(a.it.name).localeCompare(String(b.it.name)));
 }
-function pkPosFill(packs, pos) { const o = {}; pos = Math.max(0, Number(pos) || 0); packs.forEach((p, i) => { o[p.k] = i ? '' : String(packs.length === 1 ? r3(pos / p.z) : Math.floor(pos / p.z + 1e-9)); }); return o; }
+// v2.103.34: POS ka stock us packet mein jis ka % pehle se laga (rack wala — 125 gm ka 2 kg = 16); kai lage = sab se bara; koi nahi = sab se bara barcode.
+function pkPosFill(packs, pos) { const o = {}; pos = Math.max(0, Number(pos) || 0); const tg = packs.find(p => p.has) || packs[0]; for (const p of packs) o[p.k] = p === tg ? String(packs.length === 1 || tg.has ? r3(pos / p.z) : Math.floor(pos / p.z + 1e-9)) : ''; return o; }
 function pkDraftOf(id, x) { let dr = rk.plDr.get(id); if (dr) return dr; x = x || pkAllRows().find(y => y.id === id); if (!x) return null;
   dr = { _t: false, _pos: gmNow(1, id) }; const pre = pkPosFill(x.packs, dr._pos);
   for (const p of x.packs) dr[p.k] = { b: p.b || '', c: pre[p.k], pct: p.pct || rackPct() || 20 }; rk.plDr.set(id, dr); return dr; }
