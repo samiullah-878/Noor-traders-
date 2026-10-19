@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.56';
-import { liveLabelsHTML } from './barcode.js?v=2.103.56';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.57';
+import { liveLabelsHTML } from './barcode.js?v=2.103.57';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1570,7 +1570,9 @@ function tcFind(code) {
 //   Zeeshan — login ke naam mein) ya malik. Step 2 step 1 ke baghair nahi (rules v2.48 bhi). TC2_FROM se pehle ke note: purana ek tick.
 const TC2_FROM = 1791903600000, TC_SHOP = 1;   // 2026-10-13 8:00 pm PKT · dukan = branch 1 (rules mein bhi 1)
 const tcGKey = t => tcKey(t) + 'G';
-const tcNeedG = t => tcIssued(t) >= TC2_FROM;
+// v2.103.57: malik — "Godam 1: Zeeshan de diya tick, larka mil gaya; baqi godam: sirf larka" → do-tick sirf Godam 1 (NAAM se; rules mein branch 2) ke notes par
+const tcG1 = b => { const n = String(branchName(Number(b), collect().names || {}) || ''); return /godam\s*1\b/i.test(n) || (Number(b) === 2 && !/godam/i.test(n)); };
+const tcNeedG = t => tcIssued(t) >= TC2_FROM && (tcG1(t.from) || tcG1(t.to));
 // v2.102.4: 📦 GODAM WALE KAI (malik: "Zeeshan ke saath kisi aur larke ko bhi godam ke tick mein") — stockConfig.tcGiver = "Zeeshan|Bilal"
 //   (rules 2.58: naam matches '.*(zeeshan|bilal).*'). Naam sirf harf / hindse / space (regex mehfooz). Purana akela naam bhi chalta.
 const tcClean = n => String(n || '').replace(/[^A-Za-z0-9\u0600-\u06FF ]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 30);
@@ -1578,9 +1580,9 @@ const tcGivers = () => { const l = String(itemCfg.tcGiver || 'Zeeshan').split('|
 const tcGiver = () => tcGivers().join(', ');
 const tcIsGiver = () => isOwner() || tcGivers().some(g => String(nameOf() || '').toLowerCase().includes(g.toLowerCase()));
 let tcGEd = null;   // { sel: Set, staff: [names], extra: '' } — malik ka chooser khula
-const tcGodamSide = (t, step) => step === 1 ? Number(t.from) !== TC_SHOP : Number(t.to) !== TC_SHOP;
+const tcGodamSide = (t, step) => { const b = step === 1 ? t.from : t.to; return Number(b) !== TC_SHOP && tcG1(b); };   // v2.103.57: sirf Godam 1 par godam wale (Zeeshan) ka tick; baqi godam = larka
 const tcCanStep = (t, step) => (!tcGodamSide(t, step) || tcIsGiver()) && (step !== 1 || isOwner() || can('stock.tcgive'));
-const tcSide = (t, step) => tcGodamSide(t, step) ? '📦 ' + tcGiver() : '🏪 Dukan';
+const tcSide = (t, step) => tcGodamSide(t, step) ? '📦 ' + tcGiver() : Number(step === 1 ? t.from : t.to) !== TC_SHOP ? '📦 Godam (larka)' : '🏪 Dukan';
 function tcState(t) {
   if (t && t.cancelled) return { k: 'cancel' };
   const c = tcChecks.get(tcKey(t)), g = tcChecks.get(tcGKey(t)) || null;
@@ -1626,7 +1628,11 @@ function tcMissing(t) { const S = tcTkOf(t); return (t.lines || []).filter((_, i
 // v2.103.56: ⚠️ farq ka nishan bhi item par (Set mein 'f<i>'); tcTkSt = '' | 'ok' | 'farq'
 const tcTkSt = (t, i) => { const S = tcTkOf(t); return S.has(i) ? 'ok' : S.has('f' + i) ? 'farq' : ''; };
 function tcTkSet(t, i, st) { const k = tcKey(t), m = tcTk(); if (!m.has(k)) m.set(k, new Set()); const S = m.get(k); S.delete(i); S.delete('f' + i); if (st === 'ok') S.add(i); else if (st === 'farq') S.add('f' + i); m.delete(k); m.set(k, S); tcTkSave();
-  if (tcTkAll(t) && !tcChecks.get(k) && !tcFarqItems(t).length) tcSel.add(k); else tcSel.delete(k); }
+  if (tcTkAll(t) && !tcChecks.get(k) && !tcFarqItems(t).length) { tcSel.delete(k); tcAutoSave(t); } else tcSel.delete(k); }
+// v2.103.57: larka ne har item ✓ kar diya → check khud save (button nahi) — farq ho to nahi; ghalti par malik 🗑
+function tcAutoSave(t) { const key = tcKey(t); if (tcChecks.get(key) || tcState(t).ng || !tcCanStep(t, 2) || !cloud?.saveTransferCheck) return;
+  const d = { transferId: t.transferId, transferNo: t.transferNo, from: t.from, to: t.to, issuedAt: tcIssued(t), status: 'ok', note: '', byName: nameOf() || (isOwner() ? 'Malik' : 'Mulazim'), device: deviceOf(), lines: (t.lines || []).length };
+  tcFast(key, d, { onOk: () => { try { auditOf?.({ area: 'stock', act: 'tr-check', what: `TN ${t.transferNo || t.transferId} ✓ poora (items tick)`.slice(0, 120), ref: key, refType: 'transfer' }); } catch {} } }); notice(`✓ TN ${t.transferNo || t.transferId} check — sab items aa gaye`); }
 function tcFarqItems(t) { const S = tcTkOf(t); return (t.lines || []).filter((_, i) => S.has('f' + i)).map(l => l.name); }
 const tcQty = l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); return `${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}`; };
 let tcIq = '';
@@ -4201,7 +4207,7 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.103.56';
+import { agentRegister } from './agent.js?v=2.103.57';
 const AG = (() => {
   const S_ = { type: 'STRING' }, N_ = { type: 'NUMBER' }, B_ = { type: 'BOOLEAN' }, A_ = it => ({ type: 'ARRAY', items: it }), O_ = (p, r = []) => ({ type: 'OBJECT', properties: p, required: r });
   const names = () => collect().names || {};
