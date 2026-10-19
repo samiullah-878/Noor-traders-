@@ -3163,3 +3163,11 @@ v2.103.38 (2026-10-19, PC/rules nahi) — 🧺 Rack bharo poori window premium: 
   tabs rk.tab: lane (carton + packet-war) / pend (⏳ Patti nikli) / pct (pkAllHTML(true) — sab packet items, bina toggle) · owner chips (% · hadd · patti)
   <details class=rk-set> (rk.setOpen toggle se yaad) · rows compact (chips 11px, tafseel 2 line clamp) · ⏳ box compact (TN header, ek line items).
   BUG fix: pending item label class .rk-pl → .rk-pli (packet list ka .rk-pl takrata tha — list aadhi screen par aati thi). AI nahi.
+
+v2.103.39 (2026-10-19, PC/rules nahi) — 🏷 BARCODE LABEL transfer note ke saath (rack bharo)
+- Malik: "badam ka bhi barcode banane ka option · sub-barcode bhi · ek click: note + barcode print".
+- rkLabelLines(lines): pk wali line = har packet ka label (labelRows qty == z; main = 1) × n; carton/pcs = asal code × pcs (ctn·pack + pcs, 1000 tak).
+  rkLabelsGo = cloud.requestLabel 200-200 (labelJobs → PC label-print, TSC) + notice "🏷 N label".
+- Packet-war row: chip "🏷 barcode label bhi" default ✓ (rk.lbOff); packet patti print ke baad labels. Carton row: chip "🏷 barcode label × N" default ✗ (rk.lbOn);
+  patti print ke baad labels. ⏳ box: har TN par 🏷 button (confirm "N label chhapein?") → us note ke sab items ke label dobara.
+- labelRows: bs/bc na ho to bq ke codes (sub-barcode) bhi. Tests sk/rk.mjs, rk2.mjs. AI nahi.

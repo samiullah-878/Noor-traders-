@@ -4320,3 +4320,6 @@ html body :is(#summary,#dialogBody) .rk-pli{padding:6px 10px;border-radius:10px}
 html body :is(#summary,#dialogBody) .rk-pbb .rk-sv{padding:10px 12px}
 html body :is(#summary,#dialogBody) .rk-pl{margin-top:0}
 html body :is(#summary,#dialogBody) .rk-set{border-radius:14px;background:#fff;border:1.5px solid #e4e7f5;padding:0 12px}html body :is(#summary,#dialogBody) .rk-set summary{padding:10px 0;font-weight:800;font-size:13px;color:#3730a3;cursor:pointer;list-style:none}html body :is(#summary,#dialogBody) .rk-set summary::-webkit-details-marker{display:none}html body :is(#summary,#dialogBody) .rk-set summary::after{content:'▾';float:right}html body :is(#summary,#dialogBody) .rk-set[open] summary::after{content:'▴'}html body :is(#summary,#dialogBody) .rk-set .rk-nb{padding:0 0 10px}
+/* v2.103.39: 🏷 label chip */
+html body :is(#summary,#dialogBody) .rk-lb{grid-column:1/-1;display:inline-flex;align-items:center;gap:6px;justify-self:start;padding:5px 10px;border-radius:999px;border:1px dashed #c7cdfb;background:#fff;color:#4b5280;font-size:12px;font-weight:800;cursor:pointer}
+html body :is(#summary,#dialogBody) .rk-lb input{width:16px;height:16px;margin:0;accent-color:#4f46e5}html body :is(#summary,#dialogBody) .rk-lb.is-in{background:#eef2ff;border-style:solid;border-color:#a5b4fc;color:#3730a3}
