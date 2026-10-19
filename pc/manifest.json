@@ -1,6 +1,6 @@
 {
- "version": "2026-10-19.1",
- "note": "item-report v1.5: stock fraq / ginti farq bill nafa aur bikri se bahar",
+ "version": "2026-10-19.2",
+ "note": "item-report v1.5 run mazboot + irep-kal (kal ka data); irep-today v1.1; sales-stats v1.5 + rack-bharo v1.6: stock fraq bahar",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
   "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
@@ -31,8 +31,8 @@
   "transfer-dekho-auto.bat": "a7ea0955221df6e712737467a9d39e110c867f1f2526f8572fc76955625156ee",
   "transfer-dekho.js": "d30502e0190fa92f4ecd65000446718d84a3c52ed7daa90dc46279c28052a461",
   "transfer-sync.js": "f50c030220cd3056f00a87486f46b85b346e5644de863267cea58469c5e21ee1",
-  "item-report.js": "6e627ce725772ac5a32e0cd1741da93b7a8dd3886fa810bc5d9247563b735e75",
-  "sales-stats.js": "3b69da9e444da7b5786952aefab1ec7ca74963d996e4ad64b94a151e51e0519b",
+  "item-report.js": "b4a82603ff083ffd2750d023cc63a25465ff87ab81db14c177c7f3ef8d9cbe91",
+  "sales-stats.js": "1b04c029b375aa22eadc139c9b38c693705553b64f9591c65ddab457ca94c505",
   "sales-stats-auto.bat": "a5f4f2546741d00fecd83d6db87e82af075cca1ed8e189d26e7075388c6a1212",
   "BARCODE-DOCTOR.bat": "b127ae24f3219d77288bb6a6ad17758d85376fe2ef1f50aeb6293a2ebfe7ccb4",
   "LABEL-GEHRA.bat": "2fd4a77c5241b38433ba280babd4659011672fcb08b928a968e9e7e3931d4d88",
@@ -66,9 +66,9 @@
   "factory-post.js": "d614f523bb4b1a3b4c08c8035f6b464aabb73c3c9e655a550b32013814bf6597",
   "factory-auto.bat": "9ee1ce9bc65004a10e719de271a0ba5ce1c942f430c47e83fc1052e2319a95c3",
   "galla-parchi.js": "e64cf7cd1c18b1be97d0062681d436b60f7c494d0195bd0d8d7e6e76eca7760c",
-  "irep-today.js": "21a64a1a92de3bf226a69131419fc898bc606b77bd6bbfc7b75f2f8793c301ac",
+  "irep-today.js": "40ed10c821a2ce0938e8940a583728bcd8473e110a571d8665e6cdbdd71b4584",
   "irep-today-auto.bat": "8f7842cfabb15e6ceb5c4f9cbe55ea6433d7c609b8d346d2490deec4da716d23",
-  "rack-bharo.js": "8bc9aed1c96a1b5a91e2a79b3fbf5a5be9cb9013d2fca08af4432764a7dc7bb2",
+  "rack-bharo.js": "a76416c5d06d0dd3527915e35bc603eaf1803cf60747ce234c85200506defcf2",
   "rack-auto.bat": "7844767d490b117c8660fb0aaede09f418a6cdda0decb145ae8ce5fa996b38ed"
  },
  "services": [

@@ -3071,3 +3071,14 @@ v2.103.25 (2026-10-18) — 🖨 LABEL PRINTER RUKA: wajah app mein + ▶ Baqi ch
   NOFARQ: har Sale query (bikri, item lines, nafa bills, COGS-0 andaza) mein Description NOT LIKE 'Stock ginti farq%' (post-farq ka desc) —
   party naam kuch bhi ho, ginti farq ka bill bahar. Aaj (irep-today, runToday) aur 3 mahine dono — agli run (10 min / ghanta) par purana bhi saaf.
   App mein badlav nahi. Test itd/t.cjs. AI nahi.
+
+v2.103.28 (2026-10-19) — 📅 Item report: kal ka data hamesha + bari report mazboot + stock fraq har jagah bahar (manifest 2026-10-19.2)
+- Malik: 18 Oct (kal) item report mein Rs 0. Wajah: bari 3-mahine report (sales-stats -> item-report.run, har ghante) 17 ke baad nahi bani
+  (PC band / script ruka — log se pakka hoga); irep-today sirf aaj; app mergeToday 17 ke baad 18 khali bhar ke 19 jorta tha.
+- PC item-report v1.5: run() — irep chunks + meta PEHLE commit, nafa chunks baad mein apni try (fail = sirf log, NF null; report rukti nahi).
+  runKal(): posStats/irep-kal {at, day, n, j, cj, nb} (irep-today jaisa, kal ka din), ghante mein ek dafa (din badle to foran). irep-today.js v1.1
+  runToday ke baad runKal. sales-stats v1.5: SKIP + stock%fraq/farq party, SKIP_S = + Description NOT LIKE 'Stock ginti farq%' (4 sale queries).
+  rack-bharo v1.6: NOFQ (Description + farq party subquery) 3 dukan sale queries mein (bika / ever / packet lines).
+- App: cloud.listenItemKal; irep.js remerge = mergeToday(mergeToday(full, kdoc), tdoc); nfBills kal + aaj (jo full se naye); ageText: bari report
+  > 3 ghante purani = " · ⚠️ 3 mahine wali report X pehle — PC: "<sales-stats aakhri log line>"" (cloud.listenPcStatus, malik). Tests itd (16),
+  ir5 t/t2, sk/irk. Rules wahi. AI nahi.

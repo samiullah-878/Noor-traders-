@@ -1,5 +1,5 @@
 // =========================================================
-//  sales-stats.js  v1.4 (2026-10-17: useUTC false — sham ki sale) · v1.3 (2026-10-14: + 📊 item-report.js — 3 mahine har item har din ginti / Rs / nafa) · v1.2 (2026-10-11: purchase history + mahina-war + mahine ke 4 hisse) · v1.1 (2026-09-28: Noor Traders ke apne bill bahar) · v1 (2026-09-28) — POS ki 6 MAHINE ki BIKRI + PURCHASE, har item ka khulasa -> Firestore posStats
+//  sales-stats.js  v1.5 (2026-10-19: 🧾 stock fraq party + ginti farq bill bikri / khareed mein nahi) · v1.4 (2026-10-17: useUTC false — sham ki sale) · v1.3 (2026-10-14: + 📊 item-report.js — 3 mahine har item har din ginti / Rs / nafa) · v1.2 (2026-10-11: purchase history + mahina-war + mahine ke 4 hisse) · v1.1 (2026-09-28: Noor Traders ke apne bill bahar) · v1 (2026-09-28) — POS ki 6 MAHINE ki BIKRI + PURCHASE, har item ka khulasa -> Firestore posStats
 //  App ka "🛒 Purchase order" isi se andaza lagata hai (roz kitna bikta hai, kitne din ka stock baqi, pichhli dafa kis se liya).
 //  SQL mein KUCH NAHI likhti — sirf SELECT. Chalana: node sales-stats.js  (SALE-DATA.bat har ghante chalata hai)
 //  posStats/meta {at, days, n, chunks, ptDays[4], months[7], parties[]}  ·  posStats/items-<k> {items:[{i, w[26 hafte], s30, s90, s180, p180, pn, lp{d,q,r,party}, ph, mo, pt}]}
@@ -15,13 +15,14 @@ const SQL_CONFIG = require('./sql-config.js');
 SQL_CONFIG.options = { ...(SQL_CONFIG.options || {}), useUTC: false };   // v1.4 (2026-10-17): 🐞 Pakistan ka waqt — pehle UTC jata tha, sham 7 ke baad ki sale item report mein raat 12 tak nahi aati thi
 if (!getApps().length) initializeApp({ credential: cert(require('./firebase-key.json')) });
 const db = getFirestore(), col = db.collection('businesses').doc('noor-traders').collection('posStats');
-const SKIP = "AND ISNULL(pt.PartyName, '') NOT LIKE '%noor%trader%' AND ISNULL(pt.PartyName, '') NOT LIKE '%our factory%'";   // andar ka lena-dena bikri/khareed nahi
+const SKIP = "AND ISNULL(pt.PartyName, '') NOT LIKE '%noor%trader%' AND ISNULL(pt.PartyName, '') NOT LIKE '%our factory%' AND LOWER(ISNULL(pt.PartyName, '')) NOT LIKE '%stock%fraq%' AND LOWER(ISNULL(pt.PartyName, '')) NOT LIKE '%stock%farq%'";   // v1.5: stock fraq bhi
+const SKIP_S = SKIP + " AND ISNULL(CAST(s.Description AS NVARCHAR(200)), '') NOT LIKE 'Stock ginti farq%'";   // v1.5: ginti farq ka sale bill   // andar ka lena-dena bikri/khareed nahi
 const DAYS = 182, CHUNK = 250, r3 = n => Math.round((Number(n) || 0) * 1000) / 1000;
 
 const Q_SALE = `
 SELECT d.ItemID, DATEDIFF(day, s.SaleDate, GETDATE()) / 7 AS wk, SUM(d.Qty) AS q
 FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
-WHERE s.SaleDate >= DATEADD(day, -${DAYS}, GETDATE()) AND ISNULL(s.DocStatusID, 0) <> 3 ${SKIP}
+WHERE s.SaleDate >= DATEADD(day, -${DAYS}, GETDATE()) AND ISNULL(s.DocStatusID, 0) <> 3 ${SKIP_S}
 GROUP BY d.ItemID, DATEDIFF(day, s.SaleDate, GETDATE()) / 7`;
 const Q_SALE_DAYS = `
 SELECT d.ItemID,
@@ -29,7 +30,7 @@ SELECT d.ItemID,
   SUM(CASE WHEN s.SaleDate >= DATEADD(day, -90, GETDATE()) THEN d.Qty ELSE 0 END) AS s90,
   SUM(d.Qty) AS s180
 FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
-WHERE s.SaleDate >= DATEADD(day, -${DAYS}, GETDATE()) AND ISNULL(s.DocStatusID, 0) <> 3 ${SKIP}
+WHERE s.SaleDate >= DATEADD(day, -${DAYS}, GETDATE()) AND ISNULL(s.DocStatusID, 0) <> 3 ${SKIP_S}
 GROUP BY d.ItemID`;
 const Q_PUR = `
 SELECT d.ItemID, SUM(d.Qty) AS q, COUNT(DISTINCT p.PurchaseID) AS n
@@ -55,12 +56,12 @@ WHERE x.rn <= 12`;
 const Q_MO = `
 SELECT d.ItemID, YEAR(s.SaleDate) AS y, MONTH(s.SaleDate) AS m, SUM(d.Qty) AS q
 FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
-WHERE s.SaleDate >= DATEADD(month, DATEDIFF(month, 0, GETDATE()) - 6, 0) AND ISNULL(s.DocStatusID, 0) <> 3 ${SKIP}
+WHERE s.SaleDate >= DATEADD(month, DATEDIFF(month, 0, GETDATE()) - 6, 0) AND ISNULL(s.DocStatusID, 0) <> 3 ${SKIP_S}
 GROUP BY d.ItemID, YEAR(s.SaleDate), MONTH(s.SaleDate)`;
 const Q_PT = `
 SELECT d.ItemID, CASE WHEN DAY(s.SaleDate) <= 10 THEN 0 WHEN DAY(s.SaleDate) <= 20 THEN 1 WHEN DAY(s.SaleDate) <= 25 THEN 2 ELSE 3 END AS b, SUM(d.Qty) AS q
 FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
-WHERE s.SaleDate >= DATEADD(day, -${DAYS}, GETDATE()) AND ISNULL(s.DocStatusID, 0) <> 3 ${SKIP}
+WHERE s.SaleDate >= DATEADD(day, -${DAYS}, GETDATE()) AND ISNULL(s.DocStatusID, 0) <> 3 ${SKIP_S}
 GROUP BY d.ItemID, CASE WHEN DAY(s.SaleDate) <= 10 THEN 0 WHEN DAY(s.SaleDate) <= 20 THEN 1 WHEN DAY(s.SaleDate) <= 25 THEN 2 ELSE 3 END`;
 const partOf = dd => dd <= 10 ? 0 : dd <= 20 ? 1 : dd <= 25 ? 2 : 3;
 // 6 mahine (DAYS) mein har hisse ke kitne din — aaj samait

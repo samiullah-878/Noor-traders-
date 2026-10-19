@@ -26,6 +26,7 @@ const isDay = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
 const pct = (a, b) => b ? Math.round(a / b * 1000) / 10 : 0;
 
 let cloud = null, notice = () => {}, pdfOf = null, stop = null, data = null, err = '', loaded = false, cStop = null, commCfg = {}, cq = '';
+let kdoc = null, kStop = null, pcs = null, pcStop = null;   // v2.103.28: 📅 kal ka data (irep-kal) + PC script ka haal
 let full = null, tdoc = null, tStop = null, slowT = 0, slow = false;   // v2.103.6: ⚡ aaj ka data (irep-today) alag aata hai, data = full + aaj
 const LS = 'sam-irep';
 const st = (() => { let v = {}; try { v = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch {} return { mon: v.mon || '', per: v.per || 'm', from: v.from || '', to: v.to || '', ws: v.ws !== false, sort: v.sort || 'rs', q: '', lim: 60, tsort: v.tsort || 'rs', tq: '', tAll: false, rev: !!v.rev, trev: !!v.trev }; })();   // v2.103.3: ⇅ ulta
@@ -33,15 +34,17 @@ const keep = () => { try { localStorage.setItem(LS, JSON.stringify({ mon: st.mon
 
 let stockOf = () => null;
 export function irepSetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; pdfOf = o.pdf || pdfOf; stockOf = o.stock || stockOf; }
-export function irepStop() { if (stop) { try { stop(); } catch {} stop = null; } if (tStop) { try { tStop(); } catch {} tStop = null; } clearTimeout(slowT); slowT = 0; if (cStop) { try { cStop(); } catch {} cStop = null; } }
+export function irepStop() { if (stop) { try { stop(); } catch {} stop = null; } if (tStop) { try { tStop(); } catch {} tStop = null; } if (kStop) { try { kStop(); } catch {} kStop = null; } if (pcStop) { try { pcStop(); } catch {} pcStop = null; } clearTimeout(slowT); slowT = 0; if (cStop) { try { cStop(); } catch {} cStop = null; } }
 function watch() {
   if (!cStop && cloud?.listenCommission) cStop = cloud.listenCommission(m => { commCfg = m || {}; if ($('irRoot')) paint(); if (document.querySelector('.ir-cset')) commSetPaint(); });
   if (!tStop && cloud?.listenItemToday) tStop = cloud.listenItemToday(t => { tdoc = t; remerge(); });
+  if (!kStop && cloud?.listenItemKal) kStop = cloud.listenItemKal(t => { kdoc = t; remerge(); });
+  if (!pcStop && cloud?.listenPcStatus) { try { pcStop = cloud.listenPcStatus(d => { pcs = d; if ($('irRoot')) paint(); }); } catch {} }
   if (stop || !cloud?.listenItemReport) return;
   slow = false; clearTimeout(slowT); slowT = setTimeout(() => { if (!loaded) { slow = true; if ($('irRoot')) paint(); } }, 10000);   // v2.103.6: 📶 hamesha ghoomta na rahe
   stop = cloud.listenItemReport((d, e) => { loaded = true; clearTimeout(slowT); if (d) { full = d; err = ''; remerge(); return; } err = e?.code || e?.message || 'masla'; if ($('irRoot')) paint(); });
 }
-function remerge() { data = mergeToday(full, tdoc); ix = null; if (data) loaded = true; if ($('irRoot')) paint(); }
+function remerge() { data = mergeToday(mergeToday(full, kdoc), tdoc); ix = null; if (data) loaded = true; if ($('irRoot')) paint(); }
 // v2.103.6: ⚡ poori report (har ghante) + aaj ka hissa (har 10 min). Aaj ka doc naya ho to us din ki lines us se badal do.
 function mergeToday(F, T) {
   if (!T?.day || !Array.isArray(T.items) || !isDay(T.day)) return F;
@@ -258,7 +261,9 @@ export function renderIrep() {
 const agoT = at => { const m = Math.round((Date.now() - at) / 60000); return m < 1 ? 'abhi' : m < 60 ? m + ' min pehle' : m < 1440 ? Math.round(m / 60) + ' ghante pehle' : Math.round(m / 1440) + ' din pehle'; };
 function ageText() {   // v2.103.6: ⚡ aaj ka data har 10 min — 40 min se purana = PC ka script ruka
   const at = Number(data?.meta?.at) || 0, tAt = Number(data?.meta?.tAt) || 0, tOk = tAt && data?.meta?.tDay === today();
-  if (tOk) { const m = (Date.now() - tAt) / 60000; return [m > 40 ? `⚠️ PC ka sale script ruka — aaj ka data ${agoT(tAt)}` : `⚡ Aaj ka data: ${agoT(tAt)} (har 10 min)`, m > 40]; }
+  // v2.103.28: bari (3 mahine) report 3 ghante se purani = alag khabar + PC script ki aakhri line (pcStatus)
+  const big = at && (Date.now() - at) / 60000 > 180 ? ` · ⚠️ 3 mahine wali report ${agoT(at)}${(() => { const r = (pcs?.services || []).find(x => /sales-stats/.test(String(x.script || ''))); return r?.log ? ` — PC: "${String(r.log).slice(0, 80)}"` : ''; })()}` : '';
+  if (tOk) { const m = (Date.now() - tAt) / 60000; return [(m > 40 ? `⚠️ PC ka sale script ruka — aaj ka data ${agoT(tAt)}` : `⚡ Aaj ka data: ${agoT(tAt)} (har 10 min)`) + big, m > 40 || !!big]; }
   if (!at) return ['', false]; const m = (Date.now() - at) / 60000;
   return [m > 150 ? `⚠️ PC ka sale script ruka — data ${agoT(at)}` : `🖥 PC ka data: ${agoT(at)} (har ghante taza)`, m > 150];
 }
@@ -337,10 +342,10 @@ function nfNeed(mons) {
 }
 const monsIn = (a, b) => { const out = []; let m = a.slice(0, 7); while (m <= b.slice(0, 7) && out.length < 4) { out.push(m); const d = new Date(+m.slice(0, 4), +m.slice(5, 7), 1); m = `${d.getFullYear()}-${p2(d.getMonth() + 1)}`; } return out; };
 function nfBills(a, b) {   // [{day, t, no, party, sale, cost, nafa, ws, est}] — aaj ka hissa irep-today se (naya ho to)
-  const out = [], td = tdoc?.nb && tdoc.day && Number(tdoc.at) > (Number(full?.meta?.at) || 0) ? tdoc : null;
+  const out = [], TD = [kdoc, tdoc].filter(x => x?.nb && x.day && Number(x.at) > (Number(full?.meta?.at) || 0)), tdDays = new Set(TD.map(x => x.day));   // v2.103.28: kal bhi
   for (const mon of monsIn(a, b)) { const c = nfC.get(mon)?.d; const rows = [];
-    if (c) for (const r of c.b) { const day = `${mon}-${p2(r[0])}`; if (td && day === td.day) continue; rows.push([day, r, c.p]); }
-    if (td && td.day.slice(0, 7) === mon) for (const r of td.nb.b || []) rows.push([td.day, r, td.nb.p || []]);
+    if (c) for (const r of c.b) { const day = `${mon}-${p2(r[0])}`; if (tdDays.has(day)) continue; rows.push([day, r, c.p]); }
+    for (const td of TD) if (td.day.slice(0, 7) === mon) for (const r of td.nb.b || []) rows.push([td.day, r, td.nb.p || []]);
     for (const [day, r, P] of rows) { if (day < a || day > b) continue; if (!st.ws && r[6]) continue;
       out.push({ day, t: r[1] || '', no: r[2] || '', party: P[r[3]] || '', sale: Number(r[4]) || 0, cost: Number(r[5]) || 0, nafa: (Number(r[4]) || 0) - (Number(r[5]) || 0), ws: !!r[6], est: !!r[7] }); } }
   return out;

@@ -130,9 +130,11 @@ async function run({ pool, sql, db, log = console.log, now = new Date() }) {
   if (comm) b.set(col.doc('irep-comm'), { j: JSON.stringify(comm), at: Date.now() });
   chunks.forEach((items, k) => b.set(col.doc('irep-' + k), { j: JSON.stringify(items), n: items.length, at: Date.now() }));
   const nafa = {};   // v1.4: { 'YYYY-MM': hisse }
-  if (NF) { const nb = db.batch(); for (const [mon, o] of NF) { const J = nafaChunks(o); nafa[mon] = J.length; J.forEach((j, k) => nb.set(col.doc(`nafa-${mon}-${k}`), { j, at: Date.now() })); } await nb.commit(); }
+  // v1.5: nafa ALAG (pehle nafa commit fail = poori report ruk jati thi) — report pehle, nafa baad mein apni try mein
+  if (NF) for (const [mon, o] of NF) nafa[mon] = nafaChunks(o).length;
   b.set(col.doc('irep-meta'), { at: Date.now(), from: days[0], to: days[days.length - 1], days, n: all.length, chunks: chunks.length, ws: wsNames.slice(0, 10), ver: '1.4', comm: !!comm, ...(NF ? { nafa } : {}), bytes: chunks.reduce((s, c) => s + Buffer.byteLength(JSON.stringify(c)), 0) });
   await b.commit();
+  if (NF) { try { const nb = db.batch(); for (const [mon, o] of NF) nafaChunks(o).forEach((j, k) => nb.set(col.doc(`nafa-${mon}-${k}`), { j, at: Date.now() })); await nb.commit(); } catch (e) { log('💰 nafa save nahi hua (report ban gayi): ' + e.message); NF = null; } }
   try { const old = await col.get(); for (const d of old.docs) { const m = /^irep-(\d+)$/.exec(d.id), n = /^nafa-(\d{4}-\d{2})-(\d+)$/.exec(d.id); if ((m && Number(m[1]) >= chunks.length) || (n && NF && !(Number(n[2]) < (nafa[n[1]] || 0)))) await d.ref.delete(); } } catch {}
   log(new Date().toLocaleString('en-PK') + ' — 📊 item report: ' + all.length + ' items, ' + days.length + ' din, ' + chunks.length + ' hisse, ' + Math.round((Date.now() - t0) / 1000) + 's');
   return { n: all.length, days: days.length };
@@ -155,4 +157,21 @@ async function runToday({ pool, sql, db, log = console.log, now = new Date() }) 
   log(new Date().toLocaleString('en-PK') + ' — ⚡ aaj ' + days[0] + ': ' + items.length + ' items, Rs ' + Math.round(items.reduce((s, x) => s + x.rs, 0)) + ', ' + Math.round((Date.now() - t0) / 1000) + 's');
   return { n: items.length };
 }
-module.exports = { run, runToday, collect, nafaCollect, perPiece, pieceCost };
+// v1.5: 📅 KAL KA DATA — malik: "kal (18) ka data nahi aa raha". Bari report (har ghante) ruk jaye to bhi kal dikhe: posStats/irep-kal
+//   (irep-today jaisa) — ghante mein ek dafa (ya din badle) dobara banta hai. App: bari report + kal + aaj.
+async function runKal({ pool, sql, db, log = console.log, now = new Date() }) {
+  const ref = db.collection('businesses').doc('noor-traders').collection('posStats').doc('irep-kal');
+  const from = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1), to = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const dk = `${from.getFullYear()}-${String(from.getMonth() + 1).padStart(2, '0')}-${String(from.getDate()).padStart(2, '0')}`;
+  let old = null; try { const o = await ref.get(); old = o.exists ? o.data() : null; } catch {}
+  if (old && old.day === dk && Date.now() - (Number(old.at) || 0) < 60 * 60000) return { same: true };
+  const C = await collect({ pool, sql, db, log, from, to }), { all, comm } = C;
+  let nb = ''; try { const NF = await nafaCollect({ pool, sql, from, to, ...C }), o = [...NF.values()][0]; if (o) nb = JSON.stringify(o); } catch {}
+  const items = all.map(e => { const x = e.d[0] || [0, 0, 0]; const o = { i: e.i, n: e.n, c: e.c, pk: e.pk, q: x[1], rs: x[2] }; if (x[3] || x[4]) { o.wq = x[3]; o.wrs = x[4]; } return o; });
+  let j = JSON.stringify(items); while (Buffer.byteLength(j) > 850000 && items.length > 50) { items.length = Math.floor(items.length * 0.8); j = JSON.stringify(items); }
+  const cj = comm ? JSON.stringify({ men: comm.men, rows: comm.rows.map(r => [r[1], r[2], r[3]]) }) : '';
+  await ref.set({ at: Date.now(), day: dk, n: items.length, j, cj, nb });
+  log(new Date().toLocaleString('en-PK') + ' — 📅 kal ' + dk + ': ' + items.length + ' items');
+  return { n: items.length };
+}
+module.exports = { run, runToday, runKal, collect, nafaCollect, perPiece, pieceCost };
