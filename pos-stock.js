@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.50';
-import { liveLabelsHTML } from './barcode.js?v=2.103.50';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.51';
+import { liveLabelsHTML } from './barcode.js?v=2.103.51';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -3580,7 +3580,7 @@ function roRows() { const g = rk?.g || 0, dm = new Map(roDm.map(d => [String(d.i
   return ro.rows.map(x => { const tot = r3(Object.values(x.st || {}).reduce((a, b) => a + b, 0)), gst = g ? r3(x.st?.[g] || 0) : tot, { t, own } = roTarget(x), last = x.h[0], pct = t > 0 ? Math.round(tot / t * 100) : null, lim = last && t > 0 ? Math.round(Math.max(0, last.pre) / t * 100) : 20;
     const need = t > 0 ? Math.max(0, r3(t - tot)) : 0, pk = Number(x.pk) || 0, lao = pk > 1 ? Math.ceil(need / pk - 1e-9) * pk : Math.ceil(need), q = tq.has(String(x.i)) ? tq.get(String(x.i)) : lao;
     return { x, id: String(x.i), tot, gst, t, own, pct, lim, need, lao, q, pk, last, dm: dm.get(String(x.i)) || null, party: last?.p || '' }; }); }
-function roList() { const f = rk.roF, L = roRows().filter(r => (!rk.g || Number(r.x.st?.[rk.g] || 0) > 0 || r.dm) && (f === 'dm' ? !!r.dm : f === 'all' ? r.t > 0 : r.t > 0 && r.pct != null && r.pct <= f) || (f !== 'dm' && r.dm));
+function roList() { const f = rk.roF, L = roRows().filter(r => !hidden[r.id] && (!rk.g || Number(r.x.st?.[rk.g] || 0) > 0 || r.dm) && (f === 'dm' ? !!r.dm : f === 'all' ? r.t > 0 : r.t > 0 && r.pct != null && r.pct <= f) || (f !== 'dm' && r.dm));
   const q = (rk.roQs || '').trim(); const out = q ? smartSearch(L.map(r => ({ ...r, name: r.x.n })), q, 200) : L; return out.sort((a, b) => (b.dm ? 1 : 0) - (a.dm ? 1 : 0) || (a.pct ?? 999) - (b.pct ?? 999)); }
 const roWhen = at => { const d = Math.round((Date.now() - at) / 864e5); return d <= 0 ? 'aaj' : d === 1 ? 'kal' : d + ' din pehle'; };
 function roHTML(names) { const L = roList(), G = new Map(); for (const r of L) { const k = r.party || 'Supplier nahi pata'; if (!G.has(k)) G.set(k, []); G.get(k).push(r); }
@@ -3593,7 +3593,7 @@ function roHTML(names) { const L = roList(), G = new Map(); for (const r of L) {
       ${ys.map(r => { const x = r.x, st = Object.entries(x.st || {}).filter(([, v]) => v).map(([b, v]) => `${esc(branchName(Number(b), names))} ${num(v)}`).join(' · ');
         return `<div class="rk-r${on(r) ? ' is-in' : ''}"><label class="rk-tk"><input type="checkbox" data-ro-t="${esc(r.id)}"${S.has(r.id) ? ' checked' : ''}><span><b>${esc(x.n)}</b><span class="rk-chips">${r.t > 0 ? `<i class="rk-c ${r.pct <= 20 ? 'kh' : r.pct <= 40 ? 'lo' : 'pc'}">📊 ${num(r.tot)} / ${num(r.t)} (${r.pct}%)</i>` : '<i class="rk-c mu">poora nahi pata</i>'}${r.dm ? `<i class="rk-c own">📢 ${esc(r.dm.byName || 'larka')}: ${r.dm.lvl === 'out' ? 'khatam' : 'kam'}</i>` : ''}${r.own ? '<i class="rk-c pc">✏️ malik ka poora</i>' : ''}</span>
           <small>${r.last ? `🛒 aakhri ${esc(roWhen(r.last.at))}: <b>${num(r.last.q)} aaya</b>, us waqt <b>${num(Math.max(0, r.last.pre))} tha</b> → poora ${num(r.t)}${x.h.length > 1 ? ' · pichhli: ' + x.h.map(h => num(h.q)).join(' · ') : ''}` : ''}${st ? `<br>📍 ${st}` : ''}${x.s30 ? ` · 30 din bika ${num(x.s30)}` : ''}</small></span></label>
-          <div class="rk-q"><input type="number" inputmode="numeric" min="0" step="${r.pk > 1 ? r.pk : 1}" data-ro-qty="${esc(r.id)}" value="${r.q}"><small>${r.pk > 1 ? 'pcs (' + unit(r) + ')' : 'pcs'}</small></div>${isOwner() ? `<button type="button" class="rk-e" data-ro-e="${esc(r.id)}" aria-label="Poora">✏️</button>` : ''}
+          <div class="rk-q"><input type="number" inputmode="numeric" min="0" step="${r.pk > 1 ? r.pk : 1}" data-ro-qty="${esc(r.id)}" value="${r.q}"><small>${r.pk > 1 ? 'pcs (' + unit(r) + ')' : 'pcs'}</small></div>${isOwner() ? `<button type="button" class="rk-e" data-ro-e="${esc(r.id)}" aria-label="Poora">✏️</button><button type="button" class="rk-e rk-ban" data-ro-ban="${esc(r.id)}" aria-label="Band">🚫</button>` : ''}
           ${ed === r.id ? `<div class="rk-ed"><label>🧺 Poora (100%) — godam + dukan mein kul kitna hona chahiye<input type="number" inputmode="numeric" min="0" data-ro-tv="${esc(r.id)}" value="${r.t || ''}"></label><div class="rk-mode"><button type="button" class="rk-sv" data-ro-tsv="${esc(r.id)}">✓ Save</button>${r.own ? `<button type="button" data-ro-tdel="${esc(r.id)}">↺ Khud (aakhri purchase se)</button>` : ''}</div></div>` : ''}</div>`; }).join('')}
       <button type="button" class="rk-go" data-ro-go="${esc(k)}"${n && !rk.busy ? '' : ' disabled'}>${rk.busy === 'o' + k ? '⏳…' : `🛒 ${num(n)} items — order (PDF · WhatsApp)`}</button></section>`; }).join('') || (ro.at ? `<div class="th-empty">✓<b>${rk.roF === 'dm' ? 'Koi demand nahi' : 'Is hadd tak koi item nahi'}</b><small>Chip badal kar dekhein</small></div>` : '')}
     ${nOn ? `<p class="rk-note">Chune hue: <b>${num(nOn)}</b> items</p>` : ''}`; }
@@ -3606,11 +3606,16 @@ async function roGo(k) { if (!rk || rk.busy) return; const L = roList().filter(r
     notice(`🛒 Order ban gaya — ${k} (${items.length} items) · Notes → 🛒 mein bhi`); if (regPdfOf) regPdfOf(html, 'Order-' + k.replace(/[^a-z0-9]+/gi, '-'));
   } catch (e) { notice('⚠️ ' + (e?.message || e)); }
   if (rk) { rk.busy = ''; rkPaint(); } }
-document.addEventListener('click', e => { const t = e.target.closest?.('[data-ro-f],[data-ro-all],[data-ro-go],[data-ro-e],[data-ro-tsv],[data-ro-tdel]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
+// v2.103.51: Mangwao / kahin bhi se item band — stock screen wala password (stockConfig.bandPw, default 7183), phir wahi confirm; band hote hi rack/mangwao list se hat jata hai
+async function bandAsk(id, on) { if (!isOwner()) return false; const want = String(itemCfg?.bandPw || '7183'), got = prompt((on ? 'Item BAND karne' : 'Item dobara CHALU karne') + ' ka password:');
+  if (got === null) return false; if (got !== want) { notice('❌ Password ghalat'); return false; }
+  const box = { checked: on, disabled: false }; await toggleHidden(id, on, box); if (rk) rkPaint(); return box.checked === on; }
+document.addEventListener('click', e => { const t = e.target.closest?.('[data-ro-f],[data-ro-all],[data-ro-go],[data-ro-e],[data-ro-ban],[data-ro-tsv],[data-ro-tdel]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
   if (d.roF != null) { rk.roF = /^\d+$/.test(d.roF) ? Number(d.roF) : d.roF; try { localStorage.setItem('sam-ro-f', String(rk.roF)); } catch {} rkPaint(); return; }
   if (d.roAll != null) { const ids = roList().filter(r => (r.party || 'Supplier nahi pata') === d.roAll).map(r => r.id), cur = rkPick('o' + d.roAll, ids); rk.man.set('o' + d.roAll, cur.size === ids.length ? new Set() : new Set(ids)); rkPaint(); return; }
   if (d.roGo != null) { roGo(d.roGo); return; }
   if (d.roE) { rk.roEd = rk.roEd === d.roE ? '' : d.roE; rkPaint(); return; }
+  if (d.roBan) { bandAsk(d.roBan, true); return; }   // v2.103.51: 🚫 Band — wahi password jo stock screen par
   if (d.roTsv || d.roTdel) { const id = d.roTsv || d.roTdel; if (!cloud?.setReorderCfg) return; const v = d.roTdel ? null : { t: Number(document.querySelector(`[data-ro-tv="${CSS.escape(id)}"]`)?.value) || 0 }; if (v && !(v.t > 0)) { notice('Poora likhein'); return; }
     itemCfg = { ...(itemCfg || {}), reorder: { ...(itemCfg?.reorder || {}), [id]: v } }; rk.roEd = ''; rk.roQ.delete(id); rkPaint(); cloud.setReorderCfg(id, v).then(() => notice(v ? '✓ Poora save' : '↺ Khud')).catch(er => notice('Save nahi hua: ' + (er?.message || er))); return; } });
 document.addEventListener('change', e => { const t = e.target; if (!rk || !t.closest?.('#rkBody')) return; const d = t.dataset;
@@ -4143,7 +4148,7 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.103.50';
+import { agentRegister } from './agent.js?v=2.103.51';
 const AG = (() => {
   const S_ = { type: 'STRING' }, N_ = { type: 'NUMBER' }, B_ = { type: 'BOOLEAN' }, A_ = it => ({ type: 'ARRAY', items: it }), O_ = (p, r = []) => ({ type: 'OBJECT', properties: p, required: r });
   const names = () => collect().names || {};
@@ -4207,6 +4212,9 @@ const AG = (() => {
     { name: 'rack_hadd', icon: '📉', label: 'Rack ki aam hadd', desc: 'Malik ki aam hadd: pct (0=band,10/20/30/40 — maal aane par 100%, itna reh jaye to lao) aur/ya lo (0 = khali, 0.25 = ¼ ctn, 0.5 = ½ ctn dukan mein reh jaye).', params: O_({ pct: N_, lo: N_ }),
       summary({ pct, lo }) { const a = []; if (pct != null) a.push(`% hadd ${pct || 'band'}`); if (lo != null) a.push(`dukan hadd ${rkHdName(Number(lo))}`); if (!a.length) throw Error('pct ya lo do'); return a.join(' · '); },
       async run({ pct, lo }) { if (pct != null) await cloud.setRackPct(Number(pct) || 0); if (lo != null) await cloud.setRackLo(Number(lo) || 0); return '✓ Hadd badal gayi'; } },
+    { name: 'item_band', icon: '⛔', label: 'Item band / chalu', danger: true, desc: 'Item BAND karo (POS mein INACTIVE, stock 0, sab listen se ghaib — band=true) ya wapas CHALU (band=false). Khatarnak: stock screen par password lagta hai, yahan "Pakka?" confirm.', params: O_({ item: S_, band: B_ }, ['item']),
+      summary({ item: v, band = true }) { return `${item(v).name}: ${band ? '⛔ BAND karo (POS inactive, stock 0)' : '✅ wapas CHALU'}`; },
+      async run({ item: v, band = true }) { const it = item(v), id = String(it.id); if (!cloud?.setStockHidden) throw new Error('App update karein'); const next = { ...hidden }; if (band) next[id] = true; else delete next[id]; await cloud.setStockHidden(next); hidden = next; try { rerender(); } catch {} if (rk) rkPaint(); return `✓ ${it.name} ${band ? 'band — "Band items" mein milega' : 'wapas chalu'}`; } },
     { name: 'item_rack_off', icon: '🚫', label: 'Rack list se hatao', desc: 'Item sirf godam se bikta hai — rack bharo list mein kabhi na aaye (off=true) ya wapas (off=false).', params: O_({ item: S_, off: B_ }, ['item']),
       summary({ item: v, off = true }) { return `${item(v).name}: ${off ? 'rack list se hatao (sirf godam)' : 'wapas rack list mein'}`; },
       async run({ item: v, off = true }) { const it = item(v), id = String(it.id), old = rackCfg(id) || {}, nv = off ? { ...old, off: true } : (() => { const { off: _o, ...r } = old; return Object.keys(r).length ? r : null; })(); itemCfg = { ...(itemCfg || {}), rack: { ...(itemCfg?.rack || {}), [id]: nv } }; await cloud.setRackCfg(id, nv); if (rk) rkPaint(); return `✓ ${it.name} ${off ? 'hata diya' : 'wapas'}`; } },

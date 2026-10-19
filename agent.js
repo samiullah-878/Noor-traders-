@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.103.50';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.103.50';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.103.51';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.103.51';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -23,6 +23,7 @@ const extOn = () => !!H?.owner?.();
 // v2.103.49: ⚡ TEZ — har sawal par 55 tools nahi: lafz dekh kar sirf matlab ke action tools (baqi DECL sab). Koi lafz na mile = sab read + 0 write.
 const EXT_KW = [
   [/rack|patti|lane|lana|lao|godam|dukan|bhar|packet|paket|hadd|%|percent|fisad|khali|carton|ctn/, ['rack_list', 'rack_pending', 'rack_patti', 'packet_patti', 'rack_bhar_diya', 'packet_pct', 'packet_pct_all', 'packet_list', 'rack_hadd', 'item_rack_off', 'godam_list', 'transfer_list']],
+  [/\bband\b|bund|inactive|chalu|chaloo|active kar|wapas kar/, ['item_band', 'item_rack_off', 'mulazim_band']],
   [/mangwa|mangw|order|supplier|poora|pura|demand|khatam|kam hai|re.?order/, ['mangwao_list', 'mangwao_order', 'mangwao_poora', 'demand_list', 'demand_done']],
   [/stock|kitna|kitne|kitni|hai\b|milao|ginti|gino|gina/, ['stock_dekho', 'stock_milao', 'godam_list', 'packet_list', 'mangwao_list']],
   [/label|barcode|chhap|print|tn\b|note/, ['label_print', 'note_dobara_print', 'transfer_list', 'rack_pending']],

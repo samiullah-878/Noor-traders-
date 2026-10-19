@@ -3241,3 +3241,5 @@ v2.103.49 (2026-10-20, PC/rules nahi) — ⚡ AGENT TEZ — malik: "time bohat l
 
 v2.103.50 (2026-10-20) — BUG FIX ⚖️ Tolai har screen par chhap jata tha: tolai.js listenTolaiDay har update par $(dialog).open dekh kar paint() karta tha —
   chahe khirki mein rack bharo / koi aur ho. Ab sirf jab dialogTitle "⚖️ Tolai" ho. (Ek dafa Tolai khulne ke baad masla shuru hota tha.) AI nahi.
+
+v2.103.51 (20 Oct 2026): Rack bharo → Mangwao: har item par 🚫 Band (sirf malik) — stock screen wala password (stockConfig.bandPw, default 7183) + wahi confirm → item POS inactive/stock 0, mangwao+rack list se foran ghaib (bandAsk(id,on) pos-stock.js). Wapas chalu: Stock screen "Band items". Agent action item_band {item, band} (danger → "Pakka?"); EXT_KW band/chalu routing. AI nahi.
