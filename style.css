@@ -4244,3 +4244,12 @@ html body :is(#summary,#dialogBody) .gm-pc span{display:flex;gap:6px}html body :
 html body :is(#summary,#dialogBody) .gm-pc button.is-in{background:linear-gradient(135deg,#10b981,#047857)!important;color:#fff!important;border-color:transparent}
 html body :is(#summary,#dialogBody) .gm-sum{display:flex;flex-wrap:wrap;gap:8px 14px;margin:8px 0;padding:10px 12px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0;font-size:13px}
 html body :is(#summary,#dialogBody) .gm-sum .neg b{color:#b91c1c}html body :is(#summary,#dialogBody) .gm-sum .pos b{color:#15803d}
+
+/* v2.103.29: 🧮 stock milao — jagah chips + dukan / godam haal */
+html body :is(#summary,#dialogBody) .gm-where button.is-in{background:linear-gradient(135deg,#4f46e5,#6d28d9)!important;color:#fff!important}
+html body :is(#summary,#dialogBody) .gm-src{color:#9a3412}html body :is(#summary,#dialogBody) .gm-src button{border-color:#fed7aa;color:#9a3412}html body :is(#summary,#dialogBody) .gm-src button.is-in{background:linear-gradient(135deg,#f97316,#ea580c)!important;color:#fff!important}
+html body :is(#summary,#dialogBody) .gm-pls{display:flex;flex-direction:column;gap:4px;padding:0 12px 10px}
+html body :is(#summary,#dialogBody) .gm-pl{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;padding:6px 10px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;font-size:12.5px;color:#334155}
+html body :is(#summary,#dialogBody) .gm-pl.is-in{background:#eef2ff;border-color:#c7d2fe}html body :is(#summary,#dialogBody) .gm-pl>span:first-child{font-weight:800;color:#1e293b}
+html body :is(#summary,#dialogBody) .gm-pl small{color:#64748b}html body :is(#summary,#dialogBody) .gm-pl .mut{color:#94a3b8}html body :is(#summary,#dialogBody) .gm-pl .rk-c{margin-left:auto}
+html body :is(#summary,#dialogBody) .gm-cp{display:flex;gap:8px}html body :is(#summary,#dialogBody) .gm-cp input{width:74px!important}

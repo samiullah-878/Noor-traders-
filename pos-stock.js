@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.28';
-import { liveLabelsHTML } from './barcode.js?v=2.103.28';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.29';
+import { liveLabelsHTML } from './barcode.js?v=2.103.29';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -165,6 +165,7 @@ function start(withCounts = true) {
       bills = list.filter(r => String(r.id).startsWith('_bill-')).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
       list.forEach(r => { if (!String(r.id).startsWith('_')) counts.set(r.id, r); });
       soft();
+      try { gmLive(); } catch {}   // v2.103.29: 🧮 stock milao live (doosre larke ki ginti)
     }, () => {});
   }
 }
@@ -3541,79 +3542,128 @@ function pkSetHTML(names) {
     <label class="hs-search"><input type="search" data-rkp-qs="1" placeholder="🔍 item (garam masala, ilaichi…)" value="${esc(rk.pq)}" autocomplete="off"></label>
     <div id="rkPkList">${TN.length ? `<div class="rk-tnh">⇄ ${esc(branchName(g0, names))} → ${esc(branchName(1, names))} transfer notes se <b>${num(TN.length)}</b> items <small>tap = re-order likhein</small></div>${TN.map(row).join('')}<div class="rk-tnh rk-tnh2">Baqi kai barcode wale items</div>` : ''}${L.map(row).join('') || (TN.length ? '' : '<p class="rk-note">Is godam mein kai barcode wala koi item nahi mila.</p>')}</div></section>`;
 }
-// ---- v2.103.26: 🧮 GODAM 2 MILAO — malik: "godam 2 mein items add kar liye, ab wohi items dukan ka stock adjust + har barcode ka % (kitna
-//   reh jaye to transfer note)". Godam 2 (naam se, collect().g2) ke stock wale items; har barcode (packet) ki rack par ginti -> kul (kg) = dukan ki
-//   GINTI (writeCount branch 1 — farq purane farq-bill raaste se POS mein) + packet-war cfg (rackPk: g = Godam 2, at = abhi, p[z] = {b: gina, pct,
-//   n = b − floor(b·pct%), a = n}) — PC packet ginti pehle se karta hai; jab b ka pct% reh jaye -> packet transfer note "250 gm × 7".
+// ---- v2.103.29: 🧮 STOCK MILAO (pehle "Godam 2 milao" v2.103.26) — malik: "baqi godam bhi add karo, godamo ka stock bhi aise hi tally;
+//   upar % chips (20% chuno to jis item ka 100 mein se 20 reh gaya wo saamne); godam mein zyada / dukan mein kam — ek larka godam mein, ek dukan
+//   par LIVE ginti". 📍 Ginti kahan: Dukan (br 1) / har godam. Dukan = "kis godam ke items" chips (src) + har packet ki ginti + packet % (rackPk, g = src).
+//   Godam = us godam ke items, carton wale par Ctn + Pcs, packet wale par har packet -> writeCount(br). 📊 % = (abhi POS stock + farq jo abhi bill
+//   mein nahi gaya) / pichhli ginti ka kul (counts c-<br>-<id>). Card par dukan + har godam ka POS / gina / %. Live: counts listener -> gmLive()
+//   (koi khana likha ja raha ho to blur tak ruko).
 let gm = null;
+const GM_LS = 'sam-gm';
 const gmSizes = it => [{ z: 1, b: it?.code }, ...((it?.bq) || []).map(x => ({ z: Number(x.q) || 1, b: x.b }))].filter((x, i, a) => x.z > 0 && a.findIndex(y => Math.abs(y.z - x.z) < 1e-9) === i).sort((a, b) => b.z - a.z);
 const gmDone = id => { const cf = pkCfg(id); return !!cf && Object.values(cf.p || {}).some(o => Number(o?.b) > 0); };
+const gmKey = z => String(+Number(z).toFixed(4));
+const gmCnt = (b, id) => { const c = counts.get(countId(b, id)); return c && !c.del && Number(c.total) >= 0 && c.at ? c : null; };
+const gmNow = (b, id) => Number(saleStockItem(b, id)?.stock) || 0;
+// farq jo abhi POS mein nahi gaya (bill / auto adjustment baqi) — % mein jor kar asal maal
+function gmPend(b, id, c) {
+  const f = r3((Number(c.total) || 0) - sysOf(c)); if (Math.abs(f) < 0.001) return 0;
+  if (c.auto) return Number(c.pfAt) >= Number(c.at) ? 0 : f;
+  const key = f < 0 ? String(id) : 'R' + id, q = Number(postedMap.get(`_posted-${c.round}-${b}`)?.items?.[key]) || 0, left = Math.max(0, Math.abs(f) - q);
+  return f < 0 ? -left : left;
+}
+function gmPct(b, id) { const c = gmCnt(b, id); if (!c || !(Number(c.total) > 0)) return null; const adj = gmNow(b, id) + gmPend(b, id, c); return Math.max(0, Math.round(adj / Number(c.total) * 100)); }
+const gmWhen = at => { const d = new Date(at); return `${d.getDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()]} ${d.getHours() % 12 || 12}:${String(d.getMinutes()).padStart(2, '0')}`; };
+function gmGods() { const C = collect(); return { C, gods: C.branches.filter(b => b !== 1), names: C.names || {} }; }
 function gmList() {
-  const C = collect(), g2 = C.g2; if (g2 == null) return { g2: null, L: [] };
-  const P = agPool(), seen = new Set(), L = [];
-  for (const c of rows.filter(r => !r.meta && Array.isArray(r.items) && r.branch === g2)) for (const x of c.items) { const id = String(x?.id ?? ''); if (!id || seen.has(id)) continue; const gs = Number(x.stock) || 0; if (!(gs > 0)) continue; seen.add(id);
-    const it = P.byId.get(id) || x, sI = saleStockItem(1, id); L.push({ id, it, gs, ss: Number(sI?.stock) || 0, sI }); }
-  return { g2, L: L.sort((a, b) => String(a.it.name).localeCompare(String(b.it.name))) };
+  const { C, gods } = gmGods(), P = agPool(), br = gm?.br ?? 1, src = gods.includes(gm?.src) ? gm.src : (C.g2 != null ? C.g2 : gods[0]);
+  const from = br === 1 ? (src != null ? [src] : []) : [br], seen = new Set(), L = [];
+  const add = (id, x) => { if (!id || seen.has(id)) return; seen.add(id); const it = P.byId.get(id) || x; L.push({ id, it }); };
+  for (const b of from) for (const c of rows.filter(r => !r.meta && Array.isArray(r.items) && r.branch === b)) for (const x of c.items) { const id = String(x?.id ?? ''); if (id && (Number(x.stock) || 0) > 0) add(id, x); }
+  if (br !== 1) for (const [k, c] of counts) { const m = /^c-(\d+)-(.+)$/.exec(k); if (m && Number(m[1]) === br && !c.del) add(String(m[2]), { id: m[2], name: c.name }); }
+  return { br, src, gods, L: L.sort((a, b) => String(a.it.name).localeCompare(String(b.it.name))) };
 }
+const gmIsDone = (br, id) => { const c = gmCnt(br, id); return !!(c && c.round === roundNow()) || (br === 1 && gmDone(id)); };
 export function gmOpen() {
-  start(true); rackWatch(); gm = { q: '', tab: 'baqi', ed: '', dr: new Map(), busy: '' };
-  const d = $('dialog'); if (!d) return; d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = '🧮 Godam 2 milao — dukan stock + packet %'; $('dialogBody').innerHTML = '<div class="rk-root" id="gmBody"></div>'; if (!d.open) d.showModal(); gmPaint();
+  start(true); rackWatch(); let v = {}; try { v = JSON.parse(localStorage.getItem(GM_LS) || '{}') || {}; } catch {}
+  gm = { q: '', tab: 'baqi', ed: '', dr: new Map(), busy: '', br: Number(v.br) || 1, src: Number(v.src) || 0, pct: Number(v.pct) || 0, dirty: false };
+  const d = $('dialog'); if (!d) return; d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = '🧮 Stock milao — ginti + %'; $('dialogBody').innerHTML = '<div class="rk-root" id="gmBody"></div>'; if (!d.open) d.showModal(); gmPaint();
 }
-function gmDraft(r) { let dr = gm.dr.get(r.id); if (dr) return dr; const cf = pkCfg(r.id), def = rackPct() || 20; dr = { n: {}, p: {} };
-  for (const x of gmSizes(r.it)) { const k = String(+x.z.toFixed(4)), o = cf?.p?.[k]; dr.n[k] = o && Number(o.b) > 0 ? String(o.b) : ''; dr.p[k] = Number(o?.pct) || def; }
-  gm.dr.set(r.id, dr); return dr; }
-const gmTot = (r, dr) => r3(gmSizes(r.it).reduce((t, x) => t + (Number(dr.n[String(+x.z.toFixed(4))]) || 0) * x.z, 0));
-function gmSumHTML(r, tot, far) { const U = esc(r.it?.uName || 'kg'); return `<span>Rack par kul <b>${num(tot)} ${U}</b></span><span>POS dukan <b>${num(r3(r.ss))}</b></span><span class="${far < 0 ? 'neg' : far > 0 ? 'pos' : ''}">Farq <b>${far > 0 ? '+' : ''}${num(far)} ${U}</b></span>`; }
+const gmKeep = () => { try { localStorage.setItem(GM_LS, JSON.stringify({ br: gm.br, src: gm.src, pct: gm.pct })); } catch {} };
+function gmLive() { if (!gm || !$('gmBody')) return; if (document.activeElement?.closest?.('#gmBody') && document.activeElement.matches('input')) { gm.dirty = true; return; } gmPaint(true); }
+function gmDraft(r) {
+  const k0 = gm.br + '|' + r.id; let dr = gm.dr.get(k0); if (dr) return dr; const cf = pkCfg(r.id), def = rackPct() || 20; dr = { n: {}, p: {}, ctn: '', pcs: '' };
+  for (const x of gmSizes(r.it)) { const k = gmKey(x.z), o = cf?.p?.[k]; dr.n[k] = gm.br === 1 && o && Number(o.b) > 0 ? String(o.b) : ''; dr.p[k] = Number(o?.pct) || def; }
+  gm.dr.set(k0, dr); return dr;
+}
+const gmCtn = (r, br) => br !== 1 && (Number(r.it.pack) || 0) > 1;   // godam mein carton wala: main barcode = Ctn + Pcs
+function gmTot(r, dr, br) { let t = 0; for (const x of gmSizes(r.it)) { const k = gmKey(x.z); if (x.z === 1 && gmCtn(r, br)) t += (Number(dr.ctn) || 0) * (Number(r.it.pack) || 0) + (Number(dr.pcs) || 0); else t += (Number(dr.n[k]) || 0) * x.z; } return r3(t); }
+const gmQ = (v, it) => { const pk = Number(it?.pack) || 0, u = esc(it?.uName || 'pcs'); if (pk > 1 && Math.abs(v) >= pk) { const c = Math.trunc(v / pk), p = r3(v - c * pk); return `${num(c)} ctn${p ? ' + ' + num(Math.abs(p)) + ' ' + u : ''}`; } return `${num(r3(v))} ${u}`; };
+function gmSumHTML(r, br) { const dr = gmDraft(r), tot = gmTot(r, dr, br), pos = gmNow(br, r.id), far = r3(tot - pos); return `<span>Gina <b>${gmQ(tot, r.it)}</b></span><span>POS <b>${gmQ(pos, r.it)}</b></span><span class="${far < 0 ? 'neg' : far > 0 ? 'pos' : ''}">Farq <b>${far > 0 ? '+' : far < 0 ? '−' : ''}${gmQ(Math.abs(far), r.it)}</b></span>`; }
+function gmPlaces(r, names, gods) {
+  const one = (b, ic) => { const c = gmCnt(b, r.id), p = gmPct(b, r.id), pos = gmNow(b, r.id); if (b !== 1 && !c && !(pos > 0)) return '';
+    return `<div class="gm-pl${gm.br === b ? ' is-in' : ''}"><span>${ic} ${esc(branchName(b, names))}</span><span>POS <b>${gmQ(pos, r.it)}</b></span>${c ? `<span>gina <b>${gmQ(Number(c.total) || 0, r.it)}</b> <small>${esc(c.byName || '')} · ${gmWhen(c.at)}</small></span>` : '<span class="mut">abhi nahi gina</span>'}${p != null ? `<i class="rk-c ${p <= 20 ? 'kh' : p <= 40 ? 'lo' : 'pc'}">📊 ${p}% bacha</i>` : ''}</div>`; };
+  return one(1, '🏪') + gods.map(g => one(g, '🏬')).join('');
+}
 function gmPaint(only) {
-  const el = $('gmBody'); if (!el || !gm) return; const names = collect().names || {}, { g2, L } = gmList();
-  if (g2 == null) { el.innerHTML = '<div class="th-empty">🏬<b>Godam 2 nahi mila</b><small>POS mein "Godam 2" naam ka godam chahiye</small></div>'; return; }
-  const done = L.filter(r => gmDone(r.id)), baqi = L.filter(r => !gmDone(r.id)), q = gm.q.trim();
-  let V = gm.tab === 'done' ? done : baqi; if (q) V = smartSearch(L.map(r => ({ ...r, name: r.it.name, code: r.it.code })), q, 60);
-  const U = it => esc(it?.uName || 'kg');
-  const row = r => { const open = gm.ed === r.id, ok = gmDone(r.id), dr = open ? gmDraft(r) : null, tot = dr ? gmTot(r, dr) : 0, far = r3(tot - r.ss), guess = r3(r.ss - r.gs);
-    return `<div class="rk-ps${ok ? ' is-in' : ''}"><button type="button" class="rk-psh" data-gm-ed="${esc(r.id)}"><span><b>${ok ? '✓ ' : ''}${esc(r.it.name)}</b><span class="rk-chips">${ok ? '<i class="rk-c own">✓ mil gaya</i>' : '<i class="rk-c kh">baqi</i>'}<i class="rk-c pc">${num(gmSizes(r.it).length)} barcode</i></span><small>🏪 POS dukan <b>${num(r3(r.ss))}</b> · 🏬 ${esc(branchName(g2, names))} <b>${num(r3(r.gs))}</b> ${U(r.it)}</small></span><i>${open ? '▴' : '▾'}</i></button>
-      ${open ? `<div class="rk-psb"><p class="rk-note">Dukan ke rack par har packet gin kar likhein · andaza (POS dukan − Godam 2) = <b>${num(Math.max(0, guess))} ${U(r.it)}</b></p>
-        ${gmSizes(r.it).map(x => { const k = String(+x.z.toFixed(4)); return `<div class="gm-r"><div class="gm-l"><b>${esc(pkName(x.z, r.it))}</b><small>${esc(String(x.b || ''))}</small></div><label class="gm-n"><input type="number" inputmode="decimal" min="0" step="any" data-gm-n="${esc(r.id)}|${k}" value="${esc(dr.n[k])}" placeholder="0"><small>packet</small></label>
-          <div class="gm-pc"><small>% reh jaye to lao</small><span>${[10, 20, 30, 40].map(v => `<button type="button" class="${Number(dr.p[k]) === v ? 'is-in' : ''}" data-gm-p="${esc(r.id)}|${k}|${v}">${v}%</button>`).join('')}</span></div></div>`; }).join('')}
-        <div class="gm-sum" id="gmSum-${esc(r.id)}">${gmSumHTML(r, tot, far)}</div>
-        <div class="rk-ed"><button type="button" class="rk-sv" data-gm-sv="${esc(r.id)}"${gm.busy ? ' disabled' : ''}>${gm.busy === r.id ? '⏳ Save…' : '✓ Save — dukan stock + packet %'}</button></div></div>` : ''}</div>`; };
-  const html = `<div class="rk-hero"><div><small>GODAM 2 MILAO</small><b>${num(baqi.length)} items baqi</b><span>${num(done.length)} ho gaye · kul ${num(L.length)}</span></div><span class="rk-ic">🧮</span></div>
-    <p class="rk-note">Har item: dukan ke rack par har barcode (packet) gino → dukan ka POS stock usi hisaab se theek (farq bill), aur har packet ka % — utna reh jaye to packet transfer note khud.</p>
-    ${!roundNow() ? `<div class="rk-z0"><b>📋 Stock ginti shuru nahi</b><small>Dukan ka stock theek karne ke liye pehle Stock → "📋 Nayi ginti shuru" (malik). Tab tak sirf packet % save hoga.</small></div>` : ''}
-    <div class="mchips"><button type="button" class="rc${gm.tab === 'baqi' ? ' on' : ''}" data-gm-tab="baqi">⏳ Baqi (${num(baqi.length)})</button><button type="button" class="rc${gm.tab === 'done' ? ' on' : ''}" data-gm-tab="done">✓ Ho gaye (${num(done.length)})</button></div>
+  const el = $('gmBody'); if (!el || !gm) return; gm.dirty = false;
+  const { names } = gmGods(), { br, src, gods, L } = gmList(); if (gods.includes(src)) gm.src = src;
+  if (!gods.length) { el.innerHTML = '<div class="th-empty">🏬<b>Koi godam nahi mila</b></div>'; return; }
+  const done = L.filter(r => gmIsDone(br, r.id)), baqi = L.filter(r => !gmIsDone(br, r.id)), q = gm.q.trim();
+  let V = gm.tab === 'done' ? done : baqi;
+  if (gm.pct) V = L.map(r => ({ r, p: gmPct(br, r.id) })).filter(x => x.p != null && x.p <= gm.pct).sort((a, b) => a.p - b.p).map(x => x.r);
+  if (q) V = smartSearch(V.map(r => ({ ...r, name: r.it.name, code: r.it.code })), q, 60);
+  const row = r => { const open = gm.ed === r.id, ok = gmIsDone(br, r.id), c = gmCnt(br, r.id), p = gmPct(br, r.id);
+    return `<div class="rk-ps${ok ? ' is-in' : ''}"><button type="button" class="rk-psh" data-gm-ed="${esc(r.id)}"><span><b>${ok ? '✓ ' : ''}${esc(r.it.name)}</b><span class="rk-chips">${ok && c ? `<i class="rk-c own">✓ gina — ${esc(c.byName || '')} · ${gmWhen(c.at)}</i>` : ok ? '<i class="rk-c own">✓ packet % laga</i>' : '<i class="rk-c kh">baqi</i>'}${p != null ? `<i class="rk-c ${p <= 20 ? 'kh' : p <= 40 ? 'lo' : 'pc'}">📊 ${p}% bacha</i>` : ''}<i class="rk-c pc">${num(gmSizes(r.it).length)} barcode</i></span></span><i>${open ? '▴' : '▾'}</i></button>
+      <div class="gm-pls">${gmPlaces(r, names, gods)}</div>
+      ${open ? gmEdHTML(r, br) : ''}</div>`; };
+  const html = `<div class="rk-hero"><div><small>STOCK MILAO · ${esc(br === 1 ? '🏪 ' + branchName(1, names) : '🏬 ' + branchName(br, names))}</small><b>${num(baqi.length)} items baqi</b><span>${num(done.length)} ho gaye · kul ${num(L.length)}</span></div><span class="rk-ic">🧮</span></div>
+    <div class="rk-nb gm-where"><span>📍 Ginti kahan</span>${[1, ...gods].map(b => `<button type="button" class="${br === b ? 'is-in' : ''}" data-gm-br="${b}">${b === 1 ? '🏪' : '🏬'} ${esc(branchName(b, names))}</button>`).join('')}</div>
+    ${br === 1 ? `<div class="rk-nb gm-src"><span>📦 Kis godam ke items</span>${gods.map(g => `<button type="button" class="${src === g ? 'is-in' : ''}" data-gm-src="${g}">${esc(branchName(g, names))}</button>`).join('')}</div>` : ''}
+    <div class="rk-nb rk-pct"><span>📊 Itna % bacha</span>${[[0, 'Sab'], [10, '10%'], [20, '20%'], [30, '30%'], [40, '40%']].map(([v, l]) => `<button type="button" class="${gm.pct === v ? 'is-in' : ''}" data-gm-pct="${v}">${l}</button>`).join('')}</div>
+    ${!roundNow() ? `<div class="rk-z0"><b>📋 Stock ginti shuru nahi</b><small>Stock theek karne ke liye pehle Stock → "📋 Nayi ginti shuru" (malik). Tab tak${br === 1 ? ' sirf packet %' : ' ginti'} save nahi hogi.</small></div>` : ''}
+    ${gm.pct ? `<p class="rk-note">📊 ${gm.pct}% ya kam bacha — pichhli ginti ko 100% maan kar (sab se kam pehle). <b>${num(V.length)}</b> items</p>` : `<div class="mchips"><button type="button" class="rc${gm.tab === 'baqi' ? ' on' : ''}" data-gm-tab="baqi">⏳ Baqi (${num(baqi.length)})</button><button type="button" class="rc${gm.tab === 'done' ? ' on' : ''}" data-gm-tab="done">✓ Ho gaye (${num(done.length)})</button></div>`}
     <label class="hs-search"><input type="search" data-gm-q="1" placeholder="🔍 item dhoondo…" value="${esc(gm.q)}" autocomplete="off"></label>
-    <div id="gmList">${V.map(row).join('') || `<div class="th-empty">🧮<b>${gm.tab === 'done' && !q ? 'Abhi koi nahi' : q ? 'Nahi mila' : 'Sab ho gaye ✓'}</b></div>`}</div>`;
-  if (only) { const t = document.createElement('div'); t.innerHTML = html; const a = t.querySelector('#gmList'), b = el.querySelector('#gmList'); if (a && b) { b.innerHTML = a.innerHTML; return; } }
+    <div id="gmList">${V.map(row).join('') || `<div class="th-empty">🧮<b>${gm.pct ? `${gm.pct}% tak koi item nahi` : gm.tab === 'done' && !q ? 'Abhi koi nahi' : q ? 'Nahi mila' : 'Sab ho gaye ✓'}</b>${gm.pct ? '<small>% sirf un items ka jin ki pehle ginti ho chuki</small>' : ''}</div>`}</div>`;
+  if (only) { const t = document.createElement('div'); t.innerHTML = html; const a = t.querySelector('#gmList'), b = el.querySelector('#gmList'), ha = t.querySelector('.rk-hero'), hb = el.querySelector('.rk-hero'); if (a && b) { b.innerHTML = a.innerHTML; if (ha && hb) hb.innerHTML = ha.innerHTML; return; } }
   el.innerHTML = html;
 }
+function gmEdHTML(r, br) {
+  const dr = gmDraft(r), dk = br === 1;
+  return `<div class="rk-psb"><p class="rk-note">${dk ? 'Dukan ke rack par' : 'Godam mein'} har barcode gin kar likhein${dk ? ' · har packet ka % — utna reh jaye to packet transfer note' : ''}</p>
+    ${gmSizes(r.it).map(x => { const k = gmKey(x.z);
+      if (x.z === 1 && gmCtn(r, br)) return `<div class="gm-r"><div class="gm-l"><b>${esc(pkName(1, r.it))} · 1 ctn = ${num(r.it.pack)}</b><small>${esc(String(x.b || ''))}</small></div><span class="gm-cp"><label class="gm-n"><input type="number" inputmode="decimal" min="0" step="any" data-gm-c="${esc(r.id)}" value="${esc(dr.ctn)}" placeholder="0"><small>ctn</small></label><label class="gm-n"><input type="number" inputmode="decimal" min="0" step="any" data-gm-s="${esc(r.id)}" value="${esc(dr.pcs)}" placeholder="0"><small>${esc(r.it.uName || 'pcs')}</small></label></span></div>`;
+      return `<div class="gm-r"><div class="gm-l"><b>${esc(pkName(x.z, r.it))}</b><small>${esc(String(x.b || ''))}</small></div><label class="gm-n"><input type="number" inputmode="decimal" min="0" step="any" data-gm-n="${esc(r.id)}|${k}" value="${esc(dr.n[k])}" placeholder="0"><small>${x.z === 1 && !(Number(r.it.pack) > 1) ? esc(r.it.uName || 'pcs') : 'packet'}</small></label>
+        ${dk ? `<div class="gm-pc"><small>% reh jaye to lao</small><span>${[10, 20, 30, 40].map(v => `<button type="button" class="${Number(dr.p[k]) === v ? 'is-in' : ''}" data-gm-p="${esc(r.id)}|${k}|${v}">${v}%</button>`).join('')}</span></div>` : ''}</div>`; }).join('')}
+    <div class="gm-sum" id="gmSum-${esc(r.id)}">${gmSumHTML(r, br)}</div>
+    <div class="rk-ed"><button type="button" class="rk-sv" data-gm-sv="${esc(r.id)}"${gm.busy ? ' disabled' : ''}>${gm.busy === r.id ? '⏳ Save…' : dk ? '✓ Save — dukan ginti + packet %' : '✓ Save — godam ginti'}</button></div></div>`;
+}
 async function gmSave(id) {
-  const { g2, L } = gmList(), r = L.find(x => x.id === id); if (!r || gm.busy) return;
-  if (!isOwner() && !can('stock.g2milao')) { notice('Is kaam ki ijazat nahi — malik se kahein'); return; }   // v2.103.27: mulazim bhi (rules 2.63)
-  const dr = gmDraft(r), sizes = gmSizes(r.it), p = {}; let any = false;
-  for (const x of sizes) { const k = String(+x.z.toFixed(4)), b = Math.max(0, Number(dr.n[k]) || 0), pct = Number(dr.p[k]) || 20; if (!(b > 0)) continue; any = true; const n = Math.max(1, Math.round(b - Math.floor(b * pct / 100))); p[k] = { n, a: n, b, pct }; }
-  if (!any && !confirm(`${r.it.name}: koi packet nahi likha — dukan ka stock ZERO save karein?`)) return;
+  const { br, src, gods, L } = gmList(), r = L.find(x => x.id === id); if (!r || gm.busy) return;
+  if (!isOwner() && !can('stock.g2milao')) { notice('Is kaam ki ijazat nahi — malik se kahein'); return; }
+  const dr = gmDraft(r), p = {}; let any = false;
+  if (br === 1) for (const x of gmSizes(r.it)) { const k = gmKey(x.z), b = Math.max(0, Number(dr.n[k]) || 0), pct = Number(dr.p[k]) || 20; if (!(b > 0)) continue; any = true; const n = Math.max(1, Math.round(b - Math.floor(b * pct / 100))); p[k] = { n, a: n, b, pct }; }
+  const tot = gmTot(r, dr, br), typed = Object.values(dr.n).some(v => String(v).trim() !== '') || String(dr.ctn).trim() !== '' || String(dr.pcs).trim() !== '';
+  if (!typed) { notice('Pehle ginti likhein'); return; }
+  if (!(tot > 0) && !confirm(`${r.it.name}: ginti ZERO save karein?`)) return;
   gm.busy = id; gmPaint();
-  const tot = gmTot(r, dr), per = Number(r.sI?.pack || r.it.pack) || 0, ctn = per > 1 ? Math.floor(tot / per + 1e-9) : 0, pcs = r3(tot - ctn * (per > 1 ? per : 0));
-  const msg = [];
+  const pos = gmNow(br, id), per = Number(r.it.pack) || 0, ctn = per > 1 ? Math.floor(tot / per + 1e-9) : 0, pcs = r3(tot - ctn * (per > 1 ? per : 0)), msg = [];
   try {
-    if (roundNow() && !countLocked()) { await writeCount({ id, name: r.it.name, stock: r.ss, pack: per }, { ctn, pcs, total: tot }, null, false, 1); msg.push(`dukan ginti ${num(tot)} (farq ${num(r3(tot - r.ss))})`); }
-    else msg.push('⚠️ ginti round nahi — dukan stock baad mein');
-    if (any && cloud?.setRackPk) { const v = { g: g2, at: Date.now(), p }; await cloud.setRackPk(id, v); itemCfg = { ...(itemCfg || {}), rackPk: { ...(itemCfg?.rackPk || {}), [id]: JSON.stringify(v) } }; msg.push(Object.entries(p).map(([z, o]) => `${pkName(Number(z), r.it)} ${o.b}→${o.pct}%`).join(' · ')); }
-    notice(`✓ ${r.it.name} — ${msg.join(' · ')}`); gm.ed = ''; gm.dr.delete(id);
+    if (roundNow() && !countLocked()) { await writeCount({ id, name: r.it.name, stock: pos, pack: per }, { ctn, pcs, total: tot }, null, false, br); msg.push(`ginti ${gmQ(tot, r.it)} (farq ${gmQ(r3(tot - pos), r.it)})`); }
+    else msg.push('⚠️ ginti round nahi — stock baad mein');
+    if (br === 1 && any && cloud?.setRackPk) { const g = gods.includes(src) ? src : gods.map(b => [b, gmNow(b, id)]).sort((a, b) => b[1] - a[1])[0]?.[0]; const v = { g, at: Date.now(), p }; await cloud.setRackPk(id, v); itemCfg = { ...(itemCfg || {}), rackPk: { ...(itemCfg?.rackPk || {}), [id]: JSON.stringify(v) } }; msg.push(Object.entries(p).map(([z, o]) => `${pkName(Number(z), r.it)} ${o.b}→${o.pct}%`).join(' · ')); }
+    notice(`✓ ${r.it.name} — ${msg.join(' · ')}`); gm.ed = ''; gm.dr.delete(br + '|' + id);
   } catch (e) { notice('⚠️ Save nahi hua: ' + (e?.message || e)); }
   gm.busy = ''; gmPaint();
 }
 document.addEventListener('click', e => {
-  const t = e.target.closest?.('[data-gm-ed],[data-gm-tab],[data-gm-p],[data-gm-sv]'); if (!t || !gm || !t.closest('#gmBody')) return; const d = t.dataset;
+  const t = e.target.closest?.('[data-gm-ed],[data-gm-tab],[data-gm-p],[data-gm-sv],[data-gm-br],[data-gm-src],[data-gm-pct]'); if (!t || !gm || !t.closest('#gmBody')) return; const d = t.dataset;
   if (d.gmEd) { gm.ed = gm.ed === d.gmEd ? '' : d.gmEd; gmPaint(); return; }
   if (d.gmTab) { gm.tab = d.gmTab; gmPaint(); return; }
+  if (d.gmBr) { gm.br = Number(d.gmBr); gm.ed = ''; gmKeep(); gmPaint(); return; }
+  if (d.gmSrc) { gm.src = Number(d.gmSrc); gm.ed = ''; gmKeep(); gmPaint(); return; }
+  if (d.gmPct != null) { gm.pct = Number(d.gmPct) || 0; gmKeep(); gmPaint(); return; }
   if (d.gmP) { const [id, k, v] = d.gmP.split('|'), r = gmList().L.find(x => x.id === id); if (!r) return; gmDraft(r).p[k] = Number(v); gmPaint(); return; }
   if (d.gmSv) { gmSave(d.gmSv); return; }
 });
 document.addEventListener('input', e => { const t = e.target; if (!gm) return;
   if (t?.dataset?.gmQ != null) { gm.q = t.value || ''; clearTimeout(gmPaint.t); gmPaint.t = setTimeout(() => gmPaint(true), 160); return; }
-  if (t?.dataset?.gmN) { const [id, k] = t.dataset.gmN.split('|'), r = gmList().L.find(x => x.id === id); if (!r) return; const dr = gmDraft(r); dr.n[k] = t.value; const box = document.getElementById('gmSum-' + id); if (box) { const tot = gmTot(r, dr); box.innerHTML = gmSumHTML(r, tot, r3(tot - r.ss)); } }
+  const id = t?.dataset?.gmN ? t.dataset.gmN.split('|')[0] : (t?.dataset?.gmC || t?.dataset?.gmS); if (!id) return;
+  const r = gmList().L.find(x => x.id === id); if (!r) return; const dr = gmDraft(r);
+  if (t.dataset.gmN) dr.n[t.dataset.gmN.split('|')[1]] = t.value; else if (t.dataset.gmC) dr.ctn = t.value; else dr.pcs = t.value;
+  const box = document.getElementById('gmSum-' + id); if (box) box.innerHTML = gmSumHTML(r, gm.br);
 });
+document.addEventListener('focusout', e => { if (gm?.dirty && e.target?.closest?.('#gmBody')) setTimeout(() => { if (gm?.dirty && !document.activeElement?.closest?.('#gmBody input')) gmPaint(true); }, 300); });
 async function rkpGo(g) {
   if (!rk || rk.busy) return; const all = pkDue().filter(y => String(y.g) === String(g)), P = rkPick('p' + g, all.map(y => String(y.r.i))), ys = all.filter(y => P.has(String(y.r.i)));
   const lines = [], noteP = [];
@@ -3699,7 +3749,7 @@ export function renderTransferHub(canDo = () => true) {
   const row = (t, dd) => { const x = tot([t]); const k = esc(tcKey(t)); return `<div class="th-rw"><button type="button" class="th-row" data-th-tc="${k}" data-th-d="${dd}"><span class="th-tn">TN<b>${esc(String(t.transferNo || '').replace(/^0+/, '') || '—')}</b></span><span class="th-mid"><b>${esc(branchName(t.from, names))} ➜ ${esc(branchName(t.to, names))}</b><small>${(t.lines || []).length} items · ${num(x.c)} ctn${x.p ? ' + ' + num(x.p) + ' pcs' : ''}${x.c !== x.ca ? ' (asal ' + num(x.ca) + ')' : ''} · ${esc(regClock(t.at))}${t.app ? ' · 📱' : ''}${Number(t.editCount) > 0 ? ' · ✏️' : ''}</small></span>${stChip(t)}</button>${own ? `<details class="th-more"><summary aria-label="Aur">⋯</summary><div><button type="button" data-th-prn="${esc(String(t.transferId))}">🖨 Dobara print</button><button type="button" data-th-edit="${esc(String(t.transferId))}">✏️ Edit</button><button type="button" class="danger" data-th-cancel="${esc(String(t.transferId))}">❌ Cancel</button></div></details>` : ''}</div>`; };
   const grp = [[today, 'Aaj'], [yest, 'Kal']].map(([d, l]) => { const g = all.filter(t => regDay(t.at) === d); return g.length ? `<section class="th-day"><div class="th-dh"><b>${l}</b><span>${g.length} note</span></div>${g.slice(0, 40).map(t => row(t, d === today ? 1 : 2)).join('')}</section>` : ''; }).join('');
   const tile = (k, ic, t, sub, cls) => `<button type="button" class="th-tile ${cls}" data-th="${k}"><span>${ic}</span><b>${t}</b><small>${sub}</small></button>`;
-  $('list').innerHTML = `<div class="th-root"><div class="th-tiles">${canDo('stock.transfer') ? tile('new', '➕', 'Naya transfer note', 'Sirf majood maal · Ctn mein · ⤓ Sara', 'a') : ''}${canDo('stock.g2milao') && collect().g2 != null ? (() => { const { L } = gmList(), b = L.filter(r => !gmDone(r.id)).length; return tile('g2m', '🧮', 'Godam 2 milao', L.length ? (b ? `${b} items baqi` : 'Sab mil gaye ✓') : 'Godam 2 mein stock nahi', 'b'); })() : ''}${canDo('stock.rack') ? (() => { const n = rackDue().length + pkDue().length; return tile('rack', '🧺', 'Rack bharo', (n ? `${n} items godam se lane` : rackAt || irData ? 'Sab rack bhare ✓' : 'Data aa raha hai') + (rackZero.length && isOwner() ? ` · ⚠️ ${rackZero.length} pcs 0` : ''), 'c' + (n ? ' rk-hot' : '')).replace('</button>', n ? `<i class="rk-badge">${n}</i></button>` : '</button>'); })() : ''}${canDo('stock.tc') ? tile('tc', '🧾', 'Transfer check', pend ? pend + ' baqi · scan karein' : 'Maal pohancha? Scan', 'b') : ''}${canDo('stock.reg') ? tile('reg', '📋', 'Transfer register', 'Din-war · PDF', 'c') : ''}</div>
+  $('list').innerHTML = `<div class="th-root"><div class="th-tiles">${canDo('stock.transfer') ? tile('new', '➕', 'Naya transfer note', 'Sirf majood maal · Ctn mein · ⤓ Sara', 'a') : ''}${canDo('stock.g2milao') && collect().branches.some(b => b !== 1) ? tile('g2m', '🧮', 'Stock milao', 'Dukan + godam ginti · 📊 % bacha · live', 'b') : ''}${canDo('stock.rack') ? (() => { const n = rackDue().length + pkDue().length; return tile('rack', '🧺', 'Rack bharo', (n ? `${n} items godam se lane` : rackAt || irData ? 'Sab rack bhare ✓' : 'Data aa raha hai') + (rackZero.length && isOwner() ? ` · ⚠️ ${rackZero.length} pcs 0` : ''), 'c' + (n ? ' rk-hot' : '')).replace('</button>', n ? `<i class="rk-badge">${n}</i></button>` : '</button>'); })() : ''}${canDo('stock.tc') ? tile('tc', '🧾', 'Transfer check', pend ? pend + ' baqi · scan karein' : 'Maal pohancha? Scan', 'b') : ''}${canDo('stock.reg') ? tile('reg', '📋', 'Transfer register', 'Din-war · PDF', 'c') : ''}</div>
     ${grp || '<div class="th-empty">⇄<b>Aaj / kal koi transfer note nahi</b><small>"Naya transfer note" se banayein</small></div>'}</div>`;
 }
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-th],[data-th-reg],[data-th-tc],[data-th-prn],[data-th-edit],[data-th-cancel]'); if (!b) return; const d = b.dataset;

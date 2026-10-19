@@ -5356,3 +5356,15 @@ v2.103.28 (2026-10-19) — 📅 Item report: kal ka data hamesha + bari report m
 - App: cloud.listenItemKal; irep.js remerge = mergeToday(mergeToday(full, kdoc), tdoc); nfBills kal + aaj (jo full se naye); ageText: bari report
   > 3 ghante purani = " · ⚠️ 3 mahine wali report X pehle — PC: "<sales-stats aakhri log line>"" (cloud.listenPcStatus, malik). Tests itd (16),
   ir5 t/t2, sk/irk. Rules wahi. AI nahi.
+
+v2.103.29 (2026-10-19) — 🧮 STOCK MILAO (Godam 2 milao ka bara roop): dukan + har godam ginti, 📊 % bacha chips, live do larke
+- Malik: baqi godam bhi; godamo ka stock bhi aise tally; % chips (20% = 100 mein se 20 reh gaya wo saamne); godam mein zyada / dukan mein kam;
+  ek larka godam mein ek dukan par LIVE ginti.
+- pos-stock.js gm module (v2.103.26 wala badla): gm {br (1 = dukan | godam), src (dukan mode: kis godam ke items), pct, tab, q, ed, dr} localStorage
+  sam-gm. Chips: 📍 Ginti kahan [dukan + collect().branches godam] · 📦 Kis godam ke items (sirf dukan) · 📊 Itna % bacha Sab/10/20/30/40.
+  gmList: dukan = src godam ke stock > 0 items; godam = us godam ke stock > 0 + jin ki is godam mein ginti (counts c-<br>-<id>).
+  gmPct(b, id) = (POS abhi + gmPend — farq jo bill / auto mein abhi nahi gaya: postedMap _posted-<round>-<b>, auto pfAt) / pichhli ginti total;
+  % chip = sirf <= pct, kam pehle. Card: har jagah (dukan + godam) POS · gina (kis ne · waqt) · 📊 % (gmPlaces). Editor: dukan = har packet + packet %
+  (rackPk g = src) — pehle jaisa; godam = carton wale ka Ctn + Pcs (main barcode) + sub packets; live "Gina · POS · Farq". gmSave -> writeCount(br).
+  Done = is round mein us jagah gina (dukan par packet % bhi). Live: counts listener -> gmLive() (khana likha ja raha ho to focusout tak ruko).
+  Tile "🧮 Stock milao" (canDo stock.g2milao). CAP label badla. Tests sk/gm.mjs + gm2.mjs. PC / rules wahi. AI nahi.
