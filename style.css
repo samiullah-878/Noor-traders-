@@ -4327,3 +4327,4 @@ html body :is(#summary,#dialogBody) .rk-lb input{width:16px;height:16px;margin:0
 .report-document .rp-tbl td.rp-r{text-align:right;white-space:nowrap}.report-document .rp-tbl td.rp-n{color:#888;width:28px}.report-document .rp-tbl tr.rp-cat td{background:#f1f5f9;font-weight:800;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#334155}.report-document .rp-tbl td.rp-item small{color:#666}
 /* v2.103.43: 📷 dhundli check */
 .pp-camthumb{position:relative}.pp-camthumb.blur img{outline:3px solid #ef4444;outline-offset:-3px}.pp-camq{display:block;font-size:11px;font-weight:800;margin-top:3px;color:#6b7280}.pp-camq.ok{color:#15803d}.pp-camq.bad{color:#b91c1c}
+.lk-merged{margin:6px 0;padding:6px 8px;border-radius:12px;background:#f0fdf4;border:1px dashed #86efac}.lk-merged>small{display:block;color:#166534;font-weight:700;margin-bottom:4px}

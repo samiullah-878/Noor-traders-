@@ -5479,3 +5479,6 @@ v2.103.43 (2026-10-19, PC/rules nahi) — 📷 DHUNDLI TASVEER CHECK (pic-check.
   2px blur ~235, 3px ~35 → limit 250 (label 200). Galti = blur false (kabhi na roke).
 - purchase.js camera pages: har page ke neeche "✓ Saaf (n)" / "⚠️ Dhundli (n) — dobara lein" (camQ, camCheck), thumbnail lal, note + "Phir bhi parho".
   Gallery wali: dhundli ho to confirm. tolai.js label photo: dhundli = confirm. sw.js cache mein pic-check.js. AI image size pehle se 2400px/0.9.
+
+v2.103.44 (2026-10-19, PC/rules nahi) — 🔗 Khata: juri hui larke ki credit entry (skipsBalance) alag card NAHI — POS bill ke card mein "📷 Larke ki entry"
+  (tasveerein, receipt, edit). cashLinkChip: larke ki credit entry ke liye "🔗 Larke ki entry juri · farq" (pehle ghalat "💵 Cash se ada … purana jor"). AI nahi.
