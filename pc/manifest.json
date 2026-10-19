@@ -1,5 +1,5 @@
 {
- "version": "2026-10-19.5",
+ "version": "2026-10-19.6",
  "note": "post-farq v16: ginti ke baad sale par rok sirf _late on (default band)",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -11,7 +11,7 @@
   "khata-auto.bat": "c6f019335516b837d486e8c47bd5d1acb753628b80669795df7bad51e9f718d7",
   "khata-sync-auto.bat": "7006262d6b2e395b6212aa2b130c191bb3284b1a2bf60793ee537fd845f69905",
   "label-auto.bat": "7094351892e48c7a2d4a32b2ac49e96e8d39e66856a3ff276d36b27b91368824",
-  "label-print.js": "563858a225f97aa6295154a9b1f6a6e8f7f751e891a0eee2d2accbe935219865",
+  "label-print.js": "3422a415cc25a7a4349a3eda3c0542f9a1943770f695c3cb4334fe4784b78217",
   "pos-khata-sync.js": "f45a29ccca6e012d89c7dbf7732fe223e9461831fd42f577437bbf9a0805ef2e",
   "post-farq.js": "8443f4c7335feb725d4cac3403c3391984f7a46701c5fe9c0356e78ccf0b60c3",
   "purchase-auto.bat": "f877f7a5c14ad0a654b499396e8661c20a1140c2b99d68c1a91b18cae440fb85",
@@ -63,7 +63,7 @@
   "LABEL-NAAP.bat": "123ac0c0f7cc137541e909b1c6dd1c1ec2563e8da5d1de9fb6c538f831852da8",
   "LABEL-URDU-FONT.bat": "f780e334b69b848c41117a487ea1cf26698649686145e485a1acabb60a3618df",
   "sale-farq-check.js": "02400f160dfeecd7d572a5e8d1321c9653a0526fbe16afad3cb635d79f5c83f3",
-  "factory-post.js": "d614f523bb4b1a3b4c08c8035f6b464aabb73c3c9e655a550b32013814bf6597",
+  "factory-post.js": "eeb18ad42991ced2ecbaefe337ce37d5717ac76d4650561b784b18f49bb279d4",
   "factory-auto.bat": "9ee1ce9bc65004a10e719de271a0ba5ce1c942f430c47e83fc1052e2319a95c3",
   "galla-parchi.js": "e64cf7cd1c18b1be97d0062681d436b60f7c494d0195bd0d8d7e6e76eca7760c",
   "irep-today.js": "40ed10c821a2ce0938e8940a583728bcd8473e110a571d8665e6cdbdd71b4584",

@@ -5465,3 +5465,11 @@ v2.103.41 (2026-10-19, PC/rules nahi) — 📄 RATE LIST PDF (Stock tile, CAP st
 - pos-stock.js rp module: rpOpen (dialog) chips Sab / Sirf stock wale · Category (it.cat) · 🙈 Rate chhupao · 🏷 Barcode bhi · search; rpPdf → regPdfOf(html, title)
   (printArea + openReportPreview = kholo + bhejo, poori screen). Columns #, Item, Retail (rate2||rate), Wholesale (ws||wrate), 1 Ctn (pack uName), Ctn rate
   (rate×pack, W wrate×pack). Category ke heading rows. Hidden items nahi. CSS .rp-tbl. Test sk/rp.mjs. AI nahi.
+
+v2.103.42 + PC label-print v4.7 + factory-post v1.4 (2026-10-19, manifest 2026-10-19.6, rules nahi)
+- 🏭 Factory batch: chip "🏷 BARCODE CHHAPEIN? Haan (N label) / Nahi" (data-fb-bc) "Aur…" se bahar; Nahi = fb.lbl none (localStorage sam-fc-bc yaad).
+  Batch tafseel: label na chhape hon to "🏷 Label ab chhapo" (data-fc-lblnow → labelSpecs cfg.lbl + sendLabels batch no).
+- PC label-print v4.7: bara order par printer rukta tha → har hisse se pehle waitMove (line <= 1), 100+ label = 4 qatar ke hisse, 90 s ruka = line saaf +
+  wahi hissa dobara (2 dafa, ctl.retry), hisson ke beech 400 ms.
+- PC factory-post v1.4: parchi par har item ke neeche Urdu naam (urdu-names.js UR.get/line, KAM PAD GAYA mein bhi); Urdu ho to nt-parchi tasveer
+  (printAny), na chale to UR.strip + RAW. AI nahi.

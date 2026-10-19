@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  factory-post.js  v1.3 (2026-10-17: 📱 SIRF APP batch (status 'app') ki parchi — POS / SQL ko haath nahi, sirf printer; baqi = app ka factory stock) · v1.2 (2026-10-16: 🎁 packing outs (4 kg / 700 g) + 🖨 2 parchi (factory + munshi) bana / laga / BAQI stock) · v1.1 (2026-10-15 raat: ⏳ 'job:' naye item — pehle item bane, phir batch) · v1.0 (2026-10-15) — 🏭 FACTORY PRODUCTION -> POS STOCK (app "🏭 Factory" / stock screen "Factory batch (OK)")
+//  factory-post.js  v1.4 (2026-10-19: 🔤 Urdu naam parchi par — urdu-names.js + nt-parchi) · v1.3 (2026-10-17: 📱 SIRF APP batch (status 'app') ki parchi — POS / SQL ko haath nahi, sirf printer; baqi = app ka factory stock) · v1.2 (2026-10-16: 🎁 packing outs (4 kg / 700 g) + 🖨 2 parchi (factory + munshi) bana / laga / BAQI stock) · v1.1 (2026-10-15 raat: ⏳ 'job:' naye item — pehle item bane, phir batch) · v1.0 (2026-10-15) — 🏭 FACTORY PRODUCTION -> POS STOCK (app "🏭 Factory" / stock screen "Factory batch (OK)")
 //  Malik: "apni factory ki items — formula ke saath batch, larka OK kare to production auto stock mein aa jaye aur raw maal auto minus;
 //          shop ki sale se stock minus hota rahe; batch ka barcode label OK par khud chhap jaye (sub barcode bhi)".
 //  Firestore factoryBatches/<id> status 'new' -> POS mein EK Adjustment (dukan godam, BranchID 1):
@@ -157,6 +157,12 @@ async function post(ref, b) {
 }
 // ---------- 🖨 PARCHI (v1.2) — server ka TM-T88IV, raw ESC/POS (post-farq jaisa RawCached.dll) ----------
 const PRINTER_NAME = 'TM-T88IV', W = 32;
+// v1.4 (2026-10-19): 🔤 URDU — item ke naam ke neeche Urdu naam (blueAccess/urduNames, transfer-sync v4.8 jaisa). Urdu ho to nt-parchi ki tasveer wali
+//   parchi (tez worker); na chale to bina Urdu purana RAW raasta (parchi kabhi na ruke).
+let UR = null; try { UR = require('./urdu-names.js'); } catch (e) { console.log('urdu-names.js nahi: ' + e.message); }   // v1.4: 🔤 Urdu naam parchi par
+let PARCHI = null; const getParchi = () => PARCHI || (PARCHI = require('./nt-parchi.js').make({ dir: DIR, width: W, dots: 512 }));
+try { UR?.watch?.(db, BUSINESS_ID, m => console.log(m)); } catch (e) { console.log('Urdu naam watch nahi: ' + e.message); }
+function printAny(text, tag) { if (UR && UR.has(text)) { return Promise.resolve().then(() => getParchi().sendJobs([UR.toJob(text, { font: getParchi().FONT_UR, dots: 512 })], PRINTER_NAME)).catch(e => (console.log('Urdu parchi masla: ' + e.message + ' — bina Urdu'), printRaw(UR.strip(text), tag))); } return printRaw(text, tag); }
 let cfgCache = null, cfgAt = 0;
 async function facCfg() { if (Date.now() - cfgAt < 60000 && cfgCache) return cfgCache; const d = await biz.collection('factory').doc('cfg').get(); cfgCache = d.exists ? d.data() : {}; cfgAt = Date.now(); return cfgCache; }
 const asc = t => String(t ?? '').normalize('NFKD').replace(/[^\x20-\x7e]/g, '').replace(/\s+/g, ' ').trim();
@@ -169,13 +175,13 @@ function slipText(b, after, copy, app) {
   const out = [ESC + '@', ESC + 'a\x01', big('NOOR TRADERS'), bold(app ? 'FACTORY BATCH - SIRF APP' : 'FACTORY PRODUCTION'), bold('COPY: ' + copy), ESC + 'a\x00', hr,
     line('Batch:', b.no || ''), ...(app ? [] : [line('POS Adj #:', b.adjNo || '')]), line('Tareekh:', new Date().toLocaleString('en-GB', { hour12: true }).replace(',', '')), line('Kis ne:', b.byName || ''),
     line('Kaam:', b.kind === 'pack' ? 'bulk se packing' : (b.n || 1) + ' batch'), hr, bold('BANA (+)  /  ' + where + ' baqi')];
-  const row = (name, q, id) => { const a = A.get(String(id)); out.push(asc(name).slice(0, W), line('  ' + (q > 0 ? '+' : '-') + nf(Math.abs(q)), a ? 'baqi ' + nf(a.s) + (a.s < 0 ? ' KAM!' : '') : '')); };
+  const row = (name, q, id) => { const a = A.get(String(id)); out.push(asc(name).slice(0, W)); { const ur = UR?.get?.(id); if (ur) out.push(UR.line(ur, 36)); } out.push(line('  ' + (q > 0 ? '+' : '-') + nf(Math.abs(q)), a ? 'baqi ' + nf(a.s) + (a.s < 0 ? ' KAM!' : '') : '')); };   // v1.4: Urdu naam
   if (r3(b.out) > 0) row(b.itemName || b.name, r3(b.out), b.itemId);
   for (const o of b.outs || []) if (r3(o.q) > 0) row(o.name, r3(o.q), o.id);
   out.push(hr, bold('LAGA (-)  /  ' + where + ' baqi'));
   for (const l of b.lines || []) if (r3(l.q) > 0) row(l.name, -r3(l.q), l.id);
   const kam = (b.lines || []).filter(l => (A.get(String(l.id))?.s ?? 0) < 0);
-  if (kam.length) out.push(hr, bold('!! KAM PAD GAYA (' + (app ? 'factory ' : '') + 'stock minus):'), ...kam.map(l => '  ' + asc(l.name).slice(0, W - 2)));
+  if (kam.length) out.push(hr, bold('!! KAM PAD GAYA (' + (app ? 'factory ' : '') + 'stock minus):'), ...kam.flatMap(l => { const ur = UR?.get?.(l.id); return ['  ' + asc(l.name).slice(0, W - 2), ...(ur ? [UR.line(ur, 30)] : [])]; }));
   out.push(hr, line('Laagat:', 'Rs ' + nf(Math.round(b.cost || 0))));
   for (const o of b.outs || []) out.push(line('  ' + asc(o.name).slice(0, 18) + ' fi pcs', 'Rs ' + nf(o.c)));
   out.push(hr, '', copy.startsWith('MUNSHI') ? 'Munshi dastakhat: ____________' : 'Factory dastakhat: ___________', '', '', '', GS + 'V\x42\x00');
@@ -221,7 +227,7 @@ async function slip(ref, b) {
   if (!copies) { log(`🖨 ${b.no}: parchi band (setting)`); return; }
   const tags = copies === 2 ? ['FACTORY (LARKA)', 'MUNSHI'] : ['MUNSHI'];
   let ok = 0;
-  for (const [i, t] of tags.entries()) { const err = await printRaw(slipText({ ...b, itemName }, after, t), i ? 'b' : 'a'); if (err) throw new Error('printer: ' + (err.message || err)); ok++; }
+  for (const [i, t] of tags.entries()) { const err = await printAny(slipText({ ...b, itemName }, after, t), i ? 'b' : 'a'); if (err) throw new Error('printer: ' + (err.message || err)); ok++; }
   await ref.update({ prnAt: Date.now(), prnN: ok, prnErr: FieldValue.delete() });
   log(`🖨 ${b.no}: ${ok} parchi ${PRINTER_NAME} par`);
 }
@@ -254,7 +260,7 @@ async function appSlip(id) {
     const S = await appStock(), nm = new Map([[String(b.itemId), b.name], ...(b.outs || []).map(o => [String(o.id), o.name]), ...(b.lines || []).map(l => [String(l.id), l.name])]);
     const after = [...nm.keys()].map(k => ({ id: k, name: clean(nm.get(k), 80), s: r3(S.get(k) || 0) }));
     const tags = copies === 2 ? ['FACTORY (LARKA)', 'MUNSHI'] : ['MUNSHI']; let ok = 0;
-    for (const [i, t] of tags.entries()) { const err = await printRaw(slipText({ ...b, itemName: b.name }, after, t, true), i ? 'b' : 'a'); if (err) throw new Error('printer: ' + (err.message || err)); ok++; }
+    for (const [i, t] of tags.entries()) { const err = await printAny(slipText({ ...b, itemName: b.name }, after, t, true), i ? 'b' : 'a'); if (err) throw new Error('printer: ' + (err.message || err)); ok++; }
     await ref.update({ prnAt: Date.now(), prnN: ok, prnState: 'done', prnErr: FieldValue.delete() });
     log(`🖨 ${b.no} (sirf app): ${ok} parchi ${PRINTER_NAME} par`);
   } catch (e) { log(`❌ ${id} parchi: ${e.message}`); try { await ref.update({ prnState: 'err', prnErr: clean(e.message, 200) }); } catch {} }

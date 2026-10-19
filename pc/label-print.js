@@ -23,6 +23,8 @@
 //                     --test-urdu [font] = ek qatar test. Data: har label par ~30 byte (tasveer 300-1600 thi)) · v3.8 (2026-10-06: ⚠ PUTBMP par TSC ~30-36 label ke baad ruk jata tha -> wapas BITMAP magar Urdu tasveer sirf
 //                     likhai jitni (kaat kar, 2-4 guna chhoti) + bara order 8-8 qatar (24 label) ke ALAG print jobs mein) · v3.7 (2026-10-06: ⚡ Urdu tasveer printer ko EK dafa (DOWNLOAD "UR.BMP"), har label par sirf PUTBMP — job 158-357 KB se
 //                     ~10 KB; labels ruk ruk kar nahi nikalte / "Error - Printing" nahi. label-settings "urduMode": "bitmap" = purana) · v3.6 (2026-10-05: Urdu raster upar/neeche padding px*0.35 — Nastaleeq ka sar kat-ta tha; default font Tahoma 24) · v3.5 (2026-10-05: lamba naam 2 line (char 14 dot), Urdu 46 dot tak, barcode 24/20%) · v3.4 (2026-10-05: English naam ke neeche URDU naam — blueAccess/urduNames, PowerShell raster -> TSPL BITMAP; label-settings urdu/urduFont/urduPx/urduInvert)
+//  v4.7 (2026-10-19): BARA ORDER (900 label) par printer rukta tha — (1) har hisse se pehle line khali hone ka intezar (pehle sirf k>0), pichhle
+//     hukum ka aakhri hissa bhi; (2) 100+ label = chhote hisse (4 qatar); (3) ruka 90 s = line saaf + wahi hissa dobara (2 dafa tak); (4) hisson ke beech 400 ms.
 //  v3.3 (2026-09-24: number har BARCODE ka apna — ek item ke sub-barcode alag alag 1 se; dobara chhapne par aage se)
 //  v3.2 (number barcode ke code wali line par dayen — naam 2 line ho to bhi theek)
 //  v3.1 (number font 2, rate ki line 4 dot upar — neeche kat rahi thi)
@@ -327,6 +329,7 @@ async function waitMove(printer, ref, ctl) {
     if (n !== last) { if (last >= 0 && stuck) { stuck = false; await ref.update({ stuck: FieldValue.delete() }).catch(() => {}); } last = n; moved = Date.now(); }
     if (!stuck && Date.now() - moved > 30000) { stuck = true; const why = await printerWhy(printer).catch(() => 'Printer aage nahi chal raha'); await ref.update({ stuck: { at: Date.now(), why } }).catch(() => {}); log('⚠️ Label printer ruka: ' + why);
       if (!tried) { tried = true; await resumePaused(printer).catch(() => {}); } }
+    if (stuck && ctl.retry < 2 && Date.now() - moved > 90000) { ctl.retry++; log('↻ 90 s ruka — line saaf kar ke wahi hissa dobara (' + ctl.retry + ')'); await purgeQueue(printer).catch(() => {}); return 'retry'; }   // v4.7
     if (stuck && Date.now() - moved > 10 * 60000) return new Error('Printer 10 min se ruka — ' + ((await printerWhy(printer).catch(() => '')) || ''));
     if (Date.now() - t0 > 40 * 60000) return new Error('Printer bahut der se ruka');
     await new Promise(r => setTimeout(r, 2500));
@@ -343,7 +346,7 @@ const later = fn => { queue = queue.then(fn).catch(e => { log('Masla: ' + e.mess
 async function handle(doc) {
   if (busy.has(doc.id)) return;
   busy.add(doc.id);
-  const ctl = { cancel: false }; live.set(doc.id, ctl);
+  const ctl = { cancel: false, retry: 0 }; live.set(doc.id, ctl);
   let beat = null;
   try {
     const ref = jobCol.doc(doc.id);
@@ -368,14 +371,14 @@ async function handle(doc) {
     const ur = S.urdu ? (await urduNames())[String(j.itemId)] || '' : '';   // v3.4: Urdu naam (ho to)
     let err = (S.urdu && ur) ? await ensureFont(S) : null;   // v3.9
     // v3.8: chhote jobs ek ke baad ek · v4.0: har hisse se pehle cancel dekho, line khali hone tak ruko (ginti = asal chhapai), ginti likho
-    const SX = ur && S.urduMode !== 'ttf' ? { ...S, rowsPerJob: Math.min(rowsPer(S), 4), rowsMax: Math.min(Number(S.rowsMax) || 8, 4) } : S;   // v4.6: Urdu tasveer = chhote hisse
+    const SX = (ur && S.urduMode !== 'ttf') || copies2 >= 100 ? { ...S, rowsPerJob: Math.min(rowsPer(S), 4), rowsMax: Math.min(Number(S.rowsMax) || 8, 4) } : S;   // v4.6: Urdu tasveer = chhote hisse · v4.7: bara order bhi
     const parts = err ? [] : tspl(SX, j, nums, ur), perPart = rowsPer(SX) * Math.max(1, Number(S.cols) || 1);
     let sent = 0, cancelled = false;
     for (let k = 0; k < parts.length && !err; k++) {
       if (ctl.cancel) { cancelled = true; break; }   // v4.1: watcher ne jhanda lagaya
-      if (k > 0) { const we = await waitMove(S.printer, ref, ctl); if (we) { err = we; break; }   // v4.6: ruka = wajah app ko, 10 min = haar
+      { const we = await waitMove(S.printer, ref, ctl); if (we === 'retry') { if (k > 0) { err = await sendRaw(parts[k - 1], S.printer); if (err) break; } k--; continue; } if (we) { err = we; break; }   // v4.6: ruka = wajah app ko, 10 min = haar · v4.7: har hisse se pehle, retry = pichhla hissa dobara
          if (ctl.cancel) { cancelled = true; break; } try { if (((await ref.get()).data() || {}).cancelReq) { cancelled = true; break; } } catch {} }
-      err = await sendRaw(parts[k], S.printer); if (err) break;
+      err = await sendRaw(parts[k], S.printer); if (err) break; await new Promise(r => setTimeout(r, 400));   // v4.7: saans
       sent = Math.min(copies2, (k + 1) * perPart);
       if (parts.length > 1) ref.update({ sent: Math.max(0, sent - perPart), total: copies2, beatAt: Date.now() }).catch(() => {});   // line mein abhi ek hissa — chhap chuke ≈ pichhle
     }
