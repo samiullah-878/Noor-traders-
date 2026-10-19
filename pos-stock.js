@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.47';
-import { liveLabelsHTML } from './barcode.js?v=2.103.47';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.48';
+import { liveLabelsHTML } from './barcode.js?v=2.103.48';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -4143,7 +4143,7 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.103.47';
+import { agentRegister } from './agent.js?v=2.103.48';
 const AG = (() => {
   const S_ = { type: 'STRING' }, N_ = { type: 'NUMBER' }, B_ = { type: 'BOOLEAN' }, A_ = it => ({ type: 'ARRAY', items: it }), O_ = (p, r = []) => ({ type: 'OBJECT', properties: p, required: r });
   const names = () => collect().names || {};
@@ -4231,6 +4231,11 @@ const AG = (() => {
     { name: 'rate_list_pdf', icon: '📄', label: 'Rate list PDF', desc: 'Sab items (ya category) ki rate list PDF — naam, retail, wholesale, ctn pcs. rate_chhupao=true to sirf naam + pcs.', params: O_({ category: S_, rate_chhupao: B_, sirf_stock: B_ }),
       summary({ category, rate_chhupao, sirf_stock }) { return `📄 ${rate_chhupao ? 'Items list' : 'Rate list'}${category ? ' — ' + category : ''}${sirf_stock ? ' (sirf stock wale)' : ''}`; },
       async run({ category, rate_chhupao, sirf_stock }) { rp = { who: sirf_stock ? 'stock' : 'all', cat: category ? ([...new Set(rpItems().map(it => String(it.cat || '').trim()))].find(c => fold(c) === fold(category) || fold(c).includes(fold(category))) || '') : '', hide: !!rate_chhupao, bc: false, q: '' }; if (category && !rp.cat) throw Error('Category "' + category + '" nahi mili'); rpPdf(); return '📄 PDF khul gayi — kholo / bhejo'; } },
+    { name: 'transfer_check_list', read: true, desc: 'Transfer check: kaun se transfer notes abhi "maal mil gaya" ✓ nahi hue (late bhi).', params: O_({}),
+      run() { tcStart(); return { list: tcAll().filter(t => { const st = tcState(t); return st.k !== 'ok' && st.k !== 'cancel' && st.k !== 'farq'; }).slice(0, 40).map(t => { const st = tcState(t); return { tn: String(t.transferNo || '').replace(/^0+/, ''), se: branchName(Number(t.from), names()), ko: branchName(Number(t.to), names()), haal: st.k === 'late' ? 'LATE' : st.ng ? 'pehle "maal de diya" tick baqi' : 'baqi', items: (t.lines || []).length, kab: new Date(tcIssued(t)).toLocaleString('en-PK') }; }) }; } },
+    { name: 'transfer_check_ok', icon: '🧾', label: 'Transfer check ✓', desc: 'Transfer note (tn) ka "maal poora mil gaya" ✓ (ya farq=true + note).', params: O_({ tn: S_, farq: B_, note: S_ }, ['tn']),
+      summary({ tn, farq, note }) { tcStart(); const t = tcFind(String(tn)); if (!t) throw Error('TN ' + tn + ' nahi mila'); const st = tcState(t); if (st.k === 'ok') throw Error('TN ' + tn + ' pehle hi ✓'); return `TN ${tn}: ${farq ? '⚠️ farq — ' + (note || '') : '✓ poora mila'}`; },
+      async run({ tn, farq, note }) { const t = tcFind(String(tn)); await tcSaveOne(t, farq ? 'farq' : 'ok', note || ''); return `✓ TN ${tn} check`; } },
     { name: 'demand_done', icon: '📢', label: 'Demand ho gayi', desc: 'Larke ki demand (item) ko "ho gaya" karo.', params: O_({ item: S_ }, ['item']),
       summary({ item: v }) { const it = item(v), d = roDm.find(x => String(x.i) === String(it.id)); if (!d) throw Error(it.name + ' ki koi open demand nahi'); return `📢 ${it.name} — demand ho gayi (${d.byName || ''})`; },
       async run({ item: v }) { const it = item(v), d = roDm.find(x => String(x.i) === String(it.id)); await cloud.saveDemand({ ...d, st: 'done', doneAt: Date.now() }); return '✓ Demand band'; } },

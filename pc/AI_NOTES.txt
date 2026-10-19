@@ -3222,3 +3222,11 @@ v2.103.47 (2026-10-20, PC/rules nahi) — 🤖 AGENT = POORI APP (hissa 1) — m
   stock_milao, mangwao_order, mangwao_poora, label_print, note_dobara_print, rate_list_pdf, demand_done. item(v) = smartSearch + exact/full-word, warna
   error "kaun sa item? a / b / c" (e.cands). godam(v) naam se. Har run = wahi functions (stockAgentTransfer, rkLabelsGo, writeCount, setRackPk…).
 - CLAUDE.md qaida: har naya feature apna agent action register kare. Tests sk/ag.mjs (actions + card raasta, mock agentStep). AI: samajhna Gemini (malik ki key), kaam app.
+
+v2.103.48 (2026-10-20, PC/rules nahi) — 🤖 AGENT hissa 2: aur actions
+- pos-stock.js: transfer_check_list (read), transfer_check_ok {tn, farq, note} (tcSaveOne).
+- irep.js (aakhir mein): nafa_report {from,to,top,wholesale} (agg), item_sale {item,from,to}, nafa_pdf {filter}, sale_report_pdf.
+- factory.js (aakhir mein): factory_batches {days}, factory_batch_kholo {item, n} (form prefill — OK malik dabaye).
+- app.js (agentSetup se pehle): mulazim_list, caps_list, cap_set {mulazim, cap, on} (danger — saveStaff deny), mulazim_band {mulazim, on} (danger),
+  pos_sale_auto {on}, print_setting {purchaseAuto, purchaseCopies, bankAuto, urduSlip, bigSlip}. agSt(naam) / agCap(key ya naam ka hissa).
+  Khata / purchase / sale / notes / due: pehle se agent ke apne tools (propose_*). AI nahi (samajhna Gemini).

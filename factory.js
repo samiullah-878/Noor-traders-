@@ -16,8 +16,8 @@
 //   ginti / 📥 maal aaya / 📤 maal diya = factoryMoves, naya item = cfg.local ('loc:<id>' — POS mein nahi), rate sirf factory (POS "lagao" band).
 //   Factory ka STOCK = app ka apna: har item ke waqia (ginti = itna hai · aaya + · diya − · batch: tayyar + / raw −) waqt ke hisaab se.
 //   cfg.posOn true = purana tareeqa (POS Adjustment, POS ginti, POS item). ⚙️ mein on / off (sirf malik).
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.103.47';
-import { smartSearch, fold } from './smart-search.js?v=2.103.47';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.103.48';
+import { smartSearch, fold } from './smart-search.js?v=2.103.48';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1442,3 +1442,12 @@ document.addEventListener('change', e => {
   if ((d.fcWm != null || d.fcRm != null) && cloud?.setFactoryCfg) { if (!(v >= 0)) return; cfg = { ...(cfg || {}), ...(d.fcWm != null ? { wm: v } : { rm: v }) }; cloud.setFactoryCfg(d.fcWm != null ? { wm: v } : { rm: v }).then(() => notice('✓ Nafa ' + v + '% save')).catch(er => notice('Save nahi hua: ' + (er?.message || er))); }
 });
 export const _fcTest = { mcCpp, mcOpen, get mc() { return mc; }, rateRows, items: () => items, fStocks: () => fStocks(), pcsG, volU, lineVol, fixMl, looksPack, get fe() { return fe; }, forms, selfMats, mlFromName, volOf, openAdd, addListHTML, get fa() { return fa; }, packCalc, packDefs, packUnit, packCpp, bulkCpp, batchCalc: () => batchCalc(), fb: () => fb, rEd, rateRows, isMat, fRate, rateOf, setRate, posRate: v => { posRate = v; }, gOf, kgOf, pcsOfKg, qk, costOf, suggest, labelSpecs, qt, set: (c, b, it) => { cfg = c; batches = b || []; items = it || []; byId = new Map(items.map(x => [x.id, x])); itemsOk = true; }, batchNo, pdfHTML, st, matchItem, photoFormula, pf: () => pf, pendItems: () => pendItems(items.filter(x => !x.pending)) };
+
+// v2.103.48: 🤖 agent actions — factory
+import { agentRegister } from './agent.js?v=2.103.48';
+agentRegister([
+  { name: 'factory_batches', read: true, desc: 'Factory ke aaj ke (ya pichhle N din ke) batch: item, kitne batch, pcs, haal (POS mein / app / hold).', params: { type: 'OBJECT', properties: { days: { type: 'INTEGER' } } },
+    run({ days }) { watch(); const from = Date.now() - Math.max(1, Math.min(60, Number(days) || 1)) * 864e5; return { list: batches.filter(b => (b.at || 0) >= from).slice(0, 40).map(b => ({ no: b.no, item: b.name || byId.get(String(b.itemId))?.name || '', batch: b.n, pcs: b.out, haal: b.status, kis_ne: b.byName || '', kab: new Date(b.at).toLocaleString('en-PK'), laagat: b.cost })) }; } },
+  { name: 'factory_batch_kholo', read: true, desc: 'Naya factory batch ka form kholo (item + kitne batch bhar kar) — OK aap dabayein.', params: { type: 'OBJECT', properties: { item: { type: 'STRING' }, n: { type: 'INTEGER' } }, required: ['item'] },
+    async run({ item, n }) { await openBatch(null, 'make'); await new Promise(r => setTimeout(r, 400)); const q = String(item).toLowerCase(), it = items.filter(x => (forms()[x.id]) && String(x.name).toLowerCase().includes(q)); if (!it.length) throw Error('Factory item "' + item + '" nahi (formula wala)'); if (fb) { fb.id = it[0].id; fb.n = Math.max(1, Math.min(10, Number(n) || 1)); batchPaint(); } return { khul_gaya: it[0].name, batch: fb?.n || 1 }; } },
+]);
