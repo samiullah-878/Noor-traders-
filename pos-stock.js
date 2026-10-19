@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.57';
-import { liveLabelsHTML } from './barcode.js?v=2.103.57';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.58';
+import { liveLabelsHTML } from './barcode.js?v=2.103.58';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1634,7 +1634,7 @@ function tcAutoSave(t) { const key = tcKey(t); if (tcChecks.get(key) || tcState(
   const d = { transferId: t.transferId, transferNo: t.transferNo, from: t.from, to: t.to, issuedAt: tcIssued(t), status: 'ok', note: '', byName: nameOf() || (isOwner() ? 'Malik' : 'Mulazim'), device: deviceOf(), lines: (t.lines || []).length };
   tcFast(key, d, { onOk: () => { try { auditOf?.({ area: 'stock', act: 'tr-check', what: `TN ${t.transferNo || t.transferId} ✓ poora (items tick)`.slice(0, 120), ref: key, refType: 'transfer' }); } catch {} } }); notice(`✓ TN ${t.transferNo || t.transferId} check — sab items aa gaye`); }
 function tcFarqItems(t) { const S = tcTkOf(t); return (t.lines || []).filter((_, i) => S.has('f' + i)).map(l => l.name); }
-const tcQty = l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); return `${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}`; };
+const tcQty = l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0), pk = Array.isArray(l.pk) && l.pk.length ? ' · 📦 ' + l.pk.map(p => `${p.nm} ×${num(p.n)}`).join(', ') : ''; return `${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}${pk}`; };   // v2.103.58: sub-barcode packet (500 gm ×2) bhi
 let tcIq = '';
 // v2.103.56: 📦 AANE WALA MAAL — sab pending notes ke items ek list (jis taraf aa raha hai us ke neeche); ✓ aa gaya / ⚠️ farq → note ke andar wahi item khud; ticked = neeche chips
 function tcInHTML(pend) {
@@ -1651,14 +1651,15 @@ function tcInHTML(pend) {
 }
 function tcLinesCk(t) { const k = tcKey(t), S = tcTkOf(t), L = t.lines || [], n = L.filter((_, i) => S.has(i)).length;
   return `<div class="tc-tkh"><i class="tc-tkc${n === L.length ? ' ok' : ''}">✓ ${num(n)}/${num(L.length)} gine</i>${isOwner() ? `<button type="button" class="tc-tka" data-tc-tka="${esc(k)}">${n === L.length ? '☐ koi nahi' : '☑ sab'}</button>` : ''}</div>`
-    + L.map((l, i) => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0), st = tcTkSt(t, i), on = st === 'ok'; return `<label class="tc-ln tc-lck${on ? ' is-in' : st === 'farq' ? ' is-fq' : ''}"><input type="checkbox" data-tc-tk="${esc(k)}|${i}"${on ? ' checked' : ''}><span>${esc(l.name)}${st === 'farq' ? ' <i class="rk-c kh">⚠️ farq</i>' : ''}</span><b>${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}</b><button type="button" class="tc-ifq${st === 'farq' ? ' on' : ''}" data-tc-itk="${esc(k)}|${i}|${st === 'farq' ? '' : 'farq'}" aria-label="farq">⚠️</button></label>`; }).join(''); }
-function tcLines(t) { return (t.lines || []).map(l => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); return `<div class="tc-ln"><span>${esc(l.name)}</span><b>${x.c ? num(x.c) + ' ctn' : ''}${x.c && x.p ? ' + ' : ''}${x.p ? num(x.p) + ' pcs' : ''}</b></div>`; }).join(''); }
+    + L.map((l, i) => { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0), st = tcTkSt(t, i), on = st === 'ok'; return `<label class="tc-ln tc-lck${on ? ' is-in' : st === 'farq' ? ' is-fq' : ''}"><input type="checkbox" data-tc-tk="${esc(k)}|${i}"${on ? ' checked' : ''}><span>${esc(l.name)}${st === 'farq' ? ' <i class="rk-c kh">⚠️ farq</i>' : ''}</span><b>${tcQty(l)}</b><button type="button" class="tc-ifq${st === 'farq' ? ' on' : ''}" data-tc-itk="${esc(k)}|${i}|${st === 'farq' ? '' : 'farq'}" aria-label="farq">⚠️</button></label>`; }).join(''); }
+function tcLines(t) { return (t.lines || []).map(l => `<div class="tc-ln"><span>${esc(l.name)}</span><b>${tcQty(l)}</b></div>`).join(''); }
 function tcWho(c) { return `<div class="tc-who"><span>👤 ${esc(c.byName || '—')}</span><span>🕒 ${tcClock(c.ts)} · ${esc(regDay(c.ts || Date.now()))}</span><span>📱 Device: <b>${esc(c.device || '—')}</b></span></div>`; }
 function tcAll() {   // v2.99.25: POS ke note + app ke bane note (transferJobs done) jo abhi POS list (transfer-dekho) mein nahi aaye
   const dels = new Set((trList || []).filter(j => (j.op === 'delete' && j.transferId || j.op === 'edit' && j.oldId) && j.status === 'done').map(j => String(j.op === 'edit' ? j.oldId : j.transferId)));   // v2.99.58: app se cancel · v2.99.68: edit = purana cancel
-  const L = (ptList || []).map(t => dels.has(String(t.transferId)) && !t.cancelled ? { ...t, cancelled: true, cancelledAt: t.cancelledAt || 0 } : t), ids = new Set(L.map(t => String(t.transferId)));
+  const pkOf = new Map(); for (const j of trList || []) { if (j.status !== 'done' || !j.transferId || j.op === 'delete') continue; for (const l of j.lines || []) if (Array.isArray(l.pk) && l.pk.length) pkOf.set(String(j.transferId) + '|' + String(l.itemId), l.pk); }   // v2.103.58: POS note par bhi packet (app job se)
+  const L = (ptList || []).map(t => { const x = dels.has(String(t.transferId)) && !t.cancelled ? { ...t, cancelled: true, cancelledAt: t.cancelledAt || 0 } : t; return pkOf.size && (x.lines || []).some(l => pkOf.has(String(x.transferId) + '|' + String(l.itemId))) ? { ...x, lines: x.lines.map(l => { const pk = pkOf.get(String(x.transferId) + '|' + String(l.itemId)); return pk ? { ...l, pk } : l; }) } : x; }), ids = new Set(L.map(t => String(t.transferId)));
   for (const j of trList || []) { if (j.op === 'delete' || j.status !== 'done' || !j.transferId || ids.has(String(j.transferId)) || dels.has(String(j.transferId))) continue;
-    L.push({ id: 'T' + j.transferId, transferId: Number(j.transferId), transferNo: String(j.transferNo || ''), from: Number(j.from), to: Number(j.to), at: Number(j.doneAt) || Number(j.at) || 0, createdOn: Number(j.doneAt) || Number(j.at) || 0, app: true, lines: (j.lines || []).map(l => ({ itemId: String(l.itemId), name: l.name, qty: Number(l.qty) || 0, pack: Number(l.pack) || 0 })) }); }
+    L.push({ id: 'T' + j.transferId, transferId: Number(j.transferId), transferNo: String(j.transferNo || ''), from: Number(j.from), to: Number(j.to), at: Number(j.doneAt) || Number(j.at) || 0, createdOn: Number(j.doneAt) || Number(j.at) || 0, app: true, lines: (j.lines || []).map(l => ({ itemId: String(l.itemId), name: l.name, qty: Number(l.qty) || 0, pack: Number(l.pack) || 0, ...(Array.isArray(l.pk) && l.pk.length ? { pk: l.pk } : {}) })) }); }
   return L;
 }
 function tcRows() {
@@ -4207,7 +4208,7 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.103.57';
+import { agentRegister } from './agent.js?v=2.103.58';
 const AG = (() => {
   const S_ = { type: 'STRING' }, N_ = { type: 'NUMBER' }, B_ = { type: 'BOOLEAN' }, A_ = it => ({ type: 'ARRAY', items: it }), O_ = (p, r = []) => ({ type: 'OBJECT', properties: p, required: r });
   const names = () => collect().names || {};
