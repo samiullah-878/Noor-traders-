@@ -3139,3 +3139,9 @@ v2.103.33 + PC transfer-sync v4.9 (2026-10-19, manifest 2026-10-19.5, rules 2.63
 v2.103.34 (2026-10-19, PC/rules nahi) — 👀 POS ka stock us packet mein jis ka % laga (rack wala): pkPosFill tg = packs.find(has) || packs[0]; 125 gm × 2 kg = 16. AI nahi.
 
 v2.103.35 (2026-10-19, PC/rules nahi) — 👀 prefill: % wale packets = app ka apna bacha (left), kul POS se na mile to farq sab se bare % wale mein (pkPosFill _src app/pos; chip "📱 app ke hisaab se"). Kala chana 1 kg 3 + 500 gm 33 = 19.5 = POS. Koi % nahi = POS bare barcode mein. AI nahi.
+
+v2.103.36 (2026-10-19, PC/rules nahi) — 📦 packet note bana → "⏳ Note bana — rack bhar gaya?" (larke ka ✓)
+- Malik: "note ban jaye to item tab gayab ho jab larka shop par check kar ke OK kare · dobara note bhi ban sake".
+- rackPk cfg.tn = {at, no, q} (pkMarkSent, setRackPkMany ek write — staff likh sakta, rules 2.63). tn ho to pkDue mein nahi; packet-war ke upar
+  amber box pkPendHTML: item · TN · kitni der pehle · packets · godam; ✓ Rack bhar diya (pkOk: tn hatao, at abhi, c hatao = wapas 100%) ·
+  🖨 Dobara (pkAgain: wahi packets lao ka naya note, note "(dobara)", tn update). CAP wahi (canDoRk / stock.rack). Test sk/rk.mjs. AI nahi.
