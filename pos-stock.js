@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.83';
-import { liveLabelsHTML } from './barcode.js?v=2.103.83';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.84';
+import { liveLabelsHTML } from './barcode.js?v=2.103.84';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -2180,7 +2180,7 @@ function rowHTML(r) {
       <button type="button" class="stock-label-btn" data-stock-label="${esc(r.id)}">🏷️ Label</button>
       ${canEditItem() ? `<button type="button" class="stock-item-btn" data-stock-item="${esc(r.id)}">✏️ Item</button>` : ''}
       ${isOwner() && typeof window.ntFacIs === 'function' ? `<label class="fac-tick"><input type="checkbox" data-fac-tick="${esc(r.id)}"${window.ntFacIs(r) ? ' checked' : ''}> 🏭 Factory</label>` : ''}
-      ${isOwner() ? `<label style="display:block;font-size:.85em;white-space:nowrap"><input type="checkbox" style="width:auto" data-stock-hide="${esc(r.id)}"${isHidden(r) ? ' checked' : ''}> Band</label>${isHidden(r) ? bandChip(r.id) : ''}` : ''}
+      ${canBand() ? `<label style="display:block;font-size:.85em;white-space:nowrap"><input type="checkbox" style="width:auto" data-stock-hide="${esc(r.id)}"${isHidden(r) ? ' checked' : ''}> Band</label>${isHidden(r) ? bandChip(r.id) : ''}` : ''}
     </div>
     </div>
     ${countHTML(r)}
@@ -2228,9 +2228,7 @@ document.addEventListener('click', e => {
   if (sa) { saveAll(sa); return; }
   const hb = e.target.closest?.('[data-stock-hide]');
   if (hb) {   // v2.94.0: 🔒 Band par password (default 7183; stockConfig.bandPw se badal sakte hain) — on aur off dono
-    const want = String(itemCfg.bandPw || '7183'), got = prompt((hb.checked ? 'Item BAND karne' : 'Item dobara CHALU karne') + ' ka password:');
-    if (got === null || got !== want) { hb.checked = !hb.checked; if (got !== null) notice('❌ Password ghalat'); return; }
-    toggleHidden(hb.dataset.stockHide, hb.checked, hb); return; }
+    const on = hb.checked; bandPwCheck((on ? 'Item BAND karne' : 'Item dobara CHALU karne') + ' ka password:').then(pw => { if (pw == null) { hb.checked = !on; return; } toggleHidden(hb.dataset.stockHide, on, hb, pw); }); return; }
   if (e.target.closest?.('[data-stock-more]')) { limit += PAGE; rerender(); return; }
   if (e.target.closest?.('[data-stock-bills]')) { openBills(); return; }
   if (e.target.closest?.('[data-stock-ginti]')) { openGinti(); return; }
@@ -2384,8 +2382,15 @@ async function requestPost() {
   } catch (e) { notice(e?.message || 'Nahi bheja ja saka'); }
 }
 
-async function toggleHidden(id, on, box) {
-  if (!cloud?.setStockHidden || !isOwner()) { box.checked = !on; return; }
+// v2.103.84: 🔒 BAND har mulazim (CAP stock.band) — password server par (rules 2.66: blueAccess/bandKey); malik Settings se badle. Malik ka check phone par (bandKey parh sakta hai).
+let bandPwCache = null;
+const canBand = () => isOwner() || can('stock.band');
+async function bandPwWant() { if (bandPwCache) return bandPwCache; let k = null; try { k = await cloud?.getBandKey?.(); } catch {} if (!k) { k = String(itemCfg?.bandPw || '7183'); try { await cloud?.setBandKey?.(k); } catch {} } bandPwCache = k; return k; }
+export function bandPwReset() { bandPwCache = null; }
+async function bandPwCheck(msg) { const got = prompt(msg); if (got === null) return null; if (isOwner()) { const want = await bandPwWant(); if (got !== want) { notice('❌ Password ghalat'); return null; } } return got; }
+async function bandWrite(next, pw) { try { await cloud.setStockHidden(next, null, isOwner() ? null : pw); return true; } catch (e) { notice(/permission|insufficient/i.test(String(e?.code || e?.message || e)) ? '❌ Password ghalat (ya malik ne rules 2.66 upload nahi kiye)' : '⚠️ ' + (e?.message || e)); return false; } }
+async function toggleHidden(id, on, box, pw) {
+  if (!cloud?.setStockHidden || !canBand()) { box.checked = !on; return; }
   const item = collect().items.find(r => String(r.id) === String(id));
   const nm = item ? item.name : 'Yeh item';
   const stk = item ? `\nAbhi stock: ${num(item.stock)} ${item.uName || 'Pcs'}` : '';
@@ -2397,11 +2402,11 @@ async function toggleHidden(id, on, box) {
   if (on) next[String(id)] = true; else delete next[String(id)];
   box.disabled = true;
   try {
-    await cloud.setStockHidden(next);
+    if (!(await bandWrite(next, pw))) throw Object.assign(Error(''), { quiet: true });
     hidden = next;
     notice(on ? 'Item band — list se hat gaya ("Band items" mein milega)' : 'Item wapas list mein');
     rerender();
-  } catch (e) { box.checked = !on; notice(e?.message || 'Nahi hua'); }
+  } catch (e) { box.checked = !on; if (!e?.quiet) notice(e?.message || 'Nahi hua'); }
   finally { box.disabled = false; }
 }
 
@@ -3656,18 +3661,18 @@ function roHTML(names) { const L0 = roList(), G0 = new Map(); for (const r of L0
   const G = rk.roP ? new Map([[rk.roP, G0.get(rk.roP)]]) : G0, L = rk.roP ? G0.get(rk.roP) : L0;
   const sq = (rk.roPq || '').trim(), supAll = [...G0].sort((a, b) => b[1].length - a[1].length), supL = sq ? smartSearch(supAll.map(([k, ys]) => ({ id: k, name: k, ys })), sq, 60).map(o => [o.id, o.ys]) : supAll;   // v2.103.55: 🔍 supplier smart search
   const supChips = G0.size > 1 ? `<label class="hs-search rk-supq"><input type="search" data-ro-pq="1" placeholder="🔍 supplier dhoondo… (${num(G0.size)})" value="${esc(rk.roPq || '')}" autocomplete="off"></label><div class="rk-nb rk-sup"><button type="button" class="${rk.roP ? '' : 'is-in'}" data-ro-p="">Sab ${num(L0.length)}</button>${supL.map(([k, ys]) => `<button type="button" class="${rk.roP === k ? 'is-in' : ''}" data-ro-p="${esc(k)}">${esc(k)} <b>${num(ys.length)}</b></button>`).join('') || '<small class="stat-note">koi supplier nahi mila</small>'}</div>` : '';
-  const bp = isOwner() ? bandPendList() : [], bandBox = bp.length ? `<details class="rk-set rk-bandp"><summary>⛔ Band — PC baqi <b>${num(bp.length)}</b> items (PC on hote hi khud POS mein inactive)${bp.some(b => b.st === 'fail') ? ` · ❌ ${num(bp.filter(b => b.st === 'fail').length)}` : ''}</summary><div class="rk-bp">${bp.some(b => b.st === 'fail') ? `<p class="rk-note">❌ = PC ne 3 dafa koshish ki, nahi hua — wajah item ke neeche. 🔁 dobara = PC phir koshish karega.</p>` : ''}${bp.map(b => `<div class="rk-bpr"><span><b>${esc(b.name)}</b> ${bandChip(b.id)}</span><button type="button" data-ro-unban="${esc(b.id)}">↩ wapas chalu</button></div>`).join('')}</div></details>` : '';
+  const bp = canBand() ? bandPendList() : [], bandBox = bp.length ? `<details class="rk-set rk-bandp"><summary>⛔ Band — PC baqi <b>${num(bp.length)}</b> items (PC on hote hi khud POS mein inactive)${bp.some(b => b.st === 'fail') ? ` · ❌ ${num(bp.filter(b => b.st === 'fail').length)}` : ''}</summary><div class="rk-bp">${bp.some(b => b.st === 'fail') ? `<p class="rk-note">❌ = PC ne 3 dafa koshish ki, nahi hua — wajah item ke neeche. 🔁 dobara = PC phir koshish karega.</p>` : ''}${bp.map(b => `<div class="rk-bpr"><span><b>${esc(b.name)}</b> ${bandChip(b.id)}</span><button type="button" data-ro-unban="${esc(b.id)}">↩ wapas chalu</button></div>`).join('')}</div></details>` : '';
   const P = new Map(); for (const [k, ys] of G) P.set(k, rkPick('o' + k, ys.map(r => r.id))); const on = r => P.get(r.party || 'Supplier nahi pata')?.has(r.id) && r.q > 0; const nOn = L.filter(on).length, ed = rk.roEd;
   const unit = r => r.pk > 1 ? `${num(r.q / r.pk)} ctn` : `${num(r.q)} pcs`;
   return `${bandBox}<div class="rk-nb rk-pct"><span>📊 Itna % reh gaya</span>${[...[10, 20, 30, 40, 50, 60, 70, 80, 90].map(v => [v, v + '%']), ['all', 'Sab'], ['dm', '📢 Demand' + (roDm.length ? ' ' + num(roDm.length) : '')]].map(([v, l]) => `<button type="button" class="${String(rk.roF) === String(v) ? 'is-in' : ''}" data-ro-f="${v}">${l}</button>`).join('')}</div>
     ${!ro.at ? '<div class="th-empty">🛒<b>PC data aa raha hai</b><small>Shop PC update ke baad 10 min — "🛒 Mangwao" script</small></div>' : `<p class="rk-note">🖥 PC ${esc(new Date(ro.at).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }))} · kul = ${rk.g ? esc(branchName(rk.g, names)) + ' + baqi sab' : 'dukan + sab godam'} · poora = aakhri purchase par "us waqt tha + aaya" (✏️ se badlein)</p>`}
     ${supChips}<datalist id="roPartyList">${[...new Set(roRows().flatMap(r => r.ps.map(o => o.p)))].sort().map(p => `<option value="${esc(p)}">`).join('')}</datalist>
     <label class="hs-search"><input type="search" data-ro-q="1" placeholder="🔍 item dhoondo…" value="${esc(rk.roQs || '')}" autocomplete="off"></label>
-    ${[...G].map(([k, ys]) => { const S = P.get(k), n = ys.filter(on).length; return `<section class="rk-g rk-ro"><div class="rk-gh"><b>🏪 ${esc(k)}</b><button type="button" class="rk-all" data-ro-all="${esc(k)}">${ys.every(r => S.has(r.id)) ? '☐ koi nahi' : '☑ sab'}</button>${isOwner() ? `<button type="button" class="rk-all rk-banall" data-ro-banall="${esc(k)}" title="Is supplier ke sab items band">⛔ sab band</button>` : ''}</div>
+    ${[...G].map(([k, ys]) => { const S = P.get(k), n = ys.filter(on).length; return `<section class="rk-g rk-ro"><div class="rk-gh"><b>🏪 ${esc(k)}</b><button type="button" class="rk-all" data-ro-all="${esc(k)}">${ys.every(r => S.has(r.id)) ? '☐ koi nahi' : '☑ sab'}</button>${canBand() ? `<button type="button" class="rk-all rk-banall" data-ro-banall="${esc(k)}" title="Is supplier ke sab items band">⛔ sab band</button>` : ''}</div>
       ${ys.map(r => { const x = r.x, st = Object.entries(x.st || {}).filter(([, v]) => v).map(([b, v]) => `${esc(branchName(Number(b), names))} ${num(v)}`).join(' · ');
         return `<div class="rk-r${on(r) ? ' is-in' : ''}"><label class="rk-tk"><input type="checkbox" data-ro-t="${esc(r.id)}"${S.has(r.id) ? ' checked' : ''}><span><b>${esc(x.n)}</b><span class="rk-chips"><i class="rk-c ${r.tot > 0 ? 'ok' : 'kh'}">📦 abhi ${num(r.tot)}${r.pk > 1 && r.tot > 0 ? ` (${num(Math.floor(r.tot / r.pk))} ctn)` : ''}</i>${r.t > 0 ? `<i class="rk-c ${r.pct <= 20 ? 'kh' : r.pct <= 40 ? 'lo' : 'pc'}">📊 ${num(r.tot)} / ${num(r.t)} (${r.pct}%)</i>` : '<i class="rk-c mu">poora nahi pata</i>'}${r.dm ? `<i class="rk-c own">📢 ${esc(r.dm.byName || 'larka')}: ${r.dm.lvl === 'out' ? 'khatam' : 'kam'}</i>` : ''}${r.own ? '<i class="rk-c pc">✏️ malik ka poora</i>' : ''}${r.pOwn ? '<i class="rk-c pc">📌 malik ka supplier</i>' : ''}${r.cheap ? `<i class="rk-c ok">💰 sasta: ${esc(r.cheap.p)} @ ${num(r.cheap.r)}</i>` : ''}</span>
           <small>${r.last ? `🛒 aakhri ${esc(roWhen(r.last.at))}: <b>${num(r.last.q)} aaya</b>, us waqt <b>${num(Math.max(0, r.last.pre))} tha</b> → poora ${num(r.t)}${x.h.length > 1 ? ' · pichhli: ' + x.h.map(h => num(h.q)).join(' · ') : ''}` : ''}<br>📍 ${st || '<b>kahin nahi (0)</b>'}${r.ps.length ? `<br>🏪 ${r.ps.slice(0, 4).map(o => `${o.p === r.party ? '<b>' : ''}${esc(o.p)} ×${o.n}${o.r > 0 ? ' @ ' + num(o.r) : ''}${o.p === r.party ? '</b>' : ''}`).join(' · ')}` : ''}${x.s30 ? ` · 30 din bika ${num(x.s30)}` : ''}</small></span></label>
-          <div class="rk-q"><input type="number" inputmode="numeric" min="0" step="${r.pk > 1 ? r.pk : 1}" data-ro-qty="${esc(r.id)}" value="${r.q}"><small>${r.pk > 1 ? 'pcs (' + unit(r) + ')' : 'pcs'}</small></div>${isOwner() ? `<div class="rk-eb"><button type="button" class="rk-e" data-ro-e="${esc(r.id)}" aria-label="Poora">✏️</button><button type="button" class="rk-e rk-ban" data-ro-ban="${esc(r.id)}" aria-label="Band">🚫</button></div>` : ''}
+          <div class="rk-q"><input type="number" inputmode="numeric" min="0" step="${r.pk > 1 ? r.pk : 1}" data-ro-qty="${esc(r.id)}" value="${r.q}"><small>${r.pk > 1 ? 'pcs (' + unit(r) + ')' : 'pcs'}</small></div>${isOwner() ? `<div class="rk-eb"><button type="button" class="rk-e" data-ro-e="${esc(r.id)}" aria-label="Poora">✏️</button><button type="button" class="rk-e rk-ban" data-ro-ban="${esc(r.id)}" aria-label="Band">🚫</button></div>` : canBand() ? `<div class="rk-eb"><button type="button" class="rk-e rk-ban" data-ro-ban="${esc(r.id)}" aria-label="Band">🚫</button></div>` : ''}
           ${ed === r.id ? `<div class="rk-ed"><label>🧺 Poora (100%) — godam + dukan mein kul kitna hona chahiye<input type="number" inputmode="numeric" min="0" data-ro-tv="${esc(r.id)}" value="${r.own ? r.t : ''}" placeholder="khud: ${num(r.t)}"></label><label>🏪 Pakka supplier (khali = khud: zyada dafa / sasta)<input type="text" list="roPartyList" data-ro-pv="${esc(r.id)}" value="${esc(r.pOwn ? r.party : '')}" placeholder="khud: ${esc(r.party)}" maxlength="60"></label><div class="rk-mode"><button type="button" class="rk-sv" data-ro-tsv="${esc(r.id)}">✓ Save</button>${r.own || r.pOwn ? `<button type="button" data-ro-tdel="${esc(r.id)}">↺ Khud (poora + supplier)</button>` : ''}</div></div>` : ''}</div>`; }).join('')}
       <button type="button" class="rk-go" data-ro-go="${esc(k)}"${n && !rk.busy ? '' : ' disabled'}>${rk.busy === 'o' + k ? '⏳…' : `🛒 ${num(n)} items — order (PDF · WhatsApp)`}</button></section>`; }).join('') || (ro.at ? `<div class="th-empty">✓<b>${rk.roF === 'dm' ? 'Koi demand nahi' : 'Is hadd tak koi item nahi'}</b><small>Chip badal kar dekhein</small></div>` : '')}
     ${nOn ? `<p class="rk-note">Chune hue: <b>${num(nOn)}</b> items</p>` : ''}`; }
@@ -3688,14 +3693,13 @@ document.addEventListener('click', e => { const b = e.target.closest?.('[data-rk
   cloud.setRackCfg(id, nv).then(() => notice('🔒 100% lock: ' + num(v) + (Number(pk) > 1 ? ' ctn' : ' pcs'))).catch(er => notice('Save nahi hua: ' + (er?.message || er))); });
 // v2.103.51: Mangwao / kahin bhi se item band — stock screen wala password (stockConfig.bandPw, default 7183), phir wahi confirm; band hote hi rack/mangwao list se hat jata hai
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-ro-bretry]'); if (!b) return; e.preventDefault(); if (!cloud?.bandRetry) { notice('App update karein'); return; } b.disabled = true; cloud.bandRetry(b.dataset.roBretry).then(() => notice('🔁 PC dobara koshish karega (PC on ho)')).catch(er => { b.disabled = false; notice('⚠️ ' + (er?.message || er)); }); });   // v2.103.63: ❌ fail → dobara (stock screen + mangwao dono)
-async function bandAsk(id, on) { if (!isOwner()) return false; const want = String(itemCfg?.bandPw || '7183'), got = prompt((on ? 'Item BAND karne' : 'Item dobara CHALU karne') + ' ka password:');
-  if (got === null) return false; if (got !== want) { notice('❌ Password ghalat'); return false; }
-  const box = { checked: on, disabled: false }; await toggleHidden(id, on, box); if (rk) rkPaint(); return box.checked === on; }
+async function bandAsk(id, on) { if (!canBand()) return false; const pw = await bandPwCheck((on ? 'Item BAND karne' : 'Item dobara CHALU karne') + ' ka password:'); if (pw == null) return false;
+  const box = { checked: on, disabled: false }; await toggleHidden(id, on, box, pw); if (rk) rkPaint(); return box.checked === on; }
 // v2.103.55: supplier ke sab (is list ke) items ek saath band — password + "Pakka?" (N items)
-async function bandAllAsk(k) { if (!isOwner() || !cloud?.setStockHidden) return; const ys = roList().filter(r => (r.party || 'Supplier nahi pata') === k && !hidden[r.id]); if (!ys.length) { notice('Koi item nahi'); return; }
-  const want = String(itemCfg?.bandPw || '7183'), got = prompt(`"${k}" ke ${ys.length} items BAND karne ka password:`); if (got === null) return; if (got !== want) { notice('❌ Password ghalat'); return; }
+async function bandAllAsk(k) { if (!canBand() || !cloud?.setStockHidden) return; const ys = roList().filter(r => (r.party || 'Supplier nahi pata') === k && !hidden[r.id]); if (!ys.length) { notice('Koi item nahi'); return; }
+  const got = await bandPwCheck(`"${k}" ke ${ys.length} items BAND karne ka password:`); if (got == null) return;
   if (!confirm(`"${k}" ke ${ys.length} items BAND karein? Pakka?\n\n${ys.slice(0, 12).map(r => '• ' + r.x.n).join('\n')}${ys.length > 12 ? '\n…' : ''}\n\nPC par POS mein stock 0 + INACTIVE (PC on hote hi).`)) return;
-  const next = { ...hidden }; for (const r of ys) next[r.id] = true; try { await cloud.setStockHidden(next); hidden = next; notice(`⛔ ${ys.length} items band — PC baqi list mein`); try { rerender(); } catch {} if (rk) rkPaint(); } catch (e) { notice('⚠️ ' + (e?.message || e)); } }
+  const next = { ...hidden }; for (const r of ys) next[r.id] = true; try { if (!(await bandWrite(next, got))) return; hidden = next; notice(`⛔ ${ys.length} items band — PC baqi list mein`); try { rerender(); } catch {} if (rk) rkPaint(); } catch (e) { notice('⚠️ ' + (e?.message || e)); } }
 document.addEventListener('input', e => { const t = e.target; if (!rk || !t.dataset?.roPq || !t.closest?.('#rkBody')) return; rk.roPq = t.value; const box = t.closest('#rkBody')?.querySelector('.rk-sup'); if (!box) return;   // sirf chips dobara (search box ka focus na toote)
   const tmp = document.createElement('div'); tmp.innerHTML = roHTML(collect().names); const nb = tmp.querySelector('.rk-sup'); if (nb) box.replaceWith(nb); });
 document.addEventListener('click', e => { const t = e.target.closest?.('[data-ro-f],[data-ro-p],[data-ro-all],[data-ro-go],[data-ro-e],[data-ro-ban],[data-ro-banall],[data-ro-unban],[data-ro-tsv],[data-ro-tdel]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
@@ -4253,8 +4257,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.103.83';
-import { recentPush } from './recent.js?v=2.103.83';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.103.84';
+import { recentPush } from './recent.js?v=2.103.84';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)

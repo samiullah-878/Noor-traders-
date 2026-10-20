@@ -1,3 +1,4 @@
+// v17.2 (2026-10-20): _hidden.pw (mulazim ka band password, rules 2.66) foran mita do.
 // v17.1 (2026-10-20): fail ki WAJAH app ko (_bandDone.fail[id] = {n, why}) + app ka 🔁 dobara (stockCount/_hidden.retry[id] = ts → fail reset).
 // v17 (2026-10-20): band ka jawab app ko — stockCount/_bandDone {items:{id:{at,code,name,bills}}, fail:{id:n}} har bandOnce ke baad (badla ho to). App: '⏳ PC baqi' list, ✓ POS inactive, ❌ 3 dafa fail.
 // v16 (2026-10-19): malik — "ginti ke baad sale ho to bhi bill bane": late rok sirf jab stockCount/_late {on: true} (app ⚙️ chip, default BAND).
@@ -23,7 +24,7 @@ const readline = require('readline');
 const sql = require('mssql');
 require('./proc-fill.js').patch(sql, m => console.log(`[${new Date().toLocaleTimeString()}]`, m));   // 2026-10-20: POS update ke naye proc params khud (proc-fill.js)
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
-const { getFirestore } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
 // ---------------- SETTINGS ----------------
 const PARTY_NAME = 'stock fraq';   // POS ka account — naam mein "stock" ke baad "fraq" ya "farq" ho, quotes/space se farq nahi parta
@@ -690,6 +691,7 @@ let hasActiveCol = null;
 function watchBand() {
   countCol.doc('_hidden').onSnapshot(d => {
     bandHidden = hiddenIds(d); bandRetry = (d.exists && d.data().retry) || {};
+    if (d.exists && d.data().pw) countCol.doc('_hidden').update({ pw: FieldValue.delete() }).catch(() => {});   // v17.2: mulazim ka password field foran mitao (doosre parh na sakein)
     if (!readBand()) {
       writeBand({ old: [...bandHidden], done: {}, fail: {} });
       log(`Band feature chalu: ${bandHidden.size} purane band items ko nahi chheda jayega`);
