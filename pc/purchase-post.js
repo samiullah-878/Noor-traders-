@@ -1,5 +1,7 @@
 // =========================================================
-//  purchase-post.js  v4.3 (2026-10-20: POS update — line par BatchNo '' + ExpiryDate NULL; SCRIPT_VER 4 = rukay 5 bill khud dobara) · v4 (2026-09-22) — Blue Khata app ki "🧾 POS Purchase" -> POS PURCHASE BILL
+//  purchase-post.js  v4.4 (2026-10-20: 💾 app ne save par chuna — 🚚 'via' gaari = blueAccess/gaariBills 'b:pos-<PurchaseID>' · 📦 supply + 'larka' = us
+//      larke ki entry (blueKhata) par posBill 'pos-<PurchaseID>' (sirf agar entry maujood, delete nahi, pehle se kisi bill se nahi juri) — rev +1. POS mein kuch nahi.)
+//  v4.3 (2026-10-20: POS update — line par BatchNo '' + ExpiryDate NULL; SCRIPT_VER 4 = rukay 5 bill khud dobara) · v4 (2026-09-22) — Blue Khata app ki "🧾 POS Purchase" -> POS PURCHASE BILL
 //  v4.2 (2026-10-08): 🏷 FARZI SUB-BARCODE — line par sbl:1 (app 'rate saath ✓') ho to us item ke apne-rate wale sub-barcode
 //      (SBSaleRate > 0, jaise 11+ = 0.05 kg = Rs 625) ka rate = ROUND(SBItemQty × naya PIECE rate, 2). Khali rate wale (0) nahi chhedte.
 //  v4.1 (2026-09-23): BILLS_FLAG / pokeBills ko DIR aur log ke BAAD kiya — v4 chalte hi gir jati thi.
@@ -372,12 +374,41 @@ async function handle(doc) {
       await ref.update({ status: 'done', purchaseNo: r.purchaseNo, purchaseId: r.purchaseId, ...(r.total != null ? { posTotal: r.total } : {}),
         rates, ...(rateError ? { rateError } : {}), doneAt: Date.now(), error: FieldValue.delete() });
       pokeBills();
+      try { await linkVia(j, r); } catch (e) { log('  🔗 gaari / larke ki entry NAHI juri: ' + e.message); }   // v4.4 — bill ban chuka, yeh sirf jor hai
       log(`${r.again ? 'Pehle se ho chuka tha' : r.edited ? 'PURCHASE BILL UPDATE HO GAYA' : 'PURCHASE BILL BAN GAYA'}: ${r.purchaseNo} · ${j.partyName} · Rs ${r.total ?? ''}${rates ? ' · ' + rates + ' items ke rate' : ''}`);
     } catch (e) {
       log(`Purchase NAHI bana (${id}): ${e.message}`);
       await ref.update({ status: 'failed', error: clip(e.message, 300), failVer: SCRIPT_VER, doneAt: Date.now() }).catch(() => {});
     }
   } finally { busy.delete(id); }
+}
+
+// ---------- v4.4: app ka chunaav — 🚚 apni gaari / 📦 supply + larke ki entry ----------
+// POS mein kuch nahi likhta. Sirf Firestore: gaari = gaariBills map, larka = us entry par posBill (app ke "🔗 Milao" jaisa).
+async function linkVia(j, r) {
+  const pid = Number(r && r.purchaseId) || 0;
+  if (!pid || j.editOf) return;                          // edit wala bill pehle se jura / alag hota hai
+  const bill = 'pos-' + pid;
+  if (j.via === 'gaari') {
+    await biz.collection('blueAccess').doc('gaariBills').set({ map: { ['b:' + bill]: Date.now() } }, { merge: true });
+    log('  🚚 apni gaari ka bill: ' + bill);
+    return;
+  }
+  const lk = String(j.larka || '').trim();
+  if (j.via !== 'supply' || !lk) return;
+  if (!/^[A-Za-z0-9_-]{1,80}$/.test(lk) || lk.startsWith('pos-')) { log('  larke ki entry ki id ghalat: ' + clip(lk, 40)); return; }
+  const eref = biz.collection('blueKhata').doc(lk);
+  const why = await db.runTransaction(async t => {
+    const s = await t.get(eref);
+    if (!s.exists) return 'entry nahi mili';
+    const e = s.data() || {};
+    if (e.deleted) return 'entry delete ho chuki';
+    if (e.posBill || (Array.isArray(e.posBillIds) && e.posBillIds.length)) return 'pehle se kisi bill se juri';
+    if (!(e.kind === 'purchaseCash' || (e.purchase === true && e.kind === 'borrow'))) return 'yeh larke ki purchase entry nahi';
+    t.update(eref, { posBill: bill, posBillIds: null, updatedAt: Date.now(), updatedBy: 'pc-purchase-post', rev: (Number(e.rev) || 0) + 1 });
+    return '';
+  });
+  log(why ? `  larke ki entry NAHI juri (${why}) — app mein "🔗 Milao" se jorein` : `  🔗 larke ki entry juri: ${lk} → ${bill}`);
 }
 
 // ---------- --dekho: sirf parhna (kuch nahi likhta) ----------

@@ -3332,3 +3332,5 @@ purchase-post.js v4.3 (20 Oct 2026): POS (Cognitive) update ke baad usp_Purchase
 QAIDA: nayi parchi = upar UR.dateLine(date) + Urdu sar-khi; user ki likhai = UR.note(text) aur print function mein `text = await UR.fillNotes(text)` (UR.has se pehle).
 
 rack-bharo.js v1.15 (20 Oct 2026, manifest 2026-10-20.21): ↩ sale return (SaleReturn/SaleReturnDetail, cancel/ginti farq/wholesale bahar) packet-war sold se minus (rack par wapis), khula return kh se minus, row.rq.
+
+purchase-post.js v4.4 (20 Oct 2026, manifest 2026-10-20.22): app v2.104.0 save par "🚚 apni gaari / 📦 supply" puchti hai — job mein via ('gaari'|'supply') + larka (blueKhata entry id). Bill done hone ke BAAD linkVia(): gaari → blueAccess/gaariBills {map:{'b:pos-<PurchaseID>': ts}} merge; supply + larka → transaction mein entry check (maujood, deleted nahi, posBill/posBillIds khali, purchaseCash ya purchase borrow) phir posBill 'pos-<id>', posBillIds null, rev+1, updatedBy 'pc-purchase-post'. Edit job (editOf) par kuch nahi. Nakami sirf log (bill par asar nahi). POS mein kuch nahi likhta.

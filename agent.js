@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.103.93';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.103.93';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.104.0';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.104.0';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -32,7 +32,9 @@ const EXT_KW = [
   [/nafa|profit|munafa|bikri|bika|sale|report/, ['nafa_report', 'item_sale', 'nafa_pdf', 'sale_report_pdf']],
   [/factory|batch|packing/, ['factory_batches', 'factory_batch_kholo']],
   [/mulazim|larka|larke|cap|ijazat|band|chalu|on\b|off\b|setting|print|parchi|copy|auto/, ['mulazim_list', 'caps_list', 'cap_set', 'mulazim_band', 'pos_sale_auto', 'print_setting']],
-  [/khol|open|screen/, ['screen_kholo']],
+  [/khol|open|screen/, ['screen_kholo', 'screen_kaam_list', 'screen_kaam_kholo']],
+  [/teen nuqt|nuqte|3 dot|dots|⋮|menu|chip|\bpin\b|screen par laga|upar laga|bahar la/, ['screen_kaam_list', 'screen_kaam_kholo', 'chip_pin']],   // v2.104.0: ⋮ shell
+  [/likhai|font|heading|marzi|text size|text ka size|colou?r/, ['likhai_marzi']],   // v2.104.0: 🔠 apni marzi
 ];
 function extPick(text) { const t = fold(String(text || '')), pick = new Set(); for (const [re, L] of EXT_KW) if (re.test(t)) for (const n of L) pick.add(n);
   const all = [...EXT.values()]; if (!pick.size) return all.filter(a => a.read);   // kuch na mile = sirf parhne wale

@@ -36,9 +36,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.103.93';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.103.93';
-import { blurScore, blurText } from './pic-check.js?v=2.103.93';   // v2.103.43: 📷 dhundli check
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.104.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.104.0';
+import { blurScore, blurText } from './pic-check.js?v=2.104.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -56,7 +56,7 @@ const W_CHIPS = [1, 1.25, 1.5, 2, 3, 4, 5];   // v2.98.3: 3/4/5% bhi
 
 let cloud = null, rerender = () => {}, notice = () => {}, isOwner = () => false, uidOf = () => '', nameOf = () => '';   // v2.21: nameOf (galla ke liye)
 let partiesOf = () => [], partyOf = () => null, matchesOf = () => true, canUse = () => false, rankOf = null, billIdsOf = () => [], pcBillsOf = () => [];
-let photoFormOf = null, aiBillOf = null, cashDupesOf = () => [], learnOf = null, unlearnOf = null;
+let photoFormOf = null, aiBillOf = null, cashDupesOf = () => [], learnOf = null, unlearnOf = null, larkaOf = null;   // v2.104.0: larkaOf = save par larke ki entries (app.js)
 let lastRatesOf = () => ({}), saveRatesOf = () => {};   // v2.1.0: har item ka pichhla khareed / nafa
 let billFmtOf = () => null, saveBillFmtOf = () => {};   // v2.3.0: supplier ke bill ka naqsha   // v1.98.0: photo wala purchase form, AI bill reader, milan ka dhyan
 let pcQ = '', pcWhen = 'all';   // v1.96: PC ke bill ki list
@@ -74,7 +74,7 @@ export function ppSetup(o) {
   isOwner = o.owner || isOwner; uidOf = o.uid || uidOf; nameOf = o.name || nameOf;
   partiesOf = o.parties || partiesOf; partyOf = o.party || partyOf; matchesOf = o.accountMatches || matchesOf; canUse = o.canUse || canUse;
   rankOf = o.rank || rankOf; billIdsOf = o.billIdsOf || billIdsOf; pcBillsOf = o.pcBills || pcBillsOf;
-  photoFormOf = o.photoForm || photoFormOf; aiBillOf = o.aiBill || aiBillOf; cashDupesOf = o.cashDupes || cashDupesOf; learnOf = o.learn || learnOf;
+  photoFormOf = o.photoForm || photoFormOf; aiBillOf = o.aiBill || aiBillOf; cashDupesOf = o.cashDupes || cashDupesOf; learnOf = o.learn || learnOf; larkaOf = o.larka || larkaOf;
   unlearnOf = o.unlearn || unlearnOf; lastRatesOf = o.lastRates || lastRatesOf; saveRatesOf = o.saveRates || saveRatesOf;
   billFmtOf = o.billFmt || billFmtOf; saveBillFmtOf = o.saveBillFmt || saveBillFmtOf;
   try {
@@ -531,7 +531,7 @@ export function renderPP() {
   const total = cartTotal();
   const gopts = b => (Number(b) ? '' : '<option value="0" selected disabled>— Godam chunein —</option>') + s.branches.map(x => `<option value="${x}"${Number(x) === Number(b) ? ' selected' : ''}>${esc(s.branchName(x, s.names))}</option>`).join('');
   $('summary').innerHTML = `<div class="stock-head sale-head pp-head" data-pp-root="1">
-    <div class="pp-modes"><button type="button" class="on">🧾 Items wali bill</button>${photoFormOf ? '<button type="button" data-pp-photo="1">📷 Sirf photo + raqam</button>' : ''}</div>
+    <div class="pp-modes"><button type="button" class="on">🧾 Items wali bill</button>${photoFormOf ? '<button type="button" data-pp-photo="1" data-mn="pp.photo" data-mn-i="📷" data-mn-t="Sirf photo" data-mn-s="photo + raqam (bina items)" data-mn-g="🧾 Purchase — kaam">📷 Sirf photo + raqam</button>' : ''}</div>
     ${billStripHTML()}
     ${edit ? `<div class="pp-edit"><b>✏️ EDIT — POS bill ${esc(edit.billNo || '')}</b><small>Save par yahi bill POS mein UPDATE hoga (naya nahi banega)</small><button type="button" data-pp-edit-off="1">✕ Edit chhodo</button></div>` : ''}
     ${supplierBox()}
@@ -539,14 +539,17 @@ export function renderPP() {
       ${s.branches.length ? `<label class="${Number(godam) ? '' : 'pp-need'}">Godam (sab items)<select data-pp-godam="1">${gopts(godam)}</select></label>` : ''}
       <label>Supplier bill # <input maxlength="40" data-pp-inv="1" value="${esc(invoiceNo)}" placeholder="ikhtiyari"></label>
     </div>
+    <button type="button" class="pp-addpatti" id="ppAddPatti" data-mn-open="pp.xtra"${(Number(pct) || Number(xtra)) ? '' : ' hidden'}>${pattiTxt()}</button>
+    <div class="pp-addbox" data-mn-box="pp.xtra" data-mn-i="⚙️" data-mn-t="% · Mazdoori" data-mn-s="har item ki khareed mein jorein" data-mn-g="🧾 Purchase — kaam">
     <div class="pp-meta pp-add">
       <label>+ % (har item par)<input type="number" min="0" step="any" inputmode="decimal" data-pp-pct="1" value="${pct || ''}" placeholder="0"></label>
       <label>Mazdoori / kharcha Rs${xtraName ? ' (' + esc(xtraName) + ')' : ''}<input type="number" min="0" step="any" inputmode="decimal" data-pp-xtra="1" value="${xtra || ''}" placeholder="0"></label>
     </div>
     ${pctChipsHTML()}
     <p class="stat-note pp-addnote" id="ppXtraNote">${xtraNoteText()}</p>
+    </div>
     <div class="sale-total"><small>Purchase · ${cart.length} items</small><strong id="ppTotal">Rs ${num(total)}</strong></div>
-    <div class="account-tools"><button class="sh-wide" id="ppTodayBtn" data-pp-today="1">${todayLabel()}</button>${aiBillOf && canUse() ? '<button class="sh-wide" data-pp-ai="1">🤖 Bill ki tasveer se items</button>' : ''}${aiRows && aiRows.length ? `<button class="sh-wide" data-pp-jopen="1">🧾 Jaanch kholo (${aiRows.filter(r => !r.skip && !r.done).length} baqi)</button>` : ''}${canUse() && !edit ? '<button class="sh-wide" data-pp-pcbills="1">✏️ PC ka bill edit karein</button>' : ''}${packGaps().length ? `<button data-pp-packs="1">📦 Carton size khali (${packGaps().length})</button>` : ''}${supplier ? '<button data-pp-copy="1">📑 Pichhla bill copy</button>' : ''}</div>
+    <div class="account-tools pp-tools"><button class="sh-wide" id="ppTodayBtn" data-pp-today="1" data-mn="pp.today" data-mn-i="📋" data-mn-t="Aaj ke bill" data-mn-s="app se bane · POS haalat" data-mn-n="${today.length || ''}" data-mn-g="🧾 Purchase — kaam">${todayLabel()}</button>${aiBillOf && canUse() ? '<button class="sh-wide" data-pp-ai="1" data-mn="pp.ai" data-mn-i="🤖" data-mn-t="Tasveer se" data-mn-s="bill ki photo se items" data-mn-g="🧾 Purchase — kaam">🤖 Bill ki tasveer se items</button>' : ''}${aiRows && aiRows.length ? `<button class="sh-wide" data-pp-jopen="1" data-mn="pp.jaanch" data-mn-keep="1" data-mn-i="🔎" data-mn-t="Jaanch kholo" data-mn-s="AI ki parhi lines" data-mn-n="${aiRows.filter(r => !r.skip && !r.done).length || ''}" data-mn-g="🧾 Purchase — kaam">🧾 Jaanch kholo (${aiRows.filter(r => !r.skip && !r.done).length} baqi)</button>` : ''}${canUse() && !edit ? '<button class="sh-wide" data-pp-pcbills="1" data-mn="pp.pcbill" data-mn-i="✏️" data-mn-t="PC ka bill" data-mn-s="POS bill edit karein" data-mn-g="🧾 Purchase — kaam">✏️ PC ka bill edit karein</button>' : ''}${packGaps().length ? `<button data-pp-packs="1" data-mn="pp.packs" data-mn-keep="1" data-mn-i="📦" data-mn-t="Carton khali" data-mn-s="carton size likhein" data-mn-n="${packGaps().length}" data-mn-g="🧾 Purchase — kaam">📦 Carton size khali (${packGaps().length})</button>` : ''}${supplier ? '<button data-pp-copy="1" data-mn="pp.copy" data-mn-i="📑" data-mn-t="Pichhla copy" data-mn-s="isi supplier ka pichhla bill" data-mn-g="🧾 Purchase — kaam">📑 Pichhla bill copy</button>' : ''}</div>
   </div>`;
   const si = $('search'); if (si) si.placeholder = '📷 scan ya item ka naam / code (Enter)';
   if (s.failed) { $('list').innerHTML = `<div class="empty"><strong>Items nahi mile</strong><p>${esc(s.failed)}</p></div>`; $('actions').innerHTML = ''; return; }
@@ -562,7 +565,7 @@ export function renderPP() {
   if (supplier && !q) loadSupItems(supplier);
   const si2 = supplier && !q ? (supItems.get(supplier)?.list || []).map(x => s.items.find(r => String(r.id) === String(x.id))).filter(Boolean).slice(0, 12) : [];
   if (si2.length) found = `<div class="sale-found"><p class="stat-note" style="margin:0 0 4px">📦 Is supplier se aksar aane wale</p><div class="mchips">${si2.map(r => `<button type="button" data-pp-add="${esc(r.id)}">${esc(r.name)}</button>`).join('')}</div></div>`;
-  const bar = cart.length ? `<div class="ws-chips"><small>Wholesale nafa SAB items par (naye khareed ke upar):</small>${W_CHIPS.map(p => `<button type="button" data-pp-wall="${p}">+${p}%</button>`).join('')}<input id="ppWCustom" type="number" inputmode="decimal" min="0" step="0.01" placeholder="apni %"><button type="button" data-pp-wall-custom="1">Lagao</button><button type="button" data-pp-old-all="1">↺ Sab par purana nafa</button></div>` : '';
+  const bar = cart.length ? `<div class="ws-chips" data-mn-box="pp.nafa" data-mn-i="📈" data-mn-t="Nafa sab par" data-mn-s="wholesale % sab items par" data-mn-g="🧾 Purchase — kaam"><small>Wholesale nafa SAB items par (naye khareed ke upar):</small>${W_CHIPS.map(p => `<button type="button" data-pp-wall="${p}">+${p}%</button>`).join('')}<input id="ppWCustom" type="number" inputmode="decimal" min="0" step="0.01" placeholder="apni %"><button type="button" data-pp-wall-custom="1">Lagao</button><button type="button" data-pp-old-all="1">↺ Sab par purana nafa</button></div>` : '';
   const rows = cart.map((l, i) => [l, i]).reverse().map(([l, i]) => {   // v2.33: nayi line upar (index wahi)
     const fl = lineFlags(l), isOpen = lineView === 'all' || l.k === openKey || cart.length < 2;
     if (!isOpen) return passFilter(l, fl) ? lineMiniHTML(l, i, fl) : '';   // v2.96.4: chhoti patti
@@ -675,8 +678,11 @@ function xtraNoteText() {
   if (xtra > 0) parts.push(`Rs ${num(xtra)} raqam ke hisaab se sab par (+${num(Math.round(xtraPct() * 100) / 100)}%)`);
   return parts.length ? parts.join(' · ') + ` — POS bill Rs ${num(cartTotal())}` : 'Bill par % ya mazdoori / kiraya ho to upar likhein — har item ki khareed mein jud jayega.';
 }
+// v2.104.0: phone par chhoti patti (% / mazdoori laga hai) — tap = ⋮ wala hissa poori screen
+const pattiTxt = () => `⚙️ ${Number(pct) ? '+' + num(pct) + '% har item' : ''}${Number(pct) && Number(xtra) ? ' · ' : ''}${Number(xtra) ? 'Mazdoori Rs ' + num(xtra) : ''} <i>badlo ›</i>`;
 function refreshTotals() {
   const xn = $('ppXtraNote'); if (xn) xn.textContent = xtraNoteText();
+  const ap = $('ppAddPatti'); if (ap) { ap.innerHTML = pattiTxt(); ap.hidden = !(Number(pct) || Number(xtra)); }
   const t = $('ppTotal'); if (t) t.textContent = 'Rs ' + num(cartTotal());
   cart.forEach((l, i) => { const a = $('ppAmt' + i); if (a && document.activeElement !== a) a.value = lineTotal(l) ? r2(lineTotal(l)) : ''; });
   const b = document.querySelector('[data-pp-save]'); if (b && !saving) b.textContent = saveLabel(cartTotal());
@@ -2033,6 +2039,38 @@ async function copyLast(btn) {
   finally { btn.disabled = false; }
 }
 
+// ---------- v2.104.0: 💾 SAVE PAR — 🚚 apni gaari ya 📦 supplier ki supply; supply ho to larke ki (photo wali) entry chuno → PC bill bante hi jor deta hai
+//   (purchase-post v4.4: gaari = blueAccess/gaariBills 'b:pos-<id>' · larka = us entry par posBill). CAP 'pur.via' (Settings → Mulazim). AI nahi.
+const viaOn = () => { try { return typeof window.ntCan !== 'function' || window.ntCan('pur.via'); } catch { return true; } };
+let viaBusy = false;
+function viaRows(L, sel) {
+  return L.map(c => `<label class="via-e${sel === c.id ? ' is-in' : ''}"><input type="radio" name="viaE" value="${esc(c.id)}"${sel === c.id ? ' checked' : ''}><span class="via-ph">${c.ph || '🧾'}</span><span class="via-tx"><b>Rs ${num(c.amount)} · ${c.kind === 'cash' ? '💵 Cash' : '🧾 Credit'}</b><small>${esc(c.date)}${c.note ? ' · ' + esc(String(c.note).slice(0, 40)) : ''}</small>${c.party ? `<small class="via-oth">⚠️ doosra khata: ${esc(c.party)}</small>` : ''}<i class="${c.near ? 'ok' : 'bad'}">${c.near ? '✓ raqam barabar' : 'farq Rs ' + num(Math.abs(c.diff))}</i></span></label>`).join('')
+    + `<label class="via-e${!sel ? ' is-in' : ''}"><input type="radio" name="viaE" value=""${!sel ? ' checked' : ''}><span class="via-ph">❔</span><span class="via-tx"><b>Abhi larke ki entry nahi bani</b><small>baad mein "🔗 Milao" se jorein</small></span></label>`;
+}
+function askVia(p, lines, total) {
+  if (viaBusy) return Promise.resolve(null); viaBusy = true;
+  let R = { cands: [], gaari: false }; try { R = (larkaOf && larkaOf(p.id, total)) || R; } catch (er) { console.warn('larka', er); }
+  let L = (R.cands || []).map(c => ({ ...c, diff: r2((Number(c.amount) || 0) - total) }));
+  let mode = R.gaari && !L.length ? 'gaari' : 'supply', sel = (L.find(c => c.near && !c.party) || {}).id || '';
+  const paint = () => { const b = $('dialogBody'); if (!b?.querySelector('.via-root')) return;
+    b.querySelectorAll('[data-via]').forEach(x => x.classList.toggle('is-in', x.dataset.via === mode));
+    const box = $('viaList'); if (box) { box.hidden = mode !== 'supply'; box.innerHTML = `<p class="via-h">Larke ki entry chunein — ${esc(p.name)} (7 din)</p><small class="via-sub">Jo chunein wohi is POS bill se jur jayegi</small>${viaRows(L, sel)}`; }
+    const go = b.querySelector('[data-via-go]'); if (go) go.textContent = mode === 'gaari' ? '✓ Bill bhejo (🚚 gaari)' : sel ? '✓ Bill bhejo + jor do' : '✓ Bill bhejo'; };
+  return new Promise(res => {
+    let done = false; const fin = v => { if (done) return; done = true; viaBusy = false; const d = $('dialog'); d?.removeEventListener('close', onClose); document.removeEventListener('click', onClick, true); document.removeEventListener('change', onChange, true); if (d?.open) d.close(); res(v); };
+    const onClose = () => fin(null);
+    const onClick = e => { const t = e.target; if (!t.closest?.('#dialogBody .via-root')) return;
+      const m = t.closest('[data-via]'); if (m) { mode = m.dataset.via; paint(); return; }
+      if (t.closest('[data-via-x]')) { fin(null); return; }
+      if (t.closest('[data-via-go]')) { fin(mode === 'gaari' ? { via: 'gaari' } : { via: 'supply', ...(sel ? { larka: sel } : {}) }); } };
+    const onChange = e => { const t = e.target; if (t?.name === 'viaE' && t.closest('#dialogBody .via-root')) { sel = t.value; paint(); } };
+    dlg('💾 Bill bhejne se pehle — maal kaise aaya?', `<div class="via-root"><div class="via-sum"><b>${esc(p.name)}</b><span>${lines.length} items · <b>Rs ${num(total)}</b>${invoiceNo ? ' · bill # ' + esc(invoiceNo) : ''}</span></div>
+      <div class="via-2"><button type="button" data-via="gaari">🚚 Apni gaari<small>gaari laayi — larke ki entry nahi</small></button><button type="button" data-via="supply">📦 Supplier ki supply<small>supplier ne bheja — larke ki entry jorein</small></button></div>
+      <div id="viaList" class="via-list"></div><div class="via-acts"><button type="button" class="via-back" data-via-x="1">← Wapas</button><button type="button" class="got" data-via-go="1">✓ Bill bhejo</button></div></div>`);
+    const d = $('dialog'); d?.addEventListener('close', onClose); document.addEventListener('click', onClick, true); document.addEventListener('change', onChange, true); paint();
+    Promise.resolve(R.ready).then(F => { if (!done && Array.isArray(F)) { L = F.map(c => ({ ...c, diff: r2((Number(c.amount) || 0) - total) })); paint(); } }).catch(() => {});
+  });
+}
 async function save(opt = {}) {
   const auto = !!opt.auto, no = why => ({ ok: false, why: [why] });   // v2.99.7: 🤖 agent — har confirm / alert ki jagah "nahi bheja + wajah"
   { let ok = true; try { ok = typeof window.ntCan !== 'function' || window.ntCan('pur.post'); } catch {} if (!ok) { notice('POS mein bill bhejne ki ijazat nahi — malik se kahein'); return auto ? no('ijazat nahi') : undefined; } }   // v2.99.24
@@ -2069,20 +2107,24 @@ async function save(opt = {}) {
   if (!edit) {   // v1.98.0: isi supplier ki photo wali purchase pehle se to nahi?
     const dup = (cashDupesOf(p.id, total) || []).slice(0, 5);
     if (auto && dup.length) return no('isi supplier ki photo wali purchase pehle se maujood (' + dup.map(x => x.date + ' Rs ' + num(x.rs)).join(', ') + ')');
-    if (dup.length && !confirm('Dhyan: isi supplier ki photo wali purchase pehle se maujood hai:\n\n' +
+    if (dup.length && !(viaOn() && !auto) && !confirm('Dhyan: isi supplier ki photo wali purchase pehle se maujood hai:\n\n' +
       dup.map(x => `${x.date} · Rs ${num(x.rs)}${x.note ? ' · ' + x.note : ''}`).join('\n') +
       '\n\nAgar yeh WAHI kharid hai to POS bill aate hi woh khud jur jayegi (do dafa nahi ginti) — warna "Milao" se jorein.\n\nBill bhejein?')) return;
   }
-  if (!auto && !confirm(`${edit ? 'POS BILL ' + edit.billNo + ' — UPDATE' : 'POS PURCHASE BILL'}\n${p.name}\n${lines.length} items · Rs ${num(total)}${invoiceNo ? '\nSupplier bill # ' + invoiceNo : ''}\n\n${edit ? 'POS mein yahi bill badlein (purani lines hat kar yeh lagengi) aur naye rates lagayein?' : 'POS mein bill banayein aur naye rates lagayein?'}`)) return;
+  let via = null;   // v2.104.0: 🚚 gaari / 📦 supply + larke ki entry — malik: "bill save karte waqt hi chunein, supply ho to larke ki entry saath jor do"
+  if (!auto && !edit && viaOn()) { via = await askVia(p, lines, total); if (!via) return; }
+  else if (!auto && !confirm(`${edit ? 'POS BILL ' + edit.billNo + ' — UPDATE' : 'POS PURCHASE BILL'}\n${p.name}\n${lines.length} items · Rs ${num(total)}${invoiceNo ? '\nSupplier bill # ' + invoiceNo : ''}\n\n${edit ? 'POS mein yahi bill badlein (purani lines hat kar yeh lagengi) aur naye rates lagayein?' : 'POS mein bill banayein aur naye rates lagayein?'}`)) return;
   const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const doc = { id, date: date2, at: new Date().toISOString(), branch: BILL_BRANCH, godam: Number(godam) || BILL_BRANCH,
     partyId: String(p.id), partyName: String(p.name || '').slice(0, 120), invoiceNo: invoiceNo.trim(), note: note.trim(),
     lines, total, role: isOwner() ? 'owner' : 'staff', by: uidOf(), status: 'new', createdAt: Date.now(),
+    ...(via?.via ? { via: via.via } : {}), ...(via?.larka ? { larka: String(via.larka).slice(0, 80) } : {}),
     ...(edit ? { editOf: { purchaseId: Number(edit.purchaseId), billNo: String(edit.billNo || ''), stamp: String(edit.stamp || ''), partyId: String(edit.partyId || ''), posPartyId: Number(edit.posPartyId) || 0 } } : {}) };
   saving = true; rerender();
   let sentOk = auto ? no('bheja nahi ja saka') : undefined;
   try {
     const w = cloud.saveAppPurchase(doc);
+    if (via) Promise.resolve(w).then(() => { if (window.ntViaOld && Date.now() - window.ntViaOld < 60000) notice(isOwner() ? '⚠️ Bill chala gaya — magar 🚚 / larke ki entry nahi juri: Firestore rules 2.67 publish karein' : '⚠️ Bill chala gaya — larke ki entry baad mein "🔗 Milao" se jorein'); }).catch(() => {});   // v2.104.0
     const picsNow = billPics.filter(isData);   // v2.19: tasveer bill ke sath — cloud (3 tak) + phone (jaanch bhi)
     if (picsNow.length && cloud.putBillPhotos) Promise.resolve(cloud.putBillPhotos(id, picsNow.slice(0, 3))).catch(er => { console.warn('bill ki tasveer cloud par nahi gayi', er); notice('⚠️ Bill chala gaya magar tasveer cloud par nahi gayi (phone mein mehfooz hai)'); });
     // v2.20: bill ke sath jo lines gayin un sab ke bill wale naam yaad (✓ dabaya ho ya nahi) — peeche chalta hai, bill nahi rukta

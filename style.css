@@ -4403,3 +4403,190 @@ html body #summary .ir-trd{margin-bottom:8px}
 .ir-err{font-size:12px}
 @media (min-width:1100px){.ir-main{grid-template-columns:200px minmax(0,1fr);align-items:start}html body #summary .ir-nav{flex-direction:column;position:sticky;top:12px;overflow:visible;padding:8px}html body #summary .ir-nav button{width:100%;justify-content:flex-start;padding:10px 12px;font-size:14px}}
 html body :is(#summary,#dialogBody) .rk-trn{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 2px;padding:8px 10px;border-radius:12px;background:#fffbeb;border:1.5px solid #fcd34d;font-size:12.5px;color:#92400e}html body :is(#summary,#dialogBody) .rk-trn span{flex:1 1 100%}html body :is(#summary,#dialogBody) .rk-trn button{min-height:0;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:800;border:1.5px solid #fcd34d!important;background:#fff!important;color:#92400e!important}
+
+/* =====================================================================================================
+   v2.104.0 🧭 SHELL — naya dhancha (shell.js). Phone (<1100px): header chhota (‹ · naam · ⋮), screen ke kaam
+   (data-mn / data-mn-seg / data-mn-box) screen se chhup kar ⋮ ki sheet mein · 📌 pin = #subBar (header mein, screen chips
+   ke neeche) · chuna hua hissa poori screen (body.mnf) · 🔠 apni marzi (html data-fs / data-hs / data-tx / data-hx).
+   Theme ke "html.lt button {…!important}" se bachne ke liye har button par !important.
+   ===================================================================================================== */
+html body #recentBar{display:none!important}
+html body .pu-flt,html body .pp-addpatti{display:none}
+html.mn-open body{overflow:hidden}
+
+/* ---- ⋮ par laal ginti (aaj ki haalat) ---- */
+html body main>header #settings{position:relative;overflow:visible}
+html body main>header #settings .mn-badge{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#e11d48;color:#fff;font:800 11px/19px system-ui,-apple-system,sans-serif;text-align:center;box-shadow:0 0 0 2px rgba(255,255,255,.9),0 3px 8px rgba(225,29,72,.45);pointer-events:none;letter-spacing:0}
+
+/* ---- 📌 / haal hi: #subBar (screen chips ke neeche) ---- */
+html body main>header .sub-bar{display:flex;align-items:center;gap:6px;overflow-x:auto;scrollbar-width:none;margin:2px 0 6px;padding:2px 0}
+html body main>header .sub-bar[hidden]{display:none!important}
+html body main>header .sub-bar::-webkit-scrollbar{display:none}
+html body main>header .sub-bar::before{content:"↳";flex:none;color:rgba(255,255,255,.7);font-size:15px;font-weight:800;padding:0 1px 0 6px}
+html body main>header .sub-bar .sb-c{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;min-height:30px!important;padding:3px 12px!important;border-radius:999px!important;font-size:12.5px!important;font-weight:700!important;white-space:nowrap;background:rgba(255,255,255,.13)!important;color:#fff!important;border:1px solid rgba(255,255,255,.28)!important;box-shadow:none!important}
+html body main>header .sub-bar .sb-c.pin{background:rgba(255,255,255,.22)!important;border-color:rgba(255,255,255,.5)!important}
+html body main>header .sub-bar .sb-c.is-in{background:#fff!important;color:#1d3466!important;border-color:#fff!important;box-shadow:0 3px 10px rgba(5,15,35,.25)!important}
+html body main>header .sub-bar .sb-c em{font-style:normal;background:#e11d48;color:#fff;border-radius:999px;padding:0 6px;font-size:10.5px;line-height:16px;font-weight:800}
+html body main>header .sub-bar .sb-p{font-size:10px;line-height:1}
+html body #sbMenu{position:fixed;z-index:1300;min-width:210px;display:flex;flex-direction:column;gap:2px;padding:6px;border-radius:16px;background:#fff;border:1px solid #e3e8f2;box-shadow:0 14px 40px rgba(10,20,45,.28)}
+html body #sbMenu[hidden]{display:none!important}
+html body #sbMenu button{min-height:42px!important;text-align:left;padding:8px 12px!important;border-radius:11px!important;background:transparent!important;color:#16274a!important;border:0!important;box-shadow:none!important;font-size:14px!important;font-weight:650!important}
+html body #sbMenu button:hover{background:#f1f4fa!important}
+html.dk body #sbMenu{background:var(--dlg,#13275A);border-color:var(--line,rgba(255,255,255,.14))}
+html.dk body #sbMenu button{color:var(--ink,#e8eeff)!important}
+
+/* ---- ⋮ SHEET ---- */
+html body #mnRoot{position:fixed;inset:0;z-index:1200}
+html body #mnRoot[hidden]{display:none!important}
+html body #mnRoot .mn-dim{position:absolute;inset:0;background:rgba(8,16,36,.46);-webkit-backdrop-filter:blur(2px);backdrop-filter:blur(2px);animation:mnFade .18s ease}
+html body #mnRoot .mn-sheet{position:absolute;left:0;right:0;bottom:0;max-height:88%;display:flex;flex-direction:column;background:var(--surf,#fff);color:var(--ink,#10192b);border-radius:24px 24px 0 0;box-shadow:0 -16px 44px rgba(8,16,36,.32);animation:mnUp .22s cubic-bezier(.2,.8,.2,1);padding-top:4px;font-family:var(--font,inherit),system-ui,sans-serif}
+html body #mnRoot .mn-hdl{flex:none;width:46px;height:5px;border-radius:9px;background:#cfd6e4;margin:6px auto 2px}
+html body #mnRoot .mn-close{position:absolute;top:10px;right:12px;width:36px;height:36px;min-height:0!important;padding:0!important;border-radius:50%!important;background:#eef2f9!important;color:#33415c!important;border:0!important;box-shadow:none!important;font-size:15px!important;z-index:2}
+html body #mnRoot .mn-body{overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:4px 16px calc(20px + env(safe-area-inset-bottom))}
+html body #mnRoot .mn-h{margin:6px 46px 2px 0;font-size:19px;line-height:1.25;font-weight:800;color:var(--accent-ink,#1d3466)}
+html body #mnRoot .mn-sub{margin:0 0 6px;font-size:12.5px;color:var(--ink2,#64748b)}
+html body #mnRoot .mn-gh{margin:16px 0 8px;font-size:11.5px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:var(--ink2,#64748b)}
+html body #mnRoot .mn-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+html body #mnRoot .mn-tile{position:relative;display:flex!important;align-items:center;gap:10px;min-height:64px!important;padding:10px 32px 10px 10px!important;text-align:left;border-radius:16px!important;background:var(--surf2,#f5f7fc)!important;border:1px solid var(--line,#e2e8f2)!important;color:var(--ink,#10192b)!important;box-shadow:0 1px 2px rgba(15,30,60,.05)!important;font-weight:600!important}
+html body #mnRoot .mn-tile:active{transform:scale(.98)}
+html body #mnRoot .mn-tile>i{flex:none;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-style:normal;font-size:19px;background:#fff;box-shadow:0 2px 6px rgba(20,40,80,.12)}
+html body #mnRoot .mn-tile>span:not(.mn-pin){min-width:0;display:flex;flex-direction:column}
+html body #mnRoot .mn-tile b{font-size:13.5px;line-height:1.25;font-weight:750}
+html body #mnRoot .mn-tile small{font-size:11px;line-height:1.3;color:var(--ink2,#64748b);font-weight:600;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+html body #mnRoot .mn-tile.is-in{border-color:var(--accent-ink,#1d3466)!important;box-shadow:inset 0 0 0 1px var(--accent-ink,#1d3466)!important}
+html body #mnRoot .mn-n{position:absolute;top:5px;left:38px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#e11d48;color:#fff;font:800 10.5px/18px system-ui,sans-serif;font-style:normal;text-align:center;box-shadow:0 0 0 2px var(--surf2,#f5f7fc)}
+html body #mnRoot .mn-pin{position:absolute;top:3px;right:3px;width:28px;height:28px;display:grid;place-items:center;border-radius:50%;font-size:13px;filter:grayscale(1);opacity:.42}
+html body #mnRoot .mn-pin.is-in{filter:none;opacity:1;background:#fff3c4;box-shadow:0 1px 4px rgba(180,120,0,.3)}
+html body #mnRoot .mn-seg{margin:0 0 10px}
+html body #mnRoot .mn-seg>small{display:block;font-size:12px;font-weight:700;color:var(--ink2,#64748b);margin:0 0 6px}
+html body #mnRoot .mn-seg>div,html body #mnRoot .mn-app,html body #mnRoot .mz-row{display:flex;flex-wrap:wrap;gap:6px}
+html body #mnRoot .mn-seg button,html body #mnRoot .mn-app button,html body #mnRoot .mz-row button:not(.mz-sw){min-height:38px!important;padding:6px 14px!important;border-radius:999px!important;font-size:13px!important;font-weight:700!important;background:var(--surf2,#f1f4fa)!important;color:var(--ink,#1d2b45)!important;border:1px solid var(--line,#dfe5f0)!important;box-shadow:none!important}
+html body #mnRoot .mn-seg button.is-in,html body #mnRoot .mz-row button.is-in:not(.mz-sw){background:linear-gradient(135deg,#1d3466,#2b4f95)!important;color:#fff!important;border-color:transparent!important;box-shadow:0 3px 10px rgba(29,52,102,.28)!important}
+html body #mnRoot .mn-hb{display:flex;flex-wrap:wrap;gap:6px;overflow:visible;padding:0}
+html body #mnRoot .mn-hb .hchip{min-height:34px;font-size:12.5px;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none}
+html body #mnRoot .mn-hb .hchip:not(.bad):not(.warn):not(.ok):not(.hot){background:#eef2fb!important;color:#1d3466!important;border:1px solid #d6deef!important}
+html body #mnRoot .mn-nr{margin:8px 2px 0;font-size:12.5px;color:var(--ink2,#475569);line-height:1.45}
+html.dk body #mnRoot .mn-sheet{background:var(--dlg,#13275A);color:var(--ink,#e8eeff);border-top:1px solid var(--edge,rgba(255,255,255,.16));box-shadow:0 -16px 44px rgba(0,0,0,.55)}
+html.dk body #mnRoot .mn-hdl{background:rgba(255,255,255,.25)}
+html.dk body #mnRoot .mn-close{background:rgba(255,255,255,.1)!important;color:var(--ink,#e8eeff)!important}
+html.dk body #mnRoot .mn-tile{background:var(--glass2,rgba(255,255,255,.08))!important;border-color:var(--line,rgba(255,255,255,.14))!important;color:var(--ink,#e8eeff)!important}
+html.dk body #mnRoot .mn-tile>i{background:var(--glass,rgba(255,255,255,.07));box-shadow:none}
+html.dk body #mnRoot .mn-n{box-shadow:none}
+html.dk body #mnRoot .mn-pin.is-in{background:rgba(255,214,102,.22)}
+html.dk body #mnRoot .mn-seg button,html.dk body #mnRoot .mn-app button,html.dk body #mnRoot .mz-row button:not(.mz-sw){background:var(--glass2,rgba(255,255,255,.08))!important;color:var(--ink,#e8eeff)!important;border-color:var(--line,rgba(255,255,255,.14))!important}
+html.dk body #mnRoot .mn-seg button.is-in,html.dk body #mnRoot .mz-row button.is-in:not(.mz-sw){background:var(--accent-ink,#8fd8ff)!important;color:var(--ontx,#081127)!important}
+html.dk body #mnRoot .mn-hb .hchip:not(.bad):not(.warn):not(.ok):not(.hot){background:rgba(255,255,255,.1)!important;color:var(--ink,#e8eeff)!important;border-color:var(--line,rgba(255,255,255,.14))!important}
+@media (min-width:1100px){
+  html body #mnRoot .mn-sheet{left:auto;top:0;bottom:0;right:0;width:440px;max-height:none;border-radius:24px 0 0 24px;animation:mnLeft .22s cubic-bezier(.2,.8,.2,1)}
+  html body #mnRoot .mn-hdl{display:none}
+}
+@keyframes mnUp{from{transform:translateY(48px);opacity:.35}to{transform:none;opacity:1}}
+@keyframes mnLeft{from{transform:translateX(48px);opacity:.35}to{transform:none;opacity:1}}
+@keyframes mnFade{from{opacity:0}to{opacity:1}}
+
+/* ---- PHONE: chhota header + screen ke kaam ⋮ mein ---- */
+@media (max-width:1099.98px){
+  html body main>header{padding:10px 10px 8px!important}
+  html body main>header .top{gap:8px!important}
+  html body main>header .top small{display:block;font-size:10.5px!important;letter-spacing:1px!important;line-height:1.2!important;margin:0!important;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}   /* 👤 kaun login — chhota magar rahe */
+  html body main>header #title{font-size:20px!important;line-height:1.25!important;margin:0!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  html body main>header .top .round,html body main>header #back{min-height:40px!important;min-width:40px;padding:0 10px!important;font-size:22px!important;border-radius:12px!important}
+  html body #repoLink,html body #rulesBtn{display:none!important}
+  html body main>header #homeBar{display:none!important}
+  html body main>header .app-nav{margin:8px 0 2px!important;gap:5px!important}
+  html body main>header .app-nav button{min-height:30px!important;padding:4px 11px!important;font-size:12.5px!important}
+  /* ⋮ mein gaye hue kaam screen par nahi (data-mn-keep = screen par bhi rahe) */
+  html body:not(.mnf) main [data-mn]:not([data-mn-keep]),
+  html body:not(.mnf) main [data-mn-seg]:not([data-mn-keep]),
+  html body:not(.mnf) main [data-mn-box]:not([data-mn-keep]){display:none!important}
+  html body main .pp-modes{display:none!important}
+  html body:not(.mnf) main .pp-tools:not(:has([data-mn-keep])){display:none!important}
+  html body main .puh .puh-chips{display:none!important}
+  /* chhoti patti: "📅 Aaj · 🔎 Sab — ⋮ se badlein" / "⚙️ +5% · Mazdoori — badlo" */
+  html body main .pu .pu-flt{display:flex!important;align-items:center;gap:6px;width:100%;min-height:44px!important;margin:0 0 10px;padding:8px 10px 8px 14px!important;border-radius:14px!important;background:var(--surf,#fff)!important;color:var(--ink,#16274a)!important;border:1px solid var(--line,#dfe5f0)!important;box-shadow:0 2px 10px rgba(20,40,80,.06)!important;font-size:13.5px!important;font-weight:700!important;text-align:left}
+  html body main .pu .pu-flt i{margin-left:auto;font-style:normal;font-size:11.5px;font-weight:800;color:var(--accent-ink,#2563eb);background:var(--surf2,#eef3ff);padding:4px 10px;border-radius:999px;white-space:nowrap}
+  html body:not(.mnf) main :is(#summary,#list) .pp-addpatti:not([hidden]){display:flex!important;align-items:center;gap:6px;width:100%;min-height:40px!important;margin:6px 0!important;padding:6px 12px!important;border-radius:12px!important;background:#fff7e6!important;color:#8a5a00!important;border:1px solid #f1dea6!important;box-shadow:none!important;font-size:13px!important;font-weight:700!important;text-align:left}
+  html body main :is(#summary,#list) .pp-addpatti i{margin-left:auto;font-style:normal;font-size:12px;opacity:.85}
+  html.dk body:not(.mnf) main :is(#summary,#list) .pp-addpatti:not([hidden]){background:rgba(255,202,51,.14)!important;color:#ffd88a!important;border-color:rgba(234,194,82,.35)!important}
+}
+
+/* ---- FOCUS: chuna hua hissa poori screen ---- */
+html body.mnf main>header #back{display:inline-flex!important;align-items:center;justify-content:center}
+html body.mnf main>header #title[data-mnf-t]::after{content:" › " attr(data-mnf-t);font-size:.74em;font-weight:700;opacity:.92}
+html body #mnfBar.mnf-bar{display:flex!important;align-items:center;gap:10px;margin:0 0 10px;padding:7px 12px 7px 7px;border-radius:14px;background:var(--surf2,#eef2fb);color:var(--ink,#16274a);border:1px solid var(--line,#dfe5f0)}
+html body #mnfBar.mnf-bar button{min-height:34px!important;padding:4px 13px!important;border-radius:999px!important;background:linear-gradient(135deg,#1d3466,#2b4f95)!important;color:#fff!important;border:0!important;box-shadow:none!important;font-size:13px!important;font-weight:800!important}
+html body #mnfBar.mnf-bar b{font-size:14px;font-weight:800}
+html.dk body #mnfBar.mnf-bar{background:var(--glass2,rgba(255,255,255,.08));color:var(--ink,#e8eeff);border-color:var(--line,rgba(255,255,255,.14))}
+
+/* ---- 💾 POS Purchase save: 🚚 gaari / 📦 supply + larke ki entry ---- */
+html body #dialogBody .via-root{display:flex;flex-direction:column;gap:12px}
+html body #dialogBody .via-sum{display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:16px;background:linear-gradient(135deg,#1d3466,#2b4f95);color:#fff}
+html body #dialogBody .via-sum b{font-size:16px;color:#fff}
+html body #dialogBody .via-sum span{font-size:13px;opacity:.94;color:#fff}
+html body #dialogBody .via-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+html body #dialogBody .via-2 button{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:4px;min-height:96px!important;padding:12px 8px!important;border-radius:18px!important;font-size:16px!important;font-weight:800!important;background:var(--surf2,#f3f6fc)!important;color:var(--ink,#16274a)!important;border:2px solid var(--line,#dfe5f0)!important;box-shadow:none!important;text-align:center}
+html body #dialogBody .via-2 button small{display:block;font-size:11.5px;font-weight:600;color:var(--ink2,#64748b);line-height:1.3}
+html body #dialogBody .via-2 button.is-in{border-color:#16a34a!important;background:#ecfdf3!important;box-shadow:0 6px 18px rgba(22,163,74,.2)!important}
+html body #dialogBody .via-list[hidden]{display:none!important}
+html body #dialogBody .via-h{margin:2px 0 0;font-weight:800;font-size:14px}
+html body #dialogBody .via-sub{display:block;margin:0 0 8px;color:var(--ink2,#64748b);font-size:12px}
+html body #dialogBody .via-e{display:flex;align-items:center;gap:10px;padding:8px 10px;margin:0 0 7px;border-radius:14px;border:1.5px solid var(--line,#dfe5f0);background:var(--surf,#fff);cursor:pointer}
+html body #dialogBody .via-e.is-in{border-color:#2563eb;background:#eff5ff;box-shadow:0 3px 12px rgba(37,99,235,.14)}
+html body #dialogBody .via-e input{width:20px;height:20px;flex:none;margin:0;accent-color:#2563eb}
+html body #dialogBody .via-ph{flex:none;width:54px;height:54px;border-radius:11px;overflow:hidden;display:grid;place-items:center;background:var(--surf2,#f1f4fa);font-size:22px}
+html body #dialogBody .via-ph img{width:100%;height:100%;object-fit:cover;display:block;margin:0;border-radius:0}
+html body #dialogBody .via-tx{min-width:0;display:flex;flex-direction:column;gap:1px}
+html body #dialogBody .via-tx b{font-size:14px}
+html body #dialogBody .via-tx small{font-size:11.5px;color:var(--ink2,#64748b)}
+html body #dialogBody .via-tx .via-oth{color:#b45309;font-weight:700}
+html body #dialogBody .via-tx i{font-style:normal;font-size:11.5px;font-weight:800}
+html body #dialogBody .via-tx i.ok{color:#15803d}
+html body #dialogBody .via-tx i.bad{color:#b91c1c}
+html body #dialogBody .via-acts{display:flex;gap:8px;position:sticky;bottom:0;padding:10px 0 2px;background:var(--surf,#fff)}
+html body #dialogBody .via-acts button{min-height:48px!important;border-radius:14px!important;font-weight:800!important}
+html body #dialogBody .via-acts .via-back{flex:0 0 auto;background:var(--surf2,#eef2f9)!important;color:var(--ink,#16274a)!important;border:1px solid var(--line,#dfe5f0)!important}
+html body #dialogBody .via-acts .got{flex:1;background:linear-gradient(180deg,#1f8a55,#146b41)!important;color:#fff!important;border:0!important;box-shadow:0 4px 14px rgba(20,107,65,.28)!important}
+html.dk body #dialogBody .via-e{background:var(--glass,rgba(255,255,255,.05))}
+html.dk body #dialogBody .via-e.is-in{background:rgba(37,99,235,.22);border-color:#60a5fa}
+html.dk body #dialogBody .via-acts{background:var(--dlg,#13275A)}
+html.dk body #dialogBody .via-2 button{background:var(--glass2,rgba(255,255,255,.08))!important;color:var(--ink,#e8eeff)!important;border-color:var(--line,rgba(255,255,255,.16))!important}
+html.dk body #dialogBody .via-2 button small{color:var(--ink2,#9fb0dc)}
+html.dk body #dialogBody .via-2 button.is-in{background:rgba(22,163,74,.2)!important;border-color:#34d399!important}
+html.dk body #dialogBody .via-acts .via-back{background:var(--glass2,rgba(255,255,255,.08))!important;color:var(--ink,#e8eeff)!important;border-color:var(--line,rgba(255,255,255,.16))!important}
+html.dk body #dialogBody .via-ph{background:var(--glass2,rgba(255,255,255,.08))}
+html.dk body #mnRoot .mz-prev{background:var(--glass,rgba(255,255,255,.05));border-color:var(--line,rgba(255,255,255,.16))}
+@media (max-width:1099.98px){html.dk body main .pu .pu-flt{background:var(--glass2,rgba(255,255,255,.08))!important;color:var(--ink,#e8eeff)!important;border-color:var(--line,rgba(255,255,255,.16))!important;box-shadow:none!important}html.dk body main .pu .pu-flt i{background:var(--glass,rgba(255,255,255,.06));color:var(--accent-ink,#8fd8ff)}}
+
+/* ---- 🔠 APNI MARZI ---- */
+html body #mnRoot .mz-sw{width:36px!important;height:36px!important;min-height:0!important;padding:0!important;border-radius:50%!important;border:2px solid #fff!important;box-shadow:0 0 0 1px var(--line,#d5dbe7)!important;font-size:14px!important;color:var(--ink2,#64748b)!important;background:var(--sw,var(--surf2,#f1f4fa))!important}
+html body #mnRoot .mz-sw.is-in{box-shadow:0 0 0 3px #2563eb!important}
+html body #mnRoot .mz-prev{display:flex;flex-direction:column;gap:2px;margin:16px 0 10px;padding:12px 14px;border-radius:16px;border:1px dashed var(--line,#cfd6e4);background:var(--surf2,#f7f9fd)}
+html body #mnRoot .mz-prev span{font-size:14px;color:var(--mn-tx,var(--ink,#10192b))}
+html body #mnRoot .mz-prev small{font-size:11px;color:var(--ink2,#64748b)}
+html body #mnRoot .mz-ph{font-size:17px;color:var(--mn-hx,var(--accent-ink,#1d3466))}
+html body #mnRoot .mn-app .mz-all{background:linear-gradient(135deg,#b45309,#d97706)!important;color:#fff!important;border-color:transparent!important}
+/* likhai ka size (phone; PC par Settings → 🖥 PC par size) */
+@media (max-width:1099.98px){
+  html[data-fs="s"] body>main{zoom:.9}
+  html[data-fs="l"] body>main{zoom:1.12}
+  html[data-fs="xl"] body>main{zoom:1.25}
+  html[data-fs="s"] body #dialog #dialogBody,html[data-fs="s"] body #dialog #dialogTitle{zoom:.92}
+  html[data-fs="l"] body #dialog #dialogBody,html[data-fs="l"] body #dialog #dialogTitle{zoom:1.1}
+  html[data-fs="xl"] body #dialog #dialogBody,html[data-fs="xl"] body #dialog #dialogTitle{zoom:1.2}
+  html[data-fs="s"] body #mnRoot .mn-sheet{zoom:.94}
+  html[data-fs="l"] body #mnRoot .mn-sheet{zoom:1.08}
+  html[data-fs="xl"] body #mnRoot .mn-sheet{zoom:1.16}
+}
+/* headings ka size (har jagah) */
+html[data-hs="s"] :is(#title,#dialogTitle,.party .name b,.pu-nm,#list h2,#list h3,#dialogBody h2,#dialogBody h3,.mn-h,.mz-ph){zoom:.88}
+html[data-hs="l"] :is(#title,#dialogTitle,.party .name b,.pu-nm,#list h2,#list h3,#dialogBody h2,#dialogBody h3,.mn-h,.mz-ph){zoom:1.15}
+html[data-hs="xl"] :is(#title,#dialogTitle,.party .name b,.pu-nm,#list h2,#list h3,#dialogBody h2,#dialogBody h3,.mn-h,.mz-ph){zoom:1.3}
+/* likhai / headings ka rang (sirf roshan look — andheri look par nahi) */
+html[data-tx]:not(.dk){--ink:var(--mn-tx)}
+html[data-tx]:not(.dk) body,html[data-tx]:not(.dk) body #dialog{color:var(--mn-tx)}
+html[data-hx]:not(.dk) :is(#dialogTitle,.party .name b,.pu-nm,#list h2,#list h3,#dialogBody h2,#dialogBody h3,.mn-h,.mz-ph){color:var(--mn-hx)!important}
+/* v2.104.0: Purchase list ka din-sar (.pu-dh <header>) — theme ka "html.lt header {navy !important}" is par bhi lag raha tha (navy par kaala likha) */
+html body main #list .pu-dh{background:var(--surf2,#f4f6fb)!important;color:var(--ink,#0b2545)!important;border:0!important;border-radius:12px!important;box-shadow:none!important;padding:8px 8px!important;margin:0 0 6px!important}
+html.dk body main #list .pu-dh{background:rgba(10,18,35,.85)!important;color:#e6edf7!important}
+/* v2.104.0: roshan look mein neeche ke rangeen buttons par likhai gehri thi (html.lt button {color: ink !important}) — ab safed (day-acts chips pehle jaise) */
+html.lt body footer#actions:not(.day-acts) button{color:#fff!important}
