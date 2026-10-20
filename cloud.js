@@ -1,16 +1,24 @@
-import {cashLinkChanges} from './cash-links.js';
-import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js';
-import {snapshotRows} from './live-data.js';
+import {cashLinkChanges} from './cash-links.js?v=2.103.79';
+import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js?v=2.103.79';
+import {snapshotRows} from './live-data.js?v=2.103.79';
 let transferFail=null;   // v2.86: tez transfer ka server-se-inkaar hook
-import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js';
-import {planImport} from './import-plan.js';
+import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js?v=2.103.79';
+import {planImport} from './import-plan.js?v=2.103.79';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import * as authSDK from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
-import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,memoryLocalCache,collection,query,where,doc,getDoc,getDocFromServer,getDocs,getDocsFromServer,getDocsFromCache,getDocFromCache,setDoc,deleteDoc,updateDoc,deleteField,onSnapshot,runTransaction,writeBatch,waitForPendingWrites,orderBy,limit,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.103.78';
-import {firebaseConfig,BUSINESS_ID} from './config.js?v=1.79.1';
+import {initializeFirestore,persistentLocalCache,persistentSingleTabManager,memoryLocalCache,disableNetwork,enableNetwork,collection,query,where,doc,getDoc,getDocFromServer,getDocs,getDocsFromServer,getDocsFromCache,getDocFromCache,setDoc,deleteDoc,updateDoc,deleteField,onSnapshot,runTransaction,writeBatch,waitForPendingWrites,orderBy,limit,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
+import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.103.79';
+import {firebaseConfig,BUSINESS_ID} from './config.js?v=2.103.79';
 export {loginErrorMessage};
-export async function connect(callbacks){const app=initializeApp(firebaseConfig,'blue-khata'),auth=authSDK.getAuth(app);try{await authSDK.setPersistence(auth,authSDK.browserLocalPersistence)}catch(e){console.warn('Auth persistence nahi mili',e)}let db;try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})})}catch(e){console.warn('Offline storage nahi mili — memory mode',e);db=initializeFirestore(app,{localCache:memoryLocalCache()})}const col=collection(db,'businesses',BUSINESS_ID,'blueKhata'),ref=id=>doc(col,id),other=(name,id)=>doc(db,'businesses',BUSINESS_ID,name,id);
+export async function connect(callbacks){const app=initializeApp(firebaseConfig,'blue-khata'),auth=authSDK.getAuth(app);try{await authSDK.setPersistence(auth,authSDK.browserLocalPersistence)}catch(e){console.warn('Auth persistence nahi mili',e)}let db;try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentSingleTabManager({forceOwnership:false})})})   /* v2.103.79: har tab apna live data — pehle multi-tab: ek tab hi server se leta tha, Chrome ne woh tab sula diya to PC ke SAB tab ruk jate (mobile theek). Doosra tab khud memory mode mein */}catch(e){console.warn('Offline storage nahi mili — memory mode',e);db=initializeFirestore(app,{localCache:memoryLocalCache()})}const col=collection(db,'businesses',BUSINESS_ID,'blueKhata'),ref=id=>doc(col,id),other=(name,id)=>doc(db,'businesses',BUSINESS_ID,name,id);
+/* v2.103.79: 📶 CHOWKIDAR — PC sync-stock har ~2 min posStock/_live.checkedAt likhta hai. 4 min tak na aaye (ya tab dair baad khule / net wapas aaye) to server se pucho:
+   server par naya hai / jawab 15 sec mein na aaye = hamara live connection chupke se atka → network band-chalu (reload nahi, data mehfooz). Server par bhi purana = PC script band, kuch mat karo. AI nahi. */
+let nwUn=null,nwSeen=0,nwAt=0,nwKick=0,nwHid=0;const nwRef=other('posStock','_live');
+async function nwReset(why){if(Date.now()-nwKick<120000)return;nwKick=Date.now();console.warn('📶 live connection dobara jor raha hoon:',why);try{await disableNetwork(db);await enableNetwork(db)}catch(e){console.warn('net reset',e)}}
+async function nwCheck(force){if(!navigator.onLine||!auth.currentUser)return;if(!nwUn){if(force)await nwReset('tab wapas');return}if(!force&&Date.now()-nwAt<240000)return;nwAt=Date.now();try{const s=await Promise.race([getDocFromServer(nwRef),new Promise((_,no)=>setTimeout(()=>no(Error('15 sec jawab nahi')),15000))]);if((Number(s.data()?.checkedAt)||0)>nwSeen)await nwReset('server par naya data')}catch(e){await nwReset(e.message||'server jawab nahi')}}
+authSDK.onAuthStateChanged(auth,u=>{nwUn?.();nwUn=null;if(!u)return;nwAt=Date.now();const un=onSnapshot(nwRef,s=>{nwAt=Date.now();nwSeen=Math.max(nwSeen,Number(s.data()?.checkedAt)||0)},()=>{if(nwUn===un)nwUn=null});nwUn=un});
+setInterval(()=>void nwCheck(false),60000);addEventListener('online',()=>void nwCheck(true));
+document.addEventListener('visibilitychange',()=>{if(document.hidden){nwHid=Date.now();return}if(nwHid&&Date.now()-nwHid>120000)void nwCheck(true);nwHid=0});
 const liveQuery=query(col,where('type','in',['party','entry','closing','expenseAccount','dayPhoto','import','cashCustody','reminder']));const cashQuery=query(col,where('type','in',['closing','cashCustody']));
 let accessScope='none',offCredential=null;const supplierCol=collection(db,'businesses',BUSINESS_ID,'purchaseSuppliers');
 async function loginStep(stage,fn){try{return await fn()}catch(e){if(e.code==='permission-denied')throw Object.assign(new Error(stage),{code:'login/'+stage});throw e}}
