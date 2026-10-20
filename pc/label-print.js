@@ -329,7 +329,8 @@ async function waitMove(printer, ref, ctl) {
     if (n !== last) { if (last >= 0 && stuck) { stuck = false; await ref.update({ stuck: FieldValue.delete() }).catch(() => {}); } last = n; moved = Date.now(); }
     if (!stuck && Date.now() - moved > 30000) { stuck = true; const why = await printerWhy(printer).catch(() => 'Printer aage nahi chal raha'); await ref.update({ stuck: { at: Date.now(), why } }).catch(() => {}); log('⚠️ Label printer ruka: ' + why);
       if (!tried) { tried = true; await resumePaused(printer).catch(() => {}); } }
-    if (stuck && ctl.retry < 2 && Date.now() - moved > 90000) { ctl.retry++; log('↻ 90 s ruka — line saaf kar ke wahi hissa dobara (' + ctl.retry + ')'); await purgeQueue(printer).catch(() => {}); return 'retry'; }   // v4.7
+    // v4.8 (2026-10-20): v4.7 ka "90 s ruka = line saaf + wahi hissa DOBARA" HATAYA — printer dheere chhap raha tha (asal mein nikal rahe the) magar spooler ka number nahi hila,
+    //   script ne wahi 50-50 label dobara bhej diye (white chana / mada nayab dobara nikle). Ab ruka ho to sirf intezar + app ko wajah; 10 min = failed (sent = asal). Dobara kabhi khud nahi.
     if (stuck && Date.now() - moved > 10 * 60000) return new Error('Printer 10 min se ruka — ' + ((await printerWhy(printer).catch(() => '')) || ''));
     if (Date.now() - t0 > 40 * 60000) return new Error('Printer bahut der se ruka');
     await new Promise(r => setTimeout(r, 2500));
