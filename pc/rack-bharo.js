@@ -1,5 +1,5 @@
 // =========================================================
-//  rack-bharo.js  v1.9 (2026-10-20: 📦 packet item par ledger bhi — s0 = ginti (from) ke waqt dukan ka POS stock (abhi − ledger net), li/lo = us ke baad ledger QtyIn/QtyOut, sq = sale qty (packet + khula). App farq ki wajah batati hai: ginti ke waqt farq tha ya baad mein bina-packet sale / aamad) · v1.8 (2026-10-20: ⏱ har 1 MIN (malik: "bikne ka time kam karo"); badla na ho to 5 min tak nahi likhta) · v1.7 (2026-10-20: 🏬 WHOLESALE ki sale 'bika' mein NAHI — malik: 'is mein wholesale ki sale add na karo' (wholesale maal rack se nahi jata). Party naam blueAccess/reportConfig.wsNames + 'whole sale' — item-report jaisa; lane (sold) aur packet (sold[z]) dono) · v1.6 (2026-10-19: 🧾 stock fraq / ginti farq ke sale bill 'bika' mein nahi gine) · v1.5 (2026-10-18: 📤 NIKLA = aakhri aamad ke baad dukan se bika (s) + WAPAS godam gaya (o: transfer dukan -> godam) − seedha dukan
+//  rack-bharo.js  v1.10 (2026-10-20: wq = from ke baad wholesale parties ko dukan se bika — app 'aur nikasi' se alag dikhati hai) · v1.9 (2026-10-20: 📦 packet item par ledger bhi — s0 = ginti (from) ke waqt dukan ka POS stock (abhi − ledger net), li/lo = us ke baad ledger QtyIn/QtyOut, sq = sale qty (packet + khula). App farq ki wajah batati hai: ginti ke waqt farq tha ya baad mein bina-packet sale / aamad) · v1.8 (2026-10-20: ⏱ har 1 MIN (malik: "bikne ka time kam karo"); badla na ho to 5 min tak nahi likhta) · v1.7 (2026-10-20: 🏬 WHOLESALE ki sale 'bika' mein NAHI — malik: 'is mein wholesale ki sale add na karo' (wholesale maal rack se nahi jata). Party naam blueAccess/reportConfig.wsNames + 'whole sale' — item-report jaisa; lane (sold) aur packet (sold[z]) dono) · v1.6 (2026-10-19: 🧾 stock fraq / ginti farq ke sale bill 'bika' mein nahi gine) · v1.5 (2026-10-18: 📤 NIKLA = aakhri aamad ke baad dukan se bika (s) + WAPAS godam gaya (o: transfer dukan -> godam) − seedha dukan
 //                  par purchase (p) — malik ka asal qaida: 'maal aane par rack bhara, jitna nikla 1 carton ho to lao'. Row: o, p. lo ab sirf
 //                  candidate (dukan stock < 1 carton) — app malik ki hadd chip (rackLo) se faisla) · v1.4 (2026-10-18: 🟠 lo = rack KAM: dukan par bikta (180 din) aur dukan stock 1 carton se kam -> row bhejo
 //                  (Clear shampoo 400ml: 12 pcs dukan se WAPAS Godam 1 gaye, phir 10 bike = 2 bache, list mein nahi aaya tha) · godam: aakhri
@@ -106,12 +106,16 @@ async function readPk(p, cfg, now = new Date()) {
   const vals = items.map(x => `(${x.id}, '${sqlDt(new Date(x.from))}')`).join(','), ldg = new Map();
   try { const rs = (await p.request().query(`SELECT v.ItemID, ISNULL(SUM(l.QtyIn), 0) AS qi, ISNULL(SUM(l.QtyOut), 0) AS qo FROM (VALUES ${vals}) v(ItemID, W)
       LEFT JOIN dbo.StockLedger l ON l.ItemID = v.ItemID AND l.BranchID = ${SHOP} AND l.LedgerDate > CAST(v.W AS DATETIME) GROUP BY v.ItemID`)).recordset;
-    for (const r of rs) ldg.set(Number(r.ItemID), { qi: r3(r.qi), qo: r3(r.qo) }); } catch (e) { console.log('ledger masla: ' + (e?.message || e)); }
+    for (const r of rs) ldg.set(Number(r.ItemID), { qi: r3(r.qi), qo: r3(r.qo), wq: 0 });
+    const NOTWS = NOWS.replace('NOT IN', 'IN');   // v1.10: sirf wholesale
+    const ws = (await p.request().query(`SELECT v.ItemID, SUM(d.Qty) AS q FROM (VALUES ${vals}) v(ItemID, W) JOIN dbo.SaleDetail d ON d.ItemID = v.ItemID JOIN dbo.Sale s ON s.SaleID = d.SaleID
+      WHERE s.SaleDate >= CAST(v.W AS DATETIME) AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(NULLIF(d.GBranchID, 0), s.BranchID) = ${SHOP} ${NOFQ} ${NOTWS} GROUP BY v.ItemID`)).recordset;
+    for (const r of ws) { const o = ldg.get(Number(r.ItemID)); if (o) o.wq = r3(r.q); } } catch (e) { console.log('ledger masla: ' + (e?.message || e)); }
   const by = new Map(items.map(x => [x.id, { ...x, sold: {}, kh: 0, sq: 0 }]));
   for (const l of lines) { const x = by.get(Number(l.ItemID)); if (!x || new Date(l.SaleDate).getTime() < x.from) continue; const q = Number(l.Qty) || 0, m = packOf(q, x.sizes), sg = q < 0 ? -1 : 1;
     x.sq = r3(x.sq + q); if (m) x.sold[m.z] = r3((x.sold[m.z] || 0) + sg * m.n); else x.kh = r3(x.kh + q); }
   return [...by.values()].map(x => { const S = st.get(x.id) || { n: 'Item ' + x.id, st: {} }, ss = r3(S.st[SHOP] || 0), L = ldg.get(x.id) || { qi: 0, qo: 0 };
-    return { i: x.id, n: S.n, g: x.g, gs: r3(S.st[x.g] || 0), ss, from: x.from, sold: x.sold, kh: x.kh, sq: x.sq, s0: r3(ss - L.qi + L.qo), li: L.qi, lo: L.qo }; });
+    return { i: x.id, n: S.n, g: x.g, gs: r3(S.st[x.g] || 0), ss, from: x.from, sold: x.sold, kh: x.kh, sq: x.sq, s0: r3(ss - L.qi + L.qo), li: L.qi, lo: L.qo, wq: L.wq || 0 }; });
 }
 // v1.3: ⚠️ PackQty 0/NULL wale items — POS counter sale "Divide by zero error" (rate ÷ carton pcs). Sirf wo jo 30 din mein bike ya dukan mein stock > 0.
 async function readZero(p, now = new Date()) {
