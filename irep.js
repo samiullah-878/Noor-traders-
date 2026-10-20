@@ -26,11 +26,11 @@ const isDay = s => /^\d{4}-\d{2}-\d{2}$/.test(String(s || ''));
 const pct = (a, b) => b ? Math.round(a / b * 1000) / 10 : 0;
 
 let cloud = null, notice = () => {}, pdfOf = null, stop = null, data = null, err = '', loaded = false, cStop = null, commCfg = {}, cq = '';
-let kdoc = null, kStop = null, pcs = null, pcStop = null;   // v2.103.28: 📅 kal ka data (irep-kal) + PC script ka haal
+let kdoc = null, kStop = null, pcs = null, pcStop = null, irErr = null;   // v2.103.86: irErr = PC item-report ki poori galti (posStats/irep-err)   // v2.103.28: 📅 kal ka data (irep-kal) + PC script ka haal
 let full = null, tdoc = null, tStop = null, slowT = 0, slow = false;   // v2.103.6: ⚡ aaj ka data (irep-today) alag aata hai, data = full + aaj
 const LS = 'sam-irep';
-const st = (() => { let v = {}; try { v = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch {} return { mon: v.mon || '', per: v.per || 'm', from: v.from || '', to: v.to || '', ws: v.ws !== false, sort: v.sort || 'rs', q: '', lim: 60, tsort: v.tsort || 'rs', tq: '', tAll: false, rev: !!v.rev, trev: !!v.trev }; })();   // v2.103.3: ⇅ ulta
-const keep = () => { try { localStorage.setItem(LS, JSON.stringify({ mon: st.mon, per: st.per, from: st.from, to: st.to, ws: st.ws, sort: st.sort, tsort: st.tsort, rev: st.rev, trev: st.trev })); } catch {} };
+const st = (() => { let v = {}; try { v = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch {} return { mon: v.mon || '', per: v.per || 'm', from: v.from || '', to: v.to || '', ws: v.ws !== false, sort: v.sort || 'rs', q: '', lim: 60, tsort: v.tsort || 'rs', tq: '', tAll: false, rev: !!v.rev, trev: !!v.trev, rep: v.rep || 'items', view: v.view || 'chart', trd: v.trd || 'wk' }; })();   // v2.103.3: ⇅ ulta
+const keep = () => { try { localStorage.setItem(LS, JSON.stringify({ mon: st.mon, per: st.per, from: st.from, to: st.to, ws: st.ws, sort: st.sort, tsort: st.tsort, rev: st.rev, trev: st.trev, rep: st.rep, view: st.view, trd: st.trd })); } catch {} };
 
 let stockOf = () => null;
 export function irepSetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; pdfOf = o.pdf || pdfOf; stockOf = o.stock || stockOf; }
@@ -40,6 +40,7 @@ function watch() {
   if (!tStop && cloud?.listenItemToday) tStop = cloud.listenItemToday(t => { tdoc = t; remerge(); });
   if (!kStop && cloud?.listenItemKal) kStop = cloud.listenItemKal(t => { kdoc = t; remerge(); });
   if (!pcStop && cloud?.listenPcStatus) { try { pcStop = cloud.listenPcStatus(d => { pcs = d; if ($('irRoot')) paint(); }); } catch {} }
+  if (!irErr && cloud?.getIrepErr) cloud.getIrepErr().then(e => { irErr = e || { n: 0 }; if ($('irRoot')) paint(); }).catch(() => {});
   if (stop || !cloud?.listenItemReport) return;
   slow = false; clearTimeout(slowT); slowT = setTimeout(() => { if (!loaded) { slow = true; if ($('irRoot')) paint(); } }, 10000);   // v2.103.6: 📶 hamesha ghoomta na rahe
   stop = cloud.listenItemReport((d, e) => { loaded = true; clearTimeout(slowT); if (d) { full = d; err = ''; remerge(); return; } err = e?.code || e?.message || 'masla'; if ($('irRoot')) paint(); });
@@ -293,27 +294,23 @@ function paint() {
   const { tbl, shown, html: rowsH } = rowsOf();
   const chips = (list, attr, on) => `<div class="mchips">${list.map(([k, l]) => `<button type="button" class="rc${on(k) ? ' on' : ''}" ${attr}="${esc(k)}">${esc(l)}</button>`).join('')}</div>`;
   const perLabel = st.per === 'c' ? `${short(a)} – ${short(b)}` : `${(PERS.find(p => p[0] === st.per) || PERS[3])[1]} · ${short(a)} – ${short(b)}`;
-  root.innerHTML = `<div class="bc-head ir-head">
-    ${chips(X.mons.map(mm => [mm, monLabel(mm)]), 'data-ir-mon', k => k === m)}
-    ${chips(PERS.filter(([k]) => !/^w5$/.test(k) || L > 28), 'data-ir-p', k => k === st.per)}
-    ${st.per === 'c' ? `<div class="lk-filter ir-cf"><label>Tareekh se<input type="date" data-ir-from value="${esc(st.from || a)}" min="${esc(X.days[0] || '')}" max="${esc(X.days.slice(-1)[0] || '')}"></label><label>Tareekh tak<input type="date" data-ir-to value="${esc(st.to || b)}" min="${esc(X.days[0] || '')}" max="${esc(X.days.slice(-1)[0] || '')}"></label></div>` : ''}
-    <div class="mchips"><button type="button" class="rc${st.ws ? ' on' : ''}" data-ir-ws="1">${st.ws ? '☑' : '☐'} 📦 Wholesale ke saath</button><button type="button" class="rc${st.ws ? '' : ' on'}" data-ir-ws="0">${st.ws ? '☐' : '☑'} Wholesale ke baghair</button></div>
-    <div class="ir-hero"><small>${esc(perLabel)}</small><strong>Rs ${num(T.rs)}</strong><span>sale · ${num(T.n)} items</span>
-      <div class="ir-kp"><div class="ir-tap" data-ir-nafa="1" role="button"><b class="${T.pf < 0 ? 'neg' : ''}">Rs ${num(T.pf)}</b><small>nafa (andaza) · items ▸</small></div><div><b>${pct(T.pf, T.rs)}%</b><small>nafa %</small></div><div><b>${num(pd.length ? T.rs / pd.length : 0)}</b><small>roz ki sale</small></div></div></div>
-    <p class="lk-age${old ? ' warn' : ''}">${esc(age)}${T.noCost ? ` · ${T.noCost} items ka khareed rate nahi (nafa mein nahi)` : ''}</p></div>
-  ${nfHTML(a, b)}
-  ${commHTML(a, b)}
-  <section class="ir-sec" id="irTopSec"><div class="ir-sh"><b>🏆 Items — sale aur nafa (Rs)</b><small>tap = item ki poori kahani</small></div>
+  // v2.103.86: 🎨 STRUCTURE — malik: "reports ek side, charts switch, reports switch, har chip tarteeb se, premium". Upar control patti (chipki) · summary ·
+  //   reports ki list (phone = chipki tabs, PC = baayein rail) · ek waqt mein EK report · 📊 Chart ⇄ 📋 Table · PDF = khuli report.
+  const REP = [['items', '🏆', 'Items'], ['nafa', '💰', 'Nafa'], ['bills', '🧾', 'Asal nafa'], ['comm', '👦', 'Commission'], ['trend', '📈', 'Trend'], ['pattern', '🔎', 'Pattern'], ['stock', '💸', 'Phansa stock']];
+  const rep = REP.some(r => r[0] === st.rep) ? st.rep : 'items', view = st.view === 'table' ? 'table' : 'chart', trd = ['wk', 'pt', 'wd', 'day'].includes(st.trd) ? st.trd : 'wk';
+  const sw = () => `<div class="ir-vsw"><button type="button" class="${view === 'chart' ? 'is-in' : ''}" data-ir-view="chart">📊 Chart</button><button type="button" class="${view === 'table' ? 'is-in' : ''}" data-ir-view="table">📋 Table</button></div>`;
+  const tblOf = cols => `<div class="ir-tbl">${cols.map(c => `<button type="button" class="ir-row" ${c.act || ''}><span><b>${esc(c.label)}</b>${c.sub ? `<small>${esc(c.sub)}</small>` : ''}</span><span class="ir-num"><b>Rs ${num(c.a)}</b><small class="${c.b < 0 ? 'neg' : ''}">nafa Rs ${num(c.b)}</small></span></button>`).join('') || '<p class="lk-note">Is arse mein data nahi</p>'}</div>`;
+  const TR = { wk: ['📅 Hafta-war', `${monLabel(m)} — tap = woh hafta`, wkCols, {}], pt: ['🗓 Mahine ke hisse', `1–10 · 11–20 · 21–${L} — tap = woh hissa`, ptCols, {}], wd: ['📆 Kis din zyada', 'ek din ki ausat — tap = us din ki items', wdCols, { h: 120 }], day: ['📈 Roz ki sale', `${short(a)} – ${short(b)} · tap = us din`, dayCols, { h: 120 }] };
+  const body = rep === 'items' ? (view === 'table' ? `  <section class="ir-sec"><div class="ir-sh"><b>📋 Saari items (<span id="irTblN">${num(tbl.length)}</span>)</b><small>tap = tafseel</small></div>
+    <div class="ir-sticky">${sortBar(chips, 'data-ir-sort', st.sort, 'data-ir-rev', st.rev)}
+    <label class="hs-search"><input type="search" data-ir-q="1" placeholder="🔍 item dhoondo…" value="${esc(st.q)}"></label></div>
+    <div id="irRows">${rowsH}</div></section>` : `  <section class="ir-sec" id="irTopSec"><div class="ir-sh"><b>🏆 Items — sale aur nafa (Rs)</b><small>tap = item ki poori kahani</small></div>
     <div class="ir-sticky">${sortBar(chips, 'data-ir-tsort', st.tsort, 'data-ir-trev', st.trev)}
     <label class="hs-search"><input type="search" data-ir-tq="1" placeholder="🔍 item dhoondo (number bhi dikhega)…" value="${esc(st.tq)}"></label></div>
     <div id="irTop">${topHTML()}</div></section>
-  ${nafaHTML(rows, T, a, b)}
-  ${phHTML()}
-  <section class="ir-sec"><div class="ir-sh"><b>📅 Hafta-war — ${esc(monLabel(m))}</b><small>tap = woh hafta</small></div>${legend()}${colChart(wkCols)}</section>
-  <section class="ir-sec"><div class="ir-sh"><b>🗓 Mahine ke hisse</b><small>1–10 · 11–20 · 21–${L} — tap = woh hissa</small></div>${colChart(ptCols)}</section>
-  <section class="ir-sec"><div class="ir-sh"><b>📆 Kis din zyada bikta hai</b><small>ek din ki ausat sale — tap = us din ki top items</small></div>${colChart(wdCols, { h: 120 })}</section>
-  <section class="ir-sec"><div class="ir-sh"><b>📈 Roz ki sale</b><small>${esc(short(a))} – ${esc(short(b))} · tap = us din ki items</small></div><div class="ir-scroll">${colChart(dayCols, { h: 120 })}</div></section>
-  <section class="ir-sec ir-pat"><div class="ir-sh"><b>🔎 Pattern — ${esc(monLabel(m))}</b><small>${P.endD < L ? `aaj tak (${P.endD} din)` : 'poora mahina'}</small></div>
+`)
+    : rep === 'nafa' ? nafaHTML(rows, T, a, b) : rep === 'bills' ? nfHTML(a, b) : rep === 'comm' ? commHTML(a, b) : rep === 'stock' ? phHTML()
+    : rep === 'pattern' ? `  <section class="ir-sec ir-pat"><div class="ir-sh"><b>🔎 Pattern — ${esc(monLabel(m))}</b><small>${P.endD < L ? `aaj tak (${P.endD} din)` : 'poora mahina'}</small></div>
     ${[0, 1, 2].map(i => PO.part[i].length ? `<h5>${['🌅 Mahine ke SHURU (1–10) mein zyada', '🌤 DARMIYAN (11–20) mein zyada', `🌙 AAKHIR (21–${L}) mein zyada`][i]}</h5><div class="ir-pcs">${PO.part[i].slice(0, 10).map(x => pchip(x.r, `${x.x.toFixed(1)}× baqi dino se`)).join('')}</div>` : '').join('')}
     ${WD_ORDER.map(g => PO.wd[g].length ? `<h5>📆 ${WD[g]} ko zyada</h5><div class="ir-pcs">${PO.wd[g].slice(0, 8).map(x => pchip(x.r, `${x.x.toFixed(1)}× baqi dino se`)).join('')}</div>` : '').join('')}
     ${PO.up.length ? `<h5>📈 Pichhle mahine se BARH rahi</h5><div class="ir-pcs">${PO.up.slice(0, 10).map(x => pchip(x.r, x.x >= 9 ? 'nayi' : '+' + Math.round(x.x * 100) + '% roz')).join('')}</div>` : ''}
@@ -322,10 +319,21 @@ function paint() {
     ${PO.loss.length ? `<h5 class="neg">🔻 GHAATE mein bik rahi</h5><div class="ir-pcs">${PO.loss.slice(0, 10).map(x => pchip(x.r, `Rs ${num(x.x)}`)).join('')}</div>` : ''}
     ${![...PO.part, ...PO.wd, PO.up, PO.down, PO.thin, PO.loss].some(l => l.length) ? '<p class="lk-note">Abhi koi khaas pattern nahi — mahina aage barhega to saaf hoga.</p>' : ''}
     <p class="lk-note">Pattern = item ki us hisse / din ki roz ki sale baqi hisson / dino se kitne guna zyada. Nafa = abhi ka khareed rate × ginti (andaza).</p></section>
-  <section class="ir-sec"><div class="ir-sh"><b>📋 Saari items (<span id="irTblN">${num(tbl.length)}</span>)</b><small>tap = tafseel</small></div>
-    <div class="ir-sticky">${sortBar(chips, 'data-ir-sort', st.sort, 'data-ir-rev', st.rev)}
-    <label class="hs-search"><input type="search" data-ir-q="1" placeholder="🔍 item dhoondo…" value="${esc(st.q)}"></label></div>
-    <div id="irRows">${rowsH}</div></section>`;
+`
+    : `<section class="ir-sec"><div class="mchips ir-trd">${Object.entries(TR).map(([k, v]) => `<button type="button" class="rc${trd === k ? ' on' : ''}" data-ir-trd="${k}">${v[0]}</button>`).join('')}</div><div class="ir-sh"><b>${TR[trd][0]}</b><small>${esc(TR[trd][1])}</small></div>${view === 'table' ? tblOf(TR[trd][2]) : `${legend()}<div class="${trd === 'day' ? 'ir-scroll' : ''}">${colChart(TR[trd][2], TR[trd][3])}</div>`}</section>`;
+  root.innerHTML = `<div class="ir-shell">
+    <div class="bc-head ir-head ir-ctl">
+    ${chips(X.mons.map(mm => [mm, monLabel(mm)]), 'data-ir-mon', k => k === m)}
+    ${chips(PERS.filter(([k]) => !/^w5$/.test(k) || L > 28), 'data-ir-p', k => k === st.per)}
+    ${st.per === 'c' ? `<div class="lk-filter ir-cf"><label>Tareekh se<input type="date" data-ir-from value="${esc(st.from || a)}" min="${esc(X.days[0] || '')}" max="${esc(X.days.slice(-1)[0] || '')}"></label><label>Tareekh tak<input type="date" data-ir-to value="${esc(st.to || b)}" min="${esc(X.days[0] || '')}" max="${esc(X.days.slice(-1)[0] || '')}"></label></div>` : ''}
+    <div class="mchips"><button type="button" class="rc${st.ws ? ' on' : ''}" data-ir-ws="1">${st.ws ? '☑' : '☐'} 📦 Wholesale ke saath</button><button type="button" class="rc${st.ws ? '' : ' on'}" data-ir-ws="0">${st.ws ? '☐' : '☑'} Wholesale ke baghair</button></div>
+    </div>
+    <div class="ir-hero"><small>${esc(perLabel)}</small><strong>Rs ${num(T.rs)}</strong><span>sale · ${num(T.n)} items</span>
+      <div class="ir-kp"><div class="ir-tap" data-ir-nafa="1" role="button"><b class="${T.pf < 0 ? 'neg' : ''}">Rs ${num(T.pf)}</b><small>nafa (andaza) · items ▸</small></div><div><b>${pct(T.pf, T.rs)}%</b><small>nafa %</small></div><div><b>${num(pd.length ? T.rs / pd.length : 0)}</b><small>roz ki sale</small></div></div></div>
+    <p class="lk-age${old ? ' warn' : ''}">${esc(age)}${T.noCost ? ` · ${T.noCost} items ka khareed rate nahi (nafa mein nahi)` : ''}</p>
+    ${irErr?.n && old ? `<p class="lk-age warn ir-err">🖥 PC report ki galti: ${esc(String(irErr.msg || '').slice(0, 220))}</p>` : ''}
+    <div class="ir-main"><nav class="ir-nav">${REP.map(([k, ic, l]) => `<button type="button" class="${rep === k ? 'is-in' : ''}" data-ir-rep="${k}"><span>${ic}</span><b>${l}</b></button>`).join('')}</nav>
+      <div class="ir-pane">${rep === 'items' || rep === 'trend' ? sw() : ''}${body}</div></div></div>`;
 }
 
 // ---------- 💰 v2.103.10: ASAL NAFA — sale bills se (malik: "sale bills ke data ke hisaab se profit") ----------
@@ -508,28 +516,30 @@ function wdDlg(g) {
 }
 
 // ---------- PDF ----------
-function pdfHTML() {
+function pdfHTML(only) {   // v2.103.86: only = khuli report (items/nafa/bills/comm/trend/pattern/stock) — sirf wahi hissa
+  const on = k => !only || only === k || (only === 'trend' && k === 'items');
   const m = monthOf(), [a, b0] = range(), b = clipEnd(b0), { rows, T } = agg(a, b), P = patterns(m).out, L = lastDay(m);
   const sec = (t, l, f) => l.length ? `<h3>${t}</h3><p>${l.slice(0, 12).map(f).join(' · ')}</p>` : '';
   return `<h1>NOOR TRADERS</h1><h2>📊 Item Sale Report — ${esc(short(a))} se ${esc(short(b))} ${esc(b.slice(0, 4))}${st.ws ? '' : ' (wholesale ke baghair)'}</h2>
     <p><b>Kul sale Rs ${num(T.rs)}</b> · nafa (andaza) Rs ${num(T.pf)} (${pct(T.pf, T.rs)}%) · ${num(T.n)} items · ${esc(new Date().toLocaleString('en-PK'))}</p>
-    ${nfPdf(a, b)}
-    ${phPdf()}
-    ${(() => { const W = wsSplit(a, b), has = rows.filter(r => !r.noCost), plus = has.filter(r => r.pf > 0).sort((x, y) => y.pf - x.pf), loss = has.filter(r => r.pf < 0), P = plus.reduce((t, r) => t + r.pf, 0), Lr = loss.reduce((t, r) => t + r.pf, 0), none = rows.filter(r => r.noCost);   // v2.101.5: 💰 nafa kahan se
+    ${on('bills') ? nfPdf(a, b) : ''}
+    ${on('stock') ? phPdf() : ''}
+    ${!on('nafa') ? '' : (() => { const W = wsSplit(a, b), has = rows.filter(r => !r.noCost), plus = has.filter(r => r.pf > 0).sort((x, y) => y.pf - x.pf), loss = has.filter(r => r.pf < 0), P = plus.reduce((t, r) => t + r.pf, 0), Lr = loss.reduce((t, r) => t + r.pf, 0), none = rows.filter(r => r.noCost);   // v2.101.5: 💰 nafa kahan se
       return `<h3>💰 Nafa kahan se (Rupees)</h3><p>Kul nafa <b>Rs ${num(T.pf)}</b>${st.ws ? ` · Retail Rs ${num(W.r.pf)} (sale Rs ${num(W.r.rs)}) · Wholesale Rs ${num(W.w.pf)} (sale Rs ${num(W.w.rs)})` : ''}${loss.length ? ` · ghaata ${loss.length} items Rs ${num(Math.abs(Lr))}` : ''}${none.length ? ` · ${none.length} items ka khareed rate nahi` : ''}</p>
         <table class="iv-tbl"><thead><tr><th>#</th><th>Sab se zyada nafa</th><th>Sale Rs</th><th>Nafa Rs</th><th>Hissa</th></tr></thead><tbody>${plus.slice(0, 15).map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.it.n)}</td><td>${num(r.rs)}</td><td>${num(r.pf)}</td><td>${pct(r.pf, P)}%</td></tr>`).join('')}</tbody></table>`; })()}
-    ${sec('🌅 Shuru (1–10) mein zyada', P.part[0], x => esc(x.r.it.n))}${sec('🌤 Darmiyan (11–20) mein zyada', P.part[1], x => esc(x.r.it.n))}${sec(`🌙 Aakhir (21–${L}) mein zyada`, P.part[2], x => esc(x.r.it.n))}
-    ${WD_ORDER.map(g => sec(`📆 ${WD[g]} ko zyada`, P.wd[g], x => esc(x.r.it.n))).join('')}${sec('⚠️ Zyada sale, kam nafa', P.thin, x => `${esc(x.r.it.n)} (${x.x}%)`)}${sec('🔻 Ghaate mein', P.loss, x => `${esc(x.r.it.n)} (Rs ${num(x.x)})`)}
-    ${(() => { const C = commAgg(a, b); return C && C.men.length ? `<h3>💰 Commission — Supply Man wise (kul Rs ${num(C.trs)} · ${num(C.tq)} packet)</h3><table class="iv-tbl"><thead><tr><th>Supply Man</th><th>Items (packet)</th><th>Packet</th><th>Commission Rs</th></tr></thead><tbody>${C.men.map(m => `<tr><td><b>${esc(m.name)}</b></td><td>${[...m.items].sort((x, y) => y[1] - x[1]).map(([it, q]) => esc(cName(it)) + ' ' + num(q)).join(', ')}</td><td>${num(m.q)}</td><td><b>${num(m.rs)}</b></td></tr>`).join('')}</tbody></table>` : ''; })()}
-    <table class="iv-tbl"><thead><tr><th>#</th><th>Item</th><th>Ginti</th><th>Sale Rs</th><th>Nafa Rs</th><th>Nafa %</th><th>Fi pc nafa</th></tr></thead><tbody>
-    ${rows.sort(sorter(st.sort, st.rev)).map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.it.n)}</td><td>${fmtQty(r.q, r.it.pk)}</td><td>${num(r.rs)}</td><td>${r.noCost ? '—' : num(r.pf)}</td><td>${r.noCost ? '—' : pct(r.pf, r.rs) + '%'}</td><td>${perPc(r) == null ? '—' : num(perPc(r))}</td></tr>`).join('')}</tbody></table>
+    ${!on('pattern') ? '' : sec('🌅 Shuru (1–10) mein zyada', P.part[0], x => esc(x.r.it.n))}${!on('pattern') ? '' : sec('🌤 Darmiyan (11–20) mein zyada', P.part[1], x => esc(x.r.it.n))}${!on('pattern') ? '' : sec(`🌙 Aakhir (21–${L}) mein zyada`, P.part[2], x => esc(x.r.it.n))}
+    ${!on('pattern') ? '' : WD_ORDER.map(g => sec(`📆 ${WD[g]} ko zyada`, P.wd[g], x => esc(x.r.it.n))).join('')}${sec('⚠️ Zyada sale, kam nafa', P.thin, x => `${esc(x.r.it.n)} (${x.x}%)`)}${sec('🔻 Ghaate mein', P.loss, x => `${esc(x.r.it.n)} (Rs ${num(x.x)})`)}
+    ${!on('comm') ? '' : (() => { const C = commAgg(a, b); return C && C.men.length ? `<h3>💰 Commission — Supply Man wise (kul Rs ${num(C.trs)} · ${num(C.tq)} packet)</h3><table class="iv-tbl"><thead><tr><th>Supply Man</th><th>Items (packet)</th><th>Packet</th><th>Commission Rs</th></tr></thead><tbody>${C.men.map(m => `<tr><td><b>${esc(m.name)}</b></td><td>${[...m.items].sort((x, y) => y[1] - x[1]).map(([it, q]) => esc(cName(it)) + ' ' + num(q)).join(', ')}</td><td>${num(m.q)}</td><td><b>${num(m.rs)}</b></td></tr>`).join('')}</tbody></table>` : ''; })()}
+    ${!on('items') ? '' : `<table class="iv-tbl"><thead><tr><th>#</th><th>Item</th><th>Ginti</th><th>Sale Rs</th><th>Nafa Rs</th><th>Nafa %</th><th>Fi pc nafa</th></tr></thead><tbody>
+    ${rows.sort(sorter(st.sort, st.rev)).map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.it.n)}</td><td>${fmtQty(r.q, r.it.pk)}</td><td>${num(r.rs)}</td><td>${r.noCost ? '—' : num(r.pf)}</td><td>${r.noCost ? '—' : pct(r.pf, r.rs) + '%'}</td><td>${perPc(r) == null ? '—' : num(perPc(r))}</td></tr>`).join('')}</tbody></table>`}
     <p><small>Nafa = abhi ka khareed rate × ginti (andaza). Data: POS (Noor Traders ke andar ke bill aur cancel bahar).</small></p>`;
 }
 
 // ---------- clicks ----------
 document.addEventListener('click', e => {
+  { const r = e.target.closest?.('[data-ir-rep],[data-ir-view],[data-ir-trd]'); if (r && r.closest('.ir-root')) { const d = r.dataset; if (d.irRep) { st.rep = d.irRep; st.view = 'chart'; } if (d.irView) st.view = d.irView; if (d.irTrd) st.trd = d.irTrd; keep(); paint(); if (d.irRep) document.querySelector('.ir-main')?.scrollIntoView?.({ block: 'start' }); return; } }   // v2.103.86
   if (e.target.closest?.('[data-ir-retry]')) { irepStop(); loaded = false; err = ''; slow = false; watch(); paint(); return; }   // v2.103.6: 🔄 dobara
-  if (e.target.closest?.('[data-ir-pdf]')) { if (!data?.meta) { notice('Report abhi nahi aayi'); return; } const [a, b0] = range(); if (pdfOf) pdfOf(pdfHTML(), `Item sale ${a} se ${clipEnd(b0)}`); return; }
+  if (e.target.closest?.('[data-ir-pdf]')) { if (!data?.meta) { notice('Report abhi nahi aayi'); return; } const [a, b0] = range(); const rp = st.rep || 'items'; if (pdfOf) pdfOf(pdfHTML(rp), `Item ${rp} ${a} se ${clipEnd(b0)}`); return; }   // v2.103.86: khuli report ki PDF
   const c = e.target.closest?.('[data-ir-cset],[data-ir-cadd],[data-ir-cdel],[data-ir-man]');
   if (c && c.closest('.ir-root')) { const d = c.dataset;
     if (d.irMan != null) { manDlg(d.irMan); return; }
@@ -572,7 +582,7 @@ document.addEventListener('input', e => {   // v2.101.1: search par sirf neeche 
 export const _irTest = { phAgg, setStock: f => { stockOf = f; }, nfBills, nfSum, nfHTML, nfC, nfSetT: t => { tdoc = t; }, nfSetFull: f => { full = f; }, mergeToday, ageText, setFull: (f, t) => { full = f; tdoc = t; remerge(); }, fmtQty, topHTML, nafaHTML, wsSplit, setRows: r => { lastRows = { sorted: r, srt: () => 0 }; }, agg, range, patterns, partRange, setData: d => { data = d; loaded = true; ix = null; }, st, pdfHTML, commAgg, setComm: c => { commCfg = c; } };
 
 // v2.103.48: 🤖 agent actions — item report (nafa / sale)
-import { agentRegister } from './agent.js?v=2.103.85';
+import { agentRegister } from './agent.js?v=2.103.86';
 agentRegister([
   { name: 'nafa_report', read: true, desc: 'Item report: muddat (from/to YYYY-MM-DD, default aaj) ki sale, nafa (andaza), top items nafa ke hisaab se; wholesale ke saath/baghair.', params: { type: 'OBJECT', properties: { from: { type: 'STRING' }, to: { type: 'STRING' }, top: { type: 'INTEGER' }, wholesale: { type: 'BOOLEAN' } } },
     run({ from, to, top, wholesale }) { if (!data?.meta) throw Error('Report abhi PC se nahi aayi'); const ws0 = st.ws; if (wholesale != null) st.ws = !!wholesale; try { const X = index(), a = /^\d{4}-\d\d-\d\d$/.test(from || '') ? from : X.days[X.days.length - 1], b = /^\d{4}-\d\d-\d\d$/.test(to || '') ? to : a, { rows, T } = agg(a, b), L = rows.filter(r => !r.noCost).sort((x, y) => y.pf - x.pf);

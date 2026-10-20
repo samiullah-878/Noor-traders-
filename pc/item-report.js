@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  item-report.js  v1.5 (2026-10-19: 🧾 stock fraq / ginti farq bill nafa + bikri se BAHAR — party naam saaf karke + Description "Stock ginti farq") · v1.4 (2026-10-17: 💰 asal nafa — har sale bill TotalSale − COGS -> posStats/nafa-<mahina>-<k>, aaj ka irep-today.nb) · v1.3 (2026-10-17: ⚡ runToday — sirf AAJ ka data har 10 min posStats/irep-today (irep-today.js) · collect() alag) · v1.2 (2026-10-14: 💰 COMMISSION items (blueAccess/commission) — har din har Supply Man kitne packet -> posStats/irep-comm) · v1.1 (2026-10-14: Firestore list-ke-andar-list nahi leta — items ab JSON string 'j' mein, hissa ~600 KB tak) · v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
+//  item-report.js  v1.7 (2026-10-20: koi array nahi, har doc alag, poori galti irep-err mein) · v1.5 (2026-10-19: 🧾 stock fraq / ginti farq bill nafa + bikri se BAHAR — party naam saaf karke + Description "Stock ginti farq") · v1.4 (2026-10-17: 💰 asal nafa — har sale bill TotalSale − COGS -> posStats/nafa-<mahina>-<k>, aaj ka irep-today.nb) · v1.3 (2026-10-17: ⚡ runToday — sirf AAJ ka data har 10 min posStats/irep-today (irep-today.js) · collect() alag) · v1.2 (2026-10-14: 💰 COMMISSION items (blueAccess/commission) — har din har Supply Man kitne packet -> posStats/irep-comm) · v1.1 (2026-10-14: Firestore list-ke-andar-list nahi leta — items ab JSON string 'j' mein, hissa ~600 KB tak) · v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
 //  Malik: "poore month ka actual data — 1–10, 10–20, 20–30, poora mahina, week wise; har item kaun si bik rahi, kin dino / hafton
 //         mein zyada, un par nafa kitna — chart, click par aage data".
 //  sales-stats.js (har ghante) ke aakhir mein chalta hai: run({ pool, sql, db }). SQL mein KUCH NAHI likhta — sirf SELECT.
@@ -128,14 +128,15 @@ async function run({ pool, sql, db, log = console.log, now = new Date() }) {
   const chunks = []; let cur = [], size = 2;
   for (const e of all) { const n = Buffer.byteLength(JSON.stringify(e)) + 1; if (cur.length && size + n > MAXB) { chunks.push(cur); cur = []; size = 2; } cur.push(e); size += n; }
   if (cur.length) chunks.push(cur);
-  const b = db.batch();
-  if (comm) b.set(col.doc('irep-comm'), { j: JSON.stringify(comm), at: Date.now() });
-  chunks.forEach((items, k) => b.set(col.doc('irep-' + k), { j: JSON.stringify(items), n: items.length, at: Date.now() }));
-  const nafa = {};   // v1.4: { 'YYYY-MM': hisse }
-  // v1.5: nafa ALAG (pehle nafa commit fail = poori report ruk jati thi) — report pehle, nafa baad mein apni try mein
-  if (NF) for (const [mon, o] of NF) nafa[mon] = nafaChunks(o).length;
-  b.set(col.doc('irep-meta'), { at: Date.now(), from: days[0], to: days[days.length - 1], days, n: all.length, chunks: chunks.length, ws: wsNames.flat(3).map(String).slice(0, 10), ver: '1.6', comm: !!comm, ...(NF ? { nafa } : {}), bytes: chunks.reduce((s, c) => s + Buffer.byteLength(JSON.stringify(c)), 0) });
-  try { await b.commit(); } catch (e) { if (!/INVALID_ARGUMENT/.test(String(e?.message))) throw e; log('⚠️ meta commit: ' + e.message + ' — ws ke baghair dobara'); const b2 = db.batch(); if (comm) b2.set(col.doc('irep-comm'), { j: JSON.stringify(comm), at: Date.now() }); chunks.forEach((items, k) => b2.set(col.doc('irep-' + k), { j: JSON.stringify(items), n: items.length, at: Date.now() })); b2.set(col.doc('irep-meta'), { at: Date.now(), from: days[0], to: days[days.length - 1], days: days.map(String), n: all.length, chunks: chunks.length, ws: [], ver: '1.6', comm: !!comm, ...(NF ? { nafa } : {}) }); await b2.commit(); }   // v1.6
+  // v1.7 (2026-10-20): FIX — phir 'INVALID_ARGUMENT: Property array contains an invalid nested entity' (4 din report ruki). Ab Firestore mein KOI array nahi
+  //   (days / ws = JSON text: dj / wsj), har doc ALAG save (ek fail = baqi bach jayein) aur fail ki POORI wajah posStats/irep-err {at, doc, msg} mein (app dikhati hai).
+  const nafa = {}; if (NF) for (const [mon, o] of NF) nafa[mon] = nafaChunks(o).length;
+  const errs = [], put = async (id, data) => { try { await col.doc(id).set(data); } catch (e) { errs.push(id + ': ' + String(e?.message || e)); log('⚠️ ' + id + ' save nahi: ' + (e?.message || e)); } };
+  if (comm) await put('irep-comm', { j: JSON.stringify(comm), at: Date.now() });
+  for (let k = 0; k < chunks.length; k++) await put('irep-' + k, { j: JSON.stringify(chunks[k]), n: chunks[k].length, at: Date.now() });
+  await put('irep-meta', { at: Date.now(), from: days[0], to: days[days.length - 1], dj: JSON.stringify(days.map(String)), n: all.length, chunks: chunks.length, wsj: JSON.stringify(wsNames.flat(3).map(String).slice(0, 10)), ver: '1.7', comm: !!comm, nj: JSON.stringify(NF ? nafa : {}), bytes: chunks.reduce((s, c) => s + Buffer.byteLength(JSON.stringify(c)), 0) });
+  try { await col.doc('irep-err').set({ at: Date.now(), msg: errs.join(' | ').slice(0, 1500), n: errs.length }); } catch {}
+  if (errs.length) throw new Error(errs[0].slice(0, 400));
   if (NF) { try { const nb = db.batch(); for (const [mon, o] of NF) nafaChunks(o).forEach((j, k) => nb.set(col.doc(`nafa-${mon}-${k}`), { j, at: Date.now() })); await nb.commit(); } catch (e) { log('💰 nafa save nahi hua (report ban gayi): ' + e.message); NF = null; } }
   try { const old = await col.get(); for (const d of old.docs) { const m = /^irep-(\d+)$/.exec(d.id), n = /^nafa-(\d{4}-\d{2})-(\d+)$/.exec(d.id); if ((m && Number(m[1]) >= chunks.length) || (n && NF && !(Number(n[2]) < (nafa[n[1]] || 0)))) await d.ref.delete(); } } catch {}
   log(new Date().toLocaleString('en-PK') + ' — 📊 item report: ' + all.length + ' items, ' + days.length + ' din, ' + chunks.length + ' hisse, ' + Math.round((Date.now() - t0) / 1000) + 's');
