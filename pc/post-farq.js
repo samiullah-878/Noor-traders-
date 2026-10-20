@@ -1,3 +1,4 @@
+// v17.1 (2026-10-20): fail ki WAJAH app ko (_bandDone.fail[id] = {n, why}) + app ka 🔁 dobara (stockCount/_hidden.retry[id] = ts → fail reset).
 // v17 (2026-10-20): band ka jawab app ko — stockCount/_bandDone {items:{id:{at,code,name,bills}}, fail:{id:n}} har bandOnce ke baad (badla ho to). App: '⏳ PC baqi' list, ✓ POS inactive, ❌ 3 dafa fail.
 // v16 (2026-10-19): malik — "ginti ke baad sale ho to bhi bill bane": late rok sirf jab stockCount/_late {on: true} (app ⚙️ chip, default BAND).
 //   stockAt pehle se ginti ke lamhe ka POS stock (ledger) nikalta hai — baad ki sale farq nahi bigarti.
@@ -676,18 +677,18 @@ let bandDoneLast = '';
 async function pushBandDone(st) {   // v17: app ko batao kis ka kaam ho gaya (purane = feature se pehle ke, unhe bhi "done" gino)
   const items = {}; for (const id of st.old || []) items[id] = { at: 0, note: 'purana' };
   for (const [id, d] of Object.entries(st.done || {})) items[id] = { at: Number(d.at) || 0, code: String(d.code || ''), name: String(d.name || '').slice(0, 80), bills: (d.bills || []).slice(0, 5).map(String), ...(d.note ? { note: String(d.note) } : {}) };
-  const fail = {}; for (const [id, n] of Object.entries(st.fail || {})) fail[id] = Number(n) || 0;
+  const fail = {}; for (const [id, n] of Object.entries(st.fail || {})) fail[id] = { n: Number(n) || 0, why: String(st.why?.[id] || '').slice(0, 160) };
   const j = JSON.stringify({ items, fail }); if (j === bandDoneLast) return; bandDoneLast = j;
   try { await countCol.doc('_bandDone').set({ items, fail, updatedAt: Date.now() }); } catch (e) { bandDoneLast = ''; log('_bandDone likhne mein masla: ' + e.message); }
 }
 const bandDay = () => { const x = new Date(), q = n => String(n).padStart(2, '0'); return `${x.getFullYear()}-${q(x.getMonth() + 1)}-${q(x.getDate())}`; };
 const hiddenIds = d => { const m = d.exists ? d.data().items || {} : {}; return new Set(Object.keys(m).filter(k => m[k])); };
-let bandHidden = null;
+let bandHidden = null, bandRetry = {};
 let hasActiveCol = null;
 
 function watchBand() {
   countCol.doc('_hidden').onSnapshot(d => {
-    bandHidden = hiddenIds(d);
+    bandHidden = hiddenIds(d); bandRetry = (d.exists && d.data().retry) || {};
     if (!readBand()) {
       writeBand({ old: [...bandHidden], done: {}, fail: {} });
       log(`Band feature chalu: ${bandHidden.size} purane band items ko nahi chheda jayega`);
@@ -777,7 +778,7 @@ async function bandProcess(pool, ids, st) {
       }
     } catch (e) {
       log(`Band: ${L.branchName} stock 0 NAHI HUA - ${e.message}`);
-      lines.forEach(l => failed.add(l.itemId));
+      st.why = st.why || {}; lines.forEach(l => { failed.add(l.itemId); st.why[String(l.itemId)] = `${L.branchName}: ${e.message}`; });
     }
   }
   const canOff = await activeCol(pool);
@@ -787,11 +788,11 @@ async function bandProcess(pool, ids, st) {
     try {
       if (canOff && it.active) await pool.request().input('id', sql.Int, it.id).query('UPDATE dbo.Items SET IsActive = 0 WHERE ItemID = @id');
       st.done[id] = { at: Date.now(), code: it.code, name: it.name, wasActive: it.active, bills: bills[it.id] || [] };
-      delete st.fail[id];
+      delete st.fail[id]; if (st.why) delete st.why[id];
       st.old = (st.old || []).filter(x => x !== id);
       log(`Band: ${it.code} ${it.name} - POS mein inactive`);
     } catch (e) {
-      st.fail[id] = (st.fail[id] || 0) + 1;
+      st.fail[id] = (st.fail[id] || 0) + 1; st.why = st.why || {}; st.why[id] = 'inactive: ' + e.message;
       log(`Band: ${it.code} inactive NAHI HUA - ${e.message}`);
     }
   }
@@ -806,6 +807,7 @@ async function bandOnce() {
   st.old = (st.old || []).filter(id => bandHidden.has(id));         // tick hata to "purana" nahi raha
   const back = Object.keys(st.done).filter(id => !bandHidden.has(id));
   for (const id of Object.keys(st.fail)) if (!bandHidden.has(id)) delete st.fail[id];
+  st.retried = st.retried || {}; for (const [id, ts] of Object.entries(bandRetry)) { if (Number(ts) > (st.retried[id] || 0)) { st.retried[id] = Number(ts); if (st.fail[id]) { delete st.fail[id]; log(`Band: ${id} app se dobara koshish`); } } }   // v17.1
   const old = new Set(st.old);
   const fresh = [...bandHidden].filter(id => !old.has(id) && !st.done[id] && (st.fail[id] || 0) < 3);
   if (!fresh.length && !back.length) { if (JSON.stringify(st) !== before) writeBand(st); await pushBandDone(st); return; }
