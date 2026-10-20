@@ -1,5 +1,5 @@
 // =========================================================
-//  item-post.js  v1.3 (2026-10-18: ⚠️ PackQty kabhi 0 nahi — POS counter sale 'Divide by zero' (kala tail khula). Ab kam az kam 1; purane app-bane items
+//  item-post.js  v1.4 (2026-10-20: POS update → proc ke naye params (proc-fill.js) + 'expects parameter' wali failed jobs khud dobara) · v1.3 (2026-10-18: ⚠️ PackQty kabhi 0 nahi — POS counter sale 'Divide by zero' (kala tail khula). Ab kam az kam 1; purane app-bane items
 //                                   jin ka PackQty 0 hai EK dafa 1 kar deta hai (item-fix-pack0.done) + log) · v1.2 (2026-10-15: 🔔 PC band tha to item banne / na banne ki phone par khabar) · v1  (2026-09-23) — Blue Khata app se POS mein ITEM banana / badalna
 //  v1.1 (2026-10-08): ⚠️ RATE KI GHALTI THEEK — POS Items mein sab rate FI PIECE hain (POS form CTN khana = rate × pack khud
 //      dikhata hai). v1 SaleRate mein R CTN aur PurchaseRate mein khareed × pack likhti thi (mujhid ghee 1kg: R Cotton 136,800,
@@ -30,6 +30,7 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 const sql = require('mssql');
+require('./proc-fill.js').patch(sql, m => console.log(`[${new Date().toLocaleTimeString()}]`, m));   // 2026-10-20: POS update ke naye proc params khud (proc-fill.js)
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 
@@ -316,7 +317,9 @@ lock.on('listening', async () => {
   try { await getPool(); log('SQL se jur gaya'); } catch (e) { log('SQL masla: ' + e.message); process.exit(1); }
   try { await repairV1(); } catch (e) { log('🔧 purane rate theek nahi hue (agli dafa phir): ' + e.message); }
   try { await repairPack0(); } catch (e) { log('🔧 PackQty-0 theek nahi hua (agli dafa phir): ' + e.message); }
-  log('item-post v1.3 chal raha hai — app se item banane / badalne ka intezar…');
+  // v1.4 (2026-10-20): POS update ke baad "expects parameter" se failed jobs (7 din) khud dobara 'new' — proc-fill ab naye params bhar deta hai
+  try { const fs = await col.where('status', '==', 'failed').get(); let n = 0; for (const d of fs.docs) { const x = d.data() || {}; if (/expects parameter/i.test(String(x.error || '')) && Number(x.at) > Date.now() - 7 * 864e5) { await d.ref.update({ status: 'new', error: '', retryAt: Date.now() }); n++; } } if (n) log(`🔁 ${n} failed item jobs (POS update wale) dobara line mein`); } catch (e) { log('failed jobs dobara nahi lage: ' + e.message); }
+  log('item-post v1.4 chal raha hai — app se item banane / badalne ka intezar…');
   col.where('status', '==', 'new').onSnapshot(
     s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handleJob(c.doc)); }); },
     e => { log('Firestore masla: ' + e.message); process.exit(1); });

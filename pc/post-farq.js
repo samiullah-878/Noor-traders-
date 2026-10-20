@@ -21,6 +21,7 @@ const os = require('os');
 const path = require('path');
 const readline = require('readline');
 const sql = require('mssql');
+require('./proc-fill.js').patch(sql, m => console.log(`[${new Date().toLocaleTimeString()}]`, m));   // 2026-10-20: POS update ke naye proc params khud (proc-fill.js)
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 

@@ -46,3 +46,4 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 4. PC file badle to `pc/manifest.json` version + sha256.
 5. `node --check` (copy as .mjs) + tests; phir commit/push, deploy (`gh run list -R samiullah-878/Noor-traders- -L 1`) ka intezar.
 6. Malik ko chhota Roman Urdu summary: kya badla, "app Update karein", AI hai ya nahi.
+- **POS update** (Cognitive) ke baad procedures mein naye params aa sakte hain ("expects parameter … was not supplied"). `pc/proc-fill.js` har `usp_` call se pehle sys.parameters dekh kar anjaan params 0 / '' / NULL bhar deta hai — har POS-likhne wali script mein `require('./proc-fill.js').patch(sql, log)`. Nayi script banao to ye line zaroor (20 Oct 2026: @IsAdvanceTaxable se naya item ruk gaya tha).
