@@ -42,7 +42,7 @@ function items() {
   for (const el of root.querySelectorAll('[data-mn],[data-mn-seg],[data-mn-box]')) {
     const type = el.hasAttribute('data-mn-box') ? 'box' : el.hasAttribute('data-mn-seg') ? 'seg' : 'btn';
     const k = el.getAttribute(type === 'box' ? 'data-mn-box' : type === 'seg' ? 'data-mn-seg' : 'data-mn');
-    if (!k || seen.has(k)) continue; if (type === 'btn' && (el.disabled || el.closest('[hidden]'))) continue;
+    if (!k || seen.has(k)) continue; if (el.closest('[hidden]') || (type === 'btn' && el.disabled)) continue;
     seen.add(k);
     const d = el.dataset, t = clean(d.mnT || (type === 'btn' ? el.textContent : '')) || k;
     const it = { k, type, el, i: d.mnI || '', t, s: d.mnS || '', g: d.mnG || '', n: d.mnN || '', on: type === 'btn' ? ON(el) : type === 'box' ? document.body.dataset.mnf === k : false };
@@ -203,17 +203,20 @@ function paintBadge() {
 const ML = 'sam-marzi';
 const FS = [['s', 'Chhota'], ['m', 'Aam'], ['l', 'Bara'], ['xl', 'Bohat bara']], HS = [['s', 'Chhoti'], ['m', 'Aam'], ['l', 'Bari'], ['xl', 'Bohat bari']];
 const TX = ['', '#10192b', '#1d3466', '#0f5132', '#7c2d12', '#4c1d95', '#000000'], HX = ['', '#10192b', '#1d3466', '#b45309', '#15803d', '#b91c1c', '#6d28d9'];
+const HR = [['', 'Chhota'], ['big', 'Bara']], NV = [['', '☰ se (chhupe)'], ['all', 'Hamesha dikhao']];   // v2.105.0: 📊 upar ka card · 🧭 screen chips
 const mGet = () => { try { const o = JSON.parse(localStorage.getItem(ML) || '{}'); return o && typeof o === 'object' ? o : {}; } catch { return {}; } };
 function mApply(m = mGet()) {
   const h = document.documentElement;
   for (const [k, a] of [['fs', 'fs'], ['hs', 'hs']]) { const v = m[k]; if (v && v !== 'm' && ['s', 'l', 'xl'].includes(v)) h.dataset[a] = v; else delete h.dataset[a]; }
   if (m.tx && /^#[0-9a-f]{6}$/i.test(m.tx)) { h.dataset.tx = '1'; h.style.setProperty('--mn-tx', m.tx); } else { delete h.dataset.tx; h.style.removeProperty('--mn-tx'); }
   if (m.hx && /^#[0-9a-f]{6}$/i.test(m.hx)) { h.dataset.hx = '1'; h.style.setProperty('--mn-hx', m.hx); } else { delete h.dataset.hx; h.style.removeProperty('--mn-hx'); }
+  if (m.hero === 'big') h.dataset.hero = 'big'; else delete h.dataset.hero;
+  if (m.nav === 'all') h.dataset.nav = 'all'; else delete h.dataset.nav;
 }
 function mSet(patch, at = Date.now()) { const m = { ...mGet(), ...patch, at }; try { localStorage.setItem(ML, JSON.stringify(m)); } catch {} mApply(m); return m; }
 export function marziCloud(mz, mAt) {   // app.js listenLook se — malik ne "sab par" lagaya ho to (naya ho tab)
   if (!mz || typeof mz !== 'object' || !(Number(mAt) > 0)) return; if (Number(mAt) <= (Number(mGet().at) || 0)) return;
-  mSet({ fs: mz.fs || 'm', hs: mz.hs || 'm', tx: mz.tx || '', hx: mz.hx || '' }, Number(mAt));
+  mSet({ fs: mz.fs || 'm', hs: mz.hs || 'm', tx: mz.tx || '', hx: mz.hx || '', hero: mz.hero === 'big' ? 'big' : '', nav: mz.nav === 'all' ? 'all' : '' }, Number(mAt));
 }
 function marziHTML() {
   const m = mGet(), dk = document.documentElement.classList.contains('dk');
@@ -222,6 +225,8 @@ function marziHTML() {
   return `<h3 class="mn-h">🔠 Apni marzi — likhai</h3><p class="mn-sub">Sirf is phone par · foran lagta hai</p>
   <div class="mn-gh">🔠 Likhai ka size</div><div class="mz-row">${chips(FS, 'fs', m.fs)}</div>
   <div class="mn-gh">🔡 Headings (naam / sar-khi) ka size</div><div class="mz-row">${chips(HS, 'hs', m.hs)}</div>
+  <div class="mn-gh">📊 Upar ka card (Purchase, Khata, Daily…)</div><div class="mz-row">${HR.map(([v, t]) => `<button type="button" class="${(m.hero || '') === v ? 'is-in' : ''}" data-mz="hero|${v}">${t}</button>`).join('')}</div>
+  <div class="mn-gh">🧭 Screen chips (Khata, Purchase…)</div><div class="mz-row">${NV.map(([v, t]) => `<button type="button" class="${(m.nav || '') === v ? 'is-in' : ''}" data-mz="nav|${v}">${t}</button>`).join('')}</div>
   ${dk ? '<p class="mn-sub">🌙 Andheri look par rang nahi badalte — Settings → 🎨 Look mein roshan look chunein</p>' : `<div class="mn-gh">🖍 Likhai ka rang</div><div class="mz-row">${sw(TX, 'tx', m.tx)}</div>
   <div class="mn-gh">🎯 Headings ka rang</div><div class="mz-row">${sw(HX, 'hx', m.hx)}</div>`}
   <div class="mz-prev"><b class="mz-ph">Arman palydar</b><span>Lene hain Rs 13,000 · aaj</span><small>↑ aisa nazar aayega</small></div>
@@ -230,19 +235,38 @@ function marziHTML() {
 function marziOpen() { ensureRoot(); $('mnBody').innerHTML = marziHTML(); root.hidden = false; document.documentElement.classList.add('mn-open'); }
 document.addEventListener('click', e => {
   const b = e.target.closest?.('[data-mz]'); if (!b) return; const [k, v] = b.dataset.mz.split('|');
-  if (k === 'reset') { mSet({ fs: 'm', hs: 'm', tx: '', hx: '' }); }
-  else if (k === 'all') { const m = mGet(); if (!H.cloud?.setMarzi) { H.notice?.('App update karein'); return; } H.cloud.setMarzi({ fs: m.fs || 'm', hs: m.hs || 'm', tx: m.tx || '', hx: m.hx || '' }).then(() => H.notice?.('👑 Sab mulazimon ke phone par bhi lag jayega')).catch(er => H.notice?.('Nahi hua: ' + (er?.message || er))); return; }
+  if (k === 'reset') { mSet({ fs: 'm', hs: 'm', tx: '', hx: '', hero: '', nav: '' }); }
+  else if (k === 'all') { const m = mGet(); if (!H.cloud?.setMarzi) { H.notice?.('App update karein'); return; } H.cloud.setMarzi({ fs: m.fs || 'm', hs: m.hs || 'm', tx: m.tx || '', hx: m.hx || '', hero: m.hero || '', nav: m.nav || '' }).then(() => H.notice?.('👑 Sab mulazimon ke phone par bhi lag jayega')).catch(er => H.notice?.('Nahi hua: ' + (er?.message || er))); return; }
   else mSet({ [k]: v });
   if (isOpen()) $('mnBody').innerHTML = marziHTML();
 });
 document.addEventListener('click', e => { if (e.target.closest?.('#marziBtn')) { try { $('dialog')?.close(); } catch {} marziOpen(); } });
 
+// ---------------- ☰ screen chips (v2.105.0 — malik: "chips oper top par chhote · screen ke andar chhupe rahein · upar baayein se khulein") ----------------
+const navOpen = () => document.documentElement.classList.contains('nav-open');
+function navSet(on) { document.documentElement.classList.toggle('nav-open', !!on); paintNavBtn(); }
+function navBtnSetup() {
+  const top = document.querySelector('main>header .top'); if (!top || $('navBtn')) return;
+  const b = document.createElement('button'); b.type = 'button'; b.id = 'navBtn'; b.className = 'round nav-btn'; b.setAttribute('aria-label', 'Screens badlein'); b.title = 'Screens badlein'; b.textContent = '☰';
+  top.insertBefore(b, top.firstChild);
+  b.addEventListener('click', () => navSet(!navOpen()));
+  document.querySelector('.app-nav')?.addEventListener('click', e => { if (e.target.closest?.('button')) setTimeout(() => navSet(false), 0); });
+}
+function paintNavBtn() {
+  const b = $('navBtn'); if (!b) return;
+  const L = [...document.querySelectorAll('.app-nav button')].filter(x => !x.hidden && x.id !== 'navAll');
+  b.hidden = L.length < 2; b.classList.toggle('is-in', navOpen());
+  let n = 0; for (const x of L) if (x.classList.contains('has-count')) n += Number(x.dataset.count) || 0;
+  let s = b.querySelector('.mn-badge');
+  if (!n || navOpen()) { s?.remove(); return; }
+  if (!s) { s = document.createElement('span'); s.className = 'mn-badge'; b.appendChild(s); } s.textContent = n > 99 ? '99+' : String(n);
+}
 // ---------------- setup ----------------
 let moT = 0;
 const later = () => { clearTimeout(moT); moT = setTimeout(() => { shellRoute(); if (F) { const x = find(F); if (!x) unfocus(); else fbar(x); } repaintOpen(); }, 120); };
-export function shellRoute() { const v = scr(); if (shellRoute.v !== v) { shellRoute.v = v; if (F) unfocus(); lastSub = ''; } paintSub(); paintBadge(); }
+export function shellRoute() { const v = scr(); if (shellRoute.v !== v) { shellRoute.v = v; if (F) unfocus(); lastSub = ''; if (navOpen()) navSet(false); } paintSub(); paintBadge(); paintNavBtn(); }
 export function shellSetup(h = {}) {
-  H = h; mApply();
+  H = h; mApply(); navBtnSetup();
   const st = $('settings');
   if (st && !st.dataset.mn0) { st.dataset.mn0 = '1'; const old = st.onclick; H.openSettings = H.openSettings || (() => old?.call(st)); st.onclick = () => { if (isOpen()) close(); else open(); }; st.setAttribute('aria-label', 'Is screen ke kaam'); st.title = 'Is screen ke kaam'; }
   // header ka ‹ — focus ho to pehle focus se wapas
@@ -264,11 +288,13 @@ agentRegister([
     summary: a => `⋮ → ${a.kaam}`, run({ kaam }) { const x = pick(kaam); if (!x) throw Error('Is screen par yeh kaam nahi: ' + kaam); go(x.k); return '✓ ' + x.t + ' khul gaya'; } },
   { name: 'chip_pin', desc: 'Screen ke ⋮ wale kaam ko screen par chhota chip bana kar lagao (pin=true) ya hatao (pin=false) — mobile app jaisa.', params: O_({ kaam: S_, pin: B_ }, ['kaam']),
     summary: a => `📌 ${a.kaam} ${a.pin === false ? 'hatao' : 'lagao'}`, run({ kaam, pin = true }) { const x = pick(kaam); if (!x) throw Error('Is screen par yeh kaam nahi: ' + kaam); pinToggle(scr(), x.k, pin !== false); lastSub = ''; paintSub(); return pin === false ? '✓ Hata diya' : '✓ Screen par lag gaya'; } },
-  { name: 'likhai_marzi', desc: 'Is phone par likhai ka size (Chhota/Aam/Bara/Bohat bara), headings ka size, likhai ka rang, headings ka rang (hex jaise #1d3466; khali = pehle jaisa).', params: O_({ size: S_, heading: S_, rang: S_, heading_rang: S_ }),
+  { name: 'likhai_marzi', desc: 'Is phone par likhai ka size (Chhota/Aam/Bara/Bohat bara), headings ka size, likhai ka rang, headings ka rang (hex jaise #1d3466; khali = pehle jaisa), upar ka card (Chhota/Bara), screen chips (chhupe/hamesha).', params: O_({ size: S_, heading: S_, rang: S_, heading_rang: S_, card: S_, screen_chips: S_ }),
     summary: a => '🔠 ' + Object.entries(a).filter(([, v]) => v != null && v !== '').map(([k, v]) => k + ' ' + v).join(' · '),
     run(a) { const lv = (v, L) => { const f = fold(v); const hit = L.find(([k, t]) => fold(t) === f || k === f); return hit ? hit[0] : null; }; const p = {};
       if (a.size) { const v = lv(a.size, FS); if (!v) throw Error('Size: Chhota / Aam / Bara / Bohat bara'); p.fs = v; }
       if (a.heading) { const v = lv(a.heading, HS); if (!v) throw Error('Heading: Chhoti / Aam / Bari / Bohat bari'); p.hs = v; }
       for (const [k, kk] of [['rang', 'tx'], ['heading_rang', 'hx']]) if (a[k] != null) { const v = String(a[k]).trim(); if (v && !/^#[0-9a-f]{6}$/i.test(v)) throw Error('Rang hex mein (#1d3466)'); p[kk] = v; }
+      if (a.card) { const f = fold(a.card); p.hero = /bar|big/.test(f) ? 'big' : ''; }
+      if (a.screen_chips) { const f = fold(a.screen_chips); p.nav = /hamesha|all|dikha/.test(f) ? 'all' : ''; }
       if (!Object.keys(p).length) throw Error('Kya badalna hai?'); mSet(p); return '✓ Lag gaya'; } },
 ]);

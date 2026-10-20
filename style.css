@@ -4590,3 +4590,178 @@ html body main #list .pu-dh{background:var(--surf2,#f4f6fb)!important;color:var(
 html.dk body main #list .pu-dh{background:rgba(10,18,35,.85)!important;color:#e6edf7!important}
 /* v2.104.0: roshan look mein neeche ke rangeen buttons par likhai gehri thi (html.lt button {color: ink !important}) — ab safed (day-acts chips pehle jaise) */
 html.lt body footer#actions:not(.day-acts) button{color:#fff!important}
+
+/* =====================================================================================================
+   v2.105.0 📱 CHHOTA HEADER + CHHOTE CHARTS + CHIPS UPAR (malik: "jitni bhi chips hain small size mein upar top par ·
+   screen ke andar screen chips chhupe, upar baayein se khulein · upar ke bare card aadhe · AI agent upar se hatao").
+   Sirf phone (<1100px). html[data-hero="big"] = purane bare card (🔠 Apni marzi) · html[data-nav="all"] = screen chips hamesha.
+   ===================================================================================================== */
+@media (min-width:1100px){html body #navBtn{display:none!important}html body #summary .dy-strip{display:none!important}}
+@media (max-width:1099.98px){
+  /* ---- ☰ screen chips: band, ☰ se khulte · ek hi line ---- */
+  html:not(.nav-open):not([data-nav="all"]) body main>header .app-nav{display:none!important}
+  html body main>header .app-nav.app-nav.app-nav,html body main>header .app-nav.app-nav.app-nav:has(.nav-all:not([hidden])){flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none;margin:6px -10px 2px!important;padding:2px 10px 4px!important;gap:6px!important}
+  html body main>header .app-nav::-webkit-scrollbar{display:none}
+  html body main>header .app-nav button{flex:0 0 auto!important}
+  html body main>header .app-nav button.nav-all{order:-1!important}
+  html body main>header .app-nav button.desk-on{background:#fff!important;color:#1d3466!important;border-color:#fff!important}
+  html body main>header .top #navBtn{display:inline-flex;align-items:center;justify-content:center;position:relative;overflow:visible;min-height:40px!important;min-width:40px;padding:0 10px!important;font-size:20px!important;border-radius:12px!important;color:#fff!important;background:rgba(255,255,255,.13)!important;border:1px solid rgba(255,255,255,.24)!important;box-shadow:none!important}
+  html.nav-open body main>header .top #navBtn{background:#fff!important;color:#1d3466!important}
+  html body main>header .top #navBtn[hidden]{display:none!important}
+  html body main>header #agentBar{display:none!important}
+  /* ---- filter patti (Purchase / Khata): "⋮ se badlein" ---- */
+  html body main :is(#list,.pu) .pu-flt{display:flex!important;align-items:center;gap:6px;width:100%;min-height:42px!important;margin:0 0 8px;padding:7px 10px 7px 14px!important;border-radius:14px!important;background:var(--surf,#fff)!important;color:var(--ink,#16274a)!important;border:1px solid var(--line,#dfe5f0)!important;box-shadow:0 2px 10px rgba(20,40,80,.06)!important;font-size:13px!important;font-weight:700!important;text-align:left}
+  html body main :is(#list,.pu) .pu-flt i{margin-left:auto;font-style:normal;font-size:11.5px;font-weight:800;color:var(--accent-ink,#2563eb);background:var(--surf2,#eef3ff);padding:4px 10px;border-radius:999px;white-space:nowrap}
+  html.dk body main :is(#list,.pu) .pu-flt{background:var(--glass2,rgba(255,255,255,.08))!important;color:var(--ink,#e8eeff)!important;border-color:var(--line,rgba(255,255,255,.16))!important;box-shadow:none!important}
+  /* khaali dabbe (sab kaam ⋮ mein chale gaye) */
+  html body:not(.mnf) main .account-tools:not(:has(> :not([data-mn]), > [data-mn-keep])){display:none!important}
+  /* toolbar: ⇩ PDF ⋮ mein — search poori chaurai */
+  html body main .toolbar .search{flex:1 1 auto!important}
+}
+
+/* ===== 📊 chhote charts (phone · data-hero != big) ===== */
+@media (max-width:1099.98px){
+  /* --- chips ki har qatar: ek line, side par khiskao, chhoti --- */
+  html:not([data-hero="big"]) body :is(#summary,#list,#dialogBody) :is(.mchips,.rk-nb,.sk-gd,.sk-chips,.fc-per,.sc-state,.party-chips){display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none;gap:6px!important;padding-bottom:2px!important;align-items:center}
+  html:not([data-hero="big"]) body :is(#summary,#list,#dialogBody) :is(.mchips,.rk-nb,.sk-gd,.sk-chips,.fc-per,.sc-state,.party-chips)::-webkit-scrollbar{display:none}
+  html:not([data-hero="big"]) body :is(#summary,#list,#dialogBody) :is(.mchips,.rk-nb,.sk-gd,.sk-chips,.fc-per,.sc-state,.party-chips)>*{flex:0 0 auto!important;white-space:nowrap!important}
+  html:not([data-hero="big"]) body :is(#summary,#list,#dialogBody) :is(.mchips,.rk-nb,.sk-gd,.sk-chips,.fc-per,.party-chips)>button{min-height:30px!important;padding:3px 11px!important;font-size:12.5px!important;border-radius:999px!important;width:auto!important}
+  html:not([data-hero="big"]) body :is(#summary,#list,#dialogBody) .sc-state span{font-size:11px!important;padding:2px 8px!important}
+  /* --- Khata: Customers / Suppliers --- */
+  html:not([data-hero="big"]) body main header #summary .bq-grid{gap:8px!important}
+  html:not([data-hero="big"]) body main header #summary .bq-card{padding:7px 10px!important;gap:0!important;border-radius:14px!important}
+  html:not([data-hero="big"]) body main header #summary .bq-card .bq-h{font-size:11.5px!important;margin:0 0 2px!important}
+  html:not([data-hero="big"]) body main header #summary .bq-card small{font-size:10.5px!important;line-height:1.25!important}
+  html:not([data-hero="big"]) body main header #summary .bq-card strong{font-size:17px!important;line-height:1.2!important}
+  html:not([data-hero="big"]) body main header #summary .bq-card .bq-tip{display:none!important}
+  html:not([data-hero="big"]) body main header #summary .bq-other{font-size:11px!important}
+  /* --- Purchase --- */
+  html:not([data-hero="big"]) body main header #summary .puh{padding:10px 12px!important;border-radius:18px!important}
+  html:not([data-hero="big"]) body main header #summary .puh::after{display:none!important}
+  html:not([data-hero="big"]) body main header #summary .puh :is(.puh-ic,.puh-head small){display:none!important}
+  html:not([data-hero="big"]) body main header #summary .puh .puh-head b{font-size:13.5px!important}
+  html:not([data-hero="big"]) body main header #summary .puh .puh-pill{font-size:11px!important;padding:2px 9px!important}
+  html:not([data-hero="big"]) body main header #summary .puh .puh-bal{margin:2px 0 4px!important}
+  html:not([data-hero="big"]) body main header #summary .puh .puh-bal strong{font-size:21px!important}
+  html:not([data-hero="big"]) body main header #summary .puh .puh-bar{height:4px!important;margin-bottom:6px!important}
+  html:not([data-hero="big"]) body main header #summary .puh .puh-split{gap:6px!important}
+  html:not([data-hero="big"]) body main header #summary .puh .puh-split>div{padding:4px 8px!important;gap:6px!important;border-radius:10px!important}
+  html:not([data-hero="big"]) body main header #summary .puh .puh-split span{width:auto!important;height:auto!important;font-size:13px!important;background:none!important;border:0!important}
+  html:not([data-hero="big"]) body main header #summary .puh .puh-split small{font-size:10.5px!important}
+  html:not([data-hero="big"]) body main header #summary .puh .puh-split b{font-size:12.5px!important}
+  /* --- Daily Sale: sara data EK chips ki line · sheet search ke foran neeche --- */
+  html:not([data-hero="big"]) body main header #summary.summary:has(.dy-strip){display:block!important;padding:6px 8px!important}
+  html:not([data-hero="big"]) body main header #summary:has(.dy-strip)>:not(.dy-strip){display:none!important}
+  html:not([data-hero="big"]) body main header #summary .dy-strip{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:1px 0}
+  html:not([data-hero="big"]) body main header #summary .dy-strip::-webkit-scrollbar{display:none}
+  html:not([data-hero="big"]) body main header #summary .dy-strip .dy-c{position:relative;flex:0 0 auto;display:flex!important;flex-direction:column;justify-content:center;gap:0;min-height:42px!important;padding:4px 11px!important;border-radius:12px!important;background:#fff!important;color:#13213f!important;border:1px solid #e3e8f2!important;box-shadow:none!important;text-align:left;font-weight:700!important;overflow:hidden}
+  html:not([data-hero="big"]) body main header #summary .dy-strip .dy-c small{font-size:10px!important;line-height:1.2;color:#5d6b88!important;font-weight:700;white-space:nowrap}
+  html:not([data-hero="big"]) body main header #summary .dy-strip .dy-c b{font-size:14px!important;line-height:1.2;white-space:nowrap;color:inherit!important}
+  html:not([data-hero="big"]) body main header #summary .dy-strip .dy-c.wait{background:#fff7e0!important;border-color:#f1dea6!important;color:#8a5a00!important}
+  html:not([data-hero="big"]) body main header #summary .dy-strip .dy-c.bad,html:not([data-hero="big"]) body main header #summary .dy-strip .dy-c.warn{background:#fdecec!important;border-color:#f6c1c1!important;color:#b42332!important}
+  html:not([data-hero="big"]) body main header #summary .dy-strip .dy-c.ok{background:#e7f7ee!important;border-color:#bfe8d0!important;color:#147548!important}
+  html:not([data-hero="big"]) body main header #summary .dy-strip .dy-date input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0;padding:0;border:0}
+  html.dk:not([data-hero="big"]) body main header #summary .dy-strip .dy-c:not(.wait):not(.bad):not(.warn):not(.ok){background:var(--glass2,rgba(255,255,255,.08))!important;color:var(--ink,#e8eeff)!important;border-color:var(--line,rgba(255,255,255,.16))!important}
+  html.dk:not([data-hero="big"]) body main header #summary .dy-strip .dy-c small{color:var(--ink2,#9fb0dc)!important}
+  html:not([data-hero="big"]) body main #list:has(.day-cols)>:is(label.dy-pick,p.dy-warnp,p.day-hint){display:none!important}
+  html:not([data-hero="big"]) body main #list .day-hint{display:none!important}
+  /* --- Factory / Item report (ir-hero) --- */
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .ir-hero{padding:10px 12px!important;border-radius:16px!important;margin:4px 0!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .ir-hero small{font-size:10px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .ir-hero>strong,html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .ir-hero .fc-hrow strong{font-size:18px!important;margin:0!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .ir-hero>span{font-size:11px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .fc-gear{min-height:32px!important;width:34px!important;padding:0!important;font-size:15px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .fc-per{margin-top:6px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .ir-kp{margin-top:6px!important;gap:6px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .ir-kp>div{padding:5px 8px!important;border-radius:10px!important;min-height:0!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .ir-kp b{font-size:13.5px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .ir-kp small{font-size:10px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .fc-tabs{margin:8px 0 6px!important;padding:3px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .fc-tabs button{min-height:40px!important;padding:3px 2px!important;font-size:11.5px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .fc-tabs button span{font-size:14px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .fc-bnew{grid-template-columns:1fr!important;margin:4px 0 8px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .fc-big{min-height:46px!important;padding:6px 12px!important;border-radius:14px!important;flex-direction:row!important;align-items:center!important;gap:10px!important;margin:0!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .fc-big .fc-ic{width:30px!important;height:30px!important;font-size:15px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .fc-big b{font-size:14px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .fc-big small{font-size:11px!important;margin:0!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .ir-head{gap:6px!important}
+  /* --- Transfer --- */
+  html:not([data-hero="big"]) body main .summary>div.thh.thh{padding:10px 12px!important;border-radius:18px!important}
+  html:not([data-hero="big"]) body main .summary>div.thh :is(.thh-ic,.thh-head small){display:none!important}
+  html:not([data-hero="big"]) body main .summary>div.thh .thh-head b{font-size:13.5px!important}
+  html:not([data-hero="big"]) body main .summary>div.thh .thh-pill{font-size:11px!important;padding:2px 9px!important}
+  html:not([data-hero="big"]) body main .summary>div.thh .thh-bal{margin:2px 0 6px!important}
+  html:not([data-hero="big"]) body main .summary>div.thh .thh-bal strong{font-size:20px!important}
+  html:not([data-hero="big"]) body main .summary>div.thh .thh-bal span{font-size:11px!important}
+  html:not([data-hero="big"]) body main .summary>div.thh .thh-stats{gap:6px!important}
+  html:not([data-hero="big"]) body main .summary>div.thh .thh-stats>div{padding:4px 7px!important;gap:5px!important;border-radius:10px!important;min-height:0!important}
+  html:not([data-hero="big"]) body main .summary>div.thh .thh-stats span{width:20px!important;height:20px!important;font-size:11px!important}
+  html:not([data-hero="big"]) body main .summary>div.thh .thh-stats small{font-size:9.5px!important}
+  html:not([data-hero="big"]) body main .summary>div.thh .thh-stats b{font-size:13px!important}
+  html:not([data-hero="big"]) body main #list .th-tiles{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;scrollbar-width:none;gap:6px!important;margin:0 0 8px}
+  html:not([data-hero="big"]) body main #list .th-tiles::-webkit-scrollbar{display:none}
+  html:not([data-hero="big"]) body main #list .th-tiles button.th-tile{flex:0 0 auto!important;flex-direction:row!important;align-items:center!important;gap:6px!important;min-height:38px!important;padding:4px 12px 4px 6px!important;border-radius:999px!important;width:auto!important}
+  html:not([data-hero="big"]) body main #list .th-tiles .th-tile span{width:26px!important;height:26px!important;font-size:14px!important;border-radius:999px!important}
+  html:not([data-hero="big"]) body main #list .th-tiles .th-tile b{font-size:12.5px!important;white-space:nowrap}
+  html:not([data-hero="big"]) body main #list .th-tiles .th-tile small{display:none!important}
+  /* --- Stock --- */
+  html:not([data-hero="big"]) body main .summary>.sc-top .sc-state{margin:0 0 6px!important}
+  html:not([data-hero="big"]) body main .stock-head.sk .sk-top{padding:8px 12px!important;gap:6px!important}
+  html:not([data-hero="big"]) body main .stock-head.sk .sk-hrow small{font-size:10px!important}
+  html:not([data-hero="big"]) body main .stock-head.sk .sk-hrow strong{font-size:16px!important}
+  html:not([data-hero="big"]) body main .stock-head.sk .sk-ico{min-height:36px!important;min-width:36px!important;padding:0!important;font-size:15px!important}
+  html:not([data-hero="big"]) body main .stock-head.sk .sk-sbox{min-height:38px!important}
+  html:not([data-hero="big"]) body main .stock-head.sk .sk-big{min-height:44px!important;padding:6px 12px!important;border-radius:14px!important;gap:8px!important}
+  html:not([data-hero="big"]) body main .stock-head.sk .sk-big .bi{width:30px!important;height:30px!important;font-size:15px!important}
+  html:not([data-hero="big"]) body main .stock-head.sk .sk-big b{font-size:13px!important}
+  html:not([data-hero="big"]) body main .stock-head.sk .sk-big small{font-size:10.5px!important}
+  html:not([data-hero="big"]) body main .stock-head.sk .sk-tiles{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;scrollbar-width:none;gap:6px!important}
+  html:not([data-hero="big"]) body main .stock-head.sk .sk-tiles::-webkit-scrollbar{display:none}
+  html:not([data-hero="big"]) body main .stock-head.sk .sk-tile{flex:0 0 auto!important;flex-direction:row!important;gap:5px!important;min-height:32px!important;padding:3px 11px 3px 8px!important;border-radius:999px!important;font-size:12px!important;white-space:nowrap}
+  html:not([data-hero="big"]) body main .stock-head.sk .sk-tile span{font-size:14px!important;width:auto!important;height:auto!important;background:none!important}
+  /* --- Larka / register / barcode KPI tiles --- */
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .bc-kpis{gap:5px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .bc-kpis>div{padding:5px 4px!important;border-radius:10px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .bc-kpis b{font-size:15px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .bc-kpis small{font-size:10px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .lk-filter{gap:5px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .lk-filter label:first-child{grid-column:auto!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .lk-filter{grid-template-columns:1.2fr 1fr 1fr!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .lk-filter :is(select,input){min-height:34px!important;font-size:12.5px!important;padding:0 6px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .lk-filter label{font-size:10px!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) :is(.lk-idle,.lk-age){font-size:10.5px!important;margin:2px 0!important}
+  html:not([data-hero="big"]) body :is(#summary,#dialogBody) .bc-head{gap:6px!important}
+  /* --- Reminder: notification wala bara dabba → patli patti --- */
+  html:not([data-hero="big"]) body #summary .nt-pushcard{display:flex!important;flex-wrap:wrap;align-items:center;gap:4px 8px!important;padding:6px 10px!important;border-radius:12px!important}
+  html:not([data-hero="big"]) body #summary .nt-pushcard b{font-size:12px!important;flex:1 1 60%}
+  html:not([data-hero="big"]) body #summary .nt-pushcard small{display:none!important}
+  html:not([data-hero="big"]) body #summary .nt-pushcard .got{min-height:30px!important;padding:2px 10px!important;font-size:11.5px!important;border-radius:999px!important}
+  html:not([data-hero="big"]) body #summary .nt-pushcard .nt-link{font-size:10.5px!important;min-height:0!important;padding:0!important}
+  html:not([data-hero="big"]) body #summary .nt-search input{min-height:38px!important}
+  /* --- Sale --- */
+  html:not([data-hero="big"]) body main .sale-head .sale-total{padding:6px 12px!important;margin:6px 0 2px!important}
+  html:not([data-hero="big"]) body main .sale-head .sale-total strong{font-size:19px!important}
+  html:not([data-hero="big"]) body main .sale-head .sale-modes .sale-mode{min-height:36px!important;font-size:13px!important;padding:4px 10px!important}
+  /* --- Khirkiyan: Rack bharo / Stock milao hero, tabs --- */
+  html:not([data-hero="big"]) body #dialogBody .rk-hero{padding:9px 12px!important;border-radius:16px!important}
+  html:not([data-hero="big"]) body #dialogBody .rk-hero small{font-size:9.5px!important}
+  html:not([data-hero="big"]) body #dialogBody .rk-hero b{font-size:16px!important;margin:1px 0!important}
+  html:not([data-hero="big"]) body #dialogBody .rk-hero span{font-size:11px!important}
+  html:not([data-hero="big"]) body #dialogBody .rk-hero .rk-ic{font-size:22px!important}
+  html:not([data-hero="big"]) body #dialogBody .rk-tabs{gap:4px!important;padding:3px!important;margin:6px 0!important}
+  html:not([data-hero="big"]) body #dialogBody .rk-tabs button{min-height:34px!important;padding:2px 6px!important;font-size:12px!important}
+  html:not([data-hero="big"]) body #dialogBody .rk-tabs button i{font-size:12px!important}
+  html:not([data-hero="big"]) body #dialogBody :is(.rk-top,.rk-pl)>*{margin-top:4px!important;margin-bottom:4px!important}
+  html:not([data-hero="big"]) body #dialogBody .hs-search input{min-height:38px!important}
+  html:not([data-hero="big"]) body #dialogBody .tn-bar{padding:6px 8px!important}
+}
+/* 🔗 Milao → ✏️ POS bill edit */
+html body #dialogBody .mi-acts .mi-edit{background:linear-gradient(135deg,#1d3466,#2b4f95)!important;color:#fff!important;border:0!important}
+html body main>header #navBtn .mn-badge{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;padding:0 5px;border-radius:999px;background:#e11d48;color:#fff;font:800 11px/19px system-ui,-apple-system,sans-serif;text-align:center;box-shadow:0 0 0 2px rgba(255,255,255,.9);pointer-events:none}
+/* v2.105.0: ✏️ POS bill edit (Milao se) — 📌 bill ki tasveer upar chipki rahe, neeche lines (phone) */
+@media (max-width:1099.98px){
+  html body main #list .pp-billbar{position:sticky;top:0;z-index:6;padding:6px!important;margin:0 0 8px!important;box-shadow:0 8px 22px rgba(15,30,60,.16)}
+  html body main #list .pp-billbar .pp-billwrap{max-height:34vh}
+  html body main #list .pp-billbar .pp-billacts{margin-top:4px!important}
+  html body main #list .pp-billbar .pp-billacts button{min-height:30px!important;padding:2px 12px!important;font-size:12px!important}
+}

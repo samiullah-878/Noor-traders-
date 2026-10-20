@@ -414,14 +414,14 @@ export function renderSale() {
   // v1.54: godam ke buttons hata diye — bill hamesha main branch se; line ke andar godam badla ja sakta hai
   $('summary').innerHTML = `<div class="stock-head sale-head" data-sale-root="1">
     ${editing ? `<div class="sale-edit-bar"><b>✏️ Bill #${esc(String(editing.saleNo || ''))} edit ho raha hai</b><small>Purana Rs ${num(editing.oldTotal)} · items badlein, phir "Bill badlo" — POS mein wahi bill (number wahi) badlega</small><button type="button" data-sale-edit-x="1">✕ Edit chhoro</button></div>` : ''}
-    <div class="account-tools">
+    <div class="account-tools sale-modes" data-mn-seg="sale.mode" data-mn-keep="1" data-mn-i="🛒" data-mn-t="Sale ki qism" data-mn-g="🧾 Sale">
       <button class="sale-mode${mode === 'counter' ? ' selected' : ''}" data-sale-mode="counter">🛒 Counter Sale</button>
       ${can('sale.wholesale') ? `<button class="sale-mode${mode === 'wholesale' ? ' selected' : ''}" data-sale-mode="wholesale">📦 Wholesale</button>` : ''}
     </div>
     <div class="sale-total"><small>${mode === 'wholesale' ? 'Wholesale (W rate)' : 'Counter (R rate)'} · ${num(cart.length)} items</small>
       <strong id="saleTotal">Rs ${num(total)}</strong></div>
     <div class="account-tools">
-      <button class="sh-wide" id="saleTodayBtn" data-sale-today="1">${todayLabel()}</button>
+      <button class="sh-wide" id="saleTodayBtn" data-sale-today="1" data-mn="sale.today" data-mn-i="📋" data-mn-t="Aaj ke bills" data-mn-s="app se bane · POS haalat" data-mn-g="🧾 Sale">${todayLabel()}</button>
     </div>
   </div>`;
   const si = $('search'); if (si) si.placeholder = '📷 scan ya naam / code likhein (Enter)';

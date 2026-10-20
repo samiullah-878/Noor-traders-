@@ -1031,6 +1031,14 @@ function setBillPics(files) {          // v2.19: foran dikhe (blob), phir chhoti
     billPics = ok; picPut('draft', { pics: ok, at: Date.now() });
   }).catch(() => {});
 }
+// v2.105.0: 🔗 Milao → ✏️ POS bill edit — larke ki entry ki bill tasveer (data-URL) upar 📌 chipki, neeche bill ki lines edit
+export function ppShowPics(pics, opt = {}) {   // opt: { pin: true, open: true (sab lines khuli = edit) }
+  const pin = opt === false ? false : opt.pin !== false; if (opt && opt.open) { lineView = 'all'; openKey = ''; }
+  const L = (pics || []).filter(u => typeof u === 'string' && u.startsWith('data:image/')).slice(0, 6); if (!L.length) return false;
+  for (const u of oldBlobs) { try { URL.revokeObjectURL(u); } catch {} } oldBlobs = [];
+  billPics = L; billIx = 0; billZoom = 1; picSeq++; billPin = !!pin; picPut('draft', { pics: L, at: Date.now() });
+  return true;
+}
 // ---------- v2.19: bill ki TASVEER — phone (IndexedDB) + bill ke sath cloud (entryPhotos/<bill id>, 3 tak) ----------
 const PIC_DB = 'sam-pp-bills-v1', PIC_KEEP = 60, PIC_MAX = 260000;   // 3 x 260KB < Firestore ki 1MB hadd
 let picDbP = null, picSeq = 0, vTmp = null, restoreSeq = 0, oldBlobs = [], ppOnce = false;
