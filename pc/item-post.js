@@ -211,7 +211,7 @@ async function sendLate() {
     const title = ok.length ? `✓ ${ok.length} item POS mein ${ok.every(x => x.op === 'new') ? 'ban gaye' : 'save ho gaye'}` : `❌ ${bad.length} item POS mein nahi bane`;
     const body = [ok.length ? ok.map(x => x.name).slice(0, 6).join(', ') : '', bad.length ? '❌ ' + bad.map(x => x.name + (x.err ? ' (' + x.err + ')' : '')).slice(0, 3).join(', ') : ''].filter(Boolean).join(' · ');
     const { getMessaging } = require('firebase-admin/messaging');
-    const r = await getMessaging().sendEachForMulticast({ tokens, data: { title, body, tag: 'items-' + Date.now(), link: 'https://samiullah-878.github.io/Noor-traders-/' }, webpush: { headers: { Urgency: 'high' } } });
+    const r = await getMessaging().sendEachForMulticast({ tokens, data: { title, body, tag: 'items-' + Date.now(), link: 'https://samiullah-878.github.io/Noor-traders-/#v=stock' }, webpush: { headers: { Urgency: 'high' } } });
     log(`🔔 item khabar: ${r.successCount}/${tokens.length} phone — ${title}: ${body}`);
   } catch (e) { log('🔔 item khabar nahi gayi: ' + e.message); }
 }

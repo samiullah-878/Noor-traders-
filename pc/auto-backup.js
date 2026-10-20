@@ -109,7 +109,7 @@ async function gaariNotify() {
   const tokens = tk.docs.map(d => d.data()).filter(x => x.token && (x.role === 'owner' || x.role === 'malik')).map(x => x.token);
   if (!tokens.length) { log('🚚 gaari: malik ka koi push token nahi (app mein notification ON karein)'); return; }
   const { getMessaging } = require('firebase-admin/messaging');
-  const r = await getMessaging().sendEachForMulticast({ tokens, data: { title: '🚚 Driver se hisaab lena hai', body, tag: 'gaari-' + day, link: 'https://samiullah-878.github.io/Noor-traders-/' }, webpush: { headers: { Urgency: 'high' } } });
+  const r = await getMessaging().sendEachForMulticast({ tokens, data: { title: '🚚 Driver se hisaab lena hai', body, tag: 'gaari-' + day, link: 'https://samiullah-878.github.io/Noor-traders-/#v=gaari' }, webpush: { headers: { Urgency: 'high' } } });
   log(`🚚 gaari notification ${t}: ${r.successCount}/${tokens.length} phone — ${body}`);
 }
 // ---- v1.4: 🔁 BAAR BAAR YAAD (notes.nag 15/30/60 min) — waqt guzarne ke baad har nag minute, jab tak ✓ na ho. Subah 7 – raat 11.
