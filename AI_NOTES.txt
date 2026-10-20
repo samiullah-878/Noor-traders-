@@ -5592,3 +5592,5 @@ v2.103.76 (20 Oct 2026, PC script/rules nahi) — 🖥 PC PAR SIZE (malik: "apps
 v2.103.76 + rack-bharo v1.13: 🔒 rack poora lock = 18 Oct 2026 09:30 se PEHLE ka dukan stock (malik ka waqt) — har item; pehle-transfer wala tareeqa hataya. Editor mein "(18 Oct 9:30 se pehle: N)". AI nahi.
 
 PC label-print v4.8 (manifest 2026-10-20.13): ⚠️ DOHRA LABEL FIX — v4.7 ka "90 s line na hili = purge + wahi hissa dobara" hataya: printer bara order dheere chhapta tha, spooler count nahi hilta tha, script ne wahi labels dobara bhej diye (20 Oct: white chana 50 + mada nayab 50 dobara). Ab ruka = sirf intezar + app ko wajah (stuck), 10 min = failed with sent. QAIDA: label script kabhi khud dobara na bheje — dohra chhapna paisa/waqt zaya.
+
+v2.103.78 + rack-bharo v1.14: 🔒 100% LOCK sirf Godam 1 + Godam 3 (naam se, rk100G; Godam 2 purana qaida). PC b0 = 18 Oct se PEHLE transfer note (dukan mein) ke foran baad ka dukan stock (cheeni 10 bori note → 10). App: lane patti ke neeche (malik) "🔒 100
