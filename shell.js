@@ -14,8 +14,8 @@
 //  🔠 Apni marzi: likhai size (main zoom) · headings size · likhai rang · headings rang — har phone (localStorage sam-marzi);
 //     malik "👑 Sab mulazimon par" = blueAccess/look {marzi, mAt} (cloud.setMarzi). AI nahi.
 // =====================================================================================================
-import { recentList } from './recent.js?v=2.104.0';
-import { agentRegister } from './agent.js?v=2.104.0';
+import { recentList } from './recent.js?v=2.105.0';
+import { agentRegister } from './agent.js?v=2.105.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -199,47 +199,63 @@ function paintBadge() {
   if (!b) { b = document.createElement('span'); b.className = 'mn-badge'; st.appendChild(b); } b.textContent = n > 9 ? '9+' : String(n);
 }
 
-// ---------------- 🔠 apni marzi ----------------
+// ---------------- 🔠 apni marzi (poori app — har screen + khirki) ----------------
+// v2.105.0 (malik: "chips big / small ka option · fonts colours sab poori app ke liye"): + 🔘 chips Chhote / Bare (data-chip) ·
+//   🔤 font (data-ff + --font) · andheri look ke apne halke rang (txd / hxd — look badle to khud sahi rang) · 📊 card · 🧭 screen chips.
 const ML = 'sam-marzi';
 const FS = [['s', 'Chhota'], ['m', 'Aam'], ['l', 'Bara'], ['xl', 'Bohat bara']], HS = [['s', 'Chhoti'], ['m', 'Aam'], ['l', 'Bari'], ['xl', 'Bohat bari']];
 const TX = ['', '#10192b', '#1d3466', '#0f5132', '#7c2d12', '#4c1d95', '#000000'], HX = ['', '#10192b', '#1d3466', '#b45309', '#15803d', '#b91c1c', '#6d28d9'];
-const HR = [['', 'Chhota'], ['big', 'Bara']], NV = [['', '☰ se (chhupe)'], ['all', 'Hamesha dikhao']];   // v2.105.0: 📊 upar ka card · 🧭 screen chips
+const TXD = ['', '#ffffff', '#e8eeff', '#bfe3ff', '#c8f7d8', '#ffe6a8', '#ffd0dc'], HXD = ['', '#ffffff', '#8fd8ff', '#ffd27a', '#7cf0b5', '#ff9fb5', '#c9b5ff'];
+const HR = [['', 'Chhota'], ['big', 'Bara']], NV = [['', '☰ se (chhupe)'], ['all', 'Hamesha dikhao']], CH = [['', 'Chhote'], ['big', 'Bare']];
+const FF = [['', 'Look jaisa'], ['poppins', 'Poppins'], ['sora', 'Sora'], ['outfit', 'Outfit'], ['jakarta', 'Jakarta'], ['arial', 'Saada']];
+const FFN = { poppins: "'Poppins'", sora: "'Sora'", outfit: "'Outfit'", jakarta: "'Plus Jakarta Sans'", arial: 'Arial' };
+const HEX = v => /^#[0-9a-f]{6}$/i.test(String(v || ''));
 const mGet = () => { try { const o = JSON.parse(localStorage.getItem(ML) || '{}'); return o && typeof o === 'object' ? o : {}; } catch { return {}; } };
+const isDk = () => document.documentElement.classList.contains('dk');
 function mApply(m = mGet()) {
-  const h = document.documentElement;
+  const h = document.documentElement, dk = isDk();
   for (const [k, a] of [['fs', 'fs'], ['hs', 'hs']]) { const v = m[k]; if (v && v !== 'm' && ['s', 'l', 'xl'].includes(v)) h.dataset[a] = v; else delete h.dataset[a]; }
-  if (m.tx && /^#[0-9a-f]{6}$/i.test(m.tx)) { h.dataset.tx = '1'; h.style.setProperty('--mn-tx', m.tx); } else { delete h.dataset.tx; h.style.removeProperty('--mn-tx'); }
-  if (m.hx && /^#[0-9a-f]{6}$/i.test(m.hx)) { h.dataset.hx = '1'; h.style.setProperty('--mn-hx', m.hx); } else { delete h.dataset.hx; h.style.removeProperty('--mn-hx'); }
+  const tx = dk ? m.txd : m.tx, hx = dk ? m.hxd : m.hx;   // andheri look = apne halke rang
+  if (HEX(tx)) { h.dataset.tx = '1'; h.style.setProperty('--mn-tx', tx); } else { delete h.dataset.tx; h.style.removeProperty('--mn-tx'); }
+  if (HEX(hx)) { h.dataset.hx = '1'; h.style.setProperty('--mn-hx', hx); } else { delete h.dataset.hx; h.style.removeProperty('--mn-hx'); }
   if (m.hero === 'big') h.dataset.hero = 'big'; else delete h.dataset.hero;
   if (m.nav === 'all') h.dataset.nav = 'all'; else delete h.dataset.nav;
+  if (m.chip === 'big') h.dataset.chip = 'big'; else delete h.dataset.chip;
+  if (FFN[m.ff]) { h.dataset.ff = m.ff; h.style.setProperty('--font', FFN[m.ff]); h.style.setProperty('--mn-ff', FFN[m.ff]); } else { delete h.dataset.ff; h.style.removeProperty('--font'); h.style.removeProperty('--mn-ff'); }
 }
 function mSet(patch, at = Date.now()) { const m = { ...mGet(), ...patch, at }; try { localStorage.setItem(ML, JSON.stringify(m)); } catch {} mApply(m); return m; }
+const mPack = m => ({ fs: m.fs || 'm', hs: m.hs || 'm', tx: m.tx || '', hx: m.hx || '', txd: m.txd || '', hxd: m.hxd || '', hero: m.hero === 'big' ? 'big' : '', nav: m.nav === 'all' ? 'all' : '', chip: m.chip === 'big' ? 'big' : '', ff: FFN[m.ff] ? m.ff : '' });
 export function marziCloud(mz, mAt) {   // app.js listenLook se — malik ne "sab par" lagaya ho to (naya ho tab)
   if (!mz || typeof mz !== 'object' || !(Number(mAt) > 0)) return; if (Number(mAt) <= (Number(mGet().at) || 0)) return;
-  mSet({ fs: mz.fs || 'm', hs: mz.hs || 'm', tx: mz.tx || '', hx: mz.hx || '', hero: mz.hero === 'big' ? 'big' : '', nav: mz.nav === 'all' ? 'all' : '' }, Number(mAt));
+  mSet(mPack(mz), Number(mAt));
 }
 function marziHTML() {
-  const m = mGet(), dk = document.documentElement.classList.contains('dk');
+  const m = mGet(), dk = isDk();
   const chips = (L, k, cur) => L.map(([v, t]) => `<button type="button" class="${(cur || 'm') === v ? 'is-in' : ''}" data-mz="${k}|${v}">${t}</button>`).join('');
+  const opt = (L, k, cur) => L.map(([v, t]) => `<button type="button" class="${(cur || '') === v ? 'is-in' : ''}" data-mz="${k}|${v}">${t}</button>`).join('');
   const sw = (L, k, cur) => L.map(c => `<button type="button" class="mz-sw${(cur || '') === c ? ' is-in' : ''}" data-mz="${k}|${c}" style="${c ? `--sw:${c}` : ''}" aria-label="${c || 'pehle jaisa'}">${c ? '' : '↺'}</button>`).join('');
-  return `<h3 class="mn-h">🔠 Apni marzi — likhai</h3><p class="mn-sub">Sirf is phone par · foran lagta hai</p>
+  return `<h3 class="mn-h">🔠 Apni marzi — poori app</h3><p class="mn-sub">Sirf is phone par · har screen aur khirki par · foran lagta hai</p>
   <div class="mn-gh">🔠 Likhai ka size</div><div class="mz-row">${chips(FS, 'fs', m.fs)}</div>
   <div class="mn-gh">🔡 Headings (naam / sar-khi) ka size</div><div class="mz-row">${chips(HS, 'hs', m.hs)}</div>
-  <div class="mn-gh">📊 Upar ka card (Purchase, Khata, Daily…)</div><div class="mz-row">${HR.map(([v, t]) => `<button type="button" class="${(m.hero || '') === v ? 'is-in' : ''}" data-mz="hero|${v}">${t}</button>`).join('')}</div>
-  <div class="mn-gh">🧭 Screen chips (Khata, Purchase…)</div><div class="mz-row">${NV.map(([v, t]) => `<button type="button" class="${(m.nav || '') === v ? 'is-in' : ''}" data-mz="nav|${v}">${t}</button>`).join('')}</div>
-  ${dk ? '<p class="mn-sub">🌙 Andheri look par rang nahi badalte — Settings → 🎨 Look mein roshan look chunein</p>' : `<div class="mn-gh">🖍 Likhai ka rang</div><div class="mz-row">${sw(TX, 'tx', m.tx)}</div>
-  <div class="mn-gh">🎯 Headings ka rang</div><div class="mz-row">${sw(HX, 'hx', m.hx)}</div>`}
-  <div class="mz-prev"><b class="mz-ph">Arman palydar</b><span>Lene hain Rs 13,000 · aaj</span><small>↑ aisa nazar aayega</small></div>
+  <div class="mn-gh">🔘 Chips (Aaj · 7 din · Godam…) ka size</div><div class="mz-row">${opt(CH, 'chip', m.chip)}</div>
+  <div class="mn-gh">📊 Upar ka card (Purchase, Khata, Daily…)</div><div class="mz-row">${opt(HR, 'hero', m.hero)}</div>
+  <div class="mn-gh">🧭 Screen chips (Khata, Purchase…)</div><div class="mz-row">${opt(NV, 'nav', m.nav)}</div>
+  <div class="mn-gh">🔤 Font (likhai ki shakal)</div><div class="mz-row mz-ff">${FF.map(([v, t]) => `<button type="button" class="${(m.ff || '') === v ? 'is-in' : ''}" data-mz="ff|${v}" style="${FFN[v] ? `font-family:${FFN[v]},sans-serif` : ''}">${t}</button>`).join('')}</div>
+  <div class="mn-gh">🖍 Likhai ka rang ${dk ? '(🌙 andheri look)' : ''}</div><div class="mz-row">${dk ? sw(TXD, 'txd', m.txd) : sw(TX, 'tx', m.tx)}</div>
+  <div class="mn-gh">🎯 Headings ka rang ${dk ? '(🌙 andheri look)' : ''}</div><div class="mz-row">${dk ? sw(HXD, 'hxd', m.hxd) : sw(HX, 'hx', m.hx)}</div>
+  <div class="mz-prev"><b class="mz-ph">Arman palydar</b><span>Lene hain Rs 13,000 · aaj</span><div class="mz-pc"><button type="button" class="is-in">Aaj</button><button type="button">7 din</button><button type="button">Godam 1</button></div><small>↑ aisa nazar aayega</small></div>
   <div class="mn-app"><button type="button" data-mz="reset|1">↺ Pehle jaisa</button>${H.owner?.() ? '<button type="button" class="mz-all" data-mz="all|1">👑 Sab mulazimon par bhi</button>' : ''}</div>`;
 }
 function marziOpen() { ensureRoot(); $('mnBody').innerHTML = marziHTML(); root.hidden = false; document.documentElement.classList.add('mn-open'); }
 document.addEventListener('click', e => {
   const b = e.target.closest?.('[data-mz]'); if (!b) return; const [k, v] = b.dataset.mz.split('|');
-  if (k === 'reset') { mSet({ fs: 'm', hs: 'm', tx: '', hx: '', hero: '', nav: '' }); }
-  else if (k === 'all') { const m = mGet(); if (!H.cloud?.setMarzi) { H.notice?.('App update karein'); return; } H.cloud.setMarzi({ fs: m.fs || 'm', hs: m.hs || 'm', tx: m.tx || '', hx: m.hx || '', hero: m.hero || '', nav: m.nav || '' }).then(() => H.notice?.('👑 Sab mulazimon ke phone par bhi lag jayega')).catch(er => H.notice?.('Nahi hua: ' + (er?.message || er))); return; }
+  if (k === 'reset') { mSet({ fs: 'm', hs: 'm', tx: '', hx: '', txd: '', hxd: '', hero: '', nav: '', chip: '', ff: '' }); }
+  else if (k === 'all') { const m = mGet(); if (!H.cloud?.setMarzi) { H.notice?.('App update karein'); return; } H.cloud.setMarzi(mPack(m)).then(() => H.notice?.('👑 Sab mulazimon ke phone par bhi lag jayega')).catch(er => H.notice?.('Nahi hua: ' + (er?.message || er))); return; }
   else mSet({ [k]: v });
   if (isOpen()) $('mnBody').innerHTML = marziHTML();
 });
+// look (roshan ⇄ andheri) badle to sahi rang khud
+try { new MutationObserver(() => mApply()).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }); } catch {}
 document.addEventListener('click', e => { if (e.target.closest?.('#marziBtn')) { try { $('dialog')?.close(); } catch {} marziOpen(); } });
 
 // ---------------- ☰ screen chips (v2.105.0 — malik: "chips oper top par chhote · screen ke andar chhupe rahein · upar baayein se khulein") ----------------
@@ -288,13 +304,15 @@ agentRegister([
     summary: a => `⋮ → ${a.kaam}`, run({ kaam }) { const x = pick(kaam); if (!x) throw Error('Is screen par yeh kaam nahi: ' + kaam); go(x.k); return '✓ ' + x.t + ' khul gaya'; } },
   { name: 'chip_pin', desc: 'Screen ke ⋮ wale kaam ko screen par chhota chip bana kar lagao (pin=true) ya hatao (pin=false) — mobile app jaisa.', params: O_({ kaam: S_, pin: B_ }, ['kaam']),
     summary: a => `📌 ${a.kaam} ${a.pin === false ? 'hatao' : 'lagao'}`, run({ kaam, pin = true }) { const x = pick(kaam); if (!x) throw Error('Is screen par yeh kaam nahi: ' + kaam); pinToggle(scr(), x.k, pin !== false); lastSub = ''; paintSub(); return pin === false ? '✓ Hata diya' : '✓ Screen par lag gaya'; } },
-  { name: 'likhai_marzi', desc: 'Is phone par likhai ka size (Chhota/Aam/Bara/Bohat bara), headings ka size, likhai ka rang, headings ka rang (hex jaise #1d3466; khali = pehle jaisa), upar ka card (Chhota/Bara), screen chips (chhupe/hamesha).', params: O_({ size: S_, heading: S_, rang: S_, heading_rang: S_, card: S_, screen_chips: S_ }),
+  { name: 'likhai_marzi', desc: 'Is phone par likhai ka size (Chhota/Aam/Bara/Bohat bara), headings ka size, likhai ka rang, headings ka rang (hex jaise #1d3466; khali = pehle jaisa), upar ka card (Chhota/Bara), screen chips (chhupe/hamesha), chips (Chhote/Bare), font (Poppins/Sora/Outfit/Jakarta/Saada).', params: O_({ size: S_, heading: S_, rang: S_, heading_rang: S_, card: S_, screen_chips: S_, chips: S_, font: S_ }),
     summary: a => '🔠 ' + Object.entries(a).filter(([, v]) => v != null && v !== '').map(([k, v]) => k + ' ' + v).join(' · '),
     run(a) { const lv = (v, L) => { const f = fold(v); const hit = L.find(([k, t]) => fold(t) === f || k === f); return hit ? hit[0] : null; }; const p = {};
       if (a.size) { const v = lv(a.size, FS); if (!v) throw Error('Size: Chhota / Aam / Bara / Bohat bara'); p.fs = v; }
       if (a.heading) { const v = lv(a.heading, HS); if (!v) throw Error('Heading: Chhoti / Aam / Bari / Bohat bari'); p.hs = v; }
-      for (const [k, kk] of [['rang', 'tx'], ['heading_rang', 'hx']]) if (a[k] != null) { const v = String(a[k]).trim(); if (v && !/^#[0-9a-f]{6}$/i.test(v)) throw Error('Rang hex mein (#1d3466)'); p[kk] = v; }
+      for (const [k, kk] of [['rang', isDk() ? 'txd' : 'tx'], ['heading_rang', isDk() ? 'hxd' : 'hx']]) if (a[k] != null) { const v = String(a[k]).trim(); if (v && !/^#[0-9a-f]{6}$/i.test(v)) throw Error('Rang hex mein (#1d3466)'); p[kk] = v; }
       if (a.card) { const f = fold(a.card); p.hero = /bar|big/.test(f) ? 'big' : ''; }
+      if (a.chips) { const f = fold(a.chips); p.chip = /bar|big/.test(f) ? 'big' : ''; }
+      if (a.font) { const f = fold(a.font); const hit = FF.find(([k, t]) => k && (f.includes(k) || f.includes(fold(t)))); p.ff = hit ? hit[0] : ''; }
       if (a.screen_chips) { const f = fold(a.screen_chips); p.nav = /hamesha|all|dikha/.test(f) ? 'all' : ''; }
       if (!Object.keys(p).length) throw Error('Kya badalna hai?'); mSet(p); return '✓ Lag gaya'; } },
 ]);
