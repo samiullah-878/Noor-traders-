@@ -99,7 +99,7 @@ function fdShow(on) { const d = dlgEl(); if (!d) return; if (on && !fd) { fd = d
   if (fd && fd.parentNode !== d) d.appendChild(fd); if (!fd || dShown === on) return; dShown = on; if (on) flPaint(fd); fd.classList.toggle('nvf-on', on); }
 function onDlgScroll(e) {
   const b = e.target; if (!b || b.id !== 'dialogBody') return; const y = b.scrollTop || 0, dy = y - dLast;
-  if (!floatOn() || mq.matches || b.querySelector('.nv-root') || y < 60) { fdShow(false); dLast = y; return; }
+  if (!floatOn() || mq.matches || b.querySelector('.nv-root') || y < 60 || dlgEl()?.classList.contains('full-dialog')) { fdShow(false); dLast = y; return; }   // v2.103.79: poori screen khirki mein upar patti nahi
   if (dy < -8) fdShow(true); else if (dy > 8) fdShow(false);
   if (Math.abs(dy) > 8) dLast = y;
 }
