@@ -4622,10 +4622,10 @@ html.lt body footer#actions:not(.day-acts) button{color:#fff!important}
 /* ===== 📊 chhote charts (phone · data-hero != big) ===== */
 @media (max-width:1099.98px){
   /* --- chips ki har qatar: ek line, side par khiskao, chhoti --- */
-  html:not([data-chip="big"]) body :is(#summary,#list,#dialogBody) :is(.mchips,.rk-nb,.sk-gd,.sk-chips,.fc-per,.sc-state,.party-chips,.sort-chips,.due-modes){display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none;gap:6px!important;padding-bottom:2px!important;align-items:center}
-  html:not([data-chip="big"]) body :is(#summary,#list,#dialogBody) :is(.mchips,.rk-nb,.sk-gd,.sk-chips,.fc-per,.sc-state,.party-chips,.sort-chips,.due-modes)::-webkit-scrollbar{display:none}
-  html:not([data-chip="big"]) body :is(#summary,#list,#dialogBody) :is(.mchips,.rk-nb,.sk-gd,.sk-chips,.fc-per,.sc-state,.party-chips,.sort-chips,.due-modes)>*{flex:0 0 auto!important;white-space:nowrap!important}
-  html:not([data-hero="big"]) body :is(#summary,#list,#dialogBody) :is(.mchips,.rk-nb,.sk-gd,.sk-chips,.fc-per,.party-chips,.sort-chips,.due-modes)>button{min-height:30px!important;padding:3px 11px!important;font-size:12.5px!important;border-radius:999px!important;width:auto!important}
+  html:not([data-chip="big"]) body :is(#summary,#list,#dialogBody) :is(.mchips,.rk-nb,.sk-gd,.sk-chips,.fc-per,.sc-state,.party-chips,.sort-chips,.due-modes):not([data-mn-seg]){display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;overflow-y:hidden!important;scrollbar-width:none;gap:6px!important;padding-bottom:2px!important;align-items:center}
+  html:not([data-chip="big"]) body :is(#summary,#list,#dialogBody) :is(.mchips,.rk-nb,.sk-gd,.sk-chips,.fc-per,.sc-state,.party-chips,.sort-chips,.due-modes):not([data-mn-seg])::-webkit-scrollbar{display:none}
+  html:not([data-chip="big"]) body :is(#summary,#list,#dialogBody) :is(.mchips,.rk-nb,.sk-gd,.sk-chips,.fc-per,.sc-state,.party-chips,.sort-chips,.due-modes):not([data-mn-seg])>*{flex:0 0 auto!important;white-space:nowrap!important}
+  html:not([data-hero="big"]) body :is(#summary,#list,#dialogBody) :is(.mchips,.rk-nb,.sk-gd,.sk-chips,.fc-per,.party-chips,.sort-chips,.due-modes):not([data-mn-seg])>button{min-height:28px!important;padding:2px 10px!important;font-size:12px!important;border-radius:999px!important;width:auto!important}
   html:not([data-chip="big"]) body :is(#summary,#list,#dialogBody) .sc-state span{font-size:11px!important;padding:2px 8px!important}
   /* --- Khata: Customers / Suppliers --- */
   html:not([data-hero="big"]) body main header #summary .bq-grid{gap:8px!important}
@@ -4779,3 +4779,17 @@ html body #mnRoot .mz-prev .mz-pc button{min-height:30px!important;padding:3px 1
 html body #mnRoot .mz-prev .mz-pc button.is-in{background:linear-gradient(135deg,#1d3466,#2b4f95)!important;color:#fff!important;border-color:transparent!important}
 html[data-chip="big"] body #mnRoot .mz-prev .mz-pc button{min-height:38px!important;padding:6px 15px!important;font-size:14px!important}
 html.dk body #mnRoot .mz-prev .mz-pc button:not(.is-in){background:var(--glass2,rgba(255,255,255,.08))!important;color:var(--ink,#e8eeff)!important;border-color:var(--line,rgba(255,255,255,.16))!important}
+
+/* v2.105.1: malik — "search bar chhoti, chips bhi chhote, sab upar aaye" (phone) · Tareekh / Tarteeb chips ⋮ mein hi rahein (generic chip rule unhein dobara dikha raha tha) */
+@media (max-width:1099.98px){
+  html body main .toolbar{margin:6px 0 6px!important;gap:6px!important}
+  html body main .toolbar .search{padding:0 10px!important;border-radius:12px!important;min-height:0!important}
+  html body main .toolbar .search>span{font-size:14px!important}
+  html body main .toolbar :is(#search,input){min-height:38px!important;font-size:15px!important;padding:4px 6px!important}
+  html:not([data-chip="big"]) body main>header .app-nav button{min-height:28px!important;padding:2px 10px!important;font-size:12px!important}
+  html:not([data-chip="big"]) body main>header .sub-bar .sb-c{min-height:27px!important;padding:2px 10px!important;font-size:12px!important}
+  html body main :is(#list,.pu) .pu-flt{min-height:34px!important;padding:4px 8px 4px 12px!important;font-size:12.5px!important;white-space:nowrap;overflow:hidden;margin:0 0 6px!important}
+  html body main :is(#list,.pu) .pu-flt i{font-size:11px!important;padding:3px 8px!important;flex:none}
+  html:not([data-chip="big"]) body main #actions.day-acts button{min-height:34px!important;font-size:12.5px!important}
+  html:not([data-chip="big"]) body main #list .party-chips{margin:4px 0!important}
+}
