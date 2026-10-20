@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.81';
-import { liveLabelsHTML } from './barcode.js?v=2.103.81';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.82';
+import { liveLabelsHTML } from './barcode.js?v=2.103.82';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -3553,7 +3553,6 @@ function rkSynth(id) { const P = agPool(), it = P.byId.get(String(id)); if (!it)
   return { i: String(id), n: it.name, pk, g: g ? g[0] : 0, gs: g ? g[1] : 0, ss: Number(sI?.stock) || 0, w: 0, s: 0, m: pk > 1 ? pk : 1, fc: 1, add: 1 }; }
 // 🔍 Ye kyun nahi aaya? — rack list mein na hone ki wajah
 function rkWhy(id) { id = String(id); const names = collect().names || {}, x = rackSrc().find(r => String(r.i) === id), cf = rackCfg(id) || {}, gods = collect().branches.filter(b => b !== 1);
-  if (rkPendIds().has(id)) return { w: '⏳ Patti nikli — upar "rack bhar diya" ✓ baqi', stk: x ? `dukan ${num(r3(x.ss))}` : '', can: false };
   const gst = gods.map(b => [b, Number(saleStockItem(b, id)?.stock) || 0]).filter(z => z[1] > 0), ss = Number(saleStockItem(1, id)?.stock) || 0;
   const stk = `dukan ${num(r3(ss))} · ${gst.length ? gst.map(([b, v]) => esc(branchName(b, names)) + ' ' + num(r3(v))).join(' · ') : 'godam 0'}`;
   const any = gst.length > 0;   // v2.103.80: godam mein maal ho to ➕ hamesha (packet wala / farq wala bhi)
@@ -3570,9 +3569,8 @@ function rackDue() {
   const src = rackSrc(), ex = rk?.extra || new Map(), have = new Set(src.map(x => String(x.i)));
   const L = src.map(x => ex.has(String(x.i)) ? { ...x, add: 1 } : x);
   for (const id of ex.keys()) if (!have.has(id)) { const x = rkSynth(id); if (x) L.push(x); }
-  const rank = c => c.khali ? 3 : c.lo ? 2 : c.add ? 1 : 0;
-  const pend = rkPendIds();
-  return L.filter(x => (x.add || !pkCfg(x.i)) && !pend.has(String(x.i)) && !(rackSent.get(String(x.i)) > (Number(x.w) || 0))).map(x => ({ x, c: rackCalc(x) })).filter(y => y.c.due).sort((a, b) => rank(b.c) - rank(a.c));
+  const rank = c => c.add ? 9 : c.khali ? 3 : c.lo ? 2 : 0;   // v2.103.82: 🔍 search se laya = sab se upar
+  return L.filter(x => (x.add || !pkCfg(x.i)) && (x.add || !(rackSent.get(String(x.i)) > (Number(x.w) || 0)))).map(x => ({ x, c: rackCalc(x) })).filter(y => y.c.due).sort((a, b) => rank(b.c) - rank(a.c));
 }
 const rkQty = (q, pk) => pk ? `${num(Math.floor(q / pk))} ctn` : `${num(q)} pcs`;
 const rkWhen = ms => { const d = new Date(ms); return `${d.getDate()} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()]} ${d.toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' })}`; };
@@ -3596,18 +3594,18 @@ function pkReconcile(packs, pos) { const K = packs.filter(p => p.left != null &&
 function pkN(b, c, pct) { const base = c != null && c !== '' ? Number(c) : b; return Math.max(0, Math.round(base - Math.floor(b * pct / 100))); }
 function pkDue() {
   const out = [];
-  const pend = rkPendIds(); for (const r of rackPk) { const cf = pkCfg(r.i); if (!cf || pend.has(String(r.i))) continue; if (pkSent.get(String(r.i)) > (Number(r.from) || 0)) continue;   // v2.103.37: patti nikli, larke ka ✓ baqi
-    if (rackCfg(r.i)?.off) continue;   // v2.103.72: 🚫 nahi lana (packet wale bhi)
+  const fx = rk?.pkx || new Set(); for (const r of rackPk) { const cf = pkCfg(r.i), force = fx.has(String(r.i)); if (!cf) continue; if (!force && pkSent.get(String(r.i)) > (Number(r.from) || 0)) continue;   // v2.103.82: "Rack bhara?" (larke ka ✓) hataya; 🔍 search se laya = force
+    if (!force && rackCfg(r.i)?.off) continue;   // v2.103.72: 🚫 nahi lana (packet wale bhi)
     const it = saleStockItem(1, String(r.i)) || saleStockItem(Number(r.g), String(r.i)), gI = saleStockItem(Number(cf.g || r.g), String(r.i)), gs = gI ? Number(gI.stock) || 0 : Number(r.gs) || 0;
     const packs = Object.entries(cf.p || {}).map(([z, o]) => { const zz = Number(z); const sold = Number(r.sold?.[z] ?? r.sold?.[String(zz)]) || 0, n = Math.max(1, Number(o?.n) || 10), b = Number(o?.b) || 0, pct = Number(o?.pct) || 0, L = pkLeft(o, r, z, cf.at), a = L ? L.lao : Math.max(1, Number(o?.a) || n);
       return { z: zz, sold, n, a, b, pct, left: L ? L.left : null, due: L ? L.due : sold >= n, lao: a, name: pkName(zz, it) }; });
-    const packsDue = packs.filter(p => p.due);   // v2.103.67: POS se milana HATA diya — malik: "app ka apna data (barcode-war sale) chalega, POS mein sirf kul hai"
+    let packsDue = packs.filter(p => p.due); if (force && !packsDue.length) packsDue = (packs.some(p => p.b > 0) ? packs.filter(p => p.b > 0) : packs).map(p => ({ ...p, a: Math.max(1, Number(p.lao) || 1) }));   // v2.103.82 · v2.103.67: POS se milana HATA diya — malik: "app ka apna data (barcode-war sale) chalega, POS mein sirf kul hai"
 
     if (!packsDue.length) continue;
-    if (gs <= 0.0005 || gs < Math.min(...packsDue.map(p => p.z)) - 1e-9) continue;   // v2.103.72: godam khali (1 packet bhi nahi banta) → list mein nahi
-    out.push({ r, cf, it, g: Number(cf.g || r.g), gs, packs: packsDue, name: r.n || it?.name || 'Item ' + r.i });
+    if (!force && (gs <= 0.0005 || gs < Math.min(...packsDue.map(p => p.z)) - 1e-9)) continue;   // v2.103.72: godam khali (1 packet bhi nahi banta) → list mein nahi
+    out.push({ r, cf, it, g: Number(cf.g || r.g), gs, packs: packsDue, force, name: r.n || it?.name || 'Item ' + r.i });
   }
-  return out;
+  return out.sort((a, b) => (b.force ? 1 : 0) - (a.force ? 1 : 0));
 }
 // ---- v2.103.39: 🏷 BARCODE LABEL transfer note ke saath — malik: "badam ka bhi barcode banane ka option · sub-barcode bhi · ek click: note + barcode".
 //   rkLabelLines(lines): har line ke liye [{code, qty(z), rate, copies}] — pk wali: har packet (z) ka label × n (labelRows: qty == z, main = 1);
@@ -3766,7 +3764,7 @@ function rkPaint(only) {
   const html = `<div class="rk-hero rk-hero2"><div><small>DUKAN KA RACK · ${esc(rk.g ? branchName(rk.g, names) : 'sab godam')}</small><b>${num(laneN)} items godam se lane</b><span>${ctn ? num(ctn) + ' carton · ' : ''}${rackAt ? `🖥 PC ${esc(new Date(rackAt).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }))} · <i id="rkAge">${age < 1 ? 'abhi' : age + ' min pehle'}</i>` : irData ? '⚠️ andaza — PC data nahi' : 'PC data aa raha hai'}</span></div><span class="rk-ic">🧺</span></div>
     ${rackAt && age > 10 ? '<div class="rk-time old">⚠️ PC ka rack data 10 min se purana — rack script ruka?</div>' : ''}
     <div class="rk-top"><div class="rk-nb rk-gch">${[...collect().branches.filter(b => b !== 1), 0].map(b => `<button type="button" class="${rk.g === b ? 'is-in' : ''}" data-rk-g="${b}">${b ? '🏬 ' + esc(branchName(b, names)) : 'Sab'}</button>`).join('')}</div>
-    <div class="rk-tabs${can('stock.mangwao') ? ' four' : ''}">${[['lane', '🧺 Lane wale', laneN], ['pend', '⏳ Rack bhara?', pendN], ['pct', '📋 Packet %', pctN], ...(can('stock.mangwao') ? [['ro', '🛒 Mangwao', roN]] : [])].map(([k, l, n]) => `<button type="button" class="${rk.tab === k ? 'is-in' : ''}" data-rk-tab="${k}">${l}<i>${num(n)}</i></button>`).join('')}</div>${rk.tab === 'lane' ? `<label class="hs-search rk-qtop"><input type="search" data-rk-q="1" placeholder="🔍 koi bhi item dhoondo → ➕ line mein lao" value="${esc(rk.q)}" autocomplete="off"></label>` : ''}${rk.tab === 'pct' ? (() => { const A = pkAllRows(), n = A.filter(x => Math.abs(x.far) > 0.0005).length; return `<div class="rk-nb rk-farbar"><button type="button" class="${rk.plFar ? '' : 'is-in'}" data-rkp-plfar="0">Sab ${num(A.length)}</button><button type="button" class="${rk.plFar ? 'is-in' : ''} ${n ? 'kh' : ''}" data-rkp-plfar="1">⚖️ Farq wale ${num(n)}</button><span>farq = dono packet jama ≠ POS → dobara gino</span></div>`; })() : ''}</div>
+    ${rk.tab === 'pend' ? (rk.tab = 'lane', '') : ''}<div class="rk-tabs${can('stock.mangwao') ? '' : ' two'}">${[['lane', '🧺 Lane wale', laneN], ['pct', '📋 Packet %', pctN], ...(can('stock.mangwao') ? [['ro', '🛒 Mangwao', roN]] : [])].map(([k, l, n]) => `<button type="button" class="${rk.tab === k ? 'is-in' : ''}" data-rk-tab="${k}">${l}<i>${num(n)}</i></button>`).join('')}</div>${rk.tab === 'lane' ? `<label class="hs-search rk-qtop"><input type="search" data-rk-q="1" placeholder="🔍 koi bhi item dhoondo → ➕ line mein lao" value="${esc(rk.q)}" autocomplete="off"></label>` : ''}${rk.tab === 'pct' ? (() => { const A = pkAllRows(), n = A.filter(x => Math.abs(x.far) > 0.0005).length; return `<div class="rk-nb rk-farbar"><button type="button" class="${rk.plFar ? '' : 'is-in'}" data-rkp-plfar="0">Sab ${num(A.length)}</button><button type="button" class="${rk.plFar ? 'is-in' : ''} ${n ? 'kh' : ''}" data-rkp-plfar="1">⚖️ Farq wale ${num(n)}</button><span>farq = dono packet jama ≠ POS → dobara gino</span></div>`; })() : ''}</div>
     ${rk.tab === 'pend' ? (rkPendHTML(names) || '<div class="th-empty">✓<b>Sab rack bhare — koi patti baqi nahi</b></div>') : rk.tab === 'pct' ? pkAllHTML(true) : rk.tab === 'ro' ? roHTML(names) : `    ${rackZero.length && isOwner() ? (() => { const Z = rk.zAll ? rackZero : rackZero.slice(0, 8); return `<div class="rk-z0"><b>⚠️ ${num(rackZero.length)} items ka carton pcs <u>0</u> hai</b><small>POS mein in ka bill "Divide by zero" rok sakta hai. App se bane items PC khud 1 kar deta hai (item-post v1.3); baqi POS Item master mein Cotton/packing likhein (kam az kam 1).</small><span class="rk-chips">${Z.map(x => `<i class="rk-c kh" title="dukan ${num(x.ss)} · 30 din mein ${num(x.s)} bike">${esc(x.n)}${x.s ? ` · ${num(x.s)} bike` : ''}</i>`).join('')}${rackZero.length > 8 ? `<button type="button" class="rk-c pc rk-zm" data-rk-zall="1">${rk.zAll ? '▴ kam' : `+${num(rackZero.length - 8)} aur`}</button>` : ''}</span></div>`; })() : ''}
     ${isOwner() || all.length + pkDue().length > 3 ? `<details class="rk-set"${rk.setOpen ? ' open' : ''}><summary>⚙️ Qaide — % · hadd · patti</summary>
     ${isOwner() ? `<div class="rk-nb rk-pct"><span>📊 Itna % reh jaye to lao</span>${[[0, 'Sab'], [10, '10%'], [20, '20%'], [30, '30%'], [40, '40%']].map(([v, l]) => `<button type="button" class="${rackPct() === v ? 'is-in' : ''}" data-rk-pct="${v}">${l}</button>`).join('')}</div>` : ''}
@@ -3777,7 +3775,7 @@ function rkPaint(only) {
       ${ys.map(row).join('')}
       <button type="button" class="rk-go" data-rk-go="${esc(String(g))}"${n && !rk.busy ? '' : ' disabled'}>${rk.busy === String(g) ? '⏳ PC note bana raha hai…' : `🖨 ${num(n)} items — patti print${ys.length > n ? ' · phir agle' : ''}`}</button></section>`; }).join('') || (q ? `<p class="rk-note">"${esc(q)}" — list mein nahi. Neeche wajah dekhein.</p>` : `<div class="th-empty">🧺<b>${rackAt || irData ? 'Sab rack bhare hain' : 'Data aa raha hai'}</b><small>${rackAt || irData ? 'Jaise hi kisi item ka ek carton bikega, yahan aa jayega' : 'Shop PC update ke baad 2–5 minute'}</small></div>`)}</div>
     <div id="rkWhy">${q ? (() => { const due = new Set(all.map(y => String(y.x.i))), H = smartSearch(agPool().list.filter(it => !due.has(String(it.id))), q, 6); if (!H.length) return '';
-      return `<section class="rk-g rk-why"><div class="rk-gh"><b>🔍 Ye list mein kyun nahi?</b></div>${H.map(it => { const w = rkWhy(it.id); return `<div class="rk-wy"><span><b>${esc(it.name)}</b><i class="rk-c pc">${w.w}</i><small>📦 ${w.stk}</small></span>${w.can || w.any ? `<button type="button" class="rk-sv" data-rk-add="${esc(String(it.id))}">➕ Line mein lao</button>` : ''}</div>`; }).join('')}</section>`; })() : ''}</div>
+      return `<section class="rk-g rk-why"><div class="rk-gh"><b>🔍 Ye list mein kyun nahi?</b></div>${H.map(it => { const w = rkWhy(it.id); return `<div class="rk-wy"${w.can || w.any ? ` data-rk-add="${esc(String(it.id))}" role="button"` : ''}><span><b>${esc(it.name)}</b><i class="rk-c pc">${w.w}</i><small>📦 ${w.stk}</small></span>${w.can || w.any ? `<button type="button" class="rk-sv" data-rk-add="${esc(String(it.id))}">➕ Line mein lao</button>` : ''}</div>`; }).join('')}</section>`; })() : ''}</div>
     ${(() => { const P = pkDue(), cnt = Object.keys(itemCfg?.rackPk || {}).filter(k => pkCfg(k)).length; if (!P.length && !cnt && !isOwner()) return '';
       const G = new Map(); for (const y of P) { if (rk.g && Number(y.g) !== rk.g) continue; if (!G.has(y.g)) G.set(y.g, []); G.get(y.g).push(y); }
       return `<section class="rk-g rk-pw"><div class="rk-gh"><b>📦 Packet-war${cnt ? ` · ${num(cnt)} items` : ''}</b>${isOwner() ? '<button type="button" class="rk-all" data-rkp-set="1">⚙️ Items chunein</button>' : ''}</div>
@@ -4096,7 +4094,8 @@ document.addEventListener('click', e => {
     itemCfg = { ...(itemCfg || {}), rackPk: { ...(itemCfg?.rackPk || {}), [id]: v ? JSON.stringify(v) : null } }; rk.pDraft.delete(id); rk.pEd = ''; rkPaint();
     cloud.setRackPk(id, v).then(() => notice(v ? '✓ Packet-war save — PC 2 min mein ginna shuru' : '🗑 Hata diya')).catch(er => notice('Save nahi hua: ' + (er?.message || er))); return; }
   if (d.rkAll) { const ids = rkGroups(rackDue(), rkQOf).get(d.rkAll) || [], cur = rkPick('r' + d.rkAll, ids); rk.man.set('r' + d.rkAll, cur.size === ids.length ? new Set() : new Set(ids)); rkPaint(); return; }
-  if (d.rkAdd) { rk.extra.set(String(d.rkAdd), 1); const x = rkSynth(d.rkAdd); notice(`➕ ${x?.n || 'Item'} list mein — 1 ${Number(x?.pk) > 1 ? 'carton' : 'pcs'}`); rk.q = ''; rkPaint(); return; }
+  if (d.rkAdd) { const id = String(d.rkAdd), isPk = !!pkCfg(id) && (rackPk || []).some(r => String(r.i) === id); rk.pkx = rk.pkx || new Set(); if (isPk) rk.pkx.add(id); else rk.extra.set(id, 1);   // v2.103.82: tap = Lane wale list mein sab se upar (packet wala = packet-war line)
+    const nm = agPool().byId.get(id)?.name || 'Item'; notice(`➕ ${nm} — Lane wale list mein upar (tadad badal kar patti print)`); rk.q = ''; rk.tab = 'lane'; const qi = document.querySelector('[data-rk-q]'); if (qi) qi.value = ''; rkPaint(); try { $('rkBody')?.scrollTo?.({ top: 0 }); document.getElementById('dialogBody')?.scrollTo?.({ top: 0 }); } catch {} return; }
   if (d.rkPc) { const [id, v] = d.rkPc.split('|'), old = rackCfg(id) || {}, nv = { ...old, pct: Number(v) || 0 }; if (!cloud?.setRackCfg) return;   // v2.103.31: item ka apna %
     itemCfg = { ...(itemCfg || {}), rack: { ...(itemCfg?.rack || {}), [id]: Number(v) ? nv : Object.fromEntries(Object.entries(nv).filter(([k]) => k !== 'pct')) } }; rkPaint();
     cloud.setRackCfg(id, nv).then(() => notice(Number(v) ? `📊 Is item ka % ${v}` : '📊 Sab wala %')).catch(er => notice('Save nahi hua: ' + (er?.message || er))); return; }
@@ -4245,8 +4244,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.103.81';
-import { recentPush } from './recent.js?v=2.103.81';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.103.82';
+import { recentPush } from './recent.js?v=2.103.82';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)

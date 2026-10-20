@@ -4385,3 +4385,4 @@ html body :is(#summary,#dialogBody) .rk-100x{min-height:0;padding:6px 10px;borde
 
 /* v2.103.81: html{zoom:.92} ke saath 100vw = 92% chaura tha → khirki ab inset 0 (auto) = poori screen · 🔍 lane search upar chipki patti mein */
 html body :is(#summary,#dialogBody) .rk-qtop{margin:8px 0 2px}html body :is(#summary,#dialogBody) .rk-qtop input{padding:9px 12px;font-size:14px}
+html body :is(#summary,#dialogBody) .rk-tabs.two{grid-template-columns:1fr 1fr}html body :is(#summary,#dialogBody) .rk-wy[role=button]{cursor:pointer}html body :is(#summary,#dialogBody) .rk-wy[role=button]:active{background:#eef2ff}
