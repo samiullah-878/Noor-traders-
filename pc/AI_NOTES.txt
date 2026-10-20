@@ -3289,3 +3289,5 @@ v2.103.69 + PC rack-bharo v1.9: ⚖️ farq ki WAJAH — PC pj row mein s0 (from
 v2.103.70: ⚖️ packet farq — sab se chhote packet ke AADHE se kam farq = 0 (chip/filter mein nahi; 0.005 PCS jaisa POS ka rounding). AI nahi.
 
 v2.103.71 + rack-bharo v1.10: 📋 Packet % tab — upar sticky chips "Sab N / ⚖️ Farq wale N" (rk.plFar; list ke andar wala hataya). Farq wajah mein "wholesale bika X (rack se nahi)" alag (PC wq), "aur nikasi" = lo − sq − wq. AI nahi.
+
+v2.103.72: 🧺 packet-war items — (1) 🚫 "nahi lana" (rackCfg.off) ab packet walon par bhi: lane row par 🚫 button (malik), pkDue skip, Packet % list mein "🚫 nahi lana" chip + ↺ wapas; rkWhy wajah. (2) Godam khali (godam stock 0 ya sab se chhote packet se kam) → lane list mein nahi; wajah "🏬 Godam khali". Agent item_rack_off packet walon par bhi. AI nahi.
