@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.84';
-import { liveLabelsHTML } from './barcode.js?v=2.103.84';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.85';
+import { liveLabelsHTML } from './barcode.js?v=2.103.85';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1645,7 +1645,7 @@ function tcInHTML(pend) {
   if (!rows.length) return '';
   const q = fold(tcIq.trim()), open = rows.filter(r => !r.st && (!q || fold(r.l.name).includes(q))), done = rows.filter(r => r.st), G = new Map();
   for (const r of open) { if (!G.has(r.to)) G.set(r.to, []); G.get(r.to).push(r); }
-  const row = r => `<div class="tc-ir"><span><b>${esc(r.l.name)}</b><small>${tcQty(r.l)} · TN ${esc(r.tn)}</small></span><button type="button" class="tc-iok" data-tc-itk="${esc(r.k)}|${r.i}|ok">✓ aa gaya</button><button type="button" class="tc-ifq" data-tc-itk="${esc(r.k)}|${r.i}|farq">⚠️</button></div>`;
+  const row = r => `<div class="tc-ir"><span><b>${esc(r.l.name)}</b><small>${tcQty(r.l)} · TN ${esc(r.tn)}</small></span>${isOwner() || can('stock.tcprint') ? `<button type="button" class="tc-ilb" data-tc-lb1="${esc(r.k)}|${r.i}" aria-label="Barcode">🏷</button>` : ''}<button type="button" class="tc-iok" data-tc-itk="${esc(r.k)}|${r.i}|ok">✓ aa gaya</button><button type="button" class="tc-ifq" data-tc-itk="${esc(r.k)}|${r.i}|farq">⚠️</button></div>`;
   return `<details class="rk-set tc-in" open><summary>📦 Aane wala maal — <b>${num(rows.length - done.length)}</b> items baqi${done.length ? ` · ✓ ${num(done.length)}` : ''}</summary>
     <label class="hs-search tc-iq"><input type="search" data-tc-iq="1" placeholder="🔍 item dhoondo…" value="${esc(tcIq)}" autocomplete="off"></label>
     ${[...G].map(([to, ys]) => `<div class="tc-ig"><b>→ ${esc(to)} <i>${num(ys.length)}</i></b>${ys.sort((a, b) => a.l.name.localeCompare(b.l.name)).map(row).join('')}</div>`).join('') || (q ? '<p class="muted">Kuch nahi mila</p>' : '<p class="tc-iall">✓ Sab items aa gaye — neeche note par "Maal poora mila" dabao</p>')}
@@ -1680,6 +1680,7 @@ function tcNikleHTML() {
   const C = (on, k, v, lab) => `<button type="button" class="rc${on ? ' on' : ''}" data-tc-${k}="${v}">${lab}</button>`;
   const card = ({ t, s }) => { const k = tcKey(t), op = tcOpen.has(k);
     return `<div class="tc-n ${s.k}${s.ng ? ' ng' : ''}">${(s.k === 'wait' || s.k === 'late') && !s.ng && tcCanStep(t, 2) ? `<label class="tc-ck"><input type="checkbox" data-tc-sel="${esc(k)}"${tcSel.has(k) ? ' checked' : ''}></label>` : ''}<button type="button" class="tc-h" data-tc-open="${esc(k)}"><span class="tc-l"><b>TN ${esc(t.transferNo || t.transferId)}</b><small>${esc(branchName(t.from, names))} → ${esc(branchName(t.to, names))} · ${tcSum(t)}</small></span><span class="tc-t">${tcClock(tcIssued(t))}${regDay(tcIssued(t)) !== regDay(Date.now()) ? `<small>${esc(regDay(tcIssued(t)).slice(5))}</small>` : ''}</span></button>
+      ${s.k !== 'cancel' && (isOwner() || can('stock.tcprint')) ? `<div class="tc-rp"><button type="button" data-tc-rp="${esc(k)}|note">🖨 Note dobara</button><button type="button" data-tc-rp="${esc(k)}|lb">🏷 Barcode dobara</button><button type="button" data-tc-rp="${esc(k)}|both">🖨+🏷 Dono</button></div>` : ''}
       <span class="tc-st ${s.k}${s.ng ? ' ng' : ''}">${tcStatusText(t, s)}</span>${!s.c && tcFarqItems(t).length ? `<span class="tc-st farq">⚠️ farq: ${esc(tcFarqItems(t).join(', ').slice(0, 80))} — note khol kar "Farq hai" save karo</span>` : ''}${tcStepsHTML(t, s)}${s.k === 'cancel' ? '' : tcEditHTML(t)}
       ${op ? `<div class="tc-more">${(s.k === 'wait' || s.k === 'late') && !s.ng && tcCanStep(t, 2) ? tcLinesCk(t) : tcLines(t)}${s.g && tcNeedG(t) ? `<p class="tc-note">📦 1 number: ${esc(s.g.byName || '')} · ${tcClock(s.g.ts)} · 📱 ${esc(s.g.device || '—')}</p>${isOwner() && !s.c ? `<button type="button" class="tc-del" data-tc-del="${esc(tcGKey(t))}">🗑 "De diya" tick hatao (sirf malik)</button>` : ''}` : ''}${s.c ? tcWho(s.c) + (s.c.note ? `<p class="tc-note">📝 ${esc(s.c.note)}</p>` : '') + (isOwner() ? `<button type="button" class="tc-del" data-tc-del="${esc(k)}">🗑 Check hatao (sirf malik — ghalti par)</button>` : '') : '<p class="tc-note">Abhi kisi ne scan nahi kiya. Maal aane par "📷 Scan / Check" mein parchi scan karein.</p>'}</div>` : ''}</div>`; };
   return `<div class="mchips">${C(tcDays === 1, 'd', 1, 'Aaj')}${C(tcDays === 2, 'd', 2, 'Kal')}${C(tcDays === 7, 'd', 7, '7 din')}${C(tcDays === 30, 'd', 30, '30 din')}</div>
@@ -3691,6 +3692,14 @@ document.addEventListener('click', e => { const x = e.target.closest?.('[data-rk
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-rk-100sv]'); if (!b || !rk) return; const [id, pk] = b.dataset.rk100sv.split('|'), v = Number(document.querySelector(`[data-rk-100="${CSS.escape(id)}"]`)?.value) || 0; if (!(v > 0)) { notice('100% likhein'); return; }
   if (!cloud?.setRackCfg) { notice('App update karein'); return; } const pcs = Math.round(v * (Number(pk) || 1)), nv = { ...(rackCfg(id) || {}), b: pcs }; itemCfg = { ...(itemCfg || {}), rack: { ...(itemCfg?.rack || {}), [id]: nv } }; rk.sel.delete(id); rkPaint();
   cloud.setRackCfg(id, nv).then(() => notice('🔒 100% lock: ' + num(v) + (Number(pk) > 1 ? ' ctn' : ' pcs'))).catch(er => notice('Save nahi hua: ' + (er?.message || er))); });
+// v2.103.85: 🖨 TRANSFER CHECK se dobara — note / barcode / dono (TN card) + ek item ka 🏷 (aane wala maal). 20+ label = pehle "Pakka?"
+const tcLbLine = l => ({ itemId: l.itemId, name: l.name, pack: Number(l.pack) || 0, ctn: 0, pcs: Number(l.qty) || 0, ...(Array.isArray(l.pk) && l.pk.length ? { pk: l.pk } : {}) });
+async function tcLabels(lines, why) { const n = rkLbCount(lines); if (!n) { notice('🏷 Koi barcode nahi mila'); return; } if (n > 20 && !confirm(`${num(n)} barcode label chhapein? Pakka?`)) return; await rkLabelsGo(lines, why); }
+function tcNotePrint(t) { if (!cloud?.requestPrint) { notice('App update karein'); return; } const job = (trList || []).find(j => String(j.transferId) === String(t.transferId) && j.status === 'done' && j.op !== 'delete');
+  cloud.requestPrint({ kind: 'transfer', id: job ? job.id : 'pos:' + t.transferId, reason: 'Transfer check — dobara', copies: 1 }).then(() => notice('🖨 TN ' + (t.transferNo || t.transferId) + ' dobara print — PC ko bheja')).catch(er => notice('⚠️ ' + (er?.message || er))); }
+document.addEventListener('click', async e => { const b = e.target.closest?.('[data-tc-rp],[data-tc-lb1]'); if (!b) return; e.preventDefault(); e.stopPropagation();
+  if (b.dataset.tcRp) { const [k, w] = b.dataset.tcRp.split('|'), t = tcAll().find(x => tcKey(x) === k); if (!t) return; if (w === 'note' || w === 'both') tcNotePrint(t); if (w === 'lb' || w === 'both') await tcLabels((t.lines || []).map(tcLbLine), '(TN ' + (t.transferNo || t.transferId) + ')'); return; }
+  const [k, i] = b.dataset.tcLb1.split('|'), t = tcAll().find(x => tcKey(x) === k), l = t?.lines?.[Number(i)]; if (!l) return; await tcLabels([tcLbLine(l)], '(' + l.name + ')'); }, true);
 // v2.103.51: Mangwao / kahin bhi se item band — stock screen wala password (stockConfig.bandPw, default 7183), phir wahi confirm; band hote hi rack/mangwao list se hat jata hai
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-ro-bretry]'); if (!b) return; e.preventDefault(); if (!cloud?.bandRetry) { notice('App update karein'); return; } b.disabled = true; cloud.bandRetry(b.dataset.roBretry).then(() => notice('🔁 PC dobara koshish karega (PC on ho)')).catch(er => { b.disabled = false; notice('⚠️ ' + (er?.message || er)); }); });   // v2.103.63: ❌ fail → dobara (stock screen + mangwao dono)
 async function bandAsk(id, on) { if (!canBand()) return false; const pw = await bandPwCheck((on ? 'Item BAND karne' : 'Item dobara CHALU karne') + ' ka password:'); if (pw == null) return false;
@@ -4257,8 +4266,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.103.84';
-import { recentPush } from './recent.js?v=2.103.84';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.103.85';
+import { recentPush } from './recent.js?v=2.103.85';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)

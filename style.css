@@ -4387,3 +4387,5 @@ html body :is(#summary,#dialogBody) .rk-100x{min-height:0;padding:6px 10px;borde
 html body :is(#summary,#dialogBody) .rk-qtop{margin:8px 0 2px}html body :is(#summary,#dialogBody) .rk-qtop input{padding:9px 12px;font-size:14px}
 html body :is(#summary,#dialogBody) .rk-tabs.two{grid-template-columns:1fr 1fr}html body :is(#summary,#dialogBody) .rk-wy[role=button]{cursor:pointer}html body :is(#summary,#dialogBody) .rk-wy[role=button]:active{background:#eef2ff}
 html body :is(#summary,#dialogBody) .rk-lb.rk-cap{border-color:#fdba74;background:#fff7ed;color:#9a3412}html body :is(#summary,#dialogBody) .rk-lb.rk-cap.is-in{border-style:solid}
+html body :is(#summary,#dialogBody) .tc-rp{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}html body :is(#summary,#dialogBody) .tc-rp button{min-height:0;padding:5px 10px;border-radius:999px;font-size:12px;font-weight:800;border:1.5px solid #c7d2fe!important;background:#eef2ff!important;color:#3730a3!important}
+html body :is(#summary,#dialogBody) .tc-ilb{min-height:0;width:34px;height:34px;padding:0;border-radius:10px;border:1.5px solid #c7d2fe!important;background:#fff!important;font-size:15px;flex:0 0 auto}
