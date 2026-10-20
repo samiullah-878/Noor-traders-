@@ -1,5 +1,5 @@
 // =========================================================
-//  rack-bharo.js  v1.6 (2026-10-19: 🧾 stock fraq / ginti farq ke sale bill 'bika' mein nahi gine) · v1.5 (2026-10-18: 📤 NIKLA = aakhri aamad ke baad dukan se bika (s) + WAPAS godam gaya (o: transfer dukan -> godam) − seedha dukan
+//  rack-bharo.js  v1.7 (2026-10-20: 🏬 WHOLESALE ki sale 'bika' mein NAHI — malik: 'is mein wholesale ki sale add na karo' (wholesale maal rack se nahi jata). Party naam blueAccess/reportConfig.wsNames + 'whole sale' — item-report jaisa; lane (sold) aur packet (sold[z]) dono) · v1.6 (2026-10-19: 🧾 stock fraq / ginti farq ke sale bill 'bika' mein nahi gine) · v1.5 (2026-10-18: 📤 NIKLA = aakhri aamad ke baad dukan se bika (s) + WAPAS godam gaya (o: transfer dukan -> godam) − seedha dukan
 //                  par purchase (p) — malik ka asal qaida: 'maal aane par rack bhara, jitna nikla 1 carton ho to lao'. Row: o, p. lo ab sirf
 //                  candidate (dukan stock < 1 carton) — app malik ki hadd chip (rackLo) se faisla) · v1.4 (2026-10-18: 🟠 lo = rack KAM: dukan par bikta (180 din) aur dukan stock 1 carton se kam -> row bhejo
 //                  (Clear shampoo 400ml: 12 pcs dukan se WAPAS Godam 1 gaye, phir 10 bike = 2 bache, list mein nahi aaya tha) · godam: aakhri
@@ -23,6 +23,10 @@ const SHOP = 1, DAYS = 180;
 // v1.6: ginti farq ke bill (party "stock fraq" / Description "Stock ginti farq") asal bikri nahi
 const NOFQ = "AND ISNULL(CAST(s.Description AS NVARCHAR(200)), '') NOT LIKE 'Stock ginti farq%' AND ISNULL(s.PartyID, -2) NOT IN (SELECT PartyID FROM dbo.Party WHERE LOWER(PartyName) LIKE '%stock%fraq%' OR LOWER(PartyName) LIKE '%stock%farq%')";
 const r3 = n => Math.round((Number(n) || 0) * 1000) / 1000;
+// v1.7: wholesale parties ki sale rack ke 'bika' mein nahi — reportConfig.wsNames (+ 'whole sale'); SQL fragment (main() mein set)
+let NOWS = "AND ISNULL(s.PartyID, -2) NOT IN (SELECT PartyID FROM dbo.Party WHERE LOWER(PartyName) LIKE '%whole%sale%')";
+function setWs(names) { const esc = x => String(x || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').replace(/\s+/g, ' ').trim(); const L = ['whole sale', ...(Array.isArray(names) ? names.flat(3) : [])].map(esc).filter(x => x.length >= 3);
+  NOWS = "AND ISNULL(s.PartyID, -2) NOT IN (SELECT PartyID FROM dbo.Party WHERE " + [...new Set(L)].map(n => `LOWER(PartyName) LIKE '%${n.replace(/ /g, '%')}%'`).join(' OR ') + ")"; }
 const med = a => { const s = a.filter(x => x > 0).sort((x, y) => x - y); if (!s.length) return 0; const k = s.length >> 1; return s.length % 2 ? s[k] : r3((s[k - 1] + s[k]) / 2); };
 const sqlDt = d => { const p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
 
@@ -42,7 +46,7 @@ async function read(p, now = new Date()) {
     const rs = (await p.request().query(`
       SELECT v.ItemID, SUM(d.Qty) AS q FROM (VALUES ${vals}) v(ItemID, W)
       JOIN dbo.SaleDetail d ON d.ItemID = v.ItemID JOIN dbo.Sale s ON s.SaleID = d.SaleID
-      WHERE s.SaleDate >= CAST(v.W AS DATETIME) AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(NULLIF(d.GBranchID, 0), s.BranchID) = ${SHOP} ${NOFQ}
+      WHERE s.SaleDate >= CAST(v.W AS DATETIME) AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(NULLIF(d.GBranchID, 0), s.BranchID) = ${SHOP} ${NOFQ} ${NOWS}
       GROUP BY v.ItemID`)).recordset;
     for (const r of rs) sold.set(Number(r.ItemID), Number(r.q) || 0);
     // v1.5: 📤 wapas godam (dukan -> kahin aur) + 🛒 seedha dukan par purchase — aakhri aamad ke baad
@@ -95,7 +99,7 @@ async function readPk(p, cfg, now = new Date()) {
   for (const x of items) x.from = Math.max(x.at || 0, lt.get(x.id) || 0, since.getTime());
   const minT = new Date(Math.min(...items.map(x => x.from)));
   const lines = (await p.request().input('a', sql.DateTime, minT).query(`SELECT d.ItemID, d.Qty, s.SaleDate FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID
-    WHERE s.SaleDate >= @a AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(NULLIF(d.GBranchID, 0), s.BranchID) = ${SHOP} ${NOFQ} AND d.ItemID IN (${ids.join(',')})`)).recordset;
+    WHERE s.SaleDate >= @a AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(NULLIF(d.GBranchID, 0), s.BranchID) = ${SHOP} ${NOFQ} ${NOWS} AND d.ItemID IN (${ids.join(',')})`)).recordset;
   const st = new Map((await p.request().query(`SELECT r.ItemID, r.BranchID, ISNULL(r.CurrStock, 0) AS St, i.ItemName FROM dbo.ItemBranchRate r JOIN dbo.Items i ON i.ItemID = r.ItemID WHERE r.ItemID IN (${ids.join(',')})`)).recordset
     .reduce((m, r) => { const k = Number(r.ItemID); if (!m.has(k)) m.set(k, { n: String(r.ItemName || '').trim().slice(0, 70), st: {} }); m.get(k).st[Number(r.BranchID)] = Number(r.St) || 0; return m; }, new Map()).entries());
   const by = new Map(items.map(x => [x.id, { ...x, sold: {}, kh: 0 }]));
@@ -122,6 +126,7 @@ if (require.main === module) (async () => {
     const { getFirestore } = require('firebase-admin/firestore');
     if (!getApps().length) initializeApp({ credential: cert(require('./firebase-key.json')) });
     pool = await new sql.ConnectionPool(SQL_CONFIG).connect();
+    try { const c = await getFirestore().collection('businesses').doc('noor-traders').collection('blueAccess').doc('reportConfig').get(); setWs(c.exists ? c.data().wsNames : null); } catch {}   // v1.7
     const rows = await read(pool);
     let pk = []; try { const c = await getFirestore().collection('businesses').doc('noor-traders').collection('blueAccess').doc('stockConfig').get(); pk = await readPk(pool, c.exists ? c.data().rackPk : null); } catch (e) { console.log('📦 packet-war masla: ' + (e?.message || e)); }
     let z = []; try { z = await readZero(pool); } catch (e) { console.log('⚠️ pcs-0 masla: ' + (e?.message || e)); }
