@@ -5579,3 +5579,5 @@ v2.103.71 + rack-bharo v1.10: 📋 Packet % tab — upar sticky chips "Sab N / �
 v2.103.72: 🧺 packet-war items — (1) 🚫 "nahi lana" (rackCfg.off) ab packet walon par bhi: lane row par 🚫 button (malik), pkDue skip, Packet % list mein "🚫 nahi lana" chip + ↺ wapas; rkWhy wajah. (2) Godam khali (godam stock 0 ya sab se chhote packet se kam) → lane list mein nahi; wajah "🏬 Godam khali". Agent item_rack_off packet walon par bhi. AI nahi.
 
 v2.103.73: 🖥 PC (1100px+) par har khirki (#dialog) ka body + title zoom 1.28 — chips/text bare (malik: "PC par screens ke andar chips chhote"). Sirf CSS. AI nahi.
+
+v2.103.74 + rack-bharo v1.11: 🔒 RACK POORA LOCK (carton items) — PC: b0 = pehle rack transfer (18 Oct 2026 se, SHOP mein) ke foran baad dukan ka stock (ledger se), bt = us note ka waqt; note na ho to 18 Oct 00:00 ka stock; rows mein b0/bt; filter mein lowPct (ss/b0 ≤ 40%) bhi. App rackCalc: bLock = cf.b (malik ✏️ "🧺 Rack poora — lock", data-rk-b, cloud.setRackCfg b) > x.b0 > purana (ss+nikla); % = ss/bLock; pctDue (≤ % chip) = lane ka sabab, lao = poora − abhi (poore carton). Chip "📊 16% bacha (🔒 poora 60 mein se 10)". Agent rack_poora {item, poora}. AI nahi.

@@ -1,5 +1,5 @@
 // =========================================================
-//  rack-bharo.js  v1.10 (2026-10-20: wq = from ke baad wholesale parties ko dukan se bika — app 'aur nikasi' se alag dikhati hai) · v1.9 (2026-10-20: 📦 packet item par ledger bhi — s0 = ginti (from) ke waqt dukan ka POS stock (abhi − ledger net), li/lo = us ke baad ledger QtyIn/QtyOut, sq = sale qty (packet + khula). App farq ki wajah batati hai: ginti ke waqt farq tha ya baad mein bina-packet sale / aamad) · v1.8 (2026-10-20: ⏱ har 1 MIN (malik: "bikne ka time kam karo"); badla na ho to 5 min tak nahi likhta) · v1.7 (2026-10-20: 🏬 WHOLESALE ki sale 'bika' mein NAHI — malik: 'is mein wholesale ki sale add na karo' (wholesale maal rack se nahi jata). Party naam blueAccess/reportConfig.wsNames + 'whole sale' — item-report jaisa; lane (sold) aur packet (sold[z]) dono) · v1.6 (2026-10-19: 🧾 stock fraq / ginti farq ke sale bill 'bika' mein nahi gine) · v1.5 (2026-10-18: 📤 NIKLA = aakhri aamad ke baad dukan se bika (s) + WAPAS godam gaya (o: transfer dukan -> godam) − seedha dukan
+//  rack-bharo.js  v1.11 (2026-10-20: 🔒 b0 = RACK POORA lock — pehle rack transfer (18 Oct 2026 se, SHOP mein) ke foran baad dukan ka stock (ledger se: abhi − us ke baad ki harkat); note na ho to 18 Oct 00:00 ka stock. Malik: 'pehle din wali quantity lock, transfer notes se qaida na badle'. App: rackCfg.b (malik) > b0) · v1.10 (2026-10-20: wq = from ke baad wholesale parties ko dukan se bika — app 'aur nikasi' se alag dikhati hai) · v1.9 (2026-10-20: 📦 packet item par ledger bhi — s0 = ginti (from) ke waqt dukan ka POS stock (abhi − ledger net), li/lo = us ke baad ledger QtyIn/QtyOut, sq = sale qty (packet + khula). App farq ki wajah batati hai: ginti ke waqt farq tha ya baad mein bina-packet sale / aamad) · v1.8 (2026-10-20: ⏱ har 1 MIN (malik: "bikne ka time kam karo"); badla na ho to 5 min tak nahi likhta) · v1.7 (2026-10-20: 🏬 WHOLESALE ki sale 'bika' mein NAHI — malik: 'is mein wholesale ki sale add na karo' (wholesale maal rack se nahi jata). Party naam blueAccess/reportConfig.wsNames + 'whole sale' — item-report jaisa; lane (sold) aur packet (sold[z]) dono) · v1.6 (2026-10-19: 🧾 stock fraq / ginti farq ke sale bill 'bika' mein nahi gine) · v1.5 (2026-10-18: 📤 NIKLA = aakhri aamad ke baad dukan se bika (s) + WAPAS godam gaya (o: transfer dukan -> godam) − seedha dukan
 //                  par purchase (p) — malik ka asal qaida: 'maal aane par rack bhara, jitna nikla 1 carton ho to lao'. Row: o, p. lo ab sirf
 //                  candidate (dukan stock < 1 carton) — app malik ki hadd chip (rackLo) se faisla) · v1.4 (2026-10-18: 🟠 lo = rack KAM: dukan par bikta (180 din) aur dukan stock 1 carton se kam -> row bhejo
 //                  (Clear shampoo 400ml: 12 pcs dukan se WAPAS Godam 1 gaye, phir 10 bike = 2 bache, list mein nahi aaya tha) · godam: aakhri
@@ -67,6 +67,14 @@ async function read(p, now = new Date()) {
   const ever = new Set((await p.request().input('a', sql.DateTime, since).query(`SELECT DISTINCT d.ItemID FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID
     WHERE s.SaleDate >= @a AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(NULLIF(d.GBranchID, 0), s.BranchID) = ${SHOP} ${NOFQ}`)).recordset.map(r => Number(r.ItemID)).filter(Number.isFinite));
   const want = [...new Set([...ids.filter(id => (sold.get(id) || 0) > 0), ...ever])]; if (!want.length) return [];
+  // v1.11: 🔒 rack poora (b0) — pehla transfer SHOP mein RACK0 ke baad; stock us ke baad = ss − (ledger in − out after T)
+  const RACK0 = new Date('2026-10-18T00:00:00'), b0 = new Map();
+  try { const ft = new Map((await p.request().input('a', sql.DateTime, RACK0).query(`SELECT d.ItemID, MIN(ISNULL(t.CreatedOn, t.TransferDate)) AS W FROM dbo.StockTransferDetail d JOIN dbo.StockTransfer t ON t.TransferID = d.TransferID
+      WHERE t.ToBranchID = ${SHOP} AND t.FromBranchID <> ${SHOP} AND t.TransferDate >= @a AND d.Qty > 0 GROUP BY d.ItemID`)).recordset.map(r => [Number(r.ItemID), new Date(r.W)]));
+    for (let k = 0; k < want.length; k += 800) { const part = want.slice(k, k + 800), vals = part.map(id => `(${id}, '${sqlDt(ft.get(id) || RACK0)}')`).join(',');
+      const rs = (await p.request().query(`SELECT v.ItemID, ISNULL(SUM(l.QtyIn), 0) AS qi, ISNULL(SUM(l.QtyOut), 0) AS qo FROM (VALUES ${vals}) v(ItemID, W)
+        LEFT JOIN dbo.StockLedger l ON l.ItemID = v.ItemID AND l.BranchID = ${SHOP} AND l.LedgerDate > CAST(v.W AS DATETIME) GROUP BY v.ItemID`)).recordset;
+      for (const r of rs) b0.set(Number(r.ItemID), { qi: r3(r.qi), qo: r3(r.qo), t: (ft.get(Number(r.ItemID)) || RACK0).getTime() }); } } catch (e) { console.log('b0 masla: ' + (e?.message || e)); }
   const out = [];
   for (let k = 0; k < want.length; k += 800) {
     const part = want.slice(k, k + 800);
@@ -74,11 +82,13 @@ async function read(p, now = new Date()) {
       FROM dbo.Items i LEFT JOIN dbo.ItemBranchRate r ON r.ItemID = i.ItemID WHERE i.ItemID IN (${part.join(',')})`)).recordset;
     const by = new Map(); for (const r of rs) { const id = Number(r.ItemID); if (!by.has(id)) by.set(id, { n: String(r.ItemName || '').trim().slice(0, 70), pk: Number(r.Pack) || 0, st: {} }); if (r.BranchID != null) by.get(id).st[Number(r.BranchID)] = Number(r.St) || 0; }
     for (const id of part) { const L = last.get(id), I = by.get(id); if (!I) continue; const ss = I.st[SHOP] || 0, o0 = outQ.get(id) || 0, p0 = purQ.get(id) || 0, s0 = sold.get(id) || 0, nik = s0 + o0 - p0, khali = ever.has(id) && ss <= 0, lo = !khali && ever.has(id) && I.pk > 1 && ss < I.pk;
-      if (!(nik > 0) && !khali && !lo) continue;
+      const B0 = b0.get(id), bq0 = B0 ? r3(ss - B0.qi + B0.qo) : 0, lowPct = bq0 > 0 && ss / bq0 <= 0.4;   // v1.11: % wala sabab bhi
+      if (!(nik > 0) && !khali && !lo && !lowPct) continue;
       const best = Number(Object.entries(I.st).filter(([b, v]) => Number(b) !== SHOP && v > 0).sort((a, b) => b[1] - a[1])[0]?.[0]) || 0;
       const g = L && (I.st[L.g] || 0) > 0 ? L.g : best, gs = I.st[g] || 0; if (!g || !(gs > 0)) continue;
       const fc = !L || !(I.pk > 1) ? 1 : (L.qs.every(q => Math.abs(q / I.pk - Math.round(q / I.pk)) < 1e-6) ? 1 : 0);
-      out.push({ i: id, n: I.n, pk: I.pk, g, gs: r3(gs), ss: r3(ss), w: L ? L.w.getTime() : 0, s: r3(s0), m: L ? med(L.qs) : 0, fc, ...(o0 ? { o: r3(o0) } : {}), ...(p0 ? { p: r3(p0) } : {}), ...(khali ? { k: 1 } : {}), ...(lo ? { lo: 1 } : {}) }); }
+      const B = b0.get(id), bq = B ? r3(ss - B.qi + B.qo) : 0;
+      out.push({ i: id, n: I.n, pk: I.pk, g, gs: r3(gs), ss: r3(ss), w: L ? L.w.getTime() : 0, s: r3(s0), m: L ? med(L.qs) : 0, fc, ...(bq > 0 ? { b0: bq, bt: B.t } : {}), ...(o0 ? { o: r3(o0) } : {}), ...(p0 ? { p: r3(p0) } : {}), ...(khali ? { k: 1 } : {}), ...(lo ? { lo: 1 } : {}) }); }
   }
   return out.sort((a, b) => a.n.localeCompare(b.n));
 }
