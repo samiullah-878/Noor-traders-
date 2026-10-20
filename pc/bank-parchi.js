@@ -1,5 +1,5 @@
 // =========================================================
-//  bank-parchi.js  v2.4 (2026-10-14: ✉️ Alfalah EMAIL bhi parhna (ibanking: naam · email.notification: account + charges) + wahi Ref / TXN do docs mein = EK, doosra post nahi) · v2.3 (2026-10-14: 🏦 BANK ALFALAH SMS (8287) parhna — aaye / 💳 card / fee / statement; Alfalah NT (@pcin) mein aaye
+//  bank-parchi.js  v2.5 (2026-10-20: chhoti parchi par Urdu sar-khi + bari Urdu tareekh) · v2.4 (2026-10-14: ✉️ Alfalah EMAIL bhi parhna (ibanking: naam · email.notification: account + charges) + wahi Ref / TXN do docs mein = EK, doosra post nahi) · v2.3 (2026-10-14: 🏦 BANK ALFALAH SMS (8287) parhna — aaye / 💳 card / fee / statement; Alfalah NT (@pcin) mein aaye
 //                     paise khud; apne naam (Noor Traders / Samiullah) se aaye = khud nahi, app EK transfer banati hai) · v2.2 (2026-10-13: 🔔 HBL Mobile app ki NOTIFICATION (src 'notif') bhi parhta hai + notification / SMS / email jurwan = ek) · v2.1 (2026-10-12) — 🏦 sirf apne HBL account ke (A/C ke aakhri 4 number app mein yaad) · v2.0 (2026-10-12) — 🤖 aaye paise khud HBL khate mein (neeche) · v1.0 — 💰 PAISE AAYE ki parchi (Server PC, TM-T88IV)
 //  Malik: "jaise hi koi paisa aya usi time computer se print bi nikl aiya".
 //  📩 HBL Inbox (Firestore bankSms) mein naya SMS / email aate hi -> parchi: raqam (bara), kis se, bank, via, waqt, TXN.
@@ -176,7 +176,7 @@ const bankKeyOf = r => r.txn ? 'T' + r.txn.toUpperCase() : `A${r.dir}${r.amt}${r
 const ascii = s => String(s ?? '').replace(/[^\x20-\x7e]/g, '').replace(/\s+/g, ' ').trim();
 const rs = p => 'Rs ' + Math.round(p / 100).toLocaleString('en-US');
 function slipText(r, head, W = 42) {
-  const ESC = '\x1b', GS = '\x1d', out = head(r.dir === 'in' ? 'PAISE AAYE - HBL' : 'PAISE GAYE - HBL');
+  const ESC = '\x1b', GS = '\x1d', out = head(r.dir === 'in' ? 'PAISE AAYE - HBL' : 'PAISE GAYE - HBL', r.dir === 'in' ? 'پیسے آئے — ایچ بی ایل' : 'پیسے گئے — ایچ بی ایل', r.day || Date.now());   // v2.5 (2026-10-20): Urdu sar-khi + tareekh (transfer-sync head)
   const row = (l, v) => { v = ascii(v); if (!v) return; const s = (l + ': ').padEnd(8) + v; for (let i = 0; i < s.length; i += W) out.push(s.slice(i, i + W)); };
   out.push(ESC + 'a' + '\x01' + ESC + '!' + '\x38' + (r.dir === 'in' ? '+ ' : '- ') + rs(r.amt) + ESC + '!' + '\x00' + ESC + 'a' + '\x00', '');
   row(r.dir === 'in' ? 'Kis se' : 'Kis ko', r.name); row('Bank', r.bank); row('Via', r.via);

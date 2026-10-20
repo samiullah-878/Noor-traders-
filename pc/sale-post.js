@@ -1,5 +1,6 @@
 // ============================================================
 //  sale-post.js — Blue Khata app ki "Nayi Sale" -> POS Sale bill (v1)
+//  v1.12 (2026-10-20): 📅 rasid + gate pass par upar Urdu tareekh (urdu-names v1.5) · rasid par 'Sale No' poora (32 harf mein kat jata tha)
 //  v1.11 (2026-10-14): 🔤 GATE PASS par har item ke neeche URDU naam (urdu-names.js, app ke Urdu naam) — tasveer, nt-parchi worker se
 //  v1.10 (2026-10-14): 🚪 GATE PASS sirf item + quantity, bara aur gehra font (heading / bill no / barcode / total / dastakhat hata diye)
 //  v1.9.1 (2026-10-06): ✏️ edit — doosre counter ka naya bill (beech mein) ab edit nahi rokta; sirf APNE notes wala naya bill = wapas
@@ -428,9 +429,11 @@ async function receiptFor(saleNo, saleId) {
   out.push(ESC + 'a' + '\x01');                          // center
   out.push(big(SHOP.name));
   out.push(SHOP.phone);
+  if (UR.isOn() && UR.dateLine) out.push(UR.dateLine(head.SaleDate, 50));   // v1.12 (2026-10-20): 📅 Urdu tareekh bari
   out.push(ESC + 'a' + '\x00');                          // left
   out.push(hr);
-  out.push(line('Sale No: ' + String(head.SaleNo || '').trim(), new Date(head.SaleDate).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })));
+  { const no = 'Sale No: ' + String(head.SaleNo || '').trim(), dt = new Date(head.SaleDate).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });   // v1.12: 32 harf mein number kat jata tha
+    if (no.length + dt.length + 1 <= W) out.push(line(no, dt)); else out.push(ESC + 'E\x01' + no + ESC + 'E\x00', ESC + 'a\x02' + dt + ESC + 'a\x00'); }
   out.push(ESC + 'a' + '\x01');
   out.push(barcode(String(head.SaleNo || '').trim()));
   out.push(ESC + 'a' + '\x00');
@@ -514,6 +517,7 @@ function gatePassText(godamName, rows, saleNo, partyName, when) {
   const r3v = v => Math.round((Number(v) || 0) * 1000) / 1000;
   const wrap = (t, w) => { const o = []; let cur = ''; for (const x of String(t || '').trim().split(/\s+/).filter(Boolean)) { for (let y = x; y; y = y.slice(w)) { const c = y.slice(0, w); if (!cur) cur = c; else if ((cur + ' ' + c).length <= w) cur += ' ' + c; else { o.push(cur); cur = c; } } } if (cur) o.push(cur); return o.length ? o : ['']; };
   const out = [ESC + '@', ESC + 'G' + '\x01'];   // ESC G 1 = double-strike (gehra)
+  if (UR.isOn() && UR.dateLine) out.push(UR.dateLine(when || Date.now(), 44));   // v1.12 (2026-10-20): 📅 upar Urdu tareekh
   const byItem = new Map();   // ek item ki carton/piece wali do lines jama kar ke ek qatar
   for (const l of rows) { const k = l.ItemID; const o = byItem.get(k) || { name: l.name, pack: l.pack, qty: 0, ur: UR.get(k) }; o.qty = r3v(o.qty + l.qty); byItem.set(k, o); }
   let i = 0;

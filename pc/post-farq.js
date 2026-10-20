@@ -1,3 +1,4 @@
+// v17.3 (2026-10-20): 🔤 ginti farq + item band rasid par Urdu sar-khi + bari Urdu tareekh (urdu-names + nt-parchi) · item band rasid ab kaghaz kaat-ti hai.
 // v17.2 (2026-10-20): _hidden.pw (mulazim ka band password, rules 2.66) foran mita do.
 // v17.1 (2026-10-20): fail ki WAJAH app ko (_bandDone.fail[id] = {n, why}) + app ka 🔁 dobara (stockCount/_hidden.retry[id] = ts → fail reset).
 // v17 (2026-10-20): band ka jawab app ko — stockCount/_bandDone {items:{id:{at,code,name,bills}}, fail:{id:n}} har bandOnce ke baad (badla ho to). App: '⏳ PC baqi' list, ✓ POS inactive, ❌ 3 dafa fail.
@@ -504,7 +505,7 @@ function receiptText(b) {
   const big = t => ESC + '!' + '\x30' + t + ESC + '!' + '\x00';
   const barcode = code => { const c = String(code || '').trim(); if (!c) return '';
     return GS + 'h' + '\x50' + GS + 'w' + '\x02' + GS + 'H' + '\x02' + GS + 'k' + '\x49' + String.fromCharCode(c.length + 2) + '{B' + c + '\n'; };
-  const out = [ESC + '@', ESC + 'a' + '\x01', big('NOOR TRADERS'), 'STOCK GINTI FARQ', ESC + 'a' + '\x00', hr,
+  const out = [ESC + '@', ESC + 'a' + '\x01', big('NOOR TRADERS'), 'STOCK GINTI FARQ', ...urHead('اسٹاک گنتی فرق', b.doneAt || Date.now()), ESC + 'a' + '\x00', hr,
     line('Sale No:', b.saleNo || '-')];
   if (b.saleNo) { out.push(ESC + 'a' + '\x01', barcode(String(b.saleNo).trim()), ESC + 'a' + '\x00'); }
   if (b.returnNo) out.push(line('Return No:', b.returnNo));
@@ -527,8 +528,16 @@ function receiptText(b) {
   return out.join('\r\n');
 }
 
+// 2026-10-20: 🔤 Urdu sar-khi + bari Urdu tareekh (malik: har parchi par) — urdu-names + nt-parchi (tasveer); na chale to bina Urdu RAW
+let UR = null; try { UR = require('./urdu-names.js'); UR.watch(db, BUSINESS_ID, m => console.log(m)); } catch (e) { console.log('urdu-names.js nahi: ' + e.message); UR = null; }
+let PARCHI = null; const getParchi = () => PARCHI || (PARCHI = require('./nt-parchi.js').make({ dir: DIR, width: PRINT_WIDTH, dots: 512 }));
+function urHead(t, date) { try { return UR && UR.isOn() && UR.dateLine ? [UR.line(t, 44, 1), UR.dateLine(date, 50), '\x1ba\x00'] : []; } catch { return []; } }
 // RAW print: ESC/POS bytes seedha printer ko (barcode/bara text chalta hai)
 function printText(text) {
+  if (UR && UR.has(text)) return Promise.resolve().then(() => getParchi().sendJobs([UR.toJob(text, { font: getParchi().FONT_UR, dots: 512 })], PRINTER_NAME)).catch(e => (console.log('Urdu parchi masla: ' + e.message + ' — bina Urdu'), printText0(UR.strip(text))));
+  return printText0(text);
+}
+function printText0(text) {
   const file = path.join(DIR, 'farq-print.bin');
   fs.writeFileSync(file, Buffer.from(text, 'binary'));
   const ps = `
@@ -731,14 +740,14 @@ function bandReceipt(L, r) {
   const row = (a, b) => { a = String(a); b = String(b); return (a + ' '.repeat(Math.max(1, W - a.length - b.length))).slice(0, W - b.length) + b; };
   const center = t => { t = String(t).slice(0, W); return ' '.repeat(Math.floor((W - t.length) / 2)) + t; };
   const hr = '-'.repeat(W);
-  const out = [center('NOOR TRADERS'), center('ITEM BAND - STOCK 0'), hr, row('Sale No:', r.saleNo || '-')];
+  const out = ['\x1b@' + center('NOOR TRADERS'), center('ITEM BAND - STOCK 0'), ...urHead('آئٹم بند — اسٹاک صفر', Date.now()), hr, row('Sale No:', r.saleNo || '-')];
   if (r.returnNo) out.push(row('Return No:', r.returnNo));
   out.push(row('Branch:', L.branchName), row('Tareekh:', new Date().toLocaleString('en-GB')), hr);
   for (const k of [...L.kam, ...L.zyada]) {
     out.push(String(k.ItemName).slice(0, W));
     out.push(row(`  ${k.positive ? '-' : '+'}${n(k.qty)} x ${n(k.cost)}`, 'Rs ' + n(k.amount)));
   }
-  out.push(hr, row('Kul:', 'Rs ' + n(L.net)), center('POS mein item INACTIVE'), '', '', '');
+  out.push(hr, row('Kul:', 'Rs ' + n(L.net)), center('POS mein item INACTIVE'), '', '', '', '\x1dV\x42\x00');   // 2026-10-20: kaghaz kaato (pehle kat-ta nahi tha)
   return out.join('\r\n');
 }
 

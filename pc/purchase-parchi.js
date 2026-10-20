@@ -1,5 +1,5 @@
 // =========================================================
-//  purchase-parchi.js  v1.2 (2026-10-11: har item ke saath [godam] + Stock (godam)) · v1.1 (2026-10-11: fi piece khareed / bechna line; ek item ki kai lines jama) · v1 (2026-10-10) — 🖨 PURCHASE BILL KI TAFSEELI PARCHI (transfer-sync.js isay chalata hai)
+//  purchase-parchi.js  v1.3 (2026-10-20: Urdu sar-khi + bari Urdu tareekh) · v1.2 (2026-10-11: har item ke saath [godam] + Stock (godam)) · v1.1 (2026-10-11: fi piece khareed / bechna line; ek item ki kai lines jama) · v1 (2026-10-10) — 🖨 PURCHASE BILL KI TAFSEELI PARCHI (transfer-sync.js isay chalata hai)
 //  Malik: "jitne bhi purchase ke bill hain un ka print chahiye jaise hi larka add kare — pehle ka stock, abhi ka stock…"
 //  1) POS mein NAYA purchase bill (POS se ya app se — purchase-post) aate hi khud TM-T88IV par parchi:
 //     har item: tadad x rate = raqam · Stock pehle -> ab (us godam ka) · pichli khareed ka rate -> naya (+/-) ·
@@ -62,6 +62,7 @@ function parchiText(bill, o = {}) {
   const kind = o.kind || 'naya';
   const title = kind === 'badla' ? `BADLA HUA BILL (${o.n || 2})` : kind === 'dobara' ? 'PURCHASE BILL - DOBARA PRINT' : 'PURCHASE BILL (NAYA)';
   const out = [ESC + '@' + ESC + 'a' + '\x01' + ESC + '!' + '\x30' + (o.shop || 'NOOR TRADERS') + ESC + '!' + '\x00', ESC + '!' + '\x08' + title + ESC + '!' + '\x00' + ESC + 'a' + '\x00'];
+  if (UR && UR.isOn() && UR.dateLine) { out.push(UR.line(kind === 'badla' ? 'بدلا ہوا خریداری بل' : kind === 'dobara' ? 'خریداری بل — دوبارہ پرنٹ' : 'خریداری بل — نیا', 44, 1)); if (bill.date && !isNaN(new Date(bill.date))) out.push(UR.dateLine(bill.date, 56)); }   // v1.3 (2026-10-20): 📅 Urdu sar-khi + tareekh
   out.push(line('Bill: ' + ascii(bill.no), stampOf(bill.date)));
   for (const s of wrap('Supplier: ' + bill.party, W)) out.push(s);
   if (bill.invoice) out.push('Supplier bill #: ' + ascii(bill.invoice).slice(0, W - 17));
@@ -115,6 +116,7 @@ function parchiText(bill, o = {}) {
   out.push('', '', '', GS + 'V' + '\x42' + '\x00');
   return out.join('\r\n');
 }
+let UR = null; try { UR = require('./urdu-names.js'); } catch {}   // v1.3: transfer-sync ne watch() pehle hi chala diya (wahi module)
 function goneText(info, o = {}) {
   const out = [ESC + '@' + ESC + 'a' + '\x01' + ESC + '!' + '\x30' + (o.shop || 'NOOR TRADERS') + ESC + '!' + '\x00', ESC + '!' + '\x08' + (info.cancel ? 'PURCHASE BILL CANCEL HUA' : 'PURCHASE BILL MITA DIYA GAYA') + ESC + '!' + '\x00' + ESC + 'a' + '\x00', '-'.repeat(W)];
   out.push('Bill: ' + ascii(info.no), ...wrap('Supplier: ' + (info.party || ''), W), line('Raqam thi:', 'Rs.' + money(info.net)), `Items the: ${info.items || 0}`);

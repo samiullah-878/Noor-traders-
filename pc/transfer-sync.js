@@ -19,6 +19,7 @@
 //  v4.5 (2026-10-12): 💰 HBL parchi — bank-parchi.js: HBL Inbox mein naya SMS / email aate hi "PAISE AAYE" parchi. Setting printConfig.bankAuto.
 //  v4.9 (2026-10-19): 📦 SUB-BARCODE PACKET — line.pk [{z,n,nm}] (app ka transfer / rack bharo): item ke neeche '> 500 gm x 20 packet' (mota),
 //     qty ki jagah 'POS: 10' (POS mein wazan); neeche 'Kul POS' + 'Kul packet'. Reprint (tj.lines) mein bhi pk.
+//  v4.10 (2026-10-20): 📅 transfer note / purchase bill par Urdu sar-khi + bari Urdu tareekh · 📝 Note / Wajah Urdu bara (AI, urdu-names v1.5, 4 s)
 //  v4.8 (2026-10-14): 🔤 TRANSFER NOTE PAR URDU — har item ke English naam ke neeche Urdu naam (urdu-names.js: blueAccess/urduNames LIVE,
 //     printConfig.urduSlip). Urdu wali parchi nt-parchi ke tez worker se (tasveer); Urdu na ho to pehle jaisa RAW.
 //  Chalana:  node transfer-sync.js   (transfer-auto.bat loop mein)
@@ -164,8 +165,10 @@ const pad = (s, w, right) => { s = String(s ?? '').slice(0, w); return right ? s
 const line = (l, r) => pad(l, PRINT_WIDTH - String(r).length) + r;
 const ascii = s => String(s ?? '').replace(/[^\x20-\x7e]/g, '').replace(/\s+/g, ' ').trim();
 function stamp(d) { const x = new Date(d); const h = x.getHours() % 12 || 12; return `${String(x.getDate()).padStart(2, '0')}-${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][x.getMonth()]}-${x.getFullYear()} ${h}:${String(x.getMinutes()).padStart(2, '0')} ${x.getHours() < 12 ? 'am' : 'pm'}`; }
-function head(title) {
-  return [ESC + '@', ESC + 'a' + '\x01', ESC + '!' + '\x30' + SHOP_NAME + ESC + '!' + '\x00', SHOP_PHONE, ESC + '!' + '\x08' + title + ESC + '!' + '\x00', ESC + 'a' + '\x00', '-'.repeat(PRINT_WIDTH)];
+function head(title, urT, date) {   // v4.10 (2026-10-20): urT = Urdu sar-khi · date = Urdu tareekh bari (malik: har parchi par)
+  const o = [ESC + '@', ESC + 'a' + '\x01', ESC + '!' + '\x30' + SHOP_NAME + ESC + '!' + '\x00', SHOP_PHONE, ESC + '!' + '\x08' + title + ESC + '!' + '\x00'];
+  if (UR.isOn()) { if (urT) o.push(UR.line(urT, 44, 1)); if (date != null && date !== '' && !isNaN(new Date(date)) && UR.dateLine) o.push(UR.dateLine(date, 56)); }
+  o.push(ESC + 'a' + '\x00', '-'.repeat(PRINT_WIDTH)); return o;
 }
 const qtyText = l => { const pk = Number(l.pack) || 0; if (pk > 1 && (Number(l.ctn) || Number(l.pcs) != null)) { const c = Number(l.ctn) || 0, p = Number(l.pcs) || 0; return (c ? n(c) + ' ' + ascii(l.cName || 'Ctn') : '') + (c && p ? ' + ' : '') + (p || !c ? n(p) + ' ' + ascii(l.uName || 'Pcs') : '') + ' (' + n(l.qty) + ')'; } return n(l.qty); };
 // v4.2: stock ka matn — pack ho to "12 Ctn + 3 Pcs", warna seedha qty
@@ -187,12 +190,12 @@ function baqiText(x, r) {
   return out.join('\r\n');
 }
 function transferText(r, note, reprint) {
-  const out = head('STOCK TRANSFER NOTE');
+  const out = head('STOCK TRANSFER NOTE', 'اسٹاک ٹرانسفر نوٹ', r.at);
   out.push(line('STN No: ' + r.transferNo, stamp(r.at)));
   { const c = String(r.transferNo || '').replace(/[^\x20-\x7e]/g, '').trim(); if (c) out.push(ESC + 'a' + '\x01' + GS + 'h' + '\x50' + GS + 'w' + '\x02' + GS + 'H' + '\x02' + GS + 'k' + '\x49' + String.fromCharCode(c.length + 2) + '{B' + c + '\n' + ESC + 'a' + '\x00'); }   // v4.1: barcode (CODE128) — app ka 🧾 Transfer check scan
   out.push(`Se : ${ascii(r.from)}`, `Ko : ${ascii(r.to)}`);
   if (r.pos) out.push('(POS se bana note - stock ki parchi)');   // v4.4
-  if (note) out.push('Note: ' + ascii(note).slice(0, PRINT_WIDTH - 6));
+  if (note) { if (UR.note) { const u = UR.note(note, 50); if (u) out.push(u); } out.push(ESC + 'a' + '\x00' + 'Note: ' + ascii(note).slice(0, PRINT_WIDTH - 6)); }   // v4.10: 📝 Note Urdu bara (AI)
   out.push('-'.repeat(PRINT_WIDTH), pad('Item', PRINT_WIDTH - 22) + pad('Qty', 22, true), '-'.repeat(PRINT_WIDTH));
   if (r.rows.some(x => x.baqiFrom != null || x.baqiTo != null)) out.push('(har item ke neeche stock: pehle -> baad)');   // v4.3
   for (const x of r.rows) {
@@ -206,14 +209,15 @@ function transferText(r, note, reprint) {
   { const kp = r.rows.reduce((s, x) => s + (Array.isArray(x.pk) ? x.pk.reduce((t, p) => t + (Number(p.n) || 0), 0) : 0), 0); if (kp) out.push(line('', 'Kul packet: ' + n(kp))); }   // v4.9
   if (reprint) {
     out.push('', ESC + 'a' + '\x01', ESC + '!' + '\x30' + 'DOBARA PRINT (' + reprint.n + ')' + ESC + '!' + '\x00', ESC + 'a' + '\x00');
-    out.push('Wajah: ' + ascii(reprint.reason).slice(0, PRINT_WIDTH - 7), stamp(reprint.at) + (reprint.by ? ' · ' + ascii(reprint.by) : ''));
+    if (UR.note && reprint.reason) { const u = UR.note(reprint.reason, 44); if (u) out.push(u); }   // v4.10: 📝 Wajah Urdu (AI)
+    out.push(ESC + 'a' + '\x00' + 'Wajah: ' + ascii(reprint.reason).slice(0, PRINT_WIDTH - 7), stamp(reprint.at) + (reprint.by ? ' · ' + ascii(reprint.by) : ''));
   }
   out.push('', 'Dastakhat (nikala): ____________', '', 'Dastakhat (mila):   ____________', '', '', '', GS + 'V' + '\x42' + '\x00');
   return out.join('\r\n');
 }
 function purchaseText(b, entry) {
   const money = c => (Math.round((Number(c) || 0)) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
-  const out = head('PURCHASE BILL');
+  const out = head('PURCHASE BILL', 'خریداری بل', b ? b.date : entry ? entry.date : null);
   if (b) {
     out.push(line('Bill No: ' + b.billNo, b.date), 'Supplier: ' + ascii(b.partyName).slice(0, PRINT_WIDTH - 10));
     out.push('-'.repeat(PRINT_WIDTH), pad('Item', 18) + pad('Qty', 8, true) + pad('Rate', 8, true) + pad('Rs', 8, true), '-'.repeat(PRINT_WIDTH));
@@ -227,13 +231,14 @@ function purchaseText(b, entry) {
     out.push(ESC + 'a' + '\x02', ESC + '!' + '\x30' + 'Rs.' + money(b.net) + ESC + '!' + '\x00', ESC + 'a' + '\x00');
   } else if (entry) {
     out.push(line('Cash purchase', entry.date), 'Supplier: ' + ascii(entry.partyName || '').slice(0, PRINT_WIDTH - 10));
-    if (entry.note) out.push('Note: ' + ascii(entry.note).slice(0, PRINT_WIDTH - 6));
+    if (entry.note) { if (UR.note) { const u = UR.note(entry.note, 50); if (u) out.push(u); } out.push(ESC + 'a' + '\x00' + 'Note: ' + ascii(entry.note).slice(0, PRINT_WIDTH - 6)); }
     out.push('-'.repeat(PRINT_WIDTH), ESC + 'a' + '\x02', ESC + '!' + '\x30' + 'Rs.' + money(entry.amount) + ESC + '!' + '\x00', ESC + 'a' + '\x00');
   }
   out.push('', '', '', GS + 'V' + '\x42' + '\x00');
   return out.join('\r\n');
 }
 function sendRaw(text, docName) {
+  if (UR.NOTE && String(text).includes(UR.NOTE)) return UR.fillNotes(text, 4000).catch(() => UR.strip(text)).then(t => sendRaw(t, docName));   // v4.10: 📝 Note / Wajah Urdu (AI 4 s) pehle
   if (UR.has(text)) {   // v4.8: Urdu tasveer wali parchi — nt-parchi worker (tez). Na chale to bina Urdu purana tareeqa (parchi kabhi na ruke)
     return Promise.resolve().then(() => getParchi().sendJobs([UR.toJob(text, { font: getParchi().FONT_UR, dots: 512 })], PRINTER_NAME))
       .catch(e => (log('Urdu parchi masla: ' + e.message + ' — bina Urdu'), sendRaw(UR.strip(text), docName)));   // printer ki ghalti (Error wapas) = wahi lautao, dobara mat chhapo

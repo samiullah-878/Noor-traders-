@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  factory-post.js  v1.4 (2026-10-19: 🔤 Urdu naam parchi par — urdu-names.js + nt-parchi) · v1.3 (2026-10-17: 📱 SIRF APP batch (status 'app') ki parchi — POS / SQL ko haath nahi, sirf printer; baqi = app ka factory stock) · v1.2 (2026-10-16: 🎁 packing outs (4 kg / 700 g) + 🖨 2 parchi (factory + munshi) bana / laga / BAQI stock) · v1.1 (2026-10-15 raat: ⏳ 'job:' naye item — pehle item bane, phir batch) · v1.0 (2026-10-15) — 🏭 FACTORY PRODUCTION -> POS STOCK (app "🏭 Factory" / stock screen "Factory batch (OK)")
+//  factory-post.js  v1.5 (2026-10-20: Urdu sar-khi + bari Urdu tareekh) · v1.4 (2026-10-19: 🔤 Urdu naam parchi par — urdu-names.js + nt-parchi) · v1.3 (2026-10-17: 📱 SIRF APP batch (status 'app') ki parchi — POS / SQL ko haath nahi, sirf printer; baqi = app ka factory stock) · v1.2 (2026-10-16: 🎁 packing outs (4 kg / 700 g) + 🖨 2 parchi (factory + munshi) bana / laga / BAQI stock) · v1.1 (2026-10-15 raat: ⏳ 'job:' naye item — pehle item bane, phir batch) · v1.0 (2026-10-15) — 🏭 FACTORY PRODUCTION -> POS STOCK (app "🏭 Factory" / stock screen "Factory batch (OK)")
 //  Malik: "apni factory ki items — formula ke saath batch, larka OK kare to production auto stock mein aa jaye aur raw maal auto minus;
 //          shop ki sale se stock minus hota rahe; batch ka barcode label OK par khud chhap jaye (sub barcode bhi)".
 //  Firestore factoryBatches/<id> status 'new' -> POS mein EK Adjustment (dukan godam, BranchID 1):
@@ -173,7 +173,9 @@ function slipText(b, after, copy, app) {
   const line = (l, r) => { l = asc(l); r = asc(r); return (l + ' '.repeat(Math.max(1, W - l.length - r.length))).slice(0, W - r.length) + r; };
   const hr = '-'.repeat(W), A = new Map(after.map(a => [String(a.id), a]));
   const where = app ? 'Factory mein ab' : 'POS mein ab';
-  const out = [ESC + '@', ESC + 'a\x01', big('NOOR TRADERS'), bold(app ? 'FACTORY BATCH - SIRF APP' : 'FACTORY PRODUCTION'), bold('COPY: ' + copy), ESC + 'a\x00', hr,
+  const out = [ESC + '@', ESC + 'a\x01', big('NOOR TRADERS'), bold(app ? 'FACTORY BATCH - SIRF APP' : 'FACTORY PRODUCTION'),
+    ...(UR?.isOn?.() && UR.dateLine ? [UR.line(app ? 'فیکٹری بیچ — صرف ایپ' : 'فیکٹری پروڈکشن', 44, 1), UR.dateLine(Date.now(), 50)] : []),   // v1.5 (2026-10-20): 📅 Urdu sar-khi + tareekh
+    ESC + 'a\x01' + bold('COPY: ' + copy), ESC + 'a\x00', hr,
     line('Batch:', b.no || ''), ...(app ? [] : [line('POS Adj #:', b.adjNo || '')]), line('Tareekh:', new Date().toLocaleString('en-GB', { hour12: true }).replace(',', '')), line('Kis ne:', b.byName || ''),
     line('Kaam:', b.kind === 'pack' ? 'bulk se packing' : (b.n || 1) + ' batch'), hr, bold('BANA (+)  /  ' + where + ' baqi')];
   const row = (name, q, id) => { const a = A.get(String(id)); out.push(asc(name).slice(0, W)); { const ur = UR?.get?.(id); if (ur) out.push(UR.line(ur, 36)); } out.push(line('  ' + (q > 0 ? '+' : '-') + nf(Math.abs(q)), a ? 'baqi ' + nf(a.s) + (a.s < 0 ? ' KAM!' : '') : '')); };   // v1.4: Urdu naam

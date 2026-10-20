@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-print.js  v1.20 (2026-10-14: 🔤 GATE PASS par har item ke neeche URDU naam — urdu-names.js) · v1.19 (2026-10-14: 🚪 GATE PASS sirf item + quantity, bara gehra font) · v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
+//  nt-print.js  v1.21 (2026-10-20: 📅 rasid + gate pass par Urdu tareekh; urdu-names.js bhi khud-update) · v1.20 (2026-10-14: 🔤 GATE PASS par har item ke neeche URDU naam — urdu-names.js) · v1.19 (2026-10-14: 🚪 GATE PASS sirf item + quantity, bara gehra font) · v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
 //                   (6+ harf, beech mein space nahi, 5+ hindse) aur grid mein wohi code nahi = bzzz — scan pakra gaya ho ya NAHI (server par scan
 //                   pakra hi nahi ja raha tha: log mein koi 'GHALAT scan' / '🔎' nahi tha). Naam se talaash = awaz nahi. Log mein 'scan pakra / NAHI')
 //                   · v1.17 (2026-10-08: 🔑 CHAABI KHUD UTHAO — awaz-only PC par firebase-key.json Desktop / Downloads / Documents (AnyDesk se)
@@ -112,6 +112,7 @@ function billJob(d) {
   const cash = d.mode === 'wholesale' ? (Number(d.cash) || 0) : total;
   s.raw(ESC + '@' + ESC + 'a\x01');
   s.ln(big(SHOP.name)); s.ln(SHOP.phone);
+  try { if (UR.dateUr && UR.isOn()) s.img(UR.dateUr(t).t, 50, true, 1); } catch {}   // v1.21 (2026-10-20): 📅 Urdu tareekh bari
   s.raw(ESC + 'a\x00'); s.ln(hr());
   { const sn = 'Sale No: ' + String(d.saleNo || '').trim(), ws = whenStr(t); if (sn.length + ws.length + 1 <= W) s.ln(line(sn, ws)); else { s.ln(bold(sn)); s.ln(line('', ws)); } }
   if (tok) s.ln(bold(line('Token: ' + tok, '')));
@@ -146,6 +147,7 @@ function gateJobs(d, names) {
   return Object.values(gp).map(ls => {
     const s = Seg();
     s.raw(ESC + '@' + ESC + 'G\x01');   // ESC G 1 = double-strike (gehra)
+    try { if (UR.dateUr && UR.isOn()) s.img(UR.dateUr(when(d)).t, 44, true, 1); } catch {}   // v1.21: 📅 upar Urdu tareekh
     ls.forEach((l, i) => {
       if (i) s.ln(ESC + '!\x00' + hr());
       const nm = String(l.name || '').trim(), q = gateQty(l);
@@ -417,7 +419,7 @@ function listen() {
 
 // v1.7: 🔄 KHUD-UPDATE — counter PCs par haath se command nahi. GitHub (pc/manifest.json) ke sha256 se milata hai.
 const UPD_BASE = 'https://raw.githubusercontent.com/samiullah-878/Noor-traders-/main/pc/';
-const UPD_FILES = ['zinda.js', 'nt-print.js', 'nt-parchi.js', 'nt-scan.js', 'nt-posui.js'];   // 2026-10-11: zinda.js pehle (nt-print us ko chahta hai)
+const UPD_FILES = ['zinda.js', 'urdu-names.js', 'nt-print.js', 'nt-parchi.js', 'nt-scan.js', 'nt-posui.js'];   // 2026-10-11: zinda.js pehle (nt-print us ko chahta hai)
 const sha256 = b => require('crypto').createHash('sha256').update(b).digest('hex');
 function getBuf(url, n = 0) {
   return new Promise((res, rej) => {

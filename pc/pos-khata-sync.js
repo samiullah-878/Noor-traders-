@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-10-20: 📅 har voucher par Urdu tareekh bari (upar + neeche) · 📝 Tafseel Urdu bari (AI, urdu-names v1.5 fillNotes, 4 s) · 🏦 HBL Urdu sar-khi · dobara print: udhar sale ka sahi naam, BPV/BRV naam
 //
 //  ACCOUNTS
 //    app mein "POS mein bhi banao" wala account   -> POS mein Party + Account banta hai
@@ -368,7 +369,7 @@ function inWords(rs) {
 }
 // 2026-10-14: 🔤 voucher par URDU — malik: "jitna bhi print … urdu bhi saath". Party ka Urdu naam blueAccess/urduParties (app: 🖨 Print setting),
 //   pid na ho (POS se dobara print) to app ke khaton mein naam se. Setting printConfig.urduSlip. Urdu wali parchi nt-parchi worker se (tasveer).
-const UR_TITLE = { 'TRANSFER VOUCHER': 'ٹرانسفر واؤچر', 'CASH PAYMENT VOUCHER': 'رقم دی گئی', 'CASH RECEIPT VOUCHER': 'رقم وصول ہوئی', 'UDHAR SALE VOUCHER': 'ادھار سیل', 'KHARCHA VOUCHER': 'خرچہ', 'PURCHASE - CASH': 'خریداری — نقد', 'PURCHASE - UDHAR': 'خریداری — ادھار' };
+const UR_TITLE = { 'TRANSFER VOUCHER': 'ٹرانسفر واؤچر', 'CASH PAYMENT VOUCHER': 'رقم دی گئی', 'CASH RECEIPT VOUCHER': 'رقم وصول ہوئی', 'UDHAR SALE VOUCHER': 'ادھار سیل', 'KHARCHA VOUCHER': 'خرچہ', 'PURCHASE - CASH': 'خریداری — نقد', 'PURCHASE - UDHAR': 'خریداری — ادھار', 'BANK PAYMENT VOUCHER': 'بینک سے ادائیگی', 'BANK RECEIPT VOUCHER': 'بینک میں وصولی' };
 const nameKey = t => String(t || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 function urPartyOf(l) {
   if (!UR.isOn() || !l) return '';
@@ -405,9 +406,10 @@ const printStamp = (now = new Date()) => { const hh = now.getHours() % 12 || 12;
 const dateMark = (date, big, C, where) => {   // where 'top' | 'bot'
   const I = dateInfo(date); if (!I) return [];
   const GS = '\x1d', rv = t => GS + 'B\x01' + t + GS + 'B\x00', o = [];
+  if (UR.isOn() && UR.dateLine) o.push(UR.dateLine(date, 56));   // 2026-10-20: 📅 Urdu tareekh bari (آج — ۲۰ اکتوبر ۲۰۲۶ / کل کا بل — … / N دن پرانا — …) upar + neeche
   if (I.age === 0) { o.push(C + big('AAJ - ' + I.txt)); return o; }
   const tag = I.age === 1 ? 'KAL KA BILL' : I.age > 1 ? I.age + ' DIN PURANA' : 'AAGE KI TAREEKH';
-  if (where === 'top') { if (UR.isOn()) o.push(UR.line(I.age === 1 ? 'کل کا بل' : I.age > 1 ? I.age + ' دن پرانا بل' : 'آگے کی تاریخ', 46, 1)); o.push(C + rv(big(' ' + tag + ' '))); }
+  if (where === 'top') o.push(C + rv(big(' ' + tag + ' ')));
   o.push(C + big(I.txt));
   if (where === 'bot') o.push(C + rv(' ' + tag + ' '));
   return o;
@@ -457,7 +459,7 @@ function receiptBig({ title, code, date, lines, note, copy, pay }) {
     if (l.after != null) { const a = Number(l.after) || 0; out.push(smb(rowW(WB, who + 'Ab baqaya - ' + (a > 0 ? 'LENE' : a < 0 ? 'DENE' : 'BARABAR') + ':', 'Rs.' + n(Math.abs(a))))); }
   }
   const nl = wrap(note, WB);
-  if (nl.length) out.push(hrB, sm('Tafseel:'), ...nl.map(sm));
+  if (nl.length) out.push(hrB, ...(UR.note ? [UR.note(note, 50)].filter(Boolean) : []), sm('Tafseel:'), ...nl.map(sm));   // 2026-10-20: 📝 Tafseel Urdu (AI, print se pehle fillNotes)
   out.push(hrB, ...dateMark(date, big2, C, 'bot'), L + '', sm('Dastakhat: ______________________'), '', C + sm('Blue Khata app'), L, '', '');
   out.push(GS + 'V\x42\x00');                                    // kaghaz kaato
   return out.join('\r\n');
@@ -487,6 +489,7 @@ function receipt({ title, code, date, lines, note, copy, bank, pay }) {
     ? [ESC + '@', C + rev(huge(' HBL ')), '', bold('NOOR TRADERS') + '  ' + SHOP_PHONE, '', tall(bank.dir === 'out' ? 'HBL SE PAISE GAYE' : 'HBL MEIN PAISE AAYE')]
     : [ESC + '@', C + big('NOOR TRADERS'), SHOP_PHONE, '', tall(title)];
   if (!bank && UR.isOn() && UR_TITLE[title]) out.push(UR.line(UR_TITLE[title], 40));   // 2026-10-14: 🔤 Urdu
+  if (bank && UR.isOn()) { out.push(UR.line(bank.dir === 'out' ? 'ایچ بی ایل سے پیسے گئے' : 'ایچ بی ایل میں پیسے آئے', 50, 1)); if (UR.dateLine) out.push(UR.dateLine(date, 56)); }   // 2026-10-20: 🏦 Urdu sar-khi + tareekh
   if (copy) out.push('(Dobara print)');
   out.push(...payMark(pay, false, big, C));   // 2026-10-17: 💵 payment de do / copy
   if (!bank) out.push(...dateMark(date, big, C, 'top'));   // 2026-10-18: 📅 bari tareekh
@@ -516,7 +519,7 @@ function receipt({ title, code, date, lines, note, copy, bank, pay }) {
   }
   if (bq.length) out.push(L + hr);
   const nl = wrap(note, W);
-  if (nl.length) out.push('Tafseel:', ...nl, hr);
+  if (nl.length) out.push(...(UR.note ? [UR.note(note, bank ? 44 : 50)].filter(Boolean) : []), L + 'Tafseel:', ...nl, hr);   // 2026-10-20: 📝 Tafseel Urdu
   if (!bank) out.push(...dateMark(date, big, C, 'bot'), L + hr);
   out.push('', '', 'Dastakhat: ______________________', '', C + 'Blue Khata app', L, '', '', '');
   out.push(GS + 'V\x42\x00');                                    // kaghaz kaato
@@ -569,6 +572,7 @@ const withPrinter = fn => { const p = prQ.then(fn, fn); prQ = p.catch(() => {});
 const printReceipt = text => withPrinter(() => printReceipt0(text));
 async function printReceipt0(text) {
   if (!AUTO_PRINT || DRY) return false;
+  if (UR.fillNotes) { try { text = await UR.fillNotes(text, 4000); } catch { text = UR.strip(text); } }   // 2026-10-20: 📝 Tafseel Urdu (AI 4 s; na aaye = English hi)
   if (UR.has(text)) {   // 2026-10-14: 🔤 Urdu tasveer — nt-parchi worker (tez). Exception = bina Urdu purana tareeqa. Printer ki ghalti = dobara nahi.
     try { const P = getParchi(), e = await P.sendJobs([UR.toJob(text, { font: P.FONT_UR, dots: 512 })], PRINTER_NAME);
       lastPrintErr = e ? String(e.message || e).slice(0, 160) : ''; log(e ? 'Print nahi hua: ' + lastPrintErr : 'Voucher rasid print ho gayi (Urdu)'); return !e; }
@@ -605,7 +609,7 @@ async function reprintVoucher(code, copies = 1, fromJob = false) {
     const e0 = [...app.values()].find(e => e.type === 'entry' && !e.deleted && String(e.posCode || '').trim() === String(code).trim());
     const pay = type !== 'CPV' ? '' : e0 && e0.kind === 'purchaseCash' && !e0.posPrintedAt ? 'do' : 'copy';
     let ok = false;
-    for (let i = 0; i < Math.min(3, Math.max(1, Number(copies) || 1)); i++) ok = await printReceipt(receipt({ title: VTITLE[type] || type + ' VOUCHER', code: rows[0].VoucherCode, date: rows[0].VoucherDate,
+    for (let i = 0; i < Math.min(3, Math.max(1, Number(copies) || 1)); i++) ok = await printReceipt(receipt({ title: type === 'JV' && /^udhar sale/i.test(rem.trim()) ? 'UDHAR SALE VOUCHER' : VTITLE[type] || type + ' VOUCHER',   // 2026-10-20: udhar sale ka dobara print "TRANSFER VOUCHER" likhta tha code: rows[0].VoucherCode, date: rows[0].VoucherDate,
       lines, note: rem, copy: true, bank, pay }));
     if (fromJob) {
       const ids = [...app.values()].filter(e => e.type === 'entry' && String(e.posCode || '').trim() === String(code).trim()).map(e => e.id);
@@ -624,7 +628,7 @@ function bankSlip(base, isTransfer) {
   if (base.bankSms || /^HBL (aaye|gaye) /.test(nt)) return { dir: /^HBL gaye/.test(nt) || (!isTransfer && base.kind === 'payment' && !isB(base.partyId)) ? 'out' : 'in' };
   return null;
 }
-const VTITLE = { CPV: 'CASH PAYMENT VOUCHER', CRV: 'CASH RECEIPT VOUCHER', JV: 'TRANSFER VOUCHER' };
+const VTITLE = { CPV: 'CASH PAYMENT VOUCHER', CRV: 'CASH RECEIPT VOUCHER', JV: 'TRANSFER VOUCHER', BPV: 'BANK PAYMENT VOUCHER', BRV: 'BANK RECEIPT VOUCHER' };
 
 // ============================================================
 //  1) ACCOUNTS

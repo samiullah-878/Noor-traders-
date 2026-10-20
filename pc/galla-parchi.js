@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  galla-parchi.js  v1.0 (2026-10-15) — 💰 GALLA KI ADAIGI PARCHI (sirf URDU, bare lafz, EK hi dafa)
+//  galla-parchi.js  v1.1 (2026-10-20: upar bari Urdu tareekh آج — …) · v1.0 (2026-10-15) — 💰 GALLA KI ADAIGI PARCHI (sirf URDU, bare lafz, EK hi dafa)
 //  Malik: "galla par cash payment tab de ga jab Zeeshan / Mubeen / Sonu / Malik ne check kar liya ho — us ke baad payment dene ka
 //          ek print nikle, dobara na nikle; us print par koi bhi English na ho, only Urdu; lafz bare bare".
 //  Sirf NAQAD supplier (purchase "💵 Galla se abhi cash" -> gallaCalls needCheck). pos-khata-sync.js isay chalata hai (server TM-T88IV).
@@ -30,6 +30,7 @@ const fit = (s, big, mid, small) => { const n = String(s).length; return n <= 12
 function slipJob(Seg, ESC, c, partyUr, checkUr) {
   const rs = Math.round((Number(c.amount) || 0) / 100), s = Seg();
   s.raw(ESC + '@' + ESC + 'a\x01');
+  { const d = new Date(Number(c.checkAt) || Date.now()); s.img(`آج — ${urDigits(d.getDate())} ${MON[d.getMonth()]} ${urDigits(d.getFullYear())}`, 56, true, 1); }   // v1.1 (2026-10-20): 📅 upar bari tareekh (malik: har parchi par)
   s.img('ادائیگی پرچی', 40, true, 1);
   s.raw('\r\n');
   s.img(partyUr, fit(partyUr, 72, 58, 44), true, 1);

@@ -5636,3 +5636,13 @@ v2.103.91 (20 Oct 2026) — ⚡ AI model speed test (malik: "flash ka koi aur mo
 - Ek dafa (malik ke phone par, din mein ek koshish): aiConfig.picked na ho to 2.5-flash ping; chale to wohi model + picked (ai25Try). cloud.setAiConfig ab 'picked' rakhta hai.
 
 (20 Oct 2026) PC purchase-post v4.3: POS update ke naye line params BatchNo/ExpiryDate khali bhare; 5 ruke app purchase bill khud dobara. App mein koi badlav nahi.
+
+v2.103.92 (20 Oct 2026) — 🔤 HAR PARCHI PAR URDU (malik: "all prints ki narration Urdu mein bari bari" + "har parchi ke upar bara aaj / kal ka narration") + app khud marammat:
+- PC urdu-names v1.5: dateUr/dateLine (آج — ۲۰ اکتوبر ۲۰۲۶ · کل کا بل — … · N دن پرانا — … · آگے کی تاریخ) · note(text) nishan + fillNotes(text) print se pehle: AI (aiConfig key/model, Gemini 3 = minimal) 4 s hadd, na aaye = line hatao (parchi English ke saath, kabhi na ruke); bani Urdu C:\khata-sync\urdu-notes.json mein yaad (dobara AI nahi). printConfig.urduNote (default ON; app Print setting chip). toJob/strip NOTE nishan kabhi nahi chhapte.
+- Voucher (pos-khata-sync): upar + neeche bari Urdu tareekh (dateMark), Tafseel Urdu 50px, HBL voucher Urdu sar-khi; dobara print: udhar sale JV ab "UDHAR SALE VOUCHER" (pehle TRANSFER), BPV/BRV naam + Urdu. printReceipt0 fillNotes.
+- Transfer note / purchase fallback (transfer-sync v4.10 head(title, urT, date)): Urdu sar-khi + tareekh, Note + dobara print ki Wajah Urdu (sendRaw fillNotes). purchase-parchi v1.3, bank-parchi v2.5 (chhoti HBL), factory-post v1.5: Urdu sar-khi + tareekh.
+- post-farq v17.3: ginti farq + item band rasid Urdu sar-khi + tareekh (ab urdu-names + nt-parchi), item band rasid ab kaghaz kaat-ti hai (pehle cut nahi tha).
+- sale-post v1.12 + nt-print v1.21: rasid + gate pass upar Urdu tareekh; sale-post rasid 'Sale No' poora (32 harf mein kat jata tha). nt-print khud-update list mein urdu-names.js.
+- galla-parchi v1.1: upar bari آج tareekh. Token parchi: koi badlav nahi.
+- index.html watchdog: app 10 s mein na khule to EK dafa khud marammat (SW + purani cache saaf, ?fix= reload); 10 min mein dobara atke to purana 🔄 button.
+- AI: sirf Tafseel / Note / Wajah ko Urdu harfon mein (PC, print ke waqt, 4 s). Tareekh / sar-khi fixed lafz — AI nahi.

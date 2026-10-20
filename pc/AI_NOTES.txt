@@ -3327,3 +3327,6 @@ sales-stats.js v1.6 (20 Oct 2026, app v2.103.89): ph nested array → phj JSON t
 QAIDA: Firestore mein list ke andar list kabhi nahi — JSON text.
 
 purchase-post.js v4.3 (20 Oct 2026): POS (Cognitive) update ke baad usp_PurchaseDetail_InsertUpdate mein naye params BatchNo (varchar) + ExpiryDate (datetime) — script ANJAAN dekh kar 5 bill rok rahi thi. SOFT_DETAIL mein BatchNo '' + ExpiryDate NULL (haath wale bill jaisa). SCRIPT_VER 4 → 'ANJAAN parameter' wali failed jobs ek dafa khud dobara (POS ko chhua nahi tha, dohra nahi banega). manifest 2026-10-20.19.
+
+2026-10-20 (manifest 2026-10-20.20) — 🔤 har parchi par Urdu: urdu-names v1.5 (dateLine + note/fillNotes AI 4 s, urdu-notes.json cache, printConfig.urduNote) · pos-khata-sync (voucher tareekh + Tafseel Urdu, HBL Urdu, udhar sale reprint naam, BPV/BRV) · transfer-sync v4.10 (head Urdu, Note/Wajah Urdu, sendRaw fillNotes) · purchase-parchi v1.3 · bank-parchi v2.5 · factory-post v1.5 · post-farq v17.3 (Urdu + item band cut) · sale-post v1.12 (Urdu tareekh rasid + gate pass, Sale No fix) · nt-print v1.21 (Urdu tareekh, urdu-names khud-update) · galla-parchi v1.1.
+QAIDA: nayi parchi = upar UR.dateLine(date) + Urdu sar-khi; user ki likhai = UR.note(text) aur print function mein `text = await UR.fillNotes(text)` (UR.has se pehle).
