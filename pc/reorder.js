@@ -1,5 +1,5 @@
 // =========================================================
-//  reorder.js  v1.1 (2026-10-20) — aakhri 6 purchase + har ek ka rate (r = avg); har 1 min (malik: 'stock ki tarah'). v1.0 (2026-10-19) — 🛒 MANGWAO (supplier se re-order) — malik: "godam ka stock sahi hai; usi ka re-order supplier se kaise dekhein —
+//  reorder.js  v1.2 (2026-10-20: likhna kam az kam 5 min baad — mulazim ke phone slow) · v1.1 (2026-10-20) — aakhri 6 purchase + har ek ka rate (r = avg); har 1 min (malik: 'stock ki tarah'). v1.0 (2026-10-19) — 🛒 MANGWAO (supplier se re-order) — malik: "godam ka stock sahi hai; usi ka re-order supplier se kaise dekhein —
 //    aakhri purchase kab hui, kitna aaya, us waqt kitna stock tha → poora (100%) = us waqt + aaya; chips 10/20/30/40% reh gaya".
 //  Har item (jo 365 din mein khareeda gaya): aakhri 3 purchase (Purchase + PurchaseDetail, cancel nahi): tareekh, tadad (pcs), party, aur us waqt
 //  (purchase se theek pehle) SAB branches ka kul stock = abhi ka kul − ledger ka net (LedgerDate >= purchase date). Abhi ka stock branch-war.
@@ -55,7 +55,8 @@ if (require.main === module) (async () => {
     const j = JSON.stringify(rows), h = crypto.createHash('sha1').update(j).digest('hex');
     if (j.length > 900000) throw new Error('data bohat bara (' + j.length + ')');
     let old = null; try { const o = await ref.get(); old = o.exists ? o.data() : null; } catch {}
-    if (old && old.h === h && Date.now() - (Number(old.at) || 0) < 10 * 60000) { console.log(new Date().toLocaleString('en-PK') + ' — 🛒 wahi (' + rows.length + ')'); process.exit(0); }
+    if (old && (old.h === h ? Date.now() - (Number(old.at) || 0) < 10 * 60000 : Date.now() - (Number(old.at) || 0) < 5 * 60000)) {   // v1.2: badla ho tab bhi 5 min se pehle nahi (phone par bojh)
+ console.log(new Date().toLocaleString('en-PK') + ' — 🛒 wahi (' + rows.length + ')'); process.exit(0); }
     await ref.set({ at: Date.now(), h, n: rows.length, j });
     console.log(new Date().toLocaleString('en-PK') + ' — 🛒 reorder: ' + rows.length + ' items, ' + Math.round((Date.now() - t0) / 1000) + 's');
     process.exit(0);
