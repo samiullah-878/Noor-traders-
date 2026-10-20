@@ -128,6 +128,19 @@ async function generate({ key, model, parts, onStatus, fast = false, think = '' 
   throw Error('Google ke server par abhi bohat rush hai. 2-5 minute baad dobara koshish karein. (' + (lastErr?.message || '') + ')');
 }
 
+// v2.103.90: ⚡ SPEED TEST (Settings → AI key) — malik: "flash ka koi aur model dekho, 4-5 din pehle wala tez tha".
+//   Ek chhota sawal, sirf EK koshish (koi doosra model nahi), 30 s hadd. Lauta: { ms } ya galti.
+export async function pingModel({ key, model, ms = 30000 }) {
+  if (!key || !model) throw Error('key / model khali');
+  const g3 = /gemini-3/i.test(model), t0 = Date.now();
+  const body = tc => JSON.stringify({ contents: [{ role: 'user', parts: [{ text: 'Sirf yeh JSON do: {"ok":1}' }] }], generationConfig: { temperature: 0, responseMimeType: 'application/json', ...(tc ? { thinkingConfig: tc } : {}) } });
+  const go = tc => api('/models/' + encodeURIComponent(model) + ':generateContent', key, { method: 'POST', ms, body: body(tc) });
+  try { await go(g3 ? { thinkingLevel: 'minimal' } : { thinkingBudget: 0 }); }
+  catch (e) { if (!/thinking|INVALID_ARGUMENT|HTTP 400/i.test(String(e?.message || ''))) throw e; await go(null); }
+  return { ms: Date.now() - t0 };
+}
+export const SPEED_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-3.5-flash-lite'];
+
 // v2.99.4: 🤖 NOOR AGENT — Gemini "function calling". contents = poori baat-cheet; model ka jawab (content) BILKUL waisa hi
 //   wapas history mein rakhna hai (Gemini 3 ke functionCall parts par 'thoughtSignature' hota hai — badla to 400).
 //   Rush (503) par 2 dafa ruk kar, phir doosra flash model. Thinking thori (tez + tools sahi); jo model na maane us par bina.

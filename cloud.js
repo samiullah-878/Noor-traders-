@@ -1,14 +1,14 @@
-import {cashLinkChanges} from './cash-links.js?v=2.103.90';
-import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js?v=2.103.90';
-import {snapshotRows} from './live-data.js?v=2.103.90';
+import {cashLinkChanges} from './cash-links.js?v=2.103.91';
+import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js?v=2.103.91';
+import {snapshotRows} from './live-data.js?v=2.103.91';
 let transferFail=null;   // v2.86: tez transfer ka server-se-inkaar hook
-import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js?v=2.103.90';
-import {planImport} from './import-plan.js?v=2.103.90';
+import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js?v=2.103.91';
+import {planImport} from './import-plan.js?v=2.103.91';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import * as authSDK from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
 import {initializeFirestore,persistentLocalCache,persistentSingleTabManager,memoryLocalCache,disableNetwork,enableNetwork,collection,query,where,doc,getDoc,getDocFromServer,getDocs,getDocsFromServer,getDocsFromCache,getDocFromCache,setDoc,deleteDoc,updateDoc,deleteField,onSnapshot,runTransaction,writeBatch,waitForPendingWrites,orderBy,limit,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.103.90';
-import {firebaseConfig,BUSINESS_ID} from './config.js?v=2.103.90';
+import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.103.91';
+import {firebaseConfig,BUSINESS_ID} from './config.js?v=2.103.91';
 export {loginErrorMessage};
 export async function connect(callbacks){const app=initializeApp(firebaseConfig,'blue-khata'),auth=authSDK.getAuth(app);try{await authSDK.setPersistence(auth,authSDK.browserLocalPersistence)}catch(e){console.warn('Auth persistence nahi mili',e)}let db;try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentSingleTabManager({forceOwnership:false})})})   /* v2.103.79: har tab apna live data — pehle multi-tab: ek tab hi server se leta tha, Chrome ne woh tab sula diya to PC ke SAB tab ruk jate (mobile theek). Doosra tab khud memory mode mein */}catch(e){console.warn('Offline storage nahi mili — memory mode',e);db=initializeFirestore(app,{localCache:memoryLocalCache()})}const col=collection(db,'businesses',BUSINESS_ID,'blueKhata'),ref=id=>doc(col,id),other=(name,id)=>doc(db,'businesses',BUSINESS_ID,name,id);
 /* v2.103.79: 📶 CHOWKIDAR — PC sync-stock har ~2 min posStock/_live.checkedAt likhta hai. 4 min tak na aaye (ya tab dair baad khule / net wapas aaye) to server se pucho:
@@ -60,7 +60,7 @@ const authReady=new Promise(resolve=>{const off=authSDK.onAuthStateChanged(auth,
 return {authReady,currentUid:()=>auth.currentUser?.uid||'',
  // v1.81: AI key (malik likhta hai; malik + Full App mulazim parhte hain) aur sham ke milan ka natija
  async getAiConfig(){const d=await getDoc(other('blueAccess','aiConfig'));return d.exists()?d.data():null},
- async setAiConfig(cfg){await setDoc(other('blueAccess','aiConfig'),{provider:'gemini',key:String(cfg.key||'').trim(),model:String(cfg.model||'').trim(),agentModel:['lite','pro'].includes(cfg.agentModel)?cfg.agentModel:'',agentTools:cfg.agentTools==='all'?'all':'reminder',updatedAt:Date.now(),by:auth.currentUser?.uid||''})},
+ async setAiConfig(cfg){await setDoc(other('blueAccess','aiConfig'),{provider:'gemini',key:String(cfg.key||'').trim(),model:String(cfg.model||'').trim(),agentModel:['lite','pro'].includes(cfg.agentModel)?cfg.agentModel:'',agentTools:cfg.agentTools==='all'?'all':'reminder',picked:!!cfg.picked,updatedAt:Date.now(),by:auth.currentUser?.uid||''})},
  async requestRates(d){if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('Rates sirf malik badal sakta hai');const id=Date.now().toString(36)+Math.random().toString(36).slice(2,7);await setDoc(other('rateJobs',id),{lines:(d.lines||[]).slice(0,100),status:'new',by:auth.currentUser.uid,at:Date.now()});return id},
  watchRates(id,cb){return onSnapshot(other('rateJobs',id),s=>cb(s.exists()?s.data():null),()=>cb(null))},
  async getTally(day){const d=await getDoc(other('dayTally',day));return d.exists()?d.data():null},

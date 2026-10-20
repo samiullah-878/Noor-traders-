@@ -582,7 +582,7 @@ document.addEventListener('input', e => {   // v2.101.1: search par sirf neeche 
 export const _irTest = { phAgg, setStock: f => { stockOf = f; }, nfBills, nfSum, nfHTML, nfC, nfSetT: t => { tdoc = t; }, nfSetFull: f => { full = f; }, mergeToday, ageText, setFull: (f, t) => { full = f; tdoc = t; remerge(); }, fmtQty, topHTML, nafaHTML, wsSplit, setRows: r => { lastRows = { sorted: r, srt: () => 0 }; }, agg, range, patterns, partRange, setData: d => { data = d; loaded = true; ix = null; }, st, pdfHTML, commAgg, setComm: c => { commCfg = c; } };
 
 // v2.103.48: 🤖 agent actions — item report (nafa / sale)
-import { agentRegister } from './agent.js?v=2.103.90';
+import { agentRegister } from './agent.js?v=2.103.91';
 agentRegister([
   { name: 'nafa_report', read: true, desc: 'Item report: muddat (from/to YYYY-MM-DD, default aaj) ki sale, nafa (andaza), top items nafa ke hisaab se; wholesale ke saath/baghair.', params: { type: 'OBJECT', properties: { from: { type: 'STRING' }, to: { type: 'STRING' }, top: { type: 'INTEGER' }, wholesale: { type: 'BOOLEAN' } } },
     run({ from, to, top, wholesale }) { if (!data?.meta) throw Error('Report abhi PC se nahi aayi'); const ws0 = st.ws; if (wholesale != null) st.ws = !!wholesale; try { const X = index(), a = /^\d{4}-\d\d-\d\d$/.test(from || '') ? from : X.days[X.days.length - 1], b = /^\d{4}-\d\d-\d\d$/.test(to || '') ? to : a, { rows, T } = agg(a, b), L = rows.filter(r => !r.noCost).sort((x, y) => y.pf - x.pf);

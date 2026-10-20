@@ -5628,3 +5628,9 @@ v2.103.90 (20 Oct 2026) — ⚡ AI bill tez + app baar baar reload nahi:
   Gemini 3: fast = thinkingLevel 'minimal' (thinkingBudget 0 nahi maanta tha → be-had sochta = slow), pakka = 'low'; 2.x = budget 0 / 1024; na maane to narm, phir bina config.
 - purchase.js: hamesha ⚡ Tez se shuru; 🎯 Pakka sirf us ek bill ke liye (aiModeOnce, read ke baad wapas tez); purana localStorage 'pp-ai-mode' hata diya. Status par model ka naam (⚡ Tez · 3-flash …).
 - Malik: "thori der doosri app khol kar wapas aao to poori app dobara load". Wajah: v2.103.79 khud-update — naya version + app peeche = foran reload (aaj 10+ update). Ab chupke reload sirf jab app 30 min se zyada peeche rahi ho (updHidAt / UPD_IDLE); warna sirf ✨ Update patti. Likhte waqt kabhi nahi (updBusy). Android khud tab band kare to wahi screen (keepView) — woh hamare haath mein nahi.
+
+v2.103.91 (20 Oct 2026) — ⚡ AI model speed test (malik: "flash ka koi aur model dekho, 4-5 din pehle wala tez tha; Test par problem"):
+- Wajah: code 14 Oct se nahi badla tha; saved model 'gemini-3.8-flash' (2 Sep 2026 ka naya, p50 ~8 s) — "Test" button khud sab se naya model bhar deta tha. Google: 2.5-flash band nahi, purani keys par chalta hai.
+- Settings → AI key: "⚡ Speed test" — SPEED_MODELS (2.5-flash, 3.6-flash, 3.8-flash, 3.5-flash-lite) + abhi wala, pingModel (ai-tally: ek chhota sawal, ek koshish, 30 s) ek saath; har chip par second, sab se tez ⚡, galti ❌ wajah. Chip tap = aiConfig.model foran save (picked:true).
+- Test ab model KHUD nahi badalta (sirf khali ho to bharta; list mein na ho to batata hai).
+- Ek dafa (malik ke phone par, din mein ek koshish): aiConfig.picked na ho to 2.5-flash ping; chale to wohi model + picked (ai25Try). cloud.setAiConfig ab 'picked' rakhta hai.
