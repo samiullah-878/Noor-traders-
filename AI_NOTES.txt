@@ -5622,3 +5622,9 @@ v2.103.89 (20 Oct 2026) — 🐞 Item report (Commission / Asal nafa) 4 din se R
 - sales-stats v1.6: ph → phj (JSON text); har doc alag save; item-report ab sales-stats save fail ho tab bhi chalti hai. sales-stats-auto.bat badli taake doctor loop foran dobara chalaye.
 - App cloud.getPosStats: items mein phj ho to wapas ph bana leti hai (po-formula.js waisa hi).
 - QAIDA: Firestore mein KABHI list ke andar list mat bhejo (admin SDK bhi) — JSON text bana kar bhejo.
+
+v2.103.90 (20 Oct 2026) — ⚡ AI bill tez + app baar baar reload nahi:
+- Malik: "bill par AI ne 2 minute laga diye · pehla flash wala bht tez tha". ai-tally generate(): har koshish ki HADD (api ms + AbortController; tez 25 s · pakka 50 s · har agla page +10 s); rush / hadd / 5xx par FORAN doosra model (pickModel: best flash, phir baqi flash; lite nahi), 2 tak, aakhri 60 s; koi waqfa nahi. Pro (pakka) par rush = flash.
+  Gemini 3: fast = thinkingLevel 'minimal' (thinkingBudget 0 nahi maanta tha → be-had sochta = slow), pakka = 'low'; 2.x = budget 0 / 1024; na maane to narm, phir bina config.
+- purchase.js: hamesha ⚡ Tez se shuru; 🎯 Pakka sirf us ek bill ke liye (aiModeOnce, read ke baad wapas tez); purana localStorage 'pp-ai-mode' hata diya. Status par model ka naam (⚡ Tez · 3-flash …).
+- Malik: "thori der doosri app khol kar wapas aao to poori app dobara load". Wajah: v2.103.79 khud-update — naya version + app peeche = foran reload (aaj 10+ update). Ab chupke reload sirf jab app 30 min se zyada peeche rahi ho (updHidAt / UPD_IDLE); warna sirf ✨ Update patti. Likhte waqt kabhi nahi (updBusy). Android khud tab band kare to wahi screen (keepView) — woh hamare haath mein nahi.

@@ -36,9 +36,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.103.89';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.103.89';
-import { blurScore, blurText } from './pic-check.js?v=2.103.89';   // v2.103.43: 📷 dhundli check
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.103.90';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.103.90';
+import { blurScore, blurText } from './pic-check.js?v=2.103.90';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -907,7 +907,7 @@ document.addEventListener('click', async e => {
   const px = e.target.closest?.('[data-pp-photo],[data-pp-ai]');
   if (px) { if (px.dataset.ppPhoto != null) { if (photoFormOf) photoFormOf(); } else aiItems(); return; }
   const am = e.target.closest?.('[data-pp-aimode],[data-pp-airepro]');   // v2.99.78
-  if (am) { if (am.dataset.ppAimode) { try { localStorage.setItem('pp-ai-mode', am.dataset.ppAimode); } catch {} document.querySelectorAll('.pp-aimode').forEach(x => { x.outerHTML = aiModeHTML(); }); }
+  if (am) { if (am.dataset.ppAimode) { aiModeOnce = am.dataset.ppAimode; document.querySelectorAll('.pp-aimode').forEach(x => { x.outerHTML = aiModeHTML(); }); }
     else if (aiLastFiles && !aiBusy) aiRead(aiLastFiles, { mode: 'pakka' });
     return; }
   const cm = e.target.closest?.('[data-pp-aicam],[data-pp-aigal],[data-pp-camgo],[data-pp-camnext],[data-pp-camredo],[data-pp-camx]');
@@ -1809,8 +1809,10 @@ function boriMemFromBill() {           // v2.99.68: POS carton wale item par bil
 let camPages = [], camUrls = [];
 // v2.99.78: ⚡ TEZ (flash, 10-15 s) / 🎯 PAKKA (pro, 25-35 s) — malik: "AI bht time la rha ha". Phone yaad rakhta hai. 'pur.aipakka' band = sirf Tez.
 const canPakka = () => { try { return typeof window.ntCan !== 'function' || window.ntCan('pur.aipakka'); } catch { return true; } };
-const aiModeNow = () => { let m = 'tez'; try { m = localStorage.getItem('pp-ai-mode') || 'tez'; } catch {} return m === 'pakka' && canPakka() ? 'pakka' : 'tez'; };
-const aiModeHTML = () => { const m = aiModeNow(); return `<div class="pp-aimode"><button type="button" class="${m === 'tez' ? 'on' : ''}" data-pp-aimode="tez">⚡ Tez<small>10–15 sec</small></button>${canPakka() ? `<button type="button" class="${m === 'pakka' ? 'on' : ''}" data-pp-aimode="pakka">🎯 Pakka<small>25–35 sec · lamba bill</small></button>` : ''}</div>`; };
+// v2.103.90: malik — "pehla flash wala bht tez tha": hamesha ⚡ Tez se shuru; 🎯 Pakka sirf ISI bill ke liye (phone yaad nahi rakhta)
+let aiModeOnce = 'tez'; try { localStorage.removeItem('pp-ai-mode'); } catch {}
+const aiModeNow = () => aiModeOnce === 'pakka' && canPakka() ? 'pakka' : 'tez';
+const aiModeHTML = () => { const m = aiModeNow(); return `<div class="pp-aimode"><button type="button" class="${m === 'tez' ? 'on' : ''}" data-pp-aimode="tez">⚡ Tez<small>10–15 sec</small></button>${canPakka() ? `<button type="button" class="${m === 'pakka' ? 'on' : ''}" data-pp-aimode="pakka">🎯 Pakka<small>25–50 sec · sirf is bill</small></button>` : ''}</div>`; };
 let aiLastFiles = null;
 function aiItems() {
   if (aiBusy) { notice('AI abhi bill parh raha hai…'); return; }
@@ -1888,7 +1890,7 @@ async function aiRead(files, opt = {}) {   // v2.99.7: opt.agent = 🤖 agent se
   } catch (err) {
     say('❌ ' + ((err && err.message) || 'Nakam'));
     if (opt.agent) throw err;
-  } finally { aiBusy = false; }
+  } finally { aiBusy = false; aiModeOnce = 'tez'; }
 }
 // v2.99.2: BILL KI LINE TARTEEB (Jaanch ke cards + POS bill isi se) —
 //   (1) bill par S.No / # ka khana ho aur number 1,2,3 jaisa silsila banayein (dohraaye nahi) to unhi se; har tasveer ke number aapas mein na

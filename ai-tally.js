@@ -33,12 +33,13 @@ export async function shrinkForAI(file, maxPx = 1800, quality = 0.85) {
 }
 
 async function api(path, key, init = {}) {
-  let res;
+  let res, body = null; const { ms = 0, ...rest } = init;   // v2.103.90: ms = is koshish ki hadd (Google rush mein 40-60 s latka rehta tha)
+  const ac = ms ? new AbortController() : null, tm = ac ? setTimeout(() => ac.abort(), ms) : 0;
   try {
-    res = await fetch(API + path, { ...init, headers: { 'x-goog-api-key': key, 'Content-Type': 'application/json', ...(init.headers || {}) } });
-  } catch (e) { throw Error('Internet / Google tak rasai nahi hui: ' + (e.message || '')); }
-  let body = null;
-  try { body = await res.json(); } catch { /* khali jawab */ }
+    res = await fetch(API + path, { ...rest, ...(ac ? { signal: ac.signal } : {}), headers: { 'x-goog-api-key': key, 'Content-Type': 'application/json', ...(rest.headers || {}) } });
+    try { body = await res.json(); } catch { /* khali jawab */ }
+  } catch (e) { if (ac?.signal.aborted) throw Error('Google ne ' + Math.round(ms / 1000) + ' second mein jawab nahi diya (rush / timeout)'); throw Error('Internet / Google tak rasai nahi hui: ' + (e.message || '')); }
+  finally { if (tm) clearTimeout(tm); }
   if (!res.ok) {
     const msg = body?.error?.message || ('HTTP ' + res.status);
     if (res.status === 400 && /API key/i.test(msg)) throw Error('AI key ghalat hai — Settings mein dobara paste karein.');
@@ -76,44 +77,54 @@ export async function pickProModel(key) {
 }
 
 const wait = ms => new Promise(r => setTimeout(r, ms));
-const busyError = e => /overloaded|high demand|try again later|temporar|unavailable|503/i.test(String(e?.message || ''));
+const busyError = e => /overloaded|high demand|try again later|temporar|unavailable|503|504|500|internal|deadline|timeout|jawab nahi diya/i.test(String(e?.message || ''));
+const short = m => String(m || '').replace(/^gemini-/, '');
 
-// v1.82: Google par rush (503) ho to khud 2 dafa ruk kar dobara koshish; phir bhi na chale to doosra flash model aazmao.
+// v2.103.90: malik — "AI ne 2 minute laga diye" (Google par rush). Pehle: ek hi model par 3 dafa poora intezar (har dafa 30-60 s) + ruk ruk kar.
+//   Ab: har koshish ki HADD (tez 25 s · pakka 50 s), rush / hadd par FORAN doosra model (koi waqfa nahi), aakhri koshish lambi (60 s).
+//   Gemini 3 ko "sochna kam" = thinkingLevel 'minimal' (thinkingBudget 0 woh nahi maanta → pehle be-had sochta tha = slow).
 async function generate({ key, model, parts, onStatus, fast = false, think = '' }) {
-  // v2.0.0: Gemini 2.5 flash har jawab se pehle "sochta" hai — parhne ke kaam mein us ki zarurat nahi.
-  // thinkingBudget 0 se jawab kaafi tez aata hai. Jo model yeh na maane (400) us par khud purane tareeqe se dobara.
-  let noThink = fast;
-  // v2.99.78: 🎯 PAKKA (pro) — sochna HAD ke saath (pehle be-had = 1-2 minute): Gemini 3 = thinkingLevel 'low', 2.x pro = 1024 budget
-  let lim = !fast && think === 'low' ? (/gemini-3/i.test(String(model || '')) ? { thinkingLevel: 'low' } : { thinkingBudget: 1024 }) : null;
-  const cfg = () => ({ temperature: 0, responseMimeType: 'application/json', ...(noThink ? { thinkingConfig: { thinkingBudget: 0 } } : lim ? { thinkingConfig: lim } : {}) });
-  const once = m => api('/models/' + encodeURIComponent(m) + ':generateContent', key, {
-    method: 'POST',
-    body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: cfg() })
+  const g3 = m => /gemini-3/i.test(String(m || ''));
+  const cfgOf = (m, lv) => {   // lv: 0 = had wala sochna, 1 = thora narm, 2 = bina config
+    let tc = null;
+    if (lv < 2) {
+      if (fast) tc = g3(m) ? { thinkingLevel: lv ? 'low' : 'minimal' } : (lv ? null : { thinkingBudget: 0 });
+      else if (think === 'low') tc = g3(m) ? { thinkingLevel: 'low' } : (lv ? null : { thinkingBudget: 1024 });
+    }
+    return { temperature: 0, responseMimeType: 'application/json', ...(tc ? { thinkingConfig: tc } : {}) };
+  };
+  const once = (m, lv, ms) => api('/models/' + encodeURIComponent(m) + ':generateContent', key, {
+    method: 'POST', ms,
+    body: JSON.stringify({ contents: [{ role: 'user', parts }], generationConfig: cfgOf(m, lv) })
   });
-  const call = async m => {
-    try { return await once(m); }
-    catch (e) {
-      if ((noThink || lim) && /thinking|thinking_budget|thinkingConfig|thinking_level|generation_?config|INVALID_ARGUMENT|HTTP 400/i.test(String(e?.message || ''))) {
-        if (noThink) noThink = false; else lim = null; return await call(m);   // yeh model yeh had nahi maanta — agla tareeqa (aakhir mein bina had)
-      }
-      throw e;
+  const call = async (m, ms) => {
+    for (let lv = 0; ; lv++) {
+      try { return await once(m, lv, ms); }
+      catch (e) { if (lv < 2 && /thinking|thinking_budget|thinkingConfig|thinking_level|generation_?config|INVALID_ARGUMENT|HTTP 400/i.test(String(e?.message || ''))) continue; throw e; }   // yeh model yeh had nahi maanta — agla tareeqa
     }
   };
-  const delays = [2500, 6000];
-  let lastErr = null;
-  for (let i = 0; i <= delays.length; i++) {
-    try { return await call(model); }
-    catch (e) {
-      lastErr = e;
-      if (!busyError(e)) throw e;
-      if (i < delays.length) { onStatus?.('Google par rush hai — ' + (i + 2) + '/3 koshish, thora sabar…'); await wait(delays[i]); }
-    }
+  const lim = (fast ? 25000 : 50000) + Math.max(0, parts.filter(x => x.inline_data).length - 1) * 10000;   // har agla page +10 s
+  let lastErr = null, alts = null;
+  const altList = async () => {
+    if (alts) return alts;
+    try {
+      const m = await pickModel(key), seen = new Set([model]);
+      alts = [m.best, ...m.all.filter(n => /flash/.test(n) && !/(lite|tts|image|live|audio|embedding)/.test(n))].filter(n => n && !seen.has(n) && seen.add(n));
+    } catch { alts = []; }
+    return alts;
+  };
+  try { return await call(model, lim); }
+  catch (e) { lastErr = e; if (!busyError(e)) throw e; }
+  const L = await altList();
+  for (let i = 0; i < Math.min(2, L.length); i++) {
+    onStatus?.('Google par rush — doosra model: ' + short(L[i]) + '…');
+    try { return await call(L[i], i === Math.min(2, L.length) - 1 ? 60000 : lim); }
+    catch (e) { lastErr = e; if (!busyError(e)) throw e; }
   }
-  try {                                        // aakhri chara: doosra flash model
-    const m = await pickModel(key);
-    const alt = m.all.find(n => n !== model && /flash/.test(n) && !/(lite|tts|image|live|audio|embedding)/.test(n));
-    if (alt) { onStatus?.('Doosra model aazma raha hoon: ' + alt); return await call(alt); }
-  } catch { /* fallback bhi nakam */ }
+  if (!L.length) {   // doosra model hai hi nahi — wahi ek dafa aur, lambi hadd
+    onStatus?.('Google par rush — ' + short(model) + ' dobara…');
+    try { return await call(model, 60000); } catch (e) { lastErr = e; if (!busyError(e)) throw e; }
+  }
   throw Error('Google ke server par abhi bohat rush hai. 2-5 minute baad dobara koshish karein. (' + (lastErr?.message || '') + ')');
 }
 
