@@ -3299,3 +3299,4 @@ v2.103.74 + rack-bharo v1.11: 🔒 RACK POORA LOCK (carton items) — PC: b0 = p
 v2.103.75 + PC doctor v2.8 + rack-bharo v1.12: 🔄 rack auto-refresh — wajah: rack-auto.bat 1-min wali nayi thi magar doctor purani 2-min loop band nahi karta tha (sirf .js badle par) + rack-bharo badla na ho to 5 min skip → "7 min pehle". Doctor v2.8: .bat badle to loop dobara; rack-bharo har 2 min zaroor likhe; app "x min pehle" har 20 s khud taza (laal > 5 min). AI nahi.
 
 v2.103.76 (app, 20 Oct 2026): PC par size chips (Settings → 🖥 PC par size). PC scripts nahi badle.
+v2.103.76 + rack-bharo v1.13: 🔒 rack poora lock = 18 Oct 2026 09:30 se PEHLE ka dukan stock (malik ka waqt) — har item; pehle-transfer wala tareeqa hataya. Editor mein "(18 Oct 9:30 se pehle: N)". AI nahi.

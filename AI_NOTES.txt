@@ -5589,3 +5589,4 @@ v2.103.76 (20 Oct 2026, PC script/rules nahi) — 🖥 PC PAR SIZE (malik: "apps
 - style.css aakhir: 1100px+ par body>main zoom 1.25 (m 1.12, s 1) + #dialogBody/#dialogTitle zoom 1.5 (m 1.38, s 1.28 = purana v2.103.73). Global html{zoom:.92} wahi; asal = .92 × ye.
 - QAIDA: PC par html par zoom > 1 KABHI nahi — Chrome mein vw/vh/dvh bhi zoom hote hain → 100vw / 90dvh khirkiyan screen se bahar. Zoom sirf main ya khirki ke andar (body). Layout nahi badla.
 - Agent: pc_size {size: s|m|l}. AI nahi.
+v2.103.76 + rack-bharo v1.13: 🔒 rack poora lock = 18 Oct 2026 09:30 se PEHLE ka dukan stock (malik ka waqt) — har item; pehle-transfer wala tareeqa hataya. Editor mein "(18 Oct 9:30 se pehle: N)". AI nahi.
