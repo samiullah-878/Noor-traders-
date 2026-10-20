@@ -5646,3 +5646,9 @@ v2.103.92 (20 Oct 2026) — 🔤 HAR PARCHI PAR URDU (malik: "all prints ki narr
 - galla-parchi v1.1: upar bari آج tareekh. Token parchi: koi badlav nahi.
 - index.html watchdog: app 10 s mein na khule to EK dafa khud marammat (SW + purani cache saaf, ?fix= reload); 10 min mein dobara atke to purana 🔄 button.
 - AI: sirf Tafseel / Note / Wajah ko Urdu harfon mein (PC, print ke waqt, 4 s). Tareekh / sar-khi fixed lafz — AI nahi.
+
+v2.103.93 (20 Oct 2026) — ↩ SALE RETURN packet-war mein (malik: "sale wapis (return) ho to app mein packet wapis plus"):
+- PC rack-bharo v1.15 readPk: dukan ke SaleReturn / SaleReturnDetail (DocStatusID 3 cancel bahar, ginti farq NOFQ + wholesale NOWS bahar, GBranchID dukan, from ke baad) — barcode packet = usi packet ki bikri (sold[z]) se minus (= rack par wapis), khula wapsi kh se minus; rq = kul wapis.
+- App pkAllRows why: rq alag ("↩ wapis aaya (return) X — app mein plus"), aamad = li − rq.
+- Cancel bill: pehle se — PC har minute ginti ke baad ki saari sale shuru se jorta hai, DocStatusID 3 shamil nahi (cancel/edit agle minute khud theek).
+- Mulazim "% nazar nahi aata": code mein staff ke liye bhi Packet % chips dikhte hain (test pl_staff: owner false par chip ✓; sirf item ka apna % (setRackCfg) malik ka). Asal phone ka screenshot ka intezar.

@@ -3330,3 +3330,5 @@ purchase-post.js v4.3 (20 Oct 2026): POS (Cognitive) update ke baad usp_Purchase
 
 2026-10-20 (manifest 2026-10-20.20) — 🔤 har parchi par Urdu: urdu-names v1.5 (dateLine + note/fillNotes AI 4 s, urdu-notes.json cache, printConfig.urduNote) · pos-khata-sync (voucher tareekh + Tafseel Urdu, HBL Urdu, udhar sale reprint naam, BPV/BRV) · transfer-sync v4.10 (head Urdu, Note/Wajah Urdu, sendRaw fillNotes) · purchase-parchi v1.3 · bank-parchi v2.5 · factory-post v1.5 · post-farq v17.3 (Urdu + item band cut) · sale-post v1.12 (Urdu tareekh rasid + gate pass, Sale No fix) · nt-print v1.21 (Urdu tareekh, urdu-names khud-update) · galla-parchi v1.1.
 QAIDA: nayi parchi = upar UR.dateLine(date) + Urdu sar-khi; user ki likhai = UR.note(text) aur print function mein `text = await UR.fillNotes(text)` (UR.has se pehle).
+
+rack-bharo.js v1.15 (20 Oct 2026, manifest 2026-10-20.21): ↩ sale return (SaleReturn/SaleReturnDetail, cancel/ginti farq/wholesale bahar) packet-war sold se minus (rack par wapis), khula return kh se minus, row.rq.

@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.92';
-import { liveLabelsHTML } from './barcode.js?v=2.103.92';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.93';
+import { liveLabelsHTML } from './barcode.js?v=2.103.93';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -3999,7 +3999,7 @@ function pkAllRows() {
     const K = packs.filter(p => p.left != null && p.b > 0), pos = gmNow(1, id), app = r3(K.reduce((t, p) => t + p.left * p.z, 0)), minZ = K.length ? Math.min(...K.map(p => p.z)) : 1, far0 = K.length ? r3(app - pos) : 0, far = Math.abs(far0) < minZ / 2 - 1e-9 ? 0 : far0;   // v2.103.68: ⚖️ dono packet jama vs POS kul · v2.103.70: aadhe chhote packet se kam farq = 0 (0.005 PCS jaisa nahi dikhana)
     // v2.103.69: farq KAHAN se — ginti ke waqt (app A0 vs POS s0) ya baad mein (bina-packet bika kh · aamad li · aur nikasi lo−sq) — PC rack-bharo v1.9 (s0/li/lo/sq)
     let why = null; if (K.length && r && r.s0 != null && !(Number(r.from) < (Number(cf.at) || 0) - 1000)) { const refill = Number(r.from) > (Number(cf.at) || 0) + 60000, A0 = r3(K.reduce((t, p) => { const o = cf.p?.[p.k]; return t + ((!refill && o?.c != null && o.c !== '') ? Number(o.c) : p.b) * p.z; }, 0));
-      why = { A0, s0: r3(r.s0), f0: r3(A0 - r.s0), kh: r3(r.kh || 0), li: r3(r.li || 0), wq: r3(r.wq || 0), other: r3(Math.max(0, (r.lo || 0) - (r.sq || 0) - (r.wq || 0))) }; }
+      why = { A0, s0: r3(r.s0), f0: r3(A0 - r.s0), kh: r3(r.kh || 0), li: r3(Math.max(0, (r.li || 0) - (r.rq || 0))), rq: r3(r.rq || 0), wq: r3(r.wq || 0), other: r3(Math.max(0, (r.lo || 0) - (r.sq || 0) - (r.wq || 0))) }; }   // v2.103.93: ↩ rq = sale return (PC rack-bharo v1.15) — app mein plus ho chuka, aamad se alag
     const low = Math.min(999, ...packs.filter(p => p.now != null).map(p => p.now)); return { id, cf, it, packs, low, pos, app, far, why }; });
   return L.sort((a, b) => a.low - b.low || String(a.it.name).localeCompare(String(b.it.name)));
 }
@@ -4020,7 +4020,7 @@ function pkSumHTML(x, dr) { const pos = gmNow(1, x.id), tot = pkTot(x, dr), far 
 // v2.103.69: farq ki wajah (chhoti line) — kis hisse mein hai: ginti ke waqt / bina-packet sale (khula) / aamad / aur nikasi
 function pkWhyHTML(x) { const w = x.why; if (!w) return ''; const u = v => gmQ(Math.abs(v), x.it), parts = [];
   if (Math.abs(w.f0) > 0.0005) parts.push(`ginti ke waqt hi: app ${u(w.A0)} · POS ${u(w.s0)} (${w.f0 > 0 ? '+' : '−'}${u(w.f0)})`); else parts.push('ginti ke waqt theek tha');
-  if (w.kh > 0.0005) parts.push(`POS mein bina-packet (khula) bika ${u(w.kh)} — app ne minus nahi kiya`); if (w.wq > 0.0005) parts.push(`wholesale bika ${u(w.wq)} (rack se nahi)`); if (w.li > 0.0005) parts.push(`aamad ${u(w.li)}`); if (w.other > 0.0005) parts.push(`aur nikasi (transfer/adjust) ${u(w.other)}`);
+  if (w.kh > 0.0005) parts.push(`POS mein bina-packet (khula) bika ${u(w.kh)} — app ne minus nahi kiya`); if (w.wq > 0.0005) parts.push(`wholesale bika ${u(w.wq)} (rack se nahi)`); if (w.rq > 0.0005) parts.push(`↩ wapis aaya (return) ${u(w.rq)} — app mein plus`); if (w.li > 0.0005) parts.push(`aamad ${u(w.li)}`); if (w.other > 0.0005) parts.push(`aur nikasi (transfer/adjust) ${u(w.other)}`);
   return `<small class="rk-why">↳ ${parts.join(' · ')}</small>`; }
 function pkRowHTML(x, ed) {
   const open = rk.plEd === x.id, dr = open && ed ? pkDraftOf(x.id, x) : null;
@@ -4282,8 +4282,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.103.92';
-import { recentPush } from './recent.js?v=2.103.92';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.103.93';
+import { recentPush } from './recent.js?v=2.103.93';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)
