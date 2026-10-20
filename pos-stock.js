@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.67';
-import { liveLabelsHTML } from './barcode.js?v=2.103.67';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.68';
+import { liveLabelsHTML } from './barcode.js?v=2.103.68';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -3947,7 +3947,8 @@ function pkAllRows() {
   const L = pkIds().map(id => { const cf = pkCfg(id), r = by.get(id), it = P.byId.get(id) || { name: r?.n || 'Item ' + id };
     const packs = pkSizesOf(it, cf).map(({ z, k }) => { const ck = Object.keys(cf.p || {}).find(y => Math.abs(Number(y) - z) < 1e-9), o = ck != null ? cf.p[ck] : null, L = o && Number(o.b) ? pkLeft(o, r, ck, cf.at) : null;
       return { z, k: ck ?? k, has: !!o, b: L ? L.b : 0, pct: Number(o?.pct) || 0, n: Number(o?.n) || 0, sold: L ? L.sold : 0, left: L ? L.left : null, now: L ? L.now : null, lao: L ? L.lao : 0 }; });
-    const low = Math.min(999, ...packs.filter(p => p.now != null).map(p => p.now)); return { id, cf, it, packs, low }; });
+    const K = packs.filter(p => p.left != null && p.b > 0), pos = gmNow(1, id), app = r3(K.reduce((t, p) => t + p.left * p.z, 0)), far = K.length ? r3(app - pos) : 0;   // v2.103.68: ⚖️ dono packet jama vs POS kul
+    const low = Math.min(999, ...packs.filter(p => p.now != null).map(p => p.now)); return { id, cf, it, packs, low, pos, app, far }; });
   return L.sort((a, b) => a.low - b.low || String(a.it.name).localeCompare(String(b.it.name)));
 }
 // v2.103.35: jin packets ka % laga (left maloom) → 👀 = app ka apna bacha (1 kg 3 · 500 gm 33 = 19.5 = POS); kul POS se na mile to farq sab se bare
@@ -3966,7 +3967,7 @@ function pkSumHTML(x, dr) { const pos = gmNow(1, x.id), tot = pkTot(x, dr), far 
   return `<span>🏪 POS dukan <b>${gmQ(pos, x.it)}</b></span>${dr._t ? `<span>👀 aap ki ginti <b>${gmQ(tot, x.it)}</b></span><span class="${far < 0 ? 'neg' : far > 0 ? 'pos' : ''}">Farq <b>${far > 0 ? '+' : far < 0 ? '−' : ''}${gmQ(Math.abs(far), x.it)}</b>${Math.abs(far) > 0.0005 ? ' → POS mein' : ' ✓'}</span>` : `<span class="mut">👀 ${dr._src === 'app' ? 'app ke apne hisaab se bhara (barcode-war sale minus)' : 'POS se bhara' + (multi ? ' (bara packet) — chhote gin kar likhein' : '')} · sahi ho to bas Save</span>${dr._src === 'app' && Math.abs(far) > 0.0005 ? `<span class="neg">⚠️ POS <b>${gmQ(pos, x.it)}</b> · app <b>${gmQ(tot, x.it)}</b> — farq <b>${gmQ(Math.abs(far), x.it)}</b></span><button type="button" class="gm-posfill" data-rkp-posfill="${esc(x.id)}">🏪 POS ke hisaab se bharo</button>` : ''}`}`; }
 function pkRowHTML(x, ed) {
   const open = rk.plEd === x.id, dr = open && ed ? pkDraftOf(x.id, x) : null;
-  return `<div class="rk-ps${open ? ' is-in' : ''}"><button type="button" class="rk-psh" data-rkp-ped="${esc(x.id)}"><span><b>${esc(x.it.name)}</b><span class="rk-chips">${x.packs.map(p => p.b ? `<i class="rk-c ${p.now <= p.pct ? 'kh' : p.now <= 40 ? 'lo' : 'pc'}">${esc(pkName(p.z, x.it))}: ${num(p.left)}/${num(p.b)} (${p.now}%) · hadd ${num(p.pct)}%</i>` : p.has ? `<i class="rk-c pc">${esc(pkName(p.z, x.it))}: hadd ${num(p.n)} bikne par</i>` : `<i class="rk-c mu">${esc(pkName(p.z, x.it))}: % nahi laga</i>`).join('')}</span></span><i>${open ? '▴' : '▾'}</i></button>
+  return `<div class="rk-ps${open ? ' is-in' : ''}"><button type="button" class="rk-psh" data-rkp-ped="${esc(x.id)}"><span><b>${esc(x.it.name)}</b><span class="rk-chips">${x.packs.map(p => p.b ? `<i class="rk-c ${p.now <= p.pct ? 'kh' : p.now <= 40 ? 'lo' : 'pc'}">${esc(pkName(p.z, x.it))}: ${num(p.left)}/${num(p.b)} (${p.now}%) · hadd ${num(p.pct)}%</i>` : p.has ? `<i class="rk-c pc">${esc(pkName(p.z, x.it))}: hadd ${num(p.n)} bikne par</i>` : `<i class="rk-c mu">${esc(pkName(p.z, x.it))}: % nahi laga</i>`).join('')}${Math.abs(x.far) > 0.0005 ? `<i class="rk-c kh">⚖️ farq ${x.far > 0 ? '+' : '−'}${gmQ(Math.abs(x.far), x.it)} (app ${gmQ(x.app, x.it)} · POS ${gmQ(x.pos, x.it)})</i>` : ''}</span></span><i>${open ? '▴' : '▾'}</i></button>
     ${dr ? `<div class="rk-psb"><div class="gm-sum" id="pkSum-${esc(x.id)}">${pkSumHTML(x, dr)}</div>${x.packs.map(p => { const d = dr[p.k], sk = esc(x.id) + '|' + esc(p.k); return `<div class="gm-r gm-r2"><div class="gm-l"><b>${esc(pkName(p.z, x.it))}</b>${p.b ? `<small>app: ${num(p.left)}/${num(p.b)} bacha</small>` : '<small>naya — 🧺 poora likhein</small>'}</div>
       <label class="gm-f"><small>🧺 Rack POORA bhara ho to (100%)</small><span><input type="number" inputmode="numeric" min="1" step="1" data-rkp-pb="${sk}" value="${esc(String(d.b))}" placeholder="jaise 250"><em>packet</em></span></label>
       <label class="gm-f"><small>👀 Abhi rack par <i class="gm-src">${dr._t ? '✏️ aap ne likha' : d.c !== '' ? (dr._src === 'app' ? '📱 app ke hisaab se' : '🏪 POS se') : 'gin kar'}</i></small><span><input type="number" inputmode="decimal" min="0" step="any" data-rkp-pc="${sk}" value="${esc(String(d.c ?? ''))}" placeholder="gino"><em>packet</em></span></label>
@@ -3979,15 +3980,17 @@ function pkPrevHTML(d, p, sk) { const b = Number(d.b) || 0, pct = Number(d.pct) 
   return `<small>Abhi <b>${num(now)}/${num(b)} = ${pc}%</b> bacha · <b>${pct}% (${num(lim)})</b> par list mein aayega · tab <b>${num(b - lim)} packet</b> aayenge (wapas 100%)${now <= lim ? ' · ⚠️ abhi se list mein' : ''}</small>${sk && now > b ? `<button type="button" class="gm-full" data-rkp-full="${sk}">⚠️ Abhi ${num(now)} — poore ${num(b)} se zyada · Poora ${num(Math.ceil(now))} kar dein?</button>` : ''}`; }
 function pkAllHTML(force) {
   const ids = pkIds(); if (!ids.length) return force ? '<div class="th-empty">📦<b>Abhi koi packet item nahi</b><small>Lane wale tab mein "⚙️ Items chunein" ya Stock milao se % lagayein</small></div>' : ''; const ed = pkCan(), q = String(rk.plq || '').trim(); if (force) rk.plOpen = true;
-  let L = pkAllRows(); if (q) L = smartSearch(L.map(x => ({ ...x, name: x.it.name })), q, 120);
+  let L = pkAllRows(); if (rk.plFar) L = L.filter(x => Math.abs(x.far) > 0.0005); if (q) L = smartSearch(L.map(x => ({ ...x, name: x.it.name })), q, 120);
   return `<div class="rk-pl">${force ? `<div class="rk-gh"><b>📋 Sab packet items (${num(ids.length)}) — % dekho / badlo</b></div>` : `<button type="button" class="rk-plh" data-rkp-plo="1">📋 Sab packet items (${num(ids.length)}) — % dekho / badlo <i>${rk.plOpen ? '▴' : '▾'}</i></button>`}
     ${rk.plOpen ? `${ed ? `<div class="rk-nb rk-pct"><span>📊 Sab ka % ek click</span>${[10, 20, 30, 40].map(v => `<button type="button" data-rkp-allpct="${v}">${v}%</button>`).join('')}</div>` : ''}
+      ${(() => { const n = pkAllRows().filter(x => Math.abs(x.far) > 0.0005).length; return `<div class="rk-nb"><button type="button" class="${rk.plFar ? 'is-in' : ''}" data-rkp-plfar="1">⚖️ Farq wale ${num(n)}</button><span>app (dono packet jama) ≠ POS kul — dobara gin lo</span></div>`; })()}
       <label class="hs-search"><input type="search" data-rkp-plq="1" placeholder="🔍 item dhoondo…" value="${esc(rk.plq || '')}" autocomplete="off"></label>
       <div id="rkPl">${L.slice(0, 150).map(x => pkRowHTML(x, ed)).join('') || '<p class="rk-note">Nahi mila</p>'}</div>` : ''}</div>`;
 }
 document.addEventListener('click', e => {
-  const t = e.target.closest?.('[data-rkp-plo],[data-rkp-ped],[data-rkp-posfill],[data-rkp-pp],[data-rkp-psv],[data-rkp-allpct],[data-rkp-full]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
+  const t = e.target.closest?.('[data-rkp-plo],[data-rkp-plfar],[data-rkp-ped],[data-rkp-posfill],[data-rkp-pp],[data-rkp-psv],[data-rkp-allpct],[data-rkp-full]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
   if (d.rkpPlo) { rk.plOpen = !rk.plOpen; rkPaint(); return; }
+  if (d.rkpPlfar) { rk.plFar = !rk.plFar; rkPaint(); return; }   // v2.103.68
   if (d.rkpPosfill) { const x = pkAllRows().find(y => y.id === d.rkpPosfill), dr = x && pkDraftOf(x.id, x); if (!dr) return; const pre = pkPosFill(x.packs, dr._pos, true); for (const p of x.packs) dr[p.k].c = pre[p.k]; dr._src = 'pos'; dr._far = 0; dr._t = false; rkPaint(); return; }   // v2.103.65
   if (d.rkpPed) { rk.plEd = rk.plEd === d.rkpPed ? '' : d.rkpPed; if (rk.plEd) start(true); rkPaint(); return; }   // v2.103.33: ginti round chahiye (👀 = ginti)
   if (d.rkpFull) { const [id, k] = d.rkpFull.split('|'), dr = pkDraftOf(id); if (!dr?.[k]) return; dr[k].b = String(Math.ceil(Number(dr[k].c) || 0)); rkPaint(); return; }
@@ -4015,7 +4018,7 @@ document.addEventListener('click', e => {
     cloud.setRackPkMany(m).then(() => notice(`📊 ${n} items ka % ${v}`)).catch(er => notice('Save nahi hua: ' + (er?.message || er))); return; }
 });
 document.addEventListener('input', e => { const t = e.target; if (!rk) return;
-  if (t?.dataset?.rkpPlq != null) { rk.plq = t.value || ''; clearTimeout(rk.plT); rk.plT = setTimeout(() => { const el = document.getElementById('rkPl'); if (!el) return; let L = pkAllRows(); const q = rk.plq.trim(); if (q) L = smartSearch(L.map(x => ({ ...x, name: x.it.name })), q, 120); el.innerHTML = L.slice(0, 150).map(x => pkRowHTML(x, pkCan())).join('') || '<p class="rk-note">Nahi mila</p>'; }, 160); return; }
+  if (t?.dataset?.rkpPlq != null) { rk.plq = t.value || ''; clearTimeout(rk.plT); rk.plT = setTimeout(() => { const el = document.getElementById('rkPl'); if (!el) return; let L = pkAllRows(); if (rk.plFar) L = L.filter(x => Math.abs(x.far) > 0.0005); const q = rk.plq.trim(); if (q) L = smartSearch(L.map(x => ({ ...x, name: x.it.name })), q, 120); el.innerHTML = L.slice(0, 150).map(x => pkRowHTML(x, pkCan())).join('') || '<p class="rk-note">Nahi mila</p>'; }, 160); return; }
   if (t?.dataset?.rkpPb || t?.dataset?.rkpPc) { const [id, k] = (t.dataset.rkpPb || t.dataset.rkpPc).split('|'), x = pkAllRows().find(y => y.id === id), dr = x && pkDraftOf(id, x); if (!dr?.[k]) return;
     if (t.dataset.rkpPb) dr[k].b = t.value; else { dr[k].c = t.value; dr._t = true; document.querySelectorAll('#rkBody .gm-src').forEach(x => { if (x.closest('.rk-ps.is-in')) x.textContent = '✏️ aap ne likha'; }); }
     for (const pp of x.packs) { const el = document.getElementById(`pkPrev-${id}-${String(pp.k).replace('.', '_')}`); if (el) el.innerHTML = pkPrevHTML(dr[pp.k], { left: dr._t ? 0 : pp.left }, id + '|' + pp.k); }
@@ -4220,8 +4223,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.103.67';
-import { recentPush } from './recent.js?v=2.103.67';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.103.68';
+import { recentPush } from './recent.js?v=2.103.68';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)
@@ -4296,6 +4299,8 @@ const AG = (() => {
       async run({ item: v, band = true }) { const it = item(v), id = String(it.id); if (!cloud?.setStockHidden) throw new Error('App update karein'); const next = { ...hidden }; if (band) next[id] = true; else delete next[id]; await cloud.setStockHidden(next); hidden = next; try { rerender(); } catch {} if (rk) rkPaint(); return `✓ ${it.name} ${band ? 'band — "Band items" mein milega' : 'wapas chalu'}`; } },
     { name: 'transfer_items_pending', read: true, desc: 'Aane wala maal: pending transfer notes ke items jo abhi tick nahi hue (is phone par), kis taraf aa rahe hain.', params: O_({}),
       run() { tcStart(); const names = collect().names || {}, out = []; for (const t of tcRows()) { const st = tcState(t); if (st.k !== 'wait' && st.k !== 'late') continue; (t.lines || []).forEach((l, i) => { if (!tcTkSt(t, i)) out.push({ item: l.name, qty: tcQty(l), tn: String(t.transferNo || t.transferId), taraf: branchName(t.to, names) }); }); } return { baqi: out.length, list: out.slice(0, 80) }; } },
+    { name: 'packet_farq_list', read: true, desc: 'Packet-war items jin ka app ka hisaab (sab packet jama) POS dukan ke kul se nahi milta — dobara ginne ke liye.', params: O_({}),
+      run() { needRk(); const L = pkAllRows().filter(x => Math.abs(x.far) > 0.0005).sort((a, b) => Math.abs(b.far) - Math.abs(a.far)); return { farq_wale: L.length, list: L.slice(0, 60).map(x => ({ item: x.it.name, app: x.app, pos: x.pos, farq: x.far, packets: x.packs.filter(p => p.left != null).map(p => `${pkName(p.z, x.it)} ${num(p.left)}/${num(p.b)}`).join(' · ') })) }; } },
     { name: 'band_list', read: true, desc: 'Band kiye hue items jin ka PC (POS inactive) kaam baqi ya fail hai.', params: O_({}),
       run() { const L = bandPendList(); return { baqi: L.filter(b => b.st === 'wait').map(b => b.name), fail: L.filter(b => b.st === 'fail').map(b => b.name), note: L.length ? 'PC on hote hi khud POS mein inactive + stock 0' : 'Sab band items POS mein ho chuke' }; } },
     { name: 'supplier_band', icon: '⛔', label: 'Supplier ke sab items band', danger: true, desc: 'Mangwao list ke is supplier ke SAB items band (POS inactive, stock 0). Bohat khatarnak.', params: O_({ supplier: S_ }, ['supplier']),
