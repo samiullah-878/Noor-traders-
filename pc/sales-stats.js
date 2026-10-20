@@ -1,5 +1,5 @@
 // =========================================================
-//  sales-stats.js  v1.5 (2026-10-19: 🧾 stock fraq party + ginti farq bill bikri / khareed mein nahi) · v1.4 (2026-10-17: useUTC false — sham ki sale) · v1.3 (2026-10-14: + 📊 item-report.js — 3 mahine har item har din ginti / Rs / nafa) · v1.2 (2026-10-11: purchase history + mahina-war + mahine ke 4 hisse) · v1.1 (2026-09-28: Noor Traders ke apne bill bahar) · v1 (2026-09-28) — POS ki 6 MAHINE ki BIKRI + PURCHASE, har item ka khulasa -> Firestore posStats
+//  sales-stats.js  v1.6 (2026-10-20: ph → phj text (nested array galti, 4 din ruka) + item report alag chale) · v1.5 (2026-10-19: 🧾 stock fraq party + ginti farq bill bikri / khareed mein nahi) · v1.4 (2026-10-17: useUTC false — sham ki sale) · v1.3 (2026-10-14: + 📊 item-report.js — 3 mahine har item har din ginti / Rs / nafa) · v1.2 (2026-10-11: purchase history + mahina-war + mahine ke 4 hisse) · v1.1 (2026-09-28: Noor Traders ke apne bill bahar) · v1 (2026-09-28) — POS ki 6 MAHINE ki BIKRI + PURCHASE, har item ka khulasa -> Firestore posStats
 //  App ka "🛒 Purchase order" isi se andaza lagata hai (roz kitna bikta hai, kitne din ka stock baqi, pichhli dafa kis se liya).
 //  SQL mein KUCH NAHI likhti — sirf SELECT. Chalana: node sales-stats.js  (SALE-DATA.bat har ghante chalata hai)
 //  posStats/meta {at, days, n, chunks, ptDays[4], months[7], parties[]}  ·  posStats/items-<k> {items:[{i, w[26 hafte], s30, s90, s180, p180, pn, lp{d,q,r,party}, ph, mo, pt}]}
@@ -97,14 +97,19 @@ if (require.main === module) (async () => {
     for (const e of M.values()) { while (e.w.length && !e.w[e.w.length - 1]) e.w.pop(); }   // khali purane hafte hata do (chhota doc)
     const all = [...M.values()], chunks = [];
     for (let k = 0; k < all.length; k += CHUNK) chunks.push(all.slice(k, k + CHUNK));
-    const b = db.batch();
-    chunks.forEach((items, k) => b.set(col.doc('items-' + k), { items, at: Date.now() }));
-    b.set(col.doc('meta'), { at: Date.now(), days: DAYS, n: all.length, chunks: chunks.length, ver: '1.2', ptDays: extra.ptDays, months: extra.months, parties: extra.parties.slice(0, 3000) });
-    await b.commit();
-    const old = await col.get();                                     // purane zyada chunks mitao
-    for (const d of old.docs) { const m = /^items-(\d+)$/.exec(d.id); if (m && Number(m[1]) >= chunks.length) await d.ref.delete(); }
-    console.log(new Date().toLocaleString('en-PK') + ' — posStats: ' + all.length + ' items, ' + chunks.length + ' hisse, ' + Math.round((Date.now() - t0) / 1000) + 's');
-    try { await require('./item-report.js').run({ pool, sql, db }); } catch (e) { console.log('📊 item report nahi bani: ' + (e?.message || e)); }   // v1.3: 📊 Item Sale Report (app)
+    // v1.6 (2026-10-20): FIX — 4 din se 'INVALID_ARGUMENT: Property array contains an invalid nested entity': ph = list ke andar list (Firestore nahi leta)
+    //   → ph ab JSON text 'phj' (app cloud.getPosStats wapas ph bana leti hai). Har doc ALAG save (ek fail = baqi bach jayein).
+    //   Aur 📊 item report (Commission / Asal nafa) ab is ke fail hone par bhi chalti hai (pehle yahan ki galti use bhi rok deti thi).
+    const flat = e => { if (!e.ph) return e; const { ph, ...r } = e; return { ...r, phj: JSON.stringify(ph) }; };
+    const errs = [], put = async (id, data) => { try { await col.doc(id).set(data); } catch (e) { errs.push(id + ': ' + String(e?.message || e)); } };
+    try {
+      for (let k = 0; k < chunks.length; k++) await put('items-' + k, { items: chunks[k].map(flat), at: Date.now() });
+      await put('meta', { at: Date.now(), days: DAYS, n: all.length, chunks: chunks.length, ver: '1.6', ptDays: extra.ptDays.map(Number), months: extra.months.map(String), parties: extra.parties.slice(0, 3000).map(String) });
+      const old = await col.get();                                     // purane zyada chunks mitao
+      for (const d of old.docs) { const m = /^items-(\d+)$/.exec(d.id); if (m && Number(m[1]) >= chunks.length) await d.ref.delete(); }
+      console.log(new Date().toLocaleString('en-PK') + ' — posStats: ' + all.length + ' items, ' + chunks.length + ' hisse, ' + Math.round((Date.now() - t0) / 1000) + 's' + (errs.length ? ' · ⚠️ ' + errs.length + ' save nahi: ' + errs[0].slice(0, 200) : ''));
+    } catch (e) { console.log(new Date().toLocaleString('en-PK') + ' — ⚠️ posStats save: ' + (e?.message || e)); }
+    try { await require('./item-report.js').run({ pool, sql, db }); } catch (e) { console.log(new Date().toLocaleString('en-PK') + ' — 📊 item report nahi bani: ' + (e?.message || e)); }   // v1.3: 📊 Item Sale Report (app)
     await pool.close(); process.exit(0);
   } catch (e) { console.log(new Date().toLocaleString('en-PK') + ' — GALTI: ' + (e?.message || e)); try { await pool?.close(); } catch {} process.exit(1); }
 })();

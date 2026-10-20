@@ -5616,3 +5616,9 @@ v2.103.88 (20 Oct 2026) — ⚡ Transfer screen mulazim ke phone par slow (malik
 - 3-mahine item-report (bhari) ka local andaza sirf tab jab PC rack data 20 s mein na aaye (pehle har dafa foran).
 - 🛒 Mangwao data (posStats/reorder, bara doc) sirf jab Mangwao tab khula ho (roWatch); Rack khirki band = listener band (rkUnwatch). Tab ka number '·' jab tak data na aaye. Agent mangwao actions bhi roWatch karte hain.
 - PC reorder v1.2: badla ho tab bhi 5 min se pehle Firestore mein dobara nahi likhta.
+
+v2.103.89 (20 Oct 2026) — 🐞 Item report (Commission / Asal nafa) 4 din se Rs 0 (malik: "larko ko paisa dena hai"):
+- ASAL WAJAH: PC sales-stats.js items-k mein ph = [[din, tadad, rate, party#]] (list ke andar list) → Firestore 'INVALID_ARGUMENT: Property array contains an invalid nested entity'. Poora sales-stats fail → us ke baad chalne wali item-report.js chalti hi nahi thi (irep v1.6/v1.7 wale fix galat jagah the).
+- sales-stats v1.6: ph → phj (JSON text); har doc alag save; item-report ab sales-stats save fail ho tab bhi chalti hai. sales-stats-auto.bat badli taake doctor loop foran dobara chalaye.
+- App cloud.getPosStats: items mein phj ho to wapas ph bana leti hai (po-formula.js waisa hi).
+- QAIDA: Firestore mein KABHI list ke andar list mat bhejo (admin SDK bhi) — JSON text bana kar bhejo.

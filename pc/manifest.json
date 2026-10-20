@@ -1,6 +1,6 @@
 {
- "version": "2026-10-20.17",
- "note": "reorder v1.2: 5 min se pehle dobara nahi",
+ "version": "2026-10-20.18",
+ "note": "sales-stats v1.6: nested array fix + item report alag",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
   "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
@@ -32,8 +32,8 @@
   "transfer-dekho.js": "d30502e0190fa92f4ecd65000446718d84a3c52ed7daa90dc46279c28052a461",
   "transfer-sync.js": "c731e169f5eeefd6ea280f97b19060060322069ec724cc55c1e02897982ee709",
   "item-report.js": "03dc7a3da648c14c096d7320e336e803ea85bfb18c0a6f28186f033989de0f2c",
-  "sales-stats.js": "1b04c029b375aa22eadc139c9b38c693705553b64f9591c65ddab457ca94c505",
-  "sales-stats-auto.bat": "a5f4f2546741d00fecd83d6db87e82af075cca1ed8e189d26e7075388c6a1212",
+  "sales-stats.js": "bb3228a0ad8f2f1811e1d89c7bd6f209ee86182948f3abfa967037307ddc60b6",
+  "sales-stats-auto.bat": "687c682f023c6d8673fb606d15c24676f7117a8e68ac7fd1a7f34b8dad6742b8",
   "BARCODE-DOCTOR.bat": "b127ae24f3219d77288bb6a6ad17758d85376fe2ef1f50aeb6293a2ebfe7ccb4",
   "LABEL-GEHRA.bat": "2fd4a77c5241b38433ba280babd4659011672fcb08b928a968e9e7e3931d4d88",
   "pos-sales-dekho.js": "de00d32c1c8f04271f3b3f21d901eede0f4e74754451cddbfa26c1a0fbef7fc2",

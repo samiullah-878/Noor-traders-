@@ -3322,3 +3322,6 @@ v2.103.86 + PC item-report v1.7: 🐞 3-mahine report 4 din se fail (INVALID_ARG
 v2.103.87: 🚚 RASTE MEIN — rack/packet note nikla (48 ghante, rkTransit: trList rack jobs minus rackDone/Transfer check ✓) → lane item par peeli patti "🚚 TN x · y min pehle nikla — raste mein" + ➕ Naya note (confirm → tick) + 🖨 Reprint (requestPrint transfer job); default ☐ (rkPick free ids), group mein neeche; khud tick karo to confirm "phir bhi naya?". AI nahi.
 
 reorder.js v1.2 (20 Oct 2026, app v2.103.88): Firestore likhna kam az kam 5 min baad (badla ho tab bhi) — mulazim ke phone par bara doc har minute aata tha, screen slow. Wahi data ho to 10 min. manifest 2026-10-20.17.
+
+sales-stats.js v1.6 (20 Oct 2026, app v2.103.89): ph nested array → phj JSON text (4 din se 'invalid nested entity' se poori script + item report ruki thi). Har doc alag save; item-report alag try mein — sales-stats ki galti ab use nahi rokti. bat badli (doctor foran loop chalaye). manifest 2026-10-20.18.
+QAIDA: Firestore mein list ke andar list kabhi nahi — JSON text.
