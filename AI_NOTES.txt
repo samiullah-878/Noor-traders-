@@ -5634,3 +5634,5 @@ v2.103.91 (20 Oct 2026) — ⚡ AI model speed test (malik: "flash ka koi aur mo
 - Settings → AI key: "⚡ Speed test" — SPEED_MODELS (2.5-flash, 3.6-flash, 3.8-flash, 3.5-flash-lite) + abhi wala, pingModel (ai-tally: ek chhota sawal, ek koshish, 30 s) ek saath; har chip par second, sab se tez ⚡, galti ❌ wajah. Chip tap = aiConfig.model foran save (picked:true).
 - Test ab model KHUD nahi badalta (sirf khali ho to bharta; list mein na ho to batata hai).
 - Ek dafa (malik ke phone par, din mein ek koshish): aiConfig.picked na ho to 2.5-flash ping; chale to wohi model + picked (ai25Try). cloud.setAiConfig ab 'picked' rakhta hai.
+
+(20 Oct 2026) PC purchase-post v4.3: POS update ke naye line params BatchNo/ExpiryDate khali bhare; 5 ruke app purchase bill khud dobara. App mein koi badlav nahi.

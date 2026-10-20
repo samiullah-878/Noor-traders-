@@ -1,5 +1,5 @@
 // =========================================================
-//  purchase-post.js  v4  (2026-09-22) — Blue Khata app ki "🧾 POS Purchase" -> POS PURCHASE BILL
+//  purchase-post.js  v4.3 (2026-10-20: POS update — line par BatchNo '' + ExpiryDate NULL; SCRIPT_VER 4 = rukay 5 bill khud dobara) · v4 (2026-09-22) — Blue Khata app ki "🧾 POS Purchase" -> POS PURCHASE BILL
 //  v4.2 (2026-10-08): 🏷 FARZI SUB-BARCODE — line par sbl:1 (app 'rate saath ✓') ho to us item ke apne-rate wale sub-barcode
 //      (SBSaleRate > 0, jaise 11+ = 0.05 kg = Rs 625) ka rate = ROUND(SBItemQty × naya PIECE rate, 2). Khali rate wale (0) nahi chhedte.
 //  v4.1 (2026-09-23): BILLS_FLAG / pokeBills ko DIR aur log ke BAAD kiya — v4 chalte hi gir jati thi.
@@ -43,7 +43,7 @@ const CREATED_BY = 1;          // POS user: Administrator (sale-post jaisa)
 const MARK = 'BK-PUR ';        // Purchase.Description mein nishan
 const MAX_JOB_DIN = 7;
 const LOCK_PORT = 47821;
-const SCRIPT_VER = 3;
+const SCRIPT_VER = 4;   // v4.3: ANJAAN (BatchNo/ExpiryDate) wali failed jobs ek dafa khud dobara
 
 const DIR = __dirname;
 // 2026-10-01 HEARTBEAT: har 30 sec '<script>.alive' mein waqt — doctor 3 min purana dekhe to script ko latki samajh kar dobara chalata hai
@@ -211,7 +211,7 @@ async function insertNew(p, j, jobId, marker, party, branch, lines, total) {
     return { purchaseId, purchaseNo: no, total, lines };
   } catch (e) { try { await tx.rollback(); } catch {} throw e; }
 }
-const SOFT_DETAIL = { Discount: '0', Tax: '0', Cost: 0, ItemIncentive: 0, TradeOffer: 0, Cotton: 0, Bardana: 0, GQgy: 0, IsGetStore: 0 };
+const SOFT_DETAIL = { Discount: '0', Tax: '0', Cost: 0, ItemIncentive: 0, TradeOffer: 0, Cotton: 0, Bardana: 0, GQgy: 0, IsGetStore: 0, BatchNo: '', ExpiryDate: null };   // v4.3 (2026-10-20): POS update ke naye khane — khali (POS mein haath se bill waisa hi)
 // v3: line ke sale rates — app ke naye (agar diye) warna POS ke maujooda (branch 1, phir Items). Sab FI PIECE (POS jaisa).
 async function lineRates(tx, l) {
   const cur = (await new sql.Request(tx).input('i', sql.Int, l.ItemID).query(`

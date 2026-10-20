@@ -3325,3 +3325,5 @@ reorder.js v1.2 (20 Oct 2026, app v2.103.88): Firestore likhna kam az kam 5 min 
 
 sales-stats.js v1.6 (20 Oct 2026, app v2.103.89): ph nested array → phj JSON text (4 din se 'invalid nested entity' se poori script + item report ruki thi). Har doc alag save; item-report alag try mein — sales-stats ki galti ab use nahi rokti. bat badli (doctor foran loop chalaye). manifest 2026-10-20.18.
 QAIDA: Firestore mein list ke andar list kabhi nahi — JSON text.
+
+purchase-post.js v4.3 (20 Oct 2026): POS (Cognitive) update ke baad usp_PurchaseDetail_InsertUpdate mein naye params BatchNo (varchar) + ExpiryDate (datetime) — script ANJAAN dekh kar 5 bill rok rahi thi. SOFT_DETAIL mein BatchNo '' + ExpiryDate NULL (haath wale bill jaisa). SCRIPT_VER 4 → 'ANJAAN parameter' wali failed jobs ek dafa khud dobara (POS ko chhua nahi tha, dohra nahi banega). manifest 2026-10-20.19.
