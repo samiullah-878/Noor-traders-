@@ -281,8 +281,19 @@ function paintNavBtn() {
 let moT = 0;
 const later = () => { clearTimeout(moT); moT = setTimeout(() => { shellRoute(); if (F) { const x = find(F); if (!x) unfocus(); else fbar(x); } repaintOpen(); }, 120); };
 export function shellRoute() { const v = scr(); if (shellRoute.v !== v) { shellRoute.v = v; if (F) unfocus(); lastSub = ''; if (navOpen()) navSet(false); } paintSub(); paintBadge(); paintNavBtn(); }
+// v2.105.1: malik — "screen side par na khiske, fix rahe" (phone). Poori screen / khirki (#dialogBody, main, list) ka daayein-baayein
+//   khisakna hamesha 0 par wapas — chahe focus / scrollIntoView ne khiskaya ho. Chips ki qatar aur tables apni jagah khiskti rehti hain.
+function lockX() {
+  if (lockX.on) return; lockX.on = 1;
+  document.addEventListener('scroll', e => {
+    if (innerWidth >= 1100) return;
+    const t = e.target;
+    if (t === document || t === document.documentElement || t === document.body) { if (window.scrollX) window.scrollTo(0, window.scrollY); return; }
+    if (t && t.nodeType === 1 && t.scrollLeft && (t.id === 'dialogBody' || t.id === 'dialog' || t.matches('main,.workspace,#list,#summary,.mn-body'))) t.scrollLeft = 0;
+  }, { capture: true, passive: true });
+}
 export function shellSetup(h = {}) {
-  H = h; mApply(); navBtnSetup();
+  H = h; mApply(); navBtnSetup(); lockX();
   const st = $('settings');
   if (st && !st.dataset.mn0) { st.dataset.mn0 = '1'; const old = st.onclick; H.openSettings = H.openSettings || (() => old?.call(st)); st.onclick = () => { if (isOpen()) close(); else open(); }; st.setAttribute('aria-label', 'Is screen ke kaam'); st.title = 'Is screen ke kaam'; }
   // header ka ‹ — focus ho to pehle focus se wapas

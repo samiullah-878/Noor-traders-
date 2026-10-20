@@ -4793,3 +4793,17 @@ html.dk body #mnRoot .mz-prev .mz-pc button:not(.is-in){background:var(--glass2,
   html:not([data-chip="big"]) body main #actions.day-acts button{min-height:34px!important;font-size:12.5px!important}
   html:not([data-chip="big"]) body main #list .party-chips{margin:4px 0!important}
 }
+/* v2.105.1: malik — "screen side par na khiske, fix rahe" (phone): khirki / screen kabhi daayein-baayein nahi khiskegi; chips ki qatar apni jagah khiskti hai */
+@media (max-width:1099.98px){
+  html{overflow-x:clip}
+  html body #dialog,html body #dialog #dialogBody{overflow-x:hidden!important}
+  html body :is(#summary,#list,#dialogBody) :is(.mchips,.rk-nb,.sk-gd,.sk-chips,.fc-per,.sc-state,.party-chips,.sort-chips,.due-modes,.th-tiles,.sk-tiles,.dy-strip,.rk-tabs){min-width:0;max-width:100%}
+  html body #dialogBody :is(.rk-top,.rk-pl,.rk-root,.gm-root,.ir-root,.bc-root,.th-root)>*{min-width:0}
+  /* Rack bharo (malik ka 01:45 screenshot): asal data mein koi line chauri ho to poori list chauri ho kar side par khisak jati thi — ab card / group screen jitna hi, lamba lafz toot kar neeche */
+  html body :is(#summary,#dialogBody) .rk-r{grid-template-columns:minmax(0,1fr) auto auto}
+  html body :is(#summary,#dialogBody) :is(.rk-g,.rk-pg,.rk-packs,.rk-r,.rk-top)>*{min-width:0}
+  html body :is(#dialogBody,#summary,#list){overflow-wrap:break-word}
+  /* Gaari calendar: "Bohat bara" likhai par bhi 7 khane screen ke andar */
+  html body #summary .gx-cal{grid-template-columns:repeat(7,minmax(0,1fr))}
+  html body #summary .gx-cal button{min-width:0}
+}
