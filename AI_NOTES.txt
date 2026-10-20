@@ -5567,3 +5567,5 @@ PC rack-bharo v1.7 (manifest 2026-10-20.6): 🏬 wholesale parties (reportConfig
 v2.103.67: ⚠️ v2.103.66 ka POS-reconcile WAPAS (malik: "app ka apna data hona chahiye — 500 gm barcode ki sale 500 gm se minus; POS mein sirf kul"). QAIDA: packet-war bacha = app ka aakhri likha (c) − us barcode ki sale (PC rack-bharo sold[z]); POS ke kul se KHUD kabhi na milao. pkReconcile sirf 🏪 "POS ke hisaab se bharo" button (editor) par. Farq chip rehta hai (sirf dikhata hai).
 
 v2.103.68: 📋 Packet % list — har item par ⚖️ farq chip (app = sab packet jama vs POS dukan kul; pkAllRows: pos/app/far) + upar "⚖️ Farq wale N" filter (rk.plFar) — malik dobara ginwa le. Agent packet_farq_list (read). Pehla farq wholesale sale se tha (rack-bharo v1.7 se hal). AI nahi.
+
+PC rack-bharo v1.8 (manifest 2026-10-20.7): rack-auto.bat har 1 MIN (tha 2); badla na ho to 5 min tak Firestore nahi likhta (tha 10). Malik: "bikne ka time kam karo". App mein kuch nahi badla (⚠️ "10 min se purana" warning wahi).

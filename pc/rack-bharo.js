@@ -1,5 +1,5 @@
 // =========================================================
-//  rack-bharo.js  v1.7 (2026-10-20: 🏬 WHOLESALE ki sale 'bika' mein NAHI — malik: 'is mein wholesale ki sale add na karo' (wholesale maal rack se nahi jata). Party naam blueAccess/reportConfig.wsNames + 'whole sale' — item-report jaisa; lane (sold) aur packet (sold[z]) dono) · v1.6 (2026-10-19: 🧾 stock fraq / ginti farq ke sale bill 'bika' mein nahi gine) · v1.5 (2026-10-18: 📤 NIKLA = aakhri aamad ke baad dukan se bika (s) + WAPAS godam gaya (o: transfer dukan -> godam) − seedha dukan
+//  rack-bharo.js  v1.8 (2026-10-20: ⏱ har 1 MIN (malik: "bikne ka time kam karo"); badla na ho to 5 min tak nahi likhta) · v1.7 (2026-10-20: 🏬 WHOLESALE ki sale 'bika' mein NAHI — malik: 'is mein wholesale ki sale add na karo' (wholesale maal rack se nahi jata). Party naam blueAccess/reportConfig.wsNames + 'whole sale' — item-report jaisa; lane (sold) aur packet (sold[z]) dono) · v1.6 (2026-10-19: 🧾 stock fraq / ginti farq ke sale bill 'bika' mein nahi gine) · v1.5 (2026-10-18: 📤 NIKLA = aakhri aamad ke baad dukan se bika (s) + WAPAS godam gaya (o: transfer dukan -> godam) − seedha dukan
 //                  par purchase (p) — malik ka asal qaida: 'maal aane par rack bhara, jitna nikla 1 carton ho to lao'. Row: o, p. lo ab sirf
 //                  candidate (dukan stock < 1 carton) — app malik ki hadd chip (rackLo) se faisla) · v1.4 (2026-10-18: 🟠 lo = rack KAM: dukan par bikta (180 din) aur dukan stock 1 carton se kam -> row bhejo
 //                  (Clear shampoo 400ml: 12 pcs dukan se WAPAS Godam 1 gaye, phir 10 bike = 2 bache, list mein nahi aaya tha) · godam: aakhri
@@ -134,7 +134,7 @@ if (require.main === module) (async () => {
     const ref = getFirestore().collection('businesses').doc('noor-traders').collection('posStats').doc('rack');
     const j = JSON.stringify(rows), pj = JSON.stringify(pk), zj = JSON.stringify(z), h = crypto.createHash('sha1').update(j + pj + zj).digest('hex');
     let old = null; try { const o = await ref.get(); old = o.exists ? o.data() : null; } catch {}
-    if (old && old.h === h && Date.now() - (Number(old.at) || 0) < 10 * 60000) { console.log(new Date().toLocaleString('en-PK') + ' — 🧺 wahi (' + rows.length + ')'); process.exit(0); }
+    if (old && old.h === h && Date.now() - (Number(old.at) || 0) < 5 * 60000) { console.log(new Date().toLocaleString('en-PK') + ' — 🧺 wahi (' + rows.length + ')'); process.exit(0); }
     await ref.set({ at: Date.now(), h, n: rows.length, j, pj, z: zj });
     console.log(new Date().toLocaleString('en-PK') + ' — 🧺 rack: ' + rows.length + ' items (bike + godam mein)' + (z.length ? ', ⚠️ pcs-0: ' + z.length : '') + ', ' + Math.round((Date.now() - t0) / 1000) + 's');
     process.exit(0);
