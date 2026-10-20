@@ -3285,3 +3285,5 @@ v2.103.68: 📋 Packet % list — har item par ⚖️ farq chip (app = sab packe
 PC rack-bharo v1.8 (manifest 2026-10-20.7): rack-auto.bat har 1 MIN (tha 2); badla na ho to 5 min tak Firestore nahi likhta (tha 10). Malik: "bikne ka time kam karo". App mein kuch nahi badla (⚠️ "10 min se purana" warning wahi).
 
 v2.103.69 + PC rack-bharo v1.9: ⚖️ farq ki WAJAH — PC pj row mein s0 (from ke waqt dukan stock = abhi − ledger net), li/lo (ledger in/out baad mein), sq (kul sale qty). App pkAllRows.why {A0 (app ginti jama), s0, f0, kh (bina-packet bika), li, other (lo−sq)} → pkWhyHTML line: "ginti ke waqt hi … · bina-packet bika … · aamad … · aur nikasi …". AI nahi.
+
+v2.103.70: ⚖️ packet farq — sab se chhote packet ke AADHE se kam farq = 0 (chip/filter mein nahi; 0.005 PCS jaisa POS ka rounding). AI nahi.
