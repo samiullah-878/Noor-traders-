@@ -1,5 +1,5 @@
 // =========================================================
-//  doctor.js  v2.7 (2026-10-08: GitHub par NAYA manifest version har 3 min dekho — naya ho to foran poori jaanch + update (pehle sirf 30 min) ·
+//  doctor.js  v2.8 (2026-10-20: .bat badle (jaise har 2 min → 1 min) to purani loop band kar ke nayi chalao — pehle purani loop chalti rehti thi, naya waqfa nahi lagta tha) · v2.7 (2026-10-08: GitHub par NAYA manifest version har 3 min dekho — naya ho to foran poori jaanch + update (pehle sirf 30 min) ·
 //              purana / CDN ka baasi manifest (chhota version) par kuch nahi) · v2.6 (2026-10-04: sab scripts CHUPKE (chupa.vbs, koi window nahi) · ek dafa purani dikhti windows band kar ke chupke chalata hai ·
 //              PC ka waqt ghalat -> "NT Waqt Theek" task + w32tm, pcStatus.clockOff app ko) · v2.5 (non-periodic zinda = node) · v2.4 (taskkill /F)
 //              · v2.3 (2026-10-01: HEARTBEAT — latki script pakar kar dobara) · v2.2 (3 dafa ke baad bhi 30 min mein phir koshish) · v2.1 (UNAUTHENTICATED par doctor khud dobara · PC ka waqt jaanch) · v2 (2026-09-25) — KHATA PC DOCTOR
@@ -263,8 +263,12 @@ async function cycle(why, full = true) {
     const rows = [];
     for (const s of services) {
       let action = '';
+      if (s.bat && changed.includes(s.bat)) {   // v2.8: bat (loop / waqfa) badla → poori loop dobara
+        for (const q of list) if (runsBat(q, s) || runsScript(q, s)) { try { killPid(q.pid, true); } catch {} }
+        await new Promise(r => setTimeout(r, 1500)); list = procs(); action = 'bat nayi — loop dobara shuru'; log(`↻ ${s.bat}: nayi bat, loop dobara`);
+      }
       if (changed.includes(s.script) && alive(s, list)) { const n = stopScript(s, list); if (n) { action = 'nayi lagi — dobara shuru'; log(`↻ ${s.script}: nayi file, dobara shuru`); } }
-      else if (changed.includes(s.script)) action = 'nayi lagi';
+      else if (changed.includes(s.script) && !action) action = 'nayi lagi';
       if (!alive(s, list)) {
         if (!s.periodic && stopBatOnly(s, list)) log(`■ ${s.bat}: window thi magar ${s.script} nahi chal rahi — purani loop band`);
         if (startBat(s)) { action = action || 'band thi — chala di'; log(`▶ ${s.script}: band thi, ${s.bat} chala di`); }

@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.74';
-import { liveLabelsHTML } from './barcode.js?v=2.103.74';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.75';
+import { liveLabelsHTML } from './barcode.js?v=2.103.75';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -3514,6 +3514,7 @@ function rackLocalRows() {
   rlKey = key; return (rlCache = out.sort((a, b) => a.n.localeCompare(b.n)));
 }
 const rackSrc = () => rackAt ? rackRows : rackLocalRows();
+setInterval(() => { const el = document.getElementById('rkAge'); if (!el || !rackAt) return; const a = Math.round((Date.now() - rackAt) / 60000); el.textContent = a < 1 ? 'abhi' : a + ' min pehle'; el.style.color = a > 5 ? '#fca5a5' : ''; }, 20000);   // v2.103.75: "x min pehle" khud taza
 let bandStop = null;   // v2.103.55: rack/mangwao window mein band + PC jawab live (stock screen khule baghair)
 function bandWatch() { if (bandStop || !cloud?.listenBand) return; bandStop = cloud.listenBand((k, v) => { if (k === 'h') hidden = v || {}; else bandDone = { items: v?.items || {}, fail: v?.fail || {} }; if (rk) rkPaint(); }); }
 function rackWatch() { rackLocalWatch(); bandWatch(); if (rackStop || !cloud?.listenRack) return; rackStop = cloud.listenRack(d => { rackRows = Array.isArray(d?.rows) ? d.rows : []; rackPk = Array.isArray(d?.pk) ? d.pk : []; rackZero = Array.isArray(d?.z) ? d.z : []; rackAt = Number(d?.at) || 0; if (document.querySelector('.th-root') && !rk) rerender(); if (rk && $('rkBody')) rkPaint(); }); }
@@ -3751,7 +3752,7 @@ function rkPaint(only) {
       <label class="rk-lb rk-lbc${rk.lbOn.has(id) ? ' is-in' : ''}"><input type="checkbox" data-rk-lb="${esc(id)}"${rk.lbOn.has(id) ? ' checked' : ''}><span>🏷 barcode label${rk.lbOn.has(id) ? ` × ${num(c.pk ? Math.floor(v / c.pk) * c.pk : v)}` : ''}</span></label>
       ${ed ? `<div class="rk-ed"><div class="rk-mode">${c.P ? [['', 'Khud'], ['ctn', '📦 Carton'], ['pcs', '🔹 Pcs']].map(([k, l]) => `<button type="button" class="${(cf?.mode || '') === k ? 'is-in' : ''}" data-rk-md="${esc(id)}|${k}">${l}</button>`).join('') : ''}<button type="button" class="rk-off" data-rk-off="${esc(id)}">🚫 Sirf godam — rack par nahi</button></div><div class="rk-mode rk-ipc"><small>📊 Is item ka %</small>${[[0, 'Sab wala'], [10, '10%'], [20, '20%'], [30, '30%'], [40, '40%']].map(([v, l]) => `<button type="button" class="${(Number(cf?.pct) || 0) === v ? 'is-in' : ''}" data-rk-pc="${esc(id)}|${v}">${l}</button>`).join('')}</div><label>🧺 Rack poora (100%) — lock${c.bt ? ` <small>(${esc(rkWhen(c.bt))} ke pehle note ke baad ${num(r3(Number(x.b0) || 0))})</small>` : ''}<input type="number" inputmode="numeric" min="0" step="1" data-rk-b="${esc(id)}" value="${cf?.b || ''}" placeholder="${c.bLock ? num(r3(c.bLock)) : 'likhein'}"><small>pcs</small></label><label>Kitna bikne par lana<input type="number" inputmode="numeric" min="0" step="1" data-rk-u="${esc(id)}" value="${cf?.u || ''}" placeholder="${c.unit}"><small>pcs</small></label><label>Kitna lana<input type="number" inputmode="numeric" min="0" step="1" data-rk-w="${esc(id)}" value="${cf?.q || ''}" placeholder="khud"><small>pcs</small></label><button type="button" class="rk-sv" data-rk-sv="${esc(id)}">✓ Save</button>${cf ? `<button type="button" class="rk-au" data-rk-au="${esc(id)}">↺ Khud</button>` : ''}</div>` : ''}</div>`; };
   const pendN = rkPend().reduce((t, x) => t + x.lines.length, 0), pkN_ = pkDue().filter(y => !rk.g || Number(y.g) === rk.g).length, laneN = L.length + pkN_, pctN = pkIds().length, roN = can('stock.mangwao') ? roRows().filter(r => r.t > 0 && r.pct != null && r.pct <= 40 || r.dm).length : 0;
-  const html = `<div class="rk-hero rk-hero2"><div><small>DUKAN KA RACK · ${esc(rk.g ? branchName(rk.g, names) : 'sab godam')}</small><b>${num(laneN)} items godam se lane</b><span>${ctn ? num(ctn) + ' carton · ' : ''}${rackAt ? `🖥 PC ${esc(new Date(rackAt).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }))} · ${age < 1 ? 'abhi' : age + ' min pehle'}` : irData ? '⚠️ andaza — PC data nahi' : 'PC data aa raha hai'}</span></div><span class="rk-ic">🧺</span></div>
+  const html = `<div class="rk-hero rk-hero2"><div><small>DUKAN KA RACK · ${esc(rk.g ? branchName(rk.g, names) : 'sab godam')}</small><b>${num(laneN)} items godam se lane</b><span>${ctn ? num(ctn) + ' carton · ' : ''}${rackAt ? `🖥 PC ${esc(new Date(rackAt).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }))} · <i id="rkAge">${age < 1 ? 'abhi' : age + ' min pehle'}</i>` : irData ? '⚠️ andaza — PC data nahi' : 'PC data aa raha hai'}</span></div><span class="rk-ic">🧺</span></div>
     ${rackAt && age > 10 ? '<div class="rk-time old">⚠️ PC ka rack data 10 min se purana — rack script ruka?</div>' : ''}
     <div class="rk-top"><div class="rk-nb rk-gch">${[...collect().branches.filter(b => b !== 1), 0].map(b => `<button type="button" class="${rk.g === b ? 'is-in' : ''}" data-rk-g="${b}">${b ? '🏬 ' + esc(branchName(b, names)) : 'Sab'}</button>`).join('')}</div>
     <div class="rk-tabs${can('stock.mangwao') ? ' four' : ''}">${[['lane', '🧺 Lane wale', laneN], ['pend', '⏳ Rack bhara?', pendN], ['pct', '📋 Packet %', pctN], ...(can('stock.mangwao') ? [['ro', '🛒 Mangwao', roN]] : [])].map(([k, l, n]) => `<button type="button" class="${rk.tab === k ? 'is-in' : ''}" data-rk-tab="${k}">${l}<i>${num(n)}</i></button>`).join('')}</div>${rk.tab === 'pct' ? (() => { const A = pkAllRows(), n = A.filter(x => Math.abs(x.far) > 0.0005).length; return `<div class="rk-nb rk-farbar"><button type="button" class="${rk.plFar ? '' : 'is-in'}" data-rkp-plfar="0">Sab ${num(A.length)}</button><button type="button" class="${rk.plFar ? 'is-in' : ''} ${n ? 'kh' : ''}" data-rkp-plfar="1">⚖️ Farq wale ${num(n)}</button><span>farq = dono packet jama ≠ POS → dobara gino</span></div>`; })() : ''}</div>
@@ -4234,8 +4235,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.103.74';
-import { recentPush } from './recent.js?v=2.103.74';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.103.75';
+import { recentPush } from './recent.js?v=2.103.75';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)
