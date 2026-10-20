@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.62';
-import { liveLabelsHTML } from './barcode.js?v=2.103.62';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.103.63';
+import { liveLabelsHTML } from './barcode.js?v=2.103.63';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -3659,6 +3659,7 @@ async function roGo(k) { if (!rk || rk.busy) return; const L = roList().filter(r
   } catch (e) { notice('⚠️ ' + (e?.message || e)); }
   if (rk) { rk.busy = ''; rkPaint(); } }
 // v2.103.51: Mangwao / kahin bhi se item band — stock screen wala password (stockConfig.bandPw, default 7183), phir wahi confirm; band hote hi rack/mangwao list se hat jata hai
+document.addEventListener('click', e => { const b = e.target.closest?.('[data-ro-bretry]'); if (!b) return; e.preventDefault(); if (!cloud?.bandRetry) { notice('App update karein'); return; } b.disabled = true; cloud.bandRetry(b.dataset.roBretry).then(() => notice('🔁 PC dobara koshish karega (PC on ho)')).catch(er => { b.disabled = false; notice('⚠️ ' + (er?.message || er)); }); });   // v2.103.63: ❌ fail → dobara (stock screen + mangwao dono)
 async function bandAsk(id, on) { if (!isOwner()) return false; const want = String(itemCfg?.bandPw || '7183'), got = prompt((on ? 'Item BAND karne' : 'Item dobara CHALU karne') + ' ka password:');
   if (got === null) return false; if (got !== want) { notice('❌ Password ghalat'); return false; }
   const box = { checked: on, disabled: false }; await toggleHidden(id, on, box); if (rk) rkPaint(); return box.checked === on; }
@@ -3669,7 +3670,7 @@ async function bandAllAsk(k) { if (!isOwner() || !cloud?.setStockHidden) return;
   const next = { ...hidden }; for (const r of ys) next[r.id] = true; try { await cloud.setStockHidden(next); hidden = next; notice(`⛔ ${ys.length} items band — PC baqi list mein`); try { rerender(); } catch {} if (rk) rkPaint(); } catch (e) { notice('⚠️ ' + (e?.message || e)); } }
 document.addEventListener('input', e => { const t = e.target; if (!rk || !t.dataset?.roPq || !t.closest?.('#rkBody')) return; rk.roPq = t.value; const box = t.closest('#rkBody')?.querySelector('.rk-sup'); if (!box) return;   // sirf chips dobara (search box ka focus na toote)
   const tmp = document.createElement('div'); tmp.innerHTML = roHTML(collect().names); const nb = tmp.querySelector('.rk-sup'); if (nb) box.replaceWith(nb); });
-document.addEventListener('click', e => { const t = e.target.closest?.('[data-ro-f],[data-ro-p],[data-ro-all],[data-ro-go],[data-ro-e],[data-ro-ban],[data-ro-banall],[data-ro-unban],[data-ro-bretry],[data-ro-tsv],[data-ro-tdel]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
+document.addEventListener('click', e => { const t = e.target.closest?.('[data-ro-f],[data-ro-p],[data-ro-all],[data-ro-go],[data-ro-e],[data-ro-ban],[data-ro-banall],[data-ro-unban],[data-ro-tsv],[data-ro-tdel]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
   if (d.roP != null) { rk.roP = d.roP; try { localStorage.setItem('sam-ro-p', rk.roP); } catch {} rkPaint(); return; }
   if (d.roF != null) { rk.roF = /^\d+$/.test(d.roF) ? Number(d.roF) : d.roF; try { localStorage.setItem('sam-ro-f', String(rk.roF)); } catch {} rkPaint(); return; }
   if (d.roAll != null) { const ids = roList().filter(r => (r.party || 'Supplier nahi pata') === d.roAll).map(r => r.id), cur = rkPick('o' + d.roAll, ids); rk.man.set('o' + d.roAll, cur.size === ids.length ? new Set() : new Set(ids)); rkPaint(); return; }
@@ -3677,7 +3678,6 @@ document.addEventListener('click', e => { const t = e.target.closest?.('[data-ro
   if (d.roE) { rk.roEd = rk.roEd === d.roE ? '' : d.roE; rkPaint(); return; }
   if (d.roBan) { bandAsk(d.roBan, true); return; }   // v2.103.51: 🚫 Band — wahi password jo stock screen par
   if (d.roUnban) { bandAsk(d.roUnban, false); return; }
-  if (d.roBretry) { if (!cloud?.bandRetry) { notice('App update karein'); return; } cloud.bandRetry(d.roBretry).then(() => notice('🔁 PC dobara koshish karega (PC on ho)')).catch(e => notice('⚠️ ' + (e?.message || e))); return; }   // v2.103.62
   if (d.roBanall != null) { bandAllAsk(d.roBanall); return; }   // v2.103.55: ⛔ supplier ke sab items
   if (d.roTsv || d.roTdel) { const id = d.roTsv || d.roTdel; if (!cloud?.setReorderCfg) return; const v = d.roTdel ? null : { t: Number(document.querySelector(`[data-ro-tv="${CSS.escape(id)}"]`)?.value) || 0, p: String(document.querySelector(`[data-ro-pv="${CSS.escape(id)}"]`)?.value || '').trim().slice(0, 60) }; if (v && !(v.t > 0) && !v.p) { notice('Poora ya supplier likhein'); return; }
     itemCfg = { ...(itemCfg || {}), reorder: { ...(itemCfg?.reorder || {}), [id]: v } }; rk.roEd = ''; rk.roQ.delete(id); rkPaint(); cloud.setReorderCfg(id, v).then(() => notice(v ? '✓ Save' : '↺ Khud')).catch(er => notice('Save nahi hua: ' + (er?.message || er))); return; } });
@@ -4211,8 +4211,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.103.62';
-import { recentPush } from './recent.js?v=2.103.62';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.103.63';
+import { recentPush } from './recent.js?v=2.103.63';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)
