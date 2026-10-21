@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.105.7';
-import { liveLabelsHTML } from './barcode.js?v=2.105.7';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.105.8';
+import { liveLabelsHTML } from './barcode.js?v=2.105.8';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -4304,27 +4304,57 @@ document.addEventListener('input', e => { const t = e.target; if (rk && t?.datas
 let rkQT = 0;
 document.addEventListener('close', e => { if (e.target?.id === 'dialog' && rk) { rk = null; rkUnwatch(); if (document.querySelector('.th-root')) rerender(); } }, true);   // v2.103.88: Mangwao listener band
 export const _rkTest = { pkDue, rackCalc, rackDue, rackLocalRows, set rows(v) { rackRows = v; }, set cfg(v) { itemCfg = v; } };
+// v2.105.8: 🏬 GODAM-WISE DASHBOARD (malik: Transfer notes screen ki tasveer — "yahan par har godam wise dashboard aaye"). Har godam (POS branch, naam se;
+//   dukan = 1 nahi) ka dabba: aaj ke note · 📤 gaya / 📥 aaya ctn + pcs (wahi ⚖️ carton ginti jo upar) · ⏳ check baqi / ⏰ late / ⚠️ farq (pichhle 2 din, sirf
+//   usi godam ke). Dabba dabao = neeche list sirf us godam ke notes (patti "✕ Sab"). Phone par ek qatar side scroll. CAP stock.thgodam / tr.godam. Yahan AI nahi.
+let thG = 0;
+const thTot = list => { let c = 0, ca = 0, p = 0; for (const t of list) for (const l of t.lines || []) { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); c += ctnG(x.c, ctnOf(l.itemId, l.name)); ca += x.c; p += x.p; } return { c: r2(c), ca: r2(ca), p: Math.round(p * 1000) / 1000 }; };
+function thGodamStats(all, td) {
+  const names = collect().names || {}, set = new Set((collect().branches || []).map(Number).filter(b => b && b !== 1 && b !== JAMA));
+  for (const t of all) for (const b of [Number(t.from), Number(t.to)]) if (b && b !== 1 && b !== JAMA) set.add(b);
+  return [...set].sort((a, b) => a - b).map(g => {
+    const mine = t => Number(t.from) === g || Number(t.to) === g, tdG = td.filter(mine), o = tdG.filter(t => Number(t.from) === g), i = tdG.filter(t => Number(t.to) === g);
+    const st = all.filter(t => mine(t) && Date.now() - tcIssued(t) < 2 * 864e5).map(t => tcState(t).k);
+    return { g, name: branchName(g, names), n: tdG.length, nOut: o.length, nIn: i.length, out: thTot(o), inn: thTot(i), pend: st.filter(k => k === 'wait' || k === 'late').length, late: st.filter(k => k === 'late').length, farq: st.filter(k => k === 'farq').length };
+  });
+}
+function thgCard(x) {
+  const cls = x.farq || x.late ? 'bad' : x.pend ? 'w' : 'ok', q = v => `${num(v.c)} <small>ctn</small>${v.p ? ` + ${num(v.p)} <small>pcs</small>` : ''}`;
+  return `<button type="button" class="thg ${cls}${thG === x.g ? ' is-in' : ''}" data-th-g="${x.g}" aria-pressed="${thG === x.g}"><span class="thg-h"><b>🏬 ${esc(x.name)}</b><i>${x.farq ? '⚠️ ' + x.farq : x.late ? '⏰ ' + x.late : x.pend ? '⏳ ' + x.pend : '✓'}</i></span>`
+    + `<span class="thg-n">${x.n ? `<b>${x.n}</b> note aaj` : 'aaj koi note nahi'}</span>`
+    + (x.nOut ? `<span class="thg-l">📤 Gaya <b>${q(x.out)}</b></span>` : '') + (x.nIn ? `<span class="thg-l">📥 Aaya <b>${q(x.inn)}</b></span>` : '')
+    + `<span class="thg-s"><em class="${x.pend ? 'w' : ''}">⏳ ${x.pend}</em><em class="${x.late ? 'bad' : ''}">⏰ ${x.late}</em><em class="${x.farq ? 'bad' : ''}">⚠️ ${x.farq}</em></span></button>`;
+}
+export function thGodamNow() {   // agent / test ke liye — wahi hisaab jo dabbon par
+  thWatch(); const today = regDay(Date.now()), all = tcAll().filter(t => t && !t.cancelled && t.at >= Date.now() - 3 * 864e5), td = all.filter(t => regDay(t.at) === today);
+  return thGodamStats(all, td).map(x => ({ godam: x.name, aaj_note: x.n, gaya: `${num(x.out.c)} ctn${x.out.p ? ' + ' + num(x.out.p) + ' pcs' : ''} (${x.nOut} note)`, aaya: `${num(x.inn.c)} ctn${x.inn.p ? ' + ' + num(x.inn.p) + ' pcs' : ''} (${x.nIn} note)`, check_baqi: x.pend, late: x.late, farq: x.farq }));
+}
 export function renderTransferHub(canDo = () => true) {
   thWatch(); rackWatch(); canDoRk = canDo;
   const names = collect().names || {}, today = regDay(Date.now()), y = new Date(); y.setDate(y.getDate() - 1); const yest = regDay(y.getTime());
   const all = tcAll().filter(t => t && !t.cancelled && t.at >= Date.now() - 3 * 864e5).sort((a, b) => b.at - a.at);
   // v2.99.80: malik — "register se carton piece": ⚖️ carton ginti (jaise 4 = 1) wahi jo Transfer register mein; asal (ca) chhota sa
-  const tot = list => { let c = 0, ca = 0, p = 0; for (const t of list) for (const l of t.lines || []) { const x = cp(Number(l.qty) || 0, Number(l.pack) || 0); c += ctnG(x.c, ctnOf(l.itemId, l.name)); ca += x.c; p += x.p; } return { c: r2(c), ca: r2(ca), p: Math.round(p * 1000) / 1000 }; };
+  const tot = thTot;
   const td = all.filter(t => regDay(t.at) === today), T = tot(td);
+  const gStat = canDo('stock.thgodam') ? thGodamStats(all, td) : [];   // v2.105.8: 🏬 godam-wise
+  if (thG && !gStat.some(x => x.g === thG)) thG = 0;
+  const gCards = gStat.length ? `<div class="thg-row">${gStat.map(thgCard).join('')}</div>` : '';
   const st = all.filter(t => Date.now() - tcIssued(t) < 2 * 864e5).map(t => tcState(t).k), pend = st.filter(k => k === 'wait' || k === 'late').length, late = st.filter(k => k === 'late').length, farq = st.filter(k => k === 'farq').length;
   const job = (trList || []).find(j => j.status !== 'done' && j.status !== 'failed' && Date.now() - j.at < 10 * 60000);
   $('summary').innerHTML = `<div class="thh"><div class="thh-head"><span class="thh-ic">⇄</span><div><small>GODAM SE GODAM</small><b>Transfer notes</b></div>${job ? '<span class="thh-pill wait">⏳ PC bana raha hai</span>' : `<span class="thh-pill">${td.length} aaj</span>`}</div>
     <div class="thh-bal"><strong>${num(T.c)} <small>Ctn</small>${T.p ? ` + ${num(T.p)} <small>Pcs</small>` : ''}</strong><span>aaj ${td.length} note · ${td.reduce((n, t) => n + (t.lines || []).length, 0)} items${T.c !== T.ca ? ` · <em class="thh-asal">asal ${num(T.ca)} ctn</em>` : ''}</span></div>
-    <div class="thh-stats"><div class="${pend ? 'w' : 'ok'}"><span>${pend ? '⏳' : '✓'}</span><div><small>Check baqi</small><b>${pend}</b></div></div><div class="${late ? 'bad' : 'ok'}"><span>⏰</span><div><small>Late (2 ghante+)</small><b>${late}</b></div></div><div class="${farq ? 'bad' : 'ok'}"><span>⚠️</span><div><small>Farq</small><b>${farq}</b></div></div></div></div>`;
+    <div class="thh-stats"><div class="${pend ? 'w' : 'ok'}"><span>${pend ? '⏳' : '✓'}</span><div><small>Check baqi</small><b>${pend}</b></div></div><div class="${late ? 'bad' : 'ok'}"><span>⏰</span><div><small>Late (2 ghante+)</small><b>${late}</b></div></div><div class="${farq ? 'bad' : 'ok'}"><span>⚠️</span><div><small>Farq</small><b>${farq}</b></div></div></div>${gCards}</div>`;
   const stChip = t => { const s = tcState(t); return s.k === 'ok' ? '<span class="th-chip ok">✓ Pohancha</span>' : s.k === 'farq' ? '<span class="th-chip bad">⚠️ Farq</span>' : s.ng ? '<span class="th-chip bad">📦 De diya tick nahi</span>' : s.k === 'late' ? `<span class="th-chip bad">⏰ ${tcAgo(s.age)}</span>` : `<span class="th-chip w">⏳ ${tcAgo(s.age)}</span>`; };
   const own = isOwner();
   const row = (t, dd) => { const x = tot([t]); const k = esc(tcKey(t)); return `<div class="th-rw"><button type="button" class="th-row" data-th-tc="${k}" data-th-d="${dd}"><span class="th-tn">TN<b>${esc(String(t.transferNo || '').replace(/^0+/, '') || '—')}</b></span><span class="th-mid"><b>${esc(branchName(t.from, names))} ➜ ${esc(branchName(t.to, names))}</b><small>${(t.lines || []).length} items · ${num(x.c)} ctn${x.p ? ' + ' + num(x.p) + ' pcs' : ''}${x.c !== x.ca ? ' (asal ' + num(x.ca) + ')' : ''} · ${esc(regClock(t.at))}${t.app ? ' · 📱' : ''}${Number(t.editCount) > 0 ? ' · ✏️' : ''}</small></span>${stChip(t)}</button>${own ? `<details class="th-more"><summary aria-label="Aur">⋯</summary><div><button type="button" data-th-prn="${esc(String(t.transferId))}">🖨 Dobara print</button><button type="button" data-th-edit="${esc(String(t.transferId))}">✏️ Edit</button><button type="button" class="danger" data-th-cancel="${esc(String(t.transferId))}">❌ Cancel</button></div></details>` : ''}</div>`; };
-  const grp = [[today, 'Aaj'], [yest, 'Kal']].map(([d, l]) => { const g = all.filter(t => regDay(t.at) === d); return g.length ? `<section class="th-day"><div class="th-dh"><b>${l}</b><span>${g.length} note</span></div>${g.slice(0, 40).map(t => row(t, d === today ? 1 : 2)).join('')}</section>` : ''; }).join('');
+  const allF = thG ? all.filter(t => Number(t.from) === thG || Number(t.to) === thG) : all;   // v2.105.8: 🏬 chuna hua godam
+  const grp = [[today, 'Aaj'], [yest, 'Kal']].map(([d, l]) => { const g = allF.filter(t => regDay(t.at) === d); return g.length ? `<section class="th-day"><div class="th-dh"><b>${l}</b><span>${g.length} note</span></div>${g.slice(0, 40).map(t => row(t, d === today ? 1 : 2)).join('')}</section>` : ''; }).join('');
   const tile = (k, ic, t, sub, cls) => `<button type="button" class="th-tile ${cls}" data-th="${k}" data-mn="th.${k}" data-mn-keep="1" data-mn-i="${ic}" data-mn-t="${esc(t)}" data-mn-s="${esc(String(sub).replace(/<[^>]*>/g, ''))}" data-mn-g="⇄ Transfer"><span>${ic}</span><b>${t}</b><small>${sub}</small></button>`;   // v2.105.0: chhote + ⋮
   $('list').innerHTML = `<div class="th-root"><div class="th-tiles">${canDo('stock.transfer') ? tile('new', '➕', 'Naya transfer note', 'Sirf majood maal · Ctn mein · ⤓ Sara', 'a') : ''}${canDo('stock.g2milao') && collect().branches.some(b => b !== 1) ? tile('g2m', '🧮', 'Stock milao', 'Dukan + godam ginti · 📊 % bacha · live', 'b') : ''}${canDo('stock.rack') ? (() => { const n = rackDue().length + pkDue().length; return tile('rack', '🧺', 'Rack bharo', (n ? `${n} items godam se lane` : rackAt || irData ? 'Sab rack bhare ✓' : 'Data aa raha hai') + (rackZero.length && isOwner() ? ` · ⚠️ ${rackZero.length} pcs 0` : ''), 'c' + (n ? ' rk-hot' : '')).replace('</button>', n ? `<i class="rk-badge">${n}</i></button>` : '</button>'); })() : ''}${canDo('stock.tc') ? tile('tc', '🧾', 'Transfer check', pend ? pend + ' baqi · scan karein' : 'Maal pohancha? Scan', 'b') : ''}${canDo('stock.reg') ? tile('reg', '📋', 'Transfer register', 'Din-war · PDF', 'c') : ''}</div>
-    ${grp || '<div class="th-empty">⇄<b>Aaj / kal koi transfer note nahi</b><small>"Naya transfer note" se banayein</small></div>'}</div>`;
+    ${thG ? `<div class="thg-pill"><span>🏬 Sirf <b>${esc(branchName(thG, names))}</b> ke notes</span><button type="button" data-th-g="0">✕ Sab</button></div>` : ''}${grp || (thG ? `<div class="th-empty">🏬<b>${esc(branchName(thG, names))} — aaj / kal koi note nahi</b><small>"✕ Sab" se poori list</small></div>` : '<div class="th-empty">⇄<b>Aaj / kal koi transfer note nahi</b><small>"Naya transfer note" se banayein</small></div>')}</div>`;
 }
-document.addEventListener('click', e => { const b = e.target.closest?.('[data-th],[data-th-reg],[data-th-tc],[data-th-prn],[data-th-edit],[data-th-cancel]'); if (!b) return; const d = b.dataset;
+document.addEventListener('click', e => { const b = e.target.closest?.('[data-th],[data-th-reg],[data-th-tc],[data-th-prn],[data-th-edit],[data-th-cancel],[data-th-g]'); if (!b) return; const d = b.dataset;
+  if (d.thG != null) { const g = Number(d.thG) || 0; thG = thG === g ? 0 : g; rerender(); if (thG) setTimeout(() => document.querySelector('.thg-pill')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }), 80); return; }   // v2.105.8: 🏬
   if (d.thTc) { tcDays = Number(d.thD) === 2 ? 2 : 1; tcDir = 'all'; tcOpen.add(d.thTc); openTransferCheck('nikle');   // v2.99.68: note par tap = us ka check
     setTimeout(() => { const el = [...document.querySelectorAll('[data-tc-open]')].find(x => x.dataset.tcOpen === d.thTc); if (el) { el.scrollIntoView({ block: 'center' }); el.closest('.tc-n')?.classList.add('tc-flash'); } }, 500); return; }
   if (d.thPrn || d.thEdit || d.thCancel) { thAct(d, b); return; }
@@ -4425,8 +4455,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.105.7';
-import { recentPush } from './recent.js?v=2.105.7';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.105.8';
+import { recentPush } from './recent.js?v=2.105.8';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)
@@ -4537,6 +4567,8 @@ const AG = (() => {
       async run({ category, rate_chhupao, sirf_stock }) { rp = { who: sirf_stock ? 'stock' : 'all', cat: category ? ([...new Set(rpItems().map(it => String(it.cat || '').trim()))].find(c => fold(c) === fold(category) || fold(c).includes(fold(category))) || '') : '', hide: !!rate_chhupao, bc: false, q: '' }; if (category && !rp.cat) throw Error('Category "' + category + '" nahi mili'); rpPdf(); return '📄 PDF khul gayi — kholo / bhejo'; } },
     { name: 'transfer_check_list', read: true, desc: 'Transfer check: kaun se transfer notes abhi "maal mil gaya" ✓ nahi hue (late bhi).', params: O_({}),
       run() { tcStart(); return { list: tcAll().filter(t => { const st = tcState(t); return st.k !== 'ok' && st.k !== 'cancel' && st.k !== 'farq'; }).slice(0, 40).map(t => { const st = tcState(t); return { tn: String(t.transferNo || '').replace(/^0+/, ''), se: branchName(Number(t.from), names()), ko: branchName(Number(t.to), names()), haal: st.k === 'late' ? 'LATE' : st.ng ? 'pehle "maal de diya" tick baqi' : 'baqi', items: (t.lines || []).length, kab: new Date(tcIssued(t)).toLocaleString('en-PK') }; }) }; } },
+    { name: 'godam_transfer_haal', read: true, desc: '🏬 Aaj ke transfer notes GODAM-WISE: har godam ke note, gaya / aaya ctn + pcs, check baqi / late / farq (Transfer notes screen ke dabbe).', params: O_({}),
+      run() { const r = thGodamNow(); return r.length ? { godam: r } : { note: 'Abhi godam / transfer data nahi aaya' }; } },
     { name: 'transfer_check_ok', icon: '🧾', label: 'Transfer check ✓', desc: 'Transfer note (tn) ka "maal poora mil gaya" ✓ (ya farq=true + note).', params: O_({ tn: S_, farq: B_, note: S_ }, ['tn']),
       summary({ tn, farq, note }) { tcStart(); const t = tcFind(String(tn)); if (!t) throw Error('TN ' + tn + ' nahi mila'); const st = tcState(t); if (st.k === 'ok') throw Error('TN ' + tn + ' pehle hi ✓'); return `TN ${tn}: ${farq ? '⚠️ farq — ' + (note || '') : '✓ poora mila'}`; },
       async run({ tn, farq, note }) { const t = tcFind(String(tn)); await tcSaveOne(t, farq ? 'farq' : 'ok', note || ''); return `✓ TN ${tn} check`; } },

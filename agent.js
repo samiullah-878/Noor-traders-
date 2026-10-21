@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.105.7';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.105.7';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.105.8';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.105.8';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -28,11 +28,14 @@ const EXT_KW = [
   [/stock|kitna|kitne|kitni|hai\b|milao|ginti|gino|gina/, ['stock_dekho', 'stock_milao', 'godam_list', 'packet_list', 'mangwao_list']],
   [/label|barcode|chhap|print|tn\b|note/, ['label_print', 'note_dobara_print', 'transfer_list', 'rack_pending']],
   [/check|mila|farq|poora mil/, ['transfer_check_list', 'transfer_check_ok', 'transfer_list']],
+  [/godam.?wise|har godam|godam ka haal|transfer.*godam|godam.*transfer|dashboard/, ['godam_transfer_haal', 'transfer_list', 'transfer_check_list']],   // v2.105.8: 🏬
   [/pdf|rate list|ratelist|list bhej/, ['rate_list_pdf', 'nafa_pdf', 'sale_report_pdf']],
   [/nafa|profit|munafa|bikri|bika|sale|report/, ['nafa_report', 'item_sale', 'nafa_pdf', 'sale_report_pdf']],
   [/factory|batch|packing/, ['factory_batches', 'factory_batch_kholo']],
   [/mulazim|larka|larke|cap|ijazat|band|chalu|on\b|off\b|setting|print|parchi|copy|auto/, ['mulazim_list', 'caps_list', 'cap_set', 'mulazim_band', 'pos_sale_auto', 'print_setting', 'mulazim_code']],
   [/code|kod|login|pakka|hindse|6 digit/, ['mulazim_code', 'malik_code_haal', 'mulazim_list']],   // v2.105.7: 📱 larke ka code · 🔑 malik ka pakka code
+  [/malik tab|tab band|wapas mulazim|mulazim ki tab|logout/, ['malik_tab_wapas']],   // v2.105.8: 👑 mulazim ki tab mein malik → wapas
+  [/tasveer|tasvir|photo|picture|pic\b|foto/, ['khata_tasveerein']],   // v2.105.8: 📷 entry ki tasveer
   [/khol|open|screen/, ['screen_kholo', 'screen_kaam_list', 'screen_kaam_kholo']],
   [/teen nuqt|nuqte|3 dot|dots|⋮|menu|chip|\bpin\b|screen par laga|upar laga|bahar la/, ['screen_kaam_list', 'screen_kaam_kholo', 'chip_pin']],   // v2.104.0: ⋮ shell
   [/likhai|font|heading|marzi|text size|text ka size|colou?r/, ['likhai_marzi']],   // v2.104.0: 🔠 apni marzi

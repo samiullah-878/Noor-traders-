@@ -40,7 +40,7 @@ export function parseLogin({ role, username, password, ownerEmail, scope = 'full
 
 // SDK and account reads are injected so real authentication ordering can be
 // regression-tested without touching production users or attendance records.
-export function createAuthController({ auth, sdk, accounts, onReset, onSession, onError }) {
+export function createAuthController({ auth, sdk, accounts, onReset, onSession, onError, cache }) {
   let epoch = 0;
   let pending = false;
   let activeUid = null;
@@ -55,8 +55,8 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
   // v2.81: ⚡ FORAN KHULNA — pichhla tasdeeq shuda session (isi UID ka) phone par yaad; boot par foran onSession, server ki jaanch
   // (getSession + getAccount) peeche. Jaanch fail = reset + signOut (pehle jaisa). Internet band = yaad wala session chalta rahe.
   // Server rules phir bhi har read/write jaanchte hain — ye sirf screen jaldi dikhane ke liye hai.
-  const CK = 'sam-sess-v1';
-  const ls = () => { try { return globalThis.localStorage || null; } catch { return null; } };
+  const CK = cache?.key || 'sam-sess-v1';   // v2.105.8: 👑 malik ki tab (mulazim ke phone par) apna alag, sirf us tab ka (sessionStorage) — mulazim ka yaad wala session na mite
+  const ls = () => { try { return (cache?.store === 'session' ? globalThis.sessionStorage : globalThis.localStorage) || null; } catch { return null; } };
   let optimistic = null;
   const readCache = uid => { try { const c = JSON.parse(ls()?.getItem(CK) || 'null'); return c && c.uid === uid && Date.now() - (Number(c.at) || 0) < 30 * 864e5 ? c : null; } catch { return null; } };
   const writeCache = s => { try { const a = s.account ? Object.fromEntries(Object.entries(s.account).filter(([k]) => !/hash|salt|pass|pw|secret|key|cred/i.test(k))) : undefined; ls()?.setItem(CK, JSON.stringify({ uid: s.user.uid, role: s.role, scope: s.scope, phone: s.phone, account: a, at: Date.now() })); } catch {} };
@@ -222,6 +222,27 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
         const token = await getToken(auth.currentUser);
         if (ticket !== epoch) throw failure('login/cancelled');
         await sdk.signOut(auth);
+        const credential = await sdk.signInWithCustomToken(auth, token);
+        attemptUser = credential.user;
+        check(ticket, credential.user);
+        await activate(credential.user, ticket, 'owner');
+      } catch (error) {
+        if (ticket === epoch) { reset(); if (auth.currentUser) await sdk.signOut(auth); }
+        else if (attemptUser && auth.currentUser?.uid === attemptUser.uid) await sdk.signOut(auth);
+        throw error;
+      } finally { pending = false; }
+    },
+    // v2.105.8: 👑 MULAZIM KI TAB MEIN MALIK — mulazim ki tab ne shop PC se token le liya (cloud.ownerTokenFromCode), reload ke baad alag Firebase app
+    //   (sirf is tab, sessionStorage) is token se seedha malik. Mulazim ka apna login (doosri app, localStorage) bilkul nahi hilta.
+    async loginWithToken(token) {
+      if (pending) throw failure('login/busy');
+      if (!token) throw failure('owner/notoken');
+      pending = true;
+      const ticket = ++epoch;
+      let attemptUser = null;
+      reset();
+      try {
+        if (auth.currentUser) await sdk.signOut(auth);
         const credential = await sdk.signInWithCustomToken(auth, token);
         attemptUser = credential.user;
         check(ticket, credential.user);

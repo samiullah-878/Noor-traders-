@@ -4937,3 +4937,88 @@ html body :is(#summary,#dialogBody) .oc-note{margin:0;font-size:12px;color:#6474
 html.dk body :is(#summary,#dialogBody) :is(.st-codeln,.st-capq,.oc-stat){background:var(--glass,rgba(255,255,255,.06))!important;border-color:var(--line,rgba(255,255,255,.14))!important;color:var(--ink,#e8eeff)!important}
 html.dk body :is(#summary,#dialogBody) .st-codeln b{color:#7dd3fc}
 html.dk body :is(#summary,#dialogBody) :is(.oc-intro,.oc-note,.oc-form label){color:var(--ink2,#a9b4cc)}
+/* v2.105.8: 👑 mulazim ki tab mein malik — Screen badlein ka button · code khirki · upar sunehri patti */
+html body :is(#summary,#dialogBody) .mk-sw{margin-top:14px;padding-top:12px;border-top:1px dashed #e2c46b}
+html body :is(#summary,#dialogBody) .mk-open{display:flex!important;align-items:center;gap:12px;width:100%!important;min-height:58px!important;padding:10px 14px!important;border-radius:16px!important;border:1.5px solid #e2b93b!important;background:linear-gradient(135deg,#fffbeb,#fef3c7)!important;color:#78350f!important;text-align:left;box-shadow:0 6px 16px rgba(180,120,10,.14)!important;cursor:pointer}
+html body :is(#summary,#dialogBody) .mk-open .mk-ic{flex:0 0 auto;display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#b45309);font-size:20px;box-shadow:0 3px 8px rgba(180,83,9,.35)}
+html body :is(#summary,#dialogBody) .mk-open .mk-tx{display:grid;gap:2px;min-width:0}
+html body :is(#summary,#dialogBody) .mk-open b{font-size:16px;color:#78350f}
+html body :is(#summary,#dialogBody) .mk-open small{font-size:12px;font-weight:600;color:#92400e;white-space:normal}
+html body :is(#summary,#dialogBody) .mk-root{display:grid;gap:12px;min-width:0}
+html body :is(#summary,#dialogBody) .mk-intro{margin:0;font-size:13.5px;line-height:1.5;color:#334155}
+html body :is(#summary,#dialogBody) .mk-code{font:800 28px ui-monospace,Menlo,Consolas,monospace!important;letter-spacing:10px;text-align:center;padding:12px!important;border-radius:14px!important;border:2px solid #e2b93b!important;background:#fffdf5!important;color:#78350f!important}
+html body :is(#summary,#dialogBody) .mk-go{min-height:52px!important;border:0!important;border-radius:14px!important;background:linear-gradient(135deg,#d97706,#92400e)!important;color:#fff!important;font-size:17px!important;font-weight:800!important;box-shadow:0 8px 18px rgba(146,64,14,.3)!important}
+html body :is(#summary,#dialogBody) .mk-go:disabled{opacity:.6}
+html body :is(#summary,#dialogBody) .mk-msg{margin:0;min-height:18px;font-weight:700;color:#92400e;font-size:13.5px}
+html body :is(#summary,#dialogBody) .mk-note{margin:0;font-size:12px;color:#64748b}
+html body main>header .mk-bar{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:0 0 8px;padding:7px 8px 7px 12px;border-radius:14px;background:linear-gradient(135deg,#fbbf24,#d97706)!important;color:#451a03!important;box-shadow:0 6px 16px rgba(217,119,6,.35);min-width:0}
+html body main>header .mk-bar .mk-b1{font-size:13.5px;font-weight:700;min-width:0}
+html body main>header .mk-bar small{font-size:11px;font-weight:700;opacity:.85}
+html body main>header .mk-bar button{margin-left:auto;min-height:34px!important;width:auto!important;padding:0 12px!important;border-radius:999px!important;border:0!important;background:#451a03!important;color:#fde68a!important;font-size:13px!important;font-weight:800!important;box-shadow:none!important;cursor:pointer}
+html.dk body :is(#summary,#dialogBody) .mk-open{background:linear-gradient(135deg,rgba(251,191,36,.16),rgba(217,119,6,.12))!important;color:#fde68a!important;border-color:rgba(251,191,36,.5)!important}
+html.dk body :is(#summary,#dialogBody) :is(.mk-open b,.mk-open small){color:#fde68a}
+html.dk body :is(#summary,#dialogBody) .mk-code{background:rgba(255,255,255,.06)!important;color:#fde68a!important}
+html.dk body :is(#summary,#dialogBody) :is(.mk-intro,.mk-note){color:var(--ink2,#a9b4cc)}
+html.dk body :is(#summary,#dialogBody) .mk-msg{color:#fbbf24}
+/* v2.105.8: 📷 party entry ki tasveer — form ka picker · khate ki chip (chhoti tasveer) · poori screen */
+html body #dialogBody .epk{display:grid;gap:8px;margin:4px 0 8px;padding:10px 12px;border-radius:14px;border:1.5px dashed #a5b4fc;background:#f5f7ff;min-width:0}
+html body #dialogBody .epk.has{border-style:solid;border-color:#818cf8;background:#eef2ff}
+html body #dialogBody .epk-h{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+html body #dialogBody .epk-h b{font-size:14px;color:#312e81}
+html body #dialogBody .epk-h small{font-size:11.5px;color:#6366f1;font-weight:600}
+html body #dialogBody .epk-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+html body #dialogBody .epk-th{display:flex;gap:6px;flex-wrap:wrap}
+html body #dialogBody .epk-one{position:relative;width:56px;height:56px;border-radius:12px;overflow:hidden;border:1px solid #c7d2fe;background:#fff}
+html body #dialogBody .epk-one img{width:100%;height:100%;object-fit:cover;display:block}
+html body #dialogBody .epk-one button{position:absolute;top:2px;right:2px;min-height:0!important;width:22px!important;height:22px!important;padding:0!important;border-radius:999px!important;border:0!important;background:rgba(15,23,42,.78)!important;color:#fff!important;font-size:12px!important;line-height:22px!important;box-shadow:none!important}
+html body #dialogBody label.epk-btn{display:inline-flex!important;align-items:center;gap:4px;min-height:40px;width:auto!important;margin:0!important;padding:0 14px!important;border-radius:999px;border:1.5px solid #818cf8;background:#fff;color:#3730a3!important;font-weight:800;font-size:13.5px;cursor:pointer}
+html body #dialogBody label.epk-btn.off{opacity:.45;pointer-events:none}
+html body #dialogBody .epk-msg{margin:0;font-size:12px;color:#4f46e5;font-weight:600}
+html body .eph{display:inline-flex!important;align-items:center;gap:3px;vertical-align:middle;min-height:0!important;width:auto!important;margin:4px 6px 0 0!important;padding:3px!important;border-radius:12px!important;border:1px solid #c7d2fe!important;background:#eef2ff!important;color:#3730a3!important;box-shadow:none!important;cursor:pointer;line-height:1}
+html body .eph img{width:42px;height:42px;object-fit:cover;border-radius:9px;display:block}
+html body .eph:not(.has){padding:5px 10px!important;gap:5px;font-weight:800;font-size:13px}
+html body .eph .eph-n{font-size:12px;font-weight:800;padding:0 4px}
+html.epv-on body{overflow:hidden}
+html body #epv{position:fixed;inset:0;width:auto;height:auto;z-index:2147483000;display:grid;grid-template-rows:auto minmax(0,1fr) auto;background:#020617!important;color:#fff;touch-action:pan-y}
+html body #epv .epv-top{display:flex;align-items:center;gap:10px;padding:max(12px,env(safe-area-inset-top)) 14px 10px}
+html body #epv .epv-t{display:grid;gap:2px;min-width:0;flex:1}
+html body #epv .epv-t b{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff}
+html body #epv .epv-t small{font-size:12.5px;color:#cbd5e1}
+html body #epv button{min-height:0!important;box-shadow:none!important;cursor:pointer}
+html body #epv .epv-x{width:44px!important;height:44px!important;padding:0!important;border-radius:999px!important;border:0!important;background:rgba(255,255,255,.14)!important;color:#fff!important;font-size:20px!important}
+html body #epv .epv-stage{display:grid;place-items:center;min-height:0;padding:0 8px;overflow:hidden}
+html body #epv .epv-img{max-width:100%;max-height:100%;object-fit:contain;border-radius:10px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+html body #epv .epv-img:not([src]){display:none}
+html body #epv .epv-wait{color:#cbd5e1;font-weight:700}
+html body #epv .epv-bot{display:flex;align-items:center;justify-content:center;gap:10px;padding:10px 14px max(14px,env(safe-area-inset-bottom))}
+html body #epv .epv-bot button{width:auto!important;min-width:48px;height:46px!important;padding:0 14px!important;border-radius:999px!important;border:0!important;background:rgba(255,255,255,.14)!important;color:#fff!important;font-size:22px!important;font-weight:800!important}
+html body #epv .epv-bot button:disabled{opacity:.3}
+html body #epv .epv-c{font-size:13px;font-weight:700;color:#e2e8f0;min-width:110px;text-align:center}
+html body #epv .epv-bot .epv-share{font-size:15px!important;background:linear-gradient(135deg,#22c55e,#15803d)!important}
+html.dk body #dialogBody .epk{background:var(--glass,rgba(255,255,255,.06))!important;border-color:rgba(129,140,248,.55)!important}
+html.dk body #dialogBody :is(.epk-h b,.epk-msg){color:#c7d2fe}
+html.dk body #dialogBody label.epk-btn{background:rgba(255,255,255,.08);color:#e0e7ff!important}
+html.dk body .eph{background:rgba(129,140,248,.16)!important;border-color:rgba(129,140,248,.45)!important;color:#e0e7ff!important}
+/* v2.105.8: 🏬 Transfer notes — godam-wise dashboard (hero ke andar dabbe · phone par ek qatar side scroll) */
+html body .summary .thh .thg-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px;margin-top:10px;min-width:0}
+@media (max-width:700px){html body .summary .thh .thg-row{display:flex;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;padding-bottom:2px;scrollbar-width:none}html body .summary .thh .thg-row::-webkit-scrollbar{display:none}html body .summary .thh .thg{flex:0 0 168px;scroll-snap-align:start}}
+html body .summary .thh .thg{display:grid!important;gap:3px;align-content:start;text-align:left;min-height:0!important;width:auto!important;margin:0!important;padding:9px 11px!important;border-radius:15px!important;border:1px solid rgba(255,255,255,.16)!important;background:rgba(255,255,255,.08)!important;color:#fff!important;box-shadow:none!important;cursor:pointer;min-width:0;font:inherit}
+html body .summary .thh .thg.is-in{background:rgba(255,255,255,.2)!important;border-color:#fde68a!important;box-shadow:0 0 0 2px rgba(253,230,138,.5)!important}
+html body .summary .thh .thg-h{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
+html body .summary .thh .thg-h b{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body .summary .thh .thg-h i{flex:none;font-style:normal;font-size:11.5px;font-weight:800;padding:2px 8px;border-radius:999px;background:rgba(52,211,153,.25);color:#bbf7d0}
+html body .summary .thh .thg.w .thg-h i{background:rgba(251,191,36,.3);color:#fde68a}
+html body .summary .thh .thg.bad .thg-h i{background:rgba(251,113,133,.32);color:#fecdd3}
+html body .summary .thh .thg-n{font-size:12px;color:rgba(255,255,255,.72)}
+html body .summary .thh .thg-n b{font-size:15px;color:#fff}
+html body .summary .thh .thg-l{font-size:12px;color:rgba(255,255,255,.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body .summary .thh .thg-l b{color:#fff;font-weight:800}
+html body .summary .thh .thg-l small{font-size:10.5px;opacity:.75;font-weight:600}
+html body .summary .thh .thg-s{display:flex;gap:5px;flex-wrap:wrap;margin-top:2px}
+html body .summary .thh .thg-s em{font-style:normal;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.75)}
+html body .summary .thh .thg-s em.w{background:rgba(251,191,36,.25);color:#fde68a}
+html body .summary .thh .thg-s em.bad{background:rgba(251,113,133,.28);color:#fecdd3}
+html body .thg-pill{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 0 10px;padding:7px 7px 7px 14px;border-radius:14px;background:#eef2ff;border:1px solid #c7d2fe;color:#312e81;font-size:13.5px;min-width:0}
+html body .thg-pill button{flex:none;min-height:34px!important;width:auto!important;padding:0 14px!important;border-radius:999px!important;border:1px solid #a5b4fc!important;background:#fff!important;color:#3730a3!important;font-weight:800!important;box-shadow:none!important}
+html.dk body .thg-pill{background:rgba(129,140,248,.14);border-color:rgba(129,140,248,.4);color:#e0e7ff}
+html.dk body .thg-pill button{background:rgba(255,255,255,.08)!important;color:#e0e7ff!important}

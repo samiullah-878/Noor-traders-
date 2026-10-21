@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-10-21 (b): 📷 party entry ki tasveer (app v2.105.8) har voucher / kharcha parchi ke neeche — pehli + dobara print (entry-photo.js) · 🐞 dobara print par voucher no / tareekh wapas · purchase tasveer ka intezar (pn object) theek
 //  2026-10-21: 📝 malik — "Tafseel ka lafz Urdu mein bara, har print par": Urdu line 'تفصیل: …' (52px) — AI 4 s mein na aaye to bhi (urdu-names v1.6 roman2ur)
 //  2026-10-20: 📅 har voucher par Urdu tareekh bari (upar + neeche) · 📝 Tafseel Urdu bari (AI, urdu-names v1.5 fillNotes, 4 s) · 🏦 HBL Urdu sar-khi · dobara print: udhar sale ka sahi naam, BPV/BRV naam
 //
@@ -610,8 +611,11 @@ async function reprintVoucher(code, copies = 1, fromJob = false) {
     const e0 = [...app.values()].find(e => e.type === 'entry' && !e.deleted && String(e.posCode || '').trim() === String(code).trim());
     const pay = type !== 'CPV' ? '' : e0 && e0.kind === 'purchaseCash' && !e0.posPrintedAt ? 'do' : 'copy';
     let ok = false;
-    for (let i = 0; i < Math.min(3, Math.max(1, Number(copies) || 1)); i++) ok = await printReceipt(receipt({ title: type === 'JV' && /^udhar sale/i.test(rem.trim()) ? 'UDHAR SALE VOUCHER' : VTITLE[type] || type + ' VOUCHER',   // 2026-10-20: udhar sale ka dobara print "TRANSFER VOUCHER" likhta tha code: rows[0].VoucherCode, date: rows[0].VoucherDate,
-      lines, note: rem, copy: true, bank, pay }));
+    // 2026-10-20: udhar sale ka dobara print "TRANSFER VOUCHER" likhta tha · 2026-10-21: 🐞 us din ka comment "code / date" ko bhi comment bana gaya
+    //   (dobara print par voucher number / barcode / tareekh nahi aati thi) — wapas · 📷 entry ki tasveer bhi (entry-photo.js)
+    const rtxt = await epTxt(receipt({ title: type === 'JV' && /^udhar sale/i.test(rem.trim()) ? 'UDHAR SALE VOUCHER' : VTITLE[type] || type + ' VOUCHER', code: rows[0].VoucherCode, date: rows[0].VoucherDate,
+      lines, note: rem, copy: true, bank, pay }), e0 && !e0.transferId ? e0 : null);
+    for (let i = 0; i < Math.min(3, Math.max(1, Number(copies) || 1)); i++) ok = await printReceipt(rtxt);
     if (fromJob) {
       const ids = [...app.values()].filter(e => e.type === 'entry' && String(e.posCode || '').trim() === String(code).trim()).map(e => e.id);
       if (ok && ids.length) await markApp(ids, { posPrintedAt: Date.now(), posPrintErr: '' });
@@ -921,7 +925,7 @@ async function syncEntries(pool, acct) {
           : [{ pid: base.partyId, name: acct.get(base.partyId).name, label: base.kind === 'payment' ? 'Diye' : base.kind === 'collection' ? 'Wasool kiye' : 'Udhar', amount: amt,
                after: rupees(appBalance(base.partyId)), before: rupees(appBalance(base.partyId, new Set(docIds))) }];   // 2026-10-09: sabqa = is voucher ke baghair
         const bank = bankSlip(base, isTransfer);   // 2026-10-12: HBL wali entry = HBL parchi
-        const printed = await printReceipt(receipt({ title: T, code: r.code, date: base.date, lines: plines, note: String(base.note || '').trim(), bank, pay: e.kind !== 'purchaseCash' ? '' : e.posPrintedAt ? 'copy' : 'do' }));   // 2026-10-17: 💵 juri cash purchase ka CPV — purchase parchi pehle chhap chuki to COPY (do dafa paise nahi)
+        const printed = await printReceipt(await epTxt(receipt({ title: T, code: r.code, date: base.date, lines: plines, note: String(base.note || '').trim(), bank, pay: e.kind !== 'purchaseCash' ? '' : e.posPrintedAt ? 'copy' : 'do' }), isTransfer ? null : e));   // 2026-10-21: 📷 entry ki tasveer   // 2026-10-17: 💵 juri cash purchase ka CPV — purchase parchi pehle chhap chuki to COPY (do dafa paise nahi)
         if (printed) await markApp(docIds, { posPrintedAt: Date.now(), posPrintErr: '' });
         else await markApp(docIds, { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
         await logPrint({ code: r.code, name, amt, ok: printed, bank: !!bank });
@@ -1056,7 +1060,7 @@ async function printExpenses() {
   for (const e of [...app.values()]) {
     if (e.type !== 'entry' || e.kind !== 'expense' || e.deleted || e.date !== day || e.posPrintedAt || e.posPrintErr) continue;
     if (Date.now() - tsOf(e.createdAt) > 20 * 3600000) continue;
-    const ok = await printReceipt(expenseSlip(e));
+    const ok = await printReceipt(await epTxt(expenseSlip(e), e));   // 2026-10-21: 📷 kharcha ki tasveer bhi
     if (ok) await markApp([e.id], { posPrintedAt: Date.now(), posPrintErr: '' });
     else await markApp([e.id], { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
     await logPrint({ code: 'Kharcha', name: e.account || 'Kharcha', amt: rupees(e.amount), ok });
@@ -1068,6 +1072,9 @@ async function printExpenses() {
 // Samaan ki tasveer (goodsPhotos[0] — entry par ya entryPhotos/<id>) chhoti (aadha kaghaz) parchi ke neeche. Bill ki tasveer NAHI.
 // Tasveer abhi upload ho rahi ho (pn > 0, 3 min tak) to agle chakkar tak ruko. Dobara = printJobs id 'PUR:<entryId>'.
 let PH = null; try { PH = require('./photo-print.js'); } catch (e) { log('photo-print.js nahi mili — purchase parchi tasveer ke baghair'); }
+// 2026-10-21: 📷 party entry ki tasveer (app v2.105.8 — entryPhotos/<id>.photos) har voucher parchi ke neeche (entry-photo.js)
+let EP = null; try { EP = require('./entry-photo.js')({ biz, PH, log }); } catch (e) { log('entry-photo.js nahi mili — voucher parchi tasveer ke baghair'); }
+const epTxt = async (txt, e) => (EP && e && !e.transferId && ((Number(e.pn && e.pn.photos) || 0) > 0 || (Array.isArray(e.photos) && e.photos.length))) ? EP.withPhoto(txt, e) : txt;
 async function goodsPhoto(e) {
   let a = Array.isArray(e.goodsPhotos) ? e.goodsPhotos : [];
   if (!a.length) { try { const d = await biz.collection('entryPhotos').doc(String(e.id)).get(); a = (d.exists && Array.isArray(d.data().goodsPhotos)) ? d.data().goodsPhotos : []; } catch {} }
@@ -1093,7 +1100,7 @@ async function printPurchases() {
     if (e.type !== 'entry' || e.purchase !== true || !['purchaseCash', 'borrow'].includes(e.kind) || e.deleted || e.date !== day || e.posPrintedAt || e.posPrintErr) continue;
     const age = Date.now() - tsOf(e.createdAt); if (age > 20 * 3600000) continue;
     const sl = await purchaseSlip(e);
-    if (!sl.photo && Number(e.pn) > 0 && age < 3 * 60000) continue;   // tasveer abhi aa rahi hai
+    if (!sl.photo && (Number(e.pn && e.pn.goodsPhotos) || 0) > 0 && age < 3 * 60000) continue;   // tasveer abhi aa rahi hai (2026-10-21: pn object hai — pehle Number(e.pn) = NaN, kabhi nahi rukta tha)
     const ok = await printReceipt(sl.text);
     if (ok) await markApp([e.id], { posPrintedAt: Date.now(), posPrintErr: '' });
     else await markApp([e.id], { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
@@ -1198,7 +1205,7 @@ async function quickEntries() {
       const T = { CPV: VTITLE.CPV, CRV: VTITLE.CRV, JV: 'UDHAR SALE VOUCHER' }[spec.type] || spec.type, amt = rupees(e.amount), docIds = [e.id];
       const plines = [{ pid: e.partyId, name, label: e.kind === 'payment' ? 'Diye' : e.kind === 'collection' ? 'Wasool kiye' : 'Udhar', amount: amt, after: rupees(appBalance(e.partyId)), before: rupees(appBalance(e.partyId, new Set(docIds))) }];
       const bank = bankSlip(e, false);
-      const printed = await printReceipt(receipt({ title: T, code: r.code, date: e.date, lines: plines, note: String(e.note || '').trim(), bank, pay: e.kind !== 'purchaseCash' ? '' : e.posPrintedAt ? 'copy' : 'do' }));   // 2026-10-17: 💵
+      const printed = await printReceipt(await epTxt(receipt({ title: T, code: r.code, date: e.date, lines: plines, note: String(e.note || '').trim(), bank, pay: e.kind !== 'purchaseCash' ? '' : e.posPrintedAt ? 'copy' : 'do' }), e));   // 2026-10-17: 💵 · 2026-10-21: 📷 tasveer
       if (printed) await markApp(docIds, { posPrintedAt: Date.now(), posPrintErr: '' });
       else await markApp(docIds, { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
       await logPrint({ code: r.code, name, amt, ok: printed, bank: !!bank });
