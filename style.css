@@ -4844,3 +4844,8 @@ html body .rk-pill,html body .ac-flt{display:none}
   html body #detailTools .dt-quick{display:none!important}
 }
 html body #detailTools .dt-dates{display:contents}
+/* v2.105.2: neeche ki patti ke kaam ⋮ mein (shell.js FT_MOVE → html[data-ftmn]) — sirf phone */
+@media (max-width:1099.98px){
+  html[data-ftmn] body main #actions{display:none!important}
+  html[data-ftmn] body main{padding-bottom:84px!important}
+}

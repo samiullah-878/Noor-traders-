@@ -53,9 +53,29 @@ function items(rootEl = scopeEl()) {
     if (type === 'seg') it.opts = [...el.querySelectorAll('button')].filter(b => !b.hidden && !b.disabled).map((b, i) => ({ i, t: clean(b.textContent), on: ON(b) }));
     out.push(it);
   }
+  if (root === mainEl()) out.unshift(...ftItems(seen));   // neeche wale kaam sab se upar (roz ke)
   return out;
 }
 const find = k => items().find(x => x.k === k);
+
+// v2.105.2: malik (Daily Sale / HBL ke screenshot) — "ye neeche wali chips 3 dot mein aa jaye": phone par neeche ki patti (#actions) ke kaam ⋮ mein.
+//   Screen par neeche sirf asal bara button: Khata "＋ Naya account" · Purchase "＋ Purchase" · Transfer "➕ Naya transfer note" · khate ke andar
+//   "Saman diya / Paisa wasool kiya" · POS Purchase ke apne button. Baqi screens (FT_MOVE) ki patti chhupi, button wahi (⋮ se .click()).
+const FT_MOVE = new Set(['daily', 'hbl', 'expenses', 'cash', 'dasti', 'due', 'notes', 'galla', 'factory', 'irep', 'larka', 'barcode', 'history', 'chart', 'gaari', 'nazar']);
+const ftMove = () => phone() && !H.selected?.() && FT_MOVE.has(vw());
+const EMO = /^((?:\p{Extended_Pictographic}|\p{Regional_Indicator})(?:\uFE0F|\u200D|\p{Extended_Pictographic}|\p{Emoji_Modifier})*)\s*(.*)$/u;
+function ftItems(seen) {
+  const a = $('actions'); if (!a || !ftMove()) return [];
+  return [...a.querySelectorAll('button')].map((b, i) => {
+    const k = 'ft.' + i; if (b.hidden || b.disabled || b.closest('[hidden]') || seen.has(k)) return null; seen.add(k);
+    let txt = clean(b.textContent), ic = '';
+    if (/^[＋+]\s*/.test(txt)) { ic = '➕'; txt = txt.replace(/^[＋+]\s*/, ''); }
+    const m = txt.match(EMO); if (m) { ic = ic || m[1]; txt = m[2] || txt; }
+    if (!ic) ic = /chart/i.test(txt) ? '📊' : /diya|payment/i.test(txt) ? '💸' : /daily/i.test(txt) ? '🧾' : /reminder/i.test(txt) ? '🔔' : /dasti/i.test(txt) ? '💼' : /account/i.test(txt) ? '👤' : '⚡';
+    return { k, type: 'btn', el: b, i: ic, t: txt, s: '', g: '⬇️ Neeche wale kaam', n: '', on: ON(b) };
+  }).filter(Boolean);
+}
+function ftPaint() { const on = ftMove(); if ((document.documentElement.dataset.ftmn === '1') !== on) { if (on) document.documentElement.dataset.ftmn = '1'; else delete document.documentElement.dataset.ftmn; } }
 
 // ---------------- sheet ----------------
 let root = null;
@@ -297,7 +317,7 @@ function paintNavBtn() {
 // ---------------- setup ----------------
 let moT = 0;
 const later = () => { clearTimeout(moT); moT = setTimeout(() => { shellRoute(); if (F) { const x = items(mainEl()).find(y => y.k === F); if (!x) unfocus(); else fbar(x); } repaintOpen(); }, 120); };
-export function shellRoute() { const v = scr(); if (shellRoute.v !== v) { shellRoute.v = v; if (F) unfocus(); lastSub = ''; if (navOpen()) navSet(false); } paintSub(); paintBadge(); paintNavBtn(); }
+export function shellRoute() { const v = scr(); if (shellRoute.v !== v) { shellRoute.v = v; if (F) unfocus(); lastSub = ''; if (navOpen()) navSet(false); } ftPaint(); paintSub(); paintBadge(); paintNavBtn(); }
 // v2.105.1: malik — "screen side par na khiske, fix rahe" (phone). Poori screen / khirki (#dialogBody, main, list) ka daayein-baayein
 //   khisakna hamesha 0 par wapas — chahe focus / scrollIntoView ne khiskaya ho. Chips ki qatar aur tables apni jagah khiskti rehti hain.
 function lockX() {
