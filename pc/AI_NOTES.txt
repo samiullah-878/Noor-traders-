@@ -3336,3 +3336,4 @@ rack-bharo.js v1.15 (20 Oct 2026, manifest 2026-10-20.21): ↩ sale return (Sale
 purchase-post.js v4.4 (20 Oct 2026, manifest 2026-10-20.22): app v2.104.0 save par "🚚 apni gaari / 📦 supply" puchti hai — job mein via ('gaari'|'supply') + larka (blueKhata entry id). Bill done hone ke BAAD linkVia(): gaari → blueAccess/gaariBills {map:{'b:pos-<PurchaseID>': ts}} merge; supply + larka → transaction mein entry check (maujood, deleted nahi, posBill/posBillIds khali, purchaseCash ya purchase borrow) phir posBill 'pos-<id>', posBillIds null, rev+1, updatedBy 'pc-purchase-post'. Edit job (editOf) par kuch nahi. Nakami sirf log (bill par asar nahi). POS mein kuch nahi likhta.
 
 app v2.105.1 (21 Oct 2026): sirf phone layout (search / chips chhote, khirki side par na khiske) — PC scripts / manifest mein koi tabdeeli NAHI.
+app v2.105.2 (21 Oct 2026): sirf phone layout (khirki ka ⋮, party khata samne, neeche ki chips ⋮ mein) — PC scripts / manifest mein koi tabdeeli NAHI.
