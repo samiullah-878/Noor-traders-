@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.105.6';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.105.6';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.105.7';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.105.7';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -31,7 +31,8 @@ const EXT_KW = [
   [/pdf|rate list|ratelist|list bhej/, ['rate_list_pdf', 'nafa_pdf', 'sale_report_pdf']],
   [/nafa|profit|munafa|bikri|bika|sale|report/, ['nafa_report', 'item_sale', 'nafa_pdf', 'sale_report_pdf']],
   [/factory|batch|packing/, ['factory_batches', 'factory_batch_kholo']],
-  [/mulazim|larka|larke|cap|ijazat|band|chalu|on\b|off\b|setting|print|parchi|copy|auto/, ['mulazim_list', 'caps_list', 'cap_set', 'mulazim_band', 'pos_sale_auto', 'print_setting']],
+  [/mulazim|larka|larke|cap|ijazat|band|chalu|on\b|off\b|setting|print|parchi|copy|auto/, ['mulazim_list', 'caps_list', 'cap_set', 'mulazim_band', 'pos_sale_auto', 'print_setting', 'mulazim_code']],
+  [/code|kod|login|pakka|hindse|6 digit/, ['mulazim_code', 'malik_code_haal', 'mulazim_list']],   // v2.105.7: 📱 larke ka code · 🔑 malik ka pakka code
   [/khol|open|screen/, ['screen_kholo', 'screen_kaam_list', 'screen_kaam_kholo']],
   [/teen nuqt|nuqte|3 dot|dots|⋮|menu|chip|\bpin\b|screen par laga|upar laga|bahar la/, ['screen_kaam_list', 'screen_kaam_kholo', 'chip_pin']],   // v2.104.0: ⋮ shell
   [/likhai|font|heading|marzi|text size|text ka size|colou?r/, ['likhai_marzi']],   // v2.104.0: 🔠 apni marzi

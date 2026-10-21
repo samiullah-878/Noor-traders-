@@ -4907,3 +4907,33 @@ html.dk body :is(#summary,#dialogBody) .tc-nc:is(.farq,.fq) b{color:#fdba74}
 html.dk body :is(#summary,#dialogBody) .tc-nc.late b{color:#fca5a5}
 html.dk body :is(#summary,#dialogBody) .tc-nc.ng b{color:#c4b5fd}
 html body :is(#summary,#dialogBody) .tc-kpis{grid-template-columns:repeat(auto-fit,minmax(70px,1fr))}   /* v2.105.6: 4 dabbe ek qatar (2 + 2 nahi) */
+/* v2.105.7: 📱 larke ka code (Mulazim card, istemal par naya) · 🔍 card ke andar ijazat search · 🔑 malik ka pakka code */
+html body :is(#summary,#dialogBody) .st-codeln{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0 2px;padding:8px 10px;border-radius:12px;background:#f0f9ff;border:1px dashed #7dd3fc;font-size:13px;color:#075985;min-width:0}
+html body :is(#summary,#dialogBody) .st-codeln>span{font-weight:800}
+html body :is(#summary,#dialogBody) .st-codeln b{font:800 18px ui-monospace,Menlo,Consolas,monospace;letter-spacing:2px;color:#0c4a6e}
+html body :is(#summary,#dialogBody) .st-codeln :is(button,a){min-height:0!important;width:auto!important;padding:4px 10px!important;border-radius:999px!important;border:1px solid #bae6fd!important;background:#fff!important;color:#075985!important;font-size:13px!important;text-decoration:none;box-shadow:none!important;cursor:pointer}
+html body :is(#summary,#dialogBody) .st-codeln small{flex:1 1 100%;font-size:11px;color:#0369a1}
+html body :is(#summary,#dialogBody) .st-codeln.wait{color:#64748b;background:#f8fafc;border-color:#e2e8f0}
+html body :is(#summary,#dialogBody) .st-capq{display:flex;align-items:center;gap:6px;margin:8px 0;padding:0 10px;border:1.5px solid #c7d2fe;border-radius:12px;background:#fff;min-width:0}
+html body :is(#summary,#dialogBody) .st-capq input{flex:1;min-width:0;border:0!important;outline:0;padding:9px 0!important;font-size:14px;background:transparent!important;box-shadow:none!important}
+html body :is(#summary,#dialogBody) .oc-root{display:grid;gap:12px;min-width:0}
+html body :is(#summary,#dialogBody) .oc-intro{margin:0;font-size:13.5px;color:#334155;line-height:1.5}
+html body :is(#summary,#dialogBody) .oc-big{display:grid;gap:4px;text-align:center;padding:14px;border-radius:16px;background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1.5px solid #6ee7b7}
+html body :is(#summary,#dialogBody) .oc-big b{font:800 34px ui-monospace,Menlo,Consolas,monospace;letter-spacing:4px;color:#065f46}
+html body :is(#summary,#dialogBody) .oc-big small{font-size:12px;color:#047857;font-weight:700}
+html body :is(#summary,#dialogBody) .oc-stat{display:grid;gap:3px;padding:10px 12px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;font-weight:800;color:#475569}
+html body :is(#summary,#dialogBody) .oc-stat.on{background:#f0fdf4;border-color:#bbf7d0;color:#166534}
+html body :is(#summary,#dialogBody) .oc-stat small{font-weight:600;color:#64748b}
+html body :is(#summary,#dialogBody) .oc-lock{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-radius:12px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;font-weight:800}
+html body :is(#summary,#dialogBody) .oc-lock button{min-height:0!important;width:auto!important;padding:6px 12px!important;border-radius:999px!important;border:1px solid #fca5a5!important;background:#fff!important;color:#991b1b!important;font-weight:800}
+html body :is(#summary,#dialogBody) .oc-form{display:grid;gap:8px}
+html body :is(#summary,#dialogBody) .oc-form label{display:grid;gap:4px;font-weight:700;color:#334155;font-size:13px}
+html body :is(#summary,#dialogBody) .oc-form input{font:800 24px ui-monospace,Menlo,Consolas,monospace!important;letter-spacing:6px;text-align:center;padding:10px!important}
+html body :is(#summary,#dialogBody) .oc-btns{display:flex;gap:8px}
+html body :is(#summary,#dialogBody) .oc-btns button{flex:1;min-width:0}
+html body :is(#summary,#dialogBody) .oc-save{background:linear-gradient(135deg,#1d4ed8,#1e3a8a)!important;color:#fff!important;border:0!important}
+html body :is(#summary,#dialogBody) .oc-del{background:#fff!important;color:#b91c1c!important;border:1px solid #fecaca!important}
+html body :is(#summary,#dialogBody) .oc-note{margin:0;font-size:12px;color:#64748b}
+html.dk body :is(#summary,#dialogBody) :is(.st-codeln,.st-capq,.oc-stat){background:var(--glass,rgba(255,255,255,.06))!important;border-color:var(--line,rgba(255,255,255,.14))!important;color:var(--ink,#e8eeff)!important}
+html.dk body :is(#summary,#dialogBody) .st-codeln b{color:#7dd3fc}
+html.dk body :is(#summary,#dialogBody) :is(.oc-intro,.oc-note,.oc-form label){color:var(--ink2,#a9b4cc)}

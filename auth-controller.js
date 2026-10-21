@@ -208,6 +208,30 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
         throw error;
       } finally { pending = false; }
     },
+    // v2.105.7: 🔑 MALIK KA PAKKA CODE — getToken(anonymous user) shop PC (owner-login.js, admin key) se custom token (ntOwner) laye;
+    //   poore dauran pending = restore() anonymous user ko sign out NAHI karta. Phir wahi malik ka uid / email (activate owner).
+    async loginWithTokenFrom(getToken) {
+      if (pending) throw failure('login/busy');
+      pending = true;
+      const ticket = ++epoch;
+      let attemptUser = null;
+      reset();
+      try {
+        if (auth.currentUser && !auth.currentUser.isAnonymous) await sdk.signOut(auth);
+        if (!auth.currentUser) await sdk.signInAnonymously(auth);
+        const token = await getToken(auth.currentUser);
+        if (ticket !== epoch) throw failure('login/cancelled');
+        await sdk.signOut(auth);
+        const credential = await sdk.signInWithCustomToken(auth, token);
+        attemptUser = credential.user;
+        check(ticket, credential.user);
+        await activate(credential.user, ticket, 'owner');
+      } catch (error) {
+        if (ticket === epoch) { reset(); if (auth.currentUser) await sdk.signOut(auth); }
+        else if (attemptUser && auth.currentUser?.uid === attemptUser.uid) await sdk.signOut(auth);
+        throw error;
+      } finally { pending = false; }
+    },
     // v2.88: SCREEN BADALNA bina logout/login — wahi anonymous user, server par session ki credentialId badal kar (rules 2.29
     // nayi key active check karti hain = password ki jaanch), phir activate() se naya scope. Login screen nahi aati.
     async switchScope(credentialId, scope) {

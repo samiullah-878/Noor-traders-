@@ -21,7 +21,7 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 - Lambi list / parchi = **5-5 ki patti**: poori list dikhao, upar ke N par khud ✓, print ke baad agle N par khud ✓ (chips 3 · 5 · 10 · Sab).
 - Jahan ginti/check ho wahan **har item ka ☐ checkbox** + "✓ n/N" chip.
 - Har PDF ke saath **kholo + bhejo** option; kholne par poori screen.
-- Har naya feature/screen = **Settings → Mulazim mein on/off CAP** (`can(k)` deny-list).
+- Har naya feature/screen = **Settings → Mulazim mein on/off CAP** (`can(k)` deny-list). CAP key ki shakal `^[a-z]+[.:][a-z0-9]+$` (warna saveStaff gira deta hai — 21 Oct 2026: stock.g2milao / stock.rack100 save nahi hote the). Jo screen malik shuru mein BAND chahe (Item report / Larka report) = `OPT_IN` set + `st.allow` (tick = khula), deny nahi (v2.105.7).
 - **Speed pehle** — har tick/button foran (pehle UI, server baad mein).
 - **🤖 Agent action**: har naya feature / chip / qaida apna agent action bhi register kare (`agentRegister([...])` — pos-stock.js ke aakhir mein namoona): `name, desc, params, read|write, danger, summary(args), run(args)`; `run` WAHI function jo button chalata hai. Malik likh kar poori app chalata hai (v2.103.47).
 - Shop ki parchiyon par English ke saath **Urdu** bhi. Har parchi ke upar **bari Urdu tareekh** (`UR.dateLine(date)` — آج / کل کا بل / N دن پرانا) + Urdu sar-khi; jo cheez insaan likhta hai (Tafseel / Note / Wajah) = `UR.note(text, px, 'تفصیل')` (Urdu label bara, "تفصیل: …") aur print se pehle `text = await UR.fillNotes(text)` (AI 4 s; na aaye to `roman2ur` — bina AI qaide wala Urdu, line kabhi gayab nahi) — 20/21 Oct 2026.
@@ -45,6 +45,7 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 - `firebase-key.json`, `local-config.json` **GitHub par kabhi nahi** (haath se copy).
 - Master key, AI key, bank key chat mein kabhi mat likho.
 - `node_modules` / `package-lock` commit mat karo.
+- **Login code**: malik ka pakka code sirf hash (`blueAccess/ownerCode`, PBKDF2) — tasdeeq sirf shop PC (`pc/owner-login.js`, admin custom token, 10 ghalat = 1 ghanta band). Plain code kabhi Firestore / log / chat mein nahi. Larke ke code (`deviceJoins pc-…`, keep) ek dafa chalte hain, phir naya khud (v2.105.7).
 
 ## 6. Har update ka checklist
 1. Firestore rules badlein to `firestore-rules-X.html` (pichhle versions ke chips ke saath) malik ko bhejo + poora rules text chat mein.

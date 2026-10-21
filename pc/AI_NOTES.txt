@@ -3342,3 +3342,7 @@ app v2.105.3 (21 Oct 2026): Rack bharo 🔒 100% lock ab stockConfig.rackB (mula
 app v2.105.4 (21 Oct 2026): mulazim ka apna rack % (sirf us ka phone) + 🔒 100% box hisaab / khud save + lock wale items khud list mein + Naya note khirki — PC scripts / manifest mein koi tabdeeli NAHI.
 app v2.105.5 (21 Oct 2026): Packet % mein search se naya item ➕ (draft → Save) — PC scripts / manifest mein koi tabdeeli NAHI (PC rack-bharo pehle se stockConfig.rackPk parhta hai).
 app v2.105.6 (21 Oct 2026): Transfer check = items + chips (📄 poora note, Zeeshan ke de diya items) — PC scripts / manifest mein koi tabdeeli NAHI.
+2026-10-21 (manifest 2026-10-21.24) + app v2.105.7 — 🔑 NAYI SERVICE owner-login.js v1.0 ("🔑 Malik code login", owner-login-auto.bat loop, lock port 47835, log owner-login-log.txt, ZINDA sql:false — POS / SQL mein KUCH NAHI):
+  login screen par malik ka 6 hindse ka pakka code → app ownerLogin/<anon uid> {code, status 'new'} → ye script blueAccess/ownerCode ke hash (PBKDF2-SHA256 120k) se pbkdf2Sync + timingSafeEqual → theek = admin createCustomToken(malik uid, {ntOwner:true}) → {status 'ok', token};
+  ghalat = {status 'bad', msg} + blueAccess/ownerCodeLock.fails (1 ghanta) — 10 = 1 ghanta band (until), malik app se 🔓. Purana request (server updateTime 10 min) mita deta hai. Code / token log mein kabhi nahi. auditLog login/owner-code(-lock).
+  PC band = code login nahi chalta (app 20 s baad "password se login" kehti hai). firebase-key.json wahi (haath se — GitHub par kabhi nahi).

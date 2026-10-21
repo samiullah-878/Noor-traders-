@@ -1,6 +1,6 @@
 {
- "version": "2026-10-21.23",
- "note": "Tafseel / Note / Wajah har parchi par Urdu bara (bina AI bhi) · transfer note: packet naam ke aage usi line par",
+ "version": "2026-10-21.24",
+ "note": "🔑 Malik ka pakka code: login screen par 6 hindse — shop PC (owner-login.js) jaanch kar malik login · 10 ghalat = 1 ghanta band",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
   "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
@@ -72,7 +72,9 @@
   "rack-auto.bat": "89540d9e4ef5de1c1a4c672ba065f80e1fdbfb5fa70403a36f703c3896afc902",
   "reorder.js": "21ded98a4bde7b66de6441bc700bd8cdec13e4e4d49f993b8a328165591e9cef",
   "reorder-auto.bat": "5464a06406b8991a2a3ac9a8a4e396a80eb2939f8d669cb28784695ac618727d",
-  "proc-fill.js": "e47043ef0dec77aec80d0011ccfceea0d730b38f2f811fdeed728abe372942f8"
+  "proc-fill.js": "e47043ef0dec77aec80d0011ccfceea0d730b38f2f811fdeed728abe372942f8",
+  "owner-login.js": "8edbe8bfb6d229bd6a93fd2c996c868813dafab753be133dac517ff8e76653be",
+  "owner-login-auto.bat": "615017a146db4e684c5f5ee34db6a851012bca73a6abe24f823299839b834da7"
  },
  "services": [
   {
@@ -280,6 +282,12 @@
    "script": "factory-post.js",
    "bat": "factory-auto.bat",
    "log": "factory-log.txt"
+  },
+  {
+   "name": "🔑 Malik code login",
+   "script": "owner-login.js",
+   "bat": "owner-login-auto.bat",
+   "log": "owner-login-log.txt"
   }
  ]
 }
