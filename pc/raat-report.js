@@ -1,4 +1,7 @@
 // =========================================================
+//  v1.3 (2026-10-21): ⏰ SUBAH KI "KHATAM HONE WALA MAAL" KHABAR BAND (malik: "ab is ki zaroorat nahi — app par awe load"; app v2.106.0 ne
+//     Reminder screen se ⏰ / 🛒 order hata diye, mangwana = Rack bharo → 🛒 Mangwao). Na subah ka SQL hisaab, na push, na raat ki report mein
+//     alert card. Sirf 🌙 raat ki report. (Test ke liye haath se: node raat-report.js --alert ab bhi chalta hai.)
 //  raat-report.js  v1.0 (2026-10-11) — 🌙 RAAT KI REPORT + ⏰ MAAL KHATAM HONE SE PEHLE KHABAR (Server PC)
 //  Malik: "dukan mere baghair chale" — har raat ek report aur har subah khatam hone wale maal ki khabar, phone par (FCM).
 //  1) 🌙 Raat (default 22:30): aaj ka POS hisaab — sale (cash / udhaar / cancel / wapsi), andaza NAFA (POS COGS, warna
@@ -19,7 +22,7 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 
-const VER = '1.2';   // v1.1 (2026-10-11): sachi dhadkan + chowkidar (11-Oct 3 ghante khamosh, report nahi bani) · report waqt guzre to usi din baad mein bhi · default 18:30
+const VER = '1.3';   // v1.1 (2026-10-11): sachi dhadkan + chowkidar (11-Oct 3 ghante khamosh, report nahi bani) · report waqt guzre to usi din baad mein bhi · default 18:30
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47833;
 const DIR = __dirname;
@@ -246,8 +249,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
     return a;
   }
   async function runReport(day, cfg, why) {
-    let a = null; try { a = (await access.doc('stockAlert').get()).data() || null; if (!a || a.day !== dayOf(now())) { a = await buildAlert(cfg); await access.doc('stockAlert').set(a); } } catch (e) { log('alert nahi bana: ' + e.message); }
-    const r = await buildReport(day, cfg, a);
+    const r = await buildReport(day, cfg, null);   // v1.3: ⏰ khatam-maal ka hisaab band (report mein alert card nahi)
     await access.doc('report-' + day).set(r);
     try { const old = new Date(day + 'T12:00:00'); old.setDate(old.getDate() - KEEP_DAYS); await access.doc('report-' + dayOf(old)).delete(); } catch {}
     const body = `Sale ${rs(r.sale.total)} · Nafa ~${rs(r.sale.profit)}` + (r.flags.length ? ` · ⚠️ ${r.flags.length} baatein` : ' · ✓ sab theek');
@@ -262,8 +264,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
     try {
       const cfg = await cfgGet(), st = readSt(), t = now(), hm = `${pad2(t.getHours())}:${pad2(t.getMinutes())}`, day = dayOf(t);
       const due = (time, key, win = 3) => { const [h, m] = String(time || '').split(':').map(Number); if (!Number.isFinite(h)) return false; const d = new Date(t); d.setHours(h, m || 0, 0, 0); return hm >= `${pad2(h)}:${pad2(m || 0)}` && t.getTime() - d.getTime() < win * 3600e3 && st[key] !== day; };   // alert: 3 ghante; report (v1.1): usi din jab bhi chale (PC band / atka tha)
-      if (Number(cfg.alertNow) > (st.alertNow || 0)) { st.alertNow = Number(cfg.alertNow); saveSt(st); await runAlert(cfg, 'app se abhi'); }
-      else if (cfg.alertOn !== false && due(cfg.alertTime, 'alertDay')) { st.alertDay = day; saveSt(st); await runAlert(cfg, 'subah'); }
+      // v1.3: ⏰ subah ki khatam-maal khabar (runAlert) BAND — malik ne kaha zaroorat nahi
       if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); await runReport(String(cfg.reportDay || day), cfg, 'app se abhi'); }
       else if (cfg.reportOn !== false && due(cfg.reportTime, 'reportDay', 24)) { st.reportDay = day; saveSt(st); await runReport(day, cfg, 'raat'); }
       if (Date.now() - lastAlive > 5 * 60000) { lastAlive = Date.now(); try { await access.doc('reportConfig').set({ alive: Date.now(), ver: VER }, { merge: true }); } catch {} }   // app: "PC zinda"
@@ -297,7 +298,7 @@ if (require.main === module) {
     lock.once('error', () => { console.log('raat-report pehle se chal raha hai.'); process.exit(3); });
     lock.listen(LOCK_PORT, '127.0.0.1', async () => {
       try { await getPool(); } catch (e) { log('SQL se nahi jura: ' + e.message); process.exit(1); }
-      log(`raat-report v${VER} chal raha hai (${os.hostname()}) — 🌙 raat ki report + ⏰ khatam hone wala maal`);
+      log(`raat-report v${VER} chal raha hai (${os.hostname()}) — 🌙 raat ki report (⏰ khatam-maal khabar band)`);
       setTimeout(R.tick, 5000); setInterval(R.tick, 30000);
     });
   }

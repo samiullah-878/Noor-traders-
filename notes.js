@@ -6,9 +6,8 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { saleStock, stockAgentGodams, stockAgentTransfer } from './pos-stock.js?v=2.105.9';
-import { planItem, shopIdx, hisaabLines } from './po-formula.js?v=2.105.9';   // v2.99.29: shaffaf order formula
-import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.105.9';
+import { saleStock } from './pos-stock.js?v=2.106.0';   // 📢 demand ke items (v2.106.0: 🛒 purchase order + po-formula hata diye)
+import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.106.0';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -34,7 +33,6 @@ export function notesSetup(o) {
   cloud = o.cloud || cloud; notice = o.notice || notice; whoOf = o.who || whoOf; recordsOf = o.records || recordsOf;
   partyOf = o.party || partyOf; partiesOf = o.parties || partiesOf; itemsOf = o.items || itemsOf; routeTo = o.route || routeTo;
   dlgOf = o.modal || dlgOf; closeDlg = o.close || closeDlg; payOf = o.pay || payOf; canUseOf = o.canUse || canUseOf; aiOf = o.ai || aiOf; stockOf = o.stock || stockOf; pdfOf = o.pdf || pdfOf; balanceOf = o.balance || balanceOf;
-  alWatch();
   if (!stop && cloud?.listenNotes) stop = cloud.listenNotes(list => { notes = (list || []).filter(n => n && n.id && !n.deleted); if ($('ntRoot')) paint(); badge(); try { window.dispatchEvent(new Event('sam-notes')); } catch {} });
   window.addEventListener('hashchange', hashGo);
   setTimeout(hashGo, 1800);
@@ -273,7 +271,7 @@ document.addEventListener('click', e => {
 // ---------- v2.36: 📢 DEMAND — mulazim item par "Khatam / Kam hai" dabaye -> purchase order mein 👦 chip ----------
 // demands/<id> {id, i, n, lvl:'out'|'low', by, byName, at, st:'open'|'done'}
 let dmList = [], dmStop = null, dmQ = '';
-function dmWatch() { if (dmStop || !cloud?.listenDemands) return; dmStop = cloud.listenDemands(l => { dmList = (l || []).sort((a, b) => (b.at || 0) - (a.at || 0)); const b = $('ntPo'); if (b) b.innerHTML = poHTML(); const d = $('dmBody'); if (d) d.innerHTML = dmHTML(); }); }
+function dmWatch() { if (dmStop || !cloud?.listenDemands) return; dmStop = cloud.listenDemands(l => { dmList = (l || []).sort((a, b) => (b.at || 0) - (a.at || 0)); const d = $('dmBody'); if (d) d.innerHTML = dmHTML(); }); }
 const dmOpen = () => dmList.filter(d => d.st === 'open');
 function dmItems() { try { const m = stockOf(); if (m && m.size) return [...m.values()]; } catch {}
   try { const st = saleStock(); const m = new Map(); for (const b of st.branches || []) for (const r of st.itemsFor(b) || []) if (!m.has(String(r.id))) m.set(String(r.id), r); return [...m.values()]; } catch { return []; } }
@@ -302,170 +300,10 @@ document.addEventListener('click', async e => {
   if (x) { const d = dmList.find(z => z.id === x.dataset.dmX); if (!d) return; d.st = 'done'; const b = $('dmBody'); if (b) b.innerHTML = dmHTML(); try { await cloud.saveDemand(d); } catch (er) { notice('⚠️ ' + (er?.message || er)); } }
 });
 
-// ---------- v2.99.22: ⏰ MAAL KHATAM HONE SE PEHLE (PC raat-report.js -> blueAccess/stockAlert) ----------
-// Har subah PC: kul stock ÷ roz ki bikri = kitne din baqi. 🔴 laal <= alertRed din, 🟡 peela <= alertYellow. Supplier ke hisaab se jama,
-// 📲 WhatsApp order (POS ka phone), ➕ Order mein daalo (mojooda purchase order mein). Yahan AI nahi.
-let alData = null, alStop = null, alOpen = true, alSupOpen = new Set();
-function alWatch() { if (alStop || !cloud?.listenStockAlert) return; alStop = cloud.listenStockAlert(d => { alData = d === undefined ? null : d; const b = $('ntAl'); if (b) b.innerHTML = alHTML(); }); }
-const alU = x => (x.u || 'Ctn').toLowerCase();
-function alGroups() {
-  const g = new Map();
-  for (const x of (alData?.items || [])) { const k = x.party || 'Supplier nahi pata'; if (!g.has(k)) g.set(k, { party: k, phone: '', items: [] }); const G = g.get(k); if (x.phone) G.phone = x.phone; G.items.push(x); }
-  return [...g.values()].sort((a, b) => b.items.filter(x => x.lvl === 'red').length - a.items.filter(x => x.lvl === 'red').length || b.items.length - a.items.length);
-}
-function alOrderText(G) { return `*NOOR TRADERS — Order*\n${new Date().toLocaleDateString('en-PK', { day: 'numeric', month: 'short' })}\n\n` + G.items.map(x => `• ${x.n} — ${num(x.need)} ${alU(x)}`).join('\n') + '\n\nShukriya'; }
-function alHTML() {
-  if (!alData) return '';
-  const can = (whoOf() || {}).role === 'owner' || (whoOf() || {}).scope === 'full';
-  const gs = alGroups(), red = Number(alData.redN) || 0, yel = Number(alData.yellowN) || 0;
-  const head = `<button type="button" class="al-head${red ? ' red' : ''}" data-al-toggle="1"><b>⏰ Khatam hone wala maal</b><span>${red ? `🔴 ${red}` : ''}${red && yel ? ' · ' : ''}${yel ? `🟡 ${yel}` : ''}${!red && !yel ? '✓ sab theek' : ''}</span><small>${esc(new Date(alData.at).toLocaleString('en-PK', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))} · ${alOpen ? '▲' : '▼'}</small></button>`;
-  if (!alOpen || !gs.length) return head + (!gs.length && alOpen ? `<p class="al-empty">Koi item ${alData.yellow || 7} din ke andar khatam nahi ho raha 🎉</p>` : '');
-  return head + gs.map(G => { const op = alSupOpen.has(G.party), rN = G.items.filter(x => x.lvl === 'red').length;
-    return `<div class="al-sup${rN ? ' red' : ''}"><button type="button" class="al-sh" data-al-sup="${esc(G.party)}"><b>🧾 ${esc(G.party)}</b><span>${rN ? `🔴 ${rN}` : ''}${G.items.length - rN ? ` 🟡 ${G.items.length - rN}` : ''}</span></button>
-      ${op || gs.length <= 2 ? `<div class="al-items">${G.items.map(x => `<div class="al-it ${x.lvl}"><span class="al-nm"><b>${esc(x.n)}</b><small>stock ${num(x.have)} ${esc(alU(x))} · roz ~${x.daily} · ${x.lq ? `pichli dafa ${num(x.lq)} ${esc(alU(x))}${x.ld ? ' (' + esc(x.ld.slice(5)) + ')' : ''}` : 'pehli dafa'}</small></span><span class="al-dn">${x.left <= 0 ? '<b>khatam</b>' : `<b>${x.left}</b> din`}</span><span class="al-need">mangwao <b>${num(x.need)}</b> ${esc(alU(x))}</span></div>`).join('')}
-      ${can ? `<div class="al-acts">${G.phone ? `<button type="button" class="al-wa" data-al-wa="${esc(G.party)}">📲 WhatsApp order</button>` : `<button type="button" class="al-wa" data-al-wa="${esc(G.party)}">📲 Order bhejo</button>`}<button type="button" class="al-add" data-al-add="${esc(G.party)}">➕ Order mein daalo</button></div>` : ''}</div>` : ''}</div>`; }).join('');
-}
-document.addEventListener('click', async e => {
-  if (e.target.closest?.('[data-al-toggle]')) { alOpen = !alOpen; const b = $('ntAl'); if (b) b.innerHTML = alHTML(); return; }
-  const sp = e.target.closest?.('[data-al-sup]'); if (sp) { const k = sp.dataset.alSup; if (alSupOpen.has(k)) alSupOpen.delete(k); else alSupOpen.add(k); const b = $('ntAl'); if (b) b.innerHTML = alHTML(); return; }
-  const wa = e.target.closest?.('[data-al-wa]'); if (wa) { const G = alGroups().find(g => g.party === wa.dataset.alWa); if (!G) return; const t = alOrderText(G); try { await navigator.clipboard?.writeText(t); } catch {} window.open('https://wa.me/' + (G.phone || '') + '?text=' + encodeURIComponent(t), '_blank'); return; }
-  const ad = e.target.closest?.('[data-al-add]'); if (ad) {
-    const G = alGroups().find(g => g.party === ad.dataset.alAdd); if (!G) return;
-    const w = whoOf() || {}; let o = poList[0];
-    if (!o || o.lines.every(l => l.items.every(x => x.st !== 'open'))) o = { id: 'po' + Date.now().toString(36), at: Date.now(), by: String(w.uid || ''), byName: String(w.name || '').slice(0, 60), note: '⏰ khatam alert', lines: [] };
-    let ln = o.lines.find(l => l.party === G.party); if (!ln) { ln = { party: G.party, items: [] }; o.lines.push(ln); }
-    let n = 0; for (const x of G.items) { if (ln.items.some(y => String(y.i) === String(x.i) && y.st === 'open')) continue; ln.items.push({ i: String(x.i), n: String(x.n).slice(0, 60), q: x.need, u: x.u || '', st: 'open' }); n++; }
-    try { await poSave(o); notice(n ? `✓ ${n} item order mein — neeche 🛒 Purchase order` : 'Yeh items pehle se order mein hain'); } catch (er) { notice('Nahi hua: ' + (er?.message || er)); }
-    return;
-  }
-});
-// ---------- v2.34: 🛒 PURCHASE ORDER — POS ki 6 mahine ki bikri/purchase (posStats) + stock -> AI -> supplier-wise chips ----------
-// purchaseOrders/<id> {id, at, by, byName, note, lines:[{party, items:[{i, n, q, u, st:'open'|'got'|'gone'}]}]}
-// Chip: DOUBLE TAP = "✓ Maal aa gaya" mein; wahan TAP = gayab. Ek tap = tadad badlo (0 = hatao).
-let poList = [], poStop = null, poBusy = false, poTap = { id: '', t: 0 }, poStatsAt = 0, pdfOf = null;
-const PO_SKIP = 'sam-po-skip', poNorm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-// v2.99.29: order ki setting Firestore (stockConfig.po) mein — har phone par ek jaisi: {skipParties[], skipItems{id:naam}, safety}
-let poCfg = null, poCfgStop = null, poStats = null, poTr = [];
-try { poTr = JSON.parse(localStorage.getItem('sam-po-tr') || '[]') || []; } catch {}
-const poOwner = () => (whoOf() || {}).role === 'owner';
-function poCfgWatch() { if (poCfgStop || !cloud?.listenStockConfig) return; poCfgStop = cloud.listenStockConfig(c => { poCfg = (c && c.po) || {}; if (!Array.isArray(poCfg.skipParties) && poOwner() && cloud.setPoConfig) { const old = poSkipLocal(); cloud.setPoConfig({ ...poCfg, skipParties: old }).catch(() => {}); } const b = $('ntPo'); if (b) b.innerHTML = poHTML(); }); }
-function poSkipLocal() { try { const a = JSON.parse(localStorage.getItem(PO_SKIP) || 'null'); return Array.isArray(a) ? a : ['our factory']; } catch { return ['our factory']; } }
-function poSkip() { return Array.isArray(poCfg?.skipParties) ? poCfg.skipParties : poSkipLocal(); }
-const poSkipItems = () => (poCfg?.skipItems && typeof poCfg.skipItems === 'object') ? poCfg.skipItems : {};
-const poSafety = () => [3, 5, 7].includes(Number(poCfg?.safety)) ? Number(poCfg.safety) : 5;
-async function poCfgSet(patch) { const next = { skipParties: poSkip(), skipItems: poSkipItems(), safety: poSafety(), ...patch }; poCfg = next; const b = $('ntPo'); if (b) b.innerHTML = poHTML(); if (cloud?.setPoConfig && poOwner()) await cloud.setPoConfig(next); }
-function poSkipSet(a) { try { localStorage.setItem(PO_SKIP, JSON.stringify(a)); } catch {} poCfgSet({ skipParties: a }).catch(e => notice('⚠️ ' + (e?.message || e))); }
-const poSkipped = party => { const p = poNorm(party); return poSkip().some(s => poNorm(s) && (p === poNorm(s) || p.includes(poNorm(s))) ); };
-const poGodamTxt = it => it?.gs ? Object.entries(it.gs).map(([g, q]) => g + ': ' + num(q)).join(' · ') : '';
-const poUnit = it => (Number(it.pack) || 0) > 1 ? (it.cName || 'Ctn') : (it.uName || 'Pcs');
-function poWatch() { poCfgWatch(); if (poStop || !cloud?.listenPurchaseOrders) return; poStop = cloud.listenPurchaseOrders(l => { poList = (l || []).sort((a, b) => (b.at || 0) - (a.at || 0)); const b = $('ntPo'); if (b) b.innerHTML = poHTML(); }); }
-function poHTML() {
-  const o = poList[0], can = (whoOf() || {}).role === 'owner' || (whoOf() || {}).scope === 'full';
-  const head = `<div class="po-head"><b>🛒 Purchase order</b>${poStatsAt ? `<small>data: ${esc(new Date(poStatsAt).toLocaleString('en-PK', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))}</small>` : ''}${can ? `<button type="button" class="got po-make" data-po-make="1"${poBusy ? ' disabled' : ''}>${poBusy ? '⏳ AI soch raha hai…' : '🤖 Order banao'}</button>` : ''}</div>`;
-  const own = poOwner(), si = Object.entries(poSkipItems());
-  const skipRow = `<div class="po-skip"><small>🚫 Order se bahar:</small>${poSkip().map(s => `<button type="button" class="po-skipchip" data-po-unskip="${esc(s)}"${own ? '' : ' disabled'}>${esc(s)} ✕</button>`).join('') || '<small>koi nahi</small>'}${si.length ? `<small class="po-sk2">📦 Band items ${si.length}:</small>${si.slice(0, 30).map(([id, nm]) => `<button type="button" class="po-skipchip it" data-po-unitem="${esc(id)}"${own ? '' : ' disabled'}>${esc(nm || id)} ✕</button>`).join('')}` : ''}</div>`
-    + `<div class="po-set"><small>🛡 Bachat stock:</small>${[3, 5, 7].map(d => `<button type="button" class="rc${poSafety() === d ? ' on' : ''}" data-po-safety="${d}"${own ? '' : ' disabled'}>${d} din</button>`).join('')}<small class="po-hint">Formula: roz ki bikri (mahine ke rujhan ke saath) × (agla order + bachat) − stock · chip dabao = 🧮 poora hisaab</small></div>`;
-  const trBox = poTr.length ? `<div class="po-tr"><div class="po-party">🚚 Godam se dukan mangwao<small>${poTr.reduce((n, g) => n + g.items.length, 0)}</small></div>${poTr.map((g, gi) => `<div class="po-trg"><small>${esc(g.from)} → ${esc(g.to)}</small><div class="po-chips">${g.items.map(x => `<span class="po-chip tr">${esc(x.n)}<b>${esc(num(x.units))} ${esc(x.u)}</b><i>dukan ${esc(num(x.dk))} din</i></span>`).join('')}</div>${own || (whoOf() || {}).scope === 'full' ? `<button type="button" class="got po-trgo" data-po-tr="${gi}">🚚 Transfer note banao (${g.items.length})</button>` : ''}</div>`).join('')}</div>` : '';
-  const dm = dmOpen().length ? `<small class="po-meta">📢 ${dmOpen().length} demand khuli — "Order banao" par sab se upar aayengi</small>` : '';
-  if (!o) return head + skipRow + dm + trBox + '<p class="po-empty">Abhi koi order nahi — "🤖 Order banao" dabayein.</p>';
-  const open = [], got = [];
-  o.lines.forEach((ln, li) => ln.items.forEach((x, ii) => { if (x.st === 'got') got.push([li, ii, x, ln.party]); }));
-  const lines = o.lines.map((ln, li) => { const its = ln.items.map((x, ii) => [ii, x]).filter(([, x]) => x.st === 'open'); if (!its.length) return '';
-    return `<div class="po-line${its.some(([, x]) => x.d) ? ' has-dm' : ''}"><div class="po-party">🧾 ${esc(ln.party || 'Supplier nahi pata')}<small>${its.length}</small><button type="button" class="po-noline" data-po-skip="${esc(ln.party || '')}" title="Is supplier ko order mein na lao">🚫</button></div><div class="po-chips">${its.map(([ii, x]) => `<button type="button" class="po-chip${x.d ? ' dm' : ''}" data-po-chip="${li}|${ii}">${esc(x.n)}<b>${esc(num(x.q))} ${esc(x.u || '')}</b>${x.d ? `<i>👦 ${esc(x.d)}</i>` : x.why ? `<i>${esc(x.why)}</i>` : ''}${x.ai ? `<i class="po-ai">🤖 ${esc(x.ai)}</i>` : ''}</button>`).join('')}</div></div>`; }).join('');
-  return head + skipRow + `<small class="po-meta">${esc(new Date(o.at).toLocaleString('en-PK', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))} · ${esc(o.byName || '')}${o.note ? ' · ' + esc(o.note) : ''} · <i>chip: 1 tap = 🧮 hisaab / tadad · DOUBLE TAP = maal aa gaya</i></small>`
-    + (lines || '<p class="po-empty">Sab maal aa gaya 🎉</p>') + trBox
-    + `<div class="po-acts"><button type="button" data-po-bazaar="1">🧾 Bazaar list · WhatsApp</button><button type="button" data-po-pdf="1">📄 PDF</button></div>`
-    + (got.length ? `<div class="po-got"><div class="po-party">✓ Maal aa gaya<small>${got.length} · tap = hatao</small></div><div class="po-chips">${got.map(([li, ii, x]) => `<button type="button" class="po-chip got" data-po-gone="${li}|${ii}">${esc(x.n)}<b>${esc(num(x.q))} ${esc(x.u || '')}</b></button>`).join('')}</div></div>` : '');
-}
-async function poSave(o) { const i = poList.findIndex(x => x.id === o.id); if (i >= 0) poList[i] = o; else poList.unshift(o); const b = $('ntPo'); if (b) b.innerHTML = poHTML(); await cloud.savePurchaseOrder(o); }
-// v2.99.29: FORMULA se order (po-formula.js) — AI sirf "dhyan" ki baat likhta hai, tadad formula ki
-async function poStatsGet(force) { if (!force && poStats && Date.now() - poStats.got < 10 * 60000) return poStats; const st = await cloud.getPosStats(); poStatsAt = st.at || 0; poStats = { ...st, meta: st.meta || {}, byId: new Map(st.items.map(x => [String(x.i), x])), shop: shopIdx(st.items, st.meta || {}), got: Date.now() }; return poStats; }
-function poDukan() { try { return stockAgentGodams().find(g => g.dukan)?.name || ''; } catch { return ''; } }
-function poPlan(id, st) { const it = (stockOf() || new Map()).get(String(id)); if (!it) return null; return planItem(it, st.byId.get(String(id)) || {}, { meta: st.meta, shop: st.shop, safety: poSafety(), today: new Date(), dukan: poDukan() }); }
-async function poMake() {
-  if (poBusy) return; poBusy = true; const box = $('ntPo'); if (box) box.innerHTML = poHTML();
-  try {
-    const st = await poStatsGet(true);
-    if (!st.items.length) throw Error('POS ka data abhi nahi aaya — dukan ke PC par SALE-DATA.bat ek dafa chalayein');
-    const stock = stockOf() || new Map(), skipI = poSkipItems(), hid = { ...((() => { try { return saleStock().hidden || {}; } catch { return {}; } })()), ...((cloud.getStockHidden ? await cloud.getStockHidden() : null) || {}) };   // v2.99.31: stock screen khuli na ho tab bhi chhupe items bahar
-    const cand = [], trs = new Map();
-    const partyOf2 = (h, s) => h.bp.last?.party || s?.lp?.party || '';
-    for (const d of dmOpen()) {   // 📢 mulazim ki demand — hamesha, sab se pehle
-      const h = poPlan(d.i, st); if (!h) continue; const s = st.byId.get(String(d.i)) || {};
-      const q = Math.max(1, h.q || Math.ceil(h.bp.aam || h.bp.last?.q || 1));
-      cand.push({ h, q, party: partyOf2(h, s), d: (d.byName || 'mulazim') + ': ' + (d.lvl === 'out' ? 'khatam' : 'kam'), di: d.id });
-    }
-    for (const s of st.items) {
-      const id = String(s.i); if (cand.some(c => c.h.id === id) || skipI[id] || hid[id] || !stock.has(id)) continue;
-      const h = poPlan(id, st); if (!h || h.noSale) continue;
-      if (h.order) cand.push({ h, q: h.q, party: partyOf2(h, s) });
-      else if (h.transfer) { const k = h.transfer.from + '→' + h.transfer.to; if (!trs.has(k)) trs.set(k, { from: h.transfer.from, to: h.transfer.to, items: [] }); trs.get(k).items.push({ i: id, n: h.name.slice(0, 60), units: h.transfer.units, pcs: h.transfer.pcs, pk: h.pk, u: h.unit, dk: h.transfer.dkLeft }); }
-    }
-    poTr = [...trs.values()].map(g => ({ ...g, items: g.items.sort((a, b) => a.dk - b.dk).slice(0, 40) })); try { localStorage.setItem('sam-po-tr', JSON.stringify(poTr)); } catch {}
-    const cand2 = cand.filter(c => c.d || !poSkipped(c.party));   // 🚫 our factory waghera (demand phir bhi)
-    cand2.sort((a, b) => (b.d ? 1 : 0) - (a.d ? 1 : 0) || a.h.left - b.h.left);
-    const top = cand2.slice(0, 120);
-    if (!top.length) { notice(poTr.length ? '✓ Order ki zaroorat nahi — 🚚 godam se dukan mangwane wale items neeche' : 'Sab items ka stock kaafi hai — abhi order ki zaroorat nahi'); return; }
-    // 🤖 AI: tadad nahi badalta — sirf ajeeb baat pakarta hai (bikri ruki / achanak barhi / mausami)
-    const aiNote = new Map();
-    if (aiOf) {
-      const table = top.slice(0, 80).map(c => [c.h.id, c.h.name, c.h.unit, 'stock ' + c.h.have, 'roz ' + c.h.daily, c.h.left + ' din', 'order ' + c.q, 'mahine ' + (c.h.mo || []).join('/'), 'hafte ' + ((st.byId.get(c.h.id)?.w) || []).slice(0, 8).map(x => Math.round(x / c.h.pk * 10) / 10).join('/'), c.h.trend].join(' | ')).join('\n');
-      const prompt = ['Tum Pakistani wholesale dukan ke purchase manager ho. Neeche order ki list hai — tadad formula ne nikali hai (roz ki bikri × din − stock).',
-        'Sirf woh items batao jin mein kuch AJEEB hai: bikri achanak ruk gayi (shayad mat mangwao), achanak bohat barhi (zyada chahiye), mausami / ek dafa ki bikri. Baqi chhor do. Max 15.',
-        'Har note 8 lafz tak, Roman Urdu. SIRF JSON: [{"id":"...","note":"..."}]', '', table].join('\n');
-      try { const txt = await aiOf(prompt); const j = JSON.parse(String(txt).replace(/```json|```/g, '').trim().replace(/^[^\[]*/, '').replace(/[^\]]*$/, '')); if (Array.isArray(j)) for (const x of j.slice(0, 15)) if (x && x.id && x.note) aiNote.set(String(x.id), String(x.note).slice(0, 60)); } catch {}
-    }
-    const g = new Map();
-    for (const c of top) { const k = c.party || 'Supplier nahi pata'; if (!g.has(k)) g.set(k, []); const it = { i: c.h.id, n: String(c.h.name).slice(0, 60), q: c.q, u: c.h.unit, st: 'open', why: c.h.have <= 0 ? 'stock 0' : Math.round(c.h.left) + ' din baqi' }; if (c.d) { it.d = c.d; it.di = c.di; } if (aiNote.has(c.h.id)) it.ai = aiNote.get(c.h.id); g.get(k).push(it); }
-    const lines = [...g].map(([party, items]) => ({ party: party.slice(0, 80), items: items.slice(0, 40) })).sort((a, b) => (b.items.some(x => x.d) ? 1 : 0) - (a.items.some(x => x.d) ? 1 : 0) || b.items.length - a.items.length).slice(0, 30);
-    const w = whoOf() || {};
-    await poSave({ id: 'po' + Date.now().toString(36), at: Date.now(), by: String(w.uid || ''), byName: String(w.name || '').slice(0, 60), note: 'formula · bachat ' + poSafety() + ' din · ' + lines.reduce((n, l) => n + l.items.length, 0) + ' items' + (aiNote.size ? ' · 🤖 ' + aiNote.size + ' dhyan' : ''), lines });
-    notice('🛒 Order ban gaya — ' + lines.length + ' supplier' + (poTr.length ? ' · 🚚 ' + poTr.reduce((n, x) => n + x.items.length, 0) + ' godam se' : ''));
-  } catch (e) { notice('⚠️ ' + (e?.message || e)); }
-  finally { poBusy = false; const b = $('ntPo'); if (b) b.innerHTML = poHTML(); }
-}
-// 🧮 ek item ka poora hisaab + tadad badlo + aainda band
-async function poCard(li, ii) {
-  const o = poList[0], x = o?.lines[li]?.items[ii]; if (!x) return;
-  let L = null; try { const st = await poStatsGet(); const h = poPlan(x.i, st); if (h) L = hisaabLines(h, st.meta, new Date()); } catch (e) { L = [['⚠️', esc(e?.message || e)]]; }
-  const it = (stockOf() || new Map()).get(String(x.i));
-  dlgOf('🧮 ' + x.n, `<div class="po-hcard">${x.d ? `<div class="po-hrow dm"><span>👦</span><div>${esc(x.d)}</div></div>` : ''}${x.ai ? `<div class="po-hrow ai"><span>🤖</span><div>${esc(x.ai)}</div></div>` : ''}${(L || [['📦', 'Stock — ' + esc(poGodamTxt(it) || num(it?.stock || 0))]]).map(([k, v]) => `<div class="po-hrow"><span>${k}</span><div>${v}</div></div>`).join('')}</div>
-    <form class="po-hform"><label>Kitna mangwana hai (${esc(x.u || '')})<input name="q" type="number" step="any" min="0" inputmode="decimal" value="${esc(String(x.q))}"></label><div class="po-hacts">${poOwner() ? `<button type="button" class="give" data-po-band="${esc(x.i)}">🚫 Aainda na mangwao</button>` : ''}<button type="submit" class="got">💾 Save</button></div><small class="stat-note">0 = is order se hatao</small></form>`);
-  const f = document.querySelector('#dialogBody .po-hform'); if (!f) return;
-  f.onsubmit = ev => { ev.preventDefault(); const n = Number(f.elements.q.value); if (!Number.isFinite(n) || n < 0) return; if (n === 0) x.st = 'gone'; else x.q = Math.round(n * 100) / 100; closeDlg(); poSave(o).catch(er => notice('⚠️ ' + (er?.message || er))); };
-  const band = f.querySelector('[data-po-band]'); if (band) band.onclick = async () => { if (!confirm('"' + x.n + '" aainda kisi order mein na aaye?\n(Upar "📦 Band items" se wapas la sakte hain)')) return; x.st = 'gone'; closeDlg(); try { await poCfgSet({ skipItems: { ...poSkipItems(), [x.i]: x.n } }); await poSave(o); notice('🚫 ' + x.n + ' — aainda order mein nahi aayega'); } catch (er) { notice('⚠️ ' + (er?.message || er)); } };
-}
-async function poTransfer(gi) {
-  const g = poTr[gi]; if (!g) return;
-  const gd = (() => { try { return stockAgentGodams(); } catch { return []; } })(), from = gd.find(x => x.name === g.from), to = gd.find(x => x.name === g.to);
-  if (!from || !to) { notice('Godam nahi mila — stock screen se transfer karein'); return; }
-  if (!confirm(`🚚 ${g.from} → ${g.to}\n\n${g.items.map(x => '• ' + x.n + ' — ' + num(x.units) + ' ' + x.u).join('\n')}\n\nTransfer note bana dein? (POS mein bhi banega)`)) return;
-  notice('⏳ Transfer note ban raha hai…');
-  try {
-    const r = await stockAgentTransfer({ from: from.id, to: to.id, lines: g.items.map(x => x.pk > 1 ? { id: x.i, name: x.n, ctn: Math.floor(x.pcs / x.pk), pcs: Math.round((x.pcs - Math.floor(x.pcs / x.pk) * x.pk) * 1000) / 1000 } : { id: x.i, name: x.n, pcs: x.pcs }), note: 'Order screen: godam se dukan' });
-    if (r.ok) { poTr.splice(gi, 1); try { localStorage.setItem('sam-po-tr', JSON.stringify(poTr)); } catch {} notice('✓ Transfer note ' + (r.no || '') + ' ban gaya'); }
-    else notice((r.pending ? '⏳ ' : '⚠️ ') + (r.why || 'Transfer nahi bana'));
-  } catch (e) { notice('⚠️ ' + (e?.message || e)); }
-  const b = $('ntPo'); if (b) b.innerHTML = poHTML();
-}
-function poBazaarText(o) { return '🧾 Bazaar list — ' + new Date(o.at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short' }) + '\n' + o.lines.map(ln => { const its = ln.items.filter(x => x.st === 'open'); return its.length ? '\n*' + (ln.party || 'Supplier nahi pata') + '*\n' + its.map(x => '• ' + x.n + ' — ' + num(x.q) + ' ' + (x.u || '') + (x.d ? ' (👦 ' + x.d + ')' : '')).join('\n') : ''; }).filter(Boolean).join('\n'); }
-document.addEventListener('click', async e => {
-  if (e.target.closest?.('[data-po-make]')) { poMake(); return; }
-  const sk = e.target.closest?.('[data-po-skip]'); if (sk) { const p = sk.dataset.poSkip || 'Supplier nahi pata'; if (!confirm('"' + p + '" ko aainda order se bahar rakhein?')) return; const a = poSkip(); if (!a.some(s => poNorm(s) === poNorm(p))) a.push(p); poSkipSet(a); const o = poList[0]; if (o) { o.lines = o.lines.filter(l => !poSkipped(l.party)); poSave(o).catch(() => {}); } else { const b = $('ntPo'); if (b) b.innerHTML = poHTML(); } return; }
-  const sf = e.target.closest?.('[data-po-safety]'); if (sf) { poCfgSet({ safety: Number(sf.dataset.poSafety) }).then(() => notice('🛡 Bachat ' + sf.dataset.poSafety + ' din — agla "Order banao" is se')).catch(er => notice('⚠️ ' + (er?.message || er))); return; }
-  const ui = e.target.closest?.('[data-po-unitem]'); if (ui) { const m = { ...poSkipItems() }; delete m[ui.dataset.poUnitem]; poCfgSet({ skipItems: m }).catch(er => notice('⚠️ ' + (er?.message || er))); return; }
-  const tg = e.target.closest?.('[data-po-tr]'); if (tg) { poTransfer(Number(tg.dataset.poTr)); return; }
-  const us = e.target.closest?.('[data-po-unskip]'); if (us) { poSkipSet(poSkip().filter(s => s !== us.dataset.poUnskip)); const b = $('ntPo'); if (b) b.innerHTML = poHTML(); return; }
-  if (e.target.closest?.('[data-po-bazaar]')) { const o = poList[0]; if (!o) return; const t = poBazaarText(o); try { await navigator.clipboard?.writeText(t); } catch {} if (navigator.share) { try { await navigator.share({ text: t }); return; } catch {} } window.open('https://wa.me/?text=' + encodeURIComponent(t), '_blank'); return; }
-  if (e.target.closest?.('[data-po-pdf]')) { const o = poList[0]; if (!o || !pdfOf) return; pdfOf(`<h1>NOOR TRADERS</h1><h2>🧾 Bazaar list · ${esc(new Date(o.at).toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' }))}</h2>` + o.lines.map(ln => { const its = ln.items.filter(x => x.st === 'open'); return its.length ? `<h3>${esc(ln.party || 'Supplier nahi pata')}</h3><table class="iv-tbl"><tbody>${its.map(x => `<tr><td>${esc(x.n)}${x.d ? ' <small>👦 ' + esc(x.d) + '</small>' : ''}</td><td class="iv-n">${esc(num(x.q))} ${esc(x.u || '')}</td><td>☐</td></tr>`).join('')}</tbody></table>` : ''; }).join(''), 'Bazaar list'); return; }
-  const g = e.target.closest?.('[data-po-gone]'); if (g) { const o = poList[0]; if (!o) return; const [li, ii] = g.dataset.poGone.split('|').map(Number); const x = o.lines[li]?.items[ii]; if (!x) return; x.st = 'gone'; poSave(o).catch(er => notice('⚠️ ' + (er?.message || er))); return; }
-  const c = e.target.closest?.('[data-po-chip]'); if (!c) return;
-  const o = poList[0]; if (!o) return; const [li, ii] = c.dataset.poChip.split('|').map(Number), x = o.lines[li]?.items[ii]; if (!x) return;
-  const now = Date.now();
-  if (poTap.id === c.dataset.poChip && now - poTap.t < 400) { clearTimeout(poTap.timer); poTap = { id: '', t: 0 }; x.st = 'got'; if (x.di) { const d = dmList.find(z => z.id === x.di); if (d && d.st === 'open') { d.st = 'done'; cloud.saveDemand(d).catch(() => {}); } } try { navigator.vibrate?.(40); } catch {} poSave(o).then(() => notice('✓ ' + x.n + ' — maal aa gaya')).catch(er => notice('⚠️ ' + (er?.message || er))); return; }
-  clearTimeout(poTap.timer);
-  poTap = { id: c.dataset.poChip, t: now, timer: setTimeout(() => { poTap = { id: '', t: 0 }; poCard(li, ii); }, 420) };   // v2.99.29: 1 tap = 🧮 hisaab card
-});
+// v2.106.0: ⏰ "Khatam hone wala maal" (stockAlert) aur 🛒 "Purchase order" (posStats + AI order, supplier ke dabbe, bazaar list, godam se dukan)
+//   Reminder screen se HATA diye — malik: "in sab ko bhi band kar do, ab is ki zaroorat nahi · app par awe load hai, khatam ho jaye · due account wala rahe".
+//   Mangwana ab sirf 📦 Stock → 🧺 Rack bharo → 🛒 Mangwao (PDF). Na listener, na posStats ka bhari data, na po-formula.js. PC raat-report v1.3: subah ki khatam-maal khabar bhi band.
+let pdfOf = null;   // notesSetup({pdf}) — purana raasta, ab yahan istemal nahi
 
 // ---------- notes likhna ----------
 async function saveNote(n, old) {
@@ -593,13 +431,12 @@ function card(n) {
 function paint() {
   const root = $('ntRoot'); if (!root) return;
   const due = dueParty(), l = listFor(fTab), cnt = t => listFor(t).length;
-  poWatch(); dmWatch();
   root.innerHTML = `<div class="nt-push" id="ntPush"></div>
     <label class="nt-search"><input type="search" placeholder="🔍 note, item, supplier, raqam…" value="${esc(fQ)}" data-nt-q="1"></label>
     <div class="mchips nt-tabs">${[['open', 'Sab khule'], ['today', '🔔 Aaj'], ['late', '⏰ Guzar gaye'], ['next', 'Aane wale'], ['order', '🧾 Order'], ['done', '✓ Ho gaye']].map(([k, lab]) => `<button type="button" class="rc${fTab === k ? ' on' : ''}" data-nt-tab="${k}">${lab} ${cnt(k)}</button>`).join('')}<button type="button" class="rc nt-selbtn${selMode ? ' on' : ''}" data-nt-selmode="1">${selMode ? '✕ Chunna band' : '☑ Kai chunein'}</button></div>
     <div class="nt-list">${l.map(card).join('') || `<div class="nt-empty">📝<b>${fQ ? 'Kuch nahi mila' : fTab === 'done' ? 'Abhi koi ho gaya note nahi' : 'Koi khula note nahi'}</b><small>Neeche "📝 Naya note" dabayein</small></div>`}</div>${selMode ? bulkHTML(l) : ''}
     ${due.length && fTab !== 'done' ? `<div class="nt-sec"><h3>📒 Accounts ke due</h3>${due.map(x => `<button type="button" class="nt-due${x.late ? ' late' : ''}" data-nt-party="${esc(x.p.id)}"><b>${esc(x.p.name)}</b><span>${esc(nice(x.r.dueDate))}${x.r.dueTime ? ' · ' + esc(t12(x.r.dueTime)) : ''}</span>${x.r.note ? `<small>${esc(x.r.note)}</small>` : ''}</button>`).join('')}</div>` : ''}
-    <div class="al-box" id="ntAl">${alHTML()}</div><div class="po-box" id="ntPo">${poHTML()}</div><div id="ntGc">${gcLoad().accounts.length ? gcCardHTML() : ''}</div>`;
+    <div id="ntGc">${gcLoad().accounts.length ? gcCardHTML() : ''}</div>`;
   pushStatus();
 }
 // ---------- v2.99.27: ☑ KAI NOTES EK SAATH — din / waqt / baar baar / ho gaye ----------
@@ -749,7 +586,7 @@ export async function noteAgentSave({ text = '', day = '', time = '', partyId = 
   const t = String(text || '').trim(); if (!t) throw Error('Note mein kuch likhein');
   const p = partyId ? partyOf(partyId) : null;
   const d = await saveNote({ kind: 'note', text: t, items: (items || []).slice(0, 20), partyId: p ? p.id : '', partyName: p ? p.name : '',
-    remindDay: /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : '', remindTime: /^\d{2}:\d{2}$/.test(time) ? time : '', allDay: false, nag: nagOk(nag) || undefined, hasPic: Array.isArray(photos) && photos.length > 0 });   // v2.103.7: na bataya = khud har 1 ghanta
+    remindDay: /^\d{4}-\d{2}-\d{2}$/.test(day) ? day : '', remindTime: /^\d{2}:\d{2}$/.test(time) ? time : '', allDay: false, nag: !/^\d{4}-\d{2}-\d{2}$/.test(day) ? undefined : nag === 0 ? 0 : (nagOk(nag) || undefined), hasPic: Array.isArray(photos) && photos.length > 0 });   // v2.103.7: na bataya = khud har 1 ghanta · v2.106.0: 0 = 🔕 sirf ek dafa (agent ka 🔔 card)
   if (Array.isArray(photos) && photos.length && cloud?.putPhotos) { const P = photos.slice(0, 2).filter(x => typeof x === 'string' && x.startsWith('data:')); pics.set(d.id, P); cloud.putPhotos('n-' + d.id, P).catch(er => notice('⚠️ Tasveer save nahi hui: ' + (er?.message || er))); }
   badge(); return d;
 }

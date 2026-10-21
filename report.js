@@ -1,4 +1,4 @@
-// report.js — v2.99.22: 🌙 RAAT KI REPORT (malik) + ⚙️ report / alert setting + push ke link (?report=din / ?alert=1)
+// report.js — v2.99.22: 🌙 RAAT KI REPORT (malik) + ⚙️ report setting + push ke link (?report=din) · v2.106.0: ⏰ khatam-maal (alert) ka card / setting hata diye
 // Data: PC raat-report.js -> blueAccess/report-<din> (har raat) aur blueAccess/stockAlert (har subah). Setting: blueAccess/reportConfig.
 // Yahan AI nahi — sab PC ka seedha hisaab (POS SQL + khata).
 const $ = id => document.getElementById(id);
@@ -43,7 +43,7 @@ function html() {
   if (!rep) return `<div class="rp-root">${nav}<p class="rp-wait">⏳ Report parh rahe hain…</p>${acts}${pcLine}</div>`;
   if (rep._err) return `<div class="rp-root">${nav}<p class="warning">Report nahi parh sake (internet?)</p>${acts}${pcLine}</div>`;
   if (rep._none || !rep.day) return `<div class="rp-root">${nav}<div class="rp-empty">📭 Is din ki report nahi bani.<small>Report har raat ${esc(cfg.reportTime)} baje khud banti hai. Abhi chahiye to "🔄 Abhi banao" dabayein — Server PC ek minute mein bana dega.${waitNow && Date.now() - waitNow < 180000 ? '<br>⏳ PC ko keh diya — intezar…' : ''}</small></div>${acts}${pcLine}</div>`;
-  const r = rep, S = r.sale || {}, k = r.khata, ws = r.ws || {}, P = r.purchase || {}, st = r.stock || {}, T = r.transfer, G = r.ginti, A = r.alert;
+  const r = rep, S = r.sale || {}, k = r.khata, ws = r.ws || {}, P = r.purchase || {}, st = r.stock || {}, T = r.transfer, G = r.ginti;
   const hero = `<div class="rp-hero"><small>🧾 Kul sale (POS)</small><b>${money(S.total)}</b><span>📈 Andaza nafa <b>${money(S.profit)}</b> (${S.profitPct || 0}%)</span>
     <div class="rp-chips"><i>💵 Cash ${money(S.cash)}</i><i>📒 Udhaar ${money(S.credit)}</i><i>${num(S.n)} bill</i>${S.cancelN ? `<i class="bad">⊘ ${S.cancelN} cancel</i>` : ''}${S.returnN ? `<i>↩ ${S.returnN} wapsi ${money(S.returnRs)}</i>` : ''}</div></div>`;
   const dhyan = (r.flags || []).length ? card('⚠️', 'DHYAN', `<ul class="rp-flags">${r.flags.map(f => `<li>${esc(f)}</li>`).join('')}</ul>`, 'warn') : card('✅', 'Sab theek', '<p class="rp-ok">Aaj koi khaas masla nahi pakra gaya.</p>', 'good');
@@ -58,8 +58,8 @@ function html() {
   const stC = card('💼', 'Stock ki maaliyat', `<div class="rp-big">${money(st.value)}${dv != null ? ` <small class="${dv < 0 ? 'bad' : 'good'}">${dv < 0 ? '▼' : '▲'} kal se ${money(Math.abs(dv))}</small>` : ''}</div>` + Object.entries(st.per || {}).map(([g, v]) => row(esc(g), money(v))).join('') + (st.negN ? `<p class="rp-tip">⚠️ ${num(st.negN)} items ka stock minus (jor mein nahi)</p>` : ''));
   const trC = T ? card('🧾', `Transfer note (${T.n})`, (T.pendingN ? `<p class="rp-sub bad">⏳ ${T.pendingN} check nahi hue:</p>` + T.pending.map(x => row(`TN ${esc(x.no)} · ${esc(x.from)} → ${esc(x.to)}`, esc(clock(x.at)))).join('') : '<p class="rp-ok">✓ Sab check ho gaye</p>') + (T.farqN ? `<p class="rp-sub bad">⚠️ Farq (${T.farqN}):</p>` + T.farq.map(x => row(`TN ${esc(x.no)} · ${esc(x.by)}`, esc(x.note))).join('') : '')) : '';
   const giC = G ? card('📋', 'Stock ginti', row('Aaj gine', num(G.n)) + row('Farq wale', `${num(G.farqN)} · ${money(G.farqRs)}`, G.farqN ? 'bad' : 'good')) : '';
-  const alC = A ? card('⏰', 'Khatam hone wala maal', (A.top || []).length ? A.top.map(x => row(esc(x.n), x.left <= 0 ? 'khatam' : x.left + ' din', 'bad')).join('') + `<p class="rp-tip">${num(A.redN)} laal (${A.red} din) · ${num(A.yellowN)} peela</p><button type="button" class="rp-go" data-rp-po="1">🛒 Order screen kholo</button>` : '<p class="rp-ok">✓ Koi maal jald khatam nahi ho raha</p>') : '';
-  return `<div class="rp-root">${nav}${hero}${dhyan}${loss}${wsC}${khC}${puC}${stC}${trC}${giC}${alC}<p class="rp-foot">Bani: ${esc(new Date(r.at).toLocaleString('en-PK'))} · Server PC</p>${acts}${pcLine}</div>`;
+  // v2.106.0: ⏰ khatam hone wala maal ka card hata diya (malik: zaroorat nahi — Mangwao kaafi)
+  return `<div class="rp-root">${nav}${hero}${dhyan}${loss}${wsC}${khC}${puC}${stC}${trC}${giC}<p class="rp-foot">Bani: ${esc(new Date(r.at).toLocaleString('en-PK'))} · Server PC</p>${acts}${pcLine}</div>`;
 }
 function pdfHTML() {
   const r = rep; if (!r || !r.day) return '';
@@ -76,39 +76,31 @@ function pdfHTML() {
 document.addEventListener('click', e => {
   if (e.target.closest?.('#rpOpenBtn')) { openReport(); return; }
   if (!open() && !document.querySelector('#dialog[open] .rs-root')) return;
-  const t = e.target.closest?.('[data-rp-day],[data-rp-now],[data-rp-set],[data-rp-pdf],[data-rp-po],[data-rs-on],[data-rs-rt],[data-rs-at],[data-rs-red],[data-rs-small],[data-rs-wsdel],[data-rs-wsadd],[data-rs-back],[data-rs-alertnow]'); if (!t) return;
+  const t = e.target.closest?.('[data-rp-day],[data-rp-now],[data-rp-set],[data-rp-pdf],[data-rs-on],[data-rs-rt],[data-rs-small],[data-rs-wsdel],[data-rs-wsadd],[data-rs-back]'); if (!t) return;
   const d = t.dataset;
   if (d.rpDay) { const n = shift(day, Number(d.rpDay)); if (n > today()) return; day = n; watch(); paintIf(); return; }
   if (d.rpNow != null) { waitNow = Date.now(); cloud.setReportConfig({ reportNow: 1, reportDay: day }).then(() => notice('🖥 Server PC ko keh diya — 1 minute mein report')).catch(er => notice('Nahi hua: ' + (er?.message || er))); paintIf(); return; }
   if (d.rpPdf != null) { const h = pdfHTML(); if (h && pdfOf) pdfOf(h, 'Raat ki report ' + day); return; }
-  if (d.rpPo != null) { try { $('dialog').close(); } catch {} route('notes'); setTimeout(() => $('ntPo')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 400); return; }
   if (d.rpSet != null) { openSettings(); return; }
   // ---- setting ----
   const save = patch => cloud.setReportConfig(patch).then(() => notice('✓ Save')).catch(er => notice('Nahi hua: ' + (er?.message || er)));
   if (d.rsBack != null) { const keep = rep; openReport(day); if (keep && keep.day === day) { rep = keep; paintIf(); } return; }
   if (d.rsOn) { const [k, v] = d.rsOn.split(':'); cfg[k] = v === '1'; paintSet(); save({ [k]: v === '1' }); return; }
   if (d.rsRt) { let v = d.rsRt; if (v === 'apna') { v = prompt('Report ka waqt (24 ghante, jaise 22:45):', cfg.reportTime) || ''; if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(v)) { if (v) notice('Waqt aise likhein: 22:45'); return; } } cfg.reportTime = v; paintSet(); save({ reportTime: v }); return; }
-  if (d.rsAt) { let v = d.rsAt; if (v === 'apna') { v = prompt('Alert ka waqt (jaise 08:30):', cfg.alertTime) || ''; if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(v)) { if (v) notice('Waqt aise likhein: 08:30'); return; } } cfg.alertTime = v; paintSet(); save({ alertTime: v }); return; }
-  if (d.rsRed) { const [a, b] = d.rsRed.split('/').map(Number); cfg.alertRed = a; cfg.alertYellow = b; paintSet(); save({ alertRed: a, alertYellow: b }); return; }
   if (d.rsSmall) { cfg.wsSmall = Number(d.rsSmall); paintSet(); save({ wsSmall: cfg.wsSmall }); return; }
   if (d.rsWsdel) { const l = (cfg.wsNames || []).filter(x => x !== d.rsWsdel); if (!l.length) { notice('Kam se kam ek naam rakhein'); return; } cfg.wsNames = l; paintSet(); save({ wsNames: l }); return; }
   if (d.rsWsadd != null) { const v = (prompt('Wholesale customer / account ka naam (POS mein jaisa likha hai):') || '').trim(); if (!v) return; const l = [...new Set([...(cfg.wsNames || []), v])]; cfg.wsNames = l; paintSet(); save({ wsNames: l }); return; }
-  if (d.rsAlertnow != null) { cloud.setReportConfig({ alertNow: 1 }).then(() => notice('🖥 Server PC ko keh diya — 1 minute mein ⏰ khabar')).catch(er => notice('Nahi hua: ' + (er?.message || er))); return; }
 });
 document.addEventListener('change', e => { if (!e.target.matches?.('[data-rp-date]')) return; const v = e.target.value; if (!v || v > today()) return; day = v; watch(); paintIf(); });
 
 // ---------- ⚙️ setting ----------
 function setHTML() {
   const C = (on, attr, v, lab) => `<button type="button" class="${on ? 'on' : ''}" data-${attr}="${esc(v)}">${lab}</button>`;
-  const rt = ['18:30', '19:00', '21:00', '22:30'], at = ['08:00', '09:00', '10:00'], rd = [[2, 5], [3, 7], [5, 10]];
+  const rt = ['18:30', '19:00', '21:00', '22:30'];
   return `<div class="rs-root">
     <button type="button" class="rs-back" data-rs-back="1">← Report</button>
     <div class="rs-card"><h4>🌙 Raat ki report</h4><div class="mchips">${C(cfg.reportOn !== false, 'rs-on', 'reportOn:1', '🟢 ON')}${C(cfg.reportOn === false, 'rs-on', 'reportOn:0', '⚪ Band')}</div>
       <small>Kis waqt (dukan band hone ke baad)</small><div class="mchips">${rt.map(v => C(cfg.reportTime === v, 'rs-rt', v, v.replace(/^(\d+):/, (m, h) => (h % 12 || 12) + ':') + (Number(v.slice(0, 2)) < 12 ? ' AM' : ' PM'))).join('')}${C(!rt.includes(cfg.reportTime), 'rs-rt', 'apna', '✏️ ' + (!rt.includes(cfg.reportTime) ? esc(cfg.reportTime) : 'Apna'))}</div></div>
-    <div class="rs-card"><h4>⏰ Maal khatam hone ki khabar</h4><div class="mchips">${C(cfg.alertOn !== false, 'rs-on', 'alertOn:1', '🟢 ON')}${C(cfg.alertOn === false, 'rs-on', 'alertOn:0', '⚪ Band')}</div>
-      <small>Subah kis waqt</small><div class="mchips">${at.map(v => C(cfg.alertTime === v, 'rs-at', v, (Number(v.slice(0, 2)) % 12 || 12) + v.slice(2) + ' AM')).join('')}${C(!at.includes(cfg.alertTime), 'rs-at', 'apna', '✏️ ' + (!at.includes(cfg.alertTime) ? esc(cfg.alertTime) : 'Apna'))}</div>
-      <small>Laal / peela — kitne din mein khatam</small><div class="mchips">${rd.map(([a, b]) => C(Number(cfg.alertRed) === a && Number(cfg.alertYellow) === b, 'rs-red', a + '/' + b, `🔴 ${a} · 🟡 ${b} din`)).join('')}</div>
-      <button type="button" class="rs-now" data-rs-alertnow="1">⏰ Abhi check karo</button></div>
     <div class="rs-card"><h4>🏷 Wholesale ki nigrani</h4><small>In naamon wale POS bill wholesale gine jayenge</small>
       <div class="mchips rs-ws">${(cfg.wsNames || []).map(n => `<button type="button" data-rs-wsdel="${esc(n)}">${esc(n)} ✕</button>`).join('')}<button type="button" class="rs-add" data-rs-wsadd="1">➕ Naam</button></div>
       <small>⚠️ Shak = aadhi ya zyada lines is se kam pcs ki ho (jaise 1-2 piece)</small><div class="mchips">${[3, 6].map(n => C(Number(cfg.wsSmall) === n, 'rs-small', n, n + ' pcs se kam')).join('')}</div></div>
@@ -126,6 +118,6 @@ export function reportDeepLink() {
   try { history.replaceState(history.state, '', u.pathname + (u.search ? u.search : '') + u.hash); } catch {}
   if (!isOwner()) return;
   if (r) openReport(r);
-  else { route('notes'); setTimeout(() => $('ntPo')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 600); }
+  else route('notes');   // v2.106.0: purani ⏰ push ka link — 🛒 order ka hissa ab nahi
 }
 export const _reportTest = { html, setHTML, pdfHTML, set: (r, d) => { rep = r; day = d; } };

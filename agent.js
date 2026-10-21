@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.105.9';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.105.9';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.106.0';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.106.0';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -300,6 +300,7 @@ Object.assign(T, {
   async maal_value({ items, rate_type = 'wholesale' }) { await stockOk(); const m = maalOf(items, rate_type); return { rate_type, lines: m.lines, kul_rs: m.total }; },
   async sale_summary({ date }) { if (!canSaleA()) throw Error('Is login par sale dekhne ki ijazat nahi'); setTyping('🧾 POS bills dekh raha hoon…'); return await H.saleDay(isDate(date) ? date : H.today()); },
   soye_khate(a = {}) { if (!H.soye) throw Error('Is ke liye app update karein'); return H.soye(a); },
+  reminder_aaj() { if (!H.noteFind) throw Error('Notes ke liye app update karein'); const td = H.today(), L = (H.noteFind('', { open: true, n: 20 }) || []).filter(x => x.reminder && x.reminder <= td); return { aaj: L.length, guzre: L.filter(x => x.reminder < td).length, list: L.map(x => ({ note_id: x.id, text: x.text, din: x.reminder, waqt: x.time, khata: x.account })) }; },   // v2.106.0: 📋 aaj ke reminder (card app dikhati hai)
   search_notes({ text, only_open = true }) { if (!H.noteFind) throw Error('Notes ke liye app update karein'); const L = H.noteFind(text || '', { open: only_open !== false, n: 10 }); return { mile: L.length, notes: L }; },
   hisaab({ expression }) { const r = calcParse(String(expression || ''), false); if (!r) return { error: 'Hisaab samajh nahi aaya — sirf hindse aur + − × ÷ % do' }; return { natija: r.val, hisaab: r.pretty }; },
   propose_entry: async a => { if (Array.isArray(a.items) && a.items.length) { await stockOk(); const m = maalOf(a.items, a.rate_type || 'wholesale'); a = { ...a, amount: Number(a.amount) > 0 ? a.amount : m.total, note: [maalNote(m), a.note].filter(Boolean).join(' · '), _maal: m }; } return propose('entry', a); },
@@ -347,6 +348,7 @@ DECL.push(
   { name: 'sale_summary', description: 'Kisi din ke POS + app sale bills: kul sale, counter / wholesale, udhaar, cancel, bare bills.', parameters: obj({ date: D }) },
   { name: 'soye_khate', description: 'SOYE HUE KHATE: jin khaton mein kaafi din se koi entry nahi ("kaun se customer 2 mahine se nahi aaye", "purane baqaye"). days = kitne din se (default 30), category Customer / Supplier / Sab, with_zero = 0 baqaya wale bhi. Baqaya sab se zyada upar.', parameters: obj({ days: I, category: { type: 'STRING', enum: ['Customer', 'Supplier', 'Sab'] }, with_zero: B }) },
   { name: 'search_notes', description: 'Notes / reminders dhoondo (likhai, account, item).', parameters: obj({ text: S, only_open: B }) },
+  { name: 'reminder_aaj', description: 'Aaj ke (aur guzre hue) khule reminder — list card ✓ Ho gaya / ⏭ Kal ke saath app dikhati hai.', parameters: obj({}) },
   { name: 'hisaab', description: 'Calculator: expression (hindse aur + - * / ( ) %). Har jama / zarb / taqseem / % isi se — khud hisaab KABHI mat lagao.', parameters: obj({ expression: S }, ['expression']) },
   { name: 'propose_rate_change', description: 'Item ka rate badalne ka CARD (malik). Sirf jo rate badalna hai woh do. User ✓ par POS mein (PC).', parameters: obj({ item_id: S, khareed_ctn: N, khareed_pcs: N, parchoon_ctn: N, parchoon_pcs: N, wholesale_ctn: N, wholesale_pcs: N }, ['item_id']) },
   { name: 'propose_new_item', description: 'POS mein NAYA item banane ka CARD (malik). pack = 1 carton mein kitne piece.', parameters: obj({ name: S, pack: N, barcode: S, khareed_ctn: N, khareed_pcs: N, parchoon_ctn: N, parchoon_pcs: N, wholesale_ctn: N, wholesale_pcs: N }, ['name']) },
@@ -543,7 +545,14 @@ async function run(c) {
   if (c.type === 'purchase') { const r = H.ppFill(c.p.id, c.lines.map(l => ({ id: l.id, name: l.name, ctn: l.ctn, pcs: l.pcs, costCtn: l.costCtn, costPcs: l.costPcs }))); c.cart = r; return `Purchase screen par lag gaya — ${r.supplierName} · ${r.n} items · ${rs(r.total)}`; }
   if (c.type === 'sale') { const r = H.saleFill(c.mode, c.m.lines.map(l => ({ id: l.item_id, name: l.name, ctn: l.ctn, pcs: l.pcs }))); return `Sale screen par lag gaya — ${r.n} items · ${rs(r.total)} (${c.mode === 'wholesale' ? 'Wholesale' : 'Counter'})`; }
   if (c.type === 'notes') { const r = await H.noteBulk(c.list.map(x => x.id), { day: c.day, time: c.time, nag: c.nag, done: c.done }); if (r.fail.length && !r.ok) throw Error(r.fail[0]); return `${r.ok} notes ${c.done ? 'ho gaye' : 'badal gaye'}${r.fail.length ? ` · ${r.fail.length} nahi hue` : ''}`; }
-  if (c.type === 'note') { await H.noteSave({ text: c.text, day: c.day, time: c.time, partyId: c.p?.id || '', items: c.items, nag: c.nag || 0, pics: c.pics || [] }); return `Note save${c.day ? ' · 🔔 ' + c.day + (c.time ? ' ' + c.time : '') : ''}`; }
+  if (c.type === 'rem') {   // v2.106.0: 🔔 agent ka reminder card (app, AI nahi)
+    const text = String(c.text || '').trim(); if (!text && !c.pics?.length) throw Error('Kya yaad dilana hai — card mein likhein');
+    if (c.day && c.day < H.today()) throw Error('Guzri tareekh — aaj ya aage ki chunein');
+    await H.noteSave({ text: text || 'Tasveer wala note', day: c.day, time: c.day ? c.time : '', partyId: c.p?.id || '', items: c.items || [], nag: c.day ? c.nag : undefined, pics: c.pics || [] });
+    c.say = c.day ? '✓ Reminder lag gaya — ' + remSumText(c) : '✓ Note save ho gaya (reminder ke baghair)';
+    return c.day ? 'Reminder lag gaya' : 'Note save';
+  }
+  if (c.type === 'note') { await H.noteSave({ text: c.text, day: c.day, time: c.time, partyId: c.p?.id || '', items: c.items, nag: c.nag || undefined, pics: c.pics || [] }); return `Note save${c.day ? ' · 🔔 ' + c.day + (c.time ? ' ' + c.time : '') : ''}`; }
   if (c.type === 'act') { const r = await c.a.run(c.args); try { H.audit?.({ area: 'agent', act: 'act', what: ('🤖 ' + (c.a.label || c.a.name) + ': ' + c.sum).slice(0, 120), note: String(c.said || '').slice(0, 200) }); } catch {} return typeof r === 'string' ? r : (r?.msg || r?.ok === false ? (r?.why || 'Nahi hua') : 'Ho gaya'); }
   if (c.type === 'due') {
     const old = H.records().find(r => r.id === 'reminder-' + c.p.id);
@@ -583,7 +592,7 @@ function system() {
     'RULE 12 — ANY arithmetic (jama, zarb, taqseem, %, discount, carton x rate) -> hisaab tool or maal_value. Never calculate in your head.',
   ].join('\n');
 }
-const TOOL_SAY = { find_account: '🔎 Account dhoond raha hoon', account_info: '📒 Khata dekh raha hoon', day_summary: '📊 Din ka hisaab', totals: '🧮 Jama nikal raha hoon', top_balances: '💰 Baqaye dekh raha hoon', due_list: '⏰ Due dates', search_entries: '🔍 Entries dhoond raha hoon', propose_entry: '📝 Card bana raha hoon', propose_transfer: '📝 Card bana raha hoon', propose_cash_give: '📝 Card bana raha hoon', propose_due_date: '📝 Card bana raha hoon', show_photos: '🖼 Tasveerein dhoond raha hoon', find_item: '📦 Item dhoond raha hoon', item_info: '📦 Stock dekh raha hoon', maal_value: '🧮 Maal ki qeemat', sale_summary: '🧾 POS bills dekh raha hoon', search_notes: '📝 Notes dhoond raha hoon', soye_khate: '😴 Soye khate dhoond raha hoon', hisaab: '🧮 Hisaab', propose_rate_change: '📝 Card bana raha hoon', propose_new_item: '📝 Card bana raha hoon', propose_godam_transfer: '📝 Card bana raha hoon', propose_purchase: '📝 Card bana raha hoon', propose_sale: '📝 Card bana raha hoon', propose_note: '📝 Card bana raha hoon', propose_notes_bulk: '📝 Notes chun raha hoon', propose_entries: '📝 Card bana raha hoon', khata_pdf: '📄 PDF bana raha hoon', open_screen: '📱 Screen khol raha hoon' };
+const TOOL_SAY = { find_account: '🔎 Account dhoond raha hoon', account_info: '📒 Khata dekh raha hoon', day_summary: '📊 Din ka hisaab', totals: '🧮 Jama nikal raha hoon', top_balances: '💰 Baqaye dekh raha hoon', due_list: '⏰ Due dates', search_entries: '🔍 Entries dhoond raha hoon', propose_entry: '📝 Card bana raha hoon', propose_transfer: '📝 Card bana raha hoon', propose_cash_give: '📝 Card bana raha hoon', propose_due_date: '📝 Card bana raha hoon', show_photos: '🖼 Tasveerein dhoond raha hoon', find_item: '📦 Item dhoond raha hoon', item_info: '📦 Stock dekh raha hoon', maal_value: '🧮 Maal ki qeemat', sale_summary: '🧾 POS bills dekh raha hoon', search_notes: '📝 Notes dhoond raha hoon', reminder_aaj: '🔔 Aaj ke reminder dekh raha hoon', soye_khate: '😴 Soye khate dhoond raha hoon', hisaab: '🧮 Hisaab', propose_rate_change: '📝 Card bana raha hoon', propose_new_item: '📝 Card bana raha hoon', propose_godam_transfer: '📝 Card bana raha hoon', propose_purchase: '📝 Card bana raha hoon', propose_sale: '📝 Card bana raha hoon', propose_note: '📝 Card bana raha hoon', propose_notes_bulk: '📝 Notes chun raha hoon', propose_entries: '📝 Card bana raha hoon', khata_pdf: '📄 PDF bana raha hoon', open_screen: '📱 Screen khol raha hoon' };
 function trimHistory() {             // aakhri ~14 user sawal; kaat sirf user ki LIKHAI par (functionCall/Response ka joda na toote)
   let users = 0;
   for (let i = history.length - 1; i >= 0; i--) {
@@ -604,7 +613,7 @@ async function ask(text, shown) {
 }
 let lastAsk = '';
 // v2.103.59: 🧰 malik — "agent mein sirf reminder wala on rakho, baqi sab off (time lag raha hai); neeche wale chips on rahein" → AI ko sirf notes/reminder tools; stock ke ⚡ quick chips (extQuick, bina AI) phir bhi chalte hain
-const REM_TOOLS = new Set(['search_notes', 'propose_note', 'propose_notes_bulk', 'due_list', 'propose_due_date', 'find_account', 'hisaab']);
+const REM_TOOLS = new Set(['search_notes', 'reminder_aaj', 'propose_note', 'propose_notes_bulk', 'due_list', 'propose_due_date', 'find_account', 'hisaab']);
 const agTools = cfg => (cfg.agentTools || 'reminder') === 'all' ? (extOn() ? DECL.concat(extDeclFor(lastAsk)) : DECL) : DECL.filter(d => REM_TOOLS.has(d.name));
 const agModel = cfg => { const m = String(cfg.model || ''); if (cfg.agentModel === 'lite') return m.includes('lite') ? m : m.replace(/-flash(?!-lite)/, '-flash-lite') || m; if (cfg.agentModel === 'pro') return m.replace(/-flash(-lite)?/, '-pro'); return m; };   // v2.103.49: ⚡ agent ki raftar (Settings → AI key)
 async function askAI(t) {
@@ -686,6 +695,7 @@ async function quick(t) {
   if (idm || iid) return false;
   const n = normQ(t), ws = wordsOf(t);
   if (!ws.length) return false;
+  if (remOn()) { const k = remIntent(n); if (k === 'make') { remFromText(t); return true; } if (k === 'list') { remList(); return true; } }   // v2.106.0: 🔔 reminder — app khud (AI nahi)
   if (extOn() && EXT.size) { const q = await extQuick(n); if (q) return true; }   // v2.103.49: ⚡ malik ke aam stock hukum bina AI
   // 📦 "stock add karna hai" -> raaste (purchase bol kar / bill photo / transfer / naya item)
   if (ws.some(w => STOCKW.test(w)) && ws.some(w => ADDW.test(w)) && !/\d/.test(n)) { stockMenu(); return true; }
@@ -865,19 +875,191 @@ function addFiles(list) {
   for (const f of [...(list || [])]) { if (attach.length >= 8) { H.notice('Zyada se zyada 8 photo'); break; } if (/^image\//.test(f.type || 'image/')) attach.push(f); }
   paintAttach();
 }
+// ---------------- v2.106.0: 🔔 REMINDER — agent ke andar, sara kaam APP (AI nahi) ----------------
+// malik: "AI agent ke andar hi reminder ka chips daal do · reminder note banane ka · time / date ka aisa kaam app kare magar lage agent kar raha hai".
+//   🔔 chip / likh-bol kar ("kal shaam 6 baje Waqas ko payment yaad dilana") → remParse (din · waqt · baar baar · naam) → card (chips se badlo)
+//   → ✓ = wahi notes (Reminder screen + phone notification, pehle jaisa). 📋 Aaj ke reminder = list + ✓ Ho gaya / ⏭ Kal. CAP: v:notes + hb.agrem.
+const RP_MON = { jan: 1, january: 1, feb: 2, february: 2, mar: 3, march: 3, apr: 4, april: 4, may: 5, jun: 6, june: 6, jul: 7, july: 7, aug: 8, august: 8, sep: 9, sept: 9, september: 9, oct: 10, october: 10, nov: 11, november: 11, dec: 12, december: 12 };
+const RP_NUM = { ek: 1, aik: 1, do: 2, teen: 3, char: 4, chaar: 4, panch: 5, paanch: 5, chhe: 6, che: 6, saat: 7, aath: 8, nau: 9, das: 10 };
+const RP_WD = [[/^(itwa+r|itva+r|sunday)$/, 0], [/^(peer|pir|somwa+r|monday)$/, 1], [/^(mangal|mangalwa+r|tuesday)$/, 2], [/^(budh|budhwa+r|wednesday)$/, 3], [/^(jume?ra+t|jumm?era+t|jumme?ra+t|thursday)$/, 4], [/^(jumm?a+h?|friday)$/, 5], [/^(sanichar|saturday)$/, 6]];
+const RP_MONRE = 'jan|january|feb|february|mar|march|apr|april|may|jun|june|jul|july|aug|august|sep|sept|september|oct|october|nov|november|dec|december';
+const RP_BJ = '(?:baje|bje|bajay|bajy|bjy|baj|o\\s?clock|oclock)';
+export function remParse(raw, { today, now = new Date() } = {}) {
+  const src = String(raw || '').replace(/\s+/g, ' ').trim();
+  const lo = [...src].map(ch => { const u = '۰۱۲۳۴۵۶۷۸۹'.indexOf(ch), a = '٠١٢٣٤٥٦٧٨٩'.indexOf(ch); if (u >= 0) return String(u); if (a >= 0) return String(a); const l = ch.toLowerCase(); return l.length === ch.length ? l : ch; }).join('');   // asal likhai jitni lambi (kaatne ki jagah wahi)
+  const cut = [], free = (i, j) => !cut.some(([a, b]) => i < b && j > a), mark = m => { cut.push([m.index, m.index + m[0].length]); return m; };
+  const find = re => { const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g'); let m; while ((m = g.exec(lo))) { if (m[0].length && free(m.index, m.index + m[0].length)) return m; if (!m[0].length) g.lastIndex++; } return null; };
+  const T0 = /^\d{4}-\d{2}-\d{2}$/.test(today || '') ? today : `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const D0 = s => new Date(s + 'T12:00:00Z'), iso = d => d.toISOString().slice(0, 10), plus = (s, n) => { const d = D0(s); d.setUTCDate(d.getUTCDate() + n); return iso(d); };
+  const ty = Number(T0.slice(0, 4)), tm = Number(T0.slice(5, 7));
+  const mk = (y, mo, d) => { if (!(mo >= 1 && mo <= 12 && d >= 1 && d <= 31)) return ''; const s = `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`; return iso(D0(s)) === s ? s : ''; };   // 31 Feb = nahi
+  const fut = (mo, d) => { let s = mk(ty, mo, d); if (s && s < T0) s = mk(ty + 1, mo, d); return s; };
+  let day = '', time = '', nag, m;
+  // 🔁 baar baar (pehle — "har 1 ghanta" waqt na samjha jaye)
+  if ((m = find(/\bhar\s+(?:15|pandrah|pandra)\s*(?:minute|minutes|minut|mint|min|mins)\b/))) { nag = 15; mark(m); }
+  else if ((m = find(/\bhar\s+(?:30\s*(?:minute|minutes|minut|mint|min|mins)?|tees\s*(?:minute|minutes|minut|mint|min|mins)?|aa?dhe\s+ghante|aa?dha\s+ghanta)\b/))) { nag = 30; mark(m); }
+  else if ((m = find(/\bhar\s+(?:(?:ek|aik|1)\s+)?(?:ghante|ghanta|ghantay|hour|hr)\b/))) { nag = 60; mark(m); }
+  else if ((m = find(/\b(?:baar\s*-?\s*baar|bar\s*-?\s*bar|jab\s+tak\s+(?:na|nah?i)\s+\w+)\b/))) { nag = 15; mark(m); }
+  else if ((m = find(/\b(?:sirf\s+)?(?:ek|aik|1)\s+(?:dafa|dafaa|martaba)\b/))) { nag = 0; mark(m); }
+  // 📅 din
+  if ((m = find(/\b(\d{4})-(\d{1,2})-(\d{1,2})\b/))) { day = mk(+m[1], +m[2], +m[3]); if (day) mark(m); }
+  if (!day && (m = find(/\b(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/))) { const y = m[3] ? (m[3].length === 2 ? 2000 + Number(m[3]) : Number(m[3])) : 0; day = y ? mk(y, +m[2], +m[1]) : fut(+m[2], +m[1]); if (day) mark(m); }
+  if (!day && (m = find(new RegExp(`\\b(\\d{1,2})\\s*(?:st|nd|rd|th)?\\s*(${RP_MONRE})\\b`)))) { day = fut(RP_MON[m[2]], +m[1]); if (day) mark(m); }
+  if (!day && (m = find(new RegExp(`\\b(${RP_MONRE})\\s+(\\d{1,2})\\b`)))) { day = fut(RP_MON[m[1]], +m[2]); if (day) mark(m); }
+  if (!day && (m = find(/\b(\d{1,2})\s*(?:tareekh|tarikh|tareek|tarekh|tarik|date)\b(?:\s+(?:ko|ki|ke))?/))) { const d = +m[1]; let s = mk(ty, tm, d); if (s && s < T0) s = tm === 12 ? mk(ty + 1, 1, d) : mk(ty, tm + 1, d); if (s) { day = s; mark(m); } }
+  if (!day && (m = find(/\b(?:aaj|aj|today)\b/))) { day = T0; mark(m); }
+  if (!day && (m = find(/\b(?:parson|parso|parsun|parsoon|parsu)\b/))) { day = plus(T0, 2); mark(m); }
+  if (!day && (m = find(/\b(?:narson|narso)\b/))) { day = plus(T0, 3); mark(m); }
+  if (!day && (m = find(/\b(?:kal|kl|kall|kaal|tomorrow)\b/))) { day = plus(T0, 1); mark(m); }
+  if (!day && (m = find(/\b(\d{1,2}|ek|aik|do|teen|char|chaar|panch|paanch|chhe|saat|aath|nau|das)\s+(?:din|dino|dinon|days?)\s+(?:ke\s+)?(?:baad|bad|mein|me|main)\b/))) { const n = /\d/.test(m[1]) ? Number(m[1]) : RP_NUM[m[1]]; if (n > 0 && n <= 60) { day = plus(T0, n); mark(m); } }
+  if (!day && (m = find(/\b(?:agl[ea]\s+(?:hafte|hafta|week)|(?:ek\s+|1\s+)?(?:hafte|hafta|week)\s+(?:ke\s+)?(?:baad|bad))\b/))) { day = plus(T0, 7); mark(m); }
+  if (!day && (m = find(/\b(?:agl[ea]\s+(?:mahine|mahina|month)|(?:ek\s+|1\s+)?(?:mahine|mahina|month)\s+(?:ke\s+)?(?:baad|bad))\b/))) { day = plus(T0, 30); mark(m); }
+  if (!day) {   // hafte ka din: "jumma ko", "agle peer", "hafte ko" (= Saturday)
+    const g = /\b(?:agl[ea]\s+)?([a-z]+)(\s+(?:ko|wale din|walay din))?\b/g; let x;
+    while ((x = g.exec(lo))) {
+      if (!free(x.index, x.index + x[0].length)) continue;
+      let wd = -1; for (const [r, n] of RP_WD) if (r.test(x[1])) { wd = n; break; }
+      if (wd < 0 && /^(hafte|hafta)$/.test(x[1]) && x[2]) wd = 6;
+      if (wd < 0) continue;
+      let n = (wd - D0(T0).getUTCDay() + 7) % 7; if (!n) n = 7;
+      day = plus(T0, n); cut.push([x.index, x.index + x[0].length]); break;
+    }
+  }
+  // ⏰ waqt — subah / dopahar / shaam / raat + hindse
+  let per = '';
+  const pm = find(/\b(subah|subha|sobah|subh|sbh|morning|savere|savery|sawere|dopahar|dopehar|dupahar|dupehar|dophar|dopher|afternoon|zohar|zuhar|sehpahar|sehpehar|asar|asr|shaam|sham|evening|maghrib|raat|rat|night|isha)\b/);
+  if (pm) per = /^(subah|subha|sobah|subh|sbh|morning|savere|savery|sawere)$/.test(pm[1]) ? 'am' : /^(dopahar|dopehar|dupahar|dupehar|dophar|dopher|afternoon|zohar|zuhar)$/.test(pm[1]) ? 'noon' : /^(sehpahar|sehpehar|asar|asr)$/.test(pm[1]) ? 'asr' : /^(raat|rat|night|isha)$/.test(pm[1]) ? 'night' : 'eve';
+  const hm = (h, mi, ap = '') => { h = Number(h); mi = Number(mi) || 0; if (!(h >= 0 && h <= 24 && mi >= 0 && mi < 60)) return '';
+    if (ap === 'am') { if (h === 12) h = 0; } else if (ap === 'pm') { if (h < 12) h += 12; }
+    else if (per === 'am') { if (h === 12) h = 0; }
+    else if (per === 'noon') { if (h >= 1 && h <= 5) h += 12; }
+    else if (per === 'asr' || per === 'eve') { if (h < 12) h += 12; }
+    else if (per === 'night') { if (h === 12) { h = 23; mi = 59; } else if (h >= 5 && h < 12) h += 12; }
+    else if (h >= 1 && h <= 7) h += 12;   // dukan ka waqt: 1–7 = dopahar / shaam
+    if (h >= 24) h = 0; return String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0'); };
+  if ((m = find(new RegExp(`\\b(\\d{1,2}):(\\d{2})\\s*(am|pm|${RP_BJ})?(?![\\w:])`)))) { time = hm(m[1], m[2], /^(am|pm)$/.test(m[3] || '') ? m[3] : ''); if (time) mark(m); }
+  if (!time && (m = find(new RegExp(`\\b(\\d{1,2})\\.(\\d{2})\\s*(am|pm|${RP_BJ})\\b`)))) { time = hm(m[1], m[2], /^(am|pm)$/.test(m[3]) ? m[3] : ''); if (time) mark(m); }
+  if (!time && (m = find(new RegExp(`\\b(?:saa?de|sarhe|sarhay|saday)\\s+(\\d{1,2})(?:\\s*${RP_BJ})?\\b`)))) { time = hm(m[1], 30); if (time) mark(m); }
+  if (!time && (m = find(new RegExp(`\\b(?:sawa|sava)\\s+(\\d{1,2})(?:\\s*${RP_BJ})?\\b`)))) { time = hm(m[1], 15); if (time) mark(m); }
+  if (!time && (m = find(new RegExp(`\\b(?:paune|pone|paunay|poney)\\s+(\\d{1,2})(?:\\s*${RP_BJ})?\\b`)))) { const h = Number(m[1]) - 1; time = hm(h < 1 ? 12 : h, 45); if (time) mark(m); }
+  if (!time && (m = find(new RegExp(`\\b(?:dedh|deydh|derh)\\s*${RP_BJ}\\b`)))) { time = hm(1, 30); mark(m); }
+  if (!time && (m = find(new RegExp(`\\b(?:dhai|dhaai|dhayi|arhai|adhai)\\s*${RP_BJ}\\b`)))) { time = hm(2, 30); mark(m); }
+  if (!time && (m = find(new RegExp(`\\b(\\d{1,2})\\s*(am|pm|${RP_BJ})\\b`)))) { time = hm(m[1], 0, /^(am|pm)$/.test(m[2]) ? m[2] : ''); if (time) mark(m); }
+  if (!time && pm && (m = find(new RegExp(`(?:\\b${pm[1]}\\s+(\\d{1,2})|\\b(\\d{1,2})\\s+${pm[1]})\\b`)))) { time = hm(m[1] || m[2], 0); if (time) { mark(m); cut.push([pm.index, pm.index + pm[0].length]); } }
+  if (!time && (m = find(/\b(\d{1,3}|ek|aik|do|teen|char|chaar|panch|paanch|aa?dhe|aa?dha|aadhay)\s*(ghante|ghanta|ghanton|ghantay|hours?|hrs?|minute|minutes|minut|mint|min|mins)\s*(?:ke\s+)?(?:baad|bad|mein|me|main)\b/))) {
+    const n = /^aa?dh/.test(m[1]) ? 0.5 : /\d/.test(m[1]) ? Number(m[1]) : RP_NUM[m[1]], mins = Math.round(n * (/^(ghant|hour|hr)/.test(m[2]) ? 60 : 1));
+    if (mins > 0 && mins <= 1440) { const t = new Date(now.getTime() + mins * 60000), td = `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; time = String(t.getHours()).padStart(2, '0') + ':' + String(t.getMinutes()).padStart(2, '0'); if (!day || day === T0) day = td; mark(m); }
+  }
+  if (!time && pm) time = { am: '09:00', noon: '13:00', asr: '16:00', eve: '18:00', night: '21:00' }[per];
+  if (pm && free(pm.index, pm.index + pm[0].length)) mark(pm);
+  // likhai: din / waqt / hukum ke lafz hata kar
+  cut.sort((a, b) => a[0] - b[0]);
+  let text = '', at = 0; for (const [a, b] of cut) { if (a >= at) { text += src.slice(at, a) + ' '; at = b; } else at = Math.max(at, b); } text += src.slice(at);
+  text = text.replace(/\b(?:mujhe|mje|muje|mjhe|hamein|humein|hume)\b/gi, ' ')
+    .replace(/\b(?:yaa?d|yad)\s+(?:dila|kara|karwa|kar|rakh)\w*(?:\s+(?:dena|dein|den|do|dijiye|dijye|lena|lo|na))?/gi, ' ')
+    .replace(/\b(?:ka\s+|ki\s+|ke\s+)?(?:reminder|remind(?:\s+me)?|alarm)(?:\s+(?:laga|bana|set|lag|daal|dal|kar|de)\w*(?:\s+(?:do|dein|den|dena|lo|na|dijiye))?)?/gi, ' ')
+    .replace(/\b(?:ka\s+|ki\s+|ke\s+)?note\s+(?:bana|likh|laga|kar|daal|dal)\w*(?:\s+(?:do|dein|den|dena|lo|na|dijiye))?/gi, ' ')
+    .replace(/^\s*(?:note|reminder)\s*[:：-]\s*/i, ' ').replace(/\s*[:：,;.-]+\s*$/, '').replace(/^\s*[:：,;.-]+\s*/, '').replace(/\s+/g, ' ').trim();
+  for (let k = 0; k < 3; k++) text = text.replace(/^(?:ko|ke|ki|ka|se|par|pe|liye|ke liye|wale|wali|aur|or|ke\s+baare\s+mein)\s+/i, '').replace(/\s+(?:ko|ke|ki|ka|se|ke liye|liye|par|pe)$/i, '').trim();
+  const nm = text.match(/^((?:[^\s\d][^\s]*\s+){0,3}?[^\s\d][^\s]*)\s+(?:ko|se|ka|ki|ke|kay|sy)\b/i);
+  return { day, time, nag, text, name: nm ? nm[1].trim() : '' };
+}
+const remOn = () => !!H?.noteSave && canFull() && (!H.can || (H.can('v:notes') && H.can('hb.agrem')));
+const REM_WD = ['Itwar', 'Peer', 'Mangal', 'Budh', 'Jumerat', 'Jumma', 'Hafta'], REM_T = ['09:00', '12:00', '15:00', '18:00', '21:00'];
+const remShift = (d, n) => { const x = new Date(d + 'T12:00:00Z'); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
+const remHM = () => { const d = new Date(); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+const t12 = s => { const [h, mi] = String(s || '').split(':').map(Number); return Number.isFinite(h) ? ((h % 12) || 12) + ':' + String(mi || 0).padStart(2, '0') + (h < 12 ? ' AM' : ' PM') : ''; };
+function remDayLab(d) { const T = H.today(); if (d === T) return 'Aaj'; if (d === remShift(T, 1)) return 'Kal'; if (d === remShift(T, 2)) return 'Parson'; if (d === remShift(T, -1)) return 'Kal (guzra)';
+  const x = new Date(d + 'T12:00:00Z'); return isNaN(x) ? d : REM_WD[x.getUTCDay()] + ' ' + x.getUTCDate() + ' ' + x.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' }); }
+const remAutoDay = time => time > remHM() ? H.today() : remShift(H.today(), 1);   // sirf waqt chuna → aaj (aage ho to) warna kal
+const remNagTxt = c => !c.day ? '' : c.nag === 0 ? '🔕 ek dafa' : '🔁 har ' + ({ 15: '15 min', 30: '30 min' }[c.nag] || '1 ghanta');
+const remWarn = c => !!(c.day && c.day === H.today() && c.time && c.time <= remHM());
+function remSumText(c) { return c.day ? `${remDayLab(c.day)}${c.time ? ' · ' + t12(c.time) : ' · subah 7 se'} · ${remNagTxt(c)}${c.p ? ' · 👤 ' + c.p.name : ''}` : 'sirf note (reminder ke baghair)'; }
+function remSumHTML(id, c) { return c.day ? `🔔 <b>${esc(remSumText(c))}</b>${remWarn(c) ? `<span class="agr-wn">⚠️ Ye waqt guzar chuka — notification foran aa jayegi <button type="button" class="agr-fix" data-agr-fix="${id}">Kal karein</button></span>` : ''}` : '📝 Sirf note — <b>📅 din</b> chunein to 🔔 reminder bhi lagega'; }
+const remPk = c => c.p ? 'p:' + c.p.id : c.cands ? 'c:' + c.cands.map(x => x.account_id).join(',') : 'q';
+function remPartyHTML(id, c) {
+  if (c.p) return `<span class="agr-c on agr-who">👤 ${esc(c.p.name)}<button type="button" class="agr-x" data-agr-px="${id}" aria-label="Khata hatao">✕</button></span>`;
+  if (c.cands?.length) return `<small class="agr-q">Kaun sa khata?</small>${c.cands.map(x => `<button type="button" class="agr-c" data-agr-pp="${id}|${esc(x.account_id)}">👤 ${esc(x.name)}</button>`).join('')}<button type="button" class="agr-c" data-agr-px="${id}">✕ Koi nahi</button>`;
+  return `<input type="search" class="agr-pq" data-agr-pq="${id}" placeholder="🔍 Khata (ikhtiyari)" autocomplete="off" enterkeyhint="search"><span class="agr-pl" id="agrpl-${id}"></span>`;
+}
+function remCardHTML(id, c) {
+  const T = H.today(), live = !c.done && !c.no;
+  const dB = (v, lab) => `<button type="button" class="agr-c${c.day === remShift(T, v) ? ' on' : ''}" data-agr-day="${id}|${v}">${lab}</button>`;
+  const tB = (v, lab) => `<button type="button" class="agr-c${c.time === v ? ' on' : ''}" data-agr-time="${id}|${v}">${lab}</button>`;
+  const cur = c.nag === undefined ? 60 : c.nag, nB = (v, lab) => `<button type="button" class="agr-c${cur === v ? ' on' : ''}" data-agr-nag="${id}|${v}">${lab}</button>`;
+  const cd = c.day && ![0, 1, 2, 7].some(n => remShift(T, n) === c.day), ct = c.time && !REM_T.includes(c.time);
+  const thumbs = c.pics?.length ? `<div class="ag-thumbs">${c.pics.map(u => `<img src="${esc(u)}" alt="photo">`).join('')}</div>` : '';
+  const form = live ? `<textarea class="agr-tx" data-agr-tx="${id}" rows="2" maxlength="1000" placeholder="Kya yaad dilana hai… (jaise: Waqas ko payment)">${esc(c.text)}</textarea>
+    <div class="agr-sec"><small>📅 Din</small><div class="agr-row">${dB(0, 'Aaj')}${dB(1, 'Kal')}${dB(2, 'Parson')}${dB(7, 'Hafte baad')}<label class="agr-c agr-in${cd ? ' on' : ''}" data-agr-dl="${id}"><span>📅 ${cd ? esc(remDayLab(c.day)) : 'Tareekh'}</span><input type="date" data-agr-dayin="${id}" value="${esc(c.day || '')}" min="${T}"></label><button type="button" class="agr-c agr-clr" data-agr-day="${id}|x"${c.day ? '' : ' hidden'}>✕</button></div></div>
+    <div class="agr-sec"><small>⏰ Waqt</small><div class="agr-row">${tB('09:00', 'Subah 9')}${tB('12:00', '12 baje')}${tB('15:00', '3 baje')}${tB('18:00', 'Shaam 6')}${tB('21:00', 'Raat 9')}<label class="agr-c agr-in${ct ? ' on' : ''}" data-agr-tl="${id}"><span>⏰ ${ct ? esc(t12(c.time)) : 'Apna'}</span><input type="time" data-agr-timein="${id}" value="${esc(c.time || '')}"></label><button type="button" class="agr-c agr-clr" data-agr-time="${id}|"${c.time ? '' : ' hidden'}>✕</button></div></div>
+    <div class="agr-sec" data-agr-nr="${id}"${c.day ? '' : ' hidden'}><small>🔁 Baar baar</small><div class="agr-row">${nB(60, 'Har 1 ghanta')}${nB(30, '30 min')}${nB(15, '15 min')}${nB(0, '🔕 Ek dafa')}</div></div>
+    <div class="agr-sec"><small>👤 Khata</small><div class="agr-row" id="agrp-${id}" data-k="${remPk(c)}">${remPartyHTML(id, c)}</div></div>` : `<div class="ag-note-tx">${esc(c.text || 'Tasveer wala note')}</div>`;
+  const st = c.done ? `<div class="ag-cf-st ok">${esc(c.say || '✓ ' + c.done)}</div><button type="button" class="ag-no agr-all" data-ag-route="notes">📋 Sab reminder dekhein</button>`
+    : c.no ? '<div class="ag-cf-st">✕ Nahi lagaya</div>'
+    : `<div class="ag-cf-acts"><button type="button" class="ag-no" data-ag-no="${id}">✕ Nahi</button><button type="button" class="ag-ok" data-ag-ok="${id}">${c.day ? '✓ Reminder lagao' : '✓ Note save karo'}</button></div>`;
+  return `<div class="ag-confirm ag-rem" id="agc-${id}"><div class="ag-cf-head"><span>🔔 ${c.done ? 'Reminder' : 'Naya reminder'}</span><small>⚡ foran · AI nahi</small></div>${thumbs}${form}${live ? `<div class="agr-sum${remWarn(c) ? ' warn' : ''}" id="agrs-${id}">${remSumHTML(id, c)}</div>` : ''}${st}</div>`;
+}
+function remSync(id) {   // chip dabane par poora card dobara nahi — sirf nishan / labels (likhai ka focus na toote)
+  const c = pending.get(id), el = document.getElementById('agc-' + id); if (!c || !el) return; const T = H.today();
+  el.querySelectorAll('[data-agr-day]').forEach(b => { const v = b.dataset.agrDay.split('|')[1]; if (v === 'x') b.hidden = !c.day; else b.classList.toggle('on', c.day === remShift(T, Number(v))); });
+  const cd = c.day && ![0, 1, 2, 7].some(n => remShift(T, n) === c.day), dl = el.querySelector('[data-agr-dl]');
+  if (dl) { dl.classList.toggle('on', !!cd); dl.querySelector('span').textContent = '📅 ' + (cd ? remDayLab(c.day) : 'Tareekh'); const i = dl.querySelector('input'); if (i && i.value !== (c.day || '')) i.value = c.day || ''; }
+  el.querySelectorAll('[data-agr-time]').forEach(b => { const v = b.dataset.agrTime.split('|')[1]; if (!v) b.hidden = !c.time; else b.classList.toggle('on', c.time === v); });
+  const ct = c.time && !REM_T.includes(c.time), tl = el.querySelector('[data-agr-tl]');
+  if (tl) { tl.classList.toggle('on', !!ct); tl.querySelector('span').textContent = '⏰ ' + (ct ? t12(c.time) : 'Apna'); const i = tl.querySelector('input'); if (i && i.value !== (c.time || '')) i.value = c.time || ''; }
+  const nr = el.querySelector('[data-agr-nr]'); if (nr) { nr.hidden = !c.day; const cur = c.nag === undefined ? 60 : c.nag; nr.querySelectorAll('[data-agr-nag]').forEach(b => b.classList.toggle('on', Number(b.dataset.agrNag.split('|')[1]) === cur)); }
+  const pr = document.getElementById('agrp-' + id); if (pr && pr.dataset.k !== remPk(c)) { pr.innerHTML = remPartyHTML(id, c); pr.dataset.k = remPk(c); }
+  const sm = document.getElementById('agrs-' + id); if (sm) { sm.className = 'agr-sum' + (remWarn(c) ? ' warn' : ''); sm.innerHTML = remSumHTML(id, c); }
+  const ok = el.querySelector('[data-ag-ok]'); if (ok && !c.busy) ok.textContent = c.day ? '✓ Reminder lagao' : '✓ Note save karo';
+}
+function remParty(c, name) { const f = findAccounts({ query: name }); if (f.decision === 'pakka') { const p = H.party(f.account_id); if (p) { c.p = p; c.cands = null; return; } } if (f.decision === 'poochna' && f.candidates?.length) c.cands = f.candidates.slice(0, 4).map(x => ({ account_id: x.account_id, name: x.name })); }
+function remOpen(pre = {}, say = '') {
+  const id = 'pa' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const c = { type: 'rem', text: String(pre.text || '').slice(0, 1000), day: pre.day || '', time: pre.time || '', nag: pre.nag, p: pre.p || null, cands: pre.cands || null, pics: pre.pics || [], items: [] };
+  if (c.day && c.day < H.today()) c.day = '';
+  if (c.time && !c.day) c.day = remAutoDay(c.time);
+  pending.set(id, c); toShow.push({ kind: 'card', id });
+  quickReply(say || '🔔 Likh dein kya yaad dilana hai, phir **📅 din** aur **⏰ waqt** chunein — ✓ dabate hi lag jayega.', 'app ne 🔔 reminder ka card dikhaya (abhi save nahi)');
+  if (!c.text) setTimeout(() => document.querySelector(`[data-agr-tx="${id}"]`)?.focus(), 80);
+  return id;
+}
+function remFromText(t) {
+  const r = remParse(t, { today: H.today() }), pre = { text: r.text, day: r.day, time: r.time, nag: r.nag };
+  if (r.name) remParty(pre, r.name);
+  const tmp = { ...pre, day: pre.day || (pre.time ? remAutoDay(pre.time) : '') };
+  remOpen(pre, r.text ? `🔔 Samajh gaya — **${remSumText(tmp)}**${pre.cands ? ' · kaun sa khata? card mein chunein' : ''}. Theek ho to ✓ dabayein (din / waqt chips se badal sakte hain).` : '🔔 Kya yaad dilana hai? Card mein likh dein — din / waqt chun kar ✓.');
+}
+function remChip() { addMsg('me', '🔔 Naya reminder'); remOpen({}, '🔔 Likh dein (ya ⌨️ / 🎤 bolein) kya yaad dilana hai, phir **📅 din** aur **⏰ waqt** chunein — ✓ dabate hi lag jayega. Seedha bhi likh sakte hain: **"kal shaam 6 baje Waqas ko payment"**.'); }
+function remListHTML() {
+  const td = H.today(), all = H.noteFind ? H.noteFind('', { open: true, n: 20 }) || [] : [];
+  const due = all.filter(x => x.reminder && x.reminder <= td).sort((a, b) => (a.reminder + (a.time || '99')).localeCompare(b.reminder + (b.time || '99')));
+  const next = all.filter(x => x.reminder > td).slice(0, 3), late = due.filter(x => x.reminder < td).length;
+  let dueAcc = 0; try { dueAcc = (T.due_list({ only_overdue: false }).list || []).filter(x => x.due_date <= td).length; } catch {}
+  const row = (x, act) => `<div class="agr-li${x.reminder < td ? ' late' : ''}" id="agrl-${esc(x.id)}"><span class="agr-lt"><b>${esc(x.text || '—')}</b><small>${x.reminder < td ? '⏰ ' + esc(remDayLab(x.reminder)) : esc(remDayLab(x.reminder))}${x.time ? ' · ' + esc(t12(x.time)) : ''}${x.account ? ' · 👤 ' + esc(x.account) : ''}${x.repeat_minutes ? ' · 🔁' : ''}</small></span>${act ? `<span class="agr-la"><button type="button" class="agr-c" data-agr-kal="${esc(x.id)}">⏭ Kal</button><button type="button" class="agr-c ok" data-agr-done="${esc(x.id)}">✓ Ho gaya</button></span>` : ''}</div>`;
+  return `<div class="ag-card agr-list"><small class="ag-cap">🔔 Aaj ke reminder · ${due.length}${late ? ` · ⏰ ${late} guzre hue` : ''}</small>${due.length ? due.map(x => row(x, true)).join('') : '<div class="ag-cf-st ok">✓ Aaj koi reminder baqi nahi</div>'}${next.length ? `<small class="ag-cap">Aane wale</small>${next.map(x => row(x, false)).join('')}` : ''}<div class="agr-lacts">${remOn() ? '<button type="button" class="agr-c" data-ag-rem>🔔 Naya reminder</button>' : ''}${dueAcc ? `<button type="button" class="agr-c" data-ag-say="Kis ki due date guzar gayi?">📒 ${dueAcc} khaton ki due date</button>` : ''}<button type="button" class="agr-c" data-ag-route="notes">📋 Sab reminder</button></div></div>`;
+}
+function remList() {
+  if (!H.noteFind) { quickReply('Notes ke liye app update karein.'); return; }
+  addRaw(remListHTML());
+  const T = H.today(), all = H.noteFind('', { open: true, n: 20 }) || [], due = all.filter(x => x.reminder && x.reminder <= T), late = due.filter(x => x.reminder < T).length;
+  quickReply(due.length ? `Aaj ke **${due.length}** reminder${late ? ` (⏰ ${late} guzre hue)` : ''} — kaam ho gaya ho to **✓ Ho gaya**, warna **⏭ Kal**.` : '✓ Aaj koi reminder baqi nahi.', `app ne aaj ke ${due.length} reminder dikhaye`);
+}
+function remIntent(n) {
+  if (/\b(kholo|kholen|kholain|khol do|kholdo|open)$/.test(n) || /\b(dhoond|dhund|search|talash|find)\w*/.test(n)) return '';   // "reminder kholo" = screen · "notes dhoondo" = AI
+  if (/^(naya |new )?(reminder|note|alarm)( lagao| laga do| banao| bana do)?$/.test(n)) return 'make';
+  if (/\b(?:yaa?d|yad)\s+(?:dila|kara|karwa|rakh)\w*|\bremind\s+(?:me|karo|kar\s*do|karna|kar\s*dena)\b|\balarm\b|\breminder\s+(?:laga|bana|set|lag|daal|dal|kar)\w*|\bnote\s+(?:bana|likh|laga|kar|daal|dal)\w*|^(?:note|reminder)\s*[:：-]/.test(n)) return 'make';
+  if (/\b(reminders?|remainders?|notes?)\b/.test(n) && (/\b(aaj|aj|sab|kaun|kon|konse|kaunse|kitne|kitni|kya|baqi|dikhao|batao|list)\b/.test(n) || /^(reminders?|aaj ke reminders?|mere reminders?)$/.test(n))) return 'list';
+  return '';
+}
 const NOTEW = /\b(note|notes|yaad|yad|reminder|remind|likh)\b/;   // v2.103.59
 // v2.103.59: 📝 photo + "kal ke liye note" → note card: din (kal/parson/aaj/tareekh), waqt (10 baje / 10:30), text = jo likha; tasveer 2 tak (notes.js jaisa 1280px jpeg)
-async function noteFromPhotos(t, files) {
+async function noteFromPhotos(t, files) {   // v2.106.0: wahi 🔔 card (din / waqt chips) — tasveer 2 tak
   if (!H.noteSave) throw Error('Notes ke liye app update karein');
-  const q = normQ(t), add = (d, n) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); }, today = H.today();
-  let day = /\b(parson|parsun)\b/.test(q) ? add(today, 2) : /\b(kal|kl|tomorrow)\b/.test(q) ? add(today, 1) : /\b(aaj|aj|today)\b/.test(q) ? today : '';
-  const dm = q.match(/\b(\d{4}-\d{2}-\d{2})\b/); if (dm && dm[1] >= today) day = dm[1];
-  const tm = q.match(/\b(\d{1,2})(?::(\d{2}))?\s*(baje|bje|am|pm)\b/); let time = ''; if (tm) { let h = Number(tm[1]) % 24; if (tm[3] === 'pm' && h < 12) h += 12; if (tm[3] !== 'am' && tm[3] !== 'pm' && h >= 1 && h <= 7) h += 12; time = String(h).padStart(2, '0') + ':' + (tm[2] || '00'); }
-  const text = String(t || '').trim().replace(/\b(es|is|iss|us) ka (note|reminder) bana ?do\b/i, '').replace(/\bnote bana ?do\b/i, '').replace(/\s+/g, ' ').trim() || 'Tasveer wala note';
   const pics = []; for (const f of files.slice(0, 2)) { try { const im = await shrinkForAI(f, 1280, 0.7); pics.push('data:' + im.mime + ';base64,' + im.data); } catch {} }
-  const id = 'pa' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-  pending.set(id, { type: 'note', text, day, time, p: null, items: [], nag: 0, pics }); toShow.push({ kind: 'card', id }); flushShow();
-  quickReply(`📝 Note ka card bana diya${day ? ' · 🔔 ' + day : ' (reminder ka din nahi likha — "kal" / "parson" likhein)'} — ✓ dabayein.`); return true;
+  const r = remParse(String(t || '').replace(/\b(es|is|iss|us) ka (note|reminder) bana ?do\b/i, ' '), { today: H.today() });
+  const pre = { text: r.text || 'Tasveer wala note', day: r.day, time: r.time, nag: r.nag, pics }; if (r.name) remParty(pre, r.name);
+  const tmp = { ...pre, day: pre.day || (pre.time ? remAutoDay(pre.time) : '') };
+  remOpen(pre, `📝 Tasveer ka note${tmp.day ? ' · 🔔 **' + remSumText(tmp) + '**' : ' — reminder ka din chunein'} — ✓ dabayein.`); return true;
 }
 const BILLW = /\b(bill|purchase|khareed|kharid|maal|invoice|supplier|bil)\b/, KHARW = /\b(kharcha|kharch|expense|bijli|kiraya|parchi|receipt|petrol|diesel|chai|khana)\b/;
 async function classify(files, cfg) {   // ek chhota AI sawal: bill hai ya kharcha — kharcha ho to usi mein parh bhi lo (doosra chakkar nahi)
@@ -896,9 +1078,9 @@ async function askPhotos(t, files) {
   const urls = files.map(f => f._u || (f._u = thumbUrl(f)));
   addRaw(`<div class="ag-msg me"><div><div class="ag-thumbs">${urls.map(u => `<img src="${esc(u)}" alt="photo">`).join('')}</div>${t ? esc(t) : ''}</div></div>`);
   try {
+    if (NOTEW.test(normQ(t))) return await noteFromPhotos(t, files);   // v2.103.59: "note bana do / yaad dilana" + photo → seedha card (AI nahi, foran) · v2.106.0: AI key ke baghair bhi
     const cfg = await H.loadAiCfg(); if (!cfg?.key) throw Error('AI key nahi lagi — malik ⋮ Settings mein "AI key" save kare.');
-    let type = NOTEW.test(normQ(t)) ? 'note' : BILLW.test(normQ(t)) ? 'bill' : KHARW.test(normQ(t)) ? 'kharcha' : '', info = null;
-    if (type === 'note') return await noteFromPhotos(t, files);   // v2.103.59: "note bana do / yaad dilana" + photo → seedha card (AI nahi, foran)
+    let type = BILLW.test(normQ(t)) ? 'bill' : KHARW.test(normQ(t)) ? 'kharcha' : '', info = null;
     if (type !== 'bill') { setTyping('📷 Photo pehchan raha hoon…'); info = await classify(files, cfg); if (!type) type = info.type; }
     if (type === 'bill') return await billFromPhotos(files);
     if (type === 'kharcha') return kharchaFromPhoto(files, urls, info || {});
@@ -955,6 +1137,7 @@ function kharchaFromPhoto(files, urls, info) {
 
 // ---------------- SCREEN ----------------
 function showTool(name, args, res) {   // tool ke natije ka card (AI ke jawab se pehle)
+  if (name === 'reminder_aaj' && res && !res.error) { toShow.push({ kind: 'html', html: remListHTML() }); return; }   // v2.106.0
   if (!res || res.error) { if (res?.error && /^propose/.test(name)) toShow.push({ kind: 'html', html: `<div class="ag-card ag-warn">⚠️ ${esc(res.error)}${res.mojood_kharcha_accounts ? '<div class="ag-chips">' + res.mojood_kharcha_accounts.map(n => `<span class="ag-chip">${esc(n)}</span>`).join('') + '</div>' : ''}${res.godams ? '<div class="ag-chips">' + res.godams.map(n => `<span class="ag-chip">🏬 ${esc(n)}</span>`).join('') + '</div>' : ''}${res.kam ? '<div class="ag-rows">' + res.kam.map(k => `<div class="ag-row"><span><b>${esc(k.item)}</b><small>Chahiye ${esc(k.chahiye)}</small></span><strong class="bad">${esc(k.mojood)}</strong></div>`).join('') + '</div>' : ''}</div>` }); return; }
   if (name === 'find_item') {
     if (res.decision === 'poochna' && res.candidates?.length) toShow.push({ kind: 'html', html: itemChips(res.candidates) });
@@ -1014,6 +1197,7 @@ function itemCard(it) {
 const maalRows = L => '<div class="ag-rows">' + L.map(l => `<div class="ag-row"><span><b>${esc(l.name)}</b><small>${esc(l.qty)} × ${rs(l.rate)}/${esc(l.rate_per || '')}</small></span><strong>${rs(l.total)}</strong></div>`).join('') + '</div>';
 function cardHTML(id) {
   const c = pending.get(id); if (!c) return '';
+  if (c.type === 'rem') return remCardHTML(id, c);   // v2.106.0: 🔔
   const bal = (lab, b0, b1) => `<div class="ag-ba"><small>${esc(lab)}</small><span>${money(Math.abs(b0))} <i>${sideTxt(b0)}</i></span><em>→</em><span><b>${money(Math.abs(b1))}</b> <i>${sideTxt(b1)}</i></span></div>`;
   let head = '', body = '';
   if (c.type === 'entry') { head = KNAME[c.k]; body = `${c.maal ? maalRows(c.maal.lines) : ''}${c.thumbs?.length ? `<div class="ag-thumbs">${c.thumbs.map(u => `<img src="${esc(u)}" alt="parchi">`).join('')}</div>` : ''}<div class="ag-cf-who">${c.p ? esc(c.p.name) : c.exp ? '🧾 ' + esc(c.exp) : 'Cash sale (bina account)'}</div>${c.p ? bal('Baqaya', c.before, c.after) : ''}${c.k === 'collection' || c.k === 'payment' ? `<button type="button" class="ag-tog ${c.cash ? 'on' : ''}" data-ag-tog="${id}">${c.cash ? '💵 Galle ka cash — Daily Sale mein shamil' : '🏦 Bank / online — Daily Sale mein NAHI'}</button>` : ''}`; }
@@ -1065,6 +1249,16 @@ function sheet() {
     <small class="ag-foot">AI ghalti kar sakta hai — har entry card par ✓ se pehle naam aur raqam dekh lein.</small></div></div>`);
   el = $('agSheet');
   el.addEventListener('click', onClick);
+  el.addEventListener('input', e => { const t = e.target;   // v2.106.0: 🔔 card ki likhai / khata dhoondo
+    if (t.matches?.('[data-agr-tx]')) { const c = pending.get(t.dataset.agrTx); if (c && !c.done) c.text = t.value; return; }
+    if (t.matches?.('[data-agr-pq]')) { const id = t.dataset.agrPq, box = document.getElementById('agrpl-' + id), q = t.value.trim(); if (!box) return;
+      const f = q.length >= 2 ? findAccounts({ query: q }) : null; box.innerHTML = (f?.candidates || []).slice(0, 5).map(x => `<button type="button" class="agr-c" data-agr-pp="${id}|${esc(x.account_id)}">👤 ${esc(x.name)}</button>`).join(''); } });
+  el.addEventListener('change', e => { const t = e.target, id = t.dataset?.agrDayin || t.dataset?.agrTimein || t.dataset?.agrTx; if (!id) return; const c = pending.get(id); if (!c || c.type !== 'rem' || c.done || c.no) return;
+    if (t.dataset.agrDayin != null) { const v = t.value || ''; if (v && v < H.today()) { H.notice('Guzri tareekh nahi — aaj ya aage'); t.value = c.day || ''; return; } c.day = v; }
+    else if (t.dataset.agrTimein != null) { c.time = t.value || ''; if (c.time && !c.day) c.day = remAutoDay(c.time); }
+    else {   // likhai mein din / waqt / naam ho to khali khane khud bharo (likhai wahi rehti hai)
+      const r = remParse(t.value, { today: H.today() }); if (!c.day && r.day) c.day = r.day; if (!c.time && r.time) { c.time = r.time; if (!c.day) c.day = remAutoDay(c.time); } if (c.nag === undefined && r.nag !== undefined) c.nag = r.nag; if (!c.p && !c.cands && r.name) remParty(c, r.name); }
+    remSync(id); });
   $('agForm').addEventListener('submit', e => { e.preventDefault(); kbStop(); const i = $('agInput'); const v = i.value; i.value = ''; ask(v); });
   kbWire($('agInput'));
   for (const id of ['agCamIn', 'agGalIn']) $(id).addEventListener('change', e => { addFiles(e.target.files); e.target.value = ''; camChips(false); });
@@ -1080,7 +1274,7 @@ function suggFor() {   // har screen ke apne chips — [label, kind(say|fill|hin
     purchase: [['📷 Bill ki photo', 'pic', ''], ['🎤 Bol kar purchase', 'hint', 'purchase']],
     daily: [['📊 Aaj ka hisaab', 'say', 'Aaj ka hisaab'], ['📊 Kal ka hisaab', 'say', 'Kal ka hisaab'], ['🧾 Aaj ki sale', 'say', 'Aaj ki sale']],
     due: [['⏰ Kis ki due guzar gayi?', 'say', 'Kis ki due date guzar gayi?'], ['💰 Sab se zyada lene', 'say', 'Sab se zyada kis se lene hain?']],
-    notes: [['📝 Naya reminder', 'fill', 'Kal yaad dilana: '], ['🔁 Har 15 min yaad', 'fill', 'Har 15 minute yaad dilana: '], ['🔔 Sab notes kal', 'fill', 'Saare khule notes kal subah 10 baje ke reminder par laga do'], ['🔍 Notes dhoondo', 'fill', 'Notes mein dhoondo: ']],
+    notes: [['🔁 Har 15 min yaad', 'fill', 'Har 15 minute yaad dilana: '], ['🔔 Sab notes kal', 'fill', 'Saare khule notes kal subah 10 baje ke reminder par laga do'], ['🔍 Notes dhoondo', 'fill', 'Notes mein dhoondo: ']],
     expenses: [['🧾 Kharcha likho', 'fill', 'Bijli ka kharcha '], ['📷 Kharche ki parchi', 'pic', '']],
     cash: [['📊 Aaj ka hisaab', 'say', 'Aaj ka hisaab'], ['💸 Cash bhejo', 'fill', 'Closing cash se  ko bhejo']],
   };
@@ -1121,7 +1315,7 @@ function kbOpen() {
 function paintSugg() {
   const box = $('agSugg'); if (!box) return;
   const L = suggFor(), cams = [...box.querySelectorAll('.ag-sg-cam')].map(x => x.outerHTML).join('');
-  box.innerHTML = cams + '<button type="button" class="ag-sg-kb" data-ag-kb>⌨️ Bolo</button>' + (L ? L.map(([lab, k, t]) => k === 'pic' ? `<button type="button" data-ag-pic>${esc(lab)}</button>` : `<button type="button" data-ag-${k === 'say' ? 'say' : k === 'fill' ? 'fill' : 'hint'}="${esc(t)}">${esc(lab)}</button>`).join('')
+  box.innerHTML = cams + '<button type="button" class="ag-sg-kb" data-ag-kb>⌨️ Bolo</button>' + (remOn() ? '<button type="button" class="ag-sg-rem" data-ag-rem>🔔 Reminder</button><button type="button" class="ag-sg-rem2" data-ag-remlist>📋 Aaj ke reminder</button>' : '') + (L ? L.map(([lab, k, t]) => k === 'pic' ? `<button type="button" data-ag-pic>${esc(lab)}</button>` : `<button type="button" data-ag-${k === 'say' ? 'say' : k === 'fill' ? 'fill' : 'hint'}="${esc(t)}">${esc(lab)}</button>`).join('')
     : SUGG.map(x => `<button type="button" data-ag-say="${esc(x.replace(/^\S+\s/, ''))}">${esc(x)}</button>`).join(''));
   box.scrollLeft = 0;
 }
@@ -1137,7 +1331,8 @@ export function openAgent(text, opt = {}) {
   { const c = scr(), p = c.partyId ? H.party(c.partyId) : null; $('agWho').textContent = who() + ' · ' + (p ? '📒 ' + p.name : c.view && c.view !== 'khata' ? '📱 ' + (SCREEN_NAME[c.view] || c.view) : (H.owner() ? 'poori ijazat' : 'aaj ki entries / transfer')); }
   paintSugg();
   if (!$('agMsgs').children.length) addMsg('ai', 'Assalam o alaikum! Main Noor Agent hoon. Baqaya, din ka hisaab, **stock / rate**, **aaj ki sale**, due dates poochein — ya bol kar kaam karwayein: entry, **rate badalna**, **purchase**, **godam transfer**, **note**, **hisaab**. Har kaam pehle card par dikhega, aap ✓ karein.');
-  if (opt.kb) kbOpen(); else if (opt.mic) listen(); else if (text) ask(text); else setTimeout(() => $('agInput')?.focus(), 60);
+  if (opt.rem && remOn() && !busy) remChip(); else if (opt.remlist && !busy) { addMsg('me', '📋 Aaj ke reminder'); remList(); }   // v2.106.0: 🔔
+  else if (opt.kb) kbOpen(); else if (opt.mic) listen(); else if (text) ask(text); else setTimeout(() => $('agInput')?.focus(), 60);
 }
 // v2.99.10: 🎤 GEMINI KHUD SUNTA HAI — malik: "awaz sahi nahi pehchanta, hum kuch bolte hain ye kuch samajhta hai".
 //   Wajah: phone ka awaz-system (ur-PK) Urdu harf likhta tha (khate Roman mein) aur naam ghalat. Ab: mic -> WAV (16k mono) -> Gemini
@@ -1296,6 +1491,26 @@ async function onClick(e) {
   if (d.agClose != null) return closeAgent();
   if (d.agClear != null) { history = []; notes = []; pending.clear(); $('agMsgs').innerHTML = ''; addMsg('ai', 'Nayi baat shuru — poochein.'); return; }
   if (d.agSay != null) return ask(d.agSay);
+  if (d.agRem != null) { if (busy) return; remChip(); return; }   // v2.106.0: 🔔 chip
+  if (d.agRemlist != null) { if (busy) return; addMsg('me', '📋 Aaj ke reminder'); remList(); return; }
+  if (d.agrDay || d.agrTime != null || d.agrNag || d.agrPp || d.agrPx || d.agrFix) {
+    const id = String(d.agrDay || d.agrTime || d.agrNag || d.agrPp || d.agrPx || d.agrFix).split('|')[0], c = pending.get(id); if (!c || c.type !== 'rem' || c.done || c.no || c.busy) return;
+    if (d.agrDay) { const v = d.agrDay.split('|')[1]; c.day = v === 'x' ? '' : remShift(H.today(), Number(v)); }
+    else if (d.agrTime != null) { c.time = d.agrTime.split('|')[1] || ''; if (c.time && !c.day) c.day = remAutoDay(c.time); }
+    else if (d.agrNag) c.nag = Number(d.agrNag.split('|')[1]);
+    else if (d.agrPp) { const p = H.party(d.agrPp.split('|')[1]); if (p) { c.p = p; c.cands = null; try { notePartyPick(p.id); } catch {} } }
+    else if (d.agrPx) { c.p = null; c.cands = null; }
+    else if (d.agrFix) c.day = remShift(H.today(), 1);
+    remSync(id); return;
+  }
+  if (d.agrDone || d.agrKal) {   // 📋 aaj ke reminder: ✓ ho gaya / ⏭ kal
+    const nid = d.agrDone || d.agrKal; b.disabled = true;
+    try { const r = await H.noteBulk([nid], d.agrDone ? { done: true } : { day: remShift(H.today(), 1) }); if (!r?.ok) throw Error(r?.fail?.[0] || 'Nahi hua');
+      const row = document.getElementById('agrl-' + nid); if (row) { row.classList.add('ok'); const a = row.querySelector('.agr-la'); if (a) a.innerHTML = d.agrDone ? '<i>✓ Ho gaya</i>' : '<i>⏭ Kal par</i>'; }
+      notes.push(d.agrDone ? 'user ne ek reminder "ho gaya" kiya' : 'user ne ek reminder kal par kiya'); }
+    catch (er) { b.disabled = false; H.notice('⚠️ ' + (er?.message || er)); }
+    return;
+  }
   if (d.agPic != null) { camChips(); return; }
   if (d.agCam != null) { $('agCamIn').click(); return; }
   if (d.agGal != null) { $('agGalIn').click(); return; }
@@ -1333,7 +1548,7 @@ async function onClick(e) {
     const c = pending.get(d.agOk); if (!c || c.done || c.no || c.busy) return;
     if (c.type === 'act' && c.ask && !confirm('⚠️ Pakka? ' + c.sum)) return;   // v2.103.47: khatarnak = doosra ✓
     c.busy = true; b.disabled = true; b.textContent = ['rate', 'newitem', 'gtransfer'].includes(c.type) || c.type === 'act' ? '⏳ Chal raha hai…' : '⏳ Save…';
-    try { await execute(d.agOk); notes.push('user ne ✓ dabaya — SAVE HO GAYA: ' + c.done); H.notice('✓ ' + c.done); H.render(); }
+    try { await execute(d.agOk); notes.push('user ne ✓ dabaya — SAVE HO GAYA: ' + c.done); H.notice('✓ ' + c.done); H.render(); if (c.type === 'rem' && c.say) addMsg('ai', c.say); }
     catch (err) { H.notice('⚠️ ' + (err?.message || err)); b.disabled = false; b.textContent = '✓ Haan, karo'; }
     finally { c.busy = false; const el = document.getElementById('agc-' + d.agOk); if (el && (c.done || c.type === 'batch')) el.outerHTML = cardHTML(d.agOk); }
   }
@@ -1347,14 +1562,15 @@ export function paintAgentBar(on) {
   bar.dataset.ready = '1';
   bar.innerHTML = `<button type="button" class="ag-bar-main" data-agb-open><span class="ag-orb">🤖</span><span class="ag-bar-txt"><b>Noor Agent</b><small>Poochein ya hukum dein — "Bilal ka baqaya?" · "Aaj ki sale?"</small></span><span class="ag-bar-go">➤</span></button>
     <button type="button" class="ag-bar-mic" data-agb-mic aria-label="Bol kar poochein">🎤</button>
-    <div class="ag-bar-chips"><button type="button" data-agb-say="Aaj ka hisaab">📊 Aaj ka hisaab</button><button type="button" data-agb-say="Kis ki due date guzar gayi?">⏰ Due</button><button type="button" data-agb-say="Sab se zyada kis se lene hain?">💰 Lene</button><button type="button" data-agb-kb>⌨️ Bolo</button><button type="button" data-agb-say="Stock add karna hai">📦 Stock</button><button type="button" data-agb-say="Aaj ki sale">🧾 Sale</button><button type="button" data-agb-say="">➕ Entry likhwao</button></div>`;
+    <div class="ag-bar-chips"><button type="button" data-agb-say="Aaj ka hisaab">📊 Aaj ka hisaab</button><button type="button" data-agb-say="Kis ki due date guzar gayi?">⏰ Due</button><button type="button" data-agb-say="Sab se zyada kis se lene hain?">💰 Lene</button><button type="button" data-agb-kb>⌨️ Bolo</button><button type="button" data-agb-rem>🔔 Reminder</button><button type="button" data-agb-say="Stock add karna hai">📦 Stock</button><button type="button" data-agb-say="Aaj ki sale">🧾 Sale</button><button type="button" data-agb-say="">➕ Entry likhwao</button></div>`;
   bar.addEventListener('click', e => {
     const b = e.target.closest('button'); if (!b) return; const d = b.dataset;
     if (d.agbOpen != null) openAgent();
     else if (d.agbSay != null) openAgent(d.agbSay);
     else if (d.agbMic != null) openAgent('', { mic: true });
     else if (d.agbKb != null) openAgent('', { kb: true });
+    else if (d.agbRem != null) openAgent('', { rem: true });   // v2.106.0
   });
 }
 // test ke liye (app mein istemal nahi)
-export const _agentTest = { T, DECL, screenOf, suggFor, findAccounts, propose, execute, pending, ask, history: () => history, cardHTML, quick, parseAmount, addFiles, attach: () => attach, calcParse, godamOf, system: () => system() };
+export const _agentTest = { remParse, remIntent, T, DECL, screenOf, suggFor, findAccounts, propose, execute, pending, ask, history: () => history, cardHTML, quick, parseAmount, addFiles, attach: () => attach, calcParse, godamOf, system: () => system() };
