@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.109.0';
-import { liveLabelsHTML } from './barcode.js?v=2.109.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.110.0';
+import { liveLabelsHTML } from './barcode.js?v=2.110.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -169,10 +169,12 @@ function start(withCounts = true) {
       flags = list.find(r => r.id === '_flags')?.items || {};
       countOff = !!list.find(r => r.id === '_lock')?.off;
       bills = list.filter(r => String(r.id).startsWith('_bill-')).sort((a, b) => (b.doneAt || 0) - (a.doneAt || 0));
-      list.forEach(r => { if (!String(r.id).startsWith('_')) counts.set(r.id, r); });
+      list.forEach(r => { if (!String(r.id).startsWith('_') && !String(r.id).startsWith('pcwarn-')) counts.set(r.id, r); });
+      pcWarnAll = list.filter(r => String(r.id).startsWith('pcwarn-')); try { pcSeen(list); } catch {}   // v2.110.0: 📡 PC ka jawab
       soft();
       try { gmLive(); } catch {}   // v2.103.29: 🧮 stock milao live (doosre larke ki ginti)
-    }, () => {});
+    }, () => {}, pend => { pendCount = pend || new Set(); try { pcPaint(); } catch {} });   // v2.110.0: abhi sirf phone mein (server tak nahi)
+    if (!pcTimer) pcTimer = setInterval(() => { try { pcTick(); } catch {} }, 5000);
   }
 }
 
@@ -619,21 +621,113 @@ export function stockRozChip() {
 export async function stockRozOpen(k) {
   if (!cloud) return; start();
   if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  if (isOwner() && !k) { try { (await import('./roz.js?v=2.109.0')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
+  if (isOwner() && !k) { try { (await import('./roz.js?v=2.110.0')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
   const L = rozLocs().filter(rozCan);
   if (!rozCfg().on) { notice('📋 Roz ki ginti malik ne band rakhi hai'); return; }
   if (!L.length) { notice('🔒 Roz ki ginti ki ijazat nahi (malik: Settings → Mulazim → 📋 Roz ki ginti)'); return; }
   const go = x => { try { window.ntRecentOpen?.({ open: { kind: 'stock', screen: 'roz', k: x } }); } catch { rozEnter(x); } };
   if (k || L.length === 1) { go(k || L[0].k); return; }
-  try { (await import('./roz.js?v=2.109.0')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
+  try { (await import('./roz.js?v=2.110.0')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
 }
 // roz.js ke liye andar ka saman (sirf parhna + wahi kaam jo buttons karte hain)
 export function stockRozApi() {
   return { cloud, notice, esc, num, isOwner: () => isOwner(), can, sid: () => rozSid(), who: () => whoName(), day: dayStr, cfg: rozCfg, locs: rozLocs, doc: rozDoc, rawDoc: k => counts.get('roz-' + k) || null, mine: rozMine, gina: rozGina, pool: rozPool, pend: rozPend,
     items: itemsOf, names: () => brInfo().names, count: (b, id) => { const c = counts.get(countId(b, id)); return c && !c.del ? c : null; }, sys: (c, r) => sysOf(c, r), counted: countedPcs,
     bill: (r, c, b) => billOf(r, c, b), round: () => roundNow(), autoOn: () => autoOn, post: () => postReq, postQ: () => postQ, bills: () => bills, posted: k => postedMap.get(k) || null, trJobs: () => trList || [], notes: () => { try { return tcAll(); } catch { return []; } },
-    seeStock: () => seeStock(), loaded: () => loaded, hidden: r => isHidden(r), counts: () => counts, enter: k => stockRozOpen(k), branchName: b => branchName(b, brInfo().names), locked: () => countOff };
+    seeStock: () => seeStock(), loaded: () => loaded, hidden: r => isHidden(r), counts: () => counts, enter: k => stockRozOpen(k), branchName: b => branchName(b, brInfo().names), locked: () => countOff, pc: () => stockPcState() };
 }
+// ================= v2.110.0: 📡 PC KA JAWAB (malik: "har ginti ke saath PC ka jawab — na mile to app bataye: PC jawab nahi de raha / save nahi hua, malik se rabta karo") =================
+//   Save → ⏳ bhej rahe (sirf phone mein — Firestore hasPendingWrites) → ☁️ Save ✓ (server) → ✅ PC ✓ (post-farq ne us second ka POS stock likha: sysPosAt === at, ~20–30 s).
+//   15 s server tak nahi = ❌ "Save nahi hua — internet" (Firestore khud bhejta rehta, ginti zaya nahi) · 90 s PC ka ✓ nahi = ⚠️ "PC jawab nahi de raha" → larke ko upar
+//   laal patti + 📲 Malik ko batao (WhatsApp, likha hua paigham) + stockCount/pcwarn-<sid> (malik ki app ka chip, 10 min taaza). PC zinda (baad ki ginti ✓) magar ye item
+//   5 min se nahi = "PC ne ye item POS mein nahi pehchana". CAP stock.pcwarn (deny = shuru se chalu). Rules / PC script NAHI badle. AI NAHI.
+const PC_SEND = 15000, PC_WAIT = 90000, PC_ITEM = 5 * 60000, PC_FRESH = 10 * 60000;
+let pendCount = new Set(), pcOkSeen = 0, pcOkKeys = null, pcTimer = null, pcWarnAt = 0, pcWarnSig = '', pcWarnAll = [], pcWarnDocs = [], pcWarnStop = null, pcLastC = null, pcLastV = 0;
+const pcOn = () => isOwner() || can('stock.pcwarn');
+const pcMine = c => isOwner() || (!!whoName() && String(c?.byName || '') === whoName());
+const pcSafe = v => String(v || '').replace(/[^A-Za-z0-9_-]/g, '').slice(0, 60);
+const onStockScreen = () => !!document.querySelector('main')?.classList.contains('sk-screen');
+function pcSeen(list) {   // nayi ✅ (PC ne abhi pakki ki) = PC zinda — waqt yaad (pehli dafa sirf yaad, waqt nahi)
+  const keys = new Set(); for (const c of list) if (String(c.id).startsWith('c-') && sysSure(c)) keys.add(c.id + '@' + c.at);
+  if (pcOkKeys) for (const k of keys) if (!pcOkKeys.has(k)) { pcOkSeen = Date.now(); break; }
+  pcOkKeys = keys;
+}
+function pcLastOk() {   // is round mein PC ki aakhri pakki ginti ka waqt (counts badle tab dobara)
+  if (pcLastC === counts) return pcLastV;
+  let m = 0; const R = roundNow(); for (const [k, c] of counts) if (k.startsWith('c-') && c.round === R && sysSure(c)) m = Math.max(m, Number(c.at) || 0);
+  pcLastC = counts; pcLastV = m; return m;
+}
+function pcState(c, id, lastOk = pcLastOk()) {   // '' | send | nosave | wait | ok | down | item
+  if (!c || c.del || !c.at || c.round !== roundNow()) return '';
+  const age = Date.now() - Number(c.at); if (age > 12 * 3600e3) return '';
+  if (pendCount.has(id)) return age < PC_SEND ? 'send' : 'nosave';
+  if (sysSure(c)) return 'ok';
+  if (age < PC_WAIT) return 'wait';
+  if (lastOk > Number(c.at)) return age > PC_ITEM ? 'item' : 'wait';   // PC zinda — baad ki ginti pakki ho chuki
+  return Date.now() - pcOkSeen < 120000 ? 'wait' : 'down';   // abhi abhi PC ne kuch pakka kiya = chal raha, intezar
+}
+const PC_TXT = { send: ['⏳', 'bhej rahe…'], nosave: ['❌', 'Save nahi hua — internet check karein'], wait: ['☁️', 'Save ✓ · ⏳ PC…'], ok: ['✅', 'PC ✓'], down: ['⚠️', 'Save ✓ · PC jawab nahi de raha'], item: ['⚠️', 'PC ne ye item POS mein nahi pehchana — malik ko batayein'] };
+const pcTxt = s => s ? `${PC_TXT[s][0]} ${esc(PC_TXT[s][1])}` : '';
+function pcSpan(c, id) { const s = pcOn() ? pcState(c, id) : ''; return `<small class="pcst" data-pcst="${esc(id)}" data-st="${s}">${pcTxt(s)}</small>`; }
+function pcSum() {   // meri (malik = sab ki) is round ki gintiyon ka haal
+  const out = { send: [], nosave: [], wait: [], ok: [], down: [], item: [] }; if (!loaded || !pcOn()) return out;
+  const R = roundNow(), lastOk = pcLastOk();
+  for (const [k, c] of counts) { if (!k.startsWith('c-') || c.round !== R || !pcMine(c)) continue; const st = pcState(c, k, lastOk); if (out[st]) out[st].push(c); }
+  return out;
+}
+function pcWhere(L) { const nm = brInfo().names, b = [...new Set(L.map(c => Number(c.branch)))]; return b.map(x => branchName(x, nm)).join(' · '); }
+function pcWaUrl(L, since) {
+  const t = new Date(since).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return 'https://wa.me/?text=' + encodeURIComponent(`Malik, PC jawab nahi de raha ⚠️\n${whoName() || 'Mulazim'} — ${pcWhere(L)} ki ginti: ${L.length} items PC ne pakke nahi kiye (${t} se).\nPC / KHATA-DOCTOR check karein.`);
+}
+function pcBannerInner(S = pcSum()) {
+  let h = '';
+  if (S.nosave.length) h += `<div class="pc-warn ns"><b>❌ ${num(S.nosave.length)} ginti abhi server tak nahi pohanchi</b><span>Internet check karein — app khud bhejti rahegi, ginti zaya nahi hogi.</span></div>`;
+  if (S.down.length) { const since = Math.min(...S.down.map(c => Number(c.at))), m = Math.max(1, Math.round((Date.now() - since) / 60000));
+    h += `<div class="pc-warn dn"><b>⚠️ PC jawab nahi de raha</b><span>${num(S.down.length)} ginti PC ne pakki nahi ki (${num(m)} min se). Ginti mehfooz hai — PC on hote hi khud pakki ho jayegi.${isOwner() ? ' PC / KHATA-DOCTOR dekhein.' : ' <b>Malik se rabta karein.</b>'}</span>${isOwner() ? '' : `<a class="pc-wa" href="${esc(pcWaUrl(S.down, since))}" target="_blank" rel="noopener">📲 Malik ko batao</a>`}</div>`; }
+  return h;
+}
+const pcSig = S => `${S.nosave.length}|${S.down.length}|${S.down.length ? Math.round((Date.now() - Math.min(...S.down.map(c => Number(c.at)))) / 60000) : 0}`;
+function pcBannerHTML() { const S = pcSum(); return `<div id="pcWarn" data-sig="${pcSig(S)}">${pcBannerInner(S)}</div>`; }
+function pcPaint() {   // sirf chhote status + patti badlo (list dobara nahi — khane / keyboard wahi)
+  if (!onStockScreen()) return;
+  const lastOk = pcLastOk(), on = pcOn();
+  document.querySelectorAll('#list [data-pcst]').forEach(el => { const id = el.dataset.pcst, s = on ? pcState(counts.get(id), id, lastOk) : ''; if ((el.dataset.st || '') !== s) { el.dataset.st = s; el.innerHTML = pcTxt(s); } });
+  const w = $('pcWarn'); if (w) { const S = pcSum(), g = pcSig(S); if (w.dataset.sig !== g) { w.dataset.sig = g; w.innerHTML = pcBannerInner(S); } }
+}
+let pcWas = { down: 0, nosave: 0 }, pcChipT = '';
+function pcTick() {
+  if (!cloud) return;
+  if (isOwner()) { const t = stockPcChip()?.t || ''; if (t !== pcChipT) { pcChipT = t; try { window.dispatchEvent(new Event('sam-hb')); } catch {} } }   // malik ki chip badli (ya purani hui) = upar dobara
+  if (!loaded) return;
+  pcPaint();
+  if (onStockScreen() && pcOn()) {   // naya masla = ek dafa neeche notice (larka list mein neeche ho to bhi pata chale)
+    const S0 = pcSum(), d = S0.down.length, n = S0.nosave.length;
+    if (d && !pcWas.down) notice(`⚠️ PC jawab nahi de raha — ${num(d)} ginti pakki nahi.${isOwner() ? ' PC / KHATA-DOCTOR dekhein.' : ' Upar "📲 Malik ko batao" dabayein.'}`);
+    else if (n && !pcWas.nosave) notice(`❌ ${num(n)} ginti server tak nahi pohanchi — internet check karein`);
+    pcWas = { down: d, nosave: n };
+  }
+  if (isOwner() || !pcOn() || !cloud.setPcWarn) return;
+  const sid = rozSid(); if (!sid) return;
+  const S = pcSum(), self = pcWarnAll.find(d => d.id === 'pcwarn-' + pcSafe(sid));
+  if (S.down.length) { const since = Math.min(...S.down.map(c => Number(c.at))), g = S.down.length + '|' + since;
+    if (g !== pcWarnSig || Date.now() - pcWarnAt > 120000) { pcWarnSig = g; pcWarnAt = Date.now(); cloud.setPcWarn(sid, { name: whoName(), where: pcWhere(S.down), n: S.down.length, since }).catch(() => {}); } }
+  else if (pcWarnSig || self) { pcWarnSig = ''; pcWarnAt = 0; cloud.setPcWarn(sid, null).catch(() => {}); }   // theek ho gaya = malik ki chip se hata
+}
+// 🏷 malik ki upar ki chip — Stock khula ho to apna hisaab, warna larkon ke pcwarn docs (sirf in ka chhota listener)
+export function stockPcChip() {
+  if (!cloud || !isOwner()) return null;
+  if (!pcWarnStop && cloud.listenPcWarn) { pcWarnStop = cloud.listenPcWarn(l => { pcWarnDocs = Array.isArray(l) ? l : []; try { window.dispatchEvent(new Event('sam-hb')); } catch {} }); if (!pcTimer) pcTimer = setInterval(() => { try { pcTick(); } catch {} }, 5000); }
+  const T = Date.now(), W = [...pcWarnDocs, ...pcWarnAll].filter((d, i, a) => a.findIndex(x => x.id === d.id) === i && Number(d.n) > 0 && T - (Number(d.at) || 0) < PC_FRESH);
+  const S = loaded ? pcSum() : null, n = Math.max(S ? S.down.length : 0, W.reduce((t, d) => t + (Number(d.n) || 0), 0));   // apna hisaab ya larkon ki khabar — jo zyada
+  if (!n && !(S && S.nosave.length)) return null;
+  const who = [...new Set(W.map(d => String(d.name || '').trim()).filter(Boolean))].slice(0, 3).join(', ');
+  return n ? { t: `⚠️ PC jawab nahi de raha · ${num(n)}`, cls: 'bad', n: `PC jawab nahi de raha — ${num(n)} ginti pakki nahi${who ? ' (' + who + ')' : ''}` }
+    : { t: `❌ ${num(S.nosave.length)} ginti save nahi`, cls: 'bad', n: 'kuch ginti abhi server tak nahi pohanchi (internet)' };
+}
+export function stockPcState() { const S = pcSum(), T = Date.now();
+  return { down: S.down.length, nosave: S.nosave.length, wait: S.wait.length + S.send.length, ok: S.ok.length, item: S.item.map(c => String(c.name || '')).slice(0, 20),
+    warns: [...pcWarnDocs, ...pcWarnAll].filter((d, i, a) => a.findIndex(x => x.id === d.id) === i && Number(d.n) > 0 && T - (Number(d.at) || 0) < PC_FRESH).map(d => ({ naam: d.name, jagah: d.where, ginti: d.n, kab_se: new Date(Number(d.since) || 0).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) })) }; }
 function captureTyped() {
   const keep = new Map();
   const lst = $('list');
@@ -965,6 +1059,7 @@ function summaryHTML(branches, pick, items, meta, names, canJama = false) {
       <div class="sk-srow"><label class="sk-sbox"><span>🔍</span><input type="search" data-sk-q="1" placeholder="Naam ya barcode…" value="${esc(q)}" autocomplete="off"></label>
         <button type="button" class="sk-ico go" data-stock-scan="1" aria-label="Scan">${camMissing() ? '🔫' : '📷'}</button><button type="button" class="sk-ico" data-stock-mic="1" aria-label="Awaz">🎤</button></div>
       ${gd}
+      ${pcBannerHTML()}
     </div>
     <div class="sk-body">
       <small class="sk-meta">${seeStock() ? 'kul ' + num(totalPcs) + ' pcs' : num(shownCount) + ' items'}${stamp ? ' · aakhri tabdeeli ' + esc(since(stamp)) : ''}</small>${liveChip()}
@@ -2370,7 +2465,8 @@ function countHTML(r) {
     ${seeStock() ? `<button type="button" class="count-tick" data-count-tick="${esc(r.id)}" title="Jitna system mein hai utna hi maal hai">✓ Tick</button>` : ''}
     <div class="count-live" data-count-live="${esc(r.id)}"></div>
     ${c && !seeStock() ? `<small style="align-self:center">✓ Gina ${num(countedPcs(c))} ${esc(r.uName || 'Pcs')} · ${esc(stampText(c.at))}${c.byName ? ' · ' + esc(c.byName) : ''}${(c.history || []).length > 1 ? ' · ✏️ ' + c.history.length + ' dafa' : ''}</small>` : ''}
-    ${c && seeStock() ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Us waqt system ${num(sysOf(c, r))}${sysSure(c) ? ' ✓' : autoOn ? '' : ' (PC tasdeeq baqi)'} · Farq ${diff > 0 ? '+' : ''}${num(diff)}${
+    ${c ? pcSpan(c, countId(pickedBranch, r.id)) : ''}
+    ${c && seeStock() ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Us waqt system ${num(sysOf(c, r))}${sysSure(c) ? ' ✓' : autoOn || (pcOn() && pcState(c, countId(pickedBranch, r.id))) ? '' : ' (PC tasdeeq baqi)'} · Farq ${diff > 0 ? '+' : ''}${num(diff)}${
       r.prate ? ' · Rs ' + (diff > 0 ? '+' : '') + num(diff * r.prate) : ''}${(() => { const bi = billOf(r, c); return bi.k === 'done' ? ` · <b class="sk-ok">✓ ${esc(bi.no)}</b>` : bi.k === 'part' ? ` · <b class="sk-w">${esc(bi.no)} (${num(bi.q)}) · baqi</b>` : bi.k === 'baqi' ? ' · <b class="sk-w">bill baqi</b>' : ''; })()}</small>` : ''}
   </div>
   ${flagHTML(r)}
@@ -4660,8 +4756,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.109.0';
-import { recentPush } from './recent.js?v=2.109.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.110.0';
+import { recentPush } from './recent.js?v=2.110.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)
@@ -4795,6 +4891,9 @@ const AG = (() => {
     { name: 'roz_ginti_haal', read: true, desc: '📋 Aaj ki roz ki ginti ka haal — har jagah kitne items liye / gine, kaun larka kitne, setting (on / items har larka).', params: O_({}),
       run() { start(); const C = rozCfg(); if (!C.on) return { haal: 'Roz ki ginti band hai (malik: Stock → 📋 Roz ki ginti → ✅ shuru)' };
         return { har_larka: C.n, jagah: rozLocs().map(L => { const d = rozDoc(L.k), by = d?.by || {}; return { jagah: L.name, larke: Object.entries(by).map(([sid, m]) => { const ids = (m?.ids || []).map(String); return { naam: m?.n || sid, liye: ids.length, gine: ids.filter(id => rozGina(L.b, id)).length }; }), kul_liye: Object.keys(d?.taken || {}).length }; }) }; } },
+    { name: 'pc_jawab_haal', read: true, desc: '📡 Ginti ka PC jawab — aaj ki kitni ginti PC ne pakki ki (✅), kitni intezar, kitni ruki (PC jawab nahi de raha), kitni server tak nahi pohanchi, kaun larka bata raha hai.', params: O_({}),
+      run() { start(); if (!loaded) return { haal: 'Stock abhi aa raha hai — 2 second baad dobara' }; const P = stockPcState();
+        return { pakki_PC: P.ok, intezar: P.wait, ruki_PC_jawab_nahi: P.down, save_nahi_hui: P.nosave, PC_ne_item_nahi_pehchana: P.item, larkon_ki_khabar: P.warns, haal: P.down ? '⚠️ PC jawab nahi de raha — PC / KHATA-DOCTOR dekhein' : P.nosave ? '❌ kuch ginti server tak nahi pohanchi (internet)' : '✓ PC jawab de raha hai' }; } },
   ];
 })();
 agentRegister(AG);

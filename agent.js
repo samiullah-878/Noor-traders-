@@ -6,8 +6,8 @@
 //     AI KHUD NAHI chunta — app buttons dikhati hai, user chunta hai. Sirf tools ke diye account_id hi istemal ho sakte hain.
 //   * Entry / transfer / closing cash bhejna / due date = propose_* -> CARD (account, raqam, pehle -> baad ka baqaya) -> user ✓ dabaye
 //     tabhi app ke apne save raaste se (wohi jo haath se: POS voucher + parchi bhi). Ijazat wohi jo app mein (mulazim sirf aaj).
-import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.109.0';
-import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.109.0';
+import { agentStep, askImage, shrinkForAI, hearAudio } from './ai-tally.js?v=2.110.0';
+import { fold, partyScore, notePartyPick, smartHit } from './smart-search.js?v=2.110.0';
 
 let H = null;                       // app.js ke hooks (agentSetup)
 export function agentSetup(hooks) { H = hooks; }
@@ -27,6 +27,7 @@ const EXT_KW = [
   [/mangwa|mangw|order|supplier|poora|pura|demand|khatam|kam hai|re.?order/, ['mangwao_list', 'mangwao_order', 'mangwao_poora', 'demand_list', 'demand_done']],
   [/stock|kitna|kitne|kitni|hai\b|milao|ginti|gino|gina/, ['stock_dekho', 'stock_milao', 'godam_list', 'packet_list', 'mangwao_list']],
   [/roz|ginti|gino|gina|tally|list/, ['roz_ginti_kholo', 'roz_ginti_haal']],   // v2.109.0: 📋 roz ki ginti
+  [/\bpc\b|jawab|save nahi|pakki|server/, ['pc_jawab_haal']],   // v2.110.0: 📡 ginti ka PC jawab
   [/label|barcode|chhap|print|tn\b|note/, ['label_print', 'note_dobara_print', 'transfer_list', 'rack_pending']],
   [/check|mila|farq|poora mil/, ['transfer_check_list', 'transfer_check_ok', 'transfer_list']],
   [/godam.?wise|har godam|godam ka haal|transfer.*godam|godam.*transfer|dashboard/, ['godam_transfer_haal', 'transfer_list', 'transfer_check_list']],   // v2.105.8: 🏬

@@ -68,6 +68,8 @@ function dashHTML() {
     <ol><li>Neeche <b>✅ Shuru karo</b></li><li>Settings → Mulazim → larke par <b>📋 Roz ki ginti — jagah</b> tick</li><li>Larka <b>Stock</b> kholay → <b>📋 Aaj ki list</b> dabaye = us ki apni alag list</li></ol>
     <button type="button" class="rz-big" data-rz-on="1">✅ Roz ki ginti shuru karo</button></div>`;
   const lockW = A.locked?.() ? `<div class="rz-lock"><span>🔴 <b>Counting band hai</b> — larke ginti save nahi kar sakte</span><button type="button" data-rz-unlock="1">🟢 Counting ON</button></div>` : '';
+  const P = A.pc?.(), pcN = P ? Math.max(P.down, P.warns.reduce((t, w) => t + (Number(w.ginti) || 0), 0)) : 0;   // v2.110.0: 📡 PC ka jawab
+  const pcW = pcN ? `<div class="rz-lock"><span>⚠️ <b>PC jawab nahi de raha</b> — ${A.num(pcN)} ginti PC ne pakki nahi ki${P.warns.length ? ' (' + E(P.warns.map(w => w.naam + ' · ' + w.jagah + ' · ' + w.kab_se + ' se').join(' / ')) + ')' : ''}. PC / KHATA-DOCTOR dekhein.</span></div>` : '';
   const F = farqRows(), q = A.postQ(), qBusy = q && (q.jobs || []).some(j => !j.st || j.st === 'sent') && Date.now() - (Number(q.at) || 0) < 3 * 3600e3;
   const fix = F.filter(x => ['jagah', 'kam', 'zyada'].includes(kindF(x))), fixRs = fix.reduce((t, x) => t + x.rs, 0);
   const locCard = L => { const t = locToday(L), cv = locCover(L), hs = locHist(L);
@@ -80,7 +82,7 @@ function dashHTML() {
     return `<div class="rz-g ${k}"><div class="rz-gh"><b>${t}</b><small>${E(s)}</small><i>${A.num(g.length)}</i></div>${g.slice(0, 40).map(x => `<div class="rz-fr"><span class="rz-fn"><b>${E(x.r.name)}</b><small>${E(x.L.name)} · gina ${A.num(A.counted(x.c))} · POS ${A.num(A.sys(x.c, x.r))}${x.c.byName ? ' · ' + E(x.c.byName) : ''}${x.round !== A.day() ? ' · ' + E(x.round) : ''}${x.pair ? ` · <b class="g">${E(x.pair.L.name)} ${x.pair.f > 0 ? '+' : ''}${A.num(x.pair.f)}</b>` : ''}${x.part ? ' · kuch bill ho chuka' : ''}</small></span>
       <span class="rz-fq ${x.f < 0 ? 'r' : 'g'}"><b>${x.f > 0 ? '+' : ''}${A.num(x.f)}</b><small>${x.rs ? rs(x.rs) : ''}</small></span>${k === 'big' ? `<span class="rz-fbt"><button type="button" class="rz-mini" data-rz-again="${E(x.L.k)}|${E(x.id)}">📋 Dobara gino</button><button type="button" class="rz-mini alt" data-rz-force="${E(x.L.k)}|${E(x.id)}">✓ Theek hai</button></span>` : ''}</div>`).join('')}${g.length > 40 ? `<small class="rz-mut">+${A.num(g.length - 40)} aur</small>` : ''}</div>`; };
   const qLine = q ? `<div class="rz-q${qBusy ? ' busy' : ''}">${(q.jobs || []).map(j => `<span class="${j.st === 'done' ? 'ok' : j.st === 'failed' ? 'bad' : j.st === 'nothing' ? 'mut' : ''}">${j.st === 'done' ? '✓' : j.st === 'failed' ? '❌' : j.st === 'nothing' ? '—' : '⏳'} ${E(A.branchName(j.branch))} ${j.kind === 'kam' ? 'kam' : 'zyada'} (${A.num((j.items || []).length)})${j.saleNo ? ' #' + E(j.saleNo) : j.returnNo ? ' R#' + E(j.returnNo) : ''}${j.error ? ' · ' + E(String(j.error).slice(0, 60)) : ''}</span>`).join('')}${qBusy ? '<small>PC ek ek kar ke bill + parchi bana raha hai…</small>' : ''}</div>` : '';
-  return `${set}${lockW}
+  return `${set}${lockW}${pcW}
     <div class="rz-locs">${Ls.map(locCard).join('') || '<p class="rz-say">Koi jagah ON nahi — ⋮ se jagah chunein.</p>'}</div>
     <div class="rz-farq"><div class="rz-fh"><b>⚖️ Farq — aaj + pichhle 7 din (bill baqi)</b><small>${A.num(F.length)} items</small></div>
       ${F.length ? KINDS.map(grp).join('') : '<p class="rz-say">✓ Koi farq baqi nahi.</p>'}

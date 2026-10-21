@@ -5390,3 +5390,24 @@ html.dk .rz-boy{background:rgba(255,255,255,.08);color:#E7EEFF}html.dk .rz-bar{b
 html.dk body #dialogBody :is(.rz-mn button,.rz-mini,.rz-pk,.rz-pat){background:rgba(255,255,255,.06)!important;color:#E7EEFF!important;border-color:rgba(255,255,255,.18)!important}
 html.dk body #dialogBody .rz-mn button.is-in{background:rgba(22,163,74,.2)!important;color:#A7F3C8!important;border-color:rgba(74,222,128,.55)!important}
 html.dk .rz-q{background:rgba(255,255,255,.05)}html.dk .rz-q span{background:rgba(255,255,255,.08);color:#E7EEFF}
+/* ================= v2.110.0: 📡 PC KA JAWAB — har ginti ka ⏳ / ☁️ / ✅ + "PC jawab nahi de raha" patti (chipki upar) ================= */
+html body #list .pcst{align-self:center;font-size:11.5px;font-weight:800;padding:2px 9px;border-radius:999px;background:#EEF2F8;color:#4b5568;white-space:normal;line-height:1.35}
+html body #list .pcst:empty,html body #list .pcst[data-st=""]{display:none}
+html body #list .pcst[data-st="send"]{background:#FFF4DB;color:#8A5300}
+html body #list .pcst[data-st="wait"]{background:#EAF1FF;color:#1E3768}
+html body #list .pcst[data-st="ok"]{background:#E6F6EC;color:#0F6A45}
+html body #list .pcst:is([data-st="nosave"],[data-st="down"]){background:#FDE2E2;color:#9B1C1C}
+html body #list .pcst[data-st="item"]{background:#FFF0DB;color:#8A3B00}
+html.dk body #list .pcst{background:rgba(255,255,255,.08);color:#C9D3E6}
+html.dk body #list .pcst[data-st="ok"]{background:rgba(22,163,74,.18);color:#A7F3C8}
+html.dk body #list .pcst[data-st="wait"]{background:rgba(59,130,246,.18);color:#BFD7FF}
+html.dk body #list .pcst[data-st="send"],html.dk body #list .pcst[data-st="item"]{background:rgba(245,158,11,.18);color:#FCD9A0}
+html.dk body #list .pcst:is([data-st="nosave"],[data-st="down"]){background:rgba(220,38,38,.2);color:#FECACA}
+#pcWarn{display:grid;gap:6px}#pcWarn:empty{display:none}
+html body .sk .pc-warn{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 10px;padding:9px 12px;border-radius:14px;background:#FFE4E4;color:#7A1414;border:1px solid #F3B4B4;box-shadow:0 6px 16px rgba(122,20,20,.18)}
+html body .sk .pc-warn.ns{background:#FFF1D6;color:#7A4300;border-color:#F2D29A}
+html body .sk .pc-warn b{grid-column:1;font-size:13.5px;font-weight:900;color:inherit!important}
+html body .sk .pc-warn>span{grid-column:1;font-size:12px;line-height:1.4;color:inherit!important;opacity:.95}
+html body .sk .pc-warn>span b{font-size:12px}
+html body .sk .pc-warn .pc-wa{grid-column:2;grid-row:1 / span 2;display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:999px;background:#128C4A!important;color:#fff!important;font-size:13px;font-weight:900;text-decoration:none!important;white-space:nowrap;box-shadow:0 4px 12px rgba(18,140,74,.3)}
+@media (max-width:420px){html body .sk .pc-warn{grid-template-columns:minmax(0,1fr)}html body .sk .pc-warn .pc-wa{grid-column:1;grid-row:auto;justify-self:start}}
