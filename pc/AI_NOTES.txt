@@ -3337,3 +3337,4 @@ purchase-post.js v4.4 (20 Oct 2026, manifest 2026-10-20.22): app v2.104.0 save p
 
 app v2.105.1 (21 Oct 2026): sirf phone layout (search / chips chhote, khirki side par na khiske) — PC scripts / manifest mein koi tabdeeli NAHI.
 app v2.105.2 (21 Oct 2026): sirf phone layout (khirki ka ⋮, party khata samne, neeche ki chips ⋮ mein) — PC scripts / manifest mein koi tabdeeli NAHI.
+app v2.105.3 (21 Oct 2026): Rack bharo 🔒 100% lock ab stockConfig.rackB (mulazim bhi) — PC rack-bharo.js isay NAHI parhta (sirf rackPk), koi PC tabdeeli nahi. Firestore RULES 2.68 (stockConfig: mulazim rackPk + rackB).
