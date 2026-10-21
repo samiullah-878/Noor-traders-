@@ -1,5 +1,5 @@
 // ============================================================
-//  auto-backup.js  v1.6 (2026-10-12: cancel note par notification nahi, edit = nayi check) · v1.5 (🚚 transfer note 10 min mein check na ho = notification) · v1.0 (2026-10-05) — ☁️ AUTO BACKUP: din mein 2 dafa (app ki Settings se waqt) poora khata JSON mein,
+//  auto-backup.js  v1.9 (2026-10-22: 📷 factory items ki HD tasveer PC + Google Drive "Factory Photos" mein · factory nuskhe (factory/cfg) + batch bhi backup mein) · v1.6 (2026-10-12: cancel note par notification nahi, edit = nayi check) · v1.5 (🚚 transfer note 10 min mein check na ho = notification) · v1.0 (2026-10-05) — ☁️ AUTO BACKUP: din mein 2 dafa (app ki Settings se waqt) poora khata JSON mein,
 //  C:\khata-sync\backups mein + Google Drive for Desktop ke folder ("Blue Khata Backup") mein — Drive khud upload karta hai.
 //
 //  App (Settings -> 💾 Backup -> ☁️ Auto backup) blueAccess/backupConfig likhti hai: {on, email, times:['14:00','22:00'], now}
@@ -22,7 +22,7 @@ const zlib = require('zlib');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
-const VER = '1.8';   // v1.8 (2026-10-17): 🔁 din wala har reminder KHUD har 1 ghanta (nag na likha = 60, 0 = band), 3 din ki hadd khatam (jab tak ✓ na ho), 4+ ek saath = ek khulasa notification · v1.7: v1.7 (2026-10-17): 🔔 MULAZIM ka reminder MALIK ke phone par bhi — waqt aate hi pehli khabar (malik + likhne wala), sirf mulazim ke likhe notes · v1.4 (2026-10-11): 🔁 notes.nag — baar baar yaad (15/30/60 min) jab tak ✓ na ho · v1.3 (2026-10-07): driver ki jeb se EXTRA kharcha (kind 'kharch', driver:true) khate se − (app v2.97.1) · v1.2 (2026-10-07): driver ka KHATA (app v2.96.1 jaisa) — phera + (kiraya − kharche − commission), liya −, advance + · v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
+const VER = '1.9';   // v1.9 (2026-10-22): 📷 factory tasveerein (factory/phIdx + ph_<id>_<v>_<i>) -> backups\Factory Photos + Drive "Blue Khata Backup\Factory Photos" (sirf nayi / badli; hatai = file bhi hate) · extra backup mein factory/cfg (nuskhe) + factoryBatches · v1.8 (2026-10-17): 🔁 din wala har reminder KHUD har 1 ghanta (nag na likha = 60, 0 = band), 3 din ki hadd khatam (jab tak ✓ na ho), 4+ ek saath = ek khulasa notification · v1.7: v1.7 (2026-10-17): 🔔 MULAZIM ka reminder MALIK ke phone par bhi — waqt aate hi pehli khabar (malik + likhne wala), sirf mulazim ke likhe notes · v1.4 (2026-10-11): 🔁 notes.nag — baar baar yaad (15/30/60 min) jab tak ✓ na ho · v1.3 (2026-10-07): driver ki jeb se EXTRA kharcha (kind 'kharch', driver:true) khate se − (app v2.97.1) · v1.2 (2026-10-07): driver ka KHATA (app v2.96.1 jaisa) — phera + (kiraya − kharche − commission), liya −, advance + · v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47832;
 const DIR = __dirname;
@@ -69,16 +69,42 @@ async function makeBackup(why) {
   for (const c of ['blueAccess', 'appSales', 'appPurchases', 'notes', 'demands', 'gallaCalls', 'purchaseSuppliers', 'purchaseOrders', 'posLedger', 'tokens', 'entryPhotos', 'partyPhotos']) {
     try { extra[c] = await readAll(c, c === 'blueAccess' ? (d => !/private|aiConfig|pushConfig/i.test(d.id)) : null); } catch (e) { extra[c] = { error: e.message }; }
   }
+  try { const fc = await base.collection('factory').doc('cfg').get(); extra.factoryCfg = fc.exists ? fc.data() : null; } catch (e) { extra.factoryCfg = { error: e.message }; }   // v1.9: 🏭 nuskhe (tasveer wale docs nahi — wo neeche alag)
+  try { extra.factoryBatches = await readAll('factoryBatches'); } catch (e) { extra.factoryBatches = { error: e.message }; }
   const f2 = `Noor-Traders-extra-${st}.json.gz`;
   fs.writeFileSync(path.join(out, f2), zlib.gzipSync(Buffer.from(JSON.stringify({ exportedAt: now.toISOString(), ...extra }))));
   prune(out);
   const size = fs.statSync(path.join(out, f1)).size;
   const drive = driveFolder(); let copied = '';
   if (drive) { try { fs.copyFileSync(path.join(out, f1), path.join(drive, f1)); fs.copyFileSync(path.join(out, f2), path.join(drive, f2)); prune(drive); copied = drive; } catch (e) { log('Drive folder mein copy nahi hua: ' + e.message); } }
-  const status = { at: Date.now(), ok: true, file: f1, size, count: records.length, drive: copied, pc: os.hostname(), ms: Date.now() - t0, why, ver: VER };
+  let ph = null; try { ph = await mirrorFacPhotos(drive); if (ph.n || ph.del) log(`📷 Factory tasveer: ${ph.n} nayi / badli · ${ph.del} hatai · kul ${ph.total}${drive ? ' (Drive bhi)' : ''}`); } catch (e) { log('📷 Factory tasveer copy masla: ' + e.message); }
+  const status = { at: Date.now(), ok: true, file: f1, size, count: records.length, drive: copied, pc: os.hostname(), ms: Date.now() - t0, why, ver: VER, ...(ph ? { photos: ph.total } : {}) };
   await base.collection('blueAccess').doc('backupStatus').set(status);
   log(`✅ Backup: ${f1} (${Math.round(size / 1024)} KB, ${records.length} records) ${copied ? '-> ' + copied : '(Drive folder NAHI mila)'} · ${Date.now() - t0} ms`);
   return status;
+}
+
+// ---- v1.9: 📷 FACTORY TASVEER — PC (backups\Factory Photos) + Google Drive (Blue Khata Backup\Factory Photos) — sirf nayi / badli ----
+const PH_STATE = path.join(DIR, 'backups', 'fac-photos.json');
+const phSafe = s => String(s || '').replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60) || 'item';
+async function mirrorFacPhotos(drive) {
+  const d = await base.collection('factory').doc('phIdx').get(), items = (d.exists ? d.data()?.items : null) || {};
+  let st = {}; try { st = JSON.parse(fs.readFileSync(PH_STATE, 'utf8')) || {}; } catch {}
+  const outs = [path.join(DIR, 'backups', 'Factory Photos'), ...(drive ? [path.join(drive, 'Factory Photos')] : [])];
+  for (const o of outs) fs.mkdirSync(o, { recursive: true });
+  let n = 0, del = 0;
+  for (const [id, m] of Object.entries(items)) {
+    if (!m || !m.v) continue; const file = `${phSafe(m.nm)} [${String(id).replace(/[^\w-]/g, '_')}].jpg`;
+    if (st[id] && st[id].v === m.v && st[id].file === file && outs.every(o => fs.existsSync(path.join(o, file)))) continue;
+    const parts = [];
+    for (let i = 0; i < (Number(m.n) || 1); i++) { const sn = await base.collection('factory').doc(`ph_${String(id).replace(/\//g, '_')}_${m.v}_${i}`).get(); const b = sn.exists ? sn.data().b : null; if (!b) throw Error('tasveer ka hissa nahi mila: ' + id); parts.push(Buffer.from(b)); }
+    const buf = Buffer.concat(parts);
+    for (const o of outs) { if (st[id] && st[id].file && st[id].file !== file) { try { fs.unlinkSync(path.join(o, st[id].file)); } catch {} } fs.writeFileSync(path.join(o, file), buf); }
+    st[id] = { v: m.v, file }; n++;
+  }
+  for (const id of Object.keys(st)) if (!items[id] || !items[id].v) { for (const o of outs) { try { fs.unlinkSync(path.join(o, st[id].file)); } catch {} } delete st[id]; del++; }
+  fs.writeFileSync(PH_STATE, JSON.stringify(st));
+  return { n, del, total: Object.keys(st).length };
 }
 
 // ---- v1.1: 🚚 GAARI NOTIFICATION (app band ho tab bhi — FCM, malik ke pushTokens par) ----
@@ -269,7 +295,7 @@ async function tick() {
   } finally { busy = false; if (doneKeys.size > 50) doneKeys = new Set([...doneKeys].slice(-20)); }
 }
 
-module.exports._t = { trDue, trList, trNotify, trSet: (p, j, c) => { trPos = p; trJobs = j; trChecks = c; trStops = []; }, trSent: () => trSent, nagDue, firstDue, nagNotify, nagNotes: () => nagNotes, nagSent: () => nagSent };
+module.exports._t = { mirrorFacPhotos, phSafe, trDue, trList, trNotify, trSet: (p, j, c) => { trPos = p; trJobs = j; trChecks = c; trStops = []; }, trSent: () => trSent, nagDue, firstDue, nagNotify, nagNotes: () => nagNotes, nagSent: () => nagSent };
 if (process.env.NT_TEST) {} else if (process.argv.includes('--now')) {
   makeBackup('--now test').then(s => { console.log(s); process.exit(0); }).catch(e => { console.error('Nahi hua:', e.message); process.exit(1); });
 } else {
