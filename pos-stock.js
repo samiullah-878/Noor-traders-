@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.108.1';
-import { liveLabelsHTML } from './barcode.js?v=2.108.1';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.109.0';
+import { liveLabelsHTML } from './barcode.js?v=2.109.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -18,7 +18,7 @@ let cloud = null, rerender = () => {}, notice = () => {};
 let stop = null, rows = [], loaded = false, failed = '';
 let branch = null, sort = 'name', filter = 'all', bills = [];
 let godamAll = false;   // v1.97: godam par 'Sab' khud chuna ho tabhi sab items   // v1.67: shuru mein SAB items
-let postReq = null;
+let postReq = null, postQ = null;
 let hidden = {};   // item id -> true (Band kiye hue items, sab branches mein chhupe)
 let bandDone = { items: {}, fail: {} };   // v2.103.55: PC post-farq ka jawab (stockCount/_bandDone) — kis band item ka POS kaam ho gaya / fail
 let counts = new Map(), round = '', stopCount = null, isOwner = () => false;
@@ -39,11 +39,11 @@ function billOf(r, c, b = pickedBranch) {
   return { k: q >= Math.abs(f) - 0.001 ? 'done' : 'part', f, q, no: bl ? (f < 0 ? 'Sale #' + (bl.saleNo || '') : 'Return #' + (bl.returnNo || '')) : 'bill' };
 }
 // v2.101.1: 👁 stock sirf jis mulazim ko malik dikhaye (CAP stock.see) — baqi sirf ginti likhein
-const seeStock = () => isOwner() || can('stock.see');
+const seeStock = () => isOwner() || (can('stock.see') && !roz);   // v2.109.0: 📋 roz ki ginti mein larke ko stock nazar nahi (andaza na lagaye)
 // v1.49: _flags (baqi / check nishan), _lock (malik ne ginti band ki)
 let flags = {}, countOff = false;
 const flagOf = id => flags[String(id)] || {};
-const countLocked = () => (countOff || !can('stock.count')) && !isOwner();
+const countLocked = () => (countOff || (!can('stock.count') && !rozCanHere())) && !isOwner();   // v2.109.0: roz ki ginti ki ijazat = us jagah ginti
 
 let aliasStop = null;
 let itemCfg = {}, cfgStop = null, ptList = [], ptStop = null;
@@ -116,6 +116,7 @@ export function stockSetup(opts) {
   notice = opts.notice || (() => {});
   isOwner = opts.owner || (() => false);
   uidOf = opts.uid || uidOf;   // v2.99.92
+  rozSid = opts.sid || rozSid;   // v2.109.0: 📋 roz ki ginti — larke ki pehchan (staffId)
 }
 
 // Snapshot par poori screen foran na banao: thora ruko, aur jab koi ginti likh raha ho to us ke baad
@@ -162,7 +163,7 @@ function start(withCounts = true) {
       round = list.find(r => r.id === '_round')?.round || ''; roundDoc = round;
       lateRuleOn = list.find(r => r.id === '_late')?.on === true;
       autoOn = !!list.find(r => r.id === '_auto')?.on; postedMap = new Map(list.filter(r => String(r.id).startsWith('_posted-')).map(r => [r.id, r])); roundNow();
-      postReq = list.find(r => r.id === '_post') || null;
+      postReq = list.find(r => r.id === '_post') || null; postQ = list.find(r => r.id === '_postQ') || null;   // v2.109.0: 📋 ek click theek ki line
       hidden = list.find(r => r.id === '_hidden')?.items || {};
       { const bd = list.find(r => r.id === '_bandDone'); bandDone = { items: bd?.items || {}, fail: bd?.fail || {} }; }
       flags = list.find(r => r.id === '_flags')?.items || {};
@@ -516,6 +517,123 @@ let facOnly = false;
 const isFacRow = r => { try { return !!window.ntFacIs?.(r); } catch { return false; } };
 try { const mn = document.querySelector('main'); if (mn && window.MutationObserver) { let was = mn.classList.contains('sk-screen'); new MutationObserver(() => { const now = mn.classList.contains('sk-screen'); if (was && !now) facOnly = false; was = now; }).observe(mn, { attributes: true, attributeFilter: ['class'] }); } } catch {}
 export const stockFacOnly = () => facOnly;
+// ================= v2.109.0: 📋 ROZ KI GINTI (malik: "roz kuch items app khud de · har larke ko apne ALAG items — 4 larke = 4 guna · mahine / hafte mein poori
+//   dukan + godam tally · farq ho to pehle doosri jagah dekhe · ek click theek + parchi"). Malik ki setting stockConfig.roz {on, n, locs:{nt,g1,g2,g3}} ·
+//   stockCount/roz-<jagah> {day, b, taken:{itemId: sid}, by:{sid:{n, ids:[], at}}, want:{itemId:1}, hist:{din:{sid:[naam, liye, gine]}}} — larka transaction se N
+//   items leta hai (cloud.rozClaim — do larkon ko ek item kabhi nahi). Ginti WAHI stockCount/c-<branch>-<id> (round = aaj, _auto). Jagah NAAM se (Noor · Godam 1/2/3).
+//   Tarteeb: malik ka "dobara gino" → minus stock → 48 ghante mein hile (transfer) → kabhi nahi gine (qeemat zyada pehle) → sab se purane gine → 0 stock.
+//   Aaj gine / transfer raste mein (3 ghante) / band = list mein nahi. Larke ko stock / farq nazar nahi. Dashboard + farq + ek click = roz.js.
+const ROZ_LOC = [['nt', 'Noor Traders', '🏪', 'stock.rozdukan'], ['g1', 'Godam 1', '🏬', 'stock.rozg1'], ['g2', 'Godam 2', '🏬', 'stock.rozg2'], ['g3', 'Godam 3', '🏬', 'stock.rozg3']];
+let roz = null, rozSid = () => '', rozBusy = false, rozPrevBranch;
+const rozCfg = () => { const c = itemCfg?.roz || {}; return { on: c.on === true, n: [10, 20, 30].includes(Number(c.n)) ? Number(c.n) : 20, locs: c.locs || {} }; };
+let brC = null, brKey = null;
+function brInfo() { if (brC && brKey === rows) return brC; const chunks = rows.filter(r => !r.meta && Array.isArray(r.items)), names = {}, by = new Map();
+  rows.forEach(r => { if (r.branch != null && r.name) names[r.branch] = r.name; });
+  for (const c of chunks.slice().sort((a, b) => (a.order || 0) - (b.order || 0))) { if (!by.has(c.branch)) by.set(c.branch, []); by.get(c.branch).push(...c.items); }
+  brC = { branches: [...by.keys()].sort((a, b) => a - b), names, by }; brKey = rows; return brC; }
+const itemsOf = b => brInfo().by.get(Number(b)) || [];
+function rozLocs(all) {   // jagah NAAM se (POS branch 2 ka naam "Godam 1" hai — number se nahi)
+  const { branches, names } = brInfo(), find = rx => branches.find(b => rx.test(String(names[b] || ''))), C = rozCfg();
+  const B = { nt: find(/noor/i) ?? (branches.includes(1) ? 1 : undefined), g1: find(/godam\s*-?\s*1\b/i), g2: find(/godam\s*-?\s*2\b/i), g3: find(/godam\s*-?\s*3\b/i) };
+  return ROZ_LOC.filter(([k]) => B[k] != null && (all || C.locs[k] !== false)).map(([k, t, ic, cap]) => ({ k, t, ic, cap, b: B[k], name: branchName(B[k], names) }));
+}
+const rozDoc = k => { const d = counts.get('roz-' + k); return d && d.day === dayStr() ? d : null; };   // sirf aaj ka (purana din = khali)
+const rozMine = k => { const d = rozDoc(k), me = d?.by?.[rozSid()]; return me && Array.isArray(me.ids) ? me.ids.map(String) : []; };
+const rozCan = L => isOwner() || can(L.cap);
+const rozCanHere = () => !!roz && rozCan(roz);
+const rozGina = (b, id) => { const c = counts.get(countId(b, id)); return !!(c && c.round === dayStr() && !c.del); };
+function rozPend(b) {   // transfer abhi POS mein nahi (job new / working) ya 3 ghante se kam purana note jo abhi mila nahi = aaj mat gino (farq ghalat aata)
+  const out = new Set(), T = Date.now();
+  for (const j of trList || []) { if (!['new', 'working'].includes(j.status) || (Number(j.from) !== b && Number(j.to) !== b)) continue; for (const l of j.lines || []) if (l.itemId != null) out.add(String(l.itemId)); }
+  try { for (const t of tcAll()) { const at = tcIssued(t); if (!at || T - at > 3 * 3600e3 || t.cancelled || (Number(t.from) !== b && Number(t.to) !== b)) continue; const st = tcState(t).k; if (st === 'ok' || st === 'farq') continue; for (const l of t.lines || []) if (l.itemId != null) out.add(String(l.itemId)); } } catch {}
+  return out;
+}
+function rozPool(L) {
+  const d = rozDoc(L.k), taken = d?.taken || {}, want = counts.get('roz-' + L.k)?.want || {}, T = Date.now(), moved = new Set(), pend = rozPend(L.b);
+  for (const t of ptLive()) { const at = Number(t.createdOn) || Number(t.at) || 0; if (T - at > 48 * 3600e3 || (Number(t.from) !== L.b && Number(t.to) !== L.b)) continue; for (const l of t.lines || []) if (l.itemId != null) moved.add(String(l.itemId)); }
+  const list = [];
+  for (const r of itemsOf(L.b)) { const id = String(r.id), c = counts.get(countId(L.b, id)), wt = Number(want[id]) || 0, again = wt > (Number(c?.at) || 0);   // malik: dobara ginwao (gine ke baad laga)
+    if (isHidden(r) || pend.has(id) || ((taken[id] || rozGina(L.b, id)) && !again)) continue;
+    const last = c && !c.del ? Number(c.at) || 0 : 0, st = Number(r.stock) || 0;
+    const w = again ? 0 : st < 0 ? 1 : moved.has(id) ? 2 : !last ? (st === 0 ? 5 : 3) : 4;
+    list.push({ id, w, last, v: Math.abs(st * (Number(r.prate) || 0)), n: String(r.name || '') }); }
+  list.sort((a, b) => a.w - b.w || a.last - b.last || b.v - a.v || NAMEC.compare(a.n, b.n));
+  return list.map(x => x.id);
+}
+function rozHistOf(d0) {   // naya din: kal ke har larke ka [naam, liye, gine] (mahine ka hisaab)
+  const o = {}; for (const [sid, m] of Object.entries(d0?.by || {})) { const ids = Array.isArray(m?.ids) ? m.ids.map(String) : [];
+    o[sid] = [String(m?.n || '').slice(0, 40), ids.length, ids.filter(id => { const c = counts.get(countId(d0.b, id)); return c && c.round === d0.day && !c.del; }).length]; }
+  return o;
+}
+async function rozClaim(L) {
+  if (!cloud?.rozClaim) throw Error('App update karein');
+  const sid = rozSid(); if (!sid) throw Error('Login ki pehchan nahi mili — dobara login karein');
+  const n = rozCfg().n, pool = rozPool(L).slice(0, n * 5);
+  if (!pool.length) return [];
+  return cloud.rozClaim({ loc: L.k, b: L.b, day: dayStr(), ids: pool, sid, name: whoName(), n, histFn: rozHistOf });
+}
+async function rozEnter(k, opts = {}) {
+  const L = rozLocs().find(x => x.k === k); if (!L) { notice('Ye jagah roz ki ginti mein nahi (malik: ⚙️)'); return; }
+  if (!rozCfg().on) { notice('📋 Roz ki ginti malik ne band rakhi hai'); return; }
+  if (!rozCan(L)) { notice('🔒 ' + L.name + ' ki ginti ki ijazat nahi (malik: Settings → Mulazim)'); return; }
+  if (!roz) rozPrevBranch = branch;
+  roz = L; branch = L.b; inPick = null; facOnly = false; limit = 200; const s = $('search'); if (s) s.value = ''; rerender();
+  if (!rozMine(k).length || opts.more) await rozTake(opts.more);
+}
+async function rozTake(more) {
+  if (!roz || rozBusy) return;
+  if (countOff && !isOwner()) { notice('🔴 Malik ne counting band ki hui hai — malik se ON karwayein'); return; }   // rules bhi mana karte (_lock.off)
+  rozBusy = true; rerender();
+  try { const got = await rozClaim(roz); if (!got.length) notice(more ? '✓ Is jagah ke liye aaj aur items baqi nahi' : '✓ Is jagah ke sab items aaj gine ja chuke / liye ja chuke'); else notice(`📋 ${got.length} items aap ke — ${roz.name} (kisi aur ke paas nahi)`); }
+  catch (e) { notice('Items nahi mile: ' + (e?.message || e)); }
+  finally { rozBusy = false; rerender(); }
+}
+function rozExit() { if (!roz) return; roz = null; if (rozPrevBranch !== undefined) branch = rozPrevBranch; rozPrevBranch = undefined; limit = PAGE; }
+try { const mn = document.querySelector('main'); if (mn && window.MutationObserver) { let was = mn.classList.contains('sk-screen'); new MutationObserver(() => { const now = mn.classList.contains('sk-screen'); if (was && !now) rozExit(); was = now; }).observe(mn, { attributes: true, attributeFilter: ['class'] }); } } catch {}
+function rozStripHTML(mine) {
+  const done = mine.filter(r => rozGina(roz.b, r.id)).length, all = mine.length, n = rozCfg().n, fin = all && done >= all;
+  return `<div class="in-strip roz-strip${fin ? ' fin' : ''}"><span class="rz-t">📋 Aaj ki ginti — <b>${esc(roz.name)}</b></span><span class="rz-n">${rozBusy ? '⏳ items aa rahe…' : !all ? '' : fin ? '✅ ' + num(done) + ' / ' + num(all) + ' — shabash!' : '✓ ' + num(done) + ' / ' + num(all)}</span>
+    ${fin ? `<button type="button" class="rz-more" data-roz-more="1"${rozBusy ? ' disabled' : ''}>➕ Aur ${num(n)}</button>` : ''}<button type="button" class="rz-x" data-roz-x="1" aria-label="Band">✕</button>
+    ${!all && !rozBusy ? (countOff && !isOwner() ? '<small class="rz-note">🔴 Malik ne counting band ki hui hai — malik se ON karwayein</small>' : `<small class="rz-note">Aaj aap ke liye koi item nahi — ➕ dabayein ya malik se poochhein</small><button type="button" class="rz-more" data-roz-more="1">➕ ${num(n)} items lo</button>`) : ''}</div>`;
+}
+// 📋 larke ka bara button Stock par (phone par upar ki chip ⋮ mein chhup jati hai — yahan seedha nazar aaye). Malik = tile + dashboard.
+function rozBigHTML() {
+  if (roz || isOwner() || !loaded || !rozCfg().on) return '';
+  const L = rozLocs().filter(rozCan); if (!L.length) return '';
+  let done = 0, all = 0; for (const x of L) { const m = rozMine(x.k); all += m.length; done += m.filter(id => rozGina(x.b, id)).length; }
+  const fin = all && done >= all, where = L.map(x => x.name).join(' · ');
+  return `<button type="button" class="sk-big roz${fin ? ' fin' : ''}" data-roz-open="1"><span class="bi">${fin ? '✅' : '📋'}</span><span><b>${fin ? 'Aaj ki list poori · ' + num(done) + ' / ' + num(all) : all ? 'Aaj ki list · ✓ ' + num(done) + ' / ' + num(all) : 'Aaj ki list — aap ke ' + num(rozCfg().n) + ' items'}</b><small>${esc(where)} · ${countOff ? '🔴 malik ne counting band ki hui hai' : fin ? 'shabash! aur lene hon to tap' : all ? num(all - done) + ' baqi — tap, jari rakhein' : 'tap karein — items milenge (har larke ke alag)'}</small></span><em>›</em></button>`;
+}
+// 🏷 upar ki chip (home bar) — larka: "📋 Ginti 7/20" · malik: jagah-war
+export function stockRozChip() {
+  const C = rozCfg(); if (!C.on || !cloud) return null;
+  if (!loaded) { if (!isOwner() && ROZ_LOC.some(x => can(x[3]))) start(); return null; }
+  const L = rozLocs().filter(rozCan); if (!L.length) return null;
+  if (isOwner()) { const per = L.map(x => { const d = rozDoc(x.k), ids = Object.keys(d?.taken || {}); return { x, n: ids.length, done: ids.filter(id => rozGina(x.b, id)).length }; });
+    const t = per.reduce((a, p) => a + p.done, 0), all = per.reduce((a, p) => a + p.n, 0);
+    return { t: `📋 Ginti ${num(t)}${all ? ' / ' + num(all) : ''}`, cls: all && t >= all ? 'ok' : all ? 'warn' : '', n: all ? `roz ki ginti ${num(t)} / ${num(all)}` : 'roz ki ginti abhi shuru nahi' }; }
+  let done = 0, all = 0; for (const x of L) { const m = rozMine(x.k); all += m.length; done += m.filter(id => rozGina(x.b, id)).length; }
+  return { t: all ? `📋 Ginti ${num(done)} / ${num(all)}` : '📋 Aaj ki ginti', cls: all && done >= all ? 'ok' : 'warn', n: all ? (done >= all ? 'aaj ki ginti poori ✓' : `aaj ki ginti baqi ${num(all - done)}`) : 'aaj ki ginti shuru karein' };
+}
+// 📋 kholna: larka — ek jagah = seedha list · zyada = chunao · malik = dashboard (roz.js)
+export async function stockRozOpen(k) {
+  if (!cloud) return; start();
+  if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
+  if (isOwner() && !k) { try { (await import('./roz.js?v=2.109.0')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
+  const L = rozLocs().filter(rozCan);
+  if (!rozCfg().on) { notice('📋 Roz ki ginti malik ne band rakhi hai'); return; }
+  if (!L.length) { notice('🔒 Roz ki ginti ki ijazat nahi (malik: Settings → Mulazim → 📋 Roz ki ginti)'); return; }
+  const go = x => { try { window.ntRecentOpen?.({ open: { kind: 'stock', screen: 'roz', k: x } }); } catch { rozEnter(x); } };
+  if (k || L.length === 1) { go(k || L[0].k); return; }
+  try { (await import('./roz.js?v=2.109.0')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
+}
+// roz.js ke liye andar ka saman (sirf parhna + wahi kaam jo buttons karte hain)
+export function stockRozApi() {
+  return { cloud, notice, esc, num, isOwner: () => isOwner(), can, sid: () => rozSid(), who: () => whoName(), day: dayStr, cfg: rozCfg, locs: rozLocs, doc: rozDoc, rawDoc: k => counts.get('roz-' + k) || null, mine: rozMine, gina: rozGina, pool: rozPool, pend: rozPend,
+    items: itemsOf, names: () => brInfo().names, count: (b, id) => { const c = counts.get(countId(b, id)); return c && !c.del ? c : null; }, sys: (c, r) => sysOf(c, r), counted: countedPcs,
+    bill: (r, c, b) => billOf(r, c, b), round: () => roundNow(), autoOn: () => autoOn, post: () => postReq, postQ: () => postQ, bills: () => bills, posted: k => postedMap.get(k) || null, trJobs: () => trList || [], notes: () => { try { return tcAll(); } catch { return []; } },
+    seeStock: () => seeStock(), loaded: () => loaded, hidden: r => isHidden(r), counts: () => counts, enter: k => stockRozOpen(k), branchName: b => branchName(b, brInfo().names), locked: () => countOff };
+}
 function captureTyped() {
   const keep = new Map();
   const lst = $('list');
@@ -586,6 +704,13 @@ function renderStockInner() {
     return;
   }
 
+  if (roz && pickedBranch !== roz.b) { rozPrevBranch = undefined; rozExit(); return renderStockInner(); }   // v2.109.0: 📋 roz mein doosra godam chuna = roz band, wahi godam (loop nahi)
+  if (roz) {   // 📋 roz ki ginti: sirf MERE aaj ke items (lene ki tarteeb mein) — filter / tabs nahi
+    const byId = new Map(items.map(r => [String(r.id), r])), mine = rozMine(roz.k).map(id => byId.get(id)).filter(Boolean);
+    const shownR = q ? smartSearch(mine, q, 200) : mine;
+    $('list').innerHTML = rozStripHTML(mine) + (q ? `<p class="stat-note">${num(shownR.length)} item mile (aap ki aaj ki list mein)</p>` : '') + shownR.map(rowHTML).join('');
+    return;
+  }
   if (pickedBranch !== 1 && filter === 'all' && !godamAll) filter = 'has';   // v1.97: godam khula ho to shuru se sirf usi ke items
   let shown = items.filter(passes), wide = 0;
   if (facOnly) shown = shown.filter(isFacRow);   // v2.107.0: 🏭 Factory stock (factory ek-screen ka chip)
@@ -829,6 +954,7 @@ function summaryHTML(branches, pick, items, meta, names, canJama = false) {
     can('stock.transfer') ? tile('data-stock-transfer', '⇄', 'Transfer') : '',
     canEditItem() ? tile('data-stock-urdu', '🔤', 'Urdu naam') : '',
     can('stock.ratepdf') ? tile('data-stock-ratepdf', '📄', 'Rate list PDF') : '',   // v2.103.41
+    (isOwner() || (rozCfg().on && ROZ_LOC.some(x => can(x[3])))) ? tile('data-roz-open', '📋', 'Roz ki ginti') : '',   // v2.109.0
   ].filter(Boolean);
   const extra = filter === 'baqi' ? 'Ginti baqi' : filter === 'farq' ? '⚖️ Farq wale' : filter === 'nishan' ? '⏳ Baqi nishan' : filter === 'check' ? '🔍 Check wale' : filter === 'hidden' ? 'Band items' : filter === 'hday' && hDay ? '🕘 ' + hDayLabel(hDay) : '';
   const fN = (hDay ? 1 : 0) + (sort !== 'name' ? 1 : 0) + (extra ? 1 : 0);
@@ -843,6 +969,7 @@ function summaryHTML(branches, pick, items, meta, names, canJama = false) {
     <div class="sk-body">
       <small class="sk-meta">${seeStock() ? 'kul ' + num(totalPcs) + ' pcs' : num(shownCount) + ' items'}${stamp ? ' · aakhri tabdeeli ' + esc(since(stamp)) : ''}</small>${liveChip()}
       ${scanList.length ? `<div class="sk-scan"><button type="button" class="sh-wide sh-scan" data-stock-scan="1">${camIco()} Aur scan karein (${num(scanList.length)} list mein)</button><button type="button" class="sh-wide sh-clear" data-stock-clear="1">✕ Saaf karein — wapas poori list</button></div>` : ''}
+      ${rozBigHTML()}
       ${can('stock.count') || isOwner() ? gintiBig(pick, items) : ''}
       ${tiles.length ? `<div class="sk-tiles">${tiles.join('')}</div>` : ''}
       ${ijPend().length || ijBad().length ? `<button type="button" class="sk-pend${ijBad().length && !ijPend().length ? ' bad' : ''}" data-stock-ijobs="1">${ijPend().length ? '⏳ ' + num(ijPend().length) + ' item PC baqi' : ''}${ijPend().length && ijBad().length ? ' · ' : ''}${ijBad().length ? '❌ ' + num(ijBad().length) + ' nahi bana' : ''} — dekhein</button>` : ''}
@@ -2265,6 +2392,7 @@ function historyHTML(r, c) {
     const d = Math.round((Number(h.total) - Number(h.sys)) * 100) / 100;
     const ctn = esc(r.cName || 'Ctn'), pcs = esc(r.uName || 'Pcs');
     const jama = h.tick ? '<b style="color:#0b6b2e">✓ Tick — system jaisa</b> · ' : h.add ? `<b style="color:#0b6b2e">+${num(h.add.ctn)} ${ctn} + ${num(h.add.pcs)} ${pcs}${h.note ? ' (' + esc(h.note) + ')' : ''}</b> → ` : (h.note ? `(${esc(h.note)}) ` : '');
+    if (!seeStock()) return `${esc(stampText(h.at))} — ${h.tick ? '<b style="color:#0b6b2e">✓ Tick</b> · ' : ''}<b>${num(h.ctn)} ${ctn} + ${num(h.pcs)} ${pcs}</b> · ${num(h.total)} ${pcs}`;   // v2.109.0: stock nazar nahi = system / farq bhi nahi (andhi ginti)
     return `${esc(stampText(h.at))} — ${jama}<b>${num(h.ctn)} ${ctn} + ${num(h.pcs)} ${pcs}</b> · ${num(h.total)} ${pcs} · System ${num(h.sys)} · Farq ${d > 0 ? '+' : ''}${num(d)}${
       r.prate ? ' · Rs ' + (d > 0 ? '+' : '') + num(d * r.prate) : ''}`;
   }).join('<br>')}</div>`;
@@ -2376,6 +2504,9 @@ document.addEventListener('click', e => {
     return; }
   if (e.target.closest?.('[data-in-clear]')) { inPick = null; rerender(); return; }
   if (e.target.closest?.('[data-fac-clear]')) { facOnly = false; rerender(); return; }   // v2.107.0
+  if (e.target.closest?.('[data-roz-more]')) { rozTake(true); return; }   // v2.109.0: 📋 ➕ aur N
+  if (e.target.closest?.('[data-roz-x]')) { rozExit(); rerender(); return; }
+  if (e.target.closest?.('[data-roz-open]')) { const v = e.target.closest('[data-roz-open]').dataset.rozOpen || ''; stockRozOpen(v === '1' ? '' : v); return; }
   const lb = e.target.closest?.('[data-stock-label]');
   if (lb) { openLabels(lb.dataset.stockLabel); return; }
   const lp = e.target.closest?.('[data-label-print]');
@@ -4529,15 +4660,16 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.108.1';
-import { recentPush } from './recent.js?v=2.108.1';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.109.0';
+import { recentPush } from './recent.js?v=2.109.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)
 export function stockScreenOpen(o = {}) { try { $('dialog')?.close(); } catch {}
   if (o.screen === 'rack') { rackOpen(); if (o.g != null && collect().branches.includes(Number(o.g))) rk.g = Number(o.g); if (o.tab && RK_TABN[o.tab]) rk.tab = o.tab; rkPaint(); rkRecent(); }
   else if (o.screen === 'milao') gmOpen(); else if (o.screen === 'ratelist') rpOpen(); else if (o.screen === 'transfer') openTransfer(); else if (o.screen === 'check') openTransferCheck(o.view || 'nikle'); else if (o.screen === 'register') openRegister(); else if (o.screen === 'ginti') openGinti(); else if (o.screen === 'ijobs') ijDlg(); else if (o.screen === 'band') bandDlg(o.q || '');
-  else if (o.screen === 'factory') { facOnly = true; inPick = null; const s = $('search'); if (s) s.value = ''; limit = PAGE; rerender(); } }   // v2.107.0: 🏭 Factory stock
+  else if (o.screen === 'factory') { facOnly = true; inPick = null; const s = $('search'); if (s) s.value = ''; limit = PAGE; rerender(); }   // v2.107.0: 🏭 Factory stock
+  else if (o.screen === 'roz') { if (o.k) rozEnter(String(o.k)); else stockRozOpen(); } }   // v2.109.0: 📋 roz ki ginti
 const AG = (() => {
   const S_ = { type: 'STRING' }, N_ = { type: 'NUMBER' }, B_ = { type: 'BOOLEAN' }, A_ = it => ({ type: 'ARRAY', items: it }), O_ = (p, r = []) => ({ type: 'OBJECT', properties: p, required: r });
   const names = () => collect().names || {};
@@ -4656,6 +4788,13 @@ const AG = (() => {
     { name: 'demand_done', icon: '📢', label: 'Demand ho gayi', desc: 'Larke ki demand (item) ko "ho gaya" karo.', params: O_({ item: S_ }, ['item']),
       summary({ item: v }) { const it = item(v), d = roDm.find(x => String(x.i) === String(it.id)); if (!d) throw Error(it.name + ' ki koi open demand nahi'); return `📢 ${it.name} — demand ho gayi (${d.byName || ''})`; },
       async run({ item: v }) { const it = item(v), d = roDm.find(x => String(x.i) === String(it.id)); await cloud.saveDemand({ ...d, st: 'done', doneAt: Date.now() }); return '✓ Demand band'; } },
+    // v2.109.0: 📋 roz ki ginti — wahi function jo chip / tile chalate hain
+    { name: 'roz_ginti_kholo', read: true, desc: '📋 Roz ki ginti kholo — larka: us ki aaj ki list (alag items, Ctn + Pcs) · malik: dashboard (har jagah larkon ki progress, mahine ka %, farq, ✅ ek click theek). jagah ikhtiyari (Noor Traders / Godam 1 / 2 / 3).', params: O_({ jagah: S_ }),
+      async run({ jagah }) { let k = ''; if (jagah) { const q = fold(String(jagah)), L = rozLocs(true).find(x => fold(x.name).includes(q) || q.includes(fold(x.name)) || (q.includes('dukan') && x.k === 'nt')); if (!L) throw Error('Jagah "' + jagah + '" nahi mili'); k = L.k; }
+        await stockRozOpen(k && !isOwner() ? k : (isOwner() && k ? k : '')); return { khul_gaya: k ? 'roz ki ginti — ' + k : 'roz ki ginti' }; } },
+    { name: 'roz_ginti_haal', read: true, desc: '📋 Aaj ki roz ki ginti ka haal — har jagah kitne items liye / gine, kaun larka kitne, setting (on / items har larka).', params: O_({}),
+      run() { start(); const C = rozCfg(); if (!C.on) return { haal: 'Roz ki ginti band hai (malik: Stock → 📋 Roz ki ginti → ✅ shuru)' };
+        return { har_larka: C.n, jagah: rozLocs().map(L => { const d = rozDoc(L.k), by = d?.by || {}; return { jagah: L.name, larke: Object.entries(by).map(([sid, m]) => { const ids = (m?.ids || []).map(String); return { naam: m?.n || sid, liye: ids.length, gine: ids.filter(id => rozGina(L.b, id)).length }; }), kul_liye: Object.keys(d?.taken || {}).length }; }) }; } },
   ];
 })();
 agentRegister(AG);

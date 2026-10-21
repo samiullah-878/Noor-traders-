@@ -1,5 +1,5 @@
 // ============================================================
-//  auto-backup.js  v1.9 (2026-10-22: 📷 factory items ki HD tasveer PC + Google Drive "Factory Photos" mein · factory nuskhe (factory/cfg) + batch bhi backup mein) · v1.6 (2026-10-12: cancel note par notification nahi, edit = nayi check) · v1.5 (🚚 transfer note 10 min mein check na ho = notification) · v1.0 (2026-10-05) — ☁️ AUTO BACKUP: din mein 2 dafa (app ki Settings se waqt) poora khata JSON mein,
+//  auto-backup.js  v2.0 (2026-10-22: 📋 roz ki ginti — _round roz · _postQ line · larkon ko 12 / 4 baje yaad · malik ko 8 baje khulasa) · v1.9 (2026-10-22: 📷 factory items ki HD tasveer PC + Google Drive "Factory Photos" mein · factory nuskhe (factory/cfg) + batch bhi backup mein) · v1.6 (2026-10-12: cancel note par notification nahi, edit = nayi check) · v1.5 (🚚 transfer note 10 min mein check na ho = notification) · v1.0 (2026-10-05) — ☁️ AUTO BACKUP: din mein 2 dafa (app ki Settings se waqt) poora khata JSON mein,
 //  C:\khata-sync\backups mein + Google Drive for Desktop ke folder ("Blue Khata Backup") mein — Drive khud upload karta hai.
 //
 //  App (Settings -> 💾 Backup -> ☁️ Auto backup) blueAccess/backupConfig likhti hai: {on, email, times:['14:00','22:00'], now}
@@ -22,7 +22,7 @@ const zlib = require('zlib');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
-const VER = '1.9';   // v1.9 (2026-10-22): 📷 factory tasveerein (factory/phIdx + ph_<id>_<v>_<i>) -> backups\Factory Photos + Drive "Blue Khata Backup\Factory Photos" (sirf nayi / badli; hatai = file bhi hate) · extra backup mein factory/cfg (nuskhe) + factoryBatches · v1.8 (2026-10-17): 🔁 din wala har reminder KHUD har 1 ghanta (nag na likha = 60, 0 = band), 3 din ki hadd khatam (jab tak ✓ na ho), 4+ ek saath = ek khulasa notification · v1.7: v1.7 (2026-10-17): 🔔 MULAZIM ka reminder MALIK ke phone par bhi — waqt aate hi pehli khabar (malik + likhne wala), sirf mulazim ke likhe notes · v1.4 (2026-10-11): 🔁 notes.nag — baar baar yaad (15/30/60 min) jab tak ✓ na ho · v1.3 (2026-10-07): driver ki jeb se EXTRA kharcha (kind 'kharch', driver:true) khate se − (app v2.97.1) · v1.2 (2026-10-07): driver ka KHATA (app v2.96.1 jaisa) — phera + (kiraya − kharche − commission), liya −, advance + · v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
+const VER = '2.0';   // v2.0 (2026-10-22): 📋 ROZ KI GINTI — (1) _auto on = _round roz khud aaj (post-farq ginti ka us waqt ka stock likhe) (2) stockCount/_postQ (malik ka "✅ Sab theek karo") ek ek kar ke _post (post-farq wahi bill + parchi) (3) 12 / 4 baje baqi larkon ko push (4) 8 baje malik ko khulasa · v1.9 (2026-10-22): 📷 factory tasveerein (factory/phIdx + ph_<id>_<v>_<i>) -> backups\Factory Photos + Drive "Blue Khata Backup\Factory Photos" (sirf nayi / badli; hatai = file bhi hate) · extra backup mein factory/cfg (nuskhe) + factoryBatches · v1.8 (2026-10-17): 🔁 din wala har reminder KHUD har 1 ghanta (nag na likha = 60, 0 = band), 3 din ki hadd khatam (jab tak ✓ na ho), 4+ ek saath = ek khulasa notification · v1.7: v1.7 (2026-10-17): 🔔 MULAZIM ka reminder MALIK ke phone par bhi — waqt aate hi pehli khabar (malik + likhne wala), sirf mulazim ke likhe notes · v1.4 (2026-10-11): 🔁 notes.nag — baar baar yaad (15/30/60 min) jab tak ✓ na ho · v1.3 (2026-10-07): driver ki jeb se EXTRA kharcha (kind 'kharch', driver:true) khate se − (app v2.97.1) · v1.2 (2026-10-07): driver ka KHATA (app v2.96.1 jaisa) — phera + (kiraya − kharche − commission), liya −, advance + · v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47832;
 const DIR = __dirname;
@@ -269,10 +269,91 @@ async function trNotify() {
   for (const k of Object.keys(trSent)) if (Date.now() - trSent[k] > 2 * 86400000) delete trSent[k];
   try { fs.writeFileSync(TR_FILE, JSON.stringify(trSent)); } catch {}
 }
+// ---- v2.0: 📋 ROZ KI GINTI (app v2.109.0) — POS / SQL mein kuch nahi likhta ----
+const ROZ_LOC = [['nt', /noor/i, 'Noor Traders', 'stock.rozdukan'], ['g1', /godam\s*-?\s*1\b/i, 'Godam 1', 'stock.rozg1'], ['g2', /godam\s*-?\s*2\b/i, 'Godam 2', 'stock.rozg2'], ['g3', /godam\s*-?\s*3\b/i, 'Godam 3', 'stock.rozg3']];
+const ROZ_FILE = path.join(DIR, 'roz-sent.json');
+let rozSent = (() => { try { return JSON.parse(fs.readFileSync(ROZ_FILE, 'utf8')) || {}; } catch { return {}; } })();
+const countCol = base.collection('stockCount');
+// _auto · _round · _postQ · _post = LISTENER (har minute get() = roz ~4,000 reads — post-farq v10 wala sabaq). Jawab aate hi agli line foran.
+const rozD = {}, rozU = {}; let rozQBusy = false, rozQT = 0;
+const rozHas = id => Object.prototype.hasOwnProperty.call(rozD, id);
+function rozWatch() {
+  for (const id of ['_auto', '_round', '_postQ', '_post']) { if (rozU[id]) continue;
+    rozU[id] = countCol.doc(id).onSnapshot(d => { rozD[id] = d.exists ? d.data() : null;
+      if (id === '_postQ' || id === '_post') { clearTimeout(rozQT); rozQT = setTimeout(() => rozQueue().catch(e => log('📋 theek line masla: ' + e.message)), 1500); } },
+      e => { log(`📋 roz sun masla (${id}): ${e.message}`); rozU[id] = null; delete rozD[id]; }); }
+}
+async function rozRound(day) {   // "session = din" ON = _round hamesha aaj (malik app na khole tab bhi)
+  if (!rozHas('_auto') || !rozHas('_round') || rozD._auto?.on !== true || rozD._round?.round === day) return;
+  const r = { round: day, at: Date.now(), by: 'pc' }; await countCol.doc('_round').set(r); rozD._round = r; log('📋 Ginti ka din: ' + day);
+}
+async function rozQueue() {   // malik ka "✅ Sab theek karo" — ek waqt mein ek _post (post-farq wahi bill + parchi), jawab line mein, phir agli
+  if (rozQBusy || !rozHas('_postQ') || !rozHas('_post')) return; rozQBusy = true;
+  try {
+    const q = rozD._postQ; if (!q) return;
+    const jobs = (Array.isArray(q.jobs) ? q.jobs : []).map(j => ({ ...j })), save = async () => { const nq = { ...q, jobs }; await countCol.doc('_postQ').set(nq); rozD._postQ = nq; };
+    let i = jobs.findIndex(j => !j.st || j.st === 'sent'); if (i < 0) return;
+    if (Date.now() - (Number(q.at) || 0) > 6 * 3600e3) { for (const j of jobs) if (!j.st || j.st === 'sent') { j.st = 'failed'; j.error = 'der ho gayi — dobara dabayein'; } await save(); log('📋 Theek line 6 ghante purani — band'); return; }
+    const P = rozD._post, age = Date.now() - (Number(P?.at) || 0);
+    if (P && (P.status === 'posting' ? age < 60 * 60000 : ['pending', 'approved', 'preview'].includes(P.status) && age < 20 * 60000)) return;   // PC abhi bill bana raha
+    if (jobs[i].st === 'sent') {
+      const j = jobs[i], mine = P && Number(P.at) === Number(j.at) && Number(P.branch) === Number(j.branch);
+      if (mine && ['done', 'nothing', 'failed'].includes(P.status)) { j.st = P.status; if (P.saleNo) j.saleNo = String(P.saleNo); if (P.returnNo) j.returnNo = String(P.returnNo); if (P.error) j.error = String(P.error).slice(0, 160); if (P.total != null) j.total = Number(P.total) || 0; }
+      else { j.st = 'failed'; j.error = mine ? 'PC ne waqt par bill nahi banaya (post-farq band?)' : 'PC ka jawab nahi mila'; }
+      log(`📋 Theek line ${i + 1}/${jobs.length}: ${j.st}${j.saleNo ? ' Sale ' + j.saleNo : ''}${j.returnNo ? ' Return ' + j.returnNo : ''}${j.error ? ' · ' + j.error : ''}`);
+      i = jobs.findIndex(x => !x.st); if (i < 0) { await save(); return; }
+    }
+    const j = jobs[i], at = Date.now(); j.at = at; j.st = 'sent';
+    const post = { round: String(j.round), branch: Number(j.branch), status: 'approved', direct: true, kind: j.kind === 'zyada' ? 'zyada' : 'kam', items: (j.items || []).map(String), at, approvedAt: at, by: 'pc-line' };
+    await countCol.doc('_post').set(post); rozD._post = post; await save();
+    log(`📋 Theek line ${i + 1}/${jobs.length} bheji: branch ${j.branch} ${j.kind} (${post.items.length} items)`);
+  } finally { rozQBusy = false; }
+}
+async function rozState(day) {   // har jagah: branch, doc (aaj), gine (aaj)
+  const cfg = (await base.collection('blueAccess').doc('stockConfig').get()).data()?.roz || {}; if (cfg.on !== true) return null;
+  const metas = (await base.collection('posStock').where('meta', '==', true).get()).docs.map(d => ({ b: Number(d.data().branch ?? String(d.id).match(/^b(\d+)-/)?.[1]), name: String(d.data().name || '') }));
+  const find = rx => metas.find(m => rx.test(m.name))?.b;
+  const gina = new Set((await countCol.where('round', '==', day).get()).docs.filter(d => !d.data().del).map(d => d.id));
+  const out = [];
+  for (const [k, rx, t, cap] of ROZ_LOC) { if ((cfg.locs || {})[k] === false) continue; const b = k === 'nt' ? (find(rx) ?? (metas.some(m => m.b === 1) ? 1 : undefined)) : find(rx); if (b == null) continue;
+    const dd = await countCol.doc('roz-' + k).get(), d = dd.exists && dd.data().day === day ? dd.data() : { by: {}, taken: {} };
+    out.push({ k, b, t, cap, d, n: Number(cfg.n) || 20, done: id => gina.has(`c-${b}-${id}`) }); }
+  return out;
+}
+async function rozNotify(now, day) {
+  const hm = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`, slot = ['12:00', '16:00', '20:00'].filter(t => hm >= t).pop(); if (!slot) return;
+  const key = day + ' ' + slot; if (rozSent[key]) return; const due = new Date(now); due.setHours(...slot.split(':').map(Number), 0, 0); if (now.getTime() - due.getTime() > 2 * 3600e3) { rozSent[key] = 1; return; }
+  const L = await rozState(day); rozSent[key] = Date.now(); try { fs.writeFileSync(ROZ_FILE, JSON.stringify(Object.fromEntries(Object.entries(rozSent).filter(([k]) => k >= dayOf(new Date(Date.now() - 3 * 864e5)))))); } catch {}
+  if (!L || !L.length) return;
+  const tk = (await base.collection('pushTokens').get()).docs.map(d => d.data()).filter(x => x.token), { getMessaging } = require('firebase-admin/messaging');
+  const send = async (tokens, title, body, tag) => { tokens = [...new Set(tokens)]; if (!tokens.length) return 0; try { const r = await getMessaging().sendEachForMulticast({ tokens, data: { title, body, tag, link: 'https://samiullah-878.github.io/Noor-traders-/#v=stock' }, webpush: { headers: { Urgency: 'high' } } }); return r.successCount; } catch (e) { log('📋 push masla: ' + e.message); return 0; } };
+  if (slot === '20:00') {   // malik ko khulasa
+    const lines = L.map(x => { const ids = Object.keys(x.d.taken || {}), dn = ids.filter(x.done).length, boys = Object.keys(x.d.by || {}).length; return ids.length ? `${x.t}: ${dn}/${ids.length}${boys ? ' (' + boys + ' larke)' : ''}${dn >= ids.length ? ' ✓' : ''}` : `${x.t}: aaj shuru nahi`; });
+    const n = await send(tk.filter(isBoss).map(x => x.token), '📋 Aaj ki ginti', lines.join(' · ') + '\nFarq: app → Stock → 📋 Roz ki ginti', 'roz-' + day); log(`📋 Malik ko ginti khulasa: ${n} phone`); return;
+  }
+  const staff = (await base.collection('blueStaff').get()).docs.map(d => ({ id: d.id, ...d.data() })).filter(s => s.active !== false && Array.isArray(s.allow));
+  const norm = v => String(v || '').trim().toLowerCase();
+  let sent = 0;
+  for (const s of staff) { const mine = L.filter(x => s.allow.includes(x.cap)); if (!mine.length) continue;
+    const parts = mine.map(x => { const ids = (x.d.by?.[s.id]?.ids || []).map(String), dn = ids.filter(x.done).length; return { x, all: ids.length, dn }; });
+    const left = parts.filter(p => !p.all || p.dn < p.all); if (!left.length) continue;
+    const body = left.map(p => p.all ? `${p.x.t}: ${p.dn}/${p.all} — ${p.all - p.dn} baqi` : `${p.x.t}: shuru karein (${p.x.n} items)`).join('\n');
+    sent += await send(tk.filter(t => norm(t.name) === norm(s.name) && !isBoss(t)).map(t => t.token), '📋 Aaj ki ginti baqi', body, 'roz-' + day + '-' + s.id); }
+  log(`📋 ${slot} ginti yaad: ${sent} phone`);
+}
+async function rozTick() {
+  const now = new Date(), day = dayOf(now);
+  rozWatch();
+  try { await rozRound(day); } catch (e) { log('📋 ginti din masla: ' + e.message); }
+  try { await rozQueue(); } catch (e) { log('📋 theek line masla: ' + e.message); }
+  try { await rozNotify(now, day); } catch (e) { log('📋 ginti yaad masla: ' + e.message); }
+}
+
 let doneKeys = new Set(), lastNow = 0, busy = false;
 async function tick() {
   if (busy) return;
   busy = true;
+  try { await rozTick(); } catch (e) { log('📋 roz masla: ' + e.message); }
   try { await gaariNotify(); } catch (e) { log('gaari notification masla: ' + e.message); }
   try { await nagNotify(); } catch (e) { log('🔁 nag masla: ' + e.message); }
   try { await trNotify(); } catch (e) { log('🚚 transfer check masla: ' + e.message); }
@@ -295,7 +376,7 @@ async function tick() {
   } finally { busy = false; if (doneKeys.size > 50) doneKeys = new Set([...doneKeys].slice(-20)); }
 }
 
-module.exports._t = { mirrorFacPhotos, phSafe, trDue, trList, trNotify, trSet: (p, j, c) => { trPos = p; trJobs = j; trChecks = c; trStops = []; }, trSent: () => trSent, nagDue, firstDue, nagNotify, nagNotes: () => nagNotes, nagSent: () => nagSent };
+module.exports._t = { mirrorFacPhotos, phSafe, rozRound, rozQueue, rozNotify, rozState, rozTick, rozWatch, rozD, rozSentSet: v => { rozSent = v; }, trDue, trList, trNotify, trSet: (p, j, c) => { trPos = p; trJobs = j; trChecks = c; trStops = []; }, trSent: () => trSent, nagDue, firstDue, nagNotify, nagNotes: () => nagNotes, nagSent: () => nagSent };
 if (process.env.NT_TEST) {} else if (process.argv.includes('--now')) {
   makeBackup('--now test').then(s => { console.log(s); process.exit(0); }).catch(e => { console.error('Nahi hua:', e.message); process.exit(1); });
 } else {
