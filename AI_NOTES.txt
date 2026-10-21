@@ -5701,3 +5701,14 @@ v2.105.3 (21 Oct 2026) — 🧺 RACK BHARO: % QAIDA HAR PHONE PAR · 🔒 100% L
 - 🐞 PURANI GALTI: data-rk-100sv / data-rk-100now / data-rk-100x ko dataset.rk100sv se parha ja raha tha — "-100" (dash ke baad number) dataset mein camelCase NAHI banta → undefined → 🔒 Lock / "abhi dukan = 100%" / ↺ hatao KABHI kaam nahi karte the (v2.103.78 se). Ab getAttribute. QAIDA: data-* naam mein dash ke baad number mat rakho (ya getAttribute).
 - ➕ khud (search se laya, rk.extra / packet rk.pkx): saath "✕ hatao" (data-rk-unadd, packet = "p:<id>") → sirf is khirki ki line se nikalta hai (mulazim bhi).
 - Test: rig malik + mulazim (pos-stock isOwner patch): patti, Qaide read-only, 100% box + Lock → setRackB, search → ➕ khud → ✕ hatao. AI nahi.
+
+PC PARCHI UPDATE (21 Oct 2026, manifest 2026-10-21.23 — app wahi v2.105.3) — 📝 TAFSEEL URDU BARA HAR PARCHI PAR + 📦 TRANSFER NOTE: PACKET NAAM KE AAGE (malik: "Tafseel ka lafz urdu main bara hona chahie … har print par … har item ka aage hi us ka piece aaye, oper neeche nahi"):
+- urdu-names v1.6: note(text, px, lab) — Urdu label ('تفصیل' / 'نوٹ' / 'وجہ') shuru mein ("تفصیل: گلو"), beech mein, bara (voucher 52px).
+  fillNotes: AI (Gemini 4 s) na aaye to roman2ur(t) — BINA AI: lughat RDICT (~340 dukan ke lafz + naam) + harf-ba-harf qaide (aa→ا, ee→ی, oo→و, kh/gh/sh/ch/th…, aakhri a/i/e→ا/ی/ے, aakhri ue→و, chhote zer/zabar gira do)
+  + bare harf ke chhote naam (TXN / POS / ATM, lughat mein nahi) harf harf (ٹی ایکس این). Pehle (v1.5) AI na aaye to Urdu line hi gayab hoti thi — ab kabhi nahi.
+  AI 4 s mein na aaye to pas-e-parda noteBg (20 s) — jawab urdu-notes.json mein, agli parchi par AI wali spelling. roman2ur ka jawab yaad mein NAHI jata.
+- pos-khata-sync: receiptBig + receipt (har voucher / kharcha / purchase parchi) = UR.note(note, 52, 'تفصیل'); English "Tafseel:" chhota waise hi neeche.
+- transfer-sync v4.11: pkNameLines(nm, pkL) — packet wale item ki pehli line MOTI: naam + "250 gm x 15 packet" usi line par daayein (pehle neeche alag "> 250 gm x 15 packet").
+  Lamba ho to naam chhota (kam az kam 14 harf + '.'), phir bhi na aaye to baqi packet agli line daayein. POS ka wazan ("POS: 3.75") Urdu naam ke baad chhota daayein. Note / Wajah ke saath Urdu label.
+- Test: scratchpad prn/slips.js (git HEAD vs naya, AI key khali = bina AI) → "تفصیل: گلو", "نوٹ: ریک بھرو"; manifest sha256 sab 71 theek; node --check.
+- AI: Gemini sirf jab key ho (behtar spelling, pas-e-parda yaad); warna qaide wala Urdu (AI nahi).

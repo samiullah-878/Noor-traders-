@@ -20,6 +20,8 @@
 //  v4.9 (2026-10-19): 📦 SUB-BARCODE PACKET — line.pk [{z,n,nm}] (app ka transfer / rack bharo): item ke neeche '> 500 gm x 20 packet' (mota),
 //     qty ki jagah 'POS: 10' (POS mein wazan); neeche 'Kul POS' + 'Kul packet'. Reprint (tj.lines) mein bhi pk.
 //  v4.10 (2026-10-20): 📅 transfer note / purchase bill par Urdu sar-khi + bari Urdu tareekh · 📝 Note / Wajah Urdu bara (AI, urdu-names v1.5, 4 s)
+//  v4.11 (2026-10-21): 📦 malik — "har item ke aage hi us ka piece aaye, upar neeche nahi": packet wale item ki pehli (mota) line = naam + '250 gm x 15 packet' (pkNameLines);
+//     POS ka wazan Urdu naam ke baad chhota daayein · 📝 Note / Wajah Urdu label ('نوٹ:' / 'وجہ:') + bina AI bhi Urdu (urdu-names v1.6 roman2ur).
 //  v4.8 (2026-10-14): 🔤 TRANSFER NOTE PAR URDU — har item ke English naam ke neeche Urdu naam (urdu-names.js: blueAccess/urduNames LIVE,
 //     printConfig.urduSlip). Urdu wali parchi nt-parchi ke tez worker se (tasveer); Urdu na ho to pehle jaisa RAW.
 //  Chalana:  node transfer-sync.js   (transfer-auto.bat loop mein)
@@ -189,27 +191,38 @@ function baqiText(x, r) {
   one(r.to, x.baqiTo, x.baqiTo == null ? null : r3(Number(x.baqiTo) - q));
   return out.join('\r\n');
 }
+// v4.11 (2026-10-21): malik — "har item ke aage hi us ka piece aaye, upar neeche nahi": packet wale item ki pehli line = naam + "250 gm x 15 packet"
+//   (mota, ek hi line). Lamba ho to naam chhota (kam az kam 14 harf), phir bhi na aaye to baqi packet agli line par daayein. POS ka wazan Urdu naam ke baad chhota.
+function pkNameLines(nm, pkL) {
+  const B0 = ESC + '!' + '\x08', B1 = ESC + '!' + '\x00', pk = pkL.map(p => `${ascii(p.nm || n(p.z))} x ${n(p.n)}`), all = pk.join(' + ') + ' packet';
+  if (nm.length + 1 + all.length <= PRINT_WIDTH) return [B0 + pad(nm, PRINT_WIDTH - all.length) + all + B1];
+  const first = pk[0] + (pk.length > 1 ? ' +' : ' packet'), room = PRINT_WIDTH - first.length - 1;
+  if (room >= 14) { const out = [B0 + pad(nm.length > room ? nm.slice(0, room - 1) + '.' : nm, PRINT_WIDTH - first.length) + first + B1]; if (pk.length > 1) { const rest = pk.slice(1).join(' + ') + ' packet'; out.push(B0 + pad('', Math.max(0, PRINT_WIDTH - rest.length)) + rest.slice(0, PRINT_WIDTH) + B1); } return out; }
+  return [B0 + nm.slice(0, PRINT_WIDTH) + B1, B0 + pad('', Math.max(0, PRINT_WIDTH - all.length)) + all.slice(0, PRINT_WIDTH) + B1];
+}
 function transferText(r, note, reprint) {
   const out = head('STOCK TRANSFER NOTE', 'اسٹاک ٹرانسفر نوٹ', r.at);
   out.push(line('STN No: ' + r.transferNo, stamp(r.at)));
   { const c = String(r.transferNo || '').replace(/[^\x20-\x7e]/g, '').trim(); if (c) out.push(ESC + 'a' + '\x01' + GS + 'h' + '\x50' + GS + 'w' + '\x02' + GS + 'H' + '\x02' + GS + 'k' + '\x49' + String.fromCharCode(c.length + 2) + '{B' + c + '\n' + ESC + 'a' + '\x00'); }   // v4.1: barcode (CODE128) — app ka 🧾 Transfer check scan
   out.push(`Se : ${ascii(r.from)}`, `Ko : ${ascii(r.to)}`);
   if (r.pos) out.push('(POS se bana note - stock ki parchi)');   // v4.4
-  if (note) { if (UR.note) { const u = UR.note(note, 50); if (u) out.push(u); } out.push(ESC + 'a' + '\x00' + 'Note: ' + ascii(note).slice(0, PRINT_WIDTH - 6)); }   // v4.10: 📝 Note Urdu bara (AI)
+  if (note) { if (UR.note) { const u = UR.note(note, 50, 'نوٹ'); if (u) out.push(u); } out.push(ESC + 'a' + '\x00' + 'Note: ' + ascii(note).slice(0, PRINT_WIDTH - 6)); }   // v4.10: 📝 Note Urdu bara (AI)
   out.push('-'.repeat(PRINT_WIDTH), pad('Item', PRINT_WIDTH - 22) + pad('Qty', 22, true), '-'.repeat(PRINT_WIDTH));
   if (r.rows.some(x => x.baqiFrom != null || x.baqiTo != null)) out.push('(har item ke neeche stock: pehle -> baad)');   // v4.3
   for (const x of r.rows) {
     const pkL = Array.isArray(x.pk) && x.pk.length ? x.pk : null;   // v4.9: 📦 sub-barcode packet — "500 gm x 20 packet" + POS ka wazan
-    const q = pkL ? 'POS: ' + n(x.qty) + (ascii(x.uName) && !/^pcs$/i.test(ascii(x.uName)) ? ' ' + ascii(x.uName) : '') : qtyText(x); if (ascii(x.name).length + q.length + 1 > PRINT_WIDTH) { out.push(ascii(x.name).slice(0, PRINT_WIDTH)); out.push(pad('', PRINT_WIDTH - q.length) + q); } else out.push(pad(ascii(x.name), PRINT_WIDTH - q.length) + q);
-    if (pkL) for (const p of pkL) out.push(ESC + '!' + '\x08' + `  > ${ascii(p.nm || n(p.z))} x ${n(p.n)} packet`.slice(0, PRINT_WIDTH) + ESC + '!' + '\x00');   // v4.9: mota
+    const q = pkL ? 'POS: ' + n(x.qty) + (ascii(x.uName) && !/^pcs$/i.test(ascii(x.uName)) ? ' ' + ascii(x.uName) : '') : qtyText(x);
+    if (pkL) out.push(...pkNameLines(ascii(x.name), pkL));   // v4.11: packet naam ke AAGE usi line par (mota)
+    else if (ascii(x.name).length + q.length + 1 > PRINT_WIDTH) { out.push(ascii(x.name).slice(0, PRINT_WIDTH)); out.push(pad('', PRINT_WIDTH - q.length) + q); } else out.push(pad(ascii(x.name), PRINT_WIDTH - q.length) + q);
     { const ur = UR.get(x.itemId); if (ur) out.push(UR.line(ur, 40)); }   // v4.8: 🔤 Urdu naam
+    if (pkL) out.push(pad('', PRINT_WIDTH - q.length) + q);   // v4.11: POS ka wazan chhota, daayein
     const b = baqiText(x, r); if (b) out.push(...b.split('\r\n'));   // v4.2: baqi stock usi parchi par
   }
   out.push('-'.repeat(PRINT_WIDTH), line('Items: ' + r.rows.length, 'Kul POS: ' + n(r.rows.reduce((s, x) => s + (Number(x.qty) || 0), 0))));
   { const kp = r.rows.reduce((s, x) => s + (Array.isArray(x.pk) ? x.pk.reduce((t, p) => t + (Number(p.n) || 0), 0) : 0), 0); if (kp) out.push(line('', 'Kul packet: ' + n(kp))); }   // v4.9
   if (reprint) {
     out.push('', ESC + 'a' + '\x01', ESC + '!' + '\x30' + 'DOBARA PRINT (' + reprint.n + ')' + ESC + '!' + '\x00', ESC + 'a' + '\x00');
-    if (UR.note && reprint.reason) { const u = UR.note(reprint.reason, 44); if (u) out.push(u); }   // v4.10: 📝 Wajah Urdu (AI)
+    if (UR.note && reprint.reason) { const u = UR.note(reprint.reason, 44, 'وجہ'); if (u) out.push(u); }   // v4.10: 📝 Wajah Urdu (AI)
     out.push(ESC + 'a' + '\x00' + 'Wajah: ' + ascii(reprint.reason).slice(0, PRINT_WIDTH - 7), stamp(reprint.at) + (reprint.by ? ' · ' + ascii(reprint.by) : ''));
   }
   out.push('', 'Dastakhat (nikala): ____________', '', 'Dastakhat (mila):   ____________', '', '', '', GS + 'V' + '\x42' + '\x00');
@@ -231,7 +244,7 @@ function purchaseText(b, entry) {
     out.push(ESC + 'a' + '\x02', ESC + '!' + '\x30' + 'Rs.' + money(b.net) + ESC + '!' + '\x00', ESC + 'a' + '\x00');
   } else if (entry) {
     out.push(line('Cash purchase', entry.date), 'Supplier: ' + ascii(entry.partyName || '').slice(0, PRINT_WIDTH - 10));
-    if (entry.note) { if (UR.note) { const u = UR.note(entry.note, 50); if (u) out.push(u); } out.push(ESC + 'a' + '\x00' + 'Note: ' + ascii(entry.note).slice(0, PRINT_WIDTH - 6)); }
+    if (entry.note) { if (UR.note) { const u = UR.note(entry.note, 50, 'نوٹ'); if (u) out.push(u); } out.push(ESC + 'a' + '\x00' + 'Note: ' + ascii(entry.note).slice(0, PRINT_WIDTH - 6)); }
     out.push('-'.repeat(PRINT_WIDTH), ESC + 'a' + '\x02', ESC + '!' + '\x30' + 'Rs.' + money(entry.amount) + ESC + '!' + '\x00', ESC + 'a' + '\x00');
   }
   out.push('', '', '', GS + 'V' + '\x42' + '\x00');

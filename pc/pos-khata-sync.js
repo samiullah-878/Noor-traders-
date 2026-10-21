@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-10-21: 📝 malik — "Tafseel ka lafz Urdu mein bara, har print par": Urdu line 'تفصیل: …' (52px) — AI 4 s mein na aaye to bhi (urdu-names v1.6 roman2ur)
 //  2026-10-20: 📅 har voucher par Urdu tareekh bari (upar + neeche) · 📝 Tafseel Urdu bari (AI, urdu-names v1.5 fillNotes, 4 s) · 🏦 HBL Urdu sar-khi · dobara print: udhar sale ka sahi naam, BPV/BRV naam
 //
 //  ACCOUNTS
@@ -459,7 +460,7 @@ function receiptBig({ title, code, date, lines, note, copy, pay }) {
     if (l.after != null) { const a = Number(l.after) || 0; out.push(smb(rowW(WB, who + 'Ab baqaya - ' + (a > 0 ? 'LENE' : a < 0 ? 'DENE' : 'BARABAR') + ':', 'Rs.' + n(Math.abs(a))))); }
   }
   const nl = wrap(note, WB);
-  if (nl.length) out.push(hrB, ...(UR.note ? [UR.note(note, 50)].filter(Boolean) : []), sm('Tafseel:'), ...nl.map(sm));   // 2026-10-20: 📝 Tafseel Urdu (AI, print se pehle fillNotes)
+  if (nl.length) out.push(hrB, ...(UR.note ? [UR.note(note, 52, 'تفصیل')].filter(Boolean) : []), sm('Tafseel:'), ...nl.map(sm));   // 2026-10-20: 📝 Tafseel Urdu (AI, print se pehle fillNotes)
   out.push(hrB, ...dateMark(date, big2, C, 'bot'), L + '', sm('Dastakhat: ______________________'), '', C + sm('Blue Khata app'), L, '', '');
   out.push(GS + 'V\x42\x00');                                    // kaghaz kaato
   return out.join('\r\n');
@@ -519,7 +520,7 @@ function receipt({ title, code, date, lines, note, copy, bank, pay }) {
   }
   if (bq.length) out.push(L + hr);
   const nl = wrap(note, W);
-  if (nl.length) out.push(...(UR.note ? [UR.note(note, bank ? 44 : 50)].filter(Boolean) : []), L + 'Tafseel:', ...nl, hr);   // 2026-10-20: 📝 Tafseel Urdu
+  if (nl.length) out.push(...(UR.note ? [UR.note(note, bank ? 46 : 52, 'تفصیل')].filter(Boolean) : []), L + 'Tafseel:', ...nl, hr);   // 2026-10-20: 📝 Tafseel Urdu
   if (!bank) out.push(...dateMark(date, big, C, 'bot'), L + hr);
   out.push('', '', 'Dastakhat: ______________________', '', C + 'Blue Khata app', L, '', '', '');
   out.push(GS + 'V\x42\x00');                                    // kaghaz kaato
