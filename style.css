@@ -5310,3 +5310,18 @@ html.dk body #dialogBody .ph-pat{background:rgba(255,255,255,.06)!important;colo
 html.dk .ph-none{color:#cfe0ff}html.dk .ph-stage.empty{background:rgba(255,255,255,.05);border-color:rgba(159,176,208,.5)}
 /* purani 🧪 Formulas tab: do bare button ki likhai ek ek harf khari ho rahi thi (phone, chhota hero) — ek ke neeche ek */
 @media (max-width:1099.98px){html:not([data-hero="big"]) body :is(#summary,#dialogBody) .ir-root .fc-fnew{grid-template-columns:1fr!important;margin:4px 0 8px!important}}
+/* ================= v2.108.1: factory ek-screen — ⋮ list (① doosre items · ➕ maal jorein) · 🧴 har pcs ke saath ✕ / ➕ packing · 🎁 ⌃ Chhupao ================= */
+.ek-sr{display:flex;align-items:center;gap:8px;min-width:0}
+.ek-sr>.hs-search{flex:1;min-width:0;margin:0}
+html body :is(#summary,#dialogBody) .ir-root .ek-dots{flex:none;width:46px;height:46px;min-height:0;padding:0;border-radius:14px;border:1.5px solid var(--ir-grid)!important;background:var(--ir-surf)!important;color:#1E3768!important;font-size:22px;font-weight:900;line-height:1}
+html body :is(#summary,#dialogBody) .ir-root .ek-dots.is-in{background:#1E3768!important;border-color:#1E3768!important;color:#fff!important}
+html.dk body :is(#summary,#dialogBody) .ir-root .ek-dots:not(.is-in){color:#cfe0ff!important}
+.ek-hlw{margin-top:10px;padding-top:4px;border-top:1px dashed var(--ir-grid)}
+#ekPickList:empty{display:none}
+html body :is(#summary,#dialogBody) .ir-root .fc-lab:has(.ek-tgl){display:flex;align-items:center;gap:8px}
+html body :is(#summary,#dialogBody) .ir-root .fc-lab .ek-tgl{margin-left:auto;min-height:32px;padding:0 12px;border-radius:999px;border:1.5px dashed #178156!important;background:rgba(23,129,86,.07)!important;color:#0F6A45!important;font-size:12px;font-weight:800;letter-spacing:0;text-transform:none}
+html body :is(#summary,#dialogBody) .ir-root .fc-lab .ek-tgl.is-in{border-style:solid!important;border-color:var(--ir-grid)!important;background:var(--ir-surf)!important;color:var(--ir-ink)!important}
+html.dk body :is(#summary,#dialogBody) .ir-root .fc-lab .ek-tgl:not(.is-in){color:#7ee2b2!important}
+html body :is(#summary,#dialogBody) .ir-root .fc-lab:has(.ek-tgl) small{display:none}
+html body :is(#summary,#dialogBody) .ir-root .fc-lab .ek-tgl{white-space:nowrap;flex:none}
+.ek-mats.sm{margin-top:8px;padding:10px;border-radius:14px;border:1.5px dashed #9FB0D0;background:rgba(43,79,149,.04)}

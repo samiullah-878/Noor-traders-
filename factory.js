@@ -16,8 +16,8 @@
 //   ginti / 📥 maal aaya / 📤 maal diya = factoryMoves, naya item = cfg.local ('loc:<id>' — POS mein nahi), rate sirf factory (POS "lagao" band).
 //   Factory ka STOCK = app ka apna: har item ke waqia (ginti = itna hai · aaya + · diya − · batch: tayyar + / raw −) waqt ke hisaab se.
 //   cfg.posOn true = purana tareeqa (POS Adjustment, POS ginti, POS item). ⚙️ mein on / off (sirf malik).
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.108.0';
-import { smartSearch, fold } from './smart-search.js?v=2.108.0';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.108.1';
+import { smartSearch, fold } from './smart-search.js?v=2.108.1';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1262,7 +1262,7 @@ function ekFresh(it, eb) {
   const f = it ? forms()[it.id] : null, x = it ? feInit(it, f) : null;
   if (x && f?.sum) x.sum = true;
   if (x && !f && !x.ml && KGU.test(un(it))) x.sum = true;   // naya nuskha kg / ltr wala: 1 batch = raw ka jama (khud)
-  return { id: it ? String(it.id) : '', q: '', fe: x, n: 1, oq: {}, rEd: {}, posR: false, pq: '', sel: new Set(), nw: null, ni: null, eb: eb || null, busy: false };
+  return { id: it ? String(it.id) : '', q: '', fe: x, n: 1, oq: {}, rEd: {}, posR: false, pq: '', sel: new Set(), nw: null, ni: null, eb: eb || null, busy: false, hlOpen: false, plOpen: false, smOpen: false, spm: null };   // v2.108.1: hlOpen ① doosre items · plOpen ➕ maal list · smOpen 🧴 packing chunna · spm naya packing
 }
 const ekPerOf = F => { if (Number(F.ml) > 0 && F.auto !== false) { const V = volOf(F.lines); return V.v > 0 ? r3(V.v * 1000 / F.ml) : 0; } if (F.sum) { const V = volOf(F.lines); return V.v > 0 ? r3(V.v) : 0; } return Number(F.per) || 0; };
 const ekForm = F => ({ per: ekPerOf(F), lines: F.lines.filter(l => Number(l.q) > 0), lab: Number(F.lab) || 0, gas: Number(F.gas) || 0, ml: Number(F.ml) || 0, auto: F.auto !== false, self: { mats: Object.entries(F.self || {}).filter(([, q]) => Number(q) > 0).map(([id, q]) => ({ id, q: Number(q) })) } });
@@ -1296,7 +1296,8 @@ function ekRender(root) {
   if (!itemsOk) { root.innerHTML = `<div id="ekRoot" class="ek"><div class="ir-hero fc-hero ek-hero"><div class="fc-hrow"><div><small>NOOR TRADERS · APNI FACTORY</small><strong>🏭 Factory</strong></div></div></div><div class="ek-mn">${ekMenu()}</div>${itemsErr ? `<p class="ir-say">⏳ Stock load nahi hua: ${esc(itemsErr)}</p>` : '<p class="lk-note">⏳ Items aa rahi hain…</p>'}</div>`; return; }
   if (!ek) { const last = ekJob(ekLast()), it = last ? byId.get(last) : null; ek = ekFresh(it && (isOwner() || forms()[it.id]) ? it : null); }
   else { const nid = ekJob(ek.id); if (nid !== ek.id) ek.id = nid;   // ⏳ PC ne item bana diya — asli id
-    if (ek.fe) { for (const l of ek.fe.lines) l.id = ekJob(l.id); for (const k of Object.keys(ek.oq)) { const nk = ekJob(k); if (nk !== k) { ek.oq[nk] = ek.oq[k]; delete ek.oq[k]; } } }
+    if (ek.fe) { for (const l of ek.fe.lines) l.id = ekJob(l.id); for (const k of Object.keys(ek.oq)) { const nk = ekJob(k); if (nk !== k) { ek.oq[nk] = ek.oq[k]; delete ek.oq[k]; } }
+      for (const k of Object.keys(ek.fe.self || {})) { const nk = ekJob(k); if (nk !== k) { ek.fe.self[nk] = ek.fe.self[k]; delete ek.fe.self[k]; } } }
     else if (ek.id && byId.get(ek.id)) ek = ekFresh(byId.get(ek.id), ek.eb); }
   const a = document.activeElement;
   if ($('ekRoot') && a && root.contains(a) && a.matches?.('input,textarea')) { ekSoft(); return; }   // likhte waqt poori screen na bane (keyboard na toote)
@@ -1332,7 +1333,7 @@ function ekHTML() {
     ${errs.length ? `<button type="button" class="fc-alert bad" data-fc-b="${esc(errs[0].id)}"><span>❌</span><div><b>${num(errs.length)} batch POS mein nahi gaye</b> — tap karein, wajah dekhein</div><em>›</em></button>` : ''}
     ${dups.map(x => `<div class="fc-alert"><span>⚠️</span><div><b>${esc(x.name)}</b> ⏳ PC baqi hai magar ye naam POS mein pehle se hai — PC dobara item banayega. Agar wahi item hai to pending hatayein aur POS wali ko ☑ karein.</div><button type="button" data-fc-penddel="${esc(x.jid)}">✕ Hatao</button></div>`).join('')}
     <section class="ir-sec ek-c" id="ekItem"><div class="ek-h"><span class="ek-no">1</span><b>Kaun sa maal banana hai?</b></div>
-      <label class="hs-search"><input type="search" data-ek-q="1" placeholder="🔍 item ka naam / barcode — likhte hi milta julta" value="${esc(ek.q)}" autocomplete="off"></label>
+      <div class="ek-sr"><label class="hs-search"><input type="search" data-ek-q="1" placeholder="🔍 item ka naam / barcode — likhte hi milta julta" value="${esc(ek.q)}" autocomplete="off"></label>${ek.id && !ek.nw ? `<button type="button" class="ek-dots${ek.hlOpen ? ' is-in' : ''}" data-ek-hl="1" aria-label="Doosre items" title="Doosre items">⋮</button>` : ''}</div>
       <div id="ekHits">${ekHitsHTML()}</div></section>
     ${z ? ekFormHTML(z) + ekBatchHTML(z) + ekOutHTML(z) + (own ? ekRateHTML(z) : '') + `<div class="ek-save" id="ekSaveC">${ekSaveInner(z)}</div>` : ''}
     <section class="ir-sec ek-c" id="ekHist">${ekHistHTML()}</section></div>`;
@@ -1348,17 +1349,20 @@ function ekHitsHTML() {
     return `<div class="ek-hl">${fac.map(x => row(x, false)).join('')}${pos.map(x => row(x, true)).join('')}${!fac.length && !pos.length ? `<p class="lk-note">"${esc(q)}" — koi milta julta item nahi.</p>` : ''}${own && !exact ? `<button type="button" class="ek-new" data-ek-nwmain="1">➕ Naya item banao: "${esc(q)}"</button>` : ''}</div>`;
   }
   if (it) {
-    const f = F[it.id], others = finished().filter(x => x.id !== it.id && !isPend(x)).slice(0, 14);
+    const f = F[it.id];
     const th = phThumb(it.id), ph = th && phCan() ? `<button type="button" class="ek-ph img" data-ek-ph="${esc(it.id)}" aria-label="${esc(it.name)} ki tasveer"><img src="${esc(th)}" alt=""></button>` : own ? `<button type="button" class="ek-ph add" data-ek-ph="${esc(it.id)}" aria-label="Tasveer lagao"><span>📷</span><i>tasveer</i></button>` : `<div class="ek-ph" aria-hidden="true">${esc((it.name || '?').trim().charAt(0).toUpperCase())}</div>`;
     return `<div class="ek-sel">${ph}<div class="ek-seli"><b>${esc(it.name)}${isPend(it) ? ' ⏳' : ''}${isLoc(it) ? ' 📱' : ''}</b>
         <small>${f ? '✓ Formula bana hua · 1 batch = ' + esc(qt(f.per, it)) : '🧪 Naya formula — neeche maal jorein'}</small><small>stock ${esc(qk(it.stock, it))}${it.code ? ' · ' + esc(it.code) : ''}</small></div>
         <button type="button" class="ek-x" data-ek-it="" aria-label="Doosra item chunein">✕</button></div>
-      ${others.length ? `<div class="ek-sw mchips">${others.map(x => `<button type="button" data-ek-it="${esc(x.id)}">${esc(x.name)}</button>`).join('')}</div>` : ''}`;
+      ${ek.hlOpen ? `<div class="ek-hlw">${ekAllHTML(row, it.id)}</div>` : ''}`;   // v2.108.1: doosre items ⋮ ke peeche (malik: "zaroorat par saamne")
   }
-  const fin = finished().filter(x => own || !isPend(x)), rest = own ? items.filter(x => !F[x.id] && !isMat(x.id) && !packOf(x.id) && !isPend(x)).slice(0, 12) : [];
+  return ekAllHTML(row, '');
+}
+function ekAllHTML(row, skip) {
+  const own = isOwner(), F = forms(), fin = finished().filter(x => x.id !== skip && (own || !isPend(x))), rest = own ? items.filter(x => x.id !== skip && !F[x.id] && !isMat(x.id) && !packOf(x.id) && !isPend(x)).slice(0, 12) : [];
   return `${fin.length ? `<div class="fc-lab">🧪 FORMULA WALE <small>${num(fin.length)}</small></div><div class="ek-hl">${fin.map(x => row(x, false)).join('')}</div>` : ''}
     ${rest.length ? `<div class="fc-lab">BAQI FACTORY ITEMS <small>naya formula banayein</small></div><div class="ek-hl">${rest.map(x => row(x, false)).join('')}</div>` : ''}
-    ${!fin.length && !rest.length ? `<p class="lk-note">${own ? 'Factory mein abhi koi item nahi — upar naam likhein (POS mein ho to mil jayega) ya ➕ naya.' : 'Abhi koi formula nahi — malik banayega.'}</p>` : ''}`;
+    ${!fin.length && !rest.length ? `<p class="lk-note">${skip ? 'Aur koi item nahi.' : own ? 'Factory mein abhi koi item nahi — upar naam likhein (POS mein ho to mil jayega) ya ➕ naya.' : 'Abhi koi formula nahi — malik banayega.'}</p>` : ''}`;
 }
 // ➕ naya item (jo banana hai) / naya raw maal — wahin chips mein (dohra roko)
 function ekNwHTML() {
@@ -1376,15 +1380,27 @@ function ekFormHTML(z) {
   return `<section class="ir-sec ek-c" id="ekForm"><div class="ek-h"><span class="ek-no">2</span><b>Formula — 1 batch ka nuskha</b>${own ? '' : '<small>🔒 sirf malik badle</small>'}</div>
     <div class="fc-lab">RAW MAAL <small>${num(F.lines.length)}</small></div>
     <div class="ek-chips" id="ekLines">${ekLinesHTML()}</div>
-    ${SM.length ? `<div class="fc-lab">🧴 HAR PCS KE SAATH <small>bottle / dhakan</small></div><div class="ek-chips">${SM.map(([id, q]) => `<span class="ek-chip"><b>${esc(byId.get(id)?.name || id)}</b><i>${num(q)}</i><em>fi pcs</em></span>`).join('')}</div>` : ''}
+    ${ekSelfHTML(z)}
     ${own ? `<div class="ek-pick" id="ekPickBox">${ek.nw?.kind === 'raw' ? ekNwHTML() : `<div class="fc-lab">➕ MAAL JOREIN <small>☑ kai ek saath</small></div>
-      <label class="hs-search"><input type="search" data-ek-pq="1" placeholder="🔍 likhein — milte julte naam foran" value="${esc(ek.pq)}" autocomplete="off"></label>
+      <div class="ek-sr"><label class="hs-search"><input type="search" data-ek-pq="1" placeholder="🔍 naam likhein · ⋮ = poori list" value="${esc(ek.pq)}" autocomplete="off"></label><button type="button" class="ek-dots${ek.plOpen ? ' is-in' : ''}" data-ek-pl="1" aria-label="Poori list" title="Poori list">⋮</button></div>
       <div id="ekPickList">${ekPickListHTML()}</div><div id="ekPickFoot">${ekPickFootHTML()}</div>`}</div>` : ''}
     <div class="fc-lab">KHARCHA <small>fi batch</small></div>
     <div class="ek-xr"><label>👷 Mazdoori<span><em>Rs</em><input type="number" inputmode="decimal" min="0" step="any" data-ek-lab="1" value="${F.lab || ''}" placeholder="0"${own ? '' : ' disabled'}></span></label>
       <label>🔥 Gas / bijli<span><em>Rs</em><input type="number" inputmode="decimal" min="0" step="any" data-ek-gas="1" value="${F.gas || ''}" placeholder="0"${own ? '' : ' disabled'}></span></label></div>
     <div id="ekPer" class="ek-per">${ekPerHTML(z)}</div>
     <div id="ekSum" class="ek-sum">${ekSumHTML(z)}</div></section>`;
+}
+// v2.108.1: 🧴 HAR PCS KE SAATH (bottle / raper / dhakan) — malik: ✕ hatao · miqdaar · ➕ packing (list se ya naya) — Save par formula ke saath
+function ekSelfHTML(z) {
+  const own = isOwner(), F = ek.fe, S = F.self || {}, ids = Object.keys(S), show = ids.length || Number(F.ml) > 0 || !KGU.test(un(z.it));
+  if (!show || (!own && !ids.some(id => Number(S[id]) > 0))) return '';
+  const chip = id => { const it = byId.get(id), nm = it?.name || id, q = Number(S[id]) || 0, r = rateOf(id, it);
+    return `<span class="ek-chip${q > 0 ? '' : ' warn'}${it ? '' : ' gone'}"><b>${esc(nm)}${isPend(it) ? ' ⏳' : ''}</b>${own ? `<input type="number" inputmode="decimal" min="0" step="any" data-ek-sq="${esc(id)}" value="${q > 0 ? q : ''}" placeholder="1" aria-label="${esc(nm)} fi pcs">` : `<i>${num(q)}</i>`}<em>fi pcs</em>${r ? `<small>${rs(r)}</small>` : ''}${own ? `<button type="button" class="ek-cx" data-ek-sdel="${esc(id)}" aria-label="${esc(nm)} hatao">✕</button>` : ''}</span>`; };
+  const M = own && ek.smOpen ? items.filter(y => y.id !== z.it.id && (isMat(y.id) || looksPack(y.id, y.name))) : [];
+  return `<div class="fc-lab">🧴 HAR PCS KE SAATH <small>bottle / raper / dhakan</small>${own ? `<button type="button" class="ek-tgl${ek.smOpen ? ' is-in' : ''}" data-ek-smo="1">${ek.smOpen ? '⌃ Chhupao' : '➕ packing'}</button>` : ''}</div>
+    <div class="ek-chips" id="ekSelf">${ids.map(chip).join('') || '<p class="lk-note">Har pcs ke saath koi packing nahi — ➕ packing se jorein.</p>'}</div>
+    ${ek.smOpen ? `<div class="ek-mats sm">${M.map(y => `<button type="button" class="${S[y.id] != null ? 'is-in' : ''}" data-ek-smat="${esc(y.id)}">${S[y.id] != null ? '✓ ' : ''}${esc(y.name)}</button>`).join('')}<button type="button" class="alt" data-ek-spmnew="1">➕ naya packing</button></div>
+      ${ek.spm ? `<div class="ek-two ek-pm"><label class="ek-f"><span>Packing ka naam</span><input type="text" data-ek-spmf="n" maxlength="80" value="${esc(ek.spm.n)}" placeholder="jaise: Bottle 500 ml"></label><label class="ek-f"><span>Rate (Rs fi pc)</span><input type="number" inputmode="decimal" min="0" step="any" data-ek-spmf="r" value="${esc(ek.spm.r)}" placeholder="0"></label><button type="button" class="fc-go sm" data-ek-spmok="1">✓ Packing banao</button></div>` : ''}` : ''}`;
 }
 function ekLinesHTML() {
   const own = isOwner();
@@ -1402,6 +1418,7 @@ function ekPickData() {
   return { L, pos, more: L0.length - L.length, inF, use, q, exact: [...L0, ...pos].some(x => fold(x.name) === fold(q)) };
 }
 function ekPickListHTML() {
+  if (!ek.plOpen && !ek.pq.trim()) return '';   // v2.108.1: list ⋮ ke peeche (malik: "zaroorat par saamne")
   const { L, pos, more, inF, use } = ekPickData();
   const row = (x, isPos) => { const has = inF.has(x.id), on = has || ek.sel.has(x.id), r = isPos ? 0 : rateOf(x.id, x);
     return `<label class="ek-pr${on ? ' is-in' : ''}${has ? ' has' : ''}"><input type="checkbox" data-ek-pt="${esc(x.id)}"${on ? ' checked' : ''}${has ? ' disabled' : ''}><span><b>${use.get(x.id) ? '⭐ ' : ''}${esc(x.name)}${isPend(x) ? ' ⏳' : ''}</b><small>${has ? '✓ pehle se formula mein · ' : ''}${isPos ? '🏪 POS — factory mein bhi jur jayegi · ' : ''}stock ${esc(isPos ? qt(x.stock, x) : qk(x.stock, x))}${r ? ' · ' + rs(r) + '/' + esc(un(x)) : ''}</small></span></label>`; };
@@ -1466,8 +1483,9 @@ function ekNiHTML(z) {
       : `<label class="ek-f"><span>Naam</span><input type="text" data-ek-nif="n" maxlength="80" value="${esc(s.n)}" placeholder="jaise: Surf 2 kg"></label><div id="ekNiDup">${ekDupHTML(ekDup(String(s.n || '').trim()), 'out')}</div>`}
     ${!old || x ? `<div class="ek-two"><label class="ek-f"><span>Ek pc mein kitna (${vu})</span><input type="number" inputmode="decimal" min="0" step="any" data-ek-nif="g" value="${esc(s.g)}" placeholder="0.5"></label>
       ${old ? '' : `<label class="ek-f"><span>1 Ctn = kitne pcs</span><input type="number" inputmode="numeric" min="0" step="1" data-ek-nif="pk" value="${esc(s.pk)}" placeholder="ikhtiyari"></label>`}</div>
-      <div class="fc-lab">🎁 PACKING MAAL <small>har pc ke saath 1</small></div>
-      <div class="ek-mats">${M.map(y => `<button type="button" class="${s.mats[y.id] ? 'is-in' : ''}" data-ek-nimat="${esc(y.id)}">${s.mats[y.id] ? '✓ ' : ''}${esc(y.name)}</button>`).join('')}<button type="button" class="alt" data-ek-pmnew="1">➕ naya packing</button></div>
+      ${(() => { const nSel = M.filter(y => s.mats[y.id]).length, hide = s.mHide && nSel, L = hide ? M.filter(y => s.mats[y.id]) : M;   // v2.108.1: chunne ke baad ⌃ Chhupao
+        return `<div class="fc-lab">🎁 PACKING MAAL <small>har pc ke saath 1</small>${nSel ? `<button type="button" class="ek-tgl${hide ? '' : ' is-in'}" data-ek-mhide="1">${hide ? '▾ Sab (' + num(M.length) + ')' : '⌃ Chhupao'}</button>` : ''}</div>
+      <div class="ek-mats">${L.map(y => `<button type="button" class="${s.mats[y.id] ? 'is-in' : ''}" data-ek-nimat="${esc(y.id)}">${s.mats[y.id] ? '✓ ' : ''}${esc(y.name)}</button>`).join('')}${hide ? '' : '<button type="button" class="alt" data-ek-pmnew="1">➕ naya packing</button>'}</div>`; })()}
       ${s.pm ? `<div class="ek-two ek-pm"><label class="ek-f"><span>Packing ka naam</span><input type="text" data-ek-pmf="n" maxlength="80" value="${esc(s.pm.n)}" placeholder="jaise: Pouch 2 kg"></label><label class="ek-f"><span>Rate (Rs fi pc)</span><input type="number" inputmode="decimal" min="0" step="any" data-ek-pmf="r" value="${esc(s.pm.r)}" placeholder="0"></label><button type="button" class="fc-go sm" data-ek-pmok="1">✓ Packing banao</button></div>` : ''}
       <div class="ek-nicost" id="ekNiCost">${ekNiCost(z)}</div>
       <div class="fc-btns"><button type="button" class="fc-no" data-ek-nix="1">✕ Chhoro</button><button type="button" class="fc-go" data-ek-niok="1"${s.busy ? ' disabled' : ''}>✓ Jor do</button></div>` : '<div class="fc-btns"><button type="button" class="fc-no" data-ek-nix="1">✕ Chhoro</button></div>'}</div>`;
@@ -1563,12 +1581,13 @@ function ekNwUse(id) {   // ⚠️ milta julta pehle se — wahi lo
   if (!ek.fe.lines.some(l => String(l.id) === String(id))) { if (!byId.has(String(id))) facToggle(String(id), true); ek.fe.lines.push({ id: String(id), q: Number(w.q) > 0 ? r3(Number(w.q)) : 0, n: byId.get(String(id))?.name || ekPos(id)?.name || '' }); }
   ek.pq = ''; paint(); notice('✓ Pehle wala item jur gaya (naya nahi bana)');
 }
-async function ekPmSave() {   // ➕ naya packing maal (pouch / bag) — wahin
-  const s = ek?.ni?.pm; if (!s) return; const n = String(s.n || '').trim(); if (!n) { notice('Packing ka naam likhein'); return; }
-  const d = ekDup(n).find(x => fold(x.name) === fold(n)); if (d) { ek.ni.mats[String(d.id)] = 1; ek.ni.pm = null; if (!byId.has(String(d.id))) matToggle(String(d.id), true); paint(); notice('✓ ' + d.name + ' pehle se tha — wahi chuna'); return; }
+async function ekPmSave(to = 'ni') {   // ➕ naya packing maal (pouch / bag / bottle) — wahin · to 'ni' = naye item ka · 'self' = 🧴 har pcs ke saath (v2.108.1)
+  const s = to === 'self' ? ek?.spm : ek?.ni?.pm; if (!s) return; const n = String(s.n || '').trim(); if (!n) { notice('Packing ka naam likhein'); return; }
+  const put = id => { if (to === 'self') { if (ek?.fe) { ek.fe.self = ek.fe.self || {}; ek.fe.self[id] = 1; } if (ek) ek.spm = null; } else if (ek?.ni) { ek.ni.mats[id] = 1; ek.ni.pm = null; } };
+  const d = ekDup(n).find(x => fold(x.name) === fold(n)); if (d) { put(String(d.id)); if (!byId.has(String(d.id))) matToggle(String(d.id), true); paint(); notice('✓ ' + d.name + ' pehle se tha — wahi chuna'); return; }
   const r = Number(s.r) > 0 ? r2(Number(s.r)) : 0;
   try { let id; if (posOn()) { const jid = await stockNewItemQuick({ name: n, costP: r, rpcs: 0 }); window.ntFacPend(jid, n, r, true); id = 'job:' + jid; } else { const x = locNew(n, r, { mat: true }); await cloud.setFactoryCfg(x.patch); id = x.id; }
-    loadItemsQuiet(); if (ek?.ni) { ek.ni.mats[id] = 1; ek.ni.pm = null; } paint(); notice('✓ ' + n + ' packing maal ban gaya' + (posOn() ? ' (⏳ POS mein PC banayega)' : '')); }
+    loadItemsQuiet(); put(id); paint(); notice('✓ ' + n + ' packing maal ban gaya' + (posOn() ? ' (⏳ POS mein PC banayega)' : '') + (to === 'self' ? ' — Save par formula mein' : '')); }
   catch (e) { notice('Nahi hua: ' + (e?.message || e)); }
 }
 async function ekNiSave() {
@@ -1705,7 +1724,7 @@ function phCtx() {
     cat: () => cfg?.cat || {}, saveCat: p => { cfg = { ...(cfg || {}), cat: { ...(cfg?.cat || {}), ...p } }; return cloud.setFactoryCfg({ cat: p }); },
     dlg, pdf: pdfFileOf, repaint: phChanged };
 }
-const phLoad = () => phMod || (phMod = import('./fac-photo.js?v=2.108.0').catch(e => { phMod = null; throw e; }));
+const phLoad = () => phMod || (phMod = import('./fac-photo.js?v=2.108.1').catch(e => { phMod = null; throw e; }));
 async function phOpen(id) { if (!phCan()) { notice('🔒 Tasveer ki ijazat nahi (malik: Settings → Mulazim)'); return; } watchCfg(); phWatch(); await ensureItems(); try { (await phLoad()).photoSheet(phCtx(), id); } catch (e) { notice('Tasveer nahi khuli: ' + (e?.message || e)); } }
 async function phCmds() { if (!isOwner()) { notice('AI commands sirf malik'); return; } watchCfg(); phWatch(); await ensureItems(); try { (await phLoad()).commandsDlg(phCtx()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
 async function phCat() { if (!phCan()) { notice('🔒 Rate list PDF ki ijazat nahi (malik: Settings → Mulazim)'); return; } watchCfg(); phWatch(); await ensureItems(); try { (await phLoad()).catalogOpen(phCtx()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
@@ -1870,7 +1889,7 @@ document.addEventListener('input', e => {
 });
 // v2.107.0: 🏭 ek-screen ke clicks / likhai (alag listener — purane data-fc-* wahi)
 document.addEventListener('click', e => {
-  const t = e.target.closest?.('[data-ek-ph],[data-ek-cmds],[data-ek-cat],[data-ek-fstock],[data-ek-old],[data-ek-back],[data-ek-lbl],[data-ek-it],[data-ek-nwmain],[data-ek-nwraw],[data-ek-nwun],[data-ek-nwx],[data-ek-nwok],[data-ek-nwuse],[data-ek-ldel],[data-ek-padd],[data-ek-perman],[data-ek-persum],[data-ek-n],[data-ek-ebx],[data-ek-ninew],[data-ek-niold],[data-ek-niit],[data-ek-niuse],[data-ek-nimat],[data-ek-pmnew],[data-ek-pmok],[data-ek-nix],[data-ek-niok],[data-ek-odel],[data-ek-save]');
+  const t = e.target.closest?.('[data-ek-ph],[data-ek-cmds],[data-ek-cat],[data-ek-fstock],[data-ek-old],[data-ek-back],[data-ek-lbl],[data-ek-it],[data-ek-nwmain],[data-ek-nwraw],[data-ek-nwun],[data-ek-nwx],[data-ek-nwok],[data-ek-nwuse],[data-ek-ldel],[data-ek-padd],[data-ek-perman],[data-ek-persum],[data-ek-n],[data-ek-ebx],[data-ek-ninew],[data-ek-niold],[data-ek-niit],[data-ek-niuse],[data-ek-nimat],[data-ek-pmnew],[data-ek-pmok],[data-ek-nix],[data-ek-niok],[data-ek-odel],[data-ek-save],[data-ek-hl],[data-ek-pl],[data-ek-smo],[data-ek-smat],[data-ek-sdel],[data-ek-spmnew],[data-ek-spmok],[data-ek-mhide]');
   if (!t || !t.closest('.fc-root')) return; const d = t.dataset;
   if (d.ekPh != null) { phOpen(d.ekPh); return; }   // v2.108.0: 📷
   if (d.ekCmds != null) { phCmds(); return; }
@@ -1881,6 +1900,7 @@ document.addEventListener('click', e => {
   if (d.ekLbl != null) { const on = ekLbl() === 'none'; try { localStorage.setItem('sam-fc-bc', on ? '1' : '0'); } catch {} paint(); notice(on ? '🏷 Batch par barcode label chhapenge' : '🏷 Label nahi chhapenge'); return; }
   if (!ek) return;
   if (d.ekIt != null) { ekSelect(d.ekIt); return; }
+  if (d.ekHl != null) { ek.hlOpen = !ek.hlOpen; paint(); return; }   // v2.108.1: ① doosre items ⋮
   if (d.ekNwmain != null) { ek.nw = { kind: 'main', n: ek.q.trim(), un: 'Pcs', r: '', q: '', pk: '' }; ek.q = ''; paint(); setTimeout(() => document.querySelector('#ekNwBox [data-ek-nwf="n"]')?.focus(), 40); return; }
   if (d.ekNwraw != null) { ek.nw = { kind: 'raw', n: ek.pq.trim(), un: 'Kg', r: '', q: '' }; ek.pq = ''; paint(); setTimeout(() => document.querySelector('#ekNwBox [data-ek-nwf="r"]')?.focus(), 40); return; }
   if (d.ekNwun && ek.nw) { ek.nw.un = d.ekNwun; paint(); return; }
@@ -1888,6 +1908,12 @@ document.addEventListener('click', e => {
   if (d.ekNwok != null) { ekNwSave(); return; }
   if (d.ekNwuse) { ekNwUse(d.ekNwuse); return; }
   if (!ek.fe) return;
+  if (d.ekPl != null) { ek.plOpen = !ek.plOpen; const a = $('ekPickList'); if (a) a.innerHTML = ekPickListHTML(); t.classList.toggle('is-in', ek.plOpen); return; }   // v2.108.1: ➕ maal ki list ⋮
+  if (d.ekSmo != null) { ek.smOpen = !ek.smOpen; if (!ek.smOpen) ek.spm = null; paint(); return; }   // 🧴 ➕ packing / ⌃ Chhupao
+  if (d.ekSmat) { const S = ek.fe.self = ek.fe.self || {}; if (S[d.ekSmat] != null) delete S[d.ekSmat]; else { S[d.ekSmat] = 1; if (!byId.has(d.ekSmat)) matToggle(d.ekSmat, true); } paint(); return; }
+  if (d.ekSdel) { if (ek.fe.self) delete ek.fe.self[d.ekSdel]; paint(); notice('Hata diya — Save par formula se bhi'); return; }
+  if (d.ekSpmnew != null) { ek.spm = { n: '', r: '' }; paint(); setTimeout(() => document.querySelector('#ekForm [data-ek-spmf="n"]')?.focus(), 40); return; }
+  if (d.ekSpmok != null) { ekPmSave('self'); return; }
   if (d.ekLdel != null) { ek.fe.lines.splice(Number(d.ekLdel), 1); paint(); return; }
   if (d.ekPadd != null) { ekPickAdd(); return; }
   if (d.ekPerman != null) { const z = ekCalc(); if (Number(ek.fe.ml) > 0) ek.fe.auto = false; ek.fe.sum = false; ek.fe.per = z?.per || ek.fe.per; paint(); return; }
@@ -1900,6 +1926,7 @@ document.addEventListener('click', e => {
   const s = ek.ni; if (!s) return;
   if (d.ekNiit != null || d.ekNiuse) { const id = String(d.ekNiuse || d.ekNiit || ''); s.mode = 'old'; s.id = id; if (id && !s.gT) { const m = mlFromName((byId.get(id) || ekPos(id))?.name); if (m) s.g = String(r3(m / 1000)); } paint(); return; }
   if (d.ekNimat) { if (s.mats[d.ekNimat]) delete s.mats[d.ekNimat]; else s.mats[d.ekNimat] = 1; paint(); return; }
+  if (d.ekMhide != null) { s.mHide = !s.mHide; paint(); return; }   // v2.108.1: ⌃ Chhupao / ▾ Sab
   if (d.ekPmnew != null) { s.pm = { n: '', r: '' }; paint(); setTimeout(() => document.querySelector('#ekNiBox [data-ek-pmf="n"]')?.focus(), 40); return; }
   if (d.ekPmok != null) { ekPmSave(); return; }
   if (d.ekNix != null) { ek.ni = null; paint(); return; }
@@ -1918,6 +1945,8 @@ document.addEventListener('input', e => {
     const z = ekCalc(), c = $('ekNiCost'); if (c && z) c.innerHTML = ekNiCost(z); return; }
   if (!ek.fe) return;
   if (d.ekLq != null) { const l = ek.fe.lines[Number(d.ekLq)]; if (l) { const v = Number(t.value); l.q = v > 0 ? (gOf(l.id) ? pcsOfKg(v, l.id) : v) : 0; t.closest('.ek-chip')?.classList.toggle('warn', !(l.q > 0)); } ekLive(); return; }
+  if (d.ekSq != null) { const v = Number(t.value); ek.fe.self = ek.fe.self || {}; ek.fe.self[d.ekSq] = v > 0 ? v : 0; t.closest('.ek-chip')?.classList.toggle('warn', !(v > 0)); ekLive(); return; }   // v2.108.1: 🧴 fi pcs
+  if (d.ekSpmf != null && ek.spm) { ek.spm[d.ekSpmf] = t.value; return; }
   if (d.ekLab != null) { ek.fe.lab = Number(t.value) > 0 ? Number(t.value) : 0; ekLive(); return; }
   if (d.ekGas != null) { ek.fe.gas = Number(t.value) > 0 ? Number(t.value) : 0; ekLive(); return; }
   if (d.ekPer != null) { ek.fe.per = Number(t.value) > 0 ? Number(t.value) : 0; ekLive(); return; }
@@ -1980,7 +2009,7 @@ export const _fcTest = { mcCpp, mcOpen, get mc() { return mc; }, rateRows, items
   get ek() { return ek; }, ekCalc: () => ekCalc(), ekSelect, ekOn: () => ekOn(), ekView: () => ekView(), phSell: () => phSell(), phCtx: () => phCtx(), phIdx: () => phIdx, phThumb, phSize };
 
 // v2.103.48: 🤖 agent actions — factory
-import { agentRegister } from './agent.js?v=2.108.0';
+import { agentRegister } from './agent.js?v=2.108.1';
 agentRegister([
   { name: 'factory_batches', read: true, desc: 'Factory ke aaj ke (ya pichhle N din ke) batch: item, kitne batch, pcs, haal (POS mein / app / hold).', params: { type: 'OBJECT', properties: { days: { type: 'INTEGER' } } },
     run({ days }) { watch(); const from = Date.now() - Math.max(1, Math.min(60, Number(days) || 1)) * 864e5; return { list: batches.filter(b => (b.at || 0) >= from).slice(0, 40).map(b => ({ no: b.no, item: b.name || byId.get(String(b.itemId))?.name || '', batch: b.n, pcs: b.out, haal: b.status, kis_ne: b.byName || '', kab: new Date(b.at).toLocaleString('en-PK'), laagat: b.cost })) }; } },
