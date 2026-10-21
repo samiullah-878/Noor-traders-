@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.105.8';
-import { liveLabelsHTML } from './barcode.js?v=2.105.8';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.105.9';
+import { liveLabelsHTML } from './barcode.js?v=2.105.9';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -123,6 +123,7 @@ let softTimer = null, softWaiting = false;
 function soft() {
   clearTimeout(softTimer);
   softTimer = setTimeout(() => {
+    if ($('bdList')) try { bdPaint(); } catch {}   // v2.105.9: ⛔ band list khuli ho to PC ka jawab live
     const a = document.activeElement;
     if (a && a.matches?.('input') && a.closest?.('#list')) { softWaiting = true; return; }
     softWaiting = false;
@@ -388,7 +389,60 @@ const bandFailN = id => { const v = bandDone.fail[String(id)]; return Number(v &
 const bandWhy = id => { const v = bandDone.fail[String(id)]; return v && typeof v === 'object' ? String(v.why || '') : ''; };
 const bandSt = id => bandDone.items[String(id)] ? 'done' : bandFailN(id) >= 3 ? 'fail' : 'wait';
 const bandChip = id => { const st = bandSt(id); return st === 'done' ? '<i class="rk-c ok">✓ POS inactive</i>' : st === 'fail' ? `<i class="rk-c kh" title="${esc(bandWhy(id))}">❌ PC nahi kar saka</i>${bandWhy(id) ? `<small class="rk-why">${esc(bandWhy(id).slice(0, 90))}</small>` : ''}${isOwner() ? `<button type="button" class="rk-retry" data-ro-bretry="${esc(id)}">🔁 dobara</button>` : ''}` : '<i class="rk-c lo">⏳ PC baqi</i>'; };
-function bandPendList() { const P = agPool ? agPool() : null, nm = new Map((P?.list || []).map(it => [String(it.id), it.name])); return Object.keys(hidden).filter(id => hidden[id] && bandSt(id) !== 'done').map(id => ({ id, name: nm.get(id) || ro?.rows?.find(x => String(x.i) === id)?.n || ('item ' + id), st: bandSt(id) })); }
+function bandPendList() { return Object.keys(hidden).filter(id => hidden[id] && bandSt(id) !== 'done').map(id => ({ id, name: bandNameOf(id), st: bandSt(id) })); }
+// v2.105.9: ⛔ BAND LIST (Stock screen) — malik: "band kiya to stock mein aaye, POS on hote hi bill bane aur app yaad rakh kar deactive kare".
+//   Sab band items (POS mein inactive ho kar posStock se ghaib ho chuke bhi). Naam: posStock → PC ka jawab (_bandDone) → mangwao → is phone ki yaad.
+//   haal: wait = ⏳ PC baqi · fail = ❌ · done = ✓ POS deactive · live = 🟢 POS mein dobara chalu (posStock mein wapas = sync-stock sirf active bhejta hai).
+let bdNm = null, bdIx = null, bdIxKey = null;
+const bdNmGet = () => { if (!bdNm) { try { bdNm = JSON.parse(localStorage.getItem('sam-band-nm') || '{}') || {}; } catch { bdNm = {}; } } return bdNm; };
+function bdNmPut(id, n, c) { if (!n) return; const M = bdNmGet(), k = String(id); if (M[k]?.n === n && M[k]?.c === (c || '')) return; M[k] = { n: String(n).slice(0, 80), c: String(c || '').slice(0, 40) }; try { localStorage.setItem('sam-band-nm', JSON.stringify(M)); } catch {} }
+function bdIndex() { if (bdIx && bdIxKey === rows) return bdIx; const M = new Map(), sy = new Map();   // id → [{b, stock}] har godam se + godam ka aakhri sync
+  for (const r of rows) { if (r.meta) { sy.set(r.branch, Number(r.syncedAt) || 0); continue; } if (!Array.isArray(r.items)) continue; for (const it of r.items) { if (!it || it.id == null) continue; const k = String(it.id); if (!M.has(k)) M.set(k, []); M.get(k).push({ b: r.branch, stock: Number(it.stock) || 0, it }); } }
+  bdIx = { M, sy }; bdIxKey = rows; return bdIx; }
+function bandNameOf(id) { const k = String(id), x = bdIndex().M.get(k)?.[0]?.it; return x?.name || bandDone.items[k]?.name || ro?.rows?.find(r => String(r.i) === k)?.n || bdNmGet()[k]?.n || ('Item #' + k); }
+const BD_ORD = { fail: 0, wait: 1, live: 2, done: 3 };
+function bandAll() {
+  const ids = Object.keys(hidden).filter(id => hidden[id]); if (!ids.length) return [];
+  const { M, sy } = bdIndex();
+  return ids.map(id => {
+    const at = M.get(id) || [], it = at[0]?.it, d = bandDone.items[id];
+    if (it?.name) bdNmPut(id, it.name, it.code);
+    let st = bandSt(id);
+    if (st === 'done' && at.length) { const t = Number(d?.at) || 0; if (!t || at.some(x => (sy.get(x.b) || 0) > t + 15000)) st = 'live'; }   // PC ke deactive ke BAAD bhi sync mein = POS mein kisi ne chalu kiya
+    return { id, name: bandNameOf(id), code: it?.code || d?.code || bdNmGet()[id]?.c || '', st, d, at };
+  }).sort((a, b) => (BD_ORD[a.st] - BD_ORD[b.st]) || NAMEC.compare(a.name, b.name));
+}
+function bandCardHTML() {
+  if (!canBand()) return ''; const L = bandAll(); if (!L.length) return '';
+  const n = k => L.filter(b => b.st === k).length, w = n('wait'), f = n('fail'), lv = n('live'), dn = n('done');
+  const bits = [w ? '⏳ ' + num(w) + ' PC baqi' : '', f ? '❌ ' + num(f) + ' nahi hua' : '', lv ? '🟢 ' + num(lv) + ' POS mein chalu' : '', dn ? '✓ ' + num(dn) + ' POS deactive' : ''].filter(Boolean).join(' · ');
+  return `<button type="button" class="sk-band${f ? ' bad' : w ? ' hot' : ''}" data-stock-band="1"><span class="bi">⛔</span><span><b>Band items · ${num(L.length)}</b><small>${bits}</small>${w ? '<small class="sub">POS on hote hi khud: stock 0 ka bill + deactive</small>' : ''}</span><em>›</em></button>`;
+}
+let bdQ = '', bdMore = false;
+function bandDlg(q = '') { const d = $('dialog'); if (!d) return; bdQ = String(q || ''); bdMore = false; d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = '⛔ Band items';
+  $('dialogBody').innerHTML = `<div class="bd-wrap"><label class="bd-q"><span>🔍</span><input type="search" data-bd-q="1" placeholder="Naam ya code…" value="${esc(bdQ)}" autocomplete="off"></label><div id="bdList"></div></div>`; if (!d.open) d.showModal(); bdPaint(); }
+function bdPaint() {
+  const el = $('bdList'); if (!el) return;
+  const all = bandAll(), q = norm(bdQ), L = q ? all.filter(b => norm(b.name).includes(q) || fold(b.name).includes(fold(q)) || (b.code && String(b.code).toLowerCase().includes(q))) : all;
+  const cnt = k => all.filter(b => b.st === k).length, names = collect().names || {};
+  const kpi = (k, ic, t) => `<div class="bd-k ${k}"><b>${num(cnt(k))}</b><small>${ic} ${t}</small></div>`;
+  const stk = b => seeStock() && b.at.length ? b.at.map(x => `${esc(branchName(x.b, names))} ${num(x.stock)}`).join(' · ') : '';
+  const line = b => b.st === 'wait' ? `⏳ PC baqi — POS on hote hi stock 0 + deactive${stk(b) ? ' · abhi ' + stk(b) : ''}`
+    : b.st === 'fail' ? `❌ PC nahi kar saka${bandWhy(b.id) ? ' — ' + esc(bandWhy(b.id).slice(0, 110)) : ''}`
+    : b.st === 'live' ? `🟢 POS mein chalu hai — app mein abhi band${stk(b) ? ' · ' + stk(b) : ''}`
+    : b.d?.note === 'purana' ? '✓ Pehle se band (purana)' : b.d?.note ? '✓ ' + esc(b.d.note) : `✓ POS mein deactive${(b.d?.bills || []).length ? ' · bill ' + esc(b.d.bills.slice(0, 3).join(', ')) : ''}${b.d?.at ? ' · ' + esc(stampText(b.d.at)) : ''}`;
+  const row = b => `<div class="bd-row ${b.st}"><div class="bd-m"><b>${esc(b.name)}</b><small>${b.code ? esc(b.code) + ' · ' : ''}${line(b)}</small></div><div class="bd-a">${b.st === 'fail' && isOwner() ? `<button type="button" class="bd-re" data-ro-bretry="${esc(b.id)}">🔁 Dobara</button>` : ''}${canBand() ? `<button type="button" class="bd-on" data-band-on="${esc(b.id)}">↩️ Chalu</button>` : ''}</div></div>`;
+  const grp = (k, t, cap) => { const g = L.filter(b => b.st === k); if (!g.length) return ''; const sh = cap && !bdMore && !q ? g.slice(0, cap) : g; return `<div class="bd-g"><h4>${t} <i>${num(g.length)}</i></h4>${sh.map(row).join('')}${sh.length < g.length ? `<button type="button" class="bd-more" data-bd-more="1">Aur ${num(g.length - sh.length)} dikhao</button>` : ''}</div>`; };
+  el.innerHTML = all.length ? `<div class="bd-kpis">${kpi('wait', '⏳', 'PC baqi')}${kpi('fail', '❌', 'Nahi hua')}${kpi('live', '🟢', 'POS chalu')}${kpi('done', '✓', 'Deactive')}</div>
+    <p class="bd-note">⛔ <b>Band</b> = POS mein stock 0 (stock fraq ka bill) + item <b>INACTIVE</b>. Server PC on hote hi <b>khud</b> hota hai — koi click nahi. Dukan band ho to PC on hone par.</p>
+    ${grp('fail', '❌ PC nahi kar saka')}${grp('wait', '⏳ PC baqi')}${grp('live', '🟢 POS mein dobara chalu')}${grp('done', '✓ POS mein deactive', 40)}${q && !L.length ? '<p class="bd-note">Is naam ka koi band item nahi</p>' : ''}
+    <p class="bd-foot">Naya band: Stock list mein item par ☐ <b>Band</b>, ya Rack bharo / Mangwao mein ⛔ — password ke saath. ↩️ Chalu = app + POS dono mein wapas (stock 0 hi rahega). POS mein khud chalu kiya ho to yahan 🟢 aayega.</p>`
+    : '<p class="bd-note">✓ Koi item band nahi</p>';
+}
+document.addEventListener('input', e => { if (e.target?.matches?.('[data-bd-q]')) { bdQ = e.target.value || ''; bdPaint(); } });
+document.addEventListener('click', e => { const t = e.target.closest?.('[data-band-on],[data-bd-more]'); if (!t) return; e.preventDefault();
+  if (t.dataset.bdMore) { bdMore = true; bdPaint(); return; }
+  bandAsk(t.dataset.bandOn, false).then(() => bdPaint()); });
 const passes = r => {
   if (filter === 'hidden') return isHidden(r);
   if (isHidden(r)) return false;
@@ -539,9 +593,13 @@ function renderStockInner() {
 
   const extra = shown.length - limit;
   const list = shown.slice(0, limit);
+  // v2.105.9: search mein band item bhi mile to upar patti (band list se gayab nahi lagta)
+  const bdHit = q && filter !== 'hidden' ? bandAll().filter(b => norm(b.name).includes(q) || fold(b.name).includes(fold(q)) || (b.code && String(b.code).toLowerCase().includes(q))) : [];
+  const bdSt = b => b.st === 'wait' ? '⏳ PC baqi (POS on hote hi bill + deactive)' : b.st === 'fail' ? '❌ PC nahi kar saka' : b.st === 'live' ? '🟢 POS mein chalu, app mein band' : '✓ POS mein deactive';
 
   $('list').innerHTML =
     (inPick && inPick.size ? `<div class="in-strip">📥 Aaye hue maal ki ginti — ${num(shown.length)} items <button type="button" data-in-clear="1">✕ saaf karein</button></div>` : '') +
+    (bdHit.length ? `<button type="button" class="bd-hit" data-stock-band="1" data-bd-qv="${esc($('search')?.value || '')}"><span class="bi">⛔</span><span><b>${esc(bdHit.slice(0, 2).map(b => b.name).join(' · '))}${bdHit.length > 2 ? ' +' + num(bdHit.length - 2) : ''}</b><small>${bdHit.length === 1 ? 'Band hai — ' + bdSt(bdHit[0]) : num(bdHit.length) + ' band items is naam se'}</small></span><em>›</em></button>` : '') +
     (q ? `<p class="stat-note">${shown.length} item mile${wide && filter !== 'all' ? ` · ${num(wide)} filter ke bahar se bhi (poore stock mein dhoonda)` : ''}</p>` : '') +
     (filter === 'farq' && !q ? farqHeadHTML(shown) + list.map(farqCardHTML).join('') : list.map(rowHTML).join('')) +
     (extra > 0 ? `<div class="account-tools"><button data-stock-more="1">Aur ${num(Math.min(extra, PAGE))} dikhao (${num(extra)} baqi)</button></div>
@@ -780,6 +838,7 @@ function summaryHTML(branches, pick, items, meta, names, canJama = false) {
       ${can('stock.count') || isOwner() ? gintiBig(pick, items) : ''}
       ${tiles.length ? `<div class="sk-tiles">${tiles.join('')}</div>` : ''}
       ${ijPend().length || ijBad().length ? `<button type="button" class="sk-pend${ijBad().length && !ijPend().length ? ' bad' : ''}" data-stock-ijobs="1">${ijPend().length ? '⏳ ' + num(ijPend().length) + ' item PC baqi' : ''}${ijPend().length && ijBad().length ? ' · ' : ''}${ijBad().length ? '❌ ' + num(ijBad().length) + ' nahi bana' : ''} — dekhein</button>` : ''}
+      ${bandCardHTML()}
       ${postLine(pick)}
       <div class="sk-chips"><button type="button" class="sk-chip${filter === 'all' ? ' on' : ''}" data-stock-filter="all">Sab ${num(live.length)}</button>${seeStock() ? `<button type="button" class="sk-chip${filter === 'has' ? ' on' : ''}" data-stock-filter="has">${pick !== 1 ? '📦 Is godam ka' : 'Stock'} ${num(hasN)}</button><button type="button" class="sk-chip${filter === 'minus' ? ' on' : ''}" data-stock-filter="minus">Minus ${num(minus)}</button>` : ''}${extra ? `<button type="button" class="sk-chip x" data-stock-filter="all">${esc(extra)} ✕</button>` : ''}<button type="button" class="sk-chip f" data-sk-filter="1">☰ Filter${fN ? ' <i>' + fN + '</i>' : ''}</button></div>
       ${($('search')?.value || '').trim() ? '<button type="button" class="sk-clear" data-stock-clear="1">✕ Search saaf karein</button>' : ''}
@@ -801,11 +860,11 @@ function openSkFilter() {
   const d = $('dialog'); if (!d) return;
   const { pick, items } = collect();
   const done = items.filter(r => countOf(pick, r)).length, gap = items.filter(r => { const c = countOf(pick, r); return c && Math.abs(countedPcs(c) - Number(sysOf(c, r))) > 0.001; }).length;
-  const nishanN = items.filter(r => flagOf(r.id).baqi).length, checkN = items.filter(r => flagOf(r.id).check).length, hiddenN = items.filter(isHidden).length;
+  const nishanN = items.filter(r => flagOf(r.id).baqi).length, checkN = items.filter(r => flagOf(r.id).check).length, bandN = Object.keys(hidden).filter(id => hidden[id]).length;   // v2.105.9: sab band (POS se ghaib bhi) → ⛔ list
   const row = (k, t, sub, n) => `<button type="button" class="sk-li${filter === k ? ' on' : ''}" data-stock-filter="${k}"><span class="t"><b>${t}</b><span>${sub}</span></span><b>${num(n)}</b></button>`;
   d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = '☰ Kya dikhayein?';
   $('dialogBody').innerHTML = `<div class="sk-sheet" id="skFilter">
-    <div class="sk-list">${row('baqi', 'Ginti baqi', 'Is ginti mein abhi nahi gine', items.length - done)}${gap && seeStock() ? row('farq', '⚖️ Farq wale', 'Gine magar system se kam / zyada', gap) : ''}${row('nishan', '⏳ Baqi nishan', 'Larke ne "aur ginna hai" lagaya', nishanN)}${checkN ? row('check', '🔍 Check wale', 'Dobara check karne ka nishan', checkN) : ''}${hiddenN ? row('hidden', 'Band items', 'POS mein inactive', hiddenN) : ''}</div>
+    <div class="sk-list">${row('baqi', 'Ginti baqi', 'Is ginti mein abhi nahi gine', items.length - done)}${gap && seeStock() ? row('farq', '⚖️ Farq wale', 'Gine magar system se kam / zyada', gap) : ''}${row('nishan', '⏳ Baqi nishan', 'Larke ne "aur ginna hai" lagaya', nishanN)}${checkN ? row('check', '🔍 Check wale', 'Dobara check karne ka nishan', checkN) : ''}${bandN ? `<button type="button" class="sk-li" data-stock-band="1"><span class="t"><b>⛔ Band items</b><span>POS mein stock 0 + inactive · har item ka haal</span></span><b>${num(bandN)}</b></button>` : ''}</div>
     <div class="sk-lab">🕘 Kis din ki ginti / tick?</div>
     <div class="sk-seg c4"><button type="button" class="${!hDay ? 'on' : ''}" data-stock-hday="">Sab</button>${['aaj', 'kal', '7'].map(k => `<button type="button" class="${hDay === k ? 'on' : ''}" data-stock-hday="${k}">${hDayLabel(k)} (${num(hCount(k))})</button>`).join('')}</div>
     <label class="sk-date${/^\d{4}-/.test(hDay) ? ' on' : ''}">📅 ${/^\d{4}-/.test(hDay) ? esc(hDayLabel(hDay)) + ' (' + num(hCount(hDay)) + ')' : 'Koi tareekh chunein'}<input type="date" data-stock-hdate="1" value="${/^\d{4}-/.test(hDay) ? esc(hDay) : ''}" max="${dayStr()}"></label>
@@ -2248,6 +2307,7 @@ document.addEventListener('click', e => {
     return;
   }
   if (e.target.closest?.('[data-stock-ijobs]')) { ijDlg(); return; }   // v2.99.91
+  { const bb = e.target.closest?.('[data-stock-band]'); if (bb) { bandDlg(bb.dataset.bdQv || ''); return; } }   // v2.105.9: ⛔ band list (card / ☰ / search patti)
   { const ie = e.target.closest?.('[data-ij-edit],[data-ij-cancel]');   // v2.99.92
     if (ie) { const j = ijobs.find(x => x.id === (ie.dataset.ijEdit || ie.dataset.ijCancel)); if (!j) return;
       if (j.status !== 'new') { notice('⚙️ PC bana raha hai — ab nahi badal sakta'); return; }
@@ -2433,24 +2493,28 @@ const canBand = () => isOwner() || can('stock.band');
 async function bandPwWant() { if (bandPwCache) return bandPwCache; let k = null; try { k = await cloud?.getBandKey?.(); } catch {} if (!k) { k = String(itemCfg?.bandPw || '7183'); try { await cloud?.setBandKey?.(k); } catch {} } bandPwCache = k; return k; }
 export function bandPwReset() { bandPwCache = null; }
 async function bandPwCheck(msg) { const got = prompt(msg); if (got === null) return null; if (isOwner()) { const want = await bandPwWant(); if (got !== want) { notice('❌ Password ghalat'); return null; } } return got; }
-async function bandWrite(next, pw) { try { await cloud.setStockHidden(next, null, isOwner() ? null : pw); return true; } catch (e) { notice(/permission|insufficient/i.test(String(e?.code || e?.message || e)) ? '❌ Password ghalat (ya malik ne rules 2.66 upload nahi kiye)' : '⚠️ ' + (e?.message || e)); return false; } }
+// v2.105.9: sirf TABDEELI bhejo {id: true/false} — poori list nahi (merge:true mein hataya hua item reh jata tha = ↩️ Chalu nahi hota tha)
+const bandApply = (h, ch) => { const n = { ...h }; for (const [k, on] of Object.entries(ch || {})) { if (on) n[k] = true; else delete n[k]; } return n; };
+async function bandSend(ch, pw) { if (cloud.setBand) await cloud.setBand(ch, pw); else await cloud.setStockHidden(bandApply(hidden, ch), null, pw); }
+async function bandWrite(ch, pw) { try { await bandSend(ch, isOwner() ? null : pw); return true; } catch (e) { notice(/permission|insufficient/i.test(String(e?.code || e?.message || e)) ? '❌ Password ghalat (ya malik ne rules 2.66 upload nahi kiye)' : '⚠️ ' + (e?.message || e)); return false; } }
 async function toggleHidden(id, on, box, pw) {
   if (!cloud?.setStockHidden || !canBand()) { box.checked = !on; return; }
   const item = collect().items.find(r => String(r.id) === String(id));
-  const nm = item ? item.name : 'Yeh item';
+  const nm = item ? item.name : bandNameOf(id);   // v2.105.9: POS se ghaib (deactive) item ka naam bhi
   const stk = item ? `\nAbhi stock: ${num(item.stock)} ${item.uName || 'Pcs'}` : '';
   const msg = on
-    ? `"${nm}" BAND karein?${stk}\n\nPC par POS mein is ka stock 0 ho jayega (stock fraq ka bill banega) aur item INACTIVE ho jayega.`
+    ? `"${nm}" BAND karein?${stk}\n\nServer PC on hote hi KHUD: POS mein stock 0 (stock fraq ka bill) + item INACTIVE.\nStock screen par "⛔ Band items" mein nazar aayega.`
     : `"${nm}" ko wapas chalu karein?\n\nPOS mein item dobara ACTIVE ho jayega (stock 0 hi rahega).`;
+  if (on && item) bdNmPut(id, item.name, item.code);
   if (!confirm(msg)) { box.checked = !on; return; }
   const next = { ...hidden };
   if (on) next[String(id)] = true; else delete next[String(id)];
   box.disabled = true;
   try {
-    if (!(await bandWrite(next, pw))) throw Object.assign(Error(''), { quiet: true });
+    if (!(await bandWrite({ [String(id)]: !!on }, pw))) throw Object.assign(Error(''), { quiet: true });
     hidden = next;
-    notice(on ? 'Item band — list se hat gaya ("Band items" mein milega)' : 'Item wapas list mein');
-    rerender();
+    notice(on ? `⛔ "${nm}" band — Stock par "⛔ Band items" mein · PC on hote hi khud bill + deactive` : `↩️ "${nm}" wapas chalu — PC POS mein bhi active karega`);
+    rerender(); if ($('bdList')) bdPaint();
   } catch (e) { box.checked = !on; if (!e?.quiet) notice(e?.message || 'Nahi hua'); }
   finally { box.disabled = false; }
 }
@@ -3566,7 +3630,7 @@ function rackLocalRows() {
 const rackSrc = () => rackAt ? rackRows : rackLocalRows();
 setInterval(() => { const el = document.getElementById('rkAge'); if (!el || !rackAt) return; const a = Math.round((Date.now() - rackAt) / 60000); el.textContent = a < 1 ? 'abhi' : a + ' min pehle'; el.style.color = a > 5 ? '#fca5a5' : ''; }, 20000);   // v2.103.75: "x min pehle" khud taza
 let bandStop = null;   // v2.103.55: rack/mangwao window mein band + PC jawab live (stock screen khule baghair)
-function bandWatch() { if (bandStop || !cloud?.listenBand) return; bandStop = cloud.listenBand((k, v) => { if (k === 'h') hidden = v || {}; else bandDone = { items: v?.items || {}, fail: v?.fail || {} }; if (rk) rkPaint(); }); }
+function bandWatch() { if (bandStop || !cloud?.listenBand) return; bandStop = cloud.listenBand((k, v) => { if (k === 'h') hidden = v || {}; else bandDone = { items: v?.items || {}, fail: v?.fail || {} }; if (rk) rkPaint(); if ($('bdList')) try { bdPaint(); } catch {} }); }
 function rackWatch() { if (!rackAt && !irStop) setTimeout(() => { if (!rackAt) rackLocalWatch(); }, 20000); bandWatch(); if (rackStop || !cloud?.listenRack) return; rackStop = cloud.listenRack(d => { rackRows = Array.isArray(d?.rows) ? d.rows : []; rackPk = Array.isArray(d?.pk) ? d.pk : []; rackZero = Array.isArray(d?.z) ? d.z : []; rackAt = Number(d?.at) || 0; if (!rk) { const tl = document.querySelector('.th-root [data-th="rack"] small'); if (tl) { const n = rackDue().length + pkDue().length; tl.textContent = n ? `${n} items godam se lane` : 'Sab rack bhare ✓'; } } if (rk && $('rkBody')) rkPaint(); }); }   // v2.103.88: ⚡ 3-mahine report (bhari) sirf jab PC rack data 20 s mein na aaye; Transfer screen poori dobara nahi — sirf tile ka number
 const rackCfg = id => itemCfg?.rack?.[String(id)] || null;
 // v2.105.3: malik — "rack bharo 100 percent sab mobiles par by default": 🔒 100% lock ab mulazim bhi lagaye / hataye → stockConfig.rackB {id: pcs}
@@ -3828,7 +3892,7 @@ async function bandAsk(id, on) { if (!canBand()) return false; const pw = await 
 async function bandAllAsk(k) { if (!canBand() || !cloud?.setStockHidden) return; const ys = roList().filter(r => (r.party || 'Supplier nahi pata') === k && !hidden[r.id]); if (!ys.length) { notice('Koi item nahi'); return; }
   const got = await bandPwCheck(`"${k}" ke ${ys.length} items BAND karne ka password:`); if (got == null) return;
   if (!confirm(`"${k}" ke ${ys.length} items BAND karein? Pakka?\n\n${ys.slice(0, 12).map(r => '• ' + r.x.n).join('\n')}${ys.length > 12 ? '\n…' : ''}\n\nPC par POS mein stock 0 + INACTIVE (PC on hote hi).`)) return;
-  const next = { ...hidden }; for (const r of ys) next[r.id] = true; try { if (!(await bandWrite(next, got))) return; hidden = next; notice(`⛔ ${ys.length} items band — PC baqi list mein`); try { rerender(); } catch {} if (rk) rkPaint(); } catch (e) { notice('⚠️ ' + (e?.message || e)); } }
+  const next = { ...hidden }; for (const r of ys) { next[r.id] = true; bdNmPut(r.id, r.x?.n, r.x?.c); } try { if (!(await bandWrite(Object.fromEntries(ys.map(r => [String(r.id), true])), got))) return; hidden = next; notice(`⛔ ${ys.length} items band — Stock par "⛔ Band items" mein · PC on hote hi khud bill + deactive`); try { rerender(); } catch {} if (rk) rkPaint(); } catch (e) { notice('⚠️ ' + (e?.message || e)); } }
 document.addEventListener('input', e => { const t = e.target; if (!rk || !t.dataset?.roPq || !t.closest?.('#rkBody')) return; rk.roPq = t.value; const box = t.closest('#rkBody')?.querySelector('.rk-sup'); if (!box) return;   // sirf chips dobara (search box ka focus na toote)
   const tmp = document.createElement('div'); tmp.innerHTML = roHTML(collect().names); const nb = tmp.querySelector('.rk-sup'); if (nb) box.replaceWith(nb); });
 document.addEventListener('click', e => { const t = e.target.closest?.('[data-ro-f],[data-ro-p],[data-ro-all],[data-ro-go],[data-ro-e],[data-ro-ban],[data-ro-banall],[data-ro-unban],[data-ro-tsv],[data-ro-tdel]'); if (!t || !rk || !t.closest('#rkBody')) return; const d = t.dataset;
@@ -4455,14 +4519,14 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.105.8';
-import { recentPush } from './recent.js?v=2.105.8';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.105.9';
+import { recentPush } from './recent.js?v=2.105.9';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)
 export function stockScreenOpen(o = {}) { try { $('dialog')?.close(); } catch {}
   if (o.screen === 'rack') { rackOpen(); if (o.g != null && collect().branches.includes(Number(o.g))) rk.g = Number(o.g); if (o.tab && RK_TABN[o.tab]) rk.tab = o.tab; rkPaint(); rkRecent(); }
-  else if (o.screen === 'milao') gmOpen(); else if (o.screen === 'ratelist') rpOpen(); else if (o.screen === 'transfer') openTransfer(); else if (o.screen === 'check') openTransferCheck(o.view || 'nikle'); else if (o.screen === 'register') openRegister(); else if (o.screen === 'ginti') openGinti(); else if (o.screen === 'ijobs') ijDlg(); }
+  else if (o.screen === 'milao') gmOpen(); else if (o.screen === 'ratelist') rpOpen(); else if (o.screen === 'transfer') openTransfer(); else if (o.screen === 'check') openTransferCheck(o.view || 'nikle'); else if (o.screen === 'register') openRegister(); else if (o.screen === 'ginti') openGinti(); else if (o.screen === 'ijobs') ijDlg(); else if (o.screen === 'band') bandDlg(o.q || ''); }
 const AG = (() => {
   const S_ = { type: 'STRING' }, N_ = { type: 'NUMBER' }, B_ = { type: 'BOOLEAN' }, A_ = it => ({ type: 'ARRAY', items: it }), O_ = (p, r = []) => ({ type: 'OBJECT', properties: p, required: r });
   const names = () => collect().names || {};
@@ -4473,6 +4537,10 @@ const AG = (() => {
     const L = smartSearch(P.list, q, 6); if (!L.length) throw Error(`Item "${q}" nahi mila`); const fq = fold(q), ex = L.filter(x => fold(x.name) === fq); if (ex.length === 1) return ex[0];
     const ws = fq.split(' ').filter(Boolean), full = L.filter(x => ws.every(w => fold(x.name).includes(w))); if (full.length === 1) return full[0]; if (L.length === 1) return L[0];
     const e = Error(`"${q}" — kaun sa item? ${L.slice(0, 5).map(x => x.name).join(' / ')}`); e.cands = L.slice(0, 5).map(x => ({ item_id: x.id, name: x.name })); throw e; }
+  // v2.105.9: CHALU karte waqt item POS se ghaib (deactive) ho sakta hai — pehle ⛔ band list mein dhoondo
+  function bandItem(v, band) { if (band) return item(v); const q = String(v ?? '').trim(), L = bandAll(), byId = L.find(b => b.id === q); if (byId) return byId;
+    const fq = fold(q), ex = L.filter(b => fold(b.name) === fq), H = ex.length ? ex : L.filter(b => fold(b.name).includes(fq)); if (H.length === 1) return H[0];
+    if (H.length > 1) { const e = Error(`"${q}" — kaun sa band item? ${H.slice(0, 5).map(b => b.name).join(' / ')}`); e.cands = H.slice(0, 5).map(b => ({ item_id: b.id, name: b.name })); throw e; } return item(v); }
   const stAll = id => { const o = {}; for (const b of gods()) { const x = saleStockItem(b, String(id)); if (x) o[branchName(b, names())] = r3(Number(x.stock) || 0); } return o; };
   const ctnTxt = (q, pk) => pk > 1 ? `${num(Math.floor(q / pk))} ctn${q % pk ? ' + ' + num(r3(q - Math.floor(q / pk) * pk)) : ''}` : `${num(q)} pcs`;
   const lineOf = (x, it) => { const pk = Number(it.pack) || 0, ctn = Math.max(0, Number(x.ctn) || 0), pcs = Math.max(0, Number(x.pcs) || 0); if (!ctn && !pcs) throw Error(it.name + ': ctn ya pcs likhein'); return { id: String(it.id), name: it.name, ctn: pk > 1 ? ctn : 0, pcs: pk > 1 ? pcs : pcs + ctn }; };
@@ -4527,17 +4595,19 @@ const AG = (() => {
       summary({ pct, lo }) { const a = []; if (pct != null) a.push(`% hadd ${pct || 'band'}`); if (lo != null) a.push(`dukan hadd ${rkHdName(Number(lo))}`); if (!a.length) throw Error('pct ya lo do'); return a.join(' · '); },
       async run({ pct, lo }) { if (pct != null) await cloud.setRackPct(Number(pct) || 0); if (lo != null) await cloud.setRackLo(Number(lo) || 0); return '✓ Hadd badal gayi'; } },
     { name: 'item_band', icon: '⛔', label: 'Item band / chalu', danger: true, desc: 'Item BAND karo (POS mein INACTIVE, stock 0, sab listen se ghaib — band=true) ya wapas CHALU (band=false). Khatarnak: stock screen par password lagta hai, yahan "Pakka?" confirm.', params: O_({ item: S_, band: B_ }, ['item']),
-      summary({ item: v, band = true }) { return `${item(v).name}: ${band ? '⛔ BAND karo (POS inactive, stock 0)' : '✅ wapas CHALU'}`; },
-      async run({ item: v, band = true }) { const it = item(v), id = String(it.id); if (!cloud?.setStockHidden) throw new Error('App update karein'); const next = { ...hidden }; if (band) next[id] = true; else delete next[id]; await cloud.setStockHidden(next); hidden = next; try { rerender(); } catch {} if (rk) rkPaint(); return `✓ ${it.name} ${band ? 'band — "Band items" mein milega' : 'wapas chalu'}`; } },
+      summary({ item: v, band = true }) { return `${bandItem(v, band).name}: ${band ? '⛔ BAND karo (POS inactive, stock 0)' : '✅ wapas CHALU'}`; },
+      async run({ item: v, band = true }) { const it = bandItem(v, band), id = String(it.id); if (!cloud?.setStockHidden) throw new Error('App update karein'); const next = bandApply(hidden, { [id]: !!band }); if (band && it.name) bdNmPut(id, it.name, it.code); await bandSend({ [id]: !!band }); hidden = next; try { rerender(); } catch {} if (rk) rkPaint(); if ($('bdList')) bdPaint(); return `✓ ${it.name} ${band ? 'band — Stock par "⛔ Band items" mein · PC on hote hi khud bill + deactive' : 'wapas chalu — PC POS mein bhi active karega'}`; } },
     { name: 'transfer_items_pending', read: true, desc: 'Aane wala maal: pending transfer notes ke items jo abhi tick nahi hue (is phone par), kis taraf aa rahe hain.', params: O_({}),
       run() { tcStart(); const names = collect().names || {}, out = []; for (const t of tcRows()) { const st = tcState(t); if (st.k !== 'wait' && st.k !== 'late') continue; (t.lines || []).forEach((l, i) => { if (!tcTkSt(t, i)) out.push({ item: l.name, qty: tcQty(l), tn: String(t.transferNo || t.transferId), taraf: branchName(t.to, names) }); }); } return { baqi: out.length, list: out.slice(0, 80) }; } },
     { name: 'packet_farq_list', read: true, desc: 'Packet-war items jin ka app ka hisaab (sab packet jama) POS dukan ke kul se nahi milta — dobara ginne ke liye.', params: O_({}),
       run() { needRk(); const L = pkAllRows().filter(x => Math.abs(x.far) > 0.0005).sort((a, b) => Math.abs(b.far) - Math.abs(a.far)); return { farq_wale: L.length, list: L.slice(0, 60).map(x => ({ item: x.it.name, app: x.app, pos: x.pos, farq: x.far, packets: x.packs.filter(p => p.left != null).map(p => `${pkName(p.z, x.it)} ${num(p.left)}/${num(p.b)}`).join(' · ') })) }; } },
-    { name: 'band_list', read: true, desc: 'Band kiye hue items jin ka PC (POS inactive) kaam baqi ya fail hai.', params: O_({}),
-      run() { const L = bandPendList(); return { baqi: L.filter(b => b.st === 'wait').map(b => b.name), fail: L.filter(b => b.st === 'fail').map(b => b.name), note: L.length ? 'PC on hote hi khud POS mein inactive + stock 0' : 'Sab band items POS mein ho chuke' }; } },
+    { name: 'band_list', read: true, desc: 'SAB band items aur un ka haal: PC baqi (POS on hote hi stock 0 bill + inactive), fail, POS mein deactive ho chuke, POS mein dobara chalu (app mein band). Stock screen ki "⛔ Band items" list.', params: O_({}),
+      run() { const L = bandAll(), g = k => L.filter(b => b.st === k).map(b => b.name); return { kul: L.length, pc_baqi: g('wait'), fail: L.filter(b => b.st === 'fail').map(b => ({ item: b.name, wajah: bandWhy(b.id) })), pos_mein_dobara_chalu: g('live'), pos_deactive: g('done').slice(0, 80), note: g('wait').length ? 'PC on hote hi khud POS mein stock 0 (stock fraq bill) + inactive — koi click nahi' : 'Koi band item PC baqi nahi' }; } },
+    { name: 'band_list_kholo', read: true, icon: '⛔', desc: 'Stock screen ki "⛔ Band items" list kholo — har band item ka haal (PC baqi / POS deactive / fail) aur ↩️ Chalu. q = naam se dhoondo (khali = sab).', params: O_({ q: S_ }),
+      run({ q }) { bandDlg(q || ''); return { khul_gayi: 'band_list', kul: bandAll().length }; } },
     { name: 'supplier_band', icon: '⛔', label: 'Supplier ke sab items band', danger: true, desc: 'Mangwao list ke is supplier ke SAB items band (POS inactive, stock 0). Bohat khatarnak.', params: O_({ supplier: S_ }, ['supplier']),
       summary({ supplier }) { needRk(); const fs = fold(supplier), ys = roRows().filter(r => fold(r.party).includes(fs) && !hidden[r.id]); return `⛔ "${supplier}" ke ${ys.length} items BAND: ${ys.slice(0, 8).map(r => r.x.n).join(', ')}${ys.length > 8 ? '…' : ''}`; },
-      async run({ supplier }) { needRk(); const fs = fold(supplier), ys = roRows().filter(r => fold(r.party).includes(fs) && !hidden[r.id]); if (!ys.length) throw new Error('Is supplier ka koi item nahi'); const next = { ...hidden }; for (const r of ys) next[r.id] = true; await cloud.setStockHidden(next); hidden = next; try { rerender(); } catch {} if (rk) rkPaint(); return `⛔ ${ys.length} items band — PC baqi`; } },
+      async run({ supplier }) { needRk(); const fs = fold(supplier), ys = roRows().filter(r => fold(r.party).includes(fs) && !hidden[r.id]); if (!ys.length) throw new Error('Is supplier ka koi item nahi'); const ch = {}; for (const r of ys) { ch[String(r.id)] = true; bdNmPut(r.id, r.x?.n, r.x?.c); } await bandSend(ch); hidden = bandApply(hidden, ch); try { rerender(); } catch {} if (rk) rkPaint(); return `⛔ ${ys.length} items band — Stock par "⛔ Band items" mein · PC on hote hi khud bill + deactive`; } },
     { name: 'rack_poora', icon: '🔒', label: 'Rack poora (lock)', desc: 'Carton wale item ka "rack poora" (100%) pakka number (pcs) — % isi se, transfer notes se nahi badalta. poora=0 = PC wala (pehle din ka).', params: O_({ item: S_, poora: N_ }, ['item', 'poora']),
       summary({ item: v, poora }) { return `${item(v).name}: rack poora ${Number(poora) > 0 ? num(Number(poora)) + ' pcs' : 'PC wala (pehle din)'}`; },
       async run({ item: v, poora }) { const it = item(v), id = String(it.id), n = Number(poora) > 0 ? Math.round(Number(poora)) : 0; await rack100Save(id, n); return `✓ ${it.name} rack poora ${n ? num(n) + ' pcs' : 'PC wala'}`; } },

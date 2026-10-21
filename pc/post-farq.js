@@ -1,3 +1,5 @@
+// v17.4 (2026-10-21): ⛔ purane band items (feature se pehle wale) ke NAAM bhi app ko (_bandDone.items[id].name) — app ki Stock screen par "⛔ Band items" list (POS mein inactive = posStock mein naam nahi hota).
+//   Ek dafa SQL se (ghante mein ek koshish jab tak mil na jayein), band-state.json mein oldNm. POS mein KUCH nahi badalta.
 // v17.3 (2026-10-20): 🔤 ginti farq + item band rasid par Urdu sar-khi + bari Urdu tareekh (urdu-names + nt-parchi) · item band rasid ab kaghaz kaat-ti hai.
 // v17.2 (2026-10-20): _hidden.pw (mulazim ka band password, rules 2.66) foran mita do.
 // v17.1 (2026-10-20): fail ki WAJAH app ko (_bandDone.fail[id] = {n, why}) + app ka 🔁 dobara (stockCount/_hidden.retry[id] = ts → fail reset).
@@ -686,7 +688,7 @@ const readBand = () => { try { return JSON.parse(fs.readFileSync(BAND_STATE, 'ut
 const writeBand = v => fs.writeFileSync(BAND_STATE, JSON.stringify(v, null, 1));
 let bandDoneLast = '';
 async function pushBandDone(st) {   // v17: app ko batao kis ka kaam ho gaya (purane = feature se pehle ke, unhe bhi "done" gino)
-  const items = {}; for (const id of st.old || []) items[id] = { at: 0, note: 'purana' };
+  const items = {}; for (const id of st.old || []) { const o = (st.oldNm || {})[id]; items[id] = { at: 0, note: 'purana', ...(o && o.n ? { name: String(o.n).slice(0, 80), code: String(o.c || '').slice(0, 40) } : {}) }; }   // v17.4: naam bhi
   for (const [id, d] of Object.entries(st.done || {})) items[id] = { at: Number(d.at) || 0, code: String(d.code || ''), name: String(d.name || '').slice(0, 80), bills: (d.bills || []).slice(0, 5).map(String), ...(d.note ? { note: String(d.note) } : {}) };
   const fail = {}; for (const [id, n] of Object.entries(st.fail || {})) fail[id] = { n: Number(n) || 0, why: String(st.why?.[id] || '').slice(0, 160) };
   const j = JSON.stringify({ items, fail }); if (j === bandDoneLast) return; bandDoneLast = j;
@@ -749,6 +751,24 @@ function bandReceipt(L, r) {
   }
   out.push(hr, row('Kul:', 'Rs ' + n(L.net)), center('POS mein item INACTIVE'), '', '', '', '\x1dV\x42\x00');   // 2026-10-20: kaghaz kaato (pehle kat-ta nahi tha)
   return out.join('\r\n');
+}
+
+// v17.4: purane band items ke naam (sirf parhna — POS mein kuch nahi badalta). Ghante mein ek koshish jab tak sab na milein.
+async function bandOldNames(st) {
+  const nm = st.oldNm = st.oldNm || {};
+  const keep = new Set(st.old || []); for (const id of Object.keys(nm)) if (!keep.has(id)) delete nm[id];
+  const miss = (st.old || []).filter(id => !nm[id]).slice(0, 400);
+  if (!miss.length || Date.now() - (Number(st.oldNmAt) || 0) < 3600e3) return;
+  st.oldNmAt = Date.now();
+  let pool = null;
+  try {
+    pool = await sql.connect(SQL_CONFIG);
+    const L = await bandRows(pool, miss);
+    for (const it of L) nm[String(it.id)] = { c: it.code, n: it.name };
+    for (const id of miss) if (!nm[id]) nm[id] = { n: '' };   // POS mein hai hi nahi — dobara na dhoondo
+    log(`Band: ${L.length} purane band items ke naam app ko`);
+  } catch (e) { log('Purane band items ke naam nahi mile: ' + e.message); }
+  finally { if (pool) { try { await pool.close(); } catch {} } }
 }
 
 // ids ka stock 0 + inactive. st (band-state) update karta hai.
@@ -822,6 +842,7 @@ async function bandOnce() {
   st.retried = st.retried || {}; for (const [id, ts] of Object.entries(bandRetry)) { if (Number(ts) > (st.retried[id] || 0)) { st.retried[id] = Number(ts); if (st.fail[id]) { delete st.fail[id]; log(`Band: ${id} app se dobara koshish`); } } }   // v17.1
   const old = new Set(st.old);
   const fresh = [...bandHidden].filter(id => !old.has(id) && !st.done[id] && (st.fail[id] || 0) < 3);
+  if (!fresh.length && !back.length) await bandOldNames(st);   // v17.4 (band ka asal kaam pehle)
   if (!fresh.length && !back.length) { if (JSON.stringify(st) !== before) writeBand(st); await pushBandDone(st); return; }
   const pool = await sql.connect(SQL_CONFIG);
   try {
