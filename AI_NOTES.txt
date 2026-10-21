@@ -5723,3 +5723,11 @@ v2.105.4 (21 Oct 2026) — 👤 RACK BHARO: MULAZIM KA APNA % (SIRF US KE PHONE 
 - Phone: Qaide ke % / hadd chips lapet kar (naam upar) — side scroll mein chuna hua chip chhup jata tha.
 - 📝 Naya note khirki (notes / galla ⋮ → Naya note) phone par daayein 43px kat-ti thi (purana — v2.105.3 mein bhi): .nt-form grid minmax(0,1fr) + min-width:0 (dlgchk ab bad []).
 - Test: rig malik / mulazim / CAP band — apna 40% → list badli, patti "👤 Aap ka 40%", localStorage; Dalda ghee dukan 16 pcs (4 ctn): 100% = 10 → live line + Enter par save + ✕ hatao ke baad bhi lock se list mein; 20% par bahar; ↺ Malik wala. Packet % / Mangwao mulazim par theek. AI nahi.
+
+v2.105.5 (21 Oct 2026) — 📋 PACKET % MEIN NAYA ITEM SEARCH SE (malik: Packet % mein "Bir" (Biryani masala 1kg) → "Nahi mila" — "yahan par ye nahi aa raha"):
+- Wajah: Packet % tab sirf pkIds() (jin ka stockConfig.rackPk laga) dikhata tha — naya item jorne ka rasta sirf Lane ke "⚙️ Items chunein" (malik) / Stock milao mein tha.
+- pos-stock: pkPlInner(ed) = rows + pkNewHTML(q) — search par jo packet item nahi: "🔍 Packet % mein nahi — ➕ jorein" (naam · gmSizes packet / barcode · dukan + pkNewG godam stock).
+  "➕ Packet % lagao" (data-rkp-new, pkCan = malik / CAP stock.g2milao) → rk.pkNew draft {g, at, p:{}, _new} — Firestore mein ABHI kuch nahi; pkAllRows(true) mein sab se upar, editor khula
+  ("🆕 naya — 🧺 100% likh kar ✓ Save" · 🧺 100% · 👀 abhi (POS se) · % chips). ✓ Save (rkpPsv: cf = pkCfg || rk.pkNew, _new hata kar setRackPk) = asal packet item; "✕ Rehne dein" (data-rkp-newx) = draft hatao.
+  pkAllRows(nw) — draft sirf Packet % UI mein (agent / patti ginti mein nahi). pkNewG: chuna godam (stock ho) > sab se zyada stock wala > Godam 2. Koi packet item na ho to bhi search + ➕.
+- Test: rig malik / mulazim / CAP band — "tapal" → ➕ → editor → 12 + 30% → Save → tab 5; "knorr" ➕ → ✕ Rehne dein; CAP band = sirf nazar, button nahi. AI nahi.
