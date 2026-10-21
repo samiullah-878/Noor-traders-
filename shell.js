@@ -36,8 +36,12 @@ const pinned = (s, k) => (rd().pins[s] || []).includes(k);
 
 // ---------------- harvest: screen ke kaam DOM se ----------------
 const ON = el => !!el && (el.classList.contains('on') || el.classList.contains('is-in') || el.classList.contains('selected') || el.getAttribute('aria-pressed') === 'true');
-function items() {
-  const root = document.querySelector('main'); if (!root) return [];
+// v2.105.2: khirki (dialog) khuli ho to ⋮ usi ke kaam dikhata hai (#dialogBody ke data-mn tags) — malik: "koi bhi chips ka kaam ho andar rakho"
+const dlgOn = () => !!$('dialog')?.open;
+const mainEl = () => document.querySelector('main');
+const scopeEl = () => dlgOn() ? $('dialogBody') : mainEl();
+function items(rootEl = scopeEl()) {
+  const root = rootEl; if (!root) return [];
   const out = [], seen = new Set();
   for (const el of root.querySelectorAll('[data-mn],[data-mn-seg],[data-mn-box]')) {
     const type = el.hasAttribute('data-mn-box') ? 'box' : el.hasAttribute('data-mn-seg') ? 'seg' : 'btn';
@@ -45,7 +49,7 @@ function items() {
     if (!k || seen.has(k)) continue; if (el.closest('[hidden]') || (type === 'btn' && el.disabled)) continue;
     seen.add(k);
     const d = el.dataset, t = clean(d.mnT || (type === 'btn' ? el.textContent : '')) || k;
-    const it = { k, type, el, i: d.mnI || '', t, s: d.mnS || '', g: d.mnG || '', n: d.mnN || '', on: type === 'btn' ? ON(el) : type === 'box' ? document.body.dataset.mnf === k : false };
+    const it = { k, type, el, i: d.mnI || '', t, s: d.mnS || '', g: d.mnG || '', n: d.mnN || '', on: type === 'btn' ? ON(el) : type === 'box' ? (root.id === 'dialogBody' ? dShow.has(k) : document.body.dataset.mnf === k) : false };
     if (type === 'seg') it.opts = [...el.querySelectorAll('button')].filter(b => !b.hidden && !b.disabled).map((b, i) => ({ i, t: clean(b.textContent), on: ON(b) }));
     out.push(it);
   }
@@ -62,6 +66,7 @@ function ensureRoot() {
   document.body.appendChild(root); return root;
 }
 const isOpen = () => !!root && !root.hidden;
+function place() { const host = dlgOn() ? $('dialog') : document.body; if (root.parentNode !== host) host.appendChild(root); }   // khirki top-layer mein hoti hai — sheet usi ke andar warna peeche reh jaye
 function close() { if (root) { root.hidden = true; document.documentElement.classList.remove('mn-open'); } }
 function haalatHTML() {
   const bar = $('homeBar'); if (!bar || bar.hidden) return '';
@@ -69,28 +74,38 @@ function haalatHTML() {
   if (!ch && !nr) return '';
   return `<div class="mn-gh">⚠️ Aaj ki haalat</div><div class="mn-hb hchips">${ch}</div>${nr ? `<p class="mn-nr">${esc(nr)}</p>` : ''}`;
 }
+// v2.105.2: "🔒 Din band karein" ka bara patta phone par screen se hata — jahan "Aaj ki haalat" nahi (khate ke andar, Gaari, Galla…) wahan ⋮ mein
+function dinHTML() { const b = $('dayLockBtn'); if (!b || b.hidden || b.disabled || haalatHTML()) return ''; return `<div class="mn-gh">🌙 Din</div><div class="mn-app"><button type="button" data-mn-day="1">${esc(clean(b.textContent))}</button></div>`; }
 function appHTML() {
   const A = [['set', '⚙️', 'Settings'], ['sync', '↻', 'Sync / Update'], ['backup', '💾', 'Backup'], ['marzi', '🔠', 'Apni marzi']];
   if ($('rulesBtn') && !$('rulesBtn').hidden) A.push(['rules', '🔐', 'Rules']);
   if ($('repoLink')) A.push(['repo', '⇪', 'Upload']);
   return `<div class="mn-gh">⚙️ App</div><div class="mn-app">${A.map(([k, i, t]) => `<button type="button" data-mn-app="${k}">${i} ${t}</button>`).join('')}</div>`;
 }
-function tileHTML(x, s) {
-  const pin = pinned(s, x.k);
-  return `<button type="button" class="mn-tile${x.on ? ' is-in' : ''}" data-mn-go="${esc(x.k)}"><i>${esc(x.i || '•')}</i><span><b>${esc(x.t)}</b>${x.s ? `<small>${esc(x.s)}</small>` : ''}</span>${x.n && x.n !== '0' ? `<em class="mn-n">${esc(x.n)}</em>` : ''}<span class="mn-pin${pin ? ' is-in' : ''}" data-mn-pin="${esc(x.k)}" role="button" aria-label="${pin ? 'Screen se hatao' : 'Screen par lagao'}" title="${pin ? 'Screen se hatao' : 'Screen par lagao'}">📌</span></button>`;
+function tileHTML(x, s, noPin) {
+  const pin = !noPin && pinned(s, x.k);
+  return `<button type="button" class="mn-tile${x.on ? ' is-in' : ''}${noPin ? ' np' : ''}" data-mn-go="${esc(x.k)}"><i>${esc(x.i || '•')}</i><span><b>${esc(x.t)}</b>${x.s ? `<small>${esc(x.s)}</small>` : ''}</span>${x.n && x.n !== '0' ? `<em class="mn-n">${esc(x.n)}</em>` : ''}${noPin ? '' : `<span class="mn-pin${pin ? ' is-in' : ''}" data-mn-pin="${esc(x.k)}" role="button" aria-label="${pin ? 'Screen se hatao' : 'Screen par lagao'}" title="${pin ? 'Screen se hatao' : 'Screen par lagao'}">📌</span>`}</button>`;
 }
 function segHTML(x) {
   return `<div class="mn-seg"><small>${esc(x.i)} ${esc(x.t)}</small><div>${x.opts.map(o => `<button type="button" class="${o.on ? 'is-in' : ''}" data-mn-opt="${esc(x.k)}|${o.i}">${esc(o.t)}</button>`).join('')}</div></div>`;
 }
 function bodyHTML() {
-  const s = scr(), L = items(), title = clean($('title')?.textContent || 'Screen');
+  const dlg = dlgOn(), s = scr(), L = items(), title = clean((dlg ? $('dialogTitle') : $('title'))?.textContent || 'Screen');
   const groups = new Map(); for (const x of L) { const g = x.g || (x.type === 'seg' ? '🔎 Dikhao' : '🧰 Kaam'); if (!groups.has(g)) groups.set(g, []); groups.get(g).push(x); }
   const G = [...groups].map(([g, xs]) => { const segs = xs.filter(x => x.type === 'seg'), tiles = xs.filter(x => x.type !== 'seg');
-    return `<div class="mn-gh">${esc(g)}</div>${segs.map(segHTML).join('')}${tiles.length ? `<div class="mn-grid">${tiles.map(x => tileHTML(x, s)).join('')}</div>` : ''}`; }).join('');
-  return `<h3 class="mn-h">${esc(title)} — kya karna hai?</h3><p class="mn-sub">${L.length ? 'Jo chunein wohi poori screen par · 📌 = screen par bahar' : 'Is screen ke kaam jald yahan aayenge'}</p>${haalatHTML()}${G}${appHTML()}`;
+    return `<div class="mn-gh">${esc(g)}</div>${segs.map(segHTML).join('')}${tiles.length ? `<div class="mn-grid">${tiles.map(x => tileHTML(x, s, dlg)).join('')}</div>` : ''}`; }).join('');
+  if (dlg) return `<h3 class="mn-h">${esc(title)}</h3><p class="mn-sub">Is khirki ke chips aur kaam — chunein, khirki wahi rahegi</p>${G}`;
+  return `<h3 class="mn-h">${esc(title)} — kya karna hai?</h3><p class="mn-sub">${L.length ? 'Jo chunein wohi poori screen par · 📌 = screen par bahar' : 'Is screen ke kaam jald yahan aayenge'}</p>${haalatHTML()}${dinHTML()}${G}${appHTML()}`;
 }
-function open() { ensureRoot(); $('mnBody').innerHTML = bodyHTML(); root.hidden = false; document.documentElement.classList.add('mn-open'); }
+function open() { ensureRoot(); place(); $('mnBody').innerHTML = bodyHTML(); root.hidden = false; document.documentElement.classList.add('mn-open'); }
 function repaintOpen() { if (isOpen()) { const b = $('mnBody'), y = b?.scrollTop || 0; b.innerHTML = bodyHTML(); b.scrollTop = y; } }
+
+// ---------------- khirki ka box (v2.105.2): ⋮ se chuna → khirki mein wahin khul jaye (khirki band hone tak) ----------------
+const dShow = new Set(); let dStyle = null;
+function dPaint() { if (!dStyle) { dStyle = document.createElement('style'); dStyle.id = 'mnDlgCss'; document.head.appendChild(dStyle); }
+  dStyle.textContent = [...dShow].map(k => `html body #dialog #dialogBody [data-mn-box="${cssq(k)}"][data-mn-box]:not([data-mn-keep]){display:block!important}`).join('\n'); }
+function dShowBox(k) { dShow.add(k); dPaint(); const x = find(k); if (!x) return; try { if (x.el.tagName === 'DETAILS' && !x.el.open) x.el.open = true; } catch {} setTimeout(() => { try { x.el.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch {} }, 60); }
+function dReset() { if (!dShow.size) return; dShow.clear(); dPaint(); }
 
 // ---------------- focus (box = poori screen) ----------------
 let F = '', styleEl = null;
@@ -119,7 +134,7 @@ function fbar(x) {   // focus ke upar chhoti patti: "‹ wapas" — header ka �
 
 // ---------------- 📌 / haal hi: #subBar ----------------
 function subItems() {
-  const s = scr(), o = rd(), L = items(), by = new Map(L.map(x => [x.k, x])), hide = new Set(o.hide[s] || []);
+  const s = scr(), o = rd(), L = items(mainEl()), by = new Map(L.map(x => [x.k, x])), hide = new Set(o.hide[s] || []);
   const out = [], seen = new Set();
   for (const k of o.pins[s] || []) { const x = by.get(k); if (x && x.type !== 'seg' && !seen.has(k)) { seen.add(k); out.push({ ...x, pin: true }); } }
   for (const k of o.rec[s] || []) { const x = by.get(k); if (x && x.type !== 'seg' && !seen.has(k) && !hide.has(k)) { seen.add(k); out.push(x); } }
@@ -155,6 +170,7 @@ document.addEventListener('contextmenu', e => { const b = e.target.closest?.('#s
 function go(k) {
   const x = find(k); if (!x) { H.notice?.('Yeh kaam abhi is screen par nahi'); return; }
   close();
+  if (dlgOn()) { if (x.type === 'box') dShowBox(k); else try { x.el.click(); } catch (er) { console.warn('mn go', er); } return; }
   if (x.type === 'box') { focus(k); return; }
   if (F) unfocus();
   recPush(scr(), k); paintSub();
@@ -176,6 +192,7 @@ document.addEventListener('click', e => {
   const op = t.closest?.('[data-mn-opt]');
   if (op) { const [k, i] = op.dataset.mnOpt.split('|'), x = find(k); close(); const b = x?.type === 'seg' ? [...x.el.querySelectorAll('button')].filter(b2 => !b2.hidden && !b2.disabled)[Number(i)] : null; try { b?.click(); } catch {} return; }
   const ob = t.closest?.('[data-mn-open]'); if (ob) { focus(ob.dataset.mnOpen); return; }
+  if (t.closest?.('[data-mn-day]')) { close(); $('dayLockBtn')?.click(); return; }
   const ap = t.closest?.('[data-mn-app]');
   if (ap) { const k = ap.dataset.mnApp; close();
     if (k === 'set') { try { H.openSettings?.(); } catch (er) { console.warn(er); } }
@@ -246,7 +263,7 @@ function marziHTML() {
   <div class="mz-prev"><b class="mz-ph">Arman palydar</b><span>Lene hain Rs 13,000 · aaj</span><div class="mz-pc"><button type="button" class="is-in">Aaj</button><button type="button">7 din</button><button type="button">Godam 1</button></div><small>↑ aisa nazar aayega</small></div>
   <div class="mn-app"><button type="button" data-mz="reset|1">↺ Pehle jaisa</button>${H.owner?.() ? '<button type="button" class="mz-all" data-mz="all|1">👑 Sab mulazimon par bhi</button>' : ''}</div>`;
 }
-function marziOpen() { ensureRoot(); $('mnBody').innerHTML = marziHTML(); root.hidden = false; document.documentElement.classList.add('mn-open'); }
+function marziOpen() { ensureRoot(); place(); $('mnBody').innerHTML = marziHTML(); root.hidden = false; document.documentElement.classList.add('mn-open'); }
 document.addEventListener('click', e => {
   const b = e.target.closest?.('[data-mz]'); if (!b) return; const [k, v] = b.dataset.mz.split('|');
   if (k === 'reset') { mSet({ fs: 'm', hs: 'm', tx: '', hx: '', txd: '', hxd: '', hero: '', nav: '', chip: '', ff: '' }); }
@@ -279,7 +296,7 @@ function paintNavBtn() {
 }
 // ---------------- setup ----------------
 let moT = 0;
-const later = () => { clearTimeout(moT); moT = setTimeout(() => { shellRoute(); if (F) { const x = find(F); if (!x) unfocus(); else fbar(x); } repaintOpen(); }, 120); };
+const later = () => { clearTimeout(moT); moT = setTimeout(() => { shellRoute(); if (F) { const x = items(mainEl()).find(y => y.k === F); if (!x) unfocus(); else fbar(x); } repaintOpen(); }, 120); };
 export function shellRoute() { const v = scr(); if (shellRoute.v !== v) { shellRoute.v = v; if (F) unfocus(); lastSub = ''; if (navOpen()) navSet(false); } paintSub(); paintBadge(); paintNavBtn(); }
 // v2.105.1: malik — "screen side par na khiske, fix rahe" (phone). Poori screen / khirki (#dialogBody, main, list) ka daayein-baayein
 //   khisakna hamesha 0 par wapas — chahe focus / scrollIntoView ne khiskaya ho. Chips ki qatar aur tables apni jagah khiskti rehti hain.
@@ -292,8 +309,22 @@ function lockX() {
     if (t && t.nodeType === 1 && t.scrollLeft && (t.id === 'dialogBody' || t.id === 'dialog' || t.matches('main,.workspace,#list,#summary,.mn-body'))) t.scrollLeft = 0;
   }, { capture: true, passive: true });
 }
+// v2.105.2: khirki ke upar ⋮ (× ke saath) — sirf phone par aur jab khirki mein data-mn tags hon
+function dlgBtnSetup() {
+  const d = $('dialog'), head = d?.querySelector('.dialog-head'), body = $('dialogBody'); if (!head || !body || $('dlgMn')) return;
+  const b = document.createElement('button'); b.type = 'button'; b.id = 'dlgMn'; b.className = 'dlg-mn'; b.textContent = '⋮'; b.hidden = true;
+  b.setAttribute('aria-label', 'Is khirki ke chips aur kaam'); b.title = 'Is khirki ke chips aur kaam';
+  head.insertBefore(b, $('close') || null);
+  b.addEventListener('click', e => { e.preventDefault(); open(); });
+  const upd = () => { const on = dlgOn(); const n = on ? items(body).length : 0; if (b.hidden !== !n) b.hidden = !n; };
+  let t = 0; const soon = () => { clearTimeout(t); t = setTimeout(() => { upd(); if (isOpen() && root?.parentNode === d) repaintOpen(); }, 120); };
+  new MutationObserver(soon).observe(body, { childList: true, subtree: true });
+  new MutationObserver(() => { if (!dlgOn()) { if (root?.parentNode === d) close(); dReset(); } soon(); }).observe(d, { attributes: true, attributeFilter: ['open'] });
+  d.addEventListener('close', () => { if (root?.parentNode === d) close(); dReset(); upd(); });
+  let lastT = ''; new MutationObserver(() => { const tt = $('dialogTitle')?.textContent || ''; if (tt !== lastT) { lastT = tt; dReset(); } soon(); }).observe($('dialogTitle') || d, { childList: true, characterData: true, subtree: true });   // nayi khirki = purane khule box band
+}
 export function shellSetup(h = {}) {
-  H = h; mApply(); navBtnSetup(); lockX();
+  H = h; mApply(); navBtnSetup(); lockX(); dlgBtnSetup();
   const st = $('settings');
   if (st && !st.dataset.mn0) { st.dataset.mn0 = '1'; const old = st.onclick; H.openSettings = H.openSettings || (() => old?.call(st)); st.onclick = () => { if (isOpen()) close(); else open(); }; st.setAttribute('aria-label', 'Is screen ke kaam'); st.title = 'Is screen ke kaam'; }
   // header ka ‹ — focus ho to pehle focus se wapas
