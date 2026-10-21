@@ -1,14 +1,14 @@
-import {cashLinkChanges} from './cash-links.js?v=2.105.5';
-import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js?v=2.105.5';
-import {snapshotRows} from './live-data.js?v=2.105.5';
+import {cashLinkChanges} from './cash-links.js?v=2.105.6';
+import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js?v=2.105.6';
+import {snapshotRows} from './live-data.js?v=2.105.6';
 let transferFail=null;   // v2.86: tez transfer ka server-se-inkaar hook
-import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js?v=2.105.5';
-import {planImport} from './import-plan.js?v=2.105.5';
+import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js?v=2.105.6';
+import {planImport} from './import-plan.js?v=2.105.6';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import * as authSDK from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
 import {initializeFirestore,persistentLocalCache,persistentSingleTabManager,memoryLocalCache,disableNetwork,enableNetwork,collection,query,where,doc,getDoc,getDocFromServer,getDocs,getDocsFromServer,getDocsFromCache,getDocFromCache,setDoc,deleteDoc,updateDoc,deleteField,onSnapshot,runTransaction,writeBatch,waitForPendingWrites,orderBy,limit,serverTimestamp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.105.5';
-import {firebaseConfig,BUSINESS_ID} from './config.js?v=2.105.5';
+import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.105.6';
+import {firebaseConfig,BUSINESS_ID} from './config.js?v=2.105.6';
 export {loginErrorMessage};
 export async function connect(callbacks){const app=initializeApp(firebaseConfig,'blue-khata'),auth=authSDK.getAuth(app);try{await authSDK.setPersistence(auth,authSDK.browserLocalPersistence)}catch(e){console.warn('Auth persistence nahi mili',e)}let db;try{db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentSingleTabManager({forceOwnership:false})})})   /* v2.103.79: har tab apna live data — pehle multi-tab: ek tab hi server se leta tha, Chrome ne woh tab sula diya to PC ke SAB tab ruk jate (mobile theek). Doosra tab khud memory mode mein */}catch(e){console.warn('Offline storage nahi mili — memory mode',e);db=initializeFirestore(app,{localCache:memoryLocalCache()})}const col=collection(db,'businesses',BUSINESS_ID,'blueKhata'),ref=id=>doc(col,id),other=(name,id)=>doc(db,'businesses',BUSINESS_ID,name,id);
 /* v2.103.79: 📶 CHOWKIDAR — PC sync-stock har ~2 min posStock/_live.checkedAt likhta hai. 4 min tak na aaye (ya tab dair baad khule / net wapas aaye) to server se pucho:

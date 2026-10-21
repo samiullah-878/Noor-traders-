@@ -4879,3 +4879,31 @@ html body #dialogBody :is(.nt-form,.nt-contact,.nt-when,.nt-nag)>*{min-width:0}
 html body #dialogBody .nt-when{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
 html body #dialogBody .nt-contact{grid-template-columns:minmax(0,1fr)}
 html body #dialogBody .nt-form :is(input,textarea,select){max-width:100%;box-sizing:border-box}
+/* v2.105.6: 🧾 Transfer check — sirf items (lene / dene wala) + note ke chhote chips; 📄 / chip = poora note (← Wapas list) */
+html body :is(#summary,#dialogBody) .tc-idoc{min-height:0;width:34px;height:34px;padding:0;border-radius:10px;border:1.5px solid #c7d2fe!important;background:#eef2ff!important;font-size:15px;flex:0 0 auto;box-shadow:none!important}
+html body :is(#summary,#dialogBody) .tc-out{border-color:#ddd6fe!important;background:#fbfaff!important}
+html body :is(#summary,#dialogBody) .tc-out summary{color:#5b21b6!important}
+html body :is(#summary,#dialogBody) .tc-iok.tc-igv{background:#7c3aed!important}
+html body :is(#summary,#dialogBody) .tc-ncs{margin:4px 0 10px}
+html body :is(#summary,#dialogBody) details.tc-ncs>summary{cursor:pointer;list-style:none}
+html body :is(#summary,#dialogBody) .tc-ncw{display:flex;flex-wrap:wrap;gap:6px;padding-top:6px;min-width:0}
+html body :is(#summary,#dialogBody) .tc-nc{display:inline-grid;gap:1px;min-height:0;max-width:100%;min-width:0;padding:6px 10px!important;border-radius:12px!important;text-align:left;font:inherit;border:1.5px solid #e3e8f1!important;background:#f8fafc!important;color:#1b3058!important;cursor:pointer;box-shadow:none!important;width:auto!important}
+html body :is(#summary,#dialogBody) .tc-nc b{font-size:12.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body :is(#summary,#dialogBody) .tc-nc small{font-size:10.5px;font-weight:600;color:#6b7c93;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body :is(#summary,#dialogBody) .tc-nc.ok{background:#f0fdf4!important;border-color:#bbf7d0!important;color:#166534!important}
+html body :is(#summary,#dialogBody) .tc-nc:is(.farq,.fq){background:#fff7ed!important;border-color:#fdba74!important;color:#9a3412!important}
+html body :is(#summary,#dialogBody) .tc-nc.late{background:#fef2f2!important;border-color:#fecaca!important;color:#991b1b!important}
+html body :is(#summary,#dialogBody) .tc-nc.ng{background:#f5f3ff!important;border-color:#ddd6fe!important;color:#5b21b6!important}
+html body :is(#summary,#dialogBody) .tc-nc.cancel{background:#f3f4f6!important;color:#6b7280!important}
+html body :is(#summary,#dialogBody) .tc-nc.cancel b{text-decoration:line-through}
+html body :is(#summary,#dialogBody) .tc-ic.tc-fqs{border-color:#fdba74!important;background:#fff7ed!important;color:#9a3412!important}
+html body :is(#summary,#dialogBody) .tc-back2{display:inline-flex;align-items:center;min-height:0;margin:0 0 10px;padding:8px 14px!important;border-radius:999px!important;border:1.5px solid #c7d2fe!important;background:#eef2ff!important;color:#3730a3!important;font:inherit;font-size:13px!important;font-weight:800!important;box-shadow:none!important;width:auto!important}
+html body :is(#summary,#dialogBody) .tc-full{margin-top:10px;display:grid;gap:8px;min-width:0}
+html body :is(#summary,#dialogBody) .tc-full .tc-fh{display:block;color:#64748b;font-size:12px;font-weight:600}
+html.dk body :is(#summary,#dialogBody) :is(.tc-nc,.tc-out,.tc-idoc,.tc-back2){background:var(--glass,rgba(255,255,255,.06))!important;border-color:var(--line,rgba(255,255,255,.14))!important;color:var(--ink,#e8eeff)!important}
+html.dk body :is(#summary,#dialogBody) .tc-nc small{color:var(--ink2,#a9b4cc)!important}
+html.dk body :is(#summary,#dialogBody) .tc-nc.ok b{color:#86efac}
+html.dk body :is(#summary,#dialogBody) .tc-nc:is(.farq,.fq) b{color:#fdba74}
+html.dk body :is(#summary,#dialogBody) .tc-nc.late b{color:#fca5a5}
+html.dk body :is(#summary,#dialogBody) .tc-nc.ng b{color:#c4b5fd}
+html body :is(#summary,#dialogBody) .tc-kpis{grid-template-columns:repeat(auto-fit,minmax(70px,1fr))}   /* v2.105.6: 4 dabbe ek qatar (2 + 2 nahi) */
