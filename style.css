@@ -5074,3 +5074,150 @@ html.dk #agSheet .agr-x{background:rgba(0,0,0,.18)!important}
 @media (max-width:700px){#agSheet .agr-c{min-height:40px!important;font-size:14px!important;padding:0 13px!important}#agSheet .agr-la{flex-direction:column}#agSheet .agr-tx{font-size:16.5px}}
 #agSheet .ag-ok{background:linear-gradient(180deg,#1f9a5f,#167a4a)!important;color:#fff!important;border:0!important;box-shadow:0 4px 12px rgba(22,122,74,.3)!important}   /* v2.106.0: halki theme mein ✓ safed ho jata tha (html.lt button) — agent ka ✓ hamesha hara */
 #agSheet .ag-ok[disabled]{opacity:.55;filter:grayscale(.4)}
+/* ================= v2.107.0: 🏭 FACTORY EK SCREEN (factory.js ek*) — ek hi screen: ① item → ② formula chips → ③ batch → ④ bana (Ctn + Pcs, khali = khud) → ⑤ rate → 💾 Save ================= */
+.ek-hchips{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+html body :is(#summary,#dialogBody) .ir-root .ek-fstock{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:999px;border:0!important;background:#fff!important;color:#1E3768!important;font-size:13px;font-weight:800;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+html body :is(#summary,#dialogBody) .ir-root .ek-fstock i{font-style:normal;background:#E8EEFA;color:#1E3768!important;border-radius:999px;padding:1px 8px;font-size:11.5px}
+html body :is(#summary,#dialogBody) .ir-root .ek-hero .ek-today{display:inline-flex;align-items:center;min-height:40px;padding:0 12px;border-radius:999px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.24);color:#fff!important;font-size:12px;font-weight:700}
+.ek-mn{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 2px}
+html body #summary .ir-root .ek-mn button{min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--ir-grid)!important;background:var(--ir-surf)!important;color:var(--ir-ink)!important;font-size:12.5px;font-weight:700}
+html body #summary .ir-root .ek-mn button.is-in{border-color:#178156!important;color:#0F6A45!important}
+@media (max-width:1099.98px){html body:not(.mnf) main .ek-mn{display:none!important}}
+html body :is(#summary,#dialogBody) .ir-root .ek-back{min-height:40px;padding:0 14px;margin:6px 0 2px;border-radius:999px;border:1px solid var(--ir-grid)!important;background:var(--ir-surf)!important;color:#1E3768!important;font-size:13px;font-weight:800}
+html.dk body :is(#summary,#dialogBody) .ir-root .ek-back{color:#cfe0ff!important}
+.ek-h{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+html body :is(#summary,#dialogBody) .ir-root .ek-h>b{flex:1;min-width:0;font-size:15.5px;font-weight:800}
+html body :is(#summary,#dialogBody) .ir-root .ek-h>small{font-size:11px;color:var(--ir-ink2)!important;text-align:right}
+html body :is(#summary,#dialogBody) .ir-root .ek-no{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#172b52,#2e5194);color:#fff!important;font-size:13px;font-weight:900}
+html body :is(#summary,#dialogBody) .ir-root .ek-no.sm{background:none;font-size:18px;width:auto}
+/* ① item */
+.ek-hl{display:grid;gap:6px}
+html body :is(#summary,#dialogBody) .ir-root .ek-hit{display:flex;align-items:center;gap:10px;width:100%;min-height:50px;padding:8px 12px;border-radius:14px;border:1px solid var(--ir-grid)!important;background:var(--ir-surf)!important;color:var(--ir-ink)!important;text-align:left}
+.ek-hit>span{flex:1;min-width:0;display:grid;gap:2px}
+html body :is(#summary,#dialogBody) .ir-root .ek-hit b{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body :is(#summary,#dialogBody) .ir-root .ek-hit small{font-size:11.5px;color:var(--ir-ink2)!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-hit.pos{border-style:dashed!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-hit em{font-style:normal;font-size:20px;opacity:.45}
+.ek-sel{display:flex;align-items:center;gap:12px;padding:10px;border-radius:16px;background:rgba(43,79,149,.08);border:1.5px solid #2B4F95;min-width:0}
+.ek-sel.sm{padding:8px 10px}
+html.dk .ek-sel{background:rgba(120,160,255,.10);border-color:#5b7fd0}
+html body :is(#summary,#dialogBody) .ir-root .ek-ph{flex:none;width:56px;height:56px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#dce6f7,#c8d6f1);color:#1E3768!important;font-size:24px;font-weight:900}
+.ek-seli{flex:1;min-width:0;display:grid;gap:2px}
+html body :is(#summary,#dialogBody) .ir-root .ek-seli b{font-size:16px;font-weight:800;overflow:hidden;text-overflow:ellipsis}
+html body :is(#summary,#dialogBody) .ir-root .ek-seli small{font-size:12px;color:var(--ir-ink2)!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-x{flex:none;width:40px;height:40px;min-height:0;padding:0;border-radius:12px;border:1px solid var(--ir-grid)!important;background:var(--ir-surf)!important;color:var(--ir-ink)!important;font-size:14px}
+.ek-sw{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+html body :is(#summary,#dialogBody) .ir-root .ek-sw button{min-height:36px;padding:0 12px;border-radius:999px;border:1px solid var(--ir-grid)!important;background:var(--ir-surf)!important;color:var(--ir-ink)!important;font-size:12.5px;font-weight:700}
+/* ② formula chips */
+.ek-chips{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+html body :is(#summary,#dialogBody) .ir-root .ek-chip{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:4px 4px 4px 12px;border-radius:999px;background:rgba(23,43,82,.05);border:1px solid var(--ir-grid);max-width:100%;box-sizing:border-box}
+html.dk body :is(#summary,#dialogBody) .ir-root .ek-chip{background:rgba(255,255,255,.06)}
+html body :is(#summary,#dialogBody) .ir-root .ek-chip b{font-size:12.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+html body :is(#summary,#dialogBody) .ir-root .ek-chip i{font-style:normal;font-weight:800}
+html body :is(#summary,#dialogBody) .ir-root .ek-chip input{width:62px;height:34px;padding:0 4px;text-align:center;font-size:13.5px;border-radius:10px}
+html body :is(#summary,#dialogBody) .ir-root .ek-chip em{font-style:normal;font-size:11.5px;font-weight:700;color:var(--ir-ink2)!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-chip small{font-size:11px;color:var(--ir-ink2)!important;white-space:nowrap}
+html body :is(#summary,#dialogBody) .ir-root .ek-chip.warn{background:#FFF6E5;border-color:#F0B54A}
+html.dk body :is(#summary,#dialogBody) .ir-root .ek-chip.warn{background:rgba(240,181,74,.16)}
+html body :is(#summary,#dialogBody) .ir-root .ek-chip.gone{border-style:dashed;border-color:#e34948}
+html body :is(#summary,#dialogBody) .ir-root .ek-cx{flex:none;width:32px;height:32px;min-height:0;padding:0;border-radius:50%;border:0!important;background:rgba(227,73,72,.10)!important;color:#c0392b!important;font-size:12px}
+/* ➕ maal jorein (list pehle se · ☑ · N jorein) */
+.ek-pick{margin-top:12px;padding:12px;border-radius:16px;border:1.5px solid #2B4F95;background:rgba(43,79,149,.04)}
+html.dk .ek-pick{background:rgba(120,160,255,.06);border-color:#5b7fd0}
+.ek-pick>.fc-lab:first-child{margin-top:0}
+#ekPickList{display:grid;gap:6px;max-height:360px;overflow:auto;overscroll-behavior:contain}
+html body :is(#summary,#dialogBody) .ir-root .ek-pr{display:flex;align-items:center;gap:10px;min-height:50px;padding:6px 10px;border-radius:12px;border:1.5px solid var(--ir-grid);background:var(--ir-surf);cursor:pointer}
+html body :is(#summary,#dialogBody) .ir-root .ek-pr input{width:22px;height:22px;flex:none;accent-color:#178156}
+.ek-pr>span{flex:1;min-width:0;display:grid;gap:1px}
+html body :is(#summary,#dialogBody) .ir-root .ek-pr b{font-size:13.5px}
+html body :is(#summary,#dialogBody) .ir-root .ek-pr small{font-size:11px;color:var(--ir-ink2)!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-pr.is-in{border-color:#178156;background:rgba(23,129,86,.07)}
+html body :is(#summary,#dialogBody) .ir-root .ek-pr.has{opacity:.72}
+#ekPickFoot{display:grid;gap:8px;margin-top:8px}#ekPickFoot:empty{display:none}
+html body :is(#summary,#dialogBody) .ir-root .ek-add{min-height:50px;border-radius:14px;border:0!important;background:linear-gradient(135deg,#16a34a,#0f7a3a)!important;color:#fff!important;font-size:15px;font-weight:900}
+html body :is(#summary,#dialogBody) .ir-root .ek-new{min-height:46px;padding:6px 12px;border-radius:14px;border:1.5px dashed #178156!important;background:rgba(23,129,86,.07)!important;color:#0F6A45!important;font-size:13px;font-weight:800;text-align:center;width:100%}
+html body :is(#summary,#dialogBody) .ir-root .ek-new.alt{border-color:#9FB0D0!important;background:var(--ir-surf)!important;color:#1E3768!important}
+html.dk body :is(#summary,#dialogBody) .ir-root .ek-new{color:#7ee2b2!important}html.dk body :is(#summary,#dialogBody) .ir-root .ek-new.alt{color:#cfe0ff!important}
+/* chhote form (naya maal / naya item / packing) */
+.ek-mini{margin-top:12px;padding:12px;border-radius:16px;border:1.5px dashed #178156;background:rgba(23,129,86,.05);display:grid;gap:8px;min-width:0}
+.ek-mini>.fc-lab:first-child{margin:0}
+.ek-mini .fc-btns{margin:4px 0 0}
+.ek-f{display:grid;gap:4px;font-size:12px;font-weight:700;min-width:0}
+html body :is(#summary,#dialogBody) .ir-root .ek-f>span{color:var(--ir-ink2)!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-f input{width:100%;box-sizing:border-box;height:44px;border-radius:12px;border:1px solid var(--ir-grid);background:var(--ir-surf);color:var(--ir-ink);font-size:15px;font-weight:700;padding:0 12px}
+.ek-two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ek-seg,.ek-mats{display:flex;flex-wrap:wrap;gap:6px}
+html body :is(#summary,#dialogBody) .ir-root :is(.ek-seg,.ek-mats) button{min-height:38px;padding:0 12px;border-radius:999px;border:1px solid var(--ir-grid)!important;background:var(--ir-surf)!important;color:var(--ir-ink)!important;font-size:12.5px;font-weight:700}
+html body :is(#summary,#dialogBody) .ir-root :is(.ek-seg,.ek-mats) button.is-in{background:#1E3768!important;border-color:#1E3768!important;color:#fff!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-mats button.alt{border-style:dashed!important;color:#0F6A45!important}
+.ek-pm{align-items:end}.ek-pm .fc-go{grid-column:1/-1}
+html body :is(#summary,#dialogBody) .ir-root .ek-nicost{padding:8px 12px;border-radius:12px;background:rgba(23,129,86,.08);color:#0F6A45!important;font-size:12.5px;font-weight:700}
+html body :is(#summary,#dialogBody) .ir-root .ek-nicost b{color:inherit!important}
+html.dk body :is(#summary,#dialogBody) .ir-root .ek-nicost{color:#7ee2b2!important}
+/* kharcha · 1 batch · jama */
+.ek-xr{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.ek-xr label{display:grid;gap:4px;font-size:12px;font-weight:700;min-width:0}
+.ek-xr label>span{display:flex;align-items:center;gap:6px}
+html body :is(#summary,#dialogBody) .ir-root .ek-xr em{font-style:normal;color:var(--ir-ink2)!important;font-size:12px}
+html body :is(#summary,#dialogBody) .ir-root .ek-xr input{flex:1;min-width:0;width:100%}
+.ek-per{margin-top:10px}
+.ek-perb{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;font-weight:700}
+html body :is(#summary,#dialogBody) .ir-root .ek-perb input{width:96px;text-align:center}
+html body :is(#summary,#dialogBody) .ir-root .ek-sum{margin-top:10px;padding:10px 12px;border-radius:14px;background:#1E3768;display:grid;gap:4px}
+html body :is(#summary,#dialogBody) .ir-root .ek-sum :is(span,b,small){color:#fff!important}
+.ek-sumr{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12.5px;font-weight:600}
+html body :is(#summary,#dialogBody) .ir-root .ek-sum .ek-warn{color:#FFD58A!important;font-size:11.5px;font-weight:700}
+/* ③ batch */
+.ek-step{display:flex;align-items:center;gap:6px;flex:none}
+html body :is(#summary,#dialogBody) .ir-root .ek-step button{width:44px;height:44px;min-height:0;padding:0;border-radius:12px;border:1px solid var(--ir-grid)!important;background:var(--ir-surf)!important;color:#1E3768!important;font-size:22px;font-weight:900}
+html body :is(#summary,#dialogBody) .ir-root .ek-step button:last-child{background:#1E3768!important;border-color:#1E3768!important;color:#fff!important}
+html.dk body :is(#summary,#dialogBody) .ir-root .ek-step button:first-child{color:#cfe0ff!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-step b{min-width:34px;text-align:center;font-size:22px;font-weight:900}
+html body :is(#summary,#dialogBody) .ir-root .ek-bulk{display:block;font-size:12.5px;color:var(--ir-ink2)!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-bulk b{color:var(--ir-ink)!important}
+.ek-dim .ek-outs,.ek-dim #ekBal{opacity:.5}
+/* ④ bana */
+html body :is(#summary,#dialogBody) .ir-root .ek-hint{display:block;font-size:12px;margin:-4px 0 8px;color:var(--ir-ink2)!important}
+.ek-outs{display:grid;gap:8px}
+html body :is(#summary,#dialogBody) .ir-root .ek-or{position:relative;display:grid;gap:8px;padding:10px 12px;border-radius:16px;border:1px solid var(--ir-grid);background:var(--ir-surf);min-width:0}
+html body :is(#summary,#dialogBody) .ir-root .ek-or.auto{border:1.5px solid #178156;background:rgba(23,129,86,.06)}
+.ek-orh{display:grid;gap:2px;padding-right:38px;min-width:0}
+html body :is(#summary,#dialogBody) .ir-root .ek-orh b{font-size:14px;font-weight:800}
+html body :is(#summary,#dialogBody) .ir-root .ek-orh small{font-size:11.5px;color:var(--ir-ink2)!important}
+.ek-or>.ek-cx{position:absolute;top:8px;right:8px}
+.ek-oin{display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap}
+.ek-oin label{display:grid;gap:3px;font-size:11px;font-weight:800}
+html body :is(#summary,#dialogBody) .ir-root .ek-oin label span{color:var(--ir-ink2)!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-oin input{width:78px;height:44px;text-align:center;font-size:17px;font-weight:800}
+html body :is(#summary,#dialogBody) .ir-root .ek-or.auto .ek-oin input::placeholder{color:#178156!important;opacity:1!important;font-weight:800}
+html.dk body :is(#summary,#dialogBody) .ir-root .ek-or.auto .ek-oin input::placeholder{color:#7ee2b2!important}
+html.dk body :is(#summary,#dialogBody) .ir-root :is(.ek-perb,.ek-h) .fc-link{color:#9cc2ff!important}
+.ek-ot{margin-left:auto;display:flex;align-items:baseline;gap:5px;padding-bottom:10px}
+html body :is(#summary,#dialogBody) .ir-root .ek-ot b{font-size:15px;font-weight:900}
+html body :is(#summary,#dialogBody) .ir-root .ek-ot small{font-size:11px;color:var(--ir-ink2)!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-khud{font-style:normal;font-size:10px;font-weight:900;letter-spacing:.06em;padding:2px 7px;border-radius:999px;background:#178156;color:#fff!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-made{padding:10px 12px;border-radius:14px;background:rgba(23,129,86,.08);font-size:14px}
+.ek-acts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+/* ⑤ rate */
+.ek-rt{display:grid;gap:8px}
+html body :is(#summary,#dialogBody) .ir-root .ek-rr{display:grid;gap:6px;padding:10px 12px;border-radius:16px;border:1px solid var(--ir-grid);background:var(--ir-surf);min-width:0}
+.ek-rn{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}
+html body :is(#summary,#dialogBody) .ir-root .ek-rn b{font-size:14px;font-weight:800}
+html body :is(#summary,#dialogBody) .ir-root .ek-rn small{font-size:11.5px;color:var(--ir-ink2)!important}
+.ek-rg{display:grid;gap:6px}.ek-rg.c4{grid-template-columns:repeat(4,minmax(0,1fr))}.ek-rg.c2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.ek-rc{display:grid;gap:2px;text-align:center;min-width:0}
+html body :is(#summary,#dialogBody) .ir-root .ek-rc small{font-size:10px;font-weight:800;letter-spacing:.05em;color:var(--ir-ink2)!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-rc input{width:100%;height:40px;text-align:center;font-size:14px;font-weight:800;border:1.5px solid #178156!important;background:rgba(23,129,86,.06)!important;color:#0F6A45!important}
+html.dk body :is(#summary,#dialogBody) .ir-root .ek-rc input{color:#7ee2b2!important;background:rgba(23,129,86,.16)!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-rc em{font-style:normal;font-size:10px;color:var(--ir-ink2)!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-rc.chg input{border-width:2px;box-shadow:0 0 0 2px rgba(23,129,86,.12)}
+html body :is(#summary,#dialogBody) .ir-root .ek-rc.own input{background:#FFF6D6!important;border-color:#E3B341!important;color:#7a5200!important}
+/* 💾 save (neeche chipka) */
+html body :is(#summary,#dialogBody) .ir-root .ek-save{margin:12px 0;padding:12px;border-radius:18px;background:var(--ir-surf);border:1px solid var(--ir-grid);box-shadow:0 4px 18px rgba(20,33,61,.10)}
+html body :is(#summary,#dialogBody) .ir-root .ek-save .fc-ok-btn{margin-top:0}
+html body :is(#summary,#dialogBody) .ir-root .ek-note{display:block;margin-top:6px;font-size:11.5px;line-height:1.45;text-align:center;color:var(--ir-ink2)!important}
+html body :is(#summary,#dialogBody) .ir-root .ek-note b{color:var(--ir-ink)!important}
+/* 🏭 Stock screen par factory patti */
+.in-strip.fac-strip{background:#eaf7f0;border-color:#bfe3cf;color:#0f6a45}
+html.dk .in-strip.fac-strip{background:rgba(23,129,86,.16);border-color:rgba(126,226,178,.3);color:#bdf0d6}
+@media (max-width:420px){.ek-two,.ek-acts{grid-template-columns:minmax(0,1fr)}html body :is(#summary,#dialogBody) .ir-root .ek-chip b{max-width:110px}}

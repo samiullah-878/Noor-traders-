@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.106.0';
-import { liveLabelsHTML } from './barcode.js?v=2.106.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.107.0';
+import { liveLabelsHTML } from './barcode.js?v=2.107.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -510,6 +510,12 @@ document.addEventListener('input', e => {
   if (id != null) liveCount(id);
 });
 let stockActive = false;
+// v2.107.0: 🏭 FACTORY STOCK (factory ek-screen ka chip) — Stock screen par sirf factory items (☑ 🏭 Factory / category); baqi sab wahi
+//   (ginti Ctn · Pcs · Kul, Save, ✓ Tick, label, item, band). Stock screen se bahar gaye = khud band (main.sk-screen hata).
+let facOnly = false;
+const isFacRow = r => { try { return !!window.ntFacIs?.(r); } catch { return false; } };
+try { const mn = document.querySelector('main'); if (mn && window.MutationObserver) { let was = mn.classList.contains('sk-screen'); new MutationObserver(() => { const now = mn.classList.contains('sk-screen'); if (was && !now) facOnly = false; was = now; }).observe(mn, { attributes: true, attributeFilter: ['class'] }); } } catch {}
+export const stockFacOnly = () => facOnly;
 function captureTyped() {
   const keep = new Map();
   const lst = $('list');
@@ -582,9 +588,10 @@ function renderStockInner() {
 
   if (pickedBranch !== 1 && filter === 'all' && !godamAll) filter = 'has';   // v1.97: godam khula ho to shuru se sirf usi ke items
   let shown = items.filter(passes), wide = 0;
+  if (facOnly) shown = shown.filter(isFacRow);   // v2.107.0: 🏭 Factory stock (factory ek-screen ka chip)
   if (inPick && inPick.size) shown = items.filter(r => inPick.has(String(r.id)));   // v2.6: aaye hue maal ki ginti
   if (q) {   // v2.4.5: sale jaisi — poore stock mein (filter se bahar bhi), best match UPAR (tarteeb smartSearch ki)
-    const pool = items.filter(r => filter === 'hidden' ? isHidden(r) : !isHidden(r));
+    const pool = items.filter(r => (filter === 'hidden' ? isHidden(r) : !isHidden(r)) && (!facOnly || isFacRow(r)));
     const inF = new Set(shown);
     shown = smartSearch(pool, q, 500);
     wide = shown.filter(r => !inF.has(r)).length;
@@ -598,6 +605,7 @@ function renderStockInner() {
   const bdSt = b => b.st === 'wait' ? '⏳ PC baqi (POS on hote hi bill + deactive)' : b.st === 'fail' ? '❌ PC nahi kar saka' : b.st === 'live' ? '🟢 POS mein chalu, app mein band' : '✓ POS mein deactive';
 
   $('list').innerHTML =
+    (facOnly && !(inPick && inPick.size) ? `<div class="in-strip fac-strip">🏭 Factory stock — ${num(shown.length)} items <button type="button" data-fac-clear="1">✕ Sab items</button></div>` : '') +
     (inPick && inPick.size ? `<div class="in-strip">📥 Aaye hue maal ki ginti — ${num(shown.length)} items <button type="button" data-in-clear="1">✕ saaf karein</button></div>` : '') +
     (bdHit.length ? `<button type="button" class="bd-hit" data-stock-band="1" data-bd-qv="${esc($('search')?.value || '')}"><span class="bi">⛔</span><span><b>${esc(bdHit.slice(0, 2).map(b => b.name).join(' · '))}${bdHit.length > 2 ? ' +' + num(bdHit.length - 2) : ''}</b><small>${bdHit.length === 1 ? 'Band hai — ' + bdSt(bdHit[0]) : num(bdHit.length) + ' band items is naam se'}</small></span><em>›</em></button>` : '') +
     (q ? `<p class="stat-note">${shown.length} item mile${wide && filter !== 'all' ? ` · ${num(wide)} filter ke bahar se bhi (poore stock mein dhoonda)` : ''}</p>` : '') +
@@ -2366,6 +2374,7 @@ document.addEventListener('click', e => {
     else if (d.inItem != null) { const r = (inRows?.groups || []).flatMap(g => g.rows).find(x => x.id === d.inItem); $('dialog')?.close(); const q = $('search'); if (q && r) { q.value = r.name; q.dispatchEvent(new Event('input', { bubbles: true })); } rerender(); setTimeout(() => document.querySelector(`[data-stock-row="${d.inItem}"] input`)?.focus(), 200); }
     return; }
   if (e.target.closest?.('[data-in-clear]')) { inPick = null; rerender(); return; }
+  if (e.target.closest?.('[data-fac-clear]')) { facOnly = false; rerender(); return; }   // v2.107.0
   const lb = e.target.closest?.('[data-stock-label]');
   if (lb) { openLabels(lb.dataset.stockLabel); return; }
   const lp = e.target.closest?.('[data-label-print]');
@@ -4519,14 +4528,15 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.106.0';
-import { recentPush } from './recent.js?v=2.106.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.107.0';
+import { recentPush } from './recent.js?v=2.107.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)
 export function stockScreenOpen(o = {}) { try { $('dialog')?.close(); } catch {}
   if (o.screen === 'rack') { rackOpen(); if (o.g != null && collect().branches.includes(Number(o.g))) rk.g = Number(o.g); if (o.tab && RK_TABN[o.tab]) rk.tab = o.tab; rkPaint(); rkRecent(); }
-  else if (o.screen === 'milao') gmOpen(); else if (o.screen === 'ratelist') rpOpen(); else if (o.screen === 'transfer') openTransfer(); else if (o.screen === 'check') openTransferCheck(o.view || 'nikle'); else if (o.screen === 'register') openRegister(); else if (o.screen === 'ginti') openGinti(); else if (o.screen === 'ijobs') ijDlg(); else if (o.screen === 'band') bandDlg(o.q || ''); }
+  else if (o.screen === 'milao') gmOpen(); else if (o.screen === 'ratelist') rpOpen(); else if (o.screen === 'transfer') openTransfer(); else if (o.screen === 'check') openTransferCheck(o.view || 'nikle'); else if (o.screen === 'register') openRegister(); else if (o.screen === 'ginti') openGinti(); else if (o.screen === 'ijobs') ijDlg(); else if (o.screen === 'band') bandDlg(o.q || '');
+  else if (o.screen === 'factory') { facOnly = true; inPick = null; const s = $('search'); if (s) s.value = ''; limit = PAGE; rerender(); } }   // v2.107.0: 🏭 Factory stock
 const AG = (() => {
   const S_ = { type: 'STRING' }, N_ = { type: 'NUMBER' }, B_ = { type: 'BOOLEAN' }, A_ = it => ({ type: 'ARRAY', items: it }), O_ = (p, r = []) => ({ type: 'OBJECT', properties: p, required: r });
   const names = () => collect().names || {};

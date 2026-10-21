@@ -16,8 +16,8 @@
 //   ginti / 📥 maal aaya / 📤 maal diya = factoryMoves, naya item = cfg.local ('loc:<id>' — POS mein nahi), rate sirf factory (POS "lagao" band).
 //   Factory ka STOCK = app ka apna: har item ke waqia (ginti = itna hai · aaya + · diya − · batch: tayyar + / raw −) waqt ke hisaab se.
 //   cfg.posOn true = purana tareeqa (POS Adjustment, POS ginti, POS item). ⚙️ mein on / off (sirf malik).
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.106.0';
-import { smartSearch, fold } from './smart-search.js?v=2.106.0';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.107.0';
+import { smartSearch, fold } from './smart-search.js?v=2.107.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -108,8 +108,8 @@ function qt(q, it) {
 let cloud = null, notice = () => {}, pdfOf = null, canOf = () => true, ownerOf = () => false, whoOf = () => '', goPurchase = null, batchOf = null, aiFormula = null, uidOf = () => '';
 let cfg = null, cfgStop = null, batches = [], bStop = null, bFrom = 0, items = [], byId = new Map(), itemsOk = false, itemsErr = '';
 const LS = 'sam-fac';
-const st = (() => { let v = {}; try { v = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch {} return { per: v.per || 'aaj', tab: v.tab || 'batches' }; })();
-const keep = () => { try { localStorage.setItem(LS, JSON.stringify({ per: st.per, tab: st.tab })); } catch {} };
+const st = (() => { let v = {}; try { v = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch {} return { per: v.per || 'aaj', tab: v.tab || 'batches', view: v.view === 'old' ? 'old' : 'ek' }; })();   // v2.107.0: view 'ek' = nayi ek-screen · 'old' = purani tabs (⋮ se)
+const keep = () => { try { localStorage.setItem(LS, JSON.stringify({ per: st.per, tab: st.tab, view: st.view })); } catch {} };
 let fb = null;   // batch form ki haalat
 let fe = null;   // formula editor ki haalat
 let pk = null;   // ☑ picker
@@ -306,6 +306,7 @@ function repaint() { clearTimeout(rpT); rpT = setTimeout(() => { const ad = docu
 const loadItemsQuiet = () => { if (itemsOk) loadItems(); };
 function paint(only) {
   const root = $('fcRoot'); if (!root) return;
+  if (ekView()) { ekRender(root); return; }   // v2.107.0: 🏭 nayi ek-screen (purani tabs ⋮ se)
   const B = batches.filter(inPer), live = B.filter(b => b.status !== 'cancelled' && b.status !== 'cancelReq');
   const tot = live.reduce((s, b) => s + (Number(b.cost) || 0), 0), nb = live.reduce((s, b) => s + (Number(b.n) || 0), 0);
   const F = forms(), own = isOwner();
@@ -317,7 +318,7 @@ function paint(only) {
   const kp = (b, s) => `<div><b>${b}</b><small>${s}</small></div>`;
   const holdN = batches.filter(b => b.status === 'hold').length;
   const badge = { batches: errs.length ? '❌' + errs.length : holdN ? '📝' + holdN : '', formulas: Object.keys(F).length ? num(Object.keys(F).length) : '', rates: todo ? '⚠' + todo : '', stock: kam ? '⚠' + kam : '' };
-  const html = `
+  const html = `${ekOn() ? '<button type="button" class="ek-back" data-ek-back="1">‹ 🏭 Nayi factory screen</button>' : ''}
   <div class="ir-hero fc-hero"><div class="fc-hrow"><div><small>NOOR TRADERS · APNI FACTORY</small><strong>🏭 Factory</strong></div>${own ? '<button type="button" class="fc-gear" data-fc-set="1" aria-label="Settings">⚙️</button>' : ''}</div>
     <div class="fc-per">${PER.map(([k, l]) => `<button type="button" class="${st.per === k ? 'on' : ''}" data-fc-per="${k}">${l}</button>`).join('')}</div>
     <div class="ir-kp">${kp(num(live.length), 'batch slip')}${kp(num(nb), 'batch (1–10)')}${kp(rs(tot), 'laagat')}</div></div>
@@ -1239,6 +1240,436 @@ function pdfHTML(list, title) {
     </tbody></table><p><b>Kul laagat: ${rs(tot)}</b> · ${num(list.length)} batch slip</p>`;
 }
 
+// =====================================================================================================================
+// v2.107.0: 🏭 EK SCREEN (malik, 21 Oct 2026: "puri screen change — pehle item, neeche formula ke chips · naya maal wahin chips mein ·
+//   packing / raw ek hi screen · stock wahin se · save = batch + POS stock + formula · edit bhi yahi · do ki tadad likho, teesri khud ·
+//   har item ka rate alag · 🏭 Factory stock chip → Stock screen · pehle wale hisse ⋮ ke andar"). Data WAHI: cfg.formulas (nuskha) ·
+//   cfg.packs (isi maal se bane items) · factoryBatches (PC factory-post wahi). Purani tabs = st.view 'old'. AI nahi — hisaab app ka.
+//   Bana: har khana Ctn + Pcs; jo khana KHALI chhoro, aakhri khali wala bachi hui tadad khud le leta hai. CAP fac.ekscreen.
+// =====================================================================================================================
+let ek = null, ekQT = 0;
+const EKL = 'sam-fac-ek';   // aakhri item (agli dafa wahi khule)
+const KGU = /^(kg|kgs|ltr|ltrs|l|liter|litre|lit|liters)$/;
+const ekOn = () => { try { return isOwner() || (canFacBatch() && canOf('fac.ekscreen') !== false); } catch { return false; } };
+const ekView = () => ekOn() && st.view !== 'old';
+const ekLast = () => { try { return localStorage.getItem(EKL) || ''; } catch { return ''; } };
+const ekKeep = id => { try { localStorage.setItem(EKL, String(id || '')); } catch {} };
+const ekLbl = () => { let s = ''; try { s = localStorage.getItem('sam-fc-bc') || ''; } catch {} if (s === '0') return 'none'; const v = cfg?.lbl || 'pcs'; return s === '1' && v === 'none' ? 'pcs' : v; };
+const ekPos = id => { try { return stockPickList().find(x => x.id === String(id)) || null; } catch { return null; } };
+const ekJob = id => { id = String(id || ''); if (!id.startsWith('job:')) return id; const j = jobsById.get(id.slice(4)); return j && j.status === 'done' && j.itemId ? String(j.itemId) : id; };   // ⏳ PC ne bana diya = asli id
+function ekFresh(it, eb) {
+  const f = it ? forms()[it.id] : null, x = it ? feInit(it, f) : null;
+  if (x && f?.sum) x.sum = true;
+  if (x && !f && !x.ml && KGU.test(un(it))) x.sum = true;   // naya nuskha kg / ltr wala: 1 batch = raw ka jama (khud)
+  return { id: it ? String(it.id) : '', q: '', fe: x, n: 1, oq: {}, rEd: {}, posR: false, pq: '', sel: new Set(), nw: null, ni: null, eb: eb || null, busy: false };
+}
+const ekPerOf = F => { if (Number(F.ml) > 0 && F.auto !== false) { const V = volOf(F.lines); return V.v > 0 ? r3(V.v * 1000 / F.ml) : 0; } if (F.sum) { const V = volOf(F.lines); return V.v > 0 ? r3(V.v) : 0; } return Number(F.per) || 0; };
+const ekForm = F => ({ per: ekPerOf(F), lines: F.lines.filter(l => Number(l.q) > 0), lab: Number(F.lab) || 0, gas: Number(F.gas) || 0, ml: Number(F.ml) || 0, auto: F.auto !== false, self: { mats: Object.entries(F.self || {}).filter(([, q]) => Number(q) > 0).map(([id, q]) => ({ id, q: Number(q) })) } });
+// poora hisaab — formula (abhi likha hua) × batch → bana; khane: isi maal ke items (cfg.packs) + yahi item (bhara wala nuskha)
+function ekCalc() {
+  const it = ek && byId.get(String(ek.id)); if (!it || !ek.fe) return null;
+  const f = ekForm(ek.fe), n = Math.max(0, Math.min(10, Math.floor(Number(ek.n) || 0))), c1 = costOf(f, 1), smC = selfMatCost(f), bulk = c1.cpp, main = bulk + smC;
+  const fill = Number(f.ml) > 0 || selfMats(f).length > 0;
+  const rows = [...packsOf(it.id).map(p => { const x = byId.get(p.id), u = packUnit(p); return { k: p.id, it: x, p, unit: u, pk: Number(x?.pack) || 0, cpp: u * bulk + matCost(p) }; }),
+    ...(fill ? [{ k: '_self', it, p: null, unit: 1, pk: Number(it.pack) || 0, self: true, cpp: main }] : [])];
+  const made = r3((Number(f.per) || 0) * (n || 1));
+  const typed = r => { const v = ek.oq[r.k]; if (!v) return null; const c = String(v.c ?? '').trim(), p = String(v.p ?? '').trim(); if (c === '' && p === '') return null; return Math.max(0, Math.floor((r.pk > 1 ? (Number(c) || 0) * r.pk : 0) + (Number(p) || 0) + 1e-9)); };
+  let used = 0; for (const r of rows) { r.t = typed(r); if (r.t != null) used += r.t * r.unit; }
+  let autoK = ''; if (fill || rows.some(r => r.t != null)) for (let i = rows.length - 1; i >= 0; i--) if (rows[i].t == null) { autoK = rows[i].k; break; }   // kuch na likha (bulk) = sab bulk stock mein
+  for (const r of rows) { r.auto = r.k === autoK; r.q = r.auto ? Math.max(0, Math.floor((made - used) / (r.unit || 1) + 1e-6)) : (r.t || 0); }
+  const left = r3(made - rows.reduce((t, r) => t + r.q * r.unit, 0));
+  return { it, f, n, made, rows, fill, left, over: left < -0.001, bulk, main, c1, per: Number(f.per) || 0, U: un(it) };
+}
+const ekRateRows = z => [{ it: z.it, cpp: z.fill || !z.rows.length ? z.main : z.bulk }, ...z.rows.filter(r => !r.self && r.it).map(r => ({ it: r.it, cpp: r.cpp }))];
+const ekSz = (p, src) => { const g = Number(p?.g) || 0, kg = volU(src) === 'kg'; return g >= 1000 ? num(r3(g / 1000)) + (kg ? ' kg' : ' L') : num(g) + (kg ? ' g' : ' ml'); };
+const ekSplit = r => r.pk > 1 ? { c: Math.floor(r.q / r.pk), p: r.q % r.pk } : { c: 0, p: r.q };
+const ekDup = nm => { const f = fold(nm); if (f.length < 3) return []; let P = []; try { P = stockPickList(); } catch {} const seen = new Set(), out = [];
+  for (const x of [...items, ...P]) { if (seen.has(x.id)) continue; seen.add(x.id); const g = fold(x.name); if (g === f || (f.length >= 5 && Math.abs(g.length - f.length) <= 2 && dl(g, f) <= 2)) out.push(x); if (out.length >= 3) break; }
+  return out; };
+function ekDupHTML(dup, kind) {
+  if (!dup.length) return '';
+  return `<div class="fc-alert"><span>⚠️</span><div><b>Milta julta pehle se hai:</b> ${dup.map(x => esc(x.name)).join(' · ')} — dobara mat banayein</div><button type="button" ${kind === 'out' ? 'data-ek-niuse' : 'data-ek-nwuse'}="${esc(dup[0].id)}">${kind === 'raw' ? 'Isi ko jorein' : 'Isi ko chuno'}</button></div>`;
+}
+// ---------- screen ----------
+function ekRender(root) {
+  if (!itemsOk) { root.innerHTML = `<div id="ekRoot" class="ek"><div class="ir-hero fc-hero ek-hero"><div class="fc-hrow"><div><small>NOOR TRADERS · APNI FACTORY</small><strong>🏭 Factory</strong></div></div></div><div class="ek-mn">${ekMenu()}</div>${itemsErr ? `<p class="ir-say">⏳ Stock load nahi hua: ${esc(itemsErr)}</p>` : '<p class="lk-note">⏳ Items aa rahi hain…</p>'}</div>`; return; }
+  if (!ek) { const last = ekJob(ekLast()), it = last ? byId.get(last) : null; ek = ekFresh(it && (isOwner() || forms()[it.id]) ? it : null); }
+  else { const nid = ekJob(ek.id); if (nid !== ek.id) ek.id = nid;   // ⏳ PC ne item bana diya — asli id
+    if (ek.fe) { for (const l of ek.fe.lines) l.id = ekJob(l.id); for (const k of Object.keys(ek.oq)) { const nk = ekJob(k); if (nk !== k) { ek.oq[nk] = ek.oq[k]; delete ek.oq[k]; } } }
+    else if (ek.id && byId.get(ek.id)) ek = ekFresh(byId.get(ek.id), ek.eb); }
+  const a = document.activeElement;
+  if ($('ekRoot') && a && root.contains(a) && a.matches?.('input,textarea')) { ekSoft(); return; }   // likhte waqt poori screen na bane (keyboard na toote)
+  root.innerHTML = ekHTML();
+}
+function ekSoft() { const s = (id, h) => { const el = $(id); if (el && el.innerHTML !== h) el.innerHTML = h; }; s('ekHero', ekHeroChips()); s('ekHist', ekHistHTML()); ekLive(); }
+function ekHeroChips() {
+  const T = today(), B = batches.filter(b => b.day === T && !['cancelled', 'cancelReq'].includes(b.status)), pcs = B.reduce((t, b) => t + (Number(b.out) || 0) + (b.outs || []).reduce((s, o) => s + (Number(o.q) || 0), 0), 0);
+  return `<button type="button" class="ek-fstock" data-ek-fstock="1">🏭 Factory stock <i>${num(items.filter(x => !isPend(x)).length)}</i></button><span class="ek-today">Aaj: ${num(B.length)} batch · ${num(Math.round(pcs))} pcs</span>`;
+}
+function ekMenu() {
+  const own = isOwner(), g = '🏭 Factory — purane hisse', lblOn = ekLbl() !== 'none';
+  const b = (k, i, t, s, a, on) => `<button type="button"${on ? ' class="is-in"' : ''} data-mn="${k}" data-mn-i="${i}" data-mn-t="${esc(t)}" data-mn-s="${esc(s)}" data-mn-g="${g}" ${a}>${i} ${esc(t)}</button>`;
+  return [b('fc.batches', '📋', 'Batches', 'saare batch · haal · edit / cancel', 'data-ek-old="batches"'),
+    canFacBatch() ? b('fc.oldbatch', '🧾', 'Batch — purana form', 'pehle wala 3 qadam', 'data-fc-batch="1"') : '',
+    canFacBatch() && packSrcs().length ? b('fc.bulkpack', '🎁', 'Bulk se packing', 'purane bulk stock se 4 kg / 700 g', 'data-fb-mode="pack"') : '',
+    b('fc.stock', '📦', 'Stock (purana tab)', 'factory ka pehle wala stock tab', 'data-ek-old="stock"'),
+    own ? b('fc.formulas', '🧪', 'Formulas', 'sab nuskhe ki list', 'data-ek-old="formulas"') : '',
+    own ? b('fc.rates', '🏷', 'Rates', 'laagat + nafa · W / R', 'data-ek-old="rates"') : '',
+    own ? b('fc.pkitems', '🎁', 'Packing items', 'pouch · bag · 4 kg / 700 g', 'data-fc-pkdef=""') : '',
+    own ? b('fc.mcost', '🧴', 'Wazan se laagat', 'formula ke baghair · gram × rate', 'data-mc-open=""') : '',
+    own && aiFormula ? b('fc.photo', '📷', 'Photo se formula · AI', 'Excel / parchi ki tasveer', 'data-fc-photo="1"') : '',
+    canFacBatch() ? b('fc.label', '🏷', 'Batch label: ' + (lblOn ? 'Haan' : 'Nahi'), 'Save par barcode label chhapein?', 'data-ek-lbl="1"', lblOn) : '',
+    own ? b('fc.set', '⚙️', 'Settings', 'factory items ☑ · nafa % · POS on / off', 'data-fc-set="1"') : ''].join('');
+}
+function ekHTML() {
+  const own = isOwner(), z = ekCalc(), errs = batches.filter(b => b.status === 'error'), dups = own ? items.filter(x => x.dup) : [];
+  return `<div id="ekRoot" class="ek">
+    <div class="ir-hero fc-hero ek-hero"><div class="fc-hrow"><div><small>NOOR TRADERS · APNI FACTORY</small><strong>🏭 Factory</strong></div></div><div class="ek-hchips" id="ekHero">${ekHeroChips()}</div></div>
+    <div class="ek-mn">${ekMenu()}</div>
+    ${errs.length ? `<button type="button" class="fc-alert bad" data-fc-b="${esc(errs[0].id)}"><span>❌</span><div><b>${num(errs.length)} batch POS mein nahi gaye</b> — tap karein, wajah dekhein</div><em>›</em></button>` : ''}
+    ${dups.map(x => `<div class="fc-alert"><span>⚠️</span><div><b>${esc(x.name)}</b> ⏳ PC baqi hai magar ye naam POS mein pehle se hai — PC dobara item banayega. Agar wahi item hai to pending hatayein aur POS wali ko ☑ karein.</div><button type="button" data-fc-penddel="${esc(x.jid)}">✕ Hatao</button></div>`).join('')}
+    <section class="ir-sec ek-c" id="ekItem"><div class="ek-h"><span class="ek-no">1</span><b>Kaun sa maal banana hai?</b></div>
+      <label class="hs-search"><input type="search" data-ek-q="1" placeholder="🔍 item ka naam / barcode — likhte hi milta julta" value="${esc(ek.q)}" autocomplete="off"></label>
+      <div id="ekHits">${ekHitsHTML()}</div></section>
+    ${z ? ekFormHTML(z) + ekBatchHTML(z) + ekOutHTML(z) + (own ? ekRateHTML(z) : '') + `<div class="ek-save" id="ekSaveC">${ekSaveInner(z)}</div>` : ''}
+    <section class="ir-sec ek-c" id="ekHist">${ekHistHTML()}</section></div>`;
+}
+function ekHitsHTML() {
+  const own = isOwner(), F = forms(), q = ek.q.trim(), it = ek.id ? byId.get(ek.id) : null;
+  if (ek.nw?.kind === 'main') return ekNwHTML();
+  const row = (x, pos) => `<button type="button" class="ek-hit${pos ? ' pos' : ''}" data-ek-it="${esc(x.id)}"><span><b>${esc(x.name)}${isPend(x) ? ' ⏳' : ''}${isLoc(x) ? ' 📱' : ''}</b><small>${pos ? '🏪 POS item · factory mein bhi jur jayegi' : F[x.id] ? '🧪 formula hai · 1 batch = ' + esc(qt(F[x.id].per, x)) : 'formula abhi nahi'} · stock ${esc(pos ? qt(x.stock, x) : qk(x.stock, x))}</small></span><em>›</em></button>`;
+  if (q) {
+    const fac = srch(items.filter(x => own || F[x.id]), q, 8); let pos = [];
+    if (own && fac.length < 6) { let P = []; try { P = stockPickList(); } catch {} const have = new Set(items.map(x => x.id)); pos = srch(P.filter(x => !have.has(x.id)), q, 6 - fac.length); }
+    const exact = [...fac, ...pos].some(x => fold(x.name) === fold(q));
+    return `<div class="ek-hl">${fac.map(x => row(x, false)).join('')}${pos.map(x => row(x, true)).join('')}${!fac.length && !pos.length ? `<p class="lk-note">"${esc(q)}" — koi milta julta item nahi.</p>` : ''}${own && !exact ? `<button type="button" class="ek-new" data-ek-nwmain="1">➕ Naya item banao: "${esc(q)}"</button>` : ''}</div>`;
+  }
+  if (it) {
+    const f = F[it.id], others = finished().filter(x => x.id !== it.id && !isPend(x)).slice(0, 14);
+    return `<div class="ek-sel"><div class="ek-ph" aria-hidden="true">${esc((it.name || '?').trim().charAt(0).toUpperCase())}</div><div class="ek-seli"><b>${esc(it.name)}${isPend(it) ? ' ⏳' : ''}${isLoc(it) ? ' 📱' : ''}</b>
+        <small>${f ? '✓ Formula bana hua · 1 batch = ' + esc(qt(f.per, it)) : '🧪 Naya formula — neeche maal jorein'}</small><small>stock ${esc(qk(it.stock, it))}${it.code ? ' · ' + esc(it.code) : ''}</small></div>
+        <button type="button" class="ek-x" data-ek-it="" aria-label="Doosra item chunein">✕</button></div>
+      ${others.length ? `<div class="ek-sw mchips">${others.map(x => `<button type="button" data-ek-it="${esc(x.id)}">${esc(x.name)}</button>`).join('')}</div>` : ''}`;
+  }
+  const fin = finished().filter(x => own || !isPend(x)), rest = own ? items.filter(x => !F[x.id] && !isMat(x.id) && !packOf(x.id) && !isPend(x)).slice(0, 12) : [];
+  return `${fin.length ? `<div class="fc-lab">🧪 FORMULA WALE <small>${num(fin.length)}</small></div><div class="ek-hl">${fin.map(x => row(x, false)).join('')}</div>` : ''}
+    ${rest.length ? `<div class="fc-lab">BAQI FACTORY ITEMS <small>naya formula banayein</small></div><div class="ek-hl">${rest.map(x => row(x, false)).join('')}</div>` : ''}
+    ${!fin.length && !rest.length ? `<p class="lk-note">${own ? 'Factory mein abhi koi item nahi — upar naam likhein (POS mein ho to mil jayega) ya ➕ naya.' : 'Abhi koi formula nahi — malik banayega.'}</p>` : ''}`;
+}
+// ➕ naya item (jo banana hai) / naya raw maal — wahin chips mein (dohra roko)
+function ekNwHTML() {
+  const w = ek.nw, raw = w.kind === 'raw';
+  return `<div class="ek-mini" id="ekNwBox"><div class="fc-lab">${raw ? '➕ NAYA MAAL — YAHIN' : '➕ NAYA ITEM — JO BANANA HAI'} <small>${posOn() ? '⏳ POS mein PC banayega' : '📱 sirf factory'}</small></div>
+    <label class="ek-f"><span>Naam</span><input type="text" data-ek-nwf="n" maxlength="80" value="${esc(w.n)}" placeholder="${raw ? 'jaise: Soda ash' : 'jaise: Surf 2 kg'}"></label>
+    <div id="ekNwDup">${ekDupHTML(ekDup(String(w.n || '').trim()), w.kind)}</div>
+    <div class="ek-f"><span>Kis mein ginte hain?</span><div class="ek-seg">${['Kg', 'Ltr', 'Pcs'].map(u => `<button type="button" class="${w.un === u ? 'is-in' : ''}" data-ek-nwun="${u}">${u}</button>`).join('')}</div></div>
+    <div class="ek-two"><label class="ek-f"><span>Khareed rate (Rs fi ${esc(w.un)})</span><input type="number" inputmode="decimal" min="0" step="any" data-ek-nwf="r" value="${esc(w.r)}" placeholder="${raw ? '0' : 'ikhtiyari'}"></label>
+      ${raw ? `<label class="ek-f"><span>1 batch mein kitna (${esc(w.un)})</span><input type="number" inputmode="decimal" min="0" step="any" data-ek-nwf="q" value="${esc(w.q)}" placeholder="0"></label>` : `<label class="ek-f"><span>1 Ctn = kitne pcs</span><input type="number" inputmode="numeric" min="0" step="1" data-ek-nwf="pk" value="${esc(w.pk)}" placeholder="ikhtiyari"></label>`}</div>
+    <div class="fc-btns"><button type="button" class="fc-no" data-ek-nwx="1">✕ Chhoro</button><button type="button" class="fc-go" data-ek-nwok="1"${w.busy ? ' disabled' : ''}>${raw ? '✓ Jor do — formula mein bhi' : '✓ Banao aur chuno'}</button></div></div>`;
+}
+function ekFormHTML(z) {
+  const own = isOwner(), F = ek.fe, SM = Object.entries(F.self || {}).filter(([, q]) => Number(q) > 0);
+  return `<section class="ir-sec ek-c" id="ekForm"><div class="ek-h"><span class="ek-no">2</span><b>Formula — 1 batch ka nuskha</b>${own ? '' : '<small>🔒 sirf malik badle</small>'}</div>
+    <div class="fc-lab">RAW MAAL <small>${num(F.lines.length)}</small></div>
+    <div class="ek-chips" id="ekLines">${ekLinesHTML()}</div>
+    ${SM.length ? `<div class="fc-lab">🧴 HAR PCS KE SAATH <small>bottle / dhakan</small></div><div class="ek-chips">${SM.map(([id, q]) => `<span class="ek-chip"><b>${esc(byId.get(id)?.name || id)}</b><i>${num(q)}</i><em>fi pcs</em></span>`).join('')}</div>` : ''}
+    ${own ? `<div class="ek-pick" id="ekPickBox">${ek.nw?.kind === 'raw' ? ekNwHTML() : `<div class="fc-lab">➕ MAAL JOREIN <small>☑ kai ek saath</small></div>
+      <label class="hs-search"><input type="search" data-ek-pq="1" placeholder="🔍 likhein — milte julte naam foran" value="${esc(ek.pq)}" autocomplete="off"></label>
+      <div id="ekPickList">${ekPickListHTML()}</div><div id="ekPickFoot">${ekPickFootHTML()}</div>`}</div>` : ''}
+    <div class="fc-lab">KHARCHA <small>fi batch</small></div>
+    <div class="ek-xr"><label>👷 Mazdoori<span><em>Rs</em><input type="number" inputmode="decimal" min="0" step="any" data-ek-lab="1" value="${F.lab || ''}" placeholder="0"${own ? '' : ' disabled'}></span></label>
+      <label>🔥 Gas / bijli<span><em>Rs</em><input type="number" inputmode="decimal" min="0" step="any" data-ek-gas="1" value="${F.gas || ''}" placeholder="0"${own ? '' : ' disabled'}></span></label></div>
+    <div id="ekPer" class="ek-per">${ekPerHTML(z)}</div>
+    <div id="ekSum" class="ek-sum">${ekSumHTML(z)}</div></section>`;
+}
+function ekLinesHTML() {
+  const own = isOwner();
+  return ek.fe.lines.map((l, i) => { const it = byId.get(String(l.id)), g = gOf(l.id), [ru, per] = g ? ['kg', 1000 / g] : [un(it), 1], r = rateOf(l.id, it), v = Number(l.q) > 0 ? (g ? kgOf(l.q, l.id) : r3(l.q)) : '', nm = it?.name || l.n || 'Item ' + l.id;
+    return `<span class="ek-chip${Number(l.q) > 0 ? '' : ' warn'}${it ? '' : ' gone'}"><b>${esc(nm)}${isPend(it) ? ' ⏳' : ''}</b>${own ? `<input type="number" inputmode="decimal" min="0" step="any" data-ek-lq="${i}" value="${v}" placeholder="kitna" aria-label="${esc(nm)} kitna">` : `<i>${num(v)}</i>`}<em>${g ? 'kg' : esc(un(it))}</em><small>${r ? rs(r * per) + '/' + esc(ru) : '⚠️ rate nahi'}</small>${own ? `<button type="button" class="ek-cx" data-ek-ldel="${i}" aria-label="${esc(nm)} hatao">✕</button>` : ''}</span>`; }).join('')
+    || `<p class="lk-note">${own ? 'Neeche list se maal ☑ karein — ya naam likh kar naya.' : 'Is item ka formula abhi nahi.'}</p>`;
+}
+function ekPickData() {
+  const F = forms(), inF = new Set(ek.fe.lines.map(l => String(l.id))), outs = new Set(packsOf(ek.id).map(p => p.id)), use = new Map(), q = ek.pq.trim();
+  for (const [fid, f] of Object.entries(F)) if (fid !== ek.id) for (const l of f.lines || []) use.set(String(l.id), (use.get(String(l.id)) || 0) + 1);
+  const base = items.filter(x => x.id !== ek.id && !outs.has(x.id));
+  const L0 = q ? srch(base, q, 40) : base.filter(x => !inF.has(x.id) && !F[x.id]).sort((a, b) => (isMat(a.id) ? 1 : 0) - (isMat(b.id) ? 1 : 0) || (use.get(b.id) || 0) - (use.get(a.id) || 0) || a.name.localeCompare(b.name));   // packing maal (bag / pouch) neeche
+  const L = L0.slice(0, q ? 40 : 8); let pos = [];
+  if (q && L0.length < 6) { let P = []; try { P = stockPickList(); } catch {} const have = new Set(items.map(x => x.id)); pos = srch(P.filter(x => !have.has(x.id)), q, 6); }
+  return { L, pos, more: L0.length - L.length, inF, use, q, exact: [...L0, ...pos].some(x => fold(x.name) === fold(q)) };
+}
+function ekPickListHTML() {
+  const { L, pos, more, inF, use } = ekPickData();
+  const row = (x, isPos) => { const has = inF.has(x.id), on = has || ek.sel.has(x.id), r = isPos ? 0 : rateOf(x.id, x);
+    return `<label class="ek-pr${on ? ' is-in' : ''}${has ? ' has' : ''}"><input type="checkbox" data-ek-pt="${esc(x.id)}"${on ? ' checked' : ''}${has ? ' disabled' : ''}><span><b>${use.get(x.id) ? '⭐ ' : ''}${esc(x.name)}${isPend(x) ? ' ⏳' : ''}</b><small>${has ? '✓ pehle se formula mein · ' : ''}${isPos ? '🏪 POS — factory mein bhi jur jayegi · ' : ''}stock ${esc(isPos ? qt(x.stock, x) : qk(x.stock, x))}${r ? ' · ' + rs(r) + '/' + esc(un(x)) : ''}</small></span></label>`; };
+  return `${L.map(x => row(x, false)).join('')}${pos.map(x => row(x, true)).join('')}${!L.length && !pos.length ? '<p class="lk-note">Koi milta julta naam nahi.</p>' : ''}${more > 0 ? `<p class="lk-note">+${num(more)} aur — likh kar dhoondein</p>` : ''}`;
+}
+function ekPickFootHTML() {
+  const { exact, q } = ekPickData(), n = ek.sel.size;
+  return `${n ? `<button type="button" class="ek-add" data-ek-padd="1">➕ ${num(n)} jorein</button>` : ''}${q && !exact ? `<button type="button" class="ek-new" data-ek-nwraw="1">➕ "${esc(q)}" naya maal banao — yahin</button>` : ''}`;
+}
+function ekPerHTML(z) {
+  const F = ek.fe, it = z.it, own = isOwner(), V = volOf(F.lines), U = esc(un(it));
+  if (Number(F.ml) > 0 && F.auto !== false) return `<div class="ek-perb"><span>1 batch = raw ka jama</span><b>${num(r3(V.v))} ${volU(it)} = ${num(Math.floor(z.per + 1e-9))} ${U}</b>${own ? '<button type="button" class="fc-link" data-ek-perman="1">✎ haath se</button>' : ''}</div>`;
+  if (F.sum) return `<div class="ek-perb"><span>1 batch = raw ka jama</span><b>${num(z.per)} ${U}</b>${own ? '<button type="button" class="fc-link" data-ek-perman="1">✎ haath se</button>' : ''}</div>`;
+  return `<div class="ek-perb"><span>1 batch =</span>${own ? `<input type="number" inputmode="decimal" min="0" step="any" data-ek-per="1" value="${Number(F.per) > 0 ? esc(String(F.per)) : ''}" placeholder="?" aria-label="1 batch mein kitna">` : `<b>${num(F.per)}</b>`}<span>${U}${it.pack > 1 && F.per > 0 ? ' · ' + esc(qt(F.per, it)) : ''}</span>${own && V.v > 0 ? `<button type="button" class="fc-link" data-ek-persum="1">↺ raw ka jama: ${num(V.v)}</button>` : ''}</div>`;
+}
+function ekSumHTML(z) {
+  const miss = ek.fe.lines.filter(l => !(Number(l.q) > 0)).length, noR = z.c1.noRate;
+  return `<div class="ek-sumr"><span>1 batch = <b>${num(z.per)} ${esc(z.U)}</b></span><span>laagat <b>${rs(z.c1.total)}</b> · ${rs(z.fill || !z.rows.length ? z.main : z.bulk)} / ${esc(z.U)}</span></div>
+    ${miss ? `<small class="ek-warn">⚠️ ${num(miss)} maal ki miqdaar likhein (ya ✕ hatayein)</small>` : ''}${noR ? `<small class="ek-warn">⚠️ ${num(noR)} maal ka rate nahi — laagat kam dikhegi (⋮ → 🧪 Formulas)</small>` : ''}`;
+}
+function ekBatchHTML(z) {
+  const eb = ek.eb, fresh = eb && ['new', 'hold', 'cancelReq', 'app'].includes(eb.status) && !eb.adjNo;
+  return `<section class="ir-sec ek-c" id="ekBatchC"><div class="ek-h"><span class="ek-no">3</span><b>Kitne batch?</b>
+      <span class="ek-step"><button type="button" data-ek-n="-1" aria-label="Kam">−</button><b id="ekN">${num(z.n)}</b><button type="button" data-ek-n="1" aria-label="Zyada">+</button></span></div>
+    <small class="ek-bulk" id="ekBulk">${ekBulkHTML(z)}</small>
+    ${eb ? `<div class="fc-alert"><span>✏️</span><div><b>Edit: ${esc(eb.no)}</b> — Save par ${fresh ? 'yahi batch badlega' : 'purana wapas + naya (' + esc(eb.no) + 'E)'}</div><button type="button" data-ek-ebx="1">✕ Chhoro</button></div>` : ''}</section>`;
+}
+const ekBulkHTML = z => z.n ? `Kul bana: <b>${esc(qt(z.made, z.it))}</b> · laagat ${rs(z.c1.total * z.n)} — neeche items mein bat jayega` : '0 = <b>sirf formula save</b> (batch nahi, stock nahi)';
+function ekOutHTML(z) {
+  const own = isOwner(), it = z.it;
+  return `<section class="ir-sec ek-c${z.n ? '' : ' ek-dim'}" id="ekOutC"><div class="ek-h"><span class="ek-no">4</span><b>Is batch se kya bana?</b></div>
+    ${z.rows.length > 1 ? '<small class="ek-hint">Jo khana <b>khali</b> chhorein — aakhri khali wala bachi hui tadad <b>khud</b> le lega.</small>' : ''}
+    <div class="ek-outs">${z.rows.map((r, i) => ekRowHTML(r, i, z)).join('') || `<div class="ek-made">Bana: <b id="ekMade">${esc(qt(z.made, it))}</b> ${esc(it.name)}</div>`}</div>
+    <div id="ekBal" class="fc-rawsum ${z.over ? 'bad' : 'ok'}">${ekBalHTML(z)}</div>
+    ${own ? `<div class="ek-acts"><button type="button" class="ek-new" data-ek-ninew="1">➕ Naya item — isi maal se</button><button type="button" class="ek-new alt" data-ek-niold="1">+ Pehle wala item jorein</button></div><div id="ekNiBox">${ek.ni ? ekNiHTML(z) : ''}</div>` : ''}</section>`;
+}
+function ekRowHTML(r, i, z) {
+  const x = r.it, own = isOwner(), v = ek.oq[r.k] || {}, cn = x?.cn || 'Ctn', U = x?.un || 'Pcs', a = ekSplit(r);
+  return `<div class="ek-or${r.auto ? ' auto' : ''}" data-ek-orow="${i}"><div class="ek-orh"><b>${esc(x?.name || r.k)}${isPend(x) ? ' ⏳' : ''}</b>
+      <small>${r.self ? 'yahi item' : esc(ekSz(r.p, z.it))}${r.p?.mats?.length ? ' · 🎁 ' + r.p.mats.map(m => esc(byId.get(String(m.id))?.name || m.n || '')).join(' + ') : ''}${r.pk > 1 ? ' · 1 ' + esc(cn) + ' = ' + num(r.pk) : ''} · stock ${esc(qt(x?.stock || 0, x))}</small></div>
+    ${own && !r.self ? `<button type="button" class="ek-cx" data-ek-odel="${esc(r.k)}" aria-label="${esc(x?.name || '')} hatao">✕</button>` : ''}
+    <div class="ek-oin">${r.pk > 1 ? `<label><span>${esc(cn)}</span><input type="number" inputmode="numeric" min="0" step="1" data-ek-oc="${esc(r.k)}" value="${esc(v.c ?? '')}" placeholder="${r.auto ? a.c : 0}"></label>` : ''}
+      <label><span>${esc(U)}</span><input type="number" inputmode="numeric" min="0" step="1" data-ek-op="${esc(r.k)}" value="${esc(v.p ?? '')}" placeholder="${r.auto ? a.p : 0}"></label>
+      <span class="ek-ot" id="ekOt${i}">${ekOtHTML(r)}</span></div></div>`;
+}
+const ekOtHTML = r => r.auto ? `<i class="ek-khud">KHUD</i><b>${num(r.q)}</b><small>pcs</small>` : `<b>= ${num(r.q)}</b><small>pcs</small>`;
+function ekBalHTML(z) {
+  const it = z.it, ml = Number(z.f.ml) || 0, L = x => ml ? num(r3(x * ml / 1000)) + ' ' + volU(it) : esc(qt(r3(x), it));
+  if (!z.rows.length) return `✓ ${esc(qt(z.made, it))} ${esc(it.name)} stock mein jayega`;
+  if (z.over) return `⚠️ Tadad zyada — bana sirf ${L(z.made)}, likha ${L(r3(z.made - z.left))}. Kam karein`;
+  const parts = z.rows.filter(r => r.q > 0).map(r => num(r.q) + ' × ' + esc(r.it?.name || '')).join(' + ') || '—';
+  return `Bana ${L(z.made)} = ${parts}${z.left > 0.0005 ? (z.fill ? ` · bacha khula ${L(z.left)} (stock mein nahi)` : ` · baqi <b>${esc(it.name)} +${L(z.left)}</b> stock mein`) : ' · sab bat gaya ✓'}`;
+}
+// ➕ naya item / + pehle wala item — isi maal se (cfg.packs: src = ye item, g = 1 pc mein kitna, mats = packing maal)
+function ekNiHTML(z) {
+  const s = ek.ni, it = z.it, old = s.mode === 'old', x = old && s.id ? (byId.get(s.id) || ekPos(s.id)) : null, vu = volU(it) === 'kg' ? 'kg' : 'L';
+  const M = items.filter(y => y.id !== it.id && (isMat(y.id) || looksPack(y.id, y.name)));
+  return `<div class="ek-mini"><div class="fc-lab">${old ? '+ PEHLE WALA ITEM — ISI MAAL SE' : '➕ NAYA ITEM — ISI MAAL SE'} <small>${esc(it.name)}</small></div>
+    ${old ? (x ? `<div class="ek-sel sm"><div class="ek-seli"><b>${esc(x.name)}</b><small>${esc(x.code || '')}${x.pack > 1 ? ' · 1 ctn = ' + num(x.pack) : ''}</small></div><button type="button" class="ek-x" data-ek-niit="" aria-label="Badlo">✕</button></div>`
+        : `<label class="hs-search"><input type="search" data-ek-niq="1" placeholder="🔍 item dhoondein (jaise Surf 2 kg)" value="${esc(s.q)}" autocomplete="off"></label><div id="ekNiHits" class="ek-hl">${ekNiHitsHTML()}</div>`)
+      : `<label class="ek-f"><span>Naam</span><input type="text" data-ek-nif="n" maxlength="80" value="${esc(s.n)}" placeholder="jaise: Surf 2 kg"></label><div id="ekNiDup">${ekDupHTML(ekDup(String(s.n || '').trim()), 'out')}</div>`}
+    ${!old || x ? `<div class="ek-two"><label class="ek-f"><span>Ek pc mein kitna (${vu})</span><input type="number" inputmode="decimal" min="0" step="any" data-ek-nif="g" value="${esc(s.g)}" placeholder="0.5"></label>
+      ${old ? '' : `<label class="ek-f"><span>1 Ctn = kitne pcs</span><input type="number" inputmode="numeric" min="0" step="1" data-ek-nif="pk" value="${esc(s.pk)}" placeholder="ikhtiyari"></label>`}</div>
+      <div class="fc-lab">🎁 PACKING MAAL <small>har pc ke saath 1</small></div>
+      <div class="ek-mats">${M.map(y => `<button type="button" class="${s.mats[y.id] ? 'is-in' : ''}" data-ek-nimat="${esc(y.id)}">${s.mats[y.id] ? '✓ ' : ''}${esc(y.name)}</button>`).join('')}<button type="button" class="alt" data-ek-pmnew="1">➕ naya packing</button></div>
+      ${s.pm ? `<div class="ek-two ek-pm"><label class="ek-f"><span>Packing ka naam</span><input type="text" data-ek-pmf="n" maxlength="80" value="${esc(s.pm.n)}" placeholder="jaise: Pouch 2 kg"></label><label class="ek-f"><span>Rate (Rs fi pc)</span><input type="number" inputmode="decimal" min="0" step="any" data-ek-pmf="r" value="${esc(s.pm.r)}" placeholder="0"></label><button type="button" class="fc-go sm" data-ek-pmok="1">✓ Packing banao</button></div>` : ''}
+      <div class="ek-nicost" id="ekNiCost">${ekNiCost(z)}</div>
+      <div class="fc-btns"><button type="button" class="fc-no" data-ek-nix="1">✕ Chhoro</button><button type="button" class="fc-go" data-ek-niok="1"${s.busy ? ' disabled' : ''}>✓ Jor do</button></div>` : '<div class="fc-btns"><button type="button" class="fc-no" data-ek-nix="1">✕ Chhoro</button></div>'}</div>`;
+}
+function ekNiCost(z) {
+  const s = ek.ni; if (!s) return ''; const g = Number(s.g) > 0 ? Number(s.g) * 1000 : 0; if (!g) return 'Ek pc ka wazan likhein — laagat khud';
+  const unit = g / (srcMl(z.it.id) || gOf(z.it.id) || 1000), mc = Object.entries(s.mats).filter(([, q]) => Number(q) > 0).reduce((t, [id, q]) => t + Number(q) * rateOf(id, byId.get(id)), 0), cpp = unit * z.bulk + mc;
+  const x = s.mode === 'old' && s.id ? (byId.get(s.id) || ekPos(s.id)) : null, sg = suggest({ pack: x ? Number(x.pack) || 0 : Number(s.pk) || 0 }, cpp);
+  return `Laagat fi pc <b>${rs(cpp)}</b> · raye: W ${num(sg.wpcs)} · R ${num(sg.rpcs)}`;
+}
+function ekNiHitsHTML() {
+  const s = ek.ni, q = String(s.q || '').trim(), outs = new Set(packsOf(ek.id).map(p => p.id)), inF = new Set(ek.fe.lines.map(l => String(l.id)));
+  const pool = items.filter(x => x.id !== ek.id && !outs.has(x.id) && !inF.has(x.id) && !isMat(x.id));
+  const L = q ? srch(pool, q, 10) : pool.filter(x => !forms()[x.id]).sort((a, b) => a.name.localeCompare(b.name)).slice(0, 10); let pos = [];
+  if (q && L.length < 6) { let P = []; try { P = stockPickList(); } catch {} const have = new Set(items.map(x => x.id)); pos = srch(P.filter(x => !have.has(x.id)), q, 6); }
+  return [...L.map(x => [x, 0]), ...pos.map(x => [x, 1])].map(([x, p]) => `<button type="button" class="ek-hit${p ? ' pos' : ''}" data-ek-niit="${esc(x.id)}"><span><b>${esc(x.name)}</b><small>${p ? '🏪 POS · ' : ''}stock ${esc(qt(x.stock, x))}</small></span><em>›</em></button>`).join('') || '<p class="lk-note">Likh kar dhoondein.</p>';
+}
+function ekRateHTML(z) {
+  const R = ekRateRows(z), can = posOn() && stockFactoryCanRate();
+  return `<section class="ir-sec ek-c" id="ekRateC"><div class="ek-h"><span class="ek-no">5</span><b>Rates — har item alag</b><small>W ${wm()}% · R ${rm()}%</small></div>
+    <div class="ek-rt">${R.map((x, i) => ekRateRowHTML(x, i)).join('')}</div>
+    ${can ? `<label class="fc-posr"><input type="checkbox" data-ek-posr="1"${ek.posR ? ' checked' : ''}> <span>POS mein bhi yahi rate lagao<small>Save par — sirf jin ka rate badla · ⏳ naye item ka PC banne ke baad</small></span></label>` : `<small class="lk-note">${posOn() ? 'POS mein rate sirf ijazat wala laga sakta hai' : '📱 Factory sirf app mein — rate POS mein nahi jata'}</small>`}</section>`;
+}
+function ekRateRowHTML(x, i) {
+  const it = x.it, w = { ...suggest(it, x.cpp), ...(ek.rEd[it.id] || {}) }, cr = curRates(it), pk = it.pack > 1;
+  const cell = (k, lab) => (pk || k.endsWith('pcs')) ? `<label class="ek-rc${Math.abs((w[k] || 0) - (cr[k] || 0)) >= 1 ? ' chg' : ''}${ek.rEd[it.id]?.[k] != null ? ' own' : ''}"><small>${lab}</small><input type="number" inputmode="decimal" min="0" step="any" data-ek-r="${k}|${i}" value="${w[k] || ''}" aria-label="${esc(it.name)} ${lab}"><em>POS ${num(cr[k])}</em></label>` : '';
+  return `<div class="ek-rr"><div class="ek-rn"><b>${esc(it.name)}${isPend(it) ? ' ⏳' : ''}</b><small id="ekC${i}">laagat ${rs(x.cpp)}${pk ? ' · ' + rs(x.cpp * it.pack) + ' / ctn' : ''}</small></div>
+    <div class="ek-rg ${pk ? 'c4' : 'c2'}">${cell('wctn', 'W CTN')}${cell('wpcs', 'W PCS')}${cell('rctn', 'R CTN')}${cell('rpcs', 'R PCS')}</div></div>`;
+}
+function ekSaveInner(z) {
+  const own = isOwner(), send = posOn() && (own || canOf('fac.send')), tot = z.rows.reduce((t, r) => t + r.q, 0), nIt = z.rows.filter(r => r.q > 0).length;
+  const lab = z.n === 0 ? '💾 Save — sirf formula' : ek.eb ? '💾 Edit save — ' + ek.eb.no : (own ? '💾 Save — formula + batch' : '💾 Save — batch') + (posOn() ? (send ? ' + POS stock' : ' (app mein)') : ' + factory stock');
+  const gp = []; if (tot > 0) gp.push(num(tot) + ' pcs (' + num(nIt) + ' item)'); if (z.rows.length && !z.fill && z.left > 0.0005) gp.push(esc(qt(z.left, z.it)) + ' ' + esc(z.it.name)); if (!z.rows.length) gp.push(esc(qt(z.made, z.it)) + ' ' + esc(z.it.name));
+  const gain = gp.join(' + ') || '0';
+  const note = z.n === 0 ? 'Batch nahi banega — sirf nuskha mehfooz' : `${posOn() ? (send ? 'PC 1 min mein POS: ' : '📝 app mein rahega (POS ke liye malik 📤) · ') : '📱 factory stock: '}<b>+${gain}</b> · raw maal minus · 🏷 ${ekLbl() === 'none' ? 'label nahi' : 'label haan'} (⋮ se badlein)${own ? ' · ✏️ Edit = yahi screen' : ''}`;
+  return `<button type="button" class="fc-ok-btn" data-ek-save="1"${ek.busy || (z.n && z.over) ? ' disabled' : ''}>${ek.busy ? '⏳ Save ho raha…' : lab}</button><small class="ek-note">${note}</small>`;
+}
+function ekHistHTML() {
+  const T = today(), B = batches.filter(b => b.day === T).slice(0, 12);
+  return `<div class="ek-h"><span class="ek-no sm" aria-hidden="true">📋</span><b>Aaj ke batch</b><small>sab: ⋮ → 📋 Batches</small></div>
+    <div class="fc-list">${B.map(batchCard).join('') || '<p class="lk-note">Aaj abhi koi batch nahi.</p>'}</div>`;
+}
+// likhte waqt sirf hisaab wale hisse (input wahi rahe)
+function ekLive() {
+  const root = $('ekRoot'); if (!root || !ek) return; const z = ekCalc(); if (!z) return;
+  const s = (id, h) => { const el = $(id); if (el && el.innerHTML !== h) el.innerHTML = h; }, a = document.activeElement;
+  if (!(a && a.dataset?.ekPer != null)) s('ekPer', ekPerHTML(z));
+  s('ekSum', ekSumHTML(z)); s('ekBulk', ekBulkHTML(z)); s('ekN', num(z.n)); $('ekOutC')?.classList.toggle('ek-dim', !z.n);
+  const bal = $('ekBal'); if (bal) { bal.className = 'fc-rawsum ' + (z.over ? 'bad' : 'ok'); s('ekBal', ekBalHTML(z)); }
+  s('ekMade', esc(qt(z.made, z.it)));
+  z.rows.forEach((r, i) => { const row = root.querySelector(`[data-ek-orow="${i}"]`); if (!row) return; row.classList.toggle('auto', !!r.auto); s('ekOt' + i, ekOtHTML(r));
+    const sp = ekSplit(r), c = row.querySelector('[data-ek-oc]'), p = row.querySelector('[data-ek-op]'); if (c) c.placeholder = r.auto ? String(sp.c) : '0'; if (p) p.placeholder = r.auto ? String(sp.p) : '0'; });
+  if (isOwner()) ekRateRows(z).forEach((x, i) => { s('ekC' + i, `laagat ${rs(x.cpp)}${x.it.pack > 1 ? ' · ' + rs(x.cpp * x.it.pack) + ' / ctn' : ''}`); const w = { ...suggest(x.it, x.cpp), ...(ek.rEd[x.it.id] || {}) }, cr = curRates(x.it);
+    for (const k of ['wctn', 'wpcs', 'rctn', 'rpcs']) { const inp = root.querySelector(`[data-ek-r="${k}|${i}"]`); if (!inp) continue; if (inp !== a && ek.rEd[x.it.id]?.[k] == null) inp.value = w[k] || ''; inp.closest('.ek-rc')?.classList.toggle('chg', Math.abs((w[k] || 0) - (cr[k] || 0)) >= 1); } });
+  s('ekSaveC', ekSaveInner(z));
+}
+// ---------- kaam ----------
+function ekSelect(id) {
+  id = String(id || '');
+  if (!id) { ek = ekFresh(null); ekKeep(''); paint(); setTimeout(() => document.querySelector('#ekRoot [data-ek-q]')?.focus(), 40); return; }
+  const it = byId.get(id);
+  if (!it) { if (!isOwner()) { notice('Factory mein jorna sirf malik'); return; } facToggle(id, true).then(() => { loadItemsQuiet(); if (byId.get(id)) ekSelect(id); }); return; }
+  if (!isOwner() && !forms()[id]) { notice('Is item ka formula malik banayega'); return; }
+  ek = ekFresh(it); ekKeep(id); paint();
+}
+function ekPickAdd() {
+  const ids = [...ek.sel].filter(id => !ek.fe.lines.some(l => String(l.id) === id)); if (!ids.length) return;
+  let P = []; try { P = stockPickList(); } catch {} const PM = new Map(P.map(x => [x.id, x])), newF = ids.filter(id => !byId.has(id));
+  if (newF.length && !isOwner()) { notice('🏪 POS wali items factory mein sirf malik jor sakta hai'); return; }
+  for (const id of newF) facToggle(id, true);   // POS wali = factory mein bhi (foran)
+  for (const id of ids) ek.fe.lines.push({ id, q: 0, n: byId.get(id)?.name || PM.get(id)?.name || '' });
+  const n0 = ek.fe.lines.length - ids.length; ek.sel.clear(); ek.pq = ''; paint();
+  notice('✓ ' + ids.length + ' maal jur gaya' + (newF.length ? ' (' + newF.length + ' factory mein bhi)' : '') + ' — ab har ek ki miqdaar likhein');
+  setTimeout(() => document.querySelector(`#ekLines [data-ek-lq="${n0}"]`)?.focus(), 60);
+}
+async function ekNwSave() {
+  const w = ek?.nw; if (!w || w.busy) return; const n = String(w.n || '').trim(); if (!n) { notice('Naam likhein'); return; }
+  if (!isOwner()) { notice('Naya item sirf malik'); return; }
+  const r = Number(w.r) > 0 ? r2(Number(w.r)) : 0; w.busy = true; paint();
+  try {
+    let id;
+    if (posOn()) { const jid = await stockNewItemQuick({ name: n, costP: r, rpcs: 0, pack: w.kind === 'main' && Number(w.pk) > 1 ? Math.floor(Number(w.pk)) : 0 }); window.ntFacPend(jid, n, r); id = 'job:' + jid; }
+    else { const x = locNew(n, r, { un: w.un, pk: w.kind === 'main' ? w.pk : 0 }); await cloud.setFactoryCfg(x.patch); id = x.id; }
+    loadItemsQuiet();
+    if (w.kind === 'main') { const it = byId.get(id); ek = ekFresh(it || null); if (it) ekKeep(id); else ek.id = id; notice(`✓ ${n} — ${posOn() ? '⏳ POS mein PC on hote hi banega' : '📱 sirf factory'} · ab neeche formula banayein`); }
+    else { ek.fe.lines.push({ id, q: Number(w.q) > 0 ? r3(Number(w.q)) : 0, n }); ek.nw = null; ek.pq = ''; notice(`✓ ${n} formula mein jur gaya${posOn() ? ' — ⏳ POS mein PC on hote hi banega' : ''}`); }
+    paint();
+  } catch (e) { w.busy = false; paint(); notice('Nahi hua: ' + (e?.message || e)); }
+}
+function ekNwUse(id) {   // ⚠️ milta julta pehle se — wahi lo
+  const w = ek?.nw; if (!w) return; ek.nw = null;
+  if (w.kind === 'main') { ekSelect(id); return; }
+  if (!ek.fe.lines.some(l => String(l.id) === String(id))) { if (!byId.has(String(id))) facToggle(String(id), true); ek.fe.lines.push({ id: String(id), q: Number(w.q) > 0 ? r3(Number(w.q)) : 0, n: byId.get(String(id))?.name || ekPos(id)?.name || '' }); }
+  ek.pq = ''; paint(); notice('✓ Pehle wala item jur gaya (naya nahi bana)');
+}
+async function ekPmSave() {   // ➕ naya packing maal (pouch / bag) — wahin
+  const s = ek?.ni?.pm; if (!s) return; const n = String(s.n || '').trim(); if (!n) { notice('Packing ka naam likhein'); return; }
+  const d = ekDup(n).find(x => fold(x.name) === fold(n)); if (d) { ek.ni.mats[String(d.id)] = 1; ek.ni.pm = null; if (!byId.has(String(d.id))) matToggle(String(d.id), true); paint(); notice('✓ ' + d.name + ' pehle se tha — wahi chuna'); return; }
+  const r = Number(s.r) > 0 ? r2(Number(s.r)) : 0;
+  try { let id; if (posOn()) { const jid = await stockNewItemQuick({ name: n, costP: r, rpcs: 0 }); window.ntFacPend(jid, n, r, true); id = 'job:' + jid; } else { const x = locNew(n, r, { mat: true }); await cloud.setFactoryCfg(x.patch); id = x.id; }
+    loadItemsQuiet(); if (ek?.ni) { ek.ni.mats[id] = 1; ek.ni.pm = null; } paint(); notice('✓ ' + n + ' packing maal ban gaya' + (posOn() ? ' (⏳ POS mein PC banayega)' : '')); }
+  catch (e) { notice('Nahi hua: ' + (e?.message || e)); }
+}
+async function ekNiSave() {
+  const s = ek?.ni, it = ek && byId.get(ek.id); if (!s || s.busy || !it) return; if (!isOwner() || !cloud?.setFactoryCfg) { notice('Sirf malik'); return; }
+  const g = Number(s.g) > 0 ? r3(Number(s.g) * 1000) : 0; if (!(g > 0)) { notice('Ek pc mein kitna — likhein'); return; }
+  let id = s.mode === 'old' ? String(s.id || '') : ''; if (s.mode === 'old' && !id) { notice('Item chunein'); return; }
+  const n = s.mode === 'old' ? (byId.get(id)?.name || ekPos(id)?.name || '') : String(s.n || '').trim(); if (!n) { notice('Naam likhein'); return; }
+  const z = ekCalc(), mats = Object.entries(s.mats).filter(([, q]) => Number(q) > 0).map(([mid, q]) => ({ id: mid, q: r3(q), n: String(byId.get(mid)?.name || '').slice(0, 80) }));
+  s.busy = true; paint();
+  try {
+    if (!id) { const unit = g / (srcMl(it.id) || gOf(it.id) || 1000), cpp = r2(unit * (z?.bulk || 0) + mats.reduce((t, m) => t + m.q * rateOf(m.id, byId.get(m.id)), 0)), pk = Number(s.pk) > 1 ? Math.floor(Number(s.pk)) : 0, sg = suggest({ pack: pk }, cpp);
+      if (posOn()) { const jid = await stockNewItemQuick({ name: n, pack: pk, costP: cpp, rpcs: sg.rpcs, wpcs: sg.wpcs }); window.ntFacPend(jid, n, cpp); id = 'job:' + jid; }
+      else { const x = locNew(n, cpp, { pk }); await cloud.setFactoryCfg(x.patch); id = x.id; } }
+    const v = { src: it.id, g, mats }, patch = { packs: { [id]: v } };
+    if (!id.startsWith('job:') && !id.startsWith('loc:') && !items.some(x => x.id === id)) patch.items = { [id]: true };   // POS wali item = factory mein bhi
+    cfg = { ...(cfg || {}), packs: { ...(cfg?.packs || {}), [id]: v }, ...(patch.items ? { items: { ...(cfg?.items || {}), ...patch.items } } : {}) };
+    loadItemsQuiet(); ek.ni = null; paint();
+    notice(`✓ ${n} — ${it.name} se banega (${ekSz(v, it)} fi pc)${id.startsWith('job:') ? ' · ⏳ POS mein PC banayega' : ''}`);
+    await cloud.setFactoryCfg(patch);
+  } catch (e) { if (ek?.ni) ek.ni.busy = false; paint(); notice('Nahi hua: ' + (e?.message || e)); }
+}
+async function ekOutDel(k) {
+  if (!isOwner() || !cloud?.setFactoryCfg) return; const x = byId.get(String(k));
+  if (!confirm(`"${x?.name || k}" ab is maal se nahi banega? (packing ki setting hategi — item wahi rahega)`)) return;
+  cfg = { ...(cfg || {}), packs: { ...(cfg?.packs || {}), [k]: null } }; delete ek.oq[k]; loadItemsQuiet(); paint();
+  try { await cloud.setFactoryCfg({ packs: { [k]: null } }); notice('Hata diya'); } catch (e) { notice('Save nahi hua: ' + (e?.message || e)); }
+}
+function ekFormulaV(z) {   // malik — wahi cfg.formulas shakal (purana Formulas tab bhi wahi parhta hai)
+  const F = ek.fe, nm = id => String(byId.get(String(id))?.name || '').slice(0, 80);
+  const self = Object.entries(F.self || {}).filter(([, q]) => Number(q) > 0).map(([id, q]) => ({ id, q: r3(q), n: nm(id) }));
+  return { per: r3(z.per), lines: F.lines.filter(l => Number(l.q) > 0).map(l => ({ id: String(l.id), q: r3(l.q), n: String(byId.get(String(l.id))?.name || l.n || '').slice(0, 80) })), lab: r2(F.lab), gas: r2(F.gas), cpp: r2(z.main), at: Date.now(),
+    ml: Number(F.ml) > 0 ? r3(F.ml) : 0, auto: F.auto !== false, self: { mats: self }, sum: !!F.sum && !(Number(F.ml) > 0) };
+}
+const ekSetF = (id, v) => { cfg = { ...(cfg || {}), formulas: { ...(cfg?.formulas || {}), [id]: v } }; };
+function ekBatchWrite(it, z0) {   // wahi batchCalc + batch doc (purana form jaisa) — PC factory-post wahi · kam stock par poochhe (null = ruk gaye)
+  const pk = {}; for (const r of z0.rows) if (!r.self && r.q > 0) pk[r.k] = r.q;
+  const keepFb = fb; fb = { mode: 'make', id: it.id, n: z0.n, real: '', pk, self: z0.fill ? String(z0.rows.find(r => r.self)?.q ?? '') : '', lbl: ekLbl(), busy: false, send: false };
+  let z; try { z = batchCalc(); } finally { fb = keepFb; }
+  if (!z) throw Error('Formula nahi mila');
+  if (z.over) throw Error('Tadad zyada — bana kam');
+  if (z.kam.length && !confirm(`${z.kam.map(l => l.name).join(', ')} stock mein kam hai.\nPhir bhi darj karein? (${posOn() ? 'POS' : 'factory stock'} mein minus ho jayega)`)) return null;
+  const send = posOn() && (isOwner() || canOf('fac.send')), mode = ekLbl();
+  const outs = z.k.rows.map(r => ({ id: r.it.id, name: r.it.name, q: r.n, c: r2(r.c) }));
+  const lbl = [...(z.fill || !packsOf(it.id).length ? labelSpecs(it, z.out, mode) : []), ...z.k.rows.flatMap(r => labelSpecs(r.it, r.n, mode))].slice(0, 6);
+  const d = { no: batchNo(), itemId: it.id, name: it.name, n: z0.n, per: z.f.per, out: z.out, outs, kind: 'make', lines: z.lines.map(l => ({ id: l.id, name: l.name, q: r3(l.q), c: r2(l.c) })), cost: Math.round(z.total), oh: z.oh, labels: lbl, byName: whoOf() || '', day: today(), hold: posOn() && !send, app: !posOn() };
+  d.loc = posOn() && hasLoc(d);
+  const eb = ek.eb;
+  if (eb) { const fresh = ['new', 'hold', 'cancelReq', 'app'].includes(eb.status) && !eb.adjNo;
+    if (fresh) return { msg: `✓ ${eb.no} edit — ${it.name}`, done: cloud.editFactoryBatch(eb.id, d) };
+    return { msg: `✓ ${eb.no} wapas + naya ${eb.no}E${d.hold ? ' (📝 app mein)' : ''}`, done: (async () => { await cloud.factoryBatchAct(eb.id, 'cancel'); const r = cloud.addFactoryBatch({ ...d, no: eb.no + 'E' }); await r?.done; })() }; }
+  const r = cloud.addFactoryBatch(d);
+  if (d.app && r?.id) { appB = [...appB.filter(b => b.id !== r.id), { ...d, id: r.id, status: 'app', at: Date.now() }]; fsCache = null; }   // foran factory stock mein
+  return { msg: d.app ? `✓ ${d.no} · ${it.name} — 🏭 factory stock mein darj${d.labels.length ? ' · 🏷 label' : ''}` : d.hold ? `✓ ${d.no} · ${it.name} — 📝 app mein mehfooz (POS ke liye ⋮ → Batches → 📤)` : `✓ ${d.no} · ${it.name} — PC 1 min mein POS stock badlega${d.labels.length ? ' + 🏷 label' : ''}`,
+    done: Promise.resolve(r?.done).then(() => { if (d.app && d.labels.length) sendLabels(d.labels, d.no); }) };
+}
+function ekRatesWrite(z) {   // ☑ POS mein bhi — sirf jin ka rate badla (wahi stockAgentItemSave jo 🏷 Rates tab)
+  let n = 0, skip = 0;
+  for (const x of ekRateRows(z)) { const it = x.it, w = { ...suggest(it, x.cpp), ...(ek.rEd[it.id] || {}) }, cr = curRates(it);
+    if (!['wctn', 'wpcs', 'rctn', 'rpcs'].some(k => (it.pack > 1 || k.endsWith('pcs')) && Math.abs((w[k] || 0) - (cr[k] || 0)) >= 1)) continue;
+    if (isPend(it) || isLoc(it)) { skip++; continue; }
+    const p = it.pack > 1 ? { wctn: w.wctn, wpcs: w.wpcs, rctn: w.rctn, rpcs: w.rpcs } : { wpcs: w.wpcs, rpcs: w.rpcs };
+    try { stockAgentItemSave(it.id, p).then(r => { if (r && r.ok === false && !r.pending) notice(it.name + ': ' + (r.why || 'rate nahi laga')); }).catch(e => notice(it.name + ': ' + (e?.message || e))); n++; } catch (e) { notice(it.name + ': ' + (e?.message || e)); } }
+  return { n, skip };
+}
+async function ekSave() {
+  if (!ek || ek.busy) return; const z = ekCalc(); if (!z) { notice('Pehle item chunein'); return; }
+  const it = z.it, own = isOwner(), F = ek.fe;
+  if (own) { const miss = F.lines.filter(l => !(Number(l.q) > 0));
+    if (!F.lines.length) { notice('Kam se kam ek raw maal jorein'); return; }
+    if (miss.length) { notice('⚠️ ' + miss.map(l => byId.get(String(l.id))?.name || l.n || '').slice(0, 3).join(', ') + ' — kitna? likhein (ya ✕ hatayein)'); return; }
+    if (!(z.per > 0)) { notice('1 batch mein kitna banta hai — likhein'); return; } }
+  else if (!forms()[it.id]) { notice('Is item ka formula malik banayega'); return; }
+  if (z.n > 0) { if (!canFacBatch()) { notice('🔒 Batch ki ijazat nahi (malik: Settings → Mulazim)'); return; } if (!cloud?.addFactoryBatch) { notice('App update karein'); return; }
+    if (z.over) { notice('Tadad zyada — bana kam. Theek karein'); return; } if (!(z.made > 0)) { notice('Kitna bana — formula dekhein'); return; } }
+  if (!cloud?.setFactoryCfg && own) { notice('App update karein'); return; }
+  if (!own && !(z.n > 0)) { notice('Kitne batch bane — + dabayein'); return; }
+  ek.busy = true; ekLive();
+  const oldF = cfg?.formulas?.[it.id], v = own ? ekFormulaV(z) : null; let wrote = false;
+  const undo = () => { if (v && !wrote) { ekSetF(it.id, oldF ?? null); loadItemsQuiet(); } if (ek) { ek.busy = false; ekLive(); } };
+  try {
+    if (v) { ekSetF(it.id, v); loadItemsQuiet(); }   // foran (tez) — batchCalc bhi naya nuskha parhe
+    let msg = '✓ ' + it.name + ' — formula save', r = null;
+    if (z.n > 0) { r = ekBatchWrite(it, z); if (!r) { undo(); return; } msg = r.msg; }   // kam stock par "nahi" = kuch save nahi (formula bhi nahi)
+    wrote = true;
+    const ps = [...(v ? [cloud.setFactoryCfg({ formulas: { [it.id]: v } })] : []), ...(r ? [r.done] : [])];
+    const rr = own && ek.posR && posOn() && stockFactoryCanRate() ? ekRatesWrite(z) : null;
+    notice(msg + (rr?.n ? ' · 🏷 ' + rr.n + ' rate POS ko' : '') + (rr?.skip ? ' · ⏳ ' + rr.skip + ' naye item ka rate PC banne ke baad' : ''));
+    ek = ekFresh(byId.get(it.id) || it); ekKeep(it.id); paint(); try { stockRepaint(); } catch {}
+    Promise.all(ps).catch(er => notice('❌ Save nahi hua: ' + (er?.message || er)));
+  } catch (e) { undo(); notice('Save nahi hua: ' + (e?.message || e)); }
+}
+// ✏️ edit — wahi screen bhari hui (POS mein nahi gaya = wahi batch badle · gaya = wapas + naya)
+function ekEdit(id) {
+  const b = batches.find(x => x.id === id) || appB.find(x => x.id === id); if (!b) return;
+  const it = byId.get(String(b.itemId)); if (b.kind === 'pack' || !ekOn() || !it || !forms()[it.id]) { openBatch(id); return; }
+  ek = ekFresh(it, b); ek.n = Math.max(1, Math.min(10, Number(b.n) || 1));
+  const put = (k, q, pk) => { q = Math.max(0, Math.floor(Number(q) || 0)); ek.oq[k] = pk > 1 ? { c: String(Math.floor(q / pk)), p: String(q % pk) } : { c: '', p: String(q) }; };
+  const O = new Map((b.outs || []).map(o => [String(o.id), Number(o.q) || 0]));
+  for (const p of packsOf(it.id)) put(p.id, O.get(p.id) || 0, Number(byId.get(p.id)?.pack) || 0);   // jo is batch mein nahi tha = 0 (khud wala na bane)
+  const f = forms()[it.id]; if (Number(f.ml) > 0 || selfMats(f).length) put('_self', b.out, Number(it.pack) || 0);
+  try { $('dialog')?.close(); } catch {} st.view = 'ek'; keep(); ekKeep(it.id);
+  if (!$('fcRoot')) { try { window.ntRecentOpen?.({ open: { kind: 'route', v: 'factory' } }); } catch {} } else paint();
+  setTimeout(() => { if ($('fcRoot') && !$('ekRoot')) paint(); $('ekBatchC')?.scrollIntoView?.({ block: 'start', behavior: 'smooth' }); }, 350);
+}
+function ekFactoryStock() { try { window.ntRecentOpen?.({ open: { kind: 'stock', screen: 'factory' } }); } catch (e) { notice('Stock screen nahi khuli: ' + (e?.message || e)); } }
+
 // ---------- dialog ----------
 function dlg(title, html) { const d = $('dialog'); if (!d) return; d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = title; $('dialogBody').innerHTML = `<div class="ir-root fc-root fc-dlg">${html}</div>`; if (!d.open) d.showModal(); }
 
@@ -1341,7 +1772,7 @@ document.addEventListener('click', e => {
     if (d.fcAct === 'send' && !confirm('POS mein bhejein? PC 1 min mein stock badlega — us ke baad edit sirf "wapas + naya".')) return;
     Promise.resolve(cloud?.factoryBatchAct?.(id, d.fcAct)).then(() => { notice(d.fcAct === 'cancel' ? '↩ Wapas ho raha — PC 1 min' : d.fcAct === 'cancelNow' ? '✕ Batch cancel' : d.fcAct === 'send' ? '📤 POS ko bheja — PC 1 min' : '↻ Dobara bheja'); $('dialog')?.close(); }).catch(er => notice('Nahi hua: ' + (er?.message || er))); return; }
   if (d.fcApp2pos) { app2pos(d.fcApp2pos); return; }   // v2.103.2
-  if (d.fcEdit) { openBatch(d.fcEdit); return; }
+  if (d.fcEdit) { if (ekOn()) ekEdit(d.fcEdit); else openBatch(d.fcEdit); return; }   // v2.107.0: edit = wahi ek-screen
   if (d.fbIt && fb) { fb.id = d.fbIt; fb.real = ''; fb.pk = {}; batchPaint(); return; }
   if (d.fbN && fb) { fb.n = Number(d.fbN); fb.real = ''; batchPaint(); return; }
   if (d.fbLbl && fb) { fb.lbl = d.fbLbl; batchPaint(); return; }
@@ -1394,6 +1825,64 @@ document.addEventListener('input', e => {
   if (d.pfPq != null && pf) { pf.prodQ = t.value || ''; clearTimeout(qT); qT = setTimeout(() => pfSwap(['pfProd']), 180); return; }
   if (d.pfSq != null && pf) { pf.sq = t.value || ''; clearTimeout(qT); qT = setTimeout(() => pfSwap(['pfHits']), 180); return; }
 });
+// v2.107.0: 🏭 ek-screen ke clicks / likhai (alag listener — purane data-fc-* wahi)
+document.addEventListener('click', e => {
+  const t = e.target.closest?.('[data-ek-fstock],[data-ek-old],[data-ek-back],[data-ek-lbl],[data-ek-it],[data-ek-nwmain],[data-ek-nwraw],[data-ek-nwun],[data-ek-nwx],[data-ek-nwok],[data-ek-nwuse],[data-ek-ldel],[data-ek-padd],[data-ek-perman],[data-ek-persum],[data-ek-n],[data-ek-ebx],[data-ek-ninew],[data-ek-niold],[data-ek-niit],[data-ek-niuse],[data-ek-nimat],[data-ek-pmnew],[data-ek-pmok],[data-ek-nix],[data-ek-niok],[data-ek-odel],[data-ek-save]');
+  if (!t || !t.closest('.fc-root')) return; const d = t.dataset;
+  if (d.ekFstock != null) { ekFactoryStock(); return; }
+  if (d.ekOld) { st.view = 'old'; st.tab = d.ekOld; keep(); paint(); return; }
+  if (d.ekBack != null) { st.view = 'ek'; keep(); paint(); return; }
+  if (d.ekLbl != null) { const on = ekLbl() === 'none'; try { localStorage.setItem('sam-fc-bc', on ? '1' : '0'); } catch {} paint(); notice(on ? '🏷 Batch par barcode label chhapenge' : '🏷 Label nahi chhapenge'); return; }
+  if (!ek) return;
+  if (d.ekIt != null) { ekSelect(d.ekIt); return; }
+  if (d.ekNwmain != null) { ek.nw = { kind: 'main', n: ek.q.trim(), un: 'Pcs', r: '', q: '', pk: '' }; ek.q = ''; paint(); setTimeout(() => document.querySelector('#ekNwBox [data-ek-nwf="n"]')?.focus(), 40); return; }
+  if (d.ekNwraw != null) { ek.nw = { kind: 'raw', n: ek.pq.trim(), un: 'Kg', r: '', q: '' }; ek.pq = ''; paint(); setTimeout(() => document.querySelector('#ekNwBox [data-ek-nwf="r"]')?.focus(), 40); return; }
+  if (d.ekNwun && ek.nw) { ek.nw.un = d.ekNwun; paint(); return; }
+  if (d.ekNwx != null) { ek.nw = null; paint(); return; }
+  if (d.ekNwok != null) { ekNwSave(); return; }
+  if (d.ekNwuse) { ekNwUse(d.ekNwuse); return; }
+  if (!ek.fe) return;
+  if (d.ekLdel != null) { ek.fe.lines.splice(Number(d.ekLdel), 1); paint(); return; }
+  if (d.ekPadd != null) { ekPickAdd(); return; }
+  if (d.ekPerman != null) { const z = ekCalc(); if (Number(ek.fe.ml) > 0) ek.fe.auto = false; ek.fe.sum = false; ek.fe.per = z?.per || ek.fe.per; paint(); return; }
+  if (d.ekPersum != null) { if (Number(ek.fe.ml) > 0) ek.fe.auto = true; else ek.fe.sum = true; paint(); return; }
+  if (d.ekN) { ek.n = Math.max(0, Math.min(10, Math.floor(Number(ek.n) || 0) + Number(d.ekN))); ekLive(); return; }
+  if (d.ekEbx != null) { ek = ekFresh(byId.get(ek.id) || null); paint(); return; }
+  if (d.ekNinew != null || d.ekNiold != null) { const nw = d.ekNinew != null; ek.ni = { mode: nw ? 'new' : 'old', id: '', q: '', n: '', g: '', pk: '', mats: {}, pm: null, busy: false, gT: false }; paint(); setTimeout(() => document.querySelector(nw ? '#ekNiBox [data-ek-nif="n"]' : '#ekNiBox [data-ek-niq]')?.focus(), 40); return; }
+  if (d.ekOdel) { ekOutDel(d.ekOdel); return; }
+  if (d.ekSave != null) { ekSave(); return; }
+  const s = ek.ni; if (!s) return;
+  if (d.ekNiit != null || d.ekNiuse) { const id = String(d.ekNiuse || d.ekNiit || ''); s.mode = 'old'; s.id = id; if (id && !s.gT) { const m = mlFromName((byId.get(id) || ekPos(id))?.name); if (m) s.g = String(r3(m / 1000)); } paint(); return; }
+  if (d.ekNimat) { if (s.mats[d.ekNimat]) delete s.mats[d.ekNimat]; else s.mats[d.ekNimat] = 1; paint(); return; }
+  if (d.ekPmnew != null) { s.pm = { n: '', r: '' }; paint(); setTimeout(() => document.querySelector('#ekNiBox [data-ek-pmf="n"]')?.focus(), 40); return; }
+  if (d.ekPmok != null) { ekPmSave(); return; }
+  if (d.ekNix != null) { ek.ni = null; paint(); return; }
+  if (d.ekNiok != null) { ekNiSave(); return; }
+});
+document.addEventListener('input', e => {
+  const t = e.target; if (!t?.dataset || !ek || !t.closest?.('#ekRoot')) return; const d = t.dataset;
+  if (d.ekQ != null) { ek.q = t.value || ''; clearTimeout(ekQT); ekQT = setTimeout(() => { const h = $('ekHits'); if (h && ek) h.innerHTML = ekHitsHTML(); }, 150); return; }
+  if (d.ekPq != null) { ek.pq = t.value || ''; clearTimeout(ekQT); ekQT = setTimeout(() => { const a = $('ekPickList'), b = $('ekPickFoot'); if (a && ek) a.innerHTML = ekPickListHTML(); if (b && ek) b.innerHTML = ekPickFootHTML(); }, 150); return; }
+  if (d.ekNiq != null && ek.ni) { ek.ni.q = t.value || ''; clearTimeout(ekQT); ekQT = setTimeout(() => { const h = $('ekNiHits'); if (h && ek?.ni) h.innerHTML = ekNiHitsHTML(); }, 150); return; }
+  if (d.ekNwf != null && ek.nw) { ek.nw[d.ekNwf] = t.value; if (d.ekNwf === 'n') { clearTimeout(ekQT); ekQT = setTimeout(() => { const el = $('ekNwDup'); if (el && ek?.nw) el.innerHTML = ekDupHTML(ekDup(String(ek.nw.n || '').trim()), ek.nw.kind); }, 220); } return; }
+  if (d.ekPmf != null && ek.ni?.pm) { ek.ni.pm[d.ekPmf] = t.value; return; }
+  if (d.ekNif != null && ek.ni) { const s = ek.ni; s[d.ekNif] = t.value; if (d.ekNif === 'g') s.gT = t.value !== '';
+    if (d.ekNif === 'n') { if (!s.gT) { const m = mlFromName(t.value); s.g = m ? String(r3(m / 1000)) : ''; const gi = document.querySelector('#ekNiBox [data-ek-nif="g"]'); if (gi) gi.value = s.g; }
+      clearTimeout(ekQT); ekQT = setTimeout(() => { const el = $('ekNiDup'); if (el && ek?.ni) el.innerHTML = ekDupHTML(ekDup(String(ek.ni.n || '').trim()), 'out'); }, 220); }
+    const z = ekCalc(), c = $('ekNiCost'); if (c && z) c.innerHTML = ekNiCost(z); return; }
+  if (!ek.fe) return;
+  if (d.ekLq != null) { const l = ek.fe.lines[Number(d.ekLq)]; if (l) { const v = Number(t.value); l.q = v > 0 ? (gOf(l.id) ? pcsOfKg(v, l.id) : v) : 0; t.closest('.ek-chip')?.classList.toggle('warn', !(l.q > 0)); } ekLive(); return; }
+  if (d.ekLab != null) { ek.fe.lab = Number(t.value) > 0 ? Number(t.value) : 0; ekLive(); return; }
+  if (d.ekGas != null) { ek.fe.gas = Number(t.value) > 0 ? Number(t.value) : 0; ekLive(); return; }
+  if (d.ekPer != null) { ek.fe.per = Number(t.value) > 0 ? Number(t.value) : 0; ekLive(); return; }
+  if (d.ekOc != null || d.ekOp != null) { const k = d.ekOc ?? d.ekOp, v = ek.oq[k] = ek.oq[k] || {}; v[d.ekOc != null ? 'c' : 'p'] = t.value; ekLive(); return; }
+  if (d.ekR != null) { const [k, i] = String(d.ekR).split('|'), z = ekCalc(), x = z && ekRateRows(z)[Number(i)]; if (x) { ek.rEd[x.it.id] = { ...(ek.rEd[x.it.id] || {}), [k]: Number(t.value) >= 0 ? Number(t.value) : 0 }; t.closest('.ek-rc')?.classList.add('own'); } return; }
+});
+document.addEventListener('change', e => {
+  const t = e.target; if (!t?.dataset || !ek || !t.closest?.('#ekRoot')) return; const d = t.dataset;
+  if (d.ekPt != null) { const id = d.ekPt; if (t.checked) ek.sel.add(id); else ek.sel.delete(id); t.closest('.ek-pr')?.classList.toggle('is-in', t.checked); const f = $('ekPickFoot'); if (f) f.innerHTML = ekPickFootHTML(); return; }
+  if (d.ekPosr != null) { ek.posR = !!t.checked; return; }
+});
 // photo dialog: search ke waqt sirf list badle (input na toote)
 function pfSwap(ids) { const el = $('fcPhoto'); if (!el || !pf) return; const tmp = document.createElement('div'); pfPaint(tmp); swapParts(el, tmp.innerHTML, ids); }
 document.addEventListener('change', e => {
@@ -1441,13 +1930,24 @@ document.addEventListener('change', e => {
   }
   if ((d.fcWm != null || d.fcRm != null) && cloud?.setFactoryCfg) { if (!(v >= 0)) return; cfg = { ...(cfg || {}), ...(d.fcWm != null ? { wm: v } : { rm: v }) }; cloud.setFactoryCfg(d.fcWm != null ? { wm: v } : { rm: v }).then(() => notice('✓ Nafa ' + v + '% save')).catch(er => notice('Save nahi hua: ' + (er?.message || er))); }
 });
-export const _fcTest = { mcCpp, mcOpen, get mc() { return mc; }, rateRows, items: () => items, fStocks: () => fStocks(), pcsG, volU, lineVol, fixMl, looksPack, get fe() { return fe; }, forms, selfMats, mlFromName, volOf, openAdd, addListHTML, get fa() { return fa; }, packCalc, packDefs, packUnit, packCpp, bulkCpp, batchCalc: () => batchCalc(), fb: () => fb, rEd, rateRows, isMat, fRate, rateOf, setRate, posRate: v => { posRate = v; }, gOf, kgOf, pcsOfKg, qk, costOf, suggest, labelSpecs, qt, set: (c, b, it) => { cfg = c; batches = b || []; items = it || []; byId = new Map(items.map(x => [x.id, x])); itemsOk = true; }, batchNo, pdfHTML, st, matchItem, photoFormula, pf: () => pf, pendItems: () => pendItems(items.filter(x => !x.pending)) };
+export const _fcTest = { mcCpp, mcOpen, get mc() { return mc; }, rateRows, items: () => items, fStocks: () => fStocks(), pcsG, volU, lineVol, fixMl, looksPack, get fe() { return fe; }, forms, selfMats, mlFromName, volOf, openAdd, addListHTML, get fa() { return fa; }, packCalc, packDefs, packUnit, packCpp, bulkCpp, batchCalc: () => batchCalc(), fb: () => fb, rEd, rateRows, isMat, fRate, rateOf, setRate, posRate: v => { posRate = v; }, gOf, kgOf, pcsOfKg, qk, costOf, suggest, labelSpecs, qt, set: (c, b, it) => { cfg = c; batches = b || []; items = it || []; byId = new Map(items.map(x => [x.id, x])); itemsOk = true; }, batchNo, pdfHTML, st, matchItem, photoFormula, pf: () => pf, pendItems: () => pendItems(items.filter(x => !x.pending)),
+  get ek() { return ek; }, ekCalc: () => ekCalc(), ekSelect, ekOn: () => ekOn(), ekView: () => ekView() };
 
 // v2.103.48: 🤖 agent actions — factory
-import { agentRegister } from './agent.js?v=2.106.0';
+import { agentRegister } from './agent.js?v=2.107.0';
 agentRegister([
   { name: 'factory_batches', read: true, desc: 'Factory ke aaj ke (ya pichhle N din ke) batch: item, kitne batch, pcs, haal (POS mein / app / hold).', params: { type: 'OBJECT', properties: { days: { type: 'INTEGER' } } },
     run({ days }) { watch(); const from = Date.now() - Math.max(1, Math.min(60, Number(days) || 1)) * 864e5; return { list: batches.filter(b => (b.at || 0) >= from).slice(0, 40).map(b => ({ no: b.no, item: b.name || byId.get(String(b.itemId))?.name || '', batch: b.n, pcs: b.out, haal: b.status, kis_ne: b.byName || '', kab: new Date(b.at).toLocaleString('en-PK'), laagat: b.cost })) }; } },
   { name: 'factory_batch_kholo', read: true, desc: 'Naya factory batch ka form kholo (item + kitne batch bhar kar) — OK aap dabayein.', params: { type: 'OBJECT', properties: { item: { type: 'STRING' }, n: { type: 'INTEGER' } }, required: ['item'] },
     async run({ item, n }) { await openBatch(null, 'make'); await new Promise(r => setTimeout(r, 400)); const q = String(item).toLowerCase(), it = items.filter(x => (forms()[x.id]) && String(x.name).toLowerCase().includes(q)); if (!it.length) throw Error('Factory item "' + item + '" nahi (formula wala)'); if (fb) { fb.id = it[0].id; fb.n = Math.max(1, Math.min(10, Number(n) || 1)); batchPaint(); } return { khul_gaya: it[0].name, batch: fb?.n || 1 }; } },
+  // v2.107.0: 🏭 ek-screen + Factory stock — wahi function jo button chalata hai (Save malik / larka khud dabaye)
+  { name: 'factory_ek_kholo', read: true, desc: 'Factory ki nayi EK SCREEN kholo (item + formula + batch + bana + rate ek jagah) — item chun kar, kitne batch (0 = sirf formula). Save aap dabayein.', params: { type: 'OBJECT', properties: { item: { type: 'STRING' }, n: { type: 'INTEGER' } } },
+    async run({ item, n }) { if (!ekOn()) throw Error('Factory ek-screen ki ijazat nahi (malik: Settings → Mulazim)'); st.view = 'ek'; keep();
+      if (!$('fcRoot')) { try { window.ntRecentOpen?.({ open: { kind: 'route', v: 'factory' } }); } catch {} await new Promise(r => setTimeout(r, 500)); }
+      await ensureItems(); paint();
+      if (item) { const L = srch(items.filter(x => isOwner() || forms()[x.id]), String(item), 3); if (!L.length) throw Error('Factory item "' + item + '" nahi mila'); ekSelect(L[0].id); }
+      if (n != null && ek) { ek.n = Math.max(0, Math.min(10, Math.floor(Number(n) || 0))); paint(); }
+      return { khul_gayi: 'factory ek-screen', item: ek?.id ? (byId.get(ek.id)?.name || '') : '', batch: ek?.n ?? 1 }; } },
+  { name: 'factory_stock_kholo', read: true, desc: 'Factory ka poora stock Stock screen par kholo — sirf factory items (ginti Ctn / Pcs, Save, Tick, label, item sab wahi).', params: { type: 'OBJECT', properties: {} },
+    run() { ekFactoryStock(); return { khul_gaya: 'factory stock (Stock screen)' }; } },
 ]);
