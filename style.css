@@ -4856,3 +4856,26 @@ html body :is(#summary,#dialogBody) .rk-set .rk-only{display:block;margin:2px 0 
 /* v2.105.3: ➕ khud (search se laya) item ka ✕ hatao */
 html body :is(#summary,#dialogBody) .rk-unadd{display:inline-flex;align-items:center;min-height:0!important;padding:2px 9px!important;border-radius:999px!important;border:1px solid #fecaca!important;background:#fff5f5!important;color:#b91c1c!important;font:inherit;font-size:11px!important;font-weight:800!important;cursor:pointer;box-shadow:none!important}
 html.dk body :is(#summary,#dialogBody) .rk-unadd{background:rgba(248,113,113,.14)!important;color:#fca5a5!important;border-color:rgba(248,113,113,.35)!important}
+
+/* v2.105.4: 🔒 100% box — likhte hi hisaab (abhi X = Y% bacha · list mein / kab aayega) · 👤 mulazim ka apna % (sirf us ka phone) + ↺ Malik wala */
+html body :is(#summary,#dialogBody) .rk-100 .rk-100p{flex:1 1 100%;display:block;margin-top:2px;font-size:12px;line-height:1.45;font-weight:600;color:#4c1d95}
+html body :is(#summary,#dialogBody) .rk-100 .rk-100p b{font-weight:800;color:#3b0764}
+html body :is(#summary,#dialogBody) .rk-100 .rk-100p em{font-style:normal;font-weight:800;color:#b45309}
+html body :is(#summary,#dialogBody) .rk-100 .rk-100p em.ok{color:#047857}
+html body :is(#summary,#dialogBody) .rk-100 .rk-100p i{font-style:normal;color:#6b7280}
+html body :is(#summary,#dialogBody) .rk-set .rk-mine{color:#5b21b6}
+html body :is(#summary,#dialogBody) .rk-set .rk-mine0{display:inline-flex;align-items:center;min-height:0!important;margin-left:6px;padding:3px 10px!important;border-radius:999px!important;border:1px solid #c4b5fd!important;background:#f5f3ff!important;color:#5b21b6!important;font:inherit;font-size:11.5px!important;font-weight:800!important;box-shadow:none!important;cursor:pointer}
+html.dk body :is(#summary,#dialogBody) .rk-set .rk-mine{color:#c4b5fd}
+html.dk body :is(#summary,#dialogBody) .rk-set .rk-mine0{background:rgba(167,139,250,.14)!important;color:#ddd6fe!important;border-color:rgba(167,139,250,.4)!important}
+@media (max-width:1099.98px){
+  /* v2.105.4: ⚙️ Qaide ke % / hadd chips phone par poore nazar aayein (Sab · 10 … 60%) — naam upar, chips neeche lapet kar (side scroll nahi, chuna hua chhupe nahi) */
+  html:not([data-chip="big"]) body :is(#summary,#dialogBody) .rk-set .rk-nb:is(.rk-pct,.rk-hd):not([data-mn-seg]){flex-wrap:wrap!important;overflow:visible!important;row-gap:6px!important}
+  html:not([data-chip="big"]) body :is(#summary,#dialogBody) .rk-set .rk-nb:is(.rk-pct,.rk-hd):not([data-mn-seg])>span{flex:1 1 100%!important;white-space:normal!important}
+}
+@media (max-width:1099.98px){html:not([data-chip="big"]) body :is(#summary,#dialogBody) .rk-set .rk-nb.rk-hd:not([data-mn-seg]){margin-top:8px!important}}
+/* v2.105.4: 📝 Naya note khirki phone par daayein 43px kat rahi thi (grid ka column sab se chaure bachche jitna) — 🧱 qaida: minmax(0,1fr) + min-width:0 */
+html body #dialogBody .nt-form{grid-template-columns:minmax(0,1fr)!important}
+html body #dialogBody :is(.nt-form,.nt-contact,.nt-when,.nt-nag)>*{min-width:0}
+html body #dialogBody .nt-when{grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+html body #dialogBody .nt-contact{grid-template-columns:minmax(0,1fr)}
+html body #dialogBody .nt-form :is(input,textarea,select){max-width:100%;box-sizing:border-box}
