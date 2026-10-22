@@ -5449,3 +5449,18 @@ html.dk .bc-set{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.
 html.dk body #summary :is(.bc-set>b,.bc-pr b,.bc-rates label){color:#E7EEFF!important}
 html.dk body #summary :is(.bc-mn button,.bc-pr button,.bc-pat){background:rgba(255,255,255,.06)!important;color:#E7EEFF!important;border-color:rgba(255,255,255,.18)!important}
 html.dk body #summary .bc-mn button.is-in{background:rgba(22,163,74,.2)!important;color:#A7F3C8!important;border-color:rgba(74,222,128,.55)!important}
+/* 💰 mazdoori — transfer note ✓ (v2.111.0) */
+html body #summary .bc-ph{font-size:14px;font-weight:900;color:#FFE6A6!important}
+html body #summary .bc-payall{min-height:42px;border-radius:999px;border:0!important;background:#FFE6A6!important;color:#16264A!important;font-weight:900;font-size:13.5px}
+html body #summary .bc-mil{font-size:12px;color:#DCE5F7!important;font-weight:700}
+.bc-tns{display:grid;gap:5px;max-height:none}
+.bc-tn{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:4px 8px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.08);border-left:4px solid #FFE6A6}
+.bc-tn.paid{border-left-color:#4ADE80;opacity:.85}.bc-tn.wait{border-left-color:#94A3B8;opacity:.8}.bc-tn.farq{border-left-color:#F87171}
+.bc-tnn{display:grid;min-width:0}html body #summary .bc-tnn b{font-size:13px;color:#fff!important}html body #summary .bc-tnn small{font-size:11px;color:#AFC0E3!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body #summary .bc-tnc{font-size:12px;font-weight:800;color:#DCE5F7!important;white-space:nowrap}html body #summary .bc-tnr{font-size:13.5px;font-weight:900;color:#FFE6A6!important;white-space:nowrap}
+html body #summary .bc-tn :is(.bc-py,.bc-pd,.bc-tnw){grid-column:1 / -1;justify-self:start}
+html body #summary .bc-py{min-height:34px;padding:0 14px;border-radius:999px;border:0!important;background:#16A34A!important;color:#fff!important;font-weight:900;font-size:12.5px}
+html body #summary .bc-pd{min-height:30px;padding:0 12px;border-radius:999px;border:1px solid rgba(74,222,128,.6)!important;background:rgba(22,163,74,.2)!important;color:#A7F3C8!important;font-weight:800;font-size:12px}
+html body #summary .bc-tnw{font-style:normal;font-size:11.5px;font-weight:800;color:#CBD5E1!important}
+html body #summary .bc-fq{grid-column:1 / -1;font-size:11px;color:#FECACA!important;font-weight:700}
+html body #summary .bc-wrs small{font-size:11px;font-weight:700;color:#FFD9A0!important}

@@ -3361,3 +3361,4 @@ app v2.105.6 (21 Oct 2026): Transfer check = items + chips (📄 poora note, Zee
   (3) Yaad (push): 12:00 / 16:00 jin larkon ki aaj ki list baqi (blueStaff.allow mein stock.roz* + pushTokens naam se) · 20:00 malik ko khulasa (jagah: gine / liye, kitne larke). roz-sent.json (3 din). 2 ghante se late slot = chhor do (PC der se chala).
   _auto · _round · _postQ · _post = onSnapshot (har minute get() NAHI — reads bachao, post-farq v10 wala sabaq).
 app v2.110.0 (22 Oct 2026): 📡 ginti ka PC jawab (⏳ / ☁️ / ✅ + "PC jawab nahi de raha") — app sirf post-farq ka sysPos (sysPosAt === at) dekhti hai; PC scripts / manifest mein koi tabdeeli NAHI. post-farq band = larke ko 90 s mein laal patti + malik ko chip.
+app v2.111.0 (22 Oct 2026): 🏷 barcode godam-war + 💰 mazdoori (godam → dukan transfer note ✓ ke packet × rate) — sirf app (labelJobs / transferJobs / transferChecks parhti hai) — PC scripts / manifest mein koi tabdeeli NAHI.

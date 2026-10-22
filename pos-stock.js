@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.110.0';
-import { liveLabelsHTML } from './barcode.js?v=2.110.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.111.0';
+import { liveLabelsHTML } from './barcode.js?v=2.111.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -621,13 +621,13 @@ export function stockRozChip() {
 export async function stockRozOpen(k) {
   if (!cloud) return; start();
   if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  if (isOwner() && !k) { try { (await import('./roz.js?v=2.110.0')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
+  if (isOwner() && !k) { try { (await import('./roz.js?v=2.111.0')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
   const L = rozLocs().filter(rozCan);
   if (!rozCfg().on) { notice('📋 Roz ki ginti malik ne band rakhi hai'); return; }
   if (!L.length) { notice('🔒 Roz ki ginti ki ijazat nahi (malik: Settings → Mulazim → 📋 Roz ki ginti)'); return; }
   const go = x => { try { window.ntRecentOpen?.({ open: { kind: 'stock', screen: 'roz', k: x } }); } catch { rozEnter(x); } };
   if (k || L.length === 1) { go(k || L[0].k); return; }
-  try { (await import('./roz.js?v=2.110.0')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
+  try { (await import('./roz.js?v=2.111.0')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
 }
 // roz.js ke liye andar ka saman (sirf parhna + wahi kaam jo buttons karte hain)
 export function stockRozApi() {
@@ -1978,6 +1978,27 @@ function tcAll() {   // v2.99.25: POS ke note + app ke bane note (transferJobs d
   for (const j of trList || []) { if (j.op === 'delete' || j.status !== 'done' || !j.transferId || ids.has(String(j.transferId)) || dels.has(String(j.transferId))) continue;
     L.push({ id: 'T' + j.transferId, transferId: Number(j.transferId), transferNo: String(j.transferNo || ''), from: Number(j.from), to: Number(j.to), at: Number(j.doneAt) || Number(j.at) || 0, createdOn: Number(j.doneAt) || Number(j.at) || 0, app: true, lines: (j.lines || []).map(l => ({ itemId: String(l.itemId), name: l.name, qty: Number(l.qty) || 0, pack: Number(l.pack) || 0, ...(Array.isArray(l.pk) && l.pk.length ? { pk: l.pk } : {}) })) }); }
   return L;
+}
+// v2.111.0: 💰 MAZDOORI — godam → dukan transfer note ke packet (malik: "larke ne note banaya, dukan par maal aa gaya (✓ mil gaya) = usi waqt mazdoori").
+//   Har note: {key (tcKey — pay ka nishan), no, from, at, st (ok / farq / wait / late), by (note banane wala), lines [{itemId, name, z (packet size), n}]}.
+//   Packet: line.pk (📦 250 gm ×10) — 14 din se purane app note ka pk = oldJobs (barcode.js ek dafa server se). pk na ho = poore pcs (z 1, sirf poore hindse).
+export const stockShop = () => { const { branches, names } = brInfo(); return branches.find(b => /noor/i.test(String(names[b] || ''))) ?? (branches.includes(1) ? 1 : branches[0]); };
+export function stockArrivals(lo, hi, oldJobs = []) {
+  thWatch(); const shop = stockShop();
+  const pkOld = new Map(), byJob = new Map();
+  for (const j of [...(oldJobs || []), ...(trList || [])]) { if (!j || !j.transferId || j.op === 'delete') continue; byJob.set(String(j.transferId), j);
+    if (j.status === 'done') for (const l of j.lines || []) if (Array.isArray(l.pk) && l.pk.length) pkOld.set(String(j.transferId) + '|' + String(l.itemId), l.pk); }
+  const out = [];
+  for (const t of tcAll()) {
+    const at = tcIssued(t); if (!(at >= lo && at < hi) || t.cancelled || Number(t.to) !== Number(shop) || Number(t.from) === Number(shop)) continue;
+    const lines = [];
+    for (const l of t.lines || []) { const pk = Array.isArray(l.pk) && l.pk.length ? l.pk : pkOld.get(String(t.transferId) + '|' + String(l.itemId));
+      if (pk) { for (const p of pk) { const z = Number(p.z) || 0, n = Number(p.n) || 0; if (z > 0 && n > 0) lines.push({ itemId: String(l.itemId), name: String(l.name || ''), z, n, pk: true }); } }
+      else { const q = Number(l.qty) || 0; if (q > 0 && Math.abs(q - Math.round(q)) < 1e-9) lines.push({ itemId: String(l.itemId), name: String(l.name || ''), z: 1, n: Math.round(q), pk: false }); } }
+    const job = byJob.get(String(t.transferId));
+    out.push({ key: tcKey(t), no: String(t.transferNo || '').replace(/^0+/, ''), from: Number(t.from), at, st: tcState(t).k, by: String(job?.byName || '').trim() || (t.app ? 'Mulazim' : 'POS'), lines });
+  }
+  return out.sort((a, b) => b.at - a.at);
 }
 function tcRows() {
   const since = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - (tcDays === 2 ? 1 : tcDays - 1)); return d.getTime(); })();
@@ -4757,8 +4778,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.110.0';
-import { recentPush } from './recent.js?v=2.110.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.111.0';
+import { recentPush } from './recent.js?v=2.111.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)

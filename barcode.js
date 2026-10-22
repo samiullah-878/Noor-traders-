@@ -6,7 +6,7 @@
 //          'printing' jis ki dhadkan (beatAt, label-print v4.1) 3 min se nahi = "⚠ atka hua" (Cancel = PC foran saaf karta hai).
 // Screen: din ke hisaab se -> item -> har barcode (packet size) ki ginti. Chips: Aaj · Kal · 7 din · 30 din · status · search.
 // PDF: app ka openReportPreview (poori screen + WhatsApp / share).
-import { smartHit } from './smart-search.js?v=2.110.0';   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.111.0';   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -22,16 +22,17 @@ const nice = day => day === dayOf() ? 'Aaj' : day === dayOf(back(1)) ? 'Kal' : d
 let cloud = null, notice = () => {}, itemsOf = () => [], pdfOf = null, godamsOf = () => [], isOwn = () => false, myUid = () => '', canK = () => true;
 let jobs = [], stop = null, stopFrom = 0, fP = 'today', fS = 'done', fQ = '', open = new Set();
 let fG = '', cus = { a: '', b: '' }, extra = null, extraKey = '', lbl = {}, cfgStop = null, devs = [], devStop = null, setOn = false;
+let arrOf = () => [], shopOf = () => 1, paidMap = {}, payStop = null, oldTr = null, oldTrKey = '', pruned = false;   // 💰 transfer note ✓ = mazdoori
 
 export function barcodeSetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; itemsOf = o.items || itemsOf; pdfOf = o.pdf || pdfOf;
-  godamsOf = o.godams || godamsOf; isOwn = o.owner || isOwn; myUid = o.uid || myUid; canK = o.can || canK; }
+  godamsOf = o.godams || godamsOf; isOwn = o.owner || isOwn; myUid = o.uid || myUid; canK = o.can || canK; arrOf = o.arrivals || arrOf; shopOf = o.shop || shopOf; }
 export function barcodeStop() { if (stop) { try { stop(); } catch {} stop = null; stopFrom = 0; } }
 const monthStart = (k = 0) => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(1); d.setMonth(d.getMonth() - k); return d.getTime(); };
 const dayMs = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '')); return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime() : 0; };
 const fromMs = () => fP === 'today' ? back(0) : fP === 'kal' ? back(1) : fP === '7' ? back(6) : fP === 'mon' ? monthStart(0) : fP === 'pmon' ? monthStart(1) : fP === 'cus' ? (dayMs(cus.a) || back(29)) : back(29);
 const toMs = () => fP === 'kal' ? back(0) : fP === 'pmon' ? monthStart(0) : fP === 'cus' && dayMs(cus.b) ? dayMs(cus.b) + 864e5 : Infinity;
 const liveFrom = () => Math.min(back(29), monthStart(0));
-const PL = { today: 'Aaj', kal: 'Kal', '7': '7 din', '30': '30 din', mon: 'Is mahina', pmon: 'Pichhla mahina', cus: '📅 Tareekh' };
+const PLA = [['today', 'Aaj'], ['kal', 'Kal'], ['7', '7 din'], ['30', '30 din'], ['mon', 'Is mahina'], ['pmon', 'Pichhla mahina'], ['cus', 'Tareekh']], PL = Object.fromEntries(PLA);   // array = tarteeb (number wale key object mein pehle aa jate)
 const paisaOn = () => isOwn() || canK('tr.bcpaisa');
 function watch() {
   const f = liveFrom();   // 30 din / is mahina — jo pehle; chips sirf filter
@@ -39,7 +40,19 @@ function watch() {
     stop = cloud?.listenLabelJobs ? cloud.listenLabelJobs(f, l => { jobs = (l || []).filter(j => j && j.id); paint(); }) : null; }
   if (!cfgStop && cloud?.listenStockConfig) cfgStop = cloud.listenStockConfig(c => { lbl = c?.lbl || {}; paint(); });
   if (!devStop && isOwn() && cloud?.listenStaffDevices) devStop = cloud.listenStaffDevices(l => { devs = Array.isArray(l) ? l : []; uidSave(); paint(); });
-  wantExtra();
+  if (!payStop && isOwn() && cloud?.listenLblPay) payStop = cloud.listenLblPay(m => { paidMap = m || {}; prunePaid(); paint(); });
+  wantExtra(); wantOldTr();
+}
+function wantOldTr() {   // 14 din se purane app note ka packet (pk) — ek dafa server se
+  const lo = fromMs(), hi = toMs() === Infinity ? Date.now() + 864e5 : toMs();
+  if (lo >= Date.now() - 13 * 864e5 || !cloud?.getTransferJobs) { oldTr = null; oldTrKey = ''; return; }
+  const k = lo + '|' + Math.round(hi / 864e5); if (oldTrKey === k) return; oldTrKey = k; oldTr = 'wait';
+  cloud.getTransferJobs(lo - 864e5, hi).then(l => { if (oldTrKey !== k) return; oldTr = Array.isArray(l) ? l : []; paint(); }).catch(() => { if (oldTrKey !== k) return; oldTr = []; paint(); });
+}
+function prunePaid() {   // 200 din se purane pay ke nishan hata (doc chhota rahe) — ek dafa
+  if (pruned || !isOwn() || !cloud?.pruneLblPaid) return; pruned = true;
+  const old = Object.entries(paidMap).filter(([, v]) => Date.now() - (Number(v?.at) || 0) > 200 * 864e5).map(([k]) => k);
+  if (old.length) cloud.pruneLblPaid(old).catch(() => {});
 }
 function wantExtra() {   // live (30 din / is mahina) se purana = ek dafa server se
   const lo = fromMs(), hi = toMs();
@@ -106,6 +119,28 @@ function payOf(items, q) {
   const P = [...per.values()].map(o => ({ ...o, rs: o.b * rb + o.s * rs })).sort((a, b) => (b.b + b.s) - (a.b + a.s));
   return { B, S, rb, rs, rsB: B * rb, rsS: S * rs, total: B * rb + S * rs, per: P };
 }
+// 💰 MAZDOORI = godam → dukan transfer note ✓ (mil gaya) ke packet × rate. Sirf packet (📦) wali line ya jis barcode ke label chhape (aam maal nahi)
+const zk = z => String(Math.round((Number(z) || 0) * 10000) / 10000);
+function trPay() {
+  const rb = Math.max(0, Number(lbl.rb) || 0), rs = Math.max(0, Number(lbl.rs) || 0), shop = shopOf(), out = { rows: [], per: [], B: 0, S: 0, rb, rs, due: 0, paid: 0, waitN: 0, waitRs: 0, none: false };
+  if (fG !== '' && (String(fG) === 'x' || Number(fG) === Number(shop))) { out.none = true; return out; }
+  const keys = new Set(); for (const j of [...jobs, ...(Array.isArray(extra) ? extra : [])]) keys.add(String(j.itemId) + '|' + zk(Number(j.qty) || 1));
+  let notes = []; try { notes = arrOf(fromMs(), toMs() === Infinity ? Date.now() + 864e5 : toMs(), Array.isArray(oldTr) ? oldTr : []) || []; } catch {}
+  if (fG !== '') notes = notes.filter(t => Number(t.from) === Number(fG));
+  const per = new Map();
+  for (const t of notes) {
+    let b = 0, sb = 0;
+    for (const l of t.lines || []) { if (!l.pk && !keys.has(l.itemId + '|' + zk(l.z))) continue; if (Math.abs(Number(l.z) - 1) < 1e-9) b += Number(l.n) || 0; else sb += Number(l.n) || 0; }
+    if (!b && !sb) continue;
+    const amt = b * rb + sb * rs, recv = t.st === 'ok' || t.st === 'farq', pd = paidMap[t.key] || null;
+    out.rows.push({ ...t, b, s: sb, amt, recv, pd });
+    if (!recv) { out.waitN++; out.waitRs += amt; continue; }
+    out.B += b; out.S += sb; if (pd) out.paid += Number(pd.rs) || 0; else out.due += amt;
+    const o = per.get(t.by) || { n: t.by, notes: 0, b: 0, s: 0, rs: 0, due: 0 }; o.notes++; o.b += b; o.s += sb; o.rs += amt; if (!pd) o.due += amt; per.set(t.by, o);
+  }
+  out.per = [...per.values()].sort((a, b) => b.rs - a.rs);
+  return out;
+}
 export function renderBarcode() {
   watch();
   $('summary').innerHTML = '<div class="bc-root" id="bcRoot"></div>';
@@ -150,15 +185,26 @@ function paint() {
   const pl = fP === 'cus' ? `📅 ${cus.a || '…'} → ${cus.b || '…'}` : PL[fP];
   const chips = `<button type="button" class="bc-pat" data-mn-sheet="1">${esc(gl)} · ${esc(pl)} · ${esc(sl)} — ⋮ se badlein</button>
     <div class="bc-mn">${[['', '🏬', 'Sab godam'], ...G.map(g => [String(g.b), g.b === 1 ? '🏪' : '🏬', g.name]), ...(unk ? [['x', '❓', 'Pata nahi (larka chunein ⚙️)']] : [])].map(([k, i, t]) => mn('bc.g' + (k || 'all'), i, t, `data-bc-f="${esc(k)}"`, String(fG) === k)).join('')}
-      ${Object.entries(PL).map(([k, t]) => mn('bc.p' + k, '📅', t, `data-bc-p="${k}"`, fP === k)).join('')}
+      ${PLA.map(([k, t]) => mn('bc.p' + k, '📅', t, `data-bc-p="${k}"`, fP === k)).join('')}
       ${[['done', '✓', 'Chhap gaye'], ['wait', '⏳', 'Line mein'], ['bad', '⚠️', 'Fail / cancel'], ['all', '📋', 'Sab']].map(([k, i, t]) => mn('bc.s' + k, i, t, `data-bc-s="${k}"`, fS === k)).join('')}
       ${own ? mn('bc.set', '⚙️', 'Mazdoori rate + larkon ki godam', 'data-bc-set="1"', setOn) : ''}</div>
     ${fP === 'cus' ? `<div class="bc-cus"><label>Se<input type="date" data-bc-da="1" value="${esc(cus.a)}" max="${dayOf()}"></label><label>Tak<input type="date" data-bc-db="1" value="${esc(cus.b)}" max="${dayOf()}"></label></div>` : ''}`;
   const rs = n => 'Rs ' + num(n);
-  const pay = paisaOn() ? `<div class="bc-pay"><div class="bc-pk"><div><b>${num(P.B)}</b><small>🏷 Barcode label</small></div><div><b>${num(P.S)}</b><small>🔖 Sub-barcode</small></div><div><b>${num(P.B + P.S)}</b><small>Kul (asal chhape)</small></div></div>
-      ${P.rb || P.rs ? `<div class="bc-rs"><span>💰 Mazdoori</span><b>${rs(P.total)}</b><small>${num(P.B)} × Rs ${num(P.rb)} + ${num(P.S)} × Rs ${num(P.rs)}</small></div>` : own ? '<button type="button" class="bc-rsno" data-bc-set="1">⚙️ Mazdoori ka rate likhein — phir paisa yahan</button>' : ''}
-      ${P.per.length ? `<div class="bc-who">${P.per.map(o => `<div class="bc-wr"><span class="bc-wn"><b>${esc(o.n)}</b><small>${esc(gName(o.g))}</small></span><span class="bc-wc">🏷 ${num(o.b)} · 🔖 ${num(o.s)}</span>${P.rb || P.rs ? `<b class="bc-wrs">${rs(o.rs)}</b>` : ''}</div>`).join('')}</div>` : ''}
-      ${extra === 'wait' ? '<small class="bc-wait">⏳ purana data aa raha hai…</small>' : ''}</div>` : '';
+  const T = paisaOn() ? trPay() : null, tm = ms => new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }), dd = ms => { const k = dayOf(ms); return k === dayOf() ? 'Aaj' : k === dayOf(back(1)) ? 'Kal' : k.slice(5).replace('-', '/'); };
+  const tnRow = t => `<div class="bc-tn${t.recv ? (t.pd ? ' paid' : ' due') : ' wait'}${t.st === 'farq' ? ' farq' : ''}"><span class="bc-tnn"><b>TN ${esc(t.no || '—')}</b><small>${esc(gName(t.from))} → dukan · ${esc(t.by)} · ${esc(dd(t.at))} ${esc(tm(t.at))}</small></span>
+      <span class="bc-tnc">${t.b ? '🏷 ' + num(t.b) : ''}${t.b && t.s ? ' · ' : ''}${t.s ? '🔖 ' + num(t.s) : ''}</span>${T.rb || T.rs ? `<b class="bc-tnr">${rs(t.pd ? Number(t.pd.rs) || 0 : t.amt)}</b>` : ''}
+      ${!t.recv ? '<em class="bc-tnw">⏳ check baqi</em>' : t.pd ? `<button type="button" class="bc-pd" data-bc-unpaid="${esc(t.key)}"${own ? '' : ' disabled'}>✓ Pay · ${esc(dd(Number(t.pd.at) || 0))} ${esc(tm(Number(t.pd.at) || 0))}</button>` : own && (T.rb || T.rs) ? `<button type="button" class="bc-py" data-bc-paid="${esc(t.key)}">💵 Pay kar diya</button>` : ''}${t.st === 'farq' ? '<small class="bc-fq">⚠️ check mein farq — dekh kar pay karein</small>' : ''}</div>`;
+  const milan = P.B + P.S && T && (T.B + T.S) ? `<small class="bc-mil">🏷 Label chhape ${num(P.B + P.S)} · 📦 Dukan pohanche ✓ ${num(T.B + T.S)}${P.B + P.S - (T.B + T.S) > 0 ? ` · farq ${num(P.B + P.S - (T.B + T.S))} (abhi nahi pohanche)` : ''}</small>` : '';
+  const pay = !T ? '' : T.none ? `<div class="bc-pay"><b class="bc-ph">💰 Mazdoori</b><small class="bc-wait">Mazdoori godam → dukan transfer note (✓ mil gaya) se banti hai — ${esc(gl)} ke liye nahi. "Sab godam" ya godam chunein.</small></div>`
+    : `<div class="bc-pay"><b class="bc-ph">💰 Mazdoori — transfer note ✓ (godam → dukan)</b>
+      <div class="bc-pk"><div><b>${num(T.B)}</b><small>🏷 Barcode packet</small></div><div><b>${num(T.S)}</b><small>🔖 Sub-barcode packet</small></div><div><b>${num(T.B + T.S)}</b><small>Kul ✓ pohanche</small></div></div>
+      ${T.rb || T.rs ? `<div class="bc-rs"><span>Baqi</span><b>${rs(T.due)}</b><small>${num(T.B)} × Rs ${num(T.rb)} + ${num(T.S)} × Rs ${num(T.rs)}${own ? ' · pay ho chuki ' + rs(T.paid) : ''}${T.waitN ? ` · ⏳ ${num(T.waitN)} note check baqi (${rs(T.waitRs)})` : ''}</small></div>
+        ${own && T.due > 0 ? `<button type="button" class="bc-payall" data-bc-payall="1">💵 Sab baqi pay kar diya — ${rs(T.due)}</button>` : ''}`
+      : own ? '<button type="button" class="bc-rsno" data-bc-set="1">⚙️ Mazdoori ka rate likhein — phir paisa yahan</button>' : ''}
+      ${milan}
+      ${T.rows.length ? `<div class="bc-tns">${T.rows.slice(0, 60).map(tnRow).join('')}${T.rows.length > 60 ? `<small class="bc-wait">+${num(T.rows.length - 60)} aur note (PDF mein sab)</small>` : ''}</div>` : `<small class="bc-wait">Is waqt mein godam → dukan koi packet wala note nahi${oldTr === 'wait' ? ' — ⏳ purana data aa raha hai…' : ''}</small>`}
+      ${T.per.length > 1 || (T.per.length && T.per[0].n) ? `<div class="bc-who">${T.per.map(o => `<div class="bc-wr"><span class="bc-wn"><b>${esc(o.n)}</b><small>${num(o.notes)} note · 🏷 ${num(o.b)} · 🔖 ${num(o.s)}</small></span>${T.rb || T.rs ? `<b class="bc-wrs">${rs(o.rs)}${own && o.due && o.due !== o.rs ? `<small> · baqi ${rs(o.due)}</small>` : ''}</b>` : ''}</div>`).join('')}</div>` : ''}
+      ${extra === 'wait' ? '<small class="bc-wait">⏳ purana data aa raha hai…</small>' : ''}</div>`;
   const people = () => { const m = new Map(); for (const j of [...jobs, ...(Array.isArray(extra) ? extra : [])]) { const w = whoOf(j); if (!m.has(w.k)) m.set(w.k, w); } return [...m.values()].sort((a, b) => a.n.localeCompare(b.n)); };
   const set = own && setOn ? `<div class="bc-set"><b>💰 Mazdoori ka rate (fi label)</b>
       <div class="bc-rates"><label>🏷 Barcode<span>Rs</span><input type="number" min="0" step="any" inputmode="decimal" data-bc-rb="1" value="${esc(lbl.rb ?? '')}" placeholder="0"></label>
@@ -175,10 +221,12 @@ function paint() {
 }
 function pdfHTML() {
   const r = build(), P = r.pay, when = fP === 'cus' ? `${cus.a} se ${cus.b}` : { today: 'Aaj', kal: 'Kal', '7': 'Pichhle 7 din', '30': 'Pichhle 30 din', mon: 'Is mahina', pmon: 'Pichhla mahina' }[fP];
-  const payT = paisaOn() ? `<h3>💰 ${esc(fG === '' ? 'Sab godam' : gName(fG))} — asal chhape label</h3><table class="iv-tbl"><thead><tr><th>Larka</th><th>Godam</th><th>Barcode</th><th>Sub</th>${P.rb || P.rs ? '<th>Rs</th>' : ''}</tr></thead><tbody>
-      ${P.per.map(o => `<tr><td class="iv-item"><b>${esc(o.n)}</b></td><td>${esc(gName(o.g).replace(/^❓ /, ''))}</td><td class="iv-n">${num(o.b)}</td><td class="iv-n">${num(o.s)}</td>${P.rb || P.rs ? `<td class="iv-n"><b>${num(o.rs)}</b></td>` : ''}</tr>`).join('')}
-      <tr><td class="iv-item"><b>Kul</b></td><td></td><td class="iv-n"><b>${num(P.B)}</b></td><td class="iv-n"><b>${num(P.S)}</b></td>${P.rb || P.rs ? `<td class="iv-n"><b>${num(P.total)}</b></td>` : ''}</tr></tbody></table>
-      ${P.rb || P.rs ? `<p><b>Mazdoori: ${num(P.B)} × Rs ${num(P.rb)} + ${num(P.S)} × Rs ${num(P.rs)} = Rs ${num(P.total)}</b></p>` : ''}` : '';
+  const T = paisaOn() ? trPay() : null, d2 = ms => new Date(ms).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
+  const payT = T && !T.none && T.rows.length ? `<h3>💰 Mazdoori — transfer note ✓ (godam → dukan)${fG === '' ? '' : ' · ' + esc(gName(fG))}</h3><table class="iv-tbl"><thead><tr><th>Note</th><th>Larka</th><th>Barcode</th><th>Sub</th>${T.rb || T.rs ? '<th>Rs</th>' : ''}<th>Haal</th></tr></thead><tbody>
+      ${T.rows.map(t => `<tr><td class="iv-item"><b>TN ${esc(t.no || '—')}</b><br><small>${esc(gName(t.from))} · ${esc(d2(t.at))}</small></td><td>${esc(t.by)}</td><td class="iv-n">${num(t.b)}</td><td class="iv-n">${num(t.s)}</td>${T.rb || T.rs ? `<td class="iv-n"><b>${num(t.pd ? Number(t.pd.rs) || 0 : t.amt)}</b></td>` : ''}<td>${!t.recv ? '⏳ check baqi' : t.pd ? '✓ Pay' : 'Baqi'}${t.st === 'farq' ? ' ⚠️' : ''}</td></tr>`).join('')}
+      <tr><td class="iv-item"><b>Kul ✓</b></td><td></td><td class="iv-n"><b>${num(T.B)}</b></td><td class="iv-n"><b>${num(T.S)}</b></td>${T.rb || T.rs ? `<td class="iv-n"><b>${num(T.paid + T.due)}</b></td>` : ''}<td></td></tr></tbody></table>
+      ${T.rb || T.rs ? `<p><b>${num(T.B)} × Rs ${num(T.rb)} + ${num(T.S)} × Rs ${num(T.rs)} · Baqi Rs ${num(T.due)}${isOwn() ? ' · Pay ho chuki Rs ' + num(T.paid) : ''}${T.waitN ? ' · ⏳ ' + num(T.waitN) + ' note check baqi' : ''}</b></p>` : ''}
+      ${T.per.length ? `<p>${T.per.map(o => `${esc(o.n)}: ${num(o.notes)} note · 🏷 ${num(o.b)} · 🔖 ${num(o.s)}${T.rb || T.rs ? ' · Rs ' + num(o.rs) : ''}`).join(' &nbsp;|&nbsp; ')}</p>` : ''}` : '';
   return `<h1>NOOR TRADERS</h1><h2>🏷 Barcode report — ${esc(when)}${fG === '' ? '' : ' · ' + esc(gName(fG).replace(/^❓ /, ''))} (${esc({ done: 'chhap gaye', wait: 'line mein', bad: 'fail', all: 'sab' }[fS])})</h2>
     <p>${num(r.labels)} label · ${num(r.items)} items · ${num(r.subs)} sub-barcode · ${esc(new Date().toLocaleString('en-PK'))}</p>${payT}
     ${r.days.map(d => `<h3>${esc(d.day)} — ${num(d.labels)} label</h3><table class="iv-tbl"><thead><tr><th>Item</th><th>Barcode</th><th>Packet</th><th>Label</th></tr></thead><tbody>
@@ -222,11 +270,12 @@ document.addEventListener('click', async e => {
       alert(bad === 'rules' ? '✕ Cancel NAHI hua — Firebase rules 2.34 publish nahi hue.\n\nMalik: app ka "firestore-rules-2.34.html" page khol kar Copy → Firebase Console → Firestore → Rules mein paste → Publish.'
         : '✕ Cancel NAHI hua: ' + bad + '\n\nInternet check karein aur dobara dabayein.'); }
     if (ok) notice(`✕ Cancel bhej diya${ok > 1 ? ' (' + ok + ')' : ''} — PC foran rok dega (jo printer mein pohanch chuke, 10-20 nikal sakte hain)`); return; }
-  if (e.target.closest?.('[data-bc-pdf]')) { const r = build(); if (!r.labels) { notice('Is waqt mein koi label nahi'); return; } if (pdfOf) pdfOf(pdfHTML(), 'Barcode report ' + dayOf()); return; }
+  if (e.target.closest?.('[data-bc-pdf]')) { const r = build(); if (!r.labels && !(paisaOn() && trPay().rows.length)) { notice('Is waqt mein koi label / note nahi'); return; } if (pdfOf) pdfOf(pdfHTML(), 'Barcode report ' + dayOf()); return; }
   if (!$('bcRoot')) return;
-  const t = e.target.closest?.('[data-bc-p],[data-bc-s],[data-bc-open],[data-bc-f],[data-bc-set],[data-bc-rsave],[data-bc-asg]'); if (!t) return;
+  const t = e.target.closest?.('[data-bc-p],[data-bc-s],[data-bc-open],[data-bc-f],[data-bc-set],[data-bc-rsave],[data-bc-asg],[data-bc-paid],[data-bc-unpaid],[data-bc-payall]'); if (!t) return;
   const d = t.dataset;
-  if (d.bcP) { fP = d.bcP; if (fP === 'cus' && !cus.a) cus = { a: dayOf(back(6)), b: dayOf() }; wantExtra(); paint(); return; }
+  if (d.bcP) { fP = d.bcP; if (fP === 'cus' && !cus.a) cus = { a: dayOf(back(6)), b: dayOf() }; wantExtra(); wantOldTr(); paint(); return; }
+  if (d.bcPaid || d.bcUnpaid || d.bcPayall) { await payAct(d); return; }
   if (d.bcF != null) { fG = d.bcF; paint(); return; }
   if (d.bcSet) { setOn = !setOn; paint(); if (setOn) setTimeout(() => $('bcRoot')?.querySelector('.bc-set')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }), 60); return; }
   if (d.bcRsave) { const rb = Number($('bcRoot')?.querySelector('[data-bc-rb]')?.value), rsv = Number($('bcRoot')?.querySelector('[data-bc-rs]')?.value);
@@ -238,5 +287,20 @@ document.addEventListener('click', async e => {
   if (d.bcS) { fS = d.bcS; paint(); return; }
   if (d.bcOpen) { if (open.has(d.bcOpen)) open.delete(d.bcOpen); else open.add(d.bcOpen); paint(); }
 });
-document.addEventListener('change', e => { const t = e.target; if (!t?.matches?.('[data-bc-da],[data-bc-db]')) return; if (t.dataset.bcDa) cus.a = t.value || ''; else cus.b = t.value || ''; if (cus.a && cus.b && cus.a > cus.b) [cus.a, cus.b] = [cus.b, cus.a]; wantExtra(); paint(); });
+document.addEventListener('change', e => { const t = e.target; if (!t?.matches?.('[data-bc-da],[data-bc-db]')) return; if (t.dataset.bcDa) cus.a = t.value || ''; else cus.b = t.value || ''; if (cus.a && cus.b && cus.a > cus.b) [cus.a, cus.b] = [cus.b, cus.a]; wantExtra(); wantOldTr(); paint(); });
+// 💵 pay ka nishan (sirf malik) — blueAccess/lblPay.paid[noteKey] = {rs, at, n, by}
+async function payAct(d) {
+  if (!isOwn() || !cloud?.setLblPaid) { notice('Sirf malik'); return; }
+  const T = trPay(), byKey = new Map(T.rows.map(t => [t.key, t]));
+  let list = [];
+  if (d.bcPaid) { const t = byKey.get(d.bcPaid); if (!t || !t.recv) return; list = [{ key: t.key, v: { rs: t.amt, n: t.b + t.s, by: 'Malik' } }]; }
+  else if (d.bcUnpaid) { const t = byKey.get(d.bcUnpaid); if (!confirm(`TN ${t?.no || ''} — pay ka nishan hatayein? (paisa wapas "baqi" mein)`)) return; list = [{ key: d.bcUnpaid, v: null }]; }
+  else { const due = T.rows.filter(t => t.recv && !t.pd && t.amt > 0); if (!due.length) return;
+    if (!confirm(`💵 ${due.length} note ki mazdoori Rs ${num(due.reduce((n, t) => n + t.amt, 0))} — sab pay kar diya?`)) return;
+    list = due.map(t => ({ key: t.key, v: { rs: t.amt, n: t.b + t.s, by: 'Malik' } })); }
+  const before = { ...paidMap };   // foran (server baad mein)
+  for (const x of list) { if (x.v) paidMap[x.key] = { ...x.v, at: Date.now() }; else delete paidMap[x.key]; } paint();
+  try { await cloud.setLblPaid(list); notice(list.some(x => x.v) ? `💵 Pay ka nishan lag gaya (${list.length} note)` : '↩️ Pay ka nishan hata'); }
+  catch (er) { paidMap = before; paint(); notice('Save nahi hua: ' + (er?.message || er)); }
+}
 document.addEventListener('input', e => { if (e.target.matches?.('[data-bc-q]')) { fQ = e.target.value || ''; paint(); const q = document.querySelector('[data-bc-q]'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } } });
