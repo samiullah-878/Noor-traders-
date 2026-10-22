@@ -5411,3 +5411,41 @@ html body .sk .pc-warn>span{grid-column:1;font-size:12px;line-height:1.4;color:i
 html body .sk .pc-warn>span b{font-size:12px}
 html body .sk .pc-warn .pc-wa{grid-column:2;grid-row:1 / span 2;display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:999px;background:#128C4A!important;color:#fff!important;font-size:13px;font-weight:900;text-decoration:none!important;white-space:nowrap;box-shadow:0 4px 12px rgba(18,140,74,.3)}
 @media (max-width:420px){html body .sk .pc-warn{grid-template-columns:minmax(0,1fr)}html body .sk .pc-warn .pc-wa{grid-column:1;grid-row:auto;justify-self:start}}
+/* ================= v2.111.0: 🏷 BARCODE — godam-war + 💰 mazdoori (Transfer ke andar bhi) ================= */
+html body #summary .bc-pat{display:none;align-items:center;width:100%;min-height:36px;padding:5px 12px;border-radius:12px;border:1px dashed #9FB0D0!important;background:#fff!important;color:#1E3768!important;font-size:12.5px;font-weight:700;text-align:left}
+@media (max-width:1099.98px){html body #summary .bc-pat{display:flex}}
+.bc-mn{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+html body #summary .bc-mn button{min-height:34px;padding:0 12px;border-radius:999px;border:1px solid #C9D3E6!important;background:#fff!important;color:#1E3768!important;font-size:12.5px;font-weight:700}
+html body #summary .bc-mn button.is-in{border-color:#178156!important;color:#0F6A45!important;background:rgba(23,129,86,.08)!important}
+.bc-cus{display:flex;gap:8px;flex-wrap:wrap}.bc-cus label{display:grid;gap:2px;font-size:11.5px;font-weight:700;color:#4b5568;flex:1;min-width:130px}
+html body #summary .bc-cus input{min-height:38px;border-radius:10px;padding:0 8px;font-size:14px}
+.bc-pay{display:grid;gap:8px;padding:12px;border-radius:18px;background:linear-gradient(135deg,#16264A,#24467F);color:#fff;box-shadow:0 10px 24px rgba(22,38,74,.25);min-width:0}
+.bc-pk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.bc-pk div{display:grid;justify-items:center;gap:1px;padding:8px 4px;border-radius:12px;background:rgba(255,255,255,.1)}
+html body #summary .bc-pk b{font-size:20px;font-weight:900;color:#fff!important}html body #summary .bc-pk small{font-size:11px;font-weight:700;color:#C9D6F2!important;text-align:center}
+.bc-rs{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:baseline;gap:2px 10px;padding:10px 12px;border-radius:14px;background:rgba(255,230,166,.14);border:1px solid rgba(255,230,166,.35)}
+html body #summary .bc-rs span{font-size:13px;font-weight:800;color:#FFE6A6!important}html body #summary .bc-rs b{font-size:22px;font-weight:900;color:#FFE6A6!important;text-align:right}
+html body #summary .bc-rs small{grid-column:1 / -1;font-size:11.5px;color:#E2E9F8!important;opacity:.9}
+html body #summary .bc-rsno{min-height:38px;border-radius:12px;border:1px dashed rgba(255,230,166,.6)!important;background:transparent!important;color:#FFE6A6!important;font-weight:800;font-size:13px}
+.bc-who{display:grid;gap:4px}
+.bc-wr{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:7px 10px;border-radius:12px;background:rgba(255,255,255,.07)}
+.bc-wn{display:grid;min-width:0}html body #summary .bc-wn b{font-size:13.5px;color:#fff!important;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}html body #summary .bc-wn small{font-size:11px;color:#AFC0E3!important}
+html body #summary .bc-wc{font-size:12px;font-weight:700;color:#DCE5F7!important;white-space:nowrap}html body #summary .bc-wrs{font-size:13.5px;font-weight:900;color:#FFE6A6!important;white-space:nowrap}
+html body #summary .bc-wait{font-size:12px;color:#FFE6A6!important}
+.bc-set{display:grid;gap:8px;padding:12px;border-radius:16px;border:1.5px solid #C9D3E6;background:#F7F9FD;min-width:0}
+html body #summary .bc-set>b{font-size:13.5px;color:#16264A!important}html body #summary .bc-set>small{font-size:11.5px;color:#6E7687!important;margin-top:-4px}
+.bc-rates{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}
+.bc-rates label{display:grid;grid-template-columns:auto auto;align-items:center;gap:2px 6px;font-size:12px;font-weight:700;color:#1E3768;flex:1;min-width:140px}
+.bc-rates label span{grid-row:2;font-size:12px;color:#6E7687}
+html body #summary .bc-rates input{grid-row:2;min-height:38px;border-radius:10px;padding:0 8px;font-size:15px;width:100%}
+html body #summary .bc-rsave{min-height:40px;padding:0 16px;border-radius:999px;border:0!important;background:#178156!important;color:#fff!important;font-weight:900}
+.bc-ppl{display:grid;gap:6px}
+.bc-pr{display:grid;gap:4px;padding:8px 10px;border-radius:12px;background:#fff;border:1px solid #E3E9F3}
+html body #summary .bc-pr b{font-size:13px;color:#16264A!important}
+.bc-pr span{display:flex;flex-wrap:wrap;gap:5px}
+html body #summary .bc-pr button{min-height:32px;padding:0 10px;border-radius:999px;border:1px solid #C9D3E6!important;background:#fff!important;color:#1E3768!important;font-size:12px;font-weight:700}
+html body #summary .bc-pr button.is-in{border-color:#178156!important;background:#178156!important;color:#fff!important}
+html.dk .bc-set{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.16)}html.dk .bc-pr{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12)}
+html.dk body #summary :is(.bc-set>b,.bc-pr b,.bc-rates label){color:#E7EEFF!important}
+html.dk body #summary :is(.bc-mn button,.bc-pr button,.bc-pat){background:rgba(255,255,255,.06)!important;color:#E7EEFF!important;border-color:rgba(255,255,255,.18)!important}
+html.dk body #summary .bc-mn button.is-in{background:rgba(22,163,74,.2)!important;color:#A7F3C8!important;border-color:rgba(74,222,128,.55)!important}

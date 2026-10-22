@@ -14,23 +14,65 @@ const dayOf = (ms = Date.now()) => { const d = new Date(ms); return d.getFullYea
 const back = n => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - n); return d.getTime(); };
 const nice = day => day === dayOf() ? 'Aaj' : day === dayOf(back(1)) ? 'Kal' : day;
 
-let cloud = null, notice = () => {}, itemsOf = () => [], pdfOf = null;
+// v2.111.0: 🏬 GODAM-WAR + 💰 MAZDOORI (malik: "Godam 2 ke kitne barcode, kitne sub-barcode — mazdoori se zarb = kitna paisa · har godam alag bhi ·
+//   barcode screen Transfer ke andar"). Printer EK hi (TSC 244 Pro) — is liye godam = JIS LARKE NE CHHAPA us ki jagah (malik ⚙️ mein ek dafa chunta hai).
+//   labelJobs.by (uid) → staffDevices (by → staffId, naam) → stockConfig.lbl {rb: Rs fi barcode label, rs: Rs fi sub-barcode label, g: {staffId|malik: branch},
+//   u: {uid: {s, n}} (purane uid yaad — dobara login par bhi hisaab na toote)}. Ginti = ASAL chhape (done = copies, fail / cancel = sent). Paisa: malik + CAP tr.bcpaisa.
+//   Waqt: Aaj · Kal · 7 · 30 din · Is mahina · Pichhla mahina · 📅 tareekh (purana = ek dafa getLabelJobs). Chips ⋮ mein (qaida). Rules NAHI badle. AI NAHI.
+let cloud = null, notice = () => {}, itemsOf = () => [], pdfOf = null, godamsOf = () => [], isOwn = () => false, myUid = () => '', canK = () => true;
 let jobs = [], stop = null, stopFrom = 0, fP = 'today', fS = 'done', fQ = '', open = new Set();
+let fG = '', cus = { a: '', b: '' }, extra = null, extraKey = '', lbl = {}, cfgStop = null, devs = [], devStop = null, setOn = false;
 
-export function barcodeSetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; itemsOf = o.items || itemsOf; pdfOf = o.pdf || pdfOf; }
+export function barcodeSetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; itemsOf = o.items || itemsOf; pdfOf = o.pdf || pdfOf;
+  godamsOf = o.godams || godamsOf; isOwn = o.owner || isOwn; myUid = o.uid || myUid; canK = o.can || canK; }
 export function barcodeStop() { if (stop) { try { stop(); } catch {} stop = null; stopFrom = 0; } }
-const fromMs = () => fP === 'today' ? back(0) : fP === 'kal' ? back(1) : fP === '7' ? back(6) : back(29);
+const monthStart = (k = 0) => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(1); d.setMonth(d.getMonth() - k); return d.getTime(); };
+const dayMs = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(s || '')); return m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])).getTime() : 0; };
+const fromMs = () => fP === 'today' ? back(0) : fP === 'kal' ? back(1) : fP === '7' ? back(6) : fP === 'mon' ? monthStart(0) : fP === 'pmon' ? monthStart(1) : fP === 'cus' ? (dayMs(cus.a) || back(29)) : back(29);
+const toMs = () => fP === 'kal' ? back(0) : fP === 'pmon' ? monthStart(0) : fP === 'cus' && dayMs(cus.b) ? dayMs(cus.b) + 864e5 : Infinity;
+const liveFrom = () => Math.min(back(29), monthStart(0));
+const PL = { today: 'Aaj', kal: 'Kal', '7': '7 din', '30': '30 din', mon: 'Is mahina', pmon: 'Pichhla mahina', cus: '📅 Tareekh' };
+const paisaOn = () => isOwn() || canK('tr.bcpaisa');
 function watch() {
-  const f = back(29);   // hamesha 30 din suno — chips sirf filter
-  if (stop && stopFrom === f) return;
-  barcodeStop(); stopFrom = f;
-  stop = cloud?.listenLabelJobs ? cloud.listenLabelJobs(f, l => { jobs = (l || []).filter(j => j && j.id); paint(); }) : null;
+  const f = liveFrom();   // 30 din / is mahina — jo pehle; chips sirf filter
+  if (!(stop && stopFrom === f)) { barcodeStop(); stopFrom = f;
+    stop = cloud?.listenLabelJobs ? cloud.listenLabelJobs(f, l => { jobs = (l || []).filter(j => j && j.id); paint(); }) : null; }
+  if (!cfgStop && cloud?.listenStockConfig) cfgStop = cloud.listenStockConfig(c => { lbl = c?.lbl || {}; paint(); });
+  if (!devStop && isOwn() && cloud?.listenStaffDevices) devStop = cloud.listenStaffDevices(l => { devs = Array.isArray(l) ? l : []; uidSave(); paint(); });
+  wantExtra();
 }
+function wantExtra() {   // live (30 din / is mahina) se purana = ek dafa server se
+  const lo = fromMs(), hi = toMs();
+  if (lo >= liveFrom() || !cloud?.getLabelJobs) { extra = null; extraKey = ''; return; }
+  const k = lo + '|' + hi; if (extraKey === k) return; extraKey = k; extra = 'wait';
+  cloud.getLabelJobs(lo, hi === Infinity ? Date.now() + 864e5 : hi).then(l => { if (extraKey !== k) return; extra = (l || []).filter(j => j && j.id); paint(); })
+    .catch(er => { if (extraKey !== k) return; extra = []; notice('Purana data nahi aaya: ' + (er?.message || er)); paint(); });
+}
+const pool = () => (Array.isArray(extra) && fromMs() < liveFrom()) ? extra : jobs;
+// 👤 kis ne chhapa → 🏬 kis godam ka
+function uidSave() {   // staffDevices ke uid → staffId yaad (purane bhi, taake dobara login par hisaab na toote) — sirf malik, sirf naye
+  if (!isOwn() || !cloud?.setLblUids) return; const u = lbl.u || {}, add = {};
+  for (const d of devs) { const uid = String(d.by || ''), sid = String(d.staffId || ''); if (!uid || !sid) continue; const o = u[uid]; if (!o || o.s !== sid || (d.name && o.n !== String(d.name).slice(0, 40))) add[uid] = { s: sid, n: String(d.name || o?.n || '').slice(0, 40) }; }
+  const me = String(myUid() || ''); if (me && (u[me]?.s !== 'malik')) add[me] = { s: 'malik', n: 'Malik' };   // larke ki app bhi malik ke label pehchane
+  if (Object.keys(add).length) cloud.setLblUids(add).catch(() => {});
+}
+function whoOf(j) {
+  const uid = String(j.by || '');
+  if (uid && uid === myUid() && isOwn()) return { k: 'malik', n: 'Malik' };
+  const d = devs.find(x => String(x.by || '') === uid && x.staffId), o = (lbl.u || {})[uid];
+  if (d) return { k: String(d.staffId), n: String(d.name || o?.n || 'Mulazim') };
+  if (o?.s) return { k: String(o.s), n: String(o.n || 'Mulazim') };
+  return { k: 'u:' + uid.slice(0, 8), n: uid ? 'Pata nahi (' + uid.slice(0, 4) + ')' : 'Pata nahi' };
+}
+const godamOf = j => { const g = (lbl.g || {})[whoOf(j).k]; return g == null ? 'x' : Number(g); };
+const gName = b => b === 'x' ? '❓ Pata nahi' : (godamsOf().find(x => x.b === Number(b))?.name || 'Godam ' + b);
+const printed = j => j.status === 'done' ? Math.max(1, Number(j.copies) || Number(j.total) || 1) : ['failed', 'cancelled', 'skipped'].includes(j.status) ? Math.max(0, Math.min(Number(j.sent) || 0, Number(j.total) || Number(j.copies) || 0)) : 0;
 const jobDay = j => j.day || dayOf(Number(j.doneAt) || Number(j.at) || 0);
+function inRange(j) { const t = Number(j.doneAt) || Number(j.at) || 0; return t >= fromMs() && t < toMs(); }
 function build() {
-  const lo = fromMs(), hi = fP === 'kal' ? back(0) : Infinity, q = fQ.trim().toLowerCase();
+  const q = fQ.trim().toLowerCase();
   const items = new Map((itemsOf() || []).map(r => [String(r.id), r]));
-  const sel = jobs.filter(j => { const t = Number(j.doneAt) || Number(j.at) || 0; return t >= lo && t < hi; })
+  const sel = pool().filter(inRange).filter(j => fG === '' || String(godamOf(j)) === String(fG))
     .filter(j => fS === 'all' ? true : fS === 'done' ? j.status === 'done' : fS === 'wait' ? (j.status === 'new' || j.status === 'printing') : (j.status === 'failed' || j.status === 'skipped' || j.status === 'cancelled'))
     .filter(j => !q || smartHit([j.name, j.code, items.get(String(j.itemId))?.name].join(' '), q));
   const days = new Map();
@@ -50,7 +92,19 @@ function build() {
     const rows = [...im.values()].map(r => ({ ...r, codes: [...r.codes.values()].sort((a, b) => (a.sub - b.sub) || (a.qty - b.qty)) })).sort((a, b) => b.labels - a.labels);
     return { day: d, rows, labels: rows.reduce((n, r) => n + r.labels, 0), pieces: rows.reduce((n, r) => n + r.pieces, 0), subs: rows.reduce((n, r) => n + r.codes.filter(c => c.sub).reduce((m, c) => m + c.labels, 0), 0) };
   });
-  return { days: out, labels: out.reduce((n, d) => n + d.labels, 0), items: new Set(out.flatMap(d => d.rows.map(r => r.name))).size, subs: out.reduce((n, d) => n + d.subs, 0), jobs: sel.length };
+  return { days: out, labels: out.reduce((n, d) => n + d.labels, 0), items: new Set(out.flatMap(d => d.rows.map(r => r.name))).size, subs: out.reduce((n, d) => n + d.subs, 0), jobs: sel.length, pay: payOf(items, q) };
+}
+// 💰 asal chhape label (status chip se azad) — barcode / sub · larka-war · paisa
+function payOf(items, q) {
+  const rb = Math.max(0, Number(lbl.rb) || 0), rs = Math.max(0, Number(lbl.rs) || 0), per = new Map(); let B = 0, S = 0;
+  for (const j of pool()) { if (!inRange(j)) continue; const g = godamOf(j); if (fG !== '' && String(g) !== String(fG)) continue;
+    if (q && !smartHit([j.name, j.code, items.get(String(j.itemId))?.name].join(' '), q)) continue;
+    const n = printed(j); if (!n) continue;
+    const it = items.get(String(j.itemId)), main = String(it?.code || ''), sub = main ? String(j.code || '') !== main : false, w = whoOf(j);
+    if (sub) S += n; else B += n;
+    const o = per.get(w.k) || { k: w.k, n: w.n, g, b: 0, s: 0 }; if (sub) o.s += n; else o.b += n; per.set(w.k, o); }
+  const P = [...per.values()].map(o => ({ ...o, rs: o.b * rb + o.s * rs })).sort((a, b) => (b.b + b.s) - (a.b + a.s));
+  return { B, S, rb, rs, rsB: B * rb, rsS: S * rs, total: B * rb + S * rs, per: P };
 }
 export function renderBarcode() {
   watch();
@@ -90,10 +144,28 @@ export function liveLabelsHTML(list, opts = {}) {   // v2.97: pos-stock bhi iste
 }
 function paint() {
   const root = $('bcRoot'); if (!root) return;
-  const r = build();
-  root.innerHTML = liveLabelsHTML(jobs) + `<div class="bc-head">
-    <div class="mchips">${[['today', 'Aaj'], ['kal', 'Kal'], ['7', '7 din'], ['30', '30 din']].map(([k, l]) => `<button type="button" class="rc${fP === k ? ' on' : ''}" data-bc-p="${k}">${l}</button>`).join('')}</div>
-    <div class="mchips">${[['done', '✓ Chhap gaye'], ['wait', '⏳ Line mein'], ['bad', '⚠️ Fail / cancel'], ['all', 'Sab']].map(([k, l]) => `<button type="button" class="rc${fS === k ? ' on' : ''}" data-bc-s="${k}">${l}</button>`).join('')}</div>
+  const r = build(), own = isOwn(), G = godamsOf(), P = r.pay, unk = pool().some(j => inRange(j) && godamOf(j) === 'x');
+  const mn = (k, i, t, a, on) => `<button type="button"${on ? ' class="is-in"' : ''} data-mn="${k}" data-mn-i="${i}" data-mn-t="${esc(t)}" data-mn-g="🏷 Barcode" ${a}>${i} ${esc(t)}</button>`;
+  const gl = fG === '' ? '🏬 Sab godam' : gName(fG), sl = { done: '✓ Chhap gaye', wait: '⏳ Line mein', bad: '⚠️ Fail / cancel', all: 'Sab' }[fS];
+  const pl = fP === 'cus' ? `📅 ${cus.a || '…'} → ${cus.b || '…'}` : PL[fP];
+  const chips = `<button type="button" class="bc-pat" data-mn-sheet="1">${esc(gl)} · ${esc(pl)} · ${esc(sl)} — ⋮ se badlein</button>
+    <div class="bc-mn">${[['', '🏬', 'Sab godam'], ...G.map(g => [String(g.b), g.b === 1 ? '🏪' : '🏬', g.name]), ...(unk ? [['x', '❓', 'Pata nahi (larka chunein ⚙️)']] : [])].map(([k, i, t]) => mn('bc.g' + (k || 'all'), i, t, `data-bc-f="${esc(k)}"`, String(fG) === k)).join('')}
+      ${Object.entries(PL).map(([k, t]) => mn('bc.p' + k, '📅', t, `data-bc-p="${k}"`, fP === k)).join('')}
+      ${[['done', '✓', 'Chhap gaye'], ['wait', '⏳', 'Line mein'], ['bad', '⚠️', 'Fail / cancel'], ['all', '📋', 'Sab']].map(([k, i, t]) => mn('bc.s' + k, i, t, `data-bc-s="${k}"`, fS === k)).join('')}
+      ${own ? mn('bc.set', '⚙️', 'Mazdoori rate + larkon ki godam', 'data-bc-set="1"', setOn) : ''}</div>
+    ${fP === 'cus' ? `<div class="bc-cus"><label>Se<input type="date" data-bc-da="1" value="${esc(cus.a)}" max="${dayOf()}"></label><label>Tak<input type="date" data-bc-db="1" value="${esc(cus.b)}" max="${dayOf()}"></label></div>` : ''}`;
+  const rs = n => 'Rs ' + num(n);
+  const pay = paisaOn() ? `<div class="bc-pay"><div class="bc-pk"><div><b>${num(P.B)}</b><small>🏷 Barcode label</small></div><div><b>${num(P.S)}</b><small>🔖 Sub-barcode</small></div><div><b>${num(P.B + P.S)}</b><small>Kul (asal chhape)</small></div></div>
+      ${P.rb || P.rs ? `<div class="bc-rs"><span>💰 Mazdoori</span><b>${rs(P.total)}</b><small>${num(P.B)} × Rs ${num(P.rb)} + ${num(P.S)} × Rs ${num(P.rs)}</small></div>` : own ? '<button type="button" class="bc-rsno" data-bc-set="1">⚙️ Mazdoori ka rate likhein — phir paisa yahan</button>' : ''}
+      ${P.per.length ? `<div class="bc-who">${P.per.map(o => `<div class="bc-wr"><span class="bc-wn"><b>${esc(o.n)}</b><small>${esc(gName(o.g))}</small></span><span class="bc-wc">🏷 ${num(o.b)} · 🔖 ${num(o.s)}</span>${P.rb || P.rs ? `<b class="bc-wrs">${rs(o.rs)}</b>` : ''}</div>`).join('')}</div>` : ''}
+      ${extra === 'wait' ? '<small class="bc-wait">⏳ purana data aa raha hai…</small>' : ''}</div>` : '';
+  const people = () => { const m = new Map(); for (const j of [...jobs, ...(Array.isArray(extra) ? extra : [])]) { const w = whoOf(j); if (!m.has(w.k)) m.set(w.k, w); } return [...m.values()].sort((a, b) => a.n.localeCompare(b.n)); };
+  const set = own && setOn ? `<div class="bc-set"><b>💰 Mazdoori ka rate (fi label)</b>
+      <div class="bc-rates"><label>🏷 Barcode<span>Rs</span><input type="number" min="0" step="any" inputmode="decimal" data-bc-rb="1" value="${esc(lbl.rb ?? '')}" placeholder="0"></label>
+        <label>🔖 Sub-barcode<span>Rs</span><input type="number" min="0" step="any" inputmode="decimal" data-bc-rs="1" value="${esc(lbl.rs ?? '')}" placeholder="0"></label><button type="button" class="bc-rsave" data-bc-rsave="1">💾 Save</button></div>
+      <b>🏬 Kis larke ke label kis godam ke?</b><small>Printer ek hai (TSC 244 Pro) — jis larke ne chhape, us ki godam. Ek dafa chunein, purana data bhi.</small>
+      <div class="bc-ppl">${people().map(w => { const cur = (lbl.g || {})[w.k]; return `<div class="bc-pr"><b>${esc(w.n)}</b><span>${G.map(g => `<button type="button" class="${Number(cur) === g.b ? 'is-in' : ''}" data-bc-asg="${esc(w.k)}|${g.b}">${esc(g.name)}</button>`).join('')}<button type="button" class="${cur == null ? 'is-in' : ''}" data-bc-asg="${esc(w.k)}|">—</button></span></div>`; }).join('') || '<small>Abhi kisi ne label nahi chhape</small>'}</div></div>` : '';
+  root.innerHTML = liveLabelsHTML(jobs) + `<div class="bc-head">${chips}${set}${pay}
     <label class="hs-search"><input type="search" placeholder="🔍 item ya barcode…" value="${esc(fQ)}" data-bc-q="1"></label>
     <div class="bc-kpis"><div><b>${num(r.labels)}</b><small>label</small></div><div><b>${num(r.items)}</b><small>items</small></div><div><b>${num(r.subs)}</b><small>sub-barcode</small></div><div><b>${num(r.jobs)}</b><small>hukum</small></div></div></div>
     ${r.days.map(d => `<div class="bc-day"><div class="bc-dayhead"><b>${esc(nice(d.day))}</b><span>${num(d.labels)} label · ${d.rows.length} items${d.subs ? ' · ' + num(d.subs) + ' sub' : ''}</span></div>
@@ -102,9 +174,13 @@ function paint() {
       || `<div class="nt-empty">🏷<b>Is waqt mein koi label nahi</b><small>Stock screen se label chhapwayein — yahan khud aa jayega</small></div>`}`;
 }
 function pdfHTML() {
-  const r = build(), when = { today: 'Aaj', kal: 'Kal', '7': 'Pichhle 7 din', '30': 'Pichhle 30 din' }[fP];
-  return `<h1>NOOR TRADERS</h1><h2>🏷 Barcode report — ${esc(when)} (${esc({ done: 'chhap gaye', wait: 'line mein', bad: 'fail', all: 'sab' }[fS])})</h2>
-    <p>${num(r.labels)} label · ${num(r.items)} items · ${num(r.subs)} sub-barcode · ${esc(new Date().toLocaleString('en-PK'))}</p>
+  const r = build(), P = r.pay, when = fP === 'cus' ? `${cus.a} se ${cus.b}` : { today: 'Aaj', kal: 'Kal', '7': 'Pichhle 7 din', '30': 'Pichhle 30 din', mon: 'Is mahina', pmon: 'Pichhla mahina' }[fP];
+  const payT = paisaOn() ? `<h3>💰 ${esc(fG === '' ? 'Sab godam' : gName(fG))} — asal chhape label</h3><table class="iv-tbl"><thead><tr><th>Larka</th><th>Godam</th><th>Barcode</th><th>Sub</th>${P.rb || P.rs ? '<th>Rs</th>' : ''}</tr></thead><tbody>
+      ${P.per.map(o => `<tr><td class="iv-item"><b>${esc(o.n)}</b></td><td>${esc(gName(o.g).replace(/^❓ /, ''))}</td><td class="iv-n">${num(o.b)}</td><td class="iv-n">${num(o.s)}</td>${P.rb || P.rs ? `<td class="iv-n"><b>${num(o.rs)}</b></td>` : ''}</tr>`).join('')}
+      <tr><td class="iv-item"><b>Kul</b></td><td></td><td class="iv-n"><b>${num(P.B)}</b></td><td class="iv-n"><b>${num(P.S)}</b></td>${P.rb || P.rs ? `<td class="iv-n"><b>${num(P.total)}</b></td>` : ''}</tr></tbody></table>
+      ${P.rb || P.rs ? `<p><b>Mazdoori: ${num(P.B)} × Rs ${num(P.rb)} + ${num(P.S)} × Rs ${num(P.rs)} = Rs ${num(P.total)}</b></p>` : ''}` : '';
+  return `<h1>NOOR TRADERS</h1><h2>🏷 Barcode report — ${esc(when)}${fG === '' ? '' : ' · ' + esc(gName(fG).replace(/^❓ /, ''))} (${esc({ done: 'chhap gaye', wait: 'line mein', bad: 'fail', all: 'sab' }[fS])})</h2>
+    <p>${num(r.labels)} label · ${num(r.items)} items · ${num(r.subs)} sub-barcode · ${esc(new Date().toLocaleString('en-PK'))}</p>${payT}
     ${r.days.map(d => `<h3>${esc(d.day)} — ${num(d.labels)} label</h3><table class="iv-tbl"><thead><tr><th>Item</th><th>Barcode</th><th>Packet</th><th>Label</th></tr></thead><tbody>
       ${d.rows.map(row => row.codes.map((c, i) => `<tr><td class="iv-item">${i ? '' : '<b>' + esc(row.name) + '</b>'}</td><td>${c.sub ? 'SUB ' : ''}${esc(c.code)}</td><td class="iv-n">${num(c.qty)}</td><td class="iv-n"><b>${num(c.labels)}</b></td></tr>`).join('') + `<tr><td></td><td></td><td class="iv-n"><small>kul</small></td><td class="iv-n"><b>${num(row.labels)}</b></td></tr>`).join('')}
       </tbody></table>`).join('')}`;
@@ -148,10 +224,19 @@ document.addEventListener('click', async e => {
     if (ok) notice(`✕ Cancel bhej diya${ok > 1 ? ' (' + ok + ')' : ''} — PC foran rok dega (jo printer mein pohanch chuke, 10-20 nikal sakte hain)`); return; }
   if (e.target.closest?.('[data-bc-pdf]')) { const r = build(); if (!r.labels) { notice('Is waqt mein koi label nahi'); return; } if (pdfOf) pdfOf(pdfHTML(), 'Barcode report ' + dayOf()); return; }
   if (!$('bcRoot')) return;
-  const t = e.target.closest?.('[data-bc-p],[data-bc-s],[data-bc-open]'); if (!t) return;
+  const t = e.target.closest?.('[data-bc-p],[data-bc-s],[data-bc-open],[data-bc-f],[data-bc-set],[data-bc-rsave],[data-bc-asg]'); if (!t) return;
   const d = t.dataset;
-  if (d.bcP) { fP = d.bcP; paint(); return; }
+  if (d.bcP) { fP = d.bcP; if (fP === 'cus' && !cus.a) cus = { a: dayOf(back(6)), b: dayOf() }; wantExtra(); paint(); return; }
+  if (d.bcF != null) { fG = d.bcF; paint(); return; }
+  if (d.bcSet) { setOn = !setOn; paint(); if (setOn) setTimeout(() => $('bcRoot')?.querySelector('.bc-set')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }), 60); return; }
+  if (d.bcRsave) { const rb = Number($('bcRoot')?.querySelector('[data-bc-rb]')?.value), rsv = Number($('bcRoot')?.querySelector('[data-bc-rs]')?.value);
+    if (!(rb >= 0) || !(rsv >= 0)) { notice('Rate sahi likhein (0 ya zyada)'); return; }
+    try { await cloud.setLblRate(rb, rsv); lbl = { ...lbl, rb, rs: rsv }; notice(`💾 Mazdoori: barcode Rs ${num(rb)} · sub-barcode Rs ${num(rsv)}`); paint(); } catch (er) { notice('Save nahi hua: ' + (er?.message || er)); } return; }
+  if (d.bcAsg) { const [k, b] = d.bcAsg.split('|'); const v = b === '' ? null : Number(b);
+    lbl = { ...lbl, g: { ...(lbl.g || {}) } }; if (v == null) delete lbl.g[k]; else lbl.g[k] = v; paint();   // foran (server baad mein)
+    try { await cloud.setLblGodam(k, v); } catch (er) { notice('Save nahi hua: ' + (er?.message || er)); } return; }
   if (d.bcS) { fS = d.bcS; paint(); return; }
   if (d.bcOpen) { if (open.has(d.bcOpen)) open.delete(d.bcOpen); else open.add(d.bcOpen); paint(); }
 });
+document.addEventListener('change', e => { const t = e.target; if (!t?.matches?.('[data-bc-da],[data-bc-db]')) return; if (t.dataset.bcDa) cus.a = t.value || ''; else cus.b = t.value || ''; if (cus.a && cus.b && cus.a > cus.b) [cus.a, cus.b] = [cus.b, cus.a]; wantExtra(); paint(); });
 document.addEventListener('input', e => { if (e.target.matches?.('[data-bc-q]')) { fQ = e.target.value || ''; paint(); const q = document.querySelector('[data-bc-q]'); if (q) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } } });
