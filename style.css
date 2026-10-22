@@ -5471,3 +5471,5 @@ html body #summary .bc-wrs small{font-size:11px;font-weight:700;color:#FFD9A0!im
 .st-nm .st-pend{display:inline-block;align-self:flex-start;width:max-content;max-width:100%;margin:2px 0 0;padding:2px 8px;border-radius:999px;background:#fff4d6;color:#8a5a00;font:700 11px/1.5 system-ui,sans-serif;font-style:normal;letter-spacing:.01em;animation:stPend 1.4s ease-in-out infinite}
 @keyframes stPend{50%{opacity:.55}}
 html.dk .st-nm .st-pend{background:#3a2c0b;color:#ffd77a}
+/* v2.112.1: 🧺 Rack bharo — 🚚 raste mein (TN) + 🔒 100% dabba hamesha poori chaurai, alag line (pehle dono ek qatar ke 2 khanon mein aa kar naam / TN ko patla kar dete) */
+html body :is(#summary,#dialogBody) .rk-r>.rk-trn,html body :is(#summary,#dialogBody) .rk-r>.rk-100{grid-column:1/-1;min-width:0}
