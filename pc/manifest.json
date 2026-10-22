@@ -1,10 +1,10 @@
 {
- "version": "2026-10-22.2",
- "note": "📋 auto-backup v2.0: roz ki ginti — _round roz aaj · \"✅ Sab theek karo\" ki line ek ek kar ke post-farq ko · larkon ko 12 / 4 baje yaad · malik ko 8 baje khulasa (POS mein kuch nahi likhta)",
+ "version": "2026-10-22.3",
+ "note": "🩹 KHATA-DOCTOR v2.9: taskkill /T kabhi nahi (PID reuse = stock script / doctor khud band hote) · WMIC 30 s hadd + PowerShell · list na mile = kuch shuru/band nahi · chakkar 10 min atka = khud dobara · 🚑 NT-PRINT v1.22 (server PC): doctor 15 min chup = taza doctor.js + atka band + dobara chalao",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
   "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
-  "doctor.js": "3f6e740313b9627b2316daa39c0561e3ab99388527cc8274f533a000e225dd61",
+  "doctor.js": "4c25d78b09213ad06de47e401b2fb814b90a20b2f1a327af469e77236b01de0c",
   "farq-auto.bat": "43b036da0a9dc1c7f7ffd42f085a57b6ee2c208ce093bcd135e9720d15858f8c",
   "item-auto.bat": "3cf5fb7147862e01e667fcb2689428c9303539fe85b6b14762788658b6a108a3",
   "item-post.js": "e0f8b90ef8db435a2d5913d94784a59880d48edf4625288b30cde6eb2768563e",
@@ -38,7 +38,7 @@
   "LABEL-GEHRA.bat": "2fd4a77c5241b38433ba280babd4659011672fcb08b928a968e9e7e3931d4d88",
   "pos-sales-dekho.js": "de00d32c1c8f04271f3b3f21d901eede0f4e74754451cddbfa26c1a0fbef7fc2",
   "pos-sales-auto.bat": "aef4a274bb9cdcde344028e9ad2de8fe7a3572580a0b20f3e3f7b1e806d33e11",
-  "nt-print.js": "c4fb360759891c504e2a6124a4f8ee573f09ba5f5056ec95b6a869423e840c46",
+  "nt-print.js": "afcecc3850668db77495207e88f66099206063d03edf1d617473c7a0bb7f410d",
   "nt-print-auto.bat": "6d2d36d3e6db49986502bdf20df2dd3fe8d2bcce6aca4b807d7b8ed9294dccce",
   "nt-parchi.js": "7a45873ebc250a38990ee170a264008859cfdeef0928bbadb6ddf3d1d5c33ee2",
   "auto-backup.js": "359f8fec3d6c985ece954d9c2134866c50d7928ddc1917c9e712f482874f7000",

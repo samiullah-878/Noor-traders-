@@ -1,5 +1,9 @@
 // =========================================================
-//  doctor.js  v2.8 (2026-10-20: .bat badle (jaise har 2 min → 1 min) to purani loop band kar ke nayi chalao — pehle purani loop chalti rehti thi, naya waqfa nahi lagta tha) · v2.7 (2026-10-08: GitHub par NAYA manifest version har 3 min dekho — naya ho to foran poori jaanch + update (pehle sirf 30 min) ·
+//  doctor.js  v2.9 (2026-10-22: 🩹 21-Oct shaam 6:50 doctor CHUP ho gaya aur stock script bhi band — subah tak koi dobara chalane wala nahi. Ab: (1) taskkill /T (poora tree) KABHI NAHI —
+//              Windows mare hue parent ka PID naye process ko de deta hai, /T phir be-taaluq scripts (stock) aur doctor ki apni loop bhi band kar deta · (2) WMIC / taskkill par waqt ki hadd
+//              (WMIC atke to pehle doctor hamesha ke liye ruk jata) + WMIC na chale to PowerShell (CIM); list hi na mile = is chakkar mein koi script shuru / band NAHI · (3) chakkar 10 min se
+//              atka = doctor khud band, .bat 20 sec mein naya · (4) NT-PRINT (server PC) doctor 15 min chup dekhe to jagata hai — doctor-jaga.txt ka paigham log mein)
+//              · v2.8 (2026-10-20: .bat badle (jaise har 2 min → 1 min) to purani loop band kar ke nayi chalao — pehle purani loop chalti rehti thi, naya waqfa nahi lagta tha) · v2.7 (2026-10-08: GitHub par NAYA manifest version har 3 min dekho — naya ho to foran poori jaanch + update (pehle sirf 30 min) ·
 //              purana / CDN ka baasi manifest (chhota version) par kuch nahi) · v2.6 (2026-10-04: sab scripts CHUPKE (chupa.vbs, koi window nahi) · ek dafa purani dikhti windows band kar ke chupke chalata hai ·
 //              PC ka waqt ghalat -> "NT Waqt Theek" task + w32tm, pcStatus.clockOff app ko) · v2.5 (non-periodic zinda = node) · v2.4 (taskkill /F)
 //              · v2.3 (2026-10-01: HEARTBEAT — latki script pakar kar dobara) · v2.2 (3 dafa ke baad bhi 30 min mein phir koshish) · v2.1 (UNAUTHENTICATED par doctor khud dobara · PC ka waqt jaanch) · v2 (2026-09-25) — KHATA PC DOCTOR
@@ -21,10 +25,10 @@ const net = require('net');
 const path = require('path');
 const https = require('https');
 const crypto = require('crypto');
-const { execSync, spawn } = require('child_process');
+const { execSync, execFileSync, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '2.7';
+const VER = '2.9';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
@@ -122,13 +126,22 @@ async function update(m) {
 }
 
 // ---------- processes ----------
+// v2.9: WMIC kabhi atak jata hai — execSync BINA hadd = doctor hamesha ke liye ruka (report / "Abhi check" / scripts dobara chalana sab band). Ab 30 sec hadd;
+//   WMIC na chale / atke to 1 ghanta PowerShell (CIM, 40 sec hadd). Dono na chalein = null → is chakkar mein KOI script shuru / band nahi (andhi list par sab "band" lagti thi).
+let wmicBad = 0, lastList = null;
+const parseProcs = out => String(out || '').split(/\r?\n/).map(l => l.trim()).filter(l => l && !/^Node,CommandLine/i.test(l)).map(l => {
+  const parts = l.split(','); const pid = Number(parts.pop()); parts.shift(); return { cmd: parts.join(',').toLowerCase(), pid };
+}).filter(p => p.pid > 0);
 function procs() {
+  if (Date.now() - wmicBad > 60 * 60 * 1000) {
+    try { const l = parseProcs(execSync('wmic process where "name=\'node.exe\' or name=\'cmd.exe\'" get processid,commandline /format:csv', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true, timeout: 30000 })); if (l.length) return (lastList = l); }
+    catch (e) { wmicBad = Date.now(); log('⚠ WMIC nahi chala / atka (' + String(e.code || e.message || e).slice(0, 40) + ') — 1 ghanta PowerShell se'); }
+  }
   try {
-    const out = execSync('wmic process where "name=\'node.exe\' or name=\'cmd.exe\'" get processid,commandline /format:csv', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
-    return out.split(/\r?\n/).map(l => l.trim()).filter(l => l && !/^Node,CommandLine/i.test(l)).map(l => {
-      const parts = l.split(','); const pid = Number(parts.pop()); parts.shift(); return { cmd: parts.join(',').toLowerCase(), pid };
-    });
-  } catch { return []; }
+    const out = execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', "Get-CimInstance Win32_Process -Filter \"Name='node.exe' or Name='cmd.exe'\" | ForEach-Object { 'x,' + ([string]$_.CommandLine -replace ',', ' ') + ',' + $_.ProcessId }"], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true, timeout: 40000 });
+    const l = parseProcs(out); if (l.length) return (lastList = l);
+  } catch (e) { log('⚠ PowerShell process list bhi nahi (' + String(e.code || e.message || e).slice(0, 40) + ')'); }
+  return null;
 }
 // poora naam hi mile — "sync.js" ko "pos-khata-sync.js" na samjhe
 const word = (hay, w) => new RegExp('(^|[\\s\\\\/"])' + w.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?=[\\s"]|$)').test(hay);
@@ -153,9 +166,11 @@ function startBat(s) {
   spawn('cmd.exe', ['/c', b], { cwd: DIR, detached: true, stdio: 'ignore', windowsHide: true }).unref();
   return true;
 }
-function killPid(pid, tree) {
+// v2.9: /T (poora tree) KABHI NAHI — Windows mare hue parent (chupa.vbs ka wscript) ka PID naye process ko de deta hai; taskkill /T phir us PID ke
+//   "bachche" samajh kar be-taaluq scripts (21-Oct: stock) aur doctor ki apni loop bhi band kar deta. Har process ALAG pakra jata hai (bat + node dono list mein) — tree ki zaroorat nahi.
+function killPid(pid) {
   try { process.kill(pid); } catch {}
-  try { execSync(`taskkill /F ${tree ? '/T ' : ''}/PID ${pid}`, { stdio: 'ignore', windowsHide: true }); } catch {}
+  try { execSync(`taskkill /F /PID ${pid}`, { stdio: 'ignore', windowsHide: true, timeout: 15000 }); } catch {}
 }
 function stopScript(s, list) {
   let n = 0;
@@ -165,7 +180,7 @@ function stopScript(s, list) {
 // v2.5: bat ki khaali window (node ke baghair) — purani loop band, warna do loop
 function stopBatOnly(s, list) {
   let n = 0;
-  for (const p of list) if (runsBat(p, s) && !runsScript(p, s) && /cmd(\.exe)?/.test(p.cmd)) { killPid(p.pid, true); n++; }
+  for (const p of list) if (runsBat(p, s) && !runsScript(p, s) && /cmd(\.exe)?/.test(p.cmd)) { killPid(p.pid); n++; }
   return n;
 }
 // v2.6: ek dafa — jo bat loops pehle dikhti windows mein chal rahi thin unhein band kar ke chupke chalao
@@ -173,7 +188,7 @@ const HIDE_MARK = path.join(DIR, 'chupa.done');
 function hideOnce(list) {
   if (process.platform !== 'win32' || fs.existsSync(HIDE_MARK)) return false;
   let n = 0;
-  for (const s of services) for (const p of list) if (runsBat(p, s) && /cmd(\.exe)?/.test(p.cmd)) { killPid(p.pid, true); n++; }
+  for (const s of services) for (const p of list) if (runsBat(p, s) && /cmd(\.exe)?/.test(p.cmd)) { killPid(p.pid); n++; }
   for (const s of services) for (const p of list) if (runsScript(p, s)) { killPid(p.pid); n++; }
   try { fs.writeFileSync(HIDE_MARK, String(Date.now())); } catch {}
   log(`🙈 v2.6: ${n} purani (dikhti) processes band — ab sab scripts chupke (bina window) chalengi`);
@@ -241,10 +256,10 @@ function clockCheck() {
 }
 
 // ---------- ek chakkar ----------
-let services = [], manifestVer = '', lastGit = 0, busy = false, restartSelf = false;
+let services = [], manifestVer = '', lastGit = 0, busy = false, restartSelf = false, cycleAt = 0;
 async function cycle(why, full = true) {
   clockCheck();
-  if (busy) return; busy = true;
+  if (busy) return; busy = true; cycleAt = Date.now();
   try {
     if (full) log(`— jaanch (${why}) —`);
     await ensureConfig();
@@ -259,13 +274,16 @@ async function cycle(why, full = true) {
     } else log('GitHub tak nahi pahuncha (internet?) — sirf jaanch');
     if (!services.length) try { services = JSON.parse(fs.readFileSync(path.join(DIR, 'manifest.json'), 'utf8')).services || []; } catch {}
     let list = procs();
-    if (hideOnce(list)) { await new Promise(r => setTimeout(r, 3000)); list = procs(); }
+    if (list && hideOnce(list)) { await new Promise(r => setTimeout(r, 3000)); list = procs() || list; }
+    const blind = !list;   // v2.9: process list nahi mili — andhe ho kar kuch shuru / band NAHI
+    if (blind) log('⚠ scripts ki list nahi mili (WMI) — is chakkar mein koi script shuru / band nahi, 2 min baad phir');
     const rows = [];
     for (const s of services) {
+      if (blind) { const ll = s.log ? lastLine(s.log) : { line: '', at: 0 }; rows.push({ name: s.name || s.script, script: s.script, ver: verOf(s.script), action: 'list nahi mili (WMI) — pichhla haal', log: ll.line, logAt: ll.at, periodic: !!s.periodic }); continue; }
       let action = '';
       if (s.bat && changed.includes(s.bat)) {   // v2.8: bat (loop / waqfa) badla → poori loop dobara
-        for (const q of list) if (runsBat(q, s) || runsScript(q, s)) { try { killPid(q.pid, true); } catch {} }
-        await new Promise(r => setTimeout(r, 1500)); list = procs(); action = 'bat nayi — loop dobara shuru'; log(`↻ ${s.bat}: nayi bat, loop dobara`);
+        for (const q of list) if (runsBat(q, s) || runsScript(q, s)) { try { killPid(q.pid); } catch {} }
+        await new Promise(r => setTimeout(r, 1500)); list = procs() || list; action = 'bat nayi — loop dobara shuru'; log(`↻ ${s.bat}: nayi bat, loop dobara`);
       }
       if (changed.includes(s.script) && alive(s, list)) { const n = stopScript(s, list); if (n) { action = 'nayi lagi — dobara shuru'; log(`↻ ${s.script}: nayi file, dobara shuru`); } }
       else if (changed.includes(s.script) && !action) action = 'nayi lagi';
@@ -306,7 +324,7 @@ async function cycle(why, full = true) {
       rows.push({ name: s.name || s.script, script: s.script, ver: verOf(s.script), action, log: ll.line, logAt: ll.at, periodic: !!s.periodic });
     }
     await new Promise(r => setTimeout(r, 4000));
-    list = procs();
+    list = procs() || lastList || [];
     for (const r of rows) { const s = services.find(x => x.script === r.script); r.ok = s ? alive(s, list) : false; if (!r.ok && !r.action) r.action = 'band'; }
     const ref = statusRef();
     if (ref) await ref.set({ at: Date.now(), host: os.hostname(), bootAt: Date.now() - os.uptime() * 1000, doctor: VER, manifest: manifestVer, clockOff,
@@ -338,6 +356,10 @@ const lock = net.createServer().listen(LOCK_PORT, '127.0.0.1');
 lock.on('error', () => { console.log('KHATA-DOCTOR pehle se chal raha hai.'); process.exit(3); });
 lock.on('listening', async () => {
   log(`KHATA-DOCTOR v${VER} shuru — ${os.hostname()}`);
+  // v2.9: 🚑 NT-PRINT ne jagaya ho to us ka paigham (kyun / kitni der chup) log mein — app ki 🖥️ PC scripts mein nazar aaye
+  try { const jf = path.join(DIR, 'doctor-jaga.txt'); if (fs.existsSync(jf)) { log('🚑 ' + fs.readFileSync(jf, 'utf8').trim().slice(0, 200)); fs.unlinkSync(jf); } } catch {}
+  // v2.9: chakkar 10 min se atka (koi await kabhi poora na ho → busy hamesha true → report / "Abhi check" sab band) = doctor khud band, KHATA-DOCTOR.bat 20 sec mein naya
+  setInterval(() => { if (busy && cycleAt && Date.now() - cycleAt > 10 * 60 * 1000) { log('⚠ chakkar 10 min se atka — doctor dobara shuru ho raha hai'); setTimeout(() => process.exit(1), 1000); } }, 30000);
   ensureStartup(); ensureModules(); ensureChupa();
   await cycle('shuru');
   setInterval(() => cycle('30 minute'), EVERY);

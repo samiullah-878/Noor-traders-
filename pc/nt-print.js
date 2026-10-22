@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-print.js  v1.21 (2026-10-20: 📅 rasid + gate pass par Urdu tareekh; urdu-names.js bhi khud-update) · v1.20 (2026-10-14: 🔤 GATE PASS par har item ke neeche URDU naam — urdu-names.js) · v1.19 (2026-10-14: 🚪 GATE PASS sirf item + quantity, bara gehra font) · v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
+//  nt-print.js  v1.22 (2026-10-22: 🚑 DOCTOR JAGAO — sirf doctor wale (server) PC par: KHATA-DOCTOR 15 min chup = taza doctor.js + atka doctor (port 47830, netstat) band + KHATA-DOCTOR.bat chupke; 30 min mein ek dafa · counter PCs par kuch nahi) · v1.21 (2026-10-20: 📅 rasid + gate pass par Urdu tareekh; urdu-names.js bhi khud-update) · v1.20 (2026-10-14: 🔤 GATE PASS par har item ke neeche URDU naam — urdu-names.js) · v1.19 (2026-10-14: 🚪 GATE PASS sirf item + quantity, bara gehra font) · v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
 //                   (6+ harf, beech mein space nahi, 5+ hindse) aur grid mein wohi code nahi = bzzz — scan pakra gaya ho ya NAHI (server par scan
 //                   pakra hi nahi ja raha tha: log mein koi 'GHALAT scan' / '🔎' nahi tha). Naam se talaash = awaz nahi. Log mein 'scan pakra / NAHI')
 //                   · v1.17 (2026-10-08: 🔑 CHAABI KHUD UTHAO — awaz-only PC par firebase-key.json Desktop / Downloads / Documents (AnyDesk se)
@@ -39,7 +39,7 @@ let FA = null, FF = null; try { FA = require('firebase-admin/app'); FF = require
 const { initializeApp, cert, getApps } = FA || {};
 const { getFirestore, FieldValue } = FF || {};
 
-const VER = '1.19';
+const VER = '1.22';
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
@@ -236,10 +236,11 @@ const keep = (arr, x, n) => { arr.unshift(x); if (arr.length > n) arr.length = n
 async function beat() {
   if (!pcDoc) return;   // v1.15: awaz-only
   if (!prAt || Date.now() - prAt > 10 * 60000) scanPrinters();
-  try { await pcDoc.set({ name: PC_NAME, host: os.hostname(), printer: printerName(), printers: PR_LIST.map(n => ({ n, h: h6(n) })), at: Date.now(), ver: VER, width: W, snd: sndState() }); }
+  try { await pcDoc.set({ name: PC_NAME, host: os.hostname(), printer: printerName(), printers: PR_LIST.map(n => ({ n, h: h6(n) })), at: Date.now(), ver: VER, width: W, snd: sndState(), ...(djLast ? { docJaga: djLast } : {}) }); }
   catch (e) { log('⚠ report: ' + e.message); if (unauth(e)) { log('Firebase rabta toota (UNAUTHENTICATED) — dobara shuru'); setTimeout(() => process.exit(1), 500); } }
 }
 
+let djLast = null;   // v1.22: 🚑 aakhri "doctor jagao" (printPCs mein)
 const busy = new Set();
 let queue = Promise.resolve();
 const later = fn => { queue = queue.then(fn).catch(e => { log('Masla: ' + e.message); if (unauth(e)) setTimeout(() => process.exit(1), 500); }); };
@@ -458,6 +459,82 @@ async function selfUpdate() {
   finally { updBusy = false; }
 }
 
+// v1.22 (2026-10-22): 🚑 DOCTOR JAGAO — 21-Oct shaam 6:50 KHATA-DOCTOR chup ho gaya (stock script bhi band) aur subah tak kisi ne dobara nahi chalaya (doctor hi to chalata hai).
+//   SIRF doctor wale PC par (is folder mein doctor.js + KHATA-DOCTOR.bat, aur blueAccess/pcStatus.host = is PC ka naam): har 3 min pcStatus dekho —
+//   doctor 15 min se chup = (1) GitHub se taza doctor.js (sha manifest se) (2) port 47830 rakhne wala atka doctor band (netstat — WMI nahi; sirf wahi PID, /T NAHI)
+//   (3) KHATA-DOCTOR.bat chupke (chupa.vbs). 30 min mein ek dafa · PC on hue 8 min se kam = intezar (Startup khud chalata hai). Counter PCs par kuch nahi.
+//   Nishan: doctor-jaga.txt (doctor apne log mein "🚑 …" dikhata — app ki 🖥️ PC scripts) + printPCs/<id>.docJaga. Print se alag — print nahi rukta.
+/*DJ-START*/
+function docJagaMake(d) {
+  const STALE = 15 * 60e3, GAP = 30 * 60e3, BOOT = 8 * 60e3, SKIP = 60 * 60e3;
+  let lastTry = 0, notMine = 0, running = false;
+  async function check() {
+    if (running) return 'busy';
+    const now = d.now();
+    if (notMine && now - notMine < SKIP) return 'not-mine';
+    if (!d.exists('doctor.js') || !d.exists('KHATA-DOCTOR.bat')) { notMine = now; return 'no-doctor'; }
+    if (d.uptime() * 1000 < BOOT) return 'boot';
+    if (lastTry && now - lastTry < GAP) return 'gap';
+    running = true;
+    try {
+      const st = await d.status();
+      if (!st || !st.host) return 'no-status';
+      if (String(st.host).toLowerCase() !== String(d.host()).toLowerCase()) { notMine = now; return 'not-mine'; }
+      const age = now - (Number(st.at) || 0);
+      if (age < STALE) return 'ok';
+      lastTry = now;
+      const mins = Math.round(age / 60000);
+      d.log(`🚑 DOCTOR JAGAO: KHATA-DOCTOR ${mins} min se chup — dobara chala raha hoon`);
+      let fresh = 'wahi'; try { fresh = (await d.freshDoctor()) || 'wahi'; } catch (e) { fresh = 'GitHub nahi (' + String(e.message || e).slice(0, 40) + ')'; }
+      let killed = 0; try { killed = d.killDoctor(); } catch (e) { d.log('🚑 atka doctor band nahi hua: ' + String(e.message || e).slice(0, 80)); }
+      d.note(`NT-PRINT ne jagaya (${d.host()}): doctor ${mins} min se chup tha · atka band: ${killed} · doctor.js ${fresh}`);
+      let started = false; try { started = !!d.startDoctor(); } catch (e) { d.log('🚑 KHATA-DOCTOR nahi chala: ' + String(e.message || e).slice(0, 80)); }
+      try { await d.mark({ at: now, mins, killed, fresh, started }); } catch {}
+      return started ? 'rescued' : 'fail';
+    } finally { running = false; }
+  }
+  return { check };
+}
+// GitHub ka taza doctor.js (manifest ke sha se) — wahi ho to '' · purana backup\<din>\ mein
+async function djFresh({ get, sha, fs, path, dir, base, day }) {
+  const m = JSON.parse((await get(base + 'manifest.json?t=' + Date.now())).toString('utf8')), want = m.files && m.files['doctor.js'];
+  if (!want) return '';
+  const p = path.join(dir, 'doctor.js'); let cur = ''; try { cur = sha(fs.readFileSync(p)); } catch {}
+  if (cur === want) return '';
+  const b = await get(base + 'doctor.js?t=' + Date.now());
+  if (sha(b) !== want) return 'GitHub abhi purana (sha nahi mila)';
+  try { if (fs.existsSync(p)) { const bd = path.join(dir, 'backup', day); fs.mkdirSync(bd, { recursive: true }); fs.copyFileSync(p, path.join(bd, 'doctor.js')); } } catch {}
+  fs.writeFileSync(p + '.new', b); fs.renameSync(p + '.new', p);
+  const v = (String(b.slice(0, 600)).match(/\bv(\d+(?:\.\d+)*)\b/) || [])[1];
+  return 'nayi' + (v ? ' v' + v : '');
+}
+// netstat -ano: port par LISTENING wale PID (apna nahi)
+function djPids(out, port, self) {
+  const re = new RegExp('[:.]' + port + '\\s');
+  return [...new Set(String(out || '').split(/\r?\n/).filter(l => /LISTENING/i.test(l) && re.test(l)).map(l => Number(l.trim().split(/\s+/).pop())).filter(n => n > 4 && n !== self))];
+}
+/*DJ-END*/
+const DJ_PORT = 47830;   // KHATA-DOCTOR ka lock port (doctor.js LOCK_PORT)
+const docJaga = docJagaMake({
+  now: () => Date.now(), uptime: () => os.uptime(), host: () => os.hostname(), log,
+  exists: f => fs.existsSync(path.join(DIR, f)),
+  status: async () => { if (!base) return null; let t; try { const s = await Promise.race([base.collection('blueAccess').doc('pcStatus').get(), new Promise((_, no) => { t = setTimeout(() => no(Error('pcStatus 20 sec mein nahi aaya')), 20000); })]); return s.exists ? s.data() : null; } finally { clearTimeout(t); } },
+  freshDoctor: () => djFresh({ get: getBuf, sha: sha256, fs, path, dir: DIR, base: UPD_BASE, day: today() }),
+  killDoctor: () => {   // port 47830 par LISTENING = doctor (atka hua) — sirf wahi PID band (WMI / tree nahi)
+    const pids = djPids(execFileSync('netstat', ['-ano', '-p', 'TCP'], { encoding: 'utf8', windowsHide: true, timeout: 15000 }), DJ_PORT, process.pid);
+    let n = 0; for (const pid of pids) { try { execFileSync('taskkill', ['/F', '/PID', String(pid)], { stdio: 'ignore', windowsHide: true, timeout: 15000 }); n++; } catch {} }
+    return n;
+  },
+  startDoctor: () => {
+    const cp = require('child_process'), bat = path.join(DIR, 'KHATA-DOCTOR.bat'), vbs = path.join(DIR, 'chupa.vbs');
+    if (fs.existsSync(vbs)) cp.spawn('wscript.exe', ['//B', '//Nologo', vbs, bat], { cwd: DIR, detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    else cp.spawn('cmd.exe', ['/c', bat], { cwd: DIR, detached: true, stdio: 'ignore', windowsHide: true }).unref();
+    return true;
+  },
+  note: t => { try { fs.writeFileSync(path.join(DIR, 'doctor-jaga.txt'), t); } catch {} },
+  mark: async info => { djLast = info; await beat(); },
+});
+
 const lock = net.createServer();
 lock.once('error', () => { console.log('nt-print pehle se chal raha hai.'); process.exit(3); });
 lock.listen(LOCK_PORT, '127.0.0.1', async () => {
@@ -468,4 +545,5 @@ lock.listen(LOCK_PORT, '127.0.0.1', async () => {
   else { await beat(); setInterval(beat, 60000); }
   listen();
   setTimeout(selfUpdate, 60000); setInterval(selfUpdate, 3 * 60000);   // v1.7 · v1.16: har 3 min (pehle 5)
+  if (!AWAZ_ONLY) { const dj = () => docJaga.check().then(r => { if (r === 'rescued' || r === 'fail') log('🚑 doctor jagao: ' + r); }).catch(e => log('🚑 doctor ki jaanch nahi hui: ' + String(e.message || e).slice(0, 80))); setTimeout(dj, 90000); setInterval(dj, 3 * 60000); }   // v1.22: 🚑
 });

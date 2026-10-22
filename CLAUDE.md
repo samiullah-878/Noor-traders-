@@ -50,6 +50,8 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 ## 4. POS / PC — KHATARNAK, dhyan se
 - POS = Cognitive Solutions (SQL Server). Jo script POS mein **likhti** hai (item-post, purchase-post, transfer-sync, sale-post…) us mein **koi value kabhi 0/khali na jaye jis se POS divide karta ho** — khas taur par **PackQty (carton pcs) kam az kam 1**. (18 Oct 2026: "kala tail khula" ka PackQty 0 gaya → counter sale "Divide by zero", bill band.)
 - Parhne wali scripts (rack, irep, stats) POS mein kabhi kuch nahi likhti.
+- **🩹 PC processes (22 Oct 2026, doctor v2.9)**: `taskkill /T` (poora tree) **KABHI NAHI** — Windows mare hue parent ka PID naye process ko de deta hai, /T phir be-taaluq scripts aur doctor ki apni loop bhi maar deta (21-Oct shaam 6:50: doctor chup + stock band, subah tak). Har `execSync` / `execFileSync` (wmic, taskkill, powershell, netstat) par `timeout` zaroor — bina hadd ek atka WMIC poore doctor ko hamesha ke liye rok deta tha. Process list na mile = andhe ho kar kuch shuru / band nahi.
+- **🚑 Doctor ka chowkidar (NT-PRINT v1.22)**: server PC par NT-PRINT har 3 min `blueAccess/pcStatus` dekhta hai — doctor 15 min chup = taza doctor.js + port 47830 wala atka doctor band (netstat, sirf wahi PID) + KHATA-DOCTOR.bat chupke (30 min mein ek dafa, host = pcStatus.host). Doctor aur NT-PRINT ek doosre ke nigraan — doctor wala PC badle to dono khud samajh lete (host).
 - **Godam/branch ko NAAM se pehchano, number se nahi** — POS mein branch 2 ka naam "Godam 1" hai. Godam 2 = naam mein "godam 2" (`collect().g2` / `jamaG2`). Branch 1 = NOOR TRADERS (dukan).
 - Ata/maida jaisa maal sirf godam se bikta hai — dukan ki sale mein mat gino.
 - Diagnostic scripts SQL password kabhi print na karein.
