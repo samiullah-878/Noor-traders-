@@ -5464,3 +5464,10 @@ html body #summary .bc-pd{min-height:30px;padding:0 12px;border-radius:999px;bor
 html body #summary .bc-tnw{font-style:normal;font-size:11.5px;font-weight:800;color:#CBD5E1!important}
 html body #summary .bc-fq{grid-column:1 / -1;font-size:11px;color:#FECACA!important;font-weight:700}
 html body #summary .bc-wrs small{font-size:11px;font-weight:700;color:#FFD9A0!important}
+/* v2.112.0: ⚡ boot chowkidar — sust net par splash ke neeche halki line (login page ki jhalak nahi) */
+#boot .boot-slow{display:block;margin:12px auto 0;max-width:280px;font:600 13px/1.45 system-ui,sans-serif;color:#fff;opacity:.82;letter-spacing:.01em}
+#boot .boot-skip{font-weight:700;box-shadow:0 6px 18px #0004}
+/* v2.112.0: 💾 mulazim card — server ke ✓ ka intezar */
+.st-nm .st-pend{display:inline-block;align-self:flex-start;width:max-content;max-width:100%;margin:2px 0 0;padding:2px 8px;border-radius:999px;background:#fff4d6;color:#8a5a00;font:700 11px/1.5 system-ui,sans-serif;font-style:normal;letter-spacing:.01em;animation:stPend 1.4s ease-in-out infinite}
+@keyframes stPend{50%{opacity:.55}}
+html.dk .st-nm .st-pend{background:#3a2c0b;color:#ffd77a}
