@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.112.1';
-import { liveLabelsHTML } from './barcode.js?v=2.112.1';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.113.0';
+import { liveLabelsHTML } from './barcode.js?v=2.113.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -173,6 +173,7 @@ function start(withCounts = true) {
       pcWarnAll = list.filter(r => String(r.id).startsWith('pcwarn-')); try { pcSeen(list); } catch {}   // v2.110.0: 📡 PC ka jawab
       soft();
       try { gmLive(); } catch {}   // v2.103.29: 🧮 stock milao live (doosre larke ki ginti)
+      try { if (farqMod && $('fqRoot')) farqMod.farqLive(stockRozApi()); } catch {}   // v2.113.0: ⚖️ stock farq live
     }, () => {}, pend => { pendCount = pend || new Set(); try { pcPaint(); } catch {} });   // v2.110.0: abhi sirf phone mein (server tak nahi)
     if (!pcTimer) pcTimer = setInterval(() => { try { pcTick(); } catch {} }, 5000);
   }
@@ -259,7 +260,7 @@ export function stockReport(fallback) {
     const past = Array.isArray(c.history) ? c.history.slice().reverse() : [];
     const hist = past.map(h => {
       const hd = Math.round((Number(h.total) - Number(h.sys)) * 100) / 100;
-      return `${stampText(h.at)}: ${num(h.ctn)}+${num(h.pcs)} = ${num(h.total)} · Farq ${hd > 0 ? '+' : ''}${num(hd)}`;
+      return `${stampText(h.at)}: ${num(h.ctn)}+${num(h.pcs)} = ${num(h.total)} · Farq ${hd > 0 ? '+' : ''}${num(hd)}${hWho(h, c) ? ' · ' + hWho(h, c) : ''}`;
     }).join('\n');
     return {
       name: r.name, code: r.code || '',
@@ -534,6 +535,9 @@ function brInfo() { if (brC && brKey === rows) return brC; const chunks = rows.f
   for (const c of chunks.slice().sort((a, b) => (a.order || 0) - (b.order || 0))) { if (!by.has(c.branch)) by.set(c.branch, []); by.get(c.branch).push(...c.items); }
   brC = { branches: [...by.keys()].sort((a, b) => a - b), names, by }; brKey = rows; return brC; }
 const itemsOf = b => brInfo().by.get(Number(b)) || [];
+// v2.113.0: jagah + id se item (Map — har dafa poori list nahi chhanni)
+const itIdx = new WeakMap();
+const itemAt = (b, id) => { const L = itemsOf(b); let m = itIdx.get(L); if (!m) { m = new Map(L.map(x => [String(x.id), x])); itIdx.set(L, m); } return m.get(String(id)) || null; };
 function rozLocs(all) {   // jagah NAAM se (POS branch 2 ka naam "Godam 1" hai — number se nahi)
   const { branches, names } = brInfo(), find = rx => branches.find(b => rx.test(String(names[b] || ''))), C = rozCfg();
   const B = { nt: find(/noor/i) ?? (branches.includes(1) ? 1 : undefined), g1: find(/godam\s*-?\s*1\b/i), g2: find(/godam\s*-?\s*2\b/i), g3: find(/godam\s*-?\s*3\b/i) };
@@ -621,20 +625,65 @@ export function stockRozChip() {
 export async function stockRozOpen(k) {
   if (!cloud) return; start();
   if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  if (isOwner() && !k) { try { (await import('./roz.js?v=2.112.1')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
+  if (isOwner() && !k) { try { (await import('./roz.js?v=2.113.0')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
   const L = rozLocs().filter(rozCan);
   if (!rozCfg().on) { notice('📋 Roz ki ginti malik ne band rakhi hai'); return; }
   if (!L.length) { notice('🔒 Roz ki ginti ki ijazat nahi (malik: Settings → Mulazim → 📋 Roz ki ginti)'); return; }
   const go = x => { try { window.ntRecentOpen?.({ open: { kind: 'stock', screen: 'roz', k: x } }); } catch { rozEnter(x); } };
   if (k || L.length === 1) { go(k || L[0].k); return; }
-  try { (await import('./roz.js?v=2.112.1')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
+  try { (await import('./roz.js?v=2.113.0')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
 }
 // roz.js ke liye andar ka saman (sirf parhna + wahi kaam jo buttons karte hain)
 export function stockRozApi() {
   return { cloud, notice, esc, num, isOwner: () => isOwner(), can, sid: () => rozSid(), who: () => whoName(), day: dayStr, cfg: rozCfg, locs: rozLocs, doc: rozDoc, rawDoc: k => counts.get('roz-' + k) || null, mine: rozMine, gina: rozGina, pool: rozPool, pend: rozPend,
     items: itemsOf, names: () => brInfo().names, count: (b, id) => { const c = counts.get(countId(b, id)); return c && !c.del ? c : null; }, sys: (c, r) => sysOf(c, r), counted: countedPcs,
     bill: (r, c, b) => billOf(r, c, b), round: () => roundNow(), autoOn: () => autoOn, post: () => postReq, postQ: () => postQ, bills: () => bills, posted: k => postedMap.get(k) || null, trJobs: () => trList || [], notes: () => { try { return tcAll(); } catch { return []; } },
-    seeStock: () => seeStock(), loaded: () => loaded, hidden: r => isHidden(r), counts: () => counts, enter: k => stockRozOpen(k), branchName: b => branchName(b, brInfo().names), locked: () => countOff, pc: () => stockPcState() };
+    seeStock: () => seeStock(), loaded: () => loaded, hidden: r => isHidden(r), counts: () => counts, enter: k => stockRozOpen(k), branchName: b => branchName(b, brInfo().names), locked: () => countOff, pc: () => stockPcState(),
+    // v2.113.0: ⚖️ Stock farq (farq.js) — sab jagah + doosri jagah ki ginti wahin
+    branches: () => brInfo().branches, item: (b, id) => itemAt(b, id), canCount: () => !!roundNow() && (!countOff || isOwner()) && (isOwner() || can('stock.count')), canWant: () => isOwner() && rozCfg().on,
+    rozKeys: bs => rozLocs().filter(L => (bs || []).map(Number).includes(Number(L.b))).map(L => L.k), save: (b, id, ctn, pcs) => oxSave(b, id, ctn, pcs) };
+}
+// ================= v2.113.0 ⚖️ STOCK FARQ + 📍 DOOSRI JAGAH (malik: "jo bhi larka stock gine, agar stock kam ho to ek screen mein dukan ka piece phir
+//   saath godam ka piece — dono apni apni jagah adjust ho kar wahi stock se bill bane, kam zyada apne khane mein; larkon ko khapna nahi parega") =================
+//   (1) Ginti ke neeche "📍 Baqi jagah": isi item ki doosri jagahon ka POS + aaj ki ginti, aur jo nahi gini wahin likh kar gino (WAHI writeCount,
+//       us jagah ki ginti) + asal farq (sab ka jor). Sirf jin ko stock dikhta hai (andhi ginti mein nahi). (2) ⚖️ Stock farq screen = farq.js.
+//   (3) Roz ki ginti ON: kisi jagah bara KAM nikla to wahi item doosri roz-jagahon ki list mein sab se upar (cloud.rozAsk) — wahan ka larka gine,
+//       jagah badli khud pakri jaye. Larke ko kuch nahi dikhta. AI NAHI. CAP stock.farq.
+let farqMod = null;
+const farqCan = () => seeStock() && (isOwner() || can('stock.farq'));
+async function farqOpenNow() { if (!farqCan()) { notice('⚖️ Stock farq — ijazat nahi (malik se kahein)'); return; } start(true); if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
+  try { farqMod = farqMod || await import('./farq.js?v=2.113.0'); recentPush({ key: 'farq', icon: '⚖️', label: 'Stock farq', open: { kind: 'stock', screen: 'farq' } }); farqMod.farqOpen(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
+// sab jagah (jo gini) ka asal farq — is round ki ginti
+function oxNet(id) { let net = 0, k = false, z = false, n = 0, pr = 0; for (const b of brInfo().branches) { const it = itemAt(b, id); if (!it) continue; const c = countOf(b, it); if (!c) continue; const f = r3(countedPcs(c) - Number(sysOf(c, it))); net += f; n++; if (f < -0.001) k = true; if (f > 0.001) z = true; pr = Number(it.prate) || pr; } return n ? { net: r3(net), rs: net * pr, both: k && z, n } : null; }
+function oxHTML(r, c, diff) {
+  if (!c || !farqCan() || pickedBranch === JAMA || Math.abs(Number(diff) || 0) < 0.001) return '';
+  const { branches, names } = brInfo(), id = String(r.id), canC = (isOwner() || can('stock.count')) && (!countOff || isOwner());
+  const rowsH = branches.filter(b => b !== pickedBranch).map(b => { const it = itemAt(b, id); if (!it || isHidden(it)) return '';
+    const oc = countOf(b, it), pk = Number(it.pack) || 0, stk = Number(it.stock) || 0, cps = pk > 1 ? ` (${num(Math.floor(Math.abs(stk) / pk))} ${esc(it.cName || 'ctn')}${r3(Math.abs(stk) % pk) ? ' ' + num(r3(Math.abs(stk) % pk)) : ''})` : '';
+    const cell = oc ? (() => { const f = r3(countedPcs(oc) - Number(sysOf(oc, it))); return `<span class="ox-g">gina <b>${num(countedPcs(oc))}</b> → <b class="${f < -0.001 ? 'r' : f > 0.001 ? 'g' : ''}">${Math.abs(f) < 0.001 ? '✓ barabar' : (f > 0 ? '+' : '') + num(f)}</b>${oc.byName ? ' · 👤 ' + esc(oc.byName) : ''}</span>`; })()
+      : canC ? `<span class="ox-in">${pk > 1 ? `<input type="number" inputmode="decimal" step="any" min="0" placeholder="${esc(it.cName || 'Ctn')}" data-ox-ctn="${b}|${esc(id)}">` : ''}<input type="number" inputmode="decimal" step="any" min="0" placeholder="${esc(it.uName || 'Pcs')}" data-ox-pcs="${b}|${esc(id)}"><button type="button" data-ox-save="${b}|${esc(id)}">✓ Gino</button></span>` : '<span class="ox-g">abhi nahi gina</span>';
+    return `<div class="ox-r${oc ? ' done' : ''}"><span class="ox-n"><span class="ox-t">${b === 1 ? '🏪' : '🏬'} <b>${esc(branchName(b, names))}</b></span><small>POS ${num(stk)}${cps}</small></span>${cell}</div>`; }).join('');
+  if (!rowsH) return '';
+  const N = oxNet(id), lab = N ? (N.both ? '🔁 jagah badli' : N.net < -0.001 ? '⬇️ asal kami' : N.net > 0.001 ? '⬆️ asal zyadti' : '✓ sab barabar') : '';
+  return `<div class="ox-box" data-ox-box="${esc(id)}"><div class="ox-h">📍 Baqi jagah — ${diff < 0 ? 'yahan kam hai, kahin aur to nahi?' : 'yahan zyada hai — kahin aur kam to nahi?'}</div>${rowsH}${N && N.n > 1 ? `<div class="ox-net ${N.both ? 'jagah' : N.net < 0 ? 'k' : N.net > 0 ? 'z' : 'e'}">⚖️ Asal farq (sab jagah): <b>${Math.abs(N.net) < 0.001 ? '0' : (N.net > 0 ? '+' : '') + num(N.net)}</b>${Math.abs(N.rs) >= 1 ? ' · Rs ' + (N.rs > 0 ? '+' : '') + num(Math.round(N.rs)) : ''} — ${lab}</div>` : ''}<button type="button" class="ox-open" data-sk-farq="1">⚖️ Stock farq — sab jagah ek screen ›</button></div>`;
+}
+async function oxSave(b, id, ctn, pcs) {
+  if (!roundNow()) throw Error(isOwner() ? 'Pehle "📋 Nayi ginti shuru" dabayein' : 'Malik ne abhi ginti shuru nahi ki');
+  if (countOff && !isOwner()) throw Error('🔴 Malik ne counting band ki hui hai');
+  if (!(isOwner() || can('stock.count'))) throw Error('Ginti ki ijazat nahi');
+  const it = itemAt(b, id); if (!it) throw Error('Is jagah yeh item nahi');
+  const pk = Number(it.pack) || 0, c = pk > 1 ? Math.max(0, Number(ctn) || 0) : 0, p = Math.max(0, Number(pcs) || 0) + (pk > 1 ? 0 : Math.max(0, Number(ctn) || 0)), total = r3(c * (pk > 1 ? pk : 0) + p);
+  if (!staleOk()) return null;
+  if (total === 0 && !confirm(`"${it.name}" (${branchName(b, brInfo().names)}) ki ginti ZERO save karein?`)) return null;
+  await writeCount(it, { ctn: c, pcs: p, total, bad: false }, null, false, b);
+  return { total };
+}
+// roz: bara KAM = doosri roz-jagahon ki list mein sab se upar (us jagah aaj nahi gina ho to)
+function rozAskOthers(item, b0, total) {
+  try { const C = rozCfg(); if (!C.on || !cloud?.rozAsk) return; const f = r3(total - (Number(item.stock) || 0)), pk = Number(item.pack) || 0, pr = Number(item.prate) || 0;
+    if (!(f < -0.001) || !((pk > 1 && -f >= pk) || -f * pr >= 500)) return;
+    for (const L of rozLocs()) { if (Number(L.b) === Number(b0)) continue; const it = itemAt(L.b, item.id); if (!it || isHidden(it) || rozGina(L.b, item.id)) continue; cloud.rozAsk(L.k, [String(item.id)]).catch(() => {}); }
+  } catch {}
 }
 // ================= v2.110.0: 📡 PC KA JAWAB (malik: "har ginti ke saath PC ka jawab — na mile to app bataye: PC jawab nahi de raha / save nahi hua, malik se rabta karo") =================
 //   Save → ⏳ bhej rahe (sirf phone mein — Firestore hasPendingWrites) → ☁️ Save ✓ (server) → ✅ PC ✓ (post-farq ne us second ka POS stock likha: sysPosAt === at, ~20–30 s).
@@ -942,7 +991,7 @@ function openGinti() {
     <div class="sk-chips">${[['all', 'Sab'], ['baqi', 'Bill baqi ' + num(pend.length)], ...(see ? [['kam', 'Kam ' + num(kam)], ['zy', 'Zyada ' + num(zy)], ['eq', 'Barabar']] : [])].map(([k, l]) => `<button type="button" class="sk-chip${gf === k ? ' on' : ''}" data-ginti-f="${k}">${l}</button>`).join('')}</div>
     <div class="sk-tbl"><div class="sk-th${see ? '' : ' nosee'}${own ? ' own' : ''}">${own ? '<span></span>' : ''}<span>ITEM</span>${see ? '<span>SYSTEM</span>' : ''}<span>GINA</span>${see ? '<span>FARQ</span>' : ''}</div>${rows || '<p class="sk-note">Is mein koi item nahi.</p>'}</div>
     <p class="sk-note">Line par tap = dobara gino / edit (jab tak bill na bane, wahi ginti badalti hai).</p>
-    <div class="sk-two">${list.length && see ? '<button type="button" class="sk-btn p" data-ginti-pdf="1">📄 PDF · WhatsApp</button>' : ''}${own && !autoOn ? '<button type="button" class="sk-btn" data-stock-round="new">Nayi ginti shuru</button>' : ''}</div>`}
+    <div class="sk-two">${list.length && see ? '<button type="button" class="sk-btn p" data-ginti-pdf="1">📄 PDF · WhatsApp</button>' : ''}${own && !autoOn ? '<button type="button" class="sk-btn" data-stock-round="new">Nayi ginti shuru</button>' : ''}</div>${farqCan() ? '<button type="button" class="sk-btn sk-farq-l" data-sk-farq="1">⚖️ Stock farq — dukan + godam ek screen (jagah badli khud) ›</button>' : ''}`}
     </div>`;
   if (!d.open) d.showModal();
 }
@@ -968,7 +1017,7 @@ function openRecount(itemId) {
   d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = '✏️ Dobara gino — ' + r.name;
   $('dialogBody').innerHTML = `<div class="sk-sheet" id="skRe" data-re-item="${esc(r.id)}">
     <div class="sk-rehead"><b>${esc(r.name)}</b><small>${seeStock() ? 'system ' + num(r.stock) + ' ' + esc(r.uName || 'Pcs') : esc(r.code || '')}${per > 1 ? ' · 1 ' + esc(r.cName || 'Ctn') + ' = ' + num(per) : ''}${seeStock() && r.prate ? ' · khareed Rs ' + num(r.prate) : ''}</small></div>
-    ${H.length ? `<div class="sk-list"><div class="sk-lh">AAJ KI GINTI</div>${H.map((h, i) => `<div class="sk-hist${i === 0 ? ' cur' : ''}"><span class="t"><b>${esc(stampText(h.at))}${i === 0 ? ' (abhi lagi hui)' : ''}${h.tick ? ' · ✓ tick' : ''}</b><span>${seeStock() ? 'system ' + num(h.sys) + ' · ' : ''}gina ${num(h.total)}${h.ctn ? ' (' + num(h.ctn) + ' ctn + ' + num(h.pcs) + ')' : ''}</span></span>${seeStock() ? `<b class="${h.total - h.sys < 0 ? 'r' : h.total - h.sys > 0 ? 'g' : 'z'}">${h.total - h.sys > 0 ? '+' : ''}${num(Math.round((h.total - h.sys) * 100) / 100)}</b>` : ''}</div>`).join('')}</div>` : ''}
+    ${H.length ? `<div class="sk-list"><div class="sk-lh">AAJ KI GINTI</div>${H.map((h, i) => `<div class="sk-hist${i === 0 ? ' cur' : ''}"><span class="t"><b>${esc(stampText(h.at))}${i === 0 ? ' (abhi lagi hui)' : ''}${h.tick ? ' · ✓ tick' : ''}</b><span>${seeStock() ? 'system ' + num(h.sys) + ' · ' : ''}gina ${num(h.total)}${h.ctn ? ' (' + num(h.ctn) + ' ctn + ' + num(h.pcs) + ')' : ''}${hWhoHTML(h, c)}</span></span>${seeStock() ? `<b class="${h.total - h.sys < 0 ? 'r' : h.total - h.sys > 0 ? 'g' : 'z'}">${h.total - h.sys > 0 ? '+' : ''}${num(Math.round((h.total - h.sys) * 100) / 100)}</b>` : ''}</div>`).join('')}</div>` : ''}
     <div class="sk-lab">Nayi ginti (physical)</div>
     <div class="sk-phy">${per > 1 ? `<label>${esc(r.cName || 'Ctn')}<input type="number" step="any" inputmode="decimal" data-re-ctn="1" value="${c ? esc(String(c.ctn ?? '')) : ''}"></label>` : ''}<label>${esc(r.uName || 'Pcs')}<input type="number" step="any" inputmode="decimal" data-re-pcs="1" value="${c ? esc(String(c.pcs ?? '')) : ''}"></label></div>
     ${seeStock() ? `<div class="sk-farq ${f < 0 ? 'r' : f > 0 ? 'g' : 'z'}" id="reFarq">${c ? `${num(countedPcs(c))} ${esc(r.uName || 'Pcs')} · farq ${f > 0 ? '+' : ''}${num(f)}${r.prate ? ' · Rs ' + (f > 0 ? '+' : '') + num(Math.round(f * r.prate)) : ''}` : 'Ginti likhein'}</div>` : ''}
@@ -1049,6 +1098,7 @@ function summaryHTML(branches, pick, items, meta, names, canJama = false) {
     canEditItem() ? tile('data-stock-urdu', '🔤', 'Urdu naam') : '',
     can('stock.ratepdf') ? tile('data-stock-ratepdf', '📄', 'Rate list PDF') : '',   // v2.103.41
     (isOwner() || (rozCfg().on && ROZ_LOC.some(x => can(x[3])))) ? tile('data-roz-open', '📋', 'Roz ki ginti') : '',   // v2.109.0
+    farqCan() ? tile('data-sk-farq', '⚖️', 'Stock farq') : '',   // v2.113.0: sab jagah ek screen
   ].filter(Boolean);
   const extra = filter === 'baqi' ? 'Ginti baqi' : filter === 'farq' ? '⚖️ Farq wale' : filter === 'nishan' ? '⏳ Baqi nishan' : filter === 'check' ? '🔍 Check wale' : filter === 'hidden' ? 'Band items' : filter === 'hday' && hDay ? '🕘 ' + hDayLabel(hDay) : '';
   const fN = (hDay ? 1 : 0) + (sort !== 'name' ? 1 : 0) + (extra ? 1 : 0);
@@ -2490,6 +2540,7 @@ function countHTML(r) {
     ${c && seeStock() ? `<small style="align-self:center">Ginti ${num(countedPcs(c))} · Us waqt system ${num(sysOf(c, r))}${sysSure(c) ? ' ✓' : autoOn || (pcOn() && pcState(c, countId(pickedBranch, r.id))) ? '' : ' (PC tasdeeq baqi)'} · Farq ${diff > 0 ? '+' : ''}${num(diff)}${
       r.prate ? ' · Rs ' + (diff > 0 ? '+' : '') + num(diff * r.prate) : ''}${(() => { const bi = billOf(r, c); return bi.k === 'done' ? ` · <b class="sk-ok">✓ ${esc(bi.no)}</b>` : bi.k === 'part' ? ` · <b class="sk-w">${esc(bi.no)} (${num(bi.q)}) · baqi</b>` : bi.k === 'baqi' ? ' · <b class="sk-w">bill baqi</b>' : ''; })()}</small>` : ''}
   </div>
+  ${oxHTML(r, c, diff)}
   ${flagHTML(r)}
   ${c ? historyHTML(r, c) : oldHistoryHTML(r)}`;
 }
@@ -2501,6 +2552,10 @@ function oldHistoryHTML(r) {
   return `<details class="old-hist"><summary>🕘 Pichhli ginti ki history (${n})</summary>${historyHTML(r, old)}</details>`;
 }
 
+// v2.113.0 (malik: "jis larke ki id se save ho us ka naam history mein bhi aaye"): har line ka naam h.n (naya) — purani lines mein naam
+//   save hi nahi hota tha, sirf aakhri (h.at === c.at) ka naam c.byName se.
+const hWho = (h, c) => String(h?.n || (c && Number(h?.at) && Number(h.at) === Number(c.at) ? c.byName || '' : '') || '').trim();
+const hWhoHTML = (h, c) => { const w = hWho(h, c); return w ? ` <span class="hs-who">👤 ${esc(w)}</span>` : ''; };
 function historyHTML(r, c) {
   const R = hRange();   // v2.99.87: sirf chune din ki history
   const list = Array.isArray(c?.history) ? c.history.filter(h => hIn(h, R)).reverse() : [];
@@ -2509,9 +2564,10 @@ function historyHTML(r, c) {
     const d = Math.round((Number(h.total) - Number(h.sys)) * 100) / 100;
     const ctn = esc(r.cName || 'Ctn'), pcs = esc(r.uName || 'Pcs');
     const jama = h.tick ? '<b style="color:#0b6b2e">✓ Tick — system jaisa</b> · ' : h.add ? `<b style="color:#0b6b2e">+${num(h.add.ctn)} ${ctn} + ${num(h.add.pcs)} ${pcs}${h.note ? ' (' + esc(h.note) + ')' : ''}</b> → ` : (h.note ? `(${esc(h.note)}) ` : '');
-    if (!seeStock()) return `${esc(stampText(h.at))} — ${h.tick ? '<b style="color:#0b6b2e">✓ Tick</b> · ' : ''}<b>${num(h.ctn)} ${ctn} + ${num(h.pcs)} ${pcs}</b> · ${num(h.total)} ${pcs}`;   // v2.109.0: stock nazar nahi = system / farq bhi nahi (andhi ginti)
+    const who = hWhoHTML(h, c);   // v2.113.0: 👤 naam
+    if (!seeStock()) return `${esc(stampText(h.at))} — ${h.tick ? '<b style="color:#0b6b2e">✓ Tick</b> · ' : ''}<b>${num(h.ctn)} ${ctn} + ${num(h.pcs)} ${pcs}</b> · ${num(h.total)} ${pcs}${who}`;   // v2.109.0: stock nazar nahi = system / farq bhi nahi (andhi ginti)
     return `${esc(stampText(h.at))} — ${jama}<b>${num(h.ctn)} ${ctn} + ${num(h.pcs)} ${pcs}</b> · ${num(h.total)} ${pcs} · System ${num(h.sys)} · Farq ${d > 0 ? '+' : ''}${num(d)}${
-      r.prate ? ' · Rs ' + (d > 0 ? '+' : '') + num(d * r.prate) : ''}`;
+      r.prate ? ' · Rs ' + (d > 0 ? '+' : '') + num(d * r.prate) : ''}${who}`;
   }).join('<br>')}</div>`;
 }
 
@@ -2624,6 +2680,10 @@ document.addEventListener('click', e => {
   if (e.target.closest?.('[data-roz-more]')) { rozTake(true); return; }   // v2.109.0: 📋 ➕ aur N
   if (e.target.closest?.('[data-roz-x]')) { rozExit(); rerender(); return; }
   if (e.target.closest?.('[data-roz-open]')) { const v = e.target.closest('[data-roz-open]').dataset.rozOpen || ''; stockRozOpen(v === '1' ? '' : v); return; }
+  if (e.target.closest?.('[data-sk-farq]')) { farqOpenNow(); return; }   // v2.113.0: ⚖️ Stock farq
+  { const ox = e.target.closest?.('[data-ox-save]'); if (ox) { const [b, id] = ox.dataset.oxSave.split('|'), box = ox.closest('.ox-r'), cI = box?.querySelector('[data-ox-ctn]'), pI = box?.querySelector('[data-ox-pcs]');
+    if (!cI?.value && !pI?.value) { notice('Ginti likhein (Ctn / Pcs)'); return; }
+    ox.disabled = true; oxSave(Number(b), id, Number(cI?.value || 0) || 0, Number(pI?.value || 0) || 0).then(r => { if (r) notice('✓ ' + branchName(Number(b), brInfo().names) + ': ginti save (' + num(r.total) + ')'); }).catch(er => notice('⚠️ Ginti save nahi hui: ' + errTxt(er))).finally(() => { ox.disabled = false; }); return; } }
   const lb = e.target.closest?.('[data-stock-label]');
   if (lb) { openLabels(lb.dataset.stockLabel); return; }
   const lp = e.target.closest?.('[data-label-print]');
@@ -2837,8 +2897,10 @@ function readCount(item, skipBlank) {
 async function writeCount(item, v, add = null, tick = false, br = pickedBranch) {
   const at = Date.now();
   const old = counts.get(countId(br, item.id));
-  const past = Array.isArray(old?.history) ? old.history : [];
+  // v2.113.0: pichhli aakhri line ka naam (purane save mein line par naam nahi tha, sirf byName) — naye save se pehle line mein pakka kar do
+  const past = Array.isArray(old?.history) ? old.history.map((x, i, a) => i === a.length - 1 && x && !x.n && old.byName && Number(x.at) === Number(old.at) ? { ...x, n: String(old.byName).slice(0, 40) } : x) : [];
   const h = { at, ctn: v.ctn, pcs: v.pcs, total: v.total, sys: item.stock };
+  const nm = whoName(); if (nm) h.n = nm;   // v2.113.0: 👤 jis larke ke login se save hua (history ki har line par naam)
   if (add) { h.add = { ctn: add.ctn, pcs: add.pcs, total: add.total }; if (add.note) h.note = add.note; }
   if (tick) h.tick = true;
   const history = [...past, h].slice(-20);
@@ -2889,7 +2951,7 @@ async function saveCount(itemId, button, mode = 'save') {
   if (v.total === 0 && !confirm(`"${item.name}" ki ginti ZERO save karein?\n\n${zeroText(item)}`)) return;
   button.disabled = true;
   try {
-    if (!(mode === 'save' && jama && v.total === countedPcs(old) && !add)) await writeCount(item, v, add);
+    if (!(mode === 'save' && jama && v.total === countedPcs(old) && !add)) { await writeCount(item, v, add); if (mode !== 'baqi') rozAskOthers(item, pickedBranch, v.total); }   // v2.113.0
     if (mode === 'baqi') { if (!baqi) await setFlag(item.id, { baqi: true }); const id = CSS.escape(String(item.id)); ['ctn', 'pcs', 'tot'].forEach(k => { const b = $('list').querySelector(`[data-count-${k}="${id}"]`); if (b) b.value = ''; }); }
     else if (baqi) await setFlag(item.id, { baqi: false });
     itemMsg(item.id, '✓ ' + item.name + (mode === 'baqi' ? ` — ab tak ${num(v.total)} ${item.uName || 'Pcs'} (baqi ginna hai)` : add ? ` — jama: kul ${num(v.total)} ${item.uName || 'Pcs'}` : ` — ginti save (${num(v.total)} ${item.uName || 'Pcs'})`), true);
@@ -4778,8 +4840,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.112.1';
-import { recentPush } from './recent.js?v=2.112.1';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.113.0';
+import { recentPush } from './recent.js?v=2.113.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)
@@ -4787,7 +4849,8 @@ export function stockScreenOpen(o = {}) { try { $('dialog')?.close(); } catch {}
   if (o.screen === 'rack') { rackOpen(); if (o.g != null && collect().branches.includes(Number(o.g))) rk.g = Number(o.g); if (o.tab && RK_TABN[o.tab]) rk.tab = o.tab; rkPaint(); rkRecent(); }
   else if (o.screen === 'milao') gmOpen(); else if (o.screen === 'ratelist') rpOpen(); else if (o.screen === 'transfer') openTransfer(); else if (o.screen === 'check') openTransferCheck(o.view || 'nikle'); else if (o.screen === 'register') openRegister(); else if (o.screen === 'ginti') openGinti(); else if (o.screen === 'ijobs') ijDlg(); else if (o.screen === 'band') bandDlg(o.q || '');
   else if (o.screen === 'factory') { facOnly = true; inPick = null; const s = $('search'); if (s) s.value = ''; limit = PAGE; rerender(); }   // v2.107.0: 🏭 Factory stock
-  else if (o.screen === 'roz') { if (o.k) rozEnter(String(o.k)); else stockRozOpen(); } }   // v2.109.0: 📋 roz ki ginti
+  else if (o.screen === 'roz') { if (o.k) rozEnter(String(o.k)); else stockRozOpen(); }   // v2.109.0: 📋 roz ki ginti
+  else if (o.screen === 'farq') farqOpenNow(); }   // v2.113.0: ⚖️ stock farq
 const AG = (() => {
   const S_ = { type: 'STRING' }, N_ = { type: 'NUMBER' }, B_ = { type: 'BOOLEAN' }, A_ = it => ({ type: 'ARRAY', items: it }), O_ = (p, r = []) => ({ type: 'OBJECT', properties: p, required: r });
   const names = () => collect().names || {};

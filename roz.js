@@ -84,7 +84,7 @@ function dashHTML() {
   const qLine = q ? `<div class="rz-q${qBusy ? ' busy' : ''}">${(q.jobs || []).map(j => `<span class="${j.st === 'done' ? 'ok' : j.st === 'failed' ? 'bad' : j.st === 'nothing' ? 'mut' : ''}">${j.st === 'done' ? '✓' : j.st === 'failed' ? '❌' : j.st === 'nothing' ? '—' : '⏳'} ${E(A.branchName(j.branch))} ${j.kind === 'kam' ? 'kam' : 'zyada'} (${A.num((j.items || []).length)})${j.saleNo ? ' #' + E(j.saleNo) : j.returnNo ? ' R#' + E(j.returnNo) : ''}${j.error ? ' · ' + E(String(j.error).slice(0, 60)) : ''}</span>`).join('')}${qBusy ? '<small>PC ek ek kar ke bill + parchi bana raha hai…</small>' : ''}</div>` : '';
   return `${set}${lockW}${pcW}
     <div class="rz-locs">${Ls.map(locCard).join('') || '<p class="rz-say">Koi jagah ON nahi — ⋮ se jagah chunein.</p>'}</div>
-    <div class="rz-farq"><div class="rz-fh"><b>⚖️ Farq — aaj + pichhle 7 din (bill baqi)</b><small>${A.num(F.length)} items</small></div>
+    <div class="rz-farq"><div class="rz-fh"><b>⚖️ Farq — aaj + pichhle 7 din (bill baqi)</b><small>${A.num(F.length)} items</small></div>${F.length ? '<button type="button" class="rz-mini rz-fq" data-sk-farq="1">⚖️ Har item ek line mein — dukan + har godam saath (Stock farq) ›</button>' : ''}
       ${F.length ? KINDS.map(grp).join('') : '<p class="rz-say">✓ Koi farq baqi nahi.</p>'}
       ${qLine}
       ${fix.length ? `<button type="button" class="rz-big ok" data-rz-fix="1"${qBusy ? ' disabled' : ''}>✅ Sab theek karo — ${A.num(fix.length)} items · ${rs(fixRs)}<small>"stock fraq" bill (kam = Sale · zyada = Return) — PC parchi khud chhapega</small></button>` : ''}

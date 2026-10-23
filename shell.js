@@ -14,8 +14,9 @@
 //  🔠 Apni marzi: likhai size (main zoom) · headings size · likhai rang · headings rang — har phone (localStorage sam-marzi);
 //     malik "👑 Sab mulazimon par" = blueAccess/look {marzi, mAt} (cloud.setMarzi). AI nahi.
 // =====================================================================================================
-import { recentList } from './recent.js?v=2.112.1';
-import { agentRegister } from './agent.js?v=2.112.1';
+import { recentList } from './recent.js?v=2.113.0';
+import { agentRegister } from './agent.js?v=2.113.0';
+import { smartHit, hlName } from './smart-search.js?v=2.113.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -87,7 +88,7 @@ function ensureRoot() {
 }
 const isOpen = () => !!root && !root.hidden;
 function place() { const host = dlgOn() ? $('dialog') : document.body; if (root.parentNode !== host) host.appendChild(root); }   // khirki top-layer mein hoti hai — sheet usi ke andar warna peeche reh jaye
-function close() { if (root) { root.hidden = true; document.documentElement.classList.remove('mn-open'); } }
+function close() { if (root) { const bk = root.dataset.back; delete root.dataset.back; delete root.dataset.mode; root.hidden = true; document.documentElement.classList.remove('mn-open'); if (bk === 'set') setTimeout(() => { try { window.ntSettingsOpen?.(); } catch {} }, 0); } }   // v2.113.0: Settings se khula (🔠 Apni marzi) = band par wapas Settings
 function haalatHTML() {
   const bar = $('homeBar'); if (!bar || bar.hidden) return '';
   const ch = bar.querySelector('.hchips')?.innerHTML || '', nr = clean(bar.querySelector('.hnarr')?.textContent || '');
@@ -117,8 +118,8 @@ function bodyHTML() {
   if (dlg) return `<h3 class="mn-h">${esc(title)}</h3><p class="mn-sub">Is khirki ke chips aur kaam — chunein, khirki wahi rahegi</p>${G}`;
   return `<h3 class="mn-h">${esc(title)} — kya karna hai?</h3><p class="mn-sub">${L.length ? 'Jo chunein wohi poori screen par · 📌 = screen par bahar' : 'Is screen ke kaam jald yahan aayenge'}</p>${haalatHTML()}${dinHTML()}${G}${appHTML()}`;
 }
-function open() { ensureRoot(); place(); $('mnBody').innerHTML = bodyHTML(); root.hidden = false; document.documentElement.classList.add('mn-open'); }
-function repaintOpen() { if (isOpen()) { const b = $('mnBody'), y = b?.scrollTop || 0; b.innerHTML = bodyHTML(); b.scrollTop = y; } }
+function open() { ensureRoot(); place(); delete root.dataset.back; delete root.dataset.mode; $('mnBody').innerHTML = bodyHTML(); root.hidden = false; document.documentElement.classList.add('mn-open'); }
+function repaintOpen() { if (isOpen() && root.dataset.mode !== 'dh') { const b = $('mnBody'), y = b?.scrollTop || 0; b.innerHTML = bodyHTML(); b.scrollTop = y; } }
 
 // ---------------- khirki ka box (v2.105.2): ⋮ se chuna → khirki mein wahin khul jaye (khirki band hone tak) ----------------
 const dShow = new Set(); let dStyle = null;
@@ -293,7 +294,7 @@ document.addEventListener('click', e => {
 });
 // look (roshan ⇄ andheri) badle to sahi rang khud
 try { new MutationObserver(() => mApply()).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] }); } catch {}
-document.addEventListener('click', e => { if (e.target.closest?.('#marziBtn')) { try { $('dialog')?.close(); } catch {} marziOpen(); } });
+document.addEventListener('click', e => { if (e.target.closest?.('#marziBtn')) { const fromSet = !!$('dialog')?.open && /^Settings\b/.test($('dialogTitle')?.textContent || ''); try { $('dialog')?.close(); } catch {} marziOpen(); if (fromSet && root) root.dataset.back = 'set'; } });
 
 // ---------------- ☰ screen chips (v2.105.0 — malik: "chips oper top par chhote · screen ke andar chhupe rahein · upar baayein se khulein") ----------------
 const navOpen = () => document.documentElement.classList.contains('nav-open');
@@ -316,8 +317,8 @@ function paintNavBtn() {
 }
 // ---------------- setup ----------------
 let moT = 0;
-const later = () => { clearTimeout(moT); moT = setTimeout(() => { shellRoute(); if (F) { const x = items(mainEl()).find(y => y.k === F); if (!x) unfocus(); else fbar(x); } repaintOpen(); }, 120); };
-export function shellRoute() { const v = scr(); if (shellRoute.v !== v) { shellRoute.v = v; if (F) unfocus(); lastSub = ''; if (navOpen()) navSet(false); } ftPaint(); paintSub(); paintBadge(); paintNavBtn(); }
+const later = () => { clearTimeout(moT); moT = setTimeout(() => { shellRoute(); dhLearn(); if (F) { const x = items(mainEl()).find(y => y.k === F); if (!x) unfocus(); else fbar(x); } repaintOpen(); }, 120); };
+export function shellRoute() { const v = scr(); if (shellRoute.v !== v) { shellRoute.v = v; if (F) unfocus(); lastSub = ''; if (navOpen()) navSet(false); } dhPaintBtn(); ftPaint(); paintSub(); paintBadge(); paintNavBtn(); }
 // v2.105.1: malik — "screen side par na khiske, fix rahe" (phone). Poori screen / khirki (#dialogBody, main, list) ka daayein-baayein
 //   khisakna hamesha 0 par wapas — chahe focus / scrollIntoView ne khiskaya ho. Chips ki qatar aur tables apni jagah khiskti rehti hain.
 function lockX() {
@@ -342,18 +343,149 @@ function dlgBtnSetup() {
   new MutationObserver(() => { if (!dlgOn()) { if (root?.parentNode === d) close(); dReset(); } soon(); }).observe(d, { attributes: true, attributeFilter: ['open'] });
   d.addEventListener('close', () => { if (root?.parentNode === d) close(); dReset(); upd(); });
   let lastT = ''; new MutationObserver(() => { const tt = $('dialogTitle')?.textContent || ''; if (tt !== lastT) { lastT = tt; dReset(); } soon(); }).observe($('dialogTitle') || d, { childList: true, characterData: true, subtree: true });   // nayi khirki = purane khule box band
+  let setT = 0; new MutationObserver(() => { clearTimeout(setT); setT = setTimeout(dhLearnSettings, 250); }).observe(body, { childList: true });   // v2.113.0: 🔍 Settings ki cheezein yaad
 }
 export function shellSetup(h = {}) {
-  H = h; mApply(); navBtnSetup(); lockX(); dlgBtnSetup();
+  H = h; mApply(); navBtnSetup(); lockX(); dlgBtnSetup(); dhBtnSetup();
   const st = $('settings');
   if (st && !st.dataset.mn0) { st.dataset.mn0 = '1'; const old = st.onclick; H.openSettings = H.openSettings || (() => old?.call(st)); st.onclick = () => { if (isOpen()) close(); else open(); }; st.setAttribute('aria-label', 'Is screen ke kaam'); st.title = 'Is screen ke kaam'; }
   // header ka ‹ — focus ho to pehle focus se wapas
   $('back')?.addEventListener('click', e => { if (F) { e.preventDefault(); e.stopImmediatePropagation(); unfocus(); } }, true);
   const mo = new MutationObserver(later); for (const id of ['summary', 'list', 'actions', 'homeBar']) if ($(id)) mo.observe($(id), { childList: true, subtree: id === 'homeBar' || id === 'actions' });
-  window.ntShellRoute = shellRoute; window.ntShellOpen = open; window.ntShellFocus = focus;
+  window.ntShellRoute = shellRoute; window.ntShellOpen = open; window.ntShellFocus = focus; window.ntShellClose = () => { if (isOpen()) { close(); return true; } return false; };   // v2.113.0: phone ka back = sheet band
   shellRoute();
 }
 mApply();   // pehli paint se pehle (flash nahi)
+
+// ================= v2.113.0 🔍 DHOONDO (malik: "small icon search bar — default mulazim aur malik — har screen, har chips search, ek click par
+//   seedha us screen par") =================
+//   Header ka 🔍 → ek list: 📱 screens (☰ wali, sirf ijazat wali) · 🧰 har screen ke ⋮ chips (is phone par jo screen khuli — khud yaad
+//   localStorage sam-dh-cat; pehli dafa ke liye dh-cat.js ka naqsha) · ⚙️ Settings ki har cheez (Settings khulte hi yaad). Spelling maaf
+//   (smart-search) + hum-maani lafz (kharcha = akhrajat …). Tap = seedha wahan — screen khol kar chip khud dabta hai. CAP app.dhoondo
+//   (har mulazim, shuru se ON). AI NAHI.
+const DH_LS = 'sam-dh-cat', DH_SET = 'sam-dh-set', DH_REC = 'sam-dh-rec', DH_DAY = 864e5;
+const VIEW_NAV = { khata: 'khataNav', daily: 'dailyNav', expenses: 'expenseNav', cash: 'cashNav', dasti: 'dastiNav', history: 'historyNav', notes: 'notesNav', hbl: 'hblNav', barcode: 'barcodeNav', nazar: 'nazarNav', galla: 'gallaNav', larka: 'larkaNav', irep: 'irepNav', factory: 'factoryNav', gaari: 'gaariNav', due: 'dueNav', purchase: 'purchaseNav', ppurchase: 'purchaseNav', pos: 'posNav', stock: 'stockNav', transfer: 'transferNav', sale: 'saleNav' };
+const dhRd = k => { try { const o = JSON.parse(localStorage.getItem(k) || 'null'); return o && typeof o === 'object' ? o : null; } catch { return null; } };
+const dhWr = (k, o) => { try { localStorage.setItem(k, JSON.stringify(o)); } catch {} };
+const dhCan = () => { try { return !!H.owner?.() || H.can?.('app.dhoondo') !== false; } catch { return true; } };
+const dhKey = x => String(x.k).startsWith('ft.') ? 'ft:' + x.t : x.k;   // neeche ki patti ke kaam: naam se pehchan (index badal sakta)
+let DHS = null;
+async function dhStatic() { if (DHS) return DHS; try { DHS = (await import('./dh-cat.js?v=2.113.0')).DH_CAT || {}; } catch { DHS = {}; } return DHS; }
+// is screen ke chips yaad — jo kabhi dikhe sab (haalat ke hisaab se aate jate hain), 21 din na dikhe to bhool jao
+const dhSig = new Map();   // view → pichhli dafa ke chips (wahi hon to localStorage chhoo bhi nahi — tez)
+function dhLearn() {
+  try {
+    if (dlgOn() || H.selected?.() || F || !mainEl()) return;
+    const v = vw(), nav = VIEW_NAV[v]; if (!nav) return;
+    const now = Date.now(), L = items(mainEl()).filter(x => x.t && x.k && x.t.length < 80);
+    if (!L.length) return;
+    const sig = L.map(x => [dhKey(x), x.type, x.i, x.t, x.s, x.g].join('\u0001')).join('\u0002') + '|' + clean($('title')?.textContent || '');
+    const ps = dhSig.get(v); if (ps && ps.sig === sig && now - ps.at < DH_DAY) return; dhSig.set(v, { sig, at: now });
+    const C = dhRd(DH_LS) || {}, old = C[v] || { items: [] }, by = new Map((old.items || []).map(x => [x.k, x]));
+    let ch = false;
+    for (const x of L) { const k = dhKey(x), o = by.get(k), n = { k, y: x.type, i: x.i || '', t: x.t, s: x.s || '', g: x.g || '', at: now };
+      if (!o || o.t !== n.t || o.s !== n.s || o.i !== n.i || o.g !== n.g || o.y !== n.y || now - (o.at || 0) > DH_DAY) { by.set(k, n); ch = true; } }
+    for (const [k, o] of by) if (now - (o.at || 0) > 21 * DH_DAY) { by.delete(k); ch = true; }
+    const t = clean($('title')?.textContent || '');
+    if (!ch && old.t === t) return;
+    C[v] = { nav, t, items: [...by.values()].slice(-120), at: now }; dhWr(DH_LS, C);
+  } catch {}
+}
+function dhLearnSettings() {
+  try { if (!dlgOn() || !/^Settings\b/.test($('dialogTitle')?.textContent || '')) return;
+    const rows = [...$('dialogBody').querySelectorAll('.set-row[id]')].map(r => ({ id: r.id, i: clean(r.querySelector('.set-ic')?.textContent || ''), t: clean(r.querySelector('.set-tx b')?.textContent || ''), s: clean(r.querySelector('.set-tx small')?.textContent || ''), g: clean(r.closest('.set-grp')?.querySelector('h4')?.textContent || '') })).filter(x => x.t);
+    if (rows.length) dhWr(DH_SET, { at: Date.now(), own: !!H.owner?.(), rows });
+  } catch {}
+}
+const EMO1 = /^((?:\p{Extended_Pictographic}|\p{Regional_Indicator})(?:\uFE0F|\u200D|\p{Extended_Pictographic}|\p{Emoji_Modifier})*)\s*(.*)$/u;
+const NAV_IC = { khataNav: '📒', transferNav: '⇄', notesNav: '🔔', dailyNav: '📅', dueNav: '⏰', purchaseNav: '🛒', posNav: '🖥', saleNav: '🧾', stockNav: '📦', expenseNav: '💸', cashNav: '💰', dastiNav: '🤝', hblNav: '🏦', barcodeNav: '🏷', historyNav: '🕘', nazarNav: '📺', gallaNav: '💰', larkaNav: '👦', irepNav: '📊', factoryNav: '🏭', gaariNav: '🚚' };
+async function dhData() {
+  const S = await dhStatic(), own = !!H.owner?.();
+  const navs = [...document.querySelectorAll('.app-nav button')].filter(b => b.id && /Nav$/.test(b.id) && b.id !== 'switchNav' && !b.hidden && !b.closest('[hidden]'));
+  const vis = new Set(navs.map(b => b.id)), out = [];
+  for (const b of navs) { const m = clean(b.textContent).match(EMO1), t = (m ? (m[2] || clean(b.textContent)) : clean(b.textContent)).replace(/^[^\p{L}\p{N}]+/u, '') || clean(b.textContent); out.push({ kind: 'scr', nav: b.id, i: (m && m[1]) || NAV_IC[b.id] || '📱', t, s: '', p: 'Screen' }); }
+  const C = dhRd(DH_LS) || {}, SV = S.views || {};
+  for (const v of new Set([...Object.keys(SV), ...Object.keys(C)])) {
+    const nav = VIEW_NAV[v]; if (!nav || !vis.has(nav)) continue;
+    const live = C[v], st = SV[v], by = new Map();
+    if (st && (own || !live)) for (const x of st.items || []) if (own || !x.o) by.set(x.k, x);   // pehli dafa: naqsha (malik ke sab; mulazim ke aam)
+    if (live) for (const x of live.items || []) by.set(x.k, x);
+    const p = (navs.find(b => b.id === nav) ? clean(navs.find(b => b.id === nav).textContent) : '') || live?.t || st?.t || v;   // ☰ jaisa naam (⇄ Transfer, 🏦 HBL)
+    for (const x of by.values()) out.push({ kind: 'chip', v, nav, k: x.k, y: x.y, i: x.i || '•', t: x.t, s: x.s || '', g: x.g || '', p });
+  }
+  const LS = dhRd(DH_SET), rows = LS && Array.isArray(LS.rows) && (!!LS.own === own) ? LS.rows : (S.settings || []).filter(x => own || !x.o);
+  for (const x of rows) out.push({ kind: 'set', id: x.id, i: x.i || '⚙️', t: x.t, s: x.s || '', g: x.g || '', p: '⚙️ Settings' });
+  return out;
+}
+const SYN = [['kharcha', 'akhrajat', 'expense', 'kharch'], ['ginti', 'count', 'gin'], ['mulazim', 'staff', 'larka', 'larke'], ['khata', 'hisaab', 'hisab', 'account'], ['parchi', 'print', 'receipt', 'rasid', 'printer'], ['tasveer', 'photo', 'pic', 'picture', 'camera'], ['bank', 'hbl', 'alfalah'], ['maal', 'stock', 'saman'], ['wapas', 'return'], ['report', 'pdf'], ['rate', 'qeemat', 'price'], ['band', 'off'], ['transfer', 'tn', 'note']];
+const dhF = s => String(s || '').toLowerCase().normalize('NFKC');
+function dhScore(x, q) {
+  const toks = dhF(q).split(/\s+/).filter(Boolean); if (!toks.length) return 0;
+  const T = dhF(x.t), O = dhF([x.s, x.g, x.p].join(' ')), all = T + ' ' + O; let sc = 0;
+  for (const t0 of toks) {
+    const alts = [t0, ...(t0.length >= 3 ? (SYN.find(g => g.some(w => w.startsWith(t0) || (t0.startsWith(w) && w.length >= 3))) || []) : [])].filter(Boolean);
+    let best = 0;
+    for (const t of alts) { if (T.startsWith(t)) best = Math.max(best, 100); else if (T.split(/[^a-z0-9\u0600-\u06ff]+/).some(w => w.startsWith(t))) best = Math.max(best, 80); else if (T.includes(t)) best = Math.max(best, 60); else if (O.includes(t)) best = Math.max(best, 30); }
+    if (!best && t0.length >= 3 && smartHit(x.t + ' ' + x.s, t0)) best = 18;
+    if (!best) return 0; sc += best;
+  }
+  return sc + (x.kind === 'scr' ? 6 : x.kind === 'set' ? 0 : 3);
+}
+let dhAll = [], dhList = [];
+const dhRecRd = () => { const r = dhRd(DH_REC); return Array.isArray(r) ? r : []; };
+function dhRecPush(x) { const k = x.kind + '|' + (x.nav || '') + '|' + (x.k || x.id || ''); const L = dhRecRd().filter(y => y.key !== k); L.unshift({ key: k, kind: x.kind, nav: x.nav, v: x.v, k: x.k, id: x.id, t: x.t }); dhWr(DH_REC, L.slice(0, 8)); }
+function dhRowHTML(x, i, q) { return `<button type="button" class="dh-r ${x.kind}" data-dh="${i}"><i>${esc(x.i)}</i><span><b>${q ? hlName(x.t, q) : esc(x.t)}</b><small>${x.kind === 'scr' ? '📱 Screen kholein' : x.kind === 'set' ? '⚙️ Settings' + (x.g ? ' › ' + esc(x.g) : '') : esc(x.p) + ' › ⋮' + (x.s ? ' · ' + esc(x.s) : '')}</small></span><em>›</em></button>`; }
+function dhPaint() {
+  const box = $('dhRes'); if (!box) return; const q = String($('dhQ')?.value || '').trim();
+  if (!q) {
+    const R = dhRecRd().map(r => dhAll.find(x => x.kind === r.kind && (x.nav || '') === (r.nav || '') && (x.k || x.id || '') === (r.k || r.id || ''))).filter(Boolean).slice(0, 6);
+    const S = dhAll.filter(x => x.kind === 'scr'); dhList = [...R, ...S];
+    box.innerHTML = `${R.length ? `<div class="mn-gh">🕘 Haal hi mein</div><div class="dh-l">${R.map((x, i) => dhRowHTML(x, i, '')).join('')}</div>` : ''}<div class="mn-gh">📱 Sab screens</div><div class="dh-g">${S.map((x, i) => `<button type="button" class="dh-s" data-dh="${R.length + i}"><i>${esc(x.i)}</i><b>${esc(x.t)}</b></button>`).join('')}</div><p class="dh-tip">Likhein: <b>rack</b> · <b>ginti</b> · <b>kharcha</b> · <b>hbl</b> · <b>printer</b> · <b>mulazim</b> — screen, us ke ⋮ ke kaam aur Settings sab ek jagah.</p>`;
+    return;
+  }
+  const L = dhAll.map(x => ({ x, s: dhScore(x, q) })).filter(o => o.s > 0).sort((a, b) => b.s - a.s || String(a.x.t).localeCompare(String(b.x.t))).slice(0, 40).map(o => o.x);
+  dhList = L;
+  if (!L.length) { box.innerHTML = `<div class="dh-none">🔍 "${esc(q)}" — kuch nahi mila<small>Doosra lafz likhein (jaise "stock", "bill", "report"). Jo screen abhi tak nahi kholi us ke chips pehli dafa kholne ke baad yahan aa jayenge.</small></div>`; return; }
+  const G = [['scr', '📱 Screens'], ['chip', '🧰 Kaam / chips'], ['set', '⚙️ Settings']];
+  box.innerHTML = G.map(([k, h]) => { const xs = L.map((x, i) => [x, i]).filter(([x]) => x.kind === k); return xs.length ? `<div class="mn-gh">${h} <i class="dh-n">${xs.length}</i></div><div class="dh-l">${xs.map(([x, i]) => dhRowHTML(x, i, q)).join('')}</div>` : ''; }).join('');
+}
+async function dhOpen() {
+  if (!dhCan()) { H.notice?.('🔍 Dhoondo ki ijazat nahi — malik se kahein'); return; }
+  try { if ($('dialog')?.open) $('dialog').close(); } catch {}
+  if (navOpen()) navSet(false);
+  ensureRoot(); place(); delete root.dataset.back; root.dataset.mode = 'dh';
+  $('mnBody').innerHTML = `<h3 class="mn-h">🔍 Dhoondo</h3><label class="dh-q"><span>🔍</span><input type="search" id="dhQ" placeholder="Screen, chip ya setting… (rack, ginti, hbl)" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="search"></label><div id="dhRes"><p class="dh-tip">⏳</p></div>`;
+  root.hidden = false; document.documentElement.classList.add('mn-open');
+  const q = $('dhQ'); q.addEventListener('input', dhPaint); q.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const b = $('dhRes')?.querySelector('.dh-r'); if (b && String(q.value).trim()) b.click(); } });
+  setTimeout(() => { try { q.focus(); } catch {} }, 60);
+  try { dhAll = await dhData(); } catch (er) { console.warn('dh', er); dhAll = []; }
+  dhPaint();
+}
+const dhWait = async (fn, ms = 5000) => { const t0 = Date.now(); for (;;) { const v = fn(); if (v) return v; if (Date.now() - t0 > ms) return null; await new Promise(r => setTimeout(r, 120)); } };
+async function dhGo(x) {
+  if (!x) return; dhRecPush(x); close();
+  if (x.kind === 'scr') { try { $('dialog')?.open && $('dialog').close(); } catch {} $(x.nav)?.click(); return; }
+  if (x.kind === 'set') {
+    try { (window.ntSettingsOpen || H.openSettings)?.(); } catch {}
+    const b = await dhWait(() => { const e = $(x.id); return e && $('dialog')?.open && e.closest('#dialogBody') ? e : null; }, 3000);
+    if (b) { try { b.scrollIntoView({ block: 'center' }); } catch {} b.click(); } else H.notice?.('“' + x.t + '” — yeh setting aap ke liye nahi / abhi nahi mili');
+    return;
+  }
+  if (vw() !== x.v || H.selected?.() || dlgOn()) { try { $('dialog')?.open && $('dialog').close(); } catch {} $(x.nav)?.click(); }
+  const it = await dhWait(() => { const L = items(mainEl()); return String(x.k).startsWith('ft:') ? L.find(y => y.t === x.t) : (L.find(y => y.k === x.k) || L.find(y => y.t === x.t)); }, 5000);
+  if (!it) { H.notice?.('“' + x.t + '” abhi is screen par nahi (ijazat / abhi ki haalat)'); return; }
+  if (it.type === 'seg') { open(); return; }   // options ka dabba (Aaj · 7 din …) = ⋮ khol do, wahin chunein
+  go(it.k);
+}
+document.addEventListener('click', e => { const b = e.target.closest?.('#mnRoot [data-dh]'); if (!b) return; e.preventDefault(); e.stopPropagation(); dhGo(dhList[Number(b.dataset.dh)]); }, true);
+function dhBtnSetup() {
+  const top = document.querySelector('main>header .top'), st = $('settings'); if (!top || !st || $('dhBtn')) return;
+  const b = document.createElement('button'); b.type = 'button'; b.id = 'dhBtn'; b.className = 'round dh-btn'; b.textContent = '🔍'; b.title = 'Dhoondo — har screen / chip / setting'; b.setAttribute('aria-label', 'Dhoondo');
+  top.insertBefore(b, st); b.addEventListener('click', () => { if (isOpen() && root?.dataset.mode === 'dh') close(); else dhOpen(); });
+  dhPaintBtn();
+}
+function dhPaintBtn() { const b = $('dhBtn'); if (!b) return; const on = dhCan(); if (b.hidden === on) b.hidden = !on; }
+window.ntDhOpen = dhOpen; window.ntShellView = () => vw(); window.ntShellItems = () => items(mainEl()).map(x => ({ k: x.k, y: x.type, i: x.i, t: x.t, s: x.s, g: x.g }));
 
 // ---------------- 🤖 Agent ----------------
 const S_ = { type: 'STRING' }, B_ = { type: 'BOOLEAN' }, O_ = (p, r = []) => ({ type: 'OBJECT', properties: p, required: r });
