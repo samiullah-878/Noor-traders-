@@ -2230,7 +2230,7 @@ html.dk .pp-src.bill{background:#14244a;color:#b9ccff;border-color:#2c4688}
 .give-baqi b{font-variant-numeric:tabular-nums}
 .give-baqi.ok{background:#e9f7ef;border-color:#bfe3cd;color:#1f8a55;font-weight:800}
 .give-baqi.neg{background:#fff1f1;border-color:#f3c4c4;color:#c0392b}
-body.day-locked [data-give] input,body.day-locked [data-give] .give-sug,body.day-locked [data-give] .give-amt,body.day-locked [data-give] .give-go,body.day-locked [data-give] .give-acts{display:none!important}
+body.day-locked [data-give] input,body.day-locked [data-give] .give-sug,body.day-locked [data-give] .give-amt,body.day-locked [data-give] .give-go,body.day-locked [data-give] .give-acts,body.day-locked [data-give] .give-old{display:none!important}
 /* ================= v2.99.4: 🤖 NOOR AGENT — main screen patti + chat (theme ke rang: --p1/--p2/--ink/--dlg, warna navy) ================= */
 .agent-bar{position:relative;display:grid;grid-template-columns:1fr auto;gap:8px;margin:10px 0 6px;padding:10px;border-radius:20px;
   background:linear-gradient(135deg,rgba(94,231,255,.16),rgba(123,108,255,.18)),var(--glass2,rgba(255,255,255,.92));
@@ -5731,3 +5731,46 @@ html.dk #qtrDlg .qtr-after{background:rgba(255,255,255,.04);border-color:rgba(25
 html.dk #qtrDlg .qtr-ar{color:#9fb0cc}html.dk #qtrDlg .qtr-ar b{color:#fff}html.dk #qtrDlg .qtr-ar.up b{color:#86efac}html.dk #qtrDlg .qtr-ar.dn b{color:#fcd34d}html.dk #qtrDlg .qtr-ar.neg b{color:#fca5a5}
 html.dk #qtrDlg .qtr-why{background:rgba(34,197,94,.12);color:#86efac}
 html.dk #qtrDlg .qtr-pw span{color:#e6edf8}
+/* v2.114.1: 📅 PURANA CASH — "Is cash se payment bhejo" mein pichhle din ka bacha (din ki chips, purana pehle).
+   Closing Cash ka khana tang hai (phone 135px · PC 170px) — dabba apni chaurai se bahar na nikle (minmax(0,1fr)), chips do line mein toot sakein. */
+.give-box{grid-template-columns:minmax(0,1fr)}
+.give-box>*,.give-head,.give-amt,.give-chips{min-width:0}
+.give-chips span{white-space:normal;flex-wrap:wrap;row-gap:0;max-width:100%}.give-chips span b{white-space:nowrap}
+.give-box{container-type:inline-size}.give-acts{flex-wrap:wrap}
+@container (max-width:260px){.give-row{grid-template-columns:minmax(0,1fr)}.give-row>strong{justify-self:start}.give-who b,.give-who small{white-space:normal;overflow-wrap:anywhere}}   /* sirf tang dabbe mein: naam + note (warna naam 0 chaurai) */
+.give-chips span.old{background:#fff7e6;border-color:#f3d9a4}.give-chips span.old b{color:#9a5b00}
+.give-chips span.kul{background:#eef4ff;border-color:#c9dafb}.give-chips span.kul b{color:#1e4fa8}
+.give-old{display:grid;gap:6px;padding:8px;border-radius:14px;background:#fffaf0;border:1px dashed #efcf8f;min-width:0}
+.give-old .give-lh{color:#9a5b00;text-transform:none;letter-spacing:0;font-size:12px}
+.give-days{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100px,100%),1fr));gap:5px;max-height:214px;overflow-y:auto;overflow-x:hidden;min-width:0;scrollbar-width:thin}
+html body .give-days button{display:flex!important;flex-direction:column;align-items:flex-start;gap:0;width:100%!important;min-width:0;min-height:0!important;padding:5px 9px!important;border-radius:11px!important;border:1px solid #f0d49b!important;background:#fff!important;color:#7a4a00!important;box-shadow:none!important;font:inherit;text-align:left}
+html body .give-days button i{font-style:normal;font-size:11px;font-weight:700;opacity:.8}
+html body .give-days button b{font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap}
+html body .give-days button.is-in{background:linear-gradient(180deg,#f59e0b,#d97706)!important;border-color:#d97706!important;color:#fff!important}
+html body .give-full.all{border-style:solid!important;background:#eef4ff!important;color:#1e4fa8!important}
+/* v2.114.1: dark looks — "Is cash se" dabba bhi andhera (pehle roshan card par theme ke safed-likhai wale khane / Poora button nazar hi nahi aate the) */
+html.dk.dk body .give-box{background:var(--glass2,rgba(255,255,255,.09))!important;border-color:var(--line,rgba(255,255,255,.14))!important;box-shadow:none!important}
+html.dk.dk body .give-head>b{color:var(--ink)!important}
+html.dk.dk body .give-chips span{background:var(--glass,rgba(255,255,255,.06))!important;border-color:var(--line)!important;color:var(--ink2)!important}
+html.dk.dk body .give-chips span b{color:var(--ink)!important}
+html.dk.dk body .give-chips span.ok{background:color-mix(in srgb,var(--good) 14%,transparent)!important;border-color:color-mix(in srgb,var(--good) 40%,transparent)!important}
+html.dk.dk body .give-chips span.ok b{color:var(--good)!important}
+html.dk.dk body .give-chips span.neg b{color:var(--bad)!important}
+html.dk.dk body .give-chips span.old{background:rgba(245,158,11,.13)!important;border-color:rgba(245,158,11,.42)!important}
+html.dk.dk body .give-chips span.old b{color:#fbbf24!important}
+html.dk.dk body .give-chips span.kul{background:color-mix(in srgb,var(--p1) 12%,transparent)!important;border-color:color-mix(in srgb,var(--p1) 35%,transparent)!important}
+html.dk.dk body .give-chips span.kul b{color:var(--accent-ink)!important}
+html.dk.dk body .give-av,html.dk.dk body .give-lh{color:var(--ink2)!important}
+html.dk.dk body .give-old{background:rgba(245,158,11,.07)!important;border-color:rgba(245,158,11,.45)!important}
+html.dk.dk body .give-old .give-lh{color:#fbbf24!important}
+html.dk.dk body .give-days button{background:rgba(245,158,11,.10)!important;border-color:rgba(245,158,11,.45)!important;color:#fcd34d!important}
+html.dk.dk body .give-days button.is-in{background:linear-gradient(180deg,#f59e0b,#d97706)!important;border-color:#f59e0b!important;color:#fff!important}
+html.dk.dk body .give-box .give-full{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}
+html.dk.dk body .give-box .give-full.all{background:color-mix(in srgb,var(--p1) 14%,transparent)!important;border-color:color-mix(in srgb,var(--p1) 40%,transparent)!important;color:var(--accent-ink)!important}
+html.dk.dk body .give-row{background:var(--glass)!important;border-color:var(--line)!important}
+html.dk.dk body .give-who b{color:var(--ink)!important}html.dk.dk body .give-who small{color:var(--ink2)!important}
+html.dk.dk body .give-row>strong{color:var(--bad)!important}
+html.dk.dk body .give-baqi{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}
+html.dk.dk body .give-baqi.ok{background:color-mix(in srgb,var(--good) 14%,transparent)!important;border-color:color-mix(in srgb,var(--good) 40%,transparent)!important;color:var(--good)!important}
+/* v2.114.1: halki looks mein "✓ Bhejo" ki likhai neeli par gehri neeli thi (html.lt button rang) — wapas hara + safed (asal design) */
+html.lt.lt body .give-box .give-go{background:linear-gradient(180deg,#1f9a5f,#167a4a)!important;color:#fff!important;border:0!important}

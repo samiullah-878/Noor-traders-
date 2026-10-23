@@ -5943,3 +5943,27 @@ AI NAHI. PC scripts NAHI badle (TN wahi transfer-sync). Rules 2.70 — malik ko 
    + t114b (5 looks 360px + PC 1366: rang, side scroll). Insaan jaisa test se mila aur theek: mulazim ka password tez likha (60 ms se kam fi harf) to Stock ka barcode-scanner
    pakarne wala (keyboard wedge, pos-stock keydown) use "scan" samajh kar khana khali kar deta tha → #qtrDlg ke andar scanner band. Halki theme ne chune hue chips / hara button safed
    kar diye the → #qtrDlg ke button rang !important.
+
+========== v2.114.1 (23 Oct 2026) — 📅 PURANA CASH ("💸 Is cash se payment bhejo" mein pichhle din ka bacha) ==========
+Malik (tasveer: Gina 1,050,000 · Bheja 1,050,000 · Baqi 0 · Kul available 1,289,500): "yahan purani cash bhi aani chahiye jis din ki bhi ho — wo transfer kar sake".
+Pehle bhi kul cash (cashLedger available) tak bhej sakte the (appendCashMove), magar nazar sirf AAJ ka baqi aata tha ("Baqi 0").
+1) app.js cashDays(through): har din ka bacha (cashLedger rows, din-war): pehle us din ka aaya (closing cash / cash add / wapas), phir us din ka gaya —
+   move par `src` (din ki chip se bheja) = pehle USI din se; phir apne din se; phir sab se purane din se (FIFO). Manfi kabhi nahi.
+2) giveBoxHTML: chips Gina · Bheja · Aaj baqi · 📅 Purana · Kul (purana na ho to pehle jaisa "Baqi" + "Kul available" line). Neeche "📅 Purana cash · din chunein":
+   har din ki chip (19 Oct · Rs 70,000) — dabao = raqam + note "📅 19 Oct ka cash" + hidden src; button "Aaj ka" / "Sab" (aaj + purana, note "📅 Aaj + purana cash").
+   Bhejna WAHI ✓ Bhejo (custody-<date> move + cashpay khata entry); move mein naya ikhtiyari field `src` ('YYYY-MM-DD', sirf jab din chuna).
+   📅 chips SIRF aaj ki tareekh par (pichhli tareekh par baad ke dinon ka kharcha bhi ginna parta — "Sab" appendCashMove se mana hota; wahan dabba pehle jaisa).
+   Chuni chip ka din render ke baad gayab (doosre phone ne bheja) = raqam + 📅 note saaf + notice; din ka cash ghata = raqam nayi (sirf agar raqam wahi thi jo chip ne bhari)
+   — bhejte waqt ka optimistic render (giveBusy) yeh nahi karta. cashLedger toote = purana hisaab (gina − bheja). cashDays ek pass (FIFO pointer) + ledger avail ke saath share:
+   3 saal × 5 bhejna/din ≈ 2 ms (pehle sort har row par ≈ 40 ms).
+3) CAP d.purana (Daily Sale, shuru se ON). Rules NAHI badle (malik ke move mein koi bhi field chalta hai).
+   ⚠️ Mila (pehle se, is update se nahi): mulazim ke custody rule validLastMove sirf from/to/amount/note/at maante — app v2.99.17 se har move mein 'ref' (cashpay link) jata hai,
+   is liye mulazim ka "✓ Bhejo" server par mana hota hoga. Theek karna ho to rules mein 'ref' + 'src' dono (malik ke OK ke baad).
+4) style.css: Closing Cash ka khana tang hai (phone 135px, PC 170px) — dabba ab bahar nahi nikalta (minmax(0,1fr), chips do line, bheji raqam ki line naam + note ke saath upar-neeche).
+   Bheji raqam ki line: @container (max-width:260px) mein naam + note upar, raqam neeche (chaure dabbe mein pehle jaisi). Din band (day-locked) = 📅 chips bhi chhupi.
+   Dark looks mein dabba andhera (pehle roshan card par theme ke safed-likhai wale khane / Poora button nazar nahi aate the). Halki looks mein "✓ Bhejo" wapas hara + safed.
+AI NAHI. PC scripts NAHI badle.
+   Test: give2/run.mjs (happy-dom, asal finance-tools + cash-links: FIFO, src, draft wapas, Aaj ka / Sab, zyada = mana, mulazim / CAP band / purani tareekh) ALL OK ·
+   t114c (insaan jaisa: malik phone chip → Bilal → src save → chip gayab · Aaj ka · Sab → "✓ Sab bhej diya" · 4 looks 360/412 · mulazim · CAP band) ✓.
+   Alag AI review (diff parh kar): 4 mile — stale chip aadha saaf · pichhli tareekh par chips ghalat · har render par sort (dheema) · din band par chips — sab theek + test.
+   Regression: t113a–k · t114a/b · t113h-pc · fkt113 · pc113 · bs113 · pdfchk · rk5 · dlgchk ✓ · sweep2 = v2.114.0 jaisa (110 ✅).
