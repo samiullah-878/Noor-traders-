@@ -5669,3 +5669,65 @@ html.dk body .ox-box .ox-g b.r{color:#ff9b93}html.dk body .ox-box .ox-g b.g{colo
 /* v2.113.1: 🏦 HBL jora (bank minus + kharcha) — edit / delete nahi, HBL screen ka ↩ Wapas */
 .bk-pair-tip{display:inline-block;margin-top:4px;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:650;line-height:1.5;color:#1e4fa8;background:#eef4ff;border:1px solid #c9dafb}
 html.dk .bk-pair-tip{color:#9cc2ff;background:rgba(80,140,255,.12);border-color:rgba(80,140,255,.32)}
+/* v2.114.0: 🏬 HAR GODAM PATTI (stock list / ginti — sirf jahan stock hai) */
+html body .hg-row{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin:2px 4px 8px;min-width:0}
+html body .hg-row .hg-c{display:inline-flex;align-items:baseline;gap:4px;padding:3px 9px;border-radius:999px;border:1px solid #d9e3f3;background:#f6f9ff;color:#33415c;font:650 12px/1.45 system-ui,sans-serif;white-space:nowrap}
+html body .hg-row .hg-c b{font-weight:800;color:#13213f}
+html body .hg-row .hg-c.here{background:#1d3466;border-color:#1d3466;color:#dfe8ff}html body .hg-row .hg-c.here b{color:#fff}
+html body .hg-row .hg-c.neg{background:#fff1f0;border-color:#f5c2bf;color:#9b1c1c}html body .hg-row .hg-c.neg b{color:#b3261e}
+html body .hg-row .hg-none{font:600 11.5px/1.4 system-ui,sans-serif;color:#94a3b8}
+html body .sk-chips .sk-chip.hg{gap:4px}   /* .on = baqi chips jaisa (halki theme header .on khud sambhalti hai) */
+html body .stock-row .stock-tr-btn{display:block;margin-top:4px;min-height:32px!important;padding:4px 10px!important;border-radius:999px!important;border:1px solid #c7d6f2!important;background:#eef4ff!important;color:#1d3466!important;font:800 12px/1 system-ui,sans-serif!important;white-space:nowrap}
+html.dk body .hg-row .hg-c{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);color:#c9d6ee}html.dk body .hg-row .hg-c b{color:#fff}
+html.dk body .hg-row .hg-c.here{background:#3b5bab;border-color:#3b5bab}
+html.dk body .hg-row .hg-c.neg{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.35);color:#fca5a5}html.dk body .hg-row .hg-c.neg b{color:#fecaca}
+html.dk body .stock-row .stock-tr-btn{background:rgba(80,140,255,.14)!important;border-color:rgba(80,140,255,.35)!important;color:#bcd4ff!important}
+/* ⇄ ginti ke 📍 Baqi jagah mein jagah badli = transfer */
+html body .ox-box .ox-tr{display:block!important;width:100%;min-height:44px!important;border:0!important;border-top:1px solid #cfe9da!important;border-radius:0!important;background:#effaf3!important;color:#0b6b2e!important;font:800 13.5px/1.2 system-ui,sans-serif!important;box-shadow:none!important;padding:8px 12px!important}
+html body .ox-box .ox-tr small{display:block;font:600 11px/1.3 system-ui,sans-serif;opacity:.75;margin-top:2px}
+html.dk body .ox-box .ox-tr{background:rgba(34,197,94,.12)!important;color:#86efac!important;border-top-color:rgba(34,197,94,.3)!important}
+/* ⇄ JALDI TRANSFER khirki (apni dialog — khuli khirki ke upar) */
+#qtrDlg.qtr-dlg{width:min(430px,calc(100% - 20px));max-height:calc(100% - 24px);overflow:auto;border:0;border-radius:22px;padding:0;background:#fff;color:#13213f;box-shadow:0 24px 60px #0b1a3a55}
+#qtrDlg.qtr-dlg::backdrop{background:rgba(9,18,40,.5);backdrop-filter:blur(2px)}
+#qtrDlg .qtr-hd{position:sticky;top:0;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:13px 14px 11px 16px;background:linear-gradient(135deg,#1d3466,#2c4c8f);color:#fff}
+#qtrDlg .qtr-hd b{font:800 17px/1.2 system-ui,sans-serif}#qtrDlg .qtr-hd em{font:700 11.5px/1 system-ui,sans-serif;font-style:normal;margin-left:6px;padding:3px 8px;border-radius:999px;background:#ffffff26}
+#qtrDlg .qtr-x{min-width:38px;min-height:38px;border:0!important;border-radius:12px!important;background:#ffffff26!important;color:#fff!important;font-size:16px;box-shadow:none!important}
+#qtrDlg .qtr-it{display:flex;flex-direction:column;gap:2px;padding:12px 16px 4px}#qtrDlg .qtr-it b{font:800 16px/1.3 system-ui,sans-serif}#qtrDlg .qtr-it small{font:600 12px/1.3 system-ui,sans-serif;color:#64748b}
+#qtrDlg .qtr-why{margin:6px 16px 0;padding:8px 11px;border-radius:12px;background:#effaf3;color:#0b6b2e;font:650 12.5px/1.4 system-ui,sans-serif}
+#qtrDlg .qtr-sec{padding:8px 16px 2px}
+#qtrDlg .qtr-lb{display:block;margin-bottom:6px;font:800 11px/1 system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#64748b}
+#qtrDlg .qtr-cs{display:flex;flex-wrap:wrap;gap:7px}
+#qtrDlg .qtr-c{display:inline-flex;flex-direction:column;align-items:flex-start;gap:1px;min-width:0;width:auto!important;min-height:0!important;padding:8px 12px!important;border-radius:14px!important;border:1.5px solid #dbe5f5!important;background:#f7faff!important;color:#1f2a44!important;text-align:left;font:inherit;box-shadow:none!important}
+#qtrDlg .qtr-c i{font-style:normal;font-size:13px}#qtrDlg .qtr-c b{font:800 13.5px/1.2 system-ui,sans-serif}#qtrDlg .qtr-c small{font:650 11.5px/1.2 system-ui,sans-serif;color:#64748b}
+#qtrDlg .qtr-c.is-in{border-color:#1d3466!important;background:linear-gradient(135deg,#1d3466,#2c4c8f)!important;color:#fff!important;box-shadow:0 6px 16px #1d346633!important}#qtrDlg .qtr-c.is-in small{color:#c8d6f5}
+#qtrDlg .qtr-none{font:600 12.5px/1.4 system-ui,sans-serif;color:#b3261e}
+#qtrDlg .qtr-q{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+#qtrDlg .qtr-q label{display:flex;align-items:center;gap:6px;margin:0}
+#qtrDlg .qtr-q input{width:5.2em;min-height:46px;padding:8px 10px;border-radius:12px;border:1.5px solid #cfdcf2;font:800 18px/1 system-ui,sans-serif;color:#13213f;background:#fff}
+#qtrDlg .qtr-q span{font:700 12.5px/1 system-ui,sans-serif;color:#475569}
+#qtrDlg .qtr-all{width:auto!important;min-height:40px!important;padding:6px 12px!important;border-radius:999px!important;border:1px solid #c7d6f2!important;background:#eef4ff!important;color:#1d3466!important;font:800 12.5px/1 system-ui,sans-serif;box-shadow:none!important}
+#qtrDlg .qtr-after{margin:10px 16px 2px;padding:9px 12px;border-radius:14px;background:#f4f7fc;border:1px solid #e1e9f5}
+#qtrDlg .qtr-ar{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:4px 0;font:600 13px/1.35 system-ui,sans-serif;color:#475569}
+#qtrDlg .qtr-ar+.qtr-ar{border-top:1px dashed #dde6f3}
+#qtrDlg .qtr-an{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#qtrDlg .qtr-av{display:inline-flex;align-items:baseline;gap:5px;white-space:nowrap}#qtrDlg .qtr-av s{color:#94a3b8;font-weight:600}#qtrDlg .qtr-av i{font-style:normal;color:#94a3b8}
+#qtrDlg .qtr-ar b{font:800 14px/1.2 system-ui,sans-serif;color:#13213f}
+#qtrDlg .qtr-ar.up b{color:#0b6b2e}#qtrDlg .qtr-ar.dn b{color:#b45309}#qtrDlg .qtr-ar.neg b{color:#b3261e}
+#qtrDlg .qtr-pw{display:flex;flex-direction:column;gap:5px;margin:10px 16px 0}
+#qtrDlg .qtr-pw span{font:800 12.5px/1.2 system-ui,sans-serif;color:#1f2a44}#qtrDlg .qtr-pw small{font-weight:600;color:#64748b;margin-left:4px}
+#qtrDlg .qtr-pw input,#qtrDlg .qtr-note{width:100%;min-height:44px;padding:8px 12px;border-radius:12px;border:1.5px solid #cfdcf2;font:600 15px/1.2 system-ui,sans-serif;background:#fff;color:#13213f}
+#qtrDlg .qtr-note{display:block;width:calc(100% - 32px);margin:10px 16px 0}
+#qtrDlg .qtr-go{display:block;width:calc(100% - 32px)!important;margin:12px 16px 4px;min-height:52px!important;border:0!important;border-radius:16px!important;background:linear-gradient(135deg,#0f7a45,#0b6b2e)!important;color:#fff!important;font:800 16px/1 system-ui,sans-serif;box-shadow:0 10px 22px #0b6b2e40!important}
+#qtrDlg .qtr-go:disabled{opacity:.6}
+#qtrDlg .qtr-msg{min-height:1.2em;margin:4px 16px 14px;font:650 12.5px/1.4 system-ui,sans-serif;color:#475569}
+#qtrDlg .qtr-msg.bad{color:#b3261e}#qtrDlg .qtr-msg.ok{color:#0b6b2e}#qtrDlg .qtr-msg.wait{color:#1d4ed8}
+html.dk #qtrDlg.qtr-dlg{background:#141c2e;color:#e6edf8}
+html.dk #qtrDlg .qtr-it small,html.dk #qtrDlg .qtr-lb,html.dk #qtrDlg .qtr-q span,html.dk #qtrDlg .qtr-msg{color:#9fb0cc}
+html.dk #qtrDlg .qtr-c{background:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.14)!important;color:#e6edf8!important}html.dk #qtrDlg .qtr-c small{color:#9fb0cc}
+html.dk #qtrDlg .qtr-c.is-in{background:#3b5bab!important;border-color:#3b5bab!important;color:#fff!important}
+html.dk #qtrDlg .qtr-q input,html.dk #qtrDlg .qtr-pw input,html.dk #qtrDlg .qtr-note{background:#0e1524;border-color:rgba(255,255,255,.18);color:#fff}
+html.dk #qtrDlg .qtr-all{background:rgba(80,140,255,.14)!important;border-color:rgba(80,140,255,.35)!important;color:#bcd4ff!important}
+html.dk #qtrDlg .qtr-after{background:rgba(255,255,255,.04);border-color:rgba(255,255,255,.1)}
+html.dk #qtrDlg .qtr-ar{color:#9fb0cc}html.dk #qtrDlg .qtr-ar b{color:#fff}html.dk #qtrDlg .qtr-ar.up b{color:#86efac}html.dk #qtrDlg .qtr-ar.dn b{color:#fcd34d}html.dk #qtrDlg .qtr-ar.neg b{color:#fca5a5}
+html.dk #qtrDlg .qtr-why{background:rgba(34,197,94,.12);color:#86efac}
+html.dk #qtrDlg .qtr-pw span{color:#e6edf8}

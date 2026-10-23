@@ -4,7 +4,8 @@
 //   Har item: jagah-war gina / POS / farq + ASAL farq (sab jagah ka jor). 🔁 Jagah badli (ek jagah kam, doosri zyada) = dobara ginne ki zaroorat
 //   nahi — "bara farq, pehle dobara gino" sirf ASAL farq par lagta hai. Jo jagah abhi nahi gini, wahin likh kar gino (wahi ginti — us jagah ki,
 //   history mein naam). ✓ Theek karo = WAHI "stock fraq" bill (PC post-farq: kam = Sale, zyada = Return, parchi PC khud) — har jagah ka POS stock
-//   theek, paisa sirf asal farq ka. Transfer note NAHI (parchi par "maal le jao" ka dhoka nahi — roz.js wala qaida).
+//   theek, paisa sirf asal farq ka. v2.114.0: 🔁 jagah badli par "⇄ Transfer se theek karo" bhi (malik: "jab bhi transfer — direct ho jaye") = qtr.js
+//   TN (note par "sirf hisaab") + dono jagah ki ginti wahi tadad par dobara (farq 0 — bill nahi). Bill wala rasta bhi wahi.
 //   Data pos-stock.js stockRozApi() se (sirf parhna + wahi kaam jo buttons karte hain). Bill sirf malik. CAP stock.farq. AI NAHI.
 const $ = id => document.getElementById(id);
 let A = null, st = { f: 'all' };
@@ -63,8 +64,9 @@ function card(x) {
     : k === 'pend' ? `<p class="fq-tip pend">⏳ Transfer note ka maal abhi raste mein / POS mein nahi — note poora hone ke baad gino.</p>`
     : x.unc.length ? `<p class="fq-tip ask">📍 ${x.unc.map(l => '<b>' + E(A.branchName(l.b)) + '</b>').join(' / ')} abhi nahi gini — pehle wahan bhi gin lein, shayad maal wahan ho.</p>` : '';
   const plan = fixable(x) ? x.locs.filter(l => l.c && Math.abs(l.f) >= 0.001).map(l => `${E(A.branchName(l.b))} ${l.f < 0 ? 'kam ' + A.num(-l.f) + ' → Sale' : 'zyada ' + A.num(l.f) + ' → Return'}`).join(' · ') : '';
-  const btns = own ? (fixable(x) ? `<div class="fq-acts"><small>${plan}</small><button type="button" class="fq-fix" data-fq-fix="${E(x.id)}"${busy ? ' disabled' : ''}>✓ Theek karo</button></div>`
-    : k === 'big' ? `<div class="fq-acts">${A.canWant() ? `<button type="button" class="fq-mini" data-fq-again="${E(x.id)}">📋 Dobara ginwao</button>` : ''}<button type="button" class="fq-mini alt" data-fq-force="${E(x.id)}">✓ Theek hai (isi ginti par)</button></div>` : '') : '';
+  const trB = k === 'jagah' && A.qtrCan?.() ? `<button type="button" class="fq-tr" data-fq-tr="${E(x.id)}">⇄ Transfer se theek karo</button>` : '';   // v2.114.0
+  const btns = own ? (fixable(x) ? `<div class="fq-acts"><small>${plan}</small>${trB}<button type="button" class="fq-fix" data-fq-fix="${E(x.id)}"${busy ? ' disabled' : ''}>${trB ? '🧾 Bill se theek karo' : '✓ Theek karo'}</button></div>`
+    : k === 'big' ? `<div class="fq-acts">${A.canWant() ? `<button type="button" class="fq-mini" data-fq-again="${E(x.id)}">📋 Dobara ginwao</button>` : ''}<button type="button" class="fq-mini alt" data-fq-force="${E(x.id)}">✓ Theek hai (isi ginti par)</button></div>` : '') : trB ? `<div class="fq-acts">${trB}</div>` : '';
   const shown = k === 'jagah' ? x.locs.filter(l => !l.none) : x.locs;   // jagah badli: jo nahi gini wo chhupi (shor kam)
   return `<article class="fq-c ${k}" data-fq-item="${E(x.id)}"><div class="fq-hd"><span class="fq-nm"><b>${E(x.name)}</b><small>${KN ? KN[1] : ''}</small></span><span class="fq-net ${x.net < -0.001 ? 'k' : x.net > 0.001 ? 'z' : 'e'}"><small>Asal farq</small><b>${Math.abs(x.net) < 0.001 ? '0' : sg(x.net)}</b><small>${x.rs ? rs(x.rs) : 'Rs 0'}</small></span></div>${shown.map(loc).join('')}${tip}${btns}</article>`;
 }
@@ -97,7 +99,9 @@ async function fixList(list, label) {
   catch (e) { A.notice('Nahi bheja: ' + (e?.message || e)); }
 }
 document.addEventListener('click', async e => {
-  const t = e.target.closest?.('[data-fq-f],[data-fq-fix],[data-fq-all],[data-fq-save],[data-fq-again],[data-fq-force]'); if (!t || !A || !t.closest('#fqRoot')) return;
+  const t = e.target.closest?.('[data-fq-f],[data-fq-fix],[data-fq-all],[data-fq-save],[data-fq-again],[data-fq-force],[data-fq-tr]'); if (!t || !A || !t.closest('#fqRoot')) return;
+  if (t.dataset.fqTr) { const x = build().find(y => y.id === t.dataset.fqTr); if (!x) return; let k = null, z = null; for (const l of x.locs) { if (!l.c) continue; if (l.f < -0.001 && (!k || l.f < k.f)) k = l; if (l.f > 0.001 && (!z || l.f > z.f)) z = l; }   // v2.114.0: ⇄ jagah badli = TN (sab se bara kam → sab se bari zyadti)
+    if (!k || !z) { A.notice('Jagah badli ka jora nahi mila'); return; } const q = r3(Math.min(-k.f, z.f)); A.qtr({ id: x.id, from: k.b, to: z.b, qty: q, recount: true, why: '🔁 Jagah badli — ' + A.branchName(k.b) + ' mein kam, ' + A.branchName(z.b) + ' mein zyada. Note banne ke baad dono jagah ki ginti khud taza (farq 0) — bill nahi.' }); return; }
   const d = t.dataset;
   try {
     if (d.fqF) { st.f = d.fqF; paint(); return; }

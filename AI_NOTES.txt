@@ -5919,3 +5919,27 @@ Malik: "en saare kaamo ko ek dafa real insaan ki tarah test karo — koi bug to 
 7) HBL 📝 note: ek SMS ki do lines (kharcha + Alfalah charges) par do dabbe (wahi data-bk-memo-t) → save pehla textarea parhta, doosre ka likha zaya. Ab dabba sirf us line par jahan dabaya (data-bk-mr = line id, memoRow) aur ek paint mein ek hi (memoEd); save button ke saath wala textarea.
 PC: pos-khata-sync printExpenses har kharcha ki "KHARCHA VOUCHER — Kharcha diya" chhapti thi — HBL / transfer se kharcha (dailyIncluded false) bhi = galle wala samjhe paise diye / closing mein parchi gine. Ab aisi parchi par upar bara kala "BANK / KHATE SE · GALLE SE NAHI" + Urdu, line "Bank / khate se", neeche "*** GALLE SE PAISE NAHI GAYE ***" (payMark 'nocash', payDo band ho tab bhi). Parchi phir bhi nikalti hai (malik ka record). manifest 2026-10-23.1.
 Test: t113k (K1 kx Cancel/OK · K2 trash dono / HBL band + ‹ salamat · K3 HBL jora malik + mulazim · K4 ‹ + der se khirki / anjaan likhai · K5 do line note · K6 khud-lagao bina sawal · K7 roz taken) + t113j (HBL kharcha ↩) + t113a–i dobara + purane regression; PC parchi harness (t/pks/slip.mjs: bari + chhoti, payDo band).
+
+========== v2.114.0 (23 Oct 2026) — 🏬 HAR GODAM KA STOCK + ⇄ JALDI TRANSFER (har stock screen) · rules 2.70 ==========
+Malik (tasveer: Stock → Godam 1 · "Sufi g" + parchi "G1 10 · G2 — · G3 0 · Noor 0 → TRANSFER Godam 1 → Noor → AFTER TRANSFER STOCK Noor 10 · Godam 1 0"):
+"aik item ka stock likhein to koi checkbox de do — wo item hum ko har godam ke hisab se chahiye · godam 1 ke saath wahi item Noor Traders mein kitna, saath mein · larkon ki ginti mein bhi
+(checkbox lagaya ho to) · stock kam / zyada ho to baqi jagah ginne ka tab neeche aaye aur us mein likh kar transfer kar sakein". Phir (13:34): "zero wale godam ka naam na aaye · jab bhi
+transfer — direct ho jaye, koi issue nahi · us mein bhi password laga do · ijazat ki zaroorat nahi — sab par default, jahan jahan stock screen hai".
+1) 🏬 ☐ Har godam (Stock chips: Sab · Is godam ka · Minus · ☐ Har godam): tick = har item ke neeche patti — SIRF jahan stock hai (0 = naam nahi, band item nahi): 🏪 Noor 6 Ctn 9 ·
+   🏬 G1 31 Ctn (chuna godam gehra, minus laal). Phone yaad (sam-hg). Ginti mein bhi (wahi rowHTML). Sirf jin ko stock dikhta hai (andhi ginti mein nahi). CAP stock.hargodam (shuru se ON).
+2) ⇄ Transfer (har item ke Label ke neeche; qtr.js — apni <dialog>, khuli khirki ke upar): Se = sirf stock wali jagah · Ko = baqi sab (Noor 0 bhi) · tadad Ctn + Pcs + "Sab" ·
+   "Transfer ke baad" har jagah (purana → naya, sirf stock wali + se / ko) · mulazim = 🔒 ⛔ Band wala password · Note. confirm → WAHI cloud.requestTransfer (PC transfer-sync:
+   POS TN + parchi, pehle jaisa). Godam mein stock kam = mana (dukan se nahi — trSave qaida). Bhejte hi khirki band (1.6 s); PC ka jawab notice (khirki band ho tab bhi, 10 min).
+   Andhi ginti wala mulazim: transfer khulta hai magar koi stock hindsa nahi. Phone ka back = pehle yeh khirki (window.ntQtrClose). CAP stock.qtr (shuru se ON).
+3) 🔁 Ginti mein jagah badli (📍 Baqi jagah): "⇄ Transfer N: Godam 1 → Noor" (sab se bara kam → sab se bari zyadti, tadad = chhoti) → wahi khirki (tadad khud, note "⚖️ Ginti farq —
+   maal pehle se wahan (sirf hisaab)"). TN ban jaye = recountSame: dono jagah ki ginti WAHI tadad par dobara writeCount (history note "⇄ TN-123 ke baad") → PC is lamhe ka POS
+   stock likhta hai (sysPos) → farq 0 → fraq bill NAHI (dohra theek nahi). ⚖️ Stock farq screen ke jagah badli card par bhi "⇄ Transfer se theek karo" + "🧾 Bill se theek karo".
+   QAIDA BADLA (pehle: jagah ki ghalti = sirf fraq bill, TN nahi) — malik ne kaha "transfer direct ho jaye, koi issue nahi". Dono raste maujood.
+4) 🔒 Password (rules 2.70): transferJobs create — mulazim (koi bhi scope) 'pw' ke saath = pw == blueAccess/bandKey.pw (⛔ Band wala, malik Settings se) warna mana; banane wala
+   foran pw mita deta (update sirf 'pw' hatana); apna job parh sake (PC ka jawab). Malik / purani Transfer screen pehle jaisi (bina pw). cloud.requestTransfer({…, pw}).
+AI NAHI. PC scripts NAHI badle (TN wahi transfer-sync). Rules 2.70 — malik ko firestore-rules-2.70.html upload karni hai (warna mulazim ka password wala transfer mana).
+   Test (insaan jaisa): t114a (A1 patti + 0 wale naam nahi + phone yaad · A2 malik ⇄ Sab / baad ka stock / confirm / PC jawab / godam kam = mana / phone back · A3 mulazim
+   password khali / ghalat (rules jaisa stub) / sahi + naam · A4 andhi ginti = koi hindsa nahi, CAP band · A5 ginti jagah badli → TN → dono ginti taza · A6 farq screen dono raste)
+   + t114b (5 looks 360px + PC 1366: rang, side scroll). Insaan jaisa test se mila aur theek: mulazim ka password tez likha (60 ms se kam fi harf) to Stock ka barcode-scanner
+   pakarne wala (keyboard wedge, pos-stock keydown) use "scan" samajh kar khana khali kar deta tha → #qtrDlg ke andar scanner band. Halki theme ne chune hue chips / hara button safed
+   kar diye the → #qtrDlg ke button rang !important.
