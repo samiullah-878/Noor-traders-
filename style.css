@@ -5666,3 +5666,6 @@ html.dk body #dialogBody .fq-net.k b{color:#ff9b93}html.dk body #dialogBody .fq-
 html.dk body #dialogBody .fq-l.k .fq-f{color:#ff9b93}html.dk body #dialogBody .fq-l.z .fq-f{color:#86efac}
 html.dk body .ox-box .ox-net.jagah{background:rgba(34,197,94,.12);color:#a7f3c8}html.dk body .ox-box .ox-net.k{background:rgba(239,68,68,.12);color:#ffb4ad}html.dk body .ox-box .ox-net.z{background:rgba(96,165,250,.12);color:#cfe0ff}
 html.dk body .ox-box .ox-g b.r{color:#ff9b93}html.dk body .ox-box .ox-g b.g{color:#86efac}
+/* v2.113.1: 🏦 HBL jora (bank minus + kharcha) — edit / delete nahi, HBL screen ka ↩ Wapas */
+.bk-pair-tip{display:inline-block;margin-top:4px;padding:2px 9px;border-radius:999px;font-size:11.5px;font-weight:650;line-height:1.5;color:#1e4fa8;background:#eef4ff;border:1px solid #c9dafb}
+html.dk .bk-pair-tip{color:#9cc2ff;background:rgba(80,140,255,.12);border-color:rgba(80,140,255,.32)}

@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.113.0';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.113.1';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -210,6 +210,7 @@ function doneHTML(x) {
   return `<div class="bk-done ${r.dir}"><span>${x.d.st === 'skip' ? '✕' : '✓'}</span><div><b>${esc(r.name || x.d.text.slice(0, 40))}</b><small>${esc(dShow(r))}${p ? ' · 👤 ' + esc(p.name) : ''}${x.d.byName ? ' · ' + esc(x.d.byName) : ''}</small></div><b class="bk-amt">${r.amt ? (r.dir === 'in' ? '+' : '−') + m(r.amt) : ''}</b></div>`;
 }
 function html() {
+  memoEd = new Set();
   const R = rows(), today = O.today ? O.today() : '', T = R.pend.concat(R.done.filter(x => x.d.st === 'done')).filter(x => x.r.ok && x.r.day === today);   // dubara aaye (wahi TXN) ek hi dafa
   const inT = T.filter(x => x.r.dir === 'in').reduce((n, x) => n + x.r.amt, 0), outT = T.filter(x => x.r.dir === 'out').reduce((n, x) => n + x.r.amt, 0);
   const last = src => { const l = R.all.find(x => x.d.src === src && x.r.day); return l ? dShow(l.r) : 'abhi nahi'; };
@@ -607,17 +608,17 @@ function doneRow(v) {
 // ---------- 📝 v2.113.0 NOTE har payment ke neeche (malik: "HBL mein notes likhne ka option bhi ho neeche har payment par") ----------
 //   bankSms/<id>.note — rules mein 'note' pehle se (v2.38) · naya rule NAHI · sab phones par. ✓ Lagao se pehle likha = khate ki entry ke note mein bhi.
 //   Likhna CAP hbl.note (dekhna sab HBL wale). 🔔 Reminder (notes.js) wahi alag. AI NAHI.
-let memoOpen = '', memoDraft = null;
+let memoOpen = '', memoRow = '', memoDraft = null, memoEd = new Set();   // v2.113.1: ek SMS ki do lines (kharcha + Alfalah charges) = likhne ka dabba sirf PEHLI line par (do dabbe = doosre ka likha zaya)
 const memoCan = () => capOk('hbl.note');
 const memoTail = d => { const n = String(d?.note || '').trim(); return n ? ' · 📝 ' + n.slice(0, 200) : ''; };
-function memoHTML(doc, edit = true) {
-  if (!doc) return ''; const id = esc(doc.id), n = String(doc.note || '').trim(), can = edit && memoCan();
-  if (can && memoOpen === doc.id) return `<div class="bkp-memo-ed"><textarea data-bk-memo-t="${id}" maxlength="300" rows="2" placeholder="📝 Note likhein… (kis cheez ka paisa, kis ne kaha, bill no.)">${esc(memoDraft != null ? memoDraft : n)}</textarea><div class="bkp-memo-bt"><button type="button" class="bkp-memo-x" data-bk-memo-x="${id}">✕ Rehne do</button><button type="button" class="bkp-memo-sv" data-bk-memo-s="${id}">✓ Note save</button></div></div>`;
-  if (n) return can ? `<button type="button" class="bkp-memo has" data-bk-memo="${id}"><i>📝</i><span>${esc(n)}</span><em>✏️</em></button>` : `<div class="bkp-memo has"><i>📝</i><span>${esc(n)}</span></div>`;
-  return can ? `<button type="button" class="bkp-memo add" data-bk-memo="${id}">📝 Note likhein</button>` : '';
+function memoHTML(doc, edit = true, rk = '') {
+  if (!doc) return ''; const id = esc(doc.id), n = String(doc.note || '').trim(), can = edit && memoCan(), mr = rk ? ` data-bk-mr="${esc(rk)}"` : '';
+  if (can && memoOpen === doc.id && (!memoRow || !rk || memoRow === rk) && !memoEd.has(doc.id) && memoEd.add(doc.id)) return `<div class="bkp-memo-ed"><textarea data-bk-memo-t="${id}" maxlength="300" rows="2" placeholder="📝 Note likhein… (kis cheez ka paisa, kis ne kaha, bill no.)">${esc(memoDraft != null ? memoDraft : n)}</textarea><div class="bkp-memo-bt"><button type="button" class="bkp-memo-x" data-bk-memo-x="${id}">✕ Rehne do</button><button type="button" class="bkp-memo-sv" data-bk-memo-s="${id}">✓ Note save</button></div></div>`;
+  if (n) return can ? `<button type="button" class="bkp-memo has" data-bk-memo="${id}"${mr}><i>📝</i><span>${esc(n)}</span><em>✏️</em></button>` : `<div class="bkp-memo has"><i>📝</i><span>${esc(n)}</span></div>`;
+  return can ? `<button type="button" class="bkp-memo add" data-bk-memo="${id}"${mr}>📝 Note likhein</button>` : '';
 }
 async function memoSave(id, text) {
-  const d = (docs || []).find(z => z.id === id); memoOpen = ''; memoDraft = null; if (!d) { paint(); return; }
+  const d = (docs || []).find(z => z.id === id); memoOpen = ''; memoRow = ''; memoDraft = null; if (!d) { paint(); return; }
   const v = String(text || '').replace(/[ \t]+\n/g, '\n').trim().slice(0, 300), old = String(d.note || '');
   if (v === old.trim()) { paint(); return; }
   d.note = v; paint();   // foran (speed pehle) — server peeche
@@ -715,7 +716,7 @@ function pDone(v) {
   const kindTag = v.cash ? 'Closing cash' : kx ? '🧾 ' + kx : v.e && v.e.posNo ? 'Bill · kharcha' : v.e && v.e.transferId ? 'Khate mein' : 'Daily + khata';
   return `<article class="bkp-row done ${v.dir}"><div class="bkp-av ${v.dir}">${v.dir === 'in' ? '↓' : '↑'}<i>${esc(initials(name))}</i></div>
     <div class="bkp-mid"><div class="bkp-top"><b class="bkp-nm">${esc(name)}</b></div><div class="bkp-meta">${esc(meta)}${txn ? ` <span class="bkp-txn">${esc(txn)}</span>` : ''}</div>${kx ? `<div class="bkp-who kxd"><span class="bkp-pk kx">🧾 Kharcha</span><b>${esc(kx)}</b><small>Akhrajat mein · Daily mein nahi</small></div>` : ''}
-      ${v.cash ? '' : `<div class="bkp-acts sm">${noteBtn(txn, 'v:' + v.id).replace('bk-nb', 'bkp-ic bk-nb')}${undo}</div>`}${src ? memoHTML(src) : ''}${v.e && O.printChip ? `<div class="bkp-prn">${O.printChip(v.e)}</div>` : ''}</div>
+      ${v.cash ? '' : `<div class="bkp-acts sm">${noteBtn(txn, 'v:' + v.id).replace('bk-nb', 'bkp-ic bk-nb')}${undo}</div>`}${src ? memoHTML(src, true, v.id) : ''}${v.e && O.printChip ? `<div class="bkp-prn">${O.printChip(v.e)}</div>` : ''}</div>
     <div class="bkp-amt ${v.dir}">${v.dir === 'in' ? '+' : '−'}${m(v.amt)}<small class="ok">✓ ${kindTag}</small></div></article>`;
 }
 function spark(H) {
@@ -750,6 +751,7 @@ function cardBox(H, R) {
     ${O.owner && O.owner() ? `<button type="button" class="bkp-chip" data-bk-lim="${esc(c)}">✏️ Limit / due tareekh</button>` : ''}</div>`;
 }
 export function renderHbl() {
+  memoEd = new Set();
   if (!$('list')) return;
   if (!canUse()) { $('summary').innerHTML = ''; $('list').innerHTML = '<div class="bk-screen"><p class="bk-empty">🏦 HBL screen sirf malik / Full mulazim</p></div>'; $('actions').innerHTML = ''; return; }
   bankWatch();
@@ -832,9 +834,9 @@ document.addEventListener('click', e => {
   const t = e.target.closest?.('[data-hbl-tab],[data-hbl-range],[data-hbl-khata],[data-hbl-pdf],[data-hbl-open],[data-hbl-print],[data-hbl-acct],[data-bk-acpick],[data-bk-note],[data-bk-undo],[data-bk-memo],[data-bk-memo-s],[data-bk-memo-x]'); if (!t) return;
   const d = t.dataset;
   // v2.113.0 📝 note: khol / save / rehne do
-  if (d.bkMemo != null && t.hasAttribute('data-bk-memo')) { if (!memoCan()) { O.notice?.('Note likhne ki ijazat nahi — malik se kahein'); return; } memoOpen = d.bkMemo; memoDraft = null; paint(); setTimeout(() => { const ta = document.querySelector(`[data-bk-memo-t="${CSS.escape(memoOpen)}"]`); if (ta) { ta.focus(); const n = ta.value.length; try { ta.setSelectionRange(n, n); } catch {} } }, 40); return; }
-  if (d.bkMemoS) { const ta = document.querySelector(`[data-bk-memo-t="${CSS.escape(d.bkMemoS)}"]`); memoSave(d.bkMemoS, ta ? ta.value : (memoDraft || '')); return; }
-  if (d.bkMemoX != null) { memoOpen = ''; memoDraft = null; paint(); return; }
+  if (d.bkMemo != null && t.hasAttribute('data-bk-memo')) { if (!memoCan()) { O.notice?.('Note likhne ki ijazat nahi — malik se kahein'); return; } memoOpen = d.bkMemo; memoRow = d.bkMr || ''; memoDraft = null; paint(); setTimeout(() => { const ta = document.querySelector(`[data-bk-memo-t="${CSS.escape(memoOpen)}"]`); if (ta) { ta.focus(); const n = ta.value.length; try { ta.setSelectionRange(n, n); } catch {} } }, 40); return; }
+  if (d.bkMemoS) { const ta = t.closest('.bkp-memo-ed')?.querySelector('textarea') || document.querySelector(`[data-bk-memo-t="${CSS.escape(d.bkMemoS)}"]`); memoSave(d.bkMemoS, ta ? ta.value : (memoDraft || '')); return; }
+  if (d.bkMemoX != null) { memoOpen = ''; memoRow = ''; memoDraft = null; paint(); return; }
   if (d.hblAcct) { pickAcct(); return; }
   if (d.bkAcpick) { try { $('dialog').close(); } catch {} saveHbl(d.bkAcpick); return; }
   if (d.bkNote) { openNote(d.bkNote); return; }

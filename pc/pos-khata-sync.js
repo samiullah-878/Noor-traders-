@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-10-23: 🏦 bank / khate se kharcha (dailyIncluded false — HBL / transfer se) ki KHARCHA parchi par bara "BANK / KHATE SE · GALLE SE NAHI" (pehle "Kharcha diya" = galle wala dhoka)
 //  2026-10-21 (b): 📷 party entry ki tasveer (app v2.105.8) har voucher / kharcha parchi ke neeche — pehli + dobara print (entry-photo.js) · 🐞 dobara print par voucher no / tareekh wapas · purchase tasveer ka intezar (pn object) theek
 //  2026-10-21: 📝 malik — "Tafseel ka lafz Urdu mein bara, har print par": Urdu line 'تفصیل: …' (52px) — AI 4 s mein na aaye to bhi (urdu-names v1.6 roman2ur)
 //  2026-10-20: 📅 har voucher par Urdu tareekh bari (upar + neeche) · 📝 Tafseel Urdu bari (AI, urdu-names v1.5 fillNotes, 4 s) · 🏦 HBL Urdu sar-khi · dobara print: udhar sale ka sahi naam, BPV/BRV naam
@@ -388,9 +389,10 @@ let BIG_SLIP = true;
 //   "ادائیگی کر دیں · PAYMENT DE DO" — galla isi se paise de. Dobara print (aur har CPV ki dobara) = bara "کاپی — ادائیگی نہیں ·
 //   COPY - PAYMENT NAHI". Pehli parchi chhapi hi nahi thi (posPrintedAt nahi) to agli = pehli. printConfig.payDo (default ON).
 let PAY_DO = true;
-const payMark = (pay, ur, big, C) => {   // pay 'do' | 'copy' — ulta (kala) bara patta + Urdu
-  if (pay !== 'do' && pay !== 'copy') return [];
+const payMark = (pay, ur, big, C) => {   // pay 'do' | 'copy' | 'nocash' — ulta (kala) bara patta + Urdu
+  if (pay !== 'do' && pay !== 'copy' && pay !== 'nocash') return [];
   const GS = '\x1d', rv = t => GS + 'B\x01' + t + GS + 'B\x00', o = [''];
+  if (pay === 'nocash') { if (UR.isOn()) o.push(UR.line('بینک / کھاتے سے — گلے سے پیسے نہیں', 50, 1)); o.push(C + rv(big(' BANK / KHATE SE ')), C + rv(big(' GALLE SE NAHI ')), ''); return o; }   // 2026-10-23: 🏦 bank / khate wala kharcha
   if (UR.isOn()) o.push(UR.line(pay === 'do' ? 'ادائیگی کر دیں' : 'کاپی — ادائیگی نہیں', pay === 'do' ? 64 : 50, 1));
   o.push(C + rv(big(pay === 'do' ? ' PAYMENT DE DO ' : ' COPY-PAYMENT NAHI ')), '');
   return o;
@@ -451,6 +453,7 @@ function receiptBig({ title, code, date, lines, note, copy, pay }) {
   if (!many && lines[0]) out.push(L + hr, C + smb(String(lines[0].label || '').toUpperCase()));
   out.push(C + huge('Rs.' + n(total)), '');
   if (pay === 'copy') out.push(C + smb('*** COPY - IS PAR PAISE NA DEIN ***'), '');
+  if (pay === 'nocash') out.push(C + smb('*** GALLE SE PAISE NAHI GAYE ***'), '');   // 2026-10-23
   out.push(L + hr);
   // sabqa + ab baqaya — chhote (Font B), do party hon to naam saath
   for (const l of lines) {
@@ -467,7 +470,7 @@ function receiptBig({ title, code, date, lines, note, copy, pay }) {
   return out.join('\r\n');
 }
 function receipt({ title, code, date, lines, note, copy, bank, pay }) {
-  if (bank || !PAY_DO) pay = '';
+  if (bank || (!PAY_DO && pay !== 'nocash')) pay = '';   // 2026-10-23: 'nocash' (galle se nahi) payDo band ho tab bhi
   if (!bank && BIG_SLIP) return receiptBig({ title, code, date, lines, note, copy, pay });
   const W = PRINT_WIDTH;
   const n = v => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
@@ -1050,9 +1053,13 @@ async function syncEntries(pool, acct) {
 // Sirf AAJ ki kharcha entry, jis par posPrintedAt / posPrintErr nahi. Kamyab = posPrintedAt; nakam = posPrintErr. Dobara = printJobs id 'EXP:<entryId>'.
 const tsOf = v => typeof v === 'number' ? v : Date.parse(v) || 0;
 const todayPk = () => { const d = new Date(Date.now() + 5 * 3600000); return d.toISOString().slice(0, 10); };
+// 2026-10-23 (app v2.113.1): 🏦 BANK / KHATE SE KHARCHA — HBL "Kis ko diya?" → kharcha (bk<sms>x), ⇄ transfer → kharcha (kx…x), HBL bill / card / fee.
+//   In par galle se paisa NAHI gaya (dailyIncluded false) — pehle "Kharcha diya" chhapta tha = galle wala samjhe paise diye / closing mein parchi ginay.
+//   Ab upar bara kala patta "BANK / KHATE SE · GALLE SE NAHI" + Urdu, line "Bank / khate se". Parchi phir bhi nikalti hai (malik ka record).
 function expenseSlip(e, copy) {
+  const nocash = e.dailyIncluded === false;
   return receipt({ title: 'KHARCHA VOUCHER', code: 'KH-' + String(e.id).replace(/[^A-Za-z0-9]/g, '').slice(-8).toUpperCase(), date: e.date,
-    lines: [{ name: e.account || 'Kharcha', label: 'Kharcha diya', amount: rupees(e.amount) }], note: String(e.note || '').trim(), copy });
+    lines: [{ name: e.account || 'Kharcha', label: nocash ? 'Bank / khate se' : 'Kharcha diya', amount: rupees(e.amount) }], note: String(e.note || '').trim(), copy, ...(nocash ? { pay: 'nocash' } : {}) });
 }
 async function printExpenses() {
   if (DRY || !AUTO_PRINT) return;

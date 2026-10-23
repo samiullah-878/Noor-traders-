@@ -27,14 +27,15 @@ function build() {
     let o = out.get(id); if (!o) { o = { id, name: r.name, r, locs: new Map() }; out.set(id, o); }
     o.locs.set(b, { b, r, c, f, f0, part: q > 0 && f !== 0, billed: Math.abs(f0) >= 0.001 && f === 0, pend: !!pendBy.get(b)?.has(id) });
   }
-  const L = [], t0 = dayStart();
+  const L = [];
   for (const o of out.values()) {
     const got = [...o.locs.values()]; if (!got.some(x => Math.abs(x.f) > 0.001)) continue;   // sab bill ho chuke / barabar
     for (const b of brs) if (!o.locs.has(b)) { const r = A.item(b, o.id); if (r && !A.hidden(r)) o.locs.set(b, { b, r, c: null, f: 0, none: true, pend: !!pendBy.get(b)?.has(o.id) }); }
     const locs = [...o.locs.values()].sort((a, b) => a.b - b.b), fs = locs.map(x => x.f), pr = Number(o.r.prate) || 0, pk = Number(o.r.pack) || 0;
     const net = r3(fs.reduce((t, f) => t + f, 0)), rsN = r2(net * pr), hasK = fs.some(f => f < -0.001), hasZ = fs.some(f => f > 0.001);
-    const pend = locs.some(x => x.pend), hMax = Math.max(0, ...locs.filter(x => x.c).map(x => (x.c.history || []).filter(h => (Number(h?.at) || 0) >= t0).length));
-    const big = (Math.abs(rsN) >= BIG_RS || (pk > 1 && Math.abs(net) >= pk)) && hMax < 2 && !force.has(o.id);
+    // v2.113.1: "ek hi dafa gina" sirf FARQ wali jagah ka dekho (pehle: kisi bhi jagah ki sab se zyada ginti — barabar wali godam 2 dafa = dukan ka Rs 3,000 kam bina dobara ginti bill). Din = us ginti ka apna din (roz.js jaisa).
+    const pend = locs.some(x => x.pend), once = locs.some(x => x.c && Math.abs(x.f) > 0.001 && (x.c.history || []).filter(h => (Number(h?.at) || 0) >= dayStart(x.c.at)).length < 2);
+    const big = (Math.abs(rsN) >= BIG_RS || (pk > 1 && Math.abs(net) >= pk)) && once && !force.has(o.id);
     const kind = pend ? 'pend' : big ? 'big' : hasK && hasZ ? 'jagah' : net < 0 ? 'kam' : net > 0 ? 'zyada' : 'jagah';
     const unc = locs.filter(x => x.none && Math.abs(Number(x.r.stock) || 0) > 0.001);
     L.push({ ...o, locs, net, rs: rsN, kind, hasK, hasZ, unc });
@@ -88,9 +89,10 @@ export function farqOpen(api) { A = api; dlg(); }
 export function farqLive(api) { if (api) A = api; if (!$('fqRoot') || !A) return; const ae = document.activeElement; if (ae && ae.closest?.('#fqRoot') && ae.matches('input')) { dirty = true; return; } paint(); }
 document.addEventListener('focusout', e => { if (dirty && e.target?.closest?.('#fqRoot')) setTimeout(() => { if (dirty && !document.activeElement?.closest?.('#fqRoot input')) { dirty = false; paint(); } }, 300); });
 async function fixList(list, label) {
-  const J = jobsOf(list); if (!J.length) { A.notice('Theek karne ko kuch nahi'); return; }
+  const J0 = jobsOf(list); if (!J0.length) { A.notice('Theek karne ko kuch nahi'); return; }
+  const J = J0.slice(0, 40), cut = J0.length - J.length;   // v2.113.1: cloud 40 hisse tak (pehle 12 par baqi CHUPKE se gir jate) — zyada hon to saaf batao
   const tot = list.reduce((t, x) => t + x.rs, 0);
-  if (!confirm(`✅ ${label} — "stock fraq" bill (${J.length} hisse)\n${J.map(j => `${A.branchName(j.branch)} · ${j.kind === 'kam' ? 'kam (Sale)' : 'zyada (Return)'} · ${j.items.length} items`).join('\n')}\nAsal farq ${rs(tot)}\n\nPC bill + parchi banaye?`)) return;
+  if (!confirm(`✅ ${label} — "stock fraq" bill (${J.length} hisse)\n${J.map(j => `${A.branchName(j.branch)} · ${j.kind === 'kam' ? 'kam (Sale)' : 'zyada (Return)'} · ${j.items.length} items`).join('\n')}${cut ? `\n⚠️ ${cut} hisse abhi NAHI (ek dafa 40 tak) — yeh ho jayein to dobara "Sab theek karo"` : ''}\nAsal farq ${rs(tot)}\n\nPC bill + parchi banaye?`)) return;
   try { await A.cloud.requestFarqQueue(J); for (const x of list) force.delete(x.id); A.notice('✓ PC ko bhej diya — ek ek kar ke bill + parchi (1–3 min)'); setTimeout(paint, 300); }
   catch (e) { A.notice('Nahi bheja: ' + (e?.message || e)); }
 }
