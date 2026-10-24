@@ -1,3 +1,6 @@
+// v18 (2026-10-25): ⚖️ STOCK THEEK (app ⇄ khirki) — larkon ki ginti se ALAG: stockCount/_adj-<id> {type 'adj', status 'new', branch, kind kam|zyada, items[{id,name,qty}], afterTn}
+//   → pehle afterTn wala TN 'done' (failed / 30 min = fail) → WAHI createBill (stock fraq Sale / Return, cost) magar ginti ka _posted ledger NAHI · POS Description
+//   "Stock theek <id>" = dohra nahi · parchi "STOCK THEEK" · jawab status done + saleNo / returnNo (ya fail + error). Ginti / roz / farq pehle jaisa.
 // v17.4 (2026-10-21): ⛔ purane band items (feature se pehle wale) ke NAAM bhi app ko (_bandDone.items[id].name) — app ki Stock screen par "⛔ Band items" list (POS mein inactive = posStock mein naam nahi hota).
 //   Ek dafa SQL se (ghante mein ek koshish jab tak mil na jayein), band-state.json mein oldNm. POS mein KUCH nahi badalta.
 // v17.3 (2026-10-20): 🔤 ginti farq + item band rasid par Urdu sar-khi + bari Urdu tareekh (urdu-names + nt-parchi) · item band rasid ab kaghaz kaat-ti hai.
@@ -289,7 +292,7 @@ function printList(L) {
 async function createAdjustment(pool, L) {
   const { round, branch, kam, zyada } = L;
   const now = new Date();
-  const note = `Created By:Administrator On:${now.toLocaleString('en-US')} at PC:${os.hostname()} (stock ginti ${round})\r\n`;
+  const note = `Created By:Administrator On:${now.toLocaleString('en-US')} at PC:${os.hostname()} (${L.adj ? 'stock theek app' : 'stock ginti ' + round})\r\n`;
   const rows = [...kam.map(k => ({ ...k, sq: -k.qty })), ...zyada.map(k => ({ ...k, sq: k.qty }))];
   const cogs = round2(rows.reduce((t, k) => t + k.sq * k.cost, 0));
   const tx = new sql.Transaction(pool);
@@ -301,9 +304,9 @@ async function createAdjustment(pool, L) {
     adjNo = String(Number(mx) + 1).padStart(8, '0');
     const h = await new sql.Request(tx)
       .input('AdjustmentID', sql.Int, 0).input('BranchID', sql.Int, branch).input('AdjustmentNo', sql.VarChar(50), adjNo)
-      .input('AdjustmentDate', sql.DateTime, now).input('Description', sql.VarChar(150), `Stock ginti farq ${round}`)
+      .input('AdjustmentDate', sql.DateTime, now).input('Description', sql.VarChar(150), L.desc || `Stock ginti farq ${round}`)
       .input('CreatedBy', sql.Int, CREATED_BY).input('CreatedOn', sql.DateTime, now).input('UpdatedBy', sql.Int, 0).input('UpdatedOn', sql.DateTime, null)
-      .input('Remarks', sql.VarChar(150), 'Blue Khata ginti').input('SystemNotes', sql.VarChar(sql.MAX), note)
+      .input('Remarks', sql.VarChar(150), L.adj ? 'Blue Khata stock theek' : 'Blue Khata ginti').input('SystemNotes', sql.VarChar(sql.MAX), note)
       .input('COGS', sql.Float, cogs).input('DocStatusID', sql.Int, 1).input('SaleID', sql.Int, 0)
       .execute('dbo.usp_Adjustment_InsertUpdate');
     let adjId = Number(h.recordset?.[0]?.AdjustmentID) || 0;
@@ -324,6 +327,7 @@ async function createAdjustment(pool, L) {
     }
     await tx.commit();
   } catch (e) { await tx.rollback().catch(() => {}); throw e; }
+  if (L.adj) { log(`🧮 ADJUSTMENT ${adjNo} (branch ${branch}, stock theek): ${kam.length} kam, ${zyada.length} zyada`); return { saleNo: 'ADJ-' + adjNo, returnNo: '', adjustment: adjNo }; }   // v18: ginti ka ledger nahi
   const items = { ...L.already };
   rows.forEach(k => { items[k.key] = round3((Number(items[k.key]) || 0) + k.qty); });
   const local = readLocal(); local[L.postedKey] = items; writeLocal(local);
@@ -337,8 +341,8 @@ async function createBill(pool, L) {
   const { P, round, branch, kam, zyada, saleTotal, saleCogs, retTotal, retCogs } = L;
   const net = L.net;
   const now = new Date();
-  const note = `Created By:Administrator On:${now.toLocaleString('en-US')} at PC:${os.hostname()} (stock ginti ${round})\r\n`;
-  const desc = `Stock ginti farq ${round}`;
+  const note = `Created By:Administrator On:${now.toLocaleString('en-US')} at PC:${os.hostname()} (${L.adj ? 'stock theek app' : 'stock ginti ' + round})\r\n`;
+  const desc = L.desc || `Stock ginti farq ${round}`;   // v18: stock theek = "Stock theek <id>" (dohra rokne ka nishan)
   const tx = new sql.Transaction(pool);
   await tx.begin();
   let saleNo = '', returnNo = '';
@@ -476,6 +480,7 @@ async function createBill(pool, L) {
     throw e;
   }
 
+  if (L.adj) return { saleNo, returnNo };   // v18: stock theek — ginti ka _posted ledger NAHI chhuta
   // Kitna bill mein chala gaya, yaad rakhein (dobara na jaye)
   const items = { ...L.already };
   [...kam, ...zyada].forEach(k => { items[k.key] = round3((Number(items[k.key]) || 0) + k.qty); });
@@ -507,12 +512,12 @@ function receiptText(b) {
   const big = t => ESC + '!' + '\x30' + t + ESC + '!' + '\x00';
   const barcode = code => { const c = String(code || '').trim(); if (!c) return '';
     return GS + 'h' + '\x50' + GS + 'w' + '\x02' + GS + 'H' + '\x02' + GS + 'k' + '\x49' + String.fromCharCode(c.length + 2) + '{B' + c + '\n'; };
-  const out = [ESC + '@', ESC + 'a' + '\x01', big('NOOR TRADERS'), 'STOCK GINTI FARQ', ...urHead('اسٹاک گنتی فرق', b.doneAt || Date.now()), ESC + 'a' + '\x00', hr,
+  const out = [ESC + '@', ESC + 'a' + '\x01', big('NOOR TRADERS'), b.adj ? 'STOCK THEEK' : 'STOCK GINTI FARQ', ...urHead(b.adj ? 'اسٹاک درستی' : 'اسٹاک گنتی فرق', b.doneAt || Date.now()), ESC + 'a' + '\x00', hr,
     line('Sale No:', b.saleNo || '-')];
   if (b.saleNo) { out.push(ESC + 'a' + '\x01', barcode(String(b.saleNo).trim()), ESC + 'a' + '\x00'); }
   if (b.returnNo) out.push(line('Return No:', b.returnNo));
   out.push(line('Tareekh:', new Date(b.doneAt || Date.now()).toLocaleString('en-GB')));
-  out.push(line('Ginti:', b.round || ''));
+  if (b.adj) { out.push(line('Kaam:', 'Stock theek (app)')); if (b.byName) out.push(line('Kis ne:', String(b.byName).replace(/[^\x20-\x7e]/g, '').slice(0, 20) || '-')); } else out.push(line('Ginti:', b.round || ''));
   out.push(line('Account:', String(b.party || '').replace(/["']/g, '')));
   const section = (title, list, sign) => {
     if (!list || !list.length) return;
@@ -896,8 +901,86 @@ async function bandOld(yes) {
   }
 }
 
+// ============================================================
+//  v18 (2026-10-25): ⚖️ STOCK THEEK — app ki ⇄ khirki se (malik / malik ki manzoori). Larkon ki GINTI se bilkul ALAG.
+//  stockCount/_adj-<id>: {type 'adj', status 'new', branch, kind 'kam'|'zyada', items:[{id,name,qty}], afterTn, note, byName, at}
+//  afterTn = pehle wo transfer note (sirf hisaab) 'done' ho — failed = yeh bhi fail, 30 min = fail. Bill WAHI createBill (L.adj: _posted ledger nahi).
+//  Dohra nahi: transaction 'posting' + POS Description "Stock theek <id>" pehle dekho. Listener (type == adj) — get() har tick nahi.
+// ============================================================
+const ADJ_WAIT_MS = 30 * 60e3, ADJ_STUCK_MS = 10 * 60e3;
+let adjDocs = new Map(), adjUnsub = null, adjCleanAt = 0;
+const trJobCol = db.collection('businesses').doc(BUSINESS_ID).collection('transferJobs');
+function watchAdj() {
+  if (adjUnsub) return;
+  adjUnsub = countCol.where('type', '==', 'adj').onSnapshot(s => {
+    let fresh = false;
+    s.docChanges().forEach(c => { if (c.type === 'removed') adjDocs.delete(c.doc.id); else { adjDocs.set(c.doc.id, c.doc); if ((c.doc.data() || {}).status === 'new') fresh = true; } });
+    if (fresh && kickFarq) kickFarq();
+  }, e => { log('Stock theek listener masla: ' + e.message + ' — 1 min baad dobara'); adjUnsub = null; setTimeout(watchAdj, 60000); });   // band nahi (listenFail nahi) — ginti ka kaam chalta rahe
+}
+async function adjList(pool, j, desc) {
+  const party = (await pool.request().query(PARTY_SQL_TEXT)).recordset;
+  if (party.length !== 1 && farqMode() !== 'sale') party.splice(0, party.length, { PartyID: 0, PartyName: 'POS Adjustment', AccountID: 0 });
+  if (party.length !== 1) return { error: `POS mein "${PARTY_NAME}" naam ka ${party.length ? 'ek se zyada' : 'koi'} account mila` };
+  const P = party[0], branch = Number(j.branch) || 0, kind = j.kind === 'zyada' ? 'zyada' : 'kam', kam = [], zyada = [], skipped = [];
+  for (const x of (Array.isArray(j.items) ? j.items : []).slice(0, 40)) {
+    const qty = round3(Number(x && x.qty) || 0); if (!(qty > 0)) continue;
+    const it = await findItem(pool, { itemId: x.id, name: x.name }, branch);
+    if (!it) { skipped.push({ id: String(x.id), name: x.name, why: 'POS mein yeh item pakka nahi pehchana gaya (naam / jagah)' }); continue; }
+    const cost = Number(it.Cost) || 0, rate = RATE_MODE === 'sale' ? (Number(it.SaleRate) || 0) : cost, cur = Number(it.CurrStock) || 0;
+    (kind === 'kam' ? kam : zyada).push({ ...it, key: (kind === 'kam' ? '' : 'R') + it.ItemID, qty, cost, rate, sys: cur, count: round3(kind === 'kam' ? cur - qty : cur + qty), amount: round2(qty * rate), cogs: round2(qty * cost) });
+  }
+  const sum = (list, f) => round2(list.reduce((t, k) => t + k[f], 0));
+  const saleTotal = sum(kam, 'amount'), saleCogs = sum(kam, 'cogs'), retTotal = sum(zyada, 'amount'), retCogs = sum(zyada, 'cogs');
+  return { P, round: '', branch, postedKey: '', already: {}, kam, zyada, skipped, saleTotal, saleCogs, retTotal, retCogs, net: round2(saleTotal - retTotal), adj: true, desc };
+}
+async function adjJob(pool, ref, j, deps = {}) {
+  const make = deps.createBill || createBill, print = deps.printBill || printBill, now = Date.now();
+  if (j.afterTn) {
+    const t = await trJobCol.doc(String(j.afterTn)).get(), st = t.exists ? (t.data() || {}).status : '';
+    if (st === 'failed') { await ref.set({ status: 'fail', error: 'Transfer note nahi bana — is liye bill bhi nahi bana', doneAt: now }, { merge: true }); log('⚖️ Stock theek: TN fail — bill nahi'); return 'fail'; }
+    if (st !== 'done') {
+      if (now - (Number(j.at) || now) > ADJ_WAIT_MS) { await ref.set({ status: 'fail', error: 'Transfer note 30 min mein nahi bana — bill nahi bana', doneAt: now }, { merge: true }); return 'fail'; }
+      return 'wait';
+    }
+  }
+  const got = await db.runTransaction(async t => {
+    const cur = (await t.get(ref)).data(); if (!cur) return false;
+    if (cur.status === 'new' || (cur.status === 'posting' && now - (Number(cur.postingAt) || 0) > ADJ_STUCK_MS)) { t.update(ref, { status: 'posting', postingAt: now }); return true; }
+    return false;
+  });
+  if (!got) return 'skip';
+  try {
+    const desc = ('Stock theek ' + String(ref.id).replace(/^_adj-/, '')).slice(0, 150);
+    const q = farqMode() !== 'sale' ? 'SELECT TOP 1 AdjustmentNo AS No FROM dbo.Adjustment WHERE Description = @d ORDER BY AdjustmentID DESC' : 'SELECT TOP 1 SaleNo AS No FROM dbo.Sale WHERE Description = @d ORDER BY SaleID DESC';
+    const prev = (await pool.request().input('d', sql.VarChar(150), desc).query(q)).recordset[0];
+    if (prev) { await ref.set({ status: 'done', saleNo: String(prev.No || '').trim(), again: true, doneAt: Date.now() }, { merge: true }); log('⚖️ Stock theek pehle se bana tha: ' + String(prev.No || '').trim()); return 'done'; }
+    const L = await adjList(pool, j, desc);
+    if (L.error) { await ref.set({ status: 'fail', error: L.error, doneAt: Date.now() }, { merge: true }); log('⚖️ Stock theek: ' + L.error); return 'fail'; }
+    if (!L.kam.length && !L.zyada.length) { await ref.set({ status: 'fail', error: (L.skipped[0] && L.skipped[0].why) || 'Tadad khali', doneAt: Date.now() }, { merge: true }); return 'fail'; }
+    const r = await make(pool, L);
+    await ref.set({ status: 'done', saleNo: r.saleNo || '', returnNo: r.returnNo || '', total: L.net, doneAt: Date.now() }, { merge: true });
+    log(`⚖️ Stock theek bill: ${r.saleNo || ''}${r.returnNo ? ' / ' + r.returnNo : ''} · branch ${L.branch} · ${L.kam.length + L.zyada.length} item · Rs ${L.net}${j.byName ? ' · ' + j.byName : ''}`);
+    try { await print({ ...brief(L), ...r, adj: true, byName: j.byName || '', doneAt: Date.now() }); } catch (e) { log('Stock theek print: ' + e.message); }
+    return 'done';
+  } catch (e) { await ref.set({ status: 'fail', error: String((e && e.message) || e).slice(0, 200), doneAt: Date.now() }, { merge: true }); log('⚖️ Stock theek bill nahi bana: ' + ((e && e.message) || e)); return 'fail'; }
+}
+async function adjOnce(deps = {}) {
+  watchAdj();
+  const now = Date.now();
+  if (now - adjCleanAt > 3600e3) { adjCleanAt = now; for (const d of adjDocs.values()) { const x = d.data() || {}; if ((x.status === 'done' || x.status === 'fail') && now - (Number(x.doneAt) || Number(x.at) || now) > 14 * 864e5) d.ref.delete().catch(() => {}); } }   // 14 din purane saaf
+  const due = [...adjDocs.values()].map(d => ({ d, x: d.data() || {} })).filter(({ x }) => x.status === 'new' || (x.status === 'posting' && now - (Number(x.postingAt) || 0) > ADJ_STUCK_MS))
+    .sort((a, b) => (Number(a.x.at) || 0) - (Number(b.x.at) || 0));
+  if (!due.length) return 0;
+  const pool = deps.pool || await sql.connect(SQL_CONFIG);
+  let n = 0;
+  try { for (const { d, x } of due.slice(0, 10)) { if ((await adjJob(pool, d.ref, x, deps)) === 'done') n++; } }
+  finally { if (!deps.pool) await pool.close(); }
+  return n;
+}
+
 async function autoLoop() {
-  log(`post-farq v17 --auto chal raha hai. App ka hukam listener se (foran), SQL kaam har ${POLL_SECONDS} second. Band: Ctrl+C`);
+  log(`post-farq v18 --auto chal raha hai. App ka hukam listener se (foran), SQL kaam har ${POLL_SECONDS} second. Band: Ctrl+C`);
   let busy = false, again = false, timer = null;
   const tick = async () => {
     if (busy) { again = true; return; }
@@ -906,17 +989,19 @@ async function autoLoop() {
       again = false;
       try { await autoOnce(); } catch (e) { log('Masla: ' + e.message); }
       try { await bandOnce(); } catch (e) { log('Band masla: ' + e.message); }
+      try { await adjOnce(); } catch (e) { log('Stock theek masla: ' + e.message); }   // v18
     } while (again);
     busy = false;
   };
   kickFarq = () => { if (timer) return; timer = setTimeout(() => { timer = null; tick(); }, 1500); };
   watchBand();
   watchCtl();
+  watchAdj();   // v18: ⚖️ stock theek
   await tick();
   setInterval(ZINDA.guard(tick, 10 * 60000, 'farq tick'), POLL_SECONDS * 1000);   // 2026-10-11: chowkidar
 }
 
-module.exports = { createBill, PARTY_SQL: `SELECT PartyID, PartyName, AccountID FROM dbo.Party
+module.exports = { _t: { adjOnce, adjJob, adjList, receiptText, adjDocs: () => adjDocs }, createBill, PARTY_SQL: `SELECT PartyID, PartyName, AccountID FROM dbo.Party
   WHERE (LOWER(PartyName) LIKE '%stock%fraq%' OR LOWER(PartyName) LIKE '%stock%farq%')`, SQL_CONFIG, round2, round3 };
 
 if (require.main === module) {

@@ -1,5 +1,5 @@
 // ============================================================
-//  auto-backup.js  v2.1 (2026-10-24: 📲 malik ki ijazat — mulazim ki darkhwast malik ke phone par push, malik ka faisla mulazim ke phone par) · v2.0 (2026-10-22: 📋 roz ki ginti — _round roz · _postQ line · larkon ko 12 / 4 baje yaad · malik ko 8 baje khulasa) · v1.9 (2026-10-22: 📷 factory items ki HD tasveer PC + Google Drive "Factory Photos" mein · factory nuskhe (factory/cfg) + batch bhi backup mein) · v1.6 (2026-10-12: cancel note par notification nahi, edit = nayi check) · v1.5 (🚚 transfer note 10 min mein check na ho = notification) · v1.0 (2026-10-05) — ☁️ AUTO BACKUP: din mein 2 dafa (app ki Settings se waqt) poora khata JSON mein,
+//  auto-backup.js  v2.2 (2026-10-25: ⚖️ "sirf hisaab" TN ki check-yaad push nahi) · v2.1 (2026-10-24: 📲 malik ki ijazat — mulazim ki darkhwast malik ke phone par push, malik ka faisla mulazim ke phone par) · v2.0 (2026-10-22: 📋 roz ki ginti — _round roz · _postQ line · larkon ko 12 / 4 baje yaad · malik ko 8 baje khulasa) · v1.9 (2026-10-22: 📷 factory items ki HD tasveer PC + Google Drive "Factory Photos" mein · factory nuskhe (factory/cfg) + batch bhi backup mein) · v1.6 (2026-10-12: cancel note par notification nahi, edit = nayi check) · v1.5 (🚚 transfer note 10 min mein check na ho = notification) · v1.0 (2026-10-05) — ☁️ AUTO BACKUP: din mein 2 dafa (app ki Settings se waqt) poora khata JSON mein,
 //  C:\khata-sync\backups mein + Google Drive for Desktop ke folder ("Blue Khata Backup") mein — Drive khud upload karta hai.
 //
 //  App (Settings -> 💾 Backup -> ☁️ Auto backup) blueAccess/backupConfig likhti hai: {on, email, times:['14:00','22:00'], now}
@@ -22,7 +22,8 @@ const zlib = require('zlib');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
-const VER = '2.1';   // v2.1 (2026-10-24): 📲 MALIK KI IJAZAT (app v2.115.0) — approvals status 'new' = malik ko push, faisla (done / no / fail) = mulazim ko push. POS / SQL nahi.
+const VER = '2.2';   // v2.2 (2026-10-25): ⚖️ "sirf hisaab" transfer note (stock theek / ginti farq) ki "check nahi hua" push NAHI.
+// v2.1 (2026-10-24): 📲 MALIK KI IJAZAT (app v2.115.0) — approvals status 'new' = malik ko push, faisla (done / no / fail) = mulazim ko push. POS / SQL nahi.
 // pichla:    // v2.0 (2026-10-22): 📋 ROZ KI GINTI — (1) _auto on = _round roz khud aaj (post-farq ginti ka us waqt ka stock likhe) (2) stockCount/_postQ (malik ka "✅ Sab theek karo") ek ek kar ke _post (post-farq wahi bill + parchi) (3) 12 / 4 baje baqi larkon ko push (4) 8 baje malik ko khulasa · v1.9 (2026-10-22): 📷 factory tasveerein (factory/phIdx + ph_<id>_<v>_<i>) -> backups\Factory Photos + Drive "Blue Khata Backup\Factory Photos" (sirf nayi / badli; hatai = file bhi hate) · extra backup mein factory/cfg (nuskhe) + factoryBatches · v1.8 (2026-10-17): 🔁 din wala har reminder KHUD har 1 ghanta (nag na likha = 60, 0 = band), 3 din ki hadd khatam (jab tak ✓ na ho), 4+ ek saath = ek khulasa notification · v1.7: v1.7 (2026-10-17): 🔔 MULAZIM ka reminder MALIK ke phone par bhi — waqt aate hi pehli khabar (malik + likhne wala), sirf mulazim ke likhe notes · v1.4 (2026-10-11): 🔁 notes.nag — baar baar yaad (15/30/60 min) jab tak ✓ na ho · v1.3 (2026-10-07): driver ki jeb se EXTRA kharcha (kind 'kharch', driver:true) khate se − (app v2.97.1) · v1.2 (2026-10-07): driver ka KHATA (app v2.96.1 jaisa) — phera + (kiraya − kharche − commission), liya −, advance + · v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47832;
@@ -232,10 +233,12 @@ function trWatch() {
     base.collection('transferChecks').where('issuedAt', '>=', since).onSnapshot(s => s.docChanges().forEach(c => { if (c.type === 'removed') trChecks.delete(c.doc.id); else trChecks.add(c.doc.id); }), fail('transferChecks'))
   ];
 }
+// v2.2 (2026-10-25): ⚖️ "sirf hisaab" note (app v2.116.0 stock theek / ginti farq — maal pehle se wahan, hila nahi) = check ki yaad NAHI
+const trHisaab = t => /sirf\s*hisaa?b/i.test(String((t && t.note) || ''));
 function trList() {   // v1.6: cancel (POS mein mita / app se delete) shamil nahi
   const dels = new Set([...trJobs.values()].filter(j => j.op === 'delete' && j.status === 'done' && j.transferId).map(j => String(j.transferId)));
-  const L = [...trPos.values()].filter(t => !t.cancelled && !dels.has(String(t.transferId))), ids = new Set([...trPos.values()].map(t => String(t.transferId)));
-  for (const j of trJobs.values()) { if (j.op === 'delete' || j.status !== 'done' || !j.transferId || ids.has(String(j.transferId)) || dels.has(String(j.transferId))) continue;
+  const L = [...trPos.values()].filter(t => !t.cancelled && !trHisaab(t) && !dels.has(String(t.transferId))), ids = new Set([...trPos.values()].map(t => String(t.transferId)));
+  for (const j of trJobs.values()) { if (j.op === 'delete' || j.status !== 'done' || !j.transferId || trHisaab(j) || ids.has(String(j.transferId)) || dels.has(String(j.transferId))) continue;
     L.push({ id: 'T' + j.transferId, transferId: j.transferId, transferNo: String(j.transferNo || ''), from: j.from, to: j.to, createdOn: Number(j.doneAt) || Number(j.at) || 0, lines: j.lines || [] }); }
   return L;
 }

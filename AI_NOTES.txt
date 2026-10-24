@@ -6066,3 +6066,34 @@ B3 farq · B4 din · B5 CAP band / malik seedha Edit · B6 purani purchase (tasv
 3) Laptop (DESKTOP-I5BS1UF) par abhi nt-local v1.0.1 (sirf /ping) chal raha hai aur nt-local-setup ne NT Camera (galla camera) BAND kiya hua hai
    (Startup "NT Camera.lnk" -> C:\NTCam\NT Camera.lnk.band, task "NT Camera chowkidar" delete — pc/ntup.txt wala user-level task). Malik se poocha:
    camera wapas chalu? (OK par: nt-local.js khud shortcut wapas + chowkidar task + camera chalu + local server exit 3; laptop par kuch nahi karna).
+
+========== v2.116.0 (25 Oct 2026) — ⚖️ STOCK THEEK (⇄ Transfer khirki ke andar) · 📜 item ke TN (3 din + chips) · PC post-farq v18 · auto-backup v2.2 · raat-report v1.4 ==========
+Malik: "transfer screen par aik hi time noor traders ka stock aur godam ka stock likhein — app bataye kitna kam / zyada, jagah badli wala hissa adjust,
+baqi sale farq, chhutti" · "larkon ki ginti wese hi rehni chahie" · "transfer wale button ke andar hi" · "0 wala tick" · "transfer note history har din
+ke hisaab se transfer notes mein bhi, magar Zeeshan ki tick ki zaroorat nahi" · "neeche us item ki TN history — sirf 3 din, Hafta / 2 hafte / Mahina
+chips dabane par" · "history sab items par".
+1) qtr.js (⇄ khirki) — 2 tab: "⇄ Transfer" (purana, bilkul wahi) | "⚖️ Stock theek" (CAP stock.theek, shuru se ON; sirf seeStock() — andhi ginti mein tab nahi;
+   recount wali khirki mein tab nahi). Do jagah: 🏪 main (agPool().main) + chuni godam (chips, default = sab se bara stock, warna "Godam 1" NAAM se).
+   Har jagah Ctn / Pcs + "☐ 0 · khali" tick. POS (live — sync-stock push par khirki khud taza, likha hua / focus nahi toota: qtrLive).
+   qtrPlan(pa, pb, main): farq = asal − POS. Ek jagah kam + doosri zyada = TN (chhoti tadad, kam wali → zyada wali; godam se POS stock se zyada nahi —
+   transfer-sync mana karta). Baqi = bill (kam = Sale, zyada = Return) "stock fraq" party, khareed rate (Rs dikhaya).
+   ✓ Theek karo: confirm → TN `requestTransfer` note QTR_HISAAB 'Stock theek - maal pehle se wahan (sirf hisaab)' (ascii — POS Description VarChar).
+   TN fail = bill bhi NAHI. Phir bill: malik = `cloud.requestStockAdjust` (stockCount/_adj-<id>, afterTn = TN job id) + watchStockAdj (✓ bill no paigham);
+   mulazim = TN apne ⛔ password se, bill = `ntIjAsk({kind:'farq', jobs:[{adj:1,…}]})` → malik ✓ → app.js ijDo: sab jobs adj = requestStockAdjust.
+   Larkon ki GINTI (stockCount c-*, _posted, _bill) bilkul NAHI chhuti (saveStockCount 0 — test).
+   📋 Dohra ki khabar: is jagah ki larkon ki ginti ka farq abhi bill nahi hua (billOf baqi / part, _auto band) → jagah ke dabbe mein amber line +
+   confirm mein ⚠️ (dono se wahi farq do dafa bill ho jata). Sirf khabar — rokta nahi. (pos-stock qtrGinti)
+2) 📜 Khirki ke neeche HAR item ke transfer note (POS + app ke + ⏳ PC par bante): default 3 din, chips Hafta / 2 hafte / Mahina (dabane par sirf
+   history dobara — likha hua wahi). ⚖️ sirf hisaab · ❌ cancel · ✏️ edit nishan. (pos-stock qtrHist, 80 tak)
+3) "Sirf hisaab" note (tcHisaab = note mein "sirf hisaab" — stock theek AUR purana ginti-farq recount TN, dono mein maal hila nahi):
+   register mein HAAN ("⚖️ Sirf hisaab" chip) · Zeeshan / check list, raste mein, late, check baqi, roz ginti ka "abhi TN" block, agent list,
+   upar ka jor (asal hila maal) mein NAHI · scan karo to "sirf hisaab — tick ki zaroorat nahi". PC: auto-backup v2.2 "check nahi hua" push nahi,
+   raat-report v1.4 "check nahi hue" mein nahi (cancel bhi nahi).
+4) PC post-farq.js v18 (manifest 2026-10-25.1): stockCount where type == 'adj' listener → afterTn TN done ka intezar (failed = fail, 30 min = fail) →
+   transaction new → posting (10 min atka = dobara) → POS mein Description "Stock theek <id>" pehle se? = done (dohra nahi) → WAHI createBill
+   (farqMode sale = Sale + jura Return; adjust = Adjustment) L.adj = _posted ledger / posted-farq.json NAHI → done {saleNo, returnNo, total} + parchi
+   "STOCK THEEK" (Kaam: Stock theek (app) · Kis ne). 14 din purane done / fail saaf. rack-bharo "Stock theek" Sale ko bikri nahi ginta (stock fraq party).
+5) Rules NAHI badle (malik stockCount mein sab likh sakta; mulazim _adj nahi likhta — manzoori se malik ki app). AI NAHI.
+Test: t116a (insaan jaisa: malik / 0 khali / mulazim + manzoori / history chips / tick list / CAP / 📋 ginti dohra / 360 glass + 412 frost — 61 ✓),
+PC pf18/t.js (afterTn intezar · fail · 30 min · dohra · atka posting · item na mile · parchi) + t2.js (asal createBill / createAdjustment, mock SQL),
+abt2/t4.js, rr14/t.js · regression t115a/b, t114a/c, t113f/k, dlgchk.

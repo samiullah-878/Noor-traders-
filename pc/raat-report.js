@@ -1,4 +1,5 @@
 // =========================================================
+//  v1.4 (2026-10-25): ⚖️ app v2.116.0 "sirf hisaab" transfer note (maal pehle se wahan) aur cancel note — "check nahi hue" ginti mein NAHI.
 //  v1.3 (2026-10-21): ⏰ SUBAH KI "KHATAM HONE WALA MAAL" KHABAR BAND (malik: "ab is ki zaroorat nahi — app par awe load"; app v2.106.0 ne
 //     Reminder screen se ⏰ / 🛒 order hata diye, mangwana = Rack bharo → 🛒 Mangwao). Na subah ka SQL hisaab, na push, na raat ki report mein
 //     alert card. Sirf 🌙 raat ki report. (Test ke liye haath se: node raat-report.js --alert ab bhi chalta hai.)
@@ -22,7 +23,8 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 
-const VER = '1.3';   // v1.1 (2026-10-11): sachi dhadkan + chowkidar (11-Oct 3 ghante khamosh, report nahi bani) · report waqt guzre to usi din baad mein bhi · default 18:30
+const VER = '1.4';   // v1.4 (2026-10-25): ⚖️ "sirf hisaab" / cancel transfer note "check nahi hue" mein nahi.
+// v1.1 (2026-10-11): sachi dhadkan + chowkidar (11-Oct 3 ghante khamosh, report nahi bani) · report waqt guzre to usi din baad mein bhi · default 18:30
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47833;
 const DIR = __dirname;
@@ -204,7 +206,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
       const ts = await biz.collection('posTransfers').where('at', '>=', d0.getTime() - 864e5).get(), ck = await biz.collection('transferChecks').where('issuedAt', '>=', d0.getTime() - 2 * 864e5).get();
       const done = new Set(ck.docs.map(x => x.id)), farq = ck.docs.map(x => x.data()).filter(x => x.status === 'farq' && (x.issuedAt || 0) >= d0.getTime() && (x.issuedAt || 0) < d1.getTime());
       const today = ts.docs.map(x => ({ ...x.data(), id: x.id })).filter(t => { const at = Number(t.createdOn) || Number(t.at) || 0; return at >= d0.getTime() && at < d1.getTime(); });
-      const pend = today.filter(t => !done.has(t.id));
+      const pend = today.filter(t => !done.has(t.id) && !t.cancelled && !/sirf\s*hisaa?b/i.test(String(t.note || '')));   // v1.4: "sirf hisaab" (stock theek / ginti farq — maal hila nahi) + cancel = check baqi NAHI
       transfer = { n: today.length, pendingN: pend.length, pending: pend.slice(0, 10).map(t => ({ no: String(t.transferNo || t.transferId), at: Number(t.createdOn) || Number(t.at) || 0, from: names[t.from] || String(t.from), to: names[t.to] || String(t.to) })),
         farqN: farq.length, farq: farq.slice(0, 5).map(x => ({ no: String(x.transferNo || ''), note: String(x.note || '').slice(0, 80), by: String(x.byName || '') })) };
     } catch (e) { log('transfer nahi parhe: ' + e.message); }
