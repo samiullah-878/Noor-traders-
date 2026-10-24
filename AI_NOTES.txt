@@ -5993,3 +5993,25 @@ stock screen aa jaye".
    screen dikhti hai + CAP app.dhitem (shuru se ON). AI NAHI. Rules NAHI. PC NAHI.
    Test t115a (insaan jaisa): F1 malik farq (chhupi + ＋ + 🔁 Godam 1 63 + Noor dobara → Theek karo) · F2 mulazim · D1 Dhoondo sur → Stock (Har godam, roshan,
    nazar mein) · barcode · kuch nahi · D2 mulazim stock / andhi / CAP band / bina stock · 360 frost + glass. Regression t113f/t114a/t113a/t114c/t113k + dlgchk.
+
+==================== v2.114.4 (2026-10-24) — 📡 LOCAL SERVER (laptop) — UPDATE 1: camera band + jaanch ====================
+Malik: "kabhi net hi na chale to kaam chalta rahe — laptop local server bane; TP-Link router; saare mobile us WiFi se chalein".
+Server PC DESKTOP-Q1SLV77 hi ASAL server (POS SQL wahin). Laptop (Dell Latitude 7280, WiFi 192.168.0.107) = LOCAL SERVER: net na ho to
+phones WiFi par laptop se, laptop LAN par Q1SLV77 ke SQL se. Net ho to laptop chup (sab pehle jaisa Firebase se).
+* pc/nt-local-setup.ps1 (manifest mein NAHI, laptop par ek dafa admin PowerShell: irm .../main/pc/nt-local-setup.ps1 | iex):
+  1) NT Camera band — schtasks "NT Camera chowkidar" delete, Startup "NT Camera.lnk" -> C:\NTCam\NT Camera.lnk.band (wapas = move back),
+     ntcam.py + rtsp ffmpeg process band. C:\NTCam files NAHI mitti. 2) Node v20.18.1 + npm mssql (C:\khata-sync). 3) local-config:
+     \\Q1SLV77\khata-sync (ya c$) se sql; server localhost/. -> DESKTOP-Q1SLV77\...; na mile to Read-Host (password SecureString, kabhi print nahi).
+  4) firewall "NT Local Server" TCP 47900 (admin). 5) powercfg sleep/hibernate AC 0. 6) Startup NT-LOCAL.vbs -> nt-local-auto.bat. 7) /ping jaanch + IP.
+* pc/nt-local.js v1.0: http 0.0.0.0:47900 (port hi lock, dobara = exit 3). GET /ping {ok,host,ver,ip,sql{ok,ms,items,err}} — SQL sirf
+  SELECT COUNT(*) dbo.Items (10 s cache). GET / = status page. CORS * + Access-Control-Allow-Private-Network. 6 ghante baad exit(0).
+  POS mein KUCH NAHI likhta (Update 1). Log nt-local-log.txt.
+* pc/nt-local-auto.bat: har chalne se pehle GitHub raw se nt-local-new.js -> node --check -> nt-local.js (net na ho = purani). Khud update, doctor ki zaroorat nahi.
+* App local-srv.js + Settings → 🔗 Update → "📡 Local server jaanch" (sab ke liye, sirf parhna): IP (localStorage nt-local-ip, default .107),
+  fetch http://IP:47900/ping {targetAddressSpace:"local"} (Chrome Local Network Access; fail ho to bina option dobara), 🌐 Seedha kholo link.
+  sw.js ASSETS mein (net ke baghair bhi khule).
+* KHATARNAK: KHATA-DOCTOR / sale-post waghera laptop par KABHI nahi — dono PC chalein to bill POS mein do dafa.
+* Yahan test: nt-local /ping + OPTIONS headers + dobara chalana exit 3 + SQL fail paigham (password log mein nahi) + Chromium mein jaanch screen.
+  Yahan test NAHI: Windows setup script, asal laptop / Q1SLV77 SQL network, Android Chrome ka mixed-content / LNA ijazat (sab se bara sawal).
+* AGLA: malik ki jaanch kamyab -> Update 2 print + sale (net na ho to app job laptop ko, laptop POS + printer; net aaye to Firebase, pakki ID, dohra nahi),
+  phir purchase, phir stock.

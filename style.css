@@ -5788,3 +5788,11 @@ html body #dialogBody .fq-l.again{background:#eef2ff}
 html.dk body #dialogBody .fq-re{background:rgba(99,102,241,.18)!important;border-color:rgba(129,140,248,.5)!important;color:#c7d2fe!important}
 html.dk body #dialogBody .fq-zs{background:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.25)!important;color:var(--ink,#e2e8f0)!important}
 html.dk body #dialogBody .fq-l.again{background:rgba(99,102,241,.12)}
+/* 📡 Local server jaanch (v2.114.4) */
+html body #dialogBody .ls-ip{display:flex;flex-direction:column;gap:4px;font-weight:600;margin:10px 0}
+html body #dialogBody .ls-ip input{font-size:18px;padding:10px;border-radius:10px;border:1px solid #cbd5e1}
+html body #dialogBody .ls-open{display:inline-flex;align-items:center;padding:10px 14px;border-radius:10px;border:1px solid #cbd5e1;text-decoration:none;color:inherit}
+html body #dialogBody .ls-line{padding:10px 12px;margin:8px 0;border-radius:12px;background:#f1f5f9;color:#0f172a}
+html body #dialogBody .ls-line.ls-ok{background:#ecfdf3;border:1px solid #bbf7d0}
+html body #dialogBody .ls-line.ls-bad{background:#fef2f2;border:1px solid #fecaca}
+html body #dialogBody .ls-help{padding:10px 12px;border-radius:12px;background:#fffbeb;border:1px solid #fde68a;color:#422006;line-height:1.55;font-size:14px}
