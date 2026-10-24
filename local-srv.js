@@ -1,6 +1,6 @@
 // local-srv.js (v2.114.4) — 📡 Local server jaanch: internet na ho to dukaan ke WiFi par laptop (pc/nt-local.js) se baat.
 // Update 1: sirf jaanch — laptop mila? POS database jura? Chrome ijazat de raha hai? (POS mein kuch nahi likhta)
-const KEY = 'nt-local-ip', PORT = 47900, DEF = '192.168.0.107';
+const KEY = 'nt-local-ip', PORT = 47900, DEF = '192.168.1.108';
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const getIp = () => { try { return localStorage.getItem(KEY) || DEF } catch { return DEF } };
 const setIp = v => { try { localStorage.setItem(KEY, v) } catch {} };
@@ -32,7 +32,7 @@ export function localSrvOpen(modal) {
   syncOpen(); ipIn.oninput = syncOpen;
   const go = async () => {
     const ip = ipIn.value.trim();
-    if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) { out.innerHTML = line(false, 'IP theek likhein (jaise 192.168.0.107)'); return }
+    if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) { out.innerHTML = line(false, 'IP theek likhein (jaise 192.168.1.108)'); return }
     setIp(ip); out.innerHTML = line(null, 'Laptop dhoond rahe hain…');
     const r = await localPing(ip);
     if (!document.querySelector('[data-ls-root]')) return;

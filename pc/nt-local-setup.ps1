@@ -72,7 +72,7 @@ if (-not ($cfg -and $cfg.sql -and $cfg.sql.server)) {
   if ($srv -match '^(localhost|127\.0\.0\.1|\.|\(local\))(\\|$)') { $srv = $SERVER + $srv.Substring($Matches[1].Length) }
   $sq.server = $srv
   $cfg = [pscustomobject]@{ pcName = 'Laptop (local server)'; sql = $sq }
-  ($cfg | ConvertTo-Json -Depth 5) | Set-Content -Path $lc -Encoding UTF8
+  [IO.File]::WriteAllText($lc, ($cfg | ConvertTo-Json -Depth 5), (New-Object Text.UTF8Encoding $false))
 }
 Say ("  SQL server: " + $cfg.sql.server + " · database: " + $cfg.sql.database) Green
 

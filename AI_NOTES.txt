@@ -6015,3 +6015,8 @@ phones WiFi par laptop se, laptop LAN par Q1SLV77 ke SQL se. Net ho to laptop ch
   Yahan test NAHI: Windows setup script, asal laptop / Q1SLV77 SQL network, Android Chrome ka mixed-content / LNA ijazat (sab se bara sawal).
 * AGLA: malik ki jaanch kamyab -> Update 2 print + sale (net na ho to app job laptop ko, laptop POS + printer; net aaye to Firebase, pakki ID, dohra nahi),
   phir purchase, phir stock.
+
+* v2.114.5 / nt-local 1.0.1 (24 Oct): laptop = DESKTOP-I5BS1UF, IP 192.168.1.108 (notes ka .107 purana — app default ab .108). Setup ne
+  "POS database nahi juda: local-config.json nahi mili" diya — GALTI MERI: Windows PowerShell 5 `Set-Content -Encoding UTF8` = BOM, JSON.parse fail.
+  Hal: nt-local BOM hata kar parhta; setup ab [IO.File]::WriteAllText UTF8 bina BOM. QAIDA: PC par JSON likhna ho to BOM ke baghair, Node mein parhte waqt ﻿ hatao.
+  Server share se local-config nahi mila (\\Q1SLV77\khata-sync share nahi) — malik ne haath se sa + password diya.

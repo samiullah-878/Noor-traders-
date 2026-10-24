@@ -15,7 +15,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const VER = '1.0';
+const VER = '1.0.1';   // 1.0.1: local-config ka BOM (Windows PowerShell UTF8) ab parh leta hai
 const PORT = 47900;
 const DIR = __dirname;
 const LOG = path.join(DIR, 'nt-local-log.txt');
@@ -41,11 +41,11 @@ function loadSql() {
   if (sqlCfg) return null;
   try { sqlLib = require('mssql'); } catch { return 'mssql install nahi (setup dobara chalayein)'; }
   try {
-    const local = JSON.parse(fs.readFileSync(path.join(DIR, 'local-config.json'), 'utf8')) || {};
+    const local = JSON.parse(fs.readFileSync(path.join(DIR, 'local-config.json'), 'utf8').replace(/^\uFEFF/, '')) || {};
     if (!local.sql || !local.sql.server) return 'local-config.json mein SQL setting nahi';
     sqlCfg = { ...local.sql, connectionTimeout: 6000, requestTimeout: 6000, pool: { max: 2, min: 0, idleTimeoutMillis: 60000 },
       options: { encrypt: false, trustServerCertificate: true, ...(local.sql.options || {}) } };
-  } catch { return 'local-config.json nahi mili'; }
+  } catch (e) { return fs.existsSync(path.join(DIR, 'local-config.json')) ? 'local-config.json parhi nahi gayi: ' + e.message : 'local-config.json nahi mili'; }
   return null;
 }
 async function sqlCheck() {
