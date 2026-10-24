@@ -5978,3 +5978,18 @@ Malik (screenshot "Malik ka pakka code", 123456 likha): "login save nahi ho rahi
    ja raha hai…", 12 s = "Internet bohat dheema — dobara Save". AI NAHI. Rules NAHI badle.
    Test: oc1.mjs (stubcloud115: aasaan = laal line + server call nahi · mushkil = ✅ top layer + bara code · 15 s net = 2.5 s / 12 s paigham · permission = rules 2.70).
 QAIDA: khuli khirki ke upar kuch dikhana ho to top layer (popover / apni <dialog>) — position:fixed div khirki ke peeche chhup jata hai.
+
+========== v2.114.3 (24 Oct 2026) — ⚖️ Stock farq: POS 0 wali godam chhupi + 🔁 Dobara gino · 🔍 Dhoondo mein item → Stock screen ==========
+Malik (knoor cubes screenshot: Godam2 / Godam 3 "POS 0 · abhi nahi gina" khane): "doosre godam ka stock zero na ho ya wahan se sale hota ho tab wo godam aaye,
+warna na aaye · ginne ke baad dobara bhi ginti karwa lena". Aur (Dhoondo "isp — kuch nahi mila"): "yahan item bhi search ho sake — us item ka stock checkbox se
+stock screen aa jaye".
+1) farq.js build(): jo jagah abhi nahi gini aur POS 0 (aur transfer raste mein nahi) = chhupi (o.zs) → card par "＋ Godam2 · Godam 3 (POS 0) bhi gino"
+   (showZ = khol do). Jahan se maal bikta hai wahan stock hota hai — wo aati hai. Sale ka alag data app mein nahi (PC sync-stock mein branch-war sale nahi).
+2) farq.js: gini hui qatar par "🔁 Dobara gino" (again: b|id) → wahin Ctn / Pcs + ✓ Gino (WAHI A.save = oxSave → writeCount, history 2nd line) + ✕.
+   Aaj 2 dafa gina = "bara farq" khud hat kar "✓ Theek karo" (purana once qaida). Bill wala qatar par nahi. Malik + jin ko ginti ki ijazat (canCount).
+3) pos-stock.js window.ntItemFind(q, n) (naam / Urdu / barcode, band items nahi, har jagah stock sirf ≠ 0, andhi ginti = "📦 Stock screen par dekhein") +
+   window.ntItemOpen(id) (Stock screen, branch = dukan ya jahan item, filter all, search = naam, scanHit roshan, 🏬 Har godam ON (save nahi), scroll).
+   Roz ki ginti chal rahi = mana (andhi ginti na toote). shell.js Dhoondo: "📦 Items" patti (Screens ke baad), ⏳ jab tak stock load; sirf jin ko Stock
+   screen dikhti hai + CAP app.dhitem (shuru se ON). AI NAHI. Rules NAHI. PC NAHI.
+   Test t115a (insaan jaisa): F1 malik farq (chhupi + ＋ + 🔁 Godam 1 63 + Noor dobara → Theek karo) · F2 mulazim · D1 Dhoondo sur → Stock (Har godam, roshan,
+   nazar mein) · barcode · kuch nahi · D2 mulazim stock / andhi / CAP band / bina stock · 360 frost + glass. Regression t113f/t114a/t113a/t114c/t113k + dlgchk.

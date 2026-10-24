@@ -12,6 +12,7 @@ let A = null, st = { f: 'all' };
 const D = 864e5, r2 = n => Math.round((Number(n) || 0) * 100) / 100, r3 = n => Math.round((Number(n) || 0) * 1000) / 1000;
 const BIG_RS = 2000;   // asal farq is se bara (ya 1 ctn+) aur aaj ek hi dafa gina = pehle dobara gino (ek larke ki ghalti par bill na bane)
 const force = new Set();   // malik: "✓ Theek hai" (bara farq isi ginti par)
+const showZ = new Set(), again = new Set();   // v2.114.3: POS 0 wali jagah dikhao (item id) · 🔁 dobara gino khula (b|id)
 const rs = n => 'Rs ' + (n > 0 ? '+' : n < 0 ? '−' : '') + A.num(Math.abs(Math.round(n)));
 const sg = n => (n > 0 ? '+' : n < 0 ? '−' : '') + A.num(Math.abs(n));
 const dayStart = (t = Date.now()) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
@@ -31,7 +32,10 @@ function build() {
   const L = [];
   for (const o of out.values()) {
     const got = [...o.locs.values()]; if (!got.some(x => Math.abs(x.f) > 0.001)) continue;   // sab bill ho chuke / barabar
-    for (const b of brs) if (!o.locs.has(b)) { const r = A.item(b, o.id); if (r && !A.hidden(r)) o.locs.set(b, { b, r, c: null, f: 0, none: true, pend: !!pendBy.get(b)?.has(o.id) }); }
+    // v2.114.3 (malik: "doosre godam ka stock zero na ho ya wahan se sale hota ho tab wo godam aaye, warna na aaye"): jo jagah abhi nahi gini aur POS 0 = chhupi
+    //   (jahan se maal bikta hai wahan stock hota hai — aati rahegi). "＋ … (POS 0) bhi gino" se khul jati hai.
+    for (const b of brs) if (!o.locs.has(b)) { const r = A.item(b, o.id); if (!r || A.hidden(r)) continue; const pend = !!pendBy.get(b)?.has(o.id), z = !(Math.abs(Number(r.stock) || 0) > 0.001);
+      if (z && !pend && !showZ.has(o.id)) (o.zs || (o.zs = [])).push(b); else o.locs.set(b, { b, r, c: null, f: 0, none: true, pend }); }
     const locs = [...o.locs.values()].sort((a, b) => a.b - b.b), fs = locs.map(x => x.f), pr = Number(o.r.prate) || 0, pk = Number(o.r.pack) || 0;
     const net = r3(fs.reduce((t, f) => t + f, 0)), rsN = r2(net * pr), hasK = fs.some(f => f < -0.001), hasZ = fs.some(f => f > 0.001);
     // v2.113.1: "ek hi dafa gina" sirf FARQ wali jagah ka dekho (pehle: kisi bhi jagah ki sab se zyada ginti — barabar wali godam 2 dafa = dukan ka Rs 3,000 kam bina dobara ginti bill). Din = us ginti ka apna din (roz.js jaisa).
@@ -54,10 +58,13 @@ function jobsOf(list) {
 // ---------- dikhana ----------
 function card(x) {
   const E = A.esc, own = A.isOwner(), busy = qBusy(), canC = A.canCount();
+  const inp = l => `${(Number(l.r.pack) || 0) > 1 ? `<input type="number" inputmode="decimal" step="any" min="0" placeholder="${E(l.r.cName || 'Ctn')}" data-fq-ctn="${l.b}|${E(x.id)}">` : ''}<input type="number" inputmode="decimal" step="any" min="0" placeholder="${E(l.r.uName || 'Pcs')}" data-fq-pcs="${l.b}|${E(x.id)}"><button type="button" data-fq-save="${l.b}|${E(x.id)}">✓ Gino</button>`;
   const loc = l => { const nm = E(A.branchName(l.b)), ic = l.b === 1 ? '🏪' : '🏬';
-    if (l.none) return `<div class="fq-l none"><span class="fq-ln"><span class="fq-lt">${ic} <b>${nm}</b></span><small>POS ${A.num(l.r.stock)}${cp(l.r.stock, l.r) ? ' (' + E(cp(l.r.stock, l.r)) + ')' : ''} · abhi nahi gina</small></span>${canC ? `<span class="fq-in">${(Number(l.r.pack) || 0) > 1 ? `<input type="number" inputmode="decimal" step="any" min="0" placeholder="${E(l.r.cName || 'Ctn')}" data-fq-ctn="${l.b}|${E(x.id)}">` : ''}<input type="number" inputmode="decimal" step="any" min="0" placeholder="${E(l.r.uName || 'Pcs')}" data-fq-pcs="${l.b}|${E(x.id)}"><button type="button" data-fq-save="${l.b}|${E(x.id)}">✓ Gino</button></span>` : ''}</div>`;
-    const g = A.counted(l.c), s = Number(A.sys(l.c, l.r));
-    return `<div class="fq-l ${l.f < -0.001 ? 'k' : l.f > 0.001 ? 'z' : 'e'}"><span class="fq-ln"><span class="fq-lt">${ic} <b>${nm}</b></span><small>gina <b>${A.num(g)}</b>${cp(g, l.r) ? ' (' + E(cp(g, l.r)) + ')' : ''} · POS ${A.num(s)}${l.c.byName ? ' · 👤 ' + E(l.c.byName) : ''}${l.billed ? ' · ✓ bill ho chuka' : l.part ? ' · kuch bill ho chuka' : ''}${l.pend ? ' · ⏳ note raste mein' : ''}</small></span><b class="fq-f">${Math.abs(l.f) < 0.001 ? '✓ 0' : sg(l.f)}</b></div>`; };
+    if (l.none) return `<div class="fq-l none"><span class="fq-ln"><span class="fq-lt">${ic} <b>${nm}</b></span><small>POS ${A.num(l.r.stock)}${cp(l.r.stock, l.r) ? ' (' + E(cp(l.r.stock, l.r)) + ')' : ''} · abhi nahi gina</small></span>${canC ? `<span class="fq-in">${inp(l)}</span>` : ''}</div>`;
+    const g = A.counted(l.c), s = Number(A.sys(l.c, l.r)), key = l.b + '|' + x.id, re = canC && !l.billed;   // v2.114.3: 🔁 gine hue ko dobara gino (wahin)
+    if (re && again.has(key)) return `<div class="fq-l none again"><span class="fq-ln"><span class="fq-lt">${ic} <b>${nm}</b></span><small>pehle gina <b>${A.num(g)}</b>${cp(g, l.r) ? ' (' + E(cp(g, l.r)) + ')' : ''} · POS ${A.num(s)} — 🔁 dobara likhein</small></span><span class="fq-in">${inp(l)}<button type="button" class="fq-x" data-fq-un="${E(key)}" aria-label="Wapas">✕</button></span></div>`;
+    return `<div class="fq-l ${l.f < -0.001 ? 'k' : l.f > 0.001 ? 'z' : 'e'}"><span class="fq-ln"><span class="fq-lt">${ic} <b>${nm}</b></span><small>gina <b>${A.num(g)}</b>${cp(g, l.r) ? ' (' + E(cp(g, l.r)) + ')' : ''} · POS ${A.num(s)}${l.c.byName ? ' · 👤 ' + E(l.c.byName) : ''}${l.billed ? ' · ✓ bill ho chuka' : l.part ? ' · kuch bill ho chuka' : ''}${l.pend ? ' · ⏳ note raste mein' : ''}${re ? ` <button type="button" class="fq-re" data-fq-re="${E(key)}">🔁 Dobara gino</button>` : ''}</small></span><b class="fq-f">${Math.abs(l.f) < 0.001 ? '✓ 0' : sg(l.f)}</b></div>`; };
+  const zsB = canC && x.zs?.length && x.kind !== 'jagah' ? `<button type="button" class="fq-zs" data-fq-zs="${E(x.id)}">＋ ${x.zs.map(b => E(A.branchName(b))).join(' · ')} (POS 0) bhi gino</button>` : '';
   const k = x.kind, KN = KINDS.find(z => z[0] === k);
   const tip = k === 'jagah' ? `<p class="fq-tip jagah">🔁 <b>Jagah badli</b> — ${x.locs.filter(l => l.f < -0.001).map(l => E(A.branchName(l.b)) + ' ' + sg(l.f)).join(' · ')} → ${x.locs.filter(l => l.f > 0.001).map(l => E(A.branchName(l.b)) + ' ' + sg(l.f)).join(' · ')}. Maal wahi, jagah badli — dobara ginne ki zaroorat nahi.</p>`
     : k === 'big' ? `<p class="fq-tip big">🔁 Asal farq bara hai (${rs(x.rs)}) — pehle dobara gin lein${x.unc.length ? ', aur ' + x.unc.map(l => E(A.branchName(l.b))).join(' / ') + ' bhi gin lein (shayad maal wahan ho)' : ''}.</p>`
@@ -68,7 +75,7 @@ function card(x) {
   const btns = own ? (fixable(x) ? `<div class="fq-acts"><small>${plan}</small>${trB}<button type="button" class="fq-fix" data-fq-fix="${E(x.id)}"${busy ? ' disabled' : ''}>${trB ? '🧾 Bill se theek karo' : '✓ Theek karo'}</button></div>`
     : k === 'big' ? `<div class="fq-acts">${A.canWant() ? `<button type="button" class="fq-mini" data-fq-again="${E(x.id)}">📋 Dobara ginwao</button>` : ''}<button type="button" class="fq-mini alt" data-fq-force="${E(x.id)}">✓ Theek hai (isi ginti par)</button></div>` : '') : trB ? `<div class="fq-acts">${trB}</div>` : '';
   const shown = k === 'jagah' ? x.locs.filter(l => !l.none) : x.locs;   // jagah badli: jo nahi gini wo chhupi (shor kam)
-  return `<article class="fq-c ${k}" data-fq-item="${E(x.id)}"><div class="fq-hd"><span class="fq-nm"><b>${E(x.name)}</b><small>${KN ? KN[1] : ''}</small></span><span class="fq-net ${x.net < -0.001 ? 'k' : x.net > 0.001 ? 'z' : 'e'}"><small>Asal farq</small><b>${Math.abs(x.net) < 0.001 ? '0' : sg(x.net)}</b><small>${x.rs ? rs(x.rs) : 'Rs 0'}</small></span></div>${shown.map(loc).join('')}${tip}${btns}</article>`;
+  return `<article class="fq-c ${k}" data-fq-item="${E(x.id)}"><div class="fq-hd"><span class="fq-nm"><b>${E(x.name)}</b><small>${KN ? KN[1] : ''}</small></span><span class="fq-net ${x.net < -0.001 ? 'k' : x.net > 0.001 ? 'z' : 'e'}"><small>Asal farq</small><b>${Math.abs(x.net) < 0.001 ? '0' : sg(x.net)}</b><small>${x.rs ? rs(x.rs) : 'Rs 0'}</small></span></div>${shown.map(loc).join('')}${zsB}${tip}${btns}</article>`;
 }
 function html() {
   const E = A.esc, own = A.isOwner(), L = build(), busy = qBusy(), q = A.postQ();
@@ -99,7 +106,10 @@ async function fixList(list, label) {
   catch (e) { A.notice('Nahi bheja: ' + (e?.message || e)); }
 }
 document.addEventListener('click', async e => {
-  const t = e.target.closest?.('[data-fq-f],[data-fq-fix],[data-fq-all],[data-fq-save],[data-fq-again],[data-fq-force],[data-fq-tr]'); if (!t || !A || !t.closest('#fqRoot')) return;
+  const t = e.target.closest?.('[data-fq-f],[data-fq-fix],[data-fq-all],[data-fq-save],[data-fq-again],[data-fq-force],[data-fq-tr],[data-fq-zs],[data-fq-re],[data-fq-un]'); if (!t || !A || !t.closest('#fqRoot')) return;
+  if (t.dataset.fqZs) { showZ.add(t.dataset.fqZs); paint(); return; }   // v2.114.3
+  if (t.dataset.fqRe) { again.add(t.dataset.fqRe); paint(); setTimeout(() => { try { $('fqRoot').querySelector(`.fq-l.again [data-fq-save="${CSS.escape(t.dataset.fqRe)}"]`)?.closest('.fq-in')?.querySelector('input')?.focus(); } catch {} }, 40); return; }
+  if (t.dataset.fqUn) { again.delete(t.dataset.fqUn); paint(); return; }
   if (t.dataset.fqTr) { const x = build().find(y => y.id === t.dataset.fqTr); if (!x) return; let k = null, z = null; for (const l of x.locs) { if (!l.c) continue; if (l.f < -0.001 && (!k || l.f < k.f)) k = l; if (l.f > 0.001 && (!z || l.f > z.f)) z = l; }   // v2.114.0: ⇄ jagah badli = TN (sab se bara kam → sab se bari zyadti)
     if (!k || !z) { A.notice('Jagah badli ka jora nahi mila'); return; } const q = r3(Math.min(-k.f, z.f)); A.qtr({ id: x.id, from: k.b, to: z.b, qty: q, recount: true, why: '🔁 Jagah badli — ' + A.branchName(k.b) + ' mein kam, ' + A.branchName(z.b) + ' mein zyada. Note banne ke baad dono jagah ki ginti khud taza (farq 0) — bill nahi.' }); return; }
   const d = t.dataset;
@@ -107,7 +117,7 @@ document.addEventListener('click', async e => {
     if (d.fqF) { st.f = d.fqF; paint(); return; }
     if (d.fqSave) { const [b, id] = d.fqSave.split('|'), root = t.closest('.fq-l'), cI = root?.querySelector('[data-fq-ctn]'), pI = root?.querySelector('[data-fq-pcs]');
       const c = Number(cI?.value || 0) || 0, p = Number(pI?.value || 0) || 0; if (c < 0 || p < 0 || (!cI?.value && !pI?.value)) { A.notice('Ginti likhein (Ctn / Pcs)'); return; }
-      t.disabled = true; try { const r = await A.save(Number(b), id, c, p); if (r) A.notice('✓ ' + A.branchName(Number(b)) + ': ginti save (' + A.num(r.total) + ')'); } finally { t.disabled = false; } return; }
+      t.disabled = true; try { const r = await A.save(Number(b), id, c, p); if (r) { const re = again.delete(d.fqSave); A.notice('✓ ' + A.branchName(Number(b)) + ': ' + (re ? 'dobara ' : '') + 'ginti save (' + A.num(r.total) + ')'); if (re) paint(); } } finally { t.disabled = false; } return; }
     if (!A.isOwner()) return;
     if (d.fqFix) { const x = build().find(z => z.id === d.fqFix); if (x && fixable(x)) await fixList([x], x.name); return; }
     if (d.fqAll != null) { await fixList(build().filter(fixable), 'Sab theek'); return; }
