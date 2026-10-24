@@ -46,7 +46,7 @@ if (-not $node) {
 Say ("  Node: " + (& node -v)) Green
 foreach ($f in 'nt-local.js', 'nt-local-auto.bat') {
   # GitHub API = hamesha taaza (raw.githubusercontent 5 minute purani copy deta hai, ?t= bhi nahi bachata)
-  try { Invoke-WebRequest ($API + $f + '?ref=main') -Headers @{ Accept = 'application/vnd.github.raw'; 'User-Agent' = 'nt-local' } -OutFile (Join-Path $K $f) -UseBasicParsing -ErrorAction Stop; Say "  + $f" }
+  try { Invoke-WebRequest ($API + $f + '?ref=main') -Headers @{ Accept = 'application/vnd.github.raw' } -UserAgent 'nt-local' -OutFile (Join-Path $K $f) -UseBasicParsing -ErrorAction Stop; Say "  + $f" }
   catch {
     try { Invoke-WebRequest ($RAW + $f) -OutFile (Join-Path $K $f) -UseBasicParsing -ErrorAction Stop; Say "  + $f (raw)" }
     catch { Say "  ! $f download nahi hua: $($_.Exception.Message)" Red; return }
