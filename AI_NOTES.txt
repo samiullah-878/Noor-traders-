@@ -6024,3 +6024,31 @@ phones WiFi par laptop se, laptop LAN par Q1SLV77 ke SQL se. Net ho to laptop ch
   Doctor ko pata nahi chalta tha kyun ke manifest sha256 milne tak har 3 min dobara koshish karta hai. nt-local setup / bat ab GitHub API
   (contents/pc/<f>?ref=main, Accept application/vnd.github.raw, User-Agent; bina login 60/ghanta) — fail ho to raw. QAIDA: malik ko foran chalne wali
   command ho to API wala link do.
+
+========== v2.115.0 (24 Oct 2026) — 📲 MALIK KI IJAZAT (mulazim maange → malik ✓ / ✕) · rules 2.71 · PC auto-backup v2.1 ==========
+Malik (suggestion #1 "Malik ki ijazat" — "pehla wala kaam OK karo"): mulazim purani entry badalna / hatana, farq bill, band din kholna khud nahi kar sakta —
+ab app se malik ko darkhwast, malik ke phone par push, malik ✓ = kaam KHUD (malik ki app apne haq se karti hai — mulazim ko likhne ki naya haq NAHI diya).
+1) Firestore businesses/noor-traders/approvals/<id> (rules 2.71): {id, kind edit|delete|farq|din, title, lines[≤12 string], reason, rid, rev, after?
+   (JSON string ≤6000), jobs? (JSON string ≤20000), by (uid), byName, at, status 'new', dev}. List-ke-andar-list nahi (after / jobs = string).
+   Mulazim (anonymous, staffAccount active) sirf APNA banaye (by == uid, status new) + apna parhe; update / delete sirf malik.
+   cloud.js: askCreate · listenAsks (malik, 48 ghante) · listenMyAsks (mulazim, by == uid) · askDecide (malik: status done|no|fail, decidedAt, err) ·
+   askCleanup (malik, 7 din purani, 60 ek dafa — onSession ke 20 s baad ek dafa).
+2) app.js 📲 ijazat (CAP app.ijazat, shuru se ON; sirf mulazim, cloud mode):
+   - Purani tareekh ki entry (kh.edit / kh.del, full scope, POS posted / auto / transfer / kx / bkPair / band NAHI) par Edit ki jagah "📲 Malik se ijazat"
+     → khirki (wajah + ✏️ Badalna hai / 🗑 Hatana hai). ✏️ = WAHI entry / purchase form (ijAsk) — upar band "📲 Yeh tabdeeli malik ko jayegi",
+     button "📲 Malik ko bhejo", delete / tasveer / reminder chhupe. save() ke shuru mein: ijAsk wali entry + mulazim = ijSend (likhai NAHI).
+   - ijSend: sirf badle field (IJ_F: kind partyId account amount date note dailyIncluded posPending items) — ijNorm: khali / undefined / default ek jaisa
+     (dailyIncluded undefined = haan, posPending undefined = nahi, items = itemId/ctn/pcs/rate/total/godam) → warna form ke default se jhooti tabdeeli.
+     Kuch na badla = "Kuch badla nahi" (darkhwast nahi, form khula, ijAsk wahi). lines "Raqam: Rs 5,000 → Rs 4,500". Dobara nahi (ijPend rid).
+   - Aaj ki chhapi (printed) entry ka purana "editAsk / 30 min editOk" qaida WAHI (v2.99.62) — yeh naya sirf purani tareekh / farq / din ke liye.
+   - farq.js: mulazim ke card par "📲 Malik se manzoori" + "📲 Sab ki manzoori maango" (jobsOf, 40 tak) → kind farq (jobs JSON). ⏳ intezar chip.
+   - Din band: mulazim ka #dayLockBtn = "📲 Din kholne ki ijazat" (rid din:<aaj>) → "⏳ … bheji".
+   - Malik: header "📲 N" (#ijBtn, har screen) + home chip → list (pehle → baad, 💬 wajah, 👤 naam · waqt · 📱 device) ✓ Manzoor / ✕ Nahi.
+     ✓ edit/delete = save({...cur,...after}, cur, 'noask') (list khuli rehti) · rev badla = confirm · entry hat chuki = ✓ band. farq = requestFarqQueue(jobs)
+     (WAHI PC "stock fraq" bill). din = setDayLock(''). Neeche "Aaj ke faisle" (fail par 🔁 Dobara). #ij=<id> hash (push se khule).
+   - Mulazim ko faisla: listenMyAsks → "✅ Malik ne manzoor kar diya" / "❌ Malik ne mana kar diya" / "⚠️ …".
+3) PC auto-backup.js v2.1 (manifest 2026-10-24.1): approvals sunta hai — nayi darkhwast (24 ghante tak) = malik (isBoss tokens) ko push
+   "📲 Ijazat chahiye — <naam>" (link #ij=<id>), faisla (2 ghante tak) = us mulazim (uid, warna naam) ko push. ij-sent.json = dobara nahi. Sirf PC on ho tab.
+4) cashCustody move mein 'ref' + 'src' rules 2.71 mein (mulazim ka "Is cash se Bhejo" pehle server par ruk sakta tha — v2.114.1 mein mila tha).
+Theme: .ij-* (+ html.dk.dk). AI NAHI. Test t115b (insaan jaisa): B1 mulazim edit/delete + "Kuch badla nahi" + faisle ke paigham · B2 malik ✓/✕/hat chuki ·
+B3 farq · B4 din · B5 CAP band / malik seedha Edit · B6 purani purchase (tasveer chhupi, sirf raqam) · 360 glass + 412 frost. PC abt2/t3.js.

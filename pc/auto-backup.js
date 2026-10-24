@@ -1,5 +1,5 @@
 // ============================================================
-//  auto-backup.js  v2.0 (2026-10-22: 📋 roz ki ginti — _round roz · _postQ line · larkon ko 12 / 4 baje yaad · malik ko 8 baje khulasa) · v1.9 (2026-10-22: 📷 factory items ki HD tasveer PC + Google Drive "Factory Photos" mein · factory nuskhe (factory/cfg) + batch bhi backup mein) · v1.6 (2026-10-12: cancel note par notification nahi, edit = nayi check) · v1.5 (🚚 transfer note 10 min mein check na ho = notification) · v1.0 (2026-10-05) — ☁️ AUTO BACKUP: din mein 2 dafa (app ki Settings se waqt) poora khata JSON mein,
+//  auto-backup.js  v2.1 (2026-10-24: 📲 malik ki ijazat — mulazim ki darkhwast malik ke phone par push, malik ka faisla mulazim ke phone par) · v2.0 (2026-10-22: 📋 roz ki ginti — _round roz · _postQ line · larkon ko 12 / 4 baje yaad · malik ko 8 baje khulasa) · v1.9 (2026-10-22: 📷 factory items ki HD tasveer PC + Google Drive "Factory Photos" mein · factory nuskhe (factory/cfg) + batch bhi backup mein) · v1.6 (2026-10-12: cancel note par notification nahi, edit = nayi check) · v1.5 (🚚 transfer note 10 min mein check na ho = notification) · v1.0 (2026-10-05) — ☁️ AUTO BACKUP: din mein 2 dafa (app ki Settings se waqt) poora khata JSON mein,
 //  C:\khata-sync\backups mein + Google Drive for Desktop ke folder ("Blue Khata Backup") mein — Drive khud upload karta hai.
 //
 //  App (Settings -> 💾 Backup -> ☁️ Auto backup) blueAccess/backupConfig likhti hai: {on, email, times:['14:00','22:00'], now}
@@ -22,7 +22,8 @@ const zlib = require('zlib');
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
-const VER = '2.0';   // v2.0 (2026-10-22): 📋 ROZ KI GINTI — (1) _auto on = _round roz khud aaj (post-farq ginti ka us waqt ka stock likhe) (2) stockCount/_postQ (malik ka "✅ Sab theek karo") ek ek kar ke _post (post-farq wahi bill + parchi) (3) 12 / 4 baje baqi larkon ko push (4) 8 baje malik ko khulasa · v1.9 (2026-10-22): 📷 factory tasveerein (factory/phIdx + ph_<id>_<v>_<i>) -> backups\Factory Photos + Drive "Blue Khata Backup\Factory Photos" (sirf nayi / badli; hatai = file bhi hate) · extra backup mein factory/cfg (nuskhe) + factoryBatches · v1.8 (2026-10-17): 🔁 din wala har reminder KHUD har 1 ghanta (nag na likha = 60, 0 = band), 3 din ki hadd khatam (jab tak ✓ na ho), 4+ ek saath = ek khulasa notification · v1.7: v1.7 (2026-10-17): 🔔 MULAZIM ka reminder MALIK ke phone par bhi — waqt aate hi pehli khabar (malik + likhne wala), sirf mulazim ke likhe notes · v1.4 (2026-10-11): 🔁 notes.nag — baar baar yaad (15/30/60 min) jab tak ✓ na ho · v1.3 (2026-10-07): driver ki jeb se EXTRA kharcha (kind 'kharch', driver:true) khate se − (app v2.97.1) · v1.2 (2026-10-07): driver ka KHATA (app v2.96.1 jaisa) — phera + (kiraya − kharche − commission), liya −, advance + · v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
+const VER = '2.1';   // v2.1 (2026-10-24): 📲 MALIK KI IJAZAT (app v2.115.0) — approvals status 'new' = malik ko push, faisla (done / no / fail) = mulazim ko push. POS / SQL nahi.
+// pichla:    // v2.0 (2026-10-22): 📋 ROZ KI GINTI — (1) _auto on = _round roz khud aaj (post-farq ginti ka us waqt ka stock likhe) (2) stockCount/_postQ (malik ka "✅ Sab theek karo") ek ek kar ke _post (post-farq wahi bill + parchi) (3) 12 / 4 baje baqi larkon ko push (4) 8 baje malik ko khulasa · v1.9 (2026-10-22): 📷 factory tasveerein (factory/phIdx + ph_<id>_<v>_<i>) -> backups\Factory Photos + Drive "Blue Khata Backup\Factory Photos" (sirf nayi / badli; hatai = file bhi hate) · extra backup mein factory/cfg (nuskhe) + factoryBatches · v1.8 (2026-10-17): 🔁 din wala har reminder KHUD har 1 ghanta (nag na likha = 60, 0 = band), 3 din ki hadd khatam (jab tak ✓ na ho), 4+ ek saath = ek khulasa notification · v1.7: v1.7 (2026-10-17): 🔔 MULAZIM ka reminder MALIK ke phone par bhi — waqt aate hi pehli khabar (malik + likhne wala), sirf mulazim ke likhe notes · v1.4 (2026-10-11): 🔁 notes.nag — baar baar yaad (15/30/60 min) jab tak ✓ na ho · v1.3 (2026-10-07): driver ki jeb se EXTRA kharcha (kind 'kharch', driver:true) khate se − (app v2.97.1) · v1.2 (2026-10-07): driver ka KHATA (app v2.96.1 jaisa) — phera + (kiraya − kharche − commission), liya −, advance + · v1.1: 🚚 gaari — roz sham malik ko notification "driver se hisaab lena hai"
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47832;
 const DIR = __dirname;
@@ -349,6 +350,36 @@ async function rozTick() {
   try { await rozNotify(now, day); } catch (e) { log('📋 ginti yaad masla: ' + e.message); }
 }
 
+// ---- v2.1: 📲 MALIK KI IJAZAT (app v2.115.0) — POS / SQL mein kuch nahi. Listener (har minute get() nahi) ----
+const IJ_FILE = path.join(DIR, 'ij-sent.json');
+let ijSent = (() => { try { return JSON.parse(fs.readFileSync(IJ_FILE, 'utf8')) || {}; } catch { return {}; } })();
+const ijNew = new Map(), ijDone = new Map(); let ijU1 = null, ijU2 = null; const IJ_T0 = Date.now() - 6 * 3600e3;
+function ijWatch() {
+  const col = base.collection('approvals');
+  if (!ijU1) ijU1 = col.where('status', '==', 'new').onSnapshot(s => { ijNew.clear(); for (const d of s.docs) ijNew.set(d.id, { ...d.data(), id: d.id }); }, e => { log('📲 ijazat sun masla: ' + e.message); ijU1 = null; });
+  if (!ijU2) ijU2 = col.where('decidedAt', '>', IJ_T0).onSnapshot(s => { for (const d of s.docs) ijDone.set(d.id, { ...d.data(), id: d.id }); }, e => { log('📲 ijazat faisla sun masla: ' + e.message); ijU2 = null; });
+}
+async function ijNotify() {
+  ijWatch();
+  const now = Date.now();
+  const fresh = [...ijNew.values()].filter(a => a.status === 'new' && !ijSent['n' + a.id] && now - (Number(a.at) || 0) < 24 * 3600e3);
+  const dec = [...ijDone.values()].filter(a => ['done', 'no', 'fail'].includes(a.status) && !ijSent['d' + a.id] && now - (Number(a.decidedAt) || 0) < 2 * 3600e3);
+  if (!fresh.length && !dec.length) return;
+  const tk = (await base.collection('pushTokens').get()).docs.map(d => d.data()).filter(x => x.token), { getMessaging } = require('firebase-admin/messaging');
+  const L = 'https://samiullah-878.github.io/Noor-traders-/', norm = v => String(v || '').trim().toLowerCase();
+  const send = async (tokens, title, body, tag, link) => { tokens = [...new Set(tokens)]; if (!tokens.length) return 0; const r = await getMessaging().sendEachForMulticast({ tokens, data: { title, body, tag, link }, webpush: { headers: { Urgency: 'high' } } }); return r.successCount; };
+  for (const a of fresh.slice(0, 10)) { ijSent['n' + a.id] = now;
+    try { const n = await send(tk.filter(isBoss).map(x => x.token), '📲 Ijazat chahiye — ' + String(a.byName || 'Mulazim').slice(0, 30), String(a.title || '').slice(0, 160) + (a.reason ? '\n💬 ' + String(a.reason).slice(0, 120) : '') + '\nTap — ✓ Manzoor / ✕ Nahi', 'ij-' + a.id, L + '#ij=' + a.id); log(`📲 ijazat "${String(a.title || '').slice(0, 40)}" (${a.byName || '?'}): malik ${n} phone`); }
+    catch (e) { log('📲 ijazat push masla: ' + e.message); } }
+  for (const a of dec.slice(0, 10)) { ijSent['d' + a.id] = now;
+    try { const tokens = tk.filter(x => !isBoss(x) && ((a.by && x.uid === a.by) || (a.byName && norm(x.name) === norm(a.byName)))).map(x => x.token);
+      const n = await send(tokens, a.status === 'done' ? '✅ Malik ne ijazat de di' : a.status === 'no' ? '❌ Malik ne mana kar diya' : '⚠️ Ijazat — kaam nahi hua', String(a.title || '').slice(0, 160) + (a.err ? '\n' + String(a.err).slice(0, 100) : ''), 'ijd-' + a.id, L);
+      log(`📲 faisla ${a.status} "${String(a.title || '').slice(0, 40)}": mulazim ${n} phone`); }
+    catch (e) { log('📲 faisla push masla: ' + e.message); } }
+  for (const k of Object.keys(ijSent)) if (now - ijSent[k] > 3 * 864e5) delete ijSent[k];
+  try { fs.writeFileSync(IJ_FILE, JSON.stringify(ijSent)); } catch {}
+}
+
 let doneKeys = new Set(), lastNow = 0, busy = false;
 async function tick() {
   if (busy) return;
@@ -357,6 +388,7 @@ async function tick() {
   try { await gaariNotify(); } catch (e) { log('gaari notification masla: ' + e.message); }
   try { await nagNotify(); } catch (e) { log('🔁 nag masla: ' + e.message); }
   try { await trNotify(); } catch (e) { log('🚚 transfer check masla: ' + e.message); }
+  try { await ijNotify(); } catch (e) { log('📲 ijazat masla: ' + e.message); }
   try {
     const cd = await base.collection('blueAccess').doc('backupConfig').get();
     const c = cd.exists ? cd.data() : {};
@@ -376,7 +408,7 @@ async function tick() {
   } finally { busy = false; if (doneKeys.size > 50) doneKeys = new Set([...doneKeys].slice(-20)); }
 }
 
-module.exports._t = { mirrorFacPhotos, phSafe, rozRound, rozQueue, rozNotify, rozState, rozTick, rozWatch, rozD, rozSentSet: v => { rozSent = v; }, trDue, trList, trNotify, trSet: (p, j, c) => { trPos = p; trJobs = j; trChecks = c; trStops = []; }, trSent: () => trSent, nagDue, firstDue, nagNotify, nagNotes: () => nagNotes, nagSent: () => nagSent };
+module.exports._t = { ijNotify, ijWatch, ijNew, ijDone, ijSentSet: v => { ijSent = v; }, mirrorFacPhotos, phSafe, rozRound, rozQueue, rozNotify, rozState, rozTick, rozWatch, rozD, rozSentSet: v => { rozSent = v; }, trDue, trList, trNotify, trSet: (p, j, c) => { trPos = p; trJobs = j; trChecks = c; trStops = []; }, trSent: () => trSent, nagDue, firstDue, nagNotify, nagNotes: () => nagNotes, nagSent: () => nagSent };
 if (process.env.NT_TEST) {} else if (process.argv.includes('--now')) {
   makeBackup('--now test').then(s => { console.log(s); process.exit(0); }).catch(e => { console.error('Nahi hua:', e.message); process.exit(1); });
 } else {

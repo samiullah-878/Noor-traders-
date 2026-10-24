@@ -73,7 +73,9 @@ function card(x) {
   const plan = fixable(x) ? x.locs.filter(l => l.c && Math.abs(l.f) >= 0.001).map(l => `${E(A.branchName(l.b))} ${l.f < 0 ? 'kam ' + A.num(-l.f) + ' → Sale' : 'zyada ' + A.num(l.f) + ' → Return'}`).join(' · ') : '';
   const trB = k === 'jagah' && A.qtrCan?.() ? `<button type="button" class="fq-tr" data-fq-tr="${E(x.id)}">⇄ Transfer se theek karo</button>` : '';   // v2.114.0
   const btns = own ? (fixable(x) ? `<div class="fq-acts"><small>${plan}</small>${trB}<button type="button" class="fq-fix" data-fq-fix="${E(x.id)}"${busy ? ' disabled' : ''}>${trB ? '🧾 Bill se theek karo' : '✓ Theek karo'}</button></div>`
-    : k === 'big' ? `<div class="fq-acts">${A.canWant() ? `<button type="button" class="fq-mini" data-fq-again="${E(x.id)}">📋 Dobara ginwao</button>` : ''}<button type="button" class="fq-mini alt" data-fq-force="${E(x.id)}">✓ Theek hai (isi ginti par)</button></div>` : '') : trB ? `<div class="fq-acts">${trB}</div>` : '';
+    : k === 'big' ? `<div class="fq-acts">${A.canWant() ? `<button type="button" class="fq-mini" data-fq-again="${E(x.id)}">📋 Dobara ginwao</button>` : ''}<button type="button" class="fq-mini alt" data-fq-force="${E(x.id)}">✓ Theek hai (isi ginti par)</button></div>` : '')
+    : fixable(x) && A.askCan?.() ? `<div class="fq-acts"><small>${plan}</small>${trB}${A.askPend?.('farq:' + x.id) ? '<span class="fq-wait">⏳ Malik ki manzoori ka intezar</span>' : `<button type="button" class="fq-fix ask" data-fq-ask="${E(x.id)}">📲 Malik se manzoori</button>`}</div>`   /* v2.115.0: mulazim = malik ki ijazat */
+    : trB ? `<div class="fq-acts">${trB}</div>` : '';
   const shown = k === 'jagah' ? x.locs.filter(l => !l.none) : x.locs;   // jagah badli: jo nahi gini wo chhupi (shor kam)
   return `<article class="fq-c ${k}" data-fq-item="${E(x.id)}"><div class="fq-hd"><span class="fq-nm"><b>${E(x.name)}</b><small>${KN ? KN[1] : ''}</small></span><span class="fq-net ${x.net < -0.001 ? 'k' : x.net > 0.001 ? 'z' : 'e'}"><small>Asal farq</small><b>${Math.abs(x.net) < 0.001 ? '0' : sg(x.net)}</b><small>${x.rs ? rs(x.rs) : 'Rs 0'}</small></span></div>${shown.map(loc).join('')}${zsB}${tip}${btns}</article>`;
 }
@@ -88,6 +90,7 @@ function html() {
   return `<div class="fq-hero"><div><small>Bill baqi · pichhle 7 din</small><b>${A.num(L.length)} items</b></div><div><small>Asal farq (sab jagah)</small><b class="${net < 0 ? 'k' : net > 0 ? 'z' : ''}">${rs(net)}</b></div><div><small>🔁 Jagah badli</small><b>${A.num(N('jagah'))}</b></div></div>
     ${L.length ? seg + pat : ''}${qLine}
     ${L.length ? KINDS.map(grp).join('') : '<div class="fq-empty">✅<b>Koi farq baqi nahi</b><small>Jo ginti hui sab barabar ya bill ho chuka.</small></div>'}
+    ${!own && fix.length && A.askCan?.() ? (A.askPend?.('farq:sab:' + new Date().toISOString().slice(0, 10)) ? '<p class="fq-wait big">⏳ Sab ki manzoori malik ko bheji hui hai</p>' : `<button type="button" class="fq-big ask" data-fq-askall="1">📲 Sab ki manzoori maango — ${A.num(fix.length)} items · ${rs(fixRs)}<small>Malik ✓ karega to PC "stock fraq" bill + parchi khud bana dega</small></button>`) : ''}
     ${own && fix.length ? `<button type="button" class="fq-big" data-fq-all="1"${busy ? ' disabled' : ''}>✅ Sab theek karo — ${A.num(fix.length)} items · ${rs(fixRs)}<small>"stock fraq" bill — kam = Sale · zyada = Return (har jagah apna) · PC parchi khud</small></button>` : ''}
     <p class="fq-foot">Jagah badli wale item dono jagah adjust hote hain — POS stock sahi, nuqsan sirf asal farq. ${own ? '' : 'Bill malik banata hai.'}</p>`;
 }
@@ -106,7 +109,7 @@ async function fixList(list, label) {
   catch (e) { A.notice('Nahi bheja: ' + (e?.message || e)); }
 }
 document.addEventListener('click', async e => {
-  const t = e.target.closest?.('[data-fq-f],[data-fq-fix],[data-fq-all],[data-fq-save],[data-fq-again],[data-fq-force],[data-fq-tr],[data-fq-zs],[data-fq-re],[data-fq-un]'); if (!t || !A || !t.closest('#fqRoot')) return;
+  const t = e.target.closest?.('[data-fq-f],[data-fq-fix],[data-fq-all],[data-fq-save],[data-fq-again],[data-fq-force],[data-fq-tr],[data-fq-zs],[data-fq-re],[data-fq-un],[data-fq-ask],[data-fq-askall]'); if (!t || !A || !t.closest('#fqRoot')) return;
   if (t.dataset.fqZs) { showZ.add(t.dataset.fqZs); paint(); return; }   // v2.114.3
   if (t.dataset.fqRe) { again.add(t.dataset.fqRe); paint(); setTimeout(() => { try { $('fqRoot').querySelector(`.fq-l.again [data-fq-save="${CSS.escape(t.dataset.fqRe)}"]`)?.closest('.fq-in')?.querySelector('input')?.focus(); } catch {} }, 40); return; }
   if (t.dataset.fqUn) { again.delete(t.dataset.fqUn); paint(); return; }
@@ -118,6 +121,15 @@ document.addEventListener('click', async e => {
     if (d.fqSave) { const [b, id] = d.fqSave.split('|'), root = t.closest('.fq-l'), cI = root?.querySelector('[data-fq-ctn]'), pI = root?.querySelector('[data-fq-pcs]');
       const c = Number(cI?.value || 0) || 0, p = Number(pI?.value || 0) || 0; if (c < 0 || p < 0 || (!cI?.value && !pI?.value)) { A.notice('Ginti likhein (Ctn / Pcs)'); return; }
       t.disabled = true; try { const r = await A.save(Number(b), id, c, p); if (r) { const re = again.delete(d.fqSave); A.notice('✓ ' + A.branchName(Number(b)) + ': ' + (re ? 'dobara ' : '') + 'ginti save (' + A.num(r.total) + ')'); if (re) paint(); } } finally { t.disabled = false; } return; }
+    if (d.fqAsk || d.fqAskall != null) {   // v2.115.0: 📲 mulazim — farq bill malik ki manzoori se (malik ✓ = WAHI requestFarqQueue)
+      const list = d.fqAsk ? build().filter(z => z.id === d.fqAsk && fixable(z)) : build().filter(fixable), J = jobsOf(list).slice(0, 40); if (!J.length) { A.notice('Theek karne ko kuch nahi'); return; }
+      const tot = list.reduce((s, x) => s + x.rs, 0), rid = d.fqAsk ? 'farq:' + d.fqAsk : 'farq:sab:' + new Date().toISOString().slice(0, 10);
+      const why = prompt('Malik se farq bill ki manzoori — wajah (ikhtiyari):', ''); if (why === null) return;
+      t.disabled = true;
+      try { await A.ask({ kind: 'farq', title: `⚖️ Stock farq bill — ${list.length === 1 ? list[0].name : A.num(list.length) + ' items'} · ${rs(tot)}`, lines: [...J.map(j => `${A.branchName(j.branch)} · ${j.kind === 'kam' ? 'kam (Sale)' : 'zyada (Return)'} · ${j.items.length} items`), ...list.slice(0, 8).map(x => `${x.name}: ${sg(x.net)} (${rs(x.rs)})`)].slice(0, 12), jobs: JSON.stringify(J), reason: String(why).trim(), rid });
+        A.notice('📲 Malik ko bhej diya — manzoori par PC bill + parchi bana dega'); paint(); }
+      catch (er) { t.disabled = false; A.notice('Nahi gaya: ' + (er?.message || er)); }
+      return; }
     if (!A.isOwner()) return;
     if (d.fqFix) { const x = build().find(z => z.id === d.fqFix); if (x && fixable(x)) await fixList([x], x.name); return; }
     if (d.fqAll != null) { await fixList(build().filter(fixable), 'Sab theek'); return; }
