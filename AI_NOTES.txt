@@ -6052,3 +6052,17 @@ ab app se malik ko darkhwast, malik ke phone par push, malik ✓ = kaam KHUD (ma
 4) cashCustody move mein 'ref' + 'src' rules 2.71 mein (mulazim ka "Is cash se Bhejo" pehle server par ruk sakta tha — v2.114.1 mein mila tha).
 Theme: .ij-* (+ html.dk.dk). AI NAHI. Test t115b (insaan jaisa): B1 mulazim edit/delete + "Kuch badla nahi" + faisle ke paigham · B2 malik ✓/✕/hat chuki ·
 B3 farq · B4 din · B5 CAP band / malik seedha Edit · B6 purani purchase (tasveer chhupi, sirf raqam) · 360 glass + 412 frost. PC abt2/t3.js.
+
+========== 24 Oct 2026 (raat) — 📡 LOCAL SERVER ka agla kaam ROKA · 📶 malik ne BACKUP INTERNET chuna (koi code nahi badla) ==========
+1) Malik: "20 phone ek saath — ek ne stock badla to baqi par?" → JAANCH (asal app + asal pc/sync-stock.js, mock POS SQL + mock Firestore fan-out,
+   20 alag device, test scratchpad t/sh/live20.mjs + stubcloud117.js + live20pc/): POS counter sale (Hamza Ghee 50→30 ctn) = 19/19 phone 3–4 s,
+   app sale 20/20 ≈ 5 s, refresh NAHI (pos-stock soft() — sirf ginti ke khane mein likhte waqt focusout tak rukta). Shop par sale POS se hoti hai
+   (app se nahi) — "app sale foran ghatao" wala mashwara rad.
+2) Malik: net na ho to POORI app (stock, daily sale, transfer, purchase, sale, factory) local server (laptop) se. Bataya: matlab dukaan mein apna
+   "chhota Firebase" (har screen ka data + POS jobs + wapas sync, dohra / gum ka khatra), hafton ka kaam; aur sab se bara sawal: HTTPS app se
+   http://laptop par Chrome (LNA / mixed content) — asal phone par jaanch abhi pakki nahi. Mashwara: 4G backup router (auto failover).
+   Malik: "Thik hai hum alternative internet use kar lete hain". → Update 2/3 (print / purchase / sale offline) NAHI banana jab tak malik khud na kahe.
+   Agar kabhi dobara: POS mein likhai SIRF server PC ki purani scripts (laptop job SQL ke alag chhote database ki line se pohanchaye) — do writer kabhi nahi.
+3) Laptop (DESKTOP-I5BS1UF) par abhi nt-local v1.0.1 (sirf /ping) chal raha hai aur nt-local-setup ne NT Camera (galla camera) BAND kiya hua hai
+   (Startup "NT Camera.lnk" -> C:\NTCam\NT Camera.lnk.band, task "NT Camera chowkidar" delete — pc/ntup.txt wala user-level task). Malik se poocha:
+   camera wapas chalu? (OK par: nt-local.js khud shortcut wapas + chowkidar task + camera chalu + local server exit 3; laptop par kuch nahi karna).
