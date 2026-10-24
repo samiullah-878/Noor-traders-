@@ -3406,3 +3406,7 @@ phones WiFi par laptop se, laptop LAN par Q1SLV77 ke SQL se. Net ho to laptop ch
   "POS database nahi juda: local-config.json nahi mili" diya — GALTI MERI: Windows PowerShell 5 `Set-Content -Encoding UTF8` = BOM, JSON.parse fail.
   Hal: nt-local BOM hata kar parhta; setup ab [IO.File]::WriteAllText UTF8 bina BOM. QAIDA: PC par JSON likhna ho to BOM ke baghair, Node mein parhte waqt ﻿ hatao.
   Server share se local-config nahi mila (\\Q1SLV77\khata-sync share nahi) — malik ne haath se sa + password diya.
+* (24 Oct) raw.githubusercontent = cache-control max-age=300 aur ?t= query ko NAZAR-ANDAAZ karta hai (x-cache HIT) — push ke 5 min tak purani file.
+  Doctor ko pata nahi chalta tha kyun ke manifest sha256 milne tak har 3 min dobara koshish karta hai. nt-local setup / bat ab GitHub API
+  (contents/pc/<f>?ref=main, Accept application/vnd.github.raw, User-Agent; bina login 60/ghanta) — fail ho to raw. QAIDA: malik ko foran chalne wali
+  command ho to API wala link do.

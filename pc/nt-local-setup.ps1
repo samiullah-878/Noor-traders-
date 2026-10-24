@@ -1,12 +1,14 @@
 # nt-local-setup.ps1 (2026-10-24) - LAPTOP ko NT LOCAL SERVER banana (Update 1: camera band + jaanch)
 #   Chalana (laptop, AnyDesk -> PowerShell "Run as administrator"):
-#     irm https://raw.githubusercontent.com/samiullah-878/Noor-traders-/main/pc/nt-local-setup.ps1 | iex
+#     irm https://api.github.com/repos/samiullah-878/Noor-traders-/contents/pc/nt-local-setup.ps1 -Headers @{Accept='application/vnd.github.raw'} | iex
+#   (raw.githubusercontent wala link bhi chalta hai magar push ke baad 5 minute purani copy deta hai)
 #   1) NT Camera band (program + chowkidar task + Startup shortcut) - C:\NTCam ki files NAHI mitti
 #   2) C:\khata-sync + Node + mssql   3) local-config (server PC ka SQL, laptop se)   4) firewall port 47900
 #   5) Sleep band (bijli par)   6) Startup NT-LOCAL.vbs   7) chalu + jaanch
 #   KHATA-DOCTOR is laptop par NAHI lagana - warna sale/purchase POS mein do dafa jayein.
 $ErrorActionPreference = 'Continue'
 $K = 'C:\khata-sync'; $RAW = 'https://raw.githubusercontent.com/samiullah-878/Noor-traders-/main/pc/'; $SERVER = 'DESKTOP-Q1SLV77'; $PORT = 47900
+$API = 'https://api.github.com/repos/samiullah-878/Noor-traders-/contents/pc/'
 function Say($t, $c = 'White') { Write-Host $t -ForegroundColor $c }
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch {}
 Say ""; Say "===== NT LOCAL SERVER SETUP - $env:COMPUTERNAME =====" Cyan
@@ -43,8 +45,12 @@ if (-not $node) {
 }
 Say ("  Node: " + (& node -v)) Green
 foreach ($f in 'nt-local.js', 'nt-local-auto.bat') {
-  try { Invoke-WebRequest ($RAW + $f + '?t=' + [DateTimeOffset]::Now.ToUnixTimeSeconds()) -OutFile (Join-Path $K $f) -UseBasicParsing; Say "  + $f" }
-  catch { Say "  ! $f download nahi hua: $($_.Exception.Message)" Red; return }
+  # GitHub API = hamesha taaza (raw.githubusercontent 5 minute purani copy deta hai, ?t= bhi nahi bachata)
+  try { Invoke-WebRequest ($API + $f + '?ref=main') -Headers @{ Accept = 'application/vnd.github.raw'; 'User-Agent' = 'nt-local' } -OutFile (Join-Path $K $f) -UseBasicParsing -ErrorAction Stop; Say "  + $f" }
+  catch {
+    try { Invoke-WebRequest ($RAW + $f) -OutFile (Join-Path $K $f) -UseBasicParsing -ErrorAction Stop; Say "  + $f (raw)" }
+    catch { Say "  ! $f download nahi hua: $($_.Exception.Message)" Red; return }
+  }
 }
 if (-not (Test-Path (Join-Path $K 'node_modules\mssql'))) {
   Say "  mssql install (1-3 minute)..." Yellow

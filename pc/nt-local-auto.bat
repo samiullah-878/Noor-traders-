@@ -2,7 +2,7 @@
 REM nt-local-auto.bat - NT LOCAL SERVER (laptop): net na ho to WiFi par app isi se. Chalne se pehle GitHub se taaza nt-local.js (net ho to).
 cd /d C:\khata-sync
 :loop
-powershell -NoProfile -ExecutionPolicy Bypass -Command "try{[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;Invoke-WebRequest ('https://raw.githubusercontent.com/samiullah-878/Noor-traders-/main/pc/nt-local.js?t='+[DateTimeOffset]::Now.ToUnixTimeSeconds()) -OutFile 'nt-local-new.js' -UseBasicParsing -TimeoutSec 20}catch{}" >nul 2>&1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try{[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;Invoke-WebRequest 'https://api.github.com/repos/samiullah-878/Noor-traders-/contents/pc/nt-local.js?ref=main' -Headers @{Accept='application/vnd.github.raw';'User-Agent'='nt-local'} -OutFile 'nt-local-new.js' -UseBasicParsing -TimeoutSec 20}catch{}" >nul 2>&1
 if exist nt-local-new.js (
   node --check nt-local-new.js >nul 2>&1 && move /y nt-local-new.js nt-local.js >nul
   if exist nt-local-new.js del nt-local-new.js
