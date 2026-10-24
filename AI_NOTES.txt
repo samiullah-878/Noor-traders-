@@ -5967,3 +5967,14 @@ AI NAHI. PC scripts NAHI badle.
    t114c (insaan jaisa: malik phone chip → Bilal → src save → chip gayab · Aaj ka · Sab → "✓ Sab bhej diya" · 4 looks 360/412 · mulazim · CAP band) ✓.
    Alag AI review (diff parh kar): 4 mile — stale chip aadha saaf · pichhli tareekh par chips ghalat · har render par sort (dheema) · din band par chips — sab theek + test.
    Regression: t113a–k · t114a/b · t113h-pc · fkt113 · pc113 · bs113 · pdfchk · rk5 · dlgchk ✓ · sweep2 = v2.114.0 jaisa (110 ✅).
+
+========== v2.114.2 (24 Oct 2026) — 🔑 Malik ka pakka code save + ⚠️ paigham khirki ke peeche chhupte the (POORI APP) ==========
+Malik (screenshot "Malik ka pakka code", 123456 likha): "login save nahi ho rahi, time bahut lag raha". Wajah: 123456 aasaan code = cloud.setOwnerCode foran mana
+("Itna aasaan code nahi") — magar paigham notice() ke #toast mein tha jo khuli <dialog> (showModal = top layer) ke PEECHE chhup jata hai → malik ko kuch nazar nahi aaya.
+1) app.js notice(): #toast ko popover="manual" + showPopover() (top layer — har khuli khirki ke upar); popover na ho to khuli dialog ke andar daal do. pointer-events none
+   (neeche button na ruken), purana timer clear. POORI app ke "Nahi hua / ✅" paigham ab khirki ke andar bhi nazar aate hain.
+2) Pakka code: likhte hi aasaan code (111111 / 123456 / 654321) par khirki ke andar laal line (.oc-err); Save par bhi wahin; ghalti / ijazat ("rules 2.70") khirki mein.
+   Save: larke ke code ki jaanch (5 s hadd) + PBKDF2 hash EK SAATH, ownerCode + ownerCodeLock likhai ek saath, baad mein dobara parhna nahi (ocInfo khud). 2.5 s = "⏳ Server tak
+   ja raha hai…", 12 s = "Internet bohat dheema — dobara Save". AI NAHI. Rules NAHI badle.
+   Test: oc1.mjs (stubcloud115: aasaan = laal line + server call nahi · mushkil = ✅ top layer + bara code · 15 s net = 2.5 s / 12 s paigham · permission = rules 2.70).
+QAIDA: khuli khirki ke upar kuch dikhana ho to top layer (popover / apni <dialog>) — position:fixed div khirki ke peeche chhup jata hai.

@@ -1,14 +1,14 @@
-import {cashLinkChanges} from './cash-links.js?v=2.114.1';
-import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js?v=2.114.1';
-import {snapshotRows} from './live-data.js?v=2.114.1';
+import {cashLinkChanges} from './cash-links.js?v=2.114.2';
+import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js?v=2.114.2';
+import {snapshotRows} from './live-data.js?v=2.114.2';
 let transferFail=null;   // v2.86: tez transfer ka server-se-inkaar hook
-import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js?v=2.114.1';
-import {planImport} from './import-plan.js?v=2.114.1';
+import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js?v=2.114.2';
+import {planImport} from './import-plan.js?v=2.114.2';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import * as authSDK from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
 import {initializeFirestore,persistentLocalCache,persistentSingleTabManager,memoryLocalCache,disableNetwork,enableNetwork,collection,query,where,doc,getDoc,getDocFromServer,getDocs,getDocsFromServer,getDocsFromCache,getDocFromCache,setDoc,deleteDoc,updateDoc,deleteField,onSnapshot,runTransaction,writeBatch,waitForPendingWrites,orderBy,limit,serverTimestamp,Bytes,FieldPath} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.114.1';
-import {firebaseConfig,BUSINESS_ID} from './config.js?v=2.114.1';
+import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.114.2';
+import {firebaseConfig,BUSINESS_ID} from './config.js?v=2.114.2';
 export {loginErrorMessage};
 export async function connect(callbacks){const MT=(()=>{try{return sessionStorage.getItem('sam-malik-tab')==='1'}catch{return false}})();   /* v2.105.8: 👑 MULAZIM KI TAB MEIN MALIK — alag Firebase app (naam 'blue-khata-malik'), login sirf is tab (sessionStorage), data memory mein (phone par save nahi). Mulazim ka login ('blue-khata', localStorage) bilkul nahi hilta. */
 const app=initializeApp(firebaseConfig,MT?'blue-khata-malik':'blue-khata');let auth;try{auth=authSDK.initializeAuth(app,{persistence:MT?authSDK.browserSessionPersistence:[authSDK.browserLocalPersistence,authSDK.indexedDBLocalPersistence]})}catch(e){console.warn('initializeAuth nahi chala — purana tareeqa',e);auth=authSDK.getAuth(app);try{await authSDK.setPersistence(auth,MT?authSDK.browserSessionPersistence:authSDK.browserLocalPersistence)}catch(e2){console.warn('Auth persistence nahi mili',e2)}}   /* v2.112.0: ⚡ TEZ KHULNA — getAuth() mobile par HAR dafa Google ka chhupa sign-in iframe (apis.google.com + firebaseapp.com) internet se laata tha, login ki jaanch us ke BAAD (sust net = 10+ sec, phir index.html ka 10 sec parda login page dikha deta — malik ke phone par 5-7 sec jhalak). Hum popup / redirect login nahi karte → initializeAuth bina popupRedirectResolver. Login phone ki yaad (localStorage; IndexedDB wala bhi utha leta hai). setPersistence ka await bhi nahi (wo auth ki poori tayyari ka intezar karta tha) */let db;try{db=MT?initializeFirestore(app,{localCache:memoryLocalCache()}):initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentSingleTabManager({forceOwnership:false})})})   /* v2.103.79: har tab apna live data — pehle multi-tab: ek tab hi server se leta tha, Chrome ne woh tab sula diya to PC ke SAB tab ruk jate (mobile theek). Doosra tab khud memory mode mein */}catch(e){console.warn('Offline storage nahi mili — memory mode',e);db=initializeFirestore(app,{localCache:memoryLocalCache()})}const col=collection(db,'businesses',BUSINESS_ID,'blueKhata'),ref=id=>doc(col,id),other=(name,id)=>doc(db,'businesses',BUSINESS_ID,name,id);
@@ -153,9 +153,10 @@ async joinByTicket(t){t=String(t||'').toUpperCase().replace(/[^A-Z0-9]/g,'');if(
  listenJoinCodes(cb){if(!auth.currentUser||auth.currentUser.isAnonymous){cb([]);return()=>{}}return onSnapshot(collection(db,'businesses',BUSINESS_ID,'deviceJoins'),s=>cb(s.docs.filter(d=>d.id.startsWith('pc-')).map(d=>({id:d.id,code:d.id.slice(3),...d.data()}))),()=>cb(null))},   /* v2.105.7 */
  /* v2.105.7: 🔑 MALIK KA PAKKA CODE — sirf hash (PBKDF2-SHA256, 120k) blueAccess/ownerCode mein; shop PC (owner-login.js, admin) jaanch kar custom token (ntOwner) deta hai */
  async setOwnerCode(code){if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('Sirf malik');code=String(code||'').replace(/\D/g,'');if(code.length!==6)throw Error('6 hindse likhein');if(/^(\d)\1{5}$/.test(code)||'0123456789'.includes(code)||'9876543210'.includes(code))throw Error('Itna aasaan code nahi (111111 / 123456) — koi aur');
-  try{if((await getDoc(other('deviceJoins','pc-'+code))).exists())throw Error('Ye code abhi kisi larke ka hai — koi aur chunein')}catch(e){if(/larke/.test(e.message))throw e}
-  const a=new Uint8Array(16);crypto.getRandomValues(a);const salt=btoa(String.fromCharCode(...a)),it=120000,hash=await ownerHashFn(code,salt,it);
-  await setDoc(other('blueAccess','ownerCode'),{hash,salt,it,uid:auth.currentUser.uid,email:String(auth.currentUser.email||''),at:Date.now(),on:true});try{await setDoc(other('blueAccess','ownerCodeLock'),{until:0,fails:[],at:Date.now()},{merge:true})}catch{}ownerCodeMemo=null;return true},
+  const a=new Uint8Array(16);crypto.getRandomValues(a);const salt=btoa(String.fromCharCode(...a)),it=120000;   /* v2.114.2: larke ke code ki jaanch + hash EK SAATH, dono likhai ek saath (pehle 4 qadam baari baari) */
+  const [busy,hash]=await Promise.all([Promise.race([getDoc(other('deviceJoins','pc-'+code)).then(d=>d.exists()).catch(()=>false),new Promise(r=>setTimeout(()=>r(false),5000))]),ownerHashFn(code,salt,it)]);
+  if(busy)throw Error('Ye code abhi kisi larke ka hai — koi aur chunein');
+  await Promise.all([setDoc(other('blueAccess','ownerCode'),{hash,salt,it,uid:auth.currentUser.uid,email:String(auth.currentUser.email||''),at:Date.now(),on:true}),setDoc(other('blueAccess','ownerCodeLock'),{until:0,fails:[],at:Date.now()},{merge:true}).catch(()=>{})]);ownerCodeMemo=null;return true},
  async clearOwnerCode(){if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('Sirf malik');await deleteDoc(other('blueAccess','ownerCode'));ownerCodeMemo=null},
  async ownerCodeInfo(){if(!auth.currentUser||auth.currentUser.isAnonymous)return null;const [a,b]=await Promise.all([getDoc(other('blueAccess','ownerCode')).catch(()=>null),getDoc(other('blueAccess','ownerCodeLock')).catch(()=>null)]);const x=a?.exists()?a.data():null,l=b?.exists()?b.data():{};return {on:!!x?.hash,at:x?.at||0,email:x?.email||'',until:Number(l.until)||0,fails:Array.isArray(l.fails)?l.fails.length:0,last:Number(l.last)||0,lastDev:String(l.lastDev||'')}},
  async unlockOwnerCode(){if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('Sirf malik');await setDoc(other('blueAccess','ownerCodeLock'),{until:0,fails:[],at:Date.now()},{merge:true})},

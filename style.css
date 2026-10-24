@@ -5774,3 +5774,9 @@ html.dk.dk body .give-baqi{background:var(--glass)!important;border-color:var(--
 html.dk.dk body .give-baqi.ok{background:color-mix(in srgb,var(--good) 14%,transparent)!important;border-color:color-mix(in srgb,var(--good) 40%,transparent)!important;color:var(--good)!important}
 /* v2.114.1: halki looks mein "✓ Bhejo" ki likhai neeli par gehri neeli thi (html.lt button rang) — wapas hara + safed (asal design) */
 html.lt.lt body .give-box .give-go{background:linear-gradient(180deg,#1f9a5f,#167a4a)!important;color:#fff!important;border:0!important}
+
+/* v2.114.2: paigham (toast) top layer mein — khuli khirki ke upar; ungli ka raasta nahi rokta */
+#toast[popover]{inset:auto auto 100px 50%;margin:0;border:0;overflow:visible;width:auto;height:auto;max-width:90%;pointer-events:none}
+#toast{pointer-events:none}
+.oc-err{padding:9px 12px;border-radius:12px;background:#fef2f2;border:1px solid #fecaca;color:#991b1b;font-weight:800;font-size:13.5px}
+html.dk .oc-err{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.45);color:#fca5a5}
