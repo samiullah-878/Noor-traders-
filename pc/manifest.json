@@ -1,6 +1,6 @@
 {
- "version": "2026-10-25.1",
- "note": "⚖️ Stock theek (app v2.116.0): post-farq v18 — app ki ⇄ khirki se dono jagah asal stock → TN (sirf hisaab) ke baad stock fraq Sale / Return (stockCount/_adj-*). auto-backup v2.2 + raat-report v1.4: \"sirf hisaab\" TN ki check-yaad / \"check nahi hue\" nahi. Larkon ki ginti nahi chhuti.",
+ "version": "2026-10-25.2",
+ "note": "📦 rack-bharo v1.16: packet-war mein sirf POORA EK packet minus (tadad bilkul barabar — 0.250 = 250 gm packet). Guna (5 = 5 packet, 0.5 = 2 × 250 gm) ya beech ki tadad (0.400) = khula, minus nahi — sale, minus line, wapsi. App nahi badli.",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
   "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
@@ -68,7 +68,7 @@
   "galla-parchi.js": "0b3e4d58a6c95c51d62a4d2068525e75abad9ff4eee98c085064c24d7436f1ac",
   "irep-today.js": "40ed10c821a2ce0938e8940a583728bcd8473e110a571d8665e6cdbdd71b4584",
   "irep-today-auto.bat": "8f7842cfabb15e6ceb5c4f9cbe55ea6433d7c609b8d346d2490deec4da716d23",
-  "rack-bharo.js": "1979d4cab94bc4d2a5172e49980e65c4cf1746cf58a44ca2937ab5f5c6250c47",
+  "rack-bharo.js": "6d29701ec2c5f6aeef2f4d087581125f88ea887ebf2e6a90df924f978cec379e",
   "rack-auto.bat": "89540d9e4ef5de1c1a4c672ba065f80e1fdbfb5fa70403a36f703c3896afc902",
   "reorder.js": "21ded98a4bde7b66de6441bc700bd8cdec13e4e4d49f993b8a328165591e9cef",
   "reorder-auto.bat": "5464a06406b8991a2a3ac9a8a4e396a80eb2939f8d669cb28784695ac618727d",

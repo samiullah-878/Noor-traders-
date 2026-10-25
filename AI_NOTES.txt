@@ -6097,3 +6097,14 @@ chips dabane par" · "history sab items par".
 Test: t116a (insaan jaisa: malik / 0 khali / mulazim + manzoori / history chips / tick list / CAP / 📋 ginti dohra / 360 glass + 412 frost — 61 ✓),
 PC pf18/t.js (afterTn intezar · fail · 30 min · dohra · atka posting · item na mile · parchi) + t2.js (asal createBill / createAdjustment, mock SQL),
 abt2/t4.js, rr14/t.js · regression t115a/b, t114a/c, t113f/k, dlgchk.
+
+========== 25 Oct 2026 (dopehar) — 📦 PC rack-bharo v1.16: PACKET-WAR mein sirf POORA EK PACKET minus (app nahi badli, manifest 2026-10-25.2) ==========
+Malik: "rack bharo (📦 Packet %) se jo barcode minus hote hain — keyboard par 5 ya koi aur number likhein to minus nahi hona chahiye, wo khula maal customer
+ne seedha liya". Pehle scan record wala plan (counter PC NT-PRINT har scan Firestore mein, server bill se milaye, har counter ki patti) — malik ne khud behtar
+qaida diya: "packet ke ilawa koi bhi sale minus na ho — ghee ka barcode 000258 koi 1 kg mein bechta hai to tadad packet se zyada = minus nahi · sonf 250 gm
+packet: 0.400 = minus nahi, 0.250 = seedha 250 gm packet se, 0.125 = 125 gm wale se" — "ye sab se best". Wohi banaya; scan record / counter patti NAHI lage
+(zaroorat nahi rahi — draft scratchpad mein, malik kabhi keyboard ki pehchan maange to).
+* pc/rack-bharo.js v1.16 packOf: line ki tadad kisi packet size ke BILKUL barabar = 1 packet; "poora guna" (5 = 5 × 1 kg, 0.5 = 2 × 250 gm) HATAYA; baqi sab
+  khula (kh). Sale, sale ki minus line aur wapsi (return) — teeno par. App ka farq paigham pehle se: "POS mein bina-packet (khula) bika — app ne minus nahi kiya".
+* QAIDA (agli AI): packet-war ki bikri = sirf bilkul barabar tadad; guna / andaze se packet mat gino. Keyboard se likha bilkul 0.250 bhi packet ginta hai (malik ko manzoor).
+* Test: scratchpad rb116/t.js (sonf 0.25 / 0.4 / 0.125 / 0.5 / 5 / minus line / wapsi, ghee 1 kg vs 500 gm, daal 5 vs 1). AI NAHI. Rules nahi badle.
