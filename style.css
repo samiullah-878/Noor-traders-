@@ -5944,3 +5944,21 @@ html.dk #qtrDlg .qth-h b,html.dk #qtrDlg .qth-m b,html.dk #qtrDlg .qth-q{color:#
 html.dk #qtrDlg .qth-c{background:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.14)!important;color:#c4d0e4!important}html.dk #qtrDlg .qth-c.is-in{background:#3b5bab!important;border-color:#3b5bab!important;color:#fff!important}
 html.dk #qtrDlg .qth-r{border-color:rgba(255,255,255,.08)}html.dk #qtrDlg .qth-t{background:rgba(99,102,241,.2);color:#c7d2fe}
 html.dk .th-chip.hs{background:rgba(99,102,241,.2);color:#c7d2fe}
+/* v2.118.0: 📦 ginti mein packet patti (Ctn / Pcs ke saath har packet ki tadad — app kg jore) */
+html body #list .pos-dates .cnt-pk{flex:1 1 100%;display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;margin:2px 0;padding:10px 12px;border-radius:14px;border:1px solid #C9D8F2;background:linear-gradient(180deg,#F5F9FF,#EAF1FD);min-width:0}
+html body #list .cnt-pk .cnt-pkh{align-self:center;font:800 12.5px/1.2 system-ui,sans-serif;color:#1E3768;white-space:nowrap}
+html body #list .cnt-pk label{font-weight:800;color:#2B4F95}
+html body #list .cnt-pk input{background:#fff;border-color:#B9CBEA}
+html body #list .cnt-pk .cnt-pkn{flex:1 1 100%;font:600 11px/1.35 system-ui,sans-serif;color:#64748b}
+.count-live .cnt-pkl{font-size:12px;font-weight:700;color:#2B4F95}
+.hs-pk{font-weight:700;color:#2B4F95}
+html.dk body #list .pos-dates .cnt-pk{background:rgba(99,140,255,.08);border-color:rgba(140,170,255,.28)}
+html.dk body #list .cnt-pk .cnt-pkh{color:#cfe0ff}html.dk body #list .cnt-pk label{color:#b9cdfa}
+html.dk body #list .cnt-pk input{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.2);color:#E7EEFF}
+html.dk body #list .cnt-pk .cnt-pkn{color:#9fb0cc}html.dk .count-live .cnt-pkl,html.dk .hs-pk{color:#9cc0ff}
+/* v2.118.0: Packet % — ⚙️ Qaida ki patti */
+.rk-pq b{color:#0F6A45}html.dk .rk-pq b{color:#7fe0b0}
+/* v2.118.0: 📦 Aane wala maal — dene wale ke paas baqi items ki patti */
+.tc-iwait{font-size:12.5px;line-height:1.45;color:#7a4b00;background:#fff7e6;border:1px dashed #f0d39a;border-radius:10px;padding:8px 10px;margin:6px 0}
+.tc-iwait b{color:#5c3700}
+html.dk .tc-iwait{background:rgba(245,170,40,.1);border-color:rgba(245,190,90,.32);color:#f6d38d}html.dk .tc-iwait b{color:#ffe2a6}

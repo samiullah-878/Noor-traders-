@@ -6130,3 +6130,33 @@ deactive" · "larka mazeed items bhi ginti kar sake" · screenshot: "Items nahi 
 Test: scratchpad t/sh r117.mjs (A ghalti dohrayi — dheemi claim + class flip · B skip: list se hata + naya item + doosre larke ko nahi + tab + ↩ + coverage ·
 C mazeed: ➕ Aur hamesha + search ➕ Main ginoon + CAP band = nahi · D dashboard tab · L glass / frost dekha — 34 ✓) · regression rz.mjs 54, t116a 61,
 t115b 54, t114a 40, t114c 45, t113f 31, t113k 40, dlgchk.
+
+========== v2.118.0 (25 Oct 2026) — 📊 Packet % = ⚙️ Qaida (chips hataye) · 📦 ginti mein packet patti · 📦 transfer check item-war "de diya" (rules 2.72) ==========
+Malik: (1) "Packet % ki '% reh jaye to lao' patti ka ab koi maqsad nahi — rack 100 mein 27, abhi 16 — qaida jitna % par aaye usi waqt item list mein"
+(2) "stock screen mein jis item ke packet bhi hon (jaise anardana) — ginti ka hisaab kaise?" (3) "Zeeshan jitni items OK kare larka bhi utni items OK kare —
+poore transfer note ki bajaye — jaise Godam 2 ka maal aata hai: wahan se tick, yahan larke ke paas bhi item".
+1) 📊 PACKET % = QAIDA (pos-stock): packet ka apna % (rackPk p[z].pct) ab NAHI chalta — pkQ() = rackPct() (dekhne wale ka: malik ka ya mulazim ka apna,
+   baqi items jaisa) || 20 (Qaida "Sab" = packet 20%). pkLeft lim = floor(b × pkQ / 100) · pkReconcile · chips. HATAYE: Packet % editor + 🧮 Stock milao ke
+   "% reh jaye to lao 10·20·30·40" chips, ⋮ "📊 Sab ka % ek click" (data-rkp-pp / data-gm-p / data-rkp-allpct). Item chip par "· hadd X%" nahi (sirf
+   "250 gm: 16/27 (59%)"), Lane wale packet line par bhi nahi. Hari line: "Abhi 16/27 = 59% · ⚙️ Qaida 30% — 8 reh jaye to khud list mein · tab 19 packet
+   aayenge". Packet % tab ke upar patti ".rk-pq" + ⚙️ Qaide dabba (rkSetHTML) ab Packet % tab ke ⋮ mein bhi. Save par pct = Qaida (purane phones ke liye).
+   Agent: packet_pct = sirf poora / abhi; packet_pct_all = Qaida % (cloud.setRackPct). Data nahi mitaya (purana pct pada rahe, chalta nahi).
+2) 📦 GINTI MEIN PACKET PATTI (CAP stock.ginpk, ON): countHTML (+ farq card "Dobara gino") mein packet wale item ke liye Ctn / Pcs / Kul ke baad
+   ".cnt-pk" — har packet ki tadad (data-count-pk="<id>|<size>"). Kaun se: Packet % item = pkSizesOf (1 sirf jab us ka 🧺 100% laga) · bina Packet % =
+   sirf chhote (< 1) sub-barcode (carton 12 jaisa nahi). readCount: kul = Ctn/Pcs/Kul + Σ tadad × size (3 hindse, r3) · live "📦 250 gm ×16 · 125 gm ×48 →
+   10.5". writeCount: history h.pk (text) + doc pkn {size: tadad}. ⏳ Baqi (jama) = pkn pichhle hisse + ye hissa (cntPkMerge). Save ke baad khane khali
+   (cntPkClear) + pkn wali ginti par Ctn / Pcs pehle se nahi bharte (warna dobara Save par khula + packet dohra). Dukan (branch 1) + Packet % item + aakhri
+   Save (mode save; Baqi wala hissa nahi) = cntPkRack: rackPk p[z].c = gini tadad (na likha = 0), at = abhi → Rack bharo ka "👀 abhi" isi ginti se (bikri
+   yahan se — PC rack-bharo from = at). saveAll (scan list) mein bhi. Andhi ginti mein bhi patti (stock / farq nahi).
+3) 📦 TRANSFER CHECK ITEM-WAR (rules 2.72): naya collection transferGive/<TN key> {g: {item index: ms}, nm, t (issuedAt), from, to, at} —
+   cloud.setTransferGive (merge; wapas = deleteField) + listenTransferGive (t >= 62 din). Dene wala (Godam 1 se Zeeshan / godam wale, dukan se larka)
+   "✓ de diya" = phone ki yaad (sam-tc-gtick) + server (tcGvSend) — tcGiven = phone ∪ server (doosre godam wale ke ✓ bhi). Sab ✓ = wahi tcGiveNow (G).
+   Lene wala (tcInHTML): note ka G abhi nahi (ng) ho to bhi jo items server par "de diya" — wohi "📦 Aane wala maal" mein (✓ aa gaya / ⚠️) + patti
+   ".tc-iwait" "⏳ TN … — N item abhi 📦 Zeeshan ke paas". Sab ✓ magar G abhi nahi = tcAutoWait → G aate hi (checks listener) tcAutoSave. Note par
+   "N/M item de diye" (step 1, status, chip). Rules na lagi = setTransferGive permission → ek dafa paigham "🔐 Firebase rules 2.72 abhi nahi lagi", purana
+   tareeqa (phone ki yaad + poora note G) chalta rehta. "Mil gaya" check ka qaida WAHI (G ke baghair nahi).
+4) RULES 2.72: match transferGive/{id} — read: malik / staff · create, update: id 'T123'/'T123E2', keys sirf g/nm/t/from/to/at, g map ≤ 300, at ==
+   request.time, from 2 (Godam 1) = tcGiverOk() · delete sirf malik. firestore-rules-2.72.html (chips) + app ka 🔐 Rules button. AI NAHI. PC NAHI badla.
+Test: scratchpad t/sh t118.mjs (A Packet % Qaida 12 · B patti / jama / rack sync / andhi / CAP 19 · C Zeeshan → larka / G intezar / rules na lagi 15 —
+46 ✓) + stub118.js · regression rz 54, r117 34, t116a 61, t115b 54, t114a 40, t114c 45, t113f 31, t113k 40, dlgchk, tc6 (3 role). Yahan test NAHI:
+asal Firebase par rules 2.72 (emulator download band) — rules ka dhancha transferChecks jaisa, brackets jaanche.
