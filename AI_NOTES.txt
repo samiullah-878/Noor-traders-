@@ -6160,3 +6160,33 @@ poore transfer note ki bajaye — jaise Godam 2 ka maal aata hai: wahan se tick,
 Test: scratchpad t/sh t118.mjs (A Packet % Qaida 12 · B patti / jama / rack sync / andhi / CAP 19 · C Zeeshan → larka / G intezar / rules na lagi 15 —
 46 ✓) + stub118.js · regression rz 54, r117 34, t116a 61, t115b 54, t114a 40, t114c 45, t113f 31, t113k 40, dlgchk, tc6 (3 role). Yahan test NAHI:
 asal Firebase par rules 2.72 (emulator download band) — rules ka dhancha transferChecks jaisa, brackets jaanche.
+
+========== v2.119.0 (25 Oct 2026) — 🧺 RACK BHARO NAYA SAAF SCREEN (search upar · tabs ⋮ · patli lines · ☐ Sab items · Enter = agla · ek click print) ==========
+Malik (tasveer par ✗): "search top par · baqi faltu cheezein nahi · neeche Lane wale / Packet % / Mangwao sab 3 dots ke andar · ek item poori screen par aa
+raha hai — aisa ho ke screen par 10 items aa sakein · upar ek tick — sab items kam zyada sab aa jayein, phir larka manually bhar kar stock mangwa sake · ek
+click par print + barcode · jo item na mangwana ho us par zero, aur agle item par — keyboard ka kaam kam, rack bhara rahe" + pichhle plan ke 3 + 4 (Packet %
+mein asal haal · Qaida "0 se X% tak").
+1) pos-stock rkPaint NAYA: title "🧺 Rack bharo" · bara neela hero / neeche lambi "Qaida:" likhai HATAYI · upar chipka .rk2-top = 🔍 search (data-rk-q) +
+   "☐ Sab items" (data-rk-sab, CAP stock.racksab, phone par yaad sam-rk-sab) + patti rk-pill ("🧺 Lane wale · 🏬 Godam 1 · 📊 0–20% · ⋮ badlein").
+   Godam chips (rk.g), tabs (data-mn-seg="rk.tab"), ⚙️ Qaide (rk.set), ⚠️ carton 0 (rk.zero), 🚫 sirf godam (rk.offs), ⚙️ Packet items chunein (rk.pset)
+   = phone par ⋮ mein (PC par screen par). Packet % / Mangwao tab ka andar wahi (sirf upar patti).
+2) Har item = .rk2-r patli line (~48px, 10+ ek screen par): naam + chhoti line (📊 % / 🔴 khali · godam · dukan · 🚚 raste) + daayein tadad (data-rk-qty
+   ctn/pcs). Packet: 1 packet = usi line par (📦 250 gm 0/6 … · pkt); kai packet = doosri line [250 gm 0/6 ⌷] [125 gm ⌷] (data-rkp-q). Naam par tap
+   (data-rk2-x, rk.x2) = purane tools wahin (chips · tafseel · 🏷 label · 🚚 note / reprint · 🔒 100% · ✏️ qaida editor · 🚫 nahi lana · godam jitna hi).
+3) Patti mein = tadad > 0 (✓ tick / 5-5 patti / rkPick lane mein NAHI; Mangwao mein purana). Default: zaroorat wale = app ki tadad, 🚚 raste wale = 0,
+   ☐ Sab items wale = 0 (rkVal / rkpWant; pkQOf ab rkpWant se). Likhte hi state (rkQtySet — paint nahi, line hari, neeche ginti); ↵ Enter / Next = agla
+   khana (enterkeyhint next); godam se zyada = godam jitna (blur par). Khana focus mein ho to bahar ka rkPaint ruk jata (rk.dirty) — chhorte hi.
+4) ☐ Sab items (rkLaneRows): zaroorat wale (rackDue + pkDue, upar ke godam ke) + pkSabEntry (har packet item, godam: upar chuna → set wala → sab se zyada maal)
+   + har item jis ka chune godam(on) mein maal (rkSynth, add 0, sab 1) — zaroorat wale pehle, baqi naam se; 300 tak (search = 400) + "aur — search karein".
+   Zaroorat wale packet item ke baqi packet bhi (0). saleStockItem ab index (rows badle tab hi banta) — hazaron bulave tez.
+5) Neeche chipki .rk2-foot: "🏷 barcode" (data-rk-lball, sam-rk-lball, shuru se ON) + "🖨 Print — N items" (data-rk-goall → rkGoAll): har godam ka EK
+   transfer note (note '🧺 Rack bharo', aam + packet lines saath — PC transfer-sync pk wali line pehle se chhapta), phir rackSent / pkSent, tadad saaf;
+   label: packet (rk.lbOff ke ilawa) + aam (sirf jin par 🏷 tick) — 🏷 band = koi nahi. Purane rkGo / rkpGo / rk.n (5-5) lane mein istemal nahi.
+6) 📋 Packet %: pkLaneWhy — item par chip + editor hari line: "✅ Lane wale mein (Godam 1 se)" / "🏬 Godam2 ki list mein (upar Godam 1 chuna hai)" /
+   "🚫 Nahi lana" / "🖨 Patti nikal chuki" / "⏳ PC ka hisaab abhi nahi" / "⛔ <godam> mein maal nahi — ☐ Sab items se doosre godam se". Hadd par: "abhi list
+   mein: N packet (wapas 100%)". Qaida likhai "⚙️ Qaida 0–20% — 0 se 20% tak jitne bhi packet…" · Qaide "📊 Qaida — 0 se itne % tak sab lao" · patti 📊 0–X%.
+   (Pichhle plan ke 1 + 2 — godam khud / godam khali patti — malik ne nahi kaha; un ki jagah ☐ Sab items.)
+7) Dark theme (glass): rack khirki pehle se roshan (#f6f7fb) — naye khane / search / patti par roshan rang !important. Rules NAHI badle (2.72 wahi). AI NAHI. PC NAHI.
+Test: scratchpad t/sh t119.mjs + stub119.js (requestTransfer / watchTransfer) — hero nahi · search pehla · tabs / Qaide phone par ⋮ · 10+ lines · Sab items
+(0 se) · Enter = agla · 0 = nahi · tools · ek click = har godam ek note (aam + packet) + label · Packet % chip / editor · CAP band — 25 ✓; look frost / glass /
+old + PC 1366; regression t118 46 (naye text), rz 54, r117 34, t116a 61, t115b 54, t114a 40, t114c 45, t113f 31, t113k 40, dlgchk.
