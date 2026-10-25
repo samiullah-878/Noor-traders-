@@ -6108,3 +6108,25 @@ packet: 0.400 = minus nahi, 0.250 = seedha 250 gm packet se, 0.125 = 125 gm wale
   khula (kh). Sale, sale ki minus line aur wapsi (return) — teeno par. App ka farq paigham pehle se: "POS mein bina-packet (khula) bika — app ne minus nahi kiya".
 * QAIDA (agli AI): packet-war ki bikri = sirf bilkul barabar tadad; guna / andaze se packet mat gino. Keyboard se likha bilkul 0.250 bhi packet ginta hai (malik ko manzoor).
 * Test: scratchpad rb116/t.js (sonf 0.25 / 0.4 / 0.125 / 0.5 / 5 / minus line / wapsi, ghee 1 kg vs 500 gm, daal 5 vs 1). AI NAHI. Rules nahi badle.
+
+========== v2.117.0 (25 Oct 2026) — 📋 ROZ KI GINTI: ⏭ item skip (alag tab) · ➕ mazeed items · "Main bhi ginoon" ghalti theek ==========
+Malik: "larka kisi item ko skip karna chahe to skip kar sake — wo alehda aik tab mein aa jaye, kisi aur larke ki tab mein bhi na aaye, sirf stock counting se
+deactive" · "larka mazeed items bhi ginti kar sake" · screenshot: "Items nahi mile: Cannot read properties of null (reading 'name')".
+1) GHALTI: rozTake (➕ Main bhi ginoon) ke await rozClaim ke dauran main ki class 'sk-screen' render mein pal bhar hati → MutationObserver ne rozExit → roz = null →
+   phir roz.name = crash ("Items nahi mile"). Ab: `const L = roz` pehle (paigham L.name), rozGen (larke ne khud ✕ / jagah chip dabayi = wapas NAHI), claim ke baad
+   roz null + screen abhi bhi stock ki = roz wapas; observer 400 ms baad bhi 'sk-screen' na ho tab hi rozExit. QAIDA: async ke baad `roz` dobara mat parho.
+2) ⏭ SKIP (CAP stock.rozskip, shuru se ON): meri list ke har item par "⏭ Skip" → item ke neeche chhota dabba: wajah chips (Maal nahi hai / Band / purana item /
+   Ginna mushkil (khula) / Doosri jagah ka — marzi) + "⏭ Skip karo" / "Nahi". cloud.rozSkip TRANSACTION: roz-<jagah> (aaj) ke taken[id] + meri ids se hata +
+   stockCount/rozskip-<jagah> {loc, at, items:{<id>:{by sid, n naam, at, why, b, nm item}}} (merge; din se reset NAHI — pakka). Phir rozClaim(L, 1) = us ki jagah
+   1 naya item khud. Skip item: kisi larke ke rozPool / rozMine / "➕ Aur" / search mein NAHI; mahine ki coverage (roz.js locCover) se bhi bahar.
+   POS / stock / sale / ⛔ band (_hidden) par koi asar NAHI — sirf roz ginti.
+   Larke ki patti par tabs "📋 Meri list N" | "⏭ Skip N": skip tab = is jagah ke sab skip (kis ne, kab, wajah) + "↩ Wapas" (sirf malik ya jis larke ne skip
+   kiya; cloud.rozUnskip = items.<id> deleteField) → item phir pool mein. Malik dashboard (roz.js): "📋 Aaj" | "⏭ Skip N" tab — jagah-war list + ↩ Wapas.
+3) ➕ MAZEED (CAP stock.rozmore, ON): "➕ Aur N" ab hamesha (pehle sirf list poori hone par; malik ne counting band ki ho to mulazim ko nahi). Meri list mein search
+   likho to neeche "<jagah> ke aur items" — rozPool wale (kisi ke paas nahi, aaj gine nahi, skip / band nahi) smartSearch 12 tak, har ek par "➕ Main ginoon" =
+   cloud.rozClaim({ids:[id], n:1}) (WAHI transaction — do larkon ko ek item kabhi nahi).
+4) Rules NAHI badle (staff stockCount ka koi bhi non-_ doc likh sakta, _lock.off na ho). rozskip-* ko baqi parhne wale nahi chhoote: app (counts loops 'c-' /
+   /^c-(\d+)-/), PC auto-backup (roz-<k> id se), post-farq (where round / type), raat-report (itemId != null). AI NAHI. PC NAHI badla.
+Test: scratchpad t/sh r117.mjs (A ghalti dohrayi — dheemi claim + class flip · B skip: list se hata + naya item + doosre larke ko nahi + tab + ↩ + coverage ·
+C mazeed: ➕ Aur hamesha + search ➕ Main ginoon + CAP band = nahi · D dashboard tab · L glass / frost dekha — 34 ✓) · regression rz.mjs 54, t116a 61,
+t115b 54, t114a 40, t114c 45, t113f 31, t113k 40, dlgchk.

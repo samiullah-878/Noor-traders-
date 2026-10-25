@@ -4,6 +4,7 @@
 //   Theek = WAHI "stock fraq" bill (PC post-farq — kam = Sale, zyada = Return, parchi khud). Ek click = stockCount/_postQ (PC auto-backup ek ek kar ke _post).
 //   Jagah ki ghalti (Dukan −12 · Godam 1 +12) bhi dono jagah fraq bill = POS stock dono jagah theek, Rs net 0 (transfer note nahi — parchi par "maal le jao" ka dhoka nahi).
 //   Data pos-stock.js stockRozApi() se (sirf parhna + wahi kaam). AI NAHI.
+// v2.117.0: ⏭ SKIP tab (dashboard) — larkon ke skip kiye items jagah-war (kis ne · kab · wajah) + ↩ Wapas (malik) · mahine ke hisaab mein skip nahi.
 const $ = id => document.getElementById(id);
 let A = null, st = { tab: 'aaj' };
 const D = 864e5, r2 = n => Math.round((Number(n) || 0) * 100) / 100, r3 = n => Math.round((Number(n) || 0) * 1000) / 1000;
@@ -22,7 +23,7 @@ export function rozPick(api, go) {
 }
 
 // ---------- malik ka dashboard ----------
-export function rozDash(api) { A = api; dlg('📋 Roz ki ginti', dashHTML()); }
+export function rozDash(api) { A = api; st.tab = 'aaj'; dlg('📋 Roz ki ginti', dashHTML()); }
 const dayStart = (t = Date.now()) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
 // jagah ki aaj ki progress + har larka
 function locToday(L) {
@@ -30,8 +31,8 @@ function locToday(L) {
   const ids = Object.keys(d?.taken || {}); let gina = 0; for (const [k, c] of A.counts()) if (k.startsWith(`c-${L.b}-`) && c.round === A.day() && !c.del) gina++;
   return { boys, all: ids.length, done: ids.filter(id => A.gina(L.b, id)).length, gina };
 }
-function locCover(L) {   // mahine (30 din) mein kitne items gine
-  const T = Date.now(), its = A.items(L.b).filter(r => !A.hidden(r)); let c30 = 0, c7 = 0, n = 0;
+function locCover(L) {   // mahine (30 din) mein kitne items gine · v2.117.0: ⏭ skip wale ginti se band = hisaab mein nahi
+  const T = Date.now(), sk = (A.skips && A.skips(L.k)) || {}, its = A.items(L.b).filter(r => !A.hidden(r) && !sk[String(r.id)]); let c30 = 0, c7 = 0, n = 0;
   for (const r of its) { const c = A.count(L.b, r.id), st = Number(r.stock) || 0; if (!c && st === 0) continue; n++; const at = Math.max(Number(c?.at) || 0, ...((c?.history || []).map(h => Number(h?.at) || 0)));
     if (at >= T - 30 * D) c30++; if (at >= T - 7 * D) c7++; }
   return { n, c30, c7, p30: n ? Math.round(c30 * 100 / n) : 0 };
@@ -82,7 +83,14 @@ function dashHTML() {
     return `<div class="rz-g ${k}"><div class="rz-gh"><b>${t}</b><small>${E(s)}</small><i>${A.num(g.length)}</i></div>${g.slice(0, 40).map(x => `<div class="rz-fr"><span class="rz-fn"><b>${E(x.r.name)}</b><small>${E(x.L.name)} · gina ${A.num(A.counted(x.c))} · POS ${A.num(A.sys(x.c, x.r))}${x.c.byName ? ' · ' + E(x.c.byName) : ''}${x.round !== A.day() ? ' · ' + E(x.round) : ''}${x.pair ? ` · <b class="g">${E(x.pair.L.name)} ${x.pair.f > 0 ? '+' : ''}${A.num(x.pair.f)}</b>` : ''}${x.part ? ' · kuch bill ho chuka' : ''}</small></span>
       <span class="rz-fq ${x.f < 0 ? 'r' : 'g'}"><b>${x.f > 0 ? '+' : ''}${A.num(x.f)}</b><small>${x.rs ? rs(x.rs) : ''}</small></span>${k === 'big' ? `<span class="rz-fbt"><button type="button" class="rz-mini" data-rz-again="${E(x.L.k)}|${E(x.id)}">📋 Dobara gino</button><button type="button" class="rz-mini alt" data-rz-force="${E(x.L.k)}|${E(x.id)}">✓ Theek hai</button></span>` : ''}</div>`).join('')}${g.length > 40 ? `<small class="rz-mut">+${A.num(g.length - 40)} aur</small>` : ''}</div>`; };
   const qLine = q ? `<div class="rz-q${qBusy ? ' busy' : ''}">${(q.jobs || []).map(j => `<span class="${j.st === 'done' ? 'ok' : j.st === 'failed' ? 'bad' : j.st === 'nothing' ? 'mut' : ''}">${j.st === 'done' ? '✓' : j.st === 'failed' ? '❌' : j.st === 'nothing' ? '—' : '⏳'} ${E(A.branchName(j.branch))} ${j.kind === 'kam' ? 'kam' : 'zyada'} (${A.num((j.items || []).length)})${j.saleNo ? ' #' + E(j.saleNo) : j.returnNo ? ' R#' + E(j.returnNo) : ''}${j.error ? ' · ' + E(String(j.error).slice(0, 60)) : ''}</span>`).join('')}${qBusy ? '<small>PC ek ek kar ke bill + parchi bana raha hai…</small>' : ''}</div>` : '';
-  return `${set}${lockW}${pcW}
+  // v2.117.0: ⏭ SKIP tab — larkon ne jo items ginti se band kiye (har jagah) · ↩ Wapas = phir ginti mein
+  const SK = Ls.map(L => ({ L, list: Object.entries((A.skips && A.skips(L.k)) || {}).filter(([, x]) => x && typeof x === 'object').map(([id, x]) => ({ id, x, r: A.items(L.b).find(y => String(y.id) === String(id)) })).sort((a, b) => (Number(b.x.at) || 0) - (Number(a.x.at) || 0)) })), skN = SK.reduce((t, g) => t + g.list.length, 0);
+  const tabs = `<div class="rz-dtabs" role="tablist"><button type="button" class="${st.tab !== 'skip' ? 'is-in' : ''}" data-rz-tab="aaj">📋 Aaj</button><button type="button" class="${st.tab === 'skip' ? 'is-in' : ''}" data-rz-tab="skip">⏭ Skip <i>${A.num(skN)}</i></button></div>`;
+  if (st.tab === 'skip') return `${set}${tabs}
+    <div class="rz-sktab">${skN ? SK.filter(g => g.list.length).map(g => `<div class="rz-skg"><div class="rz-skh"><span class="ic">${g.L.ic}</span><b>${E(g.L.name)}</b><i>${A.num(g.list.length)}</i></div>
+      ${g.list.map(({ id, x, r }) => `<div class="rz-skr"><span><b>${E(r?.name || x.nm || 'Item ' + id)}</b><small>⏭ ${E(x.n || '—')} · ${E(new Date(Number(x.at) || 0).toLocaleString('en-PK', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }))}${x.why ? ' · ' + E(x.why) : ''}</small></span>${own ? `<button type="button" data-rz-unskip="${E(g.L.k)}|${E(id)}">↩ Wapas</button>` : ''}</div>`).join('')}</div>`).join('')
+      : '<p class="rz-say">✓ Koi item skip nahi. Larka apni list mein item par "⏭ Skip" dabaye to wo us jagah ki ginti se band ho kar yahan aata hai (kisi larke ki list mein nahi) — stock / POS par asar nahi.</p>'}</div>`;
+  return `${set}${tabs}${lockW}${pcW}
     <div class="rz-locs">${Ls.map(locCard).join('') || '<p class="rz-say">Koi jagah ON nahi — ⋮ se jagah chunein.</p>'}</div>
     <div class="rz-farq"><div class="rz-fh"><b>⚖️ Farq — aaj + pichhle 7 din (bill baqi)</b><small>${A.num(F.length)} items</small></div>${F.length ? '<button type="button" class="rz-mini rz-fq" data-sk-farq="1">⚖️ Har item ek line mein — dukan + har godam saath (Stock farq) ›</button>' : ''}
       ${F.length ? KINDS.map(grp).join('') : '<p class="rz-say">✓ Koi farq baqi nahi.</p>'}
@@ -102,10 +110,12 @@ async function fixAll() {
   catch (e) { A.notice('Nahi bheja: ' + (e?.message || e)); }
 }
 document.addEventListener('click', async e => {
-  const t = e.target.closest?.('[data-rz-on],[data-rz-n],[data-rz-loc],[data-rz-self],[data-rz-fix],[data-rz-again],[data-rz-force],[data-rz-unlock]'); if (!t || !A || !t.closest('#rzRoot')) return;
+  const t = e.target.closest?.('[data-rz-on],[data-rz-n],[data-rz-loc],[data-rz-self],[data-rz-fix],[data-rz-again],[data-rz-force],[data-rz-unlock],[data-rz-tab],[data-rz-unskip]'); if (!t || !A || !t.closest('#rzRoot')) return;
   const d = t.dataset, C = A.cfg();
   if (!A.isOwner()) return;
   try {
+    if (d.rzTab) { st.tab = d.rzTab === 'skip' ? 'skip' : 'aaj'; paint(); return; }   // v2.117.0: ⏭ Skip tab
+    if (d.rzUnskip) { const [k, id] = d.rzUnskip.split('|'); t.disabled = true; await A.unskip(k, id); A.notice('↩ Wapas ginti mein — agle larke ki list mein aa sakta hai'); setTimeout(paint, 400); return; }
     if (d.rzOn != null) { const on = d.rzOn === '1'; await A.cloud.setRozCfg({ ...C, on }); if (on && !A.autoOn() && A.cloud.setStockAuto) await A.cloud.setStockAuto(true);
       let lk = ''; if (on && A.locked?.() && A.cloud.setStockLock) { try { await A.cloud.setStockLock(false); lk = ' · 🟢 Counting ON'; } catch {} }
       A.notice(on ? '✅ Roz ki ginti shuru' + lk + ' — larkon ko Settings → Mulazim se ijazat dein' : '⏸ Roz ki ginti band'); setTimeout(paint, 400); return; }

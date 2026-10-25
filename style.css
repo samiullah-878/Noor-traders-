@@ -5339,6 +5339,42 @@ html body #list .roz-strip button{min-height:38px;padding:0 14px;border-radius:9
 html body #list .roz-strip .rz-more{background:#FFE6A6!important;color:#16264A!important}
 html body #list .roz-strip .rz-x{width:38px;padding:0;background:rgba(255,255,255,.16)!important;color:#fff!important}
 .roz-strip .rz-note{flex-basis:100%;font-size:12px;opacity:.9}
+/* v2.117.0: ⏭ SKIP + ➕ MAZEED — patti ke tab · item par Skip · skip ki khirki · Skip tab · search se aur items · dashboard tab */
+html body #list .roz-strip .rz-tabs{flex-basis:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:2px}
+html body #list .roz-strip .rz-tabs button{min-height:40px;border-radius:12px;background:rgba(255,255,255,.12)!important;color:#fff!important;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:6px}
+html body #list .roz-strip .rz-tabs button i{font-style:normal;min-width:22px;padding:1px 7px;border-radius:999px;background:rgba(255,255,255,.18);font-size:12px}
+html body #list .roz-strip .rz-tabs button.is-in{background:#FFE6A6!important;color:#16264A!important}html body #list .roz-strip .rz-tabs button.is-in i{background:rgba(22,38,74,.12)}
+html body .stock-row .stock-skip-btn{display:block;margin:4px 0 0 auto;min-height:32px!important;padding:4px 12px!important;border-radius:999px!important;border:1px solid #f0d9a0!important;background:#fff8e6!important;color:#7a4b00!important;font:800 12px/1 system-ui,sans-serif!important;white-space:nowrap}
+html body .stock-row .stock-skip-btn.is-in{background:#7a4b00!important;color:#fff!important;border-color:#7a4b00!important}
+html body .stock-row .rz-skip{display:grid;gap:8px;margin:2px 4px 10px;padding:12px;border-radius:14px;border:1px solid #f0d9a0;background:linear-gradient(180deg,#fffaf0,#fff4dc);color:#5c3a00}
+.rz-skip>b{font:800 14px/1.3 system-ui,sans-serif;color:#5c3700}.rz-skip>small{font:600 12px/1.45 system-ui,sans-serif;color:#7a5410}
+.rz-skip .rz-why{display:flex;flex-wrap:wrap;gap:6px}
+html body .rz-skip .rz-why button{min-height:34px;padding:0 12px;border-radius:999px;border:1px solid #e6c98a!important;background:#fff!important;color:#6b4300!important;font:700 12.5px/1 system-ui,sans-serif}
+html body .rz-skip .rz-why button.is-in{background:#7a4b00!important;color:#fff!important;border-color:#7a4b00!important}
+.rz-skip .rz-sk-acts{display:flex;gap:8px;flex-wrap:wrap}
+html body .rz-skip .rz-sk-go{flex:1;min-height:44px;border-radius:12px;border:0!important;background:linear-gradient(135deg,#8a5a00,#b07400)!important;color:#fff!important;font:800 14px/1 system-ui,sans-serif}
+html body .rz-skip .rz-sk-no{min-height:44px;padding:0 16px;border-radius:12px;border:1px solid #e6c98a!important;background:#fff!important;color:#6b4300!important;font:700 13px/1 system-ui,sans-serif}
+.rz-sks,.rz-mores{display:grid;gap:8px;margin:8px 0 14px}
+.rz-skr,.rz-mr{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid #E2E6EE;background:linear-gradient(180deg,#fff,#F7F9FD);min-width:0}
+.rz-skr>span,.rz-mr>span{flex:1;min-width:0;display:grid;gap:2px}.rz-skr b,.rz-mr b{font:800 13.5px/1.3 system-ui,sans-serif;color:#16264A;overflow-wrap:anywhere}
+.rz-skr small,.rz-mr small{font:600 11.5px/1.4 system-ui,sans-serif;color:#64748b;overflow-wrap:anywhere}
+html body :is(#list,#dialogBody) .rz-skr button{flex:none;min-height:36px;padding:0 12px;border-radius:999px;border:1px solid #C9D3E6!important;background:#fff!important;color:#1E3768!important;font:800 12px/1 system-ui,sans-serif}
+html body #list .rz-mr button{flex:none;min-height:38px;padding:0 14px;border-radius:999px;border:0!important;background:linear-gradient(135deg,#1E3768,#2B4F95)!important;color:#fff!important;font:800 12.5px/1 system-ui,sans-serif}
+.rz-mores{padding-top:10px;border-top:1px dashed #C9D3E6}
+.rz-sk-empty small{display:block;margin-top:4px}
+html body #dialogBody .rz-dtabs{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+html body #dialogBody .rz-dtabs button{min-height:42px;border-radius:12px;border:1px solid #C9D3E6!important;background:#fff!important;color:#1E3768!important;font:800 13.5px/1 system-ui,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px}
+html body #dialogBody .rz-dtabs button i{font-style:normal;min-width:22px;padding:2px 7px;border-radius:999px;background:#EEF2FA;font-size:12px}
+html body #dialogBody .rz-dtabs button.is-in{background:linear-gradient(135deg,#1E3768,#2B4F95)!important;color:#fff!important;border-color:transparent!important}html body #dialogBody .rz-dtabs button.is-in i{background:rgba(255,255,255,.2)}
+.rz-sktab{display:grid;gap:12px;min-width:0}.rz-skg{display:grid;gap:8px;padding:12px;border-radius:16px;border:1px solid #E2E6EE;background:linear-gradient(180deg,#fff,#F7F9FD)}
+.rz-skh{display:flex;align-items:center;gap:8px}.rz-skh b{flex:1;font:800 15px/1.2 system-ui,sans-serif;color:#16264A}.rz-skh i{font-style:normal;padding:3px 10px;border-radius:999px;background:#fff4dc;color:#7a4b00;font-weight:900;font-size:12.5px}
+html.dk body .stock-row .stock-skip-btn{background:rgba(245,170,40,.14)!important;border-color:rgba(245,190,90,.38)!important;color:#f6d38d!important}
+html.dk body .stock-row .rz-skip{background:rgba(245,170,40,.1);border-color:rgba(245,190,90,.32);color:#f6d38d}html.dk .rz-skip>b{color:#ffe2a6}html.dk .rz-skip>small{color:#e8c98a}
+html.dk body .rz-skip :is(.rz-why button,.rz-sk-no){background:rgba(255,255,255,.06)!important;color:#ffe2a6!important;border-color:rgba(245,190,90,.38)!important}
+html.dk body .rz-skip .rz-why button.is-in{background:#b07400!important;color:#fff!important}
+html.dk .rz-skr,html.dk .rz-mr,html.dk .rz-skg{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.14)}html.dk .rz-skr b,html.dk .rz-mr b,html.dk .rz-skh b{color:#E7EEFF}html.dk .rz-skr small,html.dk .rz-mr small{color:#9fb0cc}
+html.dk body :is(#list,#dialogBody) .rz-skr button,html.dk body #dialogBody .rz-dtabs button{background:rgba(255,255,255,.06)!important;color:#E7EEFF!important;border-color:rgba(255,255,255,.18)!important}
+html.dk body #dialogBody .rz-dtabs button.is-in{background:linear-gradient(135deg,#2B4F95,#3b63b5)!important;color:#fff!important}html.dk .rz-skh i{background:rgba(245,170,40,.16);color:#f6d38d}html.dk .rz-mores{border-top-color:rgba(255,255,255,.16)}
 /* dashboard */
 .rz-root{display:grid;gap:12px;min-width:0}
 .rz-say{margin:0;font-size:13px;color:#4b5568}
