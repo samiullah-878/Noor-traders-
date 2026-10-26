@@ -3529,3 +3529,9 @@ Malik (bilal alflah khata): "screen par sirf 4 entries hain, 10 aani chahiye —
   Sab chips / buttons (waqt, note, 🔔, Post, POS status, tasveer, larke ki entry, Receipt, Bill dekhein, transfer actions, Edit/Delete) div.li-x mein —
   sirf .open par (liOpen Set, tap par render(); button/input ke andar tap = toggle nahi). Dobara tap = band.
 * Test t/sh/t126.mjs — 8+ entries ek screen, chips chhupe, tap khule/band, andar ke button se band nahi — ALL OK. AI nahi.
+
+=== v2.126.1 (2026-10-27) — khata screen aur tang (phone) ===
+Malik: "farq wali chips upar, aur chhoti; search thora upar; khate ke chips aur chhote taake zyada khate nazar aayein".
+style.css @media 700: #summary:has([data-pm-line]) padding 10/12, strong 20px, small 12px; workspace padding-top 6; ledger h3 6/8 12px;
+li-c padding 5/8, strong 13.5, b 11, date 10, run 9.5, li-m 9.5 → 393px phone par 10 entries. POS chip inline-block 11px; .big = block (pehle
+inline-flex se alfaaz do column mein toot-te the); button "🔍 Farq". shot126.mjs: vis 10. AI nahi.

@@ -6249,3 +6249,24 @@ html body #list .ledger-item.li-c:not(.open) .li-x{display:none}
 html body #list .ledger-item.li-c.open{background:#f7f8fd;cursor:default}html body #list .ledger-item.li-c.open .li-x{display:block;margin-top:4px}
 html body #list .ledger-item.li-c.open>b{white-space:normal}
 html.dk body #list .ledger-item.li-c.open{background:rgba(255,255,255,.06)}
+/* v2.126.1: khata screen aur tang — upar ka card chhota, POS chip ek line, search upar, entries aur chhoti (malik: "zyada khate nazar aayein") */
+@media(max-width:700px){
+html body #summary:has([data-pm-line]){padding:10px 12px!important;gap:6px!important;border-radius:14px}
+html body #summary:has([data-pm-line]) strong{font-size:20px!important;line-height:1.15}
+html body #summary:has([data-pm-line]) small{font-size:12px!important}
+html body #summary:has([data-pm-line]) [data-pm-line]{margin-top:4px}
+html body main:has(#summary [data-pm-line]) .workspace{padding-top:6px!important}
+html body main:has(#summary [data-pm-line]) .toolbar{margin-bottom:4px}
+html body main:has(#summary [data-pm-line]) #list>.stat-note{font-size:10.5px;margin:2px 0 6px}
+html body #list .ledger-column h3{padding:6px 8px!important;font-size:12px!important;min-height:0!important}html body #list .ledger-column h3 small{font-size:11.5px!important;margin-top:0!important}
+html body #list .ledger-item.li-c{padding:5px 8px 5px!important}
+html body #list .ledger-item.li-c>strong{font-size:13.5px}
+html body #list .ledger-item.li-c>b{font-size:11px}
+html body #list .ledger-item.li-c>small{font-size:10px}
+html body #list .ledger-item.li-c .run{font-size:9.5px;padding:0 6px;margin-top:1px}
+html body #list .ledger-item.li-c .li-m{font-size:9.5px;margin-top:1px}
+}
+html body #summary button.pm-line{display:inline-block!important;font-size:11px;padding:2px 9px}
+html body #summary button.pm-line.big{display:block!important;white-space:normal;font-size:11px;line-height:1.35;padding:4px 10px}
+html body #summary .pm-lw{display:block}html body #summary .pm-lw .pm-dbtn{margin-top:4px;font-size:11px;padding:2px 9px}
+html body #summary .pm-lw:has(.big){display:flex;flex-wrap:wrap;gap:4px;align-items:center}html body #summary .pm-lw:has(.big) .pm-dbtn{margin:0}
