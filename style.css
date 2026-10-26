@@ -6270,3 +6270,49 @@ html body #summary button.pm-line{display:inline-block!important;font-size:11px;
 html body #summary button.pm-line.big{display:block!important;white-space:normal;font-size:11px;line-height:1.35;padding:4px 10px}
 html body #summary .pm-lw{display:block}html body #summary .pm-lw .pm-dbtn{margin-top:4px;font-size:11px;padding:2px 9px}
 html body #summary .pm-lw:has(.big){display:flex;flex-wrap:wrap;gap:4px;align-items:center}html body #summary .pm-lw:has(.big) .pm-dbtn{margin:0}
+/* v2.126.2: khata screen — upar ka card EK LINE (raqam · lena/dena · POS chip), header neeche se tang, search aur upar (malik) */
+@media(max-width:700px){
+html body main:has(#summary [data-pm-line]) header{padding-bottom:8px!important}
+html body main:has(#summary [data-pm-line]) #syncStatus{margin:2px 0 4px!important;font-size:11px!important}
+html body #summary:has([data-pm-line]){padding:7px 10px!important;border-radius:12px!important;box-shadow:none}
+html body #summary:has([data-pm-line])>div{display:flex!important;flex-wrap:wrap;align-items:center;gap:4px 8px;min-width:0}
+html body #summary:has([data-pm-line]) strong{font-size:18px!important;display:inline!important;margin:0!important;line-height:1.2}
+html body #summary:has([data-pm-line]) small{font-size:11px!important;display:inline!important;margin:0!important;flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body #summary:has([data-pm-line]) [data-pm-line]{display:inline-block!important;margin:0!important;flex:none}
+html body #summary:has([data-pm-line]) [data-pm-line]:empty{display:none!important}
+html body #summary:has([data-pm-line]) .pm-lw{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center}
+html body #summary button.pm-line{font-size:10.5px!important;padding:1px 8px!important}
+html body #summary button.pm-line.big{display:inline-block!important;white-space:normal;flex:1 1 100%}
+html body #summary .pm-lw .pm-dbtn{font-size:10.5px!important;padding:1px 8px!important}
+html body main:has(#summary [data-pm-line]) .workspace{padding-top:4px!important}
+}
+/* v2.126.2 (b): POS chip khulne par poori chaurai (bahar na nikle) + ledger table ki lines gehri kaali, sar-khi saaf (malik) */
+html body #summary .pm-lw:has(.big){display:flex!important;width:100%;flex-wrap:wrap}
+html body #summary button.pm-line.big{max-width:100%;white-space:normal!important;text-align:left}
+html body #list .ledger-column{border:1.5px solid #1f2937!important;border-radius:10px!important}
+html body #list .ledger-pair{gap:8px}
+html body #list .ledger-column h3{border-bottom:1.5px solid #1f2937!important;background:#eef2f8!important}
+html body #list .ledger-item.li-c{border-bottom:1px solid #374151!important}html body #list .ledger-item.li-c:last-child{border-bottom:0!important}
+html body #list .ledger-column h3 small{font-weight:800}
+html.dk body #list .ledger-column{border-color:#cbd5e1!important}html.dk body #list .ledger-column h3{border-bottom-color:#cbd5e1!important}html.dk body #list .ledger-item.li-c{border-bottom-color:#94a3b8!important}
+html body #summary:has([data-pm-line]) [data-pm-line]:has(.big){display:block!important;flex:1 1 100%;max-width:100%;min-width:0}
+/* v2.126.2 (c): patti sirf lafzon jitni — card ka padding kam, header neeche se, search foran neeche (malik) */
+@media(max-width:700px){
+html body main:has(#summary [data-pm-line]) header{padding-bottom:5px!important;border-radius:0 0 14px 14px!important}
+html body main:has(#summary [data-pm-line]) #syncStatus{display:none!important}
+html body main header #summary.summary:has([data-pm-line]){padding:4px 9px!important;margin:0!important;border-radius:10px!important;box-shadow:none!important}
+html body #summary:has([data-pm-line])>div{gap:2px 8px!important}
+html body #summary:has([data-pm-line]) strong{font-size:16px!important}
+html body #summary:has([data-pm-line]) small{font-size:10.5px!important}
+html body #summary button.pm-line{font-size:10px!important;padding:0 7px!important;line-height:1.5}
+html body #summary button.pm-line.big{line-height:1.3;padding:2px 8px!important}
+html body #summary .pm-lw .pm-dbtn{font-size:10px!important;padding:0 7px!important;line-height:1.5}
+html body main:has(#summary [data-pm-line]) .workspace{padding-top:3px!important}
+html body main:has(#summary [data-pm-line]) .toolbar .search input{height:36px;min-height:36px;font-size:13px}
+}
+@media(max-width:700px){
+html body #summary:has([data-pm-line])>div{padding:0!important;margin:0!important;min-height:0!important;background:transparent!important;box-shadow:none!important;border:0!important}
+html body #summary:has([data-pm-line]){min-height:0!important;align-items:center}
+html body #summary:has([data-pm-line]) [data-pm-line]:not(:has(.big)){order:1}
+html body #summary:has([data-pm-line]) small{order:2;flex:1 1 80px}
+}

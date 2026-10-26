@@ -6308,3 +6308,10 @@ Malik: "farq wali chips upar, aur chhoti; search thora upar; khate ke chips aur 
 style.css @media 700: #summary:has([data-pm-line]) padding 10/12, strong 20px, small 12px; workspace padding-top 6; ledger h3 6/8 12px;
 li-c padding 5/8, strong 13.5, b 11, date 10, run 9.5, li-m 9.5 → 393px phone par 10 entries. POS chip inline-block 11px; .big = block (pehle
 inline-flex se alfaaz do column mein toot-te the); button "🔍 Farq". shot126.mjs: vis 10. AI nahi.
+
+=== v2.126.2 (2026-10-27) — khata screen: upar EK PATTI (raqam · POS chip · lena/dena), search foran neeche, ledger lines gehri ===
+Malik: "upar ki chips aur chhoti, baqaya ke saamne; search mazeed upar; patti sirf lafzon jitni; table ki lines gehre black, sar-khi saaf".
+style.css @media 700: header padding-bottom 5, #syncStatus hidden (is screen par), #summary:has([data-pm-line]) padding 4/9, >div flex row
+(strong 16px · chip order 1 · small order 2 ellipsis), inner div padding 0; workspace padding-top 3; search input 36px. POS chip 10px; .big =
+block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.5px #1f2937, h3 border-bottom, entries border-bottom #374151
+(dk: halki). Phone 393: 11 entries. AI nahi.
