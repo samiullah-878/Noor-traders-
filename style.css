@@ -6351,3 +6351,16 @@ html body #dialogBody .pf-via button.is-in{background:linear-gradient(135deg,#22
 html body #dialogBody .pf-via i{flex:1 1 100%;font-style:normal;font-size:11px;color:#166534}
 html body .pu-card .pu-acts button.pu-pos{background:linear-gradient(135deg,#1e9e4a,#166534)!important;color:#fff!important;border:0!important;font-weight:800}
 @media(max-width:700px){html body footer#actions:has(> .pu-addbtn:only-child){justify-content:center}html body footer#actions > .pu-addbtn{flex:0 0 auto!important;min-height:40px!important;height:40px;padding:0 18px!important;font-size:13.5px!important;border-radius:11px!important}}
+
+/* ===== v2.129.0: POS Purchase naya bill = sirf patli patti · search ke saath 📷 🤖 chhote chips · 🤖 Jaanch neeche patli chips · card status chip ===== */
+html body #summary .pp-hbar.pp-hbar-need{background:#fffdf2;border:1px dashed #e0b84a;color:#7a5200}html body #summary .pp-hbar.pp-hbar-need .pp-av{background:#f1dc9a;color:#7a5200}html body #summary .pp-hbar.pp-hbar-need b{color:#7a5200}
+html body label.search.has-scan input{padding-right:96px}
+html body label.search .pp-scanbtn{position:absolute;right:5px;top:50%;transform:translateY(-50%);display:flex;gap:4px;width:auto;height:auto;background:none;border:0;padding:0}
+html body label.search .pp-scanbtn button{height:32px;min-height:32px;width:40px;padding:0;border-radius:10px;border:1px solid #d5dce9;background:#223b6d;color:#fff;font-size:16px;display:grid;place-items:center;cursor:pointer}
+html body label.search .pp-scanbtn button[data-pp-ai]{background:linear-gradient(135deg,#4f46e5,#7c3aed)}
+html body .pu-card .pu-chip.wait{background:#fff7e0;color:#8a5a00;border-color:#f1dea6}
+html body .jaanch-dlg .jc-acts.jc-sticky{display:flex!important;flex-wrap:nowrap!important;gap:5px!important;padding:6px 0 6px!important;align-items:center!important}
+html body .jaanch-dlg .jc-acts.jc-sticky .jc-okrow{display:contents!important}
+html body .jaanch-dlg .jc-acts.jc-sticky button{flex:0 0 auto!important;min-height:36px!important;height:36px!important;max-height:36px;padding:0 10px!important;font-size:14px!important;border-radius:999px!important;white-space:nowrap;line-height:1}
+html body .jaanch-dlg .jc-acts.jc-sticky button.jc-prev{min-width:40px;width:40px;padding:0!important}html body .jaanch-dlg .jc-acts.jc-sticky button.jc-mini{min-width:40px;width:40px;padding:0!important}
+html body .jaanch-dlg .jc-acts.jc-sticky button.jc-ok{flex:1 1 auto!important;order:3;font-weight:800!important}

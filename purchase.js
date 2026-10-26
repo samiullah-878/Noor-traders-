@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.128.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.128.0';
-import { blurScore, blurText } from './pic-check.js?v=2.128.0';   // v2.103.43: 📷 dhundli check
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.129.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.129.0';
+import { blurScore, blurText } from './pic-check.js?v=2.129.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -311,6 +311,11 @@ function installHooks() {
 }
 
 // ---------- aaj ke app purchase bills ----------
+export function ppWatchToday() { try { watchToday(); } catch {} }   // v2.129.0: Purchase list bhi aaj ke app bills sunti hai (card ka status)
+export function ppAppStatusOf(entryId) {   // larke ki entry (larka = id) se bana app bill: {status, no, err}
+  const p = today.find(x => x.larka === entryId && !['cancelled', 'replaced'].includes(x.status)); if (!p) return null;
+  return { status: p.status, no: p.purchaseNo || (p.purchaseId ? String(p.purchaseId) : ''), err: p.error || '', at: p.createdAt || 0 };
+}
 function watchToday() {
   const d = todayStr();
   if (stopToday && todayDay === d) return;
@@ -318,8 +323,11 @@ function watchToday() {
   if (!cloud?.listenAppPurchases) return;
   todayDay = d;
   stopToday = cloud.listenAppPurchases(d, list => {
+    const sigOld = today.map(p => p.id + ':' + p.status + ':' + (p.purchaseNo || p.purchaseId || '')).join('|');
     today = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); todayErr = '';
     const b = $('ppTodayBtn'); if (b) b.textContent = todayLabel();
+    const sigNew = today.map(p => p.id + ':' + p.status + ':' + (p.purchaseNo || p.purchaseId || '')).join('|');
+    if (sigNew !== sigOld && today.some(p => p.larka)) { try { rerender(); } catch {} }   // v2.129.0: larke ki entry ke card par status (⏳ / ✅) taza
     if ($('dialog')?.open && $('dialogTitle')?.textContent.startsWith('Aaj ke app purchase')) { const open = [...document.querySelectorAll('#dialogBody details[open]')].length; openToday(); if (open) document.querySelectorAll('#dialogBody details').forEach(d => d.open = true); }
   }, e => { todayErr = e?.message || 'Load nahi hue'; stopToday = null; });
 }
@@ -605,8 +613,8 @@ export function renderPP() {
   const s = stock();
   const total = cartTotal();
   const gopts = b => (Number(b) ? '' : '<option value="0" selected disabled>— Godam chunein —</option>') + s.branches.map(x => `<option value="${x}"${Number(x) === Number(b) ? ' selected' : ''}>${esc(s.branchName(x, s.names))}</option>`).join('');
-  const P = partyOf(supplier), hdShow = hdOpen || supOpen || !P || (s.branches.length > 0 && !Number(godam));   // v2.120.0: supplier + godam chun liya = sirf patti
-  const hdBar = P && !hdShow ? `<button type="button" class="pp-hbar" data-pp-hd="1" title="Supplier / godam / bill# / % badlein"><span class="pp-av">${esc(String(P.name || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?')}</span><b>${esc(P.name)}</b><span class="pp-hsep">·</span><span>🏬 ${esc(s.branches.length ? s.branchName(godam, s.names) : '—')}</span>${invoiceNo ? `<span class="pp-hsep">·</span><span>Bill# ${esc(invoiceNo)}</span>` : ''}${Number(pct) || Number(xtra) ? `<span class="pp-hsep">·</span><span>⚙️ ${Number(pct) ? '+' + num(pct) + '%' : ''}${Number(pct) && Number(xtra) ? ' · ' : ''}${Number(xtra) ? 'Rs ' + num(xtra) : ''}</span>` : ''}<i>badlo ▾</i></button>` : '';
+  const P = partyOf(supplier), hdShow = hdOpen || supOpen;   // v2.120.0: supplier + godam chun liya = sirf patti · v2.129.0: naya bill = bhi sirf patti (malik: upar ka dabba / godam / bill# / carton hata do)
+  const hdBar = P && !hdShow ? `<button type="button" class="pp-hbar" data-pp-hd="1" title="Supplier / godam / bill# / % badlein"><span class="pp-av">${esc(String(P.name || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?')}</span><b>${esc(P.name)}</b><span class="pp-hsep">·</span><span>🏬 ${esc(s.branches.length ? s.branchName(godam, s.names) : '—')}</span>${invoiceNo ? `<span class="pp-hsep">·</span><span>Bill# ${esc(invoiceNo)}</span>` : ''}${Number(pct) || Number(xtra) ? `<span class="pp-hsep">·</span><span>⚙️ ${Number(pct) ? '+' + num(pct) + '%' : ''}${Number(pct) && Number(xtra) ? ' · ' : ''}${Number(xtra) ? 'Rs ' + num(xtra) : ''}</span>` : ''}<i>badlo ▾</i></button>` : !hdShow ? `<button type="button" class="pp-hbar pp-hbar-need" data-pp-hd="1"><span class="pp-av">?</span><b>${P ? esc(P.name) : '👤 Supplier chunein'}</b><span class="pp-hsep">·</span><span>🏬 ${s.branches.length && Number(godam) ? esc(s.branchName(godam, s.names)) : 'Godam chunein'}</span><i>▾</i></button>` : '';
   const bcBar = (edit && Number(edit.purchaseId) && typeof window.ntBcTick === 'function' ? `<div class="pp-bc" data-mn-keep="1">${window.ntBcTick('pos-' + Number(edit.purchaseId), 'big')}${typeof window.ntBcGo === 'function' ? `<button type="button" class="got pp-bcgo" data-pp-bcgo="1"${bcBusy ? ' disabled' : ''}>${bcBusy ? '⏳' : '✓ Check + 📌 Post' + (editNav?.bc && editNav.list[editNav.i + 1] ? ' · agla ›' : editNav?.bc ? ' · list ›' : '')}</button>` : ''}</div>` : '');   // v2.128.0: ✓ Check + 📌 Post patti form band hone par bhi dikhe
   $('summary').innerHTML = `<div class="stock-head sale-head pp-head" data-pp-root="1">
     ${hdBar}${bcBar}${fromBarHTML()}<div class="pp-hd${hdShow ? '' : ' pp-hd-off'}">
@@ -616,7 +624,7 @@ export function renderPP() {
     ${supplierBox()}
     <div class="pp-meta">
       ${s.branches.length ? `<label class="${Number(godam) ? '' : 'pp-need'}">Godam (sab items)<select data-pp-godam="1">${gopts(godam)}</select></label>` : ''}
-      <label>Supplier bill # <input maxlength="40" data-pp-inv="1" value="${esc(invoiceNo)}" placeholder="ikhtiyari"></label>
+      <label data-mn-box="pp.inv" data-mn-i="🔢" data-mn-t="Supplier bill #" data-mn-s="${esc(invoiceNo || 'ikhtiyari')}" data-mn-g="🧾 Purchase — kaam">Supplier bill # <input maxlength="40" data-pp-inv="1" value="${esc(invoiceNo)}" placeholder="ikhtiyari"></label>
     </div>
     <button type="button" class="pp-addpatti" id="ppAddPatti" data-mn-open="pp.xtra"${(Number(pct) || Number(xtra)) ? '' : ' hidden'}>${pattiTxt()}</button>
     <div class="pp-addbox" data-mn-box="pp.xtra" data-mn-i="⚙️" data-mn-t="% · Mazdoori" data-mn-s="har item ki khareed mein jorein" data-mn-g="🧾 Purchase — kaam">
@@ -629,8 +637,8 @@ export function renderPP() {
     </div>
     ${P && !supOpen && (!s.branches.length || Number(godam)) ? '<button type="button" class="pp-hdup" data-pp-hd="0">▴ Form band</button>' : ''}
     </div>
-    <div class="sale-total"><small>Purchase · ${cart.length} items</small><strong id="ppTotal">Rs ${num(total)}</strong></div>
-    <div class="account-tools pp-tools"><button class="sh-wide" id="ppTodayBtn" data-pp-today="1" data-mn="pp.today" data-mn-i="📋" data-mn-t="Aaj ke bill" data-mn-s="app se bane · POS haalat" data-mn-n="${today.length || ''}" data-mn-g="🧾 Purchase — kaam">${todayLabel()}</button>${aiBillOf && canUse() ? '<button class="sh-wide" data-pp-ai="1" data-mn="pp.ai" data-mn-i="🤖" data-mn-t="Tasveer se" data-mn-s="bill ki photo se items" data-mn-g="🧾 Purchase — kaam">🤖 Bill ki tasveer se items</button>' : ''}${aiRows && aiRows.length ? `<button class="sh-wide" data-pp-jopen="1" data-mn="pp.jaanch" data-mn-keep="1" data-mn-i="🔎" data-mn-t="Jaanch kholo" data-mn-s="AI ki parhi lines" data-mn-n="${aiRows.filter(r => !r.skip && !r.done).length || ''}" data-mn-g="🧾 Purchase — kaam">🧾 Jaanch kholo (${aiRows.filter(r => !r.skip && !r.done).length} baqi)</button>` : ''}${(() => { try { return typeof window.ntCan !== 'function' || window.ntCan('pur.check'); } catch { return true; } })() ? '<button class="sh-wide" data-bc-screen="1" data-mn="pp.check" data-mn-i="✅" data-mn-t="Bill check" data-mn-s="POS bills check / baqi" data-mn-g="🧾 Purchase — kaam">✅ Bill check</button>' : ''}${canUse() && !edit ? '<button class="sh-wide" data-pp-pcbills="1" data-mn="pp.pcbill" data-mn-i="✏️" data-mn-t="PC ka bill" data-mn-s="POS bill edit karein" data-mn-g="🧾 Purchase — kaam">✏️ PC ka bill edit karein</button>' : ''}${packGaps().length ? `<button data-pp-packs="1" data-mn="pp.packs" data-mn-keep="1" data-mn-i="📦" data-mn-t="Carton khali" data-mn-s="carton size likhein" data-mn-n="${packGaps().length}" data-mn-g="🧾 Purchase — kaam">📦 Carton size khali (${packGaps().length})</button>` : ''}${canGrid() ? `<div class="pp-vseg" data-mn-seg="pp.view" data-mn-i="📊" data-mn-t="Bill ka look" data-mn-g="🧾 Purchase — kaam"><button type="button" class="${isGrid() ? 'is-in' : ''}" data-pp-view="grid">📊 Table</button><button type="button" class="${isRows() ? 'is-in' : ''}" data-pp-view="rows">☰ Lines</button><button type="button" class="${viewNow() === 'card' ? 'is-in' : ''}" data-pp-view="card">🗂 Card</button></div>` : ''}${supplier ? '<button data-pp-copy="1" data-mn="pp.copy" data-mn-i="📑" data-mn-t="Pichhla copy" data-mn-s="isi supplier ka pichhla bill" data-mn-g="🧾 Purchase — kaam">📑 Pichhla bill copy</button>' : ''}</div>
+    ${cart.length ? `<div class="sale-total"><small>Purchase · ${cart.length} items</small><strong id="ppTotal">Rs ${num(total)}</strong></div>` : ''}
+    <div class="account-tools pp-tools"><button class="sh-wide" id="ppTodayBtn" data-pp-today="1" data-mn="pp.today" data-mn-i="📋" data-mn-t="Aaj ke bill" data-mn-s="app se bane · POS haalat" data-mn-n="${today.length || ''}" data-mn-g="🧾 Purchase — kaam">${todayLabel()}</button>${aiBillOf && canUse() ? '<button class="sh-wide" data-pp-ai="1" data-mn="pp.ai" data-mn-i="🤖" data-mn-t="Tasveer se" data-mn-s="bill ki photo se items" data-mn-g="🧾 Purchase — kaam">🤖 Bill ki tasveer se items</button>' : ''}${aiRows && aiRows.length ? `<button class="sh-wide" data-pp-jopen="1" data-mn="pp.jaanch" data-mn-keep="1" data-mn-i="🔎" data-mn-t="Jaanch kholo" data-mn-s="AI ki parhi lines" data-mn-n="${aiRows.filter(r => !r.skip && !r.done).length || ''}" data-mn-g="🧾 Purchase — kaam">🧾 Jaanch kholo (${aiRows.filter(r => !r.skip && !r.done).length} baqi)</button>` : ''}${(() => { try { return typeof window.ntCan !== 'function' || window.ntCan('pur.check'); } catch { return true; } })() ? '<button class="sh-wide" data-bc-screen="1" data-mn="pp.check" data-mn-i="✅" data-mn-t="Bill check" data-mn-s="POS bills check / baqi" data-mn-g="🧾 Purchase — kaam">✅ Bill check</button>' : ''}${canUse() && !edit ? '<button class="sh-wide" data-pp-pcbills="1" data-mn="pp.pcbill" data-mn-i="✏️" data-mn-t="PC ka bill" data-mn-s="POS bill edit karein" data-mn-g="🧾 Purchase — kaam">✏️ PC ka bill edit karein</button>' : ''}${packGaps().length ? `<button data-pp-packs="1" data-mn="pp.packs" data-mn-i="📦" data-mn-t="Carton khali" data-mn-s="carton size likhein" data-mn-n="${packGaps().length}" data-mn-g="🧾 Purchase — kaam">📦 Carton size khali (${packGaps().length})</button>` : ''}${canGrid() ? `<div class="pp-vseg" data-mn-seg="pp.view" data-mn-i="📊" data-mn-t="Bill ka look" data-mn-g="🧾 Purchase — kaam"><button type="button" class="${isGrid() ? 'is-in' : ''}" data-pp-view="grid">📊 Table</button><button type="button" class="${isRows() ? 'is-in' : ''}" data-pp-view="rows">☰ Lines</button><button type="button" class="${viewNow() === 'card' ? 'is-in' : ''}" data-pp-view="card">🗂 Card</button></div>` : ''}${supplier ? '<button data-pp-copy="1" data-mn="pp.copy" data-mn-i="📑" data-mn-t="Pichhla copy" data-mn-s="isi supplier ka pichhla bill" data-mn-g="🧾 Purchase — kaam">📑 Pichhla bill copy</button>' : ''}</div>
   </div>`;
   const si = $('search'); if (si) si.placeholder = '📷 scan ya item ka naam / code (Enter)';
   if (s.failed) { $('list').innerHTML = `<div class="empty"><strong>Items nahi mile</strong><p>${esc(s.failed)}</p></div>`; $('actions').innerHTML = ''; return; }
@@ -775,13 +783,14 @@ export function ppOpenFrom(en) {
   cart = []; edit = null; editNav = null; editSnap = ''; aiRows = null; openKey = ''; lineFilter = 'all';
   supplier = String(en.partyId); supOpen = false; supQuery = ''; day = ''; invoiceNo = ''; note = '';
   fromEntry = { id: String(en.id), partyId: String(en.partyId), amount: Number(en.amount) || 0, via: en.via === 'gaari' ? 'gaari' : en.via === 'supply' ? 'supply' : '', kind: en.kind || '', date: en.date || '' };
+  if (Array.isArray(en.pics) && en.pics.length) { billPics = en.pics.slice(0, 4); billIx = 0; billPin = true; }   // v2.129.0: larke ki tasveer upar chipki (malik)
   keepDraft(); return true;
 }
 const fromBarHTML = () => fromEntry && fromEntry.partyId === String(supplier) ? `<div class="pp-from" data-mn-keep="1"><span>📎 Larke ki entry <b>Rs ${num(fromEntry.amount / 100)}</b> · ${fromEntry.date}${fromEntry.via === 'gaari' ? ' · 🚚 apni gaari' : fromEntry.via === 'supply' ? ' · 📦 supplier ki supply' : ''}<small>POS bill bhejte hi yahi entry is bill se jur jayegi (do dafa nahi ginti)</small></span><button type="button" data-pp-fromx="1" title="Entry se alag karo">✕</button></div>` : '';
 export function scanInSearch(on) {   // v2.128.0: 📷 scan ka button search ke dabbe ke andar (daayein) — tap = camera; doosri screen par hata diya jata hai
   const lab = $('search')?.closest('label.search'); if (!lab) return; const b = lab.querySelector('.pp-scanbtn');
   if (!on) { b?.remove(); lab.classList.remove('has-scan'); return; }
-  if (!b) { lab.insertAdjacentHTML('beforeend', '<button type="button" class="pp-scanbtn" data-pp-camera="1" title="Barcode scan — camera on/off">📷</button>'); lab.classList.add('has-scan'); }
+  if (!b) { lab.insertAdjacentHTML('beforeend', `<span class="pp-scanbtn"><button type="button" data-pp-camera="1" title="Barcode scan — camera on/off">📷</button>${aiBillOf && canUse() ? '<button type="button" data-pp-ai="1" title="Bill ki tasveer se items (AI)">🤖</button>' : ''}</span>`); lab.classList.add('has-scan'); }
 }
 function xtraNoteText() {
   const parts = [];
@@ -862,6 +871,7 @@ document.addEventListener('change', e => {
     godam = Number(t.value);
     cart.forEach(l => { if (!Number(l.godam)) l.godam = godam; });   // v2.99.74: jin ka godam abhi nahi chuna — khud
     if (cart.some(l => Number(l.godam) !== godam) && confirm('Sab items ka godam bhi yahi kar dein?')) cart.forEach(l => { l.godam = godam; });
+    if (Number(godam) && partyOf(supplier) && !supOpen) hdOpen = false;   // v2.129.0: dono chun liye = form band, sirf patti
     keepDraft(); rerender(); return;
   }
   if (t.dataset.ppLg != null) { const l = cart[t.dataset.ppLg]; if (l) { l.godam = Number(t.value); keepDraft(); } return; }
@@ -1113,7 +1123,7 @@ document.addEventListener('click', async e => {
   const t = e.target.closest?.('[data-pp-bcgo],[data-pp-fromx],[data-pp-sup],[data-pp-sup-change],[data-pp-supfind],[data-pp-add],[data-pp-del],[data-pp-clear],[data-pp-save],[data-pp-today],[data-pp-camera],[data-pp-old],[data-pp-w],[data-pp-wall],[data-pp-wall-custom],[data-pp-old-all],[data-pp-copy]');
   if (!t) return;
   const d = t.dataset;
-  if (d.ppSup) { supplier = d.ppSup; notePartyPick(supplier); supOpen = false; supQuery = ''; hdOpen = false; keepDraft(); rerender(); return; }
+  if (d.ppSup) { supplier = d.ppSup; notePartyPick(supplier); supOpen = false; supQuery = ''; hdOpen = !!(stock().branches.length && !Number(godam)); keepDraft(); rerender(); return; }   // v2.129.0: godam baqi ho to form khula rahe, warna patti
   if (d.ppSupChange != null) { supOpen = true; rerender(); setTimeout(() => $('ppSupQ')?.focus(), 50); return; }
   if (d.ppSupfind != null) { supOpen = true; supQuery = String(d.ppSupfind || '').split(/\s+/).slice(0, 2).join(' '); try { $('dialog')?.close(); } catch {} rerender(); setTimeout(() => { const q = $('ppSupQ'); if (q) { q.value = supQuery; q.focus(); q.dispatchEvent(new Event('input', { bubbles: true })); } }, 60); return; }
   if (d.ppAdd) { const it = stock().items.find(r => String(r.id) === d.ppAdd); if (it) { const r = addItem(it); const s = $('search'); if (s) s.value = ''; notice(r.again ? `+1 · ${it.name}` : `✓ ${it.name}`); rerender(); focusLine(r.line.k); } return; }
@@ -1738,7 +1748,7 @@ function jCard(i) {
       `<div class="jc-why"><small>🔴 Humare stock mein ye item nahi mila</small></div>`}
     </div>
     <div class="jc-acts jc-sticky">
-      <div class="jc-okrow"><button type="button" class="jc-prev" data-pp-jprev="1"${jHasPrev() ? '' : ' disabled'} title="Pichhla" aria-label="Pichhla">‹</button>${ln ? '<button type="button" class="got jc-ok" data-pp-jok="1">✓ Theek — agla ›</button>' : ''}</div>
+      <div class="jc-okrow"><button type="button" class="jc-prev" data-pp-jprev="1"${jHasPrev() ? '' : ' disabled'} title="Pichhla" aria-label="Pichhla">‹</button>${ln ? '<button type="button" class="got jc-ok" data-pp-jok="1">✓ Theek ›</button>' : ''}</div>
       <button type="button" class="jc-mini" data-pp-pick="${i}" title="Item badlein" aria-label="Item badlein">${ln ? '✏️' : '✏️ Item chunein'}</button>
       <button type="button" class="danger jc-mini" data-pp-jskip="1" title="Chhor" aria-label="Chhor">✕</button>
       <button type="button" class="jc-mini" data-pp-jlist="1" title="List" aria-label="List">☰</button>
@@ -2221,7 +2231,7 @@ async function save(opt = {}) {
   if (!p) { if (auto) return no('supplier nahi chuna'); notice('Pehle supplier chunein'); supOpen = true; rerender(); return; }
   if (!Number(godam) && cart.some(l => !Number(l.godam))) {   // v2.99.74: godam khud chunna hai (agent = Godam 1)
     if (auto) godam = BILL_BRANCH;
-    else { notice('⚠️ Pehle godam chunein'); rerender(); setTimeout(() => { const g = document.querySelector('[data-pp-godam]'); if (g) { g.scrollIntoView({ block: 'center' }); g.focus(); } }, 60); return; }
+    else { notice('⚠️ Pehle godam chunein'); hdOpen = true; rerender(); setTimeout(() => { const g = document.querySelector('[data-pp-godam]'); if (g) { g.scrollIntoView({ block: 'center' }); g.focus(); } }, 60); return; }
   }
   cartBillOrder();   // v2.99.1: POS bill bilkul bill ki tarteeb mein
   const lines = [], zero = [], noCost = [];
