@@ -3549,3 +3549,11 @@ block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.
 - 🏦 HBL column Daily sheet se hata (HBL screen alag wahi hai).
 - PC par Sale / Wasooli / Akhrajat columns thore chaure (1.25fr vs 1fr).
 - AI nahi. Rules nahi badle (2.75 hi publish karein).
+
+## v2.127.1 (2026-10-27) — 📒 Daily Sale NEECHE ke khane (2.127.0 ki ghalti theek: malik upar nahi, neeche ke khane keh rahe the)
+- Upar ki patti WAPAS purani (Sale+Wasooli+Kal · Kharcha+Aaj · Hona · tareekh · pictures) — 2.127.0 wali 3-line patti hata di.
+- Neeche: Sale khane ka 🖥 Auto ON dabba phone par ⋮ mein (data-mn-box d.auto).
+- Kal ka change + Aaj ka change + Closing cash = ab EK khana "💵 Change · Closing" (cashColHTML — teen hisse upar se neeche, har hisse mein wahi countSheet form; data-col=cash).
+- 🏦 HBL khana Daily se hata (HBL screen alag wahi; footer ka 🏦 HBL button HBL screen kholta hai).
+- Sale / Wasooli / Akhrajat khane chaure (PC 1.2fr 1.2fr 1.2fr 1fr; phone 4 khane).
+- Neeche ki patti pehle se hi ⋮ mein thi (shell FT_MOVE 'daily'). AI nahi. Rules nahi badle.
