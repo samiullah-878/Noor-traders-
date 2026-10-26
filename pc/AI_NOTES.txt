@@ -3476,3 +3476,8 @@ Malik: "bill check karne ka checkbox chahiye aur ek screen jis mein POS ka bill 
 * sw.js ASSETS mein bill-check.js. firestore-rules-2.73.html + .txt malik ko.
 * Tests t/sh/t122.mjs (stub122.js: billChecks + requestPost/watchPost + purchaseBill) — screen / khata card / staff+CAP — ALL OK; t121 regression OK.
 AI: nahi.
+
+=== v2.122.1 (2026-10-26) — ✅ POS Purchase (EDIT) screen par bhi bill check ka tick ===
+Malik (PC ka bill edit khula tha): "idhar saath hi check ka option ho, kaam khatam". purchase.js renderPP: edit mode mein .pp-edit ke neeche
+<div class="pp-bc" data-mn-keep> window.ntBcTick("pos-<purchaseId>", "big") (app.js window.ntBcTick = bcTick). bcPaint() khud taza karta hai.
+Test t/sh/t1221.mjs (draft mein edit) OK. AI nahi.

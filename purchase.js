@@ -1,4 +1,5 @@
 // purchase.js — v2.6.0 "POS Purchase" screen
+// v2.6.1 (app v2.122.1): ✏️ EDIT mein upar ✅ bill check ka tick (malik: "idhar saath hi check ka option ho, kaam khatam").
 // v2.6.0 (2026-10-26, app v2.121.0): ☰ COMPACT LINES (phone default) — har item 3 line, sab rate + nafa % nazar, side scroll nahi; chips
 //          neeche ek chipki patti (chuna hua item: W / R chips · ↺ · 🏷 · 🏬 · ✕). PC default table. ⋮ Table / Lines / Card.
 // v2.5.0 (2026-10-26, app v2.120.0): 📊 TABLE view (POS jaisi, default) — har item ek qatar, sab khane; naam par tap = neeche poora card;
@@ -40,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.122.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.122.0';
-import { blurScore, blurText } from './pic-check.js?v=2.122.0';   // v2.103.43: 📷 dhundli check
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.122.1';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.122.1';
+import { blurScore, blurText } from './pic-check.js?v=2.122.1';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -609,6 +610,7 @@ export function renderPP() {
     <div class="pp-modes"><button type="button" class="on">🧾 Items wali bill</button>${photoFormOf ? '<button type="button" data-pp-photo="1" data-mn="pp.photo" data-mn-i="📷" data-mn-t="Sirf photo" data-mn-s="photo + raqam (bina items)" data-mn-g="🧾 Purchase — kaam">📷 Sirf photo + raqam</button>' : ''}</div>
     ${billStripHTML()}
     ${edit ? `<div class="pp-edit"><b>✏️ EDIT — POS bill ${esc(edit.billNo || '')}</b><small>Save par yahi bill POS mein UPDATE hoga (naya nahi banega)</small><button type="button" data-pp-edit-off="1">✕ Edit chhodo</button></div>` : ''}
+    ${edit && Number(edit.purchaseId) && typeof window.ntBcTick === 'function' ? `<div class="pp-bc" data-mn-keep="1">${window.ntBcTick('pos-' + Number(edit.purchaseId), 'big')}</div>` : ''}
     ${supplierBox()}
     <div class="pp-meta">
       ${s.branches.length ? `<label class="${Number(godam) ? '' : 'pp-need'}">Godam (sab items)<select data-pp-godam="1">${gopts(godam)}</select></label>` : ''}

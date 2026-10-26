@@ -6197,3 +6197,4 @@ html body #dialogBody .bc-main small .bc-st{font-style:normal;font-size:10px;pad
 html body #dialogBody .bc-go{min-height:40px;line-height:1.15;padding:0 10px;font-size:12px;text-align:center}
 html.lt body #dialogBody .bc-main{background:transparent!important;color:#1a2d53!important}html.lt body #dialogBody .bc-go{background:linear-gradient(135deg,#1e9e4a,#14773a)!important;color:#fff!important}html.lt body #dialogBody .bc-un{background:#fff!important;color:#44566f!important}
 html.lt body #dialogBody .bc-seg button.is-in{background:linear-gradient(135deg,#223b6d,#4f46e5)!important;color:#fff!important}
+html body #summary .pp-bc{margin:2px 0 6px}html body #summary .pp-bc .bc-tick{margin:0;width:100%;justify-content:flex-start}
