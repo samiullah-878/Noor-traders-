@@ -6319,7 +6319,9 @@ html body #summary:has([data-pm-line]) small{order:2;flex:1 1 80px}
 
 /* ===== v2.127.1: 📒 Daily Sale neeche ke khane — Auto sale ⋮ mein · Kal/Aaj change + Closing EK khana (upar se neeche) · HBL column gayab · Sale/Wasooli/Akhrajat chaure ===== */
 @media(min-width:701px){html body .cash-sheet{grid-template-columns:1.2fr 1.2fr 1.2fr 1fr!important;min-width:0!important}}
-@media(max-width:700px){html body .cash-sheet{grid-template-columns:repeat(4,minmax(165px,1fr))!important;min-width:0!important}html body .cash-sheet .dy-cashcol{min-width:200px}}
+@media(max-width:700px){html body .cash-sheet{grid-template-columns:repeat(3,minmax(225px,1fr))!important;min-width:0!important}html body .cash-sheet .dy-cashcol{min-width:225px}
+ /* v2.127.4: phone par Sale khana chhupa (malik: "sale wala khana hat jaye, baqi chaure") — form/Auto ⋮ mein (focus = body.mnf mein khula rehta) */
+ html body:not(.mnf) .cash-sheet .sheet-column[data-col="sale"]{display:none!important}html body.mnf .cash-sheet{grid-template-columns:minmax(0,1fr)!important}}
 html body .dy-cashcol .dy-sub{border:1px solid #e3e8f1;border-radius:12px;padding:6px 8px;margin:0 0 8px;background:#fff}
 html body .dy-cashcol .dy-sub-h{display:flex;justify-content:space-between;align-items:center;gap:8px;font-weight:800;font-size:13px;color:#13213f;margin-bottom:4px}html body .dy-cashcol .dy-sub-h b{font-size:14px;color:#166534;white-space:nowrap}
 html body .dy-cashcol .dy-sub[data-sub="cash"]{border-color:#f1dc9a;background:#fffdf2}

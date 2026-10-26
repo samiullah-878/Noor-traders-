@@ -3564,3 +3564,6 @@ block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.
 ## v2.127.3 (2026-10-27) — Khata list: do pattiyan hata di (malik: "khate mazeed upar dikhein")
 - "👥 Sab accounts · 📅 Sab · ↕ Bara baqaya · ⋮ se badlein" patti (khFlt) gayab — chunna ⋮ se hi (wahi chips).
 - "Daily Closing Cash Khata" wali qatar khata list se gayab — Closing Cash screen sidebar / ⋮ se khulti hai. AI nahi.
+
+## v2.127.4 (2026-10-27) — Daily: phone par Sale khana gayab, baqi 3 khane chaure (malik)
+- Phone (≤700px): Sale column chhupa (`body:not(.mnf)` — ⋮ se "✍️ Sale haath se likhein" focus mein poora dikhta); Wasooli / Akhrajat / Change·Closing 225px chaure (side scroll). PC waisa hi. AI nahi.
