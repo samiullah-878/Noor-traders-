@@ -6254,3 +6254,10 @@ AI: nahi.
 Malik (PC ka bill edit khula tha): "idhar saath hi check ka option ho, kaam khatam". purchase.js renderPP: edit mode mein .pp-edit ke neeche
 <div class="pp-bc" data-mn-keep> window.ntBcTick("pos-<purchaseId>", "big") (app.js window.ntBcTick = bcTick). bcPaint() khud taza karta hai.
 Test t/sh/t1221.mjs (draft mein edit) OK. AI nahi.
+
+=== PC nt-print v1.23 + sale-post v1.13 (2026-10-26, manifest 2026-10-26.2) — 🧾 RASID KI TABLE DABBE MEIN ===
+Malik (POS ki Duplicate rasid ki tasveer): "app wali rasid update karni hai, ye side wali line le kar aani hai us ke andar".
+boxTable(W, items, pcsSum, ctnSum) dono mein (ek jaisa): +---+ / | | se Items | PCS | CTN | Rate (W=32: 12/5/3/7), lamba naam usi khane mein
+agli line (wrap), har item ke neeche daayein "Rs amount", aakhir "Total: PCS x / CTN y" ka dabba. Baqi rasid (Sale No, barcode, Urdu tareekh,
+bara total, Cash / Balance, bank lines) wahi. POS (Cognitive) ki apni rasid hum nahi badal sakte — sirf app / PC wali.
+Test: node -e boxTable 32 / 42 — lines barabar W. AI nahi.

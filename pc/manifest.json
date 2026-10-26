@@ -1,6 +1,6 @@
 {
- "version": "2026-10-26.1",
- "note": "⛔ sync.js v3: POS mein CANCEL purchase bill = khate ki entry bhi 🗑 (posStatus 3, \"⛔ POS mein CANCEL\"), pichhle 60 din ke cancel bhi; judi cash payment par nishan. App v2.119.1 (nishan dikhana).",
+ "version": "2026-10-26.2",
+ "note": "🧾 nt-print v1.23 + sale-post v1.13: rasid ki items table dabbe (side lines) mein — Items | PCS | CTN | Rate, neeche Rs amount, Total ka dabba (POS wali rasid jaisi). sync.js v3 (cancel bill) pehle se.",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
   "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
@@ -19,7 +19,7 @@
   "rate-auto.bat": "5ef8ee9e5dab8c93513083444c472c8be819e6c5e21973008a31552f8c23152f",
   "rate-lagao.js": "e2d418e8cb18f24802f0620e9c7a84900c90d153ecd3dc295dd8aebc581ed18f",
   "sale-auto.bat": "dd778ec2ff7f58d3e8eedc8d0b70cc81713152b919048b8beb8c5b2f5ea4ab5d",
-  "sale-post.js": "fd927ee725c6deee54bef863e74ce61411c887341584c4ced718a55e9704dc52",
+  "sale-post.js": "6eec2a08827b98df567dab2881345d9b8ae6355b4b10bedbb5286d71db762ed4",
   "sql-config.js": "6e2bf966d0907b5be6c9001a249f1338ecb6f67ced6af9aff5d5921938742ba7",
   "stock-auto.bat": "4d92cfa7495bf9bb0519228443e053537d1d6a096efecc97f3c999178790c47e",
   "subcode-auto.bat": "40d8530886748dc71c8139a70ce768922f2e3c9aae896d2ed13731948e9d9d3a",
@@ -38,7 +38,7 @@
   "LABEL-GEHRA.bat": "2fd4a77c5241b38433ba280babd4659011672fcb08b928a968e9e7e3931d4d88",
   "pos-sales-dekho.js": "de00d32c1c8f04271f3b3f21d901eede0f4e74754451cddbfa26c1a0fbef7fc2",
   "pos-sales-auto.bat": "aef4a274bb9cdcde344028e9ad2de8fe7a3572580a0b20f3e3f7b1e806d33e11",
-  "nt-print.js": "afcecc3850668db77495207e88f66099206063d03edf1d617473c7a0bb7f410d",
+  "nt-print.js": "3000b52542e11aeaf6da90c03c8052bb73ccebc893a1453666b7a9dc34cc1484",
   "nt-print-auto.bat": "6d2d36d3e6db49986502bdf20df2dd3fe8d2bcce6aca4b807d7b8ed9294dccce",
   "nt-parchi.js": "7a45873ebc250a38990ee170a264008859cfdeef0928bbadb6ddf3d1d5c33ee2",
   "auto-backup.js": "9ceb8697422b590c1ba0594c2ef6925bc62af6b1addac2d6ab6ad6d73859e3c8",

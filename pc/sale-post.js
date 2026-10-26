@@ -1,5 +1,6 @@
 // ============================================================
 //  sale-post.js — Blue Khata app ki "Nayi Sale" -> POS Sale bill (v1)
+//  v1.13 (2026-10-26): 🧾 rasid ki items table dabbe (side lines) mein — boxTable (nt-print v1.23 jaisa)
 //  v1.12 (2026-10-20): 📅 rasid + gate pass par upar Urdu tareekh (urdu-names v1.5) · rasid par 'Sale No' poora (32 harf mein kat jata tha)
 //  v1.11 (2026-10-14): 🔤 GATE PASS par har item ke neeche URDU naam (urdu-names.js, app ke Urdu naam) — tasveer, nt-parchi worker se
 //  v1.10 (2026-10-14): 🚪 GATE PASS sirf item + quantity, bara aur gehra font (heading / bill no / barcode / total / dastakhat hata diye)
@@ -352,6 +353,25 @@ async function editSale(e) {
     return { saleNo: no, total, stock: allExp ? 'theek' : 'un-posted par stock nahi lagta' };
   } catch (err) { await tx.rollback().catch(() => {}); throw err; }
 }
+// v1.13 (sale-post): 🧾 DABBE WALI TABLE (malik: "POS wali rasid jaisi side wali lines rasid ke andar") — har item dabbe mein,
+//   Items | PCS | CTN | Rate; naam lamba ho to usi khane mein agli line; neeche daayein Amount; aakhir mein Total ka dabba. W ke hisaab se.
+function boxTable(W, items, pcsSum, ctnSum) {
+  const cols = [Math.max(8, W - 2 - 5 - 3 - 7 - 3), 5, 3, 7];                // Items · PCS · CTN · Rate (+ 5 '|' = W)
+  const padL = (t, w) => { t = String(t ?? ''); return t.length > w ? t.slice(0, w) : t.padEnd(w); };
+  const padR = (t, w) => { t = String(t ?? ''); return t.length > w ? t.slice(0, w) : t.padStart(w); };
+  const row = c => '|' + padL(c[0], cols[0]) + '|' + padR(c[1], cols[1]) + '|' + padR(c[2], cols[2]) + '|' + padR(c[3], cols[3]) + '|';
+  const sep = '+' + cols.map(w => '-'.repeat(w)).join('+') + '+';
+  const wrap = (t, w) => { const o = []; let cur = ''; for (const x of String(t || '').trim().split(/\s+/).filter(Boolean)) { for (let y = x; y; y = y.slice(w)) { const c = y.slice(0, w); if (!cur) cur = c; else if ((cur + ' ' + c).length <= w) cur += ' ' + c; else { o.push(cur); cur = c; } } } if (cur) o.push(cur); return o.length ? o : ['']; };
+  const out = [sep, row(['Items', 'PCS', 'CTN', 'Rate']), sep];
+  for (const it of items) {
+    const nm = wrap(it.name, cols[0]);
+    nm.forEach((t, i) => out.push(row([t, i ? '' : it.pcs, i ? '' : it.ctn, i ? '' : it.rate])));
+    out.push('|' + padR('Rs ' + it.amt, W - 2) + '|');
+    out.push(sep);
+  }
+  out.push('|' + padL('Total: PCS ' + pcsSum + ' / CTN ' + ctnSum, W - 2) + '|', sep);
+  return out;
+}
 async function handleEdit(doc) {
   const key = 'e' + doc.id;
   if (busy.has(key)) return;
@@ -440,20 +460,16 @@ async function receiptFor(saleNo, saleId) {
   out.push('Customer: ' + String(head.PartyName || '').trim());
   if (head.PartyArea && String(head.PartyArea).trim()) out.push(String(head.PartyArea).trim());
   out.push(hr);
-  out.push(bold(pad('Items', 14) + pad('PCS', 4, true) + pad('CTN', 4, true) + pad('Rate', 9, true)));
-  out.push(hr);
-  let pcsSum = 0, ctnSum = 0;
+  let pcsSum = 0, ctnSum = 0; const items = [];
   for (const l of lines) {
     const pack = Number(l.PackQty) || 0, qty = Number(l.Qty) || 0;
     const ctn = pack > 1 ? Math.floor(qty / pack) : 0;
     const pcs = pack > 1 ? r3(qty - ctn * pack) : qty;
     pcsSum += pcs; ctnSum += ctn;
     const amt = Math.round(qty * Number(l.Rate) * 100) / 100;
-    out.push(String(l.ItemName || '').trim().slice(0, W));
-    out.push(pad('', 1) + pad(n3(pcs), 6, true) + pad(n(ctn), 5, true) + pad(n(l.Rate), 9, true) + pad(n(amt), 10, true));
+    items.push({ name: String(l.ItemName || '').trim().slice(0, 60), pcs: n3(pcs), ctn: n(ctn), rate: n(l.Rate), amt: n(amt) });
   }
-  out.push(hr);
-  out.push(line('Total (PCS ' + n3(r3(pcsSum)) + ' / CTN ' + n(ctnSum) + ')', ''));
+  for (const x of boxTable(W, items, n3(r3(pcsSum)), n(ctnSum))) out.push(x);   // v1.13: dabbe wali table
   out.push(ESC + 'a' + '\x02');                          // right
   out.push(big('Rs.' + n(total)));
   out.push(ESC + 'a' + '\x00');
