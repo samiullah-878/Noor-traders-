@@ -1,5 +1,5 @@
 // =========================================================
-//  purchase-post.js  v4.4 (2026-10-20: 💾 app ne save par chuna — 🚚 'via' gaari = blueAccess/gaariBills 'b:pos-<PurchaseID>' · 📦 supply + 'larka' = us
+//  purchase-post.js  v4.5 (2026-10-27: 🚚 gaari + 'larka' = larke ki entry phir bhi jur jaye — app ke 📎 "POS bill banao" se) · v4.4 (2026-10-20: 💾 app ne save par chuna — 🚚 'via' gaari = blueAccess/gaariBills 'b:pos-<PurchaseID>' · 📦 supply + 'larka' = us
 //      larke ki entry (blueKhata) par posBill 'pos-<PurchaseID>' (sirf agar entry maujood, delete nahi, pehle se kisi bill se nahi juri) — rev +1. POS mein kuch nahi.)
 //  v4.3 (2026-10-20: POS update — line par BatchNo '' + ExpiryDate NULL; SCRIPT_VER 4 = rukay 5 bill khud dobara) · v4 (2026-09-22) — Blue Khata app ki "🧾 POS Purchase" -> POS PURCHASE BILL
 //  v4.2 (2026-10-08): 🏷 FARZI SUB-BARCODE — line par sbl:1 (app 'rate saath ✓') ho to us item ke apne-rate wale sub-barcode
@@ -392,10 +392,10 @@ async function linkVia(j, r) {
   if (j.via === 'gaari') {
     await biz.collection('blueAccess').doc('gaariBills').set({ map: { ['b:' + bill]: Date.now() } }, { merge: true });
     log('  🚚 apni gaari ka bill: ' + bill);
-    return;
+    if (!String(j.larka || '').trim()) return;   // v4.5: gaari + larke ki entry (app ke 📎 "POS bill banao" se) = entry bhi jorni hai
   }
   const lk = String(j.larka || '').trim();
-  if (j.via !== 'supply' || !lk) return;
+  if ((j.via !== 'supply' && j.via !== 'gaari') || !lk) return;
   if (!/^[A-Za-z0-9_-]{1,80}$/.test(lk) || lk.startsWith('pos-')) { log('  larke ki entry ki id ghalat: ' + clip(lk, 40)); return; }
   const eref = biz.collection('blueKhata').doc(lk);
   const why = await db.runTransaction(async t => {

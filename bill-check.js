@@ -1,4 +1,4 @@
-// bill-check.js — v1.0 (2026-10-26, app v2.122.0) ✅ BILL CHECK — POS ke purchase bills ki check-list.
+// bill-check.js — v1.1 (2026-10-27, app v2.128.0: bcGo export + ntBcNav ‹ › list) · v1.0 (2026-10-26, app v2.122.0) ✅ BILL CHECK — POS ke purchase bills ki check-list.
 // Malik: "bill check karne ka checkbox chahiye aur ek screen jis mein POS ka bill check aur jo check nahi hua wo bhi aaye —
 //   aaj / 7 din / 15 din / mahina ke jo check nahi hue saamne lao; bill check + bill post ek hi click."
 // Data: billChecks/<pos-id> {at, by, n, billNo, date, pid, amt, ts} (rules 2.73) — app.js listen karta hai, yahan sirf UI. AI nahi.
@@ -92,13 +92,18 @@ document.addEventListener('click', async e => {
   const d = b.dataset;
   if (d.bcTab) { st.tab = d.bcTab; bcPaint(); return; }
   if (d.bcD) { st.d = d.bcD; try { localStorage.setItem(LS, st.d); } catch {} bcPaint(); return; }
-  if (d.bcOpen) { C.openBill(d.bcOpen); return; }
+  if (d.bcOpen) { bcSetNav(d.bcOpen); C.openBill(d.bcOpen); return; }
   if (d.bcUn) { if (await setCheck(d.bcUn, false)) C.notice('↩ Check hata diya'); return; }
-  if (d.bcGo) {
-    const id = d.bcGo, ent = bills().find(x => x.id === id); if (!ent) return;
-    const ok = await setCheck(id, true); if (!ok) return;
-    if (!C.isPosted(ent) && C.can('pur.post')) { try { await C.post([ent]); } catch (err) { C.notice('Post nahi gaya: ' + (err?.message || err)); } }
-    else C.notice('✅ Bill check ho gaya');
-    return;
-  }
+  if (d.bcGo) { await bcGo(d.bcGo); return; }
 });
+export async function bcGo(id) {   // v2.128.0: ✓ Check + 📌 Post — list ke button aur POS Purchase screen ke button dono yahi (ek raasta)
+  const ent = bills().find(x => x.id === id); if (!ent) return false;
+  const ok = await setCheck(id, true); if (!ok) return false;
+  if (!C.isPosted(ent) && C.can('pur.post')) { try { await C.post([ent]); } catch (err) { C.notice('Post nahi gaya: ' + (err?.message || err)); } }
+  else C.notice('✅ Bill check ho gaya');
+  return true;
+}
+function bcSetNav(id) {   // v2.128.0: list se bill khola = ‹ › isi list (Baqi, chuna hua din) ke bills — purchase.js ppOpenFromKhata parhta hai
+  const L = list().filter(e => !chk(e) || e.id === id).map(e => ({ id: e.id, partyId: e.partyId, label: `${C.party(e.partyId)?.name || 'Supplier'} · Bill ${billNo(e)} · ${money(e.amount)}` }));
+  try { window.ntBcNav = L.some(n => n.id === id) ? { list: L, at: Date.now() } : null; } catch {}
+}

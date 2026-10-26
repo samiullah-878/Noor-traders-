@@ -6340,3 +6340,11 @@ block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.
 
 ## v2.127.4 (2026-10-27) — Daily: phone par Sale khana gayab, baqi 3 khane chaure (malik)
 - Phone (≤700px): Sale column chhupa (`body:not(.mnf)` — ⋮ se "✍️ Sale haath se likhein" focus mein poora dikhta); Wasooli / Akhrajat / Change·Closing 225px chaure (side scroll). PC waisa hi. AI nahi.
+
+## v2.128.0 (2026-10-27) — 🧾 Purchase: check list se agla bill · scan search mein · larke ki entry se POS bill · 🚚/📦 yaad (rules 2.76, PC purchase-post v4.5)
+- ✅ Bill check list se bill tap = seedha POS Purchase EDIT screen (pehle "Purchase bill" khirki → Bill dekhein). Upar patti: ☐ tick + "✓ Check + 📌 Post · agla ›" (wahi bcGo = check + sendPost) → agla un-checked bill khud khulta (‹ › = usi list, window.ntBcNav); aakhri ke baad check list wapas (← bhi, ppBackParty "@bc").
+- 🎤 mic + "Wohi item dobara" patti khatam; 📷 Scan ab search ke dabbe ke andar (scanInSearch, .pp-scanbtn; doosri screen par hat jata). Neeche ke buttons chhote (#actions.pp-small: "✕ Naya" + "💾 POS bhejo · Rs").
+- ＋ Purchase form: supplier search "spelling ghalat bhi chalegi" (wahi accountMatches/smartHit); 🚚 Apni gaari / 📦 Supplier ki supply chips (CAP fp.via) → entry.via; supplier chunte hi us ki pichhli entry se khud yaad (viaOfParty). Rules 2.76: entry par "via".
+- Purchase list card (larke ki entry, bina POS bill): "🧾 POS bill banao" (CAP fp.pospost) → POS Purchase screen supplier ke saath + 📎 patti; bhejte waqt poochna nahi — via + larka = wahi entry (PC purchase-post jorta hai → ek hi entry, do nahi). Raqam farq ho to warning. 📎 draft mein bhi (fe).
+- PC purchase-post v4.5: 🚚 gaari ke saath larka ho to entry phir bhi jur jaye (pehle gaari par return).
+- Footer: sirf chhota "＋ Purchase"; 🧾 POS Purchase ⋮ mein (data-mn pu.pos). AI kahin nahi. Malik: rules 2.76 publish karein.
