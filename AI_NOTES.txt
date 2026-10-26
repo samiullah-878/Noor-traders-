@@ -6190,3 +6190,14 @@ mein asal haal · Qaida "0 se X% tak").
 Test: scratchpad t/sh t119.mjs + stub119.js (requestTransfer / watchTransfer) — hero nahi · search pehla · tabs / Qaide phone par ⋮ · 10+ lines · Sab items
 (0 se) · Enter = agla · 0 = nahi · tools · ek click = har godam ek note (aam + packet) + label · Packet % chip / editor · CAP band — 25 ✓; look frost / glass /
 old + PC 1366; regression t118 46 (naye text), rz 54, r117 34, t116a 61, t115b 54, t114a 40, t114c 45, t113f 31, t113k 40, dlgchk.
+
+==================== v2.119.1 + PC sync.js v3 (2026-10-26, manifest 2026-10-26.1) — ⛔ POS CANCEL BILL = KHATE SE BHI ====================
+Malik (screenshot bill 00002710 tail sarsoo Rs 298,500: "ya bill pos se cancel ha mgr khata main arha ha — khata se bi cancel hona chahie").
+Wajah: pc/sync.js (Khata sync, har 5 min) cancel (DocStatusID 3) bill ko sirf SKIP karti thi — pehle bani entry khate mein pari rehti thi.
+* pc/sync.js v3: har chakkar pichhle 60 din ke cancel bills (Q_CANCELLED) → entry maujood + deleted nahi = 🗑 deleted:true, posStatus 3,
+  note + " — ⛔ POS mein CANCEL", cancelledAt. 🗑 Hataye huye se wapas aa sakti hai. cancel-done.json yaad (Firestore reads bachao).
+  Judi cash payment (purchaseCash posBillIds array-contains) par sirf posCancelWarn nishan — malik khud dekhe, kuch hataya nahi.
+* app.js postBadgeHTML: posCancelWarn = ⛔ red badge. AI nahi.
+* Test scratchpad sy/t.js (fake mssql + firestore): entry deleted/posStatus 3/note, cash warn, cancel-done — OK.
+* Firebase: 25-Oct billing account SUSPENDED (card 4917 decline, email CloudPlatform-noreply) → Firestore 50K/din hadd, PC scripts
+  RESOURCE_EXHAUSTED. Hal = malik card theek kare (console.cloud.google.com/billing). 324K reads/din (25-Oct) — baad mein dekhna kaun parhta hai.
