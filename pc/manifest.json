@@ -1,6 +1,6 @@
 {
- "version": "2026-10-27.1",
- "note": "🔍 pos-khata-sync: har 15 min har jude khate ki POS ledger LINES posLines/<appId> (sirf badle) — app mein \"Farq dhoondo\" foran. ⚖️ posLedger, 🔒 khata band, dabbe wali rasid pehle se.",
+ "version": "2026-10-27.2",
+ "note": "🔐 rules-publish (malik ne 27 Oct OK kiya): Firestore rules GitHub se khud publish → blueAccess/rulesPub. 🔍 pos-khata-sync: har 15 min har jude khate ki POS ledger LINES posLines/<appId> (sirf badle) — app mein \"Farq dhoondo\" foran. ⚖️ posLedger, 🔒 khata band, dabbe wali rasid pehle se.",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
   "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
@@ -75,7 +75,9 @@
   "proc-fill.js": "e47043ef0dec77aec80d0011ccfceea0d730b38f2f811fdeed728abe372942f8",
   "owner-login.js": "8edbe8bfb6d229bd6a93fd2c996c868813dafab753be133dac517ff8e76653be",
   "owner-login-auto.bat": "615017a146db4e684c5f5ee34db6a851012bca73a6abe24f823299839b834da7",
-  "entry-photo.js": "bb214468caa9e4bf38b1b8eebfe5268f300aec41d42c1d526ff957828bbac005"
+  "entry-photo.js": "bb214468caa9e4bf38b1b8eebfe5268f300aec41d42c1d526ff957828bbac005",
+  "rules-publish.js": "3f3630caa099c1a4b2de91bdb66fa44c05c71233d73fa8ff8b71ccf780d0b71b",
+  "rules-auto.bat": "17d6194ac73feab9151f7f8ad6b1ac206974958890f93b3eed1dded7baa32ae7"
  },
  "services": [
   {
@@ -289,6 +291,12 @@
    "script": "owner-login.js",
    "bat": "owner-login-auto.bat",
    "log": "owner-login-log.txt"
+  },
+  {
+   "name": "Rules publish",
+   "script": "rules-publish.js",
+   "bat": "rules-auto.bat",
+   "log": "rules-publish-log.txt"
   }
  ]
 }

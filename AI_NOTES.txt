@@ -6367,3 +6367,5 @@ block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.
 
 ## v2.131.0 (2026-10-27) — 🔐 Rules dabbe mein "PC ne publish ki?" status (cloud.getRulesPub → blueAccess/rulesPub)
 - pc/rules-publish.js v1.0 + rules-auto.bat TAYYAR (GitHub rules → Firebase Rules REST API, blueAccess/rulesPub) magar manifest mein NAHI, push nahi — malik ki saaf ijazat ka intezar (security rules khud badalne wala service). Tab tak rules purane tareeqe se (firestore-rules-X.html). AI nahi.
+
+## 2026-10-27 03:05 — 🔐 rules-publish service LAGA DI (malik: "tum laga sakte ho rules auto to laga do"): pc/rules-publish.js v1.0 + rules-auto.bat manifest 2026-10-27.2 mein. Doctor ~3 min mein utaar kar chalayega; 5 min mein rules 2.76 khud publish (blueAccess/rulesPub). Ghalti ho to app ke 🔐 Rules dabbe mein dikhegi.

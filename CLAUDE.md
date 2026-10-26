@@ -97,7 +97,7 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 - **Login code**: malik ka pakka code sirf hash (`blueAccess/ownerCode`, PBKDF2) — tasdeeq sirf shop PC (`pc/owner-login.js`, admin custom token, 10 ghalat = 1 ghanta band). Plain code kabhi Firestore / log / chat mein nahi. Larke ke code (`deviceJoins pc-…`, keep) ek dafa chalte hain, phir naya khud (v2.105.7).
 
 ## 6. Har update ka checklist
-1. Firestore rules badlein to `firestore-rules-X.html` (pichhle versions ke chips ke saath) malik ko bhejo + poora rules text chat mein. (`pc/rules-publish.js` = PC se khud publish, TAYYAR magar manifest mein NAHI — malik ki saaf ijazat ke baghair security-rules badalne wala service kabhi mat lagao; v2.131.0.)
+1. Firestore rules badlein to `firestore-rules-X.html` (pichhle versions ke chips ke saath) malik ko bhejo + poora rules text chat mein. **Ab (27 Oct 2026, malik ka OK): shop PC `pc/rules-publish.js` har 5 min GitHub ki `firestore.rules` khud publish karta hai (blueAccess/rulesPub) — bas `firestore.rules` header `BLUE KHATA vX` aur `version.json.rules` ek rakho; html sirf tab bhejo jab app ke 🔐 Rules dabbe mein PC ki ghalti dikhe.**
 2. `AI_NOTES.txt` (root) + `pc/AI_NOTES.txt` dono update.
 3. Version bump: `OLD=x NEW=y; grep -rl "$OLD" --include=*.js --include=*.html . | grep -v node_modules | grep -v firestore-rules | xargs sed -i "s/v=$OLD\b/v=$NEW/g; s/sam-blue-khata-$OLD\b/sam-blue-khata-$NEW/; s/APP_VER='$OLD'/APP_VER='$NEW'/; s/Blue Khata v$OLD\b/Blue Khata v$NEW/g"` + `version.json`.
 4. PC file badle to `pc/manifest.json` version + sha256.
