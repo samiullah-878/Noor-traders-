@@ -6021,3 +6021,76 @@ html body #dialogBody .rk2-ps .rk2-qp{flex-direction:row;align-items:center;gap:
 html body #dialogBody .rk2-ps .rk2-qp small{max-width:74px;white-space:normal;line-height:1.2;color:#334a7a;font-weight:800}
 html body #dialogBody .rk-root > .rk2-pset{align-self:flex-start}
 @media (min-width:900px){html body #dialogBody .rk-root:has(> .rk2-foot){width:100%;max-width:980px;margin:0 auto}}
+
+/* ===== v2.120.0: 📊 PURCHASE TABLE (POS jaisi) + upar ki patti ===== */
+html body #summary .pp-hbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;width:100%;text-align:left;padding:8px 12px;margin:4px 0 6px;border-radius:14px;background:#fff;border:1px solid #dde3ef;box-shadow:0 1px 3px rgba(20,30,60,.06);color:#1a2d53;font-size:13.5px;min-height:44px}
+html body #summary .pp-hbar b{font-size:15px}html body #summary .pp-hbar span{white-space:nowrap}html body #summary .pp-hbar .pp-hsep{opacity:.4}
+html body #summary .pp-hbar i{margin-left:auto;font-style:normal;font-size:12px;color:#4f46e5;font-weight:700}
+html body #summary .pp-hbar .pp-av{width:28px;height:28px;border-radius:50%;display:inline-grid;place-items:center;background:linear-gradient(135deg,#223b6d,#4f46e5);color:#fff;font-size:12px;font-weight:800}
+html body #summary .pp-hd-off{display:none}
+html body #summary .pp-hdup{margin-top:6px;background:#f2f4f9;border:1px solid #d5dce9;border-radius:10px;min-height:34px;padding:0 12px;font-size:12.5px;color:#44566f}
+html body #summary .pp-vseg{display:flex;gap:4px;background:#eef1f7;border-radius:12px;padding:3px}
+html body #summary .pp-vseg button{min-height:34px;padding:0 12px;border:0;border-radius:9px;background:transparent;color:#44566f;font-weight:700}
+html body #summary .pp-vseg button.is-in{background:#fff;color:#1a2d53;box-shadow:0 1px 3px rgba(0,0,0,.12)}
+html body #list .sale-cart.pp-gridc{padding:0;background:transparent;border:0}
+html body #list .pp-tw{overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;border:1px solid #d9e0ec;border-radius:14px;background:#fff;box-shadow:0 2px 8px rgba(20,30,60,.06);max-width:100%}
+html body #list .pp-tbl{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:13px;color:#1a2d53}
+html body #list .pp-tbl th{position:sticky;top:0;z-index:3;background:#f3f6fb;color:#44566f;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.02em;padding:7px 6px;border-bottom:1.5px solid #d9e0ec;white-space:nowrap;text-align:center}
+html body #list .pp-tbl td{padding:3px 4px;border-bottom:1px solid #edf0f6;vertical-align:middle;white-space:nowrap}
+html body #list .pp-tbl tr.pp-tr:nth-child(even) td{background:#fbfcfe}
+html body #list .pp-tbl td.n{color:#8a97ad;font-weight:700;text-align:center;min-width:26px}
+html body #list .pp-tbl td.cd{color:#6b7c93;font-size:11.5px;max-width:70px;overflow:hidden;text-overflow:ellipsis}
+html body #list .pp-tbl th.nm,html body #list .pp-tbl td.nm{position:sticky;left:0;z-index:2;background:#fff;min-width:150px;max-width:220px;text-align:left;box-shadow:2px 0 0 #e3e8f1}
+html body #list .pp-tbl th.nm{z-index:4;background:#f3f6fb}
+html body #list .pp-tbl tr.pp-tr:nth-child(even) td.nm{background:#fbfcfe}
+html body #list .pp-tbl td.nm button{display:block;width:100%;text-align:left;background:transparent;border:0;padding:3px 2px;min-height:0;color:#1a2d53;white-space:normal;line-height:1.2}
+html body #list .pp-tbl td.nm b{display:block;font-size:13.5px;font-weight:800}
+html body #list .pp-tbl td.nm small{display:block;font-size:10.5px;color:#7a889e;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:210px}
+html body #list .pp-tbl td.nm small i{font-style:normal;color:#d64545;font-weight:700}
+html body #list .pp-tbl tr.open td.nm button b{color:#4f46e5}
+html body #list .pp-tbl tr.warn td.n{color:#d64545}
+html body #list .pp-tbl td input,html body #list .pp-tbl td select{width:76px;min-width:0;min-height:34px;height:34px;padding:0 6px;font-size:13px;font-weight:700;border:1px solid #d9e0ec;border-radius:8px;background:#fff;color:#1a2d53;text-align:right;-moz-appearance:textfield}
+html body #list .pp-tbl td input::-webkit-outer-spin-button,html body #list .pp-tbl td input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+html body #list .pp-tbl td.q input{width:62px;background:#f6f9ff}
+html body #list .pp-tbl td.a input{width:92px;background:#fffdf2;font-weight:800}
+html body #list .pp-tbl td.g select{width:110px;text-align:left;font-weight:600;font-size:12px}
+html body #list .pp-tbl td input.chg{background:#eefbf1;border-color:#9bd8ad;color:#166534}
+html body #list .pp-tbl td input::placeholder{color:#a9b3c4;font-weight:500}
+html body #list .pp-tbl td input:focus,html body #list .pp-tbl td select:focus{outline:0;border-color:#4f46e5;box-shadow:0 0 0 2px rgba(79,70,229,.18)}
+html body #list .pp-tbl td.x{padding:0 4px}html body #list .pp-tbl td.x .sale-x{min-height:30px;height:30px;width:30px;padding:0;border-radius:8px}
+html body #list .pp-tbl tfoot td{background:#f3f6fb;font-weight:800;border-top:1.5px solid #d9e0ec;padding:8px 6px;text-align:right}
+html body #list .pp-tbl tfoot td.nm{text-align:left;background:#f3f6fb}html body #list .pp-tbl tfoot td.tt{color:#166534;font-size:14px}
+html body #list .pp-tbl tr.pp-trx>td{padding:8px 6px 10px;background:#f6f8fc;white-space:normal;border-bottom:2px solid #c9d3ea}
+html body #list .pp-tbl tr.pp-trx .pp-line{margin:0;max-width:980px}
+html body #list .pp-tbl tr.pp-tr.fresh td{animation:lineGlow 1.8s ease}
+html.dk body #list .pp-tw{background:#fff}
+html.dk body #list .pp-tbl td.nm,html.dk body #list .pp-tbl td{color:#1a2d53}
+html.dk body #list .pp-tbl td input,html.dk body #list .pp-tbl td select{background:#fff!important;color:#1a2d53!important;border-color:#d9e0ec!important}
+html.dk body #summary .pp-hbar{background:#fff!important;color:#1a2d53!important}
+@media(max-width:600px){html body #list .pp-tbl{font-size:12.5px}html body #list .pp-tbl th.nm,html body #list .pp-tbl td.nm{min-width:128px;max-width:150px}html body #list .pp-tbl td.nm small{max-width:140px}html body #list .pp-tbl td input{width:66px}html body #list .pp-tbl td.a input{width:82px}html body #summary .pp-hbar i{margin-left:0}}
+/* v2.120.0: PC par purchase ka upar wala hissa ek qatar (table ke liye jagah) + table tang columns */
+@media (min-width:900px){
+html body .pp-head .account-tools.pp-tools{display:flex;flex-wrap:wrap;gap:6px}
+html body .pp-head .account-tools.pp-tools .sh-wide,html body .pp-head .account-tools.pp-tools button{flex:0 1 auto;width:auto;flex-basis:auto!important;min-height:38px!important;padding:0 12px!important;font-size:12.5px}
+html body .pp-head .account-tools.pp-tools .pp-vseg{margin-left:auto}
+html body #list .pp-tbl{font-size:12.5px}
+html body #list .pp-tbl th.nm,html body #list .pp-tbl td.nm{min-width:140px;max-width:200px}
+html body #list .pp-tbl td input{width:62px;height:32px;min-height:32px;font-size:12.5px}
+html body #list .pp-tbl td.q input{width:56px}html body #list .pp-tbl td.a input{width:84px}html body #list .pp-tbl td.g select{width:96px;height:32px;min-height:32px}
+html body #list .pp-tbl td{padding:3px 3px}html body #list .pp-tbl th{padding:6px 4px}
+html body #list .pp-tbl td.cd{display:none}html body #list .pp-tbl th.cd{display:none}
+}
+html body #list .pp-tbl td.nm small u{text-decoration:none;display:none}
+@media (min-width:900px){html body #list .pp-tbl td.nm small u{display:inline}}
+@media (min-width:900px){
+html body #list .pp-tbl th.nm,html body #list .pp-tbl td.nm{width:165px;min-width:165px;max-width:165px}
+html body #list .pp-tbl td.nm small{max-width:158px}
+html body #list .pp-tbl td input{width:58px}html body #list .pp-tbl td.q input{width:52px}html body #list .pp-tbl td.a input{width:76px}html body #list .pp-tbl td.g select{width:82px;padding:0 2px;font-size:11.5px}
+html body #list .pp-tbl td.x{padding:0 2px}html body #list .pp-tbl td.x .sale-x{width:26px;min-width:26px;height:26px;min-height:26px;font-size:12px}
+html body #list .pp-tbl td{padding:2px 2px}html body #list .pp-tbl th{padding:6px 2px;font-size:10.5px}html body #list .pp-tbl td.n{min-width:22px}
+}
+html body #list .pp-tbl td input,html body #list .pp-tbl td select,html body #list .pp-tbl th.nm,html body #list .pp-tbl td.nm{box-sizing:border-box}
+@media (min-width:900px){
+html body #list .pp-tbl th.nm,html body #list .pp-tbl td.nm{width:155px;min-width:155px;max-width:155px}html body #list .pp-tbl td.nm small{max-width:148px}
+html body #list .pp-tbl td input{width:54px}html body #list .pp-tbl td.q input{width:48px}html body #list .pp-tbl td.a input{width:70px}html body #list .pp-tbl td.g select{width:76px}
+}
