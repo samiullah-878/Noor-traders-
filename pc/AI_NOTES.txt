@@ -3444,3 +3444,19 @@ har cheez nazar aaye, PC aur mobile dono same; upar wala form andar chala jaye, 
   inputs 54px, item 155px — 1366 laptop par poori table bina scroll; .pp-tools PC par ek qatar; html.dk overrides.
 * Test scratchpad t/sh/t120.mjs (phone / new / pc / dark / cap) — ALL OK; screenshots t120/.
 AI: nahi.
+
+==================== v2.121.0 (2026-10-26) — ☰ PURCHASE COMPACT LINES (phone) + NEECHE CHIPS KI PATTI ====================
+Malik (v2.120 table phone par side scroll): "sahi maza wala kaam nahi — sab chips bhi chahiye aur kaam bhi speed se bill check ho". Preview OK.
+* purchase.js v2.6.0: ppView auto | grid | rows | card (localStorage sam-pp-view; auto = PC ≥900px table, phone ☰ lines). rowsHTML(): har item
+  .pp-cr = line 1 (# naam · code · pack · pehle · ⚠ · Rs) + .pp-cg (pack: Ctn Pcs Kh/Ctn Kh/Pcs Raqam / khula: Pcs Kh Raqam 🏬 Godam)
+  + .pp-cg (W Ctn · W Pcs · R Ctn · R Pcs · 🏷 Retail — label mein nafa %: hara / .lo narangi (CTN↔PCS 0.5+ farq) / .neg laal).
+  WAHI data-pp-* inputs. selKey = chuna hua item (focusin / tap, data-pp-sel) → .sel neela. cbarHTML() footer #actions ke andar (.pp-foot):
+  ⚡ naam · ↺ (oldBtn ppCb) · 🏬 godam (data-pp-lg) · ✕ · chipRow w/r (idp ppCb: W 7 + R 4 + 🏷 = Retail). paintChips ppCb bhi; paintRates
+  ☰ labels % + chg rang; refreshTotals data-pp-rs. inPP ab #actions bhi (godam select). renderPP: selKey hamesha koi item (aakhri).
+  Table (grid) qatar par bhi data-pp-sel + .sel — PC par wahi patti.
+* style.css: .pp-cr / .pp-cg / .pp-crf; footer#actions.pp-foot flex-wrap + .pp-cbar (chips side-scroll); theme overrides (html.lt footer
+  button color:#fff!important ko .pp-cbar mein haraya); 🤖 .ag-fab upar jab .pp-foot. NESTED GRID: .sale-cart.pp-gridc + .sale-pay
+  grid-template-columns:minmax(0,1fr) + min-width:0 (warna 1fr tracks input ki intrinsic width lete — 393px phone par side mein nikalta tha;
+  .sale-pay purana bug bhi theek).
+* Tests t/sh/t121.mjs + t121b.mjs (bina isMobile; screenshots) + t120.mjs (table ab view:grid) — ALL OK.
+AI: nahi.
