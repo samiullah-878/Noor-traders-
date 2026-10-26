@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-10-26: 🔒 app mein "Khata band" (party.active false) = POS Account IsActive 0; chalu = 1 (appHashParty mein a)
 //  2026-10-23: 🏦 bank / khate se kharcha (dailyIncluded false — HBL / transfer se) ki KHARCHA parchi par bara "BANK / KHATE SE · GALLE SE NAHI" (pehle "Kharcha diya" = galle wala dhoka)
 //  2026-10-21 (b): 📷 party entry ki tasveer (app v2.105.8) har voucher / kharcha parchi ke neeche — pehli + dobara print (entry-photo.js) · 🐞 dobara print par voucher no / tareekh wapas · purchase tasveer ka intezar (pn object) theek
 //  2026-10-21: 📝 malik — "Tafseel ka lafz Urdu mein bara, har print par": Urdu line 'تفصیل: …' (52px) — AI 4 s mein na aaye to bhi (urdu-names v1.6 roman2ur)
@@ -709,6 +710,12 @@ async function syncAccounts(pool, acct) {
       continue;
     }
     if (!posId || !partySynced(p)) continue;
+    // 2026-10-26: 🔒 app mein "Khata band" (active false) = POS Account IsActive 0; chalu = 1. Sirf TABDEELI par (link.act yaad) — pehli dafa sirf yaad,
+    //   taake POS mein haath se band kiye accounts khud chalu na ho jayein.
+    { const act = p.active === false ? 0 : 1;
+      if (link && link.act !== act) {
+        if (link.act !== undefined && !p.deleted) { try { const acc = byPos.get(posId)?.AccountID || link.accountId; if (acc && !DRY) { await pool.request().input('a', acc).input('v', sql.Bit, act).query('UPDATE dbo.Account SET IsActive=@v WHERE AccountID=@a'); log(`🔒 ${p.name}: POS account ${act ? 'CHALU (IsActive 1)' : 'BAND (IsActive 0)'}`); } } catch (e) { log(`  ${p.name}: POS IsActive nahi badla: ` + e.message); } }
+        await setLink(key, { act }); link.act = act; } }
     if (link && link.appHash === h) continue;
     if (!link) { await setLink(key, { posPartyId: posId, accountId: byPos.get(posId)?.AccountID, appHash: h }); continue; }
     // app mein badla

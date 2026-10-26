@@ -1,6 +1,6 @@
 {
- "version": "2026-10-26.2",
- "note": "🧾 nt-print v1.23 + sale-post v1.13: rasid ki items table dabbe (side lines) mein — Items | PCS | CTN | Rate, neeche Rs amount, Total ka dabba (POS wali rasid jaisi). sync.js v3 (cancel bill) pehle se.",
+ "version": "2026-10-26.3",
+ "note": "🔒 pos-khata-sync: app mein \"Khata band (POS bhi)\" = POS Account IsActive 0 (chalu = 1), sirf tabdeeli par (link.act). nt-print v1.23 / sale-post v1.13 dabbe wali rasid.",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
   "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
@@ -12,7 +12,7 @@
   "khata-sync-auto.bat": "7006262d6b2e395b6212aa2b130c191bb3284b1a2bf60793ee537fd845f69905",
   "label-auto.bat": "7094351892e48c7a2d4a32b2ac49e96e8d39e66856a3ff276d36b27b91368824",
   "label-print.js": "5d7a582349f0cbb6a1636a402bad2309f53d9ff7b69bda257086882da30ea3e0",
-  "pos-khata-sync.js": "e90b8a0ed5d91708d89e38c8a203a8fa99246bfcf6504b35d80a58721c76b751",
+  "pos-khata-sync.js": "fe8e44203883a5f14501e75c2607ac9e7d767ad457fa4bb18dd47ec05b4ace1d",
   "post-farq.js": "fe83b69aa925f12f8d777edebe60f0b3b98d7f349c1f3de6cbc14f42109929e9",
   "purchase-auto.bat": "f877f7a5c14ad0a654b499396e8661c20a1140c2b99d68c1a91b18cae440fb85",
   "purchase-post.js": "fc8b3ecceb31a57200824966327a8e6826ebbda12eca0cea344aeba1c11febac",

@@ -3488,3 +3488,11 @@ boxTable(W, items, pcsSum, ctnSum) dono mein (ek jaisa): +---+ / | | se Items | 
 agli line (wrap), har item ke neeche daayein "Rs amount", aakhir "Total: PCS x / CTN y" ka dabba. Baqi rasid (Sale No, barcode, Urdu tareekh,
 bara total, Cash / Balance, bank lines) wahi. POS (Cognitive) ki apni rasid hum nahi badal sakte — sirf app / PC wali.
 Test: node -e boxTable 32 / 42 — lines barabar W. AI nahi.
+
+=== v2.123.0 + PC pos-khata-sync (2026-10-26, manifest 2026-10-26.3) — 🔒 KHATA BAND (POS MEIN BHI) ===
+Malik (ADEEL FAISLABAD DAAL, ⋮ Is khate ka): "POS mein bhi band karein khata ka option laga do".
+* app.js: khate ke ⋮ (👤 Is khate ka) mein "🔒 Khata band (POS bhi)" / "🔓 Khata chalu (POS bhi)" (data-acct-band, data-mn ac.band; malik) = WAHI acctBand
+  (party.active false/true). Confirm mein baqaya ho to ⚠ "Baqaya Rs X lena/dena — phir bhi band?"; POS se juda khata ho to "POS mein bhi band (inactive)".
+* pc/pos-khata-sync.js: har party par link.act (0/1) yaad; app mein active badle to POS Account.IsActive = 0/1 (UPDATE dbo.Account). Pehli dafa sirf yaad
+  (POS mein haath se band accounts khud chalu NA hon). Hash mein nahi (sab parties ka faltu update na ho).
+* Test t/sh/t123.mjs (⋮ tile, confirm text, notice) OK. AI nahi.
