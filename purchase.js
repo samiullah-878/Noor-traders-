@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.129.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.129.0';
-import { blurScore, blurText } from './pic-check.js?v=2.129.0';   // v2.103.43: 📷 dhundli check
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.130.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.130.0';
+import { blurScore, blurText } from './pic-check.js?v=2.130.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -2320,6 +2320,7 @@ async function save(opt = {}) {
     aiRows = null; aiBillInfo = null; jView = 'list'; jIx = -1;   // v2.4.0: bheja hua bill — purani jaanch band
     notice(keep.edit ? 'Update PC ko bhej diya — PC POS mein wohi bill badal dega (Aaj ke app purchase mein status)' : 'Purchase bill bhej diya — PC POS mein bana dega (Aaj ke app purchase mein status)');
     sentOk = { ok: true, id, total, n: lines.length, party: p.name };
+    if (!auto) { try { setTimeout(() => window.ntPpSaved?.(keep.edit ? 'edit' : 'new'), 80); } catch {} }   // v2.130.0: list se ✏️ aaye the to wapas list
     w.catch(err => {
       if (!cart.length) { cart = keep.cart; supplier = keep.supplier; godam = keep.godam; invoiceNo = keep.invoiceNo; note = keep.note; edit = keep.edit; day = keep.day; if (!billPics.length && keep.pics?.length) { billPics = keep.pics; if (keep.pics.every(isData)) picPut('draft', { pics: keep.pics, at: Date.now() }); } keepDraft(); rerender(); }
       alert('Purchase bill PC tak NAHI gaya: ' + (err?.message || err) + '\nBill wapas screen par hai — dobara bhejein.');

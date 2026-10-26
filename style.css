@@ -6364,3 +6364,29 @@ html body .jaanch-dlg .jc-acts.jc-sticky .jc-okrow{display:contents!important}
 html body .jaanch-dlg .jc-acts.jc-sticky button{flex:0 0 auto!important;min-height:36px!important;height:36px!important;max-height:36px;padding:0 10px!important;font-size:14px!important;border-radius:999px!important;white-space:nowrap;line-height:1}
 html body .jaanch-dlg .jc-acts.jc-sticky button.jc-prev{min-width:40px;width:40px;padding:0!important}html body .jaanch-dlg .jc-acts.jc-sticky button.jc-mini{min-width:40px;width:40px;padding:0!important}
 html body .jaanch-dlg .jc-acts.jc-sticky button.jc-ok{flex:1 1 auto!important;order:3;font-weight:800!important}
+
+/* ===== v2.130.0: 🛒 Purchase list — dashboard gayab · patli lines (tap = khula) · chips chhote · search patla ===== */
+html body main header #summary.summary:has(> .puh-only){display:flex;flex-wrap:wrap;gap:6px;padding:6px 10px!important;min-height:0}
+html body main header #summary .puh-only .puh-c{min-height:32px;padding:0 11px;border-radius:999px;font-size:12.5px;font-weight:700;background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.22)}
+html body main header #summary .puh-only .puh-c.bc-w{background:#fde68a;color:#7a4b00;border-color:#f5c542}
+@media(max-width:700px){html body:not(.mnf) main header #summary.summary:has(> .puh-only){display:none!important}}
+html body main.pu-screen .toolbar label.search input{height:36px!important;min-height:36px!important;font-size:14px!important;padding:0 10px 0 30px!important}
+html body main.pu-screen .toolbar{padding-top:4px;padding-bottom:4px;gap:6px}
+html body .pu-card.pu-c{padding:0!important;border-radius:12px!important;margin:0 0 5px!important;overflow:hidden}
+html body .pu-card.pu-c .pu-l1{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nm amt" "st tm";align-items:center;column-gap:8px;row-gap:1px;padding:6px 10px;cursor:pointer}
+html body .pu-card.pu-c .pu-l1 .pu-nm{grid-area:nm;font-size:13.5px;font-weight:800;color:#13213f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+html body .pu-card.pu-c .pu-l1 .pu-amt{grid-area:amt;font-size:14px;font-weight:800;color:#166534;white-space:nowrap;margin:0}
+html body .pu-card.pu-c .pu-l1 .pu-tm{grid-area:tm;font-size:10.5px;color:#7a889e;text-align:right;white-space:nowrap}
+html body .pu-card.pu-c .pu-l1 .pu-s{grid-area:st;justify-self:start;font-style:normal;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:#eef1f7;color:#44566f;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+html body .pu-card.pu-c .pu-l1 .pu-s.ok{background:#e7f7ee;color:#147548}html body .pu-card.pu-c .pu-l1 .pu-s.bad{background:#fdecec;color:#b42332}html body .pu-card.pu-c .pu-l1 .pu-s.wait{background:#fff7e0;color:#8a5a00}html body .pu-card.pu-c .pu-l1 .pu-s.cash{background:#e7f7ee;color:#147548}html body .pu-card.pu-c .pu-l1 .pu-s.warn{background:#fff7e0;color:#8a5a00}
+html body .pu-card.pu-c .pu-l1 .pu-s.ph{grid-area:st;justify-self:start;margin-left:0}html body .pu-card.pu-c .pu-l1 .pu-s+.pu-s.ph{display:none}
+html body .pu-card.pu-c .pu-l1 .pu-car{display:none}
+html body .pu-card.pu-c .pu-x{display:none;padding:4px 10px 8px;border-top:1px dashed #e3e8f1}html body .pu-card.pu-c.open .pu-x{display:block}
+html body .pu-card.pu-c.open .pu-l1{background:#f6f8fc}
+html body .pu-card.pu-c .pu-chips{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 4px}html body .pu-card.pu-c .pu-chip{font-size:10.5px;padding:2px 8px;border-radius:999px}
+html body .pu-card.pu-c .pu-acts{gap:5px;padding-top:6px;border-top:1px dashed #e3e8f1}
+html body .pu-card.pu-c .pu-acts button,html body .pu-card.pu-c .pu-acts details summary{min-height:32px!important;height:32px;padding:0 11px!important;border-radius:999px!important;font-size:12.5px!important;font-weight:700!important;border:1px solid #d5dce9;background:#f6f8fc;color:#1a2d53;display:inline-flex;align-items:center;white-space:nowrap}
+html body .pu-card.pu-c .pu-acts button.pu-edit{background:linear-gradient(135deg,#223b6d,#4f46e5)!important;color:#fff!important;border:0!important}
+html body .pu-card.pu-c .pu-acts button.pu-pos{height:32px}
+html body .pu-card.pu-c .pu-body{margin:0}html body .pu-card.pu-c .entry-photo{width:64px;height:64px;border-radius:10px}
+html body .pu-day .pu-dh{padding:4px 8px;font-size:12px;margin:6px 0 4px}
