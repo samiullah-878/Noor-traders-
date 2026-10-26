@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-10-26: ⚖️ POS MILAN — har 15 min jude khaton ka POS ledger balance blueAccess/posLedger (app: har khate par POS baqaya + milan screen)
 //  2026-10-26: 🔒 app mein "Khata band" (party.active false) = POS Account IsActive 0; chalu = 1 (appHashParty mein a)
 //  2026-10-23: 🏦 bank / khate se kharcha (dailyIncluded false — HBL / transfer se) ki KHARCHA parchi par bara "BANK / KHATE SE · GALLE SE NAHI" (pehle "Kharcha diya" = galle wala dhoka)
 //  2026-10-21 (b): 📷 party entry ki tasveer (app v2.105.8) har voucher / kharcha parchi ke neeche — pehli + dobara print (entry-photo.js) · 🐞 dobara print par voucher no / tareekh wapas · purchase tasveer ka intezar (pn object) theek
@@ -1252,6 +1253,21 @@ async function quickRun() {
 }
 
 // ============================================================
+// 2026-10-26: ⚖️ POS MILAN — har 15 min POS ledger (Debit − Credit = lena +, dena −) jude hue khaton ka blueAccess/posLedger {m:{appId: paisa}, at, n}
+//   (sirf badle to). App har khate par "🖥 POS baqaya" + "⚖️ POS milan" screen. AI nahi.
+let ledgerAt = 0, ledgerLast = '';
+async function ledgerPush(pool) {
+  if (Date.now() - ledgerAt < 15 * 60000) return; ledgerAt = Date.now();
+  const rows = (await pool.request().query(`SELECT p.PartyID, SUM(ISNULL(vd.Debit,0) - ISNULL(vd.Credit,0)) AS Bal
+    FROM dbo.Party p LEFT JOIN dbo.VoucherDetail vd ON vd.AccountID = p.AccountID GROUP BY p.PartyID`)).recordset;
+  const byPos = new Map(rows.map(r => [Number(r.PartyID), Math.round((Number(r.Bal) || 0) * 100)]));
+  const m = {}; let n = 0;
+  for (const [k, l] of links) { if (!k.startsWith('party:') || !l || !l.posPartyId) continue; const appId = k.slice(6); if (!appId || /[.\/]/.test(appId) || !byPos.has(Number(l.posPartyId))) continue; m[appId] = byPos.get(Number(l.posPartyId)); n++; }
+  const j = JSON.stringify(m); if (j === ledgerLast) return; ledgerLast = j;
+  if (DRY) { log(`(dry) POS ledger: ${n} khate`); return; }
+  await biz.collection('blueAccess').doc('posLedger').set({ m, at: Date.now(), n, pc: os.hostname() });
+  log(`⚖️ POS ledger likha: ${n} khate`);
+}
 async function once() {
   if (fs.existsSync(path.join(DIR, 'khata-sync.pause'))) { log('Ruka hua (khata-sync.pause file mojood hai)'); return; }
   const pool = await sql.connect(SQL_CONFIG);
@@ -1261,6 +1277,7 @@ async function once() {
     lastAcct = acct;   // ⚡ tez raasta isi naqshe se
     try { await syncEntries(pool, acct); }
     finally { for (const k of syncMine) inFlight.delete(k); syncMine.clear(); }
+    try { await ledgerPush(pool); } catch (e) { log('⚖️ POS ledger masla: ' + e.message); }
   } finally {
     await pool.close();
   }

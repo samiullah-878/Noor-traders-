@@ -6269,3 +6269,14 @@ Malik (ADEEL FAISLABAD DAAL, ⋮ Is khate ka): "POS mein bhi band karein khata k
 * pc/pos-khata-sync.js: har party par link.act (0/1) yaad; app mein active badle to POS Account.IsActive = 0/1 (UPDATE dbo.Account). Pehli dafa sirf yaad
   (POS mein haath se band accounts khud chalu NA hon). Hash mein nahi (sab parties ka faltu update na ho).
 * Test t/sh/t123.mjs (⋮ tile, confirm text, notice) OK. AI nahi.
+
+==================== v2.124.0 + RULES 2.74 + PC pos-khata-sync (2026-10-26, manifest 2026-10-26.4) — ⚖️ POS MILAN ====================
+Malik: "jitne bhi khate hain, POS ka ledger aur humara khata same aa raha hai ya nahi — sab khaton ke liye check; har khate ki screen ke upar POS baqaya bhi".
+* PC pos-khata-sync ledgerPush(): har 15 min SQL (Party ⟕ VoucherDetail: SUM(Debit−Credit) = lena +, dena −) → links party:<appId> → blueAccess/posLedger
+  {m:{appId: paisa}, at, n, pc} — sirf badle to (JSON compare). Rules 2.74: blueAccess/posLedger get blueStaff (malik generic).
+* cloud.listenPosLedger. app.js: pmStart (session +2.6 s, owner/full + CAP kh.posmilan), pos-milan.js lazy (pmSetup ctx), khate ke summary mein
+  <div data-pm-line> pmLineHTML (✓ barabar hara / ⚠ farq laal / "POS mein nahi juda"), Khata list footer "⚖️ POS milan (N farq)" (data-pm-screen,
+  ⋮ kh.posmilan). Screen: 🔍 + pill, seg Farq / Theek / POS mein nahi / Sab (⋮), summary card, rows (naam · App · POS · farq) tap = khata.
+  Farq hadd Rs 1 (TOL 100 paisa). CAP kh.posmilan (full list).
+* Tests t/sh/t124.mjs (stub124: posLed) — khata line (barabar / farq / nahi), screen, tabs, tap, ledger nahi, CAP band — ALL OK. AI nahi.
+* Ghalti: screen button + row dono par data-pm-open tha → row tap screen dobara khol deta; button ab data-pm-screen.
