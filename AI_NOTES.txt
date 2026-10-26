@@ -6364,3 +6364,6 @@ block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.
 
 ## v2.130.1 (2026-10-27) — Purchase list: har bill = naam + floating chips (Daily Sale ke hero chips jaisa), upar ka gap band
 - Band line: naam upar, neeche side-scroll chips `.pu-k` (Raqam · POS bill · Haalat · Tareekh·waqt · 📷 · Note) — dy-c jaisa premium look; tap = pehle jaisa khula. Header/toolbar ka gap chhota (main.pu-screen). AI nahi.
+
+## v2.131.0 (2026-10-27) — 🔐 Rules dabbe mein "PC ne publish ki?" status (cloud.getRulesPub → blueAccess/rulesPub)
+- pc/rules-publish.js v1.0 + rules-auto.bat TAYYAR (GitHub rules → Firebase Rules REST API, blueAccess/rulesPub) magar manifest mein NAHI, push nahi — malik ki saaf ijazat ka intezar (security rules khud badalne wala service). Tab tak rules purane tareeqe se (firestore-rules-X.html). AI nahi.
