@@ -6237,3 +6237,15 @@ html body #summary button.pm-line.ok{background:rgba(30,158,74,.16)!important;co
 html body #summary button.pm-line b{color:#fff}
 html.lt body #summary button.pm-line.ok{background:#eefbf1!important;color:#166534!important}html.lt body #summary button.pm-line.bad{background:#fff0f0!important;color:#b32936!important}html.lt body #summary button.pm-line.none{background:#f2f4f9!important;color:#44566f!important}html.lt body #summary button.pm-line b{color:inherit}
 html body #summary .pm-lw .pm-dbtn{margin:0;background:#fff!important;color:#b32936!important;border:1px solid #f1c4c4!important;min-height:0;height:auto;padding:3px 10px;font-size:11.5px;border-radius:999px}
+
+/* ===== v2.126.0: 📒 khate ki entries chhoti — tap = chips khulein ===== */
+html body #list .ledger-item.li-c{padding:7px 9px 6px!important;cursor:pointer}
+html body #list .ledger-item.li-c>strong{font-size:15px;line-height:1.2}
+html body #list .ledger-item.li-c>b{font-size:12px;margin-top:1px;line-height:1.25;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body #list .ledger-item.li-c>small{font-size:10.5px;line-height:1.3}
+html body #list .ledger-item.li-c .run{font-size:10.5px;padding:1px 7px;margin:2px 0 0}
+html body #list .ledger-item.li-c .li-m{display:block;color:#64748b;font-size:10.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}html body #list .ledger-item.li-c .li-m i{font-style:normal;float:right;opacity:.6}
+html body #list .ledger-item.li-c:not(.open) .li-x{display:none}
+html body #list .ledger-item.li-c.open{background:#f7f8fd;cursor:default}html body #list .ledger-item.li-c.open .li-x{display:block;margin-top:4px}
+html body #list .ledger-item.li-c.open>b{white-space:normal}
+html.dk body #list .ledger-item.li-c.open{background:rgba(255,255,255,.06)}

@@ -3522,3 +3522,10 @@ Malik: "kaise pata chale kaunsi entry ka farq hai, kaunsi app mein hai POS mein 
 Malik (bilal alflah screenshot: pm-line summary ke doosre card mein bara gol dabba ban gaya): "ye upar wale chips small size mein, click karein to bara".
 pm-line ab pehle card ke andar (balance ke neeche), button: "🖥 POS ✓" / "🖥 POS ⚠ Rs X" / "🖥 POS —"; tap (data-pm-tog, pmOpenLine) = poori baat
 (POS baqaya · app) + 🔍 Farq dhoondo; dobara tap = chhoti. t124 / t125 update — ALL OK.
+
+==================== v2.126.0 (2026-10-27) — 📒 KHATE KI ENTRIES CHHOTI (tap = chips) ====================
+Malik (bilal alflah khata): "screen par sirf 4 entries hain, 10 aani chahiye — baqi chips upar ki taraf hide, click karein to show, POS ka number neeche".
+* app.js ledgerHTML: article.ledger-item.li-c — band: raqam · label · tareekh · Baqaya chip · chhoti line (🖥 posCode / bill no + 📌 / note 40 harf) ▾.
+  Sab chips / buttons (waqt, note, 🔔, Post, POS status, tasveer, larke ki entry, Receipt, Bill dekhein, transfer actions, Edit/Delete) div.li-x mein —
+  sirf .open par (liOpen Set, tap par render(); button/input ke andar tap = toggle nahi). Dobara tap = band.
+* Test t/sh/t126.mjs — 8+ entries ek screen, chips chhupe, tap khule/band, andar ke button se band nahi — ALL OK. AI nahi.
