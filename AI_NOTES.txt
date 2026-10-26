@@ -6233,3 +6233,19 @@ Malik (v2.120 table phone par side scroll): "sahi maza wala kaam nahi — sab ch
   .sale-pay purana bug bhi theek).
 * Tests t/sh/t121.mjs + t121b.mjs (bina isMobile; screenshots) + t120.mjs (table ab view:grid) — ALL OK.
 AI: nahi.
+
+==================== v2.122.0 + RULES 2.73 (2026-10-26) — ✅ BILL CHECK (POS purchase bills ki check-list) ====================
+Malik: "bill check karne ka checkbox chahiye aur ek screen jis mein POS ka bill check aur jo check nahi hua wo bhi aaye — aaj / 7 din /
+15 din / month ke jo check nahi hue saamne lao; bill check + bill post ek hi click mein".
+* Data: billChecks/<pos-id> {at, by, n, billNo, date, pid, amt, ts} — rules 2.73 (read malik / full / purchase mulazim; likhe wahi, by = apni uid;
+  delete malik ya wohi). cloud.js listenBillChecks / setBillCheck(id, on, info) (off = deleteDoc).
+* bill-check.js v1.0 (lazy import): bcOpen() full dialog "✅ Bill check" — 🔍 search (supplier / bill#) + pill (data-mn-sheet) · ⋮ seg
+  "Kaun se bill" (Baqi N / Check hue N) · "Kitne din ke" (Aaj · 7 din · 15 din · Mahina · Sab; localStorage sam-bc-d, default 7 din).
+  Row: ☐ tick (sirf check) · naam + Rs · Bill# · tareekh · 📌 Posted / Khula · "✓ Check + 📌 Post" (posted ya pur.post band = "✓ Check");
+  Check hue tab: ✅ kis ne kab + ↩. Bill tap = showBill (Purchase bill khirki). bcTickHTML(id) = ☐ "Bill check kiya" / ✅ "Check kiya · naam waqt".
+* app.js: billChecks listener (bcStart session ke 2.2 s baad, reset par bcStopAll), bcTick() — khate ke POS bill card (posStatusHTML) + Purchase
+  bill khirki (big); Purchase screen chip "✅ N check baqi" (data-bc-screen, ⋮ pu.check) + POS Purchase tools "✅ Bill check" (pp.check).
+  "✓ Check + 📌 Post" = setBillCheck + sendPost("post", [ent]) (wahi PC post job). CAP pur.check (default on).
+* sw.js ASSETS mein bill-check.js. firestore-rules-2.73.html + .txt malik ko.
+* Tests t/sh/t122.mjs (stub122.js: billChecks + requestPost/watchPost + purchaseBill) — screen / khata card / staff+CAP — ALL OK; t121 regression OK.
+AI: nahi.
