@@ -3588,3 +3588,6 @@ block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.
 - Upar ka dashboard (mahine ki purchase / cash / credit / progress) HATA (malik: "zaroorat nahi, hide"); #summary mein sirf ✅ check + 🔗 milao chips (phone par ⋮). "📅 Mahina · Sab bill" patti bhi gayi (⋮ seg wahi). Search patla (main.pu-screen).
 - Har bill = patli line `.pu-card.pu-c` (naam · status chip · raqam · tareekh/waqt), tap = `.pu-x` khula (chips, tasveer, receipt, buttons) — `puOpen` Set. ~9–10 bill ek screen.
 - Buttons = chhote chips. POS bill (khula, aaj / malik) par "✏️ Edit" = seedha POS Purchase EDIT (`openKhataBill(id, "@pu")`); 💾 UPDATE ke baad `window.ntPpSaved` → khud wapas Purchase list (← bhi). AI nahi.
+
+## v2.130.1 (2026-10-27) — Purchase list: har bill = naam + floating chips (Daily Sale ke hero chips jaisa), upar ka gap band
+- Band line: naam upar, neeche side-scroll chips `.pu-k` (Raqam · POS bill · Haalat · Tareekh·waqt · 📷 · Note) — dy-c jaisa premium look; tap = pehle jaisa khula. Header/toolbar ka gap chhota (main.pu-screen). AI nahi.

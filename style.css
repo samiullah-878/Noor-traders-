@@ -6373,14 +6373,21 @@ html body main header #summary .puh-only .puh-c.bc-w{background:#fde68a;color:#7
 html body main.pu-screen .toolbar label.search input{height:36px!important;min-height:36px!important;font-size:14px!important;padding:0 10px 0 30px!important}
 html body main.pu-screen .toolbar{padding-top:4px;padding-bottom:4px;gap:6px}
 html body .pu-card.pu-c{padding:0!important;border-radius:12px!important;margin:0 0 5px!important;overflow:hidden}
-html body .pu-card.pu-c .pu-l1{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"nm amt" "st tm";align-items:center;column-gap:8px;row-gap:1px;padding:6px 10px;cursor:pointer}
-html body .pu-card.pu-c .pu-l1 .pu-nm{grid-area:nm;font-size:13.5px;font-weight:800;color:#13213f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-html body .pu-card.pu-c .pu-l1 .pu-amt{grid-area:amt;font-size:14px;font-weight:800;color:#166534;white-space:nowrap;margin:0}
-html body .pu-card.pu-c .pu-l1 .pu-tm{grid-area:tm;font-size:10.5px;color:#7a889e;text-align:right;white-space:nowrap}
-html body .pu-card.pu-c .pu-l1 .pu-s{grid-area:st;justify-self:start;font-style:normal;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;background:#eef1f7;color:#44566f;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
-html body .pu-card.pu-c .pu-l1 .pu-s.ok{background:#e7f7ee;color:#147548}html body .pu-card.pu-c .pu-l1 .pu-s.bad{background:#fdecec;color:#b42332}html body .pu-card.pu-c .pu-l1 .pu-s.wait{background:#fff7e0;color:#8a5a00}html body .pu-card.pu-c .pu-l1 .pu-s.cash{background:#e7f7ee;color:#147548}html body .pu-card.pu-c .pu-l1 .pu-s.warn{background:#fff7e0;color:#8a5a00}
-html body .pu-card.pu-c .pu-l1 .pu-s.ph{grid-area:st;justify-self:start;margin-left:0}html body .pu-card.pu-c .pu-l1 .pu-s+.pu-s.ph{display:none}
-html body .pu-card.pu-c .pu-l1 .pu-car{display:none}
+html body .pu-card.pu-c{background:linear-gradient(180deg,#fff,#f6f8fd)!important;border:1px solid #e1e7f3!important;box-shadow:0 1px 2px rgba(11,37,69,.04),0 8px 20px -14px rgba(11,37,69,.3)!important}
+html body .pu-card.pu-c .pu-l1{display:block;padding:7px 10px 8px;cursor:pointer}
+html body .pu-card.pu-c .pu-nmrow{display:flex;align-items:center;gap:8px}html body .pu-card.pu-c .pu-nm{flex:1 1 auto;min-width:0;font-size:13.5px;font-weight:800;color:#13213f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body .pu-card.pu-c .pu-car{flex:0 0 auto;font-style:normal;font-size:11px;color:#8a97ad;transition:transform .15s}html body .pu-card.pu-c.open .pu-car{transform:rotate(180deg)}
+html body .pu-card.pu-c .pu-fc{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;margin-top:5px;padding-bottom:1px}html body .pu-card.pu-c .pu-fc::-webkit-scrollbar{display:none}
+html body .pu-card.pu-c .pu-k{flex:0 0 auto;display:flex;flex-direction:column;justify-content:center;gap:0;min-height:36px;padding:3px 9px;border-radius:10px;background:#fff;border:1px solid #e3e8f1;box-shadow:0 1px 2px rgba(11,37,69,.05)}
+html body .pu-card.pu-c .pu-k small{font-size:9.5px;line-height:1.2;color:#7a889e;font-weight:700;white-space:nowrap;letter-spacing:.02em}html body .pu-card.pu-c .pu-k b{font-size:12.5px;line-height:1.25;color:#1a2d53;white-space:nowrap;font-weight:800}
+html body .pu-card.pu-c .pu-k.amt{background:#eefbf1;border-color:#9bd8ad}html body .pu-card.pu-c .pu-k.amt b{color:#166534;font-size:13.5px}
+html body .pu-card.pu-c .pu-k.ok,html body .pu-card.pu-c .pu-k.cash{background:#e7f7ee;border-color:#bfe8d0}html body .pu-card.pu-c .pu-k.ok b,html body .pu-card.pu-c .pu-k.cash b{color:#147548}
+html body .pu-card.pu-c .pu-k.wait,html body .pu-card.pu-c .pu-k.warn{background:#fff7e0;border-color:#f1dea6}html body .pu-card.pu-c .pu-k.wait b,html body .pu-card.pu-c .pu-k.warn b{color:#8a5a00}
+html body .pu-card.pu-c .pu-k.bad{background:#fdecec;border-color:#f6c1c1}html body .pu-card.pu-c .pu-k.bad b{color:#b42332}
+html body .pu-card.pu-c .pu-k.pos{background:#eef3ff;border-color:#c7d4f5}html body .pu-card.pu-c .pu-k.pos b{color:#2c4a85}
+html body .pu-card.pu-c .pu-k.credit{background:#f3f0ff;border-color:#d8ccff}html body .pu-card.pu-c .pu-k.credit b{color:#4f46e5}
+html body .pu-card.pu-c .pu-k.nt b{font-weight:600;color:#44566f}
+html body main.pu-screen>header{padding-bottom:4px!important}html body main.pu-screen .workspace{padding-top:0!important}html body main.pu-screen .toolbar{margin-top:2px!important}
 html body .pu-card.pu-c .pu-x{display:none;padding:4px 10px 8px;border-top:1px dashed #e3e8f1}html body .pu-card.pu-c.open .pu-x{display:block}
 html body .pu-card.pu-c.open .pu-l1{background:#f6f8fc}
 html body .pu-card.pu-c .pu-chips{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 4px}html body .pu-card.pu-c .pu-chip{font-size:10.5px;padding:2px 8px;border-radius:999px}
