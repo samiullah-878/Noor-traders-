@@ -1263,10 +1263,33 @@ async function ledgerPush(pool) {
   const byPos = new Map(rows.map(r => [Number(r.PartyID), Math.round((Number(r.Bal) || 0) * 100)]));
   const m = {}; let n = 0;
   for (const [k, l] of links) { if (!k.startsWith('party:') || !l || !l.posPartyId) continue; const appId = k.slice(6); if (!appId || /[.\/]/.test(appId) || !byPos.has(Number(l.posPartyId))) continue; m[appId] = byPos.get(Number(l.posPartyId)); n++; }
-  const j = JSON.stringify(m); if (j === ledgerLast) return; ledgerLast = j;
-  if (DRY) { log(`(dry) POS ledger: ${n} khate`); return; }
-  await biz.collection('blueAccess').doc('posLedger').set({ m, at: Date.now(), n, pc: os.hostname() });
-  log(`⚖️ POS ledger likha: ${n} khate`);
+  const j = JSON.stringify(m);
+  if (j !== ledgerLast) { ledgerLast = j; if (!DRY) { await biz.collection('blueAccess').doc('posLedger').set({ m, at: Date.now(), n, pc: os.hostname() }); log(`⚖️ POS ledger likha: ${n} khate`); } }
+  try { await linesPush(pool); } catch (e) { log('🔍 POS lines masla: ' + e.message); }
+}
+// 2026-10-26 (b): 🔍 FARQ KI ENTRIES — har jude khate ki POS ledger LINES (LINES_FROM se) posLines/<appId> {j: JSON [[date, code, docType, docNo, dr, cr, desc, st]…], pre: paisa
+//   (LINES_FROM se pehle ka jor = app ka "Sabqa baqaya"), n, at} — sirf jo khata badla (hash). App click par 1 read = foran. Cancel (VoucherStatusID 3) shamil nahi.
+const LINES_FROM = '2026-09-15';   // sync.js START_DATE jaisa (app mein isi din se POS purchase alag entries hain)
+const linesHash = new Map();
+async function linesPush(pool) {
+  const rows = (await pool.request().input('from', sql.Date, LINES_FROM).query(`SELECT p.PartyID, v.VoucherCode, v.VoucherDate, v.DocumentType, v.DocumentNo, v.VoucherRemarks, v.VoucherStatusID, vd.Debit, vd.Credit, vd.Description
+    FROM dbo.VoucherDetail vd JOIN dbo.Voucher v ON v.VoucherID = vd.VoucherID JOIN dbo.Party p ON p.AccountID = vd.AccountID
+    WHERE v.VoucherDate >= @from AND ISNULL(v.VoucherStatusID, 1) <> 3 ORDER BY v.VoucherDate, v.VoucherID`)).recordset;
+  const pre = (await pool.request().input('from', sql.Date, LINES_FROM).query(`SELECT p.PartyID, SUM(ISNULL(vd.Debit,0) - ISNULL(vd.Credit,0)) AS Bal
+    FROM dbo.VoucherDetail vd JOIN dbo.Voucher v ON v.VoucherID = vd.VoucherID JOIN dbo.Party p ON p.AccountID = vd.AccountID
+    WHERE v.VoucherDate < @from AND ISNULL(v.VoucherStatusID, 1) <> 3 GROUP BY p.PartyID`)).recordset;
+  const preBy = new Map(pre.map(r => [Number(r.PartyID), Math.round((Number(r.Bal) || 0) * 100)]));
+  const byPos = new Map();
+  for (const r of rows) { const k = Number(r.PartyID); if (!byPos.has(k)) byPos.set(k, []); byPos.get(k).push([ymd(r.VoucherDate), String(r.VoucherCode || ''), String(r.DocumentType || ''), r.DocumentNo == null ? '' : String(r.DocumentNo), Math.round((Number(r.Debit) || 0) * 100), Math.round((Number(r.Credit) || 0) * 100), String(r.Description || r.VoucherRemarks || '').trim().slice(0, 60), Number(r.VoucherStatusID) || 1]); }
+  let w = 0;
+  for (const [k, l] of links) {
+    if (!k.startsWith('party:') || !l || !l.posPartyId) continue; const appId = k.slice(6), pid = Number(l.posPartyId); if (!appId || /[.\/]/.test(appId)) continue;
+    const L = (byPos.get(pid) || []).slice(-2000), doc = { j: JSON.stringify(L), pre: preBy.get(pid) || 0, n: L.length };
+    const h = hash(doc); if (linesHash.get(appId) === h) continue; linesHash.set(appId, h);
+    if (DRY) continue;
+    await biz.collection('posLines').doc(appId).set({ ...doc, at: Date.now() }); w++;
+  }
+  if (w) log(`🔍 POS lines likhi: ${w} khate`);
 }
 async function once() {
   if (fs.existsSync(path.join(DIR, 'khata-sync.pause'))) { log('Ruka hua (khata-sync.pause file mojood hai)'); return; }

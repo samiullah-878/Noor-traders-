@@ -3507,3 +3507,13 @@ Malik: "jitne bhi khate hain, POS ka ledger aur humara khata same aa raha hai ya
   Farq hadd Rs 1 (TOL 100 paisa). CAP kh.posmilan (full list).
 * Tests t/sh/t124.mjs (stub124: posLed) — khata line (barabar / farq / nahi), screen, tabs, tap, ledger nahi, CAP band — ALL OK. AI nahi.
 * Ghalti: screen button + row dono par data-pm-open tha → row tap screen dobara khol deta; button ab data-pm-screen.
+
+==================== v2.125.0 + RULES 2.75 + PC pos-khata-sync (2026-10-26, manifest 2026-10-26.5) — 🔍 FARQ KI ENTRIES ====================
+Malik: "kaise pata chale kaunsi entry ka farq hai, kaunsi app mein hai POS mein nahi — click karte hi foran, sab khaton ka auto".
+* PC linesPush() (ledgerPush ke saath har 15 min): SQL VoucherDetail ⋈ Voucher ⋈ Party, VoucherDate >= LINES_FROM (2026-09-15), status 3 nahi →
+  posLines/<appId> {j: JSON lines (max 2000), pre: pehle ka jor (paisa), n, at}; per-party hash, sirf badle likhe. Rules 2.75: posLines get malik / full.
+* cloud.getPosLines(id). pos-milan.js v1.1: pmDiff(p, doc) — app entries (model skipsBalance / cashPaysBill, lena + dena −) vs POS lines:
+  (1) posCode == VoucherCode (2) pos-<id> == PO docNo (3) raqam ±Rs 1 + tareekh ±3 din; pos-opening-* / "Sabqa baqaya" = pre. Natija: App mein hai
+  POS nahi · POS mein hai app nahi · raqam farq (+ sabqa/opening), upar "✓ in se poora farq banta hai" ya ⚠ baqi. Button "🔍 Farq dhoondo" khate ki
+  pm-line + milan row (data-pm-diff, stopPropagation); ‹ POS milan wapas (data-pm-back).
+* Tests t/sh/t125.mjs (stub125 getPosLines) — khata button, 1 read, teeno hisse, jor ✓, wapas, row button — ALL OK. AI nahi.

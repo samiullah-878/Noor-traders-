@@ -6213,3 +6213,18 @@ html body #dialogBody .pm-r .pm-v{display:flex;flex-direction:column;min-width:0
 html body #dialogBody .pm-r .pm-d em{font-style:normal;font-weight:800;font-size:12px;white-space:nowrap;padding:3px 8px;border-radius:999px}html body #dialogBody .pm-r .pm-d em.b{background:#fff0f0;color:#b32936}html body #dialogBody .pm-r .pm-d em.o{background:#eefbf1;color:#166534}html body #dialogBody .pm-r .pm-d em.n{background:#f2f4f9;color:#44566f;font-size:10.5px}
 @media(max-width:480px){html body #dialogBody .pm-r{grid-template-columns:minmax(0,1fr) auto}html body #dialogBody .pm-r .pm-n{grid-column:1}html body #dialogBody .pm-r .pm-d{grid-column:2;grid-row:1}html body #dialogBody .pm-r .pm-v{grid-column:1/-1;flex-direction:row;gap:6px;align-items:baseline}html body #dialogBody .pm-r .pm-v small{min-width:46px}}
 html.dk body #dialogBody .pm-r{background:#fff!important;color:#1a2d53!important}
+/* v2.125.0: 🔍 farq ki entries */
+html body .pm-dbtn{display:inline-flex;align-items:center;margin-left:8px;padding:3px 10px;border-radius:999px;background:#fff;color:#b32936;border:1px solid #f1c4c4;font-size:11.5px;font-weight:800;font-style:normal;cursor:pointer;min-height:0;line-height:1.3}
+html body #summary .pm-line{white-space:normal}html body #summary .pm-line .pm-dbtn{margin-left:6px}
+html body #dialogBody .pm-r .pm-d{display:flex;flex-direction:column;align-items:flex-end;gap:4px}html body #dialogBody .pm-r .pm-d .pm-dbtn{margin:0}
+html body #dialogBody .pm-back{align-self:flex-start;min-height:34px;padding:0 12px;border-radius:999px;background:#f2f4f9!important;color:#1a2d53!important;border:1px solid #d5dce9!important;font-weight:700;font-size:12.5px}
+html body #dialogBody .pm-sum .pm-okl{color:#166534;font-weight:700}html body #dialogBody .pm-sum .pm-badl{color:#b32936;font-weight:700}
+html body #dialogBody .pm-sec{background:#fff;border:1px solid #e1e6f0;border-radius:14px;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+html body #dialogBody .pm-sec .pm-sh{display:flex;justify-content:space-between;align-items:center;font-size:13px;color:#1a2d53;padding-bottom:4px;border-bottom:1px solid #eef1f7}html body #dialogBody .pm-sec .pm-sh i{font-style:normal;font-weight:800;background:#eef1f7;border-radius:999px;padding:1px 9px;font-size:12px}
+html body #dialogBody .pm-sec.a .pm-sh i{background:#fff3e0;color:#8a4b00}html body #dialogBody .pm-sec.p .pm-sh i{background:#e8edff;color:#254076}html body #dialogBody .pm-sec.d .pm-sh i{background:#fff0f0;color:#b32936}
+html body #dialogBody .pm-none{margin:0;color:#8a97ad;font-size:12px}
+html body #dialogBody .pm-e{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:8px;align-items:center;padding:4px 0;border-bottom:1px dashed #eef1f7}html body #dialogBody .pm-e:last-child{border-bottom:0}
+html body #dialogBody .pm-e .pm-ed{font-size:11px;color:#7a889e;font-weight:700}html body #dialogBody .pm-e .pm-et{display:flex;flex-direction:column;min-width:0}html body #dialogBody .pm-e .pm-et b{font-size:12.5px;color:#1a2d53;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}html body #dialogBody .pm-e .pm-et small{font-size:11px;color:#7a889e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body #dialogBody .pm-e>b{font-size:12.5px;white-space:nowrap}html body #dialogBody .pm-e>b.l{color:#166534}html body #dialogBody .pm-e>b.d{color:#b32936}
+html body #dialogBody .pm-e2{border-bottom:1px solid #eef1f7;padding-bottom:4px}html body #dialogBody .pm-e2 .pm-fq{display:block;text-align:right;color:#b32936;font-weight:800;font-size:11.5px}
+html.dk body #dialogBody .pm-sec{background:#fff}
