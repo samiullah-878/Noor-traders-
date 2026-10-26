@@ -6333,3 +6333,7 @@ block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.
 
 ## v2.127.2 (2026-10-27) — Daily: Sale ka haath wala form bhi ⋮ mein (malik: "Sale wala bhi three dot ke andar, auto sale ke saath")
 - Sale khane ka poora form (account / raqam / note / Save / pictures / AI milao) phone par ⋮ → "✍️ Sale haath se likhein" (data-mn-box d.saleform). Khane mein sirf entries + total. AI nahi.
+
+## v2.127.3 (2026-10-27) — Khata list: do pattiyan hata di (malik: "khate mazeed upar dikhein")
+- "👥 Sab accounts · 📅 Sab · ↕ Bara baqaya · ⋮ se badlein" patti (khFlt) gayab — chunna ⋮ se hi (wahi chips).
+- "Daily Closing Cash Khata" wali qatar khata list se gayab — Closing Cash screen sidebar / ⋮ se khulti hai. AI nahi.
