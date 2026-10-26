@@ -3542,3 +3542,10 @@ style.css @media 700: header padding-bottom 5, #syncStatus hidden (is screen par
 (strong 16px · chip order 1 · small order 2 ellipsis), inner div padding 0; workspace padding-top 3; search input 36px. POS chip 10px; .big =
 block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.5px #1f2937, h3 border-bottom, entries border-bottom #374151
 (dk: halki). Phone 393: 11 entries. AI nahi.
+
+## v2.127.0 (2026-10-27) — 📒 Daily Sale upar ki patti (malik ka hukum)
+- Upar hero: 3 patli lines — Kal ka change / Aaj ka change / Closing cash (gina + "hona Rs X" + farq ✓/⚠). Purani 2 bari cards + chips ki qatar gayab (phone + PC dono).
+- 🖥 "Auto ON — POS ki sale" ka dabba phone par ⋮ mein (data-mn-box d.auto); 📅 Tareekh + 📷 Pictures bhi ⋮ mein (dy.tools).
+- 🏦 HBL column Daily sheet se hata (HBL screen alag wahi hai).
+- PC par Sale / Wasooli / Akhrajat columns thore chaure (1.25fr vs 1fr).
+- AI nahi. Rules nahi badle (2.75 hi publish karein).

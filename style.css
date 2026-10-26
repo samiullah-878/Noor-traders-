@@ -4532,7 +4532,7 @@ html.lt body footer#actions:not(.day-acts) button{color:#fff!important}
    screen ke andar screen chips chhupe, upar baayein se khulein · upar ke bare card aadhe · AI agent upar se hatao").
    Sirf phone (<1100px). html[data-hero="big"] = purane bare card (🔠 Apni marzi) · html[data-nav="all"] = screen chips hamesha.
    ===================================================================================================== */
-@media (min-width:1100px){html body #navBtn{display:none!important}html body #summary .dy-strip{display:none!important}}
+@media (min-width:1100px){html body #navBtn{display:none!important}html body #summary .dy-strip:not(.dy-v){display:none!important}}
 @media (max-width:1099.98px){
   /* ---- ☰ screen chips: band, ☰ se khulte · ek hi line ---- */
   html:not(.nav-open):not([data-nav="all"]) body main>header .app-nav{display:none!important}
@@ -6316,3 +6316,23 @@ html body #summary:has([data-pm-line]){min-height:0!important;align-items:center
 html body #summary:has([data-pm-line]) [data-pm-line]:not(:has(.big)){order:1}
 html body #summary:has([data-pm-line]) small{order:2;flex:1 1 80px}
 }
+
+/* ===== v2.127.0: 📒 Daily Sale — upar 3 lines (Kal ka change / Aaj ka change / Closing cash), Auto sale ⋮ mein, HBL column gayab, Sale·Wasooli·Akhrajat thore chaure ===== */
+html body .dy-strip.dy-v{display:flex!important;flex-direction:column;gap:4px;overflow:visible;padding:0}
+html body .dy-strip.dy-v .dy-r{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 11px;border-radius:10px;background:#fff;color:#13213f;border:1px solid #e3e8f1}
+html body .dy-strip.dy-v .dy-r small{font-size:11.5px;color:#5b6b86;font-weight:700}html body .dy-strip.dy-v .dy-r b{font-size:14px;font-weight:800;white-space:nowrap}html body .dy-strip.dy-v .dy-r b i{font-style:normal;font-size:11px;font-weight:700;margin-left:4px}
+html body .dy-strip.dy-v .dy-r.ok{background:#eefbf1;border-color:#9bd8ad}html body .dy-strip.dy-v .dy-r.ok b i{color:#166534}
+html body .dy-strip.dy-v .dy-r.bad{background:#fff0f0;border-color:#f1c4c4}html body .dy-strip.dy-v .dy-r.bad b i{color:#b32936}
+html body .dy-strip.dy-v .dy-r.wait{background:#fffdf2;border-color:#f1dc9a}html body .dy-strip.dy-v .dy-r.wait b i{color:#8a4b00}
+html body .dy-strip.dy-v .dy-tools{display:flex;gap:6px;flex-wrap:wrap}
+html body .dy-strip.dy-v .dy-c.warn{align-self:flex-start}
+html body main header #summary.summary:has(.dy-v){display:block!important;padding:6px 8px!important}html body main header #summary:has(.dy-v)>:not(.dy-strip){display:none!important}html body main header #summary:has(.dy-v)>button.day-camera{display:none!important}
+html body .dy-strip.dy-v .dy-r small u{text-decoration:none;font-weight:600;opacity:.8}
+@media(min-width:701px){html body main header #summary.summary:has(.dy-v){padding:8px 12px!important}
+ html body .dy-strip.dy-v{display:grid!important;grid-template-columns:minmax(300px,440px) auto;grid-auto-rows:min-content;column-gap:14px;row-gap:4px;align-items:start}
+ html body .dy-strip.dy-v .dy-r{grid-column:1}html body .dy-strip.dy-v .dy-c.warn,html body .dy-strip.dy-v .dy-tools{grid-column:2}html body .dy-strip.dy-v .dy-c.warn{grid-row:1}html body .dy-strip.dy-v .dy-tools{grid-row:2/span 2;align-self:start}
+ html body .dy-strip.dy-v .dy-c{position:relative;display:flex;flex-direction:column;justify-content:center;gap:0;min-height:40px;padding:4px 11px;border-radius:10px;border:1px solid #e3e8f1;background:#fff;color:#13213f;font:inherit;cursor:pointer;flex:0 0 auto}
+ html body .dy-strip.dy-v .dy-c small{font-size:10px;line-height:1.2;color:#5d6b88;font-weight:700;white-space:nowrap}html body .dy-strip.dy-v .dy-c b{font-size:13px;line-height:1.2;white-space:nowrap}
+ html body main header #summary .dy-strip.dy-v button.dy-c.warn{justify-self:start;width:auto;background:#fdecec!important;border-color:#f6c1c1!important;color:#b42332!important}
+ html body .dy-strip.dy-v .dy-date input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;margin:0;padding:0;border:0}}
+@media(min-width:701px){html body .cash-sheet{grid-template-columns:1.25fr 1.25fr 1.25fr 1fr 1fr 1fr!important;min-width:0!important}}
