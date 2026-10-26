@@ -3557,3 +3557,6 @@ block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.
 - 🏦 HBL khana Daily se hata (HBL screen alag wahi; footer ka 🏦 HBL button HBL screen kholta hai).
 - Sale / Wasooli / Akhrajat khane chaure (PC 1.2fr 1.2fr 1.2fr 1fr; phone 4 khane).
 - Neeche ki patti pehle se hi ⋮ mein thi (shell FT_MOVE 'daily'). AI nahi. Rules nahi badle.
+
+## v2.127.2 (2026-10-27) — Daily: Sale ka haath wala form bhi ⋮ mein (malik: "Sale wala bhi three dot ke andar, auto sale ke saath")
+- Sale khane ka poora form (account / raqam / note / Save / pictures / AI milao) phone par ⋮ → "✍️ Sale haath se likhein" (data-mn-box d.saleform). Khane mein sirf entries + total. AI nahi.
