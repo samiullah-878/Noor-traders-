@@ -5,7 +5,7 @@
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => 'Rs ' + (Math.abs(Number(n) || 0) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
-import { skipsBalance, cashPaysBill } from './model.js?v=2.125.0';
+import { skipsBalance, cashPaysBill } from './model.js?v=2.125.1';
 const TOL = 100;   // paisa — Rs 1 tak farq = theek (POS 2 decimal rounding)
 let C = null, st = { f: 'farq', q: '' };
 export function pmSetup(ctx) { C = ctx; }   // ctx: parties, entries, balance, ledger, can, owner, notice, modal, openAccount
@@ -17,12 +17,13 @@ export function pmRow(p) {   // {app, pos, farq, state: 'ok'|'farq'|'none'}
   if (pos == null) return { app, pos: null, farq: 0, state: 'none' };
   const farq = app - pos; return { app, pos, farq, state: Math.abs(farq) <= TOL ? 'ok' : 'farq' };
 }
-export function pmLineHTML(p) {   // khate ki screen ke upar
+let pmOpenLine = '';   // v1.2: chhoti chip, tap = bara (malik: "chips small, click karein to bara")
+export function pmLineHTML(p) {   // khate ki screen ke upar — chhoti chip; tap = poori baat + 🔍 Farq dhoondo
   if (!C || !p || p.bank || !C.can('kh.posmilan') || !led()) return '';
-  const r = pmRow(p);
-  if (r.state === 'none') return `<div class="pm-line none">🖥 POS mein yeh khata nahi juda</div>`;
-  if (r.state === 'ok') return `<div class="pm-line ok">🖥 POS baqaya ${money(r.pos)} ${sideTxt(r.pos)} · ✓ barabar</div>`;
-  return `<div class="pm-line bad">🖥 POS baqaya <b>${money(r.pos)} ${sideTxt(r.pos)}</b> · ⚠ farq <b>${money(r.farq)}</b> (app ${money(r.app)} ${sideTxt(r.app)})<button type="button" class="pm-dbtn" data-pm-diff="${esc(p.id)}">🔍 Farq dhoondo</button></div>`;
+  const r = pmRow(p), big = pmOpenLine === p.id;
+  if (r.state === 'none') return `<button type="button" class="pm-line none${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ${big ? 'mein yeh khata nahi juda' : '—'}</button>`;
+  if (r.state === 'ok') return `<button type="button" class="pm-line ok${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ✓${big ? ` baqaya ${money(r.pos)} ${sideTxt(r.pos)} · barabar` : ''}</button>`;
+  return `<span class="pm-lw"><button type="button" class="pm-line bad${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ⚠ ${money(r.farq)}${big ? ` farq · POS <b>${money(r.pos)} ${sideTxt(r.pos)}</b> · app ${money(r.app)} ${sideTxt(r.app)}` : ''}</button>${big ? `<button type="button" class="pm-dbtn" data-pm-diff="${esc(p.id)}">🔍 Farq dhoondo</button>` : ''}</span>`;
 }
 export function pmCount() { if (!C || !led()) return 0; let n = 0; for (const p of C.parties()) { if (p.bank) continue; if (pmRow(p).state === 'farq') n++; } return n; }
 const agoTxt = t => { if (!t) return ''; const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'abhi' : m < 60 ? m + ' min pehle' : m < 1440 ? Math.round(m / 60) + ' ghante pehle' : Math.round(m / 1440) + ' din pehle'; };
@@ -113,7 +114,8 @@ export async function pmDiffOpen(id) {
 document.addEventListener('input', e => { const t = e.target; if (!t?.dataset?.pmQ) return; st.q = t.value; pmPaint(); });
 document.addEventListener('click', e => {
   if (!C) return;
-  const b = e.target.closest?.('[data-pm-f],[data-pm-open],[data-pm-diff],[data-pm-back]'); if (!b) return;
+  const b = e.target.closest?.('[data-pm-f],[data-pm-open],[data-pm-diff],[data-pm-back],[data-pm-tog]'); if (!b) return;
+  if (b.dataset.pmTog) { pmOpenLine = pmOpenLine === b.dataset.pmTog ? '' : b.dataset.pmTog; const w = document.querySelector('#summary [data-pm-line]'); if (w) { const p = C.parties().find(x => x.id === b.dataset.pmTog); if (p) w.innerHTML = pmLineHTML(p); } return; }
   if (b.dataset.pmDiff) { e.stopPropagation(); e.preventDefault(); pmDiffOpen(b.dataset.pmDiff); return; }
   if (b.dataset.pmBack) { pmOpen(); return; }
   if (b.dataset.pmF) { st.f = b.dataset.pmF; pmPaint(); return; }

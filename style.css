@@ -6228,3 +6228,12 @@ html body #dialogBody .pm-e .pm-ed{font-size:11px;color:#7a889e;font-weight:700}
 html body #dialogBody .pm-e>b{font-size:12.5px;white-space:nowrap}html body #dialogBody .pm-e>b.l{color:#166534}html body #dialogBody .pm-e>b.d{color:#b32936}
 html body #dialogBody .pm-e2{border-bottom:1px solid #eef1f7;padding-bottom:4px}html body #dialogBody .pm-e2 .pm-fq{display:block;text-align:right;color:#b32936;font-weight:800;font-size:11.5px}
 html.dk body #dialogBody .pm-sec{background:#fff}
+/* v2.125.1: khate ke upar POS chip chhoti, tap = bari */
+html body #summary [data-pm-line]{display:block;margin-top:6px}
+html body #summary .pm-lw{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:100%}
+html body #summary button.pm-line{display:inline-flex;align-items:center;gap:4px;margin:0;padding:3px 10px;min-height:0;height:auto;border:0;border-radius:999px;font-size:11.5px;font-weight:800;line-height:1.3;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;cursor:pointer;box-shadow:none}
+html body #summary button.pm-line.big{white-space:normal;text-align:left;font-size:12px;padding:5px 12px}
+html body #summary button.pm-line.ok{background:rgba(30,158,74,.16)!important;color:#9ff0b8!important}html body #summary button.pm-line.bad{background:rgba(214,69,69,.22)!important;color:#ffb4b4!important}html body #summary button.pm-line.none{background:rgba(255,255,255,.1)!important;color:#c9d2e6!important}
+html body #summary button.pm-line b{color:#fff}
+html.lt body #summary button.pm-line.ok{background:#eefbf1!important;color:#166534!important}html.lt body #summary button.pm-line.bad{background:#fff0f0!important;color:#b32936!important}html.lt body #summary button.pm-line.none{background:#f2f4f9!important;color:#44566f!important}html.lt body #summary button.pm-line b{color:inherit}
+html body #summary .pm-lw .pm-dbtn{margin:0;background:#fff!important;color:#b32936!important;border:1px solid #f1c4c4!important;min-height:0;height:auto;padding:3px 10px;font-size:11.5px;border-radius:999px}

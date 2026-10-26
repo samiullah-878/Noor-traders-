@@ -3517,3 +3517,8 @@ Malik: "kaise pata chale kaunsi entry ka farq hai, kaunsi app mein hai POS mein 
   POS nahi · POS mein hai app nahi · raqam farq (+ sabqa/opening), upar "✓ in se poora farq banta hai" ya ⚠ baqi. Button "🔍 Farq dhoondo" khate ki
   pm-line + milan row (data-pm-diff, stopPropagation); ‹ POS milan wapas (data-pm-back).
 * Tests t/sh/t125.mjs (stub125 getPosLines) — khata button, 1 read, teeno hisse, jor ✓, wapas, row button — ALL OK. AI nahi.
+
+=== v2.125.1 (2026-10-27) — khate ke upar POS chip CHHOTI, tap = bari ===
+Malik (bilal alflah screenshot: pm-line summary ke doosre card mein bara gol dabba ban gaya): "ye upar wale chips small size mein, click karein to bara".
+pm-line ab pehle card ke andar (balance ke neeche), button: "🖥 POS ✓" / "🖥 POS ⚠ Rs X" / "🖥 POS —"; tap (data-pm-tog, pmOpenLine) = poori baat
+(POS baqaya · app) + 🔍 Farq dhoondo; dobara tap = chhoti. t124 / t125 update — ALL OK.
