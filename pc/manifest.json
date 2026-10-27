@@ -1,5 +1,5 @@
 {
- "version": "2026-10-27.7",
+ "version": "2026-10-27.8",
  "note": "📦 pk-report v1.1: SAB branches (NOOR TRADERS + godam) — pkReport-<branch>-<k>. ⚖️ pos-khata-sync: BARABAR KARO (milanJobs app/pos — chuni hui purani entries / vouchers doosri taraf). 📦 pk-report: Godam 2 packet report (3 mahine, barcode-war, sirf parhti) → posStats/pkReport. 🔐 rules-publish (malik ne 27 Oct OK kiya): Firestore rules GitHub se khud publish → blueAccess/rulesPub. 🔍 pos-khata-sync: har 15 min har jude khate ki POS ledger LINES posLines/<appId> (sirf badle) — app mein \"Farq dhoondo\" foran. ⚖️ posLedger, 🔒 khata band, dabbe wali rasid pehle se.",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -78,7 +78,7 @@
   "entry-photo.js": "bb214468caa9e4bf38b1b8eebfe5268f300aec41d42c1d526ff957828bbac005",
   "rules-publish.js": "3f3630caa099c1a4b2de91bdb66fa44c05c71233d73fa8ff8b71ccf780d0b71b",
   "rules-auto.bat": "17d6194ac73feab9151f7f8ad6b1ac206974958890f93b3eed1dded7baa32ae7",
-  "pk-report.js": "40a16b67e081be333d3266c32f072acfe55fa54e35d0819c1d2d1792d2586dae",
+  "pk-report.js": "fa157f55ee8b6f8f8917e2b5f2331d55d0fed9f33e8d72e90de5a3cfcdbcfba7",
   "pk-auto.bat": "f854ae6e648e13b26c7d771126627c0efbb15cfc8a1fd8b10132f920c9c276b6"
  },
  "services": [

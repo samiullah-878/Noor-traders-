@@ -3611,3 +3611,6 @@ block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.
 
 ## v2.133.2 (2026-10-27) — 📦 Packet report: "Godam 2 ke items" filter default (malik: "jo items Godam 2 mein hain un ka data NOOR TRADERS mein chahiye")
 - PC pk-report v1.2: item.st = {branchId: stock} (ItemBranchRate). App: scope chip ⋮ "📦 Godam 2 ke items" (default — Godam 2 mein stock > 0 YA 3 mahine mein Godam 2 se bika) / "Sab items"; branch NOOR TRADERS default. Purani report (v<3) ho to PC foran nayi. AI nahi.
+
+## v2.133.3 (2026-10-27) — 📦 Packet report: Aaj / Kal / tareekh (malik: "date wise aaj kal ka option")
+- PC pk-report v1.3: mahine ke saath aakhri 14 din ke roz ke bucket m["YYYY-MM-DD"] (meta.days, dayFrom; v4 → purani report foran nayi). App: 📅 seg mein Aaj · Kal chips + 📆 tareekh (aakhri 14 din) ⋮ mein; rowsOf st.m din bhi. AI nahi.

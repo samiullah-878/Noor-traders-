@@ -1,5 +1,5 @@
 // =========================================================
-//  pk-report.js  v1.2 (2026-10-27: item.st = har branch ka stock — app 'Godam 2 ke items' filter) · v1.1 (2026-10-27: SAB branches — NOOR TRADERS dukan + har godam; docs pkReport-<branchId>-<k>, meta.branches) · v1.0 (2026-10-27) — 📦 PACKET REPORT (malik: "poore 3 mahine ka Godam 2 ka barcode ke saath packets wala data —
+//  pk-report.js  v1.3 (2026-10-27: aakhri 14 din roz ke bucket m['YYYY-MM-DD'] — app Aaj / Kal / tareekh) · v1.2 (2026-10-27: item.st = har branch ka stock — app 'Godam 2 ke items' filter) · v1.1 (2026-10-27: SAB branches — NOOR TRADERS dukan + har godam; docs pkReport-<branchId>-<k>, meta.branches) · v1.0 (2026-10-27) — 📦 PACKET REPORT (malik: "poore 3 mahine ka Godam 2 ka barcode ke saath packets wala data —
 //  kitne packet bike, sub-barcode + barcode, 1 packet ke hisaab se, jo scan hue")
 //
 //  SIRF PARHTI hai (POS mein kuch nahi likhti). Har ghante (aur app ke "🔄 Taza karo" = posStats/pkReq par 10 min ke andar):
@@ -24,7 +24,7 @@ if (!getApps().length) initializeApp({ credential: cert(require(path.join(__dirn
 const db = getFirestore(), col = db.collection('businesses').doc('noor-traders').collection('posStats');
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const p2 = n => String(n).padStart(2, '0'), r3 = n => Math.round((Number(n) || 0) * 1000) / 1000;
-const MONTHS_BACK = 2, CHUNK = 250, EVERY = 60 * 60000, EPS = 1e-6;
+const MONTHS_BACK = 2, DAYS = 14, CHUNK = 250, EVERY = 60 * 60000, EPS = 1e-6;
 
 async function branchMap(pool) {   // sync-stock.js jaisa: branch table + naam ka column khud dhoondo
   const t = await pool.request().query(`SELECT TOP 1 c.TABLE_NAME AS T, n.COLUMN_NAME AS N FROM INFORMATION_SCHEMA.COLUMNS c
@@ -44,6 +44,7 @@ function monthsOf(now = new Date()) { const out = []; for (let k = MONTHS_BACK; 
 
 async function build(pool, reqAt) {
   const now = new Date(), months = monthsOf(now), from = new Date(now.getFullYear(), now.getMonth() - MONTHS_BACK, 1);
+  const dayFrom = (() => { const d = new Date(now); d.setDate(d.getDate() - (DAYS - 1)); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`; })();
   const bm = await branchMap(pool);
   const bids = Object.keys(bm).map(Number).filter(n => n > 0);   // v1.1: SAB branches (NOOR TRADERS dukan + har godam) — malik: "NOOR TRADERS ka data chahiye"
   if (!bids.length) throw Error('POS mein branch list nahi mili');
@@ -67,15 +68,18 @@ async function build(pool, reqAt) {
   for (const l of lines) {
     const it = byId.get(String(l.ItemID)); if (!it) continue;
     const d = new Date(l.SaleDate), mk = `${d.getFullYear()}-${p2(d.getMonth() + 1)}`; if (!months.includes(mk)) continue;
-    const e = get(it), M = e.m[mk] || (e.m[mk] = { pk: {}, main: 0, mainN: 0, loose: 0, looseN: 0, bills: 0 });
-    const bk = mk + '|' + e.i; if (!bills.has(bk)) bills.set(bk, new Set()); bills.get(bk).add(String(l.SaleID));
-    const q = Number(l.Qty) || 0, S = subBy.get(e.i) || [];
+    const dk = `${mk}-${p2(d.getDate())}`, keys = dk >= dayFrom ? [mk, dk] : [mk];   // v1.3: aakhri DAYS din roz ka bucket bhi (app: Aaj / Kal / tareekh)
+    const e = get(it), q = Number(l.Qty) || 0, S = subBy.get(e.i) || [];
     let hit = null, sc = false;
     if (scanCol && l.SC) { hit = S.find(x => x.b === String(l.SC)) || null; sc = !!hit; }
     if (!hit) hit = S.find(x => x.q > 0 && Math.abs(x.q - q) < EPS) || null;   // malik ka qaida: BILKUL barabar = 1 packet
-    if (hit) { const P = M.pk[hit.b] || (M.pk[hit.b] = { n: 0, q: 0, sc: 0 }); P.n += 1; P.q = r3(P.q + q); if (sc) P.sc += 1; }
-    else if (Math.abs(q - Math.round(q)) < EPS) { M.main = r3(M.main + q); M.mainN += 1; }
-    else { M.loose = r3(M.loose + q); M.looseN += 1; }
+    for (const k of keys) {
+      const M = e.m[k] || (e.m[k] = { pk: {}, main: 0, mainN: 0, loose: 0, looseN: 0, bills: 0 });
+      const bk = k + '|' + e.i; if (!bills.has(bk)) bills.set(bk, new Set()); bills.get(bk).add(String(l.SaleID));
+      if (hit) { const P = M.pk[hit.b] || (M.pk[hit.b] = { n: 0, q: 0, sc: 0 }); P.n += 1; P.q = r3(P.q + q); if (sc) P.sc += 1; }
+      else if (Math.abs(q - Math.round(q)) < EPS) { M.main = r3(M.main + q); M.mainN += 1; }
+      else { M.loose = r3(M.loose + q); M.looseN += 1; }
+    }
   }
   for (const [bk, set] of bills) { const [mk, id] = bk.split('|'); const e = out.get(id); if (e && e.m[mk]) e.m[mk].bills = set.size; }
   const all = [...out.values()].sort((a, b) => a.n.localeCompare(b.n));
@@ -86,14 +90,14 @@ async function build(pool, reqAt) {
   log(`  ${bm[gid]} (#${gid}): ${lines.length} lines · ${all.length} items`);
   }
   for (let k = 0; k < 12; k++) batch.delete(col.doc('pkReport-' + k));   // v1.0 wale purane chunk
-  batch.set(col.doc('pkReport'), { at: Date.now(), from: `${from.getFullYear()}-${p2(from.getMonth() + 1)}-01`, to: `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`, months: months.join(','), branches: brOut, scanCol, how: scanCol ? 'scan' : 'size', lines: linesAll.length, reqAt: reqAt || 0, v: 3 });
+  batch.set(col.doc('pkReport'), { at: Date.now(), from: `${from.getFullYear()}-${p2(from.getMonth() + 1)}-01`, to: `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`, months: months.join(','), branches: brOut, scanCol, how: scanCol ? 'scan' : 'size', lines: linesAll.length, days: DAYS, dayFrom, reqAt: reqAt || 0, v: 4 });
   await batch.commit();
   log(`✅ ${brOut.length} branches (${brOut.map(b => b.name).join(', ')}) · ${months.join(' ')} · scan: ${scanCol || 'nahi (packet-size se)'}`);
 }
 let lastRun = 0;
 const tick = ZINDA.guard(async () => {
   const meta = (await col.doc('pkReport').get()).data() || {}, req = (await col.doc('pkReq').get()).data() || {};
-  const reqAt = Number(req.at) || 0, due = Date.now() - (Number(meta.at) || 0) > EVERY || reqAt > (Number(meta.reqAt) || 0) || Number(meta.v || 0) < 3;   // v1.2: purani (sirf Godam 2) report ho to foran nayi
+  const reqAt = Number(req.at) || 0, due = Date.now() - (Number(meta.at) || 0) > EVERY || reqAt > (Number(meta.reqAt) || 0) || Number(meta.v || 0) < 4;   // v1.3: purani (sirf Godam 2) report ho to foran nayi
   if (!due || Date.now() - lastRun < 5 * 60000) return;
   lastRun = Date.now(); let pool;
   try { pool = await sql.connect(SQL_CONFIG); await build(pool, reqAt); }

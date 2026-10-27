@@ -1,4 +1,4 @@
-// pk-report.js — v1.2 (2026-10-27, app v2.133.2: 📦 'Godam 2 ke items' filter default — Godam 2 mein stock/bikri wale items ki NOOR TRADERS bikri) · v1.1 (2026-10-27, app v2.133.1: har branch — NOOR TRADERS default, godam chips) · v1.0 (2026-10-27, app v2.132.0) 📦 PACKET REPORT (malik: "poore 3 mahine ka Godam 2 ka barcode ke saath
+// pk-report.js — v1.3 (2026-10-27, app v2.133.3: 📅 Aaj / Kal / tareekh — roz ke bucket aakhri 14 din) · v1.2 (2026-10-27, app v2.133.2: 📦 'Godam 2 ke items' filter default — Godam 2 mein stock/bikri wale items ki NOOR TRADERS bikri) · v1.1 (2026-10-27, app v2.133.1: har branch — NOOR TRADERS default, godam chips) · v1.0 (2026-10-27, app v2.132.0) 📦 PACKET REPORT (malik: "poore 3 mahine ka Godam 2 ka barcode ke saath
 //   packets wala data — kitne packet bike, sub-barcode + barcode, 1 packet ke hisaab se, jo scan hue").
 // Data: PC pk-report.js (sirf parhti hai) → posStats/pkReport (meta) + pkReport-<k> (JSON text) — app sirf parhti hai; "🔄 Taza karo" = posStats/pkReq.
 // Screen: full khirki (Transfer/Stock tiles se) — ⋮: mahina (Aug · Sep · Oct · 3 mahine) · tarteeb; search; har item patli line
@@ -7,7 +7,9 @@ const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => { n = Number(n) || 0; return Math.abs(n - Math.round(n)) < 1e-6 ? new Intl.NumberFormat('en-PK').format(Math.round(n)) : String(Math.round(n * 1000) / 1000); };
 const MN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-const mLab = m => m === 'all' ? '3 mahine' : `${MN[+m.slice(5, 7) - 1]} ${m.slice(2, 4)}`;
+const p2 = n => String(n).padStart(2, '0'), dayKey = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+const TODAY = () => dayKey(new Date()), YEST = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayKey(d); };
+const mLab = m => m === 'all' ? '3 mahine' : m.length === 10 ? (m === TODAY() ? 'Aaj' : m === YEST() ? 'Kal' : `${+m.slice(8, 10)} ${MN[+m.slice(5, 7) - 1]}`) : `${MN[+m.slice(5, 7) - 1]} ${m.slice(2, 4)}`;
 let C = null, R = null, stop = null, st = { m: 'all', q: '', sort: 'pk', open: new Set(), busy: false, b: '', scope: 'g2' };   // v1.2 scope g2 = sirf wo items jo Godam 2 mein hain (stock ya bikri) — malik
 // v1.1: har branch alag (NOOR TRADERS dukan default — naam se; godam chips ⋮ mein) — malik: "yahan NOOR TRADERS ka data chahiye"
 const branches = () => Array.isArray(R?.meta?.branches) && R.meta.branches.length ? R.meta.branches : (R?.meta?.godam ? [{ id: '', name: R.meta.godam.name }] : []);
@@ -19,7 +21,7 @@ const g2Items = () => { const g = g2(); if (!g) return null; const S = new Set((
 export function pkSetup(ctx) { C = ctx; }
 const months = () => String(R?.meta?.months || '').split(',').filter(Boolean);
 function rowsOf() {   // har item: chune mahine ka jor
-  const ms = st.m === 'all' ? months() : [st.m], q = st.q.trim().toLowerCase();
+  const ms = st.m === 'all' ? months() : [st.m], q = st.q.trim().toLowerCase();   // st.m = 'YYYY-MM' ya 'YYYY-MM-DD' (v1.3 roz ka bucket)
   const out = [], G = st.scope === 'g2' ? g2Items() : null;
   for (const it of items()) {
     if (G && !G.has(it.i)) continue;
@@ -60,7 +62,8 @@ export function pkHTML() {
     <div class="pk-top"><label class="pk-q"><span>🔍</span><input type="search" data-pk-q="1" value="${esc(st.q)}" placeholder="Item / code / barcode" autocomplete="off"></label><button type="button" class="rk-pill" data-mn-sheet="1">${pill()} <i>${L.length}</i></button></div>
     ${branches().length > 1 ? seg('pk.b', 'Dukan / godam', '🏬', branches().map(b => [String(b.id), b.name])) : ''}
     ${g2() ? seg('pk.scope', 'Kaun se items', '📦', [['g2', 'Godam 2 ke items'], ['all', 'Sab items']]) : ''}
-    ${seg('pk.m', 'Mahina', '📅', [...months().map(m => [m, mLab(m)]), ['all', '3 mahine']])}
+    ${seg('pk.m', 'Mahina / din', '📅', [...(R.meta.days ? [[TODAY(), 'Aaj'], [YEST(), 'Kal']] : []), ...months().map(m => [m, mLab(m)]), ['all', '3 mahine']])}
+    ${R.meta.days ? `<label class="pk-date" data-mn-box="pk.date" data-mn-i="📆" data-mn-t="Apni tareekh" data-mn-s="aakhri ${R.meta.days} din" data-mn-g="📦 Packet report"><small>📆 Tareekh (aakhri ${R.meta.days} din)</small><input type="date" data-pk-date="1" min="${esc(R.meta.dayFrom || '')}" max="${TODAY()}" value="${st.m.length === 10 ? st.m : ''}"></label>` : ''}
     ${seg('pk.sort', 'Tarteeb', '↕', [['pk', 'Zyada packet'], ['main', 'Zyada main'], ['name', 'Naam']])}
     <div class="pk-tools"><button type="button" data-pk-pdf="1" data-mn="pk.pdf" data-mn-i="📄" data-mn-t="PDF" data-mn-s="kholo + bhejo" data-mn-g="📦 Packet report">📄 PDF</button><button type="button" data-pk-csv="1" data-mn="pk.csv" data-mn-i="📊" data-mn-t="Excel (CSV)" data-mn-s="poori list download" data-mn-g="📦 Packet report">📊 Excel</button>${C.owner() ? `<button type="button" data-pk-req="1" data-mn="pk.req" data-mn-i="🔄" data-mn-t="Taza karo" data-mn-s="PC se abhi dobara" data-mn-g="📦 Packet report"${st.busy ? ' disabled' : ''}>🔄 Taza karo</button>` : ''}</div>
     <div class="pk-sum"><span><small>Packets</small><b>${num(T.pk)}</b></span><span><small>Main ${esc(R.meta.how === 'scan' ? '· scan se' : '')}</small><b>${num(T.main)}</b></span><span><small>Bills</small><b>${num(T.bills)}</b></span><span><small>Items</small><b>${L.length}</b></span></div>
@@ -103,7 +106,8 @@ function pdfHTML() {
     + (r.loose ? `<tr><td></td><td></td><td>KHULA</td><td></td>${ms.map(mk => `<td>${num(it.m?.[mk]?.loose || 0)}</td>`).join('')}<td>${num(r.loose)} ${esc(it.u)}</td></tr>` : ''); }).join('')}
   </tbody></table>`;
 }
-document.addEventListener('input', e => { const t = e.target; if (!t?.dataset?.pkQ) return; st.q = t.value; paint(); });
+document.addEventListener('input', e => { const t = e.target; if (t?.dataset?.pkDate) { if (/^\d{4}-\d{2}-\d{2}$/.test(t.value)) { st.m = t.value; paint(); } return; } if (!t?.dataset?.pkQ) return; st.q = t.value; paint(); });
+document.addEventListener('change', e => { const t = e.target; if (t?.dataset?.pkDate && /^\d{4}-\d{2}-\d{2}$/.test(t.value)) { st.m = t.value; paint(); } });
 document.addEventListener('click', async e => {
   if (!C) return;
   const b = e.target.closest?.('[data-pk-b],[data-pk-scope],[data-pk-m],[data-pk-sort],[data-pk-pdf],[data-pk-csv],[data-pk-req],[data-pk-tog]'); if (!b) return;
