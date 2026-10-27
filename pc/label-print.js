@@ -1,5 +1,7 @@
 // =========================================================
-//  label-print.js  v4.6 (2026-10-18: 🖨 PRINTER RUKA — malik: rice 350 SHAEEN BADSHA 48/100 par atka. Agla hissa bhejne se pehle line 30 s na
+//  label-print.js  v4.9 (2026-10-27: 📅 malik — daayein kone ka number ('7J-463') HATA, us ki jagah chhapne ke din ki tareekh + mahine ka pehla harf
+//                     '27-O' (J F M A M J J A S O N D), font 2 (bara) — Godam 2 theke ki packing: larka aaj ke packet jaldi gine, kal ka maal mix na ho. Factory batch label par batch no wahi.
+//                     labelJobs numFrom/numTo pehle jaise likhe jate hain (app ka hisaab), sirf chhapai se number gaya) · v4.6 (2026-10-18: 🖨 PRINTER RUKA — malik: rice 350 SHAEEN BADSHA 48/100 par atka. Agla hissa bhejne se pehle line 30 s na
 //                     chale to Windows se printer / job ka haal (Paper khatam / Error / Offline / Ruka hua) -> labelJobs.stuck {at, why} (app mein dikhe);
 //                     Paused job ek dafa Resume-PrintJob (dohra nahi chhapta); chal pare to stuck hatao; 10 min ruka rahe to 'failed' + sent = asal
 //                     chhape (app: ▶ Baqi chhapo). Urdu wale item ke hisse 4 qatar (12 label) — printer memory na bhare) · v4.5 (2026-10-15: 🏭 factory batch label — job.batch ho to daayein kone par batch no (running number ki jagah)) · v4.4 (2026-10-13: Urdu TEXT (ttf) — font printer mein sirf ek dafa (label-font.json), bhejne ke baad 20 s intezar;
@@ -138,6 +140,7 @@ const NUM_FILE = path.join(DIR, 'label-numbers.json');
 const MON = 'ABCDEFGHIJKL';
 const dayKey = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 const dayCode = () => { const d = new Date(); return String(d.getDate() % 10) + MON[d.getMonth()]; };
+const dateTag = () => { const d = new Date(); return d.getDate() + '-' + 'JFMAMJJASOND'[d.getMonth()]; };   // v4.9 (2026-10-27): malik — label par number nahi, aaj ki tareekh + mahine ka harf ('27-O') — larka aaj ke packet jaldi pehchane, maal mix na ho
 function nextNums(itemId, copies) {
   let store = { day: '', items: {} };
   try { store = JSON.parse(fs.readFileSync(NUM_FILE, 'utf8')) || store; } catch {}
@@ -193,11 +196,11 @@ function labelCmds(S, j, x0, tag, ur) {
     y += uh + 2; }
   out.push(`BARCODE ${bx},${y + 4},"128",${bh},0,0,${narrow},${narrow},"${code}"`);   // v4.2: readable 0 — code neeche khud likhte hain
   // v4.2: code BAYEN + number DAYEN, aapas mein nahi chadhte (pehle number barcode ke code ke upar aa jata tha)
-  { const ty = y + 4 + bh + 3, tg = tag ? String(tag) : '', tw = tg.length * 8, room = W - 2 * m - (tg ? tw + 8 : 0);   // number font "1" = 8 dot
+  { const ty = y + 4 + bh + 3, tg = tag ? String(tag) : '', tgBig = !!tg && /^\d{1,2}-[A-Z]$/.test(tg), tw = tg.length * (tgBig ? 12 : 8), room = W - 2 * m - (tg ? tw + 8 : 0);   // v4.9: tareekh ('27-O') font "2" (12 dot) — bara; batch no font "1"
     const big = code.length * 12 <= room, cw = code.length * (big ? 12 : 8);
     const cx = tg ? x0 + m : x0 + Math.max(m, Math.round((W - cw) / 2));
     out.push(`TEXT ${cx},${ty},"${big ? 2 : 1}",0,1,1,"${code}"`);
-    if (tg) out.push(`TEXT ${x0 + W - m - tw},${ty + (big ? 6 : 0)},"1",0,1,1,"${tg}"`); }
+    if (tg) out.push(`TEXT ${x0 + W - m - tw},${ty + (big || tgBig ? (tgBig ? 0 : 6) : 0)},"${tgBig ? 2 : 1}",0,1,1,"${tg}"`); }
   // rate ki line 4 dot upar (neeche kinare se kat rahi thi)
   if (S.showRate && Number(j.rate) > 0) out.push(`TEXT ${x0 + m},${y0 + H - m - 24},"2",0,1,1,"Rs ${money(j.rate)}"`);
   return out;
@@ -218,7 +221,7 @@ function tspl(S, j, nums, ur) {
     if (!out) { out = head(); rows = 0; }
     out.push('CLS');
     for (let c = 0; c < S.cols && done < copies; c++, done++)
-      out.push(...labelCmds(S, j, c * (S.w + S.colGap) * DOT, j.batch ? clean(j.batch, 16) : nums ? `${nums.code}-${nums.from + done}` : '', ur));   // v4.5: 🏭 factory batch no (factory-post.js) number ki jagah
+      out.push(...labelCmds(S, j, c * (S.w + S.colGap) * DOT, j.batch ? clean(j.batch, 16) : dateTag(), ur));   // v4.5: 🏭 factory batch no (factory-post.js) number ki jagah
     out.push('PRINT 1,1'); rows++;
     if (rows >= per || done >= copies) { out.push(''); jobs.push(out.join('\r\n')); out = null; }
   }
@@ -479,7 +482,7 @@ if (process.argv.includes('--calibrate')) {   // v2.1: roll badalne ke baad prin
   const lock = net.createServer();
   lock.once('error', () => { console.log('label-print pehle se chal raha hai.'); process.exit(3); });
   lock.listen(LOCK_PORT, '127.0.0.1', () => {
-    { const S = settings(); log(`label-print v4.4 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
+    { const S = settings(); log(`label-print v4.9 chal raha hai — printer "${S.printer}", ${S.cols} x ${S.w}x${S.h} mm. Band: Ctrl+C`); }
     sweepStuck(true).catch(e => log('Atke hue dekhne mein masla: ' + e.message));   // v4.1
     setInterval(() => { sweepStuck(false).catch(() => {}); }, 2 * 60000);
     jobCol.where('cancelReq', '==', true).onSnapshot(s => {   // v4.1: cancel foran (queue ke peeche nahi)
