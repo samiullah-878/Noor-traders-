@@ -5,7 +5,7 @@
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => 'Rs ' + (Math.abs(Number(n) || 0) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
-import { skipsBalance, cashPaysBill } from './model.js?v=2.133.4';
+import { skipsBalance, cashPaysBill } from './model.js?v=2.133.5';
 const TOL = 100;   // paisa — Rs 1 tak farq = theek (POS 2 decimal rounding)
 let C = null, st = { f: 'farq', q: '' };
 export function pmSetup(ctx) { C = ctx; }   // ctx: parties, entries, balance, ledger, can, owner, notice, modal, openAccount
