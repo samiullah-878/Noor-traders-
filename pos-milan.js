@@ -1,11 +1,11 @@
-// pos-milan.js — v1.3 (2026-10-27, app v2.133.0: ⚖️ barabar karo chips — milanJobs app/pos, rules 2.77) · v1.0 (2026-10-26, app v2.124.0) ⚖️ POS MILAN — har khate ka app baqaya vs POS ledger baqaya.
+// pos-milan.js — v1.4 (2026-10-27, app v2.133.4: 🔄 Taza karo + POS data ka waqt, job ke baad khud taza, ↩ pehle se alag) · v1.3 (2026-10-27, app v2.133.0: ⚖️ barabar karo chips — milanJobs app/pos, rules 2.77) · v1.0 (2026-10-26, app v2.124.0) ⚖️ POS MILAN — har khate ka app baqaya vs POS ledger baqaya.
 // Malik: "jitne bhi khate hain, POS ka ledger aur humara khata same aa raha hai — sab khaton ke liye check karna hai; har khate ki screen par bhi POS baqaya".
 // v1.1 (app v2.125.0): 🔍 FARQ KI ENTRIES — posLines/<id> (PC har 15 min, sab khate) se entry-war milan: App mein hai POS nahi · POS mein hai app nahi · raqam farq.
 // Data: blueAccess/posLedger {m:{appPartyId: paisa (lena +, dena −)}, at, n} — PC pos-khata-sync har 15 min. Yahan sirf UI. AI nahi.
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => 'Rs ' + (Math.abs(Number(n) || 0) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
-import { skipsBalance, cashPaysBill } from './model.js?v=2.133.3';
+import { skipsBalance, cashPaysBill } from './model.js?v=2.133.4';
 const TOL = 100;   // paisa — Rs 1 tak farq = theek (POS 2 decimal rounding)
 let C = null, st = { f: 'farq', q: '' };
 export function pmSetup(ctx) { C = ctx; }   // ctx: parties, entries, balance, ledger, can, owner, notice, modal, openAccount
@@ -56,6 +56,7 @@ export function pmOpen() {
   C.modal('⚖️ POS milan', pmHTML(), true);
 }
 export function pmPaint() {
+  try { if (document.querySelector('#dialogBody [data-pm-droot]')) { diffRefresh(); return; } } catch {}
   const r = document.querySelector('#dialogBody [data-pm-root]'); if (!r || !$('dialog')?.open) return;
   const q = r.querySelector('[data-pm-q]'), foc = document.activeElement === q;
   r.outerHTML = pmHTML();
@@ -69,13 +70,35 @@ const dTxt = d => d ? new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { da
 // ---------- ⚖️ BARABAR KARO (v2.133.0, rules 2.77) — malik: "konsa baqaya barabar ho: app wala / POS wala — jo entries nahi wo daal de" ----------
 let jobs = [], jobStop = null, jobPid = '', jobDoc = null, jobParty = null;
 const fixState = () => { const j = jobs[0]; if (!j) return null; if (j.status === 'done' && Date.now() - (Number(j.doneAt) || 0) > 6 * 3600000) return null; return j; };
+let reqAt = 0, reqT = 0, linesAt = 0;   // v2.133.4: 🔄 Taza karo (blueAccess/posLedgerReq → PC foran, posLedger.req)
+function freshHTML(doc) {
+  const t = Math.max(Number(led()?.at) || 0, Number(doc?.at) || 0);
+  const waiting = reqAt && !(Number(led()?.req) >= reqAt);
+  return `<div class="pm-fresh${waiting ? ' wait' : ''}"><span>🖥 POS data: <b>${t ? agoTxt(t) : '—'}</b>${waiting ? ' · ⏳ PC se naya aa raha hai…' : ''}</span>${C.owner() && C.reqLedger ? `<button type="button" data-pm-taza="1"${waiting ? ' disabled' : ''}>🔄 Taza karo</button>` : ''}</div>`;
+}
+async function tazaGo() {
+  try { reqAt = await C.reqLedger(); } catch (err) { C.notice('Nahi gaya: ' + (err?.message || err)); return; }
+  repaintDiff();
+  clearTimeout(reqT); reqT = setTimeout(() => { if (reqAt && !(Number(led()?.req) >= reqAt)) { reqAt = 0; repaintDiff(); C.notice('⚠️ Shop PC ne 3 min mein jawab nahi diya — PC / internet check karein, ya malik ko batayein'); } }, 180000);
+}
+function repaintDiff() { const r = document.querySelector('#dialogBody [data-pm-droot]'); if (r && jobParty && jobDoc && r.dataset.pmDroot === jobParty.id) r.outerHTML = diffHTML(jobParty, jobDoc); }
+async function diffRefresh() {   // ledger badla (PC ne likha) aur farq screen khuli — lines dobara (1 read) + repaint
+  const r = document.querySelector('#dialogBody [data-pm-droot]'); if (!r || !jobParty) return;
+  const at = Number(led()?.at) || 0; if (!at || at <= linesAt) { repaintDiff(); return; }
+  linesAt = at;
+  try { const d = await C.getLines(jobParty.id); if (d) jobDoc = d; } catch {}
+  if (reqAt && Number(led()?.req) >= reqAt) { reqAt = 0; clearTimeout(reqT); C.notice('✅ POS data taza ho gaya'); }
+  repaintDiff();
+}
 function fixHTML(p, D) {
   if (!C.owner()) return '';
   const j = fixState();
   const busy = j && j.status !== 'done';
   const nA = D.posOnly.filter(x => x.code && x.dt !== 'PO').length, nP = D.appOnly.filter(a => !/^pos-/.test(String(a.e.id)) && !a.e.purchase && ['payment', 'collection', 'credit', 'borrow'].includes(a.e.kind)).length;
   const chips = busy ? '' : `<div class="pm-fix"><small>Barabar karo:</small>${nA ? `<button type="button" data-pm-fix="app">📱 App ko POS jaisa <i>${nA}</i></button>` : ''}${nP ? `<button type="button" data-pm-fix="pos">🖥 POS ko app jaisa <i>${nP}</i></button>` : ''}${!nA && !nP ? '<span class="pm-fixok">✓ voucher wali koi entry baqi nahi (purchase bill sync.js se)</span>' : ''}</div>`;
-  const st = j ? `<div class="pm-fixst ${j.status === 'done' ? (j.fail ? 'warn' : 'ok') : 'wait'}"><b>${j.status === 'done' ? (j.fail ? '⚠️ ' : '✅ ') + (j.done || 0) + ' ban gayi' + (j.fail ? ' · ' + j.fail + ' nahi bani' : '') : '⏳ Shop PC bana raha hai — ' + (j.dir === 'app' ? 'app mein ' : 'POS mein ') + (j.n || '') + ' entries (1–2 min)'}</b>${j.status === 'done' ? `<small>${j.dir === 'app' ? 'App ki entries khate mein aa gayin' : 'POS vouchers ban gaye'} · POS lines 15 min mein taza (tab tak yahan purana farq dikh sakta hai)</small>` : ''}${Array.isArray(j.log) && j.log.length ? `<details><summary>tafseel (${j.log.length})</summary>${j.log.map(x => `<div>${esc(x)}</div>`).join('')}</details>` : ''}</div>` : '';
+  const jt = j && j.status === 'done' ? [j.done ? `✅ ${j.done} ban gayi` : '', j.skip ? `↩ ${j.skip} pehle se thi (kuch nahi kiya)` : '', j.fail ? `✕ ${j.fail} nahi bani` : ''].filter(Boolean).join(' · ') || '✓ kuch karna nahi para' : '';
+  const stale = j && j.status === 'done' && (Number(led()?.at) || 0) < (Number(j.doneAt) || 0);
+  const st = j ? `<div class="pm-fixst ${j.status === 'done' ? (j.fail ? 'warn' : 'ok') : 'wait'}"><b>${j.status === 'done' ? jt : '⏳ Shop PC bana raha hai — ' + (j.dir === 'app' ? 'app mein ' : 'POS mein ') + (j.n || '') + ' entries (1–2 min)'}</b>${j.status === 'done' ? `<small>${stale ? '⏳ POS ka naya baqaya aa raha hai (1 min) — screen khud taza hogi' : '✓ Neeche ka hisaab naye POS data se hai'}</small>` : ''}${Array.isArray(j.log) && j.log.length ? `<details><summary>tafseel (${j.log.length})</summary>${j.log.map(x => `<div>${esc(x)}</div>`).join('')}</details>` : ''}</div>` : '';
   return chips + st;
 }
 function jobWatch(pid) {
@@ -128,6 +151,7 @@ function diffHTML(p, doc) {
     <button type="button" class="pm-back" data-pm-back="1">‹ POS milan</button>
     <div class="pm-sum ${r.state === 'farq' ? 'bad' : 'ok'}"><b>${esc(p.name)} — ${r.state === 'farq' ? '⚠ farq ' + money(r.farq) : '✓ barabar'}</b><small>✍️ App ${money(r.app)} ${sideTxt(r.app)} · 🖥 POS ${r.pos == null ? '—' : money(r.pos) + ' ' + sideTxt(r.pos)} · POS lines ${at ? agoTxt(at) : '—'}</small>
       <small class="${D.ok ? 'pm-okl' : 'pm-badl'}">${D.ok ? '✓ Neeche wali entries se poora farq ban jata hai' : '⚠ Neeche wali entries se ' + money(D.sum) + ' banta hai — baqi ' + money(D.farq - D.sum) + ' kisi aur wajah se (cancel voucher / tareekh)'}</small></div>
+    ${freshHTML(doc)}
     ${fixHTML(p, D)}
     ${sec('📱 App mein hai — POS mein nahi', 'a', D.appOnly.length, D.appOnly.map(a => appLine(a.e, a.amt)).join(''))}
     ${sec('🖥 POS mein hai — app mein nahi', 'p', D.posOnly.length, D.posOnly.map(posLine).join(''))}
@@ -143,14 +167,15 @@ export async function pmDiffOpen(id) {
   let doc = null; try { doc = await C.getLines(p.id); } catch (e) { C.notice('POS lines nahi mili: ' + (e?.message || e)); }
   if (!$('dialog')?.open) return;
   if (!doc) { $('dialogBody').innerHTML = `<div class="bc-root"><button type="button" class="pm-back" data-pm-back="1">‹ POS milan</button><div class="empty"><strong>Is khate ki POS lines abhi PC se nahi aayin</strong><p>PC (pos-khata-sync) har 15 min likhta hai — rules 2.75 publish hon aur PC chal raha ho.</p></div></div>`; return; }
-  jobParty = p; jobDoc = doc; jobWatch(p.id);
+  jobParty = p; jobDoc = doc; linesAt = Number(led()?.at) || 0; jobWatch(p.id);
   $('dialogBody').innerHTML = diffHTML(p, doc);
 }
 document.addEventListener('input', e => { const t = e.target; if (!t?.dataset?.pmQ) return; st.q = t.value; pmPaint(); });
 document.addEventListener('click', e => {
   if (!C) return;
-  const b = e.target.closest?.('[data-pm-fix],[data-pm-f],[data-pm-open],[data-pm-diff],[data-pm-back],[data-pm-tog]'); if (!b) return;
+  const b = e.target.closest?.('[data-pm-taza],[data-pm-fix],[data-pm-f],[data-pm-open],[data-pm-diff],[data-pm-back],[data-pm-tog]'); if (!b) return;
   if (b.dataset.pmFix) { e.stopPropagation(); fixGo(b.dataset.pmFix); return; }
+  if (b.dataset.pmTaza) { e.stopPropagation(); tazaGo(); return; }
   if (b.dataset.pmTog) { pmOpenLine = pmOpenLine === b.dataset.pmTog ? '' : b.dataset.pmTog; const w = document.querySelector('#summary [data-pm-line]'); if (w) { const p = C.parties().find(x => x.id === b.dataset.pmTog); if (p) w.innerHTML = pmLineHTML(p); } return; }
   if (b.dataset.pmDiff) { e.stopPropagation(); e.preventDefault(); pmDiffOpen(b.dataset.pmDiff); return; }
   if (b.dataset.pmBack) { pmOpen(); return; }

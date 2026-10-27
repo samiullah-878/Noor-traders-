@@ -3614,3 +3614,8 @@ block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.
 
 ## v2.133.3 (2026-10-27) — 📦 Packet report: Aaj / Kal / tareekh (malik: "date wise aaj kal ka option")
 - PC pk-report v1.3: mahine ke saath aakhri 14 din ke roz ke bucket m["YYYY-MM-DD"] (meta.days, dayFrom; v4 → purani report foran nayi). App: 📅 seg mein Aaj · Kal chips + 📆 tareekh (aakhri 14 din) ⋮ mein; rowsOf st.m din bhi. AI nahi.
+
+## v2.133.4 (2026-10-27) — 🔄 POS milan purana data theek (malik: sehna traders — POS GL (39,474) = app 39,474 dena, farq screen galat 1,153,700 dikha rahi thi)
+- Wajah: "POS ko app jaisa" ne JV-00000000602 (7 Oct, backdate) theek bana diya tha, magar PC ka POS baqaya / lines ~2 ghante purane rahe (ledgerPush 15 min throttle + syncEntries ki ghalti par once() ledgerPush tak pohanchta hi nahi tha).
+- PC pos-khata-sync: syncEntries ghalti → log, phir bhi ledgerPush; milan job ke baad ledgerForce (isi chakkar mein taza); app "🔄 Taza karo" = blueAccess/posLedgerReq {at} (listener) → foran, posLedger.req = wahi at; forced par linesHash saaf (sab lines dobara). Baqaya ab cancel (VoucherStatusID 3) ke baghair (lines jaisa). Job: skip (pehle se) alag, done nahi.
+- App pos-milan v1.4: farq screen par "🖥 POS data: X pehle · 🔄 Taza karo" (malik), ⏳ jab tak PC ka req na aaye, 3 min = ⚠️ PC ne jawab nahi; ledger badle to lines dobara (1 read) + repaint; job done ke baad "⏳ POS ka naya baqaya aa raha" → khud taza. Status: ✅ N ban gayi · ↩ N pehle se · ✕ N nahi. AI nahi. Rules nahi badle (blueAccess malik likh sakta).

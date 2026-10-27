@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-10-27 (b): 🔄 POS baqaya/lines foran taza (app Taza karo = blueAccess/posLedgerReq, milan job ke baad khud) · sync ghalti se ledger na ruke · cancel voucher baqaye mein nahi · job 'skip'
 //  2026-10-27: ⚖️ BARABAR KARO — app ke Farq screen se milanJobs (dir app/pos): chuni hui purani entries / vouchers doosri taraf (runMilanJobs, importVoucher force)
 //  2026-10-26: ⚖️ POS MILAN — har 15 min jude khaton ka POS ledger balance blueAccess/posLedger (app: har khate par POS baqaya + milan screen)
 //  2026-10-26: 🔒 app mein "Khata band" (party.active false) = POS Account IsActive 0; chalu = 1 (appHashParty mein a)
@@ -853,7 +854,7 @@ async function runMilanJobs(pool, acct, acctIds, importVoucher) {
     const j = d.data() || {}, ref = d.ref, ids = Array.isArray(j.ids) ? j.ids.map(String).slice(0, 300) : [], L = [];
     const say = m => { L.push(m); log('⚖️ ' + m); };
     await ref.set({ status: 'working', startAt: Date.now() }, { merge: true });
-    let done = 0, fail = 0;
+    let done = 0, fail = 0, skip = 0;
     try {
       if (j.dir === 'pos') {
         const purAc = await purchaseAccount(pool);
@@ -863,7 +864,7 @@ async function runMilanJobs(pool, acct, acctIds, importVoucher) {
           if (!acct.has(e.partyId)) { fail++; say(`${id}: party POS se judi nahi`); continue; }
           if (String(id).startsWith('pos-') || e.purchase || e.transferId) { fail++; say(`${id}: purchase bill / transfer — voucher nahi banta`); continue; }
           const key = 'entry:' + id, link = links.get(key);
-          if ((link && link.voucherId && !link.deleted) || e.posCode) { say(`${id}: pehle se POS mein (${link?.code || e.posCode})`); done++; continue; }
+          if ((link && link.voucherId && !link.deleted) || e.posCode) { say(`${id}: pehle se POS mein (${link?.code || e.posCode}) — kuch nahi kiya`); skip++; continue; }
           let spec = null;
           if (e.kind === 'borrow') { if (!purAc) { fail++; say(`${id}: POS ka purchase account nahi mila (Defaults) — Saman liya nahi bana`); continue; } spec = borrowToVoucher(e, acct, purAc); }
           else spec = appEntryToVoucher(e, acct);
@@ -893,8 +894,9 @@ async function runMilanJobs(pool, acct, acctIds, importVoucher) {
         }
       } else say('dir ghalat: ' + j.dir);
     } catch (e) { say('masla: ' + (e.message || e)); fail++; }
-    await ref.set({ status: 'done', done, fail, log: L.slice(0, 120), doneAt: Date.now() }, { merge: true });
-    log(`⚖️ milan job ${d.id} (${j.dir}): ${done} bane · ${fail} nahi`);
+    await ref.set({ status: 'done', done, fail, skip, log: L.slice(0, 120), doneAt: Date.now() }, { merge: true });
+    log(`⚖️ milan job ${d.id} (${j.dir}): ${done} bane · ${skip} pehle se · ${fail} nahi`);
+    ledgerForce = Date.now();   // isi chakkar ke aakhir mein POS baqaya + lines taza (app ki farq screen foran theek)
   }
 }
 function transferToVoucher(out, acct) {
@@ -1332,16 +1334,25 @@ async function quickRun() {
 // ============================================================
 // 2026-10-26: ⚖️ POS MILAN — har 15 min POS ledger (Debit − Credit = lena +, dena −) jude hue khaton ka blueAccess/posLedger {m:{appId: paisa}, at, n}
 //   (sirf badle to). App har khate par "🖥 POS baqaya" + "⚖️ POS milan" screen. AI nahi.
-let ledgerAt = 0, ledgerLast = '';
+let ledgerAt = 0, ledgerLast = '', ledgerForce = 0, ledgerReqSeen = 0;
+// 2026-10-27: 🔄 app ka "Taza karo" (blueAccess/posLedgerReq {at}) ya ⚖️ milan job = foran (15 min ka intezar nahi) — doc 'at' hamesha naya (app ko pata chale taza hai)
+function listenLedgerReq() {
+  biz.collection('blueAccess').doc('posLedgerReq').onSnapshot(s => { const at = Number(s.data()?.at) || 0; if (at > ledgerReqSeen) { ledgerReqSeen = at; ledgerForce = Date.now(); if (kick) kick(); } }, e => log('posLedgerReq listener: ' + e.message));
+}
 async function ledgerPush(pool) {
-  if (Date.now() - ledgerAt < 15 * 60000) return; ledgerAt = Date.now();
+  const forced = ledgerForce > 0;
+  if (!forced && Date.now() - ledgerAt < 15 * 60000) return; ledgerAt = Date.now(); ledgerForce = 0;
+  if (forced) { ledgerLast = ''; linesHash.clear(); }
   const rows = (await pool.request().query(`SELECT p.PartyID, SUM(ISNULL(vd.Debit,0) - ISNULL(vd.Credit,0)) AS Bal
-    FROM dbo.Party p LEFT JOIN dbo.VoucherDetail vd ON vd.AccountID = p.AccountID GROUP BY p.PartyID`)).recordset;
+    FROM dbo.Party p LEFT JOIN dbo.VoucherDetail vd ON vd.AccountID = p.AccountID
+    LEFT JOIN dbo.Voucher v ON v.VoucherID = vd.VoucherID
+    WHERE vd.VoucherDetailID IS NULL OR ISNULL(v.VoucherStatusID, 1) <> 3
+    GROUP BY p.PartyID`)).recordset;   // 2026-10-27: cancel (3) voucher nahi — lines jaisa
   const byPos = new Map(rows.map(r => [Number(r.PartyID), Math.round((Number(r.Bal) || 0) * 100)]));
   const m = {}; let n = 0;
   for (const [k, l] of links) { if (!k.startsWith('party:') || !l || !l.posPartyId) continue; const appId = k.slice(6); if (!appId || /[.\/]/.test(appId) || !byPos.has(Number(l.posPartyId))) continue; m[appId] = byPos.get(Number(l.posPartyId)); n++; }
   const j = JSON.stringify(m);
-  if (j !== ledgerLast) { ledgerLast = j; if (!DRY) { await biz.collection('blueAccess').doc('posLedger').set({ m, at: Date.now(), n, pc: os.hostname() }); log(`⚖️ POS ledger likha: ${n} khate`); } }
+  if (j !== ledgerLast) { ledgerLast = j; if (!DRY) { await biz.collection('blueAccess').doc('posLedger').set({ m, at: Date.now(), n, pc: os.hostname(), ...(forced ? { req: ledgerReqSeen } : {}) }); log(`⚖️ POS ledger likha: ${n} khate`); } }
   try { await linesPush(pool); } catch (e) { log('🔍 POS lines masla: ' + e.message); }
 }
 // 2026-10-26 (b): 🔍 FARQ KI ENTRIES — har jude khate ki POS ledger LINES (LINES_FROM se) posLines/<appId> {j: JSON [[date, code, docType, docNo, dr, cr, desc, st]…], pre: paisa
@@ -1375,9 +1386,12 @@ async function once() {
     const acct = new Map();
     await syncAccounts(pool, acct);
     lastAcct = acct;   // ⚡ tez raasta isi naqshe se
+    let syncErr = null;
     try { await syncEntries(pool, acct); }
+    catch (e) { syncErr = e; log('Entries sync masla: ' + e.message); }   // 2026-10-27: sync ki ghalti se POS baqaya / lines na rukein (farq screen 2 ghante purana dikh raha tha)
     finally { for (const k of syncMine) inFlight.delete(k); syncMine.clear(); }
     try { await ledgerPush(pool); } catch (e) { log('⚖️ POS ledger masla: ' + e.message); }
+    if (syncErr) throw syncErr;
   } finally {
     await pool.close();
   }
@@ -1394,6 +1408,7 @@ async function once() {
   await loadLinks();
   if (AUTO && !DRY) listenVoucherJobs();   // 2026-10-12: 🖨 dobara print
   if (AUTO && !DRY) listenGallaChecks();   // 2026-10-15: 💰 galla ki Urdu parchi
+  if (AUTO && !DRY) listenLedgerReq();   // 2026-10-27: 🔄 POS milan 'Taza karo'
   log(`App records: ${app.size} · links: ${links.size}`);
   if (!AUTO) { await once(); log('Ho gaya.'); process.exit(0); }
   let busy = false, again = false, timer = null;
