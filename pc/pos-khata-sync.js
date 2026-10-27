@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-10-27 (d): ⚡ 'Saman liya' bhi tez raaste (quickEntries) — seconds mein JV + parchi (malik: "instant voucher")
 //  2026-10-27 (c): 📦 khate ka 'Saman liya' (app wala, BORROW_FROM ke baad / milan se jura) bhi POS JV — Purchase account Dr / party Cr, parchi UDHAR PURCHASE VOUCHER
 //  2026-10-27 (b): 🔄 POS baqaya/lines foran taza (app Taza karo = blueAccess/posLedgerReq, milan job ke baad khud) · sync ghalti se ledger na ruke · cancel voucher baqaye mein nahi · job 'skip'
 //  2026-10-27: ⚖️ BARABAR KARO — app ke Farq screen se milanJobs (dir app/pos): chuni hui purani entries / vouchers doosri taraf (runMilanJobs, importVoucher force)
@@ -1284,7 +1285,8 @@ async function runGalla() {
 async function quickEntries() {
   if (DRY || !lastAcct || !fresh.size) return;
   const ids = [...fresh]; fresh.clear();
-  const todo = ids.map(id => app.get(id)).filter(e => e && e.type === 'entry' && !e.deleted && !e.transferId && !e.purchase && e.posNo !== true && ['payment', 'collection', 'credit'].includes(e.kind)
+  const quickBorrow = e => e.kind === 'borrow' && !app.get(e.partyId)?.bank && !/sabqa baqaya/i.test(String(e.note || '')) && ms(e.createdAt) >= BORROW_FROM;   // 2026-10-27: 📦 Saman liya bhi tez (malik: "instant voucher")
+  const todo = ids.map(id => app.get(id)).filter(e => e && e.type === 'entry' && !e.deleted && !e.transferId && !e.purchase && e.posNo !== true && (['payment', 'collection', 'credit'].includes(e.kind) || quickBorrow(e))
     && !/^(pos|cashpay-)/.test(String(e.id)) && !links.has('entry:' + e.id) && lastAcct.has(e.partyId) && ms(e.createdAt) >= ENABLED_AT && Date.now() - ms(e.createdAt) < 30 * 60000);
   if (!todo.length) return;
   const t0 = Date.now(), pool = await qPoolGet();
@@ -1293,7 +1295,9 @@ async function quickEntries() {
     if (links.has(key) || inFlight.has(key)) continue;
     inFlight.add(key);
     try {
-      const spec = appEntryToVoucher(e, lastAcct); if (!spec) continue;
+      const isB = e.kind === 'borrow', purAc = isB ? await purchaseAccount(pool) : 0;
+      if (isB && !purAc) continue;   // purchase account na mile = poora sync dekhega
+      const spec = isB ? borrowToVoucher(e, lastAcct, purAc) : appEntryToVoucher(e, lastAcct); if (!spec) continue;
       const ex = (await pool.request().input('m', sql.VarChar(120), '%[[]app:' + e.id + ']%').query('SELECT TOP 1 VoucherID FROM dbo.Voucher WHERE SystemNote LIKE @m')).recordset[0];
       if (ex) continue;   // pehle ban chuka — poora sync jorega
       const name = lastAcct.get(e.partyId).name;
@@ -1301,8 +1305,8 @@ async function quickEntries() {
       await setLink(key, { appHash: appHashEntry(e), voucherId: r.voucherId, code: r.code, posHash: null });
       await markApp([e.id], { posCode: r.code, posError: null });
       log(`⚡ POS mein bana (tez): ${spec.type} · ${name} · Rs ${rupees(e.amount)} · ${r.code} (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
-      const T = { CPV: VTITLE.CPV, CRV: VTITLE.CRV, JV: 'UDHAR SALE VOUCHER' }[spec.type] || spec.type, amt = rupees(e.amount), docIds = [e.id];
-      const plines = [{ pid: e.partyId, name, label: e.kind === 'payment' ? 'Diye' : e.kind === 'collection' ? 'Wasool kiye' : 'Udhar', amount: amt, after: rupees(appBalance(e.partyId)), before: rupees(appBalance(e.partyId, new Set(docIds))) }];
+      const T = isB ? 'UDHAR PURCHASE VOUCHER' : { CPV: VTITLE.CPV, CRV: VTITLE.CRV, JV: 'UDHAR SALE VOUCHER' }[spec.type] || spec.type, amt = rupees(e.amount), docIds = [e.id];
+      const plines = [{ pid: e.partyId, name, label: isB ? 'Maal liya (udhar)' : e.kind === 'payment' ? 'Diye' : e.kind === 'collection' ? 'Wasool kiye' : 'Udhar', amount: amt, after: rupees(appBalance(e.partyId)), before: rupees(appBalance(e.partyId, new Set(docIds))) }];
       const bank = bankSlip(e, false);
       const printed = await printReceipt(await epTxt(receipt({ title: T, code: r.code, date: e.date, lines: plines, note: String(e.note || '').trim(), bank, pay: e.kind !== 'purchaseCash' ? '' : e.posPrintedAt ? 'copy' : 'do' }), e));   // 2026-10-17: 💵 · 2026-10-21: 📷 tasveer
       if (printed) await markApp(docIds, { posPrintedAt: Date.now(), posPrintErr: '' });
