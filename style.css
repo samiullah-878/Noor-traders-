@@ -6449,3 +6449,13 @@ html body #dialogBody .pm-bk input{width:20px;height:20px;flex:0 0 auto}html bod
 html body #dialogBody .pm-bo{flex:0 0 auto;min-height:30px;width:34px;padding:0;border-radius:999px;border:1px solid #d5dce9;background:#fff}
 html body #dialogBody .pm-bgo{min-height:40px!important;border-radius:999px!important;font-weight:800!important;padding:0 16px!important}
 html body #dialogBody .pm-bgo:disabled{opacity:.45;box-shadow:none}
+/* v2.134.0: ✕ entry-war POS mein nahi + 📤 POS mein bhejo (chips qaida: patla, gol, premium) */
+html body .ledger-item .pm-ent{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0;padding:6px 8px;border-radius:11px;background:linear-gradient(180deg,#fff6f6,#fdeeee);border:1px solid #f1c4c4}
+html body .ledger-item .pm-ent small{flex:1 1 160px;min-width:0;color:#b32936;font-weight:700;font-size:11.5px;line-height:1.35}
+html body .ledger-item .pm-ent.wait{background:linear-gradient(180deg,#fffaf0,#fff3dc);border-color:#f0d9a8}html body .ledger-item .pm-ent.wait small{color:#9a6200}
+html body .ledger-item .pm-ent.skip{background:linear-gradient(180deg,#f3f8ff,#e9f2ff);border-color:#c7dbf5}html body .ledger-item .pm-ent.skip small{color:#285a9c}
+html body .ledger-item .pm-ent .pm-send,html body .ledger-item .pm-send{display:inline-flex;align-items:center;gap:4px;height:32px;min-height:32px;padding:0 12px;border-radius:999px;border:1px solid #e3a9a9!important;background:linear-gradient(180deg,#fff,#fbeaea)!important;color:#a3202d!important;font-size:12px;font-weight:800;white-space:nowrap;box-shadow:0 1px 2px rgba(163,32,45,.12);cursor:pointer;width:auto}
+html body .ledger-item .li-m .pm-et{font-weight:800;font-size:11px;padding:1px 7px;border-radius:999px;white-space:nowrap}
+html body .ledger-item .li-m .pm-et.miss{color:#b32936;background:#fdeeee;border:1px solid #f1c4c4}
+html body .ledger-item .li-m .pm-et.wait{color:#9a6200;background:#fff3dc;border:1px solid #f0d9a8}
+html body .ledger-item .li-m .pm-et.skip{color:#285a9c;background:#e9f2ff;border:1px solid #c7dbf5}

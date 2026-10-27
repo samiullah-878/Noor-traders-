@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-10-27 (e): ⚖️ milan job / 📤 ab purana ⇄ TRANSFER bhi POS JV (milanTransfer — POS mein pehle se ho to sirf jor); har milan entry pehle [app:id] marker dekhti hai
 //  2026-10-27 (d): ⚡ 'Saman liya' bhi tez raaste (quickEntries) — seconds mein JV + parchi (malik: "instant voucher")
 //  2026-10-27 (c): 📦 khate ka 'Saman liya' (app wala, BORROW_FROM ke baad / milan se jura) bhi POS JV — Purchase account Dr / party Cr, parchi UDHAR PURCHASE VOUCHER
 //  2026-10-27 (b): 🔄 POS baqaya/lines foran taza (app Taza karo = blueAccess/posLedgerReq, milan job ke baad khud) · sync ghalti se ledger na ruke · cancel voucher baqaye mein nahi · job 'skip'
@@ -864,10 +865,17 @@ async function runMilanJobs(pool, acct, acctIds, importVoucher) {
         for (const id of ids) {
           const e = app.get(id);
           if (!e || e.deleted) { fail++; say(`${id}: entry nahi mili / delete`); continue; }
+          if (e.transferId) {   // 2026-10-27 (e): ⇄ purana transfer bhi (malik: Sahid iqbal dhal 2,100) — dono khate jude hon to JV, POS mein pehle se ho to sirf jor
+            const r0 = await milanTransfer(pool, acct, e, say); if (r0 === 'done') done++; else if (r0 === 'skip') skip++; else fail++; continue;
+          }
           if (!acct.has(e.partyId)) { fail++; say(`${id}: party POS se judi nahi`); continue; }
-          if (String(id).startsWith('pos-') || e.purchase || e.transferId) { fail++; say(`${id}: purchase bill / transfer — voucher nahi banta`); continue; }
+          if (String(id).startsWith('pos-') || e.purchase) { fail++; say(`${id}: purchase bill — voucher nahi banta (sync.js)`); continue; }
           const key = 'entry:' + id, link = links.get(key);
           if ((link && link.voucherId && !link.deleted) || e.posCode) { say(`${id}: pehle se POS mein (${link?.code || e.posCode}) — kuch nahi kiya`); skip++; continue; }
+          const mk = DRY ? null : (await pool.request().input('m', sql.VarChar(120), '%[[]app:' + id + ']%').query('SELECT TOP 1 VoucherID, VoucherCode FROM dbo.Voucher WHERE SystemNote LIKE @m AND VoucherStatusID <> 3')).recordset[0];
+          if (mk) { await setLink(key, { appHash: appHashEntry(e), voucherId: mk.VoucherID, code: mk.VoucherCode, posHash: null }); await markApp([id], { posCode: mk.VoucherCode, posError: null }); skip++; say(`${id}: POS mein pehle se ${mk.VoucherCode} — sirf jor diya`); continue; }
+          const twin = DRY ? null : await posTwin(pool, acct.get(e.partyId).accountId, e);   // 2026-10-27 (e): purana POS data = dohra voucher na bane
+          if (twin) { fail++; say(`${id}: POS mein ${twin.VoucherCode} (${String(twin.VoucherDate || '').slice(0, 10)}) isi raqam ka pehle se hai, kisi app entry se juda nahi — dohra nahi banaya. POS milan 🔄 Taza karke dekhein`); continue; }
           let spec = null;
           if (e.kind === 'borrow' && app.get(e.partyId)?.bank) { fail++; say(`${id}: bank / loan khata — Saman liya ka purchase JV nahi banta`); continue; }
           if (e.kind === 'borrow') { if (!purAc) { fail++; say(`${id}: POS ka purchase account nahi mila (Defaults) — Saman liya nahi bana`); continue; } spec = borrowToVoucher(e, acct, purAc); }
@@ -902,6 +910,50 @@ async function runMilanJobs(pool, acct, acctIds, importVoucher) {
     log(`⚖️ milan job ${d.id} (${j.dir}): ${done} bane · ${skip} pehle se · ${fail} nahi`);
     ledgerForce = Date.now();   // isi chakkar ke aakhir mein POS baqaya + lines taza (app ki farq screen foran theek)
   }
+}
+// 2026-10-27 (e): party ke account par ±3 din mein wahi raqam / wahi taraf (lena Dr, dena Cr) wala voucher jo kisi link mein nahi = shayad haath se bana
+async function posTwin(pool, accountId, e) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(e.date || ''))) return null;
+  const amt = rupees(e.amount); if (!(amt > 0)) return null;
+  const dr = ['credit', 'payment'].includes(e.kind) ? 1 : 0;   // payment / udhar = party Dr · wasooli / Saman liya = party Cr
+  const d0 = new Date(e.date + 'T00:00:00Z'), d1 = new Date(d0.getTime() - 3 * 86400000), d2 = new Date(d0.getTime() + 3 * 86400000);
+  const rows = (await pool.request().input('d1', sql.Date, d1).input('d2', sql.Date, d2).input('a', sql.Float, amt).input('ac', sql.Int, accountId).query(`
+    SELECT v.VoucherID, v.VoucherCode, v.VoucherDate FROM dbo.Voucher v JOIN dbo.VoucherDetail vd ON vd.VoucherID = v.VoucherID
+    WHERE v.VoucherStatusID <> 3 AND v.VoucherDate BETWEEN @d1 AND @d2 AND vd.AccountID = @ac AND ABS(ISNULL(vd.${dr ? 'Debit' : 'Credit'}, 0) - @a) < 0.01`)).recordset;
+  const used = new Set([...links.values()].filter(l => l && l.voucherId && !l.deleted).map(l => Number(l.voucherId)));
+  return rows.find(r => !used.has(Number(r.VoucherID))) || null;
+}
+// 2026-10-27 (e): ⚖️ milan job ka TRANSFER — wahi transferToVoucher (naye transfer jaisa JV). Pehle POS dekho: [app:t-<tid>] marker ya
+// ±3 din mein wahi raqam (to Dr / from Cr) wala voucher = dobara NAHI, sirf link + posCode. Rasid nahi chhapti (purani entry).
+async function milanTransfer(pool, acct, e, say) {
+  const tid = String(e.transferId), base = app.get(`transfer-${tid}-out`) || e, key = 'transfer:' + tid, link = links.get(key);
+  const docIds = [`transfer-${tid}-out`, `transfer-${tid}-in`].filter(x => app.has(x));
+  if (tid.startsWith('posv')) { say(`${e.id}: yeh transfer POS se aaya tha — kuch nahi kiya`); return 'skip'; }
+  if (base.deleted) { say(`${e.id}: transfer delete hai`); return 'fail'; }
+  const miss = [base.fromPartyId, base.toPartyId].filter(x => !acct.has(x));
+  if (miss.length) { say(`${e.id}: transfer ka ${miss.map(x => app.get(x)?.name || x).join(' + ')} khata POS se juda nahi — pehle khata POS mein jorein`); return 'fail'; }
+  const nm = `${acct.get(base.fromPartyId).name} -> ${acct.get(base.toPartyId).name}`;
+  if ((link && link.voucherId && !link.deleted) || base.posCode) { say(`${e.id}: pehle se POS mein (${link?.code || base.posCode}) — ${nm}`); return 'skip'; }
+  const amt = rupees(base.amount), from = acct.get(base.fromPartyId).accountId, to = acct.get(base.toPartyId).accountId;
+  if (!(amt > 0)) { say(`${e.id}: raqam 0 — ${nm}`); return 'fail'; }
+  let ex = (await pool.request().input('m', sql.VarChar(120), '%[[]app:t-' + tid + ']%').query('SELECT TOP 1 VoucherID, VoucherCode FROM dbo.Voucher WHERE SystemNote LIKE @m AND VoucherStatusID <> 3')).recordset[0];
+  if (!ex && /^\d{4}-\d{2}-\d{2}$/.test(String(base.date || ''))) {
+    const d0 = new Date(base.date + 'T00:00:00Z'), d1 = new Date(d0.getTime() - 3 * 86400000), d2 = new Date(d0.getTime() + 3 * 86400000);
+    ex = (await pool.request().input('d1', sql.Date, d1).input('d2', sql.Date, d2).input('a', sql.Float, amt).input('f', sql.Int, from).input('t', sql.Int, to).query(`
+      SELECT TOP 1 v.VoucherID, v.VoucherCode FROM dbo.Voucher v WHERE v.VoucherStatusID <> 3 AND v.VoucherDate BETWEEN @d1 AND @d2
+        AND EXISTS (SELECT 1 FROM dbo.VoucherDetail a WHERE a.VoucherID = v.VoucherID AND a.AccountID = @t AND ABS(ISNULL(a.Debit, 0) - @a) < 0.01)
+        AND EXISTS (SELECT 1 FROM dbo.VoucherDetail b WHERE b.VoucherID = v.VoucherID AND b.AccountID = @f AND ABS(ISNULL(b.Credit, 0) - @a) < 0.01)`)).recordset[0];
+  }
+  if (ex) {
+    if (!DRY) { await setLink(key, { appHash: appHashEntry(base), voucherId: ex.VoucherID, code: ex.VoucherCode, posHash: null }); await markApp(docIds, { posCode: ex.VoucherCode, posError: null }); }
+    say(`${e.id}: POS mein pehle se ${ex.VoucherCode} (${nm} · Rs ${amt}) — dobara nahi banaya, sirf jor diya`); return 'skip';
+  }
+  const spec = transferToVoucher(base, acct);
+  if (DRY) { say(`DRY: JV ${nm} Rs ${amt} ${base.date}`); return 'skip'; }
+  const r = await posWriteVoucher(pool, { voucherId: 0, type: spec.type, date: base.date, remarks: spec.remarks, marker: 't-' + tid, lines: spec.lines });
+  await setLink(key, { appHash: appHashEntry(base), voucherId: r.voucherId, code: r.code, posHash: null });
+  await markApp(docIds, { posCode: r.code, posError: null });
+  say(`${r.code}: ⇄ ${nm} · Rs ${amt} · ${base.date} (transfer)`); return 'done';
 }
 function transferToVoucher(out, acct) {
   const from = acct.get(out.fromPartyId), to = acct.get(out.toPartyId);
