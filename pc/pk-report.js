@@ -91,7 +91,7 @@ async function build(pool, reqAt) {
 let lastRun = 0;
 const tick = ZINDA.guard(async () => {
   const meta = (await col.doc('pkReport').get()).data() || {}, req = (await col.doc('pkReq').get()).data() || {};
-  const reqAt = Number(req.at) || 0, due = Date.now() - (Number(meta.at) || 0) > EVERY || reqAt > (Number(meta.reqAt) || 0);
+  const reqAt = Number(req.at) || 0, due = Date.now() - (Number(meta.at) || 0) > EVERY || reqAt > (Number(meta.reqAt) || 0) || Number(meta.v || 0) < 2;   // v1.1: purani (sirf Godam 2) report ho to foran nayi
   if (!due || Date.now() - lastRun < 5 * 60000) return;
   lastRun = Date.now(); let pool;
   try { pool = await sql.connect(SQL_CONFIG); await build(pool, reqAt); }
