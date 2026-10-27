@@ -1,4 +1,4 @@
-// pk-report.js — v1.1 (2026-10-27, app v2.133.1: har branch — NOOR TRADERS default, godam chips) · v1.0 (2026-10-27, app v2.132.0) 📦 PACKET REPORT (malik: "poore 3 mahine ka Godam 2 ka barcode ke saath
+// pk-report.js — v1.2 (2026-10-27, app v2.133.2: 📦 'Godam 2 ke items' filter default — Godam 2 mein stock/bikri wale items ki NOOR TRADERS bikri) · v1.1 (2026-10-27, app v2.133.1: har branch — NOOR TRADERS default, godam chips) · v1.0 (2026-10-27, app v2.132.0) 📦 PACKET REPORT (malik: "poore 3 mahine ka Godam 2 ka barcode ke saath
 //   packets wala data — kitne packet bike, sub-barcode + barcode, 1 packet ke hisaab se, jo scan hue").
 // Data: PC pk-report.js (sirf parhti hai) → posStats/pkReport (meta) + pkReport-<k> (JSON text) — app sirf parhti hai; "🔄 Taza karo" = posStats/pkReq.
 // Screen: full khirki (Transfer/Stock tiles se) — ⋮: mahina (Aug · Sep · Oct · 3 mahine) · tarteeb; search; har item patli line
@@ -8,18 +8,21 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const num = n => { n = Number(n) || 0; return Math.abs(n - Math.round(n)) < 1e-6 ? new Intl.NumberFormat('en-PK').format(Math.round(n)) : String(Math.round(n * 1000) / 1000); };
 const MN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const mLab = m => m === 'all' ? '3 mahine' : `${MN[+m.slice(5, 7) - 1]} ${m.slice(2, 4)}`;
-let C = null, R = null, stop = null, st = { m: 'all', q: '', sort: 'pk', open: new Set(), busy: false, b: '' };
+let C = null, R = null, stop = null, st = { m: 'all', q: '', sort: 'pk', open: new Set(), busy: false, b: '', scope: 'g2' };   // v1.2 scope g2 = sirf wo items jo Godam 2 mein hain (stock ya bikri) — malik
 // v1.1: har branch alag (NOOR TRADERS dukan default — naam se; godam chips ⋮ mein) — malik: "yahan NOOR TRADERS ka data chahiye"
 const branches = () => Array.isArray(R?.meta?.branches) && R.meta.branches.length ? R.meta.branches : (R?.meta?.godam ? [{ id: '', name: R.meta.godam.name }] : []);
 const curB = () => { const B = branches(); if (!B.length) return null; const hit = B.find(b => String(b.id) === String(st.b)); if (hit) return hit; return B.find(b => /noor/i.test(String(b.name || '')) && !/godam/i.test(String(b.name || ''))) || B[0]; };
 const items = () => { const b = curB(); return b ? (R?.by?.[String(b.id)] || []) : (R?.items || []); };
 const bName = () => curB()?.name || 'NOOR TRADERS';
+const g2 = () => branches().find(b => /godam/i.test(String(b.name || '')) && /2/.test(String(b.name || ''))) || null;
+const g2Items = () => { const g = g2(); if (!g) return null; const S = new Set((R?.by?.[String(g.id)] || []).map(x => x.i)); for (const it of items()) if (Number(it.st?.[String(g.id)]) > 0) S.add(it.i); return S; };
 export function pkSetup(ctx) { C = ctx; }
 const months = () => String(R?.meta?.months || '').split(',').filter(Boolean);
 function rowsOf() {   // har item: chune mahine ka jor
   const ms = st.m === 'all' ? months() : [st.m], q = st.q.trim().toLowerCase();
-  const out = [];
+  const out = [], G = st.scope === 'g2' ? g2Items() : null;
   for (const it of items()) {
+    if (G && !G.has(it.i)) continue;
     if (q && !(it.n.toLowerCase().includes(q) || it.c.toLowerCase().includes(q) || String(it.mb || '').includes(q) || Object.keys(it.subs || {}).some(b => b.includes(q)))) continue;
     let pk = 0, sc = 0, main = 0, mainN = 0, loose = 0, bills = 0; const sub = {};
     for (const mk of ms) { const M = it.m?.[mk]; if (!M) continue; main += M.main || 0; mainN += M.mainN || 0; loose += M.loose || 0; bills += M.bills || 0;
@@ -30,7 +33,7 @@ function rowsOf() {   // har item: chune mahine ka jor
   out.sort((a, b) => st.sort === 'name' ? a.it.n.localeCompare(b.it.n) : st.sort === 'main' ? b.main - a.main : b.pk - a.pk || b.main - a.main);
   return out;
 }
-const pill = () => `📅 ${mLab(st.m)} · 🏬 ${esc(bName())}`;
+const pill = () => `📅 ${mLab(st.m)} · 🏬 ${esc(bName())}${st.scope === 'g2' && g2() ? ' · 📦 Godam 2 ke items' : ''}`;
 function subHTML(r) {
   const it = r.it, ms = st.m === 'all' ? months() : [st.m];
   const perM = (b) => ms.map(mk => { const P = it.m?.[mk]?.pk?.[b]; return `<span class="pk-mm"><small>${esc(mLab(mk))}</small><b>${P ? num(P.n) : '0'}</b></span>`; }).join('');
@@ -56,6 +59,7 @@ export function pkHTML() {
   return `<div class="pk-root" data-pk-root="1">
     <div class="pk-top"><label class="pk-q"><span>🔍</span><input type="search" data-pk-q="1" value="${esc(st.q)}" placeholder="Item / code / barcode" autocomplete="off"></label><button type="button" class="rk-pill" data-mn-sheet="1">${pill()} <i>${L.length}</i></button></div>
     ${branches().length > 1 ? seg('pk.b', 'Dukan / godam', '🏬', branches().map(b => [String(b.id), b.name])) : ''}
+    ${g2() ? seg('pk.scope', 'Kaun se items', '📦', [['g2', 'Godam 2 ke items'], ['all', 'Sab items']]) : ''}
     ${seg('pk.m', 'Mahina', '📅', [...months().map(m => [m, mLab(m)]), ['all', '3 mahine']])}
     ${seg('pk.sort', 'Tarteeb', '↕', [['pk', 'Zyada packet'], ['main', 'Zyada main'], ['name', 'Naam']])}
     <div class="pk-tools"><button type="button" data-pk-pdf="1" data-mn="pk.pdf" data-mn-i="📄" data-mn-t="PDF" data-mn-s="kholo + bhejo" data-mn-g="📦 Packet report">📄 PDF</button><button type="button" data-pk-csv="1" data-mn="pk.csv" data-mn-i="📊" data-mn-t="Excel (CSV)" data-mn-s="poori list download" data-mn-g="📦 Packet report">📊 Excel</button>${C.owner() ? `<button type="button" data-pk-req="1" data-mn="pk.req" data-mn-i="🔄" data-mn-t="Taza karo" data-mn-s="PC se abhi dobara" data-mn-g="📦 Packet report"${st.busy ? ' disabled' : ''}>🔄 Taza karo</button>` : ''}</div>
@@ -91,7 +95,7 @@ function csv() {
 function dl(blob, name) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); }
 function pdfHTML() {
   const ms = st.m === 'all' ? months() : [st.m], L = rowsOf();
-  return `<h1>NOOR TRADERS</h1><h2>📦 ${esc(bName())} — Packet report (${esc(mLab(st.m))})</h2>
+  return `<h1>NOOR TRADERS</h1><h2>📦 ${esc(bName())} — Packet report (${esc(mLab(st.m))})${st.scope === 'g2' && g2() ? ' · sirf Godam 2 ke items' : ''}</h2>
   <p>${esc(R.meta.from || '')} se ${esc(R.meta.to || '')} · ${R.meta.how === 'scan' ? 'packet = scan hua barcode' : 'packet = tadad packet size ke barabar (guna / beech ki = khula)'} · ${esc(new Date().toLocaleString('en-PK'))}</p>
   <table><thead><tr><th>Item</th><th>Barcode</th><th>Qism</th><th>Size</th>${ms.map(m => `<th>${esc(mLab(m))}</th>`).join('')}<th>Kul</th></tr></thead><tbody>
   ${L.map(r => { const it = r.it; return `<tr class="pk-h"><td><b>${esc(it.n)}</b> <small>${esc(it.c)}</small></td><td>${esc(it.mb || '')}</td><td>MAIN</td><td></td>${ms.map(mk => `<td>${num(it.m?.[mk]?.main || 0)}</td>`).join('')}<td><b>${num(r.main)}</b> ${esc(it.u)}</td></tr>`
@@ -102,9 +106,10 @@ function pdfHTML() {
 document.addEventListener('input', e => { const t = e.target; if (!t?.dataset?.pkQ) return; st.q = t.value; paint(); });
 document.addEventListener('click', async e => {
   if (!C) return;
-  const b = e.target.closest?.('[data-pk-b],[data-pk-m],[data-pk-sort],[data-pk-pdf],[data-pk-csv],[data-pk-req],[data-pk-tog]'); if (!b) return;
+  const b = e.target.closest?.('[data-pk-b],[data-pk-scope],[data-pk-m],[data-pk-sort],[data-pk-pdf],[data-pk-csv],[data-pk-req],[data-pk-tog]'); if (!b) return;
   const d = b.dataset;
   if (d.pkB != null) { st.b = d.pkB; st.open.clear(); paint(); return; }
+  if (d.pkScope) { st.scope = d.pkScope; paint(); return; }
   if (d.pkM) { st.m = d.pkM; paint(); return; }
   if (d.pkSort) { st.sort = d.pkSort; paint(); return; }
   if (d.pkPdf) { if (!R?.meta) { C.notice('Report abhi nahi aayi'); return; } C.pdf(pdfHTML(), `${bName()} packet ${mLab(st.m)}`); return; }

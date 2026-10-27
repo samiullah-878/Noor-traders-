@@ -1,5 +1,5 @@
 // =========================================================
-//  pk-report.js  v1.1 (2026-10-27: SAB branches — NOOR TRADERS dukan + har godam; docs pkReport-<branchId>-<k>, meta.branches) · v1.0 (2026-10-27) — 📦 PACKET REPORT (malik: "poore 3 mahine ka Godam 2 ka barcode ke saath packets wala data —
+//  pk-report.js  v1.2 (2026-10-27: item.st = har branch ka stock — app 'Godam 2 ke items' filter) · v1.1 (2026-10-27: SAB branches — NOOR TRADERS dukan + har godam; docs pkReport-<branchId>-<k>, meta.branches) · v1.0 (2026-10-27) — 📦 PACKET REPORT (malik: "poore 3 mahine ka Godam 2 ka barcode ke saath packets wala data —
 //  kitne packet bike, sub-barcode + barcode, 1 packet ke hisaab se, jo scan hue")
 //
 //  SIRF PARHTI hai (POS mein kuch nahi likhti). Har ghante (aur app ke "🔄 Taza karo" = posStats/pkReq par 10 min ke andar):
@@ -51,6 +51,8 @@ async function build(pool, reqAt) {
   const mbCol = await colOf(pool, 'Items', ['barcode']);
   const items = (await pool.request().query(`SELECT i.ItemID, i.ItemCode, i.ItemName, ISNULL(i.PackQty, 0) AS PackQty, i.QtyName, i.PackQtyName${mbCol ? `, i.[${mbCol}] AS MB` : ''} FROM dbo.Items i`)).recordset;
   const subs = (await pool.request().query(`SELECT ItemID, LTRIM(RTRIM(SBBarCode)) AS B, SBItemQty AS Q FROM dbo.ItemSubCode WHERE LTRIM(RTRIM(ISNULL(SBBarCode, ''))) <> ''`)).recordset;
+  const stMap = new Map();   // v1.2: har item ka har branch mein stock (malik: "jo items Godam 2 mein hain un ka NOOR TRADERS ka data") — app filter 'Godam 2 ke items'
+  try { for (const r of (await pool.request().query(`SELECT ItemID, BranchID, ISNULL(CurrStock, 0) AS S FROM dbo.ItemBranchRate`)).recordset) { const id = String(r.ItemID); if (!stMap.has(id)) stMap.set(id, {}); if (Number(r.S)) stMap.get(id)[String(r.BranchID)] = r3(r.S); } } catch (e) { log('ItemBranchRate: ' + e.message); }
   const linesAll = (await pool.request().input('a', sql.DateTime, from).query(`
     SELECT d.ItemID, d.Qty, s.SaleDate, s.SaleID, ISNULL(NULLIF(d.GBranchID, 0), s.BranchID) AS B${scanCol ? `, LTRIM(RTRIM(CAST(d.[${scanCol}] AS NVARCHAR(80)))) AS SC` : ''}
     FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID
@@ -61,7 +63,7 @@ async function build(pool, reqAt) {
   for (const gid of bids) {
   const lines = linesAll.filter(l => Number(l.B) === gid);
   const out = new Map(), bills = new Map();
-  const get = r => { const id = String(r.ItemID); if (!out.has(id)) out.set(id, { i: id, c: String(r.ItemCode || ''), n: String(r.ItemName || '').trim(), pk: Number(r.PackQty) || 0, u: String(r.QtyName || 'Pcs'), cu: String(r.PackQtyName || 'Ctn'), mb: String(r.MB || '').trim(), subs: Object.fromEntries((subBy.get(id) || []).map(x => [x.b, x.q])), m: {} }); return out.get(id); };
+  const get = r => { const id = String(r.ItemID); if (!out.has(id)) out.set(id, { i: id, c: String(r.ItemCode || ''), n: String(r.ItemName || '').trim(), pk: Number(r.PackQty) || 0, u: String(r.QtyName || 'Pcs'), cu: String(r.PackQtyName || 'Ctn'), mb: String(r.MB || '').trim(), subs: Object.fromEntries((subBy.get(id) || []).map(x => [x.b, x.q])), st: stMap.get(id) || {}, m: {} }); return out.get(id); };
   for (const l of lines) {
     const it = byId.get(String(l.ItemID)); if (!it) continue;
     const d = new Date(l.SaleDate), mk = `${d.getFullYear()}-${p2(d.getMonth() + 1)}`; if (!months.includes(mk)) continue;
@@ -84,14 +86,14 @@ async function build(pool, reqAt) {
   log(`  ${bm[gid]} (#${gid}): ${lines.length} lines · ${all.length} items`);
   }
   for (let k = 0; k < 12; k++) batch.delete(col.doc('pkReport-' + k));   // v1.0 wale purane chunk
-  batch.set(col.doc('pkReport'), { at: Date.now(), from: `${from.getFullYear()}-${p2(from.getMonth() + 1)}-01`, to: `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`, months: months.join(','), branches: brOut, scanCol, how: scanCol ? 'scan' : 'size', lines: linesAll.length, reqAt: reqAt || 0, v: 2 });
+  batch.set(col.doc('pkReport'), { at: Date.now(), from: `${from.getFullYear()}-${p2(from.getMonth() + 1)}-01`, to: `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`, months: months.join(','), branches: brOut, scanCol, how: scanCol ? 'scan' : 'size', lines: linesAll.length, reqAt: reqAt || 0, v: 3 });
   await batch.commit();
   log(`✅ ${brOut.length} branches (${brOut.map(b => b.name).join(', ')}) · ${months.join(' ')} · scan: ${scanCol || 'nahi (packet-size se)'}`);
 }
 let lastRun = 0;
 const tick = ZINDA.guard(async () => {
   const meta = (await col.doc('pkReport').get()).data() || {}, req = (await col.doc('pkReq').get()).data() || {};
-  const reqAt = Number(req.at) || 0, due = Date.now() - (Number(meta.at) || 0) > EVERY || reqAt > (Number(meta.reqAt) || 0) || Number(meta.v || 0) < 2;   // v1.1: purani (sirf Godam 2) report ho to foran nayi
+  const reqAt = Number(req.at) || 0, due = Date.now() - (Number(meta.at) || 0) > EVERY || reqAt > (Number(meta.reqAt) || 0) || Number(meta.v || 0) < 3;   // v1.2: purani (sirf Godam 2) report ho to foran nayi
   if (!due || Date.now() - lastRun < 5 * 60000) return;
   lastRun = Date.now(); let pool;
   try { pool = await sql.connect(SQL_CONFIG); await build(pool, reqAt); }
