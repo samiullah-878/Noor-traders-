@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-parchi.js  v1.1.1 (2026-10-06: ⚠ v1.1 ka C# compile NAHI hota tha (px naam do dafa) -> print ruk gaya; theek + NtPrint3.dll) · v1.1 (2026-10-06: ⚡ TEZ — PowerShell EK dafa khula (worker), har print seedha; Urdu tasveer LockBits se; parchiyon
+//  nt-parchi.js  v1.2 (2026-10-27: 🧻 kaghaz kam — Urdu tasveer 20% chhoti, kaatne se pehle 1 khali line) · v1.1.1 (2026-10-06: ⚠ v1.1 ka C# compile NAHI hota tha (px naam do dafa) -> print ruk gaya; theek + NtPrint3.dll) · v1.1 (2026-10-06: ⚡ TEZ — PowerShell EK dafa khula (worker), har print seedha; Urdu tasveer LockBits se; parchiyon
 //                     ke beech 150 ms; worker atke to purana tareeqa khud) · v1.0 (2026-10-04) — SAANJHI parchi: ESC/POS segments + Urdu/bara text ka raster + Windows RAW print (har job alag cut)
 //  Istemal: nt-print.js (💻 PC) aur sale-post.js (counter: Abdurehman / Bilal / Mithu) — token parchi dono jagah ek jaisi.
 //  make(opts) -> { Seg, tokenJobs(d), sendJobs(jobs, printer), ESC, GS, line, hr, big, bold, when, FONT_UR }
@@ -26,7 +26,7 @@ function Seg() {
     raw(t) { buf += t; },
     ln(t = '') { t = String(t); if (ascii(t)) buf += t + '\r\n'; else { flush(); a.push({ i: t, f: FONT_UR, px: 24, b: false, w: DOTS, a: 0 }); } },
     img(t, px, bold, align = 1, font = FONT_UR) { flush(); a.push({ i: String(t), f: font, px, b: !!bold, w: DOTS, a: align }); },
-    end() { buf += '\r\n\r\n\r\n\r\n' + GS + 'V' + '\x42' + '\x00'; flush(); return { s: a }; }
+    end() { buf += '\r\n\r\n' + GS + 'V' + '\x42' + '\x00'; flush(); return { s: a }; }   // v1.2 (2026-10-27): kaghaz kam — GS V 66 khud kaatne tak le jata hai
   };
 }
 const when = d => new Date(Number(d.doneAt) || Number(d.createdAt) || Date.now());
@@ -148,7 +148,26 @@ function oneShot(jobs, printer) {
     { timeout: 90000, windowsHide: true }, (err, out, errOut) => res(err ? new Error((String(errOut || '').trim().split(/\r?\n/).pop()) || err.message) : null)));
 }
 let q = Promise.resolve();
+// v1.2 (2026-10-27): 🧻 KAGHAZ KAM — malik: "parchi bohat bari nikalti hai, paper bohat lagta hai" (har parchi isi raaste: voucher, kharcha, purchase,
+//   transfer, sale, galla, factory, farq). (1) Urdu likhai ki tasveer 20% chhoti (px 26-120; token ka bara number 170 wahi), (2) kaatne (GS V 66 0 —
+//   printer khud kaatne ki jagah tak le jata hai) se pehle sirf EK khali line. Printer / C# worker wahi.
+const UR_SCALE = 0.8, CUTSEQ = GS + 'V' + '\x42' + '\x00';
+function compactJobs(jobs) {
+  return (Array.isArray(jobs) ? jobs : []).map(j => (j && Array.isArray(j.s)) ? { ...j, s: j.s.map(g => {
+    if (!g) return g;
+    if (g.i != null && Number(g.px) >= 26 && Number(g.px) <= 120) return { ...g, px: Math.max(24, Math.round(Number(g.px) * UR_SCALE)) };
+    if (g.r) {
+      const t = Buffer.from(String(g.r), 'base64').toString('latin1'), k = t.lastIndexOf(CUTSEQ);
+      if (k < 0) return g;
+      let a = k; while (a >= 2 && t.slice(a - 2, a) === '\r\n') a -= 2;   // kaatne se pehle ki saari khali lines
+      const n = (k - a) / 2; if (n <= 2) return g;                       // 2 = aakhri line ka khatma + 1 khali line
+      return { ...g, r: Buffer.from(t.slice(0, a) + '\r\n\r\n' + t.slice(k), 'latin1').toString('base64') };
+    }
+    return g;
+  }) } : j);
+}
 function sendJobs(jobs, printer) {   // -> null (theek) ya Error
+  jobs = compactJobs(jobs);   // v1.2 (2026-10-27): har parchi chhoti
   const run = async () => {
     if (process.platform === 'win32' && opts.worker !== false) {
       const r = await viaWorker(jobs, printer);

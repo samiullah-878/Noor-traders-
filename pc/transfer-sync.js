@@ -225,7 +225,7 @@ function transferText(r, note, reprint) {
     if (UR.note && reprint.reason) { const u = UR.note(reprint.reason, 44, 'وجہ'); if (u) out.push(u); }   // v4.10: 📝 Wajah Urdu (AI)
     out.push(ESC + 'a' + '\x00' + 'Wajah: ' + ascii(reprint.reason).slice(0, PRINT_WIDTH - 7), stamp(reprint.at) + (reprint.by ? ' · ' + ascii(reprint.by) : ''));
   }
-  out.push('', 'Dastakhat (nikala): ____________', '', 'Dastakhat (mila):   ____________', '', '', '', GS + 'V' + '\x42' + '\x00');
+  out.push('', 'Dastakhat (nikala): ____________', '', 'Dastakhat (mila):   ____________', '', GS + 'V' + '\x42' + '\x00');   // 2026-10-27: kaghaz kam
   return out.join('\r\n');
 }
 function purchaseText(b, entry) {
@@ -247,7 +247,7 @@ function purchaseText(b, entry) {
     if (entry.note) { if (UR.note) { const u = UR.note(entry.note, 50, 'نوٹ'); if (u) out.push(u); } out.push(ESC + 'a' + '\x00' + 'Note: ' + ascii(entry.note).slice(0, PRINT_WIDTH - 6)); }
     out.push('-'.repeat(PRINT_WIDTH), ESC + 'a' + '\x02', ESC + '!' + '\x30' + 'Rs.' + money(entry.amount) + ESC + '!' + '\x00', ESC + 'a' + '\x00');
   }
-  out.push('', '', '', GS + 'V' + '\x42' + '\x00');
+  out.push('', GS + 'V' + '\x42' + '\x00');   // 2026-10-27: kaghaz kam
   return out.join('\r\n');
 }
 function sendRaw(text, docName) {

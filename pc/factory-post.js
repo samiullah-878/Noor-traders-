@@ -187,7 +187,7 @@ function slipText(b, after, copy, app) {
   if (kam.length) out.push(hr, bold('!! KAM PAD GAYA (' + (app ? 'factory ' : '') + 'stock minus):'), ...kam.flatMap(l => { const ur = UR?.get?.(l.id); return ['  ' + asc(l.name).slice(0, W - 2), ...(ur ? [UR.line(ur, 30)] : [])]; }));
   out.push(hr, line('Laagat:', 'Rs ' + nf(Math.round(b.cost || 0))));
   for (const o of b.outs || []) out.push(line('  ' + asc(o.name).slice(0, 18) + ' fi pcs', 'Rs ' + nf(o.c)));
-  out.push(hr, '', copy.startsWith('MUNSHI') ? 'Munshi dastakhat: ____________' : 'Factory dastakhat: ___________', '', '', '', GS + 'V\x42\x00');
+  out.push(hr, '', copy.startsWith('MUNSHI') ? 'Munshi dastakhat: ____________' : 'Factory dastakhat: ___________', '', GS + 'V\x42\x00');   // 2026-10-27: kaghaz kam
   return out.join('\r\n');
 }
 function printRaw(text, tag) {

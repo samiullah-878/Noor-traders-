@@ -474,7 +474,7 @@ function receiptBig({ title, code, date, lines, note, copy, pay }) {
   }
   const nl = wrap(note, WB);
   if (nl.length) out.push(hrB, ...(UR.note ? [UR.note(note, 52, 'تفصیل')].filter(Boolean) : []), sm('Tafseel:'), ...nl.map(sm));   // 2026-10-20: 📝 Tafseel Urdu (AI, print se pehle fillNotes)
-  out.push(hrB, ...dateMark(date, big2, C, 'bot'), L + '', sm('Dastakhat: ______________________'), '', C + sm('Blue Khata app'), L, '', '');
+  out.push(hrB, L + sm('Dastakhat: ______________________'), '');   // 2026-10-27: malik — neeche tareekh NAHI, 'Blue Khata app' + khali lines nahi (kaghaz kam; GS V 66 khud kaatne tak le jata hai)
   out.push(GS + 'V\x42\x00');                                    // kaghaz kaato
   return out.join('\r\n');
 }
@@ -534,8 +534,7 @@ function receipt({ title, code, date, lines, note, copy, bank, pay }) {
   if (bq.length) out.push(L + hr);
   const nl = wrap(note, W);
   if (nl.length) out.push(...(UR.note ? [UR.note(note, bank ? 46 : 52, 'تفصیل')].filter(Boolean) : []), L + 'Tafseel:', ...nl, hr);   // 2026-10-20: 📝 Tafseel Urdu
-  if (!bank) out.push(...dateMark(date, big, C, 'bot'), L + hr);
-  out.push('', '', 'Dastakhat: ______________________', '', C + 'Blue Khata app', L, '', '', '');
+  out.push('', L + 'Dastakhat: ______________________', '');   // 2026-10-27: malik — neeche tareekh nahi, faltu khali kaghaz nahi
   out.push(GS + 'V\x42\x00');                                    // kaghaz kaato
   return out.join('\r\n');
 }
@@ -1350,10 +1349,10 @@ async function purchaseSlip(e, copy) {
       before: e.partyId ? rupees(appBalance(e.partyId, new Set([e.id]))) : null, after: e.partyId ? rupees(appBalance(e.partyId)) : null }],
     note: String(e.note || '').trim(), copy, pay });
   let photo = '';
-  if (PH) { const u = await goodsPhoto(e); if (u) photo = PH.photoRaster(u, 256, 320); }
+  if (PH) { const u = await goodsPhoto(e); if (u) photo = PH.photoRaster(u); }   // 2026-10-27: photo-print v2 (poori chaurai, saaf)
   if (!photo) return { text: txt, photo: false };
   const cut = '\x1dV\x42\x00', k = txt.lastIndexOf(cut);
-  return { text: k >= 0 ? txt.slice(0, k) + 'Samaan ki tasveer:\r\n' + photo + '\r\n\r\n\r\n' + txt.slice(k) : txt + photo, photo: true };
+  return { text: k >= 0 ? txt.slice(0, k) + 'Samaan ki tasveer:\r\n' + photo + '\r\n' + txt.slice(k) : txt + photo, photo: true };
 }
 async function printPurchases() {
   if (DRY || !AUTO_PRINT) return;

@@ -182,7 +182,7 @@ function slipText(r, head, W = 42) {
   row(r.dir === 'in' ? 'Kis se' : 'Kis ko', r.name); row('Bank', r.bank); row('Via', r.via);
   const [y, mo, d] = String(r.day || '').split('-'); row('Waqt', r.day ? `${d}-${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][Number(mo) - 1]}-${y}${r.time ? ' ' + r.time : ''}` : '');
   row('TXN', r.txn); row('Zariya', r.src === 'email' ? 'HBL email' : r.src === 'notif' ? 'HBL notification' : 'HBL SMS');
-  out.push('-'.repeat(W), r.kind === 'cash' ? 'Branch mein cash jama hua' : 'App: HBL screen par [ ] tick karein', '(khata mein tab lagega)', '', '', '', GS + 'V' + '\x42' + '\x00');
+  out.push('-'.repeat(W), r.kind === 'cash' ? 'Branch mein cash jama hua' : 'App: HBL screen par [ ] tick karein', '(khata mein tab lagega)', '', GS + 'V' + '\x42' + '\x00');
   return out.join('\r\n');
 }
 // v2.0 (2026-10-12): 🤖 PAISE AAYE = Server PC KHUD khate mein — malik: "jo bhi raqam account mein aa rahi hai wo isi default account

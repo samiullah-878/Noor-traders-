@@ -113,14 +113,14 @@ function parchiText(bill, o = {}) {
   out.push('-'.repeat(W), '', 'Maal gina:  ______________', '', 'Check kiya: ______________', '');
   out.push(`Print: ${stampOf(o.at || Date.now())} (${kind === 'dobara' ? 'dobara' : 'khud, auto'})`.slice(0, W));
   if (o.copy) out.push(`Copy ${o.copy}`);
-  out.push('', '', '', GS + 'V' + '\x42' + '\x00');
+  out.push('', GS + 'V' + '\x42' + '\x00');   // 2026-10-27: kaghaz kam
   return out.join('\r\n');
 }
 let UR = null; try { UR = require('./urdu-names.js'); } catch {}   // v1.3: transfer-sync ne watch() pehle hi chala diya (wahi module)
 function goneText(info, o = {}) {
   const out = [ESC + '@' + ESC + 'a' + '\x01' + ESC + '!' + '\x30' + (o.shop || 'NOOR TRADERS') + ESC + '!' + '\x00', ESC + '!' + '\x08' + (info.cancel ? 'PURCHASE BILL CANCEL HUA' : 'PURCHASE BILL MITA DIYA GAYA') + ESC + '!' + '\x00' + ESC + 'a' + '\x00', '-'.repeat(W)];
   out.push('Bill: ' + ascii(info.no), ...wrap('Supplier: ' + (info.party || ''), W), line('Raqam thi:', 'Rs.' + money(info.net)), `Items the: ${info.items || 0}`);
-  out.push('-'.repeat(W), `Pata chala: ${stampOf(o.at || Date.now())}`, 'Yeh bill pehle chhap chuka tha.', '', '', '', GS + 'V' + '\x42' + '\x00');
+  out.push('-'.repeat(W), `Pata chala: ${stampOf(o.at || Date.now())}`, 'Yeh bill pehle chhap chuka tha.', '', GS + 'V' + '\x42' + '\x00');
   return out.join('\r\n');
 }
 // pichli parchi ke lines vs ab — kya badla (aasan zabaan)

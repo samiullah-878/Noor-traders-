@@ -477,7 +477,7 @@ async function receiptFor(saleNo, saleId) {
   out.push(line(head.IsCreditSale ? 'Balance (Udhaar):' : 'Balance:', 'Rs.' + n(Math.round((total - cash) * 100) / 100)));
   out.push(hr);
   for (const t of SHOP.lines) out.push(t);
-  out.push('', '', '');
+  out.push('');   // 2026-10-27: kaghaz kam (GS V 66 khud kaatne tak)
   out.push(GS + 'V' + '\x42' + '\x00');                  // paper cut
   return out.join('\r\n');
 }
@@ -547,7 +547,7 @@ function gatePassText(godamName, rows, saleNo, partyName, when) {
     if (o.ur) out.push(UR.line(o.ur, 48));   // v1.11: 🔤 Urdu naam (bara, mota)
     out.push(ESC + 'a' + '\x02' + ESC + '!' + (q.length * 2 <= W ? '\x38' : '\x18') + q + ESC + '!' + '\x00' + ESC + 'a' + '\x00');   // mota + do guna bara
   }
-  out.push(ESC + 'G' + '\x00', '', '', '');
+  out.push(ESC + 'G' + '\x00', '');   // 2026-10-27: kaghaz kam
   out.push(GS + 'V' + '\x42' + '\x00');
   return out.join('\r\n');
 }

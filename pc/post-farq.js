@@ -530,7 +530,7 @@ function receiptText(b) {
   section('KAM NIKLE (Sale)', b.kam, '-');
   section('ZYADA NIKLE (Return)', b.zyada, '+');
   out.push(hr, line('Kam:', '-' + n(b.kamRs)), line('Zyada:', '+' + n(b.zyadaRs)), hr);
-  out.push(line('KUL FARQ:', 'Rs ' + n(b.total)), hr, '', '', '');
+  out.push(line('KUL FARQ:', 'Rs ' + n(b.total)), hr, '');   // 2026-10-27: kaghaz kam
   out.push(GS + 'V' + '\x42' + '\x00');
   return out.join('\r\n');
 }
@@ -754,7 +754,7 @@ function bandReceipt(L, r) {
     out.push(String(k.ItemName).slice(0, W));
     out.push(row(`  ${k.positive ? '-' : '+'}${n(k.qty)} x ${n(k.cost)}`, 'Rs ' + n(k.amount)));
   }
-  out.push(hr, row('Kul:', 'Rs ' + n(L.net)), center('POS mein item INACTIVE'), '', '', '', '\x1dV\x42\x00');   // 2026-10-20: kaghaz kaato (pehle kat-ta nahi tha)
+  out.push(hr, row('Kul:', 'Rs ' + n(L.net)), center('POS mein item INACTIVE'), '', '\x1dV\x42\x00');   // 2026-10-20: kaghaz kaato (pehle kat-ta nahi tha)
   return out.join('\r\n');
 }
 

@@ -1,5 +1,5 @@
 // =========================================================
-//  entry-photo.js  v1.0 (2026-10-21) — 📷 PARTY ENTRY KI TASVEER parchi (TM-T88IV) par
+//  entry-photo.js  v1.1 (2026-10-27: sirf pehli tasveer, photo-print v2 — saaf + kam kaghaz) · v1.0 (2026-10-21) — 📷 PARTY ENTRY KI TASVEER parchi (TM-T88IV) par
 //  Malik: "jab bhi kisi party ki amount add ki jaye wahan photo lagane ka option ho, wohi photo party chips ke andar aur PRINT par ho".
 //  App v2.105.8: tasveer entryPhotos/<entryId>.photos (3 tak, JPEG data-URL), entry par pn.photos = ginti.
 //  Yahan: har tasveer photo-print.js se kaala-safed, aadhe kaghaz ki chaurai (256 dots, lambai 320 tak), parchi ke neeche kaatne se pehle.
@@ -29,14 +29,14 @@ module.exports = function entryPhoto({ biz, PH, log = () => {} } = {}) {
   async function raster(e, opts) {
     if (!PH || !PH.photoRaster) return '';
     const out = [];
-    for (const u of await photosOf(e, opts)) { const r = PH.photoRaster(u, 256, 320); if (r) out.push(r); }
+    for (const u of (await photosOf(e, opts)).slice(0, 1)) { const r = PH.photoRaster(u); if (r) out.push(r); }   // v1.1 (2026-10-27): malik — kaghaz kam: sirf PEHLI tasveer, poori chaurai (photo-print v2 saaf)
     return out.join('\r\n\r\n');
   }
   // parchi ke text mein kaatne (GS V) se pehle "Tasveer:" + raster
   function addBeforeCut(txt, ras, label = 'Tasveer:') {
     if (!ras) return txt;
     const k = String(txt).lastIndexOf(CUT);
-    return k >= 0 ? txt.slice(0, k) + label + '\r\n' + ras + '\r\n\r\n\r\n' + txt.slice(k) : txt + '\r\n' + label + '\r\n' + ras + '\r\n';
+    return k >= 0 ? txt.slice(0, k) + label + '\r\n' + ras + '\r\n' + txt.slice(k) : txt + '\r\n' + label + '\r\n' + ras + '\r\n';
   }
   async function withPhoto(txt, e, opts) { try { return addBeforeCut(txt, await raster(e, opts)); } catch (er) { log('tasveer parchi par nahi lagi: ' + (er.message || er)); return txt; } }
   return { photosOf, raster, addBeforeCut, withPhoto };
