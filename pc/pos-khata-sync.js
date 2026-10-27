@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-10-27: ⚖️ BARABAR KARO — app ke Farq screen se milanJobs (dir app/pos): chuni hui purani entries / vouchers doosri taraf (runMilanJobs, importVoucher force)
 //  2026-10-26: ⚖️ POS MILAN — har 15 min jude khaton ka POS ledger balance blueAccess/posLedger (app: har khate par POS baqaya + milan screen)
 //  2026-10-26: 🔒 app mein "Khata band" (party.active false) = POS Account IsActive 0; chalu = 1 (appHashParty mein a)
 //  2026-10-23: 🏦 bank / khate se kharcha (dailyIncluded false — HBL / transfer se) ki KHARCHA parchi par bara "BANK / KHATE SE · GALLE SE NAHI" (pehle "Kharcha diya" = galle wala dhoka)
@@ -824,6 +825,78 @@ function appEntryToVoucher(e, acct) {
     { accountId: SALE_ACCOUNT_ID, debit: 0, credit: amt, desc: `Udhar sale - ${a.name}` }] };
   return null;
 }
+// 2026-10-27: ⚖️ "BARABAR KARO" (app Farq ki entries → milanJobs {partyId, dir:'app'|'pos', ids[], status:'new'}) — malik: "jo entries nahi wo daal de barabar".
+//   dir 'pos' = app ki chuni hui entries POS mein voucher (Payment → CPV, Wasooli → CRV, Udhaar diya → JV sale, Saman liya → JV purchase account) —
+//              ENABLED_AT se purani bhi, 'borrow' bhi (aam sync sirf link ke baad ki, borrow kabhi nahi). Voucher bante hi link + posCode (dobara nahi banta).
+//   dir 'app' = POS ke chune hue vouchers (code) app mein — importVoucher(v, force=true) (party ke 'since' se purane bhi).
+//   Har job: status new → working → done {done, fail, log[]} (log = text lines, nested list nahi). Sirf malik banata hai (rules 2.77).
+let purchaseAcId = 0;
+async function purchaseAccount(pool) {
+  if (purchaseAcId) return purchaseAcId;
+  try {
+    const cols = (await pool.request().query(`SELECT COLUMN_NAME AS C FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'Defaults'`)).recordset.map(x => String(x.C));
+    const c = cols.find(x => /purchase/i.test(x) && /ac/i.test(x)); if (!c) return 0;
+    const r = (await pool.request().query(`SELECT TOP 1 [${c}] AS A FROM dbo.Defaults`)).recordset[0];
+    purchaseAcId = Number(r?.A) || 0;
+  } catch (e) { log('Defaults purchase account: ' + e.message); }
+  return purchaseAcId;
+}
+function borrowToVoucher(e, acct, purAc) {
+  const a = acct.get(e.partyId), amt = rupees(e.amount), note = String(e.note || '').trim();
+  return { type: 'JV', remarks: `Udhar purchase (app) ${note} - ${a.name}`.replace(/\s+/g, ' '), lines: [
+    { accountId: purAc, debit: amt, credit: 0, desc: `Udhar purchase - ${a.name}` },
+    { accountId: a.accountId, debit: 0, credit: amt, desc: note || 'Udhar purchase (app)' }] };
+}
+async function runMilanJobs(pool, acct, acctIds, importVoucher) {
+  const snap = await biz.collection('milanJobs').where('status', '==', 'new').limit(5).get();
+  for (const d of snap.docs) {
+    const j = d.data() || {}, ref = d.ref, ids = Array.isArray(j.ids) ? j.ids.map(String).slice(0, 300) : [], L = [];
+    const say = m => { L.push(m); log('⚖️ ' + m); };
+    await ref.set({ status: 'working', startAt: Date.now() }, { merge: true });
+    let done = 0, fail = 0;
+    try {
+      if (j.dir === 'pos') {
+        const purAc = await purchaseAccount(pool);
+        for (const id of ids) {
+          const e = app.get(id);
+          if (!e || e.deleted) { fail++; say(`${id}: entry nahi mili / delete`); continue; }
+          if (!acct.has(e.partyId)) { fail++; say(`${id}: party POS se judi nahi`); continue; }
+          if (String(id).startsWith('pos-') || e.purchase || e.transferId) { fail++; say(`${id}: purchase bill / transfer — voucher nahi banta`); continue; }
+          const key = 'entry:' + id, link = links.get(key);
+          if ((link && link.voucherId && !link.deleted) || e.posCode) { say(`${id}: pehle se POS mein (${link?.code || e.posCode})`); done++; continue; }
+          let spec = null;
+          if (e.kind === 'borrow') { if (!purAc) { fail++; say(`${id}: POS ka purchase account nahi mila (Defaults) — Saman liya nahi bana`); continue; } spec = borrowToVoucher(e, acct, purAc); }
+          else spec = appEntryToVoucher(e, acct);
+          if (!spec) { fail++; say(`${id}: ${e.kind} POS mein nahi ban sakti`); continue; }
+          if (DRY) { say(`DRY: ${spec.type} ${acct.get(e.partyId).name} Rs ${rupees(e.amount)} ${e.date}`); continue; }
+          const r = await posWriteVoucher(pool, { voucherId: 0, type: spec.type, date: e.date, remarks: spec.remarks, marker: e.id, lines: spec.lines });
+          await setLink(key, { appHash: appHashEntry(e), voucherId: r.voucherId, code: r.code, posHash: null });
+          await markApp([id], { posCode: r.code, posError: null });
+          done++; say(`${r.code}: ${acct.get(e.partyId).name} · Rs ${rupees(e.amount)} · ${e.date} (${e.kind})`);
+        }
+      } else if (j.dir === 'app') {
+        if (!ids.length) say('koi voucher nahi');
+        else {
+          const req = pool.request(); ids.forEach((c, i) => req.input('c' + i, sql.NVarChar(40), c));
+          const rows = (await req.query(`SELECT v.VoucherID, v.VoucherCode, v.VoucherType, v.VoucherDate, v.VoucherRemarks, v.SystemNote, v.UpdatedOn, v.CreatedOn,
+              vd.VoucherDetailID, vd.AccountID, vd.Description, vd.Debit, vd.Credit
+            FROM dbo.Voucher v JOIN dbo.VoucherDetail vd ON vd.VoucherID = v.VoucherID
+            WHERE v.VoucherCode IN (${ids.map((_, i) => '@c' + i).join(',')}) AND v.VoucherStatusID <> 3`)).recordset;
+          const vs = new Map();
+          for (const r of rows) { if (!vs.has(r.VoucherID)) vs.set(r.VoucherID, { ...r, lines: [] }); vs.get(r.VoucherID).lines.push(r); }
+          for (const c of ids) {
+            const v = [...vs.values()].find(x => String(x.VoucherCode) === c);
+            if (!v) { fail++; say(`${c}: POS mein nahi mila / cancel`); continue; }
+            if (!v.lines.some(l => acctIds.has(l.AccountID))) { fail++; say(`${c}: is voucher mein judi party ki line nahi`); continue; }
+            try { await importVoucher(v, true); done++; say(`${c}: app mein likh diya`); } catch (e) { fail++; say(`${c}: ${e.message || e}`); }
+          }
+        }
+      } else say('dir ghalat: ' + j.dir);
+    } catch (e) { say('masla: ' + (e.message || e)); fail++; }
+    await ref.set({ status: 'done', done, fail, log: L.slice(0, 120), doneAt: Date.now() }, { merge: true });
+    log(`⚖️ milan job ${d.id} (${j.dir}): ${done} bane · ${fail} nahi`);
+  }
+}
 function transferToVoucher(out, acct) {
   const from = acct.get(out.fromPartyId), to = acct.get(out.toPartyId);
   const amt = rupees(out.amount), note = String(out.note || '').trim();
@@ -955,23 +1028,24 @@ async function syncEntries(pool, acct) {
   const linkedVoucher = new Map();
   for (const [k, l] of links) if (l.voucherId && !linkedVoucher.has(l.voucherId)) linkedVoucher.set(l.voucherId, k);
 
-  for (const v of vouchers.values()) {
-    if (/\[app:/.test(String(v.SystemNote || '')) && !linkedVoucher.has(v.VoucherID)) continue; // app ki, link baad mein
+  // 2026-10-27: ek voucher app mein laana — loop + ⚖️ milanJobs (force = party ke 'since' se purana bhi) dono isi se
+  const importVoucher = async (v, force = false) => {
+    if (/\[app:/.test(String(v.SystemNote || '')) && !linkedVoucher.has(v.VoucherID)) return; // app ki, link baad mein
     const existingKey0 = linkedVoucher.get(v.VoucherID);
     const created = new Date(v.CreatedOn || v.VoucherDate).getTime();
     const partyLines = v.lines.filter(l => acctIds.has(l.AccountID)
-      && (existingKey0 || created >= acct.get(acctIds.get(l.AccountID)).since));
-    if (!partyLines.length) continue;
+      && (existingKey0 || force || created >= acct.get(acctIds.get(l.AccountID)).since));   // 2026-10-27: force = ⚖️ milanJobs (purana voucher bhi)
+    if (!partyLines.length) return;
     const date = ymd(v.VoucherDate);
     const code = v.VoucherCode;
     const posH = hash(v.lines.map(l => [l.AccountID, l.Debit, l.Credit, l.Description]).concat([date, v.VoucherRemarks]));
     const existingKey = linkedVoucher.get(v.VoucherID);
     const link = existingKey && links.get(existingKey);
-    if (link && link.posHash === posH) continue;
+    if (link && link.posHash === posH) return;
     const appOrigin = existingKey && !/^(entry:posv-|transfer:posv)/.test(existingKey);
     if (link && !link.posHash) {                                   // app ne abhi likha — POS ka naya roop yaad rakho
       for (const [k2, l2] of links) if (l2.voucherId === v.VoucherID) await setLink(k2, { posHash: posH });
-      continue;
+      return;
     }
     if (appOrigin) {                                               // app wali entry POS mein badli gayi
       const d0 = partyLines.find(l => l.Debit > 0) || partyLines[0];
@@ -979,7 +1053,7 @@ async function syncEntries(pool, acct) {
       const ids = existingKey.startsWith('transfer:')
         ? [`transfer-${existingKey.slice(9)}-out`, `transfer-${existingKey.slice(9)}-in`] : [existingKey.slice(6)];
       const docs = ids.map(id => app.get(id)).filter(Boolean);
-      if (!docs.length) { await setLink(existingKey, { posHash: posH }); continue; }
+      if (!docs.length) { await setLink(existingKey, { posHash: posH }); return; }
       log(`POS mein badli (app wali): ${code} · Rs ${rupees(amount)}`);
       const rev = Math.max(...docs.map(d => d.rev || 0)) + 1;
       let first = null;
@@ -988,7 +1062,7 @@ async function syncEntries(pool, acct) {
         if (!first) first = rec;
       }
       await setLink(existingKey, { posHash: posH, appHash: appHashEntry(first) });
-      continue;
+      return;
     }
 
     const debit = partyLines.filter(l => l.Debit > 0), credit = partyLines.filter(l => l.Credit > 0);
@@ -1007,7 +1081,7 @@ async function syncEntries(pool, acct) {
       const inc = app.get(`transfer-${tid}-in`);
       await appWrite(`transfer-${tid}-in`, { ...common, kind: 'payment', transferRole: 'in', partyId: to, rev }, inc ? { ...inc, rev: rev - 1 } : null);
       await setLink(key, { voucherId: v.VoucherID, code, simple: v.lines.length === 2, posHash: posH, appHash: appHashEntry({ ...common, kind: 'collection', partyId: from }) });
-      continue;
+      return;
     }
     // warna har party account ek entry
     const byAcc = new Map();
@@ -1037,7 +1111,10 @@ async function syncEntries(pool, acct) {
       const rec = await appWrite(id, data, cur);
       await setLink(key, { voucherId: v.VoucherID, code, simple: v.lines.length === 2 && byAcc.size === 1, posHash: posH, appHash: appHashEntry(rec) });
     }
-  }
+    };
+  for (const v of vouchers.values()) await importVoucher(v, false);
+
+  try { await runMilanJobs(pool, acct, acctIds, importVoucher); } catch (e) { log('⚖️ milanJobs masla: ' + e.message); }
 
   // ---------- POS mein delete hue ----------
   const alive = new Set((await pool.request().query(`SELECT VoucherID FROM dbo.Voucher

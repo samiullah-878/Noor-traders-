@@ -6414,3 +6414,11 @@ html body #dialogBody .pk-b{font-size:12.5px;font-weight:700;color:#13213f;min-w
 html body #dialogBody .pk-n{text-align:right;white-space:nowrap}html body #dialogBody .pk-n b{font-size:14px;color:#166534}html body #dialogBody .pk-n small{display:block;font-size:10px;color:#7a889e}
 html body #dialogBody .pk-ms{grid-column:1/-1;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}html body #dialogBody .pk-mm{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;min-width:52px;padding:2px 7px;border-radius:9px;background:#f6f8fc;border:1px solid #e3e8f1}html body #dialogBody .pk-mm small{font-size:9.5px;color:#7a889e;font-weight:700}html body #dialogBody .pk-mm b{font-size:12.5px;color:#1a2d53}
 html body #dialogBody .pk-row.pk-main .pk-n b{color:#2c4a85}html body #dialogBody .pk-row.pk-zero{opacity:.55}html body #dialogBody .pk-row.pk-loose .pk-n b{color:#8a5a00}
+
+/* ===== v2.133.0: ⚖️ Barabar karo (Farq ki entries) ===== */
+html body #dialogBody .pm-fix{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0}html body #dialogBody .pm-fix small{flex:1 1 100%;font-size:11px;font-weight:700;color:#5b6b86}
+html body #dialogBody .pm-fix button{min-height:36px;padding:0 12px;border-radius:999px;border:0;font-weight:800;font-size:13px;color:#fff;background:linear-gradient(135deg,#223b6d,#4f46e5);display:inline-flex;align-items:center;gap:6px}
+html body #dialogBody .pm-fix button[data-pm-fix="pos"]{background:linear-gradient(135deg,#1e9e4a,#166534)}html body #dialogBody .pm-fix button i{font-style:normal;background:rgba(255,255,255,.22);border-radius:999px;padding:1px 7px;font-size:11.5px}
+html body #dialogBody .pm-fixok{font-size:12px;color:#166534;font-weight:700}
+html body #dialogBody .pm-fixst{border-radius:12px;padding:8px 10px;margin:6px 0;font-size:12.5px;border:1px solid #e3e8f1;background:#f6f8fc}html body #dialogBody .pm-fixst.wait{background:#fff7e0;border-color:#f1dea6;color:#8a5a00}html body #dialogBody .pm-fixst.ok{background:#e7f7ee;border-color:#bfe8d0;color:#147548}html body #dialogBody .pm-fixst.warn{background:#fdecec;border-color:#f6c1c1;color:#b42332}
+html body #dialogBody .pm-fixst small{display:block;font-size:11px;margin-top:2px;opacity:.85}html body #dialogBody .pm-fixst details{margin-top:4px;font-size:11px}html body #dialogBody .pm-fixst summary{cursor:pointer;font-weight:700}

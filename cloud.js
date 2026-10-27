@@ -1,14 +1,14 @@
-import {cashLinkChanges} from './cash-links.js?v=2.132.0';
-import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js?v=2.132.0';
-import {snapshotRows} from './live-data.js?v=2.132.0';
+import {cashLinkChanges} from './cash-links.js?v=2.133.0';
+import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js?v=2.133.0';
+import {snapshotRows} from './live-data.js?v=2.133.0';
 let transferFail=null;   // v2.86: tez transfer ka server-se-inkaar hook
-import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js?v=2.132.0';
-import {planImport} from './import-plan.js?v=2.132.0';
+import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js?v=2.133.0';
+import {planImport} from './import-plan.js?v=2.133.0';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import * as authSDK from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
 import {initializeFirestore,persistentLocalCache,persistentSingleTabManager,memoryLocalCache,disableNetwork,enableNetwork,collection,query,where,doc,getDoc,getDocFromServer,getDocs,getDocsFromServer,getDocsFromCache,getDocFromCache,setDoc,deleteDoc,updateDoc,deleteField,onSnapshot,runTransaction,writeBatch,waitForPendingWrites,orderBy,limit,serverTimestamp,Bytes,FieldPath} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.132.0';
-import {firebaseConfig,BUSINESS_ID} from './config.js?v=2.132.0';
+import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.133.0';
+import {firebaseConfig,BUSINESS_ID} from './config.js?v=2.133.0';
 export {loginErrorMessage};
 export async function connect(callbacks){const MT=(()=>{try{return sessionStorage.getItem('sam-malik-tab')==='1'}catch{return false}})();   /* v2.105.8: 👑 MULAZIM KI TAB MEIN MALIK — alag Firebase app (naam 'blue-khata-malik'), login sirf is tab (sessionStorage), data memory mein (phone par save nahi). Mulazim ka login ('blue-khata', localStorage) bilkul nahi hilta. */
 const app=initializeApp(firebaseConfig,MT?'blue-khata-malik':'blue-khata');let auth;try{auth=authSDK.initializeAuth(app,{persistence:MT?authSDK.browserSessionPersistence:[authSDK.browserLocalPersistence,authSDK.indexedDBLocalPersistence]})}catch(e){console.warn('initializeAuth nahi chala — purana tareeqa',e);auth=authSDK.getAuth(app);try{await authSDK.setPersistence(auth,MT?authSDK.browserSessionPersistence:authSDK.browserLocalPersistence)}catch(e2){console.warn('Auth persistence nahi mili',e2)}}   /* v2.112.0: ⚡ TEZ KHULNA — getAuth() mobile par HAR dafa Google ka chhupa sign-in iframe (apis.google.com + firebaseapp.com) internet se laata tha, login ki jaanch us ke BAAD (sust net = 10+ sec, phir index.html ka 10 sec parda login page dikha deta — malik ke phone par 5-7 sec jhalak). Hum popup / redirect login nahi karte → initializeAuth bina popupRedirectResolver. Login phone ki yaad (localStorage; IndexedDB wala bhi utha leta hai). setPersistence ka await bhi nahi (wo auth ki poori tayyari ka intezar karta tha) */let db;try{db=MT?initializeFirestore(app,{localCache:memoryLocalCache()}):initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentSingleTabManager({forceOwnership:false})})})   /* v2.103.79: har tab apna live data — pehle multi-tab: ek tab hi server se leta tha, Chrome ne woh tab sula diya to PC ke SAB tab ruk jate (mobile theek). Doosra tab khud memory mode mein */}catch(e){console.warn('Offline storage nahi mili — memory mode',e);db=initializeFirestore(app,{localCache:memoryLocalCache()})}const col=collection(db,'businesses',BUSINESS_ID,'blueKhata'),ref=id=>doc(col,id),other=(name,id)=>doc(db,'businesses',BUSINESS_ID,name,id);
@@ -118,6 +118,8 @@ const api={authReady,malikTab:MT,currentUid:()=>auth.currentUser?.uid||'',
  listenPkReport(cb){   /* v2.132.0: 📦 Godam 2 packet report — posStats/pkReport (meta) + pkReport-<k> (JSON text chunks) */
   return onSnapshot(other('posStats','pkReport'),async s=>{if(!s.exists()){cb(null);return}const m=s.data()||{};const n=Number(m.chunks)||0;let items=[];try{const ds=await Promise.all(Array.from({length:n},(_,k)=>getDoc(other('posStats','pkReport-'+k))));for(const d of ds){const x=d.data();if(x?.j){try{items=items.concat(JSON.parse(x.j)||[])}catch{}}}}catch(err){console.warn('pkReport chunks',err)}cb({meta:m,items})},err=>{console.warn('pkReport',err);cb({meta:null,items:[],err:err?.message||String(err)})})},
  async requestPkReport(){if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('Sirf malik');await setDoc(other('posStats','pkReq'),{at:Date.now(),by:auth.currentUser.uid})},
+ async addMilanJob(j){if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('Sirf malik');const id='mj'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);await setDoc(doc(db,'businesses',BUSINESS_ID,'milanJobs',id),{id,partyId:String(j.partyId),dir:j.dir==='app'?'app':'pos',ids:(j.ids||[]).map(String).slice(0,300),n:Number(j.n)||0,amt:Number(j.amt)||0,at:Date.now(),by:auth.currentUser.uid,status:'new'});return id},   /* v2.133.0: ⚖️ barabar karo (rules 2.77) */
+ listenMilanJobs(partyId,cb){return onSnapshot(query(collection(db,'businesses',BUSINESS_ID,'milanJobs'),where('partyId','==',String(partyId))),s=>{const L=s.docs.map(d=>d.data()).sort((a,b)=>(b.at||0)-(a.at||0));cb(L)},err=>{console.warn('milanJobs',err);cb([])})},
  async getRulesPub(){try{const s=await getDoc(other('blueAccess','rulesPub'));return s.exists()?s.data():null}catch{return null}},   /* v2.131.0: 🔐 PC ne rules kab publish ki */
  async requestPcCheck(){if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('Sirf malik');await setDoc(other('blueAccess','pcCheck'),{at:Date.now(),by:auth.currentUser.uid})},
  // v2.21: 💵 GALLA SE CASH — darkhwast (purchase), sunna + ✓ de diye (galla). Rules v2.11.
