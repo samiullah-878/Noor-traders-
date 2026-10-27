@@ -6395,3 +6395,6 @@ block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.
 
 ## v2.133.5 (2026-10-27) — 🧾 Transfer check: jagah-war note (malik: "godam alag alag — Godam 1, Godam 2, Godam 3, NOOR TRADERS")
 - ⋮ "Kis jagah ke note": Sab + har branch (collect().branches, naam POS se) — "Godam → Dukan / Dukan → Godam" chips hata diye. tcDir = "all" | branch no.; filter from ya to = wahi jagah; note chip par ⬆ gaya / ⬇ aaya; patti "📅 Aaj · 🏬 Godam 2"; phone yaad (localStorage sam-tc-loc). AI nahi.
+
+## v2.133.6 (2026-10-27) — 🖨 Transfer screen: note ka dobara print chip (malik: "transfer ka print 2 bhi le sake")
+- Har note ki line par 🖨 chip (⋯ wala "Dobara print" hata) → khirki: copies ×1/×2/×3 (default ×2, phone yaad sam-rp-cps) + wajah chips (Gum ho gaya / Larke ko chahiye / Godam copy) ya likho → WAHI cloud.requestPrint kind transfer (app note = job id, POS note = pos:<TransferID>; PC transfer-sync handlePrint) → cloud.watchPrint status ⏳ / ✅ chhap gaya / ✕ error; 2 min = ⚠️ PC ne jawab nahi. CAP stock.trprint (OPT_IN — mulazim default band). pos-stock: TRP_WHY / trp / trpPaint / trpGo, attrs data-trp-* (purane rate-list "rp" se alag). Rules nahi badle (printJobs pehle se staff create). AI nahi.

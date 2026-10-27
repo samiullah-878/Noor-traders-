@@ -6430,3 +6430,12 @@ html body #dialogBody .pm-fresh button{flex:0 0 auto;min-height:32px;padding:0 1
 /* v2.133.5: transfer check — jagah chuni ho to note par ⬆ gaya / ⬇ aaya */
 html body .tc-nc b .tc-io{font-style:normal;font-size:10.5px;font-weight:800;margin-left:6px;padding:1px 7px;border-radius:999px;vertical-align:middle;white-space:nowrap}
 html body .tc-nc b .tc-io.out{background:#fff7e0;color:#8a5a00}html body .tc-nc b .tc-io.in{background:#e7f7ee;color:#147548}
+
+/* ===== v2.133.6: 🖨 Transfer note dobara print (chip + khirki) ===== */
+html body .th-rw .th-rp{flex:0 0 auto;min-height:34px;min-width:38px;padding:0 9px;border-radius:999px;border:1px solid #c7d4f5;background:linear-gradient(180deg,#fff,#eef3ff);color:#2c4a85;font-size:15px;display:inline-grid;place-items:center;align-self:center}
+html body #dialogBody .trp-root{display:grid;gap:8px}html body #dialogBody .trp-h{display:flex;flex-direction:column;padding:8px 10px;border-radius:12px;background:#f6f8fc;border:1px solid #e3e8f1}html body #dialogBody .trp-h b{font-size:15px;color:#13213f}html body #dialogBody .trp-h small{font-size:12px;color:#5b6b86}
+html body #dialogBody .trp-l{font-size:11.5px;font-weight:700;color:#5b6b86}
+html body #dialogBody .trp-chips{display:flex;flex-wrap:wrap;gap:6px}html body #dialogBody .trp-chips button{min-height:34px;padding:0 13px;border-radius:999px;border:1px solid #d5dce9;background:#f6f8fc;color:#1a2d53;font-weight:700;font-size:13px}html body #dialogBody .trp-chips button.is-in{background:linear-gradient(135deg,#223b6d,#4f46e5)!important;color:#fff!important;border-color:transparent}
+html body #dialogBody .trp-in{height:38px;border:1px solid #d5dce9;border-radius:11px;padding:0 10px;font-size:14px}
+html body #dialogBody .trp-st{border-radius:11px;padding:7px 10px;font-size:12.5px;font-weight:700;border:1px solid #e3e8f1}html body #dialogBody .trp-st.wait{background:#fff7e0;border-color:#f1dea6;color:#8a5a00}html body #dialogBody .trp-st.ok{background:#e7f7ee;border-color:#bfe8d0;color:#147548}html body #dialogBody .trp-st.bad,html body #dialogBody .trp-st.late{background:#fdecec;border-color:#f6c1c1;color:#b42332}
+html body #dialogBody .trp-go{min-height:40px!important;border-radius:999px!important;font-weight:800!important;justify-self:start;padding:0 18px!important}
