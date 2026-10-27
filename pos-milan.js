@@ -1,11 +1,11 @@
-// pos-milan.js — v1.4 (2026-10-27, app v2.133.4: 🔄 Taza karo + POS data ka waqt, job ke baad khud taza, ↩ pehle se alag) · v1.3 (2026-10-27, app v2.133.0: ⚖️ barabar karo chips — milanJobs app/pos, rules 2.77) · v1.0 (2026-10-26, app v2.124.0) ⚖️ POS MILAN — har khate ka app baqaya vs POS ledger baqaya.
+// pos-milan.js — v1.5 (2026-10-27, app v2.133.7: 📤 sab khaton ki baqi entries POS mein — taza data → list ☑ → milanJobs) · v1.4 (2026-10-27, app v2.133.4: 🔄 Taza karo + POS data ka waqt, job ke baad khud taza, ↩ pehle se alag) · v1.3 (2026-10-27, app v2.133.0: ⚖️ barabar karo chips — milanJobs app/pos, rules 2.77) · v1.0 (2026-10-26, app v2.124.0) ⚖️ POS MILAN — har khate ka app baqaya vs POS ledger baqaya.
 // Malik: "jitne bhi khate hain, POS ka ledger aur humara khata same aa raha hai — sab khaton ke liye check karna hai; har khate ki screen par bhi POS baqaya".
 // v1.1 (app v2.125.0): 🔍 FARQ KI ENTRIES — posLines/<id> (PC har 15 min, sab khate) se entry-war milan: App mein hai POS nahi · POS mein hai app nahi · raqam farq.
 // Data: blueAccess/posLedger {m:{appPartyId: paisa (lena +, dena −)}, at, n} — PC pos-khata-sync har 15 min. Yahan sirf UI. AI nahi.
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => 'Rs ' + (Math.abs(Number(n) || 0) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
-import { skipsBalance, cashPaysBill } from './model.js?v=2.133.6';
+import { skipsBalance, cashPaysBill } from './model.js?v=2.133.7';
 const TOL = 100;   // paisa — Rs 1 tak farq = theek (POS 2 decimal rounding)
 let C = null, st = { f: 'farq', q: '' };
 export function pmSetup(ctx) { C = ctx; }   // ctx: parties, entries, balance, ledger, can, owner, notice, modal, openAccount
@@ -42,6 +42,7 @@ export function pmHTML() {
     <div class="bc-top"><label class="bc-q"><span>🔍</span><input type="search" data-pm-q="1" value="${esc(st.q)}" placeholder="Khata dhoondein" autocomplete="off"></label><button type="button" class="rk-pill" data-mn-sheet="1">⚖️ ${lab} <i>${rows.length}</i></button></div>
     ${seg}
     <div class="pm-sum ${nF ? 'bad' : 'ok'}"><b>${nF ? '⚠ ' + nF + ' khate POS se farq' : '✓ Sab khate POS se barabar'}</b><small>${all.length} khate · ${nO} theek · ${nN} POS mein nahi · 🖥 ${L ? 'POS se ' + agoTxt(L.at) : 'PC se abhi nahi aaya'}</small></div>
+    ${C.owner() && C.reqLedger && nF ? '<button type="button" class="pm-bulkbtn" data-pm-bulk="go" data-mn-keep="1">📤 Sab khaton ki baqi entries POS mein bhejo</button>' : ''}
     <div class="bc-list">${!L ? '<div class="empty"><strong>PC se POS ledger abhi nahi aaya</strong><p>pos-khata-sync 15 minute mein likhti hai — PC chal raha ho.</p></div>' : rows.length ? rows.map(({ p, r }) => `<button type="button" class="pm-r ${r.state}" data-pm-open="${esc(p.id)}">
       <span class="pm-n"><b>${esc(p.name)}</b><small>${esc(p.category || '')}</small></span>
       <span class="pm-v"><small>✍️ App</small><b>${money(r.app)} <i>${sideTxt(r.app)}</i></b></span>
@@ -50,12 +51,74 @@ export function pmHTML() {
     <p class="stat-note">Farq = app ka baqaya − POS ka ledger baqaya. Rs 1 tak farq = theek (POS ki rounding). Khate par tap = wo khata khule. PC har 15 min POS se taza karta hai.</p>
   </div>`;
 }
+// ---------- 📤 SAB KHATE EK SAATH (v2.133.7) — malik: "is tarah ki jitni bhi entries hain sab ko jorne ka order kar do" ----------
+// Pehle 🔄 taza POS data (posLedgerReq) → har farq wale khate ki lines (1 read / khata) → pmDiff → "App mein hai — POS mein nahi" ki voucher wali entries
+// (Payment / Wasooli / Udhaar diya / Saman liya; purchase bill, transfer, voucher no. wali nahi) → list ☑ (default: sirf wo khate jahan yahi entries poora farq hain
+// aur POS mein koi alag / raqam-farq line nahi) → confirm → har khate ki EK milanJob (dir pos) — WAHI raasta jo khate ka "🖥 POS ko app jaisa".
+let bulk = null;
+const bulkElig = e => !/^pos-/.test(String(e.id)) && !e.purchase && !e.transferId && !String(e.posCode || '').trim() && ['payment', 'collection', 'credit', 'borrow'].includes(e.kind);
+function bulkHTML() {
+  const B = bulk; if (!B) return '';
+  const head = `<button type="button" class="pm-back" data-pm-back="1">‹ POS milan</button><div class="pm-sum"><b>📤 Sab khaton ki baqi entries POS mein</b><small>App mein hain, POS mein nahi — har khate ka voucher (CPV / CRV / JV) shop PC banayega</small></div>`;
+  let body = '';
+  if (B.st === 'taza') body = `<div class="pm-fixst wait"><b>⏳ Pehle POS ka taza data mangwa raha hoon (1 min)…</b><small>Purane data se ghalat entries na jayen</small></div>`;
+  else if (B.st === 'late') body = `<div class="pm-fixst warn"><b>⚠️ Shop PC ne 3 min mein taza data nahi bheja</b><small>PC / internet check karein. Purane data se bhejna khatarnak ho sakta hai.</small></div><div class="pm-fix"><button type="button" data-pm-bulkgo="old">Phir bhi purane data se dekho</button></div>`;
+  else if (B.st === 'load') body = `<div class="pm-fixst wait"><b>⏳ Khaton ki POS lines parh raha hoon… ${B.done || 0}/${B.total || 0}</b></div>`;
+  else if (B.st === 'sent') body = `<div class="pm-fixst ok"><b>✅ ${B.sent} khaton ki ${B.sentN} entries ka hukum shop PC ko chala gaya</b><small>PC 1–5 min mein POS mein banayega; har khata banne ke baad POS milan khud taza ho jayega.</small></div>`;
+  else if (B.st === 'ready') {
+    const R = B.rows, sel = R.filter(r => B.sel.has(r.p.id)), n = sel.reduce((a, r) => a + r.ids.length, 0), amt = sel.reduce((a, r) => a + r.amt, 0);
+    const line = r => `<label class="pm-bk ${r.safe ? '' : 'warn'}"><input type="checkbox" data-pm-bsel="${esc(r.p.id)}"${B.sel.has(r.p.id) ? ' checked' : ''}><span class="pm-bn"><b>${esc(r.p.name)}</b><small>${r.ids.length} entries · ${money(r.amt)}${r.safe ? ' · ✓ is se khata barabar' : ' · ⚠ ' + esc(r.why)}</small></span><button type="button" class="pm-bo" data-pm-diff="${esc(r.p.id)}">🔍</button></label>`;
+    body = `${R.length ? `<div class="pm-bsum"><b>${sel.length}/${R.length} khate · ${n} entries · ${money(amt)}</b><span><button type="button" data-pm-ball="1">☑ Sab</button><button type="button" data-pm-bsafe="1">✓ Sirf pakke</button><button type="button" data-pm-bnone="1">☐ Koi nahi</button></span></div>
+      <div class="pm-blist">${R.map(line).join('')}</div>
+      <button type="button" class="got pm-bgo" data-pm-bsend="1"${sel.length ? '' : ' disabled'}>📤 ${sel.length} khaton ki ${n} entries POS mein bhejo</button>` : '<div class="pm-fixst ok"><b>✓ Koi baqi entry nahi — jo farq hai wo POS ki taraf ya purchase bill ka hai</b></div>'}
+      ${B.skip ? `<p class="stat-note">${B.skip} khaton mein bhejne wali entry nahi (farq POS ki taraf / purchase bill / voucher no. wali) — un ko 🔍 Farq se dekhein.</p>` : ''}`;
+  }
+  return `<div class="bc-root pm-droot pm-broot" data-pm-bulk="1">${head}${body}</div>`;
+}
+function bulkPaint() { const r = document.querySelector('#dialogBody [data-pm-bulk]'); if (r) r.outerHTML = bulkHTML(); }
+async function bulkStart() {
+  if (!C.owner()) { C.notice('Sirf malik'); return; }
+  bulk = { st: 'taza', rows: [], sel: new Set() };
+  $('dialogBody').innerHTML = bulkHTML();
+  let at = 0; try { at = await C.reqLedger(); } catch (err) { C.notice('Nahi gaya: ' + (err?.message || err)); bulk.st = 'late'; bulkPaint(); return; }
+  const t0 = Date.now();
+  while (bulk && bulk.st === 'taza' && !(Number(led()?.req) >= at)) { if (Date.now() - t0 > 180000) { bulk.st = 'late'; bulkPaint(); return; } await new Promise(r => setTimeout(r, 2000)); }
+  if (bulk && bulk.st === 'taza') bulkLoad();
+}
+async function bulkLoad() {
+  const B = bulk; if (!B) return;
+  const P = C.parties().filter(p => !p.bank && pmRow(p).state === 'farq');
+  B.st = 'load'; B.total = P.length; B.done = 0; B.rows = []; B.skip = 0; bulkPaint();
+  let k = 0;
+  const work = async () => { while (k < P.length && bulk === B) { const p = P[k++]; let doc = null; try { doc = await C.getLines(p.id); } catch {} B.done++;
+    if (doc) { const D = pmDiff(p, doc), E = D.appOnly.filter(a => bulkElig(a.e));
+      if (E.length) { const safe = D.ok && !D.posOnly.length && !D.diff.length && E.length === D.appOnly.length;
+        B.rows.push({ p, ids: E.map(a => a.e.id), amt: E.reduce((n, a) => n + Math.abs(a.amt), 0), safe, why: !D.ok ? 'in entries se poora farq nahi banta' : D.posOnly.length ? D.posOnly.length + ' POS line app mein nahi' : D.diff.length ? D.diff.length + ' raqam farq' : 'kuch entries yahan se nahi jati' });
+      } else B.skip++; } else B.skip++;
+    if (B.done % 3 === 0) bulkPaint(); } };
+  await Promise.all([work(), work(), work(), work()]);
+  if (bulk !== B) return;
+  B.rows.sort((a, b) => (b.safe - a.safe) || b.amt - a.amt);
+  B.sel = new Set(B.rows.filter(r => r.safe).map(r => r.p.id));
+  B.st = 'ready'; bulkPaint();
+}
+async function bulkSend() {
+  const B = bulk; if (!B || B.st !== 'ready') return;
+  const sel = B.rows.filter(r => B.sel.has(r.p.id)); if (!sel.length) return;
+  const n = sel.reduce((a, r) => a + r.ids.length, 0), amt = sel.reduce((a, r) => a + r.amt, 0);
+  if (!confirm(`📤 ${sel.length} khaton ki ${n} entries (kul ${money(amt)}) POS mein voucher ban jayengi:\n\n${sel.slice(0, 15).map(r => `• ${r.p.name} — ${r.ids.length} · ${money(r.amt)}`).join('\n')}${sel.length > 15 ? '\n…' : ''}\n\nPOS mein likhna wapas nahi hota (POS mein hi delete). Theek?`)) return;
+  let ok = 0, okN = 0;
+  for (const r of sel) { try { await C.addJob({ partyId: r.p.id, dir: 'pos', ids: r.ids, n: r.ids.length, amt: r.amt }); ok++; okN += r.ids.length; } catch (err) { C.notice(r.p.name + ': ' + (err?.message || err)); } }
+  B.st = 'sent'; B.sent = ok; B.sentN = okN; bulkPaint();
+}
 export function pmOpen() {
   if (!C) return;
   if (!C.can('kh.posmilan')) { C.notice('⚖️ POS milan ki ijazat nahi — malik se kahein'); return; }
+  bulk = null;
   C.modal('⚖️ POS milan', pmHTML(), true);
 }
 export function pmPaint() {
+  if (document.querySelector('#dialogBody [data-pm-bulk]:not(button)')) return;   // v2.133.7: sab khate screen khud paint karti hai
   try { if (document.querySelector('#dialogBody [data-pm-droot]')) { diffRefresh(); return; } } catch {}
   const r = document.querySelector('#dialogBody [data-pm-root]'); if (!r || !$('dialog')?.open) return;
   const q = r.querySelector('[data-pm-q]'), foc = document.activeElement === q;
@@ -171,11 +234,18 @@ export async function pmDiffOpen(id) {
   $('dialogBody').innerHTML = diffHTML(p, doc);
 }
 document.addEventListener('input', e => { const t = e.target; if (!t?.dataset?.pmQ) return; st.q = t.value; pmPaint(); });
+document.addEventListener('change', e => { const t = e.target; if (!t?.dataset?.pmBsel || !bulk) return; if (t.checked) bulk.sel.add(t.dataset.pmBsel); else bulk.sel.delete(t.dataset.pmBsel); bulkPaint(); });
 document.addEventListener('click', e => {
   if (!C) return;
-  const b = e.target.closest?.('[data-pm-taza],[data-pm-fix],[data-pm-f],[data-pm-open],[data-pm-diff],[data-pm-back],[data-pm-tog]'); if (!b) return;
+  const b = e.target.closest?.('[data-pm-bulk],[data-pm-bulkgo],[data-pm-ball],[data-pm-bsafe],[data-pm-bnone],[data-pm-bsend],[data-pm-taza],[data-pm-fix],[data-pm-f],[data-pm-open],[data-pm-diff],[data-pm-back],[data-pm-tog]'); if (!b) return;
   if (b.dataset.pmFix) { e.stopPropagation(); fixGo(b.dataset.pmFix); return; }
   if (b.dataset.pmTaza) { e.stopPropagation(); tazaGo(); return; }
+  if (b.dataset.pmBulk === 'go') { e.stopPropagation(); bulkStart(); return; }
+  if (b.dataset.pmBulkgo === 'old') { if (bulk) bulkLoad(); return; }
+  if (b.dataset.pmBall != null && bulk) { bulk.sel = new Set(bulk.rows.map(r => r.p.id)); bulkPaint(); return; }
+  if (b.dataset.pmBsafe != null && bulk) { bulk.sel = new Set(bulk.rows.filter(r => r.safe).map(r => r.p.id)); bulkPaint(); return; }
+  if (b.dataset.pmBnone != null && bulk) { bulk.sel = new Set(); bulkPaint(); return; }
+  if (b.dataset.pmBsend != null) { bulkSend(); return; }
   if (b.dataset.pmTog) { pmOpenLine = pmOpenLine === b.dataset.pmTog ? '' : b.dataset.pmTog; const w = document.querySelector('#summary [data-pm-line]'); if (w) { const p = C.parties().find(x => x.id === b.dataset.pmTog); if (p) w.innerHTML = pmLineHTML(p); } return; }
   if (b.dataset.pmDiff) { e.stopPropagation(); e.preventDefault(); pmDiffOpen(b.dataset.pmDiff); return; }
   if (b.dataset.pmBack) { pmOpen(); return; }

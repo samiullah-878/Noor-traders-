@@ -6439,3 +6439,13 @@ html body #dialogBody .trp-chips{display:flex;flex-wrap:wrap;gap:6px}html body #
 html body #dialogBody .trp-in{height:38px;border:1px solid #d5dce9;border-radius:11px;padding:0 10px;font-size:14px}
 html body #dialogBody .trp-st{border-radius:11px;padding:7px 10px;font-size:12.5px;font-weight:700;border:1px solid #e3e8f1}html body #dialogBody .trp-st.wait{background:#fff7e0;border-color:#f1dea6;color:#8a5a00}html body #dialogBody .trp-st.ok{background:#e7f7ee;border-color:#bfe8d0;color:#147548}html body #dialogBody .trp-st.bad,html body #dialogBody .trp-st.late{background:#fdecec;border-color:#f6c1c1;color:#b42332}
 html body #dialogBody .trp-go{min-height:40px!important;border-radius:999px!important;font-weight:800!important;justify-self:start;padding:0 18px!important}
+/* v2.133.7: 📤 sab khaton ki baqi entries POS mein */
+html body #dialogBody .pm-bulkbtn{min-height:38px;padding:0 14px;border-radius:999px;border:0;background:linear-gradient(135deg,#1e9e4a,#166534);color:#fff;font-weight:800;font-size:13px;margin:4px 0 8px;box-shadow:0 2px 6px rgba(22,101,52,.25)}
+html body #dialogBody .pm-bsum{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between;margin:6px 0}html body #dialogBody .pm-bsum b{font-size:13px;color:#13213f}html body #dialogBody .pm-bsum span{display:flex;gap:4px}
+html body #dialogBody .pm-bsum button{min-height:30px;padding:0 10px;border-radius:999px;border:1px solid #d5dce9;background:#f6f8fc;color:#1a2d53;font-weight:700;font-size:12px}
+html body #dialogBody .pm-blist{display:grid;gap:5px;margin-bottom:8px}
+html body #dialogBody .pm-bk{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:12px;border:1px solid #bfe8d0;background:#f3fbf6}html body #dialogBody .pm-bk.warn{border-color:#f1dea6;background:#fffdf2}
+html body #dialogBody .pm-bk input{width:20px;height:20px;flex:0 0 auto}html body #dialogBody .pm-bn{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}html body #dialogBody .pm-bn b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}html body #dialogBody .pm-bn small{font-size:11px;color:#5b6b86}
+html body #dialogBody .pm-bo{flex:0 0 auto;min-height:30px;width:34px;padding:0;border-radius:999px;border:1px solid #d5dce9;background:#fff}
+html body #dialogBody .pm-bgo{min-height:40px!important;border-radius:999px!important;font-weight:800!important;padding:0 16px!important}
+html body #dialogBody .pm-bgo:disabled{opacity:.45;box-shadow:none}

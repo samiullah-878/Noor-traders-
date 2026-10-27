@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-10-27 (c): 📦 khate ka 'Saman liya' (app wala, BORROW_FROM ke baad / milan se jura) bhi POS JV — Purchase account Dr / party Cr, parchi UDHAR PURCHASE VOUCHER
 //  2026-10-27 (b): 🔄 POS baqaya/lines foran taza (app Taza karo = blueAccess/posLedgerReq, milan job ke baad khud) · sync ghalti se ledger na ruke · cancel voucher baqaye mein nahi · job 'skip'
 //  2026-10-27: ⚖️ BARABAR KARO — app ke Farq screen se milanJobs (dir app/pos): chuni hui purani entries / vouchers doosri taraf (runMilanJobs, importVoucher force)
 //  2026-10-26: ⚖️ POS MILAN — har 15 min jude khaton ka POS ledger balance blueAccess/posLedger (app: har khate par POS baqaya + milan screen)
@@ -55,6 +56,7 @@ const SALE_ACCOUNT_ID = 7;           // Total Sales (POS Defaults.SaleACID) — 
 const CREATED_BY = 1;                // POS user: Administrator
 const IMPORT_NEW_SUPPLIERS = true;   // POS mein NAYE bane supplier app mein laayein (purane app mein pehle se hain)
 const LOOP_SECONDS = 60;
+const BORROW_FROM = Date.parse('2026-10-27T00:00:00+05:00');   // 2026-10-27: 📦 'Saman liya' (app-origin borrow) is waqt ke baad bani = POS JV khud (purani = app 'Sab khate POS mein bhejo' / milanJobs)
 const AUTO_PRINT = true;             // app se POS mein nayi entry bante hi rasid print
 const PRINT_WIDTH = 42;              // rasid ki chaurai (TM-T88IV 80mm = 42 akshar)
 const PRINTER_NAME = 'TM-T88IV';     // Windows mein printer ka naam (sale-post.js wala)
@@ -849,7 +851,7 @@ function borrowToVoucher(e, acct, purAc) {
     { accountId: a.accountId, debit: 0, credit: amt, desc: note || 'Udhar purchase (app)' }] };
 }
 async function runMilanJobs(pool, acct, acctIds, importVoucher) {
-  const snap = await biz.collection('milanJobs').where('status', '==', 'new').limit(5).get();
+  const snap = await biz.collection('milanJobs').where('status', '==', 'new').limit(25).get();   // 2026-10-27: 'sab khate' ek saath
   for (const d of snap.docs) {
     const j = d.data() || {}, ref = d.ref, ids = Array.isArray(j.ids) ? j.ids.map(String).slice(0, 300) : [], L = [];
     const say = m => { L.push(m); log('⚖️ ' + m); };
@@ -866,6 +868,7 @@ async function runMilanJobs(pool, acct, acctIds, importVoucher) {
           const key = 'entry:' + id, link = links.get(key);
           if ((link && link.voucherId && !link.deleted) || e.posCode) { say(`${id}: pehle se POS mein (${link?.code || e.posCode}) — kuch nahi kiya`); skip++; continue; }
           let spec = null;
+          if (e.kind === 'borrow' && app.get(e.partyId)?.bank) { fail++; say(`${id}: bank / loan khata — Saman liya ka purchase JV nahi banta`); continue; }
           if (e.kind === 'borrow') { if (!purAc) { fail++; say(`${id}: POS ka purchase account nahi mila (Defaults) — Saman liya nahi bana`); continue; } spec = borrowToVoucher(e, acct, purAc); }
           else spec = appEntryToVoucher(e, acct);
           if (!spec) { fail++; say(`${id}: ${e.kind} POS mein nahi ban sakti`); continue; }
@@ -910,6 +913,7 @@ function transferToVoucher(out, acct) {
 async function syncEntries(pool, acct) {
   const acctIds = new Map([...acct].map(([appId, a]) => [a.accountId, appId]));
   if (!acctIds.size) return;
+  const purAc = await purchaseAccount(pool);   // 2026-10-27: 📦 Saman liya → JV (Purchase account Dr / party Cr)
 
   // ---------- POS vouchers (CPV / CRV / JV) ----------
   const vrows = (await pool.request().input('d', sql.Date, new Date(START_DATE)).query(`
@@ -953,7 +957,8 @@ async function syncEntries(pool, acct) {
         if (cashPays(e)) base = { ...e, kind: 'payment', note: (String(e.note || '').trim() ? String(e.note).trim() + ' · ' : '') + 'Cash purchase (POS bill)' };
         else if (lk && lk.voucherId && !lk.deleted) base = { ...e, kind: 'payment', deleted: true };   // jor toota -> CPV hatao
         else continue;
-      } else if (!['payment', 'collection', 'credit'].includes(e.kind)) continue;
+      } else if (!['payment', 'collection', 'credit'].includes(e.kind)
+        && !(e.kind === 'borrow' && !fromPos && !e.purchase && !app.get(e.partyId)?.bank && !/sabqa baqaya/i.test(String(e.note || '')) && (links.has(key) || ms(e.createdAt) >= BORROW_FROM))) continue;   // 2026-10-27: 📦 Saman liya (app wali) bhi — nayi khud, purani sirf milan job / jurne ke baad edit
       if (!acct.has(e.partyId)) { await noteSkip(e, e, false, notInPos(e.partyId)); continue; }
       // 2026-10-09: "CASH DIYA" (cashpay-: Cash Khata / Daily Sale ke Closing Cash se payment) = dukan ka cash us account ko -> POS mein
       //   CPV (Cash Payment, parchi "Diye"). Pehle 'credit' hone se "Udhar sale" JV banta tha (POS sale mein ghalat). Jo JV ban chuke, wese hi.
@@ -993,8 +998,8 @@ async function syncEntries(pool, acct) {
         vouchers.delete(vid);
         continue;
       }
-      const spec = isTransfer ? transferToVoucher(base, acct) : appEntryToVoucher(base, acct);
-      if (!spec) continue;
+      const spec = isTransfer ? transferToVoucher(base, acct) : base.kind === 'borrow' ? (purAc ? borrowToVoucher(base, acct, purAc) : null) : appEntryToVoucher(base, acct);
+      if (!spec) { if (base.kind === 'borrow' && !purAc) log(`📦 Saman liya POS mein nahi gaya (${name}): POS Defaults mein purchase account nahi mila`); continue; }
       log(`${vid ? 'POS mein badla' : 'POS mein bana'}: ${spec.type} · ${name} · Rs ${rupees(base.amount)} · ${base.date}`);
       if (DRY) continue;
       const r = await posWriteVoucher(pool, { voucherId: vid, type: spec.type, date: base.date, remarks: spec.remarks,
@@ -1003,12 +1008,12 @@ async function syncEntries(pool, acct) {
       const docIds = isTransfer ? [`transfer-${e.transferId}-out`, `transfer-${e.transferId}-in`] : [e.id];
       await markApp(docIds, { posCode: r.code, posError: null });
       if (!vid) {                                                   // sirf nayi entry par rasid
-        const T = { CPV: VTITLE.CPV, CRV: VTITLE.CRV, JV: isTransfer ? VTITLE.JV : 'UDHAR SALE VOUCHER' }[spec.type] || spec.type;
+        const T = { CPV: VTITLE.CPV, CRV: VTITLE.CRV, JV: isTransfer ? VTITLE.JV : base.kind === 'borrow' ? 'UDHAR PURCHASE VOUCHER' : 'UDHAR SALE VOUCHER' }[spec.type] || spec.type;
         const amt = rupees(base.amount);
         const plines = isTransfer
           ? [{ pid: base.fromPartyId, name: acct.get(base.fromPartyId).name, label: 'Se (nikla)', amount: amt, after: rupees(appBalance(base.fromPartyId)), before: rupees(appBalance(base.fromPartyId, new Set(docIds))) },
              { pid: base.toPartyId, name: acct.get(base.toPartyId).name, label: 'Ko (gaya)', amount: amt, after: rupees(appBalance(base.toPartyId)), before: rupees(appBalance(base.toPartyId, new Set(docIds))) }]
-          : [{ pid: base.partyId, name: acct.get(base.partyId).name, label: base.kind === 'payment' ? 'Diye' : base.kind === 'collection' ? 'Wasool kiye' : 'Udhar', amount: amt,
+          : [{ pid: base.partyId, name: acct.get(base.partyId).name, label: base.kind === 'payment' ? 'Diye' : base.kind === 'collection' ? 'Wasool kiye' : base.kind === 'borrow' ? 'Maal liya (udhar)' : 'Udhar', amount: amt,
                after: rupees(appBalance(base.partyId)), before: rupees(appBalance(base.partyId, new Set(docIds))) }];   // 2026-10-09: sabqa = is voucher ke baghair
         const bank = bankSlip(base, isTransfer);   // 2026-10-12: HBL wali entry = HBL parchi
         const printed = await printReceipt(await epTxt(receipt({ title: T, code: r.code, date: base.date, lines: plines, note: String(base.note || '').trim(), bank, pay: e.kind !== 'purchaseCash' ? '' : e.posPrintedAt ? 'copy' : 'do' }), isTransfer ? null : e));   // 2026-10-21: 📷 entry ki tasveer   // 2026-10-17: 💵 juri cash purchase ka CPV — purchase parchi pehle chhap chuki to COPY (do dafa paise nahi)
