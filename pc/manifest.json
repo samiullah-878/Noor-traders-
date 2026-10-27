@@ -1,6 +1,6 @@
 {
- "version": "2026-10-27.2",
- "note": "🔐 rules-publish (malik ne 27 Oct OK kiya): Firestore rules GitHub se khud publish → blueAccess/rulesPub. 🔍 pos-khata-sync: har 15 min har jude khate ki POS ledger LINES posLines/<appId> (sirf badle) — app mein \"Farq dhoondo\" foran. ⚖️ posLedger, 🔒 khata band, dabbe wali rasid pehle se.",
+ "version": "2026-10-27.3",
+ "note": "📦 pk-report: Godam 2 packet report (3 mahine, barcode-war, sirf parhti) → posStats/pkReport. 🔐 rules-publish (malik ne 27 Oct OK kiya): Firestore rules GitHub se khud publish → blueAccess/rulesPub. 🔍 pos-khata-sync: har 15 min har jude khate ki POS ledger LINES posLines/<appId> (sirf badle) — app mein \"Farq dhoondo\" foran. ⚖️ posLedger, 🔒 khata band, dabbe wali rasid pehle se.",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
   "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
@@ -77,7 +77,9 @@
   "owner-login-auto.bat": "615017a146db4e684c5f5ee34db6a851012bca73a6abe24f823299839b834da7",
   "entry-photo.js": "bb214468caa9e4bf38b1b8eebfe5268f300aec41d42c1d526ff957828bbac005",
   "rules-publish.js": "3f3630caa099c1a4b2de91bdb66fa44c05c71233d73fa8ff8b71ccf780d0b71b",
-  "rules-auto.bat": "17d6194ac73feab9151f7f8ad6b1ac206974958890f93b3eed1dded7baa32ae7"
+  "rules-auto.bat": "17d6194ac73feab9151f7f8ad6b1ac206974958890f93b3eed1dded7baa32ae7",
+  "pk-report.js": "a883e7e3ae8752eca338990419df8042e3ba987a841b057e7a256c40bc121e8b",
+  "pk-auto.bat": "f854ae6e648e13b26c7d771126627c0efbb15cfc8a1fd8b10132f920c9c276b6"
  },
  "services": [
   {
@@ -297,6 +299,12 @@
    "script": "rules-publish.js",
    "bat": "rules-auto.bat",
    "log": "rules-publish-log.txt"
+  },
+  {
+   "name": "Godam 2 packet report",
+   "script": "pk-report.js",
+   "bat": "pk-auto.bat",
+   "log": "pk-report-log.txt"
   }
  ]
 }
