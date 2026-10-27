@@ -108,7 +108,7 @@ async function upload(id, file, kind) {
     C.setIdx(id, { v: r.v, n: r.n, sz: x.bytes.length, w: x.w, h: x.h, t: x.thumb, nm: it?.name || '', at: r.v });
     if (ps?.id === id) { ps.busy = ''; ps.hd = hdUrlOf(id, x.blob); sheetPaint(); }
     C.notice(`✓ HD tasveer save — ${x.w} × ${x.h} · ${kb(x.bytes.length)}${kind === 'ai' ? ' · ✨ AI wali' : ''}`); C.repaint();
-    if (kind === 'cam') { try { const { blurScore } = await import('./pic-check.js?v=2.133.0'); const s = await blurScore(file, { limit: 60 }); if (s?.blur && ps?.id === id) C.notice('⚠️ Tasveer thori dhundli lag rahi hai — chahein to dobara lein (haath na hile)'); } catch {} }
+    if (kind === 'cam') { try { const { blurScore } = await import('./pic-check.js?v=2.133.1'); const s = await blurScore(file, { limit: 60 }); if (s?.blur && ps?.id === id) C.notice('⚠️ Tasveer thori dhundli lag rahi hai — chahein to dobara lein (haath na hile)'); } catch {} }
   } catch (e) { if (ps) { ps.busy = ''; sheetPaint(); } C.notice('Tasveer save nahi hui: ' + (e?.message || e)); }
 }
 async function copyText(t) { try { await navigator.clipboard.writeText(t); return true; } catch {} try { const a = document.createElement('textarea'); a.value = t; a.style.position = 'fixed'; a.style.opacity = '0'; document.body.append(a); a.select(); const ok = document.execCommand('copy'); a.remove(); return ok; } catch { return false; } }

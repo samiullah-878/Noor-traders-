@@ -1,16 +1,16 @@
 // =========================================================
-//  pk-report.js  v1.0 (2026-10-27) — 📦 GODAM 2 PACKET REPORT (malik: "poore 3 mahine ka Godam 2 ka barcode ke saath packets wala data —
+//  pk-report.js  v1.1 (2026-10-27: SAB branches — NOOR TRADERS dukan + har godam; docs pkReport-<branchId>-<k>, meta.branches) · v1.0 (2026-10-27) — 📦 PACKET REPORT (malik: "poore 3 mahine ka Godam 2 ka barcode ke saath packets wala data —
 //  kitne packet bike, sub-barcode + barcode, 1 packet ke hisaab se, jo scan hue")
 //
 //  SIRF PARHTI hai (POS mein kuch nahi likhti). Har ghante (aur app ke "🔄 Taza karo" = posStats/pkReq par 10 min ke andar):
-//    • Godam = NAAM se (branch table mein 'godam' + '2'), number se nahi (CLAUDE.md §4).
+//    • Har branch alag (NAAM ke saath; app mein chip — default NOOR TRADERS naam se), number par bharosa nahi (CLAUDE.md §4).
 //    • Aakhri 3 calendar mahine (is mahine samet) ki sale lines: dbo.SaleDetail + dbo.Sale (cancel DocStatusID 3 nahi,
 //      line ka godam = ISNULL(NULLIF(d.GBranchID,0), s.BranchID)).
 //    • Packet = dbo.ItemSubCode (SBBarCode, SBItemQty). SCAN ka pata: agar SaleDetail mein barcode/subcode ka column hai to wahi
 //      (exact "kaun sa barcode scan hua"); nahi to malik ka qaida (rack-bharo v1.16): line ki tadad kisi packet ke BILKUL barabar = 1 packet
 //      (0.250 = 250 gm), guna / beech ki tadad = khula. Dono surat report mein 'how' likha hai: 'scan' ya 'size'.
-//  Likhti hai: posStats/pkReport { at, from, to, months, godam{id,name}, scanCol, how, n, chunks, reqAt }
-//              posStats/pkReport-<k> { j: JSON text [ {i, c, n, pk, u, cu, mb, subs:{b:q}, m:{ 'YYYY-MM': {pk:{b:{n,q,sc}}, main:q, mainN, loose:q, looseN, bills} } } ] }
+//  Likhti hai: posStats/pkReport { at, from, to, months, branches:[{id,name,n,lines,chunks}], scanCol, how, reqAt }
+//              posStats/pkReport-<branchId>-<k> { j: JSON text [ {i, c, n, pk, u, cu, mb, subs:{b:q}, m:{ 'YYYY-MM': {pk:{b:{n,q,sc}}, main:q, mainN, loose:q, looseN, bills} } } ] }
 //  (list ke andar list NAHI — Firestore 'invalid nested entity'; sab JSON text). Chalana: pk-auto.bat (loop 10 min). Log: pk-report-log.txt.
 // =========================================================
 const path = require('path');
@@ -45,20 +45,23 @@ function monthsOf(now = new Date()) { const out = []; for (let k = MONTHS_BACK; 
 async function build(pool, reqAt) {
   const now = new Date(), months = monthsOf(now), from = new Date(now.getFullYear(), now.getMonth() - MONTHS_BACK, 1);
   const bm = await branchMap(pool);
-  const gid = Number(Object.keys(bm).find(id => /godam/i.test(bm[id]) && /2/.test(bm[id])) || 0);
-  if (!gid) throw Error('POS mein "Godam 2" naam ki branch nahi mili: ' + JSON.stringify(bm));
+  const bids = Object.keys(bm).map(Number).filter(n => n > 0);   // v1.1: SAB branches (NOOR TRADERS dukan + har godam) — malik: "NOOR TRADERS ka data chahiye"
+  if (!bids.length) throw Error('POS mein branch list nahi mili');
   const scanCol = await colOf(pool, 'SaleDetail', ['subcode', 'barcode', 'scancode']);   // POS line par scanned code?
   const mbCol = await colOf(pool, 'Items', ['barcode']);
   const items = (await pool.request().query(`SELECT i.ItemID, i.ItemCode, i.ItemName, ISNULL(i.PackQty, 0) AS PackQty, i.QtyName, i.PackQtyName${mbCol ? `, i.[${mbCol}] AS MB` : ''} FROM dbo.Items i`)).recordset;
   const subs = (await pool.request().query(`SELECT ItemID, LTRIM(RTRIM(SBBarCode)) AS B, SBItemQty AS Q FROM dbo.ItemSubCode WHERE LTRIM(RTRIM(ISNULL(SBBarCode, ''))) <> ''`)).recordset;
-  const lines = (await pool.request().input('a', sql.DateTime, from).input('g', sql.Int, gid).query(`
-    SELECT d.ItemID, d.Qty, s.SaleDate, s.SaleID${scanCol ? `, LTRIM(RTRIM(CAST(d.[${scanCol}] AS NVARCHAR(80)))) AS SC` : ''}
+  const linesAll = (await pool.request().input('a', sql.DateTime, from).query(`
+    SELECT d.ItemID, d.Qty, s.SaleDate, s.SaleID, ISNULL(NULLIF(d.GBranchID, 0), s.BranchID) AS B${scanCol ? `, LTRIM(RTRIM(CAST(d.[${scanCol}] AS NVARCHAR(80)))) AS SC` : ''}
     FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID
-    WHERE s.SaleDate >= @a AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(NULLIF(d.GBranchID, 0), s.BranchID) = @g`)).recordset;
+    WHERE s.SaleDate >= @a AND ISNULL(s.DocStatusID, 0) <> 3`)).recordset;
   const subBy = new Map(); for (const s of subs) { const id = String(s.ItemID); if (!subBy.has(id)) subBy.set(id, []); subBy.get(id).push({ b: String(s.B), q: Number(s.Q) || 0 }); }
+  const byId = new Map(items.map(r => [String(r.ItemID), r]));
+  const batch = db.batch(); const brOut = [];
+  for (const gid of bids) {
+  const lines = linesAll.filter(l => Number(l.B) === gid);
   const out = new Map(), bills = new Map();
   const get = r => { const id = String(r.ItemID); if (!out.has(id)) out.set(id, { i: id, c: String(r.ItemCode || ''), n: String(r.ItemName || '').trim(), pk: Number(r.PackQty) || 0, u: String(r.QtyName || 'Pcs'), cu: String(r.PackQtyName || 'Ctn'), mb: String(r.MB || '').trim(), subs: Object.fromEntries((subBy.get(id) || []).map(x => [x.b, x.q])), m: {} }); return out.get(id); };
-  const byId = new Map(items.map(r => [String(r.ItemID), r]));
   for (const l of lines) {
     const it = byId.get(String(l.ItemID)); if (!it) continue;
     const d = new Date(l.SaleDate), mk = `${d.getFullYear()}-${p2(d.getMonth() + 1)}`; if (!months.includes(mk)) continue;
@@ -75,12 +78,15 @@ async function build(pool, reqAt) {
   for (const [bk, set] of bills) { const [mk, id] = bk.split('|'); const e = out.get(id); if (e && e.m[mk]) e.m[mk].bills = set.size; }
   const all = [...out.values()].sort((a, b) => a.n.localeCompare(b.n));
   const chunks = []; for (let k = 0; k < all.length; k += CHUNK) chunks.push(all.slice(k, k + CHUNK));
-  const batch = db.batch();
-  chunks.forEach((c, k) => batch.set(col.doc('pkReport-' + k), { j: JSON.stringify(c), k, at: Date.now() }));
-  for (let k = chunks.length; k < 12; k++) batch.delete(col.doc('pkReport-' + k));   // purane faltu chunk
-  batch.set(col.doc('pkReport'), { at: Date.now(), from: `${from.getFullYear()}-${p2(from.getMonth() + 1)}-01`, to: `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`, months: months.join(','), godam: { id: gid, name: bm[gid] }, scanCol, how: scanCol ? 'scan' : 'size', n: all.length, lines: lines.length, chunks: chunks.length, reqAt: reqAt || 0, v: 1 });
+  chunks.forEach((c, k) => batch.set(col.doc(`pkReport-${gid}-${k}`), { j: JSON.stringify(c), k, b: gid, at: Date.now() }));
+  for (let k = chunks.length; k < 12; k++) batch.delete(col.doc(`pkReport-${gid}-${k}`));   // purane faltu chunk
+  brOut.push({ id: gid, name: bm[gid], n: all.length, lines: lines.length, chunks: chunks.length });
+  log(`  ${bm[gid]} (#${gid}): ${lines.length} lines · ${all.length} items`);
+  }
+  for (let k = 0; k < 12; k++) batch.delete(col.doc('pkReport-' + k));   // v1.0 wale purane chunk
+  batch.set(col.doc('pkReport'), { at: Date.now(), from: `${from.getFullYear()}-${p2(from.getMonth() + 1)}-01`, to: `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`, months: months.join(','), branches: brOut, scanCol, how: scanCol ? 'scan' : 'size', lines: linesAll.length, reqAt: reqAt || 0, v: 2 });
   await batch.commit();
-  log(`✅ Godam 2 (${bm[gid]}, #${gid}) · ${months.join(' ')} · ${lines.length} lines · ${all.length} items · scan: ${scanCol || 'nahi (packet-size se)'}`);
+  log(`✅ ${brOut.length} branches (${brOut.map(b => b.name).join(', ')}) · ${months.join(' ')} · scan: ${scanCol || 'nahi (packet-size se)'}`);
 }
 let lastRun = 0;
 const tick = ZINDA.guard(async () => {
