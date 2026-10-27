@@ -3648,3 +3648,7 @@ block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.
 
 ## PC label-print v4.9 (2026-10-27) — 📅 label par tareekh (malik: Godam 2 ki packing theke par Rs 2 / packet — "number khatam karo, aaj ki tareekh aur mahine ki jagah sirf harf, jaise 27-O · code chhota, larka jaldi pehchane aaj ke packet, maal mix na ho")
 - labelCmds: daayein kone ka "7J-463" (din ka hindsa + mahina A-L + running number) HATA → dateTag() = chhapne ke din ki tareekh + mahine ka pehla harf (J F M A M J J A S O N D) jaise "27-O", font "2" (bara). Factory batch label (job.batch) par batch no wahi (font 1). labelJobs numFrom/numTo/numCode pehle jaise (app ka barcode hisaab nahi toota). manifest 2026-10-27.14. App nahi badli. AI nahi.
+
+## v2.136.0 (2026-10-27) — 📄 Daily Sale PDF: upar chips (malik: "pdf mein upar chips ki shakal mein sale, closing cash, aaj ka change, kal ka change · akhrajat aur wasooliyan waise hi jaise pehle")
+- app.js report() daily: printArea mein sub ke neeche `dailyPdfChips(d, saleEntries)` — 💰 Sale (2+ entries = chhoti line) · ⬅️ Kal ka change · ➡️ Aaj ka change · 🔒 Closing cash · ⚖️ Farq (hara barabar / laal farq / peela "Closing baqi"); inline style (html2canvas), flex 3-3 qatar, gol premium.
+- Table ab sirf Wasooli · Akhrajat · Sirf Khata (pehle jaisi entries, rang, Total) — Sale / Change / Closing ke khane chips mein chale gaye (table patla, phone par seedha nazar). Har PDF page ke upar header ke saath chips bhi (pdf-export source.innerHTML). Kholo + bhejo wahi. AI nahi.
