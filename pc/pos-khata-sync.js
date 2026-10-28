@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-10-28 (i): 📜 OPENING FARQ malik ki ijazat se — milanJobs ids ['@opening'] (dir pos = POS JV 'Opening balance farq (app)' · dir app = app mein 'Sabqa baqaya farq theek (POS jaisa)' posNo entry)
 //  2026-10-28 (h): 🔎 BILL JAANCH — farq wale khate ki POS purchase bill entry (App mein hai — POS mein nahi) ka POS mein asal haal; delete / cancel / party / raqam / 📌 khud theek, baqi wajah blueAccess/billJaanch (app chip)
 //  2026-10-27 (g): 🤖 AUTO MILAN — har 15 min pakke farq khud barabar (POS→app voucher, app→POS entry, opening farq = app wala JV) + milanJobs dir auto + blueAccess/autoMilan
 //  2026-10-27 (e): ⚖️ milan job / 📤 ab purana ⇄ TRANSFER bhi POS JV (milanTransfer — POS mein pehle se ho to sirf jor); har milan entry pehle [app:id] marker dekhti hai
@@ -957,6 +958,40 @@ async function billJaanch(pool, acctIds, jq) {
   if (j !== jzLast && !DRY) { await biz.collection('blueAccess').doc('billJaanch').set({ m, at: Date.now(), n: Object.keys(m).length, pc: os.hostname() }); jzLast = j; if (Object.keys(m).length) log(`🔎 bill jaanch: ${Object.keys(m).length} wajah likhi`); }
   return fixed;
 }
+function lineOfPc(r) {   // POS voucher line → milanDiffPc ki line (autoMilan + 📜 opening job)
+  const desc = String(r.Description || r.VoucherRemarks || '').trim(), note = String(r.SystemNote || '');
+  return { d: ymd(r.VoucherDate), code: String(r.VoucherCode || ''), dt: String(r.DocumentType || ''), vt: String(r.VoucherType || ''), no: r.DocumentNo == null ? '' : String(r.DocumentNo),
+    amt: Math.round((Number(r.Debit) || 0) * 100) - Math.round((Number(r.Credit) || 0) * 100), desc, appMark: /\[app:/.test(note), vid: Number(r.VoucherID),
+    created: new Date(r.CreatedOn || r.VoucherDate).getTime(), open: OPEN_RX.test(desc) || OPEN_RX.test(String(r.VoucherRemarks || '')) || /\[app:(opening|openfix)-/.test(note) };
+}
+// 2026-10-28 (i): 📜 OPENING FARQ — malik ki ijazat (app ka chip) se milanJobs {dir pos|app, ids:['@opening']}: is khate ka sabqa (15-Sep se pehle + opening voucher)
+//   dir pos = POS mein JV "Opening balance farq (app)" (party vs Equity — autoMilan wala) · dir app = app mein "Sabqa baqaya farq theek (POS jaisa)" entry
+//   (START_DATE se 1 din pehle, posNo + dailyIncluded false — POS mein kabhi nahi jati, Daily nahi). Har dafa SQL se taza hisaab; barabar ho to 'skip'.
+const sideRs = v => 'Rs ' + rsTxt(Math.abs(v)) + (v < -100 ? ' dena' : v > 100 ? ' lena' : '');
+async function milanOpening(pool, acctIds, j, say) {
+  const appId = String(j.partyId || ''), p = app.get(appId);
+  if (!p || p.deleted) { say('opening: khata nahi mila'); return 'fail'; }
+  let accId = 0; for (const [a, id] of acctIds) if (id === appId) { accId = Number(a); break; }
+  if (!accId) { say(`${p.name}: POS se juda nahi`); return 'fail'; }
+  const rows = (await pool.request().input('from', sql.Date, START_DATE).input('ac', sql.Int, accId).query(`SELECT v.VoucherID, v.VoucherCode, v.VoucherDate, v.VoucherType, v.DocumentType, v.DocumentNo, v.VoucherRemarks, v.SystemNote, v.CreatedOn, vd.Debit, vd.Credit, vd.Description
+    FROM dbo.VoucherDetail vd JOIN dbo.Voucher v ON v.VoucherID = vd.VoucherID WHERE vd.AccountID = @ac AND v.VoucherDate >= @from AND ISNULL(v.VoucherStatusID, 1) <> 3`)).recordset;
+  const pre = (await pool.request().input('from', sql.Date, START_DATE).input('ac', sql.Int, accId).query(`SELECT SUM(ISNULL(vd.Debit,0) - ISNULL(vd.Credit,0)) AS Bal
+    FROM dbo.VoucherDetail vd JOIN dbo.Voucher v ON v.VoucherID = vd.VoucherID WHERE vd.AccountID = @ac AND v.VoucherDate < @from AND ISNULL(v.VoucherStatusID, 1) <> 3`)).recordset[0];
+  const D = milanDiffPc(appId, rows.map(lineOfPc), Math.round((Number(pre?.Bal) || 0) * 100)), fix = D.openApp - D.openPos;
+  if (Math.abs(fix) <= 100) { say(`${p.name}: opening pehle se barabar (app ${sideRs(D.openApp)} · POS ${sideRs(D.openPos)})`); return 'skip'; }
+  if (DRY) { say(`(dry) ${p.name}: opening farq Rs ${rsTxt(fix)}`); return 'skip'; }
+  if (j.dir === 'pos') {
+    const amt = rupees(Math.abs(fix)), dr = fix > 0, date = D.openLines.length ? D.openLines[D.openLines.length - 1].d : START_DATE;
+    const r = await posWriteVoucher(pool, { voucherId: 0, type: 'JV', date, marker: 'openfix-' + appId + '-' + Date.now().toString(36), remarks: `Opening balance farq theek (app) - ${p.name}`,
+      lines: [{ accountId: accId, debit: dr ? amt : 0, credit: dr ? 0 : amt, desc: 'Opening balance farq (app)' },
+        { accountId: EQUITY_ACCOUNT_ID, debit: dr ? 0 : amt, credit: dr ? amt : 0, desc: 'Opening balance farq (app) - ' + p.name }] });
+    say(`${r.code}: POS ka opening app jaisa — Rs ${rsTxt(Math.abs(fix))} ${dr ? 'lena (Dr)' : 'dena (Cr)'} (POS ${sideRs(D.openPos)} → app ${sideRs(D.openApp)})`); return 'done';
+  }
+  const delta = -fix, d0 = new Date(START_DATE + 'T12:00:00Z'); d0.setUTCDate(d0.getUTCDate() - 1);
+  const id = 'openfix-app-' + appId.replace(/[^\w-]/g, '').slice(0, 40) + '-' + Date.now().toString(36);
+  await appWrite(id, { type: 'entry', kind: delta > 0 ? 'payment' : 'borrow', partyId: appId, amount: Math.abs(delta), date: d0.toISOString().slice(0, 10), note: 'Sabqa baqaya farq theek (POS jaisa)', posNo: true, dailyIncluded: false, deleted: false }, null);
+  say(`${p.name}: app ka sabqa POS jaisa — Rs ${rsTxt(Math.abs(delta))} ${delta > 0 ? 'kam dena / zyada lena' : 'zyada dena / kam lena'} (app ${sideRs(D.openApp)} → POS ${sideRs(D.openPos)})`); return 'done';
+}
 async function autoMilan(pool, acct, acctIds, importVoucher) {
   const rows = (await pool.request().input('from', sql.Date, START_DATE).query(`SELECT vd.AccountID, v.VoucherID, v.VoucherCode, v.VoucherDate, v.VoucherType, v.DocumentType, v.DocumentNo, v.VoucherRemarks, v.SystemNote, v.CreatedOn, vd.Debit, vd.Credit, vd.Description
     FROM dbo.VoucherDetail vd JOIN dbo.Voucher v ON v.VoucherID = vd.VoucherID
@@ -968,10 +1003,7 @@ async function autoMilan(pool, acct, acctIds, importVoucher) {
   for (const r of rows) {
     const k = Number(r.AccountID); if (!acctIds.has(k)) continue;
     if (!byAcc.has(k)) byAcc.set(k, []);
-    const desc = String(r.Description || r.VoucherRemarks || '').trim(), note = String(r.SystemNote || '');
-    byAcc.get(k).push({ d: ymd(r.VoucherDate), code: String(r.VoucherCode || ''), dt: String(r.DocumentType || ''), vt: String(r.VoucherType || ''), no: r.DocumentNo == null ? '' : String(r.DocumentNo),
-      amt: Math.round((Number(r.Debit) || 0) * 100) - Math.round((Number(r.Credit) || 0) * 100), desc, appMark: /\[app:/.test(note), vid: Number(r.VoucherID),
-      created: new Date(r.CreatedOn || r.VoucherDate).getTime(), open: OPEN_RX.test(desc) || OPEN_RX.test(String(r.VoucherRemarks || '')) || /\[app:(opening|openfix)-/.test(note) });
+    byAcc.get(k).push(lineOfPc(r));
   }
   const now = Date.now(), plans = [], jq = [];
   for (const [accId, appId] of acctIds) {
@@ -1088,7 +1120,8 @@ async function runMilanJobs(pool, acct, acctIds, importVoucher) {
     let done = 0, fail = 0, skip = 0;
     const count = r => { if (r === 'done') done++; else if (r === 'skip') skip++; else fail++; };
     try {
-      if (j.dir === 'pos') {
+      if (ids.length === 1 && ids[0] === '@opening') count(await milanOpening(pool, acctIds, j, say));   // 2026-10-28 (i): 📜 opening farq (malik ki ijazat)
+      else if (j.dir === 'pos') {
         const purAc = await purchaseAccount(pool);
         for (const id of ids) count(await milanSendOne(pool, acct, id, say, purAc));
       } else if (j.dir === 'app') {
