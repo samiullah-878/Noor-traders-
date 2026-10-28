@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  item-report.js  v1.7 (2026-10-20: koi array nahi, har doc alag, poori galti irep-err mein) · v1.5 (2026-10-19: 🧾 stock fraq / ginti farq bill nafa + bikri se BAHAR — party naam saaf karke + Description "Stock ginti farq") · v1.4 (2026-10-17: 💰 asal nafa — har sale bill TotalSale − COGS -> posStats/nafa-<mahina>-<k>, aaj ka irep-today.nb) · v1.3 (2026-10-17: ⚡ runToday — sirf AAJ ka data har 10 min posStats/irep-today (irep-today.js) · collect() alag) · v1.2 (2026-10-14: 💰 COMMISSION items (blueAccess/commission) — har din har Supply Man kitne packet -> posStats/irep-comm) · v1.1 (2026-10-14: Firestore list-ke-andar-list nahi leta — items ab JSON string 'j' mein, hissa ~600 KB tak) · v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
+//  item-report.js  v1.8 (2026-10-28: 🏭 supplier-wise — posStats/irep-sup: har supplier ke items + aakhri khareed rate, 365 din) · v1.7 (2026-10-20: koi array nahi, har doc alag, poori galti irep-err mein) · v1.5 (2026-10-19: 🧾 stock fraq / ginti farq bill nafa + bikri se BAHAR — party naam saaf karke + Description "Stock ginti farq") · v1.4 (2026-10-17: 💰 asal nafa — har sale bill TotalSale − COGS -> posStats/nafa-<mahina>-<k>, aaj ka irep-today.nb) · v1.3 (2026-10-17: ⚡ runToday — sirf AAJ ka data har 10 min posStats/irep-today (irep-today.js) · collect() alag) · v1.2 (2026-10-14: 💰 COMMISSION items (blueAccess/commission) — har din har Supply Man kitne packet -> posStats/irep-comm) · v1.1 (2026-10-14: Firestore list-ke-andar-list nahi leta — items ab JSON string 'j' mein, hissa ~600 KB tak) · v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
 //  Malik: "poore month ka actual data — 1–10, 10–20, 20–30, poora mahina, week wise; har item kaun si bik rahi, kin dino / hafton
 //         mein zyada, un par nafa kitna — chart, click par aage data".
 //  sales-stats.js (har ghante) ke aakhir mein chalta hai: run({ pool, sql, db }). SQL mein KUCH NAHI likhta — sirf SELECT.
@@ -118,6 +118,25 @@ async function nafaCollect({ pool, sql, from, to, skipIds, wsIds, info, inList }
   for (const o of M.values()) { o.b.sort((x, y) => x[0] - y[0] || String(x[1]).localeCompare(String(y[1]))); delete o.pi; }
   return M;
 }
+// v1.8 (2026-10-28): 🏭 SUPPLIER-WISE (malik: "supplier wise sale data items ka chahiye, supplier search ho sake, PDF, nafa nahi") —
+//   pichhle 365 din ki khareed (cancel 3 nahi; noor traders / our factory / stock fraq / godam stock jaisi andar ki parties nahi):
+//   posStats/irep-sup {at, n, j: JSON {s: [[supplier naam, [[itemId, aakhri rate, 'YYYY-MM-DD', kitni dafa], ...]], ...]}} — app irep.js isi se.
+async function supCollect({ pool, sql }) {
+  const rows = (await pool.request().query(`SELECT x.PartyID, x.PartyName, x.ItemID, x.Rate, CONVERT(char(10), x.PurchaseDate, 23) AS D, x.n FROM (
+      SELECT p.PartyID, pt.PartyName, d.ItemID, d.Rate, p.PurchaseDate,
+        ROW_NUMBER() OVER (PARTITION BY p.PartyID, d.ItemID ORDER BY p.PurchaseDate DESC, p.PurchaseID DESC) AS rn,
+        COUNT(*) OVER (PARTITION BY p.PartyID, d.ItemID) AS n
+      FROM dbo.PurchaseDetail d JOIN dbo.Purchase p ON p.PurchaseID = d.PurchaseID LEFT JOIN dbo.Party pt ON pt.PartyID = p.PartyID
+      WHERE p.PurchaseDate >= DATEADD(day, -365, GETDATE()) AND ISNULL(p.DocStatusID, 0) <> 3 AND p.PartyID IS NOT NULL) x
+    WHERE x.rn = 1`)).recordset;
+  const by = new Map();
+  for (const r of rows) {
+    const nm = String(r.PartyName || '').trim(); if (!nm || skipName(nm) || /godam\s*stock|opening/i.test(nm)) continue;
+    const k = Number(r.PartyID); if (!by.has(k)) by.set(k, [nm, []]);
+    by.get(k)[1].push([Number(r.ItemID), r2(r.Rate), String(r.D || ''), Number(r.n) || 1]);
+  }
+  return [...by.values()].sort((a, b) => a[0].localeCompare(b[0]));
+}
 const nafaChunks = o => { const out = []; let cur = [], size = 0; for (const r of o.b) { const n = JSON.stringify(r).length + 1; if (cur.length && size + n > 700000) { out.push(cur); cur = []; size = 0; } cur.push(r); size += n; } out.push(cur); return out.map(b => JSON.stringify({ p: o.p, b })); };
 async function run({ pool, sql, db, log = console.log, now = new Date() }) {
   const t0 = Date.now();
@@ -133,6 +152,7 @@ async function run({ pool, sql, db, log = console.log, now = new Date() }) {
   const nafa = {}; if (NF) for (const [mon, o] of NF) nafa[mon] = nafaChunks(o).length;
   const errs = [], put = async (id, data) => { try { await col.doc(id).set(data); } catch (e) { errs.push(id + ': ' + String(e?.message || e)); log('⚠️ ' + id + ' save nahi: ' + (e?.message || e)); } };
   if (comm) await put('irep-comm', { j: JSON.stringify(comm), at: Date.now() });
+  try { const S = await supCollect({ pool, sql }); let j = JSON.stringify({ s: S }); while (Buffer.byteLength(j) > 900000 && S.length > 10) { S.length = Math.floor(S.length * 0.9); j = JSON.stringify({ s: S }); } await col.doc('irep-sup').set({ j, n: S.length, at: Date.now() }); } catch (e) { log('🏭 supplier-wise nahi bana: ' + (e?.message || e)); }   // v1.8
   for (let k = 0; k < chunks.length; k++) await put('irep-' + k, { j: JSON.stringify(chunks[k]), n: chunks[k].length, at: Date.now() });
   await put('irep-meta', { at: Date.now(), from: days[0], to: days[days.length - 1], dj: JSON.stringify(days.map(String)), n: all.length, chunks: chunks.length, wsj: JSON.stringify(wsNames.flat(3).map(String).slice(0, 10)), ver: '1.7', comm: !!comm, nj: JSON.stringify(NF ? nafa : {}), bytes: chunks.reduce((s, c) => s + Buffer.byteLength(JSON.stringify(c)), 0) });
   try { await col.doc('irep-err').set({ at: Date.now(), msg: errs.join(' | ').slice(0, 1500), n: errs.length }); } catch {}

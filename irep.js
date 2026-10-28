@@ -1,4 +1,4 @@
-// irep.js — v2.99.81: 📊 ITEM SALE REPORT (sirf malik) — kaun si item kab bikti hai, kitna nafa, kin dino / hafton mein zyada.
+// irep.js — v2.140.0: 🏭 Supplier-wise sale (⋮, PDF, nafa nahi, ☑ sale / purchase rate) · v2.99.81: 📊 ITEM SALE REPORT (sirf malik) — kaun si item kab bikti hai, kitna nafa, kin dino / hafton mein zyada.
 // Malik: "poore month ka actual data: 1–10, 10–20, 20–30, poora mahina, week wise · har item · pattern · nafa · chart, click par aage data".
 // Data: PC item-report.js (sales-stats ke saath har ghante) -> posStats/irep-meta + irep-<k>. 3 calendar mahine, har item har din:
 //   d: [[dayIdx, ginti, Rs, wholesale ginti, wholesale Rs]] · c = fi piece khareed (ABHI ka rate — purane din ka nafa andaza).
@@ -32,8 +32,8 @@ const LS = 'sam-irep';
 const st = (() => { let v = {}; try { v = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch {} return { mon: v.mon || '', per: v.per || 'm', from: v.from || '', to: v.to || '', ws: v.ws !== false, sort: v.sort || 'rs', q: '', lim: 60, tsort: v.tsort || 'rs', tq: '', tAll: false, rev: !!v.rev, trev: !!v.trev, rep: v.rep || 'items', view: v.view || 'chart', trd: v.trd || 'wk' }; })();   // v2.103.3: ⇅ ulta
 const keep = () => { try { localStorage.setItem(LS, JSON.stringify({ mon: st.mon, per: st.per, from: st.from, to: st.to, ws: st.ws, sort: st.sort, tsort: st.tsort, rev: st.rev, trev: st.trev, rep: st.rep, view: st.view, trd: st.trd })); } catch {} };
 
-let stockOf = () => null;
-export function irepSetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; pdfOf = o.pdf || pdfOf; stockOf = o.stock || stockOf; }
+let stockOf = () => null, canK = () => true;
+export function irepSetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; pdfOf = o.pdf || pdfOf; stockOf = o.stock || stockOf; canK = o.can || canK; }
 export function irepStop() { if (stop) { try { stop(); } catch {} stop = null; } if (tStop) { try { tStop(); } catch {} tStop = null; } if (kStop) { try { kStop(); } catch {} kStop = null; } if (pcStop) { try { pcStop(); } catch {} pcStop = null; } clearTimeout(slowT); slowT = 0; if (cStop) { try { cStop(); } catch {} cStop = null; } }
 function watch() {
   if (!cStop && cloud?.listenCommission) cStop = cloud.listenCommission(m => { commCfg = m || {}; if ($('irRoot')) paint(); if (document.querySelector('.ir-cset')) commSetPaint(); });
@@ -326,7 +326,7 @@ function paint() {
     ${chips(X.mons.map(mm => [mm, monLabel(mm)]), 'data-ir-mon', k => k === m)}
     ${chips(PERS.filter(([k]) => !/^w5$/.test(k) || L > 28), 'data-ir-p', k => k === st.per)}
     ${st.per === 'c' ? `<div class="lk-filter ir-cf"><label>Tareekh se<input type="date" data-ir-from value="${esc(st.from || a)}" min="${esc(X.days[0] || '')}" max="${esc(X.days.slice(-1)[0] || '')}"></label><label>Tareekh tak<input type="date" data-ir-to value="${esc(st.to || b)}" min="${esc(X.days[0] || '')}" max="${esc(X.days.slice(-1)[0] || '')}"></label></div>` : ''}
-    <div class="mchips"><button type="button" class="rc${st.ws ? ' on' : ''}" data-ir-ws="1">${st.ws ? '☑' : '☐'} 📦 Wholesale ke saath</button><button type="button" class="rc${st.ws ? '' : ' on'}" data-ir-ws="0">${st.ws ? '☐' : '☑'} Wholesale ke baghair</button></div>
+    <div class="mchips"><button type="button" class="rc${st.ws ? ' on' : ''}" data-ir-ws="1">${st.ws ? '☑' : '☐'} 📦 Wholesale ke saath</button><button type="button" class="rc${st.ws ? '' : ' on'}" data-ir-ws="0">${st.ws ? '☐' : '☑'} Wholesale ke baghair</button>${canK('ir.sup') ? '<button type="button" class="rc ir-supbtn" data-irs-open="1" data-mn="ir.sup" data-mn-i="🏭" data-mn-t="Supplier-wise sale" data-mn-s="supplier ke items ki bikri · PDF (nafa nahi)" data-mn-g="📊 Item report">🏭 Supplier-wise</button>' : ''}</div>
     </div>
     <div class="ir-hero"><small>${esc(perLabel)}</small><strong>Rs ${num(T.rs)}</strong><span>sale · ${num(T.n)} items</span>
       <div class="ir-kp"><div class="ir-tap" data-ir-nafa="1" role="button"><b class="${T.pf < 0 ? 'neg' : ''}">Rs ${num(T.pf)}</b><small>nafa (andaza) · items ▸</small></div><div><b>${pct(T.pf, T.rs)}%</b><small>nafa %</small></div><div><b>${num(pd.length ? T.rs / pd.length : 0)}</b><small>roz ki sale</small></div></div></div>
@@ -535,6 +535,75 @@ function pdfHTML(only) {   // v2.103.86: only = khuli report (items/nafa/bills/c
     <p><small>Nafa = abhi ka khareed rate × ginti (andaza). Data: POS (Noor Traders ke andar ke bill aur cancel bahar).</small></p>`;
 }
 
+// ---------- 🏭 v2.140.0: SUPPLIER-WISE SALE (malik: "supplier wise sale data items ka · supplier search · three dot ke andar · PDF bhejo / kholo ·
+//   nafa nahi · sale rate / purchase rate checkbox") — PC item-report v1.8 posStats/irep-sup (365 din ki khareed: supplier → items + aakhri rate).
+//   Waqt = item report ka (range()). NAFA KABHI NAHI. Khane ☑ Sale rate (default on) · ☐ Purchase rate (default off — PDF supplier ko ja sakti hai).
+let sup = null, supAt = 0, supBusy = false; const irs = { q: '', pick: '', sr: 1, pr: 0 };
+try { const o = JSON.parse(localStorage.getItem('sam-irsup') || '{}'); irs.sr = o.sr === 0 ? 0 : 1; irs.pr = o.pr ? 1 : 0; } catch {}
+const irsKeep = () => { try { localStorage.setItem('sam-irsup', JSON.stringify({ sr: irs.sr, pr: irs.pr })); } catch {} };
+async function supLoad(force) {
+  if (supBusy || (sup && !sup.err && !force && Date.now() - supAt < 30 * 60000)) return;
+  supBusy = true; try { sup = cloud?.getIrepSup ? (await cloud.getIrepSup()) || { s: [], none: 1 } : { s: [], err: 'App update karein' }; supAt = Date.now(); } catch (e) { sup = { s: [], err: e?.message || String(e) }; } finally { supBusy = false; }
+}
+function supItems(S) {   // ek supplier ke items — is waqt ki bikri (nafa nahi)
+  const [a, b0] = range(), b = clipEnd(b0), X = index(), byId = new Map(X.items.map(it => [String(it.i), it])), stk = stockOf() || new Map();
+  const rows = (S[1] || []).map(([id, rate, d, n]) => {
+    const it = byId.get(String(id)), sm = stk.get?.(String(id)), s0 = it ? sumItem(it, a, b) : { q: 0, rs: 0 }, pk = Number(it?.pk) || Number(sm?.pack) || 0, c = Number(it?.c) || 0;
+    let pr = Number(rate) || 0; if (pk > 1 && pr > 0 && c > 0 && Math.abs(Math.log(pr / pk / c)) < Math.abs(Math.log(pr / c))) pr = pr / pk;   // carton ka rate = fi piece
+    return { id: String(id), name: it?.n || sm?.name || ('Item #' + id), q: s0.q, rs: s0.rs, pk, sr: s0.q > 0 ? s0.rs / s0.q : 0, pr, d: String(d || ''), n: Number(n) || 1 };
+  }).sort((x, y) => y.rs - x.rs || x.name.localeCompare(y.name));
+  return { rows, a, b, T: rows.reduce((t, r) => t + r.rs, 0), sold: rows.filter(r => r.q > 0).length };
+}
+const perTxt = (a, b) => st.per === 'c' ? `${short(a)} – ${short(b)}` : `${(PERS.find(p => p[0] === st.per) || PERS[3])[1]} · ${short(a)} – ${short(b)}`;
+function supListHTML() {
+  const q = irs.q.trim().toLowerCase(), L = (sup?.s || []).filter(x => !q || String(x[0]).toLowerCase().includes(q)).map(x => { const R = supItems(x); return { x, R }; }).sort((u, v) => v.R.T - u.R.T || String(u.x[0]).localeCompare(String(v.x[0])));
+  return L.length ? L.slice(0, 300).map(({ x, R }) => `<button type="button" class="irs-r" data-irs-pick="${esc(x[0])}"><b>${esc(x[0])}</b><small>${num(x[1].length)} items · is waqt bike ${num(R.sold)}</small><span>Rs ${num(R.T)}</span></button>`).join('') : '<p class="lk-note">Koi supplier nahi mila</p>';
+}
+function supHTML() {
+  if (!sup) return '<div class="nt-empty">⏳<b>Suppliers aa rahe hain…</b></div>';
+  if (sup.err) return `<div class="nt-empty">📶<b>Supplier data nahi aaya</b><small>${esc(sup.err)}</small><button type="button" class="sh-wide" data-irs-retry="1">🔄 Dobara</button></div>`;
+  if (!(sup.s || []).length) return '<div class="nt-empty">🏭<b>PC se supplier ka data abhi nahi aaya</b><small>Shop PC item report ke saath har ghante banata hai — thori der baad kholein</small></div>';
+  const [a, b0] = range(), b = clipEnd(b0);
+  if (!irs.pick) return `<div class="irs-top"><label class="irs-q"><span>🔍</span><input type="search" data-irs-q="1" placeholder="Supplier dhoondo…" value="${esc(irs.q)}" autocomplete="off"></label></div>
+    <p class="irs-per">🗓 ${esc(perTxt(a, b))} <small>(waqt item report ke ⋮ se badlein)</small></p><div class="irs-list" id="irsList">${supListHTML()}</div>`;
+  const S = (sup.s || []).find(x => x[0] === irs.pick); if (!S) { irs.pick = ''; return supHTML(); }
+  const R = supItems(S);
+  const seg = `<div class="bc-seg irs-cols" data-mn-seg="irs.col" data-mn-i="☑" data-mn-t="Khane — Sale / Purchase rate" data-mn-g="🏭 Supplier-wise"><button type="button" class="${irs.sr ? 'is-in' : ''}" data-irs-sr="1">${irs.sr ? '☑' : '☐'} Sale rate</button><button type="button" class="${irs.pr ? 'is-in' : ''}" data-irs-pr="1">${irs.pr ? '☑' : '☐'} Purchase rate</button></div>`;
+  return `<div class="irs-top"><button type="button" class="irs-back" data-irs-back="1">‹ Suppliers</button><b class="irs-name">${esc(S[0])}</b><button type="button" class="irs-pdf" data-irs-pdf="1" data-mn-keep="1">📄 PDF</button></div>
+    ${seg}<p class="irs-per">🗓 ${esc(perTxt(a, b))} · ${num(R.rows.length)} items · bike ${num(R.sold)} · <b>Sale Rs ${num(R.T)}</b></p>
+    <div class="irs-tw">${supTable(R, false)}</div>`;
+}
+function supTable(R, pdf) {
+  const head = `<tr><th>#</th><th>Item</th><th>Bika</th><th>Sale Rs</th>${irs.sr ? '<th>Sale rate</th>' : ''}${irs.pr ? '<th>Purchase rate</th>' : ''}</tr>`;
+  const body = R.rows.map((r, i) => `<tr${r.q > 0 ? '' : ' class="irs-0"'}><td>${i + 1}</td><td>${esc(r.name)}</td><td>${r.q > 0 ? esc(fmtQty(r.q, r.pk)) : '—'}</td><td>${r.rs ? num(r.rs) : '—'}</td>${irs.sr ? `<td>${r.sr ? num(r.sr) : '—'}</td>` : ''}${irs.pr ? `<td>${r.pr ? num(r.pr) + (r.d ? ` <small>${esc(short(r.d))}</small>` : '') : '—'}</td>` : ''}</tr>`).join('');
+  const foot = `<tr class="irs-t"><td></td><td><b>Kul</b></td><td></td><td><b>${num(R.T)}</b></td>${irs.sr ? '<td></td>' : ''}${irs.pr ? '<td></td>' : ''}</tr>`;
+  return `<table class="iv-tbl irs-tbl"><thead>${head}</thead><tbody>${body}${foot}</tbody></table>`;
+}
+function supPaint() { const el = document.querySelector('#dialogBody .irs-root'); if (el) el.innerHTML = supHTML(); }
+async function supOpen() {
+  if (!canK('ir.sup')) { notice('🏭 Supplier-wise ki ijazat nahi'); return; }
+  if (!data?.meta) { notice('Report abhi nahi aayi'); return; }
+  dlg('🏭 Supplier-wise sale', '<div class="irs-root"></div>'); supPaint();
+  await supLoad(); supPaint();
+}
+function supPdf() {
+  const S = (sup?.s || []).find(x => x[0] === irs.pick); if (!S || !pdfOf) return;
+  const R = supItems(S);
+  pdfOf(`<h1>Noor Traders</h1><h2>Supplier: ${esc(S[0])}</h2><p>Bikri — ${esc(perTxt(R.a, R.b))} · ${num(R.rows.length)} items · bike ${num(R.sold)} · Sale Rs ${num(R.T)}</p>${supTable(R, true)}<p>Generated ${esc(new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' }))}</p>`, `Supplier ${S[0]} ${R.a} se ${R.b}`);
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest?.('[data-irs-open],[data-irs-pick],[data-irs-back],[data-irs-sr],[data-irs-pr],[data-irs-pdf],[data-irs-retry]'); if (!t) return;
+  const d = t.dataset;
+  if (d.irsOpen) { supOpen(); return; }
+  if (d.irsRetry) { sup = null; supPaint(); supLoad(true).then(supPaint); return; }
+  if (d.irsPick) { irs.pick = d.irsPick; supPaint(); return; }
+  if (d.irsBack) { irs.pick = ''; supPaint(); return; }
+  if (d.irsSr) { irs.sr = irs.sr ? 0 : 1; irsKeep(); supPaint(); return; }
+  if (d.irsPr) { irs.pr = irs.pr ? 0 : 1; irsKeep(); supPaint(); return; }
+  if (d.irsPdf) { supPdf(); return; }
+});
+document.addEventListener('input', e => { const t = e.target; if (t?.dataset?.irsQ == null) return; irs.q = t.value || ''; const L = document.getElementById('irsList'); if (L) L.innerHTML = supListHTML(); });
+
 // ---------- clicks ----------
 document.addEventListener('click', e => {
   { const r = e.target.closest?.('[data-ir-rep],[data-ir-view],[data-ir-trd]'); if (r && r.closest('.ir-root')) { const d = r.dataset; if (d.irRep) { st.rep = d.irRep; st.view = 'chart'; } if (d.irView) st.view = d.irView; if (d.irTrd) st.trd = d.irTrd; keep(); paint(); if (d.irRep) document.querySelector('.ir-main')?.scrollIntoView?.({ block: 'start' }); return; } }   // v2.103.86
@@ -582,7 +651,7 @@ document.addEventListener('input', e => {   // v2.101.1: search par sirf neeche 
 export const _irTest = { phAgg, setStock: f => { stockOf = f; }, nfBills, nfSum, nfHTML, nfC, nfSetT: t => { tdoc = t; }, nfSetFull: f => { full = f; }, mergeToday, ageText, setFull: (f, t) => { full = f; tdoc = t; remerge(); }, fmtQty, topHTML, nafaHTML, wsSplit, setRows: r => { lastRows = { sorted: r, srt: () => 0 }; }, agg, range, patterns, partRange, setData: d => { data = d; loaded = true; ix = null; }, st, pdfHTML, commAgg, setComm: c => { commCfg = c; } };
 
 // v2.103.48: 🤖 agent actions — item report (nafa / sale)
-import { agentRegister } from './agent.js?v=2.139.0';
+import { agentRegister } from './agent.js?v=2.140.0';
 agentRegister([
   { name: 'nafa_report', read: true, desc: 'Item report: muddat (from/to YYYY-MM-DD, default aaj) ki sale, nafa (andaza), top items nafa ke hisaab se; wholesale ke saath/baghair.', params: { type: 'OBJECT', properties: { from: { type: 'STRING' }, to: { type: 'STRING' }, top: { type: 'INTEGER' }, wholesale: { type: 'BOOLEAN' } } },
     run({ from, to, top, wholesale }) { if (!data?.meta) throw Error('Report abhi PC se nahi aayi'); const ws0 = st.ws; if (wholesale != null) st.ws = !!wholesale; try { const X = index(), a = /^\d{4}-\d\d-\d\d$/.test(from || '') ? from : X.days[X.days.length - 1], b = /^\d{4}-\d\d-\d\d$/.test(to || '') ? to : a, { rows, T } = agg(a, b), L = rows.filter(r => !r.noCost).sort((x, y) => y.pf - x.pf);

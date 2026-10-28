@@ -14,9 +14,9 @@
 //  🔠 Apni marzi: likhai size (main zoom) · headings size · likhai rang · headings rang — har phone (localStorage sam-marzi);
 //     malik "👑 Sab mulazimon par" = blueAccess/look {marzi, mAt} (cloud.setMarzi). AI nahi.
 // =====================================================================================================
-import { recentList } from './recent.js?v=2.139.0';
-import { agentRegister } from './agent.js?v=2.139.0';
-import { smartHit, hlName } from './smart-search.js?v=2.139.0';
+import { recentList } from './recent.js?v=2.140.0';
+import { agentRegister } from './agent.js?v=2.140.0';
+import { smartHit, hlName } from './smart-search.js?v=2.140.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -370,7 +370,7 @@ const dhWr = (k, o) => { try { localStorage.setItem(k, JSON.stringify(o)); } cat
 const dhCan = () => { try { return !!H.owner?.() || H.can?.('app.dhoondo') !== false; } catch { return true; } };
 const dhKey = x => String(x.k).startsWith('ft.') ? 'ft:' + x.t : x.k;   // neeche ki patti ke kaam: naam se pehchan (index badal sakta)
 let DHS = null;
-async function dhStatic() { if (DHS) return DHS; try { DHS = (await import('./dh-cat.js?v=2.139.0')).DH_CAT || {}; } catch { DHS = {}; } return DHS; }
+async function dhStatic() { if (DHS) return DHS; try { DHS = (await import('./dh-cat.js?v=2.140.0')).DH_CAT || {}; } catch { DHS = {}; } return DHS; }
 // is screen ke chips yaad — jo kabhi dikhe sab (haalat ke hisaab se aate jate hain), 21 din na dikhe to bhool jao
 const dhSig = new Map();   // view → pichhli dafa ke chips (wahi hon to localStorage chhoo bhi nahi — tez)
 function dhLearn() {

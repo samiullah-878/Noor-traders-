@@ -6526,3 +6526,27 @@ html body #dialogBody .nb-chip.sm u.ud{text-decoration:none;font-size:10px;font-
 html body #dialogBody .nb-chip.sm.wt .nb-cno,html body #dialogBody .nb-chip.sm.wt .nb-camt{color:#9a6200}
 html body #dialogBody .nb-chip.sm.fl .nb-cno,html body #dialogBody .nb-chip.sm.fl .nb-camt{color:#c62828}
 html body #dialogBody .nb-chipv .nb-pill[hidden]{display:none!important}
+/* v2.140.0: 🏭 Supplier-wise sale (item report) */
+html body #dialogBody .irs-root{display:flex;flex-direction:column;gap:8px}
+html body #dialogBody .irs-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:2;background:var(--surface,#fff);padding:2px 0 4px}
+html body #dialogBody .irs-q{display:flex;align-items:center;gap:6px;flex:1 1 260px;max-width:420px;min-width:0;height:42px;padding:0 14px;border-radius:999px;border:1.5px solid #c9d6ef;background:linear-gradient(180deg,#fff,#f3f6fc)}
+html body #dialogBody .irs-q input{flex:1 1 auto;min-width:0;border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;height:38px!important;font-size:15px;outline:none}
+html body #dialogBody .irs-back,html body #dialogBody .irs-pdf{height:36px;min-height:36px;padding:0 14px!important;border-radius:999px;font-size:13px;font-weight:800;white-space:nowrap;width:auto!important;border:1px solid #c9d6ef!important;background:linear-gradient(180deg,#fff,#eef3fc)!important;color:#1d3b7a!important}
+html body #dialogBody .irs-pdf{margin-left:auto;background:linear-gradient(180deg,#2f5bd3,#1e44b0)!important;color:#fff!important;border-color:#1e44b0!important}
+html body #dialogBody .irs-name{font-size:16px;font-weight:900;color:#13244a;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body #dialogBody .irs-per{margin:0;font-size:12.5px;color:#4d5b74}html body #dialogBody .irs-per small{color:#8a94a6}
+html body #dialogBody .irs-cols{display:flex;gap:6px;flex-wrap:wrap}
+html body #dialogBody .irs-cols button{height:34px;min-height:34px;padding:0 12px;border-radius:999px;font-size:12.5px;font-weight:800;width:auto;border:1px solid #c9d6ef!important;background:#fff!important;color:#1d3b7a!important}
+html body #dialogBody .irs-cols button.is-in{background:linear-gradient(180deg,#2f5bd3,#1e44b0)!important;color:#fff!important;border-color:#1e44b0!important}
+html body #dialogBody .irs-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+html body #dialogBody .irs-r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 8px;text-align:left;padding:10px 12px;border-radius:14px;border:1.5px solid #d7dde8!important;background:linear-gradient(180deg,#fff,#f4f6fa)!important;color:#1d2433!important;min-height:0;height:auto;width:100%}
+html body #dialogBody .irs-r b{font-size:14px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body #dialogBody .irs-r small{grid-column:1;font-size:11.5px;color:#6b7385}
+html body #dialogBody .irs-r span{grid-column:2;grid-row:1/3;align-self:center;font-weight:900;color:#1e44b0;white-space:nowrap}
+html body #dialogBody .irs-tw{overflow-x:auto}
+html body #dialogBody .irs-tbl{width:100%;border-collapse:collapse;font-size:13px}
+html body #dialogBody .irs-tbl th,html body #dialogBody .irs-tbl td{padding:7px 8px;border-bottom:1px solid #e3e8f0;text-align:left;white-space:nowrap}
+html body #dialogBody .irs-tbl td:nth-child(2){white-space:normal;min-width:140px;font-weight:700}
+html body #dialogBody .irs-tbl tr.irs-0 td{color:#9aa3b2}
+html body #dialogBody .irs-tbl tr.irs-t td{border-top:2px solid #c9d6ef;background:#f3f6fc}
+html body #dialogBody .irs-tbl small{color:#8a94a6;font-size:10.5px}
