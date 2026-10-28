@@ -258,6 +258,7 @@ export function renderIrep() {
   if ($('list')) $('list').innerHTML = '';
   $('actions').innerHTML = '<button class="got" data-ir-pdf="1">📄 PDF · WhatsApp</button>';
   paint();
+  if (canK('ir.sup')) setTimeout(() => { supLoad().catch(() => {}); }, 1200);   // v2.140.1: 🏭 pas-e-parda — click par foran
 }
 const agoT = at => { const m = Math.round((Date.now() - at) / 60000); return m < 1 ? 'abhi' : m < 60 ? m + ' min pehle' : m < 1440 ? Math.round(m / 60) + ' ghante pehle' : Math.round(m / 1440) + ' din pehle'; };
 function ageText() {   // v2.103.6: ⚡ aaj ka data har 10 min — 40 min se purana = PC ka script ruka
@@ -541,10 +542,23 @@ function pdfHTML(only) {   // v2.103.86: only = khuli report (items/nafa/bills/c
 let sup = null, supAt = 0, supBusy = false; const irs = { q: '', pick: '', sr: 1, pr: 0 };
 try { const o = JSON.parse(localStorage.getItem('sam-irsup') || '{}'); irs.sr = o.sr === 0 ? 0 : 1; irs.pr = o.pr ? 1 : 0; } catch {}
 const irsKeep = () => { try { localStorage.setItem('sam-irsup', JSON.stringify({ sr: irs.sr, pr: irs.pr })); } catch {} };
+// v2.140.1: malik — "click karte hi foran, data pehle se ho": (1) phone mein pichhla data (localStorage) foran, (2) item report khulte hi pas-e-parda
+//   load, (3) PC ka irep-sup na ho to pehle se maujood khareed (sales-stats ph, posStats items-*) se list.
+const SUP_LS = 'sam-irsup-data', SUP_SKIP = /noor\s*trader|our\s*factory|stock\s*f[ae]?r?a?q|godam\s*stock|opening/i;
+try { const c = JSON.parse(localStorage.getItem(SUP_LS) || 'null'); if (c && Array.isArray(c.s) && c.s.length) sup = c; } catch {}
 async function supLoad(force) {
-  if (supBusy || (sup && !sup.err && !force && Date.now() - supAt < 30 * 60000)) return;
-  supBusy = true; try { sup = cloud?.getIrepSup ? (await cloud.getIrepSup()) || { s: [], none: 1 } : { s: [], err: 'App update karein' }; supAt = Date.now(); } catch (e) { sup = { s: [], err: e?.message || String(e) }; } finally { supBusy = false; }
+  if (supBusy || (sup && !sup.err && (sup.s || []).length && supAt && !force && Date.now() - supAt < 30 * 60000)) return;
+  supBusy = true;
+  try {
+    let d = cloud?.getIrepSup ? await cloud.getIrepSup() : null;
+    if ((!d || !(d.s || []).length) && cloud?.getSupFromStats) d = await cloud.getSupFromStats();
+    if (d && (d.s || []).length) { d.s = d.s.filter(x => x && !SUP_SKIP.test(String(x[0]))); sup = d; try { const j = JSON.stringify(d); if (j.length < 1500000) localStorage.setItem(SUP_LS, j); } catch {} }
+    else if (!sup || !(sup.s || []).length) sup = { s: [], none: 1 };
+    supAt = Date.now();
+  } catch (e) { if (!sup || !(sup.s || []).length) sup = { s: [], err: e?.message || String(e) }; }
+  finally { supBusy = false; }
 }
+function supRefresh() { const q = document.activeElement; if (q && q.dataset && q.dataset.irsQ != null) { const L = document.getElementById('irsList'); if (L) L.innerHTML = supListHTML(); return; } supPaint(); }
 function supItems(S) {   // ek supplier ke items — is waqt ki bikri (nafa nahi)
   const [a, b0] = range(), b = clipEnd(b0), X = index(), byId = new Map(X.items.map(it => [String(it.i), it])), stk = stockOf() || new Map();
   const rows = (S[1] || []).map(([id, rate, d, n]) => {
@@ -584,7 +598,7 @@ async function supOpen() {
   if (!canK('ir.sup')) { notice('🏭 Supplier-wise ki ijazat nahi'); return; }
   if (!data?.meta) { notice('Report abhi nahi aayi'); return; }
   dlg('🏭 Supplier-wise sale', '<div class="irs-root"></div>'); supPaint();
-  await supLoad(); supPaint();
+  await supLoad(); supRefresh();
 }
 function supPdf() {
   const S = (sup?.s || []).find(x => x[0] === irs.pick); if (!S || !pdfOf) return;
@@ -651,7 +665,7 @@ document.addEventListener('input', e => {   // v2.101.1: search par sirf neeche 
 export const _irTest = { phAgg, setStock: f => { stockOf = f; }, nfBills, nfSum, nfHTML, nfC, nfSetT: t => { tdoc = t; }, nfSetFull: f => { full = f; }, mergeToday, ageText, setFull: (f, t) => { full = f; tdoc = t; remerge(); }, fmtQty, topHTML, nafaHTML, wsSplit, setRows: r => { lastRows = { sorted: r, srt: () => 0 }; }, agg, range, patterns, partRange, setData: d => { data = d; loaded = true; ix = null; }, st, pdfHTML, commAgg, setComm: c => { commCfg = c; } };
 
 // v2.103.48: 🤖 agent actions — item report (nafa / sale)
-import { agentRegister } from './agent.js?v=2.140.0';
+import { agentRegister } from './agent.js?v=2.140.1';
 agentRegister([
   { name: 'nafa_report', read: true, desc: 'Item report: muddat (from/to YYYY-MM-DD, default aaj) ki sale, nafa (andaza), top items nafa ke hisaab se; wholesale ke saath/baghair.', params: { type: 'OBJECT', properties: { from: { type: 'STRING' }, to: { type: 'STRING' }, top: { type: 'INTEGER' }, wholesale: { type: 'BOOLEAN' } } },
     run({ from, to, top, wholesale }) { if (!data?.meta) throw Error('Report abhi PC se nahi aayi'); const ws0 = st.ws; if (wholesale != null) st.ws = !!wholesale; try { const X = index(), a = /^\d{4}-\d\d-\d\d$/.test(from || '') ? from : X.days[X.days.length - 1], b = /^\d{4}-\d\d-\d\d$/.test(to || '') ? to : a, { rows, T } = agg(a, b), L = rows.filter(r => !r.noCost).sort((x, y) => y.pf - x.pf);
