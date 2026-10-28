@@ -1,5 +1,5 @@
 {
- "version": "2026-10-27.15",
+ "version": "2026-10-28.1",
  "note": "📦 pos-khata-sync: khate ka Saman liya (app wala, 27 Oct se) bhi POS JV (Purchase Dr / party Cr); milanJobs 25 / chakkar. 🔄 pos-khata-sync: POS baqaya/lines foran taza (posLedgerReq + milan job ke baad), sync ghalti se ledger na ruke, cancel voucher baqaye mein nahi. 📦 pk-report v1.1: SAB branches (NOOR TRADERS + godam) — pkReport-<branch>-<k>. ⚖️ pos-khata-sync: BARABAR KARO (milanJobs app/pos — chuni hui purani entries / vouchers doosri taraf). 📦 pk-report: Godam 2 packet report (3 mahine, barcode-war, sirf parhti) → posStats/pkReport. 🔐 rules-publish (malik ne 27 Oct OK kiya): Firestore rules GitHub se khud publish → blueAccess/rulesPub. 🔍 pos-khata-sync: har 15 min har jude khate ki POS ledger LINES posLines/<appId> (sirf badle) — app mein \"Farq dhoondo\" foran. ⚖️ posLedger, 🔒 khata band, dabbe wali rasid pehle se.",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -36,7 +36,7 @@
   "sales-stats-auto.bat": "687c682f023c6d8673fb606d15c24676f7117a8e68ac7fd1a7f34b8dad6742b8",
   "BARCODE-DOCTOR.bat": "b127ae24f3219d77288bb6a6ad17758d85376fe2ef1f50aeb6293a2ebfe7ccb4",
   "LABEL-GEHRA.bat": "2fd4a77c5241b38433ba280babd4659011672fcb08b928a968e9e7e3931d4d88",
-  "pos-sales-dekho.js": "de00d32c1c8f04271f3b3f21d901eede0f4e74754451cddbfa26c1a0fbef7fc2",
+  "pos-sales-dekho.js": "3863ce44468ed98d1594e16c5bb9d98abc9f02539e51b94ebfeaa88ed5fc36d0",
   "pos-sales-auto.bat": "aef4a274bb9cdcde344028e9ad2de8fe7a3572580a0b20f3e3f7b1e806d33e11",
   "nt-print.js": "776b574e151b75ac3bea4a97329d8c545740891ae584cf30dd425b6697458db9",
   "nt-print-auto.bat": "6d2d36d3e6db49986502bdf20df2dd3fe8d2bcce6aca4b807d7b8ed9294dccce",

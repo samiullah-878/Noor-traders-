@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.137.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.137.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.138.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.138.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -878,17 +878,20 @@ function nbChipHTML(b, open, vd, yd) {
   const who = String(b.by || b.where || '').replace(/^💻 |^📱 App · /, ''), party = b.party && !/counter\s*sale/i.test(b.party) ? b.party : '';
   return `<button type="button" class="nb-chip ${st}${open === b.id ? ' open' : ''}" data-nb="${esc(b.id)}"><span class="nb-cno">#${b.saleNo ? esc(String(b.saleNo).replace(/^0+(?=\d{4})/, '')) : (b.credit ? 'Wholesale' : 'Counter')}</span><b class="nb-camt">Rs ${num(b.total)}</b><span class="nb-cst">${lab}${c === 'up' ? ' <u class="ud">udhaar</u>' : ''}${b.edited ? ' ✏️' : ''}</span><small class="nb-cmeta">${esc(tm)}${who ? ' · ' + esc(who) : ''}${party ? ' · ' + esc(party) : ''}</small></button>`;
 }
+function nbChipSm(b, open) {   // v2.138.0: un-posted chhota chip — sirf bill no + raqam
+  const c = billCls(b), st = c === 'fl' ? 'fl' : c === 'wt' ? 'wt' : 'un';
+  return `<button type="button" class="nb-chip sm ${st}${open === b.id ? ' open' : ''}" data-nb="${esc(b.id)}" title="${st === 'un' ? 'Un-posted' : st === 'wt' ? 'PC ka intezar' : 'Ghalti'}"><span class="nb-cno">${st === 'wt' ? '⏳ ' : st === 'fl' ? '⚠ ' : ''}#${b.saleNo ? esc(String(b.saleNo).replace(/^0+(?=\d{4})/, '')) : (b.credit ? 'W' : 'C')}</span><b class="nb-camt">${num(b.total)}</b>${c === 'up' ? '<u class="ud">U</u>' : ''}</button>`;
+}
 function mountBills(box, opt = {}) {
   let open = '', filter = 'all';
   const chips = !!opt.chips;
   try { filter = localStorage.getItem('sam-bills-f') || 'all'; } catch {}
   box.classList.add('nb-wrap');
-  if (chips) { box.classList.add('nb-chipv'); box.innerHTML = `<div class="nb-ctop"><input type="search" class="nb-q" placeholder="🔍 Bill no, naam, raqam…" autocomplete="off"><button type="button" class="rk-pill nb-pill" data-mn-sheet="1"></button></div>
+  if (chips) { filter = 'all'; box.classList.add('nb-chipv'); box.innerHTML = `<div class="nb-ctop"><label class="nb-qchip"><span>🔍</span><input type="search" class="nb-q" placeholder="Bill no, naam, raqam" autocomplete="off"></label><button type="button" class="nb-more" data-nb-more="1" title="Aur (⋮)">⋮</button><button type="button" class="rk-pill nb-pill" data-mn-sheet="1" hidden></button><input type="date" class="nb-date nb-date-x" tabindex="-1" aria-label="Tareekh"></div>
     <div class="nb-copt"><div class="bc-seg nb-nseg" data-mn-seg="nb.n" data-mn-i="🔢" data-mn-t="Kitne bill (chips)" data-mn-g="🧾 Bills"></div>
-      <div class="bc-seg nb-f" data-mn-seg="nb.f" data-mn-i="🔎" data-mn-t="Kaun se bill" data-mn-g="🧾 Bills"></div>
-      <span class="nb-day"><button type="button" data-nb-day="-1" data-mn="nb.prev" data-mn-i="‹" data-mn-t="Pichhla din" data-mn-g="🧾 Bills">‹ Pichhla din</button><button type="button" data-nb-day="1" data-mn="nb.next" data-mn-i="›" data-mn-t="Agla din" data-mn-g="🧾 Bills">Agla din ›</button><button type="button" data-nb-cal="1" data-mn="nb.cal" data-mn-i="📅" data-mn-t="Tareekh chunein" data-mn-g="🧾 Bills">📅 Tareekh</button><input type="date" class="nb-date nb-date-x" tabindex="-1" aria-label="Tareekh"></span>
-      <button type="button" class="nb-unp" data-nb-unp="1" data-mn="nb.unp" data-mn-i="🖨" data-mn-t="Un-posted print" data-mn-s="sab un-posted bills ki parchi" data-mn-g="🧾 Bills">🖨 Un-posted</button></div>
-    <div class="nb-sum"></div><small class="nb-sync"></small><div class="nb-grid nb-list"></div>`; }
+      <span class="nb-day"><button type="button" data-nb-day="-1" data-mn="nb.prev" data-mn-i="‹" data-mn-t="Pichhla din" data-mn-g="🧾 Bills">‹ Pichhla din</button><button type="button" data-nb-day="1" data-mn="nb.next" data-mn-i="›" data-mn-t="Agla din" data-mn-g="🧾 Bills">Agla din ›</button><button type="button" data-nb-cal="1" data-mn="nb.cal" data-mn-i="📅" data-mn-t="Tareekh chunein" data-mn-g="🧾 Bills">📅 Tareekh</button></span>
+      <button type="button" class="nb-unp" data-nb-unp="1" data-mn="nb.unp" data-mn-i="🖨" data-mn-t="Un-posted print" data-mn-s="sab un-posted bills ki parchi" data-mn-g="🧾 Bills">🖨 Un-posted</button><small class="nb-sync"></small></div>
+    <div class="nb-f" hidden></div><div class="nb-sum" hidden></div><div class="nb-list"></div>`; }   // v2.138.0: malik — saamne sirf bill; tabs nahi (Posted + Un-posted ek saath); total nahi; sab ⋮ mein
   else box.innerHTML = `<div class="nb-head"><span class="nb-day"><button type="button" data-nb-day="-1" title="Pichhla din">‹</button><b class="nb-dayt"></b><button type="button" data-nb-day="1" title="Agla din">›</button><label class="nb-cal" title="Tareekh chunein">📅<input type="date" class="nb-date"></label></span><small class="nb-sync"></small></div>
     <div class="nb-top"><input type="search" class="nb-q" placeholder="🔍 Bill no, naam, raqam…" autocomplete="off"><button type="button" class="nb-unp" data-nb-unp="1">🖨 Un-posted</button></div>
     <div class="nb-f"></div><div class="nb-sum"></div><div class="nb-list"></div>`;
@@ -909,7 +912,7 @@ function mountBills(box, opt = {}) {
     const rows = all.filter(b => pass(b) && (!t || smartHit(`${b.saleNo || ''} ${b.party || ''} ${b.where || ''} ${b.by || ''}`, t) || (dg.length >= 2 && String(Math.round(Math.abs(b.total))).startsWith(dg))));
     const cnt = k => all.filter(b => k === 'all' || (k === 'pd' && billCls(b) === 'pd') || (k === 'up' && billCls(b) === 'up') || (k === 'un' && b.ps === 1 && !b.cancelled) || (k === 'po' && b.ps === 2) || (k === 'pc' && b.src === 'pos') || (k === 'app' && b.src === 'app') || (k === 'ws' && wsIs(b, vd))).length;
     if (isOwner()) { wsWatch(); wsReport(vd); } else if (filter === 'ws') filter = 'all';
-    fbox.innerHTML = (isOwner() ? [...FILTERS, ['ws', '🏷 Wholesale']] : FILTERS).map(([k, n]) => `<button type="button" data-nb-f="${k}" class="${filter === k ? (chips ? 'is-in' : 'on') : ''}">${n} <em>${cnt(k)}</em></button>`).join('');
+    fbox.innerHTML = chips ? '' : (isOwner() ? [...FILTERS, ['ws', '🏷 Wholesale']] : FILTERS).map(([k, n]) => `<button type="button" data-nb-f="${k}" class="${filter === k ? 'on' : ''}">${n} <em>${cnt(k)}</em></button>`).join('');   // v2.138.0: chips = tabs nahi
     if (nseg) nseg.innerHTML = NB_NS.map(n => `<button type="button" data-nb-n="${n}" class="${nbN === n ? 'is-in' : ''}">${n} chips</button>`).join('');
     const live = rows.filter(b => !b.cancelled && !b.farq);
     const tot = live.reduce((n, b) => n + b.total, 0), udh = live.filter(b => billCls(b) === 'up').reduce((n, b) => n + (b.total - b.cash), 0);
@@ -924,11 +927,12 @@ function mountBills(box, opt = {}) {
     const un = all.filter(b => b.ps === 1 && !b.cancelled && !b.farq).length; unpBtn.textContent = `🖨 Un-posted ${un}`; unpBtn.title = `${un} un-posted bills ka print`; unpBtn.disabled = !un;
     syncEl.innerHTML = posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : '';
     syncEl.className = 'nb-sync' + (posSyncAt && Date.now() - posSyncAt > 90000 ? ' old' : '');
-    if (chips) {
-      const shown = t ? rows : rows.slice(0, nbN);
-      if (pill) pill.innerHTML = `${isToday ? 'Aaj' : vd === yd ? 'Kal' : D.getDate() + ' ' + D.toLocaleString('en-US', { month: 'short' })} · ${NB_FN[filter] || 'Sab'} · ${shown.length}/${rows.length} <i>⋮</i>`; if (pill) pill.title = dayTxt;
-      if (filter !== 'ws') sum.innerHTML = `<b>${num(shown.length)}</b> / ${num(rows.length)} bills${t ? ' (search)' : ''} · <b>Rs ${num(tot)}</b>${udh > 0.5 ? ` · <span class="red">udhaar Rs ${num(udh)}</span>` : ''}${un ? ` · <span class="nb-unn">○ ${num(un)} un-posted</span>` : ''}`;
-      list.innerHTML = shown.map(b => nbChipHTML(b, open, vd, yd) + (open === b.id ? `<div class="nb-cdet">${nbDetHTML(b, filter)}</div>` : '')).join('') || '<p class="stat-note">Koi bill nahi</p>';
+    if (chips) {   // v2.138.0: un-posted / intezar / ghalti = chhote neele chips UPAR, posted (laal) bare neeche — kul N
+      const top = b => !b.cancelled && !b.farq && (b.ps === 1 || b.status === 'new' || b.status === 'posting' || b.status === 'failed' || (!b.ps && b.src === 'app'));
+      const ord = [...rows.filter(top), ...rows.filter(b => !top(b))], shown = t ? ord : ord.slice(0, nbN);
+      if (pill) { pill.hidden = isToday; pill.innerHTML = `📅 ${vd === yd ? 'Kal' : D.getDate() + ' ' + D.toLocaleString('en-US', { month: 'short' })} <i>⋮</i>`; pill.title = dayTxt; }
+      const U = shown.filter(top), P = shown.filter(b => !top(b)), det = b => open === b.id ? `<div class="nb-cdet">${nbDetHTML(b, filter)}</div>` : '';
+      list.innerHTML = (U.length ? `<div class="nb-ugrid">${U.map(b => nbChipSm(b, open) + det(b)).join('')}</div>` : '') + (P.length ? `<div class="nb-grid">${P.map(b => nbChipHTML(b, open, vd, yd) + det(b)).join('')}</div>` : '') || '<p class="stat-note">Koi bill nahi</p>';
       return;
     }
     list.innerHTML = rows.map(b => { const c = billCls(b), bd = new Date(b.createdAt || 0), bds = `${bd.getFullYear()}-${String(bd.getMonth() + 1).padStart(2, '0')}-${String(bd.getDate()).padStart(2, '0')}`;
@@ -945,6 +949,7 @@ function mountBills(box, opt = {}) {
   box.addEventListener('click', async e => {
     const dd = e.target.closest('[data-nb-day]'); if (dd) { const t = new Date(viewDay() + 'T12:00:00'); t.setDate(t.getDate() + Number(dd.dataset.nbDay)); goDay(`${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`); return; }
     const f = e.target.closest('[data-nb-f]'); if (f) { filter = f.dataset.nbF; try { localStorage.setItem('sam-bills-f', filter); } catch {} paint(); return; }
+    if (e.target.closest('[data-nb-more]')) { box.classList.toggle('nb-open'); return; }   // v2.138.0: PC ka ⋮
     const nn = e.target.closest('[data-nb-n]'); if (nn) { nbN = Number(nn.dataset.nbN) || 20; try { localStorage.setItem('sam-bills-n', String(nbN)); } catch {} paint(); return; }   // v2.137.0
     if (e.target.closest('[data-nb-cal]')) { try { dateIn.showPicker(); } catch { try { dateIn.focus(); dateIn.click(); } catch {} } return; }
     if (e.target.closest('[data-nb-unp]')) { printUnposted(); return; }

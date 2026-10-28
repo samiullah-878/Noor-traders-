@@ -1,5 +1,6 @@
 // =========================================================
-//  pos-sales-dekho.js  v1.8 (2026-10-16: malik — "haath se likhi jaye, auto sale band / on ka option": blueAccess/saleConfig.posAuto
+//  pos-sales-dekho.js  v1.9 (2026-10-28: ⚡ malik — "posting POS mein jaldi, app mein late": har 1 sec; bills ka haal (posted / un-posted) PEHLE likho, items + Daily Sale
+//                     baad mein; items aam chakkar mein sirf aakhri 40 bills ke (har 5 min sab)) · v1.8 (2026-10-16: malik — "haath se likhi jaye, auto sale band / on ka option": blueAccess/saleConfig.posAuto
 //                     (default BAND) — band = possale-<aaj> hata do, kuch na likho (pichhle din wese hi); posSales/<din>.sum hamesha (app: sirf
 //                     malik ko "POS ke hisaab se" milane ke liye, ginti mein nahi)) · v1.7 (2026-10-13 sham: malik (POS Sale Register Summary ki photo) — "wholesale ka bill sale mein, SYSTEM ki sale":
 //                     'whole sale' party ka bill POORA (TotalSale) Sale mein, POS ke Total Sale jaisa; baqi udhaar bill pehle jaisa (cash)) · v1.6 (2026-10-13: 📦 WHOLESALE / udhaar bill ka usi waqt mila cash (CRV, DocumentNo = SaleID) bhi Sale mein; note mein
@@ -17,9 +18,9 @@ const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
 const BUSINESS_ID = 'noor-traders';
-const EVERY = 2 * 1000;             // v1.3: 2 sec (sirf ginti; Firestore par likhna sirf badlaav par) · v1.1: 10 sec — pehle sirf ginti/aakhri bill dekhta hai, badle to poori list
+const EVERY = 1000;                // v1.9 (2026-10-27): 1 sec (malik: "posting POS mein jaldi, app mein late") · v1.3: 2 sec (sirf ginti; Firestore par likhna sirf badlaav par) · v1.1: 10 sec — pehle sirf ginti/aakhri bill dekhta hai, badle to poori list
 const FULL_EVERY = 5 * 60 * 1000;    // phir bhi har 5 min poori list (koi badlaav na chhoote)
-let lastKey = '', lastFull = 0;
+let lastKey = '', lastFull = 0, lastLinesFull = 0;
 const LOCK_PORT = 47824;
 const cfgLocal = () => { try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'local-config.json'), 'utf8')) || {}; } catch { return {}; } };
 const DIR = __dirname;
@@ -114,11 +115,11 @@ async function saleFor(p, d0, d1) {
 }
 
 // v1.2: aaj ke har bill ke items -> posSaleLines/<SaleID> {day, no, at, lines:[{i,n,q,r,g}]} — sirf badle hue likhe
-async function syncLines(p, d0, d1, day) {
-  const rs = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
+async function syncLines(p, d0, d1, day, fromId = 0) {   // v1.9: fromId = sirf is SaleID se naye (aakhri 40) — 0 = sab
+  const rs = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).input('f', sql.Int, Number(fromId) || 0).query(`
     SELECT d.SaleID, s.SaleNo, d.ItemID, i.ItemName, d.Qty, d.Rate, d.GBranchID
     FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID JOIN dbo.Items i ON i.ItemID = d.ItemID
-    WHERE s.SaleDate >= @a AND s.SaleDate < @b ORDER BY d.SaleID, d.SaleDetailID`)).recordset;
+    WHERE s.SaleDate >= @a AND s.SaleDate < @b AND s.SaleID >= @f ORDER BY d.SaleID, d.SaleDetailID`)).recordset;
   const by = new Map();
   for (const r of rs) { if (!by.has(r.SaleID)) by.set(r.SaleID, { no: String(r.SaleNo || '').trim(), lines: [] });
     by.get(r.SaleID).lines.push({ i: r.ItemID, n: String(r.ItemName || '').trim().slice(0, 60), q: Math.round((Number(r.Qty) || 0) * 1000) / 1000, r: r2(r.Rate), g: Number(r.GBranchID) || 0 }); }
@@ -158,12 +159,15 @@ async function once() {
   const day = dayOf(d0), sm = saleSum(rows, await crvFor(p, d0, d1));
   const sum = { amt: sm.amt, n: sm.n, cx: sm.cx, fq: sm.fq, fqRs: sm.fqRs, ws: sm.ws, wsRs: sm.wsRs, wsCash: sm.wsCash, auto: AUTO };   // v1.8: app milane ke liye (ginti nahi)
   const hash = day + JSON.stringify(bills) + JSON.stringify(sum);
+  // v1.9 (2026-10-28): bills ka haal (posted / un-posted / naya) SAB SE PEHLE app ko — items aur Daily Sale baad mein (pehle items ki lambi query ke baad jata tha = late)
+  if (hash !== lastHash) {
+    await col.doc(day).set({ day, at: Date.now(), bills, sum });
+    lastHash = hash;
+    log(`Aaj ke ${bills.length} POS bills app mein (cancel ${bills.filter(b => b.x).length}, udhaar ${bills.filter(b => b.cr && !b.x).length})`);
+  }
   await writeSale(day, sm).catch(e => log('POS sale (auto) masla: ' + e.message));   // v1.5 · v1.6 wholesale CRV · v1.8 band = hata
-  await syncLines(p, d0, d1, day).catch(e => log('Items masla: ' + e.message));
-  if (hash === lastHash) return;
-  await col.doc(day).set({ day, at: Date.now(), bills, sum });
-  lastHash = hash;
-  log(`Aaj ke ${bills.length} POS bills app mein (cancel ${bills.filter(b => b.x).length}, udhaar ${bills.filter(b => b.cr && !b.x).length})`);
+  const fullLines = Date.now() - lastLinesFull > FULL_EVERY; if (fullLines) lastLinesFull = Date.now();
+  await syncLines(p, d0, d1, day, fullLines ? 0 : (Number(rows[Math.min(39, rows.length - 1)]?.SaleID) || 0)).catch(e => log('Items masla: ' + e.message));   // v1.9: aam chakkar = sirf aakhri 40 bills ke items, har 5 min sab
 }
 
 const lock = net.createServer().listen(LOCK_PORT, '127.0.0.1');
@@ -173,7 +177,7 @@ lock.on('listening', async () => {
   for (let i = 0; i < 50 && !cfgReady; i++) await new Promise(r => setTimeout(r, 200));   // v1.8: setting (10 sec tak)
   try { const p = await getPool(), y1 = new Date(); y1.setHours(0, 0, 0, 0); const y0 = new Date(y1); y0.setDate(y0.getDate() - 1);   // v1.5: kal ki aakhri sale bhi (PC raat ko band ho gaya ho)
     await writeSale(dayOf(y0), await saleFor(p, y0, y1), true); } catch (e) { log('Kal ki POS sale: ' + e.message); }
-  log('pos-sales-dekho v1.8 chal raha hai — har 2 second (sirf badlaav par likhta hai)…');
+  log('pos-sales-dekho v1.9 chal raha hai — har 1 second (sirf badlaav par likhta hai, bills ka haal pehle)…');
   let running = false, again = false;
   const tick = async () => { if (running) { again = true; return; } running = true;
     try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }

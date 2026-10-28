@@ -6505,3 +6505,24 @@ html body #dialogBody .nb-chipv .nb-copt .nb-unp{width:auto!important}
 html body #dialogBody .nb-chipv .nb-cdet .nb-acts{display:flex;flex-wrap:wrap;gap:6px}
 html body #dialogBody .nb-chipv .nb-cdet .nb-acts button{width:auto!important;height:34px;min-height:34px;padding:0 14px!important;border-radius:999px;font-size:13px;font-weight:800;border:1px solid #c9d6ef!important;background:linear-gradient(180deg,#fff,#eef3fc)!important;color:#1d3b7a!important}
 html body #dialogBody .nb-chipv .nb-cdet .nb-acts button{flex:0 0 auto!important}html body #dialogBody .nb-chipv .nb-cdet .nb-acts .nb-edit{background:linear-gradient(135deg,#1d3b7a,#3a2c8f)!important;color:#fff!important;border-color:#1d3b7a!important}
+/* v2.138.0: Bills chips — saamne sirf bill; upar chhota search chip + ⋮; un-posted chhote neele upar */
+html body #dialogBody .nb-chipv .nb-ctop{justify-content:flex-start}
+html body #dialogBody .nb-chipv .nb-qchip{display:flex;align-items:center;gap:6px;flex:0 1 380px;min-width:0;height:42px;padding:0 14px;border-radius:999px;border:1.5px solid #c9d6ef;background:linear-gradient(180deg,#fff,#f3f6fc);box-shadow:0 1px 2px rgba(20,40,80,.06)}
+html body #dialogBody .nb-chipv .nb-qchip input.nb-q{flex:1 1 auto;min-width:0;height:38px!important;border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;font-size:15px;outline:none}
+html body #dialogBody .nb-chipv .nb-more{flex:0 0 auto;width:42px!important;height:42px;min-height:42px;padding:0!important;border-radius:999px;border:1.5px solid #c9d6ef!important;background:linear-gradient(180deg,#fff,#eef3fc)!important;color:#1d3b7a!important;font-size:20px;font-weight:900;line-height:1}
+html body #dialogBody .nb-chipv.nb-open .nb-more{background:linear-gradient(180deg,#2f5bd3,#1e44b0)!important;color:#fff!important}
+html body #dialogBody .nb-chipv .nb-copt{display:none}
+html body #dialogBody .nb-chipv.nb-open .nb-copt{display:flex;padding:8px 10px;border:1px solid #d7dde8;border-radius:14px;background:#f7f9fd}
+html body #dialogBody .nb-chipv .nb-copt .nb-sync{flex:1 1 100%;font-size:11.5px}
+@media (max-width:1099px){html body #dialogBody .nb-chipv .nb-more{display:none}html body #dialogBody .nb-chipv .nb-qchip{flex:1 1 auto}}
+html body #dialogBody .nb-chipv .nb-list{display:block;max-height:none;overflow:visible}
+html body #dialogBody .nb-chipv .nb-ugrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:7px;margin:2px 0 12px;align-items:start}
+html body #dialogBody .nb-chipv .nb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:9px;align-items:start}
+@media (min-width:700px){html body #dialogBody .nb-chipv .nb-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}}
+html body #dialogBody .nb-chip.sm{flex-direction:row;align-items:center;justify-content:space-between;gap:6px;min-height:40px;height:40px;padding:0 12px;border-radius:999px}
+html body #dialogBody .nb-chip.sm .nb-cno{font-size:13px;font-weight:800;white-space:nowrap}
+html body #dialogBody .nb-chip.sm .nb-camt{font-size:15px;font-weight:900}
+html body #dialogBody .nb-chip.sm u.ud{text-decoration:none;font-size:10px;font-weight:900;padding:0 5px;border-radius:999px;background:#fff1e0;color:#b85c00;border:1px solid #f3c48d}
+html body #dialogBody .nb-chip.sm.wt .nb-cno,html body #dialogBody .nb-chip.sm.wt .nb-camt{color:#9a6200}
+html body #dialogBody .nb-chip.sm.fl .nb-cno,html body #dialogBody .nb-chip.sm.fl .nb-camt{color:#c62828}
+html body #dialogBody .nb-chipv .nb-pill[hidden]{display:none!important}
