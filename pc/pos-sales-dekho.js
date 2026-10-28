@@ -1,5 +1,5 @@
 // =========================================================
-//  pos-sales-dekho.js  v1.9 (2026-10-28: ⚡ malik — "posting POS mein jaldi, app mein late": har 1 sec; bills ka haal (posted / un-posted) PEHLE likho, items + Daily Sale
+//  pos-sales-dekho.js  v2.0 (2026-10-28: 📌 har posted bill par post ka waqt `pt` — PC ne pehli dafa posted dekha (pos-posted-seen.json), shuru se pehle wale = UpdatedOn) · v1.9 (2026-10-28: ⚡ malik — "posting POS mein jaldi, app mein late": har 1 sec; bills ka haal (posted / un-posted) PEHLE likho, items + Daily Sale
 //                     baad mein; items aam chakkar mein sirf aakhri 40 bills ke (har 5 min sab)) · v1.8 (2026-10-16: malik — "haath se likhi jaye, auto sale band / on ka option": blueAccess/saleConfig.posAuto
 //                     (default BAND) — band = possale-<aaj> hata do, kuch na likho (pichhle din wese hi); posSales/<din>.sum hamesha (app: sirf
 //                     malik ko "POS ke hisaab se" milane ke liye, ginti mein nahi)) · v1.7 (2026-10-13 sham: malik (POS Sale Register Summary ki photo) — "wholesale ka bill sale mein, SYSTEM ki sale":
@@ -42,6 +42,11 @@ async function getPool() { if (pool && pool.connected) return pool; pool = await
 const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
 const dayOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 let lastHash = '';
+// v2.0 (2026-10-28): 📌 POST KA WAQT (malik: "post hua bill number-wise aa raha hai, time-wise aa sakte hain") — PC jab pehli dafa bill ko posted
+//   (DocStatusID 2) dekhe us waqt ko yaad (pos-posted-seen.json, din ke hisaab se). Script shuru hone se pehle ke posted = POS ka UpdatedOn (andaza).
+const SEEN_FILE = path.join(__dirname, 'pos-posted-seen.json');
+let postSeen = { day: '', m: {} }, seenBoot = true;
+try { postSeen = JSON.parse(fs.readFileSync(SEEN_FILE, 'utf8')) || postSeen; if (!postSeen.m) postSeen.m = {}; } catch {}
 
 // v1.5 (2026-10-12): 🖥 POS KI SALE (AUTO) — malik: "Sale screen (Daily Sale) mein sale auto aani chahiye, us mein farq wale account ki entry
 // nahi aani chahiye. Khana abhi khula hi rahe, sale auto aati jaye". blueKhata/possale-<YYYY-MM-DD>: kind 'sale', posAuto (app mein edit /
@@ -143,18 +148,23 @@ async function once() {
   if (key === lastKey && Date.now() - lastFull < FULL_EVERY) return;   // kuch nahi badla
   lastKey = key; lastFull = Date.now();
   const rows = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
-    SELECT s.SaleID, s.SaleNo, s.SaleDate, s.TotalSale, s.CashReceived, s.IsCreditSale, s.DocStatusID, s.Description, s.SystemNotes, pt.PartyName,
+    SELECT s.SaleID, s.SaleNo, s.SaleDate, s.TotalSale, s.CashReceived, s.IsCreditSale, s.DocStatusID, s.Description, s.SystemNotes, s.UpdatedOn, pt.PartyName,
            (SELECT COUNT(*) FROM dbo.SaleDetail d WHERE d.SaleID = s.SaleID) AS N
     FROM dbo.Sale s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
     WHERE s.SaleDate >= @a AND s.SaleDate < @b ORDER BY s.SaleID DESC`)).recordset;
   const names = pcNames();
+  { const dd = dayOf(d0); if (postSeen.day !== dd) postSeen = { day: dd, m: {} }; let ch = false;   // v2.0: 📌 post ka waqt
+    for (const r of rows) { const id = String(r.SaleID), posted = Number(r.DocStatusID) === 2;
+      if (posted && !postSeen.m[id]) { postSeen.m[id] = seenBoot ? (r.UpdatedOn ? new Date(r.UpdatedOn).getTime() : Date.now()) : Date.now(); ch = true; }
+      else if (!posted && postSeen.m[id]) { delete postSeen.m[id]; ch = true; } }   // un-post hua = bhool jao (dobara post par naya waqt)
+    seenBoot = false; if (ch) { try { fs.writeFileSync(SEEN_FILE, JSON.stringify(postSeen)); } catch {} } }
   const bills = rows.slice(0, 600).map(r => {
     const desc = String(r.Description || ''), m = desc.match(/BK-APP[ :]([A-Za-z0-9_-]+)/);
     const sn = String(r.SystemNotes || ''), host = (sn.match(/at PC:\s*([A-Za-z0-9_.-]+)/i) || [])[1] || '', by = (sn.match(/By:\s*([^\r\n]+?)\s+On:/i) || [])[1] || '';
     return { id: r.SaleID, no: String(r.SaleNo || '').trim(), t: r2(r.TotalSale), c: r2(r.CashReceived), cr: r.IsCreditSale ? 1 : 0,
       x: Number(r.DocStatusID) === 3 ? 1 : 0, p: String(r.PartyName || '').slice(0, 60), n: Number(r.N) || 0,
       tm: r.SaleDate ? new Date(r.SaleDate).getTime() : 0, app: m ? m[1] : '',
-      ps: Number(r.DocStatusID) || 0, pc: String(names[host] || host.replace(/^DESKTOP-/i, '') || '').slice(0, 30), by: /blue khata/i.test(by) ? '' : String(by).trim().slice(0, 20) };
+      ps: Number(r.DocStatusID) || 0, pt: Number(postSeen.m[String(r.SaleID)]) || 0, pc: String(names[host] || host.replace(/^DESKTOP-/i, '') || '').slice(0, 30), by: /blue khata/i.test(by) ? '' : String(by).trim().slice(0, 20) };
   });
   const day = dayOf(d0), sm = saleSum(rows, await crvFor(p, d0, d1));
   const sum = { amt: sm.amt, n: sm.n, cx: sm.cx, fq: sm.fq, fqRs: sm.fqRs, ws: sm.ws, wsRs: sm.wsRs, wsCash: sm.wsCash, auto: AUTO };   // v1.8: app milane ke liye (ginti nahi)
@@ -177,7 +187,7 @@ lock.on('listening', async () => {
   for (let i = 0; i < 50 && !cfgReady; i++) await new Promise(r => setTimeout(r, 200));   // v1.8: setting (10 sec tak)
   try { const p = await getPool(), y1 = new Date(); y1.setHours(0, 0, 0, 0); const y0 = new Date(y1); y0.setDate(y0.getDate() - 1);   // v1.5: kal ki aakhri sale bhi (PC raat ko band ho gaya ho)
     await writeSale(dayOf(y0), await saleFor(p, y0, y1), true); } catch (e) { log('Kal ki POS sale: ' + e.message); }
-  log('pos-sales-dekho v1.9 chal raha hai — har 1 second (sirf badlaav par likhta hai, bills ka haal pehle)…');
+  log('pos-sales-dekho v2.0 chal raha hai — har 1 second (sirf badlaav par likhta hai, bills ka haal pehle)…');
   let running = false, again = false;
   const tick = async () => { if (running) { again = true; return; } running = true;
     try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }

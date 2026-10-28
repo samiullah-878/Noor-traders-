@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.138.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.138.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.139.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.139.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -800,10 +800,10 @@ function billsDataOf(sales, posSales) {
   const posByApp = new Map(posSales.filter(b => b.app).map(b => [b.app, b]));
   const app = sales.map(s => { const pb = posByApp.get(s.id);
     return { id: s.id, src: 'app', saleNo: s.saleNo || pb?.no || '', posId: Number(s.saleId || pb?.id) || 0, total: Number(pb ? pb.t : s.total) || 0, cash: Number(s.cash) || 0,
-      credit: s.mode === 'wholesale', status: s.status, error: s.error || '', cancelled: !!pb?.x, ps: pb ? Number(pb.ps) || 0 : 0, farq: false,
+      credit: s.mode === 'wholesale', status: s.status, error: s.error || '', cancelled: !!pb?.x, ps: pb ? Number(pb.ps) || 0 : 0, pt: Number(pb?.pt) || 0, farq: false,
       createdAt: s.createdAt || 0, where: '📱 App · ' + String(counterName(s.counter) || '').replace(/^💻 /, ''), by: '', party: '', lines: s.lines || [], edited: !!s.editedAt }; });
   const pos = posSales.filter(b => !b.app).map(b => ({ id: 'pos-' + b.id, src: 'pos', saleNo: b.no, posId: Number(b.id) || 0, total: Number(b.t) || 0, cash: b.cr ? Number(b.c) || 0 : Number(b.t) || 0,
-    credit: !!b.cr, status: 'done', cancelled: !!b.x, ps: Number(b.ps) || 0, farq: isFarq(b), createdAt: b.tm || 0, where: '💻 ' + (b.pc || 'POS'), by: b.by || '', party: b.p || '', n: b.n || 0 }));
+    credit: !!b.cr, status: 'done', cancelled: !!b.x, ps: Number(b.ps) || 0, pt: Number(b.pt) || 0, farq: isFarq(b), createdAt: b.tm || 0, where: '💻 ' + (b.pc || 'POS'), by: b.by || '', party: b.p || '', n: b.n || 0 }));
   const ord = b => b.posId || 9e15;   // POS mein na pohancha (intezar / ghalti) sab se upar
   return [...app, ...pos].sort((a, b) => (ord(b) - ord(a)) || ((b.createdAt || 0) - (a.createdAt || 0)));
 }
@@ -872,7 +872,7 @@ let nbN = 20; try { nbN = NB_NS.includes(Number(localStorage.getItem('sam-bills-
 const NB_FN = { all: 'Sab', un: 'Un-posted', po: 'Posted', pd: 'Paid', up: 'Udhaar', pc: 'PC', app: 'App', ws: 'Wholesale' };
 function nbChipHTML(b, open, vd, yd) {
   const c = billCls(b), st = b.cancelled ? 'cx' : c === 'fq' ? 'fq' : c === 'fl' ? 'fl' : c === 'wt' ? 'wt' : b.ps === 2 ? 'po' : b.ps === 1 ? 'un' : 'wt';
-  const lab = { po: '✓ Posted', un: '○ Un-posted', wt: '⏳ Intezar', fl: '⚠ Ghalti', cx: '⊘ Cancel', fq: '🧮 Farq' }[st];
+  const lab = { po: '✓ Posted' + (b.pt ? ' · 📌 ' + new Date(b.pt).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }) : ''), un: '○ Un-posted', wt: '⏳ Intezar', fl: '⚠ Ghalti', cx: '⊘ Cancel', fq: '🧮 Farq' }[st];
   const bd = new Date(b.createdAt || 0), bds = `${bd.getFullYear()}-${String(bd.getMonth() + 1).padStart(2, '0')}-${String(bd.getDate()).padStart(2, '0')}`;
   const tm0 = b.createdAt ? bd.toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }) : '', tm = !b.createdAt || bds === vd ? tm0 : `${bds === yd ? 'kal' : bd.getDate() + ' ' + bd.toLocaleString('en-US', { month: 'short' })} ${tm0}`;
   const who = String(b.by || b.where || '').replace(/^💻 |^📱 App · /, ''), party = b.party && !/counter\s*sale/i.test(b.party) ? b.party : '';
@@ -929,7 +929,8 @@ function mountBills(box, opt = {}) {
     syncEl.className = 'nb-sync' + (posSyncAt && Date.now() - posSyncAt > 90000 ? ' old' : '');
     if (chips) {   // v2.138.0: un-posted / intezar / ghalti = chhote neele chips UPAR, posted (laal) bare neeche — kul N
       const top = b => !b.cancelled && !b.farq && (b.ps === 1 || b.status === 'new' || b.status === 'posting' || b.status === 'failed' || (!b.ps && b.src === 'app'));
-      const ord = [...rows.filter(top), ...rows.filter(b => !top(b))], shown = t ? ord : ord.slice(0, nbN);
+      const pw = b => b.ps === 2 && b.pt ? b.pt : (b.createdAt || 0);   // v2.139.0: posted = post ke waqt se (naya post pehle)
+      const ord = [...rows.filter(top), ...rows.filter(b => !top(b)).sort((a, b) => pw(b) - pw(a))], shown = t ? ord : ord.slice(0, nbN);
       if (pill) { pill.hidden = isToday; pill.innerHTML = `📅 ${vd === yd ? 'Kal' : D.getDate() + ' ' + D.toLocaleString('en-US', { month: 'short' })} <i>⋮</i>`; pill.title = dayTxt; }
       const U = shown.filter(top), P = shown.filter(b => !top(b)), det = b => open === b.id ? `<div class="nb-cdet">${nbDetHTML(b, filter)}</div>` : '';
       list.innerHTML = (U.length ? `<div class="nb-ugrid">${U.map(b => nbChipSm(b, open) + det(b)).join('')}</div>` : '') + (P.length ? `<div class="nb-grid">${P.map(b => nbChipHTML(b, open, vd, yd) + det(b)).join('')}</div>` : '') || '<p class="stat-note">Koi bill nahi</p>';
