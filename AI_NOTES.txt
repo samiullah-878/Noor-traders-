@@ -6450,3 +6450,8 @@ block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.
 
 ## v2.140.1 (2026-10-28) — 🏭 Supplier-wise foran (malik: "click karte hi foran, data pehle se aaya ho")
 - irep.js: item report khulte hi pas-e-parda supLoad (1.2 s baad); phone mein aakhri data localStorage sam-irsup-data (agli dafa foran, phir taza); PC irep-sup na ho to cloud.getSupFromStats — pehle se maujood posStats/meta.parties + items-* phj (har item ki aakhri 12 khareed, supplier#) se supplier → items (aakhri rate / din / dafa). Andar ki parties (noor traders / our factory / stock fraq / godam stock / opening) nahi. Search karte waqt repaint sirf list. AI nahi.
+
+## v2.141.0 (2026-10-28) — 📊 Item report saaf (malik: "item ka naam poora · current stock godam + Noor Traders · items chips ki shakal · upar ka dashboard chhota · sab faltu chips three dot ke andar")
+- irep.js: item card chips (.ir-tr gol premium, PC 2+ column grid) — POORA naam (ellipsis nahi), "bika …", 🏬 Godam (sab godam jama) · 🏪 Noor Traders stock chip (stockLine, app stock accessor ab {gd, nt, at[[branch, q]]} — naam "noor" = NT, baqi godam); item khirki mein har jagah ka stock alag. Table / list rows mein bhi stock.
+- Hero (bari raqam + 3 dabbe) HATA → .ir-mini ek patli patti (waqt · Sale Rs · nafa chip (tap = nafa items) · roz · items · PC ⋮). Search summary .ir-tsum2 ek line.
+- ⋮ (data-mn-seg): mahina ir.mon · waqt ir.per · wholesale ir.ws · tarteeb ir.sort · Chart/Table ir.view · trend ir.trd · reports ir.rep (Items/Nafa/…) + 🏭 Supplier-wise (ir.sup). Phone = header ⋮; PC = .ir-optbtn ⋮ (irOpen; band ho to sab chips chhupe, rail bhi). Apni tareekh ke date box screen par. AI nahi.
