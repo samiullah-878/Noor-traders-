@@ -29,8 +29,8 @@ let cloud = null, notice = () => {}, pdfOf = null, stop = null, data = null, err
 let kdoc = null, kStop = null, pcs = null, pcStop = null, irErr = null;   // v2.103.86: irErr = PC item-report ki poori galti (posStats/irep-err)   // v2.103.28: 📅 kal ka data (irep-kal) + PC script ka haal
 let full = null, tdoc = null, tStop = null, slowT = 0, slow = false;   // v2.103.6: ⚡ aaj ka data (irep-today) alag aata hai, data = full + aaj
 const LS = 'sam-irep';
-const st = (() => { let v = {}; try { v = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch {} return { mon: v.mon || '', per: v.per || 'm', from: v.from || '', to: v.to || '', ws: v.ws !== false, sort: v.sort || 'rs', q: '', lim: 60, tsort: v.tsort || 'rs', tq: '', tAll: false, rev: !!v.rev, trev: !!v.trev, rep: v.rep || 'items', view: v.view || 'chart', trd: v.trd || 'wk' }; })();   // v2.103.3: ⇅ ulta
-const keep = () => { try { localStorage.setItem(LS, JSON.stringify({ mon: st.mon, per: st.per, from: st.from, to: st.to, ws: st.ws, sort: st.sort, tsort: st.tsort, rev: st.rev, trev: st.trev, rep: st.rep, view: st.view, trd: st.trd })); } catch {} };
+const st = (() => { let v = {}; try { v = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch {} return { mon: v.mon || '', per: v.per || 'm', from: v.from || '', to: v.to || '', ws: v.ws !== false, sort: v.sort || 'rs', q: '', lim: 60, tsort: v.tsort || 'rs', tq: '', tAll: false, rev: !!v.rev, trev: !!v.trev, rep: v.rep || 'items', view: v.view || 'chart', trd: v.trd || 'wk', gd: v.gd || '', gsort: v.gsort || 'q', gq: '', glim: 60 }; })();   // v2.103.3: ⇅ ulta
+const keep = () => { try { localStorage.setItem(LS, JSON.stringify({ mon: st.mon, per: st.per, from: st.from, to: st.to, ws: st.ws, sort: st.sort, tsort: st.tsort, rev: st.rev, trev: st.trev, rep: st.rep, view: st.view, trd: st.trd, gd: st.gd, gsort: st.gsort })); } catch {} };
 
 let stockOf = () => null, canK = () => true;
 const NF = () => canK('ir.nafa');   // v2.142.0: 💰 mulazim ko nafa — EK on/off (malik: "sab ikattha on/off"); band = kahin nafa / khareed rate nahi
@@ -146,7 +146,7 @@ function stockLine(it) { const e = stkMap().get?.(String(it.i)); if (!e) return 
 let pkR = null, pkStop = null, pkIdx = null; const pkMemo = new Map();
 const pkOn = () => canK('ir.pk');
 function pkStart() {
-  if (pkStop || !pkOn() || !cloud?.listenPkReport) return;
+  if (pkStop || !(pkOn() || gdOn()) || !cloud?.listenPkReport) return;   // v2.145.0: 🏬 godam-wise ki bikri bhi isi se
   try { pkStop = cloud.listenPkReport(d => { if (!d || !d.meta) return; pkR = d; pkIdx = null; pkMemo.clear(); if (document.getElementById('irRoot')) paint(); }); } catch {}
 }
 function pkIndex() { if (pkIdx) return pkIdx; const m = new Map(); for (const L of Object.values(pkR?.by || {})) for (const it of L || []) { const k = String(it.i); if (!m.has(k)) m.set(k, []); m.get(k).push(it); } return (pkIdx = m); }
@@ -362,7 +362,7 @@ function paint() {
   const perLabel = st.per === 'c' ? `${short(a)} – ${short(b)}` : `${(PERS.find(p => p[0] === st.per) || PERS[3])[1]} · ${short(a)} – ${short(b)}`;
   // v2.103.86: 🎨 STRUCTURE — malik: "reports ek side, charts switch, reports switch, har chip tarteeb se, premium". Upar control patti (chipki) · summary ·
   //   reports ki list (phone = chipki tabs, PC = baayein rail) · ek waqt mein EK report · 📊 Chart ⇄ 📋 Table · PDF = khuli report.
-  const REP = [['items', '🏆', 'Items'], ['nafa', '💰', 'Nafa'], ['bills', '🧾', 'Asal nafa'], ['comm', '👦', 'Commission'], ['trend', '📈', 'Trend'], ['pattern', '🔎', 'Pattern'], ['stock', '💸', 'Phansa stock']].filter(r => NF() || !['nafa', 'bills'].includes(r[0]));   // v2.142.0
+  const REP = [['items', '🏆', 'Items'], ['nafa', '💰', 'Nafa'], ['bills', '🧾', 'Asal nafa'], ['comm', '👦', 'Commission'], ['trend', '📈', 'Trend'], ['pattern', '🔎', 'Pattern'], ['stock', '💸', 'Phansa stock'], ['godam', '🏬', 'Godam-wise']].filter(r => (NF() || !['nafa', 'bills'].includes(r[0])) && (r[0] !== 'godam' || gdOn()));   // v2.142.0 · v2.145.0 🏬
   const rep = REP.some(r => r[0] === st.rep) ? st.rep : 'items', view = st.view === 'table' ? 'table' : 'chart', trd = ['wk', 'pt', 'wd', 'day'].includes(st.trd) ? st.trd : 'wk';
   const sw = () => `<div class="ir-vsw" data-mn-seg="ir.view" data-mn-i="📊" data-mn-t="Chart / Table" data-mn-g="📊 Item report"><button type="button" class="${view === 'chart' ? 'is-in' : ''}" data-ir-view="chart">📊 Chart</button><button type="button" class="${view === 'table' ? 'is-in' : ''}" data-ir-view="table">📋 Table</button></div>`;
   const tblOf = cols => `<div class="ir-tbl">${cols.map(c => `<button type="button" class="ir-row" ${c.act || ''}><span><b>${esc(c.label)}</b>${c.sub ? `<small>${esc(c.sub)}</small>` : ''}</span><span class="ir-num"><b>Rs ${num(c.a)}</b>${NF() ? `<small class="${c.b < 0 ? 'neg' : ''}">nafa Rs ${num(c.b)}</small>` : ''}</span></button>`).join('') || '<p class="lk-note">Is arse mein data nahi</p>'}</div>`;
@@ -375,7 +375,7 @@ function paint() {
     <label class="hs-search"><input type="search" data-ir-tq="1" placeholder="🔍 item dhoondo (number bhi dikhega)…" value="${esc(st.tq)}"></label></div>
     <div id="irTop">${topHTML()}</div></section>
 `)
-    : rep === 'nafa' ? nafaHTML(rows, T, a, b) : rep === 'bills' ? nfHTML(a, b) : rep === 'comm' ? commHTML(a, b) : rep === 'stock' ? phHTML()
+    : rep === 'nafa' ? nafaHTML(rows, T, a, b) : rep === 'bills' ? nfHTML(a, b) : rep === 'comm' ? commHTML(a, b) : rep === 'stock' ? phHTML() : rep === 'godam' ? gdHTML(a, b)
     : rep === 'pattern' ? `  <section class="ir-sec ir-pat"><div class="ir-sh"><b>🔎 Pattern — ${esc(monLabel(m))}</b><small>${P.endD < L ? `aaj tak (${P.endD} din)` : 'poora mahina'}</small></div>
     ${[0, 1, 2].map(i => PO.part[i].length ? `<h5>${['🌅 Mahine ke SHURU (1–10) mein zyada', '🌤 DARMIYAN (11–20) mein zyada', `🌙 AAKHIR (21–${L}) mein zyada`][i]}</h5><div class="ir-pcs">${PO.part[i].slice(0, 10).map(x => pchip(x.r, `${x.x.toFixed(1)}× baqi dino se`)).join('')}</div>` : '').join('')}
     ${WD_ORDER.map(g => PO.wd[g].length ? `<h5>📆 ${WD[g]} ko zyada</h5><div class="ir-pcs">${PO.wd[g].slice(0, 8).map(x => pchip(x.r, `${x.x.toFixed(1)}× baqi dino se`)).join('')}</div>` : '').join('')}
@@ -714,18 +714,105 @@ document.addEventListener('click', e => {
   if (d.irsSr) { irs.sr = irs.sr ? 0 : 1; irsKeep(); supPaint(); return; }
   if (d.irsPr) { irs.pr = irs.pr ? 0 : 1; irsKeep(); supPaint(); return; }
   if (d.irsSk) { irs.sk = irs.sk ? 0 : 1; irsKeep(); supPaint(); return; }
-  if (d.irsOc != null) { irs.oc = d.irsOc === '1' ? 1 : 0; irsKeep(); supPaint(); return; }
+  if (d.irsOc != null) { irs.oc = d.irsOc === '1' ? 1 : 0; irsKeep(); supPaint(); if (st.rep === 'godam' && document.getElementById('irRoot')) paint(); return; }
   if (d.irsPdf) { supPdf(); return; }
   if (d.irsOpdf) { ordPdf(); return; }
 });
 document.addEventListener('input', e => { const t = e.target; if (t?.dataset?.irsQ == null) return; irs.q = t.value || ''; const L = document.getElementById('irsList'); if (L) L.innerHTML = supListHTML(); });
+// ---------- 🏬 GODAM-WISE (app v2.145.0) — malik: "yahan godam wise data bhi · jo items godamon mein hain wo list khule · Godam 1 2 3 Noor Traders · wahan bhi order ban sake" ----------
+// Branch chips (NAAM se — POS branch; app stock + PC pk-report dono ke naam) → us godam ke items: stock > 0 ya is waqt wahan se bike. Stock = app ka godam-war stock
+// (stockOf().at), bikri = pk-report (posStats/pkReport by[branchId], line ka godam) is waqt ke keys (pkKeys) — sirf TADAD, Rs nahi. Patli chip: naam · stock /
+// bika · 📦. 🛒 Order = bika − us godam ka stock (irs.oc poore ctn, ⋮ wala) + 📄 Order PDF (item + tadad) + 📄 List PDF. CAP ir.godam. Nayi SQL nahi. AI nahi.
+const gdOn = () => canK('ir.godam');
+const gdKey = n => String(n || '').trim().toLowerCase().replace(/\s+/g, ' ');
+const gdIsNT = n => /noor/i.test(String(n)) && !/godam/i.test(String(n));
+function gdBranches() {   // [{key, name, id}] — Noor Traders pehle, phir godam naam se
+  const m = new Map(), add = (name, id) => { const k = gdKey(name); if (!k) return; const e = m.get(k) || { key: k, name: String(name).trim(), id: '' }; if (id != null && id !== '') e.id = String(id); m.set(k, e); };
+  for (const b of pkR?.meta?.branches || []) add(b.name, b.id);
+  for (const e of stkMap().values?.() || []) for (const [bn] of e.at || []) add(bn);
+  return [...m.values()].sort((x, y) => (gdIsNT(y.name) - gdIsNT(x.name)) || x.name.localeCompare(y.name, 'en', { numeric: true }));
+}
+function gdRows(B, a, b) {
+  const X = index(), byId = new Map(X.items.map(it => [String(it.i), it])), rows = new Map(), { keys, part } = pkR?.by ? pkKeys(a, b) : { keys: [], part: [] };
+  const get = (id, name, pk) => { let r = rows.get(id); if (!r) { const it = byId.get(id); r = { id, name: it?.n || name || ('Item #' + id), pk: Number(it?.pk) || Number(pk) || 0, sk: 0, hasSk: false, q: 0, pkRows: new Map(), khula: 0, u: '' }; rows.set(id, r); } return r; };
+  for (const e of stkMap().values?.() || []) for (const [bn, q] of e.at || []) if (gdKey(bn) === B.key && Number(q)) { const r = get(String(e.id), e.name, e.pack); r.sk += Number(q) || 0; r.hasSk = true; }
+  const L = B.id !== '' && pkR?.by ? (pkR.by[B.id] || []) : [];
+  for (const x of L) {
+    let q = 0, kh = 0; const P = new Map();
+    for (const k of keys) { const M = x.m?.[k]; if (!M) continue; kh += (Number(M.main) || 0) + (Number(M.loose) || 0);
+      for (const [bc, p] of Object.entries(M.pk || {})) { const sz = Number(x.subs?.[bc]) || (Number(p.n) ? Number(p.q) / Number(p.n) : 0); q += Number(p.q) || 0; if (sz > 0) P.set(sz, (P.get(sz) || 0) + (Number(p.n) || 0)); } }
+    q += kh; if (!(q > 1e-9)) continue;
+    const r = get(String(x.i), x.n, x.pk); r.q += q; r.khula += kh; r.u = x.u || r.u; for (const [sz, n] of P) r.pkRows.set(sz, (r.pkRows.get(sz) || 0) + n);
+  }
+  const out = [...rows.values()].filter(r => r.sk > 1e-9 || r.q > 1e-9).map(r => {
+    let od = Math.max(0, r.q - Math.max(0, r.sk)); if (od > 1e-6 && irs.oc && r.pk > 1) od = Math.ceil(od / r.pk - 1e-9) * r.pk;
+    return { ...r, q: Math.round(r.q * 1000) / 1000, od: od > 1e-6 ? Math.round(od * 1000) / 1000 : 0 };
+  });
+  return { rows: out, part, pkOk: !!pkR?.by && B.id !== '' };
+}
+const gdPk = r => r.pkRows.size ? '📦 ' + [...r.pkRows.entries()].sort((x, y) => x[0] - y[0]).map(([sz, n]) => `${pkSize(sz, r.u)} × ${num(n)}`).join(' · ') + (r.khula > 1e-9 ? ` · ⚖️ khula ${n3(r.khula)}` : '') : '';
+function gdSorted(rows) {
+  const q = (st.gq || '').trim().toLowerCase(), s = st.gsort || 'q';
+  return rows.filter(r => !q || r.name.toLowerCase().includes(q) || r.id === q).sort((x, y) => s === 'n' ? x.name.localeCompare(y.name) : s === 'sk' ? y.sk - x.sk || x.name.localeCompare(y.name) : s === 'od' ? y.od - x.od || y.q - x.q : y.q - x.q || y.sk - x.sk || x.name.localeCompare(y.name));
+}
+function gdListHTML(R) {
+  const L = gdSorted(R.rows), shown = L.slice(0, st.glim || 60);
+  return `${shown.map((r, i) => { const l2 = [r.q > 0 ? 'bika ' + fmtQty(r.q, r.pk) : (R.pkOk ? 'is waqt nahi bika' : ''), gdPk(r)].filter(Boolean).join(' · ');
+    return `<div class="ir-ch gd-ch${r.q > 0 ? '' : ' irs-0'}"><span class="ir-chn"><i>${i + 1}</i><b>${esc(r.name)}</b></span><b class="ir-cha gd-sk">🏬 ${r.hasSk ? esc(r.sk ? fmtQty(r.sk, r.pk) : '0') : '0'}</b><small class="ir-chs">${esc(l2 || '—')}</small>${r.od > 0 ? `<small class="ir-chp irs-odc">🛒 ${esc(fmtQty(r.od, r.pk))}</small>` : ''}</div>`; }).join('') || '<div class="nt-empty">🔍<b>Kuch nahi mila</b></div>'}
+    ${L.length > shown.length ? `<button type="button" class="sh-wide" data-ir-gmore="1">⬇️ Aur dikhao (${num(L.length - shown.length)})</button>` : ''}`;
+}
+function gdOrdTable(R, pdf) {
+  const O = gdSorted(R.rows).filter(r => r.od > 0).sort((x, y) => x.name.localeCompare(y.name));
+  if (!O.length) return '';
+  const head = pdf ? '<tr><th>#</th><th>Item</th><th>Order</th></tr>' : '<tr><th>#</th><th>Item</th><th>Bika</th><th>Stock</th><th>Order</th></tr>';
+  return `<table class="iv-tbl irs-tbl irs-otbl"><thead>${head}</thead><tbody>${O.map((r, i) => pdf ? `<tr><td>${i + 1}</td><td>${esc(r.name)}</td><td><b>${esc(fmtQty(r.od, r.pk))}</b></td></tr>`
+    : `<tr><td>${i + 1}</td><td>${esc(r.name)}</td><td>${esc(fmtQty(r.q, r.pk))}</td><td>${esc(r.sk ? fmtQty(Math.max(0, r.sk), r.pk) : '0')}</td><td class="irs-od"><b>${esc(fmtQty(r.od, r.pk))}</b></td></tr>`).join('')}</tbody></table>`;
+}
+function gdHTML(a, b) {
+  const BS = gdBranches();
+  if (!BS.length) { if (gdWait < 40) { gdWait++; setTimeout(() => { stkC = null; if (st.rep === 'godam' && document.getElementById('irRoot')) paint(); }, 3000); } return '<section class="ir-sec"><div class="nt-empty">⏳<b>Godam ka stock abhi nahi aaya</b><small>Stock / packet report aate hi list khud aa jayegi</small></div></section>'; }
+  gdWait = 0;
+  const B = BS.find(x => x.key === st.gd) || BS.find(x => gdIsNT(x.name)) || BS[0];
+  const R = gdRows(B, a, b), nO = R.rows.filter(r => r.od > 0).length, nS = R.rows.filter(r => r.sk > 1e-9).length;
+  const seg = `<div class="gd-bch">${BS.map(x => `<button type="button" class="gd-b${x.key === B.key ? ' is-in' : ''}" data-ir-gd="${esc(x.key)}">${gdIsNT(x.name) ? '🏪' : '🏬'} ${esc(x.name)}</button>`).join('')}</div>`;
+  const sorts = `<div class="mchips" data-mn-seg="ir.gsort" data-mn-i="↕" data-mn-t="Godam-wise tarteeb" data-mn-g="📊 Item report">${[['q', 'Zyada bika'], ['sk', 'Zyada stock'], ['od', '🛒 Order'], ['n', 'Naam A–Z']].map(([k, l]) => `<button type="button" class="rc${(st.gsort || 'q') === k ? ' on' : ''}" data-ir-gsort="${k}">${l}</button>`).join('')}</div>`;
+  const oc = `<div class="mchips" data-mn-seg="ir.goc" data-mn-i="🛒" data-mn-t="Order — poore carton / khula" data-mn-g="📊 Item report"><button type="button" class="rc${irs.oc ? ' on' : ''}" data-irs-oc="1">📦 Poore ctn</button><button type="button" class="rc${irs.oc ? '' : ' on'}" data-irs-oc="0">Khula (pcs)</button></div>`;
+  return `<section class="ir-sec gd-sec"><div class="ir-sh"><b>🏬 Godam-wise — ${esc(B.name)}</b><small>${num(R.rows.length)} items · ${num(nS)} stock mein · bikri sirf tadad${R.part.length ? ` (poore ${esc(R.part.join(' + '))} ka)` : ''}</small></div>
+    ${seg}${sorts}${oc}
+    <div class="ir-sticky"><label class="hs-search"><input type="search" data-ir-gq="1" placeholder="🔍 item dhoondo…" value="${esc(st.gq || '')}"></label></div>
+    ${R.pkOk ? '' : '<p class="lk-age warn">⏳ Is godam ki bikri (PC pk-report) abhi nahi aayi — sirf stock dikh raha hai</p>'}
+    <div class="ir-top ir-chl gd-list" id="irGd">${gdListHTML(R)}</div>
+    <div class="irs-oh"><b>🛒 Order — ${esc(B.name)}</b><small>${nO ? num(nO) + ' items · bika − is godam ka stock' + (irs.oc ? ' · poore ctn' : ' · khula') : R.pkOk ? 'koi nahi — stock bikri se zyada ya barabar' : 'bikri aane ke baad'}</small>${nO ? '<button type="button" class="irs-pdf irs-opdf" data-ir-gopdf="1">📄 Order PDF</button>' : ''}<button type="button" class="irs-pdf gd-lpdf" data-ir-gpdf="1">📄 List PDF</button></div>
+    ${nO ? `<div class="irs-tw">${gdOrdTable(R, false)}</div>` : ''}</section>`;
+}
+function gdPdf(order) {
+  if (!pdfOf || !gdOn()) return;
+  const BS = gdBranches(), B = BS.find(x => x.key === st.gd) || BS.find(x => gdIsNT(x.name)) || BS[0]; if (!B) return;
+  const [a, b0] = range(), b = clipEnd(b0), R = gdRows(B, a, b), dt = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Karachi' });
+  if (order) { const T = gdOrdTable(R, true); if (!T) { notice('🛒 Order mein koi item nahi'); return; } pdfOf(`<h1>Noor Traders — Order</h1><h2>${esc(B.name)}</h2><p>Tareekh ${esc(dt)}</p>${T}<p>Noor Traders, Gulyana</p>`, `Order ${B.name} ${b}`); return; }
+  const L = gdSorted(R.rows);
+  pdfOf(`<h1>Noor Traders</h1><h2>🏬 ${esc(B.name)} — items</h2><p>${esc(perTxt(a, b))} · ${num(L.length)} items · bikri sirf tadad${R.part.length ? ` (poore ${esc(R.part.join(' + '))} ka)` : ''}</p>
+    <table class="iv-tbl"><thead><tr><th>#</th><th>Item</th><th>Stock</th><th>Bika</th><th>Packet</th><th>Order</th></tr></thead><tbody>${L.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name)}</td><td>${esc(r.sk ? fmtQty(Math.max(0, r.sk), r.pk) : '0')}</td><td>${r.q > 0 ? esc(fmtQty(r.q, r.pk)) : '—'}</td><td>${esc(gdPk(r).replace('📦 ', ''))}</td><td>${r.od > 0 ? '<b>' + esc(fmtQty(r.od, r.pk)) + '</b>' : ''}</td></tr>`).join('')}</tbody></table>
+    ${gdOrdTable(R, false) ? `<h2>🛒 Order — ${esc(B.name)}</h2>${gdOrdTable(R, false)}` : ''}<p>Generated ${esc(new Date().toLocaleString('en-PK', { timeZone: 'Asia/Karachi' }))}</p>`, `Godam ${B.name} ${a} se ${b}`);
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest?.('[data-ir-gd],[data-ir-gsort],[data-ir-gmore],[data-ir-gopdf],[data-ir-gpdf]'); if (!t || !t.closest('.ir-root')) return;
+  const d = t.dataset;
+  if (d.irGd) { st.gd = d.irGd; st.glim = 60; keep(); paint(); return; }
+  if (d.irGsort) { st.gsort = d.irGsort; keep(); paint(); return; }
+  if (d.irGmore) { st.glim = (st.glim || 60) + 100; paint(); return; }
+  if (d.irGopdf) { gdPdf(true); return; }
+  if (d.irGpdf) { gdPdf(false); return; }
+});
+document.addEventListener('input', e => { const t = e.target; if (t?.dataset?.irGq == null || !t.closest('.ir-root')) return; st.gq = t.value || ''; st.glim = 60; clearTimeout(gdQT); gdQT = setTimeout(() => { const el = document.getElementById('irGd'); if (!el) return; const BS = gdBranches(), B = BS.find(x => x.key === st.gd) || BS.find(x => gdIsNT(x.name)) || BS[0]; if (!B) return; const [a, b0] = range(); el.innerHTML = gdListHTML(gdRows(B, a, clipEnd(b0))); }, 150); });
+let gdQT = 0, gdWait = 0;
 
 // ---------- clicks ----------
 document.addEventListener('click', e => {
   { const r = e.target.closest?.('[data-ir-rep],[data-ir-view],[data-ir-trd]'); if (r && r.closest('.ir-root')) { const d = r.dataset; if (d.irRep) { st.rep = d.irRep; st.view = 'chart'; } if (d.irView) st.view = d.irView; if (d.irTrd) st.trd = d.irTrd; keep(); paint(); if (d.irRep) document.querySelector('.ir-main')?.scrollIntoView?.({ block: 'start' }); return; } }   // v2.103.86
   if (e.target.closest?.('[data-ir-opts]')) { irOpen = !irOpen; const sh = document.querySelector('#irRoot .ir-shell'); if (sh) sh.classList.toggle('ir-open', irOpen); return; }   // v2.141.0: PC ka ⋮
   if (e.target.closest?.('[data-ir-retry]')) { irepStop(); loaded = false; err = ''; slow = false; watch(); paint(); return; }   // v2.103.6: 🔄 dobara
-  if (e.target.closest?.('[data-ir-pdf]')) { if (!data?.meta) { notice('Report abhi nahi aayi'); return; } const [a, b0] = range(); const rp = st.rep || 'items'; if (pdfOf) pdfOf(pdfHTML(rp), `Item ${rp} ${a} se ${clipEnd(b0)}`); return; }   // v2.103.86: khuli report ki PDF
+  if (e.target.closest?.('[data-ir-pdf]')) { if (!data?.meta) { notice('Report abhi nahi aayi'); return; } if (st.rep === 'godam' && gdOn()) { gdPdf(false); return; } const [a, b0] = range(); const rp = st.rep || 'items'; if (pdfOf) pdfOf(pdfHTML(rp), `Item ${rp} ${a} se ${clipEnd(b0)}`); return; }   // v2.103.86: khuli report ki PDF
   const c = e.target.closest?.('[data-ir-cset],[data-ir-cadd],[data-ir-cdel],[data-ir-man]');
   if (c && c.closest('.ir-root')) { const d = c.dataset;
     if (d.irMan != null) { manDlg(d.irMan); return; }
@@ -768,7 +855,7 @@ document.addEventListener('input', e => {   // v2.101.1: search par sirf neeche 
 export const _irTest = { pkSet: d => { pkR = d; pkIdx = null; pkMemo.clear(); }, pkLine, pkKeys, ordTable, phAgg, setStock: f => { stockOf = f; }, nfBills, nfSum, nfHTML, nfC, nfSetT: t => { tdoc = t; }, nfSetFull: f => { full = f; }, mergeToday, ageText, setFull: (f, t) => { full = f; tdoc = t; remerge(); }, fmtQty, topHTML, nafaHTML, wsSplit, setRows: r => { lastRows = { sorted: r, srt: () => 0 }; }, agg, range, patterns, partRange, setData: d => { data = d; loaded = true; ix = null; }, st, pdfHTML, commAgg, setComm: c => { commCfg = c; } };
 
 // v2.103.48: 🤖 agent actions — item report (nafa / sale)
-import { agentRegister } from './agent.js?v=2.144.0';
+import { agentRegister } from './agent.js?v=2.145.0';
 agentRegister([
   { name: 'nafa_report', read: true, desc: 'Item report: muddat (from/to YYYY-MM-DD, default aaj) ki sale, nafa (andaza), top items nafa ke hisaab se; wholesale ke saath/baghair.', params: { type: 'OBJECT', properties: { from: { type: 'STRING' }, to: { type: 'STRING' }, top: { type: 'INTEGER' }, wholesale: { type: 'BOOLEAN' } } },
     run({ from, to, top, wholesale }) { if (!data?.meta) throw Error('Report abhi PC se nahi aayi'); const ws0 = st.ws; if (wholesale != null) st.ws = !!wholesale; try { const X = index(), a = /^\d{4}-\d\d-\d\d$/.test(from || '') ? from : X.days[X.days.length - 1], b = /^\d{4}-\d\d-\d\d$/.test(to || '') ? to : a, { rows, T } = agg(a, b), L = rows.filter(r => !r.noCost).sort((x, y) => y.pf - x.pf);
