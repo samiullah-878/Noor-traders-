@@ -6469,3 +6469,39 @@ html body #dialogBody .pm-auto .pm-ar b{grid-column:1;grid-row:1}html body #dial
 html body #dialogBody .pm-auto .pm-ar small{grid-column:1/-1;font-size:11.5px;color:#4d5d53;line-height:1.35;white-space:normal}
 html body #dialogBody .pm-auto .pm-ar.bad{border-color:#f1c4c4!important}html body #dialogBody .pm-auto .pm-ar.bad b{color:#b32936}
 html body #dialogBody .pm-auto-n{margin:6px 0 2px;padding:7px 10px;border-radius:11px;background:#eef6ff;border:1px solid #c7dbf5;color:#285a9c;font-weight:700;font-size:12px;line-height:1.4}
+/* v2.137.0: 🧾 BILLS CHIPS — poori screen, bare lafz, Posted laal · Un-posted neela (malik) */
+html body #dialogBody .nb-wrap.nb-chipv{max-height:none;display:flex;flex-direction:column;gap:8px}
+html body #dialogBody .nb-chipv .nb-ctop{display:flex;gap:8px;align-items:center;position:sticky;top:0;z-index:2;background:var(--surface,#fff);padding:2px 0 4px}
+html body #dialogBody .nb-chipv .nb-ctop .nb-q{flex:1 1 auto;min-width:0;height:44px;font-size:16px;border-radius:12px}
+html body #dialogBody .nb-chipv .nb-pill{flex:0 0 auto;max-width:52%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body #dialogBody .nb-chipv .nb-copt{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+html body #dialogBody .nb-chipv .nb-copt .bc-seg{display:flex;flex-wrap:wrap;gap:5px}
+html body #dialogBody .nb-chipv .nb-copt button{height:34px;min-height:34px;padding:0 12px;border-radius:999px;font-size:12.5px;font-weight:700;white-space:nowrap}
+html body #dialogBody .nb-chipv .nb-copt button.is-in{background:linear-gradient(180deg,#2f5bd3,#1e44b0)!important;color:#fff!important;border-color:#1e44b0!important}
+html body #dialogBody .nb-chipv .nb-day{display:flex;gap:5px;align-items:center;position:relative}
+html body #dialogBody .nb-chipv .nb-date-x{position:absolute;left:0;bottom:0;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0}
+html body #dialogBody .nb-chipv .nb-sum{font-size:13px;color:var(--muted,#5b6577)}
+html body #dialogBody .nb-chipv .nb-sum .nb-unn{color:#1e5bb8;font-weight:700}
+html body #dialogBody .nb-chipv .nb-list.nb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(152px,1fr));gap:9px;max-height:none;overflow:visible;align-items:start}
+html body #dialogBody .nb-chip{display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:0;width:100%;height:auto;min-height:92px;padding:10px 12px;border-radius:16px;text-align:left;border:1.5px solid #d7dde8!important;background:linear-gradient(180deg,#fff,#f4f6fa)!important;color:#1d2433!important;box-shadow:0 1px 3px rgba(20,40,80,.08);cursor:pointer}
+html body #dialogBody .nb-chip .nb-cno{font-size:15px;font-weight:800;letter-spacing:.3px}
+html body #dialogBody .nb-chip .nb-camt{font-size:21px;font-weight:900;line-height:1.15;white-space:nowrap}
+html body #dialogBody .nb-chip .nb-cst{font-size:12px;font-weight:800}
+html body #dialogBody .nb-chip .nb-cst u{text-decoration:none;font-size:10.5px;padding:1px 6px;border-radius:999px;background:#fff1e0;color:#b85c00;border:1px solid #f3c48d}
+html body #dialogBody .nb-chip .nb-cmeta{font-size:11px;color:#6b7385;line-height:1.3;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body #dialogBody .nb-chip.po{border-color:#ef9a9a!important;background:linear-gradient(180deg,#fff,#fdecec)!important}
+html body #dialogBody .nb-chip.po .nb-cno,html body #dialogBody .nb-chip.po .nb-camt,html body #dialogBody .nb-chip.po .nb-cst{color:#c62828}
+html body #dialogBody .nb-chip.un{border-color:#90b4f0!important;background:linear-gradient(180deg,#fff,#e9f1ff)!important}
+html body #dialogBody .nb-chip.un .nb-cno,html body #dialogBody .nb-chip.un .nb-camt,html body #dialogBody .nb-chip.un .nb-cst{color:#1e5bb8}
+html body #dialogBody .nb-chip.wt{border-color:#f0d9a8!important;background:linear-gradient(180deg,#fff,#fff7e6)!important}html body #dialogBody .nb-chip.wt .nb-cst{color:#9a6200}
+html body #dialogBody .nb-chip.fl{border-color:#c62828!important;border-style:dashed!important}html body #dialogBody .nb-chip.fl .nb-cst{color:#c62828}
+html body #dialogBody .nb-chip.cx{opacity:.6}html body #dialogBody .nb-chip.cx .nb-camt{text-decoration:line-through}
+html body #dialogBody .nb-chip.fq{border-color:#c9b2ef!important;background:linear-gradient(180deg,#fff,#f4eeff)!important}html body #dialogBody .nb-chip.fq .nb-cst{color:#6a3fb5}
+html body #dialogBody .nb-chip.open{box-shadow:0 0 0 3px rgba(30,91,184,.25)}
+html body #dialogBody .nb-chipv .nb-cdet{grid-column:1/-1;border:1px solid #d7dde8;border-radius:14px;padding:10px 12px;background:#fff}
+@media (min-width:700px){html body #dialogBody .nb-chipv .nb-list.nb-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}html body #dialogBody .nb-chip .nb-camt{font-size:24px}}
+html body #dialogBody .nb-chipv .nb-day>button{width:auto!important;height:34px;padding:0 12px!important;font-size:12.5px!important;font-weight:700;color:#1d3b7a;white-space:nowrap}
+html body #dialogBody .nb-chipv .nb-copt .nb-unp{width:auto!important}
+html body #dialogBody .nb-chipv .nb-cdet .nb-acts{display:flex;flex-wrap:wrap;gap:6px}
+html body #dialogBody .nb-chipv .nb-cdet .nb-acts button{width:auto!important;height:34px;min-height:34px;padding:0 14px!important;border-radius:999px;font-size:13px;font-weight:800;border:1px solid #c9d6ef!important;background:linear-gradient(180deg,#fff,#eef3fc)!important;color:#1d3b7a!important}
+html body #dialogBody .nb-chipv .nb-cdet .nb-acts button{flex:0 0 auto!important}html body #dialogBody .nb-chipv .nb-cdet .nb-acts .nb-edit{background:linear-gradient(135deg,#1d3b7a,#3a2c8f)!important;color:#fff!important;border-color:#1d3b7a!important}
