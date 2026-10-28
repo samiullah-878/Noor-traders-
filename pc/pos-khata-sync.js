@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-10-28 (h): 🔎 BILL JAANCH — farq wale khate ki POS purchase bill entry (App mein hai — POS mein nahi) ka POS mein asal haal; delete / cancel / party / raqam / 📌 khud theek, baqi wajah blueAccess/billJaanch (app chip)
 //  2026-10-27 (g): 🤖 AUTO MILAN — har 15 min pakke farq khud barabar (POS→app voucher, app→POS entry, opening farq = app wala JV) + milanJobs dir auto + blueAccess/autoMilan
 //  2026-10-27 (e): ⚖️ milan job / 📤 ab purana ⇄ TRANSFER bhi POS JV (milanTransfer — POS mein pehle se ho to sirf jor); har milan entry pehle [app:id] marker dekhti hai
 //  2026-10-27 (d): ⚡ 'Saman liya' bhi tez raaste (quickEntries) — seconds mein JV + parchi (malik: "instant voucher")
@@ -885,6 +886,77 @@ function milanDiffPc(appId, L, prePos) {
   const appBal = (Number(p.opening) || 0) + E.reduce((n, a) => n + a.amt, 0), posBal = prePos + pos.reduce((n, x) => n + x.amt, 0);
   return { appOnly: E.filter(a => !a.used && a.amt), posOnly: pos.filter(x => !x.used && x.amt), diff, openApp: preApp + (Number(p.opening) || 0), openPos, openLines, prePos, appBal, posBal };
 }
+// ---------- 🔎 BILL JAANCH (2026-10-28 h) — malik: Waqas Traders "ye entry pehle se farq hai, is ko sahi karna hai" (bill 00002479 app mein 📌, POS ke khate mein nahi) ----------
+// autoMilan ke saath (har 15 min + app ka 🔄 Taza): farq wale khate ki "App mein hai — POS mein nahi" wali POS PURCHASE BILL entries (pos-<PurchaseID>) ka POS mein
+// asal haal (Purchase + 'PO' voucher + us ki party lines). POS asal hai — saaf haalat KHUD theek (app entry):
+//   • bill POS mein hi nahi (PurchaseID na PurchaseNo — delete) / CANCEL → entry 🗑 (sync.js v3 jaisa) + judi cash par posCancelWarn
+//   • POS mein bill ki party badal gayi (jura khata app mein hai) → entry us khate mein (+ raqam POS jaisi)
+//   • raqam POS se alag → POS jaisi · app ka 📌 posted ghalat (POS mein post nahi) → wapas
+// Baqi = sirf WAJAH blueAccess/billJaanch {m:{entryId:{k,t,no,p}}, at} (app: Farq screen + khate ka card, chip): cash (posted voucher mein party line nahi =
+// CASH bill → malik ka "💵 Cash ada likho") · other (POS ne doosri party par post kiya) · open (POS mein post baqi → "📌 Post karo") · nov (posted magar voucher nahi /
+// cancel) · pre (voucher 15-Sep se pehle) · party (nayi party app mein nahi) · idx. Ek chakkar mein 10 se zyada 🗑 nahi. AI nahi.
+const JZ_MAX_DEL = 10; let jzLast = '';
+async function billJaanch(pool, acctIds, jq) {
+  const m = {}, fixed = [];
+  const ids = [...new Set(jq.map(x => Number(String(x.e.id).slice(4))).filter(n => Number.isInteger(n) && n > 0))].slice(0, 300);
+  if (ids.length) {
+    const inList = ids.join(',');   // sirf integer (upar filter) — SQL mein seedha
+    const P = new Map((await pool.request().query(`SELECT p.PurchaseID, p.PurchaseNo, p.PartyID, p.DocStatusID, pt.AccountID AS PAcc, pt.PartyName,
+        (SELECT SUM(d.Qty * d.Rate) FROM dbo.PurchaseDetail d WHERE d.PurchaseID = p.PurchaseID) + ISNULL(p.TaxAmount, 0) - ISNULL(p.DiscountAmt, 0) AS Net
+      FROM dbo.Purchase p LEFT JOIN dbo.Party pt ON pt.PartyID = p.PartyID WHERE p.PurchaseID IN (${inList})`)).recordset.map(r => [Number(r.PurchaseID), r]));
+    const V = new Map();
+    for (const r of (await pool.request().query(`SELECT v.VoucherID, v.DocumentNo, v.VoucherStatusID, v.VoucherCode, v.VoucherDate, vd.AccountID, vd.Debit, vd.Credit, pt.PartyID, pt.PartyName
+      FROM dbo.Voucher v JOIN dbo.VoucherDetail vd ON vd.VoucherID = v.VoucherID LEFT JOIN dbo.Party pt ON pt.AccountID = vd.AccountID
+      WHERE v.DocumentType = 'PO' AND v.DocumentNo IN (${inList})`)).recordset) { const k = Number(r.DocumentNo); if (!V.has(k)) V.set(k, []); V.get(k).push(r); }
+    let dels = 0;
+    for (const q of jq) {
+      const e = app.get(q.e.id) || q.e; if (!e || e.deleted) continue;
+      const pid = Number(String(e.id).slice(4)), p = P.get(pid), vs = V.get(pid) || [];
+      const no = p ? String(p.PurchaseNo || pid) : (String(e.note || '').match(/POS Purchase\s+(\S+)/i) || [])[1] || String(pid);
+      const kh = app.get(q.appId) || {}, name = String(kh.name || '').slice(0, 60);
+      const note = (k, t) => { m[e.id] = { k, t: String(t).slice(0, 220), no, p: q.appId }; };
+      const fix = async (chg, txt, del) => {
+        const cur = app.get(e.id) || e, rec = { ...cur, ...chg, jaanch: String(txt).slice(0, 200), jaanchAt: nowIso(), updatedAt: nowIso(), rev: (cur.rev || 1) + 1 };
+        if (!DRY) { await khata.doc(e.id).set(rec); app.set(e.id, rec); }
+        if (del) for (const c of [...app.values()]) {
+          if (c.type !== 'entry' || c.deleted || c.posCancelWarn || !(c.posBill === e.id || (Array.isArray(c.posBillIds) && c.posBillIds.includes(e.id)))) continue;
+          const r2 = { ...c, posCancelWarn: 'Bill ' + no + ' POS mein nahi / CANCEL — payment check karein', updatedAt: nowIso() }; if (!DRY) { await khata.doc(c.id).set(r2); app.set(c.id, r2); }
+        }
+        fixed.push({ appId: q.appId, name, id: e.id, txt: `bill ${no}: ${txt}`, amt: Number(e.amount) || 0 }); log(`🔎 ${name} · bill ${no}: ${txt}`);
+      };
+      if (!p) {
+        let other = null; try { other = (await pool.request().input('n', sql.VarChar(50), no).query(`SELECT TOP 1 PurchaseID, DocStatusID FROM dbo.Purchase WHERE PurchaseNo = @n`)).recordset[0] || null; } catch {}
+        if (other) { note('idx', `POS mein bill ${no} doosre number (ID ${other.PurchaseID}) par hai — 🧾 bill dekh kar theek karein`); continue; }
+        if (dels >= JZ_MAX_DEL) { note('gone', 'POS mein yeh bill nahi mila (delete) — agle chakkar mein app se bhi hat jayega'); continue; }
+        dels++; await fix({ deleted: true, posStatus: 3, note: ('⛔ POS mein nahi (delete) · ' + (e.note || '')).slice(0, 200) }, 'POS mein yeh bill hi nahi (delete) — app se bhi hataya', true); continue;
+      }
+      if (Number(p.DocStatusID) === 3) {
+        if (dels >= JZ_MAX_DEL) { note('gone', 'POS mein yeh bill CANCEL hai — agle chakkar mein app se bhi hat jayega'); continue; }
+        dels++; await fix({ deleted: true, posStatus: 3, note: ('⛔ POS mein CANCEL · ' + (e.note || '')).slice(0, 200), cancelledAt: nowIso() }, 'POS mein CANCEL — app se bhi hataya', true); continue;
+      }
+      const net = Math.round((Number(p.Net) || 0) * 100), chg = {};
+      if (net > 0 && Math.abs(net - (Number(e.amount) || 0)) > 100) chg.amount = net;
+      const pAcc = Number(p.PAcc) || 0, pName = String(p.PartyName || '').trim();
+      if (pAcc && pAcc !== Number(q.accId)) {
+        const to = acctIds.get(pAcc), tp = to && app.get(to);
+        if (tp && !tp.deleted) { await fix({ ...chg, partyId: to }, `POS mein bill ki party "${pName}" hai — entry us khate mein le gaye${chg.amount ? ' (raqam POS jaisi Rs ' + rsTxt(net) + ')' : ''}`); continue; }
+        note('party', `POS mein yeh bill ab "${pName}" ka hai — woh khata app mein POS se juda nahi`); continue;
+      }
+      const posted = vs.filter(r => Number(r.VoucherStatusID) === 2), pl = posted.filter(r => r.PartyID != null), st = Number(p.DocStatusID) || 1;
+      if (!posted.length && st !== 2 && Number(e.posStatus) === 2) chg.posStatus = st;   // app ka 📌 ghalat
+      if (Object.keys(chg).length) await fix(chg, [chg.amount ? `raqam POS jaisi Rs ${rsTxt(net)}` : '', chg.posStatus ? 'POS mein post nahi — app ka 📌 hataya' : ''].filter(Boolean).join(' · '));
+      const mine = pl.filter(r => Number(r.AccountID) === Number(q.accId)), oth = pl.filter(r => Number(r.AccountID) !== Number(q.accId)), code = String((posted[0] || vs[0] || {}).VoucherCode || '').trim();
+      if (mine.length) { const d = ymd(mine[0].VoucherDate); note(d < START_DATE ? 'pre' : 'chk', d < START_DATE ? `POS mein is ka voucher ${code} ${d} ka hai (15-Sep se pehle) — POS mein bill ki tareekh dekhein` : `POS mein voucher ${code} isi khate mein hai — 🔄 Taza karein`); continue; }
+      if (oth.length) { note('other', `POS ne yeh bill "${String(oth[0].PartyName || '').trim()}" ke khate mein post kiya (${code}) — POS mein bill ki party theek kar ke dobara post karein`); continue; }
+      if (posted.length) { note('cash', `POS mein yeh CASH bill hai (${code}) — supplier ke khate mein nahi gaya. App mein is ka cash ada likhna baqi`); continue; }
+      if (st === 2) { note('nov', `POS mein bill posted hai magar voucher ${vs.length ? 'cancel' : 'nahi bana'} — POS mein Unpost kar ke dobara Post karein`); continue; }
+      note('open', 'POS mein yeh bill abhi POST nahi hua — post hote hi khata barabar');
+    }
+  }
+  const j = JSON.stringify(m);
+  if (j !== jzLast && !DRY) { await biz.collection('blueAccess').doc('billJaanch').set({ m, at: Date.now(), n: Object.keys(m).length, pc: os.hostname() }); jzLast = j; if (Object.keys(m).length) log(`🔎 bill jaanch: ${Object.keys(m).length} wajah likhi`); }
+  return fixed;
+}
 async function autoMilan(pool, acct, acctIds, importVoucher) {
   const rows = (await pool.request().input('from', sql.Date, START_DATE).query(`SELECT vd.AccountID, v.VoucherID, v.VoucherCode, v.VoucherDate, v.VoucherType, v.DocumentType, v.DocumentNo, v.VoucherRemarks, v.SystemNote, v.CreatedOn, vd.Debit, vd.Credit, vd.Description
     FROM dbo.VoucherDetail vd JOIN dbo.Voucher v ON v.VoucherID = vd.VoucherID
@@ -901,11 +973,12 @@ async function autoMilan(pool, acct, acctIds, importVoucher) {
       amt: Math.round((Number(r.Debit) || 0) * 100) - Math.round((Number(r.Credit) || 0) * 100), desc, appMark: /\[app:/.test(note), vid: Number(r.VoucherID),
       created: new Date(r.CreatedOn || r.VoucherDate).getTime(), open: OPEN_RX.test(desc) || OPEN_RX.test(String(r.VoucherRemarks || '')) || /\[app:(opening|openfix)-/.test(note) });
   }
-  const now = Date.now(), plans = [];
+  const now = Date.now(), plans = [], jq = [];
   for (const [accId, appId] of acctIds) {
     const p = app.get(appId); if (!p || p.deleted || p.bank) continue;
     const D = milanDiffPc(appId, byAcc.get(accId) || [], preBy.get(accId) || 0);
     if (Math.abs(D.appBal - D.posBal) <= 100) continue;
+    for (const a of D.appOnly) if (/^pos-\d+$/.test(String(a.e.id))) jq.push({ appId, accId, e: a.e });   // 2026-10-28 (h): 🔎 bill jaanch
     const fix = D.openApp - D.openPos, why = [];
     if (D.diff.length) why.push('raqam farq ' + D.diff.length);
     if (D.appOnly.some(a => !sendElig(a.e))) why.push('app entry jo POS mein nahi jaati');
@@ -921,8 +994,9 @@ async function autoMilan(pool, acct, acctIds, importVoucher) {
     const t = autoTried.get(appId); if (t && t.h === h && now - t.at < 6 * 3600000) continue;
     plans.push({ appId, accId, p, D, fix: Math.abs(fix) > 100 ? fix : 0, codes, h });
   }
-  if (!plans.length) return;
-  const purAc = await purchaseAccount(pool), today = todayPk(), sumRef = biz.collection('blueAccess').doc('autoMilan');
+  let jzFixed = []; try { jzFixed = await billJaanch(pool, acctIds, jq); } catch (e) { log('🔎 bill jaanch masla: ' + e.message); }
+  if (!plans.length && !jzFixed.length) return;
+  const purAc = plans.length ? await purchaseAccount(pool) : 0, today = todayPk(), sumRef = biz.collection('blueAccess').doc('autoMilan');
   let sum = {}; try { sum = (await sumRef.get()).data() || {}; } catch {}
   const m = sum.d === today ? { ...(sum.m || {}) } : {};
   const doneCodes = new Set(); let acted = 0;
@@ -949,6 +1023,14 @@ async function autoMilan(pool, acct, acctIds, importVoucher) {
       amt: P.D.appBal - P.D.posBal, at: Date.now(), by: 'auto', byName: 'Shop PC (auto)', status: 'done', done, fail, skip, log: L.slice(0, 120), doneAt: Date.now() }).catch(e => log('🤖 job likhna: ' + e.message));
     m[P.appId] = { at: Date.now(), name: String(P.p.name || '').slice(0, 60), n: done, fail, txt: L.slice(1, 6).join(' | ').slice(0, 400), farq: P.D.appBal - P.D.posBal };
     if (done) acted++;
+  }
+  const jzBy = new Map(); for (const f of jzFixed) { if (!jzBy.has(f.appId)) jzBy.set(f.appId, []); jzBy.get(f.appId).push(f); }   // 2026-10-28 (h): 🔎 bill jaanch ke khud theek
+  for (const [appId, F] of jzBy) {
+    const prev = m[appId] && Date.now() - (m[appId].at || 0) < 60000 ? m[appId] : null, L = F.map(f => f.txt);
+    m[appId] = { at: Date.now(), name: F[0].name, n: (prev?.n || 0) + F.length, fail: prev?.fail || 0, txt: [prev?.txt, ...L].filter(Boolean).join(' | ').slice(0, 400), farq: prev?.farq || 0 };
+    if (!DRY) { const jid = 'auto' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+      await biz.collection('milanJobs').doc(jid).set({ id: jid, partyId: appId, dir: 'auto', ids: F.map(f => f.id).slice(0, 300), n: F.length, amt: 0, at: Date.now(), by: 'auto', byName: 'Shop PC (bill jaanch)', status: 'done', done: F.length, fail: 0, skip: 0, log: ['🔎 Bill jaanch — POS asal', ...L].slice(0, 120), doneAt: Date.now() }).catch(e => log('🔎 job likhna: ' + e.message)); }
+    acted++;
   }
   if (!DRY) await sumRef.set({ d: today, m, at: Date.now(), pc: os.hostname() }).catch(e => log('🤖 autoMilan doc: ' + e.message));
   if (acted) { log(`🤖 auto milan: ${acted} khate khud barabar`); ledgerForce = Date.now(); }
@@ -1283,7 +1365,7 @@ async function syncEntries(pool, acct) {
   for (const v of vouchers.values()) await importVoucher(v, false);
 
   try { await runMilanJobs(pool, acct, acctIds, importVoucher); } catch (e) { log('⚖️ milanJobs masla: ' + e.message); }
-  if ((AUTO || process.argv.includes('--auto-milan')) && Date.now() - autoMilanAt >= AUTO_MILAN_EVERY) { autoMilanAt = Date.now(); try { await autoMilan(pool, acct, acctIds, importVoucher); } catch (e) { log('🤖 auto milan masla: ' + e.message); } }   // 2026-10-27 (g)
+  if ((AUTO || process.argv.includes('--auto-milan')) && (Date.now() - autoMilanAt >= AUTO_MILAN_EVERY || (ledgerForce > 0 && Date.now() - autoMilanAt >= 60000))) { autoMilanAt = Date.now(); try { await autoMilan(pool, acct, acctIds, importVoucher); } catch (e) { log('🤖 auto milan masla: ' + e.message); } }   // 2026-10-27 (g)   // 2026-10-28 (h): app ka 🔄 Taza = auto milan + 🔎 bill jaanch bhi foran (1 min mein ek dafa)
 
   // ---------- POS mein delete hue ----------
   const alive = new Set((await pool.request().query(`SELECT VoucherID FROM dbo.Voucher

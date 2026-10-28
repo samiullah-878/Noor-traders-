@@ -1,18 +1,37 @@
-// pos-milan.js — v1.7 (2026-10-27, app v2.135.0: 🤖 PC auto milan ki aaj ki list + POS opening voucher opening ke khane mein) · v1.6 (2026-10-27, app v2.134.0: ✕ entry-war 'POS mein nahi' khate ke card par + 📤 ek entry bhejo · ⇄ transfer bhi) · v1.5 (2026-10-27, app v2.133.7: 📤 sab khaton ki baqi entries POS mein — taza data → list ☑ → milanJobs) · v1.4 (2026-10-27, app v2.133.4: 🔄 Taza karo + POS data ka waqt, job ke baad khud taza, ↩ pehle se alag) · v1.3 (2026-10-27, app v2.133.0: ⚖️ barabar karo chips — milanJobs app/pos, rules 2.77) · v1.0 (2026-10-26, app v2.124.0) ⚖️ POS MILAN — har khate ka app baqaya vs POS ledger baqaya.
+// pos-milan.js — v1.8 (2026-10-28, app v2.143.0: 🔎 POS purchase bill ki farq ki WAJAH — PC bill jaanch blueAccess/billJaanch + chips 💵 Cash ada / 📌 Post / 🧾 Bill) · v1.7 (2026-10-27, app v2.135.0: 🤖 PC auto milan ki aaj ki list + POS opening voucher opening ke khane mein) · v1.6 (2026-10-27, app v2.134.0: ✕ entry-war 'POS mein nahi' khate ke card par + 📤 ek entry bhejo · ⇄ transfer bhi) · v1.5 (2026-10-27, app v2.133.7: 📤 sab khaton ki baqi entries POS mein — taza data → list ☑ → milanJobs) · v1.4 (2026-10-27, app v2.133.4: 🔄 Taza karo + POS data ka waqt, job ke baad khud taza, ↩ pehle se alag) · v1.3 (2026-10-27, app v2.133.0: ⚖️ barabar karo chips — milanJobs app/pos, rules 2.77) · v1.0 (2026-10-26, app v2.124.0) ⚖️ POS MILAN — har khate ka app baqaya vs POS ledger baqaya.
 // Malik: "jitne bhi khate hain, POS ka ledger aur humara khata same aa raha hai — sab khaton ke liye check karna hai; har khate ki screen par bhi POS baqaya".
 // v1.1 (app v2.125.0): 🔍 FARQ KI ENTRIES — posLines/<id> (PC har 15 min, sab khate) se entry-war milan: App mein hai POS nahi · POS mein hai app nahi · raqam farq.
 // Data: blueAccess/posLedger {m:{appPartyId: paisa (lena +, dena −)}, at, n} — PC pos-khata-sync har 15 min. Yahan sirf UI. AI nahi.
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => 'Rs ' + (Math.abs(Number(n) || 0) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
-import { skipsBalance, cashPaysBill } from './model.js?v=2.142.0';
+import { skipsBalance, cashPaysBill } from './model.js?v=2.143.0';
 const TOL = 100;
 const OPEN_RX = /opening|shuru ka baqaya|sabqa baqaya/i;   // v1.7 = PC autoMilan OPEN_RX   // paisa — Rs 1 tak farq = theek (POS 2 decimal rounding)
 let C = null, st = { f: 'farq', q: '' };
-export function pmSetup(ctx) { C = ctx; autoStart(); }
+export function pmSetup(ctx) { C = ctx; autoStart(); jzStart(); }
 // v1.7 (app v2.135.0): 🤖 PC ka khud barabar — blueAccess/autoMilan {d, m:{appId:{at,name,n,fail,txt,farq}}} (sirf malik parhta)
 let auto = null, autoStop = null;
 function autoStart() { if (autoStop || !C || !C.listenAuto || !C.owner()) return; try { autoStop = C.listenAuto(d => { auto = d || null; try { pmPaint(); } catch {} try { C.linePaint && C.linePaint(); } catch {} }); } catch {} }
+// v1.8 (app v2.143.0): 🔎 BILL JAANCH — malik: Waqas Traders bill 00002479 "ye entry pehle se farq hai, is ko sahi karna hai". PC (pos-khata-sync h) farq wale khate ki
+//   "App mein hai — POS mein nahi" POS purchase bill ka POS mein haal dekhta hai: delete / cancel / party / raqam / 📌 khud theek; baqi WAJAH yahan (sirf malik parhta):
+//   blueAccess/billJaanch {m:{entryId:{k,t,no,p}}, at}. k: cash → 💵 Cash ada likho (payment + posNo + dailyIncluded false + jzBill — POS mein voucher nahi, purane din ka galla / Daily nahi
+//   badalta; purchaseCash NAHI — woh Daily ke akhrajat mein ginta) · open → 📌 Post karo
+//   (wahi sendPost) · baqi → 🧾 Bill dekhein. AI nahi.
+let jz = null, jzStop = null;
+function jzStart() { if (jzStop || !C || !C.listenJz || !C.owner()) return; try { jzStop = C.listenJz(d => { jz = d || null; rerender(); try { const r = document.querySelector('#dialogBody [data-pm-droot]'); if (r && jobParty && jobDoc) r.outerHTML = diffHTML(jobParty, jobDoc); } catch {} }); } catch {} }
+const jzDone = new Set();   // is session mein chip daba diya (PC ke agle chakkar tak)
+function jzOf(e) {
+  const z = jz?.m?.[e?.id]; if (!z || !e || e.deleted || jzDone.has(e.id) || z.p !== e.partyId) return null;
+  const p = C.parties().find(x => x.id === e.partyId); if (!p || pmRow(p).state !== 'farq') return null;
+  return z;
+}
+function jzHTML(e, z) {
+  const own = C.owner(), id = esc(e.id);
+  const chip = z.k === 'cash' && own ? `<button type="button" class="pm-send" data-pm-cash="${id}">💵 Cash ada likho</button>`
+    : z.k === 'open' && own ? `<button type="button" class="pm-send" data-pm-post="${id}">📌 Post karo</button>` : '';
+  return `<div class="pm-ent jz"><small>🔎 🖥 ${esc(z.t)}</small><span class="pm-jzc">${chip}<button type="button" class="pm-send pm-bill" data-pm-bill="${id}">🧾 Bill dekhein</button></span></div>`;
+}
 const pkDay = () => new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
 const autoToday = () => (auto && auto.m && auto.d === pkDay()) ? auto.m : {};   // ctx: parties, entries, balance, ledger, can, owner, notice, modal, openAccount
 const led = () => C.ledger() || null;
@@ -173,7 +192,7 @@ function fixHTML(p, D) {
   const j = fixState();
   const busy = j && j.status !== 'done';
   const nA = D.posOnly.filter(x => x.code && x.dt !== 'PO').length, nP = D.appOnly.filter(a => bulkElig(a.e)).length;
-  const chips = busy ? '' : `<div class="pm-fix"><small>Barabar karo:</small>${nA ? `<button type="button" data-pm-fix="app">📱 App ko POS jaisa <i>${nA}</i></button>` : ''}${nP ? `<button type="button" data-pm-fix="pos">🖥 POS ko app jaisa <i>${nP}</i></button>` : ''}${!nA && !nP ? '<span class="pm-fixok">✓ voucher wali koi entry baqi nahi (purchase bill sync.js se)</span>' : ''}</div>`;
+  const chips = busy ? '' : `<div class="pm-fix"><small>Barabar karo:</small>${nA ? `<button type="button" data-pm-fix="app">📱 App ko POS jaisa <i>${nA}</i></button>` : ''}${nP ? `<button type="button" data-pm-fix="pos">🖥 POS ko app jaisa <i>${nP}</i></button>` : ''}${!nA && !nP ? '<span class="pm-fixok">✓ voucher wali koi entry baqi nahi (purchase bill sync.js se)' + (D.appOnly.some(a => /^pos-\d+$/.test(String(a.e.id)) && jzOf(a.e)) ? ' — bill ki 🔎 wajah neeche' : '') + '</span>' : ''}</div>`;
   const jt = j && j.status === 'done' ? (j.by === 'auto' ? '🤖 PC ne khud: ' : '') + ([j.done ? `✅ ${j.done} ban gayi` : '', j.skip ? `↩ ${j.skip} pehle se thi (kuch nahi kiya)` : '', j.fail ? `✕ ${j.fail} nahi bani` : ''].filter(Boolean).join(' · ') || '✓ kuch karna nahi para') : '';
   const stale = j && j.status === 'done' && (Number(led()?.at) || 0) < (Number(j.doneAt) || 0);
   const st = j ? `<div class="pm-fixst ${j.status === 'done' ? (j.fail ? 'warn' : 'ok') : 'wait'}"><b>${j.status === 'done' ? jt : '⏳ Shop PC bana raha hai — ' + (j.dir === 'app' ? 'app mein ' : 'POS mein ') + (j.n || '') + ' entries (1–2 min)'}</b>${j.status === 'done' ? `<small>${stale ? '⏳ POS ka naya baqaya aa raha hai (1 min) — screen khud taza hogi' : '✓ Neeche ka hisaab naye POS data se hai'}</small>` : ''}${Array.isArray(j.log) && j.log.length ? `<details><summary>tafseel (${j.log.length})</summary>${j.log.map(x => `<div>${esc(x)}</div>`).join('')}</details>` : ''}</div>` : '';
@@ -246,8 +265,9 @@ export function pmEntryState(e) {   // '' | 'miss' | 'wait' | 'fail' | 'skip' (+
   const ids = missIds(p);
   return ids && ids.has(e.id) && bulkElig(e) ? { st: 'miss' } : null;
 }
-export function pmEntryTag(e) { const r = pmEntryState(e); if (!r) return ''; return r.st === 'wait' ? '<b class="pm-et wait">⏳ POS mein ban raha</b>' : r.st === 'skip' ? '<b class="pm-et skip">↩ POS mein pehle se</b>' : '<b class="pm-et miss">✕ POS mein nahi</b>'; }
+export function pmEntryTag(e) { const z = /^pos-\d+$/.test(String(e?.id || '')) ? jzOf(e) : null; if (z) return '<b class="pm-et miss">🔎 POS farq — wajah</b>'; const r = pmEntryState(e); if (!r) return ''; return r.st === 'wait' ? '<b class="pm-et wait">⏳ POS mein ban raha</b>' : r.st === 'skip' ? '<b class="pm-et skip">↩ POS mein pehle se</b>' : '<b class="pm-et miss">✕ POS mein nahi</b>'; }
 export function pmEntryHTML(e) {
+  const z = /^pos-\d+$/.test(String(e?.id || '')) ? jzOf(e) : null; if (z) return jzHTML(e, z);
   const r = pmEntryState(e); if (!r) return '';
   const btn = C.owner() && (r.st === 'miss' || r.st === 'fail') ? `<button type="button" class="pm-send" data-pm-send="${esc(e.id)}">📤 POS mein bhejo</button>` : '';
   const t = r.st === 'wait' ? `⏳ 🖥 Shop PC POS mein voucher bana raha hai…${r.msg ? ' (' + esc(r.msg) + ')' : ' (1–2 min)'}`
@@ -291,7 +311,7 @@ export function pmDiff(p, doc) {   // {appOnly:[], posOnly:[], diff:[], pre:{app
 const amtTxt = v => `<b class="${v > 0 ? 'l' : 'd'}">${money(v)} ${sideTxt(v)}</b>`;
 function diffHTML(p, doc) {
   const r = pmRow(p), D = pmDiff(p, doc), at = doc?.at;
-  const appLine = (e, amt) => `<div class="pm-e"><span class="pm-ed">${dTxt(e.date)}</span><span class="pm-et"><b>${esc(KIND[e.kind] || e.kind)}</b><small>${esc(e.note || '')}${e.posCode ? ' · ' + esc(e.posCode) : ''}</small></span>${amtTxt(amt)}</div>`;
+  const appLine = (e, amt) => { const z = /^pos-\d+$/.test(String(e.id)) ? jzOf(e) : null; return `<div class="pm-e${z ? ' pm-ejz' : ''}"><span class="pm-ed">${dTxt(e.date)}</span><span class="pm-et"><b>${esc(KIND[e.kind] || e.kind)}</b><small>${esc(e.note || '')}${e.posCode ? ' · ' + esc(e.posCode) : ''}</small></span>${amtTxt(amt)}${z ? jzHTML(e, z) : ''}</div>`; };
   const posLine = x => `<div class="pm-e"><span class="pm-ed">${dTxt(x.d)}</span><span class="pm-et"><b>${esc(x.code || x.dt || 'POS')}${x.dt === 'PO' ? ' · Purchase bill ' + esc(x.no) : x.dt ? ' · ' + esc(x.dt) + (x.no ? ' ' + esc(x.no) : '') : ''}</b><small>${esc(x.desc)}</small></span>${amtTxt(x.amt)}</div>`;
   const sec = (t, cls, n, body) => `<div class="pm-sec ${cls}"><div class="pm-sh"><b>${t}</b><i>${n}</i></div>${body || '<p class="pm-none">koi nahi</p>'}</div>`;
   return `<div class="bc-root pm-droot" data-pm-droot="${esc(p.id)}">
@@ -309,6 +329,19 @@ function diffHTML(p, doc) {
     <p class="stat-note">Milan: voucher number (CPV/CRV/JV) · POS purchase bill number · warna raqam + tareekh (±3 din). Cancel vouchers shamil nahi. PC har 15 min taza karta hai.</p>
   </div>`;
 }
+async function jzGo(b) {
+  const id = b.dataset.pmCash || b.dataset.pmPost || b.dataset.pmBill, e = C.entries().find(x => x.id === id); if (!e) return;
+  if (b.dataset.pmBill) { try { $('dialog')?.close(); } catch {} setTimeout(() => C.openBill && C.openBill(id), 60); return; }
+  if (!C.owner()) return;
+  if (b.dataset.pmCash) {
+    if (!confirm(`💵 ${String(e.note || '').replace(/^POS Purchase\s*/i, 'Bill ')} · ${money(e.amount)}\nPOS mein yeh CASH bill hai — app mein "cash ada" likh dein? (POS mein kuch nahi badlega, galla / Daily mein nahi)`)) return;
+    b.disabled = true; b.textContent = '⏳ likh raha…';
+    try { await C.saveCash(e); jzDone.add(id); C.notice('✅ Cash ada likh diya — khata POS jaisa'); rerender(); const r = document.querySelector('#dialogBody [data-pm-droot]'); if (r && jobParty && jobDoc) r.outerHTML = diffHTML(jobParty, jobDoc); }
+    catch (err) { b.disabled = false; b.textContent = '💵 Cash ada likho'; C.notice('Nahi likha: ' + (err?.message || err)); }
+    return;
+  }
+  if (b.dataset.pmPost) { b.disabled = true; b.textContent = '⏳ PC ko bheja…'; try { await C.postBill(e); jzDone.add(id); } catch (err) { b.disabled = false; b.textContent = '📌 Post karo'; C.notice('Nahi gaya: ' + (err?.message || err)); } }
+}
 export async function pmDiffOpen(id) {
   const p = C.parties().find(x => x.id === id); if (!p) return;
   if (!C.can('kh.posmilan')) { C.notice('⚖️ POS milan ki ijazat nahi'); return; }
@@ -323,8 +356,9 @@ document.addEventListener('input', e => { const t = e.target; if (!t?.dataset?.p
 document.addEventListener('change', e => { const t = e.target; if (!t?.dataset?.pmBsel || !bulk) return; if (t.checked) bulk.sel.add(t.dataset.pmBsel); else bulk.sel.delete(t.dataset.pmBsel); bulkPaint(); });
 document.addEventListener('click', e => {
   if (!C) return;
-  const b = e.target.closest?.('[data-pm-send],[data-pm-bulk],[data-pm-bulkgo],[data-pm-ball],[data-pm-bsafe],[data-pm-bnone],[data-pm-bsend],[data-pm-taza],[data-pm-fix],[data-pm-f],[data-pm-open],[data-pm-diff],[data-pm-back],[data-pm-tog]'); if (!b) return;
+  const b = e.target.closest?.('[data-pm-cash],[data-pm-post],[data-pm-bill],[data-pm-send],[data-pm-bulk],[data-pm-bulkgo],[data-pm-ball],[data-pm-bsafe],[data-pm-bnone],[data-pm-bsend],[data-pm-taza],[data-pm-fix],[data-pm-f],[data-pm-open],[data-pm-diff],[data-pm-back],[data-pm-tog]'); if (!b) return;
   if (b.dataset.pmSend) { e.stopPropagation(); e.preventDefault(); sendOne(b.dataset.pmSend); return; }
+  if (b.dataset.pmCash || b.dataset.pmPost || b.dataset.pmBill) { e.stopPropagation(); e.preventDefault(); jzGo(b); return; }
   if (b.dataset.pmFix) { e.stopPropagation(); fixGo(b.dataset.pmFix); return; }
   if (b.dataset.pmTaza) { e.stopPropagation(); tazaGo(); return; }
   if (b.dataset.pmBulk === 'go') { e.stopPropagation(); bulkStart(); return; }

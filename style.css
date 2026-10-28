@@ -6571,3 +6571,25 @@ html body #summary .ir-tr.loss{border-color:#f1c4c4!important;background:linear-
 html body #summary .ir-tn b,html body #summary .ir-tbl .ir-row b{white-space:normal!important;overflow:visible!important;text-overflow:clip!important;line-height:1.25;font-size:14px}
 html body #summary .ir-stk,html body #dialogBody .ir-stk{display:block;font-size:11.5px!important;font-weight:700;color:#1d3b7a!important;background:#eef3fc;border:1px solid #d5e0f3;border-radius:999px;padding:2px 8px;width:fit-content;max-width:100%;white-space:normal}
 html body #summary .ir-tbl .ir-row{align-items:start}
+/* v2.143.0: 🏭 Supplier-wise — Stock khana + 🛒 Order table */
+html body #dialogBody .irs-tbl td.irs-sk{white-space:nowrap;font-weight:800;color:#0f5132}
+html body #dialogBody .irs-tbl td.irs-sk small{display:block;font-weight:600;color:#5b6b84;font-size:10.5px}
+html body #dialogBody .irs-tbl td:nth-child(2),html body #dialogBody .irs-tbl th:nth-child(2){position:sticky;left:0;z-index:1;background:var(--surface,#fff);box-shadow:1px 0 0 #e3e8f0}
+html body #dialogBody .irs-tbl tr.irs-t td:nth-child(2){background:#f3f6fc}
+html body #dialogBody .irs-oh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:8px 12px;border-radius:14px;border:1.5px solid #f3d9a4;background:linear-gradient(180deg,#fffaf0,#fff3dc)}
+html body #dialogBody .irs-oh b{font-size:15px;font-weight:900;color:#7a4b00}
+html body #dialogBody .irs-oh small{font-size:11.5px;color:#8a6a2f;min-width:0}
+html body #dialogBody .irs-oh .irs-opdf{margin-left:auto;height:34px;min-height:34px;background:linear-gradient(180deg,#e08a00,#b86d00)!important;border-color:#b86d00!important;color:#fff!important}
+html body #dialogBody .irs-otbl td.irs-od{color:#9a5a00;font-size:14px}
+/* v2.143.0: 📦 Item report — packet size line */
+html body #summary .ir-pk,html body #dialogBody .ir-pk{display:block;margin-top:3px;font-size:11.5px!important;font-weight:600;color:#6a3d00!important;background:linear-gradient(180deg,#fffaf0,#fff1d6);border:1px solid #f1d39b;border-radius:999px;padding:2px 9px;width:fit-content;max-width:100%;white-space:normal;line-height:1.45}
+html body #summary .ir-pk b,html body #dialogBody .ir-pk b{font-weight:900;color:#7a4b00}
+html body #summary .ir-pk em,html body #dialogBody .ir-pk em{font-style:normal;color:#9a7b45;font-size:10.5px}
+/* v2.143.0: 🔎 bill jaanch — POS purchase bill farq ki wajah (khate ka card + Farq screen) */
+html body .ledger-item .pm-ent.jz,html body #dialogBody .pm-ent.jz{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0;padding:7px 9px;border-radius:12px;background:linear-gradient(180deg,#f5f8ff,#eaf0fd);border:1px solid #c9d6ef}
+html body .ledger-item .pm-ent.jz small,html body #dialogBody .pm-ent.jz small{flex:1 1 200px;min-width:0;color:#1d3b7a;font-weight:700;font-size:11.5px;line-height:1.4}
+html body #dialogBody .pm-e.pm-ejz{grid-template-rows:auto auto}html body #dialogBody .pm-e.pm-ejz>.pm-ent{grid-column:1/-1}
+html body .pm-ent.jz .pm-jzc{display:inline-flex;flex-wrap:wrap;gap:6px}
+html body .ledger-item .pm-ent.jz .pm-send,html body #dialogBody .pm-ent.jz .pm-send{display:inline-flex;align-items:center;gap:4px;height:32px;min-height:32px;width:auto!important;padding:0 12px;border-radius:999px;font-size:12px;font-weight:800;white-space:nowrap;border:1px solid #1e44b0!important;background:linear-gradient(180deg,#2f5bd3,#1e44b0)!important;color:#fff!important}
+html body .ledger-item .pm-ent.jz .pm-send.pm-bill,html body #dialogBody .pm-ent.jz .pm-send.pm-bill{border-color:#c9d6ef!important;background:linear-gradient(180deg,#fff,#eef3fc)!important;color:#1d3b7a!important}
+html body .ledger-item .pm-ent.jz .pm-send:disabled,html body #dialogBody .pm-ent.jz .pm-send:disabled{opacity:.6}
