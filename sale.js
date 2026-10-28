@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.145.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.145.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.146.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.146.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -890,7 +890,7 @@ function mountBills(box, opt = {}) {
   if (chips) { filter = 'all'; box.classList.add('nb-chipv'); box.innerHTML = `<div class="nb-ctop"><label class="nb-qchip"><span>🔍</span><input type="search" class="nb-q" placeholder="Bill no, naam, raqam" autocomplete="off"></label><button type="button" class="nb-more" data-nb-more="1" title="Aur (⋮)">⋮</button><button type="button" class="rk-pill nb-pill" data-mn-sheet="1" hidden></button><input type="date" class="nb-date nb-date-x" tabindex="-1" aria-label="Tareekh"></div>
     <div class="nb-copt"><div class="bc-seg nb-nseg" data-mn-seg="nb.n" data-mn-i="🔢" data-mn-t="Kitne bill (chips)" data-mn-g="🧾 Bills"></div>
       <span class="nb-day"><button type="button" data-nb-day="-1" data-mn="nb.prev" data-mn-i="‹" data-mn-t="Pichhla din" data-mn-g="🧾 Bills">‹ Pichhla din</button><button type="button" data-nb-day="1" data-mn="nb.next" data-mn-i="›" data-mn-t="Agla din" data-mn-g="🧾 Bills">Agla din ›</button><button type="button" data-nb-cal="1" data-mn="nb.cal" data-mn-i="📅" data-mn-t="Tareekh chunein" data-mn-g="🧾 Bills">📅 Tareekh</button></span>
-      <button type="button" class="nb-unp" data-nb-unp="1" data-mn="nb.unp" data-mn-i="🖨" data-mn-t="Un-posted print" data-mn-s="sab un-posted bills ki parchi" data-mn-g="🧾 Bills">🖨 Un-posted</button><small class="nb-sync"></small></div>
+      <button type="button" class="nb-unp" data-nb-unp="1" data-mn="nb.unp" data-mn-i="🖨" data-mn-t="Un-posted print" data-mn-s="sab un-posted bills ki parchi" data-mn-g="🧾 Bills">🖨 Un-posted</button>${can('sale.ibills') ? '<button type="button" class="nb-ibb" data-nb-ib="1" data-mn="nb.ib" data-mn-i="🔎" data-mn-t="Item wale bills" data-mn-s="chuni items (Hamza ghee…) wale bills" data-mn-g="🧾 Bills">🔎 Item wale bills</button>' : ''}<small class="nb-sync"></small></div>
     <div class="nb-f" hidden></div><div class="nb-sum" hidden></div><div class="nb-list"></div>`; }   // v2.138.0: malik — saamne sirf bill; tabs nahi (Posted + Un-posted ek saath); total nahi; sab ⋮ mein
   else box.innerHTML = `<div class="nb-head"><span class="nb-day"><button type="button" data-nb-day="-1" title="Pichhla din">‹</button><b class="nb-dayt"></b><button type="button" data-nb-day="1" title="Agla din">›</button><label class="nb-cal" title="Tareekh chunein">📅<input type="date" class="nb-date"></label></span><small class="nb-sync"></small></div>
     <div class="nb-top"><input type="search" class="nb-q" placeholder="🔍 Bill no, naam, raqam…" autocomplete="off"><button type="button" class="nb-unp" data-nb-unp="1">🖨 Un-posted</button></div>
@@ -954,6 +954,7 @@ function mountBills(box, opt = {}) {
     const nn = e.target.closest('[data-nb-n]'); if (nn) { nbN = Number(nn.dataset.nbN) || 20; try { localStorage.setItem('sam-bills-n', String(nbN)); } catch {} paint(); return; }   // v2.137.0
     if (e.target.closest('[data-nb-cal]')) { try { dateIn.showPicker(); } catch { try { dateIn.focus(); dateIn.click(); } catch {} } return; }
     if (e.target.closest('[data-nb-unp]')) { printUnposted(); return; }
+    if (e.target.closest('[data-nb-ib]')) { openItemBills(); return; }   // v2.146.0: 🔎 Item wale bills (alag screen)
     const ed = e.target.closest('[data-nb-edit]'); if (ed) { e.stopPropagation(); const b = billsData().find(x => x.id === ed.dataset.nbEdit); if (b) editBill(b); return; }
     const pr = e.target.closest('[data-nb-print]'); if (pr) { e.stopPropagation(); const sl = salesOfView().find(x => x.id === pr.dataset.nbPrint); try { if (counter === 'local' && sl) printLocal(sl, copies, sl.crates || 1); else { await cloud.reprintAppSale(pr.dataset.nbPrint, copies, counter); notice('🖨 Print ka hukam bhej diya'); } } catch (er) { notice('Print nahi hua: ' + (er?.message || er)); } return; }
     const c = e.target.closest('[data-nb]'); if (!c) return;
@@ -962,6 +963,109 @@ function mountBills(box, opt = {}) {
   });
   const m = { box, paint }; mounts.add(m); paint();
   return setInterval(() => { if (!box.isConnected) return; syncEl.innerHTML = posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : ''; syncEl.className = 'nb-sync' + (posSyncAt && Date.now() - posSyncAt > 90000 ? ' old' : ''); }, 5000);
+}
+// ---------- 🔎 ITEM WALE BILLS (v2.146.0) — malik: "alag screen ⋮ ke andar · jin bills mein wo items hon · bill ke chips ke upar un items ke naam (jaise
+//   Hamza ghee, Mujahid oil) · items hum khud select karein · yeh screen alag, wo screen alag" ----------
+// Bills ⋮ → 🔎 Item wale bills (CAP sale.ibills) = isi khirki mein alag screen (‹ Bills se wapas). Items chuno (list pehle se: chuni hui · aaj biki · baqi, search,
+// ☑ multi) — phone / PC yaad rakhta hai (sam-ib-items). Bills = wahi live data (billsData) jin ki lines (PC posSaleLines / app lines) mein chuni item ho —
+// chip par upar "Hamza ghee ×2 · Mujahid oil ×1", neeche bill no · Rs · haal (un-posted UPAR neele, posted laal post ke waqt se). Lines: din ka ek
+// listPosSaleLines + naye bill ki 1 read (30 s baad dobara). Kitne (10…35) + din ⋮ mein (Bills wale hi). AI nahi.
+const IB_LS = 'sam-ib-items';
+let ibSel = []; try { const v = JSON.parse(localStorage.getItem(IB_LS) || '[]'); if (Array.isArray(v)) ibSel = v.filter(x => x && x.i != null).map(x => ({ i: String(x.i), n: String(x.n || '') })); } catch {}
+const ibKeep = () => { try { localStorage.setItem(IB_LS, JSON.stringify(ibSel)); } catch {} };
+let ibDayLoaded = '', ibBusy = false; const ibTry = new Map();
+async function ibLoadDay(day) {
+  if (ibDayLoaded === day || !cloud?.listPosSaleLines) return; ibDayLoaded = day;
+  try { const all = await cloud.listPosSaleLines(day); all.forEach(d => { if (d.id && Array.isArray(d.lines) && d.lines.length) lineCache.set(Number(d.id), d.lines); }); } catch {}
+  billsRepaint();
+}
+let ibT = 0;
+async function ibFetch(list) {   // naya bill: PC pehle bill likhta hai, lines baad mein — 10 min se naye ko 5 s baad dobara, purane ko 30 s
+  if (ibBusy) return; const now = Date.now(), gap = b => now - (b.createdAt || 0) < 600000 ? 5000 : 30000;
+  const need = list.filter(b => b.posId && !lineCache.has(b.posId) && now - (ibTry.get(b.posId) || 0) > gap(b));
+  if (need.length) { ibBusy = true; try { for (const b of need.slice(0, 25)) { ibTry.set(b.posId, Date.now()); lineTried.delete(b.posId); await billLines(b); } } finally { ibBusy = false; billsRepaint(); } }
+  if (!ibT && list.some(b => b.posId && !lineCache.has(b.posId) && now - (b.createdAt || 0) < 600000)) ibT = setTimeout(() => { ibT = 0; billsRepaint(); }, 6000);
+}
+const ibLines = b => (b.posId && lineCache.get(b.posId)) || (b.src === 'app' ? (b.lines || []).map(l => ({ i: l.id, n: l.name, q: Number(l.qty) || 0 })) : null);
+function ibItems() {   // [{i, n, sold}] — stock ke saare items + aaj ke bills ki lines
+  const m = new Map();
+  try { const s = saleStock(); for (const br of s.branches || []) for (const r of s.itemsFor(br) || []) if (!m.has(String(r.id))) m.set(String(r.id), { i: String(r.id), n: String(r.name || ''), code: String(r.code || ''), sold: 0 }); } catch {}
+  for (const b of billsData()) for (const l of ibLines(b) || []) { const k = String(l.i); let e = m.get(k); if (!e) m.set(k, e = { i: k, n: String(l.n || ''), code: '', sold: 0 }); e.sold++; if (!e.n && l.n) e.n = String(l.n); }
+  return [...m.values()].filter(x => x.n);
+}
+function ibPickList(q) {
+  const S = new Set(ibSel.map(x => x.i)), t = String(q || '').trim();
+  const L = ibItems().filter(x => !t || smartHit(`${x.n} ${x.code}`, t) || x.i === t).sort((a, b) => (S.has(b.i) - S.has(a.i)) || (b.sold - a.sold) || a.n.localeCompare(b.n));
+  return L.slice(0, 80).map(x => `<label class="ib-pr${S.has(x.i) ? ' on' : ''}"><input type="checkbox" data-ib-it="${esc(x.i)}" data-ib-n="${esc(x.n)}"${S.has(x.i) ? ' checked' : ''}><b>${esc(x.n)}</b>${x.sold ? `<small>aaj ${num(x.sold)} bill</small>` : ''}</label>`).join('') || '<p class="stat-note">Koi item nahi mila</p>';
+}
+function openItemBills() {
+  if (!can('sale.ibills')) { notice('🔎 Item wale bills ki ijazat nahi'); return; }
+  const d = $('dialog'); if (!d) return;
+  d.classList.remove('search-dialog'); d.classList.add('full-dialog');
+  $('dialogTitle').textContent = '🔎 Item wale bills';
+  $('dialogBody').innerHTML = '<div class="nb-wrap nb-dlg nb-ibw"></div>';
+  if (!d.open) d.showModal();
+  mountItemBills($('dialogBody').querySelector('.nb-ibw'));
+}
+function mountItemBills(box) {
+  let open = '', pick = !ibSel.length, pickDirty = true;   // picker ki list sirf kholte / search / ✕ par dobara (tick karte waqt list na hile)
+  box.classList.add('nb-wrap', 'nb-chipv', 'nb-ib');
+  box.innerHTML = `<div class="nb-ctop"><button type="button" class="ib-back" data-ib-back="1">‹ Bills</button><button type="button" class="ib-pickbtn" data-ib-pick="1">📋 Items chuno <i></i></button><button type="button" class="nb-more" data-nb-more="1" title="Aur (⋮)">⋮</button><button type="button" class="rk-pill nb-pill" data-mn-sheet="1" hidden></button><input type="date" class="nb-date nb-date-x" tabindex="-1" aria-label="Tareekh"></div>
+    <div class="nb-copt"><div class="bc-seg nb-nseg" data-mn-seg="ib.n" data-mn-i="🔢" data-mn-t="Kitne bill (chips)" data-mn-g="🔎 Item wale bills"></div>
+      <span class="nb-day"><button type="button" data-nb-day="-1" data-mn="ib.prev" data-mn-i="‹" data-mn-t="Pichhla din" data-mn-g="🔎 Item wale bills">‹ Pichhla din</button><button type="button" data-nb-day="1" data-mn="ib.next" data-mn-i="›" data-mn-t="Agla din" data-mn-g="🔎 Item wale bills">Agla din ›</button><button type="button" data-nb-cal="1" data-mn="ib.cal" data-mn-i="📅" data-mn-t="Tareekh chunein" data-mn-g="🔎 Item wale bills">📅 Tareekh</button></span><small class="nb-sync"></small></div>
+    <div class="ib-sel"></div><div class="ib-picker" hidden><label class="nb-qchip ib-q"><span>🔍</span><input type="search" data-ib-q="1" placeholder="Item ka naam / code" autocomplete="off"></label><div class="ib-plist"></div><button type="button" class="ib-done" data-ib-done="1">✓ Ho gaya</button></div>
+    <div class="ib-note"></div><div class="nb-list"></div>`;
+  const nseg = box.querySelector('.nb-nseg'), pill = box.querySelector('.nb-pill'), dateIn = box.querySelector('.nb-date'), list = box.querySelector('.nb-list'), syncEl = box.querySelector('.nb-sync');
+  const selEl = box.querySelector('.ib-sel'), picker = box.querySelector('.ib-picker'), plist = box.querySelector('.ib-plist'), pq = box.querySelector('[data-ib-q]'), note = box.querySelector('.ib-note'), pickBtn = box.querySelector('.ib-pickbtn');
+  const paintPick = () => { plist.innerHTML = ibPickList(pq.value); };
+  const paint = () => {
+    watchPast();
+    const vd = viewDay(), isToday = !billsDay, D = new Date(vd + 'T12:00:00');
+    const yd = (() => { const t = new Date(); t.setDate(t.getDate() - 1); return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`; })();
+    dateIn.value = vd; dateIn.max = todayStr(); box.querySelector('[data-nb-day="1"]').disabled = isToday;
+    if (pill) { pill.hidden = isToday; pill.innerHTML = `📅 ${vd === yd ? 'Kal' : D.getDate() + ' ' + D.toLocaleString('en-US', { month: 'short' })} <i>⋮</i>`; }
+    if (nseg) nseg.innerHTML = NB_NS.map(n => `<button type="button" data-nb-n="${n}" class="${nbN === n ? 'is-in' : ''}">${n} chips</button>`).join('');
+    syncEl.innerHTML = posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : '';
+    pickBtn.querySelector('i').textContent = ibSel.length ? String(ibSel.length) : '';
+    pickBtn.classList.toggle('is-in', pick);
+    selEl.innerHTML = ibSel.map(x => `<button type="button" class="ib-sc" data-ib-rm="${esc(x.i)}">${esc(x.n)} <i>✕</i></button>`).join('');
+    picker.hidden = !pick; if (pick && pickDirty) { pickDirty = false; paintPick(); }
+    ibLoadDay(vd);
+    const all = billsData(), S = new Map(ibSel.map(x => [x.i, x.n]));
+    if (!S.size) { note.innerHTML = '<p class="stat-note">📋 Pehle upar se items chunein — phir sirf un items wale bills yahan aayenge</p>'; list.innerHTML = ''; return; }
+    ibFetch(all.filter(b => !b.cancelled));
+    const top = b => !b.cancelled && !b.farq && (b.ps === 1 || b.status === 'new' || b.status === 'posting' || b.status === 'failed' || (!b.ps && b.src === 'app'));
+    const pw = b => b.ps === 2 && b.pt ? b.pt : (b.createdAt || 0);
+    const hitOf = b => { const L = ibLines(b); if (!L) return null; const m = new Map(); for (const l of L) { const k = String(l.i); if (!S.has(k)) continue; const e = m.get(k) || { n: S.get(k) || l.n, q: 0 }; e.q += Number(l.q) || 0; m.set(k, e); } return [...m.values()]; };
+    const rows = [], miss = all.filter(b => !b.cancelled && !ibLines(b)).length;
+    for (const b of all) { if (b.cancelled) continue; const h = hitOf(b); if (h && h.length) rows.push({ b, h }); }
+    const ord = [...rows.filter(r => top(r.b)), ...rows.filter(r => !top(r.b)).sort((x, y) => pw(y.b) - pw(x.b))], shown = ord.slice(0, nbN);
+    note.innerHTML = `<p class="ib-sum">${num(rows.length)} bills mein chuni items${miss ? ` · <span>⏳ ${num(miss)} bills ke items aa rahe hain</span>` : ''}</p>`;
+    list.innerHTML = shown.length ? `<div class="nb-grid ib-grid">${shown.map(({ b, h }) => { const items = `<span class="ib-items">${h.map(x => `<b>${esc(x.n)}</b> ×${num(r3(x.q))}`).join(' · ')}</span>`;
+      const chip = nbChipHTML(b, open, vd, yd).replace('><span class="nb-cno">', '>' + items + '<span class="nb-cno">'), cls = top(b) ? ' ib-un' : '';
+      return chip.replace('class="nb-chip ', `class="nb-chip ib-chip${cls} `) + (open === b.id ? `<div class="nb-cdet">${nbDetHTML(b, 'all')}</div>` : ''); }).join('')}</div>`
+      : `<p class="stat-note">${miss ? '⏳ Bills ke items aa rahe hain…' : 'Is din chuni items wala koi bill nahi'}</p>`;
+  };
+  pq.addEventListener('input', paintPick);
+  box.addEventListener('change', e => { const c = e.target.closest?.('[data-ib-it]'); if (!c) return; const i = c.dataset.ibIt;
+    if (c.checked) { if (!ibSel.some(x => x.i === i)) ibSel.push({ i, n: c.dataset.ibN || '' }); } else ibSel = ibSel.filter(x => x.i !== i);
+    ibKeep(); c.closest('.ib-pr')?.classList.toggle('on', c.checked); paint(); });
+  const goDay = v => { open = ''; billsDay = !v || v >= todayStr() ? '' : v; billsRepaint(); };
+  dateIn.addEventListener('change', () => goDay(dateIn.value));
+  box.addEventListener('click', async e => {
+    if (e.target.closest('[data-ib-back]')) { openToday(); return; }
+    if (e.target.closest('[data-ib-pick]')) { pick = !pick; pickDirty = true; paint(); if (pick) setTimeout(() => { try { pq.focus(); } catch {} }, 30); return; }
+    if (e.target.closest('[data-ib-done]')) { pick = false; pq.value = ''; paint(); return; }
+    const rm = e.target.closest('[data-ib-rm]'); if (rm) { ibSel = ibSel.filter(x => x.i !== rm.dataset.ibRm); ibKeep(); pickDirty = true; paint(); return; }
+    const dd = e.target.closest('[data-nb-day]'); if (dd) { const t = new Date(viewDay() + 'T12:00:00'); t.setDate(t.getDate() + Number(dd.dataset.nbDay)); goDay(`${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`); return; }
+    if (e.target.closest('[data-nb-more]')) { box.classList.toggle('nb-open'); return; }
+    const nn = e.target.closest('[data-nb-n]'); if (nn) { nbN = Number(nn.dataset.nbN) || 20; try { localStorage.setItem('sam-bills-n', String(nbN)); } catch {} billsRepaint(); return; }
+    if (e.target.closest('[data-nb-cal]')) { try { dateIn.showPicker(); } catch { try { dateIn.focus(); dateIn.click(); } catch {} } return; }
+    const ed = e.target.closest('[data-nb-edit]'); if (ed) { e.stopPropagation(); const b = billsData().find(x => x.id === ed.dataset.nbEdit); if (b) editBill(b); return; }
+    const c = e.target.closest('[data-nb]'); if (!c) return;
+    open = open === c.dataset.nb ? '' : c.dataset.nb; paint();
+  });
+  const m = { box, paint }; mounts.add(m); paint();
 }
 setSaleBillsHook(box => { if (!can('sale.bills')) { box.innerHTML = ''; return; } mountBills(box); });   // PC scan screen ka baayan hissa
 // v2.96.2: raat 12 ke baad screen khuli rahe to bhi naya din khud (pehle refresh tak kal ki list rehti thi)

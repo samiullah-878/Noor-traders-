@@ -6641,3 +6641,36 @@ html body #summary .gd-sec .ir-ch .ir-chp.irs-odc{color:#9a5a00!important;backgr
 html body #summary .gd-sec .ir-ch.irs-0{opacity:.65}
 html body #summary .gd-sec .gd-bch .gd-b{height:36px;min-height:36px;width:auto!important;padding:0 14px!important;border-radius:999px;font-size:13px;font-weight:800;white-space:nowrap;border:1.5px solid #c9d6ef!important;background:linear-gradient(180deg,#fff,#eef3fc)!important;color:#1d3b7a!important}
 html body #summary .gd-sec .gd-bch .gd-b.is-in{background:linear-gradient(180deg,#2f5bd3,#1e44b0)!important;border-color:#1e44b0!important;color:#fff!important}
+/* v2.146.0: 🔎 Item wale bills */
+html body #dialogBody .nb-ib .ib-back,html body #dialogBody .nb-ib .ib-pickbtn{height:38px;min-height:38px;width:auto!important;padding:0 14px!important;border-radius:999px;font-size:13px;font-weight:800;white-space:nowrap;border:1.5px solid #c9d6ef!important;background:linear-gradient(180deg,#fff,#eef3fc)!important;color:#1d3b7a!important}
+html body #dialogBody .nb-ib .ib-pickbtn i{font-style:normal;background:#1e44b0;color:#fff;border-radius:999px;padding:0 7px;margin-left:4px;font-size:11.5px}
+html body #dialogBody .nb-ib .ib-pickbtn i:empty{display:none}
+html body #dialogBody .nb-ib .ib-pickbtn.is-in{background:linear-gradient(180deg,#2f5bd3,#1e44b0)!important;color:#fff!important;border-color:#1e44b0!important}
+html body #dialogBody .nb-ib .ib-pickbtn.is-in i{background:#fff;color:#1e44b0}
+html body #dialogBody .nb-ib .ib-sel{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0}
+html body #dialogBody .nb-ib .ib-sc{height:32px;min-height:32px;width:auto!important;padding:0 10px 0 12px!important;border-radius:999px;font-size:12.5px;font-weight:800;border:1px solid #f1d39b!important;background:linear-gradient(180deg,#fffaf0,#fff1d6)!important;color:#7a4b00!important;white-space:nowrap}
+html body #dialogBody .nb-ib .ib-sc i{font-style:normal;opacity:.6;margin-left:4px}
+html body #dialogBody .nb-ib .ib-picker{border:1.5px solid #c9d6ef;border-radius:16px;padding:8px;background:#f8faff;margin:4px 0 8px;display:grid;gap:6px}
+html body #dialogBody .nb-ib .ib-picker[hidden]{display:none}
+html body #dialogBody .nb-ib .ib-q{display:flex;align-items:center;gap:6px;height:42px;padding:0 14px;border-radius:999px;border:1.5px solid #c9d6ef;background:#fff}
+html body #dialogBody .nb-ib .ib-q input{flex:1 1 auto;min-width:0;border:0!important;background:transparent!important;box-shadow:none!important;padding:0!important;height:38px!important;font-size:15px;outline:none}
+html body #dialogBody .nb-ib .ib-plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:5px;max-height:46vh;overflow:auto}
+html body #dialogBody .nb-ib .ib-pr{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:12px;border:1px solid #dfe5f0;background:#fff;min-width:0;cursor:pointer}
+html body #dialogBody .nb-ib .ib-pr.on{border-color:#1e44b0;background:#eef3fc}
+html body #dialogBody .nb-ib .ib-pr input{width:19px;height:19px;flex:0 0 auto}
+html body #dialogBody .nb-ib .ib-pr b{font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto}
+html body #dialogBody .nb-ib .ib-pr small{font-size:10.5px;color:#6b7385;white-space:nowrap}
+html body #dialogBody .nb-ib .ib-done{justify-self:end;height:36px;min-height:36px;width:auto!important;padding:0 16px!important;border-radius:999px;font-weight:800;border:0!important;background:linear-gradient(135deg,#1e9e4a,#166534)!important;color:#fff!important}
+html body #dialogBody .nb-ib .ib-sum{margin:2px 0 6px;font-size:12.5px;color:#4d5b74}html body #dialogBody .nb-ib .ib-sum span{color:#9a6200}
+html body #dialogBody .nb-ib .ib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:9px;align-items:start}
+@media (min-width:700px){html body #dialogBody .nb-ib .ib-grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}}
+html body #dialogBody .nb-ib .ib-chip .ib-items{display:block;width:100%;font-size:13px;line-height:1.35;color:#1d2433;padding-bottom:4px;margin-bottom:2px;border-bottom:1px dashed rgba(0,0,0,.12);white-space:normal}
+html body #dialogBody .nb-ib .ib-chip .ib-items b{font-weight:900}
+html body #dialogBody .nb-ib .nb-chip.ib-un{border-color:#9cbcf0!important;background:linear-gradient(180deg,#fff,#eaf2ff)!important}
+html body #dialogBody .nb-ib .nb-chip.ib-un :is(.nb-cno,.nb-camt,.nb-cst){color:#1e44b0}
+html body #dialogBody .nb-ib .nb-cdet{grid-column:1/-1}
+/* v2.146.0: 📄 chipki bill tasveer — ▲ Chhupao = patli patti (items upar) */
+.pp-billbar.pp-billmin{display:flex;align-items:center;gap:6px;padding:5px 6px!important}
+.pp-billbar.pp-billmin .pp-bmin{flex:1 1 auto;min-width:0;height:36px;min-height:36px;padding:0 14px!important;border-radius:999px!important;font-size:13px!important;font-weight:800!important;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1.5px solid #c9d6ef!important;background:linear-gradient(180deg,#fff,#eef3fc)!important;color:#1d3b7a!important}
+.pp-billbar.pp-billmin>button[data-pp-pin]{flex:0 0 auto;width:36px!important;height:36px;min-height:36px;padding:0!important;border-radius:999px!important}
+.pp-billacts .pp-bhide{background:linear-gradient(180deg,#2f5bd3,#1e44b0)!important;color:#fff!important;border-color:#1e44b0!important;font-weight:800!important}
