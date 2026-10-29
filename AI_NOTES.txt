@@ -6491,3 +6491,8 @@ block poori chaurai (pehle bahar nikal-ti thi). Ledger: .ledger-column border 1.
 - Ghalti: pdf-export html2canvas raasta sirf PEHLI table safhon mein baant-ta tha; baqi tables + headings har safhe ke upar dohrate → safha 1123px se lamba → addImage(…, Math.min(h,1123)) se daba kar (khinchi) tasveer. Supplier-wise (sale + order), Godam list, Sab suppliers ka order — sab kai-table PDF.
 - Ab: kai tables (sab seedhe bachay) + English + tasveer nahi = textPdfBlocks (jsPDF seedha text — h1/h2/p baari baari, har table ki lines safhon mein, naye safhe par table ka sar dobara); Urdu / tasveer = canvasPdfBlocks (hissa-war safhe). Ek-table purana raasta wahi. Lamba safha ab daba nahi — aspect wahi (chhota kar ke beech mein). AI nahi.
 - Qaida: PDF mein ek se zyada table ho to pdf-export ka multi raasta (har table seedha bacha rakho, div ke andar mat chhupao).
+
+## v2.147.2 (2026-10-29) — 📱 Item report list poori chaurai (malik: "ye screen full size honi chahiye")
+- Ghalti: .ir-top grid minmax(300px,1fr) — phone par dabba (irRoot 14px + ir-sec 12px + border) 300px se tang = chips daayein kat-ti thin.
+- Ab: sab chip grids minmax(min(300px,100%),1fr) (ir-top, Supplier-wise irs-chl / irs-list, Sab suppliers sa-items, Item wale bills ib-plist) — kabhi bahar nahi. Phone (≤700px): irRoot padding 5px, ir-sec ka dabba (padding / border / bg) hata = chips kinare se kinare. PC pehle jaisa (2–3 qataar).
+- Packet line ka unit POS ke "Pcs``" jaise nishan se saaf (pkUnit sirf harf). AI nahi.

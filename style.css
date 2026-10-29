@@ -6692,3 +6692,15 @@ html body :is(#summary,#dialogBody) .sa-dmt{grid-column:1/-1;justify-self:start;
 html body :is(#summary,#dialogBody) .sa-dmt.out{background:#b42318;color:#fff!important;border-color:#b42318}
 html body #summary .sa-sec .irs-pdf{height:36px;min-height:36px;padding:0 14px!important;border-radius:999px;font-size:13px;font-weight:800;white-space:nowrap;width:auto!important;border:1px solid #b86d00!important;background:linear-gradient(180deg,#e08a00,#b86d00)!important;color:#fff!important}
 html body #summary .sa-sec .sa-opdf{margin:0 8px 8px}html body #summary .sa-sec .sa-allpdf{margin:4px 0 8px}
+/* v2.147.2: 📱 Item report list POORI chaurai (malik: "ye screen full size honi chahiye") — chips kabhi bahar na niklein (min(…,100%)), phone par andar ka dabba hata */
+html body #summary .ir-top{grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr))}
+html body #dialogBody .irs-chl,html body #summary .sa-sec .sa-items{grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr))}
+html body #dialogBody .nb-ib .ib-plist{grid-template-columns:repeat(auto-fill,minmax(min(220px,100%),1fr))}
+html body #dialogBody .irs-list{grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr))}
+html body :is(#summary,#dialogBody) .ir-ch{max-width:100%;box-sizing:border-box}
+@media (max-width:700px){
+ html body #summary #irRoot.ir-root{padding-left:5px!important;padding-right:5px!important}
+ html body #summary .ir-root .ir-sec{padding:8px 0!important;border:0!important;box-shadow:none!important;background:transparent!important;border-radius:0!important}
+ html body #summary .ir-root .ir-sec>.ir-sh{padding:0 6px}
+ html body #summary .ir-root .ir-sec .sa-items{padding:6px 4px}
+}
