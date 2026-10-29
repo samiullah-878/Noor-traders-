@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Noor Traders · Online Dukan</title>
+<meta name="description" content="Noor Traders ki online dukan — racks par ghoomein, cheez uthayein, counter par parchi banayein aur WhatsApp par order bhejein.">
+<meta name="theme-color" content="#1b2f5c">
+<meta property="og:title" content="Noor Traders · Online Dukan">
+<meta property="og:description" content="Dukan ke racks phone par — cheez chunein, counter par parchi, WhatsApp par order.">
+<meta property="og:image" content="https://samiullah-878.github.io/Noor-traders-/dukan/og.png">
+<meta property="og:url" content="https://samiullah-878.github.io/Noor-traders-/dukan/">
+<meta property="og:type" content="website">
+<link rel="icon" href="../favicon-64.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Manrope:wght@500;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@700&text=%D9%86%D9%88%D8%B1%20%D9%B9%D8%B1%DB%8C%DA%88%D8%B1%D8%B2&display=swap">
+<link rel="stylesheet" href="dukan.css?v=2.148.0">
+</head>
+<body>
+<!-- 🏪 Andar: upar patti · racks ki gali · neeche counter -->
+<header class="top" id="top">
+  <div class="brand"><span class="logo" aria-hidden="true">NT</span><span class="bt"><b>Noor Traders</b><small id="where">Dukan khul rahi hai…</small></span></div>
+  <div class="top-acts">
+    <button type="button" class="ic" id="findBtn" aria-label="Dhoondo">🔍</button>
+    <button type="button" class="ic" id="mapBtn" aria-label="Dukan ka naqsha">🗺</button>
+  </div>
+  <div class="walk" aria-hidden="true"><i id="walkBar"></i></div>
+</header>
+
+<main class="aisle-wrap">
+  <button type="button" class="step prev" id="prevBtn" aria-label="Pichhla rack">‹</button>
+  <div class="aisle" id="aisle" aria-label="Racks"></div>
+  <button type="button" class="step next" id="nextBtn" aria-label="Agla rack">›</button>
+  <p class="hint" id="hint" hidden>👉 Ungli se agla rack</p>
+</main>
+
+<!-- 🧾 Counter (cart nahi — dukan ka counter + neeli tokri) -->
+<button type="button" class="counter" id="counterBar" aria-label="Counter kholo">
+  <span class="c-txt"><b>🧾 Counter</b><small id="cSum">Counter khali hai — rack se cheez uthayein</small></span>
+  <span class="crate" id="crate"><span class="crate-peek" id="cratePeek"></span><span class="crate-body"></span><span class="crate-n" id="crateN" hidden>0</span></span>
+</button>
+
+<!-- 🚪 Darwaza: board + shutter -->
+<div class="door" id="door">
+  <div class="board">
+    <span class="ur" lang="ur">نور ٹریڈرز</span>
+    <b>NOOR TRADERS</b>
+    <small id="dLine">Wholesale &amp; Retail</small>
+    <span class="bulbs" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+  </div>
+  <div class="shutter" id="shutter">
+    <div class="sh-paint">
+      <p class="hello">Assalam o Alaikum 👋</p>
+      <p class="hello2">Andar tashreef laiye — racks par ghoomein, cheez uthayein, counter par parchi.</p>
+      <button type="button" class="enter" id="enterBtn" disabled><span class="ar">⬆</span> <span id="enterTxt">Maal saja rahe hain…</span></button>
+      <p class="d-meta" id="dMeta"></p>
+    </div>
+    <span class="lock" aria-hidden="true"></span>
+  </div>
+</div>
+
+<!-- 🛍 Item: shelf se uthaya -->
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-bg" data-close></div>
+  <div class="sheet-card" role="dialog" aria-modal="true" aria-labelledby="shName">
+    <button type="button" class="x" data-close aria-label="Band karo">✕</button>
+    <div class="sh-img" id="shImg"></div>
+    <div class="sh-meta">
+      <span class="sh-rack" id="shRack"></span>
+      <h2 id="shName"></h2>
+      <p class="sh-rate"><b id="shRate"></b> <small id="shUnit"></small></p>
+    </div>
+    <div class="sh-row">
+      <div class="qty"><button type="button" data-q="-1" aria-label="Kam">−</button><output id="shQty">1</output><button type="button" data-q="1" aria-label="Zyada">+</button></div>
+      <button type="button" class="sh-add" id="shAdd">🧺 Counter par rakho</button>
+    </div>
+  </div>
+</div>
+
+<!-- 🧾 Counter ka manzar -->
+<div class="cv" id="cv" hidden>
+  <header class="cv-top"><button type="button" class="back" data-cv-close>‹ Racks par wapas</button><b>🧾 Counter</b></header>
+  <div class="cv-scroll">
+    <div class="cv-scene">
+      <div class="cv-light" aria-hidden="true"></div>
+      <div class="cv-desk">
+        <div class="monitor" aria-hidden="true"><span class="m-scr"><i>NOOR TRADERS</i><b id="mTot">Rs 0</b></span><span class="m-neck"></span></div>
+        <div class="big-crate" id="bigCrate"><div class="bc-in" id="bcIn"></div><span class="bc-rim"></span></div>
+      </div>
+      <div class="cv-steel" aria-hidden="true"></div>
+    </div>
+    <section class="parchi" aria-label="Parchi">
+      <header><b>NOOR TRADERS</b><small>Online parchi · <span id="pDate"></span></small></header>
+      <ol id="pLines"></ol>
+      <p class="p-empty" id="pEmpty">Tokri khali hai. Racks par jaa kar cheez uthayein.</p>
+      <footer><span>Kul (<span id="pCount">0</span>)</span><b id="pTot">Rs 0</b></footer>
+      <p class="p-note">Rates dukan ke bill ke mutabiq — tabdeel ho sakte hain.</p>
+    </section>
+    <form class="who" id="who" autocomplete="on">
+      <h3>Aap ki maloomat</h3>
+      <label>Naam<input name="name" autocomplete="name" placeholder="Apna naam"></label>
+      <label>Mobile<input name="phone" inputmode="tel" autocomplete="tel" placeholder="03xx xxxxxxx"></label>
+      <div class="pick" role="radiogroup" aria-label="Maal kaise lenge">
+        <label><input type="radio" name="how" value="self" checked><span>🏪 Khud le jaunga</span></label>
+        <label><input type="radio" name="how" value="home"><span>🛵 Ghar bhejo</span></label>
+      </div>
+      <label id="addrL" hidden>Pata<textarea name="addr" rows="2" autocomplete="street-address" placeholder="Gali, mohalla, nishani"></textarea></label>
+      <button type="submit" class="send" id="sendBtn">📲 WhatsApp par order bhejo</button>
+      <p class="send-note" id="sendNote"></p>
+    </form>
+    <p class="cv-foot" id="cvFoot"></p>
+  </div>
+</div>
+
+<!-- 🔍 Dhoondo -->
+<div class="find" id="find" hidden>
+  <div class="find-top"><input id="findQ" type="search" placeholder="Cheez ka naam likhein…" autocomplete="off" enterkeyhint="search"><button type="button" class="ic" data-find-close aria-label="Band karo">✕</button></div>
+  <div class="find-list" id="findList"></div>
+</div>
+
+<!-- 🗺 Naqsha -->
+<div class="map" id="map" hidden>
+  <div class="map-card">
+    <header><b>🗺 Dukan ka naqsha</b><button type="button" class="ic" data-map-close aria-label="Band karo">✕</button></header>
+    <ol class="path" id="mapList"></ol>
+  </div>
+</div>
+
+<div class="oops" id="oops" hidden><p id="oopsTxt"></p><button type="button" id="retryBtn">🔄 Dobara koshish</button></div>
+<script type="module" src="dukan.js?v=2.148.0"></script>
+</body>
+</html>

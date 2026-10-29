@@ -1,5 +1,5 @@
 {
- "version": "2026-10-29.1",
+ "version": "2026-10-30.1",
  "note": "↩ pos-khata-sync (j): opening theek WAPAS malik ki ijazat se (milanJobs @undo-opening), opening hisaab mein 15-Sep se pehle ki SAB app entries, autoMilan opening KABHI khud nahi, bank/HBL khata opening nahi. 📜 pos-khata-sync (i): OPENING FARQ malik ki ijazat se (milanJobs ids @opening — POS JV ya app sabqa POS jaisa). 🔎 pos-khata-sync (h): BILL JAANCH — farq wale khate ki POS purchase bill entry ka POS mein asal haal; delete / cancel / party / raqam / 📌 khud theek, baqi wajah blueAccess/billJaanch. 📦 pos-khata-sync: khate ka Saman liya (app wala, 27 Oct se) bhi POS JV (Purchase Dr / party Cr); milanJobs 25 / chakkar. 🔄 pos-khata-sync: POS baqaya/lines foran taza (posLedgerReq + milan job ke baad), sync ghalti se ledger na ruke, cancel voucher baqaye mein nahi. 📦 pk-report v1.1: SAB branches (NOOR TRADERS + godam) — pkReport-<branch>-<k>. ⚖️ pos-khata-sync: BARABAR KARO (milanJobs app/pos — chuni hui purani entries / vouchers doosri taraf). 📦 pk-report: Godam 2 packet report (3 mahine, barcode-war, sirf parhti) → posStats/pkReport. 🔐 rules-publish (malik ne 27 Oct OK kiya): Firestore rules GitHub se khud publish → blueAccess/rulesPub. 🔍 pos-khata-sync: har 15 min har jude khate ki POS ledger LINES posLines/<appId> (sirf badle) — app mein \"Farq dhoondo\" foran. ⚖️ posLedger, 🔒 khata band, dabbe wali rasid pehle se.",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -25,7 +25,7 @@
   "subcode-auto.bat": "40d8530886748dc71c8139a70ce768922f2e3c9aae896d2ed13731948e9d9d3a",
   "subcode-sync.js": "7b8ebb8ca0f04228243b4b0463e8e8e631bf5798f81bdb756f96f58a978da41b",
   "sync-bills.js": "aa5df1d80de2df1ed0952617dd77cf9fcb62bb189921a641d80d73b74dd2ea49",
-  "sync-stock.js": "be46cdb701808d941682a3c34ccb229582127ecc94569c111a53d86ed9d5764e",
+  "sync-stock.js": "57b492b9af2da2d776646097fe11a566dba5619f1a70fd04cb8b40710201d860",
   "sync.js": "3d6eaa938d5f81cd6732486225ad266b78b054119b5f97f441cba7e17424e54a",
   "transfer-auto.bat": "bc22e9e1dee01b646f4153fb971535dcf5c3fe8d4b84bb0bd55c451971ddb4f7",
   "transfer-dekho-auto.bat": "a7ea0955221df6e712737467a9d39e110c867f1f2526f8572fc76955625156ee",

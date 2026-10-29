@@ -8,7 +8,7 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const GROUPS = [
   ['📒 Rozana', ['khataNav', 'dailyNav', 'expenseNav', 'cashNav', 'dastiNav', 'dueNav', 'notesNav']],
   ['📦 Maal', ['stockNav', 'transferNav', 'purchaseNav', 'posNav', 'barcodeNav', 'factoryNav']],
-  ['🧾 Sale / Galla', ['saleNav', 'gallaNav', 'nazarNav', 'larkaNav', 'gaariNav']],
+  ['🧾 Sale / Galla', ['saleNav', 'gallaNav', 'nazarNav', 'larkaNav', 'gaariNav', 'webNav']],
   ['📊 Report', ['irepNav', 'historyNav', 'hblNav']],
 ];
 const DEF_PINS = ['khataNav', 'dailyNav', 'stockNav', 'purchaseNav'];

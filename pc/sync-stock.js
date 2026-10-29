@@ -4,6 +4,8 @@
 //  2026-10-04: har item ke saath category ka naam (cat) — Items ka '%ategor%ID' khana + category table khud dhoondta hai
 //  v2 (2026-10-11): har 5 sec fingerprint -> tabdeeli par foran sync · sachi dhadkan · 90 sec chowkidar · posStock/_live (app chip)
 //  2026-10-08: ws = W PCS (SaleRateSize) jab W CTN÷pack (SaleRate3 = wrate) se alag ho — app CTN aur PCS alag dikhaye
+//  v3 (2026-10-30): 🏪 ONLINE DUKAN — customer website ke liye webDukan/cat [[id, naam, category, RETAIL rate, unit]] (sirf majood + rate > 0, ⛔ band nahi;
+//                   khareed / nafa / ginti KABHI nahi — ye doc sab parhte hain). Badla na ho to nahi likhta.
 // =========================================================
 //
 //  Chalane ka tareeqa:   node sync-stock.js
@@ -317,6 +319,34 @@ async function readStock(pool, branch, lastRates, codes, subq, shows, subs) {
   });
 }
 
+// v3 (2026-10-30): 🏪 ONLINE DUKAN (website dukan/) — halki public list. Dukan (NOOR TRADERS, naam se) ka retail rate, warna kisi godam ka.
+const webCol = db.collection('businesses').doc(BUSINESS_ID).collection('webDukan');
+const bandRef = db.collection('businesses').doc(BUSINESS_ID).collection('stockCount').doc('_hidden');
+let webHash = '', webBandAt = 0, webBand = {};
+async function pushWeb(byBranch, names) {
+  try {
+    if (Date.now() - webBandAt > 10 * 60e3) { try { const b = await bandRef.get(); webBand = (b.exists && b.data() && b.data().items) || {}; } catch {} webBandAt = Date.now(); }
+    const keys = [...byBranch.keys()];
+    const shopB = keys.find(b => /noor/i.test(String(names[b] || ''))) ?? (byBranch.has(1) ? 1 : keys[0]);
+    const M = new Map();
+    for (const [b, items] of byBranch) for (const r of items) {
+      const k = String(r.id); let m = M.get(k);
+      if (!m) { m = { id: r.id, n: r.name, c: r.cat || '', r: 0, u: r.uName || 'Pcs', s: 0, shop: false }; M.set(k, m); }
+      m.s += Number(r.stock) || 0;
+      if (!m.c && r.cat) m.c = r.cat;
+      if (b === shopB && Number(r.rate) > 0) { m.r = Number(r.rate); m.shop = true; m.u = r.uName || m.u; }
+      else if (!m.shop && Number(r.rate) > m.r) m.r = Number(r.rate);
+    }
+    const rows = [...M.values()].filter(m => m.s > 0 && m.r > 0 && m.n && !webBand[String(m.id)])
+      .sort((a, b) => Number(a.id) - Number(b.id)).map(m => [m.id, m.n, m.c, round2(m.r), m.u]);
+    const h = hashOf(rows);
+    if (h === webHash) return;
+    await webCol.doc('cat').set({ j: JSON.stringify(rows), n: rows.length, h, at: Date.now(), by: 'pc' });
+    webHash = h;
+    console.log(`[${new Date().toLocaleTimeString()}] 🏪 Online dukan: ${rows.length} items website par`);
+  } catch (e) { console.log('🏪 Online dukan list nahi likhi:', e.message); }
+}
+
 let cycle = 0;
 
 const readState = () => {
@@ -450,15 +480,18 @@ async function runOnce() {
     const shows = await showMap(pool);
     const subs = await subFullMap(pool);
 
+    const byBranch = new Map();   // v3: 🏪 online dukan
     for (const branch of list) {
       const name = names[branch] || ('Branch ' + branch);
       const items = await readStock(pool, branch, lastRates, codes, subq, shows, subs);
+      byBranch.set(branch, items);
       const r = await pushBranch(branch, items, name);
       if (r.written || r.removed) anyChange = true;
       beat();   // har godam ke baad = kaam chal raha hai
       const tag = r.fullCheck ? ' | poora milaan' : '';
       console.log(`[${new Date().toLocaleTimeString()}] ${name} (${branch}): ${r.total} items, ${r.chunks} chunks | likhe ${r.written} | chhore ${r.skipped} | hataye ${r.removed}${tag}`);
     }
+    await pushWeb(byBranch, names);
   } catch (e) { await resetPool(); throw e; }
   await markLive(anyChange);
   return anyChange;
