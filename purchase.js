@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.148.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.148.0';
-import { blurScore, blurText } from './pic-check.js?v=2.148.0';   // v2.103.43: 📷 dhundli check
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.149.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.149.0';
+import { blurScore, blurText } from './pic-check.js?v=2.149.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -485,17 +485,26 @@ function navHTML(after) {
     <button type="button" class="got" data-pp-nav="1"${next ? '' : ' disabled'}>Agla ›</button></div></div>`;
 }
 async function navGo(d) {
+  if (bcBusy) { notice('⏳ Pehla bill abhi post ho raha hai…'); return; }
   const N = editNav; if (!N) return; const j = N.i + d, n = N.list[j]; if (!n) return;
   if (cart.length && (!edit || editSnap !== cartSig()) && !confirm(`Is bill mein tabdeeli SAVE nahi hui — chhor kar ${d > 0 ? 'agla' : 'pichhla'} bill kholein?`)) return;
   cart = []; edit = null; N.i = j; notice('⏳ ' + n.label + ' khul raha hai…');
   await openBillForEdit(n.id, n.partyId, n.minUpd);
   rerender();
 }
-async function openBillForEdit(id, partyId, minUpdated) {
+async function openBillForEdit(id, partyId, minUpdated, unposted) {
   let b = await cloud.purchaseBill(id).catch(() => null);
   if (!billReady(b, minUpdated)) { b = await waitBill(id, minUpdated); if (!b) return; }
   const st = Number(b.docStatus ?? b.status);
-  if (st === 2) { alert('Yeh bill POSTED hai — pehle malik Unpost kare, phir edit.'); return; }
+  if (st === 2 && !unposted) {   // v2.149.0: malik = "↩ Unpost kar ke kholo" (PC jawab ke baad khulta hai)
+    if (!isOwner() || typeof window.ntPostWait !== 'function') { alert('Yeh bill POSTED hai — pehle malik Unpost kare, phir edit.'); return; }
+    if (!confirm('Yeh bill POS mein POSTED hai.\n\n↩ Unpost kar ke edit ke liye kholein?')) return;
+    const pid = Number(b.purchaseId) || Number(String(id).replace(/^pos-/, '')) || 0;
+    ppFlow = { pid, partyId, label: 'Bill ' + (b.billNo || b.purchaseNo || pid), st: 'unpost' }; rerender();
+    const r = await window.ntPostWait('unpost', [pid]);
+    if (!(r.ok > 0)) { ppFlow = { ...ppFlow, st: 'bad', why: 'Unpost nahi hua: ' + ((r.errors || [])[0] || '') }; rerender(); return; }
+    ppFlow = { ...ppFlow, st: 'unposted' };
+  }
   if (st === 3) { alert('Yeh bill POS mein CANCEL hai.'); return; }
   if (!isOwner() && b.date !== todayStr()) { alert('Mulazim sirf AAJ ka khula bill edit kar sakta hai.'); return; }
   const m = ppLoadBill(b, { partyId }); if (m === 'cancel') return; if (m) { alert(m); return; }
@@ -615,7 +624,7 @@ export function renderPP() {
   const gopts = b => (Number(b) ? '' : '<option value="0" selected disabled>— Godam chunein —</option>') + s.branches.map(x => `<option value="${x}"${Number(x) === Number(b) ? ' selected' : ''}>${esc(s.branchName(x, s.names))}</option>`).join('');
   const P = partyOf(supplier), hdShow = hdOpen || supOpen;   // v2.120.0: supplier + godam chun liya = sirf patti · v2.129.0: naya bill = bhi sirf patti (malik: upar ka dabba / godam / bill# / carton hata do)
   const hdBar = P && !hdShow ? `<button type="button" class="pp-hbar" data-pp-hd="1" title="Supplier / godam / bill# / % badlein"><span class="pp-av">${esc(String(P.name || '').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase() || '?')}</span><b>${esc(P.name)}</b><span class="pp-hsep">·</span><span>🏬 ${esc(s.branches.length ? s.branchName(godam, s.names) : '—')}</span>${invoiceNo ? `<span class="pp-hsep">·</span><span>Bill# ${esc(invoiceNo)}</span>` : ''}${Number(pct) || Number(xtra) ? `<span class="pp-hsep">·</span><span>⚙️ ${Number(pct) ? '+' + num(pct) + '%' : ''}${Number(pct) && Number(xtra) ? ' · ' : ''}${Number(xtra) ? 'Rs ' + num(xtra) : ''}</span>` : ''}<i>badlo ▾</i></button>` : !hdShow ? `<button type="button" class="pp-hbar pp-hbar-need" data-pp-hd="1"><span class="pp-av">?</span><b>${P ? esc(P.name) : '👤 Supplier chunein'}</b><span class="pp-hsep">·</span><span>🏬 ${s.branches.length && Number(godam) ? esc(s.branchName(godam, s.names)) : 'Godam chunein'}</span><i>▾</i></button>` : '';
-  const bcBar = (edit && Number(edit.purchaseId) && typeof window.ntBcTick === 'function' ? `<div class="pp-bc" data-mn-keep="1">${window.ntBcTick('pos-' + Number(edit.purchaseId), 'big')}${typeof window.ntBcGo === 'function' ? `<button type="button" class="got pp-bcgo" data-pp-bcgo="1"${bcBusy ? ' disabled' : ''}>${bcBusy ? '⏳' : '✓ Check + 📌 Post' + (editNav?.bc && editNav.list[editNav.i + 1] ? ' · agla ›' : editNav?.bc ? ' · list ›' : '')}</button>` : ''}</div>` : '');   // v2.128.0: ✓ Check + 📌 Post patti form band hone par bhi dikhe
+  const bcBar = (edit && Number(edit.purchaseId) && typeof window.ntBcTick === 'function' ? `<div class="pp-bc" data-mn-keep="1">${window.ntBcTick('pos-' + Number(edit.purchaseId), 'big')}${typeof window.ntBcGo === 'function' ? `<button type="button" class="got pp-bcgo" data-pp-bcgo="1"${bcBusy ? ' disabled' : ''}>${bcBusy ? '⏳' : '✓ Check + 📌 Post' + (editNav?.list?.[editNav.i + 1] ? ' · agla ›' : editNav?.bc ? ' · list ›' : '')}</button>` : ''}</div>` : '');   // v2.128.0: ✓ Check + 📌 Post patti form band hone par bhi dikhe
   $('summary').innerHTML = `<div class="stock-head sale-head pp-head" data-pp-root="1">
     ${hdBar}${bcBar}${fromBarHTML()}<div class="pp-hd${hdShow ? '' : ' pp-hd-off'}">
     <div class="pp-modes"><button type="button" class="on">🧾 Items wali bill</button>${photoFormOf ? '<button type="button" data-pp-photo="1" data-mn="pp.photo" data-mn-i="📷" data-mn-t="Sirf photo" data-mn-s="photo + raqam (bina items)" data-mn-g="🧾 Purchase — kaam">📷 Sirf photo + raqam</button>' : ''}</div>
@@ -667,8 +676,8 @@ export function renderPP() {
     <p class="stat-note">Bill POS mein baqi bills jaisa (credit, open) banega — post baad mein "📌 post" se. ${edit ? 'Payment ki entry pehle jaisi alag.' : 'Galla se cash chuna to galla wala "de diye" dabate hi supplier ko payment khata mein khud lag jayegi.'}</p></div>` : '';
   const pinned = billPin && billPics.length ? (billHide ? `<div class="pp-billbar pp-billmin"><button type="button" class="pp-bmin" data-pp-bshow="1">📄 Bill${billPics.length > 1 ? ' ' + (billIx + 1) + '/' + billPics.length : ''} · ▼ Dikhao</button><button type="button" data-pp-pin="1" aria-label="Hatao">✕</button></div>`   // v2.146.0: ▲ Chhupao = patli patti, items upar (malik)
     : `<div class="pp-billbar" data-zoom="${billZoom}"><div class="pp-billwrap"><img src="${billPics[Math.min(billIx, billPics.length - 1)]}" alt="bill"></div><div class="pp-billacts"><button type="button" class="pp-bhide" data-pp-bhide="1">▲ Chhupao</button><button type="button" data-pp-zoom="-1">−</button><button type="button" data-pp-zoom="1">+</button>${billPics.length > 1 ? `<button type="button" data-pp-nextpic="1">${billIx + 1}/${billPics.length} ›</button>` : ''}<button type="button" data-pp-pic="${billIx}">⤢ Poori screen</button><button type="button" data-pp-pin="1">✕</button></div></div>`) : '';
-  $('list').innerHTML = pinned + camRow + found + (cart.length ? bar + (isGrid() || isRows() ? '' : foldBarHTML()) + `<div class="sale-cart${isGrid() || isRows() ? ' pp-gridc' : ''}">${rows || '<p class="stat-note">Is chunao mein koi item nahi</p>'}</div>` + foot :
-    (q ? '' : (editNav ? navHTML(true) : '') + `<div class="empty"><strong>Naya purchase bill</strong><p>Upar supplier chunein, phir item ka naam likhein ya 📷 se scan karein.</p></div>`));
+  $('list').innerHTML = flowHTML() + pinned + camRow + found + (cart.length ? bar + (isGrid() || isRows() ? '' : foldBarHTML()) + `<div class="sale-cart${isGrid() || isRows() ? ' pp-gridc' : ''}">${rows || '<p class="stat-note">Is chunao mein koi item nahi</p>'}</div>` + foot :
+    (q ? '' : (editNav ? navHTML(!ppFlow) : '') + `<div class="empty"><strong>Naya purchase bill</strong><p>Upar supplier chunein, phir item ka naam likhein ya 📷 se scan karein.</p></div>`));
   if (Date.now() - ppAddAt < 1800 && ppAddAt !== ppScrolled) { ppScrolled = ppAddAt; requestAnimationFrame(() => keepScan(document.querySelector('.pp-line.fresh'))); }   // scan box upar rahe (nayi line us ke neeche)
   $('actions').parentElement && $('actions').classList.toggle('pp-foot', cart.length > 0 && (isGrid() || isRows()));   // v2.121.0: chips ki patti footer ke andar
   $('actions').classList.toggle('pp-small', cart.length > 0);   // v2.128.0: malik — neeche ke buttons chhote (📷 search mein chala gaya)
@@ -777,6 +786,31 @@ function paintMrp(i) {
 }
 const saveLabel = t => (edit ? '💾 UPDATE · Rs ' : '💾 POS bhejo · Rs ') + num(t);
 let bcBusy = false;
+// v2.149.0: ✓ CHECK + 📌 POST EK CLICK (malik: "Update ki bajaye Check + Post dabayein to bill update ho, rates lagein, post ho jaye · Unpost ka option")
+//   flow: 💾 UPDATE (naye rates, bina "Bhejein?") → PC ka intezar (appPurchases status done) → ✓ check + 📌 post (PC jawab) → agla bill.
+//   Update fail / PC 3 min chup = post KABHI nahi. ppFlow = upar ki patti {pid, partyId, label, st, why, rates} · ↩ Unpost sirf malik (postJobs rules).
+let ppFlow = null;
+function flowHTML() {
+  const F = ppFlow; if (!F) return '';
+  const T = { upd: '⏳ Update bhej raha…', wait: '⏳ POS mein update + naye rates…', post: '⏳ Check + 📌 post…', posted: '✅ Update + rates + check + 📌 POST ho gaya', checked: '✅ Update + check ho gaya — 📌 post nahi hua', bad: '✕ Post nahi kiya', unpost: '⏳ ↩ Unpost ho raha…', unposted: '↩ Unpost ho gaya — ab edit ho sakta hai' }[F.st] || '';
+  const busy = ['upd', 'wait', 'post', 'unpost'].includes(F.st);
+  const acts = busy ? '' : `${F.st === 'posted' && isOwner() ? '<button type="button" class="pp-fl-b" data-pp-unpost="1">↩ Unpost</button>' : ''}${F.st === 'unposted' && !edit ? '<button type="button" class="pp-fl-b" data-pp-flopen="1">✏️ Kholo</button>' : ''}<button type="button" class="pp-fl-x" data-pp-flx="1" aria-label="Band karo">✕</button>`;
+  return `<div class="pp-flow ${F.st}" data-mn-keep="1"><span class="pp-fl-t"><b>${T}</b><small>${esc(F.label || '')}${F.rates ? ' · ' + num(F.rates) + ' items ke rate lage' : ''}${F.why ? ' · ' + esc(F.why) : ''}</small></span>${acts}</div>`;
+}
+function waitAppPurchase(id, ms) {
+  return new Promise(res => {
+    let done = false, stop = null;
+    const fin = r => { if (done) return; done = true; try { stop && stop(); } catch {} res(r); };
+    if (!cloud?.watchAppPurchase) { fin({ ok: false, why: 'app purani hai — Update karein' }); return; }
+    stop = cloud.watchAppPurchase(id, (p, e) => {
+      if (e) { fin({ ok: false, why: 'status nahi parh saka: ' + (e.message || e) }); return; }
+      if (!p) return;
+      if (p.status === 'done') fin({ ok: true, rates: Number(p.rates) || 0, rateError: String(p.rateError || ''), doneAt: Number(p.doneAt) || Date.now() });
+      else if (['failed', 'cancelled', 'replaced'].includes(p.status)) fin({ ok: false, why: p.status === 'failed' ? 'Update nahi hua: ' + (p.error || '') : 'Update ' + p.status });
+    });
+    setTimeout(() => fin({ ok: false, why: 'PC ne 3 minute mein update nahi kiya — PC on hai? (update baad mein ho jayega, post khud NAHI hoga)' }), ms);
+  });
+}
 let fromEntry = null;   // v2.128.0: 📎 larke ki purchase entry se POS bill — {id, partyId, amount (paisa), via, kind, date}; bhejte waqt wahi entry is bill se jur jati hai (PC purchase-post larka)
 export function ppOpenFrom(en) {
   if (!en || !en.id || !partyOf(en.partyId)) { notice('Entry ka supplier nahi mila'); return false; }
@@ -1123,7 +1157,7 @@ document.addEventListener('click', async e => {
     return; }
   const ba = e.target.closest?.('[data-pp-retry],[data-pp-reopen],[data-pp-editdone],[data-pp-cancel]');
   if (ba) { const d = ba.dataset; billAct(d.ppRetry ? 'retry' : d.ppReopen ? 'reopen' : d.ppEditdone ? 'editdone' : 'cancel', d.ppRetry || d.ppReopen || d.ppEditdone || d.ppCancel, ba); return; }
-  const t = e.target.closest?.('[data-pp-bcgo],[data-pp-fromx],[data-pp-sup],[data-pp-sup-change],[data-pp-supfind],[data-pp-add],[data-pp-del],[data-pp-clear],[data-pp-save],[data-pp-today],[data-pp-camera],[data-pp-old],[data-pp-w],[data-pp-wall],[data-pp-wall-custom],[data-pp-old-all],[data-pp-copy]');
+  const t = e.target.closest?.('[data-pp-bcgo],[data-pp-unpost],[data-pp-flopen],[data-pp-flx],[data-pp-fromx],[data-pp-sup],[data-pp-sup-change],[data-pp-supfind],[data-pp-add],[data-pp-del],[data-pp-clear],[data-pp-save],[data-pp-today],[data-pp-camera],[data-pp-old],[data-pp-w],[data-pp-wall],[data-pp-wall-custom],[data-pp-old-all],[data-pp-copy]');
   if (!t) return;
   const d = t.dataset;
   if (d.ppSup) { supplier = d.ppSup; notePartyPick(supplier); supOpen = false; supQuery = ''; hdOpen = !!(stock().branches.length && !Number(godam)); keepDraft(); rerender(); return; }   // v2.129.0: godam baqi ho to form khula rahe, warna patti
@@ -1134,18 +1168,38 @@ document.addEventListener('click', async e => {
   if (d.ppClear) { if (!confirm(edit ? 'Edit chhor kar screen saaf kar dein? (POS ka bill waisa hi rahega)' : 'Yeh purchase bill saaf kar dein?')) return; cart = []; note = ''; invoiceNo = ''; edit = null; editNav = null; day = ''; xtra = 0; xtraName = ''; pct = 0; supplier = ''; godam = 0; supQuery = ''; supOpen = false; gallaMode = 'none'; gallaOwn = 0; setBillPics([]); billPin = false; aiRows = null; aiBillInfo = null; jView = 'list'; jIx = -1; keepDraft(); rerender(); return; }
   if (d.ppCamera) { openSaleCamera(); return; }
   if (d.ppFromx) { fromEntry = null; keepDraft(); rerender(); return; }
-  if (d.ppBcgo) {   // v2.128.0: ✓ Check + 📌 Post (wahi bill-check ka raasta) → agla bill khud / list wapas
+  if (d.ppBcgo) {   // v2.149.0: EK CLICK = 💾 UPDATE (naye rates, bina "Bhejein?") → PC ka intezar → ✓ check + 📌 post → agla bill (v2.128.0 wahi bcGo raasta)
     if (!edit || !Number(edit.purchaseId) || bcBusy) return;
-    if (editSnap !== cartSig() && !confirm('Is bill mein tabdeeli SAVE nahi hui (pehle 💾 UPDATE dabayein). Phir bhi check + post karein?')) return;
-    const id = 'pos-' + Number(edit.purchaseId); bcBusy = true; rerender();
-    let ok = false; try { ok = await window.ntBcGo(id); } catch (err) { notice('Check nahi hua: ' + (err?.message || err)); }
-    bcBusy = false; if (!ok) { rerender(); return; }
-    const N = editNav, next = N?.bc ? N.list[N.i + 1] : null;
-    cart = []; edit = null; editSnap = ''; keepDraft();
-    if (next) { await navGo(1); return; }
+    const pid = Number(edit.purchaseId), id = 'pos-' + pid, N = editNav, pty = supplier;
+    const lbl = `${partyOf(supplier)?.name || 'Supplier'} · Bill ${edit.billNo || pid}`;
+    bcBusy = true; ppFlow = { pid, partyId: pty, label: lbl, st: 'upd' }; rerender();
+    let r; try { r = await save({ direct: true }); } catch (err) { r = { ok: false, why: [err?.message || String(err)] }; }
+    if (!r || !r.ok) { bcBusy = false; ppFlow = r?.why?.length ? { pid, partyId: pty, label: lbl, st: 'bad', why: r.why[0] } : null; rerender(); return; }   // undefined = sawal par Cancel
+    ppFlow = { pid, partyId: pty, label: lbl + ' · Rs ' + num(r.total), st: 'wait' }; rerender();
+    const u = await waitAppPurchase(r.id, 180000);
+    if (!u.ok) { bcBusy = false; ppFlow = { ...ppFlow, st: 'bad', why: u.why }; rerender(); notice('✕ Post nahi kiya — ' + u.why); return; }
+    ppFlow = { ...ppFlow, st: 'post', rates: u.rates, upd: u.doneAt }; rerender();
+    let g = null;
+    try { g = typeof window.ntBcGoWait === 'function' ? await window.ntBcGoWait(id) : null; } catch (err) { g = { ok: false, why: err?.message || String(err) }; }
+    if ((!g || g.why === 'nokhata') && isOwner() && typeof window.ntPostWait === 'function') { const pr = await window.ntPostWait('post', [pid]); g = { ok: pr.ok > 0, posted: pr.ok > 0, why: pr.ok > 0 ? '' : ((pr.errors || [])[0] || 'post nahi hua') }; }
+    bcBusy = false;
+    ppFlow = { ...ppFlow, st: g?.posted ? 'posted' : g?.ok ? 'checked' : 'bad', why: g?.posted ? (u.rateError ? 'rates: ' + u.rateError : '') : (g?.why === 'nokhata' ? 'bill khate mein nahi mila' : (g?.why || 'post nahi hua')) };
+    notice(g?.posted ? '✅ ' + lbl + ' — update + rates + check + 📌 post' : '⚠️ ' + lbl + ' — post nahi hua' + (g?.why ? ': ' + g.why : ''));
+    const next = N && N.list[N.i + 1];
+    if (next) { await navGo(1); rerender(); return; }
     editNav = null; rerender(); if (N?.bc) { notice('✅ List ke sab bill check ho gaye'); window.ntBcBack?.(); }
     return;
   }
+  if (d.ppUnpost) {   // v2.149.0: ↩ Unpost (malik) — abhi post hua bill wapas
+    const F = ppFlow; if (!F || !isOwner() || bcBusy || typeof window.ntPostWait !== 'function') return;
+    if (!confirm('↩ UNPOST karein?\n' + F.label + '\n\nPhir yeh bill dobara edit ho sakega.')) return;
+    ppFlow = { ...F, st: 'unpost', why: '' }; rerender();
+    const r = await window.ntPostWait('unpost', [F.pid]);
+    ppFlow = { ...F, st: r.ok > 0 ? 'unposted' : 'bad', why: r.ok > 0 ? '' : 'Unpost nahi hua: ' + ((r.errors || [])[0] || '') }; rerender();
+    return;
+  }
+  if (d.ppFlopen) { const F = ppFlow; if (!F || bcBusy) return; if (cart.length && !confirm('Screen par ek bill adhoora hai — chhor kar yeh bill kholein?')) return; cart = []; edit = null; notice('⏳ Bill khul raha hai…'); await openBillForEdit('pos-' + F.pid, F.partyId || '', Number(F.upd) || 0, true); rerender(); return; }   // upd = PC ka naya bill (purana stamp = PC edit rok deta)
+  if (d.ppFlx) { if (!bcBusy) { ppFlow = null; rerender(); } return; }
   if (d.ppToday) { openToday(); return; }
   if (d.ppOld != null) { const l = cart[d.ppOld]; if (l) { allModes(l, 'old'); recalc(l); keepDraft(); rerender(); } return; }
   if (d.ppW) { const [i, p] = d.ppW.split(':'); const l = cart[i]; if (l) { l.wMode = Number(p); l.wcMode = Number(p); recalc(l); keepDraft(); rerender(); } return; }
@@ -2274,7 +2328,7 @@ async function save(opt = {}) {
     via = { via: FE.via === 'gaari' ? 'gaari' : 'supply', larka: FE.id };
   }
   else if (!auto && !edit && viaOn()) { via = await askVia(p, lines, total); if (!via) return; }
-  else if (!auto && !confirm(`${edit ? 'POS BILL ' + edit.billNo + ' — UPDATE' : 'POS PURCHASE BILL'}\n${p.name}\n${lines.length} items · Rs ${num(total)}${invoiceNo ? '\nSupplier bill # ' + invoiceNo : ''}\n\n${edit ? 'POS mein yahi bill badlein (purani lines hat kar yeh lagengi) aur naye rates lagayein?' : 'POS mein bill banayein aur naye rates lagayein?'}`)) return;
+  else if (!auto && !opt.direct && !confirm(`${edit ? 'POS BILL ' + edit.billNo + ' — UPDATE' : 'POS PURCHASE BILL'}\n${p.name}\n${lines.length} items · Rs ${num(total)}${invoiceNo ? '\nSupplier bill # ' + invoiceNo : ''}\n\n${edit ? 'POS mein yahi bill badlein (purani lines hat kar yeh lagengi) aur naye rates lagayein?' : 'POS mein bill banayein aur naye rates lagayein?'}`)) return;
   const id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const doc = { id, date: date2, at: new Date().toISOString(), branch: BILL_BRANCH, godam: Number(godam) || BILL_BRANCH,
     partyId: String(p.id), partyName: String(p.name || '').slice(0, 120), invoiceNo: invoiceNo.trim(), note: note.trim(),
@@ -2323,7 +2377,7 @@ async function save(opt = {}) {
     aiRows = null; aiBillInfo = null; jView = 'list'; jIx = -1;   // v2.4.0: bheja hua bill — purani jaanch band
     notice(keep.edit ? 'Update PC ko bhej diya — PC POS mein wohi bill badal dega (Aaj ke app purchase mein status)' : 'Purchase bill bhej diya — PC POS mein bana dega (Aaj ke app purchase mein status)');
     sentOk = { ok: true, id, total, n: lines.length, party: p.name };
-    if (!auto) { try { setTimeout(() => window.ntPpSaved?.(keep.edit ? 'edit' : 'new'), 80); } catch {} }   // v2.130.0: list se ✏️ aaye the to wapas list
+    if (!auto && !opt.direct) { try { setTimeout(() => window.ntPpSaved?.(keep.edit ? 'edit' : 'new'), 80); } catch {} }   // v2.130.0: list se ✏️ aaye the to wapas list
     w.catch(err => {
       if (!cart.length) { cart = keep.cart; supplier = keep.supplier; godam = keep.godam; invoiceNo = keep.invoiceNo; note = keep.note; edit = keep.edit; day = keep.day; if (!billPics.length && keep.pics?.length) { billPics = keep.pics; if (keep.pics.every(isData)) picPut('draft', { pics: keep.pics, at: Date.now() }); } keepDraft(); rerender(); }
       alert('Purchase bill PC tak NAHI gaya: ' + (err?.message || err) + '\nBill wapas screen par hai — dobara bhejein.');

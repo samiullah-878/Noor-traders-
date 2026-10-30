@@ -103,6 +103,14 @@ export async function bcGo(id) {   // v2.128.0: ✓ Check + 📌 Post — list k
   else C.notice('✅ Bill check ho gaya');
   return true;
 }
+export async function bcGoWait(id) {   // v2.149.0: ✓ Check + 📌 Post — POS Purchase ki ek-click patti: post ka PC JAWAB bhi (✅ / ✕ wajah)
+  const ent = bills().find(x => x.id === id); if (!ent) return { ok: false, why: 'nokhata' };
+  const ok = await setCheck(id, true); if (!ok) return { ok: false, why: 'Check nahi hua' };
+  if (C.isPosted(ent)) return { ok: true, posted: true, already: true };
+  if (!C.can('pur.post') || !(C.owner && C.owner()) || !C.postWait) return { ok: true, posted: false, why: 'post sirf malik' };
+  const r = await C.postWait([ent]);
+  return r.ok ? { ok: true, posted: true } : { ok: true, posted: false, why: (r.errors || [])[0] || 'post nahi hua' };
+}
 function bcSetNav(id) {   // v2.128.0: list se bill khola = ‹ › isi list (Baqi, chuna hua din) ke bills — purchase.js ppOpenFromKhata parhta hai
   const L = list().filter(e => !chk(e) || e.id === id).map(e => ({ id: e.id, partyId: e.partyId, label: `${C.party(e.partyId)?.name || 'Supplier'} · Bill ${billNo(e)} · ${money(e.amount)}` }));
   try { window.ntBcNav = L.some(n => n.id === id) ? { list: L, at: Date.now() } : null; } catch {}
