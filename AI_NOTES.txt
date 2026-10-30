@@ -6537,3 +6537,10 @@ Malik: "shutter khulne, item select karne, cart (tokri) mein dalne aur ek rack s
 - 🧾 Counter: tokri khisak kar aaye (crateIn), monitor jhapak kar jale, parchi printer slot se nikle (clip-path) + lines ek ek kar ke + printer "tik tik". Class 'cvin' (NOT 'enter' — .enter darwaze ka button hai, takra kar cv 46px ho gaya tha).
 - Awaaz: WebAudio se bani (file nahi) — shutter / pick / drop / step / print; 🔊 chip darwaze par + upar patti, localStorage nt-dk-snd, shuru BAND.
 - LITE (deviceMemory ≤ 2 ya ≤ 2 core ya prefers-reduced-motion): 3D / stagger / flip nahi, sirf saada. AI NAHI.
+
+## v2.152.0 (2026-10-30) — 🏆 Larka report: insaf wali RANKING
+Malik (Larka report screenshot, "wishal+hafiz", "imran+sami", "hamiyu", "hamyun+wasif", "counter sale default", "samiullah"): "is mein kaise faisla karein kaun upar hai aur kaun neeche" → plan diya → "Bana di" (OK).
+- larka.js: "☐ 🏆 Ranking" chip (data-mn lk.rank, keep) → rankHTML: jori (naam mein + & , /) ki sale + bill aadhi-aadhi; ek larke ke kai naam = blueAccess/larkaRank {al:{naam: asal}, out:{naam:1}} (cloud listenLarkaRank / saveLarkaRank, sirf malik); "default / counter sale / walk in" khud bahar + malik ka 🚫 Bahar; din = jin din bill banaye (jori = dono ka din).
+  Tarteeb chips: Roz ki sale (kul ÷ din, default) · Kul sale · Bill. 🥇🥈🥉 upar, aakhri laal "⬇ sab se neeche", har line: kul · bill · din · fi bill + bar.
+  "⚙️ Naam theek karo": har naam ka "= asal naam" dropdown + 🚫 Bahar / ↩ Shamil + 🤔 milte julte naam (hamiyu = hamyun ✓ — lev ≤ 2) — save ⏳/✅.
+  PDF mein bhi ranking table (Ranking chalu ho to). Haazri app ke din NAHI (alag app) — din = bill wale din. AI NAHI.

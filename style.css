@@ -6792,3 +6792,21 @@ html body .pp-cbl{flex:none;height:34px;min-height:0!important;padding:0 12px!im
 .pp-lbn{margin:0 0 10px;font-size:13px;color:#33415a}
 .pp-lbst{min-width:44px;font-size:12.5px;font-weight:800;white-space:nowrap}
 .pp-lbst.ok{color:#1f7a44}.pp-lbst.bad{color:#b3261e}
+/* v2.152.0: 🏆 Larka ranking */
+.lk-rkrow{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px}
+.lk-rkrow b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lk-md{min-width:30px;height:30px;border-radius:999px;display:grid;place-items:center;font-weight:800;font-size:13px;background:rgba(127,140,160,.15)}
+.lk-rk.top .lk-md{background:none;font-size:22px}
+.lk-rk .bc-cnt small{font-size:11px;opacity:.7;margin-left:3px}
+.lk-rks{font-size:12px;font-weight:700;opacity:.75}
+.lk-rk.last{border-color:rgba(217,83,79,.55)!important;background:rgba(217,83,79,.08)!important}
+.lk-rk.last .lk-rks{color:#c0392b;opacity:1}
+.lk-rk.last .lk-bar u{background:#d9534f!important}
+.lk-jo{font-size:10.5px;font-weight:800;padding:1px 6px;border-radius:999px;background:rgba(242,182,50,.25);color:#8a5d00}
+.lk-rkby{margin:6px 0 8px}
+.lk-rkset{display:grid;gap:6px;padding:4px 0 10px}
+.lk-rkset-r{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:6px 10px;border-radius:12px;background:rgba(127,140,160,.10)}
+.lk-rkset-r.off{opacity:.55}
+.lk-rkset-r b{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.lk-rkset-r select{height:34px;border-radius:10px;max-width:150px}
+.lk-rkset-r small{font-size:11px;opacity:.7}

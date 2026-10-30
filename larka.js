@@ -36,18 +36,19 @@ const LABEL = {
   mahina: k => `${MONTHS[+k.slice(5, 7) - 1]} ${k.slice(0, 4)}` };
 const MAX_ROWS = 120, MAX_BILLS = 300, STALE = 20 * 60000;
 
-let cloud = null, notice = () => {}, pdfOf = null;
+let cloud = null, notice = () => {}, pdfOf = null, isOwner = () => false;
 let data = { sum: null, bills: null, at: 0 }, stop = null, tick = null, loaded = false, err = '';
 const st = { by: 'larka', man: 'all', from: '', to: '', view: 'din', bills: false, ws: (() => { try { return localStorage.getItem('lk-ws') === '1'; } catch { return false; } })() };
 
-export function larkaSetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; pdfOf = o.pdf || pdfOf; }
-export function larkaStop() { if (stop) { try { stop(); } catch {} stop = null; } clearInterval(tick); tick = null; }
+export function larkaSetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; pdfOf = o.pdf || pdfOf; isOwner = o.owner || isOwner; }
+export function larkaStop() { if (stop) { try { stop(); } catch {} stop = null; } if (rkStop) { try { rkStop(); } catch {} rkStop = null; } clearInterval(tick); tick = null; }
 function watch() {
   if (!stop) {
     loaded = false; err = '';
     stop = cloud?.listenLarka ? cloud.listenLarka(x => { data = x || data; err = x?.err || ''; loaded = true; paint(); }) : null;
     if (!stop) { loaded = true; err = 'app purani hai'; }
   }
+  if (!rkStop && cloud?.listenLarkaRank) rkStop = cloud.listenLarkaRank(x => { if (x && !rkDirty) { rk = { al: x.al || {}, out: x.out || {} }; if (st.rank) paint(); } });
   if (!tick) tick = setInterval(() => { if ($('lkRoot')) paintAge(); else larkaStop(); }, 30000);
 }
 
@@ -94,6 +95,65 @@ function build() {
   return { s, men, sold, idle, nameOf, per, all, by, keys, bina, bills, who: st.man === 'all' ? s.all : (nameOf.get(men[0]?.id) || '') };
 }
 
+// ---------- v2.152.0: 🏆 RANKING — malik: "is mein kaise faisla karein kaun upar hai aur kaun neeche" ----------
+//   Jori (naam mein + / & / ,) ki sale aur bill aadhi-aadhi · ek larke ke kai naam = malik ek dafa jode (blueAccess/larkaRank {al:{naam: asal}, out:{naam:1}})
+//   · "default" / "counter sale" + malik ke 🚫 bahar · din = jin din us ne bill banaye (jori = dono ka din) · tarteeb: roz ki sale (kul ÷ din) / kul / bill.
+//   🥇🥈🥉 upar · sab se neeche laal. Sirf parhna (POS / khata kuch nahi). AI nahi.
+let rk = { al: {}, out: {} }, rkStop = null, rkDirty = false, rkOpen = false, rkSt = '';
+st.rank = (() => { try { return localStorage.getItem('lk-rank') === '1'; } catch { return false; } })(); st.rkBy = 'roz';
+const nk = x => String(x || '').toLowerCase().replace(/[^a-z0-9؀-ۿ ]+/g, ' ').replace(/\s+/g, ' ').trim();
+const tc = x => String(x || '').replace(/(^|\s)\S/g, c => c.toUpperCase());
+const parts = name => String(name || '').split(/\s*(?:\+|&|,|\/|\band\b)\s*/i).map(nk).filter(Boolean);
+const canon = k => { let x = k, n = 0; while (rk.al[x] && rk.al[x] !== x && n++ < 6) x = rk.al[x]; return x; };
+const autoOut = k => /default|counter\s*sale|walk\s*in/.test(k);
+const isOut = k => !!rk.out[k] || autoOut(k);
+function ranking(r) {
+  const s = r.s, P = new Map();
+  for (const row of s.days) {
+    if (row[0] < st.from || row[0] > st.to || !(Number(row[2]) > 0)) continue;
+    const ps = parts(r.nameOf.get(row[1])); if (!ps.length) continue;
+    for (const p of ps) {
+      const c = canon(p); if (isOut(p) || isOut(c)) continue;
+      const o = P.get(c) || { k: c, t: 0, n: 0, d: new Set(), jori: false }; P.set(c, o);
+      o.t += Number(row[3]) / ps.length; o.n += Number(row[2]) / ps.length; o.d.add(row[0]); if (ps.length > 1) o.jori = true;
+    }
+  }
+  const L = [...P.values()].map(o => ({ ...o, din: o.d.size, roz: o.d.size ? o.t / o.d.size : 0, fi: o.n ? o.t / o.n : 0 }));
+  const key = { roz: x => x.roz, kul: x => x.t, bill: x => x.n }[st.rkBy] || (x => x.roz);
+  return L.sort((a, b) => key(b) - key(a) || b.t - a.t);
+}
+function names(s) { const m = new Set(); for (const x of s.men) for (const p of parts(x.name)) m.add(p); return [...m].sort(); }
+const lev = (a, b) => { const d = Array.from({ length: b.length + 1 }, (_, i) => i); for (let i = 1; i <= a.length; i++) { let pr = d[0]; d[0] = i; for (let j = 1; j <= b.length; j++) { const t = d[j]; d[j] = Math.min(d[j] + 1, d[j - 1] + 1, pr + (a[i - 1] === b[j - 1] ? 0 : 1)); pr = t; } } return d[b.length]; };
+function guesses(all) {   // 🤔 milte julte naam (hamiyu / hamyun) — malik ✓ kare to jur jayein
+  const out = []; const free = all.filter(k => !rk.al[k] && !isOut(k));
+  for (let i = 0; i < free.length; i++) for (let j = i + 1; j < free.length; j++) { const a = free[i], b = free[j]; if (a.length >= 4 && b.length >= 4 && a.slice(0, 2) === b.slice(0, 2) && lev(a, b) <= 2 && canon(a) !== canon(b)) out.push([a, b]); }
+  return out.slice(0, 8);
+}
+const medal = i => ['🥇', '🥈', '🥉'][i] || String(i + 1);
+function rankHTML(r) {
+  if (st.by !== 'larka') return '<div class="nt-empty">🏆<b>Ranking sirf "👦 Larka (SP Man)" par</b><small>Upar se Larka chunein</small></div>';
+  const L = ranking(r), top = L[0] ? ({ roz: L[0].roz, kul: L[0].t, bill: L[0].n }[st.rkBy] || 1) : 1, own = isOwner() && !!cloud?.saveLarkaRank;
+  const rows = L.map((x, i) => { const v = { roz: x.roz, kul: x.t, bill: x.n }[st.rkBy], pc = top > 0 ? Math.max(3, Math.round(v / top * 100)) : 0, last = L.length > 3 && i === L.length - 1;
+    return `<div class="bc-item lk-man lk-rk${i < 3 ? ' top' : ''}${last ? ' last' : ''}"><div class="lk-rkrow"><span class="lk-md">${medal(i)}</span><b>${esc(tc(x.k))}${x.jori ? ' <small class="lk-jo">jori ½</small>' : ''}</b><b class="bc-cnt">${st.rkBy === 'bill' ? num(x.n) + ' bill' : 'Rs ' + num(st.rkBy === 'kul' ? x.t : x.roz)}${st.rkBy === 'roz' ? '<small>/ din</small>' : ''}</b></div>
+      <small class="lk-rks">Kul Rs ${num(x.t)} · ${num(x.n)} bill · ${x.din} din · fi bill Rs ${num(x.fi)}${last ? ' · ⬇ sab se neeche' : ''}</small><i class="lk-bar"><u style="width:${Math.min(100, pc)}%"></u></i></div>`; }).join('');
+  const chip = (k, t) => `<button type="button" class="rc${st.rkBy === k ? ' on' : ''}" data-lk-rkby="${k}">${t}</button>`;
+  return `<div class="bc-day"><div class="bc-dayhead"><b>🏆 Ranking</b><span>${esc(span(st.from, st.to))}</span></div>
+    <div class="mchips lk-rkby">${chip('roz', 'Roz ki sale')}${chip('kul', 'Kul sale')}${chip('bill', 'Bill')}${own ? `<button type="button" class="rc${rkOpen ? ' on' : ''}" data-lk-rkset="1">⚙️ Naam theek karo${rkSt ? ' ' + rkSt : ''}</button>` : ''}</div>
+    ${rkOpen && own ? rkSetHTML(r) : ''}
+    ${rows || '<div class="nt-empty">🧾<b>In tareekhon mein koi larka nahi</b></div>'}
+    <p class="lk-note">Jori ki sale / bill aadhi-aadhi · din = jin din bill banaye · "default" aur 🚫 bahar wale shamil nahi · roz ki sale = kul ÷ din.</p></div>`;
+}
+function rkSetHTML(r) {
+  const all = names(r.s), G = guesses(all);
+  return `<div class="lk-rkset">${G.length ? `<p class="lk-idle">🤔 Ye ek hi larka to nahi?</p><div class="mchips">${G.map(([a, b]) => `<button type="button" class="rc" data-lk-join="${esc(a)}|${esc(b)}">${esc(a)} = ${esc(b)} ✓</button>`).join('')}</div>` : ''}
+    ${all.map(k => `<div class="lk-rkset-r${isOut(k) ? ' off' : ''}"><b>${esc(k)}</b><select data-lk-al="${esc(k)}"><option value="">apna naam</option>${all.filter(x => x !== k && canon(x) !== k).map(x => `<option value="${esc(x)}"${rk.al[k] === x ? ' selected' : ''}>= ${esc(x)}</option>`).join('')}</select>${autoOut(k) ? '<small>khud bahar</small>' : `<button type="button" class="rc" data-lk-out="${esc(k)}">${rk.out[k] ? '↩ Shamil karo' : '🚫 Bahar'}</button>`}</div>`).join('')}</div>`;
+}
+let rkT = 0;
+function rkSave() {
+  rkDirty = true; rkSt = '⏳'; paint(); clearTimeout(rkT);
+  rkT = setTimeout(async () => { try { await cloud.saveLarkaRank(rk); rkSt = '✅'; } catch (e) { rkSt = '✕'; notice('Naam save nahi hue: ' + (e?.message || e)); } rkDirty = false; paint(); setTimeout(() => { if (rkSt === '✅') { rkSt = ''; paint(); } }, 2500); }, 400);
+}
+
 const ageText = () => {
   if (!data.at) return ['', false];
   const m = Math.max(0, Math.round((Date.now() - data.at) / 60000)), old = Date.now() - data.at > STALE;
@@ -126,8 +186,10 @@ function paint() {
     <div class="mchips lk-ws"><button type="button" class="rc${st.ws ? '' : ' on'}" data-lk-ws="0">${st.ws ? '☐' : '☑'} Wholesale ke baghair</button><button type="button" class="rc${st.ws ? ' on' : ''}" data-lk-ws="1">${st.ws ? '☑' : '☐'} 📦 Wholesale ke saath</button></div>
     ${s.hasWs ? '' : '<p class="lk-idle">⏳ Wholesale alag karne ke liye PC ka naya data (larka-stats v2) 5-10 minute mein aayega — abhi sab bill shamil hain.</p>'}
     <div class="bc-kpis lk-kpis"><div><b>Rs ${num(r.all.t)}</b><small>total sale</small></div><div><b>${num(r.all.n)}</b><small>bills</small></div><div><b>${r.all.n ? num(r.all.t / r.all.n) : '–'}</b><small>fi bill</small></div></div>
-    <p class="lk-age${old ? ' warn' : ''}" id="lkAge">${esc(age)}</p></div>
-  <div class="bc-day"><div class="bc-dayhead"><b>${esc(r.who)}</b><span>${esc(span(st.from, st.to))}</span></div>
+    <p class="lk-age${old ? ' warn' : ''}" id="lkAge">${esc(age)}</p>
+    <div class="mchips"><button type="button" class="rc${st.rank ? ' on' : ''}" data-lk-rank="1" data-mn="lk.rank" data-mn-i="🏆" data-mn-t="Ranking" data-mn-s="kaun upar, kaun neeche" data-mn-g="👦 Larka report" data-mn-keep="1">${st.rank ? '☑' : '☐'} 🏆 Ranking</button></div></div>
+  ${st.rank ? rankHTML(r) : ''}
+  <div class="bc-day"${st.rank ? ' hidden' : ''}><div class="bc-dayhead"><b>${esc(r.who)}</b><span>${esc(span(st.from, st.to))}</span></div>
     ${r.sold.map(m => { const o = r.per.get(m.id), pc = r.all.t > 0 ? Math.max(0, Math.round(o.t / r.all.t * 100)) : 0;
       return `<div class="bc-item lk-man"><div class="lk-row"><b>${esc(m.name)}</b><small>${num(o.n)} bill${r.men.length > 1 ? ' · hissa ' + pc + '%' : ''}</small><b class="bc-cnt">Rs ${num(o.t)}</b></div>${r.men.length > 1 ? `<i class="lk-bar"><u style="width:${Math.min(100, pc)}%"></u></i>` : ''}</div>`; }).join('')
       || '<div class="nt-empty">🧾<b>In tareekhon mein koi bill nahi</b><small>Upar se tareekh ya naam badal kar dekhein</small></div>'}
@@ -153,6 +215,7 @@ function pdfHTML() {
       ${r.sold.map(m => { const o = r.per.get(m.id); return `<tr><td class="iv-item"><b>${esc(m.name)}</b></td><td class="iv-n">${num(o.n)}</td><td class="iv-n"><b>${num(o.t)}</b></td><td class="iv-n">${r.all.t > 0 ? Math.round(o.t / r.all.t * 100) + '%' : ''}</td></tr>`; }).join('')}
       ${multi ? `<tr><td class="iv-item"><b>Kul</b></td><td class="iv-n"><b>${num(r.all.n)}</b></td><td class="iv-n"><b>${num(r.all.t)}</b></td><td></td></tr>` : ''}</tbody></table>
     ${r.bina.n ? `<p>${num(r.bina.n)} bills (Rs ${num(r.bina.t)}) larke ke naam ke baghair bane — upar shamil nahi.</p>` : ''}
+    ${st.rank && st.by === 'larka' ? `<h3>🏆 Ranking (${st.rkBy === 'kul' ? 'kul sale' : st.rkBy === 'bill' ? 'bill' : 'roz ki sale'} se) — jori aadhi-aadhi, din = jin din bill banaye</h3><table class="iv-tbl"><thead><tr><th>#</th><th>Larka</th><th>Roz ki sale</th><th>Kul sale</th><th>Bill</th><th>Din</th></tr></thead><tbody>${ranking(r).map((x, i) => `<tr><td>${medal(i)}</td><td class="iv-item"><b>${esc(tc(x.k))}</b>${x.jori ? ' (jori ½)' : ''}</td><td class="iv-n"><b>${num(x.roz)}</b></td><td class="iv-n">${num(x.t)}</td><td class="iv-n">${num(x.n)}</td><td class="iv-n">${x.din}</td></tr>`).join('')}</tbody></table>` : ''}
     <h3>${esc(VIEWS.find(v => v[0] === st.view)[1])}</h3>
     <table class="iv-tbl"><thead><tr><th></th>${multi ? `<th>${esc(s.word)}</th>` : ''}<th>Bills</th><th>Total sale</th></tr></thead><tbody>
       ${r.keys.slice(0, MAX_ROWS).map(k => { const m = r.by.get(k), t = sum(m), lab = esc(LABEL[st.view](k));
@@ -172,8 +235,13 @@ export function renderLarka() {
 document.addEventListener('click', e => {
   if (e.target.closest?.('[data-lk-pdf]')) { if (!data.sum) { notice('Report abhi nahi aayi'); return; } const r = build(); if (!r.all.n) { notice('In tareekhon mein koi bill nahi'); return; } if (pdfOf) pdfOf(pdfHTML(), `Larka sale ${st.from} se ${st.to}`); return; }
   if (!$('lkRoot')) return;
-  const t = e.target.closest?.('[data-lk-by],[data-lk-q],[data-lk-v],[data-lk-bills],[data-lk-ws]'); if (!t) return;
+  const t = e.target.closest?.('[data-lk-by],[data-lk-q],[data-lk-v],[data-lk-bills],[data-lk-ws],[data-lk-rank],[data-lk-rkby],[data-lk-rkset],[data-lk-out],[data-lk-join]'); if (!t) return;
   const d = t.dataset;
+  if (d.lkRank) { st.rank = !st.rank; try { localStorage.setItem('lk-rank', st.rank ? '1' : '0'); } catch {} if (st.rank && st.by !== 'larka') { st.by = 'larka'; st.man = 'all'; } paint(); return; }
+  if (d.lkRkby) { st.rkBy = d.lkRkby; paint(); return; }
+  if (d.lkRkset) { rkOpen = !rkOpen; paint(); return; }
+  if (d.lkOut) { const k = d.lkOut; if (rk.out[k]) delete rk.out[k]; else rk.out[k] = 1; rkSave(); return; }
+  if (d.lkJoin) { const [a, b] = d.lkJoin.split('|'); if (a && b) { rk.al[a] = b; rkSave(); } return; }
   if (d.lkWs != null) { st.ws = d.lkWs === '1'; try { localStorage.setItem('lk-ws', st.ws ? '1' : '0'); } catch {} paint(); return; }
   if (d.lkBy && MODES[d.lkBy]) { if (st.by !== d.lkBy) { st.by = d.lkBy; st.man = 'all'; } }
   else if (d.lkQ != null) { const q = quick(S())[+d.lkQ]; if (q) { st.from = q[1]; st.to = q[2]; } }
@@ -183,6 +251,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', e => {
   const t = e.target; if (!t?.matches || !$('lkRoot')) return;
+  if (t.matches('[data-lk-al]')) { const k = t.dataset.lkAl; if (t.value) rk.al[k] = t.value; else delete rk.al[k]; rkSave(); return; }
   if (t.matches('[data-lk-man]')) st.man = t.value || 'all';
   else if (t.matches('[data-lk-from]')) { if (isDay(t.value)) st.from = t.value; }
   else if (t.matches('[data-lk-to]')) { if (isDay(t.value)) st.to = t.value; }
