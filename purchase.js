@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.149.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.149.0';
-import { blurScore, blurText } from './pic-check.js?v=2.149.0';   // v2.103.43: 📷 dhundli check
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.150.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.150.0';
+import { blurScore, blurText } from './pic-check.js?v=2.150.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -563,7 +563,7 @@ function lineCardHTML(l, i, s, gopts) {   // v2.120.0: purana poora card (table 
     const hint = v => v > 0 ? `pehle ${num(v)}` : '—';
     const ch = (v, now) => v > 0 && Math.abs((Number(now) || 0) - v) > 0.004 ? ' changed' : '';
     return `<div class="sale-line pp-line${i === cart.length - 1 && Date.now() - ppAddAt < 1800 && !isGrid() ? ' fresh' : ''}" data-pp-line="${i}">
-      <div class="sale-line-top"><b><span class="pp-no">${i + 1}.</span> ${esc(l.name)}${l.billName && l.billName !== l.name ? `<small class="pp-billname">bill: ${esc(l.billName)}</small>` : ''}</b><span class="pp-topbtns">${cart.length > 1 && lineView !== 'all' ? '<button type="button" class="pp-fold" data-pp-fold="1" title="Band karo" aria-label="Band karo">▲</button>' : ''}<button type="button" class="danger sale-x" data-pp-del="${i}" aria-label="Hatao">✕</button></span></div>
+      <div class="sale-line-top"><b><span class="pp-no">${i + 1}.</span> ${esc(l.name)}${l.billName && l.billName !== l.name ? `<small class="pp-billname">bill: ${esc(l.billName)}</small>` : ''}</b><span class="pp-topbtns">${lblChip(i)}${cart.length > 1 && lineView !== 'all' ? '<button type="button" class="pp-fold" data-pp-fold="1" title="Band karo" aria-label="Band karo">▲</button>' : ''}<button type="button" class="danger sale-x" data-pp-del="${i}" aria-label="Hatao">✕</button></span></div>
       <small>${esc(l.code)}${pk ? ' · 1 ' + esc(l.cName) + ' = ' + num(pk) : ''} · ${l.src === 'bill' ? '<b>POS bill</b> ka khareed' : l.posHand ? '<b>POS</b> khareed' : l.mem ? '<b>pichhli dafa</b> khareed' : 'purana khareed'} <b>${l.oldCost > 0 ? num(l.oldCost) + '/' + esc(l.uName) + (pk ? ' (' + num(r2(l.oldCost * pk)) + '/' + esc(l.cName) + ')' : '') : 'maloom nahi'}</b>${wN != null ? ' · nafa W ' + wN + '%' : ''}${rN != null ? ' · R ' + rN + '%' : ''}</small>
       <div class="sale-inputs pp-inputs">
         ${pk ? `<label>${esc(l.cName)} (${num(pk)})<input type="number" min="0" step="1" inputmode="numeric" data-pp-ctn="${i}" value="${l.ctn || ''}"></label>` : ''}
@@ -702,17 +702,66 @@ function rowsHTML(s, gopts) {
     const g2 = pk ? [K('W ' + C + ' ' + nfI(wc, lo(wc, wp)), inp('wctn', i, l.wctn, hint(wcO), ch(wcO, l.wctn))), K('W ' + U + ' ' + nfI(wp, lo(wp, wc)), inp('wpcs', i, l.wpcs, hint(l.oldW), ch(l.oldW, l.wpcs))), K('R ' + C + ' ' + nfI(rc, lo(rc, rp)), inp('rctn', i, l.rctn, hint(rcO), ch(rcO, l.rctn))), K('R ' + U + ' ' + nfI(rp, lo(rp, rc)), inp('rpcs', i, l.rpcs, hint(oR), ch(oR, l.rpcs))), rt ? K('🏷 Retail', inp('mrp', i, v || '', l.oldMrp ? num(l.oldMrp) : 'retail')) : '']
       : [K('W ' + U + ' ' + nfI(wp), inp('wpcs', i, l.wpcs, hint(l.oldW), ch(l.oldW, l.wpcs))), K('R ' + U + ' ' + nfI(rp), inp('rpcs', i, l.rpcs, hint(oR), ch(oR, l.rpcs))), rt ? K('🏷 Retail', inp('mrp', i, v || '', l.oldMrp ? num(l.oldMrp) : 'retail')) : ''];
     return `<div class="sale-line pp-line pp-cr${l.k === selKey ? ' sel' : ''}${fl.warn.length ? ' warn' : ''}${i === cart.length - 1 && Date.now() - ppAddAt < 1800 ? ' fresh' : ''}" data-pp-line="${i}" data-pp-sel="${esc(l.k)}">
-      <div class="pp-cr1"><span class="pp-no">${i + 1}.</span><b>${esc(l.name)}</b><small>${esc(l.code || '')}${pk ? ' · 1 ' + C + ' = ' + num(pk) : ''} · pehle ${l.oldCost > 0 ? num(l.oldCost) : '—'}${fl.warn.length ? ' · <i>⚠ ' + esc(fl.warn.join(', ')) + '</i>' : ''}</small><em class="pp-rs" data-pp-rs="${i}">Rs ${num(r2(lineTotal(l)))}</em></div>
+      <div class="pp-cr1"><span class="pp-no">${i + 1}.</span><b>${esc(l.name)}</b><small>${esc(l.code || '')}${pk ? ' · 1 ' + C + ' = ' + num(pk) : ''} · pehle ${l.oldCost > 0 ? num(l.oldCost) : '—'}${fl.warn.length ? ' · <i>⚠ ' + esc(fl.warn.join(', ')) + '</i>' : ''}</small>${lblChip(i)}<em class="pp-rs" data-pp-rs="${i}">Rs ${num(r2(lineTotal(l)))}</em></div>
       <div class="pp-cg pp-cg${g1.length}">${g1.join('')}</div><div class="pp-cg pp-cg${pk ? 5 : 3}">${g2.join('')}</div>
     </div>`;
   }).join('') + `<div class="pp-crf"><b>${cart.length} items</b><b id="ppTblTot">Total Rs ${num(cartTotal())}</b></div>`;
 }
+// ---------- v2.150.0: 🏷 BARCODE LABEL — malik: "yahan barcode ka chhota chip · save karne se pehle bhi click kare to barcode nikal aaye" ----------
+//   Item card / patti ka 🏷 → khirki: asal code + packet wale (Show ✓) sub-barcode, har ek ki tadad + 🖨 (wahi cloud.requestLabel → PC label-print).
+//   Rate = screen par likha NAYA R PCS (save na hua ho tab bhi); packet = tadad × naya rate jab "rate saath" ✓ (warna POS wala). Asal code par label = bill ke pieces.
+//   CAP fp.lbl · rules 2.79: Sirf Purchase mulazim bhi labelJobs. AI NAHI.
+const lblOk = () => { let ok = true; try { ok = typeof window.ntCan !== 'function' || window.ntCan('fp.lbl'); } catch {} return ok && !!cloud?.requestLabel; };
+const lblChip = i => lblOk() ? `<button type="button" class="pp-lbl" data-pp-lbl="${i}" title="Barcode label" aria-label="Barcode label">🏷</button>` : '';
+let lblRows = [];
+function lblOpen(i) {
+  const l = cart[i]; if (!l) return;
+  const it = (stock().items || []).find(r => String(r.id) === String(l.id)) || {};
+  const pos = r2(Number(it.rate2) || Number(it.rate) || 0), rp = Number(l.rpcs) > 0 ? r2(l.rpcs) : pos, U = l.uName || 'Pcs';
+  const rows = [], seen = new Set(), add = x => { const c = String(x.code || '').trim(); if (!c || seen.has(c)) return; seen.add(c); rows.push({ ...x, code: c }); };
+  const pcs = Math.round(linePcs(l));
+  add({ code: l.code || it.code, qty: 1, price: rp, main: true, copies: Math.max(1, Math.min(1000, pcs || 1)) });
+  const sbl = sblOf(l);
+  for (const x of subsOf(l)) if (x.s !== false) { const q = Number(x.q) || 1; add({ code: x.b, qty: q, price: sbl && Number(l.rpcs) > 0 ? r2(q * Number(l.rpcs)) : r2(Number(x.r)), copies: 1 }); }
+  for (const b of Array.isArray(it.bc) ? it.bc : []) add({ code: b, qty: 1, price: rp, copies: 1 });
+  lblRows = rows.map(x => ({ ...x, itemId: String(l.id), name: String(l.name || '') }));
+  const note = Number(l.rpcs) > 0 && Math.abs(Number(l.rpcs) - pos) > 0.004 ? `naya R ${esc(U)} <b>Rs ${num(rp)}</b> (POS mein abhi Rs ${num(pos)} — label par naya)` : `R ${esc(U)} <b>Rs ${num(rp)}</b>`;
+  dlg('🏷 Barcode — ' + l.name, `<p class="pp-lbn">${note}${packOf(l) ? ` · 1 ${esc(l.cName || 'Ctn')} = ${num(packOf(l))}` : ''}${pcs ? ` · is bill mein ${num(pcs)} ${esc(U)}` : ''}</p>
+    <div class="label-list">${lblRows.length ? lblRows.map((x, k) => `<div class="label-row"><div class="label-info"><b>${esc(x.code)}</b><small>${x.qty !== 1 ? 'Tadad ' + num(x.qty) + ' · ' : ''}Rs ${num(x.price)}${x.main ? ' · asal code' : ' · packet / doosra code'}</small></div>
+      <input type="number" min="1" max="1000" inputmode="numeric" value="${x.copies}" data-pp-lblc="${k}" aria-label="Kitne label"><button type="button" class="primary" data-pp-lblgo="${k}">🖨</button><span class="pp-lbst" data-pp-lbst="${k}"></span></div>`).join('')
+      : '<p>Is item ka koi barcode nahi — Stock screen par item ke 🏷 se ➕ Naya barcode banayein.</p>'}</div>
+    <p class="muted" style="font-size:.85em;margin-top:8px">Label PC ke label printer par chhapta hai (PC par label-print chalna chahiye).</p>`);
+}
+async function lblGo(k, btn) {
+  const x = lblRows[k]; if (!x || btn.disabled) return;
+  const inp = document.querySelector(`[data-pp-lblc="${k}"]`), st = document.querySelector(`[data-pp-lbst="${k}"]`);
+  const copies = Math.max(1, Math.min(1000, Math.floor(Number(inp?.value) || 1)));
+  const parts = []; for (let left = copies; left > 0; left -= 200) parts.push(Math.min(200, left));
+  if (parts.length > 1 && !confirm(`${copies} label — ${parts.length} hisson mein chhapenge (${parts.join(' + ')}). Theek?`)) return;
+  const say = (t, c) => { if (st && st.isConnected) { st.textContent = t; st.className = 'pp-lbst' + (c ? ' ' + c : ''); } };
+  btn.disabled = true; say('⏳');
+  try {
+    const jids = [];
+    for (const c of parts) jids.push(await cloud.requestLabel({ itemId: x.itemId, code: x.code, name: x.name, qty: x.qty, rate: x.price, copies: c }));
+    say('⏳ PC…');
+    let ok = 0, done = false; const stops = [];
+    const end = (t, good) => { if (done) return; done = true; stops.forEach(f => { try { f && f(); } catch {} }); btn.disabled = false; say(t, good ? 'ok' : 'bad'); notice(good ? `🏷 ${copies} label chhap gaye — ${x.name}` : '🏷 ' + t); };
+    if (cloud.watchLabel) jids.forEach(j => { let seen = false; stops.push(cloud.watchLabel(j, d => {
+      if (!d || seen) return;
+      if (d.status === 'done') { seen = true; ok++; if (ok === jids.length) end('✅ ' + copies, true); else say(`⏳ ${ok}/${jids.length}`); }
+      else if (['failed', 'skipped', 'cancelled'].includes(d.status)) { seen = true; end('✕ ' + (d.error || d.status), false); }
+    })); });
+    else end('✅ bhej diya', true);
+    setTimeout(() => end('⚠️ PC se jawab nahi (label-print chal raha hai?)', false), 180000);
+  } catch (e) { btn.disabled = false; say('✕', 'bad'); notice('🏷 Label nahi gaya: ' + (e?.message || e)); }
+}
+document.addEventListener('click', e => { const b = e.target.closest?.('[data-pp-lblgo]'); if (b) lblGo(Number(b.dataset.ppLblgo), b); });
 function selLine() { const i = cart.findIndex(l => l.k === selKey); return i >= 0 ? i : (isRows() || isGrid()) && cart.length ? cart.length - 1 : -1; }
 function cbarHTML() {
   const i = selLine(), l = cart[i]; if (!l) return '';
   const s = stock(), gd = s.branches.length > 1;
   const gopts = b => s.branches.map(x => `<option value="${x}"${Number(x) === Number(b) ? ' selected' : ''}>${esc(s.branchName(x, s.names))}</option>`).join('');
-  return `<div class="pp-cbar" id="ppCbar"><div class="pp-cb1"><span class="pp-cbn">⚡ <b>${i + 1}. ${esc(l.name)}</b></span>${oldBtn(l, i, 'ppCb')}${gd ? `<select class="pp-cbg" data-pp-lg="${i}">${gopts(l.godam)}</select>` : ''}<button type="button" class="pp-cbx" data-pp-del="${i}">✕</button></div>
+  return `<div class="pp-cbar" id="ppCbar"><div class="pp-cb1"><span class="pp-cbn">⚡ <b>${i + 1}. ${esc(l.name)}</b></span>${oldBtn(l, i, 'ppCb')}${gd ? `<select class="pp-cbg" data-pp-lg="${i}">${gopts(l.godam)}</select>` : ''}${lblOk() ? `<button type="button" class="pp-cbl" data-pp-lbl="${i}">🏷 Barcode</button>` : ''}<button type="button" class="pp-cbx" data-pp-del="${i}">✕</button></div>
     <div class="pp-cb2">${chipRow(l, i, 'w', 'ppCb')}${chipRow(l, i, 'r', 'ppCb')}</div></div>`;
 }
 function cbarPaint() { const b = $('ppCbar'); if (!b) return; const h = cbarHTML(); if (h) b.outerHTML = h; else b.remove(); }
@@ -1157,7 +1206,7 @@ document.addEventListener('click', async e => {
     return; }
   const ba = e.target.closest?.('[data-pp-retry],[data-pp-reopen],[data-pp-editdone],[data-pp-cancel]');
   if (ba) { const d = ba.dataset; billAct(d.ppRetry ? 'retry' : d.ppReopen ? 'reopen' : d.ppEditdone ? 'editdone' : 'cancel', d.ppRetry || d.ppReopen || d.ppEditdone || d.ppCancel, ba); return; }
-  const t = e.target.closest?.('[data-pp-bcgo],[data-pp-unpost],[data-pp-flopen],[data-pp-flx],[data-pp-fromx],[data-pp-sup],[data-pp-sup-change],[data-pp-supfind],[data-pp-add],[data-pp-del],[data-pp-clear],[data-pp-save],[data-pp-today],[data-pp-camera],[data-pp-old],[data-pp-w],[data-pp-wall],[data-pp-wall-custom],[data-pp-old-all],[data-pp-copy]');
+  const t = e.target.closest?.('[data-pp-lbl],[data-pp-bcgo],[data-pp-unpost],[data-pp-flopen],[data-pp-flx],[data-pp-fromx],[data-pp-sup],[data-pp-sup-change],[data-pp-supfind],[data-pp-add],[data-pp-del],[data-pp-clear],[data-pp-save],[data-pp-today],[data-pp-camera],[data-pp-old],[data-pp-w],[data-pp-wall],[data-pp-wall-custom],[data-pp-old-all],[data-pp-copy]');
   if (!t) return;
   const d = t.dataset;
   if (d.ppSup) { supplier = d.ppSup; notePartyPick(supplier); supOpen = false; supQuery = ''; hdOpen = !!(stock().branches.length && !Number(godam)); keepDraft(); rerender(); return; }   // v2.129.0: godam baqi ho to form khula rahe, warna patti
@@ -1168,6 +1217,7 @@ document.addEventListener('click', async e => {
   if (d.ppClear) { if (!confirm(edit ? 'Edit chhor kar screen saaf kar dein? (POS ka bill waisa hi rahega)' : 'Yeh purchase bill saaf kar dein?')) return; cart = []; note = ''; invoiceNo = ''; edit = null; editNav = null; day = ''; xtra = 0; xtraName = ''; pct = 0; supplier = ''; godam = 0; supQuery = ''; supOpen = false; gallaMode = 'none'; gallaOwn = 0; setBillPics([]); billPin = false; aiRows = null; aiBillInfo = null; jView = 'list'; jIx = -1; keepDraft(); rerender(); return; }
   if (d.ppCamera) { openSaleCamera(); return; }
   if (d.ppFromx) { fromEntry = null; keepDraft(); rerender(); return; }
+  if (d.ppLbl != null) { lblOpen(Number(d.ppLbl)); return; }   // v2.150.0: 🏷 barcode label (save se pehle bhi, naya R rate)
   if (d.ppBcgo) {   // v2.149.0: EK CLICK = 💾 UPDATE (naye rates, bina "Bhejein?") → PC ka intezar → ✓ check + 📌 post → agla bill (v2.128.0 wahi bcGo raasta)
     if (!edit || !Number(edit.purchaseId) || bcBusy) return;
     const pid = Number(edit.purchaseId), id = 'pos-' + pid, N = editNav, pty = supplier;

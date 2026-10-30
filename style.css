@@ -6783,3 +6783,12 @@ html body .pp-flow .pp-fl-t b{font-size:13.5px;font-weight:800;color:inherit!imp
 html body .pp-flow .pp-fl-t small{font-size:12px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:inherit!important}
 html body .pp-flow .pp-fl-b{flex:none;height:34px;padding:0 13px;border-radius:999px;border:1.5px solid currentColor!important;background:#fff!important;color:inherit!important;font-weight:800;font-size:13px;white-space:nowrap;box-shadow:none!important;min-height:0!important}
 html body .pp-flow .pp-fl-x{flex:none;width:30px;height:30px;padding:0;border-radius:999px;border:0!important;background:rgba(0,0,0,.06)!important;color:inherit!important;box-shadow:none!important;min-height:0!important}
+
+/* v2.150.0: 🔄 malik — "Sonu ka mobile baar baar refresh": Chrome ka upar se khench kar refresh (pull-to-refresh) band */
+html,body{overscroll-behavior-y:none}
+/* v2.150.0: 🏷 purchase item ka barcode chip */
+html body .pp-lbl{flex:none;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;min-height:0!important;padding:0!important;margin:0 4px;border-radius:999px;border:1.5px solid #d7dde8!important;background:linear-gradient(180deg,#fff,#eef2f8)!important;color:#1d3561!important;font-size:14px;line-height:1;box-shadow:0 1px 2px rgba(20,40,90,.1)!important}
+html body .pp-cbl{flex:none;height:34px;min-height:0!important;padding:0 12px!important;border-radius:999px;border:1.5px solid #d7dde8!important;background:linear-gradient(180deg,#fff,#eef2f8)!important;color:#1d3561!important;font-size:13px;font-weight:800;white-space:nowrap}
+.pp-lbn{margin:0 0 10px;font-size:13px;color:#33415a}
+.pp-lbst{min-width:44px;font-size:12.5px;font-weight:800;white-space:nowrap}
+.pp-lbst.ok{color:#1f7a44}.pp-lbst.bad{color:#b3261e}
