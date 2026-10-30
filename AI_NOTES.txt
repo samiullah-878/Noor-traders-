@@ -6547,3 +6547,12 @@ Malik (Larka report screenshot, "wishal+hafiz", "imran+sami", "hamiyu", "hamyun+
 
 ## v2.153.0 (2026-10-30) — 🏆 Ranking: 👥 Jori ikatthi (default) / 👤 Har larka alag
 Malik: "jo naam ikatthe hain un ko ikattha rank-wise karo" → plan → OK. larka.js st.rkTeam (localStorage lk-rkteam, default ON): jori ("wishal+hafiz") EK team — poori sale / bill / din (bahar wala hissa nikal kar, naam POS ki tarteeb mein, key sorted), akele larke apni jagah; jori ki line par "fi banda" (roz ya kul ÷ larke). Chips 👥 Jori ikatthi · 👤 Har larka alag (purana aadha-aadha). PDF mein "Fi banda (roz)" khana. AI NAHI.
+
+=== v2.154.0 (2026-10-30) — Larka ranking ⭐ Score ===
+- 🏆 Ranking ab default "⭐ Score" se: har din larke/jori ko us din ke baqi larkon ke average se naapa (100 = average).
+  Score = 50% sale + 30% gahak (bill) + 20% fi bill; jori mode mein fi banda values. Sab dinon ka average = score.
+- Pichhle barabar arsay se muqabla: 📈 +N / 📉 −N chip.
+- Badges: 🏅 sab se zyada sale, 🧾 sab se zyada gahak, 💎 sab se behtar fi bill (kam az kam 30% bill zaroori), 📈 sab se zyada behtari.
+- Har line par "Sale · Gahak · Fi bill" index; PDF mein ⭐ Score column + trend + badges.
+- Purani tarteeb (Roz ki sale / Kul sale / Bill) chips mein mojood. AI nahi. Rules tabdeel nahi (2.79).
+- Files: larka.js (rkCollect, ranking, rankHTML, PDF), style.css (.lk-bd).

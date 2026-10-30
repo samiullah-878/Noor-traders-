@@ -100,7 +100,7 @@ function build() {
 //   · "default" / "counter sale" + malik ke 🚫 bahar · din = jin din us ne bill banaye (jori = dono ka din) · tarteeb: roz ki sale (kul ÷ din) / kul / bill.
 //   🥇🥈🥉 upar · sab se neeche laal. Sirf parhna (POS / khata kuch nahi). AI nahi.
 let rk = { al: {}, out: {} }, rkStop = null, rkDirty = false, rkOpen = false, rkSt = '';
-st.rank = (() => { try { return localStorage.getItem('lk-rank') === '1'; } catch { return false; } })(); st.rkBy = 'roz';
+st.rank = (() => { try { return localStorage.getItem('lk-rank') === '1'; } catch { return false; } })(); st.rkBy = 'score';
 st.rkTeam = (() => { try { return localStorage.getItem('lk-rkteam') !== '0'; } catch { return true; } })();   // v2.153.0: malik — "jo naam ikatthe hain un ko ikattha rank karo" (default jori ikatthi)
 const nk = x => String(x || '').toLowerCase().replace(/[^a-z0-9؀-ۿ ]+/g, ' ').replace(/\s+/g, ' ').trim();
 const tc = x => String(x || '').replace(/(^|\s)\S/g, c => c.toUpperCase());
@@ -108,24 +108,47 @@ const parts = name => String(name || '').split(/\s*(?:\+|&|,|\/|\band\b)\s*/i).m
 const canon = k => { let x = k, n = 0; while (rk.al[x] && rk.al[x] !== x && n++ < 6) x = rk.al[x]; return x; };
 const autoOut = k => /default|counter\s*sale|walk\s*in/.test(k);
 const isOut = k => !!rk.out[k] || autoOut(k);
-function ranking(r) {
-  const s = r.s, P = new Map();
+// v2.154.0: ⭐ SCORE (malik: "koi is se bhi smart tareeqa") — har din usi din ke larkon ki average se (100 = average; rash / chhutti ka asar khatam)
+//   din ka score = 50% sale + 30% gahak (bill) + 20% fi bill · jori ikatthi = FI BANDA se (team do larkon ki sale se upar na jaye) · 📈 pichhle utne hi dinon se · 🏅🧾💎📈 inaam.
+function rkCollect(r, from, to) {
+  const s = r.s, P = new Map(), byDay = new Map();
+  const add = (k, ks, jori, day, t, n) => {
+    const o = P.get(k) || { k, ks, t: 0, n: 0, d: new Set(), jori: false }; P.set(k, o); o.t += t; o.n += n; o.d.add(day); if (jori) o.jori = true;
+    let m = byDay.get(day); if (!m) byDay.set(day, m = new Map()); const x = m.get(k) || { t: 0, n: 0 }; x.t += t; x.n += n; m.set(k, x);
+  };
   for (const row of s.days) {
-    if (row[0] < st.from || row[0] > st.to || !(Number(row[2]) > 0)) continue;
+    if (row[0] < from || row[0] > to || !(Number(row[2]) > 0)) continue;
     const ps = parts(r.nameOf.get(row[1])); if (!ps.length) continue;
-    if (st.rkTeam) {   // 👥 jori ikatthi: "wishal+hafiz" ek team — poori sale / bill / din (bahar wala hissa nikal kar)
+    if (st.rkTeam) {   // 👥 jori ikatthi: "wishal+hafiz" ek team — poori sale / bill / din (bahar wala hissa nikal kar, naam POS ki tarteeb mein)
       const cs = [...new Set(ps.filter(p => !isOut(p)).map(canon).filter(c => !isOut(c)))]; if (!cs.length) continue;
-      const k = [...cs].sort().join('+'), o = P.get(k) || { k, ks: cs, t: 0, n: 0, d: new Set(), jori: cs.length > 1 }; P.set(k, o);   // naam POS wali tarteeb mein (wishal + hafiz)
-      o.t += Number(row[3]); o.n += Number(row[2]); o.d.add(row[0]); continue;
+      add([...cs].sort().join('+'), cs, cs.length > 1, row[0], Number(row[3]), Number(row[2])); continue;
     }
-    for (const p of ps) {
-      const c = canon(p); if (isOut(p) || isOut(c)) continue;
-      const o = P.get(c) || { k: c, ks: [c], t: 0, n: 0, d: new Set(), jori: false }; P.set(c, o);
-      o.t += Number(row[3]) / ps.length; o.n += Number(row[2]) / ps.length; o.d.add(row[0]); if (ps.length > 1) o.jori = true;
+    for (const p of ps) { const c = canon(p); if (isOut(p) || isOut(c)) continue; add(c, [c], ps.length > 1, row[0], Number(row[3]) / ps.length, Number(row[2]) / ps.length); }
+  }
+  const sc = new Map();
+  for (const m of byDay.values()) {
+    const U = [...m.entries()].map(([k, x]) => { const z = st.rkTeam ? (P.get(k)?.ks.length || 1) : 1; return { k, t: x.t / z, n: x.n / z, f: x.n ? x.t / x.n : 0 }; });
+    const avg = f => { const v = U.map(f).filter(z => z > 0); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0; };
+    const aT = avg(u => u.t), aN = avg(u => u.n), aF = avg(u => u.f);
+    for (const u of U) {
+      const iS = aT ? u.t / aT * 100 : 100, iN = aN ? u.n / aN * 100 : 100, iF = aF && u.f ? u.f / aF * 100 : 100;
+      const o = sc.get(u.k) || { s: 0, iS: 0, iN: 0, iF: 0, c: 0 }; o.s += 0.5 * iS + 0.3 * iN + 0.2 * iF; o.iS += iS; o.iN += iN; o.iF += iF; o.c++; sc.set(u.k, o);
     }
   }
-  const L = [...P.values()].map(o => ({ ...o, nm: o.ks.map(tc).join(' + '), size: st.rkTeam ? o.ks.length : 1, din: o.d.size, roz: o.d.size ? o.t / o.d.size : 0, fi: o.n ? o.t / o.n : 0 }));
-  const key = { roz: x => x.roz, kul: x => x.t, bill: x => x.n }[st.rkBy] || (x => x.roz);
+  return [...P.values()].map(o => { const z = sc.get(o.k), c = z?.c || 0;
+    return { ...o, nm: o.ks.map(tc).join(' + '), size: st.rkTeam ? o.ks.length : 1, din: o.d.size, roz: o.d.size ? o.t / o.d.size : 0, fi: o.n ? o.t / o.n : 0,
+      score: c ? z.s / c : 0, iS: c ? z.iS / c : 0, iN: c ? z.iN / c : 0, iF: c ? z.iF / c : 0 }; });
+}
+function ranking(r) {
+  const L = rkCollect(r, st.from, st.to);
+  const len = Math.max(1, Math.round((toDate(st.to) - toDate(st.from)) / 864e5) + 1);
+  const prev = new Map(rkCollect(r, addDays(st.from, -len), addDays(st.from, -1)).map(x => [x.k, x.score]));
+  for (const x of L) { const p = prev.get(x.k); x.up = p && x.score ? Math.round(x.score - p) : null; x.bd = []; }
+  const best = (f, ok = () => true) => { let b = null; for (const x of L) if (ok(x) && f(x) > 0 && (!b || f(x) > f(b))) b = x; return b; };
+  const maxN = Math.max(0, ...L.map(x => x.n));
+  [[best(x => x.t), '🏅', 'sab se zyada sale'], [best(x => x.n), '🧾', 'sab se zyada gahak'], [best(x => x.fi, x => x.n >= maxN * 0.3), '💎', 'sab se bara fi bill'], [best(x => x.up || 0), '📈', 'sab se zyada behtri']]
+    .forEach(([x, e, t]) => { if (x && L.length > 1) x.bd.push([e, t]); });
+  const key = { score: x => x.score, roz: x => x.roz, kul: x => x.t, bill: x => x.n }[st.rkBy] || (x => x.score);
   return L.sort((a, b) => key(b) - key(a) || b.t - a.t);
 }
 function names(s) { const m = new Set(); for (const x of s.men) for (const p of parts(x.name)) m.add(p); return [...m].sort(); }
@@ -138,16 +161,19 @@ function guesses(all) {   // 🤔 milte julte naam (hamiyu / hamyun) — malik �
 const medal = i => ['🥇', '🥈', '🥉'][i] || String(i + 1);
 function rankHTML(r) {
   if (st.by !== 'larka') return '<div class="nt-empty">🏆<b>Ranking sirf "👦 Larka (SP Man)" par</b><small>Upar se Larka chunein</small></div>';
-  const L = ranking(r), top = L[0] ? ({ roz: L[0].roz, kul: L[0].t, bill: L[0].n }[st.rkBy] || 1) : 1, own = isOwner() && !!cloud?.saveLarkaRank;
-  const rows = L.map((x, i) => { const v = { roz: x.roz, kul: x.t, bill: x.n }[st.rkBy], pc = top > 0 ? Math.max(3, Math.round(v / top * 100)) : 0, last = L.length > 3 && i === L.length - 1;
-    return `<div class="bc-item lk-man lk-rk${i < 3 ? ' top' : ''}${last ? ' last' : ''}"><div class="lk-rkrow"><span class="lk-md">${medal(i)}</span><b>${esc(x.nm)}${x.jori ? ` <small class="lk-jo">${st.rkTeam ? '👥 jori' : 'jori ½'}</small>` : ''}</b><b class="bc-cnt">${st.rkBy === 'bill' ? num(x.n) + ' bill' : 'Rs ' + num(st.rkBy === 'kul' ? x.t : x.roz)}${st.rkBy === 'roz' ? '<small>/ din</small>' : ''}</b></div>
+  const L = ranking(r), val = x => ({ score: x.score, roz: x.roz, kul: x.t, bill: x.n }[st.rkBy] ?? x.score), top = L[0] ? (val(L[0]) || 1) : 1, own = isOwner() && !!cloud?.saveLarkaRank;
+  const rows = L.map((x, i) => { const v = val(x), pc = top > 0 ? Math.max(3, Math.round(v / top * 100)) : 0, last = L.length > 3 && i === L.length - 1;
+    return `<div class="bc-item lk-man lk-rk${i < 3 ? ' top' : ''}${last ? ' last' : ''}"><div class="lk-rkrow"><span class="lk-md">${medal(i)}</span><b>${esc(x.nm)}${x.jori ? ` <small class="lk-jo">${st.rkTeam ? '👥 jori' : 'jori ½'}</small>` : ''}</b><b class="bc-cnt">${st.rkBy === 'score' ? '⭐ ' + Math.round(x.score) : st.rkBy === 'bill' ? num(x.n) + ' bill' : 'Rs ' + num(st.rkBy === 'kul' ? x.t : x.roz)}${st.rkBy === 'roz' ? '<small>/ din</small>' : ''}</b></div>
+      ${x.bd.length || x.up != null ? `<span class="lk-bd">${x.bd.map(([e, t]) => `<em title="${esc(t)}">${e} ${esc(t)}</em>`).join('')}${x.up != null && x.up !== 0 ? `<em class="${x.up > 0 ? 'up' : 'dn'}">${x.up > 0 ? '📈 +' + x.up : '📉 ' + x.up} pichhle se</em>` : ''}</span>` : ''}
+      ${st.rkBy === 'score' ? `<small class="lk-rks">Sale ${Math.round(x.iS)} · Gahak ${Math.round(x.iN)} · Fi bill ${Math.round(x.iF)}${x.size > 1 ? ' · fi banda' : ''}</small>` : ''}
       <small class="lk-rks">Kul Rs ${num(x.t)} · ${num(x.n)} bill · ${x.din} din · fi bill Rs ${num(x.fi)}${x.size > 1 ? ` · <u class="lk-fb">fi banda Rs ${num((st.rkBy === 'kul' ? x.t : x.roz) / x.size)}${st.rkBy === 'kul' ? '' : '/din'}</u>` : ''}${last ? ' · ⬇ sab se neeche' : ''}</small><i class="lk-bar"><u style="width:${Math.min(100, pc)}%"></u></i></div>`; }).join('');
   const chip = (k, t) => `<button type="button" class="rc${st.rkBy === k ? ' on' : ''}" data-lk-rkby="${k}">${t}</button>`;
   return `<div class="bc-day"><div class="bc-dayhead"><b>🏆 Ranking</b><span>${esc(span(st.from, st.to))}</span></div>
     <div class="mchips lk-rkby"><button type="button" class="rc${st.rkTeam ? ' on' : ''}" data-lk-team="1">👥 Jori ikatthi</button><button type="button" class="rc${st.rkTeam ? '' : ' on'}" data-lk-team="0">👤 Har larka alag</button></div>
-    <div class="mchips lk-rkby">${chip('roz', 'Roz ki sale')}${chip('kul', 'Kul sale')}${chip('bill', 'Bill')}${own ? `<button type="button" class="rc${rkOpen ? ' on' : ''}" data-lk-rkset="1">⚙️ Naam theek karo${rkSt ? ' ' + rkSt : ''}</button>` : ''}</div>
+    <div class="mchips lk-rkby">${chip('score', '⭐ Score')}${chip('roz', 'Roz ki sale')}${chip('kul', 'Kul sale')}${chip('bill', 'Bill')}${own ? `<button type="button" class="rc${rkOpen ? ' on' : ''}" data-lk-rkset="1">⚙️ Naam theek karo${rkSt ? ' ' + rkSt : ''}</button>` : ''}</div>
     ${rkOpen && own ? rkSetHTML(r) : ''}
     ${rows || '<div class="nt-empty">🧾<b>In tareekhon mein koi larka nahi</b></div>'}
+    ${st.rkBy === 'score' ? '<p class="lk-note">⭐ Score: har din usi din ke larkon se muqabla (100 = average, 130 = 30% behtar) · 50% sale + 30% gahak + 20% fi bill · jori = fi banda · 📈 / 📉 = pichhle utne hi dinon se.</p>' : ''}
     <p class="lk-note">${st.rkTeam ? 'Jori ek team ki tarah (poori sale) · fi banda = team ÷ larke' : 'Jori ki sale / bill aadhi-aadhi'} · din = jin din bill banaye · "default" aur 🚫 bahar wale shamil nahi · roz ki sale = kul ÷ din.</p></div>`;
 }
 function rkSetHTML(r) {
@@ -222,7 +248,7 @@ function pdfHTML() {
       ${r.sold.map(m => { const o = r.per.get(m.id); return `<tr><td class="iv-item"><b>${esc(m.name)}</b></td><td class="iv-n">${num(o.n)}</td><td class="iv-n"><b>${num(o.t)}</b></td><td class="iv-n">${r.all.t > 0 ? Math.round(o.t / r.all.t * 100) + '%' : ''}</td></tr>`; }).join('')}
       ${multi ? `<tr><td class="iv-item"><b>Kul</b></td><td class="iv-n"><b>${num(r.all.n)}</b></td><td class="iv-n"><b>${num(r.all.t)}</b></td><td></td></tr>` : ''}</tbody></table>
     ${r.bina.n ? `<p>${num(r.bina.n)} bills (Rs ${num(r.bina.t)}) larke ke naam ke baghair bane — upar shamil nahi.</p>` : ''}
-    ${st.rank && st.by === 'larka' ? `<h3>🏆 Ranking (${st.rkBy === 'kul' ? 'kul sale' : st.rkBy === 'bill' ? 'bill' : 'roz ki sale'} se) — ${st.rkTeam ? 'jori ikatthi (team)' : 'jori aadhi-aadhi'}, din = jin din bill banaye</h3><table class="iv-tbl"><thead><tr><th>#</th><th>Larka</th><th>Roz ki sale</th><th>Kul sale</th><th>Bill</th><th>Din</th>${st.rkTeam ? '<th>Fi banda (roz)</th>' : ''}</tr></thead><tbody>${ranking(r).map((x, i) => `<tr><td>${medal(i)}</td><td class="iv-item"><b>${esc(x.nm)}</b>${x.jori ? (st.rkTeam ? ' (jori)' : ' (jori ½)') : ''}</td><td class="iv-n"><b>${num(x.roz)}</b></td><td class="iv-n">${num(x.t)}</td><td class="iv-n">${num(x.n)}</td><td class="iv-n">${x.din}</td>${st.rkTeam ? `<td class="iv-n">${x.size > 1 ? num(x.roz / x.size) : ''}</td>` : ''}</tr>`).join('')}</tbody></table>` : ''}
+    ${st.rank && st.by === 'larka' ? `<h3>🏆 Ranking (${st.rkBy === 'score' ? '⭐ score' : st.rkBy === 'kul' ? 'kul sale' : st.rkBy === 'bill' ? 'bill' : 'roz ki sale'} se) — ${st.rkTeam ? 'jori ikatthi (team)' : 'jori aadhi-aadhi'}, din = jin din bill banaye</h3><table class="iv-tbl"><thead><tr><th>#</th><th>Larka</th><th>⭐ Score</th><th>Roz ki sale</th><th>Kul sale</th><th>Bill</th><th>Din</th>${st.rkTeam ? '<th>Fi banda (roz)</th>' : ''}</tr></thead><tbody>${ranking(r).map((x, i) => `<tr><td>${medal(i)}</td><td class="iv-item"><b>${esc(x.nm)}</b>${x.jori ? (st.rkTeam ? ' (jori)' : ' (jori ½)') : ''}${x.bd.length ? ' ' + x.bd.map(b => b[0]).join('') : ''}</td><td class="iv-n"><b>${Math.round(x.score)}</b>${x.up ? ` <small>(${x.up > 0 ? '+' : ''}${x.up})</small>` : ''}</td><td class="iv-n"><b>${num(x.roz)}</b></td><td class="iv-n">${num(x.t)}</td><td class="iv-n">${num(x.n)}</td><td class="iv-n">${x.din}</td>${st.rkTeam ? `<td class="iv-n">${x.size > 1 ? num(x.roz / x.size) : ''}</td>` : ''}</tr>`).join('')}</tbody></table>` : ''}
     <h3>${esc(VIEWS.find(v => v[0] === st.view)[1])}</h3>
     <table class="iv-tbl"><thead><tr><th></th>${multi ? `<th>${esc(s.word)}</th>` : ''}<th>Bills</th><th>Total sale</th></tr></thead><tbody>
       ${r.keys.slice(0, MAX_ROWS).map(k => { const m = r.by.get(k), t = sum(m), lab = esc(LABEL[st.view](k));
