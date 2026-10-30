@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Manrope:wght@500;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@700&text=%D9%86%D9%88%D8%B1%20%D9%B9%D8%B1%DB%8C%DA%88%D8%B1%D8%B2&display=swap">
-<link rel="stylesheet" href="dukan.css?v=2.150.0">
+<link rel="stylesheet" href="dukan.css?v=2.151.0">
 </head>
 <body>
 <!-- 🏪 Andar: upar patti · racks ki gali · neeche counter -->
@@ -26,8 +26,9 @@
   <div class="top-acts">
     <button type="button" class="ic" id="findBtn" aria-label="Dhoondo">🔍</button>
     <button type="button" class="ic" id="mapBtn" aria-label="Dukan ka naqsha">🗺</button>
+    <button type="button" class="ic snd" id="sndBtn" aria-label="Awaaz" aria-pressed="false">🔇</button>
   </div>
-  <div class="walk" aria-hidden="true"><i id="walkBar"></i></div>
+  <div class="walk" aria-hidden="true"><i id="walkBar"></i><b id="walkFeet">👣</b></div>
 </header>
 
 <main class="aisle-wrap">
@@ -43,23 +44,27 @@
   <span class="crate" id="crate"><span class="crate-peek" id="cratePeek"></span><span class="crate-body"></span><span class="crate-n" id="crateN" hidden>0</span></span>
 </button>
 
+<!-- 💡 andar ki batti (shutter ke baad jalti hai) -->
+<div class="lights" id="lights" aria-hidden="true"></div>
 <!-- 🚪 Darwaza: board + shutter -->
 <div class="door" id="door">
-  <div class="board">
+  <div class="door-top"><div class="board" id="board">
     <span class="ur" lang="ur">نور ٹریڈرز</span>
     <b>NOOR TRADERS</b>
     <small id="dLine">Wholesale &amp; Retail</small>
     <span class="bulbs" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
-  </div>
+  </div></div>
+  <div class="sh-wrap"><span class="drum" aria-hidden="true"></span>
   <div class="shutter" id="shutter">
     <div class="sh-paint">
       <p class="hello">Assalam o Alaikum 👋</p>
       <p class="hello2">Andar tashreef laiye — racks par ghoomein, cheez uthayein, counter par parchi.</p>
       <button type="button" class="enter" id="enterBtn" disabled><span class="ar">⬆</span> <span id="enterTxt">Maal saja rahe hain…</span></button>
       <p class="d-meta" id="dMeta"></p>
+      <button type="button" class="snd-chip" id="sndDoor" aria-pressed="false">🔇 Awaaz band</button>
     </div>
     <span class="lock" aria-hidden="true"></span>
-  </div>
+  </div></div>
 </div>
 
 <!-- 🛍 Item: shelf se uthaya -->
@@ -92,6 +97,7 @@
       </div>
       <div class="cv-steel" aria-hidden="true"></div>
     </div>
+    <div class="p-slot" aria-hidden="true"></div>
     <section class="parchi" aria-label="Parchi">
       <header><b>NOOR TRADERS</b><small>Online parchi · <span id="pDate"></span></small></header>
       <ol id="pLines"></ol>
@@ -130,6 +136,6 @@
 </div>
 
 <div class="oops" id="oops" hidden><p id="oopsTxt"></p><button type="button" id="retryBtn">🔄 Dobara koshish</button></div>
-<script type="module" src="dukan.js?v=2.150.0"></script>
+<script type="module" src="dukan.js?v=2.151.0"></script>
 </body>
 </html>

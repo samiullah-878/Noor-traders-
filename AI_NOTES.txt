@@ -6527,3 +6527,13 @@ Malik (POS Purchase, "bhej diya" patti 3/49): "Update ki bajaye bill check + pos
 2) Malik: "Sono ka mobile baar baar refresh ho jata hai". App khud sirf naya version (30 min peeche) / malik tab par reload karti hai. Phone wajahein: Chrome ka upar se khench kar refresh + kam memory (doosri app se wapas = dobara load).
    - style.css `html,body{overscroll-behavior-y:none}` = pull-to-refresh BAND.
    - app.js rlLog (onSession + 4 s): isi tab mein pehle chal chuki (sessionStorage sam-alive) aur app ne khud reload na kiya ho (rlMark('update'|'malik') har location.reload se pehle) → auditLog area 'device' act 'reload' "🔄 App dobara khuli · wajah (phone memory — document.wasDiscarded / reload / peeche-aage) · N min baad · device" — History mein malik dekhe. Pehli dafa kholna = kuch nahi. Memory wajah ho to phone par Chrome ⋮ → Add to Home screen (install) behtar. AI NAHI.
+
+## v2.151.0 (2026-10-30) — 🎬 Online Dukan website: animations + 🔊 awaaz (dukan/ sirf)
+Malik: "shutter khulne, item select karne, cart (tokri) mein dalne aur ek rack se doosre rack par jane par animation". OK diya (awaaz ka jawab nahi — shuru mein BAND, 🔊 chip).
+- 🚪 Shutter: door-top (board) + sh-wrap (overflow) + drum — enter(): jhatka (300 ms) → drum mein lipat kar upar (1.2 s, WAAPI) → board upar ghayab → #lights (andheri dukan) do teen jhapak kar roshan + top bar tube light flick → pehle 2 racks ke items neeche se ubhar (rise, stagger --d). Board ke bulb data aate hi ek ek kar ke jalte (board.lit).
+- 🛍 Item: tap = item shelf se uthta (lift) + rate parchi hilti (wig) + "tick" → khirki mein FLIP (shelf wali tasveer barh kar khirki ki jagah).
+- 🧺 Tokri: ghoomta hua udta (300°) → tokri uchhle + tadad pop + "+N" upar + counter patti chamke + "thak". "+" bubble bhi pop.
+- 🚶 Rack se rack: depth() har scroll frame qareeb ke racks par --p (rotateY ±14°, scale, opacity) + farsh tiles parallax; naye rack par board jhoole (swing) + 👣 patti par + halki "whoosh"; ‹ › par camera bob.
+- 🧾 Counter: tokri khisak kar aaye (crateIn), monitor jhapak kar jale, parchi printer slot se nikle (clip-path) + lines ek ek kar ke + printer "tik tik". Class 'cvin' (NOT 'enter' — .enter darwaze ka button hai, takra kar cv 46px ho gaya tha).
+- Awaaz: WebAudio se bani (file nahi) — shutter / pick / drop / step / print; 🔊 chip darwaze par + upar patti, localStorage nt-dk-snd, shuru BAND.
+- LITE (deviceMemory ≤ 2 ya ≤ 2 core ya prefers-reduced-motion): 3D / stagger / flip nahi, sirf saada. AI NAHI.

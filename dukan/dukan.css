@@ -62,7 +62,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 .sign b{font:800 18px/1.1 "Baloo 2",Manrope,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .sign .sp{flex:none;font-size:11px;font-weight:700;opacity:.8}
 /* lohay ka rack */
-.rack{position:relative;z-index:1;flex:1;min-height:0;margin:0 0 30px;padding:0 16px;display:grid;grid-template-rows:repeat(var(--rows,4),minmax(0,1fr));background:linear-gradient(90deg,rgba(0,0,0,.04),rgba(255,255,255,.35) 50%,rgba(0,0,0,.05));border-radius:4px 4px 0 0}
+.rack{position:relative;z-index:1;flex:1;min-height:0;margin:0 0 30px;transform-origin:50% 60%;padding:0 16px;display:grid;grid-template-rows:repeat(var(--rows,4),minmax(0,1fr));background:linear-gradient(90deg,rgba(0,0,0,.04),rgba(255,255,255,.35) 50%,rgba(0,0,0,.05));border-radius:4px 4px 0 0}
 .rack::before,.rack::after{content:"";position:absolute;top:-6px;bottom:-26px;width:14px;border-radius:3px;z-index:3;
   background:
     repeating-linear-gradient(180deg,transparent 0 9px,var(--slot) 9px 15px,transparent 15px 20px) 4px 0/6px 100% no-repeat,
@@ -120,23 +120,33 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 .fly{position:fixed;z-index:60;pointer-events:none;border-radius:8px;object-fit:contain}
 
 /* ---------- 🚪 darwaza ---------- */
-.door{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;background:#2b3442}
-.board{position:relative;flex:none;margin:calc(10px + var(--sat)) max(12px,var(--sar)) 0 max(12px,var(--sal));padding:12px 14px 16px;border-radius:14px;text-align:center;color:#fff;
-  background:linear-gradient(180deg,#26478f,#142a5a);border:3px solid #d9a42a;box-shadow:0 0 0 3px #0e1d40,0 18px 40px -16px rgba(0,0,0,.8);transition:transform .7s ease,opacity .7s ease}
+.door{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;background:none}
+.door-top{flex:none;padding:calc(10px + var(--sat)) max(12px,var(--sar)) 12px max(12px,var(--sal));background:linear-gradient(180deg,#232b38,#2b3442)}
+.board{position:relative;padding:12px 14px 16px;border-radius:14px;text-align:center;color:#fff;
+  background:linear-gradient(180deg,#26478f,#142a5a);border:3px solid #d9a42a;box-shadow:0 0 0 3px #0e1d40,0 18px 40px -16px rgba(0,0,0,.8)}
 .board .ur{display:block;font:700 26px/1.9 "Noto Nastaliq Urdu",serif;color:var(--gold2);text-shadow:0 2px 0 rgba(0,0,0,.35)}
 .board b{display:block;margin-top:-6px;font:800 32px/1 "Baloo 2",Manrope,sans-serif;letter-spacing:2px;color:#fff;text-shadow:0 3px 0 #0e1d40,0 0 18px rgba(255,215,106,.45)}
 .board small{display:inline-block;margin-top:6px;padding:3px 10px;border-radius:999px;background:var(--gold);color:var(--navy);font-weight:800;font-size:12px}
 .bulbs{position:absolute;left:12px;right:12px;bottom:4px;display:flex;justify-content:space-between}
-.bulbs i{width:6px;height:6px;border-radius:999px;background:#ffe9a6;box-shadow:0 0 8px 2px rgba(255,214,102,.8);animation:bulb 1.4s ease-in-out infinite}
-.bulbs i:nth-child(2n){animation-delay:.7s}
-@keyframes bulb{50%{opacity:.35}}
-.shutter{position:relative;flex:1;margin:12px max(12px,var(--sar)) 0 max(12px,var(--sal));border-radius:6px 6px 0 0;overflow:hidden;display:flex;align-items:center;justify-content:center;
+.bulbs i{width:6px;height:6px;border-radius:999px;background:#6b6250;box-shadow:none}
+.board.lit .bulbs i{animation:bulbOn .22s ease-out forwards,bulb 1.4s ease-in-out infinite}
+.board.lit .bulbs i:nth-child(1){animation-delay:.05s,.3s}.board.lit .bulbs i:nth-child(2){animation-delay:.15s,1s}.board.lit .bulbs i:nth-child(3){animation-delay:.25s,.5s}.board.lit .bulbs i:nth-child(4){animation-delay:.35s,1.2s}.board.lit .bulbs i:nth-child(5){animation-delay:.45s,.7s}.board.lit .bulbs i:nth-child(6){animation-delay:.55s,1.4s}.board.lit .bulbs i:nth-child(7){animation-delay:.65s,.9s}
+.board.lit b{animation:signOn .9s ease-out .2s both}
+@keyframes bulbOn{to{background:#ffe9a6;box-shadow:0 0 8px 2px rgba(255,214,102,.8)}}
+@keyframes bulb{50%{opacity:.4}}
+@keyframes signOn{0%{opacity:.35;text-shadow:none}30%{opacity:1}40%{opacity:.5}55%{opacity:1;text-shadow:0 3px 0 #0e1d40,0 0 26px rgba(255,215,106,.8)}100%{opacity:1}}
+/* shutter: upar wale DRUM mein lipat-ta hai (sh-wrap overflow) — andar ki dukan peeche nazar aati hai */
+.sh-wrap{position:relative;flex:1;min-height:0;overflow:hidden}
+.sh-wrap::before,.sh-wrap::after{content:"";position:absolute;top:0;bottom:0;width:max(10px,var(--sal));z-index:4;background:linear-gradient(90deg,#1d242f,#3a4352)}
+.sh-wrap::before{left:0}.sh-wrap::after{right:0;transform:scaleX(-1)}
+.drum{position:absolute;left:0;right:0;top:0;height:18px;z-index:5;background:linear-gradient(180deg,#4b535e,#a9b1bb 40%,#5c6571 70%,#2f363f);box-shadow:0 5px 10px rgba(0,0,0,.45)}
+.shutter{position:absolute;inset:0;padding-top:18px;display:flex;align-items:center;justify-content:center;will-change:transform;
   background:
     linear-gradient(90deg,rgba(0,0,0,.28),rgba(0,0,0,0) 14%,rgba(0,0,0,0) 86%,rgba(0,0,0,.28)),
     repeating-linear-gradient(180deg,#a6aeb8 0 7px,#d3d9df 7px 11px,#8a939d 11px 13px);
-  box-shadow:0 -6px 0 #59626d inset;transition:transform .9s cubic-bezier(.6,.05,.3,1)}
+  box-shadow:0 -6px 0 #59626d inset}
 .lock{position:absolute;bottom:14px;left:50%;width:46px;height:14px;margin-left:-23px;border-radius:4px;background:linear-gradient(180deg,#59626d,#3b434d);box-shadow:0 2px 0 rgba(255,255,255,.25) inset}
-.sh-paint{position:relative;z-index:1;margin:0 16px 30px;padding:20px 18px;max-width:420px;border-radius:18px;text-align:center;background:rgba(22,32,52,.72);color:#fff;backdrop-filter:blur(2px);box-shadow:0 20px 40px -20px rgba(0,0,0,.7)}
+.sh-paint{position:relative;z-index:1;margin:0 18px 30px;padding:20px 18px;max-width:420px;border-radius:18px;text-align:center;background:rgba(22,32,52,.72);color:#fff;backdrop-filter:blur(2px);box-shadow:0 20px 40px -20px rgba(0,0,0,.7)}
 .hello{margin:0;font:800 24px/1.2 "Baloo 2",Manrope,sans-serif}
 .hello2{margin:6px 0 16px;color:#d7deea;font-size:14px}
 .enter{display:inline-flex;align-items:center;gap:8px;height:46px;padding:0 22px;border:0;border-radius:999px;background:linear-gradient(180deg,var(--gold2),var(--gold));color:var(--navy);font:800 16px/1 Manrope,sans-serif;box-shadow:0 10px 22px -10px rgba(242,182,50,.9),0 0 0 3px rgba(255,255,255,.18)}
@@ -144,10 +154,17 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 .enter .ar{display:inline-block;animation:ar 1.2s ease-in-out infinite}
 @keyframes ar{50%{transform:translateY(-4px)}}
 .d-meta{margin:14px 0 0;color:#c6cfdd;font-size:12.5px;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 12px}
-.door.up .shutter{transform:translateY(-110%)}
-.door.up .board{transform:translateY(-130%);opacity:0}
-.door.up{background:transparent;pointer-events:none;transition:background .4s ease .5s}
+.snd-chip{margin-top:12px;height:32px;padding:0 13px;border-radius:999px;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.1);color:#fff;font-weight:800;font-size:12.5px}
+.snd-chip[aria-pressed="true"]{background:rgba(242,182,50,.25);border-color:var(--gold)}
+.door.up{pointer-events:none}
 .door.gone{display:none}
+/* 💡 andar ki batti: shutter ke baad do teen jhapak, phir roshan */
+.lights{position:fixed;inset:0;z-index:49;pointer-events:none;background:radial-gradient(ellipse at 50% 20%,rgba(20,28,44,.82),rgba(6,9,16,.94))}
+.lights.on{animation:lightsOn 1.05s steps(1,end) forwards}
+.lights.off{display:none}
+@keyframes lightsOn{0%{opacity:1}14%{opacity:.25}22%{opacity:.9}36%{opacity:.1}48%{opacity:.55}62%{opacity:0}100%{opacity:0}}
+.top.flick::after{animation:flick 1.05s steps(1,end)}
+@keyframes flick{0%{opacity:.1}14%{opacity:1}22%{opacity:.2}36%{opacity:1}48%{opacity:.4}62%,100%{opacity:1}}
 
 /* ---------- 🛍 item sheet ---------- */
 .sheet{position:fixed;inset:0;z-index:40}
@@ -281,3 +298,46 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
   .tag{font-size:13px}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* ---------- 🎬 v2.151.0 animations (malik: shutter · item uthana · tokri · rack se rack) ---------- */
+html:not(.lite) .bay .rack{transform:perspective(900px) rotateY(calc(var(--p,0) * -14deg)) scale(var(--s,1));opacity:var(--o,1);will-change:transform}
+html:not(.lite) .bay::after{background-position:0 0,calc(var(--p,0) * 90px) 0,0 0}
+.sign{transform-origin:50% -16px}
+.sign.swing{animation:swing 1s cubic-bezier(.3,.6,.4,1)}
+@keyframes swing{0%{transform:rotate(7deg)}30%{transform:rotate(-5deg)}55%{transform:rotate(3deg)}78%{transform:rotate(-1.2deg)}100%{transform:none}}
+.bay.rise .it{animation:rise .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--d,0) * 30ms)}
+@keyframes rise{from{opacity:0;transform:translateY(26px) scale(.9)}to{opacity:1;transform:none}}
+.bay.rise .sign{animation:dropIn .6s cubic-bezier(.3,1.4,.5,1) both}
+@keyframes dropIn{from{opacity:0;transform:translateY(-30px) rotate(6deg)}to{opacity:1;transform:none}}
+.walk b{position:absolute;top:-8px;left:var(--w,0%);transform:translateX(-60%);font-size:11px;line-height:1;transition:left .35s ease;filter:drop-shadow(0 1px 1px rgba(0,0,0,.4))}
+.walk b.bob{animation:feet .5s ease-in-out}
+@keyframes feet{25%{transform:translateX(-60%) translateY(-3px) rotate(-12deg)}50%{transform:translateX(-60%)}75%{transform:translateX(-60%) translateY(-3px) rotate(12deg)}}
+.aisle.bob{animation:camBob .45s ease-in-out}
+@keyframes camBob{40%{transform:translateY(3px)}}
+/* 🛍 item uthana */
+.it.lift .it-box{animation:lift .32s cubic-bezier(.3,1.4,.5,1)}
+@keyframes lift{0%{transform:none}45%{transform:translateY(-14px) scale(1.08);filter:drop-shadow(0 16px 10px rgba(0,0,0,.3))}100%{transform:translateY(-4px)}}
+.tag.wig{animation:wig .5s ease-in-out}
+@keyframes wig{20%{transform:rotate(-7deg)}45%{transform:rotate(5deg)}70%{transform:rotate(-2deg)}100%{transform:none}}
+.fly2{position:fixed;z-index:60;pointer-events:none;transform-origin:0 0;object-fit:contain;border-radius:8px}
+/* 🧺 tokri */
+.crate-n.pop{animation:popN .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes popN{0%{transform:scale(.4)}60%{transform:scale(1.45)}100%{transform:none}}
+.plus.pop{animation:popN .4s cubic-bezier(.3,1.6,.5,1)}
+.plus1{position:fixed;z-index:61;pointer-events:none;transform:translate(-50%,0);font:800 16px/1 "Baloo 2",Manrope,sans-serif;color:var(--good);text-shadow:0 1px 0 #fff,0 0 8px #fff;animation:up1 .9s ease-out forwards}
+@keyframes up1{0%{opacity:0;transform:translate(-50%,6px) scale(.7)}20%{opacity:1;transform:translate(-50%,-6px) scale(1.15)}100%{opacity:0;transform:translate(-50%,-46px) scale(1)}}
+.counter.glow{animation:cGlow .7s ease-out}
+@keyframes cGlow{0%{box-shadow:0 -1px 0 #fff inset,0 0 0 0 rgba(242,182,50,.0)}35%{box-shadow:0 -1px 0 #fff inset,0 -6px 26px 4px rgba(242,182,50,.75)}100%{box-shadow:0 -1px 0 #fff inset,0 -14px 30px -18px rgba(20,30,50,.55)}}
+/* 🧾 counter kholna: tokri khisak kar · monitor jalta · parchi printer se */
+.p-slot{height:12px;margin:18px 6px -10px;border-radius:8px;position:relative;z-index:2;background:linear-gradient(180deg,#2a313b,#4a525d 60%,#1d232b);box-shadow:0 4px 8px rgba(0,0,0,.35)}
+.parchi{margin-top:0}
+.cv.cvin .big-crate{animation:crateIn .6s cubic-bezier(.2,.9,.3,1.15) both}
+@keyframes crateIn{from{transform:translateX(75%) rotate(6deg);opacity:0}to{transform:none;opacity:1}}
+.cv.cvin .m-scr{animation:scrOn .7s steps(1,end) both .15s}
+@keyframes scrOn{0%{filter:brightness(.2)}20%{filter:brightness(1.4)}30%{filter:brightness(.3)}45%,100%{filter:none}}
+.cv.cvin .parchi{animation:printOut .9s cubic-bezier(.3,.7,.3,1) both .35s}
+@keyframes printOut{from{clip-path:inset(0 0 100% 0);transform:translateY(-24px)}to{clip-path:inset(0 0 -20px 0);transform:none}}
+.cv.cvin .parchi li{animation:lineIn .35s ease-out both;animation-delay:calc(.5s + var(--d,0) * 70ms)}
+@keyframes lineIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+.ic.snd[aria-pressed="true"]{background:rgba(242,182,50,.28);border-color:var(--gold)}
+html.lite .bay .rack{transform:none!important}

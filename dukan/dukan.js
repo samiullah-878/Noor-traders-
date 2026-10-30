@@ -6,7 +6,7 @@
 //     info  = malik {name, line, wa, addr, time, map, on} · racks = app {order:[cat], cn:{cat:naam}, hc:{cat:1}, hide:{id:1}, ic:{id:cat}}
 //     phIdx = {m:{id:v}} · ph_<id> = {b: Bytes JPEG, v}  (tasveer ek dafa aa kar phone ke IndexedDB mein)
 //   AI NAHI. Order = WhatsApp link (muft) — koi server / payment nahi. Tokri sirf gahak ke phone mein (localStorage).
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.150.0';
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.151.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -18,7 +18,39 @@ const ls = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
 };
+// ---------- 🎬 v2.151.0: animation + 🔊 awaaz (malik: "shutter khulne, item chunne, tokri mein dalne aur rack se rack par animation") ----------
+//   Sab transform / opacity (tez). Kamzor phone (deviceMemory ≤ 2 / 2 core) ya "kam harkat" setting = LITE (3D / stagger nahi). Awaaz WebAudio se bani (koi file nahi), shuru mein BAND.
+const RM = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } })();
+const LITE = RM || (Number(navigator.deviceMemory) > 0 && Number(navigator.deviceMemory) <= 2) || (Number(navigator.hardwareConcurrency) > 0 && Number(navigator.hardwareConcurrency) <= 2);
+document.documentElement.classList.toggle('lite', !!LITE);
+const anim = (el, kf, o) => { try { if (RM || !el || !el.animate) return null; return el.animate(kf, o); } catch { return null; } };
+const replay = (el, c) => { if (!el || RM) return; el.classList.remove(c); void el.offsetWidth; el.classList.add(c); };
+let SND = false, AC = null;
+function ac() { if (!SND) return null; try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); return AC; } catch { return null; } }
+function noiseSrc(a, dur) { const b = a.createBuffer(1, Math.max(1, Math.floor(a.sampleRate * dur)), a.sampleRate), d = b.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; const n = a.createBufferSource(); n.buffer = b; return n; }
+function thump(a, t, v) {
+  const o = a.createOscillator(), g = a.createGain(); o.type = 'sine'; o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(55, t + 0.14);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.22);
+  const n = noiseSrc(a, 0.05), hp = a.createBiquadFilter(), ng = a.createGain(); hp.type = 'highpass'; hp.frequency.value = 2200; ng.gain.setValueAtTime(v * 0.3, t); ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.05); n.connect(hp); hp.connect(ng); ng.connect(a.destination); n.start(t); n.stop(t + 0.05);
+}
+const SFX = {
+  shutter() { const a = ac(); if (!a) return; const t = a.currentTime, n = noiseSrc(a, 1.4), bp = a.createBiquadFilter(), g = a.createGain(), lfo = a.createOscillator(), lg = a.createGain();
+    bp.type = 'bandpass'; bp.frequency.setValueAtTime(700, t); bp.frequency.linearRampToValueAtTime(1700, t + 1.2); bp.Q.value = 1.1;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.32, t + 0.1); g.gain.setValueAtTime(0.32, t + 0.95); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
+    lfo.frequency.setValueAtTime(16, t); lfo.frequency.linearRampToValueAtTime(32, t + 1.1); lg.gain.value = 0.22; lfo.connect(lg); lg.connect(g.gain);
+    n.connect(bp); bp.connect(g); g.connect(a.destination); n.start(t); n.stop(t + 1.4); lfo.start(t); lfo.stop(t + 1.4); thump(a, t + 1.18, 0.22); },
+  drop() { const a = ac(); if (a) thump(a, a.currentTime, 0.4); },
+  pick() { const a = ac(); if (!a) return; const t = a.currentTime, o = a.createOscillator(), g = a.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(880, t); o.frequency.exponentialRampToValueAtTime(1320, t + 0.06);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.1, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12); o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.13); },
+  step() { const a = ac(); if (!a) return; const t = a.currentTime, n = noiseSrc(a, 0.26), f = a.createBiquadFilter(), g = a.createGain(); f.type = 'bandpass'; f.frequency.setValueAtTime(380, t); f.frequency.exponentialRampToValueAtTime(1500, t + 0.22); f.Q.value = 0.8;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24); n.connect(f); f.connect(g); g.connect(a.destination); n.start(t); n.stop(t + 0.26); },
+  print() { const a = ac(); if (!a) return; const t = a.currentTime; for (let k = 0; k < 9; k++) { const n = noiseSrc(a, 0.03), f = a.createBiquadFilter(), g = a.createGain(), tt = t + 0.35 + k * 0.075; f.type = 'bandpass'; f.frequency.value = 3200; g.gain.setValueAtTime(0.06, tt); g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.03); n.connect(f); f.connect(g); g.connect(a.destination); n.start(tt); n.stop(tt + 0.03); } }
+};
+const sfx = k => { try { SFX[k] && SFX[k](); } catch {} };
+function sndPaint() { [['sndBtn', SND ? '🔊' : '🔇'], ['sndDoor', SND ? '🔊 Awaaz chalu' : '🔇 Awaaz band']].forEach(([id, t]) => { const b = document.getElementById(id); if (b) { b.textContent = t; b.setAttribute('aria-pressed', String(SND)); } }); }
 const ss = { get(k) { try { return sessionStorage.getItem(k); } catch { return null; } }, set(k, v) { try { sessionStorage.setItem(k, v); } catch {} } };
+
+SND = ls.get('nt-dk-snd', false) === true; sndPaint();
 
 // ---------- ☁️ Firestore REST (sirf parhna) ----------
 const ROOT = `projects/${firebaseConfig.projectId}/databases/(default)/documents`;
@@ -125,6 +157,7 @@ function renderAisle(keepId) {
   bays.forEach((b, i) => b.items.forEach(it => S.bayOf.set(it.id, i)));
   const a = $('aisle');
   a.innerHTML = bays.length ? bays.map((b, i) => bayHTML(b, i, D)).join('') : '<p class="empty-aisle">Abhi racks par maal nahi saja — thori der baad dobara dekhein.</p>';
+  bayEls = [...a.querySelectorAll('.bay')];
   observe();
   if (keepId && S.bayOf.has(keepId)) go(S.bayOf.get(keepId), true);
   onScroll();
@@ -171,14 +204,28 @@ function onScroll() {
   S.cur = i;
   const b = S.bays[i];
   $('where').textContent = b ? `Rack ${b.rk.no}/${S.racks.length} · ${b.rk.name}${b.parts > 1 ? ` (${b.p + 1}/${b.parts})` : ''}` : 'Noor Traders';
-  $('walkBar').style.width = S.bays.length ? Math.round((i + 1) / S.bays.length * 100) + '%' : '0';
+  const w = S.bays.length ? Math.round((i + 1) / S.bays.length * 100) + '%' : '0';
+  $('walkBar').style.width = w; $('walkFeet').style.setProperty('--w', w);
   $('prevBtn').disabled = a.scrollLeft < 4;
   $('nextBtn').disabled = a.scrollLeft + a.clientWidth >= a.scrollWidth - 4;
+  depth();
+  if (i !== arrived) { clearTimeout(arriveT); arriveT = setTimeout(() => { if (S.cur !== i || i === arrived) return; const first = arrived < 0; arrived = i; if (first || !doorGone) return; replay(bayEls[i]?.querySelector('.sign'), 'swing'); replay($('walkFeet'), 'bob'); sfx('step'); }, 140); }
+}
+// 🚶 rack se rack: racks halka sa mud kar (3D) aage, farsh ki tiles alag raftaar (sirf qareeb ke 3–4 racks)
+let bayEls = [], arrived = -1, arriveT = 0, doorGone = false;
+function depth() {
+  if (LITE || !bayEls.length) return;
+  const a = $('aisle'), bw = S.dims?.bw || a.clientWidth || 1, x = a.scrollLeft, mid = x + a.clientWidth / 2;
+  const lo = Math.max(0, Math.floor(x / bw) - 1), hi = Math.min(bayEls.length - 1, Math.ceil((x + a.clientWidth) / bw) + 1);
+  for (let k = lo; k <= hi; k++) {
+    const p = Math.max(-1, Math.min(1, ((k + 0.5) * bw - mid) / bw)), el = bayEls[k]; if (!el) continue;
+    el.style.setProperty('--p', p.toFixed(3)); el.style.setProperty('--s', (1 - Math.abs(p) * 0.07).toFixed(3)); el.style.setProperty('--o', (1 - Math.abs(p) * 0.3).toFixed(3));
+  }
 }
 function go(i, now) {
   const a = $('aisle'), bw = S.dims?.bw || a.clientWidth;
   i = Math.max(0, Math.min(S.bays.length - 1, i));
-  if (now) { a.style.scrollBehavior = 'auto'; a.scrollLeft = i * bw; a.style.scrollBehavior = ''; } else a.scrollTo({ left: i * bw, behavior: 'smooth' });
+  if (now) { a.style.scrollBehavior = 'auto'; a.scrollLeft = i * bw; a.style.scrollBehavior = ''; } else { a.scrollTo({ left: i * bw, behavior: 'smooth' }); if (!LITE) replay(a, 'bob'); }
 }
 
 // ---------- 🧺 tokri (counter par) ----------
@@ -201,10 +248,10 @@ function setQty(id, q) {
   if (q > 0) S.crate[id] = q; else delete S.crate[id];
   saveCrate(); paintCrate(); markItem(id);
 }
-function flyFrom(el, it) {
+function flyFrom(el, it, q = 1) {
   const crate = $('crate'); if (!el || !crate) return;
   const r0 = el.getBoundingClientRect(), r1 = crate.getBoundingClientRect();
-  if (!r0.width) { bump(); return; }
+  if (!r0.width || RM) { landed(q); return; }
   const f = PHURL.has(it.id) ? Object.assign(document.createElement('img'), { src: PHURL.get(it.id), alt: '' }) : document.createElement('div');
   if (!PHURL.has(it.id)) f.style.cssText = thumbStyle(it);
   f.className = 'fly';
@@ -212,17 +259,26 @@ function flyFrom(el, it) {
   Object.assign(f.style, { left: (r0.left + (r0.width - w) / 2) + 'px', top: (r0.top + (r0.height - h) / 2) + 'px', width: w + 'px', height: h + 'px' });
   document.body.appendChild(f);
   const dx = r1.left + r1.width / 2 - (r0.left + r0.width / 2), dy = r1.top + r1.height / 3 - (r0.top + r0.height / 2);
-  const done = () => { f.remove(); bump(); };
+  let ok = false; const done = () => { if (ok) return; ok = true; f.remove(); landed(q); };
   try {
-    const an = f.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1 }, { transform: `translate(${dx * 0.45}px,${dy * 0.45 - 90}px) scale(.75) rotate(-8deg)`, opacity: 1, offset: 0.45 }, { transform: `translate(${dx}px,${dy}px) scale(.22) rotate(14deg)`, opacity: 0.7 }], { duration: 640, easing: 'cubic-bezier(.45,.05,.55,.95)' });
-    an.onfinish = done; an.oncancel = done;
+    const an = f.animate([{ transform: 'translate(0,0) scale(1) rotate(0deg)', opacity: 1 }, { transform: `translate(${dx * 0.45}px,${dy * 0.45 - 110}px) scale(.8) rotate(-${LITE ? 10 : 140}deg)`, opacity: 1, offset: 0.45 }, { transform: `translate(${dx}px,${dy}px) scale(.2) rotate(${LITE ? 14 : 300}deg)`, opacity: 0.75 }], { duration: 680, easing: 'cubic-bezier(.45,.05,.55,.95)' });
+    an.onfinish = done; an.oncancel = done; setTimeout(done, 900);
   } catch { done(); }
 }
-function bump() { const c = $('crate'); c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
+function bump() { replay($('crate'), 'bump'); }
+// 🧺 tokri mein gira: tokri uchhle · tadad "pop" · "+1" upar · counter patti chamke · "thak"
+function landed(q) {
+  bump(); replay($('crateN'), 'pop'); replay($('counterBar'), 'glow'); sfx('drop');
+  if (RM) return;
+  const c = $('crate').getBoundingClientRect(), s1 = document.createElement('span');
+  s1.className = 'plus1'; s1.textContent = '+' + num(q); s1.style.left = (c.left + c.width / 2) + 'px'; s1.style.top = (c.top - 6) + 'px';
+  document.body.appendChild(s1); setTimeout(() => s1.remove(), 950);
+}
 function addToCrate(id, q, el) {
   const it = S.items.get(id); if (!it) return;
   setQty(id, (Number(S.crate[id]) || 0) + q);
-  flyFrom(el, it);
+  flyFrom(el, it, q);
+  document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"] .plus`).forEach(p => replay(p, 'pop'));
   try { navigator.vibrate && navigator.vibrate(12); } catch {}
 }
 
@@ -244,8 +300,9 @@ function closeOv(n) {
 addEventListener('popstate', () => { if (skipPop > 0) { skipPop--; return; } const n = OV.pop(); if (n) hideOv(n); });
 
 // ---------- 🛍 item uthaya ----------
-function openSheet(id) {
+function openSheet(id, fromEl) {
   const it = S.items.get(id); if (!it) return;
+  const src = fromEl && fromEl.querySelector('img,.pk'), r0 = src ? src.getBoundingClientRect() : null;
   S.open = id; S.q = 1;
   $('shRack').textContent = `Rack ${it.rk.no} · ${it.rk.name}`;
   $('shName').textContent = it.n;
@@ -256,7 +313,18 @@ function openSheet(id) {
   const have = Number(S.crate[id]) || 0;
   $('shAdd').textContent = have ? `🧺 Aur rakho (tokri mein ${num(have)})` : '🧺 Counter par rakho';
   $('sheet').hidden = false; openOv('sheet');
+  if (r0 && r0.width && !LITE && !RM) requestAnimationFrame(() => flip(src, r0, $('shImg').querySelector('img,.pk')));   // 🛍 shelf se uth kar khirki mein
   setTimeout(() => $('shAdd').focus({ preventScroll: true }), 50);
+}
+function flip(src, r0, tgt) {
+  if (!tgt) return; const r1 = tgt.getBoundingClientRect(); if (!r1.width) return;
+  const c = src.tagName === 'IMG' ? Object.assign(document.createElement('img'), { src: src.src, alt: '' }) : src.cloneNode(true);
+  c.classList.add('fly2'); Object.assign(c.style, { left: r1.left + 'px', top: r1.top + 'px', width: r1.width + 'px', height: r1.height + 'px', margin: '0' });
+  document.body.appendChild(c); tgt.style.opacity = '0';
+  const sx = r0.width / r1.width, sy = r0.height / r1.height, dx = r0.left - r1.left, dy = r0.top - r1.top;
+  let ok = false; const end = () => { if (ok) return; ok = true; c.remove(); tgt.style.opacity = ''; };
+  const an = anim(c, [{ transform: `translate(${dx}px,${dy}px) scale(${sx},${sy})` }, { transform: `translate(${dx * 0.4}px,${dy * 0.4 - 30}px) scale(${(sx + 1) / 2},${(sy + 1) / 2})`, offset: 0.5 }, { transform: 'none' }], { duration: 420, easing: 'cubic-bezier(.25,.8,.25,1)' });
+  if (an) { an.onfinish = end; an.oncancel = end; } setTimeout(end, 700);
 }
 
 // ---------- 🧾 counter ----------
@@ -287,7 +355,10 @@ function openCounter() {
   [...f.elements.how].forEach(r => { r.checked = r.value === (w.how || 'self'); });
   $('addrL').hidden = (w.how || 'self') !== 'home';
   paintCounter();
-  $('cv').hidden = false; openOv('cv');
+  const cv = $('cv'); cv.querySelectorAll('#pLines li').forEach((li, k) => li.style.setProperty('--d', String(Math.min(k, 12))));
+  cv.classList.remove('cvin'); cv.hidden = false; openOv('cv');
+  if (!RM) { void cv.offsetWidth; cv.classList.add('cvin'); clearTimeout(openCounter.t); openCounter.t = setTimeout(() => cv.classList.remove('cvin'), 2200); }   // 'enter' class darwaze ke button ki hai — takrao nahi
+  sfx('print');
   $('cv').querySelector('.cv-scroll').scrollTop = 0;
 }
 function waNum(s) {
@@ -358,11 +429,32 @@ function paintDoor() {
   const off = I.on === false;
   $('enterBtn').disabled = off;
   $('enterTxt').textContent = off ? 'Online dukan abhi band hai' : 'Shutter uthayein';
+  $('board').classList.add('lit');   // 💡 board ke bulb ek ek kar ke jalte hain
 }
 function enter() {
   const d = $('door'); if (d.classList.contains('up')) return;
-  d.classList.add('up'); ss.set('nt-dk-in', '1');
-  setTimeout(() => { d.classList.add('gone'); if (!ss.get('nt-dk-hint') && S.bays.length > 1) { ss.set('nt-dk-hint', '1'); $('hint').hidden = false; setTimeout(() => { $('hint').hidden = true; }, 3600); } }, 950);
+  d.classList.add('up'); ss.set('nt-dk-in', '1'); sfx('shutter');
+  const sh = $('shutter'), board = $('board'), top = d.querySelector('.door-top');
+  const finish = () => { if (doorGone) return; doorGone = true; d.classList.add('gone'); lightsOn(); if (!ss.get('nt-dk-hint') && S.bays.length > 1) { ss.set('nt-dk-hint', '1'); $('hint').hidden = false; setTimeout(() => { $('hint').hidden = true; }, 3600); } };
+  if (RM) { finish(); return; }
+  // ① jhatka · ② drum mein lipat kar upar · ③ board upar ghayab
+  const j = anim(sh, [{ transform: 'translateY(0)' }, { transform: 'translateY(-16px)' }, { transform: 'translateY(-5px)' }, { transform: 'translateY(-12px)' }], { duration: 300, easing: 'ease-out', fill: 'forwards' });
+  const roll = () => { const r = anim(sh, [{ transform: 'translateY(-12px)' }, { transform: 'translateY(-101%)' }], { duration: LITE ? 650 : 1200, easing: 'cubic-bezier(.45,.05,.45,1)', fill: 'forwards' }); if (r) r.onfinish = finish; else finish(); };
+  if (j) j.onfinish = roll; else roll();
+  anim(top, [{ transform: 'none', opacity: 1 }, { transform: 'translateY(-110%)', opacity: 0 }], { duration: 520, delay: LITE ? 400 : 760, easing: 'ease-in', fill: 'forwards' });
+  setTimeout(finish, 2200);
+}
+// 💡 andar ki batti: tube light do teen jhapak kar roshan, racks neeche se ubhar kar
+function lightsOn() {
+  const L = $('lights');
+  if (RM || LITE) { L.classList.add('off'); return; }
+  L.classList.add('on'); replay($('top'), 'flick');
+  setTimeout(() => { L.classList.add('off'); }, 1100);
+  setTimeout(rise, 520);
+}
+function rise() {
+  const els = [bayEls[S.cur], bayEls[S.cur + 1]].filter(Boolean);
+  els.forEach(el => { el.querySelectorAll('.it').forEach((it, k) => it.style.setProperty('--d', String(Math.min(k, 24)))); replay(el, 'rise'); setTimeout(() => el.classList.remove('rise'), 1600); });
 }
 
 // ---------- ⚠️ ghalti ----------
@@ -376,7 +468,7 @@ async function load(again) {
     if (!d.cat) throw Object.assign(Error('nocat'), { code: 'nocat' });
     build(d); renderAisle(keep); paintCrate(); paintDoor();
     S.loadedAt = Date.now();
-    if (!again && ss.get('nt-dk-in') && S.info.on !== false) { $('door').classList.add('up', 'gone'); }
+    if (!again && ss.get('nt-dk-in') && S.info.on !== false) { $('door').classList.add('up', 'gone'); $('lights').classList.add('off'); doorGone = true; }
   } catch (e) {
     console.warn('dukan load', e);
     if (again) return;
@@ -390,7 +482,7 @@ document.addEventListener('click', e => {
   const it = t.closest('.it');
   if (it && t.closest('#aisle')) {
     if (t.closest('[data-plus]')) addToCrate(it.dataset.id, 1, it.querySelector('img,.pk'));
-    else openSheet(it.dataset.id);
+    else { replay(it, 'lift'); replay(it.querySelector('.tag'), 'wig'); sfx('pick'); const el = it; setTimeout(() => openSheet(el.dataset.id, el), LITE || RM ? 0 : 150); }
     return;
   }
   if (t.closest('[data-close]')) { closeOv('sheet'); return; }
@@ -417,6 +509,7 @@ document.addEventListener('click', e => {
   if (t.closest('#prevBtn')) { go(S.cur - (S.dims && S.dims.bw < $('aisle').clientWidth - 10 ? 2 : 1)); return; }
   if (t.closest('#nextBtn')) { go(S.cur + (S.dims && S.dims.bw < $('aisle').clientWidth - 10 ? 2 : 1)); return; }
   if (t.closest('#enterBtn')) { enter(); return; }
+  if (t.closest('#sndBtn') || t.closest('#sndDoor')) { SND = !SND; ls.set('nt-dk-snd', SND); sndPaint(); if (SND) sfx('pick'); return; }
   if (t.closest('#retryBtn')) { load(); return; }
 });
 $('who').addEventListener('change', e => { if (e.target.name === 'how') $('addrL').hidden = e.target.value !== 'home'; });
