@@ -6810,3 +6810,4 @@ html body .pp-cbl{flex:none;height:34px;min-height:0!important;padding:0 12px!im
 .lk-rkset-r b{min-width:0;overflow:hidden;text-overflow:ellipsis}
 .lk-rkset-r select{height:34px;border-radius:10px;max-width:150px}
 .lk-rkset-r small{font-size:11px;opacity:.7}
+.lk-rks .lk-fb{text-decoration:none;padding:0 6px;border-radius:999px;background:rgba(32,80,192,.10);color:#2050c0;white-space:nowrap}

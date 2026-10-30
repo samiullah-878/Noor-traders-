@@ -3771,3 +3771,6 @@ Malik (Larka report screenshot, "wishal+hafiz", "imran+sami", "hamiyu", "hamyun+
   Tarteeb chips: Roz ki sale (kul ÷ din, default) · Kul sale · Bill. 🥇🥈🥉 upar, aakhri laal "⬇ sab se neeche", har line: kul · bill · din · fi bill + bar.
   "⚙️ Naam theek karo": har naam ka "= asal naam" dropdown + 🚫 Bahar / ↩ Shamil + 🤔 milte julte naam (hamiyu = hamyun ✓ — lev ≤ 2) — save ⏳/✅.
   PDF mein bhi ranking table (Ranking chalu ho to). Haazri app ke din NAHI (alag app) — din = bill wale din. AI NAHI.
+
+## v2.153.0 (2026-10-30) — 🏆 Ranking: 👥 Jori ikatthi (default) / 👤 Har larka alag
+Malik: "jo naam ikatthe hain un ko ikattha rank-wise karo" → plan → OK. larka.js st.rkTeam (localStorage lk-rkteam, default ON): jori ("wishal+hafiz") EK team — poori sale / bill / din (bahar wala hissa nikal kar, naam POS ki tarteeb mein, key sorted), akele larke apni jagah; jori ki line par "fi banda" (roz ya kul ÷ larke). Chips 👥 Jori ikatthi · 👤 Har larka alag (purana aadha-aadha). PDF mein "Fi banda (roz)" khana. AI NAHI.

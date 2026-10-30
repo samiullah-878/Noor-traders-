@@ -101,6 +101,7 @@ function build() {
 //   🥇🥈🥉 upar · sab se neeche laal. Sirf parhna (POS / khata kuch nahi). AI nahi.
 let rk = { al: {}, out: {} }, rkStop = null, rkDirty = false, rkOpen = false, rkSt = '';
 st.rank = (() => { try { return localStorage.getItem('lk-rank') === '1'; } catch { return false; } })(); st.rkBy = 'roz';
+st.rkTeam = (() => { try { return localStorage.getItem('lk-rkteam') !== '0'; } catch { return true; } })();   // v2.153.0: malik — "jo naam ikatthe hain un ko ikattha rank karo" (default jori ikatthi)
 const nk = x => String(x || '').toLowerCase().replace(/[^a-z0-9؀-ۿ ]+/g, ' ').replace(/\s+/g, ' ').trim();
 const tc = x => String(x || '').replace(/(^|\s)\S/g, c => c.toUpperCase());
 const parts = name => String(name || '').split(/\s*(?:\+|&|,|\/|\band\b)\s*/i).map(nk).filter(Boolean);
@@ -112,13 +113,18 @@ function ranking(r) {
   for (const row of s.days) {
     if (row[0] < st.from || row[0] > st.to || !(Number(row[2]) > 0)) continue;
     const ps = parts(r.nameOf.get(row[1])); if (!ps.length) continue;
+    if (st.rkTeam) {   // 👥 jori ikatthi: "wishal+hafiz" ek team — poori sale / bill / din (bahar wala hissa nikal kar)
+      const cs = [...new Set(ps.filter(p => !isOut(p)).map(canon).filter(c => !isOut(c)))]; if (!cs.length) continue;
+      const k = [...cs].sort().join('+'), o = P.get(k) || { k, ks: cs, t: 0, n: 0, d: new Set(), jori: cs.length > 1 }; P.set(k, o);   // naam POS wali tarteeb mein (wishal + hafiz)
+      o.t += Number(row[3]); o.n += Number(row[2]); o.d.add(row[0]); continue;
+    }
     for (const p of ps) {
       const c = canon(p); if (isOut(p) || isOut(c)) continue;
-      const o = P.get(c) || { k: c, t: 0, n: 0, d: new Set(), jori: false }; P.set(c, o);
+      const o = P.get(c) || { k: c, ks: [c], t: 0, n: 0, d: new Set(), jori: false }; P.set(c, o);
       o.t += Number(row[3]) / ps.length; o.n += Number(row[2]) / ps.length; o.d.add(row[0]); if (ps.length > 1) o.jori = true;
     }
   }
-  const L = [...P.values()].map(o => ({ ...o, din: o.d.size, roz: o.d.size ? o.t / o.d.size : 0, fi: o.n ? o.t / o.n : 0 }));
+  const L = [...P.values()].map(o => ({ ...o, nm: o.ks.map(tc).join(' + '), size: st.rkTeam ? o.ks.length : 1, din: o.d.size, roz: o.d.size ? o.t / o.d.size : 0, fi: o.n ? o.t / o.n : 0 }));
   const key = { roz: x => x.roz, kul: x => x.t, bill: x => x.n }[st.rkBy] || (x => x.roz);
   return L.sort((a, b) => key(b) - key(a) || b.t - a.t);
 }
@@ -134,14 +140,15 @@ function rankHTML(r) {
   if (st.by !== 'larka') return '<div class="nt-empty">🏆<b>Ranking sirf "👦 Larka (SP Man)" par</b><small>Upar se Larka chunein</small></div>';
   const L = ranking(r), top = L[0] ? ({ roz: L[0].roz, kul: L[0].t, bill: L[0].n }[st.rkBy] || 1) : 1, own = isOwner() && !!cloud?.saveLarkaRank;
   const rows = L.map((x, i) => { const v = { roz: x.roz, kul: x.t, bill: x.n }[st.rkBy], pc = top > 0 ? Math.max(3, Math.round(v / top * 100)) : 0, last = L.length > 3 && i === L.length - 1;
-    return `<div class="bc-item lk-man lk-rk${i < 3 ? ' top' : ''}${last ? ' last' : ''}"><div class="lk-rkrow"><span class="lk-md">${medal(i)}</span><b>${esc(tc(x.k))}${x.jori ? ' <small class="lk-jo">jori ½</small>' : ''}</b><b class="bc-cnt">${st.rkBy === 'bill' ? num(x.n) + ' bill' : 'Rs ' + num(st.rkBy === 'kul' ? x.t : x.roz)}${st.rkBy === 'roz' ? '<small>/ din</small>' : ''}</b></div>
-      <small class="lk-rks">Kul Rs ${num(x.t)} · ${num(x.n)} bill · ${x.din} din · fi bill Rs ${num(x.fi)}${last ? ' · ⬇ sab se neeche' : ''}</small><i class="lk-bar"><u style="width:${Math.min(100, pc)}%"></u></i></div>`; }).join('');
+    return `<div class="bc-item lk-man lk-rk${i < 3 ? ' top' : ''}${last ? ' last' : ''}"><div class="lk-rkrow"><span class="lk-md">${medal(i)}</span><b>${esc(x.nm)}${x.jori ? ` <small class="lk-jo">${st.rkTeam ? '👥 jori' : 'jori ½'}</small>` : ''}</b><b class="bc-cnt">${st.rkBy === 'bill' ? num(x.n) + ' bill' : 'Rs ' + num(st.rkBy === 'kul' ? x.t : x.roz)}${st.rkBy === 'roz' ? '<small>/ din</small>' : ''}</b></div>
+      <small class="lk-rks">Kul Rs ${num(x.t)} · ${num(x.n)} bill · ${x.din} din · fi bill Rs ${num(x.fi)}${x.size > 1 ? ` · <u class="lk-fb">fi banda Rs ${num((st.rkBy === 'kul' ? x.t : x.roz) / x.size)}${st.rkBy === 'kul' ? '' : '/din'}</u>` : ''}${last ? ' · ⬇ sab se neeche' : ''}</small><i class="lk-bar"><u style="width:${Math.min(100, pc)}%"></u></i></div>`; }).join('');
   const chip = (k, t) => `<button type="button" class="rc${st.rkBy === k ? ' on' : ''}" data-lk-rkby="${k}">${t}</button>`;
   return `<div class="bc-day"><div class="bc-dayhead"><b>🏆 Ranking</b><span>${esc(span(st.from, st.to))}</span></div>
+    <div class="mchips lk-rkby"><button type="button" class="rc${st.rkTeam ? ' on' : ''}" data-lk-team="1">👥 Jori ikatthi</button><button type="button" class="rc${st.rkTeam ? '' : ' on'}" data-lk-team="0">👤 Har larka alag</button></div>
     <div class="mchips lk-rkby">${chip('roz', 'Roz ki sale')}${chip('kul', 'Kul sale')}${chip('bill', 'Bill')}${own ? `<button type="button" class="rc${rkOpen ? ' on' : ''}" data-lk-rkset="1">⚙️ Naam theek karo${rkSt ? ' ' + rkSt : ''}</button>` : ''}</div>
     ${rkOpen && own ? rkSetHTML(r) : ''}
     ${rows || '<div class="nt-empty">🧾<b>In tareekhon mein koi larka nahi</b></div>'}
-    <p class="lk-note">Jori ki sale / bill aadhi-aadhi · din = jin din bill banaye · "default" aur 🚫 bahar wale shamil nahi · roz ki sale = kul ÷ din.</p></div>`;
+    <p class="lk-note">${st.rkTeam ? 'Jori ek team ki tarah (poori sale) · fi banda = team ÷ larke' : 'Jori ki sale / bill aadhi-aadhi'} · din = jin din bill banaye · "default" aur 🚫 bahar wale shamil nahi · roz ki sale = kul ÷ din.</p></div>`;
 }
 function rkSetHTML(r) {
   const all = names(r.s), G = guesses(all);
@@ -215,7 +222,7 @@ function pdfHTML() {
       ${r.sold.map(m => { const o = r.per.get(m.id); return `<tr><td class="iv-item"><b>${esc(m.name)}</b></td><td class="iv-n">${num(o.n)}</td><td class="iv-n"><b>${num(o.t)}</b></td><td class="iv-n">${r.all.t > 0 ? Math.round(o.t / r.all.t * 100) + '%' : ''}</td></tr>`; }).join('')}
       ${multi ? `<tr><td class="iv-item"><b>Kul</b></td><td class="iv-n"><b>${num(r.all.n)}</b></td><td class="iv-n"><b>${num(r.all.t)}</b></td><td></td></tr>` : ''}</tbody></table>
     ${r.bina.n ? `<p>${num(r.bina.n)} bills (Rs ${num(r.bina.t)}) larke ke naam ke baghair bane — upar shamil nahi.</p>` : ''}
-    ${st.rank && st.by === 'larka' ? `<h3>🏆 Ranking (${st.rkBy === 'kul' ? 'kul sale' : st.rkBy === 'bill' ? 'bill' : 'roz ki sale'} se) — jori aadhi-aadhi, din = jin din bill banaye</h3><table class="iv-tbl"><thead><tr><th>#</th><th>Larka</th><th>Roz ki sale</th><th>Kul sale</th><th>Bill</th><th>Din</th></tr></thead><tbody>${ranking(r).map((x, i) => `<tr><td>${medal(i)}</td><td class="iv-item"><b>${esc(tc(x.k))}</b>${x.jori ? ' (jori ½)' : ''}</td><td class="iv-n"><b>${num(x.roz)}</b></td><td class="iv-n">${num(x.t)}</td><td class="iv-n">${num(x.n)}</td><td class="iv-n">${x.din}</td></tr>`).join('')}</tbody></table>` : ''}
+    ${st.rank && st.by === 'larka' ? `<h3>🏆 Ranking (${st.rkBy === 'kul' ? 'kul sale' : st.rkBy === 'bill' ? 'bill' : 'roz ki sale'} se) — ${st.rkTeam ? 'jori ikatthi (team)' : 'jori aadhi-aadhi'}, din = jin din bill banaye</h3><table class="iv-tbl"><thead><tr><th>#</th><th>Larka</th><th>Roz ki sale</th><th>Kul sale</th><th>Bill</th><th>Din</th>${st.rkTeam ? '<th>Fi banda (roz)</th>' : ''}</tr></thead><tbody>${ranking(r).map((x, i) => `<tr><td>${medal(i)}</td><td class="iv-item"><b>${esc(x.nm)}</b>${x.jori ? (st.rkTeam ? ' (jori)' : ' (jori ½)') : ''}</td><td class="iv-n"><b>${num(x.roz)}</b></td><td class="iv-n">${num(x.t)}</td><td class="iv-n">${num(x.n)}</td><td class="iv-n">${x.din}</td>${st.rkTeam ? `<td class="iv-n">${x.size > 1 ? num(x.roz / x.size) : ''}</td>` : ''}</tr>`).join('')}</tbody></table>` : ''}
     <h3>${esc(VIEWS.find(v => v[0] === st.view)[1])}</h3>
     <table class="iv-tbl"><thead><tr><th></th>${multi ? `<th>${esc(s.word)}</th>` : ''}<th>Bills</th><th>Total sale</th></tr></thead><tbody>
       ${r.keys.slice(0, MAX_ROWS).map(k => { const m = r.by.get(k), t = sum(m), lab = esc(LABEL[st.view](k));
@@ -235,10 +242,11 @@ export function renderLarka() {
 document.addEventListener('click', e => {
   if (e.target.closest?.('[data-lk-pdf]')) { if (!data.sum) { notice('Report abhi nahi aayi'); return; } const r = build(); if (!r.all.n) { notice('In tareekhon mein koi bill nahi'); return; } if (pdfOf) pdfOf(pdfHTML(), `Larka sale ${st.from} se ${st.to}`); return; }
   if (!$('lkRoot')) return;
-  const t = e.target.closest?.('[data-lk-by],[data-lk-q],[data-lk-v],[data-lk-bills],[data-lk-ws],[data-lk-rank],[data-lk-rkby],[data-lk-rkset],[data-lk-out],[data-lk-join]'); if (!t) return;
+  const t = e.target.closest?.('[data-lk-by],[data-lk-q],[data-lk-v],[data-lk-bills],[data-lk-ws],[data-lk-rank],[data-lk-rkby],[data-lk-team],[data-lk-rkset],[data-lk-out],[data-lk-join]'); if (!t) return;
   const d = t.dataset;
   if (d.lkRank) { st.rank = !st.rank; try { localStorage.setItem('lk-rank', st.rank ? '1' : '0'); } catch {} if (st.rank && st.by !== 'larka') { st.by = 'larka'; st.man = 'all'; } paint(); return; }
   if (d.lkRkby) { st.rkBy = d.lkRkby; paint(); return; }
+  if (d.lkTeam != null) { st.rkTeam = d.lkTeam === '1'; try { localStorage.setItem('lk-rkteam', st.rkTeam ? '1' : '0'); } catch {} paint(); return; }
   if (d.lkRkset) { rkOpen = !rkOpen; paint(); return; }
   if (d.lkOut) { const k = d.lkOut; if (rk.out[k]) delete rk.out[k]; else rk.out[k] = 1; rkSave(); return; }
   if (d.lkJoin) { const [a, b] = d.lkJoin.split('|'); if (a && b) { rk.al[a] = b; rkSave(); } return; }
