@@ -3826,3 +3826,12 @@ Malik: website link Settings mein · har rack ke upar naam, neeche baqi racks ke
   🏷 Naam: ON/Band (racks.nmOn) = customer ko photo par naam.
 - Website: har rack mein pehle ASAL PHOTO wala bay (3D jhukao + 📱 phone ghumao), phir baqi items ka bana rack (photo wale items dohra nahi). Photo par tap = khirki (rate POS cat se, khatam = "Khatam", uthaya nahi jata), peeli rate parchi har item par ek (tang jagah sirf raqam; naam 🔍 qareeb wali bari photo mein / chauri jagah par). Tokri mein = hari ginti photo par. Photo ka tukda (canvas) tokri / parchi / dhoondo / khirki mein. 🔍 Dhoondo → photo wala rack + chamak.
 - AI: haan (sirf dabbe + label padhna; naam malik ka tap). Rules wahi (2.79) — ph_rp_* purane ph_ qaide mein, racks doc mein rp / nmOn.
+
+== v2.159.0 (31 Oct 2026) — 🌾 Online Dukan: KHULA MAAL (sheeshe ke dabbe + tore) ==
+Malik: "dalon ka section — tore ke saath pictures · neeche tora, upar sheeshe ke dabbe (kali mirch, ilaichi, dry fruit) · jagah na badle, customer khud aage chalta jaye · packet wise data se customer packet chune". Design (real.png) malik ne OK kiya.
+- Website (dukan/): har rack mein photo bay ke baad 🌾 KHULA BAY — upar kaala dabbon wala rack (aage dhalwan acrylic sheesha, peeli parchi naam + Rs/kg), farsh par tore (jute = daal, safed bori = cheeni / chawal / atta; mura hua munh, andar dher, kabhi steel ka scoop). Daane canvas par (dukan/khula.js: kaju, pista, badam, kishmish, kali mirch, ilaichi, zeera, chana, masoor, chawal, cheeni, atta …). Item ki apni tasveer ho to dabbe / tore mein wohi (dher ki shakal).
+- Tap = khirki mein packet chips: POS sub-barcode (PC sync-stock v4 → cat row[5] [[wazan, rate]]); na hon to kg wale par 250 g · 500 g · 1 kg · 2 kg · 5 kg (rate × wazan). Packet wale shelf items (anday 12 / 30) par bhi chips. Tokri key "id@wazan" — parchi + WhatsApp par "Daal Chana — 5 kg packet · 2 × Rs 1,550".
+- Kaun kahan: app 🏪 Online Dukan → item → "🌾 Website par kaise rakha ho?" 🫙 Dabba / 🧺 Tora / ▦ Shelf (khud wala par "khud"); ☑ kai items ek saath bhi. racks.lp (cloud.saveWebRacks). Khud: unit kg, ya packet wala daal / dry fruit.
+- PC: sync-stock v4 (manifest 2026-10-31.2) — website ko packet ka wazan + BECHNE ka rate (khareed kabhi nahi).
+- Perf: tile se daane (ek dafa), bori ki bunai tile, blur nahi, canvas 8 ms fi frame, door ke canvas khali. 3000 items perf test wahi.
+- AI NAHI (sirf drawing). Rules wahi (2.79).

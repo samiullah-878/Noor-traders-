@@ -4,7 +4,7 @@
 //  2026-10-04: har item ke saath category ka naam (cat) — Items ka '%ategor%ID' khana + category table khud dhoondta hai
 //  v2 (2026-10-11): har 5 sec fingerprint -> tabdeeli par foran sync · sachi dhadkan · 90 sec chowkidar · posStock/_live (app chip)
 //  2026-10-08: ws = W PCS (SaleRateSize) jab W CTN÷pack (SaleRate3 = wrate) se alag ho — app CTN aur PCS alag dikhaye
-//  v3 (2026-10-30): 🏪 ONLINE DUKAN — customer website ke liye webDukan/cat [[id, naam, category, RETAIL rate, unit]] (sirf majood + rate > 0, ⛔ band nahi;
+//  v4 (2026-10-31): 🌾 website ko packet (sub-barcode tadad + bechne ka rate) bhi · v3 (2026-10-30): 🏪 ONLINE DUKAN — customer website ke liye webDukan/cat [[id, naam, category, RETAIL rate, unit]] (sirf majood + rate > 0, ⛔ band nahi;
 //                   khareed / nafa / ginti KABHI nahi — ye doc sab parhte hain). Badla na ho to nahi likhta.
 // =========================================================
 //
@@ -319,6 +319,13 @@ async function readStock(pool, branch, lastRates, codes, subq, shows, subs) {
   });
 }
 
+// v4 (2026-10-31): 🌾 KHULA MAAL — website par tore / sheeshe ke dabbe se customer PACKET chunta hai (250 g · 500 g · 1 kg …).
+//   Item ke sub-barcode (sb) se [[tadad, bechne ka rate]] — Show ✓ wale pehle (na hon to sab); rate 0 = tadad × item ka rate. Khareed KABHI nahi.
+function webPacks(m) {
+  const L = (m.sb || []).filter(x => Number(x.q) > 0), S = L.some(x => x.s) ? L.filter(x => x.s) : L, seen = new Map();
+  for (const x of S) { const q = Math.round(Number(x.q) * 1000) / 1000; if (seen.has(q) || q <= 0) continue; const pr = Number(x.r) > 0 ? round2(x.r) : round2(q * m.r); if (pr > 0) seen.set(q, pr); }
+  return [...seen.entries()].sort((a, b) => a[0] - b[0]).slice(0, 8);
+}
 // v3 (2026-10-30): 🏪 ONLINE DUKAN (website dukan/) — halki public list. Dukan (NOOR TRADERS, naam se) ka retail rate, warna kisi godam ka.
 const webCol = db.collection('businesses').doc(BUSINESS_ID).collection('webDukan');
 const bandRef = db.collection('businesses').doc(BUSINESS_ID).collection('stockCount').doc('_hidden');
@@ -331,14 +338,15 @@ async function pushWeb(byBranch, names) {
     const M = new Map();
     for (const [b, items] of byBranch) for (const r of items) {
       const k = String(r.id); let m = M.get(k);
-      if (!m) { m = { id: r.id, n: r.name, c: r.cat || '', r: 0, u: r.uName || 'Pcs', s: 0, shop: false }; M.set(k, m); }
+      if (!m) { m = { id: r.id, n: r.name, c: r.cat || '', r: 0, u: r.uName || 'Pcs', s: 0, shop: false, sb: null }; M.set(k, m); }
       m.s += Number(r.stock) || 0;
       if (!m.c && r.cat) m.c = r.cat;
+      if (!m.sb && Array.isArray(r.sb) && r.sb.length) m.sb = r.sb;   // v4 (2026-10-31): packet (sub-barcode) — sirf wazan + BECHNE ka rate
       if (b === shopB && Number(r.rate) > 0) { m.r = Number(r.rate); m.shop = true; m.u = r.uName || m.u; }
       else if (!m.shop && Number(r.rate) > m.r) m.r = Number(r.rate);
     }
     const rows = [...M.values()].filter(m => m.s > 0 && m.r > 0 && m.n && !webBand[String(m.id)])
-      .sort((a, b) => Number(a.id) - Number(b.id)).map(m => [m.id, m.n, m.c, round2(m.r), m.u]);
+      .sort((a, b) => Number(a.id) - Number(b.id)).map(m => { const pk = webPacks(m); return pk.length ? [m.id, m.n, m.c, round2(m.r), m.u, pk] : [m.id, m.n, m.c, round2(m.r), m.u]; });
     const h = hashOf(rows);
     if (h === webHash) return;
     await webCol.doc('cat').set({ j: JSON.stringify(rows), n: rows.length, h, at: Date.now(), by: 'pc' });

@@ -14,12 +14,15 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
+import { kindOf } from './dukan/khula.js?v=2.159.0';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
 const title = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ').replace(/(^|[\s(/&-])([a-z])/g, (m, a, b) => a + b.toUpperCase());
 const hash = s => { let h = 7; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
-const rkPh = k => 'rk_' + hash(k).toString(36);   // v2.156.0: website dukan.js mein BILKUL yahi (rack ki tasveer ka id)
+const rkPh = k => 'rk_' + hash(k).toString(36);
+// v2.159.0: 🌾 khula maal — website par 🫙 sheeshe ka dabba / 🧺 tora / ▦ shelf. Qaida website (dukan/khula.js) wala hi — ek jagah.
+const KIND = { g: '🫙 Dabba', s: '🧺 Tora', n: '▦ Shelf' };   // v2.156.0: website dukan.js mein BILKUL yahi (rack ki tasveer ka id)
 const ago = t => { const m = Math.round((Date.now() - (Number(t) || 0)) / 60000); return !t ? '—' : m < 1 ? 'abhi' : m < 60 ? m + ' min pehle' : m < 1440 ? Math.round(m / 60) + ' ghante pehle' : Math.round(m / 1440) + ' din pehle'; };
 const LS = 'sam-web-dukan';
 const pref = (() => { try { return JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch { return {}; } })();
@@ -32,7 +35,7 @@ let un = null;  // Firestore listeners
 const TH = new Map();   // id -> {v, url} chhoti tasveer (phone ki memory)
 
 function fresh() {
-  return { cat: {}, info: {}, racks: { order: [], cn: {}, hc: {}, hide: {}, ic: {}, rp: {}, nmOn: false }, ph: {}, got: {}, q: '', ck: pref.ck || '', f: pref.f || 'all', lim: 120, view: 'list', busy: new Set(), ok: new Set(), err: new Map(), crop: null, pq: '', pck: '', arm: '', act: '', rkSt: '', infoSt: '', sel: null, ai: null, aiOpen: '', rpe: null, rpq: '', rpNew: null, rpDelArm: 0, lastF: [], rkIds: new Set(), rkWait: new Set() };
+  return { cat: {}, info: {}, racks: { order: [], cn: {}, hc: {}, hide: {}, ic: {}, rp: {}, nmOn: false, lp: {} }, ph: {}, got: {}, q: '', ck: pref.ck || '', f: pref.f || 'all', lim: 120, view: 'list', busy: new Set(), ok: new Set(), err: new Map(), crop: null, pq: '', pck: '', arm: '', act: '', rkSt: '', infoSt: '', sel: null, ai: null, aiOpen: '', rpe: null, rpq: '', rpNew: null, rpDelArm: 0, lastF: [], rkIds: new Set(), rkWait: new Set() };
 }
 
 // ---------- 📦 items (POS stock → website wali list) ----------
@@ -43,7 +46,8 @@ function base() {
   const band = st.hidden || {}, M = new Map();
   for (const b of bs) for (const r of st.itemsFor(b)) {
     const k = String(r.id); let m = M.get(k);
-    if (!m) { m = { id: r.id, n: String(r.name || '').trim(), c: r.cat || '', r: 0, u: r.uName || 'Pcs', s: 0, shop: false }; M.set(k, m); }
+    if (!m) { m = { id: r.id, n: String(r.name || '').trim(), c: r.cat || '', r: 0, u: r.uName || 'Pcs', s: 0, shop: false, pk: [] }; M.set(k, m); }
+    if (!m.pk.length && Array.isArray(r.sb)) m.pk = r.sb.filter(x => Number(x?.q) > 0).map(x => [Number(x.q), Number(x.r) || 0]);   // 🌾 packet (sub-barcode) — dabba / tora ka khud wala faisla
     m.s += Number(r.stock) || 0;
     if (!m.c && r.cat) m.c = r.cat;
     if (b === shopB && Number(r.rate) > 0) { m.r = Number(r.rate); m.shop = true; m.u = r.uName || m.u; }
@@ -54,7 +58,7 @@ function base() {
 function items() {
   const B = base(); if (!B) return null;
   const R = W.racks;
-  return B.map(m => { const id = String(m.id), pc = String(m.c || '').trim() || 'Mutafarriq'; return { id, n: m.n, pc, c: String(R.ic[id] || '') || pc, r: Math.round(m.r * 100) / 100, u: m.u, hide: !!R.hide[id], pic: !!W.ph[id] }; });
+  return B.map(m => { const id = String(m.id), pc = String(m.c || '').trim() || 'Mutafarriq'; const o = { id, n: m.n, pc, c: String(R.ic[id] || '') || pc, r: Math.round(m.r * 100) / 100, u: m.u, pk: m.pk || [], hide: !!R.hide[id], pic: !!W.ph[id] }; o.auto = kindOf(o, null); o.k = kindOf(o, R.lp); return o; });
 }
 function racksOf(L) {
   const R = W.racks, cnt = new Map();
@@ -89,7 +93,7 @@ export function webOpen(ctx) {
     if (k === 'cat') W.cat = v || {};
     else if (k === 'info') W.info = v || {};
     else if (k === 'phIdx') W.ph = (v && v.m) || {};
-    else if (k === 'racks' && !W.rkDirty) W.racks = { order: Array.isArray(v?.order) ? v.order : [], cn: v?.cn || {}, hc: v?.hc || {}, hide: v?.hide || {}, ic: v?.ic || {}, rp: v?.rp || {}, nmOn: !!v?.nmOn };
+    else if (k === 'racks' && !W.rkDirty) W.racks = { order: Array.isArray(v?.order) ? v.order : [], cn: v?.cn || {}, hc: v?.hc || {}, hide: v?.hide || {}, ic: v?.ic || {}, rp: v?.rp || {}, nmOn: !!v?.nmOn, lp: v?.lp || {} };
     paintSoon();
   });
   paint();
@@ -157,7 +161,7 @@ function paintList() {
 function rowHTML(it, no) {
   const st = W.busy.has(it.id) || W.rkIds.has(it.id) || W.rkWait.has(it.id) ? '<span class="wd-s">⏳</span>' : W.err.has(it.id) ? `<span class="wd-s bad" title="${esc(W.err.get(it.id))}">✕</span>` : W.ok.has(it.id) ? '<span class="wd-s ok">✅</span>' : '';
   const on = W.sel && W.sel.has(it.id);
-  return `<div class="wd-r${it.hide ? ' off' : ''}${W.sel ? ' sel' : ''}${on ? ' on' : ''}" data-row="${esc(it.id)}">${W.sel ? `<span class="wd-ck" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}<span class="wd-th${it.pic ? '' : ' none'}" data-th="${esc(it.id)}">${it.pic ? '' : '📷'}</span><span class="wd-n"><b>${esc(it.n)}</b><small>Rs ${num(it.r)}${it.u ? ' / ' + esc(it.u) : ''} · ${no.get(it.c) ? 'Rack ' + no.get(it.c) + ' ' : ''}${esc(rackName(it.c))}${it.c !== it.pc ? ' ✏️' : ''}${it.hide ? ' · 🙈 website se chhupa' : ''}</small></span>${st}${W.sel ? '' : `<button type="button" class="wd-cam" data-cam="${esc(it.id)}" aria-label="Tasveer lo">📷</button>`}</div>`;
+  return `<div class="wd-r${it.hide ? ' off' : ''}${W.sel ? ' sel' : ''}${on ? ' on' : ''}" data-row="${esc(it.id)}">${W.sel ? `<span class="wd-ck" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}<span class="wd-th${it.pic ? '' : ' none'}" data-th="${esc(it.id)}">${it.pic ? '' : '📷'}</span><span class="wd-n"><b>${esc(it.n)}</b><small>Rs ${num(it.r)}${it.u ? ' / ' + esc(it.u) : ''} · ${no.get(it.c) ? 'Rack ' + no.get(it.c) + ' ' : ''}${esc(rackName(it.c))}${it.c !== it.pc ? ' ✏️' : ''}${it.k !== 'n' ? ' · ' + KIND[it.k] : ''}${it.hide ? ' · 🙈 website se chhupa' : ''}</small></span>${st}${W.sel ? '' : `<button type="button" class="wd-cam" data-cam="${esc(it.id)}" aria-label="Tasveer lo">📷</button>`}</div>`;
 }
 
 // ---------- 🖼 chhoti tasveerein (sirf nazar aane wali) ----------
@@ -200,7 +204,9 @@ function itemSheet(id) {
 <div class="wd-chips"><button type="button" class="wd-chip" data-shot="cam">📸 Camera</button><button type="button" class="wd-chip" data-shot="gal">🖼 Gallery</button>
 <button type="button" class="wd-chip" data-wd="mvrack">🗂 Rack badlo</button>
 <button type="button" class="wd-chip" data-wd="hide">${it.hide ? '👁 Website par dikhao' : '🙈 Website se chhupao'}</button>
-${it.pic ? '<button type="button" class="wd-chip bad" data-wd="delph">🗑 Tasveer hatao</button>' : ''}</div>`);
+${it.pic ? '<button type="button" class="wd-chip bad" data-wd="delph">🗑 Tasveer hatao</button>' : ''}</div>
+<h3>🌾 Website par kaise rakha ho?</h3><div class="wd-chips">${Object.entries(KIND).map(([k, t]) => `<button type="button" class="wd-chip${it.k === k ? ' is-in' : ''}" data-lp="${k}">${t}${it.auto === k ? ' <small>khud</small>' : ''}</button>`).join('')}</div>
+<p class="wd-note">🫙 sheeshe ka dabba (dry fruit / masale) · 🧺 farsh par tora (daal / chawal / cheeni) — customer tap kar ke packet chunta hai (250 g · 1 kg … ya POS ke packet). Tasveer lagao to dabbe / tore mein wohi dikhegi.</p>`);
 }
 function mvSheet() {
   const id = W.act, it = (items() || []).find(x => x.id === id); if (!it) return;
@@ -386,7 +392,15 @@ function selMvSheet() {
   const rk = racksOf(items() || []);
   W.act = '';
   sheet(`<h3 class="wd-st">🗂 ${num(n)} items — kis rack par?</h3><div class="wd-chips">${rk.map((r, i) => `<button type="button" class="wd-chip" data-smv="${esc(r.k)}">${r.off ? '🙈 ' : (i + 1) + '. '}${esc(r.name)} <small>${r.n}</small></button>`).join('')}<button type="button" class="wd-chip" data-smv="@pos">↺ POS wala rack (har item ka apna)</button></div>
+<h3>🌾 Ya website par kaise rakhe hon?</h3><div class="wd-chips">${Object.entries(KIND).map(([k, t]) => `<button type="button" class="wd-chip" data-slp="${k}">${t}</button>`).join('')}</div>
 <form class="wd-newrk" data-form="newrk"><input name="k" placeholder="Naya rack ka naam" maxlength="40"><button type="submit" class="wd-chip">＋ Naya rack</button></form>`);
+}
+function lpMany(ids, k) {   // 🌾 kai items ek saath dabba / tora / shelf (khud wala = override hatao)
+  const by = new Map((items() || []).map(x => [x.id, x])); let n = 0; W.racks.lp = W.racks.lp || {};
+  for (const id of ids) { const it = by.get(id); if (!it) continue; if (k === it.auto) delete W.racks.lp[id]; else W.racks.lp[id] = k; W.rkIds.add(id); W.ok.delete(id); W.err.delete(id); n++; }
+  if (W.sel) W.sel.clear();
+  sheetClose(); saveRacks();
+  A.notice(`🌾 ${num(n)} items → ${KIND[k]} ⏳`);
 }
 function moveMany(ids, k) {
   const L = items() || [], by = new Map(L.map(x => [x.id, x])); let n = 0;
@@ -677,6 +691,8 @@ function onClick(e) {
   const f = t.closest('[data-f]'); if (f) { W.f = f.dataset.f; W.lim = 120; keep(); sheetClose(); paint(); return; }
   const pck = t.closest('[data-pck]'); if (pck) { W.pck = pck.dataset.pck; W.arm = ''; paint(); return; }
   const pk = t.closest('[data-pick]'); if (pk) { const id = pk.dataset.pick; if (W.ph[id] && W.arm !== id) { W.arm = id; paint(); return; } W.arm = ''; cropSave(id); return; }
+  const lpb = t.closest('[data-lp]'); if (lpb) { const id = W.act; if (id) lpMany([id], lpb.dataset.lp); return; }
+  const slp = t.closest('[data-slp]'); if (slp) { if (W.sel && W.sel.size) lpMany([...W.sel], slp.dataset.slp); return; }
   const mv = t.closest('[data-mv]'); if (mv) { const id = W.act, it = (items() || []).find(x => x.id === id); if (it) { if (mv.dataset.mv === it.pc) delete W.racks.ic[id]; else W.racks.ic[id] = mv.dataset.mv; } sheetClose(); saveRacks(); return; }
   const up = t.closest('[data-up]'); if (up) { moveRack(up.dataset.up, -1); return; }
   const dn = t.closest('[data-dn]'); if (dn) { moveRack(dn.dataset.dn, 1); return; }

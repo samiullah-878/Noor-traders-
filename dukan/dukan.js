@@ -13,7 +13,13 @@
 //   v2.158.0 (malik: "rack ki asal photo — customer photo par cheez dabaye, rate naam se aaye"): racks.rp[pid] {k, o, w, h, s: JSON [[x,y,w,h,itemId]] 0–1000}
 //     + ph_rp_<pid> = PHOTO BAY (asal rack) · har cheez par tap wali jagah + peeli rate parchi (racks.nmOn = naam bhi) · rate cat se (POS) · khatam = "Khatam".
 //     Photo wale items bane hue rack mein nahi (dohra nahi) · tasveer ka tukda canvas se kaat kar tokri / parchi / dhoondo mein · 📱 phone ghumao = 3D · 🔍 qareeb se.
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.158.0';
+//   v2.159.0 (malik: "daalon ka section — tore farsh par, upar sheeshe ke dabbe mein kali mirch / ilaichi / dry fruit · customer chalta jaye, tora dekhta jaye · packet chune"):
+//     🌾 KHULA BAY (har rack mein photo ke baad, bane rack se pehle): upar kaala dabbon wala rack (aage dhalwan sheesha) + neeche farsh par tore (jute / safed bori).
+//     Daane canvas par (khula.js) · item ki apni tasveer ho to wohi dher ki shakal mein · jagah static (koi animation jagah nahi badalti).
+//     Tap = packet chips: cat row[5] [[wazan, rate]] (PC sync-stock v4, sub-barcode) — na hon to 250 g · 500 g · 1 kg · 2 kg · 5 kg (rate × wazan). Tokri key "id@wazan".
+//     racks.lp {id: 'g' dabba | 's' tora | 'n' shelf} = malik ka faisla (app) — warna khud: unit kg / packet wala daal-dry fruit.
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.159.0';
+import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg } from './khula.js?v=2.159.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -119,7 +125,7 @@ function build(d) {
   const hide = R.hide || {}, ic = R.ic || {}, hc = R.hc || {}, cn = R.cn || {};
   const groups = new Map(); S.items = new Map();
   // 📸 v2.158.0: asal rack ki photos — photo par jo item hai wo usi rack ka (bane hue rack mein dohra nahi)
-  S.nmOn = !!R.nmOn;
+  S.nmOn = !!R.nmOn; S.lp = R.lp && typeof R.lp === 'object' ? R.lp : {};
   S.rps = Object.entries(R.rp && typeof R.rp === 'object' ? R.rp : {}).map(([pid, x]) => { let a = []; try { a = JSON.parse((x && x.s) || '[]'); } catch {}
     return { pid, k: String(x?.k || '').trim(), o: Number(x?.o) || 0, w: Number(x?.w) || 3, h: Number(x?.h) || 4, spots: (Array.isArray(a) ? a : []).filter(t => Array.isArray(t) && t[4]).map(t => ({ x: +t[0] || 0, y: +t[1] || 0, w: +t[2] || 0, h: +t[3] || 0, id: String(t[4]) })) }; })
     .filter(p => p.k && !hc[p.k] && p.spots.length && phV('rp_' + p.pid)).sort((a, b) => a.o - b.o);
@@ -130,7 +136,9 @@ function build(d) {
     if (!id || !n || hide[id] || rate <= 0) continue;
     const key = onPh.get(id) || String(ic[id] || r[2] || '').trim() || 'Mutafarriq';
     if (hc[key]) continue;
-    const it = { id, n, c: key, r: rate, u: String(r[4] || '').trim() };
+    const pk = Array.isArray(r[5]) ? r[5].filter(x => Array.isArray(x) && Number(x[0]) > 0 && Number(x[1]) > 0).map(x => [Number(x[0]), Number(x[1])]) : [];
+    const it = { id, n, c: key, r: rate, u: String(r[4] || '').trim(), pk };
+    it.k = onPh.has(id) ? 'n' : kindOf(it, S.lp);   // 🌾 g = sheeshe ka dabba · s = tora · n = shelf
     S.items.set(id, it);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(it);
@@ -140,9 +148,9 @@ function build(d) {
   const pos = k => { const i = order.indexOf(k); return i < 0 ? 1e9 : i; };
   const keys = [...groups.keys()].sort((a, b) => (pos(a) - pos(b)) || a.localeCompare(b));
   S.racks = keys.map((k, i) => ({ key: k, no: i + 1, name: String(cn[k] || '').trim() || title(k), items: groups.get(k).sort((a, b) => a.n.localeCompare(b.n)) }));
-  S.racks.forEach(rk => { rk.items.forEach(it => { it.rk = rk; }); rk.photos = S.rps.filter(p => p.k === rk.key); rk.rest = rk.items.filter(it => !onPh.has(it.id)); });
+  S.racks.forEach(rk => { rk.items.forEach(it => { it.rk = rk; }); rk.photos = S.rps.filter(p => p.k === rk.key); rk.rest = rk.items.filter(it => !onPh.has(it.id) && it.k === 'n'); rk.loose = rk.items.filter(it => it.k !== 'n'); });
   S.info = d.info || {}; S.at = Number(cat.at) || 0;
-  for (const id of Object.keys(S.crate)) if (!S.items.has(id) || !(Number(S.crate[id]) > 0)) delete S.crate[id];
+  for (const k of Object.keys(S.crate)) if (!lineOf(k, 1) || !(Number(S.crate[k]) > 0)) delete S.crate[k];
   saveCrate();
 }
 
@@ -164,10 +172,14 @@ function pkHTML(it, big) {
   const hue = hueOf(it);
   return `<span class="pk ${shape}" style="--h:${hue}"><span>${esc(big ? it.n : it.n)}</span></span>`;
 }
-const imgOf = (it, big) => PHURL.has(it.id) ? `<img src="${PHURL.get(it.id)}" alt="">` : pkHTML(it, big);
+// 🌾 khula item (bina tasveer): daanon ki chhoti tasveer canvas se (ek dafa bana kar yaad)
+const GTH = new Map();
+const gth = (it, px = 120) => { const k = it.id + '|' + it.k + '|' + px; if (!GTH.has(k)) { try { GTH.set(k, thumbOf(it.n, it.k, px)); } catch { GTH.set(k, ''); } } return GTH.get(k); };
+const picOf = (it, px) => PHURL.get(it.id) || (it.k && it.k !== 'n' ? gth(it, px) : '');
+const imgOf = (it, big) => { const u = picOf(it, big ? 280 : 120); return u ? `<img src="${u}" alt="">` : pkHTML(it, big); };
 
 function itemHTML(it) {
-  const q = Number(S.crate[it.id]) || 0;
+  const q = cnt(it.id);
   return `<button type="button" class="it${q ? ' in-crate' : ''}" data-id="${esc(it.id)}" aria-label="${esc(it.n)}, ${rs(it.r)}"><span class="it-box">${imgOf(it)}</span><span class="tag"><small>Rs</small>${num(it.r)}</span><span class="plus" data-plus="1" aria-label="Tokri mein dalo">${q ? num(q) : '+'}</span></button>`;
 }
 // v2.156.1: ⚡ malik — "aage peeche karte hain to lag aata hai": sirf qareeb ke racks mein maal (DOM chhota) — door ke rack khali dhancha (sign + shelf), paas aate hi bhar jate
@@ -182,6 +194,7 @@ function fillNear(i) {
   bayEls.forEach((el, k) => {
     const want = Math.abs(k - i) <= NEAR, drop = Math.abs(k - i) > FAR, has = el._fill;
     if (S.bays[k]?.photo) { if (want) loadRp(S.bays[k].photo); return; }   // 📸 photo bay: sirf photo lao
+    if (S.bays[k]?.kh) { if (want) { el._fill = true; khQueue(el); } else if (drop && has) { el._fill = false; el.querySelectorAll('[data-kh] canvas').forEach(c => { c.width = c.height = 0; c._ok = false; }); } return; }   // 🌾 dabbe / tore: qareeb = daane, door = canvas khali (phone ki memory)
     if (want && !has) { const rk = el.querySelector('.rack'), bg = rk.querySelector('.rk-bg'); rk.innerHTML = ''; if (bg) rk.appendChild(bg); rk.insertAdjacentHTML('beforeend', shelvesHTML(S.bays[k], D, true).h); el._fill = true; }
     else if (drop && has) { const rk = el.querySelector('.rack'), bg = rk.querySelector('.rk-bg'); rk.innerHTML = ''; if (bg) rk.appendChild(bg); rk.insertAdjacentHTML('beforeend', shelvesHTML(S.bays[k], D, false).h); el._fill = false; }
   });
@@ -195,7 +208,7 @@ function bayHTML(b, i, D) {
 const RPU = new Map();   // pid -> photo (blob url)
 function spotsHTML(p, pxW) {   // pxW = photo screen par kitni chauri (px) — naam sirf jahan jagah ho (≥ 66px), tang jagah par sirf raqam
   const k = 1000 / Math.max(120, pxW || 360), seen = new Set(), wN = 66 * k, wR = 46 * k;
-  return p.spots.map(sp => { const it = S.items.get(sp.id), first = !seen.has(sp.id); seen.add(sp.id); const q = Number(S.crate[sp.id]) || 0, nar = sp.w < wR;
+  return p.spots.map(sp => { const it = S.items.get(sp.id), first = !seen.has(sp.id); seen.add(sp.id); const q = cnt(sp.id), nar = sp.w < wR;
     return `<button type="button" class="spot${it ? '' : ' gone'}${q ? ' in-crate' : ''}" data-spot="${esc(sp.id)}" style="left:${sp.x / 10}%;top:${sp.y / 10}%;width:${sp.w / 10}%;height:${sp.h / 10}%" aria-label="${it ? esc(it.n) + ', ' + rs(it.r) : 'Khatam'}">${first ? `<span class="pin${nar ? ' nar' : ''}">${it ? `${S.nmOn && sp.w >= wN ? `<b>${esc(it.n)}</b>` : ''}<span class="pr">${nar ? '' : '<small>Rs</small>'}${num(it.r)}</span>` : '<span class="pr">Khatam</span>'}${q ? `<em>${num(q)}</em>` : ''}</span>` : ''}</button>`; }).join('');
 }
 function pbayHTML(b, i, D) {
@@ -221,6 +234,50 @@ async function cropSpots(p, url) {
       const bl = await new Promise(ok => cv.toBlob(ok, 'image/jpeg', 0.82)); if (bl) PHURL.set(id, URL.createObjectURL(bl)); }
     paintCrate(); } catch {}
 }
+// ---------- 🌾 v2.159.0: khula maal — sheeshe ke dabbe (upar) + tore (farsh par) ----------
+function khPack(L, D) {   // ek bay = dabbe (gc × 2–3 qatar) + tore (3–4 ek qatar, sirf tore = 2 qatar)
+  const gc = Math.max(4, D.cols), sc = D.cols >= 6 ? 4 : 3, G = L.filter(it => it.k === 'g'), T = L.filter(it => it.k === 's'), out = [];
+  const nb = G.length && T.length ? Math.max(Math.ceil(G.length / (gc * 2)), Math.ceil(T.length / sc)) : G.length ? Math.ceil(G.length / (gc * 3)) : Math.ceil(T.length / (sc * 2));
+  const pg = Math.ceil(G.length / Math.max(1, nb)), ps = Math.ceil(T.length / Math.max(1, nb));   // barabar baanto (8 + 1 jaisa akela dabba nahi)
+  for (let k = 0; k < nb; k++) out.push({ g: G.splice(0, pg), s: T.splice(0, ps), gc, sc });
+  return out.filter(x => x.g.length || x.s.length);
+}
+const unitTxt = it => isKg(it.u) ? 'kg' : (it.u || '');
+function khHTML(b, i, D) {
+  const K = b.kh, g = K.g, t = K.s, gr = g.length ? Math.ceil(g.length / K.gc) : 0, gc = g.length ? Math.min(K.gc, Math.ceil(g.length / Math.max(1, gr))) : 0, sr = t.length ? Math.ceil(t.length / K.sc) : 0, sc = t.length ? Math.min(K.sc, t.length > K.sc ? K.sc : t.length) : 0;
+  const lab = it => `<b>${esc(it.n)}</b><small>Rs ${num(it.r)}${unitTxt(it) ? '/' + esc(unitTxt(it)) : ''}</small>`;
+  const em = it => { const q = cnt(it.id); return q ? `<em class="kq">${num(q)}</em>` : ''; };
+  const cells = g.map(it => `<button type="button" class="dabba${cnt(it.id) ? ' in-crate' : ''}" data-kh="${esc(it.id)}" aria-label="${esc(it.n)}, ${rs(it.r)}"><canvas></canvas><i class="kd-acr"></i><span class="kd-lab"><span>${lab(it)}</span></span>${em(it)}</button>`);
+  while (gr && cells.length < gr * gc) cells.push('<span class="dabba kd0" aria-hidden="true"></span>');
+  return `<section class="bay kbay" data-bay="${i}" style="--bayW:${D.bw}px" aria-label="Rack ${b.rk.no}: ${esc(b.rk.name)} — khula maal"><header class="sign"><span class="sk">Rack ${b.rk.no}</span><b>${esc(b.rk.name)}</b><span class="sp">🌾${b.parts > 1 ? ` ${b.p + 1}/${b.parts}` : ''}</span></header>`
+    + `<div class="kh">${gr ? `<div class="kunit" style="--gr:${gr};--gc:${gc}"><div class="kgrid">${cells.join('')}</div></div>` : ''}`
+    + `${sr ? `<div class="ktore" style="--sr:${sr};--sc:${sc}">${t.map(it => `<button type="button" class="tora${cnt(it.id) ? ' in-crate' : ''}" data-kh="${esc(it.id)}" aria-label="${esc(it.n)}, ${rs(it.r)}"><canvas></canvas><span class="tr-tg">${lab(it)}</span>${em(it)}</button>`).join('')}</div>` : ''}</div></section>`;
+}
+// canvas par daane — ek frame mein ~12 ms tak, baqi agle frame (scroll kabhi na ruke)
+const KQ = [], KIMG = new Map(); let kqRaf = 0;
+function khQueue(el) { el.querySelectorAll('[data-kh] canvas').forEach(cv => { if (!cv._ok && !KQ.includes(cv)) KQ.push(cv); }); if (!kqRaf) kqRaf = requestAnimationFrame(khPump); }
+function khPump() {
+  kqRaf = 0; const t0 = performance.now();
+  while (KQ.length && performance.now() - t0 < 8) { const cv = KQ.shift(); if (cv.isConnected) khDraw(cv); }
+  if (KQ.length) kqRaf = requestAnimationFrame(khPump);
+}
+function khDraw(cv) {
+  const w = cv.clientWidth, h = cv.clientHeight, host = cv.closest('[data-kh]'), it = host && S.items.get(host.dataset.kh); if (!it) return;
+  if (!w || !h) { cv._ok = false; return; }   // abhi nazar se door — rack par aate hi dobara
+  const dpr = Math.min(LITE ? 1.25 : 2.2, Math.max(1, devicePixelRatio || 1));
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv._dpr = dpr;
+  const url = PHURL.get(it.id), img = url ? KIMG.get(url) : null;
+  if (url && !img && !KIMG.has(url)) { KIMG.set(url, null); const im = new Image(); im.src = url; im.decode().then(() => { KIMG.set(url, im); document.querySelectorAll(`[data-kh="${CSS.escape(it.id)}"] canvas`).forEach(c => { c._ok = false; KQ.push(c); }); if (!kqRaf) kqRaf = requestAnimationFrame(khPump); }).catch(() => {}); }
+  try { (host.classList.contains('tora') ? drawSack : drawBin)(cv, it.n, img || null, LITE); cv._ok = true; } catch (e) { console.warn('khula', e); }
+}
+// tap: dabba / tora halka sa uthe (jagah wahi)
+function optsOf(it) {   // packet chips: POS ke packet (sub-barcode) — na hon to khule maal ke aam wazan
+  const m = new Map(); (it.pk || []).forEach(([q, p]) => m.set(q, { q, p, pk: true }));
+  if (it.k !== 'n' || m.size) { if (!m.has(1)) m.set(1, { q: 1, p: it.r, pk: false }); }
+  if (it.k !== 'n' && isKg(it.u) && !(it.pk || []).length) [0.25, 0.5, 2, 5].forEach(q => { if (!m.has(q)) m.set(q, { q, p: Math.round(it.r * q * 100) / 100, pk: false }); });
+  return [...m.values()].sort((a, b) => a.q - b.q);
+}
+const keyOf = (it, q) => { if (!q) return it.id; const o = optsOf(it).find(x => x.q === q); return q === 1 && (!o || (!o.pk && o.p === it.r)) ? it.id : `${it.id}@${q}`; };
 function openPz(i) {
   const b = S.bays[i], p = b && b.photo, url = p && RPU.get(p.pid); if (!url) return;
   const box = $('pzIn'); box.style.setProperty('--ar', (p.w / p.h).toFixed(4)); box.innerHTML = `<img src="${url}" alt="" draggable="false">${spotsHTML(p, Math.min(2400, Math.max(innerWidth * 2.3, 900)))}`;
@@ -242,12 +299,14 @@ function renderAisle(keepId) {
   const bays = [];
   S.racks.forEach(rk => { rk.bay0 = bays.length;
     rk.photos.forEach((ph, j) => bays.push({ rk, photo: ph, p: j, parts: rk.photos.length, items: [...new Set(ph.spots.map(x => x.id))].map(id => S.items.get(id)).filter(Boolean) }));   // 📸 pehle asal photo
+    const K = khPack(rk.loose, D); K.forEach((kh, j) => bays.push({ rk, kh, p: j, parts: K.length, items: [...kh.g, ...kh.s] }));   // 🌾 phir khula maal (dabbe + tore)
     const parts = Math.ceil(rk.rest.length / D.per); for (let p = 0; p < parts; p++) bays.push({ rk, p, parts, items: rk.rest.slice(p * D.per, (p + 1) * D.per) }); });
   S.bays = bays; S.bayOf = new Map();
   bays.forEach((b, i) => b.items.forEach(it => { if (!S.bayOf.has(it.id)) S.bayOf.set(it.id, i); }));
   const a = $('aisle');
-  a.innerHTML = bays.length ? bays.map((b, i) => b.photo ? pbayHTML(b, i, D) : bayHTML(b, i, D)).join('') : '<p class="empty-aisle">Abhi racks par maal nahi saja — thori der baad dobara dekhein.</p>';
-  bayEls = [...a.querySelectorAll('.bay')]; rackEls = bayEls.map(el => el.querySelector('.rack, .pv-in')); filledAt = -99;
+  KQ.length = 0;
+  a.innerHTML = bays.length ? bays.map((b, i) => b.photo ? pbayHTML(b, i, D) : b.kh ? khHTML(b, i, D) : bayHTML(b, i, D)).join('') : '<p class="empty-aisle">Abhi racks par maal nahi saja — thori der baad dobara dekhein.</p>';
+  bayEls = [...a.querySelectorAll('.bay')]; rackEls = bayEls.map(el => el.querySelector('.rack, .pv-in, .kh')); filledAt = -99;
   paintRkBar();
   observe();
   if (keepId && S.bayOf.has(keepId)) go(S.bayOf.get(keepId), true);
@@ -261,7 +320,7 @@ function observe() {
   try { io && io.disconnect(); } catch {}
   if (!('IntersectionObserver' in window)) { S.items.forEach(it => { if (phV(it.id)) want.add(it.id); }); loadPhotos(); return; }
   io = new IntersectionObserver(es => {
-    for (const e of es) if (e.isIntersecting) { const b = S.bays[Number(e.target.dataset.bay)]; if (b) { b.items.forEach(it => { if (phV(it.id) && !PHURL.has(it.id)) want.add(it.id); }); if (!b.photo && phV(rkPh(b.rk.key)) && !RBG.has(b.rk.key)) wantBg.add(b.rk.key); } }
+    for (const e of es) if (e.isIntersecting) { const b = S.bays[Number(e.target.dataset.bay)]; if (b) { b.items.forEach(it => { if (phV(it.id) && !PHURL.has(it.id)) want.add(it.id); }); if (!b.photo && !b.kh && phV(rkPh(b.rk.key)) && !RBG.has(b.rk.key)) wantBg.add(b.rk.key); } }
     clearTimeout(loadT); loadT = setTimeout(() => { loadPhotos(); loadBgs(); }, 50);
   }, { root: $('aisle'), rootMargin: '0px 120% 0px 120%' });
   document.querySelectorAll('.bay').forEach(el => io.observe(el));
@@ -312,6 +371,7 @@ async function soften(url) {
 async function loadShop() { try { const url = await bigPhoto('shop'); const el = $('shopPh'); if (url && el) { el.style.backgroundImage = `url('${url}')`; el.classList.add('has'); } } catch {} }
 function setPhoto(id, url) {
   PHURL.set(id, url);
+  document.querySelectorAll(`[data-kh="${CSS.escape(id)}"] canvas`).forEach(c => { c._ok = false; KQ.push(c); }); if (KQ.length && !kqRaf) kqRaf = requestAnimationFrame(khPump);   // 🌾 malik ki tasveer dabbe / tore mein
   document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"] .it-box`).forEach(b => { b.innerHTML = `<img src="${url}" alt="">`; });
   if (S.open === id) $('shImg').innerHTML = imgOf(S.items.get(id), true);
   paintCrate();
@@ -325,7 +385,7 @@ function onScroll() {
   S.cur = i;
   const b = S.bays[i], x = a.scrollLeft;
   if (i !== filledAt) { filledAt = i; fillNear(i);   // v2.156.1: sirf rack badle to DOM likho (har frame nahi)
-    $('where').textContent = b ? `Rack ${b.rk.no}/${S.racks.length} · ${b.rk.name}${b.photo ? ' 📸' : ''}${b.parts > 1 ? ` (${b.p + 1}/${b.parts})` : ''}` : 'Noor Traders';
+    $('where').textContent = b ? `Rack ${b.rk.no}/${S.racks.length} · ${b.rk.name}${b.photo ? ' 📸' : b.kh ? ' 🌾' : ''}${b.parts > 1 ? ` (${b.p + 1}/${b.parts})` : ''}` : 'Noor Traders';
     const w = S.bays.length ? Math.round((i + 1) / S.bays.length * 100) + '%' : '0';
     $('walkBar').style.width = w; $('walkFeet').style.setProperty('--w', w); }
   if (!LITE) { FL ||= document.querySelector('.floor-t'); CE ||= document.querySelector('.ceil-t'); if (FL) FL.style.transform = `translate3d(${-(x % 128).toFixed(1)}px,0,0)`; if (CE) CE.style.transform = `translate3d(${-((x * 0.55) % 250).toFixed(1)}px,0,0)`; }   // 🚶 farsh / lights — sirf transform (GPU), poori dukan dobara nahi
@@ -390,32 +450,39 @@ function hpWalk(k) {
 function hpArrive() { const h = $('helper'); if (!h || h.hidden) return; $('hpT').textContent = 'Lijiye, aa gaye 🙂'; replay(h.querySelector('.hp-ava'), 'wave'); setTimeout(closeHelper, 1600); }
 
 // ---------- 🧺 tokri (counter par) ----------
-const lines = () => Object.entries(S.crate).map(([id, q]) => ({ it: S.items.get(id), q: Number(q) || 0 })).filter(x => x.it && x.q > 0);
+// v2.159.0: tokri ki key = item id (aam) ya "id@wazan" (🌾 packet / khula wazan) · q = kitne
+const baseId = k => { k = String(k); const i = k.lastIndexOf('@'); return i < 0 ? k : k.slice(0, i); };
+const pqOf = k => { k = String(k); const i = k.lastIndexOf('@'); return i < 0 ? 0 : Number(k.slice(i + 1)) || 0; };
+function lineOf(k, q) { const it = S.items.get(baseId(k)); if (!it) return null; const pq = pqOf(k), o = pq ? optsOf(it).find(x => x.q === pq) : null; return { k, it, q: Number(q) || 0, pq, pk: !!(o && o.pk), price: pq ? (o ? o.p : Math.round(it.r * pq * 100) / 100) : it.r }; }
+const lines = () => Object.entries(S.crate).map(([k, q]) => lineOf(k, q)).filter(x => x && x.q > 0);
+const cnt = id => { let n = 0; for (const [k, q] of Object.entries(S.crate)) if (baseId(k) === id) n += Number(q) || 0; return n; };
+const pkName = x => x.pq ? `${pkLab(x.pq, x.it.u)}${x.pk ? ' packet' : ''}` : '';
 function paintCrate() {
-  const L = lines(), n = L.length, tot = L.reduce((s, x) => s + x.q * x.it.r, 0);
+  const L = lines(), n = L.length, tot = L.reduce((s, x) => s + x.q * x.price, 0);
   $('counterBar').classList.toggle('has', n > 0);
   $('cSum').textContent = n ? `${n} cheez${n > 1 ? 'ein' : ''} · ${rs(tot)} — parchi dekhein` : 'Counter khali hai — rack se cheez uthayein';
   $('crateN').hidden = !n; $('crateN').textContent = String(n);
   $('cratePeek').innerHTML = L.slice(-4).map(x => `<span style="${thumbStyle(x.it)}"></span>`).join('');
   if (!$('cv').hidden) paintCounter();
 }
-const thumbStyle = it => PHURL.has(it.id) ? `background-image:url('${PHURL.get(it.id)}')` : `background:linear-gradient(160deg,hsl(${hueOf(it)} 72% 60%),hsl(${hueOf(it)} 66% 40%))`;
+const thumbStyle = it => { const u = picOf(it); return u ? `background-image:url('${u}')` : `background:linear-gradient(160deg,hsl(${hueOf(it)} 72% 60%),hsl(${hueOf(it)} 66% 40%))`; };
 function markItem(id) {
-  const q = Number(S.crate[id]) || 0;
+  const q = cnt(id);
+  document.querySelectorAll(`[data-kh="${CSS.escape(id)}"]`).forEach(el => { el.classList.toggle('in-crate', q > 0); let em = el.querySelector('.kq'); if (q) { if (!em) { em = document.createElement('em'); em.className = 'kq'; el.appendChild(em); } em.textContent = num(q); } else if (em) em.remove(); });   // 🌾
   document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"]`).forEach(el => { el.classList.toggle('in-crate', q > 0); const p = el.querySelector('.plus'); if (p) p.textContent = q ? num(q) : '+'; });
   document.querySelectorAll(`.spot[data-spot="${CSS.escape(id)}"]`).forEach(el => { el.classList.toggle('in-crate', q > 0); const pin = el.querySelector('.pin'); if (!pin) return; let em = pin.querySelector('em'); if (q) { if (!em) { em = document.createElement('em'); pin.appendChild(em); } em.textContent = num(q); } else if (em) em.remove(); });   // 📸
 }
-function setQty(id, q) {
+function setQty(k, q) {
   q = Math.max(0, Math.round(q * 100) / 100);
-  if (q > 0) S.crate[id] = q; else delete S.crate[id];
-  saveCrate(); paintCrate(); markItem(id);
+  if (q > 0) S.crate[k] = q; else delete S.crate[k];
+  saveCrate(); paintCrate(); markItem(baseId(k));
 }
 function flyFrom(el, it, q = 1) {
   const crate = $('crate'); if (!el || !crate) return;
   const r0 = el.getBoundingClientRect(), r1 = crate.getBoundingClientRect();
   if (!r0.width || RM) { landed(q); return; }
-  const f = PHURL.has(it.id) ? Object.assign(document.createElement('img'), { src: PHURL.get(it.id), alt: '' }) : document.createElement('div');
-  if (!PHURL.has(it.id)) f.style.cssText = thumbStyle(it);
+  const pu = picOf(it), f = pu ? Object.assign(document.createElement('img'), { src: pu, alt: '' }) : document.createElement('div');
+  if (!pu) f.style.cssText = thumbStyle(it);
   f.className = 'fly';
   const w = Math.min(r0.width, 120), h = Math.min(r0.height, 140);
   Object.assign(f.style, { left: (r0.left + (r0.width - w) / 2) + 'px', top: (r0.top + (r0.height - h) / 2) + 'px', width: w + 'px', height: h + 'px' });
@@ -436,11 +503,11 @@ function landed(q) {
   s1.className = 'plus1'; s1.textContent = '+' + num(q); s1.style.left = (c.left + c.width / 2) + 'px'; s1.style.top = (c.top - 6) + 'px';
   document.body.appendChild(s1); setTimeout(() => s1.remove(), 950);
 }
-function addToCrate(id, q, el) {
-  const it = S.items.get(id); if (!it) return;
-  setQty(id, (Number(S.crate[id]) || 0) + q);
+function addToCrate(k, q, el) {
+  const id = baseId(k), it = S.items.get(id); if (!it) return;
+  setQty(k, (Number(S.crate[k]) || 0) + q);
   flyFrom(el, it, q);
-  document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"] .plus`).forEach(p => replay(p, 'pop'));
+  document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"] .plus, [data-kh="${CSS.escape(id)}"] .kq`).forEach(p => replay(p, 'pop'));
   buzz(14);
 }
 
@@ -465,23 +532,31 @@ addEventListener('popstate', () => { if (skipPop > 0) { skipPop--; return; } con
 // ---------- 🛍 item uthaya ----------
 function openSheet(id, fromEl) {
   const it = S.items.get(id); if (!it) return;
-  const src = fromEl && fromEl.querySelector('img,.pk'), r0 = src ? src.getBoundingClientRect() : null;
+  const src = fromEl && fromEl.querySelector('img,.pk,canvas'), r0 = src ? src.getBoundingClientRect() : null;
   S.open = id; S.q = 1;
-  $('shRack').textContent = `Rack ${it.rk.no} · ${it.rk.name}`;
+  const O = optsOf(it); S.pkq = O.length > 1 ? (O.find(x => x.q === 1) || O[0]).q : 0;   // 🌾 packet chips (1 se zyada option ho to)
+  $('shRack').textContent = `Rack ${it.rk.no} · ${it.rk.name}${it.k === 'g' ? ' · 🫙 Dabba' : it.k === 's' ? ' · 🧺 Tora' : ''}`;
   $('shName').textContent = it.n;
-  $('shRate').textContent = rs(it.r);
-  $('shUnit').textContent = it.u ? 'fi ' + it.u : '';
   $('shQty').textContent = '1';
-  $('shImg').innerHTML = imgOf(it, true);
-  const have = Number(S.crate[id]) || 0;
-  $('shAdd').textContent = have ? `🧺 Aur rakho (tokri mein ${num(have)})` : '🧺 Counter par rakho';
+  $('shImg').innerHTML = imgOf(it, true); $('shImg').classList.toggle('kh-img', it.k === 'g' && !PHURL.has(it.id));
+  paintPk();
   $('sheet').hidden = false; openOv('sheet');
   if (r0 && r0.width && !LITE && !RM) requestAnimationFrame(() => flip(src, r0, $('shImg').querySelector('img,.pk')));   // 🛍 shelf se uth kar khirki mein
   setTimeout(() => $('shAdd').focus({ preventScroll: true }), 50);
 }
+function paintPk() {   // khirki: chuna hua packet → rate + "tokri mein"
+  const it = S.items.get(S.open); if (!it) return;
+  const O = optsOf(it), o = S.pkq ? O.find(x => x.q === S.pkq) : null, box = $('shPk');
+  box.hidden = O.length < 2;
+  if (O.length > 1) box.innerHTML = `<p>${it.k !== 'n' ? '🌾 Kitna chahiye?' : '📦 Packet chunein'}</p><div>${O.map(x => `<button type="button" class="pkc${x.q === S.pkq ? ' is-in' : ''}" data-pkq="${x.q}" aria-pressed="${x.q === S.pkq}"><b>${esc(pkLab(x.q, it.u))}${x.pk ? ' <i>📦</i>' : ''}</b><small>${rs(x.p)}</small></button>`).join('')}</div>`;
+  $('shRate').textContent = rs(o ? o.p : it.r);
+  $('shUnit').textContent = o ? `${pkLab(o.q, it.u)}${o.pk ? ' packet' : ''}${o.q !== 1 ? ` · ${rs(it.r)}/${unitTxt(it) || '1'}` : ''}` : (it.u ? 'fi ' + it.u : '');
+  const have = Number(S.crate[keyOf(it, S.pkq)]) || 0;
+  $('shAdd').textContent = have ? `🧺 Aur rakho (tokri mein ${num(have)})` : '🧺 Counter par rakho';
+}
 function flip(src, r0, tgt) {
   if (!tgt) return; const r1 = tgt.getBoundingClientRect(); if (!r1.width) return;
-  const c = src.tagName === 'IMG' ? Object.assign(document.createElement('img'), { src: src.src, alt: '' }) : src.cloneNode(true);
+  let c; try { c = src.tagName === 'IMG' ? Object.assign(document.createElement('img'), { src: src.src, alt: '' }) : src.tagName === 'CANVAS' ? Object.assign(document.createElement('img'), { src: src.toDataURL('image/jpeg', 0.7), alt: '' }) : src.cloneNode(true); } catch { return; }
   c.classList.add('fly2'); Object.assign(c.style, { left: r1.left + 'px', top: r1.top + 'px', width: r1.width + 'px', height: r1.height + 'px', margin: '0' });
   document.body.appendChild(c); tgt.style.opacity = '0';
   const sx = r0.width / r1.width, sy = r0.height / r1.height, dx = r0.left - r1.left, dy = r0.top - r1.top;
@@ -492,11 +567,11 @@ function flip(src, r0, tgt) {
 
 // ---------- 🧾 counter ----------
 const fmtNow = t => new Date(t || Date.now()).toLocaleString('en-PK', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' });
-function plImg(it) { return PHURL.has(it.id) ? `<span class="pl-img" style="background-image:url('${PHURL.get(it.id)}')"></span>` : `<span class="pl-img">${pkHTML(it)}</span>`; }
+function plImg(it) { const u = picOf(it); return u ? `<span class="pl-img" style="background-image:url('${u}')"></span>` : `<span class="pl-img">${pkHTML(it)}</span>`; }
 function paintCounter() {
-  const L = lines(), tot = L.reduce((s, x) => s + x.q * x.it.r, 0);
+  const L = lines(), tot = L.reduce((s, x) => s + x.q * x.price, 0);
   $('pDate').textContent = fmtNow();
-  $('pLines').innerHTML = L.map(x => `<li>${plImg(x.it)}<span class="pl-n"><b>${esc(x.it.n)}</b><small>${rs(x.it.r)}${x.it.u ? ' / ' + esc(x.it.u) : ''} × ${num(x.q)}</small></span><span class="pl-r"><b>${rs(x.q * x.it.r)}</b><span class="mini-q"><button type="button" data-pq="-1" data-id="${esc(x.it.id)}" aria-label="Kam">−</button><span>${num(x.q)}</span><button type="button" data-pq="1" data-id="${esc(x.it.id)}" aria-label="Zyada">+</button></span></span></li>`).join('');
+  $('pLines').innerHTML = L.map(x => `<li>${plImg(x.it)}<span class="pl-n"><b>${esc(x.it.n)}</b>${x.pq ? `<i class="pl-pk">${esc(pkName(x))}</i>` : ''}<small>${rs(x.price)}${x.pq ? '' : x.it.u ? ' / ' + esc(x.it.u) : ''} × ${num(x.q)}</small></span><span class="pl-r"><b>${rs(x.q * x.price)}</b><span class="mini-q"><button type="button" data-pq="-1" data-id="${esc(x.k)}" aria-label="Kam">−</button><span>${num(x.q)}</span><button type="button" data-pq="1" data-id="${esc(x.k)}" aria-label="Zyada">+</button></span></span></li>`).join('');
   $('pEmpty').hidden = L.length > 0;
   $('pCount').textContent = L.length + (L.length === 1 ? ' cheez' : ' cheezein');
   $('pTot').textContent = rs(tot); $('mTot').textContent = rs(tot);
@@ -541,9 +616,9 @@ function sendOrder(e) {
   if (!wa) return bad('Dukan ka WhatsApp number abhi nahi laga.');
   if (!w.name) { f.elements.name.focus(); return bad('Apna naam likhein.'); }
   if (w.how === 'home' && !w.addr) { f.elements.addr.focus(); return bad('Ghar bhejna hai to pata likhein.'); }
-  const tot = L.reduce((s, x) => s + x.q * x.it.r, 0);
+  const tot = L.reduce((s, x) => s + x.q * x.price, 0);
   const t = [`*${S.info.name || 'Noor Traders'} — Online order* 🧾`, fmtNow(), ''];
-  L.forEach((x, i) => { t.push(`${i + 1}. ${x.it.n}`); t.push(`    ${num(x.q)}${x.it.u ? ' ' + x.it.u : ''} × ${rs(x.it.r)} = ${rs(x.q * x.it.r)}`); });
+  L.forEach((x, i) => { t.push(`${i + 1}. ${x.it.n}${x.pq ? ` — ${pkName(x)}` : ''}`); t.push(`    ${num(x.q)}${x.pq ? (x.pk ? ' packet' : ' dafa') : x.it.u ? ' ' + x.it.u : ''} × ${rs(x.price)} = ${rs(x.q * x.price)}`); });
   t.push('──────────', `*Kul: ${rs(tot)}* (${L.length} ${L.length === 1 ? 'cheez' : 'cheezein'})`, '', `Naam: ${w.name}`);
   if (w.phone) t.push(`Mobile: ${w.phone}`);
   t.push(w.how === 'home' ? `🛵 Ghar bhejein — Pata: ${w.addr}` : '🏪 Khud dukan se le jaunga');
@@ -569,7 +644,7 @@ function findPaint() {
 function showOnRack(id) {
   if (!S.bayOf.has(id)) return;
   go(S.bayOf.get(id));
-  setTimeout(() => document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"], .spot[data-spot="${CSS.escape(id)}"]`).forEach(el => { el.classList.remove('glow'); void el.offsetWidth; el.classList.add('glow'); setTimeout(() => el.classList.remove('glow'), 3600); }), 450);
+  setTimeout(() => document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"], .spot[data-spot="${CSS.escape(id)}"], [data-kh="${CSS.escape(id)}"]`).forEach(el => { el.classList.remove('glow'); void el.offsetWidth; el.classList.add('glow'); setTimeout(() => el.classList.remove('glow'), 3600); }), 450);
 }
 
 // ---------- 🗺 naqsha ----------
@@ -628,7 +703,7 @@ function lightsOn() {
 }
 function rise() {
   const els = [bayEls[S.cur], bayEls[S.cur + 1]].filter(Boolean);
-  els.forEach(el => { el.querySelectorAll('.it').forEach((it, k) => it.style.setProperty('--d', String(Math.min(k, 24)))); replay(el, 'rise'); setTimeout(() => el.classList.remove('rise'), 1600); });
+  els.forEach(el => { el.querySelectorAll('.it, .dabba, .tora').forEach((it, k) => it.style.setProperty('--d', String(Math.min(k, 24)))); replay(el, 'rise'); setTimeout(() => el.classList.remove('rise'), 1600); });
 }
 
 // ---------- ⚠️ ghalti ----------
@@ -656,6 +731,9 @@ document.addEventListener('click', e => {
   if (!GY.asked) gyroStart();   // 📱 pehli ungli par (iPhone ijazat maangta hai)
   const sp = t.closest('[data-spot]');
   if (sp) { const id = sp.dataset.spot, si = S.items.get(id); if (!si) { replay(sp, 'nope'); buzz([10, 40, 10]); return; } replay(sp, 'tap'); sfx('pick'); buzz(8); closeHelper(); setTimeout(() => openSheet(id, null), LITE || RM ? 0 : 120); return; }   // 📸 photo par cheez
+  const kh = t.closest('[data-kh]');
+  if (kh && t.closest('#aisle')) { replay(kh, 'lift'); sfx('pick'); buzz(8); closeHelper(); setTimeout(() => openSheet(kh.dataset.kh, kh), LITE || RM ? 0 : 140); return; }   // 🌾 dabba / tora
+  const pkb = t.closest('[data-pkq]'); if (pkb) { S.pkq = Number(pkb.dataset.pkq) || 0; paintPk(); buzz(6); return; }
   const pzb = t.closest('[data-pz]'); if (pzb) { openPz(Number(pzb.dataset.pz)); return; }
   if (t.closest('[data-pz-close]')) { closeOv('pz'); return; }
   const it = t.closest('.it');
@@ -668,15 +746,15 @@ document.addEventListener('click', e => {
   if (t.closest('[data-close]')) { closeOv('sheet'); return; }
   if (t.closest('[data-q]')) { S.q = Math.max(1, Math.min(999, S.q + Number(t.closest('[data-q]').dataset.q))); $('shQty').textContent = String(S.q); return; }
   if (t.closest('#shAdd')) {
-    const id = S.open, el = $('shImg').querySelector('img,.pk');
-    if (!id) return;
+    const id = S.open, el = $('shImg').querySelector('img,.pk'), it = S.items.get(id);
+    if (!id || !it) return;
     const r = el ? el.getBoundingClientRect() : null, ghost = r ? { getBoundingClientRect: () => r } : null;
-    closeOv('sheet'); addToCrate(id, S.q, ghost); return;
+    closeOv('sheet'); addToCrate(keyOf(it, S.pkq), S.q, ghost); return;
   }
   if (t.closest('#counterBar')) { openCounter(); return; }
   if (t.closest('[data-cv-close]')) { closeOv('cv'); return; }
   const pq = t.closest('[data-pq]');
-  if (pq) { const id = pq.dataset.id; setQty(id, (Number(S.crate[id]) || 0) + Number(pq.dataset.pq)); markItem(id); return; }
+  if (pq) { const k = pq.dataset.id; setQty(k, (Number(S.crate[k]) || 0) + Number(pq.dataset.pq)); return; }
   if (t.closest('#findBtn')) { $('find').hidden = false; openOv('find'); findPaint(); setTimeout(() => $('findQ').focus(), 30); return; }
   if (t.closest('[data-find-close]')) { closeOv('find'); return; }
   const fr = t.closest('[data-find]');
