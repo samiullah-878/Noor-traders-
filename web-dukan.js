@@ -14,7 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf } from './dukan/khula.js?v=2.159.0';
+import { kindOf } from './dukan/khula.js?v=2.160.0';
+import { smartFind } from './dukan/dhoond.js?v=2.160.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -35,7 +36,7 @@ let un = null;  // Firestore listeners
 const TH = new Map();   // id -> {v, url} chhoti tasveer (phone ki memory)
 
 function fresh() {
-  return { cat: {}, info: {}, racks: { order: [], cn: {}, hc: {}, hide: {}, ic: {}, rp: {}, nmOn: false, lp: {} }, ph: {}, got: {}, q: '', ck: pref.ck || '', f: pref.f || 'all', lim: 120, view: 'list', busy: new Set(), ok: new Set(), err: new Map(), crop: null, pq: '', pck: '', arm: '', act: '', rkSt: '', infoSt: '', sel: null, ai: null, aiOpen: '', rpe: null, rpq: '', rpNew: null, rpDelArm: 0, lastF: [], rkIds: new Set(), rkWait: new Set() };
+  return { cat: {}, info: {}, racks: { order: [], cn: {}, hc: {}, hide: {}, ic: {}, rp: {}, nmOn: false, lp: {}, draw: false }, ph: {}, got: {}, q: '', ck: pref.ck || '', f: pref.f || 'all', lim: 120, view: 'list', busy: new Set(), ok: new Set(), err: new Map(), crop: null, pq: '', pck: '', arm: '', act: '', rkSt: '', infoSt: '', sel: null, ai: null, aiOpen: '', rpe: null, rpq: '', rpNew: null, rpDelArm: 0, lastF: [], rkIds: new Set(), rkWait: new Set() };
 }
 
 // ---------- 📦 items (POS stock → website wali list) ----------
@@ -93,7 +94,7 @@ export function webOpen(ctx) {
     if (k === 'cat') W.cat = v || {};
     else if (k === 'info') W.info = v || {};
     else if (k === 'phIdx') W.ph = (v && v.m) || {};
-    else if (k === 'racks' && !W.rkDirty) W.racks = { order: Array.isArray(v?.order) ? v.order : [], cn: v?.cn || {}, hc: v?.hc || {}, hide: v?.hide || {}, ic: v?.ic || {}, rp: v?.rp || {}, nmOn: !!v?.nmOn, lp: v?.lp || {} };
+    else if (k === 'racks' && !W.rkDirty) W.racks = { order: Array.isArray(v?.order) ? v.order : [], cn: v?.cn || {}, hc: v?.hc || {}, hide: v?.hide || {}, ic: v?.ic || {}, rp: v?.rp || {}, nmOn: !!v?.nmOn, lp: v?.lp || {}, draw: !!v?.draw };
     paintSoon();
   });
   paint();
@@ -143,14 +144,17 @@ function paintList() {
   const L = items();
   if (!L) { $('wdStrip').innerHTML = '<span>⏳ Items load ho rahe hain…</span>'; $('wdBody').innerHTML = '<p class="wd-empty">Stock aa raha hai…</p>'; $('wdFoot').innerHTML = ''; return; }
   $('wdStrip').innerHTML = stripHTML(L);
-  const q = W.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const rk = racksOf(L), no = new Map(rk.filter(r => !r.off).map((r, i) => [r.k, i + 1]));
-  let F = L.filter(it => (!W.ck || it.c === W.ck) && (W.f === 'all' || (W.f === 'nopic' && !it.pic && !it.hide) || (W.f === 'pic' && it.pic) || (W.f === 'hid' && it.hide)) && (!q.length || q.every(w => (it.n + ' ' + it.c).toLowerCase().includes(w))));
-  F.sort((a, b) => ((no.get(a.c) || 999) - (no.get(b.c) || 999)) || a.n.localeCompare(b.n));
+  const q = W.q.trim();
+  const rk = racksOf(L), no = new Map(rk.filter(r => !r.off).map((r, i) => [r.k, i + 1])), onP = W.f === 'noph' ? onPhotoSet() : null;
+  let F = L.filter(it => (!W.ck || it.c === W.ck) && (W.f === 'all' || (W.f === 'nopic' && !it.pic && !it.hide) || (W.f === 'pic' && it.pic) || (W.f === 'hid' && it.hide) || (W.f === 'noph' && !it.hide && it.k === 'n' && !onP.has(it.id))));
+  let NR = [];
+  if (q) { const r = smartFind(F, q, it => it.n + ' ' + rackName(it.c), it => it.id); F = r.hits; NR = r.near; }   // v2.160.0: 🔍 smart (daal = dal = دال · sugar = cheeni · ghalat typing = "Shayad ye")
+  else F.sort((a, b) => ((no.get(a.c) || 999) - (no.get(b.c) || 999)) || a.n.localeCompare(b.n));
   W.lastF = F.map(x => x.id);
   const body = $('wdBody'), keepY = body.scrollTop;
   body.innerHTML = `<label class="wd-q"><span>🔍</span><input id="wdQ" type="search" placeholder="Item dhoondo…" value="${esc(W.q)}" autocomplete="off"></label>` +
-    (F.length ? `<div class="wd-list">${F.slice(0, W.lim).map(it => rowHTML(it, no)).join('')}</div>${F.length > W.lim ? `<button type="button" class="wd-chip wd-more" data-wd="more">⬇ Aur ${num(Math.min(120, F.length - W.lim))} (kul ${num(F.length)})</button>` : ''}` : `<p class="wd-empty">${q.length ? 'Is naam ka item nahi mila.' : W.f === 'nopic' ? '✅ Is rack ke sab items ki tasveer lag chuki!' : 'Yahan koi item nahi.'}</p>`);
+    (F.length ? `<div class="wd-list">${F.slice(0, W.lim).map(it => rowHTML(it, no)).join('')}</div>${F.length > W.lim ? `<button type="button" class="wd-chip wd-more" data-wd="more">⬇ Aur ${num(Math.min(120, F.length - W.lim))} (kul ${num(F.length)})</button>` : ''}` : NR.length ? '' : `<p class="wd-empty">${q ? 'Is naam ka item nahi mila.' : W.f === 'nopic' ? '✅ Is rack ke sab items ki tasveer lag chuki!' : W.f === 'noph' ? '✅ Sab items kisi rack ki photo par hain!' : 'Yahan koi item nahi.'}</p>`) +
+    (NR.length ? `<p class="wd-near">🤔 ${F.length ? 'Ye bhi ho sakte hain' : `"${esc(q)}" seedha nahi mila — shayad ye`}:</p><div class="wd-list">${NR.map(it => rowHTML(it, no)).join('')}</div>` : '');
   body.scrollTop = keepY;
   if (W.sel) { const n = W.sel.size, all = F.length && F.every(x => W.sel.has(x.id));
     $('wdFoot').innerHTML = `<button type="button" class="wd-chip" data-wd="selall">${all ? '☐ Koi nahi' : `☑ Sab ${num(F.length)}`}</button><button type="button" class="wd-chip" data-wd="selx">✕ Band</button><button type="button" class="wd-main" data-wd="selmv"${n ? '' : ' disabled'}>🗂 ${num(n)} → Rack</button>`; }
@@ -190,13 +194,17 @@ function menuHTML() {
   const L = items() || [], rk = racksOf(L), own = A.owner();
   const ch = (on, attr, t) => `<button type="button" class="wd-chip${on ? ' is-in' : ''}" ${attr}>${t}</button>`;
   return `<h3>🌐 Website</h3><div class="wd-chips">${ch(0, 'data-wd="site"', '🌐 Website kholo')}${ch(0, 'data-wd="share"', '🔗 Link bhejo')}${ch(0, 'data-wd="copy"', '📋 Link copy')}</div>
-<h3>📸 Asal rack ki photo (customer photo par cheez dabaye)</h3><div class="wd-chips">${ch(0, 'data-wd="rps"', `📸 Rack ki photos <small>${Object.keys(W.racks.rp || {}).length}</small>`)}</div>
+<h3>📸 Asal rack ki photo (customer photo par cheez dabaye)</h3><div class="wd-chips">${ch(0, 'data-wd="rps"', `📸 Rack ki photos <small>${Object.keys(W.racks.rp || {}).length}</small>`)}${ch(!!W.racks.draw, 'data-wd="draw"', W.racks.draw ? '▦ Bane hue racks: ON' : '▦ Bane hue racks: Band')}</div>
+<p class="wd-note">▦ Band = website par sirf asal rack ki photos + 🌾 dabbe / tore. Jo item kisi photo par nahi, wo sirf customer ke 🔍 dhoondo mein (tokri mein daal sakta hai). Koi rack photo na ho to bane hue racks khud dikhte hain (dukan khali na lage).</p>
 <h3>☑ Kai items ek saath</h3><div class="wd-chips">${ch(!!W.sel, 'data-wd="sel"', W.sel ? '☑ Chunne ka mode ON — band karo' : '☑ Items chuno → ek saath rack mein')}</div>
 <h3>🗂 Rack</h3><div class="wd-chips">${ch(!W.ck, 'data-ck=""', 'Sab racks')}${rk.map((r, i) => ch(W.ck === r.k, `data-ck="${esc(r.k)}"`, `${r.off ? '🙈 ' : (i + 1) + '. '}${esc(r.name)} <small>${r.n}</small>`)).join('')}</div>
-<h3>🔎 Dikhao</h3><div class="wd-chips">${[['all', 'Sab'], ['nopic', '📷 Bina tasveer'], ['pic', '✅ Tasveer wale'], ['hid', '🙈 Chhupe']].map(([k, t]) => ch(W.f === k, `data-f="${k}"`, t)).join('')}</div>
+<h3>🔎 Dikhao</h3><div class="wd-chips">${[['all', 'Sab'], ['nopic', '📷 Bina tasveer'], ['pic', '✅ Tasveer wale'], ['noph', `📸 Rack photo par nahi <small>${num(nophCount())}</small>`], ['hid', '🙈 Chhupe']].map(([k, t]) => ch(W.f === k, `data-f="${k}"`, t)).join('')}</div>
 <h3>⚙️ Tarteeb</h3><div class="wd-chips">${own && A.aiText ? ch(0, 'data-wd="airk"', '🤖 Racks khud banao (AI)') : ''}${ch(0, 'data-wd="racks"', '🗂 Racks ki tarteeb')}${own ? ch(0, 'data-wd="info"', '🏪 Dukan ki maloomat') + ch(0, 'data-wd="pub"', '🔄 Rates abhi website par bhejo') : ''}</div>
 <p class="wd-note">Website par sirf naam, retail rate aur tasveer jati hai — khareed / nafa kabhi nahi. Rates PC khud bhejta hai.</p>`;
 }
+// v2.160.0: kaun se items kisi asal rack ki photo par lage hain (bane racks band hon to baqi website ke manzar mein nahi — sirf dhoondo)
+function onPhotoSet() { const S = new Set(); for (const pid of Object.keys(W.racks.rp || {})) for (const t of rpS(pid)) if (t[4]) S.add(String(t[4])); return S; }
+function nophCount() { const L = items() || [], P = onPhotoSet(); return L.filter(it => !it.hide && it.k === 'n' && !P.has(it.id)).length; }
 function itemSheet(id) {
   const it = (items() || []).find(x => x.id === id); if (!it) return;
   W.act = id;
@@ -264,8 +272,8 @@ function rpPointer() {
   wrap.addEventListener('pointerup', end); wrap.addEventListener('pointercancel', () => { st = null; });
 }
 function pickListHTML() {
-  const L = items() || [], q = (W.rpq || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const F = (q.length ? L.filter(it => q.every(w => it.n.toLowerCase().includes(w))) : L).slice(0, 60);
+  const L = items() || [], q = (W.rpq || '').trim();
+  const F = (q ? (r => [...r.hits, ...r.near])(smartFind(L, q, it => it.n, it => it.id)) : L).slice(0, 60);
   return F.map(it => `<button type="button" class="wd-r wd-pr" data-bxit="${esc(it.id)}"><span class="wd-n"><b>${esc(it.n)}</b><small>Rs ${num(it.r)} · ${esc(rackName(it.c))}</small></span></button>`).join('') || '<p class="wd-empty">Is naam ka item nahi mila.</p>';
 }
 function namePick() {
@@ -578,8 +586,8 @@ async function cropSave(id) {
 // ---------- 🔎 ye kaun sa item? (list pehle se, search, bina tasveer pehle) ----------
 function paintPick() {
   const L = items() || [], rk = racksOf(L).filter(r => !r.off);
-  const q = W.pq.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const F = L.filter(it => !it.hide && (!W.pck || it.c === W.pck) && (!q.length || q.every(w => it.n.toLowerCase().includes(w)))).sort((a, b) => (a.pic - b.pic) || a.n.localeCompare(b.n));
+  const q = W.pq.trim(), F0 = L.filter(it => !it.hide && (!W.pck || it.c === W.pck));
+  const F = q ? (r => [...r.hits, ...r.near])(smartFind(F0, q, it => it.n, it => it.id)) : F0.sort((a, b) => (a.pic - b.pic) || a.n.localeCompare(b.n));
   $('wdStrip').innerHTML = `<span>Item par dabayein — tasveer usi ki lag jayegi${W.crop?.done?.length ? ` · ✅ ${W.crop.done.length} lag chuki` : ''}</span>`;
   $('wdBody').innerHTML = `<div class="wd-pk"><img src="${W.crop?.url || ''}" alt="" id="wdPv"></div>
 <label class="wd-q"><span>🔍</span><input id="wdPQ" type="search" placeholder="Naam likhein…" value="${esc(W.pq)}" autocomplete="off"></label>
@@ -646,6 +654,7 @@ function onClick(e) {
   if (k === 'airk') { sheetClose(); aiRun(); return; }   // v2.157.0
   if (k === 'rps') { sheetClose(); W.view = 'rps'; paint(); return; }   // v2.158.0: 📸 asal rack photos
   if (k === 'rpadd') { W.act = ''; sheet(`<h3 class="wd-st">📸 Rack ki asal photo</h3><p class="wd-note">Saamne se, seedha, poora rack ek photo mein — roshni mein. 🤖 AI har cheez ke gird dabba banayegi, aap naam lagayenge.</p><div class="wd-chips"><button type="button" class="wd-chip" data-rpshot="cam">📸 Camera</button><button type="button" class="wd-chip" data-rpshot="gal">🖼 Gallery</button></div>`); return; }
+  if (k === 'draw') { W.racks.draw = !W.racks.draw; saveRacks(); sheetClose(); paint(); A.notice(W.racks.draw ? '▦ Website par bane hue racks ON' : '▦ Bane hue racks band — sirf asal photos + 🌾 dabbe / tore ⏳'); return; }
   if (k === 'nmon') { W.racks.nmOn = !W.racks.nmOn; saveRacks(); paint(); A.notice(W.racks.nmOn ? '🏷 Customer ko photo par naam bhi dikhega' : '🏷 Photo par sirf rate (naam nahi)'); return; }
   if (k === 'rpdraw' && W.rpe) { W.rpe.draw = !W.rpe.draw; W.rpe.sel = new Set(); paint(); return; }
   if (k === 'rpai') { rpDetect(); return; }

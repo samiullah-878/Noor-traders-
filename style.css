@@ -6754,6 +6754,7 @@ html body #wdDlg .wd-r{display:grid;grid-template-columns:46px minmax(0,1fr) aut
 #wdDlg .wd-s.bad{color:#b3261e;font-weight:800}
 html body #wdDlg .wd-cam{width:36px;height:36px;padding:0;border-radius:999px;border:1.5px solid #d7dde8!important;background:linear-gradient(180deg,#fff,#eef2f8)!important;font-size:16px;box-shadow:none!important}
 #wdDlg .wd-empty{margin:30px 10px;text-align:center;color:#5b6880;font-weight:700}
+#wdDlg .wd-near{margin:14px 4px 6px;padding:6px 12px;border-radius:999px;background:#fff6dd;color:#6b4e00;font-weight:800;font-size:12.5px;display:inline-block}   /* v2.160.0: 🤔 Shayad ye (smart dhoondo) */
 #wdDlg .wd-note{margin:6px 0 10px;color:#5b6880;font-size:12.5px}
 #wdDlg .wd-sheet{position:absolute;inset:0;z-index:5}
 #wdDlg .wd-sbg{position:absolute;inset:0;background:rgba(10,18,36,.45)}

@@ -492,3 +492,6 @@ html:not(.lite) .kh{will-change:transform}
 .pkc.is-in small{color:#dfe7f7}
 .pl-pk{display:inline-block;margin:2px 0 1px;padding:1px 7px;border-radius:999px;background:#fff3c4;color:#5b4300;font:800 11px/1.4 Manrope,sans-serif;font-style:normal}
 html.lite .kh{transform:none!important}
+
+/* ---------- 🔍 v2.160.0: smart dhoondo — "Shayad ye" ---------- */
+.find-near{grid-column:1/-1;margin:8px 2px 0;justify-self:start;padding:6px 12px;border-radius:999px;background:#fff3c4;color:#5b4300;font-weight:800;font-size:12.5px}

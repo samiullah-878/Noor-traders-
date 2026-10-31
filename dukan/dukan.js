@@ -18,8 +18,11 @@
 //     Daane canvas par (khula.js) · item ki apni tasveer ho to wohi dher ki shakal mein · jagah static (koi animation jagah nahi badalti).
 //     Tap = packet chips: cat row[5] [[wazan, rate]] (PC sync-stock v4, sub-barcode) — na hon to 250 g · 500 g · 1 kg · 2 kg · 5 kg (rate × wazan). Tokri key "id@wazan".
 //     racks.lp {id: 'g' dabba | 's' tora | 'n' shelf} = malik ka faisla (app) — warna khud: unit kg / packet wala daal-dry fruit.
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.159.0';
-import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg } from './khula.js?v=2.159.0';
+//   v2.160.0 (malik: "search smart nahi" · "sab bane racks band — apne racks ki photos lagani hain"): 🔍 dhoond.js (app ke saath ek qaida) + "Shayad ye" ·
+//     racks.draw false (default) = bane hue racks BAND — sirf asal photo bays + 🌾 khula; baqi items sirf dhoondo se (seedha khirki). Koi photo na ho = bane racks (dukan khali nahi).
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.160.0';
+import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg } from './khula.js?v=2.160.0';
+import { smartFind } from './dhoond.js?v=2.160.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -113,7 +116,7 @@ async function cGet(k) { const db = await idb(); if (!db) return null; return ne
 async function cPut(k, v) { const db = await idb(); if (!db) return; try { db.transaction('ph', 'readwrite').objectStore('ph').put(v, k); } catch {} }
 
 // ---------- 🧠 haalat ----------
-const S = { racks: [], bays: [], items: new Map(), bayOf: new Map(), info: {}, ph: {}, at: 0, crate: ls.get('nt-dk-crate', {}) || {}, cur: 0, open: null, q: 1, dims: null, loadedAt: 0, walkTo: -1, goal: -1 };
+const S = { racks: [], vis: [], bays: [], items: new Map(), bayOf: new Map(), info: {}, ph: {}, at: 0, crate: ls.get('nt-dk-crate', {}) || {}, cur: 0, open: null, q: 1, dims: null, loadedAt: 0, walkTo: -1, goal: -1 };
 const PHURL = new Map(), RBG = new Map();   // RBG: rack key -> rack ki asal tasveer (blob url)
 const phV = id => { const x = S.ph[id]; return x && typeof x === 'object' ? Number(x.v) || 0 : Number(x) || 0; };
 const saveCrate = () => ls.set('nt-dk-crate', S.crate);
@@ -125,7 +128,7 @@ function build(d) {
   const hide = R.hide || {}, ic = R.ic || {}, hc = R.hc || {}, cn = R.cn || {};
   const groups = new Map(); S.items = new Map();
   // 📸 v2.158.0: asal rack ki photos — photo par jo item hai wo usi rack ka (bane hue rack mein dohra nahi)
-  S.nmOn = !!R.nmOn; S.lp = R.lp && typeof R.lp === 'object' ? R.lp : {};
+  S.nmOn = !!R.nmOn; S.lp = R.lp && typeof R.lp === 'object' ? R.lp : {}; S.draw = !!R.draw;
   S.rps = Object.entries(R.rp && typeof R.rp === 'object' ? R.rp : {}).map(([pid, x]) => { let a = []; try { a = JSON.parse((x && x.s) || '[]'); } catch {}
     return { pid, k: String(x?.k || '').trim(), o: Number(x?.o) || 0, w: Number(x?.w) || 3, h: Number(x?.h) || 4, spots: (Array.isArray(a) ? a : []).filter(t => Array.isArray(t) && t[4]).map(t => ({ x: +t[0] || 0, y: +t[1] || 0, w: +t[2] || 0, h: +t[3] || 0, id: String(t[4]) })) }; })
     .filter(p => p.k && !hc[p.k] && p.spots.length && phV('rp_' + p.pid)).sort((a, b) => a.o - b.o);
@@ -296,11 +299,13 @@ function gyroStart() {
 }
 function renderAisle(keepId) {
   const D = dims(); S.dims = D;
-  const bays = [];
+  const bays = [], noDraw = !S.draw && S.rps.length > 0;   // v2.160.0: koi asal photo na ho to bane racks hi (dukan khali na lage)
   S.racks.forEach(rk => { rk.bay0 = bays.length;
     rk.photos.forEach((ph, j) => bays.push({ rk, photo: ph, p: j, parts: rk.photos.length, items: [...new Set(ph.spots.map(x => x.id))].map(id => S.items.get(id)).filter(Boolean) }));   // 📸 pehle asal photo
     const K = khPack(rk.loose, D); K.forEach((kh, j) => bays.push({ rk, kh, p: j, parts: K.length, items: [...kh.g, ...kh.s] }));   // 🌾 phir khula maal (dabbe + tore)
-    const parts = Math.ceil(rk.rest.length / D.per); for (let p = 0; p < parts; p++) bays.push({ rk, p, parts, items: rk.rest.slice(p * D.per, (p + 1) * D.per) }); });
+    if (!noDraw) { const parts = Math.ceil(rk.rest.length / D.per); for (let p = 0; p < parts; p++) bays.push({ rk, p, parts, items: rk.rest.slice(p * D.per, (p + 1) * D.per) }); }   // ▦ bane hue (malik ne band kiye to nahi)
+    if (bays.length === rk.bay0) rk.bay0 = null; });
+  let no = 0; S.racks.forEach(rk => { rk.no = rk.bay0 == null ? 0 : ++no; }); S.vis = S.racks.filter(rk => rk.bay0 != null);   // sirf nazar aane wale racks ginti mein
   S.bays = bays; S.bayOf = new Map();
   bays.forEach((b, i) => b.items.forEach(it => { if (!S.bayOf.has(it.id)) S.bayOf.set(it.id, i); }));
   const a = $('aisle');
@@ -385,7 +390,7 @@ function onScroll() {
   S.cur = i;
   const b = S.bays[i], x = a.scrollLeft;
   if (i !== filledAt) { filledAt = i; fillNear(i);   // v2.156.1: sirf rack badle to DOM likho (har frame nahi)
-    $('where').textContent = b ? `Rack ${b.rk.no}/${S.racks.length} · ${b.rk.name}${b.photo ? ' 📸' : b.kh ? ' 🌾' : ''}${b.parts > 1 ? ` (${b.p + 1}/${b.parts})` : ''}` : 'Noor Traders';
+    $('where').textContent = b ? `Rack ${b.rk.no}/${S.vis.length} · ${b.rk.name}${b.photo ? ' 📸' : b.kh ? ' 🌾' : ''}${b.parts > 1 ? ` (${b.p + 1}/${b.parts})` : ''}` : 'Noor Traders';
     const w = S.bays.length ? Math.round((i + 1) / S.bays.length * 100) + '%' : '0';
     $('walkBar').style.width = w; $('walkFeet').style.setProperty('--w', w); }
   if (!LITE) { FL ||= document.querySelector('.floor-t'); CE ||= document.querySelector('.ceil-t'); if (FL) FL.style.transform = `translate3d(${-(x % 128).toFixed(1)}px,0,0)`; if (CE) CE.style.transform = `translate3d(${-((x * 0.55) % 250).toFixed(1)}px,0,0)`; }   // 🚶 farsh / lights — sirf transform (GPU), poori dukan dobara nahi
@@ -416,14 +421,13 @@ function go(i, now) {
 // ---------- 🗂 v2.156.0: neeche racks ke naam (chips) — jis par khare hain wo roshan ----------
 function paintRkBar() {
   const box = $('rkChips'); if (!box) return;
-  box.innerHTML = S.racks.map((rk, k) => `<button type="button" class="rkc" data-rk="${k}"><i>${rk.no}</i>${esc(rk.name)}</button>`).join('');
+  box.innerHTML = S.racks.map((rk, k) => rk.bay0 == null ? '' : `<button type="button" class="rkc" data-rk="${k}"><i>${rk.no}</i>${esc(rk.name)}</button>`).join('');
   curRk = null; markRk();
 }
 function markRk() {
   const box = $('rkChips'); if (!box) return;
   const k = curRk ? S.racks.indexOf(curRk) : -1;
-  box.querySelectorAll('.rkc').forEach((el, j) => el.classList.toggle('cur', j === k));
-  const el = box.children[k]; if (el) box.scrollTo({ left: el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2, behavior: LITE ? 'auto' : 'smooth' });
+  let el = null; box.querySelectorAll('.rkc').forEach(b => { const on = Number(b.dataset.rk) === k; b.classList.toggle('cur', on); if (on) el = b; }); if (el) box.scrollTo({ left: el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2, behavior: LITE ? 'auto' : 'smooth' });
 }
 function goRack(k, why) {
   const rk = S.racks[k]; if (!rk || rk.bay0 == null || !S.bays[rk.bay0]) return;
@@ -437,7 +441,7 @@ function openHelper(auto) {
   const h = $('helper'); if (!h || !S.racks.length) return;
   $('hpT').textContent = auto ? 'Assalam o Alaikum! 👋' : 'Ji, farmaiye 🙂';
   $('hpS').textContent = isClosed() ? 'Dukan abhi band hai, magar aap order chhor sakte hain — khulte hi bhej denge. Kya chahiye?' : 'Kya chahiye? Rack chunein — main aap ko wahan le chalta hoon. 👉 Ungli se bhi agla rack dekh sakte hain.';
-  $('hpChips').innerHTML = '<button type="button" class="hp-alt" data-hp-find="1">🔍 Naam se dhoondo</button>' + S.racks.map((rk, k) => `<button type="button" data-hp-rk="${k}"><i>${rk.no}</i>${esc(rk.name)}</button>`).join('');
+  $('hpChips').innerHTML = '<button type="button" class="hp-alt" data-hp-find="1">🔍 Naam se dhoondo</button>' + S.racks.map((rk, k) => rk.bay0 == null ? '' : `<button type="button" data-hp-rk="${k}"><i>${rk.no}</i>${esc(rk.name)}</button>`).join('');
   h.hidden = false; replay(h.querySelector('.hp-ava'), 'wave'); buzz(10);
 }
 function closeHelper() { const h = $('helper'); if (h) h.hidden = true; }
@@ -527,7 +531,9 @@ function closeOv(n) {
   OV.splice(i, 1); skipPop++;
   try { history.back(); } catch { skipPop--; }
 }
-addEventListener('popstate', () => { if (skipPop > 0) { skipPop--; return; } const n = OV.pop(); if (n) hideOv(n); });
+const afterQ = [];   // v2.160.0: ek khirki band (history.back) ke BAAD doosri kholo — warna back aur pushState takra kar safha hi chhoot jata
+function afterBack(fn) { if (skipPop <= 0) { fn(); return; } afterQ.push(fn); setTimeout(() => { const i = afterQ.indexOf(fn); if (i >= 0) { afterQ.splice(i, 1); fn(); } }, 450); }
+addEventListener('popstate', () => { if (skipPop > 0) { skipPop--; if (!skipPop) afterQ.splice(0).forEach(f => f()); return; } const n = OV.pop(); if (n) hideOv(n); });
 
 // ---------- 🛍 item uthaya ----------
 function openSheet(id, fromEl) {
@@ -535,7 +541,7 @@ function openSheet(id, fromEl) {
   const src = fromEl && fromEl.querySelector('img,.pk,canvas'), r0 = src ? src.getBoundingClientRect() : null;
   S.open = id; S.q = 1;
   const O = optsOf(it); S.pkq = O.length > 1 ? (O.find(x => x.q === 1) || O[0]).q : 0;   // 🌾 packet chips (1 se zyada option ho to)
-  $('shRack').textContent = `Rack ${it.rk.no} · ${it.rk.name}${it.k === 'g' ? ' · 🫙 Dabba' : it.k === 's' ? ' · 🧺 Tora' : ''}`;
+  $('shRack').textContent = `${it.rk.no ? `Rack ${it.rk.no} · ` : ''}${it.rk.name}${it.k === 'g' ? ' · 🫙 Dabba' : it.k === 's' ? ' · 🧺 Tora' : ''}`;
   $('shName').textContent = it.n;
   $('shQty').textContent = '1';
   $('shImg').innerHTML = imgOf(it, true); $('shImg').classList.toggle('kh-img', it.k === 'g' && !PHURL.has(it.id));
@@ -628,21 +634,16 @@ function sendOrder(e) {
 }
 
 // ---------- 🔍 dhoondo ----------
-function findPaint() {
-  const q = $('findQ').value.trim().toLowerCase(), box = $('findList');
-  if (!q) { box.innerHTML = `<p class="find-empty">Naam likhein — jaise "oil", "sabun", "chawal"</p>`; return; }
-  const words = q.split(/\s+/).filter(Boolean);
-  const hits = [];
-  for (const it of S.items.values()) {
-    const s = (it.n + ' ' + it.rk.name).toLowerCase();
-    if (words.every(w => s.includes(w))) { const nl = it.n.toLowerCase(); hits.push([nl.startsWith(words[0]) ? 0 : words.every(w => nl.includes(w)) ? 1 : 2, it]); }
-    if (hits.length > 400) break;
-  }
-  hits.sort((a, b) => a[0] - b[0] || a[1].n.localeCompare(b[1].n));
-  box.innerHTML = hits.length ? hits.slice(0, 80).map(([, it]) => `<button type="button" class="fr" data-find="${esc(it.id)}">${plImg(it)}<span><b>${esc(it.n)}</b><small>Rack ${it.rk.no} · ${esc(it.rk.name)}</small></span><span class="tag"><small>Rs</small>${num(it.r)}</span></button>`).join('') : `<p class="find-empty">"${esc(q)}" nahi mila — doosra naam likh kar dekhein.</p>`;
+function findPaint() {   // v2.160.0: 🔍 smart (daal = dal = دال · sugar = cheeni · ghalat typing par "Shayad ye")
+  const q = $('findQ').value.trim(), box = $('findList');
+  if (!q) { box.innerHTML = `<p class="find-empty">Naam likhein — jaise "oil", "sabun", "chawal", "daal"</p>`; return; }
+  const r = smartFind([...S.items.values()], q, it => it.n + ' ' + it.rk.name, it => it.id, 80);
+  const row = it => `<button type="button" class="fr" data-find="${esc(it.id)}">${plImg(it)}<span><b>${esc(it.n)}</b><small>${S.bayOf.has(it.id) ? `Rack ${it.rk.no} · ${esc(it.rk.name)}` : `${esc(it.rk.name)} · 🧺 seedha tokri mein`}</small></span><span class="tag"><small>Rs</small>${num(it.r)}</span></button>`;
+  box.innerHTML = r.hits.map(row).join('') + (r.near.length ? `<p class="find-near">🤔 ${r.hits.length ? 'Ye bhi ho sakte hain' : `"${esc(q)}" seedha nahi mila — shayad ye`}:</p>` + r.near.map(row).join('') : '')
+    || `<p class="find-empty">"${esc(q)}" nahi mila — doosra naam likh kar dekhein.</p>`;
 }
 function showOnRack(id) {
-  if (!S.bayOf.has(id)) return;
+  if (!S.bayOf.has(id)) { afterBack(() => openSheet(id, null)); return; }   // v2.160.0: rack par nahi (bane racks band) = seedha khirki (dhoondo band hone ke baad)
   go(S.bayOf.get(id));
   setTimeout(() => document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"], .spot[data-spot="${CSS.escape(id)}"], [data-kh="${CSS.escape(id)}"]`).forEach(el => { el.classList.remove('glow'); void el.offsetWidth; el.classList.add('glow'); setTimeout(() => el.classList.remove('glow'), 3600); }), 450);
 }
@@ -651,7 +652,7 @@ function showOnRack(id) {
 function openMap() {
   const curRack = S.bays[S.cur]?.rk?.no;
   $('mapList').innerHTML = `<li><button type="button" data-go="0"><span class="n">🚪</span><span class="t"><b>Darwaza</b><small>Shuru</small></span></button></li>` +
-    S.racks.map(rk => `<li><button type="button" class="${rk.no === curRack ? 'cur' : ''}" data-go="${rk.bay0 ?? 0}"><span class="n">${rk.no}</span><span class="t"><b>${esc(rk.name)}</b><small>${rk.items.length} cheezein</small></span></button></li>`).join('') +
+    S.vis.map(rk => `<li><button type="button" class="${rk.no === curRack ? 'cur' : ''}" data-go="${rk.bay0 ?? 0}"><span class="n">${rk.no}</span><span class="t"><b>${esc(rk.name)}</b><small>${rk.items.length} cheezein</small></span></button></li>`).join('') +
     `<li class="end"><button type="button" data-counter="1"><span class="n">🧾</span><span class="t"><b>Counter</b><small>Parchi + order</small></span></button></li>`;
   $('map').hidden = false; openOv('map');
   setTimeout(() => $('mapList').querySelector('.cur')?.scrollIntoView({ block: 'center' }), 30);

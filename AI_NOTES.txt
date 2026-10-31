@@ -6608,3 +6608,10 @@ Malik: "dalon ka section — tore ke saath pictures · neeche tora, upar sheeshe
 - PC: sync-stock v4 (manifest 2026-10-31.2) — website ko packet ka wazan + BECHNE ka rate (khareed kabhi nahi).
 - Perf: tile se daane (ek dafa), bori ki bunai tile, blur nahi, canvas 8 ms fi frame, door ke canvas khali. 3000 items perf test wahi.
 - AI NAHI (sirf drawing). Rules wahi (2.79).
+
+== v2.160.0 (31 Oct 2026) — 🔍 Smart dhoondo + ▦ bane hue racks band (website par sirf asal rack photos) ==
+Malik: "search smart nahi" (screenshot: "DaDalDaD" → "nahi mila") · "sab bane racks band — jo items racks par nahi honge un ki pictures de kar apna rack banwa lenge" · dabbe / tore RAKHO. Internet se tasveerein NAHI (malik: faida nahi).
+- 🔍 dukan/dhoond.js (naya, app + website dono): spelling farq (daal/dal/dhal, cheeni/chini, chawal/chaval, kalimirch = kali mirch), English ↔ Urdu (sugar = cheeni, rice = chawal, cashew = kaju …), Urdu keyboard (دال), "1kg" = "1 kg", 3 se kam mile to "🤔 Shayad ye:" qareeb wale. App Online Dukan list + item chuno + rack photo naam + website 🔍 sab isi se.
+- ▦ racks.draw (default BAND): website par sirf 📸 asal rack photos + 🌾 dabbe / tore. Photo par na lage items sirf customer ke 🔍 dhoondo mein ("🧺 seedha tokri mein" → khirki). Ek bhi rack photo na ho to bane racks khud (khali dukan nahi). Neeche ke chips / naqsha / ginti sirf nazar aane wale racks.
+- App ⋮: "▦ Bane hue racks: Band / ON" chip · 🔎 Dikhao "📸 Rack photo par nahi N" (jin items ki rack photo abhi leni hai).
+- AI NAHI. Rules wahi (2.79). PC tabdeeli nahi.
