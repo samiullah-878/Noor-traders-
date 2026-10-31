@@ -14,8 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf } from './dukan/khula.js?v=2.160.0';
-import { smartFind } from './dukan/dhoond.js?v=2.160.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
+import { kindOf, KHK, KH_NAME, netQuery } from './dukan/khula.js?v=2.161.0';
+import { smartFind } from './dukan/dhoond.js?v=2.161.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -36,7 +36,7 @@ let un = null;  // Firestore listeners
 const TH = new Map();   // id -> {v, url} chhoti tasveer (phone ki memory)
 
 function fresh() {
-  return { cat: {}, info: {}, racks: { order: [], cn: {}, hc: {}, hide: {}, ic: {}, rp: {}, nmOn: false, lp: {}, draw: false }, ph: {}, got: {}, q: '', ck: pref.ck || '', f: pref.f || 'all', lim: 120, view: 'list', busy: new Set(), ok: new Set(), err: new Map(), crop: null, pq: '', pck: '', arm: '', act: '', rkSt: '', infoSt: '', sel: null, ai: null, aiOpen: '', rpe: null, rpq: '', rpNew: null, rpDelArm: 0, lastF: [], rkIds: new Set(), rkWait: new Set() };
+  return { cat: {}, info: {}, racks: { order: [], cn: {}, hc: {}, hide: {}, ic: {}, rp: {}, nmOn: false, lp: {}, draw: false, cr: {} }, ph: {}, got: {}, q: '', ck: pref.ck || '', f: pref.f || 'all', lim: 120, view: 'list', busy: new Set(), ok: new Set(), err: new Map(), crop: null, pq: '', pck: '', arm: '', act: '', rkSt: '', infoSt: '', sel: null, ai: null, aiOpen: '', rpe: null, rpq: '', rpNew: null, rpDelArm: 0, lastF: [], rkIds: new Set(), rkWait: new Set() };
 }
 
 // ---------- 📦 items (POS stock → website wali list) ----------
@@ -59,16 +59,18 @@ function base() {
 function items() {
   const B = base(); if (!B) return null;
   const R = W.racks;
-  return B.map(m => { const id = String(m.id), pc = String(m.c || '').trim() || 'Mutafarriq'; const o = { id, n: m.n, pc, c: String(R.ic[id] || '') || pc, r: Math.round(m.r * 100) / 100, u: m.u, pk: m.pk || [], hide: !!R.hide[id], pic: !!W.ph[id] }; o.auto = kindOf(o, null); o.k = kindOf(o, R.lp); return o; });
+  const P = onPhotoSet();   // rack photo par laga item = photo par hi (dabba / tora nahi) — website jaisa
+  return B.map(m => { const id = String(m.id), pc = String(m.c || '').trim() || 'Mutafarriq'; const o = { id, n: m.n, pc, c: String(R.ic[id] || '') || pc, r: Math.round(m.r * 100) / 100, u: m.u, pk: m.pk || [], hide: !!R.hide[id], pic: !!W.ph[id] };
+    o.auto = P.has(id) ? 'n' : kindOf(o, null); o.k = P.has(id) ? 'n' : kindOf(o, R.lp); if (o.k !== 'n') o.c = KHK; return o; });   // v2.160.0: 🌾 dabbe / tore = alag section
 }
 function racksOf(L) {
   const R = W.racks, cnt = new Map();
   for (const it of L) cnt.set(it.c, (cnt.get(it.c) || 0) + (it.hide ? 0 : 1));
   for (const k of R.order || []) if (!cnt.has(k)) cnt.set(k, 0);
-  const pos = k => { const i = (R.order || []).indexOf(k); return i < 0 ? 1e9 : i; };
-  return [...cnt.keys()].sort((a, b) => (pos(a) - pos(b)) || a.localeCompare(b)).map(k => ({ k, name: String(R.cn[k] || '').trim() || title(k), n: cnt.get(k), off: !!R.hc[k] }));
+  const pos = k => { const i = (R.order || []).indexOf(k); return i < 0 ? (k === KHK ? -1 : 1e9) : i; };   // 🌾 section shuru mein (website jaisa)
+  return [...cnt.keys()].sort((a, b) => (pos(a) - pos(b)) || a.localeCompare(b)).map(k => ({ k, name: rackName(k), n: cnt.get(k), off: !!R.hc[k] }));
 }
-const rackName = k => String(W.racks.cn[k] || '').trim() || title(k);
+const rackName = k => String(W.racks.cn[k] || '').trim() || (k === KHK ? KH_NAME : title(k));
 
 // ---------- 🪟 khirki ----------
 export function webOpen(ctx) {
@@ -94,7 +96,7 @@ export function webOpen(ctx) {
     if (k === 'cat') W.cat = v || {};
     else if (k === 'info') W.info = v || {};
     else if (k === 'phIdx') W.ph = (v && v.m) || {};
-    else if (k === 'racks' && !W.rkDirty) W.racks = { order: Array.isArray(v?.order) ? v.order : [], cn: v?.cn || {}, hc: v?.hc || {}, hide: v?.hide || {}, ic: v?.ic || {}, rp: v?.rp || {}, nmOn: !!v?.nmOn, lp: v?.lp || {}, draw: !!v?.draw };
+    else if (k === 'racks' && !W.rkDirty) W.racks = { order: Array.isArray(v?.order) ? v.order : [], cn: v?.cn || {}, hc: v?.hc || {}, hide: v?.hide || {}, ic: v?.ic || {}, rp: v?.rp || {}, nmOn: !!v?.nmOn, lp: v?.lp || {}, draw: !!v?.draw, cr: v?.cr || {} };
     paintSoon();
   });
   paint();
@@ -125,6 +127,7 @@ function paint() {
   const v = W.view;
   $('wdT').textContent = v === 'crop' ? '✂️ Photo se items' : v === 'pick' ? '🔎 Ye kaun sa item?' : v === 'racks' ? '🗂 Racks ki tarteeb' : v === 'info' ? '🏪 Dukan ki maloomat' : v === 'ai' ? '🤖 Racks khud banao' : '🏪 Online Dukan';
   if (v === 'ai') return paintAi();
+  if (v === 'net') { $('wdT').textContent = '🌐 Khula maal ki tasveerein'; return paintNet(); }
   if (v === 'rps' || v === 'rpe') { $('wdT').textContent = v === 'rps' ? '📸 Rack ki asal photos' : '📸 ' + rackName(W.racks.rp?.[W.rpe?.pid]?.k || ''); return v === 'rps' ? paintRps() : paintRpe(); }
   if (v === 'crop') return paintCrop();
   if (v === 'pick') return paintPick();
@@ -165,7 +168,7 @@ function paintList() {
 function rowHTML(it, no) {
   const st = W.busy.has(it.id) || W.rkIds.has(it.id) || W.rkWait.has(it.id) ? '<span class="wd-s">⏳</span>' : W.err.has(it.id) ? `<span class="wd-s bad" title="${esc(W.err.get(it.id))}">✕</span>` : W.ok.has(it.id) ? '<span class="wd-s ok">✅</span>' : '';
   const on = W.sel && W.sel.has(it.id);
-  return `<div class="wd-r${it.hide ? ' off' : ''}${W.sel ? ' sel' : ''}${on ? ' on' : ''}" data-row="${esc(it.id)}">${W.sel ? `<span class="wd-ck" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}<span class="wd-th${it.pic ? '' : ' none'}" data-th="${esc(it.id)}">${it.pic ? '' : '📷'}</span><span class="wd-n"><b>${esc(it.n)}</b><small>Rs ${num(it.r)}${it.u ? ' / ' + esc(it.u) : ''} · ${no.get(it.c) ? 'Rack ' + no.get(it.c) + ' ' : ''}${esc(rackName(it.c))}${it.c !== it.pc ? ' ✏️' : ''}${it.k !== 'n' ? ' · ' + KIND[it.k] : ''}${it.hide ? ' · 🙈 website se chhupa' : ''}</small></span>${st}${W.sel ? '' : `<button type="button" class="wd-cam" data-cam="${esc(it.id)}" aria-label="Tasveer lo">📷</button>`}</div>`;
+  return `<div class="wd-r${it.hide ? ' off' : ''}${W.sel ? ' sel' : ''}${on ? ' on' : ''}" data-row="${esc(it.id)}">${W.sel ? `<span class="wd-ck" aria-hidden="true">${on ? '✓' : ''}</span>` : ''}<span class="wd-th${it.pic ? '' : ' none'}" data-th="${esc(it.id)}">${it.pic ? '' : '📷'}</span><span class="wd-n"><b>${esc(it.n)}</b><small>Rs ${num(it.r)}${it.u ? ' / ' + esc(it.u) : ''} · ${no.get(it.c) ? 'Rack ' + no.get(it.c) + ' ' : ''}${esc(rackName(it.c))}${it.c !== it.pc && it.c !== KHK ? ' ✏️' : ''}${it.k !== 'n' ? ' · ' + KIND[it.k] : ''}${it.hide ? ' · 🙈 website se chhupa' : ''}</small></span>${st}${W.sel ? '' : `<button type="button" class="wd-cam" data-cam="${esc(it.id)}" aria-label="Tasveer lo">📷</button>`}</div>`;
 }
 
 // ---------- 🖼 chhoti tasveerein (sirf nazar aane wali) ----------
@@ -196,11 +199,64 @@ function menuHTML() {
   return `<h3>🌐 Website</h3><div class="wd-chips">${ch(0, 'data-wd="site"', '🌐 Website kholo')}${ch(0, 'data-wd="share"', '🔗 Link bhejo')}${ch(0, 'data-wd="copy"', '📋 Link copy')}</div>
 <h3>📸 Asal rack ki photo (customer photo par cheez dabaye)</h3><div class="wd-chips">${ch(0, 'data-wd="rps"', `📸 Rack ki photos <small>${Object.keys(W.racks.rp || {}).length}</small>`)}${ch(!!W.racks.draw, 'data-wd="draw"', W.racks.draw ? '▦ Bane hue racks: ON' : '▦ Bane hue racks: Band')}</div>
 <p class="wd-note">▦ Band = website par sirf asal rack ki photos + 🌾 dabbe / tore. Jo item kisi photo par nahi, wo sirf customer ke 🔍 dhoondo mein (tokri mein daal sakta hai). Koi rack photo na ho to bane hue racks khud dikhte hain (dukan khali na lage).</p>
+<h3>🌾 Khula maal (dabbe / tore — alag section)</h3><div class="wd-chips">${ch(0, 'data-wd="net"', `🌐 Internet se tasveerein <small>${num(L.filter(it => it.k !== 'n' && !it.hide && !it.pic).length)} bina</small>`)}</div>
 <h3>☑ Kai items ek saath</h3><div class="wd-chips">${ch(!!W.sel, 'data-wd="sel"', W.sel ? '☑ Chunne ka mode ON — band karo' : '☑ Items chuno → ek saath rack mein')}</div>
 <h3>🗂 Rack</h3><div class="wd-chips">${ch(!W.ck, 'data-ck=""', 'Sab racks')}${rk.map((r, i) => ch(W.ck === r.k, `data-ck="${esc(r.k)}"`, `${r.off ? '🙈 ' : (i + 1) + '. '}${esc(r.name)} <small>${r.n}</small>`)).join('')}</div>
 <h3>🔎 Dikhao</h3><div class="wd-chips">${[['all', 'Sab'], ['nopic', '📷 Bina tasveer'], ['pic', '✅ Tasveer wale'], ['noph', `📸 Rack photo par nahi <small>${num(nophCount())}</small>`], ['hid', '🙈 Chhupe']].map(([k, t]) => ch(W.f === k, `data-f="${k}"`, t)).join('')}</div>
 <h3>⚙️ Tarteeb</h3><div class="wd-chips">${own && A.aiText ? ch(0, 'data-wd="airk"', '🤖 Racks khud banao (AI)') : ''}${ch(0, 'data-wd="racks"', '🗂 Racks ki tarteeb')}${own ? ch(0, 'data-wd="info"', '🏪 Dukan ki maloomat') + ch(0, 'data-wd="pub"', '🔄 Rates abhi website par bhejo') : ''}</div>
 <p class="wd-note">Website par sirf naam, retail rate aur tasveer jati hai — khareed / nafa kabhi nahi. Rates PC khud bhejta hai.</p>`;
+}
+// ---------- 🌐 v2.160.0: KHULA MAAL KI TASVEEREIN INTERNET SE (malik: "pictures online utha lain") ----------
+//   Wikimedia Commons (muft, qanooni tasveerein — CORS khula) · har item ke 6 namoone → malik tap = wohi item ki tasveer (putPhoto, credit racks.cr).
+//   Google Images khud download nahi hota (ijazat / copyright) — "🔎 Google" chip Google kholta hai, malik save kar ke 🖼 Gallery se lagaye. AI nahi.
+const COMMONS = (q, off) => `https://commons.wikimedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrsearch=${encodeURIComponent(q + ' filetype:bitmap')}&gsrnamespace=6&gsrlimit=12&gsroffset=${off}&prop=imageinfo&iiprop=url|mime|extmetadata&iiurlwidth=640&iiextmetadatafilter=LicenseShortName|Artist`;
+const NET = new Map();   // id -> {q, off, list:[{u, cr}], st: 'ld'|'ok'|'none'|'err'}
+const plain = v => String(v || '').replace(/<[^>]*>/g, ' ').replace(/&[a-z#0-9]+;/gi, ' ').replace(/\s+/g, ' ').trim();
+let netRun = 0;
+async function netLoad(id, more) {
+  const it = (items() || []).find(x => x.id === id); if (!it) return;
+  const o = NET.get(id) || { q: netQuery(it.n), off: 0, list: [], st: '' }; if (o.st === 'ld') return;
+  if (more) o.off += 12; o.st = 'ld'; NET.set(id, o); paintSoon();
+  try {
+    const r = await fetch(COMMONS(o.q, o.off)); if (!r.ok) throw Error('HTTP ' + r.status);
+    const j = await r.json(), P = Object.values(j?.query?.pages || {}).sort((a, b) => (a.index || 0) - (b.index || 0));
+    const got = P.map(p => { const ii = p.imageinfo && p.imageinfo[0]; if (!ii || !ii.thumburl || /svg|gif|pdf|djvu|tiff?/i.test(ii.mime || '') && !/jpe?g|png|webp/i.test(ii.thumburl)) return null;
+      const m = ii.extmetadata || {}; return { u: ii.thumburl, cr: `${plain(m.Artist?.value).slice(0, 60) || 'Wikimedia'} · ${plain(m.LicenseShortName?.value) || 'Commons'} · Wikimedia Commons` }; }).filter(Boolean).slice(0, 6);
+    o.list = more ? got.concat(o.list).slice(0, 6) : got; o.st = o.list.length ? 'ok' : 'none';
+    if (!o.list.length && !more && o.q !== it.n) { o.q = it.n; o.off = 0; o.st = ''; NET.set(id, o); return netLoad(id); }   // English lafz se na mile to item ka apna naam
+  } catch (e) { o.st = 'err'; o.err = e.message || String(e); }
+  NET.set(id, o); paintSoon();
+}
+function netQueue(ids) {   // 3 ek saath
+  const q = ids.filter(id => !NET.has(id)); let i = 0; const run = ++netRun;
+  const next = () => { if (run !== netRun || !W || W.view !== 'net' || i >= q.length) return; const id = q[i++]; netLoad(id).finally(next); };
+  for (let k = 0; k < 3; k++) next();
+}
+async function netPick(id, i) {
+  const o = NET.get(id), x = o && o.list[i], it = (items() || []).find(y => y.id === id); if (!x || !it || W.busy.has(id)) return;
+  W.busy.add(id); paintSoon();
+  try { const r = await fetch(x.u); if (!r.ok) throw Error('HTTP ' + r.status); const bm = await createImageBitmap(await r.blob()); const bytes = await bigBytes(bm, 720); W.busy.delete(id); await putPhoto(id, bytes, '🌐 ' + it.n, x.cr); }
+  catch (e) { W.busy.delete(id); W.err.set(id, 'Internet tasveer nahi aayi'); A.notice('❌ Tasveer nahi aayi (' + (e.message || e) + ') — 🔎 Google / 🖼 Gallery se lagayein'); paintSoon(); }
+}
+function paintNet() {
+  const L = (items() || []).filter(it => it.k !== 'n' && !it.hide).sort((a, b) => (a.pic - b.pic) || a.n.localeCompare(b.n));
+  const done = L.filter(it => it.pic).length, can = L.filter(it => !it.pic && NET.get(it.id)?.list?.length).length;
+  const keepY = $('wdBody').scrollTop;
+  $('wdStrip').innerHTML = `<span>🌐 Internet (Wikimedia — muft tasveerein) · jo tasveer pasand ho us par tap</span><span class="wd-k">📷 ${num(done)} / ${num(L.length)}</span>`;
+  $('wdBody').innerHTML = L.length ? `<div class="wd-nl">${L.map(it => { const o = NET.get(it.id) || {}, st = W.busy.has(it.id) ? '<span class="wd-s">⏳</span>' : W.err.has(it.id) ? '<span class="wd-s bad">✕</span>' : W.ok.has(it.id) ? '<span class="wd-s ok">✅</span>' : '';
+    return `<div class="wd-nr" data-nrow="${esc(it.id)}"><div class="wd-nh"><span class="wd-th${it.pic ? '' : ' none'}" data-th="${esc(it.id)}">${it.pic ? '' : (it.k === 'g' ? '🫙' : '🧺')}</span><span class="wd-n"><b>${esc(it.n)}</b><small>${it.k === 'g' ? '🫙 Dabba' : '🧺 Tora'} · 🔎 "${esc(o.q || netQuery(it.n))}"${it.pic ? ' · ✅ tasveer lagi hai' : ''}</small></span>${st}</div>
+<div class="wd-nc">${(o.list || []).map((x, i) => `<button type="button" class="wd-ncp" data-netpick="${esc(it.id)}|${i}" aria-label="Ye tasveer lagao"><img src="${esc(x.u)}" alt="" loading="lazy" referrerpolicy="no-referrer"></button>`).join('')}${o.st === 'ld' ? '<span class="wd-dim">⏳ internet par dhoond rahe…</span>' : o.st === 'none' ? '<span class="wd-dim">Internet par nahi mili — 🔎 Google / 🖼 Gallery</span>' : o.st === 'err' ? '<span class="wd-dim bad">✕ Internet nahi chala — dobara 🔄</span>' : ''}</div>
+<div class="wd-chips"><button type="button" class="wd-chip" data-netmore="${esc(it.id)}">🔄 Aur</button><button type="button" class="wd-chip" data-netg="${esc(it.id)}">🔎 Google</button><button type="button" class="wd-chip" data-netgal="${esc(it.id)}">🖼 Gallery</button></div></div>`; }).join('')}</div>`
+    : '<p class="wd-empty">Abhi koi 🫙 dabba / 🧺 tora wala item nahi.<br>Item par tap kar ke "🌾 Website par kaise rakha ho?" se chunein.</p>';
+  $('wdBody').scrollTop = keepY;
+  $('wdFoot').innerHTML = `<button type="button" class="wd-chip" data-wd="back">‹ Wapas</button><button type="button" class="wd-main" data-wd="netall"${can ? '' : ' disabled'}>✅ Bina tasveer walon par pehli wali (${num(can)})</button>`;
+  thumbs();
+  netQueue(L.map(it => it.id));
+}
+async function netAll() {
+  const L = (items() || []).filter(it => it.k !== 'n' && !it.hide && !it.pic && NET.get(it.id)?.list?.length);
+  A.notice(`🌐 ${num(L.length)} items par tasveer lag rahi hai ⏳`);
+  for (const it of L) { if (!W || W.view !== 'net') break; await netPick(it.id, 0); }
 }
 // v2.160.0: kaun se items kisi asal rack ki photo par lage hain (bane racks band hon to baqi website ke manzar mein nahi — sirf dhoondo)
 function onPhotoSet() { const S = new Set(); for (const pid of Object.keys(W.racks.rp || {})) for (const t of rpS(pid)) if (t[4]) S.add(String(t[4])); return S; }
@@ -213,7 +269,7 @@ function itemSheet(id) {
 <button type="button" class="wd-chip" data-wd="mvrack">🗂 Rack badlo</button>
 <button type="button" class="wd-chip" data-wd="hide">${it.hide ? '👁 Website par dikhao' : '🙈 Website se chhupao'}</button>
 ${it.pic ? '<button type="button" class="wd-chip bad" data-wd="delph">🗑 Tasveer hatao</button>' : ''}</div>
-<h3>🌾 Website par kaise rakha ho?</h3><div class="wd-chips">${Object.entries(KIND).map(([k, t]) => `<button type="button" class="wd-chip${it.k === k ? ' is-in' : ''}" data-lp="${k}">${t}${it.auto === k ? ' <small>khud</small>' : ''}</button>`).join('')}</div>
+${it.k !== 'n' ? '<p class="wd-note">🌾 Ye item "' + esc(rackName(KHK)) + '" section mein hai (rack badalne se nahi hilta — ▦ Shelf chunein to wapas apne rack mein).</p>' : ''}<h3>🌾 Website par kaise rakha ho?</h3><div class="wd-chips">${Object.entries(KIND).map(([k, t]) => `<button type="button" class="wd-chip${it.k === k ? ' is-in' : ''}" data-lp="${k}">${t}${it.auto === k ? ' <small>khud</small>' : ''}</button>`).join('')}</div>
 <p class="wd-note">🫙 sheeshe ka dabba (dry fruit / masale) · 🧺 farsh par tora (daal / chawal / cheeni) — customer tap kar ke packet chunta hai (250 g · 1 kg … ya POS ke packet). Tasveer lagao to dabbe / tore mein wohi dikhegi.</p>`);
 }
 function mvSheet() {
@@ -485,7 +541,7 @@ function paintInfo() {
 }
 
 // ---------- ✂️ photo se items ----------
-let shotFor = '';
+let shotFor = '', shotBack = '';
 function shoot(kind, forId) { shotFor = forId || ''; sheetClose(); $(kind === 'cam' ? 'wdCam' : 'wdGal').click(); }
 async function decode(file) {
   try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch {}
@@ -500,7 +556,7 @@ async function gotFile(f) {
   if (shotFor.startsWith('@bg:')) { const k = shotFor.slice(4); shotFor = ''; if (k === '@shop') bgSave('shop', bm, 'Dukan ki tasveer'); else bgSave(rkPh(k), bm, 'Rack ' + rackName(k)); paint(); return; }   // v2.156.0
   if (W.crop?.url) { try { URL.revokeObjectURL(W.crop.url); } catch {} }
   const one = shotFor;
-  W.crop = { bm, w, h, url: URL.createObjectURL(f), box: one ? { x: w * 0.06, y: h * 0.06, w: w * 0.88, h: h * 0.88 } : { x: w * 0.3, y: h * 0.3, w: w * 0.4, h: h * 0.4 }, one, done: [] };
+  W.crop = { bm, w, h, url: URL.createObjectURL(f), box: one ? { x: w * 0.06, y: h * 0.06, w: w * 0.88, h: h * 0.88 } : { x: w * 0.3, y: h * 0.3, w: w * 0.4, h: h * 0.4 }, one, done: [], back: shotBack }; shotBack = '';
   W.view = 'crop'; paint();
 }
 function paintCrop() {
@@ -559,7 +615,7 @@ async function cropBytes() {
   let b = await blob(0.86); if (b.size > 170000) b = await blob(0.72);
   return new Uint8Array(await b.arrayBuffer());
 }
-async function putPhoto(id, bytes, label) {
+async function putPhoto(id, bytes, label, credit) {   // credit = 🌐 internet tasveer ka haq (website khirki mein) · apni tasveer = credit hata
   const it = (items() || []).find(x => x.id === id), nm = label || (it ? it.n : id);
   W.busy.add(id); W.err.delete(id); W.ok.delete(id);
   const url = URL.createObjectURL(new Blob([bytes], { type: 'image/jpeg' }));
@@ -568,7 +624,8 @@ async function putPhoto(id, bytes, label) {
   try {
     const v = await A.cloud.putWebPhoto(id, bytes);
     TH.set(id, { v, url }); w.ok.add(id);
-    A.notice('✅ Website par tasveer lag gayi — ' + nm); if (W === w && (w.view === 'racks' || w.view === 'info')) w.ph = { ...w.ph, [id]: v };
+    const cr = w.racks.cr || (w.racks.cr = {}); if (credit) { cr[id] = String(credit).slice(0, 160); saveRacks(); } else if (cr[id]) { delete cr[id]; saveRacks(); }
+    A.notice('✅ Website par tasveer lag gayi — ' + nm); if (W === w) w.ph = { ...w.ph, [id]: v };   // v2.160.0: foran (phIdx ka jawab der se aaye tab bhi dohra nahi)
   } catch (e) { w.err.set(id, e.message || String(e)); A.notice('❌ Tasveer save nahi hui: ' + (e.message || e)); }
   finally { w.busy.delete(id); if (W === w) paintSoon(); }
 }
@@ -576,7 +633,7 @@ async function cropSave(id) {
   let bytes; try { bytes = await cropBytes(); } catch (e) { A.notice('❌ ' + (e.message || e)); return; }
   const it = (items() || []).find(x => x.id === id);
   putPhoto(id, bytes);
-  if (W.crop.one) { W.view = 'list'; W.crop = null; paint(); return; }
+  if (W.crop.one) { W.view = W.crop.back || 'list'; W.crop = null; paint(); return; }   // 🌐 net screen se aaye to wapas wahin
   W.crop.done.push(it ? it.n : id);
   const C = W.crop, B = C.box;
   C.box = { x: Math.min(C.w - B.w, B.x + B.w), y: B.y, w: B.w, h: B.h };   // agla item aksar daayein
@@ -654,6 +711,8 @@ function onClick(e) {
   if (k === 'airk') { sheetClose(); aiRun(); return; }   // v2.157.0
   if (k === 'rps') { sheetClose(); W.view = 'rps'; paint(); return; }   // v2.158.0: 📸 asal rack photos
   if (k === 'rpadd') { W.act = ''; sheet(`<h3 class="wd-st">📸 Rack ki asal photo</h3><p class="wd-note">Saamne se, seedha, poora rack ek photo mein — roshni mein. 🤖 AI har cheez ke gird dabba banayegi, aap naam lagayenge.</p><div class="wd-chips"><button type="button" class="wd-chip" data-rpshot="cam">📸 Camera</button><button type="button" class="wd-chip" data-rpshot="gal">🖼 Gallery</button></div>`); return; }
+  if (k === 'net') { sheetClose(); W.view = 'net'; paint(); return; }   // 🌐
+  if (k === 'netall') { netAll(); return; }
   if (k === 'draw') { W.racks.draw = !W.racks.draw; saveRacks(); sheetClose(); paint(); A.notice(W.racks.draw ? '▦ Website par bane hue racks ON' : '▦ Bane hue racks band — sirf asal photos + 🌾 dabbe / tore ⏳'); return; }
   if (k === 'nmon') { W.racks.nmOn = !W.racks.nmOn; saveRacks(); paint(); A.notice(W.racks.nmOn ? '🏷 Customer ko photo par naam bhi dikhega' : '🏷 Photo par sirf rate (naam nahi)'); return; }
   if (k === 'rpdraw' && W.rpe) { W.rpe.draw = !W.rpe.draw; W.rpe.sel = new Set(); paint(); return; }
@@ -700,6 +759,10 @@ function onClick(e) {
   const f = t.closest('[data-f]'); if (f) { W.f = f.dataset.f; W.lim = 120; keep(); sheetClose(); paint(); return; }
   const pck = t.closest('[data-pck]'); if (pck) { W.pck = pck.dataset.pck; W.arm = ''; paint(); return; }
   const pk = t.closest('[data-pick]'); if (pk) { const id = pk.dataset.pick; if (W.ph[id] && W.arm !== id) { W.arm = id; paint(); return; } W.arm = ''; cropSave(id); return; }
+  const np = t.closest('[data-netpick]'); if (np) { const [id, i] = np.dataset.netpick.split('|'); netPick(id, Number(i)); return; }
+  const nm = t.closest('[data-netmore]'); if (nm) { netLoad(nm.dataset.netmore, true); return; }
+  const ng = t.closest('[data-netg]'); if (ng) { const it = (items() || []).find(x => x.id === ng.dataset.netg); if (it) { window.open('https://www.google.com/search?tbm=isch&q=' + encodeURIComponent(it.n), '_blank', 'noopener'); A.notice('🔎 Google se tasveer save karein, phir yahan 🖼 Gallery dabayein'); } return; }
+  const nga = t.closest('[data-netgal]'); if (nga) { shotBack = 'net'; shoot('gal', nga.dataset.netgal); return; }
   const lpb = t.closest('[data-lp]'); if (lpb) { const id = W.act; if (id) lpMany([id], lpb.dataset.lp); return; }
   const slp = t.closest('[data-slp]'); if (slp) { if (W.sel && W.sel.size) lpMany([...W.sel], slp.dataset.slp); return; }
   const mv = t.closest('[data-mv]'); if (mv) { const id = W.act, it = (items() || []).find(x => x.id === id); if (it) { if (mv.dataset.mv === it.pc) delete W.racks.ic[id]; else W.racks.ic[id] = mv.dataset.mv; } sheetClose(); saveRacks(); return; }

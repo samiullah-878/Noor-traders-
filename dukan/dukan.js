@@ -19,10 +19,11 @@
 //     Tap = packet chips: cat row[5] [[wazan, rate]] (PC sync-stock v4, sub-barcode) — na hon to 250 g · 500 g · 1 kg · 2 kg · 5 kg (rate × wazan). Tokri key "id@wazan".
 //     racks.lp {id: 'g' dabba | 's' tora | 'n' shelf} = malik ka faisla (app) — warna khud: unit kg / packet wala daal-dry fruit.
 //   v2.160.0 (malik: "search smart nahi" · "sab bane racks band — apne racks ki photos lagani hain"): 🔍 dhoond.js (app ke saath ek qaida) + "Shayad ye" ·
+//     🌾 khula maal ab ALAG SECTION (rack key '@khula', naam "Daalein · Masala Jaat · Cheeni · Chawal", shuru mein — tarteeb / naam app se) · racks.cr {id: credit} = 🌐 internet tasveer ka naam (khirki mein)
 //     racks.draw false (default) = bane hue racks BAND — sirf asal photo bays + 🌾 khula; baqi items sirf dhoondo se (seedha khirki). Koi photo na ho = bane racks (dukan khali nahi).
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.160.0';
-import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg } from './khula.js?v=2.160.0';
-import { smartFind } from './dhoond.js?v=2.160.0';
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.161.0';
+import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank } from './khula.js?v=2.161.0';
+import { smartFind } from './dhoond.js?v=2.161.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -128,7 +129,7 @@ function build(d) {
   const hide = R.hide || {}, ic = R.ic || {}, hc = R.hc || {}, cn = R.cn || {};
   const groups = new Map(); S.items = new Map();
   // 📸 v2.158.0: asal rack ki photos — photo par jo item hai wo usi rack ka (bane hue rack mein dohra nahi)
-  S.nmOn = !!R.nmOn; S.lp = R.lp && typeof R.lp === 'object' ? R.lp : {}; S.draw = !!R.draw;
+  S.nmOn = !!R.nmOn; S.lp = R.lp && typeof R.lp === 'object' ? R.lp : {}; S.draw = !!R.draw; S.cr = R.cr && typeof R.cr === 'object' ? R.cr : {};
   S.rps = Object.entries(R.rp && typeof R.rp === 'object' ? R.rp : {}).map(([pid, x]) => { let a = []; try { a = JSON.parse((x && x.s) || '[]'); } catch {}
     return { pid, k: String(x?.k || '').trim(), o: Number(x?.o) || 0, w: Number(x?.w) || 3, h: Number(x?.h) || 4, spots: (Array.isArray(a) ? a : []).filter(t => Array.isArray(t) && t[4]).map(t => ({ x: +t[0] || 0, y: +t[1] || 0, w: +t[2] || 0, h: +t[3] || 0, id: String(t[4]) })) }; })
     .filter(p => p.k && !hc[p.k] && p.spots.length && phV('rp_' + p.pid)).sort((a, b) => a.o - b.o);
@@ -137,20 +138,21 @@ function build(d) {
     if (!Array.isArray(r)) continue;
     const id = String(r[0] ?? ''), rate = Number(r[3]) || 0, n = String(r[1] || '').trim();
     if (!id || !n || hide[id] || rate <= 0) continue;
-    const key = onPh.get(id) || String(ic[id] || r[2] || '').trim() || 'Mutafarriq';
-    if (hc[key]) continue;
+    const key0 = onPh.get(id) || String(ic[id] || r[2] || '').trim() || 'Mutafarriq';
     const pk = Array.isArray(r[5]) ? r[5].filter(x => Array.isArray(x) && Number(x[0]) > 0 && Number(x[1]) > 0).map(x => [Number(x[0]), Number(x[1])]) : [];
-    const it = { id, n, c: key, r: rate, u: String(r[4] || '').trim(), pk };
+    const it = { id, n, c: key0, r: rate, u: String(r[4] || '').trim(), pk };
     it.k = onPh.has(id) ? 'n' : kindOf(it, S.lp);   // 🌾 g = sheeshe ka dabba · s = tora · n = shelf
+    const key = it.k !== 'n' ? KHK : key0;   // v2.160.0: sab dabbe / tore EK alag section mein
+    if (hc[key]) continue;
     S.items.set(id, it);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(it);
   }
   for (const p of S.rps) if (!groups.has(p.k)) groups.set(p.k, []);
   const order = Array.isArray(R.order) ? R.order.map(String) : [];
-  const pos = k => { const i = order.indexOf(k); return i < 0 ? 1e9 : i; };
+  const pos = k => { const i = order.indexOf(k); return i < 0 ? (k === KHK ? -1 : 1e9) : i; };   // 🌾 section tarteeb mein na ho to shuru mein
   const keys = [...groups.keys()].sort((a, b) => (pos(a) - pos(b)) || a.localeCompare(b));
-  S.racks = keys.map((k, i) => ({ key: k, no: i + 1, name: String(cn[k] || '').trim() || title(k), items: groups.get(k).sort((a, b) => a.n.localeCompare(b.n)) }));
+  S.racks = keys.map((k, i) => ({ key: k, no: i + 1, name: String(cn[k] || '').trim() || (k === KHK ? KH_NAME : title(k)), items: groups.get(k).sort(k === KHK ? (a, b) => (grainRank(a.n) - grainRank(b.n)) || a.n.localeCompare(b.n) : (a, b) => a.n.localeCompare(b.n)) }));
   S.racks.forEach(rk => { rk.items.forEach(it => { it.rk = rk; }); rk.photos = S.rps.filter(p => p.k === rk.key); rk.rest = rk.items.filter(it => !onPh.has(it.id) && it.k === 'n'); rk.loose = rk.items.filter(it => it.k !== 'n'); });
   S.info = d.info || {}; S.at = Number(cat.at) || 0;
   for (const k of Object.keys(S.crate)) if (!lineOf(k, 1) || !(Number(S.crate[k]) > 0)) delete S.crate[k];
@@ -427,7 +429,7 @@ function paintRkBar() {
 function markRk() {
   const box = $('rkChips'); if (!box) return;
   const k = curRk ? S.racks.indexOf(curRk) : -1;
-  let el = null; box.querySelectorAll('.rkc').forEach(b => { const on = Number(b.dataset.rk) === k; b.classList.toggle('cur', on); if (on) el = b; }); if (el) box.scrollTo({ left: el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2, behavior: LITE ? 'auto' : 'smooth' });
+  let el = null; box.querySelectorAll('.rkc').forEach(b => { const on = Number(b.dataset.rk) === k; b.classList.toggle('cur', on); if (on) el = b; }); if (el) { const r = el.getBoundingClientRect(), br = box.getBoundingClientRect(); box.scrollTo({ left: Math.max(0, box.scrollLeft + r.left - br.left - (box.clientWidth - r.width) / 2), behavior: LITE ? 'auto' : 'smooth' }); }   // v2.160.0: chip ka asal maqam (pehle avatar ki chaurai jitna khisak jata tha)
 }
 function goRack(k, why) {
   const rk = S.racks[k]; if (!rk || rk.bay0 == null || !S.bays[rk.bay0]) return;
@@ -543,6 +545,7 @@ function openSheet(id, fromEl) {
   const O = optsOf(it); S.pkq = O.length > 1 ? (O.find(x => x.q === 1) || O[0]).q : 0;   // 🌾 packet chips (1 se zyada option ho to)
   $('shRack').textContent = `${it.rk.no ? `Rack ${it.rk.no} · ` : ''}${it.rk.name}${it.k === 'g' ? ' · 🫙 Dabba' : it.k === 's' ? ' · 🧺 Tora' : ''}`;
   $('shName').textContent = it.n;
+  const cr = PHURL.has(id) && S.cr[id]; $('shCr').hidden = !cr; $('shCr').textContent = cr ? '📷 ' + cr : '';   // 🌐 internet tasveer ka haq (credit)
   $('shQty').textContent = '1';
   $('shImg').innerHTML = imgOf(it, true); $('shImg').classList.toggle('kh-img', it.k === 'g' && !PHURL.has(it.id));
   paintPk();

@@ -51,6 +51,19 @@ const KW = [
   [/mash|urad/i, 'mash'], [/rajma|lobia|kidney/i, 'rajma'], [/chana|chickpea|channa/i, 'chana'], [/daal|dal\b/i, 'chana'], [/chawal|rice|basmati|sela/i, 'chawal'],
   [/cheeni|sugar|shakar|khand/i, 'cheeni'], [/til\b|sesame/i, 'til'], [/beans|lobia/i, 'beans'],
 ];
+// v2.160.0: 🌾 khula maal ka ALAG section (malik: "alag section — Daalein, Masala Jaat, Cheeni, Chawal") — app + website ek hi key / naam
+export const KHK = '@khula', KH_NAME = 'Daalein · Masala Jaat · Cheeni · Chawal';
+export function grainHit(name) { for (const [re, k] of KW) if (re.test(name)) return k; return ''; }
+// section ke andar tarteeb: dry fruit → masale → daalein → chawal → cheeni / namak → atta
+const RANK = { kaju: 0, pista: 0, badam: 0, akhrot: 0, kishmish: 0, chuhara: 0, mungphali: 0, mirch: 1, kalonji: 1, ilaichi: 1, zeera: 1, saunf: 1, laung: 1, darchini: 1, dhania: 1, haldi: 1, lalmirch: 1, til: 1,
+  chana: 2, kalachana: 2, masoor: 2, moong: 2, mash: 2, rajma: 2, beans: 2, chawal: 3, cheeni: 4, namak: 4, atta: 5, maida: 5, besan: 5, sooji: 5 };
+export const grainRank = name => { const k = grainHit(name); return k in RANK ? RANK[k] : 6; };
+// 🌐 internet (Wikimedia Commons) par dhoondne ke English lafz
+const EN = { kaju: 'cashew nuts', pista: 'pistachio nuts', badam: 'almonds', akhrot: 'walnuts', mungphali: 'peanuts', kishmish: 'raisins', chuhara: 'dried dates', mirch: 'black peppercorns', kalonji: 'nigella sativa seeds',
+  ilaichi: 'green cardamom', zeera: 'cumin seeds', saunf: 'fennel seeds', laung: 'cloves spice', darchini: 'cinnamon sticks', dhania: 'coriander seeds', chana: 'chana dal', kalachana: 'black chickpeas', masoor: 'masoor dal',
+  moong: 'moong dal', mash: 'urad dal', rajma: 'kidney beans', chawal: 'basmati rice', cheeni: 'white sugar', til: 'sesame seeds', atta: 'wheat flour', maida: 'white flour', besan: 'gram flour', haldi: 'turmeric powder',
+  lalmirch: 'red chili powder', namak: 'salt', sooji: 'semolina', beans: 'dried beans' };
+export const netQuery = name => EN[grainHit(name)] || String(name || '').replace(/\d+\s*(kg|g|gm|ml|ltr|pcs)\b/gi, '').trim();
 export function grainOf(name) { for (const [re, k] of KW) if (re.test(name)) return k; return ['beans', 'chana', 'moong', 'mash', 'til'][hashOf(name) % 5]; }
 // 🫙 dabba (dry fruit / masale) ya 🧺 tora (daal, chawal, cheeni, atta) — malik app se badal sakta hai (racks.lp)
 const GLASS = /kaju|cashew|pista|badam|almond|akhrot|walnut|mung ?phal|peanut|kishmish|raisin|munakka|chuhar|khajoor|anjeer|khopr|narial|chilgoza|mirch|pepper|kalonji|ilaichi|elaichi|cardamom|zeera|jeera|cumin|saunf|sonf|laung|clove|darchini|cinnamon|dhania|coriander|haldi|turmeric|masala|ajwain|methi|til\b|khashkhash|zafran|dry ?fruit|mewa|meva/i;

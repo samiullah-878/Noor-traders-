@@ -495,3 +495,6 @@ html.lite .kh{transform:none!important}
 
 /* ---------- 🔍 v2.160.0: smart dhoondo — "Shayad ye" ---------- */
 .find-near{grid-column:1/-1;margin:8px 2px 0;justify-self:start;padding:6px 12px;border-radius:999px;background:#fff3c4;color:#5b4300;font-weight:800;font-size:12.5px}
+.sh-cr{display:block;margin-top:3px;color:var(--ink2);font-size:10.5px;line-height:1.3;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kbay .sign{max-width:calc(100% - 80px);gap:8px;padding:5px 12px 6px}   /* 🌾 ‹ › buttons se na takraye */
+.kbay .sign b{white-space:normal;font-size:15px;line-height:1.1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}   /* lamba naam 2 line */

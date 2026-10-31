@@ -3842,3 +3842,11 @@ Malik: "search smart nahi" (screenshot: "DaDalDaD" → "nahi mila") · "sab bane
 - ▦ racks.draw (default BAND): website par sirf 📸 asal rack photos + 🌾 dabbe / tore. Photo par na lage items sirf customer ke 🔍 dhoondo mein ("🧺 seedha tokri mein" → khirki). Ek bhi rack photo na ho to bane racks khud (khali dukan nahi). Neeche ke chips / naqsha / ginti sirf nazar aane wale racks.
 - App ⋮: "▦ Bane hue racks: Band / ON" chip · 🔎 Dikhao "📸 Rack photo par nahi N" (jin items ki rack photo abhi leni hai).
 - AI NAHI. Rules wahi (2.79). PC tabdeeli nahi.
+
+== v2.161.0 (31 Oct 2026) — 🌾 Khula maal ALAG SECTION + 🌐 internet se tasveerein ==
+Malik: "wo aik alag section hain — naam Daalein, Masala Jaat, Cheeni, Chawal · us mein pictures online utha lain". Plan OK hua.
+- Website: sab 🫙 dabbe + 🧺 tore apne racks se nikal kar EK section "Daalein · Masala Jaat · Cheeni · Chawal" (rack key @khula) — pehla rack (darwaze ke saath); andar tarteeb dry fruit → masale → daalein → chawal → cheeni → atta. Naam / jagah app ki 🗂 Racks ki tarteeb se.
+- App ⋮ → "🌐 Internet se tasveerein": har dabba / tora item ke 6 namoone Wikimedia Commons (muft, qanooni) se — English lafz khud (chana dal, white sugar, cashew nuts…), na mile to item ka naam. Tap = wohi tasveer website par (dabbe / tore mein dher ki shakal). "✅ Bina tasveer walon par pehli wali" ek click. 🔄 Aur · 🔎 Google (Google kholta hai — save kar ke 🖼 Gallery). Website khirki mein chhota credit (📷 Artist · License · Wikimedia Commons).
+- Google Images se khud download nahi (Google ijazat nahi deta / copyright).
+- Website: neeche ke rack chip ki jagah theek (pehle avatar jitna khisak jata), lamba section naam 2 line, ‹ › se na takraye.
+- AI NAHI. Rules wahi (2.79). PC tabdeeli nahi.

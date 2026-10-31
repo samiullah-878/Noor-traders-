@@ -6755,6 +6755,16 @@ html body #wdDlg .wd-r{display:grid;grid-template-columns:46px minmax(0,1fr) aut
 html body #wdDlg .wd-cam{width:36px;height:36px;padding:0;border-radius:999px;border:1.5px solid #d7dde8!important;background:linear-gradient(180deg,#fff,#eef2f8)!important;font-size:16px;box-shadow:none!important}
 #wdDlg .wd-empty{margin:30px 10px;text-align:center;color:#5b6880;font-weight:700}
 #wdDlg .wd-near{margin:14px 4px 6px;padding:6px 12px;border-radius:999px;background:#fff6dd;color:#6b4e00;font-weight:800;font-size:12.5px;display:inline-block}   /* v2.160.0: 🤔 Shayad ye (smart dhoondo) */
+#wdDlg .wd-nl{display:grid;gap:10px;padding:2px 0 10px}   /* v2.160.0: 🌐 khula maal ki internet tasveerein */
+#wdDlg .wd-nr{padding:10px;border-radius:16px;background:#fff;border:1px solid #e3e8f0;box-shadow:0 6px 16px -14px rgba(20,40,90,.6);display:grid;gap:8px;min-width:0}
+#wdDlg .wd-nh{display:flex;align-items:center;gap:10px;min-width:0}
+#wdDlg .wd-nc{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;min-height:30px;align-items:center}
+#wdDlg .wd-nc::-webkit-scrollbar{display:none}
+#wdDlg .wd-ncp{flex:none;width:76px;height:76px;padding:0;border-radius:12px;border:2px solid #e3e8f0;overflow:hidden;background:#f1f4f9}
+#wdDlg .wd-ncp img{width:100%;height:100%;object-fit:cover;display:block}
+#wdDlg .wd-ncp:active{transform:scale(.95);border-color:#2d55b0}
+#wdDlg .wd-nr .wd-chips{gap:6px}
+#wdDlg .wd-dim.bad{color:#c2372f}
 #wdDlg .wd-note{margin:6px 0 10px;color:#5b6880;font-size:12.5px}
 #wdDlg .wd-sheet{position:absolute;inset:0;z-index:5}
 #wdDlg .wd-sbg{position:absolute;inset:0;background:rgba(10,18,36,.45)}
