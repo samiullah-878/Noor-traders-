@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.154.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.154.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.155.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.155.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -93,7 +93,7 @@ function keepScan(el) {   // scan box upar nazar rahe; nayi line uske neeche —
   window.scrollTo({ top: Math.max(0, (window.scrollY || 0) + s.top - 8), behavior: 'smooth' });
 }
 let lastAddAt = 0, lastScrolled = 0;
-let quickSave = false, posSales = [], stopPosSales = null, posSyncAt = 0, stopPosSync = null;
+let quickSave = false, posSales = [], stopPosSales = null, posSyncAt = 0, stopPosSync = null, posMeta = null, posArr = 0;   // v2.155.0: posMeta {at, pm} + posArr = is device par aakhri bill-list kab aayi (⏱ Raftar)
 const BASE_COUNTERS = [['abdurehman', 'Abdurehman'], ['bilal', 'Bilal bhai'], ['mithu', 'Mithu'], ['local', '🖥 Yehi device']];
 // v2.78: 💻 PC chunein — har PC ka NT-PRINT agent printPCs/{id} mein zinda report deta hai; bill usi PC par bina window ke
 let PCS = [], pcsUn = null;
@@ -348,7 +348,7 @@ function watchSales() {
   if (stopSales) { stopSales(); stopSales = null; }
   if (!cloud?.listenAppSales) return;
   salesDay = day;
-  try { stopPosSales?.(); } catch {} let firstPos = true; stopPosSales = cloud.listenPosSales ? cloud.listenPosSales(day, b => { posSales = Array.isArray(b) ? b : []; if (!firstPos) posSyncAt = Date.now(); firstPos = false; billsRepaint(); }) : null;   // v2.64.1: POS ke bills
+  try { stopPosSales?.(); } catch {} let firstPos = true; stopPosSales = cloud.listenPosSales ? cloud.listenPosSales(day, (b, meta) => { posSales = Array.isArray(b) ? b : []; if (meta) posMeta = meta; if (!firstPos) { posSyncAt = Date.now(); posArr = Date.now(); } firstPos = false; billsRepaint(); }) : null;   // v2.64.1: POS ke bills
   try { stopPosSync?.(); } catch {} let firstSync = true; stopPosSync = cloud.listenPosSync ? cloud.listenPosSync(at => { if (firstSync) { firstSync = false; posSyncAt = Math.max(posSyncAt, Math.min(Date.now(), Number(at) || 0)); } else posSyncAt = Date.now(); billsRepaint(); }) : null;   // v2.95.3: is device ki ghari se (server PC ki ghari peeche thi -> '3 min pehle')   // v2.95: PC ka aakhri sync
   stopSales = cloud.listenAppSales(day, list => {
     sales = list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); salesErr = ''; localCheck();
@@ -882,6 +882,17 @@ function nbChipSm(b, open) {   // v2.138.0: un-posted chhota chip — sirf bill 
   const c = billCls(b), st = c === 'fl' ? 'fl' : c === 'wt' ? 'wt' : 'un';
   return `<button type="button" class="nb-chip sm ${st}${open === b.id ? ' open' : ''}" data-nb="${esc(b.id)}" title="${st === 'un' ? 'Un-posted' : st === 'wt' ? 'PC ka intezar' : 'Ghalti'}"><span class="nb-cno">${st === 'wt' ? '⏳ ' : st === 'fl' ? '⚠ ' : ''}#${b.saleNo ? esc(String(b.saleNo).replace(/^0+(?=\d{4})/, '')) : (b.credit ? 'W' : 'C')}</span><b class="nb-camt">${num(b.total)}</b>${c === 'up' ? '<u class="ud">U</u>' : ''}</button>`;
 }
+// v2.155.0: 🔔 NAYE BILL KI AWAAZ (malik: "yahan ek second mein bill pohnche") — ⋮ on/band (localStorage sam-bills-snd, shuru band), CAP sale.bsnd.
+//   WebAudio ki do halki ghantiyan, 0.8 s mein ek dafa (do khirkiyan khuli hon to bhi ek). Browser awaaz sirf ungli lagne ke baad deta hai — click par nbAcGet.
+let nbAc = null, nbDingAt = 0;
+const nbSndOn = () => { try { return localStorage.getItem('sam-bills-snd') === '1'; } catch { return false; } };
+function nbAcGet() { try { nbAc = nbAc || new (window.AudioContext || window.webkitAudioContext)(); if (nbAc.state === 'suspended') nbAc.resume().catch(() => {}); return nbAc; } catch { return null; } }
+function nbDing() {
+  if (Date.now() - nbDingAt < 800) return; nbDingAt = Date.now();
+  const ac = nbAcGet(); if (!ac || ac.state !== 'running') return;
+  const t = ac.currentTime;
+  for (const [f, d] of [[880, 0], [1320, 0.12]]) { const o = ac.createOscillator(), g = ac.createGain(); o.type = 'sine'; o.frequency.value = f; g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.22, t + d + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.35); o.connect(g); g.connect(ac.destination); o.start(t + d); o.stop(t + d + 0.4); }
+}
 function mountBills(box, opt = {}) {
   let open = '', filter = 'all';
   const chips = !!opt.chips;
@@ -890,7 +901,7 @@ function mountBills(box, opt = {}) {
   if (chips) { filter = 'all'; box.classList.add('nb-chipv'); box.innerHTML = `<div class="nb-ctop"><label class="nb-qchip"><span>🔍</span><input type="search" class="nb-q" placeholder="Bill no, naam, raqam" autocomplete="off"></label><button type="button" class="nb-more" data-nb-more="1" title="Aur (⋮)">⋮</button><button type="button" class="rk-pill nb-pill" data-mn-sheet="1" hidden></button><input type="date" class="nb-date nb-date-x" tabindex="-1" aria-label="Tareekh"></div>
     <div class="nb-copt"><div class="bc-seg nb-nseg" data-mn-seg="nb.n" data-mn-i="🔢" data-mn-t="Kitne bill (chips)" data-mn-g="🧾 Bills"></div>
       <span class="nb-day"><button type="button" data-nb-day="-1" data-mn="nb.prev" data-mn-i="‹" data-mn-t="Pichhla din" data-mn-g="🧾 Bills">‹ Pichhla din</button><button type="button" data-nb-day="1" data-mn="nb.next" data-mn-i="›" data-mn-t="Agla din" data-mn-g="🧾 Bills">Agla din ›</button><button type="button" data-nb-cal="1" data-mn="nb.cal" data-mn-i="📅" data-mn-t="Tareekh chunein" data-mn-g="🧾 Bills">📅 Tareekh</button></span>
-      <button type="button" class="nb-unp" data-nb-unp="1" data-mn="nb.unp" data-mn-i="🖨" data-mn-t="Un-posted print" data-mn-s="sab un-posted bills ki parchi" data-mn-g="🧾 Bills">🖨 Un-posted</button>${can('sale.ibills') ? '<button type="button" class="nb-ibb" data-nb-ib="1" data-mn="nb.ib" data-mn-i="🔎" data-mn-t="Item wale bills" data-mn-s="chuni items (Hamza ghee…) wale bills" data-mn-g="🧾 Bills">🔎 Item wale bills</button>' : ''}<small class="nb-sync"></small></div>
+      <button type="button" class="nb-unp" data-nb-unp="1" data-mn="nb.unp" data-mn-i="🖨" data-mn-t="Un-posted print" data-mn-s="sab un-posted bills ki parchi" data-mn-g="🧾 Bills">🖨 Un-posted</button>${can('sale.ibills') ? '<button type="button" class="nb-ibb" data-nb-ib="1" data-mn="nb.ib" data-mn-i="🔎" data-mn-t="Item wale bills" data-mn-s="chuni items (Hamza ghee…) wale bills" data-mn-g="🧾 Bills">🔎 Item wale bills</button>' : ''}${can('sale.bsnd') ? '<button type="button" class="nb-sndb" data-nb-snd="1" data-mn="nb.snd" data-mn-i="🔔" data-mn-t="Naye bill par awaaz" data-mn-s="naya bill aate hi halki ding (sirf is device par)" data-mn-g="🧾 Bills">🔕 Awaaz: band</button>' : ''}<small class="nb-sync"></small></div>
     <div class="nb-f" hidden></div><div class="nb-sum" hidden></div><div class="nb-list"></div>`; }   // v2.138.0: malik — saamne sirf bill; tabs nahi (Posted + Un-posted ek saath); total nahi; sab ⋮ mein
   else box.innerHTML = `<div class="nb-head"><span class="nb-day"><button type="button" data-nb-day="-1" title="Pichhla din">‹</button><b class="nb-dayt"></b><button type="button" data-nb-day="1" title="Agla din">›</button><label class="nb-cal" title="Tareekh chunein">📅<input type="date" class="nb-date"></label></span><small class="nb-sync"></small></div>
     <div class="nb-top"><input type="search" class="nb-q" placeholder="🔍 Bill no, naam, raqam…" autocomplete="off"><button type="button" class="nb-unp" data-nb-unp="1">🖨 Un-posted</button></div>
@@ -898,6 +909,9 @@ function mountBills(box, opt = {}) {
   const nseg = box.querySelector('.nb-nseg'), pill = box.querySelector('.nb-pill');
   const dayT = box.querySelector('.nb-dayt'), dateIn = box.querySelector('.nb-date');
   const q = box.querySelector('.nb-q'), list = box.querySelector('.nb-list'), fbox = box.querySelector('.nb-f'), sum = box.querySelector('.nb-sum'), syncEl = box.querySelector('.nb-sync'), unpBtn = box.querySelector('.nb-unp');
+  const sndBtn = box.querySelector('[data-nb-snd]'), nbSeen = { vd: '', ok: false, m: new Map() };   // v2.155.0: ✨ naya bill pehchan (bill|haal -> pehli dafa kab dekha)
+  const syncHTML = () => { const pm = chips && !billsDay ? posMeta?.pm : null, sec = ms => `${(Math.max(0, Number(ms) || 0) / 1000).toFixed(1)}s`;   // v2.155.0: ⏱ Raftar (PC pos-sales-dekho v2.1 ka doc.pm)
+    return (posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : '') + (pm ? ` <span class="nb-rf">⏱ Raftar: PC jaanch har ${Number(pm.e) === 500 ? '½ sec' : sec(pm.e)} · parha ${sec(pm.q)} · bheja ~${sec(pm.w)}${posArr ? ` · yahan aakhri ${new Date(posArr).toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit', second: '2-digit' })}` : ''}</span>` : ''); };
   const paint = () => {
     watchPast();
     const vd = viewDay(), isToday = !billsDay, D = new Date(vd + 'T12:00:00');
@@ -925,8 +939,9 @@ function mountBills(box, opt = {}) {
         ${got.length < live.length ? `<small>⏳ ${live.length - got.length} bills ke items aa rahe hain…</small>` : ''}<small>Retail = aaj ka rate (purane din ka farq andaza)</small></div>`;
     }
     const un = all.filter(b => b.ps === 1 && !b.cancelled && !b.farq).length; unpBtn.textContent = `🖨 Un-posted ${un}`; unpBtn.title = `${un} un-posted bills ka print`; unpBtn.disabled = !un;
-    syncEl.innerHTML = posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : '';
+    syncEl.innerHTML = syncHTML();
     syncEl.className = 'nb-sync' + (posSyncAt && Date.now() - posSyncAt > 90000 ? ' old' : '');
+    if (sndBtn) { const on = nbSndOn(); sndBtn.textContent = on ? '🔔 Awaaz: ON' : '🔕 Awaaz: band'; sndBtn.classList.toggle('is-in', on); sndBtn.setAttribute('aria-pressed', String(on)); }
     if (chips) {   // v2.138.0: un-posted / intezar / ghalti = chhote neele chips UPAR, posted (laal) bare neeche — kul N
       const top = b => !b.cancelled && !b.farq && (b.ps === 1 || b.status === 'new' || b.status === 'posting' || b.status === 'failed' || (!b.ps && b.src === 'app'));
       const pw = b => b.ps === 2 && b.pt ? b.pt : (b.createdAt || 0);   // v2.139.0: posted = post ke waqt se (naya post pehle)
@@ -934,6 +949,14 @@ function mountBills(box, opt = {}) {
       if (pill) { pill.hidden = isToday; pill.innerHTML = `📅 ${vd === yd ? 'Kal' : D.getDate() + ' ' + D.toLocaleString('en-US', { month: 'short' })} <i>⋮</i>`; pill.title = dayTxt; }
       const U = shown.filter(top), P = shown.filter(b => !top(b)), det = b => open === b.id ? `<div class="nb-cdet">${nbDetHTML(b, filter)}</div>` : '';
       list.innerHTML = (U.length ? `<div class="nb-ugrid">${U.map(b => nbChipSm(b, open) + det(b)).join('')}</div>` : '') + (P.length ? `<div class="nb-grid">${P.map(b => nbChipHTML(b, open, vd, yd) + det(b)).join('')}</div>` : '') || '<p class="stat-note">Koi bill nahi</p>';
+      // v2.155.0: ✨ naya bill / naya post = chip par 2.4 s chamak (dobara paint par --nbd se wahin se jari) · 🔔 naya un-posted = ding (⋮, sirf is device)
+      const fk = b => b.id + '|' + (top(b) ? 'u' : 'p'), now = Date.now();
+      if (!isToday) { nbSeen.vd = ''; nbSeen.ok = false; }
+      else if (nbSeen.vd !== vd || !nbSeen.ok) { nbSeen.vd = vd; nbSeen.m = new Map(all.map(b => [fk(b), 0])); nbSeen.ok = all.length > 0; }
+      else { let ding = 0; for (const b of all) { const k = fk(b); if (nbSeen.m.has(k)) continue; nbSeen.m.set(k, now); if (top(b) && !nbSeen.m.has(b.id + '|p')) ding++; }
+        if (ding && can('sale.bsnd') && nbSndOn()) nbDing();
+        const by = new Map(shown.map(b => [String(b.id), b]));
+        for (const el of list.querySelectorAll('.nb-chip[data-nb]')) { const b = by.get(el.dataset.nb), at = b && nbSeen.m.get(fk(b)); if (at && now - at < 2400) { el.classList.add('nb-new'); el.style.setProperty('--nbd', `${at - now}ms`); } } }
       return;
     }
     list.innerHTML = rows.map(b => { const c = billCls(b), bd = new Date(b.createdAt || 0), bds = `${bd.getFullYear()}-${String(bd.getMonth() + 1).padStart(2, '0')}-${String(bd.getDate()).padStart(2, '0')}`;
@@ -951,6 +974,8 @@ function mountBills(box, opt = {}) {
     const dd = e.target.closest('[data-nb-day]'); if (dd) { const t = new Date(viewDay() + 'T12:00:00'); t.setDate(t.getDate() + Number(dd.dataset.nbDay)); goDay(`${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`); return; }
     const f = e.target.closest('[data-nb-f]'); if (f) { filter = f.dataset.nbF; try { localStorage.setItem('sam-bills-f', filter); } catch {} paint(); return; }
     if (e.target.closest('[data-nb-more]')) { box.classList.toggle('nb-open'); return; }   // v2.138.0: PC ka ⋮
+    if (e.target.closest('[data-nb-snd]')) { const on = !nbSndOn(); try { localStorage.setItem('sam-bills-snd', on ? '1' : '0'); } catch {} if (on) { nbAcGet(); setTimeout(nbDing, 60); } notice(on ? '🔔 Naye bill par awaaz ON — sirf is device par' : '🔕 Awaaz band'); paint(); return; }   // v2.155.0
+    if (nbSndOn()) nbAcGet();   // v2.155.0: ungli lagte hi awaaz ki ijazat (browser)
     const nn = e.target.closest('[data-nb-n]'); if (nn) { nbN = Number(nn.dataset.nbN) || 20; try { localStorage.setItem('sam-bills-n', String(nbN)); } catch {} paint(); return; }   // v2.137.0
     if (e.target.closest('[data-nb-cal]')) { try { dateIn.showPicker(); } catch { try { dateIn.focus(); dateIn.click(); } catch {} } return; }
     if (e.target.closest('[data-nb-unp]')) { printUnposted(); return; }
@@ -962,7 +987,7 @@ function mountBills(box, opt = {}) {
     if (open) { const b = billsData().find(x => x.id === open); if (b && b.posId && !lineCache.has(b.posId)) { lineTried.delete(b.posId); await billLines(b); paint(); } }
   });
   const m = { box, paint }; mounts.add(m); paint();
-  return setInterval(() => { if (!box.isConnected) return; syncEl.innerHTML = posSyncAt ? `🔄 PC sync ${ago(posSyncAt)}` : ''; syncEl.className = 'nb-sync' + (posSyncAt && Date.now() - posSyncAt > 90000 ? ' old' : ''); }, 5000);
+  return setInterval(() => { if (!box.isConnected) return; syncEl.innerHTML = syncHTML(); syncEl.className = 'nb-sync' + (posSyncAt && Date.now() - posSyncAt > 90000 ? ' old' : ''); }, 5000);
 }
 // ---------- 🔎 ITEM WALE BILLS (v2.146.0) — malik: "alag screen ⋮ ke andar · jin bills mein wo items hon · bill ke chips ke upar un items ke naam (jaise
 //   Hamza ghee, Mujahid oil) · items hum khud select karein · yeh screen alag, wo screen alag" ----------

@@ -6556,3 +6556,14 @@ Malik: "jo naam ikatthe hain un ko ikattha rank-wise karo" → plan → OK. lark
 - Har line par "Sale · Gahak · Fi bill" index; PDF mein ⭐ Score column + trend + badges.
 - Purani tarteeb (Roz ki sale / Kul sale / Bill) chips mein mojood. AI nahi. Rules tabdeel nahi (2.79).
 - Files: larka.js (rkCollect, ranking, rankHTML, PDF), style.css (.lk-bd).
+
+=== v2.155.0 (2026-10-31) — ⚡ Bills screen par bill ~1 second (PC pos-sales-dekho v2.1) ===
+- Malik (counter PC ki Bills screen ki photo): "wahan scan ho aur yahan ek second mein bill pohnche".
+- PC pos-sales-dekho v2.1:
+  · jaanch har ½ sec (pehle 1 sec), sasti COUNT/MAX query (SaleID >= aaj ka pehla bill).
+  · badlaav par POORI din ki list nahi — sirf naye (SaleID > pichhla max) + badle (UpdatedOn) + aakhri 15 bill; memory cache ko COUNT/MAX/X/SUM(DocStatus, Total, Cash) se milata hai — na mile (delete / purana bill bina UpdatedOn badla) = foran poori list. Har 5 min poori list pehle jaisi.
+  · Daily Sale (possale), items (posSaleLines) aur sum ALAG peeche ki lane (slow, har 1.5 sec agar kuch badla) — bill ka likhna in ka intezar nahi karta (pehle har bill ke baad 2-3 sec yahi rokte the).
+  · posSales/<din> ab set merge:true {day, at, bills, pm}; sum alag merge. pm = {q: dekh+parhne ka ms, w: pichhle likhne ka ms, e: 500, f: 1 = poori list}.
+- App (Bills chips): naya bill / naya post = chip par 2.4 s sunehri chamak (.nb-new, dobara paint par --nbd se jari) · ⋮ 🔔 "Awaaz: ON/band" (sirf is device, shuru band, CAP sale.bsnd) — naya un-posted bill aaye to halki ding · ⋮ mein "⏱ Raftar: PC jaanch har ½ sec · parha 0.1s · bheja ~0.3s · yahan aakhri hh:mm:ss".
+- Net par depend: aam taur par ~1 sec, kamzor net par 2-3 sec. Pakka LAN wala raasta (local server) malik ne 24 Oct ko roka hua hai.
+- AI nahi. Rules tabdeel nahi (2.79). Khata / paisa par koi asar nahi.

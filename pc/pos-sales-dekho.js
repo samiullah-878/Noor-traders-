@@ -1,5 +1,5 @@
 // =========================================================
-//  pos-sales-dekho.js  v2.0 (2026-10-28: 📌 har posted bill par post ka waqt `pt` — PC ne pehli dafa posted dekha (pos-posted-seen.json), shuru se pehle wale = UpdatedOn) · v1.9 (2026-10-28: ⚡ malik — "posting POS mein jaldi, app mein late": har 1 sec; bills ka haal (posted / un-posted) PEHLE likho, items + Daily Sale
+//  pos-sales-dekho.js  v2.1 (2026-10-31: ⚡ har ½ sec · sirf naye/badle bill parho (cache + COUNT/SUM se milao, na mile = poori list) · sum / Daily Sale / items alag peeche ki lane · doc.pm raftar) · v2.0 (2026-10-28: 📌 har posted bill par post ka waqt `pt` — PC ne pehli dafa posted dekha (pos-posted-seen.json), shuru se pehle wale = UpdatedOn) · v1.9 (2026-10-28: ⚡ malik — "posting POS mein jaldi, app mein late": har 1 sec; bills ka haal (posted / un-posted) PEHLE likho, items + Daily Sale
 //                     baad mein; items aam chakkar mein sirf aakhri 40 bills ke (har 5 min sab)) · v1.8 (2026-10-16: malik — "haath se likhi jaye, auto sale band / on ka option": blueAccess/saleConfig.posAuto
 //                     (default BAND) — band = possale-<aaj> hata do, kuch na likho (pichhle din wese hi); posSales/<din>.sum hamesha (app: sirf
 //                     malik ko "POS ke hisaab se" milane ke liye, ginti mein nahi)) · v1.7 (2026-10-13 sham: malik (POS Sale Register Summary ki photo) — "wholesale ka bill sale mein, SYSTEM ki sale":
@@ -18,7 +18,7 @@ const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
 const BUSINESS_ID = 'noor-traders';
-const EVERY = 1000;                // v1.9 (2026-10-27): 1 sec (malik: "posting POS mein jaldi, app mein late") · v1.3: 2 sec (sirf ginti; Firestore par likhna sirf badlaav par) · v1.1: 10 sec — pehle sirf ginti/aakhri bill dekhta hai, badle to poori list
+const EVERY = 500;                 // v2.1 (2026-10-31): ½ sec (malik: "ek second mein bill pohnche") · v1.9 (2026-10-27): 1 sec (malik: "posting POS mein jaldi, app mein late") · v1.3: 2 sec (sirf ginti; Firestore par likhna sirf badlaav par) · v1.1: 10 sec — pehle sirf ginti/aakhri bill dekhta hai, badle to poori list
 const FULL_EVERY = 5 * 60 * 1000;    // phir bhi har 5 min poori list (koi badlaav na chhoote)
 let lastKey = '', lastFull = 0, lastLinesFull = 0;
 const LOCK_PORT = 47824;
@@ -138,27 +138,63 @@ async function syncLines(p, d0, d1, day, fromId = 0) {   // v1.9: fromId = sirf 
   if (w) log(`Items: ${w} bills ke items app mein`);
   if (lineHash.size > 3000) lineHash.clear();
 }
+// v2.1 (2026-10-31): ⚡ malik — "yahan scan ho aur Bills screen par EK SECOND mein bill pohnche". Teen kaam:
+//   1) jaanch har ½ sec (EVERY), saste COUNT/MAX query se (SaleID >= aaj ka pehla bill = sirf aaj ki qataren);
+//   2) badlaav par POORI din ki list nahi — sirf naye (SaleID > pichhla max) + badle (UpdatedOn) + aakhri 15 bill (scan chal raha ho) parh kar
+//      memory ki list (cache) mein jorna; phir COUNT / MAX / SUM khud mila kar dekhna — na mile (delete, purana bill badla) = foran poori list;
+//   3) Daily Sale + items (posSaleLines) + sum ALAG peeche ki lane (slow) mein — bill ka likhna inhein ka intezar nahi karta.
+//   Doc par `pm` {q: dekh+parhne ka ms, w: pichhle likhne ka ms, e: jaanch ms, f: 1 = poori list} — app ⋮ "⏱ Raftar".
+const SEL = `SELECT s.SaleID, s.SaleNo, s.SaleDate, s.TotalSale, s.CashReceived, s.IsCreditSale, s.DocStatusID, s.Description, s.SystemNotes, s.UpdatedOn, pt.PartyName,
+           (SELECT COUNT(*) FROM dbo.SaleDetail d WHERE d.SaleID = s.SaleID) AS N
+    FROM dbo.Sale s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID`;
+let cache = new Map(), cacheDay = '', firstId = 0, lastMax = 0, lastU = null, lastWm = 0, needFull = false, slowDirty = true;
+function cacheAgg() {
+  let C = 0, M = 0, X = 0, S = 0, T = 0, R = 0;
+  for (const r of cache.values()) { C++; M = Math.max(M, Number(r.SaleID) || 0); const st = Number(r.DocStatusID) || 0; if (st === 3) X++; S += st; T += Number(r.TotalSale) || 0; R += Number(r.CashReceived) || 0; }
+  return { C, M, X, S, T, R };
+}
+function aggOk(k) {
+  const a = cacheAgg();
+  return a.C === (Number(k.C) || 0) && a.M === (Number(k.M) || 0) && a.X === (Number(k.X) || 0) && a.S === (Number(k.S) || 0) && Math.abs(a.T - (Number(k.T) || 0)) < 1 && Math.abs(a.R - (Number(k.R) || 0)) < 1;
+}
+async function readFull(p, d0, d1) {
+  const rows = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`${SEL}
+    WHERE s.SaleDate >= @a AND s.SaleDate < @b ORDER BY s.SaleID DESC`)).recordset;
+  cache = new Map(rows.map(r => [Number(r.SaleID), r])); cacheDay = dayOf(d0); lastFull = Date.now(); needFull = false;
+  firstId = rows.length ? Math.min(...rows.map(r => Number(r.SaleID) || 0)) : 0;
+  return rows;
+}
 async function once() {
+  const t0 = Date.now();
   const p = await getPool();
   const d0 = new Date(); d0.setHours(0, 0, 0, 0); const d1 = new Date(d0); d1.setDate(d1.getDate() + 1);
-  const k = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
+  const day = dayOf(d0);
+  if (cacheDay !== day) { cache = new Map(); firstId = 0; lastMax = 0; lastU = null; needFull = true; }
+  const k = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).input('f', sql.Int, firstId).query(`
     SELECT COUNT(*) AS C, MAX(SaleID) AS M, SUM(CASE WHEN DocStatusID = 3 THEN 1 ELSE 0 END) AS X, SUM(DocStatusID) AS S, SUM(CAST(TotalSale AS FLOAT)) AS T, SUM(CAST(CashReceived AS FLOAT)) AS R, MAX(UpdatedOn) AS U
-    FROM dbo.Sale WHERE SaleDate >= @a AND SaleDate < @b`)).recordset[0] || {};
-  const key = `${dayOf(d0)}|${k.C}|${k.M}|${k.X}|${k.S}|${Math.round(k.T || 0)}|${Math.round(k.R || 0)}|${k.U ? new Date(k.U).getTime() : 0}`;   // v1.2: post hona / edit bhi
+    FROM dbo.Sale WHERE SaleID >= @f AND SaleDate >= @a AND SaleDate < @b`)).recordset[0] || {};
+  const key = `${day}|${k.C}|${k.M}|${k.X}|${k.S}|${Math.round(k.T || 0)}|${Math.round(k.R || 0)}|${k.U ? new Date(k.U).getTime() : 0}`;   // v1.2: post hona / edit bhi
   if (key === lastKey && Date.now() - lastFull < FULL_EVERY) return;   // kuch nahi badla
-  lastKey = key; lastFull = Date.now();
-  const rows = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
-    SELECT s.SaleID, s.SaleNo, s.SaleDate, s.TotalSale, s.CashReceived, s.IsCreditSale, s.DocStatusID, s.Description, s.SystemNotes, s.UpdatedOn, pt.PartyName,
-           (SELECT COUNT(*) FROM dbo.SaleDetail d WHERE d.SaleID = s.SaleID) AS N
-    FROM dbo.Sale s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
-    WHERE s.SaleDate >= @a AND s.SaleDate < @b ORDER BY s.SaleID DESC`)).recordset;
+  let full = needFull || !cache.size || Date.now() - lastFull >= FULL_EVERY, rows;
+  if (full) rows = await readFull(p, d0, d1);
+  else {   // v2.1: sirf naye + badle + aakhri 15
+    rows = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).input('f', sql.Int, firstId).input('m', sql.Int, lastMax)
+      .input('u', sql.DateTime, lastU || d0).query(`${SEL}
+      WHERE s.SaleID >= @f AND s.SaleDate >= @a AND s.SaleDate < @b AND (s.SaleID > @m OR s.UpdatedOn >= @u
+        OR s.SaleID IN (SELECT TOP 15 x.SaleID FROM dbo.Sale x WHERE x.SaleID >= @f AND x.SaleDate >= @a AND x.SaleDate < @b ORDER BY x.SaleID DESC))`)).recordset;
+    for (const r of rows) cache.set(Number(r.SaleID), r);
+    if (!aggOk(k)) { full = true; rows = await readFull(p, d0, d1); }   // mila nahi (delete / purana badla) = poori list
+  }
+  lastKey = key; lastMax = Number(k.M) || 0; lastU = k.U || lastU;
   const names = pcNames();
-  { const dd = dayOf(d0); if (postSeen.day !== dd) postSeen = { day: dd, m: {} }; let ch = false;   // v2.0: 📌 post ka waqt
+  { if (postSeen.day !== day) postSeen = { day, m: {} }; let ch = false;   // v2.0: 📌 post ka waqt (v2.1: sirf parhi hui qataren — baqi wese hi)
     for (const r of rows) { const id = String(r.SaleID), posted = Number(r.DocStatusID) === 2;
       if (posted && !postSeen.m[id]) { postSeen.m[id] = seenBoot ? (r.UpdatedOn ? new Date(r.UpdatedOn).getTime() : Date.now()) : Date.now(); ch = true; }
       else if (!posted && postSeen.m[id]) { delete postSeen.m[id]; ch = true; } }   // un-post hua = bhool jao (dobara post par naya waqt)
+    if (full) for (const id of Object.keys(postSeen.m)) if (!cache.has(Number(id))) { delete postSeen.m[id]; ch = true; }
     seenBoot = false; if (ch) { try { fs.writeFileSync(SEEN_FILE, JSON.stringify(postSeen)); } catch {} } }
-  const bills = rows.slice(0, 600).map(r => {
+  const all = [...cache.values()].sort((a, b) => (Number(b.SaleID) || 0) - (Number(a.SaleID) || 0));
+  const bills = all.slice(0, 600).map(r => {
     const desc = String(r.Description || ''), m = desc.match(/BK-APP[ :]([A-Za-z0-9_-]+)/);
     const sn = String(r.SystemNotes || ''), host = (sn.match(/at PC:\s*([A-Za-z0-9_.-]+)/i) || [])[1] || '', by = (sn.match(/By:\s*([^\r\n]+?)\s+On:/i) || [])[1] || '';
     return { id: r.SaleID, no: String(r.SaleNo || '').trim(), t: r2(r.TotalSale), c: r2(r.CashReceived), cr: r.IsCreditSale ? 1 : 0,
@@ -166,18 +202,36 @@ async function once() {
       tm: r.SaleDate ? new Date(r.SaleDate).getTime() : 0, app: m ? m[1] : '',
       ps: Number(r.DocStatusID) || 0, pt: Number(postSeen.m[String(r.SaleID)]) || 0, pc: String(names[host] || host.replace(/^DESKTOP-/i, '') || '').slice(0, 30), by: /blue khata/i.test(by) ? '' : String(by).trim().slice(0, 20) };
   });
-  const day = dayOf(d0), sm = saleSum(rows, await crvFor(p, d0, d1));
-  const sum = { amt: sm.amt, n: sm.n, cx: sm.cx, fq: sm.fq, fqRs: sm.fqRs, ws: sm.ws, wsRs: sm.wsRs, wsCash: sm.wsCash, auto: AUTO };   // v1.8: app milane ke liye (ginti nahi)
-  const hash = day + JSON.stringify(bills) + JSON.stringify(sum);
-  // v1.9 (2026-10-28): bills ka haal (posted / un-posted / naya) SAB SE PEHLE app ko — items aur Daily Sale baad mein (pehle items ki lambi query ke baad jata tha = late)
+  const hash = day + JSON.stringify(bills);
+  slowDirty = true;
+  // v1.9: bills ka haal SAB SE PEHLE app ko · v2.1: sum / Daily Sale / items peeche ki lane mein (slow) — yahan intezar nahi
   if (hash !== lastHash) {
-    await col.doc(day).set({ day, at: Date.now(), bills, sum });
-    lastHash = hash;
-    log(`Aaj ke ${bills.length} POS bills app mein (cancel ${bills.filter(b => b.x).length}, udhaar ${bills.filter(b => b.cr && !b.x).length})`);
+    const qm = Date.now() - t0, tw = Date.now();
+    await col.doc(day).set({ day, at: tw, bills, pm: { q: qm, w: lastWm, e: EVERY, f: full ? 1 : 0 } }, { merge: true });
+    lastWm = Date.now() - tw; lastHash = hash;
+    log(`Aaj ke ${bills.length} POS bills app mein (cancel ${bills.filter(b => b.x).length}, udhaar ${bills.filter(b => b.cr && !b.x).length}) · parha ${qm}ms · bheja ${lastWm}ms${full ? ' · poori list' : ''}`);
   }
-  await writeSale(day, sm).catch(e => log('POS sale (auto) masla: ' + e.message));   // v1.5 · v1.6 wholesale CRV · v1.8 band = hata
-  const fullLines = Date.now() - lastLinesFull > FULL_EVERY; if (fullLines) lastLinesFull = Date.now();
-  await syncLines(p, d0, d1, day, fullLines ? 0 : (Number(rows[Math.min(39, rows.length - 1)]?.SaleID) || 0)).catch(e => log('Items masla: ' + e.message));   // v1.9: aam chakkar = sirf aakhri 40 bills ke items, har 5 min sab
+}
+// v2.1: PEECHE KI LANE — sum (app milane ke liye) + Daily Sale (possale-<din>) + items (posSaleLines). Bill likhne ko kabhi nahi rokti.
+let slowRun = false, lastSumHash = '';
+async function slow() {
+  if (slowRun || !cfgReady) return;
+  const d0 = new Date(); d0.setHours(0, 0, 0, 0); const d1 = new Date(d0); d1.setDate(d1.getDate() + 1); const day = dayOf(d0);
+  if (cacheDay !== day || !cache.size) return;
+  const fullLines = Date.now() - lastLinesFull > FULL_EVERY;
+  if (!slowDirty && !fullLines) return;
+  slowRun = true; slowDirty = false;
+  try {
+    const p = await getPool(), rows = [...cache.values()], sm = saleSum(rows, await crvFor(p, d0, d1));
+    const sum = { amt: sm.amt, n: sm.n, cx: sm.cx, fq: sm.fq, fqRs: sm.fqRs, ws: sm.ws, wsRs: sm.wsRs, wsCash: sm.wsCash, auto: AUTO };   // v1.8: app milane ke liye (ginti nahi)
+    const sh = day + JSON.stringify(sum);
+    if (sh !== lastSumHash) { await col.doc(day).set({ sum }, { merge: true }); lastSumHash = sh; }
+    await writeSale(day, sm).catch(e => log('POS sale (auto) masla: ' + e.message));   // v1.5 · v1.6 wholesale CRV · v1.8 band = hata
+    if (fullLines) lastLinesFull = Date.now();
+    const ids = rows.map(r => Number(r.SaleID) || 0).sort((a, b) => b - a);
+    await syncLines(p, d0, d1, day, fullLines ? 0 : (ids[Math.min(39, ids.length - 1)] || 0)).catch(e => log('Items masla: ' + e.message));   // v1.9: aam chakkar = sirf aakhri 40 bills ke items, har 5 min sab
+  } catch (e) { slowDirty = true; log('Peeche ki lane: ' + e.message); }
+  finally { slowRun = false; }
 }
 
 const lock = net.createServer().listen(LOCK_PORT, '127.0.0.1');
@@ -187,13 +241,14 @@ lock.on('listening', async () => {
   for (let i = 0; i < 50 && !cfgReady; i++) await new Promise(r => setTimeout(r, 200));   // v1.8: setting (10 sec tak)
   try { const p = await getPool(), y1 = new Date(); y1.setHours(0, 0, 0, 0); const y0 = new Date(y1); y0.setDate(y0.getDate() - 1);   // v1.5: kal ki aakhri sale bhi (PC raat ko band ho gaya ho)
     await writeSale(dayOf(y0), await saleFor(p, y0, y1), true); } catch (e) { log('Kal ki POS sale: ' + e.message); }
-  log('pos-sales-dekho v2.0 chal raha hai — har 1 second (sirf badlaav par likhta hai, bills ka haal pehle)…');
+  log('pos-sales-dekho v2.1 chal raha hai — har ½ second (sirf naye / badle bill parhta hai, bill pehle — Daily Sale / items peeche)…');
   let running = false, again = false;
   const tick = async () => { if (running) { again = true; return; } running = true;
     try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }
     finally { running = false; if (again) { again = false; setTimeout(tick, 50); } } };
   await tick();
   setInterval(ZINDA.guard(tick, 5 * 60000, 'bills tick'), EVERY);   // 2026-10-11: chowkidar
+  setInterval(ZINDA.guard(slow, 10 * 60000, 'peeche ki lane'), 1500);   // v2.1: sum + Daily Sale + items alag
   // v1.3: app ka bill POS mein bana (done) / edit hua -> foran dekho (2 sec ka intezar bhi nahi)
   const kick = () => setTimeout(() => { lastKey = ''; tick(); }, 150);
   const base = db.collection('businesses').doc(BUSINESS_ID), seen = new Map();
