@@ -10,7 +10,7 @@
 //     📷 asal tasveerein — ph_shop (darwaze ke peeche dukan) + ph_rk_<hash(rack)> (rack ke peeche) · phIdx.m.shop / m['rk_…'] (app 🗂 Racks / 🏪 maloomat se)
 //     🚶 farsh (3D) + chhat ki lights scroll ke saath (--sx), qadam ka jhoola (--bob) · 🧑‍💼 dukan wala (bani hui SVG) racks ke chips se le jata hai
 //     📳 halka vibrate · 🔔 darwaze ki ghanti (awaaz on ho to) · 🌙 info.open / info.close (Pakistan waqt) — band = aadha shutter, order phir bhi.
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.156.0';
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.156.1';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -159,10 +159,23 @@ function itemHTML(it) {
   const q = Number(S.crate[it.id]) || 0;
   return `<button type="button" class="it${q ? ' in-crate' : ''}" data-id="${esc(it.id)}" aria-label="${esc(it.n)}, ${rs(it.r)}"><span class="it-box">${imgOf(it)}</span><span class="tag"><small>Rs</small>${num(it.r)}</span><span class="plus" data-plus="1" aria-label="Tokri mein dalo">${q ? num(q) : '+'}</span></button>`;
 }
-function bayHTML(b, i, D) {
-  const sh = [];
+// v2.156.1: ⚡ malik — "aage peeche karte hain to lag aata hai": sirf qareeb ke racks mein maal (DOM chhota) — door ke rack khali dhancha (sign + shelf), paas aate hi bhar jate
+const NEAR = 2, FAR = 5;
+function shelvesHTML(b, D, fill) {
   const rows = Math.min(D.rows, Math.max(D.rows - 2, 3, Math.ceil(b.items.length / D.cols)));   // v2.156.0: chhota rack = pehle jitni shelf (maal bara na lage)
-  for (let s = 0; s < rows; s++) sh.push(`<div class="shelf">${b.items.slice(s * D.cols, (s + 1) * D.cols).map(itemHTML).join('')}</div>`);
+  let h = ''; for (let s = 0; s < rows; s++) h += `<div class="shelf">${fill ? b.items.slice(s * D.cols, (s + 1) * D.cols).map(itemHTML).join('') : ''}</div>`;
+  return { rows, h };
+}
+function fillNear(i) {
+  const D = S.dims; if (!D) return;
+  bayEls.forEach((el, k) => {
+    const want = Math.abs(k - i) <= NEAR, drop = Math.abs(k - i) > FAR, has = el._fill;
+    if (want && !has) { const rk = el.querySelector('.rack'), bg = rk.querySelector('.rk-bg'); rk.innerHTML = ''; if (bg) rk.appendChild(bg); rk.insertAdjacentHTML('beforeend', shelvesHTML(S.bays[k], D, true).h); el._fill = true; }
+    else if (drop && has) { const rk = el.querySelector('.rack'), bg = rk.querySelector('.rk-bg'); rk.innerHTML = ''; if (bg) rk.appendChild(bg); rk.insertAdjacentHTML('beforeend', shelvesHTML(S.bays[k], D, false).h); el._fill = false; }
+  });
+}
+function bayHTML(b, i, D) {
+  const { rows, h } = shelvesHTML(b, D, false), sh = [h];
   const bg = RBG.get(b.rk.key);
   return `<section class="bay${D.rows >= 6 ? ' cmp' : ''}" data-bay="${i}" style="--rows:${rows};--cols:${D.cols};--bayW:${D.bw}px" aria-label="Rack ${b.rk.no}: ${esc(b.rk.name)}"><header class="sign"><span class="sk">Rack ${b.rk.no}</span><b>${esc(b.rk.name)}</b>${b.parts > 1 ? `<span class="sp">${b.p + 1}/${b.parts}</span>` : ''}</header><div class="rack"><div class="rk-bg${bg ? ' on' : ''}" data-rbg="${esc(b.rk.key)}"${bg ? ` style="background-image:url('${bg}')"` : ''}></div>${sh.join('')}</div></section>`;
 }
@@ -174,7 +187,7 @@ function renderAisle(keepId) {
   bays.forEach((b, i) => b.items.forEach(it => S.bayOf.set(it.id, i)));
   const a = $('aisle');
   a.innerHTML = bays.length ? bays.map((b, i) => bayHTML(b, i, D)).join('') : '<p class="empty-aisle">Abhi racks par maal nahi saja — thori der baad dobara dekhein.</p>';
-  bayEls = [...a.querySelectorAll('.bay')];
+  bayEls = [...a.querySelectorAll('.bay')]; rackEls = bayEls.map(el => el.querySelector('.rack')); filledAt = -99;
   paintRkBar();
   observe();
   if (keepId && S.bayOf.has(keepId)) go(S.bayOf.get(keepId), true);
@@ -221,9 +234,20 @@ async function loadBgs() {
   try {
     while (wantBg.size) {
       const k = [...wantBg][0]; wantBg.delete(k); if (RBG.has(k)) continue;
-      try { const url = await bigPhoto(rkPh(k)); if (!url) continue; RBG.set(k, url); document.querySelectorAll(`.rk-bg[data-rbg="${CSS.escape(k)}"]`).forEach(el => { el.style.backgroundImage = `url('${url}')`; el.classList.add('on'); }); } catch (e) { console.warn('rack tasveer', e); }
+      try { const raw = await bigPhoto(rkPh(k)); if (!raw) continue; const url = await soften(raw); RBG.set(k, url); document.querySelectorAll(`.rk-bg[data-rbg="${CSS.escape(k)}"]`).forEach(el => { el.style.backgroundImage = `url('${url}')`; el.classList.add('on'); }); } catch (e) { console.warn('rack tasveer', e); }
     }
   } finally { bgLoading = false; }
+}
+// rack ki tasveer ek dafa halki + dhundli bana lo (canvas) — har frame CSS blur ka bojh nahi
+async function soften(url) {
+  try {
+    const im = new Image(); im.src = url; await im.decode();
+    const k = Math.min(1, 520 / (im.naturalWidth || 520)), cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(im.naturalWidth * k)); cv.height = Math.max(1, Math.round(im.naturalHeight * k));
+    const cx = cv.getContext('2d'); try { cx.filter = 'blur(2px) saturate(.92)'; } catch {} cx.drawImage(im, -4, -4, cv.width + 8, cv.height + 8); cx.filter = 'none';
+    cx.fillStyle = 'rgba(255,253,247,.52)'; cx.fillRect(0, 0, cv.width, cv.height);
+    const b = await new Promise(ok => cv.toBlob(ok, 'image/jpeg', 0.72)); if (!b) return url;
+    try { URL.revokeObjectURL(url); } catch {} return URL.createObjectURL(b);
+  } catch { return url; }
 }
 async function loadShop() { try { const url = await bigPhoto('shop'); const el = $('shopPh'); if (url && el) { el.style.backgroundImage = `url('${url}')`; el.classList.add('has'); } } catch {} }
 function setPhoto(id, url) {
@@ -239,32 +263,33 @@ function onScroll() {
   let i = Math.min(Math.max(0, S.bays.length - 1), Math.max(0, Math.round(a.scrollLeft / bw)));
   const vis = Math.max(1, Math.round(a.clientWidth / bw)); if (S.goal >= i && S.goal < i + vis) i = S.goal;   // v2.156.0: PC par do rack saath — jis rack ko chuna wahi "yahan"
   S.cur = i;
-  const b = S.bays[i];
-  $('where').textContent = b ? `Rack ${b.rk.no}/${S.racks.length} · ${b.rk.name}${b.parts > 1 ? ` (${b.p + 1}/${b.parts})` : ''}` : 'Noor Traders';
-  const w = S.bays.length ? Math.round((i + 1) / S.bays.length * 100) + '%' : '0';
-  $('walkBar').style.width = w; $('walkFeet').style.setProperty('--w', w);
-  if (!LITE) { const wr = $('aisleWrap'), x = a.scrollLeft; wr.style.setProperty('--sx', String(Math.round(x))); wr.style.setProperty('--bob', (-Math.abs(Math.sin(x / bw * Math.PI * 2)) * 3).toFixed(2) + 'px'); }   // v2.156.0: 🚶 farsh / lights / qadam
+  const b = S.bays[i], x = a.scrollLeft;
+  if (i !== filledAt) { filledAt = i; fillNear(i);   // v2.156.1: sirf rack badle to DOM likho (har frame nahi)
+    $('where').textContent = b ? `Rack ${b.rk.no}/${S.racks.length} · ${b.rk.name}${b.parts > 1 ? ` (${b.p + 1}/${b.parts})` : ''}` : 'Noor Traders';
+    const w = S.bays.length ? Math.round((i + 1) / S.bays.length * 100) + '%' : '0';
+    $('walkBar').style.width = w; $('walkFeet').style.setProperty('--w', w); }
+  if (!LITE) { FL ||= document.querySelector('.floor-t'); CE ||= document.querySelector('.ceil-t'); if (FL) FL.style.transform = `translate3d(${-(x % 128).toFixed(1)}px,0,0)`; if (CE) CE.style.transform = `translate3d(${-((x * 0.55) % 250).toFixed(1)}px,0,0)`; }   // 🚶 farsh / lights — sirf transform (GPU), poori dukan dobara nahi
   if (b && b.rk !== curRk) { curRk = b.rk; markRk(); }
-  $('prevBtn').disabled = a.scrollLeft < 4;
-  $('nextBtn').disabled = a.scrollLeft + a.clientWidth >= a.scrollWidth - 4;
+  const pd = x < 4, nd = x + a.clientWidth >= a.scrollWidth - 4;
+  if (pd !== lastPd) { lastPd = pd; $('prevBtn').disabled = pd; } if (nd !== lastNd) { lastNd = nd; $('nextBtn').disabled = nd; }
   depth();
   if (i !== arrived) { clearTimeout(arriveT); arriveT = setTimeout(() => { if (S.cur !== i || i === arrived) return; const first = arrived < 0; arrived = i; if (first || !doorGone) return; replay(bayEls[i]?.querySelector('.sign'), 'swing'); replay($('walkFeet'), 'bob'); sfx('step'); buzz(6); if (S.walkTo === i) { S.walkTo = -1; hpArrive(); } }, 140); }
 }
 // 🚶 rack se rack: racks halka sa mud kar (3D) aage, farsh ki tiles alag raftaar (sirf qareeb ke 3–4 racks)
-let bayEls = [], arrived = -1, arriveT = 0, doorGone = false, curRk = null;
+let bayEls = [], rackEls = [], arrived = -1, arriveT = 0, doorGone = false, curRk = null, filledAt = -99, FL = null, CE = null, lastPd = null, lastNd = null;
 function depth() {
   if (LITE || !bayEls.length) return;
   const a = $('aisle'), bw = S.dims?.bw || a.clientWidth || 1, x = a.scrollLeft, mid = x + a.clientWidth / 2;
   const lo = Math.max(0, Math.floor(x / bw) - 1), hi = Math.min(bayEls.length - 1, Math.ceil((x + a.clientWidth) / bw) + 1);
-  for (let k = lo; k <= hi; k++) {
-    const p = Math.max(-1, Math.min(1, ((k + 0.5) * bw - mid) / bw)), el = bayEls[k]; if (!el) continue;
-    el.style.setProperty('--p', p.toFixed(3)); el.style.setProperty('--s', (1 - Math.abs(p) * 0.07).toFixed(3)); el.style.setProperty('--o', (1 - Math.abs(p) * 0.3).toFixed(3));
+  for (let k = lo; k <= hi; k++) {   // v2.156.1: seedha rack ka transform (CSS var nahi — warna rack ka har item dobara style hota tha)
+    const p = Math.max(-1, Math.min(1, ((k + 0.5) * bw - mid) / bw)), el = rackEls[k]; if (!el) continue;
+    el.style.transform = `perspective(900px) rotateY(${(-p * 14).toFixed(2)}deg) scale(${(1 - Math.abs(p) * 0.07).toFixed(3)})`; el.style.opacity = (1 - Math.abs(p) * 0.3).toFixed(3);
   }
 }
 function go(i, now) {
   const a = $('aisle'), bw = S.dims?.bw || a.clientWidth;
   i = Math.max(0, Math.min(S.bays.length - 1, i)); S.goal = i;
-  if (now) { a.style.scrollBehavior = 'auto'; a.scrollLeft = i * bw; a.style.scrollBehavior = ''; } else { a.scrollTo({ left: i * bw, behavior: 'smooth' }); if (!LITE) replay(a, 'bob'); }
+  if (now) { a.style.scrollBehavior = 'auto'; a.scrollLeft = i * bw; a.style.scrollBehavior = ''; } else { a.scrollTo({ left: i * bw, behavior: 'smooth' }); }   // v2.156.1: gali ka jhatka (aisle transform) hataya — scroll ko bhari karta tha
 }
 
 // ---------- 🗂 v2.156.0: neeche racks ke naam (chips) — jis par khare hain wo roshan ----------

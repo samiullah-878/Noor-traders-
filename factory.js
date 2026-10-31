@@ -16,8 +16,8 @@
 //   ginti / 📥 maal aaya / 📤 maal diya = factoryMoves, naya item = cfg.local ('loc:<id>' — POS mein nahi), rate sirf factory (POS "lagao" band).
 //   Factory ka STOCK = app ka apna: har item ke waqia (ginti = itna hai · aaya + · diya − · batch: tayyar + / raw −) waqt ke hisaab se.
 //   cfg.posOn true = purana tareeqa (POS Adjustment, POS ginti, POS item). ⚙️ mein on / off (sirf malik).
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.156.0';
-import { smartSearch, fold } from './smart-search.js?v=2.156.0';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.156.1';
+import { smartSearch, fold } from './smart-search.js?v=2.156.1';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1724,7 +1724,7 @@ function phCtx() {
     cat: () => cfg?.cat || {}, saveCat: p => { cfg = { ...(cfg || {}), cat: { ...(cfg?.cat || {}), ...p } }; return cloud.setFactoryCfg({ cat: p }); },
     dlg, pdf: pdfFileOf, repaint: phChanged };
 }
-const phLoad = () => phMod || (phMod = import('./fac-photo.js?v=2.156.0').catch(e => { phMod = null; throw e; }));
+const phLoad = () => phMod || (phMod = import('./fac-photo.js?v=2.156.1').catch(e => { phMod = null; throw e; }));
 async function phOpen(id) { if (!phCan()) { notice('🔒 Tasveer ki ijazat nahi (malik: Settings → Mulazim)'); return; } watchCfg(); phWatch(); await ensureItems(); try { (await phLoad()).photoSheet(phCtx(), id); } catch (e) { notice('Tasveer nahi khuli: ' + (e?.message || e)); } }
 async function phCmds() { if (!isOwner()) { notice('AI commands sirf malik'); return; } watchCfg(); phWatch(); await ensureItems(); try { (await phLoad()).commandsDlg(phCtx()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
 async function phCat() { if (!phCan()) { notice('🔒 Rate list PDF ki ijazat nahi (malik: Settings → Mulazim)'); return; } watchCfg(); phWatch(); await ensureItems(); try { (await phLoad()).catalogOpen(phCtx()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
@@ -2009,7 +2009,7 @@ export const _fcTest = { mcCpp, mcOpen, get mc() { return mc; }, rateRows, items
   get ek() { return ek; }, ekCalc: () => ekCalc(), ekSelect, ekOn: () => ekOn(), ekView: () => ekView(), phSell: () => phSell(), phCtx: () => phCtx(), phIdx: () => phIdx, phThumb, phSize };
 
 // v2.103.48: 🤖 agent actions — factory
-import { agentRegister } from './agent.js?v=2.156.0';
+import { agentRegister } from './agent.js?v=2.156.1';
 agentRegister([
   { name: 'factory_batches', read: true, desc: 'Factory ke aaj ke (ya pichhle N din ke) batch: item, kitne batch, pcs, haal (POS mein / app / hold).', params: { type: 'OBJECT', properties: { days: { type: 'INTEGER' } } },
     run({ days }) { watch(); const from = Date.now() - Math.max(1, Math.min(60, Number(days) || 1)) * 864e5; return { list: batches.filter(b => (b.at || 0) >= from).slice(0, 40).map(b => ({ no: b.no, item: b.name || byId.get(String(b.itemId))?.name || '', batch: b.n, pcs: b.out, haal: b.status, kis_ne: b.byName || '', kab: new Date(b.at).toLocaleString('en-PK'), laagat: b.cost })) }; } },

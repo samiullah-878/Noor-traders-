@@ -300,7 +300,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px soli
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
 /* ---------- 🎬 v2.151.0 animations (malik: shutter · item uthana · tokri · rack se rack) ---------- */
-html:not(.lite) .bay .rack{transform:perspective(900px) rotateY(calc(var(--p,0) * -14deg)) scale(var(--s,1));opacity:var(--o,1);will-change:transform}
+html:not(.lite) .bay .rack{will-change:transform}   /* v2.156.1: transform JS seedha rack par likhta hai (depth) */
 html:not(.lite) .bay::after{background-position:0 0,calc(var(--p,0) * 90px) 0,0 0}
 .sign{transform-origin:50% -16px}
 .sign.swing{animation:swing 1s cubic-bezier(.3,.6,.4,1)}
@@ -344,21 +344,18 @@ html.lite .bay .rack{transform:none!important}
 
 /* ---------- 🏪 v2.156.0 (malik: "customer ko lage dukan ke andar hai" · 4 items fi shelf · 2 shelf zyada · neeche racks ke chips) ---------- */
 /* 🚶 galli: chhat ki tube lights + farsh (3D) chalne ke saath khisakte (--sx = scrollLeft) · qadam ka jhoola (--bob) */
-.ceil{position:absolute;left:0;right:0;top:0;height:16px;z-index:0;pointer-events:none;
-  background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,0)),
-    repeating-linear-gradient(90deg,transparent 0 70px,#ffffff 70px 176px,transparent 176px 250px) 0 4px/auto 5px repeat-x,
-    linear-gradient(180deg,#e2dccd,rgba(226,220,205,0));
-  background-position:0 0,calc(var(--sx,0) * -0.55px) 4px,0 0;filter:drop-shadow(0 0 5px rgba(255,255,236,.95))}
-.floor{position:absolute;left:-45%;right:-45%;bottom:-6px;height:118px;z-index:0;pointer-events:none;transform-origin:50% 100%;transform:perspective(220px) rotateX(64deg);
-  background:
-    linear-gradient(180deg,rgba(60,40,10,.22),rgba(60,40,10,0) 30%),
-    repeating-linear-gradient(90deg,transparent 0 62px,rgba(120,95,55,.32) 62px 64px),
-    repeating-linear-gradient(0deg,transparent 0 30px,rgba(120,95,55,.22) 30px 32px),
-    linear-gradient(180deg,var(--floor2),var(--floor1));
-  background-position:0 0,calc(var(--sx,0) * -1px) 0,0 0,0 0}
+.ceil{position:absolute;left:0;right:0;top:0;height:16px;z-index:0;pointer-events:none;overflow:hidden;background:linear-gradient(180deg,#e2dccd,rgba(226,220,205,0))}
+.ceil-t{position:absolute;left:0;top:2px;width:calc(100% + 500px);height:11px;will-change:transform;
+  background:repeating-linear-gradient(90deg,transparent 0 62px,rgba(255,255,236,.55) 62px 70px,#fff 70px 176px,rgba(255,255,236,.55) 176px 184px,transparent 184px 250px) 0 3px/auto 5px repeat-x,
+    repeating-linear-gradient(90deg,transparent 0 56px,rgba(255,255,230,.35) 56px 190px,transparent 190px 250px) 0 0/auto 11px repeat-x}
+.floor{position:absolute;left:-45%;right:-45%;bottom:-6px;height:118px;z-index:0;pointer-events:none;overflow:hidden;transform-origin:50% 100%;transform:perspective(220px) rotateX(64deg);background:linear-gradient(180deg,var(--floor2),var(--floor1))}
+.floor::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(60,40,10,.22),rgba(60,40,10,0) 30%)}
+.floor-t{position:absolute;left:0;top:0;bottom:0;width:calc(100% + 256px);will-change:transform;
+  background:repeating-linear-gradient(90deg,transparent 0 62px,rgba(120,95,55,.32) 62px 64px),repeating-linear-gradient(0deg,transparent 0 30px,rgba(120,95,55,.22) 30px 32px)}
 html:not(.lite) .bay::after{display:none}
-html:not(.lite) .aisle{translate:0 var(--bob,0px)}
+.bay{content-visibility:auto;contain-intrinsic-size:auto 420px auto 600px}
 html.lite .floor{transform:none;height:46px;bottom:0}
+html.lite .ceil-t,html.lite .floor-t{will-change:auto}
 /* 📐 tang shelf (6+ shelf) — patti, rate, + chhote */
 .bay.cmp{padding-top:10px}
 .bay.cmp .sign{margin:2px 0 6px;padding:4px 14px 5px}
@@ -372,8 +369,7 @@ html.lite .floor{transform:none;height:46px;bottom:0}
 .bay.cmp .pk span{font-size:9px;-webkit-line-clamp:3;padding:2px}
 .bay.cmp .pk.bt1{margin-top:8px}.bay.cmp .pk.bt1::before{top:-8px;height:9px}
 /* 📷 rack ke peeche asal rack ki tasveer (halki, dhundli — maal saaf nazar aaye) */
-.rk-bg{position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:inherit;background:center/cover no-repeat;opacity:0;transition:opacity .6s ease;filter:blur(1.4px) saturate(.92)}
-.rk-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,253,247,.6),rgba(255,253,247,.42))}
+.rk-bg{position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:inherit;background:center/cover no-repeat;opacity:0;transition:opacity .6s ease}
 .rk-bg.on{opacity:1}
 /* 🗂 neeche racks ke naam */
 .rkbar{position:fixed;left:0;right:0;bottom:calc(var(--cH) + var(--sab));height:var(--rbH);z-index:24;display:flex;align-items:center;gap:8px;padding:0 max(10px,var(--sar)) 0 max(10px,var(--sal));

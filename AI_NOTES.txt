@@ -6576,3 +6576,10 @@ Malik: website link Settings mein · har rack ke upar naam, neeche baqi racks ke
   🏪 Dukan ki maloomat: "Dukan khulti / band hoti hai" (time) + 🏪 Dukan ki asal tasveer (ph_shop). Likha hua form tasveer lagate waqt nahi mit-ta.
 - Website (dukan/): shelf par kam az kam 4 items, shelf = pehle + 2 (max 8; chhota rack pehle jitni shelf) · neeche #rkBar racks ke chips (roshan = jahan khare, tap = chal kar wahan) · 🧑‍💼 dukan wala (bani hui SVG): andar aate hi "Assalam o Alaikum! Kya chahiye?" + racks chips + 🔍 → chal kar rack tak "Lijiye, aa gaye" (AI nahi) · shutter ke peeche asal dukan ki tasveer, phir andar qadam (zoom) · rack ke peeche asal rack ki halki tasveer · farsh (3D) + chhat ki lights scroll ke saath, qadam ka jhoola · 📳 vibrate (uthana / tokri / shutter / rack) · 🔔 darwaze ki ghanti (awaaz on ho to) · 🌙 band waqt (Pakistan): darwaze par paigham + andar aadha shutter, order phir bhi (WhatsApp mein "dukan band waqt par order") · PC par do rack saath — chuna hua rack hi "yahan".
 - Rules wahi (2.79): ph_rk_* / ph_shop pehle wale ph_ qaide mein; info sirf malik. AI nahi.
+
+=== v2.156.1 (2026-10-31) — ⚡ Website aage / peeche lag theek ===
+- Malik: "jab hum aage peeche karte hain to lag aata hai".
+- Wajah: v2.156.0 mein har scroll frame par poori gali (aisleWrap) par --sx / --bob likhte the + scroll container par translate + chhat par CSS filter + rack tasveer par blur — 3000 items wali dukan mein har frame poori dukan dobara style (test: CPU ×4 par 2.8 sec fi frame).
+- Ab: sirf qareeb ke racks (±2) mein maal, door ke khali dhanche (±5 se door khali kar dete) + content-visibility · farsh / lights sirf apne chhote element ka transform (GPU) · rack ka 3D seedha rack par · scroll container ka jhatka hataya · rack ki tasveer ek dafa canvas se halki / dhundli (CSS blur nahi) · DOM sirf rack badalne par likha.
+- Test (3000 items, 160 racks, CPU ×4): ab 18 ms fi frame (~55 fps), pehle 2800 ms. Sab test ✓ (phone / PC / band dukan).
+- AI nahi. Rules wahi (2.79).
