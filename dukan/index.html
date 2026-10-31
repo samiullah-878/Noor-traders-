@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Manrope:wght@500;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@700&text=%D9%86%D9%88%D8%B1%20%D9%B9%D8%B1%DB%8C%DA%88%D8%B1%D8%B2&display=swap">
-<link rel="stylesheet" href="dukan.css?v=2.155.0">
+<link rel="stylesheet" href="dukan.css?v=2.156.0">
 </head>
 <body>
 <!-- 🏪 Andar: upar patti · racks ki gali · neeche counter -->
@@ -31,12 +31,23 @@
   <div class="walk" aria-hidden="true"><i id="walkBar"></i><b id="walkFeet">👣</b></div>
 </header>
 
-<main class="aisle-wrap">
+<main class="aisle-wrap" id="aisleWrap">
+  <div class="ceil" aria-hidden="true"></div>
+  <div class="floor" aria-hidden="true"></div>
   <button type="button" class="step prev" id="prevBtn" aria-label="Pichhla rack">‹</button>
   <div class="aisle" id="aisle" aria-label="Racks"></div>
   <button type="button" class="step next" id="nextBtn" aria-label="Agla rack">›</button>
   <p class="hint" id="hint" hidden>👉 Ungli se agla rack</p>
+  <!-- 🌙 v2.156.0: dukan band waqt — aadha shutter -->
+  <div class="closed-band" id="closedBand" hidden><span class="cb-sh" aria-hidden="true"></span><p><b>🌙 Dukan abhi band hai</b><small id="cbTxt">Order chhor dein — dukan khulte hi bhej denge</small></p></div>
 </main>
+
+<!-- 🗂 v2.156.0: neeche racks ke naam (chips) + 🧑‍💼 dukan wala -->
+<nav class="rkbar" id="rkBar" aria-label="Racks"><button type="button" class="h-ava" id="helpBtn" aria-label="Dukan wala — madad"></button><div class="rk-chips" id="rkChips"></div></nav>
+<div class="helper" id="helper" hidden role="dialog" aria-label="Dukan wala">
+  <div class="hp-card"><span class="hp-ava" aria-hidden="true"></span><div class="hp-tx"><b id="hpT">Assalam o Alaikum! 👋</b><small id="hpS">Kya chahiye? Main aap ko us rack tak le chalta hoon.</small></div><button type="button" class="hp-x" data-hp-close aria-label="Band karo">✕</button></div>
+  <div class="hp-chips" id="hpChips"></div>
+</div>
 
 <!-- 🧾 Counter (cart nahi — dukan ka counter + neeli tokri) -->
 <button type="button" class="counter" id="counterBar" aria-label="Counter kholo">
@@ -54,12 +65,13 @@
     <small id="dLine">Wholesale &amp; Retail</small>
     <span class="bulbs" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
   </div></div>
-  <div class="sh-wrap"><span class="drum" aria-hidden="true"></span>
+  <div class="sh-wrap"><div class="shop-ph" id="shopPh" aria-hidden="true"></div><span class="drum" aria-hidden="true"></span>
   <div class="shutter" id="shutter">
     <div class="sh-paint">
       <p class="hello">Assalam o Alaikum 👋</p>
       <p class="hello2">Andar tashreef laiye — racks par ghoomein, cheez uthayein, counter par parchi.</p>
       <button type="button" class="enter" id="enterBtn" disabled><span class="ar">⬆</span> <span id="enterTxt">Maal saja rahe hain…</span></button>
+      <p class="d-closed" id="dClosed" hidden></p>
       <p class="d-meta" id="dMeta"></p>
       <button type="button" class="snd-chip" id="sndDoor" aria-pressed="false">🔇 Awaaz band</button>
     </div>
@@ -136,6 +148,6 @@
 </div>
 
 <div class="oops" id="oops" hidden><p id="oopsTxt"></p><button type="button" id="retryBtn">🔄 Dobara koshish</button></div>
-<script type="module" src="dukan.js?v=2.155.0"></script>
+<script type="module" src="dukan.js?v=2.156.0"></script>
 </body>
 </html>

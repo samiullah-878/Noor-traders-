@@ -6,7 +6,11 @@
 //     info  = malik {name, line, wa, addr, time, map, on} · racks = app {order:[cat], cn:{cat:naam}, hc:{cat:1}, hide:{id:1}, ic:{id:cat}}
 //     phIdx = {m:{id:v}} · ph_<id> = {b: Bytes JPEG, v}  (tasveer ek dafa aa kar phone ke IndexedDB mein)
 //   AI NAHI. Order = WhatsApp link (muft) — koi server / payment nahi. Tokri sirf gahak ke phone mein (localStorage).
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.155.0';
+//   v2.156.0 (malik: "customer ko feel aaye ke dukan ke andar hai" · "har shelf par 4 items, 2 shelf zyada — racks kam" · "rack ke neeche baqi racks ke chips"):
+//     📷 asal tasveerein — ph_shop (darwaze ke peeche dukan) + ph_rk_<hash(rack)> (rack ke peeche) · phIdx.m.shop / m['rk_…'] (app 🗂 Racks / 🏪 maloomat se)
+//     🚶 farsh (3D) + chhat ki lights scroll ke saath (--sx), qadam ka jhoola (--bob) · 🧑‍💼 dukan wala (bani hui SVG) racks ke chips se le jata hai
+//     📳 halka vibrate · 🔔 darwaze ki ghanti (awaaz on ho to) · 🌙 info.open / info.close (Pakistan waqt) — band = aadha shutter, order phir bhi.
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.156.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -46,7 +50,19 @@ const SFX = {
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + 0.05); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.24); n.connect(f); f.connect(g); g.connect(a.destination); n.start(t); n.stop(t + 0.26); },
   print() { const a = ac(); if (!a) return; const t = a.currentTime; for (let k = 0; k < 9; k++) { const n = noiseSrc(a, 0.03), f = a.createBiquadFilter(), g = a.createGain(), tt = t + 0.35 + k * 0.075; f.type = 'bandpass'; f.frequency.value = 3200; g.gain.setValueAtTime(0.06, tt); g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.03); n.connect(f); f.connect(g); g.connect(a.destination); n.start(tt); n.stop(tt + 0.03); } }
 };
+SFX.bell = () => { const a = ac(); if (!a) return; const t = a.currentTime;   // v2.156.0: 🔔 darwaze ki ghanti (ding-dong)
+  [[659.25, 0], [523.25, 0.42]].forEach(([f, d]) => [[1, 0.2], [2.76, 0.05], [5.4, 0.02]].forEach(([m, v]) => { const o = a.createOscillator(), g = a.createGain(); o.type = 'sine'; o.frequency.value = f * m; g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(v, t + d + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 1.25 / m); o.connect(g); g.connect(a.destination); o.start(t + d); o.stop(t + d + 1.3); })); };
 const sfx = k => { try { SFX[k] && SFX[k](); } catch {} };
+const buzz = p => { try { if (!RM && navigator.vibrate) navigator.vibrate(p); } catch {} };   // v2.156.0: 📳 halka jhatka
+const rkPh = k => 'rk_' + hash(k).toString(36);   // v2.156.0: rack ki tasveer ka id (app web-dukan.js mein bhi BILKUL yahi)
+// 🧑‍💼 dukan wala — bani hui tasveer (asal banda nahi): neeli topi par sunehra NT, moonchh, muskurahat
+const AVA = '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="32" fill="#ffe7b3"/><path d="M8 64c2-12 12-19 24-19s22 7 24 19z" fill="#1b2f5c"/><rect x="27" y="37" width="10" height="10" rx="3" fill="#c98d5e"/><path d="M25.5 46.5l6.5 7 6.5-7" fill="none" stroke="#f2b632" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="32" cy="29" r="12.5" fill="#d9a074"/><circle cx="19.8" cy="30" r="2.6" fill="#c98d5e"/><circle cx="44.2" cy="30" r="2.6" fill="#c98d5e"/><path d="M19 25.5c0-9 6-14.5 13-14.5s13 5.5 13 14.5z" fill="#1b2f5c"/><path d="M17.5 25.6h29" stroke="#163b8f" stroke-width="4" stroke-linecap="round"/><circle cx="32" cy="18.6" r="3.4" fill="#f2b632"/><circle cx="27.4" cy="30.2" r="1.7" fill="#2a1d14"/><circle cx="36.6" cy="30.2" r="1.7" fill="#2a1d14"/><path d="M27.6 33.6c1.6-1 2.9-1 4.4 0 1.5-1 2.8-1 4.4 0" fill="none" stroke="#3a2a20" stroke-width="1.8" stroke-linecap="round"/><path d="M28 36.4c2.4 2.2 5.6 2.2 8 0" fill="none" stroke="#7a3b22" stroke-width="1.8" stroke-linecap="round"/></svg>';
+const b64url = b64 => { try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return URL.createObjectURL(new Blob([u], { type: 'image/jpeg' })); } catch { return 'data:image/jpeg;base64,' + b64; } };
+// 🌙 dukan khuli / band (Pakistan ka waqt) — info.open / info.close "HH:MM"
+const pkNow = () => { try { const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date()); const g = k => Number(p.find(x => x.type === k)?.value) || 0; return g('hour') * 60 + g('minute'); } catch { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); } };
+const hm = v => { const m = /^(\d{1,2}):(\d{2})$/.exec(String(v || '').trim()); return m ? Number(m[1]) * 60 + Number(m[2]) : -1; };
+const tl = v => { const t = hm(v); if (t < 0) return ''; const h = Math.floor(t / 60), m = t % 60; return `${h < 12 ? 'subah' : h < 16 ? 'dopahar' : h < 19 ? 'shaam' : 'raat'} ${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')}`; };
+function isClosed() { const o = hm(S.info.open), c = hm(S.info.close); if (o < 0 || c < 0 || o === c) return false; const n = pkNow(); return o < c ? !(n >= o && n < c) : !(n >= o || n < c); }
 function sndPaint() { [['sndBtn', SND ? '🔊' : '🔇'], ['sndDoor', SND ? '🔊 Awaaz chalu' : '🔇 Awaaz band']].forEach(([id, t]) => { const b = document.getElementById(id); if (b) { b.textContent = t; b.setAttribute('aria-pressed', String(SND)); } }); }
 const ss = { get(k) { try { return sessionStorage.getItem(k); } catch { return null; } }, set(k, v) { try { sessionStorage.setItem(k, v); } catch {} } };
 
@@ -88,8 +104,8 @@ async function cGet(k) { const db = await idb(); if (!db) return null; return ne
 async function cPut(k, v) { const db = await idb(); if (!db) return; try { db.transaction('ph', 'readwrite').objectStore('ph').put(v, k); } catch {} }
 
 // ---------- 🧠 haalat ----------
-const S = { racks: [], bays: [], items: new Map(), bayOf: new Map(), info: {}, ph: {}, at: 0, crate: ls.get('nt-dk-crate', {}) || {}, cur: 0, open: null, q: 1, dims: null, loadedAt: 0 };
-const PHURL = new Map();
+const S = { racks: [], bays: [], items: new Map(), bayOf: new Map(), info: {}, ph: {}, at: 0, crate: ls.get('nt-dk-crate', {}) || {}, cur: 0, open: null, q: 1, dims: null, loadedAt: 0, walkTo: -1, goal: -1 };
+const PHURL = new Map(), RBG = new Map();   // RBG: rack key -> rack ki asal tasveer (blob url)
 const phV = id => { const x = S.ph[id]; return x && typeof x === 'object' ? Number(x.v) || 0 : Number(x) || 0; };
 const saveCrate = () => ls.set('nt-dk-crate', S.crate);
 
@@ -123,8 +139,8 @@ function build(d) {
 function dims() {
   const a = $('aisle'), W = a.clientWidth || innerWidth, H = a.clientHeight || 600;
   const bw = W >= 1100 ? Math.floor(W / 2) : W;
-  const cols = Math.max(3, Math.min(7, Math.floor((bw - 76) / 104)));
-  const rows = Math.max(2, Math.min(6, Math.floor((H - 96) / 118)));
+  const cols = Math.max(4, Math.min(7, Math.floor((bw - 76) / 104)));   // v2.156.0: malik — har shelf par kam az kam 4
+  const rows = Math.min(8, Math.max(2, Math.min(6, Math.floor((H - 96) / 118))) + 2);   // v2.156.0: 2 shelf zyada (racks kam)
   return { bw, cols, rows, per: cols * rows };
 }
 
@@ -145,9 +161,10 @@ function itemHTML(it) {
 }
 function bayHTML(b, i, D) {
   const sh = [];
-  const rows = Math.min(D.rows, Math.max(3, Math.ceil(b.items.length / D.cols)));
+  const rows = Math.min(D.rows, Math.max(D.rows - 2, 3, Math.ceil(b.items.length / D.cols)));   // v2.156.0: chhota rack = pehle jitni shelf (maal bara na lage)
   for (let s = 0; s < rows; s++) sh.push(`<div class="shelf">${b.items.slice(s * D.cols, (s + 1) * D.cols).map(itemHTML).join('')}</div>`);
-  return `<section class="bay" data-bay="${i}" style="--rows:${rows};--cols:${D.cols};--bayW:${D.bw}px" aria-label="Rack ${b.rk.no}: ${esc(b.rk.name)}"><header class="sign"><span class="sk">Rack ${b.rk.no}</span><b>${esc(b.rk.name)}</b>${b.parts > 1 ? `<span class="sp">${b.p + 1}/${b.parts}</span>` : ''}</header><div class="rack">${sh.join('')}</div></section>`;
+  const bg = RBG.get(b.rk.key);
+  return `<section class="bay${D.rows >= 6 ? ' cmp' : ''}" data-bay="${i}" style="--rows:${rows};--cols:${D.cols};--bayW:${D.bw}px" aria-label="Rack ${b.rk.no}: ${esc(b.rk.name)}"><header class="sign"><span class="sk">Rack ${b.rk.no}</span><b>${esc(b.rk.name)}</b>${b.parts > 1 ? `<span class="sp">${b.p + 1}/${b.parts}</span>` : ''}</header><div class="rack"><div class="rk-bg${bg ? ' on' : ''}" data-rbg="${esc(b.rk.key)}"${bg ? ` style="background-image:url('${bg}')"` : ''}></div>${sh.join('')}</div></section>`;
 }
 function renderAisle(keepId) {
   const D = dims(); S.dims = D;
@@ -158,6 +175,7 @@ function renderAisle(keepId) {
   const a = $('aisle');
   a.innerHTML = bays.length ? bays.map((b, i) => bayHTML(b, i, D)).join('') : '<p class="empty-aisle">Abhi racks par maal nahi saja — thori der baad dobara dekhein.</p>';
   bayEls = [...a.querySelectorAll('.bay')];
+  paintRkBar();
   observe();
   if (keepId && S.bayOf.has(keepId)) go(S.bayOf.get(keepId), true);
   onScroll();
@@ -165,13 +183,13 @@ function renderAisle(keepId) {
 
 // ---------- 📷 tasveerein (sirf jo rack nazar aaye / qareeb ho) ----------
 let io = null, loadT = 0, loading = false;
-const want = new Set();
+const want = new Set(), wantBg = new Set();
 function observe() {
   try { io && io.disconnect(); } catch {}
   if (!('IntersectionObserver' in window)) { S.items.forEach(it => { if (phV(it.id)) want.add(it.id); }); loadPhotos(); return; }
   io = new IntersectionObserver(es => {
-    for (const e of es) if (e.isIntersecting) { const b = S.bays[Number(e.target.dataset.bay)]; if (b) b.items.forEach(it => { if (phV(it.id) && !PHURL.has(it.id)) want.add(it.id); }); }
-    clearTimeout(loadT); loadT = setTimeout(loadPhotos, 50);
+    for (const e of es) if (e.isIntersecting) { const b = S.bays[Number(e.target.dataset.bay)]; if (b) { b.items.forEach(it => { if (phV(it.id) && !PHURL.has(it.id)) want.add(it.id); }); if (phV(rkPh(b.rk.key)) && !RBG.has(b.rk.key)) wantBg.add(b.rk.key); } }
+    clearTimeout(loadT); loadT = setTimeout(() => { loadPhotos(); loadBgs(); }, 50);
   }, { root: $('aisle'), rootMargin: '0px 120% 0px 120%' });
   document.querySelectorAll('.bay').forEach(el => io.observe(el));
 }
@@ -190,6 +208,24 @@ async function loadPhotos() {
     }
   } finally { loading = false; }
 }
+// v2.156.0: 📷 rack ki asal tasveer (rack ke peeche) + dukan ki tasveer (shutter ke peeche) — ek dafa aa kar IndexedDB
+let bgLoading = false;
+async function bigPhoto(id) {   // id = 'shop' ya rkPh(key) -> blob url
+  const v = phV(id); if (!v) return '';
+  const c = await cGet('big:' + id); if (c && c.v === v && c.b64) return b64url(c.b64);
+  const got = await batchGet([phDoc(id)]), b = got[phDoc(id)]?.b?.b64; if (!b) return '';
+  cPut('big:' + id, { v, b64: b }); return b64url(b);
+}
+async function loadBgs() {
+  if (bgLoading) return; bgLoading = true;
+  try {
+    while (wantBg.size) {
+      const k = [...wantBg][0]; wantBg.delete(k); if (RBG.has(k)) continue;
+      try { const url = await bigPhoto(rkPh(k)); if (!url) continue; RBG.set(k, url); document.querySelectorAll(`.rk-bg[data-rbg="${CSS.escape(k)}"]`).forEach(el => { el.style.backgroundImage = `url('${url}')`; el.classList.add('on'); }); } catch (e) { console.warn('rack tasveer', e); }
+    }
+  } finally { bgLoading = false; }
+}
+async function loadShop() { try { const url = await bigPhoto('shop'); const el = $('shopPh'); if (url && el) { el.style.backgroundImage = `url('${url}')`; el.classList.add('has'); } } catch {} }
 function setPhoto(id, url) {
   PHURL.set(id, url);
   document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"] .it-box`).forEach(b => { b.innerHTML = `<img src="${url}" alt="">`; });
@@ -200,19 +236,22 @@ function setPhoto(id, url) {
 // ---------- 🚶 chalna ----------
 function onScroll() {
   const a = $('aisle'), bw = S.dims?.bw || a.clientWidth || 1;
-  const i = Math.min(Math.max(0, S.bays.length - 1), Math.max(0, Math.round(a.scrollLeft / bw)));
+  let i = Math.min(Math.max(0, S.bays.length - 1), Math.max(0, Math.round(a.scrollLeft / bw)));
+  const vis = Math.max(1, Math.round(a.clientWidth / bw)); if (S.goal >= i && S.goal < i + vis) i = S.goal;   // v2.156.0: PC par do rack saath — jis rack ko chuna wahi "yahan"
   S.cur = i;
   const b = S.bays[i];
   $('where').textContent = b ? `Rack ${b.rk.no}/${S.racks.length} · ${b.rk.name}${b.parts > 1 ? ` (${b.p + 1}/${b.parts})` : ''}` : 'Noor Traders';
   const w = S.bays.length ? Math.round((i + 1) / S.bays.length * 100) + '%' : '0';
   $('walkBar').style.width = w; $('walkFeet').style.setProperty('--w', w);
+  if (!LITE) { const wr = $('aisleWrap'), x = a.scrollLeft; wr.style.setProperty('--sx', String(Math.round(x))); wr.style.setProperty('--bob', (-Math.abs(Math.sin(x / bw * Math.PI * 2)) * 3).toFixed(2) + 'px'); }   // v2.156.0: 🚶 farsh / lights / qadam
+  if (b && b.rk !== curRk) { curRk = b.rk; markRk(); }
   $('prevBtn').disabled = a.scrollLeft < 4;
   $('nextBtn').disabled = a.scrollLeft + a.clientWidth >= a.scrollWidth - 4;
   depth();
-  if (i !== arrived) { clearTimeout(arriveT); arriveT = setTimeout(() => { if (S.cur !== i || i === arrived) return; const first = arrived < 0; arrived = i; if (first || !doorGone) return; replay(bayEls[i]?.querySelector('.sign'), 'swing'); replay($('walkFeet'), 'bob'); sfx('step'); }, 140); }
+  if (i !== arrived) { clearTimeout(arriveT); arriveT = setTimeout(() => { if (S.cur !== i || i === arrived) return; const first = arrived < 0; arrived = i; if (first || !doorGone) return; replay(bayEls[i]?.querySelector('.sign'), 'swing'); replay($('walkFeet'), 'bob'); sfx('step'); buzz(6); if (S.walkTo === i) { S.walkTo = -1; hpArrive(); } }, 140); }
 }
 // 🚶 rack se rack: racks halka sa mud kar (3D) aage, farsh ki tiles alag raftaar (sirf qareeb ke 3–4 racks)
-let bayEls = [], arrived = -1, arriveT = 0, doorGone = false;
+let bayEls = [], arrived = -1, arriveT = 0, doorGone = false, curRk = null;
 function depth() {
   if (LITE || !bayEls.length) return;
   const a = $('aisle'), bw = S.dims?.bw || a.clientWidth || 1, x = a.scrollLeft, mid = x + a.clientWidth / 2;
@@ -224,9 +263,45 @@ function depth() {
 }
 function go(i, now) {
   const a = $('aisle'), bw = S.dims?.bw || a.clientWidth;
-  i = Math.max(0, Math.min(S.bays.length - 1, i));
+  i = Math.max(0, Math.min(S.bays.length - 1, i)); S.goal = i;
   if (now) { a.style.scrollBehavior = 'auto'; a.scrollLeft = i * bw; a.style.scrollBehavior = ''; } else { a.scrollTo({ left: i * bw, behavior: 'smooth' }); if (!LITE) replay(a, 'bob'); }
 }
+
+// ---------- 🗂 v2.156.0: neeche racks ke naam (chips) — jis par khare hain wo roshan ----------
+function paintRkBar() {
+  const box = $('rkChips'); if (!box) return;
+  box.innerHTML = S.racks.map((rk, k) => `<button type="button" class="rkc" data-rk="${k}"><i>${rk.no}</i>${esc(rk.name)}</button>`).join('');
+  curRk = null; markRk();
+}
+function markRk() {
+  const box = $('rkChips'); if (!box) return;
+  const k = curRk ? S.racks.indexOf(curRk) : -1;
+  box.querySelectorAll('.rkc').forEach((el, j) => el.classList.toggle('cur', j === k));
+  const el = box.children[k]; if (el) box.scrollTo({ left: el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2, behavior: LITE ? 'auto' : 'smooth' });
+}
+function goRack(k, why) {
+  const rk = S.racks[k]; if (!rk || !rk.items.length) return;
+  const i = S.bayOf.get(rk.items[0].id) ?? 0;
+  if (why === 'help') S.walkTo = i;
+  if (i === S.cur) { if (why === 'help') { S.walkTo = -1; hpArrive(); } replay(bayEls[i]?.querySelector('.sign'), 'swing'); return; }
+  go(i); buzz(8);
+}
+// ---------- 🧑‍💼 v2.156.0: dukan wala (madadgar) — "Kya chahiye?" → rack tak le jata hai (AI nahi, sirf racks ke naam) ----------
+function openHelper(auto) {
+  const h = $('helper'); if (!h || !S.racks.length) return;
+  $('hpT').textContent = auto ? 'Assalam o Alaikum! 👋' : 'Ji, farmaiye 🙂';
+  $('hpS').textContent = isClosed() ? 'Dukan abhi band hai, magar aap order chhor sakte hain — khulte hi bhej denge. Kya chahiye?' : 'Kya chahiye? Rack chunein — main aap ko wahan le chalta hoon. 👉 Ungli se bhi agla rack dekh sakte hain.';
+  $('hpChips').innerHTML = '<button type="button" class="hp-alt" data-hp-find="1">🔍 Naam se dhoondo</button>' + S.racks.map((rk, k) => `<button type="button" data-hp-rk="${k}"><i>${rk.no}</i>${esc(rk.name)}</button>`).join('');
+  h.hidden = false; replay(h.querySelector('.hp-ava'), 'wave'); buzz(10);
+}
+function closeHelper() { const h = $('helper'); if (h) h.hidden = true; }
+function hpWalk(k) {
+  const rk = S.racks[k]; if (!rk) return;
+  $('hpT').textContent = 'Chaliye! 👣'; $('hpS').textContent = `Rack ${rk.no} · ${rk.name} — ye raha.`;
+  $('hpChips').innerHTML = '';
+  goRack(k, 'help');
+}
+function hpArrive() { const h = $('helper'); if (!h || h.hidden) return; $('hpT').textContent = 'Lijiye, aa gaye 🙂'; replay(h.querySelector('.hp-ava'), 'wave'); setTimeout(closeHelper, 1600); }
 
 // ---------- 🧺 tokri (counter par) ----------
 const lines = () => Object.entries(S.crate).map(([id, q]) => ({ it: S.items.get(id), q: Number(q) || 0 })).filter(x => x.it && x.q > 0);
@@ -279,7 +354,7 @@ function addToCrate(id, q, el) {
   setQty(id, (Number(S.crate[id]) || 0) + q);
   flyFrom(el, it, q);
   document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"] .plus`).forEach(p => replay(p, 'pop'));
-  try { navigator.vibrate && navigator.vibrate(12); } catch {}
+  buzz(14);
 }
 
 // ---------- 🪟 khirkiyan + phone ka back ----------
@@ -342,7 +417,7 @@ function paintCounter() {
   $('sendBtn').disabled = !L.length || !wa;
   const note = $('sendNote');
   note.classList.toggle('bad', !wa);
-  note.textContent = !wa ? 'Dukan ka WhatsApp number abhi nahi laga — dukan par rabta karein.' : (L.length ? 'WhatsApp khulega, parchi likhi hogi — bas "Send" dabayein.' : '');
+  note.textContent = !wa ? 'Dukan ka WhatsApp number abhi nahi laga — dukan par rabta karein.' : (L.length ? (isClosed() ? `🌙 Dukan abhi band hai — order bhej dein, ${tl(S.info.open) ? tl(S.info.open) + ' ' : ''}khulte hi bhej denge. ` : '') + 'WhatsApp khulega, parchi likhi hogi — bas "Send" dabayein.' : '');
   const bits = [];
   if (S.at) bits.push('Rates taza: ' + fmtNow(S.at));
   if (S.info.time) bits.push('🕘 ' + S.info.time);
@@ -384,6 +459,7 @@ function sendOrder(e) {
   t.push('──────────', `*Kul: ${rs(tot)}* (${L.length} ${L.length === 1 ? 'cheez' : 'cheezein'})`, '', `Naam: ${w.name}`);
   if (w.phone) t.push(`Mobile: ${w.phone}`);
   t.push(w.how === 'home' ? `🛵 Ghar bhejein — Pata: ${w.addr}` : '🏪 Khud dukan se le jaunga');
+  if (isClosed()) t.push('🌙 (Dukan band waqt par order — khulne par)');
   note.classList.remove('bad'); note.textContent = '✅ WhatsApp khul raha hai…';
   location.href = `https://wa.me/${wa}?text=${encodeURIComponent(t.join('\n'))}`;
 }
@@ -426,24 +502,34 @@ function paintDoor() {
   if (I.addr) b.push(`<span>📍 ${esc(I.addr)}</span>`);
   if (I.wa) b.push(`<span>📞 ${esc(I.wa)}</span>`);
   $('dMeta').innerHTML = b.join('');
-  const off = I.on === false;
+  const off = I.on === false, cl = !off && isClosed();
   $('enterBtn').disabled = off;
-  $('enterTxt').textContent = off ? 'Online dukan abhi band hai' : 'Shutter uthayein';
-  $('board').classList.add('lit');   // 💡 board ke bulb ek ek kar ke jalte hain
+  $('enterTxt').textContent = off ? 'Online dukan abhi band hai' : cl ? 'Andar aayein (order chhor dein)' : 'Shutter uthayein';
+  $('dClosed').hidden = !cl; if (cl) $('dClosed').textContent = `🌙 Dukan abhi band hai — order chhor dein, ${tl(I.open) ? tl(I.open) + ' baje ' : ''}khulte hi bhej denge.`;
+  $('board').classList.add('lit'); $('board').classList.toggle('night', cl);   // 💡 board ke bulb ek ek kar ke jalte hain
+  paintClosed();
+}
+function paintClosed() {   // 🌙 andar: upar aadha shutter
+  const cl = S.info.on !== false && isClosed();
+  $('closedBand').hidden = !cl; $('aisleWrap').classList.toggle('closed', cl);
+  if (cl) $('cbTxt').textContent = `Order chhor dein — ${tl(S.info.open) ? tl(S.info.open) + ' baje ' : ''}khulte hi bhej denge`;
 }
 function enter() {
   const d = $('door'); if (d.classList.contains('up')) return;
-  d.classList.add('up'); ss.set('nt-dk-in', '1'); sfx('shutter');
+  d.classList.add('up'); ss.set('nt-dk-in', '1'); sfx('shutter'); buzz([18, 70, 18]);
   const sh = $('shutter'), board = $('board'), top = d.querySelector('.door-top');
-  const finish = () => { if (doorGone) return; doorGone = true; d.classList.add('gone'); lightsOn(); if (!ss.get('nt-dk-hint') && S.bays.length > 1) { ss.set('nt-dk-hint', '1'); $('hint').hidden = false; setTimeout(() => { $('hint').hidden = true; }, 3600); } };
+  const finish = () => { if (doorGone) return; doorGone = true; d.classList.add('gone'); lightsOn(); sfx('bell'); welcome(); };
   if (RM) { finish(); return; }
   // ① jhatka · ② drum mein lipat kar upar · ③ board upar ghayab
   const j = anim(sh, [{ transform: 'translateY(0)' }, { transform: 'translateY(-16px)' }, { transform: 'translateY(-5px)' }, { transform: 'translateY(-12px)' }], { duration: 300, easing: 'ease-out', fill: 'forwards' });
-  const roll = () => { const r = anim(sh, [{ transform: 'translateY(-12px)' }, { transform: 'translateY(-101%)' }], { duration: LITE ? 650 : 1200, easing: 'cubic-bezier(.45,.05,.45,1)', fill: 'forwards' }); if (r) r.onfinish = finish; else finish(); };
+  const shop = $('shopPh'), walkIn = () => { if (!shop.classList.contains('has') || LITE) { finish(); return; } const w = anim(shop, [{ transform: 'none', opacity: 1, filter: 'none' }, { transform: 'scale(1.45)', opacity: 0, filter: 'blur(3px)' }], { duration: 950, easing: 'cubic-bezier(.5,0,.75,.4)', fill: 'forwards' }); if (w) w.onfinish = finish; else finish(); };   // v2.156.0: asal dukan mein qadam
+  const roll = () => { const r = anim(sh, [{ transform: 'translateY(-12px)' }, { transform: 'translateY(-101%)' }], { duration: LITE ? 650 : 1200, easing: 'cubic-bezier(.45,.05,.45,1)', fill: 'forwards' }); if (r) r.onfinish = () => setTimeout(walkIn, shop.classList.contains('has') ? 380 : 0); else finish(); };
   if (j) j.onfinish = roll; else roll();
   anim(top, [{ transform: 'none', opacity: 1 }, { transform: 'translateY(-110%)', opacity: 0 }], { duration: 520, delay: LITE ? 400 : 760, easing: 'ease-in', fill: 'forwards' });
-  setTimeout(finish, 2200);
+  setTimeout(finish, $('shopPh').classList.contains('has') ? 3400 : 2200);
 }
+// 👋 andar aate hi (har session ek dafa) dukan wala salaam karta hai — pehle wala "👉 Ungli se agla rack" ab isi ke andar
+function welcome() { if (ss.get('nt-dk-help') || !S.racks.length) return; ss.set('nt-dk-help', '1'); setTimeout(() => { if (!OV.length) openHelper(true); }, RM || LITE ? 300 : 1500); }
 // 💡 andar ki batti: tube light do teen jhapak kar roshan, racks neeche se ubhar kar
 function lightsOn() {
   const L = $('lights');
@@ -466,7 +552,7 @@ async function load(again) {
   try {
     const d = await batchGet(['cat', 'info', 'racks', 'phIdx']);
     if (!d.cat) throw Object.assign(Error('nocat'), { code: 'nocat' });
-    build(d); renderAisle(keep); paintCrate(); paintDoor();
+    build(d); renderAisle(keep); paintCrate(); paintDoor(); if (phV('shop')) loadShop();
     S.loadedAt = Date.now();
     if (!again && ss.get('nt-dk-in') && S.info.on !== false) { $('door').classList.add('up', 'gone'); $('lights').classList.add('off'); doorGone = true; }
   } catch (e) {
@@ -480,9 +566,10 @@ async function load(again) {
 document.addEventListener('click', e => {
   const t = e.target;
   const it = t.closest('.it');
+  if (!t.closest('#helper') && !t.closest('#helpBtn') && !t.closest('[data-rk]') && $('helper') && !$('helper').hidden && S.walkTo < 0) closeHelper();
   if (it && t.closest('#aisle')) {
     if (t.closest('[data-plus]')) addToCrate(it.dataset.id, 1, it.querySelector('img,.pk'));
-    else { replay(it, 'lift'); replay(it.querySelector('.tag'), 'wig'); sfx('pick'); const el = it; setTimeout(() => openSheet(el.dataset.id, el), LITE || RM ? 0 : 150); }
+    else { replay(it, 'lift'); replay(it.querySelector('.tag'), 'wig'); sfx('pick'); buzz(8); const el = it; setTimeout(() => openSheet(el.dataset.id, el), LITE || RM ? 0 : 150); }
     return;
   }
   if (t.closest('[data-close]')) { closeOv('sheet'); return; }
@@ -511,11 +598,17 @@ document.addEventListener('click', e => {
   if (t.closest('#enterBtn')) { enter(); return; }
   if (t.closest('#sndBtn') || t.closest('#sndDoor')) { SND = !SND; ls.set('nt-dk-snd', SND); sndPaint(); if (SND) sfx('pick'); return; }
   if (t.closest('#retryBtn')) { load(); return; }
+  const rc = t.closest('[data-rk]'); if (rc) { closeHelper(); goRack(Number(rc.dataset.rk)); return; }   // v2.156.0: 🗂 neeche ka rack chip
+  if (t.closest('#helpBtn')) { if ($('helper').hidden) openHelper(false); else closeHelper(); return; }
+  if (t.closest('[data-hp-close]')) { closeHelper(); return; }
+  const hr = t.closest('[data-hp-rk]'); if (hr) { hpWalk(Number(hr.dataset.hpRk)); return; }
+  if (t.closest('[data-hp-find]')) { closeHelper(); $('find').hidden = false; openOv('find'); findPaint(); setTimeout(() => $('findQ').focus(), 30); return; }
 });
 $('who').addEventListener('change', e => { if (e.target.name === 'how') $('addrL').hidden = e.target.value !== 'home'; });
 $('who').addEventListener('submit', sendOrder);
 $('findQ').addEventListener('input', () => { clearTimeout(findPaint.t); findPaint.t = setTimeout(findPaint, 90); });
 $('aisle').addEventListener('scroll', () => { cancelAnimationFrame(onScroll.r); onScroll.r = requestAnimationFrame(onScroll); }, { passive: true });
+['pointerdown', 'wheel'].forEach(k => $('aisle').addEventListener(k, () => { S.goal = -1; }, { passive: true }));   // ungli / pahiya = khud chal raha hai
 addEventListener('keydown', e => {
   if (e.key === 'Escape' && OV.length) { closeOv(OV[OV.length - 1]); return; }
   if (OV.length || /input|textarea/i.test(e.target.tagName)) return;
@@ -525,4 +618,6 @@ let rzT = 0;
 addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { const D = dims(), o = S.dims; if (!o || D.bw !== o.bw || D.cols !== o.cols || D.rows !== o.rows) renderAisle(S.bays[S.cur]?.items?.[0]?.id); }, 180); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.loadedAt && Date.now() - S.loadedAt > 15 * 60e3) load(true); });
 
+document.querySelectorAll('#helpBtn,.hp-ava').forEach(el => { el.innerHTML = AVA; });   // v2.156.0
+setInterval(() => { if (S.loadedAt) { paintClosed(); if (!doorGone) paintDoor(); } }, 60000);   // 🌙 waqt guzre to band / khuli
 load();

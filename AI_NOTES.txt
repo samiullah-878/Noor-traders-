@@ -6567,3 +6567,12 @@ Malik: "jo naam ikatthe hain un ko ikattha rank-wise karo" → plan → OK. lark
 - App (Bills chips): naya bill / naya post = chip par 2.4 s sunehri chamak (.nb-new, dobara paint par --nbd se jari) · ⋮ 🔔 "Awaaz: ON/band" (sirf is device, shuru band, CAP sale.bsnd) — naya un-posted bill aaye to halki ding · ⋮ mein "⏱ Raftar: PC jaanch har ½ sec · parha 0.1s · bheja ~0.3s · yahan aakhri hh:mm:ss".
 - Net par depend: aam taur par ~1 sec, kamzor net par 2-3 sec. Pakka LAN wala raasta (local server) malik ne 24 Oct ko roka hua hai.
 - AI nahi. Rules tabdeel nahi (2.79). Khata / paisa par koi asar nahi.
+
+=== v2.156.0 (2026-10-31) — 🏪 Online Dukan: "andar hone ka ehsaas" + rack bara + kai items ek saath ===
+Malik: website link Settings mein · har rack ke upar naam, neeche baqi racks ke chips · list mein kai items jaldi rack-wise · rack par 4 items + 2 shelf zyada (racks kam) · "customer ko feel aaye ke dukan ke andar hai". Plan OK.
+- App Settings: "🏪 Online Dukan" — website link (row = kholo) + chips 🌐 Kholo · 🔗 Bhejo (WhatsApp wa.me) · 📋 Copy (owner ya CAP v:web).
+- App Online Dukan (web-dukan.js): ⋮ "☑ Items chuno" → har item ☐ (tap), "☑ Sab N" (search / filter wale), "🗂 N → Rack" (rack chips / ＋ Naya rack / ↺ POS wala) = EK saveWebRacks (racks.ic), har item ⏳ → ✅ / ✕. Back / ✕ Band = mode band. ⋮ mein 📋 Link copy.
+  🗂 Racks ki tarteeb: har rack ka 📷 (🖼 = lagi hai) = rack ki ASAL tasveer (poori photo ≤1100px JPEG) → ph_rk_<hash36(rack)> + phIdx.m. Photo-se-items mein "🗂 Rack ke peeche" chip.
+  🏪 Dukan ki maloomat: "Dukan khulti / band hoti hai" (time) + 🏪 Dukan ki asal tasveer (ph_shop). Likha hua form tasveer lagate waqt nahi mit-ta.
+- Website (dukan/): shelf par kam az kam 4 items, shelf = pehle + 2 (max 8; chhota rack pehle jitni shelf) · neeche #rkBar racks ke chips (roshan = jahan khare, tap = chal kar wahan) · 🧑‍💼 dukan wala (bani hui SVG): andar aate hi "Assalam o Alaikum! Kya chahiye?" + racks chips + 🔍 → chal kar rack tak "Lijiye, aa gaye" (AI nahi) · shutter ke peeche asal dukan ki tasveer, phir andar qadam (zoom) · rack ke peeche asal rack ki halki tasveer · farsh (3D) + chhat ki lights scroll ke saath, qadam ka jhoola · 📳 vibrate (uthana / tokri / shutter / rack) · 🔔 darwaze ki ghanti (awaaz on ho to) · 🌙 band waqt (Pakistan): darwaze par paigham + andar aadha shutter, order phir bhi (WhatsApp mein "dukan band waqt par order") · PC par do rack saath — chuna hua rack hi "yahan".
+- Rules wahi (2.79): ph_rk_* / ph_shop pehle wale ph_ qaide mein; info sirf malik. AI nahi.
