@@ -6797,6 +6797,17 @@ html body #wdDlg .wd-bgc.has{border-color:#a8dcb9!important;background:linear-gr
 #wdDlg .wd-shopt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 #wdDlg .wd-shopt b{font-size:13.5px;color:#1b2f5c}#wdDlg .wd-shopt small{font-size:12px;color:#5b6880}
 #wdDlg .wd-shop .wd-chip{width:38px;padding:0;justify-content:center}
+/* v2.157.0: 🤖 racks khud banao — AI ka mashwara (preview) */
+#wdDlg .wd-ail{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr));gap:7px}
+html body #wdDlg .wd-ai{display:grid;grid-template-columns:30px minmax(0,1fr);gap:9px;align-items:start;width:100%;padding:9px 10px;border-radius:14px;border:1.5px solid #e1e6ef!important;background:#fff!important;color:#18212f!important;text-align:left;box-shadow:none!important;cursor:pointer}
+html body #wdDlg .wd-ai.open{border-color:#2d55b0!important;background:linear-gradient(180deg,#f7f9ff,#eef3fd)!important}
+html body #wdDlg .wd-ai.mut{border-style:dashed!important;background:#fffaf0!important}
+#wdDlg .wd-ai .wd-no{margin-top:1px}
+#wdDlg .wd-ait{min-width:0;display:flex;flex-direction:column;gap:3px}
+#wdDlg .wd-ait b{font-size:14px;font-weight:800;color:#1b2f5c}
+#wdDlg .wd-ait b em{font-style:normal;display:inline-block;margin-left:4px;padding:0 7px;border-radius:999px;background:#e9eef7;color:#33415a;font-size:12px}
+#wdDlg .wd-ait small{font-size:12px;color:#5b6880;line-height:1.35;overflow-wrap:anywhere}
+#wdDlg .wd-ait .wd-aim{color:#9a6200;font-weight:700}
 /* v2.149.0: ✓ Check + 📌 Post ek click — upar ki patti (⏳ update → ⏳ post → ✅ / ✕) + ↩ Unpost */
 html body .pp-flow{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:8px 8px 8px 14px;border-radius:14px;border:1.5px solid #c9d6ee!important;background:linear-gradient(180deg,#f5f8ff,#e9effb)!important;color:#1b2f5c!important;box-shadow:0 4px 14px -10px rgba(27,47,92,.6)}
 html body .pp-flow.posted,html body .pp-flow.unposted{border-color:#a8dcb9!important;background:linear-gradient(180deg,#f2fbf5,#e3f5ea)!important;color:#145c33!important}

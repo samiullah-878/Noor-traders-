@@ -10,7 +10,7 @@
 //     📷 asal tasveerein — ph_shop (darwaze ke peeche dukan) + ph_rk_<hash(rack)> (rack ke peeche) · phIdx.m.shop / m['rk_…'] (app 🗂 Racks / 🏪 maloomat se)
 //     🚶 farsh (3D) + chhat ki lights scroll ke saath (--sx), qadam ka jhoola (--bob) · 🧑‍💼 dukan wala (bani hui SVG) racks ke chips se le jata hai
 //     📳 halka vibrate · 🔔 darwaze ki ghanti (awaaz on ho to) · 🌙 info.open / info.close (Pakistan waqt) — band = aadha shutter, order phir bhi.
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.156.1';
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.157.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

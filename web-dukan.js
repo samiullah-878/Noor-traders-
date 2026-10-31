@@ -8,6 +8,8 @@
 //   v2.156.0: ☑ KAI ITEMS EK SAATH RACK MEIN (⋮ "☑ Items chuno" → ☐ tap / ☑ Sab → "🗂 N → Rack" — sirf racks.ic, ek save) ·
 //     📷 RACK KI ASAL TASVEER (🗂 Racks ki tarteeb ka 📷, ya photo-se-items mein "🗂 Rack ke peeche") = ph_<rkPh(rack)> + phIdx.m ·
 //     🏪 DUKAN KI TASVEER (shutter ke peeche) = ph_shop · khulne / band hone ka waqt info.open / info.close (website par 🌙 band).
+//   v2.157.0: 🤖 RACKS KHUD BANAO (AI — Gemini, malik ki key): POS mein category khali (sab "Mutafarriq") — AI har item ka naam parh kar AIR
+//     ki list se rack chunti hai (sirf jin ka rack haath se nahi laga) → PREVIEW → malik ka ✅ Lagao = ek saveWebRacks (ic + order). Ijazat ke baghair kuch nahi.
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -26,7 +28,7 @@ let un = null;  // Firestore listeners
 const TH = new Map();   // id -> {v, url} chhoti tasveer (phone ki memory)
 
 function fresh() {
-  return { cat: {}, info: {}, racks: { order: [], cn: {}, hc: {}, hide: {}, ic: {} }, ph: {}, got: {}, q: '', ck: pref.ck || '', f: pref.f || 'all', lim: 120, view: 'list', busy: new Set(), ok: new Set(), err: new Map(), crop: null, pq: '', pck: '', arm: '', act: '', rkSt: '', infoSt: '', sel: null, lastF: [], rkIds: new Set(), rkWait: new Set() };
+  return { cat: {}, info: {}, racks: { order: [], cn: {}, hc: {}, hide: {}, ic: {} }, ph: {}, got: {}, q: '', ck: pref.ck || '', f: pref.f || 'all', lim: 120, view: 'list', busy: new Set(), ok: new Set(), err: new Map(), crop: null, pq: '', pck: '', arm: '', act: '', rkSt: '', infoSt: '', sel: null, ai: null, aiOpen: '', lastF: [], rkIds: new Set(), rkWait: new Set() };
 }
 
 // ---------- 📦 items (POS stock → website wali list) ----------
@@ -97,7 +99,7 @@ export function webClose() {
   if (!$('wdSheet').hidden) { sheetClose(); return true; }
   if (W.sel && W.view === 'list') { W.sel = null; paint(); return true; }   // v2.156.0: back = chunne ka mode band
   if (W.view === 'pick') { W.view = 'crop'; paint(); return true; }
-  if (W.view !== 'list') { W.view = 'list'; W.crop = null; paint(); return true; }
+  if (W.view !== 'list') { if (W.ai) W.ai.run = false; W.ai = null; W.view = 'list'; W.crop = null; paint(); return true; }
   try { d.close(); } catch { d.removeAttribute('open'); }
   if (un) { try { un(); } catch {} un = null; }
   clearTimeout(wsT); W = null;
@@ -111,7 +113,8 @@ function paintSoon() { clearTimeout(psT); psT = setTimeout(paint, 60); }
 function paint() {
   if (!W || !$('wdDlg')) return;
   const v = W.view;
-  $('wdT').textContent = v === 'crop' ? '✂️ Photo se items' : v === 'pick' ? '🔎 Ye kaun sa item?' : v === 'racks' ? '🗂 Racks ki tarteeb' : v === 'info' ? '🏪 Dukan ki maloomat' : '🏪 Online Dukan';
+  $('wdT').textContent = v === 'crop' ? '✂️ Photo se items' : v === 'pick' ? '🔎 Ye kaun sa item?' : v === 'racks' ? '🗂 Racks ki tarteeb' : v === 'info' ? '🏪 Dukan ki maloomat' : v === 'ai' ? '🤖 Racks khud banao' : '🏪 Online Dukan';
+  if (v === 'ai') return paintAi();
   if (v === 'crop') return paintCrop();
   if (v === 'pick') return paintPick();
   if (v === 'racks') return paintRacks();
@@ -180,7 +183,7 @@ function menuHTML() {
 <h3>☑ Kai items ek saath</h3><div class="wd-chips">${ch(!!W.sel, 'data-wd="sel"', W.sel ? '☑ Chunne ka mode ON — band karo' : '☑ Items chuno → ek saath rack mein')}</div>
 <h3>🗂 Rack</h3><div class="wd-chips">${ch(!W.ck, 'data-ck=""', 'Sab racks')}${rk.map((r, i) => ch(W.ck === r.k, `data-ck="${esc(r.k)}"`, `${r.off ? '🙈 ' : (i + 1) + '. '}${esc(r.name)} <small>${r.n}</small>`)).join('')}</div>
 <h3>🔎 Dikhao</h3><div class="wd-chips">${[['all', 'Sab'], ['nopic', '📷 Bina tasveer'], ['pic', '✅ Tasveer wale'], ['hid', '🙈 Chhupe']].map(([k, t]) => ch(W.f === k, `data-f="${k}"`, t)).join('')}</div>
-<h3>⚙️ Tarteeb</h3><div class="wd-chips">${ch(0, 'data-wd="racks"', '🗂 Racks ki tarteeb')}${own ? ch(0, 'data-wd="info"', '🏪 Dukan ki maloomat') + ch(0, 'data-wd="pub"', '🔄 Rates abhi website par bhejo') : ''}</div>
+<h3>⚙️ Tarteeb</h3><div class="wd-chips">${own && A.aiText ? ch(0, 'data-wd="airk"', '🤖 Racks khud banao (AI)') : ''}${ch(0, 'data-wd="racks"', '🗂 Racks ki tarteeb')}${own ? ch(0, 'data-wd="info"', '🏪 Dukan ki maloomat') + ch(0, 'data-wd="pub"', '🔄 Rates abhi website par bhejo') : ''}</div>
 <p class="wd-note">Website par sirf naam, retail rate aur tasveer jati hai — khareed / nafa kabhi nahi. Rates PC khud bhejta hai.</p>`;
 }
 function itemSheet(id) {
@@ -197,6 +200,61 @@ function mvSheet() {
   const rk = racksOf(items() || []);
   sheet(`<h3 class="wd-st">🗂 ${esc(it.n)} — kis rack par?</h3><div class="wd-chips">${rk.map(r => `<button type="button" class="wd-chip${r.k === it.c ? ' is-in' : ''}" data-mv="${esc(r.k)}">${esc(r.name)}</button>`).join('')}${it.c !== it.pc ? `<button type="button" class="wd-chip" data-mv="${esc(it.pc)}">↺ POS wala (${esc(title(it.pc))})</button>` : ''}</div>
 <form class="wd-newrk" data-form="newrk"><input name="k" placeholder="Naya rack ka naam" maxlength="40"><button type="submit" class="wd-chip">＋ Naya rack</button></form>`);
+}
+
+// ---------- 🤖 v2.157.0: RACKS KHUD BANAO (AI) — malik: "AI khud categories wise laga de · shuru cosmetics / chemicals … aakhir ghee oil" ----------
+const AIR = ['Cosmetics', 'Shampoo & Baal', 'Sabun', 'Daant (Paste / Brush)', 'Surf & Kapre', 'Safai / Chemicals', 'Baby', 'Tissue & Ghar ka Saman', 'Biscuit & Toffee', 'Chips & Nimko', 'Sharbat & Drinks', 'Chai & Doodh', 'Sauce & Achar', 'Masala', 'Daalein', 'Chawal, Atta & Cheeni', 'Ghee & Oil', 'Mutafarriq'];
+const AI_CH = 150;
+async function aiRun() {
+  if (!A.aiText || !A.owner()) { A.notice('🤖 Ye sirf malik ke login par'); return; }
+  const L = items(); if (!L) { A.notice('⏳ Stock abhi load nahi hua'); return; }
+  const todo = L.filter(it => !W.racks.ic[it.id]);   // sirf jin ka rack haath se nahi laga (naye bhi)
+  if (!todo.length) { A.notice('✅ Har item ka rack pehle se laga hai'); return; }
+  const w = W, R = { run: true, n: todo.length, done: 0, map: {}, err: '' };
+  w.ai = R; w.aiOpen = ''; w.view = 'ai'; sheetClose(); paint();
+  const list = AIR.map((r, i) => `${i + 1}. ${r}`).join('\n');
+  for (let i = 0; i < todo.length; i += AI_CH) {
+    if (W !== w || w.ai !== R || !R.run) return;
+    const ch = todo.slice(i, i + AI_CH), ids = new Set(ch.map(it => it.id));
+    const prompt = `You sort the items of a Pakistani grocery / wholesale shop (Noor Traders) onto shop racks. For EACH item choose exactly ONE rack number from this list:\n${list}\n` +
+      `Hints (common Pakistani brands): Dalda, Habib, Sufi, Eva, Kisan, Meezan = ghee/oil · Tapal, Lipton, Vital, Nescafe, Milkpak, Olpers, Tarang = chai & doodh · Shan, National, Mehran = masala · Lux, Safeguard, Lifebuoy, Dettol soap = sabun · Surf Excel, Ariel, Bonus, Brite = surf & kapre · Sunsilk, Head & Shoulders, Clear, hair oil, hair colour = shampoo & baal · Colgate, Sensodyne, Medicam = daant · Pampers, Huggies, Molfix, baby = baby · Harpic, Finis, Mortein, phenyl, bleach, dish wash = safai · Rooh Afza, Jam-e-Shirin, Pakola, juice = sharbat & drinks · Lays, Kurkure, Slanty, nimko = chips & nimko · Peek Freans, LU, Candyland, Hilal, chocolate = biscuit & toffee · cream, lotion, powder, makeup, perfume = cosmetics. ` +
+      `If you are not sure, use the number of "Mutafarriq". Return ONLY a JSON array (no other text) with one object for every item: [{"i":"<id>","r":<number>}]\n` + JSON.stringify(ch.map(it => ({ i: it.id, n: it.n.slice(0, 70) })));
+    try {
+      const out = await A.aiText(prompt), m = String(out || '').match(/\[[\s\S]*\]/); let arr = []; try { arr = m ? JSON.parse(m[0]) : []; } catch {}
+      for (const x of Array.isArray(arr) ? arr : []) { const id = String(x?.i ?? ''), r = Math.round(Number(x?.r)); if (ids.has(id) && r >= 1 && r <= AIR.length) R.map[id] = AIR[r - 1]; }
+      for (const id of ids) if (!R.map[id]) R.map[id] = 'Mutafarriq';   // AI ne chhor diya = Mutafarriq
+    } catch (e) { R.err = e.message || String(e); R.run = false; if (W === w) paint(); return; }
+    R.done = Math.min(todo.length, i + AI_CH); if (W === w && w.ai === R) paint();
+  }
+  R.run = false; if (W === w && w.ai === R) paint();
+}
+function aiGroups() {
+  const R = W.ai, by = new Map((items() || []).map(x => [x.id, x])), G = new Map(AIR.map(k => [k, []]));
+  for (const [id, k] of Object.entries(R.map)) { const it = by.get(id); if (it && G.has(k)) G.get(k).push(it); }
+  return [...G.entries()].filter(([, L]) => L.length);
+}
+function paintAi() {
+  const R = W.ai; if (!R) { W.view = 'list'; return paint(); }
+  const got = Object.keys(R.map).length, G = aiGroups();
+  $('wdStrip').innerHTML = R.run ? `<span>🤖 AI items ke naam parh rahi hai…</span><span class="wd-k">⏳ ${num(R.done)} / ${num(R.n)}</span>`
+    : R.err ? `<span class="wd-k bad">✕ ${esc(R.err)}</span>${got ? `<span>${num(got)} items ho gaye</span>` : ''}`
+    : `<span><b>🤖 AI ka mashwara</b> · ${num(got)} items · ${G.length} racks</span><span class="wd-dim">✅ Lagao dabane tak website nahi badlegi</span>`;
+  $('wdBody').innerHTML = (R.run && !got ? '<p class="wd-empty">⏳ AI pehle ' + num(Math.min(AI_CH, R.n)) + ' items parh rahi hai — 10-30 second…</p>' : '') +
+    `<div class="wd-ail">${G.map(([k, L], i) => { const open = W.aiOpen === k; return `<button type="button" class="wd-ai${k === 'Mutafarriq' ? ' mut' : ''}${open ? ' open' : ''}" data-aio="${esc(k)}"><span class="wd-no">${k === 'Mutafarriq' ? '?' : i + 1}</span><span class="wd-ait"><b>${esc(k)} <em>${num(L.length)}</em></b><small>${esc((open ? L : L.slice(0, 6)).map(x => x.n).join(' · '))}${!open && L.length > 6 ? ` … +${num(L.length - 6)} (dabao)` : ''}</small>${k === 'Mutafarriq' ? '<small class="wd-aim">AI ko samajh nahi aaye — baad mein ☑ chuno se rack mein bhejein</small>' : ''}</span></button>`; }).join('')}</div>`;
+  $('wdFoot').innerHTML = R.run ? `<button type="button" class="wd-chip" data-wd="aistop">✕ Roko</button><span class="wd-k">⏳ ${num(R.done)} / ${num(R.n)}</span>`
+    : `<button type="button" class="wd-chip" data-wd="back">✕ Rehne do</button>${R.err ? '<button type="button" class="wd-chip" data-wd="airk">🔄 Dobara</button>' : ''}${got ? `<button type="button" class="wd-main" data-wd="aiok">✅ Lagao — ${num(got)} items</button>` : ''}`;
+}
+function aiApply() {
+  const R = W.ai; if (!R || R.run) return;
+  const L = items() || [], by = new Map(L.map(x => [x.id, x])); let n = 0;
+  for (const [id, k] of Object.entries(R.map)) { const it = by.get(id); if (!it) continue; if (k === it.pc) delete W.racks.ic[id]; else W.racks.ic[id] = k; W.rkIds.add(id); W.ok.delete(id); W.err.delete(id); n++; }
+  const used = new Set(racksOf(items() || []).map(r => r.k)), mine = (W.racks.order || []).filter(k => !AIR.includes(k) && used.has(k));
+  const ai = AIR.filter(k => k !== 'Mutafarriq' && used.has(k)), gi = ai.indexOf('Ghee & Oil');
+  W.racks.order = gi < 0 ? [...ai, ...mine, 'Mutafarriq'] : [...ai.slice(0, gi), ...mine, ...ai.slice(gi), 'Mutafarriq'];   // malik ke apne rack Ghee & Oil se pehle — ghee / oil aakhir mein
+  for (const k of AIR) if (k !== title(k) && !W.racks.cn[k]) W.racks.cn[k] = k;   // naam jaisa likha (title() "Ka" bana deta)
+  delete W.racks.cn.Mutafarriq;   // sab items wale dabbe ka purana naam ("Surf") wapas
+  W.ai = null; W.view = 'list'; W.ck = ''; keep(); saveRacks();
+  A.notice(`🤖 ${num(n)} items racks mein lag rahe hain ⏳`);
 }
 
 // v2.156.0: ☑ chune hue items — kis rack par?
@@ -442,6 +500,10 @@ function onClick(e) {
   if (k === 'site') { window.open(WEB_URL(), '_blank', 'noopener'); return; }
   if (k === 'share') { share(); return; }
   if (k === 'copy') { sheetClose(); copyLink(); return; }
+  if (k === 'airk') { sheetClose(); aiRun(); return; }   // v2.157.0
+  if (k === 'aistop') { if (W.ai) { W.ai.run = false; } paint(); return; }
+  if (k === 'aiok') { aiApply(); return; }
+  const aio = t.closest('[data-aio]'); if (aio) { W.aiOpen = W.aiOpen === aio.dataset.aio ? '' : aio.dataset.aio; paint(); return; }
   if (k === 'sel') { W.sel = W.sel ? null : new Set(); sheetClose(); paint(); return; }   // v2.156.0: ☑ chunne ka mode
   if (k === 'selx') { W.sel = null; paint(); return; }
   if (k === 'selall') { const F = W.lastF || [], all = F.length && F.every(id => W.sel.has(id)); if (all) F.forEach(id => W.sel.delete(id)); else F.forEach(id => W.sel.add(id)); paint(); return; }

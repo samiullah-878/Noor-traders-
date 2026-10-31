@@ -6583,3 +6583,11 @@ Malik: website link Settings mein · har rack ke upar naam, neeche baqi racks ke
 - Ab: sirf qareeb ke racks (±2) mein maal, door ke khali dhanche (±5 se door khali kar dete) + content-visibility · farsh / lights sirf apne chhote element ka transform (GPU) · rack ka 3D seedha rack par · scroll container ka jhatka hataya · rack ki tasveer ek dafa canvas se halki / dhundli (CSS blur nahi) · DOM sirf rack badalne par likha.
 - Test (3000 items, 160 racks, CPU ×4): ab 18 ms fi frame (~55 fps), pehle 2800 ms. Sab test ✓ (phone / PC / band dukan).
 - AI nahi. Rules wahi (2.79).
+
+=== v2.157.0 (2026-10-31) — 🤖 Online Dukan: Racks khud banao (AI) ===
+- Malik (Racks ki tarteeb ki tasveer: sirf 1 rack "Surf" = POS: Mutafarriq · 820 items): POS mein items ki category KHALI hai, is liye sab ek rack mein.
+- Online Dukan ⋮ → "🤖 Racks khud banao (AI)" (sirf malik): Gemini (Settings wali AI key) har item ka naam parh kar AIR list se rack chunti hai:
+  Cosmetics · Shampoo & Baal · Sabun · Daant (Paste / Brush) · Surf & Kapre · Safai / Chemicals · Baby · Tissue & Ghar ka Saman · Biscuit & Toffee · Chips & Nimko · Sharbat & Drinks · Chai & Doodh · Sauce & Achar · Masala · Daalein · Chawal, Atta & Cheeni · Ghee & Oil (aakhir) · Mutafarriq (samajh na aaye).
+  Sirf woh items jin ka rack haath se nahi laga (racks.ic khali) — naye items bhi isi se. 150 items fi AI chakkar, ⏳ x / N, ✕ Roko.
+- PREVIEW: har rack ka naam + ginti + namoone (dabao = sab naam). ✅ Lagao dabane tak website nahi badalti (malik ki ijazat). Lagao = ek saveWebRacks (ic + order; malik ke apne rack Ghee & Oil se pehle; "Surf" wala purana naam (cn.Mutafarriq) hata).
+- Ghalat item = ☑ Items chuno se doosre rack mein. AI: haan (sirf rack chunne ke liye). Rules wahi (2.79).
