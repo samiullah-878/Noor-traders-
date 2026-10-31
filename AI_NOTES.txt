@@ -6591,3 +6591,11 @@ Malik: website link Settings mein · har rack ke upar naam, neeche baqi racks ke
   Sirf woh items jin ka rack haath se nahi laga (racks.ic khali) — naye items bhi isi se. 150 items fi AI chakkar, ⏳ x / N, ✕ Roko.
 - PREVIEW: har rack ka naam + ginti + namoone (dabao = sab naam). ✅ Lagao dabane tak website nahi badalti (malik ki ijazat). Lagao = ek saveWebRacks (ic + order; malik ke apne rack Ghee & Oil se pehle; "Surf" wala purana naam (cn.Mutafarriq) hata).
 - Ghalat item = ☑ Items chuno se doosre rack mein. AI: haan (sirf rack chunne ke liye). Rules wahi (2.79).
+
+=== v2.158.0 (2026-10-31) — 📸 Online Dukan: ASAL RACK KI PHOTO = dukan (AI dabbe, malik ka naam) ===
+- Malik (shampoo rack + sharbat rack ki photo): "rack ki photo par item khud identify ho, hum click kar ke naam likhein, wohi naam customer ko dikhe ya na dikhe, customer original photo se select kare, rate naam se aaye — alag alag har item ki tasveer ki zaroorat nahi".
+- App (Online Dukan ⋮ → 📸 Rack ki photos): ＋ Rack ki photo (camera / gallery) → kaunsa rack → photo ph_rp_<pid> (≤1600px JPEG) + racks.rp[pid] {k, o, w, h, s}.
+  🤖 AI (Gemini, malik ki key — sirf malik ke login par): har bottle / dabba / packet ka box_2d + label → dabbe (0–1000). Malik: dabba tap (kai chuno) → 🏷 Naam (AI label se 3 mashware + search list) — same label wale baqi dabbe khud; "✓ N mashware" = pakke mashware ek click; ✏️ Dabba = ungli se khud; ✕ Hatao; ⋮ rack badlo / photo hatao (dobara dabao). Har jagah ⏳ / ✅ save.
+  🏷 Naam: ON/Band (racks.nmOn) = customer ko photo par naam.
+- Website: har rack mein pehle ASAL PHOTO wala bay (3D jhukao + 📱 phone ghumao), phir baqi items ka bana rack (photo wale items dohra nahi). Photo par tap = khirki (rate POS cat se, khatam = "Khatam", uthaya nahi jata), peeli rate parchi har item par ek (tang jagah sirf raqam; naam 🔍 qareeb wali bari photo mein / chauri jagah par). Tokri mein = hari ginti photo par. Photo ka tukda (canvas) tokri / parchi / dhoondo / khirki mein. 🔍 Dhoondo → photo wala rack + chamak.
+- AI: haan (sirf dabbe + label padhna; naam malik ka tap). Rules wahi (2.79) — ph_rp_* purane ph_ qaide mein, racks doc mein rp / nmOn.

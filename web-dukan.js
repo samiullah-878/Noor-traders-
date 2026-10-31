@@ -10,6 +10,10 @@
 //     🏪 DUKAN KI TASVEER (shutter ke peeche) = ph_shop · khulne / band hone ka waqt info.open / info.close (website par 🌙 band).
 //   v2.157.0: 🤖 RACKS KHUD BANAO (AI — Gemini, malik ki key): POS mein category khali (sab "Mutafarriq") — AI har item ka naam parh kar AIR
 //     ki list se rack chunti hai (sirf jin ka rack haath se nahi laga) → PREVIEW → malik ka ✅ Lagao = ek saveWebRacks (ic + order). Ijazat ke baghair kuch nahi.
+//   v2.158.0: 📸 ASAL RACK KI PHOTO = DUKAN (malik: "rack ki photo par AI khud item pehchane, hum tap kar ke naam likhein, rate naam se aaye"):
+//     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
+//     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
+//     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -28,7 +32,7 @@ let un = null;  // Firestore listeners
 const TH = new Map();   // id -> {v, url} chhoti tasveer (phone ki memory)
 
 function fresh() {
-  return { cat: {}, info: {}, racks: { order: [], cn: {}, hc: {}, hide: {}, ic: {} }, ph: {}, got: {}, q: '', ck: pref.ck || '', f: pref.f || 'all', lim: 120, view: 'list', busy: new Set(), ok: new Set(), err: new Map(), crop: null, pq: '', pck: '', arm: '', act: '', rkSt: '', infoSt: '', sel: null, ai: null, aiOpen: '', lastF: [], rkIds: new Set(), rkWait: new Set() };
+  return { cat: {}, info: {}, racks: { order: [], cn: {}, hc: {}, hide: {}, ic: {}, rp: {}, nmOn: false }, ph: {}, got: {}, q: '', ck: pref.ck || '', f: pref.f || 'all', lim: 120, view: 'list', busy: new Set(), ok: new Set(), err: new Map(), crop: null, pq: '', pck: '', arm: '', act: '', rkSt: '', infoSt: '', sel: null, ai: null, aiOpen: '', rpe: null, rpq: '', rpNew: null, rpDelArm: 0, lastF: [], rkIds: new Set(), rkWait: new Set() };
 }
 
 // ---------- 📦 items (POS stock → website wali list) ----------
@@ -85,7 +89,7 @@ export function webOpen(ctx) {
     if (k === 'cat') W.cat = v || {};
     else if (k === 'info') W.info = v || {};
     else if (k === 'phIdx') W.ph = (v && v.m) || {};
-    else if (k === 'racks' && !W.rkDirty) W.racks = { order: Array.isArray(v?.order) ? v.order : [], cn: v?.cn || {}, hc: v?.hc || {}, hide: v?.hide || {}, ic: v?.ic || {} };
+    else if (k === 'racks' && !W.rkDirty) W.racks = { order: Array.isArray(v?.order) ? v.order : [], cn: v?.cn || {}, hc: v?.hc || {}, hide: v?.hide || {}, ic: v?.ic || {}, rp: v?.rp || {}, nmOn: !!v?.nmOn };
     paintSoon();
   });
   paint();
@@ -98,6 +102,7 @@ export function webClose() {
   const d = $('wdDlg'); if (!d || !d.open || !W) return false;
   if (!$('wdSheet').hidden) { sheetClose(); return true; }
   if (W.sel && W.view === 'list') { W.sel = null; paint(); return true; }   // v2.156.0: back = chunne ka mode band
+  if (W.view === 'rpe') { if (W.rpe?.draw || W.rpe?.sel?.size) { W.rpe.draw = false; W.rpe.sel = new Set(); } else { W.rpe = null; W.view = 'rps'; } paint(); return true; }   // v2.158.0
   if (W.view === 'pick') { W.view = 'crop'; paint(); return true; }
   if (W.view !== 'list') { if (W.ai) W.ai.run = false; W.ai = null; W.view = 'list'; W.crop = null; paint(); return true; }
   try { d.close(); } catch { d.removeAttribute('open'); }
@@ -115,6 +120,7 @@ function paint() {
   const v = W.view;
   $('wdT').textContent = v === 'crop' ? '✂️ Photo se items' : v === 'pick' ? '🔎 Ye kaun sa item?' : v === 'racks' ? '🗂 Racks ki tarteeb' : v === 'info' ? '🏪 Dukan ki maloomat' : v === 'ai' ? '🤖 Racks khud banao' : '🏪 Online Dukan';
   if (v === 'ai') return paintAi();
+  if (v === 'rps' || v === 'rpe') { $('wdT').textContent = v === 'rps' ? '📸 Rack ki asal photos' : '📸 ' + rackName(W.racks.rp?.[W.rpe?.pid]?.k || ''); return v === 'rps' ? paintRps() : paintRpe(); }
   if (v === 'crop') return paintCrop();
   if (v === 'pick') return paintPick();
   if (v === 'racks') return paintRacks();
@@ -180,6 +186,7 @@ function menuHTML() {
   const L = items() || [], rk = racksOf(L), own = A.owner();
   const ch = (on, attr, t) => `<button type="button" class="wd-chip${on ? ' is-in' : ''}" ${attr}>${t}</button>`;
   return `<h3>🌐 Website</h3><div class="wd-chips">${ch(0, 'data-wd="site"', '🌐 Website kholo')}${ch(0, 'data-wd="share"', '🔗 Link bhejo')}${ch(0, 'data-wd="copy"', '📋 Link copy')}</div>
+<h3>📸 Asal rack ki photo (customer photo par cheez dabaye)</h3><div class="wd-chips">${ch(0, 'data-wd="rps"', `📸 Rack ki photos <small>${Object.keys(W.racks.rp || {}).length}</small>`)}</div>
 <h3>☑ Kai items ek saath</h3><div class="wd-chips">${ch(!!W.sel, 'data-wd="sel"', W.sel ? '☑ Chunne ka mode ON — band karo' : '☑ Items chuno → ek saath rack mein')}</div>
 <h3>🗂 Rack</h3><div class="wd-chips">${ch(!W.ck, 'data-ck=""', 'Sab racks')}${rk.map((r, i) => ch(W.ck === r.k, `data-ck="${esc(r.k)}"`, `${r.off ? '🙈 ' : (i + 1) + '. '}${esc(r.name)} <small>${r.n}</small>`)).join('')}</div>
 <h3>🔎 Dikhao</h3><div class="wd-chips">${[['all', 'Sab'], ['nopic', '📷 Bina tasveer'], ['pic', '✅ Tasveer wale'], ['hid', '🙈 Chhupe']].map(([k, t]) => ch(W.f === k, `data-f="${k}"`, t)).join('')}</div>
@@ -200,6 +207,122 @@ function mvSheet() {
   const rk = racksOf(items() || []);
   sheet(`<h3 class="wd-st">🗂 ${esc(it.n)} — kis rack par?</h3><div class="wd-chips">${rk.map(r => `<button type="button" class="wd-chip${r.k === it.c ? ' is-in' : ''}" data-mv="${esc(r.k)}">${esc(r.name)}</button>`).join('')}${it.c !== it.pc ? `<button type="button" class="wd-chip" data-mv="${esc(it.pc)}">↺ POS wala (${esc(title(it.pc))})</button>` : ''}</div>
 <form class="wd-newrk" data-form="newrk"><input name="k" placeholder="Naya rack ka naam" maxlength="40"><button type="submit" class="wd-chip">＋ Naya rack</button></form>`);
+}
+
+// ---------- 📸 v2.158.0: ASAL RACK KI PHOTO — AI dabbe, malik ka naam ----------
+const rpS = pid => { try { const a = JSON.parse(W.racks.rp?.[pid]?.s || '[]'); return Array.isArray(a) ? a.filter(t => Array.isArray(t) && t.length >= 4) : []; } catch { return []; } };
+function rpSet(pid, arr) {
+  if (!W.racks.rp[pid]) return;
+  W.racks.rp[pid] = { ...W.racks.rp[pid], s: JSON.stringify(arr.map(t => { const r = [0, 1, 2, 3].map(k => Math.max(0, Math.min(1000, Math.round(Number(t[k]) || 0)))); return t[4] ? [...r, String(t[4])] : [...r, '', String(t[5] || '').slice(0, 40)]; })), at: Date.now() };
+  saveRacks();
+}
+const nrm = s => String(s || '').toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, ' ').trim();
+const tks = s => nrm(s).split(' ').filter(w => w.length > 1);
+function sugg(label, L) {   // AI ka label -> POS ke naam (lafz milao, size / brand) — sirf mashwara
+  const lt = tks(label); if (!lt.length) return [];
+  const out = [];
+  for (const it of L) { const nt = tks(it.n); let sc = 0; for (const w of lt) { if (nt.includes(w)) sc += 1; else if (nt.some(t => (t.length >= 3 && w.startsWith(t)) || (w.length >= 3 && t.startsWith(w)))) sc += 0.6; } sc /= lt.length; if (sc >= 0.34) out.push([sc, it]); }
+  return out.sort((a, b) => b[0] - a[0]).slice(0, 3);
+}
+const iou = (a, b) => { const x0 = Math.max(a[0], b[0]), y0 = Math.max(a[1], b[1]), x1 = Math.min(a[0] + a[2], b[0] + b[2]), y1 = Math.min(a[1] + a[3], b[1] + b[3]); const i = Math.max(0, x1 - x0) * Math.max(0, y1 - y0); return i / Math.max(1, a[2] * a[3] + b[2] * b[3] - i); };
+const u8b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
+const DET_PROMPT = 'This photo shows shelves of a Pakistani grocery / general store. Find EVERY individual retail product on the shelves: each bottle, box, packet, pouch, jar, tin or bag separately (if several identical items stand side by side, still give each clearly visible one its own box). Ignore shelf edges, price labels, walls, hands and people. For each product return box_2d as [ymin, xmin, ymax, xmax] normalized to 0-1000, and label = brand + product + size as printed on the pack, short (like "Rooh Afza 800ml", "Olpers milk 1L", "Dalda 1kg"); if unreadable give a short generic name like "red sharbat bottle". Return ONLY a JSON array: [{"box_2d":[ymin,xmin,ymax,xmax],"label":"..."}]. At most 120 products.';
+function paintRps() {
+  const P = Object.entries(W.racks.rp || {}).sort((a, b) => (a[1].o || 0) - (b[1].o || 0));
+  $('wdStrip').innerHTML = `<span>📸 Rack ki photo lagao → 🤖 AI har cheez ke gird dabba → aap tap kar ke naam · rate POS se khud</span><span class="wd-k">${P.length} photo</span>${W.rkSt ? `<span class="wd-k">${W.rkSt === '⏳' ? '⏳ save…' : W.rkSt === '✅' ? '✅ save' : '✕ nahi hua'}</span>` : ''}`;
+  $('wdBody').innerHTML = P.length ? `<div class="wd-rpl">${P.map(([pid, x]) => { const S = rpS(pid), ok = S.filter(t => t[4]).length; return `<button type="button" class="wd-rpc" data-rpo="${esc(pid)}"><span class="wd-rpt wd-th none" data-th="rp_${esc(pid)}">📸</span><span class="wd-n"><b>${esc(rackName(x.k))}</b><small>${W.busy.has('rp_' + pid) ? '⏳ photo save ho rahi hai…' : `✓ ${ok} / ${S.length} cheezon ka naam${S.length - ok ? ` · ${S.length - ok} baqi` : ''}`}</small></span><span class="wd-s">›</span></button>`; }).join('')}</div>`
+    : '<p class="wd-empty">Abhi koi rack photo nahi.<br>Neeche "＋ Rack ki photo" dabayein — saamne se poora rack, roshni mein.</p>';
+  $('wdFoot').innerHTML = `<button type="button" class="wd-chip${W.racks.nmOn ? ' is-in' : ''}" data-wd="nmon" title="Customer ko photo par naam">🏷 Naam: ${W.racks.nmOn ? 'ON' : 'Band'}</button><button type="button" class="wd-main" data-wd="rpadd">＋ Rack ki photo</button>`;
+  thumbs();
+}
+function paintRpe() {
+  const E = W.rpe, x = E && W.racks.rp?.[E.pid]; if (!x) { W.view = 'rps'; W.rpe = null; return paint(); }
+  const S = rpS(E.pid), L = items() || [], by = new Map(L.map(i => [i.id, i])), ok = S.filter(t => t[4]).length;
+  const nSug = S.filter(t => !t[4] && t[5] && (sugg(t[5], L)[0]?.[0] || 0) >= 0.67).length; E.nSug = nSug;
+  $('wdStrip').innerHTML = `<span><b>${esc(rackName(x.k))}</b> · ✓ ${ok} / ${S.length} naam</span>${E.ai?.run ? '<span class="wd-k">🤖 AI cheezein dhoond rahi hai… 10–40 sec</span>' : ''}${E.ai?.err ? `<span class="wd-k bad">✕ ${esc(E.ai.err)}</span>` : ''}${E.draw ? '<span class="wd-k ok">✏️ Photo par ungli se dabba banayein</span>' : E.sel.size ? `<span class="wd-k ok">☑ ${E.sel.size} chune</span>` : '<span class="wd-dim">Dabba dabao = chuno · kai chun kar ek naam</span>'}${W.rkSt === '⏳' ? '<span class="wd-k">⏳ save…</span>' : W.rkSt === '✅' ? '<span class="wd-k ok">✅ save</span>' : ''}`;
+  $('wdBody').innerHTML = `<div class="wd-pe"><div class="wd-pimg${E.draw ? ' draw' : ''}" id="wdPimg" style="aspect-ratio:${Number(x.w) || 3}/${Number(x.h) || 4}">${E.url ? `<img src="${E.url}" alt="" draggable="false">` : '<i class="wd-pw">⏳ Photo aa rahi hai…</i>'}${S.map((t, i) => { const it = t[4] ? by.get(String(t[4])) : null; return `<button type="button" class="wd-bx${t[4] ? ' ok' : ''}${E.sel.has(i) ? ' sel' : ''}${t[4] && !it ? ' gone' : ''}" data-bx="${i}" style="left:${t[0] / 10}%;top:${t[1] / 10}%;width:${t[2] / 10}%;height:${t[3] / 10}%"><i>${t[4] ? esc(it ? it.n : '⚠ stock mein nahi') : '?' + (t[5] ? ' ' + esc(t[5]) : '')}</i></button>`; }).join('')}<div class="wd-bx tmp" id="wdBxTmp" hidden></div></div></div>`;
+  $('wdFoot').innerHTML = E.sel.size
+    ? `<button type="button" class="wd-chip" data-wd="bxnone">☐ Chhoro</button><button type="button" class="wd-chip bad" data-wd="bxdel">✕ Hatao</button><button type="button" class="wd-main" data-wd="bxname">🏷 ${E.sel.size} → Naam</button>`
+    : `${A.aiImage && A.owner() ? `<button type="button" class="wd-chip" data-wd="rpai"${E.ai?.run ? ' disabled' : ''}>🤖 AI</button>` : ''}<button type="button" class="wd-chip${E.draw ? ' is-in' : ''}" data-wd="rpdraw">✏️ Dabba</button>${nSug ? `<button type="button" class="wd-chip" data-wd="rpsug">✓ ${nSug} mashware</button>` : ''}<button type="button" class="wd-chip" data-wd="rpmore" aria-label="Aur">⋮</button><button type="button" class="wd-main" data-wd="rpdone">✓ Ho gaya</button>`;
+  rpPointer();
+}
+function rpPointer() {
+  const wrap = $('wdPimg'); if (!wrap || wrap._on) return; wrap._on = 1;
+  let st = null;
+  const pt = e => { const r = wrap.getBoundingClientRect(); return { x: Math.max(0, Math.min(1000, (e.clientX - r.left) / r.width * 1000)), y: Math.max(0, Math.min(1000, (e.clientY - r.top) / r.height * 1000)) }; };   // % se — html zoom mein bhi sahi
+  const box = () => { const a = st.a, b = st.b; return [Math.min(a.x, b.x), Math.min(a.y, b.y), Math.abs(a.x - b.x), Math.abs(a.y - b.y)]; };
+  wrap.addEventListener('pointerdown', e => { if (!W?.rpe?.draw) return; e.preventDefault(); st = { a: pt(e), b: pt(e) }; try { wrap.setPointerCapture(e.pointerId); } catch {} });
+  wrap.addEventListener('pointermove', e => { if (!st) return; st.b = pt(e); const b = box(), t = $('wdBxTmp'); if (t) { t.hidden = false; Object.assign(t.style, { left: b[0] / 10 + '%', top: b[1] / 10 + '%', width: b[2] / 10 + '%', height: b[3] / 10 + '%' }); } });
+  const end = () => { if (!st) return; const b = box(); st = null; const E = W?.rpe; if (!E) return; if (b[2] < 12 || b[3] < 12) { const t = $('wdBxTmp'); if (t) t.hidden = true; return; }
+    const S = rpS(E.pid); S.push([...b, '', '']); E.draw = false; E.sel = new Set([S.length - 1]); rpSet(E.pid, S); paint(); namePick(); };
+  wrap.addEventListener('pointerup', end); wrap.addEventListener('pointercancel', () => { st = null; });
+}
+function pickListHTML() {
+  const L = items() || [], q = (W.rpq || '').trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const F = (q.length ? L.filter(it => q.every(w => it.n.toLowerCase().includes(w))) : L).slice(0, 60);
+  return F.map(it => `<button type="button" class="wd-r wd-pr" data-bxit="${esc(it.id)}"><span class="wd-n"><b>${esc(it.n)}</b><small>Rs ${num(it.r)} · ${esc(rackName(it.c))}</small></span></button>`).join('') || '<p class="wd-empty">Is naam ka item nahi mila.</p>';
+}
+function namePick() {
+  const E = W.rpe; if (!E || !E.sel.size) return;
+  const S = rpS(E.pid), lab = [...E.sel].map(i => S[i]?.[5]).find(Boolean) || '', sg = lab ? sugg(lab, items() || []) : [];
+  W.rpq = '';
+  sheet(`<h3 class="wd-st">🏷 ${E.sel.size} dabb${E.sel.size > 1 ? 'e' : 'a'} — kaunsi cheez?</h3>${lab ? `<p class="wd-note">🤖 AI ne parha: <b>${esc(lab)}</b></p>` : ''}${sg.length ? `<div class="wd-chips">${sg.map(([, it]) => `<button type="button" class="wd-chip is-in" data-bxit="${esc(it.id)}">✓ ${esc(it.n)} <small>Rs ${num(it.r)}</small></button>`).join('')}</div>` : ''}
+<label class="wd-q wd-q2"><span>🔍</span><input id="wdRQ" type="search" placeholder="Naam likhein…" autocomplete="off"></label><div class="wd-list wd-bxl">${pickListHTML()}</div>`);
+}
+function bxAssign(itemId) {
+  const E = W.rpe; if (!E) return;
+  const S = rpS(E.pid), labs = new Set(), it = (items() || []).find(x => x.id === itemId);
+  for (const i of E.sel) if (S[i]) { if (!S[i][4] && S[i][5]) labs.add(nrm(S[i][5])); S[i] = [S[i][0], S[i][1], S[i][2], S[i][3], itemId]; }
+  let extra = 0; if (labs.size) S.forEach((t, i) => { if (!t[4] && t[5] && labs.has(nrm(t[5]))) { S[i] = [t[0], t[1], t[2], t[3], itemId]; extra++; } });   // same label wale khud
+  E.sel = new Set(); sheetClose(); rpSet(E.pid, S); paint();
+  A.notice(`🏷 ${it ? it.n : itemId}${extra ? ` · 🔁 same label wale ${extra} dabbe bhi` : ''}`);
+}
+async function rpLoad(pid) {
+  const k = 'rp_' + pid, c = TH.get(k); if (c && c.url) return c.url;
+  try { const b = await A.cloud.getWebPhoto(k); if (!b) return ''; const url = URL.createObjectURL(new Blob([b], { type: 'image/jpeg' })); TH.set(k, { v: W?.ph?.[k], url, b }); return url; } catch { return ''; }
+}
+async function rpOpen(pid) {
+  W.rpe = { pid, url: TH.get('rp_' + pid)?.url || '', sel: new Set(), draw: false, ai: null }; W.view = 'rpe'; paint();
+  if (!W.rpe.url) { const w = W, url = await rpLoad(pid); if (W === w && w.rpe?.pid === pid) { w.rpe.url = url; paint(); } }
+}
+async function rpDetect() {
+  const w = W, E = w.rpe; if (!E || !A.aiImage || E.ai?.run) return;
+  E.ai = { run: true }; paint();
+  try {
+    let bytes = TH.get('rp_' + E.pid)?.b || E.bytes; if (!bytes) bytes = await A.cloud.getWebPhoto('rp_' + E.pid); if (!bytes) throw Error('Photo nahi mili');
+    const out = await A.aiImage(u8b64(bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)), DET_PROMPT), m = String(out || '').match(/\[[\s\S]*\]/);
+    let arr = []; try { arr = m ? JSON.parse(m[0]) : []; } catch {}
+    if (W !== w || w.rpe !== E) return;
+    const S = rpS(E.pid), add = [];
+    for (const o of Array.isArray(arr) ? arr : []) {
+      const b = o && (o.box_2d || o.box || o.b); if (!Array.isArray(b) || b.length < 4) continue;
+      let [y0, x0, y1, x1] = b.map(Number); if (![y0, x0, y1, x1].every(Number.isFinite)) continue;
+      [y0, x0, y1, x1] = [y0, x0, y1, x1].map(v => Math.max(0, Math.min(1000, v))); if (x1 < x0) [x0, x1] = [x1, x0]; if (y1 < y0) [y0, y1] = [y1, y0];
+      const nb = [x0, y0, x1 - x0, y1 - y0, '', String(o.label || o.name || '').slice(0, 40)];
+      if (nb[2] < 8 || nb[3] < 8 || (nb[2] > 900 && nb[3] > 900)) continue;
+      if ([...S, ...add].some(t => iou(t, nb) > 0.6)) continue;
+      add.push(nb); if (S.length + add.length >= 150) break;
+    }
+    E.ai = { run: false, n: add.length }; rpSet(E.pid, [...S, ...add]);
+    A.notice(add.length ? `🤖 ${add.length} cheezein mili — ab dabbe par tap kar ke naam lagayein` : '🤖 AI ko nayi cheez nahi mili — ✏️ Dabba se khud banayein');
+  } catch (e) { E.ai = { run: false, err: e.message || String(e) }; }
+  if (W === w) paint();
+}
+async function rpCreate(k) {
+  const w = W, bm = w.rpNew; if (!bm || !k) return; w.rpNew = null; sheetClose();
+  let bytes; try { bytes = await bigBytes(bm, 1600); } catch (e) { A.notice('❌ ' + (e.message || e)); return; }
+  const pid = Date.now().toString(36), url = URL.createObjectURL(new Blob([bytes], { type: 'image/jpeg' }));
+  TH.set('rp_' + pid, { v: -1, url, b: bytes });
+  w.racks.rp = { ...(w.racks.rp || {}), [pid]: { k, o: Date.now(), w: bm.width || bm.naturalWidth || 3, h: bm.height || bm.naturalHeight || 4, s: '[]', at: Date.now() } };
+  if (!w.racks.order.includes(k)) w.racks.order = [...racksOf(items() || []).map(r => r.k).filter(x => x !== k), k];
+  saveRacks(); putPhoto('rp_' + pid, bytes, 'Rack ki photo — ' + rackName(k));
+  w.rpe = { pid, url, bytes, sel: new Set(), draw: false, ai: null }; w.view = 'rpe'; paint();
+  if (A.aiImage && A.owner()) rpDetect();
+}
+function rpRackSheet(forPid) {
+  const rk = racksOf(items() || []);
+  sheet(`<h3 class="wd-st">🗂 Ye kaunsa rack hai?</h3><div class="wd-chips">${rk.map((r, i) => `<button type="button" class="wd-chip" data-rpk="${esc(r.k)}"${forPid ? ` data-rpfor="${esc(forPid)}"` : ''}>${r.off ? '🙈 ' : (i + 1) + '. '}${esc(r.name)}</button>`).join('')}</div>
+<form class="wd-newrk" data-form="rpnewrk"${forPid ? ` data-rpfor="${esc(forPid)}"` : ''}><input name="k" placeholder="Naya rack ka naam" maxlength="40"><button type="submit" class="wd-chip">＋ Naya rack</button></form>`);
 }
 
 // ---------- 🤖 v2.157.0: RACKS KHUD BANAO (AI) — malik: "AI khud categories wise laga de · shuru cosmetics / chemicals … aakhir ghee oil" ----------
@@ -351,6 +474,7 @@ async function gotFile(f) {
   let bm; try { bm = await decode(f); } catch { A.notice('❌ Tasveer khul nahi saki'); return; }
   const w = bm.width || bm.naturalWidth, h = bm.height || bm.naturalHeight;
   if (!w || !h) { A.notice('❌ Tasveer khul nahi saki'); return; }
+  if (shotFor === '@rp') { shotFor = ''; W.rpNew = bm; rpRackSheet(''); return; }   // v2.158.0: asal rack photo
   if (shotFor.startsWith('@bg:')) { const k = shotFor.slice(4); shotFor = ''; if (k === '@shop') bgSave('shop', bm, 'Dukan ki tasveer'); else bgSave(rkPh(k), bm, 'Rack ' + rackName(k)); paint(); return; }   // v2.156.0
   if (W.crop?.url) { try { URL.revokeObjectURL(W.crop.url); } catch {} }
   const one = shotFor;
@@ -457,6 +581,7 @@ async function previewCrop() { try { const b = await cropBytes(), el = $('wdPv')
 function onInput(e) {
   if (!W) return;
   if (e.target.id === 'wdQ') { W.q = e.target.value; W.lim = 120; W.qFocus = 1; clearTimeout(onInput.t); onInput.t = setTimeout(() => { paint(); W && (W.qFocus = 0); }, 140); }
+  else if (e.target.id === 'wdRQ') { W.rpq = e.target.value; clearTimeout(onInput.r); onInput.r = setTimeout(() => { const l = document.querySelector('#wdDlg .wd-bxl'); if (l && W) l.innerHTML = pickListHTML(); }, 120); }
   else if (e.target.id === 'wdPQ') { W.pq = e.target.value; W.arm = ''; W.qFocus = 1; clearTimeout(onInput.t); onInput.t = setTimeout(() => { paint(); W && (W.qFocus = 0); }, 140); }
 }
 function onChange(e) {
@@ -471,6 +596,9 @@ async function onSubmit(e) {
     const o = { name: g('name') || 'Noor Traders', line: g('line'), wa: g('wa'), addr: g('addr'), time: g('time'), open: g('open'), close: g('close'), on: !!f.elements.on.checked };
     W.infoSt = '⏳ save…'; W.info = { ...W.info, ...o }; paint();
     try { await A.cloud.saveWebInfo(o); if (W) { W.infoSt = '✅ save ho gaya'; paint(); } A.notice('✅ Dukan ki maloomat website par'); } catch (er) { if (W) { W.infoSt = '✕ nahi hua'; paint(); } A.notice('❌ ' + (er.message || er)); }
+  } else if (f.dataset.form === 'rpnewrk') {   // v2.158.0
+    e.preventDefault(); const k = String(f.elements.k.value || '').trim().slice(0, 40); if (!k) return;
+    if (f.dataset.rpfor) { rpMoveRack(f.dataset.rpfor, k); return; } rpCreate(k);
   } else if (f.dataset.form === 'newrk') {
     e.preventDefault();
     const k = String(f.elements.k.value || '').trim().slice(0, 40); if (!k) return;
@@ -480,6 +608,7 @@ async function onSubmit(e) {
     sheetClose(); saveRacks();
   }
 }
+function rpMoveRack(pid, k) { if (!W.racks.rp?.[pid]) return; W.racks.rp[pid] = { ...W.racks.rp[pid], k }; if (!W.racks.order.includes(k)) W.racks.order = [...racksOf(items() || []).map(r => r.k).filter(x => x !== k), k]; sheetClose(); saveRacks(); paint(); A.notice('🗂 Photo ab ' + rackName(k) + ' mein'); }
 async function publish() {
   const B = base(); if (!B) { A.notice('⏳ Stock abhi load nahi hua'); return; }
   const rows = B.sort((a, b) => Number(a.id) - Number(b.id)).map(m => [m.id, m.n, m.c, Math.round(m.r * 100) / 100, m.u]);
@@ -501,6 +630,19 @@ function onClick(e) {
   if (k === 'share') { share(); return; }
   if (k === 'copy') { sheetClose(); copyLink(); return; }
   if (k === 'airk') { sheetClose(); aiRun(); return; }   // v2.157.0
+  if (k === 'rps') { sheetClose(); W.view = 'rps'; paint(); return; }   // v2.158.0: 📸 asal rack photos
+  if (k === 'rpadd') { W.act = ''; sheet(`<h3 class="wd-st">📸 Rack ki asal photo</h3><p class="wd-note">Saamne se, seedha, poora rack ek photo mein — roshni mein. 🤖 AI har cheez ke gird dabba banayegi, aap naam lagayenge.</p><div class="wd-chips"><button type="button" class="wd-chip" data-rpshot="cam">📸 Camera</button><button type="button" class="wd-chip" data-rpshot="gal">🖼 Gallery</button></div>`); return; }
+  if (k === 'nmon') { W.racks.nmOn = !W.racks.nmOn; saveRacks(); paint(); A.notice(W.racks.nmOn ? '🏷 Customer ko photo par naam bhi dikhega' : '🏷 Photo par sirf rate (naam nahi)'); return; }
+  if (k === 'rpdraw' && W.rpe) { W.rpe.draw = !W.rpe.draw; W.rpe.sel = new Set(); paint(); return; }
+  if (k === 'rpai') { rpDetect(); return; }
+  if (k === 'rpdone') { W.rpe = null; W.view = 'rps'; paint(); return; }
+  if (k === 'bxnone' && W.rpe) { W.rpe.sel = new Set(); paint(); return; }
+  if (k === 'bxname') { namePick(); return; }
+  if (k === 'bxdel' && W.rpe) { const E = W.rpe, n = E.sel.size; rpSet(E.pid, rpS(E.pid).filter((t, i) => !E.sel.has(i))); E.sel = new Set(); paint(); A.notice(`✕ ${n} dabbe hata diye`); return; }
+  if (k === 'rpsug' && W.rpe) { const E = W.rpe, L = items() || [], S = rpS(E.pid); let n = 0; S.forEach((t, i) => { if (t[4] || !t[5]) return; const g = sugg(t[5], L)[0]; if (g && g[0] >= 0.67) { S[i] = [t[0], t[1], t[2], t[3], g[1].id]; n++; } }); rpSet(E.pid, S); paint(); A.notice(`✓ ${n} dabbon par AI ka mashwara laga — ghalat ho to dabba dabao aur badlo`); return; }
+  if (k === 'rpmore' && W.rpe) { W.rpDelArm = 0; sheet(`<h3 class="wd-st">📸 Is photo ka</h3><div class="wd-chips"><button type="button" class="wd-chip" data-wd="rpmv">🗂 Rack badlo</button><button type="button" class="wd-chip bad" data-wd="rpdel">🗑 Photo hatao</button></div>`); return; }
+  if (k === 'rpmv' && W.rpe) { rpRackSheet(W.rpe.pid); return; }
+  if (k === 'rpdel' && W.rpe) { if (!W.rpDelArm) { W.rpDelArm = 1; a.textContent = '🗑 Pakka? Dobara dabayein'; return; } const pid = W.rpe.pid; sheetClose(); const rp = { ...W.racks.rp }; delete rp[pid]; W.racks.rp = rp; W.rpe = null; W.view = 'rps'; saveRacks(); A.cloud.delWebPhoto('rp_' + pid).catch(() => {}); TH.delete('rp_' + pid); paint(); A.notice('🗑 Rack ki photo hata di'); return; }
   if (k === 'aistop') { if (W.ai) { W.ai.run = false; } paint(); return; }
   if (k === 'aiok') { aiApply(); return; }
   const aio = t.closest('[data-aio]'); if (aio) { W.aiOpen = W.aiOpen === aio.dataset.aio ? '' : aio.dataset.aio; paint(); return; }
@@ -520,6 +662,11 @@ function onClick(e) {
   if (k === 'hide') { const id = W.act; if (W.racks.hide[id]) delete W.racks.hide[id]; else W.racks.hide[id] = 1; sheetClose(); saveRacks(); return; }
   if (k === 'delph') { const id = W.act; sheetClose(); W.busy.add(id); paint(); A.cloud.delWebPhoto(id).then(() => { TH.delete(id); A.notice('🗑 Tasveer hata di'); }).catch(er => A.notice('❌ ' + (er.message || er))).finally(() => { W && W.busy.delete(id); paintSoon(); }); return; }
   const sh = t.closest('[data-shot]'); if (sh) { shoot(sh.dataset.shot, W.act); return; }
+  const rs2 = t.closest('[data-rpshot]'); if (rs2) { shoot(rs2.dataset.rpshot, '@rp'); return; }   // v2.158.0
+  const rpk = t.closest('[data-rpk]'); if (rpk) { if (rpk.dataset.rpfor) rpMoveRack(rpk.dataset.rpfor, rpk.dataset.rpk); else rpCreate(rpk.dataset.rpk); return; }
+  const rpo = t.closest('[data-rpo]'); if (rpo) { rpOpen(rpo.dataset.rpo); return; }
+  const bx = t.closest('[data-bx]'); if (bx && W.rpe && !W.rpe.draw) { const i = Number(bx.dataset.bx), E = W.rpe; if (E.sel.has(i)) E.sel.delete(i); else E.sel.add(i); paint(); return; }
+  const bxit = t.closest('[data-bxit]'); if (bxit) { bxAssign(bxit.dataset.bxit); return; }
   const smv = t.closest('[data-smv]'); if (smv) { if (W.sel && W.sel.size) moveMany([...W.sel], smv.dataset.smv); return; }   // v2.156.0
   const rbg = t.closest('[data-rbg]'); if (rbg) { bgSheet(rbg.dataset.rbg); return; }
   const bs = t.closest('[data-bgshot]'); if (bs) { shoot(bs.dataset.bgshot, '@bg:' + bs.dataset.bgk); return; }

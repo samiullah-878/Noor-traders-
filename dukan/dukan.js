@@ -10,7 +10,10 @@
 //     📷 asal tasveerein — ph_shop (darwaze ke peeche dukan) + ph_rk_<hash(rack)> (rack ke peeche) · phIdx.m.shop / m['rk_…'] (app 🗂 Racks / 🏪 maloomat se)
 //     🚶 farsh (3D) + chhat ki lights scroll ke saath (--sx), qadam ka jhoola (--bob) · 🧑‍💼 dukan wala (bani hui SVG) racks ke chips se le jata hai
 //     📳 halka vibrate · 🔔 darwaze ki ghanti (awaaz on ho to) · 🌙 info.open / info.close (Pakistan waqt) — band = aadha shutter, order phir bhi.
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.157.0';
+//   v2.158.0 (malik: "rack ki asal photo — customer photo par cheez dabaye, rate naam se aaye"): racks.rp[pid] {k, o, w, h, s: JSON [[x,y,w,h,itemId]] 0–1000}
+//     + ph_rp_<pid> = PHOTO BAY (asal rack) · har cheez par tap wali jagah + peeli rate parchi (racks.nmOn = naam bhi) · rate cat se (POS) · khatam = "Khatam".
+//     Photo wale items bane hue rack mein nahi (dohra nahi) · tasveer ka tukda canvas se kaat kar tokri / parchi / dhoondo mein · 📱 phone ghumao = 3D · 🔍 qareeb se.
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.158.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -111,26 +114,34 @@ const saveCrate = () => ls.set('nt-dk-crate', S.crate);
 
 function build(d) {
   const cat = d.cat || {}, R = d.racks || {};
+  S.ph = (d.phIdx && d.phIdx.m) || {};
   let rows = []; try { rows = JSON.parse(cat.j || '[]'); } catch {}
   const hide = R.hide || {}, ic = R.ic || {}, hc = R.hc || {}, cn = R.cn || {};
   const groups = new Map(); S.items = new Map();
+  // 📸 v2.158.0: asal rack ki photos — photo par jo item hai wo usi rack ka (bane hue rack mein dohra nahi)
+  S.nmOn = !!R.nmOn;
+  S.rps = Object.entries(R.rp && typeof R.rp === 'object' ? R.rp : {}).map(([pid, x]) => { let a = []; try { a = JSON.parse((x && x.s) || '[]'); } catch {}
+    return { pid, k: String(x?.k || '').trim(), o: Number(x?.o) || 0, w: Number(x?.w) || 3, h: Number(x?.h) || 4, spots: (Array.isArray(a) ? a : []).filter(t => Array.isArray(t) && t[4]).map(t => ({ x: +t[0] || 0, y: +t[1] || 0, w: +t[2] || 0, h: +t[3] || 0, id: String(t[4]) })) }; })
+    .filter(p => p.k && !hc[p.k] && p.spots.length && phV('rp_' + p.pid)).sort((a, b) => a.o - b.o);
+  const onPh = new Map(); for (const p of S.rps) for (const sp of p.spots) if (!onPh.has(sp.id)) onPh.set(sp.id, p.k);
   for (const r of rows) {
     if (!Array.isArray(r)) continue;
     const id = String(r[0] ?? ''), rate = Number(r[3]) || 0, n = String(r[1] || '').trim();
     if (!id || !n || hide[id] || rate <= 0) continue;
-    const key = String(ic[id] || r[2] || '').trim() || 'Mutafarriq';
+    const key = onPh.get(id) || String(ic[id] || r[2] || '').trim() || 'Mutafarriq';
     if (hc[key]) continue;
     const it = { id, n, c: key, r: rate, u: String(r[4] || '').trim() };
     S.items.set(id, it);
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(it);
   }
+  for (const p of S.rps) if (!groups.has(p.k)) groups.set(p.k, []);
   const order = Array.isArray(R.order) ? R.order.map(String) : [];
   const pos = k => { const i = order.indexOf(k); return i < 0 ? 1e9 : i; };
   const keys = [...groups.keys()].sort((a, b) => (pos(a) - pos(b)) || a.localeCompare(b));
   S.racks = keys.map((k, i) => ({ key: k, no: i + 1, name: String(cn[k] || '').trim() || title(k), items: groups.get(k).sort((a, b) => a.n.localeCompare(b.n)) }));
-  S.racks.forEach(rk => rk.items.forEach(it => { it.rk = rk; }));
-  S.info = d.info || {}; S.ph = (d.phIdx && d.phIdx.m) || {}; S.at = Number(cat.at) || 0;
+  S.racks.forEach(rk => { rk.items.forEach(it => { it.rk = rk; }); rk.photos = S.rps.filter(p => p.k === rk.key); rk.rest = rk.items.filter(it => !onPh.has(it.id)); });
+  S.info = d.info || {}; S.at = Number(cat.at) || 0;
   for (const id of Object.keys(S.crate)) if (!S.items.has(id) || !(Number(S.crate[id]) > 0)) delete S.crate[id];
   saveCrate();
 }
@@ -170,6 +181,7 @@ function fillNear(i) {
   const D = S.dims; if (!D) return;
   bayEls.forEach((el, k) => {
     const want = Math.abs(k - i) <= NEAR, drop = Math.abs(k - i) > FAR, has = el._fill;
+    if (S.bays[k]?.photo) { if (want) loadRp(S.bays[k].photo); return; }   // 📸 photo bay: sirf photo lao
     if (want && !has) { const rk = el.querySelector('.rack'), bg = rk.querySelector('.rk-bg'); rk.innerHTML = ''; if (bg) rk.appendChild(bg); rk.insertAdjacentHTML('beforeend', shelvesHTML(S.bays[k], D, true).h); el._fill = true; }
     else if (drop && has) { const rk = el.querySelector('.rack'), bg = rk.querySelector('.rk-bg'); rk.innerHTML = ''; if (bg) rk.appendChild(bg); rk.insertAdjacentHTML('beforeend', shelvesHTML(S.bays[k], D, false).h); el._fill = false; }
   });
@@ -179,15 +191,63 @@ function bayHTML(b, i, D) {
   const bg = RBG.get(b.rk.key);
   return `<section class="bay${D.rows >= 6 ? ' cmp' : ''}" data-bay="${i}" style="--rows:${rows};--cols:${D.cols};--bayW:${D.bw}px" aria-label="Rack ${b.rk.no}: ${esc(b.rk.name)}"><header class="sign"><span class="sk">Rack ${b.rk.no}</span><b>${esc(b.rk.name)}</b>${b.parts > 1 ? `<span class="sp">${b.p + 1}/${b.parts}</span>` : ''}</header><div class="rack"><div class="rk-bg${bg ? ' on' : ''}" data-rbg="${esc(b.rk.key)}"${bg ? ` style="background-image:url('${bg}')"` : ''}></div>${sh.join('')}</div></section>`;
 }
+// ---------- 📸 v2.158.0: asal rack ki photo (bay) ----------
+const RPU = new Map();   // pid -> photo (blob url)
+function spotsHTML(p, pxW) {   // pxW = photo screen par kitni chauri (px) — naam sirf jahan jagah ho (≥ 66px), tang jagah par sirf raqam
+  const k = 1000 / Math.max(120, pxW || 360), seen = new Set(), wN = 66 * k, wR = 46 * k;
+  return p.spots.map(sp => { const it = S.items.get(sp.id), first = !seen.has(sp.id); seen.add(sp.id); const q = Number(S.crate[sp.id]) || 0, nar = sp.w < wR;
+    return `<button type="button" class="spot${it ? '' : ' gone'}${q ? ' in-crate' : ''}" data-spot="${esc(sp.id)}" style="left:${sp.x / 10}%;top:${sp.y / 10}%;width:${sp.w / 10}%;height:${sp.h / 10}%" aria-label="${it ? esc(it.n) + ', ' + rs(it.r) : 'Khatam'}">${first ? `<span class="pin${nar ? ' nar' : ''}">${it ? `${S.nmOn && sp.w >= wN ? `<b>${esc(it.n)}</b>` : ''}<span class="pr">${nar ? '' : '<small>Rs</small>'}${num(it.r)}</span>` : '<span class="pr">Khatam</span>'}${q ? `<em>${num(q)}</em>` : ''}</span>` : ''}</button>`; }).join('');
+}
+function pbayHTML(b, i, D) {
+  const p = b.photo, url = RPU.get(p.pid);
+  const ah = $('aisle').clientHeight || 600, pxW = Math.min(D.bw - 40, (ah - 110) * p.w / p.h);
+  return `<section class="bay pbay" data-bay="${i}" data-rp="${esc(p.pid)}" style="--bayW:${D.bw}px" aria-label="Rack ${b.rk.no}: ${esc(b.rk.name)} — asal photo"><header class="sign"><span class="sk">Rack ${b.rk.no}</span><b>${esc(b.rk.name)}</b><span class="sp">📸${b.parts > 1 ? ` ${b.p + 1}/${b.parts}` : ''}</span></header><div class="pv"><div class="pv-in" style="--ar:${(p.w / p.h).toFixed(4)}">${url ? `<img src="${url}" alt="" draggable="false">` : '<i class="pv-wait">📸 Asal rack aa raha hai…</i>'}${spotsHTML(p, pxW)}</div><button type="button" class="pv-z" data-pz="${i}" aria-label="Qareeb se dekho">🔍</button></div></section>`;
+}
+const rpLoading = new Set();
+async function loadRp(p) {
+  if (RPU.has(p.pid) || rpLoading.has(p.pid)) return; rpLoading.add(p.pid);
+  try { const url = await bigPhoto('rp_' + p.pid); if (!url) return; RPU.set(p.pid, url);
+    document.querySelectorAll(`.pbay[data-rp="${CSS.escape(p.pid)}"] .pv-in`).forEach(el => { el.querySelector('.pv-wait')?.remove(); if (!el.querySelector('img')) el.insertAdjacentHTML('afterbegin', `<img src="${url}" alt="" draggable="false">`); });
+    cropSpots(p, url);
+  } catch (e) { console.warn('rack photo', e); } finally { rpLoading.delete(p.pid); }
+}
+// photo ka tukda (us cheez ki tasveer) — tokri / parchi / dhoondo / khirki mein (jis item ki apni tasveer nahi)
+async function cropSpots(p, url) {
+  const need = new Map(); for (const sp of p.spots) { if (phV(sp.id) || PHURL.has(sp.id) || !S.items.has(sp.id)) continue; const o = need.get(sp.id); if (!o || sp.w * sp.h > o.w * o.h) need.set(sp.id, sp); }
+  if (!need.size) return;
+  try { const im = new Image(); im.src = url; await im.decode(); const W0 = im.naturalWidth, H0 = im.naturalHeight;
+    for (const [id, sp] of need) { const sx = sp.x / 1000 * W0, sy = sp.y / 1000 * H0, sw = Math.max(1, sp.w / 1000 * W0), sh = Math.max(1, sp.h / 1000 * H0), k = Math.min(1, 280 / Math.max(sw, sh));
+      const cv = document.createElement('canvas'); cv.width = Math.max(1, Math.round(sw * k)); cv.height = Math.max(1, Math.round(sh * k)); cv.getContext('2d').drawImage(im, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+      const bl = await new Promise(ok => cv.toBlob(ok, 'image/jpeg', 0.82)); if (bl) PHURL.set(id, URL.createObjectURL(bl)); }
+    paintCrate(); } catch {}
+}
+function openPz(i) {
+  const b = S.bays[i], p = b && b.photo, url = p && RPU.get(p.pid); if (!url) return;
+  const box = $('pzIn'); box.style.setProperty('--ar', (p.w / p.h).toFixed(4)); box.innerHTML = `<img src="${url}" alt="" draggable="false">${spotsHTML(p, Math.min(2400, Math.max(innerWidth * 2.3, 900)))}`;
+  $('pzT').textContent = `🔍 Rack ${b.rk.no} · ${b.rk.name}`; $('pz').hidden = false; openOv('pz');
+  requestAnimationFrame(() => { const sc = $('pzSc'); sc.scrollLeft = (sc.scrollWidth - sc.clientWidth) / 2; sc.scrollTop = (sc.scrollHeight - sc.clientHeight) / 3; });
+}
+// 📱 phone ghumao = rack bhi halka ghoome (3D) — Android seedha, iPhone pehli ungli par ijazat
+const GY = { on: false, x: 0, y: 0, tx: 0, ty: 0, b0: null, g0: null, raf: 0, asked: false };
+function gyroStart() {
+  if (GY.on || GY.asked || LITE || RM || !('DeviceOrientationEvent' in window)) return; GY.asked = true;
+  const go = () => { GY.on = true; addEventListener('deviceorientation', e => { if (e.beta == null || e.gamma == null) return; if (GY.b0 == null) { GY.b0 = e.beta; GY.g0 = e.gamma; } GY.b0 += (e.beta - GY.b0) * 0.01; GY.g0 += (e.gamma - GY.g0) * 0.01;
+    GY.tx = Math.max(-7, Math.min(7, (e.gamma - GY.g0) * 0.4)); GY.ty = Math.max(-5, Math.min(5, (e.beta - GY.b0) * -0.3));
+    if (!GY.raf) GY.raf = requestAnimationFrame(() => { GY.raf = 0; GY.x += (GY.tx - GY.x) * 0.45; GY.y += (GY.ty - GY.y) * 0.45; depth(); }); }); };
+  const P = window.DeviceOrientationEvent && window.DeviceOrientationEvent.requestPermission;
+  if (typeof P === 'function') P.call(window.DeviceOrientationEvent).then(r => { if (r === 'granted') go(); }).catch(() => {}); else go();
+}
 function renderAisle(keepId) {
   const D = dims(); S.dims = D;
   const bays = [];
-  S.racks.forEach(rk => { const parts = Math.max(1, Math.ceil(rk.items.length / D.per)); for (let p = 0; p < parts; p++) bays.push({ rk, p, parts, items: rk.items.slice(p * D.per, (p + 1) * D.per) }); });
+  S.racks.forEach(rk => { rk.bay0 = bays.length;
+    rk.photos.forEach((ph, j) => bays.push({ rk, photo: ph, p: j, parts: rk.photos.length, items: [...new Set(ph.spots.map(x => x.id))].map(id => S.items.get(id)).filter(Boolean) }));   // 📸 pehle asal photo
+    const parts = Math.ceil(rk.rest.length / D.per); for (let p = 0; p < parts; p++) bays.push({ rk, p, parts, items: rk.rest.slice(p * D.per, (p + 1) * D.per) }); });
   S.bays = bays; S.bayOf = new Map();
-  bays.forEach((b, i) => b.items.forEach(it => S.bayOf.set(it.id, i)));
+  bays.forEach((b, i) => b.items.forEach(it => { if (!S.bayOf.has(it.id)) S.bayOf.set(it.id, i); }));
   const a = $('aisle');
-  a.innerHTML = bays.length ? bays.map((b, i) => bayHTML(b, i, D)).join('') : '<p class="empty-aisle">Abhi racks par maal nahi saja — thori der baad dobara dekhein.</p>';
-  bayEls = [...a.querySelectorAll('.bay')]; rackEls = bayEls.map(el => el.querySelector('.rack')); filledAt = -99;
+  a.innerHTML = bays.length ? bays.map((b, i) => b.photo ? pbayHTML(b, i, D) : bayHTML(b, i, D)).join('') : '<p class="empty-aisle">Abhi racks par maal nahi saja — thori der baad dobara dekhein.</p>';
+  bayEls = [...a.querySelectorAll('.bay')]; rackEls = bayEls.map(el => el.querySelector('.rack, .pv-in')); filledAt = -99;
   paintRkBar();
   observe();
   if (keepId && S.bayOf.has(keepId)) go(S.bayOf.get(keepId), true);
@@ -201,7 +261,7 @@ function observe() {
   try { io && io.disconnect(); } catch {}
   if (!('IntersectionObserver' in window)) { S.items.forEach(it => { if (phV(it.id)) want.add(it.id); }); loadPhotos(); return; }
   io = new IntersectionObserver(es => {
-    for (const e of es) if (e.isIntersecting) { const b = S.bays[Number(e.target.dataset.bay)]; if (b) { b.items.forEach(it => { if (phV(it.id) && !PHURL.has(it.id)) want.add(it.id); }); if (phV(rkPh(b.rk.key)) && !RBG.has(b.rk.key)) wantBg.add(b.rk.key); } }
+    for (const e of es) if (e.isIntersecting) { const b = S.bays[Number(e.target.dataset.bay)]; if (b) { b.items.forEach(it => { if (phV(it.id) && !PHURL.has(it.id)) want.add(it.id); }); if (!b.photo && phV(rkPh(b.rk.key)) && !RBG.has(b.rk.key)) wantBg.add(b.rk.key); } }
     clearTimeout(loadT); loadT = setTimeout(() => { loadPhotos(); loadBgs(); }, 50);
   }, { root: $('aisle'), rootMargin: '0px 120% 0px 120%' });
   document.querySelectorAll('.bay').forEach(el => io.observe(el));
@@ -265,7 +325,7 @@ function onScroll() {
   S.cur = i;
   const b = S.bays[i], x = a.scrollLeft;
   if (i !== filledAt) { filledAt = i; fillNear(i);   // v2.156.1: sirf rack badle to DOM likho (har frame nahi)
-    $('where').textContent = b ? `Rack ${b.rk.no}/${S.racks.length} · ${b.rk.name}${b.parts > 1 ? ` (${b.p + 1}/${b.parts})` : ''}` : 'Noor Traders';
+    $('where').textContent = b ? `Rack ${b.rk.no}/${S.racks.length} · ${b.rk.name}${b.photo ? ' 📸' : ''}${b.parts > 1 ? ` (${b.p + 1}/${b.parts})` : ''}` : 'Noor Traders';
     const w = S.bays.length ? Math.round((i + 1) / S.bays.length * 100) + '%' : '0';
     $('walkBar').style.width = w; $('walkFeet').style.setProperty('--w', w); }
   if (!LITE) { FL ||= document.querySelector('.floor-t'); CE ||= document.querySelector('.ceil-t'); if (FL) FL.style.transform = `translate3d(${-(x % 128).toFixed(1)}px,0,0)`; if (CE) CE.style.transform = `translate3d(${-((x * 0.55) % 250).toFixed(1)}px,0,0)`; }   // 🚶 farsh / lights — sirf transform (GPU), poori dukan dobara nahi
@@ -273,8 +333,9 @@ function onScroll() {
   const pd = x < 4, nd = x + a.clientWidth >= a.scrollWidth - 4;
   if (pd !== lastPd) { lastPd = pd; $('prevBtn').disabled = pd; } if (nd !== lastNd) { lastNd = nd; $('nextBtn').disabled = nd; }
   depth();
-  if (i !== arrived) { clearTimeout(arriveT); arriveT = setTimeout(() => { if (S.cur !== i || i === arrived) return; const first = arrived < 0; arrived = i; if (first || !doorGone) return; replay(bayEls[i]?.querySelector('.sign'), 'swing'); replay($('walkFeet'), 'bob'); sfx('step'); buzz(6); if (S.walkTo === i) { S.walkTo = -1; hpArrive(); } }, 140); }
+  if (i !== arrived) { clearTimeout(arriveT); arriveT = setTimeout(() => { if (S.cur !== i || i === arrived) return; const first = arrived < 0; arrived = i; if (first || !doorGone) return; replay(bayEls[i]?.querySelector('.sign'), 'swing'); replay($('walkFeet'), 'bob'); sfx('step'); buzz(6); if (S.walkTo === i) { S.walkTo = -1; hpArrive(); } phHint(i); }, 140); }
 }
+function phHint(i) { if (!S.bays[i]?.photo || ss.get('nt-dk-ph')) return; ss.set('nt-dk-ph', '1'); const h = $('hint'); h.textContent = '👆 Photo par cheez dabayein — rate aur tokri'; h.hidden = false; setTimeout(() => { h.hidden = true; }, 3600); }
 // 🚶 rack se rack: racks halka sa mud kar (3D) aage, farsh ki tiles alag raftaar (sirf qareeb ke 3–4 racks)
 let bayEls = [], rackEls = [], arrived = -1, arriveT = 0, doorGone = false, curRk = null, filledAt = -99, FL = null, CE = null, lastPd = null, lastNd = null;
 function depth() {
@@ -283,7 +344,7 @@ function depth() {
   const lo = Math.max(0, Math.floor(x / bw) - 1), hi = Math.min(bayEls.length - 1, Math.ceil((x + a.clientWidth) / bw) + 1);
   for (let k = lo; k <= hi; k++) {   // v2.156.1: seedha rack ka transform (CSS var nahi — warna rack ka har item dobara style hota tha)
     const p = Math.max(-1, Math.min(1, ((k + 0.5) * bw - mid) / bw)), el = rackEls[k]; if (!el) continue;
-    el.style.transform = `perspective(900px) rotateY(${(-p * 14).toFixed(2)}deg) scale(${(1 - Math.abs(p) * 0.07).toFixed(3)})`; el.style.opacity = (1 - Math.abs(p) * 0.3).toFixed(3);
+    el.style.transform = `perspective(900px) rotateY(${(-p * 14 + GY.x).toFixed(2)}deg) rotateX(${GY.y.toFixed(2)}deg) scale(${(1 - Math.abs(p) * 0.07).toFixed(3)})`; el.style.opacity = (1 - Math.abs(p) * 0.3).toFixed(3);   // + 📱 phone ka jhukao
   }
 }
 function go(i, now) {
@@ -305,8 +366,8 @@ function markRk() {
   const el = box.children[k]; if (el) box.scrollTo({ left: el.offsetLeft - (box.clientWidth - el.offsetWidth) / 2, behavior: LITE ? 'auto' : 'smooth' });
 }
 function goRack(k, why) {
-  const rk = S.racks[k]; if (!rk || !rk.items.length) return;
-  const i = S.bayOf.get(rk.items[0].id) ?? 0;
+  const rk = S.racks[k]; if (!rk || rk.bay0 == null || !S.bays[rk.bay0]) return;
+  const i = rk.bay0;
   if (why === 'help') S.walkTo = i;
   if (i === S.cur) { if (why === 'help') { S.walkTo = -1; hpArrive(); } replay(bayEls[i]?.querySelector('.sign'), 'swing'); return; }
   go(i); buzz(8);
@@ -342,6 +403,7 @@ const thumbStyle = it => PHURL.has(it.id) ? `background-image:url('${PHURL.get(i
 function markItem(id) {
   const q = Number(S.crate[id]) || 0;
   document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"]`).forEach(el => { el.classList.toggle('in-crate', q > 0); const p = el.querySelector('.plus'); if (p) p.textContent = q ? num(q) : '+'; });
+  document.querySelectorAll(`.spot[data-spot="${CSS.escape(id)}"]`).forEach(el => { el.classList.toggle('in-crate', q > 0); const pin = el.querySelector('.pin'); if (!pin) return; let em = pin.querySelector('em'); if (q) { if (!em) { em = document.createElement('em'); pin.appendChild(em); } em.textContent = num(q); } else if (em) em.remove(); });   // 📸
 }
 function setQty(id, q) {
   q = Math.max(0, Math.round(q * 100) / 100);
@@ -390,6 +452,7 @@ function hideOv(n) {
   else if (n === 'cv') $('cv').hidden = true;
   else if (n === 'find') $('find').hidden = true;
   else if (n === 'map') $('map').hidden = true;
+  else if (n === 'pz') { $('pz').hidden = true; $('pzIn').innerHTML = ''; }
 }
 function closeOv(n) {
   const i = OV.lastIndexOf(n); hideOv(n);
@@ -506,14 +569,14 @@ function findPaint() {
 function showOnRack(id) {
   if (!S.bayOf.has(id)) return;
   go(S.bayOf.get(id));
-  setTimeout(() => document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"]`).forEach(el => { el.classList.remove('glow'); void el.offsetWidth; el.classList.add('glow'); setTimeout(() => el.classList.remove('glow'), 3600); }), 450);
+  setTimeout(() => document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"], .spot[data-spot="${CSS.escape(id)}"]`).forEach(el => { el.classList.remove('glow'); void el.offsetWidth; el.classList.add('glow'); setTimeout(() => el.classList.remove('glow'), 3600); }), 450);
 }
 
 // ---------- 🗺 naqsha ----------
 function openMap() {
   const curRack = S.bays[S.cur]?.rk?.no;
   $('mapList').innerHTML = `<li><button type="button" data-go="0"><span class="n">🚪</span><span class="t"><b>Darwaza</b><small>Shuru</small></span></button></li>` +
-    S.racks.map(rk => `<li><button type="button" class="${rk.no === curRack ? 'cur' : ''}" data-go="${S.bayOf.get(rk.items[0]?.id) ?? 0}"><span class="n">${rk.no}</span><span class="t"><b>${esc(rk.name)}</b><small>${rk.items.length} cheezein</small></span></button></li>`).join('') +
+    S.racks.map(rk => `<li><button type="button" class="${rk.no === curRack ? 'cur' : ''}" data-go="${rk.bay0 ?? 0}"><span class="n">${rk.no}</span><span class="t"><b>${esc(rk.name)}</b><small>${rk.items.length} cheezein</small></span></button></li>`).join('') +
     `<li class="end"><button type="button" data-counter="1"><span class="n">🧾</span><span class="t"><b>Counter</b><small>Parchi + order</small></span></button></li>`;
   $('map').hidden = false; openOv('map');
   setTimeout(() => $('mapList').querySelector('.cur')?.scrollIntoView({ block: 'center' }), 30);
@@ -590,6 +653,11 @@ async function load(again) {
 // ---------- 👆 clicks ----------
 document.addEventListener('click', e => {
   const t = e.target;
+  if (!GY.asked) gyroStart();   // 📱 pehli ungli par (iPhone ijazat maangta hai)
+  const sp = t.closest('[data-spot]');
+  if (sp) { const id = sp.dataset.spot, si = S.items.get(id); if (!si) { replay(sp, 'nope'); buzz([10, 40, 10]); return; } replay(sp, 'tap'); sfx('pick'); buzz(8); closeHelper(); setTimeout(() => openSheet(id, null), LITE || RM ? 0 : 120); return; }   // 📸 photo par cheez
+  const pzb = t.closest('[data-pz]'); if (pzb) { openPz(Number(pzb.dataset.pz)); return; }
+  if (t.closest('[data-pz-close]')) { closeOv('pz'); return; }
   const it = t.closest('.it');
   if (!t.closest('#helper') && !t.closest('#helpBtn') && !t.closest('[data-rk]') && $('helper') && !$('helper').hidden && S.walkTo < 0) closeHelper();
   if (it && t.closest('#aisle')) {

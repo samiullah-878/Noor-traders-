@@ -6808,6 +6808,26 @@ html body #wdDlg .wd-ai.mut{border-style:dashed!important;background:#fffaf0!imp
 #wdDlg .wd-ait b em{font-style:normal;display:inline-block;margin-left:4px;padding:0 7px;border-radius:999px;background:#e9eef7;color:#33415a;font-size:12px}
 #wdDlg .wd-ait small{font-size:12px;color:#5b6880;line-height:1.35;overflow-wrap:anywhere}
 #wdDlg .wd-ait .wd-aim{color:#9a6200;font-weight:700}
+/* v2.158.0: 📸 asal rack ki photo — list + dabbe (AI) + naam */
+#wdDlg .wd-rpl{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr));gap:8px}
+html body #wdDlg .wd-rpc{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;padding:8px;border-radius:14px;border:1.5px solid #e1e6ef!important;background:#fff!important;color:#18212f!important;text-align:left;box-shadow:none!important}
+#wdDlg .wd-rpt{width:64px;height:64px;border-radius:10px;background-size:cover!important}
+#wdDlg .wd-pe{display:flex;justify-content:center}
+#wdDlg .wd-pimg{position:relative;width:100%;max-width:760px;border-radius:12px;overflow:hidden;background:#10151d;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+#wdDlg .wd-pimg.draw{touch-action:none;cursor:crosshair;outline:3px solid #f2b632}
+#wdDlg .wd-pimg img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none}
+#wdDlg .wd-pw{position:absolute;inset:0;display:grid;place-items:center;color:#cfd6e2;font-style:normal;font-weight:700}
+html body #wdDlg .wd-bx{position:absolute;z-index:2;min-width:0;min-height:0;padding:0;border-radius:6px;border:2px solid #f2b632!important;background:rgba(242,182,50,.12)!important;box-shadow:0 0 0 1px rgba(0,0,0,.35)!important;cursor:pointer}
+html body #wdDlg .wd-bx.ok{border-color:#2bbf63!important;background:rgba(43,191,99,.10)!important}
+html body #wdDlg .wd-bx.gone{border-color:#b3261e!important}
+html body #wdDlg .wd-bx.sel{border-color:#fff!important;background:rgba(45,85,176,.38)!important;box-shadow:0 0 0 2px #2d55b0,0 0 14px rgba(45,85,176,.8)!important}
+html body #wdDlg .wd-bx.tmp{border:2px dashed #fff!important;background:rgba(255,255,255,.18)!important;pointer-events:none}
+#wdDlg .wd-bx i{position:absolute;left:-2px;top:-2px;max-width:calc(100% + 40px);padding:0 4px;border-radius:5px 0 5px 0;background:rgba(242,182,50,.95);color:#2a2100;font:800 9.5px/1.45 Manrope,sans-serif;font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+#wdDlg .wd-bx.ok i{background:rgba(43,191,99,.95);color:#fff}
+#wdDlg .wd-bx.sel i{background:#2d55b0;color:#fff}
+#wdDlg .wd-f{flex-wrap:wrap}
+#wdDlg .wd-q2{margin:10px 0}
+html body #wdDlg .wd-bxl .wd-r{grid-template-columns:minmax(0,1fr)}
 /* v2.149.0: ✓ Check + 📌 Post ek click — upar ki patti (⏳ update → ⏳ post → ✅ / ✕) + ↩ Unpost */
 html body .pp-flow{display:flex;align-items:center;gap:8px;margin:0 0 10px;padding:8px 8px 8px 14px;border-radius:14px;border:1.5px solid #c9d6ee!important;background:linear-gradient(180deg,#f5f8ff,#e9effb)!important;color:#1b2f5c!important;box-shadow:0 4px 14px -10px rgba(27,47,92,.6)}
 html body .pp-flow.posted,html body .pp-flow.unposted{border-color:#a8dcb9!important;background:linear-gradient(180deg,#f2fbf5,#e3f5ea)!important;color:#145c33!important}
@@ -6853,3 +6873,5 @@ html body .pp-cbl{flex:none;height:34px;min-height:0!important;padding:0 12px!im
 .lk-bd em.dn{background:rgba(217,83,79,.12);color:#b3261e}
 html body #wdDlg .wd-form label.wd-tick{display:flex;align-items:center;justify-content:flex-start;gap:10px}
 html body #wdDlg .wd-form label.wd-tick input{flex:none;width:20px;height:20px;margin:0}
+html body #wdDlg .wd-f .wd-chip{flex:0 0 auto}
+html body #wdDlg .wd-f .wd-main{flex:1 0 auto;min-width:120px}
