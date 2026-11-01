@@ -21,9 +21,13 @@
 //   v2.160.0 (malik: "search smart nahi" · "sab bane racks band — apne racks ki photos lagani hain"): 🔍 dhoond.js (app ke saath ek qaida) + "Shayad ye" ·
 //     🌾 khula maal ab ALAG SECTION (rack key '@khula', naam "Daalein · Masala Jaat · Cheeni · Chawal", shuru mein — tarteeb / naam app se) · racks.cr {id: credit} = 🌐 internet tasveer ka naam (khirki mein)
 //     racks.draw false (default) = bane hue racks BAND — sirf asal photo bays + 🌾 khula; baqi items sirf dhoondo se (seedha khirki). Koi photo na ho = bane racks (dukan khali nahi).
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.165.0';
-import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank } from './khula.js?v=2.165.0';
-import { smartFind } from './dhoond.js?v=2.165.0';
+//   v2.166.0 (malik: "site chhoti screen jaisi — dukan jaise racks door se nazar aayein · daalein ek deewar, baqi racks doosri · jis rack ke paas jaye wo dikhe"):
+//     🏬 KAMRA (kamra.js) — 3D gali, ungli upar = aage · rack par tap = mud kar paas → yahi purana rack view ('near' khirki, phone back / 🏬 = wapas kamra).
+//     Abhi sirf ?kamra=1 link par (malik dekhe) — OK ke baad sab ke liye (ROOM_DEFAULT).
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.166.0';
+import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank } from './khula.js?v=2.166.0';
+import { smartFind } from './dhoond.js?v=2.166.0';
+import { makeKamra } from './kamra.js?v=2.166.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -80,6 +84,11 @@ function sndPaint() { [['sndBtn', SND ? '🔊' : '🔇'], ['sndDoor', SND ? '�
 const ss = { get(k) { try { return sessionStorage.getItem(k); } catch { return null; } }, set(k, v) { try { sessionStorage.setItem(k, v); } catch {} } };
 
 SND = ls.get('nt-dk-snd', false) === true; sndPaint();
+// 🏬 v2.166.0: kamra (door se nazara) — ?kamra=1 / ?kamra=0 is session ke liye yaad
+const ROOM_DEFAULT = '0';
+{ const q = new URLSearchParams(location.search).get('kamra'); if (q === '1' || q === '0') ss.set('nt-dk-kamra', q); }
+const ROOM = (ss.get('nt-dk-kamra') || ROOM_DEFAULT) === '1';
+document.body.classList.toggle('room-on', ROOM); document.body.classList.toggle('in-room', ROOM);
 
 // ---------- ☁️ Firestore REST (sirf parhna) ----------
 const ROOT = `projects/${firebaseConfig.projectId}/databases/(default)/documents`;
@@ -318,7 +327,16 @@ function renderAisle(keepId) {
   observe();
   if (keepId && S.bayOf.has(keepId)) go(S.bayOf.get(keepId), true);
   onScroll();
+  if (K) { K.build(); if (inRoom()) roomWhere(); }   // 🏬 v2.166.0
 }
+// ---------- 🏬 v2.166.0: kamra (door se) ↔ rack ke paas ----------
+const inRoom = () => ROOM && document.body.classList.contains('in-room');
+const roomWhere = () => { $('where').textContent = `🏬 Dukan · ${S.vis.length} racks — rack ke paas jao`; };
+async function rpGet(p) { if (!RPU.has(p.pid)) { await loadRp(p); for (let k = 0; k < 60 && !RPU.has(p.pid) && rpLoading.has(p.pid); k++) await new Promise(r => setTimeout(r, 100)); } return RPU.get(p.pid) || ''; }
+const K = ROOM ? makeKamra({ S, LITE, RM, esc, gth, hueOf, rpGet, sfx, buzz, openCounter: () => openCounter(), where: t => { $('where').textContent = t; },
+  onNear: rk => { if (!inRoom()) return; curRk = rk; markRk(); },
+  onEnter: i => { document.body.classList.remove('in-room'); $('roomBtn').hidden = false; closeHelper(); go(i, true); filledAt = -99; onScroll(); openOv('near'); requestAnimationFrame(depth); } }) : null;
+function toRoom() { document.body.classList.add('in-room'); $('roomBtn').hidden = true; roomWhere(); K && K.back(S.cur); }
 
 // ---------- 📷 tasveerein (sirf jo rack nazar aaye / qareeb ho) ----------
 let io = null, loadT = 0, loading = false;
@@ -392,11 +410,11 @@ function onScroll() {
   S.cur = i;
   const b = S.bays[i], x = a.scrollLeft;
   if (i !== filledAt) { filledAt = i; fillNear(i);   // v2.156.1: sirf rack badle to DOM likho (har frame nahi)
-    $('where').textContent = b ? `Rack ${b.rk.no}/${S.vis.length} · ${b.rk.name}${b.photo ? ' 📸' : b.kh ? ' 🌾' : ''}${b.parts > 1 ? ` (${b.p + 1}/${b.parts})` : ''}` : 'Noor Traders';
+    if (!inRoom()) $('where').textContent = b ? `Rack ${b.rk.no}/${S.vis.length} · ${b.rk.name}${b.photo ? ' 📸' : b.kh ? ' 🌾' : ''}${b.parts > 1 ? ` (${b.p + 1}/${b.parts})` : ''}` : 'Noor Traders';
     const w = S.bays.length ? Math.round((i + 1) / S.bays.length * 100) + '%' : '0';
     $('walkBar').style.width = w; $('walkFeet').style.setProperty('--w', w); }
   if (!LITE) { FL ||= document.querySelector('.floor-t'); CE ||= document.querySelector('.ceil-t'); if (FL) FL.style.transform = `translate3d(${-(x % 128).toFixed(1)}px,0,0)`; if (CE) CE.style.transform = `translate3d(${-((x * 0.55) % 250).toFixed(1)}px,0,0)`; }   // 🚶 farsh / lights — sirf transform (GPU), poori dukan dobara nahi
-  if (b && b.rk !== curRk) { curRk = b.rk; markRk(); }
+  if (b && b.rk !== curRk && !inRoom()) { curRk = b.rk; markRk(); }
   const pd = x < 4, nd = x + a.clientWidth >= a.scrollWidth - 4;
   if (pd !== lastPd) { lastPd = pd; $('prevBtn').disabled = pd; } if (nd !== lastNd) { lastNd = nd; $('nextBtn').disabled = nd; }
   depth();
@@ -434,6 +452,7 @@ function markRk() {
 function goRack(k, why) {
   const rk = S.racks[k]; if (!rk || rk.bay0 == null || !S.bays[rk.bay0]) return;
   const i = rk.bay0;
+  if (inRoom()) { if (why === 'help') setTimeout(closeHelper, 900); K.walkTo(i); return; }   // 🏬 chal kar rack tak, phir paas
   if (why === 'help') S.walkTo = i;
   if (i === S.cur) { if (why === 'help') { S.walkTo = -1; hpArrive(); } replay(bayEls[i]?.querySelector('.sign'), 'swing'); return; }
   go(i); buzz(8);
@@ -526,6 +545,7 @@ function hideOv(n) {
   else if (n === 'find') $('find').hidden = true;
   else if (n === 'map') $('map').hidden = true;
   else if (n === 'pz') { $('pz').hidden = true; $('pzIn').innerHTML = ''; }
+  else if (n === 'near') toRoom();   // 🏬 v2.166.0: phone back = wapas kamra
 }
 function closeOv(n) {
   const i = OV.lastIndexOf(n); hideOv(n);
@@ -647,7 +667,7 @@ function findPaint() {   // v2.160.0: 🔍 smart (daal = dal = دال · sugar =
 }
 function showOnRack(id) {
   if (!S.bayOf.has(id)) { afterBack(() => openSheet(id, null)); return; }   // v2.160.0: rack par nahi (bane racks band) = seedha khirki (dhoondo band hone ke baad)
-  go(S.bayOf.get(id));
+  if (inRoom()) K.enterBay(S.bayOf.get(id), true); else go(S.bayOf.get(id));
   setTimeout(() => document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"], .spot[data-spot="${CSS.escape(id)}"], [data-kh="${CSS.escape(id)}"]`).forEach(el => { el.classList.remove('glow'); void el.offsetWidth; el.classList.add('glow'); setTimeout(() => el.classList.remove('glow'), 3600); }), 450);
 }
 
@@ -685,7 +705,7 @@ function enter() {
   const d = $('door'); if (d.classList.contains('up')) return;
   d.classList.add('up'); ss.set('nt-dk-in', '1'); sfx('shutter'); buzz([18, 70, 18]);
   const sh = $('shutter'), board = $('board'), top = d.querySelector('.door-top');
-  const finish = () => { if (doorGone) return; doorGone = true; d.classList.add('gone'); lightsOn(); sfx('bell'); welcome(); };
+  const finish = () => { if (doorGone) return; doorGone = true; d.classList.add('gone'); lightsOn(); sfx('bell'); welcome(); if (inRoom()) K.showHint(); };
   if (RM) { finish(); return; }
   // ① jhatka · ② drum mein lipat kar upar · ③ board upar ghayab
   const j = anim(sh, [{ transform: 'translateY(0)' }, { transform: 'translateY(-16px)' }, { transform: 'translateY(-5px)' }, { transform: 'translateY(-12px)' }], { duration: 300, easing: 'ease-out', fill: 'forwards' });
@@ -766,11 +786,12 @@ document.addEventListener('click', e => {
   if (t.closest('#mapBtn')) { openMap(); return; }
   if (t.closest('[data-map-close]') || t === $('map')) { closeOv('map'); return; }
   const g = t.closest('[data-go]');
-  if (g) { closeOv('map'); go(Number(g.dataset.go)); return; }
+  if (g) { closeOv('map'); const gi = Number(g.dataset.go); if (inRoom()) afterBack(() => K.enterBay(gi, true)); else go(gi); return; }
   if (t.closest('[data-counter]')) { closeOv('map'); setTimeout(openCounter, 60); return; }
   if (t.closest('#prevBtn')) { go(S.cur - (S.dims && S.dims.bw < $('aisle').clientWidth - 10 ? 2 : 1)); return; }
   if (t.closest('#nextBtn')) { go(S.cur + (S.dims && S.dims.bw < $('aisle').clientWidth - 10 ? 2 : 1)); return; }
   if (t.closest('#enterBtn')) { enter(); return; }
+  if (t.closest('#roomBtn')) { if (OV.includes('near')) { while (OV.length && OV[OV.length - 1] !== 'near') closeOv(OV[OV.length - 1]); closeOv('near'); } else toRoom(); return; }   // 🏬 wapas poori dukan
   if (t.closest('#sndBtn') || t.closest('#sndDoor')) { SND = !SND; ls.set('nt-dk-snd', SND); sndPaint(); if (SND) sfx('pick'); return; }
   if (t.closest('#retryBtn')) { load(); return; }
   const rc = t.closest('[data-rk]'); if (rc) { closeHelper(); goRack(Number(rc.dataset.rk)); return; }   // v2.156.0: 🗂 neeche ka rack chip
@@ -787,10 +808,11 @@ $('aisle').addEventListener('scroll', () => { cancelAnimationFrame(onScroll.r); 
 addEventListener('keydown', e => {
   if (e.key === 'Escape' && OV.length) { closeOv(OV[OV.length - 1]); return; }
   if (OV.length || /input|textarea/i.test(e.target.tagName)) return;
+  if (inRoom()) { if (e.key === 'ArrowUp') K.step(1); else if (e.key === 'ArrowDown') K.step(-1); return; }
   if (e.key === 'ArrowRight') go(S.cur + 1); else if (e.key === 'ArrowLeft') go(S.cur - 1);
 });
 let rzT = 0;
-addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { const D = dims(), o = S.dims; if (!o || D.bw !== o.bw || D.cols !== o.cols || D.rows !== o.rows) renderAisle(S.bays[S.cur]?.items?.[0]?.id); }, 180); });
+addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { const D = dims(), o = S.dims; if (!o || D.bw !== o.bw || D.cols !== o.cols || D.rows !== o.rows) renderAisle(S.bays[S.cur]?.items?.[0]?.id); else if (K) K.relayout(); }, 180); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.loadedAt && Date.now() - S.loadedAt > 15 * 60e3) load(true); });
 
 document.querySelectorAll('#helpBtn,.hp-ava').forEach(el => { el.innerHTML = AVA; });   // v2.156.0
