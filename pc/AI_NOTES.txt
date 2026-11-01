@@ -3850,3 +3850,12 @@ Malik: "wo aik alag section hain — naam Daalein, Masala Jaat, Cheeni, Chawal �
 - Google Images se khud download nahi (Google ijazat nahi deta / copyright).
 - Website: neeche ke rack chip ki jagah theek (pehle avatar jitna khisak jata), lamba section naam 2 line, ‹ › se na takraye.
 - AI NAHI. Rules wahi (2.79). PC tabdeeli nahi.
+
+== v2.162.0 (1 Nov 2026) — 📱 GAARI KA PHONE: GPS se din ke km khud (rules 2.80) ==
+Malik: "gaari mein mobile rakh dein to pura din ki automatic minus (milage map se)" · "driver kuch bhi nahi dabayega — sab auto" · "jahan 4G signal na ho us ka kya?" → plan OK ("aaj phone le leta hoon").
+- Gaari ka phone: MacroDroid (HBL SMS wala hi app) har 1 min jagah apni list (gps variable) mein jorta hai, HTTP POST gaariGps (khufia chaabi blueAccess/gaariKey). Jawab 200 = list khali; signal na ho = list phone mein barhti, signal aate hi sab ek saath. Driver kuch nahi dabata; phone charger par, MacroDroid battery Unrestricted.
+- PC gaari-gps.js v1.0 (naya, doctor service "📱 Gaari ka phone (GPS km)"): har 2 min din ke km (khari gaari ki GPS hil-jul / 160 km/h se tez chhalang nahi), ruki (10 min+), phone chup (5 min+ = seedhi lakeer ka andaza, alag likha) → gaariDay/<din> + gaariPath (naqsha) + gaariGpsRaw (sirf PC) + gaariDay/_live. Parhe hue gaariGps mita deta. POS / khata mein kuch nahi.
+- App Gaari: phere ke km = meter → Falcon → 📱 GPS (us din ke km ÷ us din ke phere) → tanki ka diesel usi qaide se khud katta. Chip "📱 Aaj GPS" (🟢 chal raha / 🟡 chup — shayad signal / 📵 phone dekhein); khirki: har din km, phere (🚫 phera nahi = gaari chali magar phera nahi), ruki, chup; 🗺 naqsha (Leaflet vendor + OpenStreetMap muft) — raasta neela, chup wala hissa laal dabbedaar, ruki narangi, shuru hara, aakhir neela.
+- ⚙️ Gaari phone setup (sirf malik): 🔑 chaabi app banati (chat mein kabhi nahi), 9 qadam MacroDroid, 📋 URL / Body / Value copy, 🔎 Rabta test.
+- Rules 2.80: gaariGps (sirf naya, sahi chaabi, keys k+p), gaariDay / gaariPath (malik / Full / gaari parhein). Shop PC khud publish karega.
+- AI NAHI.

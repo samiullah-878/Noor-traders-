@@ -6886,3 +6886,25 @@ html body #wdDlg .wd-form label.wd-tick{display:flex;align-items:center;justify-
 html body #wdDlg .wd-form label.wd-tick input{flex:none;width:20px;height:20px;margin:0}
 html body #wdDlg .wd-f .wd-chip{flex:0 0 auto}
 html body #wdDlg .wd-f .wd-main{flex:1 0 auto;min-width:120px}
+/* v2.162.0: 📱 GAARI KA PHONE (GPS) — din ke km, naqsha, setup */
+html body #dialogBody .gg{display:grid;gap:10px;min-width:0}
+html body #dialogBody .gg-st{margin:0;padding:10px 12px;border-radius:14px;font-weight:800;font-size:13px;line-height:1.35;background:#eef6ff;color:#173a7a;border:1px solid #cfe0fb}
+html body #dialogBody .gg-st.gg-ok{background:#ecfdf3;color:#166534;border-color:#bbf7d0}
+html body #dialogBody .gg-st.gg-warn,html body #dialogBody .gg-st.gg-none{background:#fff8e6;color:#7c4a03;border-color:#f3d48a}
+html body #dialogBody .gg-st.gg-bad{background:#fff1f1;color:#9f1d1d;border-color:#ffc4c4}
+html body #dialogBody .gg-note{margin:0;color:#5b6880;font-size:12px;line-height:1.4}
+html body #dialogBody .gg-list{display:grid;gap:8px}
+html body #dialogBody .gg-day{display:grid!important;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"d k" "i i";gap:4px 10px;align-items:center;width:100%;padding:10px 12px!important;border-radius:16px!important;border:1px solid #e3e8f0!important;background:linear-gradient(180deg,#fff,#f6f8fc)!important;color:#18212f!important;text-align:left;box-shadow:0 6px 14px -12px rgba(20,40,90,.6)!important}
+html body #dialogBody .gg-d{grid-area:d;display:flex;flex-direction:column;min-width:0}
+html body #dialogBody .gg-d b{font-size:14px}html body #dialogBody .gg-d small{color:#5b6880;font-size:11.5px}
+html body #dialogBody .gg-k{grid-area:k;text-align:right}html body #dialogBody .gg-k b{font-size:20px;color:#1d4ed8}html body #dialogBody .gg-k small{margin-left:3px;color:#5b6880;font-weight:700}
+html body #dialogBody .gg-i{grid-area:i;display:flex;flex-wrap:wrap;gap:5px}
+html body #dialogBody .gg-i i,html body #dialogBody .gg-stops span{font-style:normal;padding:2px 8px;border-radius:999px;background:#eef2f8;color:#334155;font-size:11.5px;font-weight:700;white-space:nowrap}
+html body #dialogBody .gg-i i.ok{background:#ecfdf3;color:#166534}html body #dialogBody .gg-i i.bad{background:#fff1f1;color:#9f1d1d}html body #dialogBody :is(.gg-i i,.gg-stops span).warn{background:#fff8e6;color:#7c4a03}
+html body #dialogBody .gg-map{height:min(52vh,420px);border-radius:16px;overflow:hidden;background:#e8edf5;border:1px solid #dbe3ef}
+html body #dialogBody .gg-h{margin:4px 0 0;font-size:13px;color:#173a7a}
+html body #dialogBody .gg-stops{display:flex;flex-wrap:wrap;gap:6px}
+html body #dialogBody .gg-stops b{margin-right:5px;color:#b45309}
+html body #dialogBody .gg-set ol{margin:0;padding-left:20px;display:grid;gap:8px;font-size:13px;line-height:1.45}
+html body #dialogBody .gg-copy{height:32px;padding:0 12px;border-radius:999px!important;border:1px solid #cfd8e6!important;background:linear-gradient(180deg,#fff,#eef2f8)!important;color:#1b2f5c!important;font-weight:800;font-size:12.5px;white-space:nowrap;vertical-align:middle}
+html body #dialogBody .gg-test{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12.5px;font-weight:700}

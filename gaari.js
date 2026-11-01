@@ -1,4 +1,7 @@
 // gaari.js — 🚚 GAARI KA HISAAB v3 (v2.94, 2026-10-06) — sab kuch "PHERA" ke gird
+// v2.162.0 (2026-11-01): 📍 GAARI KA PHONE (malik: "gaari mein mobile — pura din ka khud minus, map se · driver kuch nahi dabayega · 4G na ho to?"):
+//   phone (MacroDroid, har 1 min, signal na ho to phone mein jama) → gaariGps → PC gaari-gps.js → gaariDay/<din> {km, gapKm, j:{stops,gaps}} + gaariPath (naqsha).
+//   Phere ke km: meter → Falcon → 📍 GPS (us din ke km ÷ us din ke phere) — tanki ka diesel usi purane qaide se khud katta. ⚙️ setup (sirf malik): chaabi + MacroDroid qadam + 📋 copy + 🔎 test.
 // v2.98.1 (2026-10-08): ⛽ km ka WAQT — phere ke km jab save hon (kmLog [{at, km}]) usi waqt tanki se diesel katta (edit se kam/zyada);
 //   phere ke andar ki diesel (tanki full) phere ke SHURU mein (us phere ke km nayi tanki se); purane din ka edit usi din mein (clamp).
 //   💾 Phera page: Save button — khana khud save nahi; bina save band = poochta; naya phera Save par hi banta.
@@ -21,7 +24,8 @@
 // phera cards. Purani alag entries (bilty/diesel/kharch/reading/tracker/driver — v2.92) bhi jor mein rehti hain.
 // Data: businesses/noor-traders/gaari/{id} kind 'phera' {date, startR, endR, trackerKm, bilties[{id,from,to,party,kiraya,comm,col}],
 //   kharche[{n,a}], diesel[{l,rate,amount,full}], status open|closed, note, by, byName, at, trackerTrips[{t,km,cut}] (v2.95.8)} + gaari/_config.
-import { smartHit } from './smart-search.js?v=2.161.0';   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.162.0';
+import { firebaseConfig } from './config.js?v=2.162.0';   // v2.162.0: 📍 MacroDroid ka REST pata   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (v, d = 0) => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: d });
@@ -36,13 +40,14 @@ const uid6 = () => Math.random().toString(36).slice(2, 8);
 
 let cloud = null, notice = () => {}, isOwner = () => false, byName = () => '', uidOf = () => '', modal = null, closeModal = () => {}, ai = null, pdf = null, shrink = null;
 let un = null, rows = [], cfg = { avg: 5.5, commType: 'pct', commVal: 10, driver: '', no: 'GJL640630' }, month = today().slice(0, 7), day = '', mounted = false, err = '';
-let cur = null, curTimer = null, curDirty = false, curNew = false;   // khula phera page (local copy) · v2.98.1: Save button (dirty / naya)
+let cur = null, curTimer = null, curDirty = false, curNew = false;
+let gpsUn = null, gpsDays = new Map(), gpsLive = null, phDay = new Map(), gKey = null, gTest = '';   // v2.162.0: 📍   // khula phera page (local copy) · v2.98.1: Save button (dirty / naya)
 
 export function gaariSetup(o) {
   cloud = o.cloud; notice = o.notice || notice; isOwner = o.owner || isOwner; byName = o.byName || byName; uidOf = o.uid || uidOf;
   modal = o.modal; closeModal = o.close || closeModal; ai = o.ai || null; pdf = o.pdf || null; shrink = o.shrink || null;
 }
-export function gaariStop() { if (!mounted) return; mounted = false; try { un?.(); } catch {} un = null; }
+export function gaariStop() { if (!mounted) return; mounted = false; try { un?.(); } catch {} un = null; try { gpsUn?.(); } catch {} gpsUn = null; }
 function start() {
   if (un || !cloud?.listenGaariRows) return;
   un = cloud.listenGaariRows(list => {   // v2.102.6: asal gaari docs (pehle naam takrane se gaariBills ka map aata tha — kuch nazar nahi aata tha)
@@ -50,8 +55,10 @@ function start() {
     err = '';
     const c = list.find(r => r.id === '_config'); if (c) cfg = { ...cfg, ...c };
     rows = list.filter(r => r.id !== '_config' && !r.deleted);
+    phDay = new Map(); for (const r of rows) if (r.kind === 'phera') phDay.set(r.date, (phDay.get(r.date) || 0) + 1);
     if (mounted && !cur) paint();
   }, e => { err = e?.message || 'rabta nahi'; if (mounted) paint(); });
+  if (!gpsUn && cloud?.listenGaariDays) gpsUn = cloud.listenGaariDays((days, live) => { gpsDays = new Map((days || []).filter(d => d.date).map(d => [d.date, d])); gpsLive = live; if (mounted && !cur) paint(); }, () => {});   // v2.162.0: 📍
 }
 export function renderGaari() {
   mounted = true;
@@ -167,20 +174,22 @@ function lastEnd(beforeAt) {
   if (!v) for (const r of rows) if (N(r.reading) > v) v = N(r.reading);
   return v;
 }
+// 📍 phere ke GPS km = us din ke km ÷ us din ke phere (din ka jor wahi rehta — tanki ka hisaab poora)
+function gpsKm(p) { const d = gpsDays.get(p.date); return d && N(d.km) > 0 ? r2(N(d.km) / (phDay.get(p.date) || 1)) : 0; }
 function pc(p) {
   const B = p.bilties || [], K = p.kharche || [], D = p.diesel || [];
   const kiraya = B.reduce((s, b) => s + N(b.kiraya), 0), comm = B.reduce((s, b) => s + commOf(b), 0);
   const kh = K.reduce((s, k) => s + N(k.a), 0), dL = D.reduce((s, d) => s + N(d.l), 0), dRs = D.reduce((s, d) => s + N(d.amount), 0);
   const mk = N(p.endR) > N(p.startR) && N(p.startR) ? N(p.endR) - N(p.startR) : N(p.kmMan);   // meter se · v2.102.5: shuru reading na ho to 'seedha km'
-  const tk = N(p.trackerKm), km = mk || tk, kmSrc = mk ? 'meter' : tk ? 'tracker' : '';   // v2.95.8: reading nahi to Falcon km
+  const tk = N(p.trackerKm), gk = gpsKm(p), km = mk || tk || gk, kmSrc = mk ? 'meter' : tk ? 'tracker' : gk ? 'gps' : '';   // v2.95.8: reading nahi to Falcon km · v2.162.0: phir 📍 GPS
   // v2.96: FARZI diesel = km ÷ average × rate (band phere par us waqt ka rate/average jam jata: dRate/dAvg). Asal diesel (dL/dRs) nafe mein NAHI.
   const avg = N(p.dAvg) || avgFor(pKey(p)), rate = N(p.dRate) || rateFor(pKey(p));
   const shouldL = km ? km / avg : 0, shouldRs = shouldL * rate;
-  const kmDiff = mk && tk ? mk - tk : 0, kmOk = !(mk && tk) || Math.abs(kmDiff) <= Math.max(10, mk * 0.05);
+  const ok2 = tk || gk, kmDiff = mk && ok2 ? mk - ok2 : 0, kmOk = !(mk && ok2) || Math.abs(kmDiff) <= Math.max(10, mk * 0.05);
   const pending = p.settled ? 0 : B.filter(b => !b.col).reduce((s, b) => s + N(b.kiraya), 0);
   const nafa = kiraya - comm - kh - shouldRs, driverDe = kiraya - kh - comm;
   const colRs = B.filter(b => b.col).reduce((s, b) => s + N(b.kiraya), 0), lena = p.settled ? 0 : driverDe - colRs;
-  return { kiraya, comm, kh, dL, dRs, km, mk, kmSrc, avg, rate, shouldL, shouldRs, tk, kmDiff, kmOk, pending, nafa, driverDe, colRs, lena, routes: B.map(b => `${b.from || '?'}→${b.to || '?'}`) };
+  return { kiraya, comm, kh, dL, dRs, km, mk, kmSrc, avg, rate, shouldL, shouldRs, tk, gk, kmDiff, kmOk, pending, nafa, driverDe, colRs, lena, routes: B.map(b => `${b.from || '?'}→${b.to || '?'}`) };
 }
 // v2.96: is phere ki 'tanki full' line par khatam hone wala cycle (warna null)
 function fullCheck(p) { const T = tankCycles(); return T.cyc.find(o => o.end && o.end.src === 'phera' && o.end.pid === p.id) || null; }
@@ -266,6 +275,7 @@ function paint() {
       return `<button type="button" class="gx-collect${L.bal < 0 ? ' gx-give' : ''}" data-gr-open="collect"><b>${L.bal > 0 ? '💰 Driver se lena hai' : '👤 Driver ko dena hai'}</b><strong>${rs(Math.abs(L.bal))}</strong><small>${li ? 'Aakhri dafa liya ' + rs(-li.amt) + ' · ' + esc(dmy(li.date)) + ' · ' : ''}tap = khata / 💵 paisa liya</small></button>`; })()}
     <div class="gx-chips">
       ${chip('km', '🛣️', s.km ? num(s.km) + ' km' : '—', 'Chali · tracker ' + (s.tk ? num(s.tk) : '—'))}
+      ${(() => { const g = gpsState(), t = gpsDays.get(today()); return chip('gps', '📱', t ? num(t.km, 1) + ' km' : g.lvl === 'none' ? 'Setup' : '0 km', 'Aaj GPS · ' + g.short, g.lvl === 'bad' ? 'gx-bad' : g.lvl === 'warn' || g.lvl === 'none' ? 'gx-warn' : ''); })()}
       ${(() => { const o = oilNow(); return o ? chip('oil', '🛢', num(o.km) + ' / ' + num(o.every), o.lvl === 'bad' ? 'Mobil badalwao!' : 'km · Mobil', o.lvl === 'bad' ? 'gx-bad' : o.lvl === 'warn' ? 'gx-warn' : '') : chip('oil', '🛢', '—', 'Mobil kab badla? likhein'); })()}
       ${chip('kharch', '🧾', rs(s.kh), 'Kharche · phera-wise')}
       ${chip('driver', '👤', rs(s.comm), 'Commission · driver ne rakhi')}
@@ -284,7 +294,7 @@ function cardHTML(p) {
   if (c.shouldRs) ks.push(`<i class="gc-k gc-d">⛽ Diesel <b>${num(c.shouldRs)}</b><small>${num(c.shouldL, 1)} L</small></i>`);
   (p.kharche || []).forEach(k => { if (N(k.a)) ks.push(`<i class="gc-k">${esc(k.n)} <b>${num(k.a)}</b></i>`); });
   if (c.comm) ks.push(`<i class="gc-k gc-c">👤 Comm <b>${num(c.comm)}</b></i>`);
-  const rd = N(p.startR) && N(p.endR) > N(p.startR) ? `${num(p.startR)}<br>→ ${num(p.endR)}` : c.kmSrc === 'tracker' ? '📍 tracker' : c.km ? 'seedha km' : 'reading baqi';
+  const rd = N(p.startR) && N(p.endR) > N(p.startR) ? `${num(p.startR)}<br>→ ${num(p.endR)}` : c.kmSrc === 'tracker' ? '📍 tracker' : c.kmSrc === 'gps' ? '📱 GPS' : c.km ? 'seedha km' : 'reading baqi';
   return `<button type="button" class="gp-card gc${closed ? ' closed' : ''}" data-gp="${esc(p.id)}">
     <span class="gc-bach ${c.nafa >= 0 ? 'up' : 'down'}"><small>${c.nafa >= 0 ? '💚 Safi bachat' : '🔻 Nuqsan'}</small><b>${rs(Math.abs(c.nafa))}</b><em>${closed ? '✅ band' : '🟢 khula'}</em></span>
     <span class="gc-mid"><span class="gc-route"><b>${esc(c.routes.filter(r => r !== '?→?').join(' · ') || 'Rasta abhi nahi likha')}</b><i class="gc-kir">💰 Kiraya ${rs(c.kiraya)}</i></span>
@@ -639,6 +649,7 @@ function openDetail(k) {
   const s = monthCalc(), own = isOwner();
   const kv = arr => `<div class="gx-kv">${arr.map(([a, b]) => `<p><span>${a}</span><b>${b}</b></p>`).join('')}</div>`;
   if (k === 'collect' || k === 'driver') { openDriverKhata(); return; }
+  if (k === 'gps') { openGps(); return; }
   if (k === 'kharch') {
     const P = s.pheras;
     modal('🧾 Kharche — phera-wise', `<div class="gx-win">${kv(Object.entries(s.cat).sort((a, b) => b[1] - a[1]).map(([a, b]) => [esc(a), rs(b)]).concat([['Kul', rs(s.kh)]]))}${P.map(p => { const c = pc(p); return (p.kharche || []).length ? `<div class="gp-kcard" data-gp="${esc(p.id)}"><b>${esc(String(p.date).slice(8))} ${esc(MONTHS[Number(String(p.date).slice(5, 7)) - 1])} · ${esc(c.routes.join(' · '))}</b><small>${(p.kharche || []).map(x => esc(x.n) + ' ' + num(x.a)).join(' · ')}</small><em>${rs(c.kh)}</em></div>` : ''; }).join('')}</div>`);
@@ -654,6 +665,95 @@ function openDetail(k) {
   if (k === 'old') {
     modal('📋 Purani entries', `<div class="gx-win"><div class="gr-list">${s.old.map(r => `<div class="gr-row"><span class="gr-d">${esc(r.date)}</span><span class="gr-t">${esc(r.kind)} ${esc(r.from ? r.from + '→' + (r.to || '') : r.cat || r.note || '')}</span><span class="gr-v">${num(r.kiraya || r.amount || r.reading || r.km || r.litre)}</span>${own ? `<button type="button" class="gr-x" data-gr-del="${esc(r.id)}">✕</button>` : ''}</div>`).join('')}</div></div>`);
   }
+}
+
+// ---------- v2.162.0: 📍 GAARI KA PHONE (GPS) ----------
+const hm = t => { const d = new Date(t); return `${((d.getHours() + 11) % 12) + 1}:${String(d.getMinutes()).padStart(2, '0')} ${d.getHours() < 12 ? 'am' : 'pm'}`; };
+const ago = ms => ms < 90e3 ? 'abhi' : ms < 3600e3 ? Math.round(ms / 60e3) + ' min' : ms < 48 * 3600e3 ? Math.round(ms / 3600e3) + ' ghante' : Math.round(ms / 864e5) + ' din';
+function gpsState() {   // phone ka haal — aakhri jagah kab aayi
+  const L = gpsLive; if (!L || !N(L.t) && !L.bad) return { lvl: 'none', short: 'phone setup baqi', long: '📱 Abhi gaari ke phone se kuch nahi aaya — ⚙️ Phone setup karein.' };
+  if (L.bad && N(L.recv) > N(L.t)) return { lvl: 'bad', short: '⚠️ jagah nahi', long: `⚠️ Phone se list aa rahi hai magar jagah samajh nahi aayi: “${esc(String(L.bad).slice(0, 90))}” — ⚙️ Setup ka qadam 4 dobara.` };
+  const a = Date.now() - N(L.t);
+  if (a < 10 * 60e3) return { lvl: 'ok', short: '🟢 ' + ago(a), long: `🟢 Phone chal raha hai — aakhri jagah ${ago(a)} pehle (${hm(L.t)}).` };
+  if (a < 3 * 3600e3) return { lvl: 'warn', short: '🟡 ' + ago(a) + ' se chup', long: `🟡 ${ago(a)} se nayi jagah nahi — shayad signal nahi (phone jama kar raha hai, signal aate hi sab aa jayega) ya gaari khari / phone band.` };
+  return { lvl: 'bad', short: '📵 ' + ago(a) + ' se chup', long: `📵 Gaari ka phone ${ago(a)} se chup (aakhri ${hm(L.t)}) — phone / charger / MacroDroid dekhein.` };
+}
+function openGps() {
+  const g = gpsState(), own = isOwner(), D = [...gpsDays.values()].sort((a, b) => String(b.date).localeCompare(String(a.date)));
+  const rowsH = D.map(d => { let x = {}; try { x = JSON.parse(d.j || '{}') || {}; } catch {} const st = (x.stops || []).length, gp = (x.gaps || []).length, ph = phDay.get(d.date) || 0;
+    return `<button type="button" class="gg-day" data-gg-day="${esc(d.date)}"><span class="gg-d"><b>${esc(dmy(d.date))}</b><small>${N(d.first) ? hm(d.first) + ' – ' + hm(d.last) : ''}</small></span><span class="gg-k"><b>${num(d.km, 1)}</b><small>km</small></span>
+      <span class="gg-i">${ph ? `<i class="ok">🚚 ${ph} phera</i>` : (N(d.km) >= 3 ? '<i class="bad">🚫 phera nahi</i>' : '')}${st ? `<i>⏸ ${st} ruki</i>` : ''}${gp ? `<i class="warn">📵 ${gp} chup${N(d.gapKm) ? ' · ' + num(d.gapKm, 1) + ' km andaza' : ''}</i>` : ''}<i>🗺 naqsha ›</i></span></button>`; }).join('');
+  modal('📱 Gaari ka phone (GPS)', `<div class="gx-win gg">
+    <p class="gg-st gg-${g.lvl}">${g.long}</p>
+    <p class="gg-note">Phone har minute jagah note karta hai (signal na ho to jama) → shop PC din ke km banata hai → phere ke km khud (meter / Falcon na ho to) → tanki ka diesel khud katta. Ek din mein kai phere = km barabar baante. 🤖 AI nahi.</p>
+    <div class="gg-list">${rowsH || '<p class="gr-empty">Abhi koi din nahi — phone setup ke baad yahan har din ke km aayenge.</p>'}</div>
+    ${own ? '<button type="button" class="gx-new" data-gg-setup="1">⚙️ Gaari phone setup (MacroDroid)</button>' : ''}</div>`, true);
+}
+// 🗺 naqsha — Leaflet (vendor) + OpenStreetMap (muft) · chup wala hissa dabbedaar (andaza)
+let LF = null;
+function leaflet() {
+  if (window.L) return Promise.resolve(window.L);
+  if (LF) return LF;
+  LF = new Promise((ok, no) => { const c = document.createElement('link'); c.rel = 'stylesheet'; c.href = new URL('./vendor/leaflet.css?v=1.9.4', import.meta.url).href; document.head.appendChild(c);
+    const s = document.createElement('script'); s.src = new URL('./vendor/leaflet.js?v=1.9.4', import.meta.url).href; s.onload = () => ok(window.L); s.onerror = () => { LF = null; no(Error('Naqsha load nahi hua (internet?)')); }; document.head.appendChild(s); });
+  return LF;
+}
+async function openGpsDay(date) {
+  const d = gpsDays.get(date); if (!d) return; let x = {}; try { x = JSON.parse(d.j || '{}') || {}; } catch {}
+  const ph = phDay.get(date) || 0;
+  modal(`🗺 ${dmy(date)} · ${num(d.km, 1)} km`, `<div class="gx-win gg"><div id="ggMap" class="gg-map"><p class="gr-empty">⏳ Naqsha aa raha hai…</p></div>
+    <div class="gx-kv"><p><span>Chali</span><b>${num(d.km, 1)} km</b></p><p><span>Waqt</span><b>${N(d.first) ? hm(d.first) + ' – ' + hm(d.last) : '—'}</b></p><p><span>Phere</span><b>${ph ? ph + (ph > 1 ? ' (km ' + num(d.km / ph, 1) + ' har phera)' : '') : '🚫 koi phera nahi'}</b></p>${N(d.gapKm) ? `<p><span>📵 Phone chup (andaza)</span><b>${num(d.gapKm, 1)} km</b></p>` : ''}</div>
+    ${(x.stops || []).length ? `<h4 class="gg-h">⏸ Kahan ruki</h4><div class="gg-stops">${x.stops.map((t, i) => `<span><b>${i + 1}</b>${hm(t[0])} – ${hm(t[1])} <small>(${ago(t[1] - t[0])})</small></span>`).join('')}</div>` : ''}
+    ${(x.gaps || []).length ? `<h4 class="gg-h">📵 Phone chup</h4><div class="gg-stops">${x.gaps.map(t => `<span class="warn">${hm(t[0])} – ${hm(t[1])} <small>${num(t[2], 1)} km seedha</small></span>`).join('')}</div>` : ''}</div>`, true);
+  try {
+    const [L, P] = await Promise.all([leaflet(), cloud.getGaariPath(date)]);
+    const box = $('ggMap'); if (!box || !box.isConnected) return; box.innerHTML = '';
+    if (!P.length) { box.innerHTML = '<p class="gr-empty">Is din ka raasta nahi mila.</p>'; return; }
+    const map = L.map(box, { zoomControl: true, attributionControl: true });
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
+    let seg = [P[0]];
+    const flush = (dash) => { if (seg.length > 1) L.polyline(seg.map(q => [q[1], q[2]]), dash ? { color: '#c2372f', weight: 4, dashArray: '8 8', opacity: .8 } : { color: '#1d4ed8', weight: 5, opacity: .85 }).addTo(map); };
+    for (let i = 1; i < P.length; i++) { const gap = P[i][0] - P[i - 1][0] > 5 * 60e3; if (gap) { flush(false); seg = [P[i - 1], P[i]]; flush(true); seg = [P[i]]; } else seg.push(P[i]); }
+    flush(false);
+    (x.stops || []).forEach((t, i) => L.circleMarker([t[2], t[3]], { radius: 8, color: '#b45309', fillColor: '#f59e0b', fillOpacity: .9, weight: 2 }).addTo(map).bindTooltip(`${i + 1} · ${hm(t[0])} – ${hm(t[1])}`));
+    L.circleMarker([P[0][1], P[0][2]], { radius: 9, color: '#15803d', fillColor: '#22c55e', fillOpacity: 1, weight: 3 }).addTo(map).bindTooltip('Shuru ' + hm(P[0][0]));
+    const z = P[P.length - 1]; L.circleMarker([z[1], z[2]], { radius: 9, color: '#1e3a8a', fillColor: '#3b82f6', fillOpacity: 1, weight: 3 }).addTo(map).bindTooltip('Aakhri ' + hm(z[0]));
+    map.fitBounds(L.latLngBounds(P.map(q => [q[1], q[2]])), { padding: [24, 24] });
+    setTimeout(() => map.invalidateSize(), 250);
+  } catch (e) { const box = $('ggMap'); if (box) box.innerHTML = `<p class="gr-empty">⚠️ ${esc(e?.message || e)}</p>`; }
+}
+// ⚙️ setup (sirf malik) — bank-inbox jaisa: chaabi app banati hai (chat mein KABHI nahi), MacroDroid ke qadam + 📋 copy
+const ggUrl = () => `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/businesses/noor-traders/gaariGps?key=${firebaseConfig.apiKey}`;
+const ggBody = k => `{"fields":{"k":{"stringValue":"${k}"},"p":{"stringValue":"{v=gps}"}}}`;
+const GG_SET = '{v=gps}{last_loc_latlong},{system_time};';
+async function openGpsSetup() {
+  if (!isOwner()) return;
+  if (gKey == null) { try { gKey = await cloud.getGaariKey(); } catch { gKey = ''; } }
+  const cp = (w, t) => `<button type="button" class="gg-copy" data-gg-copy="${w}">📋 ${t}</button>`;
+  modal('⚙️ Gaari phone setup', `<div class="gx-win gg gg-set">${!gKey ? `<p>Pehle khufia chaabi — sirf gaari ke phone (MacroDroid) mein jayegi. Is ke baghair koi aur jagah nahi bhej sakta.</p><button type="button" class="gx-new" data-gg-newkey="1">🔑 Chaabi banao</button>`
+    : `<div class="gg-test"><button type="button" class="gg-copy" data-gg-test="1">🔎 Rabta test (app se)</button>${gTest ? `<span>${gTest}</span>` : ''}</div>
+    <h4 class="gg-h">📱 Gaari wala phone — ek dafa (phir driver kuch nahi karega)</h4><ol>
+    <li>Phone gaari ke <b>charger</b> par, SIM mein <b>internet</b>, <b>Location ON</b>.</li>
+    <li>Play Store se <b>MacroDroid</b> install karein, kholein. Location ki ijazat: <b>Allow all the time</b> + <b>Precise</b>.</li>
+    <li><b>Add Macro</b> → Trigger ➕ → <b>Date/Time → Regular Interval</b> → <b>1 minute</b> → OK.</li>
+    <li>Action ➕ → <b>Location → Force Location Update</b> → OK. Phir Action ➕ → <b>Variables → Set Variable</b> → naya variable <b>gps</b> (Global, String) → value mein ${cp('set', 'Value copy')} paste. <small>(Agar likha hua na chale to "…" dabayein → pehle <b>gps</b> variable, phir "Last location (lat,long)", ek comma, phir "System time", aakhir mein ;)</small></li>
+    <li>Action ➕ → <b>Connectivity → HTTP Request</b> → <b>POST</b> → URL: ${cp('url', 'URL copy')} paste.</li>
+    <li>Content body → <b>application/json</b> → ${cp('body', 'Body copy')} → paste. Usi khirki mein "<b>Save response code</b>" → naya integer variable <b>kod</b>.</li>
+    <li>Action ➕ → <b>Conditions/Loops → If Clause</b> → <b>Variable kod = 200</b> → us ke andar Action ➕ <b>Set Variable → gps → khali</b> (kuch na likhein) → <b>End If</b>. <small>(Signal na ho to list phone mein rehti hai — signal aate hi sab chali jati hai.)</small></li>
+    <li>Naam "Gaari GPS → Blue Khata" → Save ✓. Phone Settings → Apps → MacroDroid → Battery → <b>Unrestricted</b>.</li>
+    <li>2–3 minute baad yahan "🟢 abhi" aana chahiye. Na aaye to is screen ki screenshot bhej dein.</li></ol>
+    <p class="gg-note">🔒 Chaabi kisi ko na bhejein. Shak ho to <button type="button" class="gg-copy" data-gg-newkey="1">🔁 nayi chaabi</button> — phir MacroDroid body dobara lagani hogi.</p>`}</div>`, true);
+}
+async function ggCopy(w) {
+  const t = w === 'url' ? ggUrl() : w === 'body' ? ggBody(gKey) : GG_SET;
+  try { await navigator.clipboard.writeText(t); notice('📋 Copy ho gaya — MacroDroid mein paste karein'); } catch { prompt('Copy karein:', t); }
+}
+async function ggTestRun() {
+  gTest = '⏳ test…'; openGpsSetup();
+  try { const r = await fetch(ggUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { k: { stringValue: gKey }, p: { stringValue: 'RABTA TEST' } } }) });
+    gTest = r.ok ? '✅ Rabta theek — ab MacroDroid ka macro test karein (⋮ → Test actions)' : r.status === 403 ? '❌ 403 — Firebase rules abhi nayi nahi lagi (shop PC 5 min mein laga deta hai) ya chaabi ghalat' : '❌ ' + r.status;
+  } catch (e) { gTest = '❌ Internet / ' + esc(e?.message || e); }
+  openGpsSetup();
 }
 
 // ---------- v2.97.1: 🧾 EXTRA KHARCHA (phere se bahar — mahine ke nafe se minus) ----------
@@ -901,6 +1001,13 @@ document.addEventListener('click', e => {
   const gd = e.target.closest?.('[data-gd]'); if (gd) { e.preventDefault(); day = gd.dataset.gd === day ? '' : gd.dataset.gd; paint(); return; }
   const m = e.target.closest?.('[data-gr-m]'); if (m) { shiftMonth(Number(m.dataset.grM)); return; }
   const o = e.target.closest?.('[data-gr-open]'); if (o) { openDetail(o.dataset.grOpen); return; }
+  const ggd = e.target.closest?.('[data-gg-day]'); if (ggd) { openGpsDay(ggd.dataset.ggDay); return; }   // v2.162.0: 📍
+  if (e.target.closest?.('[data-gg-setup]')) { openGpsSetup(); return; }
+  const ggc = e.target.closest?.('[data-gg-copy]'); if (ggc) { ggCopy(ggc.dataset.ggCopy); return; }
+  if (e.target.closest?.('[data-gg-test]')) { ggTestRun(); return; }
+  if (e.target.closest?.('[data-gg-newkey]')) { if (!isOwner()) return; if (gKey && !confirm('Nayi chaabi? Gaari ke phone ka MacroDroid body dobara lagana hoga.')) return;
+    const a = new Uint8Array(16); crypto.getRandomValues(a); const k = [...a].map(b => b.toString(16).padStart(2, '0')).join('');
+    cloud.setGaariKey(k).then(() => { gKey = k; openGpsSetup(); notice('🔑 Chaabi ban gayi'); }).catch(er => notice('⚠️ ' + (er?.message || er))); return; }
   if (e.target.closest?.('[data-gr-add="driver"]')) { if (isOwner()) openDriverPay(); return; }
   if (e.target.closest?.('[data-gr-add="extra"]')) { if (isOwner()) openExtra(); return; }
   const gxe = e.target.closest?.('[data-gx-edit]'); if (gxe) { if (isOwner()) openExtra(gxe.dataset.gxEdit); return; }
