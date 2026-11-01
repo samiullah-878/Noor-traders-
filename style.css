@@ -6920,3 +6920,32 @@ html body #summary:has(.kh-mark)::before{content:"🧾 Kharcha khata";display:in
 html body #dialogBody .ef-card.kh{background:linear-gradient(90deg,#e6fbf8,#fff)!important;border-color:#5eead4!important;box-shadow:inset 4px 0 0 #14b8a6!important}
 html body #dialogBody .ef-card.kh .ef-av{background:linear-gradient(145deg,#2dd4bf,#0f766e)!important;color:#fff!important}
 html body #dialogBody .ef-card.kh .ef-tag{background:#ccfbf1!important;color:#0f766e!important}
+/* v2.164.0: 🚪 GATE PASS (transfer check jaisa — har bill / customer alag card: upar GP # + customer, neeche tadad + ✓ de diya) */
+html body #dialogBody .gtp-root{display:grid;gap:8px;min-width:0}
+html body #dialogBody .gtp-card{display:block;background:#fff;border:1.5px solid #ddd6fe;border-radius:14px;padding:8px 10px 4px;margin:0 0 8px;min-width:0;box-shadow:0 4px 12px -10px rgba(91,33,182,.5)}
+html body #dialogBody .gtp-card.done{border-color:#bbf7d0;background:#f6fef9}
+html body #dialogBody .gtp-card.off{border-color:#e5e7eb;background:#f9fafb}
+html body #dialogBody .gtp-h{display:flex;align-items:center;gap:8px;min-width:0}
+html body #dialogBody .gtp-no{font-size:12px;font-weight:800;color:#6d28d9;white-space:nowrap}
+html body #dialogBody .gtp-no b{font-size:16px;color:#3b0764;margin-left:2px}
+html body #dialogBody .gtp-cu{flex:1;min-width:0;font-size:14px;font-weight:800;color:#1b3058;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body #dialogBody .gtp-x{min-height:0!important;width:28px;height:28px;padding:0!important;border-radius:999px!important;border:1px solid #e3e8f1!important;background:#fff!important;color:#64748b!important;font-size:12px}
+html body #dialogBody .gtp-sub{display:block;color:#64748b;font-size:11px;line-height:1.35;margin:2px 0 2px}
+html body #dialogBody .gtp-ir{gap:8px}
+html body #dialogBody .gtp-q{flex:0 0 auto;font-size:13.5px;font-weight:900;color:#1b3058;white-space:nowrap;background:linear-gradient(180deg,#f5f7ff,#eaf0ff);border:1px solid #d6def5;border-radius:999px;padding:4px 10px}
+html body #dialogBody .gtp-ch{color:#b45c00!important;font-weight:700}
+html body #dialogBody .gtp-off{margin:4px 0;color:#991b1b;font-size:12px;font-weight:700}
+html body #dialogBody .gtp-was{font-style:normal;font-size:11px;color:#166534;font-weight:800;white-space:nowrap}
+html body #dialogBody .gtp-err{margin:0;padding:8px 10px;border-radius:12px;background:#fff7ed;border:1px solid #fdba74;color:#9a3412;font-size:12.5px;font-weight:700}
+html body #dialogBody .gtp-empty{text-align:center;font-size:12.5px}
+html body #dialogBody .tc-ic.gtp-w{opacity:.75}
+html body #dialogBody .tc-ic:disabled{opacity:.8}
+html body #dialogBody .gtp-date{display:inline-grid;gap:3px;font-size:12px;color:#4a5d80}
+html body #dialogBody .gtp-date input{min-height:34px;padding:4px 10px;border-radius:11px;border:1px solid #d5dce9;font:inherit}
+html body #dialogBody .gtp-pdf{justify-self:start;min-height:34px;padding:5px 14px;border-radius:999px;border:1px solid #d5dce9!important;background:linear-gradient(180deg,#fff,#f3f6fc)!important;color:#1e3460!important;font-weight:800;font-size:12.5px;white-space:nowrap}
+html body #dialogBody .gtp-new{animation:gtpNew 1.4s ease-out 3}
+@keyframes gtpNew{0%{box-shadow:0 0 0 0 rgba(124,58,237,.55);background:#f5f0ff}100%{box-shadow:0 0 0 14px rgba(124,58,237,0)}}
+html.dk body #dialogBody .gtp-card{background:var(--glass,rgba(255,255,255,.06))!important;border-color:var(--line,rgba(255,255,255,.14))!important}
+html.dk body #dialogBody :is(.gtp-cu,.gtp-q,.gtp-no b){color:var(--ink,#e8eeff)!important}
+html.dk body #dialogBody .gtp-q{background:rgba(255,255,255,.08)!important;border-color:var(--line,rgba(255,255,255,.14))!important}
+html.dk body #dialogBody .gtp-sub{color:var(--ink2,#a9b4cc)!important}
