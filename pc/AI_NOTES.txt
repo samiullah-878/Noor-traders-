@@ -3859,3 +3859,10 @@ Malik: "gaari mein mobile rakh dein to pura din ki automatic minus (milage map s
 - ⚙️ Gaari phone setup (sirf malik): 🔑 chaabi app banati (chat mein kabhi nahi), 9 qadam MacroDroid, 📋 URL / Body / Value copy, 🔎 Rabta test.
 - Rules 2.80: gaariGps (sirf naya, sahi chaabi, keys k+p), gaariDay / gaariPath (malik / Full / gaari parhein). Shop PC khud publish karega.
 - AI NAHI.
+
+== v2.163.0 (1 Nov 2026) — 🧾 HAR KHARCHA = CUSTOMER KHATA ==
+Malik (Saman mojood Rs 24,190 khate mein nahi tha — "Kharcha" wala naam chuna gaya tha): "har kharcha ka account jaise baqi account · sab kharcha wala account as a customer perform kare". Faisle: purani kharcha entries WAHIN rahein · POS mein bhi = HAAN.
+- Akhrajat / Party payment form (aur Daily ki kharcha patti): "· Kharcha" option khatam. Purane kharcha naam (Bijli, Kiraya, Tahwah…) = "🧾 Kharcha khata banao"; naya naam likho = "＋ Naya kharcha khata: …". Save par us naam ka CUSTOMER khata khud banta hai (kharcha:true, posSync:true — PC POS mein account + har entry ka CPV), entry = "Party ko payment" (Daily Sale wahi — galle se minus, tick hatao = bahar).
+- Jis naam ka khata pehle se ho (Saman mojood) — kharcha wala dohra naam nahi dikhta, sirf khata.
+- Naya account → 🧾 Kharcha = yehi Customer khata. Akhrajat screen: "🧾 Kharcha khate" (har ek ka jor, tap = khata) + "Purane kharche" (purani entries).
+- Purani kharcha entries nahi badli (malik). AI NAHI. Rules wahi (2.80).

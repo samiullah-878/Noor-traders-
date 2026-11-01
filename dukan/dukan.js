@@ -21,9 +21,9 @@
 //   v2.160.0 (malik: "search smart nahi" · "sab bane racks band — apne racks ki photos lagani hain"): 🔍 dhoond.js (app ke saath ek qaida) + "Shayad ye" ·
 //     🌾 khula maal ab ALAG SECTION (rack key '@khula', naam "Daalein · Masala Jaat · Cheeni · Chawal", shuru mein — tarteeb / naam app se) · racks.cr {id: credit} = 🌐 internet tasveer ka naam (khirki mein)
 //     racks.draw false (default) = bane hue racks BAND — sirf asal photo bays + 🌾 khula; baqi items sirf dhoondo se (seedha khirki). Koi photo na ho = bane racks (dukan khali nahi).
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.162.0';
-import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank } from './khula.js?v=2.162.0';
-import { smartFind } from './dhoond.js?v=2.162.0';
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.163.0';
+import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank } from './khula.js?v=2.163.0';
+import { smartFind } from './dhoond.js?v=2.163.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

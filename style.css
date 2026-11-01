@@ -6908,3 +6908,5 @@ html body #dialogBody .gg-stops b{margin-right:5px;color:#b45309}
 html body #dialogBody .gg-set ol{margin:0;padding-left:20px;display:grid;gap:8px;font-size:13px;line-height:1.45}
 html body #dialogBody .gg-copy{height:32px;padding:0 12px;border-radius:999px!important;border:1px solid #cfd8e6!important;background:linear-gradient(180deg,#fff,#eef2f8)!important;color:#1b2f5c!important;font-weight:800;font-size:12.5px;white-space:nowrap;vertical-align:middle}
 html body #dialogBody .gg-test{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12.5px;font-weight:700}
+/* v2.163.0: 🧾 "＋ Naya kharcha khata" chip (Akhrajat / Party payment) */
+html body #dialogBody .kh-new{justify-content:flex-start!important;gap:6px;border-style:dashed!important;border-color:#c7372f!important;background:#fff6f5!important;color:#7a1f1a!important}
