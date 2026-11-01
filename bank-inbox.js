@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.166.0';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.167.0';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -154,6 +154,14 @@ async function editLim(c) {
   alias = { ...alias, ['@lim:' + c]: String(Math.round(Number(String(l).replace(/,/g, '')) || 0)), ['@dd:' + c]: String(Math.max(0, Math.min(31, Math.round(Number(dd) || 0)))) };
   try { await O.cloud.bankAliasSet(alias); O.notice?.('💳 Card ' + c + ' ki limit / due tareekh save'); } catch (er) { O.notice?.('⚠️ ' + (er?.message || er)); }
   paint();
+}
+// v2.167.0: 🖥 PC KHUD LAGAYE — har bank account (HBL ke ilawa) ki alag ijazat '@pcin:<4 number>' = '1' (malik). PC bank-parchi v2.3 yehi dekhta hai.
+const acctKeysOf = id => Object.entries(alias).filter(([k, v]) => k.startsWith('@a:') && v === id).map(([k]) => k.slice(3));
+const pcinOn = id => { const ks = acctKeysOf(id); return ks.length > 0 && ks.every(k => alias['@pcin:' + k] === '1'); };
+async function setPcin(id, on) {
+  if (!(O.owner && O.owner())) return; const ks = acctKeysOf(id); if (!ks.length) return;
+  const add = {}; ks.forEach(k => { add['@pcin:' + k] = on ? '1' : ''; }); alias = { ...alias, ...add }; paint();
+  try { await O.cloud.bankAliasSet(alias); O.notice?.(on ? `🖥 Ab Server PC is account (…${ks.join(', …')}) ke AAYE paise khud khate mein lagayega` : `🖥 Band — is account ke aaye paise ☐ par haath se`); } catch (er) { O.notice?.('⚠️ ' + (er?.message || er)); }
 }
 async function setAlias(k, v, msg) { alias = { ...alias, [k]: v }; paint(); try { await O.cloud.bankAliasSet(alias); if (msg) O.notice?.(msg); } catch (er) { O.notice?.('⚠️ ' + (er?.message || er)); } setTimeout(autoRun, 500); }
 // v2.99.75: malik ke bataye card (limit / outstanding) — naya khata banate waqt opening
@@ -355,6 +363,9 @@ async function autoRun() {
     // v2.99.75 ek dafa (malik): Alfalah Noor Traders ka khata = A/C …0294 (malik ne bataya) + Server PC us mein aaye paise khud lagaye
     if (O.owner && O.owner() && !alias['@alf1']) { const p = (O.parties ? O.parties() : []).find(z => z && !z.deleted && /alfalah|alflah/i.test(z.name || '') && /noor|traders|\bnt\b/i.test(z.name || ''));
       alias = { ...alias, '@alf1': '1', ...(p && !alias['@a:0294'] ? { '@a:0294': p.id, '@pcin:0294': '1' } : {}) }; try { await O.cloud.bankAliasSet(alias); } catch {} }
+    // v2.167.0 ek dafa (malik ka OK, 1 Nov 2026): Alfalah …5826 (SAMI ULLAH) ke aaye paise bhi Server PC khud lagaye · khata pehle se na chuna ho to sirf EK saaf milta khata
+    if (O.owner && O.owner() && !alias['@alf2']) { const L = (O.parties ? O.parties() : []).filter(z => z && !z.deleted && /alfalah|alflah/i.test(z.name || '') && /5826|sami/i.test(z.name || ''));
+      alias = { ...alias, '@alf2': '1', '@pcin:5826': '1', ...(!alias['@a:5826'] && L.length === 1 ? { '@a:5826': L[0].id } : {}) }; try { await O.cloud.bankAliasSet(alias); } catch {} }
     // v2.99.76: len-den pehle lag gaya (naam wali email se) aur charges wali email baad mein aayi — charges ab laga do (ek dafa, pakki ID)
     for (const x of rows().done) {
       if (!(x.r.fee > 0) || x.r.dir !== 'out' || x.d.st !== 'done' || x.d.kind === 'dup' || String(x.d.entryId || '').includes('bk' + x.d.id + 'f') || feeFail.has(x.d.id)) continue;
@@ -761,7 +772,7 @@ export function renderHbl() {
   const inT = mv.filter(v => v.dir === 'in').reduce((n, v) => n + v.amt, 0), outT = mv.filter(v => v.dir === 'out').reduce((n, v) => n + v.amt, 0), bal = hblBalance(H);
   const nIn = mv.filter(v => v.dir === 'in').length, nOut = mv.filter(v => v.dir === 'out').length, own = O.owner && O.owner();
   const banks = (O.parties ? O.parties() : []).filter(p => p.bank), cashA = hblCash(H);
-  $('summary').innerHTML = `${acctChips(H, R)}<div class="bkp-hero${isCard ? ' card' : ''}"><div class="bkp-hhead"><span class="bkp-bank">${isCard ? '💳' : '🏦'}</span><div><small>${isCard ? 'CREDIT CARD' : 'BANK ACCOUNT'}</small><b>${esc(H ? H.name : 'HBL khata nahi chuna')}</b></div>${own && isHbl ? '<button type="button" class="bkp-chip" data-hbl-acct="1">✏️ Badlo</button>' : ''}</div>
+  $('summary').innerHTML = `${acctChips(H, R)}<div class="bkp-hero${isCard ? ' card' : ''}"><div class="bkp-hhead"><span class="bkp-bank">${isCard ? '💳' : '🏦'}</span><div><small>${isCard ? 'CREDIT CARD' : 'BANK ACCOUNT'}</small><b>${esc(H ? H.name : 'HBL khata nahi chuna')}</b>${H && !isHbl && !isCard && acctKeysOf(H.id).length ? `<small class="bkp-pcin">${pcinOn(H.id) ? '🖥 aaye paise PC khud lagata hai' : '☐ aaye paise haath se'} · …${esc(acctKeysOf(H.id).join(', …'))}</small>` : ''}</div>${own && isHbl ? '<button type="button" class="bkp-chip" data-hbl-acct="1">✏️ Badlo</button>' : ''}</div>
     <div class="bkp-bal"><small>${isCard ? 'Card ka udhaar' : 'Abhi ka baqaya'}</small><strong>${m(Math.abs(bal))}</strong><span class="bkp-st">${bal > 0 ? 'Lene hain' : bal < 0 ? 'Dene hain' : 'Barabar'} · khate jaisa</span></div>
     ${cardBox(H, R)}
     ${H ? spark(H) : ''}
@@ -786,7 +797,8 @@ export function renderHbl() {
   if (memoOpen) { const ta = $('list').querySelector(`[data-bk-memo-t="${CSS.escape(memoOpen)}"]`); if (ta && document.activeElement !== ta) { try { ta.focus({ preventScroll: true }); const n = ta.value.length; ta.setSelectionRange(n, n); } catch {} } }   // v2.113.0: likhte waqt naya SMS aaye to bhi likha hua wahi
   if (own && !pstop && O.cloud?.listenPrintConfig) pstop = O.cloud.listenPrintConfig(c => { pcfg = c || {}; if (onScreen()) renderHbl(); if (prnOpen()) $('dialogBody').innerHTML = prnHTML(); });
   const pOn = !pcfg || pcfg.bankPost !== false;
-  $('actions').innerHTML = `${own ? `<button type="button" data-hbl-print="${pOn ? '0' : '1'}" title="Aaye paise Server PC khud HBL khate mein lagaye + parchi">${pOn ? '🤖 Auto ON' : '🤖 Auto BAND'}</button>` : ''}${H ? `<button type="button" data-hbl-khata="1">📒 ${isHbl ? 'HBL' : isCard ? 'Card' : 'Bank'} khata</button>` : ''}${own ? '<button type="button" data-prn-open="1">🖨 Printer</button><button type="button" data-bk-inbox="setup">⚙️ Setup</button>' : ''}${capOk('hbl.pdf') ? '<button type="button" data-hbl-pdf="1">📄 PDF · bhejo</button>' : ''}`;
+  const pcA = own && H && !isHbl && !isCard && acctKeysOf(H.id).length ? pcinOn(H.id) : null;   // v2.167.0: 🖥 is account ke aaye paise PC khud
+  $('actions').innerHTML = `${own ? `<button type="button" data-hbl-print="${pOn ? '0' : '1'}" title="Aaye paise Server PC khud HBL khate mein lagaye + parchi">${pOn ? '🤖 Auto ON' : '🤖 Auto BAND'}</button>` : ''}${pcA != null ? `<button type="button" data-bk-pcin="${pcA ? '0' : '1'}" title="Is account (…${esc(acctKeysOf(H.id).join(', …'))}) ke AAYE paise Server PC khud khate mein lagaye">${pcA ? '🖥 PC khud: ON' : '🖥 PC khud: BAND'}</button>` : ''}${H ? `<button type="button" data-hbl-khata="1">📒 ${isHbl ? 'HBL' : isCard ? 'Card' : 'Bank'} khata</button>` : ''}${own ? '<button type="button" data-prn-open="1">🖨 Printer</button><button type="button" data-bk-inbox="setup">⚙️ Setup</button>' : ''}${capOk('hbl.pdf') ? '<button type="button" data-hbl-pdf="1">📄 PDF · bhejo</button>' : ''}`;
 }
 // ================= v2.99.58 🖨 PRINTER KI HAALAT (TM-T88IV) — printConfig.voucherLog / vLast / vErr / vAlive (pos-khata-sync likhta hai) =================
 const prnOpen = () => !!document.querySelector('#dialogBody .prn-root');
@@ -831,7 +843,7 @@ function hblPdf() {
   <tfoot><tr><td colspan="3"><b>Kul</b></td><td class="iv-n"><b>${m(inT)}</b></td><td class="iv-n"><b>${m(outT)}</b></td></tr><tr><td colspan="3"><b>Abhi ka baqaya</b></td><td colspan="2" class="iv-n"><b>${m(hblBalance(H))}</b></td></tr></tfoot></table>`;
 }
 document.addEventListener('click', e => {
-  const t = e.target.closest?.('[data-hbl-tab],[data-hbl-range],[data-hbl-khata],[data-hbl-pdf],[data-hbl-open],[data-hbl-print],[data-hbl-acct],[data-bk-acpick],[data-bk-note],[data-bk-undo],[data-bk-memo],[data-bk-memo-s],[data-bk-memo-x]'); if (!t) return;
+  const t = e.target.closest?.('[data-hbl-tab],[data-hbl-range],[data-hbl-khata],[data-hbl-pdf],[data-hbl-open],[data-hbl-print],[data-bk-pcin],[data-hbl-acct],[data-bk-acpick],[data-bk-note],[data-bk-undo],[data-bk-memo],[data-bk-memo-s],[data-bk-memo-x]'); if (!t) return;
   const d = t.dataset;
   // v2.113.0 📝 note: khol / save / rehne do
   if (d.bkMemo != null && t.hasAttribute('data-bk-memo')) { if (!memoCan()) { O.notice?.('Note likhne ki ijazat nahi — malik se kahein'); return; } memoOpen = d.bkMemo; memoRow = d.bkMr || ''; memoDraft = null; paint(); setTimeout(() => { const ta = document.querySelector(`[data-bk-memo-t="${CSS.escape(memoOpen)}"]`); if (ta) { ta.focus(); const n = ta.value.length; try { ta.setSelectionRange(n, n); } catch {} } }, 40); return; }
@@ -842,6 +854,7 @@ document.addEventListener('click', e => {
   if (d.bkNote) { openNote(d.bkNote); return; }
   if (d.bkUndo) { undo(d.bkUndo); return; }
   if (d.hblPrint) { const on = d.hblPrint === '1'; O.cloud?.setPrintConfig?.({ bankPost: on }).then(() => O.notice?.(on ? '🤖 Aaye paise khud HBL khate mein + parchi — ON' : '🤖 Auto BAND — aaye paise ☐ par haath se')).catch(er => O.notice?.('⚠️ ' + (er?.message || er))); return; }
+  if (d.bkPcin) { const H = curAcct(); if (H) setPcin(H.id, d.bkPcin === '1'); return; }   // v2.167.0
   if (d.hblOpen) { O.route?.('hbl'); return; }
   if (d.hblKhata) { const H = curAcct(); if (H) O.route?.('khata', H.id); return; }
   if (d.hblPdf) { O.pdf?.(hblPdf(), 'HBL-' + range); return; }

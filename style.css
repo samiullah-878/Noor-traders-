@@ -6984,3 +6984,5 @@ html body #dialog .dialog-head .gtp-lb.is-in b{background:#fff;color:#1d4ed8}
 #gtpBlue .gtp-was{font-style:normal;font-size:11px;color:#166534;font-weight:800;white-space:nowrap}
 html.dk #gtpBlue.gtb-dlg{background:#141c2e;color:#e6edf8}html.dk #gtpBlue .gtb-card{background:rgba(59,130,246,.12);border-color:rgba(147,197,253,.35)}html.dk #gtpBlue :is(.gtp-sub,.gtb-note){color:#a9b4cc}
 html body #dialogBody .gtp-card.off .gtp-no{color:#6b7280}html body #dialogBody .gtp-card.off .gtp-no b{color:#374151}
+/* v2.167.0: 🖥 bank account ke aaye paise PC khud — hero mein chhoti line */
+html body #summary .bkp-hhead .bkp-pcin{display:block;margin-top:2px;font-size:11px;font-weight:700;opacity:.85;text-transform:none;letter-spacing:0}

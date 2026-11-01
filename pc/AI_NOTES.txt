@@ -3893,3 +3893,9 @@ Malik: "puri site ek chhoti screen jaisi lagti hai — design aisa ho jaise shop
 - Perf: deewarein / chhat SVG ek dafa · door ki rack photo 420px (300 LITE) sirf 3600 tak paas aane par · peeche reh gaye rack chhupe · CPU ×4 par 16.7 ms/frame · LITE = koi animation nahi.
 - Class naam k-* / kp-* / ks-* (purane .kh / .ph se takrao nahi — lite mein .kh{transform:none} ne rack seedha kar diya tha).
 - Abhi default BAND (ROOM_DEFAULT '0') — link ?kamra=1 (session yaad), ?kamra=0 = purana. Malik OK kare to ROOM_DEFAULT '1'. AI NAHI. App / rules mein kuch nahi.
+
+== v2.167.0 (2 Nov 2026) — 🖥 Alfalah …5826 ke aaye paise bhi Server PC khud khate mein (malik ka OK) ==
+Malik ne Alfalah SMS (MacroDroid 8287 → trigger "BAF" / "Alfalah", OTP nahi) + email (hp6235 Gmail script, BK label) chalu kiye; Raast ID ab Alfalah …0294 par (HBL se hati).
+- Har bank account (HBL ke ilawa) ki alag ijazat '@pcin:<4 number>' (PC bank-parchi v2.3 pehle se yehi dekhta hai). HBL screen par account chip (Alfalah Samiullah) → ⋮ "🖥 PC khud: ON / BAND" (sirf malik) + upar chhoti line "🖥 aaye paise PC khud lagata hai · …5826".
+- Ek dafa (malik ke phone par, '@alf2'): '@pcin:5826' = '1' + agar …5826 ka khata nahi chuna aur EK hi saaf khata (naam mein Alfalah + 5826/Sami) ho to wohi. Warna pehle SMS par "Yeh kaun sa account hai?" card.
+- PC sirf AAJ ke aaye paise lagata hai; apna transfer (Noor Traders / Sami Ullah naam) nahi. AI NAHI. PC / rules mein kuch nahi badla.
