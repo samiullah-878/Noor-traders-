@@ -3880,3 +3880,8 @@ Malik: "jitne gate pass nikal rahe hain un ka record app mein · Zeeshan / Sonu 
 
 == QAIDA (1 Nov 2026) — ⌨️ keyboard ==
 Malik: "jab hum keyboard se kaam karte hain to screen mazeed chhoti ho jati hai — is ka hal yahi hota hai ke main screen saamne, baqi cheezein three dot ke andar". Har screen / khirki: saamne sirf asal kaam; filter / din / KPI / PDF / madad sab ⋮ mein. Zaroorat ho to do ⋮ (daayein aam, baayein alag list — Gate pass: 🔵 un-posted).
+
+== v2.165.0 (1 Nov 2026) — 🔵 / 🔴 GATE PASS (Bills jaisa) + do ⋮ ==
+Malik: "Bills jaisa system — laal = posted gate pass jin ko tick karna hai, neela = un-posted jo baad mein laal ban jayega · do three dot: daayein wo sab cheezein, doosre mein un-posted · keyboard se kaam karte waqt screen chhoti — saamne sirf main screen". Demo (claude.ai design) dekh kar OK.
+- PC gate-pass v1.1: un-posted (DocStatusID 1) bills ki godam lines bhi → gatePass `ps` 1 (neela) / 2 (laal); jaanch mein SaleDetail ki ginti / max id / jor / godam bhi (scan ke dauran nayi line). Post = ps 2 + pt (post ka waqt); un-post = wapas ps 1 (tick wese hi); cancel / delete = off.
+- App gate-pass v1.1: saamne SIRF 🔴 laal cards (tick) + ✓ hare chips + ⚠️ cancel jis ka maal diya tha. Khirki ke header mein BAAYAN ⋮ (neela, ginti) = apni <dialog> (#gtpBlue) — un-posted gate pass + tadad, tick band, post hote hi khud ghaib ho kar saamne laal ✨. DAAYAN ⋮ = din · tareekh · godam · dikhao · 📊 ginti · 📄 PDF · ❌ cancel (bina diya). 🔍 chhota chip (dabao = search + keyboard). Phone back = pehle 🔵 khirki band (window.ntGtpClose). PDF mein neela nahi. AI NAHI. Rules wahi (2.81).
