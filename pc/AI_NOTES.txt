@@ -3866,3 +3866,6 @@ Malik (Saman mojood Rs 24,190 khate mein nahi tha — "Kharcha" wala naam chuna 
 - Jis naam ka khata pehle se ho (Saman mojood) — kharcha wala dohra naam nahi dikhta, sirf khata.
 - Naya account → 🧾 Kharcha = yehi Customer khata. Akhrajat screen: "🧾 Kharcha khate" (har ek ka jor, tap = khata) + "Purane kharche" (purani entries).
 - Purani kharcha entries nahi badli (malik). AI NAHI. Rules wahi (2.80).
+
+== v2.163.1 (1 Nov 2026) — 🩵 kharcha khate FIROZI ==
+Malik: "kharcha khata ka rang aam khaton se alag" → Firozi chuna. Khaton ki list mein kharcha khate ki qatar firozi (patti + halka rang + 🧾 Kharcha khata), khata kholne par upar ka hissa firozi (🧾 Kharcha khata nishan), entry form ka card firozi, Akhrajat ki kharcha khate list bhi. AI NAHI.

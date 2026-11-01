@@ -6910,3 +6910,13 @@ html body #dialogBody .gg-copy{height:32px;padding:0 12px;border-radius:999px!im
 html body #dialogBody .gg-test{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12.5px;font-weight:700}
 /* v2.163.0: 🧾 "＋ Naya kharcha khata" chip (Akhrajat / Party payment) */
 html body #dialogBody .kh-new{justify-content:flex-start!important;gap:6px;border-style:dashed!important;border-color:#c7372f!important;background:#fff6f5!important;color:#7a1f1a!important}
+/* v2.163.1: 🩵 KHARCHA KHATA = FIROZI (malik: "kharcha khata ka rang aam khaton se alag") — list qatar · khata ka upar ka hissa · entry form ka card */
+html body .party.kh-acct{background:linear-gradient(90deg,#e6fbf8,#f4fffd 60%,#fff)!important;border-color:#8fe3d6!important;box-shadow:inset 5px 0 0 #14b8a6,0 6px 14px -12px rgba(15,118,110,.55)!important}
+html body .party.kh-acct .avatar{background:linear-gradient(145deg,#2dd4bf,#0f766e)!important;color:#fff!important}
+html body .party.kh-acct .name small{color:#0f766e!important;font-weight:800}
+html body #summary:has(.kh-mark){background:linear-gradient(135deg,#0f766e,#14b8a6 70%,#5eead4)!important;border-color:#0d9488!important;color:#fff!important}
+html body #summary:has(.kh-mark) :is(strong,small,b,span){color:#fff!important}
+html body #summary:has(.kh-mark)::before{content:"🧾 Kharcha khata";display:inline-block;margin:0 0 4px;padding:2px 10px;border-radius:999px;background:rgba(255,255,255,.22);color:#fff;font-weight:800;font-size:11.5px}
+html body #dialogBody .ef-card.kh{background:linear-gradient(90deg,#e6fbf8,#fff)!important;border-color:#5eead4!important;box-shadow:inset 4px 0 0 #14b8a6!important}
+html body #dialogBody .ef-card.kh .ef-av{background:linear-gradient(145deg,#2dd4bf,#0f766e)!important;color:#fff!important}
+html body #dialogBody .ef-card.kh .ef-tag{background:#ccfbf1!important;color:#0f766e!important}
