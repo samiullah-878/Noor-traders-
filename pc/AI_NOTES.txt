@@ -3877,3 +3877,6 @@ Malik: "jitne gate pass nikal rahe hain un ka record app mein · Zeeshan / Sonu 
 - App gate-pass.js (CAP app.gate — OPT_IN, malik Zeeshan / Sonu ko tick kare): Stock screen tile "🚪 Gate pass" + Transfer screen tile. Transfer check ("📦 Jane wala maal") jaisi: har bill × godam = alag card (upar 🚪 Gate pass #no + 👤 customer, chhoti line godam → dukan · post ka waqt · PC; neeche har item naam + tadad chip (ctn + pcs) + "✓ de diya"); ✓ wale = card mein chips "De diya (chip dabao = wapas)" kis ne + waqt; poora diya = neeche "✓ Poore de diye" chips (dabao = poora card); ❌ un-post / cancel alag (diya tha = ⚠️). Tick ke baad bill ki tadad badli = tick khud baqi + "✏️ bill badla". Naya bill = upar ✨. Smart dhoondo (customer / item / no).
 - ⋮: din (Aaj · Kal · 7 din · 30 din · Is mahine) + 📆 tareekh · godam (phone par yaad sam-gtp-g) · Sab / Baqi / De diye · 📄 PDF (kholo + bhejo).
 - Classes `gtp-*` (gaari ki `.gp-*` se takrao nahi). AI NAHI.
+
+== QAIDA (1 Nov 2026) — ⌨️ keyboard ==
+Malik: "jab hum keyboard se kaam karte hain to screen mazeed chhoti ho jati hai — is ka hal yahi hota hai ke main screen saamne, baqi cheezein three dot ke andar". Har screen / khirki: saamne sirf asal kaam; filter / din / KPI / PDF / madad sab ⋮ mein. Zaroorat ho to do ⋮ (daayein aam, baayein alag list — Gate pass: 🔵 un-posted).
