@@ -1,5 +1,7 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-02 (k): 💵 voucher parchi par "RAQAM WASOOL HUI" / "RAQAM DI GAYI" BARI (party naam jitni) + Urdu · 🏦 ALFALAH parchi (bara ulta ALFALAH, "ALFALAH MEIN PAISE AAYE";
+//    note 'Alfalah aaye' = aaye — pehle 'HBL SE PAISE GAYE' chhapta tha) · bank parchi ki Tafseel Urdu bina AI (foran) + 'Server … > Parchi …' waqt
 //  2026-10-29 (j): ↩ OPENING THEEK WAPAS (milanJobs ids ['@undo-opening', job]) malik ki ijazat se · opening mein 15-Sep se pehle ki SAB app entries · autoMilan opening KABHI khud nahi · bank khata opening nahi
 //  2026-10-28 (i): 📜 OPENING FARQ malik ki ijazat se — milanJobs ids ['@opening'] (dir pos = POS JV 'Opening balance farq (app)' · dir app = app mein 'Sabqa baqaya farq theek (POS jaisa)' posNo entry)
 //  2026-10-28 (h): 🔎 BILL JAANCH — farq wale khate ki POS purchase bill entry (App mein hai — POS mein nahi) ka POS mein asal haal; delete / cancel / party / raqam / 📌 khud theek, baqi wajah blueAccess/billJaanch (app chip)
@@ -462,7 +464,11 @@ function receiptBig({ title, code, date, lines, note, copy, pay }) {
     { const ur = urPartyOf(l); if (ur) out.push(UR.line(ur, 60, 1)); }
     if (many) out.push(hr);
   }
-  if (!many && lines[0]) out.push(L + hr, C + smb(String(lines[0].label || '').toUpperCase()));
+  if (!many && lines[0]) {   // 2026-11-02: malik — "raqam wasool hui / raqam di gayi — full size"
+    const lb = String(lines[0].label || ''), LB = { 'Wasool kiye': ['RAQAM WASOOL HUI', 'رقم وصول ہوئی'], 'Diye': ['RAQAM DI GAYI', 'رقم دی گئی'] }[lb];
+    if (LB) { out.push(L + hr, C + big2(LB[0])); if (UR.isOn()) out.push(UR.line(LB[1], 56, 1)); }
+    else out.push(L + hr, C + smb(lb.toUpperCase()));
+  }
   out.push(C + huge('Rs.' + n(total)), '');
   if (pay === 'copy') out.push(C + smb('*** COPY - IS PAR PAISE NA DEIN ***'), '');
   if (pay === 'nocash') out.push(C + smb('*** GALLE SE PAISE NAHI GAYE ***'), '');   // 2026-10-23
@@ -502,11 +508,12 @@ function receipt({ title, code, date, lines, note, copy, bank, pay }) {
   // 2026-10-12: 🏦 HBL PARCHI (sirf HBL account / HBL SMS-email wali entry) — upar bara ulta "HBL", barcode nahi, raqam + baqaya lafzon mein
   const huge = t => GS + '!\x33' + t + GS + '!\x00', rev = t => GS + 'B\x01' + t + GS + 'B\x00';
   const words = v => wrap(inWords(v), W - 2).map(x => '  ' + x.trim());
+  const BK = bank && bank.bk === 'ALFALAH' ? 'ALFALAH' : 'HBL', BKU = BK === 'ALFALAH' ? 'الفلاح' : 'ایچ بی ایل';   // 2026-11-02: 🏦 Alfalah ki apni parchi
   const out = bank
-    ? [ESC + '@', C + rev(huge(' HBL ')), '', bold('NOOR TRADERS') + '  ' + SHOP_PHONE, '', tall(bank.dir === 'out' ? 'HBL SE PAISE GAYE' : 'HBL MEIN PAISE AAYE')]
+    ? [ESC + '@', C + rev(huge(' ' + BK + ' ')), '', bold('NOOR TRADERS') + '  ' + SHOP_PHONE, '', tall(BK + (bank.dir === 'out' ? ' SE PAISE GAYE' : ' MEIN PAISE AAYE'))]
     : [ESC + '@', C + big('NOOR TRADERS'), SHOP_PHONE, '', tall(title)];
   if (!bank && UR.isOn() && UR_TITLE[title]) out.push(UR.line(UR_TITLE[title], 40));   // 2026-10-14: 🔤 Urdu
-  if (bank && UR.isOn()) { out.push(UR.line(bank.dir === 'out' ? 'ایچ بی ایل سے پیسے گئے' : 'ایچ بی ایل میں پیسے آئے', 50, 1)); if (UR.dateLine) out.push(UR.dateLine(date, 56)); }   // 2026-10-20: 🏦 Urdu sar-khi + tareekh
+  if (bank && UR.isOn()) { out.push(UR.line(BKU + (bank.dir === 'out' ? ' سے پیسے گئے' : ' میں پیسے آئے'), 50, 1)); if (UR.dateLine) out.push(UR.dateLine(date, 56)); }   // 2026-10-20: 🏦 Urdu sar-khi + tareekh
   if (copy) out.push('(Dobara print)');
   out.push(...payMark(pay, false, big, C));   // 2026-10-17: 💵 payment de do / copy
   if (!bank) out.push(...dateMark(date, big, C, 'top'));   // 2026-10-18: 📅 bari tareekh
@@ -536,7 +543,9 @@ function receipt({ title, code, date, lines, note, copy, bank, pay }) {
   }
   if (bq.length) out.push(L + hr);
   const nl = wrap(note, W);
-  if (nl.length) out.push(...(UR.note ? [UR.note(note, bank ? 46 : 52, 'تفصیل')].filter(Boolean) : []), L + 'Tafseel:', ...nl, hr);   // 2026-10-20: 📝 Tafseel Urdu
+  const urN = () => { try { const t = String(note || '').replace(/\s+/g, ' ').trim().slice(0, 160), u = UR.isOn() && UR.roman2ur ? UR.roman2ur(t) : ''; return u ? [UR.line('تفصیل: ' + u, 46, 1)] : []; } catch { return []; } };   // 2026-11-02: 🏦 bank parchi = bina AI foran
+  if (nl.length) out.push(...(bank ? urN() : UR.note ? [UR.note(note, 52, 'تفصیل')].filter(Boolean) : []), L + 'Tafseel:', ...nl, hr);   // 2026-10-20: 📝 Tafseel Urdu
+  if (bank && bank.at > 0) { const t2 = x => { const q = new Date(x), h = q.getHours() % 12 || 12; return `${h}:${String(q.getMinutes()).padStart(2, '0')}:${String(q.getSeconds()).padStart(2, '0')}`; }; out.push(L + `Waqt: Server ${t2(bank.at)} > Parchi ${t2(now)} (${Math.max(0, Math.round((now - bank.at) / 1000))} s)`); }   // 2026-11-02: ⏱ der kahan
   out.push('', L + 'Dastakhat: ______________________', '');   // 2026-10-27: malik — neeche tareekh nahi, faltu khali kaghaz nahi
   out.push(GS + 'V\x42\x00');                                    // kaghaz kaato
   return out.join('\r\n');
@@ -639,12 +648,16 @@ async function reprintVoucher(code, copies = 1, fromJob = false) {
   } finally { await pool.close(); }
 }
 // 2026-10-12: kya yeh HBL ka len-den hai? (bank account wala khata, ya HBL SMS / email se bani entry) -> { dir: 'in' | 'out' } warna null
-function bankSlip(base, isTransfer) {
+function bankSlip(base, isTransfer) { const r = bankSlip0(base, isTransfer); if (!r) return null;   // 2026-11-02: 🏦 kaun sa bank (Alfalah / HBL) + entry kab bani (⏱)
+  const nm = id => String((id && app.get(id) && app.get(id).name) || ''), alf = /^Alfalah\b/i.test(String(base.note || '')) || /alf[a]?lah/i.test(isTransfer ? nm(base.fromPartyId) + ' ' + nm(base.toPartyId) : nm(base.partyId));
+  return { ...r, bk: alf ? 'ALFALAH' : 'HBL', at: ms(base.createdAt) || 0 };
+}
+function bankSlip0(base, isTransfer) {
   const isB = id => !!(id && app.get(id) && app.get(id).bank);
   if (isTransfer) { if (isB(base.fromPartyId)) return { dir: 'out' }; if (isB(base.toPartyId)) return { dir: 'in' }; }
   else if (isB(base.partyId)) return { dir: base.kind === 'collection' || base.kind === 'borrow' ? 'out' : 'in' };
   const nt = String(base.note || '');
-  if (base.bankSms || /^HBL (aaye|gaye) /.test(nt)) return { dir: /^HBL gaye/.test(nt) || (!isTransfer && base.kind === 'payment' && !isB(base.partyId)) ? 'out' : 'in' };
+  if (base.bankSms || /^(HBL|Alfalah) (aaye|gaye) /i.test(nt)) return { dir: /^(HBL|Alfalah) gaye/i.test(nt) ? 'out' : /^(HBL|Alfalah) aaye/i.test(nt) ? 'in' : (!isTransfer && base.kind === 'payment' && !isB(base.partyId)) ? 'out' : 'in' };   // 2026-11-02: 'Alfalah aaye' = aaye (pehle GAYE chhapta)
   return null;
 }
 const VTITLE = { CPV: 'CASH PAYMENT VOUCHER', CRV: 'CASH RECEIPT VOUCHER', JV: 'TRANSFER VOUCHER', BPV: 'BANK PAYMENT VOUCHER', BRV: 'BANK RECEIPT VOUCHER' };

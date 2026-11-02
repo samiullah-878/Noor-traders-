@@ -3913,3 +3913,11 @@ Malik: "unposted bill right side three dot ke andar · search upar pakki rahe, u
 - N chips (10…35) = ab sirf POSTED laal (pehle un-posted bhi N mein gine jate the).
 - style.css: bare cards (`.nb-chip:not(.sm):not(.un)`) patle — padding 5px, no 22 / raqam 15 / haal 11 / meta 10, gap 5 → PC 1366×690 par 5 × 4 = 20 poore (test). Item wale bills ke bare cards par bhi.
 - AI NAHI. PC / rules mein kuch nahi.
+
+== PC pos-khata-sync (k) · manifest 2026-11-02.1 (2 Nov 2026) — 💵 bari "RAQAM WASOOL HUI / DI GAYI" · 🏦 Alfalah parchi · bank parchi tez ==
+Malik: "raqam wasool hui / raqam di gayi full size" · "Alflah ke upar Alfalah ka logo" · "SMS aaya, dasti bill bahir" (tez).
+- receiptBig (CPV/CRV, ek party): "WASOOL KIYE" → big2 "RAQAM WASOOL HUI" + Urdu رقم وصول ہوئی · "DIYE" → "RAQAM DI GAYI" + رقم دی گئی (baqi labels pehle jaise chhote).
+- bankSlip → {dir, bk, at}: bank = ALFALAH (note "Alfalah …" ya khate ke naam mein alfalah/alflah) warna HBL; taraf note "(HBL|Alfalah) aaye/gaye" se PEHLE. Ghalti thi: Alflah Noor Traders khate par `bank` flag nahi → payment = "HBL SE PAISE GAYE" chhapta tha.
+- receipt(bank): upar bara ulta " ALFALAH " (asal logo tasveer NAHI — HBL bhi sirf likhai) + "ALFALAH MEIN PAISE AAYE" + Urdu الفلاح میں پیسے آئے.
+- Bank parchi ki Tafseel Urdu = UR.roman2ur foran (AI 4 s ka intezar nahi). Neeche "Waqt: Server h:mm:ss > Parchi h:mm:ss (N s)" (server = entry createdAt) — der phone (MacroDroid) mein hai ya PC mein, malik dekh sake.
+- App / rules mein kuch nahi. AI NAHI (bank parchi se AI hata).
