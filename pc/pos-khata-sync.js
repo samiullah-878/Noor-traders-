@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-02 (o): 🖨 Daily — Sale khana, Change/Closing khana, SAB PRINT (akhrajat 2-2 khane, neeche wasooli 2-2, phir + / − hisaab + KAM / ZYADA)
 //  2026-11-02 (n): 🖨 DAILY KHANE KA PRINT — Wasooli / Akhrajat alag (khataPrints j.k 'day' → daySlip), koi bhi mulazim (rules 2.83)
 //  2026-11-02 (m3): 🖨 khata parchi par SIRF RAQAM mota (ESC E line ke andar — tareekh / note patle) · tarteeb app wali (khOrd, app bhejti hai)
 //  2026-11-02 (m2): 🖨 khata parchi ki raqam ÷100 (app PAISA bhejti hai — pehli parchi ×100 chhapi thi, meri ghalti)
@@ -1680,26 +1681,62 @@ function khataSlip(J) {
 // 2026-11-02 (n): 🖨 DAILY KHANE KA PRINT (malik: "Wasooli ka print alehda · Akhrajat ka alehda · koi bhi print kar sakta hai")
 //   app: WAHI khataPrints/<id> {j: JSON {k:'day', t:'w'|'x', d, L:[[waqt, raqam PAISA, account, note]], tl, q}} → yahan EK khana: waqt · account · raqam MOTI, note neeche patla, aakhir KUL bara. AI nahi.
 function daySlip(J) {
-  const WB = 56, ESC = '\x1b', GS = '\x1d', C = ESC + 'a\x01', L = ESC + 'a\x00';
-  const sm = t => ESC + '!\x01' + t + ESC + '!\x00', bold = t => ESC + 'E\x01' + t + ESC + 'E\x00', big2 = t => ESC + '!\x38' + t + ESC + '!\x00';
+  const WB = 56, CW = 27, ESC = '\x1b', GS = '\x1d', C = ESC + 'a\x01', L = ESC + 'a\x00';
+  const sm = t => ESC + '!\x01' + t + ESC + '!\x00', smb = t => ESC + '!\x09' + t + ESC + '!\x00', bold = t => ESC + 'E\x01' + t + ESC + 'E\x00', big2 = t => ESC + '!\x38' + t + ESC + '!\x00';
   const B1 = ESC + 'E\x01', B0 = ESC + 'E\x00';
   const n = v => ((Number(v) || 0) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });   // app ki raqam PAISA
   const fit = (t, w) => { t = String(t ?? '').replace(/[^\x20-\x7e]/g, ''); return t.length > w ? t.slice(0, w) : t + ' '.repeat(w - t.length); };
   const rowW = (w, l, r) => { l = String(l); r = String(r); return (l + ' '.repeat(Math.max(1, w - l.length - r.length))).slice(0, w - r.length) + r; };
-  const T = J.t === 'w' ? ['WASOOLI', 'وصولی'] : ['AKHRAJAT', 'اخراجات'];
-  const rows = Array.isArray(J.L) ? J.L : [], hrB = sm('-'.repeat(WB));
+  const amtR = (w, label, v) => { const am = 'Rs.' + n(v); return fit(label, Math.max(1, w - am.length)) + B1 + am + B0; };   // label patla + raqam MOTI daayein
+  const TT = { w: ['WASOOLI', 'وصولی'], x: ['AKHRAJAT', 'اخراجات'], s: ['SALE', 'سیل'], c: ['CHANGE / CLOSING', 'چینج اور کلوزنگ کیش'], a: ['DAILY HISAAB', 'روزانہ حساب'] };
+  const T = TT[J.t] || TT.x, hrB = sm('-'.repeat(WB));
   const out = [ESC + '@', C + bold('NOOR TRADERS') + sm('  ' + SHOP_PHONE)];
   if (UR.isOn() && UR.dateLine) { const dl = UR.dateLine(String(J.d || ''), 56); if (dl) out.push(dl); }
   out.push(C + big2(T[0]));
   if (UR.isOn()) out.push(UR.line(T[1], 44, 1));
   out.push(L + sm(rowW(WB, ('Tareekh: ' + ascii(J.d) + (J.q ? ' · search: ' + ascii(J.q).slice(0, 14) : '')).slice(0, 40), printStamp(new Date()))), hrB);
-  for (const r of rows) {
-    if (!Array.isArray(r)) continue;
-    const am = n(r[1]), nw = Math.max(8, WB - 9 - am.length - 1);
-    out.push(sm(fit(ascii(r[0]), 9) + fit(ascii(r[2]), nw) + ' ' + B1 + am + B0));
-    const note = ascii(r[3]); if (note) for (const x of wrap(note, WB - 9).slice(0, 2)) out.push(sm(' '.repeat(9) + x));
+  if (J.t === 'w' || J.t === 'x' || J.t === 's') {   // ek khana: waqt · account · raqam MOTI, note neeche
+    const rows = Array.isArray(J.L) ? J.L : [];
+    for (const r of rows) {
+      if (!Array.isArray(r)) continue;
+      const am = n(r[1]), nw = Math.max(8, WB - 9 - am.length - 1);
+      out.push(sm(fit(ascii(r[0]), 9) + fit(ascii(r[2]), nw) + ' ' + B1 + am + B0));
+      const note = ascii(r[3]); if (note) for (const x of wrap(note, WB - 9).slice(0, 2)) out.push(sm(' '.repeat(9) + x));
+    }
+    out.push(hrB, C + bold(`KUL ${T[0]} (${rows.length})`), C + big2('Rs.' + n(J.tl)), '');
+    out.push(GS + 'V\x42\x00');
+    return out.join('\r\n');
   }
-  out.push(hrB, C + bold(`KUL ${T[0]} (${rows.length})`), C + big2('Rs.' + n(J.tl)), '');
+  const rowsTxt = a => (Array.isArray(a) && a.length > 1) ? wrap(a.map(n).join(' + '), WB - 4).slice(0, 3).map(x => sm('    ' + x)) : [];
+  const sum3 = () => {
+    out.push(sm(amtR(WB, 'Kal ka change', J.o))); out.push(...rowsTxt(J.or));
+    out.push(sm(amtR(WB, 'Aaj ka change', J.c))); out.push(...rowsTxt(J.cr));
+    out.push(sm(amtR(WB, 'Closing cash', J.ca))); out.push(...rowsTxt(J.kr));
+  };
+  const farq = () => {
+    if (!J.cl) { out.push(C + bold('CLOSING GINTI ABHI BAQI')); if (UR.isOn()) out.push(UR.line('کلوزنگ کی گنتی ابھی باقی ہے', 34, 1)); return; }
+    const f = Number(J.f) || 0, hona = (Number(J.s) || 0) + (Number(J.w) || 0) + (Number(J.o) || 0) - (Number(J.x) || 0) - (Number(J.c) || 0);
+    out.push(sm(rowW(WB, 'Hona chahiye Rs.' + n(hona), 'Gina Rs.' + n(J.ca))));
+    if (!f) { out.push(C + big2('BARABAR')); if (UR.isOn()) out.push(UR.line('حساب برابر', 40, 1)); return; }
+    out.push(C + big2((f > 0 ? 'KAM ' : 'ZYADA ') + 'Rs.' + n(Math.abs(f))));   // f > 0 = hona zyada, gina kam = paise KAM (screen ka "Farq −")
+    if (UR.isOn()) out.push(UR.line(f > 0 ? 'پیسے کم ہیں' : 'پیسے زیادہ ہیں', 40, 1));
+  };
+  if (J.t === 'c') { sum3(); out.push(hrB); farq(); out.push(''); out.push(GS + 'V\x42\x00'); return out.join('\r\n'); }
+  // 'a' — SAB PRINT: Akhrajat 2-2 khane, neeche Wasooli 2-2 khane (malik: "akhrajat zyada — do line, neeche wasooli, page kam lage"), phir hisaab
+  const cell = r => Array.isArray(r) ? (() => { const am = n(r[0]); return fit(ascii(r[1]), Math.max(4, CW - am.length - 1)) + ' ' + B1 + am + B0; })() : ' '.repeat(CW);
+  const grid = (title, list, tot) => {
+    const a = Array.isArray(list) ? list : [];
+    out.push(L + smb(rowW(WB, `${title} (${a.length})`, '')));
+    for (let i = 0; i < a.length; i += 2) out.push(sm(cell(a[i]) + '|' + cell(a[i + 1])));
+    if (!a.length) out.push(sm('  (koi entry nahi)'));
+    out.push(sm(amtR(WB, 'Kul ' + title.toLowerCase(), tot)), hrB);
+  };
+  grid('AKHRAJAT', J.X, J.x);
+  grid('WASOOLI', J.W, J.w);
+  out.push(sm(amtR(WB, '+ Sale', J.s)), sm(amtR(WB, '+ Wasooli', J.w)), sm(amtR(WB, '+ Kal ka change', J.o)));
+  out.push(sm(amtR(WB, '- Akhrajat', J.x)), sm(amtR(WB, '- Aaj ka change', J.c)), sm(amtR(WB, '- Closing cash', J.ca)));
+  if (!J.ok) out.push(sm('  (kal ka change nahi mila — closing mein likhein)'));
+  out.push(hrB); farq(); out.push('');
   out.push(GS + 'V\x42\x00');   // kaghaz kaato
   return out.join('\r\n');
 }
