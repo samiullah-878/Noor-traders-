@@ -1,5 +1,7 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-02 (l): ⏱ POS BAQAYA HAR SECOND (malik: "har second check · auto") — ledgerWatch har 1 sec chhota sawal (Voucher ginti / max id / UpdatedOn /
+//    status + VoucherDetail ginti); badla = ~3 s mein sirf BAQAYE (balPush, lines nahi) blueAccess/posLedger mein. Farq khud barabar NAHI (malik: "hum khud dekh lenge").
 //  2026-11-02 (k): 💵 voucher parchi par "RAQAM WASOOL HUI" / "RAQAM DI GAYI" BARI (party naam jitni) + Urdu · 🏦 ALFALAH parchi (bara ulta ALFALAH, "ALFALAH MEIN PAISE AAYE";
 //    note 'Alfalah aaye' = aaye — pehle 'HBL SE PAISE GAYE' chhapta tha) · bank parchi ki Tafseel Urdu bina AI (foran) + 'Server … > Parchi …' waqt
 //  2026-10-29 (j): ↩ OPENING THEEK WAPAS (milanJobs ids ['@undo-opening', job]) malik ki ijazat se · opening mein 15-Sep se pehle ki SAB app entries · autoMilan opening KABHI khud nahi · bank khata opening nahi
@@ -1675,6 +1677,11 @@ async function ledgerPush(pool) {
   const forced = ledgerForce > 0;
   if (!forced && Date.now() - ledgerAt < 15 * 60000) return; ledgerAt = Date.now(); ledgerForce = 0;
   if (forced) { ledgerLast = ''; linesHash.clear(); }
+  await balPush(pool, forced);
+  try { await linesPush(pool); } catch (e) { log('🔍 POS lines masla: ' + e.message); }
+}
+// 2026-11-02 (l): sirf BAQAYE (har jude khate ka POS balance) — ledgerPush (15 min / Taza) aur ledgerWatch (har second badlaav par) dono yehi
+async function balPush(pool, forced = false) {
   const rows = (await pool.request().query(`SELECT p.PartyID, SUM(ISNULL(vd.Debit,0) - ISNULL(vd.Credit,0)) AS Bal
     FROM dbo.Party p LEFT JOIN dbo.VoucherDetail vd ON vd.AccountID = p.AccountID
     LEFT JOIN dbo.Voucher v ON v.VoucherID = vd.VoucherID
@@ -1684,8 +1691,22 @@ async function ledgerPush(pool) {
   const m = {}; let n = 0;
   for (const [k, l] of links) { if (!k.startsWith('party:') || !l || !l.posPartyId) continue; const appId = k.slice(6); if (!appId || /[.\/]/.test(appId) || !byPos.has(Number(l.posPartyId))) continue; m[appId] = byPos.get(Number(l.posPartyId)); n++; }
   const j = JSON.stringify(m);
-  if (j !== ledgerLast) { ledgerLast = j; if (!DRY) { await biz.collection('blueAccess').doc('posLedger').set({ m, at: Date.now(), n, pc: os.hostname(), ...(forced ? { req: ledgerReqSeen } : {}) }); log(`⚖️ POS ledger likha: ${n} khate`); } }
-  try { await linesPush(pool); } catch (e) { log('🔍 POS lines masla: ' + e.message); }
+  if (j !== ledgerLast) { ledgerLast = j; if (!DRY) { await biz.collection('blueAccess').doc('posLedger').set({ m, at: Date.now(), n, pc: os.hostname(), ...(forced ? { req: ledgerReqSeen } : {}) }); log(`⚖️ POS ledger likha: ${n} khate${forced ? '' : ' (⏱ badlaav)'}`); } }
+}
+// 2026-11-02 (l): ⏱ har 1 sec — POS mein voucher bana / badla / cancel hua? (chhota sawal) → baqaye ~3 s mein app mein (bhaari GROUP BY 3 s mein ek dafa se zyada nahi)
+let lwSig = '', lwBusy = false, lwAt = 0, lwPend = false, lwErrAt = 0;
+async function ledgerWatch() {
+  if (lwBusy || DRY || !appReady) return; lwBusy = true;
+  try {
+    const pool = await qPoolGet();
+    const r = (await pool.request().query(`SELECT (SELECT COUNT_BIG(*) FROM dbo.Voucher) AS n, (SELECT MAX(VoucherID) FROM dbo.Voucher) AS mx,
+      (SELECT MAX(ISNULL(UpdatedOn, CreatedOn)) FROM dbo.Voucher) AS up, (SELECT SUM(CAST(ISNULL(VoucherStatusID, 1) AS bigint)) FROM dbo.Voucher) AS st,
+      (SELECT COUNT_BIG(*) FROM dbo.VoucherDetail) AS dn, (SELECT MAX(VoucherDetailID) FROM dbo.VoucherDetail) AS dmx`)).recordset[0] || {};
+    const sig = [r.n, r.mx, r.up ? new Date(r.up).getTime() : 0, r.st, r.dn, r.dmx].join('|');
+    if (sig !== lwSig) { lwSig = sig; lwPend = true; }
+    if (lwPend && Date.now() - lwAt >= 3000) { lwPend = false; lwAt = Date.now(); await balPush(pool); }
+  } catch (e) { if (Date.now() - lwErrAt > 60000) { lwErrAt = Date.now(); log('⏱ POS baqaya jaanch masla: ' + e.message); } if (/connect|socket|closed|timeout/i.test(e.message)) await qPoolDrop(); }
+  finally { lwBusy = false; }
 }
 // 2026-10-26 (b): 🔍 FARQ KI ENTRIES — har jude khate ki POS ledger LINES (LINES_FROM se) posLines/<appId> {j: JSON [[date, code, docType, docNo, dr, cr, desc, st]…], pre: paisa
 //   (LINES_FROM se pehle ka jor = app ka "Sabqa baqaya"), n, at} — sirf jo khata badla (hash). App click par 1 read = foran. Cancel (VoucherStatusID 3) shamil nahi.
@@ -1761,4 +1782,5 @@ async function once() {
   kick = () => { quickRun(); if (timer) return; timer = setTimeout(() => { timer = null; tick(); }, 800); };
   await tick();
   setInterval(ZINDA.guard(tick, 10 * 60000, 'khata tick'), LOOP_SECONDS * 1000);   // 2026-10-11: chowkidar
+  if (!DRY) setInterval(ledgerWatch, 1000);   // 2026-11-02 (l): ⏱ POS baqaya har second
 })().catch(e => { console.error('Nahi hua:', e.message); process.exit(1); });

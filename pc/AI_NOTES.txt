@@ -3921,3 +3921,9 @@ Malik: "raqam wasool hui / raqam di gayi full size" · "Alflah ke upar Alfalah k
 - receipt(bank): upar bara ulta " ALFALAH " (asal logo tasveer NAHI — HBL bhi sirf likhai) + "ALFALAH MEIN PAISE AAYE" + Urdu الفلاح میں پیسے آئے.
 - Bank parchi ki Tafseel Urdu = UR.roman2ur foran (AI 4 s ka intezar nahi). Neeche "Waqt: Server h:mm:ss > Parchi h:mm:ss (N s)" (server = entry createdAt) — der phone (MacroDroid) mein hai ya PC mein, malik dekh sake.
 - App / rules mein kuch nahi. AI NAHI (bank parchi se AI hata).
+
+== v2.169.0 + PC pos-khata-sync (l) · manifest 2026-11-02.2 (2 Nov 2026) — ⏱ POS baqaya HAR SECOND, ⏳ jhoota farq nahi ==
+Malik (hbl noor traders purana par "POS ⚠ 163,115 farq"): "har second check karna chahiye, auto" · asli farq khud barabar: "Nahi, hum khud dekh lenge".
+- PC: ledgerWatch har 1 s — SELECT Voucher COUNT / MAX(VoucherID) / MAX(UpdatedOn|CreatedOn) / SUM(status) + VoucherDetail COUNT / MAX id (tez pool qPool). Badla = balPush (wahi GROUP BY baqaya, 3 s mein ek dafa se zyada nahi) → blueAccess/posLedger (sirf badla ho to likhta). ledgerPush (15 min / Taza karo / milan) ab balPush + linesPush.
+- App pos-milan.js v2.1: pmRow state "wait" — farq ho aur is khate ki entry (updatedAt/createdAt, partyId/from/to) POS data (posLedger.at) se nayi, 3 min tak = "🖥 POS ⏳ nayi entry POS mein ja rahi"; milan list / farq screen bhi ⏳. 3 min baad bhi farq = asli ⚠ (malik khud).
+- Auto-barabar mein KOI badlaav nahi (autoMilan pehle jaisa, sirf pakka farq, 15 min). AI NAHI. Rules nahi.

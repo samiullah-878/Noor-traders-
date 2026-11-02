@@ -1,11 +1,11 @@
-// pos-milan.js — v2.0 (2026-10-29, app v2.147.3: ↩ OPENING THEEK KI JAANCH — har opening theek ka asar + malik ka ↩ Wapas · opening mein 15-Sep se pehle ki SAB app entries · bank / HBL khata opening nahi · list mein khud ☑ nahi · PC khud opening nahi) · v1.9 (2026-10-28, app v2.144.0: 📜 OPENING FARQ — sab khate list ☑ + khate ki Farq screen, malik ke chip 🖥 POS ko app jaisa / 📱 App ko POS jaisa → milanJobs ids ['@opening']) · v1.8 (2026-10-28, app v2.143.0: 🔎 POS purchase bill ki farq ki WAJAH — PC bill jaanch blueAccess/billJaanch + chips 💵 Cash ada / 📌 Post / 🧾 Bill) · v1.7 (2026-10-27, app v2.135.0: 🤖 PC auto milan ki aaj ki list + POS opening voucher opening ke khane mein) · v1.6 (2026-10-27, app v2.134.0: ✕ entry-war 'POS mein nahi' khate ke card par + 📤 ek entry bhejo · ⇄ transfer bhi) · v1.5 (2026-10-27, app v2.133.7: 📤 sab khaton ki baqi entries POS mein — taza data → list ☑ → milanJobs) · v1.4 (2026-10-27, app v2.133.4: 🔄 Taza karo + POS data ka waqt, job ke baad khud taza, ↩ pehle se alag) · v1.3 (2026-10-27, app v2.133.0: ⚖️ barabar karo chips — milanJobs app/pos, rules 2.77) · v1.0 (2026-10-26, app v2.124.0) ⚖️ POS MILAN — har khate ka app baqaya vs POS ledger baqaya.
+// pos-milan.js — v2.1 (2026-11-02, app v2.169.0: ⏳ nayi entry POS mein ja rahi = jhoota farq nahi; PC baqaya har badlaav par ~3 s) · v2.0 (2026-10-29, app v2.147.3: ↩ OPENING THEEK KI JAANCH — har opening theek ka asar + malik ka ↩ Wapas · opening mein 15-Sep se pehle ki SAB app entries · bank / HBL khata opening nahi · list mein khud ☑ nahi · PC khud opening nahi) · v1.9 (2026-10-28, app v2.144.0: 📜 OPENING FARQ — sab khate list ☑ + khate ki Farq screen, malik ke chip 🖥 POS ko app jaisa / 📱 App ko POS jaisa → milanJobs ids ['@opening']) · v1.8 (2026-10-28, app v2.143.0: 🔎 POS purchase bill ki farq ki WAJAH — PC bill jaanch blueAccess/billJaanch + chips 💵 Cash ada / 📌 Post / 🧾 Bill) · v1.7 (2026-10-27, app v2.135.0: 🤖 PC auto milan ki aaj ki list + POS opening voucher opening ke khane mein) · v1.6 (2026-10-27, app v2.134.0: ✕ entry-war 'POS mein nahi' khate ke card par + 📤 ek entry bhejo · ⇄ transfer bhi) · v1.5 (2026-10-27, app v2.133.7: 📤 sab khaton ki baqi entries POS mein — taza data → list ☑ → milanJobs) · v1.4 (2026-10-27, app v2.133.4: 🔄 Taza karo + POS data ka waqt, job ke baad khud taza, ↩ pehle se alag) · v1.3 (2026-10-27, app v2.133.0: ⚖️ barabar karo chips — milanJobs app/pos, rules 2.77) · v1.0 (2026-10-26, app v2.124.0) ⚖️ POS MILAN — har khate ka app baqaya vs POS ledger baqaya.
 // Malik: "jitne bhi khate hain, POS ka ledger aur humara khata same aa raha hai — sab khaton ke liye check karna hai; har khate ki screen par bhi POS baqaya".
 // v1.1 (app v2.125.0): 🔍 FARQ KI ENTRIES — posLines/<id> (PC har 15 min, sab khate) se entry-war milan: App mein hai POS nahi · POS mein hai app nahi · raqam farq.
 // Data: blueAccess/posLedger {m:{appPartyId: paisa (lena +, dena −)}, at, n} — PC pos-khata-sync har 15 min. Yahan sirf UI. AI nahi.
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => 'Rs ' + (Math.abs(Number(n) || 0) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
-import { skipsBalance, cashPaysBill } from './model.js?v=2.168.0';
+import { skipsBalance, cashPaysBill } from './model.js?v=2.169.0';
 const TOL = 100, PRE_FROM = '2026-09-15';   // v2.0: PC LINES_FROM / START_DATE jaisa
 const OPEN_RX = /opening|shuru ka baqaya|sabqa baqaya/i;   // v1.7 = PC autoMilan OPEN_RX   // paisa — Rs 1 tak farq = theek (POS 2 decimal rounding)
 let C = null, st = { f: 'farq', q: '' };
@@ -37,10 +37,22 @@ const autoToday = () => (auto && auto.m && auto.d === pkDay()) ? auto.m : {};   
 const led = () => C.ledger() || null;
 const posOf = p => { const m = led()?.m; if (!m || !p) return null; const v = m[p.id]; return v == null ? null : Number(v) || 0; };
 const sideTxt = v => v > 0 ? 'lena' : v < 0 ? 'dena' : 'barabar';
-export function pmRow(p) {   // {app, pos, farq, state: 'ok'|'farq'|'none'}
+// v2.169.0 (malik: "har second check · auto"): PC ab POS baqaya har badlaav par ~3 s mein bhejta hai (pos-khata-sync l). Is khate ki entry POS data se
+//   NAYI ho (3 min tak) = ⏳ "POS mein ja rahi" — jhoota ⚠ farq nahi. 3 min baad bhi farq = asli (malik khud dekhega, khud barabar NAHI).
+const tms = v => typeof v === 'number' ? v : (Date.parse(v) || 0);
+let touchC = { arr: null, m: null };
+function touchOf(id) {
+  const E = C.entries ? C.entries() : [];
+  if (touchC.arr !== E) { const m = new Map(); for (const e of E) { if (!e) continue; const t = Math.max(tms(e.updatedAt), tms(e.createdAt)); for (const k of [e.partyId, e.fromPartyId, e.toPartyId]) if (k && t > (m.get(k) || 0)) m.set(k, t); } touchC = { arr: E, m }; }
+  return touchC.m.get(id) || 0;
+}
+export function pmRow(p) {   // {app, pos, farq, state: 'ok'|'farq'|'none'|'wait'}
   const app = C.balance(p), pos = posOf(p);
   if (pos == null) return { app, pos: null, farq: 0, state: 'none' };
-  const farq = app - pos; return { app, pos, farq, state: Math.abs(farq) <= TOL ? 'ok' : 'farq' };
+  const farq = app - pos; if (Math.abs(farq) <= TOL) return { app, pos, farq, state: 'ok' };
+  const t = touchOf(p.id), at = Number(led()?.at) || 0;
+  if (t && t > at - 3000 && Date.now() - t < 3 * 60000) return { app, pos, farq, state: 'wait' };   // v2.169.0: ⏳
+  return { app, pos, farq, state: 'farq' };
 }
 let pmOpenLine = '';   // v1.2: chhoti chip, tap = bara (malik: "chips small, click karein to bara")
 export function pmLineHTML(p) {   // khate ki screen ke upar — chhoti chip; tap = poori baat + 🔍 Farq dhoondo
@@ -48,6 +60,7 @@ export function pmLineHTML(p) {   // khate ki screen ke upar — chhoti chip; ta
   const r = pmRow(p), big = pmOpenLine === p.id;
   if (r.state === 'none') return `<button type="button" class="pm-line none${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ${big ? 'mein yeh khata nahi juda' : '—'}</button>`;
   const am = autoToday()[p.id], rob = am && am.n ? (big ? ` · 🤖 PC ne aaj khud barabar kiya${am.txt ? ' (' + esc(String(am.txt).split(' | ')[0].slice(0, 90)) + ')' : ''}` : ' 🤖') : '';
+  if (r.state === 'wait') return `<button type="button" class="pm-line none${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ⏳${big ? ' nayi entry POS mein ja rahi hai — chand second' : ''}</button>`;   // v2.169.0
   if (r.state === 'ok') return `<button type="button" class="pm-line ok${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ✓${big ? ` baqaya ${money(r.pos)} ${sideTxt(r.pos)} · barabar` : ''}${rob}</button>`;
   return `<span class="pm-lw"><button type="button" class="pm-line bad${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ⚠ ${money(r.farq)}${big ? ` farq · POS ${money(r.pos)} ${sideTxt(r.pos)} · app ${money(r.app)} ${sideTxt(r.app)}` : ''}</button>${big ? `<button type="button" class="pm-dbtn" data-pm-diff="${esc(p.id)}">🔍 Farq</button>` : ''}</span>`;
 }
@@ -79,7 +92,7 @@ export function pmHTML() {
       <span class="pm-n"><b>${esc(p.name)}</b><small>${esc(p.category || '')}</small></span>
       <span class="pm-v"><small>✍️ App</small><b>${money(r.app)} <i>${sideTxt(r.app)}</i></b></span>
       <span class="pm-v"><small>🖥 POS</small><b>${r.state === 'none' ? '—' : money(r.pos) + ' <i>' + sideTxt(r.pos) + '</i>'}</b></span>
-      <span class="pm-d">${r.state === 'none' ? '<em class="n">POS mein nahi</em>' : r.state === 'ok' ? '<em class="o">✓</em>' : `<em class="b">⚠ ${money(r.farq)}</em><i class="pm-dbtn" data-pm-diff="${esc(p.id)}">🔍 Farq dhoondo</i>`}</span></button>`).join('') : `<div class="empty"><strong>${st.f === 'farq' ? 'Koi farq nahi ✓' : 'Kuch nahi'}</strong></div>`}</div>
+      <span class="pm-d">${r.state === 'none' ? '<em class="n">POS mein nahi</em>' : r.state === 'ok' ? '<em class="o">✓</em>' : r.state === 'wait' ? '<em class="n">⏳</em>' : `<em class="b">⚠ ${money(r.farq)}</em><i class="pm-dbtn" data-pm-diff="${esc(p.id)}">🔍 Farq dhoondo</i>`}</span></button>`).join('') : `<div class="empty"><strong>${st.f === 'farq' ? 'Koi farq nahi ✓' : 'Kuch nahi'}</strong></div>`}</div>
     <p class="stat-note">Farq = app ka baqaya − POS ka ledger baqaya. Rs 1 tak farq = theek (POS ki rounding). Khate par tap = wo khata khule. PC har 15 min POS se taza karta hai.</p>
   </div>`;
 }
@@ -451,7 +464,7 @@ function diffHTML(p, doc) {
   const sec = (t, cls, n, body) => `<div class="pm-sec ${cls}"><div class="pm-sh"><b>${t}</b><i>${n}</i></div>${body || '<p class="pm-none">koi nahi</p>'}</div>`;
   return `<div class="bc-root pm-droot" data-pm-droot="${esc(p.id)}">
     <button type="button" class="pm-back" data-pm-back="1">‹ POS milan</button>
-    <div class="pm-sum ${r.state === 'farq' ? 'bad' : 'ok'}"><b>${esc(p.name)} — ${r.state === 'farq' ? '⚠ farq ' + money(r.farq) : '✓ barabar'}</b><small>✍️ App ${money(r.app)} ${sideTxt(r.app)} · 🖥 POS ${r.pos == null ? '—' : money(r.pos) + ' ' + sideTxt(r.pos)} · POS lines ${at ? agoTxt(at) : '—'}</small>
+    <div class="pm-sum ${r.state === 'farq' || r.state === 'wait' ? 'bad' : 'ok'}"><b>${esc(p.name)} — ${r.state === 'farq' ? '⚠ farq ' + money(r.farq) : r.state === 'wait' ? '⏳ ' + money(r.farq) + ' (nayi entry POS mein ja rahi)' : '✓ barabar'}</b><small>✍️ App ${money(r.app)} ${sideTxt(r.app)} · 🖥 POS ${r.pos == null ? '—' : money(r.pos) + ' ' + sideTxt(r.pos)} · POS lines ${at ? agoTxt(at) : '—'}</small>
       <small class="${D.ok ? 'pm-okl' : 'pm-badl'}">${D.ok ? '✓ Neeche wali entries se poora farq ban jata hai' : '⚠ Neeche wali entries se ' + money(D.sum) + ' banta hai — baqi ' + money(D.farq - D.sum) + ' kisi aur wajah se (cancel voucher / tareekh)'}</small></div>
     ${freshHTML(doc)}
     ${fixHTML(p, D)}
