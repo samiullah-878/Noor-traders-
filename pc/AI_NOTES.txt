@@ -3905,3 +3905,11 @@ Malik: "amount small or number bara kar do" + "un-posted ko nahi chherna".
 - style.css: sirf `.nb-chip.po:not(.sm)` — .nb-cno 15→22px (PC 700px+ = 25px, 900 mota), .nb-camt 21/24→15px (PC 16px).
 - Neele un-posted chhote chips (.nb-chip.sm), wt / fl / fq cards, rang, waqt, larke ka naam — sab WAHI. Item wale bills screen ke posted cards par bhi yehi asar.
 - Sirf CSS. AI NAHI. PC / rules mein kuch nahi.
+
+== v2.168.0 (2 Nov 2026) — 🧾 Bills: 🔵 un-posted ⋮ ke andar · search upar chipki · ek screen par 20 laal ==
+Malik: "unposted bill right side three dot ke andar · search upar pakki rahe, upar neeche karne par bhi · 20 chips red wala aik time par screen mein".
+- sale.js mountBills (chips): naya `.nb-stick` = search + ⋮ + 🔵 panel + PC options — sticky (top:-14px, dialogBody ki padding dhakne ko). `.nb-wrap{overflow:hidden!important}` sticky tor deta tha → chipv par overflow:clip.
+- 🔵 un-posted chips sirf ⋮ ke panel `.nb-upan` mein (PC + phone; phone par ⋮ ab nazar aata hai, panel mein sirf un-posted, baqi options pehle jaise header ⋮). ⋮ par neeli ginti `.nb-ub` (sab un-posted), naya un-posted = ginti chamke (2.4 s) + ding pehle jaisi. 🖨 Un-posted print panel ke andar (copt / header ⋮ se hata). Search likha ho to milte un-posted saamne bhi.
+- N chips (10…35) = ab sirf POSTED laal (pehle un-posted bhi N mein gine jate the).
+- style.css: bare cards (`.nb-chip:not(.sm):not(.un)`) patle — padding 5px, no 22 / raqam 15 / haal 11 / meta 10, gap 5 → PC 1366×690 par 5 × 4 = 20 poore (test). Item wale bills ke bare cards par bhi.
+- AI NAHI. PC / rules mein kuch nahi.

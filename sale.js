@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.167.1';
-import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.167.1';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.168.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.168.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -898,14 +898,18 @@ function mountBills(box, opt = {}) {
   const chips = !!opt.chips;
   try { filter = localStorage.getItem('sam-bills-f') || 'all'; } catch {}
   box.classList.add('nb-wrap');
-  if (chips) { filter = 'all'; box.classList.add('nb-chipv'); box.innerHTML = `<div class="nb-ctop"><label class="nb-qchip"><span>🔍</span><input type="search" class="nb-q" placeholder="Bill no, naam, raqam" autocomplete="off"></label><button type="button" class="nb-more" data-nb-more="1" title="Aur (⋮)">⋮</button><button type="button" class="rk-pill nb-pill" data-mn-sheet="1" hidden></button><input type="date" class="nb-date nb-date-x" tabindex="-1" aria-label="Tareekh"></div>
+  if (chips) { filter = 'all'; box.classList.add('nb-chipv'); box.innerHTML = `<div class="nb-stick"><div class="nb-ctop"><label class="nb-qchip"><span>🔍</span><input type="search" class="nb-q" placeholder="Bill no, naam, raqam" autocomplete="off"></label><button type="button" class="nb-more" data-nb-more="1" title="🔵 Un-posted bills + aur (⋮)">⋮<em class="nb-ub" hidden></em></button><button type="button" class="rk-pill nb-pill" data-mn-sheet="1" hidden></button><input type="date" class="nb-date nb-date-x" tabindex="-1" aria-label="Tareekh"></div>
+    <div class="nb-upan"><div class="nb-uh"><b>🔵 Un-posted <span class="nb-ucnt"></span></b><button type="button" class="nb-unp" data-nb-unp="1">🖨 Un-posted</button></div><div class="nb-ugrid nb-ulist"></div></div>
     <div class="nb-copt"><div class="bc-seg nb-nseg" data-mn-seg="nb.n" data-mn-i="🔢" data-mn-t="Kitne bill (chips)" data-mn-g="🧾 Bills"></div>
       <span class="nb-day"><button type="button" data-nb-day="-1" data-mn="nb.prev" data-mn-i="‹" data-mn-t="Pichhla din" data-mn-g="🧾 Bills">‹ Pichhla din</button><button type="button" data-nb-day="1" data-mn="nb.next" data-mn-i="›" data-mn-t="Agla din" data-mn-g="🧾 Bills">Agla din ›</button><button type="button" data-nb-cal="1" data-mn="nb.cal" data-mn-i="📅" data-mn-t="Tareekh chunein" data-mn-g="🧾 Bills">📅 Tareekh</button></span>
-      <button type="button" class="nb-unp" data-nb-unp="1" data-mn="nb.unp" data-mn-i="🖨" data-mn-t="Un-posted print" data-mn-s="sab un-posted bills ki parchi" data-mn-g="🧾 Bills">🖨 Un-posted</button>${can('sale.ibills') ? '<button type="button" class="nb-ibb" data-nb-ib="1" data-mn="nb.ib" data-mn-i="🔎" data-mn-t="Item wale bills" data-mn-s="chuni items (Hamza ghee…) wale bills" data-mn-g="🧾 Bills">🔎 Item wale bills</button>' : ''}${can('sale.bsnd') ? '<button type="button" class="nb-sndb" data-nb-snd="1" data-mn="nb.snd" data-mn-i="🔔" data-mn-t="Naye bill par awaaz" data-mn-s="naya bill aate hi halki ding (sirf is device par)" data-mn-g="🧾 Bills">🔕 Awaaz: band</button>' : ''}<small class="nb-sync"></small></div>
+      ${can('sale.ibills') ? '<button type="button" class="nb-ibb" data-nb-ib="1" data-mn="nb.ib" data-mn-i="🔎" data-mn-t="Item wale bills" data-mn-s="chuni items (Hamza ghee…) wale bills" data-mn-g="🧾 Bills">🔎 Item wale bills</button>' : ''}${can('sale.bsnd') ? '<button type="button" class="nb-sndb" data-nb-snd="1" data-mn="nb.snd" data-mn-i="🔔" data-mn-t="Naye bill par awaaz" data-mn-s="naya bill aate hi halki ding (sirf is device par)" data-mn-g="🧾 Bills">🔕 Awaaz: band</button>' : ''}<small class="nb-sync"></small></div></div>
     <div class="nb-f" hidden></div><div class="nb-sum" hidden></div><div class="nb-list"></div>`; }   // v2.138.0: malik — saamne sirf bill; tabs nahi (Posted + Un-posted ek saath); total nahi; sab ⋮ mein
   else box.innerHTML = `<div class="nb-head"><span class="nb-day"><button type="button" data-nb-day="-1" title="Pichhla din">‹</button><b class="nb-dayt"></b><button type="button" data-nb-day="1" title="Agla din">›</button><label class="nb-cal" title="Tareekh chunein">📅<input type="date" class="nb-date"></label></span><small class="nb-sync"></small></div>
     <div class="nb-top"><input type="search" class="nb-q" placeholder="🔍 Bill no, naam, raqam…" autocomplete="off"><button type="button" class="nb-unp" data-nb-unp="1">🖨 Un-posted</button></div>
     <div class="nb-f"></div><div class="nb-sum"></div><div class="nb-list"></div>`;
+  // v2.168.0 (malik: "un-posted right side three dot ke andar · search upar pakki · 20 laal chips ek screen par"): .nb-stick (search + ⋮ + 🔵 panel + PC options) chipka rehta hai;
+  //   🔵 un-posted sirf ⋮ ke panel mein (badge = ginti, naya aaye to chamak) — search likha ho to milte un-posted saamne bhi; laal = aakhri N POSTED (un-posted N mein nahi). AI nahi.
+  const ulist = box.querySelector('.nb-ulist'), ucnt = box.querySelector('.nb-ucnt'), ubdg = box.querySelector('.nb-ub');
   const nseg = box.querySelector('.nb-nseg'), pill = box.querySelector('.nb-pill');
   const dayT = box.querySelector('.nb-dayt'), dateIn = box.querySelector('.nb-date');
   const q = box.querySelector('.nb-q'), list = box.querySelector('.nb-list'), fbox = box.querySelector('.nb-f'), sum = box.querySelector('.nb-sum'), syncEl = box.querySelector('.nb-sync'), unpBtn = box.querySelector('.nb-unp');
@@ -945,10 +949,13 @@ function mountBills(box, opt = {}) {
     if (chips) {   // v2.138.0: un-posted / intezar / ghalti = chhote neele chips UPAR, posted (laal) bare neeche — kul N
       const top = b => !b.cancelled && !b.farq && (b.ps === 1 || b.status === 'new' || b.status === 'posting' || b.status === 'failed' || (!b.ps && b.src === 'app'));
       const pw = b => b.ps === 2 && b.pt ? b.pt : (b.createdAt || 0);   // v2.139.0: posted = post ke waqt se (naya post pehle)
-      const ord = [...rows.filter(top), ...rows.filter(b => !top(b)).sort((a, b) => pw(b) - pw(a))], shown = t ? ord : ord.slice(0, nbN);
+      const P0 = rows.filter(b => !top(b)).sort((a, b) => pw(b) - pw(a)), shown = [...rows.filter(top), ...(t ? P0 : P0.slice(0, nbN))];   // v2.168.0: N = sirf posted (laal)
       if (pill) { pill.hidden = isToday; pill.innerHTML = `📅 ${vd === yd ? 'Kal' : D.getDate() + ' ' + D.toLocaleString('en-US', { month: 'short' })} <i>⋮</i>`; pill.title = dayTxt; }
       const U = shown.filter(top), P = shown.filter(b => !top(b)), det = b => open === b.id ? `<div class="nb-cdet">${nbDetHTML(b, filter)}</div>` : '';
-      list.innerHTML = (U.length ? `<div class="nb-ugrid">${U.map(b => nbChipSm(b, open) + det(b)).join('')}</div>` : '') + (P.length ? `<div class="nb-grid">${P.map(b => nbChipHTML(b, open, vd, yd) + det(b)).join('')}</div>` : '') || '<p class="stat-note">Koi bill nahi</p>';
+      const ug = U.map(b => nbChipSm(b, open) + det(b)).join(''), uAll = all.filter(top).length;   // v2.168.0: 🔵 un-posted = ⋮ ka panel
+      ulist.innerHTML = ug || `<p class="stat-note">${t ? 'Is search mein koi un-posted nahi' : 'Koi un-posted bill nahi ✓'}</p>`;
+      ucnt.textContent = num(uAll); ubdg.textContent = num(uAll); ubdg.hidden = !uAll;
+      list.innerHTML = (t && U.length ? `<div class="nb-ugrid">${ug}</div>` : '') + (P.length ? `<div class="nb-grid">${P.map(b => nbChipHTML(b, open, vd, yd) + det(b)).join('')}</div>` : '') || (t || !U.length ? '<p class="stat-note">Koi bill nahi</p>' : `<p class="stat-note">Abhi koi posted bill nahi · 🔵 ${num(U.length)} un-posted ⋮ mein</p>`);
       // v2.155.0: ✨ naya bill / naya post = chip par 2.4 s chamak (dobara paint par --nbd se wahin se jari) · 🔔 naya un-posted = ding (⋮, sirf is device)
       const fk = b => b.id + '|' + (top(b) ? 'u' : 'p'), now = Date.now();
       if (!isToday) { nbSeen.vd = ''; nbSeen.ok = false; }
@@ -956,7 +963,9 @@ function mountBills(box, opt = {}) {
       else { let ding = 0; for (const b of all) { const k = fk(b); if (nbSeen.m.has(k)) continue; nbSeen.m.set(k, now); if (top(b) && !nbSeen.m.has(b.id + '|p')) ding++; }
         if (ding && can('sale.bsnd') && nbSndOn()) nbDing();
         const by = new Map(shown.map(b => [String(b.id), b]));
-        for (const el of list.querySelectorAll('.nb-chip[data-nb]')) { const b = by.get(el.dataset.nb), at = b && nbSeen.m.get(fk(b)); if (at && now - at < 2400) { el.classList.add('nb-new'); el.style.setProperty('--nbd', `${at - now}ms`); } } }
+        for (const el of box.querySelectorAll('.nb-chip[data-nb]')) { const b = by.get(el.dataset.nb), at = b && nbSeen.m.get(fk(b)); if (at && now - at < 2400) { el.classList.add('nb-new'); el.style.setProperty('--nbd', `${at - now}ms`); } }
+        const ua = all.filter(top).reduce((m, b) => Math.max(m, nbSeen.m.get(fk(b)) || 0), 0);   // v2.168.0: naya un-posted = ⋮ ki ginti chamke
+        if (ua && now - ua < 2400 && !ubdg.classList.contains('nb-ubnew')) { ubdg.classList.add('nb-ubnew'); setTimeout(() => ubdg.classList.remove('nb-ubnew'), 2600); } }
       return;
     }
     list.innerHTML = rows.map(b => { const c = billCls(b), bd = new Date(b.createdAt || 0), bds = `${bd.getFullYear()}-${String(bd.getMonth() + 1).padStart(2, '0')}-${String(bd.getDate()).padStart(2, '0')}`;

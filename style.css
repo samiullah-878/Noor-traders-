@@ -6511,10 +6511,29 @@ html body #dialogBody .nb-chip.nb-new::after{content:"";position:absolute;inset:
 html body #dialogBody .nb-chipv .nb-sync .nb-rf{display:inline-block;margin-left:4px;padding:2px 9px;border-radius:999px;background:linear-gradient(180deg,#f3f7ff,#e6eefc);border:1px solid #c9d8f3;color:#1e44b0;font-weight:700;white-space:nowrap}
 html body #dialogBody .nb-chipv .nb-cdet{grid-column:1/-1;border:1px solid #d7dde8;border-radius:14px;padding:10px 12px;background:#fff}
 @media (min-width:700px){html body #dialogBody .nb-chipv .nb-list.nb-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}html body #dialogBody .nb-chip .nb-camt{font-size:24px}}
-/* v2.167.1 (malik: "amount small, number bara" — SIRF posted laal cards; neele un-posted .sm chips mat chhero) */
-html body #dialogBody .nb-chip.po:not(.sm) .nb-cno{font-size:22px;font-weight:900;line-height:1.15;white-space:nowrap}
-html body #dialogBody .nb-chip.po:not(.sm) .nb-camt{font-size:15px;font-weight:800;line-height:1.2}
-@media (min-width:700px){html body #dialogBody .nb-chip.po:not(.sm) .nb-cno{font-size:25px}html body #dialogBody .nb-chip.po:not(.sm) .nb-camt{font-size:16px}}
+/* v2.167.1 (malik: "amount small, number bara" — SIRF posted laal cards; neele un-posted .sm chips mat chhero)
+   v2.168.0 (malik: "20 laal chips ek screen par"): bare cards patle — padding / lines qareeb; PC 5 × 4 = 20 (card ~90px) */
+html body #dialogBody .nb-chip:not(.sm):not(.un){min-height:0;padding:5px 10px;gap:1px;border-radius:14px}
+html body #dialogBody .nb-chip:not(.sm):not(.un) .nb-cno{font-size:22px;font-weight:900;line-height:1.05;white-space:nowrap}
+html body #dialogBody .nb-chip:not(.sm):not(.un) .nb-camt{font-size:15px;font-weight:800;line-height:1.15}
+html body #dialogBody .nb-chip:not(.sm):not(.un) .nb-cst{font-size:11px;line-height:1.25}
+html body #dialogBody .nb-chip:not(.sm):not(.un) .nb-cmeta{font-size:10px;line-height:1.25}
+html body #dialogBody .nb-chipv .nb-grid,html body #dialogBody .nb-chipv .nb-list.nb-grid{gap:5px}
+/* v2.168.0: 🔍 search + ⋮ upar chipke (.nb-wrap ka overflow:hidden sticky tor deta tha → clip) · 🔵 un-posted ⋮ ke panel mein */
+html body #dialogBody .nb-wrap.nb-chipv{overflow:visible!important;overflow:clip!important}
+html body #dialogBody .nb-chipv .nb-stick{position:sticky;top:-14px;z-index:3;display:flex;flex-direction:column;gap:6px;padding:6px 0 5px;background:var(--surface,#fff)}
+html body #dialogBody .nb-chipv .nb-stick .nb-ctop{position:static;padding:0 8px 0 0}
+html body #dialogBody .nb-chipv .nb-more{position:relative;overflow:visible}
+html body #dialogBody .nb-chipv .nb-ub{position:absolute;top:-6px;right:-6px;min-width:20px;height:20px;padding:0 5px;border-radius:999px;background:linear-gradient(180deg,#3b7bf0,#1e44b0);color:#fff;font-size:11px;font-weight:900;font-style:normal;line-height:20px;text-align:center;box-shadow:0 0 0 2px #fff;pointer-events:none}
+html body #dialogBody .nb-chipv .nb-ub[hidden]{display:none!important}
+html body #dialogBody .nb-chipv .nb-ub.nb-ubnew{animation:nbUb .8s ease-out 3}
+@keyframes nbUb{0%{transform:scale(1);box-shadow:0 0 0 2px #fff,0 0 0 0 rgba(59,123,240,.7)}50%{transform:scale(1.25)}100%{transform:scale(1);box-shadow:0 0 0 2px #fff,0 0 0 10px rgba(59,123,240,0)}}
+html body #dialogBody .nb-chipv .nb-upan{display:none}
+html body #dialogBody .nb-chipv.nb-open .nb-upan{display:block;max-height:min(46vh,360px);overflow:auto;padding:8px 10px;border:1.5px solid #90b4f0;border-radius:14px;background:linear-gradient(180deg,#f7faff,#eaf1ff)}
+html body #dialogBody .nb-chipv .nb-uh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 6px;color:#1e5bb8;font-size:13.5px}
+html body #dialogBody .nb-chipv .nb-uh .nb-unp{width:auto!important;flex:0 0 auto;height:32px;min-height:32px;padding:0 12px!important;border-radius:999px;font-size:12.5px;font-weight:800;white-space:nowrap;border:1px solid #9cb9ec!important;background:linear-gradient(180deg,#fff,#e6eefc)!important;color:#1e44b0!important}
+html body #dialogBody .nb-chipv .nb-ulist.nb-ugrid{margin:0}
+@media (max-width:1099px){html body #dialogBody .nb-chipv .nb-more{display:inline-flex!important;align-items:center;justify-content:center}html body #dialogBody .nb-chipv.nb-open .nb-copt{display:none!important}}
 html body #dialogBody .nb-chipv .nb-day>button{width:auto!important;height:34px;padding:0 12px!important;font-size:12.5px!important;font-weight:700;color:#1d3b7a;white-space:nowrap}
 html body #dialogBody .nb-chipv .nb-copt .nb-unp{width:auto!important}
 html body #dialogBody .nb-chipv .nb-cdet .nb-acts{display:flex;flex-wrap:wrap;gap:6px}
