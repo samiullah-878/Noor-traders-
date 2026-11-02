@@ -6672,3 +6672,9 @@ Malik ne Alfalah SMS (MacroDroid 8287 → trigger "BAF" / "Alfalah", OTP nahi) +
 - Har bank account (HBL ke ilawa) ki alag ijazat '@pcin:<4 number>' (PC bank-parchi v2.3 pehle se yehi dekhta hai). HBL screen par account chip (Alfalah Samiullah) → ⋮ "🖥 PC khud: ON / BAND" (sirf malik) + upar chhoti line "🖥 aaye paise PC khud lagata hai · …5826".
 - Ek dafa (malik ke phone par, '@alf2'): '@pcin:5826' = '1' + agar …5826 ka khata nahi chuna aur EK hi saaf khata (naam mein Alfalah + 5826/Sami) ho to wohi. Warna pehle SMS par "Yeh kaun sa account hai?" card.
 - PC sirf AAJ ke aaye paise lagata hai; apna transfer (Noor Traders / Sami Ullah naam) nahi. AI NAHI. PC / rules mein kuch nahi badla.
+
+== v2.167.1 (2 Nov 2026) — 🧾 Bills: posted (laal) card par BILL NUMBER BARA, raqam chhoti ==
+Malik: "amount small or number bara kar do" + "un-posted ko nahi chherna".
+- style.css: sirf `.nb-chip.po:not(.sm)` — .nb-cno 15→22px (PC 700px+ = 25px, 900 mota), .nb-camt 21/24→15px (PC 16px).
+- Neele un-posted chhote chips (.nb-chip.sm), wt / fl / fq cards, rang, waqt, larke ka naam — sab WAHI. Item wale bills screen ke posted cards par bhi yehi asar.
+- Sirf CSS. AI NAHI. PC / rules mein kuch nahi.

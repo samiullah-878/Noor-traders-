@@ -6511,6 +6511,10 @@ html body #dialogBody .nb-chip.nb-new::after{content:"";position:absolute;inset:
 html body #dialogBody .nb-chipv .nb-sync .nb-rf{display:inline-block;margin-left:4px;padding:2px 9px;border-radius:999px;background:linear-gradient(180deg,#f3f7ff,#e6eefc);border:1px solid #c9d8f3;color:#1e44b0;font-weight:700;white-space:nowrap}
 html body #dialogBody .nb-chipv .nb-cdet{grid-column:1/-1;border:1px solid #d7dde8;border-radius:14px;padding:10px 12px;background:#fff}
 @media (min-width:700px){html body #dialogBody .nb-chipv .nb-list.nb-grid{grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}html body #dialogBody .nb-chip .nb-camt{font-size:24px}}
+/* v2.167.1 (malik: "amount small, number bara" — SIRF posted laal cards; neele un-posted .sm chips mat chhero) */
+html body #dialogBody .nb-chip.po:not(.sm) .nb-cno{font-size:22px;font-weight:900;line-height:1.15;white-space:nowrap}
+html body #dialogBody .nb-chip.po:not(.sm) .nb-camt{font-size:15px;font-weight:800;line-height:1.2}
+@media (min-width:700px){html body #dialogBody .nb-chip.po:not(.sm) .nb-cno{font-size:25px}html body #dialogBody .nb-chip.po:not(.sm) .nb-camt{font-size:16px}}
 html body #dialogBody .nb-chipv .nb-day>button{width:auto!important;height:34px;padding:0 12px!important;font-size:12.5px!important;font-weight:700;color:#1d3b7a;white-space:nowrap}
 html body #dialogBody .nb-chipv .nb-copt .nb-unp{width:auto!important}
 html body #dialogBody .nb-chipv .nb-cdet .nb-acts{display:flex;flex-wrap:wrap;gap:6px}
