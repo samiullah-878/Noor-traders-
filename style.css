@@ -700,6 +700,7 @@ footer button:not(.give):not(.got){background:linear-gradient(180deg,#27437c,#17
 .pdf-acts button{flex:1 1 0;min-height:46px;border-radius:999px!important;background:#fff!important;
   border:1px solid var(--chip-bd)!important;color:var(--chip-tx)!important;font-weight:600!important}
 .pdf-acts button[disabled]{opacity:.5}
+.pdf-acts button.pdf-tp{background:linear-gradient(180deg,#f2f7ff,#dfeaff)!important;border-color:#9cb9ec!important;color:#1e44b0!important;font-weight:800!important;white-space:nowrap}   /* v2.170.0: 🖨 dukan printer */
 
 /* ===== v2.2.0 — bill ki tasveer POS Purchase screen par ===== */
 .pp-pics{display:flex;gap:8px;align-items:center;overflow-x:auto;margin:0 0 10px;padding-bottom:2px}

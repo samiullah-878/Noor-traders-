@@ -1,22 +1,41 @@
 function script(file,test){if(test())return Promise.resolve();return new Promise((resolve,reject)=>{const el=document.createElement('script');el.src=new URL(file,import.meta.url).href;el.onload=()=>test()?resolve():reject(Error('PDF library load nahi hui'));el.onerror=()=>{el.remove();reject(Error('PDF download ki file load nahi hui. Internet check karein.'))};document.head.append(el)})}
 // v2.103.60: ⚡ LAMBI table (60+ rows, sirf English, tasveer nahi) = seedha text PDF (jsPDF vector) — html2canvas har page ki tasveer banata tha (1,000 items = 30+ page = minute bhar). Urdu / tasveer wali reports purane raste se.
 const cellLines=td=>{const c=td.cloneNode(true);c.querySelectorAll('br').forEach(b=>b.replaceWith('\n'));c.querySelectorAll('small,div,p').forEach(e=>{e.prepend('\n')});return c.textContent.split('\n').map(x=>x.replace(/\s+/g,' ').trim()).filter(Boolean)};
-function textPdf(source,table){const doc=new window.jspdf.jsPDF({unit:'pt',format:'a4',compress:true});const W=595.28,H=841.89,M=28,IW=W-2*M;let y=M;
+// v2.170.0 (malik: "khata ki PDF stuck ho jati hai · jaldi show ho"): text PDF ab async (har 40 qatar ke baad saans — phone na atke, "safha N · X%" progress),
+//   rang (td style color / mota) wahi, URDU likhai = chhoti canvas tasveer (jsPDF helvetica Urdu nahi chhapta), entry ki TASVEEREIN aakhir mein seedhi (html2canvas nahi).
+const AR=/[؀-ۿ]/;
+const wa=t=>String(t||'').replace(/→/g,'->').replace(/←/g,'<-').replace(/[^\x00-\xFF\u2013\u2014\u2018\u2019\u201C\u201D\u2022\u2026]/g,'').replace(/\s+/g,' ').trim();   // helvetica (WinAnsi) jo chhap sake — emoji / teer nahi
+function rgbOf(c){const m=String(c||'').match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);if(m)return [+m[1],+m[2],+m[3]];const h=String(c||'').match(/^#([0-9a-f]{6})$/i);return h?[parseInt(h[1].slice(0,2),16),parseInt(h[1].slice(2,4),16),parseInt(h[1].slice(4,6),16)]:null}
+function urImg(doc,txt,x,y,w,h,{size=9,bold=false,color='#000',right=false}={}){   // y = line ka upar wala kinara (pt)
+ const sc=4,c=document.createElement('canvas'),g=c.getContext('2d'),fam='Tahoma,"Noto Naskh Arabic","Segoe UI",Arial,sans-serif';let px=size*sc;g.font=`${bold?'700 ':''}${px}px ${fam}`;let tw=g.measureText(txt).width;
+ const max=w*sc;if(tw>max){px=Math.max(size*sc*0.55,px*max/tw);g.font=`${bold?'700 ':''}${px}px ${fam}`;tw=Math.min(g.measureText(txt).width,max)}
+ c.width=Math.max(2,Math.ceil(tw)+2);c.height=Math.max(2,Math.ceil(h*sc));g.font=`${bold?'700 ':''}${px}px ${fam}`;g.fillStyle=color;g.textBaseline='middle';g.fillText(txt,1,c.height/2,max);
+ const iw=c.width/sc;doc.addImage(c.toDataURL('image/png'),'PNG',right?x+w-iw:x,y,iw,h);c.width=c.height=1}
+const imgSize=src=>new Promise(r=>{const i=new Image();i.onload=()=>r({w:i.naturalWidth||1,h:i.naturalHeight||1});i.onerror=()=>r(null);i.src=src});
+async function textPdf(source,table,{figs=[],onProg}={}){const doc=new window.jspdf.jsPDF({unit:'pt',format:'a4',compress:true});const W=595.28,H=841.89,M=28,IW=W-2*M;let y=M;
  const head=[...source.children].filter(e=>!e.matches('table'));const foot=head.filter(e=>e.matches('p')&&e!==head.find(x=>x.matches('p')));
  const ths=[...table.querySelectorAll('thead th')].map(t=>t.textContent.trim()),n=ths.length;const rows=[...table.querySelectorAll('tbody tr')];
- const num=/^[-—\d.,\s%A-Za-z]{0,3}[\d.,]+/;const avg=ths.map((_,i)=>{let s=0,k=0;for(const r of rows.slice(0,200)){const td=r.children[i];if(!td||td.colSpan>1)continue;s+=Math.max(...cellLines(td).map(x=>x.length),1);k++}return k?s/k:4});
- const minW=ths.map((t,i)=>Math.max(t.length*6+10,avg[i]*5.2+12,26));let tot=minW.reduce((a,b)=>a+b,0);const big=minW.indexOf(Math.max(...minW));const cw=minW.map((w,i)=>tot>IW?w*IW/tot:w);if(tot<IW)cw[big]+=IW-tot;
+ const avg=ths.map((_,i)=>{let s=0,k=0;for(const r of rows.slice(0,200)){const td=r.children[i];if(!td||td.colSpan>1)continue;s+=Math.max(...cellLines(td).map(x=>x.length),1);k++}return k?s/k:4});
+ const minW=ths.map((t,i)=>Math.max(t.length*6+10,avg[i]*5.2+12,26));let tot=minW.reduce((a,b)=>a+b,0);const big=minW.indexOf(Math.max(...minW));const fx=avg.map(v=>v<=12),fw=i=>Math.max(avg[i]*5.6+14,40),fxW=minW.reduce((n,w,i)=>n+(fx[i]?fw(i):0),0),flW=minW.reduce((n,w,i)=>n+(fx[i]?0:w),0);const cw=minW.map((w,i)=>tot<=IW?w:(fxW<IW*0.7&&flW>0)?(fx[i]?fw(i):w*(IW-fxW)/flW):w*IW/tot);if(tot<IW)cw[big]+=IW-tot;   // v2.170.0: chhote khane (tareekh / raqam) kabhi na tootein
  const right=ths.map((_,i)=>{const td=rows.find(r=>r.children[i]&&r.children[i].colSpan===1)?.children[i];return !!td&&(td.classList.contains('rp-r')||/right/.test(td.getAttribute('style')||''))});
- const line=(txt,size,bold,color,gap)=>{doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(size);doc.setTextColor(color||'#000');const L=doc.splitTextToSize(txt,IW);for(const l of L){if(y+size>H-M){doc.addPage();y=M}doc.text(l,M,y+size*0.85);y+=size*1.25}y+=gap||0};
- const thead=()=>{doc.setFillColor(238,242,247);doc.rect(M,y,IW,16,'F');doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.setTextColor('#111');let x=M;ths.forEach((t,i)=>{doc.text(t,right[i]?x+cw[i]-4:x+4,y+11,{align:right[i]?'right':'left'});x+=cw[i]});y+=16;doc.setDrawColor(219,227,236);doc.line(M,y,M+IW,y)};
+ const line=(txt,size,bold,color,gap)=>{if(AR.test(txt)){const h=size*1.45;if(y+h>H-M){doc.addPage();y=M}urImg(doc,txt,M,y,IW,h,{size,bold,color:color||'#000'});y+=h+(gap||0);return}
+  doc.setFont('helvetica',bold?'bold':'normal');doc.setFontSize(size);doc.setTextColor(color||'#000');const L=doc.splitTextToSize(wa(txt),IW);for(const l of L){if(y+size>H-M){doc.addPage();y=M}doc.text(l,M,y+size*0.85);y+=size*1.25}y+=gap||0};
+ const thead=()=>{doc.setFont('helvetica','bold');doc.setFontSize(8.5);const TL=ths.map((t,i)=>doc.splitTextToSize(wa(t),cw[i]-6).slice(0,3)),th=6+10*Math.max(1,...TL.map(l=>l.length));doc.setFillColor(238,242,247);doc.rect(M,y,IW,th,'F');doc.setTextColor('#111');let x=M;TL.forEach((L,i)=>{L.forEach((tt,k)=>doc.text(tt,right[i]?x+cw[i]-4:x+4,y+11+k*10,{align:right[i]?'right':'left'}));x+=cw[i]});y+=th;doc.setDrawColor(219,227,236);doc.line(M,y,M+IW,y)};
  for(const e of head){if(foot.includes(e))continue;const t=e.textContent.replace(/\s+/g,' ').trim();if(!t)continue;if(e.matches('h1'))line(t,18,true,'#1e3a8a',2);else if(e.matches('h2'))line(t,13,true,'#111',2);else line(t,9.5,false,'#444',4)}
- y+=4;thead();const FS=8.5,LH=10.5;
- for(const r of rows){const tds=[...r.children];if(tds.length===1&&tds[0].colSpan>1){const t=cellLines(tds[0]).join(' ');if(y+15>H-M){doc.addPage();y=M;thead()}doc.setFillColor(241,245,249);doc.rect(M,y,IW,14,'F');doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor('#334155');doc.text(t.toUpperCase(),M+4,y+10);y+=14;continue}
-  const cells=tds.map((td,i)=>{const ls=cellLines(td);const out=[];const b=td.querySelector('b,strong')?.textContent.replace(/\s+/g,' ').trim();for(const l of ls)for(const w of doc.splitTextToSize(l,cw[i]-8))out.push({t:w,b:!!b&&l.startsWith(b),s:l.length<ls[0]?.length&&ls.length>1&&l!==ls[0]});return out});
+ y+=4;thead();const FS=8.5,LH=10.5,prog=k=>{try{onProg&&onProg(`PDF bana rahi hai… safha ${doc.getNumberOfPages()} · ${Math.round(k*100/Math.max(1,rows.length))}%`)}catch{}};
+ for(let ri=0;ri<rows.length;ri++){const r=rows[ri];if(ri&&ri%40===0){prog(ri);await new Promise(z=>setTimeout(z,0))}
+  const tds=[...r.children];if(tds.length===1&&tds[0].colSpan>1){const t=cellLines(tds[0]).join(' ');if(y+15>H-M){doc.addPage();y=M;thead()}doc.setFillColor(241,245,249);doc.rect(M,y,IW,14,'F');doc.setFont('helvetica','bold');doc.setFontSize(8);doc.setTextColor('#334155');doc.text(t.toUpperCase(),M+4,y+10);y+=14;continue}
+  const cells=tds.map((td,i)=>{const ls=cellLines(td);const out=[];const b=td.querySelector('b,strong')?.textContent.replace(/\s+/g,' ').trim();const st=td.style||{},col=rgbOf(st.color),fw=Number(st.fontWeight)>=600||st.fontWeight==='bold';
+   for(const l of ls){if(AR.test(l)){out.push({t:l,ur:1,b:fw,col});continue}doc.setFont('helvetica',fw?'bold':'normal');doc.setFontSize(FS);for(const w of doc.splitTextToSize(wa(l),cw[i]-8))out.push({t:w,b:fw||(!!b&&l.startsWith(b)),s:l.length<ls[0]?.length&&ls.length>1&&l!==ls[0],col})}return out});
   const h=Math.max(1,...cells.map(c=>c.length))*LH+5;if(y+h>H-M){doc.addPage();y=M;thead()}
-  let x=M;cells.forEach((c,i)=>{c.forEach((w,k)=>{doc.setFont('helvetica',w.b?'bold':'normal');doc.setFontSize(w.s?7.2:FS);doc.setTextColor(w.s?'#777':'#000');doc.text(w.t,right[i]?x+cw[i]-4:x+4,y+LH*(k+1)-1,{align:right[i]?'right':'left'})});x+=cw[i]});
+  let x=M;cells.forEach((c,i)=>{c.forEach((w,k)=>{if(w.ur){urImg(doc,w.t,x+3,y+LH*k+1,cw[i]-6,LH,{size:FS,bold:w.b,color:w.col?`rgb(${w.col.join(',')})`:'#000',right:right[i]});return}
+    doc.setFont('helvetica',w.b?'bold':'normal');doc.setFontSize(w.s?7.2:FS);if(w.s)doc.setTextColor('#777');else if(w.col)doc.setTextColor(...w.col);else doc.setTextColor('#000');doc.text(w.t,right[i]?x+cw[i]-4:x+4,y+LH*(k+1)-1,{align:right[i]?'right':'left'})});x+=cw[i]});
   y+=h;doc.setDrawColor(230,236,243);doc.line(M,y,M+IW,y)}
  y+=6;for(const e of foot){const t=e.textContent.replace(/\s+/g,' ').trim();if(t)line(t,8,false,'#666',0)}
+ if(figs.length){doc.addPage();y=M;line('Tasveerein',13,true,'#111',4);let k=0;   // v2.170.0: 📷 entry ki tasveerein seedhi (har safhe par 2)
+  for(const f of figs){const src=f.querySelector('img')?.getAttribute('src')||'';if(!/^data:image\/(jpeg|png)/.test(src))continue;const d=await imgSize(src);if(!d)continue;
+   const cap=(f.querySelector('figcaption')?.textContent||'').replace(/\s+/g,' ').trim(),maxH=(H-2*M)/2-34;let w=IW,h=d.h*w/d.w;if(h>maxH){h=maxH;w=d.w*h/d.h}
+   if(y+16+h>H-M){doc.addPage();y=M}if(cap)line(cap,8.5,true,'#333',2);doc.addImage(src,/png/.test(src.slice(0,15))?'PNG':'JPEG',M,y,w,h);y+=h+12;if(++k%4===0){try{onProg&&onProg(`Tasveerein lag rahi hain… ${k}/${figs.length}`)}catch{}await new Promise(z=>setTimeout(z,0))}}}
  const pages=doc.getNumberOfPages();for(let i=1;i<=pages;i++){doc.setPage(i);doc.setFont('helvetica','normal');doc.setFontSize(7.5);doc.setTextColor('#888');doc.text(`${i} / ${pages}`,W-M,H-10,{align:'right'})}
  return doc.output('blob')}
 
@@ -50,9 +69,10 @@ async function canvasPdfBlocks(source,stage){const pages=[];let page=null;const 
  for(let i=0;i<pages.length;i++){if(i)doc.addPage([794,1123]);const canvas=await window.html2canvas(pages[i],{scale:1.5,backgroundColor:'#ffffff',logging:false,windowWidth:794,scrollX:0,scrollY:0});const h=canvas.height/canvas.width*794;
   if(h<=1123)doc.addImage(canvas.toDataURL('image/jpeg',0.94),'JPEG',0,0,794,h);else{const w=794*1123/h;doc.addImage(canvas.toDataURL('image/jpeg',0.94),'JPEG',(794-w)/2,0,w,1123)}canvas.width=canvas.height=1}
  return doc.output('blob')}
-export async function exportReport(content){await script('./vendor/jspdf.js',()=>!!window.jspdf);
- {const src=document.createElement('div');src.innerHTML=content;const tb=src.querySelector('table');const rows=tb?tb.querySelectorAll('tbody tr').length:0;
-  if(tb&&rows>=60&&!src.querySelector('img,.report-photo-gallery')&&!/[\u0600-\u06FF]/.test(src.textContent)&&src.querySelectorAll('table').length===1){try{return textPdf(src,tb)}catch(e){console.warn('text pdf',e)}}}
+export async function exportReport(content,onProg){await script('./vendor/jspdf.js',()=>!!window.jspdf);
+ {const src=document.createElement('div');src.innerHTML=content;const g=src.querySelector('.report-photo-gallery'),figs=g?[...g.querySelectorAll('figure')]:[];g?.remove();   // v2.170.0: khali tasveer-hissa ab canvas raasta nahi kholta (khata PDF atakti thi)
+  const tb=src.querySelector('table');const rows=tb?tb.querySelectorAll('tbody tr').length:0,kh=!!tb&&tb.classList.contains('kh-two');   // kh-two = khata (do side) — hamesha tez raasta
+  if(tb&&src.querySelectorAll('table').length===1&&!src.querySelector('img')&&(kh||(rows>=60&&!g&&!AR.test(src.textContent)))){try{return await textPdf(src,tb,{figs:kh?figs:[],onProg})}catch(e){console.warn('text pdf',e)}}}
  {const src=document.createElement('div');src.innerHTML=content;const T=[...src.querySelectorAll('table')];   // v2.147.1: kai tables = har table safhon mein (pehle doosri tables har safhe par dohrati thi)
   if(T.length>1&&T.every(t=>t.parentElement===src)){if(!src.querySelector('img,.report-photo-gallery')&&!/[\u0600-\u06FF]/.test(src.textContent)){try{return textPdfBlocks(src)}catch(e){console.warn('text pdf blocks',e)}}
    await script('./vendor/html2canvas.js',()=>!!window.html2canvas);await document.fonts?.ready;const stage=document.createElement('div');stage.className='pdf-stage';document.body.append(stage);try{return await canvasPdfBlocks(src,stage)}finally{stage.remove()}}}

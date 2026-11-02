@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-02 (m): 🖨 KHATA DUKAN PRINTER — app khataPrints/<id> {j} (do side: ledgerTitles ke khane, tareekh filter wahi) → thermal parchi Font B 27 | 27, status done/failed
 //  2026-11-02 (l): ⏱ POS BAQAYA HAR SECOND (malik: "har second check · auto") — ledgerWatch har 1 sec chhota sawal (Voucher ginti / max id / UpdatedOn /
 //    status + VoucherDetail ginti); badla = ~3 s mein sirf BAQAYE (balPush, lines nahi) blueAccess/posLedger mein. Farq khud barabar NAHI (malik: "hum khud dekh lenge").
 //  2026-11-02 (k): 💵 voucher parchi par "RAQAM WASOOL HUI" / "RAQAM DI GAYI" BARI (party naam jitni) + Urdu · 🏦 ALFALAH parchi (bara ulta ALFALAH, "ALFALAH MEIN PAISE AAYE";
@@ -1641,6 +1642,57 @@ async function quickEntries() {
     finally { inFlight.delete(key); }
   }
 }
+// 2026-11-02 (m): 🖨 KHATA DUKAN PRINTER (malik: "khata ki pdf print bhi · ek click · ek side wasooli ek side paisa · dukan PC par")
+//   app: khataPrints/<id> {j: JSON {n, pid, sub, op, b, lt, rt, L:[[dd-mm, raqam, likhai]], R:[…], tl, tr}, name, byName, status 'new'} (rules 2.82)
+//   yahan: do khane (Font B 27 | 27) — baayein lt, daayein rt, har entry 2 line (tareekh + raqam / note) → status done / failed + err. AI nahi.
+function khataSlip(J) {
+  const W = PRINT_WIDTH, WB = 56, CW = 27, ESC = '\x1b', GS = '\x1d', C = ESC + 'a\x01', L = ESC + 'a\x00';
+  const sm = t => ESC + '!\x01' + t + ESC + '!\x00', smb = t => ESC + '!\x09' + t + ESC + '!\x00', bold = t => ESC + 'E\x01' + t + ESC + 'E\x00', big2 = t => ESC + '!\x38' + t + ESC + '!\x00';
+  const n = v => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
+  const fit = (t, w) => { t = String(t ?? '').replace(/[^\x20-\x7e]/g, ''); return t.length > w ? t.slice(0, w) : t + ' '.repeat(w - t.length); };
+  const rowW = (w, l, r) => { l = String(l); r = String(r); return (l + ' '.repeat(Math.max(1, w - l.length - r.length))).slice(0, w - r.length) + r; };
+  const side = v => v > 0 ? 'LENE' : v < 0 ? 'DENE' : 'BARABAR';
+  const Ls = Array.isArray(J.L) ? J.L : [], Rs = Array.isArray(J.R) ? J.R : [], two = (a, b) => fit(a, CW) + '|' + fit(b, CW), hrB = sm('-'.repeat(WB)), mid = sm('-'.repeat(CW) + '+' + '-'.repeat(CW));
+  const out = [ESC + '@', C + bold('NOOR TRADERS') + sm('  ' + SHOP_PHONE), C + bold('KHATA')];
+  for (const x of (ascii(J.n) ? wrap(ascii(J.n).toUpperCase(), Math.floor(W / 2)).slice(0, 3) : ['(NAAM URDU MEIN)'])) out.push(C + big2(x.trim()));
+  { const ur = urPartyOf({ pid: J.pid, name: J.n }); if (ur) out.push(UR.line(ur, 52, 1)); }
+  out.push(L + sm(rowW(WB, ascii(J.sub).slice(0, 34), printStamp(new Date()))), hrB);
+  out.push(sm(rowW(WB, 'Opening:', side(Number(J.op) || 0) + ' Rs.' + n(Math.abs(Number(J.op) || 0)))));
+  out.push(C + bold('AB BAQAYA - ' + side(Number(J.b) || 0)), C + big2('Rs.' + n(Math.abs(Number(J.b) || 0))), L + hrB);
+  out.push(smb(two(J.lt, J.rt)), sm(two(`Kul Rs.${n(J.tl)} (${Ls.length})`, `Kul Rs.${n(J.tr)} (${Rs.length})`)), mid);
+  const cell = r => Array.isArray(r) ? [rowW(CW, ascii(r[0]), n(r[1])), ascii(r[2])] : ['', ''];
+  for (let i = 0; i < Math.max(Ls.length, Rs.length); i++) {
+    const a = cell(Ls[i]), b = cell(Rs[i]);
+    out.push(sm(two(a[0], b[0])));
+    if (a[1] || b[1]) out.push(sm(two(a[1], b[1])));
+  }
+  out.push(mid, smb(two('Kul Rs.' + n(J.tl), 'Kul Rs.' + n(J.tr))), L + hrB, C + bold('AB BAQAYA - ' + side(Number(J.b) || 0) + '  Rs.' + n(Math.abs(Number(J.b) || 0))), '');
+  out.push(GS + 'V\x42\x00');   // kaghaz kaato
+  return out.join('\r\n');
+}
+const kpJobs = new Map();
+function listenKhataPrints() {
+  biz.collection('khataPrints').where('status', '==', 'new').onSnapshot(s => {
+    for (const c of s.docChanges()) if (c.type !== 'removed') kpJobs.set(c.doc.id, c.doc.data());
+    if (kpJobs.size && kick) kick();
+  }, e => log('Khata print listener masla: ' + e.message));
+}
+async function runKhataPrints() {
+  for (const [id, j] of [...kpJobs]) {
+    kpJobs.delete(id);
+    const ref = biz.collection('khataPrints').doc(id);
+    try {
+      const mine = await db.runTransaction(async tx => { const s = await tx.get(ref); if (!s.exists || s.data().status !== 'new') return false; tx.update(ref, { status: 'printing', startedAt: Date.now() }); return true; });
+      if (!mine) continue;
+      if (Date.now() - (Number(j.at) || 0) > 10 * 60000) { await ref.update({ status: 'failed', err: 'Purana hukum (10 min+) — dobara dabayein' }); continue; }
+      let J; try { J = JSON.parse(String(j.j || '')); } catch { throw new Error('Khata ka data samajh nahi aaya'); }
+      log(`🖨 Khata print: ${ascii(j.name)} (${j.byName || ''}) — ${(J.L || []).length} | ${(J.R || []).length}`);
+      const ok = await printReceipt(khataSlip(J));
+      await ref.update(ok ? { status: 'done', doneAt: Date.now() } : { status: 'failed', err: String(lastPrintErr || 'print nahi hua').slice(0, 120) });
+      await logPrint({ code: 'Khata', name: ascii(j.name).slice(0, 40), amt: 0, ok });
+    } catch (e) { log('Khata print masla: ' + e.message); try { await ref.update({ status: 'failed', err: String(e.message || e).slice(0, 120) }); } catch {} }
+  }
+}
 // tez raaste ka apna SQL pool (poora sync apna pool band karta hai — is par asar na ho)
 let qPool = null;
 async function qPoolGet() {
@@ -1661,6 +1713,7 @@ async function quickRun() {
       qAgain = false;
       try { await quickEntries(); } catch (e) { log('⚡ tez raasta masla: ' + e.message); }
       try { await printExpenses(); await printPurchases(); } catch (e) { log('Print kaam masla: ' + e.message); }
+      try { await runKhataPrints(); } catch (e) { log('Khata print masla: ' + e.message); }   // 2026-11-02 (m)
     } while (qAgain);
   } finally { qBusy = false; }
 }
@@ -1760,6 +1813,7 @@ async function once() {
   await listenApp();
   await loadLinks();
   if (AUTO && !DRY) listenVoucherJobs();   // 2026-10-12: 🖨 dobara print
+  if (AUTO && !DRY) listenKhataPrints();   // 2026-11-02 (m): 🖨 khata dukan printer
   if (AUTO && !DRY) listenGallaChecks();   // 2026-10-15: 💰 galla ki Urdu parchi
   if (AUTO && !DRY) listenLedgerReq();   // 2026-10-27: 🔄 POS milan 'Taza karo'
   log(`App records: ${app.size} · links: ${links.size}`);
