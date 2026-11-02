@@ -7015,3 +7015,7 @@ html body #summary .bkp-hhead .bkp-pcin{display:block;margin-top:2px;font-size:1
 html body #detailTools .dt-ord{display:none!important}
 html body .cash-sheet .dy-auto{margin:0 0 8px}html body .cash-sheet .dy-auto .pos-ref{margin:0!important}
 html body .cash-sheet .dy-saleform{margin:0 0 6px}
+/* ===== v2.172.0: 🖨 Daily khane ka print chip (Wasooli / Akhrajat ki neeli patti) ===== */
+html body .day-cols .sheet-column h3{display:flex!important;align-items:center;gap:8px}
+html body .day-cols .sheet-column h3 .dy-tp{margin-left:auto;flex:none;min-height:30px!important;height:30px;padding:0 12px!important;border-radius:999px!important;border:1px solid rgba(255,255,255,.38)!important;background:linear-gradient(135deg,rgba(255,255,255,.24),rgba(255,255,255,.1))!important;color:#fff!important;font-size:12.5px!important;font-weight:800!important;line-height:1!important;white-space:nowrap;box-shadow:none!important;max-width:150px;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+html body .day-cols .sheet-column h3 .dy-tp:disabled{opacity:.85;cursor:wait}

@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-02 (n): 🖨 DAILY KHANE KA PRINT — Wasooli / Akhrajat alag (khataPrints j.k 'day' → daySlip), koi bhi mulazim (rules 2.83)
 //  2026-11-02 (m3): 🖨 khata parchi par SIRF RAQAM mota (ESC E line ke andar — tareekh / note patle) · tarteeb app wali (khOrd, app bhejti hai)
 //  2026-11-02 (m2): 🖨 khata parchi ki raqam ÷100 (app PAISA bhejti hai — pehli parchi ×100 chhapi thi, meri ghalti)
 //  2026-11-02 (m): 🖨 KHATA DUKAN PRINTER — app khataPrints/<id> {j} (do side: ledgerTitles ke khane, tareekh filter wahi) → thermal parchi Font B 27 | 27, status done/failed
@@ -1676,6 +1677,32 @@ function khataSlip(J) {
   out.push(GS + 'V\x42\x00');   // kaghaz kaato
   return out.join('\r\n');
 }
+// 2026-11-02 (n): 🖨 DAILY KHANE KA PRINT (malik: "Wasooli ka print alehda · Akhrajat ka alehda · koi bhi print kar sakta hai")
+//   app: WAHI khataPrints/<id> {j: JSON {k:'day', t:'w'|'x', d, L:[[waqt, raqam PAISA, account, note]], tl, q}} → yahan EK khana: waqt · account · raqam MOTI, note neeche patla, aakhir KUL bara. AI nahi.
+function daySlip(J) {
+  const WB = 56, ESC = '\x1b', GS = '\x1d', C = ESC + 'a\x01', L = ESC + 'a\x00';
+  const sm = t => ESC + '!\x01' + t + ESC + '!\x00', bold = t => ESC + 'E\x01' + t + ESC + 'E\x00', big2 = t => ESC + '!\x38' + t + ESC + '!\x00';
+  const B1 = ESC + 'E\x01', B0 = ESC + 'E\x00';
+  const n = v => ((Number(v) || 0) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });   // app ki raqam PAISA
+  const fit = (t, w) => { t = String(t ?? '').replace(/[^\x20-\x7e]/g, ''); return t.length > w ? t.slice(0, w) : t + ' '.repeat(w - t.length); };
+  const rowW = (w, l, r) => { l = String(l); r = String(r); return (l + ' '.repeat(Math.max(1, w - l.length - r.length))).slice(0, w - r.length) + r; };
+  const T = J.t === 'w' ? ['WASOOLI', 'وصولی'] : ['AKHRAJAT', 'اخراجات'];
+  const rows = Array.isArray(J.L) ? J.L : [], hrB = sm('-'.repeat(WB));
+  const out = [ESC + '@', C + bold('NOOR TRADERS') + sm('  ' + SHOP_PHONE)];
+  if (UR.isOn() && UR.dateLine) { const dl = UR.dateLine(String(J.d || ''), 56); if (dl) out.push(dl); }
+  out.push(C + big2(T[0]));
+  if (UR.isOn()) out.push(UR.line(T[1], 44, 1));
+  out.push(L + sm(rowW(WB, ('Tareekh: ' + ascii(J.d) + (J.q ? ' · search: ' + ascii(J.q).slice(0, 14) : '')).slice(0, 40), printStamp(new Date()))), hrB);
+  for (const r of rows) {
+    if (!Array.isArray(r)) continue;
+    const am = n(r[1]), nw = Math.max(8, WB - 9 - am.length - 1);
+    out.push(sm(fit(ascii(r[0]), 9) + fit(ascii(r[2]), nw) + ' ' + B1 + am + B0));
+    const note = ascii(r[3]); if (note) for (const x of wrap(note, WB - 9).slice(0, 2)) out.push(sm(' '.repeat(9) + x));
+  }
+  out.push(hrB, C + bold(`KUL ${T[0]} (${rows.length})`), C + big2('Rs.' + n(J.tl)), '');
+  out.push(GS + 'V\x42\x00');   // kaghaz kaato
+  return out.join('\r\n');
+}
 const kpJobs = new Map();
 function listenKhataPrints() {
   biz.collection('khataPrints').where('status', '==', 'new').onSnapshot(s => {
@@ -1692,10 +1719,11 @@ async function runKhataPrints() {
       if (!mine) continue;
       if (Date.now() - (Number(j.at) || 0) > 10 * 60000) { await ref.update({ status: 'failed', err: 'Purana hukum (10 min+) — dobara dabayein' }); continue; }
       let J; try { J = JSON.parse(String(j.j || '')); } catch { throw new Error('Khata ka data samajh nahi aaya'); }
-      log(`🖨 Khata print: ${ascii(j.name)} (${j.byName || ''}) — ${(J.L || []).length} | ${(J.R || []).length}`);
-      const ok = await printReceipt(khataSlip(J));
+      const day = J && J.k === 'day';   // (n) Daily khane ka print
+      log(day ? `🖨 Daily print: ${ascii(j.name)} (${j.byName || ''}) — ${(J.L || []).length}` : `🖨 Khata print: ${ascii(j.name)} (${j.byName || ''}) — ${(J.L || []).length} | ${(J.R || []).length}`);
+      const ok = await printReceipt(day ? daySlip(J) : khataSlip(J));
       await ref.update(ok ? { status: 'done', doneAt: Date.now() } : { status: 'failed', err: String(lastPrintErr || 'print nahi hua').slice(0, 120) });
-      await logPrint({ code: 'Khata', name: ascii(j.name).slice(0, 40), amt: 0, ok });
+      await logPrint({ code: day ? 'Daily' : 'Khata', name: ascii(j.name).slice(0, 40), amt: 0, ok });
     } catch (e) { log('Khata print masla: ' + e.message); try { await ref.update({ status: 'failed', err: String(e.message || e).slice(0, 120) }); } catch {} }
   }
 }
