@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-02 (m2): 🖨 khata parchi ki raqam ÷100 (app PAISA bhejti hai — pehli parchi ×100 chhapi thi, meri ghalti)
 //  2026-11-02 (m): 🖨 KHATA DUKAN PRINTER — app khataPrints/<id> {j} (do side: ledgerTitles ke khane, tareekh filter wahi) → thermal parchi Font B 27 | 27, status done/failed
 //  2026-11-02 (l): ⏱ POS BAQAYA HAR SECOND (malik: "har second check · auto") — ledgerWatch har 1 sec chhota sawal (Voucher ginti / max id / UpdatedOn /
 //    status + VoucherDetail ginti); badla = ~3 s mein sirf BAQAYE (balPush, lines nahi) blueAccess/posLedger mein. Farq khud barabar NAHI (malik: "hum khud dekh lenge").
@@ -1643,12 +1644,12 @@ async function quickEntries() {
   }
 }
 // 2026-11-02 (m): 🖨 KHATA DUKAN PRINTER (malik: "khata ki pdf print bhi · ek click · ek side wasooli ek side paisa · dukan PC par")
-//   app: khataPrints/<id> {j: JSON {n, pid, sub, op, b, lt, rt, L:[[dd-mm, raqam, likhai]], R:[…], tl, tr}, name, byName, status 'new'} (rules 2.82)
+//   app: khataPrints/<id> {j: JSON {n, pid, sub, op, b, lt, rt, L:[[dd-mm, raqam, likhai]], R:[…], tl, tr}, name, byName, status 'new'} (rules 2.82) — raqam PAISA (app jaisi), yahan ÷100
 //   yahan: do khane (Font B 27 | 27) — baayein lt, daayein rt, har entry 2 line (tareekh + raqam / note) → status done / failed + err. AI nahi.
 function khataSlip(J) {
   const W = PRINT_WIDTH, WB = 56, CW = 27, ESC = '\x1b', GS = '\x1d', C = ESC + 'a\x01', L = ESC + 'a\x00';
   const sm = t => ESC + '!\x01' + t + ESC + '!\x00', smb = t => ESC + '!\x09' + t + ESC + '!\x00', bold = t => ESC + 'E\x01' + t + ESC + 'E\x00', big2 = t => ESC + '!\x38' + t + ESC + '!\x00';
-  const n = v => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
+  const n = v => ((Number(v) || 0) / 100).toLocaleString('en-US', { maximumFractionDigits: 2 });   // app ki raqam PAISA mein (op, b, L/R, tl/tr) — 2 Nov ghalti: ×100 chhapa tha
   const fit = (t, w) => { t = String(t ?? '').replace(/[^\x20-\x7e]/g, ''); return t.length > w ? t.slice(0, w) : t + ' '.repeat(w - t.length); };
   const rowW = (w, l, r) => { l = String(l); r = String(r); return (l + ' '.repeat(Math.max(1, w - l.length - r.length))).slice(0, w - r.length) + r; };
   const side = v => v > 0 ? 'LENE' : v < 0 ? 'DENE' : 'BARABAR';
