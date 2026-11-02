@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-02 (m3): 🖨 khata parchi par SIRF RAQAM mota (ESC E line ke andar — tareekh / note patle) · tarteeb app wali (khOrd, app bhejti hai)
 //  2026-11-02 (m2): 🖨 khata parchi ki raqam ÷100 (app PAISA bhejti hai — pehli parchi ×100 chhapi thi, meri ghalti)
 //  2026-11-02 (m): 🖨 KHATA DUKAN PRINTER — app khataPrints/<id> {j} (do side: ledgerTitles ke khane, tareekh filter wahi) → thermal parchi Font B 27 | 27, status done/failed
 //  2026-11-02 (l): ⏱ POS BAQAYA HAR SECOND (malik: "har second check · auto") — ledgerWatch har 1 sec chhota sawal (Voucher ginti / max id / UpdatedOn /
@@ -1653,18 +1654,22 @@ function khataSlip(J) {
   const fit = (t, w) => { t = String(t ?? '').replace(/[^\x20-\x7e]/g, ''); return t.length > w ? t.slice(0, w) : t + ' '.repeat(w - t.length); };
   const rowW = (w, l, r) => { l = String(l); r = String(r); return (l + ' '.repeat(Math.max(1, w - l.length - r.length))).slice(0, w - r.length) + r; };
   const side = v => v > 0 ? 'LENE' : v < 0 ? 'DENE' : 'BARABAR';
+  // (m2) malik: "lafz thora mota — jo raqmain hain wo only" — raqam ESC E (bold) line ke andar, tareekh / note patle
+  const B1 = ESC + 'E\x01', B0 = ESC + 'E\x00';
+  const segs = (w, ...ps) => { let len = 0, o = ''; for (const [t, b] of ps) { let x = String(t ?? '').replace(/[^\x20-\x7e]/g, ''); if (len + x.length > w) x = x.slice(0, Math.max(0, w - len)); len += x.length; o += b && x ? B1 + x + B0 : x; } return o + ' '.repeat(Math.max(0, w - len)); };
   const Ls = Array.isArray(J.L) ? J.L : [], Rs = Array.isArray(J.R) ? J.R : [], two = (a, b) => fit(a, CW) + '|' + fit(b, CW), hrB = sm('-'.repeat(WB)), mid = sm('-'.repeat(CW) + '+' + '-'.repeat(CW));
   const out = [ESC + '@', C + bold('NOOR TRADERS') + sm('  ' + SHOP_PHONE), C + bold('KHATA')];
   for (const x of (ascii(J.n) ? wrap(ascii(J.n).toUpperCase(), Math.floor(W / 2)).slice(0, 3) : ['(NAAM URDU MEIN)'])) out.push(C + big2(x.trim()));
   { const ur = urPartyOf({ pid: J.pid, name: J.n }); if (ur) out.push(UR.line(ur, 52, 1)); }
   out.push(L + sm(rowW(WB, ascii(J.sub).slice(0, 34), printStamp(new Date()))), hrB);
-  out.push(sm(rowW(WB, 'Opening:', side(Number(J.op) || 0) + ' Rs.' + n(Math.abs(Number(J.op) || 0)))));
+  { const st = side(Number(J.op) || 0) + ' Rs.', am = n(Math.abs(Number(J.op) || 0)); out.push(sm(segs(WB, [fit('Opening:', Math.max(1, WB - st.length - am.length)), 0], [st, 0], [am, 1]))); }
   out.push(C + bold('AB BAQAYA - ' + side(Number(J.b) || 0)), C + big2('Rs.' + n(Math.abs(Number(J.b) || 0))), L + hrB);
-  out.push(smb(two(J.lt, J.rt)), sm(two(`Kul Rs.${n(J.tl)} (${Ls.length})`, `Kul Rs.${n(J.tr)} (${Rs.length})`)), mid);
-  const cell = r => Array.isArray(r) ? [rowW(CW, ascii(r[0]), n(r[1])), ascii(r[2])] : ['', ''];
+  out.push(smb(two(J.lt, J.rt)), sm(segs(CW, ['Kul Rs.', 0], [n(J.tl), 1], [` (${Ls.length})`, 0]) + '|' + segs(CW, ['Kul Rs.', 0], [n(J.tr), 1], [` (${Rs.length})`, 0])), mid);
+  const amt = r => { const m = n(r[1]).slice(0, CW - 1); return segs(CW, [fit(ascii(r[0]), CW - m.length), 0], [m, 1]); };   // tareekh patli + raqam MOTI (daayein)
+  const cell = r => Array.isArray(r) ? [amt(r), ascii(r[2])] : [' '.repeat(CW), ''];
   for (let i = 0; i < Math.max(Ls.length, Rs.length); i++) {
     const a = cell(Ls[i]), b = cell(Rs[i]);
-    out.push(sm(two(a[0], b[0])));
+    out.push(sm(a[0] + '|' + b[0]));
     if (a[1] || b[1]) out.push(sm(two(a[1], b[1])));
   }
   out.push(mid, smb(two('Kul Rs.' + n(J.tl), 'Kul Rs.' + n(J.tr))), L + hrB, C + bold('AB BAQAYA - ' + side(Number(J.b) || 0) + '  Rs.' + n(Math.abs(Number(J.b) || 0))), '');
