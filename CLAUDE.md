@@ -131,6 +131,7 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 - **Godam/branch ko NAAM se pehchano, number se nahi** — POS mein branch 2 ka naam "Godam 1" hai. Godam 2 = naam mein "godam 2" (`collect().g2` / `jamaG2`). Branch 1 = NOOR TRADERS (dukan).
 - Ata/maida jaisa maal sirf godam se bikta hai — dukan ki sale mein mat gino.
 - Diagnostic scripts SQL password kabhi print na karein.
+- **🐞 Bug safai ke sabaq (v2.177.0)**: (1) PC ki Firestore likhai jo app ko "jawab" deti hai (jaise posLedger `req`) HAR likhne mein saath rakho aur do async likhne ek waqt ek (queue) — beech wala poora doc likh kar jawab mita deta hai. (2) "kitna purana" hamesha SERVER waqt (updateTime / readTime) — phone ki ghari nahi. (3) PC script shuru mein pehle ka data na parh sake to LIKHNA band jab tak parh na le (warna sab dobara + waqt badal jaata). (4) Ek printer / kaam ki line doosre ke peeche na ruke (thermal ≠ A4). (5) Bank parchi ka naam bank wale khate se, party ke naam se nahi.
 
 ## 5. Security (kabhi nahi)
 - `firebase-key.json`, `local-config.json` **GitHub par kabhi nahi** (haath se copy).

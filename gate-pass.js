@@ -8,7 +8,7 @@
 // Data: PC gate-pass.js (sirf POS parhti) → gatePass/<SaleID> {no, day, pt, br, p, pc, by, l:[{k,i,n,q,pk,g}], gs, gn, off} · tick = gatePass.g.<k> {n, t, q}
 //   (rules 2.81 — mulazim sirf `g`). Ek bill ke do godam = do gate pass card. Tick ke baad bill ki tadad badli (q farq) = tick khud baqi + ✏️.
 // Screen (Transfer check ka "📦 Jane wala maal" jaisa): ⋮ = din · godam · Baqi/De diye/Sab · 📄 PDF (kholo + bhejo). CAP app.gate (OPT_IN). AI NAHI.
-import { smartFind } from './dukan/dhoond.js?v=2.176.0';
+import { smartFind } from './dukan/dhoond.js?v=2.177.0';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => { n = Number(n) || 0; return Math.abs(n - Math.round(n)) < 1e-6 ? new Intl.NumberFormat('en-PK').format(Math.round(n)) : String(Math.round(n * 1000) / 1000); };
@@ -169,7 +169,7 @@ export function gpOpen() {
   try { $('dialog').classList.add('gtp-dialog'); } catch {}
   lbPaint();
   if (!gpOpen.mo && $('dialogBody')) { gpOpen.mo = new MutationObserver(() => { if (!document.querySelector('#dialogBody [data-gtp-root]')) lbPaint(); }); gpOpen.mo.observe($('dialogBody'), { childList: true }); }
-  clearInterval(timer); timer = setInterval(() => { if (!document.querySelector('#dialogBody [data-gtp-root]')) { clearInterval(timer); timer = null; try { stop?.(); } catch {} stop = null; subKey = ''; return; } paint(); }, 30000);
+  clearInterval(timer); timer = setInterval(() => { if (!document.querySelector('#dialogBody [data-gtp-root]')) { clearInterval(timer); timer = null; try { stop?.(); } catch {} stop = null; subKey = ''; return; } const [a, b] = range(); if (a + '|' + b !== subKey) listen(); paint(); }, 30000);   // v2.177.0: 🐞 raat 12 ke baad khuli screen = khud aaj ke bill
   setTimeout(() => { try { window.ntDlgMenu?.(); } catch {} }, 30);
 }
 function paint() {

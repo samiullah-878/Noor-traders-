@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.176.0';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.177.0';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -126,9 +126,13 @@ function billTo() {
   if (v.startsWith('party:')) { const p = O.party ? O.party(v.slice(6)) : null; return p ? { kind: 'party', id: v, name: p.name, p } : null; }
   return null;
 }
+// v2.177.0: 🐞 v2.163.0 ke baad kharcha = Customer khata — choices mein 'mk:<naam>' (khata banao) + kharcha khate (party) aate hain, 'expense:' sirf purana
+const isKhC = a => !!a && (a.kind === 'expense' || a.mk || a.kharcha);
+const kNm = v => { v = String(v || ''); return v.startsWith('party:') ? (O.party?.(v.slice(6))?.name || '') : v.startsWith('mk:') ? v.slice(3) : v.startsWith('expense:') ? v.slice(8) : (O.party?.(v)?.name || ''); };
+async function kResolve(v) { v = String(v || ''); if (!v.startsWith('mk:')) return v; if (!O.kharchaParty) throw Error('App update karein'); const pid = await O.kharchaParty(v.slice(3)); return 'party:' + pid; }   // naam chuna = kharcha khata ban kar wohi
 const billChoices = q => { const l = (O.expenseChoices ? O.expenseChoices() : []); const qq = String(q || '').trim().toLowerCase();
   const hit = qq.length >= 2 ? (O.smartSearch ? O.smartSearch(l, qq, 10) : l.filter(a => String(a.name).toLowerCase().includes(qq)).slice(0, 10))
-    : l.filter(a => a.kind === 'expense' || /kharch|harch|shop|dukan|bill/i.test(String(a.name))).slice(0, 10);
+    : l.filter(a => isKhC(a) || /kharch|harch|shop|dukan|bill/i.test(String(a.name))).slice(0, 10);
   return hit; };
 // v2.99.75: ➕ naya bank / card khata (malik) — card par malik ka bataya outstanding opening (dena) + limit + due tareekh
 async function newAcct(spec) {
@@ -179,20 +183,20 @@ function kharchWhoHTML(x) {
   if (T && qOpen !== 'm:' + x.d.id) return `<div class="bkp-who"><span class="bkp-pk">🧾 Kharcha</span><b>${esc(T.name)}</b><small>${esc(bankOf(r)?.name || (r.kind === 'card' ? 'card' : 'bank'))} se · Daily mein nahi</small><button type="button" class="bkp-ic" data-bk-mchg="${id}" title="Badlo">✏️</button></div>`;
   return `<div class="bkp-ask">🧾 <b>"${esc(r.merchant || r.name)}" ka kharcha kis khate mein?</b> <small>aik dafa — phir isi naam par khud</small><input type="search" placeholder="🔍 kharcha / khata…" data-bk-mq="${id}" autocomplete="off"><div class="bkp-opts" id="bkM-${id}">${mOptsHTML('', mk)}</div></div>`;
 }
-const mOptsHTML = (q, mk) => billChoices(q).map(a => `<button type="button" class="bkp-ic" data-bk-mto="${esc(mk)}|${esc(a.id)}">${a.kind === 'expense' ? '🧾' : '👤'} ${esc(a.name)}</button>`).join('') || '<small>Nahi mila</small>';
+const mOptsHTML = (q, mk) => billChoices(q).map(a => `<button type="button" class="bkp-ic" data-bk-mto="${esc(mk)}|${esc(a.id)}">${isKhC(a) ? '🧾' : '👤'} ${esc(a.name)}</button>`).join('') || '<small>Nahi mila</small>';
 function billWhoHTML(x) {
   const T = billTo(), id = esc(x.d.id);
   if (T && qOpen !== 'bill:' + x.d.id) return `<div class="bkp-who"><span class="bkp-pk">🧾 Kharcha</span><b>${esc(T.name)}</b><small>${esc(bankOf(x.r)?.name || 'HBL')} se minus · Daily mein nahi${x.r.consumer ? ' · Consumer ' + esc(x.r.consumer) : ''}</small><button type="button" class="bkp-ic" data-bk-billchg="${id}" title="Badlo">✏️</button></div>`;
   return `<div class="bkp-ask">🧾 <b>Bill kis kharcha khate mein?</b> <small>aik dafa — phir har bill khud</small><input type="search" placeholder="🔍 kharcha / khata…" data-bk-bq="${id}" autocomplete="off"><div class="bkp-opts" id="bkB-${id}">${billOptsHTML('')}</div></div>`;
 }
-const billOptsHTML = q => billChoices(q).map(a => `<button type="button" class="bkp-ic" data-bk-bill="${esc(a.id)}">${a.kind === 'expense' ? '🧾' : '👤'} ${esc(a.name)}</button>`).join('') || '<small>Nahi mila</small>';
+const billOptsHTML = q => billChoices(q).map(a => `<button type="button" class="bkp-ic" data-bk-bill="${esc(a.id)}">${isKhC(a) ? '🧾' : '👤'} ${esc(a.name)}</button>`).join('') || '<small>Nahi mila</small>';
 const dShow = r => { if (!r.day) return ''; const [y, mo, d] = r.day.split('-'); return `${d} ${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Number(mo) - 1]}${r.time ? ' · ' + r.time : ''}`; };
 // v2.113.0 🧾 (malik: "har supplier / customer ke khate ke saath kharcha wala khata bhi lag sake — jo payment kisi ko gayi wo kharcha mein aaye"):
 //   GAYE paise ka khata = 🧾 kharcha bhi (id 'expense:<naam>', Bijli / Kiraya / … + malik ke bane). ✓ Lagao = bill jaisa: HBL se minus (posNo — POS
 //   voucher nahi) + kharcha entry (Akhrajat), Daily / galle mein nahi. Naam yaad: alias[naam] = 'expense:<naam>' (agli dafa khud, party jaisa).
 //   CAP hbl.kharcha. AI NAHI.
 const expOf = v => { v = String(v || ''); return v.startsWith('expense:') && v.length > 8 ? { id: v, name: v.slice(8), exp: true } : null; };
-const expList = () => (O.expenseChoices ? O.expenseChoices() : []).filter(a => a && a.kind === 'expense');
+const expList = () => (O.expenseChoices ? O.expenseChoices() : []).filter(isKhC).map(a => a.kharcha && a.partyId ? { ...a, id: a.partyId } : a);   // v2.177.0: kharcha khate (party id) + 'mk:' naam + purane 'expense:'
 function sugOf(x) {
   if (pick.has(x.d.id)) { const v = pick.get(x.d.id), e = expOf(v); if (e) return { p: e, why: 'aap ne chuna' }; const p = O.party(v); if (p) return { p, why: 'aap ne chuna' }; }
   if (x.r.dir !== 'in') { const e = expOf(alias[aliasKey(x.r.name)]); if (e && capOk('hbl.kharcha')) return { p: e, why: 'yaad' }; }
@@ -543,18 +547,20 @@ document.addEventListener('click', e => {
   // v2.99.75: kai account / card
   if (d.bkCur) { curId = d.bkCur; try { localStorage.setItem('sam-bank-cur', curId); } catch {} if (onScreen()) renderHbl(); else paint(); return; }
   if (d.bkCmap) { const [c, pid] = d.bkCmap.split('|'); setAlias('@c:' + c, pid, `💳 Card …${c} = ${O.party?.(pid)?.name || ''} (yaad)`); return; }
-  if (d.bkMto) { const i = d.bkMto.indexOf('|'), mk = d.bkMto.slice(0, i), v = d.bkMto.slice(i + 1); qOpen = ''; const nm = v.startsWith('party:') ? (O.party?.(v.slice(6))?.name || '') : v.slice(8); setAlias('@m:' + mk, v, `🧾 Is dukan ka kharcha ab khud: ${nm}`); return; }
+  if (d.bkMto) { const i = d.bkMto.indexOf('|'), mk = d.bkMto.slice(0, i), v0 = d.bkMto.slice(i + 1); qOpen = ''; t.disabled = true; kResolve(v0).then(v => setAlias('@m:' + mk, v, `🧾 Is dukan ka kharcha ab khud: ${kNm(v)}`)).catch(er => { t.disabled = false; O.notice?.('✕ ' + (er?.message || er)); }); return; }
   if (d.bkMchg) { qOpen = 'm:' + d.bkMchg; paint(); return; }
   if (d.bkNewacct) { newAcct(d.bkNewacct); return; }
   if (d.bkLim) { editLim(d.bkLim); return; }
   if (d.bkAcmap) { const [k, pid] = d.bkAcmap.split('|'); setAlias('@a:' + k, pid, `🏦 A/C …${k} = ${O.party?.(pid)?.name || ''} (yaad)`); return; }
-  if (d.bkBill) { qOpen = ''; const nm = d.bkBill.startsWith('party:') ? (O.party?.(d.bkBill.slice(6))?.name || '') : d.bkBill.slice(8); setAlias('@bill', d.bkBill, `🧾 Har bill ab khud: ${nm}`); return; }
+  if (d.bkBill) { qOpen = ''; t.disabled = true; kResolve(d.bkBill).then(v => setAlias('@bill', v, `🧾 Har bill ab khud: ${kNm(v)}`)).catch(er => { t.disabled = false; O.notice?.('✕ ' + (er?.message || er)); }); return; }
   if (d.bkBillchg) { qOpen = 'bill:' + d.bkBillchg; paint(); return; }
   if (d.bkTab) { tab = d.bkTab; paint(); if (tab === 'setup') loadKey(); return; }
   if (d.bkOk) { apply(d.bkOk); return; }
   if (d.bkSkip) { skip(d.bkSkip); return; }
   if (d.bkChg) { qOpen = d.bkChg; pick.delete(d.bkChg); paint(); return; }
-  if (d.bkPick) { const i = d.bkPick.indexOf('|'), id = d.bkPick.slice(0, i), pid = d.bkPick.slice(i + 1); pick.set(id, pid); qOpen = ''; paint(); return; }   // v2.113.0: kharcha ke naam mein bhi kuch bhi ho
+  if (d.bkPick) { const i = d.bkPick.indexOf('|'), id = d.bkPick.slice(0, i), pid = d.bkPick.slice(i + 1);
+    if (pid.startsWith('mk:')) { t.disabled = true; kResolve(pid).then(v => { pick.set(id, v.slice(6)); qOpen = ''; paint(); }).catch(er => { t.disabled = false; O.notice?.('✕ ' + (er?.message || er)); }); return; }   // v2.177.0: naya kharcha khata
+    pick.set(id, pid); qOpen = ''; paint(); return; }   // v2.113.0: kharcha ke naam mein bhi kuch bhi ho
   if (d.bkCopy) { copy(d.bkCopy); return; }
   if (d.bkTest) { rabtaTest(); return; }
   if (d.bkNewkey) { if (key && !confirm('Nayi chaabi? Purani wali MacroDroid aur Gmail script kaam karna band kar denge — dono dobara lagani hongi.')) return;

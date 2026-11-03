@@ -6767,3 +6767,17 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - Malik: "har dafa MacroDroid ka pop-up kisi qaul ka ho · sirf angrezon ka · Urdu likhai · unlock / screen on / lock par" → filhal 100 qaul (malik: "filhal 100").
 - `qaul/1.txt … qaul/100.txt` = ek qaul (Urdu) + "— naam" (UTF-8), `qaul/all.json` = sab (n, q, a, e asal English). Website (GitHub Pages) se MacroDroid: random 1–100 → HTTP GET https://samiullah-878.github.io/Noor-traders-/qaul/{v=q}.txt → notification + pop-up. Blue Khata app / SW in files ko nahi chhuti.
 - Naye qaul jorne hon to agla number (101.txt …) + MacroDroid ka random max barhao. AI ne qaul aur tarjuma ek dafa likha (sirf mustanad qaul); phone par AI nahi.
+## v2.177.0 (2026-11-03) — 🐞 Poori app ki bug safai (11 bug, malik: "puri apps main dekho koi bug" → tafseel + khatra jaanch → OK)
+- App (foran):
+  1. 🏦 HBL Inbox kharcha chunne mein naye kharcha khate (v2.163.0 ke baad Customer khata) nahi aate the / "mk:<naam>" seedha alias ban jaata → ab `isKhC` (expense / mk / kharcha) + `kResolve` (mk: = `O.kharchaParty` → party:<id>), handlers ⏳ disabled + ✕ paigham.
+  2. 🚚 Gaari: app GPS sirf 45 din parhti thi → purana phera 0 km. Ab malik ki app kal tak ke phere mein `gpsKm` (cloud.setGaariGpsKm, merge, sirf badla ≥0.1) likhti hai; `gpsKm()` din ka GPS na ho to phere wala.
+  7a. 🚪 Gate pass khuli screen raat 12 ke baad khud aaj ke bill (30 s timer `range()` badla = `listen()`).
+  7c. 🚪 Gate pass offline: `dukan/dhoond.js` + `dukan/khula.js` SW cache mein (baqi /dukan/ pehle jaisa skip).
+  8. 🏪 Website: sirf nishan / emoji dhoondna = koi nahi (pehle SAARE items · `smartFind` empty toks → []) · akela 1 wala packet = packet ka rate (`S.pkq`) · app ka "Rates website par" ab packet bhi bhejta hai (`webPacks` = PC sync-stock v4 jaisa, pehle mita deta tha) · website editor band karte hi baqi rack save foran (`rkFlush`) · rack-photo mashwara (`sugg`) yaad (1 min / items badle).
+  9. Malik code screen `num` (undefined) → `Number(i.fails)||0`.
+  11. Band khate ke naam ka naya kharcha khata nahi banta (`kharchaParty` throw: pehle Band khate se chalu karein) — dohra khata + doosra POS account band.
+- PC (manifest 2026-11-03.3 — raat ko khud):
+  3/10. 🖨 a4-print v1.2: HP na mile to bhi 🧾 thermal foran (`noPr` — queue mein 'th' dhoondo, `meta` snapshot se = kam reads) · A4 30 min printer na mile = 'old' (`ageOut` transaction) · restart par purana test page nahi (`cfgFirst`) · chhapte waqt `pr` (cur badle / null ho to bhi), status() bhi local.
+  4/5/6. pos-khata-sync (p): bank parchi HBL / ALFALAH = BANK wale khate se (transfer: jis taraf bank) · khata / daily print "10 min purana" = server readTime − updateTime · POS milan `req` jawab: `balQ` (ek waqt ek likhna) + `ledgerReqAck` har likhne mein + forced hamesha likhe. Voucher banana NAHI chheda.
+  7b. gate-pass v1.2: shuru ka parhna (boot) fail = likhna band jab tak parh na le (pehle sab dobara + posted ka `pt` abhi ka).
+- Nahi badla (malik ko bataya): ledgerWatch har 1 s aur gate pass har 0.4 s ka SQL sawal (halka, pehle jaisa). Rules 2.85 wahi. AI nahi.

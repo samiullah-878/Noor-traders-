@@ -1,5 +1,6 @@
 // =========================================================
-//  gate-pass.js  v1.1 (2026-11-01: 🔵 UN-POSTED bhi — malik: "Bills jaisa: laal = posted (tick), neela = un-posted (baad mein laal)" · ps 1/2 ·
+//  gate-pass.js  v1.2 (2026-11-03: 🐞 shuru mein pehle ke gate pass na parh sake (internet der se) = jab tak parh na le KUCH nahi likhta — pehle sab dobara likhta
+//                 aur posted bill ka "post ka waqt" (pt) abhi ka ho jaata) · v1.1 (2026-11-01: 🔵 UN-POSTED bhi — malik: "Bills jaisa: laal = posted (tick), neela = un-posted (baad mein laal)" · ps 1/2 ·
 //                 scan ke dauran nayi line bhi (SaleDetail ginti/jor jaanch mein)) · v1.0 (2026-11-01) — 🚪 GATE PASS KA RECORD (POS ke POSTED bill → app, ~1 second)
 //  Malik: "jitne bhi gate pass nikal rahe hain un ka record app mein · har customer alag · jo bill POST ho jaye usi ka gate pass
 //          1–1½ second mein pohnche · upar gate pass number aur customer, neeche tadad — wahan Zeeshan ya Sonu tick kar de".
@@ -84,7 +85,7 @@ function main() {
     const y = new Date(); y.setDate(y.getDate() - 1);
     const sn = await GP.where('day', '>=', dayOf(y)).get();
     sn.forEach(d => { const x = d.data() || {}; known.set(Number(d.id), { h: x.off ? '' : hashOf(x), pt: Number(x.pt) || 0, ps: Number(x.ps) === 1 ? 1 : 2, off: x.off ? 1 : 0, day: String(x.day || '') }); });
-    log(`🚪 gate-pass v1.1 shuru — pehle se ${known.size} gate pass (aaj + kal) · har ${EVERY / 1000} sec POS ke bills (🔵 un-posted + 🔴 posted) dekhta hai`);
+    log(`🚪 gate-pass v1.2 shuru — pehle se ${known.size} gate pass (aaj + kal) · har ${EVERY / 1000} sec POS ke bills (🔵 un-posted + 🔴 posted) dekhta hai`);
   }
   async function once() {
     const p = await getPool();
@@ -122,10 +123,12 @@ function main() {
   lock.on('error', () => { console.log('gate-pass pehle se chal raha hai — yeh copy band.'); process.exit(3); });
   lock.on('listening', async () => {
     try { await getPool(); log('SQL se jur gaya'); } catch (e) { log('SQL masla: ' + e.message); process.exit(1); }
-    try { await boot(); } catch (e) { log('Pehle ke gate pass: ' + e.message); }
+    let booted = false, bootErrAt = 0;   // v1.2
+    try { await boot(); booted = true; } catch (e) { bootErrAt = Date.now(); log('Pehle ke gate pass (dobara koshish karega, tab tak likhna band): ' + e.message); }
     let running = false;
     const tick = async () => { if (running) return; running = true;
-      try { await once(); } catch (e) { log('⚠️ ' + (e.message || e)); try { pool?.close(); } catch {} pool = null; if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }
+      try { if (!booted) { try { await boot(); booted = true; } catch (e) { if (Date.now() - bootErrAt > 60000) { bootErrAt = Date.now(); log('Pehle ke gate pass abhi bhi nahi: ' + e.message); } return; } }
+        await once(); } catch (e) { log('⚠️ ' + (e.message || e)); try { pool?.close(); } catch {} pool = null; if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }
       finally { running = false; } };
     await tick();
     setInterval(ZINDA.guard(tick, 5 * 60000, 'gate pass tick'), EVERY);

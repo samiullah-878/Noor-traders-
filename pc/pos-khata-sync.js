@@ -1,5 +1,8 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-03 (p): 🐞 bug safai (malik OK) — 🏦 bank parchi ka naam (HBL / ALFALAH) ab BANK wale khate se (pehle doosri party ke naam mein "Alfalah" = HBL ki parchi par ALFALAH) ·
+//    🖨 khata / daily print ka "10 min purana" ab SERVER ke waqt se (phone ki ghari aage / peeche = ghalat "purana hukum" nahi) ·
+//    ⚖️ POS milan "Taza karo" ka jawab (req) kabhi nahi khota (har second wala likhna bhi req saath rakhta hai, ek waqt ek likhna). Voucher banana BILKUL nahi chheda.
 //  2026-11-02 (o): 🖨 Daily — Sale khana, Change/Closing khana, SAB PRINT (akhrajat 2-2 khane, neeche wasooli 2-2, phir + / − hisaab + KAM / ZYADA)
 //  2026-11-02 (n): 🖨 DAILY KHANE KA PRINT — Wasooli / Akhrajat alag (khataPrints j.k 'day' → daySlip), koi bhi mulazim (rules 2.83)
 //  2026-11-02 (m3): 🖨 khata parchi par SIRF RAQAM mota (ESC E line ke andar — tareekh / note patle) · tarteeb app wali (khOrd, app bhejti hai)
@@ -656,7 +659,10 @@ async function reprintVoucher(code, copies = 1, fromJob = false) {
 }
 // 2026-10-12: kya yeh HBL ka len-den hai? (bank account wala khata, ya HBL SMS / email se bani entry) -> { dir: 'in' | 'out' } warna null
 function bankSlip(base, isTransfer) { const r = bankSlip0(base, isTransfer); if (!r) return null;   // 2026-11-02: 🏦 kaun sa bank (Alfalah / HBL) + entry kab bani (⏱)
-  const nm = id => String((id && app.get(id) && app.get(id).name) || ''), alf = /^Alfalah\b/i.test(String(base.note || '')) || /alf[a]?lah/i.test(isTransfer ? nm(base.fromPartyId) + ' ' + nm(base.toPartyId) : nm(base.partyId));
+  const P = id => (id && app.get(id)) || null, nm = id => String((P(id) && P(id).name) || ''), isB = id => !!(P(id) && P(id).bank), nt = String(base.note || '');
+  // 2026-11-03 (p): BANK wala khata hi faisla kare (transfer: jis taraf bank) — doosri party ka naam nahi. Bank khata na ho (SMS entry) = note.
+  const side = isTransfer ? (isB(base.fromPartyId) ? base.fromPartyId : isB(base.toPartyId) ? base.toPartyId : '') : (isB(base.partyId) ? base.partyId : '');
+  const alf = side ? (/alf[a]?lah/i.test(nm(side)) || (/^Alfalah\b/i.test(nt) && !/\bhbl\b/i.test(nm(side)))) : /^Alfalah\b/i.test(nt);
   return { ...r, bk: alf ? 'ALFALAH' : 'HBL', at: ms(base.createdAt) || 0 };
 }
 function bankSlip0(base, isTransfer) {
@@ -1752,9 +1758,12 @@ async function runKhataPrints() {
     kpJobs.delete(id);
     const ref = biz.collection('khataPrints').doc(id);
     try {
-      const mine = await db.runTransaction(async tx => { const s = await tx.get(ref); if (!s.exists || s.data().status !== 'new') return false; tx.update(ref, { status: 'printing', startedAt: Date.now() }); return true; });
+      let age = 0;   // 2026-11-03 (p): hukm kitna purana — SERVER ka waqt (readTime − updateTime), phone ki ghari nahi
+      const mine = await db.runTransaction(async tx => { const s = await tx.get(ref); if (!s.exists || s.data().status !== 'new') return false;
+        age = s.readTime && s.updateTime ? s.readTime.toMillis() - s.updateTime.toMillis() : Date.now() - (Number(j.at) || 0);
+        tx.update(ref, { status: 'printing', startedAt: Date.now() }); return true; });
       if (!mine) continue;
-      if (Date.now() - (Number(j.at) || 0) > 10 * 60000) { await ref.update({ status: 'failed', err: 'Purana hukum (10 min+) — dobara dabayein' }); continue; }
+      if (age > 10 * 60000) { await ref.update({ status: 'failed', err: 'Purana hukum (10 min+) — dobara dabayein' }); continue; }
       let J; try { J = JSON.parse(String(j.j || '')); } catch { throw new Error('Khata ka data samajh nahi aaya'); }
       const day = J && J.k === 'day';   // (n) Daily khane ka print
       log(day ? `🖨 Daily print: ${ascii(j.name)} (${j.byName || ''}) — ${(J.L || []).length}` : `🖨 Khata print: ${ascii(j.name)} (${j.byName || ''}) — ${(J.L || []).length} | ${(J.R || []).length}`);
@@ -1792,7 +1801,7 @@ async function quickRun() {
 // ============================================================
 // 2026-10-26: ⚖️ POS MILAN — har 15 min POS ledger (Debit − Credit = lena +, dena −) jude hue khaton ka blueAccess/posLedger {m:{appId: paisa}, at, n}
 //   (sirf badle to). App har khate par "🖥 POS baqaya" + "⚖️ POS milan" screen. AI nahi.
-let ledgerAt = 0, ledgerLast = '', ledgerForce = 0, ledgerReqSeen = 0;
+let ledgerAt = 0, ledgerLast = '', ledgerForce = 0, ledgerReqSeen = 0, ledgerReqAck = 0, balQ = Promise.resolve();   // (p): ack = app ko diya jawab (har likhne mein)
 // 2026-10-27: 🔄 app ka "Taza karo" (blueAccess/posLedgerReq {at}) ya ⚖️ milan job = foran (15 min ka intezar nahi) — doc 'at' hamesha naya (app ko pata chale taza hai)
 function listenLedgerReq() {
   biz.collection('blueAccess').doc('posLedgerReq').onSnapshot(s => { const at = Number(s.data()?.at) || 0; if (at > ledgerReqSeen) { ledgerReqSeen = at; ledgerForce = Date.now(); if (kick) kick(); } }, e => log('posLedgerReq listener: ' + e.message));
@@ -1805,7 +1814,11 @@ async function ledgerPush(pool) {
   try { await linesPush(pool); } catch (e) { log('🔍 POS lines masla: ' + e.message); }
 }
 // 2026-11-02 (l): sirf BAQAYE (har jude khate ka POS balance) — ledgerPush (15 min / Taza) aur ledgerWatch (har second badlaav par) dono yehi
-async function balPush(pool, forced = false) {
+// 2026-11-03 (p): 🐞 "Taza karo" ka jawab khota tha — har second wala (ledgerWatch) beech mein likh deta (req ke bina, poora doc) to forced wala "wahi data" samajh kar chup.
+//   Ab: ek waqt ek likhna (balQ) · req (ack) HAR likhne mein · forced HAMESHA likhe.
+function balPush(pool, forced = false) { const p = balQ.then(() => balPush0(pool, forced)); balQ = p.catch(() => {}); return p; }
+async function balPush0(pool, forced = false) {
+  const req0 = ledgerReqSeen;
   const rows = (await pool.request().query(`SELECT p.PartyID, SUM(ISNULL(vd.Debit,0) - ISNULL(vd.Credit,0)) AS Bal
     FROM dbo.Party p LEFT JOIN dbo.VoucherDetail vd ON vd.AccountID = p.AccountID
     LEFT JOIN dbo.Voucher v ON v.VoucherID = vd.VoucherID
@@ -1815,7 +1828,8 @@ async function balPush(pool, forced = false) {
   const m = {}; let n = 0;
   for (const [k, l] of links) { if (!k.startsWith('party:') || !l || !l.posPartyId) continue; const appId = k.slice(6); if (!appId || /[.\/]/.test(appId) || !byPos.has(Number(l.posPartyId))) continue; m[appId] = byPos.get(Number(l.posPartyId)); n++; }
   const j = JSON.stringify(m);
-  if (j !== ledgerLast) { ledgerLast = j; if (!DRY) { await biz.collection('blueAccess').doc('posLedger').set({ m, at: Date.now(), n, pc: os.hostname(), ...(forced ? { req: ledgerReqSeen } : {}) }); log(`⚖️ POS ledger likha: ${n} khate${forced ? '' : ' (⏱ badlaav)'}`); } }
+  if (forced) ledgerReqAck = Math.max(ledgerReqAck, req0);
+  if (j !== ledgerLast || forced) { ledgerLast = j; if (!DRY) { await biz.collection('blueAccess').doc('posLedger').set({ m, at: Date.now(), n, pc: os.hostname(), ...(ledgerReqAck ? { req: ledgerReqAck } : {}) }); log(`⚖️ POS ledger likha: ${n} khate${forced ? '' : ' (⏱ badlaav)'}`); } }
 }
 // 2026-11-02 (l): ⏱ har 1 sec — POS mein voucher bana / badla / cancel hua? (chhota sawal) → baqaye ~3 s mein app mein (bhaari GROUP BY 3 s mein ek dafa se zyada nahi)
 let lwSig = '', lwBusy = false, lwAt = 0, lwPend = false, lwErrAt = 0;

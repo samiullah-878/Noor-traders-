@@ -24,10 +24,10 @@
 //   v2.166.0 (malik: "site chhoti screen jaisi — dukan jaise racks door se nazar aayein · daalein ek deewar, baqi racks doosri · jis rack ke paas jaye wo dikhe"):
 //     🏬 KAMRA (kamra.js) — 3D gali, ungli upar = aage · rack par tap = mud kar paas → yahi purana rack view ('near' khirki, phone back / 🏬 = wapas kamra).
 //     Abhi sirf ?kamra=1 link par (malik dekhe) — OK ke baad sab ke liye (ROOM_DEFAULT).
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.176.0';
-import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank } from './khula.js?v=2.176.0';
-import { smartFind } from './dhoond.js?v=2.176.0';
-import { makeKamra } from './kamra.js?v=2.176.0';
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.177.0';
+import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank } from './khula.js?v=2.177.0';
+import { smartFind } from './dhoond.js?v=2.177.0';
+import { makeKamra } from './kamra.js?v=2.177.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -562,7 +562,7 @@ function openSheet(id, fromEl) {
   const it = S.items.get(id); if (!it) return;
   const src = fromEl && fromEl.querySelector('img,.pk,canvas'), r0 = src ? src.getBoundingClientRect() : null;
   S.open = id; S.q = 1;
-  const O = optsOf(it); S.pkq = O.length > 1 ? (O.find(x => x.q === 1) || O[0]).q : 0;   // 🌾 packet chips (1 se zyada option ho to)
+  const O = optsOf(it); S.pkq = O.length > 1 ? (O.find(x => x.q === 1) || O[0]).q : O[0]?.pk ? O[0].q : 0;   // 🌾 packet chips (1 se zyada option ho to) · v2.177.0: 🐞 akela packet = usi ka rate
   $('shRack').textContent = `${it.rk.no ? `Rack ${it.rk.no} · ` : ''}${it.rk.name}${it.k === 'g' ? ' · 🫙 Dabba' : it.k === 's' ? ' · 🧺 Tora' : ''}`;
   $('shName').textContent = it.n;
   const cr = PHURL.has(id) && S.cr[id]; $('shCr').hidden = !cr; $('shCr').textContent = cr ? '📷 ' + cr : '';   // 🌐 internet tasveer ka haq (credit)

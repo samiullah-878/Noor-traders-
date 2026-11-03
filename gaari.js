@@ -24,8 +24,8 @@
 // phera cards. Purani alag entries (bilty/diesel/kharch/reading/tracker/driver — v2.92) bhi jor mein rehti hain.
 // Data: businesses/noor-traders/gaari/{id} kind 'phera' {date, startR, endR, trackerKm, bilties[{id,from,to,party,kiraya,comm,col}],
 //   kharche[{n,a}], diesel[{l,rate,amount,full}], status open|closed, note, by, byName, at, trackerTrips[{t,km,cut}] (v2.95.8)} + gaari/_config.
-import { smartHit } from './smart-search.js?v=2.176.0';
-import { firebaseConfig } from './config.js?v=2.176.0';   // v2.162.0: 📍 MacroDroid ka REST pata   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.177.0';
+import { firebaseConfig } from './config.js?v=2.177.0';   // v2.162.0: 📍 MacroDroid ka REST pata   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (v, d = 0) => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: d });
@@ -56,9 +56,9 @@ function start() {
     const c = list.find(r => r.id === '_config'); if (c) cfg = { ...cfg, ...c };
     rows = list.filter(r => r.id !== '_config' && !r.deleted);
     phDay = new Map(); for (const r of rows) if (r.kind === 'phera') phDay.set(r.date, (phDay.get(r.date) || 0) + 1);
-    if (mounted && !cur) paint();
+    gpsSync(); if (mounted && !cur) paint();
   }, e => { err = e?.message || 'rabta nahi'; if (mounted) paint(); });
-  if (!gpsUn && cloud?.listenGaariDays) gpsUn = cloud.listenGaariDays((days, live) => { gpsDays = new Map((days || []).filter(d => d.date).map(d => [d.date, d])); gpsLive = live; if (mounted && !cur) paint(); }, () => {});   // v2.162.0: 📍
+  if (!gpsUn && cloud?.listenGaariDays) gpsUn = cloud.listenGaariDays((days, live) => { gpsDays = new Map((days || []).filter(d => d.date).map(d => [d.date, d])); gpsLive = live; gpsSync(); if (mounted && !cur) paint(); }, () => {});   // v2.162.0: 📍
 }
 export function renderGaari() {
   mounted = true;
@@ -175,7 +175,16 @@ function lastEnd(beforeAt) {
   return v;
 }
 // 📍 phere ke GPS km = us din ke km ÷ us din ke phere (din ka jor wahi rehta — tanki ka hisaab poora)
-function gpsKm(p) { const d = gpsDays.get(p.date); return d && N(d.km) > 0 ? r2(N(d.km) / (phDay.get(p.date) || 1)) : 0; }
+// v2.177.0: 🐞 app GPS sirf 45 din parhti hai — purana phera 0 km na ho: din ka GPS ho to wohi (taza), warna phere mein likha `gpsKm`
+function gpsKm(p) { const d = gpsDays.get(p.date); return d && N(d.km) > 0 ? r2(N(d.km) / (phDay.get(p.date) || 1)) : N(p.gpsKm) > 0 ? r2(N(p.gpsKm)) : 0; }
+let gpsSyncAt = 0;
+function gpsSync() {   // sirf malik ki app: kal tak ke phere ka GPS km phere mein likho (badla ho to hi — 45 din tak taza, phir pakka)
+  if (!isOwner() || !cloud?.setGaariGpsKm || !gpsDays.size || !rows.length || Date.now() - gpsSyncAt < 60000) return; gpsSyncAt = Date.now();
+  const t = today();
+  for (const r of rows) { if (r.kind !== 'phera' || r.deleted || !r.date || r.date >= t) continue; const d = gpsDays.get(r.date); if (!d || !(N(d.km) > 0)) continue;
+    const live = r2(N(d.km) / (phDay.get(r.date) || 1)); if (Math.abs(live - N(r.gpsKm)) < 0.1) continue;
+    r.gpsKm = live; cloud.setGaariGpsKm(r.id, live).catch(() => { r.gpsKm = 0; }); }
+}
 function pc(p) {
   const B = p.bilties || [], K = p.kharche || [], D = p.diesel || [];
   const kiraya = B.reduce((s, b) => s + N(b.kiraya), 0), comm = B.reduce((s, b) => s + commOf(b), 0);

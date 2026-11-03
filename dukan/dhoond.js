@@ -70,7 +70,7 @@ function tokScore(e, t) {   // 0 = seedha · 0.5 = awaz se (dal = daal) · 1 = s
 // wapas: { hits, near } — hits = mile · near = "Shayad ye" (kuch na mile / 3 se kam mile to qareeb wale)
 export function smartFind(L, q, textOf, idOf, max = 400) {
   const toks = low(q).split(' ').filter(Boolean);
-  if (!toks.length) return { hits: L.slice(), near: [] };
+  if (!toks.length) return { hits: [], near: [] };   // v2.177.0: 🐞 sirf nishan / emoji likha = koi nahi (pehle SAARE items — website par hazaron tasveerein)
   const out = [];
   for (const it of L) {
     const e = entry(idOf(it), textOf(it)); let s = 0, ok = true;

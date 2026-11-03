@@ -1,5 +1,7 @@
 // =========================================================
-//  a4-print.js  v1.1 (2026-11-03 raat: malik — "ALEHDA screen · sirf us screen ki tasveer · phone number tasveer par · THERMAL par bhi option":
+//  a4-print.js  v1.2 (2026-11-03 bug safai: 🧾 thermal A4 ke peeche nahi rukti (HP na mile tab bhi) · A4 jo 30 min printer na mile = 'old' (app par 🖨 Dobara) ·
+//                 restart par 🧪 test page dobara nahi · chhapte waqt printer badle to bhi wahi printer (cur ki jagah pr))
+//              · v1.1 (2026-11-03 raat: malik — "ALEHDA screen · sirf us screen ki tasveer · phone number tasveer par · THERMAL par bhi option":
 //                 job.to 'th' = TM-T88IV parchi (NOOR TRADERS + tasveer (photo-print) + number BARA + waqt) · 'a4' = pehle jaisa (number app tasveer ki neeche patti mein likhti hai))
 //              · v1.0 (2026-11-03) — 🖨 APP KI TASVEER → HP (WiFi) printer par A4
 //  Malik: "printer apps ke saath connect karna hai — hum apps mein kisi saman ki pic add karein to us ka auto print nikle"
@@ -23,7 +25,7 @@ const http = require('http');
 const https = require('https');
 const path = require('path');
 const { execFile } = require('child_process');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47839, VER = '1.1';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47839, VER = '1.2';
 const TH_PRINTER = 'TM-T88IV';   // dukan ka thermal (pos-khata-sync wala naam)
 const OLD_MS = 30 * 60000, KEEP_MS = 7 * 864e5, SCAN_EVERY = 10 * 60000, ST_EVERY = 60000, BEAT = 5 * 60000;
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
@@ -397,7 +399,7 @@ function main() {
   const db = getFirestore(), B = db.collection('businesses').doc(BUSINESS_ID);
   const JOBS = B.collection('a4Jobs'), IMGS = B.collection('a4Img'), CFG = B.collection('blueAccess').doc('a4'), PCD = B.collection('blueAccess').doc('a4Pc');
   const TMP = path.join(DIR, 'a4tmp'); try { fs.mkdirSync(TMP, { recursive: true }); } catch {}
-  let cfg = {}, list = [], lastScan = 0, scanning = null, cur = null, st = null, stAt = 0, queue = [], busy = false, recent = [], lastPub = '', lastBeat = 0, err = '', lastTest = 0, lastScanReq = 0;
+  let cfg = {}, meta = new Map(), list = [], lastScan = 0, scanning = null, cur = null, st = null, stAt = 0, queue = [], busy = false, recent = [], lastPub = '', lastBeat = 0, err = '', lastTest = 0, lastScanReq = 0;
   const cap = () => Math.max(5, Math.min(500, Number(cfg.max) || 40));
   const over = () => { const h = Date.now() - 3600000; recent = recent.filter(t => t > h); return recent.length >= cap(); };
 
@@ -426,9 +428,9 @@ function main() {
     return scanning;
   }
   async function status() {
-    if (!cur) { st = null; return; }
-    if (cur.how === 'ipp') { try { cur.a = await ippAttrs(cur, 8000); cur.fmt = (cur.a['document-format-supported'] || cur.fmt || []).map(String); st = stateOf(cur.a); } catch { st = stateOf(null); } }
-    else { const w = (await winList().catch(() => [])).find(x => x.name === cur.name); st = !w ? { k: 'bad', t: '✕ Windows mein printer nahi mila' } : /offline|error|paperout|paper/i.test(w.wst) ? { k: 'bad', t: '⚠️ ' + w.wst } : { k: 'ok', t: '✅ Tayyar (Windows)' }; }
+    const c = cur; if (!c) { st = null; return; }   // v1.2: c = apna (beech mein cur badle to bhi)
+    if (c.how === 'ipp') { try { c.a = await ippAttrs(c, 8000); c.fmt = (c.a['document-format-supported'] || c.fmt || []).map(String); st = stateOf(c.a); } catch { st = stateOf(null); } }
+    else { const w = (await winList().catch(() => [])).find(x => x.name === c.name); st = !w ? { k: 'bad', t: '✕ Windows mein printer nahi mila' } : /offline|error|paperout|paper/i.test(w.wst) ? { k: 'bad', t: '⚠️ ' + w.wst } : { k: 'ok', t: '✅ Tayyar (Windows)' }; }
     stAt = Date.now();
   }
   const imgOf = async id => { const s = await IMGS.doc(id).get(); const u = s.exists ? String(s.data().img || '') : ''; const m = u.match(/^data:image\/jpe?g;base64,(.+)$/i); if (!m) throw Error('tasveer nahi mili'); return Buffer.from(m[1], 'base64'); };
@@ -443,55 +445,81 @@ function main() {
       return { id, ...d };
     });
   }
-  async function printSet(jobs, testBuf) {
+  async function printSet(jobs, testBuf, pr = cur) {   // v1.2: pr = shuru wala printer (beech mein scan / setting se cur badle to bhi wahi)
     const bufs = [];
     for (const j of jobs) bufs.push(testBuf || await imgOf(j.id));
     const copies = Math.max(1, Math.min(5, Number(jobs[0].copies) || Number(cfg.copies) || 1)), up = jobs.length === 2 ? 2 : 1, name = jobs.map(j => j.t || 'Tasveer').join(' + ').slice(0, 60);
     const files = bufs.map((b, i) => { const f = path.join(TMP, (jobs[i].id || 'test') + '.jpg'); fs.writeFileSync(f, b); return f; });
     try {
-      if (cur.how === 'win') { await winPrint(cur.name, files, { copies, up }); return 'win'; }
-      const F = cur.fmt || [], jpeg = F.includes('image/jpeg'), pdf = F.includes('application/pdf');
-      if (up === 2 && pdf) { await ippPrint(cur, pdfOf(bufs, 2), 'application/pdf', { copies, name }); return 'ipp-pdf'; }
-      if (up === 2 && cur.win) { await winPrint(cur.win, files, { copies, up }); return 'win'; }
-      if (up === 1 && jpeg) { try { await ippPrint(cur, bufs[0], 'image/jpeg', { copies, name }); return 'ipp'; } catch (e) { if (e.ipp !== 0x040A) throw e; } }
-      if (pdf) { try { await ippPrint(cur, pdfOf(bufs, up), 'application/pdf', { copies, name }); return 'ipp-pdf'; } catch (e) { if (e.ipp !== 0x040A) throw e; } }
+      if (pr.how === 'win') { await winPrint(pr.name, files, { copies, up }); return 'win'; }
+      const F = pr.fmt || [], jpeg = F.includes('image/jpeg'), pdf = F.includes('application/pdf');
+      if (up === 2 && pdf) { await ippPrint(pr, pdfOf(bufs, 2), 'application/pdf', { copies, name }); return 'ipp-pdf'; }
+      if (up === 2 && pr.win) { await winPrint(pr.win, files, { copies, up }); return 'win'; }
+      if (up === 1 && jpeg) { try { await ippPrint(pr, bufs[0], 'image/jpeg', { copies, name }); return 'ipp'; } catch (e) { if (e.ipp !== 0x040A) throw e; } }
+      if (pdf) { try { await ippPrint(pr, pdfOf(bufs, up), 'application/pdf', { copies, name }); return 'ipp-pdf'; } catch (e) { if (e.ipp !== 0x040A) throw e; } }
       if (process.platform !== 'win32') throw Error('printer JPEG / PDF nahi leta');
-      if (!cur.win) cur.win = await winAdd(cur);   // printer JPEG / PDF nahi leta → Windows ka driver (ek dafa)
-      await winPrint(cur.win, files, { copies, up }); return 'win';
+      if (!pr.win) pr.win = await winAdd(pr);   // printer JPEG / PDF nahi leta → Windows ka driver (ek dafa)
+      await winPrint(pr.win, files, { copies, up }); return 'win';
     } finally { for (const f of files) { try { fs.unlinkSync(f); } catch {} } }
+  }
+  async function metaOf(id) {   // v1.2: { to, t } — snapshot se (to kabhi nahi badalta), na ho to ek read
+    let m = meta.get(id); if (m) return m;
+    const p = await JOBS.doc(id).get().catch(() => null); if (!p || !p.exists) return null; const d = p.data() || {};
+    m = { to: String(d.to || 'a4'), t: p.updateTime ? p.updateTime.toMillis() : Number(d.at) || 0, st: d.status }; meta.set(id, m); return m;
+  }
+  async function ageOut(id) {   // v1.2: HP nahi mila aur A4 30 min purani = 'old' (app par 🖨 Dobara) — taza ho (Dobara dabaya) to kuch nahi
+    const ref = JOBS.doc(id);
+    return db.runTransaction(async tx => {
+      const s = await tx.get(ref); if (!s.exists) return true; const d = s.data(); if (d.status !== 'new') return true;
+      const t0 = s.updateTime ? s.updateTime.toMillis() : Number(d.at) || 0; if (Date.now() - t0 <= OLD_MS) { meta.set(id, { to: String(d.to || 'a4'), t: t0 }); return false; }
+      tx.update(ref, { status: 'old', err: 'A4 printer 30 min nahi mila — 🖨 Dobara dabao', pcAt: Date.now() }); return true;
+    });
   }
   async function work() {
     if (busy) return; busy = true;
     try {
+      let noPr = false;
       while (queue.length) {
-        const pk = await JOBS.doc(queue[0]).get().catch(() => null), to = pk && pk.exists ? String(pk.data().to || 'a4') : 'a4';
+        let i = 0;
+        if (noPr) {   // v1.2: 🐞 HP nahi mila — 🧾 thermal wali peeche na ruke (pehle saari ruk jaati thi)
+          i = -1;
+          for (let k = 0; k < queue.length; k++) {
+            const m = await metaOf(queue[k]);
+            if (!m || (m.st && m.st !== 'new')) { queue.splice(k--, 1); continue; }
+            if (m.to === 'th') { i = k; break; }
+            if (Date.now() - m.t > OLD_MS && await ageOut(queue[k]).catch(() => false)) { log('⌛ ' + queue[k] + ' — A4 printer nahi mila, 30 min purani = old'); queue.splice(k--, 1); }
+          }
+          if (i < 0) { if (queue.length) log('⏳ ' + queue.length + ' tasveer — printer nahi mila, 2 min baad dobara'); break; }
+        }
+        const m0 = await metaOf(queue[i]), to = m0 ? m0.to : 'a4';
         if (to === 'th') {   // 🧾 thermal — HP ki zaroorat nahi
-          const j = await claim(queue.shift()).catch(e => { log('⚠️ claim: ' + e.message); return null; }); if (!j) continue;
+          const j = await claim(queue.splice(i, 1)[0]).catch(e => { log('⚠️ claim: ' + e.message); return null; }); if (!j) continue;
           try { const b = await imgOf(j.id); await thermalPrint(b, j.ph, j.copies); recent.push(Date.now());
             await JOBS.doc(j.id).update({ status: 'done', doneAt: Date.now(), pr: TH_PRINTER, how: 'thermal', err: '' }).catch(() => {}); log(`🧾 ✅ ${j.t || j.id} → ${TH_PRINTER}`); }
           catch (e) { const m = String(e.message || e).slice(0, 160); await JOBS.doc(j.id).update({ status: 'failed', err: m, pcAt: Date.now() }).catch(() => {}); log(`🧾 ✕ ${j.t || j.id}: ${m}`); }
           continue;
         }
-        if (!cur) { await scan('job aaya'); if (!cur) { log('⏳ ' + queue.length + ' tasveer — printer nahi mila, 2 min baad dobara'); break; } }
+        if (!cur) { await scan('job aaya'); if (!cur) { noPr = true; continue; } }
+        const pr = cur;   // v1.2: is chhapai ka printer pakka
         const first = await claim(queue.shift()).catch(e => { log('⚠️ claim: ' + e.message); return null; }); if (!first) continue;
         const jobs = [first];
         if (Number(cfg.up) === 2) {
-          const twoOk = cur.how === 'win' || cur.win || (cur.fmt || []).includes('application/pdf');
+          const twoOk = pr.how === 'win' || pr.win || (pr.fmt || []).includes('application/pdf');
           if (twoOk) { const t = Date.now(); while (!queue.length && Date.now() - t < 15000) await new Promise(r => setTimeout(r, 500));
-            if (queue.length) { const p2 = await JOBS.doc(queue[0]).get().catch(() => null); if (p2 && p2.exists && String(p2.data().to || 'a4') !== 'th') { const s2 = await claim(queue.shift()).catch(() => null); if (s2) jobs.push(s2); } } }
+            if (queue.length) { const p2 = await metaOf(queue[0]); if (p2 && p2.to !== 'th') { const s2 = await claim(queue.shift()).catch(() => null); if (s2) jobs.push(s2); } } }
         }
         const t0 = Date.now();
         try {
-          const how = await printSet(jobs);
-          for (const j of jobs) { recent.push(Date.now()); await JOBS.doc(j.id).update({ status: 'done', doneAt: Date.now(), pr: cur.name.slice(0, 60), how, err: '' }).catch(() => {}); }
-          log(`✅ ${jobs.map(j => j.t || j.id).join(' + ')} → ${cur.name} (${how}, ${Date.now() - t0} ms)`);
+          const how = await printSet(jobs, null, pr);
+          for (const j of jobs) { recent.push(Date.now()); await JOBS.doc(j.id).update({ status: 'done', doneAt: Date.now(), pr: pr.name.slice(0, 60), how, err: '' }).catch(() => {}); }
+          log(`✅ ${jobs.map(j => j.t || j.id).join(' + ')} → ${pr.name} (${how}, ${Date.now() - t0} ms)`);
           if (err) { err = ''; await publish(true); }
         } catch (e) {
           const m = String(e.message || e).slice(0, 160);
           for (const j of jobs) await JOBS.doc(j.id).update({ status: 'failed', err: m, pcAt: Date.now() }).catch(() => {});
           log(`✕ ${jobs.map(j => j.t || j.id).join(' + ')}: ${m}`);
           err = m; await status().catch(() => {}); await publish(true);
-          if (/ECONN|EHOST|timeout|jawab/i.test(m)) cur = null;   // printer ghaib — agli dafa dobara dhoondo
+          if (/ECONN|EHOST|timeout|jawab/i.test(m) && cur === pr) cur = null;   // printer ghaib — agli dafa dobara dhoondo
         }
       }
     } finally { busy = false; }
@@ -499,7 +527,7 @@ function main() {
   async function testPage() {
     if (!cur) await scan('test page');
     if (!cur) { err = 'Test page: printer nahi mila'; await publish(true); return; }
-    try { const b = await testJpg(); const how = await printSet([{ id: 'test', t: 'Test page' }], b); err = ''; log('🧪 Test page → ' + cur.name + ' (' + how + ')'); }
+    const pr = cur; try { const b = await testJpg(); const how = await printSet([{ id: 'test', t: 'Test page' }], b, pr); err = ''; log('🧪 Test page → ' + pr.name + ' (' + how + ')'); }
     catch (e) { err = 'Test page: ' + String(e.message || e).slice(0, 140); log('✕ ' + err); }
     await status().catch(() => {}); await publish(true);
   }
@@ -517,8 +545,10 @@ function main() {
   lock.on('error', () => { console.log('a4-print pehle se chal raha hai — yeh copy band.'); process.exit(3); });
   lock.on('listening', async () => {
     log(`a4-print v${VER} shuru — 🖨 app ki tasveer → A4 printer`);
+    let cfgFirst = true;
     CFG.onSnapshot(s => {
       const prev = cfg; cfg = s.exists ? s.data() || {} : {};
+      if (cfgFirst) { cfgFirst = false; lastTest = Math.max(lastTest, Number(cfg.testAt) || 0); lastScanReq = Math.max(lastScanReq, Number(cfg.scanAt) || 0); }   // v1.2: 🐞 restart par purana 🧪 test page dobara nahi
       if (prev.pr !== cfg.pr || prev.ip !== cfg.ip) { cur = pick(cfg, list) || null; if (!cur || prev.ip !== cfg.ip) scan('setting badli').catch(() => {}); else status().then(() => publish(true)).catch(() => {}); }
       const sr = Number(cfg.scanAt) || 0; if (sr > lastScanReq) { lastScanReq = sr; if (Date.now() - sr < 10 * 60000) scan('malik ne kaha').catch(() => {}); }
       const tr = Number(cfg.testAt) || 0; if (tr > lastTest) { lastTest = tr; if (Date.now() - tr < 10 * 60000) testPage().catch(() => {}); }
@@ -527,7 +557,8 @@ function main() {
     lastTest = Math.max(lastTest, Number(cfg.testAt) || 0); lastScanReq = Math.max(lastScanReq, Number(cfg.scanAt) || 0);
     await scan('shuru').catch(e => log('⚠️ ' + e.message));
     JOBS.where('status', '==', 'new').onSnapshot(s => {
-      for (const d of s.docs) if (!queue.includes(d.id)) queue.push(d.id);
+      const ids = new Set(s.docs.map(d => d.id)); for (const k of [...meta.keys()]) if (!ids.has(k)) meta.delete(k);
+      for (const d of s.docs) { const x = d.data() || {}; meta.set(d.id, { to: String(x.to || 'a4'), t: d.updateTime ? d.updateTime.toMillis() : Number(x.at) || 0 }); if (!queue.includes(d.id)) queue.push(d.id); }
       work().catch(e => log('⚠️ ' + e.message));
     }, e => { log('⚠️ a4Jobs: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); });
     const tick = async () => {

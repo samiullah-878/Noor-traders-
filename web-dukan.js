@@ -14,8 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf, KHK, KH_NAME, netQuery } from './dukan/khula.js?v=2.176.0';
-import { smartFind } from './dukan/dhoond.js?v=2.176.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
+import { kindOf, KHK, KH_NAME, netQuery } from './dukan/khula.js?v=2.177.0';
+import { smartFind } from './dukan/dhoond.js?v=2.177.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -49,6 +49,7 @@ function base() {
     const k = String(r.id); let m = M.get(k);
     if (!m) { m = { id: r.id, n: String(r.name || '').trim(), c: r.cat || '', r: 0, u: r.uName || 'Pcs', s: 0, shop: false, pk: [] }; M.set(k, m); }
     if (!m.pk.length && Array.isArray(r.sb)) m.pk = r.sb.filter(x => Number(x?.q) > 0).map(x => [Number(x.q), Number(x.r) || 0]);   // 🌾 packet (sub-barcode) — dabba / tora ka khud wala faisla
+    if (!m.sb && Array.isArray(r.sb) && r.sb.length) m.sb = r.sb;   // v2.177.0: website ke packet (publish)
     m.s += Number(r.stock) || 0;
     if (!m.c && r.cat) m.c = r.cat;
     if (b === shopB && Number(r.rate) > 0) { m.r = Number(r.rate); m.shop = true; m.u = r.uName || m.u; }
@@ -114,6 +115,7 @@ export function webClose() {
   if (W.view !== 'list') { if (W.ai) W.ai.run = false; W.ai = null; W.view = 'list'; W.crop = null; paint(); return true; }
   try { d.close(); } catch { d.removeAttribute('open'); }
   if (un) { try { un(); } catch {} un = null; }
+  if (rkT) { clearTimeout(rkT); rkFlush(W); }   // v2.177.0: baqi rack save foran
   clearTimeout(wsT); W = null;
   return true;
 }
@@ -288,11 +290,14 @@ function rpSet(pid, arr) {
 }
 const nrm = s => String(s || '').toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, ' ').trim();
 const tks = s => nrm(s).split(' ').filter(w => w.length > 1);
+const SGC = new Map(), NTC = new Map(); let sgcN = -1, sgcAt = 0;   // v2.177.0: 🐞 har paint par 100 dabbe × 2000 items dobara — ab yaad (1 min / items badle to taza)
 function sugg(label, L) {   // AI ka label -> POS ke naam (lafz milao, size / brand) — sirf mashwara
+  if (L.length !== sgcN || Date.now() - sgcAt > 60000) { SGC.clear(); NTC.clear(); sgcN = L.length; sgcAt = Date.now(); }
+  const ck = String(label); if (SGC.has(ck)) return SGC.get(ck);
   const lt = tks(label); if (!lt.length) return [];
   const out = [];
-  for (const it of L) { const nt = tks(it.n); let sc = 0; for (const w of lt) { if (nt.includes(w)) sc += 1; else if (nt.some(t => (t.length >= 3 && w.startsWith(t)) || (w.length >= 3 && t.startsWith(w)))) sc += 0.6; } sc /= lt.length; if (sc >= 0.34) out.push([sc, it]); }
-  return out.sort((a, b) => b[0] - a[0]).slice(0, 3);
+  for (const it of L) { let nt = NTC.get(it.n); if (!nt) { nt = tks(it.n); NTC.set(it.n, nt); } let sc = 0; for (const w of lt) { if (nt.includes(w)) sc += 1; else if (nt.some(t => (t.length >= 3 && w.startsWith(t)) || (w.length >= 3 && t.startsWith(w)))) sc += 0.6; } sc /= lt.length; if (sc >= 0.34) out.push([sc, it]); }
+  const res = out.sort((a, b) => b[0] - a[0]).slice(0, 3); SGC.set(ck, res); return res;
 }
 const iou = (a, b) => { const x0 = Math.max(a[0], b[0]), y0 = Math.max(a[1], b[1]), x1 = Math.min(a[0] + a[2], b[0] + b[2]), y1 = Math.min(a[1] + a[3], b[1] + b[3]); const i = Math.max(0, x1 - x0) * Math.max(0, y1 - y0); return i / Math.max(1, a[2] * a[3] + b[2] * b[3] - i); };
 const u8b64 = u8 => { let s = ''; for (let i = 0; i < u8.length; i += 0x8000) s += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(s); };
@@ -499,14 +504,17 @@ let rkT = 0;
 function saveRacks() {
   W.rkDirty = true; W.rkSt = '⏳'; paint();
   clearTimeout(rkT);
-  rkT = setTimeout(async () => {
-    const w = W; if (!w) return;
+  const w0 = W; rkT = setTimeout(() => rkFlush(w0), 500);
+}
+async function rkFlush(w) {   // v2.177.0: 🐞 screen 0.5 sec mein band = rack badalna khoya — ab webClose bhi foran bhejta hai
+  rkT = 0; {
+    if (!w) return;
     const ids = [...w.rkIds]; w.rkIds.clear(); ids.forEach(id => w.rkWait.add(id));   // v2.156.0: har item ka ⏳ → ✅ / ✕
     try { await A.cloud.saveWebRacks(w.racks); w.rkSt = '✅'; ids.forEach(id => w.ok.add(id)); if (ids.length > 1) A.notice(`✅ ${num(ids.length)} items ka rack website par badal gaya`); }
     catch (e) { w.rkSt = '✕'; ids.forEach(id => w.err.set(id, 'Rack save nahi hua')); A.notice('❌ Racks save nahi hue: ' + (e.message || e)); }
     ids.forEach(id => w.rkWait.delete(id));
     w.rkDirty = false; if (W === w) paint();
-  }, 500);
+  }
 }
 function paintRacks() {
   const L = items() || [], rk = racksOf(L);
@@ -688,9 +696,15 @@ async function onSubmit(e) {
   }
 }
 function rpMoveRack(pid, k) { if (!W.racks.rp?.[pid]) return; W.racks.rp[pid] = { ...W.racks.rp[pid], k }; if (!W.racks.order.includes(k)) W.racks.order = [...racksOf(items() || []).map(r => r.k).filter(x => x !== k), k]; sheetClose(); saveRacks(); paint(); A.notice('🗂 Photo ab ' + rackName(k) + ' mein'); }
+// v2.177.0: 🐞 "Rates website par" packet (6th khana) mita deta tha — ab PC (sync-stock v4 webPacks) jaisa: Show ✓ wale (na hon to sab), rate 0 = tadad × rate, 8 tak
+function webPacks(m) {
+  const r2 = v => Math.round(Number(v) * 100) / 100, L = (m.sb || []).filter(x => Number(x?.q) > 0), S = L.some(x => x.s) ? L.filter(x => x.s) : L, seen = new Map();
+  for (const x of S) { const q = Math.round(Number(x.q) * 1000) / 1000; if (seen.has(q) || q <= 0) continue; const pr = Number(x.r) > 0 ? r2(x.r) : r2(q * m.r); if (pr > 0) seen.set(q, pr); }
+  return [...seen.entries()].sort((a, b) => a[0] - b[0]).slice(0, 8);
+}
 async function publish() {
   const B = base(); if (!B) { A.notice('⏳ Stock abhi load nahi hua'); return; }
-  const rows = B.sort((a, b) => Number(a.id) - Number(b.id)).map(m => [m.id, m.n, m.c, Math.round(m.r * 100) / 100, m.u]);
+  const rows = B.sort((a, b) => Number(a.id) - Number(b.id)).map(m => { const row = [m.id, m.n, m.c, Math.round(m.r * 100) / 100, m.u], pk = webPacks(m); if (pk.length) row.push(pk); return row; });
   try { await A.cloud.publishWebCat(rows); A.notice(`✅ ${num(rows.length)} items ke rates website par`); } catch (e) { A.notice('❌ ' + (e.message || e)); }
 }
 async function copyLink() { const url = WEB_URL(); try { await navigator.clipboard.writeText(url); A.notice('📋 Link copy ho gaya: ' + url); } catch { A.notice('🔗 ' + url); } }
