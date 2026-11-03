@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.173.0';
-import { liveLabelsHTML } from './barcode.js?v=2.173.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.173.1';
+import { liveLabelsHTML } from './barcode.js?v=2.173.1';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -699,13 +699,13 @@ export function stockRozChip() {
 export async function stockRozOpen(k) {
   if (!cloud) return; start();
   if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  if (isOwner() && !k) { try { (await import('./roz.js?v=2.173.0')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
+  if (isOwner() && !k) { try { (await import('./roz.js?v=2.173.1')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
   const L = rozLocs().filter(rozCan);
   if (!rozCfg().on) { notice('📋 Roz ki ginti malik ne band rakhi hai'); return; }
   if (!L.length) { notice('🔒 Roz ki ginti ki ijazat nahi (malik: Settings → Mulazim → 📋 Roz ki ginti)'); return; }
   const go = x => { try { window.ntRecentOpen?.({ open: { kind: 'stock', screen: 'roz', k: x } }); } catch { rozEnter(x); } };
   if (k || L.length === 1) { go(k || L[0].k); return; }
-  try { (await import('./roz.js?v=2.173.0')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
+  try { (await import('./roz.js?v=2.173.1')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
 }
 // roz.js ke liye andar ka saman (sirf parhna + wahi kaam jo buttons karte hain)
 export function stockRozApi() {
@@ -729,7 +729,7 @@ export function stockRozApi() {
 let farqMod = null;
 const farqCan = () => seeStock() && (isOwner() || can('stock.farq'));
 async function farqOpenNow() { if (!farqCan()) { notice('⚖️ Stock farq — ijazat nahi (malik se kahein)'); return; } start(true); if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  try { farqMod = farqMod || await import('./farq.js?v=2.173.0'); recentPush({ key: 'farq', icon: '⚖️', label: 'Stock farq', open: { kind: 'stock', screen: 'farq' } }); farqMod.farqOpen(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
+  try { farqMod = farqMod || await import('./farq.js?v=2.173.1'); recentPush({ key: 'farq', icon: '⚖️', label: 'Stock farq', open: { kind: 'stock', screen: 'farq' } }); farqMod.farqOpen(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
 // sab jagah (jo gini) ka asal farq — is round ki ginti
 function oxNet(id) { let net = 0, k = false, z = false, n = 0, pr = 0; for (const b of brInfo().branches) { const it = itemAt(b, id); if (!it) continue; const c = countOf(b, it); if (!c) continue; const f = r3(countedPcs(c) - Number(sysOf(c, it))); net += f; n++; if (f < -0.001) k = true; if (f > 0.001) z = true; pr = Number(it.prate) || pr; } return n ? { net: r3(net), rs: net * pr, both: k && z, n } : null; }
 function oxHTML(r, c, diff) {
@@ -781,7 +781,7 @@ function qtrGinti(b, id) {
     return Math.abs(f) > 0.0005 ? { f: r3(f), round } : null; } catch { return null; }
 }
 async function qtrGo(o) { if (!qtrCan()) { notice('⇄ Transfer — ijazat nahi (malik se kahein)'); return; } start(true); if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  try { qtrMod = qtrMod || await import('./qtr.js?v=2.173.0'); qtrMod.qtrOpen(qtrApi(), o); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
+  try { qtrMod = qtrMod || await import('./qtr.js?v=2.173.1'); qtrMod.qtrOpen(qtrApi(), o); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
 // jagah badli: sab se bara KAM (yahan maal kam = POS zyada) → sab se bari ZYADTI, tadad = dono mein chhoti
 function oxPair(id) {
   let k = null, z = null; for (const b of brInfo().branches) { const it = itemAt(b, id); if (!it) continue; const c = countOf(b, it); if (!c) continue; const f = r3(countedPcs(c) - Number(sysOf(c, it)));
@@ -2013,7 +2013,7 @@ document.addEventListener('input', e => { if (e.target.matches?.('[data-tr-note]
 //   koi update nahi; sirf malik ghalti par delete). Notes: posTransfers (PC transfer-dekho). Yahan AI nahi.
 // v2.118.0: 📦 tcGv = transferGive (dene wale ka item-war "de diya", server — rules 2.72) · tcAutoWait = larke ne sab ✓ kiye magar dene wale ka G abhi nahi aaya
 let tcGv = new Map(), tcGvStop = null, tcGvErr = '', tcGvWarned = false; const tcAutoWait = new Set();
-let tcSel = new Set(), tcView = 'nikle', tcDays = 1, tcDir = (() => { try { const v = localStorage.getItem('sam-tc-loc'); return v && v !== 'all' && Number(v) ? Number(v) : 'all'; } catch { return 'all'; } })(), tcChecks = new Map(), tcStop = null, tcErr = '', tcRes = null, tcBusy = false, tcFarq = false, tcOpen = new Set(), tcCode = '', tcBack = false;   // v2.105.6: tcBack = list se 📄 / chip se note khula (← Wapas list)
+let tcSel = new Set(), tcView = 'nikle', tcDays = 1, tcDir = (() => { try { const v = localStorage.getItem('sam-tc-loc'); return v && v !== 'all' && Number(v) ? Number(v) : 'all'; } catch { return 'all'; } })(), tcChecks = new Map(), tcStop = null, tcErr = '', tcRes = null, tcBusy = false, tcFarq = false, tcOpen = new Set(), tcCode = '', tcBack = false, tcFromTh = false;   // v2.105.6: tcBack = list se 📄 / chip se note khula (← Wapas list)
 let auditOf = null, nameOf = () => '', deviceOf = () => '';
 const TC_LATE = 120 * 60000;
 const tcBase = t => String(t?.id || ('T' + t?.transferId));
@@ -2268,7 +2268,7 @@ function tcScanHTML() {
       : `<div class="tc-btns"><button type="button" class="tc-ok" data-tc-ok="1"${tcBusy || (tcNeedAll() && !tcTkAll(t)) ? ' disabled' : ''}>${tcBusy ? '⏳ Save…' : tcNeedAll() && !tcTkAll(t) ? `☐ Pehle sab gin kar ✓ (${num((t.lines || []).length - tcTkOf(t).size)} baqi)` : '✓ Maal poora mila'}</button><button type="button" class="tc-farq" data-tc-farq="1"${tcBusy ? ' disabled' : ''}>⚠️ Farq hai</button></div>`}
       <p class="tc-warn">Save ke baad yeh check <b>koi badal nahi sakta</b>. Pehle maal gin lein.</p></div>`; }
   const more = r?.t ? tcNoteMore(r.t, r.type !== 'open', r.type === 'nogive') : '';   // nogive: tick ka button upar natije mein — steps dobara nahi
-  if (tcBack && r?.t) return `<button type="button" class="tc-back2" data-tc-back="1">← Wapas list</button>${res}${more}`;   // v2.105.6: list se khula = sirf note (scanner nahi)
+  if (tcBack && r?.t) return `<button type="button" class="tc-back2" data-tc-back="1">${tcFromTh ? '← Wapas transfer notes' : '← Wapas list'}</button>${res}${more}`;   // v2.105.6: list se khula = sirf note (scanner nahi)
   return `<div class="tc-scan"><button type="button" class="tc-cam" data-tc-cam="1">${camMissing() ? '🔫 Scanner gun se scan karein' : '📷 Camera se barcode scan'}</button><small>Ya scanner gun chalayein / parchi ka number neeche likhein</small></div>
     <form class="tc-inp" data-tc-form="1"><input data-tc-code="1" inputmode="numeric" autocomplete="off" enterkeyhint="go" placeholder="Transfer note number / barcode" value="${esc(tcCode)}"><button type="submit">✓</button></form>
     ${res}${more}
@@ -2309,7 +2309,7 @@ window.addEventListener?.('hashchange', () => tcHashGo());
 setTimeout(() => tcHashGo(), 2500);
 export function openTransferCheck(view) {
   const d = $('dialog'); if (!d) return;
-  tcStart(); if (view) tcView = view; recentPush({ key: 'tc', icon: '🧾', label: 'Transfer check', open: { kind: 'stock', screen: 'check', view: tcView } });
+  tcStart(); tcFromTh = false; if (view) tcView = view; recentPush({ key: 'tc', icon: '🧾', label: 'Transfer check', open: { kind: 'stock', screen: 'check', view: tcView } });
   d.classList.remove('search-dialog'); d.classList.add('full-dialog');
   $('dialogTitle').textContent = '🧾 Transfer check';
   $('dialogBody').innerHTML = tcHTML();
@@ -2388,7 +2388,7 @@ document.addEventListener('click', e => {
   if (e.target.closest?.('.tc-ck,.tc-lck')) return;   // checkbox: change par
   const sh = e.target.closest?.('[data-tc-show]'); if (sh) { e.preventDefault(); tcShow(sh.dataset.tcShow); return; }   // v2.105.6
   const tg = e.target.closest?.('[data-tc-gtk]'); if (tg) { e.preventDefault(); const [k, i, on] = tg.dataset.tcGtk.split('|'), tt = tcAll().find(x => tcKey(x) === k); if (!tt) return; tcGTkSet(tt, Number(i), on === '1'); tcPaint(); return; }
-  if (e.target.closest?.('[data-tc-back]')) { tcView = 'nikle'; tcRes = null; tcCode = ''; tcFarq = false; tcBack = false; tcPaint(); return; }
+  if (e.target.closest?.('[data-tc-back]')) { const th = tcFromTh; tcView = 'nikle'; tcRes = null; tcCode = ''; tcFarq = false; tcBack = false; tcFromTh = false; if (th) { try { $('dialog')?.close(); } catch {} return; } tcPaint(); return; }   // v2.173.1: Transfer notes se khula = wapas wahi list
   const ti = e.target.closest?.('[data-tc-itk]'); if (ti) { e.preventDefault(); const [k, i, st] = ti.dataset.tcItk.split('|'), tt = tcAll().find(x => tcKey(x) === k); if (!tt) return; tcTkSet(tt, Number(i), st); tcPaint(); return; }
   const ta = e.target.closest?.('[data-tc-tka]'); if (ta) { const k = ta.dataset.tcTka, t = tcAll().find(x => tcKey(x) === k); if (!t) return; const m = tcTk(), all = tcTkAll(t); m.delete(k); m.set(k, all ? new Set() : new Set((t.lines || []).map((_, i) => i))); tcTkSave(); tcPaint(); return; }
   const t = e.target.closest?.('[data-tc-view],[data-tc-d],[data-tc-dir],[data-tc-open],[data-tc-cam],[data-tc-retry],[data-tc-ok],[data-tc-farq],[data-tc-fback],[data-tc-fsave],[data-tc-del],[data-tc-bulk],[data-tc-selclear],[data-tc-give],[data-tc-giver],[data-tc-gxadd],[data-tc-gcancel],[data-tc-gsave]'); if (!t) return;
@@ -2403,7 +2403,7 @@ document.addEventListener('click', e => {
     const v = l.join('|'); cloud.setTcGiver(v).then(() => { itemCfg = { ...itemCfg, tcGiver: v }; tcGEd = null; notice('📦 Godam wale: ' + l.join(', ')); tcPaint(); }).catch(er => notice('Nahi hua: ' + (er?.message || er) + (/permission/i.test(String(er?.message || er)) ? ' — rules 2.58 upload karein' : ''))); return; }
   if (d.tcBulk != null) { tcBulk(); return; }
   if (d.tcSelclear != null) { tcSel.clear(); tcPaint(); return; }
-  if (d.tcView) { tcView = d.tcView; tcBack = false; if (tcView === 'scan' && tcRes?.type !== 'open') tcRes = null; }
+  if (d.tcView) { tcView = d.tcView; tcBack = false; tcFromTh = false; if (tcView === 'scan' && tcRes?.type !== 'open') tcRes = null; }
   else if (d.tcD) tcDays = Number(d.tcD);
   else if (d.tcDir) { tcDir = d.tcDir === 'all' || !Number(d.tcDir) ? 'all' : Number(d.tcDir); try { localStorage.setItem('sam-tc-loc', String(tcDir)); } catch {} }   // v2.133.5: jagah yaad
   else if (d.tcOpen) { if (tcOpen.has(d.tcOpen)) tcOpen.delete(d.tcOpen); else tcOpen.add(d.tcOpen); }
@@ -5116,8 +5116,7 @@ export function renderTransferHub(canDo = () => true) {
 document.addEventListener('click', e => { const b = e.target.closest?.('[data-th-rp],[data-th],[data-th-reg],[data-th-tc],[data-th-prn],[data-th-edit],[data-th-cancel],[data-th-g]'); if (!b) return; const d = b.dataset;
   if (d.thRp) { thRpOpen(d.thRp); return; }   // v2.133.6: 🖨 dobara print chip
   if (d.thG != null) { const g = Number(d.thG) || 0; thG = thG === g ? 0 : g; rerender(); if (thG) setTimeout(() => document.querySelector('.thg-pill')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }), 80); return; }   // v2.105.8: 🏬
-  if (d.thTc) { tcDays = Number(d.thD) === 2 ? 2 : 1; tcDir = 'all'; tcOpen.add(d.thTc); openTransferCheck('nikle');   // v2.99.68: note par tap = us ka check
-    setTimeout(() => { const el = [...document.querySelectorAll('[data-tc-open]')].find(x => x.dataset.tcOpen === d.thTc); if (el) { el.scrollIntoView({ block: 'center' }); el.closest('.tc-n')?.classList.add('tc-flash'); } }, 500); return; }
+  if (d.thTc) { openTransferCheck('nikle'); tcFromTh = true; tcShow(d.thTc); return; }   // v2.173.1: note par tap = SIRF usi note ki khirki (pehle bara card dhoondta tha jo v2.105.6 se nahi — sab notes ki ikathi list khul jati thi)
   if (d.thPrn || d.thEdit || d.thCancel) { thAct(d, b); return; }
   const k = d.th || 'reg';
   if (k === 'bc' || k === 'irep' || k === 'larka') { try { window.ntFromTransfer?.(k === 'bc' ? 'barcode' : k); } catch {} return; }   // v2.111.0: ‹ wapas = Transfer
@@ -5260,8 +5259,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.173.0';
-import { recentPush } from './recent.js?v=2.173.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.173.1';
+import { recentPush } from './recent.js?v=2.173.1';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)
