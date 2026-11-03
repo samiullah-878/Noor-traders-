@@ -7052,3 +7052,20 @@ html body #dialogBody .a4-act .a4-chip{min-height:28px!important;padding:0 10px!
 html body #dialogBody .a4-empty{padding:14px;text-align:center;border:1.5px dashed #cbd5e1;border-radius:14px;margin:0}
 html.dk body #dialogBody .a4-card,html.dk body button.a4-pr{background:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.12)!important}html.dk body #dialogBody .a4-tx b,html.dk body button.a4-pr{color:#e6edf7!important}html.dk body .a4-chip{background:rgba(255,255,255,.07)!important;color:#dbe6ff!important;border-color:rgba(255,255,255,.18)!important}
 html body .a4-ks{flex-wrap:wrap!important;overflow:visible!important}
+/* v2.175.0: 🖨 A4 Print — alag screen (number + kahan + 📷 / 🖼) */
+html body #dialogBody .a4-all{display:flex;flex-direction:column;gap:10px;min-width:0}
+html body #dialogBody .a4-top{display:flex;flex-direction:column;gap:6px;min-width:0}
+html body #dialogBody .a4-pad{display:flex;flex-direction:column;gap:9px;padding:12px;border-radius:18px;background:linear-gradient(180deg,#f7f9ff,#eef3ff);border:1px solid #d6e0f5;box-shadow:0 8px 22px -18px rgba(34,59,109,.7);min-width:0}
+html body #dialogBody .a4-num{display:flex;flex-direction:column;gap:4px;margin:0;font-size:13px;font-weight:800;color:#223b6d}
+html body #dialogBody .a4-num small{font-weight:500;color:#64748b;font-size:11px}
+html body #dialogBody .a4-numr{display:flex;gap:6px;align-items:center;min-width:0}
+html body #dialogBody .a4-numr input{flex:1;min-width:0;min-height:44px;border-radius:13px;padding:0 12px;font-size:19px;font-weight:800;letter-spacing:.5px;border:1.5px solid #c7d4f5;background:#fff;color:#0b2545}
+html body #dialogBody .a4-x{min-width:38px!important;min-height:38px!important;padding:0!important;border-radius:999px!important;background:#fff!important;border:1px solid #fecdd3!important;color:#be123c!important;font-weight:800;box-shadow:none!important;margin:0!important;width:auto!important}
+html body #dialogBody .a4-to{display:flex;gap:6px;flex-wrap:wrap}
+html body #dialogBody button.a4-tc{min-height:34px!important;padding:0 13px!important;border-radius:999px!important;border:1px solid #c7d4f5!important;background:#fff!important;color:#223b6d!important;font-size:12.5px!important;font-weight:800;white-space:nowrap;box-shadow:none!important;margin:0!important;width:auto!important}
+html body #dialogBody button.a4-tc.is-in{background:linear-gradient(180deg,#2c4a85,#223b6d)!important;color:#fff!important;border-color:#223b6d!important;box-shadow:0 4px 12px -7px rgba(34,59,109,.8)!important}
+html body #dialogBody .a4-big{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+html body #dialogBody .a4-pick{display:flex;align-items:center;justify-content:center;gap:6px;min-height:46px;border-radius:14px;font-size:15px;font-weight:800;color:#fff;cursor:pointer;background:linear-gradient(180deg,#16a34a,#15803d);box-shadow:0 8px 18px -12px rgba(21,128,61,.9);margin:0;user-select:none}
+html body #dialogBody .a4-pick+.a4-pick{background:linear-gradient(180deg,#2c4a85,#223b6d);box-shadow:0 8px 18px -12px rgba(34,59,109,.9)}
+html body #dialogBody .a4-pick:active{transform:scale(.98)}
+html.dk body #dialogBody .a4-pad{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.12)}html.dk body #dialogBody .a4-numr input,html.dk body #dialogBody button.a4-tc:not(.is-in){background:rgba(255,255,255,.07)!important;color:#e6edf7!important;border-color:rgba(255,255,255,.18)!important}html.dk body #dialogBody .a4-num{color:#dbe6ff}

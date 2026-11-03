@@ -1,5 +1,7 @@
 // =========================================================
-//  a4-print.js  v1.0 (2026-11-03) — 🖨 APP KI HAR TASVEER → HP (WiFi) printer par A4
+//  a4-print.js  v1.1 (2026-11-03 raat: malik — "ALEHDA screen · sirf us screen ki tasveer · phone number tasveer par · THERMAL par bhi option":
+//                 job.to 'th' = TM-T88IV parchi (NOOR TRADERS + tasveer (photo-print) + number BARA + waqt) · 'a4' = pehle jaisa (number app tasveer ki neeche patti mein likhti hai))
+//              · v1.0 (2026-11-03) — 🖨 APP KI TASVEER → HP (WiFi) printer par A4
 //  Malik: "printer apps ke saath connect karna hai — hum apps mein kisi saman ki pic add karein to us ka auto print nikle"
 //         · printer = WiFi HP · "jo picture upload karein" (sab tasveerein).
 //
@@ -21,7 +23,8 @@ const http = require('http');
 const https = require('https');
 const path = require('path');
 const { execFile } = require('child_process');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47839, VER = '1.0';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47839, VER = '1.1';
+const TH_PRINTER = 'TM-T88IV';   // dukan ka thermal (pos-khata-sync wala naam)
 const OLD_MS = 30 * 60000, KEEP_MS = 7 * 864e5, SCAN_EVERY = 10 * 60000, ST_EVERY = 60000, BEAT = 5 * 60000;
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 
@@ -298,7 +301,7 @@ Write-Output 'OK'
 function psFile(name, body) { const f = path.join(DIR, name); try { const want = '﻿' + body; if (!fs.existsSync(f) || fs.readFileSync(f, 'utf8') !== want) fs.writeFileSync(f, want, 'utf8'); } catch {} return f; }
 function ps(name, body, args = [], ms = 60000) {
   return new Promise(res => execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', psFile(name, body), ...args.map(String)], { timeout: ms, windowsHide: true, maxBuffer: 4 << 20 },
-    (e, out, er) => res({ ok: !e, out: String(out || '').trim(), err: String((e && e.message) || er || '').trim() })));
+    (e, out, er) => res({ ok: !e, out: String(out || '').trim(), err: String(String(er || '').trim() || (e && e.message) || '').trim() })));
 }
 const SKIP_WIN = /microsoft print to pdf|xps|onenote|fax|send to|adobe pdf|foxit|cutepdf|anydesk|tm-t\d|tm-t88|epson tm|pos-?\d|thermal|receipt|xprinter|tsc |tsc_|zebra|godex|label|barcode|bixolon|rongta|sewoo/i;
 async function winList() {
@@ -325,6 +328,54 @@ async function testJpg() {
   return fs.readFileSync(f);
 }
 
+// ---------- 🧾 THERMAL parchi (TM-T88IV) — tasveer + number ----------
+const RAW_PS = String.raw`param([string]$Printer, [string]$Bin)
+$ErrorActionPreference='Stop'
+$bytes=[System.IO.File]::ReadAllBytes($Bin)
+$dll=Join-Path (Split-Path -Parent $MyInvocation.MyCommand.Path) 'RawCached.dll'
+if(!(Test-Path $dll)){ Add-Type -TypeDefinition @"
+using System;using System.IO;using System.Runtime.InteropServices;
+public class RawCached{
+ [StructLayout(LayoutKind.Sequential,CharSet=CharSet.Unicode)] public struct DI{[MarshalAs(UnmanagedType.LPWStr)]public string n;[MarshalAs(UnmanagedType.LPWStr)]public string o;[MarshalAs(UnmanagedType.LPWStr)]public string t;}
+ [DllImport("winspool.Drv",EntryPoint="OpenPrinterW",SetLastError=true,CharSet=CharSet.Unicode)] public static extern bool OpenPrinter(string p,out IntPtr h,IntPtr d);
+ [DllImport("winspool.Drv",EntryPoint="ClosePrinter")] public static extern bool ClosePrinter(IntPtr h);
+ [DllImport("winspool.Drv",EntryPoint="StartDocPrinterW",SetLastError=true,CharSet=CharSet.Unicode)] public static extern bool StartDocPrinter(IntPtr h,int l,ref DI di);
+ [DllImport("winspool.Drv",EntryPoint="EndDocPrinter")] public static extern bool EndDocPrinter(IntPtr h);
+ [DllImport("winspool.Drv",EntryPoint="StartPagePrinter")] public static extern bool StartPagePrinter(IntPtr h);
+ [DllImport("winspool.Drv",EntryPoint="EndPagePrinter")] public static extern bool EndPagePrinter(IntPtr h);
+ [DllImport("winspool.Drv",EntryPoint="WritePrinter")] public static extern bool WritePrinter(IntPtr h,IntPtr b,int c,out int w);
+ public static void Send(string printer,byte[] data,string doc){IntPtr h;if(!OpenPrinter(printer,out h,IntPtr.Zero))throw new Exception("printer nahi mila: "+printer);
+  DI di=new DI();di.n=doc;di.t="RAW";StartDocPrinter(h,1,ref di);StartPagePrinter(h);
+  IntPtr p=Marshal.AllocCoTaskMem(data.Length);Marshal.Copy(data,0,p,data.Length);int w;WritePrinter(h,p,data.Length,out w);
+  Marshal.FreeCoTaskMem(p);EndPagePrinter(h);EndDocPrinter(h);ClosePrinter(h);}
+}
+"@ -OutputAssembly $dll }
+Add-Type -Path $dll
+[RawCached]::Send($Printer,$bytes,'A4 screen photo')
+Write-Output 'OK'
+`;
+const phClean = v => String(v || '').replace(/[^0-9+\-() ]/g, '').replace(/\s+/g, ' ').trim().slice(0, 24);
+// parchi: NOOR TRADERS · tasveer (photo-print, poori chaurai, 8 cm tak, kaat-na nahi) · number BARA (2x) · waqt · kaato
+function thermalBytes(jpg, ph, copies = 1) {
+  let PH = null; try { PH = require('./photo-print.js'); } catch {}
+  const ESC = '\x1b', GS = '\x1d', p = phClean(ph), t = new Date();
+  const photo = PH && PH.photoRaster ? PH.photoRaster('data:image/jpeg;base64,' + jpg.toString('base64'), 512, 640, { crop: 0 }) : '';
+  if (!photo) throw Error('tasveer thermal ke liye nahi bani');
+  let one = ESC + '@' + ESC + 'a\x01' + ESC + 'E\x01' + 'NOOR TRADERS' + ESC + 'E\x00' + '\r\n' + photo + ESC + 'a\x01';
+  if (p) one += GS + '!\x11' + ESC + 'E\x01' + p + ESC + 'E\x00' + GS + '!\x00' + '\r\n';
+  one += t.toLocaleDateString('en-GB') + ' ' + t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) + '\r\n\r\n' + GS + 'V\x42\x00';
+  return Buffer.from(one.repeat(Math.max(1, Math.min(3, Number(copies) || 1))), 'latin1');
+}
+async function thermalPrint(jpg, ph, copies) {
+  if (process.platform !== 'win32') throw Error('thermal sirf Windows PC par');
+  const bin = path.join(DIR, 'a4tmp', 'th-' + Date.now() + '.bin'); fs.mkdirSync(path.dirname(bin), { recursive: true });
+  fs.writeFileSync(bin, thermalBytes(jpg, ph, copies));
+  try {
+    const r = await ps('a4-raw.ps1', RAW_PS, ['-Printer', TH_PRINTER, '-Bin', bin], 45000);
+    if (!r.out.includes('OK')) throw Error(('Thermal: ' + (r.err || r.out || 'print nahi hua').split(/\r?\n/)[0]).slice(0, 160));
+  } finally { try { fs.unlinkSync(bin); } catch {} }
+}
+
 // ---------- kaun sa printer ----------
 // cfg.pr = app mein chuna (id) · na ho = HP wala WiFi (IPP) → HP Windows → akela IPP
 function pick(cfg, L) {
@@ -336,7 +387,7 @@ function pick(cfg, L) {
 const pubOf = p => ({ id: p.id, how: p.how, name: p.name, ip: p.ip || '', ...(p.how === 'ipp' ? { fmt: (p.fmt || []).filter(f => /jpeg|pdf|urf|pwg|pclm/i.test(f)).slice(0, 6).join(' '), win: p.win || '' } : { drv: p.drv || '', wst: p.wst || '' }) });
 
 if (require.main === module) main();
-module.exports = { ippEncode, ippDecode, ippAttrs, ippPrint, describeIpp, jpegSize, pdfOf, stateOf, lanHosts, pick, pubOf, VT, PS_PRINT, PS_LIST, PS_ADD, PS_TEST };
+module.exports = { thermalBytes, phClean, ippEncode, ippDecode, ippAttrs, ippPrint, describeIpp, jpegSize, pdfOf, stateOf, lanHosts, pick, pubOf, VT, PS_PRINT, PS_LIST, PS_ADD, PS_TEST };
 
 function main() {
   const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(DIR, 'a4-print.alive'), w = () => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }; w(); setInterval(w, 30000); return { guard: fn => fn }; } })();
@@ -376,7 +427,7 @@ function main() {
   }
   async function status() {
     if (!cur) { st = null; return; }
-    if (cur.how === 'ipp') { try { cur.a = await ippAttrs(cur, 8000); st = stateOf(cur.a); } catch { st = stateOf(null); } }
+    if (cur.how === 'ipp') { try { cur.a = await ippAttrs(cur, 8000); cur.fmt = (cur.a['document-format-supported'] || cur.fmt || []).map(String); st = stateOf(cur.a); } catch { st = stateOf(null); } }
     else { const w = (await winList().catch(() => [])).find(x => x.name === cur.name); st = !w ? { k: 'bad', t: '✕ Windows mein printer nahi mila' } : /offline|error|paperout|paper/i.test(w.wst) ? { k: 'bad', t: '⚠️ ' + w.wst } : { k: 'ok', t: '✅ Tayyar (Windows)' }; }
     stAt = Date.now();
   }
@@ -413,12 +464,21 @@ function main() {
     if (busy) return; busy = true;
     try {
       while (queue.length) {
+        const pk = await JOBS.doc(queue[0]).get().catch(() => null), to = pk && pk.exists ? String(pk.data().to || 'a4') : 'a4';
+        if (to === 'th') {   // 🧾 thermal — HP ki zaroorat nahi
+          const j = await claim(queue.shift()).catch(e => { log('⚠️ claim: ' + e.message); return null; }); if (!j) continue;
+          try { const b = await imgOf(j.id); await thermalPrint(b, j.ph, j.copies); recent.push(Date.now());
+            await JOBS.doc(j.id).update({ status: 'done', doneAt: Date.now(), pr: TH_PRINTER, how: 'thermal', err: '' }).catch(() => {}); log(`🧾 ✅ ${j.t || j.id} → ${TH_PRINTER}`); }
+          catch (e) { const m = String(e.message || e).slice(0, 160); await JOBS.doc(j.id).update({ status: 'failed', err: m, pcAt: Date.now() }).catch(() => {}); log(`🧾 ✕ ${j.t || j.id}: ${m}`); }
+          continue;
+        }
         if (!cur) { await scan('job aaya'); if (!cur) { log('⏳ ' + queue.length + ' tasveer — printer nahi mila, 2 min baad dobara'); break; } }
         const first = await claim(queue.shift()).catch(e => { log('⚠️ claim: ' + e.message); return null; }); if (!first) continue;
         const jobs = [first];
         if (Number(cfg.up) === 2) {
           const twoOk = cur.how === 'win' || cur.win || (cur.fmt || []).includes('application/pdf');
-          if (twoOk) { const t = Date.now(); while (!queue.length && Date.now() - t < 15000) await new Promise(r => setTimeout(r, 500)); if (queue.length) { const s2 = await claim(queue.shift()).catch(() => null); if (s2) jobs.push(s2); } }
+          if (twoOk) { const t = Date.now(); while (!queue.length && Date.now() - t < 15000) await new Promise(r => setTimeout(r, 500));
+            if (queue.length) { const p2 = await JOBS.doc(queue[0]).get().catch(() => null); if (p2 && p2.exists && String(p2.data().to || 'a4') !== 'th') { const s2 = await claim(queue.shift()).catch(() => null); if (s2) jobs.push(s2); } } }
         }
         const t0 = Date.now();
         try {
