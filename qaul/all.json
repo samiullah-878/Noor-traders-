@@ -1,0 +1,602 @@
+[
+{
+"n": 1,
+"q": "ہر چیز کی اصل قیمت وہ محنت اور مشقت ہے جو اسے حاصل کرنے میں لگتی ہے۔",
+"a": "ایڈم اسمتھ",
+"e": "The real price of every thing is the toil and trouble of acquiring it."
+},
+{
+"n": 2,
+"q": "کفایت شعاری خود ایک بڑی آمدنی ہے۔",
+"a": "سسرو",
+"e": "Thrift is a great income."
+},
+{
+"n": 3,
+"q": "عادت کی زنجیریں اتنی ہلکی ہوتی ہیں کہ محسوس نہیں ہوتیں، یہاں تک کہ اتنی مضبوط ہو جاتی ہیں کہ ٹوٹ نہیں سکتیں۔",
+"a": "سیموئل جانسن",
+"e": "The chains of habit are generally too small to be felt till they are too strong to be broken."
+},
+{
+"n": 4,
+"q": "دیانت داری، دانائی کی کتاب کا پہلا باب ہے۔",
+"a": "تھامس جیفرسن",
+"e": "Honesty is the first chapter in the book of wisdom."
+},
+{
+"n": 5,
+"q": "بڑی بڑی چیزیں چھوٹی شروعات سے ہی پروان چڑھتی ہیں۔",
+"a": "جان ڈرائیڈن",
+"e": "Mighty things from small beginnings grow."
+},
+{
+"n": 6,
+"q": "کتنے غریب ہیں وہ لوگ جن کے پاس صبر نہیں!",
+"a": "ولیم شیکسپیئر",
+"e": "How poor are they that have not patience!"
+},
+{
+"n": 7,
+"q": "محنت، محنت اور محنت — یہی اصل بات ہے۔",
+"a": "ابراہم لنکن",
+"e": "Work, work, work, is the main thing."
+},
+{
+"n": 8,
+"q": "بہترین بدلہ یہ ہے کہ تم زیادتی کرنے والے جیسے نہ بنو۔",
+"a": "مارکس اوریلیس",
+"e": "The best way of avenging yourself is not to become like the wrongdoer."
+},
+{
+"n": 9,
+"q": "جاننا کافی نہیں، اسے برتنا بھی ہے؛ چاہنا کافی نہیں، کر کے دکھانا بھی ہے۔",
+"a": "گوئٹے",
+"e": "Knowing is not enough; we must apply. Willing is not enough; we must do."
+},
+{
+"n": 10,
+"q": "ایک منٹ دیر سے پہنچنے سے تین گھنٹے پہلے پہنچ جانا بہتر ہے۔",
+"a": "ولیم شیکسپیئر",
+"e": "Better three hours too soon than a minute too late."
+},
+{
+"n": 11,
+"q": "صرف محنتی ہونا کافی نہیں، چیونٹیاں بھی محنتی ہیں؛ سوال یہ ہے کہ تم محنت کس کام کے لیے کر رہے ہو؟",
+"a": "ہنری ڈیوڈ تھورو",
+"e": "It is not enough to be industrious; so are the ants. What are you industrious about?"
+},
+{
+"n": 12,
+"q": "پیسہ ہاتھ میں آنے سے پہلے اسے خرچ مت کرو۔",
+"a": "تھامس جیفرسن",
+"e": "Never spend your money before you have it."
+},
+{
+"n": 13,
+"q": "جو درست نہ ہو وہ مت کرو، اور جو سچ نہ ہو وہ مت کہو۔",
+"a": "مارکس اوریلیس",
+"e": "If it is not right, do not do it; if it is not true, do not say it."
+},
+{
+"n": 14,
+"q": "بادلوں کے پیچھے سورج اب بھی چمک رہا ہے؛ ہر زندگی میں کچھ نہ کچھ بارش ضرور ہوتی ہے۔",
+"a": "ہنری واڈزورتھ لانگ فیلو",
+"e": "Behind the clouds is the sun still shining; into each life some rain must fall."
+},
+{
+"n": 15,
+"q": "سچ بولو تو کچھ یاد رکھنے کی ضرورت نہیں پڑتی۔",
+"a": "مارک ٹوین",
+"e": "If you tell the truth you don't have to remember anything."
+},
+{
+"n": 16,
+"q": "خوش نصیب ہے وہ جسے اپنا کام مل گیا، اسے کسی اور نعمت کی طلب نہیں ہونی چاہیے۔",
+"a": "ٹامس کارلائل",
+"e": "Blessed is he who has found his work; let him ask no other blessedness."
+},
+{
+"n": 17,
+"q": "مالک کی ایک نظر اس کے دونوں ہاتھوں سے زیادہ کام کرتی ہے۔",
+"a": "بنجمن فرینکلن",
+"e": "The eye of a master will do more work than both his hands."
+},
+{
+"n": 18,
+"q": "جو ایک دن میں امیر بننا چاہتا ہے، وہ ایک سال میں برباد ہو جاتا ہے۔",
+"a": "لیونارڈو ڈاونچی",
+"e": "He who wishes to be rich in a day will be hanged in a year."
+},
+{
+"n": 19,
+"q": "دوستی ایک گھنا سایہ دار درخت ہے۔",
+"a": "سیموئل ٹیلر کولرج",
+"e": "Friendship is a sheltering tree."
+},
+{
+"n": 20,
+"q": "ہم جیتے کس لیے ہیں، اگر ایک دوسرے کی زندگی آسان بنانے کے لیے نہیں؟",
+"a": "جارج ایلیٹ",
+"e": "What do we live for, if it is not to make life less difficult to each other?"
+},
+{
+"n": 21,
+"q": "اپنے آپ پر بھروسا رکھو؛ ہر دل اسی فولادی تار کے ساتھ دھڑکتا ہے۔",
+"a": "رالف والڈو ایمرسن",
+"e": "Trust thyself: every heart vibrates to that iron string."
+},
+{
+"n": 22,
+"q": "کوئی بڑی چیز اچانک نہیں بنتی؛ انجیر کو بھی پہلے پھول، پھر پھل اور پھر پکنے کا وقت چاہیے۔",
+"a": "اپیکٹیٹس",
+"e": "Nothing great is created suddenly, any more than a bunch of grapes or a fig."
+},
+{
+"n": 23,
+"q": "اچھا انسان کیسا ہو، اس بحث میں مزید وقت ضائع نہ کرو؛ خود اچھے انسان بن جاؤ۔",
+"a": "مارکس اوریلیس",
+"e": "Waste no more time arguing what a good man should be. Be one."
+},
+{
+"n": 24,
+"q": "کسی چیز کی اصل قیمت زندگی کا وہ حصہ ہے جو اس کے بدلے دینا پڑتا ہے۔",
+"a": "ہنری ڈیوڈ تھورو",
+"e": "The cost of a thing is the amount of what I will call life which is required to be exchanged for it."
+},
+{
+"n": 25,
+"q": "غصے کا سب سے بڑا علاج یہ ہے کہ ذرا رک جاؤ۔",
+"a": "سینیکا",
+"e": "The greatest remedy for anger is delay."
+},
+{
+"n": 26,
+"q": "سب سے بڑھ کر یہ کہ اپنے آپ سے سچے رہو۔",
+"a": "ولیم شیکسپیئر",
+"e": "This above all: to thine own self be true."
+},
+{
+"n": 27,
+"q": "ایک ابابیل سے بہار نہیں آتی، اور نہ ایک دن کسی کو خوش نصیب بناتا ہے۔",
+"a": "ارسطو",
+"e": "One swallow does not make a summer, nor does one day make a man happy."
+},
+{
+"n": 28,
+"q": "دیانت داری سے بڑھ کر کوئی میراث قیمتی نہیں۔",
+"a": "ولیم شیکسپیئر",
+"e": "No legacy is so rich as honesty."
+},
+{
+"n": 29,
+"q": "غول کی طاقت اس کا ہر بھیڑیا ہے، اور ہر بھیڑیے کی طاقت اس کا غول ہے۔",
+"a": "رڈیارڈ کپلنگ",
+"e": "For the strength of the Pack is the Wolf, and the strength of the Wolf is the Pack."
+},
+{
+"n": 30,
+"q": "مطالعہ انسان کو بھرپور بناتا ہے، گفتگو اسے حاضر جواب بناتی ہے، اور لکھنا اسے درست اور پختہ بناتا ہے۔",
+"a": "فرانسس بیکن",
+"e": "Reading maketh a full man; conference a ready man; and writing an exact man."
+},
+{
+"n": 31,
+"q": "خود سے پوچھو کہ کیا تم خوش ہو، اور اسی لمحے تم خوش نہیں رہتے۔",
+"a": "جان اسٹوارٹ مل",
+"e": "Ask yourself whether you are happy, and you cease to be so."
+},
+{
+"n": 32,
+"q": "نہ نئی چیز آزمانے میں سب سے پہلے بنو، نہ پرانی چیز چھوڑنے میں سب سے آخری۔",
+"a": "الیگزینڈر پوپ",
+"e": "Be not the first by whom the new are tried, nor yet the last to lay the old aside."
+},
+{
+"n": 33,
+"q": "مطالعہ ذہن کو صرف علم کا سامان دیتا ہے، غور و فکر ہی پڑھے ہوئے کو ہمارا بناتا ہے۔",
+"a": "جان لاک",
+"e": "Reading furnishes the mind only with materials of knowledge; it is thinking makes what we read ours."
+},
+{
+"n": 34,
+"q": "ہوائیں اور لہریں ہمیشہ سب سے ماہر ملاحوں کا ساتھ دیتی ہیں۔",
+"a": "ایڈورڈ گبن",
+"e": "The winds and waves are always on the side of the ablest navigators."
+},
+{
+"n": 35,
+"q": "صبح سوچو، دوپہر کو عمل کرو، شام کو کھاؤ اور رات کو سو جاؤ۔",
+"a": "ولیم بلیک",
+"e": "Think in the morning. Act in the noon. Eat in the evening. Sleep in the night."
+},
+{
+"n": 36,
+"q": "ہمیشہ یاد رکھو کہ کامیاب ہونے کا تمہارا اپنا پختہ ارادہ کسی بھی دوسری چیز سے زیادہ اہم ہے۔",
+"a": "ابراہم لنکن",
+"e": "Always bear in mind that your own resolution to succeed is more important than any other one thing."
+},
+{
+"n": 37,
+"q": "اچھے کام کا اصل انعام یہی ہے کہ وہ اچھی طرح انجام پا گیا۔",
+"a": "رالف والڈو ایمرسن",
+"e": "The reward of a thing well done is to have done it."
+},
+{
+"n": 38,
+"q": "زندگی مختصر نہیں، بلکہ ہم اس کا بڑا حصہ ضائع کر دیتے ہیں۔",
+"a": "سینیکا",
+"e": "It is not that we have a short time to live, but that we waste a lot of it."
+},
+{
+"n": 39,
+"q": "ککڑی کڑوی ہے؟ پھینک دو۔ راستے میں کانٹے ہیں؟ ہٹ کر چلو۔ شکایت کس بات کی؟",
+"a": "مارکس اوریلیس",
+"e": "A cucumber is bitter? Throw it away. There are briars in the road? Turn aside from them."
+},
+{
+"n": 40,
+"q": "خوشی کا ایک دروازہ بند ہو تو دوسرا کھل جاتا ہے، مگر ہم بند دروازے کو اتنی دیر تکتے ہیں کہ کھلا ہوا نظر ہی نہیں آتا۔",
+"a": "ہیلن کیلر",
+"e": "When one door of happiness closes, another opens; but often we look so long at the closed door that we do not see the one which has been opened for us."
+},
+{
+"n": 41,
+"q": "صبح ہونے سے ذرا پہلے اندھیرا سب سے گہرا ہوتا ہے۔",
+"a": "ٹامس فلر",
+"e": "It is always darkest just before the day dawneth."
+},
+{
+"n": 42,
+"q": "کسی انسان کی سب سے بڑی مدد یہ ہے کہ اس پر ذمہ داری ڈالو اور اسے بتاؤ کہ تمہیں اس پر بھروسا ہے۔",
+"a": "بکر ٹی واشنگٹن",
+"e": "Few things help an individual more than to place responsibility upon him, and to let him know that you trust him."
+},
+{
+"n": 43,
+"q": "جو کام کرنے کے لائق ہے، وہ اچھی طرح کرنے کے لائق ہے۔",
+"a": "لارڈ چیسٹرفیلڈ",
+"e": "Whatever is worth doing at all is worth doing well."
+},
+{
+"n": 44,
+"q": "ہماری زندگی چھوٹی چھوٹی الجھنوں میں بکھر جاتی ہے؛ سادگی اپناؤ، سادگی۔",
+"a": "ہنری ڈیوڈ تھورو",
+"e": "Our life is frittered away by detail. Simplify, simplify."
+},
+{
+"n": 45,
+"q": "بری فصل کے بعد بھی بیج بونا ہی پڑتا ہے۔",
+"a": "سینیکا",
+"e": "Even after a bad harvest, there must be sowing."
+},
+{
+"n": 46,
+"q": "زبان ہی انسان کو سب سے زیادہ ظاہر کرتی ہے؛ بولو، تاکہ میں تمہیں پہچان سکوں۔",
+"a": "بین جونسن",
+"e": "Language most shows a man: speak, that I may see thee."
+},
+{
+"n": 47,
+"q": "سب سے پہلی دولت صحت ہے۔",
+"a": "رالف والڈو ایمرسن",
+"e": "The first wealth is health."
+},
+{
+"n": 48,
+"q": "جس نے کبھی غلطی نہیں کی، اس نے کبھی کوئی نئی چیز دریافت نہیں کی۔",
+"a": "سیموئل اسمائلز",
+"e": "He who never made a mistake never made a discovery."
+},
+{
+"n": 49,
+"q": "غریب وہ نہیں جس کے پاس کم ہے، غریب وہ ہے جو اور زیادہ کی ہوس رکھتا ہے۔",
+"a": "سینیکا",
+"e": "It is not the man who has too little, but the man who craves more, that is poor."
+},
+{
+"n": 50,
+"q": "کوئی انسان ایسا جزیرہ نہیں جو اپنے آپ میں مکمل ہو؛ ہر شخص ایک بڑے براعظم کا حصہ ہے۔",
+"a": "جان ڈن",
+"e": "No man is an island, entire of itself; every man is a piece of the continent."
+},
+{
+"n": 51,
+"q": "صبح اٹھنے کو دل نہ چاہے تو سوچو: میں ایک انسان کا کام کرنے کے لیے اٹھ رہا ہوں۔",
+"a": "مارکس اوریلیس",
+"e": "When you rise unwillingly in the morning, think: I am rising to do the work of a human being."
+},
+{
+"n": 52,
+"q": "اپنی دکان کا خیال رکھو، دکان تمہارا خیال رکھے گی۔",
+"a": "بنجمن فرینکلن",
+"e": "Keep thy shop, and thy shop will keep thee."
+},
+{
+"n": 53,
+"q": "جو خوشی پانا چاہے اسے بانٹنا ہوگا؛ خوشی تو جڑواں پیدا ہوئی تھی۔",
+"a": "لارڈ بائرن",
+"e": "All who joy would win must share it—happiness was born a twin."
+},
+{
+"n": 54,
+"q": "بدگمان آدمی وہ ہے جو ہر چیز کی قیمت تو جانتا ہے، مگر کسی چیز کی قدر نہیں جانتا۔",
+"a": "آسکر وائلڈ",
+"e": "A cynic is a man who knows the price of everything and the value of nothing."
+},
+{
+"n": 55,
+"q": "بھلائی جتنی بانٹی جائے، اتنی ہی بڑھتی ہے۔",
+"a": "جان ملٹن",
+"e": "Good, the more communicated, more abundant grows."
+},
+{
+"n": 56,
+"q": "انسان کی ساری مصیبتیں اس لیے ہیں کہ وہ اکیلے کمرے میں سکون سے نہیں بیٹھ سکتا۔",
+"a": "پاسکل",
+"e": "All of man's troubles come from his inability to sit quietly in a room alone."
+},
+{
+"n": 57,
+"q": "پوری معلومات ہاتھ آنے سے پہلے رائے قائم کر لینا بہت بڑی غلطی ہے۔",
+"a": "آرتھر کونن ڈائل",
+"e": "It is a capital mistake to theorize before one has data."
+},
+{
+"n": 58,
+"q": "جو شخص ایک گھنٹہ بھی ضائع کرنے کی جرأت کرتا ہے، اس نے ابھی زندگی کی قدر نہیں پہچانی۔",
+"a": "چارلس ڈارون",
+"e": "A man who dares to waste one hour of time has not discovered the value of life."
+},
+{
+"n": 59,
+"q": "امید کے ساتھ سفر کرنا منزل پر پہنچ جانے سے بہتر ہے۔",
+"a": "رابرٹ لوئی اسٹیونسن",
+"e": "To travel hopefully is a better thing than to arrive."
+},
+{
+"n": 60,
+"q": "انسان کا کردار ہی اس کی تقدیر ہے۔",
+"a": "ہیراکلیٹس",
+"e": "Character is destiny."
+},
+{
+"n": 61,
+"q": "ہمیشہ صحیح کام کرو؛ اس سے کچھ لوگ خوش ہوں گے اور باقی حیران۔",
+"a": "مارک ٹوین",
+"e": "Always do right. This will gratify some people and astonish the rest."
+},
+{
+"n": 62,
+"q": "اپنی مدد آپ کا جذبہ ہی انسان کی ہر سچی ترقی کی جڑ ہے۔",
+"a": "سیموئل اسمائلز",
+"e": "The spirit of self-help is the root of all genuine growth in the individual."
+},
+{
+"n": 63,
+"q": "جس زندگی کا جائزہ نہ لیا جائے، وہ جینے کے لائق نہیں۔",
+"a": "سقراط",
+"e": "The unexamined life is not worth living."
+},
+{
+"n": 64,
+"q": "جس نے اپنا اعتبار کھو دیا، اس کے پاس کھونے کو کچھ نہیں بچا۔",
+"a": "پبلیلیس سائرس",
+"e": "He who has lost his credit has nothing more to lose."
+},
+{
+"n": 65,
+"q": "جو کام سنگ تراشی سنگِ مرمر کے ٹکڑے کے لیے کرتی ہے، وہی تعلیم انسان کی روح کے لیے کرتی ہے۔",
+"a": "جوزف ایڈیسن",
+"e": "What sculpture is to a block of marble, education is to a human soul."
+},
+{
+"n": 66,
+"q": "کام مشکل ہونے کی وجہ سے ہم ہمت نہیں چھوڑتے، بلکہ ہمت نہ کرنے کی وجہ سے کام مشکل لگتے ہیں۔",
+"a": "سینیکا",
+"e": "It is not because things are difficult that we do not dare; it is because we do not dare that they are difficult."
+},
+{
+"n": 67,
+"q": "کچھ کتابیں صرف چکھنے کے لیے ہوتی ہیں، کچھ نگلنے کے لیے، اور چند ایسی کہ انہیں چبا کر ہضم کیا جائے۔",
+"a": "فرانسس بیکن",
+"e": "Some books are to be tasted, others to be swallowed, and some few to be chewed and digested."
+},
+{
+"n": 68,
+"q": "چھوٹے خرچوں سے ہوشیار رہو؛ ایک چھوٹا سا سوراخ بڑے جہاز کو ڈبو دیتا ہے۔",
+"a": "بنجمن فرینکلن",
+"e": "Beware of little expenses; a small leak will sink a great ship."
+},
+{
+"n": 69,
+"q": "بڑے کام طاقت سے نہیں، ثابت قدمی سے انجام پاتے ہیں۔",
+"a": "سیموئل جانسن",
+"e": "Great works are performed not by strength but by perseverance."
+},
+{
+"n": 70,
+"q": "یاد رکھو، وقت ہی پیسہ ہے۔",
+"a": "بنجمن فرینکلن",
+"e": "Remember that time is money."
+},
+{
+"n": 71,
+"q": "غلطی ہر انسان سے ہو سکتی ہے، مگر غلطی پر اڑے رہنا صرف نادان کا کام ہے۔",
+"a": "سسرو",
+"e": "Any man can make mistakes, but only a fool persists in his error."
+},
+{
+"n": 72,
+"q": "شیشہ، چینی کے برتن اور ساکھ آسانی سے ٹوٹ جاتے ہیں، اور پھر کبھی ٹھیک سے نہیں جڑتے۔",
+"a": "بنجمن فرینکلن",
+"e": "Glass, china, and reputation, are easily cracked, and never well mended."
+},
+{
+"n": 73,
+"q": "سب سے محبت کرو، بھروسا چند پر کرو، اور کسی کے ساتھ برا نہ کرو۔",
+"a": "ولیم شیکسپیئر",
+"e": "Love all, trust a few, do wrong to none."
+},
+{
+"n": 74,
+"q": "جو آہستہ مگر سیدھے راستے پر چلتے ہیں، وہ بھٹک کر دوڑنے والوں سے آگے نکل جاتے ہیں۔",
+"a": "ڈیکارٹ",
+"e": "Those who go slowly, if they keep to the right road, advance further than those who run and stray from it."
+},
+{
+"n": 75,
+"q": "کوشش کرنا، تلاش کرنا، پانا اور کبھی ہار نہ ماننا۔",
+"a": "الفریڈ ٹینیسن",
+"e": "To strive, to seek, to find, and not to yield."
+},
+{
+"n": 76,
+"q": "مہم جوئی دراصل ایک تکلیف ہی ہے، جسے درست نظر سے دیکھا جائے۔",
+"a": "جی کے چیسٹرٹن",
+"e": "An adventure is only an inconvenience rightly considered."
+},
+{
+"n": 77,
+"q": "دوست پانے کا واحد طریقہ یہ ہے کہ تم خود کسی کے سچے دوست بنو۔",
+"a": "رالف والڈو ایمرسن",
+"e": "The only way to have a friend is to be one."
+},
+{
+"n": 78,
+"q": "انسان کو چیزیں پریشان نہیں کرتیں، بلکہ ان چیزوں کے بارے میں اس کی سوچ پریشان کرتی ہے۔",
+"a": "اپیکٹیٹس",
+"e": "Men are disturbed not by things, but by the opinions they form about things."
+},
+{
+"n": 79,
+"q": "اگر میں نے دوسروں سے آگے دیکھا ہے تو اس لیے کہ میں بڑے لوگوں کے کندھوں پر کھڑا تھا۔",
+"a": "آئزک نیوٹن",
+"e": "If I have seen further it is by standing on the shoulders of Giants."
+},
+{
+"n": 80,
+"q": "انسان کے کاموں میں ایک لہر آتی ہے؛ اگر چڑھاؤ کے وقت اسے پکڑ لیا جائے تو وہ کامیابی تک لے جاتی ہے۔",
+"a": "ولیم شیکسپیئر",
+"e": "There is a tide in the affairs of men, which, taken at the flood, leads on to fortune."
+},
+{
+"n": 81,
+"q": "بڑے لوگوں نے جو بلندیاں پائیں وہ ایک دم کی اڑان سے نہیں ملیں؛ جب ساتھی سو رہے تھے، وہ رات بھر اوپر چڑھنے کی محنت کر رہے تھے۔",
+"a": "ہنری واڈزورتھ لانگ فیلو",
+"e": "The heights by great men reached and kept were not attained by sudden flight, but they, while their companions slept, were toiling upward in the night."
+},
+{
+"n": 82,
+"q": "بصیرت اُن چیزوں کو دیکھنے کا فن ہے جو آنکھ سے نظر نہیں آتیں۔",
+"a": "جوناتھن سوئفٹ",
+"e": "Vision is the art of seeing things invisible."
+},
+{
+"n": 83,
+"q": "کوئی پرندہ بہت اونچا نہیں اڑتا، اگر وہ اپنے ہی پروں سے اڑ رہا ہو۔",
+"a": "ولیم بلیک",
+"e": "No bird soars too high, if he soars with his own wings."
+},
+{
+"n": 84,
+"q": "مشکل سے نکلنے کا بہترین راستہ ہمیشہ اس کے بیچ سے گزرنا ہے۔",
+"a": "رابرٹ فراسٹ",
+"e": "The best way out is always through."
+},
+{
+"n": 85,
+"q": "نیک انسان کی زندگی کا بہترین حصہ اس کے چھوٹے چھوٹے، گمنام اور بھولے بسرے مہربانی اور محبت کے کام ہیں۔",
+"a": "ولیم ورڈزورتھ",
+"e": "That best portion of a good man's life, his little, nameless, unremembered acts of kindness and of love."
+},
+{
+"n": 86,
+"q": "خوبصورت چیز ہمیشہ کی خوشی ہے۔",
+"a": "جان کیٹس",
+"e": "A thing of beauty is a joy for ever."
+},
+{
+"n": 87,
+"q": "امید پروں والا ایک پرندہ ہے جو روح میں بسیرا کرتا ہے، بے لفظ گیت گاتا ہے اور کبھی خاموش نہیں ہوتا۔",
+"a": "ایملی ڈکنسن",
+"e": "Hope is the thing with feathers that perches in the soul, and sings the tune without the words, and never stops at all."
+},
+{
+"n": 88,
+"q": "کاش کوئی طاقت ہمیں یہ تحفہ دے کہ ہم خود کو ویسا دیکھ سکیں جیسا دوسرے ہمیں دیکھتے ہیں!",
+"a": "رابرٹ برنز",
+"e": "O wad some Power the giftie gie us to see oursels as ithers see us!"
+},
+{
+"n": 89,
+"q": "آمدن بیس پاؤنڈ، خرچ اس سے ذرا کم، نتیجہ خوشی۔ آمدن بیس پاؤنڈ، خرچ اس سے ذرا زیادہ، نتیجہ پریشانی۔",
+"a": "چارلس ڈکنز",
+"e": "Annual income twenty pounds, annual expenditure nineteen nineteen and six, result happiness. Annual income twenty pounds, annual expenditure twenty pounds ought and six, result misery."
+},
+{
+"n": 90,
+"q": "کتنے ہی پھول ان دیکھے کھلتے ہیں اور اپنی خوشبو ویرانے کی ہوا میں لٹا دیتے ہیں۔",
+"a": "تھامس گرے",
+"e": "Full many a flower is born to blush unseen, and waste its sweetness on the desert air."
+},
+{
+"n": 91,
+"q": "غلطی کرنا انسانی فطرت ہے، اور معاف کر دینا خدائی صفت۔",
+"a": "الیگزینڈر پوپ",
+"e": "To err is human, to forgive divine."
+},
+{
+"n": 92,
+"q": "اگر تھوڑا سا تیل گر جائے یا کچھ چوری ہو جائے تو خود سے کہو: یہ دل کے سکون کی قیمت ہے۔",
+"a": "اپیکٹیٹس",
+"e": "If a little oil is spilled or a little wine stolen, say: this is the price of peace of mind."
+},
+{
+"n": 93,
+"q": "ناکامی بس ایک موقع ہے کہ پہلے سے زیادہ سمجھداری کے ساتھ دوبارہ شروع کیا جائے۔",
+"a": "ہنری فورڈ",
+"e": "Failure is only the opportunity more intelligently to begin again."
+},
+{
+"n": 94,
+"q": "اگر سردی آ گئی ہے تو کیا بہار بہت دور رہ سکتی ہے؟",
+"a": "پرسی بیش شیلی",
+"e": "If Winter comes, can Spring be far behind?"
+},
+{
+"n": 95,
+"q": "دانا آدمی جتنے مواقع پاتا ہے، اس سے زیادہ خود پیدا کرتا ہے۔",
+"a": "فرانسس بیکن",
+"e": "A wise man will make more opportunities than he finds."
+},
+{
+"n": 96,
+"q": "نادان اپنی مصیبت کا الزام دوسروں کو دیتا ہے، سیکھنے والا خود کو، اور دانا کسی کو نہیں۔",
+"a": "اپیکٹیٹس",
+"e": "The uneducated blame others for their troubles; the learner blames himself; the wise blames neither."
+},
+{
+"n": 97,
+"q": "مثال ہی انسانوں کا مدرسہ ہے، وہ کسی اور مدرسے سے نہیں سیکھتے۔",
+"a": "ایڈمنڈ برک",
+"e": "Example is the school of mankind, and they will learn at no other."
+},
+{
+"n": 98,
+"q": "دوستی کی خواہش تو جلد ہو جاتی ہے، مگر دوستی دیر سے پکنے والا پھل ہے۔",
+"a": "ارسطو",
+"e": "Wishing to be friends is quick work, but friendship is a slow-ripening fruit."
+},
+{
+"n": 99,
+"q": "سچائی وہ سب سے اونچی چیز ہے جسے انسان سنبھال کر رکھ سکتا ہے۔",
+"a": "جیفری چاسر",
+"e": "Trouthe is the hyeste thyng that man may kepe."
+},
+{
+"n": 100,
+"q": "غلطیاں کرتے گزری زندگی، کچھ نہ کرتے گزری زندگی سے زیادہ باعزت بھی ہے اور زیادہ مفید بھی۔",
+"a": "جارج برنارڈ شا",
+"e": "A life spent making mistakes is not only more honorable, but more useful than a life spent doing nothing."
+}
+]

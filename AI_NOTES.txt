@@ -6762,3 +6762,8 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - Malik (screenshot Akhrajat khana): "yahan chips ek time par 3 se zyada nazar nahi aate — main chahta hoon 10 screen par nazar aayein".
 - `dyEntryHTML(e, kind)` (dailySheet ke Sale / Wasooli / Akhrajat khane): band = 2 patli lines — upar Rs moti · naam (… se kata) · ▾; neeche chhota 🕒 waqt · `dyPrnMini` (🖨 ✓ CPV-1830 / ⚠️ print nahi / ❌ POS / ⏳ parchi) · 📷 (tasveer) · 🔔 (sirf jab reminder laga ho) · note. TAP = wahi entry khule (`.dy-ex`: note · remChip · ephHTML · receiptButton (print chip + 🖨 Dobara print) · Edit · Delete) — ek waqt ek (`dyOpen`, render ke baad bhi khuli rehti). Khulna / band = sirf class (render nahi — foran).
 - Change · Closing khana (cashColHTML) pehle jaisa. Hisaab / total / tarteeb wahi. AI nahi.
+
+## qaul/ (2026-11-03) — 📱 MacroDroid "Urdu qaul" pop-up (app ka hissa NAHI)
+- Malik: "har dafa MacroDroid ka pop-up kisi qaul ka ho · sirf angrezon ka · Urdu likhai · unlock / screen on / lock par" → filhal 100 qaul (malik: "filhal 100").
+- `qaul/1.txt … qaul/100.txt` = ek qaul (Urdu) + "— naam" (UTF-8), `qaul/all.json` = sab (n, q, a, e asal English). Website (GitHub Pages) se MacroDroid: random 1–100 → HTTP GET https://samiullah-878.github.io/Noor-traders-/qaul/{v=q}.txt → notification + pop-up. Blue Khata app / SW in files ko nahi chhuti.
+- Naye qaul jorne hon to agla number (101.txt …) + MacroDroid ka random max barhao. AI ne qaul aur tarjuma ek dafa likha (sirf mustanad qaul); phone par AI nahi.
