@@ -6757,3 +6757,8 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - Rules 2.85: a4Jobs create keys + to/ph (to in a4|th, ph ≤ 30); update = malik (status/ok/re/err) YA mulazim apna (status/re), status 'new'.
 - PC a4-print v1.1: job pehle parh kar `to` — 'th' = HP ka intezar NAHI → `thermalBytes` (ESC @ · NOOR TRADERS mota · photo-print `photoRaster(…, 512, 640, {crop:0})` · number GS ! 0x11 mota · waqt · GS V 66) → RawCached.dll (pos-khata-sync wala C#) `TM-T88IV` (copies 3 tak). 2-up jora sirf A4 jobs. status() ab printer ke formats bhi taza karta hai.
 - Test: app Playwright (malik / mulazim / purchase-only / CAP band / PC chup / A4 nahi + thermal / doosri screen ki tasveer = nahi / number patti 1600x1408 / input paint ke baad wahi) + PC mock flow (thermal job HP ke bina, A4 phir theek). AI NAHI.
+
+## v2.176.0 (2026-11-03) — 📒 Daily Sale ke khane: entry chhoti (10+ ek screen par)
+- Malik (screenshot Akhrajat khana): "yahan chips ek time par 3 se zyada nazar nahi aate — main chahta hoon 10 screen par nazar aayein".
+- `dyEntryHTML(e, kind)` (dailySheet ke Sale / Wasooli / Akhrajat khane): band = 2 patli lines — upar Rs moti · naam (… se kata) · ▾; neeche chhota 🕒 waqt · `dyPrnMini` (🖨 ✓ CPV-1830 / ⚠️ print nahi / ❌ POS / ⏳ parchi) · 📷 (tasveer) · 🔔 (sirf jab reminder laga ho) · note. TAP = wahi entry khule (`.dy-ex`: note · remChip · ephHTML · receiptButton (print chip + 🖨 Dobara print) · Edit · Delete) — ek waqt ek (`dyOpen`, render ke baad bhi khuli rehti). Khulna / band = sirf class (render nahi — foran).
+- Change · Closing khana (cashColHTML) pehle jaisa. Hisaab / total / tarteeb wahi. AI nahi.
