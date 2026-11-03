@@ -7019,3 +7019,36 @@ html body .cash-sheet .dy-saleform{margin:0 0 6px}
 html body .day-cols .sheet-column h3{display:flex!important;align-items:center;gap:8px}
 html body .day-cols .sheet-column h3 .dy-tp{margin-left:auto;flex:none;min-height:30px!important;height:30px;padding:0 12px!important;border-radius:999px!important;border:1px solid rgba(255,255,255,.38)!important;background:linear-gradient(135deg,rgba(255,255,255,.24),rgba(255,255,255,.1))!important;color:#fff!important;font-size:12.5px!important;font-weight:800!important;line-height:1!important;white-space:nowrap;box-shadow:none!important;max-width:150px;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
 html body .day-cols .sheet-column h3 .dy-tp:disabled{opacity:.85;cursor:wait}
+/* v2.174.0: 🖨 A4 photo print (a4-print.js) — saamne sirf chhapi tasveerein, baqi ⋮ */
+html body #dialogBody .a4-root{display:flex;flex-direction:column;gap:8px;min-width:0}
+html body .a4-pill.ok{border-color:#86efac!important}html body .a4-pill.bad{border-color:#fca5a5!important}html body .a4-pill.warn{border-color:#fcd34d!important}
+html body .a4-err{margin:0;padding:8px 11px;border-radius:12px;background:#fff1f2;border:1px solid #fecdd3;color:#9f1239;font-size:12.5px;font-weight:600;line-height:1.35}
+html body .a4-err.soft{background:#fffbeb;border-color:#fde68a;color:#92400e}
+html body .a4-chip{display:inline-flex;align-items:center;gap:5px;min-height:34px!important;padding:0 13px!important;border-radius:999px!important;border:1px solid #c7d4f5!important;background:linear-gradient(180deg,#fff,#eef3ff)!important;color:#223b6d!important;font-size:12.5px!important;font-weight:700;white-space:nowrap;box-shadow:0 3px 9px -7px rgba(34,59,109,.6)!important;margin:0!important;width:auto!important}
+html body .a4-chip:disabled{opacity:.6}
+html body .a4-test{align-self:flex-start}
+html body .a4-prs{display:flex;flex-direction:column;gap:6px;min-width:0}
+html body button.a4-pr{display:flex!important;flex-direction:column;align-items:flex-start;gap:1px;width:100%!important;text-align:left;padding:8px 12px!important;min-height:44px!important;border-radius:14px!important;border:1.5px solid #dbe3f3!important;background:#fff!important;color:#0b2545!important;box-shadow:none!important;margin:0!important}
+html body button.a4-pr b{font-size:13px}html body button.a4-pr small{font-size:11px;color:#64748b;overflow-wrap:anywhere}
+html body button.a4-pr.is-in{border-color:#16a34a!important;background:linear-gradient(180deg,#f0fdf4,#fff)!important;box-shadow:0 4px 12px -9px rgba(22,163,74,.7)!important}
+html body button.a4-pr.is-in b::after{content:' ✓';color:#16a34a}
+html body .a4-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+html body .a4-mut{color:#64748b;font-size:11.5px}
+html body .a4-ip{display:flex;flex-direction:column;gap:4px;margin:2px 0 0}html body .a4-ip small{font-size:11px;color:#64748b}
+html body .a4-ip span{display:flex;gap:6px;align-items:center}html body .a4-ip input{flex:1;min-width:0;min-height:36px;border-radius:11px;padding:0 10px;font-size:14px}
+html body .a4-inks{display:flex;flex-direction:column;gap:5px;min-width:0}
+html body .a4-ink{display:grid;grid-template-columns:minmax(0,1fr) 90px 34px;gap:8px;align-items:center;font-size:12px}
+html body .a4-ink span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}html body .a4-ink i{display:block;height:8px;border-radius:99px;background:#e2e8f0;overflow:hidden}html body .a4-ink i b{display:block;height:100%;background:#223b6d;border-radius:99px}html body .a4-ink small{text-align:right;font-weight:700}
+html body #dialogBody .a4-h{margin:4px 2px 0;font-size:13.5px;color:#223b6d}html body #dialogBody .a4-h small{font-weight:500;color:#64748b;font-size:11px}
+html body #dialogBody .a4-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));gap:7px;min-width:0}
+html body #dialogBody .a4-card{display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:9px;align-items:center;padding:7px 9px;border-radius:14px;background:#fff;border:1.5px solid #e2e8f0;min-width:0;box-shadow:0 4px 12px -10px rgba(34,59,109,.45)}
+html body #dialogBody .a4-card img,html body #dialogBody .a4-noth{width:52px;height:52px;border-radius:10px;object-fit:cover;background:#f1f5f9;display:grid;place-items:center;font-size:22px}
+html body #dialogBody .a4-card.ok{border-color:#bbf7d0}html body #dialogBody .a4-card.bad{border-color:#fecaca;background:#fffafa}html body #dialogBody .a4-card.hold{border-color:#fde68a;background:#fffdf5}
+html body #dialogBody .a4-tx{display:flex;flex-direction:column;gap:1px;min-width:0}html body #dialogBody .a4-tx b{font-size:13px;color:#0b2545;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}html body #dialogBody .a4-tx small{font-size:11px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}html body #dialogBody .a4-tx .a4-e{color:#b91c1c;white-space:normal}
+html body #dialogBody .a4-act{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+html body .a4-st{font-style:normal;font-size:11px;font-weight:800;padding:3px 8px;border-radius:999px;white-space:nowrap;background:rgba(245,158,11,.15);color:#92400e}
+html body .a4-st.ok{background:rgba(16,185,129,.13);color:#047857}html body .a4-st.bad{background:rgba(225,29,72,.11);color:#be123c}html body .a4-st.hold{background:rgba(234,179,8,.18);color:#854d0e}
+html body #dialogBody .a4-act .a4-chip{min-height:28px!important;padding:0 10px!important;font-size:11.5px!important}
+html body #dialogBody .a4-empty{padding:14px;text-align:center;border:1.5px dashed #cbd5e1;border-radius:14px;margin:0}
+html.dk body #dialogBody .a4-card,html.dk body button.a4-pr{background:rgba(255,255,255,.05)!important;border-color:rgba(255,255,255,.12)!important}html.dk body #dialogBody .a4-tx b,html.dk body button.a4-pr{color:#e6edf7!important}html.dk body .a4-chip{background:rgba(255,255,255,.07)!important;color:#dbe6ff!important;border-color:rgba(255,255,255,.18)!important}
+html body .a4-ks{flex-wrap:wrap!important;overflow:visible!important}
