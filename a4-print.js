@@ -106,7 +106,7 @@ function watch(id, name) {
 document.addEventListener('change', ev => {
   const inp = ev.target;
   if (!inp || inp.tagName !== 'INPUT' || inp.type !== 'file' || !/image/i.test(inp.accept || '')) return;
-  if (inp.closest?.('[data-a4-no]') || inp.dataset?.a4No) return;
+  if (!inp.hasAttribute?.('data-a4-in')) return;   // v2.174.1: malik — "sirf ALAG screen mein dali tasveer A4 par · baqi app jaise chal rahi waise" (baqi screens ki tasveer KABHI nahi)
   const files = [...(inp.files || [])].filter(f => /^image\//i.test(f.type || '') || /\.(jpe?g|png|webp|heic|heif|bmp)$/i.test(f.name || '')).slice(0, 6);
   if (!files.length || !C) return;
   const k = a4KindOf(inp), t = labelOf(inp, k);
