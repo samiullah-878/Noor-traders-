@@ -1,5 +1,7 @@
 // =========================================================
-//  wa-parchi.js  v1.4 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  wa-parchi.js  v1.5 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v1.5: malik (v1.4 thermal: 18 mein 17 theek, "کوئیش" ghalat magar tukda nahi) → shak ki hadd 0.75 → 0.9 (zara kam yaqeen = likhai ka tukda) +
+//        AI ko: 0.9+ sirf jab har harf saaf ho.
 //  v1.4: malik (thermal dekh kar): "same as it parchi chahiye · tarteeb dhyan se · jis ki tarteeb aage peeche lage us ka woh hissa bhi saath print" →
 //        AI hidayat: JORI-WAR (cheez + usi line ki tadad, daayein jori pehle), raw = HOOBAHOO (naam kabhi na badle, na parha = ؟), col = kaun si jori;
 //        tasveer parhte waqt AI thora soche (thinking low — pehle minimal). Thermal: har line ☐ + lafz, jori badle to ┄ lakeer, AI ko shak (sure < 0.75 / ؟)
@@ -35,7 +37,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '1.4';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '1.5';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -143,7 +145,7 @@ Rules:
 - qty: the number written for that item (Urdu digits too). Words: آدھا = 0.5, پاؤ = 0.25 (kg), ڈیڑھ = 1.5, ڈھائی = 2.5. If no quantity is written use 1.
 - unit: as written, normalised to one of kg, g, litre, ml, pcs, packet, pack, dozen, bag, bottle, box, carton, tin, roll, bar, sachet, jar, pouch. Translate: کلو = kg, گرام = g, لیٹر = litre, پاؤ = kg (with qty 0.25), عدد / دانے = pcs, تھیلا / تھیلے / بوری = bag, ڈبہ / ڈبے = box, بوتل = bottle, پیکٹ = packet, درجن = dozen, پیٹی / کارٹن = carton. Use "" if no unit is written.
 - box: bounding box of that whole line on the image — from the item text to its quantity in the same pair — normalised to 0-1000 as [ymin, xmin, ymax, xmax].
-- sure: your confidence from 0 to 1 that the item, its qty AND their pairing / order are all correct. Use a value below 0.6 when the handwriting is unclear or you are not sure which quantity belongs to the item.
+- sure: your confidence from 0 to 1 that the item, its qty AND their pairing / order are all correct. Use a value below 0.6 when the handwriting is unclear or you are not sure which quantity belongs to the item. Give 0.9 or more ONLY when every letter of the line is clearly readable and it is a word you are sure of.
 - isOrder: false (with empty lines) if the image is not a shopping / order list at all (selfie, payment screenshot, random photo, chat screenshot without a list).`;
 const PROMPT_TXT = `Below is a customer's ORDER LIST for a grocery / general store in Pakistan (Noor Traders), typed in a WhatsApp message — Urdu, Roman Urdu, English or mixed.
 Read every item in order. Do not invent items. Ignore greetings, prices and totals.
@@ -380,7 +382,8 @@ function failText(o, why, opt = {}) {
 // v1.3: 🧾 parchi JAISI LIKHI — har line gahak ke apne lafz, shuru mein ☐ (tick). opt.raster = PowerShell wali tasveer (CRM 'L'); na ho to saada text.
 const rawOf = l => String(l.r || '').replace(/\s+/g, ' ').trim() || [l.it || l.n || '', qtyStr(l.q, l.u)].filter(Boolean).join(' ').trim();
 // v1.4: shak = AI ka apna yaqeen (w, purane order par s) 0.75 se kam ya lafz mein ؟ — us line ki likhai ka tukda bhi chhapo
-const doubtOf = l => /؟|\?/.test(String(l.r || '')) || (Number(l.w ?? l.s) || 0) < 0.75;
+const DOUBT = 0.9;   // v1.5: malik OK — 0.75 par ghalat lafz bina tukde nikal gaya
+const doubtOf = l => /؟|\?/.test(String(l.r || '')) || (Number(l.w ?? l.s) || 0) < DOUBT;
 function writtenLines(P) { return [...(P.clear || []), ...(P.unc || [])].sort((a, b) => (a.i ?? 0) - (b.i ?? 0)).map(l => ({ t: rawOf(l), b: l.b || null, d: doubtOf(l), c: Number(l.c) || 0, i: l.i ?? 0 })).filter(x => x.t); }
 // opt.rows = PowerShell ne har line ki tasveer bana di (CRM 'L<k>') · opt.crops = Set(k) jin ka likhai tukda bana (CRM 'c<k>')
 function writtenText(o, P, opt = {}) {

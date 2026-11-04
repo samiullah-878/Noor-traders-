@@ -4054,3 +4054,6 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - wa-sale.js: khuli parchi ⋮ 🔁 Dobara parho (ws.reread) + ✕ "PC parchi nahi parh saka" wale dabbe mein chip (.wps-rr) → updateParchiOrder {st:'new', upAt} (rules 2.86 — st pehle se) →
   PC wa-parchi claimNew (parchiImg se tasveer) AI se phir parhe + naya thermal / A4. Khuli parchi = bill khali + pendLoad (naye items khud). Bill bana / maal nikla / new / read / chhupi = button nahi (canReread).
   ⚠️ ka waqt naye sire se (rrAt). AI app mein nahi — wahi PC wala ek parhna.
+
+## PC wa-parchi v1.5 · manifest 2026-11-04.6 (2026-11-04) — 🧾 shak ki hadd 0.9
+- Malik ki v1.4 thermal photo: 18 mein se 17 line theek (jori + tarteeb + lafz), 12vi "کوئیش 1 کلو" ghalat magar AI ko yaqeen 0.75+ tha — tukda nahi chhapa. Malik OK → `DOUBT = 0.9` + prompt: "0.9+ sirf jab har harf saaf".
