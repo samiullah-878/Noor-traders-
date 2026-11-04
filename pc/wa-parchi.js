@@ -1,5 +1,11 @@
 // =========================================================
-//  wa-parchi.js  v1.7 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  wa-parchi.js  v1.8 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v1.8: ✅ malik: "bill mein woh items jo parchi par hain hi nahi (white chana → shawer, maida → pista, mash → masoor) · tadad na likhi ho to poocho" →
+//        PAKKA JAANCH (AI NAHI): bill mein khud sirf tab jab parchi ka HAR asal lafz item ke naam mein ho (awaz / spelling / ek jaisa lafz,
+//        SOFT lafz jaise tea / masala chhor sakte) + SIZE na takraye (parchi 10 litre ↔ 900ml, 2 kilo ↔ 800g, pao ↔ 475gm = ❓ "size alag";
+//        3 kilo ↔ 3kg = wahi). Kai milte hon to: packet / size bilkul wahi (garam masala pao = 0.250 sub-barcode) → khula (kilo) → size nahi → guna.
+//        Na pakka = wohi item ❓ mein "andaza" (j: z 'w' lafz | 's' size). AI se naya khana qn (tadad likhi?) → j nq:1 → app tadad poochti +
+//        thermal par ">> TADAD ?". dhoond.mjs = dukan/dhoond.js v2.182.0 (words / canon export + rang: white = safed).
 //  v1.7: 🖼 malik: "puri parchi ka har item jaise likha print ho · AI ke baghair alag chip (⋮) · zoom ho kar aaye" → app prImg → poori parchi ki tasveer
 //        thermal par (zoomPlan: khali kinare kaat, beech mein column ka faasla ho to do hisse — daayan pehle; 512 chaurai, 640 line ke tukde). AI NAHI.
 //  v1.6: 🧠 malik: "jin ka naam nahi milta alag khane mein — hum yaad karwa dein · pattern bhi · agli dafa yaad hua naam aur parchi ka lafz ikattha chhape" →
@@ -142,12 +148,13 @@ Read EVERY item line and keep this order. Do not skip lines, do not invent items
 Ignore the shop name, dates, serial numbers, ticks / cuts, and any prices, amounts or totals (never treat a price as a quantity).
 Return ONLY this JSON:
 {"isOrder": true, "name": "customer name if written on the list, else empty", "phone": "customer phone if written on the list, else empty",
- "lines": [{"raw": "the line exactly as written, same script", "item": "...", "qty": 1, "unit": "...", "col": 1, "box": [ymin, xmin, ymax, xmax], "sure": 0.9}]}
+ "lines": [{"raw": "the line exactly as written, same script", "item": "...", "qty": 1, "qn": true, "unit": "...", "col": 1, "box": [ymin, xmin, ymax, xmax], "sure": 0.9}]}
 Rules:
 - raw: copy EXACTLY what the customer wrote on that row of that pair — the item words, then its quantity words — in the same script, spelling and digits. NEVER correct, translate, shorten or replace a word, and never put a brand you know in place of the written one. If a word cannot be read, write ؟ in its place.
 - col: which column pair the line is in — 1 = the rightmost pair, 2 = the next pair to its left, and so on (1 if the list has only one column).
 - item: the best plain, searchable product name in simple English or Roman Urdu. Keep brand, size and variant if written. Examples: "Lipton tea", "Pampers XXL", "Ponds lotion", "Aata", "Cheeni", "Surf Excel 1kg", "Dalda ghee", "Shan biryani masala". Never translate a brand name.
 - qty: the number written for that item (Urdu digits too). Words: آدھا = 0.5, پاؤ = 0.25 (kg), ڈیڑھ = 1.5, ڈھائی = 2.5. If no quantity is written use 1.
+- qn: true if ANY quantity is written for that item — a number, or a quantity / unit word such as کلو, پاؤ, آدھا, درجن, عدد, پیکٹ, ڈبہ, بوتل, kg, dozen, packet ("میدہ کلو" = 1 kg written = true). false if ONLY the item name is written with no number and no unit word (then qty 1 and qn false).
 - unit: as written, normalised to one of kg, g, litre, ml, pcs, packet, pack, dozen, bag, bottle, box, carton, tin, roll, bar, sachet, jar, pouch. Translate: کلو = kg, گرام = g, لیٹر = litre, پاؤ = kg (with qty 0.25), عدد / دانے = pcs, تھیلا / تھیلے / بوری = bag, ڈبہ / ڈبے = box, بوتل = bottle, پیکٹ = packet, درجن = dozen, پیٹی / کارٹن = carton. Use "" if no unit is written.
 - box: bounding box of that whole line on the image — from the item text to its quantity in the same pair — normalised to 0-1000 as [ymin, xmin, ymax, xmax].
 - sure: your confidence from 0 to 1 that the item, its qty AND their pairing / order are all correct. Use a value below 0.6 when the handwriting is unclear or you are not sure which quantity belongs to the item. Give 0.9 or more ONLY when every letter of the line is clearly readable and it is a word you are sure of.
@@ -156,12 +163,15 @@ const PROMPT_TXT = `Below is a customer's ORDER LIST for a grocery / general sto
 Read every item in order. Do not invent items. Ignore greetings, prices and totals.
 Return ONLY this JSON:
 {"isOrder": true, "name": "customer name if written, else empty", "phone": "customer phone if written, else empty",
- "lines": [{"raw": "that item exactly as written", "item": "plain searchable name in simple English or Roman Urdu (keep brand / size), e.g. Lipton tea, Pampers XXL, Aata, Cheeni", "qty": 1, "unit": "kg|g|litre|ml|pcs|packet|pack|dozen|bag|bottle|box|carton|tin|roll|bar|sachet|jar|pouch or empty", "box": null, "sure": 0.9}]}
+ "lines": [{"raw": "that item exactly as written", "item": "plain searchable name in simple English or Roman Urdu (keep brand / size), e.g. Lipton tea, Pampers XXL, Aata, Cheeni", "qty": 1, "qn": true, "unit": "kg|g|litre|ml|pcs|packet|pack|dozen|bag|bottle|box|carton|tin|roll|bar|sachet|jar|pouch or empty", "box": null, "sure": 0.9}]}
 Translate units: کلو = kg, گرام = g, پاؤ = 0.25 kg, آدھا = 0.5, عدد = pcs, تھیلا / تھیلے = bag, ڈبہ = box, بوتل = bottle, پیکٹ = packet, درجن = dozen. qty 1 if not written.
+qn: true if any quantity (number or unit word like kilo, pao, dozen, packet) is written for the item, false if only the item name is written.
 isOrder false (with empty lines) if the message is not an order list (greeting, question, "ok", a name only).
 
 Message:
 `;
+// v1.8: parchi ki line mein tadad ka nishan (hindsa, ½, aadha / pao, unit lafz) — ho to AI ke "qn false" ko na mano
+const hasQty = r => { const t = UDIG(r); if (/[\d½¼¾]/.test(t)) return true; return t.toLowerCase().split(/[\s,.\-\/()]+/).some(w => w && (WORDNUM[w] != null || UNIT_OF.has(w))); };
 function normLine(l) {
   if (typeof l === 'string') l = l.trim() ? { raw: l, item: l } : null;
   if (!l || typeof l !== 'object') return null;
@@ -169,7 +179,8 @@ function normLine(l) {
   if (!raw && !item) return null;
   let sure = Number(l.sure ?? l.confidence); if (!isFinite(sure)) sure = 0.7; if (sure > 1 && sure <= 100) sure /= 100; sure = Math.max(0, Math.min(1, Math.round(sure * 100) / 100));
   const col = Math.max(0, Math.min(9, Math.round(Number(l.col ?? l.column) || 0)));   // v1.4: kaun si jori (1 = daayein)
-  return { raw: raw || item, item: item || raw, qty: numOf(l.qty ?? l.quantity), unit: normUnit(l.unit), box: validBox(l.box ?? l.box_2d ?? l.bbox), sure, ...(col ? { col } : {}) };
+  const qn = l.qn ?? l.qty_written, nq = (qn === false || qn === 'false' || qn === 0) && !hasQty(raw);   // v1.8: tadad likhi hi nahi (AI kahe + parchi mein koi hindsa / unit lafz nahi)
+  return { raw: raw || item, item: item || raw, qty: numOf(l.qty ?? l.quantity), unit: normUnit(l.unit), box: validBox(l.box ?? l.box_2d ?? l.bbox), sure, ...(col ? { col } : {}), ...(nq ? { nq: 1 } : {}) };
 }
 function parseGemini(out) {
   const s = String(out || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
@@ -305,19 +316,96 @@ function best(hits, q, k2) {   // smartFind ki tarteeb + naam ka zyada hissa mil
   });
   return bo;
 }
-function matchOne(l, X, find, k2) {
+// v1.8: ✅ PAKKA JAANCH (malik: "white chana → shawer · maida → pista · mash → masoor bill mein aa gaye") — AI NAHI.
+//   smartFind (website / app ka dhoondo) ADHOORA lafz bhi pakarta hai (mash → MASoor, "andar kahin"). Parchi par lafz poore hote hain, is liye
+//   bill mein khud sirf tab jab parchi ka HAR asal lafz item ke naam mein ho (spelling / awaz / ek jaisa lafz — white = safed) aur SIZE na takraye
+//   (parchi 10 litre ↔ item 900ml = alag). Warna wohi item ❓ mein "🤖 andaza" (z: 'w' lafz · 's' size) — malik / larka ek tap.
+const UR_RE = /[\u0600-\u06FF]/;
+const STOPW = new Set(['ka', 'ki', 'ke', 'ko', 'aur', 'or', 'and', 'de', 'dein', 'dena', 'chahiye', 'chahie', 'bhi', 'sath', 'saath', 'ya', 'se', 'کا', 'کی', 'کے', 'کو', 'اور', 'بھی', 'یا', 'دیں', 'دینا', 'چاہیے', 'سے']);
+const SOFT = new Set([...GENERIC, 'fresh', 'new', 'naya', 'achha', 'acha', 'achi', 'achhi', 'best', 'original', 'asli', 'special', 'desi', 'khula', 'loose', 'number', 'no', 'pure', 'saaf', 'saf']);   // yeh lafz na milein to bhi chalega (kam az kam ek asal lafz mile)
+const KG_N = /\b(kg|kgs|kilo|kilogram|ltr|litre|liter|l)\b/i;
+const levD = (a, b) => { if (a === b) return 0; const m = a.length, n = b.length; if (!m || !n) return m || n; let pr = Array.from({ length: n + 1 }, (_, j) => j); for (let i = 1; i <= m; i++) { const cu = [i]; for (let j = 1; j <= n; j++) cu[j] = Math.min(pr[j] + 1, cu[j - 1] + 1, pr[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); pr = cu; } return pr[n]; };
+// parchi ke asal lafz (tadad / unit / ka-ki-ke / wala hata kar) → [{w roman, ur Urdu se?, soft}]
+function coreWords(q, D) {
+  const out = [];
+  for (const t of String(q || '').split(/[\s,.\-\/()+&:;]+/)) {
+    if (!t) continue; const lt = t.toLowerCase(); if (isNumTok(t) || DROP.has(lt) || STOPW.has(lt) || WORDNUM[lt] != null) continue;
+    for (const w of D.words(t)) if (w.length >= 2 && !/^\d/.test(w) && !UNIT_OF.has(w) && !DROP.has(w) && !STOPW.has(w)) out.push({ w, ur: UR_RE.test(t), soft: SOFT.has(w) });
+  }
+  return out;
+}
+function itemWords(o, D) { if (!o._w) { o._w = D.words(o.t); o._j = o._w.join(''); } return o._w; }
+function wordHit(x, o, D) {
+  const a = x.w, ka = D.k2(a), ca = D.canon(a), sa = D.sk(a), iw = itemWords(o, D);
+  for (const w of iw) {
+    if (w === a) return true;
+    const kw = D.k2(w); if (kw === ka || D.canon(w) === ca) return true;   // awaz / ek jaisa lafz (daal = dal · white = safed)
+    if (a.length >= 3 && w.startsWith(a) && a.length >= 0.7 * w.length) return true;   // pamper ~ pampers
+    if (w.length >= 3 && a.startsWith(w) && w.length >= 0.7 * a.length) return true;
+    const sw = D.sk(w);   // spelling farq: consonant wahi + thora vowel farq (Urdu mein zer / zabar likhe nahi jate — 3+ consonant par sirf consonant)
+    if (sa.length >= 2 && sw === sa && (x.ur ? sa.length >= 3 || levD(ka, kw) <= 1 : levD(ka, kw) <= (ka.length <= 4 ? 1 : 2))) return true;
+  }
+  return a.length >= 5 && o._j.includes(a);   // kalimirch = kali mirch
+}
+// poora lafz-milan: har asal lafz mile (SOFT chhor sakte hain) + kam az kam ek asal (SOFT nahi) lafz
+function covers(q, o, D) {
+  const cw = coreWords(q, D); if (!cw.length) return false;
+  let hard = 0;
+  for (const x of cw) { const h = wordHit(x, o, D); if (!h && !x.soft) return false; if (h && !x.soft) hard++; }
+  return hard > 0 || cw.every(x => wordHit(x, o, D));
+}
+// 📏 size: "3kg" / "900ml" / "1 kg" / "250 گرام" → {d: 'w' wazan (gram) | 'v' (ml), a}
+const SZ_RE = /(\d+(?:\.\d+)?)\s*(kgs?|kilo(?:gram)?s?|grams?|gms?|gr|g|ml|ltrs?|lit(?:re|er)s?|l|کلو|گرام|لیٹر|لٹر|ملی)(?![a-z])/gi;
+const SZ_M = u => { u = u.toLowerCase(); return /^(kg|kgs|kilo|کلو)/.test(u) ? ['w', 1000] : /^(g|gm|gr|gram|گرام)/.test(u) ? ['w', 1] : /^(ml|ملی)/.test(u) ? ['v', 1] : ['v', 1000]; };
+function sizesIn(text) { const out = []; const s = UDIG(text); let m; SZ_RE.lastIndex = 0; while ((m = SZ_RE.exec(s))) { const [d, k] = SZ_M(m[2]), a = Number(m[1]) * k; if (a > 0) out.push({ d, a }); } return out; }
+function parchiSize(l) {   // kul (qty × unit) ya fi-piece (naam mein likha size, tadad = ginti)
+  const q = Number(l.qty) || 0, u = String(l.unit || '');
+  if (q > 0 && (u === 'kg' || u === 'g' || u === 'litre' || u === 'ml')) return { d: u === 'kg' || u === 'g' ? 'w' : 'v', a: q * (u === 'kg' || u === 'litre' ? 1000 : 1), per: false };
+  const z = sizesIn(l.item)[0] || sizesIn(l.raw)[0]; return z ? { ...z, per: true } : null;
+}
+const loose = it => KG_N.test(String(it.uName || '')) || (Array.isArray(it.bq) && it.bq.some(b => Number(b && b.q) > 0 && Number(b.q) < 1));   // kilo se bikne wala (khula / packet sub-barcode)
+// size ka darja: 0 = bilkul wahi (packet / naam ka size) · 1 = khula (kilo) · 2 = size ka pata nahi · 3 = guna (2 kg = 2 × 1kg) · -1 = TAKRAO
+function sizeTier(l, it) {
+  const ps = parchiSize(l); if (!ps) return 2;
+  if (loose(it)) { const kg = ps.a / 1000; return !ps.per && Array.isArray(it.bq) && it.bq.some(b => Math.abs((Number(b && b.q) || 0) - kg) < 0.0005) ? 0 : 1; }
+  const is = sizesIn(it.name)[0]; if (!is || is.d !== ps.d) return 2;
+  const r = ps.a / is.a, n = Math.round(r);
+  if (Math.abs(r - 1) < 0.03) return 0;
+  return !ps.per && n >= 2 && n <= 50 && Math.abs(r - n) < 0.03 ? 3 : -1;
+}
+// hits mein se pakka: lafz pure + size theek — sab se behtar size darja pehle, phir best()
+function pickPakka(l, hits, q, k2, D) {
+  let bt = 9, ok = [];
+  for (const o of hits) {
+    if (!(covers(l.item, o, D) || covers(l.raw, o, D))) continue;
+    const t = sizeTier(l, o.it); if (t < 0) continue;
+    if (t < bt) { bt = t; ok = [o]; } else if (t === bt) ok.push(o);
+  }
+  return ok.length ? best(ok, q, k2) : null;
+}
+function matchOne(l, X, find, k2, D) {
   const qs = [...new Set([l.item, l.raw].map(q => String(q || '').trim()).filter(Boolean))];
   const tf = o => o.t, iL = o => 'it:' + o.id, iA = o => o.k;
   if (X.LR && X.LR.size) { const id = X.LR.get(lkey(l.raw)); const o = id && X.byId.get(id); if (o) return { o, s: 0.97, how: 'yaad' }; }   // v1.6: 🧠 malik ka yaad karwaya lafz — pakka
-  if (X.AL.length) for (const q of qs) { const r = find(X.AL, q, tf, iA, 5); if (r.hits.length) { const o = X.byId.get(r.hits[0].id); if (o) return { o, s: 0.95, how: 'alias' }; } }
+  const strict = !!(D && D.words && D.canon && D.sk);   // v1.8 (purana dhoond.mjs = purana tareeqa)
+  let guess = null;
+  const take = (hits, q, s, how) => {
+    if (!hits.length) return null;
+    if (!strict) return { o: best(hits, q, k2), s, how };
+    const o = pickPakka(l, hits, q, k2, D); if (o) return { o, s, how };
+    if (!guess) { const g = best(hits, q, k2); guess = { o: g, s: 0.45, how: how + ' (andaza)', z: sizeTier(l, g.it) < 0 ? 's' : 'w' }; }
+    return null;
+  };
+  if (X.AL.length) for (const q of qs) { const r = find(X.AL, q, tf, iA, 5); if (r.hits.length) { const o = X.byId.get(r.hits[0].id); if (o) { if (!strict || sizeTier(l, o.it) >= 0) return { o, s: 0.95, how: 'alias' }; if (!guess) guess = { o, s: 0.45, how: 'alias (andaza)', z: 's' }; } } }   // purchase ke naam = malik ke jore (size takraye to andaza)
   const first = [];
-  for (let i = 0; i < qs.length; i++) { const r = find(X.L, qs[i], tf, iL, 40); first.push(r); if (r.hits.length) return { o: best(r.hits, qs[i], k2), s: i ? 0.8 : 0.9, how: 'naam' }; }
+  for (let i = 0; i < qs.length; i++) { const r = find(X.L, qs[i], tf, iL, 40); first.push(r); const m = take(r.hits, qs[i], i ? 0.8 : 0.9, 'naam'); if (m) return m; }
   for (const q of qs) {   // tadad / unit hata kar, phir ek lafz kam
     const toks = q.split(/[\s,.\-\/()+&]+/).filter(Boolean), core = toks.filter(t => !isNumTok(t) && !DROP.has(t.toLowerCase()));
     if (!core.length) continue;
-    if (core.length < toks.length) { const r = find(X.L, core.join(' '), tf, iL, 40); if (r.hits.length) return { o: best(r.hits, core.join(' '), k2), s: 0.75, how: 'bina tadad' }; }
-    if (core.length >= 2) for (let k = core.length - 1; k >= 0; k--) { const sub = core.filter((_, i) => i !== k); const r = find(X.L, sub.join(' '), tf, iL, 40); if (r.hits.length) return { o: best(r.hits, sub.join(' '), k2), s: sub.length >= 2 || GENERIC.has(core[k].toLowerCase()) ? 0.6 : 0.45, how: 'ek lafz kam' }; }
+    if (core.length < toks.length) { const r = find(X.L, core.join(' '), tf, iL, 40); const m = take(r.hits, core.join(' '), 0.75, 'bina tadad'); if (m) return m; }
+    if (core.length >= 2) for (let k = core.length - 1; k >= 0; k--) { const sub = core.filter((_, i) => i !== k); const r = find(X.L, sub.join(' '), tf, iL, 40); const m = take(r.hits, sub.join(' '), sub.length >= 2 || GENERIC.has(core[k].toLowerCase()) ? 0.6 : 0.45, 'ek lafz kam'); if (m) return m; }
   }
+  if (guess) return guess;
   for (const r of first) if (r.near.length) return { o: r.near[0], s: 0.4, how: 'shayad' };
   return { o: null, s: 0, how: '' };
 }
@@ -326,11 +414,11 @@ function rackOf(id, R) {
   return String((R.cn && R.cn[k]) || '').trim() || (k === '@khula' ? 'Khula maal' : title(k));
 }
 // lines (AI) → j (order doc ki JSON lines): { r raw, it AI naam, q, u, id, n POS naam, b box, s 0..1, rk? }
-function matchLines(lines, X, find, k2, racks) {
+function matchLines(lines, X, find, k2, racks, D) {
   return (lines || []).map(l => {
-    const m = X && X.L && X.L.length && find && k2 ? matchOne(l, X, find, k2) : { o: null, s: 0 };
+    const m = X && X.L && X.L.length && find && k2 ? matchOne(l, X, find, k2, D) : { o: null, s: 0 };
     const o = m.o, y = m.how === 'yaad', s = Math.round(Math.min(m.s, y ? Math.max(Number(l.sure) || 0, 0.7) : Number(l.sure) || 0) * 100) / 100, rk = o ? rackOf(o.id, racks) : '';   // v1.6: 🧠 yaad = item pakka (AI ka kam yaqeen sirf tadad ka)
-    return { r: l.raw, it: l.item, q: l.qty, u: l.unit, id: o ? o.id : '', n: o ? String(o.it.name) : '', b: l.box || null, s, w: Number(l.sure) || 0, ...(l.col ? { c: l.col } : {}), ...(rk ? { rk } : {}), ...(y ? { y: 1 } : {}) };   // v1.4: w = AI ka apna yaqeen (parhna + jori)
+    return { r: l.raw, it: l.item, q: l.qty, u: l.unit, id: o ? o.id : '', n: o ? String(o.it.name) : '', b: l.box || null, s, w: Number(l.sure) || 0, ...(l.col ? { c: l.col } : {}), ...(rk ? { rk } : {}), ...(y ? { y: 1 } : {}), ...(o && m.z ? { z: m.z } : {}), ...(l.nq ? { nq: 1 } : {}) };   // v1.8: z = andaza kyun (w lafz · s size) · nq = tadad likhi nahi (app poochti hai)   // v1.4: w = AI ka apna yaqeen (parhna + jori)
   });
 }
 const isUnclear = l => !l.id || !(Number(l.s) >= 0.5);
@@ -404,7 +492,7 @@ const rawOf = l => String(l.r || '').replace(/\s+/g, ' ').trim() || [l.it || l.n
 // v1.4: shak = AI ka apna yaqeen (w, purane order par s) 0.75 se kam ya lafz mein ؟ — us line ki likhai ka tukda bhi chhapo
 const DOUBT = 0.9;   // v1.5: malik OK — 0.75 par ghalat lafz bina tukde nikal gaya
 const doubtOf = l => /؟|\?/.test(String(l.r || '')) || (Number(l.w ?? l.s) || 0) < DOUBT;
-function writtenLines(P) { return [...(P.clear || []), ...(P.unc || [])].sort((a, b) => (a.i ?? 0) - (b.i ?? 0)).map(l => ({ t: rawOf(l), b: l.b || null, d: l.y ? /؟|\?/.test(String(l.r || '')) : doubtOf(l), c: Number(l.c) || 0, i: l.i ?? 0, y: l.y && l.n ? String(l.n) : '' })).filter(x => x.t); }   // v1.6: 🧠 yaad = shak ka tukda nahi (sirf ؟), yaad wala naam saath
+function writtenLines(P) { return [...(P.clear || []), ...(P.unc || [])].sort((a, b) => (a.i ?? 0) - (b.i ?? 0)).map(l => ({ t: rawOf(l), b: l.b || null, d: l.y ? /؟|\?/.test(String(l.r || '')) : doubtOf(l), c: Number(l.c) || 0, i: l.i ?? 0, y: l.y && l.n ? String(l.n) : '', nq: l.nq ? 1 : 0 })).filter(x => x.t); }   // v1.6: 🧠 yaad = shak ka tukda nahi (sirf ؟), yaad wala naam saath
 // opt.rows = PowerShell ne har line ki tasveer bana di (CRM 'L<k>') · opt.crops = Set(k) jin ka likhai tukda bana (CRM 'c<k>')
 function writtenText(o, P, opt = {}) {
   const L = writtenLines(P), out = headLines(o, { rp: opt.rp, n: L.length }), crops = opt.crops || new Set();
@@ -415,6 +503,7 @@ function writtenText(o, P, opt = {}) {
     else if (hasUr(x.t)) out.push(UR.line('[ ]  ' + x.t, 34));   // Urdu: shuru (daayein) mein [ ]
     else out.push(...wrap(ascii(x.t), W - 4).map((s, j) => L0 + B1 + (j ? '    ' : '[ ] ') + s + B0));
     if (x.y) out.push(...wrap('yaad: ' + (ascii(x.y) || '?'), W - 6).map((t, j) => L0 + (j ? '      ' : '  >>  ') + t));   // v1.6: 🧠 gahak ke lafz ke saath yaad hua item (malik)
+    if (x.nq) out.push(L0 + B1 + '  >>  TADAD ?' + B0 + ' gahak se poochein');   // v1.8: malik — tadad na likhi ho to poocho
     if (crops.has(k)) out.push(CRM + 'c' + k);   // shak — likhai ka tukda
   });
   out.push(L0 + hr(), L0 + line('Kul: ' + L.length + ' lines', crops.size ? 'Tukde: ' + crops.size : ''), '', CUT);
@@ -785,7 +874,7 @@ async function start(ZINDA) {
       if (!o.ph && R.phone) o.ph = R.phone;
       if (!o.nm && R.name) o.nm = R.name;
       let X = null, Dh = null; try { [X, Dh] = await Promise.all([index(), dh()]); } catch (e) { log('⚠️ milan: ' + e.message); }
-      const j = matchLines(R.lines, X, Dh ? Dh.smartFind : null, Dh ? Dh.k2 : null, RACKS), u = j.filter(isUnclear).length;
+      const j = matchLines(R.lines, X, Dh ? Dh.smartFind : null, Dh ? Dh.k2 : null, RACKS, Dh), u = j.filter(isUnclear).length;
       o.j = JSON.stringify(j); o.st = 'ok';
       await upd(o.id, { st: 'ok', err: '', j: o.j, n: j.length, u, ph: o.ph || '', nm: o.nm || '', 'pr.th': S.th !== false ? 'wait' : 'off', 'pr.a4': S.a4 !== false ? 'wait' : 'off' });
       log(`✅ #${shortNo(o.id)} ${j.length} items (❓ ${u}) · ${o.nm || '-'} ${o.ph || ''} · ${Date.now() - t0} ms`);

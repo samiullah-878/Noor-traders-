@@ -15,10 +15,10 @@
 //   v2.179.2: 🔁 DOBARA PARHO (malik OK) — khuli parchi ⋮ 🔁 + ✕ / ⚠️ wale dabbe mein chip → {st:'new'} (rules 2.86 wahi) → PC (wa-parchi claimNew) AI se phir
 //     parhe + naya thermal / A4; bill khud dobara bhar jata hai (pendLoad). Bill bana / maal nikla / abhi parh raha = nahi.
 //   CAP sale.wsale (default khula). AI app mein NAHI — parchi PC parhta hai. Agent action NAHI (malik ka qaida v2.111.0).
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.181.2';
-import { smartSearch, noteHit } from './smart-search.js?v=2.181.2';
-import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.181.2';   // v2.180.0: 👦 larka (POS SP Man) chip
-import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.181.2';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.182.0';
+import { smartSearch, noteHit } from './smart-search.js?v=2.182.0';
+import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.182.0';   // v2.180.0: 👦 larka (POS SP Man) chip
+import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.182.0';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -254,14 +254,42 @@ const CTN_U = /\b(ctn|ctns|crtn|carton|cartons|cartoon|katon|kartan|peti|pety|bo
 const DZ_U = /\b(dz|dozen|darjan|darjn)\b|درجن/i;
 const KG_U = /\b(kg|kgs|kilo|kilogram|ltr|litre|liter)\b|کلو|لیٹر|لٹر/i;
 const GM_U = /\b(g|gm|gms|gram|grams|gr)\b|گرام/i;
-function qtyOf(x, it) {   // saada: PCS = q (gol, kam az kam 1) · carton likha ho = Ctn · darjan = ×12 · kg wala item = q (gram → kg)
+// v2.182.0: 📏 size / 📦 packet (malik: "garam masala pao = 0.250 packet khud") · parchi ka wazan ↔ item ke naam ka size
+const KGW_U = /\b(kg|kgs|kilo|kilos|kilogram)\b|کلو/i, LTR_U = /\b(l|ltr|ltrs|litre|litres|liter|liters)\b|لیٹر|لٹر/i, ML_U = /\b(ml)\b|ملی/i, PAO_U = /\b(pao|pau|paao)\b|پاؤ|پاو/i;
+const NSZ = /(\d+(?:\.\d+)?)\s*(kgs?|kilo(?:gram)?s?|grams?|gms?|gr|g|ml|ltrs?|lit(?:re|er)s?|l)(?![a-z])/i;
+function nameSize(name) { const m = String(name || '').match(NSZ); if (!m || !(Number(m[1]) > 0)) return null; const u = m[2].toLowerCase(), n = Number(m[1]); return u[0] === 'k' ? { d: 'w', a: n * 1000 } : u[0] === 'g' ? { d: 'w', a: n } : u === 'ml' ? { d: 'v', a: n } : { d: 'v', a: n * 1000 }; }
+function parchiAmt(x) {   // parchi ka kul wazan (gram) / maqdar (ml) — sirf jab unit wazan / litre ho
+  const q = Number(x?.q) || 0, u = String(x?.u || ''); if (!(q > 0) || !u) return null;
+  if (u === 'g' || (GM_U.test(u) && !KGW_U.test(u))) return { d: 'w', a: q };
+  if (u === 'kg' || KGW_U.test(u)) return { d: 'w', a: q * 1000 };
+  if (PAO_U.test(u)) return { d: 'w', a: q * 250 };
+  if (u === 'ml' || ML_U.test(u)) return { d: 'v', a: q };
+  if (u === 'litre' || LTR_U.test(u)) return { d: 'v', a: q * 1000 };
+  return null;
+}
+const pkSizes = it => (Array.isArray(it?.bq) ? it.bq.map(b => Number(b?.q) || 0).filter(q => q > 0 && q < 50) : []);   // POS sub-barcode ki tadad (0.25 = 250 gm packet)
+const looseIt = it => KG_U.test(String(it?.uName || '')) || pkSizes(it).some(q => q < 1);   // kilo se bikne wala (khula / packet)
+const pktName = kg => kg < 1 ? num(r3(kg * 1000)) + ' gm' : num(kg) + ' kg';   // chip: 📦 250 gm (packet)
+// saada: PCS = q (gol, kam az kam 1) · carton likha ho = Ctn · darjan = ×12 · kilo wala item = wazan (pao = 0.250, packet ho to 📦 chip)
+// v2.182.0: tadad likhi hi nahi (PC nq) = khali + ❓ poocho · naam ka size = parchi ka wazan (3 kilo ↔ 3kg) = 1 · guna (2 kg ↔ 1kg) = 2 · na bane = poocho
+function qtyOf(x, it) {
+  if (x?.nq) return { ctn: 0, pcs: 0, ask: 1 };
   const q = Number(x?.q) || 0, u = String(x?.u || ''), pk = Number(it?.pack) > 1 ? Number(it.pack) : 0, kgItem = KG_U.test(String(it?.uName || ''));
   if (pk && q > 0 && CTN_U.test(u)) return { ctn: Math.max(1, Math.round(q)), pcs: 0 };
   if (q > 0 && DZ_U.test(u)) return { ctn: 0, pcs: Math.max(1, Math.round(q * 12)) };
-  if (kgItem && q >= 50 && GM_U.test(u) && !KG_U.test(u)) return { ctn: 0, pcs: r3(q / 1000) };
+  const pa = parchiAmt(x);
+  if (pa && looseIt(it)) { const kg = r3(pa.a / 1000), pz = pkSizes(it).find(z => Math.abs(z - kg) < 0.0005); return { ctn: 0, pcs: kg, ...(pz ? { pkt: pktName(pz) } : {}) }; }
+  if (pa) {
+    const ns = nameSize(it?.name);
+    if (ns && ns.d === pa.d) { const r = pa.a / ns.a, n = Math.round(r); return n >= 1 && Math.abs(r - n) < 0.03 ? { ctn: 0, pcs: n } : { ctn: 0, pcs: 0, ask: 1 }; }
+    if (Math.abs(q - Math.round(q)) > 0.001) return { ctn: 0, pcs: 0, ask: 1 };   // pao / aadha ka item packet nahi = poocho (1 poora mat banao)
+  }
   if (kgItem && q > 0) return { ctn: 0, pcs: r3(q) };
   return { ctn: 0, pcs: q > 0 ? Math.max(1, Math.round(q)) : 1 };
 }
+// line par sawal / packet ka nishan (addItem ke baad)
+function markLine(ad, q) { const l = ad?.line; if (!l) return; if (q.ask && !(linePcs(l) > 0)) l.ask = 1; if (q.pkt) l.pkt = q.pkt; }
+const askOf = l => !!l.ask && !(linePcs(l) > 0);
 function itemAny(id) {   // pehle dukan (branch 1), na mile to kisi bhi godam ki list
   const s = stock(), k = String(id), a = s.items.find(r => String(r.id) === k); if (a) return a;
   for (const b of s.branches) { if (b === s.base) continue; const x = s.itemsFor(b).find(r => String(r.id) === k && !s.hidden?.[k]); if (x) return x; }
@@ -274,11 +302,12 @@ function fill(o) {
   L.slice(0, 200).forEach((x, i) => {
     if (!x || typeof x !== 'object') return;
     const sc = x.s == null ? 1 : Number(x.s) || 0, it = x.id ? (byId.get(String(x.id)) || itemAny(x.id)) : null;
-    const u = { i, r: String(x.r || '').slice(0, 200), it: String(x.it || '').slice(0, 120), q: Number(x.q) || 0, u: String(x.u || '').slice(0, 30), b: Array.isArray(x.b) && x.b.length === 4 ? x.b.map(Number) : null, id: x.id ? String(x.id) : '', n: String(x.n || '').slice(0, 120), s: sc, rk: String(x.rk || '').slice(0, 40), done: '' };
-    if (it && sc >= 0.5) { const q = qtyOf(u, it), ad = addItem(it, q.pcs, q.ctn); if (x.y && ad?.line) ad.line.y = 1; added++; } else unclear.push(u);   // v2.181.0: 🧠 yaad wali line
+    const u = { i, r: String(x.r || '').slice(0, 200), it: String(x.it || '').slice(0, 120), q: Number(x.q) || 0, u: String(x.u || '').slice(0, 30), b: Array.isArray(x.b) && x.b.length === 4 ? x.b.map(Number) : null, id: x.id ? String(x.id) : '', n: String(x.n || '').slice(0, 120), s: sc, rk: String(x.rk || '').slice(0, 40), done: '', ...(x.nq ? { nq: 1 } : {}), ...(x.z === 'w' || x.z === 's' ? { z: x.z } : {}) };   // v2.182.0: nq tadad likhi nahi · z andaza kyun
+    if (it && sc >= 0.5) { const q = qtyOf(u, it), ad = addItem(it, q.pcs, q.ctn); markLine(ad, q); if (x.y && ad?.line) ad.line.y = 1; added++; } else unclear.push(u);   // v2.181.0: 🧠 yaad wali line
   });
   addAt = 0; pendLoad = ''; selKey = cart[0]?.k || ''; curSnap = snapOf(o); keep();
-  C.notice(`📲 Parchi lag gayi — ${added} items${unclear.length ? ' · ❓ ' + unclear.length + ' dekhein' : ''}`);
+  const ask = cart.filter(askOf).length;
+  C.notice(`📲 Parchi lag gayi — ${added} items${ask ? ' · ✍ ' + ask + ' ki tadad likhein' : ''}${unclear.length ? ' · ❓ ' + unclear.length + ' dekhein' : ''}`);
 }
 function loadOrder(id) {
   const o = allOrders().find(x => x.id === id); if (!o) return;
@@ -324,7 +353,7 @@ async function paintCrops() {
     while (cropCache.size > 80) cropCache.delete(cropCache.keys().next().value);
   } catch { need.forEach(u => put(u.i, '📄')); } finally { cropBusy = false; }
 }
-const sugHTML = u => u.id && u.n ? `<button type="button" class="wps-uh wps-sug" data-ws-upick="${u.i}|${esc(u.id)}">✓ ${esc(u.n)}<small>AI ka andaza</small></button>` : '';
+const sugHTML = u => u.id && u.n ? `<button type="button" class="wps-uh wps-sug" data-ws-upick="${u.i}|${esc(u.id)}">✓ ${esc(u.n)}<small>${u.z === 's' ? '🤖 andaza · size alag' : u.z === 'w' ? '🤖 andaza · lafz poore nahi mile' : 'AI ka andaza'}</small></button>` : '';   // v2.182.0: z = PC ne pakka kyun nahi maana
 function uHits(u) {
   const q = String(u.qq ?? u.it ?? '').trim(); if (!q) return '<small class="wps-mut">Item ka naam likhein</small>';
   const L = smartSearch(stock().items, q, 8).filter(r => String(r.id) !== String(u.id)).slice(0, 6);
@@ -333,7 +362,7 @@ function uHits(u) {
 function uRowHTML(u) {
   const crop = cropCache.get(cur + '|' + u.i);
   const pic = Array.isArray(u.b) && u.b.length === 4 ? `<span class="wps-crop" data-ws-crop="${u.i}" data-ws-pv="1" title="Poori parchi">${crop ? `<img src="${esc(crop)}" alt="">` : crop === '' ? '📄' : '⏳'}</span>` : '';
-  const sub = [u.it && u.it !== u.r ? 'AI: ' + esc(u.it) : '', Number(u.q) ? num(u.q) + (u.u ? ' ' + esc(u.u) : '') : esc(u.u), u.rk ? '🗄 ' + esc(u.rk) : ''].filter(Boolean).join(' · ');
+  const sub = [u.it && u.it !== u.r ? 'AI: ' + esc(u.it) : '', u.nq ? '✍ tadad likhi nahi' : Number(u.q) ? num(u.q) + (u.u ? ' ' + esc(u.u) : '') : esc(u.u), u.rk ? '🗄 ' + esc(u.rk) : ''].filter(Boolean).join(' · ');
   return `<div class="wps-ur" data-ws-ur="${u.i}">
     <div class="wps-ur1">${pic}<span class="wps-urt"><b class="wps-raw" dir="auto">${esc(u.r || u.it || '—')}</b>${sub ? `<small>${sub}</small>` : ''}</span><button type="button" class="wps-ux" data-ws-uskip="${u.i}" title="Is line ko chhoro" aria-label="Chhoro">✕</button></div>
     <label class="wps-uql"><input type="search" data-ws-uq="${u.i}" value="${esc(u.qq ?? u.it ?? '')}" placeholder="🔍 sahi item ka naam" autocomplete="off" enterkeyhint="done"></label>
@@ -349,7 +378,8 @@ function unclearHTML() {
 function uPick(i, id) {
   const u = unclear.find(x => String(x.i) === String(i)), it = itemAny(id); if (!u) return;
   if (!it) { C.notice('Yeh item stock list mein nahi (band?) — doosra chunein'); return; }
-  const q = qtyOf(u, it); addItem(it, q.pcs, q.ctn); u.done = String(it.id); u.dn = it.name; keep();
+  const q = qtyOf(u, it); markLine(addItem(it, q.pcs, q.ctn), q); u.done = String(it.id); u.dn = it.name; keep();
+  if (q.ask) { C.notice('✍ ' + it.name + ' — tadad likhein (parchi par ' + (u.nq ? 'likhi nahi' : 'size alag') + ')'); C.rerender(); return; }
   C.notice('✓ ' + it.name + ' · ' + qtyTxt(cart.find(l => l.k === selKey) || { pcs: q.pcs, ctn: q.ctn, uName: it.uName, cName: it.cName, pack: it.pack }));
   C.rerender();
 }
@@ -393,15 +423,16 @@ function lineInfo(l, s, IX) {
   const it = m.get(String(l.id)) || null, short = !!it && linePcs(l) > (Number(it.stock) || 0) + 0.0005;
   return { lg, it, short, block: short && lg !== SALE_BRANCH };
 }
-function subTxt(l, f, s, tbl) {
+function subTxt(l, f, s, tbl, i) {
   const pk = packOf(l), Cn = esc(l.cName || 'Ctn');
+  const chips = (askOf(l) ? `<i class="wps-ask" data-ws-ask="${i}">❓ Tadad?</i>` : '') + (l.pkt ? `<i class="wps-pkt" data-ws-pkt="${i}" title="${esc(l.pkt)} packet">📦 ${esc(l.pkt)}</i>` : '');   // v2.182.0: sab se pehle (phone par baqi likhai … mein kat jati hai)
   const parts = [pk ? '1 ' + Cn + ' = ' + num(pk) : '', 'stock ' + (f.it ? num(f.it.stock) : '—') + (f.lg !== SALE_BRANCH ? ' (' + esc(brName(s, f.lg)) + ')' : ''),
     pk && Math.abs(crateOf(l) - (Number(l.rate) || 0)) > 0.004 ? Cn + ' rate ' + num(r2(crateOf(l) * pk)) : '', l.edited ? '✎ apna rate' : '', l.y ? '🧠 yaad' : '',
     f.block ? '<i>⛔ godam mein stock nahi</i>' : f.short ? '<i>stock kam</i>' : ''].filter(Boolean).join(' · ');
-  return (l.code ? (tbl ? `<u class="pp-tcd">${esc(l.code)} · </u>` : esc(l.code) + ' · ') : '') + parts;
+  return chips + (l.code ? (tbl ? `<u class="pp-tcd">${esc(l.code)} · </u>` : esc(l.code) + ' · ') : '') + parts;
 }
 const freshCls = i => i === cart.length - 1 && Date.now() - addAt < 1800 ? ' fresh' : '';
-const qInp = (k, i, v, cls = '') => `<input class="${cls}" type="number" min="0" step="${k === 'ctn' ? '1' : 'any'}" inputmode="${k === 'ctn' ? 'numeric' : 'decimal'}" data-ws-${k}="${i}" value="${Number(v) ? r3(v) : ''}">`;
+const qInp = (k, i, v, cls = '') => `<input class="${cls}" type="number" min="0" step="${k === 'ctn' ? '1' : 'any'}" inputmode="${k === 'ctn' ? 'numeric' : 'decimal'}" data-ws-${k}="${i}" value="${Number(v) ? r3(v) : ''}"${k === 'pcs' && cart[i] && askOf(cart[i]) ? ' placeholder="?"' : ''}>`;
 const rateInp = (l, i) => `<input class="${l.edited ? 'chg' : ''}" type="number" min="0" step="any" inputmode="decimal" data-ws-rate="${i}" value="${Number(l.rate) ? r2(l.rate) : ''}"${C.owner() ? '' : ' readonly tabindex="-1" title="Rate POS wala — sirf malik badal sakta hai"'}>`;
 // 📊 TABLE (PC) — POS Purchase ki table jaisi: # · Code · Item · Ctn · Pcs · Rate (fi pc) · Raqam · ✕
 function gridHTML(s, IX) {
@@ -410,9 +441,9 @@ function gridHTML(s, IX) {
   let tc = 0, tp = 0;
   const body = cart.map((l, i) => {
     const pk = packOf(l), f = lineInfo(l, s, IX); tc += pk ? Number(l.ctn) || 0 : 0; tp += Number(l.pcs) || 0;
-    return `<tr class="pp-line pp-tr${l.k === selKey ? ' sel' : ''}${f.short ? ' warn' : ''}${freshCls(i)}" data-ws-line="${i}" data-ws-sel="${esc(l.k)}">
+    return `<tr class="pp-line pp-tr${l.k === selKey ? ' sel' : ''}${f.short ? ' warn' : ''}${askOf(l) ? ' ask' : ''}${freshCls(i)}" data-ws-line="${i}" data-ws-sel="${esc(l.k)}">
       <td class="n">${i + 1}</td><td class="cd">${esc(l.code || '')}</td>
-      <td class="nm"><button type="button" data-ws-open="${esc(l.k)}" title="Yeh line chunein"><b>${esc(l.name)}</b><small>${subTxt(l, f, s, true)}</small></button></td>
+      <td class="nm"><button type="button" data-ws-open="${esc(l.k)}" title="Yeh line chunein"><b>${esc(l.name)}</b><small>${subTxt(l, f, s, true, i)}</small></button></td>
       ${anyPk ? `<td class="q">${pk ? qInp('ctn', i, l.ctn) : ''}</td>` : ''}
       <td class="q">${qInp('pcs', i, l.pcs)}</td>
       <td class="r">${rateInp(l, i)}</td>
@@ -429,8 +460,8 @@ function rowsHTML(s, IX) {
     const pk = packOf(l), f = lineInfo(l, s, IX), U = esc(l.uName || 'Pcs'), Cn = esc(l.cName || 'Ctn');
     const amt = K('Raqam', `<span class="wps-ro" data-ws-amt="${i}">${num(lineTotal(l))}</span>`), rt = K('Rate / ' + U, rateInp(l, i));
     const g = pk ? [K(Cn + ' (' + num(pk) + ')', qInp('ctn', i, l.ctn, 'q')), K(U, qInp('pcs', i, l.pcs, 'q')), rt, amt] : [K(U, qInp('pcs', i, l.pcs, 'q')), rt, amt];
-    return `<div class="sale-line pp-line pp-cr${l.k === selKey ? ' sel' : ''}${f.short ? ' warn' : ''}${freshCls(i)}" data-ws-line="${i}" data-ws-sel="${esc(l.k)}">
-      <div class="pp-cr1"><span class="pp-no">${i + 1}.</span><b>${esc(l.name)}</b><small>${subTxt(l, f, s, false)}</small><em class="pp-rs" data-ws-rs="${i}">Rs ${num(lineTotal(l))}</em>${gcHTML(l, i)}</div>
+    return `<div class="sale-line pp-line pp-cr${l.k === selKey ? ' sel' : ''}${f.short ? ' warn' : ''}${askOf(l) ? ' ask' : ''}${freshCls(i)}" data-ws-line="${i}" data-ws-sel="${esc(l.k)}">
+      <div class="pp-cr1"><span class="pp-no">${i + 1}.</span><b>${esc(l.name)}</b><small>${subTxt(l, f, s, false, i)}</small><em class="pp-rs" data-ws-rs="${i}">Rs ${num(lineTotal(l))}</em>${gcHTML(l, i)}</div>
       <div class="pp-cg pp-cg${g.length}">${g.join('')}</div></div>`;
   }).join('') + `<div class="pp-crf"><b>${cart.length} items</b><b id="wpsTot">Total Rs ${num(cartTotal())}</b></div>`;
 }
@@ -520,6 +551,8 @@ function selSet(k) {
 // ---------- 🧾 BILL BANAO — WAHI appSales doc jo sale.js save() banata hai ----------
 async function save() {
   if (saving) return;
+  const askN = cart.filter(askOf).length;   // v2.182.0: malik — parchi par tadad nahi likhi = pehle poocho, bill nahi
+  if (askN) { const i = cart.findIndex(askOf), q = document.querySelector(`#list [data-ws-pcs="${i}"]`); C.notice(`❓ ${askN} item${askN > 1 ? 's' : ''} ki tadad parchi par nahi — gahak se pooch kar likhein`); if (q) { q.scrollIntoView({ block: 'center' }); q.focus(); } return; }
   const s = stock(), gate = gateNow(), lines = []; let empty = 0;
   for (const l of cart) {   // carton aur khule piece ka rate alag ho to POS ko DO lines (unit ctn / pcs) — sale.js v1.61 jaisa
     const base = { id: String(l.id), code: String(l.code || ''), name: String(l.name || ''), pack: Number(l.pack) || 0, cName: l.cName, uName: l.uName, godam: gate > 0 ? gate : (Number(l.godam) || SALE_BRANCH) };
@@ -817,6 +850,8 @@ document.addEventListener('input', e => {
   else if (d.wsCash != null) { cash = t.value === '' ? 0 : Math.max(0, Number(t.value) || 0); keep(); const dd = $('wpsDue'); if (dd) dd.innerHTML = dueText(); return; }
   else if (d.wsNote != null) { note = t.value.slice(0, 60); keep(); return; }
   else return;
+  if (l && l.pkt && d.wsPcs != null) { l.pkt = ''; document.querySelectorAll(`#list [data-ws-pkt="${i}"]`).forEach(el => el.remove()); }   // tadad haath se badli = packet ka nishan hata
+  if (l && l.ask && linePcs(l) > 0) { l.ask = 0; document.querySelectorAll(`#list [data-ws-line="${i}"]`).forEach(el => el.classList.remove('ask')); document.querySelectorAll(`#list [data-ws-ask="${i}"]`).forEach(el => el.remove()); }   // v2.182.0: tadad likh di = sawal khatam
   keep(); refreshTotals();
 });
 document.addEventListener('change', e => {

@@ -39,11 +39,15 @@ const SYN = [
   ['kishmish', 'raisin', 'raisins'], ['akhrot', 'walnut', 'walnuts'], ['pista', 'pistachio', 'pistachios'], ['mungphali', 'peanut', 'peanuts', 'moongphali'], ['anday', 'anda', 'egg', 'eggs'],
   ['surf', 'detergent', 'washing'], ['machis', 'matchbox', 'match'], ['dahi', 'yogurt', 'yoghurt'], ['shehad', 'honey'], ['sirka', 'vinegar'], ['makhan', 'butter'], ['dhania', 'coriander'],
   ['saunf', 'fennel'], ['laung', 'clove', 'cloves'], ['darchini', 'cinnamon'], ['kalonji', 'nigella'], ['til', 'sesame'], ['sooji', 'suji', 'semolina'],
-  ['khajoor', 'dates'], ['sharbat', 'syrup'], ['manjan', 'toothpaste'], ['biscuit', 'biscuits', 'biskut'], ['nimko', 'namkeen', 'namkin'], ['shampoo', 'shampu', 'shampo']
+  ['khajoor', 'dates'], ['sharbat', 'syrup'], ['manjan', 'toothpaste'], ['biscuit', 'biscuits', 'biskut'], ['nimko', 'namkeen', 'namkin'], ['shampoo', 'shampu', 'shampo'],
+  ['safed', 'safaid', 'white'], ['kala', 'kali', 'black'], ['lal', 'red'], ['hara', 'green']   // v2.182.0: rang (parchi: white chana = safed chana)
 ];
 const CAN = new Map();
 for (const g of SYN) { const c = k2(g[0]); for (const w of g) { const k = k2(w); if (k.length >= 2 && !CAN.has(k)) CAN.set(k, c); } }
 const can = k => CAN.get(k) || k;
+// v2.182.0: PC wa-parchi ki pakka jaanch — poore lafz (Urdu → Roman) + ek jaise lafz ki chaabi (sugar = cheeni)
+export const words = s => low(s).split(' ').filter(Boolean);
+export const canon = w => can(k2(w));
 
 // har item ka ek dafa bana hua "pata" (naam + rack ka naam)
 const IDX = new Map();
