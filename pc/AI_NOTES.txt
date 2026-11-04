@@ -4018,3 +4018,5 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - Rules 2.86: parchiOrders / parchiImg — malik + mulazim parhein; app sirf NAYA {src 'app', st 'new'} + tasveer (≤1 MB); badalna sirf st, saleId, by, upAt, prReq, ph, nm, j, n, u.
 - Baqi (agla kaam): bill gahak ke KHATE par nahi (sale-post sirf Counter / Wholesale), ❓ ki chuni hui item PC ko seekhne ke liye wapas nahi jaati, POS mein rack ka khana nahi (rack = website racks ic).
 - QAIDA: PC par npm install sirf APNE folder mein (wa-mods jaisa) — C:\khata-sync mein `npm install <pkg>` package.json se bahar wale sab packages (firebase-admin, mssql) mita deta hai; Node 20.12+ par npm `exec` (shell) se chalao, `execFile('npm.cmd')` EINVAL deta hai (nt-print.js ~L421 mein yahi khatra — jab chhuo theek karo).
+
+## app v2.179.0 (2026-11-04) — sirf app (camera screen v2 phone par + WhatsApp Parchi Sale line ka 🏬 godam chip, gate pass switch hata). PC / rules / manifest kuch nahi badla.

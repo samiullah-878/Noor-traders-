@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.178.0';
-import { liveLabelsHTML } from './barcode.js?v=2.178.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.179.0';
+import { liveLabelsHTML } from './barcode.js?v=2.179.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -699,13 +699,13 @@ export function stockRozChip() {
 export async function stockRozOpen(k) {
   if (!cloud) return; start();
   if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  if (isOwner() && !k) { try { (await import('./roz.js?v=2.178.0')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
+  if (isOwner() && !k) { try { (await import('./roz.js?v=2.179.0')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
   const L = rozLocs().filter(rozCan);
   if (!rozCfg().on) { notice('📋 Roz ki ginti malik ne band rakhi hai'); return; }
   if (!L.length) { notice('🔒 Roz ki ginti ki ijazat nahi (malik: Settings → Mulazim → 📋 Roz ki ginti)'); return; }
   const go = x => { try { window.ntRecentOpen?.({ open: { kind: 'stock', screen: 'roz', k: x } }); } catch { rozEnter(x); } };
   if (k || L.length === 1) { go(k || L[0].k); return; }
-  try { (await import('./roz.js?v=2.178.0')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
+  try { (await import('./roz.js?v=2.179.0')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
 }
 // roz.js ke liye andar ka saman (sirf parhna + wahi kaam jo buttons karte hain)
 export function stockRozApi() {
@@ -729,7 +729,7 @@ export function stockRozApi() {
 let farqMod = null;
 const farqCan = () => seeStock() && (isOwner() || can('stock.farq'));
 async function farqOpenNow() { if (!farqCan()) { notice('⚖️ Stock farq — ijazat nahi (malik se kahein)'); return; } start(true); if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  try { farqMod = farqMod || await import('./farq.js?v=2.178.0'); recentPush({ key: 'farq', icon: '⚖️', label: 'Stock farq', open: { kind: 'stock', screen: 'farq' } }); farqMod.farqOpen(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
+  try { farqMod = farqMod || await import('./farq.js?v=2.179.0'); recentPush({ key: 'farq', icon: '⚖️', label: 'Stock farq', open: { kind: 'stock', screen: 'farq' } }); farqMod.farqOpen(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
 // sab jagah (jo gini) ka asal farq — is round ki ginti
 function oxNet(id) { let net = 0, k = false, z = false, n = 0, pr = 0; for (const b of brInfo().branches) { const it = itemAt(b, id); if (!it) continue; const c = countOf(b, it); if (!c) continue; const f = r3(countedPcs(c) - Number(sysOf(c, it))); net += f; n++; if (f < -0.001) k = true; if (f > 0.001) z = true; pr = Number(it.prate) || pr; } return n ? { net: r3(net), rs: net * pr, both: k && z, n } : null; }
 function oxHTML(r, c, diff) {
@@ -781,7 +781,7 @@ function qtrGinti(b, id) {
     return Math.abs(f) > 0.0005 ? { f: r3(f), round } : null; } catch { return null; }
 }
 async function qtrGo(o) { if (!qtrCan()) { notice('⇄ Transfer — ijazat nahi (malik se kahein)'); return; } start(true); if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  try { qtrMod = qtrMod || await import('./qtr.js?v=2.178.0'); qtrMod.qtrOpen(qtrApi(), o); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
+  try { qtrMod = qtrMod || await import('./qtr.js?v=2.179.0'); qtrMod.qtrOpen(qtrApi(), o); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
 // jagah badli: sab se bara KAM (yahan maal kam = POS zyada) → sab se bari ZYADTI, tadad = dono mein chhoti
 function oxPair(id) {
   let k = null, z = null; for (const b of brInfo().branches) { const it = itemAt(b, id); if (!it) continue; const c = countOf(b, it); if (!c) continue; const f = r3(countedPcs(c) - Number(sysOf(c, it)));
@@ -3478,9 +3478,30 @@ async function openScanner() {
     if (scanBox) return;               // intezar ke dauran dobara na khul jaye
   }
 
+  // v2.179.0 (malik: "camera on ho to screen par items hi nazar aayein · 123 search ke neeche · side buttons chip ke peeche · 10 items"):
+  // Sale + POS Purchase + 📲 WhatsApp Parchi Sale — PHONE par naya saaf camera (v2). PC (1100px+), transfer note aur pick-mode pehle jaise.
+  const v2 = !pickHook && !trRootMark && !!document.querySelector('[data-sale-root],[data-pp-root],[data-ws-root]') && !(window.matchMedia && window.matchMedia('(min-width:1100px)').matches);
+  const padHTML = `<div class="scan-pad" hidden>
+          <div class="scan-pad-name"></div>
+          <div class="scan-pad-row"><button type="button" data-unit="pcs" class="selected">Pcs</button><button type="button" data-unit="ctn">Ctn</button>
+            ${[1,2,3,4,5,6,7,8,9,10,11,12].map(n => `<button type="button" data-qty="${n}">${n}</button>`).join('')}<button type="button" data-qty="+1">+1</button></div>
+        </div>`;
+  const findHTML = `<div class="scan-find"><div class="scan-find-row"><input class="scan-q" type="search" enterkeyhint="next" placeholder="🔍 Naam ya code likhein" autocomplete="off"><input class="scan-n" type="text" inputmode="decimal" enterkeyhint="done" placeholder="Pcs" autocomplete="off"><input class="scan-c" type="text" inputmode="decimal" enterkeyhint="done" placeholder="Ctn" autocomplete="off"><button type="button" class="scan-u" hidden>Pcs</button></div><div class="scan-hits" hidden></div></div>`;
   scanBox = document.createElement('div');
-  scanBox.className = 'scan-box';
-  scanBox.innerHTML = `<div class="scan-inner">
+  scanBox.className = 'scan-box' + (v2 ? ' v2' : '');
+  if (v2) scanBox.innerHTML = `<div class="scan-inner">
+      ${findHTML}
+      <div class="scan-row2">
+        <div class="scan-cam" title="Camera — dabayein to bara / chhota"><video playsinline muted autoplay></video><div class="scan-line"></div></div>
+        <button type="button" class="scan-tl" aria-label="Camera ke button" title="Focus · Zoom · Camera badlo · Light">📷 ▾</button>
+        ${padHTML}
+      </div>
+      <div class="scan-left"></div>
+      <p class="scan-msg">Barcode camera ke saamne laayein — ya naam / code likhein</p>
+      <ol class="scan-names"></ol>
+      <div class="scan-bar2"><button type="button" class="scan-done">✓ Ho gaya (<span>0</span>)</button><div class="scan-sum"></div><button type="button" class="scan-close" aria-label="Band karein">✕</button></div>
+    </div>`;
+  else scanBox.innerHTML = `<div class="scan-inner">
       <div class="scan-find"><div class="scan-find-row"><input class="scan-q" type="search" enterkeyhint="next" placeholder="🔍 Naam ya code likhein" autocomplete="off"><input class="scan-n" type="text" inputmode="decimal" enterkeyhint="done" placeholder="Pcs" autocomplete="off"><input class="scan-c" type="text" inputmode="decimal" enterkeyhint="done" placeholder="Ctn" autocomplete="off"><button type="button" class="scan-u" hidden>Pcs</button></div><div class="scan-hits" hidden></div></div>
       <div class="scan-mid">
         <div class="scan-left"></div>
@@ -3499,6 +3520,7 @@ async function openScanner() {
     </div>`;
   document.body.appendChild(scanBox);
   const msg = scanBox.querySelector('.scan-msg');
+  if (v2) scanBox.querySelector('.scan-tl')?.addEventListener('click', e => { e.preventDefault(); const on = scanBox.classList.toggle('tools-on'); e.currentTarget.classList.toggle('is-in', on); e.currentTarget.textContent = on ? '📷 ▴' : '📷 ▾'; });   // v2.179.0: camera ke button chip ke peeche (shuru mein chhupe)
   if (pickHook) {   // v1.74: sirf ek code chunna hai — search/tadad/list chhupa do (v2.41: transfer wale pickMulti mein search rahe)
     scanBox.classList.add('pick-mode');
     if (!pickMulti) scanBox.querySelector('.scan-find')?.setAttribute('hidden', '');
@@ -3524,8 +3546,34 @@ async function openScanner() {
   let liG = null;   // v2.95.1: godam list EK dafa fi draw (pehle har line par — scan dheema)
   const liGodam = (k, it) => { if (!saleLineGodamHook || !saleGodamHook) return ''; const g = liG; if (!g || !g.list || g.list.length < 2) return '';
     const cur = Number(it.g) || 1; return `<div class="li-g">${g.list.map(x => `<button type="button" data-lgk="${esc(k)}" data-lgb="${x.b}" title="${esc(x.full || x.name)}"${Number(x.b) === cur ? ' class="on"' : ''}>${esc(x.name)}</button>`).join('')}</div>`; };
+  // v2.179.0: v2 (phone) — har line PATLI (naam / tadad × rate = raqam) + aakhir mein EK godam chip (dabao = agla godam: NT → G1 → G2 … → NT).
+  // Line par tap = khulti hai (Ctn / Pcs khane · ± · ✕), dobara tap = band. Godam list yahin saleStock se (sale.js ke hook par nahi).
+  let openK = '', seenLen = -1;
+  const gdList = () => { const st = saleStock(); const r = (st.branches || []).filter(b => Number(b) !== 0).map(b => { const full = (st.branchName ? st.branchName(b, st.names) : '') || st.names?.[b] || ('Godam ' + b), m = String(full).match(/(\d+)\s*$/);
+    return { b: Number(b), name: Number(b) === 1 ? 'NT' : 'G' + (m ? m[1] : String(full).slice(0, 3)), full: String(full) }; });
+    return r.sort((a, b) => (a.b === 1 ? -1 : b.b === 1 ? 1 : a.name.localeCompare(b.name, 'en', { numeric: true }))); };
+  const gChip = (k, it, gl) => { if (!gl || gl.length < 2) return ''; const cur = Number(it.g) || 1; let i = gl.findIndex(x => x.b === cur); if (i < 0) i = 0;
+    const c = gl[i], nx = gl[(i + 1) % gl.length];
+    return `<span class="li-g li-gc"><button type="button" data-lgk="${esc(k)}" data-lgb="${nx.b}" data-lgn="${esc(nx.full)}" title="${esc(c.full)} — dabayein: ${esc(nx.full)}"${cur !== 1 ? ' class="on"' : ''}>${esc(c.name)}</button></span>`; };
+  const v2Line = (k, it, gl, no) => { const L = lineOf(it, k), op = k === openK, q = scanQty.get(k) || { pcs: 0, ctn: 0 }, pk = Number(it.pack) || 0;
+    const nm = gl && gl.length > 1 ? String(it.name).replace(/ · G[^ ]*$/, '') : String(it.name);
+    const cls = [k === lastKey ? 'now' : '', op ? 'open' : ''].filter(Boolean).join(' ');
+    return `<li data-k="${esc(k)}"${cls ? ` class="${cls}"` : ''}><b><i>${no}.</i> ${esc(nm)}</b><span>${esc(L.qtxt)}${L.rate ? ` x ${num(L.rate)} = <b>${num(L.amt)}</b>` : ''}</span>${gChip(k, it, gl)}${op ? `<div class="li-qty">${pk > 1 ? `<label>${esc(it.cName || 'Ctn')}<input class="li-in" data-li="${esc(k)}" data-u="ctn" type="text" inputmode="decimal" autocomplete="off" value="${q.ctn || ''}" placeholder="0"></label>` : ''}<label>${esc(it.uName || 'Pcs')}<input class="li-in" data-li="${esc(k)}" data-u="pcs" type="text" inputmode="decimal" autocomplete="off" value="${q.pcs || ''}" placeholder="0"></label><button type="button" class="li-neg${L.total < 0 ? ' on' : ''}" data-neg="${esc(k)}" title="Wapsi (minus)">${L.total < 0 ? '↩' : '±'}</button><button type="button" class="scan-del" data-del="${esc(k)}" aria-label="Hatao">✕ Hatao</button></div>` : ''}</li>`; };
   const drawNames = (keepScroll) => {
     const sale = saleRoot();
+    if (sale && v2) {
+      const list = scanOrder.map(k => [k, scanItems.get(k)]).filter(x => x[1]);
+      if (seenLen >= 0 && list.length > seenLen) openK = '';   // naya item aaya = khuli line band (tadad upar wale 123 se)
+      seenLen = list.length; if (openK && !scanItems.has(openK)) openK = '';
+      const gl = saleLineGodamHook ? gdList() : null;
+      countBox.textContent = list.length;
+      namesBox.innerHTML = list.slice().reverse().map(([k, it], i) => v2Line(k, it, gl, list.length - i)).join('');
+      namesBox.reversed = true; namesBox.start = list.length;
+      const kul = list.reduce((n, [k, it]) => n + lineOf(it, k).amt, 0);
+      sumBox.innerHTML = list.length ? (kul ? `Kul <b>Rs ${num(kul)}</b>` : `<b>${list.length}</b> items`) : '';
+      if (keepScroll) { namesBox.querySelector('li.open,li.now')?.scrollIntoView({ block: 'nearest' }); } else { try { namesBox.scrollTop = 0; } catch {} }
+      return;
+    }
     if (sale) {
       const list = scanOrder.map(k => [k, scanItems.get(k)]).filter(x => x[1]);
       liG = null; if (saleLineGodamHook && saleGodamHook) { try { liG = saleGodamHook(); } catch {} }
@@ -3548,7 +3596,7 @@ async function openScanner() {
   scanBox._redraw = () => { try { showPad(); drawNames(); } catch {} };
   scanBox._reload = () => { const keep = lastKey; syncFromCart(); if (keep && scanItems.has(keep)) { lastKey = keep; lastScan = scanItems.get(keep); } try { showPad(); drawNames(true); } catch {} };   // v2.95
   // v2.64: Pcs/Ctn ke sath GODAM chips (sale) — agla scan isi godam se
-  if (saleRoot() && saleGodamHook && !pickHook) {
+  if (saleRoot() && saleGodamHook && !pickHook && !v2 && document.querySelector('[data-sale-root]')) {   // v2.179.0: phone (v2) par yeh qatar nahi — har line ka apna godam chip · sirf Sale screen ki (Purchase / WhatsApp mein sale.js ka godam badal deti thi)
     const gw = document.createElement('div'); gw.className = 'scan-godam';
     const paintG = () => { let g = null; try { g = saleGodamHook(); } catch {} if (!g || !g.list || g.list.length < 2) { gw.hidden = true; return; } gw.hidden = false;
       gw.innerHTML = g.list.map(x => `<button type="button" data-sg="${x.b}" title="${esc(x.full || x.name)}"${Number(x.b) === Number(g.cur) ? ' class="on"' : ''}>${esc(x.name)}</button>`).join(''); };   // v2.90: chhote NT/G1/G2
@@ -3564,7 +3612,7 @@ async function openScanner() {
   // v1.64: list ki line ka ✕ — bill se bhi kat jaye
   namesBox.addEventListener('pointerdown', e => { if (e.target.closest('.scan-del,.li-g,.li-neg')) e.preventDefault(); });
   namesBox.addEventListener('click', e => {   // v2.95: line ka godam chip / ± wapsi
-    const gb = e.target.closest('[data-lgk]'); if (gb) { e.stopPropagation(); try { saleLineGodamHook?.(gb.dataset.lgk, Number(gb.dataset.lgb)); } catch {} scanBox._reload?.(); msg.textContent = '✓ Godam: ' + (gb.title || gb.textContent); return; }
+    const gb = e.target.closest('[data-lgk]'); if (gb) { e.stopPropagation(); try { saleLineGodamHook?.(gb.dataset.lgk, Number(gb.dataset.lgb)); } catch {} scanBox._reload?.(); msg.textContent = '✓ Godam: ' + (gb.dataset.lgn || gb.title || gb.textContent) + (v2 ? ' — dobara dabayein = agla godam' : ''); if (navigator.vibrate) navigator.vibrate(25); return; }
     const nb = e.target.closest('[data-neg]'); if (nb) { e.stopPropagation(); const k = nb.dataset.neg, it = scanItems.get(k); if (!it) return; const q = scanQty.get(k) || { pcs: 0, ctn: 0 };
       const nq = (Number(q.pcs) || Number(q.ctn)) ? { pcs: -(Number(q.pcs) || 0), ctn: -(Number(q.ctn) || 0) } : { pcs: -1, ctn: 0 };
       scanQty.set(k, nq); lastKey = k; lastScan = it; if (saleQtyHook) saleQtyHook(it, nq, k); showPad(); drawNames(true); msg.textContent = (nq.pcs < 0 || nq.ctn < 0) ? `↩ ${it.name} — WAPSI (minus)` : `✓ ${it.name} — wapis plus`; return; }
@@ -3572,7 +3620,9 @@ async function openScanner() {
   // v2.58: list ki line par tap / ↑↓ = wo line chuno -> Pcs/Ctn pad aur Tadad usi par lagein
   const pickLine = k => { if (!k || !scanItems.has(k)) return; lastKey = k; lastScan = scanItems.get(k); showPad(); drawNames(true); };
   namesBox.addEventListener('click', e => { if (e.target.closest('.scan-del,.li-in,.li-qty,.li-g,.li-neg')) return;   // v2.69: khane par tap = sirf likhna (redraw nahi)
-    const li = e.target.closest('li[data-k]'); if (li) { pickLine(li.dataset.k); kbLine = true; } });
+    const li = e.target.closest('li[data-k]'); if (!li) return;
+    if (v2) { const k = li.dataset.k; if (openK === k) { openK = ''; drawNames(true); return; } openK = k; pickLine(k); liFocus(k); return; }   // v2.179.0: tap = khulo / band (scroll par nahi khulti)
+    pickLine(li.dataset.k); kbLine = true; });
   let kbLine = false, kbNum = '';
   // v2.67: list ki line ke khane — Shift / click = wahan jao, Tab = agla khana, Enter = lagao + wapas search. Scanner ke tez hindse = naya item.
   const liFocus = k => { const box = namesBox.querySelector(`li[data-k="${CSS.escape(k)}"] .li-in[data-u="pcs"]`) || namesBox.querySelector(`li[data-k="${CSS.escape(k)}"] .li-in`); if (box) { box.focus(); try { box.select(); } catch {} } };
@@ -3587,12 +3637,13 @@ async function openScanner() {
     if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation();
       const raw = String(inp.value).replace(/[^0-9]/g, '');
       if (raw.length >= 5 && liN >= 5 && (liLast - liT0) / Math.max(1, liN - 1) < 40) { inp.value = inp.defaultValue; liN = 0; feedCode(raw); qBox?.focus(); return; }   // scanner ka barcode
-      liN = 0; liApply(inp, true); qBox?.focus(); return; }
+      liN = 0; openK = ''; liApply(inp, true); qBox?.focus(); return; }
     if (e.key === 'Escape') { e.preventDefault(); inp.value = inp.defaultValue; qBox?.focus(); return; }
   }, true);
   namesBox.addEventListener('input', e => { const inp = e.target.closest?.('.li-in'); if (inp) liApply(inp, false); });
   namesBox.addEventListener('focusout', e => { const inp = e.target.closest?.('.li-in'); if (inp && !namesBox.contains(e.relatedTarget)) { liApply(inp, true); } });
-  namesBox.addEventListener('pointerdown', e => { if (e.target.closest('.li-in,.scan-del,.li-g,.li-neg')) return; const li = e.target.closest('li[data-k]'); if (li) { e.preventDefault(); pickLine(li.dataset.k); setTimeout(() => liFocus(li.dataset.k), 0); } });
+  namesBox.addEventListener('pointerdown', e => { if (v2) { if (!e.target.closest('.li-in') && e.target.closest('li[data-k]')) e.preventDefault(); return; }   // v2.179.0: khule khane ka focus na toote (click hi kholta / band karta hai)
+    if (e.target.closest('.li-in,.scan-del,.li-g,.li-neg')) return; const li = e.target.closest('li[data-k]'); if (li) { e.preventDefault(); pickLine(li.dataset.k); setTimeout(() => liFocus(li.dataset.k), 0); } });
   const lineKeys = () => [...namesBox.querySelectorAll('li[data-k]')].map(li => li.dataset.k);
   scanBox.addEventListener('keydown', e => {
     if (!saleRoot()) return;
@@ -3639,7 +3690,8 @@ async function openScanner() {
   });
   const pad = scanBox.querySelector('.scan-pad'), padName = scanBox.querySelector('.scan-pad-name');
   const showPad = () => {
-    if (!lastScan) { pad.hidden = true; return; }
+    if (v2) pad.classList.toggle('idle', !lastScan);   // v2.179.0: 123 ki patti hamesha search ke neeche (item na ho to halki)
+    if (!lastScan) { pad.hidden = !v2; return; }
     pad.hidden = false;
     const q = scanQty.get(lastKey || String(lastScan.id)) || { pcs: 0, ctn: 0 };
     padName.textContent = `${lastScan.name} — ${q.ctn ? q.ctn + ' ' + (lastScan.cName || 'Ctn') + ' + ' : ''}${q.pcs || 0} ${lastScan.uName || 'Pcs'}`;
@@ -3850,11 +3902,12 @@ async function openScanner() {
         closeScanner(); openScanner();
       };
       tools.appendChild(cb);
-      msg.textContent = `Camera: ${track.label || 'main'} — dhundla ho to 🔄 se badlein`;
+      msg.textContent = v2 ? 'Camera peeche chal raha hai — barcode saamne laayein (dhundla ho to 📷 ▾ → 🔄)' : `Camera: ${track.label || 'main'} — dhundla ho to 🔄 se badlein`;
     }
   } catch {}
   camOffBtn(tools);   // v2.40: 🔄 Camera ke neeche 📷 Camera band
-  video.addEventListener('click', refocus);
+  if (v2) scanBox.querySelector('.scan-cam')?.addEventListener('click', () => { if (!scanBox) return; const big = scanBox.classList.toggle('cam-big'); if (big) refocus(); else msg.textContent = 'Camera peeche chal raha hai — barcode saamne laayein'; });   // v2.179.0: chhota camera — tap = bara / chhota
+  else video.addEventListener('click', refocus);
   if (caps.torch) {
     let on = false; const tb = document.createElement('button'); tb.type = 'button'; tb.textContent = '🔦 Light';
     tb.onclick = async () => { on = !on; try { await track.applyConstraints({ advanced: [{ torch: on }] }); } catch {} tb.textContent = on ? '🔦 Light ON' : '🔦 Light'; };
@@ -5259,8 +5312,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.178.0';
-import { recentPush } from './recent.js?v=2.178.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.179.0';
+import { recentPush } from './recent.js?v=2.179.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)

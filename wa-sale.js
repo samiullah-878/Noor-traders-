@@ -7,12 +7,12 @@
 //     ❓ lines (samajh nahi aayi / kam yaqeen) = tasveer ka tukda + search se sahi item. 🧾 Bill banao = WAHI appSales (sale.js save() jaisa
 //     doc) → PC sale-post POS bill + print. Phir order {st 'billed', saleId}. ✓ Maal nikla = {st 'picked'} · 🖨 Dobara print = {prReq}.
 //   ⋮: 📷 Parchi photo / 🖼 gallery (app se: parchiImg + parchiOrders {src 'app', st 'new'} → PC parhta hai; 90 s jawab nahi = ⚠️) ·
-//     Counter / Wholesale · Table / Lines · print copies · counter · gate pass · 👤 gahak · ⚙️ WhatsApp setting (sirf malik: QR, numbers, print).
+//     Counter / Wholesale · Table / Lines · print copies · counter · 👤 gahak (v2.179.0: gate pass hata — line ka 🏬 godam chip) · ⚙️ WhatsApp setting (sirf malik: QR, numbers, print).
 //   Data attr SIRF `data-ws-*`, root `data-ws-root` — purchase.js ke (pp-root wale) listeners yahan kabhi nahi chalte (aur ulta bhi).
 //   Look: purchase ki classes (pp-tbl · pp-cr · pp-foot · pp-hbar · sale-hit …); apni nayi classes `wps-*` (purani .ws-* se takrao nahi).
 //   CAP sale.wsale (default khula). AI app mein NAHI — parchi PC parhta hai. Agent action NAHI (malik ka qaida v2.111.0).
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.178.0';
-import { smartSearch, noteHit } from './smart-search.js?v=2.178.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.179.0';
+import { smartSearch, noteHit } from './smart-search.js?v=2.179.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -77,6 +77,11 @@ function stock() {
 }
 function itemIn(g, id) { const st = saleStock(); return st.itemsFor(Number(g)).find(r => String(r.id) === String(id)) || null; }
 const brName = (s, b) => (s.branchName ? s.branchName(b, s.names) : '') || s.names?.[b] || ('Godam ' + b);
+// v2.179.0: 🏬 godam chip — line ke aakhir mein; dabao = agla godam (NT → G1 → G2 … → NT), na dabao = NOOR TRADERS. Naam se pehchan (number se nahi).
+function gdList() { const s = saleStock(); return (s.branches || []).filter(b => Number(b) !== 0).map(b => { const full = String(brName(s, b)), m = full.match(/(\d+)\s*$/);
+  return { b: Number(b), name: Number(b) === SALE_BRANCH ? 'NT' : 'G' + (m ? m[1] : full.slice(0, 3)), full }; }).sort((a, b) => (a.b === SALE_BRANCH ? -1 : b.b === SALE_BRANCH ? 1 : a.name.localeCompare(b.name, 'en', { numeric: true }))); }
+function gcHTML(l, i) { const L = gdList(); if (L.length < 2) return ''; const g = Number(l.godam) || SALE_BRANCH, c = L.find(x => x.b === g) || L[0];
+  return `<button type="button" class="wps-gc${g !== SALE_BRANCH ? ' is-in' : ''}" data-ws-gc="${i}" title="${esc(c.full)} — dabayein = agla godam" aria-label="Godam ${esc(c.full)}">${esc(c.name)}</button>`; }
 // v1.61 (sale.js): counter mein KHULA PIECE = Peice Rate (rate2), POORA CARTON = Cotton Rate (rate, fi piece) · wholesale = W rate
 const rateFor = (it, m = mode) => r2(m === 'wholesale' ? (Number(it.wrate) || Number(it.rate) || 0) : (Number(it.rate2) || Number(it.rate) || 0));
 const crateFor = (it, m = mode) => r2(m === 'wholesale' ? (Number(it.wrate) || Number(it.rate) || 0) : (Number(it.rate) || 0));
@@ -93,7 +98,7 @@ const qtyTxt = l => { const c = Number(l.ctn) || 0, p = Number(l.pcs) || 0; retu
 // print / counter / gate — is screen ki apni yaad (pehli dafa Sale screen wali se shuru)
 const copiesNow = () => Math.min(3, Math.max(1, Number(LG('sam-ws-copies') || LG('sam-sale-copies')) || 1));
 const counterNow = () => { const c = LG('sam-ws-counter') || LG('sam-sale-counter'); return BASE_COUNTERS.some(x => x[0] === c) || c.startsWith('pc:') ? c : 'abdurehman'; };
-const gateNow = () => { const v = LG('sam-ws-gate'); return Number(v === '' ? LG('sam-sale-gate') : v) || 0; };
+const gateNow = () => 0;   // v2.179.0: 🚪 Gate pass switch hata (malik: "zaroorat nahi") — har line ka apna godam chip (NT → G1 → G2 … → NT)
 const viewNow = () => { const v = LG(VIEW_KEY); return v === 'grid' || v === 'rows' ? v : (window.innerWidth >= 900 ? 'grid' : 'rows'); };
 function findByCode(items, code) {
   const clean = String(code).trim(), bare = clean.replace(/^0+/, '');
@@ -351,7 +356,7 @@ function gahakBox(o) {
     <button type="button" class="wps-tc pri" data-ws-gsave="1">💾 Save</button><i class="wps-wst" id="wpsGst">${stTxt(chipSt.g)}</i></div>`;
 }
 function toolsHTML(o) {
-  const v = viewNow(), cp = copiesNow(), ctr = counterNow(), s = saleStock(), gate = gateNow(), brs = (s.branches || []).filter(b => b !== 0);
+  const v = viewNow(), cp = copiesNow(), ctr = counterNow();
   const seg = (k, i, t, sub, body) => `<div class="pp-vseg" data-mn-seg="${k}" data-mn-i="${i}" data-mn-t="${t}"${sub ? ` data-mn-s="${esc(sub)}"` : ''} data-mn-g="${GRP}">${body}</div>`;
   const B = (on, at, val, lab) => `<button type="button" class="${on ? 'is-in' : ''}" data-ws-${at}="${esc(val)}">${lab}</button>`;
   return `<div class="account-tools pp-tools wps-tools">
@@ -362,7 +367,6 @@ function toolsHTML(o) {
     ${seg('ws.view', '📊', 'Bill ka look', v === 'grid' ? 'Table' : 'Lines', B(v === 'grid', 'view', 'grid', '📊 Table') + B(v === 'rows', 'view', 'rows', '☰ Lines'))}
     ${seg('ws.cp', '🖨', 'Bill kitni dafa chhape', '×' + cp, [1, 2, 3].map(n => B(cp === n, 'copies', n, '×' + n)).join(''))}
     ${C.can('sale.pc') ? seg('ws.ctr', '🖨', 'Kis counter par print', '', BASE_COUNTERS.map(([k, n]) => B(ctr === k, 'counter', k, n)).join('') + (ctr.startsWith('pc:') ? B(true, 'counter', ctr, '💻 PC (Sale screen wala)') : '')) : ''}
-    ${brs.length > 1 ? seg('ws.gate', '🚪', 'Gate pass', gate ? 'ON — sab lines us godam se' : 'OFF — sirf doosre godam ka', B(!gate, 'gate', 0, 'OFF') + brs.map(b => B(gate === b, 'gate', b, esc(brName(s, b)))).join('')) : ''}
     ${C.owner() ? `<button type="button" class="sh-wide" data-ws-set="1" data-mn="ws.set" data-mn-i="⚙️" data-mn-t="WhatsApp setting" data-mn-s="QR · numbers · print" data-mn-g="${GRP}">⚙️ WhatsApp setting</button>` : ''}
   </div>`;
 }
@@ -396,7 +400,7 @@ function gridHTML(s, IX) {
       <td class="q">${qInp('pcs', i, l.pcs)}</td>
       <td class="r">${rateInp(l, i)}</td>
       <td class="a"><span class="wps-amt" data-ws-amt="${i}">${num(lineTotal(l))}</span></td>
-      <td class="x"><button type="button" class="danger sale-x" data-ws-del="${i}" aria-label="Hatao">✕</button></td></tr>`;
+      <td class="x">${gcHTML(l, i)}<button type="button" class="danger sale-x" data-ws-del="${i}" aria-label="Hatao">✕</button></td></tr>`;
   }).join('');
   return `<div class="pp-tw"><table class="pp-tbl wps-tbl"><thead><tr>${cols.map(([t, c]) => `<th class="${c}">${t}</th>`).join('')}</tr></thead><tbody>${body}</tbody>
     <tfoot><tr><td class="n"></td><td class="cd"></td><td class="nm"><b>${cart.length} items</b></td>${anyPk ? `<td class="q"><b id="wpsTc">${num(tc)}</b></td>` : ''}<td class="q"><b id="wpsTp">${num(tp)}</b></td><td colspan="3" class="tt"><b id="wpsTot">Total Rs ${num(cartTotal())}</b></td></tr></tfoot></table></div>`;
@@ -409,7 +413,7 @@ function rowsHTML(s, IX) {
     const amt = K('Raqam', `<span class="wps-ro" data-ws-amt="${i}">${num(lineTotal(l))}</span>`), rt = K('Rate / ' + U, rateInp(l, i));
     const g = pk ? [K(Cn + ' (' + num(pk) + ')', qInp('ctn', i, l.ctn, 'q')), K(U, qInp('pcs', i, l.pcs, 'q')), rt, amt] : [K(U, qInp('pcs', i, l.pcs, 'q')), rt, amt];
     return `<div class="sale-line pp-line pp-cr${l.k === selKey ? ' sel' : ''}${f.short ? ' warn' : ''}${freshCls(i)}" data-ws-line="${i}" data-ws-sel="${esc(l.k)}">
-      <div class="pp-cr1"><span class="pp-no">${i + 1}.</span><b>${esc(l.name)}</b><small>${subTxt(l, f, s, false)}</small><em class="pp-rs" data-ws-rs="${i}">Rs ${num(lineTotal(l))}</em></div>
+      <div class="pp-cr1"><span class="pp-no">${i + 1}.</span><b>${esc(l.name)}</b><small>${subTxt(l, f, s, false)}</small><em class="pp-rs" data-ws-rs="${i}">Rs ${num(lineTotal(l))}</em>${gcHTML(l, i)}</div>
       <div class="pp-cg pp-cg${g.length}">${g.join('')}</div></div>`;
   }).join('') + `<div class="pp-crf"><b>${cart.length} items</b><b id="wpsTot">Total Rs ${num(cartTotal())}</b></div>`;
 }
@@ -463,8 +467,8 @@ function selIx() { const i = cart.findIndex(l => l.k === selKey); return i >= 0 
 const chipLbl = (k, lab) => chipSt[k] ? `${stTxt(chipSt[k])} ${lab}` : lab;
 function footHTML() {
   const o = curOrder(); if (!cart.length && !o) return '';
-  const i = selIx(), l = cart[i], s = saleStock(), brs = (s.branches || []).filter(b => b !== 0), gd = brs.length > 1 && !gateNow();
-  const line = l ? `<div class="pp-cb1"><span class="pp-cbn">⚡ <b>${i + 1}. ${esc(l.name)}</b> · ${esc(qtyTxt(l))}</span>${gd ? `<select class="pp-cbg" data-ws-lg="${i}" aria-label="Godam">${brs.map(b => `<option value="${b}"${Number(b) === Number(l.godam) ? ' selected' : ''}>${esc(brName(s, b))}</option>`).join('')}</select>` : ''}<button type="button" class="pp-cbx" data-ws-del="${i}" aria-label="Hatao">✕</button></div>` : '';
+  const i = selIx(), l = cart[i];   // v2.179.0: godam ab line ke aakhir mein chip (neeche select nahi)
+  const line = l ? `<div class="pp-cb1"><span class="pp-cbn">⚡ <b>${i + 1}. ${esc(l.name)}</b> · ${esc(qtyTxt(l))}</span><button type="button" class="pp-cbx" data-ws-del="${i}" aria-label="Hatao">✕</button></div>` : '';
   const oc = o && !o._local && String(o.st || 'new') !== 'new' ? `<div class="pp-cb2 wps-fch">${o.st === 'billed' ? '<span class="wps-fc ok">🧾 Bill bana</span>' : o.st === 'picked' ? '<span class="wps-fc ok">📦 Maal nikla ✓</span>' : `<button type="button" class="wps-fc" data-ws-pick="1">${chipLbl('pick', '✓ Maal nikla')}</button>`}<button type="button" class="wps-fc" data-ws-reprint="1">${chipLbl('print', '🖨 Dobara print')}</button></div>` : '';
   const bar = line || oc ? `<div class="pp-cbar" id="wpsCbar">${line}${oc}</div>` : '';
   return bar + `<button class="give" data-ws-clear="1">✕ Naya</button>` + (cart.length ? `<button class="got" data-ws-save="1"${saving ? ' disabled' : ''}>${saving ? '⏳ Bhej raha…' : '🧾 Bill banao · Rs ' + num(cartTotal())}</button>` : '');
@@ -783,7 +787,7 @@ document.addEventListener('click', e => {
     return; }
   if (!document.querySelector('[data-ws-root]')) return;
   const r = t.closest('#list .pp-cr, #list .pp-tr'); if (r && r.dataset.wsSel && !t.closest('button,select,input')) selSet(r.dataset.wsSel);
-  const b = t.closest('[data-ws-ord],[data-ws-add],[data-ws-del],[data-ws-open],[data-ws-mode],[data-ws-view],[data-ws-copies],[data-ws-counter],[data-ws-gate],[data-ws-cam],[data-ws-gal],[data-ws-camera],[data-ws-pv],[data-ws-gsave],[data-ws-set],[data-ws-upick],[data-ws-uskip],[data-ws-uback],[data-ws-pick],[data-ws-reprint],[data-ws-clear],[data-ws-save]');
+  const b = t.closest('[data-ws-ord],[data-ws-add],[data-ws-del],[data-ws-open],[data-ws-mode],[data-ws-view],[data-ws-copies],[data-ws-counter],[data-ws-gc],[data-ws-cam],[data-ws-gal],[data-ws-camera],[data-ws-pv],[data-ws-gsave],[data-ws-set],[data-ws-upick],[data-ws-uskip],[data-ws-uback],[data-ws-pick],[data-ws-reprint],[data-ws-clear],[data-ws-save]');
   if (!b) return;
   const d = b.dataset;
   if (d.wsOrd) { loadOrder(d.wsOrd); return; }
@@ -799,11 +803,8 @@ document.addEventListener('click', e => {
   if (d.wsView) { LS(VIEW_KEY, d.wsView === 'grid' ? 'grid' : 'rows'); C.rerender(); return; }
   if (d.wsCopies) { LS('sam-ws-copies', String(Math.min(3, Math.max(1, Number(d.wsCopies) || 1)))); C.rerender(); return; }
   if (d.wsCounter) { LS('sam-ws-counter', d.wsCounter); C.rerender(); return; }
-  if (d.wsGate != null) {
-    const g = Number(d.wsGate) || 0; LS('sam-ws-gate', String(g));
-    if (g) for (const l of cart) { l.godam = g; const it = itemIn(g, l.id); if (it && !l.edited) setStd(l, it); }
-    cash = null; keep(); C.rerender(); C.notice(g ? '🚪 Gate pass ON — sab lines ' + brName(saleStock(), g) + ' se' : '🚪 Gate pass OFF'); return;
-  }
+  if (d.wsGc != null) { const l = cart[Number(d.wsGc)]; if (!l) return; const L = gdList(), i = L.findIndex(x => x.b === (Number(l.godam) || SALE_BRANCH)), nx = L[(i + 1) % L.length]; if (!nx) return;
+    selKey = l.k; setLineGodam(l, nx.b); C.notice('🏬 ' + nx.full + ' — dobara dabayein = agla godam'); return; }   // v2.179.0: godam chip
   if (d.wsCam || d.wsGal) { picInputs(); $(d.wsCam ? 'wpsPicCam' : 'wpsPicGal')?.click(); return; }
   if (d.wsPv) { photoOpen(); return; }
   if (d.wsGsave) { gahakSave(); return; }

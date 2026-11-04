@@ -7196,3 +7196,65 @@ html body #list .pp-tbl.wps-tbl th.nm,html body #list .pp-tbl.wps-tbl td.nm{widt
 html body #list .pp-tbl.wps-tbl td.nm small{max-width:440px}
 html body #list .pp-tbl.wps-tbl td input{width:76px}html body #list .pp-tbl.wps-tbl td.q input{width:64px}
 }
+
+/* ===== v2.179.0: 📷 CAMERA SCREEN v2 — phone (1100px se kam) · Sale + POS Purchase + 📲 WhatsApp Parchi Sale (malik: "camera on ho to screen par items hi nazar aayein ·
+   123 search ke neeche (G1 G2 G3 ki jagah) · side buttons ek chip ke peeche · neeche 10 items · jo add ho search ke neeche, upar se neeche") ·
+   PC, transfer note, pick-mode pehle jaise. Camera chhote zinda dabbe mein chalta rehta hai (barcode poori tasveer se parhta hai), tap = bara. ===== */
+html body .scan-box.v2{background:#eef2f8!important}
+html body .scan-box.v2 .scan-inner{background:#f6f8fc!important;color:#10192b!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;max-width:640px;padding:0 0 calc(8px + env(safe-area-inset-bottom,0px))!important;box-sizing:border-box}
+html body .scan-box.v2 .scan-find{margin:8px 10px 0!important}
+html body .scan-box.v2 .scan-find-row{flex-wrap:nowrap!important;gap:6px!important;align-items:center!important}
+html body .scan-box.v2 .scan-find .scan-q{flex:1 1 auto!important;min-width:0!important;height:40px;min-height:40px!important;padding:0 14px!important;font-size:15px!important;border-radius:999px!important;border:1px solid #d5dce9!important;background:#fff!important;color:#10192b!important;box-shadow:0 1px 3px rgba(16,25,43,.06)}
+html body .scan-box.v2 .scan-find .scan-n,html body .scan-box.v2 .scan-find-row .scan-c{flex:0 0 54px!important;width:54px!important;height:40px;min-height:40px!important;padding:0 4px!important;font-size:15px!important;border-radius:12px!important;border:1px solid #d5dce9!important;background:#fff!important;color:#10192b!important}
+html body .scan-box.v2 .scan-row2{display:flex;align-items:center;gap:6px;margin:6px 10px 0;min-width:0;flex:none}
+html body .scan-box.v2 .scan-cam{position:relative!important;flex:0 0 54px!important;width:54px;height:36px;min-height:0!important;margin:0!important;border-radius:10px!important;overflow:hidden;background:#0b1220!important;border:1.5px solid #c9d3e6;cursor:pointer;inset:auto!important}
+html body .scan-box.v2 .scan-cam video{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;object-fit:cover;border-radius:0!important;display:block}
+html body .scan-box.v2 .scan-cam .scan-line{top:50%!important;left:6%!important;right:6%!important;height:1.5px}
+html body .scan-box.v2.cam-big .scan-row2{flex-wrap:wrap}
+html body .scan-box.v2.cam-big .scan-cam{order:5;flex:1 1 100%!important;width:100%;height:30vh;border-radius:14px!important;border:0}
+html body .scan-box.v2.cam-off .scan-cam{display:none!important}
+html body .scan-box.v2 button.scan-tl{flex:0 0 auto;height:34px;min-height:34px!important;padding:0 10px!important;margin:0!important;border-radius:999px!important;border:1px solid #d5dce9!important;background:linear-gradient(180deg,#fff,#eef2f9)!important;color:#1a2d53!important;font-size:12.5px!important;font-weight:800!important;white-space:nowrap;box-shadow:0 1px 2px rgba(16,25,43,.06)!important}
+html body .scan-box.v2 button.scan-tl.is-in{background:linear-gradient(135deg,#1a2d53,#2c4a85)!important;color:#fff!important;border-color:transparent!important}
+html body .scan-box.v2 .scan-pad,html body .scan-box.v2 .scan-pad[hidden]{display:block!important;position:static!important;flex:1 1 auto;min-width:0;width:auto!important;max-height:none!important;margin:0!important;padding:0!important;background:none!important;border-radius:0}
+html body .scan-box.v2 .scan-pad-name{display:none!important}
+html body .scan-box.v2 .scan-pad-row{display:flex!important;flex-wrap:nowrap!important;gap:5px!important;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;justify-content:flex-start!important;padding:1px 1px 2px!important;-webkit-overflow-scrolling:touch}
+html body .scan-box.v2 .scan-pad-row::-webkit-scrollbar{display:none}
+html body .scan-box.v2 .scan-pad-row button{flex:0 0 auto!important;min-width:34px!important;height:34px;min-height:34px!important;padding:0 8px!important;margin:0!important;border-radius:11px!important;border:1px solid #d5dce9!important;background:#fff!important;color:#1a2d53!important;font-size:15px!important;font-weight:800!important;box-shadow:0 1px 2px rgba(16,25,43,.06)!important;grid-column:auto!important}
+html body .scan-box.v2 .scan-pad-row button[data-unit]{font-size:12.5px!important;background:#eef2f9!important}
+html body .scan-box.v2 .scan-pad-row button[data-unit][hidden]{display:none!important}
+html body .scan-box.v2 .scan-pad-row button.selected{background:linear-gradient(135deg,#1a2d53,#2c4a85)!important;color:#fff!important;border-color:transparent!important}
+html body .scan-box.v2 .scan-pad-row button[data-qty="+1"]{background:linear-gradient(135deg,#17a05d,#0f7a45)!important;color:#fff!important;border-color:transparent!important}
+html body .scan-box.v2 .scan-pad.idle .scan-pad-row{opacity:.45}
+html body .scan-box.v2 .scan-left{display:none!important;position:static!important;width:auto!important;margin:6px 10px 0;flex:none}
+html body .scan-box.v2.tools-on .scan-left{display:block!important}
+html body .scan-box.v2 .scan-left .scan-tools{display:flex!important;flex-direction:row!important;flex-wrap:nowrap!important;gap:6px!important;overflow-x:auto;scrollbar-width:none;margin:0!important;justify-content:flex-start!important;padding:1px}
+html body .scan-box.v2 .scan-left .scan-tools::-webkit-scrollbar{display:none}
+html body .scan-box.v2 .scan-left .scan-tools button,html body .scan-box.v2 .scan-left .gun-chip{flex:0 0 auto;width:auto!important;height:32px;min-height:32px!important;padding:0 12px!important;margin:0!important;border-radius:999px!important;border:1px solid #d5dce9!important;background:linear-gradient(180deg,#fff,#eef2f9)!important;color:#1a2d53!important;font-size:12.5px!important;font-weight:700!important;white-space:nowrap!important;line-height:1!important;display:inline-flex;align-items:center}
+html body .scan-box.v2 .scan-left .scan-tools button.scan-camoff{background:linear-gradient(180deg,#fff8ec,#ffeccc)!important;color:#8a4b00!important;border-color:#f3d2a6!important}
+html body .scan-box.v2 .scan-msg{margin:6px 12px 3px!important;font-size:12.5px!important;font-weight:600!important;color:#5d6b88!important;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:1.3em;flex:none;text-shadow:none!important}
+html body .scan-box.v2 .scan-names{flex:1 1 auto!important;min-height:0!important;max-height:none!important;overflow-y:auto!important;margin:0 8px!important;padding:0 2px!important;list-style:none;text-align:left;overscroll-behavior:contain}
+html body .scan-box.v2 .scan-names li{display:grid!important;grid-template-columns:minmax(0,1fr) auto;column-gap:8px;align-items:center;margin:0 0 4px!important;padding:5px 6px 5px 10px!important;border-radius:12px;background:#fff!important;border:1px solid #e3e8f1;color:#10192b!important;font-size:13px!important;line-height:1.25!important;box-shadow:0 1px 2px rgba(16,25,43,.04);outline-offset:-2px}
+html body .scan-box.v2 .scan-names li::marker{color:#8a97ad;font-size:12px;font-weight:800}
+html body .scan-box.v2 .scan-names li>b{grid-column:1;min-width:0;font-size:14.5px!important;font-weight:800!important;color:#1a2d53;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body .scan-box.v2 .scan-names li>span{grid-column:1;min-width:0;display:block!important;font-size:12.5px!important;color:#5d6b88;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:1!important}
+html body .scan-box.v2 .scan-names li>b i{font-style:normal;font-size:12px;font-weight:800;color:#8a97ad;margin-right:2px}
+html body .scan-box.v2 .scan-names li>span b{font-size:13px!important;color:#166534}
+html body .scan-box.v2 .scan-names li.now{background:#eefbf4!important;border-color:#bfe6cb}
+html body .scan-box.v2 .scan-names li.open{background:#f3f6ff!important;border-color:#b9c7ea;box-shadow:0 0 0 2px rgba(44,74,133,.12)}
+html body .scan-box.v2 .scan-names li>.li-gc{grid-column:2;grid-row:1/span 2;margin:0!important;display:flex}
+html body .scan-box.v2 .scan-names .li-gc button{min-width:42px;height:32px;min-height:32px!important;padding:0 11px!important;margin:0!important;border-radius:999px!important;border:1px solid #c9d3e6!important;background:linear-gradient(180deg,#fff,#eef2f9)!important;color:#1a2d53!important;font-weight:800!important;font-size:12.5px!important;white-space:nowrap}
+html body .scan-box.v2 .scan-names .li-gc button.on{background:linear-gradient(135deg,#8a5200,#c27a00)!important;color:#fff!important;border-color:transparent!important}
+html body .scan-box.v2 .scan-names li>.li-qty{grid-column:1/-1;display:flex!important;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0 1px!important;position:static!important;transform:none!important}
+html body .scan-box.v2 .scan-names .li-in{width:64px;height:34px;min-height:34px!important;font-size:16px!important}
+html body .scan-box.v2 .scan-names .li-neg{height:32px;min-height:32px!important;border-radius:999px!important}
+html body .scan-box.v2 .scan-names .li-qty .scan-del{position:static!important;transform:none!important;width:auto!important;height:32px!important;min-height:32px!important;padding:0 12px!important;margin:0 0 0 auto!important;border-radius:999px!important;background:#fff1f2!important;color:#b32936!important;border:1px solid #f7c9ce!important;font-size:12.5px!important;font-weight:800!important;white-space:nowrap}
+html body .scan-box.v2 .scan-bar2{display:flex;align-items:center;gap:8px;margin:6px 10px 0;flex:none;min-width:0}
+html body .scan-box.v2 .scan-bar2 button.scan-done{flex:0 1 auto;width:auto!important;margin:0!important;height:42px;min-height:42px!important;padding:0 18px!important;border-radius:999px!important;font-size:15px!important;font-weight:800!important;background:linear-gradient(135deg,#17a05d,#0f7a45)!important;color:#fff!important;border:0!important;box-shadow:0 4px 12px rgba(19,129,80,.25)!important;white-space:nowrap}
+html body .scan-box.v2 .scan-bar2 .scan-sum{flex:1 1 auto;min-width:0;margin:0!important;text-align:right;font-size:13.5px!important;color:#10192b!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:none!important}
+html body .scan-box.v2 .scan-bar2 .scan-sum b{font-size:16px;color:#166534}
+html body .scan-box.v2 .scan-bar2 button.scan-close{flex:0 0 42px;width:42px!important;height:42px;min-height:42px!important;margin:0!important;padding:0!important;border-radius:999px!important;background:#fff1f2!important;color:#b32936!important;border:1px solid #f7c9ce!important;font-size:17px!important;font-weight:800!important;box-shadow:none!important}
+/* v2.179.0: 📲 WhatsApp Parchi Sale — line ke aakhir ka 🏬 godam chip (dabao = agla godam) */
+html body #list .pp-cr1 button.wps-gc,html body #list .pp-tbl td.x button.wps-gc{flex:none;align-self:center;min-width:40px;height:32px;min-height:32px!important;padding:0 10px!important;margin:0 0 0 2px!important;border-radius:999px!important;border:1px solid #c9d3e6!important;background:linear-gradient(180deg,#fff,#eef2f9)!important;color:#1a2d53!important;font-size:12px!important;font-weight:800!important;line-height:1!important;white-space:nowrap;box-shadow:0 1px 2px rgba(16,25,43,.06)!important}
+html body #list button.wps-gc.is-in{background:linear-gradient(135deg,#8a5200,#c27a00)!important;color:#fff!important;border-color:transparent!important}
+html body #list .pp-tbl td.x:has(.wps-gc){white-space:nowrap}
+html body #list .pp-tbl td.x .wps-gc{margin:0 6px 0 0!important}
