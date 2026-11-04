@@ -1,7 +1,8 @@
 # =========================================================
-#  wa-a4.ps1  v1.1 (2026-11-04) - wa-parchi.js ka A4 PACKING page (System.Drawing) + chhoti tasveer (thumb)
+#  wa-a4.ps1  v1.2 (2026-11-04) - wa-parchi.js ka A4 PACKING page (System.Drawing) + chhoti tasveer (thumb)
 #    v1.1: -Mode thlist -Spec <json> -Out <bin>  -> thermal (512 dots) 'parchi jaisi likhi': har line ke SHURU mein khaali dabba (tick ke liye),
 #          Urdu = daayein dabba + Urdu font, English = baayein dabba. Ek BMP (24 bit) <bin> mein; 1-bit raster node banata hai. "OK <path>".
+#    v1.2: "OK <path> H:<h1>,<h2>,..." - har line ki unchai (node line-war kaat kar beech mein likhai ke tukde rakhta hai).
 #    -Mode page  -Spec <json> -Out <prefix>  -> <prefix>-1.jpg, <prefix>-2.jpg ... ; har safhe par ek line "OK <path>"
 #    -Mode thumb -In <jpg> -Out <jpg> -Max 360 -Q 60
 #  Ghalti = "ERR:<wajah>". AI NAHI. Sirf tasveer banata hai - chhapna a4-print.js (a4Jobs) karta hai.
@@ -81,7 +82,8 @@ try {
     }
     $g.Dispose()
     $bmp.Save($Out, [System.Drawing.Imaging.ImageFormat]::Bmp); $bmp.Dispose()
-    Write-Output ('OK ' + $Out); exit 0
+    $hs = @(); foreach ($r in $rows) { $hs += [string]([int]$r.h) }
+    Write-Output ('OK ' + $Out + ' H:' + ($hs -join ',')); exit 0
   }
 
   # ---------------- A4 packing page ----------------

@@ -6824,3 +6824,11 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
   PowerShell na chale = `writtenText` saada ("[ ] lafz", Urdu UR.line). Rack-war list / ❓ tukde thermal par NAHI (packingText rakha, istemal nahi). A4 pehle jaisa (tasveer + list).
 - AI na parh sake: thermal par lambi tasveer NAHI — "AI NAHI PARH SAKA · Parchi ki tasveer app / A4 mein dekhein" (header ' PARCHI - AI NAHI ').
 - Test: bmpRaster round-trip (24 / 32 bit) 0 pixel farq · PIL naqal se preview malik ko.
+
+## PC wa-parchi v1.4 + wa-a4.ps1 v1.2 · manifest 2026-11-04.5 (2026-11-04) — 🧾 parchi HOOBAHOO + jori-war + shak par likhai ka tukda
+- Malik (pehli v1.3 thermal ki photo): "ye pagal ho gaya — same as it parchi chahiye, jaise customer ne likhi" → AI ne 4 kalam (2 jori: cheez | tadad) mila di thin
+  ("آئل مجاہد" ke saath baayein jori ka "آدھا کلو"), naam badla (ٹیپال → حیدری لال), 26 mein se 21. Phir: "tarteeb dhyan se · jis ki tarteeb aage peeche lage us ka woh hissa bhi saath print".
+- PROMPT_IMG: COLUMN PAIRS (cheez + usi row ki tadad, apni jori mein), daayein jori upar → neeche phir agli; raw = HOOBAHOO (kabhi sahi / tarjuma / brand badalna nahi, na parha = ؟);
+  col (jori number); box = cheez se tadad tak; sure = parhna + jori + tarteeb ka yaqeen. Tasveer par thinking 'low' (3.x) / 1024 (2.x), ms 75 s.
+- j line: w = AI ka yaqeen, c = jori (app ko farq nahi). Thermal: ☐ + lafz har line (PowerShell line-war — "OK path H:h1,h2…", bmpRaster(ya, yb)), jori badle = ". . ." lakeer,
+  shak (w < 0.75 ya ؟) = us line ke neeche likhai ka tukda (cropRaster box, h 170). Neeche "Kul: N lines · Tukde: n". Purane orders (w nahi) par s se.

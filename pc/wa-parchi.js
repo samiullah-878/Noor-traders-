@@ -1,5 +1,9 @@
 // =========================================================
-//  wa-parchi.js  v1.3 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  wa-parchi.js  v1.4 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v1.4: malik (thermal dekh kar): "same as it parchi chahiye · tarteeb dhyan se · jis ki tarteeb aage peeche lage us ka woh hissa bhi saath print" →
+//        AI hidayat: JORI-WAR (cheez + usi line ki tadad, daayein jori pehle), raw = HOOBAHOO (naam kabhi na badle, na parha = ؟), col = kaun si jori;
+//        tasveer parhte waqt AI thora soche (thinking low — pehle minimal). Thermal: har line ☐ + lafz, jori badle to ┄ lakeer, AI ko shak (sure < 0.75 / ؟)
+//        = usi line ki likhai ka tukda neeche (cropRaster). Line ki unchai PowerShell batata hai (OK path H:…) — BMP line-war kat kar.
 //  v1.3: 🧾 THERMAL = PARCHI JAISI LIKHI (malik: "poori tasveer ki bajaye wohi lafz thermal par · shuru mein tick ka box · simple") — har line
 //        gahak ke apne lafz (AI ka 'raw', usi tarteeb), Urdu = Urdu font + daayein ☐, English = baayein ☐ (wa-a4.ps1 -Mode thlist, PowerShell na chale
 //        to saada text). Tasveer / ❓ tukde thermal par NAHI (A4 par pehle jaisi). AI na parh sake = chhota paigham, lambi tasveer nahi. AI wahi ek dafa.
@@ -31,7 +35,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '1.3';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '1.4';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -124,18 +128,22 @@ function validBox(b) {
 
 // ---------- 🤖 Gemini ----------
 const PROMPT_IMG = `You are reading a customer's ORDER LIST (parchi) for a grocery / general store in Pakistan (Noor Traders).
-It may be handwritten in Urdu (Nastaliq), Roman Urdu, English or a mix. Urdu lists are often in two columns: the item name on the RIGHT and its quantity on the LEFT of the same row.
-Read EVERY item line from top to bottom and keep the same order. Do not skip lines, do not invent items, do not merge two items into one, do not split one item into two.
+It may be handwritten in Urdu (Nastaliq), Roman Urdu, English or a mix. Urdu lists are often written as COLUMN PAIRS: an item column with its quantity column just to its LEFT, on the same row.
+A page may have TWO OR MORE such pairs side by side (for example: qty | items | qty | items). Pair every item ONLY with the quantity written beside it inside its OWN pair on the SAME row — never with a quantity from another pair or another row.
+Order: read the RIGHTMOST pair from top to bottom first, then the next pair to its left from top to bottom, and so on. Look carefully at the row lines of the paper so every item gets its own quantity.
+Read EVERY item line and keep this order. Do not skip lines, do not invent items, do not merge two items into one, do not split one item into two.
 Ignore the shop name, dates, serial numbers, ticks / cuts, and any prices, amounts or totals (never treat a price as a quantity).
 Return ONLY this JSON:
 {"isOrder": true, "name": "customer name if written on the list, else empty", "phone": "customer phone if written on the list, else empty",
- "lines": [{"raw": "the line exactly as written, same script", "item": "...", "qty": 1, "unit": "...", "box": [ymin, xmin, ymax, xmax], "sure": 0.9}]}
+ "lines": [{"raw": "the line exactly as written, same script", "item": "...", "qty": 1, "unit": "...", "col": 1, "box": [ymin, xmin, ymax, xmax], "sure": 0.9}]}
 Rules:
+- raw: copy EXACTLY what the customer wrote on that row of that pair — the item words, then its quantity words — in the same script, spelling and digits. NEVER correct, translate, shorten or replace a word, and never put a brand you know in place of the written one. If a word cannot be read, write ؟ in its place.
+- col: which column pair the line is in — 1 = the rightmost pair, 2 = the next pair to its left, and so on (1 if the list has only one column).
 - item: the best plain, searchable product name in simple English or Roman Urdu. Keep brand, size and variant if written. Examples: "Lipton tea", "Pampers XXL", "Ponds lotion", "Aata", "Cheeni", "Surf Excel 1kg", "Dalda ghee", "Shan biryani masala". Never translate a brand name.
 - qty: the number written for that item (Urdu digits too). Words: آدھا = 0.5, پاؤ = 0.25 (kg), ڈیڑھ = 1.5, ڈھائی = 2.5. If no quantity is written use 1.
 - unit: as written, normalised to one of kg, g, litre, ml, pcs, packet, pack, dozen, bag, bottle, box, carton, tin, roll, bar, sachet, jar, pouch. Translate: کلو = kg, گرام = g, لیٹر = litre, پاؤ = kg (with qty 0.25), عدد / دانے = pcs, تھیلا / تھیلے / بوری = bag, ڈبہ / ڈبے = box, بوتل = bottle, پیکٹ = packet, درجن = dozen, پیٹی / کارٹن = carton. Use "" if no unit is written.
-- box: bounding box of that whole line (item and its quantity) on the image, normalised to 0-1000 as [ymin, xmin, ymax, xmax].
-- sure: your confidence from 0 to 1 that BOTH item and qty are read correctly. Use a value below 0.5 when the handwriting is unclear.
+- box: bounding box of that whole line on the image — from the item text to its quantity in the same pair — normalised to 0-1000 as [ymin, xmin, ymax, xmax].
+- sure: your confidence from 0 to 1 that the item, its qty AND their pairing / order are all correct. Use a value below 0.6 when the handwriting is unclear or you are not sure which quantity belongs to the item.
 - isOrder: false (with empty lines) if the image is not a shopping / order list at all (selfie, payment screenshot, random photo, chat screenshot without a list).`;
 const PROMPT_TXT = `Below is a customer's ORDER LIST for a grocery / general store in Pakistan (Noor Traders), typed in a WhatsApp message — Urdu, Roman Urdu, English or mixed.
 Read every item in order. Do not invent items. Ignore greetings, prices and totals.
@@ -153,7 +161,8 @@ function normLine(l) {
   const raw = String(l.raw ?? l.text ?? '').replace(/\s+/g, ' ').trim().slice(0, 120), item = String(l.item ?? l.name ?? '').replace(/\s+/g, ' ').trim().slice(0, 80);
   if (!raw && !item) return null;
   let sure = Number(l.sure ?? l.confidence); if (!isFinite(sure)) sure = 0.7; if (sure > 1 && sure <= 100) sure /= 100; sure = Math.max(0, Math.min(1, Math.round(sure * 100) / 100));
-  return { raw: raw || item, item: item || raw, qty: numOf(l.qty ?? l.quantity), unit: normUnit(l.unit), box: validBox(l.box ?? l.box_2d ?? l.bbox), sure };
+  const col = Math.max(0, Math.min(9, Math.round(Number(l.col ?? l.column) || 0)));   // v1.4: kaun si jori (1 = daayein)
+  return { raw: raw || item, item: item || raw, qty: numOf(l.qty ?? l.quantity), unit: normUnit(l.unit), box: validBox(l.box ?? l.box_2d ?? l.bbox), sure, ...(col ? { col } : {}) };
 }
 function parseGemini(out) {
   const s = String(out || '').trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '');
@@ -206,7 +215,7 @@ async function geminiRead({ key, model, b64, mime, text, fetchFn = globalThis.fe
   const call = async (mdl, think) => {
     const parts = b64 ? [{ inline_data: { mime_type: mime || 'image/jpeg', data: b64 } }, { text: PROMPT_IMG }] : [{ text: PROMPT_TXT + String(text || '').slice(0, 4000) }];
     const gc = { temperature: 0, responseMimeType: 'application/json' };
-    if (think) gc.thinkingConfig = /gemini-3/i.test(mdl) ? { thinkingLevel: 'minimal' } : { thinkingBudget: 0 };
+    if (think) gc.thinkingConfig = b64 ? (/gemini-3/i.test(mdl) ? { thinkingLevel: 'low' } : { thinkingBudget: 1024 }) : (/gemini-3/i.test(mdl) ? { thinkingLevel: 'minimal' } : { thinkingBudget: 0 });   // v1.4: tasveer = thora soche (jori / tarteeb)
     const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms);
     try {
       const r = await fetchFn('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(mdl) + ':generateContent', {
@@ -299,7 +308,7 @@ function matchLines(lines, X, find, k2, racks) {
   return (lines || []).map(l => {
     const m = X && X.L && X.L.length && find && k2 ? matchOne(l, X, find, k2) : { o: null, s: 0 };
     const o = m.o, s = Math.round(Math.min(m.s, Number(l.sure) || 0) * 100) / 100, rk = o ? rackOf(o.id, racks) : '';
-    return { r: l.raw, it: l.item, q: l.qty, u: l.unit, id: o ? o.id : '', n: o ? String(o.it.name) : '', b: l.box || null, s, ...(rk ? { rk } : {}) };
+    return { r: l.raw, it: l.item, q: l.qty, u: l.unit, id: o ? o.id : '', n: o ? String(o.it.name) : '', b: l.box || null, s, w: Number(l.sure) || 0, ...(l.col ? { c: l.col } : {}), ...(rk ? { rk } : {}) };   // v1.4: w = AI ka apna yaqeen (parhna + jori)
   });
 }
 const isUnclear = l => !l.id || !(Number(l.s) >= 0.5);
@@ -370,16 +379,21 @@ function failText(o, why, opt = {}) {
 }
 // v1.3: 🧾 parchi JAISI LIKHI — har line gahak ke apne lafz, shuru mein ☐ (tick). opt.raster = PowerShell wali tasveer (CRM 'L'); na ho to saada text.
 const rawOf = l => String(l.r || '').replace(/\s+/g, ' ').trim() || [l.it || l.n || '', qtyStr(l.q, l.u)].filter(Boolean).join(' ').trim();
-function writtenLines(P) { return [...(P.clear || []), ...(P.unc || [])].sort((a, b) => (a.i ?? 0) - (b.i ?? 0)).map(rawOf).filter(Boolean); }
+// v1.4: shak = AI ka apna yaqeen (w, purane order par s) 0.75 se kam ya lafz mein ؟ — us line ki likhai ka tukda bhi chhapo
+const doubtOf = l => /؟|\?/.test(String(l.r || '')) || (Number(l.w ?? l.s) || 0) < 0.75;
+function writtenLines(P) { return [...(P.clear || []), ...(P.unc || [])].sort((a, b) => (a.i ?? 0) - (b.i ?? 0)).map(l => ({ t: rawOf(l), b: l.b || null, d: doubtOf(l), c: Number(l.c) || 0, i: l.i ?? 0 })).filter(x => x.t); }
+// opt.rows = PowerShell ne har line ki tasveer bana di (CRM 'L<k>') · opt.crops = Set(k) jin ka likhai tukda bana (CRM 'c<k>')
 function writtenText(o, P, opt = {}) {
-  const L = writtenLines(P), out = headLines(o, { rp: opt.rp, n: L.length });
+  const L = writtenLines(P), out = headLines(o, { rp: opt.rp, n: L.length }), crops = opt.crops || new Set();
   out.push(L0 + hr());
-  if (opt.raster) out.push(CRM + 'L');
-  else for (const t of L) {
-    if (hasUr(t)) out.push(UR.line('[ ]  ' + t, 34));   // Urdu: shuru (daayein) mein [ ]
-    else out.push(...wrap(ascii(t), W - 4).map((s, k) => L0 + B1 + (k ? '    ' : '[ ] ') + s + B0));
-  }
-  out.push(L0 + hr(), L0 + line('Kul: ' + L.length + ' lines', ''), '', CUT);
+  L.forEach((x, k) => {
+    if (k && x.c && L[k - 1].c && x.c !== L[k - 1].c) out.push(C1 + '. . . . . . . . . . . . . . . . . . . .');   // agli jori
+    if (opt.rows) out.push(CRM + 'L' + k);
+    else if (hasUr(x.t)) out.push(UR.line('[ ]  ' + x.t, 34));   // Urdu: shuru (daayein) mein [ ]
+    else out.push(...wrap(ascii(x.t), W - 4).map((s, j) => L0 + B1 + (j ? '    ' : '[ ] ') + s + B0));
+    if (crops.has(k)) out.push(CRM + 'c' + k);   // shak — likhai ka tukda
+  });
+  out.push(L0 + hr(), L0 + line('Kul: ' + L.length + ' lines', crops.size ? 'Tukde: ' + crops.size : ''), '', CUT);
   return out.join('\r\n');
 }
 // text (UR nishan + CRM nishan) → nt-parchi job { s: [...] } — Urdu = tasveer (nt-parchi worker), CRM = raster seedha
@@ -396,16 +410,16 @@ function toJob(text, rasters = {}) {
 const stripEsc = t => String(t).split('\r\n').map(l => l.startsWith(UR.MARK) ? '[UR] ' + l.slice(UR.MARK.length).split('\u0001')[0] : l.startsWith(UR.NOTE) ? '[UR-NOTE] ' + l.slice(UR.NOTE.length).split('\u0001')[0] : l.startsWith(CRM) ? '[TASVEER ' + l.slice(CRM.length) + ']' : l.replace(/\x1b[@]|\x1b[aE!]./g, '').replace(/\x1d[B!]./g, '').replace(/\x1dV\x42\x00/g, '<<KAATO>>')).join('\n');
 
 // v1.3: wa-a4.ps1 -Mode thlist ki BMP (24 / 32 bit) → ESC/POS 1-bit raster (GS v 0, 800 line ke tukde) latin1 · '' = nahi bani
-function bmpRaster(buf, maxW = 512) {
+function bmpRaster(buf, maxW = 512, ya = 0, yb = Infinity) {   // v1.4: ya..yb = sirf yeh lines (line-war)
   if (!buf || buf.length < 54 || buf[0] !== 0x42 || buf[1] !== 0x4D) return '';
   const off = buf.readUInt32LE(10), w = buf.readInt32LE(18), h0 = buf.readInt32LE(22), bpp = buf.readUInt16LE(28), comp = buf.readUInt32LE(30);
   const h = Math.abs(h0), up = h0 > 0;
   if (!(w > 0 && h > 0) || (bpp !== 24 && bpp !== 32) || (comp !== 0 && comp !== 3)) return '';
   const stride = Math.floor((bpp * w + 31) / 32) * 4, bp = bpp / 8, W2 = Math.min(w, maxW), bw = Math.ceil(W2 / 8);
   if (off + stride * h > buf.length) return '';
-  const parts = [];
-  for (let y0 = 0; y0 < h; y0 += 800) {
-    const hh = Math.min(800, h - y0), o = Buffer.alloc(11 + bw * hh);
+  const parts = [], Y0 = Math.max(0, Math.floor(ya)), Y1 = Math.min(h, yb === Infinity ? h : Math.floor(yb)); if (Y1 <= Y0) return '';
+  for (let y0 = Y0; y0 < Y1; y0 += 800) {
+    const hh = Math.min(800, Y1 - y0), o = Buffer.alloc(11 + bw * hh);
     Buffer.from([0x1b, 0x61, 0x00, 0x1d, 0x76, 0x30, 0x00, bw & 255, bw >> 8, hh & 255, hh >> 8]).copy(o, 0);
     for (let y = 0; y < hh; y++) {
       const row = off + (up ? h - 1 - (y0 + y) : y0 + y) * stride;
@@ -578,25 +592,31 @@ async function start(ZINDA) {
     if (typeof q.st === 'string' && /^x:/.test(now) && !/^x:/.test(q.st)) q.st = 'x:' + q.st;
     tx.update(ref, q);
   }).catch(e => log(`⚠️ ${id} likha nahi: ${e.message}`));
-  async function writtenRaster(L) {   // v1.3: wa-a4.ps1 -Mode thlist → ESC/POS raster (latin1) ya '' (saada text chalega)
-    if (!L.length || process.platform !== 'win32' || !fs.existsSync(PS1)) return '';
+  async function writtenRaster(L) {   // v1.4: wa-a4.ps1 -Mode thlist → { k: raster latin1 } har line alag · {} = saada text chalega
+    if (!L.length || process.platform !== 'win32' || !fs.existsSync(PS1)) return {};
     const spec = path.join(TMP, 'thl-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6) + '.json'), outF = spec.replace(/\.json$/, '.bmp');
     try {
-      fs.writeFileSync(spec, JSON.stringify({ lines: L.map(t => ({ t })), fonts: { la: 'Arial', ur: FONT_UR }, pxU: 36, pxL: 28 }), 'utf8');
+      fs.writeFileSync(spec, JSON.stringify({ lines: L.map(x => ({ t: x.t })), fonts: { la: 'Arial', ur: FONT_UR }, pxU: 36, pxL: 28 }), 'utf8');
       const r = await ps(['-Mode', 'thlist', '-Spec', spec, '-Out', outF], 40000);
-      if (r.out.includes('OK') && fs.existsSync(outF)) { const x = bmpRaster(fs.readFileSync(outF)); if (x) return x; }
+      const hs = ((r.out.match(/H:([\d,]+)/) || [])[1] || '').split(',').map(Number).filter(n => n > 0);
+      if (r.out.includes('OK') && fs.existsSync(outF) && hs.length === L.length) {
+        const buf = fs.readFileSync(outF), m = {}; let y = 0;
+        for (let k = 0; k < hs.length; k++) { const x = bmpRaster(buf, 512, y, y + hs[k]); y += hs[k]; if (!x) return {}; m[k] = x; }
+        return m;
+      }
       log('🧾 jaisi-likhi tasveer nahi bani (' + (r.err || r.out || '?').slice(0, 80) + ') — saada text');
     } catch (e) { log('🧾 jaisi-likhi: ' + e.message); }
     finally { for (const f of [spec, outF]) { try { fs.unlinkSync(f); } catch {} } }
-    return '';
+    return {};
   }
   async function printThermal(o, P, img, opt) {
     let text, rasters = {};
     if (opt.fail) text = failText(o, opt.fail, { rp: opt.rp, photo: false });   // v1.3: thermal par lambi tasveer nahi (A4 / app mein hai)
-    else {   // v1.3: parchi jaisi likhi + ☐
-      const r = await writtenRaster(writtenLines(P));
-      if (r) rasters.L = r;
-      text = writtenText(o, P, { rp: opt.rp, raster: !!r });
+    else {   // v1.3: parchi jaisi likhi + ☐ · v1.4: shak wali line ke neeche likhai ka tukda
+      const L = writtenLines(P), rows = await writtenRaster(L), crops = new Set();
+      for (const k in rows) rasters['L' + k] = rows[k];
+      L.forEach((x, k) => { if (x.d && img && x.b) { try { const c = cropRaster(img, x.b, { h: 170 }); if (c) { rasters['c' + k] = c; crops.add(k); } } catch {} } });
+      text = writtenText(o, P, { rp: opt.rp, rows: Object.keys(rows).length === L.length, crops });
     }
     try { text = await UR.fillNotes(text, 4000); } catch { text = UR.strip(text); }
     const e = await getParchi().sendJobs([toJob(text, rasters)], S.thp || TH_PRINTER);
@@ -667,7 +687,7 @@ async function start(ZINDA) {
   // ---------- 🔄 ek order ka poora kaam (queue — ek waqt ek) ----------
   const live = new Map();   // id → order (jab tak queue mein — contact card naam / number yahin jore)
   async function readOrder(o, g) {   // → { res } ya throw
-    if (g && g.gem) return (await geminiRead({ key: AI.key, model: AI.model, b64: g.gem.toString('base64'), mime: g.gm })).res;
+    if (g && g.gem) return (await geminiRead({ key: AI.key, model: AI.model, b64: g.gem.toString('base64'), mime: g.gm, ms: 75000 })).res;   // v1.4: sochne ka waqt
     const txt = String(o.txt || '').trim(); if (!txt) throw Error('na tasveer na likhai');
     try { return (await geminiRead({ key: AI.key, model: AI.model, text: txt })).res; }
     catch (e) { log(`🤖 likhi list AI se nahi parhi (${String(e.message).slice(0, 80)}) — bina AI`); return localTextLines(txt); }
