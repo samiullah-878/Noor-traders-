@@ -6893,3 +6893,9 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 
 ## 2026-11-04 — ↩ Daily Sale: POS Sale Return minus (PC pos-sales-dekho v2.2, app nahi badli)
 - Malik: "yahan sale return add hai ke nahi". Nahi thi. Ab auto "POS ki sale" mein se POS ki wapsi minus (cancel / stock fraq / udhaar party ki wapsi bahar), note mein "↩ wapsi N bill Rs X minus". Tafseel pc/AI_NOTES.txt. AI nahi.
+
+## v2.181.2 (2026-11-04) — 🪶 entry halki: dohra sawal sirf asal shak par + Daily select lazy
+- Malik (mulazim ka phone): "entry mein wohi paigham aa kar ruk / atak jata hai — halka karo, mulazim ke mobile par load". Paigham = "Isi qism ki entry pehle ho chuki" (native confirm — khula ho to app rukti; kamzor phone par Save ke baad dobara dabaya to phir yehi).
+- save(): findDuplicate mile to — (1) isi phone ki (pendingDrafts / by = meri uid) aur 10 s ke andar = DOUBLE TAP: sawal NAHI, chup-chaap return + "✓ Yeh entry abhi save ho chuki / ho rahi hai — dobara nahi ki" (dialog band); (2) sawal sirf jab pehli 2 min ke andar bani ("abhi N sec pehle bani hai"); purani wohi raqam = sawal nahi. Kharcha jora (transfer → kharcha) ka dohra bhi sirf 2 min.
+- Daily khane (setupSheet): saare khaton ki <option> har render par NAHI — shuru mein sirf placeholder + chuna hua; poori list select ko chhoone par (pointerdown / focus / keydown → fillAll, ek dafa). Suggestion chip: pehle options() phir remember (warna lazy select ki value khali). Test: 800 khate — shuru 1 option, chip = sahi value, chhoone par 801.
+- AI nahi.
