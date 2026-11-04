@@ -7208,16 +7208,12 @@ html body .scan-box.v2 .scan-find .scan-q{flex:1 1 auto!important;min-width:0!im
 html body .scan-box.v2 .scan-find .scan-n,html body .scan-box.v2 .scan-find-row .scan-c{flex:0 0 54px!important;width:54px!important;height:40px;min-height:40px!important;padding:0 4px!important;font-size:15px!important;border-radius:12px!important;border:1px solid #d5dce9!important;background:#fff!important;color:#10192b!important}
 html body .scan-box.v2 .scan-row2{display:flex;align-items:center;gap:6px;margin:6px 10px 0;min-width:0;flex:none}
 html body .scan-box.v2 .scan-inner{position:relative}
-html body .scan-box.v2:not(.cam-off) .scan-inner{background:#0b1220!important}
-html body .scan-box.v2 .scan-inner>.scan-cam{position:absolute!important;inset:0!important;width:auto!important;height:auto!important;min-height:0!important;flex:none!important;margin:0!important;border:0!important;border-radius:0!important;background:#0b1220!important;z-index:0;overflow:hidden}
-html body .scan-box.v2 .scan-inner>.scan-cam video{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;object-fit:cover;border-radius:0!important;display:block}
-html body .scan-box.v2 .scan-inner>.scan-cam .scan-line{position:absolute;top:50%!important;left:6%!important;right:6%!important;height:2px;z-index:1}
-/* v2.179.4 (malik: "background camera on rahe magar hamein show na ho — distract hote hain"): camera POORI size mein chalta rahe (barcode poori tasveer se),
-   upar ek bharat (opaque) parda — video chhupaya NAHI (opacity / display none par phone camera rok deta), sirf dhaka. 📷 ▾ par hara nukta = camera chal raha. */
-html body .scan-box.v2 .scan-inner>.scan-cam::after{content:'';position:absolute;inset:0;background:#f6f8fc;z-index:2}
-html body .scan-box.v2:not(.cam-off) .scan-inner{background:#f6f8fc!important}
-html body .scan-box.v2:not(.cam-off) button.scan-tl{position:relative}
-html body .scan-box.v2:not(.cam-off) button.scan-tl::after{content:'';position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 2px #fff}
+/* v2.179.5 (malik: "scanning nahi ho rahi" — chhupe camera se nishana nahi lagta, kaun sa camera chal raha pata nahi): camera = 📷 ▾ chip ke saath
+   CHHOTI LIVE KHIRKI (72×44, tap = focus) — poori screen peeche wala camera + bharat parda (v2.179.3 / v2.179.4) HATA. Wapas mat lao. */
+html body .scan-box.v2 .scan-row2>.scan-cam{position:relative!important;flex:0 0 72px!important;width:72px!important;height:44px!important;min-height:0!important;max-height:44px!important;margin:0!important;border-radius:11px!important;overflow:hidden;background:#0b1220!important;border:1px solid #c9d3e6!important;box-shadow:0 1px 3px rgba(16,25,43,.18);cursor:pointer}
+html body .scan-box.v2 .scan-row2>.scan-cam video{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;object-fit:cover;border-radius:0!important;display:block}
+html body .scan-box.v2 .scan-row2>.scan-cam .scan-line{position:absolute;top:50%!important;left:8%!important;right:8%!important;height:1.5px;z-index:1}
+
 html body .scan-box.v2 .scan-inner>:not(.scan-cam){position:relative;z-index:1}
 html body .scan-box.v2 .scan-inner>.scan-find{z-index:7}
 html body .scan-box.v2.cam-off .scan-cam{display:none!important}

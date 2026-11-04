@@ -6850,3 +6850,10 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 
 ## v2.179.4 (2026-11-04) — 📷 camera peeche chalta, NAZAR NAHI aata
 - Malik: "background camera on rahe magar hamein show na ho — distract hote hain". `.scan-cam` poori size + 1080p chalta rehta hai (barcode poori tasveer se), upar `::after` bharat parda (#f6f8fc, z 2). QAIDA: chalte camera ko chhupana ho to video par opacity:0 / display:none / bahar KABHI nahi (phone video rok deta = scan band) — upar parda daalo. 📷 ▾ chip par hara nukta = camera chal raha. Test: videoWidth 1920, paused false.
+
+## v2.179.5 (2026-11-04) — 📷 scan theek: camera CHHOTI LIVE KHIRKI mein
+- Malik (screenshot): "Scaning nahi ho rahi". v2.179.4 mein camera poori screen peeche chhupa tha — barcode camera ke saamne hai ya nahi, kaun sa lens (phone mein 4) chal raha, kuch pata nahi chalta tha.
+- Malik ne chuna: `📷 ▾` chip ke saath chhoti live khirki (72×44, red line) — `.scan-cam` ab `.scan-row2` ka pehla bacha (template pos-stock.js). Tap = 🎯 focus. Detection wahi `detector.detect(video)` (poori 1080p tasveer, dikhne ka size farq nahi).
+- Hataya: poori screen peeche wala camera + `::after` parda + hara nukta (style.css v2.179.4 block). Screen ka rang #f6f8fc hi.
+- Test: Playwright (fake camera) — khirki 66×40 (zoom .92), 10 lines nazar, side scroll nahi. Desktop Chromium mein dhaka hua video bhi frames deta tha (masla nishana tha).
+- AI nahi. Rules / PC kuch nahi.
