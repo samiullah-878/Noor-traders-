@@ -4032,3 +4032,11 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - 🤖 ai-tally.js: 404 = `{gone: true}` → Google ki LIST se agla (MODEL_PREF 3.5-flash / 3.6-flash / 3.5-flash-lite sirf agar list mein hon, phir best flash; 2.5 / 2.0 / 1.5 kabhi nahi) — generate · agentStep · hearAudio.
   Chal jaye to `setModelGoneHook` → malik ki app aiConfig.model naya (PC bhi wohi parhe) + notice. Is session mein band model ki jagah seedha chalta (`liveModel`).
   SPEED_MODELS: 2.5-flash hata, 3.5-flash. app.js `ai25Try` (pehle 2.5 par WAPAS le jata tha!) → ab ulta: aiConfig purana (2.5/2.0/1.5) ho to din mein ek dafa list se naya ping kar ke save. AI wahi, sirf model ka naam.
+
+## PC wa-parchi v1.3 + wa-a4.ps1 v1.1 · manifest 2026-11-04.4 (2026-11-04) — 🧾 thermal = PARCHI JAISI LIKHI + ☐ (app v2.179.1 wahi)
+- Malik: "parchi ki tasveer — wohi lafz hamare printer se chhape hue · thermal par poori tasveer ki bajaye wohi lafz" → plan (a/b) → "Nahi, lafz same waise hi, aur shuru mein tick ka box · simple".
+- `printThermal`: AI ki har line ka `raw` (gahak ke apne lafz, AI wahi ek dafa — naya AI nahi), asal tarteeb (`writtenLines` = clear + unc, `i` se). `writtenRaster` → wa-a4.ps1 `-Mode thlist`
+  (512 dots, Urdu = FONT_UR + DirectionRightToLeft + daayein ☐ DrawRectangle · English = Arial bold + baayein ☐) ek 24-bit BMP → `bmpRaster` (node, 1-bit GS v 0, 800 line tukde) → CRM 'L'.
+  PowerShell na chale = `writtenText` saada ("[ ] lafz", Urdu UR.line). Rack-war list / ❓ tukde thermal par NAHI (packingText rakha, istemal nahi). A4 pehle jaisa (tasveer + list).
+- AI na parh sake: thermal par lambi tasveer NAHI — "AI NAHI PARH SAKA · Parchi ki tasveer app / A4 mein dekhein" (header ' PARCHI - AI NAHI ').
+- Test: bmpRaster round-trip (24 / 32 bit) 0 pixel farq · PIL naqal se preview malik ko.

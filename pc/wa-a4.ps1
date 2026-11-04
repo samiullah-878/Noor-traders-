@@ -1,5 +1,7 @@
 # =========================================================
-#  wa-a4.ps1  v1.0 (2026-11-04) - wa-parchi.js ka A4 PACKING page (System.Drawing) + chhoti tasveer (thumb)
+#  wa-a4.ps1  v1.1 (2026-11-04) - wa-parchi.js ka A4 PACKING page (System.Drawing) + chhoti tasveer (thumb)
+#    v1.1: -Mode thlist -Spec <json> -Out <bin>  -> thermal (512 dots) 'parchi jaisi likhi': har line ke SHURU mein khaali dabba (tick ke liye),
+#          Urdu = daayein dabba + Urdu font, English = baayein dabba. Ek BMP (24 bit) <bin> mein; 1-bit raster node banata hai. "OK <path>".
 #    -Mode page  -Spec <json> -Out <prefix>  -> <prefix>-1.jpg, <prefix>-2.jpg ... ; har safhe par ek line "OK <path>"
 #    -Mode thumb -In <jpg> -Out <jpg> -Max 360 -Q 60
 #  Ghalti = "ERR:<wajah>". AI NAHI. Sirf tasveer banata hai - chhapna a4-print.js (a4Jobs) karta hai.
@@ -36,6 +38,49 @@ try {
       $g.DrawImage($im, 0, 0, $w, $h); $g.Dispose()
       Save-Jpeg $b $Out $Q; $b.Dispose()
     } finally { $im.Dispose() }
+    Write-Output ('OK ' + $Out); exit 0
+  }
+
+  # ---------------- v1.1: thermal 'jaisi likhi' list (malik: "lafz same waise hi, shuru mein tick ka box, simple") ----------------
+  if ($Mode -eq 'thlist') {
+    $o = Get-Content -Raw -Encoding UTF8 -LiteralPath $Spec | ConvertFrom-Json
+    $W = 512; $la = Pick-Font ([string]$o.fonts.la) 'Arial'; $urf = Pick-Font ([string]$o.fonts.ur) $la
+    $pxU = [float]$o.pxU; if ($pxU -lt 20) { $pxU = 36 }; $pxL = [float]$o.pxL; if ($pxL -lt 18) { $pxL = 28 }
+    $fU = New-Object System.Drawing.Font($urf, $pxU, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
+    $fL = New-Object System.Drawing.Font($la, $pxL, [System.Drawing.FontStyle]::Bold, [System.Drawing.GraphicsUnit]::Pixel)
+    $BX = 28; $GAP = 14; $TW = $W - $BX - $GAP - 6
+    $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::Black, [float]3)
+    $sfU2 = New-Object System.Drawing.StringFormat; $sfU2.FormatFlags = [System.Drawing.StringFormatFlags]::DirectionRightToLeft
+    $sfL2 = New-Object System.Drawing.StringFormat
+    # pehle naap (har line ki unchai), phir ek lambi tasveer - 1-bit raster node (wa-parchi bmpRaster) banata hai (PowerShell loop dheema)
+    $rows = New-Object System.Collections.ArrayList
+    $b0 = New-Object System.Drawing.Bitmap(10, 10); $g0 = [System.Drawing.Graphics]::FromImage($b0)
+    foreach ($ln in @($o.lines)) {
+      $t = [string]$ln.t; if (-not $t) { continue }
+      $ur = Is-Ur $t; $f = $fL; $sf = $sfL2; if ($ur) { $f = $fU; $sf = $sfU2 }
+      $h = [int][math]::Ceiling($g0.MeasureString($t, $f, $TW, $sf).Height); $lh = [int][math]::Ceiling($f.GetHeight($g0))
+      [void]$rows.Add(@{ t = $t; ur = $ur; f = $f; sf = $sf; h = ([math]::Max($h, $BX) + 16); lh = $lh })
+    }
+    $g0.Dispose(); $b0.Dispose()
+    if ($rows.Count -eq 0) { Write-Output 'ERR:khali'; exit 1 }
+    $TH = 0; foreach ($r in $rows) { $TH += [int]$r.h }
+    $bmp = New-Object System.Drawing.Bitmap($W, $TH, [System.Drawing.Imaging.PixelFormat]::Format24bppRgb)
+    $g = [System.Drawing.Graphics]::FromImage($bmp)
+    $g.Clear([System.Drawing.Color]::White); $g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
+    $y = 0
+    foreach ($r in $rows) {
+      $by = $y + 8 + [int][math]::Max(0, ([int]$r.lh - $BX) / 2)
+      if ($r.ur) {
+        $g.DrawRectangle($pen, ($W - $BX - 4), $by, $BX, $BX)
+        $g.DrawString([string]$r.t, $r.f, [System.Drawing.Brushes]::Black, (New-Object System.Drawing.RectangleF([float]2, [float]($y + 8), [float]$TW, [float]([int]$r.h - 8))), $r.sf)
+      } else {
+        $g.DrawRectangle($pen, 4, $by, $BX, $BX)
+        $g.DrawString([string]$r.t, $r.f, [System.Drawing.Brushes]::Black, (New-Object System.Drawing.RectangleF([float]($BX + $GAP + 4), [float]($y + 8), [float]$TW, [float]([int]$r.h - 8))), $r.sf)
+      }
+      $y += [int]$r.h
+    }
+    $g.Dispose()
+    $bmp.Save($Out, [System.Drawing.Imaging.ImageFormat]::Bmp); $bmp.Dispose()
     Write-Output ('OK ' + $Out); exit 0
   }
 

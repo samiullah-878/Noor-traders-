@@ -1,5 +1,8 @@
 // =========================================================
-//  wa-parchi.js  v1.2 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  wa-parchi.js  v1.3 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v1.3: 🧾 THERMAL = PARCHI JAISI LIKHI (malik: "poori tasveer ki bajaye wohi lafz thermal par · shuru mein tick ka box · simple") — har line
+//        gahak ke apne lafz (AI ka 'raw', usi tarteeb), Urdu = Urdu font + daayein ☐, English = baayein ☐ (wa-a4.ps1 -Mode thlist, PowerShell na chale
+//        to saada text). Tasveer / ❓ tukde thermal par NAHI (A4 par pehle jaisi). AI na parh sake = chhota paigham, lambi tasveer nahi. AI wahi ek dafa.
 //  v1.2: 🗑 app ne parchi hata di (st 'x:<pehle>' — app v2.179.1) to AI ka jawab / print ka haal baad mein aaye tab bhi parchi CHHUPI rahe ('x:ok') — wapas list mein nahi aati.
 //  v1.1: Google ne gemini-2.5-flash band kiya ("no longer available to new users") — pehla model na chale to Google ki LIST se
 //        behtareen chalta flash model khud (app ke pickModel jaisa), rush par usi ko ek dafa aur; jo chala woh yaad. Shuru mein
@@ -28,7 +31,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '1.2';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '1.3';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -320,7 +323,7 @@ function itemLines(l, box = '[ ] ') {   // qty naam ke AAGE usi line par (CLAUDE
 function headLines(o, opt = {}) {
   const out = [ESC + '@' + C1 + ESC + '!\x30' + 'NOOR TRADERS' + ESC + '!\x00'];   // ESC @ alag line par nahi (khali line = kaghaz)
   const dl = UR.dateLine ? UR.dateLine(o.day || dayOf(o.at || Date.now()), 56) : ''; if (dl) out.push(dl);
-  out.push(C1 + GS + 'B\x01' + GS + '!\x11' + (opt.fail ? ' PACKING - PHOTO ' : ' PACKING-BILL BAAQI ') + GS + '!\x00' + GS + 'B\x00');
+  out.push(C1 + GS + 'B\x01' + GS + '!\x11' + (opt.fail ? ' PARCHI - AI NAHI ' : ' PACKING-BILL BAAQI ') + GS + '!\x00' + GS + 'B\x00');
   if (UR.isOn()) out.push(UR.line('پیکنگ پرچی — بل باقی', 40, 1));
   if (opt.rp) out.push(C1 + ESC + '!\x08' + 'DOBARA PRINT (' + opt.rp + ')' + ESC + '!\x00');
   const nm = String(o.nm || '').trim();
@@ -360,9 +363,23 @@ function packingText(o, P, opt = {}) {
 // AI na parh saka — parchi ki apni tasveer chhapo (larke tasveer dekh kar maal nikalein)
 function failText(o, why, opt = {}) {
   const out = headLines(o, { rp: opt.rp, fail: true });
-  out.push(L0 + hr(), L0 + B1 + 'AI NAHI PARH SAKA' + B0, ...wrap(ascii(why) || '-', W).map(s => L0 + s), L0 + 'Tasveer dekh kar maal nikalein:');
+  out.push(L0 + hr(), L0 + B1 + 'AI NAHI PARH SAKA' + B0, ...wrap(ascii(why) || '-', W).map(s => L0 + s), L0 + (opt.photo ? 'Tasveer dekh kar maal nikalein:' : 'Parchi ki tasveer app / A4 mein dekhein.'));   // v1.3: thermal par lambi tasveer nahi
   if (opt.photo) out.push(CRM + 'photo');
   out.push('', CUT);
+  return out.join('\r\n');
+}
+// v1.3: 🧾 parchi JAISI LIKHI — har line gahak ke apne lafz, shuru mein ☐ (tick). opt.raster = PowerShell wali tasveer (CRM 'L'); na ho to saada text.
+const rawOf = l => String(l.r || '').replace(/\s+/g, ' ').trim() || [l.it || l.n || '', qtyStr(l.q, l.u)].filter(Boolean).join(' ').trim();
+function writtenLines(P) { return [...(P.clear || []), ...(P.unc || [])].sort((a, b) => (a.i ?? 0) - (b.i ?? 0)).map(rawOf).filter(Boolean); }
+function writtenText(o, P, opt = {}) {
+  const L = writtenLines(P), out = headLines(o, { rp: opt.rp, n: L.length });
+  out.push(L0 + hr());
+  if (opt.raster) out.push(CRM + 'L');
+  else for (const t of L) {
+    if (hasUr(t)) out.push(UR.line('[ ]  ' + t, 34));   // Urdu: shuru (daayein) mein [ ]
+    else out.push(...wrap(ascii(t), W - 4).map((s, k) => L0 + B1 + (k ? '    ' : '[ ] ') + s + B0));
+  }
+  out.push(L0 + hr(), L0 + line('Kul: ' + L.length + ' lines', ''), '', CUT);
   return out.join('\r\n');
 }
 // text (UR nishan + CRM nishan) → nt-parchi job { s: [...] } — Urdu = tasveer (nt-parchi worker), CRM = raster seedha
@@ -378,6 +395,26 @@ function toJob(text, rasters = {}) {
 }
 const stripEsc = t => String(t).split('\r\n').map(l => l.startsWith(UR.MARK) ? '[UR] ' + l.slice(UR.MARK.length).split('\u0001')[0] : l.startsWith(UR.NOTE) ? '[UR-NOTE] ' + l.slice(UR.NOTE.length).split('\u0001')[0] : l.startsWith(CRM) ? '[TASVEER ' + l.slice(CRM.length) + ']' : l.replace(/\x1b[@]|\x1b[aE!]./g, '').replace(/\x1d[B!]./g, '').replace(/\x1dV\x42\x00/g, '<<KAATO>>')).join('\n');
 
+// v1.3: wa-a4.ps1 -Mode thlist ki BMP (24 / 32 bit) → ESC/POS 1-bit raster (GS v 0, 800 line ke tukde) latin1 · '' = nahi bani
+function bmpRaster(buf, maxW = 512) {
+  if (!buf || buf.length < 54 || buf[0] !== 0x42 || buf[1] !== 0x4D) return '';
+  const off = buf.readUInt32LE(10), w = buf.readInt32LE(18), h0 = buf.readInt32LE(22), bpp = buf.readUInt16LE(28), comp = buf.readUInt32LE(30);
+  const h = Math.abs(h0), up = h0 > 0;
+  if (!(w > 0 && h > 0) || (bpp !== 24 && bpp !== 32) || (comp !== 0 && comp !== 3)) return '';
+  const stride = Math.floor((bpp * w + 31) / 32) * 4, bp = bpp / 8, W2 = Math.min(w, maxW), bw = Math.ceil(W2 / 8);
+  if (off + stride * h > buf.length) return '';
+  const parts = [];
+  for (let y0 = 0; y0 < h; y0 += 800) {
+    const hh = Math.min(800, h - y0), o = Buffer.alloc(11 + bw * hh);
+    Buffer.from([0x1b, 0x61, 0x00, 0x1d, 0x76, 0x30, 0x00, bw & 255, bw >> 8, hh & 255, hh >> 8]).copy(o, 0);
+    for (let y = 0; y < hh; y++) {
+      const row = off + (up ? h - 1 - (y0 + y) : y0 + y) * stride;
+      for (let xb = 0; xb < bw; xb++) { let v = 0; for (let k = 0; k < 8; k++) { const x = xb * 8 + k; if (x < W2) { const q = row + x * bp; if (buf[q] + buf[q + 1] + buf[q + 2] < 384) v |= 0x80 >> k; } } o[11 + y * bw + xb] = v; }
+    }
+    parts.push(o);
+  }
+  return Buffer.concat(parts).toString('latin1');
+}
 // ---------- ✂️ likhai ki tasveer (thermal raster, GS v 0) ----------
 function decodeJpeg(buf) { try { const img = require('./jpeg-decode.js')(buf, { useTArray: true, formatAsRGBA: true, maxResolutionInMP: 40, maxMemoryUsageInMB: 512 }); return img && img.width && img.height ? img : null; } catch { return null; } }
 function padBox(b) {   // ~15% upar / neeche (Nastaliq ke sar / dum), thora daayein / baayein
@@ -443,7 +480,7 @@ function a4Spec(o, P, opt = {}) {
 //  ASAL SCRIPT (PC)
 // =========================================================
 if (require.main === module) main();
-module.exports = { normPh, isMob, phPretty, parseCaption, vcardInfo, numOf, normUnit, qtyStr, validBox, normLine, parseGemini, localTextLines, geminiRead, buildIndex, matchOne, matchLines, isUnclear, sortForPrint, rackOf, packingText, failText, toJob, stripEsc, decodeJpeg, padBox, cropRaster, a4Spec, dayOf, PROMPT_IMG, PROMPT_TXT, CRM, W };
+module.exports = { normPh, isMob, phPretty, parseCaption, vcardInfo, numOf, normUnit, qtyStr, validBox, normLine, parseGemini, localTextLines, geminiRead, buildIndex, matchOne, matchLines, isUnclear, sortForPrint, rackOf, packingText, failText, writtenText, writtenLines, bmpRaster, toJob, stripEsc, decodeJpeg, padBox, cropRaster, a4Spec, dayOf, PROMPT_IMG, PROMPT_TXT, CRM, W };
 
 function main() {
   const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(DIR, 'wa-parchi.alive'), w = () => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }; w(); setInterval(w, 30000); return { guard: fn => fn }; } })();
@@ -541,12 +578,25 @@ async function start(ZINDA) {
     if (typeof q.st === 'string' && /^x:/.test(now) && !/^x:/.test(q.st)) q.st = 'x:' + q.st;
     tx.update(ref, q);
   }).catch(e => log(`⚠️ ${id} likha nahi: ${e.message}`));
+  async function writtenRaster(L) {   // v1.3: wa-a4.ps1 -Mode thlist → ESC/POS raster (latin1) ya '' (saada text chalega)
+    if (!L.length || process.platform !== 'win32' || !fs.existsSync(PS1)) return '';
+    const spec = path.join(TMP, 'thl-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6) + '.json'), outF = spec.replace(/\.json$/, '.bmp');
+    try {
+      fs.writeFileSync(spec, JSON.stringify({ lines: L.map(t => ({ t })), fonts: { la: 'Arial', ur: FONT_UR }, pxU: 36, pxL: 28 }), 'utf8');
+      const r = await ps(['-Mode', 'thlist', '-Spec', spec, '-Out', outF], 40000);
+      if (r.out.includes('OK') && fs.existsSync(outF)) { const x = bmpRaster(fs.readFileSync(outF)); if (x) return x; }
+      log('🧾 jaisi-likhi tasveer nahi bani (' + (r.err || r.out || '?').slice(0, 80) + ') — saada text');
+    } catch (e) { log('🧾 jaisi-likhi: ' + e.message); }
+    finally { for (const f of [spec, outF]) { try { fs.unlinkSync(f); } catch {} } }
+    return '';
+  }
   async function printThermal(o, P, img, opt) {
     let text, rasters = {};
-    if (opt.fail) { text = failText(o, opt.fail, { rp: opt.rp, photo: !!(PH && opt.jpg) }); if (PH && opt.jpg) rasters.photo = PH.photoRaster(dataUrl(opt.jpg), 512, 900, { crop: 0 }); }
-    else {
-      text = packingText(o, P, { rp: opt.rp, crop: l => !!(img && l.b) });
-      for (const l of P.unc) if (img && l.b) { try { const r = cropRaster(img, l.b); if (r) rasters['c' + l.i] = r; } catch {} }
+    if (opt.fail) text = failText(o, opt.fail, { rp: opt.rp, photo: false });   // v1.3: thermal par lambi tasveer nahi (A4 / app mein hai)
+    else {   // v1.3: parchi jaisi likhi + ☐
+      const r = await writtenRaster(writtenLines(P));
+      if (r) rasters.L = r;
+      text = writtenText(o, P, { rp: opt.rp, raster: !!r });
     }
     try { text = await UR.fillNotes(text, 4000); } catch { text = UR.strip(text); }
     const e = await getParchi().sendJobs([toJob(text, rasters)], S.thp || TH_PRINTER);
