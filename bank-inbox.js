@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.182.0';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.182.1';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -510,8 +510,8 @@ async function rabtaTest() {
   // qadam 1: rules asal mein nayi hain? (malik ke login se _alias likhna sirf rules 2.38+ mein allowed)
   try { await O.cloud.bankAliasSet(alias || {}); }
   catch (e) { testOk = false; testMsg = `❌ Rules ASAL MEIN purani hain — Firebase ne malik ko bhi bankSms mein likhne nahi diya (${esc(e?.code || e?.message || e)}).<br><b>Hal:</b> Firebase → Firestore → Rules → poori purani mita kar nayi paste → <b>Publish</b> dabayein → upar "Rules published" aana chahiye. Agar laal error aaye to us ka screenshot bhejein.`; testBusy = false; paint(); return; }
-  // qadam 2: 4 jaanch darwaze (rules 2.40) — kaun sa khulta hai
-  const probes = [[1, 'sirf data'], [2, 'id != _alias'], [3, 'keys hasOnly'], [4, 'chaabi == bankKey.k']], res = [];
+  // qadam 2: chaabi wala jaanch darwaza (rules 2.89 — bina chaabi wale 1/2/3 band, security)
+  const probes = [[4, 'chaabi == bankKey.k']], res = [];
   for (const [pn, lab] of probes) {
     try {
       const r = await fetch(restUrl(), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { p: { integerValue: String(pn) }, ...(pn === 4 ? { k: { stringValue: key } } : {}) } }) });

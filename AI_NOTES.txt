@@ -6907,3 +6907,9 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - Line `ask` = peeli line + "❓ Tadad?" chip (sub-line mein SAB SE PEHLE — phone par baqi … mein kat jata), Pcs khana placeholder "?"; tadad likhte hi chip hat (focus nahi toota). Bill banao = ask baqi ho to ROK + pehle khane par focus. ❓ andaza chunne par bhi ask ho to "✍ tadad likhein".
 - dukan/dhoond.js (= pc/dhoond.mjs HUBAHU): `words` + `canon` export, SYN mein rang (safed = white, kala/kali = black, lal = red, hara = green) — website / app dhoondo bhi.
 - Test: node (18 parchi lines, sahi item ho / na ho) + Playwright phone (packet 0.250 + chip, Brite 3kg = 1, ketchup ask + bill rok + focus, oil andaza "size alag" → ask). Rules NAHI badle. AI: sirf Gemini ki parhai (qn), baqi jaanch / packet / sawal bina AI.
+
+## v2.182.1 (2026-11-04) — 🔒 SECURITY: bankSms ke bina-chaabi TEST darwaze band · rules 2.89
+- Malik ne poocha "public repo se koi hamare database se kya le sakta hai" — jaanch mein mila: firestore.rules bankSms mein v2.40 ke 4 "jaanch darwaze" mein se p 1 / 2 / 3 BINA login + BINA chaabi create dete the (koi bhi internet se {p:1, text:"<jhooti HBL SMS>"} likh sakta tha; PC bank-parchi har bankSms ki `text` parhta hai → jhooti entry khate mein ja sakti thi). Repo PUBLIC hai = rules + firebase config sab ke saamne.
+- Ab sirf p 4 (chaabi == blueAccess/bankKey.k, keys sirf p + k) + asal raasta (k + src sms/email/notif). MacroDroid / Gmail script ki body (k, src, from, text) wahi — un par asar NAHI.
+- bank-inbox.js Rabta test: sirf darwaza 4 parakhta hai (1-3 ab hamesha ❌ hote).
+- Qaida (CLAUDE.md §5): test ke liye bina chaabi / bina login rule KABHI chhorna nahi; test khatam = rule hatao. AI nahi.

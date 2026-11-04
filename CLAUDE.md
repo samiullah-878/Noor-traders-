@@ -154,6 +154,7 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 - `firebase-key.json`, `local-config.json` **GitHub par kabhi nahi** (haath se copy).
 - Master key, AI key, bank key chat mein kabhi mat likho.
 - `node_modules` / `package-lock` commit mat karo.
+- **🔓 Bina login / bina chaabi rule KABHI nahi (v2.182.1, rules 2.89)**: repo PUBLIC hai — rules aur firebase config sab parh sakte hain. bankSms ke purane test darwaze (p 1/2/3, v2.40) se koi bhi jhooti HBL SMS daal sakta tha (PC bank-parchi khate mein laga deta). Test ke liye khula rule banao to usi kaam ke aakhir mein hatao; bahar se likhne wala har raasta = khufia chaabi (bankKey / gaariKey jaisa) + `keys().hasOnly`. Malik ka faisla baqi: repo private (Pages / PC update ka plan alag).
 - **Login code**: malik ka pakka code sirf hash (`blueAccess/ownerCode`, PBKDF2) — tasdeeq sirf shop PC (`pc/owner-login.js`, admin custom token, 10 ghalat = 1 ghanta band). Plain code kabhi Firestore / log / chat mein nahi. Larke ke code (`deviceJoins pc-…`, keep) ek dafa chalte hain, phir naya khud (v2.105.7).
 
 ## 6. Har update ka checklist
