@@ -15,10 +15,10 @@
 //   v2.179.2: 🔁 DOBARA PARHO (malik OK) — khuli parchi ⋮ 🔁 + ✕ / ⚠️ wale dabbe mein chip → {st:'new'} (rules 2.86 wahi) → PC (wa-parchi claimNew) AI se phir
 //     parhe + naya thermal / A4; bill khud dobara bhar jata hai (pendLoad). Bill bana / maal nikla / abhi parh raha = nahi.
 //   CAP sale.wsale (default khula). AI app mein NAHI — parchi PC parhta hai. Agent action NAHI (malik ka qaida v2.111.0).
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.181.0';
-import { smartSearch, noteHit } from './smart-search.js?v=2.181.0';
-import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.181.0';   // v2.180.0: 👦 larka (POS SP Man) chip
-import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.181.0';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.181.1';
+import { smartSearch, noteHit } from './smart-search.js?v=2.181.1';
+import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.181.1';   // v2.180.0: 👦 larka (POS SP Man) chip
+import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.181.1';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -377,6 +377,7 @@ function toolsHTML(o) {
     ${o && canHide() && !hid(o) && o._local !== 'prep' && o._local !== 'send' ? `<button type="button" class="sh-wide" data-ws-hide="${esc(o.id)}" data-mn="ws.hide" data-mn-i="🗑" data-mn-t="Parchi hatao" data-mn-s="list se — ↩ wapas ho sakti hai" data-mn-g="${GRP}">🗑 Parchi hatao</button>` : ''}
     ${canReread(o) ? `<button type="button" class="sh-wide" data-ws-reread="${esc(o.id)}" data-mn="ws.reread" data-mn-i="🔁" data-mn-t="Dobara parho" data-mn-s="AI phir se parhe + naya print" data-mn-g="${GRP}">🔁 Dobara parho</button>` : ''}
     ${canHide() && orders.some(hid) ? `<button type="button" class="sh-wide" data-ws-hidlist="1" data-mn="ws.hid" data-mn-i="♻️" data-mn-t="Hatai hui parchiyan" data-mn-s="${orders.filter(hid).length} — tap = wapas list mein" data-mn-g="${GRP}">♻️ Hatai hui parchiyan</button>` : ''}
+    ${o && !o._local && C.can('sale.wsimg') ? `<button type="button" class="sh-wide" data-ws-imgpr="1" data-mn="ws.imgpr" data-mn-i="🖼" data-mn-t="Parchi jaisi print" data-mn-s="${chipSt.img === 'w' ? '⏳ ja rahi…' : chipSt.img === 'ok' ? '✅ PC ko gayi' : chipSt.img === 'bad' ? '✕ nahi gayi' : 'poori parchi ki tasveer thermal par — bina AI, zoom'}" data-mn-g="${GRP}">🖼 Parchi jaisi print</button>` : ''}
     ${o && !o._local ? `<button type="button" class="sh-wide" data-ws-pv="1" data-mn="ws.pv" data-mn-i="🧾" data-mn-t="Parchi ki tasveer" data-mn-s="poori parchi dekhein" data-mn-g="${GRP}">🧾 Parchi ki tasveer</button>${gahakBox(o)}` : ''}
     ${seg('ws.mode', '🛒', 'Sale ki qism', mode === 'wholesale' ? 'Wholesale (W rate)' : 'Counter (R rate)', B(mode === 'counter', 'mode', 'counter', '🛒 Counter') + (C.can('sale.wholesale') ? B(mode === 'wholesale', 'mode', 'wholesale', '📦 Wholesale') : ''))}
     ${seg('ws.view', '📊', 'Bill ka look', v === 'grid' ? 'Table' : 'Lines', B(v === 'grid', 'view', 'grid', '📊 Table') + B(v === 'rows', 'view', 'rows', '☰ Lines'))}
@@ -634,7 +635,7 @@ async function orderPatch(k, patch, okMsg) {   // ✓ Maal nikla / 🖨 Dobara p
   const o = curOrder(); if (!o || o._local || !C.cloud?.updateParchiOrder) return;
   chipSt[k] = 'w'; footPaint();
   try { await withT(C.cloud.updateParchiOrder(o.id, patch), 12000); const x = orders.find(y => y.id === o.id); if (x) Object.assign(x, patch); if (curSnap) Object.assign(curSnap, patch); chipSt[k] = 'ok'; C.notice(okMsg); }
-  catch (e) { chipSt[k] = 'bad'; C.notice('✕ ' + (perm(e) ? 'Ijazat nahi — rules 2.86 lagi hain?' : e?.message || e)); }
+  catch (e) { chipSt[k] = 'bad'; C.notice('✕ ' + (perm(e) ? (k === 'img' ? 'Ijazat nahi — rules 2.88 abhi PC ne nahi lagayi (5 min mein khud) — thori der baad dobara' : 'Ijazat nahi — rules 2.86 lagi hain?') : e?.message || e)); }
   footPaint(); paintOrders(); headPaint();
   setTimeout(() => { if (chipSt[k] !== 'w') { delete chipSt[k]; footPaint(); } }, 4000);
 }
@@ -855,13 +856,14 @@ document.addEventListener('click', e => {
     return; }
   if (!document.querySelector('[data-ws-root]')) return;
   const r = t.closest('#list .pp-cr, #list .pp-tr'); if (r && r.dataset.wsSel && !t.closest('button,select,input')) selSet(r.dataset.wsSel);
-  const b = t.closest('[data-ws-reread],[data-ws-hide],[data-ws-hidlist],[data-ws-learn],[data-ws-unhide],[data-ws-ord],[data-ws-add],[data-ws-del],[data-ws-open],[data-ws-mode],[data-ws-view],[data-ws-copies],[data-ws-counter],[data-ws-gc],[data-ws-cam],[data-ws-gal],[data-ws-camera],[data-ws-pv],[data-ws-gsave],[data-ws-set],[data-ws-upick],[data-ws-uskip],[data-ws-uback],[data-ws-pick],[data-ws-reprint],[data-ws-clear],[data-ws-save]');
+  const b = t.closest('[data-ws-reread],[data-ws-hide],[data-ws-hidlist],[data-ws-learn],[data-ws-imgpr],[data-ws-unhide],[data-ws-ord],[data-ws-add],[data-ws-del],[data-ws-open],[data-ws-mode],[data-ws-view],[data-ws-copies],[data-ws-counter],[data-ws-gc],[data-ws-cam],[data-ws-gal],[data-ws-camera],[data-ws-pv],[data-ws-gsave],[data-ws-set],[data-ws-upick],[data-ws-uskip],[data-ws-uback],[data-ws-pick],[data-ws-reprint],[data-ws-clear],[data-ws-save]');
   if (!b) return;
   const d = b.dataset;
   if (d.wsReread) { reread(d.wsReread, b); return; }   // v2.179.2
   if (d.wsHide) { hideOrd(d.wsHide); return; }   // v2.179.1
   if (d.wsHidlist) { hidOpen(); return; }
   if (d.wsLearn) { wlOpen(); return; }   // v2.181.0: 📒
+  if (d.wsImgpr) { orderPatch('img', { prImg: Date.now() }, '🖼 Parchi jaisi (bina AI) — PC thermal par zoom tasveer chhaap raha hai'); return; }   // v2.181.1
   if (d.wsUnhide) { unhide(d.wsUnhide); return; }
   if (d.wsOrd) { loadOrder(d.wsOrd); return; }
   if (d.wsCamera) { openSaleCamera(); return; }

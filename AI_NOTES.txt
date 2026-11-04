@@ -6885,3 +6885,8 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - Key = 'k' + FNV hash(lkey) (rules: blueAccess owner generic — naya rules nahi). PC wa-parchi v1.6 (pc/AI_NOTES).
 - Bill: yaad wali line (j y:1) cart line `y` → sub-line "🧠 yaad". Classes `wl-*`, data `data-wl-*`.
 - Test: Playwright — 30 din, 2 qatar (×2 grouping), tukde, andaza → yaad save, Baqi 0, chhoro / wapas, side scroll nahi. AI app mein nahi.
+
+## v2.181.1 (2026-11-04) — 🖼 WhatsApp parchi jaisi print (bina AI, zoom) · rules 2.88
+- Malik: "puri parchi ki aik aik item jaise likhi print ho · AI ke baghair alehda chip · zoom ho kar aaye" (chunao: poori tasveer · sirf ⋮ mein).
+- wa-sale ⋮ "🖼 Parchi jaisi print" (khuli server parchi, CAP sale.wsimg) → `orderPatch('img', {prImg: Date.now()})` (⏳/✅/✕ chipSt.img; rules na lagi = saaf paigham). PC wa-parchi v1.7 (pc/AI_NOTES).
+- Rules 2.88: parchiOrders update affectedKeys + 'prImg' (int). PC rules-publish khud lagata hai.

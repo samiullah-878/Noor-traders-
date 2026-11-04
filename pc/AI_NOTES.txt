@@ -4082,3 +4082,10 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - matchLines: yaad = `y:1` + s = min(0.97, max(AI sure, 0.7)) (item pakka; AI ka kam yaqeen sirf tadad ka). Thermal writtenText: line ke neeche `  >>  yaad: <POS naam>`; yaad line par shak ka tukda sirf ؟ par.
 - `glossOf(learn)`: naye 150 yaad (lkey + naam) PROMPT_IMG / PROMPT_TXT ke saath ("KNOWN WORDS … raw exactly as written") → geminiRead `gloss`. dataVer++ = index dobara.
 - Test: lkey Urdu/Roman, matchOne yaad 0.97, writtenText ">> yaad", glossOf. AI: wahi purana ek parhna (naya AI call nahi).
+
+## PC wa-parchi v1.7 · manifest 2026-11-04.10 (2026-11-04) — 🖼 parchi jaisi print (bina AI, zoom)
+- Malik: "puri parchi ka har item jaise likha print ho · AI ke baghair alag chip (⋮ mein) · zoom ho kar aaye". App ⋮ → parchiOrders.prImg = waqt (rules 2.88).
+- Listener `ORD.orderBy('prImg')` (prReq jaisa, 30 min purana = nahi, done = pr.im) → queue kind 'img' → `imgPrint`: parchiImg JPEG → decodeJpeg → `zoomPlan(img)`:
+  kaghaz ki safedi (70% percentile) se likhai (≤ 0.62 ×) dhoond kar khali kinare kaat · 30–70% chaurai mein sab se lambi khali patti (≥ 2.5%) = do column → DAAYAN pehle (Urdu) · har hissa 512 chaurai, ≤ 640 line ke tukde.
+  `cropRaster(img, box, {raw, w 512, h 700})` har tukda (CRM 'z<k>') + `imageSlipText` (headLines + "PARCHI JAISI LIKHI - BINA AI" + Urdu + ">> DAAYAN / BAAYAN HISSA <<"). Likhi (text) parchi = tasveer nahi → perr.
+- Test: do column → 4 tukde (daayan 2, baayan 2), ek column → 1 (sirf kinare kate). AI NAHI.

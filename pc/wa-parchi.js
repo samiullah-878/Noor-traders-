@@ -1,5 +1,7 @@
 // =========================================================
-//  wa-parchi.js  v1.6 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  wa-parchi.js  v1.7 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v1.7: 🖼 malik: "puri parchi ka har item jaise likha print ho · AI ke baghair alag chip (⋮) · zoom ho kar aaye" → app prImg → poori parchi ki tasveer
+//        thermal par (zoomPlan: khali kinare kaat, beech mein column ka faasla ho to do hisse — daayan pehle; 512 chaurai, 640 line ke tukde). AI NAHI.
 //  v1.6: 🧠 malik: "jin ka naam nahi milta alag khane mein — hum yaad karwa dein · pattern bhi · agli dafa yaad hua naam aur parchi ka lafz ikattha chhape" →
 //        app 📒 Naam seekho → blueAccess/waLearn {m:{key:{r gahak ka lafz, id, n, at}}} · yahan lkey(raw) BILKUL wahi = pakka item (s 0.97, j line y:1),
 //        AI ko 150 yaad lafz (glossOf, raw kabhi nahi badalta) · thermal: gahak ke lafz ke neeche ">>  yaad: <item>" + yaad line par shak ka tukda nahi (sirf ؟).
@@ -496,6 +498,50 @@ function cropRaster(img, box, opt = {}) {
   return Buffer.concat([hdr, out, Buffer.from([0x0a, 0x1b, 0x61, 0x00])]).toString('latin1');
 }
 
+// ---------- 🖼 v1.7: PARCHI JAISI (bina AI) — poori parchi ki tasveer thermal par, ZOOM (malik: "parchi ka har item jaise likha · AI ke baghair alag chip · zoom ho kar aaye") ----------
+// 1) kinare ka khali kaghaz kaat (sirf likhai wala hissa) 2) beech mein khali patti (do jori / do column) ho to do hisse — DAAYAN pehle (Urdu)
+// 3) har hissa 512 chaurai, ~640 line ke tukdon mein (printer ki hadd). Boxes 0–1000 (cropRaster raw). AI NAHI.
+function zoomPlan(img) {
+  if (!img || !img.width || !img.height) return [];
+  const Wd = img.width, Hd = img.height, D = img.data, st = Math.max(1, Math.floor(Math.max(Wd, Hd) / 500)), w = Math.floor(Wd / st), h = Math.floor(Hd / st);
+  const lum = new Float32Array(w * h); const hist = new Array(256).fill(0);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = ((y * st) * Wd + x * st) * 4, v = 0.299 * D[i] + 0.587 * D[i + 1] + 0.114 * D[i + 2]; lum[y * w + x] = v; hist[Math.max(0, Math.min(255, v | 0))]++; }
+  let acc = 0, paper = 200; for (let i = 0; i < 256; i++) { acc += hist[i]; if (acc >= w * h * 0.7) { paper = i; break; } }
+  const dark = v => v < paper * 0.62;
+  const colD = new Float32Array(w), rowD = new Float32Array(h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (dark(lum[y * w + x])) { colD[x]++; rowD[y]++; }
+  const edge = (arr, n, lim) => { let a = 0, b = n - 1; while (a < b && arr[a] <= lim) a++; while (b > a && arr[b] <= lim) b--; return [a, b]; };
+  let [x0, x1] = edge(colD, w, h * 0.004), [y0, y1] = edge(rowD, h, w * 0.004);
+  if (x1 - x0 < w * 0.15 || y1 - y0 < h * 0.1) { x0 = 0; x1 = w - 1; y0 = 0; y1 = h - 1; }   // kuch samajh na aaye = poori tasveer
+  const px = Math.round((x1 - x0) * 0.03) + 2, py = Math.round((y1 - y0) * 0.02) + 2;
+  x0 = Math.max(0, x0 - px); x1 = Math.min(w - 1, x1 + px); y0 = Math.max(0, y0 - py); y1 = Math.min(h - 1, y1 + py);
+  // beech ki khali patti (column ka faasla) — 30%–70% mein sab se lambi khali chaurai (≥ 2.5%)
+  const cw = x1 - x0, lim = (y1 - y0) * 0.006; let best = null, run = 0;
+  for (let x = Math.round(x0 + cw * 0.3); x <= Math.round(x0 + cw * 0.7); x++) { let c = 0; for (let y = y0; y <= y1; y++) if (dark(lum[y * w + x])) c++; if (c <= lim) { run++; if (!best || run > best.n) best = { n: run, x: x - Math.floor(run / 2) }; } else run = 0; }
+  const parts = best && best.n >= Math.max(2, cw * 0.025) ? [[best.x, x1], [x0, best.x]] : [[x0, x1]];   // daayan pehle
+  const out = [];
+  for (const [a, b] of parts) {
+    const pw = b - a, ph = y1 - y0, outH = ph * 512 / Math.max(1, pw), n = Math.max(1, Math.ceil(outH / 640));
+    for (let k = 0; k < n; k++) {
+      const ya = y0 + ph * k / n, yb = y0 + ph * (k + 1) / n;
+      out.push({ part: parts.length > 1 ? (a === parts[0][0] ? 1 : 2) : 0, box: [ya / h * 1000, a / w * 1000, yb / h * 1000, b / w * 1000].map(v => Math.round(Math.max(0, Math.min(1000, v)))) });
+    }
+  }
+  return out;
+}
+function imageSlipText(o, plan, opt = {}) {
+  const out = headLines(o, { rp: opt.rp });
+  out.push(C1 + GS + 'B\x01' + ' PARCHI JAISI LIKHI - BINA AI ' + GS + 'B\x00');
+  if (UR.isOn()) out.push(UR.line('پرچی جیسی لکھی — بغیر AI', 36, 1));
+  let lastPart = -1;
+  plan.forEach((p, k) => {
+    if (p.part !== lastPart && p.part) out.push(L0 + hr(), C1 + B1 + (p.part === 1 ? '>> DAAYAN HISSA <<' : '>> BAAYAN HISSA <<') + B0);
+    lastPart = p.part; out.push(CRM + 'z' + k);
+  });
+  out.push(L0 + hr(), '', CUT);
+  return out.join('\r\n');
+}
+
 // ---------- 🖨 A4 page ka naqsha (wa-a4.ps1 ke liye JSON) ----------
 function a4Spec(o, P, opt = {}) {
   const ur = UR.isOn(), rows = [], unc = []; let k = 0, cur = null; const anyRk = P.clear.some(l => l.rk);
@@ -516,7 +562,7 @@ function a4Spec(o, P, opt = {}) {
 //  ASAL SCRIPT (PC)
 // =========================================================
 if (require.main === module) main();
-module.exports = { lkey, glossOf, normPh, isMob, phPretty, parseCaption, vcardInfo, numOf, normUnit, qtyStr, validBox, normLine, parseGemini, localTextLines, geminiRead, buildIndex, matchOne, matchLines, isUnclear, sortForPrint, rackOf, packingText, failText, writtenText, writtenLines, bmpRaster, toJob, stripEsc, decodeJpeg, padBox, cropRaster, a4Spec, dayOf, PROMPT_IMG, PROMPT_TXT, CRM, W };
+module.exports = { zoomPlan, imageSlipText, lkey, glossOf, normPh, isMob, phPretty, parseCaption, vcardInfo, numOf, normUnit, qtyStr, validBox, normLine, parseGemini, localTextLines, geminiRead, buildIndex, matchOne, matchLines, isUnclear, sortForPrint, rackOf, packingText, failText, writtenText, writtenLines, bmpRaster, toJob, stripEsc, decodeJpeg, padBox, cropRaster, a4Spec, dayOf, PROMPT_IMG, PROMPT_TXT, CRM, W };
 
 function main() {
   const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(DIR, 'wa-parchi.alive'), w = () => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }; w(); setInterval(w, 30000); return { guard: fn => fn }; } })();
@@ -755,10 +801,26 @@ async function start(ZINDA) {
     else if (o.st === 'fail' && jpg) { log(`🔁 #${shortNo(id)} dobara print (tasveer)`); await printOrder(o, [], jpg, { rp, fail: o.err || 'AI nahi parh saka' }); }
     else await upd(id, { perr: 'Dobara print nahi — order abhi tayyar nahi (' + (o.st || '?') + ')' });
   }
+  async function imgPrint(id, rq) {   // v1.7: 🖼 parchi jaisi (bina AI) — app ka ⋮ chip (prImg)
+    const s = await ORD.doc(id).get(); if (!s.exists) return; const o = { id, ...s.data() };
+    await upd(id, { 'pr.im': rq });
+    let jpg = null; try { const im = await IMG.doc(id).get(); const u = im.exists ? String(im.data().img || '') : '', m = u.match(/^data:image\/jpe?g;base64,(.+)$/i); if (m) jpg = Buffer.from(m[1], 'base64'); } catch {}
+    const img = jpg ? decodeJpeg(jpg) : null;
+    if (!img) { await upd(id, { perr: '🖼 Parchi jaisi print nahi — is parchi ki tasveer nahi (likhi hui WhatsApp parchi?)' }); return; }
+    const plan = zoomPlan(img), rasters = {};
+    plan.forEach((p, k) => { try { const r = cropRaster(img, p.box, { raw: true, w: 512, h: 700, gamma: 1.2 }); if (r) rasters['z' + k] = r; } catch {} });
+    if (!Object.keys(rasters).length) { await upd(id, { perr: '🖼 tasveer thermal ke liye nahi bani' }); return; }
+    let text = imageSlipText(o, plan, { rp: Number(o.pr && o.pr.n) || 0 });
+    try { text = await UR.fillNotes(text, 1); } catch { text = UR.strip(text); }
+    const e = await getParchi().sendJobs([toJob(text, rasters)], S.thp || TH_PRINTER);
+    if (e) { await upd(id, { perr: '🖼 Parchi jaisi print: ' + String(e.message || e).slice(0, 120) }); throw e; }
+    log(`🖼 #${shortNo(id)} parchi jaisi (bina AI) chhap gayi · ${plan.length} tukde${plan.some(p => p.part) ? ' · do hisse' : ''}`);
+  }
   const Q = [], inQ = new Set(); let qBusy = false;
   const runJob = ZINDA.guard(async job => {
     if (job.kind === 'new') await processOrder(job.o, job.buf, job.mime, job.g, job.prev);
     else if (job.kind === 're') await reprint(job.id, job.rq);
+    else if (job.kind === 'img') await imgPrint(job.id, job.rq);   // v1.7
   }, 8 * 60000, 'parchi');
   const jobId = job => job.kind + ':' + (job.kind === 'new' ? job.o.id : job.id);   // naya parhna aur dobara print alag
   const enqueue = job => { if (job.kind === 'new' && inQ.has(jobId(job))) return; inQ.add(jobId(job)); Q.push(job); pump(); };
@@ -844,6 +906,15 @@ async function start(ZINDA) {
       const age = Date.now() - (d.updateTime ? d.updateTime.toMillis() : 0);
       if (age > OLD_RQ) { upd(d.id, { 'pr.rq': rq, perr: 'Dobara print ki darkhwast purani (30 min+) — phir dabayein' }); continue; }
       enqueue({ kind: 're', id: d.id, rq });
+    }
+  }, authErr);
+  ORD.orderBy('prImg', 'desc').limit(20).onSnapshot(s => {   // v1.7: 🖼 parchi jaisi (bina AI)
+    for (const d of s.docs) {
+      const x = d.data() || {}, rq = Number(x.prImg) || 0, done = Number(x.pr && x.pr.im) || 0, key = 'img:' + d.id + ':' + rq;
+      if (!rq || rq === done || rqBusy.has(key)) continue; rqBusy.add(key);
+      const age = Date.now() - (d.updateTime ? d.updateTime.toMillis() : 0);
+      if (age > OLD_RQ) { upd(d.id, { 'pr.im': rq, perr: '🖼 darkhwast purani (30 min+) — phir dabayein' }); continue; }
+      enqueue({ kind: 'img', id: d.id, rq });
     }
   }, authErr);
   // shuru: beech mein ruke order — AI baqi = dobara parho · print beech mein = 'failed' (KHUD dobara print nahi)
