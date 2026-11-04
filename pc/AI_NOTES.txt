@@ -4048,3 +4048,9 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
   col (jori number); box = cheez se tadad tak; sure = parhna + jori + tarteeb ka yaqeen. Tasveer par thinking 'low' (3.x) / 1024 (2.x), ms 75 s.
 - j line: w = AI ka yaqeen, c = jori (app ko farq nahi). Thermal: ☐ + lafz har line (PowerShell line-war — "OK path H:h1,h2…", bmpRaster(ya, yb)), jori badle = ". . ." lakeer,
   shak (w < 0.75 ya ؟) = us line ke neeche likhai ka tukda (cropRaster box, h 170). Neeche "Kul: N lines · Tukde: n". Purane orders (w nahi) par s se.
+
+## v2.179.2 (2026-11-04) — 🔁 WhatsApp parchi "Dobara parho" (app)
+- Malik ne OK kiya (wa-parchi v1.4 ke baad: "purani parchi naye tareeqe se parhwani ho to photo dobara na bhejni pare").
+- wa-sale.js: khuli parchi ⋮ 🔁 Dobara parho (ws.reread) + ✕ "PC parchi nahi parh saka" wale dabbe mein chip (.wps-rr) → updateParchiOrder {st:'new', upAt} (rules 2.86 — st pehle se) →
+  PC wa-parchi claimNew (parchiImg se tasveer) AI se phir parhe + naya thermal / A4. Khuli parchi = bill khali + pendLoad (naye items khud). Bill bana / maal nikla / new / read / chhupi = button nahi (canReread).
+  ⚠️ ka waqt naye sire se (rrAt). AI app mein nahi — wahi PC wala ek parhna.

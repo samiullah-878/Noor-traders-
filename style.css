@@ -7272,3 +7272,6 @@ html.dk .wps-ox{background:rgba(255,255,255,.1);border-color:rgba(255,120,130,.4
 .wps-hr .wps-ot{display:grid;flex:1;min-width:0}.wps-hr .wps-ot b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.wps-hr .wps-ot small{color:#64748b}
 .wps-hr button{flex:none}
 html.dk .wps-hr{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14)}
+/* v2.179.2: 🔁 Dobara parho — fail dabbe mein chip */
+.wps-rr{display:inline-flex!important;align-items:center;width:auto!important;margin:8px 0 0!important;min-height:34px!important;padding:4px 14px!important;border-radius:999px!important;font-size:13px;font-weight:800;background:#fff!important;color:#1f2a44!important;border:1.5px solid #d7dde8!important}
+html.dk .wps-rr{background:var(--glass)!important;color:var(--ink)!important;border-color:var(--line)!important}

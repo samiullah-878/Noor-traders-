@@ -12,9 +12,11 @@
 //   Look: purchase ki classes (pp-tbl · pp-cr · pp-foot · pp-hbar · sale-hit …); apni nayi classes `wps-*` (purani .ws-* se takrao nahi).
 //   v2.179.1: 🗑 PARCHI HATAO (malik: "parchi katt bhi sake jaise remove kar sake") — khuli parchi ke card par ✕ + ⋮ 🗑 · st 'x:<pehle wala>'
 //     (mitti nahi — list se chhupi; ↩ Wapas 6 sec + ⋮ ♻️ Hatai hui) · CAP sale.wshide · PC (wa-parchi v1.1) chhupi ko wapas nahi laata. Rules wahi.
+//   v2.179.2: 🔁 DOBARA PARHO (malik OK) — khuli parchi ⋮ 🔁 + ✕ / ⚠️ wale dabbe mein chip → {st:'new'} (rules 2.86 wahi) → PC (wa-parchi claimNew) AI se phir
+//     parhe + naya thermal / A4; bill khud dobara bhar jata hai (pendLoad). Bill bana / maal nikla / abhi parh raha = nahi.
 //   CAP sale.wsale (default khula). AI app mein NAHI — parchi PC parhta hai. Agent action NAHI (malik ka qaida v2.111.0).
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.179.1';
-import { smartSearch, noteHit } from './smart-search.js?v=2.179.1';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.179.2';
+import { smartSearch, noteHit } from './smart-search.js?v=2.179.2';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -179,6 +181,7 @@ function listenOrders() {
 }
 const hid = o => /^x:/.test(String(o?.st || ''));   // v2.179.1: 🗑 hatai hui (st 'x:<pehle wala>') — list se chhupi, ↩ wapas
 const canHide = () => C.owner() || C.can('sale.wshide');
+const canReread = o => !!o && !o._local && !hid(o) && !['new', 'read', 'billed', 'picked'].includes(String(o.st || 'new'));   // v2.179.2: 🔁
 const ready = o => !!o && !o._local && ('j' in o || 'n' in o) && !['new', 'read', 'fail', 'skip'].includes(String(o.st || 'new'));   // PC ne parh li ('read' = PC parh raha — abhi lines nahi) (sirf server wala doc yahan aata hai)
 function onOrders(list) {
   const t = Date.now(), fresh = [];
@@ -202,7 +205,8 @@ function allOrders() {
 }
 const curOrder = () => !cur ? null : orders.find(o => o.id === cur) || localOrd.get(cur) || (curSnap && curSnap.id === cur ? curSnap : null);
 const snapOf = o => ({ id: o.id, src: o.src || '', at: Number(o.at) || 0, day: o.day || '', ph: o.ph || '', nm: o.nm || '', st: o.st || '', n: Number(o.n) || 0, u: Number(o.u) || 0, by: o.by || '', txt: String(o.txt || '').slice(0, 2000) });
-const ageOf = o => o.src === 'app' && o.by && o.by === C.uid() && Number(o.at) ? Date.now() - Number(o.at) : Date.now() - (seenAt.get(o.id) || Date.now());   // apni bheji = apni ghari · baqi = jab is phone ne dekhi (PC ki ghari ka farq nahi)
+const rrAt = new Map();   // v2.179.2: 🔁 dobara parhne ka waqt (⚠️ isi se)
+const ageOf = o => rrAt.has(o.id) ? Date.now() - rrAt.get(o.id) : o.src === 'app' && o.by && o.by === C.uid() && Number(o.at) ? Date.now() - Number(o.at) : Date.now() - (seenAt.get(o.id) || Date.now());   // apni bheji = apni ghari · baqi = jab is phone ne dekhi (PC ki ghari ka farq nahi)
 function stOf(o) {
   if (!o) return ['w', ''];
   if (o._local === 'prep') return ['w', '⏳ Tayyar ho rahi'];
@@ -237,7 +241,7 @@ function paintOrders() { const el = $('wpsOrds'); if (el) el.outerHTML = ordersH
 function waitHTML(o) {
   if (!o || !cur) return '';
   if (pendLoad === cur) { const [cl, lab] = stOf(o); return `<div class="wps-wait ${cl}" id="wpsWait">${esc(lab || '⏳')} — ${o._local === 'err' ? 'parchi par tap kar ke dobara bhejein' : cl === 'warn' ? 'dukan ka PC ON hai? Malik ko batayein · tab tak items upar search / 📷 se khud lagayein' : 'items aate hi bill khud bhar jayega'}</div>`; }   // PC chup = khamosh nahi (malik ka qaida v2.110.0)
-  if ((o.st === 'fail' || o.st === 'skip') && !cart.length && !unclear.length) return `<div class="wps-wait bad" id="wpsWait">✕ PC parchi nahi parh saka${o.err ? ' (' + esc(o.err) + ')' : ''} — ⋮ → 🧾 Parchi ki tasveer dekh kar items khud likhein.</div>`;
+  if ((o.st === 'fail' || o.st === 'skip') && !cart.length && !unclear.length) return `<div class="wps-wait bad" id="wpsWait">✕ PC parchi nahi parh saka${o.err ? ' (' + esc(o.err) + ')' : ''} — ⋮ → 🧾 Parchi ki tasveer dekh kar items khud likhein.${canReread(o) ? `<button type="button" class="wps-rr" data-ws-reread="${esc(o.id)}">🔁 Dobara parho</button>` : ''}</div>`;
   return '';
 }
 
@@ -367,6 +371,7 @@ function toolsHTML(o) {
     <button type="button" class="sh-wide" data-ws-cam="1" data-mn="ws.cam" data-mn-i="📷" data-mn-t="Parchi photo" data-mn-s="camera — PC parh kar items bharega" data-mn-g="${GRP}">📷 Parchi photo</button>
     <button type="button" class="sh-wide" data-ws-gal="1" data-mn="ws.gal" data-mn-i="🖼" data-mn-t="Parchi gallery se" data-mn-s="phone mein rakhi tasveer" data-mn-g="${GRP}">🖼 Gallery se parchi</button>
     ${o && canHide() && !hid(o) && o._local !== 'prep' && o._local !== 'send' ? `<button type="button" class="sh-wide" data-ws-hide="${esc(o.id)}" data-mn="ws.hide" data-mn-i="🗑" data-mn-t="Parchi hatao" data-mn-s="list se — ↩ wapas ho sakti hai" data-mn-g="${GRP}">🗑 Parchi hatao</button>` : ''}
+    ${canReread(o) ? `<button type="button" class="sh-wide" data-ws-reread="${esc(o.id)}" data-mn="ws.reread" data-mn-i="🔁" data-mn-t="Dobara parho" data-mn-s="AI phir se parhe + naya print" data-mn-g="${GRP}">🔁 Dobara parho</button>` : ''}
     ${canHide() && orders.some(hid) ? `<button type="button" class="sh-wide" data-ws-hidlist="1" data-mn="ws.hid" data-mn-i="♻️" data-mn-t="Hatai hui parchiyan" data-mn-s="${orders.filter(hid).length} — tap = wapas list mein" data-mn-g="${GRP}">♻️ Hatai hui parchiyan</button>` : ''}
     ${o && !o._local ? `<button type="button" class="sh-wide" data-ws-pv="1" data-mn="ws.pv" data-mn-i="🧾" data-mn-t="Parchi ki tasveer" data-mn-s="poori parchi dekhein" data-mn-g="${GRP}">🧾 Parchi ki tasveer</button>${gahakBox(o)}` : ''}
     ${seg('ws.mode', '🛒', 'Sale ki qism', mode === 'wholesale' ? 'Wholesale (W rate)' : 'Counter (R rate)', B(mode === 'counter', 'mode', 'counter', '🛒 Counter') + (C.can('sale.wholesale') ? B(mode === 'wholesale', 'mode', 'wholesale', '📦 Wholesale') : ''))}
@@ -599,6 +604,17 @@ async function unhide(id) {
   o.st = st; C.rerender(); hidPaint();
   try { await withT(C.cloud.updateParchiOrder(id, { st, upAt: Date.now() }), 12000); C.notice('↩ Parchi wapas list mein'); }
   catch (e) { if (o.st === st) o.st = was; C.rerender(); hidPaint(); C.notice('✕ Wapas nahi aayi: ' + (perm(e) ? 'ijazat nahi' : String(e?.message || e).slice(0, 60))); }
+}
+// ---------- 🔁 dobara parho (v2.179.2) — {st:'new'} → PC AI se phir parhe + naya print; bill khud bhar jata hai ----------
+async function reread(id, btn) {
+  const o = orders.find(x => x.id === id); if (!canReread(o)) { C.notice('Yeh parchi abhi dobara nahi parhi ja sakti'); return; }
+  if (cur === id && (cart.length || unclear.some(u => !u.done)) && !confirm('Bill mein lage items hat kar AI ke naye items aayenge — theek?')) return;
+  if (btn) btn.disabled = true;
+  try { await withT(C.cloud.updateParchiOrder(id, { st: 'new', upAt: Date.now() }), 12000); }
+  catch (e) { if (btn) btn.disabled = false; C.notice('✕ Nahi gaya: ' + (perm(e) ? 'ijazat nahi' : String(e?.message || e).slice(0, 60))); return; }
+  o.st = 'new'; seenAt.set(id, Date.now()); rrAt.set(id, Date.now());   // ⚠️ ka waqt naye sire se
+  if (cur === id) { cart = []; unclear = []; cash = null; selKey = ''; pendLoad = id; keep(); }
+  C.rerender(); C.notice('🔁 PC ko bhej di — AI phir se parh raha (10–40 sec), naya print bhi nikle ga');
 }
 function hidHTML() {
   const L = orders.filter(hid), t0 = todayStr();
@@ -833,9 +849,10 @@ document.addEventListener('click', e => {
     return; }
   if (!document.querySelector('[data-ws-root]')) return;
   const r = t.closest('#list .pp-cr, #list .pp-tr'); if (r && r.dataset.wsSel && !t.closest('button,select,input')) selSet(r.dataset.wsSel);
-  const b = t.closest('[data-ws-hide],[data-ws-hidlist],[data-ws-unhide],[data-ws-ord],[data-ws-add],[data-ws-del],[data-ws-open],[data-ws-mode],[data-ws-view],[data-ws-copies],[data-ws-counter],[data-ws-gc],[data-ws-cam],[data-ws-gal],[data-ws-camera],[data-ws-pv],[data-ws-gsave],[data-ws-set],[data-ws-upick],[data-ws-uskip],[data-ws-uback],[data-ws-pick],[data-ws-reprint],[data-ws-clear],[data-ws-save]');
+  const b = t.closest('[data-ws-reread],[data-ws-hide],[data-ws-hidlist],[data-ws-unhide],[data-ws-ord],[data-ws-add],[data-ws-del],[data-ws-open],[data-ws-mode],[data-ws-view],[data-ws-copies],[data-ws-counter],[data-ws-gc],[data-ws-cam],[data-ws-gal],[data-ws-camera],[data-ws-pv],[data-ws-gsave],[data-ws-set],[data-ws-upick],[data-ws-uskip],[data-ws-uback],[data-ws-pick],[data-ws-reprint],[data-ws-clear],[data-ws-save]');
   if (!b) return;
   const d = b.dataset;
+  if (d.wsReread) { reread(d.wsReread, b); return; }   // v2.179.2
   if (d.wsHide) { hideOrd(d.wsHide); return; }   // v2.179.1
   if (d.wsHidlist) { hidOpen(); return; }
   if (d.wsUnhide) { unhide(d.wsUnhide); return; }
