@@ -7333,3 +7333,43 @@ html body #list .pp-line.ask input[data-ws-pcs]::placeholder{color:#b45309;font-
 html body #list i.wps-ask,html body #list i.wps-pkt{display:inline-flex;align-items:center;height:20px;padding:0 8px;margin-right:4px;border-radius:999px;font-style:normal;font-size:10.5px;font-weight:800;white-space:nowrap;vertical-align:middle}
 html body #list i.wps-ask{border:1px solid #f59e0b!important;background:linear-gradient(135deg,#fef3c7,#fde68a)!important;color:#92400e!important}
 html body #list i.wps-pkt{border:1px solid #a7d7c5!important;background:linear-gradient(135deg,#ecfdf5,#d1fae5)!important;color:#065f46!important}
+/* v2.183.0: 🎙 Meri baatein (awaz.js) — apni khirki, saamne sirf search + cards, baqi ⋮ */
+html body dialog#awDlg{position:fixed;inset:0;width:auto;height:auto;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#f4f6fa!important;color:#18212f!important;overflow:hidden}
+html body dialog#awDlg::backdrop{background:rgba(10,18,36,.5)}
+#awDlg .aw-in{position:absolute;inset:0;display:flex;flex-direction:column;min-height:0}
+#awDlg .aw-h{flex:none;display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top,0px)) 10px 8px;background:linear-gradient(180deg,#152548,#223b6d)!important;color:#fff!important}
+#awDlg .aw-h b{flex:1;min-width:0;font-size:17px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff!important}
+html body #awDlg .aw-x{flex:none;width:36px;height:36px;min-height:36px!important;padding:0!important;border-radius:999px!important;border:1px solid rgba(255,255,255,.25)!important;background:rgba(255,255,255,.12)!important;color:#fff!important;font-size:20px;font-weight:800;line-height:1;box-shadow:none!important}
+#awDlg .aw-menu{flex:none;padding:10px 12px;background:#fff;border-bottom:1px solid #dfe5ef;display:grid;gap:8px;box-shadow:0 8px 18px rgba(16,30,60,.12)}
+#awDlg .aw-mg small{display:block;font-size:11px;font-weight:800;color:#64748b;margin-bottom:4px}
+#awDlg .aw-row{display:flex;flex-wrap:wrap;gap:6px}
+#awDlg .aw-b{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding:10px 12px 40px;-webkit-overflow-scrolling:touch}
+#awDlg .aw-top{position:sticky;top:-10px;z-index:2;display:grid;gap:6px;margin:-10px -12px 8px;padding:10px 12px 8px;background:#f4f6fa}
+html body #awDlg #awQ{width:100%;height:40px;min-height:40px!important;border-radius:999px!important;border:1px solid #d5dce9!important;background:#fff!important;color:#18212f!important;padding:0 16px!important;font-size:15px;box-shadow:none!important}
+#awDlg .aw-pill{font-size:11.5px;font-weight:700;color:#5b6b85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#awDlg .aw-day{margin:12px 2px 6px;font-size:12px;font-weight:900;color:#223b6d;letter-spacing:.3px}
+#awDlg .aw-card{background:#fff;border:1px solid #e1e7f0;border-radius:14px;padding:9px 12px;margin-bottom:8px;cursor:pointer}
+#awDlg .aw-card.is-in{border-color:#a9bbe0;box-shadow:0 6px 16px rgba(34,59,109,.10)}
+#awDlg .aw-card.kh{padding:6px 12px;background:#f8fafc;border-style:dashed}
+#awDlg .aw-l1{font-size:11.5px;font-weight:700;color:#5b6b85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#awDlg .aw-tt{display:block;font-size:15px;font-weight:800;color:#18212f;margin-top:2px}
+#awDlg .aw-s{margin:3px 0 0;font-size:13px;line-height:1.45;color:#334155;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+#awDlg .aw-card.is-in .aw-s{-webkit-line-clamp:unset;display:block}
+#awDlg .aw-wd{margin:5px 0 0;font-size:12.5px;color:#475569;background:#f5f7fb;border-radius:9px;padding:6px 9px}
+#awDlg .aw-ks{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}
+html body #awDlg .aw-k,html body #awDlg .aw-c{display:inline-flex;align-items:center;gap:4px;height:34px;min-height:34px!important;max-width:100%;padding:0 13px!important;border-radius:999px!important;border:1px solid #d5dce9!important;background:linear-gradient(180deg,#fff,#eef2f9)!important;color:#1a2d53!important;font-size:12.5px!important;font-weight:800!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:none!important;text-decoration:none;width:auto!important}
+html body #awDlg .aw-k{border-color:#f5c56b!important;background:linear-gradient(135deg,#fffbeb,#fef3c7)!important;color:#92400e!important}
+html body #awDlg .aw-k.is-in{border-color:#9fd8bf!important;background:linear-gradient(135deg,#f0fdf4,#dcfce7)!important;color:#065f46!important;text-decoration:line-through}
+html body #awDlg .aw-c.is-in{border-color:transparent!important;background:linear-gradient(135deg,#223b6d,#4f46e5)!important;color:#fff!important}
+html body #awDlg .aw-c.pri{border-color:transparent!important;background:linear-gradient(135deg,#0f766e,#14b8a6)!important;color:#fff!important}
+#awDlg .aw-bt{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+#awDlg .aw-sum{background:linear-gradient(135deg,#eef2ff,#f5f3ff);border:1px solid #c7d2fe;border-radius:14px;padding:10px 12px;margin-bottom:8px}
+#awDlg .aw-sum b{font-size:13px;color:#3730a3}
+#awDlg .aw-sum p{margin:4px 0 0;font-size:13px;line-height:1.45;color:#312e81}
+#awDlg .aw-empty{text-align:center;color:#64748b;padding:30px 10px;font-size:13.5px}
+#awDlg .aw-empty b{display:block;font-size:16px;color:#223b6d;margin-bottom:4px}
+#awDlg .aw-set h4{margin:14px 0 6px;font-size:14px;color:#223b6d}
+#awDlg .aw-set ol{margin:0;padding-left:20px;font-size:13px;line-height:1.55;color:#334155}
+#awDlg .aw-set li{margin-bottom:4px}
+#awDlg .aw-note{font-size:12.5px;color:#475569;background:#fff;border:1px solid #e1e7f0;border-radius:11px;padding:8px 10px;margin:6px 0}
+#awDlg .aw-ok{font-size:13px;font-weight:800;color:#047857;margin:4px 0}
