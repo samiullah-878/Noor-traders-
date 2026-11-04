@@ -6864,3 +6864,7 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - Hifazat: rules 2.87 PC ne abhi publish na ki hon to `cloud.saveAppSale` permission-denied par BINA `sm` dobara likhta hai (`saleSmOff` — us session mein phir sm nahi bhejta). Bill kabhi nahi rukta.
 - 🚪 Gate pass switch ON (`gate > 0`) + NOOR TRADERS = PC (sale-post / NT-PRINT) ab NOOR TRADERS lines ki bhi alag parchi chhapta hai (pehle sirf godam ≠ branch).
 - Test: Playwright — WhatsApp hbar + Sale summary par chip, select → `doc.sm = 7`, confirm mein naam, side scroll nahi. AI nahi.
+
+## v2.180.1 (2026-11-04) — "aam raqam … bohat ZYADA" popup BAND
+- Malik (photo): "Dukan ka kharcha · aam raqam Rs 500–6,131 · aap ne 105,000 — bohat ZYADA" — "pehle nahi tha ab kyun". Wajah: v1.80 ka `oddAmountMessage` (khate ki pichhli 20 entries se 8× farq) — v2.163.0 se har kharcha apna khata, 4+ entries hote hi kharche par bhi aane laga.
+- Malik ne chuna: HAR khate par band. app.js `ODD_AMT_ON = false` (function rakha, save() + jora save dono mein khali). AI nahi. Rules / PC kuch nahi.
