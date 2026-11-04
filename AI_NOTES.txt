@@ -6890,3 +6890,6 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - Malik: "puri parchi ki aik aik item jaise likhi print ho · AI ke baghair alehda chip · zoom ho kar aaye" (chunao: poori tasveer · sirf ⋮ mein).
 - wa-sale ⋮ "🖼 Parchi jaisi print" (khuli server parchi, CAP sale.wsimg) → `orderPatch('img', {prImg: Date.now()})` (⏳/✅/✕ chipSt.img; rules na lagi = saaf paigham). PC wa-parchi v1.7 (pc/AI_NOTES).
 - Rules 2.88: parchiOrders update affectedKeys + 'prImg' (int). PC rules-publish khud lagata hai.
+
+## 2026-11-04 — ↩ Daily Sale: POS Sale Return minus (PC pos-sales-dekho v2.2, app nahi badli)
+- Malik: "yahan sale return add hai ke nahi". Nahi thi. Ab auto "POS ki sale" mein se POS ki wapsi minus (cancel / stock fraq / udhaar party ki wapsi bahar), note mein "↩ wapsi N bill Rs X minus". Tafseel pc/AI_NOTES.txt. AI nahi.

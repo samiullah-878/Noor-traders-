@@ -4089,3 +4089,9 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
   kaghaz ki safedi (70% percentile) se likhai (≤ 0.62 ×) dhoond kar khali kinare kaat · 30–70% chaurai mein sab se lambi khali patti (≥ 2.5%) = do column → DAAYAN pehle (Urdu) · har hissa 512 chaurai, ≤ 640 line ke tukde.
   `cropRaster(img, box, {raw, w 512, h 700})` har tukda (CRM 'z<k>') + `imageSlipText` (headLines + "PARCHI JAISI LIKHI - BINA AI" + Urdu + ">> DAAYAN / BAAYAN HISSA <<"). Likhi (text) parchi = tasveer nahi → perr.
 - Test: do column → 4 tukde (daayan 2, baayan 2), ek column → 1 (sirf kinare kate). AI NAHI.
+
+## PC pos-sales-dekho v2.2 · manifest 2026-11-04.11 (2026-11-04) — ↩ Sale Return minus
+- Malik (Daily Sale ki auto entry Rs 36,15,316 ki photo): "sale return add hai ke nahi". Nahi thi — saleSum sirf dbo.Sale parhta tha; POS counter ki wapsi (aur bill ki minus lines) POS dbo.SaleReturn mein rakhta hai (post-farq: "POS minus lines ko aise hi save karta hai").
+- Ab `retFor(p, d0, d1)` = `SELECT r.*, pt.PartyName FROM dbo.SaleReturn` (SaleReturnDate us din) → `saleSum(rows, crv, rets)`: DocStatusID 3 / stock fraq bahar · IsCreditRturn (udhaar) + party wholesale NAHI = minus nahi (`rtU`, cash galle se nahi gaya) · baqi (counter cash + wholesale — wholesale bill bhi poora gina jata hai) = `rtRs` MINUS.
+- possale note: "↩ wapsi N bill Rs X minus" (+ "udhaar wapsi N (cash nahi — minus nahi)"); posSales/<din>.sum mein rt / rtRs / rtU. SaleReturn parh na sake = null = pehle jaisa (minus nahi), log mein wajah. Nayi wapsi bina naye bill = 5 min ke poore chakkar mein.
+- App mein bana minus bill (sale-post v1.8) dbo.Sale mein hi minus lines = pehle se net — dohra minus nahi. Test: 6000 − 200 (counter) − 300 (wholesale) = 5500; udhaar 150 + cancel + stock fraq bahar. AI nahi.
