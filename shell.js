@@ -364,7 +364,7 @@ mApply();   // pehli paint se pehle (flash nahi)
 //   (smart-search) + hum-maani lafz (kharcha = akhrajat …). Tap = seedha wahan — screen khol kar chip khud dabta hai. CAP app.dhoondo
 //   (har mulazim, shuru se ON). AI NAHI.
 const DH_LS = 'sam-dh-cat', DH_SET = 'sam-dh-set', DH_REC = 'sam-dh-rec', DH_DAY = 864e5;
-const VIEW_NAV = { khata: 'khataNav', daily: 'dailyNav', expenses: 'expenseNav', cash: 'cashNav', dasti: 'dastiNav', history: 'historyNav', notes: 'notesNav', hbl: 'hblNav', barcode: 'barcodeNav', nazar: 'nazarNav', galla: 'gallaNav', larka: 'larkaNav', irep: 'irepNav', factory: 'factoryNav', gaari: 'gaariNav', due: 'dueNav', purchase: 'purchaseNav', ppurchase: 'purchaseNav', pos: 'posNav', stock: 'stockNav', transfer: 'transferNav', sale: 'saleNav' };
+const VIEW_NAV = { khata: 'khataNav', daily: 'dailyNav', expenses: 'expenseNav', cash: 'cashNav', dasti: 'dastiNav', history: 'historyNav', notes: 'notesNav', hbl: 'hblNav', barcode: 'barcodeNav', nazar: 'nazarNav', galla: 'gallaNav', larka: 'larkaNav', irep: 'irepNav', factory: 'factoryNav', gaari: 'gaariNav', due: 'dueNav', purchase: 'purchaseNav', ppurchase: 'purchaseNav', pos: 'posNav', stock: 'stockNav', transfer: 'transferNav', sale: 'saleNav', wsale: 'wsaleNav' };
 const dhRd = k => { try { const o = JSON.parse(localStorage.getItem(k) || 'null'); return o && typeof o === 'object' ? o : null; } catch { return null; } };
 const dhWr = (k, o) => { try { localStorage.setItem(k, JSON.stringify(o)); } catch {} };
 const dhCan = () => { try { return !!H.owner?.() || H.can?.('app.dhoondo') !== false; } catch { return true; } };

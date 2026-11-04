@@ -7085,3 +7085,114 @@ html body .dy-e.is-in .dy-ex{display:flex;flex-wrap:wrap;gap:6px;align-items:cen
 html body .dy-e.is-in .dy-ex .dy-xn{flex-basis:100%;font-size:12.5px;color:#334155;white-space:normal}
 html body .dy-e.is-in .dy-ex>button,html body .dy-e.is-in .dy-ex .prn-box button,html body .dy-e.is-in .dy-ex button[data-receipt]{min-height:32px!important;padding:3px 11px!important;font-size:12.5px!important;border-radius:999px!important;margin:0!important}
 html.dk body .dy-e1 .dy-en{color:#e6edf7}html.dk body .sheet-entries>div.dy-e.is-in{background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+
+/* ===== v2.178.0: 📲 WhatsApp Parchi Sale (wa-sale.js) — bill bilkul POS Purchase jaisa (pp-tbl · pp-cr · pp-foot · pp-hbar wahi classes); yahan sirf nayi cheezein `wps-*` ===== */
+/* header patti: gahak · 📞 · 💬 · haalat · Counter/Wholesale */
+html body #summary .wps-hbar{cursor:default}
+html body #summary .wps-hbar .wps-hc{display:inline-grid;place-items:center;width:32px;height:32px;flex:none;border-radius:999px;border:1px solid #d5dce9;background:linear-gradient(180deg,#fff,#eef2f9);text-decoration:none;font-size:15px;line-height:1;box-shadow:0 1px 2px rgba(20,30,60,.08)}
+html body #summary .wps-hbar .wps-hc.wa{background:linear-gradient(180deg,#effcf3,#d8f5e2);border-color:#a8e2bd}
+html body #summary .wps-hbar .wps-hst{font-style:normal;font-size:11.5px;font-weight:800;padding:3px 10px;border-radius:999px;white-space:nowrap;border:1px solid #d5dce9;background:#f6f8fc;color:#3b5998;max-width:62%;overflow:hidden;text-overflow:ellipsis}
+html body #summary .wps-hbar .wps-hst.ok{background:#eefbf1;border-color:#bfe6cb;color:#166534}
+html body #summary .wps-hbar .wps-hst.warn{background:#fff8e6;border-color:#f1dc9a;color:#8a5a00}
+html body #summary .wps-hbar .wps-hst.bad{background:#fff1f2;border-color:#f7c9ce;color:#b32936}
+html body #summary .wps-tools .pp-vseg{margin-left:0}
+/* 👤 gahak ka naam / number (⋮ ke andar — PC par tools mein) */
+html body #summary .wps-gbox{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto auto;gap:6px;align-items:end;min-width:0}
+html body #summary .wps-gbox label{display:grid;gap:2px;margin:0;font-size:11px;font-weight:800;color:#5d6b88;min-width:0}
+html body #summary .wps-gbox input{box-sizing:border-box;width:100%;min-width:0;height:38px;min-height:38px;border-radius:11px;border:1px solid #d9e0ec;padding:0 10px;font-size:14px;font-weight:700;color:#1a2d53;background:#fff}
+@media (max-width:700px){html body #summary .wps-gbox{grid-template-columns:minmax(0,1fr)}}
+/* 📲 orders ki patti — ek qatar, side scroll (phone) */
+html body #list .wps-ords{margin:0 0 8px;min-width:0;max-width:100%}
+html body #list .wps-orow{display:flex;gap:7px;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;padding:2px 2px 5px;-webkit-overflow-scrolling:touch}
+html body #list .wps-orow::-webkit-scrollbar{display:none}
+html body #list button.wps-oc{position:relative;flex:0 0 auto;display:flex;align-items:center;gap:8px;width:auto;min-width:168px;max-width:240px;height:56px;min-height:56px!important;margin:0;padding:5px 12px 5px 5px!important;border-radius:14px!important;border:1px solid #dde3ef!important;background:linear-gradient(180deg,#fff,#f5f7fc)!important;color:#1a2d53!important;text-align:left;white-space:nowrap;box-shadow:0 1px 3px rgba(20,30,60,.07)!important;font-weight:400!important}
+html body #list button.wps-oc.is-in{border-color:#4f46e5!important;background:linear-gradient(180deg,#fafaff,#eef0ff)!important;box-shadow:0 0 0 2px rgba(79,70,229,.2)!important}
+html body #list button.wps-oc.done{opacity:.7}
+html body #list button.wps-oc.warn{border-left:4px solid #e0a82e!important}html body #list button.wps-oc.bad{border-left:4px solid #d64545!important}
+html body #list .wps-oc>img,html body #list .wps-oc .wps-oi{width:44px;height:44px;flex:none;border-radius:10px;object-fit:cover;background:#eef2f9;display:grid;place-items:center;font-size:21px;border:1px solid #e3e8f1}
+html body #list .wps-ot{display:flex;flex-direction:column;min-width:0;gap:1px;line-height:1.2}
+html body #list .wps-ot b{font-size:13px;font-weight:800;color:#1a2d53;overflow:hidden;text-overflow:ellipsis;max-width:168px}
+html body #list .wps-ot small{font-size:10.5px;color:#7a889e;overflow:hidden;text-overflow:ellipsis;max-width:168px}
+html body #list .wps-ost{font-style:normal;font-size:10.5px;font-weight:800;color:#3b5998;overflow:hidden;text-overflow:ellipsis;max-width:168px}
+html body #list .wps-ost.ok{color:#166534}html body #list .wps-ost.warn{color:#9a6400}html body #list .wps-ost.bad{color:#b32936}
+html body #list .wps-pr{position:absolute;top:3px;right:6px;font-style:normal;font-size:9.5px;font-weight:800}
+html body #list .wps-pr.ok{color:#166534}html body #list .wps-pr.bad{color:#b32936}
+html body #list .wps-oempty{margin:0 0 6px;padding:8px 12px;border-radius:12px;background:#f6f8fc;border:1px dashed #cfd7e6;font-size:12.5px;color:#5d6b88}
+html body :is(#list,#dialogBody) .wps-err{margin:0 0 6px;padding:7px 11px;border-radius:11px;background:#fff1f2;border:1px solid #f7c9ce;color:#9f1d2b;font-size:12.5px;font-weight:700}
+html body #list .wps-wait{margin:0 0 8px;padding:9px 12px;border-radius:12px;background:linear-gradient(180deg,#f5f8ff,#eaf0ff);border:1px solid #d6e0f5;color:#223b6d;font-weight:700;font-size:13px}
+html body #list .wps-wait.warn{background:#fff8e6;border-color:#f1dc9a;color:#7a5409}html body #list .wps-wait.bad{background:#fff1f2;border-color:#f7c9ce;color:#9f1d2b}
+/* ❓ samajh nahi aayi lines — tasveer ka tukda + search chips */
+html body #list .wps-unc{display:grid;grid-template-columns:minmax(0,1fr);gap:7px;margin:0 0 8px;padding:8px;border-radius:14px;background:linear-gradient(180deg,#fffaf0,#fff3d9);border:1px solid #f1dc9a;min-width:0}
+html body #list .wps-unc.wps-unc-ok{display:flex;align-items:center;gap:8px;padding:7px 10px;background:#eefbf1;border-color:#bfe6cb;color:#166534;font-weight:700;font-size:12.5px}
+html body #list .wps-unh{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+html body #list .wps-unh b{font-size:13.5px;color:#7a5409}html body #list .wps-unh small{font-size:11px;color:#8a6a2a}
+html body #list button.wps-uc{margin-left:auto;min-height:30px!important;height:30px;padding:0 11px!important;border-radius:999px!important;border:1px solid #e3cf95!important;background:#fff!important;color:#7a5409!important;font-size:12px!important;font-weight:800!important;white-space:nowrap;box-shadow:none!important;width:auto}
+html body #list .wps-ur{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;padding:7px;border-radius:12px;background:#fff;border:1px solid #f0e2b8;min-width:0}
+html body #list .wps-ur1{display:flex;align-items:center;gap:8px;min-width:0}
+html body #list .wps-crop{flex:0 1 auto;max-width:58%;min-width:46px;height:52px;display:grid;place-items:center;border-radius:9px;overflow:hidden;background:#f6f8fc;border:1px solid #e3e8f1;cursor:zoom-in;font-size:18px}
+html body #list .wps-crop img{display:block;max-width:100%;max-height:52px}
+html body #list .wps-urt{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+html body #list .wps-raw{font-size:16px;font-weight:800;color:#1a2d53;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.35}
+html body #list .wps-urt small{font-size:11px;color:#7a889e;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body #list button.wps-ux{flex:none;width:32px;height:32px;min-height:32px!important;padding:0!important;border-radius:999px!important;border:1px solid #f1c4c4!important;background:#fff!important;color:#b32936!important;font-size:13px!important;box-shadow:none!important}
+html body #list .wps-uql{display:block;margin:0;min-width:0}
+html body #list .wps-uql input{box-sizing:border-box;width:100%;height:38px;min-height:38px;border-radius:11px;border:1px solid #d9e0ec;padding:0 12px;font-size:14.5px;font-weight:600;background:#fff;color:#1a2d53}
+html body #list .wps-uql input:focus{outline:0;border-color:#4f46e5;box-shadow:0 0 0 2px rgba(79,70,229,.18)}
+html body #list .wps-uhits{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;min-width:0}
+html body #list .wps-uhits::-webkit-scrollbar{display:none}
+html body #list button.wps-uh{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:0;width:auto;max-width:240px;min-height:38px!important;padding:3px 12px!important;border-radius:11px!important;border:1px solid #d5dce9!important;background:linear-gradient(180deg,#fff,#f3f6fc)!important;color:#1a2d53!important;font-size:12.5px!important;font-weight:700!important;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:none!important;text-align:left}
+html body #list button.wps-uh small{font-size:10px;color:#7a889e;font-weight:500}
+html body #list button.wps-uh.wps-sug{background:linear-gradient(135deg,#223b6d,#4f46e5)!important;color:#fff!important;border-color:transparent!important}
+html body #list button.wps-uh.wps-sug small{color:rgba(255,255,255,.8)}
+html body #list .wps-mut{color:#7a889e;font-size:11.5px;align-self:center}
+/* raqam: table / lines mein sirf dikhti hai (likhne ka khana nahi) */
+html body #list .pp-tbl td.a .wps-amt{display:inline-block;min-width:72px;padding:0 6px;text-align:right;font-weight:800;color:#166534;font-variant-numeric:tabular-nums}
+html body #list .pp-cg .pp-k .wps-ro{box-sizing:border-box;display:flex;align-items:center;justify-content:flex-end;height:34px;padding:0 6px;border:1px dashed #d9e0ec;border-radius:9px;background:#fffdf2;color:#166534;font-weight:800;font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden}
+html body #list :is(.pp-tbl td,.pp-cg .pp-k) input[readonly]{background:#f3f5f9!important;color:#5d6b88!important}
+html body #list .wps-pay .wps-hint{font-size:11px;margin:0}html body #list .wps-pay label b{font-weight:800;color:#223b6d}
+/* neeche ki patti: ✓ Maal nikla · 🖨 Dobara print (chhote chips — har theme mein) */
+html.lt body footer#actions:not(.day-acts) .pp-cbar .wps-fc,html.dk body footer#actions:not(.day-acts) .pp-cbar .wps-fc,html body footer#actions:not(.day-acts) .pp-cbar .wps-fc{flex:0 0 auto!important;display:inline-flex;align-items:center;gap:4px;width:auto!important;min-width:0;height:32px!important;min-height:32px!important;padding:0 13px!important;border-radius:999px!important;border:1px solid #d5dce9!important;background:linear-gradient(180deg,#fff,#eef2f9)!important;color:#1a2d53!important;font-size:12.5px!important;font-weight:800!important;white-space:nowrap;box-shadow:none!important;text-decoration:none}
+html.lt body footer#actions:not(.day-acts) .pp-cbar .wps-fc.ok,html.dk body footer#actions:not(.day-acts) .pp-cbar .wps-fc.ok,html body footer#actions:not(.day-acts) .pp-cbar .wps-fc.ok{background:#eefbf1!important;border-color:#bfe6cb!important;color:#166534!important}
+html body footer#actions .pp-cbar .wps-fch{padding:2px 0 4px}
+html body footer#actions.pp-foot.wps-foot .pp-cbar{margin:0;width:100%;padding:6px 2px 2px}   /* footer ki padding phone par 8px hai — -22px wala margin patti ko baayein se kaat deta tha */
+html body footer#actions .pp-cbar .pp-cb1 .pp-cbn{font-size:12.5px}
+/* ⚙️ WhatsApp setting khirki + 🧾 parchi ki tasveer */
+html body #dialogBody .wps-set{display:grid;grid-template-columns:minmax(0,1fr);gap:12px;min-width:0}
+html body #dialogBody .wps-lk{display:grid;gap:3px;padding:12px 14px;border-radius:16px;border:1px solid #d6e0f5;background:linear-gradient(180deg,#f7f9ff,#eef3ff)}
+html body #dialogBody .wps-lk b{font-size:16px;color:#172b52}html body #dialogBody .wps-lk small{font-size:12.5px;color:#44566f;line-height:1.4}
+html body #dialogBody .wps-lk.ok{background:linear-gradient(180deg,#f0fbf4,#e0f5e8);border-color:#bfe6cb}html body #dialogBody .wps-lk.ok b{color:#166534}
+html body #dialogBody .wps-lk.warn{background:linear-gradient(180deg,#fffaf0,#fff2d6);border-color:#f1dc9a}html body #dialogBody .wps-lk.warn b{color:#7a5409}
+html body #dialogBody .wps-lk.bad{background:linear-gradient(180deg,#fff6f7,#ffe9ec);border-color:#f7c9ce}html body #dialogBody .wps-lk.bad b{color:#9f1d2b}
+html body #dialogBody .wps-qr{box-sizing:border-box;width:100%;max-width:320px;margin:0 auto;padding:10px;border-radius:16px;background:#fff;border:1px solid #e3e8f1;display:grid;place-items:center;color:#44566f;font-weight:700;min-height:120px;box-shadow:0 8px 22px -14px rgba(23,43,82,.5)}
+html body #dialogBody .wps-qr svg{display:block;width:100%;height:auto;max-width:300px}
+html body #dialogBody .wps-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}
+html body #dialogBody button.wps-tc,html body #summary button.wps-tc{min-height:36px!important;height:auto;padding:0 14px!important;border-radius:999px!important;border:1px solid #c7d4f5!important;background:linear-gradient(180deg,#fff,#f3f6fd)!important;color:#223b6d!important;font-weight:800!important;font-size:13px!important;white-space:nowrap;box-shadow:none!important;width:auto;flex:0 0 auto}
+html body #dialogBody button.wps-tc.is-in,html body :is(#dialogBody,#summary) button.wps-tc.pri{background:linear-gradient(180deg,#2c4a85,#223b6d)!important;color:#fff!important;border-color:#223b6d!important;box-shadow:0 4px 12px -7px rgba(34,59,109,.8)!important}
+html body #dialogBody button.wps-tc.bad{border-color:#f1c4c4!important;color:#b32936!important;background:#fff!important}
+html body #dialogBody .wps-sec{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;padding:12px;border-radius:16px;border:1px solid #e3e8f1;background:#fff;min-width:0}
+html body #dialogBody .wps-sec h4{margin:0;font-size:14px;color:#172b52}
+html body #dialogBody .wps-nums{display:flex;flex-wrap:wrap;gap:6px}
+html body #dialogBody .wps-num{display:inline-flex;align-items:center;gap:5px;padding:3px 4px 3px 11px;border-radius:999px;background:#f3f6ff;border:1px solid #d6e0f5;font-weight:800;font-size:13px;color:#223b6d;font-variant-numeric:tabular-nums}
+html body #dialogBody .wps-num button{width:26px;height:26px;min-height:26px!important;padding:0!important;border-radius:999px!important;border:1px solid #f1c4c4!important;background:#fff!important;color:#b32936!important;font-size:12px!important;box-shadow:none!important}
+html body #dialogBody .wps-nadd{display:flex;gap:6px;min-width:0}
+html body #dialogBody .wps-nadd input{flex:1;min-width:0;box-sizing:border-box;min-height:40px;border-radius:12px;padding:0 12px;font-size:16px;font-weight:800;letter-spacing:.3px;border:1.5px solid #c7d4f5;background:#fff;color:#172b52}
+html body :is(#dialogBody,#summary) .wps-wst{font-style:normal;font-size:14px;min-width:1em}
+html body #dialogBody .wps-mut{margin:0;color:#64748b;font-size:12px}
+html body #dialogBody .wps-pv{display:grid;gap:10px;color:#44566f;font-weight:700}
+html body #dialogBody .wps-pv img{display:block;width:100%;height:auto;border-radius:12px;border:1px solid #e3e8f1;background:#fff}
+html body #dialogBody .wps-pv .wps-txt{margin:0;padding:12px;border-radius:12px;background:#fffdf2;border:1px solid #f1dc9a;white-space:pre-wrap;font-size:17px;font-weight:600;color:#1a2d53;line-height:1.6}
+/* 🌙 gehri theme */
+html.dk body #list button.wps-oc{background:rgba(255,255,255,.07)!important;border-color:rgba(255,255,255,.16)!important;color:#e6edf7!important}
+html.dk body #list button.wps-oc.is-in{background:rgba(129,140,248,.18)!important;border-color:#818cf8!important}
+html.dk body #list .wps-ot b{color:#e6edf7}html.dk body #list .wps-ot small{color:#a5b4cf}
+html.dk body #list .wps-oempty{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.16);color:#c3cee3}
+html.dk body #list .wps-unc{background:rgba(214,158,28,.1);border-color:rgba(214,158,28,.35)}html.dk body #list .wps-unh b{color:#ffd27a}html.dk body #list .wps-unh small{color:#e6c98a}
+html.dk body #list .wps-ur{background:#fff}
+html.dk body #dialogBody .wps-sec{background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.14)}html.dk body #dialogBody .wps-sec h4{color:#e6edf7}
+/* 💻 PC: orders do qatar tak (wrap), sale ki table mein naam ko zyada jagah (khane kam hain) */
+@media (min-width:900px){
+html body #list .wps-orow{flex-wrap:wrap;overflow-x:hidden;overflow-y:auto;max-height:128px}
+html body #list .pp-tbl.wps-tbl th.nm,html body #list .pp-tbl.wps-tbl td.nm{width:auto;min-width:260px;max-width:460px}
+html body #list .pp-tbl.wps-tbl td.nm small{max-width:440px}
+html body #list .pp-tbl.wps-tbl td input{width:76px}html body #list .pp-tbl.wps-tbl td.q input{width:64px}
+}

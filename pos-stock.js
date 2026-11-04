@@ -349,7 +349,7 @@ let lastScan = null, lastKey = '', scanQty = new Map(), padUnit = 'pcs';   // v1
 let scanOrder = [], scanItems = new Map();   // camera ki screen par bill ki lines
 export function setSaleScanHook(fn) { saleHook = fn; }
 export function openSaleCamera() { saleSeen = []; openScanner(); }
-const saleRoot = () => !!document.querySelector('[data-sale-root],[data-pp-root],[data-tr-root]');   // v1.86: POS Purchase screen bhi · v2.42: transfer note bhi
+const saleRoot = () => !!document.querySelector('[data-sale-root],[data-pp-root],[data-tr-root],[data-ws-root]');   // v1.86: POS Purchase screen bhi · v2.42: transfer note bhi · v2.178.0: 📲 WhatsApp Parchi Sale bhi
 
 // ---------- data ----------
 
