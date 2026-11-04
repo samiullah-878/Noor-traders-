@@ -6841,3 +6841,9 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 
 ## PC wa-parchi v1.5 · manifest 2026-11-04.6 (2026-11-04) — 🧾 shak ki hadd 0.9
 - Malik ki v1.4 thermal photo: 18 mein se 17 line theek (jori + tarteeb + lafz), 12vi "کوئیش 1 کلو" ghalat magar AI ko yaqeen 0.75+ tha — tukda nahi chhapa. Malik OK → `DOUBT = 0.9` + prompt: "0.9+ sirf jab har harf saaf".
+
+## v2.179.3 (2026-11-04) — 🧾 Sale chips screen ke andar · 1-2-3 khirki hata · 📷 camera poori screen PEECHE
+- Malik (screenshot: Sale screen aadhi, naam harf-harf toote, khirki side se kati): dukan PC ke 12 printer (`.sale-copies.sale-prn`) EK line mein = page screen se chaura → phone ne poori screen chhoti (zoom out) kar di. Ab `.sale-copies` flex-WRAP, chip 34px nowrap + lamba naam "…" (style.css aakhir), `.f5-prn` bhi nowrap/ellipsis. QAIDA: chips ki har qatar = wrap ya apna overflow-x dabba — KABHI page se chaura nahi.
+- Sale: item chunne / Enter par `qtyPad` khirki (1·2·3·6·12·24·+1 · ✕ Hatao) NAHI (malik: "khatam ho jaye", Purchase jaisa) — tadad line ke PCS khane mein. Function rakha (koi bulata nahi).
+- 📷 v2 camera (phone · Sale / Purchase / WhatsApp): malik — "camera small ho to background mein full size". `.scan-cam` ab template mein PEHLA bacha, `position:absolute; inset:0; z-index:0` (poori screen peeche), baqi sab `z-index:1` — list ke card aadhe shaffaf (rgba .9), msg + neeche ki patti safed pill. Chhota thumbnail / cam-big hata; khali jagah tap = focus. `.scan-left` (tools) relative z 2.
+- AI nahi. Rules / PC kuch nahi.

@@ -4,8 +4,8 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.179.2';
-import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.179.2';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.179.3';
+import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.179.3';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -530,8 +530,7 @@ document.addEventListener('keydown', e => {
     if (hits.length === 1) it = hits[0];
   }
   if (!it) { notice('Ek item nahi mila — list se chunein'); return; }
-  const q0 = byCode ? subQty(it, v) : 1; addItem(it, q0); e.target.value = ''; notice(`✓ ${it.name}${q0 !== 1 ? ' — ' + q0 : ''}`); rerender();
-  setTimeout(() => qtyPad(cart.length - 1), 60);
+  const q0 = byCode ? subQty(it, v) : 1; addItem(it, q0); e.target.value = ''; notice(`✓ ${it.name}${q0 !== 1 ? ' — ' + q0 : ''}`); rerender();   // v2.179.3: 1·2·3·6·12·24 wali khirki NAHI (malik) — tadad line ke PCS khane mein, search tayyar agle item ke liye
 });
 
 document.addEventListener('pointerdown', e => { const m = e.target.closest?.('[data-sale-mic]'); if (!m) return; e.preventDefault(); try { m.setPointerCapture?.(e.pointerId); } catch {} vbStart(); });
@@ -564,7 +563,7 @@ document.addEventListener('click', async e => {
   }
   if (t.dataset.saleAdd) {
     const it = stock().items.find(r => String(r.id) === t.dataset.saleAdd);
-    if (it) { addItem(it); const s = $('search'); if (s) s.value = ''; rerender(); setTimeout(() => qtyPad(cart.length - 1), 60); }
+    if (it) { addItem(it); const s = $('search'); if (s) s.value = ''; rerender(); }   // v2.179.3: qtyPad khirki nahi
     return;
   }
   if (t.dataset.saleDel != null) { cart.splice(Number(t.dataset.saleDel), 1); cash = null; keepDraft(); rerender(); return; }
