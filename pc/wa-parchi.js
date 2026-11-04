@@ -1,5 +1,8 @@
 // =========================================================
-//  wa-parchi.js  v1.5 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  wa-parchi.js  v1.6 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v1.6: 🧠 malik: "jin ka naam nahi milta alag khane mein — hum yaad karwa dein · pattern bhi · agli dafa yaad hua naam aur parchi ka lafz ikattha chhape" →
+//        app 📒 Naam seekho → blueAccess/waLearn {m:{key:{r gahak ka lafz, id, n, at}}} · yahan lkey(raw) BILKUL wahi = pakka item (s 0.97, j line y:1),
+//        AI ko 150 yaad lafz (glossOf, raw kabhi nahi badalta) · thermal: gahak ke lafz ke neeche ">>  yaad: <item>" + yaad line par shak ka tukda nahi (sirf ؟).
 //  v1.5: malik (v1.4 thermal: 18 mein 17 theek, "کوئیش" ghalat magar tukda nahi) → shak ki hadd 0.75 → 0.9 (zara kam yaqeen = likhai ka tukda) +
 //        AI ko: 0.9+ sirf jab har harf saaf ho.
 //  v1.4: malik (thermal dekh kar): "same as it parchi chahiye · tarteeb dhyan se · jis ki tarteeb aage peeche lage us ka woh hissa bhi saath print" →
@@ -212,10 +215,10 @@ async function listModels(key, fetchFn) {
   return MODEL_CACHE.list;
 }
 const isGone = e => Number(e && e.code) === 404 || /no longer available|not found|is not supported for generateContent/i.test(String(e && e.message));
-async function geminiRead({ key, model, b64, mime, text, fetchFn = globalThis.fetch, ms = 45000, waitMs = 1500 }) {
+async function geminiRead({ key, model, b64, mime, text, gloss = '', fetchFn = globalThis.fetch, ms = 45000, waitMs = 1500 }) {
   if (!key) throw Object.assign(Error('AI key nahi (app → Settings → 🤖 AI)'), { code: 'nokey' });
   const call = async (mdl, think) => {
-    const parts = b64 ? [{ inline_data: { mime_type: mime || 'image/jpeg', data: b64 } }, { text: PROMPT_IMG }] : [{ text: PROMPT_TXT + String(text || '').slice(0, 4000) }];
+    const parts = b64 ? [{ inline_data: { mime_type: mime || 'image/jpeg', data: b64 } }, { text: PROMPT_IMG + gloss }] : [{ text: (gloss ? PROMPT_TXT.replace(/\nMessage:\n$/, gloss + '\nMessage:\n') : PROMPT_TXT) + String(text || '').slice(0, 4000) }];   // v1.6: 🧠 yaad ke lafz
     const gc = { temperature: 0, responseMimeType: 'application/json' };
     if (think) gc.thinkingConfig = b64 ? (/gemini-3/i.test(mdl) ? { thinkingLevel: 'low' } : { thinkingBudget: 1024 }) : (/gemini-3/i.test(mdl) ? { thinkingLevel: 'minimal' } : { thinkingBudget: 0 });   // v1.4: tasveer = thora soche (jori / tarteeb)
     const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms);
@@ -261,10 +264,23 @@ async function geminiRead({ key, model, b64, mime, text, fetchFn = globalThis.fe
 const DROP = new Set([...UNIT_OF.keys(), 'x', 'aadha', 'adha', 'pao', 'pau', 'paao', 'derh', 'dedh', 'dhai', 'آدھا', 'پاؤ', 'ڈیڑھ', 'ڈھائی', 'wala', 'wali', 'wale', 'والا', 'والی', 'والے']);
 const GENERIC = new Set(['tea', 'chai', 'patti', 'oil', 'tel', 'ghee', 'soap', 'sabun', 'shampoo', 'lotion', 'cream', 'powder', 'masala', 'biscuit', 'biscuits', 'juice', 'drink', 'paste', 'toothpaste', 'brush', 'detergent', 'packet', 'pack', 'bottle', 'dabba', 'box', 'small', 'large', 'big', 'chhota', 'bara', 'wala']);   // yeh lafz hata kar sirf brand mile = phir bhi pakka (Lipton tea → LIPTON YELLOW LABEL)
 const isNumTok = t => /^[\d۰-۹٠-٩.,\/½¼¾]+$/.test(t) || /^\d+(?:\.\d+)?[a-z]{1,3}$/i.test(t);
+// v1.6: 🧠 AI ko is dukan ke yaad karwaye lafz (naye pehle, 150 tak) — raw kabhi nahi badalta, sirf "item" behtar
+function glossOf(learn) {
+  const L = Object.values(learn || {}).filter(v => v && v.r && v.n).sort((a, b) => (Number(b.at) || 0) - (Number(a.at) || 0)).slice(0, 150);
+  if (!L.length) return '';
+  return '\nKNOWN WORDS at this shop (the owner taught these from earlier lists). When a line\'s item words are the same as or look like one of these, set "item" to that product name and give "sure" 0.9 or more. Still copy "raw" exactly as written.\n'
+    + L.map(v => `- "${(lkey(v.r) || String(v.r)).replace(/["\n]/g, ' ').slice(0, 40)}" = ${String(v.n).replace(/["\n]/g, ' ').slice(0, 60)}`).join('\n') + '\n';
+}
+// v1.6: 🧠 parchi ke lafz ki pehchan (malik ne app 📒 Naam seekho se jo yaad karwaya) — tadad / unit / harakat / harf ke roop hata kar EK shakal
+function lkey(s) {
+  const t = String(s || '').normalize('NFKC').toLowerCase().replace(/[\u064B-\u065F\u0670\u06EA-\u06ED]/g, '').replace(/[يى]/g, 'ی').replace(/ك/g, 'ک').replace(/[ةهۀ]/g, 'ہ').replace(/ؤ/g, 'و')
+    .replace(/[\d۰-۹٠-٩]+(?:[.,\/][\d۰-۹٠-٩]+)?/g, ' ').replace(/[^\p{L}\s]/gu, ' ');
+  return t.split(/\s+/).filter(w => w && !DROP.has(w) && !isNumTok(w)).join(' ').trim().slice(0, 80);
+}
 const title = s => String(s || '').trim().toLowerCase().replace(/\s+/g, ' ').replace(/(^|[\s(/&-])([a-z])/g, (m, a, b) => a + b.toUpperCase());   // web-dukan.js jaisa
 // items (posStock b1) + aliases {id: 'naam | naam'} + urdu {id: 'اردو'} + hidden {id: true} → dhoondne ki list
-function buildIndex(items, { alias = {}, urdu = {}, hidden = {} } = {}) {
-  const L = [], AL = [], byId = new Map();
+function buildIndex(items, { alias = {}, urdu = {}, hidden = {}, learn = {} } = {}) {
+  const L = [], AL = [], byId = new Map(), LR = new Map();
   for (const it of items || []) {
     if (!it || it.id == null || !it.name) continue; const id = String(it.id); if (hidden[id] || byId.has(id)) continue;
     const al = String(alias[id] || '').trim(), ur = String(urdu[id] || '').trim();
@@ -272,7 +288,8 @@ function buildIndex(items, { alias = {}, urdu = {}, hidden = {} } = {}) {
     L.push(o); byId.set(id, o);
     if (al) for (const a of al.split(/[|;,\n]+/)) if (a.trim()) AL.push({ id, k: 'al:' + id + ':' + a.trim().toLowerCase(), t: a.trim() });
   }
-  return { L, AL, byId };
+  for (const v of Object.values(learn || {})) { const k = lkey(v && v.r), id = String((v && v.id) || ''); if (k && id && byId.has(id)) LR.set(k, id); }   // v1.6: 🧠 yaad (band item nahi)
+  return { L, AL, byId, LR };
 }
 function best(hits, q, k2) {   // smartFind ki tarteeb + naam ka zyada hissa mile + stock ho
   const top = hits.slice(0, 12); if (top.length < 2) return top[0];
@@ -289,6 +306,7 @@ function best(hits, q, k2) {   // smartFind ki tarteeb + naam ka zyada hissa mil
 function matchOne(l, X, find, k2) {
   const qs = [...new Set([l.item, l.raw].map(q => String(q || '').trim()).filter(Boolean))];
   const tf = o => o.t, iL = o => 'it:' + o.id, iA = o => o.k;
+  if (X.LR && X.LR.size) { const id = X.LR.get(lkey(l.raw)); const o = id && X.byId.get(id); if (o) return { o, s: 0.97, how: 'yaad' }; }   // v1.6: 🧠 malik ka yaad karwaya lafz — pakka
   if (X.AL.length) for (const q of qs) { const r = find(X.AL, q, tf, iA, 5); if (r.hits.length) { const o = X.byId.get(r.hits[0].id); if (o) return { o, s: 0.95, how: 'alias' }; } }
   const first = [];
   for (let i = 0; i < qs.length; i++) { const r = find(X.L, qs[i], tf, iL, 40); first.push(r); if (r.hits.length) return { o: best(r.hits, qs[i], k2), s: i ? 0.8 : 0.9, how: 'naam' }; }
@@ -309,8 +327,8 @@ function rackOf(id, R) {
 function matchLines(lines, X, find, k2, racks) {
   return (lines || []).map(l => {
     const m = X && X.L && X.L.length && find && k2 ? matchOne(l, X, find, k2) : { o: null, s: 0 };
-    const o = m.o, s = Math.round(Math.min(m.s, Number(l.sure) || 0) * 100) / 100, rk = o ? rackOf(o.id, racks) : '';
-    return { r: l.raw, it: l.item, q: l.qty, u: l.unit, id: o ? o.id : '', n: o ? String(o.it.name) : '', b: l.box || null, s, w: Number(l.sure) || 0, ...(l.col ? { c: l.col } : {}), ...(rk ? { rk } : {}) };   // v1.4: w = AI ka apna yaqeen (parhna + jori)
+    const o = m.o, y = m.how === 'yaad', s = Math.round(Math.min(m.s, y ? Math.max(Number(l.sure) || 0, 0.7) : Number(l.sure) || 0) * 100) / 100, rk = o ? rackOf(o.id, racks) : '';   // v1.6: 🧠 yaad = item pakka (AI ka kam yaqeen sirf tadad ka)
+    return { r: l.raw, it: l.item, q: l.qty, u: l.unit, id: o ? o.id : '', n: o ? String(o.it.name) : '', b: l.box || null, s, w: Number(l.sure) || 0, ...(l.col ? { c: l.col } : {}), ...(rk ? { rk } : {}), ...(y ? { y: 1 } : {}) };   // v1.4: w = AI ka apna yaqeen (parhna + jori)
   });
 }
 const isUnclear = l => !l.id || !(Number(l.s) >= 0.5);
@@ -384,7 +402,7 @@ const rawOf = l => String(l.r || '').replace(/\s+/g, ' ').trim() || [l.it || l.n
 // v1.4: shak = AI ka apna yaqeen (w, purane order par s) 0.75 se kam ya lafz mein ؟ — us line ki likhai ka tukda bhi chhapo
 const DOUBT = 0.9;   // v1.5: malik OK — 0.75 par ghalat lafz bina tukde nikal gaya
 const doubtOf = l => /؟|\?/.test(String(l.r || '')) || (Number(l.w ?? l.s) || 0) < DOUBT;
-function writtenLines(P) { return [...(P.clear || []), ...(P.unc || [])].sort((a, b) => (a.i ?? 0) - (b.i ?? 0)).map(l => ({ t: rawOf(l), b: l.b || null, d: doubtOf(l), c: Number(l.c) || 0, i: l.i ?? 0 })).filter(x => x.t); }
+function writtenLines(P) { return [...(P.clear || []), ...(P.unc || [])].sort((a, b) => (a.i ?? 0) - (b.i ?? 0)).map(l => ({ t: rawOf(l), b: l.b || null, d: l.y ? /؟|\?/.test(String(l.r || '')) : doubtOf(l), c: Number(l.c) || 0, i: l.i ?? 0, y: l.y && l.n ? String(l.n) : '' })).filter(x => x.t); }   // v1.6: 🧠 yaad = shak ka tukda nahi (sirf ؟), yaad wala naam saath
 // opt.rows = PowerShell ne har line ki tasveer bana di (CRM 'L<k>') · opt.crops = Set(k) jin ka likhai tukda bana (CRM 'c<k>')
 function writtenText(o, P, opt = {}) {
   const L = writtenLines(P), out = headLines(o, { rp: opt.rp, n: L.length }), crops = opt.crops || new Set();
@@ -394,6 +412,7 @@ function writtenText(o, P, opt = {}) {
     if (opt.rows) out.push(CRM + 'L' + k);
     else if (hasUr(x.t)) out.push(UR.line('[ ]  ' + x.t, 34));   // Urdu: shuru (daayein) mein [ ]
     else out.push(...wrap(ascii(x.t), W - 4).map((s, j) => L0 + B1 + (j ? '    ' : '[ ] ') + s + B0));
+    if (x.y) out.push(...wrap('yaad: ' + (ascii(x.y) || '?'), W - 6).map((t, j) => L0 + (j ? '      ' : '  >>  ') + t));   // v1.6: 🧠 gahak ke lafz ke saath yaad hua item (malik)
     if (crops.has(k)) out.push(CRM + 'c' + k);   // shak — likhai ka tukda
   });
   out.push(L0 + hr(), L0 + line('Kul: ' + L.length + ' lines', crops.size ? 'Tukde: ' + crops.size : ''), '', CUT);
@@ -497,7 +516,7 @@ function a4Spec(o, P, opt = {}) {
 //  ASAL SCRIPT (PC)
 // =========================================================
 if (require.main === module) main();
-module.exports = { normPh, isMob, phPretty, parseCaption, vcardInfo, numOf, normUnit, qtyStr, validBox, normLine, parseGemini, localTextLines, geminiRead, buildIndex, matchOne, matchLines, isUnclear, sortForPrint, rackOf, packingText, failText, writtenText, writtenLines, bmpRaster, toJob, stripEsc, decodeJpeg, padBox, cropRaster, a4Spec, dayOf, PROMPT_IMG, PROMPT_TXT, CRM, W };
+module.exports = { lkey, glossOf, normPh, isMob, phPretty, parseCaption, vcardInfo, numOf, normUnit, qtyStr, validBox, normLine, parseGemini, localTextLines, geminiRead, buildIndex, matchOne, matchLines, isUnclear, sortForPrint, rackOf, packingText, failText, writtenText, writtenLines, bmpRaster, toJob, stripEsc, decodeJpeg, padBox, cropRaster, a4Spec, dayOf, PROMPT_IMG, PROMPT_TXT, CRM, W };
 
 function main() {
   const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(DIR, 'wa-parchi.alive'), w = () => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }; w(); setInterval(w, 30000); return { guard: fn => fn }; } })();
@@ -537,8 +556,9 @@ async function start(ZINDA) {
   setTimeout(() => sReady(), 20000);
   let AI = { key: '', model: '' };
   BA.doc('aiConfig').onSnapshot(s => { const d = (s.exists && s.data()) || {}; AI = { key: String(d.key || ''), model: String(d.model || '') }; }, authErr);
-  let ALIAS = {}, URDU = {}, HIDDEN = {}, RACKS = { order: [], ic: {}, cn: {} }, dataVer = 0;
+  let ALIAS = {}, URDU = {}, HIDDEN = {}, RACKS = { order: [], ic: {}, cn: {} }, LEARN = {}, GLOSS = '', dataVer = 0;
   BA.doc('itemAliases').onSnapshot(s => { ALIAS = (s.exists && (s.data() || {}).map) || {}; dataVer++; }, authErr);
+  BA.doc('waLearn').onSnapshot(s => { LEARN = (s.exists && (s.data() || {}).m) || {}; GLOSS = glossOf(LEARN); dataVer++; }, authErr);   // v1.6: 🧠 📒 Naam seekho (app, malik)
   BA.doc('urduNames').onSnapshot(s => { URDU = (s.exists && (s.data() || {}).map) || {}; dataVer++; }, authErr);
   biz.collection('stockCount').doc('_hidden').onSnapshot(s => { HIDDEN = (s.exists && (s.data() || {}).items) || {}; dataVer++; }, authErr);
   biz.collection('webDukan').doc('racks').onSnapshot(s => { const d = (s.exists && s.data()) || {}; RACKS = { order: Array.isArray(d.order) ? d.order : [], ic: d.ic || {}, cn: d.cn || {} }; }, authErr);
@@ -558,7 +578,7 @@ async function start(ZINDA) {
     return catP;
   };
   let D = null; const dh = async () => D || (D = await import(pathToFileURL(path.join(DIR, 'dhoond.mjs')).href));
-  const index = async () => { const c = await catalog(), k = c.at + ':' + dataVer; if (!IX || ixKey !== k) { IX = buildIndex(c.items, { alias: ALIAS, urdu: URDU, hidden: HIDDEN }); ixKey = k; } return IX; };
+  const index = async () => { const c = await catalog(), k = c.at + ':' + dataVer; if (!IX || ixKey !== k) { IX = buildIndex(c.items, { alias: ALIAS, urdu: URDU, hidden: HIDDEN, learn: LEARN }); ixKey = k; } return IX; };
 
   // ---------- 🖼 tasveer (sharp ho to — Baileys ke saath aata hai; na ho to PowerShell) ----------
   let SHARP; const sharp = () => { if (SHARP === undefined) { try { SHARP = require(require.resolve('sharp', { paths: [MODS, DIR] })); } catch { SHARP = null; } } return SHARP; };
@@ -690,9 +710,9 @@ async function start(ZINDA) {
   // ---------- 🔄 ek order ka poora kaam (queue — ek waqt ek) ----------
   const live = new Map();   // id → order (jab tak queue mein — contact card naam / number yahin jore)
   async function readOrder(o, g) {   // → { res } ya throw
-    if (g && g.gem) return (await geminiRead({ key: AI.key, model: AI.model, b64: g.gem.toString('base64'), mime: g.gm, ms: 75000 })).res;   // v1.4: sochne ka waqt
+    if (g && g.gem) return (await geminiRead({ key: AI.key, model: AI.model, b64: g.gem.toString('base64'), mime: g.gm, gloss: GLOSS, ms: 75000 })).res;   // v1.4: sochne ka waqt
     const txt = String(o.txt || '').trim(); if (!txt) throw Error('na tasveer na likhai');
-    try { return (await geminiRead({ key: AI.key, model: AI.model, text: txt })).res; }
+    try { return (await geminiRead({ key: AI.key, model: AI.model, text: txt, gloss: GLOSS })).res; }
     catch (e) { log(`🤖 likhi list AI se nahi parhi (${String(e.message).slice(0, 80)}) — bina AI`); return localTextLines(txt); }
   }
   async function processOrder(o, buf, mime, g0, prev) {

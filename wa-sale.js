@@ -15,9 +15,10 @@
 //   v2.179.2: 🔁 DOBARA PARHO (malik OK) — khuli parchi ⋮ 🔁 + ✕ / ⚠️ wale dabbe mein chip → {st:'new'} (rules 2.86 wahi) → PC (wa-parchi claimNew) AI se phir
 //     parhe + naya thermal / A4; bill khud dobara bhar jata hai (pendLoad). Bill bana / maal nikla / abhi parh raha = nahi.
 //   CAP sale.wsale (default khula). AI app mein NAHI — parchi PC parhta hai. Agent action NAHI (malik ka qaida v2.111.0).
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.180.3';
-import { smartSearch, noteHit } from './smart-search.js?v=2.180.3';
-import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.180.3';   // v2.180.0: 👦 larka (POS SP Man) chip
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.181.0';
+import { smartSearch, noteHit } from './smart-search.js?v=2.181.0';
+import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.181.0';   // v2.180.0: 👦 larka (POS SP Man) chip
+import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.181.0';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -56,6 +57,7 @@ const seenAt = new Map(), localOrd = new Map(), imgCache = new Map(), cropCache 
 export function wsSetup(o) {
   C = { ...C, ...o };
   try { smWatch(C.cloud); } catch {}   // v2.180.0: 👦
+  wlSetup({ get cloud() { return C.cloud; }, notice: m => C.notice(m), modal: (...a) => C.modal?.(...a), owner: () => C.owner(), uid: () => C.uid() });   // v2.181.0: 📒
   try {
     const d = JSON.parse(LG(DRAFT_KEY) || 'null');
     if (d && d.day === todayStr()) {
@@ -273,7 +275,7 @@ function fill(o) {
     if (!x || typeof x !== 'object') return;
     const sc = x.s == null ? 1 : Number(x.s) || 0, it = x.id ? (byId.get(String(x.id)) || itemAny(x.id)) : null;
     const u = { i, r: String(x.r || '').slice(0, 200), it: String(x.it || '').slice(0, 120), q: Number(x.q) || 0, u: String(x.u || '').slice(0, 30), b: Array.isArray(x.b) && x.b.length === 4 ? x.b.map(Number) : null, id: x.id ? String(x.id) : '', n: String(x.n || '').slice(0, 120), s: sc, rk: String(x.rk || '').slice(0, 40), done: '' };
-    if (it && sc >= 0.5) { const q = qtyOf(u, it); addItem(it, q.pcs, q.ctn); added++; } else unclear.push(u);
+    if (it && sc >= 0.5) { const q = qtyOf(u, it), ad = addItem(it, q.pcs, q.ctn); if (x.y && ad?.line) ad.line.y = 1; added++; } else unclear.push(u);   // v2.181.0: 🧠 yaad wali line
   });
   addAt = 0; pendLoad = ''; selKey = cart[0]?.k || ''; curSnap = snapOf(o); keep();
   C.notice(`📲 Parchi lag gayi — ${added} items${unclear.length ? ' · ❓ ' + unclear.length + ' dekhein' : ''}`);
@@ -380,6 +382,7 @@ function toolsHTML(o) {
     ${seg('ws.view', '📊', 'Bill ka look', v === 'grid' ? 'Table' : 'Lines', B(v === 'grid', 'view', 'grid', '📊 Table') + B(v === 'rows', 'view', 'rows', '☰ Lines'))}
     ${seg('ws.cp', '🖨', 'Bill kitni dafa chhape', '×' + cp, [1, 2, 3].map(n => B(cp === n, 'copies', n, '×' + n)).join(''))}
     ${C.can('sale.pc') ? seg('ws.ctr', '🖨', 'Kis counter par print', '', BASE_COUNTERS.map(([k, n]) => B(ctr === k, 'counter', k, n)).join('') + (ctr.startsWith('pc:') ? B(true, 'counter', ctr, '💻 PC (Sale screen wala)') : '')) : ''}
+    ${C.owner() ? `<button type="button" class="sh-wide" data-ws-learn="1" data-mn="ws.learn" data-mn-i="📒" data-mn-t="Naam seekho" data-mn-s="${wlCount() == null ? '❓ lafz jin ka item nahi mila — AI ko yaad karwao' : wlCount() + ' lafz baqi — 🧠 yaad karwao'}" data-mn-g="${GRP}">📒 Naam seekho${wlCount() ? ' · ' + wlCount() : ''}</button>` : ''}
     ${C.owner() ? `<button type="button" class="sh-wide" data-ws-set="1" data-mn="ws.set" data-mn-i="⚙️" data-mn-t="WhatsApp setting" data-mn-s="QR · numbers · print" data-mn-g="${GRP}">⚙️ WhatsApp setting</button>` : ''}
   </div>`;
 }
@@ -392,7 +395,7 @@ function lineInfo(l, s, IX) {
 function subTxt(l, f, s, tbl) {
   const pk = packOf(l), Cn = esc(l.cName || 'Ctn');
   const parts = [pk ? '1 ' + Cn + ' = ' + num(pk) : '', 'stock ' + (f.it ? num(f.it.stock) : '—') + (f.lg !== SALE_BRANCH ? ' (' + esc(brName(s, f.lg)) + ')' : ''),
-    pk && Math.abs(crateOf(l) - (Number(l.rate) || 0)) > 0.004 ? Cn + ' rate ' + num(r2(crateOf(l) * pk)) : '', l.edited ? '✎ apna rate' : '',
+    pk && Math.abs(crateOf(l) - (Number(l.rate) || 0)) > 0.004 ? Cn + ' rate ' + num(r2(crateOf(l) * pk)) : '', l.edited ? '✎ apna rate' : '', l.y ? '🧠 yaad' : '',
     f.block ? '<i>⛔ godam mein stock nahi</i>' : f.short ? '<i>stock kam</i>' : ''].filter(Boolean).join(' · ');
   return (l.code ? (tbl ? `<u class="pp-tcd">${esc(l.code)} · </u>` : esc(l.code) + ' · ') : '') + parts;
 }
@@ -852,12 +855,13 @@ document.addEventListener('click', e => {
     return; }
   if (!document.querySelector('[data-ws-root]')) return;
   const r = t.closest('#list .pp-cr, #list .pp-tr'); if (r && r.dataset.wsSel && !t.closest('button,select,input')) selSet(r.dataset.wsSel);
-  const b = t.closest('[data-ws-reread],[data-ws-hide],[data-ws-hidlist],[data-ws-unhide],[data-ws-ord],[data-ws-add],[data-ws-del],[data-ws-open],[data-ws-mode],[data-ws-view],[data-ws-copies],[data-ws-counter],[data-ws-gc],[data-ws-cam],[data-ws-gal],[data-ws-camera],[data-ws-pv],[data-ws-gsave],[data-ws-set],[data-ws-upick],[data-ws-uskip],[data-ws-uback],[data-ws-pick],[data-ws-reprint],[data-ws-clear],[data-ws-save]');
+  const b = t.closest('[data-ws-reread],[data-ws-hide],[data-ws-hidlist],[data-ws-learn],[data-ws-unhide],[data-ws-ord],[data-ws-add],[data-ws-del],[data-ws-open],[data-ws-mode],[data-ws-view],[data-ws-copies],[data-ws-counter],[data-ws-gc],[data-ws-cam],[data-ws-gal],[data-ws-camera],[data-ws-pv],[data-ws-gsave],[data-ws-set],[data-ws-upick],[data-ws-uskip],[data-ws-uback],[data-ws-pick],[data-ws-reprint],[data-ws-clear],[data-ws-save]');
   if (!b) return;
   const d = b.dataset;
   if (d.wsReread) { reread(d.wsReread, b); return; }   // v2.179.2
   if (d.wsHide) { hideOrd(d.wsHide); return; }   // v2.179.1
   if (d.wsHidlist) { hidOpen(); return; }
+  if (d.wsLearn) { wlOpen(); return; }   // v2.181.0: 📒
   if (d.wsUnhide) { unhide(d.wsUnhide); return; }
   if (d.wsOrd) { loadOrder(d.wsOrd); return; }
   if (d.wsCamera) { openSaleCamera(); return; }

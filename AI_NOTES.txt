@@ -6878,3 +6878,10 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 
 ## v2.180.3 (2026-11-04) — 🧾 Bills search: raqam se BILKUL nahi
 - Malik: "raqam se na dhoondein, only number se search kare". sale.js Bills search: hindse = sirf bill number ka aakhir (exact); likhai = naam / jagah / larka (smartHit). Raqam wala `total.startsWith` dono raaston se hata; placeholder "Bill no, naam". AI nahi.
+
+## v2.181.0 (2026-11-04) — 📒 Naam seekho (WhatsApp parchi ❓ lafz → 🧠 yaad)
+- Malik: "jin items ka naam nahi mil raha wo alehda aik khane mein — jab time mila hum AI ko yaad karwa dein ge · pattern bhi · agli dafa yaad hua naam aur parchi ka naam ikattha chhap sake · shak kam".
+- `wa-learn.js` (naya): WA Parchi Sale ⋮ "📒 Naam seekho · N" (sirf malik) → khirki: tabs ❓ Baqi · 🧠 Yaad · ✕ Chhori · 🔄. Data `cloud.getParchiOrdersDays` (30 din, 10-10 ka `in`) → har order ki j lines jin ka item nahi / s < 0.5 (hatai hui parchi nahi) → `lkey` (PC jaisa) se EK qatar (×N parchi, zyada wala upar), tukda parchiImg + AI box (8-8 lazily). Tap = search (AI ka parha pehle) + ✓ AI ka andaza + smartSearch → item = `cloud.saveWaLearn('m', key, {r, it, id, n, at, by})` (pehle UI, ⏳ → 🧠 / ✕). ✕ = `sk`, ↩ wapas. 🧠 Yaad tab ✕ = ghalat yaad hatao (deleteField).
+- Key = 'k' + FNV hash(lkey) (rules: blueAccess owner generic — naya rules nahi). PC wa-parchi v1.6 (pc/AI_NOTES).
+- Bill: yaad wali line (j y:1) cart line `y` → sub-line "🧠 yaad". Classes `wl-*`, data `data-wl-*`.
+- Test: Playwright — 30 din, 2 qatar (×2 grouping), tukde, andaza → yaad save, Baqi 0, chhoro / wapas, side scroll nahi. AI app mein nahi.

@@ -4074,3 +4074,11 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
   5) Naya kharcha khata: entry `lastAcct` mein party na ho = `waitAcct`; once() mein syncAccounts ke foran baad `fresh` mein wapas + vRun (poore syncEntries ka intezar nahi).
   6) `ctOf` = entry ka server createTime (listener) → log "entry se N s" + printConfig.voucherLog `s` (app 🖨 Printer ki haalat mein ⏱).
 - posWriteVoucher / links / inFlight / dohri parchi ki hifazat BILKUL wahi. AI nahi.
+
+## PC wa-parchi v1.6 · manifest 2026-11-04.9 (2026-11-04) — 🧠 yaad karwaye lafz
+- Malik: "jin items ka naam nahi milta alehda khane mein — time mile to AI ko yaad karwa dein · pattern bhi · agli dafa yaad hua naam aur parchi ka lafz ikattha chhape · shak kam".
+- Data: `blueAccess/waLearn {m:{k<hash>:{r gahak ka lafz, it AI ka parha, id, n, at, by}}, sk:{k:{r, at}}}` (app 📒 Naam seekho, sirf malik).
+- `lkey(s)`: NFKC + chhota + harakat hata + ي/ى→ی, ك→ک, ة/ه/ۀ→ہ, ؤ→و + hindse / unit (UNITS + DROP) / nishan hata. buildIndex `learn` → `X.LR` (lkey(r) → id, band item nahi). matchOne SAB SE PEHLE LR (s 0.97, how 'yaad') — sirf EXACT shakal (fuzzy nahi: "پتی بڑی" ≠ "پتی چھوٹی").
+- matchLines: yaad = `y:1` + s = min(0.97, max(AI sure, 0.7)) (item pakka; AI ka kam yaqeen sirf tadad ka). Thermal writtenText: line ke neeche `  >>  yaad: <POS naam>`; yaad line par shak ka tukda sirf ؟ par.
+- `glossOf(learn)`: naye 150 yaad (lkey + naam) PROMPT_IMG / PROMPT_TXT ke saath ("KNOWN WORDS … raw exactly as written") → geminiRead `gloss`. dataVer++ = index dobara.
+- Test: lkey Urdu/Roman, matchOne yaad 0.97, writtenText ">> yaad", glossOf. AI: wahi purana ek parhna (naya AI call nahi).
