@@ -4,9 +4,9 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.180.2';
-import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.180.2';
-import { smWatch, smChipHTML, smForDoc } from './sale-man.js?v=2.180.2';   // v2.180.0: 👦 larka (POS SP Man) chip
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.180.3';
+import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.180.3';
+import { smWatch, smChipHTML, smForDoc } from './sale-man.js?v=2.180.3';   // v2.180.0: 👦 larka (POS SP Man) chip
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -901,14 +901,14 @@ function mountBills(box, opt = {}) {
   const chips = !!opt.chips;
   try { filter = localStorage.getItem('sam-bills-f') || 'all'; } catch {}
   box.classList.add('nb-wrap');
-  if (chips) { filter = 'all'; box.classList.add('nb-chipv'); box.innerHTML = `<div class="nb-stick"><div class="nb-ctop"><label class="nb-qchip"><span>🔍</span><input type="search" class="nb-q" placeholder="Bill no, naam, raqam" autocomplete="off"></label><button type="button" class="nb-more" data-nb-more="1" title="🔵 Un-posted bills + aur (⋮)">⋮<em class="nb-ub" hidden></em></button><button type="button" class="rk-pill nb-pill" data-mn-sheet="1" hidden></button><input type="date" class="nb-date nb-date-x" tabindex="-1" aria-label="Tareekh"></div>
+  if (chips) { filter = 'all'; box.classList.add('nb-chipv'); box.innerHTML = `<div class="nb-stick"><div class="nb-ctop"><label class="nb-qchip"><span>🔍</span><input type="search" class="nb-q" placeholder="Bill no, naam" autocomplete="off"></label><button type="button" class="nb-more" data-nb-more="1" title="🔵 Un-posted bills + aur (⋮)">⋮<em class="nb-ub" hidden></em></button><button type="button" class="rk-pill nb-pill" data-mn-sheet="1" hidden></button><input type="date" class="nb-date nb-date-x" tabindex="-1" aria-label="Tareekh"></div>
     <div class="nb-upan"><div class="nb-uh"><b>🔵 Un-posted <span class="nb-ucnt"></span></b><button type="button" class="nb-unp" data-nb-unp="1">🖨 Un-posted</button></div><div class="nb-ugrid nb-ulist"></div></div>
     <div class="nb-copt"><div class="bc-seg nb-nseg" data-mn-seg="nb.n" data-mn-i="🔢" data-mn-t="Kitne bill (chips)" data-mn-g="🧾 Bills"></div>
       <span class="nb-day"><button type="button" data-nb-day="-1" data-mn="nb.prev" data-mn-i="‹" data-mn-t="Pichhla din" data-mn-g="🧾 Bills">‹ Pichhla din</button><button type="button" data-nb-day="1" data-mn="nb.next" data-mn-i="›" data-mn-t="Agla din" data-mn-g="🧾 Bills">Agla din ›</button><button type="button" data-nb-cal="1" data-mn="nb.cal" data-mn-i="📅" data-mn-t="Tareekh chunein" data-mn-g="🧾 Bills">📅 Tareekh</button></span>
       ${can('sale.ibills') ? '<button type="button" class="nb-ibb" data-nb-ib="1" data-mn="nb.ib" data-mn-i="🔎" data-mn-t="Item wale bills" data-mn-s="chuni items (Hamza ghee…) wale bills" data-mn-g="🧾 Bills">🔎 Item wale bills</button>' : ''}${can('sale.bsnd') ? '<button type="button" class="nb-sndb" data-nb-snd="1" data-mn="nb.snd" data-mn-i="🔔" data-mn-t="Naye bill par awaaz" data-mn-s="naya bill aate hi halki ding (sirf is device par)" data-mn-g="🧾 Bills">🔕 Awaaz: band</button>' : ''}<small class="nb-sync"></small></div></div>
     <div class="nb-f" hidden></div><div class="nb-sum" hidden></div><div class="nb-list"></div>`; }   // v2.138.0: malik — saamne sirf bill; tabs nahi (Posted + Un-posted ek saath); total nahi; sab ⋮ mein
   else box.innerHTML = `<div class="nb-head"><span class="nb-day"><button type="button" data-nb-day="-1" title="Pichhla din">‹</button><b class="nb-dayt"></b><button type="button" data-nb-day="1" title="Agla din">›</button><label class="nb-cal" title="Tareekh chunein">📅<input type="date" class="nb-date"></label></span><small class="nb-sync"></small></div>
-    <div class="nb-top"><input type="search" class="nb-q" placeholder="🔍 Bill no, naam, raqam…" autocomplete="off"><button type="button" class="nb-unp" data-nb-unp="1">🖨 Un-posted</button></div>
+    <div class="nb-top"><input type="search" class="nb-q" placeholder="🔍 Bill no, naam…" autocomplete="off"><button type="button" class="nb-unp" data-nb-unp="1">🖨 Un-posted</button></div>
     <div class="nb-f"></div><div class="nb-sum"></div><div class="nb-list"></div>`;
   // v2.168.0 (malik: "un-posted right side three dot ke andar · search upar pakki · 20 laal chips ek screen par"): .nb-stick (search + ⋮ + 🔵 panel + PC options) chipka rehta hai;
   //   🔵 un-posted sirf ⋮ ke panel mein (badge = ginti, naya aaye to chamak) — search likha ho to milte un-posted saamne bhi; laal = aakhri N POSTED (un-posted N mein nahi). AI nahi.
@@ -930,12 +930,11 @@ function mountBills(box, opt = {}) {
     const all = billsData();
     const t = String(q.value || '').trim().toLowerCase(), dg = t.replace(/[^0-9]/g, '');
     const pass = b => filter === 'all' || (filter === 'pd' && billCls(b) === 'pd') || (filter === 'up' && billCls(b) === 'up') || (filter === 'un' && b.ps === 1 && !b.cancelled) || (filter === 'po' && b.ps === 2) || (filter === 'pc' && b.src === 'pos') || (filter === 'app' && b.src === 'app') || (filter === 'ws' && wsIs(b, vd));
-    // v2.180.2 (malik: "335 likhoon to SIRF 335 ka card — 334 / 330 poori series nahi"): sirf hindse = bill number ka AAKHIR (exact), smart / fuzzy nahi;
-    //   koi bill number na mile tab hi raqam se (raqam isi se shuru)
+    // v2.180.2 (malik: "335 likhoon to SIRF 335 ka card — 334 / 330 poori series nahi"): sirf hindse = bill number ka AAKHIR (exact), smart / fuzzy nahi.
+    // v2.180.3 (malik: "raqam se na dhoondein — only number se"): raqam se talaash BILKUL nahi (hindse = sirf bill number; likhai = naam / jagah / larka)
     const numQ = !!t && /^\d+$/.test(t), noOf = b => String(b.saleNo || '').replace(/\D/g, '');
-    const byNo = numQ ? all.filter(b => pass(b) && noOf(b) && noOf(b).endsWith(dg)) : null;
-    const rows = numQ ? (byNo.length ? byNo : all.filter(b => pass(b) && dg.length >= 2 && String(Math.round(Math.abs(b.total))).startsWith(dg)))
-      : all.filter(b => pass(b) && (!t || smartHit(`${b.saleNo || ''} ${b.party || ''} ${b.where || ''} ${b.by || ''}`, t) || (dg.length >= 2 && String(Math.round(Math.abs(b.total))).startsWith(dg))));
+    const rows = numQ ? all.filter(b => pass(b) && noOf(b) && noOf(b).endsWith(dg))
+      : all.filter(b => pass(b) && (!t || smartHit(`${b.saleNo || ''} ${b.party || ''} ${b.where || ''} ${b.by || ''}`, t)));
     const cnt = k => all.filter(b => k === 'all' || (k === 'pd' && billCls(b) === 'pd') || (k === 'up' && billCls(b) === 'up') || (k === 'un' && b.ps === 1 && !b.cancelled) || (k === 'po' && b.ps === 2) || (k === 'pc' && b.src === 'pos') || (k === 'app' && b.src === 'app') || (k === 'ws' && wsIs(b, vd))).length;
     if (isOwner()) { wsWatch(); wsReport(vd); } else if (filter === 'ws') filter = 'all';
     fbox.innerHTML = chips ? '' : (isOwner() ? [...FILTERS, ['ws', '🏷 Wholesale']] : FILTERS).map(([k, n]) => `<button type="button" data-nb-f="${k}" class="${filter === k ? 'on' : ''}">${n} <em>${cnt(k)}</em></button>`).join('');   // v2.138.0: chips = tabs nahi

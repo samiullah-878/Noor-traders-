@@ -6875,3 +6875,6 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - 🖨 Printer ki haalat (bank-inbox prnHTML) list mein "⏱ N sec" (voucherLog `s`).
 - 🧾 Bills search (sale.js): sirf hindse = bill number ka AAKHIR exact (335 → sirf ...335; pehle smartHit fuzzy 334 / 330 bhi). Bill number na mile tab raqam se.
 - AI nahi.
+
+## v2.180.3 (2026-11-04) — 🧾 Bills search: raqam se BILKUL nahi
+- Malik: "raqam se na dhoondein, only number se search kare". sale.js Bills search: hindse = sirf bill number ka aakhir (exact); likhai = naam / jagah / larka (smartHit). Raqam wala `total.startsWith` dono raaston se hata; placeholder "Bill no, naam". AI nahi.
