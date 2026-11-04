@@ -7085,3 +7085,15 @@ html body .dy-e.is-in .dy-ex{display:flex;flex-wrap:wrap;gap:6px;align-items:cen
 html body .dy-e.is-in .dy-ex .dy-xn{flex-basis:100%;font-size:12.5px;color:#334155;white-space:normal}
 html body .dy-e.is-in .dy-ex>button,html body .dy-e.is-in .dy-ex .prn-box button,html body .dy-e.is-in .dy-ex button[data-receipt]{min-height:32px!important;padding:3px 11px!important;font-size:12.5px!important;border-radius:999px!important;margin:0!important}
 html.dk body .dy-e1 .dy-en{color:#e6edf7}html.dk body .sheet-entries>div.dy-e.is-in{background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+/* v2.177.1: 🔔 Reminder form — 👤 khata chip (tay / ✕ Badlo) + jaldi tareekh / waqt chips (.rem-chips) */
+.rem-acc-w{display:grid;gap:5px;font-size:14px}
+.rem-acc{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#f4f7fc;border:1px solid #d7dde8;color:#1d3561}
+.rem-acc-i{font-size:20px;line-height:1;flex:none}
+.rem-acc-n{display:grid;min-width:0;flex:1}
+.rem-acc-n b{font-size:15.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rem-acc-n small{font-size:11.5px;color:#64748b;font-weight:600}
+.rem-acc-x{flex:none;min-height:32px!important;padding:4px 12px!important;border-radius:999px!important;font-size:12.5px;font-weight:800;background:#fff!important;border:1.5px solid #d7dde8!important;color:#1d3561!important}
+html.dk .rem-acc{background:var(--glass);border-color:var(--line);color:var(--ink)}
+html.dk .rem-acc-n small{color:var(--ink2)}
+html.dk .rem-acc-x{background:var(--glass)!important;border-color:var(--line)!important;color:var(--ink)!important}
+.rem-qk{margin:-2px 0 10px}
