@@ -11,8 +11,8 @@
 //   Data attr SIRF `data-ws-*`, root `data-ws-root` — purchase.js ke (pp-root wale) listeners yahan kabhi nahi chalte (aur ulta bhi).
 //   Look: purchase ki classes (pp-tbl · pp-cr · pp-foot · pp-hbar · sale-hit …); apni nayi classes `wps-*` (purani .ws-* se takrao nahi).
 //   CAP sale.wsale (default khula). AI app mein NAHI — parchi PC parhta hai. Agent action NAHI (malik ka qaida v2.111.0).
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.177.0';
-import { smartSearch, noteHit } from './smart-search.js?v=2.177.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.178.0';
+import { smartSearch, noteHit } from './smart-search.js?v=2.178.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -170,7 +170,7 @@ function listenOrders() {
     if (allOrders().some(o => o._local || String(o.st || 'new') === 'new')) { paintOrders(); headPaint(); const w = $('wpsWait'); if (w) w.outerHTML = waitHTML(curOrder()); }
   }, 10000);
 }
-const ready = o => !!o && !o._local && ('j' in o || 'n' in o) && !['new', 'fail', 'skip'].includes(String(o.st || 'new'));   // PC ne parh li (sirf server wala doc yahan aata hai)
+const ready = o => !!o && !o._local && ('j' in o || 'n' in o) && !['new', 'read', 'fail', 'skip'].includes(String(o.st || 'new'));   // PC ne parh li ('read' = PC parh raha — abhi lines nahi) (sirf server wala doc yahan aata hai)
 function onOrders(list) {
   const t = Date.now(), fresh = [];
   for (const o of list) if (!seenAt.has(o.id)) { seenAt.set(o.id, t); if (!ordFirst && o.src !== 'app') fresh.push(o); }
@@ -201,6 +201,7 @@ function stOf(o) {
   if (o._local === 'err') return ['bad', '✕ ' + (o.err || 'Nahi gayi')];
   const st = String(o.st || 'new'), n = Number(o.n) || 0, u = Number(o.u) || 0;
   if (st === 'new') { const a = ageOf(o); return o.src === 'app' && a > 90000 ? ['warn', '⚠️ PC se jawab nahi'] : a > 240000 ? ['warn', '⚠️ AI se jawab nahi'] : ['w', '⏳ AI parh raha']; }
+  if (st === 'read') return ageOf(o) > 240000 ? ['warn', '⚠️ AI se jawab nahi'] : ['w', '⏳ AI parh raha'];   // PC ne utha li, Gemini parh raha
   if (st === 'fail') return ['bad', '✕ ' + String(o.err || 'Parh nahi saka').slice(0, 60)];
   if (st === 'skip') return ['bad', '✕ ' + String(o.err || 'Chhori gayi').slice(0, 60)];
   if (st === 'billed') return ['ok', '🧾 Bill bana'];
@@ -210,6 +211,7 @@ function stOf(o) {
 function prOf(o) {   // 🖨 PC ki parchi (thermal / A4)
   const p = o?.pr || {}, v = [p.th, p.a4].filter(x => x && x !== 'off');
   if (!v.length) return '';
+  if (!v.includes('failed') && v.some(x => x !== 'done')) return '<i class="wps-pr" title="Chhap rahi">🖨⏳</i>';   // wait / printing / sent
   return v.includes('failed') ? `<i class="wps-pr bad" title="${esc('Print nahi hua' + (o.perr ? ': ' + o.perr : ''))}">🖨✕</i>` : '<i class="wps-pr ok" title="Chhap gayi">🖨✓</i>';
 }
 function ordersHTML() {
