@@ -6847,3 +6847,6 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - Sale: item chunne / Enter par `qtyPad` khirki (1·2·3·6·12·24·+1 · ✕ Hatao) NAHI (malik: "khatam ho jaye", Purchase jaisa) — tadad line ke PCS khane mein. Function rakha (koi bulata nahi).
 - 📷 v2 camera (phone · Sale / Purchase / WhatsApp): malik — "camera small ho to background mein full size". `.scan-cam` ab template mein PEHLA bacha, `position:absolute; inset:0; z-index:0` (poori screen peeche), baqi sab `z-index:1` — list ke card aadhe shaffaf (rgba .9), msg + neeche ki patti safed pill. Chhota thumbnail / cam-big hata; khali jagah tap = focus. `.scan-left` (tools) relative z 2.
 - AI nahi. Rules / PC kuch nahi.
+
+## v2.179.4 (2026-11-04) — 📷 camera peeche chalta, NAZAR NAHI aata
+- Malik: "background camera on rahe magar hamein show na ho — distract hote hain". `.scan-cam` poori size + 1080p chalta rehta hai (barcode poori tasveer se), upar `::after` bharat parda (#f6f8fc, z 2). QAIDA: chalte camera ko chhupana ho to video par opacity:0 / display:none / bahar KABHI nahi (phone video rok deta = scan band) — upar parda daalo. 📷 ▾ chip par hara nukta = camera chal raha. Test: videoWidth 1920, paused false.

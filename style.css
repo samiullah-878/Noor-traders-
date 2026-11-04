@@ -7212,6 +7212,12 @@ html body .scan-box.v2:not(.cam-off) .scan-inner{background:#0b1220!important}
 html body .scan-box.v2 .scan-inner>.scan-cam{position:absolute!important;inset:0!important;width:auto!important;height:auto!important;min-height:0!important;flex:none!important;margin:0!important;border:0!important;border-radius:0!important;background:#0b1220!important;z-index:0;overflow:hidden}
 html body .scan-box.v2 .scan-inner>.scan-cam video{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;object-fit:cover;border-radius:0!important;display:block}
 html body .scan-box.v2 .scan-inner>.scan-cam .scan-line{position:absolute;top:50%!important;left:6%!important;right:6%!important;height:2px;z-index:1}
+/* v2.179.4 (malik: "background camera on rahe magar hamein show na ho — distract hote hain"): camera POORI size mein chalta rahe (barcode poori tasveer se),
+   upar ek bharat (opaque) parda — video chhupaya NAHI (opacity / display none par phone camera rok deta), sirf dhaka. 📷 ▾ par hara nukta = camera chal raha. */
+html body .scan-box.v2 .scan-inner>.scan-cam::after{content:'';position:absolute;inset:0;background:#f6f8fc;z-index:2}
+html body .scan-box.v2:not(.cam-off) .scan-inner{background:#f6f8fc!important}
+html body .scan-box.v2:not(.cam-off) button.scan-tl{position:relative}
+html body .scan-box.v2:not(.cam-off) button.scan-tl::after{content:'';position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#16a34a;box-shadow:0 0 0 2px #fff}
 html body .scan-box.v2 .scan-inner>:not(.scan-cam){position:relative;z-index:1}
 html body .scan-box.v2 .scan-inner>.scan-find{z-index:7}
 html body .scan-box.v2.cam-off .scan-cam{display:none!important}
