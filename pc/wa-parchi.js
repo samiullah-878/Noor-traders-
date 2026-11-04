@@ -1,5 +1,8 @@
 // =========================================================
-//  wa-parchi.js  v1.0 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  wa-parchi.js  v1.1 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v1.1: Google ne gemini-2.5-flash band kiya ("no longer available to new users") — pehla model na chale to Google ki LIST se
+//        behtareen chalta flash model khud (app ke pickModel jaisa), rush par usi ko ek dafa aur; jo chala woh yaad. Shuru mein
+//        pichhle 3 ghante ki "AI 404 / model" wali fail parchiyan EK dafa khud dobara parhi jati hain (rr:1).
 //  Malik: "gahak apni likhi hui parchi (Urdu + English) ki photo meri WhatsApp par bhejta hai — main dukan ke number par forward
 //          karun (caption mein gahak ka number / naam) · PC khud parhe, POS items se milaye, app mein order bane, aur FORAN
 //          thermal + A4 par packing parchi nikle taake larke bill banne se pehle maal nikalna shuru kar dein."
@@ -24,8 +27,8 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '1.0';
-const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-2.5-flash';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '1.1';
+const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
 const PKG = '@whiskeysockets/baileys', PKG_VER = '7.0.0-rc14';
@@ -176,7 +179,25 @@ function localTextLines(text) {
   return { isOrder: lines.length > 0, name: '', phone: '', lines: lines.slice(0, 150) };
 }
 // key KABHI log / Firestore mein nahi
-async function geminiRead({ key, model, b64, mime, text, fetchFn = globalThis.fetch, ms = 45000 }) {
+// v1.1: Google ki model list (6 ghante yaad) → behtareen "flash" (app ke ai-tally pickModel jaisa: seedha gemini-N-flash pehle, naya pehle)
+const MODEL_CACHE = { at: 0, list: [] }, DEAD = new Set(); let GOOD = '';
+const mver = n => Number((String(n).match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || 0);
+function pickModels(names) {
+  const ok = names.filter(n => /flash/.test(n) && !/(lite|tts|image|live|audio|embedding|preview|exp)/.test(n));
+  const plain = ok.filter(n => /^gemini-\d+(\.\d+)?-flash$/.test(n)).sort((a, b) => mver(b) - mver(a));
+  return [...plain, ...ok.filter(n => !plain.includes(n)).sort((a, b) => mver(b) - mver(a))];
+}
+async function listModels(key, fetchFn) {
+  if (MODEL_CACHE.list.length && Date.now() - MODEL_CACHE.at < 6 * 3600000) return MODEL_CACHE.list;
+  const r = await fetchFn('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', { headers: { 'x-goog-api-key': key } });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw Error('model list ' + r.status);
+  const names = ((j && j.models) || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => String(m.name || '').replace(/^models\//, ''));
+  MODEL_CACHE.at = Date.now(); MODEL_CACHE.list = pickModels(names);
+  return MODEL_CACHE.list;
+}
+const isGone = e => Number(e && e.code) === 404 || /no longer available|not found|is not supported for generateContent/i.test(String(e && e.message));
+async function geminiRead({ key, model, b64, mime, text, fetchFn = globalThis.fetch, ms = 45000, waitMs = 1500 }) {
   if (!key) throw Object.assign(Error('AI key nahi (app → Settings → 🤖 AI)'), { code: 'nokey' });
   const call = async (mdl, think) => {
     const parts = b64 ? [{ inline_data: { mime_type: mime || 'image/jpeg', data: b64 } }, { text: PROMPT_IMG }] : [{ text: PROMPT_TXT + String(text || '').slice(0, 4000) }];
@@ -193,10 +214,32 @@ async function geminiRead({ key, model, b64, mime, text, fetchFn = globalThis.fe
       return out;
     } catch (e) { if (e && e.name === 'AbortError') throw Error('AI ' + Math.round(ms / 1000) + ' sec mein jawab nahi'); throw e; } finally { clearTimeout(t); }
   };
-  const one = async mdl => { let out; try { out = await call(mdl, true); } catch (e) { if (e.code !== 400) throw e; out = await call(mdl, false); } return parseGemini(out); };   // 400 = model thinkingConfig nahi leta
-  const m0 = String(model || FALLBACK_MODEL);
-  try { return { res: await one(m0), model: m0 }; }
-  catch (e) { if (m0 === FALLBACK_MODEL) throw e; log(`🤖 ${m0} nahi chala (${String(e.message).slice(0, 80)}) — ${FALLBACK_MODEL} se dobara`); return { res: await one(FALLBACK_MODEL), model: FALLBACK_MODEL }; }
+  const one = async mdl => { let out; try { out = await call(mdl, true); } catch (e) { if (e.code !== 400 || isGone(e)) throw e; out = await call(mdl, false); } return parseGemini(out); };   // 400 = model thinkingConfig nahi leta
+  const m0 = String(model || '').replace(/^models\//, '').trim();
+  const tried = new Set(), errs = [], T0 = Date.now();
+  const attempt = async (mdl, again) => {
+    tried.add(mdl);
+    try { const res = await one(mdl); GOOD = mdl; return { res, model: mdl }; }
+    catch (e) {
+      if (isGone(e)) DEAD.add(mdl);
+      if (again && [429, 500, 502, 503, 504].includes(Number(e.code)) && Date.now() - T0 < 60000) { await new Promise(r => setTimeout(r, waitMs)); return attempt(mdl, false); }   // rush = usi model ko ek dafa aur (der wala jawab nahi = seedha agla model)
+      errs.push(mdl + ': ' + String(e.message || e).slice(0, 90));
+      if (Number(e.code) === 401 || Number(e.code) === 403) throw Object.assign(Error('AI key ghalat / band (' + e.code + ') — app → Settings → 🤖 AI key'), { code: e.code });
+      return null;
+    }
+  };
+  const first = [m0, GOOD].filter(n => n && !DEAD.has(n));
+  for (const mdl of first) { if (tried.has(mdl)) continue; const r = await attempt(mdl, true); if (r) return r; }
+  let alts = [];
+  try { alts = await listModels(key, fetchFn); } catch (e) { errs.push('list: ' + String(e.message).slice(0, 60)); }
+  if (!alts.length) alts = [FALLBACK_MODEL];
+  let n = 0;
+  for (const mdl of alts) {
+    if (tried.has(mdl) || DEAD.has(mdl)) continue; if (n++ >= 2 || Date.now() - T0 > 110000) break;
+    log(`🤖 ${first[0] || 'model'} nahi chala — ${mdl} se dobara`);
+    const r = await attempt(mdl, true); if (r) return r;
+  }
+  throw Error(errs.length ? errs.slice(-2).join(' · ') : 'AI model nahi mila');
 }
 
 // ---------- 🔍 POS item se milan (dhoond.mjs smartFind — AI NAHI) ----------
@@ -682,6 +725,18 @@ async function start(ZINDA) {
     finally { claiming.delete(id); }
   }
   ORD.where('st', '==', 'new').onSnapshot(s => { for (const d of s.docs) claimNew(d.id); }, authErr);
+  // v1.1: model ki ghalti (AI 404 / Google ne model band kiya) se fail hui pichhle 3 ghante ki parchiyan EK dafa khud dobara (rr:1 = dobara nahi)
+  setTimeout(async () => {
+    try {
+      const s = await ORD.where('st', '==', 'fail').limit(60).get();
+      for (const d of s.docs) {
+        const x = d.data() || {};
+        if (x.rr || Date.now() - (Number(x.at) || 0) > 3 * 3600000 || !/AI 404|no longer available|not found/i.test(String(x.err || ''))) continue;
+        await d.ref.update({ st: 'new', err: '', rr: 1, upAt: Date.now() });
+        log(`🔁 #${shortNo(d.id)} model ki ghalti se ruki thi — dobara parh raha`);
+      }
+    } catch (e) { log('⚠️ dobara parhna: ' + e.message); }
+  }, 20000);
   const rqBusy = new Set();
   ORD.orderBy('prReq', 'desc').limit(30).onSnapshot(s => {
     for (const d of s.docs) {

@@ -4020,3 +4020,5 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - QAIDA: PC par npm install sirf APNE folder mein (wa-mods jaisa) — C:\khata-sync mein `npm install <pkg>` package.json se bahar wale sab packages (firebase-admin, mssql) mita deta hai; Node 20.12+ par npm `exec` (shell) se chalao, `execFile('npm.cmd')` EINVAL deta hai (nt-print.js ~L421 mein yahi khatra — jab chhuo theek karo).
 
 ## app v2.179.0 (2026-11-04) — sirf app (camera screen v2 phone par + WhatsApp Parchi Sale line ka 🏬 godam chip, gate pass switch hata). PC / rules / manifest kuch nahi badla.
+
+## wa-parchi v1.1 (2026-11-04, manifest 2026-11-04.2) — AI 404 (gemini-2.5-flash band) theek: model Google ki list se khud chunta hai (rush par dobara, GOOD yaad, DEAD yaad, 401/403 = key ghalat). Shuru par pichhle 3 ghante ki model-ghalti wali fail parchiyan ek dafa khud dobara (rr:1). QAIDA: AI model hardcode fallback nahi — list se.

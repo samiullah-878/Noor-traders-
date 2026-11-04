@@ -6800,3 +6800,9 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - wa-sale.js: 🚪 Gate pass ⋮ se HATA (`gateNow()` = 0, sam-ws-gate / sam-sale-gate nahi parhta) · har line ke aakhir `gcHTML` chip `.wps-gc` (Lines: `.pp-cr1` ke aakhir · Table: ✕ se pehle) → `data-ws-gc` = agla godam (`setLineGodam`, rate us godam ka, stock rok wahi) · footer ka godam select hata.
 - PC (1100px+) camera screen, transfer note camera, barcode-chuno (pick) camera PEHLE JAISE. Sale screen ka 🚪 Gate pass (⋮) NAHI chheda.
 - QAIDA: scanner ke hooks (setSale*Hook) GLOBAL hain — har screen apne `installHooks` mein jo hook use nahi karti use `null` kare, warna pichhli screen ka hook chalta hai. AI nahi.
+
+## PC wa-parchi v1.1 · manifest 2026-11-04.2 (2026-11-04) — 🤖 AI 404 theek (app v2.179.0 wahi)
+- Ghalti: pehla model na chale to FALLBACK 'gemini-2.5-flash' tha — Google ne band kar diya ("models/gemini-2.5-flash is no longer available to new users … use gemini-3.8-flash") → parchi "✕ AI 404".
+- Ab `geminiRead`: config ka model → (rush 429/5xx par usi ko 1 dafa aur) → pichhla chalta `GOOD` → Google ki LIST (`/v1beta/models`, 6 ghante yaad, `pickModels` = seedha gemini-N-flash naya pehle, lite/preview nahi) se 2 aur; 404 wala `DEAD` yaad; 401/403 = "AI key ghalat" foran; kul ~110 s hadd. Key kabhi log nahi.
+- Shuru ke 20 s baad: pichhle 3 ghante ki `st:'fail'` + err "AI 404 / no longer available / not found" parchiyan EK dafa `st:'new', rr:1` → claimNew dobara parhe + print.
+- QAIDA: AI model ka naam kabhi pakka (hardcode) fallback na rakho — Google ki list se chuno (app ka ai-tally `pickModel` jaisa).
