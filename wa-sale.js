@@ -10,9 +10,11 @@
 //     Counter / Wholesale · Table / Lines · print copies · counter · 👤 gahak (v2.179.0: gate pass hata — line ka 🏬 godam chip) · ⚙️ WhatsApp setting (sirf malik: QR, numbers, print).
 //   Data attr SIRF `data-ws-*`, root `data-ws-root` — purchase.js ke (pp-root wale) listeners yahan kabhi nahi chalte (aur ulta bhi).
 //   Look: purchase ki classes (pp-tbl · pp-cr · pp-foot · pp-hbar · sale-hit …); apni nayi classes `wps-*` (purani .ws-* se takrao nahi).
+//   v2.179.1: 🗑 PARCHI HATAO (malik: "parchi katt bhi sake jaise remove kar sake") — khuli parchi ke card par ✕ + ⋮ 🗑 · st 'x:<pehle wala>'
+//     (mitti nahi — list se chhupi; ↩ Wapas 6 sec + ⋮ ♻️ Hatai hui) · CAP sale.wshide · PC (wa-parchi v1.1) chhupi ko wapas nahi laata. Rules wahi.
 //   CAP sale.wsale (default khula). AI app mein NAHI — parchi PC parhta hai. Agent action NAHI (malik ka qaida v2.111.0).
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.179.0';
-import { smartSearch, noteHit } from './smart-search.js?v=2.179.0';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.179.1';
+import { smartSearch, noteHit } from './smart-search.js?v=2.179.1';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -175,6 +177,8 @@ function listenOrders() {
     if (allOrders().some(o => o._local || String(o.st || 'new') === 'new')) { paintOrders(); headPaint(); const w = $('wpsWait'); if (w) w.outerHTML = waitHTML(curOrder()); }
   }, 10000);
 }
+const hid = o => /^x:/.test(String(o?.st || ''));   // v2.179.1: 🗑 hatai hui (st 'x:<pehle wala>') — list se chhupi, ↩ wapas
+const canHide = () => C.owner() || C.can('sale.wshide');
 const ready = o => !!o && !o._local && ('j' in o || 'n' in o) && !['new', 'read', 'fail', 'skip'].includes(String(o.st || 'new'));   // PC ne parh li ('read' = PC parh raha — abhi lines nahi) (sirf server wala doc yahan aata hai)
 function onOrders(list) {
   const t = Date.now(), fresh = [];
@@ -194,7 +198,7 @@ function onOrders(list) {
 function allOrders() {
   const ids = new Set(orders.map(o => o.id));
   for (const [id, lo] of [...localOrd]) if (ids.has(id) && lo._local !== 'prep') { try { if (String(lo.th).startsWith('blob:')) URL.revokeObjectURL(lo.th); } catch {} lo.th = ''; localOrd.delete(id); }
-  return [...localOrd.values(), ...orders].sort((a, b) => (Number(b.at) || 0) - (Number(a.at) || 0));
+  return [...localOrd.values(), ...orders.filter(o => !hid(o))].sort((a, b) => (Number(b.at) || 0) - (Number(a.at) || 0));
 }
 const curOrder = () => !cur ? null : orders.find(o => o.id === cur) || localOrd.get(cur) || (curSnap && curSnap.id === cur ? curSnap : null);
 const snapOf = o => ({ id: o.id, src: o.src || '', at: Number(o.at) || 0, day: o.day || '', ph: o.ph || '', nm: o.nm || '', st: o.st || '', n: Number(o.n) || 0, u: Number(o.u) || 0, by: o.by || '', txt: String(o.txt || '').slice(0, 2000) });
@@ -226,7 +230,7 @@ function ordersHTML() {
   return `<div class="wps-ords" id="wpsOrds">${err}<div class="wps-orow">${L.map(o => {
     const [cl, lab] = stOf(o), who = o.nm || o.ph || (o.src === 'app' ? 'App ki parchi' : 'WhatsApp parchi');
     const th = o.th ? `<img src="${esc(o.th)}" alt="" loading="lazy">` : `<span class="wps-oi">${o.src === 'app' ? '📷' : o.txt && !o.cap ? '✍️' : '📲'}</span>`;
-    return `<button type="button" class="wps-oc ${cl}${o.id === cur ? ' is-in' : ''}${o.st === 'billed' ? ' done' : ''}" data-ws-ord="${esc(o.id)}">${th}<span class="wps-ot"><b>${esc(who)}</b><small>${o.day && o.day !== t0 ? 'kal · ' : ''}${esc(hm(o.at))}${o.nm && o.ph ? ' · ' + esc(o.ph) : ''}</small><i class="wps-ost ${cl}">${esc(lab)}</i></span>${prOf(o)}</button>`;
+    return `<button type="button" class="wps-oc ${cl}${o.id === cur ? ' is-in' : ''}${o.st === 'billed' ? ' done' : ''}" data-ws-ord="${esc(o.id)}">${th}<span class="wps-ot"><b>${esc(who)}</b><small>${o.day && o.day !== t0 ? 'kal · ' : ''}${esc(hm(o.at))}${o.nm && o.ph ? ' · ' + esc(o.ph) : ''}</small><i class="wps-ost ${cl}">${esc(lab)}</i></span>${prOf(o)}${o.id === cur && canHide() && o._local !== 'prep' && o._local !== 'send' ? `<i class="wps-ox" data-ws-hide="${esc(o.id)}" role="button" aria-label="Parchi hatao" title="Parchi hatao">✕</i>` : ''}</button>`;
   }).join('')}</div></div>`;
 }
 function paintOrders() { const el = $('wpsOrds'); if (el) el.outerHTML = ordersHTML(); }
@@ -362,6 +366,8 @@ function toolsHTML(o) {
   return `<div class="account-tools pp-tools wps-tools">
     <button type="button" class="sh-wide" data-ws-cam="1" data-mn="ws.cam" data-mn-i="📷" data-mn-t="Parchi photo" data-mn-s="camera — PC parh kar items bharega" data-mn-g="${GRP}">📷 Parchi photo</button>
     <button type="button" class="sh-wide" data-ws-gal="1" data-mn="ws.gal" data-mn-i="🖼" data-mn-t="Parchi gallery se" data-mn-s="phone mein rakhi tasveer" data-mn-g="${GRP}">🖼 Gallery se parchi</button>
+    ${o && canHide() && !hid(o) && o._local !== 'prep' && o._local !== 'send' ? `<button type="button" class="sh-wide" data-ws-hide="${esc(o.id)}" data-mn="ws.hide" data-mn-i="🗑" data-mn-t="Parchi hatao" data-mn-s="list se — ↩ wapas ho sakti hai" data-mn-g="${GRP}">🗑 Parchi hatao</button>` : ''}
+    ${canHide() && orders.some(hid) ? `<button type="button" class="sh-wide" data-ws-hidlist="1" data-mn="ws.hid" data-mn-i="♻️" data-mn-t="Hatai hui parchiyan" data-mn-s="${orders.filter(hid).length} — tap = wapas list mein" data-mn-g="${GRP}">♻️ Hatai hui parchiyan</button>` : ''}
     ${o && !o._local ? `<button type="button" class="sh-wide" data-ws-pv="1" data-mn="ws.pv" data-mn-i="🧾" data-mn-t="Parchi ki tasveer" data-mn-s="poori parchi dekhein" data-mn-g="${GRP}">🧾 Parchi ki tasveer</button>${gahakBox(o)}` : ''}
     ${seg('ws.mode', '🛒', 'Sale ki qism', mode === 'wholesale' ? 'Wholesale (W rate)' : 'Counter (R rate)', B(mode === 'counter', 'mode', 'counter', '🛒 Counter') + (C.can('sale.wholesale') ? B(mode === 'wholesale', 'mode', 'wholesale', '📦 Wholesale') : ''))}
     ${seg('ws.view', '📊', 'Bill ka look', v === 'grid' ? 'Table' : 'Lines', B(v === 'grid', 'view', 'grid', '📊 Table') + B(v === 'rows', 'view', 'rows', '☰ Lines'))}
@@ -562,6 +568,46 @@ async function save() {
   } catch (err) { C.notice('Bill save nahi hua: ' + (err?.message || err)); }
   finally { saving = false; C.rerender(); }
 }
+function clearCur() { cart = []; unclear = []; cur = ''; curSnap = null; pendLoad = ''; cash = null; note = ''; mode = 'counter'; selKey = ''; keep(); }
+// ---------- 🗑 parchi hatao (v2.179.1) — st 'x:<pehle>' (mitti nahi) · ↩ Wapas 6 sec · ⋮ ♻️ Hatai hui ----------
+let undoT = 0;
+function undoShow(id) {
+  clearTimeout(undoT); document.getElementById('wpsUndo')?.remove();
+  const el = document.createElement('div'); el.id = 'wpsUndo'; el.className = 'wps-undo'; el.setAttribute('role', 'status');
+  el.innerHTML = `<span>🗑 Parchi hata di</span><button type="button" data-ws-unhide="${esc(id)}">↩ Wapas</button>`;
+  document.body.appendChild(el); undoT = setTimeout(() => el.remove(), 6000);
+}
+async function hideOrd(id) {
+  if (!canHide()) { C.notice('Parchi hatane ki ijazat nahi — malik se poochein'); return; }
+  const lo = localOrd.get(id);
+  if (lo) {   // is phone ki parchi jo PC tak nahi gayi (✕ Nahi gayi) — seedha hatao
+    if (lo._local === 'prep' || lo._local === 'send') { C.notice('⏳ Parchi abhi ja rahi hai — thori der baad'); return; }
+    try { if (String(lo.th).startsWith('blob:')) URL.revokeObjectURL(lo.th); } catch {} localOrd.delete(id);
+    if (cur === id) clearCur(); C.rerender(); C.notice('🗑 Parchi hata di'); return;
+  }
+  const o = orders.find(x => x.id === id); if (!o || hid(o)) return;
+  if (cur === id && o.st !== 'billed' && (cart.length || unclear.some(u => !u.done)) && !confirm('Is parchi ka adhoora bill bhi saaf ho jayega — hata dein?')) return;
+  const prev = String(o.st || 'new'), st = 'x:' + prev;
+  o.st = st; if (cur === id) clearCur(); C.rerender(); undoShow(id);
+  try { await withT(C.cloud.updateParchiOrder(id, { st, upAt: Date.now() }), 12000); }
+  catch (e) { if (o.st === st) o.st = prev; document.getElementById('wpsUndo')?.remove(); C.rerender(); C.notice('✕ Parchi nahi hati: ' + (perm(e) ? 'ijazat nahi' : String(e?.message || e).slice(0, 60))); }
+}
+async function unhide(id) {
+  clearTimeout(undoT); document.getElementById('wpsUndo')?.remove();
+  const o = orders.find(x => x.id === id); if (!o || !hid(o)) return;
+  const was = o.st, st = String(o.st).slice(2) || 'new';
+  o.st = st; C.rerender(); hidPaint();
+  try { await withT(C.cloud.updateParchiOrder(id, { st, upAt: Date.now() }), 12000); C.notice('↩ Parchi wapas list mein'); }
+  catch (e) { if (o.st === st) o.st = was; C.rerender(); hidPaint(); C.notice('✕ Wapas nahi aayi: ' + (perm(e) ? 'ijazat nahi' : String(e?.message || e).slice(0, 60))); }
+}
+function hidHTML() {
+  const L = orders.filter(hid), t0 = todayStr();
+  if (!L.length) return '<p class="wps-oempty">♻️ Koi hatai hui parchi nahi (aaj + kal).</p>';
+  return `<div class="wps-hl">${L.map(o => { const who = o.nm || o.ph || (o.src === 'app' ? 'App ki parchi' : 'WhatsApp parchi');
+    return `<div class="wps-hr"><span class="wps-oi">${o.src === 'app' ? '📷' : '📲'}</span><span class="wps-ot"><b>${esc(who)}</b><small>${o.day && o.day !== t0 ? 'kal · ' : ''}${esc(hm(o.at))}</small></span><button type="button" class="wps-tc pri" data-ws-unhide="${esc(o.id)}">↩ Wapas</button></div>`; }).join('')}</div>`;
+}
+function hidPaint() { const b = document.querySelector('#dialog[open] #dialogBody [data-ws-hidbox]'); if (b) b.innerHTML = hidHTML(); }
+function hidOpen() { if (!C.modal) return; C.modal('♻️ Hatai hui parchiyan', `<div data-ws-hidbox="1">${hidHTML()}</div>`, true); }
 async function orderPatch(k, patch, okMsg) {   // ✓ Maal nikla / 🖨 Dobara print — chip par ⏳ → ✅ / ✕
   const o = curOrder(); if (!o || o._local || !C.cloud?.updateParchiOrder) return;
   chipSt[k] = 'w'; footPaint();
@@ -787,9 +833,12 @@ document.addEventListener('click', e => {
     return; }
   if (!document.querySelector('[data-ws-root]')) return;
   const r = t.closest('#list .pp-cr, #list .pp-tr'); if (r && r.dataset.wsSel && !t.closest('button,select,input')) selSet(r.dataset.wsSel);
-  const b = t.closest('[data-ws-ord],[data-ws-add],[data-ws-del],[data-ws-open],[data-ws-mode],[data-ws-view],[data-ws-copies],[data-ws-counter],[data-ws-gc],[data-ws-cam],[data-ws-gal],[data-ws-camera],[data-ws-pv],[data-ws-gsave],[data-ws-set],[data-ws-upick],[data-ws-uskip],[data-ws-uback],[data-ws-pick],[data-ws-reprint],[data-ws-clear],[data-ws-save]');
+  const b = t.closest('[data-ws-hide],[data-ws-hidlist],[data-ws-unhide],[data-ws-ord],[data-ws-add],[data-ws-del],[data-ws-open],[data-ws-mode],[data-ws-view],[data-ws-copies],[data-ws-counter],[data-ws-gc],[data-ws-cam],[data-ws-gal],[data-ws-camera],[data-ws-pv],[data-ws-gsave],[data-ws-set],[data-ws-upick],[data-ws-uskip],[data-ws-uback],[data-ws-pick],[data-ws-reprint],[data-ws-clear],[data-ws-save]');
   if (!b) return;
   const d = b.dataset;
+  if (d.wsHide) { hideOrd(d.wsHide); return; }   // v2.179.1
+  if (d.wsHidlist) { hidOpen(); return; }
+  if (d.wsUnhide) { unhide(d.wsUnhide); return; }
   if (d.wsOrd) { loadOrder(d.wsOrd); return; }
   if (d.wsCamera) { openSaleCamera(); return; }
   if (d.wsAdd) { const it = stock().items.find(x => String(x.id) === d.wsAdd); if (!it) return; const res = addItem(it); const s = $('search'); if (s) s.value = ''; C.notice(res.again ? `+1 · ${it.name}` : `✓ ${it.name}`); C.rerender(); setTimeout(() => { const el = document.querySelector(`#list [data-ws-sel="${CSS.escape(res.line.k)}"]`); if (el) keepScan(el); }, 60); return; }
@@ -816,7 +865,7 @@ document.addEventListener('click', e => {
   if (d.wsReprint) { orderPatch('print', { prReq: Date.now() }, '🖨 Dobara print ka hukam PC ko gaya'); return; }
   if (d.wsClear) {
     if ((cart.length || unclear.some(u => !u.done)) && !confirm('Yeh bill saaf kar dein? (parchi waisi hi rahegi)')) return;
-    cart = []; unclear = []; cur = ''; curSnap = null; pendLoad = ''; cash = null; note = ''; mode = 'counter'; selKey = ''; keep(); C.rerender(); return;
+    clearCur(); C.rerender(); return;
   }
   if (d.wsSave) save();
 });

@@ -32,6 +32,18 @@ export async function shrinkForAI(file, maxPx = 1800, quality = 0.85) {
   return { mime: 'image/jpeg', data: url.slice(url.indexOf(',') + 1) };
 }
 
+// v2.179.1: 🤖 Google ne purane model band kiye (gemini-2.5-flash: 2 Nov 2026 — "This model … is no longer available" 404). Purana naam = foran naya
+//   Koi model 404 de to Google ki LIST se agla (MODEL_PREF wale pehle — sirf jo list mein hon; qaida: naam kabhi pakka nahi) — chal jaye to malik ki app
+//   naya model aiConfig mein bhi likh deti hai (setModelGoneHook) taake PC bhi wohi le. Is session mein band mila model dobara nahi aazmaya jata (liveModel).
+const OLD_MODEL = /^gemini-(1\.\d|2\.0)|^gemini-2\.5-(flash|pro)$/;
+export const MODEL_PREF = ['gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.5-flash-lite'];
+const goneSet = new Set(); let goneHook = null;
+export const setModelGoneHook = f => { goneHook = typeof f === 'function' ? f : null; };
+export const isOldModel = m => OLD_MODEL.test(String(m || ''));
+let goneAlt = '';   // is session mein band model ki jagah jo chala
+export const liveModel = m => { m = String(m || ''); return m && goneSet.has(m) && goneAlt ? goneAlt : m; };
+const okAlt = n => n && !OLD_MODEL.test(n) && !goneSet.has(n);
+const tellGone = (m, alt) => { goneAlt = alt; try { goneHook?.(m, alt); } catch { /* sirf yaad */ } };
 async function api(path, key, init = {}) {
   let res, body = null; const { ms = 0, ...rest } = init;   // v2.103.90: ms = is koshish ki hadd (Google rush mein 40-60 s latka rehta tha)
   const ac = ms ? new AbortController() : null, tm = ac ? setTimeout(() => ac.abort(), ms) : 0;
@@ -44,7 +56,7 @@ async function api(path, key, init = {}) {
     const msg = body?.error?.message || ('HTTP ' + res.status);
     if (res.status === 400 && /API key/i.test(msg)) throw Error('AI key ghalat hai — Settings mein dobara paste karein.');
     if (res.status === 403) throw Error('AI key par ijazat nahi (403): ' + msg);
-    if (res.status === 404) throw Error('Yeh model nahi mila — Settings > AI key > "Test" dabayein taake sahi model chun liya jaye.');
+    if (res.status === 404) throw Object.assign(Error('Yeh AI model Google par band / nahi mila — Settings > AI key > ⚡ Speed test se naya chunein.'), { gone: true });   // v2.179.1: gone = agla model
     if (res.status === 429) throw Error('AI ki aaj ki muft hadd poori ho gayi (429). Thori der baad ya kal koshish karein.');
     throw Error('AI error: ' + msg);
   }
@@ -84,6 +96,7 @@ const short = m => String(m || '').replace(/^gemini-/, '');
 //   Ab: har koshish ki HADD (tez 25 s · pakka 50 s), rush / hadd par FORAN doosra model (koi waqfa nahi), aakhri koshish lambi (60 s).
 //   Gemini 3 ko "sochna kam" = thinkingLevel 'minimal' (thinkingBudget 0 woh nahi maanta → pehle be-had sochta tha = slow).
 async function generate({ key, model, parts, onStatus, fast = false, think = '' }) {
+  const asked = model; model = liveModel(model);   // v2.179.1: band model (2.5-flash) = foran naya
   const g3 = m => /gemini-3/i.test(String(m || ''));
   const cfgOf = (m, lv) => {   // lv: 0 = had wala sochna, 1 = thora narm, 2 = bina config
     let tc = null;
@@ -108,19 +121,20 @@ async function generate({ key, model, parts, onStatus, fast = false, think = '' 
   const altList = async () => {
     if (alts) return alts;
     try {
-      const m = await pickModel(key), seen = new Set([model]);
-      alts = [m.best, ...m.all.filter(n => /flash/.test(n) && !/(lite|tts|image|live|audio|embedding)/.test(n))].filter(n => n && !seen.has(n) && seen.add(n));
-    } catch { alts = []; }
+      const m = await pickModel(key), seen = new Set([model]), have = new Set(m.all);
+      alts = [...MODEL_PREF.filter(n => have.has(n)), m.best, ...m.all.filter(n => /flash/.test(n) && !/(lite|tts|image|live|audio|embedding)/.test(n))].filter(n => okAlt(n) && !seen.has(n) && seen.add(n));
+    } catch { alts = MODEL_PREF.filter(n => n !== model && okAlt(n)); }
     return alts;
   };
-  try { return await call(model, lim); }
-  catch (e) { lastErr = e; if (!busyError(e)) throw e; }
-  const L = await altList();
-  for (let i = 0; i < Math.min(2, L.length); i++) {
-    onStatus?.('Google par rush — doosra model: ' + short(L[i]) + '…');
-    try { return await call(L[i], i === Math.min(2, L.length) - 1 ? 60000 : lim); }
-    catch (e) { lastErr = e; if (!busyError(e)) throw e; }
+  try { const r = await call(model, lim); if (asked !== model) tellGone(asked, model); return r; }
+  catch (e) { lastErr = e; if (e?.gone) goneSet.add(model); else if (!busyError(e)) throw e; }
+  const gone = !!lastErr?.gone, L = await altList(), nTry = Math.min(gone ? 3 : 2, L.length);
+  for (let i = 0; i < nTry; i++) {
+    onStatus?.((gone ? 'Yeh model Google par band — naya model: ' : 'Google par rush — doosra model: ') + short(L[i]) + '…');
+    try { const r = await call(L[i], i === nTry - 1 ? 60000 : lim); if (gone) tellGone(asked, L[i]); return r; }
+    catch (e) { lastErr = e; if (e?.gone) goneSet.add(L[i]); else if (!busyError(e)) throw e; }
   }
+  if (gone) throw Error('Yeh AI model Google ne band kar diya aur doosra bhi nahi chala — Settings → AI key → ⚡ Speed test se naya chunein. (' + (lastErr?.message || '') + ')');
   if (!L.length) {   // doosra model hai hi nahi — wahi ek dafa aur, lambi hadd
     onStatus?.('Google par rush — ' + short(model) + ' dobara…');
     try { return await call(model, 60000); } catch (e) { lastErr = e; if (!busyError(e)) throw e; }
@@ -139,7 +153,7 @@ export async function pingModel({ key, model, ms = 30000 }) {
   catch (e) { if (!/thinking|INVALID_ARGUMENT|HTTP 400/i.test(String(e?.message || ''))) throw e; await go(null); }
   return { ms: Date.now() - t0 };
 }
-export const SPEED_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-3.5-flash-lite'];
+export const SPEED_MODELS = ['gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.8-flash', 'gemini-3.5-flash-lite'];   // v2.179.1: 2.5-flash Google ne band kiya (2 Nov 2026)
 
 // v2.99.4: 🤖 NOOR AGENT — Gemini "function calling". contents = poori baat-cheet; model ka jawab (content) BILKUL waisa hi
 //   wapas history mein rakhna hai (Gemini 3 ke functionCall parts par 'thoughtSignature' hota hai — badla to 400).
@@ -147,6 +161,7 @@ export const SPEED_MODELS = ['gemini-2.5-flash', 'gemini-3.6-flash', 'gemini-3.8
 export async function agentStep({ key, model, system, contents, tools, onStatus }) {
   if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
   if (!model) throw Error('Model ka naam khali hai — Settings > AI key > Test dabayein.');
+  const asked = model; model = liveModel(model);   // v2.179.1
   // v2.99.7: ⚡ TEZ — "sochna" kam se kam: Gemini 3 = thinkingLevel minimal (na maane to low), 2.x = thinkingBudget 0; na maane to bina
   let tcfg = /gemini-3/i.test(String(model || '')) ? { thinkingLevel: 'minimal' } : { thinkingBudget: 0 };
   const body = () => JSON.stringify({
@@ -169,11 +184,13 @@ export async function agentStep({ key, model, system, contents, tools, onStatus 
   let out = null, lastErr = null;
   const delays = [2000, 5000];
   for (let i = 0; i <= delays.length && !out; i++) {
-    try { out = await call(model); }
-    catch (e) { lastErr = e; if (!busyError(e)) throw e; if (i < delays.length) { onStatus?.('Google par rush — dobara koshish…'); await wait(delays[i]); } }
+    try { out = await call(model); if (asked !== model) tellGone(asked, model); }
+    catch (e) { lastErr = e; if (e?.gone) { goneSet.add(model); break; } if (!busyError(e)) throw e; if (i < delays.length) { onStatus?.('Google par rush — dobara koshish…'); await wait(delays[i]); } }
   }
   if (!out) {
-    try { const m = await pickModel(key); const alt = m.all.find(n => n !== model && /flash/.test(n) && !/(lite|tts|image|live|audio|embedding)/.test(n)); if (alt) out = await call(alt); } catch { /* fallback bhi nakam */ }
+    try { let all = []; try { all = (await pickModel(key)).all; } catch { /* list nahi — pasand wale */ } const have = new Set(all);
+      const L = [...MODEL_PREF.filter(n => !all.length || have.has(n)), ...all.filter(n => /flash/.test(n) && !/(lite|tts|image|live|audio|embedding)/.test(n))].filter(n => n !== model && okAlt(n));
+      for (const alt of [...new Set(L)].slice(0, 2)) { try { out = await call(alt); if (lastErr?.gone) tellGone(asked, alt); break; } catch (e) { if (e?.gone) goneSet.add(alt); } } } catch { /* fallback bhi nakam */ }
   }
   if (!out) throw Error('Google ke server par abhi rush hai — thori der baad dobara. (' + (lastErr?.message || '') + ')');
   const content = out.candidates?.[0]?.content;
@@ -379,6 +396,7 @@ export function matchTally(book, rows, totals = []) {
 export async function hearAudio({ key, model, audio, prompt, onStatus }) {
   if (!key) throw Error('AI key nahi lagi — malik Settings mein "AI key" save kare.');
   if (!model) throw Error('Model ka naam khali hai — Settings > AI key > Test dabayein.');
+  model = liveModel(model);   // v2.179.1
   let tcfg = /gemini-3/i.test(String(model || '')) ? { thinkingLevel: 'minimal' } : { thinkingBudget: 0 };
   const parts = [{ inline_data: { mime_type: audio.mime, data: audio.data } }, { text: String(prompt || '') }];
   const once = m => api('/models/' + encodeURIComponent(m) + ':generateContent', key, { method: 'POST',
@@ -393,9 +411,10 @@ export async function hearAudio({ key, model, audio, prompt, onStatus }) {
   let out = null, lastErr = null;
   for (const d of [0, 1500, 4000]) {
     if (d) { onStatus?.('Google par rush — dobara koshish…'); await wait(d); }
-    try { out = await call(model); break; } catch (e) { lastErr = e; if (!busyError(e)) throw e; }
+    try { out = await call(model); break; } catch (e) { lastErr = e; if (e?.gone) { goneSet.add(model); break; } if (!busyError(e)) throw e; }
   }
-  if (!out) { try { const m = await pickModel(key); const alt = m.all.find(n => n !== model && /flash/.test(n) && !/(lite|tts|image|live|embedding)/.test(n)); if (alt) out = await call(alt); } catch { /* nakam */ } }
+  if (!out) { try { let all = []; try { all = (await pickModel(key)).all; } catch { /* pasand wale */ } const have = new Set(all);
+    const alt = [...MODEL_PREF.filter(n => !all.length || have.has(n)), ...all.filter(n => /flash/.test(n) && !/(lite|tts|image|live|embedding)/.test(n))].find(n => n !== model && okAlt(n)); if (alt) out = await call(alt); } catch { /* nakam */ } }
   if (!out) throw Error('Google ke server par abhi rush hai — thori der baad. (' + (lastErr?.message || '') + ')');
   const txt = (out.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('').trim();
   try { const a = txt.indexOf('{'), b = txt.lastIndexOf('}'); const j = JSON.parse(txt.slice(a, b + 1)); return String(j.text ?? '').trim(); }

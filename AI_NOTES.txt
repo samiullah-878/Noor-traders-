@@ -6806,3 +6806,13 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - Ab `geminiRead`: config ka model → (rush 429/5xx par usi ko 1 dafa aur) → pichhla chalta `GOOD` → Google ki LIST (`/v1beta/models`, 6 ghante yaad, `pickModels` = seedha gemini-N-flash naya pehle, lite/preview nahi) se 2 aur; 404 wala `DEAD` yaad; 401/403 = "AI key ghalat" foran; kul ~110 s hadd. Key kabhi log nahi.
 - Shuru ke 20 s baad: pichhle 3 ghante ki `st:'fail'` + err "AI 404 / no longer available / not found" parchiyan EK dafa `st:'new', rr:1` → claimNew dobara parhe + print.
 - QAIDA: AI model ka naam kabhi pakka (hardcode) fallback na rakho — Google ki list se chuno (app ka ai-tally `pickModel` jaisa).
+
+## v2.179.1 (2026-11-04) — 🗑 WhatsApp parchi hatao + 🤖 app ka AI band model (2.5-flash) se khud nikle · PC wa-parchi v1.2 (manifest 2026-11-04.3)
+- Malik (screenshot "App ki parchi ✕ AI 404"): "parchi katt bhi sake jaise remove kar sake" + AI 404 ka pakka hal → plan → OK.
+- 🗑 wa-sale.js: khuli parchi ke card par ✕ (`.wps-ox`, data-ws-hide) + ⋮ 🗑 Parchi hatao (ws.hide) → `updateParchiOrder(id, {st: 'x:<pehle wala>', upAt})` — MITTI NAHI, sirf `allOrders()` se chhupi (`hid()`).
+  ↩ Wapas patti 6 sec (`#wpsUndo`, body par) · ⋮ ♻️ Hatai hui parchiyan (ws.hid, aaj + kal) → ↩ = st wapas pehla. Is phone ki na-gayi parchi (_local err) = seedha localOrd se.
+  Khuli parchi hataayi = bill saaf (`clearCur`, adhoora ho to confirm). Save fail = wapas dikhti + ✕ paigham. CAP `sale.wshide` (default khula). Rules 2.86 wahi ('st' pehle se allowed).
+- 🖥 PC wa-parchi v1.2 (doosre session ka v1.1 — list wala model chunao — WAHI rakha): `upd()` ab transaction — parchi 'x:…' ho to naya haal bhi 'x:ok' (chhupi wapas nahi aati). v1.1 ka "fail dobara parho" sirf st 'fail' — chhupi ('x:fail') nahi.
+- 🤖 ai-tally.js: 404 = `{gone: true}` → Google ki LIST se agla (MODEL_PREF 3.5-flash / 3.6-flash / 3.5-flash-lite sirf agar list mein hon, phir best flash; 2.5 / 2.0 / 1.5 kabhi nahi) — generate · agentStep · hearAudio.
+  Chal jaye to `setModelGoneHook` → malik ki app aiConfig.model naya (PC bhi wohi parhe) + notice. Is session mein band model ki jagah seedha chalta (`liveModel`).
+  SPEED_MODELS: 2.5-flash hata, 3.5-flash. app.js `ai25Try` (pehle 2.5 par WAPAS le jata tha!) → ab ulta: aiConfig purana (2.5/2.0/1.5) ho to din mein ek dafa list se naya ping kar ke save. AI wahi, sirf model ka naam.

@@ -1,5 +1,6 @@
 // =========================================================
-//  wa-parchi.js  v1.1 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  wa-parchi.js  v1.2 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v1.2: 🗑 app ne parchi hata di (st 'x:<pehle>' — app v2.179.1) to AI ka jawab / print ka haal baad mein aaye tab bhi parchi CHHUPI rahe ('x:ok') — wapas list mein nahi aati.
 //  v1.1: Google ne gemini-2.5-flash band kiya ("no longer available to new users") — pehla model na chale to Google ki LIST se
 //        behtareen chalta flash model khud (app ke pickModel jaisa), rush par usi ko ek dafa aur; jo chala woh yaad. Shuru mein
 //        pichhle 3 ghante ki "AI 404 / model" wali fail parchiyan EK dafa khud dobara parhi jati hain (rr:1).
@@ -27,7 +28,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '1.1';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '1.2';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -534,7 +535,12 @@ async function start(ZINDA) {
   const errs = new Map();   // id → { te, ae } (perr dono ka)
   const trim = (m, n = 500) => { while (m.size > n) m.delete(m.keys().next().value); };
   const perrOf = id => { const e = errs.get(id) || {}; return [e.te ? 'Thermal: ' + e.te : '', e.ae ? 'A4: ' + e.ae : ''].filter(Boolean).join(' · ').slice(0, 300); };
-  const upd = (id, p) => ORD.doc(id).update({ ...p, upAt: Date.now() }).catch(e => log(`⚠️ ${id} likha nahi: ${e.message}`));
+  // v1.2: app ne parchi hata di (st 'x:…') ho to naya haal bhi chhupa hi likho ('x:ok') — hatai hui parchi wapas list mein na aaye
+  const upd = (id, p) => db.runTransaction(async tx => {
+    const ref = ORD.doc(id), s = await tx.get(ref), now = s.exists ? String((s.data() || {}).st || '') : '', q = { ...p, upAt: Date.now() };
+    if (typeof q.st === 'string' && /^x:/.test(now) && !/^x:/.test(q.st)) q.st = 'x:' + q.st;
+    tx.update(ref, q);
+  }).catch(e => log(`⚠️ ${id} likha nahi: ${e.message}`));
   async function printThermal(o, P, img, opt) {
     let text, rasters = {};
     if (opt.fail) { text = failText(o, opt.fail, { rp: opt.rp, photo: !!(PH && opt.jpg) }); if (PH && opt.jpg) rasters.photo = PH.photoRaster(dataUrl(opt.jpg), 512, 900, { crop: 0 }); }
