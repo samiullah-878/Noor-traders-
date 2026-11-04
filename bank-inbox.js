@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.180.1';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.180.2';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -816,7 +816,7 @@ function prnHTML() {
   return `<div class="prn-root"><div class="prn-head ${live ? (c.vErr ? 'warn' : 'ok') : 'bad'}"><span class="prn-dot"></span><div><b>${live ? (c.vErr ? '⚠️ Aakhri parchi mein masla' : '✓ Server PC aur printer chal rahe hain') : age === null ? '❓ Abhi koi khabar nahi aayi' : `🔴 Server PC ${age} min se khamosh`}</b>
     <small>${c.vLast ? 'Aakhri parchi: ' + t(c.vLast) : 'Abhi koi parchi nahi'}${age !== null ? ' · aakhri dhadkan ' + (age < 1 ? 'abhi' : age + ' min pehle') : ''}</small>${c.vErr ? `<small class="prn-err">${esc(c.vErr)}</small>` : ''}</div></div>
     <div class="prn-stats"><div><b>${tOk}</b><small>Aaj chhapi</small></div><div class="${tBad ? 'bad' : ''}"><b>${tBad}</b><small>Aaj nahi chhapi</small></div><div><b>${L.length}</b><small>List mein</small></div></div>
-    <div class="prn-list">${L.map(x => `<div class="prn-it ${x.ok ? 'ok' : 'bad'}"><span>${x.ok ? '✓' : '✕'}</span><div><b>${esc(x.name || x.code)}${x.bank ? ' <i>HBL</i>' : ''}${x.again ? ' <i>dobara</i>' : ''}</b><small>${esc(x.code)} · ${esc(t(x.at))}${x.ok ? '' : ' · ' + esc(x.err || '')}</small></div><em>Rs ${Number(x.amt || 0).toLocaleString('en-US')}</em>${x.code ? `<button type="button" class="prn-again" data-prn-again="${esc(x.code)}" data-prn-name="${esc(x.name || '')}">🖨</button>` : ''}</div>`).join('') || '<p class="bk-empty">Abhi list khali hai — agli parchi ke baad yahan aayegi</p>'}</div>
+    <div class="prn-list">${L.map(x => `<div class="prn-it ${x.ok ? 'ok' : 'bad'}"><span>${x.ok ? '✓' : '✕'}</span><div><b>${esc(x.name || x.code)}${x.bank ? ' <i>HBL</i>' : ''}${x.again ? ' <i>dobara</i>' : ''}</b><small>${esc(x.code)} · ${esc(t(x.at))}${x.s ? ' · ⏱ ' + esc(String(x.s)) + ' sec' : ''}${x.ok ? '' : ' · ' + esc(x.err || '')}</small></div><em>Rs ${Number(x.amt || 0).toLocaleString('en-US')}</em>${x.code ? `<button type="button" class="prn-again" data-prn-again="${esc(x.code)}" data-prn-name="${esc(x.name || '')}">🖨</button>` : ''}</div>`).join('') || '<p class="bk-empty">Abhi list khali hai — agli parchi ke baad yahan aayegi</p>'}</div>
     <p class="bk-note">Printer band / kaghaz khatam ho to theek kar ke 🖨 dabayein — wohi parchi dobara nikal aayegi.</p></div>`;
 }
 export function openPrinter() {

@@ -4064,3 +4064,13 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
   List app ko: `pushMen()` shuru + har 10 min → `blueAccess/supplyMen {men:[{id,n}], at, pc}` — pehle Firestore parhta hai (parh na sake = likhna nahi), sirf badle to likhta hai. POS mein IsActive 0 wala (agar column ho) list mein nahi. EDIT (saleEdits) POS ka purana SupplyManID hi rakhta hai (SELECT * head).
 - 🚪 Malik: "default godam (NOOR TRADERS) ka gate pass ON ho to alag gate pass parchi nahi aati". App ka switch `gate > 0` = har line usi godam se. Pehle PC sirf godam ≠ bill branch wali lines ki parchi chhapta tha → NOOR TRADERS chuna to kuch nahi.
   Ab sale-post `printGatePasses(r, pr, ok.gate > 0)` + nt-print `gateJobs` (d.gate > 0) = switch ON par har godam ki parchi (app 'Yehi device' pehle se aisa karti thi). POS ka IsGetStore wahi (sirf asal godam line). AI nahi.
+
+## PC pos-khata-sync (q) · manifest 2026-11-04.8 (2026-11-04) — ⚡ voucher + parchi FORAN
+- Malik (photo: Dukan ka kharcha 105,000 par minton CPV / 🖨 nahi): "waiting time nahi — parchi usi time, voucher bhi foran, har entry". Asal wajah PC log mein (yahan se nazar nahi) — sab mumkin rukawatein band:
+  1) DO LINE: `vRun` (quickEntries — sirf voucher) · `pRun` (printExpenses / printPurchases / runKhataPrints). Pehle ek hi `quickRun` loop — koi lambi print (khata / Daily Sab print / purchase) chal rahi ho to naya voucher ruka rehta tha. tick = `await vRun()` + `pRun()` peeche.
+  2) quickEntries mein parchi `await` NAHI — alag async (agla voucher print ka intezar nahi); markApp / logPrint us ke andar.
+  3) PRINTER: `prHi` (nayi entry ki parchi — quick, full sync ki nayi, kharcha, purchase) hamesha `prLo` (khata / Daily / galla / dobara print) se AAGE. Har kaam ki hadd `PR_CAP` 45 s (Promise.race) — atka worker / spooler line nahi rokta; hadd = false + lastPrintErr (app ⚠️ + 🖨 dobara).
+  4) `printReceipt0(text, hi)`: hi = `UR.fillNotes(text, 1)` — yaad (cache) ho to wohi, warna roman2ur FORAN; AI noteBg peeche agli dafa ke liye (pehle har parchi par 4 s AI intezar).
+  5) Naya kharcha khata: entry `lastAcct` mein party na ho = `waitAcct`; once() mein syncAccounts ke foran baad `fresh` mein wapas + vRun (poore syncEntries ka intezar nahi).
+  6) `ctOf` = entry ka server createTime (listener) → log "entry se N s" + printConfig.voucherLog `s` (app 🖨 Printer ki haalat mein ⏱).
+- posWriteVoucher / links / inFlight / dohri parchi ki hifazat BILKUL wahi. AI nahi.

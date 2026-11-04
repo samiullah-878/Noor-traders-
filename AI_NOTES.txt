@@ -6868,3 +6868,10 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 ## v2.180.1 (2026-11-04) — "aam raqam … bohat ZYADA" popup BAND
 - Malik (photo): "Dukan ka kharcha · aam raqam Rs 500–6,131 · aap ne 105,000 — bohat ZYADA" — "pehle nahi tha ab kyun". Wajah: v1.80 ka `oddAmountMessage` (khate ki pichhli 20 entries se 8× farq) — v2.163.0 se har kharcha apna khata, 4+ entries hote hi kharche par bhi aane laga.
 - Malik ne chuna: HAR khate par band. app.js `ODD_AMT_ON = false` (function rakha, save() + jora save dono mein khali). AI nahi. Rules / PC kuch nahi.
+
+## v2.180.2 (2026-11-04) — ⏳/⚠️ PC haalat har entry par · Bills search 335 = sirf 335 · PC khata-sync (q)
+- Malik: "waiting time nahi — parchi usi time, voucher bhi foran, har entry" → PC pos-khata-sync (q) (pc/AI_NOTES dekho).
+- App `pcWaitOf(e)` (app.js): POS jure khate (posLinkedP) ki AAJ ki nayi entry (payment / collection / credit / borrow, transfer / purchase / bankSms / posNo nahi) jab tak posCode nahi: Daily `dyPrnMini` "⏳ PC" + khata `printChip` "⏳ POS voucher + parchi ja rahi…"; 15 sec (`PCW_SLOW`) baad har 3 sec DOM khud "⚠️ PC dheera" (re-render nahi — form ka focus na toote). 30 min baad chip nahi.
+- 🖨 Printer ki haalat (bank-inbox prnHTML) list mein "⏱ N sec" (voucherLog `s`).
+- 🧾 Bills search (sale.js): sirf hindse = bill number ka AAKHIR exact (335 → sirf ...335; pehle smartHit fuzzy 334 / 330 bhi). Bill number na mile tab raqam se.
+- AI nahi.

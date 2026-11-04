@@ -4,9 +4,9 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.180.1';
-import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.180.1';
-import { smWatch, smChipHTML, smForDoc } from './sale-man.js?v=2.180.1';   // v2.180.0: 👦 larka (POS SP Man) chip
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.180.2';
+import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.180.2';
+import { smWatch, smChipHTML, smForDoc } from './sale-man.js?v=2.180.2';   // v2.180.0: 👦 larka (POS SP Man) chip
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -930,7 +930,12 @@ function mountBills(box, opt = {}) {
     const all = billsData();
     const t = String(q.value || '').trim().toLowerCase(), dg = t.replace(/[^0-9]/g, '');
     const pass = b => filter === 'all' || (filter === 'pd' && billCls(b) === 'pd') || (filter === 'up' && billCls(b) === 'up') || (filter === 'un' && b.ps === 1 && !b.cancelled) || (filter === 'po' && b.ps === 2) || (filter === 'pc' && b.src === 'pos') || (filter === 'app' && b.src === 'app') || (filter === 'ws' && wsIs(b, vd));
-    const rows = all.filter(b => pass(b) && (!t || smartHit(`${b.saleNo || ''} ${b.party || ''} ${b.where || ''} ${b.by || ''}`, t) || (dg.length >= 2 && String(Math.round(Math.abs(b.total))).startsWith(dg))));
+    // v2.180.2 (malik: "335 likhoon to SIRF 335 ka card — 334 / 330 poori series nahi"): sirf hindse = bill number ka AAKHIR (exact), smart / fuzzy nahi;
+    //   koi bill number na mile tab hi raqam se (raqam isi se shuru)
+    const numQ = !!t && /^\d+$/.test(t), noOf = b => String(b.saleNo || '').replace(/\D/g, '');
+    const byNo = numQ ? all.filter(b => pass(b) && noOf(b) && noOf(b).endsWith(dg)) : null;
+    const rows = numQ ? (byNo.length ? byNo : all.filter(b => pass(b) && dg.length >= 2 && String(Math.round(Math.abs(b.total))).startsWith(dg)))
+      : all.filter(b => pass(b) && (!t || smartHit(`${b.saleNo || ''} ${b.party || ''} ${b.where || ''} ${b.by || ''}`, t) || (dg.length >= 2 && String(Math.round(Math.abs(b.total))).startsWith(dg))));
     const cnt = k => all.filter(b => k === 'all' || (k === 'pd' && billCls(b) === 'pd') || (k === 'up' && billCls(b) === 'up') || (k === 'un' && b.ps === 1 && !b.cancelled) || (k === 'po' && b.ps === 2) || (k === 'pc' && b.src === 'pos') || (k === 'app' && b.src === 'app') || (k === 'ws' && wsIs(b, vd))).length;
     if (isOwner()) { wsWatch(); wsReport(vd); } else if (filter === 'ws') filter = 'all';
     fbox.innerHTML = chips ? '' : (isOwner() ? [...FILTERS, ['ws', '🏷 Wholesale']] : FILTERS).map(([k, n]) => `<button type="button" data-nb-f="${k}" class="${filter === k ? 'on' : ''}">${n} <em>${cnt(k)}</em></button>`).join('');   // v2.138.0: chips = tabs nahi

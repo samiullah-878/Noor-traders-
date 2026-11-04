@@ -1,5 +1,9 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-04 (q): ⚡ VOUCHER + PARCHI FORAN (malik: "waiting time nahi — parchi usi time, voucher bhi foran, har entry") — nayi entry ka voucher ALAG line
+//    (vRun — kisi print / khata print / Daily print ke peeche nahi), parchi printer mein SAB SE AAGE (prHi) + Urdu Tafseel bina AI intezar (roman2ur foran,
+//    AI peeche yaad karta hai), har print ki hadd PR_CAP (atka kaam line nahi rokta), naya kharcha khata: POS account bante hi foran (waitAcct),
+//    log / printConfig.voucherLog mein 's' = server par entry se voucher / parchi tak kitne sec. Voucher banana (posWriteVoucher) BILKUL wahi.
 //  2026-11-03 (p): 🐞 bug safai (malik OK) — 🏦 bank parchi ka naam (HBL / ALFALAH) ab BANK wale khate se (pehle doosri party ke naam mein "Alfalah" = HBL ki parchi par ALFALAH) ·
 //    🖨 khata / daily print ka "10 min purana" ab SERVER ke waqt se (phone ki ghari aage / peeche = ghalat "purana hukum" nahi) ·
 //    ⚖️ POS milan "Taza karo" ka jawab (req) kabhi nahi khota (har second wala likhna bhi req saath rakhta hai, ek waqt ek likhna). Voucher banana BILKUL nahi chheda.
@@ -122,6 +126,7 @@ const ENABLED_AT = state.enabledAt;
 const app = new Map();
 let appReady = false;
 let kick = null, fresh = new Set(), lastAcct = null;
+const ctOf = new Map(), waitAcct = new Map();   // (q) ctOf: entry server par kab bani · waitAcct: naya khata — POS account ka intezar (id -> waqt)
 const inFlight = new Set(), syncMine = new Set();   // ⚡ tez raasta aur poora sync aik hi entry do baar na banayein   // app mein nayi/badli entry aate hi sync foran chalane ke liye
 function listenApp() {
   return new Promise((resolve, reject) => {
@@ -130,6 +135,7 @@ function listenApp() {
       s.docChanges().forEach(c => {
         if (c.type === 'removed') app.delete(c.doc.id);
         else app.set(c.doc.id, { ...c.doc.data(), id: c.doc.id });
+        if (c.type === 'added' && appReady) { try { ctOf.set(c.doc.id, c.doc.createTime.toMillis()); } catch {} }   // (q) server par kab bani (sec ginne ke liye)
         if (c.type === 'removed' || c.doc.data().updatedBy !== WRITER) userChange = true;
         if (appReady && c.type !== 'removed' && c.doc.data().type === 'entry' && c.doc.data().updatedBy !== WRITER) fresh.add(c.doc.id);   // 2026-10-12: ⚡ tez raasta
       });
@@ -595,19 +601,26 @@ async function logPrint(e) {
   if (DRY) return;
   try {
     if (!vlog) { const s = await cfgDoc().get(); vlog = (s.exists && Array.isArray(s.data().voucherLog)) ? s.data().voucherLog : []; }
-    vlog = vlog.concat([{ code: String(e.code || ''), name: ascii(e.name).slice(0, 40), amt: Number(e.amt) || 0, at: Date.now(), ok: !!e.ok, err: e.ok ? '' : String(e.err || lastPrintErr || 'print nahi hua').slice(0, 120), again: !!e.again, bank: !!e.bank }]).slice(-20);
+    vlog = vlog.concat([{ code: String(e.code || ''), name: ascii(e.name).slice(0, 40), amt: Number(e.amt) || 0, at: Date.now(), ok: !!e.ok, err: e.ok ? '' : String(e.err || lastPrintErr || 'print nahi hua').slice(0, 120), again: !!e.again, bank: !!e.bank, ...(Number(e.s) > 0 ? { s: Math.round(Number(e.s)) } : {}) }]).slice(-20);   // (q) s = kitne sec
     await cfgDoc().set({ voucherLog: vlog, vLast: Date.now(), vErr: e.ok ? '' : String(e.err || lastPrintErr || '').slice(0, 160), vAlive: Date.now() }, { merge: true });
   } catch (er) { log('printConfig haalat nahi likhi: ' + er.message); }
 }
 let aliveAt = 0;
 async function beatPrinter() { if (DRY || Date.now() - aliveAt < 5 * 60000) return; aliveAt = Date.now(); try { await cfgDoc().set({ vAlive: aliveAt }, { merge: true }); } catch {} }
 // 2026-10-15: printer ek waqt ek kaam (voucher + 💰 galla parchi aapas mein na takrayein)
-let prQ = Promise.resolve();
-const withPrinter = fn => { const p = prQ.then(fn, fn); prQ = p.catch(() => {}); return p; };
-const printReceipt = text => withPrinter(() => printReceipt0(text));
-async function printReceipt0(text) {
+// 2026-11-04 (q): DO LINE — prHi = nayi entry ki parchi (hamesha AAGE), prLo = khata / Daily / galla / dobara print. Har kaam ki hadd PR_CAP
+//   (atki print — worker / spooler — poori line kabhi nahi rokti; hadd par kaam 'printer jawab nahi' = app par ⚠️ + 🖨 dobara).
+const PR_CAP = 45000, prHi = [], prLo = []; let prBusy = false;
+function prPump() {
+  if (prBusy) return; const j = prHi.shift() || prLo.shift(); if (!j) return; prBusy = true; let t = null;
+  const cap = new Promise((_, rej) => { t = setTimeout(() => rej(new Error('printer ' + PR_CAP / 1000 + ' sec mein jawab nahi')), PR_CAP); });
+  Promise.race([Promise.resolve().then(j.fn), cap]).then(j.res, j.rej).finally(() => { clearTimeout(t); prBusy = false; prPump(); });
+}
+const withPrinter = (fn, hi = false) => new Promise((res, rej) => { (hi ? prHi : prLo).push({ fn, res, rej }); prPump(); });
+const printReceipt = (text, hi = false) => withPrinter(() => printReceipt0(text, hi), hi).catch(e => { lastPrintErr = String(e?.message || e).slice(0, 160); log('Print nahi hua: ' + lastPrintErr); return false; });
+async function printReceipt0(text, hi = false) {
   if (!AUTO_PRINT || DRY) return false;
-  if (UR.fillNotes) { try { text = await UR.fillNotes(text, 4000); } catch { text = UR.strip(text); } }   // 2026-10-20: 📝 Tafseel Urdu (AI 4 s; na aaye = English hi)
+  if (UR.fillNotes) { try { text = await UR.fillNotes(text, hi ? 1 : 4000); } catch { text = UR.strip(text); } }   // (q) nayi parchi: AI ka intezar nahi — yaad ho to wohi, warna roman2ur foran (AI peeche agli dafa ke liye)   // 2026-10-20: 📝 Tafseel Urdu (AI 4 s; na aaye = English hi)
   if (UR.has(text)) {   // 2026-10-14: 🔤 Urdu tasveer — nt-parchi worker (tez). Exception = bina Urdu purana tareeqa. Printer ki ghalti = dobara nahi.
     try { const P = getParchi(), e = await P.sendJobs([UR.toJob(text, { font: P.FONT_UR, dots: 512 })], PRINTER_NAME);
       lastPrintErr = e ? String(e.message || e).slice(0, 160) : ''; log(e ? 'Print nahi hua: ' + lastPrintErr : 'Voucher rasid print ho gayi (Urdu)'); return !e; }
@@ -1352,7 +1365,7 @@ async function syncEntries(pool, acct) {
           : [{ pid: base.partyId, name: acct.get(base.partyId).name, label: base.kind === 'payment' ? 'Diye' : base.kind === 'collection' ? 'Wasool kiye' : base.kind === 'borrow' ? 'Maal liya (udhar)' : 'Udhar', amount: amt,
                after: rupees(appBalance(base.partyId)), before: rupees(appBalance(base.partyId, new Set(docIds))) }];   // 2026-10-09: sabqa = is voucher ke baghair
         const bank = bankSlip(base, isTransfer);   // 2026-10-12: HBL wali entry = HBL parchi
-        const printed = await printReceipt(await epTxt(receipt({ title: T, code: r.code, date: base.date, lines: plines, note: String(base.note || '').trim(), bank, pay: e.kind !== 'purchaseCash' ? '' : e.posPrintedAt ? 'copy' : 'do' }), isTransfer ? null : e));   // 2026-10-21: 📷 entry ki tasveer   // 2026-10-17: 💵 juri cash purchase ka CPV — purchase parchi pehle chhap chuki to COPY (do dafa paise nahi)
+        const printed = await printReceipt(await epTxt(receipt({ title: T, code: r.code, date: base.date, lines: plines, note: String(base.note || '').trim(), bank, pay: e.kind !== 'purchaseCash' ? '' : e.posPrintedAt ? 'copy' : 'do' }), isTransfer ? null : e), true);   // (q) nayi entry = printer mein aage · 2026-10-21: 📷 entry ki tasveer   // 2026-10-17: 💵 juri cash purchase ka CPV — purchase parchi pehle chhap chuki to COPY (do dafa paise nahi)
         if (printed) await markApp(docIds, { posPrintedAt: Date.now(), posPrintErr: '' });
         else await markApp(docIds, { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
         await logPrint({ code: r.code, name, amt, ok: printed, bank: !!bank });
@@ -1496,7 +1509,7 @@ async function printExpenses() {
   for (const e of [...app.values()]) {
     if (e.type !== 'entry' || e.kind !== 'expense' || e.deleted || e.date !== day || e.posPrintedAt || e.posPrintErr) continue;
     if (Date.now() - tsOf(e.createdAt) > 20 * 3600000) continue;
-    const ok = await printReceipt(await epTxt(expenseSlip(e), e));   // 2026-10-21: 📷 kharcha ki tasveer bhi
+    const ok = await printReceipt(await epTxt(expenseSlip(e), e), true);   // 2026-10-21: 📷 kharcha ki tasveer bhi · (q) nayi entry = printer mein aage
     if (ok) await markApp([e.id], { posPrintedAt: Date.now(), posPrintErr: '' });
     else await markApp([e.id], { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
     await logPrint({ code: 'Kharcha', name: e.account || 'Kharcha', amt: rupees(e.amount), ok });
@@ -1537,7 +1550,7 @@ async function printPurchases() {
     const age = Date.now() - tsOf(e.createdAt); if (age > 20 * 3600000) continue;
     const sl = await purchaseSlip(e);
     if (!sl.photo && (Number(e.pn && e.pn.goodsPhotos) || 0) > 0 && age < 3 * 60000) continue;   // tasveer abhi aa rahi hai (2026-10-21: pn object hai — pehle Number(e.pn) = NaN, kabhi nahi rukta tha)
-    const ok = await printReceipt(sl.text);
+    const ok = await printReceipt(sl.text, true);   // (q) nayi entry = printer mein aage
     if (ok) await markApp([e.id], { posPrintedAt: Date.now(), posPrintErr: '' });
     else await markApp([e.id], { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
     const p = app.get(e.partyId); await logPrint({ code: 'Purchase', name: (p && p.name) || 'Purchase', amt: rupees(e.amount), ok });
@@ -1622,8 +1635,11 @@ async function quickEntries() {
   if (DRY || !lastAcct || !fresh.size) return;
   const ids = [...fresh]; fresh.clear();
   const quickBorrow = e => e.kind === 'borrow' && !app.get(e.partyId)?.bank && !/sabqa baqaya/i.test(String(e.note || '')) && ms(e.createdAt) >= BORROW_FROM;   // 2026-10-27: 📦 Saman liya bhi tez (malik: "instant voucher")
-  const todo = ids.map(id => app.get(id)).filter(e => e && e.type === 'entry' && !e.deleted && !e.transferId && !e.purchase && e.posNo !== true && (['payment', 'collection', 'credit'].includes(e.kind) || quickBorrow(e))
-    && !/^(pos|cashpay-)/.test(String(e.id)) && !links.has('entry:' + e.id) && lastAcct.has(e.partyId) && ms(e.createdAt) >= ENABLED_AT && Date.now() - ms(e.createdAt) < 30 * 60000);
+  const okBase = e => e && e.type === 'entry' && !e.deleted && !e.transferId && !e.purchase && e.posNo !== true && (['payment', 'collection', 'credit'].includes(e.kind) || quickBorrow(e))
+    && !/^(pos|cashpay-)/.test(String(e.id)) && !links.has('entry:' + e.id) && ms(e.createdAt) >= ENABLED_AT && Date.now() - ms(e.createdAt) < 30 * 60000;
+  const all = ids.map(id => app.get(id)).filter(okBase);
+  for (const e of all) if (!lastAcct.has(e.partyId)) { const p = app.get(e.partyId); if (p && (p.posSync === true || /^pos-party-/.test(String(p.id)))) waitAcct.set(e.id, Date.now()); }   // (q) naya khata — POS account bante hi (once)
+  const todo = all.filter(e => lastAcct.has(e.partyId));
   if (!todo.length) return;
   const t0 = Date.now(), pool = await qPoolGet();
   for (const e of todo) {
@@ -1640,14 +1656,19 @@ async function quickEntries() {
       const r = await posWriteVoucher(pool, { voucherId: 0, type: spec.type, date: e.date, remarks: spec.remarks, marker: e.id, lines: spec.lines });
       await setLink(key, { appHash: appHashEntry(e), voucherId: r.voucherId, code: r.code, posHash: null });
       await markApp([e.id], { posCode: r.code, posError: null });
-      log(`⚡ POS mein bana (tez): ${spec.type} · ${name} · Rs ${rupees(e.amount)} · ${r.code} (${((Date.now() - t0) / 1000).toFixed(1)} s)`);
+      const ct = ctOf.get(e.id) || 0, sec = ct ? (Date.now() - ct) / 1000 : 0;
+      log(`⚡ POS mein bana (tez): ${spec.type} · ${name} · Rs ${rupees(e.amount)} · ${r.code} (${((Date.now() - t0) / 1000).toFixed(1)} s${ct ? ' · entry se ' + sec.toFixed(1) + ' s' : ''})`);
       const T = isB ? 'UDHAR PURCHASE VOUCHER' : { CPV: VTITLE.CPV, CRV: VTITLE.CRV, JV: 'UDHAR SALE VOUCHER' }[spec.type] || spec.type, amt = rupees(e.amount), docIds = [e.id];
       const plines = [{ pid: e.partyId, name, label: isB ? 'Maal liya (udhar)' : e.kind === 'payment' ? 'Diye' : e.kind === 'collection' ? 'Wasool kiye' : 'Udhar', amount: amt, after: rupees(appBalance(e.partyId)), before: rupees(appBalance(e.partyId, new Set(docIds))) }];
       const bank = bankSlip(e, false);
-      const printed = await printReceipt(await epTxt(receipt({ title: T, code: r.code, date: e.date, lines: plines, note: String(e.note || '').trim(), bank, pay: e.kind !== 'purchaseCash' ? '' : e.posPrintedAt ? 'copy' : 'do' }), e));   // 2026-10-17: 💵 · 2026-10-21: 📷 tasveer
-      if (printed) await markApp(docIds, { posPrintedAt: Date.now(), posPrintErr: '' });
-      else await markApp(docIds, { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
-      await logPrint({ code: r.code, name, amt, ok: printed, bank: !!bank });
+      // (q) parchi ALAG (await nahi) — agla voucher is print ka intezar nahi karta; printer mein sab se aage (hi)
+      (async () => {
+        const printed = await printReceipt(await epTxt(receipt({ title: T, code: r.code, date: e.date, lines: plines, note: String(e.note || '').trim(), bank, pay: e.kind !== 'purchaseCash' ? '' : e.posPrintedAt ? 'copy' : 'do' }), e), true);   // 2026-10-17: 💵 · 2026-10-21: 📷
+        if (printed) await markApp(docIds, { posPrintedAt: Date.now(), posPrintErr: '' });
+        else await markApp(docIds, { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
+        const ps = ct ? (Date.now() - ct) / 1000 : 0; if (ct) log(`🖨 parchi ${r.code}: entry se ${ps.toFixed(1)} s`);
+        await logPrint({ code: r.code, name, amt, ok: printed, bank: !!bank, s: ps });
+      })().catch(er => log(`⚡ parchi (${r.code}) masla: ${er.message}`));
     } catch (err) { log(`⚡ tez raasta (${e.id}) masla: ${err.message} — poora sync banayega`); if (/connect|socket|closed|timeout/i.test(err.message)) await qPoolDrop(); }
     finally { inFlight.delete(key); }
   }
@@ -1784,19 +1805,26 @@ async function qPoolGet() {
 }
 async function qPoolDrop() { const p = qPool; qPool = null; if (p) await p.close().catch(() => {}); }
 // tez kaam (nayi entry ki parchi + kharcha + purchase parchi) — poore sync ke chalte hue bhi foran; khud aik waqt mein aik
-let qBusy = false, qAgain = false;
-async function quickRun() {
-  if (qBusy) { qAgain = true; return; }
-  qBusy = true;
+// 2026-11-04 (q): DO ALAG LINE — vRun = nayi entry ka voucher (kabhi print ke peeche nahi) · pRun = kharcha / purchase / khata / Daily print
+let vBusy = false, vAgain = false, pBusy = false, pAgain = false;
+async function vRun() {
+  if (vBusy) { vAgain = true; return; }
+  vBusy = true;
+  try { do { vAgain = false; try { await quickEntries(); } catch (e) { log('⚡ tez raasta masla: ' + e.message); } } while (vAgain); }
+  finally { vBusy = false; }
+}
+async function pRun() {
+  if (pBusy) { pAgain = true; return; }
+  pBusy = true;
   try {
     do {
-      qAgain = false;
-      try { await quickEntries(); } catch (e) { log('⚡ tez raasta masla: ' + e.message); }
+      pAgain = false;
       try { await printExpenses(); await printPurchases(); } catch (e) { log('Print kaam masla: ' + e.message); }
       try { await runKhataPrints(); } catch (e) { log('Khata print masla: ' + e.message); }   // 2026-11-02 (m)
-    } while (qAgain);
-  } finally { qBusy = false; }
+    } while (pAgain);
+  } finally { pBusy = false; }
 }
+const quickRun = () => { pRun(); return vRun(); };   // voucher ka intezar; print peeche apni line mein
 
 // ============================================================
 // 2026-10-26: ⚖️ POS MILAN — har 15 min POS ledger (Debit − Credit = lena +, dena −) jude hue khaton ka blueAccess/posLedger {m:{appId: paisa}, at, n}
@@ -1877,6 +1905,7 @@ async function once() {
     const acct = new Map();
     await syncAccounts(pool, acct);
     lastAcct = acct;   // ⚡ tez raasta isi naqshe se
+    if (waitAcct.size) { const now = Date.now(); for (const [id, t] of waitAcct) { if (acct.has(app.get(id)?.partyId)) { fresh.add(id); waitAcct.delete(id); } else if (now - t > 30 * 60000) waitAcct.delete(id); } if (fresh.size) vRun(); }   // (q) naya khata ka POS account abhi bana — voucher + parchi foran (poore sync ka intezar nahi)
     let syncErr = null;
     try { await syncEntries(pool, acct); }
     catch (e) { syncErr = e; log('Entries sync masla: ' + e.message); }   // 2026-10-27: sync ki ghalti se POS baqaya / lines na rukein (farq screen 2 ghante purana dikh raha tha)
@@ -1918,7 +1947,7 @@ async function once() {
   };
   // app mein entry aayi: 3 second ruk kar (taake saath wali entries bhi aa jayein) foran sync
   // 2026-10-12: 3 s -> 0.8 s; aur tez raasta FORAN (poora sync chal raha ho tab bhi) — parchi seconds mein
-  kick = () => { quickRun(); if (timer) return; timer = setTimeout(() => { timer = null; tick(); }, 800); };
+  kick = () => { vRun(); pRun(); if (timer) return; timer = setTimeout(() => { timer = null; tick(); }, 800); };   // (q) dono line foran
   await tick();
   setInterval(ZINDA.guard(tick, 10 * 60000, 'khata tick'), LOOP_SECONDS * 1000);   // 2026-10-11: chowkidar
   if (!DRY) setInterval(ledgerWatch, 1000);   // 2026-11-02 (l): ⏱ POS baqaya har second
