@@ -4057,3 +4057,10 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 
 ## PC wa-parchi v1.5 · manifest 2026-11-04.6 (2026-11-04) — 🧾 shak ki hadd 0.9
 - Malik ki v1.4 thermal photo: 18 mein se 17 line theek (jori + tarteeb + lafz), 12vi "کوئیش 1 کلو" ghalat magar AI ko yaqeen 0.75+ tha — tukda nahi chhapa. Malik OK → `DOUBT = 0.9` + prompt: "0.9+ sirf jab har harf saaf".
+
+## PC sale-post v1.14 + nt-print v1.24 · manifest 2026-11-04.7 (2026-11-04) — 👦 larka + 🚪 NOOR TRADERS gate pass
+- 👦 Malik: "larka entry ka option — jis ke naam par sale jaye (larke POS mein jorte hain) — godam jaisa ▾ chip upar". App (v2.180.0) bill doc mein `sm` = POS SupplyManID.
+  sale-post: `larkaOf()` — sirf agar POS `dbo.SupplyMan` list mein ho (na ho = list dobara parho, phir bhi na ho = null, pehle jaisa) → `usp_Sale_InsertUpdate @SupplyManID`. Larka report (larka-stats) / ranking khud usi ke naam.
+  List app ko: `pushMen()` shuru + har 10 min → `blueAccess/supplyMen {men:[{id,n}], at, pc}` — pehle Firestore parhta hai (parh na sake = likhna nahi), sirf badle to likhta hai. POS mein IsActive 0 wala (agar column ho) list mein nahi. EDIT (saleEdits) POS ka purana SupplyManID hi rakhta hai (SELECT * head).
+- 🚪 Malik: "default godam (NOOR TRADERS) ka gate pass ON ho to alag gate pass parchi nahi aati". App ka switch `gate > 0` = har line usi godam se. Pehle PC sirf godam ≠ bill branch wali lines ki parchi chhapta tha → NOOR TRADERS chuna to kuch nahi.
+  Ab sale-post `printGatePasses(r, pr, ok.gate > 0)` + nt-print `gateJobs` (d.gate > 0) = switch ON par har godam ki parchi (app 'Yehi device' pehle se aisa karti thi). POS ka IsGetStore wahi (sirf asal godam line). AI nahi.

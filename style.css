@@ -7287,3 +7287,11 @@ html body .sale-copies>small{flex:0 0 auto;white-space:nowrap}
 html body .sale-copies button{flex:0 1 auto;min-width:0!important;max-width:100%;height:34px;min-height:34px!important;padding:0 12px!important;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal!important;word-break:normal!important;font-size:12.5px!important;border-radius:999px!important;line-height:1}
 html body .sale-copies .sale-copies-h{margin-left:0}
 html body .f5-prn button{max-width:100%;white-space:nowrap!important;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal!important;word-break:normal!important}
+/* v2.180.0: 👦 LARKA chip (sale-man.js — Sale + WhatsApp Parchi Sale) — godam jaisa ▾; asal <select> upar shaffaf (phone ki apni list khulti hai) */
+html body .sm-chip{position:relative!important;display:inline-flex!important;align-items:center;gap:5px;flex:0 0 auto;width:auto!important;height:32px;min-height:32px;max-width:180px;margin:0!important;padding:0 11px 0 12px!important;border-radius:999px!important;border:1px solid #d5dce9;background:linear-gradient(180deg,#fff,#eef2f9);color:#1a2d53;font-size:12.5px;font-weight:800;line-height:1;white-space:nowrap;box-shadow:0 1px 2px rgba(16,25,43,.06);cursor:pointer;overflow:hidden;box-sizing:border-box;vertical-align:middle}
+html body .sm-chip>span{overflow:hidden;text-overflow:ellipsis;min-width:0;white-space:nowrap}
+html body #summary .sm-chip>i,html body .sm-chip>i{font-style:normal!important;font-size:10px!important;opacity:.75;margin:0!important;color:inherit!important;font-weight:800!important}
+html body .sm-chip.is-in{background:linear-gradient(135deg,#0f766e,#14b8a6)!important;color:#fff!important;border-color:transparent!important;box-shadow:0 2px 6px rgba(15,118,110,.25)}
+html body .sm-chip>select{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;opacity:0!important;cursor:pointer;font-size:16px;margin:0!important;padding:0!important;border:0!important;-webkit-appearance:none;appearance:none}
+html body .sale-head .account-tools.sale-tl{display:flex!important;flex-wrap:wrap;align-items:center;gap:6px}
+html body #summary .wps-hbar .sm-chip{margin-left:2px!important;max-width:140px}

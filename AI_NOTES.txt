@@ -6857,3 +6857,10 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - Hataya: poori screen peeche wala camera + `::after` parda + hara nukta (style.css v2.179.4 block). Screen ka rang #f6f8fc hi.
 - Test: Playwright (fake camera) — khirki 66×40 (zoom .92), 10 lines nazar, side scroll nahi. Desktop Chromium mein dhaka hua video bhi frames deta tha (masla nishana tha).
 - AI nahi. Rules / PC kuch nahi.
+
+## v2.180.0 (2026-11-04) — 👦 Larka chip (Sale + WhatsApp Parchi Sale) · 🚪 NOOR TRADERS gate pass · rules 2.87
+- 👦 `sale-man.js` (naya, shared): list `cloud.listenSupplyMen` (blueAccess/supplyMen — PC sale-post v1.14 POS dbo.SupplyMan se). Chip `smChipHTML()` = label + shaffaf <select> (phone ki apni list), chuna = firozi `.is-in`, phone par yaad (`sam-sale-sm`), POS se hata = khud khali. CAP `sale.larka` (deny-list). Sale: summary `.account-tools.sale-tl` mein · WhatsApp: hbar mein (confirm mein "👦 Larka: …").
+- Bill doc `sm` (int) sirf jab larka chuna + list mein ho (`smForDoc`). Rules 2.87: appSales hasOnly + 'sm' (int 1..999999) · blueAccess get list + 'supplyMen' (har mulazim).
+- Hifazat: rules 2.87 PC ne abhi publish na ki hon to `cloud.saveAppSale` permission-denied par BINA `sm` dobara likhta hai (`saleSmOff` — us session mein phir sm nahi bhejta). Bill kabhi nahi rukta.
+- 🚪 Gate pass switch ON (`gate > 0`) + NOOR TRADERS = PC (sale-post / NT-PRINT) ab NOOR TRADERS lines ki bhi alag parchi chhapta hai (pehle sirf godam ≠ branch).
+- Test: Playwright — WhatsApp hbar + Sale summary par chip, select → `doc.sm = 7`, confirm mein naam, side scroll nahi. AI nahi.

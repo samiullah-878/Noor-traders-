@@ -1,5 +1,8 @@
 // ============================================================
 //  sale-post.js — Blue Khata app ki "Nayi Sale" -> POS Sale bill (v1)
+//  v1.14 (2026-11-04): 👦 LARKA — app ka chuna larka (doc.sm) POS bill ke SupplyManID mein (sirf agar POS ki SupplyMan list mein ho; warna pehle jaisa khali) ·
+//                     SP Man list app ko blueAccess/supplyMen {men:[{id,n}]} (sirf badle to; pehle parho, parh na sake to likhna nahi) ·
+//                     🚪 gate pass switch (doc.gate > 0) = NOOR TRADERS (bill ki branch) wali lines ki bhi ALAG gate pass parchi (app 'Yehi device' jaisi)
 //  v1.13 (2026-10-26): 🧾 rasid ki items table dabbe (side lines) mein — boxTable (nt-print v1.23 jaisa)
 //  v1.12 (2026-10-20): 📅 rasid + gate pass par upar Urdu tareekh (urdu-names v1.5) · rasid par 'Sale No' poora (32 harf mein kat jata tha)
 //  v1.11 (2026-10-14): 🔤 GATE PASS par har item ke neeche URDU naam (urdu-names.js, app ke Urdu naam) — tasveer, nt-parchi worker se
@@ -69,6 +72,7 @@ const db = getFirestore();
 const UR = require('./urdu-names.js'); UR.watch(db, BUSINESS_ID, m => log(m));   // v1.11
 const saleCol = db.collection('businesses').doc(BUSINESS_ID).collection('appSales');
 const editCol = db.collection('businesses').doc(BUSINESS_ID).collection('saleEdits');   // v1.8
+const smDoc = db.collection('businesses').doc(BUSINESS_ID).collection('blueAccess').doc('supplyMen');   // v1.14: 👦 larkon (SP Man) ki list app ke liye
 
 let pool = null;
 async function getPool() {
@@ -100,6 +104,39 @@ async function basics(p) {
   base = { counter, whole: whole[0], cashAc: d.CashACID || 11 };
   log(`Counter: ${counter.PartyName.trim()} [${counter.PartyID}] · Wholesale: ${base.whole.PartyName.trim()} [${base.whole.PartyID}] · Cash a/c ${base.cashAc}`);
   return base;
+}
+
+// ---- v1.14: 👦 LARKA (POS SP Man = dbo.SupplyMan) ----
+let MEN = null, menSig = null;   // MEN: Map id -> naam (POS se) · menSig: Firestore mein jo likha hai (parha ho to)
+async function loadMen(p) {
+  const rows = (await p.request().query('SELECT * FROM dbo.SupplyMan')).recordset;
+  const m = new Map();
+  for (const r of rows) {
+    const id = Number(r.SupplyManID), n = String(r.SupplyManName || '').trim();
+    if (!(id > 0) || !n) continue;
+    if ('IsActive' in r && (r.IsActive === false || r.IsActive === 0)) continue;   // POS mein band larka list mein nahi
+    m.set(id, n.slice(0, 40));
+  }
+  MEN = m; return m;
+}
+async function pushMen() {
+  try {
+    const m = await loadMen(await getPool());
+    const men = [...m].map(([id, n]) => ({ id, n })).sort((a, b) => a.n.localeCompare(b.n));
+    const sig = JSON.stringify(men);
+    if (menSig === null) { const d = await smDoc.get(); menSig = d.exists ? JSON.stringify(d.data().men || []) : ''; }   // pehle parho (parh na sake = catch, likhna nahi)
+    if (sig === menSig) return;
+    await smDoc.set({ men, at: Date.now(), pc: os.hostname() });
+    menSig = sig; log(`👦 Larke (SP Man) app ko bheje: ${men.length}`);
+  } catch (e) { log('Larka list masla: ' + e.message); }
+}
+async function larkaOf(p, s) {   // app ka chuna larka — POS list mein ho to hi (warna null, jaise pehle)
+  const id = Number(s.sm) || 0;
+  if (!(id > 0)) return null;
+  if (!MEN || !MEN.has(id)) await loadMen(p).catch(() => {});
+  if (MEN && MEN.has(id)) return id;
+  log(`  Larka ${id} POS ki SP Man list mein nahi — bill bina larka`);
+  return null;
 }
 
 // v2.95: lines (POS rate / cost) — naya bill aur EDIT dono isi se
@@ -165,6 +202,7 @@ async function postSale(s) {
   const staff = s.role !== 'owner';
 
   const { lines, total, cogs } = await buildLines(p, s, godam, wholesale, staff);
+  const sm = await larkaOf(p, s);   // v1.14: 👦
   const cash = wholesale ? (total < 0 ? 0 : r2(Math.min(Math.max(Number(s.cash) || 0, 0), total))) : total;   // v2.95: wapsi bill (minus) — wholesale khate mein
   if (staff && Math.abs(total - Number(s.total)) > 0.5) log(`  Mulazim ka total ${s.total} tha, POS rate se ${total}`);
 
@@ -217,7 +255,7 @@ async function postSale(s) {
       .input('IsOnlineSale', sql.Bit, 0)
       .input('vNetAmount', sql.Float, total)
       .input('IsCancleReturn', sql.Bit, 0)
-      .input('SupplyManID', sql.Int, null)
+      .input('SupplyManID', sql.Int, sm)   // v1.14: 👦 larka (POS list se jaancha hua) ya null
       .execute('dbo.usp_Sale_InsertUpdate')).recordset[0];
 
     for (const l of lines) {
@@ -267,7 +305,7 @@ async function postSale(s) {
       crvNo = v.VoucherCode || '';
     }
     await tx.commit();
-    return { saleId: sale.SaleID, saleNo: sale.SaleNo, total, cash, crvNo, lines, branch, partyName: String(party.PartyName || '').trim() };
+    return { saleId: sale.SaleID, saleNo: sale.SaleNo, total, cash, crvNo, lines, branch, partyName: String(party.PartyName || '').trim(), sm };
   } catch (e) {
     await tx.rollback().catch(() => {});
     throw e;
@@ -551,9 +589,9 @@ function gatePassText(godamName, rows, saleNo, partyName, when) {
   out.push(GS + 'V' + '\x42' + '\x00');
   return out.join('\r\n');
 }
-async function printGatePasses(r, printer = PRINTER_NAME) {
+async function printGatePasses(r, printer = PRINTER_NAME, gateOn = false) {   // v1.14: gateOn = app ka 🚪 switch — branch (NOOR TRADERS) wali lines ki bhi parchi
   if (!AUTO_PRINT || !Array.isArray(r.lines)) return;
-  const gp = r.lines.filter(l => Number(l.godam) && Number(l.godam) !== Number(r.branch));
+  const gp = r.lines.filter(l => Number(l.godam) && (gateOn || Number(l.godam) !== Number(r.branch)));
   if (!gp.length) return;
   const p = await getPool();
   const names = {};
@@ -609,12 +647,12 @@ async function handleSale(doc) {
         ...(r.cash != null ? { cash: r.cash } : {}), doneAt: Date.now(), error: FieldValue.delete() });   // v1.9: intezar nahi — print saath saath
       upd.catch(() => {});   // (rad ho to neeche await par pakra jata hai)
       if (r.again || notHere(ok.counter)) await upd;
-      log(`${r.again ? 'Pehle se bani thi' : 'Sale ban gayi'}: ${r.saleNo} · ${ok.mode} · Rs ${r.total}${r.crvNo ? ' · ' + r.crvNo : ''}`);
+      log(`${r.again ? 'Pehle se bani thi' : 'Sale ban gayi'}: ${r.saleNo} · ${ok.mode} · Rs ${r.total}${r.crvNo ? ' · ' + r.crvNo : ''}${r.sm && MEN?.get(r.sm) ? ' · 👦 ' + MEN.get(r.sm) : ''}`);
       if (!r.again && notHere(ok.counter)) log(`Print yahan nahi: counter ${ok.counter} (${String(ok.counter).startsWith('pc:') ? 'NT-PRINT us PC par chhapega' : 'app usi device par chhapti hai'})`);
       else if (!r.again) {
         const pr = printerFor(ok.counter);
         await printSale(r.saleNo, r.saleId, ok.copies, pr).catch(e => log('Print masla: ' + e.message));
-        await printGatePasses(r, pr).catch(e => log('Gate pass masla: ' + e.message));
+        await printGatePasses(r, pr, Number(ok.gate) > 0).catch(e => log('Gate pass masla: ' + e.message));   // v1.14: 🚪 switch ON = NOOR TRADERS ki bhi
         await printTokens(ok, r.saleNo, pr).catch(e => log('Token masla: ' + e.message));   // 2026-10-04: har crate ka TOKEN bhi (nt-parchi)
         await upd;
       }
@@ -662,8 +700,9 @@ if (process.argv.includes('--print')) {
     try {
       await basics(await getPool());
       try { getParchi().warm(); } catch {}   // v1.9: PowerShell print worker pehle se garam
-      log('sale-post v1.9 chal raha hai — app ki sale ka intezar. Band: Ctrl+C');
+      log('sale-post v1.14 chal raha hai — app ki sale ka intezar. Band: Ctrl+C');
       listen();
+      pushMen(); setInterval(pushMen, 10 * 60 * 1000);   // v1.14: 👦 larkon ki list (har 10 min, sirf badle to likhe)
     } catch (e) { log('Shuru nahi hua: ' + e.message); process.exit(1); }
   });
 }

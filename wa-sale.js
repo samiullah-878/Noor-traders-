@@ -15,8 +15,9 @@
 //   v2.179.2: 🔁 DOBARA PARHO (malik OK) — khuli parchi ⋮ 🔁 + ✕ / ⚠️ wale dabbe mein chip → {st:'new'} (rules 2.86 wahi) → PC (wa-parchi claimNew) AI se phir
 //     parhe + naya thermal / A4; bill khud dobara bhar jata hai (pendLoad). Bill bana / maal nikla / abhi parh raha = nahi.
 //   CAP sale.wsale (default khula). AI app mein NAHI — parchi PC parhta hai. Agent action NAHI (malik ka qaida v2.111.0).
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.179.5';
-import { smartSearch, noteHit } from './smart-search.js?v=2.179.5';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.180.0';
+import { smartSearch, noteHit } from './smart-search.js?v=2.180.0';
+import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.180.0';   // v2.180.0: 👦 larka (POS SP Man) chip
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -54,6 +55,7 @@ const seenAt = new Map(), localOrd = new Map(), imgCache = new Map(), cropCache 
 
 export function wsSetup(o) {
   C = { ...C, ...o };
+  try { smWatch(C.cloud); } catch {}   // v2.180.0: 👦
   try {
     const d = JSON.parse(LG(DRAFT_KEY) || 'null');
     if (d && d.day === todayStr()) {
@@ -354,7 +356,7 @@ function uPick(i, id) {
 function hbarHTML(o) {
   const nm = o?.nm || '', ph = o?.ph || '', [cl, lab] = stOf(o);
   const av = o ? esc(ini(nm) || '📲') : '📲';
-  return `<div class="pp-hbar wps-hbar"><span class="pp-av">${av}</span><b>${o ? esc(nm || ph || (o.src === 'app' ? 'App ki parchi' : 'WhatsApp parchi')) : 'Naya bill'}</b>${o && nm && ph ? `<span class="pp-hsep">·</span><span>${esc(ph)}</span>` : ''}${ph ? `<a class="wps-hc" href="tel:${esc(telOf(ph))}" title="Call" aria-label="Call">📞</a><a class="wps-hc wa" href="https://wa.me/${esc(waOf(ph))}" target="_blank" rel="noopener" title="WhatsApp" aria-label="WhatsApp">💬</a>` : ''}${o && lab ? `<em class="wps-hst ${cl}">${esc(lab)}</em>` : ''}<i>${mode === 'wholesale' ? '📦 Wholesale' : '🛒 Counter'}</i></div>`;
+  return `<div class="pp-hbar wps-hbar"><span class="pp-av">${av}</span><b>${o ? esc(nm || ph || (o.src === 'app' ? 'App ki parchi' : 'WhatsApp parchi')) : 'Naya bill'}</b>${o && nm && ph ? `<span class="pp-hsep">·</span><span>${esc(ph)}</span>` : ''}${ph ? `<a class="wps-hc" href="tel:${esc(telOf(ph))}" title="Call" aria-label="Call">📞</a><a class="wps-hc wa" href="https://wa.me/${esc(waOf(ph))}" target="_blank" rel="noopener" title="WhatsApp" aria-label="WhatsApp">💬</a>` : ''}${o && lab ? `<em class="wps-hst ${cl}">${esc(lab)}</em>` : ''}<i>${mode === 'wholesale' ? '📦 Wholesale' : '🛒 Counter'}</i>${smChipHTML()}</div>`;   // v2.180.0: 👦 larka chip
 }
 function headPaint() { const h = document.querySelector('#summary .wps-hbar'); if (h) h.outerHTML = hbarHTML(curOrder()); }
 function gahakBox(o) {
@@ -544,7 +546,7 @@ async function save() {
   if (mode === 'counter') paid = total;   // POS: counter sale ka CashReceived = bill
   else if (paid > total) { C.notice('Cash bill se zyada nahi ho sakta'); return; }
   const o = curOrder(), who = o ? [o.nm, o.ph].filter(Boolean).join(' · ') : '', oid = o && !o._local ? o.id : '';
-  const msg = `${mode === 'wholesale' ? 'WHOLESALE' : 'COUNTER SALE'}${who ? ' · ' + who : ''}\n${lines.length} items · Rs ${num(total)}` + (mode === 'wholesale' ? `\nCash Rs ${num(paid)}${total - paid > 0 ? ' · Udhaar Rs ' + num(total - paid) : ''}` : '') + '\n\nBill banayein? (PC POS mein bill bana kar print karega)';
+  const msg = `${mode === 'wholesale' ? 'WHOLESALE' : 'COUNTER SALE'}${who ? ' · ' + who : ''}\n${lines.length} items · Rs ${num(total)}` + (mode === 'wholesale' ? `\nCash Rs ${num(paid)}${total - paid > 0 ? ' · Udhaar Rs ' + num(total - paid) : ''}` : '') + (smName() ? '\n👦 Larka: ' + smName() : '') + '\n\nBill banayein? (PC POS mein bill bana kar print karega)';
   if (!confirm(msg)) return;
   saving = true; footPaint();
   const id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -553,6 +555,7 @@ async function save() {
   catch { const k = 'sam-tok-' + todayStr(); token = Number(LG(k) || 0) + 1; LS(k, String(token)); }
   const doc = { id, copies: copiesNow(), counter: counterNow(), token: Math.max(0, Math.floor(Number(token) || 0)), crates: 1, date: todayStr(), at: new Date().toISOString(), mode, branch: SALE_BRANCH, godam: SALE_BRANCH, gate: gate > 0 ? gate : 0,
     lines, total, cash: paid, note: noteOut(), role: C.owner() ? 'owner' : 'staff', by: C.uid(), status: 'new', createdAt: Date.now() };
+  { const sm = smForDoc(C.cloud); if (sm) doc.sm = sm; }   // v2.180.0: 👦 larka → PC POS Sale.SupplyManID
   const snap = { cart: cart.slice(), unclear: unclear.slice(), cur, curSnap, note, mode, cash };
   try {
     const p = C.cloud.saveAppSale(doc);

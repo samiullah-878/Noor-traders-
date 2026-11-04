@@ -4,8 +4,9 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.179.5';
-import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.179.5';
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.180.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.180.0';
+import { smWatch, smChipHTML, smForDoc } from './sale-man.js?v=2.180.0';   // v2.180.0: 👦 larka (POS SP Man) chip
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -30,6 +31,7 @@ let searchFocused = false;   // v1.75
 export function saleSetup(o) {
   { const before = camMissing(); camCheck().then(() => { if (camMissing() !== before && document.querySelector('.sale-camrow')) { try { renderSale(); } catch {} } }); }   // v2.77: PC par camera nahi -> 🔫
   cloud = o.cloud; rerender = o.rerender || rerender; notice = o.notice || notice;
+  try { smWatch(cloud); } catch {}   // v2.180.0: 👦 larkon ki list (blueAccess/supplyMen)
   if (!pcsUn) try { pcsUn = cloud?.listenPrintPCs?.(pcsChanged) || null; } catch {}   // v2.78: 💻 PC chunein
   isOwner = o.owner || isOwner; uidOf = o.uid || uidOf; learnOf = o.learn || learnOf; nameOf = o.name || nameOf;
   try {
@@ -422,7 +424,8 @@ export function renderSale() {
     </div>
     <div class="sale-total"><small>${mode === 'wholesale' ? 'Wholesale (W rate)' : 'Counter (R rate)'} · ${num(cart.length)} items</small>
       <strong id="saleTotal">Rs ${num(total)}</strong></div>
-    <div class="account-tools">
+    <div class="account-tools sale-tl">
+      ${smChipHTML()}
       <button class="sh-wide" id="saleTodayBtn" data-sale-today="1" data-mn="sale.today" data-mn-i="📋" data-mn-t="Aaj ke bills" data-mn-s="app se bane · POS haalat" data-mn-g="🧾 Sale">${todayLabel()}</button>
     </div>
   </div>`;
@@ -683,6 +686,7 @@ async function save() {
   let token = 0; try { token = await Promise.race([cloud.nextToken(todayStr()), new Promise((_, j) => setTimeout(() => j(Error('token der')), 4000))]); } catch { try { const k = 'sam-tok-' + todayStr(); token = Number(localStorage.getItem(k) || 0) + 1; localStorage.setItem(k, String(token)); } catch {} }   // v2.72
   const doc = { id, copies, counter, token: Number(token) || 0, crates: Math.min(20, Math.max(1, crates | 0)), date: todayStr(), at: new Date().toISOString(), mode, branch: SALE_BRANCH, godam: Number(godam) || SALE_BRANCH, gate: gate > 0 ? gate : 0,
     lines, total, cash: paid, note: note.trim(), role: isOwner() ? 'owner' : 'staff', by: uidOf(), status: 'new', createdAt: Date.now() };
+  { const sm = smForDoc(cloud); if (sm) doc.sm = sm; }   // v2.180.0: 👦 larka → PC POS Sale.SupplyManID
   saving = true; rerender();
   try {
     const p = cloud.saveAppSale(doc);
