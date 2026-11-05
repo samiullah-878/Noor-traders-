@@ -15,10 +15,10 @@
 //   v2.179.2: 🔁 DOBARA PARHO (malik OK) — khuli parchi ⋮ 🔁 + ✕ / ⚠️ wale dabbe mein chip → {st:'new'} (rules 2.86 wahi) → PC (wa-parchi claimNew) AI se phir
 //     parhe + naya thermal / A4; bill khud dobara bhar jata hai (pendLoad). Bill bana / maal nikla / abhi parh raha = nahi.
 //   CAP sale.wsale (default khula). AI app mein NAHI — parchi PC parhta hai. Agent action NAHI (malik ka qaida v2.111.0).
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.183.1';
-import { smartSearch, noteHit } from './smart-search.js?v=2.183.1';
-import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.183.1';   // v2.180.0: 👦 larka (POS SP Man) chip
-import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.183.1';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.184.0';
+import { smartSearch, noteHit } from './smart-search.js?v=2.184.0';
+import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.184.0';   // v2.180.0: 👦 larka (POS SP Man) chip
+import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.184.0';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -229,7 +229,7 @@ function prOf(o) {   // 🖨 PC ki parchi (thermal / A4)
   const p = o?.pr || {}, v = [p.th, p.a4].filter(x => x && x !== 'off');
   if (!v.length) return '';
   if (!v.includes('failed') && v.some(x => x !== 'done')) return '<i class="wps-pr" title="Chhap rahi">🖨⏳</i>';   // wait / printing / sent
-  return v.includes('failed') ? `<i class="wps-pr bad" title="${esc('Print nahi hua' + (o.perr ? ': ' + o.perr : ''))}">🖨✕</i>` : '<i class="wps-pr ok" title="Chhap gayi">🖨✓</i>';
+  return v.includes('failed') ? `<i class="wps-pr bad" title="${esc('Print nahi hua' + (o.perr ? ': ' + o.perr : ''))}">🖨✕</i>` : `<i class="wps-pr ok" title="Chhap gayi${p.zm ? ' — thermal par asal likhai (zoom)' : ''}">🖨✓</i>`;
 }
 function ordersHTML() {
   const L = allOrders(), t0 = todayStr();
@@ -407,7 +407,7 @@ function toolsHTML(o) {
     ${o && canHide() && !hid(o) && o._local !== 'prep' && o._local !== 'send' ? `<button type="button" class="sh-wide" data-ws-hide="${esc(o.id)}" data-mn="ws.hide" data-mn-i="🗑" data-mn-t="Parchi hatao" data-mn-s="list se — ↩ wapas ho sakti hai" data-mn-g="${GRP}">🗑 Parchi hatao</button>` : ''}
     ${canReread(o) ? `<button type="button" class="sh-wide" data-ws-reread="${esc(o.id)}" data-mn="ws.reread" data-mn-i="🔁" data-mn-t="Dobara parho" data-mn-s="AI phir se parhe + naya print" data-mn-g="${GRP}">🔁 Dobara parho</button>` : ''}
     ${canHide() && orders.some(hid) ? `<button type="button" class="sh-wide" data-ws-hidlist="1" data-mn="ws.hid" data-mn-i="♻️" data-mn-t="Hatai hui parchiyan" data-mn-s="${orders.filter(hid).length} — tap = wapas list mein" data-mn-g="${GRP}">♻️ Hatai hui parchiyan</button>` : ''}
-    ${o && !o._local && C.can('sale.wsimg') ? `<button type="button" class="sh-wide" data-ws-imgpr="1" data-mn="ws.imgpr" data-mn-i="🖼" data-mn-t="Parchi jaisi print" data-mn-s="${chipSt.img === 'w' ? '⏳ ja rahi…' : chipSt.img === 'ok' ? '✅ PC ko gayi' : chipSt.img === 'bad' ? '✕ nahi gayi' : 'poori parchi ki tasveer thermal par — bina AI, zoom'}" data-mn-g="${GRP}">🖼 Parchi jaisi print</button>` : ''}
+    ${o && !o._local && C.can('sale.wsimg') ? `<button type="button" class="sh-wide" data-ws-imgpr="1" data-mn="ws.imgpr" data-mn-i="🖼" data-mn-t="Parchi jaisi print" data-mn-s="${chipSt.img === 'w' ? '⏳ ja rahi…' : chipSt.img === 'ok' ? '✅ PC ko gayi' : chipSt.img === 'bad' ? '✕ nahi gayi' : 'har line alag zoom thermal par — bina AI'}" data-mn-g="${GRP}">🖼 Parchi jaisi print</button>` : ''}
     ${o && !o._local ? `<button type="button" class="sh-wide" data-ws-pv="1" data-mn="ws.pv" data-mn-i="🧾" data-mn-t="Parchi ki tasveer" data-mn-s="poori parchi dekhein" data-mn-g="${GRP}">🧾 Parchi ki tasveer</button>${gahakBox(o)}` : ''}
     ${seg('ws.mode', '🛒', 'Sale ki qism', mode === 'wholesale' ? 'Wholesale (W rate)' : 'Counter (R rate)', B(mode === 'counter', 'mode', 'counter', '🛒 Counter') + (C.can('sale.wholesale') ? B(mode === 'wholesale', 'mode', 'wholesale', '📦 Wholesale') : ''))}
     ${seg('ws.view', '📊', 'Bill ka look', v === 'grid' ? 'Table' : 'Lines', B(v === 'grid', 'view', 'grid', '📊 Table') + B(v === 'rows', 'view', 'rows', '☰ Lines'))}
@@ -791,11 +791,11 @@ async function qrPaint() {
     el.innerHTML = x.createSvgTag({ cellSize: 6, margin: 4, scalable: true }); qrLast = q;
   } catch (e) { const el = document.querySelector('#dialogBody [data-ws-qr]'); if (el) el.textContent = '✕ ' + (e?.message || e); }
 }
-const cfgNow = () => ({ on: wc?.on ?? true, th: wc?.th ?? true, a4: wc?.a4 ?? false, allow: Array.isArray(wc?.allow) ? wc.allow.map(String) : [] });
+const cfgNow = () => ({ on: wc?.on ?? true, th: wc?.th ?? true, a4: wc?.a4 ?? false, zm: wc?.zm ?? true, allow: Array.isArray(wc?.allow) ? wc.allow.map(String) : [] });   // v2.184.0: zm = thermal par parchi ki asal likhai (har line zoom, bina AI)
 function cfgHTML() {
   if (wcErr === 'rules') return '<p class="wps-err">🔐 Setting parh nahi sake (rules).</p>';
   const c = cfgNow(), tg = (k, v, a, b) => `<button type="button" class="wps-tc${v ? ' is-in' : ''}" data-ws-tg="${k}">${v ? a : b}</button>`;
-  return `<div class="wps-sec"><h4>⚙️ Kaam</h4><div class="wps-row">${tg('on', c.on, '✅ Chalu', '⛔ Band')}${tg('th', c.th, '🧾 Thermal parchi: ON', '🧾 Thermal: BAND')}${tg('a4', c.a4, '🖨 A4: ON', '🖨 A4: BAND')}<i class="wps-wst">${stTxt(wst.cfg)}</i></div>${!wc ? '<small class="wps-mut">Abhi setting save nahi hui — koi chip dabayein to save ho jayegi.</small>' : ''}</div>
+  return `<div class="wps-sec"><h4>⚙️ Kaam</h4><div class="wps-row">${tg('on', c.on, '✅ Chalu', '⛔ Band')}${tg('th', c.th, '🧾 Thermal parchi: ON', '🧾 Thermal: BAND')}${c.th ? tg('zm', c.zm, '🔎 Thermal: likhai jaisi (zoom)', '🤖 Thermal: AI ki list') : ''}${tg('a4', c.a4, '🖨 A4: ON', '🖨 A4: BAND')}<i class="wps-wst">${stTxt(wst.cfg)}</i></div>${!wc ? '<small class="wps-mut">Abhi setting save nahi hui — koi chip dabayein to save ho jayegi.</small>' : ''}</div>
     <div class="wps-sec"><h4>📞 Kin numbers ki forward parchi PC le</h4><small class="wps-mut">Sirf in numbers se forward hui parchi (tasveer / likha order) PC parhega.</small>
     <div class="wps-nums">${c.allow.map(n => `<span class="wps-num">📱 ${esc(n)}<button type="button" data-ws-numx="${esc(n)}" aria-label="Hatao">✕</button></span>`).join('') || '<small class="wps-mut">Abhi koi number nahi</small>'}</div>
     <div class="wps-nadd"><input type="tel" inputmode="tel" data-ws-numin="1" maxlength="20" placeholder="0300-1234567" autocomplete="off" enterkeyhint="done"><button type="button" class="wps-tc pri" data-ws-numadd="1">➕ Jorein</button></div></div>
@@ -887,7 +887,7 @@ document.addEventListener('click', e => {
   if (set && set.closest('#dialogBody [data-ws-setroot]')) { const d = set.dataset;
     if (d.wsRelink) waCmd('relink'); else if (d.wsLogout) waCmd('logout'); else if (d.wsNumadd) numAdd();
     else if (d.wsNumx) { if (confirm(d.wsNumx + ' hata dein? Is number ki parchi phir PC nahi lega.')) cfgSave({ allow: cfgNow().allow.filter(n => n !== d.wsNumx) }, '✓ ' + d.wsNumx + ' hata diya'); }
-    else if (d.wsTg) { const c = cfgNow(), k = d.wsTg; if (!['on', 'th', 'a4'].includes(k)) return; cfgSave({ [k]: !c[k] }, k === 'on' ? (c.on ? '⛔ WhatsApp parchi band' : '✅ WhatsApp parchi chalu') : (k === 'th' ? '🧾 Thermal: ' : '🖨 A4: ') + (c[k] ? 'BAND' : 'ON')); }
+    else if (d.wsTg) { const c = cfgNow(), k = d.wsTg; if (!['on', 'th', 'a4', 'zm'].includes(k)) return; cfgSave({ [k]: !c[k] }, k === 'on' ? (c.on ? '⛔ WhatsApp parchi band' : '✅ WhatsApp parchi chalu') : k === 'zm' ? (c.zm ? '🤖 Thermal par ab AI ki list' : '🔎 Thermal par ab parchi ki asal likhai (har line zoom, bina AI)') : (k === 'th' ? '🧾 Thermal: ' : '🖨 A4: ') + (c[k] ? 'BAND' : 'ON')); }
     return; }
   if (!document.querySelector('[data-ws-root]')) return;
   const r = t.closest('#list .pp-cr, #list .pp-tr'); if (r && r.dataset.wsSel && !t.closest('button,select,input')) selSet(r.dataset.wsSel);

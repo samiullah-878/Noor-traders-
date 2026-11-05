@@ -4105,3 +4105,11 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
   Pakka na mile = pehla hit `guess` s 0.45 + `z` ('s' size takraya · 'w' lafz) → ❓ "andaza" (app). Yaad (LR) = pehle jaisa pakka; alias = pakka jab tak size na takraye. Purana dhoond.mjs (words/canon nahi) = purana tareeqa.
 - Gemini PROMPT_IMG / TXT: naya `qn` (tadad likhi? — "میدہ کلو" = 1 kg likha = true). normLine: qn false + raw mein hindsa / ½ / WORDNUM / unit lafz nahi (`hasQty`) = `nq:1` → j `nq:1` → app tadad poochti; thermal writtenText: line ke neeche ">> TADAD ? gahak se poochein".
 - dhoond.mjs = dukan/dhoond.js v2.182.0 (words / canon export + rang SYN). Test (18 lines, sahi item ho / na ho): white chana → SAFED CHANA ✓, toothbrush ≠ bath brush, dal mash ≠ dal masoor (❓ w), namak 2 kg ≠ Atc 800g (❓ s), pao lipton ≠ 475gm (❓ s), 10 L ≠ 900ml (❓ s), garam masala pao → 0.25 packet wala (Shan 50g par guna), Brite 3 kilo = Brite surf 3kg.
+
+## PC wa-parchi v1.9 · manifest 2026-11-05.1 (2026-11-05) — 🔎 thermal = parchi ki asal likhai, har line alag zoom (bina AI) · app v2.184.0
+- Malik: "app ki parchi ka auto print = poori parchi ka zoom · Tibet cream ke zoom jaisa har item · AI ghalat parhta hai — ghalti bilkul nahi · auto print bhi aisa hi".
+- zoomSlip → linePlan (flatten · skewOf · rotGray · ruleClean · dewarp · textInk · rowLines) → lineRasters (512 dot, ≤ 640 qatar tukde) → lineSlipText. Khana tabhi
+  kat-ta jab likhai ki syahi 0 aur asal syahi ≤ 3T (sirf chhapi lakeer) — likhai kabhi nahi kat-ti. Na bane = purana zoomPlan.
+- APP parchi: processOrder mein `zoomNow` (tasveer aate hi, AI ke saath saath; baad wale upd pr.th nahi chhoote, printOrder noTh = sirf A4). WhatsApp tasveer:
+  AI ka isOrder (ya AI fail) ke baad printOrder mein zoom. reprint + imgPrint (⋮ 🖼) = zoomThermal. Setting waParchi.zm (default ON; false = purani AI list).
+- zoomSlip CPU par ~1–2.5 s (event loop ruk-ta hai — Baileys theek). AI NAHI.

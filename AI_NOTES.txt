@@ -6929,3 +6929,20 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - `qaide.js`: RULES (🪞 tasveer · 🎯 nishana · 🎬 andar ka theater · 🩹 zakhm · 😊 khushi aadat · 🧘 sukoon phir faisla — Roman Urdu, apne lafz, kitaab ki ibaarat nahi). App khulte hi (3 s) har dafa + khuli app mein har 2 ghante bari bari agla qaida; card = popover (khuli MODAL khirki ho to card USI khirki ke andar daalo — warna modal baqi sab ko inert karta hai, ungli nahi chalti); tap / 📖 Sab 6, ✕, 🔕 Aaj nahi (localStorage sam-qd-*). app.js `qdKick()` renderSurface mein (sirf owner), ☰ `#qdNav` "🧠 6 Qaide" = sab 6. Server / AI nahi, CAP nahi (sirf malik).
 - MacroDroid `NT_6_Qaide.macro` (chat mein): har 3 ghante, 9:00–22:30 (TimeOfDayConstraint), random 1-6 (SetVariableAction random — AntiScamProtector namoone se) → If == i → notification. Phone par test nahi hui.
 - (2026-11-05) Malik: "har dafa unlock karne par · screen ke CENTER mein" → MacroDroid `NT_6_Qaide_Unlock.macro` (chat mein): DeviceUnlockedTrigger (koi shart nahi) → random qaida (URDU likhai — malik ne khud maanga) → MessageDialogAction (beech mein; upar notification aaye = MacroDroid ko "Display over other apps" ijazat nahi, dimBackground, yPosition 0.5, back se band). Purana 3-ghante wala macro band (dohra na ho).
+
+## v2.184.0 (2026-11-05) — 🔎 Parchi ka thermal = ASAL LIKHAI, har line alag zoom (bina AI) · PC wa-parchi v1.9 · manifest 2026-11-05.1
+- Malik (WhatsApp Parchi Sale screen, "App ki parchi" + Tibet cream ka ❓ tukda dekh kar): "app ki parchi ka auto print = poori parchi ka zoom · Tibet cream
+  ke zoom jaisa HAR item · AI ghalat parhta hai — ghalti bilkul nahi · bari parchi chhoti ho kar thermal par" + "auto print bhi aisa hi" (= WhatsApp parchi bhi).
+- PC wa-parchi.js v1.9: `zoomSlip(o, img)` → `linePlan(grayOf(img,1600))` → `lineRasters` → `lineSlipText`. Qadam: flatten (saya hatao, kaghaz safed) → skewOf
+  (−6…+6°) → rotGray → ruleClean (chhapi lakeerein: lambi patli + toti hui dash-chain, laal hashiya / kinara — SIRF line pehchanne ke liye, tasveer se nahi
+  mitti) → dewarp (mura copy-safha: lakeerein seedhi, har khana sirf upar/neeche khiskta) → textInk (CC: dhabba / saya / patli patti bahar) → rowLines (khali
+  qatar par line, lambi = valley par kaat, chhota nishan paas wali line mein) → har line ka khana tabhi kat-ta / sukerta hai jab NA likhai ki syahi ho NA asal
+  syahi lakeer se zyada (≤ 3T) → 512 chaurai zoom (maxH 100, up 2.5×), beech nuqta lakeer, ≤ 640 qatar ke GS v 0 tukde. Do alag list (lines barabar nahi) =
+  daayan pehle + mota lakeer. Samajh na aaye = purana zoomPlan (poori parchi). Shuru / aakhir ki kachra line (gehre hisse / kone mein) hi hat-ti hai.
+- Kab: APP parchi = tasveer aate hi `zoomNow` (AI ke saath saath, pr.th + pr.zm) — AI baad mein sirf app ke bill items + A4. WhatsApp tasveer = AI "order hai"
+  kahe (ya AI na parh sake) tab printOrder mein zoom (random tasveer na chhape). Dobara print + ⋮ 🖼 Parchi jaisi print = wahi zoom. Likhi WhatsApp list
+  (tasveer nahi) = pehle jaisi likhi list. A4 pehle jaisa.
+- Setting `blueAccess/waParchi.zm` (default ON) — app ⋮ ⚙️ chip "🔎 Thermal: likhai jaisi (zoom)" / "🤖 Thermal: AI ki list" (sirf Thermal ON par). cloud.saveWaParchi zm.
+- Test (node): malik ki asal copy-safha parchi (lakeerein mudi hui, laal hashiya, ungli ka saya) = 25 lines, likhai ki syahi 99.7% chhapi (baqi nuqte), 35 cm;
+  bana hua: 1 list 18 lines (item + tadad sukere), do alag list (daayan 13 → baayan 9), do jori barabar (8 qatar), mez par English (10). Product photo = purana zoom.
+  ~1–2.5 s (PC par zyada ho sakta). AI NAHI (print mein). Rules NAHI badle. Phone / asal printer par abhi test nahi.

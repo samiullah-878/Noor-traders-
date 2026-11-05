@@ -1,5 +1,13 @@
 // =========================================================
-//  wa-parchi.js  v1.8 (2026-11-04) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  wa-parchi.js  v1.9 (2026-11-05) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v1.9: 🔎 malik: "app ki parchi ka auto print = poori parchi ka zoom · Tibet cream ke tukde jaisa HAR item · AI ghalat parhta hai — ghalti bilkul
+//        nahi · auto print bhi aisa hi" → thermal = parchi ki ASAL likhai, har line alag zoom (zoomSlip / linePlan — AI NAHI): kaghaz ka saya
+//        flatten, tirchha seedha (skewOf), mura copy-safha chhapi lakeeron se seedha (dewarp — sirf upar/neeche khiskao), lakeerein / laal hashiya /
+//        kinara line pehchanne se bahar (ruleClean / textInk), line ke beech ka lamba khali faasla sukera (item + tadad paas), 512 chaurai zoom,
+//        beech nuqta lakeer. Syahi kabhi nahi kat-ti (khana tabhi kate jab na likhai ki syahi ho na asal syahi lakeer se zyada). Do ALAG list
+//        (lines barabar nahi) = daayan pehle. Samajh na aaye = purana poori parchi zoom. APP parchi = tasveer aate hi thermal (AI ke saath saath,
+//        zoomNow); WhatsApp tasveer = AI "order hai" kahe tab (ya AI na parh sake tab bhi) zoom. Dobara print + ⋮ 🖼 chip bhi yehi. Likhi WhatsApp
+//        list (tasveer nahi) = pehle jaisi. A4 + app ke bill items (AI) pehle jaise. Setting blueAccess/waParchi.zm (app ⋮ ⚙️: 🔎 zoom / 🤖 AI list).
 //  v1.8: ✅ malik: "bill mein woh items jo parchi par hain hi nahi (white chana → shawer, maida → pista, mash → masoor) · tadad na likhi ho to poocho" →
 //        PAKKA JAANCH (AI NAHI): bill mein khud sirf tab jab parchi ka HAR asal lafz item ke naam mein ho (awaz / spelling / ek jaisa lafz,
 //        SOFT lafz jaise tea / masala chhor sakte) + SIZE na takraye (parchi 10 litre ↔ 900ml, 2 kilo ↔ 800g, pao ↔ 475gm = ❓ "size alag";
@@ -48,7 +56,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '1.5';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '1.9';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -631,6 +639,372 @@ function imageSlipText(o, plan, opt = {}) {
   return out.join('\r\n');
 }
 
+// ---------- 🔎 v1.9: LINE ZOOM (bina AI) — malik: "Tibet cream ke tukde jaisa har item zoom · AI ghalat parhta hai · ghalti bilkul nahi" ----------
+// Tasveer → seedhi (tirchhi lakeerein theek) → har likhi LINE alag (syahi ki qataron se; chhapi lakeerein / laal hashiya nahi gine)
+// → line ke beech ka lamba khali faasla sukera (item + tadad paas paas, bara zoom) → 512 chaurai tak zoom → ek ke neeche ek, beech patli lakeer.
+// Syahi KABHI nahi chhootti: chhota nishan (nuqta / "1") paas wali line ke saath; lambi line (do line juri) beech ki khali qatar par kat-ti hai.
+// Do alag list (daayein / baayein, lines barabar nahi) = daayan list pehle. Kuch samajh na aaye = null → purana zoomPlan. AI NAHI.
+function grayOf(img, maxSide) {   // RGBA → { w, h, g } (average se chhota, roshni 0–255)
+  const s = Math.max(1, Math.max(img.width, img.height) / maxSide), w = Math.max(1, Math.round(img.width / s)), h = Math.max(1, Math.round(img.height / s));
+  const g = new Float32Array(w * h), D = img.data, W0 = img.width, H0 = img.height;
+  for (let y = 0; y < h; y++) {
+    const ya = Math.min(H0 - 1, Math.floor(y * s)), yb = Math.max(ya + 1, Math.min(H0, Math.floor((y + 1) * s)));
+    for (let x = 0; x < w; x++) {
+      const xa = Math.min(W0 - 1, Math.floor(x * s)), xb = Math.max(xa + 1, Math.min(W0, Math.floor((x + 1) * s))); let t = 0, n = 0;
+      for (let yy = ya; yy < yb; yy++) { let i = (yy * W0 + xa) * 4; for (let xx = xa; xx < xb; xx++, i += 4) { t += 0.299 * D[i] + 0.587 * D[i + 1] + 0.114 * D[i + 2]; n++; } }
+      g[y * w + x] = n ? t / n : 255;
+    }
+  }
+  return { w, h, g };
+}
+function inkOf(G) {   // syahi = apne aas paas (r) se kafi gehri — saya / mez / roshni ka farq syahi nahi
+  const { w, h, g } = G, r = Math.max(5, Math.round(Math.max(w, h) / 45)), W1 = w + 1, I = new Float64Array(W1 * (h + 1)), ink = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) { let row = 0; for (let x = 0; x < w; x++) { row += g[y * w + x]; I[(y + 1) * W1 + x + 1] = I[y * W1 + x + 1] + row; } }
+  for (let y = 0; y < h; y++) {
+    const ya = Math.max(0, y - r), yb = Math.min(h, y + r + 1);
+    for (let x = 0; x < w; x++) {
+      const xa = Math.max(0, x - r), xb = Math.min(w, x + r + 1);
+      const m = (I[yb * W1 + xb] - I[ya * W1 + xb] - I[yb * W1 + xa] + I[ya * W1 + xa]) / ((yb - ya) * (xb - xa)), v = g[y * w + x];
+      if (v < m * 0.8 && m - v > 16) ink[y * w + x] = 1;
+    }
+  }
+  return ink;
+}
+function skewOf(G, ink) {   // −6°…+6° — jis zaviye par qataron ki syahi sab se ikatthi (chhapi lakeerein / likhai) wohi
+  const { w, h } = G, pts = []; let k = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (ink[y * w + x] && (k++ % 3 === 0)) pts.push(x, y);
+  if (pts.length < 200) return 0;
+  const score = a => { const t = Math.tan(a * Math.PI / 180), off = Math.ceil(w * 0.11) + 2, H = new Float64Array(h + 2 * off); for (let i = 0; i < pts.length; i += 2) { const r = Math.round(pts[i + 1] - (pts[i] - w / 2) * t) + off; if (r >= 0 && r < H.length) H[r]++; } let s = 0; for (const v of H) s += v * v; return s; };
+  let best = 0, bs = score(0);
+  for (let a = -6; a <= 6.001; a += 0.5) { const s = score(a); if (s > bs * 1.0001) { bs = s; best = a; } }
+  for (let a = best - 0.4; a <= best + 0.401; a += 0.1) { const s = score(a); if (s > bs * 1.0001) { bs = s; best = a; } }
+  return Math.abs(best) < 0.15 ? 0 : Math.round(best * 10) / 10;
+}
+function rotGray(G, deg, fill) {   // seedha karo (bilinear) — kone khali = kaghaz
+  if (!deg) return G;
+  const { w, h, g } = G, t = deg * Math.PI / 180, c = Math.cos(t), s = Math.sin(t), cx = w / 2, cy = h / 2, o = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const dx = x - cx, dy = y - cy, sx = cx + dx * c - dy * s, sy = cy + dx * s + dy * c, x0 = Math.floor(sx), y0 = Math.floor(sy);
+    if (x0 < 0 || y0 < 0 || x0 >= w - 1 || y0 >= h - 1) { o[y * w + x] = fill; continue; }
+    const fx = sx - x0, fy = sy - y0, i = y0 * w + x0;
+    o[y * w + x] = (g[i] * (1 - fx) + g[i + 1] * fx) * (1 - fy) + (g[i + w] * (1 - fx) + g[i + w + 1] * fx) * fy;
+  }
+  return { w, h, g: o };
+}
+function dropRules(ink, w, h) {   // chhapi lakeerein (lambi seedhi) + laal hashiya / kaghaz ka kinara (lamba khara) — sirf line pehchanne ke liye
+  const o = ink.slice(), LH = Math.max(40, Math.round(w * 0.2)), LV = Math.max(40, Math.round(h * 0.12));
+  for (let y = 0; y < h; y++) { let a = -1, gap = 0; for (let x = 0; x <= w; x++) { const on = x < w && ink[y * w + x]; if (on) { if (a < 0) a = x; gap = 0; } else if (a >= 0 && (++gap > 3 || x === w)) { const b = x - gap; if (b - a + 1 >= LH) for (let xx = a; xx <= b; xx++) o[y * w + xx] = 0; a = -1; gap = 0; } } }
+  for (let x = 0; x < w; x++) { let a = -1, gap = 0; for (let y = 0; y <= h; y++) { const on = y < h && ink[y * w + x]; if (on) { if (a < 0) a = y; gap = 0; } else if (a >= 0 && (++gap > 3 || y === h)) { const b = y - gap; if (b - a + 1 >= LV) for (let yy = a; yy <= b; yy++) o[yy * w + x] = 0; a = -1; gap = 0; } } }
+  return o;
+}
+function median(a) { if (!a.length) return 0; const s = [...a].sort((p, q) => p - q); return s[s.length >> 1]; }
+function flatten(G) {   // saya / roshni ka farq hatao: har hissa apne kaghaz (90% roshan) se — kaghaz safed, syahi gehri, mez / saya bhi safed
+  const { w, h, g } = G, B = Math.max(12, Math.round(Math.max(w, h) / 70)), bw = Math.ceil(w / B), bh = Math.ceil(h / B), M = new Float32Array(bw * bh), Md = new Float32Array(bw * bh), hist = new Uint32Array(256);
+  for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {
+    hist.fill(0); let n = 0; const ya = by * B, yb = Math.min(h, ya + B), xa = bx * B, xb = Math.min(w, xa + B);
+    for (let y = ya; y < yb; y += 2) for (let x = xa; x < xb; x += 2) { hist[Math.max(0, Math.min(255, g[y * w + x] | 0))]++; n++; }
+    let acc = 0, v = 255, md = -1; for (let i = 0; i < 256; i++) { acc += hist[i]; if (md < 0 && acc >= n * 0.5) md = i; if (acc >= n * 0.9) { v = i; break; } }
+    M[by * bw + bx] = v; Md[by * bw + bx] = md < 0 ? v : md;
+  }
+  const S = new Float32Array(M.length);
+  for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) { let s = 0, n = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const yy = by + dy, xx = bx + dx; if (yy >= 0 && yy < bh && xx >= 0 && xx < bw) { s += M[yy * bw + xx]; n++; } } S[by * bw + bx] = Math.max(s / n, M[by * bw + bx]); }
+  const o = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) {
+    const fy = Math.max(0, Math.min(bh - 1, (y + 0.5) / B - 0.5)), y0 = Math.floor(fy), y1 = Math.min(bh - 1, y0 + 1), ty = fy - y0;
+    for (let x = 0; x < w; x++) {
+      const fx = Math.max(0, Math.min(bw - 1, (x + 0.5) / B - 0.5)), x0 = Math.floor(fx), x1 = Math.min(bw - 1, x0 + 1), tx = fx - x0;
+      const bg = (S[y0 * bw + x0] * (1 - tx) + S[y0 * bw + x1] * tx) * (1 - ty) + (S[y1 * bw + x0] * (1 - tx) + S[y1 * bw + x1] * tx) * ty;
+      o[y * w + x] = Math.min(255, g[y * w + x] / Math.max(24, bg) * 255);
+    }
+  }
+  return { w, h, g: o, M, Md, B, bw, bh };
+}
+// chhapi lakeerein — seedhi ho ya kaghaz mur kar gol / tirchhi (malik ki asal parchi: copy ke safhe ki lakeerein jhuki hui) — aur khari lakeerein
+// (laal hashiya, kaghaz ka kinara). Patli (≤ T) lambi lakeer = lakeer; us ki seedh mein (aage peeche bhi) patli syahi bhi nikalo. Sirf line PEHCHANNE ke liye.
+function ruleClean(ink, w, h) {
+  const T = Math.max(3, Math.round(Math.max(w, h) / 400)), o = ink.slice(), vk = new Uint8Array(w * h), rules = [];
+  for (const horiz of [true, false]) {
+    const N = horiz ? w : h, M = horiz ? h : w, at = horiz ? (a, b) => b * w + a : (a, b) => a * w + b;
+    const thin = new Uint8Array(w * h);
+    for (let a = 0; a < N; a++) { let s = -1; for (let b = 0; b <= M; b++) { const on = b < M && o[at(a, b)]; if (on && s < 0) s = b; else if (!on && s >= 0) { if (b - s <= T) for (let k = s; k < b; k++) thin[at(a, k)] = 1; s = -1; } } }
+    const seen = new Uint8Array(w * h), st = [], kill = [], dashes = [];
+    for (let p0 = 0; p0 < w * h; p0++) {
+      if (!thin[p0] || seen[p0]) continue;
+      const px = []; seen[p0] = 1; st.push(p0); let a0 = N, a1 = -1, b0 = M, b1 = -1;
+      while (st.length) {
+        const p = st.pop(), x = p % w, y = (p - x) / w, a = horiz ? x : y, b = horiz ? y : x; px.push(p);
+        if (a < a0) a0 = a; if (a > a1) a1 = a; if (b < b0) b0 = b; if (b > b1) b1 = b;
+        for (let dy = -1; dy <= 1; dy++) { const yy = y + dy; if (yy < 0 || yy >= h) continue; for (let dx = -1; dx <= 1; dx++) { const xx = x + dx; if (xx < 0 || xx >= w) continue; const q = yy * w + xx; if (thin[q] && !seen[q]) { seen[q] = 1; st.push(q); } } }
+      }
+      const span = a1 - a0 + 1;
+      if (span >= Math.max(8, 2 * T) && span < N * 0.15 && b1 - b0 <= 2 * T + span * 0.25 && px.length <= span * T * 1.6) {   // chhota patla tukda — toti hui lakeer ka hissa ho sakta
+        let sa = 0, sb = 0, saa = 0, sab = 0; for (const p of px) { const x = p % w, y = (p - x) / w, aa = horiz ? x : y, bb = horiz ? y : x; sa += aa; sb += bb; saa += aa * aa; sab += aa * bb; }
+        const n = px.length, den = n * saa - sa * sa, m = den ? (n * sab - sa * sb) / den : 0, c = (sb - m * sa) / n; dashes.push({ a0, a1, m, c, px });
+      }
+      if (span < N * 0.15 || b1 - b0 > Math.max(6 * T, span * 0.22) || px.length > span * T * 1.6) continue;   // lambi + patli (jhuki / gol bhi — 12° tak)
+      const sum = new Float64Array(span), cnt = new Float64Array(span);
+      for (const p of px) { const x = p % w, y = (p - x) / w, a = horiz ? x : y, b = horiz ? y : x; sum[a - a0] += b; cnt[a - a0]++; }
+      const cy = new Float64Array(span); let last = -1;
+      for (let i = 0; i < span; i++) if (cnt[i]) { cy[i] = sum[i] / cnt[i]; if (last >= 0) for (let j = last + 1; j < i; j++) cy[j] = cy[last] + (cy[i] - cy[last]) * (j - last) / (i - last); last = i; }
+      const K = Math.max(2, Math.min(40, Math.floor(span / 3))), sl = (cy[K] - cy[0]) / K, sr = (cy[span - 1] - cy[span - 1 - K]) / K, ext = Math.round(N * 0.3);
+      kill.push(...px); if (!horiz) for (const q of px) vk[q] = 1;
+      if (horiz) { const cl = v => Math.max(-0.2, Math.min(0.2, v)), L0 = cl(sl), R0 = cl(sr); rules.push({ cover: span, f: a => a < a0 ? cy[0] + L0 * (a - a0) : a > a1 ? cy[span - 1] + R0 * (a - a1) : cy[a - a0] }); }
+      for (let a = Math.max(0, a0 - ext); a <= Math.min(N - 1, a1 + ext); a++) {
+        const c = a < a0 ? cy[0] + sl * (a - a0) : a > a1 ? cy[span - 1] + sr * (a - a1) : cy[a - a0], bc = Math.round(c);
+        for (let b = Math.max(0, bc - T - 1); b <= Math.min(M - 1, bc + T + 1); b++) { const q = at(a, b); if (thin[q]) kill.push(q); }
+      }
+    }
+    // toti hui (dash) lakeer: ek seedh mein patle tukde jor kar — kul lambai ≥ 20% aur 40%+ bhari = lakeer
+    dashes.sort((p, q) => p.a0 - q.a0);
+    const nx = new Int32Array(dashes.length).fill(-1), pv = new Int32Array(dashes.length).fill(-1), gmax = N * 0.1;
+    for (let i = 0; i < dashes.length; i++) {
+      const d = dashes[i]; let bj = -1, bg = Infinity;
+      for (let j = i + 1; j < dashes.length; j++) {
+        const e = dashes[j], gap = e.a0 - d.a1; if (gap > gmax) break; if (gap < -3 || pv[j] >= 0) continue;
+        if (Math.abs(d.m - e.m) > 0.12 || Math.abs(d.m * e.a0 + d.c - (e.m * e.a0 + e.c)) > T + 1 + 0.03 * Math.max(0, gap)) continue;
+        if (gap < bg) { bg = gap; bj = j; }
+      }
+      if (bj >= 0) { nx[i] = bj; pv[bj] = i; }
+    }
+    for (let i = 0; i < dashes.length; i++) {
+      if (pv[i] >= 0) continue; const ch = []; for (let k = i; k >= 0; k = nx[k]) ch.push(dashes[k]);
+      if (ch.length < 2) continue;
+      const ext0 = ch[0].a0, ext1 = ch[ch.length - 1].a1, cov = ch.reduce((s, d) => s + d.a1 - d.a0 + 1, 0);
+      if (ext1 - ext0 < N * 0.2 || cov < (ext1 - ext0) * 0.4) continue;
+      for (const d of ch) kill.push(...d.px);
+      if (horiz) { const f0 = ch[0], f1 = ch[ch.length - 1]; rules.push({ cover: cov, f: a => a < ext0 ? f0.m * a + f0.c : a > ext1 ? f1.m * a + f1.c : pred(a) }); }
+      const pred = a => { let d = ch[0]; for (const e of ch) { if (e.a0 <= a) d = e; } const nd = ch[ch.indexOf(d) + 1]; if (nd && a > d.a1) { const t = (a - d.a1) / Math.max(1, nd.a0 - d.a1); return (d.m * d.a1 + d.c) * (1 - t) + (nd.m * nd.a0 + nd.c) * t; } return d.m * a + d.c; };
+      for (let a = Math.max(0, ext0 - Math.round(N * 0.15)); a <= Math.min(N - 1, ext1 + Math.round(N * 0.15)); a++) {
+        const bc = Math.round(pred(a)); for (let b = Math.max(0, bc - T - 1); b <= Math.min(M - 1, bc + T + 1); b++) { const q = at(a, b); if (thin[q]) kill.push(q); }
+      }
+    }
+    for (const q of kill) o[q] = 0;
+  }
+  return { ink: o, vk, T, rules };
+}
+function textInk(ink, w, h, near, T) {   // sirf likhai jaisi syahi: bohat lambe / bohat oonche tukde (kaghaz ka kinara, saya, lakeer ka bacha) line pehchanne mein nahi
+  const lab = new Int32Array(w * h), C = [], st = [];
+  for (let s = 0; s < w * h; s++) {
+    if (!ink[s] || lab[s]) continue;
+    const id = C.length + 1, c = { a: 0, x0: w, x1: 0, y0: h, y1: 0 }; lab[s] = id; st.push(s);
+    while (st.length) {
+      const p = st.pop(), x = p % w, y = (p - x) / w; c.a++; if (x < c.x0) c.x0 = x; if (x > c.x1) c.x1 = x; if (y < c.y0) c.y0 = y; if (y > c.y1) c.y1 = y;
+      for (let dy = -1; dy <= 1; dy++) { const yy = y + dy; if (yy < 0 || yy >= h) continue; for (let dx = -1; dx <= 1; dx++) { const xx = x + dx; if (xx < 0 || xx >= w) continue; const q = yy * w + xx; if (ink[q] && !lab[q]) { lab[q] = id; st.push(q); } } }
+    }
+    C.push(c);
+  }
+  const Hm = median(C.filter(c => c.a >= 8 && c.y1 - c.y0 >= 2).map(c => c.y1 - c.y0 + 1)) || 10;
+  const keep = new Uint8Array(C.length + 1);
+  const nb = near ? new Uint32Array(C.length + 1) : null; if (near) for (let i = 0; i < lab.length; i++) if (lab[i] && near[i]) nb[lab[i]]++;
+  const th = (T || 3) * 2 + 1;
+  C.forEach((c, i) => { const ch = c.y1 - c.y0 + 1, cw = c.x1 - c.x0 + 1; keep[i + 1] = c.a >= 3 && ch <= Hm * 5 && !(cw > Hm * 12 && ch < Hm * 1.6) && !(cw > w * 0.6)
+    && !(ch <= th && cw >= ch * 4)   // patli lambi patti (lakeer ka bacha / kinare ka tukda) — line pehchanne mein nahi
+    && !(nb && nb[i + 1] >= c.a * 0.6) ? 1 : 0; });   // kaghaz ke kinare (saya) par
+  const big = new Uint8Array(C.length + 1); C.forEach((c, i) => { if (c.y1 - c.y0 + 1 > Hm * 5 || c.x1 - c.x0 + 1 > w * 0.6) big[i + 1] = 1; });
+  const o = new Uint8Array(w * h), bg = new Uint8Array(w * h); for (let i = 0; i < o.length; i++) if (lab[i]) { if (keep[lab[i]]) o[i] = 1; else if (big[lab[i]]) bg[i] = 1; }
+  return { ink: o, Hm, big: bg };   // big = kinara / saya / dhabba (likhai nahi)
+}
+// ek list (x0..x1 ke andar) ki lines → [{ y0, y1, ink }]
+function rowLines(ink, w, x0, x1, ya, yb) {
+  const cw = x1 - x0 + 1, P = new Float32Array(yb - ya + 1), on = Math.max(2, cw * 0.004);
+  for (let y = ya; y <= yb; y++) { let c = 0; for (let x = x0; x <= x1; x++) c += ink[y * w + x]; P[y - ya] = c; }
+  let segs = []; let a = -1, gap = 0;
+  for (let i = 0; i <= P.length; i++) { const v = i < P.length && P[i] >= on; if (v) { if (a < 0) a = i; gap = 0; } else if (a >= 0 && (++gap > 1 || i === P.length)) { segs.push([a, i - gap]); a = -1; gap = 0; } }
+  const sum = (p, q) => { let s = 0; for (let i = p; i <= q; i++) s += P[i]; return s; };
+  let Hm = median(segs.map(s => s[1] - s[0] + 1).filter(n => n >= 4)) || 12;
+  // lambi (do line juri) = beech ki sab se khali qatar par kaato
+  const split = s => { const n = s[1] - s[0] + 1; if (n <= Hm * 1.7) return [s]; const m = Math.round(Hm * 0.55); let bi = -1, bv = Infinity; for (let i = s[0] + m; i <= s[1] - m; i++) { const v = (P[i - 1] + P[i] * 2 + P[i + 1]) / 4; if (v < bv) { bv = v; bi = i; } } if (bi < 0 || bv > (sum(s[0], s[1]) / n) * 0.35) return [s]; return [...split([s[0], bi]), ...split([bi + 1, s[1]])]; };
+  segs = segs.flatMap(split);
+  Hm = median(segs.map(s => s[1] - s[0] + 1).filter(n => n >= 4)) || Hm;
+  let L = segs.map(s => ({ y0: s[0] + ya, y1: s[1] + ya, ink: sum(s[0], s[1]) }));
+  const Im = median(L.map(l => l.ink)) || 1;
+  // chhota nishan (nuqta / dum / "1" / kat-ti dum) — paas wali line mein milao (kabhi phenko nahi)
+  for (let k = 0; k < 40; k++) {
+    if (L.length < 2) break;
+    let wi = -1, wv = Infinity; L.forEach((l, i) => { const hh = l.y1 - l.y0 + 1; const gp = Math.min(i ? l.y0 - L[i - 1].y1 : Infinity, i < L.length - 1 ? L[i + 1].y0 - l.y1 : Infinity); if (hh < Hm * 0.4 || l.ink < Im * 0.12 || (hh < Hm * 0.7 && gp <= Hm * 0.3)) { const v = l.ink; if (v < wv) { wv = v; wi = i; } } });
+    if (wi < 0) break;
+    const l = L[wi], up = L[wi - 1], dn = L[wi + 1], du = up ? l.y0 - up.y1 : Infinity, dd = dn ? dn.y0 - l.y1 : Infinity, t = du <= dd ? up : dn;
+    t.y0 = Math.min(t.y0, l.y0); t.y1 = Math.max(t.y1, l.y1); t.ink += l.ink; L.splice(wi, 1);
+  }
+  return { L, Hm };
+}
+// 📐 mura hua kaghaz: chhapi lakeerein (copy ka safha) seedhi karo — har khana (x) sirf upar / neeche khiskta hai, likhai ka koi hissa nahi kat-ta
+// → { yOf(x, Y) } ya null (lakeerein kam / ulti seedhi = waisa hi chhoro)
+function dewarp(rules, w, h, Hm) {
+  let R = rules.filter(r => r.cover >= w * 0.3).map(r => { const y = new Float32Array(w); for (let x = 0; x < w; x++) y[x] = r.f(x); return { cover: r.cover, y, c: y[w >> 1] }; });
+  if (R.length < 2) return null;
+  R.sort((p, q) => p.c - q.c);
+  const mean = (p, q) => { let s = 0; for (let x = 0; x < w; x += 4) s += Math.abs(p.y[x] - q.y[x]); return s / Math.ceil(w / 4); };
+  for (let k = 1; k < R.length;) { if (mean(R[k - 1], R[k]) < Hm * 0.5) R.splice(R[k - 1].cover >= R[k].cover ? k : k - 1, 1); else k++; }   // ek hi lakeer do dafa
+  for (let guard = 0; guard < 50 && R.length >= 2; guard++) {   // kahin aapas mein kat-ti hon to kamzor wali nikalo
+    let bad = -1; for (let k = 1; k < R.length && bad < 0; k++) { let mn = Infinity; for (let x = 0; x < w; x += 2) mn = Math.min(mn, R[k].y[x] - R[k - 1].y[x]); if (mn < Hm * 0.4) bad = R[k].cover < R[k - 1].cover ? k : k - 1; }
+    if (bad < 0) break; R.splice(bad, 1);
+  }
+  if (R.length < 2) return null;
+  for (const r of R) { let mx = 0; for (let x = 0; x < w; x++) mx = Math.max(mx, Math.abs(r.y[x] - r.c)); if (mx > h * 0.12) return null; }   // itna mura = ghalat lakeer — chhoro
+  let dev = 0; for (const r of R) for (let x = 0; x < w; x += 4) dev = Math.max(dev, Math.abs(r.y[x] - r.c)); if (dev < Math.max(2, Hm * 0.12)) return null;   // pehle hi seedha
+  const Y = R.map(r => r.c);
+  return {
+    yOf: (x, yy) => {
+      if (yy <= Y[0]) return yy + R[0].y[x] - Y[0];
+      if (yy >= Y[Y.length - 1]) return yy + R[R.length - 1].y[x] - Y[Y.length - 1];
+      let k = 0; while (k < Y.length - 2 && yy > Y[k + 1]) k++;
+      const t = (yy - Y[k]) / (Y[k + 1] - Y[k]); return R[k].y[x] + t * (R[k + 1].y[x] - R[k].y[x]);
+    }, n: R.length
+  };
+}
+function warpGray(G, D, fill) { const { w, h, g } = G, o = new Float32Array(w * h); for (let x = 0; x < w; x++) for (let y = 0; y < h; y++) { const sy = D.yOf(x, y), y0 = Math.floor(sy), t = sy - y0; o[y * w + x] = y0 < 0 || y0 >= h - 1 ? fill : g[y0 * w + x] * (1 - t) + g[(y0 + 1) * w + x] * t; } return { w, h, g: o }; }
+function warpMask(m, w, h, D) { const o = new Uint8Array(w * h); for (let x = 0; x < w; x++) for (let y = 0; y < h; y++) { const sy = Math.round(D.yOf(x, y)); o[y * w + x] = sy < 0 || sy >= h ? 1 : m[sy * w + x]; } return o; }
+// → { lines: [{ y0, y1, segs: [[xa, xb], …] }], Hm, deg } ya null
+function linePlan(G0) {
+  if (!G0 || G0.w < 60 || G0.h < 60) return null;
+  const F = flatten(G0), ink0 = inkOf(F), deg = skewOf(F, ink0);   // chhapi lakeerein bhi (zaviya unhi se saaf)
+  let G = rotGray(F, deg, 255); const { w, h } = G;
+  // kaghaz ke bahar (mez / deewar / gehra saya — apna 90% roshan bhi kaghaz ka 40% se kam) = bg · gehra hissa (median 55% se kam) = dk
+  const Mv = [...F.M].sort((p, q) => p - q), Pp = Mv[Math.floor(Mv.length * 0.9)] || 255, Dv = [...F.Md].sort((p, q) => p - q), Pd = Dv[Math.floor(Dv.length * 0.9)] || 255;
+  const t = deg * Math.PI / 180, cs = Math.cos(t), sn = Math.sin(t), cx = w / 2, cy = h / 2;
+  let bg = new Uint8Array(w * h), dk = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const dx = x - cx, dy = y - cy, sx = cx + dx * cs - dy * sn, sy = cy + dx * sn + dy * cs, bx = Math.floor(sx / F.B), by = Math.floor(sy / F.B), i = y * w + x; if (bx < 0 || by < 0 || bx >= F.bw || by >= F.bh) { bg[i] = 1; dk[i] = 1; continue; } const bi = by * F.bw + bx; if (F.M[bi] < Pp * 0.4) bg[i] = 1; if (F.Md[bi] < Pd * 0.55) dk[i] = 1; }
+  const nearOf = () => {   // kaghaz ke kinare ke paas (bg se B tak)
+    const r = F.B, W1 = w + 1, I = new Int32Array(W1 * (h + 1)), o = new Uint8Array(w * h);
+    for (let y = 0; y < h; y++) { let row = 0; for (let x = 0; x < w; x++) { row += bg[y * w + x]; I[(y + 1) * W1 + x + 1] = I[y * W1 + x + 1] + row; } }
+    for (let y = 0; y < h; y++) { const ya = Math.max(0, y - r), yb = Math.min(h, y + r + 1); for (let x = 0; x < w; x++) { const xa = Math.max(0, x - r), xb = Math.min(w, x + r + 1); if (I[yb * W1 + xb] - I[ya * W1 + xb] - I[yb * W1 + xa] + I[ya * W1 + xa] > 0) o[y * w + x] = 1; } }
+    return o;
+  };
+  let near = nearOf();
+  const stage = () => { const inkA = inkOf(G); for (let i = 0; i < inkA.length; i++) if (bg[i]) inkA[i] = 0; const RC = ruleClean(inkA, w, h), TI = textInk(RC.ink, w, h, near, RC.T); return { inkA, RC, TI }; };
+  let S = stage(), warped = 0;
+  const D = dewarp(S.RC.rules, w, h, S.TI.Hm);
+  if (D) { G = warpGray(G, D, 255); bg = warpMask(bg, w, h, D); dk = warpMask(dk, w, h, D); near = nearOf(); S = stage(); warped = D.n; }
+  const RC = S.RC, TI = S.TI, ink = TI.ink, T = RC.T, raw = S.inkA;
+  for (let i = 0; i < raw.length; i++) if (RC.vk[i] || TI.big[i] || ((dk[i] || near[i]) && !ink[i])) raw[i] = 0;   // gehre hisse (ungli / saya) ki be-likhai syahi bhi nahi   // asal syahi (chhapi lakeerein samait, khari lakeer / dhabba ke baghair) — kaatne se pehle jaanch
+  const colC = new Float32Array(w), rowC = new Float32Array(h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (ink[y * w + x]) { colC[x]++; rowC[y]++; }
+  const edge = (arr, n, lim) => { let a = 0, b = n - 1; while (a < b && arr[a] <= lim) a++; while (b > a && arr[b] <= lim) b--; return [a, b]; };
+  const [x0, x1] = edge(colC, w, Math.max(1, h * 0.002)), [y0, y1] = edge(rowC, h, Math.max(1, w * 0.002));
+  if (x1 - x0 < w * 0.08 || y1 - y0 < h * 0.04) return null;
+  // do alag list? beech (30–70%) mein khali patti + dono taraf ki lines barabar NAHI
+  const cw = x1 - x0, lim = (y1 - y0) * 0.004; let best = null, run = 0;
+  for (let x = Math.round(x0 + cw * 0.3); x <= Math.round(x0 + cw * 0.7); x++) { if (colC[x] <= lim) { run++; if (!best || run > best.n) best = { n: run, x: x - Math.floor(run / 2) }; } else run = 0; }
+  let lists = [[x0, x1]];
+  if (best && best.n >= Math.max(3, cw * 0.04)) {
+    const R = rowLines(ink, w, best.x, x1, y0, y1), Lf = rowLines(ink, w, x0, best.x, y0, y1);
+    const hit = (a, B, m) => a.L.filter(l => { const c = (l.y0 + l.y1) / 2; return B.L.some(b => c >= b.y0 - m && c <= b.y1 + m); }).length / Math.max(1, a.L.length);
+    const m = Math.max(R.Hm, Lf.Hm) * 0.3;
+    if (R.L.length >= 2 && Lf.L.length >= 2 && Math.min(hit(R, Lf, m), hit(Lf, R, m)) < 0.6) lists = [[best.x, x1], [x0, best.x]];   // daayan pehle
+  }
+  const out = []; let Hall = [];
+  for (const [a, b] of lists) {
+    const R = rowLines(ink, w, a, b, y0, y1), Hm = R.Hm; Hall.push(Hm);
+    // shuru / aakhir ki "line" jo tasveer ke kinare ko chhoo rahi ho aur jis ki syahi zyada tar gehre hisse (mez / ungli / saya) mein = kachra
+    // shuru / aakhir ki "line" jis ki syahi zyada tar gehre hisse (mez / ungli / kapra / saya) mein — ya tasveer ke kinare ko chhoo kar sirf kone mein = kachra
+    const junk = (l, edgeOk) => { let n = 0, d = 0, e = 0; for (let y = l.y0; y <= l.y1; y++) for (let x = a; x <= b; x++) if (ink[y * w + x]) { n++; if (dk[y * w + x]) d++; if (x < w * 0.15 || x > w * 0.85) e++; } return n > 0 && (d / n >= 0.6 || (edgeOk && e / n >= 0.9)); };
+    const L = R.L.slice();
+    while (L.length > 1 && junk(L[0], L[0].y0 <= y0 + 2 && y0 <= 3)) L.shift();
+    while (L.length > 1 && junk(L[L.length - 1], L[L.length - 1].y1 >= y1 - 2 && y1 >= h - 4)) L.pop();
+    for (const l of L) {
+      const py = Math.max(2, Math.round(Hm * 0.18)), ya = Math.max(0, l.y0 - py), yb = Math.min(h - 1, l.y1 + py);
+      // khali khana = likhai ki syahi nahi AUR asal syahi bhi sirf lakeer jitni (≤ 3T) — likhai wala khana KABHI nahi kat-ta
+      const n = b - a + 1, blank = new Uint8Array(n);
+      for (let x = a; x <= b; x++) { let d = 0, r = 0; for (let y = ya; y <= yb; y++) { const i = y * w + x; d += ink[i]; r += raw[i]; } blank[x - a] = d === 0 && r <= 3 * T ? 1 : 0; }
+      let ca = 0, cb = n - 1; while (ca < n && blank[ca]) ca++; while (cb > ca && blank[cb]) cb--; if (ca >= n) continue;
+      const hh = l.y1 - l.y0 + 1, gapMax = Math.max(14, Math.round(Math.max(hh, Hm) * 1.1)), keep = Math.max(8, Math.round(Math.max(hh, Hm) * 0.45));
+      const segs = []; let sa = ca, z = 0;
+      for (let i = ca; i <= cb + 1; i++) { const empty = i <= cb && blank[i]; if (empty) z++; else { if (z > gapMax) { segs.push([sa, i - z - 1]); sa = i; } z = 0; } }
+      segs.push([sa, cb]);
+      const px = Math.max(3, Math.round(Hm * 0.3)), segsX = segs.map(([p, q], k) => [Math.max(0, a + p - (k === 0 ? px : keep >> 1)), Math.min(w - 1, a + q + (k === segs.length - 1 ? px : keep >> 1))]);
+      out.push({ y0: ya, y1: yb, segs: segsX, list: lists.length > 1 ? (a === lists[0][0] ? 1 : 2) : 0 });
+    }
+  }
+  const Hm = median(Hall) || 12;
+  if (!out.length || out.some(l => l.y1 - l.y0 > Hm * 6 + 20)) return null;   // samajh nahi aaya — purana zoom
+  return { G, lines: out, Hm, deg, warped, raw, det: ink };
+}
+// ek line → 1-bit qataron ka Buffer (64 byte = 512 dot fi qatar, beech mein) · photo-print jaisa (contrast, sharp, Atkinson)
+function lineBits(G, l, opt = {}) {
+  const { w, g } = G, gapW = Math.max(8, Math.round((l.y1 - l.y0) * 0.35)), parts = l.segs, sh = l.y1 - l.y0 + 1;
+  const sw = parts.reduce((s, [a, b]) => s + (b - a + 1), 0) + gapW * (parts.length - 1);
+  const xmap = new Int32Array(sw); let p = 0;   // strip ka x → asal x (−1 = khali faasla)
+  parts.forEach(([a, b], k) => { if (k) for (let i = 0; i < gapW; i++) xmap[p++] = -1; for (let x = a; x <= b; x++) xmap[p++] = x; });
+  const maxH = opt.maxH || 120, sc = Math.min(512 / sw, maxH / sh, opt.up || 2.5), Wd = Math.max(8, Math.min(512, Math.round(sw * sc))), H = Math.max(4, Math.round(sh * sc));
+  const v = new Float32Array(Wd * H);
+  for (let y = 0; y < H; y++) {
+    const fy = Math.min(sh - 1, (y + 0.5) / sc - 0.5), yA = Math.max(0, Math.floor(fy)), yB = Math.min(sh - 1, yA + 1), ty = Math.max(0, fy - yA);
+    for (let x = 0; x < Wd; x++) {
+      if (sc >= 1) {   // bara karna = bilinear
+        const fx = Math.min(sw - 1, (x + 0.5) / sc - 0.5), xA = Math.max(0, Math.floor(fx)), xB = Math.min(sw - 1, xA + 1), tx = Math.max(0, fx - xA);
+        const q = (xx, yy) => xmap[xx] < 0 ? 255 : g[(l.y0 + yy) * w + xmap[xx]];
+        v[y * Wd + x] = (q(xA, yA) * (1 - tx) + q(xB, yA) * tx) * (1 - ty) + (q(xA, yB) * (1 - tx) + q(xB, yB) * tx) * ty;
+      } else {   // chhota karna = average
+        const xa = Math.floor(x / sc), xb = Math.max(xa + 1, Math.min(sw, Math.floor((x + 1) / sc))), ya = Math.floor(y / sc), yb = Math.max(ya + 1, Math.min(sh, Math.floor((y + 1) / sc))); let t = 0, n = 0;
+        for (let yy = ya; yy < yb; yy++) for (let xx = xa; xx < xb; xx++) { t += xmap[xx] < 0 ? 255 : g[(l.y0 + yy) * w + xmap[xx]]; n++; }
+        v[y * Wd + x] = n ? t / n : 255;
+      }
+    }
+  }
+  const hist = new Array(256).fill(0); for (const x of v) hist[Math.max(0, Math.min(255, x | 0))]++;
+  let lo = 0, hi = 255, acc = 0; for (let i = 0; i < 256; i++) { acc += hist[i]; if (acc > v.length * 0.015) { lo = i; break; } } acc = 0; for (let i = 255; i >= 0; i--) { acc += hist[i]; if (acc > v.length * 0.35) { hi = i; break; } }
+  hi = Math.min(hi, 222); lo = Math.min(lo, 140);
+  if (opt.raw) {   // halki syahi (kamzor qalam / saya) bhi gehri: is line ki asal syahi ka 30% gehra hissa = poora kala
+    const vs = []; for (let y = l.y0; y <= l.y1; y++) for (const [a, b] of parts) for (let x = a; x <= b; x++) if (opt.raw[y * w + x]) vs.push(g[y * w + x]);
+    if (vs.length >= 20) { vs.sort((p, q) => p - q); lo = Math.max(lo, Math.min(vs[Math.floor(vs.length * 0.3)], hi - 60)); }
+  }   // kaghaz flatten se safed — halki chhapi lakeer bhi safed ke qareeb, syahi gehri
+  const span = Math.max(30, hi - lo);
+  for (let i = 0; i < v.length; i++) { const t = Math.max(0, Math.min(1, (v[i] - lo) / span)); v[i] = 255 * Math.pow(t, 1.3); }
+  if (Wd > 2 && H > 2) {
+    const b = new Float32Array(v.length);
+    for (let y = 0; y < H; y++) for (let x = 0; x < Wd; x++) { let s = 0, n = 0; for (let dy = -1; dy <= 1; dy++) { const yy = y + dy; if (yy < 0 || yy >= H) continue; for (let dx = -1; dx <= 1; dx++) { const xx = x + dx; if (xx < 0 || xx >= Wd) continue; s += v[yy * Wd + xx]; n++; } } b[y * Wd + x] = s / n; }
+    for (let i = 0; i < v.length; i++) v[i] = Math.max(0, Math.min(255, v[i] + 0.8 * (v[i] - b[i])));
+  }
+  const out = Buffer.alloc(64 * H), off = (512 - Wd) >> 1, add = (x, y, e) => { if (x >= 0 && x < Wd && y < H) v[y * Wd + x] += e; };
+  for (let y = 0; y < H; y++) for (let x = 0; x < Wd; x++) {
+    const i = y * Wd + x, old = v[i], nv = old < 128 ? 0 : 255, e = (old - nv) / 8;
+    if (nv === 0) { const X = x + off; out[y * 64 + (X >> 3)] |= 0x80 >> (X & 7); }
+    add(x + 1, y, e); add(x + 2, y, e); add(x - 1, y + 1, e); add(x, y + 1, e); add(x + 1, y + 1, e); add(x, y + 2, e);
+  }
+  return { H, out };
+}
+// plan → thermal rasters { z0, z1 … } (GS v 0, har ek ≤ 640 qatar, sirf line ke beech kat-ta) + chabiyan
+function lineRasters(P, opt = {}) {
+  const SEP = (() => { const b = Buffer.alloc(64 * 7); for (let x = 8; x < 504; x++) if ((x % 6) < 3) b[3 * 64 + (x >> 3)] |= 0x80 >> (x & 7); return b; })();   // patli nuqta lakeer (tick ke liye jagah)
+  const LIST = n => { const b = Buffer.alloc(64 * 4); for (let x = 0; x < 512; x++) { b[64 + (x >> 3)] |= 0x80 >> (x & 7); b[2 * 64 + (x >> 3)] |= 0x80 >> (x & 7); } return b; };
+  const chunks = [], keys = []; let cur = [], rows = 0;
+  const push = () => { if (!rows) return; const H = rows, k = 'z' + chunks.length, hdr = Buffer.from([0x1b, 0x61, 0x00, 0x1d, 0x76, 0x30, 0x00, 64, 0, H & 255, H >> 8]); chunks.push(Buffer.concat([hdr, ...cur]).toString('latin1')); keys.push(k); cur = []; rows = 0; };
+  const add = b => { const n = b.length / 64; if (rows && rows + n > 640) push(); cur.push(b); rows += n; };
+  let lastList = P.lines.length ? P.lines[0].list : 0;
+  P.lines.forEach((l, k) => {
+    if (k && l.list !== lastList) { add(LIST()); lastList = l.list; }
+    const r = lineBits(P.G, l, { raw: P.raw, maxH: Math.round((opt.maxH || 100) * Math.min(2.6, Math.max(1, (l.y1 - l.y0) / (P.Hm * 1.4)))) });
+    add(r.out); if (k < P.lines.length - 1) add(SEP);
+  });
+  push();
+  const rasters = {}; keys.forEach((k, i) => { rasters[k] = chunks[i]; });
+  return { rasters, keys };
+}
+function lineSlipText(o, keys, n, opt = {}) {
+  const out = headLines(o, { rp: opt.rp, n: null });
+  out.push(C1 + GS + 'B\x01' + ' PARCHI JAISI LIKHI - BINA AI ' + GS + 'B\x00');
+  if (UR.isOn()) out.push(UR.line('پرچی جیسی لکھی — ہر لائن الگ، بغیر AI', 34, 1));
+  out.push(C1 + n + ' lines' + (opt.two ? '  -  pehle DAAYAN list, phir BAAYAN' : ''));
+  out.push(L0 + hr());
+  keys.forEach(k => out.push(CRM + k));
+  out.push(L0 + hr(), '', CUT);
+  return out.join('\r\n');
+}
+// img (decodeJpeg) → { text, rasters, n, mode 'line'|'zoom' } ya null — line zoom; na bane to purana poori parchi zoom
+function zoomSlip(o, img, opt = {}) {
+  if (!img) return null;
+  let P = null; try { P = linePlan(grayOf(img, 1600)); } catch { P = null; }
+  if (P && P.lines.length) {
+    const { rasters, keys } = lineRasters(P, opt);
+    if (keys.length) return { text: lineSlipText(o, keys, P.lines.length, { rp: opt.rp, two: P.lines.some(l => l.list) }), rasters, n: P.lines.length, mode: 'line', deg: P.deg };
+  }
+  const plan = zoomPlan(img), rasters = {};
+  plan.forEach((p, k) => { try { const r = cropRaster(img, p.box, { raw: true, w: 512, h: 700, gamma: 1.2 }); if (r) rasters['z' + k] = r; } catch {} });
+  if (!Object.keys(rasters).length) return null;
+  return { text: imageSlipText(o, plan, { rp: opt.rp }), rasters, n: plan.length, mode: 'zoom' };
+}
+
 // ---------- 🖨 A4 page ka naqsha (wa-a4.ps1 ke liye JSON) ----------
 function a4Spec(o, P, opt = {}) {
   const ur = UR.isOn(), rows = [], unc = []; let k = 0, cur = null; const anyRk = P.clear.some(l => l.rk);
@@ -651,7 +1025,7 @@ function a4Spec(o, P, opt = {}) {
 //  ASAL SCRIPT (PC)
 // =========================================================
 if (require.main === module) main();
-module.exports = { zoomPlan, imageSlipText, lkey, glossOf, normPh, isMob, phPretty, parseCaption, vcardInfo, numOf, normUnit, qtyStr, validBox, normLine, parseGemini, localTextLines, geminiRead, buildIndex, matchOne, matchLines, isUnclear, sortForPrint, rackOf, packingText, failText, writtenText, writtenLines, bmpRaster, toJob, stripEsc, decodeJpeg, padBox, cropRaster, a4Spec, dayOf, PROMPT_IMG, PROMPT_TXT, CRM, W };
+module.exports = { zoomPlan, imageSlipText, grayOf, flatten, textInk, ruleClean, inkOf, skewOf, rotGray, dropRules, rowLines, linePlan, lineBits, lineRasters, lineSlipText, zoomSlip, lkey, glossOf, normPh, isMob, phPretty, parseCaption, vcardInfo, numOf, normUnit, qtyStr, validBox, normLine, parseGemini, localTextLines, geminiRead, buildIndex, matchOne, matchLines, isUnclear, sortForPrint, rackOf, packingText, failText, writtenText, writtenLines, bmpRaster, toJob, stripEsc, decodeJpeg, padBox, cropRaster, a4Spec, dayOf, PROMPT_IMG, PROMPT_TXT, CRM, W };
 
 function main() {
   const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(DIR, 'wa-parchi.alive'), w = () => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }; w(); setInterval(w, 30000); return { guard: fn => fn }; } })();
@@ -682,10 +1056,10 @@ async function start(ZINDA) {
   const setLink = p => { Object.assign(L, p || {}); L.at = Date.now(); L.host = os.hostname(); L.ver = VER; const snap = { ...L }; lastLinkW = Date.now(); lw = lw.then(() => LINK.set(snap)).catch(e => log('⚠️ waLink likha nahi: ' + e.message)); return lw; };
 
   // ---------- ⚙️ settings + data (live) ----------
-  let S = { on: true, allow: [], th: true, a4: true, thp: '' }, sReady; const settingsReady = new Promise(r => { sReady = r; });
+  let S = { on: true, allow: [], th: true, a4: true, thp: '', zm: true }, sReady; const settingsReady = new Promise(r => { sReady = r; });
   BA.doc('waParchi').onSnapshot(s => {
     const d = (s.exists && s.data()) || {};
-    S = { on: d.on !== false, allow: [...new Set((Array.isArray(d.allow) ? d.allow : []).map(normPh).filter(Boolean))], th: d.th !== false, a4: d.a4 !== false, thp: String(d.thp || '').trim() };
+    S = { on: d.on !== false, allow: [...new Set((Array.isArray(d.allow) ? d.allow : []).map(normPh).filter(Boolean))], th: d.th !== false, a4: d.a4 !== false, thp: String(d.thp || '').trim(), zm: d.zm !== false };   // v1.9: zm = thermal par parchi ki asal likhai (line zoom, bina AI) — default ON
     sReady();
   }, e => { authErr(e); sReady(); });
   setTimeout(() => sReady(), 20000);
@@ -823,23 +1197,39 @@ async function start(ZINDA) {
       return aids;
     } finally { for (const f of files) { try { fs.unlinkSync(f); } catch {} } }
   }
+  // v1.9: 🔎 thermal = parchi ki ASAL likhai, har line alag zoom (zoomSlip — AI nahi). Na bane = throw (purana raasta / ghalti likho).
+  async function zoomThermal(o, jpg, opt = {}) {
+    const img = jpg ? decodeJpeg(jpg) : null; if (!img) throw Error('tasveer nahi khuli');
+    const t0 = Date.now(), Z = zoomSlip(o, img, { rp: opt.rp }); if (!Z) throw Error('tasveer thermal ke liye nahi bani');
+    let text = Z.text; try { text = await UR.fillNotes(text, 1); } catch { text = UR.strip(text); }
+    const e = await getParchi().sendJobs([toJob(text, Z.rasters)], S.thp || TH_PRINTER); if (e) throw e;
+    log(`🔎 #${shortNo(o.id)} parchi jaisi (${Z.mode === 'line' ? Z.n + ' lines alag' + (Z.deg ? ' · seedhi ' + Z.deg + '°' : '') : 'poori zoom'}) · ${Date.now() - t0} ms`);
+    return Z;
+  }
+  async function zoomNow(o, jpg) {   // v1.9: app ki parchi — AI ka intezar NAHI, tasveer aate hi thermal (pr.th ka haal saath)
+    const e0 = errs.get(o.id) || { te: '', ae: '' }; errs.set(o.id, e0); trim(errs);
+    await upd(o.id, { 'pr.th': 'printing', 'pr.zm': 1, perr: '' });
+    try { await zoomThermal(o, jpg); e0.te = ''; await upd(o.id, { 'pr.th': 'done', 'pr.at': Date.now(), perr: perrOf(o.id) }); return 'done'; }
+    catch (e) { e0.te = String((e && e.message) || e).slice(0, 140); await upd(o.id, { 'pr.th': 'failed', perr: perrOf(o.id) }); log(`🔎 #${shortNo(o.id)} thermal ✕ ${e0.te}`); return 'failed'; }
+  }
   // thermal aur A4 alag alag — ek ruke to doosra nahi (CLAUDE.md bug safai 4). Print KABHI khud dobara nahi.
+  // opt.noTh = thermal pehle hi (zoomNow) — sirf A4 · tasveer ho + S.zm = thermal par likhai ka zoom, warna AI wali list (likhi WhatsApp list)
   async function printOrder(o, j, jpg, opt = {}) {
-    const P = opt.fail ? { clear: [], unc: [] } : sortForPrint(j, RACKS), wantT = S.th !== false, wantA = S.a4 !== false;
-    const img = !opt.fail && jpg && P.unc.some(l => l.b) ? decodeJpeg(jpg) : null;
-    const e0 = { te: '', ae: '' }; errs.delete(o.id); errs.set(o.id, e0); trim(errs);
+    const P = opt.fail ? { clear: [], unc: [] } : sortForPrint(j, RACKS), wantT = S.th !== false && !opt.noTh, wantA = S.a4 !== false, zm = S.zm && !!jpg;
+    const img = !zm && !opt.fail && jpg && P.unc.some(l => l.b) ? decodeJpeg(jpg) : null;
+    const prevE = errs.get(o.id) || {}, e0 = { te: opt.noTh ? (prevE.te || '') : '', ae: '' }; errs.set(o.id, e0); trim(errs);
     const stopOld = a4Watch.get(o.id); if (stopOld) stopOld();   // dobara print — purane A4 ki khabar nahi
-    await upd(o.id, { 'pr.th': wantT ? 'printing' : 'off', 'pr.a4': wantA ? 'printing' : 'off', perr: '' });
+    await upd(o.id, { ...(opt.noTh ? {} : { 'pr.th': wantT ? 'printing' : 'off', ...(wantT && zm ? { 'pr.zm': 1 } : {}) }), 'pr.a4': wantA ? 'printing' : 'off', perr: perrOf(o.id) });
     const t0 = Date.now();
     const [rt, ra] = await Promise.all([
-      wantT ? printThermal(o, P, img, { ...opt, jpg }).then(() => 'done', e => { e0.te = String((e && e.message) || e).slice(0, 140); return 'failed'; }) : 'off',
+      wantT ? (zm ? zoomThermal(o, jpg, { rp: opt.rp }) : printThermal(o, P, img, { ...opt, jpg })).then(() => 'done', e => { e0.te = String((e && e.message) || e).slice(0, 140); return 'failed'; }) : 'off',
       wantA ? printA4(o, P, { ...opt, jpg }).then(aids => ({ st: 'sent', aids }), e => { e0.ae = String((e && e.message) || e).slice(0, 140); return { st: 'failed' }; }) : { st: 'off' }
     ]);
     const n = Number(o.pr && o.pr.n) || 0;
     if (o.pr) o.pr.n = n + 1;
-    await upd(o.id, { 'pr.th': rt, 'pr.a4': ra.st, 'pr.at': Date.now(), 'pr.n': n + 1, ...(ra.aids ? { 'pr.a4j': ra.aids } : {}), perr: perrOf(o.id) });
+    await upd(o.id, { ...(opt.noTh ? {} : { 'pr.th': rt }), 'pr.a4': ra.st, 'pr.at': Date.now(), 'pr.n': n + 1, ...(ra.aids ? { 'pr.a4j': ra.aids } : {}), perr: perrOf(o.id) });
     if (ra.aids) watchA4(o.id, ra.aids);   // 'sent' likhne ke BAAD (warna tez A4 ka 'done' pehle likha jata aur 'sent' us ko mita deta)
-    log(`🧾 #${shortNo(o.id)} thermal ${rt}${e0.te ? ' (' + e0.te + ')' : ''} · A4 ${ra.st}${e0.ae ? ' (' + e0.ae + ')' : ''} · ${Date.now() - t0} ms`);
+    log(`🧾 #${shortNo(o.id)} thermal ${opt.noTh ? '(pehle hi)' : rt + (zm && wantT ? ' (zoom)' : '')}${e0.te ? ' (' + e0.te + ')' : ''} · A4 ${ra.st}${e0.ae ? ' (' + e0.ae + ')' : ''} · ${Date.now() - t0} ms`);
   }
 
   // ---------- 🔄 ek order ka poora kaam (queue — ek waqt ek) ----------
@@ -854,6 +1244,8 @@ async function start(ZINDA) {
     live.set(o.id, o); const t0 = Date.now();
     try {
       const g = g0 || (buf ? await prepImage(buf, mime) : null);
+      // v1.9: APP ki parchi (larke ne khud photo li — order hi hai) = thermal FORAN, AI ke saath saath (AI sirf app ke bill items ke liye)
+      const zNow = o.src === 'app' && S.th !== false && S.zm && g && g.jpg ? zoomNow(o, g.jpg).catch(e => { log('🔎 ' + (e && e.message)); return 'failed'; }) : null;
       if (g && g.jpg && !o.th) { const th = await thumbOf(g.jpg); if (th) { o.th = th; await upd(o.id, { th }); } }
       let R;
       try { R = await readOrder(o, g); }
@@ -861,11 +1253,13 @@ async function start(ZINDA) {
         const why = String(e.message || e).slice(0, 160);
         await upd(o.id, { st: 'fail', err: why, n: 0, u: 0 });
         log(`✕ #${shortNo(o.id)} AI nahi parh saka: ${why}`);
-        if (g && g.jpg) await printOrder(o, [], g.jpg, { fail: why });   // tasveer hi chhaap do — larke dekh kar nikal lein
+        if (zNow) await zNow;
+        if (g && g.jpg) await printOrder(o, [], g.jpg, { fail: why, noTh: !!zNow });   // tasveer hi chhaap do — larke dekh kar nikal lein (thermal = likhai ka zoom)
         return;
       }
       if (!R.isOrder) {
-        await upd(o.id, { st: 'skip', err: 'Yeh order ki parchi nahi lagti', n: 0, u: 0, 'pr.th': 'off', 'pr.a4': 'off' });
+        if (zNow) await zNow;
+        await upd(o.id, { st: 'skip', err: 'Yeh order ki parchi nahi lagti', n: 0, u: 0, ...(zNow ? {} : { 'pr.th': 'off' }), 'pr.a4': 'off' });
         log(`⏭ #${shortNo(o.id)} order nahi (${o.txt ? 'likhai' : 'tasveer'})`);
         if (o.src === 'wa') { const r = recent.get(o.from); if (r && r.id === o.id) { if (prev) recent.set(o.from, prev); else recent.delete(o.from); } }   // yeh "order" nahi tha — pichhla order hi taza
         if (o.txt && !g && prev) await nameToRecent(o, prev);
@@ -876,9 +1270,10 @@ async function start(ZINDA) {
       let X = null, Dh = null; try { [X, Dh] = await Promise.all([index(), dh()]); } catch (e) { log('⚠️ milan: ' + e.message); }
       const j = matchLines(R.lines, X, Dh ? Dh.smartFind : null, Dh ? Dh.k2 : null, RACKS, Dh), u = j.filter(isUnclear).length;
       o.j = JSON.stringify(j); o.st = 'ok';
-      await upd(o.id, { st: 'ok', err: '', j: o.j, n: j.length, u, ph: o.ph || '', nm: o.nm || '', 'pr.th': S.th !== false ? 'wait' : 'off', 'pr.a4': S.a4 !== false ? 'wait' : 'off' });
+      await upd(o.id, { st: 'ok', err: '', j: o.j, n: j.length, u, ph: o.ph || '', nm: o.nm || '', ...(zNow ? {} : { 'pr.th': S.th !== false ? 'wait' : 'off' }), 'pr.a4': S.a4 !== false ? 'wait' : 'off' });
       log(`✅ #${shortNo(o.id)} ${j.length} items (❓ ${u}) · ${o.nm || '-'} ${o.ph || ''} · ${Date.now() - t0} ms`);
-      await printOrder(o, j, g && g.jpg);
+      if (zNow) await zNow;   // thermal pehle hi (ya chal raha) — A4 us ke baad (pr.th ka haal na mite)
+      await printOrder(o, j, g && g.jpg, { noTh: !!zNow });
     } finally { live.delete(o.id); }
   }
   async function reprint(id, rq) {
@@ -890,20 +1285,13 @@ async function start(ZINDA) {
     else if (o.st === 'fail' && jpg) { log(`🔁 #${shortNo(id)} dobara print (tasveer)`); await printOrder(o, [], jpg, { rp, fail: o.err || 'AI nahi parh saka' }); }
     else await upd(id, { perr: 'Dobara print nahi — order abhi tayyar nahi (' + (o.st || '?') + ')' });
   }
-  async function imgPrint(id, rq) {   // v1.7: 🖼 parchi jaisi (bina AI) — app ka ⋮ chip (prImg)
+  async function imgPrint(id, rq) {   // v1.7: 🖼 parchi jaisi (bina AI) — app ka ⋮ chip (prImg) · v1.9: har line alag zoom (zoomThermal)
     const s = await ORD.doc(id).get(); if (!s.exists) return; const o = { id, ...s.data() };
     await upd(id, { 'pr.im': rq });
     let jpg = null; try { const im = await IMG.doc(id).get(); const u = im.exists ? String(im.data().img || '') : '', m = u.match(/^data:image\/jpe?g;base64,(.+)$/i); if (m) jpg = Buffer.from(m[1], 'base64'); } catch {}
-    const img = jpg ? decodeJpeg(jpg) : null;
-    if (!img) { await upd(id, { perr: '🖼 Parchi jaisi print nahi — is parchi ki tasveer nahi (likhi hui WhatsApp parchi?)' }); return; }
-    const plan = zoomPlan(img), rasters = {};
-    plan.forEach((p, k) => { try { const r = cropRaster(img, p.box, { raw: true, w: 512, h: 700, gamma: 1.2 }); if (r) rasters['z' + k] = r; } catch {} });
-    if (!Object.keys(rasters).length) { await upd(id, { perr: '🖼 tasveer thermal ke liye nahi bani' }); return; }
-    let text = imageSlipText(o, plan, { rp: Number(o.pr && o.pr.n) || 0 });
-    try { text = await UR.fillNotes(text, 1); } catch { text = UR.strip(text); }
-    const e = await getParchi().sendJobs([toJob(text, rasters)], S.thp || TH_PRINTER);
-    if (e) { await upd(id, { perr: '🖼 Parchi jaisi print: ' + String(e.message || e).slice(0, 120) }); throw e; }
-    log(`🖼 #${shortNo(id)} parchi jaisi (bina AI) chhap gayi · ${plan.length} tukde${plan.some(p => p.part) ? ' · do hisse' : ''}`);
+    if (!jpg) { await upd(id, { perr: '🖼 Parchi jaisi print nahi — is parchi ki tasveer nahi (likhi hui WhatsApp parchi?)' }); return; }
+    try { await zoomThermal(o, jpg, { rp: Number(o.pr && o.pr.n) || 0 }); }
+    catch (e) { await upd(id, { perr: '🖼 Parchi jaisi print: ' + String(e.message || e).slice(0, 120) }); throw e; }
   }
   const Q = [], inQ = new Set(); let qBusy = false;
   const runJob = ZINDA.guard(async job => {
