@@ -15,10 +15,10 @@
 //   v2.179.2: 🔁 DOBARA PARHO (malik OK) — khuli parchi ⋮ 🔁 + ✕ / ⚠️ wale dabbe mein chip → {st:'new'} (rules 2.86 wahi) → PC (wa-parchi claimNew) AI se phir
 //     parhe + naya thermal / A4; bill khud dobara bhar jata hai (pendLoad). Bill bana / maal nikla / abhi parh raha = nahi.
 //   CAP sale.wsale (default khula). AI app mein NAHI — parchi PC parhta hai. Agent action NAHI (malik ka qaida v2.111.0).
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.185.1';
-import { smartSearch, noteHit } from './smart-search.js?v=2.185.1';
-import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.185.1';   // v2.180.0: 👦 larka (POS SP Man) chip
-import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.185.1';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.185.2';
+import { smartSearch, noteHit } from './smart-search.js?v=2.185.2';
+import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.185.2';   // v2.180.0: 👦 larka (POS SP Man) chip
+import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.185.2';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -809,7 +809,7 @@ function cfgHTML() {
 function a4HTML(c) {
   const seg = (v, t) => `<button type="button" class="wps-tc${c.a4m === v ? ' is-in' : ''}" data-ws-a4m="${v}">${t}</button>`, cp = n => `<button type="button" class="wps-tc${c.a4c === n ? ' is-in' : ''}" data-ws-a4c="${n}">${n}</button>`;
   const alive = a4pc && Date.now() - tms(a4pc.at) < 20 * 60000, use = a4pc?.use;
-  const hp = !a4pc ? '<small class="wps-mut">🖨 Printer ki haalat: ⏳</small>' : alive && use ? `<small class="wps-mut">🖨 ✅ ${esc(String(use.name || 'A4 printer').slice(0, 40))}${a4pc.err ? ' · ⚠️ ' + esc(String(a4pc.err).slice(0, 60)) : ''}</small>` : '<small class="wps-err">🖨 ⚠️ A4 printer / PC nahi mila — ☰ 🖨 A4 Print screen dekhein</small>';
+  const hp = !a4pc ? '<small class="wps-mut">🖨 Printer ki haalat: ⏳</small>' : alive && use ? `<small class="wps-mut">🖨 ✅ ${esc(String(use.name || 'A4 printer').slice(0, 40))}${a4pc.pi ? ' · 📄 ' + esc(String(a4pc.pi).slice(0, 60)) : ''}${a4pc.err ? ' · ⚠️ ' + esc(String(a4pc.err).slice(0, 60)) : ''}</small>` : '<small class="wps-err">🖨 ⚠️ A4 printer / PC nahi mila — ☰ 🖨 A4 Print screen dekhein</small>';
   return `<div class="wps-sec"><h4>🖨 A4 print (HP)</h4>
     <div class="wps-row">${seg('print', '✍️ "print" likhne par')}${seg('all', '📄 Har parchi')}${seg('off', '⛔ Band')}<span class="wps-mut">Copy</span>${cp(1)}${cp(2)}${cp(3)}</div>${hp}
     <small class="wps-mut">Tasveer ke saath ya us ke foran baad alag paigham mein <b>print</b> likhein (print 2 = 2 copy) → wahi tasveer A4 par, bina AI. Saman ki parchi ho ya koi bhi kaghaz.</small>

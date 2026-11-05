@@ -25,7 +25,7 @@ const http = require('http');
 const https = require('https');
 const path = require('path');
 const { execFile } = require('child_process');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47839, VER = '1.2';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47839, VER = '1.3';
 const TH_PRINTER = 'TM-T88IV';   // dukan ka thermal (pos-khata-sync wala naam)
 const OLD_MS = 30 * 60000, KEEP_MS = 7 * 864e5, SCAN_EVERY = 10 * 60000, ST_EVERY = 60000, BEAT = 5 * 60000;
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
@@ -241,8 +241,16 @@ if ($imgs.Count -eq 0) { Write-Output 'ERR:tasveer nahi mili'; exit 2 }
 $pd = New-Object System.Drawing.Printing.PrintDocument
 $pd.PrinterSettings.PrinterName = $Printer
 if (-not $pd.PrinterSettings.IsValid) { Write-Output 'ERR:Windows mein yeh printer nahi mila'; exit 3 }
-foreach ($ps in $pd.PrinterSettings.PaperSizes) { if ($ps.Kind -eq [System.Drawing.Printing.PaperKind]::A4) { $pd.DefaultPageSettings.PaperSize = $ps; break } }
-$pd.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(20, 20, 20, 20)
+$def = $pd.PrinterSettings.DefaultPageSettings
+$dk = $def.PaperSize.Kind
+if ($dk -eq [System.Drawing.Printing.PaperKind]::A4 -or $dk -eq [System.Drawing.Printing.PaperKind]::Letter) { $pd.DefaultPageSettings.PaperSize = $def.PaperSize }
+else { foreach ($ps in $pd.PrinterSettings.PaperSizes) { if ($ps.Kind -eq [System.Drawing.Printing.PaperKind]::A4) { $pd.DefaultPageSettings.PaperSize = $ps; break } } }
+function IsMan($x) { return ($x -ne $null) -and (($x.Kind -eq [System.Drawing.Printing.PaperSourceKind]::Manual) -or ($x.Kind -eq [System.Drawing.Printing.PaperSourceKind]::ManualFeed) -or ($x.SourceName -match 'manual|priority')) }
+if (IsMan $def.PaperSource) { foreach ($s in $pd.PrinterSettings.PaperSources) { if (-not (IsMan $s)) { $pd.DefaultPageSettings.PaperSource = $s; break } } }
+else { $pd.DefaultPageSettings.PaperSource = $def.PaperSource }
+Write-Output ('INFO ' + $pd.DefaultPageSettings.PaperSize.PaperName + ' | ' + $pd.DefaultPageSettings.PaperSource.SourceName)
+if ($pd.DefaultPageSettings.PaperSize.Kind -eq [System.Drawing.Printing.PaperKind]::Letter) { $pd.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(40, 40, 20, 30) }
+else { $pd.DefaultPageSettings.Margins = New-Object System.Drawing.Printing.Margins(20, 20, 20, 20) }
 if ($Copies -gt 1) { $pd.PrinterSettings.Copies = [int16]$Copies }
 $pd.DocumentName = 'Blue Khata A4'
 $pd.PrintController = New-Object System.Drawing.Printing.StandardPrintController
@@ -312,10 +320,48 @@ async function winList() {
   let L = []; try { L = JSON.parse(r.out.slice(r.out.indexOf('['))); } catch { return []; } if (!Array.isArray(L)) L = [L];
   return L.filter(x => x && x.n && !SKIP_WIN.test(x.n + ' ' + x.d)).map(x => ({ id: 'win:' + x.n, how: 'win', name: String(x.n).slice(0, 60), drv: String(x.d || '').slice(0, 60), ip: /^\d{1,3}(\.\d{1,3}){3}$/.test(x.ip || '') ? x.ip : (String(x.port || '').match(/(\d{1,3}(?:\.\d{1,3}){3})/) || [])[1] || '', wst: String(x.st || '') }));
 }
+let LAST_PI = '';   // v1.3: aakhri Windows print ka kaghaz | tray (app ⚙️ mein — "Manually feed" jaisi ghalti pakarne ke liye)
 async function winPrint(name, files, o = {}) {
   const r = await ps('a4-gdi.ps1', PS_PRINT, [name, files.join('|'), Math.max(1, Math.min(5, Number(o.copies) || 1)), o.up === 2 ? 2 : 1], 180000);
-  if (r.out.startsWith('OK')) return true;
-  throw Error((r.out.replace(/^ERR:/, '') || r.err || 'Windows print nahi hua').slice(0, 160));
+  const lines = r.out.split(/\r?\n/).map(s => s.trim()), info = lines.find(s => s.startsWith('INFO '));
+  if (info) { LAST_PI = info.slice(5, 90); log('🖨 ' + name + ' · ' + LAST_PI); }
+  if (lines.includes('OK')) return true;
+  throw Error(((lines.find(s => s.startsWith('ERR:')) || '').replace(/^ERR:/, '') || r.err || 'Windows print nahi hua').slice(0, 160));
+}
+// v1.3: 🧼 WhatsApp "print" (job k 'wa') = kaghaz ki photo → scan jaisi saaf (kaghaz safed, syahi gehri) — Windows print tez (safed safha chhota) + toner kam.
+// App ki saman wali tasveer (k 'a4') waisi hi. Kuch na bane = asal tasveer. Saaf karna wa-parchi.js ka flatten (wahi qaida). AI NAHI.
+const CRC_T = (() => { const t = new Int32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c; } return t; })();
+function crc32(buf) { let c = -1; for (let i = 0; i < buf.length; i++) c = CRC_T[(c ^ buf[i]) & 255] ^ (c >>> 8); return (c ^ -1) >>> 0; }
+function pngGray(w, h, px) {   // 8-bit grayscale PNG (apna — zlib Node ka)
+  const raw = Buffer.alloc((w + 1) * h); for (let y = 0; y < h; y++) { raw[y * (w + 1)] = 0; px.copy ? px.copy(raw, y * (w + 1) + 1, y * w, y * w + w) : raw.set(px.subarray(y * w, y * w + w), y * (w + 1) + 1); }
+  const chunk = (type, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type, 'latin1'), data]), crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(td)); return Buffer.concat([len, td, crc]); };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 0; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]), chunk('IHDR', ihdr), chunk('IDAT', require('zlib').deflateSync(raw, { level: 6 })), chunk('IEND', Buffer.alloc(0))]);
+}
+function cleanDoc(jpg) {   // → PNG Buffer ya null (null = asal tasveer hi chhapo)
+  try {
+    const WP = require('./wa-parchi.js'), img = WP.decodeJpeg(jpg); if (!img) return null;
+    const G0 = WP.grayOf(img, 2000), { w, h, g } = G0, { M, Md, B, bw, bh } = WP.flatten(G0);
+    const sm = Array.from(M).sort((p, q) => p - q), ref = Math.max(60, sm[Math.floor(sm.length * 0.8)]);
+    let pap = 0; for (let i = 0; i < M.length; i++) if (M[i] >= ref * 0.6 && Md[i] >= M[i] * 0.82) pap++;
+    const frac = pap / M.length;
+    if (frac < 0.55) { log('🧼 kaghaz nahi lagta (' + Math.round(frac * 100) + '%) — asal tasveer'); return null; }   // photo / screen / cheez = jaisi hai waisi
+    const lo = ref * 0.62, S = new Float32Array(M.length), C = i => Math.max(M[i], lo);   // gehra hissa (dabba / button) safed nahi banta — sirf halka saya
+    for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) { let t = 0, n = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const yy = by + dy, xx = bx + dx; if (yy >= 0 && yy < bh && xx >= 0 && xx < bw) { t += C(yy * bw + xx); n++; } } S[by * bw + bx] = Math.max(t / n, C(by * bw + bx)); }
+    const v = new Float32Array(w * h), hist = new Uint32Array(256);
+    for (let y = 0; y < h; y++) {
+      const fy = Math.max(0, Math.min(bh - 1, (y + 0.5) / B - 0.5)), y0 = Math.floor(fy), y1 = Math.min(bh - 1, y0 + 1), ty = fy - y0;
+      for (let x = 0; x < w; x++) {
+        const fx = Math.max(0, Math.min(bw - 1, (x + 0.5) / B - 0.5)), x0 = Math.floor(fx), x1 = Math.min(bw - 1, x0 + 1), tx = fx - x0;
+        const bg = (S[y0 * bw + x0] * (1 - tx) + S[y0 * bw + x1] * tx) * (1 - ty) + (S[y1 * bw + x0] * (1 - tx) + S[y1 * bw + x1] * tx) * ty;
+        const q = Math.min(255, g[y * w + x] / Math.max(24, bg) * 255); v[y * w + x] = q; hist[q | 0]++;
+      }
+    }
+    let k = 0, acc = 0; for (let i = 0; i < 256; i++) { acc += hist[i]; if (acc > v.length * 0.01) { k = i; break; } }
+    const b0 = Math.min(k, 90), span = Math.max(60, 222 - b0), out = Buffer.alloc(w * h);
+    for (let i = 0; i < v.length; i++) { const t = Math.max(0, Math.min(1, (v[i] - b0) / span)); out[i] = Math.round(255 * Math.pow(t, 1.3)); }
+    return pngGray(w, h, out);
+  } catch (e) { log('🧼 saaf nahi hui (asal tasveer chhapegi): ' + e.message); return null; }
 }
 async function winAdd(p) {
   const name = ('Blue Khata A4 - ' + (p.name || p.ip)).replace(/[\\/:*?"<>|]/g, ' ').slice(0, 60);
@@ -404,7 +450,7 @@ function main() {
   const over = () => { const h = Date.now() - 3600000; recent = recent.filter(t => t > h); return recent.length >= cap(); };
 
   async function publish(force) {
-    const doc = { host: os.hostname(), ver: VER, list: list.map(pubOf).slice(0, 20), use: cur ? pubOf(cur) : null, st: st || null, err: err || '', scanAt: lastScan, testAt: lastTest };
+    const doc = { host: os.hostname(), ver: VER, list: list.map(pubOf).slice(0, 20), use: cur ? pubOf(cur) : null, st: st || null, err: err || '', scanAt: lastScan, testAt: lastTest, pi: LAST_PI };
     const h = JSON.stringify(doc);
     if (!force && h === lastPub && Date.now() - lastBeat < BEAT) return;
     lastPub = h; lastBeat = Date.now();
@@ -450,17 +496,22 @@ function main() {
     for (const j of jobs) bufs.push(testBuf || await imgOf(j.id));
     const copies = Math.max(1, Math.min(5, Number(jobs[0].copies) || Number(cfg.copies) || 1)), up = jobs.length === 2 ? 2 : 1, name = jobs.map(j => j.t || 'Tasveer').join(' + ').slice(0, 60);
     const files = bufs.map((b, i) => { const f = path.join(TMP, (jobs[i].id || 'test') + '.jpg'); fs.writeFileSync(f, b); return f; });
+    const cl = [], winFiles = () => files.map((f, i) => {   // v1.3: WhatsApp kaghaz = saaf safed PNG (Windows raasta) — na bane to asal JPEG
+      if (testBuf || jobs[i].k !== 'wa') return f;
+      const t0 = Date.now(), png = cleanDoc(bufs[i]); if (!png) return f;
+      const g = f.replace(/\.jpg$/, '.png'); try { fs.writeFileSync(g, png); cl.push(g); log('🧼 saaf ' + (Date.now() - t0) + ' ms · ' + Math.round(png.length / 1024) + ' KB'); return g; } catch { return f; }
+    });
     try {
-      if (pr.how === 'win') { await winPrint(pr.name, files, { copies, up }); return 'win'; }
+      if (pr.how === 'win') { await winPrint(pr.name, winFiles(), { copies, up }); return 'win'; }
       const F = pr.fmt || [], jpeg = F.includes('image/jpeg'), pdf = F.includes('application/pdf');
       if (up === 2 && pdf) { await ippPrint(pr, pdfOf(bufs, 2), 'application/pdf', { copies, name }); return 'ipp-pdf'; }
-      if (up === 2 && pr.win) { await winPrint(pr.win, files, { copies, up }); return 'win'; }
+      if (up === 2 && pr.win) { await winPrint(pr.win, winFiles(), { copies, up }); return 'win'; }
       if (up === 1 && jpeg) { try { await ippPrint(pr, bufs[0], 'image/jpeg', { copies, name }); return 'ipp'; } catch (e) { if (e.ipp !== 0x040A) throw e; } }
       if (pdf) { try { await ippPrint(pr, pdfOf(bufs, up), 'application/pdf', { copies, name }); return 'ipp-pdf'; } catch (e) { if (e.ipp !== 0x040A) throw e; } }
       if (process.platform !== 'win32') throw Error('printer JPEG / PDF nahi leta');
       if (!pr.win) pr.win = await winAdd(pr);   // printer JPEG / PDF nahi leta → Windows ka driver (ek dafa)
-      await winPrint(pr.win, files, { copies, up }); return 'win';
-    } finally { for (const f of files) { try { fs.unlinkSync(f); } catch {} } }
+      await winPrint(pr.win, winFiles(), { copies, up }); return 'win';
+    } finally { for (const f of [...files, ...cl]) { try { fs.unlinkSync(f); } catch {} } }
   }
   async function metaOf(id) {   // v1.2: { to, t } — snapshot se (to kabhi nahi badalta), na ho to ek read
     let m = meta.get(id); if (m) return m;

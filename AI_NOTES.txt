@@ -6969,3 +6969,14 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
   Har nateeja `waLink.pr {at, t}` → app ⚙️ link ke neeche "🖨 Aakhri print: …" (khamosh nahi). 30 min purana nahi. AI NAHI.
 - Test: node vm (album + Print = 2, caption print 2, doosri chat = nahi + note, aam baat = nahi, pehle print phir tasveer, LID + apni chat, 40 min purani
   = nahi, dohra id = 1, aane wali 2 parchi + print = 2).
+
+## v2.185.2 (2026-11-05) — 🖨 HP "Manually feed — Continue" khatam + WhatsApp print saaf / tez · PC a4-print v1.3 · manifest 2026-11-05.4
+- Ghalti (malik ki photo): pehla WhatsApp print HP par "MANUALLY FEED MEDIA — Continue" dabane ke baad nikla, aur safha GRAY (kaghaz ki photo ka saya) — dheera.
+  Wajah: a4-print ka PS_PRINT har job par kaghaz zabardasti A4 karta tha (driver ka tray Letter / doosra = HP "manual feed" maangta) aur tray chuni nahi thi.
+- PS_PRINT v1.3: kaghaz = printer ka APNA default (A4 ya Letter; koi aur ho to A4), Letter par margin 40 (A4 kaghaz par kinara na kate); tray = default,
+  manual / priority ho to pehli GHAIR-manual tray. Har print par "INFO <kaghaz> | <tray>" → LAST_PI → blueAccess/a4Pc.pi → app WhatsApp ⚙️ HP line
+  "📄 A4 | Tray 1" (phir bhi Continue maange to yehi line dekh kar pakro).
+- 🧼 cleanDoc (sirf job k 'wa' + Windows raasta): wa-parchi.js ke grayOf + flatten (block 90%) se "kaghaz hai?" — 55%+ block saaf kaghaz = haan → apna
+  saya hatana (gehra hissa 62% se neeche safed nahi banta — button / dabba khokhla nahi), 1% kala nuqta → 222 safed, gamma 1.3 → 8-bit gray PNG
+  (apna writer: zlib + CRC32, bahar ka code nahi). Photo / cheez / screen (kaghaz < 55%) = ASAL JPEG. Kuch na bane = asal. App A4 screen (k 'a4') ki tasveer NAHI chhedi.
+- Test: 30+ asal tasveerein (parchi, HBL rasid, copy ka safha, screenshot, monitor, bottle) — kaghaz saaf, photo asal; ~0.2–0.8 s. Printer par abhi test nahi. AI NAHI.

@@ -4121,3 +4121,7 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 
 ## PC wa-parchi v2.1 · manifest 2026-11-05.3 (2026-11-05) — alag likha "Print" (album ke neeche) bhi A4 · app v2.185.1
 - selfImgs / selfPend (apni chat-war 10 min / 2 min), inImgs / inPend (ijazat wale), okChat (LID getLIDForPN), prNote → waLink.pr (app ⚙️ "Aakhri print").
+
+## PC a4-print v1.3 · manifest 2026-11-05.4 (2026-11-05) — HP "Manually feed" NAHI + WhatsApp kaghaz saaf · app v2.185.2
+- PS_PRINT: driver ka default kaghaz (A4 / Letter) + ghair-manual tray (zabardasti A4 = HP Continue maangta tha), "INFO kaghaz | tray" → a4Pc.pi.
+- cleanDoc: job k 'wa' + Windows raasta → kaghaz ho to saaf gray PNG (wa-parchi flatten, apna PNG writer), warna asal JPEG. IPP raasta / app A4 job wahi. AI NAHI.
