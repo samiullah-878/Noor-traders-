@@ -4138,3 +4138,6 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 
 ## PC wa-parchi v2.4 + a4-print v1.5 · manifest 2026-11-05.8 (2026-11-05) — gahak ki chat: tasveer+print caption / reply print → A4 + upar number patti · app v2.188.0
 - p2Msg (group/status nahi), chatInfo memory 30 min, reply quotedMessage + reuploadRequest, a4Jobs.hd → PS_PRINT -Heads (try/catch). AI NAHI.
+
+## PC wa-parchi v2.5 · manifest 2026-11-05.9 (2026-11-05) — malik ke apne WhatsApp par reply-print + gahak caption print (Mubeen jaisa) · app v2.189.0
+- mainExtra (handleMsg se pehle), shared helpers, P2 mainOn = malik ka reply dohra nahi. AI NAHI.

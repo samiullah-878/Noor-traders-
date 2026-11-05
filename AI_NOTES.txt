@@ -7032,3 +7032,12 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - Test: node vm 15 (bina print 0, gahak alag print 0, gahak caption print 2 = 2 copy + patti, Mubeen reply + card = patti mein card + likha number, gahak
   reply 0, reply bina print 0, group 0, status 0, malik album+Print 1, malik reply 1, apni chat 1, 40 min 0, dohra 0, LID gahak = sirf naam, A4 band = note)
   + purane selftest2/3. PowerShell patti printer par abhi test nahi. AI NAHI.
+
+## v2.189.0 (2026-11-05) — 🖨 Malik ke apne WhatsApp par bhi Mubeen jaisa print · PC wa-parchi v2.5 · manifest 2026-11-05.9
+- Malik: "mera bhi same Mubeen wala kar do — main zaroori pehle parchi Mubeen ko bhejun phir print karwaun, phir alag se customer ko number bhejun?"
+  (Unlink ka iraada chhora — malik ka WhatsApp PC par jura rahega.)
+- PC v2.5 `mainExtra` (handleMsg ke shuru mein): malik ka REPLY "print" kisi bhi 1:1 chat ki tasveer par → printOne (patti: gahak ka number · naam ·
+  likhe number · card; Mubeen / apni chat ka number patti mein nahi) · gahak ki tasveer + caption "print" (ijazat list wale = purana order + A4 raasta) →
+  printOne. Gahak ka alag / reply "print" = kuch nahi. Group / status nahi. Helpers ab dono WhatsApp ke: badJid, imgOf, noteChat, replyOf, quotedMsg,
+  printOne(…, s, note), ready(). Dohra nahi: malik ka link chale to P2 malik ka reply-print nahi chhapta (mainOn).
+- App: ⚙️ A4 hissa ki likhai mein "Gahak ki chat mein…" line. Test: node vm M1–M11 + purane 15 + selftest2/3. AI NAHI.
