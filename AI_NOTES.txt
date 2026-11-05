@@ -7016,3 +7016,19 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
   cfgPaint ab link2Paint bhi. Malik ka link off + out = "⚪ Aap ka WhatsApp PC se alag hai".
 - Test: node vm (malik → Mubeen album + Print = 2, malik LID print 2, doosra number 0 + chup, bina print 0, phir print = 1, Mubeen apni chat 1, malik link bhi
   chalu = 0 dohra nahi, Mubeen prTo mein nahi = 1, 40 min purana 0) + Playwright (prFrom chips / jorna / hatana). AI NAHI.
+
+## v2.188.0 (2026-11-05) — 🖨 Gahak ki chat se print (Mubeen ka WhatsApp) · PC wa-parchi v2.4 + a4-print v1.5 · manifest 2026-11-05.8
+- Malik: "Mubeen ko kisi number se parchi aaye — us chat mein print likhein ya reply mein print to wohi parchi print, saath number / contact card ·
+  group se nahi · khud parchi forward na karni pare" → aakhir mein (malik ne 3 dafa saaf kiya): SIRF (1) gahak ki tasveer ke SAATH "print" (caption) ya
+  (2) Mubeen / malik ka REPLY "print" kisi tasveer par. Gahak ka alag likha "print" / gahak ka reply-print = kuch nahi. 5 safhe fi ghanta ki hadd: malik
+  "abhi na lagao" (sirf a4-print ki 40 / ghanta).
+- PC wa-parchi v2.4 `p2Msg` (print phone ka har paigham): group / status / newsletter = foran bahar. `chatInfo` (jid → WhatsApp naam pushName, chat mein likhe
+  number `phonesIn` (≤ 4), contact card `vcardInfo`) — sirf memory, 30 min, ≤ 300 chats. Reply = extendedTextMessage.contextInfo.quotedMessage
+  (imageMessage / image document) → nakli msg {key: stanzaId, participant} → downloadMediaMessage(…, {reuploadRequest: sock2.updateMediaMessage}) (purani
+  parchi bhi). Raaste: reply-print (fromMe ya malikOk) → printOne · fromMe → selfPrint CX2 (apni chat) · prFrom → selfPrint CX3 · gahak tasveer + caption
+  print → printOne. Bina print tasveer download bhi nahi. `hdOf` = Tel · naam · caption (print ke baghair) · card · likhe number → a4Send meta.hd → a4Jobs.hd.
+- PC a4-print v1.5: PS_PRINT `-Heads 'H:…|…'` (hamesha 'H:' — khali arg nahi) → har tasveer ke upar Arial 13 bold patti + lakeer (try/catch: na bane to
+  tasveer phir bhi), sirf Windows raasta. App: ⚙️ Print wala phone ka likha naya kaam batata hai.
+- Test: node vm 15 (bina print 0, gahak alag print 0, gahak caption print 2 = 2 copy + patti, Mubeen reply + card = patti mein card + likha number, gahak
+  reply 0, reply bina print 0, group 0, status 0, malik album+Print 1, malik reply 1, apni chat 1, 40 min 0, dohra 0, LID gahak = sirf naam, A4 band = note)
+  + purane selftest2/3. PowerShell patti printer par abhi test nahi. AI NAHI.

@@ -25,7 +25,7 @@ const http = require('http');
 const https = require('https');
 const path = require('path');
 const { execFile } = require('child_process');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47839, VER = '1.4';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47839, VER = '1.5';
 const TH_PRINTER = 'TM-T88IV';   // dukan ka thermal (pos-khata-sync wala naam)
 const OLD_MS = 30 * 60000, KEEP_MS = 7 * 864e5, SCAN_EVERY = 10 * 60000, ST_EVERY = 60000, BEAT = 5 * 60000;
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
@@ -222,7 +222,7 @@ $out = @()
 foreach ($x in @(Get-Printer)) { $out += [pscustomobject]@{ n = [string]$x.Name; d = [string]$x.DriverName; port = [string]$x.PortName; ip = [string]$ports[[string]$x.PortName]; st = [string]$x.PrinterStatus } }
 ConvertTo-Json -Compress -InputObject @($out)
 `;
-const PS_PRINT = `param([string]$Printer, [string]$Files, [int]$Copies = 1, [int]$Up = 1)
+const PS_PRINT = `param([string]$Printer, [string]$Files, [int]$Copies = 1, [int]$Up = 1, [string]$Heads = 'H:')
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.Drawing
 $imgs = New-Object System.Collections.ArrayList
@@ -238,6 +238,7 @@ foreach ($f in ($Files -split '\\|')) {
   [void]$imgs.Add($im)
 }
 if ($imgs.Count -eq 0) { Write-Output 'ERR:tasveer nahi mili'; exit 2 }
+$hds = @(); if ($Heads.Length -gt 2) { $hds = @($Heads.Substring(2) -split '\\|') }
 $pd = New-Object System.Drawing.Printing.PrintDocument
 $pd.PrinterSettings.PrinterName = $Printer
 if (-not $pd.PrinterSettings.IsValid) { Write-Output 'ERR:Windows mein yeh printer nahi mila'; exit 3 }
@@ -255,7 +256,17 @@ if ($Copies -gt 1) { $pd.PrinterSettings.Copies = [int16]$Copies }
 $pd.DocumentName = 'Blue Khata A4'
 $pd.PrintController = New-Object System.Drawing.Printing.StandardPrintController
 $script:i = 0
-function Put($g, $im, $a) {
+function Put($g, $im, $a, $hd) {
+  if ($hd) {
+    try {
+      $f = New-Object System.Drawing.Font('Arial', 13, [System.Drawing.FontStyle]::Bold)
+      $sf = New-Object System.Drawing.StringFormat; $sf.Trimming = [System.Drawing.StringTrimming]::EllipsisCharacter; $sf.FormatFlags = [System.Drawing.StringFormatFlags]::NoWrap
+      $g.DrawString([string]$hd, $f, [System.Drawing.Brushes]::Black, (New-Object System.Drawing.RectangleF([single]$a.X, [single]$a.Y, [single]$a.Width, [single]26)), $sf)
+      $g.DrawLine([System.Drawing.Pens]::Black, [int]$a.X, [int]($a.Y + 28), [int]($a.X + $a.Width), [int]($a.Y + 28))
+      $f.Dispose(); $sf.Dispose()
+      $a = New-Object System.Drawing.Rectangle([int]$a.X, [int]($a.Y + 34), [int]$a.Width, [int]($a.Height - 34))
+    } catch {}
+  }
   $use = $im
   if ((($a.Width -gt $a.Height) -ne ($im.Width -gt $im.Height)) -and [math]::Abs($im.Width - $im.Height) -gt 8) { $use = $im.Clone(); $use.RotateFlip([System.Drawing.RotateFlipType]::Rotate90FlipNone) }
   $k = [math]::Min($a.Width / $use.Width, $a.Height / $use.Height)
@@ -272,8 +283,8 @@ $pd.add_PrintPage({ param($s, $e)
     $h = [int](($b.Height - 12) / 2)
     $top = New-Object System.Drawing.Rectangle($b.X, $b.Y, $b.Width, $h)
     $bot = New-Object System.Drawing.Rectangle($b.X, ($b.Y + $h + 12), $b.Width, $h)
-    foreach ($a in @($top, $bot)) { if ($script:i -lt $imgs.Count) { Put $g $imgs[$script:i] $a; $script:i++ } }
-  } else { Put $g $imgs[$script:i] $b; $script:i++ }
+    foreach ($a in @($top, $bot)) { if ($script:i -lt $imgs.Count) { Put $g $imgs[$script:i] $a $hds[$script:i]; $script:i++ } }
+  } else { Put $g $imgs[$script:i] $b $hds[$script:i]; $script:i++ }
   $e.HasMorePages = ($script:i -lt $imgs.Count)
 })
 try { $pd.Print(); Write-Output 'OK' } catch { Write-Output ('ERR:' + $_.Exception.Message); exit 4 } finally { foreach ($im in $imgs) { $im.Dispose() } }
@@ -322,7 +333,8 @@ async function winList() {
 }
 let LAST_PI = '';   // v1.3: aakhri Windows print ka kaghaz | tray (app ⚙️ mein — "Manually feed" jaisi ghalti pakarne ke liye)
 async function winPrint(name, files, o = {}) {
-  const r = await ps('a4-gdi.ps1', PS_PRINT, [name, files.join('|'), Math.max(1, Math.min(5, Number(o.copies) || 1)), o.up === 2 ? 2 : 1], 180000);
+  const hd = 'H:' + (Array.isArray(o.hd) && o.hd.some(Boolean) ? o.hd.map(h => String(h || '').replace(/[|"\r\n]/g, ' ').slice(0, 140)).join('|') : '');   // v1.5: har tasveer ke upar patti (WhatsApp gahak ka number / naam)
+  const r = await ps('a4-gdi.ps1', PS_PRINT, [name, files.join('|'), Math.max(1, Math.min(5, Number(o.copies) || 1)), o.up === 2 ? 2 : 1, hd], 180000);
   const lines = r.out.split(/\r?\n/).map(s => s.trim()), info = lines.find(s => s.startsWith('INFO '));
   if (info) { LAST_PI = info.slice(5, 90); log('🖨 ' + name + ' · ' + LAST_PI); }
   if (lines.includes('OK')) return true;
@@ -531,15 +543,16 @@ function main() {
       const g = f.replace(/\.jpg$/, '.png'); try { fs.writeFileSync(g, png); cl.push(g); log('🧼 saaf ' + (Date.now() - t0) + ' ms · ' + Math.round(png.length / 1024) + ' KB'); return g; } catch { return f; }
     });
     try {
-      if (pr.how === 'win') { await winPrint(pr.name, winFiles(), { copies, up }); return 'win'; }
+      const hd = jobs.map(j => testBuf ? '' : String(j.hd || ''));
+      if (pr.how === 'win') { await winPrint(pr.name, winFiles(), { copies, up, hd }); return 'win'; }
       const F = pr.fmt || [], jpeg = F.includes('image/jpeg'), pdf = F.includes('application/pdf');
       if (up === 2 && pdf) { await ippPrint(pr, pdfOf(bufs, 2), 'application/pdf', { copies, name }); return 'ipp-pdf'; }
-      if (up === 2 && pr.win) { await winPrint(pr.win, winFiles(), { copies, up }); return 'win'; }
+      if (up === 2 && pr.win) { await winPrint(pr.win, winFiles(), { copies, up, hd }); return 'win'; }
       if (up === 1 && jpeg) { try { await ippPrint(pr, bufs[0], 'image/jpeg', { copies, name }); return 'ipp'; } catch (e) { if (e.ipp !== 0x040A) throw e; } }
       if (pdf) { try { await ippPrint(pr, pdfOf(bufs, up), 'application/pdf', { copies, name }); return 'ipp-pdf'; } catch (e) { if (e.ipp !== 0x040A) throw e; } }
       if (process.platform !== 'win32') throw Error('printer JPEG / PDF nahi leta');
       if (!pr.win) pr.win = await winAdd(pr);   // printer JPEG / PDF nahi leta → Windows ka driver (ek dafa)
-      await winPrint(pr.win, winFiles(), { copies, up }); return 'win';
+      await winPrint(pr.win, winFiles(), { copies, up, hd }); return 'win';
     } finally { for (const f of [...files, ...cl]) { try { fs.unlinkSync(f); } catch {} } }
   }
   async function metaOf(id) {   // v1.2: { to, t } — snapshot se (to kabhi nahi badalta), na ho to ek read

@@ -1,5 +1,10 @@
 // =========================================================
 //  wa-parchi.js  v2.2 (2026-11-05) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v2.4: 🖨 malik: "Mubeen ko kisi number se parchi aaye — (1) gahak tasveer ke SAATH print likhe ya (2) hum REPLY mein print likhein to wohi parchi
+//        print, saath us ka number / naam / contact card · group se nahi · parchi khud forward na karni pare" (5 safhe ki hadd abhi NAHI — malik) →
+//        print phone ki har 1:1 chat: gahak ki tasveer + caption "print" = A4 · Mubeen (ya prFrom) ka REPLY "print" kisi tasveer par = wohi tasveer (purani
+//        bhi — reuploadRequest). Gahak ka alag likha "print" = kuch nahi. A4 ke upar `hd` patti: Tel number · WhatsApp naam · chat mein likhe number ·
+//        contact card (chatInfo — sirf 30 min yaad, save kuch nahi). Bina print tasveer download bhi nahi. Group / status kabhi nahi.
 //  v2.3: 🖨 malik: "main apna logout kar doon, sirf Mubeen ka WhatsApp kaam kare — main Mubeen ko parchi bhejun + Print likhun to print" (Parchi Sale
 //        order malik ke number par hi rahe = B, unlink ke baad band) → print phone par AANE wale paigham bhi, SIRF waParchi.prFrom numbers (default malik
 //        0345-0412515) se: tasveer + "print" (caption / alag) → A4 (CX3, wahi selfPrint). Malik ka apna link bhi chalta ho aur Mubeen prTo mein ho to CX3
@@ -73,7 +78,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.3';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.4';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1235,7 +1240,7 @@ async function start(ZINDA) {
       const now = Date.now(), aid = 'wp' + now.toString(36) + Math.random().toString(36).slice(2, 6), th = await thumbOf(jpg).catch(() => '');
       const b = db.batch();
       b.set(A4I.doc(aid), { img: dataUrl(jpg), by: 'wa-parchi', at: now });
-      b.set(A4J.doc(aid), { k: 'wa', to: 'a4', ph: '', t: String(meta.t || 'WhatsApp print').slice(0, 60), th: th && th.length < 40000 ? th : '', by: 'wa-parchi', byName: 'WhatsApp', at: now, status: 'new', copies: Math.max(1, Math.min(5, n || 1)), src: o ? o.id : 'self' });
+      b.set(A4J.doc(aid), { k: 'wa', to: 'a4', ph: '', t: String(meta.t || 'WhatsApp print').slice(0, 60), ...(meta.hd ? { hd: String(meta.hd).replace(/[|"]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 140) } : {}), th: th && th.length < 40000 ? th : '', by: 'wa-parchi', byName: 'WhatsApp', at: now, status: 'new', copies: Math.max(1, Math.min(5, n || 1)), src: o ? o.id : 'self' });
       await b.commit();
       log(`🖨 A4 ${n || 1} copy → ${meta.t || ''} (${aid})`);
       if (o) { await upd(o.id, { 'pr.a4': 'sent', 'pr.a4j': [aid] }); watchA4(o.id, [aid]); }
@@ -1666,6 +1671,66 @@ async function start(ZINDA) {
       if (L.st === 'open' && normPh(L.me || '') === from && me && S.prTo.includes(me)) return { ok: false, to: from, me };   // malik ka apna link bhi chal raha — wohi chhapta hai (dohra nahi)
       return { ok: true, to: from, me };
     } };
+  // v2.4: 🖨 GAHAK KI CHAT — sirf (1) tasveer ke SAATH "print" (caption) ya (2) REPLY "print" (Mubeen / prFrom). chatInfo = header ke liye 30 min yaad.
+  const chatInfo = new Map();
+  const phonesIn = t => [...new Set((UDIG(String(t || '')).match(/(?:\+?\s*92|0)\s*3\d{2}[\s-]*\d{3}[\s-]*\d{4}/g) || []).map(normPh).filter(isMob))];
+  const ciOf = jid => {
+    let c = chatInfo.get(jid); if (!c || Date.now() - c.at > 30 * 60000) { chatInfo.delete(jid); c = { nm: '', nums: [], card: null, at: 0 }; chatInfo.set(jid, c); }
+    c.at = Date.now(); while (chatInfo.size > 300) chatInfo.delete(chatInfo.keys().next().value); return c;
+  };
+  function hdOf(pn, jid, cap) {   // A4 ke upar ki patti: Tel · naam · caption · likhe number · card
+    const c = chatInfo.get(jid) || {}, parts = [], ct = stripPrint(cap).replace(/\s+/g, ' ').trim().slice(0, 50);
+    if (pn) parts.push('Tel ' + phPretty(pn)); if (c.nm) parts.push(c.nm); if (ct) parts.push(ct);
+    const have = new Set([pn, ...phonesIn(ct)]);
+    if (c.card) { if (c.card.nm) parts.push('Card: ' + c.card.nm); if (c.card.ph && !have.has(c.card.ph)) { parts.push(phPretty(c.card.ph)); have.add(c.card.ph); } }
+    for (const x of c.nums || []) if (!have.has(x)) { parts.push(phPretty(x)); have.add(x); }
+    return parts.join(' · ').slice(0, 140);
+  }
+  async function printOne(msg, im, n, pn, jid, cap, why) {
+    if (Number(im.fileLength) > 15 * 1024 * 1024) { CX2.note('✕ tasveer 15 MB se bari — nahi chhapi'); return; }
+    const hd = hdOf(pn, jid, cap), cp = n > 0 ? n : S.a4c;
+    try {
+      const buf = await within(B.downloadMediaMessage(msg, 'buffer', {}, { logger, reuploadRequest: sock2 && sock2.updateMediaMessage }), 60000, 'tasveer download');
+      const g = await prepImage(buf, String(im.mimetype || 'image/jpeg'));
+      await a4Send(g && g.jpg, cp, { t: (why === 'reply' ? 'Reply print' : 'Gahak print') + ' · ' + (pn ? phPretty(pn) : 'WhatsApp'), hd }, null);
+      CX2.note(`✅ Parchi A4 ko gayi${cp > 1 ? ' (' + cp + ' copy)' : ''} — ${hd || 'WhatsApp'} · ${why === 'reply' ? 'reply' : 'gahak ne print likha'}`);
+    } catch (e) { CX2.note('✕ parchi nahi chhapi: ' + String((e && e.message) || e).slice(0, 90)); }
+  }
+  async function p2Msg(m, s) {
+    const jid = m.key.remoteJid || '', wid = m.key.id || '';
+    if (!jid || !wid || B.isJidGroup(jid) || B.isJidBroadcast(jid) || B.isJidNewsletter(jid) || /^status@/.test(jid)) return;   // group / status KABHI nahi
+    const c = B.normalizeMessageContent(m.message) || {}, fromMe = !!m.key.fromMe;
+    const ctx = (c.extendedTextMessage && c.extendedTextMessage.contextInfo) || null, txt = String(c.conversation || (c.extendedTextMessage && c.extendedTextMessage.text) || '').trim();
+    const ci = ciOf(jid);
+    if (!fromMe && m.pushName) ci.nm = String(m.pushName).replace(/[|"]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40);
+    const cards = c.contactMessage ? [c.contactMessage] : ((c.contactsArrayMessage && c.contactsArrayMessage.contacts) || []);
+    if (cards.length) { const inf = vcardInfo(cards[0].vcard, cards[0].displayName); if (inf.ph || inf.nm) ci.card = inf; }
+    if (txt) for (const x of phonesIn(txt)) if (!ci.nums.includes(x)) { ci.nums.push(x); if (ci.nums.length > 4) ci.nums.shift(); }
+    let from = '', isMalik = false, malikOk = false;
+    if (!fromMe) { const r = await CX3.ok(m, s); from = r.to || ''; isMalik = !!from && S.prFrom.includes(from); malikOk = isMalik && r.ok; }   // malikOk false = malik ka apna link chhapta hai (dohra nahi)
+    // (2) REPLY "print" — Mubeen ya malik (prFrom); gahak ka reply-print nahi
+    const q = ctx && ctx.quotedMessage ? (B.normalizeMessageContent(ctx.quotedMessage) || ctx.quotedMessage) : null;
+    const qim = q && (q.imageMessage || (q.documentMessage && /^image\//i.test(String(q.documentMessage.mimetype || '')) ? q.documentMessage : null));
+    const rn = qim && txt && txt.length <= 25 ? printReq(txt) : 0;
+    if (rn && (fromMe || malikOk)) {
+      if (seenSet.has(wid)) return; markSeen(wid);
+      const ts = tsOf(m) || Date.now(); if (Date.now() - ts > OLD_RQ) return;
+      await settingsReady; if (!S.on || S.a4m === 'off') { CX2.note('"print" aaya magar A4 / WhatsApp parchi BAND hai (app ⚙️)'); return; }
+      const me = me2Of(s), part = String(ctx.participant || ''), qFromMe = !part || [bare(s.user && s.user.id), bare(s.user && s.user.lid)].includes(bare(part));
+      const pn = (await chatPh(m, s)) || from, pnC = pn && pn !== me ? pn : '';
+      await printOne({ key: { remoteJid: jid, id: String(ctx.stanzaId || ''), fromMe: qFromMe, ...(part ? { participant: part } : {}) }, message: ctx.quotedMessage }, qim, rn, pnC, jid, qim.caption || '', 'reply');
+      return;
+    }
+    if (fromMe) { await selfPrint(m, s, CX2); return; }   // Mubeen ki apni chat (purana)
+    if (isMalik) { await selfPrint(m, s, CX3); return; }   // malik → Mubeen (purana: caption / alag print)
+    // (1) gahak: tasveer ke SAATH "print" — warna kuch nahi (download bhi nahi)
+    const im = c.imageMessage || (c.documentMessage && /^image\//i.test(String(c.documentMessage.mimetype || '')) ? c.documentMessage : null);
+    const n = im ? printReq(im.caption || '') : 0; if (!n) return;
+    if (seenSet.has(wid)) return; markSeen(wid);
+    const ts = tsOf(m) || Date.now(); if (Date.now() - ts > OLD_RQ) return;
+    await settingsReady; if (!S.on || S.a4m === 'off') { CX2.note('Gahak ka "print" aaya magar A4 / WhatsApp parchi BAND hai (app ⚙️)'); return; }
+    await printOne(m, im, n, (await chatPh(m, s)) || from, jid, im.caption || '', 'gahak');
+  }
   async function connect2(why) {
     end2(); const my = gen2;
     fs.mkdirSync(AUTH2_DIR, { recursive: true });
@@ -1678,7 +1743,7 @@ async function start(ZINDA) {
     sock2 = s;
     s.ev.on('creds.update', saveCreds);
     s.ev.on('connection.update', u => { if (my === gen2) onConn2(u, s, state).catch(e => log('⚠️ link2: ' + e.message)); });
-    s.ev.on('messages.upsert', ev => { if (my !== gen2) return; for (const m of (ev && ev.messages) || []) if (m && m.key && m.message) msgQ = msgQ.then(() => selfPrint(m, s, m.key.fromMe ? CX2 : CX3)).catch(e => log('⚠️ print phone: ' + (e && e.message))); });   // aane wale = sirf prFrom (CX3)
+    s.ev.on('messages.upsert', ev => { if (my !== gen2) return; for (const m of (ev && ev.messages) || []) if (m && m.key && m.message) msgQ = msgQ.then(() => p2Msg(m, s)).catch(e => log('⚠️ print phone: ' + (e && e.message))); });   // v2.4: p2Msg = apni chat · malik · gahak (caption) · reply
   }
   async function onConn2(u, s, state) {
     if (u.qr && pair2) {   // 🔢 code se jorna — QR nahi dikhana

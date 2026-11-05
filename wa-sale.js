@@ -15,10 +15,10 @@
 //   v2.179.2: 🔁 DOBARA PARHO (malik OK) — khuli parchi ⋮ 🔁 + ✕ / ⚠️ wale dabbe mein chip → {st:'new'} (rules 2.86 wahi) → PC (wa-parchi claimNew) AI se phir
 //     parhe + naya thermal / A4; bill khud dobara bhar jata hai (pendLoad). Bill bana / maal nikla / abhi parh raha = nahi.
 //   CAP sale.wsale (default khula). AI app mein NAHI — parchi PC parhta hai. Agent action NAHI (malik ka qaida v2.111.0).
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.187.0';
-import { smartSearch, noteHit } from './smart-search.js?v=2.187.0';
-import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.187.0';   // v2.180.0: 👦 larka (POS SP Man) chip
-import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.187.0';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.188.0';
+import { smartSearch, noteHit } from './smart-search.js?v=2.188.0';
+import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.188.0';   // v2.180.0: 👦 larka (POS SP Man) chip
+import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.188.0';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -798,11 +798,11 @@ async function qrPaint() {
 // v2.186.0: 🖨 PRINT WALA DOOSRA PHONE — malik: "jab Mubeen apni khud ki chat mein bhi print bheje to wo bhi auto print ho". PC us phone par alag linked device
 // (sirf us ki APNI chat ke apne bheje paigham — tasveer + "print" → A4). Doosri chats / aane wale paigham PC kabhi nahi chhoota. AI nahi.
 function link2HTML() {
-  const hd = '<h4>🖨 Print wala phone — apni chat se print</h4>';
+  const hd = '<h4>🖨 Print wala phone (Mubeen) — WhatsApp se A4</h4>';
   if (wl2Err === 'rules') return `<div class="wps-sec">${hd}<p class="wps-err">🔐 Ijazat nahi (rules).</p></div>`;
   const L = wl2 || {}, at = tms(L.at), st = String(L.st || ''), quiet = !!at && Date.now() - at > 5 * 60000;
   const [cl, t, sub] = !at ? ['w', '🖥 PC ne abhi jawab nahi diya', 'PC ki nayi script (wa-parchi v2.2) 3–5 min mein khud lagti hai — PC ON hai?']
-    : st === 'open' ? ['ok', '🟢 Print wala phone juda' + (L.me ? ' · 📱 ' + L.me : ''), 'Is phone ki APNI chat mein, ya neeche wale numbers se is phone par aayi tasveer + "print" (saath ya neeche alag) = A4. Baqi chats PC nahi chhoota.']
+    : st === 'open' ? ['ok', '🟢 Print wala phone juda' + (L.me ? ' · 📱 ' + L.me : ''), 'Is phone par: gahak tasveer ke SAATH "print" bheje, ya kisi parchi par Reply kar ke "Print" likhein = A4 (upar gahak ka number · naam · card). Apni chat + neeche wale numbers bhi. Group / status kabhi nahi.']
     : st === 'qr' ? ['warn', '🟡 QR scan karein', 'Print wale phone (Mubeen) mein WhatsApp kholein → ⋮ (upar daayein) → Linked devices → Link a device → neeche wala QR scan karein.']
     : st === 'code' ? ['warn', '🔢 Yeh code Mubeen ke phone mein likhein', 'Mubeen: WhatsApp → ⋮ (upar daayein) → Linked devices → Link a device → neeche "Link with phone number instead" → yeh 8 harf. (Aap ghar se phone par bata sakte hain.)']
     : st === 'closed' ? ['bad', '🔴 Rabta toota', String(L.err || '')]
