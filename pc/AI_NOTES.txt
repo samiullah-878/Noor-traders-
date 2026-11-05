@@ -4132,3 +4132,6 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 ## PC wa-parchi v2.2 · manifest 2026-11-05.6 (2026-11-05) — 🖨 print wala doosra phone (Mubeen ki apni chat) · app v2.186.0
 - Doosra Baileys socket (wa-auth-print\, waLink2 / waCmd2: link · relink · logout · code+ph) — sirf fromMe + apni chat → selfPrint(cx CX2) → A4. Aane wale paigham
   kabhi nahi. 🔢 requestPairingCode (pehle qr event par) = door se jorna. Pehle juda na ho to khud nahi judta. AI NAHI.
+
+## PC wa-parchi v2.3 · manifest 2026-11-05.7 (2026-11-05) — print phone par malik ki bheji tasveer + print = A4 · app v2.187.0
+- CX3 (aane wale, sirf waParchi.prFrom), dohra nahi jab malik ka link bhi chale (Mubeen prTo mein), waLink.out = Unlink ke baad restart par QR nahi. AI NAHI.

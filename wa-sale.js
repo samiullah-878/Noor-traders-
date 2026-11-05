@@ -15,10 +15,10 @@
 //   v2.179.2: 🔁 DOBARA PARHO (malik OK) — khuli parchi ⋮ 🔁 + ✕ / ⚠️ wale dabbe mein chip → {st:'new'} (rules 2.86 wahi) → PC (wa-parchi claimNew) AI se phir
 //     parhe + naya thermal / A4; bill khud dobara bhar jata hai (pendLoad). Bill bana / maal nikla / abhi parh raha = nahi.
 //   CAP sale.wsale (default khula). AI app mein NAHI — parchi PC parhta hai. Agent action NAHI (malik ka qaida v2.111.0).
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.186.0';
-import { smartSearch, noteHit } from './smart-search.js?v=2.186.0';
-import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.186.0';   // v2.180.0: 👦 larka (POS SP Man) chip
-import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.186.0';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.187.0';
+import { smartSearch, noteHit } from './smart-search.js?v=2.187.0';
+import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.187.0';   // v2.180.0: 👦 larka (POS SP Man) chip
+import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.187.0';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -768,6 +768,7 @@ function linkHTML() {
     : st === 'open' ? ['ok', '🟢 WhatsApp juda hua', L.me ? '📱 ' + L.me : '']
     : st === 'qr' ? ['warn', '🟡 QR scan karein', 'Dukan wale phone mein WhatsApp kholein → ⋮ (upar daayein) → Linked devices → Link a device → neeche wala QR scan karein.']
     : st === 'closed' ? ['bad', '🔴 WhatsApp toot gaya', '🔄 Naya QR dabayein, phir scan karein.']
+    : st === 'off' && L.out ? ['w', '⚪ Aap ka WhatsApp PC se alag hai', 'Aap ne ⛔ Unlink kiya — aap ki chats PC par nahi. Print ab neeche wale "🖨 Print wala phone" se. Dobara jorna ho to 🔄 Naya QR.']
     : st === 'off' ? ['w', '⚪ PC par band', 'Neeche ✅ Chalu karein.'] : st === 'error' ? ['bad', '⚠️ Ghalti', String(L.err || '')] : ['w', '⏳ ' + (st || 'intezar'), ''];
   const pcl = at ? `🖥 ${esc(L.host || 'PC')}${L.ver ? ' · v' + esc(L.ver) : ''} · ${ago(at) === 'abhi' ? 'abhi' : ago(at) + ' pehle'}${quiet ? ' · ⚠️ PC chup?' : ''}` : '';
   const qr = st === 'qr' && L.qr ? `<div class="wps-qr" data-ws-qr="1">⏳ QR ban raha…</div>${at && Date.now() - at > 60000 ? '<p class="wps-err">⚠️ QR purana ho sakta hai — 🔄 Naya QR dabayein</p>' : ''}` : '';
@@ -801,7 +802,7 @@ function link2HTML() {
   if (wl2Err === 'rules') return `<div class="wps-sec">${hd}<p class="wps-err">🔐 Ijazat nahi (rules).</p></div>`;
   const L = wl2 || {}, at = tms(L.at), st = String(L.st || ''), quiet = !!at && Date.now() - at > 5 * 60000;
   const [cl, t, sub] = !at ? ['w', '🖥 PC ne abhi jawab nahi diya', 'PC ki nayi script (wa-parchi v2.2) 3–5 min mein khud lagti hai — PC ON hai?']
-    : st === 'open' ? ['ok', '🟢 Print wala phone juda' + (L.me ? ' · 📱 ' + L.me : ''), 'Is phone ki APNI chat (Message yourself) mein tasveer + "print" (saath ya neeche alag) = A4. Doosri chats PC nahi chhoota.']
+    : st === 'open' ? ['ok', '🟢 Print wala phone juda' + (L.me ? ' · 📱 ' + L.me : ''), 'Is phone ki APNI chat mein, ya neeche wale numbers se is phone par aayi tasveer + "print" (saath ya neeche alag) = A4. Baqi chats PC nahi chhoota.']
     : st === 'qr' ? ['warn', '🟡 QR scan karein', 'Print wale phone (Mubeen) mein WhatsApp kholein → ⋮ (upar daayein) → Linked devices → Link a device → neeche wala QR scan karein.']
     : st === 'code' ? ['warn', '🔢 Yeh code Mubeen ke phone mein likhein', 'Mubeen: WhatsApp → ⋮ (upar daayein) → Linked devices → Link a device → neeche "Link with phone number instead" → yeh 8 harf. (Aap ghar se phone par bata sakte hain.)']
     : st === 'closed' ? ['bad', '🔴 Rabta toota', String(L.err || '')]
@@ -817,14 +818,17 @@ function link2HTML() {
     : st === 'code' ? '<button type="button" class="wps-tc" data-ws-l2="code">🔄 Naya code</button><button type="button" class="wps-tc bad" data-ws-l2="logout">✕ Rehne dein</button>'
     : `<button type="button" class="wps-tc pri" data-ws-l2="code">🔢 Code se jorein</button><button type="button" class="wps-tc" data-ws-l2="link">🔳 QR se</button>`;
   const phIn = st === 'open' ? '' : `<div class="wps-nadd"><input type="tel" inputmode="tel" data-ws-l2ph="1" maxlength="20" placeholder="Print wale phone ka number" value="${esc(ph0)}" autocomplete="off" enterkeyhint="done"></div>`;
+  const pf = cfgNow().prFrom;   // v2.187.0: malik ka number — Mubeen ko bheji tasveer + print
+  const pfH = `<h4>📥 In numbers se is phone par aayi "print" bhi</h4><div class="wps-nums">${pf.map(n => `<span class="wps-num">📱 ${esc(n)}<button type="button" data-ws-pfx="${esc(n)}" aria-label="Hatao">✕</button></span>`).join('') || '<small class="wps-mut">Koi nahi — sirf apni chat</small>'}</div>
+    <div class="wps-nadd"><input type="tel" inputmode="tel" data-ws-pfin="1" maxlength="20" placeholder="0300-1234567" autocomplete="off" enterkeyhint="done"><button type="button" class="wps-tc pri" data-ws-pfadd="1">➕ Jorein</button></div>`;
   return `<div class="wps-sec">${hd}<div class="wps-lk ${cl}"><b>${esc(t)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}${pcl ? `<small class="wps-mut">${pcl}</small>` : ''}${prl}</div>${qr}${code}${st === 'code' ? '' : phIn}
-    <div class="wps-row">${btn}<i class="wps-wst">${stTxt(wst.cmd2)}</i></div></div>`;
+    <div class="wps-row">${btn}<i class="wps-wst">${stTxt(wst.cmd2)}</i></div>${pfH}</div>`;
 }
 function link2Paint() {
   const b = document.querySelector('#dialogBody [data-ws-link2]'); if (!b) return;
-  const i = b.querySelector('[data-ws-l2ph]'), v = i ? i.value : null, f = i && document.activeElement === i;
+  const keep = ['[data-ws-l2ph]', '[data-ws-pfin]'].map(q => { const i = b.querySelector(q); return [q, i ? i.value : null, !!i && document.activeElement === i]; });
   b.innerHTML = link2HTML(); qrLast2 = ''; qrPaint2();
-  const n = b.querySelector('[data-ws-l2ph]'); if (n && v != null) { n.value = v; if (f) n.focus(); }   // likhte waqt number na mite
+  for (const [q, v, f] of keep) { const n = b.querySelector(q); if (n && v != null) { n.value = v; if (f) n.focus(); } }   // likhte waqt number na mite
 }
 async function qrPaint2() {
   const q = String(wl2?.qr || ''); if (!q || wl2?.st !== 'qr' || q === qrLast2 || !document.querySelector('#dialogBody [data-ws-qr2]')) return;
@@ -845,8 +849,8 @@ async function waCmd2(cmd) {
   catch (e) { wst.cmd2 = 'bad'; C.notice('✕ ' + (perm(e) ? 'Ijazat nahi' : e?.message || e)); }
   link2Paint(); setTimeout(() => { if (wst.cmd2 !== 'w') { wst.cmd2 = ''; link2Paint(); } }, 5000);
 }
-const PR_DEF = ['03462901193'];   // v2.185.0: Mubeen — malik apne number se is chat mein tasveer + "print" = A4
-const cfgNow = () => ({ on: wc?.on ?? true, th: wc?.th ?? true, a4: wc?.a4 ?? false, zm: wc?.zm ?? true, a4m: ['print', 'all', 'off'].includes(wc?.a4m) ? wc.a4m : 'print', a4c: Math.max(1, Math.min(3, Number(wc?.a4c) || 1)), prTo: Array.isArray(wc?.prTo) ? wc.prTo.map(String) : PR_DEF, allow: Array.isArray(wc?.allow) ? wc.allow.map(String) : [] });   // v2.184.0: zm = thermal par parchi ki asal likhai (har line zoom, bina AI)
+const PR_DEF = ['03462901193'], PF_DEF = ['03450412515'];   // v2.187.0: PF = print phone par in numbers (malik) se AAYI tasveer + print = A4   // v2.185.0: Mubeen — malik apne number se is chat mein tasveer + "print" = A4
+const cfgNow = () => ({ on: wc?.on ?? true, th: wc?.th ?? true, a4: wc?.a4 ?? false, zm: wc?.zm ?? true, a4m: ['print', 'all', 'off'].includes(wc?.a4m) ? wc.a4m : 'print', a4c: Math.max(1, Math.min(3, Number(wc?.a4c) || 1)), prTo: Array.isArray(wc?.prTo) ? wc.prTo.map(String) : PR_DEF, prFrom: Array.isArray(wc?.prFrom) ? wc.prFrom.map(String) : PF_DEF, allow: Array.isArray(wc?.allow) ? wc.allow.map(String) : [] });   // v2.184.0: zm = thermal par parchi ki asal likhai (har line zoom, bina AI)
 function cfgHTML() {
   if (wcErr === 'rules') return '<p class="wps-err">🔐 Setting parh nahi sake (rules).</p>';
   const c = cfgNow(), tg = (k, v, a, b) => `<button type="button" class="wps-tc${v ? ' is-in' : ''}" data-ws-tg="${k}">${v ? a : b}</button>`;
@@ -877,11 +881,19 @@ function prAdd() {
   if (inp) inp.value = '';
   cfgSave({ prTo: [...c.prTo, n].slice(0, 10) }, '✓ ' + n + ' — is chat mein "print" = A4');
 }
+function pfAdd() {
+  const inp = document.querySelector('#dialogBody [data-ws-pfin]'), n = phNorm(inp?.value);
+  if (!n) { C.notice('Number aisa likhein: 0300-1234567'); inp?.focus(); return; }
+  const c = cfgNow(); if (c.prFrom.includes(n)) { C.notice('Yeh number pehle se hai'); return; }
+  if (inp) inp.value = '';
+  cfgSave({ prFrom: [...c.prFrom, n].slice(0, 10) }, '✓ ' + n + ' — print phone par is ki tasveer + "print" = A4');
+}
 function cfgPaint() {
   const b = document.querySelector('#dialogBody [data-ws-cfg]'); if (!b) return;
   const keep = ['[data-ws-numin]', '[data-ws-prin]'].map(q => { const i = b.querySelector(q); return [q, i?.value || '', document.activeElement === i]; });
   b.innerHTML = cfgHTML();
   for (const [q, v, f] of keep) { const n = b.querySelector(q); if (n) { n.value = v; if (f) n.focus(); } }
+  link2Paint();   // v2.187.0: prFrom wahan
 }
 async function cfgSave(patch, msg) {
   if (!C.owner() || !C.cloud?.saveWaParchi) return;
@@ -941,6 +953,7 @@ document.addEventListener('keydown', e => {
   const t = e.target;
   if (t?.matches?.('#dialogBody [data-ws-numin]')) { e.preventDefault(); numAdd(); return; }
   if (t?.matches?.('#dialogBody [data-ws-prin]')) { e.preventDefault(); prAdd(); return; }
+  if (t?.matches?.('#dialogBody [data-ws-pfin]')) { e.preventDefault(); pfAdd(); return; }
   if (!document.querySelector('[data-ws-root]') || !t || t.tagName !== 'INPUT') return;
   if (t.id === 'search') {   // Enter = code / ek hi milta item → line
     const v = t.value.trim(); if (!v) return; e.preventDefault();
@@ -960,9 +973,9 @@ document.addEventListener('keydown', e => {
 document.addEventListener('focusin', e => { const r = e.target?.closest?.('#list .pp-cr, #list .pp-tr'); if (r && r.dataset.wsSel) selSet(r.dataset.wsSel); });
 document.addEventListener('click', e => {
   const t = e.target; if (!t?.closest) return;
-  const set = t.closest('[data-ws-relink],[data-ws-logout],[data-ws-l2],[data-ws-tg],[data-ws-numx],[data-ws-numadd],[data-ws-a4m],[data-ws-a4c],[data-ws-prx],[data-ws-pradd]');
+  const set = t.closest('[data-ws-relink],[data-ws-logout],[data-ws-l2],[data-ws-pfx],[data-ws-pfadd],[data-ws-tg],[data-ws-numx],[data-ws-numadd],[data-ws-a4m],[data-ws-a4c],[data-ws-prx],[data-ws-pradd]');
   if (set && set.closest('#dialogBody [data-ws-setroot]')) { const d = set.dataset;
-    if (d.wsRelink) waCmd('relink'); else if (d.wsLogout) waCmd('logout'); else if (d.wsL2) waCmd2(d.wsL2); else if (d.wsNumadd) numAdd(); else if (d.wsPradd) prAdd();
+    if (d.wsRelink) waCmd('relink'); else if (d.wsLogout) waCmd('logout'); else if (d.wsL2) waCmd2(d.wsL2); else if (d.wsPfadd) pfAdd(); else if (d.wsPfx) { if (confirm(d.wsPfx + ' hata dein? Is number se print phone par aayi tasveer phir A4 par nahi chhapegi.')) cfgSave({ prFrom: cfgNow().prFrom.filter(n => n !== d.wsPfx) }, '✓ ' + d.wsPfx + ' hata diya'); } else if (d.wsNumadd) numAdd(); else if (d.wsPradd) prAdd();
     else if (d.wsA4m) { const v = d.wsA4m; if (['print', 'all', 'off'].includes(v)) cfgSave({ a4m: v, a4: v !== 'off' }, v === 'print' ? '🖨 A4: sirf "print" likhne par' : v === 'all' ? '🖨 A4: har parchi' : '⛔ A4 band'); }
     else if (d.wsA4c) cfgSave({ a4c: Math.max(1, Math.min(3, Number(d.wsA4c) || 1)) }, '🖨 A4: ' + d.wsA4c + ' copy');
     else if (d.wsPrx) { if (confirm(d.wsPrx + ' hata dein? Is chat mein "print" phir A4 par nahi chhapega.')) cfgSave({ prTo: cfgNow().prTo.filter(n => n !== d.wsPrx) }, '✓ ' + d.wsPrx + ' hata diya'); }

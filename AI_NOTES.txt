@@ -7005,3 +7005,14 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
   Rules NAHI badle (blueAccess malik ka aam rule; mulazim ki get list mein waLink2 nahi).
 - Test: node vm (Mubeen apni chat album + Print = 2, LID apni chat = 1, doosri chats = 0 aur chup, aam baat = 0, print 2 = 2 copy; malik wale purane 9 test wahi),
   Playwright ⚙️ (off → code bheja 03462901193, QR svg, code dabba, open + aakhri print, Unlink). Asal phone par abhi test nahi. AI NAHI.
+
+## v2.187.0 (2026-11-05) — 🖨 Malik apna WhatsApp Unlink kare, sirf Mubeen ka phone chale · PC wa-parchi v2.3 · manifest 2026-11-05.7
+- Malik: "main apna logout kar doon, sirf Mubeen ka WhatsApp kaam kare — wohi tareeqa: Mubeen ko parchi bhejun + Print likhun to print". Plan OK, Parchi Sale
+  (gahak ki forward parchi malik ke number par) = B: unlink ke baad band rahe, Mubeen par NAHI le jana.
+- PC v2.3: print phone (CX2 socket) par AANE wale paigham bhi — CX3: sirf `waParchi.prFrom` (default malik 03450412515; LID = getLIDForPN) ki tasveer + "print"
+  (caption ya alag ≤ 25 harf, 10 min / 2 min wahi) → WAHI selfPrint → A4. Doosre numbers = bilkul chup. Malik ka apna link bhi open ho + Mubeen prTo mein = CX3 chup
+  (malik wala selfPrint chhapta hai — dohra nahi). Malik ⛔ Unlink = waLink.out (waqt) → PC restart par khud QR nahi banta (🔄 Naya QR / link = out 0).
+- App: cloud.saveWaParchi `prFrom` (03… ≤ 10). ⚙️ "🖨 Print wala phone" ke neeche "📥 In numbers se is phone par aayi print bhi" (chips ✕ + ➕, data-ws-pf*);
+  cfgPaint ab link2Paint bhi. Malik ka link off + out = "⚪ Aap ka WhatsApp PC se alag hai".
+- Test: node vm (malik → Mubeen album + Print = 2, malik LID print 2, doosra number 0 + chup, bina print 0, phir print = 1, Mubeen apni chat 1, malik link bhi
+  chalu = 0 dohra nahi, Mubeen prTo mein nahi = 1, 40 min purana 0) + Playwright (prFrom chips / jorna / hatana). AI NAHI.

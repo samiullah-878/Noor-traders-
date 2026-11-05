@@ -1,5 +1,9 @@
 // =========================================================
 //  wa-parchi.js  v2.2 (2026-11-05) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v2.3: 🖨 malik: "main apna logout kar doon, sirf Mubeen ka WhatsApp kaam kare — main Mubeen ko parchi bhejun + Print likhun to print" (Parchi Sale
+//        order malik ke number par hi rahe = B, unlink ke baad band) → print phone par AANE wale paigham bhi, SIRF waParchi.prFrom numbers (default malik
+//        0345-0412515) se: tasveer + "print" (caption / alag) → A4 (CX3, wahi selfPrint). Malik ka apna link bhi chalta ho aur Mubeen prTo mein ho to CX3
+//        chup (dohra print nahi). Malik ne ⛔ Unlink kiya (L.out) = PC restart par khud QR nahi banata.
 //  v2.2: 🖨 malik: "jab Mubeen apni khud ki chat mein bhi print bheje to wo bhi auto print ho" → DOOSRA linked device (sirf PRINT): Mubeen ka apna
 //        WhatsApp (QR app ⚙️ "📲 Print wala phone" → blueAccess/waLink2 · hukum waCmd2 · chaabi wa-auth-print\). Us number ke SIRF apne bheje (fromMe)
 //        paigham + SIRF us ki apni chat (Message yourself) → wahi selfPrint (tasveer + "print" caption ya alag) → A4. Aane wale paigham / doosri chats
@@ -69,7 +73,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.2';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.3';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1074,17 +1078,18 @@ async function start(ZINDA) {
 
   // ---------- 🔗 link ki haalat (app) — har likhai POORA doc, ek waqt ek (CLAUDE.md bug safai 1) ----------
   let L = { st: 'off', qr: '', me: '', err: '', cmd: 0 };
-  try { const s = await LINK.get(); if (s.exists) { const d = s.data() || {}; L.cmd = Number(d.cmd) || 0; L.me = String(d.me || ''); } } catch (e) { log('⚠️ waLink: ' + e.message); }
+  try { const s = await LINK.get(); if (s.exists) { const d = s.data() || {}; L.cmd = Number(d.cmd) || 0; L.me = String(d.me || ''); L.out = Number(d.out) || 0; } } catch (e) { log('⚠️ waLink: ' + e.message); }
   let lw = Promise.resolve(), lastLinkW = 0;
   const setLink = p => { Object.assign(L, p || {}); L.at = Date.now(); L.host = os.hostname(); L.ver = VER; const snap = { ...L }; lastLinkW = Date.now(); lw = lw.then(() => LINK.set(snap)).catch(e => log('⚠️ waLink likha nahi: ' + e.message)); return lw; };
 
   // ---------- ⚙️ settings + data (live) ----------
-  let S = { on: true, allow: [], th: true, a4: true, thp: '', zm: true, a4m: 'print', a4c: 1, prTo: ['03462901193'] }, sReady; const settingsReady = new Promise(r => { sReady = r; });
+  let S = { on: true, allow: [], th: true, a4: true, thp: '', zm: true, a4m: 'print', a4c: 1, prTo: ['03462901193'], prFrom: ['03450412515'] }, sReady; const settingsReady = new Promise(r => { sReady = r; });
   BA.doc('waParchi').onSnapshot(s => {
     const d = (s.exists && s.data()) || {};
     S = { on: d.on !== false, allow: [...new Set((Array.isArray(d.allow) ? d.allow : []).map(normPh).filter(Boolean))], th: d.th !== false, a4: d.a4 !== false, thp: String(d.thp || '').trim(), zm: d.zm !== false,
       a4m: ['print', 'all', 'off'].includes(d.a4m) ? d.a4m : 'print', a4c: Math.max(1, Math.min(3, Number(d.a4c) || 1)),   // v2.0: A4 sirf "print" likhne par (default) · har parchi · band
-      prTo: Array.isArray(d.prTo) ? [...new Set(d.prTo.map(normPh).filter(Boolean))] : ['03462901193'] };   // v2.0: apne number se in chats mein "print" = A4 (default Mubeen)   // v1.9: zm = thermal par parchi ki asal likhai (line zoom, bina AI) — default ON
+      prTo: Array.isArray(d.prTo) ? [...new Set(d.prTo.map(normPh).filter(Boolean))] : ['03462901193'],
+      prFrom: Array.isArray(d.prFrom) ? [...new Set(d.prFrom.map(normPh).filter(Boolean))] : ['03450412515'] };   // v2.3: print phone par in numbers se AAYI tasveer + print = A4   // v2.0: apne number se in chats mein "print" = A4 (default Mubeen)   // v1.9: zm = thermal par parchi ki asal likhai (line zoom, bina AI) — default ON
     sReady();
   }, e => { authErr(e); sReady(); });
   setTimeout(() => sReady(), 20000);
@@ -1504,7 +1509,7 @@ async function start(ZINDA) {
     log('🔗 app ka hukum: ' + c);
     if (sock) { try { await within(sock.logout(), 15000, 'logout'); } catch {} }
     endSock(); wipeAuth();
-    setLink({ st: 'off', qr: '', me: '', err: c === 'logout' ? '' : 'Naya QR ban raha hai…' });
+    setLink({ st: 'off', qr: '', me: '', out: c === 'logout' ? Date.now() : 0, err: c === 'logout' ? '' : 'Naya QR ban raha hai…' });   // v2.3: out = malik ne khud alag kiya
     if (c === 'logout') return;
     await connect('app: naya link');
   }
@@ -1652,6 +1657,15 @@ async function start(ZINDA) {
       }
       return { ok: false, to: '', me };
     } };
+  const CX3 = { k: 'c', quiet: true, tag: 'Print',   // v2.3: print phone par AANE wale — sirf waParchi.prFrom (malik) ke, kisi aur ke kabhi nahi
+    note: t => CX2.note(t), who: (to, me) => phPretty(to) + ' se → ' + (me ? phPretty(me) : 'print phone'),
+    ok: async (m, s) => {
+      const me = me2Of(s), jid = m.key.remoteJid || ''; let from = await senderPh(m, s);
+      if (!from && /@lid$/.test(jid)) for (const pn of S.prFrom) { try { const lid = await s.signalRepository.lidMapping.getLIDForPN(pnJid(pn)); if (lid && bare(lid) === bare(jid)) { from = pn; break; } } catch {} }
+      if (!from || !S.prFrom.includes(from)) return { ok: false, to: from, me };
+      if (L.st === 'open' && normPh(L.me || '') === from && me && S.prTo.includes(me)) return { ok: false, to: from, me };   // malik ka apna link bhi chal raha — wohi chhapta hai (dohra nahi)
+      return { ok: true, to: from, me };
+    } };
   async function connect2(why) {
     end2(); const my = gen2;
     fs.mkdirSync(AUTH2_DIR, { recursive: true });
@@ -1664,7 +1678,7 @@ async function start(ZINDA) {
     sock2 = s;
     s.ev.on('creds.update', saveCreds);
     s.ev.on('connection.update', u => { if (my === gen2) onConn2(u, s, state).catch(e => log('⚠️ link2: ' + e.message)); });
-    s.ev.on('messages.upsert', ev => { if (my !== gen2) return; for (const m of (ev && ev.messages) || []) if (m && m.key && m.key.fromMe && m.message) msgQ = msgQ.then(() => selfPrint(m, s, CX2)).catch(e => log('⚠️ print phone: ' + (e && e.message))); });   // aane wale paigham KABHI nahi
+    s.ev.on('messages.upsert', ev => { if (my !== gen2) return; for (const m of (ev && ev.messages) || []) if (m && m.key && m.message) msgQ = msgQ.then(() => selfPrint(m, s, m.key.fromMe ? CX2 : CX3)).catch(e => log('⚠️ print phone: ' + (e && e.message))); });   // aane wale = sirf prFrom (CX3)
   }
   async function onConn2(u, s, state) {
     if (u.qr && pair2) {   // 🔢 code se jorna — QR nahi dikhana
@@ -1717,11 +1731,13 @@ async function start(ZINDA) {
     L.cmd = at;
     if (age > 10 * 60000) { setLink({}); return; }
     setLink({});
+    if (c === 'link') L.out = 0;
     (c === 'link' && !(sock && L.st === 'open') ? connect('app: jorein') : c === 'link' ? Promise.resolve() : doCmd(c)).catch(e => { log('⚠️ hukum: ' + e.message); setLink({ st: 'error', err: String(e.message).slice(0, 140) }); });
   }, authErr);
 
   setInterval(() => { if (Date.now() - lastLinkW > 5 * 60000) setLink({}); }, 60000);   // app ko pata rahe PC zinda
-  await connect('shuru');
+  if (L.out && !fs.existsSync(path.join(AUTH_DIR, 'creds.json'))) { setLink({ st: 'off', qr: '', me: '', err: '' }); log('⏸ malik ka WhatsApp PC se alag hai (Unlink) — jorna ho to app ⚙️ 🔄 Naya QR'); }   // v2.3
+  else await connect('shuru');
 }
 
 // ---------- 📦 Baileys — apne folder wa-mods\ mein (C:\khata-sync\node_modules ko kabhi nahi chhuta) ----------
