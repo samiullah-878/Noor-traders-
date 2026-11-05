@@ -7041,3 +7041,22 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
   printOne. Gahak ka alag / reply "print" = kuch nahi. Group / status nahi. Helpers ab dono WhatsApp ke: badJid, imgOf, noteChat, replyOf, quotedMsg,
   printOne(…, s, note), ready(). Dohra nahi: malik ka link chale to P2 malik ka reply-print nahi chhapta (mainOn).
 - App: ⚙️ A4 hissa ki likhai mein "Gahak ki chat mein…" line. Test: node vm M1–M11 + purane 15 + selftest2/3. AI NAHI.
+
+## v2.190.0 (2026-11-05) — 🛰 Falcon-i km KHUD (raat ko) · PC gaari-gps v1.1 · manifest 2026-11-05.10
+- Malik: "Falcon apps wala bana do pehla · ye milage trips hain" (Falcon-i app: Reports → Trips → Today's Trips, har trip "05 Nov 2026 09:37 PM" +
+  "Total Distance: 8.86 Km"). Gaari ke km / farzi diesel khud.
+- Malik ke phone (Falcon-i wala) ka MacroDroid macro `falcon-macro.js` (naqsha — scratchpad mac/buildfx.py se, asal exports ke templates; khufia
+  chaabi KABHI is file mein nahi) → app gaari ⚙️ "Falcon setup" → 📥 NT_Falcon_km.macro (URL + gaariKey bhar kar). Macro: trigger = phone unlock,
+  constraints = raat 21:45–23:59 + LastRunTime (is macro ka, 50 min mein dobara nahi; field `checkThisMacro` bina m_). Falcon-i shuru se kholo
+  (com.nxd.falconi, startNew) → ☰ (XY 92%,9%) → "Report" → "Trips" → "Today" (click text, textMatchOption 0 = CONTAINS, 1 = matches) → Read Screen
+  Contents (dict fx) → JSON (fs) → 6 dafa scroll + parho → fa (backslash/quote/nayi line saaf) → POST gaariGps {k, p:"FX1|…|…"} (WAHI collection +
+  rule — rules nahi badle) → Home → Toast ✅ / ⚠️.
+- PC gaari-gps v1.1: `FX1|` docs → fxParse (waqt 4 shaklein + "distance … X km", km/h kabhi nahi; har km apne se pehle wale PEHLE waqt se) →
+  gaariDay/<din> MERGE {date, fk, fn, ft JSON [["HH:MM", km]], fa} (waqt se dohra ek, naya km jeete; sirf aaj se 3 din pichhe tak) + gaariDay/_falcon
+  {at, n, nDt, nKm, reads, km, why, raw 3500}. GPS wala DAY.set ab merge:true (Falcon khane na mitein). Falcon ghalti = woh doc agle chakkar dobara.
+- App gaari.js: `fkKm(p)` = din fk ÷ us din ke phere (purana din = phere ka `fkKm`, gpsSync malik ki app likhti — cloud.setGaariFkKm). pc(): km =
+  meter → 📸 screenshot (trackerKm) → 🛰 Falcon khud → 📱 GPS (kmSrc 'falcon'). Chip 🛰 (km · aaj/kal · trips; ⚠️ jab parha magar trip nahi) →
+  din-war list (🚫 phera nahi likha) → din = trips chips; ⚙️ setup = haal + "📄 Screen ka text" (raw) + 5 qadam + download. cloud.listenGaariDays
+  ab `_falcon` bhi (cb 3rd arg). Test: fxParse 7 shaklein, Playwright (ok/bad/none, download = chaabi + URL bhare, placeholder nahi).
+- ⚠️ Phone par abhi test NAHI: Read Screen Contents ki dictionary mein ek hi view-id wale list items (RecyclerView) shayad ek ho jayein — pehli raat ka
+  `_falcon.raw` dekh kar theek karna (zaroorat ho to har item par scroll / doosra raasta). AI NAHI.

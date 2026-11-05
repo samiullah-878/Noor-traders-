@@ -1,5 +1,5 @@
 // =========================================================
-//  gaari-gps.js  v1.0 (2026-11-01) — 📍 GAARI KA PHONE → din ke km (khud)
+//  gaari-gps.js  v1.1 (2026-11-05) — 📍 GAARI KA PHONE → din ke km (khud)
 //  Malik: "gaari mein mobile rakh dein to pura din ka khud minus ho (milage map se) · driver kuch nahi dabayega · jahan 4G na ho?"
 //
 //  Gaari ka phone (MacroDroid, har 1 min) jagah apni list mein jorta hai, phir khufia chaabi (blueAccess/gaariKey) ke saath
@@ -11,6 +11,15 @@
 //    • gaariDay/_live {t, lat, lon, recv, n} = aakhri jagah (app: "📵 phone chup"),
 //    • parhe hue gaariGps docs mita deti (Firestore halka).
 //  AI NAHI. POS / khata mein KUCH nahi likhti. Chalana: gaari-gps-auto.bat (doctor). Log: gaari-gps-log.txt.
+//
+//  v1.1 (2026-11-05) — 🛰 FALCON-I KM KHUD (malik: "Falcon apps wala bana do · ye milage trips hain")
+//    Malik ke phone ka MacroDroid (app ⚙️ se bani .macro, wahi gaariKey) Falcon-i → Reports → Trips → Today's Trips
+//    khud khol kar screen ka text (Read Screen Contents → JSON, upar-neeche scroll, kai dafa) gaariGps mein "FX1|…" bhejta hai.
+//    Ye script trip ka waqt ("05 Nov 2026 09:37 PM") + "Total Distance: 8.86 Km" jori dhoond kar gaariDay/<din> mein
+//    MERGE karti hai: fk (din ke Falcon km), fn (trips), ft (JSON [["21:37", 8.86], …]), fa (kab) — dohra trip ek dafa
+//    (waqt se), naya parha km purane par (chalta trip baad mein poora). GPS wale khane ab merge se (Falcon na mite).
+//    gaariDay/_falcon = aakhri dafa ka haal (kitne trip, kachcha text ka namoona) — app ⚙️ mein (samajh na aaye to dikhe).
+//    AI NAHI.
 // =========================================================
 const path = require('path');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); const fs = require('fs'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
@@ -63,6 +72,72 @@ function summarize(P) {
   return { km: Math.round(km * 10) / 10, gapKm: Math.round(gapKm * 10) / 10, n: good.length, first: good[0]?.[0] || 0, last: good[good.length - 1]?.[0] || 0, gaps, stops, path };
 }
 
+// ---------- 🛰 v1.1 FALCON-I: screen ka text → trips [{day, t:'HH:MM', km}] ----------
+//   waqt: "05 Nov 2026 09:37 PM" · "Nov 05, 2026 21:37" · "2026-11-05 21:37" · "05/11/2026 09:37 PM" (din pehle — Pakistan)
+//   km: "Total Distance: 8.86 Km" (label alag view mein ho to bhi, 90 harf tak) — km/h (speed) kabhi nahi
+//   jori: har km apne se PEHLE wale pehle waqt se (card ka heading); waqt ke baghair km = chhor do
+const MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+const MRX = '(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\\.?';
+const DT_RX = [
+  new RegExp('\\b(\\d{1,2})[\\s\\-\\/.]+' + MRX + '[\\s\\-\\/.,]+(\\d{4})[\\s,T]*(?:at\\s*)?(\\d{1,2}):(\\d{2})(?::\\d{2})?\\s*([ap]\\.?\\s?m\\.?)?', 'gi'),   // 05 Nov 2026 09:37 PM
+  new RegExp('\\b' + MRX + '\\s+(\\d{1,2}),?\\s+(\\d{4})[\\s,T]*(?:at\\s*)?(\\d{1,2}):(\\d{2})(?::\\d{2})?\\s*([ap]\\.?\\s?m\\.?)?', 'gi'),   // Nov 05, 2026 09:37 PM
+  /\b(\d{4})-(\d{1,2})-(\d{1,2})[\sT]+(\d{1,2}):(\d{2})(?::\d{2})?\s*([ap]\.?\s?m\.?)?/gi,   // 2026-11-05 21:37
+  /\b(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})[\s,]+(\d{1,2}):(\d{2})(?::\d{2})?\s*([ap]\.?\s?m\.?)?/gi   // 05/11/2026 09:37 PM
+];
+const KM_LBL = /distance[\s\S]{0,90}?(?<![\w.])(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:km|kms|kilomet)(?![a-z]*\s*\/\s*h|ph|\/hr)/gi;
+const KM_ANY = /(?<![\w.])(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:km|kms)\b(?!\s*\/\s*h|ph|\/hr)/gi;
+function fxParse(txt) {
+  const s = String(txt || ''), ev = [];
+  const hh = (h, ap) => { h = Number(h); if (ap) { const p = /^p/i.test(ap); h = h % 12 + (p ? 12 : 0); } return h; };
+  DT_RX.forEach((rx, k) => { rx.lastIndex = 0; let m; while ((m = rx.exec(s))) {
+    let y, mo, d, h, mi, ap;
+    if (k === 0) { d = +m[1]; mo = MON[m[2].slice(0, 3).toLowerCase()]; y = +m[3]; h = m[4]; mi = +m[5]; ap = m[6]; }
+    else if (k === 1) { mo = MON[m[1].slice(0, 3).toLowerCase()]; d = +m[2]; y = +m[3]; h = m[4]; mi = +m[5]; ap = m[6]; }
+    else if (k === 2) { y = +m[1]; mo = +m[2]; d = +m[3]; h = m[4]; mi = +m[5]; ap = m[6]; }
+    else { d = +m[1]; mo = +m[2]; y = +m[3]; h = m[4]; mi = +m[5]; ap = m[6]; }
+    const H = hh(h, ap);
+    if (!mo || mo > 12 || d < 1 || d > 31 || y < 2024 || y > 2100 || H > 23 || mi > 59) continue;
+    ev.push({ i: m.index, end: m.index + m[0].length, kind: 'dt', day: `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`, t: `${String(H).padStart(2, '0')}:${String(mi).padStart(2, '0')}` });
+  } });
+  const kmEv = rx => { const out = []; rx.lastIndex = 0; let m; while ((m = rx.exec(s))) { const v = Number(String(m[1]).replace(',', '.')); if (v >= 0 && v < 800) out.push({ i: m.index + m[0].lastIndexOf(m[1]), kind: 'km', km: Math.round(v * 100) / 100 }); } return out; };
+  let K = kmEv(KM_LBL); if (!K.length) K = kmEv(KM_ANY);
+  // dohre waqt (do regex ek hi jagah) — ek
+  const D = ev.sort((a, b) => a.i - b.i).filter((x, i, A) => !i || x.i >= A[i - 1].end);
+  const all = [...D, ...K].sort((a, b) => a.i - b.i), trips = [];
+  let first = null, orphan = 0;
+  for (const e of all) {
+    if (e.kind === 'dt') { if (!first) first = e; continue; }
+    if (first) { if (e.km > 0) trips.push({ day: first.day, t: first.t, km: e.km }); first = null; } else orphan++;
+  }
+  return { trips, nDt: D.length, nKm: K.length, orphan };
+}
+// trips ko din-war purane trips ke saath jor (waqt se pehchan, naya km jeete) → { day: [[t, km], …] }
+function fxMerge(oldJ, add) {
+  const m = new Map(); try { for (const [t, km] of JSON.parse(oldJ || '[]') || []) if (t) m.set(String(t), Number(km) || 0); } catch {}
+  for (const x of add) m.set(x.t, x.km);
+  return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+}
+async function falconTick(docs) {
+  const today = dayOf(Date.now()), minDay = dayOf(Date.now() - 3 * 86400000);
+  for (const d of docs) {
+    const x = d.data() || {}, raw = String(x.p || ''), body = raw.replace(/^FX1\|[^|]*\|/, '');
+    const P = fxParse(body), reads = body.split('~~').filter(q => q.trim()).length;
+    const byDay = new Map(); let bad = 0;
+    for (const t of P.trips) { if (t.day > today || t.day < minDay) { bad++; continue; } if (!byDay.has(t.day)) byDay.set(t.day, []); byDay.get(t.day).push(t); }
+    const kmOut = {};
+    for (const [day, L] of byDay) {
+      const ref = DAY.doc(day), cur = await ref.get(), old = cur.exists ? cur.data() || {} : {};
+      const ft = fxMerge(old.ft, L), fk = Math.round(ft.reduce((s, q) => s + (Number(q[1]) || 0), 0) * 100) / 100;
+      await ref.set({ date: day, fk, fn: ft.length, ft: JSON.stringify(ft), fa: Date.now() }, { merge: true });
+      kmOut[day] = fk;
+      log(`🛰 ${day}: Falcon ${fk} km · ${ft.length} trip (is dafa ${L.length})`);
+    }
+    const why = P.trips.length ? (bad && !byDay.size ? 'purane din' : '') : !P.nDt && !P.nKm ? 'kuch nahi' : !P.nKm ? 'km nahi' : !P.nDt ? 'waqt nahi' : 'jori nahi';
+    await DAY.doc('_falcon').set({ at: Date.now(), recv: d.createTime ? d.createTime.toMillis() : Date.now(), n: P.trips.length, nDt: P.nDt, nKm: P.nKm, reads, km: kmOut, why, raw: body.slice(0, 3500) });
+    if (!P.trips.length) log(`🛰 Falcon text aaya magar trip nahi (${why}) — ${body.length} harf`);
+  }
+}
+
 const cache = new Map();   // day -> raw points (is chakkar ke liye)
 async function loadDay(day) {
   if (cache.has(day)) return cache.get(day);
@@ -73,10 +148,11 @@ async function loadDay(day) {
 async function tick() {
   const snap = await RAW.limit(400).get();
   if (snap.empty) return;
-  const touched = new Set(); let n = 0, last = null, real = 0;
+  const touched = new Set(); let n = 0, last = null, real = 0; const fx = [];
   for (const d of snap.docs) {
     const x = d.data() || {}, recv = d.createTime ? d.createTime.toMillis() : Date.now();
     if (/^RABTA TEST/.test(String(x.p || ''))) continue;   // app ka 🔎 rabta test — sirf mitao
+    if (/^FX1\|/.test(String(x.p || ''))) { fx.push(d); continue; }   // v1.1: 🛰 Falcon-i ka text (malik ka phone)
     real++;
     const pts = parse(x.p, recv); n += pts.length;
     for (const q of pts) { const day = dayOf(q[0]); (await loadDay(day)).push(q); touched.add(day); if (!last || q[0] > last[0]) last = q; }
@@ -86,16 +162,17 @@ async function tick() {
     const S = summarize(raw);
     await KEEP.doc(day).set({ raw: JSON.stringify(raw), at: Date.now() });
     await PATH.doc(day).set({ j: JSON.stringify(S.path), at: Date.now() });
-    await DAY.doc(day).set({ date: day, km: S.km, gapKm: S.gapKm, n: S.n, first: S.first, last: S.last, j: JSON.stringify({ stops: S.stops, gaps: S.gaps }), at: Date.now() });
+    await DAY.doc(day).set({ date: day, km: S.km, gapKm: S.gapKm, n: S.n, first: S.first, last: S.last, j: JSON.stringify({ stops: S.stops, gaps: S.gaps }), at: Date.now() }, { merge: true });   // v1.1: merge — 🛰 Falcon ke khane (fk/ft) na mitein
     log(`📍 ${day}: ${S.km} km · ${S.n} jagah · ${S.stops.length} ruke · ${S.gaps.length} chup${S.gapKm ? ` (${S.gapKm} km andaza)` : ''}`);
   }
+  let fxFail = false; if (fx.length) { try { await falconTick(fx); } catch (e) { fxFail = true; log('⚠️ Falcon', e.message || e); } }   // ghalti = Falcon ka text agle chakkar dobara
   if (last) await DAY.doc('_live').set({ t: last[0], lat: last[1], lon: last[2], recv: Date.now(), n }, { merge: true });
   else if (real) await DAY.doc('_live').set({ recv: Date.now(), bad: String(snap.docs[snap.docs.length - 1].data()?.p || '').slice(0, 160) }, { merge: true });   // list aayi magar jagah nahi — app setup mein dikhaye
-  const b = db.batch(); snap.docs.forEach(d => b.delete(d.ref)); await b.commit();
+  const b = db.batch(); snap.docs.forEach(d => { if (!(fxFail && fx.includes(d))) b.delete(d.ref); }); await b.commit();
   for (const k of [...cache.keys()]) if (k < dayOf(Date.now() - 3 * 86400000)) cache.delete(k);
 }
 let busy = false;
 async function loop() { if (busy) return; busy = true; try { await tick(); } catch (e) { log('⚠️', e.message || e); } finally { busy = false; } }
-if (require.main === module) log('📍 gaari-gps v1.0 shuru — har 2 min gaari ke phone ki jagah → din ke km');
+if (require.main === module) log('📍 gaari-gps v1.1 shuru — har 2 min gaari ke phone ki jagah → din ke km · 🛰 Falcon-i trips → din ke Falcon km');
 if (require.main === module) { loop(); setInterval(ZINDA.guard(loop, 5 * 60000, 'gaari-gps'), EVERY); }
-module.exports = { parse, summarize, dayOf };
+module.exports = { parse, summarize, dayOf, fxParse, fxMerge };

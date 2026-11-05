@@ -1,7 +1,7 @@
 // awaz-gas.js — v2.183.0: 🎙 MERI BAATEIN ka Google Apps Script (malik ke apne Google account / Drive mein chalta hai — PC nahi).
 // App (awaz.js ⚙️ Setup) isay chaabi + Firestore URL (+ Gemini key, agar app mein save ho) bhar kar copy karti hai.
 // Is file mein backtick / dollar-brace KABHI mat likho (String.raw) — Apps Script ka code seedha string hai.
-const GAS = String.raw`// NT AWAZ — Meri baatein v1.0 (Blue Khata v2.189.0) · Google Apps Script — aap ke apne Google account mein, Google ke server par.
+const GAS = String.raw`// NT AWAZ — Meri baatein v1.0 (Blue Khata v2.190.0) · Google Apps Script — aap ke apne Google account mein, Google ke server par.
 // Kaam: Drive ke folder "NT Awaz" (MacroDroid ki recording) + "NT Calls" (OnePlus ki call recording) mein NAYI awaz →
 //   📍 jagah ka naam (Sheet ka "Jagahein" tab → warna Google Maps) → file ka naya naam "Jagah - 5 Nov 10-20" →
 //   🤖 Gemini sun kar Roman Urdu notes → Sheet "Meri Baatein" (🎧 recording + 📍 map link) + Blue Khata app (🎙 Meri baatein).

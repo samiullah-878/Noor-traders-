@@ -4141,3 +4141,6 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 
 ## PC wa-parchi v2.5 · manifest 2026-11-05.9 (2026-11-05) — malik ke apne WhatsApp par reply-print + gahak caption print (Mubeen jaisa) · app v2.189.0
 - mainExtra (handleMsg se pehle), shared helpers, P2 mainOn = malik ka reply dohra nahi. AI NAHI.
+
+## PC gaari-gps v1.1 · manifest 2026-11-05.10 (2026-11-05) — 🛰 Falcon-i trips (malik ka phone MacroDroid, "FX1|" gaariGps mein) → gaariDay fk/fn/ft · app v2.190.0
+- fxParse (waqt + Total Distance jori) · fxMerge (waqt se dohra ek) · gaariDay MERGE (GPS wala bhi ab merge) · _falcon haal + raw namoona. AI NAHI.
