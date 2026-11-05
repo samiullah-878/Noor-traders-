@@ -4118,3 +4118,6 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - PC malik ke apne WhatsApp par juda — malik ke APNE bheje (fromMe) paigham: tasveer + "print" + chat waParchi.prTo (default Mubeen 0346-2901193) / apni
   chat → a4Send (a4Img + a4Jobs to 'a4', copies) → a4-print.js. Aane wali parchi par bhi "print" = A4. BILL BAAQI A4 khud nahi (a4m print|all|off).
   30 min purana nahi · PDF nahi · AI NAHI.
+
+## PC wa-parchi v2.1 · manifest 2026-11-05.3 (2026-11-05) — alag likha "Print" (album ke neeche) bhi A4 · app v2.185.1
+- selfImgs / selfPend (apni chat-war 10 min / 2 min), inImgs / inPend (ijazat wale), okChat (LID getLIDForPN), prNote → waLink.pr (app ⚙️ "Aakhri print").

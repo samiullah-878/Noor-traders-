@@ -6960,3 +6960,12 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - App wa-sale.js ⚙️ WhatsApp setting: "🖨 A4 print (HP)" — ✍️ "print" likhne par · 📄 Har parchi · ⛔ Band · Copy 1/2/3 · HP ki haalat (blueAccess/a4Pc) ·
   "📲 Apne number se — in chats mein" numbers (+ / ✕) + 💬 apni chat. cloud.saveWaParchi: a4m, a4c, prTo (a4 = a4m != off). Rules NAHI badle. AI NAHI.
 - Test: node printReq/stripPrint (15 caption), Playwright setting chips (save fields). PC flow phone + printer par abhi test nahi.
+
+## v2.185.1 (2026-11-05) — 🖨 alag likha "Print" bhi chalega · PC wa-parchi v2.1 · manifest 2026-11-05.3
+- Ghalti (malik ka screenshot): Mubeen ki chat mein 2 tasveerein (album, forward) bhejin aur NEECHE alag paigham "Print" likha — v2.0 sirf tasveer ke
+  caption ka "print" dekhta tha, is liye kuch nahi chhapa. Qaida: "print" caption mein bhi aur alag chhote paigham (≤ 25 harf) mein bhi.
+- PC v2.1: selfImgs (chat → pichhli 10 min ki apni tasveerein, jo abhi nahi chhapi) → alag "print" = sab A4 (printSelf); pehle "print" phir 2 min mein tasveer
+  = bhi (selfPend). Ijazat wale number par bhi yehi (inImgs / inPend; likha "print" se order NAHI banta). LID chat = lidMapping getLIDForPN se bhi milan.
+  Har nateeja `waLink.pr {at, t}` → app ⚙️ link ke neeche "🖨 Aakhri print: …" (khamosh nahi). 30 min purana nahi. AI NAHI.
+- Test: node vm (album + Print = 2, caption print 2, doosri chat = nahi + note, aam baat = nahi, pehle print phir tasveer, LID + apni chat, 40 min purani
+  = nahi, dohra id = 1, aane wali 2 parchi + print = 2).
