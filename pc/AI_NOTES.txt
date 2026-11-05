@@ -4128,3 +4128,7 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 
 ## PC a4-print v1.4 · manifest 2026-11-05.5 (2026-11-05) — WhatsApp A4 likhai gehri (phiki thi)
 - cleanDoc: saya 38% tak, sharpen, syahi ka andaza sirf kaghaz ke paas wale pixels se (maxNear), bara kala hissa halka gray, 2 guna bari tasveer. AI NAHI.
+
+## PC wa-parchi v2.2 · manifest 2026-11-05.6 (2026-11-05) — 🖨 print wala doosra phone (Mubeen ki apni chat) · app v2.186.0
+- Doosra Baileys socket (wa-auth-print\, waLink2 / waCmd2: link · relink · logout · code+ph) — sirf fromMe + apni chat → selfPrint(cx CX2) → A4. Aane wale paigham
+  kabhi nahi. 🔢 requestPairingCode (pehle qr event par) = door se jorna. Pehle juda na ho to khud nahi judta. AI NAHI.

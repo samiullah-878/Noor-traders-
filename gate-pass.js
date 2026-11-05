@@ -8,7 +8,7 @@
 // Data: PC gate-pass.js (sirf POS parhti) → gatePass/<SaleID> {no, day, pt, br, p, pc, by, l:[{k,i,n,q,pk,g}], gs, gn, off} · tick = gatePass.g.<k> {n, t, q}
 //   (rules 2.81 — mulazim sirf `g`). Ek bill ke do godam = do gate pass card. Tick ke baad bill ki tadad badli (q farq) = tick khud baqi + ✏️.
 // Screen (Transfer check ka "📦 Jane wala maal" jaisa): ⋮ = din · godam · Baqi/De diye/Sab · 📄 PDF (kholo + bhejo). CAP app.gate (OPT_IN). AI NAHI.
-import { smartFind } from './dukan/dhoond.js?v=2.185.2';
+import { smartFind } from './dukan/dhoond.js?v=2.186.0';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => { n = Number(n) || 0; return Math.abs(n - Math.round(n)) < 1e-6 ? new Intl.NumberFormat('en-PK').format(Math.round(n)) : String(Math.round(n * 1000) / 1000); };

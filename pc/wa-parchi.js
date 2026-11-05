@@ -1,5 +1,9 @@
 // =========================================================
-//  wa-parchi.js  v2.1 (2026-11-05) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  wa-parchi.js  v2.2 (2026-11-05) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v2.2: 🖨 malik: "jab Mubeen apni khud ki chat mein bhi print bheje to wo bhi auto print ho" → DOOSRA linked device (sirf PRINT): Mubeen ka apna
+//        WhatsApp (QR app ⚙️ "📲 Print wala phone" → blueAccess/waLink2 · hukum waCmd2 · chaabi wa-auth-print\). Us number ke SIRF apne bheje (fromMe)
+//        paigham + SIRF us ki apni chat (Message yourself) → wahi selfPrint (tasveer + "print" caption ya alag) → A4. Aane wale paigham / doosri chats
+//        KABHI nahi chhoota (order / AI bhi nahi), kabhi message nahi bhejta. Shuru mein sirf tab judta hai jab pehle QR scan ho chuka ho.
 //  v2.1: 🖨 malik ne album forward kar ke ALAG paigham "Print" likha (caption nahi) — chhapa nahi tha → ab alag likha "print" (≤ 25 harf) = usi chat ki pichhli
 //        10 min ki tasveerein (jo abhi nahi chhapi) A4; pehle "print" phir tasveer (2 min) bhi. Har nateeja waLink.pr (app ⚙️ "aakhri print") — khamosh nahi.
 //        LID chat = lidMapping dono taraf. Ijazat wale number par bhi yehi (likhi "print" se order nahi banta).
@@ -65,9 +69,9 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.1';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.2';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
-const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
+const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
 const PKG = '@whiskeysockets/baileys', PKG_VER = '7.0.0-rc14';
 const DAY = 864e5, MAX_AGE = DAY, LINK_WIN = 2 * 60000, IMG_MAX = 900000, TH_MAX = 40000, A4_MAX = 950000, OLD_RQ = 30 * 60000;
@@ -1528,23 +1532,25 @@ async function start(ZINDA) {
   async function okChat(m, s) {   // → { ok, to, me }
     const jid = m.key.remoteJid || '', me = normPh(L.me || ''), to = await chatPh(m, s);
     if (to) return { ok: to === me || S.prTo.includes(to), to, me };
+    if (/@lid$/.test(jid) && s.user && s.user.lid && bare(s.user.lid) === bare(jid)) return { ok: true, to: me, me };   // v2.2: apni chat (LID)
     if (/@lid$/.test(jid)) for (const pn of [me, ...S.prTo].filter(Boolean)) { try { const lid = await s.signalRepository.lidMapping.getLIDForPN(pnJid(pn)); if (lid && bare(lid) === bare(jid)) return { ok: true, to: pn, me }; } catch {} }
     return { ok: false, to: '', me };
   }
-  async function printSelf(list, n, to, me) {
+  const CX1 = { k: 'a', ok: (m, s) => okChat(m, s), note: t => prNote(t), who: (to, me) => to === me ? 'apni chat' : phPretty(to), tag: 'Apna print' };
+  async function printSelf(list, n, to, me, cx = CX1) {
     let ok = 0, pdf = 0, bad = '';
     for (const x of list) {
       if (x.pdf) { pdf++; continue; }
       if (Number(x.im.fileLength) > 15 * 1024 * 1024) { bad = 'tasveer 15 MB se bari'; continue; }
       try {
         const buf = await within(B.downloadMediaMessage(x.m, 'buffer', {}), 60000, 'tasveer download'), g = await prepImage(buf, String(x.im.mimetype || 'image/jpeg'));
-        await a4Send(g && g.jpg, n > 0 ? n : S.a4c, { t: 'Apna print → ' + (to === me ? 'apni chat' : phPretty(to)) + (stripPrint(x.cap) ? ' · ' + stripPrint(x.cap) : '') }, null); ok++;
+        await a4Send(g && g.jpg, n > 0 ? n : S.a4c, { t: cx.tag + ' → ' + cx.who(to, me) + (stripPrint(x.cap) ? ' · ' + stripPrint(x.cap) : '') }, null); ok++;
       } catch (e) { bad = String((e && e.message) || e).slice(0, 80); }
     }
-    prNote(`${ok ? '✅ ' + ok + ' tasveer A4 ko gayi' + ((n > 0 ? n : S.a4c) > 1 ? ' (' + (n > 0 ? n : S.a4c) + ' copy)' : '') : '✕ kuch nahi chhapa'}${pdf ? ' · PDF ' + pdf + ' abhi nahi chhapti' : ''}${bad ? ' · ' + bad : ''} — ${to === me ? 'apni chat' : phPretty(to)}`);
+    cx.note(`${ok ? '✅ ' + ok + ' tasveer A4 ko gayi' + ((n > 0 ? n : S.a4c) > 1 ? ' (' + (n > 0 ? n : S.a4c) + ' copy)' : '') : '✕ kuch nahi chhapa'}${pdf ? ' · PDF ' + pdf + ' abhi nahi chhapti' : ''}${bad ? ' · ' + bad : ''} — ${cx.who(to, me)}`);
   }
-  async function selfPrint(m, s) {
-    const jid = m.key.remoteJid || '', wid = m.key.id || '';
+  async function selfPrint(m, s, cx = CX1) {
+    const jid = m.key.remoteJid || '', wid = m.key.id || '', jk = cx.k + ':' + jid;
     if (!jid || !wid || seenSet.has(wid) || B.isJidGroup(jid) || B.isJidBroadcast(jid) || B.isJidNewsletter(jid)) return;
     const c = B.normalizeMessageContent(m.message) || {}, dm = c.documentMessage || null;
     const im = c.imageMessage || (dm && /^image\//i.test(String(dm.mimetype || '')) ? dm : null), pdf = dm && /pdf/i.test(String(dm.mimetype || '')) ? dm : null;
@@ -1554,19 +1560,19 @@ async function start(ZINDA) {
     const ts = tsOf(m) || Date.now();
     if (Date.now() - ts > OLD_RQ) { if (cn || tn) markSeen(wid); return; }   // purana (PC band tha) = khud nahi chhapta
     await settingsReady;
-    const C2 = await okChat(m, s);
-    if (!C2.ok) { if (cn || tn) { markSeen(wid); prNote(`"print" ${C2.to ? phPretty(C2.to) : 'is'} chat ka nahi chhapta (app ⚙️ "Apne number se" list mein nahi)`); } return; }
-    if (!S.on || S.a4m === 'off') { if (cn || tn) { markSeen(wid); prNote('"print" aaya magar A4 / WhatsApp parchi BAND hai (app ⚙️)'); } return; }
+    const C2 = await cx.ok(m, s);
+    if (!C2.ok) { if ((cn || tn) && !cx.quiet) { markSeen(wid); cx.note(`"print" ${C2.to ? phPretty(C2.to) : 'is'} chat ka nahi chhapta (app ⚙️ "Apne number se" list mein nahi)`); } return; }   // v2.2: doosra phone = doosri chats bilkul chup
+    if (!S.on || S.a4m === 'off') { if (cn || tn) { markSeen(wid); cx.note('"print" aaya magar A4 / WhatsApp parchi BAND hai (app ⚙️)'); } return; }
     markSeen(wid);
     if (im || pdf) {
-      const pend = selfPend.get(jid), n = cn || (pend && ts <= pend.until ? pend.n : 0);
-      if (n) { await printSelf([{ m, im, pdf, cap }], n, C2.to, C2.me); return; }
-      const keep = (selfImgs.get(jid) || []).filter(x => ts - x.ts < WIN); keep.push({ m, im, pdf, cap, ts }); selfImgs.set(jid, keep.slice(-12));   // "print" baad mein aaye to
+      const pend = selfPend.get(jk), n = cn || (pend && ts <= pend.until ? pend.n : 0);
+      if (n) { await printSelf([{ m, im, pdf, cap }], n, C2.to, C2.me, cx); return; }
+      const keep = (selfImgs.get(jk) || []).filter(x => ts - x.ts < WIN); keep.push({ m, im, pdf, cap, ts }); selfImgs.set(jk, keep.slice(-12));   // "print" baad mein aaye to
       return;
     }
-    const list = (selfImgs.get(jid) || []).filter(x => ts - x.ts < WIN); selfImgs.delete(jid);
-    if (!list.length) { selfPend.set(jid, { n: tn, until: ts + PEND }); prNote('"print" mila — 2 min ke andar tasveer bhejein to chhap jayegi'); return; }
-    await printSelf(list, tn, C2.to, C2.me);
+    const list = (selfImgs.get(jk) || []).filter(x => ts - x.ts < WIN); selfImgs.delete(jk);
+    if (!list.length) { selfPend.set(jk, { n: tn, until: ts + PEND }); cx.note('"print" mila — 2 min ke andar tasveer bhejein to chhap jayegi'); return; }
+    await printSelf(list, tn, C2.to, C2.me, cx);
   }
   // aane wali (ijazat wale number) parchi par alag likha "print" — us ki pichhli 10 min ki tasveerein A4
   async function printIncoming(from, n, ts) {
@@ -1623,6 +1629,85 @@ async function start(ZINDA) {
     const o = await createWa({ from, cap: pq ? stripPrint(im.caption) : im.caption || '', txt: '', buf, mime: String(im.mimetype || 'image/jpeg'), wid, mt: ts, a4n: ts && Date.now() - ts > OLD_RQ ? 0 : a4n });
     if (o && !a4n) { const t0 = ts || Date.now(), keep = (inImgs.get(from) || []).filter(x => t0 - x.ts < WIN); keep.push({ id: o.id, ts: t0 }); inImgs.set(from, keep.slice(-12)); }   // v2.1: "print" baad mein aaye to
   }
+
+  // ---------- 🖨 v2.2: PRINT WALA DOOSRA PHONE (Mubeen ki APNI chat) — alag linked device, sirf apne bheje + apni chat ----------
+  const LINK2 = BA.doc('waLink2');
+  let L2 = { st: 'off', qr: '', code: '', me: '', err: '', cmd: 0 }, lw2 = Promise.resolve(), lastLinkW2 = 0;
+  try { const x = await LINK2.get(); if (x.exists) { const d = x.data() || {}; L2.cmd = Number(d.cmd) || 0; L2.me = String(d.me || ''); if (d.pr) L2.pr = d.pr; } } catch (e) { log('⚠️ waLink2: ' + e.message); }
+  const setLink2 = p => { Object.assign(L2, p || {}); L2.at = Date.now(); L2.host = os.hostname(); L2.ver = VER; const snap = { ...L2 }; lastLinkW2 = Date.now(); lw2 = lw2.then(() => LINK2.set(snap)).catch(e => log('⚠️ waLink2 likha nahi: ' + e.message)); return lw2; };
+  let sock2 = null, gen2 = 0, retry2 = 0, retryT2 = null, pair2 = '', pairAsked2 = false;   // pair2 = '92…' — QR ki jagah 8 harf ka code (malik ghar, Mubeen dukan par)
+  const has2 = () => fs.existsSync(path.join(AUTH2_DIR, 'creds.json'));
+  const wipe2 = () => { try { fs.rmSync(AUTH2_DIR, { recursive: true, force: true }); } catch (e) { log('⚠️ wa-auth-print nahi mita: ' + e.message); } };
+  const end2 = () => { gen2++; clearTimeout(retryT2); const x = sock2; sock2 = null; try { x && x.end(undefined); } catch {} };
+  const me2Of = s => normPh((s && s.user && s.user.id) || '') || normPh(L2.me || '');
+  const CX2 = { k: 'b', quiet: true, tag: 'Print',
+    note: t => { log('🖨² ' + t); try { setLink2({ pr: { at: Date.now(), t: String(t).slice(0, 140) } }); } catch {} },
+    who: (to, me) => phPretty(me) + ' (apni chat)',
+    ok: async (m, s) => {   // SIRF apni chat (Message yourself) — doosri har chat = nahi
+      const jid = m.key.remoteJid || '', me = me2Of(s), to = await chatPh(m, s);
+      if (to) return { ok: !!me && to === me, to, me };
+      if (/@lid$/.test(jid)) {
+        if (s.user && s.user.lid && bare(s.user.lid) === bare(jid)) return { ok: true, to: me, me };
+        if (me) { try { const lid = await s.signalRepository.lidMapping.getLIDForPN(pnJid(me)); if (lid && bare(lid) === bare(jid)) return { ok: true, to: me, me }; } catch {} }
+      }
+      return { ok: false, to: '', me };
+    } };
+  async function connect2(why) {
+    end2(); const my = gen2;
+    fs.mkdirSync(AUTH2_DIR, { recursive: true });
+    const { state, saveCreds } = await B.useMultiFileAuthState(AUTH2_DIR);
+    if (!version) { try { const v = await within(B.fetchLatestBaileysVersion(), 10000, 'WA version'); if (v && Array.isArray(v.version)) version = v.version; } catch {} }
+    if (my !== gen2) return;
+    log(`🖨 print wala phone jor raha hai (${why || 'shuru'})${state.creds.registered ? '' : ' — QR banega'}`);
+    const s = makeWASocket({ auth: state, logger, browser: B.Browsers.windows('Chrome'), markOnlineOnConnect: false, syncFullHistory: false, shouldSyncHistoryMessage: () => false,
+      shouldIgnoreJid: j => !!(B.isJidGroup(j) || B.isJidBroadcast(j) || B.isJidNewsletter(j)), generateHighQualityLinkPreview: false, connectTimeoutMs: 30000, getMessage: async () => undefined, ...(version ? { version } : {}) });
+    sock2 = s;
+    s.ev.on('creds.update', saveCreds);
+    s.ev.on('connection.update', u => { if (my === gen2) onConn2(u, s, state).catch(e => log('⚠️ link2: ' + e.message)); });
+    s.ev.on('messages.upsert', ev => { if (my !== gen2) return; for (const m of (ev && ev.messages) || []) if (m && m.key && m.key.fromMe && m.message) msgQ = msgQ.then(() => selfPrint(m, s, CX2)).catch(e => log('⚠️ print phone: ' + (e && e.message))); });   // aane wale paigham KABHI nahi
+  }
+  async function onConn2(u, s, state) {
+    if (u.qr && pair2) {   // 🔢 code se jorna — QR nahi dikhana
+      if (!pairAsked2) { pairAsked2 = true; try { const code = String(await within(s.requestPairingCode(pair2), 20000, 'pairing code') || '').toUpperCase(); setLink2({ st: 'code', qr: '', code: code.length === 8 ? code.slice(0, 4) + '-' + code.slice(4) : code, codeFor: '0' + pair2.slice(2), err: '' }); log('🔢 print phone ka code bana — ' + phPretty('0' + pair2.slice(2))); } catch (e) { pair2 = ''; setLink2({ st: 'error', qr: '', code: '', err: 'Code nahi bana: ' + String(e.message).slice(0, 80) + ' — QR se jorein' }); } }
+    } else if (u.qr) { setLink2({ st: 'qr', qr: u.qr, code: '', err: '' }); log('🔳 print phone ka naya QR — app ⚙️ mein'); }
+    if (u.connection === 'open') { retry2 = 0; pair2 = ''; L2.code = ''; const me = normPh((s.user && s.user.id) || ''); setLink2({ st: 'open', qr: '', me, err: '' }); log(`🟢 print wala phone jur gaya — ${phPretty(me)}`); }
+    if (u.connection !== 'close') return;
+    const code = Number(u.lastDisconnect && u.lastDisconnect.error && u.lastDisconnect.error.output && u.lastDisconnect.error.output.statusCode) || 0, R = B.DisconnectReason;
+    end2();
+    if (code === R.loggedOut) { log('🔴 print phone ka link hat gaya (logout)'); wipe2(); setLink2({ st: 'off', qr: '', me: '', err: 'Link hat gaya — dobara jorna ho to 🔗 Jorein' }); return; }   // khud naya QR nahi (bina zaroorat)
+    if (code === R.restartRequired) { connect2('jorne ke baad').catch(e => log('⚠️ ' + e.message)); return; }
+    if (!state.creds.registered) { const wasCode = !!pair2; pair2 = ''; setLink2({ st: 'off', qr: '', code: '', err: (wasCode ? 'Code' : 'QR') + ' ka waqt khatam — dobara dabayein' }); return; }
+    if (code === R.connectionReplaced) { setLink2({ st: 'error', qr: '', err: 'Yahi link kisi aur jagah bhi chal raha hai — 10 min baad dobara' }); retryT2 = setTimeout(() => connect2('replaced').catch(() => {}), 10 * 60000); return; }
+    const wait = [2, 5, 10, 30, 60, 120, 300][Math.min(retry2++, 6)];
+    setLink2({ st: 'closed', qr: '', err: `Rabta toota (${code || '?'}) — ${wait} sec mein dobara` }); log(`🟠 print phone rabta toota (${code || '?'}) — ${wait} sec`);
+    retryT2 = setTimeout(() => connect2('dobara').catch(e => log('⚠️ ' + e.message)), wait * 1000);
+  }
+  async function doCmd2(c, ph) {
+    log('🔗 app ka hukum (print phone): ' + c);
+    if (c === 'link' && sock2 && L2.st === 'open') { setLink2({}); return; }
+    if (c === 'code') {   // 🔢 naya link 8 harf ke code se (WhatsApp → Linked devices → "Link with phone number instead")
+      if (!/^03\d{9}$/.test(ph || '')) { setLink2({ st: 'error', err: 'Number ghalat — 03xx-xxxxxxx' }); return; }
+      if (sock2 && L2.st === 'open') { try { await within(sock2.logout(), 15000, 'logout'); } catch {} }
+      end2(); wipe2(); pair2 = '92' + ph.slice(1); pairAsked2 = false;
+      setLink2({ st: 'off', qr: '', code: '', me: '', err: 'Code ban raha hai…' });
+      await connect2('app: code'); return;
+    }
+    pair2 = ''; pairAsked2 = false;
+    if (c !== 'link' || !has2()) { if (sock2 && L2.st === 'open' && c !== 'link') { try { await within(sock2.logout(), 15000, 'logout'); } catch {} } end2(); if (c !== 'link') wipe2(); }
+    setLink2({ st: 'off', qr: '', me: c === 'link' ? L2.me : '', err: c === 'logout' ? '' : 'Jor raha hai / naya QR…' });
+    if (c === 'logout') return;
+    await connect2('app: ' + c);
+  }
+  BA.doc('waCmd2').onSnapshot(x => {
+    if (!x.exists) return; const d = x.data() || {}, at = Number(d.at) || 0, c = String(d.do || '');
+    if (!at || at === L2.cmd || !/^(relink|logout|link|code)$/.test(c)) return;
+    const age = Date.now() - (x.updateTime ? x.updateTime.toMillis() : at);
+    L2.cmd = at; setLink2({});
+    if (age > 10 * 60000) return;
+    doCmd2(c, normPh(d.ph || '')).catch(e => { log('⚠️ hukum2: ' + e.message); setLink2({ st: 'error', err: String(e.message).slice(0, 140) }); });
+  }, authErr);
+  setInterval(() => { if ((has2() || L2.st !== 'off') && Date.now() - lastLinkW2 > 5 * 60000) setLink2({}); }, 60000);
+  if (has2()) connect2('shuru').catch(e => log('⚠️ print phone: ' + e.message)); else setLink2({ st: 'off', qr: '', err: '' });
 
   // ---------- 🔗 app ke hukum (relink / logout) — ek dafa, sirf taza (server waqt) ----------
   BA.doc('waCmd').onSnapshot(s => {

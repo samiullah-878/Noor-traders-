@@ -6989,3 +6989,19 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
   nahi gintay); t = (d − nf)/(ir − nf), gehrai t^0.8 → syahi poori kali; bara kala hissa (7 px tak kaghaz nahi) = sirf 120 tak (halka gray, kinare kale — toner kam);
   tasveer 2 guna (lambi taraf ≤ 2800 px) bilinear phir curve = kinare tez. ~1 s / tasveer (yahan), PNG 100–1500 KB.
 - Test: phiki + dhundli + saya + kala frame wali 3 banawati parchiyan (likhai poori kali), asal copy ka safha (saya saaf), HBL rasid haath mein, screenshot. AI NAHI.
+
+## v2.186.0 (2026-11-05) — 🖨 PRINT WALA DOOSRA PHONE (Mubeen ki apni chat) · PC wa-parchi v2.2 · manifest 2026-11-05.6
+- Malik (screenshot: Mubeen ke phone ki "Mubeen Bagwal (You) — Message yourself" chat mein tasveerein + "Print"): "jab Mubeen apni khud ki chat mein bhi print
+  bheje to wo bhi auto print ho". PC sirf malik ke WhatsApp par juda tha — Mubeen ki apni chat PC tak pahunchti hi nahi thi. Malik ne plan OK kiya.
+- PC wa-parchi v2.2: DOOSRA linked device (Baileys, chaabi folder wa-auth-print\) — blueAccess/waLink2 (haalat / QR / code / me / pr) + hukum blueAccess/waCmd2
+  {do: link | relink | logout | code, ph, at} (sirf taza 10 min). Shuru mein sirf tab judta hai jab pehle juda ho (creds.json). Us number ke SIRF apne bheje
+  (fromMe) paigham + SIRF apni chat (PN = s.user.id ya LID = s.user.lid / getLIDForPN) → WAHI selfPrint (cx CX2, quiet: doosri chats par koi note bhi nahi)
+  → a4Send → a4-print. Aane wale paigham kabhi nahi (order / AI nahi), message kabhi nahi bhejta. selfPrint / printSelf ab `cx` lete hain (CX1 = malik wala purana).
+  Malik ki apni chat LID par bhi (okChat s.user.lid).
+- 🔢 Code se jorna (malik ghar, Mubeen dukan — QR door se scan nahi hota): waCmd2 {do:'code', ph} → naya socket, pehle qr event par `requestPairingCode('92…')`
+  → waLink2 {st:'code', code 'ABCD-EF12', codeFor}; Mubeen: WhatsApp → Linked devices → Link a device → "Link with phone number instead" → 8 harf. QR bhi hai.
+- App wa-sale.js ⚙️ (sirf malik): neeche "🖨 Print wala phone — apni chat se print" — haalat (🟢 juda · 📱 number / 🟡 QR / 🔢 code / ⚪), number ka khana (default
+  prTo ka pehla = Mubeen), 🔢 Code se jorein · 🔳 QR se · 🔄 Naya · ⛔ Unlink, "🖨 Aakhri print" (pr). cloud.listenWaLink2 / sendWaCmd2. style .wps-pcode.
+  Rules NAHI badle (blueAccess malik ka aam rule; mulazim ki get list mein waLink2 nahi).
+- Test: node vm (Mubeen apni chat album + Print = 2, LID apni chat = 1, doosri chats = 0 aur chup, aam baat = 0, print 2 = 2 copy; malik wale purane 9 test wahi),
+  Playwright ⚙️ (off → code bheja 03462901193, QR svg, code dabba, open + aakhri print, Unlink). Asal phone par abhi test nahi. AI NAHI.
