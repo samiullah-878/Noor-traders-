@@ -6980,3 +6980,12 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
   saya hatana (gehra hissa 62% se neeche safed nahi banta — button / dabba khokhla nahi), 1% kala nuqta → 222 safed, gamma 1.3 → 8-bit gray PNG
   (apna writer: zlib + CRC32, bahar ka code nahi). Photo / cheez / screen (kaghaz < 55%) = ASAL JPEG. Kuch na bane = asal. App A4 screen (k 'a4') ki tasveer NAHI chhedi.
 - Test: 30+ asal tasveerein (parchi, HBL rasid, copy ka safha, screenshot, monitor, bottle) — kaghaz saaf, photo asal; ~0.2–0.8 s. Printer par abhi test nahi. AI NAHI.
+
+## PC a4-print v1.4 · manifest 2026-11-05.5 (2026-11-05) — WhatsApp A4 print ki likhai PHIKI thi (malik: "parchi clear nahi")
+- Malik ki photo: phone ki screen par khuli parchi ki photo print hui — kaghaz safed magar likhai halki gray (pencil jaisi). Wajah (meri v1.3): kala point
+  poori tasveer ke 1% se (phone ka kala frame) + safed 222 par — phiki pen ki syahi bhi safed ho gayi.
+- cleanDoc v1.4: saya hatana 38% tak (pehle 62% — copy ke safhe ka saya kala dhabba banta tha); `sharpen` (3×3 unsharp); kaghaz ka shor nf = median + 3 × (median − 25%)
+  (sirf neeche ka aadha, syahi isay nahi barhati); syahi ka andaza ir = 85% un pixels ka jin ke 3 px andar kaghaz ho (`maxNear` — bara kala hissa / frame / haath
+  nahi gintay); t = (d − nf)/(ir − nf), gehrai t^0.8 → syahi poori kali; bara kala hissa (7 px tak kaghaz nahi) = sirf 120 tak (halka gray, kinare kale — toner kam);
+  tasveer 2 guna (lambi taraf ≤ 2800 px) bilinear phir curve = kinare tez. ~1 s / tasveer (yahan), PNG 100–1500 KB.
+- Test: phiki + dhundli + saya + kala frame wali 3 banawati parchiyan (likhai poori kali), asal copy ka safha (saya saaf), HBL rasid haath mein, screenshot. AI NAHI.

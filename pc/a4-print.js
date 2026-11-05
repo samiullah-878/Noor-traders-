@@ -25,7 +25,7 @@ const http = require('http');
 const https = require('https');
 const path = require('path');
 const { execFile } = require('child_process');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47839, VER = '1.3';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47839, VER = '1.4';
 const TH_PRINTER = 'TM-T88IV';   // dukan ka thermal (pos-khata-sync wala naam)
 const OLD_MS = 30 * 60000, KEEP_MS = 7 * 864e5, SCAN_EVERY = 10 * 60000, ST_EVERY = 60000, BEAT = 5 * 60000;
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
@@ -338,6 +338,17 @@ function pngGray(w, h, px) {   // 8-bit grayscale PNG (apna — zlib Node ka)
   const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 0; ihdr[10] = 0; ihdr[11] = 0; ihdr[12] = 0;
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]), chunk('IHDR', ihdr), chunk('IDAT', require('zlib').deflateSync(raw, { level: 6 })), chunk('IEND', Buffer.alloc(0))]);
 }
+function sharpen(v, w, h) {   // halka unsharp (3×3) — patli likhai ka kinara saaf
+  const o = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) { const ya = Math.max(0, y - 1), yb = Math.min(h - 1, y + 1); for (let x = 0; x < w; x++) { const xa = Math.max(0, x - 1), xb = Math.min(w - 1, x + 1); let t = 0; for (const yy of [ya, y, yb]) t += v[yy * w + xa] + v[yy * w + x] + v[yy * w + xb]; const c = v[y * w + x]; o[y * w + x] = Math.max(0, Math.min(255, c + 0.9 * (c - t / 9))); } }
+  return o;
+}
+function maxNear(v, w, h, r) {   // har pixel ke r px andar sab se roshan (alag alag do dafa — tez)
+  const t = new Float32Array(w * h), o = new Float32Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let m = 0; for (let k = Math.max(0, x - r); k <= Math.min(w - 1, x + r); k++) if (v[y * w + k] > m) m = v[y * w + k]; t[y * w + x] = m; }
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let m = 0; for (let k = Math.max(0, y - r); k <= Math.min(h - 1, y + r); k++) if (t[k * w + x] > m) m = t[k * w + x]; o[y * w + x] = m; }
+  return o;
+}
 function cleanDoc(jpg) {   // → PNG Buffer ya null (null = asal tasveer hi chhapo)
   try {
     const WP = require('./wa-parchi.js'), img = WP.decodeJpeg(jpg); if (!img) return null;
@@ -346,21 +357,39 @@ function cleanDoc(jpg) {   // → PNG Buffer ya null (null = asal tasveer hi chh
     let pap = 0; for (let i = 0; i < M.length; i++) if (M[i] >= ref * 0.6 && Md[i] >= M[i] * 0.82) pap++;
     const frac = pap / M.length;
     if (frac < 0.55) { log('🧼 kaghaz nahi lagta (' + Math.round(frac * 100) + '%) — asal tasveer'); return null; }   // photo / screen / cheez = jaisi hai waisi
-    const lo = ref * 0.62, S = new Float32Array(M.length), C = i => Math.max(M[i], lo);   // gehra hissa (dabba / button) safed nahi banta — sirf halka saya
+    const lo = ref * 0.38, S = new Float32Array(M.length), C = i => Math.max(M[i], lo);   // gehra hissa (dabba / button / phone ka frame) safed nahi banta — saya (38% tak) safed
     for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) { let t = 0, n = 0; for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const yy = by + dy, xx = bx + dx; if (yy >= 0 && yy < bh && xx >= 0 && xx < bw) { t += C(yy * bw + xx); n++; } } S[by * bw + bx] = Math.max(t / n, C(by * bw + bx)); }
-    const v = new Float32Array(w * h), hist = new Uint32Array(256);
+    const v = new Float32Array(w * h);
     for (let y = 0; y < h; y++) {
       const fy = Math.max(0, Math.min(bh - 1, (y + 0.5) / B - 0.5)), y0 = Math.floor(fy), y1 = Math.min(bh - 1, y0 + 1), ty = fy - y0;
       for (let x = 0; x < w; x++) {
         const fx = Math.max(0, Math.min(bw - 1, (x + 0.5) / B - 0.5)), x0 = Math.floor(fx), x1 = Math.min(bw - 1, x0 + 1), tx = fx - x0;
         const bg = (S[y0 * bw + x0] * (1 - tx) + S[y0 * bw + x1] * tx) * (1 - ty) + (S[y1 * bw + x0] * (1 - tx) + S[y1 * bw + x1] * tx) * ty;
-        const q = Math.min(255, g[y * w + x] / Math.max(24, bg) * 255); v[y * w + x] = q; hist[q | 0]++;
+        v[y * w + x] = Math.min(255, g[y * w + x] / Math.max(24, bg) * 255);
       }
     }
-    let k = 0, acc = 0; for (let i = 0; i < 256; i++) { acc += hist[i]; if (acc > v.length * 0.01) { k = i; break; } }
-    const b0 = Math.min(k, 90), span = Math.max(60, 222 - b0), out = Buffer.alloc(w * h);
-    for (let i = 0; i < v.length; i++) { const t = Math.max(0, Math.min(1, (v[i] - b0) / span)); out[i] = Math.round(255 * Math.pow(t, 1.3)); }
-    return pngGray(w, h, out);
+    // v1.3.1: halki likhai (phone ki screen / phiki pen) bhi GEHRI — syahi ka andaza sirf syahi se (kala kinara / phone ka frame nahi gintay)
+    const sh = sharpen(v, w, h), hd = new Uint32Array(256);
+    for (let i = 0; i < sh.length; i++) hd[Math.max(0, Math.min(255, 255 - sh[i])) | 0]++;
+    const pct = (lo, hi, q) => { let n = 0; for (let i = lo; i <= hi; i++) n += hd[i]; if (!n) return -1; let a = 0; for (let i = lo; i <= hi; i++) { a += hd[i]; if (a >= n * q) return i; } return hi; };
+    const md = pct(0, 255, 0.5), nf = Math.max(8, Math.min(30, md + 3 * Math.max(2, md - pct(0, 255, 0.25))));   // kaghaz ka shor (sirf neeche ka aadha — syahi isay nahi barhati)
+    const lm = maxNear(sh, w, h, 3), hi2 = new Uint32Array(256), pv = 255 - nf - 10;   // syahi = jis ke 3 px andar kaghaz ho (bara kala hissa / frame nahi)
+    for (let i = 0; i < sh.length; i++) { const d = 255 - sh[i]; if (d > nf + 4 && lm[i] >= pv) hi2[Math.min(255, d | 0)]++; }
+    let tot = 0; for (let i = 0; i < 256; i++) tot += hi2[i]; let ir = 120;
+    if (tot > sh.length * 0.002) { let a2 = 0; for (let i = 0; i < 256; i++) { a2 += hi2[i]; if (a2 >= tot * 0.85) { ir = i; break; } } }
+    ir = Math.max(nf + 26, Math.min(170, ir));
+    const big = maxNear(sh, w, h, 7), k = Math.max(1, Math.min(2, 2800 / Math.max(w, h))), W2 = Math.round(w * k), H2 = Math.round(h * k), out = Buffer.alloc(W2 * H2), sp = ir - nf;
+    for (let y = 0; y < H2; y++) {
+      const fy = Math.max(0, Math.min(h - 1, (y + 0.5) / k - 0.5)), y0 = Math.floor(fy), y1 = Math.min(h - 1, y0 + 1), ty = fy - y0;
+      for (let x = 0; x < W2; x++) {
+        const fx = Math.max(0, Math.min(w - 1, (x + 0.5) / k - 0.5)), x0 = Math.floor(fx), x1 = Math.min(w - 1, x0 + 1), tx = fx - x0;
+        const q = (sh[y0 * w + x0] * (1 - tx) + sh[y0 * w + x1] * tx) * (1 - ty) + (sh[y1 * w + x0] * (1 - tx) + sh[y1 * w + x1] * tx) * ty;
+        const t = Math.max(0, Math.min(1, (255 - q - nf) / sp)), bl = big[Math.round(fy) * w + Math.round(fx)] < pv;
+        out[y * W2 + x] = 255 - Math.round((bl ? 120 : 255) * Math.pow(t, 0.8));   // bara kala hissa (haath / frame / mez) = halka gray — toner kam, likhai saaf
+      }
+    }
+    if (cleanDoc.dbg) cleanDoc.dbg({ md, nf, ir, frac });
+    return pngGray(W2, H2, out);
   } catch (e) { log('🧼 saaf nahi hui (asal tasveer chhapegi): ' + e.message); return null; }
 }
 async function winAdd(p) {
