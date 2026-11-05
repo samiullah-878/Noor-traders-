@@ -6946,3 +6946,17 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - Test (node): malik ki asal copy-safha parchi (lakeerein mudi hui, laal hashiya, ungli ka saya) = 25 lines, likhai ki syahi 99.7% chhapi (baqi nuqte), 35 cm;
   bana hua: 1 list 18 lines (item + tadad sukere), do alag list (daayan 13 → baayan 9), do jori barabar (8 qatar), mez par English (10). Product photo = purana zoom.
   ~1–2.5 s (PC par zyada ho sakta). AI NAHI (print mein). Rules NAHI badle. Phone / asal printer par abhi test nahi.
+
+## v2.185.0 (2026-11-05) — 🖨 WhatsApp "print" = A4 (HP LaserJet) · PC wa-parchi v2.0 · manifest 2026-11-05.2
+- Malik: "jab main Mubeen ke number (0346-2901193) par parchi bhejun jis ke saath PRINT likha ho to A4 se print · print ke baghair nahi · saman wali ho ya
+  koi bhi · auto, kisi ko kuch na karna pare · WhatsApp wali screen mein A4 chips". PC ka WhatsApp link malik ke APNE number 0345-0412515 par hai — is liye
+  Mubeen ka login NAHI chahiye: malik jo khud bhejta hai (fromMe) wo bhi PC ko milta hai.
+- PC wa-parchi v2.0: `selfPrint` — malik ke apne bheje paigham mein SIRF tasveer (image / image document) + caption `printReq` (print / Print / پرنٹ,
+  "printer"/"printing" nahi; "print 2" / "2 print" / "print x3" = copy 1–5, phone number ka hindsa copy nahi) + chat = `waParchi.prTo` (default Mubeen) ya
+  apni "Message yourself" chat → `a4Send` = wahi tasveer a4Img + a4Jobs {k 'wa', to 'a4', copies} → a4-print.js (HP LaserJet P1102w). AI / header NAHI.
+  30 min purana (PC band tha) = nahi chhapta. Baqi apne paigham kabhi nahi chhoote. PDF abhi NAHI (log) — sirf tasveer / screenshot.
+- Ijazat wale numbers ki aane wali tasveer par bhi "print" = A4 (caption se "print" hata kar gahak naam; order nahi = sirf A4). BILL BAAQI A4 (printA4)
+  ab khud NAHI — `waParchi.a4m` 'print' (default) | 'all' (har parchi, app ki nayi parchi bhi) | 'off'; `a4c` copy. Order card pr.a4 = a4Send + watchA4.
+- App wa-sale.js ⚙️ WhatsApp setting: "🖨 A4 print (HP)" — ✍️ "print" likhne par · 📄 Har parchi · ⛔ Band · Copy 1/2/3 · HP ki haalat (blueAccess/a4Pc) ·
+  "📲 Apne number se — in chats mein" numbers (+ / ✕) + 💬 apni chat. cloud.saveWaParchi: a4m, a4c, prTo (a4 = a4m != off). Rules NAHI badle. AI NAHI.
+- Test: node printReq/stripPrint (15 caption), Playwright setting chips (save fields). PC flow phone + printer par abhi test nahi.

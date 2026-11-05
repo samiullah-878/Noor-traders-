@@ -4113,3 +4113,8 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - APP parchi: processOrder mein `zoomNow` (tasveer aate hi, AI ke saath saath; baad wale upd pr.th nahi chhoote, printOrder noTh = sirf A4). WhatsApp tasveer:
   AI ka isOrder (ya AI fail) ke baad printOrder mein zoom. reprint + imgPrint (⋮ 🖼) = zoomThermal. Setting waParchi.zm (default ON; false = purani AI list).
 - zoomSlip CPU par ~1–2.5 s (event loop ruk-ta hai — Baileys theek). AI NAHI.
+
+## PC wa-parchi v2.0 · manifest 2026-11-05.2 (2026-11-05) — 🖨 "print" likha = A4 (HP) · app v2.185.0
+- PC malik ke apne WhatsApp par juda — malik ke APNE bheje (fromMe) paigham: tasveer + "print" + chat waParchi.prTo (default Mubeen 0346-2901193) / apni
+  chat → a4Send (a4Img + a4Jobs to 'a4', copies) → a4-print.js. Aane wali parchi par bhi "print" = A4. BILL BAAQI A4 khud nahi (a4m print|all|off).
+  30 min purana nahi · PDF nahi · AI NAHI.

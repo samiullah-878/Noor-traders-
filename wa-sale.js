@@ -15,10 +15,10 @@
 //   v2.179.2: 🔁 DOBARA PARHO (malik OK) — khuli parchi ⋮ 🔁 + ✕ / ⚠️ wale dabbe mein chip → {st:'new'} (rules 2.86 wahi) → PC (wa-parchi claimNew) AI se phir
 //     parhe + naya thermal / A4; bill khud dobara bhar jata hai (pendLoad). Bill bana / maal nikla / abhi parh raha = nahi.
 //   CAP sale.wsale (default khula). AI app mein NAHI — parchi PC parhta hai. Agent action NAHI (malik ka qaida v2.111.0).
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.184.0';
-import { smartSearch, noteHit } from './smart-search.js?v=2.184.0';
-import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.184.0';   // v2.180.0: 👦 larka (POS SP Man) chip
-import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.184.0';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.185.0';
+import { smartSearch, noteHit } from './smart-search.js?v=2.185.0';
+import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.185.0';   // v2.180.0: 👦 larka (POS SP Man) chip
+import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.185.0';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -745,10 +745,10 @@ async function sendPic(file) {
 }
 
 // ---------- ⚙️ WhatsApp setting (sirf malik): link / QR · numbers · print ----------
-let wl = null, wlErr = '', wlStop = null, wc = null, wcErr = '', wcStop = null, qrLib = null, qrLast = '';
+let wl = null, wlErr = '', wlStop = null, wc = null, wcErr = '', wcStop = null, qrLib = null, qrLast = '', a4pc = null, a4pcStop = null;   // v2.185.0: a4pc = HP printer ki haalat (blueAccess/a4Pc)
 const wst = {};
 function setAlive() { if (document.querySelector('#dialog[open] #dialogBody [data-ws-setroot]')) return true; setUnlisten(); return false; }
-function setUnlisten() { for (const f of [wlStop, wcStop]) { try { f?.(); } catch {} } wlStop = wcStop = null; qrLast = ''; }
+function setUnlisten() { for (const f of [wlStop, wcStop, a4pcStop]) { try { f?.(); } catch {} } wlStop = wcStop = a4pcStop = null; qrLast = ''; }
 function setOpen() {
   if (!C.owner()) { C.notice('Sirf malik'); return; }
   if (!C.modal) return;
@@ -756,6 +756,7 @@ function setOpen() {
   C.modal('📲 WhatsApp Parchi — setting', `<div class="wps-set" data-ws-setroot="1"><div data-ws-link="1">${linkHTML()}</div><div data-ws-cfg="1">${cfgHTML()}</div></div>`, true);
   if (!wlStop && C.cloud?.listenWaLink) wlStop = C.cloud.listenWaLink((d, e) => { if (!setAlive()) return; if (e) wlErr = perm(e) ? 'rules' : 'net'; else { wl = d || {}; wlErr = ''; } linkPaint(); });
   if (!wcStop && C.cloud?.listenWaParchi) wcStop = C.cloud.listenWaParchi((d, e) => { if (!setAlive()) return; if (e) wcErr = perm(e) ? 'rules' : 'net'; else { wc = d || null; wcErr = ''; } cfgPaint(); });   // d null = abhi save nahi hui
+  if (!a4pcStop && C.cloud?.listenA4Pc) a4pcStop = C.cloud.listenA4Pc((d, e) => { if (!setAlive()) return; if (d !== undefined) { a4pc = d; cfgPaint(); } });   // v2.185.0: 🖨 HP ki haalat
   try { $('dialog')?.addEventListener('close', setUnlisten, { once: true }); } catch {}
   qrPaint();
 }
@@ -791,21 +792,42 @@ async function qrPaint() {
     el.innerHTML = x.createSvgTag({ cellSize: 6, margin: 4, scalable: true }); qrLast = q;
   } catch (e) { const el = document.querySelector('#dialogBody [data-ws-qr]'); if (el) el.textContent = '✕ ' + (e?.message || e); }
 }
-const cfgNow = () => ({ on: wc?.on ?? true, th: wc?.th ?? true, a4: wc?.a4 ?? false, zm: wc?.zm ?? true, allow: Array.isArray(wc?.allow) ? wc.allow.map(String) : [] });   // v2.184.0: zm = thermal par parchi ki asal likhai (har line zoom, bina AI)
+const PR_DEF = ['03462901193'];   // v2.185.0: Mubeen — malik apne number se is chat mein tasveer + "print" = A4
+const cfgNow = () => ({ on: wc?.on ?? true, th: wc?.th ?? true, a4: wc?.a4 ?? false, zm: wc?.zm ?? true, a4m: ['print', 'all', 'off'].includes(wc?.a4m) ? wc.a4m : 'print', a4c: Math.max(1, Math.min(3, Number(wc?.a4c) || 1)), prTo: Array.isArray(wc?.prTo) ? wc.prTo.map(String) : PR_DEF, allow: Array.isArray(wc?.allow) ? wc.allow.map(String) : [] });   // v2.184.0: zm = thermal par parchi ki asal likhai (har line zoom, bina AI)
 function cfgHTML() {
   if (wcErr === 'rules') return '<p class="wps-err">🔐 Setting parh nahi sake (rules).</p>';
   const c = cfgNow(), tg = (k, v, a, b) => `<button type="button" class="wps-tc${v ? ' is-in' : ''}" data-ws-tg="${k}">${v ? a : b}</button>`;
-  return `<div class="wps-sec"><h4>⚙️ Kaam</h4><div class="wps-row">${tg('on', c.on, '✅ Chalu', '⛔ Band')}${tg('th', c.th, '🧾 Thermal parchi: ON', '🧾 Thermal: BAND')}${c.th ? tg('zm', c.zm, '🔎 Thermal: likhai jaisi (zoom)', '🤖 Thermal: AI ki list') : ''}${tg('a4', c.a4, '🖨 A4: ON', '🖨 A4: BAND')}<i class="wps-wst">${stTxt(wst.cfg)}</i></div>${!wc ? '<small class="wps-mut">Abhi setting save nahi hui — koi chip dabayein to save ho jayegi.</small>' : ''}</div>
+  return `<div class="wps-sec"><h4>⚙️ Kaam</h4><div class="wps-row">${tg('on', c.on, '✅ Chalu', '⛔ Band')}${tg('th', c.th, '🧾 Thermal parchi: ON', '🧾 Thermal: BAND')}${c.th ? tg('zm', c.zm, '🔎 Thermal: likhai jaisi (zoom)', '🤖 Thermal: AI ki list') : ''}<i class="wps-wst">${stTxt(wst.cfg)}</i></div>${!wc ? '<small class="wps-mut">Abhi setting save nahi hui — koi chip dabayein to save ho jayegi.</small>' : ''}</div>
+    ${a4HTML(c)}
     <div class="wps-sec"><h4>📞 Kin numbers ki forward parchi PC le</h4><small class="wps-mut">Sirf in numbers se forward hui parchi (tasveer / likha order) PC parhega.</small>
     <div class="wps-nums">${c.allow.map(n => `<span class="wps-num">📱 ${esc(n)}<button type="button" data-ws-numx="${esc(n)}" aria-label="Hatao">✕</button></span>`).join('') || '<small class="wps-mut">Abhi koi number nahi</small>'}</div>
     <div class="wps-nadd"><input type="tel" inputmode="tel" data-ws-numin="1" maxlength="20" placeholder="0300-1234567" autocomplete="off" enterkeyhint="done"><button type="button" class="wps-tc pri" data-ws-numadd="1">➕ Jorein</button></div></div>
     <p class="wps-mut">🤖 AI sirf dukan ke PC par chalta hai (parchi parhna) — app mein AI nahi.</p>`;
 }
+// v2.185.0: 🖨 A4 — malik: "print likha ho to A4 se print · print ke baghair nahi · saman wali ya koi bhi · apne number se Mubeen ko bhejun"
+function a4HTML(c) {
+  const seg = (v, t) => `<button type="button" class="wps-tc${c.a4m === v ? ' is-in' : ''}" data-ws-a4m="${v}">${t}</button>`, cp = n => `<button type="button" class="wps-tc${c.a4c === n ? ' is-in' : ''}" data-ws-a4c="${n}">${n}</button>`;
+  const alive = a4pc && Date.now() - tms(a4pc.at) < 20 * 60000, use = a4pc?.use;
+  const hp = !a4pc ? '<small class="wps-mut">🖨 Printer ki haalat: ⏳</small>' : alive && use ? `<small class="wps-mut">🖨 ✅ ${esc(String(use.name || 'A4 printer').slice(0, 40))}${a4pc.err ? ' · ⚠️ ' + esc(String(a4pc.err).slice(0, 60)) : ''}</small>` : '<small class="wps-err">🖨 ⚠️ A4 printer / PC nahi mila — ☰ 🖨 A4 Print screen dekhein</small>';
+  return `<div class="wps-sec"><h4>🖨 A4 print (HP)</h4>
+    <div class="wps-row">${seg('print', '✍️ "print" likhne par')}${seg('all', '📄 Har parchi')}${seg('off', '⛔ Band')}<span class="wps-mut">Copy</span>${cp(1)}${cp(2)}${cp(3)}</div>${hp}
+    <small class="wps-mut">Tasveer ke saath <b>print</b> likhein (print 2 = 2 copy) → wahi tasveer A4 par, bina AI. Saman ki parchi ho ya koi bhi kaghaz.</small>
+    <h4>📲 Apne number se — in chats mein bhejein</h4>
+    <div class="wps-nums">${c.prTo.map(n => `<span class="wps-num">📱 ${esc(n)}<button type="button" data-ws-prx="${esc(n)}" aria-label="Hatao">✕</button></span>`).join('')}<span class="wps-num">💬 Apni chat (Message yourself)</span></div>
+    <div class="wps-nadd"><input type="tel" inputmode="tel" data-ws-prin="1" maxlength="20" placeholder="0300-1234567" autocomplete="off" enterkeyhint="done"><button type="button" class="wps-tc pri" data-ws-pradd="1">➕ Jorein</button></div></div>`;
+}
+function prAdd() {
+  const inp = document.querySelector('#dialogBody [data-ws-prin]'), n = phNorm(inp?.value);
+  if (!n) { C.notice('Number aisa likhein: 0300-1234567'); inp?.focus(); return; }
+  const c = cfgNow(); if (c.prTo.includes(n)) { C.notice('Yeh number pehle se hai'); return; }
+  if (inp) inp.value = '';
+  cfgSave({ prTo: [...c.prTo, n].slice(0, 10) }, '✓ ' + n + ' — is chat mein "print" = A4');
+}
 function cfgPaint() {
   const b = document.querySelector('#dialogBody [data-ws-cfg]'); if (!b) return;
-  const inp = b.querySelector('[data-ws-numin]'), v = inp?.value || '', f = document.activeElement === inp;
+  const keep = ['[data-ws-numin]', '[data-ws-prin]'].map(q => { const i = b.querySelector(q); return [q, i?.value || '', document.activeElement === i]; });
   b.innerHTML = cfgHTML();
-  const n = b.querySelector('[data-ws-numin]'); if (n) { n.value = v; if (f) n.focus(); }
+  for (const [q, v, f] of keep) { const n = b.querySelector(q); if (n) { n.value = v; if (f) n.focus(); } }
 }
 async function cfgSave(patch, msg) {
   if (!C.owner() || !C.cloud?.saveWaParchi) return;
@@ -864,6 +886,7 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
   const t = e.target;
   if (t?.matches?.('#dialogBody [data-ws-numin]')) { e.preventDefault(); numAdd(); return; }
+  if (t?.matches?.('#dialogBody [data-ws-prin]')) { e.preventDefault(); prAdd(); return; }
   if (!document.querySelector('[data-ws-root]') || !t || t.tagName !== 'INPUT') return;
   if (t.id === 'search') {   // Enter = code / ek hi milta item → line
     const v = t.value.trim(); if (!v) return; e.preventDefault();
@@ -883,9 +906,12 @@ document.addEventListener('keydown', e => {
 document.addEventListener('focusin', e => { const r = e.target?.closest?.('#list .pp-cr, #list .pp-tr'); if (r && r.dataset.wsSel) selSet(r.dataset.wsSel); });
 document.addEventListener('click', e => {
   const t = e.target; if (!t?.closest) return;
-  const set = t.closest('[data-ws-relink],[data-ws-logout],[data-ws-tg],[data-ws-numx],[data-ws-numadd]');
+  const set = t.closest('[data-ws-relink],[data-ws-logout],[data-ws-tg],[data-ws-numx],[data-ws-numadd],[data-ws-a4m],[data-ws-a4c],[data-ws-prx],[data-ws-pradd]');
   if (set && set.closest('#dialogBody [data-ws-setroot]')) { const d = set.dataset;
-    if (d.wsRelink) waCmd('relink'); else if (d.wsLogout) waCmd('logout'); else if (d.wsNumadd) numAdd();
+    if (d.wsRelink) waCmd('relink'); else if (d.wsLogout) waCmd('logout'); else if (d.wsNumadd) numAdd(); else if (d.wsPradd) prAdd();
+    else if (d.wsA4m) { const v = d.wsA4m; if (['print', 'all', 'off'].includes(v)) cfgSave({ a4m: v, a4: v !== 'off' }, v === 'print' ? '🖨 A4: sirf "print" likhne par' : v === 'all' ? '🖨 A4: har parchi' : '⛔ A4 band'); }
+    else if (d.wsA4c) cfgSave({ a4c: Math.max(1, Math.min(3, Number(d.wsA4c) || 1)) }, '🖨 A4: ' + d.wsA4c + ' copy');
+    else if (d.wsPrx) { if (confirm(d.wsPrx + ' hata dein? Is chat mein "print" phir A4 par nahi chhapega.')) cfgSave({ prTo: cfgNow().prTo.filter(n => n !== d.wsPrx) }, '✓ ' + d.wsPrx + ' hata diya'); }
     else if (d.wsNumx) { if (confirm(d.wsNumx + ' hata dein? Is number ki parchi phir PC nahi lega.')) cfgSave({ allow: cfgNow().allow.filter(n => n !== d.wsNumx) }, '✓ ' + d.wsNumx + ' hata diya'); }
     else if (d.wsTg) { const c = cfgNow(), k = d.wsTg; if (!['on', 'th', 'a4', 'zm'].includes(k)) return; cfgSave({ [k]: !c[k] }, k === 'on' ? (c.on ? '⛔ WhatsApp parchi band' : '✅ WhatsApp parchi chalu') : k === 'zm' ? (c.zm ? '🤖 Thermal par ab AI ki list' : '🔎 Thermal par ab parchi ki asal likhai (har line zoom, bina AI)') : (k === 'th' ? '🧾 Thermal: ' : '🖨 A4: ') + (c[k] ? 'BAND' : 'ON')); }
     return; }

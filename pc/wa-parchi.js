@@ -1,5 +1,11 @@
 // =========================================================
-//  wa-parchi.js  v1.9 (2026-11-05) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  wa-parchi.js  v2.0 (2026-11-05) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v2.0: 🖨 malik: "jab main Mubeen ke number par parchi bhejun jis ke saath PRINT likha ho to A4 (HP LaserJet) se print · print ke baghair nahi · saman
+//        wali ho ya koi bhi · auto, kisi ko kuch na karna pare" (PC malik ke APNE WhatsApp 0345-0412515 par juda) → malik ke apne bheje (fromMe) paigham:
+//        sirf tasveer + caption "print" (printReq: print / پرنٹ, "print 2" = copy) + chat = waParchi.prTo (default Mubeen 0346-2901193) ya apni chat →
+//        `a4Send` wahi tasveer a4Img + a4Jobs {k 'wa', to 'a4'} → a4-print.js HP par (AI / header NAHI). Apne baqi paigham kabhi nahi chhoote. 30 min purana
+//        = nahi chhapta (PC band tha). Ijazat wale numbers ki parchi par bhi "print" = A4 (caption se "print" hata kar gahak naam) — BILL BAAQI A4 ab
+//        khud NAHI (waParchi.a4m: 'print' default · 'all' har parchi · 'off'; a4c copy). PDF abhi nahi (sirf tasveer / screenshot).
 //  v1.9: 🔎 malik: "app ki parchi ka auto print = poori parchi ka zoom · Tibet cream ke tukde jaisa HAR item · AI ghalat parhta hai — ghalti bilkul
 //        nahi · auto print bhi aisa hi" → thermal = parchi ki ASAL likhai, har line alag zoom (zoomSlip / linePlan — AI NAHI): kaghaz ka saya
 //        flatten, tirchha seedha (skewOf), mura copy-safha chhapi lakeeron se seedha (dewarp — sirf upar/neeche khiskao), lakeerein / laal hashiya /
@@ -56,7 +62,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '1.9';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.0';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1005,6 +1011,16 @@ function zoomSlip(o, img, opt = {}) {
   return { text: imageSlipText(o, plan, { rp: opt.rp }), rasters, n: plan.length, mode: 'zoom' };
 }
 
+// ---------- 🖨 v2.0: caption mein "print" → A4 (malik: "print likha ho to A4 se print · print ke baghair nahi · saman wali ho ya koi bhi") ----------
+// "print" / "Print" / "PRINT" / "پرنٹ" (printer / printing nahi) · "print 2" / "2 print" / "print x2" = copies (1–5). → 0 = print nahi
+const PR_RE = /(^|[^a-z])print([^a-z]|$)|پرنٹ/i;
+function printReq(cap) {
+  const t = UDIG(String(cap || '')).toLowerCase(); if (!PR_RE.test(t)) return 0;
+  const m = t.match(/(?:print|پرنٹ)\s*x?\s*(\d)(?!\d)|(?:^|[^\d])(\d)\s*x?\s*(?:print|پرنٹ)/);   // copy ka hindsa akela ho (phone number ka aakhri hindsa nahi)
+  return m ? Math.max(1, Math.min(5, Number(m[1] || m[2]) || 1)) : -1;   // -1 = print, copies setting wali
+}
+const stripPrint = cap => UDIG(String(cap || '')).replace(/(^|[^a-z\d])(\d\s*x?\s*)?(print|پرنٹ)(\s*x?\s*\d(?!\d))?(?=[^a-z]|$)/gi, '$1 ').replace(/\s+/g, ' ').trim();
+
 // ---------- 🖨 A4 page ka naqsha (wa-a4.ps1 ke liye JSON) ----------
 function a4Spec(o, P, opt = {}) {
   const ur = UR.isOn(), rows = [], unc = []; let k = 0, cur = null; const anyRk = P.clear.some(l => l.rk);
@@ -1025,7 +1041,7 @@ function a4Spec(o, P, opt = {}) {
 //  ASAL SCRIPT (PC)
 // =========================================================
 if (require.main === module) main();
-module.exports = { zoomPlan, imageSlipText, grayOf, flatten, textInk, ruleClean, inkOf, skewOf, rotGray, dropRules, rowLines, linePlan, lineBits, lineRasters, lineSlipText, zoomSlip, lkey, glossOf, normPh, isMob, phPretty, parseCaption, vcardInfo, numOf, normUnit, qtyStr, validBox, normLine, parseGemini, localTextLines, geminiRead, buildIndex, matchOne, matchLines, isUnclear, sortForPrint, rackOf, packingText, failText, writtenText, writtenLines, bmpRaster, toJob, stripEsc, decodeJpeg, padBox, cropRaster, a4Spec, dayOf, PROMPT_IMG, PROMPT_TXT, CRM, W };
+module.exports = { printReq, stripPrint, zoomPlan, imageSlipText, grayOf, flatten, textInk, ruleClean, inkOf, skewOf, rotGray, dropRules, rowLines, linePlan, lineBits, lineRasters, lineSlipText, zoomSlip, lkey, glossOf, normPh, isMob, phPretty, parseCaption, vcardInfo, numOf, normUnit, qtyStr, validBox, normLine, parseGemini, localTextLines, geminiRead, buildIndex, matchOne, matchLines, isUnclear, sortForPrint, rackOf, packingText, failText, writtenText, writtenLines, bmpRaster, toJob, stripEsc, decodeJpeg, padBox, cropRaster, a4Spec, dayOf, PROMPT_IMG, PROMPT_TXT, CRM, W };
 
 function main() {
   const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(DIR, 'wa-parchi.alive'), w = () => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }; w(); setInterval(w, 30000); return { guard: fn => fn }; } })();
@@ -1056,10 +1072,12 @@ async function start(ZINDA) {
   const setLink = p => { Object.assign(L, p || {}); L.at = Date.now(); L.host = os.hostname(); L.ver = VER; const snap = { ...L }; lastLinkW = Date.now(); lw = lw.then(() => LINK.set(snap)).catch(e => log('⚠️ waLink likha nahi: ' + e.message)); return lw; };
 
   // ---------- ⚙️ settings + data (live) ----------
-  let S = { on: true, allow: [], th: true, a4: true, thp: '', zm: true }, sReady; const settingsReady = new Promise(r => { sReady = r; });
+  let S = { on: true, allow: [], th: true, a4: true, thp: '', zm: true, a4m: 'print', a4c: 1, prTo: ['03462901193'] }, sReady; const settingsReady = new Promise(r => { sReady = r; });
   BA.doc('waParchi').onSnapshot(s => {
     const d = (s.exists && s.data()) || {};
-    S = { on: d.on !== false, allow: [...new Set((Array.isArray(d.allow) ? d.allow : []).map(normPh).filter(Boolean))], th: d.th !== false, a4: d.a4 !== false, thp: String(d.thp || '').trim(), zm: d.zm !== false };   // v1.9: zm = thermal par parchi ki asal likhai (line zoom, bina AI) — default ON
+    S = { on: d.on !== false, allow: [...new Set((Array.isArray(d.allow) ? d.allow : []).map(normPh).filter(Boolean))], th: d.th !== false, a4: d.a4 !== false, thp: String(d.thp || '').trim(), zm: d.zm !== false,
+      a4m: ['print', 'all', 'off'].includes(d.a4m) ? d.a4m : 'print', a4c: Math.max(1, Math.min(3, Number(d.a4c) || 1)),   // v2.0: A4 sirf "print" likhne par (default) · har parchi · band
+      prTo: Array.isArray(d.prTo) ? [...new Set(d.prTo.map(normPh).filter(Boolean))] : ['03462901193'] };   // v2.0: apne number se in chats mein "print" = A4 (default Mubeen)   // v1.9: zm = thermal par parchi ki asal likhai (line zoom, bina AI) — default ON
     sReady();
   }, e => { authErr(e); sReady(); });
   setTimeout(() => sReady(), 20000);
@@ -1197,6 +1215,23 @@ async function start(ZINDA) {
       return aids;
     } finally { for (const f of files) { try { fs.unlinkSync(f); } catch {} } }
   }
+  // v2.0: 🖨 caption "print" → wahi tasveer A4 par (a4Img + a4Jobs → a4-print.js HP LaserJet) — AI / header NAHI, jaisi bheji waisi. o = order (status pr.a4) ya null
+  let a4Chain = Promise.resolve();
+  function a4Send(jpg, n, meta, o) {
+    const p = a4Chain.then(async () => {
+      if (!jpg || !fitsUrl(jpg, A4_MAX)) throw Error('tasveer A4 ke liye bohat bari');
+      const now = Date.now(), aid = 'wp' + now.toString(36) + Math.random().toString(36).slice(2, 6), th = await thumbOf(jpg).catch(() => '');
+      const b = db.batch();
+      b.set(A4I.doc(aid), { img: dataUrl(jpg), by: 'wa-parchi', at: now });
+      b.set(A4J.doc(aid), { k: 'wa', to: 'a4', ph: '', t: String(meta.t || 'WhatsApp print').slice(0, 60), th: th && th.length < 40000 ? th : '', by: 'wa-parchi', byName: 'WhatsApp', at: now, status: 'new', copies: Math.max(1, Math.min(5, n || 1)), src: o ? o.id : 'self' });
+      await b.commit();
+      log(`🖨 A4 ${n || 1} copy → ${meta.t || ''} (${aid})`);
+      if (o) { await upd(o.id, { 'pr.a4': 'sent', 'pr.a4j': [aid] }); watchA4(o.id, [aid]); }
+      return aid;
+    });
+    a4Chain = p.catch(e => { log('🖨 A4 ✕ ' + ((e && e.message) || e)); if (o) { const e0 = errs.get(o.id) || { te: '', ae: '' }; e0.ae = String((e && e.message) || e).slice(0, 140); errs.set(o.id, e0); upd(o.id, { 'pr.a4': 'failed', perr: perrOf(o.id) }).catch(() => {}); } });
+    return p;
+  }
   // v1.9: 🔎 thermal = parchi ki ASAL likhai, har line alag zoom (zoomSlip — AI nahi). Na bane = throw (purana raasta / ghalti likho).
   async function zoomThermal(o, jpg, opt = {}) {
     const img = jpg ? decodeJpeg(jpg) : null; if (!img) throw Error('tasveer nahi khuli');
@@ -1215,11 +1250,12 @@ async function start(ZINDA) {
   // thermal aur A4 alag alag — ek ruke to doosra nahi (CLAUDE.md bug safai 4). Print KABHI khud dobara nahi.
   // opt.noTh = thermal pehle hi (zoomNow) — sirf A4 · tasveer ho + S.zm = thermal par likhai ka zoom, warna AI wali list (likhi WhatsApp list)
   async function printOrder(o, j, jpg, opt = {}) {
-    const P = opt.fail ? { clear: [], unc: [] } : sortForPrint(j, RACKS), wantT = S.th !== false && !opt.noTh, wantA = S.a4 !== false, zm = S.zm && !!jpg;
+    const P = opt.fail ? { clear: [], unc: [] } : sortForPrint(j, RACKS), wantT = S.th !== false && !opt.noTh, wantA = !!opt.a4, zm = S.zm && !!jpg;   // v2.0: A4 ab caption "print" se (a4Send) — BILL BAAQI A4 khud nahi
+    if (!wantT && !wantA && opt.noTh) return;
     const img = !zm && !opt.fail && jpg && P.unc.some(l => l.b) ? decodeJpeg(jpg) : null;
     const prevE = errs.get(o.id) || {}, e0 = { te: opt.noTh ? (prevE.te || '') : '', ae: '' }; errs.set(o.id, e0); trim(errs);
-    const stopOld = a4Watch.get(o.id); if (stopOld) stopOld();   // dobara print — purane A4 ki khabar nahi
-    await upd(o.id, { ...(opt.noTh ? {} : { 'pr.th': wantT ? 'printing' : 'off', ...(wantT && zm ? { 'pr.zm': 1 } : {}) }), 'pr.a4': wantA ? 'printing' : 'off', perr: perrOf(o.id) });
+    if (wantA) { const stopOld = a4Watch.get(o.id); if (stopOld) stopOld(); }   // dobara print — purane A4 ki khabar nahi
+    await upd(o.id, { ...(opt.noTh ? {} : { 'pr.th': wantT ? 'printing' : 'off', ...(wantT && zm ? { 'pr.zm': 1 } : {}) }), ...(wantA ? { 'pr.a4': 'printing' } : {}), perr: perrOf(o.id) });
     const t0 = Date.now();
     const [rt, ra] = await Promise.all([
       wantT ? (zm ? zoomThermal(o, jpg, { rp: opt.rp }) : printThermal(o, P, img, { ...opt, jpg })).then(() => 'done', e => { e0.te = String((e && e.message) || e).slice(0, 140); return 'failed'; }) : 'off',
@@ -1227,7 +1263,7 @@ async function start(ZINDA) {
     ]);
     const n = Number(o.pr && o.pr.n) || 0;
     if (o.pr) o.pr.n = n + 1;
-    await upd(o.id, { ...(opt.noTh ? {} : { 'pr.th': rt }), 'pr.a4': ra.st, 'pr.at': Date.now(), 'pr.n': n + 1, ...(ra.aids ? { 'pr.a4j': ra.aids } : {}), perr: perrOf(o.id) });
+    await upd(o.id, { ...(opt.noTh ? {} : { 'pr.th': rt }), ...(wantA ? { 'pr.a4': ra.st } : {}), 'pr.at': Date.now(), 'pr.n': n + 1, ...(ra.aids ? { 'pr.a4j': ra.aids } : {}), perr: perrOf(o.id) });
     if (ra.aids) watchA4(o.id, ra.aids);   // 'sent' likhne ke BAAD (warna tez A4 ka 'done' pehle likha jata aur 'sent' us ko mita deta)
     log(`🧾 #${shortNo(o.id)} thermal ${opt.noTh ? '(pehle hi)' : rt + (zm && wantT ? ' (zoom)' : '')}${e0.te ? ' (' + e0.te + ')' : ''} · A4 ${ra.st}${e0.ae ? ' (' + e0.ae + ')' : ''} · ${Date.now() - t0} ms`);
   }
@@ -1240,10 +1276,12 @@ async function start(ZINDA) {
     try { return (await geminiRead({ key: AI.key, model: AI.model, text: txt, gloss: GLOSS })).res; }
     catch (e) { log(`🤖 likhi list AI se nahi parhi (${String(e.message).slice(0, 80)}) — bina AI`); return localTextLines(txt); }
   }
-  async function processOrder(o, buf, mime, g0, prev) {
+  async function processOrder(o, buf, mime, g0, prev, a4n) {
     live.set(o.id, o); const t0 = Date.now();
     try {
       const g = g0 || (buf ? await prepImage(buf, mime) : null);
+      if (a4n && g && g.jpg) a4Send(g.jpg, a4n > 0 ? a4n : S.a4c, { t: 'WA ' + (o.src === 'app' ? 'App parchi' : phPretty(o.from)) + ' #' + shortNo(o.id) }, o).catch(() => {});   // v2.0: "print" wali — AI ka intezar nahi
+      else if (a4n) upd(o.id, { 'pr.a4': 'failed', perr: 'A4: tasveer nahi bani' }).catch(() => {});
       // v1.9: APP ki parchi (larke ne khud photo li — order hi hai) = thermal FORAN, AI ke saath saath (AI sirf app ke bill items ke liye)
       const zNow = o.src === 'app' && S.th !== false && S.zm && g && g.jpg ? zoomNow(o, g.jpg).catch(e => { log('🔎 ' + (e && e.message)); return 'failed'; }) : null;
       if (g && g.jpg && !o.th) { const th = await thumbOf(g.jpg); if (th) { o.th = th; await upd(o.id, { th }); } }
@@ -1259,7 +1297,7 @@ async function start(ZINDA) {
       }
       if (!R.isOrder) {
         if (zNow) await zNow;
-        await upd(o.id, { st: 'skip', err: 'Yeh order ki parchi nahi lagti', n: 0, u: 0, ...(zNow ? {} : { 'pr.th': 'off' }), 'pr.a4': 'off' });
+        await upd(o.id, { st: 'skip', err: a4n ? 'Order ki parchi nahi — sirf A4 print' : 'Yeh order ki parchi nahi lagti', n: 0, u: 0, ...(zNow ? {} : { 'pr.th': 'off' }) });
         log(`⏭ #${shortNo(o.id)} order nahi (${o.txt ? 'likhai' : 'tasveer'})`);
         if (o.src === 'wa') { const r = recent.get(o.from); if (r && r.id === o.id) { if (prev) recent.set(o.from, prev); else recent.delete(o.from); } }   // yeh "order" nahi tha — pichhla order hi taza
         if (o.txt && !g && prev) await nameToRecent(o, prev);
@@ -1270,7 +1308,7 @@ async function start(ZINDA) {
       let X = null, Dh = null; try { [X, Dh] = await Promise.all([index(), dh()]); } catch (e) { log('⚠️ milan: ' + e.message); }
       const j = matchLines(R.lines, X, Dh ? Dh.smartFind : null, Dh ? Dh.k2 : null, RACKS, Dh), u = j.filter(isUnclear).length;
       o.j = JSON.stringify(j); o.st = 'ok';
-      await upd(o.id, { st: 'ok', err: '', j: o.j, n: j.length, u, ph: o.ph || '', nm: o.nm || '', ...(zNow ? {} : { 'pr.th': S.th !== false ? 'wait' : 'off' }), 'pr.a4': S.a4 !== false ? 'wait' : 'off' });
+      await upd(o.id, { st: 'ok', err: '', j: o.j, n: j.length, u, ph: o.ph || '', nm: o.nm || '', ...(zNow ? {} : { 'pr.th': S.th !== false ? 'wait' : 'off' }) });
       log(`✅ #${shortNo(o.id)} ${j.length} items (❓ ${u}) · ${o.nm || '-'} ${o.ph || ''} · ${Date.now() - t0} ms`);
       if (zNow) await zNow;   // thermal pehle hi (ya chal raha) — A4 us ke baad (pr.th ka haal na mite)
       await printOrder(o, j, g && g.jpg, { noTh: !!zNow });
@@ -1295,7 +1333,7 @@ async function start(ZINDA) {
   }
   const Q = [], inQ = new Set(); let qBusy = false;
   const runJob = ZINDA.guard(async job => {
-    if (job.kind === 'new') await processOrder(job.o, job.buf, job.mime, job.g, job.prev);
+    if (job.kind === 'new') await processOrder(job.o, job.buf, job.mime, job.g, job.prev, job.a4n);
     else if (job.kind === 're') await reprint(job.id, job.rq);
     else if (job.kind === 'img') await imgPrint(job.id, job.rq);   // v1.7
   }, 8 * 60000, 'parchi');
@@ -1325,18 +1363,18 @@ async function start(ZINDA) {
   // ---------- 🆕 naya order (WhatsApp) ----------
   let lastBase = '', idN = 0;
   const newId = p => { let id = p + Date.now().toString(36); if (id === lastBase) id += (++idN).toString(36); else { lastBase = id; idN = 0; } return id; };
-  async function createWa({ from, cap, txt, buf, mime, wid, mt, fail }) {
+  async function createWa({ from, cap, txt, buf, mime, wid, mt, fail, a4n }) {
     const id = newId('w'), now = Date.now(), c = parseCaption(cap);
     const pc = pend.get(from); if (pc && now - pc.at < LINK_WIN) { if (!c.ph && pc.ph) c.ph = pc.ph; if (!c.nm && pc.nm) c.nm = pc.nm; pend.delete(from); }
     const o = { id, src: 'wa', at: now, day: dayOf(now), from, ph: c.ph, nm: c.nm, cap: String(cap || '').slice(0, 300), th: '', txt: String(txt || '').slice(0, 4000), st: fail ? 'fail' : 'read', j: '', n: 0, u: 0,
-      pr: { th: fail ? 'off' : 'wait', a4: fail ? 'off' : 'wait', at: 0, n: 0 }, perr: '', err: fail ? String(fail).slice(0, 160) : '', upAt: now, wid: String(wid || ''), mt: Number(mt) || 0 };
+      pr: { th: fail ? 'off' : 'wait', a4: !fail && a4n ? 'printing' : 'off', at: 0, n: 0 }, perr: '', err: fail ? String(fail).slice(0, 160) : '', upAt: now, wid: String(wid || ''), mt: Number(mt) || 0 };
     let g = null;
     if (buf) { try { g = await prepImage(buf, mime); } catch (e) { log('⚠️ tasveer: ' + e.message); } }
     const b = db.batch(); b.set(ORD.doc(id), o); if (g && g.full) b.set(IMG.doc(id), { img: g.full, at: now }); await b.commit();
     const prev = recent.get(from);
     if (!fail) recent.set(from, { id, at: now, ph: o.ph, nm: o.nm });
     log(`📥 #${shortNo(id)} ${buf ? 'tasveer' : fail ? 'ghalti' : 'likhi list'} — ${phPretty(from)}${o.nm ? ' · ' + o.nm : ''}${o.ph ? ' · ' + o.ph : ''}${buf && !(g && g.full) ? ' (tasveer bari — poori save nahi)' : ''}${fail ? ' — ' + fail : ''}`);
-    if (!fail) enqueue({ kind: 'new', o, buf, mime, g, prev });
+    if (!fail) enqueue({ kind: 'new', o, buf, mime, g, prev, a4n });
   }
 
   // ---------- 📱 app ke order (st 'new') + dobara parhna ----------
@@ -1349,7 +1387,8 @@ async function start(ZINDA) {
         const s = await tx.get(ref); if (!s.exists) return null; const d = s.data() || {}; if (d.st !== 'new') return null;
         const t0 = s.updateTime ? s.updateTime.toMillis() : Number(d.at) || 0;   // server ka waqt
         if (Date.now() - t0 > MAX_AGE) { tx.update(ref, { st: 'fail', err: '24 ghante se purana — dobara bhejein', upAt: Date.now() }); return null; }
-        tx.update(ref, { st: 'read', err: '', pcAt: Date.now(), upAt: Date.now(), 'pr.th': 'wait', 'pr.a4': 'wait' });
+        const a4First = S.a4m === 'all' && !d.pcAt && (d.src || 'app') === 'app';   // v2.0: 'Har parchi' = sirf nayi app parchi (Dobara parho par dobara A4 nahi)
+        tx.update(ref, { st: 'read', err: '', pcAt: Date.now(), upAt: Date.now(), 'pr.th': 'wait', ...(a4First ? { 'pr.a4': 'printing' } : !d.pcAt ? { 'pr.a4': 'off' } : {}) });
         return { id, ...d };
       });
       if (!o) return;
@@ -1358,7 +1397,7 @@ async function start(ZINDA) {
       let buf = null; try { const im = await IMG.doc(id).get(); const u = im.exists ? String(im.data().img || '') : '', m = u.match(/^data:image\/[a-z]+;base64,(.+)$/i); if (m) buf = Buffer.from(m[1], 'base64'); } catch {}
       if (!buf && !String(o.txt || '').trim()) { await upd(id, { st: 'fail', err: 'tasveer / likhai nahi mili' }); return; }
       log(`📥 #${shortNo(id)} app se (${o.byName || o.by || '-'})`);
-      enqueue({ kind: 'new', o, buf, mime: 'image/jpeg' });
+      enqueue({ kind: 'new', o, buf, mime: 'image/jpeg', a4n: S.a4m === 'all' && buf && !o.pcAt && (o.src || 'app') === 'app' ? S.a4c : 0 });
     } catch (e) { log('⚠️ app order ' + id + ': ' + e.message); }
     finally { claiming.delete(id); }
   }
@@ -1471,8 +1510,36 @@ async function start(ZINDA) {
     if (/@lid$/.test(k.remoteJid || '')) { try { const pn = await s.signalRepository.lidMapping.getPNForLID(k.remoteJid); if (pn) return normPh(pn); } catch {} }
     return '';
   }
+  async function chatPh(m, s) {   // v2.0: apne bheje paigham ki CHAT kis number ki (Mubeen / apni "Message yourself")
+    const k = m.key || {};
+    for (const j of [k.remoteJidAlt, k.remoteJid]) if (j && /@s\.whatsapp\.net$/.test(j)) return normPh(j);
+    for (const j of [k.remoteJid, k.remoteJidAlt]) if (j && /@lid$/.test(j)) { try { const pn = await s.signalRepository.lidMapping.getPNForLID(j); if (pn) return normPh(pn); } catch {} }
+    return '';
+  }
+  // v2.0: 🖨 malik APNE number se (PC isi number par juda) Mubeen ki chat (ya apni chat) mein tasveer + "print" bheje → A4. Baqi apne paigham kabhi nahi chhoote.
+  async function selfPrint(m, s) {
+    const jid = m.key.remoteJid || '', wid = m.key.id || '';
+    if (!jid || !wid || seenSet.has(wid) || B.isJidGroup(jid) || B.isJidBroadcast(jid) || B.isJidNewsletter(jid)) return;
+    const c = B.normalizeMessageContent(m.message) || {}, dm = c.documentMessage || null;
+    const im = c.imageMessage || (dm && /^image\//i.test(String(dm.mimetype || '')) ? dm : null), pdf = dm && /pdf/i.test(String(dm.mimetype || '')) ? dm : null;
+    const cap = (im || pdf || {}).caption || '', n = printReq(cap);
+    if (!n || (!im && !pdf)) return;
+    const ts = tsOf(m); if (!ts || Date.now() - ts > OLD_RQ) { markSeen(wid); return; }   // purana (PC band tha) = khud nahi chhapta
+    await settingsReady;
+    if (!S.on || S.a4m === 'off') { markSeen(wid); tellOnce('a4off', '🖨 "print" aaya magar A4 / WA parchi BAND (app ⚙️)'); return; }
+    const to = await chatPh(m, s), me = normPh(L.me || '');
+    if (!to || !(to === me || S.prTo.includes(to))) { markSeen(wid); tellOnce('prto:' + (to || jid), `🖨 ${to ? phPretty(to) : jid}: is chat ka "print" nahi chhapta (app ⚙️ "print wali chats" mein nahi)`); return; }
+    markSeen(wid);
+    if (pdf) { log(`🖨 PDF abhi A4 par nahi chhapti (${phPretty(to)}) — tasveer / screenshot bhejein`); return; }
+    if (Number(im.fileLength) > 15 * 1024 * 1024) { log('🖨 tasveer 15 MB se bari — nahi chhapi'); return; }
+    try {
+      const buf = await within(B.downloadMediaMessage(m, 'buffer', {}), 60000, 'tasveer download'), g = await prepImage(buf, String(im.mimetype || 'image/jpeg'));
+      await a4Send(g && g.jpg, n > 0 ? n : S.a4c, { t: 'Apna print → ' + (to === me ? 'apni chat' : phPretty(to)) + (stripPrint(cap) ? ' · ' + stripPrint(cap) : '') }, null);
+    } catch (e) { log('🖨 apna print ✕ ' + String((e && e.message) || e).slice(0, 120)); }
+  }
   async function handleMsg(m, s) {
-    if (!m || !m.key || !m.message || m.key.fromMe) return;
+    if (!m || !m.key || !m.message) return;
+    if (m.key.fromMe) { await selfPrint(m, s); return; }
     const jid = m.key.remoteJid || '', wid = m.key.id || '';
     if (!jid || B.isJidGroup(jid) || B.isJidBroadcast(jid) || B.isJidNewsletter(jid)) return;
     if (!wid || seenSet.has(wid)) return;
@@ -1508,7 +1575,8 @@ async function start(ZINDA) {
     try { buf = await within(B.downloadMediaMessage(m, 'buffer', {}), 60000, 'tasveer download'); }
     catch (e) { markSeen(wid); log(`⚠️ tasveer nahi utri (${phPretty(from)}): ${String(e.message).slice(0, 100)}`); await createWa({ from, cap: im.caption || '', wid, mt: ts, fail: 'WhatsApp se tasveer nahi utri — dobara forward karein' }); return; }   // app mein nazar aaye
     markSeen(wid);
-    await createWa({ from, cap: im.caption || '', txt: '', buf, mime: String(im.mimetype || 'image/jpeg'), wid, mt: ts });
+    const pq = printReq(im.caption), a4n = S.a4m === 'all' ? (pq || -1) : S.a4m === 'print' ? pq : 0;   // v2.0: "print" likha = A4 (caption se "print" hata kar gahak ka naam)
+    await createWa({ from, cap: pq ? stripPrint(im.caption) : im.caption || '', txt: '', buf, mime: String(im.mimetype || 'image/jpeg'), wid, mt: ts, a4n: ts && Date.now() - ts > OLD_RQ ? 0 : a4n });
   }
 
   // ---------- 🔗 app ke hukum (relink / logout) — ek dafa, sirf taza (server waqt) ----------
