@@ -61,7 +61,7 @@ pa = [
       iff([trig(P_TICK, "Har 1 minute"), boolc("pnSnz", False)]), sbool("doBreak", True, True), END,
       iff([strne("pnDay", "{dayofmonth}")]), sint("pnCount", 0), sstr("pnDay", "{dayofmonth}"), END,
       RANDQ, HTTP,
-      speak("पानी पी लो भाई"),
+      # awaz band (malik 6 Nov: "es ki awaz band kar do")
       *ask("💧 Paani pee lo bhai", "{v=qoul}<br><br>Aaj ab tak: <b>{v=pnCount} glass</b><br>📱 TikTok reels aaj: <b>{v=tkMin} min</b> (limit {v=tkLim})", "✅ Pee liya"),
         inc("pnCount"),
         expr("pnDue", "{system_time}+2100"),
