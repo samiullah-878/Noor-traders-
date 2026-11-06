@@ -7084,3 +7084,22 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
   (Falcon ke liye)": trigger Device Unlocked + Application Launched (com.nxd.falconi) · constraint AccessibilityServiceState Disabled · action
   AccessibilityServiceAction Enable `com.arlosoft.macrodroid/com.arlosoft.macrodroid.action.services.UIInteractionAccessibilityService` + toast.
   Chalta tabhi hai kyunke malik ke MacroDroid ko WRITE_SECURE_SETTINGS (ADB) pehle se mili hai. Falcon macro nahi badla.
+
+== 2026-11-06 · 🤖 CLAUDE REMOTE (md/) + malik ke phone ke MacroDroid macros (session_01NRAdmPUs425GxAXmqDzrbb) ==
+Malik: "mera mobile khud connect karo — tum auto delete auto modify kar sako". Seedha phone tak raasta NAHI, is liye:
+- Phone par ek dafa "🤖 Claude Remote" (link; md/tools/remote.py): har 5 min md/ver.txt (GitHub Pages) → badla ho to
+  ExportMacros backup (/MacroDroid/Claude/nt-backup.mdr) → Java (BeanShell, background) backup ki asal shakal + md/pkg.json se
+  claude.mdr (macroList = sirf hamare macros, variables = sirf naye) → ImportMacros importMode 1 (Overwrite by ID) →
+  pkg "off" naam (crOff1..5) DisableMacro getByName → notification "🤖 Claude ne macro badle (vN)" / "🤖 Claude Remote — masla".
+- pkg v1: "💧 Paani" (m_GUID = purane "💧 Paani break" -6917313488054668512 = usi jagah badla) + "🍽 Khana-peena";
+  off: "💧 Paani yaad", "🍽 Khana-peena yaad" (link wale purane). Naya bhejna: md/tools/v3.py → python3 md/tools/pkg.py <N> → push.
+- Paani: har 35 min (ghari) · popup ✅ Pee liya / ⏰ Abhi nahi (2 min jawab nahi = ⏰) → 10 min baad · locked = unlock par ·
+  call (phone / WhatsApp) par nahi · trigger tick + koi snooze nahi = 30 s baad 1 min break (purana "⏳ Break pakka" breakOn wahi) ·
+  "Aaj N glass" (pnCount, din badle reset) · 🧪 Test = macro khud chalao to popup foran.
+- Khana-peena: roz 2:00 Coffee · 2:10 Coffee+Fruit · 4:00 Nuts · 5:30 Khana · ✅ Ho gaya / ⏰ · locked = unlock par · 3 ghante baad khatam.
+- Dialog = If(local never=true) → ElseIfConfirmedThenAction (validator IfConfirmedThenAction ka EndIf nahi maanta).
+- Alag chat-link macros (repo mein nahi): "🏦 Bank mode" v1 (malik: "pehla wala sahi chala") — HBL / AL Habib / Alfa / JazzCash /
+  easypaisa khule = Java se enabled_accessibility_services yaad + "" · dev options / adb OFF; bank se hate / screen band 30 s = wapas.
+  Malik ke MacroDroid ko WRITE_SECURE_SETTINGS (ADB) hai. Doosri session ka "NT · UI Interaction khud ON (Falcon)" unlock par
+  accessibility ON kar sakta hai — bank ke dauran takrao mumkin (malik ne abhi kuch nahi kaha).
+- md/ PUBLIC — chaabi / password kabhi nahi (pkg.py check). Phone se wapas jawab ka raasta nahi.
