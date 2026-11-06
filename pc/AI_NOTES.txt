@@ -4150,3 +4150,4 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - fillItems (transfer-sync har 10 min, dbo.Items IsActive=1 SELECT): jin ka Urdu naam nahi = AI (Gemini, app urduMake wala prompt), 240 fi chakkar,
   mapReady + taza get = malik ka likha kabhi nahi badalta. gemAny = 404 par Google model list. AI: sirf naam banana.
 - 2026-11-06 pos-sales-dekho v2.3: wapsi jaanch (rtd / rtL / rtA, note mein "bill se juri · alag"); minus pehle jaisa. Dekho root AI_NOTES.
+- 2026-11-06 pkg v5 (md/, phone macros — PC nahi): 📵 TikTok reels 30 min macro; PC par koi tabdeeli nahi.

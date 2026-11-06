@@ -62,7 +62,7 @@ pa = [
       iff([strne("pnDay", "{dayofmonth}")]), sint("pnCount", 0), sstr("pnDay", "{dayofmonth}"), END,
       RANDQ, HTTP,
       speak("पानी पी लो भाई"),
-      *ask("💧 Paani pee lo bhai", "{v=qoul}<br><br>Aaj ab tak: <b>{v=pnCount} glass</b>", "✅ Pee liya"),
+      *ask("💧 Paani pee lo bhai", "{v=qoul}<br><br>Aaj ab tak: <b>{v=pnCount} glass</b><br>📱 TikTok reels aaj: <b>{v=tkMin} min</b> (limit {v=tkLim})", "✅ Pee liya"),
         inc("pnCount"),
         expr("pnDue", "{system_time}+2100"),
         sbool("pnSnz", False),
@@ -94,7 +94,7 @@ paani = {"macroExportVersion": 1, "macro": {
         {"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": P_UNL}],
     "m_actionList": pa, "m_constraintList": []},
     "globalVariables": [var("pnDue", 1), var("pnLeft", 1), var("pnShowEnd", 1), var("pnShowLeft", 1), var("pnCount", 1),
-                        var("pnDay", 2), var("pnSnz", 0), var("breakOn", 0), var("q", 1), var("qoul", 2)],
+                        var("pnDay", 2), var("pnSnz", 0), var("breakOn", 0), var("q", 1), var("qoul", 2), var("tkMin", 1), var("tkLim", 1, m_intValue=30)],
     "userIcons": None, "aiFeedback": "Paani har 35 min, unlock par pending popup."}
 
 # ======================= 🍽 KHANA-PEENA =======================

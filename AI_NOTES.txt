@@ -7124,3 +7124,7 @@ falcon-macro.js TimeOfDay 21:45 → 21:00 (naye download par). Phone par laga ma
   → backup se wohi macro le kar us ke andar har cls object par set lagao, import list mein daal do (chaabi phone se bahar kabhi nahi, md/ mein nahi).
   Remote 4 have4.txt (pehli dafa khud chale), Remote 3 off. Patch #1: "Falcon km" TimeOfDayConstraint 21:00. Remote 4 pkg mein hai (ek dafa) — aage
   Remote ko khud badalna ho to naya naam + off purana (chalta hua apne aap ko overwrite nahi).
+- 16:30 pkg v5 (malik: "TikTok 30 min — sirf reels (For You), Profile / Saved khule · Paani popup mein minutes · sirf TikTok, Facebook nahi"):
+  "📵 TikTok reels" (md/tools/tiktok.py): har 1 min TikTok foreground + screen par "For You" (CheckTextOnScreen) = tkMin++;
+  ScreenContentTrigger "For You" bhi; tkLeft = tkLim(30) − tkMin < 1 → toast + UI click "Profile" (reels se hata deta, Profile/Saved/Inbox khule).
+  Raat 12 reset (tkDay). Limit badalna = tkLim (Remote se, pkg vars). 💧 Paani popup mein "📱 TikTok reels aaj: N min (limit L)". Accessibility zaroori. AI nahi.

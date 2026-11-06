@@ -35,6 +35,7 @@ def fix(export, guid, name):
 paani = json.load(open(os.path.join(D, 'paani3.json')))
 khana = json.load(open(os.path.join(D, 'khana2.json')))
 acc = json.load(open(os.path.join(D, 'acc.json')))
+tk = json.load(open(os.path.join(D, 'tiktok.json')))
 import remote as RM
 rem = json.loads(json.dumps(RM.REMOTE))
 OLD_PAANI_BREAK = -6917313488054668512          # purane "💧 Paani break" ka GUID — usi jagah naya aa jayega
@@ -42,13 +43,14 @@ mp, vp = fix(paani, OLD_PAANI_BREAK, '💧 Paani')
 mk, vk = fix(khana, h64('claude|khana'), '🍽 Khana-peena')
 ma, va = fix(acc, h64('claude|acc'), '🛠 Accessibility khud ON')
 mr, vr = fix(rem, h64('claude|remote4'), '🤖 Claude Remote 4')
+mt, vt = fix(tk, h64('claude|tiktok'), '📵 TikTok reels')
 vars_, seen = [], set()
-for v in vp + vk:
+for v in vp + vk + vt:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🛰 Falcon macro ka waqt 21:00 (phone par laga hua, chaabi wahi) · 🤖 Remote 4 (patch) · 🛠 Accessibility · 💧 Paani · 🍽 Khana-peena.",
-       "macros": [mp, mk, ma, mr],
+       "note": "📵 TikTok reels 30 min (sirf For You screen; Profile / Saved khule) + Paani popup mein TikTok minutes.",
+       "macros": [mp, mk, ma, mr, mt],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}}],
        "vars": vars_,
        "off": ["🤖 Claude Remote 3", "💧 Paani yaad", "🍽 Khana-peena yaad", "NT · UI Interaction khud ON (Falcon ke liye)"]}
