@@ -7080,3 +7080,7 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
   Agar ON ke baad bhi map par ruke to: Falcon load 8 s se zyada / ☰ ka nishana — `_falcon.raw` dekh kar theek karo. Malik ne test ke liye
   TimeOfDay 10:38–23:59 kiya tha — wapas 21:45 karne ko kaha. Toast "✅ km chale gaye" sirf HTTP 200 hai (km mile ya nahi) — badalna malik ke OK par.
 - Malik ne GPS (gaari ka phone) wala setup abhi NAHI chahiye kaha — sirf Falcon.
+- 2026-11-06 (malik ka OK): malik ke phone ke liye ALAG chhota MacroDroid macro (chat link, repo mein nahi, chaabi nahi) "NT · UI Interaction khud ON
+  (Falcon ke liye)": trigger Device Unlocked + Application Launched (com.nxd.falconi) · constraint AccessibilityServiceState Disabled · action
+  AccessibilityServiceAction Enable `com.arlosoft.macrodroid/com.arlosoft.macrodroid.action.services.UIInteractionAccessibilityService` + toast.
+  Chalta tabhi hai kyunke malik ke MacroDroid ko WRITE_SECURE_SETTINGS (ADB) pehle se mili hai. Falcon macro nahi badla.
