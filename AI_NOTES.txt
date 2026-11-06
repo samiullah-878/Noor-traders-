@@ -7111,3 +7111,9 @@ Malik: "mera mobile khud connect karo — tum auto delete auto modify kar sako".
 - 14:05 Remote 3 CHAL GAYA ("🤖 Claude ne macro badle (v2)"). pkg v3: + "🛠 Accessibility khud ON" (md/tools/acc.py) — unlock / Falcon
   khulne par MacroDroid + UI Interaction accessibility band ho to ON (malik: Falcon ka "Screen Content - Accessibility Required");
   bank app saamne = nahi. Doosri session ka "NT · UI Interaction khud ON (Falcon ke liye)" off list mein (dohra na ho).
+
+## PC pos-sales-dekho v2.3 · manifest 2026-11-06.2 (2026-11-06 14:45) — 🔎 wapsi JAANCH
+Malik (screenshot "↩ wapsi 11 bill Rs 52,768 minus"): "jo return bill ke andar direct minus ho chuki wo yahan dobara nahi aani chahiye". POS mein
+bill ke andar wali wapsi kaise alag hai pata nahi → pehle jaanch: retFor ab SaleReturn.SaleID se juda Sale (SaleNo, TotalSale, SaleDetail Qty×Rate
+ka jor, din) bhi laata; saleSum rtd list (JSON text, 40 tak) + rtL (juri) / rtA (alag) → sum doc + note "🔎 wapsi: bill se juri N · alag N".
+Minus abhi v2.2 jaisa. Agla: rtd dekh kar qaida (andaza: juri wapsi jahan Sale.TotalSale < SaleDetail jor = bill ke andar minus ho chuki → minus nahi).

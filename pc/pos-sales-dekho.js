@@ -1,5 +1,6 @@
 // =========================================================
-//  pos-sales-dekho.js  v2.2 (2026-11-04: ↩ malik: "Daily Sale mein sale return add hai ke nahi" → POS ki SALE RETURN (dbo.SaleReturn, us din ki) ab auto sale se MINUS —
+//  pos-sales-dekho.js  v2.3 (2026-11-06: 🔎 JAANCH malik: "jo wapsi bill ke andar minus ho chuki wo dobara nahi" — har wapsi ke saath juda SaleID, us bill ka TotalSale aur
+//                     SaleDetail ka jor (Qty×Rate) → sum.rtd (app milane ke liye) + note mein "bill se juri N · alag N"; MINUS abhi pehle jaisa (qaida data dekh kar)) · v2.2 (2026-11-04: ↩ malik: "Daily Sale mein sale return add hai ke nahi" → POS ki SALE RETURN (dbo.SaleReturn, us din ki) ab auto sale se MINUS —
 //                     cancel (DocStatusID 3) / stock fraq bahar; udhaar party ki wapsi (IsCreditRturn, wholesale nahi) = cash wapas nahi diya = minus NAHI (note mein ginti);
 //                     wholesale ki wapsi poori minus (wholesale bill bhi poora gina jata hai). Note: "↩ wapsi N bill Rs X minus". Parh na sake = pehle jaisa (minus nahi)) · v2.1 (2026-10-31: ⚡ har ½ sec · sirf naye/badle bill parho (cache + COUNT/SUM se milao, na mile = poori list) · sum / Daily Sale / items alag peeche ki lane · doc.pm raftar) · v2.0 (2026-10-28: 📌 har posted bill par post ka waqt `pt` — PC ne pehli dafa posted dekha (pos-posted-seen.json), shuru se pehle wale = UpdatedOn) · v1.9 (2026-10-28: ⚡ malik — "posting POS mein jaldi, app mein late": har 1 sec; bills ka haal (posted / un-posted) PEHLE likho, items + Daily Sale
 //                     baad mein; items aam chakkar mein sirf aakhri 40 bills ke (har 5 min sab)) · v1.8 (2026-10-16: malik — "haath se likhi jaye, auto sale band / on ka option": blueAccess/saleConfig.posAuto
@@ -71,20 +72,28 @@ function saleSum(rows, crv = new Map(), rets = null) {
     cash += wsB ? t : paid; n++;   // v1.7: wholesale = POORA bill (POS Total Sale jaisa)
     if (wsB) { ws++; wsRs += t; wsCash += paid; }
   }
+  const rtd = []; let rtL = 0, rtA = 0;   // v2.3: 🔎 jaanch — bill se juri (SaleID) / alag
   for (const r of rets || []) {   // v2.2: ↩ POS Sale Return
     if (Number(r.DocStatusID) === 3 || isFarqName(r.PartyName)) continue;
     const t = Number(r.TotalSaleReturn) || 0; if (!(t > 0)) continue;
-    const cr = r.IsCreditRturn === true || Number(r.IsCreditRturn) === 1;
+    const cr = r.IsCreditRturn === true || Number(r.IsCreditRturn) === 1, sid = Number(r.SaleID) || 0;
+    rtd.push({ no: String(r.SaleReturnNo || r.SaleReturnID).trim(), p: String(r.PartyName || '').trim().slice(0, 30), t: Math.round(t), cr: cr ? 1 : 0, sid,
+      sno: sid ? String(r.LSaleNo || '').trim() : '', st: sid ? Math.round(Number(r.LTotal) || 0) : 0, sd: sid ? Math.round(Number(r.LDet) || 0) : 0,
+      sday: sid && r.LDate ? dayOf(new Date(r.LDate)) : '', at: r.SaleReturnDate ? new Date(r.SaleReturnDate).toISOString().slice(11, 16) : '' });
+    if (sid) rtL++; else rtA++;
     if (cr && !isWsName(r.PartyName)) { rtU++; continue; }   // udhaar party ki wapsi — galle se cash nahi gaya
     rt++; rtRs += t;
   }
   cash -= rtRs;
-  return { amt: Math.round(cash * 100), n, fq, fqRs: Math.round(fqRs), cx, ws, wsRs: Math.round(wsRs), wsCash: Math.round(wsCash), rt, rtRs: Math.round(rtRs), rtU, rok: rets != null };
+  return { amt: Math.round(cash * 100), n, fq, fqRs: Math.round(fqRs), cx, ws, wsRs: Math.round(wsRs), wsCash: Math.round(wsCash), rt, rtRs: Math.round(rtRs), rtU, rtL, rtA, rtd: rtd.slice(0, 40), rok: rets != null };
 }
 async function retFor(p, d0, d1) {   // v2.2: ↩ us din ki POS Sale Return (r.* — IsCreditRturn POS ke version par na ho to bhi chale) · ghalti = null (minus nahi)
   try {
     return (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
-      SELECT r.*, pt.PartyName FROM dbo.SaleReturn r LEFT JOIN dbo.Party pt ON pt.PartyID = r.PartyID WHERE r.SaleReturnDate >= @a AND r.SaleReturnDate < @b`)).recordset;
+      SELECT r.*, pt.PartyName, s.SaleNo AS LSaleNo, CAST(s.TotalSale AS FLOAT) AS LTotal, s.SaleDate AS LDate,
+        (SELECT SUM(CAST(d.Qty AS FLOAT) * CAST(d.Rate AS FLOAT)) FROM dbo.SaleDetail d WHERE d.SaleID = s.SaleID) AS LDet
+      FROM dbo.SaleReturn r LEFT JOIN dbo.Party pt ON pt.PartyID = r.PartyID LEFT JOIN dbo.Sale s ON s.SaleID = r.SaleID
+      WHERE r.SaleReturnDate >= @a AND r.SaleReturnDate < @b`)).recordset;
   } catch (e) { log('Sale Return nahi parhi: ' + e.message); return null; }
 }
 async function crvFor(p, d0, d1) {   // v1.6: udhaar bill ke saath usi bill ka CRV (cash) — SaleID -> raqam
@@ -122,7 +131,7 @@ async function writeSale(day, s, force = false) {
   const ref = KHATA.doc('possale-' + day), ex = await ref.get(), old = ex.exists ? ex.data() : null, t = Date.now();
   saleSeen.set(day, { key, at: t }); if (saleSeen.size > 10) saleSeen.delete(saleSeen.keys().next().value);
   if (s.amt <= 0) { if (old && !old.deleted) { await ref.set({ deleted: true, updatedAt: t, updatedBy: 'pc-sale' }, { merge: true }); log(`🖥 ${day}: POS sale 0 — auto entry hatayi`); } return; }
-  const note = `🖥 POS ki sale (auto) · ${s.n} bill${s.cx ? ' · ' + s.cx + ' cancel' : ''}${s.ws ? ` · 📦 Wholesale ${s.ws} bill Rs ${s.wsRs.toLocaleString('en-US')} POORA shamil (cash mila ${s.wsCash.toLocaleString('en-US')}${s.wsRs - s.wsCash > 0 ? ' · udhaar ' + (s.wsRs - s.wsCash).toLocaleString('en-US') : ''})` : ''}${s.fq ? ` · stock fraq ke ${s.fq} bill (Rs ${s.fqRs.toLocaleString('en-US')}) nahi gine` : ''}${s.rt ? ` · ↩ wapsi ${s.rt} bill Rs ${s.rtRs.toLocaleString('en-US')} minus` : ''}${s.rtU ? ` · udhaar wapsi ${s.rtU} (cash nahi — minus nahi)` : ''}`;   // v2.2: ↩
+  const note = `🖥 POS ki sale (auto) · ${s.n} bill${s.cx ? ' · ' + s.cx + ' cancel' : ''}${s.ws ? ` · 📦 Wholesale ${s.ws} bill Rs ${s.wsRs.toLocaleString('en-US')} POORA shamil (cash mila ${s.wsCash.toLocaleString('en-US')}${s.wsRs - s.wsCash > 0 ? ' · udhaar ' + (s.wsRs - s.wsCash).toLocaleString('en-US') : ''})` : ''}${s.fq ? ` · stock fraq ke ${s.fq} bill (Rs ${s.fqRs.toLocaleString('en-US')}) nahi gine` : ''}${s.rt ? ` · ↩ wapsi ${s.rt} bill Rs ${s.rtRs.toLocaleString('en-US')} minus` : ''}${s.rtU ? ` · udhaar wapsi ${s.rtU} (cash nahi — minus nahi)` : ''}${(s.rtL || s.rtA) ? ` · 🔎 wapsi: bill se juri ${s.rtL || 0} · alag ${s.rtA || 0}` : ''}`;   // v2.3: 🔎 jaanch · v2.2: ↩
   if (old && !old.deleted && old.amount === s.amt && old.note === note) return;
   await ref.set({ id: 'possale-' + day, type: 'entry', kind: 'sale', amount: s.amt, date: day, note, partyId: '', account: '', posAuto: true, posNo: true, deleted: false,
     by: 'pc-sale', updatedBy: 'pc-sale', createdAt: Number(old && old.createdAt) || t, updatedAt: t, rev: (Number(old && old.rev) || 0) + 1 }, { merge: true });
@@ -239,7 +248,7 @@ async function slow() {
   slowRun = true; slowDirty = false;
   try {
     const p = await getPool(), rows = [...cache.values()], sm = saleSum(rows, await crvFor(p, d0, d1), await retFor(p, d0, d1));
-    const sum = { amt: sm.amt, n: sm.n, cx: sm.cx, fq: sm.fq, fqRs: sm.fqRs, ws: sm.ws, wsRs: sm.wsRs, wsCash: sm.wsCash, rt: sm.rt, rtRs: sm.rtRs, rtU: sm.rtU, auto: AUTO };   // v2.2: ↩ wapsi   // v1.8: app milane ke liye (ginti nahi)
+    const sum = { amt: sm.amt, n: sm.n, cx: sm.cx, fq: sm.fq, fqRs: sm.fqRs, ws: sm.ws, wsRs: sm.wsRs, wsCash: sm.wsCash, rt: sm.rt, rtRs: sm.rtRs, rtU: sm.rtU, rtL: sm.rtL, rtA: sm.rtA, rtd: JSON.stringify(sm.rtd || []), auto: AUTO };   // v2.3: rtd JSON text (list ke andar list nahi)   // v2.2: ↩ wapsi   // v1.8: app milane ke liye (ginti nahi)
     const sh = day + JSON.stringify(sum);
     if (sh !== lastSumHash) { await col.doc(day).set({ sum }, { merge: true }); lastSumHash = sh; }
     await writeSale(day, sm).catch(e => log('POS sale (auto) masla: ' + e.message));   // v1.5 · v1.6 wholesale CRV · v1.8 band = hata
