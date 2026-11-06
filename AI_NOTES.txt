@@ -7108,3 +7108,6 @@ Malik: "mera mobile khud connect karo — tum auto delete auto modify kar sako".
   shuru mein khud variables banata hai (crHave = {v=crHave}); pkg v2 (ver.txt 2) — Paani / Khana bhi isi shakal mein.
 - 13:58 Remote 2 bhi "Variable does not exist" (createVar true ke bawajood) — link import globals kabhi nahi banata. Remote 3: sab cr* LOCAL
   variables, crHave = /MacroDroid/Claude/have.txt (Java), variableSetter.setString(name, val, 1 = local). Qaida: link-macro = sirf local vars.
+- 14:05 Remote 3 CHAL GAYA ("🤖 Claude ne macro badle (v2)"). pkg v3: + "🛠 Accessibility khud ON" (md/tools/acc.py) — unlock / Falcon
+  khulne par MacroDroid + UI Interaction accessibility band ho to ON (malik: Falcon ka "Screen Content - Accessibility Required");
+  bank app saamne = nahi. Doosri session ka "NT · UI Interaction khud ON (Falcon ke liye)" off list mein (dohra na ho).
