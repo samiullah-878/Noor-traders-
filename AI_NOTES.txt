@@ -7129,3 +7129,4 @@ falcon-macro.js TimeOfDay 21:45 → 21:00 (naye download par). Phone par laga ma
   ScreenContentTrigger "For You" bhi; tkLeft = tkLim(30) − tkMin < 1 → toast + UI click "Profile" (reels se hata deta, Profile/Saved/Inbox khule).
   Raat 12 reset (tkDay). Limit badalna = tkLim (Remote se, pkg vars). 💧 Paani popup mein "📱 TikTok reels aaj: N min (limit L)". Accessibility zaroori. AI nahi.
 - 18:50 pkg v6 (malik: "es ki awaz band kar do" — Paani popup): 💧 Paani ka SpeakTextAction hataya (sirf popup, awaz nahi). Khana-peena ki awaz abhi wahi.
+- 19:25 pkg v7 (malik: "Waleed Bhai uth kar le looo … pudi — har 10 min, raat 12 ke baad auto close, phir kabhi on na ho"): md/tools/waleed.py "🔊 Waleed Bhai" — RegularInterval 600 s speak (hi) + toast; TimerTrigger 00:00 (ya 00:00–00:40 tick) = DisableMacro apne naam se (khud band, dobara nahi). Call / WA call par chup. AI nahi.

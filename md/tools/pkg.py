@@ -36,6 +36,7 @@ paani = json.load(open(os.path.join(D, 'paani3.json')))
 khana = json.load(open(os.path.join(D, 'khana2.json')))
 acc = json.load(open(os.path.join(D, 'acc.json')))
 tk = json.load(open(os.path.join(D, 'tiktok.json')))
+wl = json.load(open(os.path.join(D, 'waleed.json')))
 import remote as RM
 rem = json.loads(json.dumps(RM.REMOTE))
 OLD_PAANI_BREAK = -6917313488054668512          # purane "💧 Paani break" ka GUID — usi jagah naya aa jayega
@@ -44,13 +45,14 @@ mk, vk = fix(khana, h64('claude|khana'), '🍽 Khana-peena')
 ma, va = fix(acc, h64('claude|acc'), '🛠 Accessibility khud ON')
 mr, vr = fix(rem, h64('claude|remote4'), '🤖 Claude Remote 4')
 mt, vt = fix(tk, h64('claude|tiktok'), '📵 TikTok reels')
+mw, vw = fix(wl, h64('claude|waleed'), '🔊 Waleed Bhai')
 vars_, seen = [], set()
 for v in vp + vk + vt:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "📵 TikTok reels 30 min (sirf For You screen; Profile / Saved khule) + Paani popup mein TikTok minutes.",
-       "macros": [mp, mk, ma, mr, mt],
+       "note": "🔊 Waleed Bhai: har 10 min bole, raat 12 khud band. Paani awaz band.",
+       "macros": [mp, mk, ma, mr, mt, mw],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}}],
        "vars": vars_,
        "off": ["🤖 Claude Remote 3", "💧 Paani yaad", "🍽 Khana-peena yaad", "NT · UI Interaction khud ON (Falcon ke liye)"]}
