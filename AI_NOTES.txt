@@ -7120,3 +7120,7 @@ Minus abhi v2.2 jaisa. Agla: rtd dekh kar qaida (andaza: juri wapsi jahan Sale.T
 
 ## v2.190.1 (2026-11-06) — 🛰 Falcon macro ka waqt 21:00 se (malik: "Falcon ka time 9 baje kar do")
 falcon-macro.js TimeOfDay 21:45 → 21:00 (naye download par). Phone par laga macro malik khud constraint mein 21:00 karta hai (chaabi wala macro — Remote se nahi).
+- 15:40 pkg v4 (malik: "jo already laga hai us ka time badlo, naya download nahi"): Remote 4 = PATCH — pkg.json "patch": [{nm (naam ka hissa), cls (m_classType), set {...}}]
+  → backup se wohi macro le kar us ke andar har cls object par set lagao, import list mein daal do (chaabi phone se bahar kabhi nahi, md/ mein nahi).
+  Remote 4 have4.txt (pehli dafa khud chale), Remote 3 off. Patch #1: "Falcon km" TimeOfDayConstraint 21:00. Remote 4 pkg mein hai (ek dafa) — aage
+  Remote ko khud badalna ho to naya naam + off purana (chalta hua apne aap ko overwrite nahi).
