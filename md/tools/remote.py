@@ -20,6 +20,13 @@ CHECK = "\n".join([
  '  if (v == null) return "err";',
  '  v = v.trim();',
  '  if (v.length() == 0 || v.length() > 20 || v.indexOf("<") >= 0) return "err";',
+ '  File hf = new File("' + DIR + '/have.txt");',
+ '  if (hf.exists()) {',
+ '    BufferedReader h = new BufferedReader(new InputStreamReader(new FileInputStream(hf), "UTF-8"));',
+ '    String have = h.readLine();',
+ '    h.close();',
+ '    if (have != null && have.trim().equals(v)) return "same";',
+ '  }',
  '  return v;',
  '} catch (Exception e) {',
  '  return "err";',
@@ -86,15 +93,18 @@ BUILD = "\n".join([
  '  JSONArray off = pk.optJSONArray("off");',
  '  for (int i = 1; i <= 5; i++) {',
  '    String nm = (off != null && off.length() >= i) ? off.getString(i - 1) : "";',
- '    try { variableSetter.setString("crOff" + i, nm); } catch (Exception e2) { }',
+ '    try { variableSetter.setString("crOff" + i, nm, 1); } catch (Exception e2) { }',
  '  }',
+ '  FileOutputStream o3 = new FileOutputStream("' + DIR + '/have.txt");',
+ '  o3.write(pk.optString("v").getBytes("UTF-8"));',
+ '  o3.close();',
  '  return "ok|" + pk.optString("note");',
  '} catch (Exception e) {',
  '  return "err|" + e;',
  '}',
 ])
 
-def gv(n, t): return {"m_name": n, "m_type": t, "isLocalVar": False}
+def gv(n, t): return {"m_name": n, "m_type": t, "isLocalVar": True}
 def sstr(n, v): return {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": gv(n, 2), "m_newStringValue": v}
 def sc(n, v, typ=0, eq=True): return {"m_classType": "MacroDroidVariableConstraint", "m_SIGUID": 0, "m_variable": gv(n, 2),
                                       "m_stringValue": v, "m_stringComparisonType": typ, "m_stringEqual": eq}
@@ -106,15 +116,13 @@ def java(code, resp): return {"m_classType": "JavaAction", "m_SIGUID": 0, "scrip
 def note(title, text, nid): return {"m_classType": "NotificationAction", "m_SIGUID": 0, "m_notificationSubject": title,
                                     "m_notificationText": text, "m_overwriteExisting": True, "notificatonId": nid,
                                     "notificationIdString": str(nid), "m_priority": 1, "autoExpand": True}
-def off(i): return {"m_classType": "DisableMacroAction", "m_SIGUID": 0, "m_state": 1, "getByName": True, "m_macroName": "{v=crOff%d}" % i,
+def off(i): return {"m_classType": "DisableMacroAction", "m_SIGUID": 0, "m_state": 1, "getByName": True, "m_macroName": "{lv=crOff%d}" % i,
                     "m_constraintList": [sc("crOff%d" % i, "", eq=False)]}
 
 acts = [
-    sstr("crHave", "{v=crHave}"),          # pehli dafa variable khud ban jaye (wohi qeemat)
-    sstr("crRes", ""), sstr("crOff1", ""), sstr("crOff2", ""), sstr("crOff3", ""), sstr("crOff4", ""), sstr("crOff5", ""),
     sstr("crVer", "err"),
     java(CHECK, "crVer"),
-    iff([sc("crVer", "err", eq=False), sc("crVer", "", eq=False), sc("crVer", "{v=crHave}", eq=False)]),
+    iff([sc("crVer", "err", eq=False), sc("crVer", "", eq=False), sc("crVer", "same", eq=False)]),
       {"m_classType": "ExportMacrosAction", "m_SIGUID": 0, "option": 0, "m_fileName": "nt-backup",
        "useAllFilesAccess": True, "allFilesPath": DIR},
       sstr("crRes", "err|chala nahi"),
@@ -123,23 +131,23 @@ acts = [
         {"m_classType": "ImportMacrosAction", "m_SIGUID": 0, "importMode": 1, "fileName": "claude",
          "useAllFilesAccess": True, "allFilesPath": DIR},
         off(1), off(2), off(3), off(4), off(5),
-        sstr("crHave", "{v=crVer}"),
-        note("🤖 Claude ne macro badle (v{v=crVer})", "{v=crRes}", 7790),
+        note("🤖 Claude ne macro badle (v{lv=crVer})", "{lv=crRes}", 7790),
       ELSE,
-        note("🤖 Claude Remote — masla", "{v=crRes}", 7791),
+        note("🤖 Claude Remote — masla", "{lv=crRes}", 7791),
       END,
     END,
 ]
 out = {"macroExportVersion": 1, "macro": {
-    "m_name": "🤖 Claude Remote 2",
+    "m_name": "🤖 Claude Remote 3",
     "m_description": "Har 5 min GitHub (Noor-traders-/md) dekhta hai. Naya version ho to pehle backup, phir Claude ke macros khud import (purane usi ID par badal jate hain) aur purane naam wale band. Chaabi / password kabhi nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
     "m_triggerList": [
         {"m_classType": "RegularIntervalTrigger", "m_SIGUID": 112233445566771, "m_seconds": 300, "m_useAlarm": False},
         {"m_classType": "MacroEnabledTrigger", "m_SIGUID": 112233445566772}],
+    "localVariables": [{"m_name": n, "m_type": 2, "isLocalVar": True, "m_stringValue": ""} for n in
+                       ("crVer", "crRes", "crOff1", "crOff2", "crOff3", "crOff4", "crOff5")],
     "m_actionList": acts, "m_constraintList": []},
-    "globalVariables": [{"m_name": n, "m_type": 2, "isLocalVar": False, "m_stringValue": ""} for n in
-                        ("crVer", "crHave", "crRes", "crOff1", "crOff2", "crOff3", "crOff4", "crOff5")],
+    "globalVariables": [],
     "userIcons": None, "aiFeedback": "All files access zaroori."}
 out = to_full(out)
 s = json.dumps(out, ensure_ascii=False, separators=(",", ":"))

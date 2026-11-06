@@ -7106,3 +7106,5 @@ Malik: "mera mobile khud connect karo — tum auto delete auto modify kar sako".
 - 13:50 GHALTI: Remote v1 (link) ke globalVariables phone par bane hi nahi (screenshot: "Variable does not exist (crVer)") — chhote var
   objects + bina createVar. Theek: md/tools/full.py to_full() (SetVariable createVar true, poore var objects) har macro par; "🤖 Claude Remote 2"
   shuru mein khud variables banata hai (crHave = {v=crHave}); pkg v2 (ver.txt 2) — Paani / Khana bhi isi shakal mein.
+- 13:58 Remote 2 bhi "Variable does not exist" (createVar true ke bawajood) — link import globals kabhi nahi banata. Remote 3: sab cr* LOCAL
+  variables, crHave = /MacroDroid/Claude/have.txt (Java), variableSetter.setString(name, val, 1 = local). Qaida: link-macro = sirf local vars.
