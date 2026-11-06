@@ -3,7 +3,7 @@
 //   phone (MacroDroid, har 1 min, signal na ho to phone mein jama) → gaariGps → PC gaari-gps.js → gaariDay/<din> {km, gapKm, j:{stops,gaps}} + gaariPath (naqsha).
 //   Phere ke km: meter → Falcon → 📍 GPS (us din ke km ÷ us din ke phere) — tanki ka diesel usi purane qaide se khud katta. ⚙️ setup (sirf malik): chaabi + MacroDroid qadam + 📋 copy + 🔎 test.
 // v2.190.0 (2026-11-05): 🛰 FALCON-I KM KHUD (malik: "Falcon apps wala bana do · ye milage trips hain"): malik ke phone ka MacroDroid (⚙️ Falcon setup se
-//   .macro download, wahi gaariKey) raat 9:45 ke baad Falcon-i → Reports → Trips → Today's Trips khud parh kar bhejta hai → PC gaari-gps v1.1 →
+//   .macro download, wahi gaariKey) raat 9:00 ke baad Falcon-i → Reports → Trips → Today's Trips khud parh kar bhejta hai → PC gaari-gps v1.1 →
 //   gaariDay/<din> {fk, fn, ft} + _falcon. Phere ke km: meter → 📸 screenshot (trackerKm) → 🛰 Falcon khud (fkKm, din ÷ phere) → 📱 GPS. Chip 🛰. AI nahi.
 // v2.98.1 (2026-10-08): ⛽ km ka WAQT — phere ke km jab save hon (kmLog [{at, km}]) usi waqt tanki se diesel katta (edit se kam/zyada);
 //   phere ke andar ki diesel (tanki full) phere ke SHURU mein (us phere ke km nayi tanki se); purane din ka edit usi din mein (clamp).
@@ -706,7 +706,7 @@ function openGps() {
     ${own ? '<button type="button" class="gx-new" data-gg-setup="1">⚙️ Gaari phone setup (MacroDroid)</button>' : ''}</div>`, true);
 }
 // ---------- v2.190.0: 🛰 FALCON-I KM KHUD (malik: "Falcon apps wala bana do · ye milage trips hain") ----------
-//   Malik ke phone ka MacroDroid (⚙️ se bani .macro, wahi gaariKey) raat 9:45 ke baad phone kholte hi (ghante mein ek dafa) Falcon-i →
+//   Malik ke phone ka MacroDroid (⚙️ se bani .macro, wahi gaariKey) raat 9:00 ke baad phone kholte hi (ghante mein ek dafa) Falcon-i →
 //   Reports → Trips → Today's Trips khud kholta, screen ka text 6 dafa (scroll) gaariGps mein "FX1|…" → PC gaari-gps v1.1 trips (waqt + Total
 //   Distance) jor kar gaariDay/<din> {fk, fn, ft} + _falcon (aakhri haal). Phere ke km: meter → 📸 screenshot → 🛰 Falcon khud → 📱 GPS. AI nahi.
 const yday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -727,7 +727,7 @@ function openFalcon() {
       <span class="gg-i">${ph ? `<i class="ok">🚚 ${ph} phera${ph > 1 ? ' · ' + num(N(d.fk) / ph, 1) + ' km har' : ''}</i>` : (N(d.fk) >= 3 ? '<i class="bad">🚫 phera nahi likha</i>' : '')}${N(d.km) > 0 ? `<i>📱 GPS ${num(d.km, 1)}</i>` : ''}<i>🕒 trips ›</i></span></button>`; }).join('');
   modal('🛰 Falcon-i km (khud)', `<div class="gx-win gg">
     <p class="gg-st gg-${f.lvl}">${f.long}</p>
-    <p class="gg-note">Raat 9:45 ke baad malik ka phone khulte hi MacroDroid Falcon-i ke Today's Trips parh kar bhejta hai → shop PC trips jor kar din ke km → phere ke km khud (meter / screenshot na ho to) → farzi diesel khud. Ek din mein kai phere = km barabar. 🤖 AI nahi.</p>
+    <p class="gg-note">Raat 9:00 ke baad malik ka phone khulte hi MacroDroid Falcon-i ke Today's Trips parh kar bhejta hai → shop PC trips jor kar din ke km → phere ke km khud (meter / screenshot na ho to) → farzi diesel khud. Ek din mein kai phere = km barabar. 🤖 AI nahi.</p>
     <div class="gg-list">${rowsH || '<p class="gr-empty">Abhi koi din nahi — setup ke baad yahan har din ke Falcon km aayenge.</p>'}</div>
     ${own ? '<button type="button" class="gx-new" data-fx-setup="1">⚙️ Falcon setup (MacroDroid)</button>' : ''}</div>`, true);
 }
@@ -753,7 +753,7 @@ async function openFalconSetup() {
     <li><b>MacroDroid</b> kholein → ☰ → <b>Export/Import</b> → <b>Import</b> → Downloads → <b>NT_Falcon_km.macro</b> → Save ✓.</li>
     <li>Macro kholein → ⋮ → <b>Test actions</b>. Pehli dafa MacroDroid <b>UI Interaction (Accessibility)</b> ki ijazat maangega → <b>ON</b>. Falcon-i khud khulega — 30 second phone na chherein.</li>
     <li>Yahan upar "🟢 Aakhri parhna … trip" aa jaye = theek. ⚠️ aaye to "Screen ka text" kholein aur is screen ki screenshot bhej dein.</li>
-    <li>Phir har raat <b>9:45 ke baad</b> phone kholte hi khud (ghante mein ek dafa). Kabhi bhi: macro par ▶ / Test actions.</li></ol>
+    <li>Phir har raat <b>9:00 ke baad</b> phone kholte hi khud (ghante mein ek dafa). Kabhi bhi: macro par ▶ / Test actions.</li></ol>
     <p class="gg-note">Falcon-i mein login rehna chahiye. ☰ menu ki jagah badle (app update) to bata dein. 🔁 Nayi chaabi banai to ye macro dobara download (gaari phone ka body bhi). 🤖 AI nahi.</p>`}</div>`, true);
 }
 async function fxDownload() {
