@@ -7117,3 +7117,6 @@ Malik (screenshot "↩ wapsi 11 bill Rs 52,768 minus"): "jo return bill ke andar
 bill ke andar wali wapsi kaise alag hai pata nahi → pehle jaanch: retFor ab SaleReturn.SaleID se juda Sale (SaleNo, TotalSale, SaleDetail Qty×Rate
 ka jor, din) bhi laata; saleSum rtd list (JSON text, 40 tak) + rtL (juri) / rtA (alag) → sum doc + note "🔎 wapsi: bill se juri N · alag N".
 Minus abhi v2.2 jaisa. Agla: rtd dekh kar qaida (andaza: juri wapsi jahan Sale.TotalSale < SaleDetail jor = bill ke andar minus ho chuki → minus nahi).
+
+## v2.190.1 (2026-11-06) — 🛰 Falcon macro ka waqt 21:00 se (malik: "Falcon ka time 9 baje kar do")
+falcon-macro.js TimeOfDay 21:45 → 21:00 (naye download par). Phone par laga macro malik khud constraint mein 21:00 karta hai (chaabi wala macro — Remote se nahi).
