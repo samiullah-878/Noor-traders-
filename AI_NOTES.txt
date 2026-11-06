@@ -7060,3 +7060,23 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
   ab `_falcon` bhi (cb 3rd arg). Test: fxParse 7 shaklein, Playwright (ok/bad/none, download = chaabi + URL bhare, placeholder nahi).
 - ⚠️ Phone par abhi test NAHI: Read Screen Contents ki dictionary mein ek hi view-id wale list items (RecyclerView) shayad ek ho jayein — pehli raat ka
   `_falcon.raw` dekh kar theek karna (zaroorat ho to har item par scroll / doosra raasta). AI NAHI.
+
+## PC urdu-names v1.7 · transfer-sync v4.12 · nt-print v1.25 · sale-post v1.15 · manifest 2026-11-06.1 (2026-11-06) — 🔤 item ka Urdu naam kabhi gayab nahi (app NAHI badli, v2.190.0 hi)
+- Masla (malik, TN 26100119 Godam 1 → NOOR TRADERS): "capri jumbo 3in1" ka Urdu naam blueAccess/urduNames mein nahi tha → parchi par sirf English →
+  godam ke larke ne na tick kiya na diya (Urdu parhta hai). Baqi 3 "baqi" items (colgate 200 ✗, qamar 1kg / 475gm pen ✓) = app ka "✓ de diya"
+  nahi dabaya — app / print ki ghalti nahi (print + app dono 32 items).
+- urdu-names `item(id, name)` = save hua Urdu naam, warna English naam ka `roman2ur` (bina AI) — transfer note (transfer-sync), gate pass (nt-print
+  gateJobs, sale-post) teeno. Urdu-only naam par '' (pehle jaisa).
+- `fillItems` (sirf transfer-sync chalata hai, har 10 min, shuru 90 s baad, print ki `later` qataar se BAHAR): POS `dbo.Items` IsActive=1 (sirf SELECT)
+  → jin ka Urdu naam nahi, 60 ek dafa / 240 fi chakkar, WAHI prompt jo app ka urduMake → urduNames {map} merge. Hifazat: `mapReady` (urduNames ka
+  snapshot aaye baghair KABHI nahi likhta), likhne se pehle urduNames taza get — jo naam is dauran malik / app ne likha woh rahe. Ghalti = 1 ghanta ruko.
+- `gemAny`: aiConfig.model → chala hua (GOODM) → 404 / band ho to Google ki model LIST se behtareen flash (wa-parchi pickModels jaisa) — pakka naam nahi.
+  fillParties / noteUr pehle jaise (nahi chhede).
+- Test: mock https + Firestore — mapReady se pehle 0, malik ka naam nahi badla, 404 → list → 3.8-flash, 300 items = 240 + "baqi 60". AI: sirf naam banana.
+
+## 2026-11-06 — 🛰 Falcon macro pehla test (malik ka phone) — sirf note, code nahi badla
+- Macro import + chala, "FX1|" text PC tak gaya (rabta / chaabi theek), magar `_falcon.why = 'kuch nahi'` (na waqt na km): Falcon-i MAP screen par
+  ruka raha — ☰ (92%, 9%) ka click nahi hua. Sab se pehla shak: MacroDroid ki Accessibility (UI Interaction) band — malik ko ON karne ko kaha.
+  Agar ON ke baad bhi map par ruke to: Falcon load 8 s se zyada / ☰ ka nishana — `_falcon.raw` dekh kar theek karo. Malik ne test ke liye
+  TimeOfDay 10:38–23:59 kiya tha — wapas 21:45 karne ko kaha. Toast "✅ km chale gaye" sirf HTTP 200 hai (km mile ya nahi) — badalna malik ke OK par.
+- Malik ne GPS (gaari ka phone) wala setup abhi NAHI chahiye kaha — sirf Falcon.

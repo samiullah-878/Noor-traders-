@@ -1,5 +1,6 @@
 // ============================================================
 //  sale-post.js — Blue Khata app ki "Nayi Sale" -> POS Sale bill (v1)
+//  v1.15 (2026-11-06): 🔤 gate pass par item ka Urdu naam na ho to bina AI Urdu (urdu-names v1.7 item) — line kabhi gayab nahi ·
 //  v1.14 (2026-11-04): 👦 LARKA — app ka chuna larka (doc.sm) POS bill ke SupplyManID mein (sirf agar POS ki SupplyMan list mein ho; warna pehle jaisa khali) ·
 //                     SP Man list app ko blueAccess/supplyMen {men:[{id,n}]} (sirf badle to; pehle parho, parh na sake to likhna nahi) ·
 //                     🚪 gate pass switch (doc.gate > 0) = NOOR TRADERS (bill ki branch) wali lines ki bhi ALAG gate pass parchi (app 'Yehi device' jaisi)
@@ -573,7 +574,7 @@ function gatePassText(godamName, rows, saleNo, partyName, when) {
   const out = [ESC + '@', ESC + 'G' + '\x01'];   // ESC G 1 = double-strike (gehra)
   if (UR.isOn() && UR.dateLine) out.push(UR.dateLine(when || Date.now(), 44));   // v1.12 (2026-10-20): 📅 upar Urdu tareekh
   const byItem = new Map();   // ek item ki carton/piece wali do lines jama kar ke ek qatar
-  for (const l of rows) { const k = l.ItemID; const o = byItem.get(k) || { name: l.name, pack: l.pack, qty: 0, ur: UR.get(k) }; o.qty = r3v(o.qty + l.qty); byItem.set(k, o); }
+  for (const l of rows) { const k = l.ItemID; const o = byItem.get(k) || { name: l.name, pack: l.pack, qty: 0, ur: UR.item ? UR.item(k, l.name) : UR.get(k) };   /* v1.15: na ho to bina AI Urdu */ o.qty = r3v(o.qty + l.qty); byItem.set(k, o); }
   let i = 0;
   for (const o of byItem.values()) {
     const pack = Number(o.pack) || 0, qty = o.qty;

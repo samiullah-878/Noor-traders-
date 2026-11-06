@@ -1,20 +1,20 @@
 // =====================================================================================================
-//  urdu-names.js  v1.6 (2026-10-21: 🔤 Tafseel / Note / Wajah HAR parchi par Urdu — AI 4 s mein na aaye to roman2ur (lughat + harf-ba-harf, bina AI); AI pas-e-parda 20 s mein behtar likh kar yaad kare · note(text, px, lab) — 'تفصیل:' / 'نوٹ:' / 'وجہ:' Urdu label bara) · v1.5 (2026-10-20: 📅 dateUr / dateLine — Urdu tareekh (آج / کل کا بل / N دن پرانا) · 📝 note() + fillNotes() — Tafseel / Note / Wajah AI se Urdu, 4 s hadd, yaad (urdu-notes.json); printConfig.urduNote) · v1.4 (2026-10-16: line(ur, px, a) — a=1 beech mein, voucher ka bara Urdu naam) · v1.3 (2026-10-15: partyAny + fillParties force — 💰 galla parchi) · v1.2 (2026-10-14: fillParties — Server PC khud AI (Gemini, blueAccess/aiConfig) se baqi parties ke Urdu naam, har 10 min) · v1.1 (2026-10-14: + PARTY ke Urdu naam blueAccess/urduParties — voucher parchi) · v1.0 (2026-10-14) — 🔤 PARCHI PAR URDU NAAM (transfer note + gate pass)
+//  urdu-names.js  v1.7 (2026-11-06: 🔤 ITEM ke Urdu naam KHUD — malik: "capri jumbo 3in1 ka Urdu nahi bana, larke ne nahi diya": fillItems = PC (transfer-sync) har 10 min jin items ka Urdu naam nahi un ka AI (Gemini) se, sirf NAYE (malik ka likha kabhi nahi badalta; map parhe baghair kabhi nahi likhta) · item(id, name) = parchi par Urdu naam, na ho to roman2ur bina AI (line kabhi gayab nahi) · gemAny: model band (404) ho to Google ki LIST se agla, pakka naam nahi) · v1.6 (2026-10-21: 🔤 Tafseel / Note / Wajah HAR parchi par Urdu — AI 4 s mein na aaye to roman2ur (lughat + harf-ba-harf, bina AI); AI pas-e-parda 20 s mein behtar likh kar yaad kare · note(text, px, lab) — 'تفصیل:' / 'نوٹ:' / 'وجہ:' Urdu label bara) · v1.5 (2026-10-20: 📅 dateUr / dateLine — Urdu tareekh (آج / کل کا بل / N دن پرانا) · 📝 note() + fillNotes() — Tafseel / Note / Wajah AI se Urdu, 4 s hadd, yaad (urdu-notes.json); printConfig.urduNote) · v1.4 (2026-10-16: line(ur, px, a) — a=1 beech mein, voucher ka bara Urdu naam) · v1.3 (2026-10-15: partyAny + fillParties force — 💰 galla parchi) · v1.2 (2026-10-14: fillParties — Server PC khud AI (Gemini, blueAccess/aiConfig) se baqi parties ke Urdu naam, har 10 min) · v1.1 (2026-10-14: + PARTY ke Urdu naam blueAccess/urduParties — voucher parchi) · v1.0 (2026-10-14) — 🔤 PARCHI PAR URDU NAAM (transfer note + gate pass)
 //  Malik: "jitna bi gate pass or transfer notes print kar rahe hain un sb ko urdu bi sath ani chahie".
 //  Naam wahi jo app mein (Stock → 🔤 Urdu naam / labels): Firestore blueAccess/urduNames {map: itemId -> Urdu} — LIVE (onSnapshot),
 //  har print par Firestore nahi parhta (tez). Setting blueAccess/printConfig.urduSlip (default ON; app: 🖨 Print setting).
 //  Text parchi mein Urdu line ek NISHAN ke saath: line(ur, px) -> toJob(text) us ko nt-parchi ki raster tasveer bana deta hai (daayein).
-//  Jis item ka Urdu naam nahi = sirf English (pehle jaisa).
+//  Jis item ka Urdu naam nahi = v1.7 se roman2ur (bina AI) Urdu — aur PC baad mein AI se asal naam bana kar yaad karta hai.
 //  Istemal: transfer-sync.js (STOCK TRANSFER NOTE) · sale-post.js + nt-print.js (GATE PASS).
 // =====================================================================================================
 const MARK = '\u0001UR\u0001';
 const NOTE = '\u0001UN\u0001';   // v1.5: Tafseel ki jagah — print se pehle fillNotes() isay Urdu tasveer (ya kuch nahi) bana deta hai
-let map = {}, pmap = {}, on = true, started = false, noteOn = true, aiKey = '', aiModel = '';
+let map = {}, pmap = {}, on = true, started = false, noteOn = true, aiKey = '', aiModel = '', mapReady = false;   // v1.7: mapReady = urduNames parh liya (us se pehle item naam KABHI nahi likhte)
 
 function watch(db, businessId, log = () => {}) {
   if (started || !db) return; started = true;
   const ba = db.collection('businesses').doc(businessId).collection('blueAccess');
-  try { ba.doc('urduNames').onSnapshot(s => { map = (s.exists && (s.data() || {}).map) || {}; }, e => log('Urdu naam nahi mile: ' + e.message)); } catch (e) { log('Urdu naam nahi mile: ' + e.message); }
+  try { ba.doc('urduNames').onSnapshot(s => { map = (s.exists && (s.data() || {}).map) || {}; mapReady = true; }, e => { mapReady = false; log('Urdu naam nahi mile: ' + e.message); }); } catch (e) { log('Urdu naam nahi mile: ' + e.message); }
   try { ba.doc('urduParties').onSnapshot(s => { pmap = (s.exists && (s.data() || {}).map) || {}; }, () => {}); } catch {}   // v1.1
   try { ba.doc('printConfig').onSnapshot(s => { const d = (s.exists && s.data()) || {}; on = d.urduSlip !== false; noteOn = d.urduNote !== false; }, () => {}); } catch {}   // v1.5: urduNote
   try { ba.doc('aiConfig').onSnapshot(s => { const d = (s.exists && s.data()) || {}; aiKey = String(d.key || ''); aiModel = String(d.model || ''); }, () => {}); } catch {}   // v1.5: Tafseel Urdu ke liye
@@ -97,6 +97,8 @@ function romWord(w) {
 const RABC = { a: 'اے', b: 'بی', c: 'سی', d: 'ڈی', e: 'ای', f: 'ایف', g: 'جی', h: 'ایچ', i: 'آئی', j: 'جے', k: 'کے', l: 'ایل', m: 'ایم', n: 'این', o: 'او', p: 'پی', q: 'کیو', r: 'آر', s: 'ایس', t: 'ٹی', u: 'یو', v: 'وی', w: 'ڈبلیو', x: 'ایکس', y: 'وائے', z: 'زیڈ' };
 const romTok = w => { const lw = String(w).toLowerCase(); if (!RDICT[lw] && /^[A-Z]{2,5}$/.test(w) && (!/[AEIOU]/.test(w) || w.length <= 3)) return [...lw].map(c => RABC[c] || '').join(' '); return romWord(w); };
 const roman2ur = t => String(t || '').replace(/[a-z]+/gi, w => romTok(w)).replace(/\s+/g, ' ').trim();
+// v1.7: 🔤 parchi ka item naam — save hua Urdu naam, warna English naam ka bina AI Urdu (malik: "Urdu line kabhi gayab nahi")
+const item = (id, name) => { if (!on) return ''; const u = get(id); if (u) return u; const t = String(name || '').replace(/[\u0001\r\n]+/g, ' ').replace(/\s+/g, ' ').trim(); return /[a-z]/i.test(t) ? roman2ur(t.slice(0, 80)) : ''; };
 // v1.6: AI 4 s mein na aaye to pas-e-parda 20 s — bani Urdu yaad (agli parchi par AI wali)
 const bgBusy = new Set();
 function noteBg(t) { const k = nkey(t); if (bgBusy.has(k) || !aiKey || Date.now() < noteWaitTill || nload()[k]) return; bgBusy.add(k); aiUr(t, 20000).catch(() => {}).finally(() => bgBusy.delete(k)); }
@@ -177,4 +179,61 @@ async function fillParties({ db, businessId, parties, log = () => {}, force = fa
   finally { fillBusy = false; }
   return done;
 }
-module.exports = { fillParties, watch, get, party, partyAny, isOn, line, has, strip, toJob, MARK, NOTE, dateUr, dateLine, UD, note, noteUr, fillNotes, noteSeg, roman2ur, _set: (m, o = true, pm) => { map = m || {}; on = o; if (pm) pmap = pm; }, _ai: (k, m, no = true) => { aiKey = k; aiModel = m; noteOn = no; nmap = {}; noteWaitTill = 0; } };
+// ---------- v1.7 (2026-11-06): 🤖 ITEM KE URDU NAAM KHUD (malik ka OK) ----------
+//   transfer-sync har 10 min POS ke chalu items deta hai → jin ka Urdu naam NAHI sirf un ka (60 ek dafa, 240 fi chakkar) — wahi prompt jo app ka
+//   "🔤 Urdu naam → AI se baqi" (pos-stock.js urduMake). Likhne se pehle urduNames taza parho: jo naam is dauran malik / app ne likha woh KABHI nahi badalta.
+//   Model: aiConfig.model → chala hua → band (404) ho to Google ki list se behtareen flash (pakka naam nahi — 2.5-flash 2 Nov band hua).
+let GOODM = '', mList = { at: 0, l: [] };
+const isGone = e => Number(e && e.code) === 404 || /no longer available|not found|not supported for generateContent/i.test(String(e && e.message));
+function gemList(key) {
+  if (mList.l.length && Date.now() - mList.at < 6 * 3600000) return Promise.resolve(mList.l);
+  return new Promise((res, rej) => {
+    const rq = https.request({ hostname: 'generativelanguage.googleapis.com', path: '/v1beta/models?pageSize=200', method: 'GET', headers: { 'x-goog-api-key': key }, timeout: 20000 }, r => {
+      let d = ''; r.setEncoding('utf8'); r.on('data', c => { d += c; }); r.on('end', () => {
+        let j = null; try { j = JSON.parse(d); } catch {} if (r.statusCode !== 200) return rej(Object.assign(new Error('model list ' + r.statusCode), { code: r.statusCode }));
+        const v = n => Number((String(n).match(/gemini-(\d+(?:\.\d+)?)/) || [])[1] || 0);
+        const names = ((j && j.models) || []).filter(m => (m.supportedGenerationMethods || []).includes('generateContent')).map(m => String(m.name || '').replace(/^models\//, ''));
+        const ok = names.filter(n => /flash/.test(n) && !/(lite|tts|image|live|audio|embedding|preview|exp)/.test(n)), plain = ok.filter(n => /^gemini-\d+(\.\d+)?-flash$/.test(n)).sort((a, b) => v(b) - v(a));
+        mList = { at: Date.now(), l: [...plain, ...ok.filter(n => !plain.includes(n)).sort((a, b) => v(b) - v(a))] }; res(mList.l);
+      });
+    });
+    rq.on('timeout', () => rq.destroy(new Error('model list ka jawab nahi'))); rq.on('error', rej); rq.end();
+  });
+}
+async function gemAny(key, model, prompt) {
+  const one = async m => { try { return await gem(key, m, prompt, true); } catch (e) { if (e.code === 400 && !isGone(e)) return gem(key, m, prompt, false); throw e; } };   // 400 = model thinkingConfig nahi leta
+  const tried = []; let last = null;
+  const go = async m => { tried.push(m); try { const o = await one(m); GOODM = m; return { o }; } catch (e) { last = e; if (!isGone(e)) throw e; return null; } };
+  for (const m of [String(model || '').replace(/^models\//, '').trim(), GOODM]) { if (!m || tried.includes(m)) continue; const r = await go(m); if (r) return r.o; }
+  for (const m of (await gemList(key)).filter(m => !tried.includes(m)).slice(0, 4)) { const r = await go(m); if (r) return r.o; }
+  throw last || new Error('AI model nahi mila');
+}
+let itBusy = false, itWaitTill = 0;
+async function fillItems({ db, businessId, items, log = () => {}, max = 240 }) {
+  if (itBusy || !on || !mapReady || Date.now() < itWaitTill || !db) return 0;
+  const seen = new Set();
+  const todo = (items || []).filter(r => { const id = r && r.id != null ? String(r.id) : ''; if (!id || seen.has(id) || !/[a-z]/i.test(String(r.name || '')) || String(map[id] || '').trim()) return false; seen.add(id); return true; });
+  if (!todo.length) return 0;
+  itBusy = true; let done = 0;
+  try {
+    const ba = db.collection('businesses').doc(businessId).collection('blueAccess');
+    const c = await ba.doc('aiConfig').get(), cfg = c.exists ? (c.data() || {}) : {};
+    if (!cfg.key) { itWaitTill = Date.now() + 3600000; return 0; }
+    for (let i = 0; i < Math.min(todo.length, max); i += 60) {
+      const chunk = todo.slice(i, i + 60);
+      const prompt = 'Tum ek Pakistani grocery (kiryana) ki dukaan ke items ke naam Urdu rasm-ul-khat mein likhte ho. Har English/Roman naam ko URDU script mein likho — tarjuma nahi, wahi naam Urdu harfon mein (brand ke naam jaise chhapte hain waise: Dettol = ڈیٹول, Surf = سرف, Colgate = کولگیٹ). Wazan/size (5kg, 160g, 1.5 ltr) hindson mein wahi rakho (jaise 5 کلو, 160 گرام, 1.5 لیٹر). Sirf JSON array do, aur kuch nahi: [{"id":"...","ur":"..."}]\n' + JSON.stringify(chunk.map(r => ({ id: String(r.id), en: String(r.name).trim().slice(0, 80) })));
+      const out = await gemAny(cfg.key, String(cfg.model || aiModel || ''), prompt);
+      const m = String(out || '').match(/\[[\s\S]*\]/); if (!m) continue;
+      let arr = []; try { arr = JSON.parse(m[0]); } catch { continue; }
+      const ids = new Set(chunk.map(r => String(r.id))), patch = {};
+      for (const x of arr) if (x && x.id != null && ids.has(String(x.id)) && x.ur && /[\u0600-\u06FF]/.test(x.ur)) patch[String(x.id)] = String(x.ur).replace(/[\u0001\r\n]+/g, ' ').trim().slice(0, 120);
+      const fresh = await ba.doc('urduNames').get(), fm = (fresh.exists && (fresh.data() || {}).map) || {};
+      for (const k of Object.keys(patch)) if (String(fm[k] || '').trim()) delete patch[k];   // malik / app ne is dauran likh diya = wohi rahe
+      if (Object.keys(patch).length) { await ba.doc('urduNames').set({ map: patch, updatedAt: Date.now(), by: 'pc' }, { merge: true }); Object.assign(map, patch); done += Object.keys(patch).length; }
+    }
+    if (done) log('🔤 ' + done + ' item ke Urdu naam AI se bane (transfer note / gate pass)' + (todo.length > max ? ' — baqi ' + (todo.length - max) + ' agle chakkar mein' : ''));
+  } catch (e) { itWaitTill = Date.now() + 3600000; log('🔤 Item Urdu naam nahi bane: ' + String(e && e.message).slice(0, 160) + ' — 1 ghante baad dobara'); }
+  finally { itBusy = false; }
+  return done;
+}
+module.exports = { fillParties, fillItems, item, watch, get, party, partyAny, isOn, line, has, strip, toJob, MARK, NOTE, dateUr, dateLine, UD, note, noteUr, fillNotes, noteSeg, roman2ur, _set: (m, o = true, pm) => { map = m || {}; mapReady = true; on = o; if (pm) pmap = pm; }, _ai: (k, m, no = true) => { aiKey = k; aiModel = m; noteOn = no; nmap = {}; noteWaitTill = 0; } };

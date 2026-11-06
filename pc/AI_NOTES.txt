@@ -4144,3 +4144,8 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 
 ## PC gaari-gps v1.1 · manifest 2026-11-05.10 (2026-11-05) — 🛰 Falcon-i trips (malik ka phone MacroDroid, "FX1|" gaariGps mein) → gaariDay fk/fn/ft · app v2.190.0
 - fxParse (waqt + Total Distance jori) · fxMerge (waqt se dohra ek) · gaariDay MERGE (GPS wala bhi ab merge) · _falcon haal + raw namoona. AI NAHI.
+
+## PC urdu-names v1.7 + transfer-sync v4.12 + nt-print v1.25 + sale-post v1.15 · manifest 2026-11-06.1 (2026-11-06) — 🔤 item Urdu naam khud · app v2.190.0 (nahi badli)
+- item(id, name): Urdu naam na ho to roman2ur (bina AI) — transfer note + gate pass par Urdu line kabhi gayab nahi.
+- fillItems (transfer-sync har 10 min, dbo.Items IsActive=1 SELECT): jin ka Urdu naam nahi = AI (Gemini, app urduMake wala prompt), 240 fi chakkar,
+  mapReady + taza get = malik ka likha kabhi nahi badalta. gemAny = 404 par Google model list. AI: sirf naam banana.

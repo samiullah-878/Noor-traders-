@@ -24,6 +24,8 @@
 //     POS ka wazan Urdu naam ke baad chhota daayein · 📝 Note / Wajah Urdu label ('نوٹ:' / 'وجہ:') + bina AI bhi Urdu (urdu-names v1.6 roman2ur).
 //  v4.8 (2026-10-14): 🔤 TRANSFER NOTE PAR URDU — har item ke English naam ke neeche Urdu naam (urdu-names.js: blueAccess/urduNames LIVE,
 //     printConfig.urduSlip). Urdu wali parchi nt-parchi ke tez worker se (tasveer); Urdu na ho to pehle jaisa RAW.
+//  v4.12 (2026-11-06): 🔤 malik — "capri jumbo 3in1 ka Urdu nahi bana": item ka Urdu naam na ho to parchi par bina AI Urdu (UR.item, roman2ur) +
+//     har 10 min POS ke chalu items mein jin ka Urdu naam nahi un ka AI se khud (urdu-names v1.7 fillItems — malik ka likha kabhi nahi badalta).
 //  Chalana:  node transfer-sync.js   (transfer-auto.bat loop mein)
 // =========================================================
 const fs = require('fs');
@@ -214,7 +216,7 @@ function transferText(r, note, reprint) {
     const q = pkL ? 'POS: ' + n(x.qty) + (ascii(x.uName) && !/^pcs$/i.test(ascii(x.uName)) ? ' ' + ascii(x.uName) : '') : qtyText(x);
     if (pkL) out.push(...pkNameLines(ascii(x.name), pkL));   // v4.11: packet naam ke AAGE usi line par (mota)
     else if (ascii(x.name).length + q.length + 1 > PRINT_WIDTH) { out.push(ascii(x.name).slice(0, PRINT_WIDTH)); out.push(pad('', PRINT_WIDTH - q.length) + q); } else out.push(pad(ascii(x.name), PRINT_WIDTH - q.length) + q);
-    { const ur = UR.get(x.itemId); if (ur) out.push(UR.line(ur, 40)); }   // v4.8: 🔤 Urdu naam
+    { const ur = UR.item ? UR.item(x.itemId, x.name) : UR.get(x.itemId); if (ur) out.push(UR.line(ur, 40)); }   // v4.8: 🔤 Urdu naam · v4.12: na ho to bina AI Urdu (line kabhi gayab nahi)
     if (pkL) out.push(pad('', PRINT_WIDTH - q.length) + q);   // v4.11: POS ka wazan chhota, daayein
     const b = baqiText(x, r); if (b) out.push(...b.split('\r\n'));   // v4.2: baqi stock usi parchi par
   }
@@ -524,17 +526,30 @@ async function posNotes() {
   } catch (e) { const m = String(e && e.message).slice(0, 160); if (tnErr !== m) { tnErr = m; log('POS transfer note dekhne mein masla: ' + m); } }
 }
 
+// v4.12 (2026-11-06): 🔤 malik — "capri jumbo 3in1 ka Urdu nahi bana, larke ne nahi diya": POS ke chalu items mein jin ka Urdu naam nahi = AI se (sirf SELECT)
+let urErr = '';
+async function urItems() {
+  try {
+    const p = await getPool();
+    const r = await p.request().query("SELECT ItemID AS id, LTRIM(RTRIM(ItemName)) AS name FROM dbo.Items WHERE IsActive = 1 AND LTRIM(RTRIM(ISNULL(ItemName, ''))) <> ''");
+    await UR.fillItems({ db, businessId: BUSINESS_ID, items: r.recordset || [], log });
+    urErr = '';
+  } catch (e) { const m = String(e && e.message).slice(0, 160); if (urErr !== m) { urErr = m; log('🔤 Item Urdu naam: ' + m); } }
+}
+
 const lock = net.createServer();
 lock.once('error', () => { console.log('transfer-sync pehle se chal raha hai.'); process.exit(3); });
 lock.listen(LOCK_PORT, '127.0.0.1', async () => {
   try { await getPool(); } catch (e) { log('SQL se nahi jura: ' + e.message); process.exit(1); }
-  log('transfer-sync v4.7 chal raha hai — transfer note, print, POSTING aur 🖨 purchase auto-print. Band: Ctrl+C');
+  log('transfer-sync v4.12 chal raha hai — transfer note, print, POSTING aur 🖨 purchase auto-print. Band: Ctrl+C');
   const fail = name => e => { log(`${name} listener toot gaya: ${e.message} — band, bat 30 sec mein dobara chalayega`); process.exit(1); };
   trCol.where('status', '==', 'new').onSnapshot(s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handleTransfer(c.doc)); }); }, fail('transfer'));
   prCol.where('status', '==', 'new').onSnapshot(s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handlePrint(c.doc)); }); }, fail('print'));
   poCol.where('status', '==', 'new').onSnapshot(s => { s.docChanges().forEach(c => { if (c.type !== 'removed') later(() => handlePost(c.doc)); }); }, fail('post'));
   setTimeout(() => later(sweepStatus), 20000); setInterval(() => later(sweepStatus), SWEEP_MS);
   if (POS_NOTE_PRINT) { setTimeout(() => later(posNotes), 15000); setInterval(() => later(posNotes), TN_EVERY_MS); }   // v4.4: POS ke note ki stock parchi (printer wali hi qataar)
+  // v4.12: 🔤 jin items ka Urdu naam nahi un ka AI se khud (urdu-names fillItems) — print ki qataar se BAHAR (parchi kabhi AI ka intezar na kare)
+  if (UR.fillItems) { setTimeout(urItems, 90000); setInterval(urItems, 10 * 60000); }
   // v4: 🖨 purchase auto-print — printer ka kaam transfer / print jobs wali queue mein (ek waqt ek parchi, files na takrayein)
   if (PP) {
     try {
