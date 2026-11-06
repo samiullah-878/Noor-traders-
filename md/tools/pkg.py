@@ -1,5 +1,7 @@
 # Claude Remote: md/pkg.json banata hai (fixed GUID + har item ka apna SIGUID)
 import json, os, hashlib, copy, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from full import to_full
 D = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(D)  # md/
 
@@ -8,6 +10,7 @@ def h64(s):
     return v if v != 0 else 1
 
 def fix(export, guid, name):
+    export = to_full(copy.deepcopy(export))
     m = copy.deepcopy(export['macro'])
     m['m_GUID'] = guid; m['aiGenerated'] = 0; m['m_name'] = name
     m.setdefault('m_category', 'Claude')
@@ -39,7 +42,7 @@ for v in vp + vk:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "💧 Paani + 🍽 Khana-peena naye (✅ / ⏰ button, unlock par yaad, 🧪 Test). Purane band.",
+       "note": "💧 Paani + 🍽 Khana-peena naye (✅ / ⏰ button, unlock par yaad, 🧪 Test). Variables khud bante hain. Purane band.",
        "macros": [mp, mk],
        "vars": vars_,
        "off": ["💧 Paani yaad", "🍽 Khana-peena yaad", "🍽 Khana-peena yaad"]}

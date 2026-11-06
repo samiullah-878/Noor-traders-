@@ -7103,3 +7103,6 @@ Malik: "mera mobile khud connect karo — tum auto delete auto modify kar sako".
   Malik ke MacroDroid ko WRITE_SECURE_SETTINGS (ADB) hai. Doosri session ka "NT · UI Interaction khud ON (Falcon)" unlock par
   accessibility ON kar sakta hai — bank ke dauran takrao mumkin (malik ne abhi kuch nahi kaha).
 - md/ PUBLIC — chaabi / password kabhi nahi (pkg.py check). Phone se wapas jawab ka raasta nahi.
+- 13:50 GHALTI: Remote v1 (link) ke globalVariables phone par bane hi nahi (screenshot: "Variable does not exist (crVer)") — chhote var
+  objects + bina createVar. Theek: md/tools/full.py to_full() (SetVariable createVar true, poore var objects) har macro par; "🤖 Claude Remote 2"
+  shuru mein khud variables banata hai (crHave = {v=crHave}); pkg v2 (ver.txt 2) — Paani / Khana bhi isi shakal mein.

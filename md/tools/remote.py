@@ -1,4 +1,6 @@
-import json, os
+import json, os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from full import to_full
 D = os.path.dirname(os.path.abspath(__file__))
 DIR = "/storage/emulated/0/MacroDroid/Claude"
 BASE = "https://samiullah-878.github.io/Noor-traders-/md/"
@@ -108,6 +110,8 @@ def off(i): return {"m_classType": "DisableMacroAction", "m_SIGUID": 0, "m_state
                     "m_constraintList": [sc("crOff%d" % i, "", eq=False)]}
 
 acts = [
+    sstr("crHave", "{v=crHave}"),          # pehli dafa variable khud ban jaye (wohi qeemat)
+    sstr("crRes", ""), sstr("crOff1", ""), sstr("crOff2", ""), sstr("crOff3", ""), sstr("crOff4", ""), sstr("crOff5", ""),
     sstr("crVer", "err"),
     java(CHECK, "crVer"),
     iff([sc("crVer", "err", eq=False), sc("crVer", "", eq=False), sc("crVer", "{v=crHave}", eq=False)]),
@@ -127,7 +131,7 @@ acts = [
     END,
 ]
 out = {"macroExportVersion": 1, "macro": {
-    "m_name": "🤖 Claude Remote",
+    "m_name": "🤖 Claude Remote 2",
     "m_description": "Har 5 min GitHub (Noor-traders-/md) dekhta hai. Naya version ho to pehle backup, phir Claude ke macros khud import (purane usi ID par badal jate hain) aur purane naam wale band. Chaabi / password kabhi nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
     "m_triggerList": [
@@ -137,6 +141,7 @@ out = {"macroExportVersion": 1, "macro": {
     "globalVariables": [{"m_name": n, "m_type": 2, "isLocalVar": False, "m_stringValue": ""} for n in
                         ("crVer", "crHave", "crRes", "crOff1", "crOff2", "crOff3", "crOff4", "crOff5")],
     "userIcons": None, "aiFeedback": "All files access zaroori."}
+out = to_full(out)
 s = json.dumps(out, ensure_ascii=False, separators=(",", ":"))
 open(os.path.join(D, "remote.json"), "w").write(s)
 print(len(s))
