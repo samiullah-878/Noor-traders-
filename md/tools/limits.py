@@ -103,9 +103,11 @@ sv = [{"m_classType": "LaunchActivityAction", "m_SIGUID": 0, "option": 1, "m_pac
       pause(4), click("Profile"), pause(3), click("Favorites", 0), toast("🔖 Saved")]
 saved = {"macroExportVersion": 1, "macro": {
     "m_name": "🔖 TikTok Saved",
-    "m_description": "Home screen ka shortcut (MacroDroid Shortcut widget → yeh macro): TikTok kholo → Profile → Saved tab. Reels shuru hi nahi hote.",
+    "m_description": "Home screen ka MacroDroid widget button (Blue ya Custom): TikTok kholo → Profile → Saved tab. Reels shuru hi nahi hote.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
-    "m_triggerList": [{"m_classType": "ShortcutTrigger", "m_SIGUID": 112233445566771}],
+    "m_triggerList": [{"m_classType": "ShortcutTrigger", "m_SIGUID": 112233445566771},
+                      {"m_classType": "WidgetPressedTrigger", "m_SIGUID": 112233445566772, "m_widgetType": 0, "m_widgetLabel": "🔖 Saved"},
+                      {"m_classType": "WidgetPressedTrigger", "m_SIGUID": 112233445566773, "m_widgetType": 4, "m_widgetLabel": "🔖 Saved", "iconText": "🔖"}],
     "m_actionList": sv, "m_constraintList": []},
     "globalVariables": [], "userIcons": None, "aiFeedback": "Accessibility (UI Interaction) zaroori."}
 
