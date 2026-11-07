@@ -14,9 +14,9 @@
 //  🔠 Apni marzi: likhai size (main zoom) · headings size · likhai rang · headings rang — har phone (localStorage sam-marzi);
 //     malik "👑 Sab mulazimon par" = blueAccess/look {marzi, mAt} (cloud.setMarzi). AI nahi.
 // =====================================================================================================
-import { recentList } from './recent.js?v=2.198.1';
-import { agentRegister } from './agent.js?v=2.198.1';
-import { smartHit, hlName } from './smart-search.js?v=2.198.1';
+import { recentList } from './recent.js?v=2.199.0';
+import { agentRegister } from './agent.js?v=2.199.0';
+import { smartHit, hlName } from './smart-search.js?v=2.199.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -306,6 +306,17 @@ function navBtnSetup() {
   b.addEventListener('click', () => navSet(!navOpen()));
   document.querySelector('.app-nav')?.addEventListener('click', e => { if (e.target.closest?.('button')) setTimeout(() => navSet(false), 0); });
 }
+// v2.199.0 (malik 7 Nov, screenshot: "front par jitne chips hain un ko left side par ek plus — us ke aage us ke chips · screen poori upar tak khali rahe · major chips ⋮ ke andar"):
+//   phone par screen chips (.app-nav) + 📌 patti (#subBar) BAND; header mein sirf baayein ek chhota ＋ (html.chip-fold) — dabao = dono qatarein khulein (＋ → ✕), phone yaad rakhta hai.
+const FOLD_LS = 'sam-chip-fold';
+const foldOn = () => { try { return localStorage.getItem(FOLD_LS) !== '0'; } catch { return true; } };
+function foldSet(on) { try { localStorage.setItem(FOLD_LS, on ? '1' : '0'); } catch {} document.documentElement.classList.toggle('chip-fold', !!on); const b = $('foldBtn'); if (b) { b.textContent = on ? '＋' : '✕'; b.classList.toggle('is-in', !on); b.title = on ? 'Chips kholein' : 'Chips band'; } }
+function foldSetup() {
+  const top = document.querySelector('main>header .top'); if (!top || $('foldBtn')) return;
+  const row = document.createElement('div'); row.id = 'foldRow'; row.className = 'fold-row';
+  const b = document.createElement('button'); b.type = 'button'; b.id = 'foldBtn'; b.className = 'fold-btn'; b.setAttribute('aria-label', 'Chips'); row.appendChild(b);
+  top.after(row); b.addEventListener('click', () => foldSet(!foldOn())); foldSet(foldOn());
+}
 function paintNavBtn() {
   const b = $('navBtn'); if (!b) return;
   const L = [...document.querySelectorAll('.app-nav button')].filter(x => !x.hidden && x.id !== 'navAll');
@@ -346,7 +357,7 @@ function dlgBtnSetup() {
   let setT = 0; new MutationObserver(() => { clearTimeout(setT); setT = setTimeout(dhLearnSettings, 250); }).observe(body, { childList: true });   // v2.113.0: 🔍 Settings ki cheezein yaad
 }
 export function shellSetup(h = {}) {
-  H = h; mApply(); navBtnSetup(); lockX(); dlgBtnSetup(); dhBtnSetup();
+  H = h; mApply(); navBtnSetup(); foldSetup(); lockX(); dlgBtnSetup(); dhBtnSetup();
   const st = $('settings');
   if (st && !st.dataset.mn0) { st.dataset.mn0 = '1'; const old = st.onclick; H.openSettings = H.openSettings || (() => old?.call(st)); st.onclick = () => { if (isOpen()) close(); else open(); }; st.setAttribute('aria-label', 'Is screen ke kaam'); st.title = 'Is screen ke kaam'; }
   // header ka ‹ — focus ho to pehle focus se wapas
@@ -370,7 +381,7 @@ const dhWr = (k, o) => { try { localStorage.setItem(k, JSON.stringify(o)); } cat
 const dhCan = () => { try { return !!H.owner?.() || H.can?.('app.dhoondo') !== false; } catch { return true; } };
 const dhKey = x => String(x.k).startsWith('ft.') ? 'ft:' + x.t : x.k;   // neeche ki patti ke kaam: naam se pehchan (index badal sakta)
 let DHS = null;
-async function dhStatic() { if (DHS) return DHS; try { DHS = (await import('./dh-cat.js?v=2.198.1')).DH_CAT || {}; } catch { DHS = {}; } return DHS; }
+async function dhStatic() { if (DHS) return DHS; try { DHS = (await import('./dh-cat.js?v=2.199.0')).DH_CAT || {}; } catch { DHS = {}; } return DHS; }
 // is screen ke chips yaad — jo kabhi dikhe sab (haalat ke hisaab se aate jate hain), 21 din na dikhe to bhool jao
 const dhSig = new Map();   // view → pichhli dafa ke chips (wahi hon to localStorage chhoo bhi nahi — tez)
 function dhLearn() {

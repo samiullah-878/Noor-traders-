@@ -7472,3 +7472,13 @@ html body #dialogBody .wo-r.pt-bad{border-color:#f7c9ce;background:linear-gradie
 html body #dialogBody .wo-q{font-style:normal;color:#b3261e}
 html body #dialogBody a.wps-tc{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid #c7d4f5;background:linear-gradient(180deg,#fff,#f3f6fd);color:#223b6d;font-weight:800;font-size:13px;white-space:nowrap;text-decoration:none}
 html body #dialogBody .wo-r small{white-space:normal;line-height:1.3}
+/* v2.199.0: ＋ chips fold (phone) — screen chips + 📌 patti band, baayein ek chhota ＋ */
+@media (min-width:1100px){html body main>header #foldRow{display:none!important}}
+@media (max-width:1099.98px){
+  html body main>header #foldRow{display:flex;align-items:center;margin:4px 0 0;min-height:30px}
+  html body main>header #foldBtn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;min-height:30px!important;padding:0!important;border-radius:999px!important;border:1px solid rgba(255,255,255,.28)!important;background:rgba(255,255,255,.12)!important;color:#fff!important;font-size:19px!important;line-height:1;font-weight:700;box-shadow:none!important}
+  html body main>header #foldBtn.is-in{background:#fff!important;color:#1d3466!important}
+  html.chip-fold:not(.nav-open) body main>header .app-nav{display:none!important}
+  html.chip-fold body main>header #subBar{display:none!important}
+  html:not(.chip-fold):not(.zz1):not(.zz2) body main>header .app-nav{display:flex!important}
+}

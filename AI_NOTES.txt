@@ -7190,3 +7190,6 @@ falcon-macro.js TimeOfDay 21:45 → 21:00 (naye download par). Phone par laga ma
 - App `wa-out.js`: stages chips (likha / awaz / call / aap ko), 📞 section: Device ID (hook) + Mubeen number (callTo) + 🔑 chaabi (banao / copy / nayi — `cloud.getCallKey/setCallKey`) + 📥 Macro link; list mein 🔊 awaz · 📞 uthai (N s) / nahi uthai ×2 / ja rahi. AI: sirf bill number.
 
 ## v2.198.1 (2026-11-07) — 📌 Scroll par upar tairti screens ki patti (nav.js #navFloat / #navFloatD) BAND (malik screenshot: "is ki ab zaroorat nahi"): `floatOn = () => false`, ☰ Sab screens ka toggle hata. Screen badalna = ☰ / 🔍. Wapas mat lao bina malik ke.
+
+## v2.199.0 (2026-11-07) — ＋ CHIPS FOLD (malik screenshot: "front par jitne chips hain un ko left side par ek plus — us ke aage us ke chips · screen poori upar tak khali rahe · major chips ⋮ ke andar")
+- shell.js `foldSetup` (phone <1100px): header `.top` ke neeche `#foldRow` + chhota gol `#foldBtn` ＋ (baayein). `html.chip-fold` (default ON, phone yaad `sam-chip-fold`) = screen chips `.app-nav` (nav=all setting ke bawajood) + 📌 `#subBar` dono CHHUPE; ＋ dabao = dono qatarein khulein (＋ → ✕, safed). ☰ (nav-open) pehle jaisa — poori list. Computer par kuch nahi. AI nahi.
