@@ -43,7 +43,7 @@ let q = '';
 function open() {
   const d = $('dialog'); if (!d) return; q = '';
   d.classList.remove('search-dialog'); d.classList.add('full-dialog'); $('dialogTitle').textContent = '☰ Sab screens';
-  $('dialogBody').innerHTML = `<div class="nv-root"><label class="hs-search nv-search"><input type="search" data-nv-q="1" placeholder="🔍 screen ka naam (jaise fac, galla, stock)…" autocomplete="off"></label><div id="nvGrid"></div><p class="nv-tip">⭐ dabayein = upar ki patti mein hamesha (har phone apni)</p><button type="button" class="nv-ftg" data-nv-float="1">${floatTxt()}</button></div>`;
+  $('dialogBody').innerHTML = `<div class="nv-root"><label class="hs-search nv-search"><input type="search" data-nv-q="1" placeholder="🔍 screen ka naam (jaise fac, galla, stock)…" autocomplete="off"></label><div id="nvGrid"></div><p class="nv-tip">⭐ dabayein = upar ki patti mein hamesha (har phone apni)</p></div>`;
   if (!d.open) d.showModal(); grid();
 }
 function grid() {
@@ -73,7 +73,7 @@ try { mq.addEventListener('change', later); } catch {}
 // Neeche scroll kiya hua ho aur ungli zara neeche khiskayein (page upar chale) = upar patli patti: wahi chips jo upar hain (⭐ pin,
 // aakhri kholi, abhi wali) + ☰. Phir neeche parhein = chhup jaye. Ek tap = wahi screen (asal .app-nav button click — ijazat wahi).
 // Har phone ki apni on / off (☰ Sab screens mein). Computer (baayein list) par nahi.
-const LS_F = 'sam-nav-float', floatOn = () => rd(LS_F) !== false;
+const LS_F = 'sam-nav-float', floatOn = () => false;   // v2.198.1 (malik 7 Nov: "is ki ab zaroorat nahi"): scroll par upar tairti screens ki patti BAND — hamesha (toggle bhi hata); ☰ aur 🔍 se screen badlein
 let fl = null, lastY = 0, shown = false, fT = 0;
 function navBottom() { const n = document.querySelector('.app-nav'); if (!n) return 0; const r = n.getBoundingClientRect(); return r.bottom + window.scrollY; }
 function flPaint(el = fl) {
