@@ -99,29 +99,28 @@ CHECK = {"m_classType": "CheckTextOnScreenAction", "m_SIGUID": 0, "textToCheck":
 tk = []
 tk += unlock("tk") + unlock("ta")          # tk = reels (25 min) · ta = poora TikTok (2 ghante)
 tk += [iff([trig(T_TICK, "Har 1 minute"), SCR, fg(TK, TKN)]),
-         inc("taMin"),
          CHECK,
-         iff([boolc("feed", True, True)]), inc("tkMin"), END,
+         iff([boolc("feed", True, True)]), inc("tkMin"), ELSE, inc("taMin"), END,   # reels = tkMin · Profile / Saved / Inbox = taMin (malik: reels dekhte waqt Saved wala time na kate)
        END]
 tk += lock("tk", 25) + lock("ta", 120)
 tk += [setv("tkLeft", 1, m_intExpression=True, m_expression="25-{v=tkMin}"), expr("taLeft", "120-{v=taMin}")]
-tk += [iff([fg(TK, TKN), lt("taLock", 1)]), ft("nttk", "📵 reels {v=tkLeft} min · TikTok {v=taLeft} min baqi"), ELSE, fthide("nttk"), END]
-tk += [iff([gt("taLock", 0), fg(TK, TKN)]),
-         hrs("ta"), HOME, toast("📵 TikTok ke 2 ghante ho gaye — {v=taHrs} ghante baad (kal isi waqt)"),
+tk += [iff([fg(TK, TKN), lt("taLock", 1)]), ft("nttk", "📵 reels {v=tkLeft} min · Saved {v=taLeft} min baqi"), ELSE, fthide("nttk"), END]
+tk += [iff([trig(T_FEED, "For You dikha"), boolc("feed", True, True)], orc=True),
+         iff([gt("tkLock", 0)]),
+           sint("tkOver", 1), hrs("tk"),
+           iff([gt("taLock", 0)]), HOME, toast("📵 Reels aur Saved dono ka waqt poora — {v=tkHrs} ghante baad"),
+           ELSE, toast("📵 Reels ke 25 min ho gaye — {v=tkHrs} ghante baad · Profile / Saved khule hain"), click("Profile"), END,
+         END,
        ELSE,
-         iff([trig(T_FEED, "For You dikha"), boolc("feed", True, True)], orc=True),
-           iff([gt("tkLock", 0)]),
-             sint("tkOver", 1), hrs("tk"),
-             toast("📵 Reels ke 25 min ho gaye — {v=tkHrs} ghante baad · Profile / Saved khule hain"),
-             click("Profile"),
-           END,
+         iff([gt("taLock", 0), fg(TK, TKN)]),
+           hrs("ta"), HOME, toast("📵 Saved / Profile ke 2 ghante ho gaye — {v=taHrs} ghante baad (kal isi waqt)"),
          END,
        END]
-tk += clock("nttk", TK, TKN, "taLock", [("r", "tkLeft"), ("t", "taLeft")], "📵 reels {lv=rM}:{lv=rS} · TikTok {lv=tM}:{lv=tS} baqi",
+tk += clock("nttk", TK, TKN, "taLock", [("r", "tkLeft"), ("t", "taLeft")], "📵 reels {lv=rM}:{lv=rS} · Saved {lv=tM}:{lv=tS} baqi",
             [anytrig((T_TICK, "Har 1 minute"), (112233445566773, "App khuli"))])
 tiktok = {"macroExportVersion": 1, "macro": {
     "m_name": "📵 TikTok reels",
-    "m_description": "Reels (For You screen) 25 min → reels par aate hi Profile par (Saved / Profile / Inbox khule). Poora TikTok 2 ghante → Home. Dono ka lock 24 ghante (agle din usi waqt). Following feed bhi reels mein ginti hai (upar For You likha hota hai).",
+    "m_description": "Reels (For You screen) 25 min → reels par aate hi Profile par. Profile / Saved / Inbox ka apna 2 ghante (reels dekhte waqt nahi katta) → Home. Dono ka lock 24 ghante (agle din usi waqt). Following feed bhi reels mein ginti hai (upar For You likha hota hai).",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
     "localVariables": [{"m_name": "feed", "m_type": 0, "m_booleanValue": False, "isLocalVar": True}, lvar("tkRem"), lvar("taRem")] + cvars(["r", "t"]),
     "m_triggerList": [

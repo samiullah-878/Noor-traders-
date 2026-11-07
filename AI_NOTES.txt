@@ -7157,3 +7157,4 @@ falcon-macro.js TimeOfDay 21:45 → 21:00 (naye download par). Phone par laga ma
 - PC pos-khata-sync (r): `receipt()` mein bank ho to lines ka before/after null → bank parchi par Sabqa / Ab baqaya nahi (malik: "banks ki parchiyon par baqaya jaat nahi"). Aam khata parchi wahi.
 - manifest 2026-11-07.1. AI nahi.
 - 2026-11-07 15:05 pkg v20 (malik: "TikTok ka time ghari ki tarah kam ho"): limits.py `clock()` — tick / app-launch par (LogicConstraint OR), app saamne + lock nahi: Loop 56 × (pause 1 s; app gayi = hide + break; X = left*60 − {loop_iteration}; M = X/60, N = X%60, S = "0N" agar <10) → FloatingText "mm:ss". TikTok mein reels + poora dono. ScreenContent trigger par loop nahi (baar baar fire hota). AI nahi.
+- 15:10 pkg v21 (malik: "reels dekhte waqt saath wala (Saved) time kam na ho"): tiktok — feed true = tkMin++, warna taMin++ (Saved/Profile/Inbox); taLock sirf feed ke bahar Home; dono lock = Home. Patti "reels mm:ss · Saved mm:ss".
