@@ -37,6 +37,7 @@ khana = json.load(open(os.path.join(D, 'khana2.json')))
 acc = json.load(open(os.path.join(D, 'acc.json')))
 tk = json.load(open(os.path.join(D, 'tiktok.json')))
 wl = json.load(open(os.path.join(D, 'waleed.json')))
+qd = json.load(open(os.path.join(D, 'qaide.json')))
 import remote as RM
 rem = json.loads(json.dumps(RM.REMOTE))
 OLD_PAANI_BREAK = -6917313488054668512          # purane "💧 Paani break" ka GUID — usi jagah naya aa jayega
@@ -45,17 +46,18 @@ mk, vk = fix(khana, h64('claude|khana'), '🍽 Khana-peena')
 ma, va = fix(acc, h64('claude|acc'), '🛠 Accessibility khud ON')
 mr, vr = fix(rem, h64('claude|remote4'), '🤖 Claude Remote 4')
 mt, vt = fix(tk, h64('claude|tiktok'), '📵 TikTok reels')
-mw, vw = fix(wl, h64('claude|waleed'), '🔊 Waleed Bhai')
+mw, vw = fix(wl, h64('claude|waleed'), '🔊 Waleed Bhai')   # ek din ka tha (6 Nov) — ab pkg mein nahi, off mein
+mq, vq = fix(qd, h64('claude|qaide'), '🧠 6 Qaide')
 vars_, seen = [], set()
-for v in vp + vk + vt:
+for v in vp + vk + vt + vq:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🔊 Waleed Bhai: har 10 min bole, raat 12 khud band. Paani awaz band.",
-       "macros": [mp, mk, ma, mr, mt, mw],
+       "note": "🧠 6 Qaide — Paani jaisa dabba, Paani/Khana ke saath takrao nahi. Waleed Bhai band.",
+       "macros": [mp, mk, ma, mr, mt, mq],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}}],
        "vars": vars_,
-       "off": ["🤖 Claude Remote 3", "💧 Paani yaad", "🍽 Khana-peena yaad", "NT · UI Interaction khud ON (Falcon ke liye)"]}
+       "off": ["🔊 Waleed Bhai", "🤖 Claude Remote 3"]}
 os.makedirs(REPO, exist_ok=True)
 s = json.dumps(pkg, ensure_ascii=False, separators=(',', ':'))
 for bad in ('AIza', 'firebase', 'gaariKey', 'bankKey', 'awazKey', 'password'):
