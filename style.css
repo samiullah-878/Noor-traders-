@@ -7456,3 +7456,12 @@ html body .rc-set small{color:#94a3b8;font-size:11px;margin-top:6px}
 html.dk body #dialogBody .rc-r,html.dk body .rc-set .rc-r{background:var(--glass,rgba(255,255,255,.06))!important;border-color:var(--line,rgba(255,255,255,.14))!important}
 html.dk body #dialogBody .rc-main b,html.dk body .rc-set .rc-main b{color:#e5e7eb}
 html.dk body dialog.rc-set{background:#0f172a;color:#e5e7eb}
+/* v2.196.0: 📲 Gahak ko WhatsApp parchi — Settings khirki ka log */
+html body #dialogBody .wo-log{display:grid;gap:6px;max-height:46vh;overflow:auto;min-width:0}
+html body #dialogBody .wo-r{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:12px;border:1px solid #e3e9f5;background:linear-gradient(180deg,#fff,#f6f8fd);min-width:0}
+html body #dialogBody .wo-r>i{flex:none;font-style:normal;font-size:15px}
+html body #dialogBody .wo-r>span{flex:1;min-width:0;display:grid;gap:1px}
+html body #dialogBody .wo-r b{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body #dialogBody .wo-r small{font-size:11.5px;opacity:.72;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body #dialogBody .wo-r em{flex:none;font-style:normal;font-size:11px;opacity:.65}
+html.dk body #dialogBody .wo-r{background:linear-gradient(180deg,#1b2436,#161d2c);border-color:#2b3650}

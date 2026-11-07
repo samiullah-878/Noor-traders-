@@ -7,6 +7,8 @@
 //  2026-11-03 (p): 🐞 bug safai (malik OK) — 🏦 bank parchi ka naam (HBL / ALFALAH) ab BANK wale khate se (pehle doosri party ke naam mein "Alfalah" = HBL ki parchi par ALFALAH) ·
 //    🖨 khata / daily print ka "10 min purana" ab SERVER ke waqt se (phone ki ghari aage / peeche = ghalat "purana hukum" nahi) ·
 //    ⚖️ POS milan "Taza karo" ka jawab (req) kabhi nahi khota (har second wala likhna bhi req saath rakhta hai, ek waqt ek likhna). Voucher banana BILKUL nahi chheda.
+//  2026-11-07 (s): 📲 GAHAK KO WHATSAPP PARCHI — nayi khata entry (jis gahak ke khate par 📲 WhatsApp tick + mobile) ki parchi text waOut/<entryId>
+//    mein (st 'new') → wa-out.js naye number se bhejta hai. Bank / transfer / kharcha khata / purani (edit) entry par nahi. (malik: "WhatsApp wala karna hai, naya number")
 //  2026-11-07 (r): 🏦 BANK PARCHI (HBL / Alfalah aaye-gaye) par Sabqa baqaya / Ab baqaya nahi — sirf raqam, lafzon mein, Tafseel (malik)
 //  2026-11-02 (o): 🖨 Daily — Sale khana, Change/Closing khana, SAB PRINT (akhrajat 2-2 khane, neeche wasooli 2-2, phir + / − hisaab + KAM / ZYADA)
 //  2026-11-02 (n): 🖨 DAILY KHANE KA PRINT — Wasooli / Akhrajat alag (khataPrints j.k 'day' → daySlip), koi bhi mulazim (rules 2.83)
@@ -503,6 +505,31 @@ function receiptBig({ title, code, date, lines, note, copy, pay }) {
   out.push(hrB, L + sm('Dastakhat: ______________________'), '');   // 2026-10-27: malik — neeche tareekh NAHI, 'Blue Khata app' + khali lines nahi (kaghaz kam; GS V 66 khud kaatne tak le jata hai)
   out.push(GS + 'V\x42\x00');                                    // kaghaz kaato
   return out.join('\r\n');
+}
+// 2026-11-07 (s): 📲 gahak ko WhatsApp parchi — sirf text (wa-out.js bhejta hai). Khata par p.wa (malik ka tick) + mobile zaroori.
+function waText({ T, code, date, l, note }) {
+  const d = String(date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/), ds = d ? `${d[3]}-${d[2]}-${d[1]}` : String(date || '');
+  const n = v => 'Rs ' + Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
+  const after = Number(l.afterN) || 0;
+  const out = ['*NOOR TRADERS*', `${String(l.name || '').trim()}`, `Tareekh: ${ds}`, `${l.label}: ${n(l.amount)}`];
+  if (l.before != null) out.push(`Sabqa baqaya: ${n(l.before)}`);
+  if (l.after != null) out.push(`Ab baqaya: ${n(l.after)}${after > 0.004 ? ' (aap ke zimme)' : after < -0.004 ? ' (hum ne dene hain)' : ' (hisaab barabar)'}`);
+  if (note) out.push(`Tafseel: ${String(note).slice(0, 120)}`);
+  if (code) out.push(`Voucher: ${code}`);
+  out.push('Shukriya 🙏');
+  return out.join('\n');
+}
+async function waQueue(e, T, code, plines, bank) {
+  try {
+    if (DRY || bank || !e || !e.partyId || !e.id) return;
+    const p = app.get(e.partyId); if (!p || p.deleted || !p.wa || p.bank || p.kharcha) return;
+    let to = String(p.phone || '').replace(/\D/g, ''); if (to.length === 12 && to.startsWith('92')) to = '0' + to.slice(2); else if (to.length === 10 && to.startsWith('3')) to = '0' + to;
+    if (!/^03\d{9}$/.test(to)) return;
+    const l = { ...(plines[0] || {}), afterN: rupees(appBalance(e.partyId)) };
+    const txt = waText({ T, code, date: e.date, l, note: String(e.note || '').trim() });
+    await biz.collection('waOut').doc(String(e.id)).create({ st: 'new', to, nm: String(p.name || '').slice(0, 40), pid: String(e.partyId), eid: String(e.id), code: String(code || ''), amt: Number(l.amount) || 0, txt, at: Date.now() });
+    log(`📲 WhatsApp parchi queue: ${p.name} · ${to} · ${code}`);
+  } catch (err) { if (!/already exists/i.test(String(err.message || err))) log('📲 waOut: ' + (err.message || err)); }
 }
 function receipt({ title, code, date, lines, note, copy, bank, pay }) {
   if (bank) lines = lines.map(l => ({ ...l, before: null, after: null }));   // 2026-11-07 (r): 🏦 bank parchi par Sabqa / Ab baqaya NAHI (malik: "banks ki parchiyon par baqaya jaat nahi")
@@ -1371,6 +1398,7 @@ async function syncEntries(pool, acct) {
         if (printed) await markApp(docIds, { posPrintedAt: Date.now(), posPrintErr: '' });
         else await markApp(docIds, { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
         await logPrint({ code: r.code, name, amt, ok: printed, bank: !!bank });
+        if (!isTransfer) await waQueue(base, T, r.code, plines, bank);   // (s) 📲 gahak ko WhatsApp
       }
       for (const [k2, l2] of links) if (k2 !== key && l2.voucherId === r.voucherId) await setLink(k2, { posHash: null });
       appMade.set(isTransfer ? 't-' + e.transferId : e.id, { VoucherID: r.voucherId });
@@ -1670,6 +1698,7 @@ async function quickEntries() {
         else await markApp(docIds, { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });
         const ps = ct ? (Date.now() - ct) / 1000 : 0; if (ct) log(`🖨 parchi ${r.code}: entry se ${ps.toFixed(1)} s`);
         await logPrint({ code: r.code, name, amt, ok: printed, bank: !!bank, s: ps });
+        await waQueue(e, T, r.code, plines, bank);   // (s) 📲 gahak ko WhatsApp
       })().catch(er => log(`⚡ parchi (${r.code}) masla: ${er.message}`));
     } catch (err) { log(`⚡ tez raasta (${e.id}) masla: ${err.message} — poora sync banayega`); if (/connect|socket|closed|timeout/i.test(err.message)) await qPoolDrop(); }
     finally { inFlight.delete(key); }
