@@ -4152,3 +4152,4 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - 2026-11-06 pos-sales-dekho v2.3: wapsi jaanch (rtd / rtL / rtA, note mein "bill se juri · alag"); minus pehle jaisa. Dekho root AI_NOTES.
 - 2026-11-06 pkg v5 (md/, phone macros — PC nahi): 📵 TikTok reels 30 min macro; PC par koi tabdeeli nahi.
 - 2026-11-07: nt-print v1.26 + sale-post v1.16 boxTable 5 khane (Items|PCS|CTN|Rate|Amt, Font B) — dono files mein ek jaisa; pos-khata-sync (r) bank parchi par baqaya nahi (receipt(): bank → before/after null). manifest 2026-11-07.1.
+- 2026-11-07: rate-change.js v1.0 NAYA (sirf parhti): khareed rate badla → posStats/rateChg har 30 s check; rate-change-auto.bat; manifest 2026-11-07.2 + services.

@@ -7412,3 +7412,45 @@ html body #qdCard::backdrop{background:transparent}
 #qdCard .qd-all li em{display:block;font-size:11px;color:#fcd34d;margin-top:3px;font-style:normal;text-align:right}
 #qdCard .qd-all li.is-in{border-color:rgba(252,211,77,.5);box-shadow:0 0 0 1px rgba(252,211,77,.25)}
 html body #qdCard .qd-x{width:28px;height:28px;min-height:28px!important;padding:0!important;border-radius:999px!important;border:1px solid rgba(255,255,255,.18)!important;background:rgba(255,255,255,.08)!important;color:#e0e7ff!important;font-size:13px!important;font-weight:900!important;box-shadow:none!important}
+/* v2.194.0: 📈 Rate change (rate-chg.js) — purchase jaisi patli lines; baayein ⋮ settings (#rcLb, apni <dialog> #rcSet), ✅ check hue (#rcChk) */
+html body #dialogBody [data-rc-root]{display:flex;flex-direction:column;gap:6px;min-width:0}
+html body #dialogBody .rc-mini{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 10px;border-radius:999px;background:linear-gradient(180deg,#eef4ff,#e3ecff);border:1px solid #c7d7f5;font-size:12.5px;font-weight:600;color:#1e3a8a;min-width:0}
+html body #dialogBody .rc-mini small{font-weight:600;color:#475569;white-space:nowrap}
+html body #dialogBody .rc-top{display:flex;gap:6px;align-items:center;min-width:0}
+html body #dialogBody .rc-q{flex:1 1 auto;min-width:0;height:36px;min-height:36px!important;padding:0 12px!important;border-radius:999px!important;border:1px solid #d5dce9!important;font-size:14px!important;background:#fff!important}
+html body #dialogBody .rc-chip,html body .rc-set .rc-chip{flex:0 0 auto;height:32px;min-height:32px!important;padding:0 11px!important;margin:0!important;border-radius:999px!important;border:1px solid #cdd6e6!important;background:linear-gradient(180deg,#fff,#eef2f9)!important;color:#1e293b!important;font-size:12.5px!important;font-weight:700!important;white-space:nowrap;box-shadow:none!important}
+html body .rc-set .rc-chip.is-in{background:linear-gradient(180deg,#2563eb,#1d4ed8)!important;color:#fff!important;border-color:#1d4ed8!important}
+html body #dialogBody .rc-chip.rc-go{background:linear-gradient(180deg,#17a05d,#0f7a45)!important;color:#fff!important;border-color:transparent!important}
+html body #dialogBody .rc-list,html body .rc-set .rc-list{display:flex;flex-direction:column;gap:5px;min-width:0}
+html body #dialogBody .rc-r,html body .rc-set .rc-r{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 8px;align-items:center;padding:6px 9px;border-radius:12px;background:#fff;border:1px solid #e3e8f2;min-width:0;transition:opacity .25s,transform .25s}
+html body #dialogBody .rc-r.is-in{border-color:#93c5fd;box-shadow:0 0 0 2px rgba(147,197,253,.35)}
+html body #dialogBody .rc-r.rc-gone{opacity:.25;transform:translateX(12px)}
+html body #dialogBody .rc-cb input{width:20px;height:20px;margin:0;accent-color:#16a34a}
+html body #dialogBody .rc-main,html body .rc-set .rc-main{min-width:0;display:flex;flex-direction:column;gap:1px;cursor:pointer}
+html body #dialogBody .rc-main b,html body .rc-set .rc-main b{font-size:13.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#0f172a}
+html body #dialogBody .rc-main small,html body .rc-set .rc-main small{font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body #dialogBody .rc-rt,html body .rc-set .rc-rt{display:flex;align-items:baseline;gap:4px;white-space:nowrap;font-size:13px;color:#334155}
+html body #dialogBody .rc-rt b{font-size:14px}
+html body #dialogBody .rc-old{text-decoration:line-through;color:#94a3b8;font-size:12px}
+html body #dialogBody .rc-up{color:#b91c1c}html body #dialogBody .rc-dn{color:#15803d}
+html body #dialogBody .rc-rt .rc-wr,html body .rc-set .rc-rt .rc-wr{color:#475569;font-size:11px;margin-left:4px}
+html body #dialogBody .rc-st{font-size:12px}
+html body #dialogBody .rc-ed{grid-column:1/-1;display:flex;flex-direction:column;gap:6px;padding:6px 0 2px;border-top:1px dashed #e2e8f0}
+html body #dialogBody .rc-ed-row{display:flex;gap:6px;flex-wrap:wrap;align-items:flex-end;min-width:0}
+html body #dialogBody .rc-ed-row label{display:flex;flex-direction:column;gap:2px;font-size:11px;color:#475569;font-weight:700;flex:1 1 90px;min-width:0}
+html body #dialogBody .rc-ed-row input{height:36px;min-height:36px!important;padding:0 10px!important;border-radius:10px!important;border:1px solid #cbd5e1!important;font-size:15px!important;font-weight:700!important;background:#fff!important;width:100%;box-sizing:border-box}
+html body #dialogBody .rc-ed-row input[readonly]{background:#f1f5f9!important;color:#64748b!important;font-weight:600!important}
+html body #dialogBody .rc-ed-msg{font-size:11px;color:#64748b}
+html body #dialogBody .rc-empty{padding:18px 10px;text-align:center;color:#64748b;font-size:13px}
+html body #dialog .dialog-head .rc-lb{position:relative;flex:0 0 auto;margin:0 8px 0 0;min-height:0!important;width:42px;height:40px;padding:0!important;border-radius:12px!important;border:1.5px solid #c7d2fe!important;background:linear-gradient(180deg,#f8f9ff,#eceeff)!important;color:#3730a3!important;font-size:22px!important;font-weight:900!important;line-height:1;box-shadow:none!important}
+html body #dialog .dialog-head .rc-lb.is-in{background:linear-gradient(180deg,#4f46e5,#4338ca)!important;color:#fff!important;border-color:#4338ca!important}
+html body dialog.rc-set{inset:0;width:auto;height:auto;max-width:520px;max-height:80vh;margin:auto;padding:0;border:0;border-radius:18px;background:#fff;color:#0f172a;box-shadow:0 20px 50px rgba(2,6,23,.35);overflow:auto}
+html body dialog.rc-set::backdrop{background:rgba(15,23,42,.45)}
+html body .rc-set .rc-set-in{padding:12px 14px 16px;display:flex;flex-direction:column;gap:6px}
+html body .rc-set .rc-set-h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}
+html body .rc-set p{margin:6px 0 2px;font-size:12px;font-weight:800;color:#475569}
+html body .rc-set .rc-chips{display:flex;gap:6px;flex-wrap:wrap}
+html body .rc-set small{color:#94a3b8;font-size:11px;margin-top:6px}
+html.dk body #dialogBody .rc-r,html.dk body .rc-set .rc-r{background:var(--glass,rgba(255,255,255,.06))!important;border-color:var(--line,rgba(255,255,255,.14))!important}
+html.dk body #dialogBody .rc-main b,html.dk body .rc-set .rc-main b{color:#e5e7eb}
+html.dk body dialog.rc-set{background:#0f172a;color:#e5e7eb}
