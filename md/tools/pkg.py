@@ -63,12 +63,12 @@ for v in vp + vk + vt + vq + vf + vb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "⏱ Facebook / YouTube / TikTok khulte hi upar countdown patti (min baqi), app band = gayab.",
+       "note": "🗑 Remote 4, purana Bank mode, Social time alag DELETE (Replace all).",
        "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}}],
        "vars": vars_,
-       "off": ["🤖 Claude Remote 4", "🏦 Bank mode", "Social time alag"],
-       "del": []}
+       "off": [],
+       "del": ["🤖 Claude Remote 4", "🏦 Bank mode", "Social time alag"]}
 os.makedirs(REPO, exist_ok=True)
 s = json.dumps(pkg, ensure_ascii=False, separators=(',', ':'))
 # chaabi ki jaanch — Remote ke Java (sanitize regex) ke lafz nikaal kar
