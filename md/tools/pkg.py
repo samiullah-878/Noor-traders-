@@ -38,6 +38,8 @@ acc = json.load(open(os.path.join(D, 'acc.json')))
 tk = json.load(open(os.path.join(D, 'tiktok.json')))
 wl = json.load(open(os.path.join(D, 'waleed.json')))
 qd = json.load(open(os.path.join(D, 'qaide.json')))
+fy = json.load(open(os.path.join(D, 'fbyt.json')))
+sv = json.load(open(os.path.join(D, 'saved.json')))
 import remote as RM
 rem = json.loads(json.dumps(RM.REMOTE))
 OLD_PAANI_BREAK = -6917313488054668512          # purane "💧 Paani break" ka GUID — usi jagah naya aa jayega
@@ -48,20 +50,22 @@ mr, vr = fix(rem, h64('claude|remote4'), '🤖 Claude Remote 4')
 mt, vt = fix(tk, h64('claude|tiktok'), '📵 TikTok reels')
 mw, vw = fix(wl, h64('claude|waleed'), '🔊 Waleed Bhai')   # ek din ka tha (6 Nov) — ab pkg mein nahi, off mein
 mq, vq = fix(qd, h64('claude|qaide'), '🧠 6 Qaide')
+mf, vf = fix(fy, h64('claude|fbyt'), '📘▶️ Facebook · YouTube')
+ms, vs = fix(sv, h64('claude|saved'), '🔖 TikTok Saved')
 vars_, seen = [], set()
 # 🏦 Bank mode (chat link, phone par) ke globals — link import banata nahi (7 Nov: "Variable does not exist (bkSave)")
 def _gv(n, t, **kw):
     v = {"m_name": n, "m_type": t, "isLocalVar": False, "m_booleanValue": False, "m_intValue": 0, "m_stringValue": ""}; v.update(kw); return v
 vb = [_gv("bankOn", 0), _gv("bkSave", 2), _gv("bkRes", 2), _gv("bkBeat", 1), _gv("bkAge", 1)]
-for v in vp + vk + vt + vq + vb:
+for v in vp + vk + vt + vq + vf + vb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🏦 Bank mode ke 5 variables banaye (bankOn/bkSave/bkRes/bkBeat/bkAge). 🧠 6 Qaide naya.",
-       "macros": [mp, mk, ma, mr, mt, mq],
+       "note": "📵 TikTok reels 25 min + poora 2 ghante · 📘 Facebook 25 min · ▶️ YouTube 2 ghante — lock 24 ghante (agle din usi waqt) · 🔖 TikTok Saved shortcut. Social time alag band.",
+       "macros": [mp, mk, ma, mr, mt, mq, mf, ms],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}}],
        "vars": vars_,
-       "off": ["🔊 Waleed Bhai", "🤖 Claude Remote 3"]}
+       "off": ["Social time alag", "🔊 Waleed Bhai"]}
 os.makedirs(REPO, exist_ok=True)
 s = json.dumps(pkg, ensure_ascii=False, separators=(',', ':'))
 for bad in ('AIza', 'firebase', 'gaariKey', 'bankKey', 'awazKey', 'password'):
