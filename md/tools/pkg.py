@@ -63,7 +63,7 @@ for v in vp + vk + vt + vq + vf + vb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🤖 Claude Remote 5: har update ke baad macros ka saaf export email (googel6235) — Claude khud dekh sakta hai; del se macro hatana.",
+       "note": "⏱ Facebook / YouTube / TikTok khulte hi upar countdown patti (min baqi), app band = gayab.",
        "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}}],
        "vars": vars_,

@@ -29,6 +29,11 @@ HOME = {"m_classType": "LaunchHomeScreenAction", "m_SIGUID": 0, "useAccessibilit
 def pause(s): return {"m_classType": "PauseAction", "m_SIGUID": 0, "m_delayInSeconds": s, "m_useAlarm": False}
 def toast(m): return {"m_classType": "ToastAction", "m_SIGUID": 0, "m_messageText": m, "m_duration": 1, "m_position": 1, "m_backgroundColor": -14606047, "m_textColor": -1, "useTextOnly": True, "cancelPrevious": True}
 def click(text, opt=1): return {"action": 0, "uiInteractionConfiguration": {"blocking": True, "checkOverlays": False, "clickOption": 1, "longClick": False, "skipCount": "0", "textContent": text, "textMatchOption": opt, "useRegex": False, "viewId": "", "xyPercentages": True, "xyPoint": {"x": 0, "y": 0}, "type": "Click"}, "m_SIGUID": 0, "m_classType": "UIInteractionAction"}
+def ft(ident, text): return {"m_classType": "FloatingTextAction", "m_SIGUID": 0, "option": 0, "identifier": ident, "textToDisplay": text,
+    "bgColor": -15788246, "textColor": -1, "alpha": 88, "updateLocation": False, "xPosition": 0.5, "yPosition": 0.04, "padding": 6, "textSize": 13,
+    "corners": 14, "alignment": 0, "moveOption": 0, "variableWidth": True, "widthPercentage": 90, "showOverStatusBar": False, "enableShadow": True}
+def fthide(ident): return {"m_classType": "FloatingTextAction", "m_SIGUID": 0, "option": 1, "identifier": ident}
+def nfg(pk, nm): return {"m_classType": "ActiveApplicationConstraint", "m_SIGUID": 0, "m_active": False, "m_foreground": True, "m_packageNameList": pk, "m_applicationNameList": nm, "usePackageNameOption": 0, "mechanismOption": 2}
 def var(n, t=1, **kw):
     v = {"m_name": n, "m_type": t, "isLocalVar": False, "m_intValue": 0, "m_stringValue": "", "m_booleanValue": False}; v.update(kw); return v
 def lvar(n, t=1): return {"m_name": n, "m_type": t, "isLocalVar": True, "m_intValue": 0, "m_booleanValue": False}
@@ -49,6 +54,9 @@ fy = []
 fy += unlock("fb") + unlock("yt")
 fy += count("fb", FB, FBN, T1) + count("yt", YT, YTN, T1)
 fy += lock("fb", 25) + lock("yt", 120)
+fy += [expr("fbLeft", "25-{v=fbMin}"), expr("ytLeft", "120-{v=ytMin}")]
+fy += [iff([fg(FB, FBN), lt("fbLock", 1)]), ft("ntfb", "📘 Facebook · {v=fbLeft} min baqi"), ELSE, fthide("ntfb"), END]
+fy += [iff([fg(YT, YTN), lt("ytLock", 1)]), ft("ntyt", "▶️ YouTube · {v=ytLeft} min baqi"), ELSE, fthide("ntyt"), END]
 fy += [iff([gt("fbLock", 0), fg(FB, FBN)]), hrs("fb"), HOME, toast("📘 Facebook ke 25 min ho gaye — {v=fbHrs} ghante baad (kal isi waqt)"), END]
 fy += [iff([gt("ytLock", 0), fg(YT, YTN)]), hrs("yt"), HOME, toast("▶️ YouTube ke 2 ghante ho gaye — {v=ytHrs} ghante baad (kal isi waqt)"), END]
 fbyt = {"macroExportVersion": 1, "macro": {
@@ -58,9 +66,10 @@ fbyt = {"macroExportVersion": 1, "macro": {
     "localVariables": [lvar("fbRem"), lvar("ytRem")],
     "m_triggerList": [
         {"m_classType": "RegularIntervalTrigger", "m_SIGUID": T1, "m_seconds": 60, "m_useAlarm": False},
-        {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": T2, "m_launched": True, "m_packageNameList": FB + YT, "m_applicationNameList": FBN + YTN, "usePackageNameOption": 0}],
+        {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": T2, "m_launched": True, "m_packageNameList": FB + YT, "m_applicationNameList": FBN + YTN, "usePackageNameOption": 0},
+        {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": 112233445566773, "m_launched": False, "m_packageNameList": FB + YT, "m_applicationNameList": FBN + YTN, "usePackageNameOption": 0}],
     "m_actionList": fy, "m_constraintList": []},
-    "globalVariables": [var("fbMin"), var("fbLock"), var("fbHrs"), var("ytMin"), var("ytLock"), var("ytHrs")],
+    "globalVariables": [var("fbMin"), var("fbLock"), var("fbHrs"), var("fbLeft"), var("ytMin"), var("ytLock"), var("ytHrs"), var("ytLeft")],
     "userIcons": None, "aiFeedback": "Usage access zaroori."}
 
 # ================= 📵 TikTok reels (v2) =================
@@ -74,7 +83,8 @@ tk += [iff([trig(T_TICK, "Har 1 minute"), SCR, fg(TK, TKN)]),
          iff([boolc("feed", True, True)]), inc("tkMin"), END,
        END]
 tk += lock("tk", 25) + lock("ta", 120)
-tk += [setv("tkLeft", 1, m_intExpression=True, m_expression="25-{v=tkMin}")]
+tk += [setv("tkLeft", 1, m_intExpression=True, m_expression="25-{v=tkMin}"), expr("taLeft", "120-{v=taMin}")]
+tk += [iff([fg(TK, TKN), lt("taLock", 1)]), ft("nttk", "📵 reels {v=tkLeft} min · TikTok {v=taLeft} min baqi"), ELSE, fthide("nttk"), END]
 tk += [iff([gt("taLock", 0), fg(TK, TKN)]),
          hrs("ta"), HOME, toast("📵 TikTok ke 2 ghante ho gaye — {v=taHrs} ghante baad (kal isi waqt)"),
        ELSE,
@@ -93,9 +103,11 @@ tiktok = {"macroExportVersion": 1, "macro": {
     "localVariables": [{"m_name": "feed", "m_type": 0, "m_booleanValue": False, "isLocalVar": True}, lvar("tkRem"), lvar("taRem")],
     "m_triggerList": [
         {"m_classType": "RegularIntervalTrigger", "m_SIGUID": T_TICK, "m_seconds": 60, "m_useAlarm": False},
-        {"m_classType": "ScreenContentTrigger", "m_SIGUID": T_FEED, "textToMatch": "For You", "ignoreCase": True, "enableRegex": False, "packageNameList": TK, "appNameList": TKN, "matchOption": 0}],
+        {"m_classType": "ScreenContentTrigger", "m_SIGUID": T_FEED, "textToMatch": "For You", "ignoreCase": True, "enableRegex": False, "packageNameList": TK, "appNameList": TKN, "matchOption": 0},
+        {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": 112233445566773, "m_launched": True, "m_packageNameList": TK, "m_applicationNameList": TKN, "usePackageNameOption": 0},
+        {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": 112233445566774, "m_launched": False, "m_packageNameList": TK, "m_applicationNameList": TKN, "usePackageNameOption": 0}],
     "m_actionList": tk, "m_constraintList": []},
-    "globalVariables": [var("tkMin"), var("tkLock"), var("tkHrs"), var("tkOver"), var("tkLeft"), var("taMin"), var("taLock"), var("taHrs")],
+    "globalVariables": [var("tkMin"), var("tkLock"), var("tkHrs"), var("tkOver"), var("tkLeft"), var("taMin"), var("taLock"), var("taHrs"), var("taLeft")],
     "userIcons": None, "aiFeedback": "Accessibility zaroori."}
 
 # ================= 🔖 TikTok Saved (shortcut) =================
