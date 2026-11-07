@@ -7496,3 +7496,19 @@ html body #dialogBody .wo-r small{white-space:normal;line-height:1.3}
 html body main .summary>div.thh-mini.thh-mini{display:flex!important;flex-direction:row;align-items:center;gap:8px 12px;flex-wrap:wrap;width:100%;flex:1 1 100%!important;padding:8px 12px!important;border-radius:14px!important;background:rgba(255,255,255,.12)!important;color:#fff!important;font-size:13px;font-weight:700;box-shadow:none!important;border:1px solid rgba(255,255,255,.14)!important}
 html body main .summary>div.thh-mini span{white-space:nowrap}html body main .summary>div.thh-mini span.bad{color:#ffd0d4}html body main .summary>div.thh-mini i{margin-left:auto;font-style:normal;font-size:11px;opacity:.75;font-weight:600;white-space:nowrap}
 html body #dialogBody .thh-dlg{display:block;padding:0}html body #dialogBody .thh-dlg>div.thh{display:block!important;width:100%;box-sizing:border-box;padding:16px!important;border-radius:18px}
+/* v2.201.0: 🗺 Falcon din ka naqsha (gaari.js openFalconDay) — trips chips = buttons, 🗺 Naqsha chip, poora map neeche, trip ki tafseel */
+html body #dialogBody button.gp-trip{font:inherit;font-size:12.5px;cursor:pointer;line-height:1.2;padding:6px 11px}
+html body #dialogBody button.gp-trip.has-pin{border-color:#9ec4f7;background:linear-gradient(180deg,#f3f8ff,#e4efff)}
+html body #dialogBody button.gp-trip.on{background:linear-gradient(180deg,#1d4ed8,#1e3a8a);color:#fff;border-color:#1e3a8a;box-shadow:0 2px 8px rgba(29,78,216,.3)}
+html body #dialogBody button.gp-trip i{font-style:normal;font-size:11px}
+html body #dialogBody .fx-mapbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 10px}
+html body #dialogBody .fx-mapbtn{height:36px;padding:0 16px;border-radius:999px;border:1px solid #1e3a8a;background:linear-gradient(180deg,#2563eb,#1e3a8a);color:#fff;font-weight:800;font-size:13.5px;white-space:nowrap;box-shadow:0 2px 8px rgba(30,58,138,.28);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+html body #dialogBody .fx-mapbtn small{font-weight:600;opacity:.85;font-size:11px}
+html body #dialogBody .fx-maphint{color:#6b7a99;font-size:11.5px}
+html body #dialogBody .fx-map{height:min(62vh,560px);margin:0 -4px 8px;border-radius:16px;position:relative}
+html body #dialogBody .fx-map[hidden]{display:none}
+html body #dialogBody .fx-mapnone{position:absolute;left:10px;right:10px;bottom:10px;z-index:500;margin:0;background:rgba(255,255,255,.94);border:1px solid #dbe3ef;border-radius:12px;padding:8px 10px;font-size:12px;color:#334155}
+html body #dialogBody .fx-tripinfo{display:flex;flex-direction:column;gap:4px;background:#f4f7ff;border:1px solid #d3e0fb;border-radius:14px;padding:9px 12px;margin-bottom:10px;font-size:12.5px;color:#13244a}
+html body #dialogBody .fx-tripinfo[hidden]{display:none}
+html body #dialogBody .fx-tripinfo b{font-size:13.5px}.fx-tripinfo span{display:block;line-height:1.35}.fx-tripinfo em{font-style:normal;font-weight:700;color:#475569;margin-right:4px}.fx-tripinfo small{color:#6b7a99}
+html.dk body #dialogBody .fx-tripinfo,html[data-theme="dark"] body #dialogBody .fx-tripinfo{background:#1b2440;border-color:#2c3a63;color:#dbe6ff}

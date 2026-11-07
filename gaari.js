@@ -27,8 +27,8 @@
 // phera cards. Purani alag entries (bilty/diesel/kharch/reading/tracker/driver — v2.92) bhi jor mein rehti hain.
 // Data: businesses/noor-traders/gaari/{id} kind 'phera' {date, startR, endR, trackerKm, bilties[{id,from,to,party,kiraya,comm,col}],
 //   kharche[{n,a}], diesel[{l,rate,amount,full}], status open|closed, note, by, byName, at, trackerTrips[{t,km,cut}] (v2.95.8)} + gaari/_config.
-import { smartHit } from './smart-search.js?v=2.200.0';
-import { firebaseConfig } from './config.js?v=2.200.0';   // v2.162.0: 📍 MacroDroid ka REST pata   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.201.0';
+import { firebaseConfig } from './config.js?v=2.201.0';   // v2.162.0: 📍 MacroDroid ka REST pata   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (v, d = 0) => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: d });
@@ -732,12 +732,53 @@ function openFalcon() {
     ${own ? '<button type="button" class="gx-new" data-fx-setup="1">⚙️ Falcon setup (MacroDroid)</button>' : ''}</div>`, true);
 }
 function openFalconDay(date) {
-  const d = gpsDays.get(date); if (!d) return; let L = []; try { L = JSON.parse(d.ft || '[]') || []; } catch {}
+  const d = gpsDays.get(date); if (!d) return; let L = [], FD = []; try { L = JSON.parse(d.ft || '[]') || []; } catch {} try { FD = JSON.parse(d.fd || '[]') || []; } catch {}
   const ph = phDay.get(date) || 0, t12 = t => { const [h, m] = String(t).split(':').map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`; };
-  modal(`🛰 ${dmy(date)} · ${num(d.fk, 1)} km`, `<div class="gx-win gg">
+  const fdOf = t => FD.find(q => q.t === t), nPin = FD.filter(q => q.p && (q.p[0] != null || q.p[2] != null)).length;
+  // v2.201.0 (malik: "map ki shakal chahiye — neeche chip, tap = poora map"): trips ke chips par tap = naqsha us trip par; 🗺 Naqsha chip = poora map neeche
+  modal(`🛰 ${dmy(date)} · ${num(d.fk, 1)} km`, `<div class="gx-win gg" data-fx-root="${esc(date)}">
     <div class="gx-kv"><p><span>Falcon km</span><b>${num(d.fk, 2)} km</b></p><p><span>Trips</span><b>${N(d.fn)}</b></p><p><span>Phere</span><b>${ph ? ph + (ph > 1 ? ' (km ' + num(N(d.fk) / ph, 1) + ' har phera)' : '') : '🚫 koi phera nahi'}</b></p>${N(d.km) > 0 ? `<p><span>📱 GPS</span><b>${num(d.km, 1)} km</b></p>` : ''}<p><span>Aakhri dafa parha</span><b>${N(d.fa) ? ago(Date.now() - N(d.fa)) + ' pehle' : '—'}</b></p></div>
-    <div class="gp-trips">${L.map(([t, km]) => `<span class="gp-trip">🕒 ${esc(t12(t))} · <b>${num(km, 2)} km</b></span>`).join('') || '<p class="gr-empty">Trips nahi</p>'}</div>
-    <p class="gg-note">Trip ka waqt + "Total Distance" Falcon-i se hoobahoo. Dohra trip ek dafa; chalta trip agli dafa poora.</p></div>`, true);
+    <div class="gp-trips">${L.map(([t, km]) => { const f = fdOf(t); return `<button type="button" class="gp-trip${f && f.p ? ' has-pin' : ''}" data-fx-trip="${esc(t)}">🕒 ${esc(t12(t))} · <b>${num(km, 2)} km</b>${f && f.p ? ' <i>📍</i>' : ''}</button>`; }).join('') || '<p class="gr-empty">Trips nahi</p>'}</div>
+    <div class="fx-mapbar"><button type="button" class="fx-mapbtn" data-fx-map="1">🗺 Naqsha${nPin ? ` <small>${nPin}/${L.length} trip</small>` : N(d.km) > 0 ? ' <small>GPS raasta</small>' : ''}</button><small class="fx-maphint">${nPin ? 'Start → End har trip (pata se andaza)' : N(d.km) > 0 ? 'Gaari ke phone ka raasta' : 'Is din trips ka pata nahi — agli raat macro v2 se'}</small></div>
+    <div id="fxTripInfo" class="fx-tripinfo" hidden></div><div id="fxMap" class="gg-map fx-map" hidden></div>
+    <p class="gg-note">Trip ka waqt + "Total Distance" Falcon-i se hoobahoo. Dohra trip ek dafa; chalta trip agli dafa poora.${FD.length ? ' Naqsha: Start / End ka pata → nuqta (OpenStreetMap, andaza 100–500 m), Falcon jaisi seedhi lakeer — asal raasta nahi.' : ''}</p></div>`, true);
+}
+// v2.201.0: 🗺 Falcon din ka naqsha — har trip Start 🟢 → End 🔴 + lakeer (fd), gaari ke phone ka GPS raasta ho to neela; trip chip tap = wo trip roshan
+const FX_CENTER = [32.574, 74.079];   // Gujrat (kuch na mile to)
+let fxMapObj = null, fxLayers = new Map();
+async function fxMapOpen(date, focusT) {
+  const d = gpsDays.get(date); if (!d) return; let FD = []; try { FD = JSON.parse(d.fd || '[]') || []; } catch {}
+  const box = $('fxMap'), info = $('fxTripInfo'); if (!box) return;
+  const t12 = t => { const [h, m] = String(t).split(':').map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`; };
+  const addr = a => String(a || '').replace(/^[\d.,]+\s*km\s*away\s*from\s*,?\s*/i, '');
+  if (!fxMapObj || !box.isConnected || fxMapObj._box !== box) {
+    box.hidden = false; box.innerHTML = '<p class="gr-empty">⏳ Naqsha aa raha hai…</p>';
+    try {
+      const [L, P] = await Promise.all([leaflet(), N(d.km) > 0 ? cloud.getGaariPath(date).catch(() => []) : Promise.resolve([])]);
+      if (!box.isConnected) return; box.innerHTML = '';
+      const map = L.map(box, { zoomControl: true, attributionControl: true }); map._box = box; fxMapObj = map; fxLayers = new Map();
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' }).addTo(map);
+      const all = [];
+      if (P.length) { L.polyline(P.map(q => [q[1], q[2]]), { color: '#1d4ed8', weight: 4, opacity: .7 }).addTo(map); P.forEach(q => all.push([q[1], q[2]])); }
+      FD.forEach((f, i) => {
+        if (!f.p) return; const a = f.p[0] != null ? [f.p[0], f.p[1]] : null, b = f.p[2] != null ? [f.p[2], f.p[3]] : null; const g = L.layerGroup().addTo(map);
+        if (a && b) L.polyline([a, b], { color: '#e11d48', weight: 4, opacity: .75 }).addTo(g);
+        if (a) { L.circleMarker(a, { radius: 8, color: '#15803d', fillColor: '#22c55e', fillOpacity: 1, weight: 2 }).addTo(g).bindTooltip(`${i + 1} · ${t12(f.t)} shuru`); all.push(a); }
+        if (b) { L.circleMarker(b, { radius: 8, color: '#9f1239', fillColor: '#f43f5e', fillOpacity: 1, weight: 2 }).addTo(g).bindTooltip(`${i + 1} · ${t12(f.t)} khatam · ${num(f.km, 2)} km`); all.push(b); }
+        fxLayers.set(f.t, { g, pts: [a, b].filter(Boolean) });
+      });
+      if (all.length) map.fitBounds(L.latLngBounds(all), { padding: [28, 28], maxZoom: 15 }); else { map.setView(FX_CENTER, 12); box.insertAdjacentHTML('beforeend', '<p class="fx-mapnone">Is din ka raasta / pata nahi mila — agli raat macro v2 Trip Detail bhi parhega.</p>'); }
+      setTimeout(() => { try { map.invalidateSize(); } catch {} }, 250);
+    } catch (e) { box.innerHTML = `<p class="gr-empty">⚠️ ${esc(e?.message || e)}</p>`; return; }
+  }
+  if (focusT) {
+    const f = FD.find(q => q.t === focusT), lay = fxLayers.get(focusT);
+    fxLayers.forEach((v, k) => { try { v.g.eachLayer(l => l.setStyle && l.setStyle({ opacity: k === focusT ? 1 : .35, fillOpacity: k === focusT ? 1 : .4 })); } catch {} });
+    if (lay && lay.pts.length) { try { lay.pts.length > 1 ? fxMapObj.fitBounds(window.L.latLngBounds(lay.pts), { padding: [40, 40], maxZoom: 15 }) : fxMapObj.setView(lay.pts[0], 14); } catch {} }
+    if (info) { info.hidden = false; info.innerHTML = f ? `<b>🕒 ${esc(t12(f.t))} · ${num(f.km, 2)} km</b>${f.f ? `<span>🟢 <em>Start</em> ${esc(addr(f.f))}${f.q && f.q[0] ? ' <small>(andaza)</small>' : ''}</span>` : ''}${f.e ? `<span>🔴 <em>End</em> ${esc(addr(f.e))}${f.q && f.q[1] ? ' <small>(andaza)</small>' : ''}</span>` : ''}${!f.p ? '<small>Pata se nuqta nahi mila — naqshe par nahi</small>' : ''}` : `<b>🕒 ${esc(t12(focusT))}</b><small>Is trip ka Detail abhi nahi parha (agli raat)</small>`; }
+    document.querySelectorAll('[data-fx-trip]').forEach(b => b.classList.toggle('on', b.dataset.fxTrip === focusT));
+  }
+  try { box.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch {}
 }
 async function openFalconSetup() {
   if (!isOwner()) return;
@@ -761,7 +802,7 @@ async function fxDownload() {
   if (gKey == null) { try { gKey = await cloud.getGaariKey(); } catch { gKey = ''; } }
   if (!gKey) { notice('Pehle 🔑 chaabi banao (📱 Gaari phone setup)'); return; }
   try {
-    const { FALCON_MACRO } = await import('./falcon-macro.js?v=2.200.0');
+    const { FALCON_MACRO } = await import('./falcon-macro.js?v=2.201.0');
     const txt = JSON.stringify(FALCON_MACRO).split('__NT_URL__').join(ggUrl()).split('__NT_KEY__').join(gKey);
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'application/octet-stream' })); a.download = 'NT_Falcon_km.macro';
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
@@ -1083,6 +1124,8 @@ document.addEventListener('click', e => {
   const ggd = e.target.closest?.('[data-gg-day]'); if (ggd) { openGpsDay(ggd.dataset.ggDay); return; }   // v2.162.0: 📍
   if (e.target.closest?.('[data-gg-setup]')) { openGpsSetup(); return; }
   const fxd = e.target.closest?.('[data-fx-day]'); if (fxd) { openFalconDay(fxd.dataset.fxDay); return; }   // v2.190.0: 🛰
+  const fxm = e.target.closest?.('[data-fx-map]'); if (fxm) { const r = fxm.closest('[data-fx-root]'); if (r) fxMapOpen(r.dataset.fxRoot); return; }   // v2.201.0: 🗺
+  const fxt = e.target.closest?.('[data-fx-trip]'); if (fxt) { const r = fxt.closest('[data-fx-root]'); if (r) fxMapOpen(r.dataset.fxRoot, fxt.dataset.fxTrip); return; }
   if (e.target.closest?.('[data-fx-setup]')) { openFalconSetup(); return; }
   if (e.target.closest?.('[data-fx-dl]')) { fxDownload(); return; }
   const ggc = e.target.closest?.('[data-gg-copy]'); if (ggc) { ggCopy(ggc.dataset.ggCopy); return; }

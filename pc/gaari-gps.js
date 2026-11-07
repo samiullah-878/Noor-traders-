@@ -1,5 +1,5 @@
 // =========================================================
-//  gaari-gps.js  v1.1 (2026-11-05) — 📍 GAARI KA PHONE → din ke km (khud)
+//  gaari-gps.js  v1.2 (2026-11-07) — 📍 GAARI KA PHONE → din ke km (khud)
 //  Malik: "gaari mein mobile rakh dein to pura din ka khud minus ho (milage map se) · driver kuch nahi dabayega · jahan 4G na ho?"
 //
 //  Gaari ka phone (MacroDroid, har 1 min) jagah apni list mein jorta hai, phir khufia chaabi (blueAccess/gaariKey) ke saath
@@ -20,8 +20,18 @@
 //    (waqt se), naya parha km purane par (chalta trip baad mein poora). GPS wale khane ab merge se (Falcon na mite).
 //    gaariDay/_falcon = aakhri dafa ka haal (kitne trip, kachcha text ka namoona) — app ⚙️ mein (samajh na aaye to dikhe).
 //    AI NAHI.
+//
+//  v1.2 (2026-11-07) — 🗺 TRIP DETAIL + PATA SE NUQTA (malik: "map ki shakal chahiye · Falcon Trip Detail mein Start / End pata aata hai")
+//    Macro v2 (falcon-macro.js) har trip khol kar Trip Detail parhta hai → body mein "~~DET~~{…}" hisse (Start / End pata, Distance, Time).
+//    Ye script: DET hisse alag (trips ki jori mein kabhi nahi — "to 10:09 PM" doosra waqt orphan ban jata tha) → har trip {t, km, f (Start pata), e (End pata)}
+//    → pata se nuqta: OpenStreetMap NOMINATIM (muft, 1 sawal / 1.1 s, User-Agent zaroori) — "0.31 Km away From, X, Sargodha Rd, Kunjah, Punjab, Pakistan"
+//      ka "X, Sargodha Rd, Kunjah, …" poochho; na mile to pehla hissa hata kar dobara (sarak → mohalla → shehr) = ANDAZA (q = kitne hisse hataye).
+//      Ek pata ek dafa (gaari-geo.json cache). gaariDay/<din>.fd = JSON [{t, km, f, e, p:[la1,lo1,la2,lo2]|null, q:[q1,q2]}] (merge, waqt se).
+//    "MENU?~~…" body = macro ko ☰ nahi mila — _falcon.why 'menu nahi' + raw (agli dafa screen dekh kar theek). Google ka map / API nahi. AI NAHI.
 // =========================================================
 const path = require('path');
+const https = require('https');
+const fs = require('fs');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); const fs = require('fs'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
@@ -117,23 +127,106 @@ function fxMerge(oldJ, add) {
   for (const x of add) m.set(x.t, x.km);
   return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 }
+// ---------- 🗺 v1.2 Trip Detail hisse + pata → nuqta ----------
+const GEO_FILE = path.join(__dirname, 'gaari-geo.json');
+let GEO = null; function geoLoad() { if (GEO) return GEO; try { GEO = JSON.parse(fs.readFileSync(GEO_FILE, 'utf8')); } catch { GEO = {}; } return GEO; }
+function geoSave() { try { fs.writeFileSync(GEO_FILE, JSON.stringify(GEO)); } catch {} }
+// body ko ~~ par todo: DET ke BAAD wala hissa = detail; baqi = list (fxParse ke liye)
+function fxSplit(body) {
+  const parts = String(body || '').split('~~'), list = [], det = [];
+  for (let i = 0; i < parts.length; i++) { const q = parts[i]; if (q.trim() === 'DET') { if (parts[i + 1]) det.push(parts[i + 1]); i++; } else if (q.trim()) list.push(q); }
+  return { list: list.join('~~'), det };
+}
+// ek Trip Detail screen ka text (JSON, quotes → ') → {t:'HH:MM', km, f, e}
+function fxDetail(txt) {
+  const S = []; const rx = /'((?:[^']|'(?=[^,}:]))*)'/g; let m; while ((m = rx.exec(txt))) S.push(m[1].trim());
+  const val = i => { for (let j = i + 1; j < Math.min(S.length, i + 4); j++) { const v = S[j]; if (/[ ,]/.test(v) && /[a-z]/i.test(v) && !/^(start|end|distance|time)$/i.test(v)) return v; } return ''; };
+  const lab = n => S.findIndex(q => q.toLowerCase() === n);
+  const out = { t: '', km: 0, f: '', e: '' };
+  const si = lab('start'), ei = lab('end'), di = lab('distance'), ti = lab('time');
+  if (si >= 0) out.f = val(si); if (ei >= 0) out.e = val(ei);
+  if (di >= 0) { for (let j = di + 1; j < Math.min(S.length, di + 4); j++) { const k = /(\d{1,4}(?:[.,]\d{1,3})?)\s*km/i.exec(S[j]); if (k) { out.km = Math.round(Number(k[1].replace(',', '.')) * 100) / 100; break; } } }
+  if (ti >= 0) { for (let j = ti + 1; j < Math.min(S.length, ti + 4); j++) { const P = fxParse(S[j]); if (P.nDt) { const e = []; DT_RX.forEach(rx2 => { rx2.lastIndex = 0; let q; while ((q = rx2.exec(S[j]))) e.push(q.index); }); out.t = fxFirstTime(S[j]); if (out.t) break; } } }
+  if (!out.t) { out.t = fxFirstTime(txt); }
+  return out.t && (out.f || out.e) ? out : null;
+}
+function fxFirstTime(txt) { const P = fxParseTimes(txt); return P.length ? P[0].t : ''; }
+// sirf waqt (din + HH:MM) nikalo — fxParse jaisa magar km ke baghair
+function fxParseTimes(s) {
+  const ev = [], hh = (h, ap) => { h = Number(h); if (ap) { const p = /^p/i.test(ap); h = h % 12 + (p ? 12 : 0); } return h; };
+  DT_RX.forEach((rx, k) => { rx.lastIndex = 0; let m; while ((m = rx.exec(s))) {
+    let y, mo, d, h, mi, ap;
+    if (k === 0) { d = +m[1]; mo = MON[m[2].slice(0, 3).toLowerCase()]; y = +m[3]; h = m[4]; mi = +m[5]; ap = m[6]; }
+    else if (k === 1) { mo = MON[m[1].slice(0, 3).toLowerCase()]; d = +m[2]; y = +m[3]; h = m[4]; mi = +m[5]; ap = m[6]; }
+    else if (k === 2) { y = +m[1]; mo = +m[2]; d = +m[3]; h = m[4]; mi = +m[5]; ap = m[6]; }
+    else { d = +m[1]; mo = +m[2]; y = +m[3]; h = m[4]; mi = +m[5]; ap = m[6]; }
+    const H = hh(h, ap); if (!mo || mo > 12 || d < 1 || d > 31 || y < 2024 || y > 2100 || H > 23 || mi > 59) continue;
+    ev.push({ i: m.index, day: `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`, t: `${String(H).padStart(2, '0')}:${String(mi).padStart(2, '0')}` });
+  } });
+  return ev.sort((a, b) => a.i - b.i);
+}
+// "0.31 Km away From, Canal View …, Sargodha Rd, Kunjah, Punjab, Pakistan" → poochhne wala pata (hisse)
+function geoParts(addr) {
+  let a = String(addr || '').replace(/^[\d.,]+\s*km\s*away\s*from\s*,?\s*/i, '').trim();
+  const parts = a.split(',').map(q => q.trim()).filter(Boolean);
+  return parts;
+}
+let geoLast = 0;
+function nominatim(q) {
+  return new Promise(res => {
+    const wait = Math.max(0, geoLast + 1100 - Date.now());
+    setTimeout(() => { geoLast = Date.now();
+      const rq = https.request({ hostname: 'nominatim.openstreetmap.org', path: '/search?format=json&limit=1&countrycodes=pk&q=' + encodeURIComponent(q), method: 'GET', headers: { 'User-Agent': 'NoorTraders-BlueKhata/1.0 (shop PC; gaari naqsha)', 'Accept-Language': 'en' }, timeout: 15000 }, r => {
+        let b = ''; r.on('data', c => b += c); r.on('end', () => { try { const J = JSON.parse(b); res(Array.isArray(J) && J[0] ? [Number(J[0].lat), Number(J[0].lon)] : null); } catch { res(null); } });
+      });
+      rq.on('error', () => res(null)); rq.on('timeout', () => { rq.destroy(); res(null); }); rq.end();
+    }, wait);
+  });
+}
+// pata → [lat, lon, q] (q = kitne hisse hata kar mila; 0 = poora pata) · cache
+async function geocode(addr) {
+  const parts = geoParts(addr); if (parts.length < 2) return null;
+  const G = geoLoad(), key = parts.join(', ').toLowerCase();
+  if (G[key] && (G[key].p || Date.now() - (G[key].at || 0) < 7 * 86400000)) return G[key].p ? G[key].p : null;   // na mila = 7 din baad dobara
+  for (let q = 0; q < parts.length - 1 && q < 4; q++) {   // kam az kam 2 hisse (shehr, Punjab) rahein
+    const p = await nominatim(parts.slice(q).join(', '));
+    if (p) { G[key] = { p: [p[0], p[1], q], at: Date.now() }; geoSave(); return G[key].p; }
+  }
+  G[key] = { p: null, at: Date.now() }; geoSave(); return null;
+}
+// fd merge: purane + naye (waqt se), nuqte sirf jin ka nahi
+async function fxDetails(oldJ, dets) {
+  const m = new Map(); try { for (const x of JSON.parse(oldJ || '[]') || []) if (x && x.t) m.set(String(x.t), x); } catch {}
+  for (const d of dets) { const o = m.get(d.t) || {}; m.set(d.t, { t: d.t, km: d.km || o.km || 0, f: d.f || o.f || '', e: d.e || o.e || '', p: o.p || null, q: o.q || null }); }
+  for (const x of m.values()) {
+    if (x.p || (!x.f && !x.e)) continue;
+    const a = x.f ? await geocode(x.f) : null, b = x.e ? await geocode(x.e) : null;
+    if (a || b) { x.p = [a ? a[0] : null, a ? a[1] : null, b ? b[0] : null, b ? b[1] : null]; x.q = [a ? a[2] : null, b ? b[2] : null]; }
+  }
+  return [...m.values()].sort((a, b) => a.t.localeCompare(b.t));
+}
 async function falconTick(docs) {
   const today = dayOf(Date.now()), minDay = dayOf(Date.now() - 3 * 86400000);
   for (const d of docs) {
-    const x = d.data() || {}, raw = String(x.p || ''), body = raw.replace(/^FX1\|[^|]*\|/, '');
-    const P = fxParse(body), reads = body.split('~~').filter(q => q.trim()).length;
+    const x = d.data() || {}, raw = String(x.p || ''), body = raw.replace(/^FX[12]\|[^|]*\|/, '');
+    if (/^MENU\?/.test(body)) { await DAY.doc('_falcon').set({ at: Date.now(), recv: d.createTime ? d.createTime.toMillis() : Date.now(), n: 0, nDt: 0, nKm: 0, reads: 0, km: {}, why: 'menu nahi (☰ nahi mila)', raw: body.slice(0, 3500) }); log('🛰 Falcon: macro ko ☰ menu nahi mila — _falcon.raw dekho'); continue; }
+    const SP = fxSplit(body), P = fxParse(SP.list), reads = SP.list.split('~~').filter(q => q.trim()).length;
+    const dets = SP.det.map(fxDetail).filter(Boolean);   // v1.2: Trip Detail (Start / End pata)
     const byDay = new Map(); let bad = 0;
     for (const t of P.trips) { if (t.day > today || t.day < minDay) { bad++; continue; } if (!byDay.has(t.day)) byDay.set(t.day, []); byDay.get(t.day).push(t); }
     const kmOut = {};
     for (const [day, L] of byDay) {
       const ref = DAY.doc(day), cur = await ref.get(), old = cur.exists ? cur.data() || {} : {};
       const ft = fxMerge(old.ft, L), fk = Math.round(ft.reduce((s, q) => s + (Number(q[1]) || 0), 0) * 100) / 100;
-      await ref.set({ date: day, fk, fn: ft.length, ft: JSON.stringify(ft), fa: Date.now() }, { merge: true });
+      const myDet = dets.filter(q => ft.some(z => z[0] === q.t));   // is din ke trips ke detail (waqt se)
+      let fd = null; if (myDet.length || old.fd) { try { fd = await fxDetails(old.fd, myDet); } catch (e) { log('⚠️ geocode', e.message || e); } }
+      const upd = { date: day, fk, fn: ft.length, ft: JSON.stringify(ft), fa: Date.now() }; if (fd) upd.fd = JSON.stringify(fd);
+      await ref.set(upd, { merge: true });
       kmOut[day] = fk;
-      log(`🛰 ${day}: Falcon ${fk} km · ${ft.length} trip (is dafa ${L.length})`);
+      log(`🛰 ${day}: Falcon ${fk} km · ${ft.length} trip (is dafa ${L.length})${fd ? ` · detail ${myDet.length}, nuqte ${fd.filter(q => q.p).length}/${fd.length}` : ''}`);
     }
     const why = P.trips.length ? (bad && !byDay.size ? 'purane din' : '') : !P.nDt && !P.nKm ? 'kuch nahi' : !P.nKm ? 'km nahi' : !P.nDt ? 'waqt nahi' : 'jori nahi';
-    await DAY.doc('_falcon').set({ at: Date.now(), recv: d.createTime ? d.createTime.toMillis() : Date.now(), n: P.trips.length, nDt: P.nDt, nKm: P.nKm, reads, km: kmOut, why, raw: body.slice(0, 3500) });
+    await DAY.doc('_falcon').set({ at: Date.now(), recv: d.createTime ? d.createTime.toMillis() : Date.now(), n: P.trips.length, nDt: P.nDt, nKm: P.nKm, reads, det: dets.length, km: kmOut, why, raw: body.slice(0, 3500) });
     if (!P.trips.length) log(`🛰 Falcon text aaya magar trip nahi (${why}) — ${body.length} harf`);
   }
 }
@@ -152,7 +245,7 @@ async function tick() {
   for (const d of snap.docs) {
     const x = d.data() || {}, recv = d.createTime ? d.createTime.toMillis() : Date.now();
     if (/^RABTA TEST/.test(String(x.p || ''))) continue;   // app ka 🔎 rabta test — sirf mitao
-    if (/^FX1\|/.test(String(x.p || ''))) { fx.push(d); continue; }   // v1.1: 🛰 Falcon-i ka text (malik ka phone)
+    if (/^FX[12]\|/.test(String(x.p || ''))) { fx.push(d); continue; }   // v1.1: 🛰 Falcon-i ka text (malik ka phone) · v1.2 FX2 = detail bhi
     real++;
     const pts = parse(x.p, recv); n += pts.length;
     for (const q of pts) { const day = dayOf(q[0]); (await loadDay(day)).push(q); touched.add(day); if (!last || q[0] > last[0]) last = q; }
@@ -173,6 +266,6 @@ async function tick() {
 }
 let busy = false;
 async function loop() { if (busy) return; busy = true; try { await tick(); } catch (e) { log('⚠️', e.message || e); } finally { busy = false; } }
-if (require.main === module) log('📍 gaari-gps v1.1 shuru — har 2 min gaari ke phone ki jagah → din ke km · 🛰 Falcon-i trips → din ke Falcon km');
+if (require.main === module) log('📍 gaari-gps v1.2 shuru — har 2 min gaari ke phone ki jagah → din ke km · 🛰 Falcon-i trips → din ke Falcon km');
 if (require.main === module) { loop(); setInterval(ZINDA.guard(loop, 5 * 60000, 'gaari-gps'), EVERY); }
-module.exports = { parse, summarize, dayOf, fxParse, fxMerge };
+module.exports = { parse, summarize, dayOf, fxParse, fxMerge, fxSplit, fxDetail, geoParts, fxDetails };
