@@ -50,7 +50,7 @@ ma, va = fix(acc, h64('claude|acc'), '🛠 Accessibility khud ON')
 mr, vr = fix(rem, h64('claude|remote5'), '🤖 Claude Remote 5')
 mt, vt = fix(tk, h64('claude|tiktok'), '📵 TikTok reels')
 mw, vw = fix(wl, h64('claude|waleed'), '🔊 Waleed Bhai')   # ek din ka tha (6 Nov) — ab pkg mein nahi, off mein
-mq, vq = fix(qd, h64('claude|qaide'), '🧠 6 Qaide')
+mq, vq = fix(qd, h64('claude|qaide'), '🧠 Falsafa')
 mf, vf = fix(fy, h64('claude|fbyt'), '📘▶️ Facebook · YouTube')
 ms, vs = fix(sv, h64('claude|saved'), '🔖 TikTok Saved')
 mb, vbk = fix(bk, h64('claude|bank3'), '🏦 Bank mode 3')
@@ -63,12 +63,12 @@ for v in vp + vk + vt + vq + vf + vb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🗑 Remote 4, purana Bank mode, Social time alag DELETE (Replace all).",
+       "note": "🧠 Falsafa: 6 qaide ki jagah falasifa ke aqwal (20), 12 s baad khud band.",
        "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}}],
        "vars": vars_,
        "off": [],
-       "del": ["🤖 Claude Remote 4", "🏦 Bank mode", "Social time alag"]}
+       "del": []}
 os.makedirs(REPO, exist_ok=True)
 s = json.dumps(pkg, ensure_ascii=False, separators=(',', ':'))
 # chaabi ki jaanch — Remote ke Java (sanitize regex) ke lafz nikaal kar
