@@ -34,6 +34,24 @@ def ft(ident, text): return {"m_classType": "FloatingTextAction", "m_SIGUID": 0,
     "corners": 14, "alignment": 0, "moveOption": 0, "variableWidth": True, "widthPercentage": 90, "showOverStatusBar": False, "enableShadow": True}
 def fthide(ident): return {"m_classType": "FloatingTextAction", "m_SIGUID": 0, "option": 1, "identifier": ident}
 def nfg(pk, nm): return {"m_classType": "ActiveApplicationConstraint", "m_SIGUID": 0, "m_active": False, "m_foreground": True, "m_packageNameList": pk, "m_applicationNameList": nm, "usePackageNameOption": 0, "mechanismOption": 2}
+def sstr(n, v, local=False): return setv(n, 2, local, m_newStringValue=v)
+LOOP = lambda n: {"m_classType": "LoopAction", "m_SIGUID": 0, "m_option": 0, "m_fixedOptionCount": n}
+ENDLOOP = {"m_classType": "EndLoopAction", "m_SIGUID": 0}
+BREAK = {"m_classType": "BreakFromLoopAction", "m_SIGUID": 0}
+# ⏱ ghari jaisa countdown (malik 7 Nov: "TikTok ka time ghari ki tarah kam hona chahie"): har 1 s — timers = [(prefix, leftVar)], text = patti ka likha ({lv=<p>M}:{lv=<p>S})
+def clock(ident, pk, nm, lockVar, timers, text, trigs):
+    a = [iff(trigs + [fg(pk, nm), lt(lockVar, 1)]), LOOP(56), pause(1), iff([nfg(pk, nm)]), fthide(ident), BREAK, END]
+    for p, left in timers:
+        a += [expr(p + "X", "{v=%s}*60-{loop_iteration}" % left, True), expr(p + "M", "{lv=%sX}/60" % p, True), expr(p + "N", "{lv=%sX}%%60" % p, True),
+              iff([lt(p + "N", 10, True)]), sstr(p + "S", "0{lv=%sN}" % p, True), ELSE, sstr(p + "S", "{lv=%sN}" % p, True), END]
+    a += [ft(ident, text), ENDLOOP, END]
+    return a
+def cvars(ps):
+    o = []
+    for p in ps: o += [lvar(p + "X"), lvar(p + "M"), lvar(p + "N"), {"m_name": p + "S", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}]
+    return o
+def trigc(s, n): return {"m_classType": "TriggerThatInvokedConstraint", "m_SIGUID": 0, "m_siGuidThatInvoked": s, "m_triggerName": n, "m_not": False}
+def anytrig(*ts): return {"m_classType": "LogicConstraint", "m_SIGUID": 0, "m_isOrCondition": True, "m_constraintList": [trigc(s, n) for s, n in ts]}
 def var(n, t=1, **kw):
     v = {"m_name": n, "m_type": t, "isLocalVar": False, "m_intValue": 0, "m_stringValue": "", "m_booleanValue": False}; v.update(kw); return v
 def lvar(n, t=1): return {"m_name": n, "m_type": t, "isLocalVar": True, "m_intValue": 0, "m_booleanValue": False}
@@ -59,11 +77,14 @@ fy += [iff([fg(FB, FBN), lt("fbLock", 1)]), ft("ntfb", "📘 Facebook · {v=fbLe
 fy += [iff([fg(YT, YTN), lt("ytLock", 1)]), ft("ntyt", "▶️ YouTube · {v=ytLeft} min baqi"), ELSE, fthide("ntyt"), END]
 fy += [iff([gt("fbLock", 0), fg(FB, FBN)]), hrs("fb"), HOME, toast("📘 Facebook ke 25 min ho gaye — {v=fbHrs} ghante baad (kal isi waqt)"), END]
 fy += [iff([gt("ytLock", 0), fg(YT, YTN)]), hrs("yt"), HOME, toast("▶️ YouTube ke 2 ghante ho gaye — {v=ytHrs} ghante baad (kal isi waqt)"), END]
+FYT = [anytrig((T1, "Har 1 minute"), (T2, "App khuli"))]
+fy += clock("ntfb", FB, FBN, "fbLock", [("f", "fbLeft")], "📘 Facebook · {lv=fM}:{lv=fS} baqi", FYT)
+fy += clock("ntyt", YT, YTN, "ytLock", [("y", "ytLeft")], "▶️ YouTube · {lv=yM}:{lv=yS} baqi", FYT)
 fbyt = {"macroExportVersion": 1, "macro": {
     "m_name": "📘▶️ Facebook · YouTube",
     "m_description": "Facebook 25 min / YouTube 2 ghante (screen on + app saamne, har 1 min). Poore hone par Home + paigham; agle din USI waqt dobara (24 ghante ka lock). Raat 12 reset nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
-    "localVariables": [lvar("fbRem"), lvar("ytRem")],
+    "localVariables": [lvar("fbRem"), lvar("ytRem")] + cvars(["f", "y"]),
     "m_triggerList": [
         {"m_classType": "RegularIntervalTrigger", "m_SIGUID": T1, "m_seconds": 60, "m_useAlarm": False},
         {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": T2, "m_launched": True, "m_packageNameList": FB + YT, "m_applicationNameList": FBN + YTN, "usePackageNameOption": 0},
@@ -96,11 +117,13 @@ tk += [iff([gt("taLock", 0), fg(TK, TKN)]),
            END,
          END,
        END]
+tk += clock("nttk", TK, TKN, "taLock", [("r", "tkLeft"), ("t", "taLeft")], "📵 reels {lv=rM}:{lv=rS} · TikTok {lv=tM}:{lv=tS} baqi",
+            [anytrig((T_TICK, "Har 1 minute"), (112233445566773, "App khuli"))])
 tiktok = {"macroExportVersion": 1, "macro": {
     "m_name": "📵 TikTok reels",
     "m_description": "Reels (For You screen) 25 min → reels par aate hi Profile par (Saved / Profile / Inbox khule). Poora TikTok 2 ghante → Home. Dono ka lock 24 ghante (agle din usi waqt). Following feed bhi reels mein ginti hai (upar For You likha hota hai).",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
-    "localVariables": [{"m_name": "feed", "m_type": 0, "m_booleanValue": False, "isLocalVar": True}, lvar("tkRem"), lvar("taRem")],
+    "localVariables": [{"m_name": "feed", "m_type": 0, "m_booleanValue": False, "isLocalVar": True}, lvar("tkRem"), lvar("taRem")] + cvars(["r", "t"]),
     "m_triggerList": [
         {"m_classType": "RegularIntervalTrigger", "m_SIGUID": T_TICK, "m_seconds": 60, "m_useAlarm": False},
         {"m_classType": "ScreenContentTrigger", "m_SIGUID": T_FEED, "textToMatch": "For You", "ignoreCase": True, "enableRegex": False, "packageNameList": TK, "appNameList": TKN, "matchOption": 0},
