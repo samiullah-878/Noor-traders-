@@ -39,7 +39,7 @@ let FA = null, FF = null; try { FA = require('firebase-admin/app'); FF = require
 const { initializeApp, cert, getApps } = FA || {};
 const { getFirestore, FieldValue } = FF || {};
 
-const VER = '1.25';   // v1.23 (2026-10-26): 🧾 rasid ki items table dabbe (side lines) mein — boxTable
+const VER = '1.26';   // v1.26 (2026-11-07): 🧾 rasid table 5 khane (Rate + Amt ek qatar, Font B)   // v1.23 (2026-10-26): 🧾 rasid ki items table dabbe (side lines) mein — boxTable
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
@@ -110,20 +110,23 @@ const ctnPcs = l => { const pack = Number(l.pack) || 0, qty = Number(l.qty) || 0
 // v1.23 (nt-print): 🧾 DABBE WALI TABLE (malik: "POS wali rasid jaisi side wali lines rasid ke andar") — har item dabbe mein,
 //   Items | PCS | CTN | Rate; naam lamba ho to usi khane mein agli line; neeche daayein Amount; aakhir mein Total ka dabba. W ke hisaab se.
 function boxTable(W, items, pcsSum, ctnSum) {
-  const cols = [Math.max(8, W - 2 - 5 - 3 - 7 - 3), 5, 3, 7];                // Items · PCS · CTN · Rate (+ 5 '|' = W)
+  // 2026-11-07 (malik: "POS wale bill jaisa — pehle Rate phir Amount usi qatar mein"): 5 khane Items | PCS | CTN | Rate | Amt ek qatar;
+  //   Font B (chhota, W × 4/3 akshar) mein taake 5 khane aa jayein; naam lamba = usi khane mein agli line; "Rs …" wali alag line NAHI.
+  const WB = Math.floor(W * 4 / 3);
+  const cols = [Math.max(8, WB - 6 - 4 - 3 - 7 - 7), 4, 3, 7, 7];              // Items · PCS · CTN · Rate · Amt (+ 6 '|' = WB)
   const padL = (t, w) => { t = String(t ?? ''); return t.length > w ? t.slice(0, w) : t.padEnd(w); };
   const padR = (t, w) => { t = String(t ?? ''); return t.length > w ? t.slice(0, w) : t.padStart(w); };
-  const row = c => '|' + padL(c[0], cols[0]) + '|' + padR(c[1], cols[1]) + '|' + padR(c[2], cols[2]) + '|' + padR(c[3], cols[3]) + '|';
+  const fit = (t, w) => { t = String(t ?? ''); if (t.length > w) t = t.replace(/,/g, ''); if (t.length > w && t.includes('.')) t = t.replace(/\.\d+$/, ''); return t; };
+  const row = c => '|' + padL(c[0], cols[0]) + '|' + padR(c[1], cols[1]) + '|' + padR(c[2], cols[2]) + '|' + padR(fit(c[3], cols[3]), cols[3]) + '|' + padR(fit(c[4], cols[4]), cols[4]) + '|';
   const sep = '+' + cols.map(w => '-'.repeat(w)).join('+') + '+';
   const wrap = (t, w) => { const o = []; let cur = ''; for (const x of String(t || '').trim().split(/\s+/).filter(Boolean)) { for (let y = x; y; y = y.slice(w)) { const c = y.slice(0, w); if (!cur) cur = c; else if ((cur + ' ' + c).length <= w) cur += ' ' + c; else { o.push(cur); cur = c; } } } if (cur) o.push(cur); return o.length ? o : ['']; };
-  const out = [sep, row(['Items', 'PCS', 'CTN', 'Rate']), sep];
+  const out = [sep, row(['Items', 'PCS', 'CTN', 'Rate', 'Amt']), sep];
   for (const it of items) {
     const nm = wrap(it.name, cols[0]);
-    nm.forEach((t, i) => out.push(row([t, i ? '' : it.pcs, i ? '' : it.ctn, i ? '' : it.rate])));
-    out.push('|' + padR('Rs ' + it.amt, W - 2) + '|');
+    nm.forEach((t, i) => out.push(row([t, i ? '' : it.pcs, i ? '' : it.ctn, i ? '' : it.rate, i ? '' : it.amt])));
     out.push(sep);
   }
-  out.push('|' + padL('Total: PCS ' + pcsSum + ' / CTN ' + ctnSum, W - 2) + '|', sep);
+  out.push('|' + padL('Total: PCS ' + pcsSum + ' / CTN ' + ctnSum, WB - 2) + '|', sep);
   return out;
 }
 function billJob(d) {
@@ -144,7 +147,7 @@ function billJob(d) {
     const amt = Math.round(Number(l.qty) * Number(l.rate) * 100) / 100;
     items.push({ name: String(l.name || '').trim().slice(0, 60), pcs: n3(pcs), ctn: num(ctn), rate: num(l.rate), amt: num(amt) });
   }
-  for (const x of boxTable(W, items, n3(pcsSum), num(ctnSum))) s.ln(x);   // v1.23: dabbe wali table
+  s.raw(ESC + '!\x01'); for (const x of boxTable(W, items, n3(pcsSum), num(ctnSum))) s.ln(x); s.raw(ESC + '!\x00');   // v1.26: 5 khane, Font B
   s.raw(ESC + 'a\x02'); s.ln(big('Rs.' + num(total))); s.raw(ESC + 'a\x00');
   s.ln(line('Cash Received:', 'Rs.' + num(cash)));
   s.ln(line(d.mode === 'wholesale' ? 'Balance (Udhaar):' : 'Balance:', 'Rs.' + num(Math.round((total - cash) * 100) / 100)));

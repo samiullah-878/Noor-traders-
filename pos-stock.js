@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.191.1';
-import { liveLabelsHTML } from './barcode.js?v=2.191.1';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.192.0';
+import { liveLabelsHTML } from './barcode.js?v=2.192.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -699,13 +699,13 @@ export function stockRozChip() {
 export async function stockRozOpen(k) {
   if (!cloud) return; start();
   if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  if (isOwner() && !k) { try { (await import('./roz.js?v=2.191.1')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
+  if (isOwner() && !k) { try { (await import('./roz.js?v=2.192.0')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
   const L = rozLocs().filter(rozCan);
   if (!rozCfg().on) { notice('📋 Roz ki ginti malik ne band rakhi hai'); return; }
   if (!L.length) { notice('🔒 Roz ki ginti ki ijazat nahi (malik: Settings → Mulazim → 📋 Roz ki ginti)'); return; }
   const go = x => { try { window.ntRecentOpen?.({ open: { kind: 'stock', screen: 'roz', k: x } }); } catch { rozEnter(x); } };
   if (k || L.length === 1) { go(k || L[0].k); return; }
-  try { (await import('./roz.js?v=2.191.1')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
+  try { (await import('./roz.js?v=2.192.0')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
 }
 // roz.js ke liye andar ka saman (sirf parhna + wahi kaam jo buttons karte hain)
 export function stockRozApi() {
@@ -729,7 +729,7 @@ export function stockRozApi() {
 let farqMod = null;
 const farqCan = () => seeStock() && (isOwner() || can('stock.farq'));
 async function farqOpenNow() { if (!farqCan()) { notice('⚖️ Stock farq — ijazat nahi (malik se kahein)'); return; } start(true); if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  try { farqMod = farqMod || await import('./farq.js?v=2.191.1'); recentPush({ key: 'farq', icon: '⚖️', label: 'Stock farq', open: { kind: 'stock', screen: 'farq' } }); farqMod.farqOpen(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
+  try { farqMod = farqMod || await import('./farq.js?v=2.192.0'); recentPush({ key: 'farq', icon: '⚖️', label: 'Stock farq', open: { kind: 'stock', screen: 'farq' } }); farqMod.farqOpen(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
 // sab jagah (jo gini) ka asal farq — is round ki ginti
 function oxNet(id) { let net = 0, k = false, z = false, n = 0, pr = 0; for (const b of brInfo().branches) { const it = itemAt(b, id); if (!it) continue; const c = countOf(b, it); if (!c) continue; const f = r3(countedPcs(c) - Number(sysOf(c, it))); net += f; n++; if (f < -0.001) k = true; if (f > 0.001) z = true; pr = Number(it.prate) || pr; } return n ? { net: r3(net), rs: net * pr, both: k && z, n } : null; }
 function oxHTML(r, c, diff) {
@@ -781,7 +781,7 @@ function qtrGinti(b, id) {
     return Math.abs(f) > 0.0005 ? { f: r3(f), round } : null; } catch { return null; }
 }
 async function qtrGo(o) { if (!qtrCan()) { notice('⇄ Transfer — ijazat nahi (malik se kahein)'); return; } start(true); if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  try { qtrMod = qtrMod || await import('./qtr.js?v=2.191.1'); qtrMod.qtrOpen(qtrApi(), o); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
+  try { qtrMod = qtrMod || await import('./qtr.js?v=2.192.0'); qtrMod.qtrOpen(qtrApi(), o); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
 // jagah badli: sab se bara KAM (yahan maal kam = POS zyada) → sab se bari ZYADTI, tadad = dono mein chhoti
 function oxPair(id) {
   let k = null, z = null; for (const b of brInfo().branches) { const it = itemAt(b, id); if (!it) continue; const c = countOf(b, it); if (!c) continue; const f = r3(countedPcs(c) - Number(sysOf(c, it)));
@@ -3283,6 +3283,7 @@ document.addEventListener('keydown', e => {
 let scanHit = null;
 let scanList = [];        // scan kiye hue item ids (tarteeb se)
 let scanStream = null, scanTimer = null, scanBox = null, scanBusy = false;
+const camSz = () => { let n = 2; try { n = Number(localStorage.getItem('sam-scan-camsz')) || 2; } catch {} return Math.min(5, Math.max(1, n)); };   // v2.192.0: 📐 camera khirki size 1-5
 let scanCamOff = false; try { scanCamOff = localStorage.getItem('sam-scan-camoff') === '1'; } catch {}   // v2.40: 📷 camera band/chalu (phone yaad rakhta hai)
 function camOffBtn(tools) { const b = document.createElement('button'); b.type = 'button'; b.className = 'scan-camoff'; b.textContent = scanCamOff ? '📷 Camera chalu' : '📷 Camera band';
   b.onclick = () => { scanCamOff = !scanCamOff; try { localStorage.setItem('sam-scan-camoff', scanCamOff ? '1' : '0'); } catch {} closeScanner(); openScanner(); }; tools.appendChild(b); return b; }
@@ -3489,6 +3490,7 @@ async function openScanner() {
   const findHTML = `<div class="scan-find"><div class="scan-find-row"><input class="scan-q" type="search" enterkeyhint="next" placeholder="🔍 Naam ya code likhein" autocomplete="off"><input class="scan-n" type="text" inputmode="decimal" enterkeyhint="done" placeholder="Pcs" autocomplete="off"><input class="scan-c" type="text" inputmode="decimal" enterkeyhint="done" placeholder="Ctn" autocomplete="off"><button type="button" class="scan-u" hidden>Pcs</button></div><div class="scan-hits" hidden></div></div>`;
   scanBox = document.createElement('div');
   scanBox.className = 'scan-box' + (v2 ? ' v2' : '');
+  if (v2) scanBox.dataset.camsz = String(camSz());   // v2.192.0: 📐 size shuru se
   if (v2) scanBox.innerHTML = `<div class="scan-inner">
       ${findHTML}
       <div class="scan-row2">
@@ -3906,6 +3908,12 @@ async function openScanner() {
     }
   } catch {}
   camOffBtn(tools);   // v2.40: 🔄 Camera ke neeche 📷 Camera band
+  if (v2) {   // v2.192.0: 📐 chhoti camera khirki ka size 1-5 (malik: "thori bari · 4-5 size, phone ke hisaab se") — phone yaad rakhta hai
+    const szb = document.createElement('button'); szb.type = 'button';
+    const paintSz = () => { szb.textContent = `📐 Size ${camSz()}`; scanBox.dataset.camsz = String(camSz()); };
+    szb.onclick = () => { const n = camSz() % 5 + 1; try { localStorage.setItem('sam-scan-camsz', String(n)); } catch {} paintSz(); };
+    tools.appendChild(szb); paintSz();
+  }
   if (v2) scanBox.querySelector('.scan-cam')?.addEventListener('click', refocus);   // v2.179.5: 📷 chhoti live khirki (malik) — tap = focus
   else video.addEventListener('click', refocus);
   if (caps.torch) {
@@ -5312,8 +5320,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.191.1';
-import { recentPush } from './recent.js?v=2.191.1';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.192.0';
+import { recentPush } from './recent.js?v=2.192.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)

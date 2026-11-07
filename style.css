@@ -7218,7 +7218,9 @@ html body .scan-box.v2 .scan-row2{display:flex;align-items:center;gap:6px;margin
 html body .scan-box.v2 .scan-inner{position:relative}
 /* v2.179.5 (malik: "scanning nahi ho rahi" — chhupe camera se nishana nahi lagta, kaun sa camera chal raha pata nahi): camera = 📷 ▾ chip ke saath
    CHHOTI LIVE KHIRKI (72×44, tap = focus) — poori screen peeche wala camera + bharat parda (v2.179.3 / v2.179.4) HATA. Wapas mat lao. */
-html body .scan-box.v2 .scan-row2>.scan-cam{position:relative!important;flex:0 0 72px!important;width:72px!important;height:44px!important;min-height:0!important;max-height:44px!important;margin:0!important;border-radius:11px!important;overflow:hidden;background:#0b1220!important;border:1px solid #c9d3e6!important;box-shadow:0 1px 3px rgba(16,25,43,.18);cursor:pointer}
+html body .scan-box.v2 .scan-row2>.scan-cam{position:relative!important;flex:0 0 var(--cw,96px)!important;width:var(--cw,96px)!important;height:var(--ch,60px)!important;min-height:0!important;max-height:var(--ch,60px)!important;margin:0!important;border-radius:11px!important;overflow:hidden;background:#0b1220!important;border:1px solid #c9d3e6!important;box-shadow:0 1px 3px rgba(16,25,43,.18);cursor:pointer}
+/* v2.192.0: 📐 camera khirki ka size 1-5 (📷 ▾ → Size chip, phone yaad rakhta hai; malik: "thori bari, 4-5 size") — default 2 */
+html body .scan-box.v2[data-camsz="1"]{--cw:72px;--ch:44px}html body .scan-box.v2[data-camsz="2"]{--cw:96px;--ch:60px}html body .scan-box.v2[data-camsz="3"]{--cw:124px;--ch:78px}html body .scan-box.v2[data-camsz="4"]{--cw:150px;--ch:94px}html body .scan-box.v2[data-camsz="5"]{--cw:180px;--ch:112px}
 html body .scan-box.v2 .scan-row2>.scan-cam video{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;min-height:0!important;max-height:none!important;object-fit:cover;border-radius:0!important;display:block}
 html body .scan-box.v2 .scan-row2>.scan-cam .scan-line{position:absolute;top:50%!important;left:8%!important;right:8%!important;height:1.5px;z-index:1}
 

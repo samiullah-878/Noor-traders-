@@ -7,6 +7,7 @@
 //  2026-11-03 (p): 🐞 bug safai (malik OK) — 🏦 bank parchi ka naam (HBL / ALFALAH) ab BANK wale khate se (pehle doosri party ke naam mein "Alfalah" = HBL ki parchi par ALFALAH) ·
 //    🖨 khata / daily print ka "10 min purana" ab SERVER ke waqt se (phone ki ghari aage / peeche = ghalat "purana hukum" nahi) ·
 //    ⚖️ POS milan "Taza karo" ka jawab (req) kabhi nahi khota (har second wala likhna bhi req saath rakhta hai, ek waqt ek likhna). Voucher banana BILKUL nahi chheda.
+//  2026-11-07 (r): 🏦 BANK PARCHI (HBL / Alfalah aaye-gaye) par Sabqa baqaya / Ab baqaya nahi — sirf raqam, lafzon mein, Tafseel (malik)
 //  2026-11-02 (o): 🖨 Daily — Sale khana, Change/Closing khana, SAB PRINT (akhrajat 2-2 khane, neeche wasooli 2-2, phir + / − hisaab + KAM / ZYADA)
 //  2026-11-02 (n): 🖨 DAILY KHANE KA PRINT — Wasooli / Akhrajat alag (khataPrints j.k 'day' → daySlip), koi bhi mulazim (rules 2.83)
 //  2026-11-02 (m3): 🖨 khata parchi par SIRF RAQAM mota (ESC E line ke andar — tareekh / note patle) · tarteeb app wali (khOrd, app bhejti hai)
@@ -504,6 +505,7 @@ function receiptBig({ title, code, date, lines, note, copy, pay }) {
   return out.join('\r\n');
 }
 function receipt({ title, code, date, lines, note, copy, bank, pay }) {
+  if (bank) lines = lines.map(l => ({ ...l, before: null, after: null }));   // 2026-11-07 (r): 🏦 bank parchi par Sabqa / Ab baqaya NAHI (malik: "banks ki parchiyon par baqaya jaat nahi")
   if (bank || (!PAY_DO && pay !== 'nocash')) pay = '';   // 2026-10-23: 'nocash' (galle se nahi) payDo band ho tab bhi
   if (!bank && BIG_SLIP) return receiptBig({ title, code, date, lines, note, copy, pay });
   const W = PRINT_WIDTH;

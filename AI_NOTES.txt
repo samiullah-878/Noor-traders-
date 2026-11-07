@@ -7150,3 +7150,9 @@ falcon-macro.js TimeOfDay 21:45 → 21:00 (naye download par). Phone par laga ma
 - 13:20 pkg v17 (malik: "phone card nahi aa raha · accessibility ON ka popup baar baar"): (1) qaide.py — ElseIfConfirmedThen ka ELSE (timeout = negative) qdOff=aaj set karta tha → 12 s timeout par poora din band; ELSE hataya, negative "✕". QAIDA: ConfirmThen mein timeout = negative branch — timeout wale dialog ke Else mein kabhi "aaj band" jaisa kaam mat rakho. (2) acc.py — toast hata (khamosh), interval 120 → 600 s.
 - 13:23 pkg v18: qdOff ki shart bhi hatai (phone par qdOff = aaj set ho chuka tha → card aaj kabhi na aata).
 - v2.191.1 + pkg v19 (malik: "popup ka time 4 second"): Falsafa card app SHOW 4000 ms, phone timeoutSeconds 4.
+
+## v2.192.0 (2026-11-07) — 🧾 rasid table POS jaisi · 📐 camera khirki size · 🏦 bank parchi baqaya nahi (malik OK 14:45)
+- PC nt-print v1.26 + sale-post v1.16 `boxTable`: 5 khane Items | PCS | CTN | Rate | Amt EK qatar (malik: "pehle rate phir total rate, POS bill jaisa"); Font B (ESC ! 0x01, WB = W×4/3: 32→42, 42→56 akshar); rate/amt 7 akshar — na aaye to comma hatao, phir dashamlav; "Rs …" alag line hata di. Dono files mein EK jaisa code (badlo to dono).
+- pos-stock.js: `camSz()` (sam-scan-camsz 1–5, default 2) → `scanBox.dataset.camsz` → style.css `--cw/--ch` (72×44 … 180×112); 📷 ▾ tools mein "📐 Size N" chip (dabao = agla). Sale / Purchase / WhatsApp sab (ek scanner).
+- PC pos-khata-sync (r): `receipt()` mein bank ho to lines ka before/after null → bank parchi par Sabqa / Ab baqaya nahi (malik: "banks ki parchiyon par baqaya jaat nahi"). Aam khata parchi wahi.
+- manifest 2026-11-07.1. AI nahi.
