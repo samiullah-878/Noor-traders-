@@ -47,7 +47,7 @@ OLD_PAANI_BREAK = -6917313488054668512          # purane "💧 Paani break" ka G
 mp, vp = fix(paani, OLD_PAANI_BREAK, '💧 Paani')
 mk, vk = fix(khana, h64('claude|khana'), '🍽 Khana-peena')
 ma, va = fix(acc, h64('claude|acc'), '🛠 Accessibility khud ON')
-mr, vr = fix(rem, h64('claude|remote4'), '🤖 Claude Remote 4')
+mr, vr = fix(rem, h64('claude|remote5'), '🤖 Claude Remote 5')
 mt, vt = fix(tk, h64('claude|tiktok'), '📵 TikTok reels')
 mw, vw = fix(wl, h64('claude|waleed'), '🔊 Waleed Bhai')   # ek din ka tha (6 Nov) — ab pkg mein nahi, off mein
 mq, vq = fix(qd, h64('claude|qaide'), '🧠 6 Qaide')
@@ -63,15 +63,23 @@ for v in vp + vk + vt + vq + vf + vb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🔖 TikTok Saved ab Blue / Custom widget button par bhi.",
+       "note": "🤖 Claude Remote 5: har update ke baad macros ka saaf export email (googel6235) — Claude khud dekh sakta hai; del se macro hatana.",
        "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}}],
        "vars": vars_,
-       "off": ["🏦 Bank mode", "Social time alag"]}
+       "off": ["🤖 Claude Remote 4", "🏦 Bank mode", "Social time alag"],
+       "del": []}
 os.makedirs(REPO, exist_ok=True)
 s = json.dumps(pkg, ensure_ascii=False, separators=(',', ':'))
+# chaabi ki jaanch — Remote ke Java (sanitize regex) ke lafz nikaal kar
+chk = s
+for m in pkg['macros']:
+    for a in m.get('m_actionList', []):
+        if a.get('m_classType') == 'JavaAction': chk = chk.replace(json.dumps(a['scriptText'], ensure_ascii=False)[1:-1], '')
 for bad in ('AIza', 'firebase', 'gaariKey', 'bankKey', 'awazKey', 'password'):
-    assert bad not in s, bad
+    assert bad not in chk, bad
+import re
+assert not re.search(r'(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{30,}', chk), 'lambi chaabi jaisi string'
 open(os.path.join(REPO, 'pkg.json'), 'w').write(s)
 open(os.path.join(REPO, 'ver.txt'), 'w').write(ver + '\n')
 # validator ke liye har macro alag .macro shakal mein bhi
