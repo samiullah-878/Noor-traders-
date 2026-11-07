@@ -63,7 +63,7 @@ for v in vp + vk + vt + vq + vf + vb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "📵 TikTok: Saved / Profile ka 2 ghante wala timer sirf wahan chalta hai (reels mein nahi).",
+       "note": "🧠 Falsafa: sirf top 5 falasifa (Suqraat · Aflatoon · Arastoo · Confucius · Kant), card safed.",
        "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}}],
        "vars": vars_,
