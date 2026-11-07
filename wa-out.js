@@ -3,7 +3,7 @@
 // gahak ko text parchi bhejta hai — sirf un khaton par jahan malik ne "📲 WhatsApp parchi" ON kiya ho (party.wa) + mobile number ho.
 // Yahan: Settings ki khirki — number jorna (🔢 code / 🔳 QR), chalu / band, roz ki hadd, faasla, aaj ki ginti, aakhri 60 bheje hue.
 // Data: blueAccess/waLinkOut (PC likhe) · waCmdOut (app → PC) · waOutCfg (malik) · waOutLog (PC). AI nahi.
-let C = null, wl = null, wlErr = '', wlStop = null, cf = null, cfStop = null, lg = null, lgStop = null, qrLast = '', st = { cmd: '', cfg: '' };
+let C = null, wl = null, wlErr = '', wlStop = null, cf = null, cfStop = null, lg = null, lgStop = null, pt = null, ptStop = null, qrLast = '', st = { cmd: '', cfg: '' };
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const perm = e => /permission|insufficient/i.test(String(e?.code || '') + String(e?.message || ''));
@@ -20,18 +20,19 @@ export function woSetup(c) {
   document.addEventListener('click', onClick);
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target?.matches?.('#dialogBody [data-wo-ph]')) { e.preventDefault(); cmd('code'); } });
 }
-function unlisten() { for (const f of [wlStop, cfStop, lgStop]) { try { f?.(); } catch {} } wlStop = cfStop = lgStop = null; qrLast = ''; }
+function unlisten() { for (const f of [wlStop, cfStop, lgStop, ptStop]) { try { f?.(); } catch {} } wlStop = cfStop = lgStop = ptStop = null; qrLast = ''; }
 export function woOpen() {
   if (!C?.owner()) { C?.notice('Sirf malik'); return; }
   qrLast = '';
-  C.modal('📲 Gahak ko WhatsApp parchi', `<div class="wps-set" data-wo-root="1"><div data-wo-link="1">${linkHTML()}</div><div data-wo-cfg="1">${cfgHTML()}</div><div data-wo-log="1">${logHTML()}</div></div>`, true);
+  C.modal('📲 Gahak ko WhatsApp parchi', `<div class="wps-set" data-wo-root="1"><div data-wo-link="1">${linkHTML()}</div><div data-wo-cfg="1">${cfgHTML()}</div><div data-wo-pt="1">${ptHTML()}</div><div data-wo-log="1">${logHTML()}</div></div>`, true);
   if (!wlStop && C.cloud?.listenWaLinkOut) wlStop = C.cloud.listenWaLinkOut((d, e) => { if (!alive()) return; if (e) wlErr = perm(e) ? 'rules' : 'net'; else { wl = d || {}; wlErr = ''; } paint('link'); });
   if (!cfStop && C.cloud?.listenWaOutCfg) cfStop = C.cloud.listenWaOutCfg((d, e) => { if (!alive()) return; if (!e) { cf = d; paint('cfg'); } });
+  if (!ptStop && C.cloud?.listenParchiTrack) ptStop = C.cloud.listenParchiTrack((d, e) => { if (!alive()) return; if (!e) { pt = d; paint('pt'); } });
   if (!lgStop && C.cloud?.listenWaOutLog) lgStop = C.cloud.listenWaOutLog((d, e) => { if (!alive()) return; if (!e) { lg = d; paint('log'); } });
   try { $('dialog')?.addEventListener('close', unlisten, { once: true }); } catch {}
   qrPaint();
 }
-const cfgNow = () => ({ on: cf?.on !== false, lim: Math.max(10, Math.min(500, Number(cf?.lim) || 150)), gap: Math.max(3, Math.min(60, Number(cf?.gap) || 8)) });
+const cfgNow = () => ({ on: cf?.on !== false, lim: Math.max(10, Math.min(500, Number(cf?.lim) || 150)), gap: Math.max(3, Math.min(60, Number(cf?.gap) || 8)), stMin: Math.max(1, Math.min(60, Number(cf?.stMin) || 5)) });
 function linkHTML() {
   const hd = '<h4>📱 Bhejne wala number (dukan ka WhatsApp Business — alag number)</h4>';
   if (wlErr === 'rules') return `<div class="wps-sec">${hd}<p class="wps-err">🔐 Ijazat nahi (rules).</p></div>`;
@@ -60,7 +61,20 @@ function cfgHTML() {
   return `<div class="wps-sec"><h4>⚙️ Kaam</h4><div class="wps-row"><button type="button" class="wps-tc${c.on ? ' is-in' : ''}" data-wo-set="on:${c.on ? 0 : 1}">${c.on ? '✅ Chalu' : '⛔ Band'}</button><i class="wps-wst">${stTxt(st.cfg)}</i></div>
     <div class="wps-row"><span class="wps-mut">Roz ki hadd</span>${seg('lim', 50, '50')}${seg('lim', 100, '100')}${seg('lim', 150, '150')}${seg('lim', 300, '300')}</div>
     <div class="wps-row"><span class="wps-mut">Faasla</span>${seg('gap', 5, '5 s')}${seg('gap', 8, '8 s')}${seg('gap', 15, '15 s')}${seg('gap', 30, '30 s')}</div>
+    <div class="wps-row"><span class="wps-mut">⏰ Mubeen "start" ka intezar</span>${seg('stMin', 3, '3 min')}${seg('stMin', 5, '5 min')}${seg('stMin', 10, '10 min')}${seg('stMin', 15, '15 min')}</div>
     <small class="wps-mut">📲 Kis gahak ko: us ke khate ke ⋮ → "📲 WhatsApp parchi ON" (mobile number khate mein ho). Bank / kharcha khate par nahi. Paigham: naam · tareekh · raqam · sabqa / ab baqaya · tafseel · voucher no.</small></div>`;
+}
+function ptHTML() {   // 📋 Mubeen ki parchiyan (PC wa-parchi v2.6 blueAccess/parchiTrack)
+  const L = Array.isArray(pt?.L) ? pt.L : [], at = tms(pt?.at);
+  const mn = (a, b) => Math.max(0, Math.round((b - a) / 60000));
+  const row = x => {
+    const f = tms(x.fwdAt), who = (x.nm ? esc(x.nm) + ' ' : '') + (x.from ? esc(x.from.replace(/^(\d{4})(\d+)$/, '$1-$2')) : '<i class="wo-q">gahak ka number?</i>');
+    const stc = x.st === 'done' ? (x.sent ? 'ok' : 'warn') : x.st === 'start' ? 'run' : x.rem ? 'bad' : 'w';
+    const stt = x.st === 'done' ? (x.sent ? `✅ Bill gahak ko gaya${x.nb > 1 ? ' (' + x.nb + ')' : ''} · ${mn(f, tms(x.doneAt))} min` : '🧾 Bill bana · ' + (x.err || 'gahak ko nahi gaya')) : x.st === 'start' ? `▶️ Shuru · ${mn(f, tms(x.startAt))} min baad` : x.rem ? `⏰ Shuru nahi · yaad-dihani gayi` : `⏳ Mubeen ke paas · ${mn(f, Date.now())} min`;
+    return `<div class="wo-r pt-${stc}"><i>${x.k === 'txt' ? '📝' : '🧾'}</i><span><b>${who}${x.k === 'txt' && x.tx ? ' · <small>' + esc(x.tx.slice(0, 30)) + '…</small>' : ''}</b><small>${stt}${x.err && x.st !== 'done' ? ' · ' + esc(x.err) : ''}</small></span><em>${esc(tmFmt(f))}</em></div>`;
+  };
+  return `<div class="wps-sec"><h4>📋 Mubeen ki parchiyan (${L.length})</h4><small class="wps-mut">Aap gahak ki parchi Mubeen ko forward karein → Mubeen usi parchi par reply "start" (${cfgNow().stMin} min mein, warna yaad-dihani) → bill tayyar = usi parchi par reply mein bill ki tasveer → gahak ko khud.${at ? ' · 🖥 ' + (ago(at) === 'abhi' ? 'abhi' : ago(at) + ' pehle') : ''}</small>
+    ${L.length ? `<div class="wo-log">${L.map(row).join('')}</div>` : '<small class="wps-mut">Abhi koi parchi nahi (PC wa-parchi v2.6 chahiye).</small>'}</div>`;
 }
 function logHTML() {
   const L = Array.isArray(lg?.L) ? lg.L.slice().reverse() : [];
@@ -70,7 +84,8 @@ function logHTML() {
 function paint(which) {
   const b = document.querySelector(`#dialogBody [data-wo-${which}]`); if (!b) return;
   if (which === 'link') { const i = b.querySelector('[data-wo-ph]'); const v = i ? i.value : null, f = !!i && document.activeElement === i; b.innerHTML = linkHTML(); qrLast = ''; qrPaint(); const n = b.querySelector('[data-wo-ph]'); if (n && v != null) { n.value = v; if (f) n.focus(); } }
-  else if (which === 'cfg') b.innerHTML = cfgHTML();
+  else if (which === 'cfg') { b.innerHTML = cfgHTML(); paint('pt'); }
+  else if (which === 'pt') b.innerHTML = ptHTML();
   else b.innerHTML = logHTML();
 }
 let qrLib = null;

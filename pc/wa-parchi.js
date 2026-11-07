@@ -80,7 +80,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.5';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.6';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1596,8 +1596,129 @@ async function start(ZINDA) {
     }
     prNote(`${ok ? '✅ ' + ok + ' tasveer A4 ko gayi' : '✕ tasveer nahi mili'} — ${phPretty(from)}`);
   }
+  // =========================================================
+  //  📋 v2.6 (2026-11-07): MUBEEN KI PARCHIYON KA PEECHA (malik: "gahak meri personal number par parchi bhejta hai, main Mubeen ko
+  //  forward · 5 min mein Mubeen usi parchi par 'start' likhe warna yaad-dihani · bill tayyar = Mubeen usi parchi par reply mein bill
+  //  ki tasveer → PC khud gahak ko (naye number se) · PC yaad rakhe kis number se kaun si parchi aayi — 5-7 ek saath").
+  //  ① gahak → malik tasveer (sirf sha256 + number yaad, download nahi) ② malik → Mubeen (prTo) wohi tasveer (sha milan, warna caption ka
+  //  number) = parchi track {st 'sent'} ③ Mubeen ka REPLY usi parchi par: 'start'/'ok'/'shuru'/👍 = 'start' · tasveer = 'done' → waOut
+  //  (wa-out.js, naya number) gahak ko tasveer + "bill tayyar" ④ har minute: 'sent' + stMin min = Mubeen + malik ko yaad-dihani (waOut)
+  //  Dono links (malik ka main + Mubeen ka P2) se — ek paigham ek dafa (trSeen). App: blueAccess/parchiTrack {L} (sirf malik). AI nahi.
+  // =========================================================
+  const TRF = path.join(DIR, 'wa-track.json'), TR_MAX = 80, TR_DAY = 2 * DAY;
+  let TR = { inc: {}, par: {} }; try { TR = JSON.parse(fs.readFileSync(TRF, 'utf8')) || TR; if (!TR.inc) TR.inc = {}; if (!TR.par) TR.par = {}; } catch {}
+  const trSeen = new Set(), trBusy = new Set(); let trW = Promise.resolve(), trDirty = false;
+  const START_RE = /^(start|started|ok|okay|shuru|shru|chalu|chaloo|theek|thik|done|👍|✅|✔|✔️|☑|🆗|👌|ok\s*g|ok\s*ji|g)[\s.!]*$/i;
+  const shaOf = im => { const b = im && im.fileSha256; try { return b ? Buffer.from(b).toString('base64') : ''; } catch { return ''; } };
+  const trSave = () => { trDirty = true; };
+  setInterval(() => { if (!trDirty) return; trDirty = false; const now = Date.now(); for (const k of Object.keys(TR.inc)) if (now - TR.inc[k].at > 8 * 3600000) delete TR.inc[k]; for (const k of Object.keys(TR.par)) if (now - TR.par[k].fwdAt > TR_DAY) delete TR.par[k]; try { fs.writeFileSync(TRF, JSON.stringify(TR)); } catch (e) { log('⚠️ wa-track.json: ' + e.message); } }, 5000);
+  let stMin = 5; BA.doc('waOutCfg').onSnapshot(x => { const d = x.exists ? x.data() || {} : {}; stMin = Math.max(1, Math.min(60, Number(d.stMin) || 5)); }, () => {});
+  function trPush() {   // app ko list (sirf malik)
+    const L = Object.values(TR.par).sort((a, b) => b.fwdAt - a.fwdAt).slice(0, TR_MAX).map(t => ({ id: t.id, from: t.from || '', nm: t.nm || '', to: t.to || '', fwdAt: t.fwdAt, st: t.st, startAt: t.startAt || 0, doneAt: t.doneAt || 0, sent: t.sent || 0, rem: t.rem || 0, err: t.err || '', by: t.by || '', k: t.k || 'img', tx: t.tx || '', grp: t.grp || t.id, nb: (t.bills || []).length }));
+    const snap = { L, at: Date.now(), stMin }; trW = trW.then(() => BA.doc('parchiTrack').set(snap)).catch(e => log('⚠️ parchiTrack: ' + e.message));
+  }
+  function trText(t, what) {
+    const who = (t.nm ? t.nm + ' ' : '') + (t.from ? phPretty(t.from) : 'gahak?');
+    return what === 'rem' ? `⏰ Noor Traders: parchi (${who}, ${tstr(t.fwdAt)}) ${stMin} min se shuru nahi hui — usi parchi par "start" likhein.`
+      : `⏰ Noor Traders: Mubeen ne parchi (${who}, ${tstr(t.fwdAt)}) ${stMin} min mein shuru nahi ki.`;
+  }
+  async function waOutPut(id, d) { try { await biz.collection('waOut').doc(id).create({ st: 'new', at: Date.now(), ...d }); return true; } catch (e) { if (!/already exists/i.test(String(e.message || e))) log('⚠️ waOut: ' + e.message); return false; } }
+  const txtOf = c => String(c.conversation || (c.extendedTextMessage && c.extendedTextMessage.text) || '').trim();
+  const txtKey = t => { const n = t.replace(/\s+/g, ' ').trim().toLowerCase(); return n.length >= 6 ? 't:' + require('crypto').createHash('sha1').update(n).digest('base64').slice(0, 20) : ''; };   // likhi parchi ki chaabi
+  const isFwd = c => { const x = c.extendedTextMessage || c.imageMessage || c.documentMessage; return !!(x && x.contextInfo && x.contextInfo.isForwarded); };
+  async function trIncoming(m, c, from) {   // ① gahak ki tasveer YA likhi list malik ko — sirf yaad (download nahi)
+    const im = imgOf(c), sha = im ? shaOf(im) : txtKey(txtOf(c)); if (!sha) return;
+    TR.inc[sha] = { from, at: tsOf(m) || Date.now(), wid: m.key.id || '', nm: String(m.pushName || '').replace(/[|"]/g, ' ').trim().slice(0, 40) }; trSave();
+  }
+  function trGroup(t) {   // ek gahak ki 2-3 parchiyan 15 min ke andar = ek group (start / yaad-dihani ikathi) — malik: "2 parchiyan ikathi bhi aati hain"
+    if (!t.from) return t.id;
+    for (const o of Object.values(TR.par)) if (o.id !== t.id && o.from === t.from && Math.abs(o.fwdAt - t.fwdAt) < 15 * 60000) return o.grp || o.id;
+    return t.id;
+  }
+  async function trForward(m, c, to, by) {   // ② malik → Mubeen tasveer = nayi parchi
+    const wid = m.key.id || ''; if (!wid || TR.par[wid]) return;
+    const im = imgOf(c), tx = im ? '' : txtOf(c); if (!im && !tx) return;
+    const sha = im ? shaOf(im) : txtKey(tx), o = sha && TR.inc[sha] && Date.now() - TR.inc[sha].at < 8 * 3600000 ? TR.inc[sha] : null;
+    if (!im && !o && !(isFwd(c) && /\d|\n/.test(tx))) return;   // malik ki apni aam baat (Mubeen se) = parchi nahi; likhi parchi sirf gahak wali ya FORWARD (list jaisi: number / kai lines)
+    const cap = parseCaption(stripPrint(im ? im.caption || '' : ''));
+    const t = { id: wid, from: (o && o.from) || cap.ph || '', nm: (o && o.nm) || cap.nm || '', to, fwdAt: tsOf(m) || Date.now(), sha, st: 'sent', by, k: im ? 'img' : 'txt', tx: tx.slice(0, 60) };
+    t.grp = trGroup(t); TR.par[wid] = t; trSave(); trPush();
+    log(`📋 parchi ${wid.slice(-6)} (${t.k}) → ${phPretty(to)} · gahak ${t.from ? phPretty(t.from) : '?'}${o ? ' (' + (im ? 'tasveer' : 'likhai') + ' se)' : cap.ph ? ' (caption se)' : ''}${t.grp !== wid ? ' · group ' + t.grp.slice(-6) : ''}`);
+  }
+  async function trReply(m, c, s, who) {   // ③ Mubeen ka reply usi parchi par — start ya bill ki tasveer
+    const ctx = (c.extendedTextMessage && c.extendedTextMessage.contextInfo) || (c.imageMessage && c.imageMessage.contextInfo) || (c.documentMessage && c.documentMessage.contextInfo) || null;
+    const im = imgOf(c), wid = m.key.id || '', now = tsOf(m) || Date.now();
+    let qid = ctx && String(ctx.stanzaId || '');
+    if ((!qid || !TR.par[qid]) && im && TR.lastBill && now - TR.lastBill.at < 3 * 60000) qid = TR.lastBill.qid;   // 2 bills: doosri tasveer bina reply, 3 min ke andar = usi parchi ki
+    const txt0 = txtOf(c);
+    if ((!qid || !TR.par[qid]) && !im && txt0 && START_RE.test(txt0)) {   // bina reply 'start' = agar sirf EK parchi / group khula ho (30 min) to wohi
+      const open = Object.values(TR.par).filter(o => o.st === 'sent' && now - o.fwdAt < 30 * 60000), g = new Set(open.map(o => o.grp || o.id));
+      if (g.size === 1) qid = open[0].id;
+    }
+    if (!qid || !TR.par[qid]) return false;
+    const t = TR.par[qid], txt = txt0;
+    if (!im && txt && START_RE.test(txt)) {
+      let n = 0; for (const o of Object.values(TR.par)) if ((o.id === qid || (t.grp && o.grp === t.grp)) && o.st === 'sent') { o.st = 'start'; o.startAt = now; n++; }   // poora group shuru
+      if (n) { trSave(); trPush(); log(`▶️ parchi ${qid.slice(-6)} shuru (${who}${n > 1 ? ', ' + n + ' parchiyan' : ''}) — ${Math.round((now - t.fwdAt) / 60000)} min`); }
+      return true;
+    }
+    if (!im) return false;
+    const bk = 'pt-' + qid + (TR.lastBill && TR.lastBill.qid === qid && TR.lastBill.wid !== wid && t.sent ? '-' + wid.slice(-6) : '');   // doosra bill = alag paigham
+    if (trBusy.has(bk) || (t.bills || []).includes(wid)) return true;   // dohra nahi (dono links)
+    trBusy.add(bk); TR.lastBill = { qid, at: now, wid };
+    t.st = 'done'; t.doneAt = now; t.bills = (t.bills || []).concat([wid]).slice(-5); trSave(); trPush();
+    if (!t.from) { t.err = 'gahak ka number nahi mila (caption mein number likhein)'; trSave(); trPush(); log(`✅ parchi ${qid.slice(-6)} bill tayyar — magar gahak ka number nahi`); return true; }
+    try {
+      const buf = await within(B.downloadMediaMessage(m, 'buffer', {}, { logger, reuploadRequest: s && s.updateMediaMessage }), 60000, 'bill tasveer download');
+      let jpg = isJpeg(buf) && buf.length <= 850000 ? buf : null; const S2 = sharp();
+      if (!jpg && S2) for (const [w, q] of [[1600, 78], [1280, 72], [1000, 65]]) { try { const b = await S2(buf).rotate().resize({ width: w, height: w, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: q }).toBuffer(); if (b.length <= 850000) { jpg = b; break; } } catch {} }
+      if (!jpg) throw Error('tasveer bari / badal nahi saki');
+      const nb = t.bills.length, ok = await waOutPut(bk, { to: t.from, nm: t.nm || '', kind: 'bill', eid: bk, txt: `*NOOR TRADERS*\nAap ka bill tayyar hai 🧾${nb > 1 ? ' (' + nb + ')' : ''} (parchi ${tstr(t.fwdAt)})\nShukriya 🙏`, im: jpg });
+      if (ok) { t.sent = Date.now(); t.err = ''; log(`📤 parchi ${qid.slice(-6)} ka bill${nb > 1 ? ' #' + nb : ''} gahak ${phPretty(t.from)} ko queue (${Math.round(jpg.length / 1024)} KB)`); }
+    } catch (e) { t.err = 'gahak ko nahi gaya: ' + String(e.message || e).slice(0, 80); log('✕ bill gahak ko: ' + e.message); }
+    finally { trBusy.delete(bk); }
+    trSave(); trPush(); return true;
+  }
+  async function trackMsg(m, s, link) {   // har paigham (dono links) — kabhi throw nahi, purana kaam nahi rokta
+    try {
+      const jid = m.key.remoteJid || '', wid = m.key.id || ''; if (!wid || badJid(jid)) return;
+      const k = link + '|' + wid; if (trSeen.has(k)) return; trSeen.add(k); if (trSeen.size > 4000) trSeen.clear();
+      const ts = tsOf(m); if (ts && Date.now() - ts > 6 * 3600000) return;
+      await settingsReady;
+      const c = B.normalizeMessageContent(m.message) || {}, fromMe = !!m.key.fromMe;
+      if (link === 'main') {
+        const me = normPh(L.me || ''), ch = await chatPh(m, s);
+        if (fromMe) { if (ch && S.prTo.includes(ch)) await trForward(m, c, ch, 'malik'); return; }
+        const from = (await senderPh(m, s)) || ch;
+        if (from && S.prTo.includes(from)) { await trReply(m, c, s, 'Mubeen'); return; }   // Mubeen ka jawab
+        if (from && from !== me && !S.prFrom.includes(from)) await trIncoming(m, c, from);   // gahak ki parchi — tasveer ya likhi (yaad)
+      } else {   // Mubeen ka link (P2): Mubeen ke apne reply · malik ki forward (sha / caption)
+        const ch = await chatPh(m, s);
+        if (fromMe) { if (ch && S.prFrom.includes(ch)) await trReply(m, c, s, 'Mubeen'); return; }
+        const from = (await senderPh(m, s)) || ch;
+        if (from && S.prFrom.includes(from)) await trForward(m, c, me2Of(s), 'malik');
+      }
+    } catch (e) { log('⚠️ track: ' + (e && e.message)); }
+  }
+  setInterval(async () => {   // ④ yaad-dihani
+    try {
+      const now = Date.now(); let ch = false;
+      for (const t of Object.values(TR.par)) {
+        if (t.st !== 'sent' || t.rem || now - t.fwdAt < stMin * 60000 || now - t.fwdAt > 3 * 3600000) continue;
+        if (t.grp && Object.values(TR.par).some(o => o.grp === t.grp && o.id !== t.id && (o.st !== 'sent' || o.rem))) { t.rem = now; continue; }   // group ki doosri parchi shuru / yaad-dihani ho chuki
+        t.rem = now; ch = true;
+        if (t.to) await waOutPut('rm-' + t.id, { to: t.to, nm: 'Mubeen', kind: 'rem', eid: 'rm-' + t.id, txt: trText(t, 'rem') });
+        const mk = S.prFrom[0] || normPh(L.me || ''); if (mk) await waOutPut('rk-' + t.id, { to: mk, nm: 'Malik', kind: 'rem', eid: 'rk-' + t.id, txt: trText(t, 'malik') });
+        log(`⏰ parchi ${t.id.slice(-6)} ${stMin} min se shuru nahi — yaad-dihani`);
+      }
+      if (ch) { trSave(); trPush(); }
+    } catch (e) { log('⚠️ yaad-dihani: ' + e.message); }
+  }, 60000);
+  trPush();
+
   async function handleMsg(m, s) {
     if (!m || !m.key || !m.message) return;
+    await trackMsg(m, s, 'main');   // v2.6: 📋 parchi ka peecha (pehle, kabhi rokta nahi)
     if (await mainExtra(m, s)) return;   // v2.5: malik ka reply-print + gahak tasveer+print (Mubeen jaisa)
     if (m.key.fromMe) { await selfPrint(m, s); return; }
     const jid = m.key.remoteJid || '', wid = m.key.id || '';
@@ -1749,6 +1870,7 @@ async function start(ZINDA) {
   async function p2Msg(m, s) {
     const jid = m.key.remoteJid || '', wid = m.key.id || '';
     if (badJid(jid) || !wid) return;
+    await trackMsg(m, s, 'p2');   // v2.6: 📋 parchi ka peecha
     const c = B.normalizeMessageContent(m.message) || {}, fromMe = !!m.key.fromMe;
     noteChat(m, c, jid, fromMe);
     let from = '', isMalik = false, malikOk = false;

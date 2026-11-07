@@ -4154,3 +4154,4 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - 2026-11-07: nt-print v1.26 + sale-post v1.16 boxTable 5 khane (Items|PCS|CTN|Rate|Amt, Font B) — dono files mein ek jaisa; pos-khata-sync (r) bank parchi par baqaya nahi (receipt(): bank → before/after null). manifest 2026-11-07.1.
 - 2026-11-07: rate-change.js v1.0 NAYA (sirf parhti): khareed rate badla → posStats/rateChg har 30 s check; rate-change-auto.bat; manifest 2026-11-07.2 + services.
 - 2026-11-07: wa-out.js v1.0 NAYA (📲 gahak ko WhatsApp parchi, alag number) + pos-khata-sync (s) waQueue; manifest 2026-11-07.3.
+- 2026-11-07: wa-parchi v2.6 (📋 Mubeen ki parchiyon ka peecha: start / bill → gahak, group, likhi parchi) + wa-out tasveer; manifest 2026-11-07.4.

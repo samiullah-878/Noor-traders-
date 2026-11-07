@@ -46,7 +46,7 @@ if (require.main === module) {
 async function main() {
   log(`wa-out v${VER} shuru — gahak ko WhatsApp parchi (naya number)`);
   const { initializeApp, cert, getApps } = require('firebase-admin/app');
-  const { getFirestore } = require('firebase-admin/firestore');
+  const { getFirestore, FieldValue } = require('firebase-admin/firestore');
   if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
   const db = getFirestore(), biz = db.collection('businesses').doc(BUSINESS_ID), BA = biz.collection('blueAccess'), Q = biz.collection('waOut');
   const LINK = BA.doc('waLinkOut');
@@ -138,7 +138,7 @@ async function main() {
     try {
       while (pend.size) {
         const [id, d] = [...pend.entries()].sort((a, b) => (Number(a[1].at) || 0) - (Number(b[1].at) || 0))[0];
-        const done = async (st, why, extra) => { pend.delete(id); try { await Q.doc(id).set({ st, why: String(why || '').slice(0, 140), sentAt: Date.now(), ...(extra || {}) }, { merge: true }); } catch (e) { log('⚠️ waOut ' + id + ': ' + e.message); } };
+        const done = async (st, why, extra) => { pend.delete(id); try { await Q.doc(id).set({ st, why: String(why || '').slice(0, 140), sentAt: Date.now(), ...(d.im ? { im: FieldValue.delete(), hadIm: 1 } : {}), ...(extra || {}) }, { merge: true }); } catch (e) { log('⚠️ waOut ' + id + ': ' + e.message); } };
         const day = dayOf(Date.now()); if (L.day !== day) { L.day = day; L.n = 0; }
         const to = normPh(d.to), nm = String(d.nm || '').slice(0, 40), txt = String(d.txt || '').trim();
         if (!cfg.on) { await done('skip', 'band hai (setting)'); continue; }
@@ -153,12 +153,13 @@ async function main() {
           const okNo = Array.isArray(chk) && chk[0] && chk[0].exists;
           if (!okNo) { await done('skip', 'yeh number WhatsApp par nahi'); await addLog({ at: Date.now(), to, nm, code: String(d.code || ''), st: 'skip', why: 'WhatsApp par nahi' }); continue; }
           const jid = (chk[0] && chk[0].jid) || jidOf(to);
-          const r = await within(sock.sendMessage(jid, { text: txt }), 30000, 'bhejna');
+          const im = d.im && (Buffer.isBuffer(d.im) ? d.im : d.im.toUint8Array ? Buffer.from(d.im.toUint8Array()) : null);   // v1.0: bill ki tasveer (Bytes) ho to tasveer + caption
+          const r = await within(sock.sendMessage(jid, im && im.length ? { image: im, caption: txt, mimetype: 'image/jpeg' } : { text: txt }), 60000, 'bhejna');
           lastSent = Date.now(); L.n++;
           await done('sent', '', { wid: String((r && r.key && r.key.id) || '') });
           await addLog({ at: Date.now(), to, nm, code: String(d.code || ''), st: 'sent' });
           setLink({ n: L.n, day, last: { at: Date.now(), to: phPretty(to), nm }, err: '' });
-          log(`📤 ${phPretty(to)} ${nm} · ${String(d.code || '')} (aaj ${L.n}/${cfg.lim})`);
+          log(`📤 ${phPretty(to)} ${nm} · ${String(d.code || d.kind || '')}${im ? ' 🖼' : ''} (aaj ${L.n}/${cfg.lim})`);
         } catch (e) {
           const why = String(e.message || e).slice(0, 120); log(`✕ ${phPretty(to)}: ${why}`);
           const tries = (Number(d.tries) || 0) + 1;
