@@ -7470,3 +7470,5 @@ html body #dialogBody .wo-r.pt-run{border-color:#bcd3f7;background:linear-gradie
 html body #dialogBody .wo-r.pt-warn{border-color:#f1dc9a;background:linear-gradient(180deg,#fffaf0,#fff2d6)}
 html body #dialogBody .wo-r.pt-bad{border-color:#f7c9ce;background:linear-gradient(180deg,#fff6f7,#ffe9ec)}
 html body #dialogBody .wo-q{font-style:normal;color:#b3261e}
+html body #dialogBody a.wps-tc{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid #c7d4f5;background:linear-gradient(180deg,#fff,#f3f6fd);color:#223b6d;font-weight:800;font-size:13px;white-space:nowrap;text-decoration:none}
+html body #dialogBody .wo-r small{white-space:normal;line-height:1.3}

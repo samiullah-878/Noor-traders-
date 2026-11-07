@@ -80,7 +80,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.6';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.7';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1612,15 +1612,54 @@ async function start(ZINDA) {
   const shaOf = im => { const b = im && im.fileSha256; try { return b ? Buffer.from(b).toString('base64') : ''; } catch { return ''; } };
   const trSave = () => { trDirty = true; };
   setInterval(() => { if (!trDirty) return; trDirty = false; const now = Date.now(); for (const k of Object.keys(TR.inc)) if (now - TR.inc[k].at > 8 * 3600000) delete TR.inc[k]; for (const k of Object.keys(TR.par)) if (now - TR.par[k].fwdAt > TR_DAY) delete TR.par[k]; try { fs.writeFileSync(TRF, JSON.stringify(TR)); } catch (e) { log('⚠️ wa-track.json: ' + e.message); } }, 5000);
-  let stMin = 5; BA.doc('waOutCfg').onSnapshot(x => { const d = x.exists ? x.data() || {} : {}; stMin = Math.max(1, Math.min(60, Number(d.stMin) || 5)); }, () => {});
+  // v2.7 (malik 7 Nov): stMin likha paigham · vMin 🤖 Urdu awaz (voice note) · cMin 📞 SIM call (HBL phone MacroDroid webhook) · mMin malik ko
+  let stMin = 5, CF = { vMin: 6, cMin: 8, mMin: 12, hook: '', callTo: '' };
+  BA.doc('waOutCfg').onSnapshot(x => { const d = x.exists ? x.data() || {} : {}; stMin = Math.max(1, Math.min(60, Number(d.stMin) || 5));
+    CF = { vMin: Math.max(stMin, Math.min(60, Number(d.vMin) || stMin + 1)), cMin: Math.max(stMin, Math.min(90, Number(d.cMin) || stMin + 3)), mMin: Math.max(stMin, Math.min(120, Number(d.mMin) || stMin + 7)), hook: String(d.hook || '').trim(), callTo: normPh(d.callTo || '') }; }, () => {});
+  // 🤖 Urdu awaz — Microsoft Edge TTS (muft, package msedge-tts wa-mods mein; na ho to ek dafa install, tab tak awaz nahi)
+  let TTSM = null, ttsTried = 0;
+  async function ttsMp3(text) {
+    if (!TTSM) {
+      try { TTSM = require(require.resolve('msedge-tts', { paths: [MODS] })); }
+      catch { if (Date.now() - ttsTried > 30 * 60000) { ttsTried = Date.now(); log('📦 Urdu awaz ka package (msedge-tts) install ho raha hai…'); exec('npm install msedge-tts@1.3.4 --no-audit --no-fund --loglevel=error', { cwd: MODS, windowsHide: true, timeout: 5 * 60000, maxBuffer: 8 << 20 }, er => log(er ? '✕ msedge-tts: ' + String(er.message).split(/\r?\n/)[0].slice(0, 120) : '📦 msedge-tts aa gaya')); } throw Error('awaz ka package abhi nahi'); }
+    }
+    const { MsEdgeTTS, OUTPUT_FORMAT } = TTSM, tts = new MsEdgeTTS();
+    await within(tts.setMetadata('ur-PK-AsadNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3), 20000, 'awaz setup');
+    const r = tts.toStream(text), st = r && r.audioStream ? r.audioStream : r;
+    const bufs = []; await within(new Promise((ok, no) => { st.on('data', c => bufs.push(c)); st.on('end', ok); st.on('close', ok); st.on('error', no); }), 40000, 'awaz banna');
+    try { tts.close && tts.close(); } catch {}
+    const b = Buffer.concat(bufs); if (b.length < 2000) throw Error('awaz khali'); return b;
+  }
+  const hookUrl = (id, params) => CF.hook ? `https://trigger.macrodroid.com/${encodeURIComponent(CF.hook)}/${id}?` + Object.entries(params).map(([k, v]) => k + '=' + encodeURIComponent(String(v))).join('&') : '';
+  async function callMubeen(t, n) {   // 📞 HBL phone ka MacroDroid: SIM se Mubeen ko call, utha le to Urdu mein bole (speaker), 25 s nahi uthai = kaat de; jawab callEvt se
+    const to = CF.callTo || S.prTo[0] || ''; if (!CF.hook || !isMob(to)) { t.callSt = 'off'; return false; }
+    const who = (t.nm ? t.nm : '') + (t.from ? ' ' + phPretty(t.from) : ''), msg = `Mubeen bhai, ${who.trim() || 'gahak'} ki parchi ${Math.round((Date.now() - t.fwdAt) / 60000)} minute se shuru nahi hui. Please parchi nikalwa dein. WhatsApp par dekhein.`;
+    try { const r = await within(fetch(hookUrl('nt-call', { id: t.id.slice(-8), to: '0' + to.slice(1), msg, n })), 15000, 'webhook'); if (!r.ok) throw Error('webhook ' + r.status); t.callSt = 'dial'; t.callAt = Date.now(); t.calls = (t.calls || 0) + 1; log(`📞 call ka ishara HBL phone ko (${n}) — parchi ${t.id.slice(-6)}`); return true; }
+    catch (e) { t.callSt = 'err'; t.err = 'call nahi lagi: ' + String(e.message || e).slice(0, 60); log('✕ call webhook: ' + e.message); return false; }
+  }
+  // 📞 HBL phone ka jawab (callEvt {k, p: "dial|id" · "ans|id|sec" · "noans|id"}) — padh kar mitao
+  biz.collection('callEvt').onSnapshot(async snap => {
+    for (const ch of snap.docChanges()) {
+      if (ch.type === 'removed') continue;
+      const d = ch.doc.data() || {}, parts = String(d.p || '').split('|'), ev = parts[0], id8 = parts[1] || '';
+      try { await ch.doc.ref.delete(); } catch {}
+      const t = Object.values(TR.par).find(o => o.id.slice(-8) === id8); if (!t) continue;
+      const mk = S.prFrom[0] || normPh(L.me || '');
+      if (ev === 'ans') { t.callSt = 'ans'; t.callSec = Number(parts[2]) || 0; log(`📞 Mubeen ne call uthai (${t.callSec} s) — parchi ${t.id.slice(-6)}`); if (mk) await waOutPut('ca-' + t.id, { to: mk, nm: 'Malik', kind: 'rem', eid: 'ca-' + t.id, txt: `📞 Mubeen ne call uthai (${t.callSec} s) — parchi ${(t.nm || '') + ' ' + (t.from ? phPretty(t.from) : '')} (${tstr(t.fwdAt)})` }); }
+      else if (ev === 'noans') { t.callSt = 'noans'; log(`📞 Mubeen ne call nahi uthai — parchi ${t.id.slice(-6)}`); if ((t.calls || 0) < 2) { t.cal2 = Date.now() + 2 * 60000; } else if (mk) await waOutPut('cn-' + t.id, { to: mk, nm: 'Malik', kind: 'rem', eid: 'cn-' + t.id, txt: `⚠️ Mubeen call nahi utha raha (2 dafa) — parchi ${(t.nm || '') + ' ' + (t.from ? phPretty(t.from) : '')} (${tstr(t.fwdAt)})` }); }
+      else if (ev === 'dial') t.callSt = 'ring';
+      trSave(); trPush();
+    }
+  }, e => log('⚠️ callEvt: ' + e.message));
   function trPush() {   // app ko list (sirf malik)
-    const L = Object.values(TR.par).sort((a, b) => b.fwdAt - a.fwdAt).slice(0, TR_MAX).map(t => ({ id: t.id, from: t.from || '', nm: t.nm || '', to: t.to || '', fwdAt: t.fwdAt, st: t.st, startAt: t.startAt || 0, doneAt: t.doneAt || 0, sent: t.sent || 0, rem: t.rem || 0, err: t.err || '', by: t.by || '', k: t.k || 'img', tx: t.tx || '', grp: t.grp || t.id, nb: (t.bills || []).length }));
-    const snap = { L, at: Date.now(), stMin }; trW = trW.then(() => BA.doc('parchiTrack').set(snap)).catch(e => log('⚠️ parchiTrack: ' + e.message));
+    const L = Object.values(TR.par).sort((a, b) => b.fwdAt - a.fwdAt).slice(0, TR_MAX).map(t => ({ id: t.id, from: t.from || '', nm: t.nm || '', to: t.to || '', fwdAt: t.fwdAt, st: t.st, startAt: t.startAt || 0, doneAt: t.doneAt || 0, sent: t.sent || 0, rem: t.rem || 0, err: t.err || '', by: t.by || '', k: t.k || 'img', tx: t.tx || '', grp: t.grp || t.id, nb: (t.bills || []).length, voc: t.voc || 0, callSt: t.callSt || '', calls: t.calls || 0, callSec: t.callSec || 0, mal: t.mal || 0, cs: t.cs || 0, bn: t.bn || '' }));
+    const snap0 = { stMin, vMin: CF.vMin, cMin: CF.cMin, mMin: CF.mMin, hookOn: !!CF.hook };
+    const snap = { L, at: Date.now(), ...snap0 }; trW = trW.then(() => BA.doc('parchiTrack').set(snap)).catch(e => log('⚠️ parchiTrack: ' + e.message));
   }
   function trText(t, what) {
     const who = (t.nm ? t.nm + ' ' : '') + (t.from ? phPretty(t.from) : 'gahak?');
     return what === 'rem' ? `⏰ Noor Traders: parchi (${who}, ${tstr(t.fwdAt)}) ${stMin} min se shuru nahi hui — usi parchi par "start" likhein.`
-      : `⏰ Noor Traders: Mubeen ne parchi (${who}, ${tstr(t.fwdAt)}) ${stMin} min mein shuru nahi ki.`;
+      : `⏰ Noor Traders: Mubeen ne parchi (${who}, ${tstr(t.fwdAt)}) ${Math.round((Date.now() - t.fwdAt) / 60000)} min mein shuru nahi ki${t.callSt === 'ans' ? ' (call uthai thi)' : t.callSt === 'noans' ? ' (call nahi uthai)' : ''}.`;
   }
   async function waOutPut(id, d) { try { await biz.collection('waOut').doc(id).create({ st: 'new', at: Date.now(), ...d }); return true; } catch (e) { if (!/already exists/i.test(String(e.message || e))) log('⚠️ waOut: ' + e.message); return false; } }
   const txtOf = c => String(c.conversation || (c.extendedTextMessage && c.extendedTextMessage.text) || '').trim();
@@ -1659,7 +1698,8 @@ async function start(ZINDA) {
     const t = TR.par[qid], txt = txt0;
     if (!im && txt && START_RE.test(txt)) {
       let n = 0; for (const o of Object.values(TR.par)) if ((o.id === qid || (t.grp && o.grp === t.grp)) && o.st === 'sent') { o.st = 'start'; o.startAt = now; n++; }   // poora group shuru
-      if (n) { trSave(); trPush(); log(`▶️ parchi ${qid.slice(-6)} shuru (${who}${n > 1 ? ', ' + n + ' parchiyan' : ''}) — ${Math.round((now - t.fwdAt) / 60000)} min`); }
+      if (n) { trSave(); trPush(); log(`▶️ parchi ${qid.slice(-6)} shuru (${who}${n > 1 ? ', ' + n + ' parchiyan' : ''}) — ${Math.round((now - t.fwdAt) / 60000)} min`);
+        if (t.from && !t.cs && await waOutPut('cs-' + t.grp, { to: t.from, nm: t.nm || '', kind: 'start', eid: 'cs-' + t.grp, txt: '*NOOR TRADERS*\nAap ki parchi shuru ho gayi hai 🛒\nBohat shukria Noor Traders par aane ke liye 🙏' })) { for (const o of Object.values(TR.par)) if (o.grp === t.grp) o.cs = Date.now(); trSave(); trPush(); } }   // malik: "start likhte hi gahak ko — shukria"
       return true;
     }
     if (!im) return false;
@@ -1673,11 +1713,36 @@ async function start(ZINDA) {
       let jpg = isJpeg(buf) && buf.length <= 850000 ? buf : null; const S2 = sharp();
       if (!jpg && S2) for (const [w, q] of [[1600, 78], [1280, 72], [1000, 65]]) { try { const b = await S2(buf).rotate().resize({ width: w, height: w, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: q }).toBuffer(); if (b.length <= 850000) { jpg = b; break; } } catch {} }
       if (!jpg) throw Error('tasveer bari / badal nahi saki');
-      const nb = t.bills.length, ok = await waOutPut(bk, { to: t.from, nm: t.nm || '', kind: 'bill', eid: bk, txt: `*NOOR TRADERS*\nAap ka bill tayyar hai 🧾${nb > 1 ? ' (' + nb + ')' : ''} (parchi ${tstr(t.fwdAt)})\nShukriya 🙏`, im: jpg });
+      let list = ''; try { const bl = await billList(jpg); if (bl) { list = bl.txt; t.bn = bl.no; } } catch (e) { log('🧾 bill list: ' + (e.message || e)); }   // 🤖 AI sirf bill number — list POS se
+      const nb = t.bills.length, ok = await waOutPut(bk, { to: t.from, nm: t.nm || '', kind: 'bill', eid: bk, txt: `*NOOR TRADERS*\nAap ka bill tayyar hai 🧾${nb > 1 ? ' (' + nb + ')' : ''}${list ? ' (Bill #' + t.bn + ')\n' + list : ' (parchi ' + tstr(t.fwdAt) + ')'}\nBohat shukria 🙏`, im: jpg });
       if (ok) { t.sent = Date.now(); t.err = ''; log(`📤 parchi ${qid.slice(-6)} ka bill${nb > 1 ? ' #' + nb : ''} gahak ${phPretty(t.from)} ko queue (${Math.round(jpg.length / 1024)} KB)`); }
     } catch (e) { t.err = 'gahak ko nahi gaya: ' + String(e.message || e).slice(0, 80); log('✕ bill gahak ko: ' + e.message); }
     finally { trBusy.delete(bk); }
     trSave(); trPush(); return true;
+  }
+  // 🧾 bill ki tasveer → 🤖 AI se SIRF bill number → POS (posSaleLines, pos-sales-dekho likhta hai) se asal items → gahak ko list (malik: "shukria ke saath saman ki list")
+  async function aiBillNo(jpg) {
+    if (!AI.key) return '';
+    const mdl = (GOOD || AI.model || FALLBACK_MODEL).replace(/^models\//, '');
+    const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 30000);
+    try {
+      const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(mdl) + ':generateContent', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': AI.key }, signal: ac.signal,
+        body: JSON.stringify({ contents: [{ role: 'user', parts: [{ inline_data: { mime_type: 'image/jpeg', data: jpg.toString('base64') } }, { text: 'This is a printed shop sale bill / receipt from a POS system. Return ONLY JSON {"no":"<bill number / invoice number / sale no as printed, digits only, or empty>"}.' }] }], generationConfig: { temperature: 0, responseMimeType: 'application/json' } }) });
+      const txt = await r.text(); if (!r.ok) throw Error('AI ' + r.status);
+      const j = JSON.parse(txt), out = (((j.candidates || [])[0] || {}).content || {}).parts || [], raw = out.filter(p => !p.thought).map(p => p.text || '').join('');
+      const o = JSON.parse(raw.replace(/^```json|```$/g, '').trim()); return String(o.no || '').replace(/\D/g, '');
+    } finally { clearTimeout(tm); }
+  }
+  async function billList(jpg) {
+    const no = await aiBillNo(jpg); if (!no) return null;
+    const days = [dayOf(Date.now()), dayOf(Date.now() - DAY)]; let found = [];
+    for (const dy of days) { const q = await biz.collection('posSaleLines').where('day', '==', dy).get().catch(() => null); if (q) found = found.concat(q.docs.map(x => x.data()).filter(d => String(d.no || '').replace(/\D/g, '') === no)); if (found.length) break; }   // aaj / kal ke bills — number ka milan digits se (S-123 jaisa prefix bhi)
+    if (!found.length) { log(`🧾 bill #${no} POS lines (aaj / kal) mein nahi mila`); return { no, txt: '' }; }
+    const d = found.sort((a, b) => (Number(b.at) || 0) - (Number(a.at) || 0))[0], L = Array.isArray(d.lines) ? d.lines : [];
+    const n = v => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+    let tot = 0; const rows = L.slice(0, 40).map(l => { const amt = (Number(l.q) || 0) * (Number(l.r) || 0); tot += amt; return `${String(l.n || '').slice(0, 28)} × ${r3(l.q)} · Rs ${n(amt)}`; });
+    if (L.length > 40) rows.push(`… aur ${L.length - 40} items`);
+    return { no, txt: rows.join('\n') + `\n*Kul: Rs ${n(tot)}*` };
   }
   async function trackMsg(m, s, link) {   // har paigham (dono links) — kabhi throw nahi, purana kaam nahi rokta
     try {
@@ -1703,13 +1768,18 @@ async function start(ZINDA) {
   setInterval(async () => {   // ④ yaad-dihani
     try {
       const now = Date.now(); let ch = false;
+      const mk = S.prFrom[0] || normPh(L.me || '');
       for (const t of Object.values(TR.par)) {
-        if (t.st !== 'sent' || t.rem || now - t.fwdAt < stMin * 60000 || now - t.fwdAt > 3 * 3600000) continue;
-        if (t.grp && Object.values(TR.par).some(o => o.grp === t.grp && o.id !== t.id && (o.st !== 'sent' || o.rem))) { t.rem = now; continue; }   // group ki doosri parchi shuru / yaad-dihani ho chuki
-        t.rem = now; ch = true;
-        if (t.to) await waOutPut('rm-' + t.id, { to: t.to, nm: 'Mubeen', kind: 'rem', eid: 'rm-' + t.id, txt: trText(t, 'rem') });
-        const mk = S.prFrom[0] || normPh(L.me || ''); if (mk) await waOutPut('rk-' + t.id, { to: mk, nm: 'Malik', kind: 'rem', eid: 'rk-' + t.id, txt: trText(t, 'malik') });
-        log(`⏰ parchi ${t.id.slice(-6)} ${stMin} min se shuru nahi — yaad-dihani`);
+        if (t.st !== 'sent' || now - t.fwdAt > 3 * 3600000) continue;
+        const min = (now - t.fwdAt) / 60000;
+        if (t.grp && Object.values(TR.par).some(o => o.grp === t.grp && o.id !== t.id && (o.st !== 'sent' || o.fwdAt < t.fwdAt || (o.fwdAt === t.fwdAt && o.id < t.id)))) continue;   // group ki sab se PEHLI parchi hi stages chalaye; koi shuru = koi yaad nahi
+        if (!t.rem && min >= stMin) { t.rem = now; ch = true; if (t.to) await waOutPut('rm-' + t.id, { to: t.to, nm: 'Mubeen', kind: 'rem', eid: 'rm-' + t.id, txt: trText(t, 'rem') }); log(`⏰ parchi ${t.id.slice(-6)} ${stMin} min se shuru nahi — likha paigham`); }
+        if (!t.voc && min >= CF.vMin && t.to) { t.voc = now; ch = true;   // 🤖 awaz
+          try { const who = (t.nm ? t.nm : '') + (t.from ? ' ' + phPretty(t.from).replace(/-/g, ' ') : ''); const au = await ttsMp3(`Mubeen bhai, ${who.trim() || 'gahak'} ki parchi ${Math.round(min)} minute se shuru nahi hui. Please parchi nikalwa dein, aur WhatsApp par start likh dein. Shukriya.`);
+            await waOutPut('rv-' + t.id, { to: t.to, nm: 'Mubeen', kind: 'voice', eid: 'rv-' + t.id, txt: '', au }); log(`🔊 awaz wala paigham Mubeen ko — parchi ${t.id.slice(-6)} (${Math.round(au.length / 1024)} KB)`); }
+          catch (e) { t.err = 'awaz: ' + String(e.message || e).slice(0, 60); log('✕ awaz: ' + (e.message || e)); } }
+        if (min >= CF.cMin && (!t.calls || (t.cal2 && now >= t.cal2 && t.calls < 2))) { t.cal2 = 0; ch = true; await callMubeen(t, t.calls ? 2 : 1); }   // 📞
+        if (!t.mal && min >= CF.mMin) { t.mal = now; ch = true; if (mk) await waOutPut('rk-' + t.id, { to: mk, nm: 'Malik', kind: 'rem', eid: 'rk-' + t.id, txt: trText(t, 'malik') }); log(`⏰ parchi ${t.id.slice(-6)} ${CF.mMin} min — malik ko`); }
       }
       if (ch) { trSave(); trPush(); }
     } catch (e) { log('⚠️ yaad-dihani: ' + e.message); }

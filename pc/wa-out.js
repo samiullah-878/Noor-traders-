@@ -138,12 +138,12 @@ async function main() {
     try {
       while (pend.size) {
         const [id, d] = [...pend.entries()].sort((a, b) => (Number(a[1].at) || 0) - (Number(b[1].at) || 0))[0];
-        const done = async (st, why, extra) => { pend.delete(id); try { await Q.doc(id).set({ st, why: String(why || '').slice(0, 140), sentAt: Date.now(), ...(d.im ? { im: FieldValue.delete(), hadIm: 1 } : {}), ...(extra || {}) }, { merge: true }); } catch (e) { log('⚠️ waOut ' + id + ': ' + e.message); } };
+        const done = async (st, why, extra) => { pend.delete(id); try { await Q.doc(id).set({ st, why: String(why || '').slice(0, 140), sentAt: Date.now(), ...(d.im ? { im: FieldValue.delete(), hadIm: 1 } : {}), ...(d.au ? { au: FieldValue.delete(), hadAu: 1 } : {}), ...(extra || {}) }, { merge: true }); } catch (e) { log('⚠️ waOut ' + id + ': ' + e.message); } };
         const day = dayOf(Date.now()); if (L.day !== day) { L.day = day; L.n = 0; }
         const to = normPh(d.to), nm = String(d.nm || '').slice(0, 40), txt = String(d.txt || '').trim();
         if (!cfg.on) { await done('skip', 'band hai (setting)'); continue; }
         if (Number(d.at) && Date.now() - Number(d.at) > 6 * 3600000) { await done('skip', 'purana (6 ghante+)'); continue; }
-        if (!isMob(to) || !txt) { await done('err', !isMob(to) ? 'mobile number ghalat' : 'paigham khali'); continue; }
+        if (!isMob(to) || (!txt && !d.au)) { await done('err', !isMob(to) ? 'mobile number ghalat' : 'paigham khali'); continue; }
         if (L.n >= cfg.lim) { log(`⏸ aaj ki hadd ${cfg.lim} poori — baqi kal`); setLink({ err: `Aaj ki hadd ${cfg.lim} poori — baqi kal` }); break; }   // queue mein rahe (st new)
         if (!sock || L.st !== 'open') { break; }   // jur jaye to kick()
         const gap = cfg.gap * 1000 - (Date.now() - lastSent); if (gap > 0) await sleep(gap);
@@ -154,12 +154,13 @@ async function main() {
           if (!okNo) { await done('skip', 'yeh number WhatsApp par nahi'); await addLog({ at: Date.now(), to, nm, code: String(d.code || ''), st: 'skip', why: 'WhatsApp par nahi' }); continue; }
           const jid = (chk[0] && chk[0].jid) || jidOf(to);
           const im = d.im && (Buffer.isBuffer(d.im) ? d.im : d.im.toUint8Array ? Buffer.from(d.im.toUint8Array()) : null);   // v1.0: bill ki tasveer (Bytes) ho to tasveer + caption
-          const r = await within(sock.sendMessage(jid, im && im.length ? { image: im, caption: txt, mimetype: 'image/jpeg' } : { text: txt }), 60000, 'bhejna');
+          const au = d.au && (Buffer.isBuffer(d.au) ? d.au : d.au.toUint8Array ? Buffer.from(d.au.toUint8Array()) : null);   // 🔊 awaz (mp3) — Urdu TTS
+          const r = await within(sock.sendMessage(jid, im && im.length ? { image: im, caption: txt, mimetype: 'image/jpeg' } : au && au.length ? { audio: au, mimetype: 'audio/mpeg', ptt: false } : { text: txt }), 60000, 'bhejna');
           lastSent = Date.now(); L.n++;
           await done('sent', '', { wid: String((r && r.key && r.key.id) || '') });
           await addLog({ at: Date.now(), to, nm, code: String(d.code || ''), st: 'sent' });
           setLink({ n: L.n, day, last: { at: Date.now(), to: phPretty(to), nm }, err: '' });
-          log(`📤 ${phPretty(to)} ${nm} · ${String(d.code || d.kind || '')}${im ? ' 🖼' : ''} (aaj ${L.n}/${cfg.lim})`);
+          log(`📤 ${phPretty(to)} ${nm} · ${String(d.code || d.kind || '')}${im ? ' 🖼' : au ? ' 🔊' : ''} (aaj ${L.n}/${cfg.lim})`);
         } catch (e) {
           const why = String(e.message || e).slice(0, 120); log(`✕ ${phPretty(to)}: ${why}`);
           const tries = (Number(d.tries) || 0) + 1;

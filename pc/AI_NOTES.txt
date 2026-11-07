@@ -4155,3 +4155,4 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - 2026-11-07: rate-change.js v1.0 NAYA (sirf parhti): khareed rate badla → posStats/rateChg har 30 s check; rate-change-auto.bat; manifest 2026-11-07.2 + services.
 - 2026-11-07: wa-out.js v1.0 NAYA (📲 gahak ko WhatsApp parchi, alag number) + pos-khata-sync (s) waQueue; manifest 2026-11-07.3.
 - 2026-11-07: wa-parchi v2.6 (📋 Mubeen ki parchiyon ka peecha: start / bill → gahak, group, likhi parchi) + wa-out tasveer; manifest 2026-11-07.4.
+- 2026-11-07: wa-parchi v2.7 (📞 start → gahak, bill list POS se (AI bill no), awaz msedge-tts, SIM call webhook + callEvt) · wa-out awaz; manifest 2026-11-07.5; rules 2.91 callEvt.

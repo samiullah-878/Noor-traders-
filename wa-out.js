@@ -24,7 +24,7 @@ function unlisten() { for (const f of [wlStop, cfStop, lgStop, ptStop]) { try { 
 export function woOpen() {
   if (!C?.owner()) { C?.notice('Sirf malik'); return; }
   qrLast = '';
-  C.modal('📲 Gahak ko WhatsApp parchi', `<div class="wps-set" data-wo-root="1"><div data-wo-link="1">${linkHTML()}</div><div data-wo-cfg="1">${cfgHTML()}</div><div data-wo-pt="1">${ptHTML()}</div><div data-wo-log="1">${logHTML()}</div></div>`, true);
+  C.modal('📲 Gahak ko WhatsApp parchi', `<div class="wps-set" data-wo-root="1"><div data-wo-link="1">${linkHTML()}</div><div data-wo-cfg="1">${cfgHTML()}</div><div data-wo-call="1">${callHTML()}</div><div data-wo-pt="1">${ptHTML()}</div><div data-wo-log="1">${logHTML()}</div></div>`, true);
   if (!wlStop && C.cloud?.listenWaLinkOut) wlStop = C.cloud.listenWaLinkOut((d, e) => { if (!alive()) return; if (e) wlErr = perm(e) ? 'rules' : 'net'; else { wl = d || {}; wlErr = ''; } paint('link'); });
   if (!cfStop && C.cloud?.listenWaOutCfg) cfStop = C.cloud.listenWaOutCfg((d, e) => { if (!alive()) return; if (!e) { cf = d; paint('cfg'); } });
   if (!ptStop && C.cloud?.listenParchiTrack) ptStop = C.cloud.listenParchiTrack((d, e) => { if (!alive()) return; if (!e) { pt = d; paint('pt'); } });
@@ -32,7 +32,9 @@ export function woOpen() {
   try { $('dialog')?.addEventListener('close', unlisten, { once: true }); } catch {}
   qrPaint();
 }
-const cfgNow = () => ({ on: cf?.on !== false, lim: Math.max(10, Math.min(500, Number(cf?.lim) || 150)), gap: Math.max(3, Math.min(60, Number(cf?.gap) || 8)), stMin: Math.max(1, Math.min(60, Number(cf?.stMin) || 5)) });
+const cfgNow = () => ({ on: cf?.on !== false, lim: Math.max(10, Math.min(500, Number(cf?.lim) || 150)), gap: Math.max(3, Math.min(60, Number(cf?.gap) || 8)), stMin: Math.max(1, Math.min(60, Number(cf?.stMin) || 5)), vMin: Math.max(1, Math.min(60, Number(cf?.vMin) || 6)), cMin: Math.max(1, Math.min(90, Number(cf?.cMin) || 8)), mMin: Math.max(1, Math.min(120, Number(cf?.mMin) || 12)), hook: String(cf?.hook || ''), callTo: String(cf?.callTo || '') });
+const MACRO_LINK = 'https://macrodroidlink.com/m/cwLDavCZf6CN';   // 📞 NT Call Mubeen (HBL phone) — 14 Nov 2026 tak; baad mein naya link maangein
+let ck = '';   // 📞 chaabi (callKey) — sirf is khirki mein
 function linkHTML() {
   const hd = '<h4>📱 Bhejne wala number (dukan ka WhatsApp Business — alag number)</h4>';
   if (wlErr === 'rules') return `<div class="wps-sec">${hd}<p class="wps-err">🔐 Ijazat nahi (rules).</p></div>`;
@@ -61,8 +63,21 @@ function cfgHTML() {
   return `<div class="wps-sec"><h4>⚙️ Kaam</h4><div class="wps-row"><button type="button" class="wps-tc${c.on ? ' is-in' : ''}" data-wo-set="on:${c.on ? 0 : 1}">${c.on ? '✅ Chalu' : '⛔ Band'}</button><i class="wps-wst">${stTxt(st.cfg)}</i></div>
     <div class="wps-row"><span class="wps-mut">Roz ki hadd</span>${seg('lim', 50, '50')}${seg('lim', 100, '100')}${seg('lim', 150, '150')}${seg('lim', 300, '300')}</div>
     <div class="wps-row"><span class="wps-mut">Faasla</span>${seg('gap', 5, '5 s')}${seg('gap', 8, '8 s')}${seg('gap', 15, '15 s')}${seg('gap', 30, '30 s')}</div>
-    <div class="wps-row"><span class="wps-mut">⏰ Mubeen "start" ka intezar</span>${seg('stMin', 3, '3 min')}${seg('stMin', 5, '5 min')}${seg('stMin', 10, '10 min')}${seg('stMin', 15, '15 min')}</div>
+    <div class="wps-row"><span class="wps-mut">⏰ "start" nahi → likha paigham</span>${seg('stMin', 3, '3 min')}${seg('stMin', 5, '5 min')}${seg('stMin', 10, '10 min')}${seg('stMin', 15, '15 min')}</div>
+    <div class="wps-row"><span class="wps-mut">🔊 computer ki awaz</span>${seg('vMin', 4, '4 min')}${seg('vMin', 6, '6 min')}${seg('vMin', 8, '8 min')}${seg('vMin', 12, '12 min')}</div>
+    <div class="wps-row"><span class="wps-mut">📞 SIM call (HBL phone)</span>${seg('cMin', 5, '5 min')}${seg('cMin', 8, '8 min')}${seg('cMin', 10, '10 min')}${seg('cMin', 15, '15 min')}</div>
+    <div class="wps-row"><span class="wps-mut">👑 aap ko khabar</span>${seg('mMin', 10, '10 min')}${seg('mMin', 12, '12 min')}${seg('mMin', 15, '15 min')}${seg('mMin', 20, '20 min')}</div>
     <small class="wps-mut">📲 Kis gahak ko: us ke khate ke ⋮ → "📲 WhatsApp parchi ON" (mobile number khate mein ho). Bank / kharcha khate par nahi. Paigham: naam · tareekh · raqam · sabqa / ab baqaya · tafseel · voucher no.</small></div>`;
+}
+function callHTML() {   // 📞 HBL phone ka MacroDroid — webhook Device ID + chaabi (callKey) + Mubeen ka number
+  const c = cfgNow(), ok = !!c.hook;
+  return `<div class="wps-sec"><h4>📞 SIM call — HBL wala phone (MacroDroid)</h4>
+    <div class="wps-lk ${ok ? 'ok' : 'warn'}"><b>${ok ? '✅ Phone juda (Device ID laga hai)' : '⚪ Abhi Device ID nahi'}</b><small>PC phone ko jagata hai → phone Mubeen ko call → utha le to speaker par Urdu mein bole → 28 s nahi uthai = kaat de → haal yahan list mein.</small></div>
+    <div class="wps-nadd"><input type="text" data-wo-hook="1" maxlength="80" placeholder="MacroDroid Device ID (Webhook wala)" value="${esc(c.hook)}" autocomplete="off"><button type="button" class="wps-tc pri" data-wo-hooksave="1">💾</button></div>
+    <div class="wps-nadd"><input type="tel" inputmode="tel" data-wo-callto="1" maxlength="20" placeholder="Mubeen ka number (khali = print wala)" value="${esc(c.callTo)}" autocomplete="off"><button type="button" class="wps-tc pri" data-wo-callsave="1">💾</button></div>
+    <div class="wps-row"><button type="button" class="wps-tc" data-wo-ckey="1">🔑 Chaabi ${ck ? 'dekhein / copy' : 'banao'}</button>${ck ? `<button type="button" class="wps-tc" data-wo-ckcopy="1">📋 Copy</button><button type="button" class="wps-tc bad" data-wo-cknew="1">↻ Nayi</button>` : ''}<a class="wps-tc" href="${MACRO_LINK}" target="_blank" rel="noopener">📥 Macro link</a></div>
+    ${ck ? `<div class="wps-pcode" style="font-size:13px;word-break:break-all">${esc(ck)}</div>` : ''}
+    <small class="wps-mut">Ek dafa: HBL phone par "📥 Macro link" kholein → MacroDroid mein save → macro ke variable <b>chaabi</b> mein yeh 🔑 chaabi likhein → Phone ki ijazat dein. Device ID: MacroDroid → macro ka Webhook trigger kholein (URL mein <b>trigger.macrodroid.com/XXXX/nt-call</b> — XXXX = Device ID) → upar likhein.</small></div>`;
 }
 function ptHTML() {   // 📋 Mubeen ki parchiyan (PC wa-parchi v2.6 blueAccess/parchiTrack)
   const L = Array.isArray(pt?.L) ? pt.L : [], at = tms(pt?.at);
@@ -70,7 +85,9 @@ function ptHTML() {   // 📋 Mubeen ki parchiyan (PC wa-parchi v2.6 blueAccess/
   const row = x => {
     const f = tms(x.fwdAt), who = (x.nm ? esc(x.nm) + ' ' : '') + (x.from ? esc(x.from.replace(/^(\d{4})(\d+)$/, '$1-$2')) : '<i class="wo-q">gahak ka number?</i>');
     const stc = x.st === 'done' ? (x.sent ? 'ok' : 'warn') : x.st === 'start' ? 'run' : x.rem ? 'bad' : 'w';
-    const stt = x.st === 'done' ? (x.sent ? `✅ Bill gahak ko gaya${x.nb > 1 ? ' (' + x.nb + ')' : ''} · ${mn(f, tms(x.doneAt))} min` : '🧾 Bill bana · ' + (x.err || 'gahak ko nahi gaya')) : x.st === 'start' ? `▶️ Shuru · ${mn(f, tms(x.startAt))} min baad` : x.rem ? `⏰ Shuru nahi · yaad-dihani gayi` : `⏳ Mubeen ke paas · ${mn(f, Date.now())} min`;
+    const cs = x.callSt === 'ans' ? ` · 📞 call uthai (${x.callSec || '?'} s)` : x.callSt === 'noans' ? ` · 📞 nahi uthai${x.calls > 1 ? ' ×2' : ''}` : x.callSt === 'dial' || x.callSt === 'ring' ? ' · 📞 call ja rahi…' : x.callSt === 'off' ? ' · 📞 (phone set nahi)' : x.callSt === 'err' ? ' · 📞 ✕' : '';
+    const vs = x.voc ? ' · 🔊 awaz' : '';
+    const stt = x.st === 'done' ? (x.sent ? `✅ Bill gahak ko gaya${x.nb > 1 ? ' (' + x.nb + ')' : ''} · ${mn(f, tms(x.doneAt))} min` : '🧾 Bill bana · ' + (x.err || 'gahak ko nahi gaya')) : x.st === 'start' ? `▶️ Shuru · ${mn(f, tms(x.startAt))} min baad` : x.rem ? `⏰ Shuru nahi · yaad-dihani${vs}${cs}` : `⏳ Mubeen ke paas · ${mn(f, Date.now())} min`;
     return `<div class="wo-r pt-${stc}"><i>${x.k === 'txt' ? '📝' : '🧾'}</i><span><b>${who}${x.k === 'txt' && x.tx ? ' · <small>' + esc(x.tx.slice(0, 30)) + '…</small>' : ''}</b><small>${stt}${x.err && x.st !== 'done' ? ' · ' + esc(x.err) : ''}</small></span><em>${esc(tmFmt(f))}</em></div>`;
   };
   return `<div class="wps-sec"><h4>📋 Mubeen ki parchiyan (${L.length})</h4><small class="wps-mut">Aap gahak ki parchi Mubeen ko forward karein → Mubeen usi parchi par reply "start" (${cfgNow().stMin} min mein, warna yaad-dihani) → bill tayyar = usi parchi par reply mein bill ki tasveer → gahak ko khud.${at ? ' · 🖥 ' + (ago(at) === 'abhi' ? 'abhi' : ago(at) + ' pehle') : ''}</small>
@@ -84,7 +101,8 @@ function logHTML() {
 function paint(which) {
   const b = document.querySelector(`#dialogBody [data-wo-${which}]`); if (!b) return;
   if (which === 'link') { const i = b.querySelector('[data-wo-ph]'); const v = i ? i.value : null, f = !!i && document.activeElement === i; b.innerHTML = linkHTML(); qrLast = ''; qrPaint(); const n = b.querySelector('[data-wo-ph]'); if (n && v != null) { n.value = v; if (f) n.focus(); } }
-  else if (which === 'cfg') { b.innerHTML = cfgHTML(); paint('pt'); }
+  else if (which === 'cfg') { b.innerHTML = cfgHTML(); paint('pt'); paint('call'); }
+  else if (which === 'call') { const i1 = b.querySelector('[data-wo-hook]'), i2 = b.querySelector('[data-wo-callto]'), f = document.activeElement; if ((i1 && f === i1) || (i2 && f === i2)) return; b.innerHTML = callHTML(); }
   else if (which === 'pt') b.innerHTML = ptHTML();
   else b.innerHTML = logHTML();
 }
@@ -113,12 +131,24 @@ async function cmd(c) {
   paint('link'); setTimeout(() => { if (st.cmd !== 'w') { st.cmd = ''; paint('link'); } }, 5000);
 }
 async function setCfg(k, v) {
-  const c = cfgNow(); c[k] = k === 'on' ? v === '1' : Number(v); cf = { ...(cf || {}), ...c }; st.cfg = 'w'; paint('cfg');
+  const c = cfgNow(); c[k] = k === 'on' ? v === '1' : (k === 'hook' || k === 'callTo') ? String(v) : Number(v); cf = { ...(cf || {}), ...c }; st.cfg = 'w'; paint('cfg');
   try { await withT(C.cloud.saveWaOutCfg(c), 12000); st.cfg = 'ok'; } catch (e) { st.cfg = 'bad'; C.notice('✕ ' + (perm(e) ? 'Ijazat nahi' : e?.message || e)); }
   paint('cfg'); setTimeout(() => { if (st.cfg !== 'w') { st.cfg = ''; paint('cfg'); } }, 4000);
+}
+async function ckShow(fresh) {   // 🔑 callKey — app banati hai (chat mein kabhi nahi)
+  try {
+    if (!fresh && !ck) ck = await C.cloud.getCallKey();
+    if (fresh || !ck) { const a = new Uint8Array(16); crypto.getRandomValues(a); const k = [...a].map(x => x.toString(16).padStart(2, '0')).join(''); await C.cloud.setCallKey(k); ck = k; C.notice('🔑 Chaabi ban gayi — HBL phone ke macro mein likhein'); }
+    paint('call');
+  } catch (e) { C.notice('✕ ' + (perm(e) ? 'Ijazat nahi' : e?.message || e)); }
 }
 function onClick(e) {
   const b = e.target.closest?.('#dialogBody [data-wo-root] button'); if (!b) return;
   if (b.dataset.woCmd) { e.preventDefault(); cmd(b.dataset.woCmd); return; }
-  if (b.dataset.woSet) { e.preventDefault(); const [k, v] = b.dataset.woSet.split(':'); setCfg(k, v); }
+  if (b.dataset.woSet) { e.preventDefault(); const [k, v] = b.dataset.woSet.split(':'); setCfg(k, v); return; }
+  if (b.dataset.woHooksave) { e.preventDefault(); const i = document.querySelector('#dialogBody [data-wo-hook]'); setCfg('hook', String(i?.value || '').trim()); return; }
+  if (b.dataset.woCallsave) { e.preventDefault(); const i = document.querySelector('#dialogBody [data-wo-callto]'); const v = String(i?.value || '').trim(); if (v && !phNorm(v)) { C.notice('Number aisa: 0300-1234567'); return; } setCfg('callTo', phNorm(v) || ''); return; }
+  if (b.dataset.woCkey) { e.preventDefault(); ckShow(false); return; }
+  if (b.dataset.woCknew) { e.preventDefault(); if (!confirm('Nayi chaabi? HBL phone ke macro mein dobara likhni hogi.')) return; ckShow(true); return; }
+  if (b.dataset.woCkcopy) { e.preventDefault(); try { navigator.clipboard.writeText(ck).then(() => C.notice('📋 Chaabi copy ho gayi')); } catch { C.notice('Copy nahi hui — likh lein'); } }
 }
