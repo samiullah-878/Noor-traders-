@@ -25,10 +25,8 @@ for i, (ic, t, s) in enumerate(RULES, 1):   # t = falsafi ka naam, s = qoul
 acts += [END,
     iff([lbool("never", True)]),
     {"m_classType": "ElseIfConfirmedThenAction", "m_SIGUID": 0, "title": "{v=qdT}",
-     "text": "<div dir=\"rtl\">{v=qdM}<br><br>— {v=qdA}</div>", "positiveText": "✅ OK", "negativeText": "🔕 Aaj nahi",
+     "text": "<div dir=\"rtl\">{v=qdM}<br><br>— {v=qdA}</div>", "positiveText": "✅ OK", "negativeText": "✕",
      "cancelAfterTimeout": True, "timeoutSeconds": 12, "htmlFormat": True, "useCustomColors": True, "textColor": -1, "bgColor": -15788246},
-    ELSE,
-      sstr("qdOff", "{dayofmonth}"),
     END,
     END,
 ]

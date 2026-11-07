@@ -19,12 +19,10 @@ out = {"macroExportVersion": 1, "macro": {
         {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": 112233445566772, "m_launched": True,
          "m_packageNameList": ["com.nxd.falconi"], "m_applicationNameList": ["Falcon-i"], "usePackageNameOption": 0},
         {"m_classType": "AccessibilityServiceStateTrigger", "m_SIGUID": 112233445566773, "option": 1, "idList": SVC, "nameList": NMS},
-        {"m_classType": "RegularIntervalTrigger", "m_SIGUID": 112233445566774, "m_seconds": 120, "m_useAlarm": False}],
+        {"m_classType": "RegularIntervalTrigger", "m_SIGUID": 112233445566774, "m_seconds": 600, "m_useAlarm": False}],
     "m_actionList": [
         {"m_classType": "IfConditionAction", "m_SIGUID": 0, "m_constraintList": [off(0), off(1)], "m_isOrCondition": True},
           {"m_classType": "AccessibilityServiceAction", "m_SIGUID": 0, "option": 0, "idList": SVC, "nameList": NMS},
-          {"m_classType": "ToastAction", "m_SIGUID": 0, "m_messageText": "🛠 MacroDroid accessibility ON", "m_duration": 2,
-           "m_position": 0, "m_backgroundColor": -14606047, "m_textColor": -1, "useTextOnly": True, "cancelPrevious": True},
         {"m_classType": "EndIfAction", "m_SIGUID": 0}],
     "m_constraintList": [notBank, {"m_classType": "MacroDroidVariableConstraint", "m_SIGUID": 0, "m_variable": {"m_name": "bankOn", "m_type": 0, "isLocalVar": False}, "m_booleanValue": False}]},
     "globalVariables": [{"m_name": "bankOn", "m_type": 0, "isLocalVar": False, "m_booleanValue": False, "m_intValue": 0, "m_stringValue": ""}],
