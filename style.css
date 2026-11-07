@@ -7512,3 +7512,7 @@ html body #dialogBody .fx-tripinfo{display:flex;flex-direction:column;gap:4px;ba
 html body #dialogBody .fx-tripinfo[hidden]{display:none}
 html body #dialogBody .fx-tripinfo b{font-size:13.5px}.fx-tripinfo span{display:block;line-height:1.35}.fx-tripinfo em{font-style:normal;font-weight:700;color:#475569;margin-right:4px}.fx-tripinfo small{color:#6b7a99}
 html.dk body #dialogBody .fx-tripinfo,html[data-theme="dark"] body #dialogBody .fx-tripinfo{background:#1b2440;border-color:#2c3a63;color:#dbe6ff}
+/* v2.202.0: 🔄 Falcon text app khud parhe — patti */
+html body #dialogBody .fx-runbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}
+html body #dialogBody .fx-runbtn{height:34px;padding:0 14px;border-radius:999px;border:1px solid #c7d6f5;background:linear-gradient(180deg,#f7faff,#e7efff);color:#1d3b7a;font-weight:700;font-size:13px;white-space:nowrap;cursor:pointer}
+html body #dialogBody #fxRunSt{color:#475569;font-size:12px}
