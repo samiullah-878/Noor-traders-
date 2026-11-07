@@ -49,11 +49,15 @@ mt, vt = fix(tk, h64('claude|tiktok'), '📵 TikTok reels')
 mw, vw = fix(wl, h64('claude|waleed'), '🔊 Waleed Bhai')   # ek din ka tha (6 Nov) — ab pkg mein nahi, off mein
 mq, vq = fix(qd, h64('claude|qaide'), '🧠 6 Qaide')
 vars_, seen = [], set()
-for v in vp + vk + vt + vq:
+# 🏦 Bank mode (chat link, phone par) ke globals — link import banata nahi (7 Nov: "Variable does not exist (bkSave)")
+def _gv(n, t, **kw):
+    v = {"m_name": n, "m_type": t, "isLocalVar": False, "m_booleanValue": False, "m_intValue": 0, "m_stringValue": ""}; v.update(kw); return v
+vb = [_gv("bankOn", 0), _gv("bkSave", 2), _gv("bkRes", 2), _gv("bkBeat", 1), _gv("bkAge", 1)]
+for v in vp + vk + vt + vq + vb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🧠 6 Qaide — Paani jaisa dabba, Paani/Khana ke saath takrao nahi. Waleed Bhai band.",
+       "note": "🏦 Bank mode ke 5 variables banaye (bankOn/bkSave/bkRes/bkBeat/bkAge). 🧠 6 Qaide naya.",
        "macros": [mp, mk, ma, mr, mt, mq],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}}],
        "vars": vars_,
