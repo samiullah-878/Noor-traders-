@@ -4364,10 +4364,10 @@ html body main>header .sub-bar{display:flex;align-items:center;gap:6px;overflow-
 html body main>header .sub-bar[hidden]{display:none!important}
 html body main>header .sub-bar::-webkit-scrollbar{display:none}
 html body main>header .sub-bar::before{content:"↳";flex:none;color:rgba(255,255,255,.7);font-size:15px;font-weight:800;padding:0 1px 0 6px}
-html body main>header .sub-bar .sb-c{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;min-height:30px!important;padding:3px 12px!important;border-radius:999px!important;font-size:12.5px!important;font-weight:700!important;white-space:nowrap;background:rgba(255,255,255,.13)!important;color:#fff!important;border:1px solid rgba(255,255,255,.28)!important;box-shadow:none!important}
-html body main>header .sub-bar .sb-c.pin{background:rgba(255,255,255,.22)!important;border-color:rgba(255,255,255,.5)!important}
-html body main>header .sub-bar .sb-c.is-in{background:#fff!important;color:#1d3466!important;border-color:#fff!important;box-shadow:0 3px 10px rgba(5,15,35,.25)!important}
-html body main>header .sub-bar .sb-c em{font-style:normal;background:#e11d48;color:#fff;border-radius:999px;padding:0 6px;font-size:10.5px;line-height:16px;font-weight:800}
+html body main>header .sub-bar .sb-c,html body #chipDrawer .sub-bar .sb-c{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;min-height:30px!important;padding:3px 12px!important;border-radius:999px!important;font-size:12.5px!important;font-weight:700!important;white-space:nowrap;background:rgba(255,255,255,.13)!important;color:#fff!important;border:1px solid rgba(255,255,255,.28)!important;box-shadow:none!important}
+html body main>header .sub-bar .sb-c.pin,html body #chipDrawer .sub-bar .sb-c.pin{background:rgba(255,255,255,.22)!important;border-color:rgba(255,255,255,.5)!important}
+html body main>header .sub-bar .sb-c.is-in,html body #chipDrawer .sub-bar .sb-c.is-in{background:#fff!important;color:#1d3466!important;border-color:#fff!important;box-shadow:0 3px 10px rgba(5,15,35,.25)!important}
+html body main>header .sub-bar .sb-c em,html body #chipDrawer .sub-bar .sb-c em{font-style:normal;background:#e11d48;color:#fff;border-radius:999px;padding:0 6px;font-size:10.5px;line-height:16px;font-weight:800}
 html body main>header .sub-bar .sb-p{font-size:10px;line-height:1}
 html body #sbMenu{position:fixed;z-index:1300;min-width:210px;display:flex;flex-direction:column;gap:2px;padding:6px;border-radius:16px;background:#fff;border:1px solid #e3e8f2;box-shadow:0 14px 40px rgba(10,20,45,.28)}
 html body #sbMenu[hidden]{display:none!important}
@@ -7472,13 +7472,27 @@ html body #dialogBody .wo-r.pt-bad{border-color:#f7c9ce;background:linear-gradie
 html body #dialogBody .wo-q{font-style:normal;color:#b3261e}
 html body #dialogBody a.wps-tc{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid #c7d4f5;background:linear-gradient(180deg,#fff,#f3f6fd);color:#223b6d;font-weight:800;font-size:13px;white-space:nowrap;text-decoration:none}
 html body #dialogBody .wo-r small{white-space:normal;line-height:1.3}
-/* v2.199.0: ＋ chips fold (phone) — screen chips + 📌 patti band, baayein ek chhota ＋ */
-@media (min-width:1100px){html body main>header #foldRow{display:none!important}}
+/* v2.200.0: ☰ SLIDER (Facebook jaisa) — phone par screen chips + 📌 patti header mein nahi, baayein se drawer */
+@media (min-width:1100px){html body #chipDrawer{display:none!important}}
 @media (max-width:1099.98px){
-  html body main>header #foldRow{display:flex;align-items:center;margin:4px 0 0;min-height:30px}
-  html body main>header #foldBtn{display:inline-flex;align-items:center;justify-content:center;width:34px;height:30px;min-height:30px!important;padding:0!important;border-radius:999px!important;border:1px solid rgba(255,255,255,.28)!important;background:rgba(255,255,255,.12)!important;color:#fff!important;font-size:19px!important;line-height:1;font-weight:700;box-shadow:none!important}
-  html body main>header #foldBtn.is-in{background:#fff!important;color:#1d3466!important}
-  html.chip-fold:not(.nav-open) body main>header .app-nav{display:none!important}
-  html.chip-fold body main>header #subBar{display:none!important}
-  html:not(.chip-fold):not(.zz1):not(.zz2) body main>header .app-nav{display:flex!important}
+  html body main>header .app-nav,html body main>header #subBar,html body main>header #foldRow{display:none!important}
+  html body #chipDrawer{position:fixed;inset:0;z-index:9000;pointer-events:none}
+  html body #chipDrawer .dr-bg{position:absolute;inset:0;background:rgba(10,20,45,.45);opacity:0;transition:opacity .22s}
+  html body #chipDrawer .dr-panel{position:absolute;top:0;bottom:0;left:0;width:min(86vw,340px);box-sizing:border-box;padding:max(14px,env(safe-area-inset-top,0px)) 14px 24px;overflow-y:auto;background:linear-gradient(180deg,#1d3466,#14284f);color:#fff;box-shadow:8px 0 30px rgba(0,0,0,.35);transform:translateX(-104%);transition:transform .24s cubic-bezier(.2,.8,.2,1);border-radius:0 22px 22px 0}
+  html.nav-open body #chipDrawer{pointer-events:auto}html.nav-open body #chipDrawer .dr-bg{opacity:1}html.nav-open body #chipDrawer .dr-panel{transform:none}
+  html body #chipDrawer .dr-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 10px}html body #chipDrawer .dr-head b{font-size:16px;letter-spacing:.3px}
+  html body #chipDrawer .dr-x{width:36px;height:36px;min-height:36px!important;padding:0!important;border-radius:999px!important;border:1px solid rgba(255,255,255,.25)!important;background:rgba(255,255,255,.12)!important;color:#fff!important;font-size:16px!important;box-shadow:none!important}
+  html body #chipDrawer .dr-sec{margin:10px 0 4px}html body #chipDrawer .dr-sec>small{display:block;font-size:11px;font-weight:800;letter-spacing:1.2px;opacity:.7;margin:0 2px 8px;text-transform:uppercase}
+  html body #chipDrawer.no-pins .dr-pins{display:none}
+  html body #chipDrawer .app-nav{display:flex!important;flex-direction:column;gap:6px!important;margin:0!important;padding:0!important;overflow:visible!important}
+  html body #chipDrawer .app-nav button{display:flex!important;width:100%;justify-content:flex-start;text-align:left;min-height:44px!important;padding:8px 14px!important;border-radius:14px!important;font-size:14.5px!important;font-weight:700;background:rgba(255,255,255,.08)!important;border:1px solid rgba(255,255,255,.12)!important;color:#fff!important;order:0!important}
+  html body #chipDrawer .app-nav button.nav-off{display:flex!important}
+  html body #chipDrawer .app-nav button.desk-on,html body #chipDrawer .app-nav button.nav-all{background:#fff!important;color:#1d3466!important;border-color:#fff!important;font-weight:800!important}
+  html body #chipDrawer .app-nav button[hidden]{display:none!important}
+  html body #chipDrawer #subBar{display:flex!important;flex-wrap:wrap;gap:6px;overflow:visible!important;margin:0!important;padding:0!important}
+  html body #chipDrawer #subBar .sb-c{white-space:nowrap}
 }
+/* v2.200.0: ⇄ Transfer — phone par bara card ⋮ mein; patli patti */
+html body main .summary>div.thh-mini.thh-mini{display:flex!important;flex-direction:row;align-items:center;gap:8px 12px;flex-wrap:wrap;width:100%;flex:1 1 100%!important;padding:8px 12px!important;border-radius:14px!important;background:rgba(255,255,255,.12)!important;color:#fff!important;font-size:13px;font-weight:700;box-shadow:none!important;border:1px solid rgba(255,255,255,.14)!important}
+html body main .summary>div.thh-mini span{white-space:nowrap}html body main .summary>div.thh-mini span.bad{color:#ffd0d4}html body main .summary>div.thh-mini i{margin-left:auto;font-style:normal;font-size:11px;opacity:.75;font-weight:600;white-space:nowrap}
+html body #dialogBody .thh-dlg{display:block;padding:0}html body #dialogBody .thh-dlg>div.thh{display:block!important;width:100%;box-sizing:border-box;padding:16px!important;border-radius:18px}

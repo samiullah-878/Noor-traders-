@@ -14,9 +14,9 @@
 //  🔠 Apni marzi: likhai size (main zoom) · headings size · likhai rang · headings rang — har phone (localStorage sam-marzi);
 //     malik "👑 Sab mulazimon par" = blueAccess/look {marzi, mAt} (cloud.setMarzi). AI nahi.
 // =====================================================================================================
-import { recentList } from './recent.js?v=2.199.0';
-import { agentRegister } from './agent.js?v=2.199.0';
-import { smartHit, hlName } from './smart-search.js?v=2.199.0';
+import { recentList } from './recent.js?v=2.200.0';
+import { agentRegister } from './agent.js?v=2.200.0';
+import { smartHit, hlName } from './smart-search.js?v=2.200.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -298,7 +298,7 @@ document.addEventListener('click', e => { if (e.target.closest?.('#marziBtn')) {
 
 // ---------------- ☰ screen chips (v2.105.0 — malik: "chips oper top par chhote · screen ke andar chhupe rahein · upar baayein se khulein") ----------------
 const navOpen = () => document.documentElement.classList.contains('nav-open');
-function navSet(on) { document.documentElement.classList.toggle('nav-open', !!on); paintNavBtn(); }
+function navSet(on) { document.documentElement.classList.toggle('nav-open', !!on); try { drawerMove(!!on); } catch {} paintNavBtn(); }
 function navBtnSetup() {
   const top = document.querySelector('main>header .top'); if (!top || $('navBtn')) return;
   const b = document.createElement('button'); b.type = 'button'; b.id = 'navBtn'; b.className = 'round nav-btn'; b.setAttribute('aria-label', 'Screens badlein'); b.title = 'Screens badlein'; b.textContent = '☰';
@@ -306,16 +306,32 @@ function navBtnSetup() {
   b.addEventListener('click', () => navSet(!navOpen()));
   document.querySelector('.app-nav')?.addEventListener('click', e => { if (e.target.closest?.('button')) setTimeout(() => navSet(false), 0); });
 }
-// v2.199.0 (malik 7 Nov, screenshot: "front par jitne chips hain un ko left side par ek plus — us ke aage us ke chips · screen poori upar tak khali rahe · major chips ⋮ ke andar"):
-//   phone par screen chips (.app-nav) + 📌 patti (#subBar) BAND; header mein sirf baayein ek chhota ＋ (html.chip-fold) — dabao = dono qatarein khulein (＋ → ✕), phone yaad rakhta hai.
-const FOLD_LS = 'sam-chip-fold';
-const foldOn = () => { try { return localStorage.getItem(FOLD_LS) !== '0'; } catch { return true; } };
-function foldSet(on) { try { localStorage.setItem(FOLD_LS, on ? '1' : '0'); } catch {} document.documentElement.classList.toggle('chip-fold', !!on); const b = $('foldBtn'); if (b) { b.textContent = on ? '＋' : '✕'; b.classList.toggle('is-in', !on); b.title = on ? 'Chips kholein' : 'Chips band'; } }
-function foldSetup() {
-  const top = document.querySelector('main>header .top'); if (!top || $('foldBtn')) return;
-  const row = document.createElement('div'); row.id = 'foldRow'; row.className = 'fold-row';
-  const b = document.createElement('button'); b.type = 'button'; b.id = 'foldBtn'; b.className = 'fold-btn'; b.setAttribute('aria-label', 'Chips'); row.appendChild(b);
-  top.after(row); b.addEventListener('click', () => foldSet(!foldOn())); foldSet(foldOn());
+// v2.200.0 (malik 7 Nov, screenshot: "jaise Facebook ka sab kuch slider ke andar hai — waisa slider · main screen bari lagni chahiye"):
+//   phone par screen chips (.app-nav) + 📌 patti (#subBar) header mein NAHI — ☰ dabao = baayein se SLIDER (#chipDrawer, Facebook jaisa) jis mein
+//   📌 is screen ke chips + sab screens ki list (asal .app-nav buttons wahi DOM, khulte waqt drawer mein, band par wapas header mein). html.nav-open = khula.
+//   v2.199.0 ka ＋ (chip-fold) hata — slider hi sab kuch.
+let drHome = null;
+function drawerEl() {
+  let d = $('chipDrawer'); if (d) return d;
+  d = document.createElement('aside'); d.id = 'chipDrawer'; d.setAttribute('aria-hidden', 'true');
+  d.innerHTML = `<div class="dr-bg" data-dr-close="1"></div><div class="dr-panel"><div class="dr-head"><b>🏪 Noor Traders</b><button type="button" class="dr-x" data-dr-close="1" aria-label="Band">✕</button></div><div class="dr-sec dr-pins"><small>📌 Is screen ke</small><div class="dr-slot" data-dr-sub></div></div><div class="dr-sec dr-screens"><small>📱 Screens</small><div class="dr-slot" data-dr-nav></div></div></div>`;
+  document.body.appendChild(d);
+  d.addEventListener('click', e => { if (e.target.closest?.('[data-dr-close]')) { navSet(false); return; } if (e.target.closest?.('.app-nav button, #subBar .sb-c')) setTimeout(() => navSet(false), 0); });
+  return d;
+}
+function drawerMove(on) {
+  if (innerWidth >= 1100) return;
+  const nav = document.querySelector('main>header .app-nav') || document.querySelector('#chipDrawer .app-nav'), sub = $('subBar'); if (!nav) return;
+  const d = drawerEl();
+  if (on) {
+    if (!drHome) drHome = { p: nav.parentNode, n: nav.nextSibling, sp: sub ? sub.parentNode : null, sn: sub ? sub.nextSibling : null };
+    d.querySelector('[data-dr-nav]').appendChild(nav); if (sub) d.querySelector('[data-dr-sub]').appendChild(sub);
+    d.classList.toggle('no-pins', !sub || !sub.children.length);
+  } else if (drHome) {
+    try { drHome.p.insertBefore(nav, drHome.n && drHome.n.parentNode === drHome.p ? drHome.n : null); } catch { drHome.p.appendChild(nav); }
+    if (sub && drHome.sp) { try { drHome.sp.insertBefore(sub, drHome.sn && drHome.sn.parentNode === drHome.sp ? drHome.sn : null); } catch { drHome.sp.appendChild(sub); } }
+  }
+  d.setAttribute('aria-hidden', on ? 'false' : 'true');
 }
 function paintNavBtn() {
   const b = $('navBtn'); if (!b) return;
@@ -357,7 +373,7 @@ function dlgBtnSetup() {
   let setT = 0; new MutationObserver(() => { clearTimeout(setT); setT = setTimeout(dhLearnSettings, 250); }).observe(body, { childList: true });   // v2.113.0: 🔍 Settings ki cheezein yaad
 }
 export function shellSetup(h = {}) {
-  H = h; mApply(); navBtnSetup(); foldSetup(); lockX(); dlgBtnSetup(); dhBtnSetup();
+  H = h; mApply(); navBtnSetup(); lockX(); dlgBtnSetup(); dhBtnSetup();
   const st = $('settings');
   if (st && !st.dataset.mn0) { st.dataset.mn0 = '1'; const old = st.onclick; H.openSettings = H.openSettings || (() => old?.call(st)); st.onclick = () => { if (isOpen()) close(); else open(); }; st.setAttribute('aria-label', 'Is screen ke kaam'); st.title = 'Is screen ke kaam'; }
   // header ka ‹ — focus ho to pehle focus se wapas
@@ -381,7 +397,7 @@ const dhWr = (k, o) => { try { localStorage.setItem(k, JSON.stringify(o)); } cat
 const dhCan = () => { try { return !!H.owner?.() || H.can?.('app.dhoondo') !== false; } catch { return true; } };
 const dhKey = x => String(x.k).startsWith('ft.') ? 'ft:' + x.t : x.k;   // neeche ki patti ke kaam: naam se pehchan (index badal sakta)
 let DHS = null;
-async function dhStatic() { if (DHS) return DHS; try { DHS = (await import('./dh-cat.js?v=2.199.0')).DH_CAT || {}; } catch { DHS = {}; } return DHS; }
+async function dhStatic() { if (DHS) return DHS; try { DHS = (await import('./dh-cat.js?v=2.200.0')).DH_CAT || {}; } catch { DHS = {}; } return DHS; }
 // is screen ke chips yaad — jo kabhi dikhe sab (haalat ke hisaab se aate jate hain), 21 din na dikhe to bhool jao
 const dhSig = new Map();   // view → pichhli dafa ke chips (wahi hon to localStorage chhoo bhi nahi — tez)
 function dhLearn() {

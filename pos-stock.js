@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.199.0';
-import { liveLabelsHTML } from './barcode.js?v=2.199.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.200.0';
+import { liveLabelsHTML } from './barcode.js?v=2.200.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -699,13 +699,13 @@ export function stockRozChip() {
 export async function stockRozOpen(k) {
   if (!cloud) return; start();
   if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  if (isOwner() && !k) { try { (await import('./roz.js?v=2.199.0')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
+  if (isOwner() && !k) { try { (await import('./roz.js?v=2.200.0')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
   const L = rozLocs().filter(rozCan);
   if (!rozCfg().on) { notice('📋 Roz ki ginti malik ne band rakhi hai'); return; }
   if (!L.length) { notice('🔒 Roz ki ginti ki ijazat nahi (malik: Settings → Mulazim → 📋 Roz ki ginti)'); return; }
   const go = x => { try { window.ntRecentOpen?.({ open: { kind: 'stock', screen: 'roz', k: x } }); } catch { rozEnter(x); } };
   if (k || L.length === 1) { go(k || L[0].k); return; }
-  try { (await import('./roz.js?v=2.199.0')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
+  try { (await import('./roz.js?v=2.200.0')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
 }
 // roz.js ke liye andar ka saman (sirf parhna + wahi kaam jo buttons karte hain)
 export function stockRozApi() {
@@ -729,7 +729,7 @@ export function stockRozApi() {
 let farqMod = null;
 const farqCan = () => seeStock() && (isOwner() || can('stock.farq'));
 async function farqOpenNow() { if (!farqCan()) { notice('⚖️ Stock farq — ijazat nahi (malik se kahein)'); return; } start(true); if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  try { farqMod = farqMod || await import('./farq.js?v=2.199.0'); recentPush({ key: 'farq', icon: '⚖️', label: 'Stock farq', open: { kind: 'stock', screen: 'farq' } }); farqMod.farqOpen(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
+  try { farqMod = farqMod || await import('./farq.js?v=2.200.0'); recentPush({ key: 'farq', icon: '⚖️', label: 'Stock farq', open: { kind: 'stock', screen: 'farq' } }); farqMod.farqOpen(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
 // sab jagah (jo gini) ka asal farq — is round ki ginti
 function oxNet(id) { let net = 0, k = false, z = false, n = 0, pr = 0; for (const b of brInfo().branches) { const it = itemAt(b, id); if (!it) continue; const c = countOf(b, it); if (!c) continue; const f = r3(countedPcs(c) - Number(sysOf(c, it))); net += f; n++; if (f < -0.001) k = true; if (f > 0.001) z = true; pr = Number(it.prate) || pr; } return n ? { net: r3(net), rs: net * pr, both: k && z, n } : null; }
 function oxHTML(r, c, diff) {
@@ -781,7 +781,7 @@ function qtrGinti(b, id) {
     return Math.abs(f) > 0.0005 ? { f: r3(f), round } : null; } catch { return null; }
 }
 async function qtrGo(o) { if (!qtrCan()) { notice('⇄ Transfer — ijazat nahi (malik se kahein)'); return; } start(true); if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  try { qtrMod = qtrMod || await import('./qtr.js?v=2.199.0'); qtrMod.qtrOpen(qtrApi(), o); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
+  try { qtrMod = qtrMod || await import('./qtr.js?v=2.200.0'); qtrMod.qtrOpen(qtrApi(), o); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
 // jagah badli: sab se bara KAM (yahan maal kam = POS zyada) → sab se bari ZYADTI, tadad = dono mein chhoti
 function oxPair(id) {
   let k = null, z = null; for (const b of brInfo().branches) { const it = itemAt(b, id); if (!it) continue; const c = countOf(b, it); if (!c) continue; const f = r3(countedPcs(c) - Number(sysOf(c, it)));
@@ -5150,6 +5150,9 @@ export function thGodamNow() {   // agent / test ke liye — wahi hisaab jo dabb
   thWatch(); const today = regDay(Date.now()), all = tcAll().filter(t => t && !t.cancelled && !tcHisaab(t) && t.at >= Date.now() - 3 * 864e5), td = all.filter(t => regDay(t.at) === today);
   return thGodamStats(all, td).map(x => ({ godam: x.name, aaj_note: x.n, gaya: `${num(x.out.c)} ctn${x.out.p ? ' + ' + num(x.out.p) + ' pcs' : ''} (${x.nOut} note)`, aaya: `${num(x.inn.c)} ctn${x.inn.p ? ' + ' + num(x.inn.p) + ' pcs' : ''} (${x.nIn} note)`, check_baqi: x.pend, late: x.late, farq: x.farq }));
 }
+let thHeroHTML = '';
+function thHeroOpen() { const d = $('dialog'); if (!d || !thHeroHTML) return; d.classList.remove('search-dialog'); $('dialogTitle').textContent = '📊 Godamon ka hisaab'; $('dialogBody').innerHTML = `<div class="summary thh-dlg">${thHeroHTML}</div>`; if (!d.open) d.showModal(); }
+document.addEventListener('click', e => { if (e.target.closest?.('[data-th-hero]')) { e.preventDefault(); thHeroOpen(); } });
 export function renderTransferHub(canDo = () => true) {
   thWatch(); rackWatch(); canDoRk = canDo;
   const names = collect().names || {}, today = regDay(Date.now()), y = new Date(); y.setDate(y.getDate() - 1); const yest = regDay(y.getTime());
@@ -5162,9 +5165,12 @@ export function renderTransferHub(canDo = () => true) {
   const gCards = gStat.length ? `<div class="thg-row">${gStat.map(thgCard).join('')}</div>` : '';
   const st = all.filter(t => Date.now() - tcIssued(t) < 2 * 864e5).map(t => tcState(t).k), pend = st.filter(k => k === 'wait' || k === 'late').length, late = st.filter(k => k === 'late').length, farq = st.filter(k => k === 'farq').length;
   const job = (trList || []).find(j => j.status !== 'done' && j.status !== 'failed' && Date.now() - j.at < 10 * 60000);
-  $('summary').innerHTML = `<div class="thh"><div class="thh-head"><span class="thh-ic">⇄</span><div><small>GODAM SE GODAM</small><b>Transfer notes</b></div>${job ? '<span class="thh-pill wait">⏳ PC bana raha hai</span>' : `<span class="thh-pill">${td.length} aaj</span>`}</div>
+  const thHero = `<div class="thh"><div class="thh-head"><span class="thh-ic">⇄</span><div><small>GODAM SE GODAM</small><b>Transfer notes</b></div>${job ? '<span class="thh-pill wait">⏳ PC bana raha hai</span>' : `<span class="thh-pill">${td.length} aaj</span>`}</div>
     <div class="thh-bal"><strong>${num(T.c)} <small>Ctn</small>${T.p ? ` + ${num(T.p)} <small>Pcs</small>` : ''}</strong><span>aaj ${td.length} note · ${td.reduce((n, t) => n + (t.lines || []).length, 0)} items${T.c !== T.ca ? ` · <em class="thh-asal">asal ${num(T.ca)} ctn</em>` : ''}</span></div>
     <div class="thh-stats"><div class="${pend ? 'w' : 'ok'}"><span>${pend ? '⏳' : '✓'}</span><div><small>Check baqi</small><b>${pend}</b></div></div><div class="${late ? 'bad' : 'ok'}"><span>⏰</span><div><small>Late (2 ghante+)</small><b>${late}</b></div></div><div class="${farq ? 'bad' : 'ok'}"><span>⚠️</span><div><small>Farq</small><b>${farq}</b></div></div></div>${gCards}</div>`;
+  // v2.200.0 (malik 7 Nov: "Transfer wali screen mein is ko ⋮ ke andar daal do — sab godamon ka hisaab · main screen bari lagni chahiye"): phone par bara card NAHI — patli patti + ⋮ "📊 Godamon ka hisaab" (wahi card khirki mein)
+  thHeroHTML = thHero;
+  $('summary').innerHTML = innerWidth < 1100 ? `<div class="thh-mini"><span>⇄ <b>${td.length}</b> aaj</span><span>${pend ? '⏳ ' + pend + ' baqi' : '✓ sab check'}</span>${late ? `<span class="bad">⏰ ${late}</span>` : ''}${farq ? `<span class="bad">⚠️ ${farq}</span>` : ''}<i>hisaab ⋮ se</i><button type="button" hidden data-th-hero="1" data-mn="th.hero" data-mn-i="📊" data-mn-t="Godamon ka hisaab" data-mn-s="aaj ke note · check baqi · late · farq · har godam" data-mn-g="⇄ Transfer">📊 Godamon ka hisaab</button></div>` : thHero;
   const stChip = t => { const s = tcState(t); return s.k === 'hisaab' ? '<span class="th-chip hs">⚖️ Sirf hisaab</span>' : s.k === 'ok' ? '<span class="th-chip ok">✓ Pohancha</span>' : s.k === 'farq' ? '<span class="th-chip bad">⚠️ Farq</span>' : s.ng ? '<span class="th-chip bad">📦 De diya tick nahi</span>' : s.k === 'late' ? `<span class="th-chip bad">⏰ ${tcAgo(s.age)}</span>` : `<span class="th-chip w">⏳ ${tcAgo(s.age)}</span>`; };
   const own = isOwner();
   const row = (t, dd) => { const x = tot([t]); const k = esc(tcKey(t)); return `<div class="th-rw"><button type="button" class="th-row" data-th-tc="${k}" data-th-d="${dd}"><span class="th-tn">TN<b>${esc(String(t.transferNo || '').replace(/^0+/, '') || '—')}</b></span><span class="th-mid"><b>${esc(branchName(t.from, names))} ➜ ${esc(branchName(t.to, names))}</b><small>${(t.lines || []).length} items · ${num(x.c)} ctn${x.p ? ' + ' + num(x.p) + ' pcs' : ''}${x.c !== x.ca ? ' (asal ' + num(x.ca) + ')' : ''} · ${esc(regClock(t.at))}${t.app ? ' · 📱' : ''}${Number(t.editCount) > 0 ? ' · ✏️' : ''}</small></span>${stChip(t)}</button>${own || canDo('stock.trprint') ? `<button type="button" class="th-rp" data-th-rp="${esc(String(t.transferId))}" title="Dobara print">🖨</button>` : ''}${own ? `<details class="th-more"><summary aria-label="Aur">⋯</summary><div><button type="button" data-th-edit="${esc(String(t.transferId))}">✏️ Edit</button><button type="button" class="danger" data-th-cancel="${esc(String(t.transferId))}">❌ Cancel</button></div></details>` : ''}</div>`; };
@@ -5320,8 +5326,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.199.0';
-import { recentPush } from './recent.js?v=2.199.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.200.0';
+import { recentPush } from './recent.js?v=2.200.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)
