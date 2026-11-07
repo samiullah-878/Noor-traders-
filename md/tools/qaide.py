@@ -16,7 +16,7 @@ acts = [
     lexpr("pLeft", "{v=pnDue}-{system_time}"),       # Paani aane mein kitne sec (manfi = abhi aayega)
     lexpr("pShow", "{v=pnShowEnd}-{system_time}"),   # > 0 = Paani popup screen par
     lexpr("kShow", "{v=kpShowEnd}-{system_time}"),   # > 0 = Khana popup screen par
-    iff([lgt("pLeft", 120), llt("pShow", 1), llt("kShow", 1), gbool("kpPend", False), strne("qdOff", "{dayofmonth}")]),
+    iff([lgt("pLeft", 120), llt("pShow", 1), llt("kShow", 1), gbool("kpPend", False)]),
       RAND,
 ]
 for i, (ic, t, s) in enumerate(RULES, 1):   # t = falsafi ka naam, s = qoul
