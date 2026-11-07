@@ -14,9 +14,9 @@
 //  🔠 Apni marzi: likhai size (main zoom) · headings size · likhai rang · headings rang — har phone (localStorage sam-marzi);
 //     malik "👑 Sab mulazimon par" = blueAccess/look {marzi, mAt} (cloud.setMarzi). AI nahi.
 // =====================================================================================================
-import { recentList } from './recent.js?v=2.194.0';
-import { agentRegister } from './agent.js?v=2.194.0';
-import { smartHit, hlName } from './smart-search.js?v=2.194.0';
+import { recentList } from './recent.js?v=2.195.0';
+import { agentRegister } from './agent.js?v=2.195.0';
+import { smartHit, hlName } from './smart-search.js?v=2.195.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -370,7 +370,7 @@ const dhWr = (k, o) => { try { localStorage.setItem(k, JSON.stringify(o)); } cat
 const dhCan = () => { try { return !!H.owner?.() || H.can?.('app.dhoondo') !== false; } catch { return true; } };
 const dhKey = x => String(x.k).startsWith('ft.') ? 'ft:' + x.t : x.k;   // neeche ki patti ke kaam: naam se pehchan (index badal sakta)
 let DHS = null;
-async function dhStatic() { if (DHS) return DHS; try { DHS = (await import('./dh-cat.js?v=2.194.0')).DH_CAT || {}; } catch { DHS = {}; } return DHS; }
+async function dhStatic() { if (DHS) return DHS; try { DHS = (await import('./dh-cat.js?v=2.195.0')).DH_CAT || {}; } catch { DHS = {}; } return DHS; }
 // is screen ke chips yaad — jo kabhi dikhe sab (haalat ke hisaab se aate jate hain), 21 din na dikhe to bhool jao
 const dhSig = new Map();   // view → pichhli dafa ke chips (wahi hon to localStorage chhoo bhi nahi — tez)
 function dhLearn() {
@@ -443,6 +443,9 @@ function dhItemsFor(q) {
     .catch(() => { if (dhIt.q === q) { dhIt = { q, L: [], busy: false }; if (String($('dhQ')?.value || '').trim() === q) dhPaint(); } });
   return null;
 }
+// v2.195.0: 📒 khate (app.js window.ntPartyFind) — sirf naam / mobile, notes NAHI (malik); bank 🏦 saath
+const dhPartyFor = q => { if (q.length < 2 || !window.ntPartyFind) return []; try { return window.ntPartyFind(q, 8) || []; } catch { return []; } };
+const dhPartyHTML = (y, q) => `<button type="button" class="dh-r kh${y.bank ? ' bank' : ''}" data-dhp="${esc(y.id)}"><i>${y.bank ? '🏦' : '📒'}</i><span><b>${hlName(y.name, q)}</b><small>${esc(y.sub)}</small></span><em>›</em></button>`;
 const dhItemHTML = (y, q) => `<button type="button" class="dh-r item" data-dhi="${esc(y.id)}"><i>📦</i><span><b>${hlName(y.name, q)}</b><small>${esc(y.sub)}</small></span><em>›</em></button>`;
 const dhRecRd = () => { const r = dhRd(DH_REC); return Array.isArray(r) ? r : []; };
 function dhRecPush(x) { const k = x.kind + '|' + (x.nav || '') + '|' + (x.k || x.id || ''); const L = dhRecRd().filter(y => y.key !== k); L.unshift({ key: k, kind: x.kind, nav: x.nav, v: x.v, k: x.k, id: x.id, t: x.t }); dhWr(DH_REC, L.slice(0, 8)); }
@@ -452,15 +455,16 @@ function dhPaint() {
   if (!q) {
     const R = dhRecRd().map(r => dhAll.find(x => x.kind === r.kind && (x.nav || '') === (r.nav || '') && (x.k || x.id || '') === (r.k || r.id || ''))).filter(Boolean).slice(0, 6);
     const S = dhAll.filter(x => x.kind === 'scr'); dhList = [...R, ...S];
-    box.innerHTML = `${R.length ? `<div class="mn-gh">🕘 Haal hi mein</div><div class="dh-l">${R.map((x, i) => dhRowHTML(x, i, '')).join('')}</div>` : ''}<div class="mn-gh">📱 Sab screens</div><div class="dh-g">${S.map((x, i) => `<button type="button" class="dh-s" data-dh="${R.length + i}"><i>${esc(x.i)}</i><b>${esc(x.t)}</b></button>`).join('')}</div><p class="dh-tip">Likhein: <b>rack</b> · <b>ginti</b> · <b>kharcha</b> · <b>hbl</b> · <b>printer</b> · <b>mulazim</b> — screen, us ke ⋮ ke kaam aur Settings sab ek jagah.</p>`;
+    box.innerHTML = `${R.length ? `<div class="mn-gh">🕘 Haal hi mein</div><div class="dh-l">${R.map((x, i) => dhRowHTML(x, i, '')).join('')}</div>` : ''}<div class="mn-gh">📱 Sab screens</div><div class="dh-g">${S.map((x, i) => `<button type="button" class="dh-s" data-dh="${R.length + i}"><i>${esc(x.i)}</i><b>${esc(x.t)}</b></button>`).join('')}</div><p class="dh-tip">Likhein: <b>khate ka naam</b> · <b>rack</b> · <b>ginti</b> · <b>kharcha</b> · <b>hbl</b> · <b>printer</b> · <b>mulazim</b> — screen, us ke ⋮ ke kaam aur Settings sab ek jagah.</p>`;
     return;
   }
   const L = dhAll.map(x => ({ x, s: dhScore(x, q) })).filter(o => o.s > 0).sort((a, b) => b.s - a.s || String(a.x.t).localeCompare(String(b.x.t))).slice(0, 40).map(o => o.x);
   dhList = L;
-  const IT = dhItemsFor(q);   // null = abhi dhoond raha · [] = koi nahi
-  if (!L.length && Array.isArray(IT) && !IT.length) { box.innerHTML = `<div class="dh-none">🔍 "${esc(q)}" — kuch nahi mila<small>Doosra lafz likhein (jaise "stock", "bill", "report" ya item ka naam). Jo screen abhi tak nahi kholi us ke chips pehli dafa kholne ke baad yahan aa jayenge.</small></div>`; return; }
-  const G = [['scr', '📱 Screens'], ['item', '📦 Items'], ['chip', '🧰 Kaam / chips'], ['set', '⚙️ Settings']];
-  box.innerHTML = G.map(([k, h]) => { if (k === 'item') return IT === null ? `<div class="mn-gh">${h}</div><p class="dh-tip">⏳ items dhoond raha hoon…</p>` : IT.length ? `<div class="mn-gh">${h} <i class="dh-n">${IT.length}</i></div><div class="dh-l">${IT.map(y => dhItemHTML(y, q)).join('')}</div>` : '';
+  const IT = dhItemsFor(q), KH = dhPartyFor(q);   // null = abhi dhoond raha · [] = koi nahi
+  if (!L.length && !KH.length && Array.isArray(IT) && !IT.length) { box.innerHTML = `<div class="dh-none">🔍 "${esc(q)}" — kuch nahi mila<small>Doosra lafz likhein (jaise "stock", "bill", "report" ya item ka naam). Jo screen abhi tak nahi kholi us ke chips pehli dafa kholne ke baad yahan aa jayenge.</small></div>`; return; }
+  const G = [['scr', '📱 Screens'], ['kh', '📒 Khate'], ['item', '📦 Items'], ['chip', '🧰 Kaam / chips'], ['set', '⚙️ Settings']];
+  box.innerHTML = G.map(([k, h]) => { if (k === 'kh') return KH.length ? `<div class="mn-gh">${h} <i class="dh-n">${KH.length}</i></div><div class="dh-l">${KH.map(y => dhPartyHTML(y, q)).join('')}</div>` : '';
+    if (k === 'item') return IT === null ? `<div class="mn-gh">${h}</div><p class="dh-tip">⏳ items dhoond raha hoon…</p>` : IT.length ? `<div class="mn-gh">${h} <i class="dh-n">${IT.length}</i></div><div class="dh-l">${IT.map(y => dhItemHTML(y, q)).join('')}</div>` : '';
     const xs = L.map((x, i) => [x, i]).filter(([x]) => x.kind === k); return xs.length ? `<div class="mn-gh">${h} <i class="dh-n">${xs.length}</i></div><div class="dh-l">${xs.map(([x, i]) => dhRowHTML(x, i, q)).join('')}</div>` : ''; }).join('');
 }
 async function dhOpen() {
@@ -492,6 +496,7 @@ async function dhGo(x) {
   go(it.k);
 }
 document.addEventListener('click', e => { const b = e.target.closest?.('#mnRoot [data-dh]'); if (!b) return; e.preventDefault(); e.stopPropagation(); dhGo(dhList[Number(b.dataset.dh)]); }, true);
+document.addEventListener('click', e => { const b = e.target.closest?.('#mnRoot [data-dhp]'); if (!b) return; e.preventDefault(); e.stopPropagation(); close(); try { window.ntPartyOpen?.(b.dataset.dhp); } catch {} }, true);   // v2.195.0: 📒 khata → seedha khata
 document.addEventListener('click', e => { const b = e.target.closest?.('#mnRoot [data-dhi]'); if (!b) return; e.preventDefault(); e.stopPropagation(); close(); try { window.ntItemOpen?.(b.dataset.dhi); } catch {} }, true);   // v2.114.3: 📦 item → Stock screen
 function dhBtnSetup() {
   const top = document.querySelector('main>header .top'), st = $('settings'); if (!top || !st || $('dhBtn')) return;
