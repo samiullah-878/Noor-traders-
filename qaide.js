@@ -1,6 +1,6 @@
 // qaide.js — v2.191.0: 🧠 FALSAFA card (malik 7 Nov 2026: "animation, premium feel · total falsafa · click ke baghair khud chala jaye").
 // Pehle (v2.183.1) Psycho-Cybernetics ke 6 qaide the — ab falasifa ke aqwal (Urdu + Roman), apne lafzon mein (kitaab ki ibaarat nahi).
-// App khulte hi (3 s) + khuli app mein har 2 ghante EK qoul — upar tairta hua card, 12 s baad KHUD gayab (koi click nahi).
+// App khulte hi (3 s) + khuli app mein har 2 ghante EK qoul — upar tairta hua card, 4 s baad KHUD gayab (koi click nahi).
 // Ungli lagao = ruk jata hai (parhne ke liye); ✕ = band; ☰ "🧠 Falsafa" = sab aqwal ki list. Sirf malik, sirf is phone ki yaad (localStorage). Server / AI kuch nahi.
 const Q = [
   ['🏛', 'ارسطو', 'Arastoo', 'ہم وہی ہیں جو ہم بار بار کرتے ہیں۔ کمال کوئی کام نہیں، عادت ہے۔', 'Hum wohi hain jo hum baar baar karte hain. Kamaal koi kaam nahi, aadat hai.'],
@@ -24,7 +24,7 @@ const Q = [
   ['🛡', 'سینیکا', 'Seneca', 'خوش قسمتی وہ ہے جب تیاری موقع سے مل جائے۔', 'Khush-qismati wo hai jab tayyari mauqe se mil jaye.'],
   ['🌙', 'حضرت علیؓ', 'Hazrat Ali (RA)', 'لوگوں سے ایسے ملو کہ مر جاؤ تو روئیں اور زندہ رہو تو تمہاری خواہش کریں۔', 'Logon se aise milo ke mar jao to royen, aur zinda raho to tumhari khwahish karein.'],
 ];
-const GAP = 2 * 3600e3, SHOW = 12000;
+const GAP = 2 * 3600e3, SHOW = 4000;
 const LS = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, String(v)); } catch {} return null; };
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 let O = null, el = null, hideT = 0, all = false, started = false, paused = false;

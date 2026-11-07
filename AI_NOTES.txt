@@ -7149,3 +7149,4 @@ falcon-macro.js TimeOfDay 21:45 → 21:00 (naye download par). Phone par laga ma
 - Phone (pkg v16): md/tools/qaide.py "🧠 Falsafa" (wohi GUID) — wahi 20 aqwal qaide.js se parh kar (ek jagah likhe), 12 s timeout, "— {v=qdA}" author. Paani / Khana ke saath takrao ka qaida wahi.
 - 13:20 pkg v17 (malik: "phone card nahi aa raha · accessibility ON ka popup baar baar"): (1) qaide.py — ElseIfConfirmedThen ka ELSE (timeout = negative) qdOff=aaj set karta tha → 12 s timeout par poora din band; ELSE hataya, negative "✕". QAIDA: ConfirmThen mein timeout = negative branch — timeout wale dialog ke Else mein kabhi "aaj band" jaisa kaam mat rakho. (2) acc.py — toast hata (khamosh), interval 120 → 600 s.
 - 13:23 pkg v18: qdOff ki shart bhi hatai (phone par qdOff = aaj set ho chuka tha → card aaj kabhi na aata).
+- v2.191.1 + pkg v19 (malik: "popup ka time 4 second"): Falsafa card app SHOW 4000 ms, phone timeoutSeconds 4.
