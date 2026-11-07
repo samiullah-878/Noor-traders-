@@ -40,6 +40,7 @@ wl = json.load(open(os.path.join(D, 'waleed.json')))
 qd = json.load(open(os.path.join(D, 'qaide.json')))
 fy = json.load(open(os.path.join(D, 'fbyt.json')))
 sv = json.load(open(os.path.join(D, 'saved.json')))
+bk = json.load(open(os.path.join(D, 'bank.json')))
 import remote as RM
 rem = json.loads(json.dumps(RM.REMOTE))
 OLD_PAANI_BREAK = -6917313488054668512          # purane "💧 Paani break" ka GUID — usi jagah naya aa jayega
@@ -52,6 +53,7 @@ mw, vw = fix(wl, h64('claude|waleed'), '🔊 Waleed Bhai')   # ek din ka tha (6 
 mq, vq = fix(qd, h64('claude|qaide'), '🧠 6 Qaide')
 mf, vf = fix(fy, h64('claude|fbyt'), '📘▶️ Facebook · YouTube')
 ms, vs = fix(sv, h64('claude|saved'), '🔖 TikTok Saved')
+mb, vbk = fix(bk, h64('claude|bank3'), '🏦 Bank mode 3')
 vars_, seen = [], set()
 # 🏦 Bank mode (chat link, phone par) ke globals — link import banata nahi (7 Nov: "Variable does not exist (bkSave)")
 def _gv(n, t, **kw):
@@ -61,11 +63,11 @@ for v in vp + vk + vt + vq + vf + vb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "📵 TikTok reels 25 min + poora 2 ghante · 📘 Facebook 25 min · ▶️ YouTube 2 ghante — lock 24 ghante (agle din usi waqt) · 🔖 TikTok Saved shortcut. Social time alag band.",
-       "macros": [mp, mk, ma, mr, mt, mq, mf, ms],
+       "note": "🛠 Accessibility: band hote hi + har 2 min khud ON (Bank mode ke dauran nahi). 🏦 Bank mode 3 (wapas lagate waqt MacroDroid services hamesha ON); purana Bank mode band.",
+       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}}],
        "vars": vars_,
-       "off": ["Social time alag", "🔊 Waleed Bhai"]}
+       "off": ["🏦 Bank mode", "Social time alag"]}
 os.makedirs(REPO, exist_ok=True)
 s = json.dumps(pkg, ensure_ascii=False, separators=(',', ':'))
 for bad in ('AIza', 'firebase', 'gaariKey', 'bankKey', 'awazKey', 'password'):
