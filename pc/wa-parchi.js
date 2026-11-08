@@ -80,7 +80,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.12';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.13';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1733,6 +1733,13 @@ async function start(ZINDA) {
     const cap = parseCaption(stripPrint(im ? im.caption || '' : ''));
     const t = { id: wid, from: (o && o.from) || cap.ph || '', nm: (o && o.nm) || cap.nm || '', to, fwdAt: tsOf(m) || Date.now(), sha, st: 'sent', by, k: im ? 'img' : 'txt', tx: tx.slice(0, 60) };
     t.grp = trGroup(t); TR.par[wid] = t; trSave();
+    // v2.13 (8 Nov, malik: "usi time ek SMS Mubeen ko, ek mujhe, aur gahak ko 'parchi receive, saman thori der mein'"): track hote hi 3 paigham naye number se (wa-out)
+    try {
+      const who = (t.nm ? t.nm + ' ' : '') + (t.from ? phPretty(t.from) : ''), mk = S.prFrom[0] || normPh(L.me || ''), grpFirst = t.grp === t.id;
+      if (t.from && grpFirst) await waOutPut('rc-' + t.grp, { to: t.from, nm: t.nm || '', kind: 'recv', eid: 'rc-' + t.grp, txt: '*NOOR TRADERS*\nAap ki parchi hamare larke ne receive kar li hai, shukria 🙏\nAap ka saman thori der mein nikal aata hai.' });   // gahak — group ki pehli parchi par ek dafa
+      if (t.to) await waOutPut('nw-' + t.id, { to: t.to, nm: 'Mubeen', kind: 'rem', eid: 'nw-' + t.id, txt: `📋 Nayi parchi: ${who.trim() || 'gahak?'} (${tstr(t.fwdAt)}) — tayyar karke usi parchi par *start* likhein.` });
+      if (mk) await waOutPut('nk-' + t.id, { to: mk, nm: 'Malik', kind: 'rem', eid: 'nk-' + t.id, txt: `✅ Parchi Mubeen ko gayi: ${who.trim() || 'gahak? (number nahi)'} (${tstr(t.fwdAt)})` });
+    } catch (e) { log('⚠️ nayi parchi paigham: ' + (e && e.message)); }
     trDbg(`✅ Printauto parchi (${t.k === 'txt' ? 'likhi' : 'tasveer'}) list mein · gahak ${t.from ? phPretty(t.from) : '? (caption mein number likhein)'}${o ? ' (' + (im ? 'tasveer' : 'likhai') + ' se)' : cap.ph ? ' (caption se)' : ''}${t.grp !== wid ? ' · group' : ''}`);
   }
   async function trReply(m, c, s, who) {   // ③ Mubeen ka reply usi parchi par — start ya bill ki tasveer

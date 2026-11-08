@@ -7247,3 +7247,6 @@ Doosri: bank Sunday / chhutti ka len-den VALUE DATE (agla kaam ka din) se bhejta
 === 2026-11-08 · PC wa-out v1.3 — bhejne wala khamosh (10:57 ke baad kuch nahi gaya) ===
 Heartbeat theek, link juda, magar 10:57 ke baad koi paigham nahi gaya (Mubeen ko 17:20 ki yaad-dihani bhi nahi). Ab: har 30 s queue (st new) Firestore se khud bhi parho (listener chup ho to bhi) + busy 4 min (har job par taza) = process.exit → bat loop dobara shuru. Ruke hue 6 ghante tak ke paigham restart par chale jate hain. manifest 2026-11-08.10. AI nahi.
 
+=== 2026-11-08 · PC wa-parchi v2.13 — Printauto par foran 3 paigham (malik ka OK) ===
+Track hote hi naye number se: gahak ko "parchi receive kar li, saman thori der mein" (number ho to; group ki pehli parchi par ek dafa) · Mubeen ko "📋 Nayi parchi: naam number — start likhein" · malik ko "✅ Parchi Mubeen ko gayi". Baqi stages wahi. manifest 2026-11-08.11. AI nahi.
+
