@@ -79,7 +79,7 @@ export function fxDetail(txt) {
   const si = lab('start'), ei = lab('end'), di = lab('distance'), ti = lab('time');
   if (si >= 0) out.f = val(si); if (ei >= 0) out.e = val(ei);
   if (di >= 0) { for (let j = di + 1; j < Math.min(S.length, di + 4); j++) { const k = /(\d{1,4}(?:[.,]\d{1,3})?)\s*km/i.exec(S[j]); if (k) { out.km = Math.round(Number(k[1].replace(',', '.')) * 100) / 100; break; } } }
-  if (ti >= 0) { for (let j = ti + 1; j < Math.min(S.length, ti + 4); j++) { const P = parseTimes(S[j]); if (P.length) { out.t = P[0].t; out.day = P[0].day; break; } } }
+  if (ti >= 0) { for (let j = ti + 1; j < Math.min(S.length, ti + 4); j++) { const P = parseTimes(S[j]); if (P.length) { out.t = P[0].t; out.day = P[0].day; if (P[1]) out.te = P[1].t; break; } } }   // v2.209.0: te = khatam waqt
   if (!out.t) { const P = parseTimes(txt); out.t = P.length ? P[0].t : ''; out.day = P.length ? P[0].day : ''; }
   return out.t && (out.f || out.e) ? out : null;
 }
@@ -115,9 +115,10 @@ export async function geocode(addr) {
   for (let q = 0; q < parts.length - 1 && q < 4; q++) { const p = await nominatim(parts.slice(q).join(', ')); if (p) { C[key] = { p: [p[0], p[1], q], at: Date.now() }; gSave(); return C[key].p; } }
   C[key] = { p: null, at: Date.now() }; gSave(); return null;
 }
+const nz = a => geoParts(a).join(',').toLowerCase(), chg = (d, o) => (d.f && nz(d.f) !== nz(o.f)) || (d.e && nz(d.e) !== nz(o.e));   // v2.209.0: pata badla = nuqta dobara
 export async function fxDetails(oldJ, dets, onStatus) {
   const m = new Map(); try { for (const x of JSON.parse(oldJ || '[]') || []) if (x && x.t) m.set(String(x.t), x); } catch {}
-  for (const d of dets) { const o = m.get(d.t) || {}; m.set(d.t, { t: d.t, km: d.km || o.km || 0, f: d.f || o.f || '', e: d.e || o.e || '', p: o.p || null, q: o.q || null }); }
+  for (const d of dets) { const o = m.get(d.t) || {}; m.set(d.t, { t: d.t, km: d.km || o.km || 0, f: d.f || o.f || '', e: d.e || o.e || '', ...((d.te || o.te) ? { te: d.te || o.te } : {}), p: chg(d, o) ? null : (o.p || null), q: chg(d, o) ? null : (o.q || null) }); }
   const todo = [...m.values()].filter(x => !x.p && (x.f || x.e)); const U = [...new Set(todo.flatMap(x => [x.f, x.e]).filter(Boolean))], R = new Map(); let n = 0, i = 0;
   const work = async () => { while (i < U.length) { const a = U[i++]; R.set(a, await geocode(a)); n++; onStatus?.(`📍 Naqsha ${n}/${U.length}…`); } };
   await Promise.all([work(), work(), work(), work()]);
@@ -158,4 +159,40 @@ export function fxProcess(cloud, onStatus) {
     return { n: done.length, trips, det, km: kmOut, hid };
   })().finally(() => { busy = null; });
   return busy;
+}
+
+// ---- v2.209.0 (2026-11-08): 🖼 GALLERY SE SCREENSHOTS (malik: "gallery se direct ek hi dafa photos upload") ----
+//   Falcon-i ke screenshot (Trips list / Past Trips / Trip Detail) → 🤖 AI (Gemini) SIRF parhta hai → wahi fxMerge (🗑 wapas nahi) + fxDetails (nuqta, AI nahi).
+const shotPrompt = today => 'These are screenshots from the Falcon-i (TPL vehicle tracker) app: the Trips list (each trip has a heading date-time like "08 Nov 2026 08:18 AM", ' +
+  'a Start address, an End address and "Total Distance: N Km") and/or "Trip Detail" pages (Start, End, Distance, Time "dd-mm-yyyy hh:mm AM to dd-mm-yyyy hh:mm PM"). ' +
+  'List every trip EXACTLY ONCE (same trip in several screenshots = one). For each: "day" = YYYY-MM-DD, "t" = START time 24h "HH:MM", "te" = END time 24h if visible else "", ' +
+  '"km" = total distance number (null if cut off), "f" = Start address exactly as written, "e" = End address exactly as written ("" if not visible). Today is ' + today + '. ' +
+  'Reply ONLY JSON: {"trips":[{"day":"2026-11-08","t":"08:18","te":"","km":12.34,"f":"","e":""}]}';
+const hm24 = v => { const m = /(\d{1,2})\s*[:.]\s*(\d{2})\s*([ap])?/i.exec(String(v || '')); if (!m) return ''; let h = +m[1]; const mi = +m[2]; if (m[3]) h = h % 12 + (/p/i.test(m[3]) ? 12 : 0); return h > 23 || mi > 59 ? '' : `${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')}`; };
+export async function fxFromShots(cloud, files, { ai, shrink, onStatus } = {}) {
+  if (!ai || !shrink) throw Error('AI tayyar nahi — Settings mein AI key dekhein');
+  files = (files || []).filter(f => f && /^image\//.test(f.type || '')).slice(0, 20); if (!files.length) throw Error('Koi tasveer nahi mili');
+  const today = dayOf(Date.now()), minDay = dayOf(Date.now() - 40 * 86400000), T = new Map(); let bad = 0;
+  for (let i = 0; i < files.length; i += 4) {
+    const part = files.slice(i, i + 4); onStatus?.(`🤖 Screenshot ${i + 1}${part.length > 1 ? '–' + (i + part.length) : ''} / ${files.length} parh raha hoon…`);
+    const imgs = []; for (const f of part) imgs.push(await shrink(f, 1600, 0.85));
+    let j = null; try { const txt = await ai(imgs, shotPrompt(today)); const m = String(txt || '').match(/\{[\s\S]*\}/); j = m ? JSON.parse(m[0]) : null; } catch (e) { if (i === 0 && files.length <= 4) throw e; }
+    for (const x of Array.isArray(j?.trips) ? j.trips : []) {
+      const t = hm24(x?.t); let day = /^\d{4}-\d{2}-\d{2}$/.test(String(x?.day || '')) ? x.day : today; if (!t) continue; if (day > today || day < minDay) { bad++; continue; }
+      const km = x.km == null || x.km === '' ? 0 : Math.round(Number(String(x.km).replace(',', '.')) * 100) / 100, k = day + ' ' + t, o = T.get(k) || { day, t, km: 0, f: '', e: '', te: '' };
+      if (km > 0 && km < 800) o.km = km; if (x.f && !o.f) o.f = String(x.f).slice(0, 200).trim(); if (x.e && !o.e) o.e = String(x.e).slice(0, 200).trim(); if (!o.te) o.te = hm24(x.te); T.set(k, o);
+    }
+  }
+  const byDay = new Map(); for (const x of T.values()) { if (!byDay.has(x.day)) byDay.set(x.day, []); byDay.get(x.day).push(x); }
+  const out = { trips: 0, cut: 0, km: {}, days: {}, bad };
+  for (const [day, L] of byDay) {
+    const old = (await cloud.getGaariDay(day)) || {}; const withKm = L.filter(x => x.km > 0); out.cut += L.length - withKm.length;
+    const ft = fxMerge(old.ft, withKm, old.fh); if (!ft.length) continue;
+    const upd = { date: day, fk: fxTotal(ft), fn: ft.length, ft: JSON.stringify(ft), fa: Date.now() };
+    await cloud.setGaariDay(day, upd); out.km[day] = upd.fk; out.days[day] = upd; out.trips += withKm.length;
+    const myDet = L.filter(x => (x.f || x.e) && ft.some(z => z[0] === x.t)).map(x => ({ t: x.t, km: x.km || (ft.find(z => z[0] === x.t) || [])[1] || 0, f: x.f, e: x.e, te: x.te || '' }));
+    if (myDet.length) { onStatus?.(`📍 ${day}: naqsha bana raha hoon…`); try { const fd = await fxDetails(old.fd, myDet, onStatus); upd.fd = JSON.stringify(fd); await cloud.setGaariDay(day, { date: day, fd: upd.fd }); } catch {} }
+  }
+  try { await cloud.setGaariDay('_falcon', { at: Date.now(), recv: Date.now(), n: out.trips, km: out.km, why: out.trips ? '' : 'screenshot mein trips nahi', src: 'shot', reads: files.length }, false); } catch {}
+  return out;
 }

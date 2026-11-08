@@ -7309,3 +7309,8 @@ pos-sales-dekho v2.4: bills[].ct = SystemNotes "Created & Printed By:… On:<waq
 === 2026-11-08 · v2.208.0 — 🛰 Falcon din: har trip ke neeche kahan se → kahan tak + purane din (malik: "5 ya 6 ka daaloon to app khud us din mein") ===
 - openFalconDay: trips ab `.fx-tlist` (column) — har `.fx-trow` = number (naqshe wala) + chip + `.fx-fe` "🟢 Start → 🔴 End" (fd ka f / e, pehle 2 hisse, Pakistan / Punjab hata). Pata na ho = peeli line.
 - fx-app: minDay 3 → 40 din (listener 45 din) — Falcon Past Trips ki list kholo = usi din mein. geocode: na mila sirf 1 ghanta yaad (pehle 7 din — ek net ghalti hafta bhar naqsha rok deti).
+=== 2026-11-08 · v2.209.0 — 🛰 Falcon din saaf (malik: "chips chhote premium · upar 4 chip ⋮ mein · city ka naam · rang ka nuqta · har red/green par waqt · gallery se ek dafa photos") ===
+- openFalconDay: KPI dabbe (#fxKpi) chhupe — ⋮ "📊 Din ki tafseel"; upar sirf patli `.fx-sum`. Trip chip `span.fx-chip` 32px (number gola + waqt + km + 🗑), neeche `.fx-fe` = 8px rang ka nuqta (`.fx-dot g/r`) + `fxPlace` (pehli jagah + SHEHAR = aakhri hissa, Pakistan/Punjab hata) + khatam waqt `te` (Trip Detail "… to …" se).
+- Naqsha: har nuqte par permanent chhota label (`.fx-lbl`) — green "N · shuru waqt", red "N · khatam waqt · km"; N = chip wala number (ft tarteeb).
+- 🖼 Gallery (⋮ din + home patti, sirf malik): input multiple → fx-app `fxFromShots` (🤖 Gemini SIRF parhna, 4-4 tasveer) → wahi fxMerge / fxDetails → din khulta + naqsha. 40 din tak.
+- fxDetails: pata badla (geoParts se) to nuqta dobara; `te` bhi jorta.
