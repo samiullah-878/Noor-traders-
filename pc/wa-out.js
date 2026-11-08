@@ -5,6 +5,7 @@
 //  Dukan ka ALAG WhatsApp Business number (0329-… · malik ne chuna) PC par linked device (Baileys — wahi package wa-mods\ se jo
 //  wa-parchi.js lagati hai; yeh script khud install NAHI karti). Asal dukan number (parchi parhne wala) is se alag rehta hai — ban ka
 //  khatra asal number par nahi.
+//  v1.1 (8 Nov): heartbeat juda na ho tab bhi (app ko zinda / band ka pata), hukum ka log.
 //  Kaam: pos-khata-sync.js har NAYI khata entry (jis gahak ke khate par 📲 tick + mobile) par waOut/<entryId> {st:'new'} likhti hai →
 //  yeh script text paigham bhejti hai (har paigham ke beech GAP sec, din mein LIM se zyada nahi), st 'sent' / 'err' / 'skip' + wajah.
 //  Aane wale paigham KABHI nahi parhti (sirf bhejna). Group / broadcast kabhi nahi. Number WhatsApp par na ho = skip (koshish nahi).
@@ -16,7 +17,7 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.0';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.1';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -115,6 +116,7 @@ async function main() {
   }
   BA.doc('waCmdOut').onSnapshot(x => {
     if (!x.exists) return; const d = x.data() || {}, at = Number(d.at) || 0, c = String(d.do || '');
+    log(`📨 waCmdOut: ${c} at=${at} (pehle ${L.cmd})`);
     if (!at || at === L.cmd || !/^(relink|logout|link|code)$/.test(c)) return;
     const age = Date.now() - (x.updateTime ? x.updateTime.toMillis() : at);
     L.cmd = at; setLink({});
@@ -171,7 +173,7 @@ async function main() {
     } finally { busy = false; }
   }
 
-  setInterval(() => { if ((has() || L.st !== 'off') && Date.now() - lastW > 5 * 60000) setLink({}); }, 60000);   // app ko pata rahe PC zinda
+  setInterval(() => { if (Date.now() - lastW > 5 * 60000) setLink({}); }, 60000);   // app ko pata rahe PC zinda — v1.1: juda na ho tab bhi (warna app mein '54 min pehle' aur pata nahi chal raha / band)
   setInterval(kick, 30000);
   if (has()) await connect('shuru'); else setLink({ st: 'off', qr: '', err: '' });
 }

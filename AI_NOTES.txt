@@ -7215,3 +7215,7 @@ falcon-macro.js TimeOfDay 21:45 → 21:00 (naye download par). Phone par laga ma
 - Detail se wapas: phone back → 2.1 s mein "Today" nahi → Falcon ka ← button (7%, 9%) → phir bhi nahi → back dobara. Scroll ke baad screen ka JSON pichhle jaisa = list khatam (BreakFromLoop) — 1 trip wale din 5 scroll nahi.
 - Raftar: sab intezar 300 ms qadam, detail pause 250 ms, scroll pause 700 ms, menu 2.4 → 1.8 s. Toast "40 second".
 - Malik: app ⚙️ Falcon setup → 📥 macro dobara (v3), purana v2 band.
+
+## v2.203.1 (2026-11-08) — 📲 wa-out heartbeat (malik: "PC code nahi de raha" — app mein "DESKTOP · v1.0 · 54 min pehle", koi ghalti nahi)
+- PC wa-out v1.1: heartbeat (waLinkOut.at) har 5 min HAMESHA — pehle sirf juda hone par (st ≠ off) → juda na ho to app ko pata hi nahi chalta tha ke script zinda hai ya band; `📨 waCmdOut` log line. manifest 2026-11-08.1.
+- App wa-out.js: 6 min se purana = "⚠️ PC par wa-out chup — Settings → 🖥️ PC scripts dekhein" (pehle sirf juda hone par). Asal wajah PC log se (wa-out-log.txt) — abhi nahi maloom.
