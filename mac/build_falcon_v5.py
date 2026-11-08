@@ -1,5 +1,6 @@
 import json, copy, random, re, sys
-SRC = '/home/claude/noor-traders-/falcon-macro.js'
+import os
+SRC = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'falcon-macro.js')   # NOTE: v4 wali falcon-macro.js par EK dafa (v5 par dobara mat chalao)
 src = open(SRC, encoding='utf-8').read()
 i = src.index('export const FALCON_MACRO = ')
 hdr, body = src[:i], src[i+len('export const FALCON_MACRO = '):].rstrip().rstrip(';')
