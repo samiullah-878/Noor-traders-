@@ -80,7 +80,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.8';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.9';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1674,15 +1674,33 @@ async function start(ZINDA) {
     for (const o of Object.values(TR.par)) if (o.id !== t.id && o.from === t.from && Math.abs(o.fwdAt - t.fwdAt) < 15 * 60000) return o.grp || o.id;
     return t.id;
   }
-  async function trForward(m, c, to, by) {   // ② malik → Mubeen tasveer = nayi parchi
+  // v2.9 (8 Nov, malik: "jis ke saath Print likha ho SIRF wo parchi"): malik → Mubeen tasveer parchi TABHI jab "print" likha ho — caption mein, ya usi tasveer par reply "print",
+  //   ya tasveer ke baad 10 min ke andar alag chhota "Print" (aakhri 3 tasveerein yaad `trPend`). Likhi parchi (text) pehle jaisi (gahak wali / forward list). Screenshot / aam tasveer = kuch nahi.
+  const trPend = new Map();   // wid -> { m, c, to, by, at }
+  async function trForward(m, c, to, by) {   // ② malik → Mubeen tasveer = nayi parchi (sirf "print" ke saath)
     const wid = m.key.id || ''; if (!wid || TR.par[wid]) return;
     const im = imgOf(c), tx = im ? '' : txtOf(c); if (!im && !tx) return;
+    if (im) {
+      if (printReq(im.caption || '')) return trTrack(m, c, to, by);
+      trPend.set(wid, { m, c, to, by, at: tsOf(m) || Date.now() }); while (trPend.size > 3) trPend.delete(trPend.keys().next().value);
+      return;
+    }
+    // text: "print" (chhota) = pehle wali tasveer(ein) parchi — reply ho to wohi, warna 10 min ki sab pending
+    if (tx.length <= 25 && printReq(tx)) {
+      const ctx = c.extendedTextMessage && c.extendedTextMessage.contextInfo, qid = ctx && String(ctx.stanzaId || '');
+      const now = tsOf(m) || Date.now(), pick = qid && trPend.has(qid) ? [qid] : [...trPend.keys()].filter(k => now - trPend.get(k).at < 10 * 60000);
+      for (const k of pick) { const q = trPend.get(k); trPend.delete(k); if (q && !TR.par[k]) await trTrack(q.m, q.c, q.to, q.by); }
+      return;
+    }
+    const sha = txtKey(tx), o = sha && TR.inc[sha] && Date.now() - TR.inc[sha].at < 8 * 3600000 ? TR.inc[sha] : null;
+    if (!o && !(isFwd(c) && /\d|\n/.test(tx))) return;   // malik ki apni aam baat (Mubeen se) = parchi nahi; likhi parchi sirf gahak wali ya FORWARD (list jaisi: number / kai lines)
+    await trTrack(m, c, to, by);
+  }
+  async function trTrack(m, c, to, by) {
+    const wid = m.key.id || ''; if (!wid || TR.par[wid]) return;
+    const im = imgOf(c), tx = im ? '' : txtOf(c);
     const sha = im ? shaOf(im) : txtKey(tx), o = sha && TR.inc[sha] && Date.now() - TR.inc[sha].at < 8 * 3600000 ? TR.inc[sha] : null;
-    if (!im && !o && !(isFwd(c) && /\d|\n/.test(tx))) return;   // malik ki apni aam baat (Mubeen se) = parchi nahi; likhi parchi sirf gahak wali ya FORWARD (list jaisi: number / kai lines)
     const cap = parseCaption(stripPrint(im ? im.caption || '' : ''));
-    // v2.8 (8 Nov, malik ka app screenshot Mubeen ko → "parchi (gahak?) shuru nahi ki" ki jhooti yaad-dihani): tasveer bhi SIRF tab parchi jab gahak se aayi (o) ya FORWARD ya caption mein gahak ka number / naam —
-    //   seedhi khinchi tasveer tabhi jab kaghaz jaisi ho (phone-screen jaisi lambi 1.9:1 = screenshot, chhor do)
-    if (im && !o && !isFwd(c) && !cap.ph && !cap.nm) { const w = Number(im.width) || 0, h = Number(im.height) || 0; if (w && h && (h / w > 1.9 || w / h > 1.9)) { log(`📋 tasveer ${wid.slice(-6)} screenshot jaisi (${w}×${h}) — parchi nahi`); return; } }
     const t = { id: wid, from: (o && o.from) || cap.ph || '', nm: (o && o.nm) || cap.nm || '', to, fwdAt: tsOf(m) || Date.now(), sha, st: 'sent', by, k: im ? 'img' : 'txt', tx: tx.slice(0, 60) };
     t.grp = trGroup(t); TR.par[wid] = t; trSave(); trPush();
     log(`📋 parchi ${wid.slice(-6)} (${t.k}) → ${phPretty(to)} · gahak ${t.from ? phPretty(t.from) : '?'}${o ? ' (' + (im ? 'tasveer' : 'likhai') + ' se)' : cap.ph ? ' (caption se)' : ''}${t.grp !== wid ? ' · group ' + t.grp.slice(-6) : ''}`);

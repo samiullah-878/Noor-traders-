@@ -4161,3 +4161,4 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - 2026-11-08: wa-out v1.1 heartbeat hamesha + hukum log; manifest 2026-11-08.1.
 - 2026-11-08: wa-out v1.2 .alive (zinda.js) — doctor latki wa-out dobara chalaye; manifest 2026-11-08.2.
 - 2026-11-08: wa-parchi v2.8 — screenshot jaisi tasveer (1.9:1, na forward, na gahak se, caption nahi) = parchi nahi; manifest 2026-11-08.3.
+- 2026-11-08: wa-parchi v2.9 — parchi track sirf 'print' ke saath (caption / reply / 10 min alag Print, trPend); manifest 2026-11-08.4.
