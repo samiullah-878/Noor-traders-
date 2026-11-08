@@ -27,8 +27,8 @@
 // phera cards. Purani alag entries (bilty/diesel/kharch/reading/tracker/driver — v2.92) bhi jor mein rehti hain.
 // Data: businesses/noor-traders/gaari/{id} kind 'phera' {date, startR, endR, trackerKm, bilties[{id,from,to,party,kiraya,comm,col}],
 //   kharche[{n,a}], diesel[{l,rate,amount,full}], status open|closed, note, by, byName, at, trackerTrips[{t,km,cut}] (v2.95.8)} + gaari/_config.
-import { smartHit } from './smart-search.js?v=2.207.1';
-import { firebaseConfig } from './config.js?v=2.207.1';   // v2.162.0: 📍 MacroDroid ka REST pata   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.208.0';
+import { firebaseConfig } from './config.js?v=2.208.0';   // v2.162.0: 📍 MacroDroid ka REST pata   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (v, d = 0) => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: d });
@@ -747,7 +747,7 @@ async function fxCfgSave(wh) {
 // 🗑 trip hatao / ↩ wapas / 🔄 din naya — gaariDay/<din> {ft, fh, fk, fn, fd} (fx-app fxHidden / fxTotal — macro dobara parhe to hataya wapas nahi)
 async function fxHide(date, t, back) {
   const d = gpsDays.get(date); if (!d || !isOwner()) return;
-  const M = await import('./fx-app.js?v=2.207.1');
+  const M = await import('./fx-app.js?v=2.208.0');
   let ft = [], fd = []; try { ft = JSON.parse(d.ft || '[]') || []; } catch {} try { fd = JSON.parse(d.fd || '[]') || []; } catch {}
   let fh = M.fxHidden(d.fh);
   if (back) { const h = fh.find(x => x[0] === t); if (!h) return; fh = fh.filter(x => x[0] !== t); if (!ft.some(x => x[0] === t)) ft.push([t, h[1]]); ft.sort((a, b) => a[0].localeCompare(b[0])); }
@@ -758,7 +758,7 @@ async function fxHide(date, t, back) {
 }
 async function fxUnhideAll(date) {   // v2.207.1: ↩ sab hataye hue wapas (ek tap)
   const d = gpsDays.get(date); if (!d || !isOwner()) return;
-  const M = await import('./fx-app.js?v=2.207.1'); let ft = []; try { ft = JSON.parse(d.ft || '[]') || []; } catch {}
+  const M = await import('./fx-app.js?v=2.208.0'); let ft = []; try { ft = JSON.parse(d.ft || '[]') || []; } catch {}
   for (const [t, km] of M.fxHidden(d.fh)) if (!ft.some(x => x[0] === t)) ft.push([t, km]); ft.sort((a, b) => a[0].localeCompare(b[0]));
   const upd = { ft: JSON.stringify(ft), fh: '[]', fk: M.fxTotal(ft), fn: ft.length }; Object.assign(d, upd); openFalconDay(date, true);
   try { await cloud.setGaariDay(date, upd); notice(`↩ ${ft.length} trip wapas — din ${num(upd.fk, 1)} km · naqsha: 🔄 Abhi parho / Falcon dobara kholein`); } catch (e) { notice('❌ ' + (e?.message || e)); }
@@ -776,7 +776,7 @@ async function fxRun(force) {
   if (!isOwner() || fxRunning) return; if (!force && Date.now() - fxRunAt < 120000) return;
   fxRunning = true; fxRunAt = Date.now(); const st = m => { fxStMsg = m; const el = $('fxRunSt'); if (el) el.textContent = m; };
   try {
-    const M = await import('./fx-app.js?v=2.207.1');
+    const M = await import('./fx-app.js?v=2.208.0');
     st('⏳ Falcon ka naya text dekh raha hoon…');
     const r = await M.fxProcess(cloud, st);
     if (!r.n && force) st(`Koi naya Falcon text nahi${fxLast && N(fxLast.at) ? ' · aakhri ' + hm(N(fxLast.at)) : ''} — 📲 se parhwao`);   // v2.205.0 (malik: button dabaya, kuch nahi hua — khamosh nahi)
@@ -805,7 +805,7 @@ function openFalcon(re) {
   modal('🛰 Falcon-i km (khud)', `<div class="gx-win gg" data-fx-home="1" data-sig="${esc(sig)}">
     <p class="gg-st gg-${f.lvl}">${f.long}</p>
     ${own ? '<div class="fx-runbar"><button type="button" class="fx-runbtn" data-fx-cmd="1">📲 Falcon se abhi parhwao</button><button type="button" class="fx-runbtn" data-fx-run="1">🔄 Abhi parho</button><small id="fxRunSt">' + esc(fxStMsg) + '</small></div>' : ''}
-    <p class="gg-note">👆 <b>Sab se asaan:</b> Falcon-i → Trips → Today's Trips kholein, neeche tak scroll karein, phir Falcon-i band — trips, km aur 🗺 naqsha (har trip ka Start / End list mein hi hota hai) yahan khud. Har trip kholne ki zaroorat nahi. Raat 9 ke baad auto bhi. 🤖 AI nahi.</p>
+    <p class="gg-note">👆 <b>Sab se asaan:</b> Falcon-i → Trips → Today's Trips kholein, neeche tak scroll karein, phir Falcon-i band — trips, km aur 🗺 naqsha (har trip ka Start / End list mein hi hota hai) yahan khud. Har trip kholne ki zaroorat nahi. Purana din (5 / 6 tareekh): Falcon-i ki Past Trips mein us din ki list kholein — khud usi din mein (40 din tak). Raat 9 ke baad auto bhi. 🤖 AI nahi.</p>
     <div class="gg-list">${rowsH || '<p class="gr-empty">Abhi koi din nahi — setup ke baad yahan har din ke Falcon km aayenge.</p>'}</div>
     ${own ? '<button type="button" class="gx-new" data-fx-setup="1">⚙️ Falcon setup (MacroDroid)</button>' : ''}</div>`, true);
 }
@@ -822,7 +822,9 @@ function openFalconDay(date, re) {
   // v2.201.0 (malik: "map ki shakal chahiye — neeche chip, tap = poora map"): trips ke chips par tap = naqsha us trip par; 🗺 Naqsha chip = poora map neeche
   modal(`🛰 ${dmy(date)} · ${num(d.fk, 1)} km`, `<div class="gx-win gg" data-fx-root="${esc(date)}" data-sig="${esc(fxSig(d))}">
     <div class="gx-kv"><p><span>Falcon km</span><b>${num(d.fk, 2)} km</b></p><p><span>Trips</span><b>${N(d.fn)}</b></p><p><span>Phere</span><b>${ph ? ph + (ph > 1 ? ' (km ' + num(N(d.fk) / ph, 1) + ' har phera)' : '') : '🚫 koi phera nahi'}</b></p>${N(d.km) > 0 ? `<p><span>📱 GPS</span><b>${num(d.km, 1)} km</b></p>` : ''}<p><span>Aakhri dafa parha</span><b>${N(d.fa) ? ago(Date.now() - N(d.fa)) + ' pehle' : '—'}</b></p></div>
-    ${mnH}<div class="gp-trips">${L.map(([t, km]) => { const f = fdOf(t); return `<span class="gp-trip fx-chip${f && f.p ? ' has-pin' : ''}" data-fx-trip="${esc(t)}">🕒 ${esc(t12(t))} · <b>${num(km, 2)} km</b>${f && f.p ? ' <i>📍</i>' : ''}${own ? `<button type="button" class="fx-del" data-fx-del="${esc(t)}" aria-label="Hatao">🗑</button>` : ''}</span>`; }).join('') || `<p class="gr-empty">Trips nahi${FH.length ? ' — ' + FH.length + ' hataye hue (↩ ⋮ se)' : ''}</p>`}</div>${hidH}
+    ${mnH}<div class="gp-trips fx-tlist">${L.map(([t, km], i) => { const f = fdOf(t); const sp = a => { const P = String(a || '').replace(/^[\d.,]+\s*km\s*away\s*from\s*,?\s*/i, '').split(',').map(q => q.trim()).filter(q => q && !/^(pakistan|punjab)$/i.test(q)); return P.slice(0, 2).join(', '); };
+      const fe = f && (f.f || f.e) ? `<small class="fx-fe"><span>🟢 ${esc(sp(f.f) || '?')}</span><em>→</em><span>🔴 ${esc(sp(f.e) || '?')}</span></small>` : '<small class="fx-fe fx-fe0">📍 pata abhi nahi — Falcon-i list dobara khol kar band karein</small>';   // v2.208.0 (malik: "har chip ke saath kahan se kahan tak")
+      return `<div class="fx-trow"><span class="gp-trip fx-chip${f && f.p ? ' has-pin' : ''}" data-fx-trip="${esc(t)}"><b class="fx-n">${i + 1}</b> 🕒 ${esc(t12(t))} · <b>${num(km, 2)} km</b>${f && f.p ? ' <i>📍</i>' : ''}${own ? `<button type="button" class="fx-del" data-fx-del="${esc(t)}" aria-label="Hatao">🗑</button>` : ''}</span>${fe}</div>`; }).join('') || `<p class="gr-empty">Trips nahi${FH.length ? ' — ' + FH.length + ' hataye hue (↩ ⋮ se)' : ''}</p>`}</div>${hidH}
     <div class="fx-mapbar"><button type="button" class="fx-mapbtn" data-fx-map="1">🗺 Naqsha${nPin ? ` <small>${nPin}/${L.length} trip</small>` : N(d.km) > 0 ? ' <small>GPS raasta</small>' : ''}</button><small class="fx-maphint">${nPin ? 'Start → End har trip (pata se andaza)' : N(d.km) > 0 ? 'Gaari ke phone ka raasta' : 'Pata abhi nahi — Falcon-i mein Today\'s Trips khol kar band karein'}</small></div>
     <div id="fxTripInfo" class="fx-tripinfo" hidden></div><div id="fxMap" class="gg-map fx-map" hidden></div>
     <p class="gg-note">Trip ka waqt + "Total Distance" Falcon-i se hoobahoo. Dohra trip ek dafa; chalta trip agli dafa poora.${FD.length ? ' Naqsha: Start / End ka pata → nuqta (OpenStreetMap, andaza 100–500 m), Falcon jaisi seedhi lakeer — asal raasta nahi.' : ''}</p></div>`, true);
@@ -892,7 +894,7 @@ async function fxDownload() {
   if (gKey == null) { try { gKey = await cloud.getGaariKey(); } catch { gKey = ''; } }
   if (!gKey) { notice('Pehle 🔑 chaabi banao (📱 Gaari phone setup)'); return; }
   try {
-    const { FALCON_MACRO } = await import('./falcon-macro.js?v=2.207.1');
+    const { FALCON_MACRO } = await import('./falcon-macro.js?v=2.208.0');
     const txt = JSON.stringify(FALCON_MACRO).split('__NT_URL__').join(ggUrl().replace('/gaariGps?', '/gaariFx?')).split('__NT_KEY__').join(gKey);   // v2.202.0: Falcon ka text gaariFx mein (app khud parhti hai — PC nahi)
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'application/octet-stream' })); a.download = 'NT_Falcon_km.macro';
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);

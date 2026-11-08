@@ -110,7 +110,7 @@ async function photon(q) {
 export async function geocode(addr) {
   const parts = geoParts(addr); if (parts.length < 2) return null;
   const C = gLoad(), key = parts.join(', ').toLowerCase();
-  if (C[key] && (C[key].p || Date.now() - (C[key].at || 0) < 7 * 86400000)) return C[key].p || null;
+  if (C[key] && (C[key].p || Date.now() - (C[key].at || 0) < 3600000)) return C[key].p || null;   // v2.208.0: na mila = sirf 1 ghanta yaad (pehle 7 din — net ki ek ghalti hafta bhar naqsha rok deti)
   for (let q = 0; q < parts.length - 1 && q < 3; q++) { const p = await photon(parts.slice(q).join(', ')); if (p) { C[key] = { p: [p[0], p[1], q], at: Date.now() }; gSave(); return C[key].p; } }
   for (let q = 0; q < parts.length - 1 && q < 4; q++) { const p = await nominatim(parts.slice(q).join(', ')); if (p) { C[key] = { p: [p[0], p[1], q], at: Date.now() }; gSave(); return C[key].p; } }
   C[key] = { p: null, at: Date.now() }; gSave(); return null;
@@ -131,7 +131,7 @@ export function fxProcess(cloud, onStatus) {
   if (busy) return busy;
   busy = (async () => {
     const docs = (await cloud.listGaariFx()).sort((a, b) => a.at - b.at); if (!docs.length) return { n: 0 };
-    const today = dayOf(Date.now()), minDay = dayOf(Date.now() - 3 * 86400000), done = [], kmOut = {}; let trips = 0, det = 0, last = null, hid = 0;
+    const today = dayOf(Date.now()), minDay = dayOf(Date.now() - 40 * 86400000)   /* v2.208.0: Falcon mein 5 / 6 tareekh (Past Trips) kholo = usi din mein */, done = [], kmOut = {}; let trips = 0, det = 0, last = null, hid = 0;
     for (const d of docs) {
       const body = String(d.p || '').replace(/^FX\d\|[^|]*\|/, '');
       if (/^MENU\?/.test(body)) { if (last && N0(last.n)) { done.push(d.id); continue; } last = { at: Date.now(), recv: d.at || Date.now(), n: 0, nDt: 0, nKm: 0, reads: 0, km: {}, why: 'menu nahi (☰ nahi mila)', raw: body.slice(0, 3500), src: 'app' }; done.push(d.id); continue; }

@@ -7306,3 +7306,6 @@ pos-sales-dekho v2.4: bills[].ct = SystemNotes "Created & Printed By:… On:<waq
   fxProcess `hid` ginti → status / setup: "⚠️ N trip aap ke 🗑 hataye hue the — ↩ Sab wapas". Khamosh nahi.
 - Ghalti: v2.207.0 ka `${esc(fxStMsg)}` single-quote string mein tha — screen par likha nazar aata tha. Theek.
 - MENU? (auto atka) doc ab usi batch ki kamyab saathi ko _falcon mein nahi dhakta.
+=== 2026-11-08 · v2.208.0 — 🛰 Falcon din: har trip ke neeche kahan se → kahan tak + purane din (malik: "5 ya 6 ka daaloon to app khud us din mein") ===
+- openFalconDay: trips ab `.fx-tlist` (column) — har `.fx-trow` = number (naqshe wala) + chip + `.fx-fe` "🟢 Start → 🔴 End" (fd ka f / e, pehle 2 hisse, Pakistan / Punjab hata). Pata na ho = peeli line.
+- fx-app: minDay 3 → 40 din (listener 45 din) — Falcon Past Trips ki list kholo = usi din mein. geocode: na mila sirf 1 ghanta yaad (pehle 7 din — ek net ghalti hafta bhar naqsha rok deti).

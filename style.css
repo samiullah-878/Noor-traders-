@@ -7585,3 +7585,13 @@ html.lt .bt-btns .bt-dk{background:#5b6b8a!important;color:#fff!important;border
 html.lt .bt-vchips button{background:#ffffff22!important;color:#fff!important;border:1px solid #ffffff55!important;border-radius:999px!important}html.lt .bt-vchips button.on{background:#fff!important;color:#000!important}
 html.lt .bt-chips button,html.lt .bt-sm,html.lt #btDlg .bt-tg,html.lt #btDlg .bt-x{border-radius:999px!important}html.lt .bt-chips button.on,html.lt #btDlg .bt-tg.on{background:#e8f5ee!important;color:#0f6b3d!important;border-color:#b9e2cb!important}
 html.lt #btDlg .bt-save{background:linear-gradient(#2f6df6,#1a4fd0)!important;color:#fff!important;border:0!important}
+/* v2.208.0: 🛰 Falcon din — har trip ke neeche "kahan se → kahan tak" */
+html body #dialogBody .fx-tlist{display:grid;gap:7px;flex-wrap:nowrap}
+html body #dialogBody .fx-trow{display:grid;gap:3px;min-width:0}
+html body #dialogBody .fx-trow>.fx-chip{justify-self:start}
+html body #dialogBody .fx-chip .fx-n{display:inline-grid;place-items:center;min-width:18px;height:18px;border-radius:999px;background:#1d4ed8;color:#fff;font-size:10.5px;font-weight:800;margin-right:2px}
+html body #dialogBody .fx-chip.on .fx-n{background:#fff;color:#1d4ed8}
+html body #dialogBody .fx-fe{display:flex;flex-wrap:wrap;align-items:center;gap:3px 6px;padding:0 10px;font-size:11.5px;line-height:1.35;color:#475569;min-width:0}
+html body #dialogBody .fx-fe span{overflow:hidden;text-overflow:ellipsis;max-width:100%}
+html body #dialogBody .fx-fe em{font-style:normal;color:#94a3b8}
+html body #dialogBody .fx-fe0{color:#a16207}
