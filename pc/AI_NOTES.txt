@@ -4176,3 +4176,7 @@ PC jo samjha → parchiTrack.dbg → app 📋 list ke neeche "🩺 PC: …". App
 === 2026-11-08 · PC a4-print v1.6 — IPP par A4 zabardasti nahi (malik: "button dabna parta hai") ===
 WiFi (IPP) raaste par media=iso_a4 bhejna band (sirf cfg.a4Force) — tray Letter / Any ho to HP Continue maangta tha, button dabao to chhapta. Windows raasta v1.3 mein pehle hi theek tha. manifest 2026-11-08.7. AI nahi.
 
+=== 2026-11-08 · PC bank-parchi v2.6 + transfer-sync v4.13 — Alfalah aaye paise khud (malik: "poochna kyun?") ===
+Wajah: Alfalah FT SMS "on 10-Nov-26 15:19:18 via FT" ki tareekh parse nahi hoti thi (day = "") → PC post() ruk jata, app "kis ka khata?" poochti. Ab DD-Mon-YY parse.
+Doosri: bank Sunday / chhutti ka len-den VALUE DATE (agla kaam ka din) se bhejta hai — PC "aaj nahi" samajhta tha. Ab SMS taza (6 h) + tareekh aaj se −2…+4 din = khud lagao, entry ki tareekh aaj, note mein "bank tareekh". manifest 2026-11-08.8. AI nahi.
+

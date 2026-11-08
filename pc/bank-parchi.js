@@ -1,5 +1,5 @@
 // =========================================================
-//  bank-parchi.js  v2.5 (2026-10-20: chhoti parchi par Urdu sar-khi + bari Urdu tareekh) · v2.4 (2026-10-14: ✉️ Alfalah EMAIL bhi parhna (ibanking: naam · email.notification: account + charges) + wahi Ref / TXN do docs mein = EK, doosra post nahi) · v2.3 (2026-10-14: 🏦 BANK ALFALAH SMS (8287) parhna — aaye / 💳 card / fee / statement; Alfalah NT (@pcin) mein aaye
+//  bank-parchi.js  v2.6 (2026-11-08: aaye paise bank ki VALUE DATE (Sunday = agla din) par bhi khud, entry aaj) · v2.5 (2026-10-20: chhoti parchi par Urdu sar-khi + bari Urdu tareekh) · v2.4 (2026-10-14: ✉️ Alfalah EMAIL bhi parhna (ibanking: naam · email.notification: account + charges) + wahi Ref / TXN do docs mein = EK, doosra post nahi) · v2.3 (2026-10-14: 🏦 BANK ALFALAH SMS (8287) parhna — aaye / 💳 card / fee / statement; Alfalah NT (@pcin) mein aaye
 //                     paise khud; apne naam (Noor Traders / Samiullah) se aaye = khud nahi, app EK transfer banati hai) · v2.2 (2026-10-13: 🔔 HBL Mobile app ki NOTIFICATION (src 'notif') bhi parhta hai + notification / SMS / email jurwan = ek) · v2.1 (2026-10-12) — 🏦 sirf apne HBL account ke (A/C ke aakhri 4 number app mein yaad) · v2.0 (2026-10-12) — 🤖 aaye paise khud HBL khate mein (neeche) · v1.0 — 💰 PAISE AAYE ki parchi (Server PC, TM-T88IV)
 //  Malik: "jaise hi koi paisa aya usi time computer se print bi nikl aiya".
 //  📩 HBL Inbox (Firestore bankSms) mein naya SMS / email aate hi -> parchi: raqam (bara), kis se, bank, via, waqt, TXN.
@@ -117,6 +117,10 @@ function parseBank(text, src = 'sms', subj = '') {
     const tx = (t.match(/Tx\s*ID\s*[:\-]?\s*([A-Z0-9]{4,})/i) || [])[1] || '';
     const dd = t.match(/on\s+(\d{1,2})-(\d{1,2})-(\d{2,4})(?:\s+at\s+(\d{1,2}):(\d{2}))?/i);
     if (dd) { const y = dd[3].length === 2 ? '20' + dd[3] : dd[3]; out.day = `${y}-${p2(dd[2])}-${p2(dd[1])}`; out.time = dd[4] ? `${p2(dd[4])}:${dd[5]}` : ''; }
+    else {   // v2.6 (8 Nov): "on 10-Nov-26 15:19:18 via FT" (FT / IBFT wali SMS — mahina lafz, saal 2 hindse) — pehle parse nahi hota tha → day '' → PC khud nahi lagata tha, app poochti thi
+      const dm = t.match(/on\s+(\d{1,2})-([A-Za-z]{3})-(\d{2,4})(?:\s+(\d{1,2}):(\d{2})(?::\d{2})?)?/i);
+      if (dm && MON[dm[2].toLowerCase()]) { const y = dm[3].length === 2 ? '20' + dm[3] : dm[3]; out.day = `${y}-${p2(MON[dm[2].toLowerCase()])}-${p2(dm[1])}`; out.time = dm[4] ? `${p2(dm[4])}:${dm[5]}` : ''; }
+    }
     out.txn = tx; out.amt = amtOf(t);
     out.acct = (t.match(/A\/C:?\s*\*?\s*([0-9*\-]{3,})/i) || [])[1] || ''; out.acct = out.acct.replace(/\D/g, '').slice(-4);
     const vv = t.match(/via\s+(?:your\s+)?(Raast(?:\s+ID)?|IBFT|[A-Za-z][A-Za-z ]{1,20}?)(?=\s+on\b|$)/i); if (vv) out.via = vv[1].replace(/\s+ID$/i, '');
@@ -202,7 +206,17 @@ function createBankWatcher({ biz, log, sendRaw, head, stateFile, cfgRef, now = (
   const khata = () => biz.collection('blueKhata');
   async function post(doc, d, r) {
     if (!cfg.bankPost || r.dir !== 'in' || d.st || r.kind === 'stmt') return '';
-    if (!r.day || r.day !== pktDay(now())) return '';   // purani tareekh: app mein malik se poochho
+    // v2.6 (8 Nov, malik: "aaye paisa dukan ka hai — counter sale mein jata hai, poochna kyun?"): Alfalah / HBL ki SMS mein VALUE DATE hoti hai — Sunday / chhutti ka
+    //   len-den "10-Nov" (agla kaam ka din) likh kar aata hai, PC "aaj nahi" samajh kar app se poochta tha. Ab: SMS ABHI aayi ho (6 ghante) aur bank ki tareekh
+    //   aaj se 2 din peeche – 4 din aage ho to bhi khud lagao — entry ki tareekh AAJ (jis din paisa / SMS aaya), bank ki tareekh note mein. Sach-much purani = poochho.
+    const today = pktDay(now()), created = doc.createTime && doc.createTime.toMillis ? doc.createTime.toMillis() : Number(d.at) || 0;
+    let eDay = r.day;
+    if (!r.day) return '';
+    if (r.day !== today) {
+      const diff = Math.round((Date.parse(r.day + 'T12:00:00+05:00') - Date.parse(today + 'T12:00:00+05:00')) / 86400000);
+      if (!(created && now() - created < 6 * 3600000 && diff >= -2 && diff <= 4)) return '';   // purani tareekh: app mein malik se poochho
+      eDay = pktDay(created);
+    }
     // v2.1: SMS / email mein account number ho (maslan loan wala) aur app ne us number ko HBL Noor Traders ka nahi maana = khud nahi — app poochegi
     // v2.3: Alfalah bhi — account ka khata app mein chuna ho aur malik ne PC ko ijazat di ho (@pcin:<4 number>, Alfalah NT 0294 = haan)
     const k = acctK(r.acct) || (r.bankAc === 'alfalah' ? ({ SAMIULLAH: '5826', NOORTRADERS: '0294' })[String(r.holder || '').toUpperCase().replace(/[^A-Z]/g, '')] || '' : ''); let tgt = hblId;   // v2.4: Alfalah email "Dear X" = account (app jaisa)
@@ -213,10 +227,10 @@ function createBankWatcher({ biz, log, sendRaw, head, stateFile, cfgRef, now = (
     const id = 'bk' + doc.id + 'a', ref = khata().doc(id);
     const ex = await ref.get(); if (ex.exists && !ex.data().deleted) return 'pehle-se';
     const t = now();
-    await ref.set({ id, type: 'entry', kind: 'payment', partyId: tgt, amount: r.amt, date: r.day, note: noteOf(r), dailyIncluded: true, posPending: false, bankSms: doc.id,
+    await ref.set({ id, type: 'entry', kind: 'payment', partyId: tgt, amount: r.amt, date: eDay, note: (noteOf(r) + (eDay !== r.day ? ' · bank tareekh ' + r.day : '')).slice(0, 900), dailyIncluded: true, posPending: false, bankSms: doc.id,
       by: 'pc-bank', updatedBy: 'pc-bank', createdAt: t, updatedAt: t, rev: 1 });
     await biz.collection('bankSms').doc(doc.id).set({ st: 'done', by: 'pc-bank', byName: 'Server PC', doneAt: t, partyId: tgt, entryId: id, kind: 'party' }, { merge: true });
-    log(`🤖 HBL khud laga: ${rs(r.amt)} — ${ascii(r.name)} -> HBL (Akhrajat)`);
+    log(`🤖 HBL khud laga: ${rs(r.amt)} — ${ascii(r.name)} -> ${tgt === hblId ? 'HBL' : 'bank ' + k}${eDay !== r.day ? ' (bank tareekh ' + r.day + ', entry ' + eDay + ')' : ''}`);
     return 'laga';
   }
   async function handle(doc) {
