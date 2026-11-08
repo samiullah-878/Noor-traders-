@@ -46,7 +46,7 @@ function linkHTML() {
     : s === 'closed' ? ['bad', '🔴 Rabta toota', String(L.err || '')]
     : s === 'error' ? ['bad', '⚠️ Ghalti', String(L.err || '')]
     : ['w', '⚪ Abhi juda nahi', L.err ? String(L.err) : 'Naya number ek dafa jorein — phir sab khud.'];
-  const pcl = at ? `🖥 ${esc(L.host || 'PC')}${L.ver ? ' · v' + esc(L.ver) : ''} · ${ago(at) === 'abhi' ? 'abhi' : ago(at) + ' pehle'}${quiet ? ' · <b class="wps-err">⚠️ PC par wa-out chup — Settings → 🖥️ PC scripts dekhein</b>' : ''}` : '';   // v2.203.1: band / juda na ho tab bhi chup dikhao (PC v1.1 har 5 min heartbeat)
+  const pcl = at ? `🖥 ${esc(L.host || 'PC')}${L.ver ? ' · v' + esc(L.ver) : ''} · ${ago(at) === 'abhi' ? 'abhi' : ago(at) + ' pehle'}${quiet ? '<span class="wo-quiet">⚠️ PC par wa-out chup (' + ago(at) + ') — Settings → 🖥️ PC scripts dekhein</span>' : ''}` : '';   // v2.203.1: band / juda na ho tab bhi chup dikhao (PC v1.1 har 5 min heartbeat)
   const cnt = at ? `<small class="wps-mut">📤 Aaj bheje: <b>${Number(L.n) || 0}</b> / ${cfgNow().lim}${L.last?.at ? ` · aakhri: ${esc(L.last.nm || '')} ${esc(L.last.to || '')} (${ago(tms(L.last.at)) === 'abhi' ? 'abhi' : ago(tms(L.last.at)) + ' pehle'})` : ''}</small>` : '';
   const qr = s === 'qr' && L.qr ? `<div class="wps-qr" data-wo-qr="1">⏳ QR ban raha…</div>${at && Date.now() - at > 60000 ? '<p class="wps-err">⚠️ QR purana ho sakta hai — 🔄 Naya QR dabayein</p>' : ''}` : '';
   const code = s === 'code' && L.code ? `<div class="wps-pcode">${esc(L.code)}</div>${L.codeFor ? `<small class="wps-mut">📱 ${esc(L.codeFor)} ke liye · 2–3 min mein likhein, warna 🔄 Naya code</small>` : ''}` : '';

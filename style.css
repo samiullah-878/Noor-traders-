@@ -7516,3 +7516,4 @@ html.dk body #dialogBody .fx-tripinfo,html[data-theme="dark"] body #dialogBody .
 html body #dialogBody .fx-runbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 10px}
 html body #dialogBody .fx-runbtn{height:34px;padding:0 14px;border-radius:999px;border:1px solid #c7d6f5;background:linear-gradient(180deg,#f7faff,#e7efff);color:#1d3b7a;font-weight:700;font-size:13px;white-space:nowrap;cursor:pointer}
 html body #dialogBody #fxRunSt{color:#475569;font-size:12px}
+html body #dialogBody .wo-quiet{display:block;margin-top:4px;padding:5px 9px;border-radius:10px;background:#fff1f2;border:1px solid #fecdd3;color:#9f1239;font-weight:700;font-size:12px}
