@@ -7209,3 +7209,9 @@ falcon-macro.js TimeOfDay 21:45 → 21:00 (naye download par). Phone par laga ma
 - `fx-app.js` (naya, ESM): PC gaari-gps v1.2 ke fxParse / fxSplit / fxDetail / fxMerge / geoParts ki HUBAHU copy (ek badlo to doosra bhi) + `geocode` Nominatim seedha phone se (fetch, CORS khula, 1.1 s gap, localStorage `sam-fx-geo` cache 500, na mila = 7 din baad) + `fxProcess(cloud, onStatus)`: gaariFx docs (purana pehle) → gaariDay/<din> {fk, fn, ft, fd, fa} merge + `_falcon` (src 'app') → docs delete. Ek waqt ek (busy).
 - gaari.js: `fxRun(force)` sirf malik — Gaari screen khulte hi (1.5 s), Falcon list / din ki khirki khulte hi (2 min mein ek dafa), 🔄 "Abhi parho" chip (`data-fx-run`, patti `#fxRunSt` ⏳ / 📍 n/N / ✅); nateeja notice. cloud.js: listGaariFx / delGaariFx / getGaariDay / setGaariDay.
 - PC gaari-gps.js v1.2 ka FX code ab dormant (gaariGps mein FX nahi aata) — hataya nahi. AI nahi.
+
+## v2.203.0 (2026-11-08) — 🛰 Falcon macro v3 (malik screenshots: Trip Detail ke naqshe par atak jata · "jahan bhi ho wahan se aage · speed aur tez")
+- falcon-macro.js v3 (mac/buildfx2.py, templates = asal v1 export `mac/falcon-v1.js` — v2 output se templates mat lo, index badal gaye): shuru mein Falcon-i jis screen par bhi khule (Engine / Trip Detail / Today / Live view) koi bhi lafz aate hi aage (max 15 s); ☰ = Falcon mein upar DAAYEIN (screenshot) — koshish 2 wahi; "Reports" expand ho to andar Mileage / Speed / Trips / Fuel — pehle se khula (Trips nazar) ho to Reports dobara nahi dabata (dobara = band); Trips exact, "Today's Trips" contains Today.
+- Detail se wapas: phone back → 2.1 s mein "Today" nahi → Falcon ka ← button (7%, 9%) → phir bhi nahi → back dobara. Scroll ke baad screen ka JSON pichhle jaisa = list khatam (BreakFromLoop) — 1 trip wale din 5 scroll nahi.
+- Raftar: sab intezar 300 ms qadam, detail pause 250 ms, scroll pause 700 ms, menu 2.4 → 1.8 s. Toast "40 second".
+- Malik: app ⚙️ Falcon setup → 📥 macro dobara (v3), purana v2 band.
