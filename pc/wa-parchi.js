@@ -80,7 +80,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.11';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.12';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1689,13 +1689,18 @@ async function start(ZINDA) {
   //   ya tasveer ke baad 10 min ke andar alag chhota "Print" (aakhri 3 tasveerein yaad `trPend`). Likhi parchi (text) pehle jaisi (gahak wali / forward list). Screenshot / aam tasveer = kuch nahi.
   // v2.11 (8 Nov, malik: "Print = sirf A4 print · Printauto = print + poora auto (list, yaad-dihani, gahak ko paigham) — load ho to manual chalta rahe"):
   //   tasveer parchi track SIRF "printauto" / "autoprint" / "print auto" par (caption, ya tasveer ke 10 min baad alag chhota paigham). Sirf "print" = print, list mein bhi nahi.
+  // v2.12 (8 Nov, ghalti 17:05): WhatsApp likha paigham tasveer se PEHLE pohanchta hai (forward ki tasveer 1-2 s baad) — "Print auto" pehle aaya, tasveer baad mein,
+  //   dono ek doosre ka intezar karte reh gaye. Ab print wale `selfPend` jaisa: "Printauto" pehle aaye to 2 min yaad (`trAuto`), us mein tasveer / likhi parchi aaye = foran track.
   const trPend = new Map();   // wid -> { m, c, to, by, at }
+  let trAuto = { at: 0, jid: '' };   // "Printauto" pehle aa gaya — 2 min ke andar aane wali parchi usi ki
+  const trAutoHot = (m) => trAuto.at && (tsOf(m) || Date.now()) - trAuto.at < 2 * 60000 && (!trAuto.jid || trAuto.jid === (m.key.remoteJid || ''));
   async function trForward(m, c, to, by) {   // ② malik → Mubeen tasveer = nayi parchi (sirf "printauto" ke saath)
     const wid = m.key.id || ''; if (!wid || TR.par[wid]) return;
     const im = imgOf(c), tx = im ? '' : txtOf(c); if (!im && !tx) return;
     if (im) {
       if (autoReq(im.caption || '')) return trTrack(m, c, to, by);
       if (printReq(im.caption || '')) { trDbg(`tasveer + "Print" (sirf print, auto nahi — auto ke liye "Printauto")`); return; }
+      if (trAutoHot(m)) { trAuto = { at: 0, jid: '' }; return trTrack(m, c, to, by); }   // v2.12: "Printauto" pehle aa chuka tha
       trPend.set(wid, { m, c, to, by, at: tsOf(m) || Date.now() }); while (trPend.size > 3) trPend.delete(trPend.keys().next().value);
       return;
     }
@@ -1704,12 +1709,13 @@ async function start(ZINDA) {
       if (!autoReq(tx)) { trDbg(`"Print" (sirf print, auto nahi — auto ke liye "Printauto")`); return; }
       const ctx = c.extendedTextMessage && c.extendedTextMessage.contextInfo, qid = ctx && String(ctx.stanzaId || '');
       const now = tsOf(m) || Date.now(), pick = qid && trPend.has(qid) ? [qid] : [...trPend.keys()].filter(k => now - trPend.get(k).at < 10 * 60000);
-      if (!pick.length) trDbg('"Printauto" mila magar 10 min mein pehle koi tasveer nahi — pehle tasveer, phir Printauto');
+      if (!pick.length) { trAuto = { at: now, jid: m.key.remoteJid || '' }; trDbg('"Printauto" mila — 2 min ke andar tasveer / parchi aaye to wohi track (tasveer aksar likhe ke baad pohanchti hai)'); }
       for (const k of pick) { const q = trPend.get(k); trPend.delete(k); if (q && !TR.par[k]) await trTrack(q.m, q.c, q.to, q.by); }
       return;
     }
     const sha = txtKey(tx), o = sha && TR.inc[sha] && Date.now() - TR.inc[sha].at < 8 * 3600000 ? TR.inc[sha] : null;
     if (!o && !(isFwd(c) && /\d|\n/.test(tx))) return;   // malik ki apni aam baat (Mubeen se) = parchi nahi; likhi parchi sirf gahak wali ya FORWARD (list jaisi: number / kai lines)
+    if (trAutoHot(m)) { trAuto = { at: 0, jid: '' }; return trTrack(m, c, to, by); }   // v2.12
     trPend.set(wid, { m, c, to, by, at: tsOf(m) || Date.now() }); while (trPend.size > 3) trPend.delete(trPend.keys().next().value);   // v2.11: likhi parchi bhi "Printauto" ke baad hi
   }
   // v2.11: 🩺 app ko bhi batao PC ne aakhri paigham ka kya samjha (parchiTrack.dbg) — khamosh nahi

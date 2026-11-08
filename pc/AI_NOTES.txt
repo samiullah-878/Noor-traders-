@@ -4180,3 +4180,6 @@ WiFi (IPP) raaste par media=iso_a4 bhejna band (sirf cfg.a4Force) — tray Lette
 Wajah: Alfalah FT SMS "on 10-Nov-26 15:19:18 via FT" ki tareekh parse nahi hoti thi (day = "") → PC post() ruk jata, app "kis ka khata?" poochti. Ab DD-Mon-YY parse.
 Doosri: bank Sunday / chhutti ka len-den VALUE DATE (agla kaam ka din) se bhejta hai — PC "aaj nahi" samajhta tha. Ab SMS taza (6 h) + tareekh aaj se −2…+4 din = khud lagao, entry ki tareekh aaj, note mein "bank tareekh". manifest 2026-11-08.8. AI nahi.
 
+=== 2026-11-08 · PC wa-parchi v2.12 — "Printauto" tasveer se pehle aaye to bhi track ===
+17:05: malik ne tasveer forward ki + alag "Print auto" likha — likha paigham PC ko pehle pohancha, tasveer baad mein; track dono ek doosre ka intezar karte rahe (🩺 line ne pakra). Ab trAuto (2 min): Printauto pehle aaye to agli tasveer / likhi parchi foran track. manifest 2026-11-08.9. AI nahi.
+
