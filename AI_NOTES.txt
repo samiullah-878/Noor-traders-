@@ -7259,3 +7259,21 @@ Mubeen usi parchi par "Start" likhe → gahak ko "Aap ka saman start ho gaya hai
 - cloud.js: listenBillClips / getBillClip (hisse jor) / listenBillTally / saveBillTally / listenBillClipPc / getBillClipCfg / setBillClipCfg. Rules 2.93: billClip read malik/Full/Nigrani; billTally create/update apna by (keys ok/miss/by/n/at/day/no/pc/t/by2/why), delete malik; posSales + posSaleLines ab Nigrani bhi; blueAccess get list mein billClipPc. app.js: title nazar = 👀 Nigrani, popstate ntBtClose. style.css .bt-* (dk + lt). sw.js tally.js. manifest 2026-11-08.13.
 - Test: Playwright phone 400px + PC 1200px (mock cloud, asal mp4) — ✓/✕/undo/📊/⚙️ sab chale, scrollWidth 400. Camera kal attach (malik). AI NAHI.
 
+
+## v2.205.0 (2026-11-08) — 🛰 Falcon: 🗑 trip hatao · 🔄 din naya · 📲 app se MacroDroid ko hukum (webhook, macro v4) · live parhna · "koi naya text nahi"
+- Malik (8 Nov raat): 8:18 am trip "418 km" ghalat (2 ghante mein na-mumkin — shayad 4.18 / 41.8) → "delete ka option · poora din naya · app MacroDroid ko bole";
+  test ke baad "app tak nahi pohncha" (asal: app 2 min mein ek dafa dekhti thi, 🔄 Abhi parho par khamosh rehti thi).
+- fx-app.js: `fh` = gaariDay/<din> JSON [["HH:MM", km]] (malik ke hataye trips, km bhi ↩ ke liye) — `fxHidden(fhJ)`, `fxMerge(oldJ, add, fhJ)` hidden skip
+  (macro dobara parhe to WAPAS NAHI), `fxTotal(ft)`. Rules nahi badle (gaariDay malik likhta hai, 2.92).
+- gaari.js: trip chip ab `<span class="gp-trip fx-chip" data-fx-trip>` + malik ka 🗑 `data-fx-del` (confirm → `fxHide(date, t, false)`: ft/fd se nikaal, fh mein, fk/fn naye,
+  pehle UI phir setGaariDay). Khirki ⋮ (`data-mn-box` .fx-mn, group "🛰 Falcon din"): 📲 Falcon se abhi parhwao · 🔄 Aaj ka din naya (sirf aaj — `fxDayReset`: ft/fh/fd khali
+  + fxCmd; purana din = sirf khali, Falcon purana nahi parhti) · ↩ Hataye hue (N) → #fxHidden list (`data-fx-back` = `fxHide(.., true)` km wapas).
+- 📲 webhook: `blueAccess/gaariFxCfg {wh, at}` (cloud getFxCfg / setFxCfg, malik) — ⚙️ Falcon setup mein input + 💾 Save + 🔎 Test (`fxWhOk` = https://trigger.macrodroid.com/<id>/<name>),
+  dikhane mein mask. `fxCmd()` = fetch GET no-cors (`?src=app&t=`) → status "hukum bhej diya ~40 s" → `fxLive()`. Link na ho = setup kholo. Link chat / repo mein KABHI nahi.
+- Live: cloud.listenGaariFx(cb) (onSnapshot added docs, sirf malik — rules read isOwner) → gaari.js `fxLive()` renderGaari par (malik) → naya doc = `fxRun(true)` 400 ms baad. fxRun force
+  par r.n 0 = "Koi naya Falcon text nahi · aakhri HH:MM — 📲 se parhwao" (khamosh nahi).
+- falcon-macro.js v4: doosra trigger `WebHookTrigger` identifier `nt_falcon` (+ ipAddressWhiteList/variableWhiteList khali); TimeOfDay 21:00–23:59 + LastRunTime 3000 s ab sirf
+  DeviceUnlockedTrigger ke `m_constraintList` mein (macro-level khali — warna din ka hukum ruk jata). SIGUID ≤ 2^53 (pehle -…4403001 float mein -…4403000 = dohra). Actions wahi v3.
+  Validator (MacroDroid MCP) VALID. Malik: macro v4 download + import, v3 delete, trigger → Copy URL → app ⚙️ paste.
+- 418 km ki asal wajah abhi maloom nahi — malik se Falcon-i 8:18 trip ka screenshot manga. Agar Falcon khud 418 dikhata hai to Falcon ki ghalti (🗑 kaafi); agar 4.18 hai to
+  fxParse KM_LBL / Falcon ka text dekh kar theek karna (`_falcon.raw`). AI nahi.

@@ -7510,6 +7510,17 @@ html body #dialogBody .fx-map[hidden]{display:none}
 html body #dialogBody .fx-mapnone{position:absolute;left:10px;right:10px;bottom:10px;z-index:500;margin:0;background:rgba(255,255,255,.94);border:1px solid #dbe3ef;border-radius:12px;padding:8px 10px;font-size:12px;color:#334155}
 html body #dialogBody .fx-tripinfo{display:flex;flex-direction:column;gap:4px;background:#f4f7ff;border:1px solid #d3e0fb;border-radius:14px;padding:9px 12px;margin-bottom:10px;font-size:12.5px;color:#13244a}
 html body #dialogBody .fx-tripinfo[hidden]{display:none}
+/* v2.205.0: 🗑 trip chip (span + chhota 🗑) · ⋮ box · hataye hue · webhook input */
+html body #dialogBody span.gp-trip.fx-chip{cursor:pointer;font-size:12.5px;line-height:1.2;padding:5px 5px 5px 11px}
+html body #dialogBody .fx-chip .fx-del{border:0;background:rgba(29,59,122,.1);color:#1d3b7a;border-radius:999px;width:24px;height:24px;line-height:24px;padding:0;font-size:12px;margin-left:2px}
+html body #dialogBody .fx-chip.on .fx-del{background:rgba(255,255,255,.22);color:#fff}
+html body #dialogBody .fx-hid{border-top:1px dashed #d3e0fb;padding-top:8px}
+html body #dialogBody .fx-hid[hidden]{display:none}
+html body #dialogBody .fx-mn{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 8px}
+html body #dialogBody .fx-mn button{font:inherit;font-size:12px;border-radius:999px;padding:6px 11px;border:1px solid #c9d7f5;background:linear-gradient(180deg,#f7faff,#e9f0ff);color:#1d3b7a;white-space:nowrap}
+html body #dialogBody .fx-wh{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0}
+html body #dialogBody .fx-wh input{flex:1 1 200px;min-width:0;font:inherit;font-size:12.5px;padding:8px 10px;border:1px solid #c9d7f5;border-radius:11px}
+html body #dialogBody .gg-st code{font-size:11.5px;word-break:break-all}
 html body #dialogBody .fx-tripinfo b{font-size:13.5px}.fx-tripinfo span{display:block;line-height:1.35}.fx-tripinfo em{font-style:normal;font-weight:700;color:#475569;margin-right:4px}.fx-tripinfo small{color:#6b7a99}
 html.dk body #dialogBody .fx-tripinfo,html[data-theme="dark"] body #dialogBody .fx-tripinfo{background:#1b2440;border-color:#2c3a63;color:#dbe6ff}
 /* v2.202.0: 🔄 Falcon text app khud parhe — patti */

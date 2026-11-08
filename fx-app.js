@@ -1,4 +1,5 @@
-// fx-app.js — v2.202.0 (2026-11-07) 🛰 FALCON TEXT APP KHUD PARHE (PC ke baghair)
+// fx-app.js — v2.205.0 (2026-11-08): 🗑 hataye trips `fh` (gaariDay JSON ["HH:MM"]) — malik ne jo trip hataya wo macro ke dobara parhne par WAPAS NAHI aata (fxMerge skip + fk/fn bina un ke);
+//   fxTotal(ft) = din ke km ek jagah (screen + save ek qaida). v2.202.0 (2026-11-07) 🛰 FALCON TEXT APP KHUD PARHE (PC ke baghair)
 //   Malik: "shop PC 9 bje band hota hai — PC ko chhor do, app par hi shift kar do · jaldi bhi ho jayega".
 //   Malik ke phone ka MacroDroid (falcon-macro.js v2) Falcon-i ka text ab `gaariFx` (rules 2.92) mein bhejta hai (gaariGps nahi).
 //   Ye module (sirf malik ka phone, gaari.js se): gaariFx ke naye docs → trips (waqt + km) + har trip ka Detail (Start / End pata)
@@ -39,11 +40,14 @@ export function fxParse(txt) {
   for (const e of all) { if (e.kind === 'dt') { if (!first) first = e; continue; } if (first) { if (e.km > 0) trips.push({ day: first.day, t: first.t, km: e.km }); first = null; } else orphan++; }
   return { trips, nDt: D.length, nKm: K.length, orphan };
 }
-export function fxMerge(oldJ, add) {
-  const m = new Map(); try { for (const [t, km] of JSON.parse(oldJ || '[]') || []) if (t) m.set(String(t), Number(km) || 0); } catch {}
-  for (const x of add) m.set(x.t, x.km);
+export function fxHidden(fhJ) { try { const a = JSON.parse(fhJ || '[]'); return Array.isArray(a) ? a.filter(x => Array.isArray(x) && x[0]).map(x => [String(x[0]), Number(x[1]) || 0]) : []; } catch { return []; } }   // [["HH:MM", km]] — ↩ wapas ke liye km bhi
+export function fxMerge(oldJ, add, fhJ) {
+  const H = new Set(fxHidden(fhJ).map(x => x[0]));   // v2.205.0: 🗑 malik ke hataye trips — dobara parhne par bhi nahi
+  const m = new Map(); try { for (const [t, km] of JSON.parse(oldJ || '[]') || []) if (t && !H.has(String(t))) m.set(String(t), Number(km) || 0); } catch {}
+  for (const x of add) if (!H.has(String(x.t))) m.set(x.t, x.km);
   return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
 }
+export const fxTotal = ft => Math.round((ft || []).reduce((s, q) => s + (Number(q[1]) || 0), 0) * 100) / 100;
 export function fxSplit(body) {
   const parts = String(body || '').split('~~'), list = [], det = [];
   for (let i = 0; i < parts.length; i++) { const q = parts[i]; if (q.trim() === 'DET') { if (parts[i + 1]) det.push(parts[i + 1]); i++; } else if (q.trim()) list.push(q); }
@@ -109,7 +113,7 @@ export function fxProcess(cloud, onStatus) {
       for (const [day, L] of byDay) {
         onStatus?.(`🛰 ${day}: ${L.length} trip parh liye…`);
         const old = (await cloud.getGaariDay(day)) || {};
-        const ft = fxMerge(old.ft, L), fk = Math.round(ft.reduce((s, q) => s + (Number(q[1]) || 0), 0) * 100) / 100;
+        const ft = fxMerge(old.ft, L, old.fh), fk = fxTotal(ft);
         const myDet = dets.filter(q => ft.some(z => z[0] === q.t)); let fd = null;
         if (myDet.length || old.fd) { try { fd = await fxDetails(old.fd, myDet, onStatus); } catch {} }
         const upd = { date: day, fk, fn: ft.length, ft: JSON.stringify(ft), fa: Date.now() }; if (fd) upd.fd = JSON.stringify(fd);
