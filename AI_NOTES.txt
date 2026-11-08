@@ -7244,3 +7244,6 @@ Doosri: bank Sunday / chhutti ka len-den VALUE DATE (agla kaam ka din) se bhejta
 === 2026-11-08 · PC wa-parchi v2.12 — "Printauto" tasveer se pehle aaye to bhi track ===
 17:05: malik ne tasveer forward ki + alag "Print auto" likha — likha paigham PC ko pehle pohancha, tasveer baad mein; track dono ek doosre ka intezar karte rahe (🩺 line ne pakra). Ab trAuto (2 min): Printauto pehle aaye to agli tasveer / likhi parchi foran track. manifest 2026-11-08.9. AI nahi.
 
+=== 2026-11-08 · PC wa-out v1.3 — bhejne wala khamosh (10:57 ke baad kuch nahi gaya) ===
+Heartbeat theek, link juda, magar 10:57 ke baad koi paigham nahi gaya (Mubeen ko 17:20 ki yaad-dihani bhi nahi). Ab: har 30 s queue (st new) Firestore se khud bhi parho (listener chup ho to bhi) + busy 4 min (har job par taza) = process.exit → bat loop dobara shuru. Ruke hue 6 ghante tak ke paigham restart par chale jate hain. manifest 2026-11-08.10. AI nahi.
+

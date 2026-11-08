@@ -19,7 +19,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.2';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.3';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -134,13 +134,14 @@ async function main() {
     logL = logL.concat([row]).slice(-60);
     const snap = logL.slice(); lgw = lgw.then(() => LOGD.set({ L: snap, at: Date.now() })).catch(e => log('⚠️ waOutLog: ' + e.message));
   }
-  const pend = new Map(); let busy = false, lastSent = 0;
+  const pend = new Map(); let busy = false, busyAt = 0, lastSent = 0;
   Q.where('st', '==', 'new').onSnapshot(s => { for (const ch of s.docChanges()) { if (ch.type === 'removed') pend.delete(ch.doc.id); else pend.set(ch.doc.id, ch.doc.data() || {}); } kick(); }, e => log('⚠️ waOut: ' + e.message));
   function kick() { if (!busy) work().catch(e => { busy = false; log('⚠️ bhejna: ' + e.message); }); }
   async function work() {
-    busy = true;
+    busy = true; busyAt = Date.now();
     try {
       while (pend.size) {
+        busyAt = Date.now();   // v1.3: har job par taza — lambi queue 'atki' na lage
         const [id, d] = [...pend.entries()].sort((a, b) => (Number(a[1].at) || 0) - (Number(b[1].at) || 0))[0];
         const done = async (st, why, extra) => { pend.delete(id); try { await Q.doc(id).set({ st, why: String(why || '').slice(0, 140), sentAt: Date.now(), ...(d.im ? { im: FieldValue.delete(), hadIm: 1 } : {}), ...(d.au ? { au: FieldValue.delete(), hadAu: 1 } : {}), ...(extra || {}) }, { merge: true }); } catch (e) { log('⚠️ waOut ' + id + ': ' + e.message); } };
         const day = dayOf(Date.now()); if (L.day !== day) { L.day = day; L.n = 0; }
@@ -177,5 +178,12 @@ async function main() {
 
   setInterval(() => { if (Date.now() - lastW > 5 * 60000) setLink({}); }, 60000);   // app ko pata rahe PC zinda — v1.1: juda na ho tab bhi (warna app mein '54 min pehle' aur pata nahi chal raha / band)
   setInterval(kick, 30000);
+  // v1.3 (8 Nov — 10:57 ke baad kuch nahi gaya, heartbeat theek, app mein "juda"): (1) 📡 har 30 s Firestore se 'new' jobs khud bhi parho (onSnapshot chup ho jaye to bhi
+  //   queue bhare) · (2) ⏱ bhejne wala 4 min se atka (busy) = dobara shuru (bat loop / doctor) — khamosh atakna kabhi nahi.
+  setInterval(async () => {
+    if (busy && Date.now() - busyAt > 4 * 60000) { log('⚠️ bhejne wala 4 min se atka hua — dobara shuru'); setLink({ err: 'bhejne wala atka tha — dobara shuru' }); setTimeout(() => process.exit(2), 1500); return; }
+    try { const s = await within(Q.where('st', '==', 'new').limit(50).get(), 20000, 'queue parhna'); let add = 0; s.forEach(d => { if (!pend.has(d.id)) { pend.set(d.id, d.data() || {}); add++; } }); if (add) { log(`📡 queue se ${add} naya job (poll)`); kick(); } }
+    catch (e) { log('⚠️ queue poll: ' + e.message); }
+  }, 30000);
   if (has()) await connect('shuru'); else setLink({ st: 'off', qr: '', err: '' });
 }
