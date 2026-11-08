@@ -1,4 +1,6 @@
-// fx-app.js — v2.205.0 (2026-11-08): 🗑 hataye trips `fh` (gaariDay JSON ["HH:MM"]) — malik ne jo trip hataya wo macro ke dobara parhne par WAPAS NAHI aata (fxMerge skip + fk/fn bina un ke);
+// fx-app.js — v2.206.0 (2026-11-08): macro v5 — FX3 · '~~LT~~<n>' (list load × 0.5 s) · 'SAATHI~~' (malik ne khud trips kholin) · trips Detail se bhi (list na ho to) —
+//   fxDetail ab `day` bhi deta hai ('08-11-2026 08:10 PM'). PC gaari-gps ki copy (dormant) NAHI badli — ab sirf app parhti hai.
+// v2.205.0 (2026-11-08): 🗑 hataye trips `fh` (gaariDay JSON ["HH:MM"]) — malik ne jo trip hataya wo macro ke dobara parhne par WAPAS NAHI aata (fxMerge skip + fk/fn bina un ke);
 //   fxTotal(ft) = din ke km ek jagah (screen + save ek qaida). v2.202.0 (2026-11-07) 🛰 FALCON TEXT APP KHUD PARHE (PC ke baghair)
 //   Malik: "shop PC 9 bje band hota hai — PC ko chhor do, app par hi shift kar do · jaldi bhi ho jayega".
 //   Malik ke phone ka MacroDroid (falcon-macro.js v2) Falcon-i ka text ab `gaariFx` (rules 2.92) mein bhejta hai (gaariGps nahi).
@@ -49,9 +51,13 @@ export function fxMerge(oldJ, add, fhJ) {
 }
 export const fxTotal = ft => Math.round((ft || []).reduce((s, q) => s + (Number(q[1]) || 0), 0) * 100) / 100;
 export function fxSplit(body) {
-  const parts = String(body || '').split('~~'), list = [], det = [];
-  for (let i = 0; i < parts.length; i++) { const q = parts[i]; if (q.trim() === 'DET') { if (parts[i + 1]) det.push(parts[i + 1]); i++; } else if (q.trim()) list.push(q); }
-  return { list: list.join('~~'), det };
+  const parts = String(body || '').split('~~'), list = [], det = []; let lt = 0, saathi = false;
+  for (let i = 0; i < parts.length; i++) { const q = parts[i], k = q.trim();
+    if (k === 'DET') { if (parts[i + 1]) det.push(parts[i + 1]); i++; }
+    else if (k === 'LT') { lt = Math.max(lt, Number(String(parts[i + 1] || '').trim()) || 0); i++; }   // v2.206.0: list load (0.5 s ke qadam)
+    else if (k === 'SAATHI') saathi = true;
+    else if (k) list.push(q); }
+  return { list: list.join('~~'), det, lt, saathi };
 }
 export function fxDetail(txt) {
   const S = []; const rx = /'((?:[^']|'(?=[^,}:]))*)'/g; let m; while ((m = rx.exec(txt))) S.push(m[1].trim());
@@ -61,8 +67,8 @@ export function fxDetail(txt) {
   const si = lab('start'), ei = lab('end'), di = lab('distance'), ti = lab('time');
   if (si >= 0) out.f = val(si); if (ei >= 0) out.e = val(ei);
   if (di >= 0) { for (let j = di + 1; j < Math.min(S.length, di + 4); j++) { const k = /(\d{1,4}(?:[.,]\d{1,3})?)\s*km/i.exec(S[j]); if (k) { out.km = Math.round(Number(k[1].replace(',', '.')) * 100) / 100; break; } } }
-  if (ti >= 0) { for (let j = ti + 1; j < Math.min(S.length, ti + 4); j++) { const P = parseTimes(S[j]); if (P.length) { out.t = P[0].t; break; } } }
-  if (!out.t) { const P = parseTimes(txt); out.t = P.length ? P[0].t : ''; }
+  if (ti >= 0) { for (let j = ti + 1; j < Math.min(S.length, ti + 4); j++) { const P = parseTimes(S[j]); if (P.length) { out.t = P[0].t; out.day = P[0].day; break; } } }
+  if (!out.t) { const P = parseTimes(txt); out.t = P.length ? P[0].t : ''; out.day = P.length ? P[0].day : ''; }
   return out.t && (out.f || out.e) ? out : null;
 }
 export const geoParts = addr => String(addr || '').replace(/^[\d.,]+\s*km\s*away\s*from\s*,?\s*/i, '').trim().split(',').map(q => q.trim()).filter(Boolean);
@@ -105,9 +111,10 @@ export function fxProcess(cloud, onStatus) {
     const docs = (await cloud.listGaariFx()).sort((a, b) => a.at - b.at); if (!docs.length) return { n: 0 };
     const today = dayOf(Date.now()), minDay = dayOf(Date.now() - 3 * 86400000), done = [], kmOut = {}; let trips = 0, det = 0, last = null;
     for (const d of docs) {
-      const body = String(d.p || '').replace(/^FX[12]\|[^|]*\|/, '');
+      const body = String(d.p || '').replace(/^FX\d\|[^|]*\|/, '');
       if (/^MENU\?/.test(body)) { last = { at: Date.now(), recv: d.at || Date.now(), n: 0, nDt: 0, nKm: 0, reads: 0, km: {}, why: 'menu nahi (☰ nahi mila)', raw: body.slice(0, 3500), src: 'app' }; done.push(d.id); continue; }
       const SP = fxSplit(body), P = fxParse(SP.list), reads = SP.list.split('~~').filter(q => q.trim()).length, dets = SP.det.map(fxDetail).filter(Boolean);
+      { const have = new Set(P.trips.map(t => t.day + ' ' + t.t)); for (const x of dets) if (x.day && x.km > 0 && !have.has(x.day + ' ' + x.t)) { P.trips.push({ day: x.day, t: x.t, km: x.km }); have.add(x.day + ' ' + x.t); } }   // v2.206.0: 👆 saathi — list na parhi ho to Detail se
       const byDay = new Map(); let bad = 0;
       for (const t of P.trips) { if (t.day > today || t.day < minDay) { bad++; continue; } if (!byDay.has(t.day)) byDay.set(t.day, []); byDay.get(t.day).push(t); }
       for (const [day, L] of byDay) {
@@ -120,7 +127,7 @@ export function fxProcess(cloud, onStatus) {
         await cloud.setGaariDay(day, upd); kmOut[day] = fk; trips += new Set(L.map(x => x.t)).size; det += myDet.length;
       }
       const why = P.trips.length ? (bad && !byDay.size ? 'purane din' : '') : !P.nDt && !P.nKm ? 'kuch nahi' : !P.nKm ? 'km nahi' : !P.nDt ? 'waqt nahi' : 'jori nahi';
-      last = { at: Date.now(), recv: d.at || Date.now(), n: P.trips.length, nDt: P.nDt, nKm: P.nKm, reads, det: dets.length, km: kmOut, why, raw: body.slice(0, 3500), src: 'app' };
+      last = { at: Date.now(), recv: d.at || Date.now(), n: P.trips.length, nDt: P.nDt, nKm: P.nKm, reads, det: dets.length, km: kmOut, why, raw: body.slice(0, 3500), src: SP.saathi ? 'saathi' : 'app', lt: SP.lt || 0 };
       done.push(d.id);
     }
     if (last) { try { await cloud.setGaariDay('_falcon', last, false); } catch {} }

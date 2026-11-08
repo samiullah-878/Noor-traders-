@@ -7277,3 +7277,16 @@ Mubeen usi parchi par "Start" likhe → gahak ko "Aap ka saman start ho gaya hai
   Validator (MacroDroid MCP) VALID. Malik: macro v4 download + import, v3 delete, trigger → Copy URL → app ⚙️ paste.
 - 418 km ki asal wajah abhi maloom nahi — malik se Falcon-i 8:18 trip ka screenshot manga. Agar Falcon khud 418 dikhata hai to Falcon ki ghalti (🗑 kaafi); agar 4.18 hai to
   fxParse KM_LBL / Falcon ka text dekh kar theek karna (`_falcon.raw`). AI nahi.
+
+## v2.206.0 (2026-11-08) — 🛰 Falcon macro v5: 👆 SAATHI (malik khud trips khole, macro parhta jaye) + auto "Downloading Trips Today" ka intezar
+- Malik (22:36, screenshots): auto Trip Detail se wapas aa kar atak jata — list dobara "Downloading Trips Today…" (us par bhi 'Today' likha = v3 ka 2.1 s wala check foran
+  sach → stale list par tap / ← = raasta gum). Malik: "hum khud trips kholein, macro har Detail parhta jaye, Falcon band par report app ko · baad mein khud seekhe".
+- falcon-macro.js v5 = `mac/build_falcon_v5.py` (v4 JSON par ek dafa; templates wahi asal export ke). Naye triggers (com.nxd.falconi): ScreenContent "Trip Detail" (→ `sa` += ~~DET~~json),
+  ScreenContent "Total Distance" (→ `sa` += ~~list json), ApplicationLaunched CLOSED (→ fa = 'SAATHI~~'+sa → wahi 3 text-saaf + HTTP gaariFx → 200 par sa khali, toast).
+  Saathi branches sab se upar (TriggerThatInvoked) + TerminateRunning; auto chal raha ho (`at` > {system_time}-150) = saathi chup. Local vars (sa) runs ke beech rehte hain (MacroDroid).
+- AUTO: shuru mein at={system_time}, sc=0; pehli list + har back ke baad `waitList` (max 80×0.5 s: 'Downloading' nahi + 'Total Distance' haan → aage, `lw` gino);
+  back = phone back → 'Trip Detail' band hone ka 6 s intezar → ab bhi = Falcon ← (7,9) → phir back; phir `rs` < `sc` jitna scroll (list upar se khulti hai). Aakhir at=0.
+  Payload FX3 + '~~LT~~{lw}'. Validator (MacroDroid MCP) chhote namoone par VALID; balance / SIGUID (naye < 2^52) / vars node se jaanche.
+- fx-app.js: `FX\d` strip, fxSplit {lt, saathi}, fxDetail `day`, Detail wale trips list na ho to bhi (P.trips), `_falcon` {src 'saathi'|'app', lt}. Setup: "👆 saathi · list load N s" +
+  saathi qadam + download v5. PC gaari-gps (dormant) NAHI badla. 418 km (8:18 am) — malik se Falcon screenshot abhi baqi. AI nahi.
+- Malik: app ⚙️ Falcon setup → 📥 v5 → import → v4 delete (webhook link wahi — device + nt_falcon).

@@ -27,8 +27,8 @@
 // phera cards. Purani alag entries (bilty/diesel/kharch/reading/tracker/driver — v2.92) bhi jor mein rehti hain.
 // Data: businesses/noor-traders/gaari/{id} kind 'phera' {date, startR, endR, trackerKm, bilties[{id,from,to,party,kiraya,comm,col}],
 //   kharche[{n,a}], diesel[{l,rate,amount,full}], status open|closed, note, by, byName, at, trackerTrips[{t,km,cut}] (v2.95.8)} + gaari/_config.
-import { smartHit } from './smart-search.js?v=2.205.0';
-import { firebaseConfig } from './config.js?v=2.205.0';   // v2.162.0: 📍 MacroDroid ka REST pata   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.206.0';
+import { firebaseConfig } from './config.js?v=2.206.0';   // v2.162.0: 📍 MacroDroid ka REST pata   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (v, d = 0) => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: d });
@@ -745,7 +745,7 @@ async function fxCfgSave(wh) {
 // 🗑 trip hatao / ↩ wapas / 🔄 din naya — gaariDay/<din> {ft, fh, fk, fn, fd} (fx-app fxHidden / fxTotal — macro dobara parhe to hataya wapas nahi)
 async function fxHide(date, t, back) {
   const d = gpsDays.get(date); if (!d || !isOwner()) return;
-  const M = await import('./fx-app.js?v=2.205.0');
+  const M = await import('./fx-app.js?v=2.206.0');
   let ft = [], fd = []; try { ft = JSON.parse(d.ft || '[]') || []; } catch {} try { fd = JSON.parse(d.fd || '[]') || []; } catch {}
   let fh = M.fxHidden(d.fh);
   if (back) { const h = fh.find(x => x[0] === t); if (!h) return; fh = fh.filter(x => x[0] !== t); if (!ft.some(x => x[0] === t)) ft.push([t, h[1]]); ft.sort((a, b) => a[0].localeCompare(b[0])); }
@@ -767,7 +767,7 @@ async function fxRun(force) {
   if (!isOwner() || fxRunning) return; if (!force && Date.now() - fxRunAt < 120000) return;
   fxRunning = true; fxRunAt = Date.now(); const st = m => { const el = $('fxRunSt'); if (el) el.textContent = m; };
   try {
-    const M = await import('./fx-app.js?v=2.205.0');
+    const M = await import('./fx-app.js?v=2.206.0');
     st('⏳ Falcon ka naya text dekh raha hoon…');
     const r = await M.fxProcess(cloud, st);
     if (!r.n && force) st(`Koi naya Falcon text nahi${fxLast && N(fxLast.at) ? ' · aakhri ' + hm(N(fxLast.at)) : ''} — 📲 se parhwao`);   // v2.205.0 (malik: button dabaya, kuch nahi hua — khamosh nahi)
@@ -850,7 +850,7 @@ async function openFalconSetup() {
   const C = await fxCfgLoad(), whOn = fxWhOk(C.wh), whMask = whOn ? C.wh.replace(/^(https:\/\/trigger\.macrodroid\.com\/)([A-Za-z0-9_-]{4})[A-Za-z0-9_-]*\//, '$1$2…/') : '';   // v2.205.0: 📲 webhook
   const L = fxLast, km = L && L.km ? Object.entries(L.km).map(([d, k]) => `${fxWhen(d)} ${num(k, 1)} km`).join(' · ') : '';
   const diag = !L ? '<p class="gg-st gg-none">Abhi phone se Falcon ka text nahi aaya.</p>'
-    : `<p class="gg-st gg-${N(L.n) ? 'ok' : 'bad'}">${N(L.n) ? `🟢 Aakhri parhna ${ago(Date.now() - N(L.at))} pehle — ${N(L.n)} trip${km ? ' · ' + km : ''}` : `⚠️ Aakhri parhna ${ago(Date.now() - N(L.at))} pehle — trips nahi mile (${esc(L.why || '?')}) · waqt ${N(L.nDt)} · km ${N(L.nKm)} · ${N(L.reads)} dafa parha`}</p>
+    : `<p class="gg-st gg-${N(L.n) ? 'ok' : 'bad'}">${N(L.n) ? `🟢 Aakhri parhna ${ago(Date.now() - N(L.at))} pehle — ${N(L.n)} trip${km ? ' · ' + km : ''}${L.src === 'saathi' ? ' · 👆 saathi' : ''}${N(L.lt) ? ' · list load ' + num(N(L.lt) / 2, 1) + ' s' : ''}` : `⚠️ Aakhri parhna ${ago(Date.now() - N(L.at))} pehle — trips nahi mile (${esc(L.why || '?')}) · waqt ${N(L.nDt)} · km ${N(L.nKm)} · ${N(L.reads)} dafa parha`}</p>
       ${L.raw ? `<details class="gg-raw"><summary>📄 Screen ka text (namoona — ghalti ho to iski screenshot bhejein)</summary><pre>${esc(String(L.raw).slice(0, 1800))}</pre></details>` : ''}`;
   modal('⚙️ Falcon-i setup', `<div class="gx-win gg gg-set">${!gKey ? `<p>Pehle khufia chaabi chahiye (wahi jo gaari ke phone wali) — <button type="button" class="gg-copy" data-gg-setup="1">📱 Gaari phone setup</button> mein "🔑 Chaabi banao".</p>`
     : `${diag}
@@ -859,10 +859,11 @@ async function openFalconSetup() {
     <div class="fx-wh"><input id="fxWhIn" type="url" inputmode="url" placeholder="https://trigger.macrodroid.com/…/nt_falcon" value="${esc(C.wh || '')}" autocomplete="off"><button type="button" class="gx-new" data-fx-whsave="1">💾 Save</button>${whOn ? '<button type="button" class="fx-runbtn" data-fx-cmd="1">🔎 Test</button>' : ''}</div>
     <p class="gg-note">Link kahan se: MacroDroid → macro v4 kholein → trigger <b>Webhook (URL)</b> par tap → <b>Copy URL</b> → yahan paste. Ye link sirf is app mein rahe (chat / kisi ko nahi).</p>
     <h4 class="gg-h">📱 Malik ka phone (jis mein Falcon-i hai) — ek dafa</h4><ol>
-    <li><button type="button" class="gx-new" data-fx-dl="1">📥 Macro download (NT_Falcon_km.macro — v4)</button><small>Chaabi andar hai — file kisi ko na bhejein.</small></li>
-    <li><b>MacroDroid</b> kholein → ☰ → <b>Export/Import</b> → <b>Import</b> → Downloads → <b>NT_Falcon_km.macro</b> → Save ✓. <b>Purana v3 macro delete</b> karein (do na chalein).</li>
+    <li><button type="button" class="gx-new" data-fx-dl="1">📥 Macro download (NT_Falcon_km.macro — v5)</button><small>Chaabi andar hai — file kisi ko na bhejein.</small></li>
+    <li><b>MacroDroid</b> kholein → ☰ → <b>Export/Import</b> → <b>Import</b> → Downloads → <b>NT_Falcon_km.macro</b> → Save ✓. <b>Purana v4 / v3 macro delete</b> karein (do na chalein). Webhook link wahi rahega.</li>
     <li>Macro kholein → ⋮ → <b>Test actions</b>. Pehli dafa MacroDroid <b>UI Interaction (Accessibility)</b> ki ijazat maangega → <b>ON</b>. Falcon-i khud khulega — 30 second phone na chherein.</li>
     <li>Yahan upar "🟢 Aakhri parhna … trip" aa jaye = theek. ⚠️ aaye to "Screen ka text" kholein aur is screen ki screenshot bhej dein.</li>
+    <li>👆 <b>Saathi tareeqa</b> (jab auto atke): Falcon-i khud kholein → Trips → Today's Trips → har trip par tap → wapas → agli. Har Trip Detail khud parhi jati hai ("📍 Trip parh li"). Falcon-i <b>band</b> karte hi sab Blue Khata ko ("✅ Saathi …").</li>
     <li>Phir har raat <b>9:00 ke baad</b> phone kholte hi khud (50 min mein ek dafa). Din mein kabhi bhi: app ka 📲 <b>Falcon se abhi parhwao</b> (upar link lagane ke baad) — phone ki screen khuli ho.</li></ol>
     <p class="gg-note">Falcon-i mein login rehna chahiye. ☰ menu ki jagah badle (app update) to bata dein. 🔁 Nayi chaabi banai to ye macro dobara download (gaari phone ka body bhi). 🤖 AI nahi.</p>`}</div>`, true);
 }
@@ -871,7 +872,7 @@ async function fxDownload() {
   if (gKey == null) { try { gKey = await cloud.getGaariKey(); } catch { gKey = ''; } }
   if (!gKey) { notice('Pehle 🔑 chaabi banao (📱 Gaari phone setup)'); return; }
   try {
-    const { FALCON_MACRO } = await import('./falcon-macro.js?v=2.205.0');
+    const { FALCON_MACRO } = await import('./falcon-macro.js?v=2.206.0');
     const txt = JSON.stringify(FALCON_MACRO).split('__NT_URL__').join(ggUrl().replace('/gaariGps?', '/gaariFx?')).split('__NT_KEY__').join(gKey);   // v2.202.0: Falcon ka text gaariFx mein (app khud parhti hai — PC nahi)
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'application/octet-stream' })); a.download = 'NT_Falcon_km.macro';
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
