@@ -7293,3 +7293,10 @@ Mubeen usi parchi par "Start" likhe → gahak ko "Aap ka saman start ho gaya hai
 === 2026-11-08 · v2.206.1 (pehle v2.204.1 likha) — 🎥 clip bill BANANE ke waqt se (malik: "posting se nahi — jis time bill bana kar print kiya") ===
 pos-sales-dekho v2.4: bills[].ct = SystemNotes "Created & Printed By:… On:<waqt> at PC:" (onTime — mm/dd · dd/mm · ISO, SaleDate ke din se shak door, us din ka na ho = 0). bill-clip v1.1: anchorOf = ct › SaleDate ka waqt (00:00 nahi) › pt; clip = anchor − pre (45) … + post (ab default 20); meta mein ct + an. tally.js bill ka waqt ct (na ho to "(post)"). manifest 2026-11-08.14. AI nahi.
 
+=== 2026-11-08 · v2.207.0 — 🛰 Falcon naqsha + khud taaza (malik: "naqsha nahi bana · list khali · insaan ki tarah socho, waqt bachao") ===
+- fx-app.js fxDetail: MacroDroid text {'' :'Trip Detail','$2' :'Start',…} mein key ke baad ' :' — purana regex key+value ek bana deta ("$2' :'Start") → 0 detail, naqsha kabhi nahi. Ab key:value jore (sirf values).
+- fxSplit: bina ~~DET~~ wali Trip Detail (saathi ki pehli) list mein ghus kar waqt / km ghalat jorti thi → ab 'Trip Detail' wala hissa = det.
+- fxParse: Today's Trips list ki har line mein Start + End pata pehle se ("… 0.61 Km away From, X, Pakistan 0.08 Km away From, Y, Pakistan Total Distance: 19.15 Km") → listAddr → har trip ka pata BINA trip khole.
+- fxProcess: km + trips PEHLE save (foran screen), naqsha (fd) baad mein alag write. fxDetails: unique pate, 4 saath; geocode = Photon (komoot, Gujrat ki taraf, Pakistan ke andar) → na mile Nominatim (viewbox Gujrat).
+- gaari.js fxRefresh: listener par khuli Falcon khirki / din khud dobara bane (data-sig) — naqsha khula ho to wahi trip. Status fxStMsg yaad.
+- Macro NAHI badla (dobara import nahi). Screenshot / share wala kaam malik ne mana kiya — nahi bana. AI nahi.

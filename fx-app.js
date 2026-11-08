@@ -1,4 +1,5 @@
-// fx-app.js — v2.206.0 (2026-11-08): macro v5 — FX3 · '~~LT~~<n>' (list load × 0.5 s) · 'SAATHI~~' (malik ne khud trips kholin) · trips Detail se bhi (list na ho to) —
+// fx-app.js — v2.207.0 (2026-11-08): Detail parser theek (key ' : value) + list ke har trip se pata + km pehle / naqsha baad + Photon 4 saath.
+// v2.206.0 (2026-11-08): macro v5 — FX3 · '~~LT~~<n>' (list load × 0.5 s) · 'SAATHI~~' (malik ne khud trips kholin) · trips Detail se bhi (list na ho to) —
 //   fxDetail ab `day` bhi deta hai ('08-11-2026 08:10 PM'). PC gaari-gps ki copy (dormant) NAHI badli — ab sirf app parhti hai.
 // v2.205.0 (2026-11-08): 🗑 hataye trips `fh` (gaariDay JSON ["HH:MM"]) — malik ne jo trip hataya wo macro ke dobara parhne par WAPAS NAHI aata (fxMerge skip + fk/fn bina un ke);
 //   fxTotal(ft) = din ke km ek jagah (screen + save ek qaida). v2.202.0 (2026-11-07) 🛰 FALCON TEXT APP KHUD PARHE (PC ke baghair)
@@ -39,8 +40,15 @@ export function fxParse(txt) {
   let K = kmEv(KM_LBL); if (!K.length) K = kmEv(KM_ANY);
   const all = [...D.map(x => ({ ...x, kind: 'dt' })), ...K].sort((a, b) => a.i - b.i), trips = [];
   let first = null, orphan = 0;
-  for (const e of all) { if (e.kind === 'dt') { if (!first) first = e; continue; } if (first) { if (e.km > 0) trips.push({ day: first.day, t: first.t, km: e.km }); first = null; } else orphan++; }
+  for (const e of all) { if (e.kind === 'dt') { if (!first) first = e; continue; } if (first) { if (e.km > 0) trips.push({ day: first.day, t: first.t, km: e.km, ...listAddr(s.slice(first.end, e.i)) }); first = null; } else orphan++; }
   return { trips, nDt: D.length, nKm: K.length, orphan };
+}
+// v2.207.0: Today's Trips list ki har line mein Start + End pata pehle se: "08 Nov 2026 02:19 PM 0.61 Km away From, Dr. …, Pakistan 0.08 Km away From, Purana …, Pakistan Total Distance: 19.15 Km"
+//   → trip khole baghair naqsha (malik: "har dafa har trip kholna nahi"). Pata nahi = khali (kuch nahi bigarta).
+function listAddr(seg) {
+  const P = String(seg || '').split(/\d{1,4}(?:[.,]\d{1,3})?\s*km\s+away\s+from\s*,?\s*/i).slice(1)
+    .map(q => q.replace(/total\s*dist[\s\S]*$/i, '').replace(/['"{}]|\s*,\s*'?\$?\d*'?\s*:.*$/g, '').replace(/[\s,]+$/, '').trim()).filter(q => /[a-z]{3}/i.test(q) && q.includes(','));
+  return P.length ? { f: P[0] || '', e: P[1] || '' } : {};
 }
 export function fxHidden(fhJ) { try { const a = JSON.parse(fhJ || '[]'); return Array.isArray(a) ? a.filter(x => Array.isArray(x) && x[0]).map(x => [String(x[0]), Number(x[1]) || 0]) : []; } catch { return []; } }   // [["HH:MM", km]] — ↩ wapas ke liye km bhi
 export function fxMerge(oldJ, add, fhJ) {
@@ -56,11 +64,15 @@ export function fxSplit(body) {
     if (k === 'DET') { if (parts[i + 1]) det.push(parts[i + 1]); i++; }
     else if (k === 'LT') { lt = Math.max(lt, Number(String(parts[i + 1] || '').trim()) || 0); i++; }   // v2.206.0: list load (0.5 s ke qadam)
     else if (k === 'SAATHI') saathi = true;
+    else if (/'\s*trip\s*detail\s*'/i.test(k)) det.push(q);   // v2.207.0: bina ~~DET~~ wali Trip Detail (saathi ki pehli) list mein ghus kar waqt / km ghalat jorti thi
     else if (k) list.push(q); }
   return { list: list.join('~~'), det, lt, saathi };
 }
 export function fxDetail(txt) {
-  const S = []; const rx = /'((?:[^']|'(?=[^,}:]))*)'/g; let m; while ((m = rx.exec(txt))) S.push(m[1].trim());
+  // v2.207.0: MacroDroid ka text {'' :'Trip Detail','$2' :'Start','$3' :'0.08 Km away From, …'} — key ke baad ' :' (space) hai; purana regex
+  //   key + value ek bana deta tha ("$2' :'Start") → 'start' kabhi nahi milta tha = 0 detail, naqsha nahi. Ab sirf VALUES (Today's jaisa ' andar theek).
+  const S = []; const rx = /'([^']*)'\s*:\s*'((?:[^']|'(?!\s*(?:,\s*'|\})))*)'/g; let m; while ((m = rx.exec(txt))) S.push(m[2].trim());
+  if (!S.length) { const r2 = /'((?:[^']|'(?=[^,}:]))*)'/g; while ((m = r2.exec(txt))) S.push(m[1].trim()); }
   const val = i => { for (let j = i + 1; j < Math.min(S.length, i + 4); j++) { const v = S[j]; if (/[ ,]/.test(v) && /[a-z]/i.test(v) && !/^(start|end|distance|time)$/i.test(v)) return v; } return ''; };
   const lab = n => S.findIndex(q => q.toLowerCase() === n);
   const out = { t: '', km: 0, f: '', e: '' };
@@ -80,27 +92,37 @@ async function nominatim(q) {
   const wait = Math.max(0, geoLast + 1100 - Date.now()); if (wait) await new Promise(r => setTimeout(r, wait)); geoLast = Date.now();
   try {
     const c = new AbortController(); const tm = setTimeout(() => c.abort(), 12000);
-    const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=pk&q=' + encodeURIComponent(q), { headers: { 'Accept-Language': 'en' }, signal: c.signal });
+    const r = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=pk&viewbox=73.3,33.4,74.9,31.9&q=' + encodeURIComponent(q), { headers: { 'Accept-Language': 'en' }, signal: c.signal });
     clearTimeout(tm); if (!r.ok) return null; const J = await r.json();
     return Array.isArray(J) && J[0] ? [Number(J[0].lat), Number(J[0].lon)] : null;
+  } catch { return null; }
+}
+// v2.207.0 (malik: "naqsha tezi se"): pehle Photon (OpenStreetMap, muft, saath saath 4) — na mile to Nominatim (1 s faasla). Sirf Pakistan ke andar.
+const inPk = (a, o) => a > 23 && a < 37.5 && o > 60 && o < 78;
+async function photon(q) {
+  try {
+    const c = new AbortController(); const tm = setTimeout(() => c.abort(), 8000);
+    const r = await fetch('https://photon.komoot.io/api/?limit=1&lat=32.57&lon=74.08&q=' + encodeURIComponent(q), { signal: c.signal });
+    clearTimeout(tm); if (!r.ok) return null; const J = await r.json(); const g = J?.features?.[0]?.geometry?.coordinates;
+    return g && inPk(+g[1], +g[0]) ? [+g[1], +g[0]] : null;
   } catch { return null; }
 }
 export async function geocode(addr) {
   const parts = geoParts(addr); if (parts.length < 2) return null;
   const C = gLoad(), key = parts.join(', ').toLowerCase();
   if (C[key] && (C[key].p || Date.now() - (C[key].at || 0) < 7 * 86400000)) return C[key].p || null;
+  for (let q = 0; q < parts.length - 1 && q < 3; q++) { const p = await photon(parts.slice(q).join(', ')); if (p) { C[key] = { p: [p[0], p[1], q], at: Date.now() }; gSave(); return C[key].p; } }
   for (let q = 0; q < parts.length - 1 && q < 4; q++) { const p = await nominatim(parts.slice(q).join(', ')); if (p) { C[key] = { p: [p[0], p[1], q], at: Date.now() }; gSave(); return C[key].p; } }
   C[key] = { p: null, at: Date.now() }; gSave(); return null;
 }
 export async function fxDetails(oldJ, dets, onStatus) {
   const m = new Map(); try { for (const x of JSON.parse(oldJ || '[]') || []) if (x && x.t) m.set(String(x.t), x); } catch {}
   for (const d of dets) { const o = m.get(d.t) || {}; m.set(d.t, { t: d.t, km: d.km || o.km || 0, f: d.f || o.f || '', e: d.e || o.e || '', p: o.p || null, q: o.q || null }); }
-  let n = 0; const todo = [...m.values()].filter(x => !x.p && (x.f || x.e));
-  for (const x of todo) {
-    n++; onStatus?.(`📍 Pata se nuqta ${n}/${todo.length}…`);
-    const a = x.f ? await geocode(x.f) : null, b = x.e ? await geocode(x.e) : null;
-    if (a || b) { x.p = [a ? a[0] : null, a ? a[1] : null, b ? b[0] : null, b ? b[1] : null]; x.q = [a ? a[2] : null, b ? b[2] : null]; }
-  }
+  const todo = [...m.values()].filter(x => !x.p && (x.f || x.e)); const U = [...new Set(todo.flatMap(x => [x.f, x.e]).filter(Boolean))], R = new Map(); let n = 0, i = 0;
+  const work = async () => { while (i < U.length) { const a = U[i++]; R.set(a, await geocode(a)); n++; onStatus?.(`📍 Naqsha ${n}/${U.length}…`); } };
+  await Promise.all([work(), work(), work(), work()]);
+  for (const x of todo) { const a = x.f ? R.get(x.f) : null, b = x.e ? R.get(x.e) : null;
+    if (a || b) { x.p = [a ? a[0] : null, a ? a[1] : null, b ? b[0] : null, b ? b[1] : null]; x.q = [a ? a[2] : null, b ? b[2] : null]; } }
   return [...m.values()].sort((a, b) => a.t.localeCompare(b.t));
 }
 // ---- poora kaam: gaariFx docs → gaariDay ----
@@ -114,6 +136,7 @@ export function fxProcess(cloud, onStatus) {
       const body = String(d.p || '').replace(/^FX\d\|[^|]*\|/, '');
       if (/^MENU\?/.test(body)) { last = { at: Date.now(), recv: d.at || Date.now(), n: 0, nDt: 0, nKm: 0, reads: 0, km: {}, why: 'menu nahi (☰ nahi mila)', raw: body.slice(0, 3500), src: 'app' }; done.push(d.id); continue; }
       const SP = fxSplit(body), P = fxParse(SP.list), reads = SP.list.split('~~').filter(q => q.trim()).length, dets = SP.det.map(fxDetail).filter(Boolean);
+      for (const x of P.trips) if ((x.f || x.e) && !dets.some(q => q.t === x.t && (q.day || x.day) === x.day)) dets.push({ t: x.t, day: x.day, km: x.km, f: x.f || '', e: x.e || '' });   // v2.207.0: list ke pate
       { const have = new Set(P.trips.map(t => t.day + ' ' + t.t)); for (const x of dets) if (x.day && x.km > 0 && !have.has(x.day + ' ' + x.t)) { P.trips.push({ day: x.day, t: x.t, km: x.km }); have.add(x.day + ' ' + x.t); } }   // v2.206.0: 👆 saathi — list na parhi ho to Detail se
       const byDay = new Map(); let bad = 0;
       for (const t of P.trips) { if (t.day > today || t.day < minDay) { bad++; continue; } if (!byDay.has(t.day)) byDay.set(t.day, []); byDay.get(t.day).push(t); }
@@ -121,10 +144,10 @@ export function fxProcess(cloud, onStatus) {
         onStatus?.(`🛰 ${day}: ${L.length} trip parh liye…`);
         const old = (await cloud.getGaariDay(day)) || {};
         const ft = fxMerge(old.ft, L, old.fh), fk = fxTotal(ft);
-        const myDet = dets.filter(q => ft.some(z => z[0] === q.t)); let fd = null;
-        if (myDet.length || old.fd) { try { fd = await fxDetails(old.fd, myDet, onStatus); } catch {} }
-        const upd = { date: day, fk, fn: ft.length, ft: JSON.stringify(ft), fa: Date.now() }; if (fd) upd.fd = JSON.stringify(fd);
-        await cloud.setGaariDay(day, upd); kmOut[day] = fk; trips += new Set(L.map(x => x.t)).size; det += myDet.length;
+        const myDet = dets.filter(q => (!q.day || q.day === day) && ft.some(z => z[0] === q.t));
+        const upd = { date: day, fk, fn: ft.length, ft: JSON.stringify(ft), fa: Date.now() };
+        await cloud.setGaariDay(day, upd); kmOut[day] = fk; trips += new Set(L.map(x => x.t)).size; det += myDet.length;   // v2.207.0: km + trips PEHLE (foran screen par)
+        if (myDet.length) { try { const fd = await fxDetails(old.fd, myDet, onStatus); await cloud.setGaariDay(day, { date: day, fd: JSON.stringify(fd) }); } catch {} }   // naqsha baad mein
       }
       const why = P.trips.length ? (bad && !byDay.size ? 'purane din' : '') : !P.nDt && !P.nKm ? 'kuch nahi' : !P.nKm ? 'km nahi' : !P.nDt ? 'waqt nahi' : 'jori nahi';
       last = { at: Date.now(), recv: d.at || Date.now(), n: P.trips.length, nDt: P.nDt, nKm: P.nKm, reads, det: dets.length, km: kmOut, why, raw: body.slice(0, 3500), src: SP.saathi ? 'saathi' : 'app', lt: SP.lt || 0 };
