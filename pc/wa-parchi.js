@@ -1,5 +1,7 @@
 // =========================================================
-//  wa-parchi.js  v2.2 (2026-11-05) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  wa-parchi.js  v2.14 (2026-11-08) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v2.14: ▶️ malik: "Mubeen start likhe to customer ko 'aap ka saman start ho gaya hai', mujhe 'Mubeen ne saman start kar diya hai'" → trReply start:
+//        gahak `cs-<grp>` naya text + malik `sk-<id>` (ek dafa, t.sk) — dono naye number se (wa-out). Baqi wahi.
 //  v2.5: 🖨 malik: "mera bhi same Mubeen wala kar do" — malik ke APNE WhatsApp par bhi: gahak ki tasveer + caption "print" (ijazat list wale = purana
 //        order + A4) aur malik ka REPLY "print" kisi bhi 1:1 chat ki tasveer par → A4 + patti (mainExtra, wahi helpers). Group / status nahi.
 //  v2.4: 🖨 malik: "Mubeen ko kisi number se parchi aaye — (1) gahak tasveer ke SAATH print likhe ya (2) hum REPLY mein print likhein to wohi parchi
@@ -80,7 +82,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.13';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.14';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1757,7 +1759,9 @@ async function start(ZINDA) {
     if (!im && txt && START_RE.test(txt)) {
       let n = 0; for (const o of Object.values(TR.par)) if ((o.id === qid || (t.grp && o.grp === t.grp)) && o.st === 'sent') { o.st = 'start'; o.startAt = now; n++; }   // poora group shuru
       if (n) { trSave(); trPush(); log(`▶️ parchi ${qid.slice(-6)} shuru (${who}${n > 1 ? ', ' + n + ' parchiyan' : ''}) — ${Math.round((now - t.fwdAt) / 60000)} min`);
-        if (t.from && !t.cs && await waOutPut('cs-' + t.grp, { to: t.from, nm: t.nm || '', kind: 'start', eid: 'cs-' + t.grp, txt: '*NOOR TRADERS*\nAap ki parchi shuru ho gayi hai 🛒\nBohat shukria Noor Traders par aane ke liye 🙏' })) { for (const o of Object.values(TR.par)) if (o.grp === t.grp) o.cs = Date.now(); trSave(); trPush(); } }   // malik: "start likhte hi gahak ko — shukria"
+        const who2 = ((t.nm ? t.nm + ' ' : '') + (t.from ? phPretty(t.from) : '')).trim() || 'gahak? (number nahi)', mk2 = S.prFrom[0] || normPh(L.me || '');
+        if (t.from && !t.cs && await waOutPut('cs-' + t.grp, { to: t.from, nm: t.nm || '', kind: 'start', eid: 'cs-' + t.grp, txt: '*NOOR TRADERS*\nAap ka saman start ho gaya hai 🛒\nBohat shukria Noor Traders par aane ke liye 🙏' })) { for (const o of Object.values(TR.par)) if (o.grp === t.grp) o.cs = Date.now(); trSave(); trPush(); }   // malik: "start likhte hi gahak ko — 'aap ka saman start ho gaya hai'" (v2.14)
+        if (mk2 && !t.sk) { t.sk = Date.now(); trSave(); await waOutPut('sk-' + qid, { to: mk2, nm: 'Malik', kind: 'rem', eid: 'sk-' + qid, txt: `▶️ Mubeen ne saman start kar diya hai: ${who2} (${tstr(t.fwdAt)} ki parchi, ${Math.round((now - t.fwdAt) / 60000)} min mein)` }); } }   // v2.14 malik: "mujhe bhi SMS — Mubeen ne saman start kar diya"
       return true;
     }
     if (!im) return false;

@@ -4189,3 +4189,6 @@ Heartbeat theek, link juda, magar 10:57 ke baad koi paigham nahi gaya (Mubeen ko
 === 2026-11-08 · PC wa-parchi v2.13 — Printauto par foran 3 paigham (malik ka OK) ===
 Track hote hi naye number se: gahak ko "parchi receive kar li, saman thori der mein" (number ho to; group ki pehli parchi par ek dafa) · Mubeen ko "📋 Nayi parchi: naam number — start likhein" · malik ko "✅ Parchi Mubeen ko gayi". Baqi stages wahi. manifest 2026-11-08.11. AI nahi.
 
+=== 2026-11-08 · PC wa-parchi v2.14 — Mubeen "Start" par gahak + malik ko paigham ===
+Mubeen usi parchi par "Start" likhe → gahak ko "Aap ka saman start ho gaya hai 🛒 shukria" (cs-<grp>, ek dafa) + malik ko "▶️ Mubeen ne saman start kar diya hai: naam number (N min mein)" (sk-<id>, ek dafa t.sk). Dono naye number se (wa-out). Header v2.2 → v2.14 (PC scripts row sahi version). manifest 2026-11-08.12. AI nahi.
+
