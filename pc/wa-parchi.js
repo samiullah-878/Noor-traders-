@@ -80,7 +80,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.9';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.10';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1549,6 +1549,14 @@ async function start(ZINDA) {
     return { ok: false, to: '', me };
   }
   const CX1 = { k: 'a', ok: (m, s) => okChat(m, s), note: t => prNote(t), who: (to, me) => to === me ? 'apni chat' : phPretty(to), tag: 'Apna print' };
+  // v2.10 (8 Nov, malik: "print par gahak ka naam / number nahi"): malik → Mubeen print ke A4 par upar GAHAK ki patti — parchi-track (gahak ki tasveer
+  //   ka milan) ya caption ("Print Ahmed 0300-1234567") se; na mile = "Gahak: ?" + caption mein likhne ki yaad (screenshot par PC gahak nahi jaan sakta).
+  function gahakHd(wid, cap, ask) {
+    const t = (wid && TR.par[wid]) || null, c = parseCaption(stripPrint(cap || ''));
+    const nm = (t && t.nm) || c.nm || '', ph = (t && t.from) || c.ph || '';
+    if (!nm && !ph) return ask ? 'Gahak: ? — caption mein naam / number likhein' : '';
+    return 'Gahak: ' + [nm, ph ? phPretty(ph) : ''].filter(Boolean).join(' · ');
+  }
   async function printSelf(list, n, to, me, cx = CX1) {
     let ok = 0, pdf = 0, bad = '';
     for (const x of list) {
@@ -1556,7 +1564,8 @@ async function start(ZINDA) {
       if (Number(x.im.fileLength) > 15 * 1024 * 1024) { bad = 'tasveer 15 MB se bari'; continue; }
       try {
         const buf = await within(B.downloadMediaMessage(x.m, 'buffer', {}), 60000, 'tasveer download'), g = await prepImage(buf, String(x.im.mimetype || 'image/jpeg'));
-        await a4Send(g && g.jpg, n > 0 ? n : S.a4c, { t: cx.tag + ' → ' + cx.who(to, me) + (stripPrint(x.cap) ? ' · ' + stripPrint(x.cap) : '') }, null); ok++;
+        const hd = gahakHd(x.m && x.m.key && x.m.key.id, x.cap, true);
+        await a4Send(g && g.jpg, n > 0 ? n : S.a4c, { t: cx.tag + ' → ' + cx.who(to, me) + (stripPrint(x.cap) ? ' · ' + stripPrint(x.cap) : ''), hd }, null); ok++;
       } catch (e) { bad = String((e && e.message) || e).slice(0, 80); }
     }
     cx.note(`${ok ? '✅ ' + ok + ' tasveer A4 ko gayi' + ((n > 0 ? n : S.a4c) > 1 ? ' (' + (n > 0 ? n : S.a4c) + ' copy)' : '') : '✕ kuch nahi chhapa'}${pdf ? ' · PDF ' + pdf + ' abhi nahi chhapti' : ''}${bad ? ' · ' + bad : ''} — ${cx.who(to, me)}`);
@@ -1922,7 +1931,7 @@ async function start(ZINDA) {
   }
   async function printOne(msg, im, n, pn, jid, cap, why, s, note) {
     if (Number(im.fileLength) > 15 * 1024 * 1024) { note('✕ tasveer 15 MB se bari — nahi chhapi'); return; }
-    const hd = hdOf(pn, jid, cap), cp = n > 0 ? n : S.a4c;
+    const g = gahakHd(msg && msg.key && msg.key.id, '', false), hd = [g, hdOf(pn, jid, cap)].filter(Boolean).join(' · ').slice(0, 140), cp = n > 0 ? n : S.a4c;   // v2.10: track wali parchi = gahak pehle
     try {
       const buf = await within(B.downloadMediaMessage(msg, 'buffer', {}, { logger, reuploadRequest: s && s.updateMediaMessage }), 60000, 'tasveer download');
       const g = await prepImage(buf, String(im.mimetype || 'image/jpeg'));

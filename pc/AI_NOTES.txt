@@ -4162,3 +4162,8 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - 2026-11-08: wa-out v1.2 .alive (zinda.js) — doctor latki wa-out dobara chalaye; manifest 2026-11-08.2.
 - 2026-11-08: wa-parchi v2.8 — screenshot jaisi tasveer (1.9:1, na forward, na gahak se, caption nahi) = parchi nahi; manifest 2026-11-08.3.
 - 2026-11-08: wa-parchi v2.9 — parchi track sirf 'print' ke saath (caption / reply / 10 min alag Print, trPend); manifest 2026-11-08.4.
+=== 2026-11-08 · PC wa-parchi v2.10 — A4 par GAHAK ki patti (malik: "print par naam / number nahi") ===
+Malik → Mubeen (aur Mubeen ki apni chat) ke print ke A4 par upar "Gahak: naam · number" — gahak ki forward ki tasveer (TR.par milan) ya caption ("Print Ahmed 0300-1234567") se;
+na mile = "Gahak: ? — caption mein naam / number likhein". Reply-print par bhi gahak pehle. Screenshot (gahak ne likh kar bheja) par PC gahak nahi jaan sakta — caption mein likho,
+tabhi tracker ko number milta hai (shukria / bill gahak ko naye number se). manifest 2026-11-08.5. AI nahi.
+

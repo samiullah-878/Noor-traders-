@@ -7223,3 +7223,8 @@ falcon-macro.js TimeOfDay 21:45 → 21:00 (naye download par). Phone par laga ma
 - PC wa-out v1.2: zinda.js .alive — pehle wa-out mein .alive nahi tha, is liye atka hua node 'zinda' dikhta aur doctor kabhi dobara nahi chalata (naya bat lock 47842 par exit 3). Qaida: HAR lambi PC script mein ZINDA (zinda.js) zaroor.
 - PC wa-parchi v2.8: malik ka app screenshot Mubeen ko = parchi nahi (jhooti '12 min mein shuru nahi ki' yaad-dihani band) — tasveer parchi sirf gahak se aayi / forward / caption wali / kaghaz jaisi (phone-screen ratio 1.9:1 = screenshot chhor do).
 - PC wa-parchi v2.9 (malik: 'jis ke saath Print likha ho SIRF wo parchi'): trForward → tasveer parchi sirf print ke saath (caption printReq / reply print / 10 min ke andar alag chhota Print → trPend se aakhri 3 tasveerein); v2.8 ka screenshot-ratio filter ab zaroorat nahi (par code mein nahi — trTrack alag). Likhi parchi pehle jaisi.
+=== 2026-11-08 · PC wa-parchi v2.10 — A4 par GAHAK ki patti (malik: "print par naam / number nahi") ===
+Malik → Mubeen (aur Mubeen ki apni chat) ke print ke A4 par upar "Gahak: naam · number" — gahak ki forward ki tasveer (TR.par milan) ya caption ("Print Ahmed 0300-1234567") se;
+na mile = "Gahak: ? — caption mein naam / number likhein". Reply-print par bhi gahak pehle. Screenshot (gahak ne likh kar bheja) par PC gahak nahi jaan sakta — caption mein likho,
+tabhi tracker ko number milta hai (shukria / bill gahak ko naye number se). manifest 2026-11-08.5. AI nahi.
+
