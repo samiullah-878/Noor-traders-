@@ -7300,3 +7300,9 @@ pos-sales-dekho v2.4: bills[].ct = SystemNotes "Created & Printed By:… On:<waq
 - fxProcess: km + trips PEHLE save (foran screen), naqsha (fd) baad mein alag write. fxDetails: unique pate, 4 saath; geocode = Photon (komoot, Gujrat ki taraf, Pakistan ke andar) → na mile Nominatim (viewbox Gujrat).
 - gaari.js fxRefresh: listener par khuli Falcon khirki / din khud dobara bane (data-sig) — naqsha khula ho to wahi trip. Status fxStMsg yaad.
 - Macro NAHI badla (dobara import nahi). Screenshot / share wala kaam malik ne mana kiya — nahi bana. AI nahi.
+=== 2026-11-08 · v2.207.1 — 🛰 Falcon: "8 trip · aaj 0 km" (malik: "same problem") ===
+- Wajah: aaj ke saare trips malik ke 🗑 (fh) mein the → fxMerge sab chhor deta → fk 0 → fxDays (fk > 0) din hi chhupa deta = ↩ ka raasta bhi nahi.
+  Ab: fxDays = fk > 0 YA hataye hue (fxHidN); row par "🗑 N hataye hue · ↩"; din khule aur saamne kuch na ho to hataye hue list khuli + "↩ Sab wapas lao" (fxUnhideAll).
+  fxProcess `hid` ginti → status / setup: "⚠️ N trip aap ke 🗑 hataye hue the — ↩ Sab wapas". Khamosh nahi.
+- Ghalti: v2.207.0 ka `${esc(fxStMsg)}` single-quote string mein tha — screen par likha nazar aata tha. Theek.
+- MENU? (auto atka) doc ab usi batch ki kamyab saathi ko _falcon mein nahi dhakta.

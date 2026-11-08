@@ -19,7 +19,7 @@ const DT_RX = [
 ];
 const KM_LBL = /distance[\s\S]{0,90}?(?<![\w.])(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:km|kms|kilomet)(?![a-z]*\s*\/\s*h|ph|\/hr)/gi;
 const KM_ANY = /(?<![\w.])(\d{1,4}(?:[.,]\d{1,3})?)\s*(?:km|kms)\b(?!\s*\/\s*h|ph|\/hr)/gi;
-const PK = 5 * 3600000;
+const PK = 5 * 3600000; const N0 = v => Number(v) || 0;
 export const dayOf = ms => new Date(ms + PK).toISOString().slice(0, 10);
 function parseTimes(s) {
   const ev = [], hh = (h, ap) => { h = Number(h); if (ap) { const p = /^p/i.test(ap); h = h % 12 + (p ? 12 : 0); } return h; };
@@ -131,10 +131,10 @@ export function fxProcess(cloud, onStatus) {
   if (busy) return busy;
   busy = (async () => {
     const docs = (await cloud.listGaariFx()).sort((a, b) => a.at - b.at); if (!docs.length) return { n: 0 };
-    const today = dayOf(Date.now()), minDay = dayOf(Date.now() - 3 * 86400000), done = [], kmOut = {}; let trips = 0, det = 0, last = null;
+    const today = dayOf(Date.now()), minDay = dayOf(Date.now() - 3 * 86400000), done = [], kmOut = {}; let trips = 0, det = 0, last = null, hid = 0;
     for (const d of docs) {
       const body = String(d.p || '').replace(/^FX\d\|[^|]*\|/, '');
-      if (/^MENU\?/.test(body)) { last = { at: Date.now(), recv: d.at || Date.now(), n: 0, nDt: 0, nKm: 0, reads: 0, km: {}, why: 'menu nahi (☰ nahi mila)', raw: body.slice(0, 3500), src: 'app' }; done.push(d.id); continue; }
+      if (/^MENU\?/.test(body)) { if (last && N0(last.n)) { done.push(d.id); continue; } last = { at: Date.now(), recv: d.at || Date.now(), n: 0, nDt: 0, nKm: 0, reads: 0, km: {}, why: 'menu nahi (☰ nahi mila)', raw: body.slice(0, 3500), src: 'app' }; done.push(d.id); continue; }
       const SP = fxSplit(body), P = fxParse(SP.list), reads = SP.list.split('~~').filter(q => q.trim()).length, dets = SP.det.map(fxDetail).filter(Boolean);
       for (const x of P.trips) if ((x.f || x.e) && !dets.some(q => q.t === x.t && (q.day || x.day) === x.day)) dets.push({ t: x.t, day: x.day, km: x.km, f: x.f || '', e: x.e || '' });   // v2.207.0: list ke pate
       { const have = new Set(P.trips.map(t => t.day + ' ' + t.t)); for (const x of dets) if (x.day && x.km > 0 && !have.has(x.day + ' ' + x.t)) { P.trips.push({ day: x.day, t: x.t, km: x.km }); have.add(x.day + ' ' + x.t); } }   // v2.206.0: 👆 saathi — list na parhi ho to Detail se
@@ -143,19 +143,19 @@ export function fxProcess(cloud, onStatus) {
       for (const [day, L] of byDay) {
         onStatus?.(`🛰 ${day}: ${L.length} trip parh liye…`);
         const old = (await cloud.getGaariDay(day)) || {};
-        const ft = fxMerge(old.ft, L, old.fh), fk = fxTotal(ft);
+        const ft = fxMerge(old.ft, L, old.fh), fk = fxTotal(ft); { const H = new Set(fxHidden(old.fh).map(x => x[0])); hid += new Set(L.filter(x => H.has(x.t)).map(x => x.t)).size; }   // v2.207.1: 🗑 wale gino — malik ko batao
         const myDet = dets.filter(q => (!q.day || q.day === day) && ft.some(z => z[0] === q.t));
         const upd = { date: day, fk, fn: ft.length, ft: JSON.stringify(ft), fa: Date.now() };
         await cloud.setGaariDay(day, upd); kmOut[day] = fk; trips += new Set(L.map(x => x.t)).size; det += myDet.length;   // v2.207.0: km + trips PEHLE (foran screen par)
         if (myDet.length) { try { const fd = await fxDetails(old.fd, myDet, onStatus); await cloud.setGaariDay(day, { date: day, fd: JSON.stringify(fd) }); } catch {} }   // naqsha baad mein
       }
       const why = P.trips.length ? (bad && !byDay.size ? 'purane din' : '') : !P.nDt && !P.nKm ? 'kuch nahi' : !P.nKm ? 'km nahi' : !P.nDt ? 'waqt nahi' : 'jori nahi';
-      last = { at: Date.now(), recv: d.at || Date.now(), n: P.trips.length, nDt: P.nDt, nKm: P.nKm, reads, det: dets.length, km: kmOut, why, raw: body.slice(0, 3500), src: SP.saathi ? 'saathi' : 'app', lt: SP.lt || 0 };
+      last = { at: Date.now(), recv: d.at || Date.now(), n: P.trips.length, nDt: P.nDt, nKm: P.nKm, reads, det: dets.length, km: kmOut, why, raw: body.slice(0, 3500), src: SP.saathi ? 'saathi' : 'app', lt: SP.lt || 0, hid };
       done.push(d.id);
     }
     if (last) { try { await cloud.setGaariDay('_falcon', last, false); } catch {} }
     if (done.length) { try { await cloud.delGaariFx(done); } catch {} }
-    return { n: done.length, trips, det, km: kmOut };
+    return { n: done.length, trips, det, km: kmOut, hid };
   })().finally(() => { busy = null; });
   return busy;
 }
