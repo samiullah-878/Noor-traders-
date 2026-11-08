@@ -4159,3 +4159,4 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - 2026-11-07: gaari-gps v1.2 (🗺 Falcon Trip Detail: Start/End pata → Nominatim nuqta → gaariDay.fd; FX2; MENU?); manifest 2026-11-07.6. App v2.201.0 + falcon-macro.js v2.
 - 2026-11-07: app v2.202.0 — Falcon text ab app khud parhti hai (gaariFx, rules 2.92); gaari-gps v1.2 ka FX hissa dormant (PC band raat ko). Koi PC file nahi badli.
 - 2026-11-08: wa-out v1.1 heartbeat hamesha + hukum log; manifest 2026-11-08.1.
+- 2026-11-08: wa-out v1.2 .alive (zinda.js) — doctor latki wa-out dobara chalaye; manifest 2026-11-08.2.

@@ -7220,3 +7220,4 @@ falcon-macro.js TimeOfDay 21:45 → 21:00 (naye download par). Phone par laga ma
 - PC wa-out v1.1: heartbeat (waLinkOut.at) har 5 min HAMESHA — pehle sirf juda hone par (st ≠ off) → juda na ho to app ko pata hi nahi chalta tha ke script zinda hai ya band; `📨 waCmdOut` log line. manifest 2026-11-08.1.
 - App wa-out.js: 6 min se purana = "⚠️ PC par wa-out chup — Settings → 🖥️ PC scripts dekhein" (pehle sirf juda hone par). Asal wajah PC log se (wa-out-log.txt) — abhi nahi maloom.
 - v2.203.2: wa-out 'PC chup' patti alag line (.wo-quiet) — pehle text ke beech mein ghus rahi thi.
+- PC wa-out v1.2: zinda.js .alive — pehle wa-out mein .alive nahi tha, is liye atka hua node 'zinda' dikhta aur doctor kabhi dobara nahi chalata (naya bat lock 47842 par exit 3). Qaida: HAR lambi PC script mein ZINDA (zinda.js) zaroor.
