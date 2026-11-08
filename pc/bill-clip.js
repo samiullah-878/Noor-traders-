@@ -1,5 +1,7 @@
 // =========================================================
-//  bill-clip.js  v1.0 (2026-11-08) — 🎥 HAR POS BILL KI CHHOTI VIDEO (counter camera) → app "👀 Bill tally"
+//  bill-clip.js  v1.1 (2026-11-08) — v1.1: clip ka waqt bill BANANE / PRINT ke waqt se (`ct`, pos-sales-dekho v2.4) — posting se nahi (malik: "Abdurehman ne jis time
+//  bill bana kar print kiya, PC us time se peeche jaye, posting ke waqt se nahi"); ct na mile to SaleDate ka waqt, phir post ka waqt. Default pehle 45 s · baad 20 s.
+//  v1.0 (2026-11-08) — 🎥 HAR POS BILL KI CHHOTI VIDEO (counter camera) → app "👀 Bill tally"
 //  Malik (8 Nov): "maal chori hota hai — larka bill par kam likh de to kaise pakrein? Camera wala banda ghar par hai, app mein
 //  us ki apni screen; ek insaan ek waqt mein items + video dono dekh kar zyada se zyada parchiyan tally kar sake."
 //
@@ -25,7 +27,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '1.0';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '1.1';
 const MODS = path.join(DIR, 'clip-mods'), TMP = path.join(DIR, 'clip-tmp'), NPM_FILE = path.join(MODS, 'npm-at.json');
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore(), biz = db.collection('businesses').doc(BUSINESS_ID), CLIP = biz.collection('billClip'), TALLY = biz.collection('billTally');
@@ -36,13 +38,13 @@ const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_,
 const CHUNK = 900 * 1024;
 
 // ---------- setting (malik, app ⚙️) ----------
-let CF = { on: false, kind: 'dahua', ip: '', port: 554, user: 'admin', pw: '', sub: 1, pre: 45, post: 10, keep: 2, ch: {}, rep: '20:30', maxs: 120 };
+let CF = { on: false, kind: 'dahua', ip: '', port: 554, user: 'admin', pw: '', sub: 1, pre: 45, post: 20, keep: 2, ch: {}, rep: '20:30', maxs: 120 };
 let cfReady = false;
 function cfApply(d) {
   d = d || {};
   CF = { on: d.on !== false && !!d.ip, kind: /hik/i.test(d.kind || '') ? 'hik' : 'dahua', ip: String(d.ip || '').trim(), port: Math.max(1, Math.min(65535, Number(d.port) || 554)),
     user: String(d.user || 'admin').trim(), pw: String(d.pw || ''), sub: d.sub === 0 || d.sub === '0' ? 0 : 1,
-    pre: Math.max(10, Math.min(180, Number(d.pre) || 45)), post: Math.max(0, Math.min(90, Number(d.post) || 10)), keep: Math.max(1, Math.min(7, Number(d.keep) || 2)),
+    pre: Math.max(10, Math.min(180, Number(d.pre) || 45)), post: Math.max(0, Math.min(90, Number(d.post) || 20)), keep: Math.max(1, Math.min(7, Number(d.keep) || 2)),
     ch: (d.ch && typeof d.ch === 'object') ? d.ch : {}, rep: /^\d{1,2}:\d{2}$/.test(String(d.rep || '')) ? String(d.rep) : '20:30', maxs: Math.max(30, Math.min(180, Number(d.maxs) || 120)) };
   cfReady = true;
 }
@@ -111,6 +113,8 @@ function hint(err) {   // malik ko samajh aane wali wajah
 }
 
 // ---------- bills → queue ----------
+// v1.1: clip ka langar = bill banane / print ka waqt (ct) › SaleDate ka waqt (00:00 nahi) › post ka waqt
+const anchorOf = b => { const ct = Number(b.ct) || 0, tm = Number(b.tm) || 0, pt = Number(b.pt) || 0; if (ct > 0) return ct; if (tm > 0 && (tm % 86400000) !== (19 * 3600000) && Math.abs(pt - tm) < 12 * 3600000 && tm < pt + 60000) return tm; return pt; };   // Pakistan 00:00 = UTC 19:00 (tm % din = 19 h) → sirf tareekh = pt
 let bills = [], billsDay = '', known = new Map(), busy = false, kickT = null, lastQ = 0;
 biz.collection('posSales').doc(dayOf()).onSnapshot(s => { const x = s.exists ? s.data() : null; bills = x && Array.isArray(x.bills) ? x.bills : []; billsDay = dayOf(); kick(); }, e => log('⚠️ posSales: ' + e.message));
 let dayWatch = dayOf();
@@ -130,7 +134,7 @@ function pick() {
     if (!b || b.x || Number(b.ps) !== 2 || !(Number(b.pt) > 0) || !(Number(b.n) > 0)) continue;
     const id = String(b.id), k = known.get(id);
     if (k && (k.st === 'ok' || k.st === 'skip' || k.tries >= 3 || (k.st === 'err' && now - k.at < 2 * 60000))) continue;
-    if (now - Number(b.pt) < (CF.post + 90) * 1000) continue;   // NVR recording 1-2 min peeche likhti — jaldi kaatna = adhoori / khali clip
+    if (now - Math.max(anchorOf(b), 0) < (CF.post + 90) * 1000) continue;   // NVR recording 1-2 min peeche likhti — jaldi kaatna = adhoori / khali clip
     if (now - Number(b.pt) > CF.keep * 86400000) continue;
     out.push(b);
   }
@@ -155,13 +159,13 @@ async function work() {
 async function one(b) {
   const id = String(b.id), ch = Number(CF.ch[b.pc] ?? CF.ch[String(b.pc || '').toLowerCase()]) || 0;
   const k = known.get(id) || { tries: 0 }; const tries = (k.tries || 0) + 1;
-  const base = { no: String(b.no || ''), day: billsDay || dayOf(b.pt), pt: Number(b.pt) || 0, tm: Number(b.tm) || 0, pc: String(b.pc || ''), p: String(b.p || ''), t: Number(b.t) || 0, by: String(b.by || ''), nl: Number(b.n) || 0, at: Date.now(), tries, ver: VER };
+  const base = { no: String(b.no || ''), day: billsDay || dayOf(b.pt), pt: Number(b.pt) || 0, tm: Number(b.tm) || 0, ct: Number(b.ct) || 0, an: anchorOf(b), pc: String(b.pc || ''), p: String(b.p || ''), t: Number(b.t) || 0, by: String(b.by || ''), nl: Number(b.n) || 0, at: Date.now(), tries, ver: VER };
   if (!ch) {   // counter ka camera lagaya hi nahi — skip (malik ⚙️ mein chip lagaye)
     known.set(id, { st: 'skip', tries, at: Date.now() });
     await CLIP.doc(id).set({ ...base, st: 'skip', err: `counter "${b.pc || '?'}" ka camera channel ⚙️ mein nahi` }, { merge: true });
     T.n++; T.err++; ST.last = `#${b.no} skip (counter ${b.pc || '?'} ka channel nahi)`; return;
   }
-  const t1 = Number(b.pt) + CF.post * 1000, t0 = Number(b.pt) - CF.pre * 1000, dur = Math.min(CF.maxs, Math.round((t1 - t0) / 1000));
+  const an = anchorOf(b), t1 = an + CF.post * 1000, t0 = an - CF.pre * 1000, dur = Math.min(CF.maxs, Math.round((t1 - t0) / 1000));
   fs.mkdirSync(TMP, { recursive: true }); const out = path.join(TMP, id + '.mp4');
   const url = playUrl(ch, t0, t1);
   const tA = Date.now(); let r = await ffCut(url, dur, out);

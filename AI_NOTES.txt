@@ -7290,3 +7290,6 @@ Mubeen usi parchi par "Start" likhe → gahak ko "Aap ka saman start ho gaya hai
 - fx-app.js: `FX\d` strip, fxSplit {lt, saathi}, fxDetail `day`, Detail wale trips list na ho to bhi (P.trips), `_falcon` {src 'saathi'|'app', lt}. Setup: "👆 saathi · list load N s" +
   saathi qadam + download v5. PC gaari-gps (dormant) NAHI badla. 418 km (8:18 am) — malik se Falcon screenshot abhi baqi. AI nahi.
 - Malik: app ⚙️ Falcon setup → 📥 v5 → import → v4 delete (webhook link wahi — device + nt_falcon).
+=== 2026-11-08 · v2.206.1 (pehle v2.204.1 likha) — 🎥 clip bill BANANE ke waqt se (malik: "posting se nahi — jis time bill bana kar print kiya") ===
+pos-sales-dekho v2.4: bills[].ct = SystemNotes "Created & Printed By:… On:<waqt> at PC:" (onTime — mm/dd · dd/mm · ISO, SaleDate ke din se shak door, us din ka na ho = 0). bill-clip v1.1: anchorOf = ct › SaleDate ka waqt (00:00 nahi) › pt; clip = anchor − pre (45) … + post (ab default 20); meta mein ct + an. tally.js bill ka waqt ct (na ho to "(post)"). manifest 2026-11-08.14. AI nahi.
+

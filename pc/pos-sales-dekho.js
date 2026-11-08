@@ -1,5 +1,5 @@
 // =========================================================
-//  pos-sales-dekho.js  v2.3 (2026-11-06: 🔎 JAANCH malik: "jo wapsi bill ke andar minus ho chuki wo dobara nahi" — har wapsi ke saath juda SaleID, us bill ka TotalSale aur
+//  pos-sales-dekho.js  v2.4 (2026-11-08: 🎥 bill ka `ct` = BANANE / PRINT ka waqt (SystemNotes "Created & Printed By:… On:… at PC:") — Bill tally ki clip post ke waqt se nahi, bill banane ke waqt se (malik: "Abdurehman ne jis time bill bana kar print kiya, PC us time se peeche jaye, posting se nahi")) · v2.3 (2026-11-06: 🔎 JAANCH malik: "jo wapsi bill ke andar minus ho chuki wo dobara nahi" — har wapsi ke saath juda SaleID, us bill ka TotalSale aur
 //                     SaleDetail ka jor (Qty×Rate) → sum.rtd (app milane ke liye) + note mein "bill se juri N · alag N"; MINUS abhi pehle jaisa (qaida data dekh kar)) · v2.2 (2026-11-04: ↩ malik: "Daily Sale mein sale return add hai ke nahi" → POS ki SALE RETURN (dbo.SaleReturn, us din ki) ab auto sale se MINUS —
 //                     cancel (DocStatusID 3) / stock fraq bahar; udhaar party ki wapsi (IsCreditRturn, wholesale nahi) = cash wapas nahi diya = minus NAHI (note mein ginti);
 //                     wholesale ki wapsi poori minus (wholesale bill bhi poora gina jata hai). Note: "↩ wapsi N bill Rs X minus". Parh na sake = pehle jaisa (minus nahi)) · v2.1 (2026-10-31: ⚡ har ½ sec · sirf naye/badle bill parho (cache + COUNT/SUM se milao, na mile = poori list) · sum / Daily Sale / items alag peeche ki lane · doc.pm raftar) · v2.0 (2026-10-28: 📌 har posted bill par post ka waqt `pt` — PC ne pehli dafa posted dekha (pos-posted-seen.json), shuru se pehle wale = UpdatedOn) · v1.9 (2026-10-28: ⚡ malik — "posting POS mein jaldi, app mein late": har 1 sec; bills ka haal (posted / un-posted) PEHLE likho, items + Daily Sale
@@ -169,6 +169,22 @@ async function syncLines(p, d0, d1, day, fromId = 0) {   // v1.9: fromId = sirf 
 //      memory ki list (cache) mein jorna; phir COUNT / MAX / SUM khud mila kar dekhna — na mile (delete, purana bill badla) = foran poori list;
 //   3) Daily Sale + items (posSaleLines) + sum ALAG peeche ki lane (slow) mein — bill ka likhna inhein ka intezar nahi karta.
 //   Doc par `pm` {q: dekh+parhne ka ms, w: pichhle likhne ka ms, e: jaanch ms, f: 1 = poori list} — app ⋮ "⏱ Raftar".
+// v2.4: SystemNotes ki pehli "On:<waqt> at PC:" line (POS "Created & Printed By:naam On:11/8/2026 5:30:12 PM at PC:DESKTOP-…") → ms. dd/mm ya mm/dd ka shak = SaleDate ke din se.
+function onTime(sn, saleDate) {
+  const m = String(sn || '').match(/Printed\s*By:[^\r\n]*?On:\s*([^\r\n]+?)\s+at PC/i) || String(sn || '').match(/On:\s*([^\r\n]+?)\s+at PC/i);
+  if (!m) return 0;
+  const sd = saleDate ? new Date(saleDate) : null; if (sd) sd.setHours(0, 0, 0, 0);
+  const okDay = t => !isNaN(t) && t > 0 && (!sd || (t >= sd.getTime() - 3600000 && t <= sd.getTime() + 2 * 86400000));   // us din ka nahi = bharosa nahi
+  const cands = [];
+  const d = m[1].match(/(?<!\d)(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})\D+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*([AP]M)?/i);
+  if (d) { let h = +d[4]; if (d[7]) { h %= 12; if (/pm/i.test(d[7])) h += 12; }
+    const a = +d[1], b = +d[2], mk = (dd, mm) => new Date(+d[3], mm - 1, dd, h, +d[5], +(d[6] || 0)).getTime();
+    const ddmm = a > 12 || (sd && a === sd.getDate() && b === sd.getMonth() + 1 && a !== b);   // default mm/dd (en-US)
+    cands.push(ddmm ? mk(a, b) : mk(b, a), ddmm ? mk(b, a) : mk(a, b)); }
+  cands.push(Date.parse(m[1]));
+  for (const t of cands) if (okDay(t)) return t;
+  return 0;
+}
 const SEL = `SELECT s.SaleID, s.SaleNo, s.SaleDate, s.TotalSale, s.CashReceived, s.IsCreditSale, s.DocStatusID, s.Description, s.SystemNotes, s.UpdatedOn, pt.PartyName,
            (SELECT COUNT(*) FROM dbo.SaleDetail d WHERE d.SaleID = s.SaleID) AS N
     FROM dbo.Sale s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID`;
@@ -222,7 +238,8 @@ async function once() {
   const bills = all.slice(0, 600).map(r => {
     const desc = String(r.Description || ''), m = desc.match(/BK-APP[ :]([A-Za-z0-9_-]+)/);
     const sn = String(r.SystemNotes || ''), host = (sn.match(/at PC:\s*([A-Za-z0-9_.-]+)/i) || [])[1] || '', by = (sn.match(/By:\s*([^\r\n]+?)\s+On:/i) || [])[1] || '';
-    return { id: r.SaleID, no: String(r.SaleNo || '').trim(), t: r2(r.TotalSale), c: r2(r.CashReceived), cr: r.IsCreditSale ? 1 : 0,
+    const ct = onTime(sn, r.SaleDate);   // v2.4: banane / print ka waqt
+    return { id: r.SaleID, ct, no: String(r.SaleNo || '').trim(), t: r2(r.TotalSale), c: r2(r.CashReceived), cr: r.IsCreditSale ? 1 : 0,
       x: Number(r.DocStatusID) === 3 ? 1 : 0, p: String(r.PartyName || '').slice(0, 60), n: Number(r.N) || 0,
       tm: r.SaleDate ? new Date(r.SaleDate).getTime() : 0, app: m ? m[1] : '',
       ps: Number(r.DocStatusID) || 0, pt: Number(postSeen.m[String(r.SaleID)]) || 0, pc: String(names[host] || host.replace(/^DESKTOP-/i, '') || '').slice(0, 30), by: /blue khata/i.test(by) ? '' : String(by).trim().slice(0, 20) };

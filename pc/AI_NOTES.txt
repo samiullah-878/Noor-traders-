@@ -4198,3 +4198,6 @@ Mubeen usi parchi par "Start" likhe → gahak ko "Aap ka saman start ho gaya hai
 - cloud.js: listenBillClips / getBillClip (hisse jor) / listenBillTally / saveBillTally / listenBillClipPc / getBillClipCfg / setBillClipCfg. Rules 2.93: billClip read malik/Full/Nigrani; billTally create/update apna by (keys ok/miss/by/n/at/day/no/pc/t/by2/why), delete malik; posSales + posSaleLines ab Nigrani bhi; blueAccess get list mein billClipPc. app.js: title nazar = 👀 Nigrani, popstate ntBtClose. style.css .bt-* (dk + lt). sw.js tally.js. manifest 2026-11-08.13.
 - Test: Playwright phone 400px + PC 1200px (mock cloud, asal mp4) — ✓/✕/undo/📊/⚙️ sab chale, scrollWidth 400. Camera kal attach (malik). AI NAHI.
 
+=== 2026-11-08 · v2.206.1 (pehle v2.204.1 likha) — 🎥 clip bill BANANE ke waqt se (malik: "posting se nahi — jis time bill bana kar print kiya") ===
+pos-sales-dekho v2.4: bills[].ct = SystemNotes "Created & Printed By:… On:<waqt> at PC:" (onTime — mm/dd · dd/mm · ISO, SaleDate ke din se shak door, us din ka na ho = 0). bill-clip v1.1: anchorOf = ct › SaleDate ka waqt (00:00 nahi) › pt; clip = anchor − pre (45) … + post (ab default 20); meta mein ct + an. tally.js bill ka waqt ct (na ho to "(post)"). manifest 2026-11-08.14. AI nahi.
+
