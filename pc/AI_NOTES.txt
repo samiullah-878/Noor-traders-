@@ -4160,3 +4160,4 @@ Malik: "khata ki PDF stuck ho jati hai, jaldi show honi chahiye" · "khata ki pd
 - 2026-11-07: app v2.202.0 — Falcon text ab app khud parhti hai (gaariFx, rules 2.92); gaari-gps v1.2 ka FX hissa dormant (PC band raat ko). Koi PC file nahi badli.
 - 2026-11-08: wa-out v1.1 heartbeat hamesha + hukum log; manifest 2026-11-08.1.
 - 2026-11-08: wa-out v1.2 .alive (zinda.js) — doctor latki wa-out dobara chalaye; manifest 2026-11-08.2.
+- 2026-11-08: wa-parchi v2.8 — screenshot jaisi tasveer (1.9:1, na forward, na gahak se, caption nahi) = parchi nahi; manifest 2026-11-08.3.
