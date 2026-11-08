@@ -3,7 +3,7 @@
 // gahak ko text parchi bhejta hai — sirf un khaton par jahan malik ne "📲 WhatsApp parchi" ON kiya ho (party.wa) + mobile number ho.
 // Yahan: Settings ki khirki — number jorna (🔢 code / 🔳 QR), chalu / band, roz ki hadd, faasla, aaj ki ginti, aakhri 60 bheje hue.
 // Data: blueAccess/waLinkOut (PC likhe) · waCmdOut (app → PC) · waOutCfg (malik) · waOutLog (PC). AI nahi.
-let C = null, wl = null, wlErr = '', wlStop = null, cf = null, cfStop = null, lg = null, lgStop = null, pt = null, ptStop = null, qrLast = '', st = { cmd: '', cfg: '' };
+let C = null, wl = null, wlCache = false, wlErr = '', wlStop = null, cf = null, cfStop = null, lg = null, lgStop = null, pt = null, ptStop = null, qrLast = '', st = { cmd: '', cfg: '' };
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const perm = e => /permission|insufficient/i.test(String(e?.code || '') + String(e?.message || ''));
@@ -25,7 +25,7 @@ export function woOpen() {
   if (!C?.owner()) { C?.notice('Sirf malik'); return; }
   qrLast = '';
   C.modal('📲 Gahak ko WhatsApp parchi', `<div class="wps-set" data-wo-root="1"><div data-wo-link="1">${linkHTML()}</div><div data-wo-cfg="1">${cfgHTML()}</div><div data-wo-call="1">${callHTML()}</div><div data-wo-pt="1">${ptHTML()}</div><div data-wo-log="1">${logHTML()}</div></div>`, true);
-  if (!wlStop && C.cloud?.listenWaLinkOut) wlStop = C.cloud.listenWaLinkOut((d, e) => { if (!alive()) return; if (e) wlErr = perm(e) ? 'rules' : 'net'; else { wl = d || {}; wlErr = ''; } paint('link'); });
+  if (!wlStop && C.cloud?.listenWaLinkOut) wlStop = C.cloud.listenWaLinkOut((d, e, fc) => { if (!alive()) return; if (e) wlErr = perm(e) ? 'rules' : 'net'; else { wl = d || {}; wlCache = !!fc; wlErr = ''; } paint('link'); });   // v2.203.3: cache wala purana snapshot = "PC chup" nahi (malik: screen khulte hi 'jaag' jata tha)
   if (!cfStop && C.cloud?.listenWaOutCfg) cfStop = C.cloud.listenWaOutCfg((d, e) => { if (!alive()) return; if (!e) { cf = d; paint('cfg'); } });
   if (!ptStop && C.cloud?.listenParchiTrack) ptStop = C.cloud.listenParchiTrack((d, e) => { if (!alive()) return; if (!e) { pt = d; paint('pt'); } });
   if (!lgStop && C.cloud?.listenWaOutLog) lgStop = C.cloud.listenWaOutLog((d, e) => { if (!alive()) return; if (!e) { lg = d; paint('log'); } });
@@ -38,7 +38,7 @@ let ck = '';   // 📞 chaabi (callKey) — sirf is khirki mein
 function linkHTML() {
   const hd = '<h4>📱 Bhejne wala number (dukan ka WhatsApp Business — alag number)</h4>';
   if (wlErr === 'rules') return `<div class="wps-sec">${hd}<p class="wps-err">🔐 Ijazat nahi (rules).</p></div>`;
-  const L = wl || {}, at = tms(L.at), s = String(L.st || ''), quiet = !!at && Date.now() - at > 6 * 60000;
+  const L = wl || {}, at = tms(L.at), s = String(L.st || ''), quiet = !!at && !wlCache && Date.now() - at > 6 * 60000;
   const [cl, t, sub] = !at ? ['w', '🖥 PC ne abhi jawab nahi diya', 'PC ki nayi script (wa-out.js) 3–5 min mein khud lagti hai — PC ON hai?']
     : s === 'open' ? ['ok', '🟢 Juda hai' + (L.me ? ' · 📱 ' + esc(L.me) : ''), 'Har nayi khata entry (jin khaton par 📲 ON hai) par gahak ko parchi khud jati hai — phone jeb mein ho, screen band ho, phir bhi.']
     : s === 'qr' ? ['warn', '🟡 QR scan karein', 'Naye number wale phone mein WhatsApp Business kholein → ⋮ → Linked devices → Link a device → neeche wala QR.']
@@ -90,7 +90,8 @@ function ptHTML() {   // 📋 Mubeen ki parchiyan (PC wa-parchi v2.6 blueAccess/
     const stt = x.st === 'done' ? (x.sent ? `✅ Bill gahak ko gaya${x.nb > 1 ? ' (' + x.nb + ')' : ''} · ${mn(f, tms(x.doneAt))} min` : '🧾 Bill bana · ' + (x.err || 'gahak ko nahi gaya')) : x.st === 'start' ? `▶️ Shuru · ${mn(f, tms(x.startAt))} min baad` : x.rem ? `⏰ Shuru nahi · yaad-dihani${vs}${cs}` : `⏳ Mubeen ke paas · ${mn(f, Date.now())} min`;
     return `<div class="wo-r pt-${stc}"><i>${x.k === 'txt' ? '📝' : '🧾'}</i><span><b>${who}${x.k === 'txt' && x.tx ? ' · <small>' + esc(x.tx.slice(0, 30)) + '…</small>' : ''}</b><small>${stt}${x.err && x.st !== 'done' ? ' · ' + esc(x.err) : ''}</small></span><em>${esc(tmFmt(f))}</em></div>`;
   };
-  return `<div class="wps-sec"><h4>📋 Mubeen ki parchiyan (${L.length})</h4><small class="wps-mut">Aap gahak ki parchi Mubeen ko forward karein → Mubeen usi parchi par reply "start" (${cfgNow().stMin} min mein, warna yaad-dihani) → bill tayyar = usi parchi par reply mein bill ki tasveer → gahak ko khud.${at ? ' · 🖥 ' + (ago(at) === 'abhi' ? 'abhi' : ago(at) + ' pehle') : ''}</small>
+  const dg = pt?.dbg && pt.dbg.t ? `<small class="wo-dbg">🩺 PC: ${esc(pt.dbg.t)} <em>(${ago(tms(pt.dbg.at)) === 'abhi' ? 'abhi' : ago(tms(pt.dbg.at)) + ' pehle'})</em></small>` : '';   // v2.203.3: PC ne aakhri "print" paigham ka kya samjha
+  return `<div class="wps-sec"><h4>📋 Mubeen ki parchiyan (${L.length})</h4><small class="wps-mut">Parchi Mubeen ko forward + <b>Printauto</b> (number ho to <b>Printauto 0300-1234567</b>) → list + yaad-dihani + gahak ko paigham. Sirf <b>Print</b> = sirf A4 print. Mubeen usi parchi par reply "start" (${cfgNow().stMin} min mein, warna yaad-dihani) → bill ki tasveer reply → gahak ko khud.${at ? ' · 🖥 ' + (ago(at) === 'abhi' ? 'abhi' : ago(at) + ' pehle') : ''}</small>${dg}
     ${L.length ? `<div class="wo-log">${L.map(row).join('')}</div>` : '<small class="wps-mut">Abhi koi parchi nahi (PC wa-parchi v2.6 chahiye).</small>'}</div>`;
 }
 function logHTML() {

@@ -7228,3 +7228,9 @@ Malik → Mubeen (aur Mubeen ki apni chat) ke print ke A4 par upar "Gahak: naam 
 na mile = "Gahak: ? — caption mein naam / number likhein". Reply-print par bhi gahak pehle. Screenshot (gahak ne likh kar bheja) par PC gahak nahi jaan sakta — caption mein likho,
 tabhi tracker ko number milta hai (shukria / bill gahak ko naye number se). manifest 2026-11-08.5. AI nahi.
 
+=== 2026-11-08 · v2.203.3 + PC wa-parchi v2.11 — "Print" vs "Printauto" (malik ka qaida) ===
+Malik: "Print = sirf A4 print · Printauto = print + poora auto (list, Mubeen ko yaad-dihani, gahak ko shukria / bill) · load ho to manual chalta rahe".
+PC: autoReq (printauto / print auto / autoprint) par hi track — caption ya tasveer / likhi parchi ke 10 min baad alag paigham; sirf Print = sirf print.
+Ghalti pakri: Mubeen ke phone (print link) par malik ka paigham LID chat se aata hai — print wale CX3 mein fallback tha, track (trackMsg) mein nahi → print hota, track nahi (13:13 / 13:30). Ab lidMatch dono jagah.
+PC jo samjha → parchiTrack.dbg → app 📋 list ke neeche "🩺 PC: …". App: waLinkOut ka cache snapshot "PC chup" nahi dikhata (wlCache). manifest 2026-11-08.6. AI nahi.
+

@@ -80,7 +80,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.10';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.11';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1031,13 +1031,15 @@ function zoomSlip(o, img, opt = {}) {
 
 // ---------- 🖨 v2.0: caption mein "print" → A4 (malik: "print likha ho to A4 se print · print ke baghair nahi · saman wali ho ya koi bhi") ----------
 // "print" / "Print" / "PRINT" / "پرنٹ" (printer / printing nahi) · "print 2" / "2 print" / "print x2" = copies (1–5). → 0 = print nahi
-const PR_RE = /(^|[^a-z])print([^a-z]|$)|پرنٹ/i;
+// v2.11 (8 Nov, malik: "Print = sirf A4 · Printauto = print + poora auto"): "printauto" / "autoprint" / "print auto" bhi print hai; `autoReq` = us mein "auto" bhi.
+const PR_RE = /(^|[^a-z])(auto\s*)?print(\s*auto)?([^a-z]|$)|پرنٹ/i;
 function printReq(cap) {
   const t = UDIG(String(cap || '')).toLowerCase(); if (!PR_RE.test(t)) return 0;
-  const m = t.match(/(?:print|پرنٹ)\s*x?\s*(\d)(?!\d)|(?:^|[^\d])(\d)\s*x?\s*(?:print|پرنٹ)/);   // copy ka hindsa akela ho (phone number ka aakhri hindsa nahi)
+  const m = t.match(/(?:print(?:\s*auto)?|پرنٹ)\s*x?\s*(\d)(?!\d)|(?:^|[^\d])(\d)\s*x?\s*(?:(?:auto\s*)?print|پرنٹ)/);   // copy ka hindsa akela ho (phone number ka aakhri hindsa nahi)
   return m ? Math.max(1, Math.min(5, Number(m[1] || m[2]) || 1)) : -1;   // -1 = print, copies setting wali
 }
-const stripPrint = cap => UDIG(String(cap || '')).replace(/(^|[^a-z\d])(\d\s*x?\s*)?(print|پرنٹ)(\s*x?\s*\d(?!\d))?(?=[^a-z]|$)/gi, '$1 ').replace(/\s+/g, ' ').trim();
+const autoReq = cap => !!printReq(cap) && /(^|[^a-z])(auto\s*print|print\s*auto)([^a-z]|$)/i.test(UDIG(String(cap || '')));   // print + "auto" = track / yaad-dihani / gahak ko paigham
+const stripPrint = cap => UDIG(String(cap || '')).replace(/(^|[^a-z\d])(\d\s*x?\s*)?(auto\s*print|print\s*auto|print|پرنٹ)(\s*x?\s*\d(?!\d))?(?=[^a-z]|$)/gi, '$1 ').replace(/\s+/g, ' ').trim();
 
 // ---------- 🖨 A4 page ka naqsha (wa-a4.ps1 ke liye JSON) ----------
 function a4Spec(o, P, opt = {}) {
@@ -1662,7 +1664,7 @@ async function start(ZINDA) {
   }, e => log('⚠️ callEvt: ' + e.message));
   function trPush() {   // app ko list (sirf malik)
     const L = Object.values(TR.par).sort((a, b) => b.fwdAt - a.fwdAt).slice(0, TR_MAX).map(t => ({ id: t.id, from: t.from || '', nm: t.nm || '', to: t.to || '', fwdAt: t.fwdAt, st: t.st, startAt: t.startAt || 0, doneAt: t.doneAt || 0, sent: t.sent || 0, rem: t.rem || 0, err: t.err || '', by: t.by || '', k: t.k || 'img', tx: t.tx || '', grp: t.grp || t.id, nb: (t.bills || []).length, voc: t.voc || 0, callSt: t.callSt || '', calls: t.calls || 0, callSec: t.callSec || 0, mal: t.mal || 0, cs: t.cs || 0, bn: t.bn || '' }));
-    const snap0 = { stMin, vMin: CF.vMin, cMin: CF.cMin, mMin: CF.mMin, hookOn: !!CF.hook };
+    const snap0 = { stMin, vMin: CF.vMin, cMin: CF.cMin, mMin: CF.mMin, hookOn: !!CF.hook, dbg: trDbgLast.t ? { ...trDbgLast } : null };
     const snap = { L, at: Date.now(), ...snap0 }; trW = trW.then(() => BA.doc('parchiTrack').set(snap)).catch(e => log('⚠️ parchiTrack: ' + e.message));
   }
   function trText(t, what) {
@@ -1685,25 +1687,38 @@ async function start(ZINDA) {
   }
   // v2.9 (8 Nov, malik: "jis ke saath Print likha ho SIRF wo parchi"): malik → Mubeen tasveer parchi TABHI jab "print" likha ho — caption mein, ya usi tasveer par reply "print",
   //   ya tasveer ke baad 10 min ke andar alag chhota "Print" (aakhri 3 tasveerein yaad `trPend`). Likhi parchi (text) pehle jaisi (gahak wali / forward list). Screenshot / aam tasveer = kuch nahi.
+  // v2.11 (8 Nov, malik: "Print = sirf A4 print · Printauto = print + poora auto (list, yaad-dihani, gahak ko paigham) — load ho to manual chalta rahe"):
+  //   tasveer parchi track SIRF "printauto" / "autoprint" / "print auto" par (caption, ya tasveer ke 10 min baad alag chhota paigham). Sirf "print" = print, list mein bhi nahi.
   const trPend = new Map();   // wid -> { m, c, to, by, at }
-  async function trForward(m, c, to, by) {   // ② malik → Mubeen tasveer = nayi parchi (sirf "print" ke saath)
+  async function trForward(m, c, to, by) {   // ② malik → Mubeen tasveer = nayi parchi (sirf "printauto" ke saath)
     const wid = m.key.id || ''; if (!wid || TR.par[wid]) return;
     const im = imgOf(c), tx = im ? '' : txtOf(c); if (!im && !tx) return;
     if (im) {
-      if (printReq(im.caption || '')) return trTrack(m, c, to, by);
+      if (autoReq(im.caption || '')) return trTrack(m, c, to, by);
+      if (printReq(im.caption || '')) { trDbg(`tasveer + "Print" (sirf print, auto nahi — auto ke liye "Printauto")`); return; }
       trPend.set(wid, { m, c, to, by, at: tsOf(m) || Date.now() }); while (trPend.size > 3) trPend.delete(trPend.keys().next().value);
       return;
     }
-    // text: "print" (chhota) = pehle wali tasveer(ein) parchi — reply ho to wohi, warna 10 min ki sab pending
+    // text: "printauto" (chhota) = pehle wali tasveer(ein) parchi — reply ho to wohi, warna 10 min ki sab pending
     if (tx.length <= 25 && printReq(tx)) {
+      if (!autoReq(tx)) { trDbg(`"Print" (sirf print, auto nahi — auto ke liye "Printauto")`); return; }
       const ctx = c.extendedTextMessage && c.extendedTextMessage.contextInfo, qid = ctx && String(ctx.stanzaId || '');
       const now = tsOf(m) || Date.now(), pick = qid && trPend.has(qid) ? [qid] : [...trPend.keys()].filter(k => now - trPend.get(k).at < 10 * 60000);
+      if (!pick.length) trDbg('"Printauto" mila magar 10 min mein pehle koi tasveer nahi — pehle tasveer, phir Printauto');
       for (const k of pick) { const q = trPend.get(k); trPend.delete(k); if (q && !TR.par[k]) await trTrack(q.m, q.c, q.to, q.by); }
       return;
     }
     const sha = txtKey(tx), o = sha && TR.inc[sha] && Date.now() - TR.inc[sha].at < 8 * 3600000 ? TR.inc[sha] : null;
     if (!o && !(isFwd(c) && /\d|\n/.test(tx))) return;   // malik ki apni aam baat (Mubeen se) = parchi nahi; likhi parchi sirf gahak wali ya FORWARD (list jaisi: number / kai lines)
-    await trTrack(m, c, to, by);
+    trPend.set(wid, { m, c, to, by, at: tsOf(m) || Date.now() }); while (trPend.size > 3) trPend.delete(trPend.keys().next().value);   // v2.11: likhi parchi bhi "Printauto" ke baad hi
+  }
+  // v2.11: 🩺 app ko bhi batao PC ne aakhri paigham ka kya samjha (parchiTrack.dbg) — khamosh nahi
+  let trDbgLast = { at: 0, t: '' };
+  function trDbg(t) { trDbgLast = { at: Date.now(), t: String(t).slice(0, 160) }; log('📋 ' + t); trPush(); }
+  async function lidMatch(jid, s, nums) {   // v2.11: @lid chat → kaun sa number (print wale CX3 jaisa fallback — pehle track mein nahi tha, is liye P2 par malik ka paigham pehchana nahi jata tha)
+    if (!/@lid$/.test(jid || '')) return '';
+    for (const pn of (nums || []).filter(isMob)) { try { const lid = await s.signalRepository.lidMapping.getLIDForPN(pnJid(pn)); if (lid && bare(lid) === bare(jid)) return pn; } catch {} }
+    return '';
   }
   async function trTrack(m, c, to, by) {
     const wid = m.key.id || ''; if (!wid || TR.par[wid]) return;
@@ -1711,8 +1726,8 @@ async function start(ZINDA) {
     const sha = im ? shaOf(im) : txtKey(tx), o = sha && TR.inc[sha] && Date.now() - TR.inc[sha].at < 8 * 3600000 ? TR.inc[sha] : null;
     const cap = parseCaption(stripPrint(im ? im.caption || '' : ''));
     const t = { id: wid, from: (o && o.from) || cap.ph || '', nm: (o && o.nm) || cap.nm || '', to, fwdAt: tsOf(m) || Date.now(), sha, st: 'sent', by, k: im ? 'img' : 'txt', tx: tx.slice(0, 60) };
-    t.grp = trGroup(t); TR.par[wid] = t; trSave(); trPush();
-    log(`📋 parchi ${wid.slice(-6)} (${t.k}) → ${phPretty(to)} · gahak ${t.from ? phPretty(t.from) : '?'}${o ? ' (' + (im ? 'tasveer' : 'likhai') + ' se)' : cap.ph ? ' (caption se)' : ''}${t.grp !== wid ? ' · group ' + t.grp.slice(-6) : ''}`);
+    t.grp = trGroup(t); TR.par[wid] = t; trSave();
+    trDbg(`✅ Printauto parchi (${t.k === 'txt' ? 'likhi' : 'tasveer'}) list mein · gahak ${t.from ? phPretty(t.from) : '? (caption mein number likhein)'}${o ? ' (' + (im ? 'tasveer' : 'likhai') + ' se)' : cap.ph ? ' (caption se)' : ''}${t.grp !== wid ? ' · group' : ''}`);
   }
   async function trReply(m, c, s, who) {   // ③ Mubeen ka reply usi parchi par — start ya bill ki tasveer
     const ctx = (c.extendedTextMessage && c.extendedTextMessage.contextInfo) || (c.imageMessage && c.imageMessage.contextInfo) || (c.documentMessage && c.documentMessage.contextInfo) || null;
@@ -1781,17 +1796,19 @@ async function start(ZINDA) {
       const ts = tsOf(m); if (ts && Date.now() - ts > 6 * 3600000) return;
       await settingsReady;
       const c = B.normalizeMessageContent(m.message) || {}, fromMe = !!m.key.fromMe;
+      const pr = (im => im ? printReq(im.caption || '') : (txtOf(c).length <= 25 && printReq(txtOf(c))))(imgOf(c));   // v2.11: "print" wala paigham pehchana na jaye to app ko batao
       if (link === 'main') {
-        const me = normPh(L.me || ''), ch = await chatPh(m, s);
-        if (fromMe) { if (ch && S.prTo.includes(ch)) await trForward(m, c, ch, 'malik'); return; }
+        const me = normPh(L.me || ''), ch = (await chatPh(m, s)) || (await lidMatch(jid, s, [...S.prTo, ...S.prFrom]));
+        if (fromMe) { if (ch && S.prTo.includes(ch)) await trForward(m, c, ch, 'malik'); else if (pr) trDbg(`apna "print" paigham — chat ${ch ? phPretty(ch) : jid.slice(0, 14) + '…'} Mubeen (prTo) ki nahi`); return; }
         const from = (await senderPh(m, s)) || ch;
         if (from && S.prTo.includes(from)) { await trReply(m, c, s, 'Mubeen'); return; }   // Mubeen ka jawab
         if (from && from !== me && !S.prFrom.includes(from)) await trIncoming(m, c, from);   // gahak ki parchi — tasveer ya likhi (yaad)
       } else {   // Mubeen ka link (P2): Mubeen ke apne reply · malik ki forward (sha / caption)
-        const ch = await chatPh(m, s);
+        const ch = (await chatPh(m, s)) || (await lidMatch(jid, s, [...S.prFrom, ...S.prTo]));
         if (fromMe) { if (ch && S.prFrom.includes(ch)) await trReply(m, c, s, 'Mubeen'); return; }
         const from = (await senderPh(m, s)) || ch;
         if (from && S.prFrom.includes(from)) await trForward(m, c, me2Of(s), 'malik');
+        else if (pr) trDbg(`"print" paigham ${from ? phPretty(from) : jid.slice(0, 14) + '…'} se — malik (prFrom) ka nahi pehchana, track nahi`);
       }
     } catch (e) { log('⚠️ track: ' + (e && e.message)); }
   }
