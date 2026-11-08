@@ -1,8 +1,9 @@
-// nazar.js — 📺 COUNTER NAZAR (v2.83, 2026-10-05) · v2.95.7 (2026-10-07): 🔔 COUNTER AWAZ — har PC ki scan-awaz ki halat (printPCs.snd, NT-PRINT v1.14):
+// nazar.js — 📺 COUNTER NAZAR (v2.83, 2026-10-05) · v2.204.0 (2026-11-08): 👀 BILL TALLY default (tally.js) — Nigrani wale ki asal screen; purana Counter Nazar ⋮ 📺 se (yaad sam-nz-mode) · v2.95.7 (2026-10-07): 🔔 COUNTER AWAZ — har PC ki scan-awaz ki halat (printPCs.snd, NT-PRINT v1.14):
 // chalu/band, aaj sahi/ghalat scan, POS error, ghalat jagah scan, tu-tu-tu, ghalat barcodes ki list (copy). Sirf parhna.
 // Nigrani wale ke liye ek screen: har counter ka bara khana — bill bante waqt har scan ki line live (liveCarts/<counter>),
 // halki "tik" awaz, ⛔ ROKO (counter par laal, save band), ✓ Theek hai, aakhri 5 bills. Mobile aur PC dono par.
 // Data sale.js likhta hai (liveCartSet / liveSaved); yahan sirf parhna + stop likhna.
+import { tallySetup, renderTally, tallyStop } from './tally.js?v=2.204.0';   /* v2.204.0: 👀 Bill tally */
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = v => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -10,7 +11,10 @@ const tm = t => t ? new Date(Number(t)).toLocaleTimeString('en-US', { hour: 'num
 
 let cloud = null, notice = () => {}, isOwner = () => false, byName = () => '', uidOf = () => '';
 let un = null, carts = [], seen = new Map(), sound = true, ac = null, mounted = false;
-let pcUn = null, pcs = [], pcTick = null, pcOpen = true;
+let pcUn = null, pcs = [], pcTick = null, pcOpen = true, nzMode = 'tally';
+try { nzMode = localStorage.getItem('sam-nz-mode') === 'live' ? 'live' : 'tally'; } catch {}
+const setMode = m => { nzMode = m; try { localStorage.setItem('sam-nz-mode', m); } catch {} const s = $('summary'); if (s) s.innerHTML = ''; renderNazar(); };
+window.ntNazarLive = () => setMode('live');
 
 const NAMES = { abdurehman: 'Abdurehman', bilal: 'Bilal bhai', mithu: 'Mithu', local: 'Yehi device' };
 const COLORS = { abdurehman: '#1a73e8', bilal: '#e0a000', mithu: '#1e9e4a' };
@@ -20,6 +24,7 @@ const ccolor = c => COLORS[c] || '#6b4ec4';
 
 export function nazarSetup(o) {
   cloud = o.cloud; notice = o.notice || notice; isOwner = o.owner || isOwner; byName = o.byName || byName; uidOf = o.uid || uidOf;
+  try { tallySetup(o); } catch {}
   try { sound = localStorage.getItem('sam-nazar-sound') !== '0'; pcOpen = localStorage.getItem('sam-nazar-pcs') !== '0'; } catch {}
 }
 
@@ -40,9 +45,11 @@ export function renderNazar() {
   if ($('list')) $('list').innerHTML = '';
   if ($('actions')) $('actions').innerHTML = '';
   if ($('tabs')) $('tabs').hidden = true;
+  if (nzMode === 'tally') { try { un?.(); } catch {} un = null; if (sum.querySelector('#nzRoot')) sum.innerHTML = ''; renderTally(sum); return; }   // v2.204.0: 👀 Bill tally = default
+  tallyStop();
   if (!sum.querySelector('#nzRoot')) {
     sum.innerHTML = `<div id="nzRoot" class="nz-root">
-      <div class="nz-top"><b>📺 Counter Nazar</b><span class="nz-chips"><button type="button" class="nz-sound${sound ? ' on' : ''}" data-nz-sound="1">${sound ? '🔔 Awaz on' : '🔕 Awaz off'}</button><small id="nzLive">● live</small></span></div>
+      <div class="nz-top"><b>📺 Counter Nazar</b><span class="nz-chips"><button type="button" class="nz-sound" data-nz-tally="1" data-mn="nz.tally" data-mn-i="👀" data-mn-t="Bill tally" data-mn-s="video se bill ki jaanch" data-mn-g="📺 Nigrani">👀 Bill tally</button><button type="button" class="nz-sound${sound ? ' on' : ''}" data-nz-sound="1">${sound ? '🔔 Awaz on' : '🔕 Awaz off'}</button><small id="nzLive">● live</small></span></div>
       <div id="nzPcs" class="nzp-wrap" hidden></div>
       <div id="nzGrid" class="nz-grid"></div>
     </div>`;
@@ -51,7 +58,7 @@ export function renderNazar() {
   watch(); paint(); watchPcs(); paintPcs();
 }
 
-export function nazarStop() { if (!mounted) return; mounted = false; try { un?.(); } catch {} un = null; try { pcUn?.(); } catch {} pcUn = null; clearInterval(pcTick); pcTick = null; }
+export function nazarStop() { tallyStop(); if (!mounted) return; mounted = false; try { un?.(); } catch {} un = null; try { pcUn?.(); } catch {} pcUn = null; clearInterval(pcTick); pcTick = null; }
 
 // ---------- v2.95.7: 🔔 COUNTER AWAZ (har PC ka NT-PRINT printPCs/<id>.snd likhta hai) ----------
 const dayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -147,6 +154,7 @@ async function onClick(e) {
   if (tp) { setTimeout(() => { pcOpen = !!tp.parentElement?.open; try { localStorage.setItem('sam-nazar-pcs', pcOpen ? '1' : '0'); } catch {} }, 0); return; }
   const cp = e.target.closest('[data-nzp-copy]');
   if (cp) { try { await navigator.clipboard.writeText(cp.dataset.nzpCopy); notice('📋 Barcode copy: ' + cp.dataset.nzpCopy); } catch { notice(cp.dataset.nzpCopy); } return; }
+  if (e.target.closest('[data-nz-tally]')) { setMode('tally'); return; }
   const s = e.target.closest('[data-nz-sound]');
   if (s) { sound = !sound; try { localStorage.setItem('sam-nazar-sound', sound ? '1' : '0'); } catch {} s.textContent = sound ? '🔔 Awaz on' : '🔕 Awaz off'; s.classList.toggle('on', sound); if (sound) tik('line'); return; }
   const st = e.target.closest('[data-nz-stop]');

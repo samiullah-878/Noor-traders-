@@ -7518,3 +7518,59 @@ html body #dialogBody .fx-runbtn{height:34px;padding:0 14px;border-radius:999px;
 html body #dialogBody #fxRunSt{color:#475569;font-size:12px}
 html body #dialogBody .wo-quiet{display:block;margin-top:4px;padding:5px 9px;border-radius:10px;background:#fff1f2;border:1px solid #fecdd3;color:#9f1239;font-weight:700;font-size:12px}
 html body #dialogBody .wo-dbg{display:block;margin:6px 0 2px;padding:5px 9px;border-radius:10px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-size:12px;font-weight:600}html body #dialogBody .wo-dbg em{font-style:normal;opacity:.7;font-weight:500}
+/* v2.204.0: 👀 BILL TALLY (tally.js) — Nigrani wale ki screen: upar video, neeche items bari, sirf ✓ THEEK / ✕ KAM */
+.bt-root{display:flex;flex-direction:column;gap:8px;min-width:0;padding:4px 0}
+.bt-bar{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:14px;min-width:0}
+.bt-prog b{font-size:15px}.bt-prog b.ok{color:#0f6b3d}.bt-prog b.bad{color:#b3261e}
+.bt-pcline{font-size:12px;color:#5b6b8a;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}.bt-pcline.bad{color:#b3261e;font-weight:700}
+.bt-chips{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+.bt-chips button,.bt-sm{border:1px solid #c9d3e6;border-radius:999px;padding:0 12px;background:linear-gradient(#fff,#f1f5fb);color:#14213d;font-size:13px;white-space:nowrap;height:34px;min-height:0}
+.bt-chips button.on{background:#e8f5ee;border-color:#b9e2cb;color:#0f6b3d}
+.bt-card{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-width:0}
+@media(min-width:900px){.bt-card{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);align-items:start}}
+.bt-vwrap{position:relative;background:#000;border-radius:16px;overflow:hidden;aspect-ratio:16/9;max-height:min(42vh,440px);width:100%;max-width:100%}
+.bt-vwrap video{width:100%;height:100%;object-fit:contain;display:block;background:#000}
+.bt-vtop{position:absolute;left:0;right:0;top:0;padding:6px 10px;background:linear-gradient(#000c,#0000);color:#fff;font-size:13px;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bt-vload{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:16px;pointer-events:none;background:#0008}
+.bt-vchips{position:absolute;left:0;right:0;bottom:0;display:flex;gap:6px;padding:6px 8px;background:linear-gradient(#0000,#000c);align-items:center}
+.bt-vchips button{border:1px solid #ffffff55;border-radius:999px;background:#ffffff22;color:#fff;padding:0 10px;font-size:12px;height:30px;min-height:0;white-space:nowrap}
+.bt-vchips button.on{background:#fff;color:#000}.bt-dur{margin-left:auto;color:#fff;font-size:12px}
+.bt-side{min-width:0}
+.bt-ihead{font-weight:700;font-size:14px;margin:2px 0 6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.bt-ihead em{color:#b3261e;font-style:normal;font-size:12px}
+.bt-items{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:46vh;overflow:auto;min-width:0}
+@media(min-width:900px){.bt-items{max-height:min(62vh,560px)}}
+.bt-items li{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #e3e9f3;border-radius:12px;background:#fff;font-size:18px;min-width:0}
+.bt-items li b{flex:1;min-width:0;font-weight:700;line-height:1.2;overflow-wrap:anywhere}.bt-items li span{font-size:20px;font-weight:800;color:#1a3fa0;white-space:nowrap}
+.bt-items li.tap{cursor:pointer;border-color:#c9d3e6}.bt-items li.sel{background:#fdecec;border-color:#f0b4b4}.bt-items li.sel b,.bt-items li.sel span{color:#b3261e;text-decoration:line-through}
+.bt-items li i{font-style:normal;font-size:18px}.bt-items li.none{color:#5b6b8a;font-size:14px;border-style:dashed}
+.bt-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;position:sticky;bottom:0;padding:6px 0 2px;z-index:2}
+.bt-btns button{height:58px;border-radius:16px;font-size:22px;font-weight:800;border:0;color:#fff;min-height:0;box-shadow:0 6px 18px #0b1a3a33}
+.bt-btns .bt-ok{background:linear-gradient(#2fb46a,#138a47)}.bt-btns .bt-bad,.bt-btns .bt-save{background:linear-gradient(#f06b6b,#c62828)}.bt-btns .bt-save{font-size:18px}
+.bt-btns .bt-dk{background:#5b6b8a;font-size:14px}.bt-btns .bt-cancel{background:#9aa6bd}
+.bt-btns:has(.bt-cancel){grid-template-columns:64px 1fr 1.3fr}
+.bt-empty{text-align:center;padding:28px 10px;color:#3b4a6b;font-size:15px}.bt-big{font-size:48px;margin-bottom:6px}
+#btDlg.bt-dlg{width:min(520px,calc(100% - 20px));max-height:calc(100% - 24px);overflow:auto;border:0;border-radius:22px;padding:0;background:#fff;color:#13213f;box-shadow:0 24px 60px #0b1a3a55}
+#btDlg.bt-dlg::backdrop{background:rgba(9,18,40,.45)}
+#btDlg .bt-dhead{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #e3e9f3;font-size:16px;position:sticky;top:0;background:#fff}
+#btDlg .bt-x{border:1px solid #c9d3e6;border-radius:999px;width:34px;height:34px;min-height:0;background:#fff;font-size:18px;padding:0;color:#13213f}
+#btDlg .bt-dbody{padding:12px 14px;display:grid;gap:10px}
+#btDlg .bt-kpi{display:flex;gap:12px;flex-wrap:wrap;font-size:15px}#btDlg .bt-kpi b{font-size:20px}#btDlg .bt-kpi .bad{color:#b3261e}
+#btDlg .bt-sub{margin:0;font-size:13px;color:#3b4a6b;line-height:1.45}
+#btDlg .bt-badlist{display:grid;gap:6px}#btDlg .bt-badrow{display:grid;grid-template-columns:auto 1fr;gap:2px 10px;padding:8px 10px;border:1px solid #f0b4b4;border-radius:12px;background:#fff6f6;font-size:13px}
+#btDlg .bt-badrow b{font-size:15px}#btDlg .bt-badrow em{grid-column:1/-1;font-style:normal;color:#b3261e;font-weight:700}#btDlg .bt-badrow small{grid-column:1/-1;color:#5b6b8a}
+#btDlg .bt-row{display:flex;gap:6px;flex-wrap:wrap}
+#btDlg .bt-tg{border:1px solid #c9d3e6;border-radius:999px;padding:0 12px;height:34px;min-height:0;background:linear-gradient(#fff,#f1f5fb);color:#14213d;font-size:13px;white-space:nowrap}#btDlg .bt-tg.on{background:#e8f5ee;border-color:#b9e2cb;color:#0f6b3d}
+#btDlg .bt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(200px,100%),1fr));gap:8px}
+#btDlg .bt-f{display:grid;gap:3px;font-size:12px;color:#5b6b8a;min-width:0}#btDlg .bt-f input{width:100%;min-width:0;height:38px;border:1px solid #c9d3e6;border-radius:10px;padding:0 10px;font-size:14px;box-sizing:border-box}
+#btDlg .bt-chlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(170px,100%),1fr));gap:6px}
+#btDlg .bt-ch{display:flex;align-items:center;gap:8px;border:1px solid #e3e9f3;border-radius:12px;padding:6px 10px;font-size:13px;min-width:0}#btDlg .bt-ch b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#btDlg .bt-ch input{width:64px;height:34px;border:1px solid #c9d3e6;border-radius:10px;padding:0 8px;font-size:15px;text-align:center}
+#btDlg .bt-save{height:44px;border-radius:12px;border:0;background:linear-gradient(#2f6df6,#1a4fd0);color:#fff;font-size:15px;font-weight:700;padding:0 18px;min-height:0}
+html.dk .bt-items li{background:#141c2e;border-color:#2a3650;color:#e6edf8}html.dk .bt-items li span{color:#8fb4ff}html.dk .bt-items li.sel{background:#3a1d1d;border-color:#7a3a3a}
+html.dk .bt-chips button,html.dk .bt-sm{background:#1b2436;border-color:#2a3650;color:#e6edf8}html.dk .bt-empty{color:#a9b4cc}
+html.dk #btDlg.bt-dlg,html.dk #btDlg .bt-dhead{background:#141c2e;color:#e6edf8}html.dk #btDlg .bt-sub,html.dk #btDlg .bt-f{color:#a9b4cc}html.dk #btDlg .bt-badrow{background:#2a1a1a;border-color:#5a3030}
+html.dk #btDlg .bt-tg,html.dk #btDlg .bt-x{background:#1b2436;border-color:#2a3650;color:#e6edf8}html.dk #btDlg .bt-f input,html.dk #btDlg .bt-ch input{background:#0f1726;color:#e6edf8;border-color:#2a3650}
+html.lt .bt-btns .bt-ok{background:linear-gradient(#2fb46a,#138a47)!important;color:#fff!important;border:0!important}html.lt .bt-btns :is(.bt-bad,.bt-save){background:linear-gradient(#f06b6b,#c62828)!important;color:#fff!important;border:0!important}
+html.lt .bt-btns .bt-dk{background:#5b6b8a!important;color:#fff!important;border:0!important}html.lt .bt-btns .bt-cancel{background:#9aa6bd!important;color:#fff!important;border:0!important}
+html.lt .bt-vchips button{background:#ffffff22!important;color:#fff!important;border:1px solid #ffffff55!important;border-radius:999px!important}html.lt .bt-vchips button.on{background:#fff!important;color:#000!important}
+html.lt .bt-chips button,html.lt .bt-sm,html.lt #btDlg .bt-tg,html.lt #btDlg .bt-x{border-radius:999px!important}html.lt .bt-chips button.on,html.lt #btDlg .bt-tg.on{background:#e8f5ee!important;color:#0f6b3d!important;border-color:#b9e2cb!important}
+html.lt #btDlg .bt-save{background:linear-gradient(#2f6df6,#1a4fd0)!important;color:#fff!important;border:0!important}
