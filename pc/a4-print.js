@@ -25,7 +25,7 @@ const http = require('http');
 const https = require('https');
 const path = require('path');
 const { execFile } = require('child_process');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47839, VER = '1.5';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47839, VER = '1.6';
 const TH_PRINTER = 'TM-T88IV';   // dukan ka thermal (pos-khata-sync wala naam)
 const OLD_MS = 30 * 60000, KEEP_MS = 7 * 864e5, SCAN_EVERY = 10 * 60000, ST_EVERY = 60000, BEAT = 5 * 60000;
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
@@ -100,7 +100,9 @@ async function ippPrint(p, data, fmt, o = {}) {
   const A = p.a || {}, job = [];
   const cp = Math.max(1, Math.min(5, Number(o.copies) || 1));
   if (cp > 1) job.push([VT.integer, 'copies', cp]);
-  const media = (A['media-supported'] || []).find(m => /iso_a4_210x297mm/i.test(String(m)));
+  // v1.6 (8 Nov, malik: "button dabna parta hai"): WiFi (IPP) par bhi kaghaz ZABARDASTI A4 nahi — printer ka apna default (tray Letter / koi bhi ho to HP
+  //   "Continue" ka intezar karta tha, batti blink, button dabao to chhapta). Windows wale raaste par v1.3 mein pehle hi hata diya tha. Sirf cfg.a4Force par purana.
+  const media = o.a4Force ? (A['media-supported'] || []).find(m => /iso_a4_210x297mm/i.test(String(m))) : '';
   if (media) job.push([VT.keyword, 'media', media]);
   const sc = A['print-scaling-supported'] || [];
   if (sc.includes('fit')) job.push([VT.keyword, 'print-scaling', 'fit']); else if (sc.includes('auto-fit')) job.push([VT.keyword, 'print-scaling', 'auto-fit']);
@@ -546,10 +548,10 @@ function main() {
       const hd = jobs.map(j => testBuf ? '' : String(j.hd || ''));
       if (pr.how === 'win') { await winPrint(pr.name, winFiles(), { copies, up, hd }); return 'win'; }
       const F = pr.fmt || [], jpeg = F.includes('image/jpeg'), pdf = F.includes('application/pdf');
-      if (up === 2 && pdf) { await ippPrint(pr, pdfOf(bufs, 2), 'application/pdf', { copies, name }); return 'ipp-pdf'; }
+      if (up === 2 && pdf) { await ippPrint(pr, pdfOf(bufs, 2), 'application/pdf', { copies, name, a4Force: !!cfg.a4Force }); return 'ipp-pdf'; }
       if (up === 2 && pr.win) { await winPrint(pr.win, winFiles(), { copies, up, hd }); return 'win'; }
-      if (up === 1 && jpeg) { try { await ippPrint(pr, bufs[0], 'image/jpeg', { copies, name }); return 'ipp'; } catch (e) { if (e.ipp !== 0x040A) throw e; } }
-      if (pdf) { try { await ippPrint(pr, pdfOf(bufs, up), 'application/pdf', { copies, name }); return 'ipp-pdf'; } catch (e) { if (e.ipp !== 0x040A) throw e; } }
+      if (up === 1 && jpeg) { try { await ippPrint(pr, bufs[0], 'image/jpeg', { copies, name, a4Force: !!cfg.a4Force }); return 'ipp'; } catch (e) { if (e.ipp !== 0x040A) throw e; } }
+      if (pdf) { try { await ippPrint(pr, pdfOf(bufs, up), 'application/pdf', { copies, name, a4Force: !!cfg.a4Force }); return 'ipp-pdf'; } catch (e) { if (e.ipp !== 0x040A) throw e; } }
       if (process.platform !== 'win32') throw Error('printer JPEG / PDF nahi leta');
       if (!pr.win) pr.win = await winAdd(pr);   // printer JPEG / PDF nahi leta → Windows ka driver (ek dafa)
       await winPrint(pr.win, winFiles(), { copies, up, hd }); return 'win';

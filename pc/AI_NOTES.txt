@@ -4173,3 +4173,6 @@ PC: autoReq (printauto / print auto / autoprint) par hi track — caption ya tas
 Ghalti pakri: Mubeen ke phone (print link) par malik ka paigham LID chat se aata hai — print wale CX3 mein fallback tha, track (trackMsg) mein nahi → print hota, track nahi (13:13 / 13:30). Ab lidMatch dono jagah.
 PC jo samjha → parchiTrack.dbg → app 📋 list ke neeche "🩺 PC: …". App: waLinkOut ka cache snapshot "PC chup" nahi dikhata (wlCache). manifest 2026-11-08.6. AI nahi.
 
+=== 2026-11-08 · PC a4-print v1.6 — IPP par A4 zabardasti nahi (malik: "button dabna parta hai") ===
+WiFi (IPP) raaste par media=iso_a4 bhejna band (sirf cfg.a4Force) — tray Letter / Any ho to HP Continue maangta tha, button dabao to chhapta. Windows raasta v1.3 mein pehle hi theek tha. manifest 2026-11-08.7. AI nahi.
+
