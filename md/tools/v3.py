@@ -73,20 +73,12 @@ pa = [
         toast("⏰ 10 minute baad dobara yaad"),
       END,
       sint("pnShowEnd", 0),
-      iff([boolc("doBreak", True, True), copy.deepcopy(INCALL)]),
-        toast("⏳ 30 second mein screen band — 1 minute aankhon ka break", True),
-        pause(30),
-        sbool("breakOn", True),
-        {"m_classType": "ScreenOnAction", "m_SIGUID": 0, "m_pieLockScreen": False, "m_screenOff": True, "m_screenOffNoLock": False, "m_screenOnAlternative": False},
-        pause(60),
-        sbool("breakOn", False),
-        toast("✅ Break khatam"),
-      END,
+      # pkg v23 (9 Nov, malik: "break wala mobile off kar deta hai"): 1 min screen-band break HATA diya
     END,
 ]
 paani = {"macroExportVersion": 1, "macro": {
     "m_name": "💧 Paani yaad",
-    "m_description": "Har 35 min paani ka popup (✅ Pee liya / ⏰ Abhi nahi = 10 min baad dobara). Phone locked ho to unlock karte hi. Call par nahi. Phone chal raha ho to 30 sec baad 1 min break. Aaj ke glass ginti.",
+    "m_description": "Har 35 min paani ka popup (✅ Pee liya / ⏰ Abhi nahi = 10 min baad dobara). Phone locked ho to unlock karte hi. Call par nahi. Aaj ke glass ginti.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1,
     "localVariables": [{"m_name": "doBreak", "m_type": 0, "m_booleanValue": False, "isLocalVar": True}, {"m_name": "never", "m_type": 0, "m_booleanValue": False, "isLocalVar": True}],
     "m_triggerList": [

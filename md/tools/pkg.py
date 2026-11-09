@@ -41,6 +41,7 @@ qd = json.load(open(os.path.join(D, 'qaide.json')))
 fy = json.load(open(os.path.join(D, 'fbyt.json')))
 sv = json.load(open(os.path.join(D, 'saved.json')))
 bk = json.load(open(os.path.join(D, 'bank.json')))
+hp = json.load(open(os.path.join(D, 'haptic.json')))   # v23: ⌨️ haptics (chat link wala '⌨️ Keyboard haptics ON (Battery saver)' off — malik: 'notification nahi, auto off')
 import remote as RM
 rem = json.loads(json.dumps(RM.REMOTE))
 OLD_PAANI_BREAK = -6917313488054668512          # purane "💧 Paani break" ka GUID — usi jagah naya aa jayega
@@ -54,6 +55,7 @@ mq, vq = fix(qd, h64('claude|qaide'), '🧠 Falsafa')
 mf, vf = fix(fy, h64('claude|fbyt'), '📘▶️ Facebook · YouTube')
 ms, vs = fix(sv, h64('claude|saved'), '🔖 TikTok Saved')
 mb, vbk = fix(bk, h64('claude|bank3'), '🏦 Bank mode 3')
+mh, vh = fix(hp, h64('claude|haptic'), '⌨️ Haptics ON')
 vars_, seen = [], set()
 # 🏦 Bank mode (chat link, phone par) ke globals — link import banata nahi (7 Nov: "Variable does not exist (bkSave)")
 def _gv(n, t, **kw):
@@ -63,11 +65,11 @@ for v in vp + vk + vt + vq + vf + vb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🧠 Falsafa: sirf top 5 falasifa (Suqraat · Aflatoon · Arastoo · Confucius · Kant), card safed.",
-       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb],
+       "note": "⌨️ Haptics bina paigham · 📵 TikTok ke paigham band · 💧 Paani ka screen-band break hata.",
+       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}}],
        "vars": vars_,
-       "off": [],
+       "off": ["⌨️ Keyboard haptics ON (Battery saver)"],
        "del": []}
 os.makedirs(REPO, exist_ok=True)
 s = json.dumps(pkg, ensure_ascii=False, separators=(',', ':'))

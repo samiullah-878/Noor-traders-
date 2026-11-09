@@ -7314,3 +7314,7 @@ pos-sales-dekho v2.4: bills[].ct = SystemNotes "Created & Printed By:… On:<waq
 - Naqsha: har nuqte par permanent chhota label (`.fx-lbl`) — green "N · shuru waqt", red "N · khatam waqt · km"; N = chip wala number (ft tarteeb).
 - 🖼 Gallery (⋮ din + home patti, sirf malik): input multiple → fx-app `fxFromShots` (🤖 Gemini SIRF parhna, 4-4 tasveer) → wahi fxMerge / fxDetails → din khulta + naqsha. 40 din tak.
 - fxDetails: pata badla (geoParts se) to nuqta dobara; `te` bhi jorta.
+=== 2026-11-09 · md pkg v23 (Claude Remote) — malik: "haptics ka notification nahi · TikTok reels ka baar baar paigham nahi · break wala mobile off kar deta hai · sab auto" ===
+- ⌨️ Haptics ON (naya, md/tools/haptic.json): Battery saver ON / boot / enable par Global battery_saver_constants = disable_vibration=false + System haptic_feedback_enabled 1 (ADB WRITE_SECURE_SETTINGS). Koi toast nahi. Chat link wala "⌨️ Keyboard haptics ON (Battery saver)" = off (malik ne kaha "auto off").
+- 📵 TikTok reels (tiktok.json): saare ToastAction hata (har dafa TikTok kholne par "Reels ke 25 min…" aata tha). Rok (home) wahi.
+- 💧 Paani (v3.py → paani3.json): 1 min screen-band "aankhon ka break" (ScreenOnAction off) HATA — popup / ginti wahi.
