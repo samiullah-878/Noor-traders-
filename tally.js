@@ -86,6 +86,7 @@ function paintPc() {
   if (!pcSt) s = '';
   else if (Date.now() - (Number(pcSt.at) || 0) > 5 * 60000) s = '🖥 PC chup (' + ago(pcSt.at) + ')';
   else if (!pcSt.on) s = '⚙️ camera band — ' + (pcSt.err || 'setup');
+  else if (pcSt.test && !pcSt.test.ok) s = '🔎 Rabta ✕ ' + (pcSt.test.err || '');
   else if (pcSt.err) s = '⚠ ' + pcSt.err;
   else s = '🎥 PC chalu' + (c.wait ? ' · ⏳ ' + c.wait + ' clip ban rahi' : '');
   if (c.err && !/⚠/.test(s)) s += (s ? ' · ' : '') + '✕ ' + c.err + ' clip nahi bani';
@@ -214,6 +215,7 @@ async function openSetup() {
       <div class="bt-ihead">🖥 Counter ↔ camera channel (NVR ka channel number)</div>
       <div class="bt-chlist">${[...pcs].sort().map(p => `<label class="bt-ch"><b>${esc(p)}</b><input type="number" min="0" max="64" data-ch="${esc(p)}" value="${esc((cf.ch || {})[p] ?? '')}" placeholder="ch"></label>`).join('') || '<small>Aaj koi POS bill nahi — bill aane par counter ke naam yahan aayenge</small>'}</div>
       <p class="bt-sub">🖥 PC: ${st.at ? (Date.now() - st.at < 5 * 60000 ? '🟢 chalu' : '⚫ chup ' + ago(st.at)) + ' · v' + esc(st.ver || '?') + (st.ff ? ' · ffmpeg ✓' : ' · ffmpeg ⏳') + (st.today ? ` · aaj ${st.today.n} (✓ ${st.today.ok} ✕ ${st.today.err})` : '') + (st.last ? ' · ' + esc(st.last) : '') + (st.err ? ' · ⚠ ' + esc(st.err) : '') : 'abhi report nahi (PC 3-5 min mein script lagata hai)'}</p>
+      ${st.test ? `<p class="bt-sub bt-test${st.test.ok ? '' : ' bad'}">🔎 Rabta test (${tm(st.test.at)}, ch ${esc(st.test.ch)}): ${st.test.ok ? '✅ NVR se live video mili — password / IP theek' : '✕ ' + esc(st.test.err) + (st.test.raw ? `<br><small>${esc(st.test.raw)}</small>` : '')}</p>` : ''}
       <div class="bt-row"><button type="button" class="bt-save" data-save="1">💾 Save</button></div>
     </div>`;
   let on = cf.on !== false && !!cf.ip, kind = /hik/i.test(cf.kind || '') ? 'hik' : 'dahua', sub = cf.sub === 0 ? 0 : 1;

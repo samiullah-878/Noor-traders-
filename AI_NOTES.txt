@@ -7321,3 +7321,6 @@ pos-sales-dekho v2.4: bills[].ct = SystemNotes "Created & Printed By:… On:<waq
 === 2026-11-09 · v2.209.1 — 🎥 Bill tally: jhoota "429 bill ki clip ban rahi" ===
 Malik ne camera ON kiya (10:09) → app ne kal + aaj ke SAB posted bill "⏳ ban rahi" gine (429), aur PC subah ke sab bill NVR se kaatne lagta (har ek ~1 min = ghante). bill-clip v1.2: ON0 = cfg.onAt (app setup ON karte waqt) || cfg.at — us se 10 min pehle ke bill nahi; billClipPc.on0. tally.js: wait sirf aaj ke din (b._d) + ct/pt ≥ on0 − 10 min; setup Save mein onAt (pehle se ON ho to purana). AI nahi.
 
+=== 2026-11-09 · v2.209.2 — 🎥 bill-clip v1.3: 401 par ruko + 🔎 Rabta test ===
+Malik ka NVR (DHI-NVR2108-I2, 192.168.10.19) — app "NVR ka user / password ghalat (401)", 27 bill ✕. Masla: PC har bill par 2 koshish (sub + main) = 50+ ghalat login → Dahua admin 30 min LOCK kar deta (DMSS bhi). v1.3: 401 aate hi AUTHBAD = sab ruk (main fallback bhi nahi), setting (on/kind/ip/port/user/pw/sub) badle tab reset + 401 wale bill dobara (tries 0, loadKnown mein bhi). Setting badalte hi rabta(): live /cam/realmonitor (Hik /Streaming/Channels/N0x) 2 s → billClipPc.test {at, ch, ok, err, raw (rtsp creds ****)}; app setup mein 🔎 line, patti par "🔎 Rabta ✕". hint() regex \b401\b. NVR password chat / repo mein KABHI nahi. AI nahi.
+
