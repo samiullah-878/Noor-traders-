@@ -86,11 +86,11 @@ function paintPc() {
   if (!pcSt) s = '';
   else if (Date.now() - (Number(pcSt.at) || 0) > 5 * 60000) s = '🖥 PC chup (' + ago(pcSt.at) + ')';
   else if (!pcSt.on) s = '⚙️ camera band — ' + (pcSt.err || 'setup');
-  else if (pcSt.test && !pcSt.test.ok) s = '🔎 Rabta ✕ ' + (pcSt.test.err || '');
+  else if (pcSt.test && !pcSt.test.ok) s = '🔎 Rabta ✕ (' + tm(pcSt.test.at) + ') ' + (pcSt.test.web ? pcSt.test.web + ' · ' : '') + (pcSt.test.err || '');
   else if (pcSt.err) s = '⚠ ' + pcSt.err;
   else s = '🎥 PC chalu' + (c.wait ? ' · ⏳ ' + c.wait + ' clip ban rahi' : '');
   if (c.err && !/⚠/.test(s)) s += (s ? ' · ' : '') + '✕ ' + c.err + ' clip nahi bani';
-  el.textContent = s; el.classList.toggle('bad', /⚠|chup|✕/.test(s));
+  el.textContent = s; el.title = s; el.classList.toggle('bad', /⚠|chup|✕/.test(s));
 }
 function paint() {
   if (!mounted || !$('btRoot')) return;

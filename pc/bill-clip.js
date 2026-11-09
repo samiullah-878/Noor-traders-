@@ -1,5 +1,8 @@
 // =========================================================
-//  bill-clip.js  v1.3 (2026-11-09) — v1.3: 401 (password) par FORAN ruko — har bill × 2 koshish = Dahua admin LOCK (DMSS bhi band ho jata); setting badle tab hi dobara + pehle
+//  bill-clip.js  v1.4 (2026-11-09) — v1.4: ffmpeg RTSP user:password ko %-decode NAHI karta — encodeURIComponent se "@" / "#" wala password
+//  hamesha 401 deta; ab password jaisa likha (sirf / ? # % space ho to saaf paigham). Rabta test mein 🌐 web login jaanch (HTTP digest magicBox) — RTSP
+//  aur web dono 401 = asal password / lock; web ✓ + RTSP 401 = RTSP ki setting.
+//  v1.3 (2026-11-09) — v1.3: 401 (password) par FORAN ruko — har bill × 2 koshish = Dahua admin LOCK (DMSS bhi band ho jata); setting badle tab hi dobara + pehle
 //  🔎 RABTA TEST (2 s live stream) → billClipPc.test {at, ok, err, raw} app setup mein; 401 wale bill setting badalne par dobara.
 //  v1.2 (2026-11-09) — v1.2: sirf camera ON hone (on0) ke baad ke bill kaatna (pehle wale = skip, NVR se purani video ka ghanta bhar ka bojh nahi); app ko on0.
 //  v1.1 (2026-11-08) — v1.1: clip ka waqt bill BANANE / PRINT ke waqt se (`ct`, pos-sales-dekho v2.4) — posting se nahi (malik: "Abdurehman ne jis time
@@ -30,7 +33,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '1.3';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '1.4';
 const MODS = path.join(DIR, 'clip-mods'), TMP = path.join(DIR, 'clip-tmp'), NPM_FILE = path.join(MODS, 'npm-at.json');
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore(), biz = db.collection('businesses').doc(BUSINESS_ID), CLIP = biz.collection('billClip'), TALLY = biz.collection('billTally');
@@ -87,7 +90,7 @@ function ffInstall() {
 const two = n => String(n).padStart(2, '0');
 function localParts(t) { const d = new Date(t); return { Y: d.getFullYear(), M: two(d.getMonth() + 1), D: two(d.getDate()), h: two(d.getHours()), m: two(d.getMinutes()), s: two(d.getSeconds()) }; }
 function playUrl(ch, t0, t1) {
-  const u = encodeURIComponent(CF.user), p = encodeURIComponent(CF.pw), a = localParts(t0), b = localParts(t1);
+  const u = credOf(CF.user), p = credOf(CF.pw), a = localParts(t0), b = localParts(t1);
   if (CF.kind === 'hik') {   // Hikvision ISAPI RTSP playback (local time, 'Z' ke baghair bhi chalta — NVR ka apna waqt)
     const tr = two(ch) + (CF.sub ? '02' : '01');
     return `rtsp://${u}:${p}@${CF.ip}:${CF.port}/Streaming/tracks/${tr}?starttime=${a.Y}${a.M}${a.D}T${a.h}${a.m}${a.s}Z&endtime=${b.Y}${b.M}${b.D}T${b.h}${b.m}${b.s}Z`;
@@ -118,15 +121,36 @@ function hint(err) {   // malik ko samajh aane wali wajah
   return e.slice(0, 140);
 }
 
+// v1.4: ffmpeg RTSP auth "user:pass" ko %-decode nahi karta — jaisa likha waisa bhejo (av_url_split aakhri @ leta hai, pehla : user/pass alag)
+const credOf = x => String(x || '').replace(/[\s/?#]/g, c => encodeURIComponent(c));
+const badPw = () => /[\s/?#%]/.test(CF.pw) || /[:@\s/?#%]/.test(CF.user);
+// v1.4: 🌐 web login jaanch — HTTP digest (Dahua magicBox / Hik ISAPI deviceInfo) — RTSP se alag: dono 401 = password / lock
+function webCheck() {
+  const http = require('http'), crypto = require('crypto'), md5 = x => crypto.createHash('md5').update(x).digest('hex');
+  const pth = CF.kind === 'hik' ? '/ISAPI/System/deviceInfo' : '/cgi-bin/magicBox.cgi?action=getDeviceType';
+  const get = (auth) => new Promise(res => { const rq = http.get({ host: CF.ip, port: 80, path: pth, headers: auth ? { Authorization: auth } : {}, timeout: 8000 }, r => { let b = ''; r.on('data', d => { b += d; if (b.length > 2000) b = b.slice(0, 2000); }); r.on('end', () => res({ st: r.statusCode, h: r.headers, b })); }); rq.on('timeout', () => { rq.destroy(); res({ st: 0, b: 'timeout' }); }); rq.on('error', e => res({ st: 0, b: e.message })); });
+  return (async () => {
+    const r1 = await get(''); if (r1.st !== 401) return { st: r1.st, b: r1.b };
+    const wa = String(r1.h['www-authenticate'] || ''), g = k => (wa.match(new RegExp(k + '="?([^",]+)"?', 'i')) || [])[1] || '';
+    if (!/digest/i.test(wa)) { const r = await get('Basic ' + Buffer.from(CF.user + ':' + CF.pw).toString('base64')); return { st: r.st, b: r.b }; }
+    const realm = g('realm'), nonce = g('nonce'), qop = /auth/.test(g('qop')) ? 'auth' : '', opq = g('opaque'), nc = '00000001', cn = crypto.randomBytes(8).toString('hex');
+    const ha1 = md5(`${CF.user}:${realm}:${CF.pw}`), ha2 = md5(`GET:${pth}`), resp = qop ? md5(`${ha1}:${nonce}:${nc}:${cn}:${qop}:${ha2}`) : md5(`${ha1}:${nonce}:${ha2}`);
+    const auth = `Digest username="${CF.user}", realm="${realm}", nonce="${nonce}", uri="${pth}", response="${resp}"` + (qop ? `, qop=${qop}, nc=${nc}, cnonce="${cn}"` : '') + (opq ? `, opaque="${opq}"` : '');
+    const r2 = await get(auth); return { st: r2.st, b: r2.b };
+  })();
+}
 // ---------- 🔎 rabta test (v1.3): live stream 2 s — password / IP / port pakka hai ya nahi ----------
 async function rabta() {
   if (!CF.on || !CF.ip) return;
   if (!ffPath()) { ffInstall(); return; }
-  const ch = Number(Object.values(CF.ch).find(v => Number(v) > 0)) || 1, u = encodeURIComponent(CF.user), p = encodeURIComponent(CF.pw);
+  const ch = Number(Object.values(CF.ch).find(v => Number(v) > 0)) || 1, u = credOf(CF.user), p = credOf(CF.pw);
   const url = CF.kind === 'hik' ? `rtsp://${u}:${p}@${CF.ip}:${CF.port}/Streaming/Channels/${ch}0${CF.sub ? 2 : 1}` : `rtsp://${u}:${p}@${CF.ip}:${CF.port}/cam/realmonitor?channel=${ch}&subtype=${CF.sub}`;
   fs.mkdirSync(TMP, { recursive: true }); const out = path.join(TMP, 'rabta.mp4');
+  if (badPw()) { TEST = { at: Date.now(), ch, ok: 0, err: 'password / user mein / ? # % ya space hai — RTSP par nahi chalta; NVR par sirf harf + number wala password rakhein', raw: '' }; AUTHBAD = Date.now(); pushSt(true); return; }
+  let web = null; try { web = await webCheck(); } catch (e) { web = { st: 0, b: e.message }; }
+  const wtxt = !web ? '' : web.st === 200 ? '🌐 web login ✓' + (String(web.b).match(/type=([^\r\n]+)/) ? ' (' + String(web.b).match(/type=([^\r\n]+)/)[1].trim().slice(0, 30) + ')' : '') : web.st === 401 ? '🌐 web login bhi ✕ 401' + (/lock/i.test(web.b) ? ' — LOCKED' : '') : '🌐 web ' + (web.st || '✕') + ' ' + String(web.b || '').slice(0, 60);
   const r = await ffCut(url, 2, out); try { fs.unlinkSync(out); } catch {}
-  TEST = { at: Date.now(), ch, ok: r.ok ? 1 : 0, err: r.ok ? '' : hint(r.err), raw: r.ok ? '' : String(r.err || '').replace(/rtsp:\/\/[^@\s]*@/g, 'rtsp://****@').slice(0, 220) };
+  TEST = { at: Date.now(), ch, ok: r.ok ? 1 : 0, web: wtxt, err: r.ok ? '' : hint(r.err), raw: r.ok ? wtxt : (wtxt + ' · ' + String(r.err || '').replace(/rtsp:\/\/[^@\s]*@/g, 'rtsp://****@')).slice(0, 260) };
   if (!r.ok && /401/.test(TEST.err)) AUTHBAD = Date.now();
   log(`🔎 rabta test ch ${ch}: ${r.ok ? '✓ NVR se live video mili (password theek)' : '✕ ' + TEST.err + ' — ' + TEST.raw}`);
   pushSt(true); kick();

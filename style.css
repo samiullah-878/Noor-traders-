@@ -7622,3 +7622,4 @@ html body #dialogBody .fx-mapbtn{height:32px;padding:0 13px;font-size:12.5px}
 .leaflet-tooltip.fx-lbl:before{display:none}
 #btDlg .bt-test{padding:8px 10px;border-radius:10px;background:#e8f5ee;color:#0f6b3d}#btDlg .bt-test.bad{background:#fdecec;color:#b3261e}#btDlg .bt-test small{color:#5b6b8a;word-break:break-all}
 html.dk #btDlg .bt-test{background:#163323;color:#8fe0b0}html.dk #btDlg .bt-test.bad{background:#3a1d1d;color:#f0a0a0}
+.bt-pcline.bad{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35}

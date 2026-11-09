@@ -7327,3 +7327,6 @@ Malik ka NVR (DHI-NVR2108-I2, 192.168.10.19) — app "NVR ka user / password gha
 === 2026-11-09 · PC bank-parchi v2.7 — apne naam se AAYA paisa bhi khud ===
 Alfalah Raast 12:03 Rs 1,380 "SAMI ULLAH T…" (FT2631401XGOWF1Y) app mein ⏳ Baqi — PC v2.3 qaida: naam noor traders / sami ullah = apna transfer (HBL <-> Alfalah), app jore → PC chhor deta. Malik: "auto lagna chahiye". v2.7: apna naam + umar < 5 min = setTimeout (5 min baad taza doc, st na ho to handle dobara); phir seen mein GAYE (ZA?out<raqam>|minute) ±30 min dhoondo — mile = chhoro (asal apna transfer), na mile = aam payment khud (log "5 min mein GAYE nahi mila"). transfer-sync v4.14 (main file touch). Test: mock biz, purani SMS → laga. AI nahi.
 
+=== 2026-11-09 · 2.209.3 — 🎥 bill-clip v1.4: 401 ki asal wajah dhoondo ===
+Malik: IP 192.168.10.19 = NVR (TCP/IP screen), password sahi — phir bhi Rabta 401. (1) ffmpeg RTSP 'user:pass' ko %-decode NAHI karta (rtsp.c rt->auth seedha) — encodeURIComponent se @ # wala password ghalat bhejta tha → credOf() sirf space / ? # %-encode (in par saaf paigham, AUTHBAD). (2) webCheck(): HTTP digest GET /cgi-bin/magicBox.cgi?action=getDeviceType (Hik /ISAPI/System/deviceInfo) port 80 → TEST.web '🌐 web login ✓ (type)' / '✕ 401 (LOCKED)'; mock digest server se test ✓. App patti: Rabta ✕ (waqt) + web + wajah, .bt-pcline.bad wrap. AI nahi.
+
