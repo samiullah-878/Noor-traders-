@@ -6,7 +6,7 @@
 //          'printing' jis ki dhadkan (beatAt, label-print v4.1) 3 min se nahi = "⚠ atka hua" (Cancel = PC foran saaf karta hai).
 // Screen: din ke hisaab se -> item -> har barcode (packet size) ki ginti. Chips: Aaj · Kal · 7 din · 30 din · status · search.
 // PDF: app ka openReportPreview (poori screen + WhatsApp / share).
-import { smartHit } from './smart-search.js?v=2.212.0';   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.213.0';   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -21,7 +21,7 @@ const nice = day => day === dayOf() ? 'Aaj' : day === dayOf(back(1)) ? 'Kal' : d
 //   Waqt: Aaj · Kal · 7 · 30 din · Is mahina · Pichhla mahina · 📅 tareekh (purana = ek dafa getLabelJobs). Chips ⋮ mein (qaida). Rules NAHI badle. AI NAHI.
 let cloud = null, notice = () => {}, itemsOf = () => [], pdfOf = null, godamsOf = () => [], isOwn = () => false, myUid = () => '', canK = () => true;
 let jobs = [], stop = null, stopFrom = 0, fP = 'today', fS = 'done', fQ = '', open = new Set();
-let fG = '', cus = { a: '', b: '' }, extra = null, extraKey = '', lbl = {}, cfgStop = null, devs = [], devStop = null, setOn = false;
+let fG = '', xgPick = 0, cus = { a: '', b: '' }, extra = null, extraKey = '', lbl = {}, cfgStop = null, devs = [], devStop = null, setOn = false;
 let arrOf = () => [], shopOf = () => 1, paidMap = {}, payStop = null, oldTr = null, oldTrKey = '', pruned = false;   // 💰 transfer note ✓ = mazdoori
 
 export function barcodeSetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; itemsOf = o.items || itemsOf; pdfOf = o.pdf || pdfOf;
@@ -209,6 +209,8 @@ function paint() {
   const set = own && setOn ? `<div class="bc-set"><b>💰 Mazdoori ka rate (fi label)</b>
       <div class="bc-rates"><label>🏷 Barcode<span>Rs</span><input type="number" min="0" step="any" inputmode="decimal" data-bc-rb="1" value="${esc(lbl.rb ?? '')}" placeholder="0"></label>
         <label>🔖 Sub-barcode<span>Rs</span><input type="number" min="0" step="any" inputmode="decimal" data-bc-rs="1" value="${esc(lbl.rs ?? '')}" placeholder="0"></label><button type="button" class="bc-rsave" data-bc-rsave="1">💾 Save</button></div>
+      <b>➕ Zyada label (packing ke faltu)</b><small>Jis godam ke labels hon us ke HAR item par itne label zyada — malik (9 Nov): Godam 2 par +5 default.</small>
+      <div class="bc-rates bc-xtra"><span class="bc-xg">${G.map(g => `<button type="button" class="${Number(lbl.xg) === g.b ? 'is-in' : ''}" data-bc-xg="${g.b}">${esc(g.name)}</button>`).join('')}</span><label>+<input type="number" min="0" max="50" step="1" inputmode="numeric" data-bc-xn="1" value="${esc(lbl.xn ?? 5)}"></label><button type="button" class="bc-rsave" data-bc-xsave="1">💾 Save</button>${lbl.xg && lbl.xn ? `<small>${esc(gName(lbl.xg))}: har item +${num(lbl.xn)}</small>` : '<small>band</small>'}</div>
       <b>🏬 Kis larke ke label kis godam ke?</b><small>Printer ek hai (TSC 244 Pro) — jis larke ne chhape, us ki godam. Ek dafa chunein, purana data bhi.</small>
       <div class="bc-ppl">${people().map(w => { const cur = (lbl.g || {})[w.k]; return `<div class="bc-pr"><b>${esc(w.n)}</b><span>${G.map(g => `<button type="button" class="${Number(cur) === g.b ? 'is-in' : ''}" data-bc-asg="${esc(w.k)}|${g.b}">${esc(g.name)}</button>`).join('')}<button type="button" class="${cur == null ? 'is-in' : ''}" data-bc-asg="${esc(w.k)}|">—</button></span></div>`; }).join('') || '<small>Abhi kisi ne label nahi chhape</small>'}</div></div>` : '';
   root.innerHTML = liveLabelsHTML(jobs) + `<div class="bc-head">${chips}${set}${pay}
@@ -281,6 +283,10 @@ document.addEventListener('click', async e => {
   if (d.bcRsave) { const rb = Number($('bcRoot')?.querySelector('[data-bc-rb]')?.value), rsv = Number($('bcRoot')?.querySelector('[data-bc-rs]')?.value);
     if (!(rb >= 0) || !(rsv >= 0)) { notice('Rate sahi likhein (0 ya zyada)'); return; }
     try { await cloud.setLblRate(rb, rsv); lbl = { ...lbl, rb, rs: rsv }; notice(`💾 Mazdoori: barcode Rs ${num(rb)} · sub-barcode Rs ${num(rsv)}`); paint(); } catch (er) { notice('Save nahi hua: ' + (er?.message || er)); } return; }
+  if (d.bcXg) { xgPick = Number(d.bcXg); $('bcRoot')?.querySelectorAll('[data-bc-xg]').forEach(x => x.classList.toggle('is-in', Number(x.dataset.bcXg) === xgPick)); return; }
+  if (d.bcXsave) { const xn = Math.floor(Number($('bcRoot')?.querySelector('[data-bc-xn]')?.value)); const xg = xgPick || Number(lbl.xg) || 0;
+    if (!(xn >= 0 && xn <= 50)) { notice('0 se 50 tak likhein'); return; } if (!xg && xn) { notice('Pehle godam chunein'); return; }
+    try { await cloud.setLblExtra(xg, xn); lbl = { ...lbl, xg, xn }; notice(xn ? `💾 ${gName(xg)}: har item +${xn} label` : '💾 Zyada label band'); paint(); } catch (er) { notice('Save nahi hua: ' + (er?.message || er)); } return; }
   if (d.bcAsg) { const [k, b] = d.bcAsg.split('|'); const v = b === '' ? null : Number(b);
     lbl = { ...lbl, g: { ...(lbl.g || {}) } }; if (v == null) delete lbl.g[k]; else lbl.g[k] = v; paint();   // foran (server baad mein)
     try { await cloud.setLblGodam(k, v); } catch (er) { notice('Save nahi hua: ' + (er?.message || er)); } return; }

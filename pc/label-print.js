@@ -1,5 +1,5 @@
 // =========================================================
-//  label-print.js  v4.9 (2026-10-27: 📅 malik — daayein kone ka number ('7J-463') HATA, us ki jagah chhapne ke din ki tareekh + mahine ka pehla harf
+//  label-print.js  v5.0 (2026-11-09: 🏷 job.x = zyada label (Godam 2 default +5, app lagati hai) — copies + x chhapte, total mein bhi) · v4.9 (2026-10-27: 📅 malik — daayein kone ka number ('7J-463') HATA, us ki jagah chhapne ke din ki tareekh + mahine ka pehla harf
 //                     '27-O' (J F M A M J J A S O N D), font 2 (bara) — Godam 2 theke ki packing: larka aaj ke packet jaldi gine, kal ka maal mix na ho. Factory batch label par batch no wahi.
 //                     labelJobs numFrom/numTo pehle jaise likhe jate hain (app ka hisaab), sirf chhapai se number gaya) · v4.6 (2026-10-18: 🖨 PRINTER RUKA — malik: rice 350 SHAEEN BADSHA 48/100 par atka. Agla hissa bhejne se pehle line 30 s na
 //                     chale to Windows se printer / job ka haal (Paper khatam / Error / Offline / Ruka hua) -> labelJobs.stuck {at, why} (app mein dikhe);
@@ -211,9 +211,10 @@ function rowHead(S) {
 }
 // Ek hukum ke copies ko qataron mein baant kar TSPL (har qatar = ek PRINT)
 // v3.8: ek hukum -> kai CHHOTE print jobs (har job rowsPerJob qataren), taake TSC ka buffer na bhare
+const copiesOf = j => Math.max(1, Math.min(200, Math.floor(Number(j.copies) || 1))) + Math.max(0, Math.min(50, Math.floor(Number(j.x) || 0)));   // v5.0: + zyada (Godam 2)
 const rowsPer = S => Math.max(1, Math.min(Number(S.rowsMax) || 8, Math.floor(Number(S.rowsPerJob) || 8)));   // v4.3: 8 qatar fi hissa
 function tspl(S, j, nums, ur) {
-  const copies = Math.max(1, Math.min(200, Math.floor(Number(j.copies) || 1)));
+  const copies = copiesOf(j);
   const per = rowsPer(S);
   const jobs = []; let out = null, rows = 0;
   const head = () => { const h = rowHead(S); if (S.urdu && ur && S.urduMode === 'putbmp-test') { const r = urduRaster(String(ur), S, urW(S)); if (r) { const bm = bmp1(r, Math.min(r.h, 56)); h.push(`DOWNLOAD "UR.BMP",${bm.length},${bm}`); } } return h; };
@@ -358,7 +359,7 @@ async function handle(doc) {
       const cur = (await t.get(ref)).data();
       if (!cur || cur.status !== 'new') return null;
       if (cur.cancelReq) { t.update(ref, { status: 'cancelled', sent: 0, doneAt: Date.now() }); return { cancelledEarly: true, ...cur }; }   // v4.0: line mein hi cancel
-      t.update(ref, { status: 'printing', pc: os.hostname(), pickedAt: Date.now(), beatAt: Date.now(), sent: 0, total: Math.max(1, Math.min(200, Math.floor(Number(cur.copies) || 1))) });
+      t.update(ref, { status: 'printing', pc: os.hostname(), pickedAt: Date.now(), beatAt: Date.now(), sent: 0, total: copiesOf(cur) });
       return cur;
     });
     if (!j) return;
@@ -370,7 +371,7 @@ async function handle(doc) {
       log(`Chhora (purana): ${j.name} ${j.code}`); return;
     }
     const S = settings();
-    const copies2 = Math.max(1, Math.min(200, Math.floor(Number(j.copies) || 1)));
+    const copies2 = copiesOf(j);
     const nums = nextNums(j.code || j.itemId, copies2);            // v3.3: har BARCODE (sub-barcode) ka apna silsila — surf 1kg alag, 2kg alag
     const ur = S.urdu ? (await urduNames())[String(j.itemId)] || '' : '';   // v3.4: Urdu naam (ho to)
     let err = (S.urdu && ur) ? await ensureFont(S) : null;   // v3.9

@@ -4231,3 +4231,6 @@ Setup chala, NT-PRINT MODULE_NOT_FOUND (nt-print.js:75 urdu-names.js) — setup 
 === 2026-11-09 · v2.212.0 + PC pos-sales-dekho v2.5 + bill-clip v2.2 (🎯 clip pehli item se + speed) ===
 Malik ka OK 14:11. PC: firstTick har 1 s (SaleDetailID > last, GROUP BY SaleID → pehli dafa dikha = ft, pos-first-seen.json) → bills[].ft. bill-clip: CF.pre 0 = ft−15 s se (ft na ho / ajeeb = 2 min), meta ft/t0. App ⚙️: pre input hata, chips 0/60/120/180/300 (default 0). Tally: aage 3 bill clip+lines prefetch; items pehle dikhein. AI nahi.
 
+=== 2026-11-09 · v2.213.0 + rules 2.95 + PC label-print v5.0 (🏷 Godam 2 labels +5) ===
+Malik ka OK 15:13. stockConfig.lbl.xg/xn (barcode.js ⚙️ set: godam chips + N, setLblExtra). cloud.requestLabel → lblExtra (stockConfig ek read; key malik / LBL_ME (deviceSeen staffId) / lbl.u) → job.x; rules labelJobs keys + x int ≤ 50. PC copiesOf(j) = copies + x (tspl / total / dobara). Malik ko ⚙️ mein Godam 2 chun kar Save karna hai (default 5 likha, par save pehle zaroori). AI nahi.
+
