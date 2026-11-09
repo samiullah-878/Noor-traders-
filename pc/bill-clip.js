@@ -1,5 +1,6 @@
 // =========================================================
-//  bill-clip.js  v1.1 (2026-11-08) — v1.1: clip ka waqt bill BANANE / PRINT ke waqt se (`ct`, pos-sales-dekho v2.4) — posting se nahi (malik: "Abdurehman ne jis time
+//  bill-clip.js  v1.2 (2026-11-09) — v1.2: sirf camera ON hone (on0) ke baad ke bill kaatna (pehle wale = skip, NVR se purani video ka ghanta bhar ka bojh nahi); app ko on0.
+//  v1.1 (2026-11-08) — v1.1: clip ka waqt bill BANANE / PRINT ke waqt se (`ct`, pos-sales-dekho v2.4) — posting se nahi (malik: "Abdurehman ne jis time
 //  bill bana kar print kiya, PC us time se peeche jaye, posting ke waqt se nahi"); ct na mile to SaleDate ka waqt, phir post ka waqt. Default pehle 45 s · baad 20 s.
 //  v1.0 (2026-11-08) — 🎥 HAR POS BILL KI CHHOTI VIDEO (counter camera) → app "👀 Bill tally"
 //  Malik (8 Nov): "maal chori hota hai — larka bill par kam likh de to kaise pakrein? Camera wala banda ghar par hai, app mein
@@ -27,7 +28,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '1.1';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '1.2';
 const MODS = path.join(DIR, 'clip-mods'), TMP = path.join(DIR, 'clip-tmp'), NPM_FILE = path.join(MODS, 'npm-at.json');
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore(), biz = db.collection('businesses').doc(BUSINESS_ID), CLIP = biz.collection('billClip'), TALLY = biz.collection('billTally');
@@ -48,14 +49,15 @@ function cfApply(d) {
     ch: (d.ch && typeof d.ch === 'object') ? d.ch : {}, rep: /^\d{1,2}:\d{2}$/.test(String(d.rep || '')) ? String(d.rep) : '20:30', maxs: Math.max(30, Math.min(180, Number(d.maxs) || 120)) };
   cfReady = true;
 }
-biz.collection('blueAccess').doc('billClip').onSnapshot(s => { cfApply(s.exists ? s.data() : null); log(`⚙️ setting: ${CF.on ? 'ON' : 'band'} · ${CF.kind} ${CF.ip || '(NVR ka IP nahi)'} · counters ${Object.keys(CF.ch).length} · ${CF.pre}+${CF.post} s`); kick(); }, e => log('⚠️ setting: ' + e.message));
+let ON0 = 0;   // v1.2: camera kab ON hua (app `onAt`, purani setting = aakhri save `at`) — us se pehle ke bill nahi; PC restart par bhi wahi
+biz.collection('blueAccess').doc('billClip').onSnapshot(s => { const d0 = s.exists ? s.data() : null; cfApply(d0); ON0 = CF.on ? (Number(d0 && (d0.onAt || d0.at)) || Date.now()) : 0; log(`⚙️ setting: ${CF.on ? 'ON' : 'band'} · ${CF.kind} ${CF.ip || '(NVR ka IP nahi)'} · counters ${Object.keys(CF.ch).length} · ${CF.pre}+${CF.post} s`); kick(); }, e => log('⚠️ setting: ' + e.message));
 
 // ---------- haal (app ke liye) ----------
 let ST = { ff: '', err: '', last: '', q: 0 }, T = { day: '', n: 0, ok: 0, err: 0 }, stAt = 0;
 async function pushSt(force) {
   if (!force && Date.now() - stAt < 20000) return; stAt = Date.now();
   const day = dayOf(); if (T.day !== day) T = { day, n: 0, ok: 0, err: 0 };
-  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T } }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
+  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T } }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
 }
 
 // ---------- ffmpeg (ffmpeg-static — apne folder mein) ----------
@@ -136,6 +138,7 @@ function pick() {
     if (k && (k.st === 'ok' || k.st === 'skip' || k.tries >= 3 || (k.st === 'err' && now - k.at < 2 * 60000))) continue;
     if (now - Math.max(anchorOf(b), 0) < (CF.post + 90) * 1000) continue;   // NVR recording 1-2 min peeche likhti — jaldi kaatna = adhoori / khali clip
     if (now - Number(b.pt) > CF.keep * 86400000) continue;
+    if (ON0 && anchorOf(b) < ON0 - 10 * 60000) continue;   // v1.2: camera ON se pehle ke bill nahi (10 min ki gunjaish)
     out.push(b);
   }
   return out.sort((a, b) => Number(a.pt) - Number(b.pt));   // purana pehle (koi reh na jaye)

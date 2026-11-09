@@ -7318,3 +7318,6 @@ pos-sales-dekho v2.4: bills[].ct = SystemNotes "Created & Printed By:… On:<waq
 - ⌨️ Haptics ON (naya, md/tools/haptic.json): Battery saver ON / boot / enable par Global battery_saver_constants = disable_vibration=false + System haptic_feedback_enabled 1 (ADB WRITE_SECURE_SETTINGS). Koi toast nahi. Chat link wala "⌨️ Keyboard haptics ON (Battery saver)" = off (malik ne kaha "auto off").
 - 📵 TikTok reels (tiktok.json): saare ToastAction hata (har dafa TikTok kholne par "Reels ke 25 min…" aata tha). Rok (home) wahi.
 - 💧 Paani (v3.py → paani3.json): 1 min screen-band "aankhon ka break" (ScreenOnAction off) HATA — popup / ginti wahi.
+=== 2026-11-09 · v2.209.1 — 🎥 Bill tally: jhoota "429 bill ki clip ban rahi" ===
+Malik ne camera ON kiya (10:09) → app ne kal + aaj ke SAB posted bill "⏳ ban rahi" gine (429), aur PC subah ke sab bill NVR se kaatne lagta (har ek ~1 min = ghante). bill-clip v1.2: ON0 = cfg.onAt (app setup ON karte waqt) || cfg.at — us se 10 min pehle ke bill nahi; billClipPc.on0. tally.js: wait sirf aaj ke din (b._d) + ct/pt ≥ on0 − 10 min; setup Save mein onAt (pehle se ON ho to purana). AI nahi.
+

@@ -61,7 +61,8 @@ function queue() {
 function counts() {
   const td = dayKey(0); let ok = 0, bad = 0, wait = 0, err = 0;
   for (const t of tallies.values()) if (t.day === td) { if (t.ok) ok++; else bad++; }
-  for (const [id, b] of bills) { if (b.x || Number(b.ps) !== 2 || tallies.has(id)) continue; const c = clips.get(id); if (!c || c.st === 'wait') wait++; else if (c.st === 'err' || c.st === 'skip') err++; }
+  const on0 = Number(pcSt?.on0) || 0;   // v2.209.1: sirf aaj ke bill (PC kal ke nahi kaatta) + camera ON hone ke baad wale — warna jhoota "429 ban rahi"
+  for (const [id, b] of bills) { if (b.x || Number(b.ps) !== 2 || tallies.has(id) || b._d !== td) continue; const c = clips.get(id); if (!c || c.st === 'wait') { if (!on0 || Number(b.ct || b.pt) >= on0 - 10 * 60000) wait++; } else if (c.st === 'err' || c.st === 'skip') err++; }
   return { ok, bad, wait, err, q: queue().length };
 }
 async function linesOf(id) {
@@ -223,7 +224,7 @@ async function openSetup() {
   d.querySelector('[data-save]').onclick = async ev => {
     const g = k => d.querySelector(`[data-cf="${k}"]`)?.value ?? '';
     const ch = {}; d.querySelectorAll('[data-ch]').forEach(i => { const v = Number(i.value); if (v > 0) ch[i.dataset.ch] = v; });
-    const out = { on, kind, sub, ip: String(g('ip')).trim(), port: Number(g('port')) || 554, user: String(g('user')).trim() || 'admin', pw: String(g('pw')), pre: Number(g('pre')) || 45, post: Number(g('post')) || 10, keep: Number(g('keep')) || 2, rep: String(g('rep')).trim() || '20:30', ch };
+    const out = { on, onAt: on ? ((cf.on !== false && cf.ip && cf.onAt) ? cf.onAt : Date.now()) : 0, kind, sub, ip: String(g('ip')).trim(), port: Number(g('port')) || 554, user: String(g('user')).trim() || 'admin', pw: String(g('pw')), pre: Number(g('pre')) || 45, post: Number(g('post')) || 10, keep: Number(g('keep')) || 2, rep: String(g('rep')).trim() || '20:30', ch };
     ev.currentTarget.disabled = true;
     try { await cloud.setBillClipCfg(out); notice('💾 Camera setup save — PC 30 s mein uthata hai'); d.close(); }
     catch (e) { notice('Save nahi hua: ' + (e?.message || e)); ev.currentTarget.disabled = false; }

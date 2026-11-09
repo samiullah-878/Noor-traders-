@@ -4201,3 +4201,6 @@ Mubeen usi parchi par "Start" likhe → gahak ko "Aap ka saman start ho gaya hai
 === 2026-11-08 · v2.206.1 (pehle v2.204.1 likha) — 🎥 clip bill BANANE ke waqt se (malik: "posting se nahi — jis time bill bana kar print kiya") ===
 pos-sales-dekho v2.4: bills[].ct = SystemNotes "Created & Printed By:… On:<waqt> at PC:" (onTime — mm/dd · dd/mm · ISO, SaleDate ke din se shak door, us din ka na ho = 0). bill-clip v1.1: anchorOf = ct › SaleDate ka waqt (00:00 nahi) › pt; clip = anchor − pre (45) … + post (ab default 20); meta mein ct + an. tally.js bill ka waqt ct (na ho to "(post)"). manifest 2026-11-08.14. AI nahi.
 
+=== 2026-11-09 · v2.209.1 — 🎥 Bill tally: jhoota "429 bill ki clip ban rahi" ===
+Malik ne camera ON kiya (10:09) → app ne kal + aaj ke SAB posted bill "⏳ ban rahi" gine (429), aur PC subah ke sab bill NVR se kaatne lagta (har ek ~1 min = ghante). bill-clip v1.2: ON0 = cfg.onAt (app setup ON karte waqt) || cfg.at — us se 10 min pehle ke bill nahi; billClipPc.on0. tally.js: wait sirf aaj ke din (b._d) + ct/pt ≥ on0 − 10 min; setup Save mein onAt (pehle se ON ho to purana). AI nahi.
+
