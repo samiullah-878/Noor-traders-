@@ -7548,6 +7548,7 @@ html body #dialogBody .wo-dbg{display:block;margin:6px 0 2px;padding:5px 9px;bor
 .bt-vchips button.on{background:#fff;color:#000}.bt-dur{margin-left:auto;color:#fff;font-size:12px}
 .bt-segs{display:flex;gap:4px;margin-left:auto;overflow-x:auto;max-width:55%}.bt-segs button{padding:0 8px;min-width:28px}.bt-segs button.dim{opacity:.45}.bt-segs:empty{display:none}.bt-segs:not(:empty)+.bt-dur{margin-left:0}
 .bt-badrow em.bad{color:#e55}
+#btDlg .bt-badrow.bt-lrow{cursor:pointer;background:#f7f9fd;border-color:#d7deea;grid-template-columns:auto 1fr auto;align-items:center}#btDlg .bt-badrow.bt-lrow span{grid-column:2}#btDlg .bt-badrow.bt-lrow em{grid-column:3;grid-row:1;white-space:nowrap}html.dk #btDlg .bt-badrow.bt-lrow{background:#1a2234;border-color:#2e3a52}.bt-lrow.cur{outline:2px solid #4c8dff}.bt-badrow em.ok{color:#2a9d4a}.bt-badrow em.go{color:#4c8dff;font-weight:700}.bt-srch{width:100%;box-sizing:border-box;margin:0 0 8px;padding:8px 12px;border-radius:999px;border:1px solid #8884;font-size:14px}
 .bt-side{min-width:0}
 .bt-ihead{font-weight:700;font-size:14px;margin:2px 0 6px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}.bt-ihead em{color:#b3261e;font-style:normal;font-size:12px}
 .bt-items{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:46vh;overflow:auto;min-width:0}
