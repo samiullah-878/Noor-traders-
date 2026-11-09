@@ -4225,3 +4225,6 @@ Malik ka OK (13:23). PC: har counter camera ki live sub-stream clip-rec\ch<N>\ m
 === 2026-11-09 · v2.211.0 + PC bill-clip v2.1 (📋 Bills ki list) ===
 Malik ka OK 13:46. tally.js ⋮ 📋 Bills: aaj ke posted bill (naya upar) + 🔍 + haalat chip; tap = wohi bill kholo (clip na ho = paigham). Khuli khirki data par khud taaza (dataset.list). PC v2.1: kamyab clip par ST.err saaf. AI nahi.
 
+=== 2026-11-09 · nt-print-setup.ps1 v2 + nt-fix.ps1 — naya counter DESKTOP-RN6QU6D ===
+Setup chala, NT-PRINT MODULE_NOT_FOUND (nt-print.js:75 urdu-names.js) — setup / fix ki file list purani thi (v1.20 urdu-names, zinda, sql-config baad mein aaye). Teeno files list mein. Qaida: nt-print.js mein naya require = dono .ps1 ki list mein bhi. firebase-key network se nahi mili = AWAZ-ONLY (print / status nahi) — chaabi ka raasta baad mein.
+

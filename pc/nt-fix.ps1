@@ -25,7 +25,7 @@ $t = [DateTimeOffset]::Now.ToUnixTimeSeconds()
 $m = $null; try { $m = Invoke-RestMethod ($RAW + 'manifest.json?t=' + $t) } catch { Say "GitHub se manifest nahi aaya: $($_.Exception.Message)" Red }
 if ($m) {
   Say "GitHub version: $($m.version)"
-  foreach ($f in 'nt-print.js', 'nt-parchi.js', 'nt-scan.js', 'nt-posui.js', 'urdu-shape.js', 'nt-print-auto.bat') {
+  foreach ($f in 'nt-print.js', 'nt-parchi.js', 'nt-scan.js', 'nt-posui.js', 'urdu-shape.js', 'urdu-names.js', 'zinda.js', 'sql-config.js', 'nt-print-auto.bat') {
     $want = [string]$m.files.$f; $p = Join-Path $K $f
     $have = if (Test-Path $p) { (Get-FileHash $p -Algorithm SHA256).Hash.ToLower() } else { '' }
     if (-not $want -or $have -eq $want) { continue }

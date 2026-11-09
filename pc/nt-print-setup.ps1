@@ -1,4 +1,4 @@
-# nt-print-setup.ps1 (2026-10-07) - NT-PRINT naye counter PC par (scan awaz tik/bzzz/tu-tu-tu, POS screen awaz, app ka bill print)
+# nt-print-setup.ps1 (2026-10-07, v2 2026-11-09: urdu-names / zinda / sql-config bhi — RN6QU6D par MODULE_NOT_FOUND) - NT-PRINT naye counter PC par (scan awaz tik/bzzz/tu-tu-tu, POS screen awaz, app ka bill print)
 #   Chalana (counter PC, PowerShell): irm https://raw.githubusercontent.com/samiullah-878/Noor-traders-/main/pc/nt-print-setup.ps1 | iex
 #   1) C:\khata-sync  2) Node.js (na ho to install)  3) GitHub se NT-PRINT files  4) local-config (PC ka naam)
 #   5) firebase-key.json (server se network copy; na ho sake to haath se rakhna)  6) npm firebase-admin  7) Startup  8) chalu + log
@@ -22,7 +22,7 @@ if (-not $node) {
 }
 Say ("Node: " + (& node -v)) Green
 # 3) files
-$files = 'nt-print.js', 'nt-parchi.js', 'nt-scan.js', 'nt-posui.js', 'urdu-shape.js', 'nt-print-auto.bat', 'manifest.json'
+$files = 'nt-print.js', 'nt-parchi.js', 'nt-scan.js', 'nt-posui.js', 'urdu-shape.js', 'urdu-names.js', 'zinda.js', 'sql-config.js', 'nt-print-auto.bat', 'manifest.json'
 foreach ($f in $files) {
   try { Invoke-WebRequest ($RAW + $f + '?t=' + [DateTimeOffset]::Now.ToUnixTimeSeconds()) -OutFile (Join-Path $K $f) -UseBasicParsing; Say "  + $f" }
   catch { Say "  ! $f download nahi hua: $($_.Exception.Message)" Red }
