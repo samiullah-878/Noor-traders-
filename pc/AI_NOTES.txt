@@ -4213,3 +4213,6 @@ Alfalah Raast 12:03 Rs 1,380 "SAMI ULLAH T…" (FT2631401XGOWF1Y) app mein ⏳ B
 === 2026-11-09 · 2.209.3 — 🎥 bill-clip v1.4: 401 ki asal wajah dhoondo ===
 Malik: IP 192.168.10.19 = NVR (TCP/IP screen), password sahi — phir bhi Rabta 401. (1) ffmpeg RTSP 'user:pass' ko %-decode NAHI karta (rtsp.c rt->auth seedha) — encodeURIComponent se @ # wala password ghalat bhejta tha → credOf() sirf space / ? # %-encode (in par saaf paigham, AUTHBAD). (2) webCheck(): HTTP digest GET /cgi-bin/magicBox.cgi?action=getDeviceType (Hik /ISAPI/System/deviceInfo) port 80 → TEST.web '🌐 web login ✓ (type)' / '✕ 401 (LOCKED)'; mock digest server se test ✓. App patti: Rabta ✕ (waqt) + web + wajah, .bt-pcline.bad wrap. AI nahi.
 
+=== 2026-11-09 · PC bill-clip v1.5 ===
+13:17 Rabta: 401 khatam, ab "🌐 web timeout" + RTSP "Invalid data found when processing input" (malik ne NVR restart / naya user kiya — NVR uth raha tha). v1.5: cfSig mein cfg.at = har Save naya test; hint Invalid data = NVR restart / RTSP band / port; asal clip ok aate hi TEST ok. AI nahi.
+

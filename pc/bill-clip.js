@@ -1,5 +1,6 @@
 // =========================================================
-//  bill-clip.js  v1.4 (2026-11-09) — v1.4: ffmpeg RTSP user:password ko %-decode NAHI karta — encodeURIComponent se "@" / "#" wala password
+//  bill-clip.js  v1.5 (2026-11-09) — v1.5: har 💾 Save par Rabta test dobara (setting wahi ho tab bhi); 'Invalid data' / web timeout ki saaf wajah; ok clip aate hi purana ✕ test saaf.
+//  v1.4 (2026-11-09) — v1.4: ffmpeg RTSP user:password ko %-decode NAHI karta — encodeURIComponent se "@" / "#" wala password
 //  hamesha 401 deta; ab password jaisa likha (sirf / ? # % space ho to saaf paigham). Rabta test mein 🌐 web login jaanch (HTTP digest magicBox) — RTSP
 //  aur web dono 401 = asal password / lock; web ✓ + RTSP 401 = RTSP ki setting.
 //  v1.3 (2026-11-09) — v1.3: 401 (password) par FORAN ruko — har bill × 2 koshish = Dahua admin LOCK (DMSS bhi band ho jata); setting badle tab hi dobara + pehle
@@ -33,7 +34,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '1.4';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '1.5';
 const MODS = path.join(DIR, 'clip-mods'), TMP = path.join(DIR, 'clip-tmp'), NPM_FILE = path.join(MODS, 'npm-at.json');
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore(), biz = db.collection('businesses').doc(BUSINESS_ID), CLIP = biz.collection('billClip'), TALLY = biz.collection('billTally');
@@ -57,7 +58,7 @@ function cfApply(d) {
 let ON0 = 0;   // v1.2: camera kab ON hua (app `onAt`, purani setting = aakhri save `at`) — us se pehle ke bill nahi; PC restart par bhi wahi
 let AUTHBAD = 0, cfSig = '', TEST = null;   // v1.3: 401 aaya = ruko jab tak user / password / IP / port na badle
 biz.collection('blueAccess').doc('billClip').onSnapshot(s => { const d0 = s.exists ? s.data() : null; cfApply(d0);
-  const sig = [CF.on, CF.kind, CF.ip, CF.port, CF.user, CF.pw, CF.sub].join('|'); if (sig !== cfSig) { const first = !cfSig; cfSig = sig; AUTHBAD = 0; for (const [k, v] of known) if (v.st === 'err') known.set(k, { st: 'err', tries: 0, at: 0 }); if (CF.on && CF.ip) setTimeout(() => rabta().catch(e => log('⚠️ rabta: ' + e.message)), first ? 20000 : 1500); } ON0 = CF.on ? (Number(d0 && (d0.onAt || d0.at)) || Date.now()) : 0; log(`⚙️ setting: ${CF.on ? 'ON' : 'band'} · ${CF.kind} ${CF.ip || '(NVR ka IP nahi)'} · counters ${Object.keys(CF.ch).length} · ${CF.pre}+${CF.post} s`); kick(); }, e => log('⚠️ setting: ' + e.message));
+  const sig = [CF.on, CF.kind, CF.ip, CF.port, CF.user, CF.pw, CF.sub, Number(d0 && d0.at) || 0].join('|');   // v1.5: har Save = naya test if (sig !== cfSig) { const first = !cfSig; cfSig = sig; AUTHBAD = 0; for (const [k, v] of known) if (v.st === 'err') known.set(k, { st: 'err', tries: 0, at: 0 }); if (CF.on && CF.ip) setTimeout(() => rabta().catch(e => log('⚠️ rabta: ' + e.message)), first ? 20000 : 1500); } ON0 = CF.on ? (Number(d0 && (d0.onAt || d0.at)) || Date.now()) : 0; log(`⚙️ setting: ${CF.on ? 'ON' : 'band'} · ${CF.kind} ${CF.ip || '(NVR ka IP nahi)'} · counters ${Object.keys(CF.ch).length} · ${CF.pre}+${CF.post} s`); kick(); }, e => log('⚠️ setting: ' + e.message));
 
 // ---------- haal (app ke liye) ----------
 let ST = { ff: '', err: '', last: '', q: 0 }, T = { day: '', n: 0, ok: 0, err: 0 }, stAt = 0;
@@ -118,6 +119,7 @@ function hint(err) {   // malik ko samajh aane wali wajah
   if (/\b453\b|forbidden|\b403\b/i.test(e)) return 'NVR user ko Playback ki ijazat nahi (NVR → User → Playback ✓)';
   if (/timed? ?out|connection refused|no route|network is unreachable|ehostunreach/i.test(e)) return 'NVR tak rasta nahi (IP / LAN dekhein)';
   if (/ffmpeg nahi/.test(e)) return 'ffmpeg abhi install nahi hua';
+  if (/invalid data found/i.test(e)) return 'NVR ne video nahi di (NVR restart ho raha / RTSP band / port 554 ghalat) — 2 min baad ⚙️ Save';
   return e.slice(0, 140);
 }
 
@@ -228,6 +230,7 @@ async function one(b) {
   for (let i = 0; i < n; i++) await CLIP.doc(id + '_' + i).set({ b: buf.subarray(i * CHUNK, (i + 1) * CHUNK), i, id });   // hisse mein `day` NAHI (safai ki query sirf meta pakre)
   await CLIP.doc(id).set({ ...base, st: 'ok', n, sz: buf.length, dur, ch, sub: CF.sub, err: FieldValue.delete(), raw: FieldValue.delete() }, { merge: true });
   known.set(id, { st: 'ok', tries, at: Date.now() });
+  if (TEST && !TEST.ok) { TEST = { ...TEST, ok: 1, err: '', raw: 'clip ban gayi — rabta theek' }; }   // v1.5: asal clip ban gayi = purana ✕ test bekar
   T.n++; T.ok++; ST.last = `#${b.no} ✓ ${Math.round(buf.length / 1024)} KB · ${dur} s`; log(`🎥 bill #${b.no} (${b.pc} ch ${ch}) ${dur} s → ${Math.round(buf.length / 1024)} KB, ${n} hisse · ${Math.round((Date.now() - tA) / 1000)} s`);
 }
 
