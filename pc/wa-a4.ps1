@@ -1,5 +1,7 @@
 # =========================================================
-#  wa-a4.ps1  v1.2 (2026-11-04) - wa-parchi.js ka A4 PACKING page (System.Drawing) + chhoti tasveer (thumb)
+#  wa-a4.ps1  v1.3 (2026-11-09) - wa-parchi.js ka A4 PACKING page (System.Drawing) + chhoti tasveer (thumb)
+#    v1.3: -Mode bill -Spec <json> -Out <prefix> -> gahak ka BILL (POS ki asal list) <prefix>-1.jpg ... (har safha ek line "OK <path>")
+#          900 chaura, navy patti, # | Item | Tadad | Rate | Raqam, aakhri safhe par Kul. Spec: {W,q,fonts.la,title,sub,cnt,tot,farq,thanks,pages:[{rows:[{no,n,q,r,a}]}]}
 #    v1.1: -Mode thlist -Spec <json> -Out <bin>  -> thermal (512 dots) 'parchi jaisi likhi': har line ke SHURU mein khaali dabba (tick ke liye),
 #          Urdu = daayein dabba + Urdu font, English = baayein dabba. Ek BMP (24 bit) <bin> mein; 1-bit raster node banata hai. "OK <path>".
 #    v1.2: "OK <path> H:<h1>,<h2>,..." - har line ki unchai (node line-war kaat kar beech mein likhai ke tukde rakhta hai).
@@ -84,6 +86,84 @@ try {
     $bmp.Save($Out, [System.Drawing.Imaging.ImageFormat]::Bmp); $bmp.Dispose()
     $hs = @(); foreach ($r in $rows) { $hs += [string]([int]$r.h) }
     Write-Output ('OK ' + $Out + ' H:' + ($hs -join ',')); exit 0
+  }
+
+  # ---------------- v1.3: gahak ka BILL ki saaf tasveer (malik: "poori list ki photo, Mubeen ki photo ke reply mein") ----------------
+  if ($Mode -eq 'bill') {
+    $o = Get-Content -Raw -Encoding UTF8 -LiteralPath $Spec | ConvertFrom-Json
+    $W = [int]$o.W; if ($W -lt 600) { $W = 900 }
+    $quality = [int]$o.q; if ($quality -lt 30 -or $quality -gt 95) { $quality = 82 }
+    $la = Pick-Font ([string]$o.fonts.la) 'Arial'
+    $PX = [System.Drawing.GraphicsUnit]::Pixel; $BO = [System.Drawing.FontStyle]::Bold; $RG = [System.Drawing.FontStyle]::Regular
+    $fT = New-Object System.Drawing.Font($la, [float]40, $BO, $PX); $fS = New-Object System.Drawing.Font($la, [float]22, $RG, $PX)
+    $fH = New-Object System.Drawing.Font($la, [float]20, $BO, $PX); $fR = New-Object System.Drawing.Font($la, [float]23, $RG, $PX)
+    $fRB = New-Object System.Drawing.Font($la, [float]23, $BO, $PX); $fK = New-Object System.Drawing.Font($la, [float]34, $BO, $PX)
+    $fN = New-Object System.Drawing.Font($la, [float]20, $RG, $PX)
+    $navy = [System.Drawing.Color]::FromArgb(34, 59, 109)
+    $bNavy = New-Object System.Drawing.SolidBrush($navy); $bBlack = [System.Drawing.Brushes]::Black; $bWhite = [System.Drawing.Brushes]::White
+    $bSub = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(206, 218, 240))
+    $bGrey = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(100, 106, 118))
+    $bZebra = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(243, 246, 251))
+    $bHd = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(222, 231, 247))
+    $sfL = New-Object System.Drawing.StringFormat; $sfL.LineAlignment = [System.Drawing.StringAlignment]::Center
+    $sfL.Trimming = [System.Drawing.StringTrimming]::EllipsisCharacter; $sfL.FormatFlags = [System.Drawing.StringFormatFlags]::NoWrap
+    $sfR = New-Object System.Drawing.StringFormat; $sfR.Alignment = [System.Drawing.StringAlignment]::Far; $sfR.LineAlignment = [System.Drawing.StringAlignment]::Center
+    $sfR.FormatFlags = [System.Drawing.StringFormatFlags]::NoWrap
+    $sfC = New-Object System.Drawing.StringFormat; $sfC.Alignment = [System.Drawing.StringAlignment]::Center; $sfC.LineAlignment = [System.Drawing.StringAlignment]::Center
+    function Rc([double]$x, [double]$y, [double]$w, [double]$h) { return (New-Object System.Drawing.RectangleF([float]$x, [float]$y, [float]$w, [float]$h)) }
+    $M = 28; $HB = 108; $TH = 40; $RH = 36; $KB = 72; $NB = 46
+    $wNo = 46; $wA = 140; $wR = 112; $wQ = 92
+    $xA = $W - $M - $wA; $xR = $xA - $wR; $xQ = $xR - $wQ; $xN = $M + $wNo + 6; $wN = $xQ - $xN - 10
+    $pages = @($o.pages); $np = $pages.Count
+    if ($np -eq 0) { Write-Output 'ERR:khali'; exit 1 }
+    $farq = [string]$o.farq
+    for ($pg = 0; $pg -lt $np; $pg++) {
+      $rows = @($pages[$pg].rows); $last = ($pg -eq ($np - 1))
+      $FH = $NB; if ($last) { $FH = $KB + $NB; if ($farq) { $FH += 34 } }
+      $H = $HB + 18 + $TH + $rows.Count * $RH + 12 + $FH
+      $bmp = New-Object System.Drawing.Bitmap($W, $H, [System.Drawing.Imaging.PixelFormat]::Format24bppRgb)
+      $g = [System.Drawing.Graphics]::FromImage($bmp)
+      $g.Clear([System.Drawing.Color]::White)
+      $g.TextRenderingHint = [System.Drawing.Text.TextRenderingHint]::AntiAliasGridFit
+      $g.FillRectangle($bNavy, 0, 0, $W, $HB)
+      $g.DrawString([string]$o.title, $fT, $bWhite, [float]$M, [float]12)
+      $sub = [string]$o.sub; if ($np -gt 1) { $sub = $sub + '   |   Safha ' + ($pg + 1) + '/' + $np }
+      $g.DrawString($sub, $fS, $bSub, [float]($M + 2), [float]66)
+      $y = $HB + 18
+      $g.FillRectangle($bHd, $M, $y, ($W - 2 * $M), $TH)
+      $g.DrawString('#', $fH, $bNavy, (Rc $M $y $wNo $TH), $sfC)
+      $g.DrawString('Item', $fH, $bNavy, (Rc $xN $y $wN $TH), $sfL)
+      $g.DrawString('Tadad', $fH, $bNavy, (Rc $xQ $y ($wQ - 6) $TH), $sfR)
+      $g.DrawString('Rate', $fH, $bNavy, (Rc $xR $y ($wR - 6) $TH), $sfR)
+      $g.DrawString('Raqam', $fH, $bNavy, (Rc $xA $y ($wA - 10) $TH), $sfR)
+      $y += $TH
+      $i = 0
+      foreach ($l in $rows) {
+        if ($i % 2 -eq 1) { $g.FillRectangle($bZebra, $M, $y, ($W - 2 * $M), $RH) }
+        $g.DrawString([string]$l.no, $fN, $bGrey, (Rc $M $y $wNo $RH), $sfC)
+        $g.DrawString([string]$l.n, $fR, $bBlack, (Rc $xN $y $wN $RH), $sfL)
+        $g.DrawString([string]$l.q, $fRB, $bBlack, (Rc $xQ $y ($wQ - 6) $RH), $sfR)
+        $g.DrawString([string]$l.r, $fR, $bBlack, (Rc $xR $y ($wR - 6) $RH), $sfR)
+        $g.DrawString([string]$l.a, $fRB, $bBlack, (Rc $xA $y ($wA - 10) $RH), $sfR)
+        $y += $RH; $i++
+      }
+      $y += 12
+      if ($last) {
+        if ($farq) { $g.DrawString($farq, $fN, $bGrey, (Rc $M $y ($W - 2 * $M - 10) 34), $sfR); $y += 34 }
+        $g.FillRectangle($bNavy, $M, $y, ($W - 2 * $M), $KB)
+        $g.DrawString([string]$o.cnt, $fS, $bSub, (Rc ($M + 18) $y 300 $KB), $sfL)
+        $g.DrawString([string]$o.tot, $fK, $bWhite, (Rc $M $y ($W - 2 * $M - 18) $KB), $sfR)
+        $y += $KB
+        $g.DrawString([string]$o.thanks, $fN, $bGrey, (Rc 0 $y $W $NB), $sfC)
+      } else {
+        $g.DrawString('Baqi items agli tasveer mein  >>', $fN, $bGrey, (Rc 0 $y $W $NB), $sfC)
+      }
+      $g.Dispose()
+      $f = $Out + '-' + ($pg + 1) + '.jpg'
+      Save-Jpeg $bmp $f $quality; $bmp.Dispose()
+      Write-Output ('OK ' + $f)
+    }
+    exit 0
   }
 
   # ---------------- A4 packing page ----------------

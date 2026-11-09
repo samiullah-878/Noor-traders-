@@ -4250,3 +4250,9 @@ Malik ka OK 17:48. pc-vault.js (service, server only — local-config mein SQL h
 === 2026-11-09 18:08 · faisla: naya server = wahi naam DESKTOP-Q1SLV77 ===
 Malik: "aisa hi kar lenge, phir kuch bhi chherne ki zaroorat nahi". Hamara system PC ka naam khud nahi badalta. Purana PC chale to pehle naam badlo + KHATA-DOCTOR band. SQL localhost / pcNames auto NAHI banaya (zaroorat nahi). Code tabdeeli nahi.
 
+=== 2026-11-09 · PC wa-parchi v2.15 + wa-out v1.4 + wa-a4.ps1 v1.3 (🧾 gahak ke bill ki POORI list — tasveer, Mubeen ki photo ke reply mein) ===
+Ghalti (malik 19:21, Bill #00135211): WhatsApp par "… aur 31 items · Kul: Rs 14,859" — asal ~31,000. Wajah: billList sirf pehle 40 lines ka jor (tot += sirf slice(0,40) ke andar) + 40 ki hadd.
+Malik ka OK 19:28 ("Mubeen ki photo ke reply mein jana chahiye, jaise pehle"): Mubeen ki photo pehle jaisi (caption: Bill # · N items · Kul) — Kul = POS ka asal posSales/<din>.bills[].t (TotalSale), na mile = lines ka jor;
+farq ho to tasveer par "Items ka jor: Rs X". Phir waOut `<bk>-l<n>` {rq: bk, at: +k} = poori list ki saaf tasveer(ein) wa-a4.ps1 -Mode bill (900 chaura, navy, # | Item | Tadad | Rate | Raqam,
+35 tak fi tasveer barabar baant — 71 = 24·24·23). Tasveer na bane (PowerShell ghalti) = poori list TEXT reply mein (billText). wa-out v1.4: `rq` = sentM (yaad) ya asal doc `wid` se quote; asal na gaya = bina quote.
+Helpers function declarations (TDZ se bachne ko — start() ke andar const baad mein aata). Test: pwsh ParseFile OK + JSON pages/rows; layout PIL namoona. AI: sirf bill number (pehle jaisa). PC 3-5 min.

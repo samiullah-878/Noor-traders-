@@ -1,5 +1,8 @@
 // =========================================================
-//  wa-parchi.js  v2.14 (2026-11-08) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  wa-parchi.js  v2.15 (2026-11-09) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v2.15: 🧾 malik (Bill #00135211: "kul 31,000 thi, likha 14,859 · items full nahi"): pehle sirf pehle 40 items ka jor + "… aur 31 items". Ab Mubeen ki photo
+//        pehle jaisi (caption: Bill # · N items · Kul = POS ka asal TotalSale), phir USI photo ke REPLY mein poori list ki saaf tasveer(ein) —
+//        wa-a4.ps1 -Mode bill, 35-35 items fi tasveer (waOut `<bk>-l<n>`, `rq` = wa-out quote). Tasveer na bane = poori list text reply mein. AI sirf bill number.
 //  v2.14: ▶️ malik: "Mubeen start likhe to customer ko 'aap ka saman start ho gaya hai', mujhe 'Mubeen ne saman start kar diya hai'" → trReply start:
 //        gahak `cs-<grp>` naya text + malik `sk-<id>` (ek dafa, t.sk) — dono naye number se (wa-out). Baqi wahi.
 //  v2.5: 🖨 malik: "mera bhi same Mubeen wala kar do" — malik ke APNE WhatsApp par bhi: gahak ki tasveer + caption "print" (ijazat list wale = purana
@@ -82,7 +85,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.14';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.15';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1775,9 +1778,18 @@ async function start(ZINDA) {
       let jpg = isJpeg(buf) && buf.length <= 850000 ? buf : null; const S2 = sharp();
       if (!jpg && S2) for (const [w, q] of [[1600, 78], [1280, 72], [1000, 65]]) { try { const b = await S2(buf).rotate().resize({ width: w, height: w, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: q }).toBuffer(); if (b.length <= 850000) { jpg = b; break; } } catch {} }
       if (!jpg) throw Error('tasveer bari / badal nahi saki');
-      let list = ''; try { const bl = await billList(jpg); if (bl) { list = bl.txt; t.bn = bl.no; } } catch (e) { log('🧾 bill list: ' + (e.message || e)); }   // 🤖 AI sirf bill number — list POS se
-      const nb = t.bills.length, ok = await waOutPut(bk, { to: t.from, nm: t.nm || '', kind: 'bill', eid: bk, txt: `*NOOR TRADERS*\nAap ka bill tayyar hai 🧾${nb > 1 ? ' (' + nb + ')' : ''}${list ? ' (Bill #' + t.bn + ')\n' + list : ' (parchi ' + tstr(t.fwdAt) + ')'}\nBohat shukria 🙏`, im: jpg });
+      let bl = null; try { bl = await billList(jpg); if (bl) t.bn = bl.no; } catch (e) { log('🧾 bill list: ' + (e.message || e)); }   // 🤖 AI sirf bill number — list + Kul POS se
+      const has = !!(bl && bl.L && bl.L.length), nb = t.bills.length;
+      const head = has ? ` (Bill #${t.bn})\n${bl.L.length} items · *Kul: Rs ${nf0(bl.tot)}*\n👇 Poori list neeche` : ' (parchi ' + tstr(t.fwdAt) + ')';
+      const ok = await waOutPut(bk, { to: t.from, nm: t.nm || '', kind: 'bill', eid: bk, txt: `*NOOR TRADERS*\nAap ka bill tayyar hai 🧾${nb > 1 ? ' (' + nb + ')' : ''}${head}\nBohat shukria 🙏`, im: jpg });
       if (ok) { t.sent = Date.now(); t.err = ''; log(`📤 parchi ${qid.slice(-6)} ka bill${nb > 1 ? ' #' + nb : ''} gahak ${phPretty(t.from)} ko queue (${Math.round(jpg.length / 1024)} KB)`); }
+      if (ok && has) {   // v2.15: poori list Mubeen ki photo ke REPLY mein (wa-out rq)
+        let imgs = []; try { imgs = await billImgs(bl); } catch (e) { log('🧾 bill tasveer: ' + (e.message || e)); }
+        const base = Date.now();
+        if (imgs.length) for (let k = 0; k < imgs.length; k++) await waOutPut(bk + '-l' + (k + 1), { to: t.from, nm: t.nm || '', kind: 'blist', eid: bk + '-l' + (k + 1), rq: bk, at: base + k + 1, txt: imgs.length > 1 ? `🧾 Bill #${t.bn} · ${k + 1}/${imgs.length}` : `🧾 Bill #${t.bn}`, im: imgs[k] });
+        else await waOutPut(bk + '-l1', { to: t.from, nm: t.nm || '', kind: 'blist', eid: bk + '-l1', rq: bk, at: base + 1, txt: billText(bl) });
+        log(`🧾 bill #${t.bn}: ${bl.L.length} items · Kul ${nf0(bl.tot)} · list ${imgs.length ? imgs.length + ' tasveer' : 'text'} reply mein`);
+      }
     } catch (e) { t.err = 'gahak ko nahi gaya: ' + String(e.message || e).slice(0, 80); log('✕ bill gahak ko: ' + e.message); }
     finally { trBusy.delete(bk); }
     trSave(); trPush(); return true;
@@ -1795,16 +1807,44 @@ async function start(ZINDA) {
       const o = JSON.parse(raw.replace(/^```json|```$/g, '').trim()); return String(o.no || '').replace(/\D/g, '');
     } finally { clearTimeout(tm); }
   }
+  // v2.15: POS ki POORI list (posSaleLines, 150 tak) + Kul = POS ka asal bill total (posSales bills[].t = TotalSale) — items ka jor sirf jab t na mile
   async function billList(jpg) {
     const no = await aiBillNo(jpg); if (!no) return null;
     const days = [dayOf(Date.now()), dayOf(Date.now() - DAY)]; let found = [];
-    for (const dy of days) { const q = await biz.collection('posSaleLines').where('day', '==', dy).get().catch(() => null); if (q) found = found.concat(q.docs.map(x => x.data()).filter(d => String(d.no || '').replace(/\D/g, '') === no)); if (found.length) break; }   // aaj / kal ke bills — number ka milan digits se (S-123 jaisa prefix bhi)
-    if (!found.length) { log(`🧾 bill #${no} POS lines (aaj / kal) mein nahi mila`); return { no, txt: '' }; }
+    for (const dy of days) { const q = await biz.collection('posSaleLines').where('day', '==', dy).get().catch(() => null); if (q) found = found.concat(q.docs.map(x => ({ id: x.id, ...x.data() })).filter(d => String(d.no || '').replace(/\D/g, '') === no)); if (found.length) break; }   // aaj / kal ke bills — number ka milan digits se (S-123 jaisa prefix bhi)
+    if (!found.length) { log(`🧾 bill #${no} POS lines (aaj / kal) mein nahi mila`); return { no, L: [] }; }
     const d = found.sort((a, b) => (Number(b.at) || 0) - (Number(a.at) || 0))[0], L = Array.isArray(d.lines) ? d.lines : [];
-    const n = v => Number(v || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
-    let tot = 0; const rows = L.slice(0, 40).map(l => { const amt = (Number(l.q) || 0) * (Number(l.r) || 0); tot += amt; return `${String(l.n || '').slice(0, 28)} × ${r3(l.q)} · Rs ${n(amt)}`; });
-    if (L.length > 40) rows.push(`… aur ${L.length - 40} items`);
-    return { no, txt: rows.join('\n') + `\n*Kul: Rs ${n(tot)}*` };
+    let sum = 0; for (const l of L) sum += (Number(l.q) || 0) * (Number(l.r) || 0);
+    let tot = 0;
+    try { const ps0 = await biz.collection('posSales').doc(String(d.day)).get(); const b = ((ps0.exists && ps0.data().bills) || []).find(x => String(x.id) === String(d.id)); if (b && Number(b.t) > 0) tot = Number(b.t); } catch (e) { log('🧾 bill total: ' + e.message); }
+    return { no, id: d.id, day: String(d.day || ''), L, tot: tot || sum, sum, posT: tot > 0 };
+  }
+  function nf0(v) { return Math.round(Number(v) || 0).toLocaleString('en-US'); }
+  function nf2(v) { return (Number(v) || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+  function dayPretty(d) { const M = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})$/); return m ? `${m[3]}-${M[Number(m[2]) - 1] || m[2]}-${m[1]}` : String(d || ''); }
+  function lineAmt(l) { return (Number(l.q) || 0) * (Number(l.r) || 0); }
+  function billText(bl) {   // tasveer na bane to: poori list text (WhatsApp text 65k tak)
+    const rows = bl.L.map((l, k) => `${k + 1}. ${String(l.n || '').slice(0, 40)} × ${r3(l.q)} · Rs ${nf0(lineAmt(l))}`);
+    const farq = bl.posT && Math.abs(bl.sum - bl.tot) > 1 ? `\nItems ka jor: Rs ${nf0(bl.sum)}` : '';
+    return `🧾 *Bill #${bl.no}* · ${bl.L.length} items\n` + rows.join('\n') + farq + `\n*Kul: Rs ${nf0(bl.tot)}*`;
+  }
+  async function billImgs(bl) {   // wa-a4.ps1 -Mode bill → 35-35 items ki saaf tasveerein (JPEG Buffer[]) · [] = nahi bani (text chalega)
+    if (process.platform !== 'win32' || !fs.existsSync(PS1) || !bl.L.length) return [];
+    const base = path.join(TMP, 'bill-' + bl.no + '-' + Date.now()), specF = base + '.json', files = [specF], PER = Math.ceil(bl.L.length / Math.ceil(bl.L.length / 35)), pages = [];   // 35 tak fi tasveer, barabar baant (71 = 24 · 24 · 23)
+    for (let i = 0; i < bl.L.length; i += PER) pages.push({ rows: bl.L.slice(i, i + PER).map((l, k) => ({ no: String(i + k + 1), n: String(l.n || '').slice(0, 60), q: String(r3(l.q)), r: nf2(l.r), a: nf0(lineAmt(l)) })) });
+    const farq = bl.posT && Math.abs(bl.sum - bl.tot) > 1 ? `Items ka jor: Rs ${nf0(bl.sum)}` : '';
+    try {
+      for (const q of [84, 70, 56]) {
+        fs.writeFileSync(specF, JSON.stringify({ W: 900, q, fonts: { la: 'Segoe UI,Arial,Tahoma' }, title: 'NOOR TRADERS', sub: `Bill # ${bl.no}   |   ${dayPretty(bl.day)}`, cnt: `${bl.L.length} items`, tot: `Kul:  Rs ${nf0(bl.tot)}`, farq, thanks: 'Bohat shukria  -  Noor Traders', pages }), 'utf8');
+        const r = await ps(['-Mode', 'bill', '-Spec', specF, '-Out', base], 60000);
+        const outs = r.out.split(/\r?\n/).filter(x => x.startsWith('OK ')).map(x => x.slice(3).trim()).filter(f => fs.existsSync(f));
+        outs.forEach(f => files.push(f));
+        if (outs.length !== pages.length) throw Error((r.out.replace(/^ERR:?/, '') || r.err || 'bill tasveer nahi bani').slice(0, 160));
+        const bufs = outs.map(f => fs.readFileSync(f));
+        if (bufs.every(b => b.length <= 850000)) return bufs;
+      }
+      return [];
+    } finally { for (const f of files) { try { fs.unlinkSync(f); } catch {} } }
   }
   async function trackMsg(m, s, link) {   // har paigham (dono links) — kabhi throw nahi, purana kaam nahi rokta
     try {

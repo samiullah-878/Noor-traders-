@@ -6,6 +6,8 @@
 //  wa-parchi.js lagati hai; yeh script khud install NAHI karti). Asal dukan number (parchi parhne wala) is se alag rehta hai — ban ka
 //  khatra asal number par nahi.
 //  v1.1 (8 Nov): heartbeat juda na ho tab bhi (app ko zinda / band ka pata), hukum ka log.
+//  v1.4 (9 Nov): job mein `rq` = pehle bheje job ka id → yeh paigham USI ke REPLY (quote) mein (malik: "poori list Mubeen ki photo ke reply mein").
+//        Bheja hua paigham yaad (sentM, 200) — restart ke baad asal doc ka `wid` se quote; asal bheja hi na gaya = bina quote.
 //  Kaam: pos-khata-sync.js har NAYI khata entry (jis gahak ke khate par 📲 tick + mobile) par waOut/<entryId> {st:'new'} likhti hai →
 //  yeh script text paigham bhejti hai (har paigham ke beech GAP sec, din mein LIM se zyada nahi), st 'sent' / 'err' / 'skip' + wajah.
 //  Aane wale paigham KABHI nahi parhti (sirf bhejna). Group / broadcast kabhi nahi. Number WhatsApp par na ho = skip (koshish nahi).
@@ -19,7 +21,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.3';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.4';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -135,6 +137,7 @@ async function main() {
     const snap = logL.slice(); lgw = lgw.then(() => LOGD.set({ L: snap, at: Date.now() })).catch(e => log('⚠️ waOutLog: ' + e.message));
   }
   const pend = new Map(); let busy = false, busyAt = 0, lastSent = 0;
+  const sentM = new Map();   // v1.4: jobId → bheja hua WAMessage (rq wale reply ke liye)
   Q.where('st', '==', 'new').onSnapshot(s => { for (const ch of s.docChanges()) { if (ch.type === 'removed') pend.delete(ch.doc.id); else pend.set(ch.doc.id, ch.doc.data() || {}); } kick(); }, e => log('⚠️ waOut: ' + e.message));
   function kick() { if (!busy) work().catch(e => { busy = false; log('⚠️ bhejna: ' + e.message); }); }
   async function work() {
@@ -160,8 +163,14 @@ async function main() {
           const jid = (chk[0] && chk[0].jid) || jidOf(to);
           const im = d.im && (Buffer.isBuffer(d.im) ? d.im : d.im.toUint8Array ? Buffer.from(d.im.toUint8Array()) : null);   // v1.0: bill ki tasveer (Bytes) ho to tasveer + caption
           const au = d.au && (Buffer.isBuffer(d.au) ? d.au : d.au.toUint8Array ? Buffer.from(d.au.toUint8Array()) : null);   // 🔊 awaz (mp3) — Urdu TTS
-          const r = await within(sock.sendMessage(jid, im && im.length ? { image: im, caption: txt, mimetype: 'image/jpeg' } : au && au.length ? { audio: au, mimetype: 'audio/mpeg', ptt: false } : { text: txt }), 60000, 'bhejna');
+          let quoted = null;
+          if (d.rq) {   // v1.4: reply mein — pehle yaad se, warna asal doc ka wid
+            quoted = sentM.get(String(d.rq)) || null;
+            if (!quoted) { try { const ps0 = await within(Q.doc(String(d.rq)).get(), 10000, 'reply ka asal'); const pd = ps0.exists ? ps0.data() : null; if (pd && pd.st === 'sent' && pd.wid) quoted = { key: { remoteJid: jid, fromMe: true, id: String(pd.wid) }, message: { conversation: String(pd.txt || '').slice(0, 300) } }; } catch {} }
+          }
+          const r = await within(sock.sendMessage(jid, im && im.length ? { image: im, caption: txt, mimetype: 'image/jpeg' } : au && au.length ? { audio: au, mimetype: 'audio/mpeg', ptt: false } : { text: txt }, quoted ? { quoted } : {}), 60000, 'bhejna');
           lastSent = Date.now(); L.n++;
+          if (r && r.key) { sentM.set(id, r); if (sentM.size > 200) sentM.delete(sentM.keys().next().value); }
           await done('sent', '', { wid: String((r && r.key && r.key.id) || '') });
           await addLog({ at: Date.now(), to, nm, code: String(d.code || ''), st: 'sent' });
           setLink({ n: L.n, day, last: { at: Date.now(), to: phPretty(to), nm }, err: '' });
