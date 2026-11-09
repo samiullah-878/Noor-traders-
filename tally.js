@@ -5,6 +5,9 @@
 //       clip, hisse <SaleID>_<i>) → yahan ek waqt mein EK bill: upar video (khud chalti, 1.5×, loop), neeche items bari likhai, sirf do button
 //       ✓ THEEK · ✕ KAM (✕ par items tap = kaun si nahi thi) → billTally/<SaleID>. Dabate hi agla bill. Agli clip pehle se load (jaldi).
 // v2.204.1: bill ka waqt = banane / print ka (`ct`, PC pos-sales-dekho v2.4) — clip bhi usi se (malik: "posting se nahi, bill banane ke waqt se").
+// v2.210.0 (9 Nov, malik: "print se 5 min pehle · un-posted ki clip jab hum order karein · Netflix jaisi speed"): PC bill-clip v2.0 apni local recording se
+//   5 min ki clip 60-60 s ke HISSON mein (meta.segs, billClip/<id>_s<i>_<j>) — yahan pehla hissa aate hi chalta hai, baqi peeche load, khatam par agla khud,
+//   neeche minute ke chips (1 2 3 4 5 ▶) — aakhri minute = print ka waqt. ⋮ 🔵 Un-posted: aaj ke un-posted bill → 🎥 Mangwao (billClipReq) → clip aate hi tally mein.
 // Malik: ⋮ ⚙️ setup (NVR + counter ↔ camera channel), 📊 aaj ka hisaab. Larka: 📊 mera aaj, ↩ pichla, 💰 bare pehle. AI NAHI.
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -14,7 +17,7 @@ const dayKey = off => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Karachi
 const ago = t => { const m = Math.round((Date.now() - Number(t)) / 60000); return m < 1 ? 'abhi' : m < 60 ? m + ' min' : Math.round(m / 60) + ' ghante'; };
 
 let cloud = null, notice = () => {}, isOwner = () => false, byName = () => '', uidOf = () => '';
-let offs = [], mounted = false, bills = new Map(), clips = new Map(), tallies = new Map(), lines = new Map(), urls = new Map(), pcSt = null;
+let offs = [], mounted = false, bills = new Map(), clips = new Map(), tallies = new Map(), lines = new Map(), urls = new Map(), pcSt = null, reqs = new Map(), segIdx = 0, segBusy = '';
 let cur = '', mode = 'view', sel = new Set(), lastDone = '', reopen = '', order = 'new', speed = 1.5, loading = '', paintT = null;
 try { order = localStorage.getItem('sam-bt-order') || 'new'; speed = Number(localStorage.getItem('sam-bt-speed')) || 1.5; } catch {}
 
@@ -28,6 +31,7 @@ export function renderTally(host) {
         <span class="bt-chips" data-mn-box>
           <button type="button" data-bt-order="1" data-mn="bt.order" data-mn-i="💰" data-mn-t="Bare bill pehle" data-mn-s="warna naya pehle" data-mn-g="👀 Bill tally">💰 Bare pehle</button>
           <button type="button" data-bt-undo="1" data-mn="bt.undo" data-mn-i="↩" data-mn-t="Pichla wapas" data-mn-s="aakhri tally dobara" data-mn-g="👀 Bill tally">↩ Pichla</button>
+          <button type="button" data-bt-unp="1" data-mn="bt.unp" data-mn-i="🔵" data-mn-t="Un-posted bills" data-mn-s="clip mangwao (hukum par)" data-mn-g="👀 Bill tally">🔵 Un-posted</button>
           <button type="button" data-bt-sum="1" data-mn="bt.sum" data-mn-i="📊" data-mn-t="Aaj ka hisaab" data-mn-s="kitne ✓ / ✕" data-mn-g="👀 Bill tally">📊 Aaj</button>
           <button type="button" data-bt-setup="1" data-mn="bt.setup" data-mn-i="⚙️" data-mn-t="Camera setup" data-mn-s="NVR + counter ka channel (malik)" data-mn-g="👀 Bill tally" hidden>⚙️ Setup</button>
           <button type="button" data-bt-live="1" data-mn="bt.live" data-mn-i="📺" data-mn-t="Counter Nazar" data-mn-s="purani live screen" data-mn-g="👀 Bill tally">📺 Counter Nazar</button>
@@ -50,11 +54,12 @@ function watch() {
   offs.push(cloud.listenBillClips(days, (l, e) => { if (!l) { if (e) $('btPc') && ($('btPc').textContent = '⚠ ' + (e.message || 'clip nahi parh sake')); return; } clips = new Map(l.map(c => [String(c.id), c])); schedule(); }));
   offs.push(cloud.listenBillTally(days, l => { if (!l) return; tallies = new Map(l.map(t => [String(t.id), t])); schedule(); }));
   offs.push(cloud.listenBillClipPc(s => { pcSt = s; paintPc(); }));
+  offs.push(cloud.listenBillClipReq(dayKey(0), l => { if (!l) return; reqs = new Map(l.map(r => [String(r.id), r])); schedule(); if ($('btDlg')?.open && $('btDlg').dataset.unp) openUnposted(); }));
 }
 function schedule() { if (paintT) return; paintT = setTimeout(() => { paintT = null; paint(); }, 120); }
 function queue() {
   const out = [];
-  for (const [id, b] of bills) { if (b.x || Number(b.ps) !== 2 || (tallies.has(id) && id !== reopen)) continue; const c = clips.get(id); if (!c || c.st !== 'ok') continue; out.push(b); }
+  for (const [id, b] of bills) { if (b.x || (tallies.has(id) && id !== reopen)) continue; const c = clips.get(id); if (!c || c.st !== 'ok') continue; if (Number(b.ps) !== 2 && !c.rq) continue; out.push(b); }   // v2.210.0: un-posted sirf jab clip mangwai (rq)
   out.sort((a, b) => order === 'big' ? (Number(b.t) - Number(a.t)) || (Number(b.pt) - Number(a.pt)) : Number(b.pt) - Number(a.pt));
   return out;
 }
@@ -69,14 +74,34 @@ async function linesOf(id) {
   if (lines.has(id)) return lines.get(id);
   try { const l = await cloud.getPosSaleLines(id); lines.set(id, l || []); return l || []; } catch { return null; }
 }
-async function clipUrl(id) {
-  if (urls.has(id)) return urls.get(id);
+const segsOf = c => (c && Array.isArray(c.segs) && c.segs.length) ? c.segs : null;
+async function segUrl(id, i) {   // v2.210.0: hissa i (v1 clip = ek hi hissa, key id#0)
+  const key = id + '#' + i; if (urls.has(key)) return urls.get(key);
   const c = clips.get(id); if (!c || c.st !== 'ok') return '';
-  const u8 = await cloud.getBillClip(id, c.n);
+  const sg = segsOf(c); const u8 = sg ? await cloud.getBillClipSeg(id, i, sg[i]?.n) : (i ? null : await cloud.getBillClip(id, c.n));
   if (!u8 || !u8.length) return '';
   const u = URL.createObjectURL(new Blob([u8], { type: 'video/mp4' }));
-  urls.set(id, u); if (urls.size > 6) { const k = urls.keys().next().value; if (k !== cur) { try { URL.revokeObjectURL(urls.get(k)); } catch {} urls.delete(k); } }
+  urls.set(key, u); if (urls.size > 24) { const k = urls.keys().next().value; if (!k.startsWith(cur + '#')) { try { URL.revokeObjectURL(urls.get(k)); } catch {} urls.delete(k); } }
+  if (id === cur) paintSegs();
   return u;
+}
+const clipUrl = id => segUrl(id, 0);
+async function loadRest(id) {   // baqi hisse peeche ek ek (Netflix jaisa) — sirf jab tak yehi bill khula hai
+  if (segBusy === id) return; segBusy = id;
+  try { const sg = segsOf(clips.get(id)); for (let i = 1; sg && i < sg.length; i++) { if (cur !== id) break; await segUrl(id, i); } } catch {} finally { if (segBusy === id) segBusy = ''; }
+}
+function paintSegs() {
+  const el = $('btSegs'); if (!el) return;
+  const sg = segsOf(clips.get(cur)); if (!sg || sg.length < 2) { el.innerHTML = ''; return; }
+  el.innerHTML = sg.map((x, i) => `<button type="button" data-bt-seg="${i}" class="${i === segIdx ? 'on' : ''}${urls.has(cur + '#' + i) ? '' : ' dim'}" title="minute ${i + 1}">${i === sg.length - 1 ? '▶' + (i + 1) : i + 1}</button>`).join('');
+}
+async function playSeg(i, keepTime) {
+  const id = cur, sg = segsOf(clips.get(id)); if (!sg) return; i = Math.max(0, Math.min(sg.length - 1, i)); segIdx = i; paintSegs();
+  const v = $('btVid'), ld = $('btVload'); if (!v) return;
+  if (!urls.has(id + '#' + i) && ld) { ld.hidden = false; ld.textContent = '⏳ minute ' + (i + 1) + '…'; }
+  const u = await segUrl(id, i).catch(() => ''); if (cur !== id || segIdx !== i) return;
+  if (!u) { if (ld) ld.textContent = '✕ hissa ' + (i + 1) + ' nahi mila'; return; }
+  if (ld) ld.hidden = true; v.src = u; v.playbackRate = speed; if (keepTime) v.currentTime = keepTime; v.play().catch(() => {});
 }
 
 // ---------- paint ----------
@@ -108,14 +133,15 @@ function paint() {
   const b = bills.get(cur), cl = clips.get(cur) || {}, t = tallies.get(cur);
   if (!main.querySelector(`[data-bt-bill="${cur}"]`)) {
     main.innerHTML = `<div class="bt-card" data-bt-bill="${esc(cur)}">
-      <div class="bt-vwrap"><video id="btVid" playsinline muted autoplay loop preload="auto"></video>
+      <div class="bt-vwrap"><video id="btVid" playsinline muted autoplay${segsOf(cl) ? '' : ' loop'} preload="auto"></video>
         <div class="bt-vtop"><b>#${esc(b.no)}</b> · ${tm(b.ct || b.pt)}${b.ct ? '' : ' (post)'} · ${esc(b.pc || '?')}${b.by ? ' · 👦 ' + esc(b.by) : ''} · Rs ${num(b.t)}${b.p ? ' · ' + esc(b.p) : ''}</div>
         <div class="bt-vload" id="btVload">⏳ video…</div>
-        <div class="bt-vchips"><button type="button" data-bt-sp="1"${speed === 1 ? ' class="on"' : ''}>1×</button><button type="button" data-bt-sp="1.5"${speed === 1.5 ? ' class="on"' : ''}>1.5×</button><button type="button" data-bt-sp="2"${speed === 2 ? ' class="on"' : ''}>2×</button><button type="button" data-bt-back10="1">↺ 10s</button><button type="button" data-bt-full="1">⛶</button><span class="bt-dur">${cl.dur ? cl.dur + ' s' : ''}</span></div>
+        <div class="bt-vchips"><button type="button" data-bt-sp="1"${speed === 1 ? ' class="on"' : ''}>1×</button><button type="button" data-bt-sp="1.5"${speed === 1.5 ? ' class="on"' : ''}>1.5×</button><button type="button" data-bt-sp="2"${speed === 2 ? ' class="on"' : ''}>2×</button><button type="button" data-bt-back10="1">↺ 10s</button><button type="button" data-bt-full="1">⛶</button><span class="bt-segs" id="btSegs"></span><span class="bt-dur">${cl.dur ? (cl.dur >= 120 ? Math.round(cl.dur / 60) + ' min' : cl.dur + ' s') : ''}</span></div>
       </div>
       <div class="bt-side"><div class="bt-ihead">🧾 Bill ki items <b id="btN"></b>${t ? `<em>pehle ${t.ok ? '✓' : '✕'} (${esc(t.n || '')})</em>` : ''}</div><ol class="bt-items" id="btItems"><li class="none">⏳ items…</li></ol></div>
     </div>`;
-    loadCur(cur);
+    segIdx = 0; loadCur(cur);
+    const vv = main.querySelector('#btVid'); if (vv) vv.addEventListener('ended', () => { const sg = segsOf(clips.get(cur)); if (!sg) return; playSeg(segIdx + 1 < sg.length ? segIdx + 1 : 0); });   // v2.210.0: hissa khatam = agla, aakhri ke baad shuru se
   }
   paintItems(); paintBtns();
   const nxt = q.find(x => String(x.id) !== cur); if (nxt) clipUrl(String(nxt.id)).catch(() => {});   // agli clip pehle se
@@ -126,6 +152,7 @@ async function loadCur(id) {
   if (loading !== id || cur !== id) return;
   const v = $('btVid'), ld = $('btVload');
   if (v) { if (u) { v.src = u; v.playbackRate = speed; v.play().catch(() => {}); if (ld) ld.hidden = true; } else if (ld) ld.textContent = '✕ video nahi mili'; }
+  paintSegs(); loadRest(id);
   paintItems();
 }
 function paintItems() {
@@ -163,7 +190,11 @@ async function onClick(e) {
   if (t.closest('[data-bt-save]')) { save(false, [...sel]); return; }
   const it = t.closest('[data-bt-item]'); if (it && mode === 'miss') { const k = it.dataset.btItem; if (sel.has(k)) sel.delete(k); else sel.add(k); paintItems(); paintBtns(); return; }
   const sp = t.closest('[data-bt-sp]'); if (sp) { speed = Number(sp.dataset.btSp) || 1.5; try { localStorage.setItem('sam-bt-speed', String(speed)); } catch {} const v = $('btVid'); if (v) v.playbackRate = speed; sp.parentElement.querySelectorAll('[data-bt-sp]').forEach(x => x.classList.toggle('on', x === sp)); return; }
-  if (t.closest('[data-bt-back10]')) { const v = $('btVid'); if (v) { v.currentTime = Math.max(0, v.currentTime - 10); v.play().catch(() => {}); } return; }
+  if (t.closest('[data-bt-back10]')) { const v = $('btVid'); if (v) { if (v.currentTime < 10 && segIdx > 0 && segsOf(clips.get(cur))) { playSeg(segIdx - 1, 50); return; } v.currentTime = Math.max(0, v.currentTime - 10); v.play().catch(() => {}); } return; }
+  const sg = t.closest('[data-bt-seg]'); if (sg) { playSeg(Number(sg.dataset.btSeg) || 0); return; }
+  if (t.closest('[data-bt-unp]')) { openUnposted(); return; }
+  const rq = t.closest('[data-bt-rq]'); if (rq) { const id = rq.dataset.btRq, b = bills.get(id); rq.disabled = true; rq.textContent = '⏳'; cloud.reqBillClip(id, { no: b?.no, pc: b?.pc, day: dayKey(0) }).then(() => notice('🎥 PC ko hukum gaya — clip 1-2 min mein')).catch(e => { notice('Hukum nahi gaya: ' + (e?.message || e)); rq.disabled = false; rq.textContent = '🎥 Mangwao'; }); return; }
+  const op = t.closest('[data-bt-open]'); if (op) { reopen = op.dataset.btOpen; cur = op.dataset.btOpen; mode = 'view'; sel = new Set(); $('btDlg')?.close(); $('btMain').innerHTML = ''; paint(); return; }
   if (t.closest('[data-bt-full]')) { const v = $('btVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (v.closest('.bt-vwrap') || v).requestFullscreen?.(); } catch {} return; }
   if (t.closest('.bt-vwrap') && t.tagName === 'VIDEO') { const v = t; if (v.paused) v.play().catch(() => {}); else v.pause(); return; }
   if (t.closest('[data-bt-order]')) { order = order === 'big' ? 'new' : 'big'; try { localStorage.setItem('sam-bt-order', order); } catch {} cur = ''; paint(); return; }
@@ -197,24 +228,39 @@ function openSum() {
   if (!d.open) d.showModal();
 }
 
+// ---------- 🔵 un-posted bills (v2.210.0) — clip sirf hukum par ----------
+function openUnposted() {
+  const d = dlg(); d.dataset.unp = '1';
+  const td = dayKey(0), list = [...bills.values()].filter(b => !b.x && b._d === td && Number(b.ps) !== 2).sort((a, b) => Number(b.ct || b.tm) - Number(a.ct || a.tm));
+  const row = b => { const id = String(b.id), c = clips.get(id), r = reqs.get(id), tl = tallies.get(id);
+    const st = c?.st === 'ok' ? (tl ? `<em>${tl.ok ? '✓ theek' : '✕ kam'}</em>` : `<button type="button" class="bt-sm" data-bt-open="${esc(id)}">▶ Dekho</button>`) : c?.st === 'err' ? `<em class="bad">✕ ${esc(c.err || 'nahi bani')}</em>` : r ? (r.st === 'err' ? `<em class="bad">✕ ${esc(r.err || '')}</em>` : '<em>⏳ PC bana raha…</em>') : `<button type="button" class="bt-sm" data-bt-rq="${esc(id)}">🎥 Mangwao</button>`;
+    return `<div class="bt-badrow"><b>#${esc(b.no)}</b><span>${tm(b.ct || b.tm)} · ${esc(b.pc || '?')}${b.by ? ' · 👦 ' + esc(b.by) : ''} · Rs ${num(b.t)}${b.p ? ' · ' + esc(b.p) : ''}</span>${st}</div>`; };
+  d.innerHTML = `<div class="bt-dhead"><b>🔵 Aaj ke un-posted bill <small>${list.length}</small></b><button type="button" class="bt-x" data-x="1">×</button></div>
+    <div class="bt-dbody"><p class="bt-sub">In ki clip PC khud nahi banata — jis bill ki chahiye us par 🎥 Mangwao (1-2 min). Clip aate hi ▶ Dekho / tally mein khud aa jayega.</p>
+      <div class="bt-badlist">${list.map(row).join('') || '<p class="bt-sub">Aaj koi un-posted bill nahi</p>'}</div></div>`;
+  d.querySelector('[data-x]').onclick = () => { delete d.dataset.unp; d.close(); };
+  if (!d.open) d.showModal();
+}
+
 async function openSetup() {
   if (!isOwner()) return;
-  const d = dlg(); d.innerHTML = '<div class="bt-dbody">⏳</div>'; if (!d.open) d.showModal();
+  const d = dlg(); delete d.dataset.unp; d.innerHTML = '<div class="bt-dbody">⏳</div>'; if (!d.open) d.showModal();
   let cf = {}; try { cf = await cloud.getBillClipCfg(); } catch (e) { cf = {}; }
   const pcs = new Set(Object.keys(cf.ch || {})); for (const b of bills.values()) if (b.pc) pcs.add(String(b.pc));
   const st = pcSt || {};
   const inp = (k, ph, v, type) => `<label class="bt-f"><span>${ph}</span><input type="${type || 'text'}" data-cf="${k}" value="${esc(v ?? '')}" autocomplete="off"></label>`;
   d.innerHTML = `<div class="bt-dhead"><b>⚙️ Camera setup (malik)</b><button type="button" class="bt-x" data-x="1">×</button></div>
     <div class="bt-dbody bt-setup">
-      <p class="bt-sub">PC counter ke camera se har POSTED bill ki chhoti video (post se <b>pehle</b> + <b>baad</b> ke second) NVR ki recording se kaat kar app mein bhejta hai. NVR ka password sirf malik ke login mein (Firestore malik-only).</p>
+      <p class="bt-sub">PC har counter ke camera ki live video apne paas 1-1 min ke tukron mein rakhta hai aur har POSTED bill ki clip (print se <b>pehle</b> + <b>baad</b> ke second, default 5 min) usi se foran banata hai; tukre na hon to NVR ki recording se. NVR ka password sirf malik ke login mein (Firestore malik-only).</p>
       <div class="bt-row"><button type="button" class="bt-tg${cf.on !== false && cf.ip ? ' on' : ''}" data-tg="on">${cf.on !== false && cf.ip ? '🟢 ON' : '⚫ Band'}</button>
         <button type="button" class="bt-tg${!/hik/i.test(cf.kind || '') ? ' on' : ''}" data-kind="dahua">Dahua (DMSS)</button><button type="button" class="bt-tg${/hik/i.test(cf.kind || '') ? ' on' : ''}" data-kind="hik">Hikvision</button>
         <button type="button" class="bt-tg${cf.sub === 0 ? '' : ' on'}" data-tg="sub">${cf.sub === 0 ? 'Main stream' : 'Sub stream (halki)'}</button></div>
       <div class="bt-grid">${inp('ip', 'NVR ka IP (LAN)', cf.ip)}${inp('port', 'RTSP port', cf.port || 554, 'number')}${inp('user', 'NVR user', cf.user || 'admin')}${inp('pw', 'NVR password', cf.pw, 'password')}
-        ${inp('pre', 'Post se PEHLE (s)', cf.pre || 45, 'number')}${inp('post', 'Post ke BAAD (s)', cf.post || 10, 'number')}${inp('keep', 'Clip rakho (din)', cf.keep || 2, 'number')}${inp('rep', 'Shaam ka paigham (HH:MM)', cf.rep || '20:30')}</div>
+        ${inp('pre', 'Print se PEHLE (s) — 300 = 5 min', cf.pre || 300, 'number')}${inp('post', 'Print ke BAAD (s)', cf.post || 20, 'number')}${inp('keep', 'Clip rakho (din)', cf.keep || 2, 'number')}${inp('rk', 'PC par live recording rakho (min)', cf.rk || 180, 'number')}${inp('rep', 'Shaam ka paigham (HH:MM)', cf.rep || '20:30')}</div>
       <div class="bt-ihead">🖥 Counter ↔ camera channel (NVR ka channel number)</div>
       <div class="bt-chlist">${[...pcs].sort().map(p => `<label class="bt-ch"><b>${esc(p)}</b><input type="number" min="0" max="64" data-ch="${esc(p)}" value="${esc((cf.ch || {})[p] ?? '')}" placeholder="ch"></label>`).join('') || '<small>Aaj koi POS bill nahi — bill aane par counter ke naam yahan aayenge</small>'}</div>
       <p class="bt-sub">🖥 PC: ${st.at ? (Date.now() - st.at < 5 * 60000 ? '🟢 chalu' : '⚫ chup ' + ago(st.at)) + ' · v' + esc(st.ver || '?') + (st.ff ? ' · ffmpeg ✓' : ' · ffmpeg ⏳') + (st.today ? ` · aaj ${st.today.n} (✓ ${st.today.ok} ✕ ${st.today.err})` : '') + (st.last ? ' · ' + esc(st.last) : '') + (st.err ? ' · ⚠ ' + esc(st.err) : '') : 'abhi report nahi (PC 3-5 min mein script lagata hai)'}</p>
+      ${st.rec && Object.keys(st.rec).length ? `<p class="bt-sub">🎞 Recording: ${Object.entries(st.rec).map(([ch, r]) => `ch ${esc(ch)} ${r.on ? '🟢' : '⚫'} ${r.n || 0} min${r.last ? ' · ' + tm(r.last) : ''}${r.err ? ' · ' + esc(r.err) : ''}`).join(' · ')}</p>` : ''}
       ${st.test ? `<p class="bt-sub bt-test${st.test.ok ? '' : ' bad'}">🔎 Rabta test (${tm(st.test.at)}, ch ${esc(st.test.ch)}): ${st.test.ok ? '✅ NVR se live video mili — password / IP theek' : '✕ ' + esc(st.test.err) + (st.test.raw ? `<br><small>${esc(st.test.raw)}</small>` : '')}</p>` : ''}
       <div class="bt-row"><button type="button" class="bt-save" data-save="1">💾 Save</button></div>
     </div>`;
@@ -226,7 +272,7 @@ async function openSetup() {
   d.querySelector('[data-save]').onclick = async ev => {
     const g = k => d.querySelector(`[data-cf="${k}"]`)?.value ?? '';
     const ch = {}; d.querySelectorAll('[data-ch]').forEach(i => { const v = Number(i.value); if (v > 0) ch[i.dataset.ch] = v; });
-    const out = { on, onAt: on ? ((cf.on !== false && cf.ip && cf.onAt) ? cf.onAt : Date.now()) : 0, kind, sub, ip: String(g('ip')).trim(), port: Number(g('port')) || 554, user: String(g('user')).trim() || 'admin', pw: String(g('pw')), pre: Number(g('pre')) || 45, post: Number(g('post')) || 10, keep: Number(g('keep')) || 2, rep: String(g('rep')).trim() || '20:30', ch };
+    const out = { on, onAt: on ? ((cf.on !== false && cf.ip && cf.onAt) ? cf.onAt : Date.now()) : 0, kind, sub, ip: String(g('ip')).trim(), port: Number(g('port')) || 554, user: String(g('user')).trim() || 'admin', pw: String(g('pw')), pre: Number(g('pre')) || 300, post: Number(g('post')) || 20, keep: Number(g('keep')) || 2, rk: Number(g('rk')) || 180, rep: String(g('rep')).trim() || '20:30', ch };
     ev.currentTarget.disabled = true;
     try { await cloud.setBillClipCfg(out); notice('💾 Camera setup save — PC 30 s mein uthata hai'); d.close(); }
     catch (e) { notice('Save nahi hua: ' + (e?.message || e)); ev.currentTarget.disabled = false; }

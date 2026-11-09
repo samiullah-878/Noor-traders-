@@ -1,14 +1,14 @@
-import {cashLinkChanges} from './cash-links.js?v=2.209.3';
-import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js?v=2.209.3';
-import {snapshotRows} from './live-data.js?v=2.209.3';
+import {cashLinkChanges} from './cash-links.js?v=2.210.0';
+import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js?v=2.210.0';
+import {snapshotRows} from './live-data.js?v=2.210.0';
 let transferFail=null;   // v2.86: tez transfer ka server-se-inkaar hook
-import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js?v=2.209.3';
-import {planImport} from './import-plan.js?v=2.209.3';
+import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js?v=2.210.0';
+import {planImport} from './import-plan.js?v=2.210.0';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import * as authSDK from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
 import {initializeFirestore,persistentLocalCache,persistentSingleTabManager,memoryLocalCache,disableNetwork,enableNetwork,collection,query,where,doc,getDoc,getDocFromServer,getDocs,getDocsFromServer,getDocsFromCache,getDocFromCache,setDoc,deleteDoc,updateDoc,deleteField,onSnapshot,runTransaction,writeBatch,waitForPendingWrites,orderBy,limit,serverTimestamp,Bytes,FieldPath} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.209.3';
-import {firebaseConfig,BUSINESS_ID} from './config.js?v=2.209.3';
+import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.210.0';
+import {firebaseConfig,BUSINESS_ID} from './config.js?v=2.210.0';
 export {loginErrorMessage};
 export async function connect(callbacks){const MT=(()=>{try{return sessionStorage.getItem('sam-malik-tab')==='1'}catch{return false}})();   /* v2.105.8: 👑 MULAZIM KI TAB MEIN MALIK — alag Firebase app (naam 'blue-khata-malik'), login sirf is tab (sessionStorage), data memory mein (phone par save nahi). Mulazim ka login ('blue-khata', localStorage) bilkul nahi hilta. */
 const app=initializeApp(firebaseConfig,MT?'blue-khata-malik':'blue-khata');let auth;try{auth=authSDK.initializeAuth(app,{persistence:MT?authSDK.browserSessionPersistence:[authSDK.browserLocalPersistence,authSDK.indexedDBLocalPersistence]})}catch(e){console.warn('initializeAuth nahi chala — purana tareeqa',e);auth=authSDK.getAuth(app);try{await authSDK.setPersistence(auth,MT?authSDK.browserSessionPersistence:authSDK.browserLocalPersistence)}catch(e2){console.warn('Auth persistence nahi mili',e2)}}   /* v2.112.0: ⚡ TEZ KHULNA — getAuth() mobile par HAR dafa Google ka chhupa sign-in iframe (apis.google.com + firebaseapp.com) internet se laata tha, login ki jaanch us ke BAAD (sust net = 10+ sec, phir index.html ka 10 sec parda login page dikha deta — malik ke phone par 5-7 sec jhalak). Hum popup / redirect login nahi karte → initializeAuth bina popupRedirectResolver. Login phone ki yaad (localStorage; IndexedDB wala bhi utha leta hai). setPersistence ka await bhi nahi (wo auth ki poori tayyari ka intezar karta tha) */let db;try{db=MT?initializeFirestore(app,{localCache:memoryLocalCache()}):initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentSingleTabManager({forceOwnership:false})})})   /* v2.103.79: har tab apna live data — pehle multi-tab: ek tab hi server se leta tha, Chrome ne woh tab sula diya to PC ke SAB tab ruk jate (mobile theek). Doosra tab khud memory mode mein */}catch(e){console.warn('Offline storage nahi mili — memory mode',e);db=initializeFirestore(app,{localCache:memoryLocalCache()})}const col=collection(db,'businesses',BUSINESS_ID,'blueKhata'),ref=id=>doc(col,id),other=(name,id)=>doc(db,'businesses',BUSINESS_ID,name,id);
@@ -169,6 +169,10 @@ listenBillClips:(days,cb)=>onSnapshot(query(collection(db,'businesses',BUSINESS_
 async getBillClip(id,n){id=String(id);const P=await Promise.all(Array.from({length:Math.max(1,Number(n)||1)},(_,i)=>getDoc(doc(db,'businesses',BUSINESS_ID,'billClip',id+'_'+i)).then(s=>s.exists()?(s.data()?.b?.toUint8Array?.()||new Uint8Array(0)):new Uint8Array(0))));const sz=P.reduce((a,b)=>a+b.length,0),out=new Uint8Array(sz);let o=0;for(const p of P){out.set(p,o);o+=p.length}return out},
 listenBillTally:(days,cb)=>onSnapshot(query(collection(db,'businesses',BUSINESS_ID,'billTally'),where('day','in',days.slice(0,10))),s=>cb(s.docs.map(d=>({...d.data(),id:d.id}))),e=>cb(null,e)),
 saveBillTally:(id,d)=>setDoc(doc(db,'businesses',BUSINESS_ID,'billTally',String(id)),{...d,by:auth.currentUser?.uid||'',at:Date.now()}),
+/* v2.210.0: 🎞 clip ke 60 s hisse (PC bill-clip v2.0: billClip/<id>_s<i>_<j>, meta.segs) — pehla hissa aate hi chale · billClipReq: un-posted bill ki clip ka hukum (Nigrani / Full / malik) */
+async getBillClipSeg(id,i,n){id=String(id);const P=await Promise.all(Array.from({length:Math.max(1,Number(n)||1)},(_,j)=>getDoc(doc(db,'businesses',BUSINESS_ID,'billClip',id+'_s'+i+'_'+j)).then(s=>s.exists()?(s.data()?.b?.toUint8Array?.()||new Uint8Array(0)):new Uint8Array(0))));const sz=P.reduce((a,b)=>a+b.length,0),out=new Uint8Array(sz);let o=0;for(const p of P){out.set(p,o);o+=p.length}return out},
+reqBillClip:(id,b)=>setDoc(doc(db,'businesses',BUSINESS_ID,'billClipReq',String(id)),{st:'new',at:Date.now(),by:auth.currentUser?.uid||'',no:String(b?.no||''),pc:String(b?.pc||''),day:String(b?.day||'')}),
+listenBillClipReq:(day,cb)=>onSnapshot(query(collection(db,'businesses',BUSINESS_ID,'billClipReq'),where('day','==',String(day))),s=>cb(s.docs.map(d=>({...d.data(),id:d.id}))),e=>cb(null,e)),
 listenBillClipPc:cb=>onSnapshot(other('blueAccess','billClipPc'),s=>cb(s.exists()?(s.data()||{}):null),()=>cb(null)),
 async getBillClipCfg(){const s=await getDoc(other('blueAccess','billClip'));return s.exists()?(s.data()||{}):{}},
 async setBillClipCfg(d){if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('Sirf malik');await setDoc(other('blueAccess','billClip'),{...d,at:Date.now()},{merge:true})},

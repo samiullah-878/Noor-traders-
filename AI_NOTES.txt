@@ -7336,3 +7336,6 @@ Malik: IP 192.168.10.19 = NVR (TCP/IP screen), password sahi — phir bhi Rabta 
 === 2026-11-09 · bill-clip v1.5 FIX ===
 025acd9 mein syntax ghalti push hui (comment ek-line callback ke beech) — manifest purana tha is liye PC par nahi gayi (PC v1.4 par hi raha). Theek kar ke manifest bump. Qaida CLAUDE.md mein.
 
+=== 2026-11-09 · v2.210.0 + PC bill-clip v2.0 + rules 2.94 (👀 Bill tally: 5 min · local recording · hisse · un-posted hukum) ===
+Malik ka OK (13:23). PC: har counter camera ki live sub-stream clip-rec\ch<N>\ mein 1 min tukre (ffmpeg -c copy, rk 180 min, watchdog 2.5 min, 401 = sab band) → bill ki clip tukron se foran (concat), na hon to NVR playback. Clip 60 s hisse billClip/<id>_s<i>_<j> + meta segs/pk/src/rq; purane v1 (n hisse) app ab bhi chalati. billClipReq/<SaleID> {st new} = un-posted bill ki clip ka hukum (app ⋮ 🔵 Un-posted → 🎥 Mangwao) → PC st ok/err. App tally.js: pehla hissa aate hi play, baqi peeche load, ended = agla hissa, minute chips, ↺10s pichle hisse mein; setup pre default 300, rk field, 🎞 recording status. NVR HTTP download jaan kar nahi (asal NVR par test nahi). Test: container ffmpeg se segment rec + concat cut (60/60/5 s) theek. AI nahi.
+
