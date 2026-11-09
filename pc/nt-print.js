@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-print.js  v1.25 (2026-11-06: 🔤 gate pass par item ka Urdu naam na ho to bina AI Urdu (urdu-names v1.7 item) — line kabhi gayab nahi) · v1.24 (2026-11-04: 🚪 app ka gate pass switch ON (d.gate) = NOOR TRADERS / bill ki branch wali lines ki bhi alag gate pass parchi — 'Yehi device' jaisi) · v1.23 (2026-10-27: 🧻 nt-parchi v1.2 — har parchi chhoti (Urdu 20% chhoti, kaatne se pehle 1 khali line); yeh file badli taake doctor dobara shuru kare) · v1.22 (2026-10-22: 🚑 DOCTOR JAGAO — sirf doctor wale (server) PC par: KHATA-DOCTOR 15 min chup = taza doctor.js + atka doctor (port 47830, netstat) band + KHATA-DOCTOR.bat chupke; 30 min mein ek dafa · counter PCs par kuch nahi) · v1.21 (2026-10-20: 📅 rasid + gate pass par Urdu tareekh; urdu-names.js bhi khud-update) · v1.20 (2026-10-14: 🔤 GATE PASS par har item ke neeche URDU naam — urdu-names.js) · v1.19 (2026-10-14: 🚪 GATE PASS sirf item + quantity, bara gehra font) · v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
+//  nt-print.js  v1.27 (2026-11-09: 🚚 sale rasid ke upar delivery patti — 2 English + 2 bari Urdu lines, app Settings 🖨 Print setting se ON / charges) · v1.25 (2026-11-06: 🔤 gate pass par item ka Urdu naam na ho to bina AI Urdu (urdu-names v1.7 item) — line kabhi gayab nahi) · v1.24 (2026-11-04: 🚪 app ka gate pass switch ON (d.gate) = NOOR TRADERS / bill ki branch wali lines ki bhi alag gate pass parchi — 'Yehi device' jaisi) · v1.23 (2026-10-27: 🧻 nt-parchi v1.2 — har parchi chhoti (Urdu 20% chhoti, kaatne se pehle 1 khali line); yeh file badli taake doctor dobara shuru kare) · v1.22 (2026-10-22: 🚑 DOCTOR JAGAO — sirf doctor wale (server) PC par: KHATA-DOCTOR 15 min chup = taza doctor.js + atka doctor (port 47830, netstat) band + KHATA-DOCTOR.bat chupke; 30 min mein ek dafa · counter PCs par kuch nahi) · v1.21 (2026-10-20: 📅 rasid + gate pass par Urdu tareekh; urdu-names.js bhi khud-update) · v1.20 (2026-10-14: 🔤 GATE PASS par har item ke neeche URDU naam — urdu-names.js) · v1.19 (2026-10-14: 🚪 GATE PASS sirf item + quantity, bara gehra font) · v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
 //                   (6+ harf, beech mein space nahi, 5+ hindse) aur grid mein wohi code nahi = bzzz — scan pakra gaya ho ya NAHI (server par scan
 //                   pakra hi nahi ja raha tha: log mein koi 'GHALAT scan' / '🔎' nahi tha). Naam se talaash = awaz nahi. Log mein 'scan pakra / NAHI')
 //                   · v1.17 (2026-10-08: 🔑 CHAABI KHUD UTHAO — awaz-only PC par firebase-key.json Desktop / Downloads / Documents (AnyDesk se)
@@ -39,7 +39,8 @@ let FA = null, FF = null; try { FA = require('firebase-admin/app'); FF = require
 const { initializeApp, cert, getApps } = FA || {};
 const { getFirestore, FieldValue } = FF || {};
 
-const VER = '1.26';   // v1.26 (2026-11-07): 🧾 rasid table 5 khane (Rate + Amt ek qatar, Font B)   // v1.23 (2026-10-26): 🧾 rasid ki items table dabbe (side lines) mein — boxTable
+const VER = '1.27';   // v1.27 (2026-11-09): 🚚 sale rasid ke upar delivery patti — DELIVERY AVAILABLE HAR GAON + charges, Urdu bari (urdu-names v1.8 dlv)
+//   // v1.26 (2026-11-07): 🧾 rasid table 5 khane (Rate + Amt ek qatar, Font B)   // v1.23 (2026-10-26): 🧾 rasid ki items table dabbe (side lines) mein — boxTable
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
 const DIR = __dirname;
@@ -135,6 +136,7 @@ function billJob(d) {
   s.raw(ESC + '@' + ESC + 'a\x01');
   s.ln(big(SHOP.name)); s.ln(SHOP.phone);
   try { if (UR.dateUr && UR.isOn()) s.img(UR.dateUr(t).t, 50, true, 1); } catch {}   // v1.21 (2026-10-20): 📅 Urdu tareekh bari
+  try { const D = UR.dlv && UR.dlv(); if (D) { s.ln(bold(D.en1)); if (D.ur) s.img(D.ur1, 62, true, 1); s.ln(bold(D.en2)); if (D.ur) s.img(D.ur2, 56, true, 1); } } catch {}   // v1.27 (2026-11-09): 🚚 delivery patti (printConfig.dlv / dlvChg)
   s.raw(ESC + 'a\x00'); s.ln(hr());
   { const sn = 'Sale No: ' + String(d.saleNo || '').trim(), ws = whenStr(t); if (sn.length + ws.length + 1 <= W) s.ln(line(sn, ws)); else { s.ln(bold(sn)); s.ln(line('', ws)); } }
   if (tok) s.ln(bold(line('Token: ' + tok, '')));

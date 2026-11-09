@@ -1,5 +1,6 @@
 // ============================================================
 //  sale-post.js — Blue Khata app ki "Nayi Sale" -> POS Sale bill (v1)
+//  v1.17 (2026-11-09): 🚚 sale rasid ke upar delivery patti — DELIVERY AVAILABLE HAR GAON + charges, Urdu bari (urdu-names v1.8 dlv; app 🖨 Print setting)
 //  v1.16 (2026-11-07): 🧾 rasid table 5 khane — Items | PCS | CTN | Rate | Amt ek qatar, Font B (malik: POS bill jaisa)
 //  v1.15 (2026-11-06): 🔤 gate pass par item ka Urdu naam na ho to bina AI Urdu (urdu-names v1.7 item) — line kabhi gayab nahi ·
 //  v1.14 (2026-11-04): 👦 LARKA — app ka chuna larka (doc.sm) POS bill ke SupplyManID mein (sirf agar POS ki SupplyMan list mein ho; warna pehle jaisa khali) ·
@@ -493,6 +494,7 @@ async function receiptFor(saleNo, saleId) {
   out.push(big(SHOP.name));
   out.push(SHOP.phone);
   if (UR.isOn() && UR.dateLine) out.push(UR.dateLine(head.SaleDate, 50));   // v1.12 (2026-10-20): 📅 Urdu tareekh bari
+  try { const D = UR.dlv && UR.dlv(); if (D) { out.push(bold(D.en1)); if (D.ur) out.push(UR.line(D.ur1, 62, 1)); out.push(bold(D.en2)); if (D.ur) out.push(UR.line(D.ur2, 56, 1)); } } catch {}   // v1.17 (2026-11-09): 🚚 delivery patti (printConfig.dlv / dlvChg)
   out.push(ESC + 'a' + '\x00');                          // left
   out.push(hr);
   { const no = 'Sale No: ' + String(head.SaleNo || '').trim(), dt = new Date(head.SaleDate).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true });   // v1.12: 32 harf mein number kat jata tha
