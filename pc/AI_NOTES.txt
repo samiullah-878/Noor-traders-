@@ -4228,3 +4228,6 @@ Malik ka OK 13:46. tally.js ⋮ 📋 Bills: aaj ke posted bill (naya upar) + �
 === 2026-11-09 · nt-print-setup.ps1 v2 + nt-fix.ps1 — naya counter DESKTOP-RN6QU6D ===
 Setup chala, NT-PRINT MODULE_NOT_FOUND (nt-print.js:75 urdu-names.js) — setup / fix ki file list purani thi (v1.20 urdu-names, zinda, sql-config baad mein aaye). Teeno files list mein. Qaida: nt-print.js mein naya require = dono .ps1 ki list mein bhi. firebase-key network se nahi mili = AWAZ-ONLY (print / status nahi) — chaabi ka raasta baad mein.
 
+=== 2026-11-09 · v2.212.0 + PC pos-sales-dekho v2.5 + bill-clip v2.2 (🎯 clip pehli item se + speed) ===
+Malik ka OK 14:11. PC: firstTick har 1 s (SaleDetailID > last, GROUP BY SaleID → pehli dafa dikha = ft, pos-first-seen.json) → bills[].ft. bill-clip: CF.pre 0 = ft−15 s se (ft na ho / ajeeb = 2 min), meta ft/t0. App ⚙️: pre input hata, chips 0/60/120/180/300 (default 0). Tally: aage 3 bill clip+lines prefetch; items pehle dikhein. AI nahi.
+

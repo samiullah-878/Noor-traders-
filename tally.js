@@ -145,11 +145,12 @@ function paint() {
     const vv = main.querySelector('#btVid'); if (vv) vv.addEventListener('ended', () => { const sg = segsOf(clips.get(cur)); if (!sg) return; playSeg(segIdx + 1 < sg.length ? segIdx + 1 : 0); });   // v2.210.0: hissa khatam = agla, aakhri ke baad shuru se
   }
   paintItems(); paintBtns();
-  const nxt = q.find(x => String(x.id) !== cur); if (nxt) clipUrl(String(nxt.id)).catch(() => {});   // agli clip pehle se
+  for (const x of q.filter(x => String(x.id) !== cur).slice(0, 3)) { clipUrl(String(x.id)).catch(() => {}); linesOf(String(x.id)); }   // v2.212.0: aage 3 bill ki video + items pehle se (✓ par agla foran)
 }
 async function loadCur(id) {
   loading = id;
-  const [u, l] = await Promise.all([clipUrl(id).catch(e => { notice('Video nahi aayi: ' + (e?.message || e)); return ''; }), linesOf(id)]);
+  linesOf(id).then(() => { if (cur === id) paintItems(); });   // v2.212.0: items jaise hi aayein — video ka intezar nahi
+  const u = await clipUrl(id).catch(e => { notice('Video nahi aayi: ' + (e?.message || e)); return ''; });
   if (loading !== id || cur !== id) return;
   const v = $('btVid'), ld = $('btVload');
   if (v) { if (u) { v.src = u; v.playbackRate = speed; v.play().catch(() => {}); if (ld) ld.hidden = true; } else if (ld) ld.textContent = '✕ video nahi mili'; }
@@ -276,8 +277,11 @@ async function openSetup() {
       <div class="bt-row"><button type="button" class="bt-tg${cf.on !== false && cf.ip ? ' on' : ''}" data-tg="on">${cf.on !== false && cf.ip ? '🟢 ON' : '⚫ Band'}</button>
         <button type="button" class="bt-tg${!/hik/i.test(cf.kind || '') ? ' on' : ''}" data-kind="dahua">Dahua (DMSS)</button><button type="button" class="bt-tg${/hik/i.test(cf.kind || '') ? ' on' : ''}" data-kind="hik">Hikvision</button>
         <button type="button" class="bt-tg${cf.sub === 0 ? '' : ' on'}" data-tg="sub">${cf.sub === 0 ? 'Main stream' : 'Sub stream (halki)'}</button></div>
+      <div class="bt-ihead">🎯 Clip kahan se shuru ho</div>
+      <div class="bt-row bt-pre">${[[0, '⏱ Pehli item se'], [60, '1 min'], [120, '2 min'], [180, '3 min'], [300, '5 min']].map(([v, t]) => `<button type="button" class="bt-tg${(cf.pre === undefined ? 0 : Number(cf.pre)) === v ? ' on' : ''}" data-pre="${v}">${t}</button>`).join('')}</div>
+      <p class="bt-sub">⏱ Pehli item = PC har bill ki pehli scan ka waqt yaad rakhta hai — clip wahan se 15 s pehle shuru, print ke baad khatam (bill jitna lamba, clip utni). Waqt na mile to 2 min.</p>
       <div class="bt-grid">${inp('ip', 'NVR ka IP (LAN)', cf.ip)}${inp('port', 'RTSP port', cf.port || 554, 'number')}${inp('user', 'NVR user', cf.user || 'admin')}${inp('pw', 'NVR password', cf.pw, 'password')}
-        ${inp('pre', 'Print se PEHLE (s) — 300 = 5 min', cf.pre || 300, 'number')}${inp('post', 'Print ke BAAD (s)', cf.post || 20, 'number')}${inp('keep', 'Clip rakho (din)', cf.keep || 2, 'number')}${inp('rk', 'PC par live recording rakho (min)', cf.rk || 180, 'number')}${inp('rep', 'Shaam ka paigham (HH:MM)', cf.rep || '20:30')}</div>
+        ${inp('post', 'Print ke BAAD (s)', cf.post || 20, 'number')}${inp('keep', 'Clip rakho (din)', cf.keep || 2, 'number')}${inp('rk', 'PC par live recording rakho (min)', cf.rk || 180, 'number')}${inp('rep', 'Shaam ka paigham (HH:MM)', cf.rep || '20:30')}</div>
       <div class="bt-ihead">🖥 Counter ↔ camera channel (NVR ka channel number)</div>
       <div class="bt-chlist">${[...pcs].sort().map(p => `<label class="bt-ch"><b>${esc(p)}</b><input type="number" min="0" max="64" data-ch="${esc(p)}" value="${esc((cf.ch || {})[p] ?? '')}" placeholder="ch"></label>`).join('') || '<small>Aaj koi POS bill nahi — bill aane par counter ke naam yahan aayenge</small>'}</div>
       <p class="bt-sub">🖥 PC: ${st.at ? (Date.now() - st.at < 5 * 60000 ? '🟢 chalu' : '⚫ chup ' + ago(st.at)) + ' · v' + esc(st.ver || '?') + (st.ff ? ' · ffmpeg ✓' : ' · ffmpeg ⏳') + (st.today ? ` · aaj ${st.today.n} (✓ ${st.today.ok} ✕ ${st.today.err})` : '') + (st.last ? ' · ' + esc(st.last) : '') + (st.err ? ' · ⚠ ' + esc(st.err) : '') : 'abhi report nahi (PC 3-5 min mein script lagata hai)'}</p>
@@ -285,7 +289,8 @@ async function openSetup() {
       ${st.test ? `<p class="bt-sub bt-test${st.test.ok ? '' : ' bad'}">🔎 Rabta test (${tm(st.test.at)}, ch ${esc(st.test.ch)}): ${st.test.ok ? '✅ NVR se live video mili — password / IP theek' : '✕ ' + esc(st.test.err) + (st.test.raw ? `<br><small>${esc(st.test.raw)}</small>` : '')}</p>` : ''}
       <div class="bt-row"><button type="button" class="bt-save" data-save="1">💾 Save</button></div>
     </div>`;
-  let on = cf.on !== false && !!cf.ip, kind = /hik/i.test(cf.kind || '') ? 'hik' : 'dahua', sub = cf.sub === 0 ? 0 : 1;
+  let on = cf.on !== false && !!cf.ip, kind = /hik/i.test(cf.kind || '') ? 'hik' : 'dahua', sub = cf.sub === 0 ? 0 : 1, pre = cf.pre === undefined ? 0 : Number(cf.pre) || 0;
+  d.querySelectorAll('[data-pre]').forEach(b => b.onclick = () => { pre = Number(b.dataset.pre) || 0; d.querySelectorAll('[data-pre]').forEach(x => x.classList.toggle('on', x === b)); });
   d.querySelector('[data-x]').onclick = () => d.close();
   d.querySelector('[data-tg="on"]').onclick = ev => { on = !on; ev.currentTarget.classList.toggle('on', on); ev.currentTarget.textContent = on ? '🟢 ON' : '⚫ Band'; };
   d.querySelector('[data-tg="sub"]').onclick = ev => { sub = sub ? 0 : 1; ev.currentTarget.classList.toggle('on', !!sub); ev.currentTarget.textContent = sub ? 'Sub stream (halki)' : 'Main stream'; };
@@ -293,7 +298,7 @@ async function openSetup() {
   d.querySelector('[data-save]').onclick = async ev => {
     const g = k => d.querySelector(`[data-cf="${k}"]`)?.value ?? '';
     const ch = {}; d.querySelectorAll('[data-ch]').forEach(i => { const v = Number(i.value); if (v > 0) ch[i.dataset.ch] = v; });
-    const out = { on, onAt: on ? ((cf.on !== false && cf.ip && cf.onAt) ? cf.onAt : Date.now()) : 0, kind, sub, ip: String(g('ip')).trim(), port: Number(g('port')) || 554, user: String(g('user')).trim() || 'admin', pw: String(g('pw')), pre: Number(g('pre')) || 300, post: Number(g('post')) || 20, keep: Number(g('keep')) || 2, rk: Number(g('rk')) || 180, rep: String(g('rep')).trim() || '20:30', ch };
+    const out = { on, onAt: on ? ((cf.on !== false && cf.ip && cf.onAt) ? cf.onAt : Date.now()) : 0, kind, sub, ip: String(g('ip')).trim(), port: Number(g('port')) || 554, user: String(g('user')).trim() || 'admin', pw: String(g('pw')), pre, post: Number(g('post')) || 20, keep: Number(g('keep')) || 2, rk: Number(g('rk')) || 180, rep: String(g('rep')).trim() || '20:30', ch };
     ev.currentTarget.disabled = true;
     try { await cloud.setBillClipCfg(out); notice('💾 Camera setup save — PC 30 s mein uthata hai'); d.close(); }
     catch (e) { notice('Save nahi hua: ' + (e?.message || e)); ev.currentTarget.disabled = false; }

@@ -1,5 +1,5 @@
 // =========================================================
-//  pos-sales-dekho.js  v2.4 (2026-11-08: 🎥 bill ka `ct` = BANANE / PRINT ka waqt (SystemNotes "Created & Printed By:… On:… at PC:") — Bill tally ki clip post ke waqt se nahi, bill banane ke waqt se (malik: "Abdurehman ne jis time bill bana kar print kiya, PC us time se peeche jaye, posting se nahi")) · v2.3 (2026-11-06: 🔎 JAANCH malik: "jo wapsi bill ke andar minus ho chuki wo dobara nahi" — har wapsi ke saath juda SaleID, us bill ka TotalSale aur
+//  pos-sales-dekho.js  v2.5 (2026-11-09: 🎥 bill ki PEHLI ITEM ka waqt `ft` — POS har scan par SaleDetail likhta hai (save se pehle), PC har 1 s naye SaleID ki pehli line dekh kar waqt yaad (pos-first-seen.json); bill-clip clip pehli item se shuru karta hai (malik: "pehli item ka time likh le to kaisa rahe")) · v2.4 (2026-11-08: 🎥 bill ka `ct` = BANANE / PRINT ka waqt (SystemNotes "Created & Printed By:… On:… at PC:") — Bill tally ki clip post ke waqt se nahi, bill banane ke waqt se (malik: "Abdurehman ne jis time bill bana kar print kiya, PC us time se peeche jaye, posting se nahi")) · v2.3 (2026-11-06: 🔎 JAANCH malik: "jo wapsi bill ke andar minus ho chuki wo dobara nahi" — har wapsi ke saath juda SaleID, us bill ka TotalSale aur
 //                     SaleDetail ka jor (Qty×Rate) → sum.rtd (app milane ke liye) + note mein "bill se juri N · alag N"; MINUS abhi pehle jaisa (qaida data dekh kar)) · v2.2 (2026-11-04: ↩ malik: "Daily Sale mein sale return add hai ke nahi" → POS ki SALE RETURN (dbo.SaleReturn, us din ki) ab auto sale se MINUS —
 //                     cancel (DocStatusID 3) / stock fraq bahar; udhaar party ki wapsi (IsCreditRturn, wholesale nahi) = cash wapas nahi diya = minus NAHI (note mein ginti);
 //                     wholesale ki wapsi poori minus (wholesale bill bhi poora gina jata hai). Note: "↩ wapsi N bill Rs X minus". Parh na sake = pehle jaisa (minus nahi)) · v2.1 (2026-10-31: ⚡ har ½ sec · sirf naye/badle bill parho (cache + COUNT/SUM se milao, na mile = poori list) · sum / Daily Sale / items alag peeche ki lane · doc.pm raftar) · v2.0 (2026-10-28: 📌 har posted bill par post ka waqt `pt` — PC ne pehli dafa posted dekha (pos-posted-seen.json), shuru se pehle wale = UpdatedOn) · v1.9 (2026-10-28: ⚡ malik — "posting POS mein jaldi, app mein late": har 1 sec; bills ka haal (posted / un-posted) PEHLE likho, items + Daily Sale
@@ -50,6 +50,23 @@ let lastHash = '';
 const SEEN_FILE = path.join(__dirname, 'pos-posted-seen.json');
 let postSeen = { day: '', m: {} }, seenBoot = true;
 try { postSeen = JSON.parse(fs.readFileSync(SEEN_FILE, 'utf8')) || postSeen; if (!postSeen.m) postSeen.m = {}; } catch {}
+// v2.5: 🎥 PEHLI ITEM ka waqt — har 1 s: naye SaleDetailID ki qataren → jis SaleID ki pehli line ab dikhi us ka waqt (PC ki ghari). Restart par purane bill = nahi (bill-clip setting wala waqt).
+const FIRST_FILE = path.join(__dirname, 'pos-first-seen.json');
+let firstSeen = { m: {} }, firstLast = 0, firstRun = false;
+try { firstSeen = JSON.parse(fs.readFileSync(FIRST_FILE, 'utf8')) || firstSeen; if (!firstSeen.m) firstSeen.m = {}; } catch {}
+async function firstTick() {
+  if (firstRun) return; firstRun = true;
+  try {
+    const p = await getPool();
+    if (!firstLast) { firstLast = Number((await p.request().query('SELECT MAX(SaleDetailID) AS m FROM dbo.SaleDetail')).recordset[0].m) || 0; return; }
+    const r = (await p.request().input('l', sql.Int, firstLast).query('SELECT d.SaleID AS S, MIN(d.SaleDetailID) AS D, MAX(d.SaleDetailID) AS X FROM dbo.SaleDetail d WHERE d.SaleDetailID > @l GROUP BY d.SaleID')).recordset;
+    if (!r.length) return;
+    const now = Date.now(); let ch = false;
+    for (const x of r) { firstLast = Math.max(firstLast, Number(x.X) || 0); const id = String(x.S); if (!firstSeen.m[id]) { firstSeen.m[id] = now; ch = true; } }
+    if (ch) { const cut = now - 3 * 86400000; for (const [k, v] of Object.entries(firstSeen.m)) if (Number(v) < cut) delete firstSeen.m[k]; try { fs.writeFileSync(FIRST_FILE, JSON.stringify(firstSeen)); } catch {} }
+  } catch (e) { log('pehli item: ' + e.message); }
+  finally { firstRun = false; }
+}
 
 // v1.5 (2026-10-12): 🖥 POS KI SALE (AUTO) — malik: "Sale screen (Daily Sale) mein sale auto aani chahiye, us mein farq wale account ki entry
 // nahi aani chahiye. Khana abhi khula hi rahe, sale auto aati jaye". blueKhata/possale-<YYYY-MM-DD>: kind 'sale', posAuto (app mein edit /
@@ -242,7 +259,7 @@ async function once() {
     return { id: r.SaleID, ct, no: String(r.SaleNo || '').trim(), t: r2(r.TotalSale), c: r2(r.CashReceived), cr: r.IsCreditSale ? 1 : 0,
       x: Number(r.DocStatusID) === 3 ? 1 : 0, p: String(r.PartyName || '').slice(0, 60), n: Number(r.N) || 0,
       tm: r.SaleDate ? new Date(r.SaleDate).getTime() : 0, app: m ? m[1] : '',
-      ps: Number(r.DocStatusID) || 0, pt: Number(postSeen.m[String(r.SaleID)]) || 0, pc: String(names[host] || host.replace(/^DESKTOP-/i, '') || '').slice(0, 30), by: /blue khata/i.test(by) ? '' : String(by).trim().slice(0, 20) };
+      ps: Number(r.DocStatusID) || 0, pt: Number(postSeen.m[String(r.SaleID)]) || 0, ft: Number(firstSeen.m[String(r.SaleID)]) || 0, pc: String(names[host] || host.replace(/^DESKTOP-/i, '') || '').slice(0, 30), by: /blue khata/i.test(by) ? '' : String(by).trim().slice(0, 20) };
   });
   const hash = day + JSON.stringify(bills);
   slowDirty = true;
@@ -283,7 +300,7 @@ lock.on('listening', async () => {
   for (let i = 0; i < 50 && !cfgReady; i++) await new Promise(r => setTimeout(r, 200));   // v1.8: setting (10 sec tak)
   try { const p = await getPool(), y1 = new Date(); y1.setHours(0, 0, 0, 0); const y0 = new Date(y1); y0.setDate(y0.getDate() - 1);   // v1.5: kal ki aakhri sale bhi (PC raat ko band ho gaya ho)
     await writeSale(dayOf(y0), await saleFor(p, y0, y1), true); } catch (e) { log('Kal ki POS sale: ' + e.message); }
-  log('pos-sales-dekho v2.2 chal raha hai — har ½ second (sirf naye / badle bill parhta hai, bill pehle — Daily Sale / items peeche)…');
+  log('pos-sales-dekho v2.5 chal raha hai — har ½ second (sirf naye / badle bill parhta hai, bill pehle — Daily Sale / items peeche)…');
   let running = false, again = false;
   const tick = async () => { if (running) { again = true; return; } running = true;
     try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }
@@ -291,6 +308,8 @@ lock.on('listening', async () => {
   await tick();
   setInterval(ZINDA.guard(tick, 5 * 60000, 'bills tick'), EVERY);   // 2026-10-11: chowkidar
   setInterval(ZINDA.guard(slow, 10 * 60000, 'peeche ki lane'), 1500);   // v2.1: sum + Daily Sale + items alag
+  setInterval(ZINDA.guard(firstTick, 10 * 60000, 'pehli item'), 1000);   // v2.5: 🎥 pehli item ka waqt
+  firstTick();
   // v1.3: app ka bill POS mein bana (done) / edit hua -> foran dekho (2 sec ka intezar bhi nahi)
   const kick = () => setTimeout(() => { lastKey = ''; tick(); }, 150);
   const base = db.collection('businesses').doc(BUSINESS_ID), seen = new Map();
