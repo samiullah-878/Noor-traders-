@@ -4256,3 +4256,16 @@ Malik ka OK 19:28 ("Mubeen ki photo ke reply mein jana chahiye, jaise pehle"): M
 farq ho to tasveer par "Items ka jor: Rs X". Phir waOut `<bk>-l<n>` {rq: bk, at: +k} = poori list ki saaf tasveer(ein) wa-a4.ps1 -Mode bill (900 chaura, navy, # | Item | Tadad | Rate | Raqam,
 35 tak fi tasveer barabar baant — 71 = 24·24·23). Tasveer na bane (PowerShell ghalti) = poori list TEXT reply mein (billText). wa-out v1.4: `rq` = sentM (yaad) ya asal doc `wid` se quote; asal na gaya = bina quote.
 Helpers function declarations (TDZ se bachne ko — start() ke andar const baad mein aata). Test: pwsh ParseFile OK + JSON pages/rows; layout PIL namoona. AI: sirf bill number (pehle jaisa). PC 3-5 min.
+
+=== 2026-11-09 · v2.217.0 + rules 2.98 + PC wa-out v1.5 + wa-parchi v2.16 (🚚 Delivery — gahak ki location → faasla → charges → malik OK → gahak + delivery boy) ===
+Malik 20:04: "saath likha ho — delivery chahiye to current location bhej dein · PC aana-jana km naape · 30 km = 1 litre = Rs 400 → gahak ko 700 (isi nafe ke hisaab se)".
+20:07: "pehle hum OK karenge · phir location delivery boy ko auto (number hum likh denge)". Flow:
+wa-parchi v2.16: bill caption mein "🚚 Delivery chahiye? Apni current location bhej dein (📎 → Location)…" SIRF jab deliveryCfg.on + shop set (DLV_ON listener); bill job mein `bn`.
+wa-out v1.5: shouldIgnoreJid = sirf 1:1 (@s.whatsapp.net / @lid) — group / status / channel kabhi nahi; messages.upsert mein SIRF locationMessage / liveLocationMessage, aur sirf us gahak ki jise
+24 ghante mein bill (kind 'bill') gaya (CU, wa-out-cust.json; LID = lidMapping getPNForLID / getLIDForPN). Baqi har paigham chhor (na parhna, na save). roadKm = OSRM router.project-osrm.org (muft);
+na mile = haversine × 1.3 (how 'line' = andaza). dlvCalc(c, km): rt = km×2, cost = rt ÷ kml × pet, chg = max(min, ceil(cost × (1 + naf%) ÷ gol) × gol), far = rt > max. (Misal 15 km → 30 → 400 → 700 ✓.)
+deliveryReq/dl-<billJobId> {to,nm,bn,eid,lat,lng,place,live,km,how,rt,cost,chg,far,st 'new',at,upd} + waOut `dn-…` malik ko (map link) + `da-…` gahak ko "location mil gayi". Live location 10 min mein ek dafa.
+Malik / Full (CAP app.dlv OPT_IN) app ☰ 🚚 Delivery (delivery.js, apni <dialog id=dlvDlg>, ntDlvClose) — charges badal sakte → ✅ OK {st ok, fin, by, okAt} (rules 2.98 sirf yehi, st new se) / ✕ (do tap).
+wa-out DQ st ok listener (sent na ho, okAt 6 ghante tak) → `dc-` gahak charges · `db-` delivery boy LOCATION (waOut `loc` {lat,lng,name,adr} → Baileys location message) · `dt-` boy ko naam/number/bill/charges/map · `dm-` Mubeen ko khabar → doc {sent, boyOk}.
+Settings (sirf malik, blueAccess/deliveryCfg): ON/BAND, 📍 Yahan dukan hai (phone GPS) / Google Maps link / "lat, lng" (parseLatLng), petrol, km fi litre, nafa %, gol, kam se kam (100), zyada se zyada aana-jana (80), boy number.
+dlvCalc app (delivery.js) = wa-out HUBAHU. Test: Chromium (list / OK / ✕ do tap / setting / save, scrollWidth 400) + wa-out nakli Baileys + nakli Firestore (text chhoda, anjaan number chhoda, LID mila, OK → 4 paigham + location). AI NAHI.

@@ -1,5 +1,7 @@
 // =========================================================
-//  wa-parchi.js  v2.15 (2026-11-09) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  wa-parchi.js  v2.16 (2026-11-09) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v2.16: 🚚 malik: "saath likha ho — delivery chahiye to current location bhej dein" → bill ke caption mein delivery ki line (sirf jab app mein delivery ON +
+//        dukan ki jagah set, blueAccess/deliveryCfg) + bill job mein `bn` (wa-out gahak ki location usi bill se jorta hai). Baqi kaam wa-out v1.5.
 //  v2.15: 🧾 malik (Bill #00135211: "kul 31,000 thi, likha 14,859 · items full nahi"): pehle sirf pehle 40 items ka jor + "… aur 31 items". Ab Mubeen ki photo
 //        pehle jaisi (caption: Bill # · N items · Kul = POS ka asal TotalSale), phir USI photo ke REPLY mein poori list ki saaf tasveer(ein) —
 //        wa-a4.ps1 -Mode bill, 35-35 items fi tasveer (waOut `<bk>-l<n>`, `rq` = wa-out quote). Tasveer na bane = poori list text reply mein. AI sirf bill number.
@@ -85,7 +87,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.15';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.16';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1098,6 +1100,8 @@ async function start(ZINDA) {
 
   // ---------- ⚙️ settings + data (live) ----------
   let S = { on: true, allow: [], th: true, a4: true, thp: '', zm: true, a4m: 'print', a4c: 1, prTo: ['03462901193'], prFrom: ['03450412515'] }, sReady; const settingsReady = new Promise(r => { sReady = r; });
+  let DLV_ON = false;   // v2.16: delivery ki line sirf jab malik ne ON + dukan ki jagah set ki ho
+  BA.doc('deliveryCfg').onSnapshot(s => { const d = (s.exists && s.data()) || {}; DLV_ON = d.on !== false && !!(d.shop && Number(d.shop.lat) && Number(d.shop.lng)); }, e => log('⚠️ deliveryCfg: ' + e.message));
   BA.doc('waParchi').onSnapshot(s => {
     const d = (s.exists && s.data()) || {};
     S = { on: d.on !== false, allow: [...new Set((Array.isArray(d.allow) ? d.allow : []).map(normPh).filter(Boolean))], th: d.th !== false, a4: d.a4 !== false, thp: String(d.thp || '').trim(), zm: d.zm !== false,
@@ -1781,7 +1785,8 @@ async function start(ZINDA) {
       let bl = null; try { bl = await billList(jpg); if (bl) t.bn = bl.no; } catch (e) { log('🧾 bill list: ' + (e.message || e)); }   // 🤖 AI sirf bill number — list + Kul POS se
       const has = !!(bl && bl.L && bl.L.length), nb = t.bills.length;
       const head = has ? ` (Bill #${t.bn})\n${bl.L.length} items · *Kul: Rs ${nf0(bl.tot)}*\n👇 Poori list neeche` : ' (parchi ' + tstr(t.fwdAt) + ')';
-      const ok = await waOutPut(bk, { to: t.from, nm: t.nm || '', kind: 'bill', eid: bk, txt: `*NOOR TRADERS*\nAap ka bill tayyar hai 🧾${nb > 1 ? ' (' + nb + ')' : ''}${head}\nBohat shukria 🙏`, im: jpg });
+      const dl = DLV_ON ? '\n🚚 Delivery chahiye? Apni current location bhej dein (📎 → Location) — hum ghar tak pohancha denge.' : '';
+      const ok = await waOutPut(bk, { to: t.from, nm: t.nm || '', kind: 'bill', eid: bk, bn: String(t.bn || ''), txt: `*NOOR TRADERS*\nAap ka bill tayyar hai 🧾${nb > 1 ? ' (' + nb + ')' : ''}${head}${dl}\nBohat shukria 🙏`, im: jpg });
       if (ok) { t.sent = Date.now(); t.err = ''; log(`📤 parchi ${qid.slice(-6)} ka bill${nb > 1 ? ' #' + nb : ''} gahak ${phPretty(t.from)} ko queue (${Math.round(jpg.length / 1024)} KB)`); }
       if (ok && has) {   // v2.15: poori list Mubeen ki photo ke REPLY mein (wa-out rq)
         let imgs = []; try { imgs = await billImgs(bl); } catch (e) { log('🧾 bill tasveer: ' + (e.message || e)); }
