@@ -1,5 +1,5 @@
 // =========================================================
-//  pos-sales-dekho.js  v2.5 (2026-11-09: 🎥 bill ki PEHLI ITEM ka waqt `ft` — POS har scan par SaleDetail likhta hai (save se pehle), PC har 1 s naye SaleID ki pehli line dekh kar waqt yaad (pos-first-seen.json); bill-clip clip pehli item se shuru karta hai (malik: "pehli item ka time likh le to kaisa rahe")) · v2.4 (2026-11-08: 🎥 bill ka `ct` = BANANE / PRINT ka waqt (SystemNotes "Created & Printed By:… On:… at PC:") — Bill tally ki clip post ke waqt se nahi, bill banane ke waqt se (malik: "Abdurehman ne jis time bill bana kar print kiya, PC us time se peeche jaye, posting se nahi")) · v2.3 (2026-11-06: 🔎 JAANCH malik: "jo wapsi bill ke andar minus ho chuki wo dobara nahi" — har wapsi ke saath juda SaleID, us bill ka TotalSale aur
+//  pos-sales-dekho.js  v2.6 (2026-11-09: 🔴🧾 LIVE BILL — Live camera dekhte waqt us counter ka bante hue bill ki lines har 1 s posLive/<counter> mein (sirf parhna) · v2.5 (2026-11-09: 🎥 bill ki PEHLI ITEM ka waqt `ft` — POS har scan par SaleDetail likhta hai (save se pehle), PC har 1 s naye SaleID ki pehli line dekh kar waqt yaad (pos-first-seen.json); bill-clip clip pehli item se shuru karta hai (malik: "pehli item ka time likh le to kaisa rahe")) · v2.4 (2026-11-08: 🎥 bill ka `ct` = BANANE / PRINT ka waqt (SystemNotes "Created & Printed By:… On:… at PC:") — Bill tally ki clip post ke waqt se nahi, bill banane ke waqt se (malik: "Abdurehman ne jis time bill bana kar print kiya, PC us time se peeche jaye, posting se nahi")) · v2.3 (2026-11-06: 🔎 JAANCH malik: "jo wapsi bill ke andar minus ho chuki wo dobara nahi" — har wapsi ke saath juda SaleID, us bill ka TotalSale aur
 //                     SaleDetail ka jor (Qty×Rate) → sum.rtd (app milane ke liye) + note mein "bill se juri N · alag N"; MINUS abhi pehle jaisa (qaida data dekh kar)) · v2.2 (2026-11-04: ↩ malik: "Daily Sale mein sale return add hai ke nahi" → POS ki SALE RETURN (dbo.SaleReturn, us din ki) ab auto sale se MINUS —
 //                     cancel (DocStatusID 3) / stock fraq bahar; udhaar party ki wapsi (IsCreditRturn, wholesale nahi) = cash wapas nahi diya = minus NAHI (note mein ginti);
 //                     wholesale ki wapsi poori minus (wholesale bill bhi poora gina jata hai). Note: "↩ wapsi N bill Rs X minus". Parh na sake = pehle jaisa (minus nahi)) · v2.1 (2026-10-31: ⚡ har ½ sec · sirf naye/badle bill parho (cache + COUNT/SUM se milao, na mile = poori list) · sum / Daily Sale / items alag peeche ki lane · doc.pm raftar) · v2.0 (2026-10-28: 📌 har posted bill par post ka waqt `pt` — PC ne pehli dafa posted dekha (pos-posted-seen.json), shuru se pehle wale = UpdatedOn) · v1.9 (2026-10-28: ⚡ malik — "posting POS mein jaldi, app mein late": har 1 sec; bills ka haal (posted / un-posted) PEHLE likho, items + Daily Sale
@@ -66,6 +66,56 @@ async function firstTick() {
     if (ch) { const cut = now - 3 * 86400000; for (const [k, v] of Object.entries(firstSeen.m)) if (Number(v) < cut) delete firstSeen.m[k]; try { fs.writeFileSync(FIRST_FILE, JSON.stringify(firstSeen)); } catch {} }
   } catch (e) { log('pehli item: ' + e.message); }
   finally { firstRun = false; }
+}
+
+// v2.6 (2026-11-09): 🔴🧾 LIVE BILL — malik: "camera ke upar transparent patti — jis waqt item NT print par aaye usi waqt camera par bhi chalti nazar aaye".
+//   SIRF jab koi Live camera dekh raha ho (liveReq st 'ok' — doc har 15 s hb se badalta; PC ki ghari se 45 s ke andar dekha = zinda): us counter
+//   (NAAM → host, pcNames ulta) ka aaj ka AAKHRI bill (SystemNotes "at PC: host") + us ki lines har 1 s → posLive/<counter naam>
+//   {pc, sid, no, st (DocStatusID), pr (Printed By), t (TotalSale), j: JSON [[detailId, naam, qty, rate]], n, ft, at} — sirf badla ho ya 20 s baad.
+//   POS mein KUCH nahi likhta (sirf parhna). Koi na dekh raha ho = koi sawal nahi. AI nahi.
+const liveCol = db.collection('businesses').doc(BUSINESS_ID).collection('posLive');
+const liveW = new Map(), liveLast = new Map(); let liveRun = false;
+function liveWatchStart() {
+  db.collection('businesses').doc(BUSINESS_ID).collection('liveReq').where('st', '==', 'ok').onSnapshot(s => {
+    const now = Date.now();
+    s.docChanges().forEach(c => { if (c.type === 'removed') liveW.delete(c.doc.id); else liveW.set(c.doc.id, { pc: String((c.doc.data() || {}).pc || ''), seen: now }); });
+  }, e => log('live bill listener: ' + e.message));
+}
+function liveHosts() {
+  const now = Date.now(), names = pcNames(), want = new Set();
+  for (const [id, w] of liveW) { if (now - w.seen > 45000) { liveW.delete(id); continue; } if (w.pc) want.add(w.pc); }
+  const out = [];
+  for (const nm of want) {
+    let host = Object.keys(names).find(h => names[h] === nm) || (/^DESKTOP-/i.test(nm) ? nm : 'DESKTOP-' + nm);
+    host = String(host).replace(/[^A-Za-z0-9.-]/g, '');
+    if (host) out.push([nm, host]);
+  }
+  return out.slice(0, 4);
+}
+async function livePut(nm, d) {
+  const k = JSON.stringify(d), o = liveLast.get(nm);
+  if (o && o.k === k && Date.now() - o.at < 20000) return;
+  liveLast.set(nm, { k, at: Date.now() });
+  await liveCol.doc(String(nm).replace(/\//g, '_').slice(0, 100)).set({ ...d, at: Date.now() });
+}
+async function liveTick() {
+  if (liveRun) return;
+  const W = liveHosts(); if (!W.length) return;
+  liveRun = true;
+  try {
+    const p = await getPool(), d0 = new Date(); d0.setHours(0, 0, 0, 0);
+    for (const [nm, host] of W) {
+      const h = (await p.request().input('d', sql.DateTime, d0).input('h', sql.NVarChar(120), '%at PC:%' + host + '%').query(`SELECT TOP 1 s.SaleID, s.SaleNo, s.TotalSale, s.DocStatusID,
+        CAST(s.SystemNotes AS NVARCHAR(600)) AS SN FROM dbo.Sale s WHERE s.SaleDate >= @d AND CAST(s.SystemNotes AS NVARCHAR(600)) LIKE @h ORDER BY s.SaleID DESC`)).recordset[0];
+      if (!h) { await livePut(nm, { pc: nm, sid: 0, no: '', st: 0, pr: 0, t: 0, j: '[]', n: 0, ft: 0 }); continue; }
+      const L = (await p.request().input('s', sql.Int, h.SaleID).query(`SELECT TOP 150 d.SaleDetailID AS D, i.ItemName AS N, d.Qty AS Q, d.Rate AS R
+        FROM dbo.SaleDetail d LEFT JOIN dbo.Items i ON i.ItemID = d.ItemID WHERE d.SaleID = @s ORDER BY d.SaleDetailID`)).recordset;
+      const j = JSON.stringify(L.map(x => [Number(x.D) || 0, String(x.N || '').trim().slice(0, 50), Math.round((Number(x.Q) || 0) * 1000) / 1000, r2(x.R)]));
+      await livePut(nm, { pc: nm, sid: Number(h.SaleID) || 0, no: String(h.SaleNo || '').trim(), st: Number(h.DocStatusID) || 0, pr: /Printed\s*By/i.test(String(h.SN || '')) ? 1 : 0,
+        t: r2(h.TotalSale), j, n: L.length, ft: Number(firstSeen.m[String(h.SaleID)]) || 0 });
+    }
+  } catch (e) { log('live bill: ' + e.message); }
+  finally { liveRun = false; }
 }
 
 // v1.5 (2026-10-12): 🖥 POS KI SALE (AUTO) — malik: "Sale screen (Daily Sale) mein sale auto aani chahiye, us mein farq wale account ki entry
@@ -309,6 +359,7 @@ lock.on('listening', async () => {
   setInterval(ZINDA.guard(tick, 5 * 60000, 'bills tick'), EVERY);   // 2026-10-11: chowkidar
   setInterval(ZINDA.guard(slow, 10 * 60000, 'peeche ki lane'), 1500);   // v2.1: sum + Daily Sale + items alag
   setInterval(ZINDA.guard(firstTick, 10 * 60000, 'pehli item'), 1000);   // v2.5: 🎥 pehli item ka waqt
+  liveWatchStart(); setInterval(ZINDA.guard(liveTick, 10 * 60000, 'live bill'), 1000);   // v2.6: 🔴🧾 live bill (sirf jab koi dekh raha ho)
   firstTick();
   // v1.3: app ka bill POS mein bana (done) / edit hua -> foran dekho (2 sec ka intezar bhi nahi)
   const kick = () => setTimeout(() => { lastKey = ''; tick(); }, 150);
