@@ -7532,6 +7532,7 @@ html body #dialogBody .wo-dbg{display:block;margin:6px 0 2px;padding:5px 9px;bor
 /* v2.204.0: 👀 BILL TALLY (tally.js) — Nigrani wale ki screen: upar video, neeche items bari, sirf ✓ THEEK / ✕ KAM */
 .bt-root{display:flex;flex-direction:column;gap:8px;min-width:0;padding:4px 0}
 .bt-bar{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;font-size:14px;min-width:0}
+.bt-pcchip{height:28px;min-height:0;padding:0 10px;margin-left:6px;border-radius:999px;border:1px solid #c9d3e6;background:linear-gradient(#fff,#eef2fa);color:#1d3a6e;font-size:12px;font-weight:600;white-space:nowrap;vertical-align:middle}.bt-pcchip.is-in{background:linear-gradient(#e7f0ff,#d4e3ff);border-color:#4c8dff}html.dk .bt-pcchip{background:#1a2234;border-color:#2e3a52;color:#cfe0ff}#btDlg .bt-pcs .bt-tg{display:flex;flex-direction:column;align-items:flex-start;height:auto;padding:6px 12px}#btDlg .bt-pcs small{font-weight:400;opacity:.75;font-size:11px}
 .bt-prog b{font-size:15px}.bt-prog b.ok{color:#0f6b3d}.bt-prog b.bad{color:#b3261e}
 .bt-pcline{font-size:12px;color:#5b6b8a;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}.bt-pcline.bad{color:#b3261e;font-weight:700}
 .bt-chips{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}

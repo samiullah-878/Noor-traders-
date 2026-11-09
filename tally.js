@@ -18,8 +18,8 @@ const ago = t => { const m = Math.round((Date.now() - Number(t)) / 60000); retur
 
 let cloud = null, notice = () => {}, isOwner = () => false, byName = () => '', uidOf = () => '';
 let offs = [], mounted = false, bills = new Map(), clips = new Map(), tallies = new Map(), lines = new Map(), urls = new Map(), pcSt = null, reqs = new Map(), segIdx = 0, segBusy = '';
-let cur = '', mode = 'view', sel = new Set(), lastDone = '', reopen = '', order = 'new', speed = 1.5, loading = '', paintT = null;
-try { order = localStorage.getItem('sam-bt-order') || 'new'; speed = Number(localStorage.getItem('sam-bt-speed')) || 1.5; } catch {}
+let fPc = '', cur = '', mode = 'view', sel = new Set(), lastDone = '', reopen = '', order = 'new', speed = 1.5, loading = '', paintT = null;
+try { fPc = localStorage.getItem('sam-bt-pc') || ''; order = localStorage.getItem('sam-bt-order') || 'new'; speed = Number(localStorage.getItem('sam-bt-speed')) || 1.5; } catch {}
 
 export function tallySetup(o) { cloud = o.cloud; notice = o.notice || notice; isOwner = o.owner || isOwner; byName = o.byName || byName; uidOf = o.uid || uidOf; }
 
@@ -29,6 +29,7 @@ export function renderTally(host) {
     host.innerHTML = `<div id="btRoot" class="bt-root">
       <div class="bt-bar"><span class="bt-prog" id="btProg">…</span><span class="bt-pcline" id="btPc"></span>
         <span class="bt-chips" data-mn-box>
+          <button type="button" data-bt-pcf="1" data-mn="bt.pcf" data-mn-i="🖥" data-mn-t="Counter / camera" data-mn-s="sirf ek counter ke bill" data-mn-g="👀 Bill tally">🖥 Counter</button>
           <button type="button" data-bt-order="1" data-mn="bt.order" data-mn-i="💰" data-mn-t="Bare bill pehle" data-mn-s="warna naya pehle" data-mn-g="👀 Bill tally">💰 Bare pehle</button>
           <button type="button" data-bt-undo="1" data-mn="bt.undo" data-mn-i="↩" data-mn-t="Pichla wapas" data-mn-s="aakhri tally dobara" data-mn-g="👀 Bill tally">↩ Pichla</button>
           <button type="button" data-bt-list="1" data-mn="bt.list" data-mn-i="📋" data-mn-t="Bills ki list" data-mn-s="jo chaho kholo" data-mn-g="👀 Bill tally">📋 Bills</button>
@@ -60,15 +61,15 @@ function watch() {
 function schedule() { if (paintT) return; paintT = setTimeout(() => { paintT = null; paint(); if ($('btDlg')?.open && $('btDlg').dataset.list) openList(true); }, 120); }
 function queue() {
   const out = [];
-  for (const [id, b] of bills) { if (b.x || (tallies.has(id) && id !== reopen)) continue; const c = clips.get(id); if (!c || c.st !== 'ok') continue; if (Number(b.ps) !== 2 && !c.rq) continue; out.push(b); }   // v2.210.0: un-posted sirf jab clip mangwai (rq)
+  for (const [id, b] of bills) { if (b.x || (tallies.has(id) && id !== reopen)) continue; if (fPc && String(b.pc || '') !== fPc && id !== reopen) continue; const c = clips.get(id); if (!c || c.st !== 'ok') continue; if (Number(b.ps) !== 2 && !c.rq) continue; out.push(b); }   // v2.210.0: un-posted sirf jab clip mangwai (rq)
   out.sort((a, b) => order === 'big' ? (Number(b.t) - Number(a.t)) || (Number(b.pt) - Number(a.pt)) : Number(b.pt) - Number(a.pt));
   return out;
 }
 function counts() {
   const td = dayKey(0); let ok = 0, bad = 0, wait = 0, err = 0;
-  for (const t of tallies.values()) if (t.day === td) { if (t.ok) ok++; else bad++; }
+  for (const t of tallies.values()) if (t.day === td && (!fPc || String(t.pc || '') === fPc)) { if (t.ok) ok++; else bad++; }
   const on0 = Number(pcSt?.on0) || 0;   // v2.209.1: sirf aaj ke bill (PC kal ke nahi kaatta) + camera ON hone ke baad wale — warna jhoota "429 ban rahi"
-  for (const [id, b] of bills) { if (b.x || Number(b.ps) !== 2 || tallies.has(id) || b._d !== td) continue; const c = clips.get(id); if (!c || c.st === 'wait') { if (!on0 || Number(b.ct || b.pt) >= on0 - 10 * 60000) wait++; } else if (c.st === 'err' || c.st === 'skip') err++; }
+  for (const [id, b] of bills) { if (b.x || Number(b.ps) !== 2 || tallies.has(id) || b._d !== td || (fPc && String(b.pc || '') !== fPc)) continue; const c = clips.get(id); if (!c || c.st === 'wait') { if (!on0 || Number(b.ct || b.pt) >= on0 - 10 * 60000) wait++; } else if (c.st === 'err' || c.st === 'skip') err++; }
   return { ok, bad, wait, err, q: queue().length };
 }
 async function linesOf(id) {
@@ -121,7 +122,7 @@ function paintPc() {
 function paint() {
   if (!mounted || !$('btRoot')) return;
   const c = counts(), q = queue();
-  const pg = $('btProg'); if (pg) pg.innerHTML = `<b class="ok">✓ ${c.ok}</b> · <b class="bad">✕ ${c.bad}</b> · baqi <b>${c.q}</b>`;
+  const pg = $('btProg'); if (pg) pg.innerHTML = `<b class="ok">✓ ${c.ok}</b> · <b class="bad">✕ ${c.bad}</b> · baqi <b>${c.q}</b> <button type="button" class="bt-pcchip${fPc ? ' is-in' : ''}" data-bt-pcf="1">🖥 ${esc(fPc || 'Sab counter')} ▾</button>`;
   paintPc();
   const ob = $('btRoot').querySelector('[data-bt-order]'); if (ob) { ob.classList.toggle('on', order === 'big'); ob.textContent = order === 'big' ? '💰 Bare pehle ✓' : '💰 Bare pehle'; }
   if (!cur || !q.some(b => String(b.id) === cur)) { cur = q.length ? String(q[0].id) : ''; mode = 'view'; sel = new Set(); }
@@ -196,6 +197,7 @@ async function onClick(e) {
   const sg = t.closest('[data-bt-seg]'); if (sg) { playSeg(Number(sg.dataset.btSeg) || 0); return; }
   if (t.closest('[data-bt-unp]')) { openUnposted(); return; }
   if (t.closest('[data-bt-list]')) { openList(); return; }
+  if (t.closest('[data-bt-pcf]')) { openPcPick(); return; }
   const rq = t.closest('[data-bt-rq]'); if (rq) { const id = rq.dataset.btRq, b = bills.get(id); rq.disabled = true; rq.textContent = '⏳'; cloud.reqBillClip(id, { no: b?.no, pc: b?.pc, day: dayKey(0) }).then(() => notice('🎥 PC ko hukum gaya — clip 1-2 min mein')).catch(e => { notice('Hukum nahi gaya: ' + (e?.message || e)); rq.disabled = false; rq.textContent = '🎥 Mangwao'; }); return; }
   const op = t.closest('[data-bt-open]'); if (op) { const c = clips.get(op.dataset.btOpen); if (!c || c.st !== 'ok') { notice(c?.st === 'err' || c?.st === 'skip' ? '⚠ Is bill ki clip nahi bani: ' + (c.err || '') : '⏳ Clip abhi ban rahi hai'); return; } reopen = op.dataset.btOpen; cur = op.dataset.btOpen; mode = 'view'; sel = new Set(); const dd = $('btDlg'); if (dd) { delete dd.dataset.list; delete dd.dataset.unp; dd.close(); } $('btMain').innerHTML = ''; paint(); return; }
   if (t.closest('[data-bt-full]')) { const v = $('btVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (v.closest('.bt-vwrap') || v).requestFullscreen?.(); } catch {} return; }
@@ -231,19 +233,35 @@ function openSum() {
   if (!d.open) d.showModal();
 }
 
+// ---------- 🖥 counter / camera chunna (v2.214.0, malik: "har camera ke lehaz se us ka bill") — phone par yaad (sam-bt-pc) ----------
+function openPcPick() {
+  const d = dlg(); delete d.dataset.list; delete d.dataset.unp;
+  const td = dayKey(0), m = new Map();
+  for (const [id, b] of bills) { if (b.x || b._d !== td || Number(b.ps) !== 2) continue; const k = String(b.pc || ''); if (!k) continue; const o = m.get(k) || { n: 0, q: 0 }; o.n++; const c = clips.get(id); if (!tallies.has(id) && c && c.st === 'ok') o.q++; m.set(k, o); }
+  if (fPc && !m.has(fPc)) m.set(fPc, { n: 0, q: 0 });
+  const all = [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+  const chip = (k, t, o) => `<button type="button" class="bt-tg${fPc === k ? ' on' : ''}" data-pcv="${esc(k)}">${t}${o ? ` <small>${o.n} bill · baqi ${o.q}</small>` : ''}</button>`;
+  d.innerHTML = `<div class="bt-dhead"><b>🖥 Kis counter ke bill?</b><button type="button" class="bt-x" data-x="1">×</button></div>
+    <div class="bt-dbody"><p class="bt-sub">Har counter ka apna camera — jo chunein sirf us ke bill tally mein aayenge (aap ke phone par yaad).</p>
+      <div class="bt-row bt-pcs">${chip('', '🖥 Sab counter', null)}${all.map(([k, o]) => chip(k, '🖥 ' + esc(k), o)).join('')}</div></div>`;
+  d.querySelector('[data-x]').onclick = () => d.close();
+  d.querySelectorAll('[data-pcv]').forEach(b => b.onclick = () => { fPc = b.dataset.pcv || ''; try { localStorage.setItem('sam-bt-pc', fPc); } catch {} reopen = ''; cur = ''; mode = 'view'; sel = new Set(); d.close(); const mn = $('btMain'); if (mn) mn.innerHTML = ''; paint(); notice(fPc ? '🖥 Sirf ' + fPc + ' ke bill' : '🖥 Sab counter ke bill'); });
+  if (!d.open) d.showModal();
+}
+
 // ---------- 📋 bills ki list (v2.211.0, malik: "bill ki list aaye, jis ko chahein khol kar tally karein") ----------
 let listQ = '';
 function openList(refresh) {
   const d = dlg(); d.dataset.list = '1'; delete d.dataset.unp;
   const td = dayKey(0), q = listQ.trim().toLowerCase();
-  const all = [...bills.values()].filter(b => !b.x && b._d === td && Number(b.ps) === 2).sort((a, b) => Number(b.ct || b.pt) - Number(a.ct || a.pt));
+  const all = [...bills.values()].filter(b => !b.x && b._d === td && Number(b.ps) === 2 && (!fPc || String(b.pc || '') === fPc)).sort((a, b) => Number(b.ct || b.pt) - Number(a.ct || a.pt));
   const list = q ? all.filter(b => String(b.no || '').toLowerCase().includes(q) || String(b.by || '').toLowerCase().includes(q) || String(b.pc || '').toLowerCase().includes(q) || String(b.p || '').toLowerCase().includes(q)) : all;
   const row = b => { const id = String(b.id), c = clips.get(id), tl = tallies.get(id);
     const st = tl ? `<em class="${tl.ok ? 'ok' : 'bad'}">${tl.ok ? '✓ theek' : '✕ kam'}</em>` : c?.st === 'ok' ? '<em class="go">▶ Dekho</em>' : c?.st === 'err' || c?.st === 'skip' ? `<em class="bad" title="${esc(c.err || '')}">⚠ nahi bani</em>` : '<em>⏳ clip…</em>';
     return `<div class="bt-badrow bt-lrow${id === cur ? ' cur' : ''}" data-bt-open="${esc(id)}"><b>#${esc(b.no)}</b><span>${tm(b.ct || b.pt)} · ${esc(b.pc || '?')}${b.by ? ' · 👦 ' + esc(b.by) : ''} · Rs ${num(b.t)}${b.p ? ' · ' + esc(b.p) : ''}</span>${st}</div>`; };
   const body = `<div class="bt-badlist">${list.map(row).join('') || '<p class="bt-sub">Koi bill nahi</p>'}</div>`;
   if (refresh && d.querySelector('.bt-badlist')) { d.querySelector('.bt-badlist').outerHTML = body; d.querySelector('[data-cnt]').textContent = list.length; return; }
-  d.innerHTML = `<div class="bt-dhead"><b>📋 Aaj ke bill <small data-cnt>${list.length}</small></b><button type="button" class="bt-x" data-x="1">×</button></div>
+  d.innerHTML = `<div class="bt-dhead"><b>📋 Aaj ke bill${fPc ? ' · 🖥 ' + esc(fPc) : ''} <small data-cnt>${list.length}</small></b><button type="button" class="bt-x" data-x="1">×</button></div>
     <div class="bt-dbody"><input type="search" class="bt-srch" placeholder="🔍 bill number · larka · counter" value="${esc(listQ)}" autocomplete="off">${body}</div>`;
   d.querySelector('[data-x]').onclick = () => { delete d.dataset.list; d.close(); };
   d.querySelector('.bt-srch').oninput = ev => { listQ = ev.target.value; openList(true); };
