@@ -7705,6 +7705,17 @@ html body #kdDlg .kd-q.t{border-color:#c7d2fe!important;background:linear-gradie
 #kdDlg .kd-code small{font-size:12px;font-weight:800;color:#4338ca}
 #kdDlg .kd-code b{font-size:28px;letter-spacing:4px;font-family:ui-monospace,Menlo,Consolas,monospace;color:#1e1b4b;user-select:all}
 #kdDlg .kd-code em{font-style:normal;font-size:11.5px;font-weight:700;color:#166534}
+/* v2.220.0 📱 Ami ka phone — 3 apps ki patti */
+#kdDlg .kd-card.ami{border-left:4px solid #db2777}
+#kdDlg .kd-tag{font-style:normal;font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:999px;background:linear-gradient(135deg,#fdf2f8,#fce7f3);border:1px solid #f9a8d4;color:#9d174d;margin-left:6px;white-space:nowrap;vertical-align:2px}
+#kdDlg .kd-ars{display:grid;gap:8px;margin-top:9px}
+#kdDlg .kd-ar{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;gap:2px 8px;min-width:0}
+#kdDlg .kd-an{font-size:13px;font-weight:800;color:#18212f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#kdDlg .kd-av{font-size:12px;font-weight:700;color:#64748b;white-space:nowrap;text-align:right}
+#kdDlg .kd-av b{font-size:14.5px;color:#1e1b4b}
+#kdDlg .kd-av em{font-style:normal;font-weight:800;color:#166534;margin-left:7px}#kdDlg .kd-av em.over{color:#be123c}
+#kdDlg .kd-ar .kd-bar{grid-column:1/-1;margin-top:2px;height:7px}
+#kdDlg .kd-h7.a{grid-template-columns:44px minmax(0,1fr)}#kdDlg .kd-h7.a em{text-align:left;font-weight:700;overflow:hidden;text-overflow:ellipsis}
 /* v2.219.0: 🧾 live camera ke upar bill ki patti (live.js) */
 #lvDlg .lv-bt{height:34px;width:38px;min-height:0;padding:0;border-radius:999px;border:1px solid #ffffff40;background:#ffffff18;color:#fff;font-size:16px;opacity:.6}#lvDlg .lv-bt.is-in{opacity:1;background:linear-gradient(#2fb86acc,#1e8a4ccc);border-color:#2fb86a}
 #lvDlg .lv-bill{position:absolute;right:max(8px,env(safe-area-inset-right));top:52px;bottom:58px;width:min(46%,330px);display:flex;flex-direction:column;background:rgba(6,12,24,.58);border:1px solid #ffffff26;border-radius:12px;color:#fff;font-size:13px;overflow:hidden;pointer-events:auto}

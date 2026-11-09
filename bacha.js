@@ -5,10 +5,17 @@
 //   (yahan ke qaide) parhta, har 10 min bachaUse {k,d,p} likhta. Yeh screen sirf parhti / qaide likhti hai. AI NAHI.
 //   Qaide string mein (Firestore REST se macro ko seedhe parhne ke liye): lim · add+addU (aaj ka zyada, epoch tak) · papa (epoch tak sab khula) ·
 //   stop (epoch tak band) · allow / block (",pkg,pkg,"). DEF_ALLOW / DEF_BLOCK = bacha/build_macro.py ke ALLOW / BLOCK jaisa — ek badlo to doosra bhi.
+// v2.220.0 📱 AMI KA PHONE (malik: "TikTok 2 ghante · Facebook 40 min · YouTube 1 ghanta · Shorts / games / Play Store band · Settings khuli ·
+//   uninstall nahi · alag macro, app se link"): doc kind 'ami' — tkL fbL ytL (roz ki hadd) · tkX fbX ytX + xU (aaj ka zyada, epoch tak) · papa ·
+//   block. Alag macro bacha/ami.macro (bacha/build_ami.py) — AMI_BLOCK = build_ami.py ka BLOCK (ek badlo to doosra bhi). Data wahi bachaUse.
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 export const MACRO_URL = 'https://samiullah-878.github.io/Noor-traders-/bacha/bacha.macro';
 export const DEF_LIM = 80;
+export const AMI_URL = 'https://samiullah-878.github.io/Noor-traders-/bacha/ami.macro';
+export const AMI_LIM = { tk: 120, fb: 40, yt: 60 };
+export const AMI_APPS = [['tk', '🎵', 'TikTok', ["com.zhiliaoapp.musically", "com.ss.android.ugc.trill", "com.zhiliaoapp.musically.go", "com.ss.android.ugc.aweme"]], ['fb', '📘', 'Facebook', ["com.facebook.katana", "com.facebook.lite"]], ['yt', '▶️', 'YouTube', ["com.google.android.youtube"]]];
+export const AMI_BLOCK = ["com.dts.freefireth", "com.dts.freefiremax", "com.tencent.ig", "com.pubg.imobile", "com.pubg.krmobile", "com.roblox.client", "com.mojang.minecraftpe", "com.king.candycrushsaga", "com.king.candycrushsodasaga", "com.kiloo.subwaysurf", "com.ludo.king", "com.miniclip.eightballpool", "com.miniclip.carrom", "com.supercell.clashofclans", "com.supercell.clashroyale", "com.supercell.brawlstars", "com.activision.callofduty.shooter", "com.imangi.templerun2", "com.outfit7.mytalkingtom2", "com.outfit7.mytalkingangelafree", "com.fingersoft.hillclimb", "com.nianticlabs.pokemongo", "com.innersloth.spacemafia", "com.playrix.township", "com.playrix.homescapes", "com.playrix.gardenscapes", "com.ea.gp.fifamobile", "com.gameloft.android.ANMP.GloftA9HM", "com.android.vending", "com.sec.android.app.samsungapps", "com.xiaomi.mipicks", "com.heytap.market", "com.bbk.appstore", "com.huawei.appmarket", "com.google.android.packageinstaller", "com.android.packageinstaller", "com.miui.packageinstaller", "com.samsung.android.packageinstaller", "com.arlosoft.macrodroid"];
 export const DEF_ALLOW = ['com.google.android.dialer', 'com.android.dialer', 'com.samsung.android.dialer', 'com.android.contacts', 'com.google.android.contacts',
   'com.samsung.android.app.contacts', 'com.android.phone', 'com.android.server.telecom', 'com.android.incallui', 'com.samsung.android.incallui',
   'com.android.systemui', 'com.whatsapp', 'com.whatsapp.w4b', 'com.google.android.apps.maps',
@@ -59,12 +66,12 @@ const ago = s => { if (!s) return 'kabhi nahi'; const m = Math.round((Date.now()
 const clock = s => new Date(s * 1000 + PK).toISOString().slice(11, 16);
 
 // ---------- 📥 phone ka data ----------
-// p = "v1|t=<epoch>|u=<aaj gina>|c=<aaj ki hadd>|b=<battery>|<log>" · log: "hh:mm~pkg," (har minute screen on) · "!B~pkg~hh:mm," band app · "!S~~" Shorts ·
+// p = "v1|t=<epoch>|u=<aaj gina>|c=<aaj ki hadd>|b=<battery>|<log>" (Ami: "v1|t=|tk=|fb=|yt=|tc=|fc=|yc=|b=|<log>" — aaj ke minute + hadd) · log: "hh:mm~pkg," (har minute screen on) · "!B~pkg~hh:mm," band app · "!S~~" Shorts ·
 //   "!U~pkg~" uninstall · "!X~~" time khatam · "!D~~" naya din
 export function parseDoc(p) {
   const s = String(p || ''); const o = { t: 0, u: 0, c: 0, b: '', mins: {}, ev: [] };
   const head = s.split('|'); let i = 0;
-  for (; i < head.length; i++) { const m = /^([tucbv])=?(.*)$/.exec(head[i]); if (!m || (head[i].indexOf('=') < 0 && m[1] !== 'v')) break; if (m[1] === 'v') continue; o[m[1]] = m[1] === 'b' ? m[2] : Number(m[2]) || 0; }
+  for (; i < head.length; i++) { if (/^v\d*$/.test(head[i])) continue; const m = /^(t|u|c|b|tk|fb|yt|tc|fc|yc)=(.*)$/.exec(head[i]); if (!m) break; o[m[1]] = m[1] === 'b' ? m[2] : Number(m[2]) || 0; }
   const log = head.slice(i).join('|');
   for (const e of log.split(',')) {
     if (!e) continue;
@@ -73,23 +80,26 @@ export function parseDoc(p) {
   }
   return o;
 }
+const AK = ['tk', 'fb', 'yt'];
 export function summarize(docs, now = Date.now()) {
-  const today = pkDay(now), out = { last: 0, used: 0, cap: 0, bat: '', mins: {}, ev: [], days: {} };
+  const today = pkDay(now), out = { last: 0, used: 0, cap: 0, bat: '', mins: {}, ev: [], days: {}, tk: 0, fb: 0, yt: 0 };
   const L = (docs || []).map(d => ({ ...parseDoc(d.p), id: d.id })).filter(x => x.t > 0).sort((a, b) => a.t - b.t);
   for (const x of L) {
     const day = pkDay(x.t * 1000);
-    const D = out.days[day] || (out.days[day] = { used: 0, mins: {}, ev: [], ids: [] });
-    D.used = Math.max(D.used, x.u); D.ids.push(x.id); D.ev.push(...x.ev);
+    const D = out.days[day] || (out.days[day] = { used: 0, tk: 0, fb: 0, yt: 0, mins: {}, ev: [], ids: [] });
+    D.used = Math.max(D.used, x.u); for (const k of AK) D[k] = Math.max(D[k], x[k] || 0); D.ids.push(x.id); D.ev.push(...x.ev);
     for (const [k, v] of Object.entries(x.mins)) D.mins[k] = (D.mins[k] || 0) + v;
     if (x.t >= out.last) { out.last = x.t; out.cap = x.c; out.bat = x.b; if (day === today) out.used = x.u; }
   }
-  const T = out.days[today]; if (T) { out.mins = T.mins; out.ev = T.ev; out.used = Math.max(out.used, T.used); }
+  const T = out.days[today]; if (T) { out.mins = T.mins; out.ev = T.ev; out.used = Math.max(out.used, T.used); for (const k of AK) out[k] = T[k]; }
   return out;
 }
-const evName = { B: 'Band app kholi', S: 'YouTube Shorts', U: 'Uninstall ki koshish', X: 'Time khatam' };
+const evName = { B: 'Band app kholi', S: 'YouTube Shorts', U: 'Uninstall ki koshish', X: 'Time khatam', M: 'Settings mein MacroDroid' };
+const AMI_NM = { tk: '🎵 TikTok', fb: '📘 Facebook', yt: '▶️ YouTube' };
+const evApp = pk => AMI_NM[pk] || appName(pk);
 
 // ---------- 🖼 khirki ----------
-let A = null, P = null, U = {}, H = {}, err = '', mode = 'list', open = '', menu = false, newCode = '', draft = null, busy = '';
+let A = null, P = null, U = {}, H = {}, err = '', mode = 'list', open = '', menu = false, newCode = '', draft = null, busy = '', edit = '', skind = 'kid';
 export function kdOpen(ctx) {
   A = ctx; mode = 'list'; open = ''; menu = false;
   let d = $('kdDlg');
@@ -105,7 +115,7 @@ export function kdOpen(ctx) {
   load(); paint();
 }
 function close() { const d = $('kdDlg'); try { d?.close(); } catch {} window.ntKdClose = null; }
-function back() { if (menu) { menu = false; paint(); return; } if (mode !== 'list') { mode = 'list'; draft = null; paint(); return; } close(); }
+function back() { if (menu) { menu = false; paint(); return; } if (mode !== 'list') { mode = 'list'; draft = null; edit = ''; paint(); return; } close(); }
 async function load() {
   err = '';
   try {
@@ -124,7 +134,7 @@ async function clean(code, docs, S) {
       if (day >= cut) continue;
       const top = Object.entries(D.mins).sort((a, b) => b[1] - a[1]).slice(0, 12);
       const ev = {}; for (const e of D.ev) if (evName[e.k]) ev[e.k] = (ev[e.k] || 0) + 1;
-      await A.cloud.bachaDaySet(code + '_' + day, { code, day, used: D.used, top: JSON.stringify(top), ev: JSON.stringify(ev), at: Date.now() });
+      await A.cloud.bachaDaySet(code + '_' + day, { code, day, used: D.used, tk: D.tk || 0, fb: D.fb || 0, yt: D.yt || 0, top: JSON.stringify(top), ev: JSON.stringify(ev), at: Date.now() });
       await A.cloud.bachaUseDel(D.ids);
     }
   } catch (e) { console.warn('bacha clean', e); }
@@ -141,17 +151,24 @@ const papaOn = ph => Number(ph.papa) > now();
 const stopOn = ph => Number(ph.stop) > now();
 const addOn = ph => Number(ph.addU) > now() ? Number(ph.add) || 0 : 0;
 const lim = ph => Number(ph.lim) || DEF_LIM;
+const isAmi = ph => ph?.kind === 'ami';
+const kids = () => (P || []).filter(x => !isAmi(x));
+const amiX = (ph, k) => Number(ph.xU) > now() ? Number(ph[k + 'X']) || 0 : 0;
+const amiL = (ph, k) => Number(ph[k + 'L']) || AMI_LIM[k];
+const amiBl = ph => setOf(ph.block || ',' + AMI_BLOCK.join(',') + ',');
+const hs = m => { m = Math.max(0, Math.round(Number(m) || 0)); return m >= 60 ? Math.floor(m / 60) + ':' + String(m % 60).padStart(2, '0') + ' gh' : m + ' min'; };
 
 function paint() {
   const b = $('kdB'), m = $('kdMenu'); if (!b) return;
-  $('kdT').textContent = mode === 'rules' ? '⚙️ Qaide — sab bachon ke phone' : mode === 'setup' ? '📲 Naya phone jorna' : '👶 Bachon ke phone';
-  m.hidden = !menu; if (menu) m.innerHTML = `<div class="kd-row"><button type="button" class="kd-c pri" data-kd="add">➕ Naya phone</button><button type="button" class="kd-c" data-kd="rules">⚙️ Qaide (time · apps)</button><button type="button" class="kd-c" data-kd="setup">📲 Macro link / setup</button><button type="button" class="kd-c" data-kd="reload">🔄 Taza karo</button></div>`;
+  $('kdT').textContent = mode === 'rules' ? '⚙️ Qaide — sab bachon ke phone' : mode === 'setup' ? '📲 Naya phone jorna' : mode === 'alim' ? '⏱ Ami ka roz ka time' : '👶 Bachon ke phone';
+  m.hidden = !menu; if (menu) m.innerHTML = `<div class="kd-row"><button type="button" class="kd-c pri" data-kd="add">➕ Bache ka phone</button><button type="button" class="kd-c pri" data-kd="addAmi">➕ 📱 Ami ka phone</button><button type="button" class="kd-c" data-kd="rules">⚙️ Bachon ke qaide (time · apps)</button><button type="button" class="kd-c" data-kd="setup">📲 Macro link / setup</button><button type="button" class="kd-c" data-kd="reload">🔄 Taza karo</button></div>`;
   if (mode === 'rules') { b.innerHTML = rulesHTML(); return; }
   if (mode === 'setup') { b.innerHTML = setupHTML(); return; }
+  if (mode === 'alim') { b.innerHTML = amiLimHTML(); return; }
   if (err) { b.innerHTML = `<div class="kd-empty"><b>⚠️ Data nahi aaya</b>${esc(err)}<br><small>Firestore rules (v2.96) PC par 5 min mein khud lagti hain — phir 🔄 Taza karo.</small></div>`; return; }
   if (!P) { b.innerHTML = '<div class="kd-empty">⏳ Load ho raha hai…</div>'; return; }
-  if (!P.length) { b.innerHTML = `<div class="kd-empty"><b>Abhi koi phone nahi juda</b>⋮ → ➕ Naya phone se pehla phone jorein.<div class="kd-row c"><button type="button" class="kd-c pri" data-kd="add">➕ Naya phone</button></div></div>`; return; }
-  b.innerHTML = P.map(cardHTML).join('');
+  if (!P.length) { b.innerHTML = `<div class="kd-empty"><b>Abhi koi phone nahi juda</b>⋮ se pehla phone jorein.<div class="kd-row c"><button type="button" class="kd-c pri" data-kd="add">➕ Bache ka phone</button><button type="button" class="kd-c pri" data-kd="addAmi">➕ 📱 Ami ka phone</button></div></div>`; return; }
+  b.innerHTML = P.map(ph => isAmi(ph) ? amiCardHTML(ph) : cardHTML(ph)).join('');
 }
 function cardHTML(ph) {
   const S = U[ph.code], is = open === ph.code;
@@ -191,10 +208,72 @@ function histHTML(ph) {
   return `<div class="kd-sub"><small>📅 Pichhle din</small>${L.map(x => `<div class="kd-h7"><span>${x.day === pkDay(Date.now()) ? 'Aaj' : esc(x.day.slice(5))}</span><i><b style="width:${Math.round((x.used || 0) / mx * 100)}%"></b></i><em>${hm(x.used)}</em></div>`).join('')}</div>`;
 }
 
-// ---------- ⚙️ qaide (sab phones par ek saath) ----------
+// ---------- 📱 Ami ka phone (kind 'ami') — 3 apps ka apna time, baqi apps khuli ----------
+const AMI_PRE = { tk: [60, 90, 120, 150, 180, 240], fb: [20, 30, 40, 60, 90], yt: [30, 45, 60, 90, 120] };
+function amiCardHTML(ph) {
+  const S = U[ph.code], is = open === ph.code, bl = amiBl(ph);
+  const last = S?.last || 0, dot = !last ? '⚪' : (now() - last) < 1200 ? '🟢' : (now() - last) < 7200 ? '🟡' : '⚫';
+  const top = Object.entries(S?.mins || {}).sort((a, b) => b[1] - a[1]);
+  const evc = {}; for (const e of S?.ev || []) if (evName[e.k]) evc[e.k] = (evc[e.k] || 0) + 1;
+  const xs = AMI_APPS.filter(([k]) => amiX(ph, k));
+  const badges = [papaOn(ph) ? `<i class="kd-bd g">🔓 Papa mode ${clock(Number(ph.papa))} tak</i>` : '', xs.length ? `<i class="kd-bd b">➕ aaj ${xs.map(([k, i]) => i + ' ' + amiX(ph, k)).join(' · ')} min</i>` : '', busy === ph.code ? '<i class="kd-bd">⏳ save…</i>' : ''].join('');
+  const rows = AMI_APPS.map(([k, i, n, ps]) => {
+    const band = ps.some(x => bl.has(x)), cap = amiL(ph, k) + amiX(ph, k), used = S?.[k] || 0, left = Math.max(0, cap - used), pct = cap ? Math.min(100, Math.round(used / cap * 100)) : 0;
+    return `<div class="kd-ar"><span class="kd-an">${i} ${n}</span><span class="kd-av"><b>${hs(used)}</b> / ${hs(cap)}<em class="${band || !left ? 'over' : ''}">${band ? '⛔ poora band' : left ? hs(left) + ' bacha' : '⛔ khatam'}</em></span><div class="kd-bar"><i style="width:${band ? 100 : pct}%" class="${band || pct >= 100 ? 'over' : pct >= 85 ? 'warn' : ''}"></i></div></div>`;
+  }).join('');
+  let h = `<div class="kd-card ami${is ? ' is-in' : ''}" data-kd-open="${esc(ph.code)}">
+    <div class="kd-l1"><span>${dot} <b>${esc(ph.nm || 'Ami ka phone')}</b><i class="kd-tag">📱 Ami</i></span><small>${S?.err ? '⚠️ ' + esc(S.err) : last ? 'aakhri data ' + ago(last) + (S.bat ? ' · 🔋' + esc(S.bat) + '%' : '') : '⏳ abhi data nahi aaya'}</small></div>
+    <div class="kd-ars">${rows}</div>
+    ${badges ? `<div class="kd-bds">${badges}</div>` : ''}
+    ${top.length ? `<div class="kd-apps">${top.slice(0, is ? 30 : 3).map(([p, n]) => `<span data-kd-app="${esc(p)}">${bl.has(p) ? '⛔ ' : ''}${esc(appName(p))} <b>${hm(n)}</b></span>`).join('')}</div>` : ''}
+    ${Object.keys(evc).length ? `<div class="kd-ev">⚠️ ${Object.entries(evc).map(([k, n]) => esc(evName[k]) + ' ×' + n).join(' · ')}</div>` : ''}`;
+  if (is) {
+    const ev = (S?.ev || []).filter(e => 'BUSXM'.includes(e.k)).slice(-8).reverse();
+    const extra = [...bl].filter(p => !AMI_BLOCK.includes(p) && !AMI_APPS.some(a => a[3].includes(p)));
+    h += `<div class="kd-acts">
+      <button type="button" class="kd-c" data-kd-act="ax:tk:30">➕ 30 min 🎵 TikTok</button><button type="button" class="kd-c" data-kd-act="ax:fb:15">➕ 15 min 📘 Facebook</button><button type="button" class="kd-c" data-kd-act="ax:yt:15">➕ 15 min ▶️ YouTube</button>
+      ${xs.length ? '<button type="button" class="kd-c" data-kd-act="unx">↺ Zyada time hatao</button>' : ''}
+      ${papaOn(ph) ? '<button type="button" class="kd-c" data-kd-act="unpapa">🔒 Papa mode band</button>' : '<button type="button" class="kd-c" data-kd-act="papa">🔓 Papa mode 10 min</button>'}
+    </div>
+    ${ev.length ? `<div class="kd-sub"><small>Aaj ki koshishein</small>${ev.map(e => `<div>${esc(e.tm)} · ${esc(evName[e.k])}${e.pk ? ' — ' + esc(evApp(e.pk)) : ''}</div>`).join('')}</div>` : ''}
+    ${extra.length ? `<div class="kd-sub"><small>⛔ Aap ki band ki hui apps (tap = kholo)</small><div class="kd-apps">${extra.map(p => `<span data-kd-app="${esc(p)}">⛔ ${esc(appName(p))}</span>`).join('')}</div></div>` : ''}
+    ${amiHistHTML(ph)}
+    <p class="kd-note">Roz: 🎵 <b>${hm(amiL(ph, 'tk'))}</b> · 📘 <b>${hm(amiL(ph, 'fb'))}</b> · ▶️ <b>${hm(amiL(ph, 'yt'))}</b>. Hamesha band: YouTube Shorts · sab games · Play Store · naya app / uninstall · MacroDroid. Settings khuli (sirf MacroDroid ka safha nahi). Baqi apps par time nahi. App par tap = ⛔ band / ✅ kholo. Tabdeeli phone par 5 min mein.</p>
+    <div class="kd-acts"><button type="button" class="kd-c pri" data-kd-act="alim">⏱ Roz ka time badlo</button><button type="button" class="kd-c" data-kd-act="name">✏️ Naam</button><button type="button" class="kd-c" data-kd-act="code">🔑 Code dikhao</button><button type="button" class="kd-c" data-kd-act="del">🗑 Phone hatao</button></div>`;
+  }
+  return h + '</div>';
+}
+function amiHistHTML(ph) {
+  const S = U[ph.code] || {}, M = { ...(H[ph.code] || {}) };
+  for (const [d, D] of Object.entries(S.days || {})) M[d] = { day: d, tk: D.tk, fb: D.fb, yt: D.yt };
+  const L = Object.values(M).sort((a, b) => b.day < a.day ? -1 : 1).slice(0, 7);
+  if (L.length < 2) return '';
+  return `<div class="kd-sub"><small>📅 Pichhle din</small>${L.map(x => `<div class="kd-h7 a"><span>${x.day === pkDay(Date.now()) ? 'Aaj' : esc(x.day.slice(5))}</span><em>🎵 ${hs(x.tk)} · 📘 ${hs(x.fb)} · ▶️ ${hs(x.yt)}</em></div>`).join('')}</div>`;
+}
+function amiLimHTML() {
+  const ph = P?.find(x => x.code === edit); if (!ph || !draft) return '<div class="kd-empty">Phone nahi mila</div>';
+  return `<div class="kd-set"><p class="kd-note">📱 <b>${esc(ph.nm)}</b> — roz ka time (raat 12 baje naya din). Baqi apps par koi time nahi.</p>
+    ${AMI_APPS.map(([k, i, n]) => `<h4>${i} ${n} — ${hm(draft[k])}</h4><div class="kd-row">${AMI_PRE[k].map(m => `<button type="button" class="kd-c${draft[k] === m ? ' is-in' : ''}" data-kd-al="${k}:${m}">${hm(m)}</button>`).join('')}<button type="button" class="kd-c" data-kd-al="${k}:?">✏️ Khud</button></div>`).join('')}
+    <div class="kd-row c"><button type="button" class="kd-c pri big" data-kd="saveAlim">💾 Save — phone par 5 min mein</button></div></div>`;
+}
+function amiToggle(ph, p) {
+  if (/game/i.test(p)) { A.notice('🎮 Game hamesha band hai'); return; }
+  const grp = AMI_APPS.find(a => a[3].includes(p)), ps = grp ? grp[3] : [p], bl = amiBl(ph), on = ps.some(x => bl.has(x)), nm = grp ? grp[1] + ' ' + grp[2] : appName(p);
+  const q = on ? `${nm} ko ✅ kholna hai?${AMI_BLOCK.includes(p) ? '\n(Is ke khulne se Ami ' + (p === 'com.arlosoft.macrodroid' ? 'macro band kar sakti hain' : 'nayi app / store khol sakti hain') + ')' : grp ? ' (phir roz ka time chalega)' : ''}` : `${nm} ko ⛔ ${grp ? 'POORA band (time ki jagah)' : 'band'} karna hai?`;
+  if (!confirm(q)) return;
+  for (const x of ps) on ? bl.delete(x) : bl.add(x);
+  return save(ph.code, { block: ',' + [...bl].join(',') + ',' }, on ? '✅ ' + nm + ' khul gayi' : '⛔ ' + nm + ' band');
+}
+async function saveAlim() {
+  const ph = P?.find(x => x.code === edit); if (!ph || !draft) return;
+  await save(edit, { tkL: String(draft.tk), fbL: String(draft.fb), ytL: String(draft.yt) }, `⏱ Roz: TikTok ${hm(draft.tk)} · Facebook ${hm(draft.fb)} · YouTube ${hm(draft.yt)}`);
+  mode = 'list'; draft = null; edit = ''; paint();
+}
+
+// ---------- ⚙️ qaide (sab BACHON ke phones par ek saath — Ami ka phone alag) ----------
 const setOf = s => new Set(String(s || '').split(',').filter(Boolean));
 function rulesDraft() {
-  const f = P?.[0] || {};
+  const f = kids()[0] || {};
   return { lim: Number(f.lim) || DEF_LIM, allow: setOf(f.allow || ',' + DEF_ALLOW.join(',') + ','), block: setOf(f.block || ',' + DEF_BLOCK.join(',') + ',') };
 }
 const stateOf = ps => ps.every(p => draft.allow.has(p)) ? 'a' : ps.some(p => draft.block.has(p)) ? 'b' : 't';
@@ -202,7 +281,7 @@ function rulesHTML() {
   if (!draft) draft = rulesDraft();
   const known = new Set(KNOWN.flatMap(k => k[2]));
   const extra = [...draft.allow, ...draft.block].filter(p => !known.has(p) && !NAME[p]);
-  const seen = new Set(); for (const S of Object.values(U)) for (const p of Object.keys(S?.mins || {})) if (!known.has(p) && !NAME[p]) seen.add(p);
+  const seen = new Set(); for (const ph of kids()) for (const p of Object.keys(U[ph.code]?.mins || {})) if (!known.has(p) && !NAME[p]) seen.add(p);
   const chip = (lab, ps) => { const s = stateOf(ps); return `<button type="button" class="kd-q ${s}" data-kd-q="${esc(ps.join(' '))}"><b>${s === 'a' ? '✅' : s === 'b' ? '⛔' : '⏱'}</b> ${esc(lab)}</button>`; };
   return `<div class="kd-set">
     <h4>⏱ Roz ka time (sirf ⏱ wali apps ginti mein)</h4>
@@ -220,53 +299,61 @@ function cycle(ps) {
   for (const p of ps) { draft.allow.delete(p); draft.block.delete(p); if (nx === 'a') draft.allow.add(p); if (nx === 'b') draft.block.add(p); }
 }
 async function saveRules() {
-  if (!P?.length) { A.notice('Pehle ➕ Naya phone jorein'); return; }
+  const K = kids(); if (!K.length) { A.notice('Pehle ⋮ → ➕ Bache ka phone jorein'); return; }
   if (KNOWN.find(k => k[1] === 'Phone / Contacts')[2].some(p => draft.block.has(p))) { if (!confirm('Phone (call) band karna hai? Emergency call bhi nahi hogi.')) return; }
   const patch = { lim: String(draft.lim), allow: ',' + [...draft.allow].join(',') + ',', block: ',' + [...draft.block].join(',') + ',' };
   busy = 'rules'; paint();
-  try { await Promise.all(P.map(ph => A.cloud.bachaSet(ph.code, { ...patch, at2: Date.now() }))); P.forEach(ph => Object.assign(ph, patch)); A.notice('✅ Qaide ' + P.length + ' phone par — 5 min mein lag jayenge'); mode = 'list'; draft = null; }
+  try { await Promise.all(K.map(ph => A.cloud.bachaSet(ph.code, { ...patch, at2: Date.now() }))); K.forEach(ph => Object.assign(ph, patch)); A.notice('✅ Qaide ' + K.length + ' bachon ke phone par — 5 min mein lag jayenge'); mode = 'list'; draft = null; }
   catch (e) { A.notice('❌ Save nahi hua: ' + (e?.code || e?.message || e)); }
   busy = ''; paint();
 }
 
 // ---------- 📲 naya phone + setup ----------
 function genCode() { const a = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', r = new Uint32Array(10); crypto.getRandomValues(r); return [...r].map(x => a[x % a.length]).join(''); }
-async function addPhone() {
-  const nm = (prompt('Phone ka naam (jaise: Zara ka phone)') || '').trim(); if (!nm) return;
-  const f = P?.[0], code = genCode();
-  const doc = { nm: nm.slice(0, 40), lim: String(f?.lim || DEF_LIM), add: '0', addU: '0', papa: String(now() + 1800), stop: '0',
-    allow: f?.allow || ',' + DEF_ALLOW.join(',') + ',', block: f?.block || ',' + DEF_BLOCK.join(',') + ',', at: Date.now() };   // papa 30 min = setup ke dauran ijazatein (Settings) de sakein
+async function addPhone(kind) {
+  const ami = kind === 'ami';
+  const nm = (prompt(ami ? 'Phone ka naam' : 'Phone ka naam (jaise: Zara ka phone)', ami ? 'Ami ka phone' : '') || '').trim(); if (!nm) return;
+  const f = kids()[0], code = genCode();
+  const doc = ami
+    ? { kind: 'ami', nm: nm.slice(0, 40), tkL: String(AMI_LIM.tk), fbL: String(AMI_LIM.fb), ytL: String(AMI_LIM.yt), tkX: '0', fbX: '0', ytX: '0', xU: '0',
+        papa: String(now() + 1800), block: ',' + AMI_BLOCK.join(',') + ',', at: Date.now() }
+    : { nm: nm.slice(0, 40), lim: String(f?.lim || DEF_LIM), add: '0', addU: '0', papa: String(now() + 1800), stop: '0',
+        allow: f?.allow || ',' + DEF_ALLOW.join(',') + ',', block: f?.block || ',' + DEF_BLOCK.join(',') + ',', at: Date.now() };   // papa 30 min = setup ke dauran ijazatein (Settings) de sakein
   try { await A.cloud.bachaSet(code, doc, false); (P || (P = [])).push({ ...doc, code }); newCode = code; mode = 'setup'; menu = false; paint(); }
   catch (e) { A.notice('❌ Phone nahi bana: ' + (e?.code || e?.message || e)); }
 }
 function setupHTML() {
-  const ph = P?.find(x => x.code === newCode);
+  const ph = P?.find(x => x.code === newCode), ami = ph ? isAmi(ph) : skind === 'ami', url = ami ? AMI_URL : MACRO_URL, who = ami ? 'Ami' : 'Bache';
   return `<div class="kd-set">
+    ${ph ? '' : `<div class="kd-row c"><button type="button" class="kd-c${ami ? '' : ' is-in'}" data-kd="skKid">👶 Bachon ka macro</button><button type="button" class="kd-c${ami ? ' is-in' : ''}" data-kd="skAmi">📱 Ami ka macro</button></div>`}
     ${ph ? `<div class="kd-code"><small>${esc(ph.nm)} ka code</small><b>${esc(ph.code)}</b><button type="button" class="kd-c" data-kd="copy">📋 Copy</button><em>Setup ke liye 30 min sab khula (🔓 Papa mode)</em></div>` : `<p class="kd-note">Har phone ka code: us phone ke card par tap → 🔑 Code dikhao.</p>`}
-    <h4>Bache ke phone par (ek dafa, ~5 min)</h4>
+    <h4>${who} ke phone par (ek dafa, ~5 min)</h4>
     <ol>
       <li>Play Store se <b>MacroDroid</b> install karein (baad mein Play Store band ho jayega).</li>
-      <li>Neeche wala <b>macro link</b> bache ke phone par kholein → MacroDroid mein <b>Import / Save</b>.</li>
-      <li>Code poochhe to upar wala <b>code</b> likhein → "✅ Jur gaya" + patli awaaz aayegi.</li>
+      <li>Neeche wala <b>${ami ? '📱 Ami ka' : '👶 bachon ka'} macro link</b> ${ami ? 'Ami' : 'bache'} ke phone par kholein → MacroDroid mein <b>Import / Save</b>.</li>
+      <li>Code poochhe to upar wala <b>code</b> likhein → "✅ Jur gaya" + ${ami ? '' : 'patli '}awaaz aayegi.</li>
       <li>MacroDroid jo ijazat maange sab <b>Allow</b>: Accessibility, Usage access, Display over other apps, Battery = <b>Unrestricted</b>.</li>
       <li><b>Notification chhupana:</b> MacroDroid ki notification ko lamba dabayein → band (macro phir bhi chalta rahega).</li>
       <li>Awaaz na aaye to phone Settings → Text-to-speech → Google → <b>Hindi</b> awaaz download.</li>
-      <li>Test: TikTok kholein → foran band. 10 min baad yahan data aa jayega.</li>
+      <li>Test: ${ami ? 'koi game / Play Store kholein → foran band (pehle 30 min sab khula — setup ke liye)' : 'TikTok kholein → foran band'}. 10 min baad yahan data aa jayega.</li>
     </ol>
-    <div class="kd-row c"><button type="button" class="kd-c pri" data-kd="wa">📲 Link WhatsApp par bhejo</button><button type="button" class="kd-c" data-kd="link">🔗 Link copy</button><a class="kd-c" href="${MACRO_URL}" download>📥 Macro file</a></div>
-    <p class="kd-note">🛡 Sab se pakki rok: bache ke Gmail par Google <b>Family Link</b> (muft) — is ke saath bacha MacroDroid hata / phone reset nahi kar sakta.</p>
+    <div class="kd-row c"><button type="button" class="kd-c pri" data-kd="wa">📲 Link WhatsApp par bhejo</button><button type="button" class="kd-c" data-kd="link">🔗 Link copy</button><a class="kd-c" href="${url}" download>📥 Macro file</a></div>
+    ${ami ? `<p class="kd-note">📱 Ami ke phone par Settings khuli rahengi — sirf MacroDroid ka safha (Force stop / Uninstall / Accessibility) band. Factory reset koi app nahi rok sakti.</p>` : `<p class="kd-note">🛡 Sab se pakki rok: bache ke Gmail par Google <b>Family Link</b> (muft) — is ke saath bacha MacroDroid hata / phone reset nahi kar sakta.</p>`}
   </div>`;
 }
 async function copy(t, msg) { try { await navigator.clipboard.writeText(t); A.notice(msg || '📋 Copy ho gaya'); } catch { prompt('Copy karein:', t); } }
 
 async function onClick(e) {
-  const t = e.target.closest('[data-kd],[data-kd-open],[data-kd-act],[data-kd-lim],[data-kd-q],[data-kd-app]'); if (!t) return;
+  const t = e.target.closest('[data-kd],[data-kd-open],[data-kd-act],[data-kd-lim],[data-kd-al],[data-kd-q],[data-kd-app]'); if (!t) return;
   const d = t.dataset;
   if (d.kd) {
     const k = d.kd; if (k !== 'menu') menu = false;
     if (k === 'back') return back();
     if (k === 'menu') { menu = !menu; return paint(); }
-    if (k === 'add') return addPhone();
+    if (k === 'add') return addPhone('kid');
+    if (k === 'addAmi') return addPhone('ami');
+    if (k === 'skKid' || k === 'skAmi') { skind = k === 'skAmi' ? 'ami' : 'kid'; return paint(); }
+    if (k === 'saveAlim') return saveAlim();
     if (k === 'rules') { mode = 'rules'; draft = null; return paint(); }
     if (k === 'setup') { mode = 'setup'; newCode = ''; return paint(); }
     if (k === 'reload') { P = null; U = {}; paint(); return load(); }
@@ -274,17 +361,26 @@ async function onClick(e) {
     if (k === 'defs') { draft = { lim: DEF_LIM, allow: new Set(DEF_ALLOW), block: new Set(DEF_BLOCK) }; return paint(); }
     if (k === 'pkg') { const p = (prompt('App ka package naam (jaise com.example.game)') || '').trim().toLowerCase(); if (!/^[a-z0-9_]+(\.[a-z0-9_]+)+$/.test(p)) { if (p) A.notice('Package naam theek nahi'); return; } draft.block.add(p); return paint(); }
     if (k === 'copy') return copy(newCode, '📋 Code copy');
-    if (k === 'link') return copy(MACRO_URL, '🔗 Link copy');
-    if (k === 'wa') { window.open('https://wa.me/?text=' + encodeURIComponent('👶 Bachon ka phone — MacroDroid macro:\n' + MACRO_URL), '_blank'); return; }
+    const ph0 = P?.find(x => x.code === newCode), ami0 = ph0 ? isAmi(ph0) : skind === 'ami', url0 = ami0 ? AMI_URL : MACRO_URL;
+    if (k === 'link') return copy(url0, '🔗 Link copy');
+    if (k === 'wa') { window.open('https://wa.me/?text=' + encodeURIComponent((ami0 ? '📱 Ami ka phone' : '👶 Bachon ka phone') + ' — MacroDroid macro:\n' + url0), '_blank'); return; }
     return;
   }
   if (d.kdLim) { let m = d.kdLim === '?' ? Number(prompt('Roz kitne minute? (jaise 80 = 1 ghanta 20 min)', String(draft.lim))) : Number(d.kdLim); if (!(m >= 5 && m <= 900)) return; draft.lim = Math.round(m); return paint(); }
+  if (d.kdAl) { const [k, v] = d.kdAl.split(':'); const m = v === '?' ? Number(prompt(AMI_NM[k] + ' — roz kitne minute? (jaise 120 = 2 ghante)', String(draft?.[k] || ''))) : Number(v); if (!draft || !(m >= 5 && m <= 900)) return; draft[k] = Math.round(m); return paint(); }
   if (d.kdQ) { cycle(d.kdQ.split(' ')); return paint(); }
   if (d.kdApp && open !== t.closest('[data-kd-open]')?.dataset.kdOpen) { open = t.closest('[data-kd-open]')?.dataset.kdOpen || ''; return paint(); }
-  if (d.kdApp) { e.stopPropagation(); const p = d.kdApp; mode = 'rules'; draft = null; paint(); setTimeout(() => $('kdB')?.querySelector(`[data-kd-q~="${CSS.escape(p)}"]`)?.scrollIntoView({ block: 'center' }), 50); return; }
+  if (d.kdApp) { e.stopPropagation(); const p = d.kdApp, ph1 = P.find(x => x.code === t.closest('[data-kd-open]')?.dataset.kdOpen); if (isAmi(ph1)) return amiToggle(ph1, p); mode = 'rules'; draft = null; paint(); setTimeout(() => $('kdB')?.querySelector(`[data-kd-q~="${CSS.escape(p)}"]`)?.scrollIntoView({ block: 'center' }), 50); return; }
   const card = t.closest('[data-kd-open]'), code = card?.dataset.kdOpen;
   if (d.kdAct && code) {
     e.stopPropagation(); const ph = P.find(x => x.code === code); if (!ph) return; const a = d.kdAct;
+    if (a.startsWith('ax:')) {
+      const [, k, n] = a.split(':'), live = Number(ph.xU) > now(), patch = { xU: String(endOfDay(Date.now())) };
+      for (const [kk] of AMI_APPS) patch[kk + 'X'] = String((live ? Number(ph[kk + 'X']) || 0 : 0) + (kk === k ? Number(n) : 0));
+      return save(code, patch, `➕ ${n} min ${AMI_NM[k]} (aaj kul +${patch[k + 'X']})`);
+    }
+    if (a === 'unx') return save(code, { tkX: '0', fbX: '0', ytX: '0', xU: '0' }, '↺ Zyada time hata');
+    if (a === 'alim') { edit = code; draft = { tk: amiL(ph, 'tk'), fb: amiL(ph, 'fb'), yt: amiL(ph, 'yt') }; mode = 'alim'; return paint(); }
     if (a === 'add15' || a === 'add30') { const n = a === 'add15' ? 15 : 30; return save(code, { add: String(addOn(ph) + n), addU: String(endOfDay(Date.now())) }, `➕ ${n} min (aaj kul +${addOn(ph) + n})`); }
     if (a === 'unadd') return save(code, { add: '0', addU: '0' }, '↺ Zyada time hata');
     if (a === 'stop') return save(code, { stop: String(endOfDay(Date.now())) }, '⏸ Aaj phone band');

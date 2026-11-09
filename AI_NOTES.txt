@@ -7399,3 +7399,15 @@ POS mein kuch nahi likhta. App live.js: billStart (counter badle to naya listene
 (4 s), tadad badli peeli, hataya laal kata 12 s, naya bill = sab hara; upar #bill + ⏳ ban raha / 🖨 Print ✓ / 📌 Post ✓ / ✕ Cancel; neeche items + Kul (print / post par POS t, warna lines ka jor);
 60 s PC chup = ⚠; doc na aaye 15 s = "PC se bill nahi aa raha". Header 🧾 chip = patti chhupao / dikhao (localStorage sam-lv-bill). Rules 2.100 posLive read malik / Full / Nigrani.
 Test: Chromium (nakli posLive — add / qty / remove / print, portrait + landscape, toggle, counter badal) + PC block nakli SQL / Firestore (koi na dekhe = 0 sawal, wohi data = dobara likhai nahi). AI NAHI.
+=== 2026-11-09 · v2.220.0 (📱 Ami ka phone — alag MacroDroid macro, Blue Khata se link) — rules nahi badle (2.100) ===
+Malik: "Ami ka phone — TikTok 2 ghante · Facebook 40 min · YouTube 1 ghanta · Shorts nahi · koi game nahi · Play Store band · Settings khuli · uninstall na kar sake ·
+alag macro + apps ke saath link". OK mila. bacha/build_ami.py (build_macro.py ke helpers) → bacha/ami.macro (PUBLIC, chaabi nahi; MCP validator se paas, share link 7 din).
+Data WAHI bachaCfg / bachaUse (rules 2.99 kafi): doc kind 'ami' {tkL fbL ytL (roz minute), tkX fbX ytX + xU (aaj ka zyada, epoch tak), papa, block ",pkg,"}.
+Macro: har minute fg app TikTok / FB / YouTube ho to us ka minute (10 min baqi = awaaz + popup), hadd poori = Home + awaaz; block list ya package mein "game" = Home; Shorts (view-id)
+= Back + Home; launcher par uninstall = rok; installer / Play Store / MacroDroid block list mein; Settings khuli magar Settings ka safha jis par "MacroDroid" + (Force stop / Uninstall /
+Use MacroDroid / Disable / Turn off) = Back + Home (log !M). Code likhne ke baad 30 min khula (local p0) + doc ka papa (setup 30 min / 🔓 10 min). Awaaz normal (pitch 1.0, hi_IN).
+Har 10 min bachaUse p = "v1|t=|tk=|fb=|yt=|tc=|fc=|yc=|b=|<log>". App bacha.js: parseDoc header generic (whitelist t u c b tk fb yt tc fc yc), summarize din ka max tk/fb/yt,
+bachaDay mein tk/fb/yt. ⋮ "➕ 📱 Ami ka phone" (addPhone('ami')), Ami card = 3 patti (dekha / hadd / bacha, ⛔ poora band), chips ➕30 TikTok · ➕15 FB · ➕15 YT (xU = aaj raat),
+↺ zyada hatao, 🔓 Papa 10 min, ⏱ Roz ka time badlo (mode 'alim' chips), app par tap = us phone ki block list ⛔/✅ (game kabhi nahi; TikTok/FB/YT tap = poora band). ⚙️ Bachon ke
+qaide ab SIRF bachon ke phones (kids()). Setup: 👶 / 📱 macro chips, link / WhatsApp / file kind ke hisaab se. AMI_BLOCK (bacha.js) = build_ami.py BLOCK — ek badlo to doosra bhi.
+Test: node (parseDoc / summarize) + Chromium nakli data (card, ➕, hadd, toggle, setup). Asal phone par test baqi (Hindi TTS, Shorts view-id, Usage access). AI NAHI.
