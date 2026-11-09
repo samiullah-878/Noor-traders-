@@ -26,6 +26,7 @@
 //     printConfig.urduSlip). Urdu wali parchi nt-parchi ke tez worker se (tasveer); Urdu na ho to pehle jaisa RAW.
 //  v4.12 (2026-11-06): 🔤 malik — "capri jumbo 3in1 ka Urdu nahi bana": item ka Urdu naam na ho to parchi par bina AI Urdu (UR.item, roman2ur) +
 //     har 10 min POS ke chalu items mein jin ka Urdu naam nahi un ka AI se khud (urdu-names v1.7 fillItems — malik ka likha kabhi nahi badalta).
+//  v4.14 (2026-11-09): 🏦 bank-parchi v2.7 — apne naam (Sami Ullah / Noor Traders) se AAYA paisa: 5 min mein GAYE (wahi raqam) na mile = dukan ka, khud lagao.
 //  v4.13 (2026-11-08): 🏦 bank-parchi v2.6 — Alfalah FT SMS "on 10-Nov-26 15:19:18" parse + bank ki VALUE DATE (Sunday = agla din) par bhi aaye paise khud (entry aaj). (Sirf module badla — doctor restart ke liye yeh line.)
 //  Chalana:  node transfer-sync.js   (transfer-auto.bat loop mein)
 // =========================================================

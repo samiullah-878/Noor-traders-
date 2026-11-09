@@ -1,5 +1,5 @@
 // =========================================================
-//  bank-parchi.js  v2.6 (2026-11-08: aaye paise bank ki VALUE DATE (Sunday = agla din) par bhi khud, entry aaj) · v2.5 (2026-10-20: chhoti parchi par Urdu sar-khi + bari Urdu tareekh) · v2.4 (2026-10-14: ✉️ Alfalah EMAIL bhi parhna (ibanking: naam · email.notification: account + charges) + wahi Ref / TXN do docs mein = EK, doosra post nahi) · v2.3 (2026-10-14: 🏦 BANK ALFALAH SMS (8287) parhna — aaye / 💳 card / fee / statement; Alfalah NT (@pcin) mein aaye
+//  bank-parchi.js  v2.7 (2026-11-09: apne naam (Sami Ullah / Noor Traders) se AAYA paisa — 5 min mein doosri taraf GAYE na mile = khud lagao) · v2.6 (2026-11-08: aaye paise bank ki VALUE DATE (Sunday = agla din) par bhi khud, entry aaj) · v2.5 (2026-10-20: chhoti parchi par Urdu sar-khi + bari Urdu tareekh) · v2.4 (2026-10-14: ✉️ Alfalah EMAIL bhi parhna (ibanking: naam · email.notification: account + charges) + wahi Ref / TXN do docs mein = EK, doosra post nahi) · v2.3 (2026-10-14: 🏦 BANK ALFALAH SMS (8287) parhna — aaye / 💳 card / fee / statement; Alfalah NT (@pcin) mein aaye
 //                     paise khud; apne naam (Noor Traders / Samiullah) se aaye = khud nahi, app EK transfer banati hai) · v2.2 (2026-10-13: 🔔 HBL Mobile app ki NOTIFICATION (src 'notif') bhi parhta hai + notification / SMS / email jurwan = ek) · v2.1 (2026-10-12) — 🏦 sirf apne HBL account ke (A/C ke aakhri 4 number app mein yaad) · v2.0 (2026-10-12) — 🤖 aaye paise khud HBL khate mein (neeche) · v1.0 — 💰 PAISE AAYE ki parchi (Server PC, TM-T88IV)
 //  Malik: "jaise hi koi paisa aya usi time computer se print bi nikl aiya".
 //  📩 HBL Inbox (Firestore bankSms) mein naya SMS / email aate hi -> parchi: raqam (bara), kis se, bank, via, waqt, TXN.
@@ -223,7 +223,17 @@ function createBankWatcher({ biz, log, sendRaw, head, stateFile, cfgRef, now = (
     if (k) { const a = amap['@a:' + k]; if (!a || (a !== hblId && amap['@pcin:' + k] !== '1')) return ''; tgt = a; }
     else if (r.bankAc === 'alfalah') return '';
     if (!tgt) return '';
-    if (/noor\s*traders|sami\s*ullah|samiullah/i.test(r.name)) return '';   // v2.3: apna paisa (HBL <-> Alfalah) — app dono taraf jor kar EK transfer banati hai
+    if (/noor\s*traders|sami\s*ullah|samiullah/i.test(r.name)) {   // v2.3: apna paisa (HBL <-> Alfalah) — app dono taraf jor kar EK transfer banati hai
+      // v2.7 (9 Nov, malik: "ye aaya paisa auto lagna chahiye — phir pooch raha hai"): naam apna ho to bhi pehle 5 min doosri taraf (GAYE, wahi raqam, ±30 min) ka
+      //   intezar — mile = apna transfer (app jore), na mile = dukan ka paisa → aam tarah khud lagao (SAMI ULLAH T… jaisa gahak / dusre bank se).
+      const age = now() - created;
+      if (age < 5 * 60000) { setTimeout(() => { hq = hq.then(async () => { const f = await biz.collection('bankSms').doc(doc.id).get(); if (f.exists && !(f.data() || {}).st) await handle(f); }).catch(e => log('HBL apna-intezar: ' + e.message)); }, 5 * 60000 - age + 3000); return 'apna-intezar'; }
+      const zc = r.day && r.time ? Math.round(Date.parse(r.day + 'T' + r.time + ':00+05:00') / 60000) : Math.round(created / 60000);
+      const re = new RegExp('^ZA?out' + r.amt + '\\|');
+      const out = Object.keys(seen).some(k => re.test(k) && Math.abs(Number(k.split('|')[1]) - zc) <= 30);
+      if (out) return '';
+      log(`🤖 apne naam ka paisa (${ascii(r.name)}) — 5 min mein GAYE nahi mila = dukan ka, khud lag raha`);
+    }
     const id = 'bk' + doc.id + 'a', ref = khata().doc(id);
     const ex = await ref.get(); if (ex.exists && !ex.data().deleted) return 'pehle-se';
     const t = now();
