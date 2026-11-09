@@ -7333,3 +7333,6 @@ Malik: IP 192.168.10.19 = NVR (TCP/IP screen), password sahi — phir bhi Rabta 
 === 2026-11-09 · PC bill-clip v1.5 ===
 13:17 Rabta: 401 khatam, ab "🌐 web timeout" + RTSP "Invalid data found when processing input" (malik ne NVR restart / naya user kiya — NVR uth raha tha). v1.5: cfSig mein cfg.at = har Save naya test; hint Invalid data = NVR restart / RTSP band / port; asal clip ok aate hi TEST ok. AI nahi.
 
+=== 2026-11-09 · bill-clip v1.5 FIX ===
+025acd9 mein syntax ghalti push hui (comment ek-line callback ke beech) — manifest purana tha is liye PC par nahi gayi (PC v1.4 par hi raha). Theek kar ke manifest bump. Qaida CLAUDE.md mein.
+
