@@ -4294,3 +4294,24 @@ bachaDay mein tk/fb/yt. ⋮ "➕ 📱 Ami ka phone" (addPhone('ami')), Ami card 
 ↺ zyada hatao, 🔓 Papa 10 min, ⏱ Roz ka time badlo (mode 'alim' chips), app par tap = us phone ki block list ⛔/✅ (game kabhi nahi; TikTok/FB/YT tap = poora band). ⚙️ Bachon ke
 qaide ab SIRF bachon ke phones (kids()). Setup: 👶 / 📱 macro chips, link / WhatsApp / file kind ke hisaab se. AMI_BLOCK (bacha.js) = build_ami.py BLOCK — ek badlo to doosra bhi.
 Test: node (parseDoc / summarize) + Chromium nakli data (card, ➕, hadd, toggle, setup). Asal phone par test baqi (Hindi TTS, Shorts view-id, Usage access). AI NAHI.
+=== 2026-11-09 · v2.221.0 + rules 2.101 + PC owner-login v2.0 + server-join v1.1 (🔐 hacker se hifazat — malik: "koi bhi hacker na aaye") ===
+Jaanch (malik ko bataya): app ki Firebase settings public hain (har web app ki) → koi bhi program se GUMNAAM (anonymous) login bana sakta tha.
+(1) Rules mein 17+ jagah akela isStaff() = gumnaam bhi "mulazim": parchiOrders/parchiImg (gahak number), gatePass, transferChecks/Give, blueAccess
+config list (itemRates = khareed + nafa), posStats rack, a4Jobs/a4Img/khataPrints (printer), pushTokens, approvals, staffDevices, stockCount _hidden.
+(2) Session phone khud likhta tha (rules sirf key ka hona dekhte) + mulazim code 6 hindse (keep = jab tak istemal na ho) aur purane screen password
+6 hindse (PBKDF2, salt public) = program be-hadd aazma kar mulazim ban sakta tha. (3) GitHub likhne wala = PC + rules par qabza (2-step malik karega).
+Git history saaf: koi asal chaabi kabhi push nahi hui (sirf Firebase web key, public hoti hai); firebase-key / local-config kabhi nahi.
+ILAAJ: rules 2.101 — realStaff() (session + session ki key active, staffAccount jaisa) har us jagah; blueStaffSessions create/update SIRF admin
+(PC); deviceJoins get/delete sirf malik; naya staffLogin/<uid> {k code|tk|cid|sw, v, scope, at, device, ua, status new} sirf apna uid.
+PC owner-login v2.0 (wahi service): staffLogin sunta hai — code (pc-, 30 min / keep) / link (tk-, 7 din) → {ok, cid, scope, perms, name, staffId};
+cid → blueStaffSessions/<uid> banata (key active + loginEnabled); sw → apna session nayi key; code / link doc session bante hi mitta (2 min yaad);
+na mila 6 hindse = malik ka pakka code ho to {owner} (app phir ownerLogin raasta, ginti nahi). Ghalat = blueAccess/staffLoginLock fails,
+1 ghante mein 10 = 1 ghanta band (sirf kamzor raaste — st-+40hex key aur tk link band mein bhi chalte). busy key ab uid + updateTime (foran
+dobara likha atakta nahi — owner wale mein bhi). App cloud.js staffAsk (25 s, PC chup = STAFF_PC_MSG saaf); createSessionWithCredential /
+createPasswordSession / updateSession / joinByCode / joinByTicket isi se; config doc login se pehle parhna band. auth-controller loginErrorMessage
+staff/* = PC ka paigham. 👥 Mulazim screen par 🔐 patti (ghalat ginti / band + 🔓 Kholo, cloud.staffLoginLock / unlockStaffLogin). Purana
+"📱 Mulazim ka device jorain" (device ID + password) BAND — 6 harf ID se koi bhi doc parh sakta tha; row par likh diya, link / code istemal.
+Asar: jude phone chalte rahenge; naya login / screen badalna sirf jab shop PC on (raat 9 ke baad subah). geoLog 'wrongpass' login se pehle — isStaff.
+server-join v1.1: purani firebase-config.js (nt-traders project!) ki jagah config.js (note-traders-khata-7ccc1) — warna naya server kabhi na jurta.
+Test: nakli firebase-admin ke saath owner-login 19 jaanch (code/link/cid/sw/purana code/malik code/band/st- band mein bhi/foran dobara). Rules ka
+Google test-tool container mein nahi (download band) — line-war jaanch + braces / parens barabar. AI NAHI.

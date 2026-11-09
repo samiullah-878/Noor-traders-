@@ -7730,3 +7730,6 @@ html body #kdDlg .kd-q.t{border-color:#c7d2fe!important;background:linear-gradie
 #lvDlg .lvb-e{padding:8px 9px;opacity:.8;font-size:12px}
 html.lt #lvDlg .lv-bt{background:#ffffff18!important;color:#fff!important;border:1px solid #ffffff40!important}html.lt #lvDlg .lv-bt.is-in{background:linear-gradient(#2fb86acc,#1e8a4ccc)!important}
 @media (orientation:portrait){#lvDlg .lv-bill{left:max(8px,env(safe-area-inset-left));right:max(8px,env(safe-area-inset-right));width:auto;top:auto;bottom:58px;height:36%}}
+/* v2.221.0 🔐 Mulazim login (shop PC jaanch) patti */
+html body #dialogBody .st-sec{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0;padding:7px 12px;border:1px solid #c7d2fe;border-radius:12px;background:linear-gradient(135deg,#f5f7ff,#eef2ff);color:#1e1b4b;font-size:12.5px;font-weight:700}
+html body #dialogBody .st-sec-b{height:32px!important;min-height:32px!important;padding:0 12px!important;border-radius:999px!important;border:1px solid #fca5a5!important;background:linear-gradient(135deg,#fff1f2,#ffe4e6)!important;color:#9f1239!important;font-size:12px!important;font-weight:800!important;white-space:nowrap;width:auto!important}

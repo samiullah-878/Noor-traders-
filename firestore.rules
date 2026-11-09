@@ -1,5 +1,5 @@
 rules_version = '2';
-// BLUE KHATA v2.100 (🧾 posLive: live camera ke upar bante hue bill ki lines (PC pos-sales-dekho likhe) — malik / Full / Nigrani sirf parhein) · v2.99 (👶 bachaCfg / bachaUse / bachaDay: bachon ke phone — MacroDroid (bina login) apne code wale doc ke qaide parhe (sirf get, list nahi) aur sirf NAYA data {k,d,p} likhe jab k wala bachaCfg doc maujood ho; malik sab parhe / likhe / mitaye) · v2.98 (🚚 deliveryReq: gahak ki WhatsApp location ka faasla / charges (PC wa-out likhe) — malik / Full parhein, sirf faisla {st ok|x, fin, by apna, okAt} jab st 'new' · blueAccess/deliveryCfg sirf malik) · v2.97 (🖥 pcVault: purane server ka backup — SIRF malik parhe, likhe sirf PC admin · pcJoin: naya server PC gumnaam login se sirf APNA doc {code, pub, host, at, st new}, malik taale wala box {box, iv, apub, st ok}, PC st done/err) · v2.96 (🔴 liveReq: live camera WebRTC — malik / Full / Nigrani sirf NAYA offer (apna by) + hb / end; PC answer likhe · blueAccess/liveCamPc staff get) · v2.95 (🏷 labelJobs.x: Godam 2 ke labels +N zyada (int ≤ 50)) · v2.94 (🔵 billClipReq: un-posted POS bill ki camera clip ka hukum — Nigrani / Full / malik sirf NAYA {st new, apna by}; PC jawab likhe · billClip read wahi) · v2.93 (👀 billClip: har POS bill ki chhoti video (PC likhe) — malik / Full / Nigrani parhein · billTally: Nigrani / Full / malik ka ✓ Theek / ✕ Kam (sirf apna by) · posSales / posSaleLines ab Nigrani bhi parhe) · v2.92 (🛰 gaariFx: malik ke phone ka Falcon-i text (MacroDroid, chaabi gaariKey) — sirf naya; malik parhe / mitaye · gaariDay: malik bhi likhe (app khud Falcon trips + naqsha, PC band ho to bhi)) · v2.91 (📞 callEvt: HBL phone ka MacroDroid call ka haal chaabi blueAccess/callKey ke saath) · v2.90 (🎙 awazNotes: Meri baatein — malik ke Apps Script se khufia chaabi (blueAccess/awazKey) ke saath sirf naya note; parhna / tick sirf malik) · v2.89 (🔒 bankSms: bina chaabi wale purane TEST darwaze (p 1/2/3) band — ab bankSms mein bina login sirf sahi chaabi (bankKey) se) · v2.88 (🖼 parchiOrders.prImg: WhatsApp parchi jaisi print — poori tasveer thermal par, bina AI · mulazim / malik sirf waqt likhe) · v2.87 (👦 appSales.sm: bill par larka (POS SP Man id) — PC POS Sale.SupplyManID · blueAccess/supplyMen: larkon ki list (PC likhe) har mulazim parhe) · v2.86 (📲 parchiOrders + parchiImg: WhatsApp Parchi Sale — PC likhe; malik / mulazim parhein, app ka 📷 sirf naya order + tasveer, badalna sirf status / lines / bill link) · v2.85 (🖨 a4Jobs: ALAG A4 Print screen — 'to' (a4 / th thermal) + 'ph' (number); mulazim apna job dobara (sirf status / re)) · v2.84 (🖨 a4Jobs + a4Img: app ki har tasveer A4 printer ko — malik / mulazim sirf NAYA job + tasveer (apna by), PC chhap kar status likhta hai; dobara sirf malik · blueAccess a4 / a4Pc mulazim parhe) · v2.83 (🖨 khataPrints: Daily Wasooli / Akhrajat ka alag print — ab HAR mulazim naya print job bana sake + apna job parhe) · v2.82 (🖨 khataPrints: khata dukan printer — malik / Full mulazim sirf NAYA job {j JSON text}, PC chhap kar status likhta hai) · v2.81 (🚪 gatePass: POS ke POSTED bill ka gate pass (PC likhe) — malik / mulazim parhein, godam wala har item ka ✓ de diya sirf `g` mein) · v2.80 (📍 gaariGps: gaari ka phone (MacroDroid) khufia chaabi blueAccess/gaariKey se sirf NAYI GPS list likhe · gaariDay / gaariPath: PC ke din ke km + raasta — malik / Full / gaari parhein) · v2.79 (🏷 labelJobs: Sirf Purchase mulazim bhi barcode label — purchase screen ka chip) · v2.78 (🏪 webDukan: Online Dukan website — sab parhein (customer bina login), malik / Full mulazim likhein; cat + info sirf malik / PC) · v2.77 (⚖️ milanJobs: barabar karo — malik banaye, PC chalaye) · v2.76 (🚚/📦 purchase entry par 'via' gaari/supply — mulazim bhi likhe) · v2.75 (🔍 posLines: har khate ki POS ledger lines — malik / full mulazim parhe) · v2.74 (⚖️ blueAccess/posLedger: POS ledger balance — full mulazim bhi parhe) · v2.73 (✅ billChecks: POS purchase bill ka check — malik / full / purchase mulazim, sirf apna by; delete malik ya wohi) · v2.72 (📦 transferGive: dene wale (Zeeshan) ka HAR ITEM "de diya" lene wale ke phone par foran — item-war; asal "mil gaya" check phir bhi '<key>G' ke baghair nahi) · v2.71 (📲 approvals: mulazim malik se ijazat maange — sirf NAYI darkhwast likhe + apni parhe; faisla / badalna / mitana sirf malik · 💸 cashCustody ki nayi move mein 'ref' (khate ki cashpay entry ka link) + 'src' (purane din ka cash) — mulazim ka "Is cash se payment bhejo" ✓ Bhejo ab chalta hai) · v2.70 (⇄ transferJobs: har mulazim ka JALDI TRANSFER sirf sahi ⛔ Band wale password se (pw == blueAccess/bandKey.pw) · apna job parhe (PC ka jawab) · banane wala pw foran mitaye) · v2.69 (🔑 malik ka PAKKA CODE: ownerLogin/{uid} — anjaan device code likhe, shop PC (admin) jaanch kar custom token de · isOwner() custom token + ntOwner claim · deviceJoins 'keep' = larke ka code jab tak istemal na ho) · v2.68 (🔒 stockConfig.rackB — rack bharo 100% lock ab stock / full mulazim bhi laga / hata sake {itemId: pcs}) · v2.67 (🚚 appPurchases: 'via' (gaari / supply) + 'larka' (larke ki entry ki id) — POS Purchase save par chuna, PC jorta hai) · v2.66 (⛔ stockCount/_hidden: mulazim item band/chalu sirf sahi password (pw == blueAccess/bandKey.pw) se; keys items/updatedAt/retry/pw) · v2.65 (📦 transferChecks: do-tick (G) sirf Godam 1 = POS branch 2 ke notes; baqi godam par larka seedha 'mil gaya', godam wale ki shart sirf branch 2) · v2.64 (⏳ blueAccess/rackDone: rack bharo patti ke baad larke ka "rack bhar diya" ✓ — stock / full mulazim likhe, sirf 'jobs') · v2.63 (🧮 Godam 2 milao: stock / full mulazim stockConfig mein SIRF rackPk (packet %) likh sake) · v2.62 (🧺 posStats/rack — har mulazim get) · v2.61 (🏭 factoryBatches 'loc' (khula tail jaisa 📱 sirf factory item) · 🔁 notes.nag 0 = band) · v2.60 (🔔 pushTokens: har mulazim — isStaff — apna token likhe, notification sab ke khud chalu) · v2.59 (🏭 factory sirf app: factoryBatches status 'app' (POS mein nahi) + edit / cancel · factoryMoves (📥 maal aaya / 📤 diya / ginti) · labelJobs 'batch') · v2.58 (📦 godam wale kai: stockConfig.tcGiver 'zeeshan|bilal' — naam matches '.*(…).*') · v2.57 (📱 deviceJoins: 6 hindse ka code (pc-…) · list sirf malik) · v2.56 (🏭 factoryBatches: outs (packing — 4 kg / 700 g) + kind ('make' / 'pack'), out 0 tab jab outs hon) · v2.55 (🏭 factoryBatches: 'hold' = app mein ruka (POS baqi) -> 📤 bhejo; POS mein jane se pehle malik / banane wala foran cancel ya ✏️ edit) · v2.54 (⏳ itemJobs: PC baqi item ka ✏️ edit / ✕ cancel — malik ya jis ne daala, sirf status new) · v2.53 (💰 gallaCalls: naqad supplier needCheck — checker ek dafa check / rok do, malik parchi phir bhejo, "de diye" sirf parchi (prnState done) ke baad · blueAccess/gallaCheck staff get) · v2.52 (🏭 factory/cfg sirf malik likhe · factoryBatches: Full / Stock mulazim batch banaye (n 1–10, status new), malik wapas / dobara; PC admin POS mein) · v2.51 (➕ itemJobs: malik ka alag switch stockConfig.itemNew — mulazim sirf NAYA item, purana rate / naam sirf itemEdit se) · v2.50 (🖥 Full mulazim khata ko "POS mein bhi banayein" sirf ON kar sake — OFF / POS se hatana sirf malik) · v2.49 (🔔 bankSms src 'notif' — HBL Mobile app ki live notification) · v2.48 (📦 transferChecks: do tick — '<key>G' = dene wala "maal de diya" (godam ki taraf sirf stockConfig.tcGiver / malik); "mil gaya" G ke baghair nahi) · v2.47 (⇄ transferJobs: malik ka op 'edit' + 'reason' + 'force' (POS wala note bhi cancel / edit)) · v2.46 (🔒 parchi chhap gayi (posPrintedAt) = mulazim edit / delete sirf malik ki ijazat (editOk, 30 min) se; jorna phir bhi) · v2.45 (🚚 blueAccess/gaariBills: apni gaari wale POS bill — malik likhe, mulazim parhe) · v2.44 (🧾 transferChecks id 'T123E2' — POS mein edit hua note dobara check) · v2.43 (🖨 printJobs kind 'voucher' — app se TM-T88IV par voucher dobara print) · v2.42 (📩 bankSms create: `id` ki shart hatayi — REST auto-id par deny hoti thi; 2.41-TEST if true chala) · v2.40 (📩 bankSms: 4 jaanch darwaze p=1..4 + asal rule bina request.auth shart) · v2.39 (📩 bankSms create saada: request.auth == null + chaabi, alag allow) · v2.38 (📩 bankSms: HBL ke SMS / email — phone (MacroDroid) aur Gmail script khufia chaabi (blueAccess/bankKey) se sirf NAYA likh sakte; app parhti / ✓ karti) · v2.37 (🔁 notes.nag: baar baar yaad dilana — 15 / 30 / 60 min, jab tak ✓ na ho) · v2.36 (👥 mulazim naam se: blueStaffKeys.perms (ek key, kai screens) · blueStaff (list) · staffDevices (jude phone) · deviceJoins ticket link) · v2.35 (transferChecks: 🧾 transfer note ka barcode scan — maal pahuncha; sirf create, waqt server ka, koi edit nahi, sirf malik ghalti par hataye) · v2.34 (labelJobs: ✕ label cancel — app sirf cancelReq likhe) · v2.33 (saleEdits: 🧾 un-posted bill ka edit PC ko · posSaleLines: POS bill ki lines parhna · appSales: minus/wapsi bill) · v2.32 (gaari phera: khula phera mulazim/driver update) · v2.31 (gaari: 🚚 gaari ka hisaab + Sirf Gaari login) · v2.30 (appSales.gate: 🚪 gate pass switch — NT ka bhi) · v2.29 (blueStaffSessions update: screen badalna bina logout) · v2.28 (urduNames: items ke Urdu naam label ke liye; blueAccess get list mein) · v2.27 (liveCarts: 📺 Counter Nazar — bill bante waqt live lines, nigrani wala sirf 'stop' likhe; nazarStaff) · v2.26 (printPCs: 💻 PC chunein — har PC ka NT-PRINT agent report likhta hai, app sirf parhti hai) · v2.25 (blueAccess/look: malik ka theme sab devices par) · v2.24 (deviceJoins: mulazim ka device jorna) · v2.23 (token number + crates; tokens/{day}) · v2.22 (appSales counter: bill kis counter ke printer par) · v2.21 (posSales: POS ke aaj ke bills parhna) · v2.20 (har mulazim: party.dasti on/off) · v2.19 (transferJobs/printJobs copies: note ×1-3) · v2.18 (appSales copies: bill ×1-3) · v2.17 (mulazim: purane khate — rev na ho to 0; Dasti mein shamil) · v2.16 (demands: 📢 mulazim ki khatam/kam demand) · v2.15 (posStats: PC ki 6 mahine ki bikri · purchaseOrders: 🛒 order) · v2.14 (notes: contactName/contactPhone) · v2.13 (notes + tasveer · pushTokens · reminder dueTime · pushConfig) · v2.12 (auditLog: 🕘 history — har harkat, sirf jorna) · v2.11 (gallaCalls: purchase wala "itne paise do" -> galla wala "de diye" + supplier ki payment · Sirf Galla login) · v2.10 (posBillIds: ek entry ke saath kai POS bill) · v2.9 (entryPhotos: tasveerein alag · pn) · v2.8 (reminder: full mulazim bhi) · v2.7 (aiConfig stock/sale ko bhi — tolai) · v2.6 (tolai mein `who` — har mulazim ka apna hisaab) · v2.5 (posTransfers: POS par bane transfer bhi app mein) · v2.4 (tolai: label ki tasveer se ginti + tolaiConfig) · v2.3 (itemJobs: app se POS ka item banana / badalna; mulazim ko ijazat stockConfig.itemEdit se) · v2.2 (billFormats: har supplier ke bill ka naqsha — ginti PCS ya CTN, rate fi PCS ya fi CTN) · v2.1 (itemRates: har item ka pichhla khareed aur nafa yaad) · v2.0 (itemAliases: Full / Purchase mulazim bhi bill ka naam "yaad" karwa sake — naam sirf barh sakte hain, mit nahi sakte) · v1.94 (app purchase: dobara / cancel) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
+// BLUE KHATA v2.101 (🔐 gumnaam login band: realStaff() = session + chalu key — parchi / gate pass / transfer / khareed rate / printer / config sirf asal mulazim · blueStaffSessions ab SIRF shop PC (owner-login v2.0) banata hai — phone staffLogin/<uid> likhta hai (code / link / password / screen badalna), 10 ghalat = 1 ghanta band · deviceJoins get sirf malik) · v2.100 (🧾 posLive: live camera ke upar bante hue bill ki lines (PC pos-sales-dekho likhe) — malik / Full / Nigrani sirf parhein) · v2.99 (👶 bachaCfg / bachaUse / bachaDay: bachon ke phone — MacroDroid (bina login) apne code wale doc ke qaide parhe (sirf get, list nahi) aur sirf NAYA data {k,d,p} likhe jab k wala bachaCfg doc maujood ho; malik sab parhe / likhe / mitaye) · v2.98 (🚚 deliveryReq: gahak ki WhatsApp location ka faasla / charges (PC wa-out likhe) — malik / Full parhein, sirf faisla {st ok|x, fin, by apna, okAt} jab st 'new' · blueAccess/deliveryCfg sirf malik) · v2.97 (🖥 pcVault: purane server ka backup — SIRF malik parhe, likhe sirf PC admin · pcJoin: naya server PC gumnaam login se sirf APNA doc {code, pub, host, at, st new}, malik taale wala box {box, iv, apub, st ok}, PC st done/err) · v2.96 (🔴 liveReq: live camera WebRTC — malik / Full / Nigrani sirf NAYA offer (apna by) + hb / end; PC answer likhe · blueAccess/liveCamPc staff get) · v2.95 (🏷 labelJobs.x: Godam 2 ke labels +N zyada (int ≤ 50)) · v2.94 (🔵 billClipReq: un-posted POS bill ki camera clip ka hukum — Nigrani / Full / malik sirf NAYA {st new, apna by}; PC jawab likhe · billClip read wahi) · v2.93 (👀 billClip: har POS bill ki chhoti video (PC likhe) — malik / Full / Nigrani parhein · billTally: Nigrani / Full / malik ka ✓ Theek / ✕ Kam (sirf apna by) · posSales / posSaleLines ab Nigrani bhi parhe) · v2.92 (🛰 gaariFx: malik ke phone ka Falcon-i text (MacroDroid, chaabi gaariKey) — sirf naya; malik parhe / mitaye · gaariDay: malik bhi likhe (app khud Falcon trips + naqsha, PC band ho to bhi)) · v2.91 (📞 callEvt: HBL phone ka MacroDroid call ka haal chaabi blueAccess/callKey ke saath) · v2.90 (🎙 awazNotes: Meri baatein — malik ke Apps Script se khufia chaabi (blueAccess/awazKey) ke saath sirf naya note; parhna / tick sirf malik) · v2.89 (🔒 bankSms: bina chaabi wale purane TEST darwaze (p 1/2/3) band — ab bankSms mein bina login sirf sahi chaabi (bankKey) se) · v2.88 (🖼 parchiOrders.prImg: WhatsApp parchi jaisi print — poori tasveer thermal par, bina AI · mulazim / malik sirf waqt likhe) · v2.87 (👦 appSales.sm: bill par larka (POS SP Man id) — PC POS Sale.SupplyManID · blueAccess/supplyMen: larkon ki list (PC likhe) har mulazim parhe) · v2.86 (📲 parchiOrders + parchiImg: WhatsApp Parchi Sale — PC likhe; malik / mulazim parhein, app ka 📷 sirf naya order + tasveer, badalna sirf status / lines / bill link) · v2.85 (🖨 a4Jobs: ALAG A4 Print screen — 'to' (a4 / th thermal) + 'ph' (number); mulazim apna job dobara (sirf status / re)) · v2.84 (🖨 a4Jobs + a4Img: app ki har tasveer A4 printer ko — malik / mulazim sirf NAYA job + tasveer (apna by), PC chhap kar status likhta hai; dobara sirf malik · blueAccess a4 / a4Pc mulazim parhe) · v2.83 (🖨 khataPrints: Daily Wasooli / Akhrajat ka alag print — ab HAR mulazim naya print job bana sake + apna job parhe) · v2.82 (🖨 khataPrints: khata dukan printer — malik / Full mulazim sirf NAYA job {j JSON text}, PC chhap kar status likhta hai) · v2.81 (🚪 gatePass: POS ke POSTED bill ka gate pass (PC likhe) — malik / mulazim parhein, godam wala har item ka ✓ de diya sirf `g` mein) · v2.80 (📍 gaariGps: gaari ka phone (MacroDroid) khufia chaabi blueAccess/gaariKey se sirf NAYI GPS list likhe · gaariDay / gaariPath: PC ke din ke km + raasta — malik / Full / gaari parhein) · v2.79 (🏷 labelJobs: Sirf Purchase mulazim bhi barcode label — purchase screen ka chip) · v2.78 (🏪 webDukan: Online Dukan website — sab parhein (customer bina login), malik / Full mulazim likhein; cat + info sirf malik / PC) · v2.77 (⚖️ milanJobs: barabar karo — malik banaye, PC chalaye) · v2.76 (🚚/📦 purchase entry par 'via' gaari/supply — mulazim bhi likhe) · v2.75 (🔍 posLines: har khate ki POS ledger lines — malik / full mulazim parhe) · v2.74 (⚖️ blueAccess/posLedger: POS ledger balance — full mulazim bhi parhe) · v2.73 (✅ billChecks: POS purchase bill ka check — malik / full / purchase mulazim, sirf apna by; delete malik ya wohi) · v2.72 (📦 transferGive: dene wale (Zeeshan) ka HAR ITEM "de diya" lene wale ke phone par foran — item-war; asal "mil gaya" check phir bhi '<key>G' ke baghair nahi) · v2.71 (📲 approvals: mulazim malik se ijazat maange — sirf NAYI darkhwast likhe + apni parhe; faisla / badalna / mitana sirf malik · 💸 cashCustody ki nayi move mein 'ref' (khate ki cashpay entry ka link) + 'src' (purane din ka cash) — mulazim ka "Is cash se payment bhejo" ✓ Bhejo ab chalta hai) · v2.70 (⇄ transferJobs: har mulazim ka JALDI TRANSFER sirf sahi ⛔ Band wale password se (pw == blueAccess/bandKey.pw) · apna job parhe (PC ka jawab) · banane wala pw foran mitaye) · v2.69 (🔑 malik ka PAKKA CODE: ownerLogin/{uid} — anjaan device code likhe, shop PC (admin) jaanch kar custom token de · isOwner() custom token + ntOwner claim · deviceJoins 'keep' = larke ka code jab tak istemal na ho) · v2.68 (🔒 stockConfig.rackB — rack bharo 100% lock ab stock / full mulazim bhi laga / hata sake {itemId: pcs}) · v2.67 (🚚 appPurchases: 'via' (gaari / supply) + 'larka' (larke ki entry ki id) — POS Purchase save par chuna, PC jorta hai) · v2.66 (⛔ stockCount/_hidden: mulazim item band/chalu sirf sahi password (pw == blueAccess/bandKey.pw) se; keys items/updatedAt/retry/pw) · v2.65 (📦 transferChecks: do-tick (G) sirf Godam 1 = POS branch 2 ke notes; baqi godam par larka seedha 'mil gaya', godam wale ki shart sirf branch 2) · v2.64 (⏳ blueAccess/rackDone: rack bharo patti ke baad larke ka "rack bhar diya" ✓ — stock / full mulazim likhe, sirf 'jobs') · v2.63 (🧮 Godam 2 milao: stock / full mulazim stockConfig mein SIRF rackPk (packet %) likh sake) · v2.62 (🧺 posStats/rack — har mulazim get) · v2.61 (🏭 factoryBatches 'loc' (khula tail jaisa 📱 sirf factory item) · 🔁 notes.nag 0 = band) · v2.60 (🔔 pushTokens: har mulazim — isStaff — apna token likhe, notification sab ke khud chalu) · v2.59 (🏭 factory sirf app: factoryBatches status 'app' (POS mein nahi) + edit / cancel · factoryMoves (📥 maal aaya / 📤 diya / ginti) · labelJobs 'batch') · v2.58 (📦 godam wale kai: stockConfig.tcGiver 'zeeshan|bilal' — naam matches '.*(…).*') · v2.57 (📱 deviceJoins: 6 hindse ka code (pc-…) · list sirf malik) · v2.56 (🏭 factoryBatches: outs (packing — 4 kg / 700 g) + kind ('make' / 'pack'), out 0 tab jab outs hon) · v2.55 (🏭 factoryBatches: 'hold' = app mein ruka (POS baqi) -> 📤 bhejo; POS mein jane se pehle malik / banane wala foran cancel ya ✏️ edit) · v2.54 (⏳ itemJobs: PC baqi item ka ✏️ edit / ✕ cancel — malik ya jis ne daala, sirf status new) · v2.53 (💰 gallaCalls: naqad supplier needCheck — checker ek dafa check / rok do, malik parchi phir bhejo, "de diye" sirf parchi (prnState done) ke baad · blueAccess/gallaCheck staff get) · v2.52 (🏭 factory/cfg sirf malik likhe · factoryBatches: Full / Stock mulazim batch banaye (n 1–10, status new), malik wapas / dobara; PC admin POS mein) · v2.51 (➕ itemJobs: malik ka alag switch stockConfig.itemNew — mulazim sirf NAYA item, purana rate / naam sirf itemEdit se) · v2.50 (🖥 Full mulazim khata ko "POS mein bhi banayein" sirf ON kar sake — OFF / POS se hatana sirf malik) · v2.49 (🔔 bankSms src 'notif' — HBL Mobile app ki live notification) · v2.48 (📦 transferChecks: do tick — '<key>G' = dene wala "maal de diya" (godam ki taraf sirf stockConfig.tcGiver / malik); "mil gaya" G ke baghair nahi) · v2.47 (⇄ transferJobs: malik ka op 'edit' + 'reason' + 'force' (POS wala note bhi cancel / edit)) · v2.46 (🔒 parchi chhap gayi (posPrintedAt) = mulazim edit / delete sirf malik ki ijazat (editOk, 30 min) se; jorna phir bhi) · v2.45 (🚚 blueAccess/gaariBills: apni gaari wale POS bill — malik likhe, mulazim parhe) · v2.44 (🧾 transferChecks id 'T123E2' — POS mein edit hua note dobara check) · v2.43 (🖨 printJobs kind 'voucher' — app se TM-T88IV par voucher dobara print) · v2.42 (📩 bankSms create: `id` ki shart hatayi — REST auto-id par deny hoti thi; 2.41-TEST if true chala) · v2.40 (📩 bankSms: 4 jaanch darwaze p=1..4 + asal rule bina request.auth shart) · v2.39 (📩 bankSms create saada: request.auth == null + chaabi, alag allow) · v2.38 (📩 bankSms: HBL ke SMS / email — phone (MacroDroid) aur Gmail script khufia chaabi (blueAccess/bankKey) se sirf NAYA likh sakte; app parhti / ✓ karti) · v2.37 (🔁 notes.nag: baar baar yaad dilana — 15 / 30 / 60 min, jab tak ✓ na ho) · v2.36 (👥 mulazim naam se: blueStaffKeys.perms (ek key, kai screens) · blueStaff (list) · staffDevices (jude phone) · deviceJoins ticket link) · v2.35 (transferChecks: 🧾 transfer note ka barcode scan — maal pahuncha; sirf create, waqt server ka, koi edit nahi, sirf malik ghalti par hataye) · v2.34 (labelJobs: ✕ label cancel — app sirf cancelReq likhe) · v2.33 (saleEdits: 🧾 un-posted bill ka edit PC ko · posSaleLines: POS bill ki lines parhna · appSales: minus/wapsi bill) · v2.32 (gaari phera: khula phera mulazim/driver update) · v2.31 (gaari: 🚚 gaari ka hisaab + Sirf Gaari login) · v2.30 (appSales.gate: 🚪 gate pass switch — NT ka bhi) · v2.29 (blueStaffSessions update: screen badalna bina logout) · v2.28 (urduNames: items ke Urdu naam label ke liye; blueAccess get list mein) · v2.27 (liveCarts: 📺 Counter Nazar — bill bante waqt live lines, nigrani wala sirf 'stop' likhe; nazarStaff) · v2.26 (printPCs: 💻 PC chunein — har PC ka NT-PRINT agent report likhta hai, app sirf parhti hai) · v2.25 (blueAccess/look: malik ka theme sab devices par) · v2.24 (deviceJoins: mulazim ka device jorna) · v2.23 (token number + crates; tokens/{day}) · v2.22 (appSales counter: bill kis counter ke printer par) · v2.21 (posSales: POS ke aaj ke bills parhna) · v2.20 (har mulazim: party.dasti on/off) · v2.19 (transferJobs/printJobs copies: note ×1-3) · v2.18 (appSales copies: bill ×1-3) · v2.17 (mulazim: purane khate — rev na ho to 0; Dasti mein shamil) · v2.16 (demands: 📢 mulazim ki khatam/kam demand) · v2.15 (posStats: PC ki 6 mahine ki bikri · purchaseOrders: 🛒 order) · v2.14 (notes: contactName/contactPhone) · v2.13 (notes + tasveer · pushTokens · reminder dueTime · pushConfig) · v2.12 (auditLog: 🕘 history — har harkat, sirf jorna) · v2.11 (gallaCalls: purchase wala "itne paise do" -> galla wala "de diye" + supplier ki payment · Sirf Galla login) · v2.10 (posBillIds: ek entry ke saath kai POS bill) · v2.9 (entryPhotos: tasveerein alag · pn) · v2.8 (reminder: full mulazim bhi) · v2.7 (aiConfig stock/sale ko bhi — tolai) · v2.6 (tolai mein `who` — har mulazim ka apna hisaab) · v2.5 (posTransfers: POS par bane transfer bhi app mein) · v2.4 (tolai: label ki tasveer se ginti + tolaiConfig) · v2.3 (itemJobs: app se POS ka item banana / badalna; mulazim ko ijazat stockConfig.itemEdit se) · v2.2 (billFormats: har supplier ke bill ka naqsha — ginti PCS ya CTN, rate fi PCS ya fi CTN) · v2.1 (itemRates: har item ka pichhla khareed aur nafa yaad) · v2.0 (itemAliases: Full / Purchase mulazim bhi bill ka naam "yaad" karwa sake — naam sirf barh sakte hain, mit nahi sakte) · v1.94 (app purchase: dobara / cancel) · v1.81 (AI key doc + dayTally) · v1.79.12 (rules halke: staffAccount ek dafa, sasti shart pehle — 1000-expression hadd) · v1.79.2 (POSTED record par sirf posBill / posDiffOk link edit) · v1.78 (posting: postJobs, posStatus taala) · v1.75 (itemAliases, print reason) · v1.73 (transferJobs, printJobs) · v1.71 (posBill link) · v1.70 (sub-barcode subcodeJobs) · v1.66 (barcode label labelJobs) · v1.61 (mulazim ka aaj ka payment transfer) · v1.50: full/purchase/stock/sale access, current-day staff writes, app sales (appSales)
 // ONLY note-traders-khata-7ccc1 (Hisaab/Sale). Do not publish in nt-traders.
 
 service cloud.firestore {
@@ -22,6 +22,13 @@ service cloud.firestore {
 
     function isStaff() {
       return signedIn() && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+    // v2.101: 👥 ASAL MULAZIM — gumnaam login + us ka session (ab SIRF shop PC banata hai) + session ki key abhi chalu. Akela isStaff() =
+    //   koi bhi bahar wala app ki public settings se gumnaam login bana kar andar (parchi, gate pass, khareed rate, printer…). Har nayi jagah realStaff().
+    function realStaff() {
+      let session = get(/databases/$(database)/documents/businesses/noor-traders/blueStaffSessions/$(request.auth.uid)).data;   // staffAccount() jaisa (session na ho = inkaar)
+      return isStaff()
+        && get(/databases/$(database)/documents/businesses/noor-traders/blueStaffKeys/$(session.credentialId)).data.get('active', false) == true;
     }
 
     function padDay(n) { return n < 10 ? '0' + string(n) : string(n); }
@@ -127,7 +134,7 @@ service cloud.firestore {
       allow get: if blueStaff();
     }
     match /businesses/noor-traders/blueAccess/{id} {
-      allow get: if isOwner() || (isStaff() && id in ['config','purchaseConfig','stockConfig','saleConfig','dayLock','itemAliases','itemRates','billFormats','geo','tolaiConfig','pushConfig','look','urduNames','gaariBills','gallaCheck','rackDone','a4','a4Pc','supplyMen','billClipPc','liveCamPc']);   // v2.87: supplyMen (👦 larkon ki list, Sale chip)   // v2.84: a4 (🖨 A4 photo print setting) + a4Pc (PC ki haalat)   // v2.64: rackDone   // v2.53: gallaCheck   // v2.45: gaariBills (🚚 apni gaari ka maal — milana nahi)   // v2.28: urduNames (items ke Urdu naam — label par)   // v2.25: look (malik ka theme sab par)   // v2.4: tolaiConfig   // v1.88: geo (dukan location / chhoot / sab band)   // v1.75: itemAliases (items ke doosre naam)
+      allow get: if isOwner() || (realStaff() && id in ['config','purchaseConfig','stockConfig','saleConfig','dayLock','itemAliases','itemRates','billFormats','geo','tolaiConfig','pushConfig','look','urduNames','gaariBills','gallaCheck','rackDone','a4','a4Pc','supplyMen','billClipPc','liveCamPc']);   // v2.87: supplyMen (👦 larkon ki list, Sale chip)   // v2.84: a4 (🖨 A4 photo print setting) + a4Pc (PC ki haalat)   // v2.64: rackDone   // v2.53: gallaCheck   // v2.45: gaariBills (🚚 apni gaari ka maal — milana nahi)   // v2.28: urduNames (items ke Urdu naam — label par)   // v2.25: look (malik ka theme sab par)   // v2.4: tolaiConfig   // v1.88: geo (dukan location / chhoot / sab band)   // v1.75: itemAliases (items ke doosre naam)
     }
     // v2.0: items ke "Doosre naam" (bill par likha hua naam -> humara item). Malik upar wale generic rule se likhta hai.
     // Ab Full aur Purchase wala mulazim bhi naam JOR sakta hai — magar naam KAM nahi kar sakta (map chhota na ho),
@@ -184,16 +191,8 @@ service cloud.firestore {
     }
     match /businesses/noor-traders/blueStaffSessions/{uid} {
       allow get: if isOwner() || (isStaff() && request.auth.uid == uid);
-      // v2.29: 🔄 SCREEN BADALNA bina logout — apni session ki credentialId nayi (active) key par; password ghalat = key nahi = inkaar
-      allow update: if isStaff() && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['credentialId','createdAt','switchedAt'])
-        && request.resource.data.createdAt == resource.data.createdAt
-        && request.resource.data.credentialId is string
-        && get(/databases/$(database)/documents/businesses/noor-traders/blueStaffKeys/$(request.resource.data.credentialId)).data.active == true;
-      allow create: if isStaff() && request.auth.uid == uid
-        && request.resource.data.keys().hasOnly(['credentialId','createdAt'])
-        && request.resource.data.credentialId is string
-        && get(/databases/$(database)/documents/businesses/noor-traders/blueStaffKeys/$(request.resource.data.credentialId)).data.active == true;
+      // v2.101: session SIRF shop PC (owner-login v2.0, admin) banata / badalta hai — phone staffLogin/<uid> likhta hai (code / link / password / screen badalna).
+      //   Pehle phone khud likhta tha aur rules sirf key ka hona dekhte the = 6 hindse ka code / password be-hadd aazma kar koi bhi mulazim ban sakta tha.
     }
     match /businesses/noor-traders/blueStaffKeys/{key} {
       allow get: if isOwner() || (isStaff()
@@ -326,7 +325,7 @@ service cloud.firestore {
     }
     match /businesses/noor-traders/posStats/{id} {
       allow read: if isOwner() || blueStaff();
-      allow get: if id == 'rack' && isStaff();   // v2.62: 🧺 rack bharo — stock wale mulazim bhi
+      allow get: if id == 'rack' && realStaff();   // v2.62: 🧺 rack bharo — stock wale mulazim bhi
     }
     // v2.15: 🛒 PURCHASE ORDER — supplier-wise items; malik + Full mulazim bana / badal sakte hain, mitana malik.
     match /businesses/noor-traders/purchaseOrders/{id} {
@@ -386,7 +385,7 @@ service cloud.firestore {
     }
     // v2.13: 🔔 PUSH tokens — har phone apna token likhe; parhta sirf Cloud Function (admin). Mitana malik.
     match /businesses/noor-traders/pushTokens/{id} {
-      allow create, update: if (isOwner() || isStaff()) && id.matches('^[a-f0-9]{16,64}$')   // v2.60: har mulazim (stock / sale / galla / purchase / gaari bhi) ka phone khud token likhe
+      allow create, update: if (isOwner() || realStaff()) && id.matches('^[a-f0-9]{16,64}$')   // v2.60: har mulazim (stock / sale / galla / purchase / gaari bhi) ka phone khud token likhe
         && request.resource.data.keys().hasOnly(['token','uid','name','role','scope','at','ua'])
         && request.resource.data.token is string && request.resource.data.token.size() > 20 && request.resource.data.token.size() <= 400
         && request.resource.data.uid == request.auth.uid && request.resource.data.at is int
@@ -398,8 +397,8 @@ service cloud.firestore {
     // v2.71: 📲 MALIK KI IJAZAT — mulazim (koi bhi, account chalu) sirf NAYI darkhwast (status new, apni uid) likhe aur apni hi parhe.
     //   Kaam (entry badalna / hatana, farq bill, din kholna) MALIK ki app malik ki ijazat se karti hai — mulazim ko koi nayi likhai nahi.
     match /businesses/noor-traders/approvals/{id} {
-      allow read: if isOwner() || (isStaff() && resource.data.by == request.auth.uid);
-      allow create: if isStaff() && id.matches('^[a-zA-Z0-9_-]{6,60}$')
+      allow read: if isOwner() || (realStaff() && resource.data.by == request.auth.uid);
+      allow create: if realStaff() && id.matches('^[a-zA-Z0-9_-]{6,60}$')
         && request.resource.data.keys().hasOnly(['id','kind','title','lines','reason','rid','rev','after','jobs','by','byName','at','status','dev'])
         && request.resource.data.id == id && request.resource.data.by == request.auth.uid && request.resource.data.status == 'new'
         && request.resource.data.kind in ['edit','delete','farq','din']
@@ -430,7 +429,7 @@ service cloud.firestore {
       }
       allow read: if isOwner() || blueStaff();
       allow create: if validAudit() && (isOwner()
-        || (isStaff() && exists(/databases/$(database)/documents/businesses/noor-traders/blueStaffSessions/$(request.auth.uid))));
+        || realStaff());
       allow delete: if isOwner();
     }
     match /businesses/noor-traders/gallaCalls/{id} {
@@ -505,8 +504,8 @@ service cloud.firestore {
       return isOwner() || (isStaff() && string(staffAccount().get('name', '')).lower().matches('.*(' + tcGiverName() + ').*'));   // v2.58: 'zeeshan|bilal' = kai godam wale
     }
     match /businesses/noor-traders/transferChecks/{id} {
-      allow read: if isOwner() || isStaff();
-      allow create: if (isOwner() || isStaff())
+      allow read: if isOwner() || realStaff();
+      allow create: if (isOwner() || realStaff())
         && id.matches('^T[0-9]{1,12}(E[0-9]{1,3})?G?$')   // v2.44: 'E2' = note edit hone ke baad nayi check · v2.48: 'G' = pehla tick (maal de diya)
         && request.resource.data.keys().hasOnly(['transferId','transferNo','from','to','issuedAt','status','note','by','byName','device','lines','ts'])
         && request.resource.data.by == request.auth.uid
@@ -532,8 +531,8 @@ service cloud.firestore {
     //   "Aane wala maal" mein foran (item-war). Doc = TN key ('T123' / 'T123E2') {g: {item index: waqt}, nm, t (note ka waqt), from, to, at}.
     //   Sirf suhulat: asal "mil gaya" check (transferChecks) phir bhi '<key>G' (poora note diya) ke baghair nahi. Godam 1 (POS branch 2) se sirf godam wale.
     match /businesses/noor-traders/transferGive/{id} {
-      allow read: if isOwner() || isStaff();
-      allow create, update: if (isOwner() || isStaff())
+      allow read: if isOwner() || realStaff();
+      allow create, update: if (isOwner() || realStaff())
         && id.matches('^T[0-9]{1,12}(E[0-9]{1,3})?$')
         && request.resource.data.keys().hasOnly(['g','nm','t','from','to','at'])
         && request.resource.data.g is map && request.resource.data.g.size() <= 300
@@ -564,8 +563,8 @@ service cloud.firestore {
     // v1.73: stock transfer note (transferJobs) aur thermal print (printJobs) — PC transfer-sync.js admin key se
     match /businesses/noor-traders/transferJobs/{jobId} {
       allow read: if isOwner() || blueStaff() || stockStaff()
-        || (isStaff() && resource.data.get('by', '') == request.auth.uid);   // v2.70: har mulazim apna ⇄ jaldi transfer dekhe (PC ka jawab)
-      allow create: if (isOwner() || blueStaff() || stockStaff() || (isStaff() && 'pw' in request.resource.data))
+        || (realStaff() && resource.data.get('by', '') == request.auth.uid);   // v2.70: har mulazim apna ⇄ jaldi transfer dekhe (PC ka jawab)
+      allow create: if (isOwner() || blueStaff() || stockStaff() || (realStaff() && 'pw' in request.resource.data))
         && request.resource.data.keys().hasOnly(['op','from','to','lines','note','transferId','byName','status','by','at','copies','reason','force','pw'])   // v2.19: copies (note kitni dafa, 1-3) · v2.47: reason, force · v2.70: pw
         && (!('pw' in request.resource.data) || (request.resource.data.pw is string
             && exists(/databases/$(database)/documents/businesses/noor-traders/blueAccess/bandKey)
@@ -576,7 +575,7 @@ service cloud.firestore {
         && ((request.resource.data.op != 'delete' && request.resource.data.op != 'edit' && !('force' in request.resource.data)) || isOwner())
         && (!('reason' in request.resource.data) || (request.resource.data.reason is string && request.resource.data.reason.size() <= 150));
       // v2.70: banane wala mulazim password ka khana foran mita de (doosre parh na sakein) — sirf 'pw' hatana, aur kuch nahi
-      allow update: if isStaff() && resource.data.get('by', '') == request.auth.uid && ('pw' in resource.data) && !('pw' in request.resource.data)
+      allow update: if realStaff() && resource.data.get('by', '') == request.auth.uid && ('pw' in resource.data) && !('pw' in request.resource.data)
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pw']);
     }
     match /businesses/noor-traders/printJobs/{jobId} {
@@ -610,7 +609,7 @@ service cloud.firestore {
         && (!exists(/databases/$(database)/documents/businesses/noor-traders/stockCount/_lock)
             || get(/databases/$(database)/documents/businesses/noor-traders/stockCount/_lock).data.get('off', false) != true);
       // v2.66: ⛔ ITEM BAND — mulazim _hidden badal sake sirf sahi password se (blueAccess/bandKey.pw, malik Settings se badalta hai; mulazim bandKey parh nahi sakta)
-      allow write: if isStaff() && docId == '_hidden'
+      allow write: if realStaff() && docId == '_hidden'
         && request.resource.data.keys().hasOnly(['items','updatedAt','retry','pw'])
         && request.resource.data.pw is string
         && exists(/databases/$(database)/documents/businesses/noor-traders/blueAccess/bandKey)
@@ -659,10 +658,21 @@ service cloud.firestore {
 
     // v2.24: mulazim ka DEVICE jorna — malik likhta hai (device ki ID = doc id), device (anonymous) parh kar mita deta hai; 10 min baad bekaar
     match /businesses/noor-traders/deviceJoins/{deviceId} {
-      // v2.57: list (poori fehrist) sirf malik — mulazim / anjaan sirf apna link / code (doc id) parh sake (pc- = 6 hindse ka code, 30 min)
-      allow get, delete: if signedIn();
+      // v2.57: list (poori fehrist) sirf malik — (v2.101 se phone kuch nahi parhta — staffLogin se shop PC)
+      allow get, delete: if isOwner();   // v2.101: code / link ab SIRF shop PC (owner-login v2.0, admin) parhta hai — gumnaam phone 6 hindse aazma kar mulazim nahi ban sakta
       allow list: if isOwner();
       allow create, update: if isOwner() && request.resource.data.keys().hasOnly(['scope','pw','name','at','by','credentialId','staffId','perms','ticket','keep']) && (!('pw' in request.resource.data) || (request.resource.data.pw is string && request.resource.data.pw.size() <= 400));   // v2.36: ticket link (credentialId) · v2.69: keep = larke ka code jab tak istemal na ho
+    }
+    // v2.101: 👥 MULAZIM LOGIN — gumnaam phone SIRF apne uid wala doc likhe { k code|tk|cid|sw, v, scope, at, device, ua, status 'new' }; shop PC
+    //   (owner-login v2.0, admin) code / link / key jaanch kar blueStaffSessions khud banata hai (10 ghalat = 1 ghanta band). Wahi phone parhe / mitaye.
+    match /businesses/noor-traders/staffLogin/{uid} {
+      allow get, delete: if isStaff() && request.auth.uid == uid;
+      allow create, update: if isStaff() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['k','v','scope','at','device','ua','status'])
+        && request.resource.data.k in ['code','tk','cid','sw']
+        && request.resource.data.v is string && request.resource.data.v.size() <= 120
+        && request.resource.data.get('scope', '') is string && request.resource.data.get('scope', '').size() <= 12
+        && request.resource.data.status == 'new';
     }
     // v2.69: 🔑 MALIK KA PAKKA CODE — anjaan device (anonymous) SIRF apne uid wala doc likhe {code, at, device, ua, status 'new'}; shop PC (admin)
     //   blueAccess/ownerCode (sirf hash) se jaanch kar custom token (ntOwner) likhta hai; wahi device parhe / mitaye. 10 ghalat = PC 1 ghanta band.
@@ -680,7 +690,7 @@ service cloud.firestore {
     // v2.36: 📱 JUDE HUE DEVICES — phone khud likhta hai (join par + har kuch der 'seen'); malik parhe / hataye
     match /businesses/noor-traders/staffDevices/{deviceId} {
       allow read, delete: if isOwner();
-      allow create, update: if isStaff() && request.resource.data.by == request.auth.uid
+      allow create, update: if realStaff() && request.resource.data.by == request.auth.uid
         && request.resource.data.keys().hasOnly(['staffId','name','by','at','seen','ua','scope','cred']);
     }
     // v2.23: roz ka TOKEN number (1, 2, 3…) — har bill par ek, sirf +1 badh sakta hai
@@ -768,27 +778,27 @@ service cloud.firestore {
     // v2.86: 📲 WhatsApp Parchi Sale — PC (wa-parchi.js, admin) WhatsApp se aayi parchi ka order likhta hai (parchiOrders + parchiImg).
     // App: malik / mulazim parhein; app ka 📷 parchi = sirf NAYA order {src 'app', st 'new'} + tasveer; badalna sirf status / lines / bill ka link.
     match /businesses/noor-traders/parchiOrders/{id} {
-      allow read: if isOwner() || isStaff();
-      allow create: if (isOwner() || isStaff())
+      allow read: if isOwner() || realStaff();
+      allow create: if (isOwner() || realStaff())
         && request.resource.data.keys().hasOnly(['id','src','st','at','day','from','ph','nm','cap','by','th'])
         && request.resource.data.src == 'app' && request.resource.data.st == 'new'
         && request.resource.data.by == request.auth.uid;
-      allow update: if (isOwner() || isStaff())
+      allow update: if (isOwner() || realStaff())
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['st','saleId','by','upAt','prReq','prImg','ph','nm','j','n','u'])   // v2.88: prImg (🖼 parchi jaisi print, bina AI)
         && (!('prImg' in request.resource.data) || request.resource.data.prImg is int);
       allow delete: if isOwner();
     }
     match /businesses/noor-traders/parchiImg/{id} {
-      allow read: if isOwner() || isStaff();
-      allow create: if (isOwner() || isStaff())
+      allow read: if isOwner() || realStaff();
+      allow create: if (isOwner() || realStaff())
         && request.resource.data.keys().hasOnly(['img'])
         && request.resource.data.img is string && request.resource.data.img.size() <= 1000000;
       allow delete: if isOwner();
     }
 
     match /businesses/noor-traders/khataPrints/{jobId} {
-      allow read: if isOwner() || blueStaff() || (isStaff() && resource.data.by == request.auth.uid);
-      allow create: if (isOwner() || isStaff())
+      allow read: if isOwner() || blueStaff() || (realStaff() && resource.data.by == request.auth.uid);
+      allow create: if (isOwner() || realStaff())
         && request.resource.data.keys().hasOnly(['j','name','byName','status','by','at'])
         && request.resource.data.j is string && request.resource.data.j.size() <= 600000
         && request.resource.data.status == 'new' && request.resource.data.by == request.auth.uid;
@@ -797,8 +807,8 @@ service cloud.firestore {
     // v2.84: 🖨 A4 PHOTO PRINT — app mein kahin bhi tasveer lagi → a4Img/<id> {img JPEG data-URL ≤ 950k} + a4Jobs/<id> {k, t, th (chhota namoona), status 'new', copies}
     //   (EK writeBatch). PC pc/a4-print.js (admin) HP WiFi printer par chhap kar status / err likhta hai, 7 din baad dono mitata hai. Dobara = sirf malik (status 'new').
     match /businesses/noor-traders/a4Jobs/{id} {
-      allow read: if isOwner() || (isStaff() && resource.data.by == request.auth.uid);
-      allow create: if (isOwner() || isStaff())
+      allow read: if isOwner() || (realStaff() && resource.data.by == request.auth.uid);
+      allow create: if (isOwner() || realStaff())
         && request.resource.data.keys().hasOnly(['k','to','ph','t','th','by','byName','at','status','copies'])
         && request.resource.data.get('to', 'a4') in ['a4', 'th']
         && request.resource.data.get('ph', '') is string && request.resource.data.get('ph', '').size() <= 30
@@ -808,13 +818,13 @@ service cloud.firestore {
         && request.resource.data.copies is int && request.resource.data.copies >= 1 && request.resource.data.copies <= 5;
       // v2.85: mulazim apna job dobara (sirf status / re — hadd ka ✓ 'ok' sirf malik)
       allow update: if ((isOwner() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','ok','re','err']))
-          || (isStaff() && resource.data.by == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','re'])))
+          || (realStaff() && resource.data.by == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','re'])))
         && request.resource.data.status == 'new';
       allow delete: if isOwner();
     }
     match /businesses/noor-traders/a4Img/{id} {
       allow read: if isOwner();
-      allow create: if (isOwner() || isStaff())
+      allow create: if (isOwner() || realStaff())
         && request.resource.data.keys().hasOnly(['img','by','at'])
         && request.resource.data.img is string && request.resource.data.img.size() <= 950000
         && request.resource.data.by == request.auth.uid;
@@ -823,8 +833,8 @@ service cloud.firestore {
     // v2.81: 🚪 GATE PASS — PC gate-pass.js (admin) POS ke POSTED bill ki godam wali lines likhta hai (gatePass/<SaleID>); malik / mulazim parhein.
     //   Godam wala (Zeeshan / Sonu — app mein CAP 'stock.gate') har item "✓ de diya" = sirf `g` badle {item: {n kis ne, t waqt, q tadad}}. Banana sirf PC, mitana sirf malik.
     match /businesses/noor-traders/gatePass/{id} {
-      allow read: if isOwner() || isStaff();
-      allow update: if (isOwner() || isStaff())
+      allow read: if isOwner() || realStaff();
+      allow update: if (isOwner() || realStaff())
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['g'])
         && request.resource.data.g is map && request.resource.data.g.size() <= 300;
       allow delete: if isOwner();

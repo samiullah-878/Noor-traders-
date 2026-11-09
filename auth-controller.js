@@ -293,6 +293,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
 
 export function loginErrorMessage(error, role = 'owner') {
   switch (error.code) {
+    case 'staff/bad': case 'staff/lock': case 'staff/time': case 'staff/off': return error.message;   // v2.221.0: 👥 shop PC ka jawab (owner-login v2.0) — Roman Urdu, seedha
     case 'login/scope-required': return 'Full App / Sirf Purchase / Sirf Stock / Sirf Sale durust select karein aur us ka password likhein.';
     case 'login/staff-config-read': return 'S1: Mulazim login settings par ijazat nahi. Nayi firestore.rules note-traders-khata-7ccc1 project mein publish karein.';
     case 'login/staff-session-create': return 'S2: Password match nahi hua ya session rule publish nahi hui. Malik Settings mein Password check karein.';

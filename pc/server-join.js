@@ -1,5 +1,5 @@
 // =========================================================
-//  server-join.js  v1.0 (2026-11-09) — 🖥 NAYA SERVER PC: purane server ki chaabi / SQL setting malik ki app se lo
+//  server-join.js  v1.1 (2026-11-09; asal project config.js se) — 🖥 NAYA SERVER PC: purane server ki chaabi / SQL setting malik ki app se lo
 //  Chalana: server-setup.ps1 khud chalata hai (node server-join.js). Koi npm package nahi chahiye (Node 18+: fetch + webcrypto).
 //
 //  1) Firebase par GUMNAAM (anonymous) login — sirf apna ek doc likh / parh sake (rules: pcJoin/<apna uid>).
@@ -26,11 +26,14 @@ const say = (t = '') => console.log(t);
 
 async function config() {
   if (process.env.NT_CFG_JSON) return JSON.parse(process.env.NT_CFG_JSON);
-  let txt = ''; try { txt = fs.readFileSync(path.join(DIR, 'firebase-config.js'), 'utf8'); } catch {}
-  if (!txt) { const r = await fetch(RAW + 'firebase-config.js?t=' + Date.now()); txt = await r.text(); }
-  const g = k => (txt.match(new RegExp(k + '\\s*:\\s*["\']([^"\']+)["\']')) || [])[1] || '';
-  const c = { apiKey: g('apiKey'), projectId: g('projectId') || 'nt-traders' };
-  if (!c.apiKey) throw Error('firebase-config.js se apiKey nahi mili');
+  // v1.1 (2026-11-09): asal app ka project config.js (note-traders-khata-7ccc1) se — pehle purani firebase-config.js (nt-traders) parhti thi
+  //   = pcJoin GHALAT project mein, malik ki app kabhi nahi dekhti, naya server kabhi na jurta.
+  let txt = ''; try { txt = fs.readFileSync(path.join(DIR, 'config.js'), 'utf8'); } catch {}
+  if (!txt) { const r = await fetch(RAW + 'config.js?t=' + Date.now()); txt = await r.text(); }
+  const g = k => (txt.match(new RegExp('["\']?' + k + '["\']?\\s*:\\s*["\']([^"\']+)["\']')) || [])[1] || '';
+  const c = { apiKey: g('apiKey'), projectId: g('projectId') || 'note-traders-khata-7ccc1' };
+  if (!c.apiKey) throw Error('config.js se apiKey nahi mili');
+  if (c.projectId !== 'note-traders-khata-7ccc1') say('⚠️ project ' + c.projectId + ' — asal app note-traders-khata-7ccc1 par hai');
   return c;
 }
 const AUTH = () => process.env.NT_AUTH_URL || 'https://identitytoolkit.googleapis.com/v1/accounts:signUp';
