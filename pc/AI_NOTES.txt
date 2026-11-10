@@ -4423,3 +4423,7 @@ Hal (B): counter PC ka NT-PRINT v1.28 -> nt-posui v1.13 shot(): alag PowerShell 
 App live.js: #lvShot (video ke neeche, bill se upar; tap = bara / poora, sam-lv-shotfit) — listenPosShot; 45 s tasveer na aaye = paigham.
 ASAL PC PAR TEST NAHI (Windows nahi) — pehli dafa malik ki screenshot se dabba (crop) theek karna par sakta hai; dg line: 'g 1012x420 | khirki 1366x728 | dabbe N'.
 AI nahi.
+
+--- v2.229.1 (10 Nov 14:15) nt-print v1.29: malik ki screenshot 'POS screen ki tasveer nahi aa rahi' (koi doc hi nahi) -> wajah door se pata nahi chalti thi.
+Ab: counter hukum sunte hi {on 0, why 'hukum sun liya'} likhta hai; PowerShell 25 s chup = err; app posLive/_want parh kar batati hai: server script purani / counter ko hukum nahi / hukum gaya magar NT-PRINT chup.
+🔎 POS bill jaanch ka nateeja (malik ki screenshot): bill ke upar ki likhai dbo.Branch (BranchName NOOR TRADERS, Address '-03450412515') + Party COUNTER SALE (Phone1, Address1 GULYANA); server par template file 0 (POS counter PCs par). Qadam 2 = malik ke alag OK par.

@@ -114,13 +114,14 @@ function billStart() {
 // ---------- 🖥 POS screen ki tasveer (v2.229.0) ----------
 // POS bill ko Print par hi save karta hai — is liye bante bill ki items counter PC (NT-PRINT v1.28) ki POS screen ki chhoti tasveer se:
 // item likhi / scan = ~1 s mein yahan · hatai = hat gayi · print = list khali · nayi item = naya bill. Tap = poori chaurai / bara.
-let SH = { un: null, t: null, recv: 0, url: '', st0: 0, d: null };
-function shotStop() { try { SH.un && SH.un(); } catch {} clearInterval(SH.t); try { SH.url && URL.revokeObjectURL(SH.url); } catch {} SH = { un: null, t: null, recv: 0, url: '', st0: 0, d: null }; const e = $('lvShot'); if (e) { e.hidden = true; e.innerHTML = ''; } }
+let SH = { un: null, un2: null, t: null, recv: 0, url: '', st0: 0, d: null, want: null };
+function shotStop() { try { SH.un && SH.un(); } catch {} try { SH.un2 && SH.un2(); } catch {} clearInterval(SH.t); try { SH.url && URL.revokeObjectURL(SH.url); } catch {} SH = { un: null, un2: null, t: null, recv: 0, url: '', st0: 0, d: null, want: null }; const e = $('lvShot'); if (e) { e.hidden = true; e.innerHTML = ''; } }
 function shotStart() {
   if (!cloud?.listenPosShot || !cur) return;
   SH.st0 = Date.now();
   const e = $('lvShot'); if (e) { let fit = false; try { fit = localStorage.getItem('sam-lv-shotfit') === '1'; } catch {} e.classList.toggle('is-fit', fit); }
   SH.un = cloud.listenPosShot(cur, (d, err, cache) => { if (err || cache) return; SH.recv = Date.now(); SH.d = d; shotPaint(true); });
+  SH.un2 = cloud.listenPosLive('_want', (d, err) => { if (!err) SH.want = d || {}; });
   SH.t = setInterval(() => shotPaint(false), 5000);
 }
 function shotPaint(fresh) {
@@ -136,7 +137,8 @@ function shotPaint(fresh) {
   }
   if (d && Number(d.on) === 0 && now - SH.recv < 60000) { note('POS screen: ' + (d.why || 'nahi mili') + (d.err ? ' (counter PC ki ghalti)' : '')); return; }
   if (d && SH.recv && now - SH.recv >= 45000) { note('POS screen ki tasveer ruk gayi — counter PC / NT-PRINT dekhein'); return; }
-  if (now - SH.st0 > 25000) { note('POS screen ki tasveer nahi aa rahi — counter PC ka NT-PRINT (update 3-5 min) / POS ki Sale screen khuli ho'); return; }
+  if (now - SH.st0 > 25000) { const hs = (SH.want && SH.want.hosts) || null, host = hs ? Object.keys(hs).find(h => hs[h] === cur) : '';
+    note(!SH.want ? 'POS screen: server ka haal nahi mila' : !hs ? 'POS screen: server PC ki script purani hai (pos-sales-dekho v2.9 nahi) — 3-5 min' : !host ? 'POS screen: server ne is counter ko hukum nahi bheja (counter ka PC naam nahi mila)' : 'POS screen: server ne ' + host + ' ko hukum bheja, counter PC ka NT-PRINT jawab nahi de raha (purana version / band / PC ka naam alag)'); return; }
   e.hidden = true;
 }
 function billGot(d) {
