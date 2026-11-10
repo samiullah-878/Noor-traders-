@@ -65,9 +65,10 @@ for v in vp + vk + vt + vq + vf + vb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "⌨️ Haptics bina paigham · 📵 TikTok ke paigham band · 💧 Paani ka screen-band break hata.",
+       "note": "🛰 Falcon: raat 9 baje wala khud chalna BAND — haath se (📲 / khud Falcon kholna) wahi.",
        "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh],
-       "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}}],
+       "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
+                 {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
        "vars": vars_,
        "off": ["⌨️ Keyboard haptics ON (Battery saver)"],
        "del": []}

@@ -4441,3 +4441,7 @@ Malik: "tally screen same live jaisi · upar teeno PC ke chips · jis ko select 
 App tally.js: #btProg = counter chips (pcChips: billClipPc.pcs ∪ bills, har chip par baqi ginti; dabao = setPc, dobara dabao = sab) · ⋮ "🖥 Sab counter" · 📅 chip sirf jab aaj na ho · bill chip #btBno (.po laal 📌 / .un neela 🔵) · queue / ginti / list = inQ(b) (posted YA chhapa ct > 0).
 PC bill-clip v2.5: clip PRINT hote hi (ct) — post ka intezar nahi (un-posted chhapa sirf rk min ke andar, purane ka NVR playback nahi) · pehli item ka waqt addStart(b): posAdds/<HOST> (NT-PRINT v1.32 har POS ADD ka waqt, 12 s mein ek likhai) — pichhle bill ke baad se print tak, 4 min ka waqfa = ruk; counter ghari ka farq off · t0 = as − 12 s (na ho = purana ft / 2 min) · lamba bill = aakhir kabhi na kate.
 posAdds = sirf PC (admin) — rules nahi badle. ASAL PC PAR TEST NAHI (addStart / ADD ka waqt) — billClip doc mein `as` dekh kar pakka karo. AI nahi.
+
+=== 2026-11-10 · md pkg v24 — 🛰 Falcon raat wala auto BAND (malik: "raat 9 baje wala band kar do, nahi chahiye — manually sahi kaam karta hai") ===
+- md/pkg.json patch: 'Falcon km' macro ka DeviceUnlockedTrigger m_isDisabled true (Claude Remote, ~5 min). Macro CHALU — 📲 webhook (app ka 'Falcon se abhi parhwao') + 👆 saathi (khud Falcon-i kholna) wahi. `off` / `del` mein NAHI.
+- falcon-macro.js (app ka download naqsha) mein unlock trigger abhi ON hai — malik dobara .macro download kare to raat wala wapas aa jayega; agle app version mein wahan bhi band karo. Wapas lana = patch set m_isDisabled false. AI nahi.
