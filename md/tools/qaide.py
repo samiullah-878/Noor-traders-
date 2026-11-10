@@ -2,7 +2,7 @@
 import json, os, copy
 D = os.path.dirname(os.path.abspath(__file__))
 from v3 import gv, setv, expr, sstr, iff, END, ELSE, strne, var, UNLOCK
-RULES = [["🏛", "سقراط", "جس زندگی کا جائزہ نہ لیا جائے وہ جینے کے لائق نہیں۔"], ["🏛", "سقراط", "میں صرف ایک بات جانتا ہوں کہ میں کچھ نہیں جانتا۔"], ["🏛", "سقراط", "مضبوط ذہن خیالات پر بات کرتے ہیں، کمزور ذہن لوگوں پر۔"], ["🏛", "سقراط", "تبدیلی کا راز نئے کو بنانے پر زور لگانا ہے، پرانے سے لڑنے پر نہیں۔"], ["📜", "افلاطون", "سب سے بڑی فتح اپنے آپ پر فتح ہے۔"], ["📜", "افلاطون", "ہر کام کا سب سے اہم حصہ اس کی شروعات ہے۔"], ["📜", "افلاطون", "مہربان رہو، ہر شخص جس سے تم ملتے ہو ایک مشکل جنگ لڑ رہا ہے۔"], ["📜", "افلاطون", "جو لوگ سیاست سے منہ موڑتے ہیں ان پر اپنے سے کم لوگ حکومت کرتے ہیں۔"], ["⚖️", "ارسطو", "ہم وہی ہیں جو ہم بار بار کرتے ہیں۔ کمال کوئی کام نہیں، عادت ہے۔"], ["⚖️", "ارسطو", "صبر کڑوا ہے، مگر اس کا پھل میٹھا ہے۔"], ["⚖️", "ارسطو", "اپنے آپ کو جاننا ہر دانائی کی شروعات ہے۔"], ["⚖️", "ارسطو", "ذہن کو تعلیم دینا اور دل کو نہ دینا — یہ کوئی تعلیم نہیں۔"], ["☯", "کنفیوشس", "فرق نہیں پڑتا تم کتنے آہستہ چلتے ہو، جب تک تم رکتے نہیں۔"], ["☯", "کنفیوشس", "ہماری سب سے بڑی شان کبھی نہ گرنا نہیں، ہر بار گر کر اٹھنا ہے۔"], ["☯", "کنفیوشس", "ایسا کام چنو جس سے محبت ہو، پھر زندگی میں ایک دن بھی کام نہیں کرنا پڑے گا۔"], ["☯", "کنفیوشس", "جو دوسروں پر کرنا پسند نہ کرو، وہ خود کسی پر نہ کرو۔"], ["🎓", "کانٹ", "ایسے عمل کرو جیسے تمہارا ہر فیصلہ سب کے لیے قانون بن جائے۔"], ["🎓", "کانٹ", "ہمت کرو اپنی عقل خود استعمال کرنے کی — یہی روشن خیالی ہے۔"], ["🎓", "کانٹ", "انسان کو ہمیشہ مقصد سمجھو، کبھی محض ذریعہ نہیں۔"], ["🎓", "کانٹ", "علم تجربے سے شروع ہوتا ہے، مگر سارا علم تجربے سے نہیں آتا۔"]]
+RULES = [["🏛", "Seneca", "Hum haqeeqat se kam, apne khayalon se zyada dukh uthate hain."], ["🏛", "Seneca", "Zindagi chhoti nahi hai, hum us ka bara hissa zaya kar dete hain."], ["👑", "Marcus Aurelius", "Tumhara bas apne zehan par hai, bahar ke waqiyat par nahi. Yeh samajh lo, taqat mil jayegi."], ["👑", "Marcus Aurelius", "Jo rukawat raaste mein hai, wohi raasta ban jati hai."], ["⛓", "Epictetus", "Insaan ko cheezein pareshan nahi kartin, un ke bare mein us ki raaye pareshan karti hai."], ["🌙", "Rumi", "Kal main hoshyar tha, duniya badalna chahta tha. Aaj danishmand hoon, khud ko badal raha hoon."], ["⚡", "Nietzsche", "Jis ke paas jeene ka 'kyun' ho, wo har 'kaise' seh leta hai."], ["🕯", "Pascal", "Insaan ki saari museebatein is se hain ke wo ek kamre mein akela chup nahi baith sakta."], ["🧭", "Kierkegaard", "Zindagi peeche dekh kar samajh aati hai, magar jeeni aage dekh kar parti hai."], ["🌲", "Thoreau", "Kisi cheez ki asal qeemat zindagi ka wo hissa hai jo tum us ke badle dete ho."], ["🎋", "Confucius", "Kitna aahista chal rahe ho yeh aham nahi, jab tak rukte nahi."], ["☯", "Lao Tzu", "Jo doosron ko jaanta hai aqalmand hai; jo khud ko jaanta hai roshan hai."], ["🏛", "Suqraat", "Jis zindagi ko parkha na jaye, wo jeene ke laiq nahi."], ["🪞", "Apne aap se", "Aaj jo kaam tum ne khud kiya, kal wo kaun karega?"], ["🪞", "Apne aap se", "Dukan tumhare baghair ek din chale to kya tootega? Wahi tumhara agla kaam hai."], ["🪞", "Apne aap se", "Masroof hona aur aage barhna do alag cheezein hain. Aaj tum kaun se the?"], ["🪞", "Apne aap se", "Jis par tumhe bharosa nahi, us ko tum ne sikhaya kya hai?"], ["🪞", "Apne aap se", "Jo cheez napi nahi jati, wo sudharti nahi."], ["🪞", "Apne aap se", "Aankhein ek hi jori hain. Dukan doosri ban sakti hai."], ["🪞", "Apne aap se", "Bachon ko tumhara paisa yaad nahi rahega, tumhara waqt yaad rahega."], ["🪞", "Apne aap se", "Aaj ka sab se zaroori kaam kaun sa tha, aur tum ne us ki jagah kya kiya?"], ["🪞", "Apne aap se", "Tum system bana rahe ho, ya system ke mulazim ban gaye ho?"], ["🪞", "Apne aap se", "Agar yeh phone abhi band ho jaye, to kya waqai kuch bigrega?"], ["🪞", "Apne aap se", "Jo faisla tum taal rahe ho, wo bhi ek faisla hai."], ["🪞", "Apne aap se", "Das saal baad ka Samiullah aaj ke kis kaam par shukria kahega?"], ["🪞", "Apne aap se", "Ghussa us par aata hai jo humare bas mein nahi. Kya yeh tumhare bas mein hai?"], ["🪞", "Apne aap se", "Paisa wapas aa jata hai, waqt nahi. Aaj ka waqt kis par kharch hua?"], ["🪞", "Apne aap se", "Tum jis cheez se bhaag rahe ho, wo aksar wahi hoti hai jo tumhe karni hai."], ["🪞", "Apne aap se", "Sasta mulazim sab se mehnga parta hai. Tum kis par bachat kar rahe ho?"], ["🪞", "Apne aap se", "Agar aaj ka din dobara mile, to kaun sa ek ghanta badlo ge?"]]   # v28 (10 Nov, malik: "gehra qoul jo sochne par majboor kare, meri personality jaisa") — Roman Urdu: falsafi + apne aap se sawal
 T_UNL = 112233445566771
 def lint(n): return {"m_name": n, "m_type": 1, "isLocalVar": True, "m_intValue": 0}
 def lexpr(n, e): return setv(n, 1, True, m_intExpression=True, m_expression=e)
@@ -11,7 +11,7 @@ def llt(n, v): return {"m_classType": "MacroDroidVariableConstraint", "m_SIGUID"
 def leq(n, v): return {"m_classType": "MacroDroidVariableConstraint", "m_SIGUID": 0, "m_variable": gv(n, 1, True), "m_intValue": v}
 def lbool(n, v): return {"m_classType": "MacroDroidVariableConstraint", "m_SIGUID": 0, "m_variable": gv(n, 0, True), "m_booleanValue": v}
 def gbool(n, v): return {"m_classType": "MacroDroidVariableConstraint", "m_SIGUID": 0, "m_variable": gv(n, 0), "m_booleanValue": v}
-RAND = setv("qi", 1, True, m_intRandom=True, m_intRandomMin=1, m_intRandomMax=20)
+RAND = setv("qi", 1, True, m_intRandom=True, m_intRandomMin=1, m_intRandomMax=len(RULES))
 acts = [
     lexpr("pLeft", "{v=pnDue}-{system_time}"),       # Paani aane mein kitne sec (manfi = abhi aayega)
     lexpr("pShow", "{v=pnShowEnd}-{system_time}"),   # > 0 = Paani popup screen par
@@ -21,12 +21,12 @@ acts = [
 ]
 for i, (ic, t, s) in enumerate(RULES, 1):   # t = falsafi ka naam, s = qoul
     acts += [iff([leq("qi", i)], cls="IfConditionAction" if i == 1 else "ElseIfConditionAction"),
-             sstr("qdT", "%s فلسفہ · %s" % (ic, t)), sstr("qdM", s), sstr("qdA", t)]
+             sstr("qdT", "%s %s" % (ic, t)), sstr("qdM", s), sstr("qdA", t)]
 acts += [END,
     iff([lbool("never", True)]),
     {"m_classType": "ElseIfConfirmedThenAction", "m_SIGUID": 0, "title": "{v=qdT}",
-     "text": "<div dir=\"rtl\">{v=qdM}<br><br>— {v=qdA}</div>", "positiveText": "✅ OK", "negativeText": "✕",
-     "cancelAfterTimeout": True, "timeoutSeconds": 4, "htmlFormat": True, "useCustomColors": True, "textColor": -15658735, "bgColor": -1},
+     "text": "<big>{v=qdM}</big>", "positiveText": "✅ OK", "negativeText": "✕",
+     "cancelAfterTimeout": True, "timeoutSeconds": 10, "htmlFormat": True, "useCustomColors": True, "textColor": -15658735, "bgColor": -1},
     END,
     END,
 ]

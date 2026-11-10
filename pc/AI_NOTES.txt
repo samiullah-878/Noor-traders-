@@ -4467,3 +4467,7 @@ posAdds = sirf PC (admin) — rules nahi badle. ASAL PC PAR TEST NAHI (addStart 
 - 🚨 Zaroori: band haalat mein app KHOLNE par ek dialog (30 s mein ek dafa, clAsk) — din mein 1 dafa (clEmDay) 5 minute (clEm) sab hadein maaf.
 - Naye globals clMin clAway clBrk clEm clAsk clEmDay (pkg vars). Dhancha jaancha (If/EndIf, variables); phone par asal test nahi — malik batayega. Waqt badalna = cb.py USE / BRK / EMG / tod(). Sirf phone ki app — browser / PC par Claude khula. AI nahi.
 - Malik ki shikayat (v26 Bari likhai): 'pehle chhoti phir bari' — wajah batai (macro app khulne ke baad badalta hai); A poora phone 130% / B jaisa hai / C WhatsApp ki apni setting — jawab ka intezar.
+
+=== 2026-11-10 · md pkg v28 — 🧠 Falsafa naya (malik: "falsafa wali ka maza nahi aa raha — gehra qoul jo sochne par majboor kare, meri personality jaisa · tum banao ya net se lao, tum jaano") ===
+- md/tools/qaide.py RULES: 20 Urdu-script aam qoul -> 30 ROMAN URDU (13 falsafi: Seneca, Marcus Aurelius, Epictetus, Rumi, Nietzsche, Pascal, Kierkegaard, Thoreau, Confucius, Lao Tzu, Suqraat — mashhoor baaton ka apna tarjuma; 17 '🪞 Apne aap se' sawal: system / waqt / log / paisa / sehat / bachay). Random 1..len(RULES); sarkhi = naam; likhai <big>; popup 10 s (pehle 4).
+- Naye qoul isi list mein jodo; kisi falsafi ke naam par wohi baat likho jo waqai us ki mashhoor ho (shak ho to 'Apne aap se'). Mazhabi shakhsiyat ke naam par qoul bina pakke hawale ke NAHI. AI nahi (phone par).
