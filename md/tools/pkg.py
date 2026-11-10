@@ -71,7 +71,7 @@ for v in vp + vk + vt + vq + vf + vb + vcb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🧠 Falsafa naya: gehre qoul + apne aap se sawal (Roman Urdu).",
+       "note": "🧠 Falsafa: har 2 din nayi 6 baatein (kul 92).",
        "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
