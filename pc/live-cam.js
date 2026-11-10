@@ -1,5 +1,6 @@
 // =========================================================
-//  live-cam.js  v1.2 (2026-11-10: 🔗 EK HI RABTA — malik ki screenshots: "error -138" / "NVR ne video nahi di": NVR ek camera par PC ko DOOSRA rabta nahi deta (pehla bill-clip ki recording ka).
+//  live-cam.js  v1.3 (2026-11-10: ⚡ malik: "time bohat zyada lag raha — on karte hi aana chahiye": ICE ka intezar 4 s → 1.2 s, har 1 s keyframe (g 12), dekhne wala jaye to camera 2 min GARAM (dobara / counter badalna = foran).)
+//  v1.2 (2026-11-10: 🔗 EK HI RABTA — malik ki screenshots: "error -138" / "NVR ne video nahi di": NVR ek camera par PC ko DOOSRA rabta nahi deta (pehla bill-clip ki recording ka).
 //    Ab bill-clip v2.4 apni recording wali line ki copy PC ke andar udp 127.0.0.1:48500+ch par deta hai — live wahi leta hai (NVR par naya rabta NAHI); na mile to purana RTSP raasta.)
 //  v1.1 (2026-11-10: 🩺 "Juda hai par video nahi" — asal wajah app ko (liveReq.warn: ffmpeg / NVR ki ghalti foran, 12 s koi packet nahi), sub-stream na chale to MAIN stream, liveReq.rtp = PC video bhej raha hai (phone na chala sake to app VP8 se dobara)) · v1.0 (2026-11-09) — 🔴 COUNTER CAMERA KI LIVE VIDEO app mein (WebRTC, seedha PC → phone)
 //  Malik (9 Nov): "kya direct live nahi chal sakti, koi tareeqa nikalo · only live video wala chahiye".
@@ -25,7 +26,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '1.2';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '1.3';
 const CLIP_MODS = path.join(DIR, 'clip-mods'), MODS = path.join(DIR, 'live-mods');
 const WERIFT = 'werift@0.24.4';
 const MAX_V = 4;
@@ -99,8 +100,8 @@ function startPipe(ch, codec) {
   sock.on('message', m => { p.pk++; for (const t of p.tracks) { try { t.writeRtp(m); } catch {} } });
   sock.bind(0, '127.0.0.1', () => {
     const port = sock.address().port;
-    const enc = codec === 'vp8' ? ['-c:v', 'libvpx', '-deadline', 'realtime', '-cpu-used', '8', '-b:v', '500k', '-g', '24', '-error-resilient', '1']
-      : ['-c:v', 'libx264', '-preset', 'ultrafast', '-tune', 'zerolatency', '-profile:v', 'baseline', '-pix_fmt', 'yuv420p', '-g', '24', '-bf', '0', '-b:v', '450k', '-maxrate', '600k', '-bufsize', '300k'];
+    const enc = codec === 'vp8' ? ['-c:v', 'libvpx', '-deadline', 'realtime', '-cpu-used', '8', '-b:v', '500k', '-g', '12', '-error-resilient', '1']
+      : ['-c:v', 'libx264', '-preset', 'ultrafast', '-tune', 'zerolatency', '-profile:v', 'baseline', '-pix_fmt', 'yuv420p', '-g', '12', '-bf', '0', '-b:v', '450k', '-maxrate', '600k', '-bufsize', '300k'];
     p.share = !p.noShare && !process.env.LIVE_TEST_SRC && shareOk(ch);   // v1.2: recording wali line chal rahi hai → wahi (NVR par naya rabta nahi)
     const src = process.env.LIVE_TEST_SRC ? ['-re', '-f', 'lavfi', '-i', 'testsrc=size=704x576:rate=15'] : p.share ? ['-f', 'mpegts', '-i', 'pipe:0'] : ['-rtsp_transport', 'tcp', '-timeout', '10000000', '-i', liveUrl(ch, p.main)];
     const args = ['-hide_banner', '-loglevel', 'error', ...(p.share ? [] : ['-nostdin']), '-fflags', 'nobuffer', ...src, '-an', '-vf', "fps=12,scale='min(640,iw)':-2", ...enc, '-f', 'rtp', '-payload_type', '96', '-pkt_size', '1200', `rtp://127.0.0.1:${port}`];
@@ -151,7 +152,7 @@ async function answer(id, r) {
   pc.addTransceiver(track, { direction: 'sendonly' });
   await pc.setRemoteDescription({ type: 'offer', sdp: offer });
   await pc.setLocalDescription(await pc.createAnswer());
-  if (pc.iceGatheringState !== 'complete') await new Promise(res => { const t = setTimeout(res, 4000); pc.iceGatheringStateChange.subscribe(s => { if (s === 'complete') { clearTimeout(t); res(); } }); });
+  if (pc.iceGatheringState !== 'complete') await new Promise(res => { const t = setTimeout(res, 1200); pc.iceGatheringStateChange.subscribe(s => { if (s === 'complete') { clearTimeout(t); res(); } }); });
   const v = { pc, track, pipe: p, hb: Date.now(), pcName: r.pc, ch };
   viewers.set(id, v); p.tracks.add(track); p.idleAt = 0;
   pc.connectionStateChange.subscribe(s => { if (s === 'failed' || s === 'closed') { if (viewers.has(id)) REQ.doc(id).set({ st: s === 'failed' ? 'err' : 'end', err: s === 'failed' ? 'rabta toot gaya / nahi bana (network)' : '', doneAt: Date.now() }, { merge: true }).catch(() => {}); endViewer(id, s); } });
@@ -175,7 +176,7 @@ setInterval(() => { REQ.where('st', 'in', ['new', 'ok']).get().then(s => { onReq
 setInterval(() => {
   const now = Date.now();
   for (const [id, v] of viewers) if (now - v.hb > 45000) { REQ.doc(id).set({ st: 'end', doneAt: now }, { merge: true }).catch(() => {}); endViewer(id, 'hb purana'); }
-  for (const p of [...pipes.values()]) if (!p.tracks.size && p.idleAt && now - p.idleAt > 20000) stopPipe(p, 'koi nahi dekh raha');
+  for (const p of [...pipes.values()]) if (!p.tracks.size && p.idleAt && now - p.idleAt > 120000) stopPipe(p, 'koi nahi dekh raha');
   for (const p of pipes.values()) {   // v1.1: 🩺 video aa rahi hai ya nahi — app ko batao
     if (!p.tracks.size) continue;
     if (p.share && p.ff && now - (p.at || now) > 8000 && !shareOk(p.ch)) { log(`🔗 live ch ${p.ch}: recording ki line ruk gayi — dobara`); try { p.ff.kill(); } catch {} continue; }   // v1.2

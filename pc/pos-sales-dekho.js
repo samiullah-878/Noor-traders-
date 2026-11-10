@@ -1,5 +1,6 @@
 // =========================================================
-//  pos-sales-dekho.js  v2.7 (2026-11-10: 🎥 AAKHRI item ka waqt `lt` (bill-clip video pehli se aakhri item tak — malik: "6 items ke baad video phir se shuru") + 🔴 live patti par BANTA HUA bill (counter ke POS login CreatedBy se — "at PC:" print par aata hai) · v2.6 (2026-11-09: 🔴🧾 LIVE BILL — Live camera dekhte waqt us counter ka bante hue bill ki lines har 1 s posLive/<counter> mein (sirf parhna) · v2.5 (2026-11-09: 🎥 bill ki PEHLI ITEM ka waqt `ft` — POS har scan par SaleDetail likhta hai (save se pehle), PC har 1 s naye SaleID ki pehli line dekh kar waqt yaad (pos-first-seen.json); bill-clip clip pehli item se shuru karta hai (malik: "pehli item ka time likh le to kaisa rahe")) · v2.4 (2026-11-08: 🎥 bill ka `ct` = BANANE / PRINT ka waqt (SystemNotes "Created & Printed By:… On:… at PC:") — Bill tally ki clip post ke waqt se nahi, bill banane ke waqt se (malik: "Abdurehman ne jis time bill bana kar print kiya, PC us time se peeche jaye, posting se nahi")) · v2.3 (2026-11-06: 🔎 JAANCH malik: "jo wapsi bill ke andar minus ho chuki wo dobara nahi" — har wapsi ke saath juda SaleID, us bill ka TotalSale aur
+//  pos-sales-dekho.js  v2.8 (2026-11-10: 🔴 live patti — BANTA bill ab aakhri chhape bill ke baad ke khule bills se (tareekh ki shart nahi, login → counter naqsha, andaza + 🩺 dg), har 0.6 s)
+//  v2.7 (2026-11-10: 🎥 AAKHRI item ka waqt `lt` (bill-clip video pehli se aakhri item tak — malik: "6 items ke baad video phir se shuru") + 🔴 live patti par BANTA HUA bill (counter ke POS login CreatedBy se — "at PC:" print par aata hai) · v2.6 (2026-11-09: 🔴🧾 LIVE BILL — Live camera dekhte waqt us counter ka bante hue bill ki lines har 1 s posLive/<counter> mein (sirf parhna) · v2.5 (2026-11-09: 🎥 bill ki PEHLI ITEM ka waqt `ft` — POS har scan par SaleDetail likhta hai (save se pehle), PC har 1 s naye SaleID ki pehli line dekh kar waqt yaad (pos-first-seen.json); bill-clip clip pehli item se shuru karta hai (malik: "pehli item ka time likh le to kaisa rahe")) · v2.4 (2026-11-08: 🎥 bill ka `ct` = BANANE / PRINT ka waqt (SystemNotes "Created & Printed By:… On:… at PC:") — Bill tally ki clip post ke waqt se nahi, bill banane ke waqt se (malik: "Abdurehman ne jis time bill bana kar print kiya, PC us time se peeche jaye, posting se nahi")) · v2.3 (2026-11-06: 🔎 JAANCH malik: "jo wapsi bill ke andar minus ho chuki wo dobara nahi" — har wapsi ke saath juda SaleID, us bill ka TotalSale aur
 //                     SaleDetail ka jor (Qty×Rate) → sum.rtd (app milane ke liye) + note mein "bill se juri N · alag N"; MINUS abhi pehle jaisa (qaida data dekh kar)) · v2.2 (2026-11-04: ↩ malik: "Daily Sale mein sale return add hai ke nahi" → POS ki SALE RETURN (dbo.SaleReturn, us din ki) ab auto sale se MINUS —
 //                     cancel (DocStatusID 3) / stock fraq bahar; udhaar party ki wapsi (IsCreditRturn, wholesale nahi) = cash wapas nahi diya = minus NAHI (note mein ginti);
 //                     wholesale ki wapsi poori minus (wholesale bill bhi poora gina jata hai). Note: "↩ wapsi N bill Rs X minus". Parh na sake = pehle jaisa (minus nahi)) · v2.1 (2026-10-31: ⚡ har ½ sec · sirf naye/badle bill parho (cache + COUNT/SUM se milao, na mile = poori list) · sum / Daily Sale / items alag peeche ki lane · doc.pm raftar) · v2.0 (2026-10-28: 📌 har posted bill par post ka waqt `pt` — PC ne pehli dafa posted dekha (pos-posted-seen.json), shuru se pehle wale = UpdatedOn) · v1.9 (2026-10-28: ⚡ malik — "posting POS mein jaldi, app mein late": har 1 sec; bills ka haal (posted / un-posted) PEHLE likho, items + Daily Sale
@@ -112,33 +113,36 @@ async function liveTick() {
       // v2.7: 🔴 BANTA HUA BILL (malik: "bill banana start ho to bill screen par aa jaye") — POS counter ka naam ("at PC:") print par likhta hai,
       //   is liye bante hue bill ko us counter ke LOGIN (CreatedBy — pichhle 3 din ke us counter ke bill) se pehchano: aakhri chhape bill ke baad ka
       //   naya bill jis par abhi "at PC:" nahi aur jis mein item aa chuki = yehi counter ka bante hua bill. Na mile = aakhri bill (pehle jaisa).
-      let src = h ? 'aakhri' : '';
+      let src = h ? 'aakhri' : '', dg = '';
+      // v2.8 (malik 10 Nov, screenshot: bill ban raha hai magar patti par pichhla #00135590): v2.7 ka sawal (SaleDate aaj + CreatedBy IN + SaleID > aakhri) kuch nahi laya.
+      //   Ab: aakhri chhape bill ke baad ke 12 bill (tareekh ki shart NAHI) → jin par abhi "at PC:" nahi, post / cancel nahi, lines hain = BANTE HUE. Pehchan: (1) CreatedBy is
+      //   counter ka (pichhle 3 din ke "at PC:" bills se login → counters) (2) login kisi counter ka maloom nahi / kai counters ka = andaza, jis mein abhi-abhi item aayi wo pehle.
+      //   Login sirf DOOSRE counters ka ho = nahi. Jo mila / na mila = `dg` (app patti par 🩺 — andaza nahi, asal haal).
       try {
-        const us = liveUsers.get(host);
-        if (!us || Date.now() - us.at > 10 * 60000) {
-          const d3 = new Date(Date.now() - 3 * 86400000);
-          const ur = (await p.request().input('d', sql.DateTime, d3).input('h', sql.NVarChar(120), '%at PC:%' + host + '%').query(`SELECT DISTINCT TOP 5 s.CreatedBy AS U FROM dbo.Sale s
-            WHERE s.SaleDate >= @d AND s.CreatedBy IS NOT NULL AND CAST(s.SystemNotes AS NVARCHAR(600)) LIKE @h`)).recordset.map(x => x.U).filter(x => x !== null && x !== undefined && String(x).trim() !== '');
-          liveUsers.set(host, { u: ur, at: Date.now() });
+        if (!liveUsers.get('*') || Date.now() - liveUsers.get('*').at > 10 * 60000) {
+          const d3 = new Date(Date.now() - 3 * 86400000), m = new Map();
+          const rs = (await p.request().input('d', sql.DateTime, d3).query(`SELECT TOP 600 s.CreatedBy AS U, CAST(s.SystemNotes AS NVARCHAR(400)) AS SN FROM dbo.Sale s
+            WHERE s.SaleDate >= @d AND CAST(s.SystemNotes AS NVARCHAR(400)) LIKE '%at PC:%' ORDER BY s.SaleID DESC`)).recordset;
+          for (const x of rs) { const hh = ((String(x.SN || '').match(/at PC:\s*([A-Za-z0-9_.-]+)/i) || [])[1] || '').toUpperCase(), u = String(x.U ?? '').trim(); if (!hh || !u) continue; if (!m.has(u)) m.set(u, new Set()); m.get(u).add(hh); }
+          liveUsers.set('*', { m, at: Date.now() });
         }
-        const U = (liveUsers.get(host) || {}).u || [];
-        if (U.length) {
-          const rq = p.request().input('d', sql.DateTime, d0).input('a', sql.Int, h ? Number(h.SaleID) || 0 : 0);
-          const num = U.every(u => typeof u === 'number' || /^\d+$/.test(String(u)));   // CreatedBy number ho ya naam — dono chalein
-          U.forEach((u, i) => num ? rq.input('u' + i, sql.Int, Number(u)) : rq.input('u' + i, sql.NVarChar(100), String(u)));
-          const c = (await rq.query(`SELECT TOP 1 s.SaleID, s.SaleNo, s.TotalSale, s.DocStatusID, CAST(s.SystemNotes AS NVARCHAR(600)) AS SN FROM dbo.Sale s
-            WHERE s.SaleDate >= @d AND s.SaleID > @a AND s.CreatedBy IN (${U.map((_, i) => '@u' + i).join(',')})
-              AND (s.SystemNotes IS NULL OR CAST(s.SystemNotes AS NVARCHAR(600)) NOT LIKE '%at PC:%') AND ISNULL(s.DocStatusID, 0) <> 3
-              AND EXISTS (SELECT 1 FROM dbo.SaleDetail d WHERE d.SaleID = s.SaleID) ORDER BY s.SaleID DESC`)).recordset[0];
-          if (c) { h = c; src = 'chalu'; }
-        }
-      } catch (e) { liveUsers.set(host, { u: [], at: Date.now() }); if (!liveErrLog) { liveErrLog = 1; log('live banta bill (10 min baad dobara): ' + e.message); } }
-      if (!h) { await livePut(nm, { pc: nm, sid: 0, no: '', st: 0, pr: 0, t: 0, j: '[]', n: 0, ft: 0, src: '' }); continue; }
+        const UM = liveUsers.get('*').m, H = host.toUpperCase();
+        const mx = h ? Number(h.SaleID) || 0 : 0;
+        const cs = (await p.request().input('a', sql.Int, mx).query(`SELECT TOP 12 s.SaleID, s.SaleNo, s.TotalSale, s.DocStatusID, s.CreatedBy AS U, CAST(s.SystemNotes AS NVARCHAR(600)) AS SN,
+          (SELECT COUNT(*) FROM dbo.SaleDetail d WHERE d.SaleID = s.SaleID) AS LN FROM dbo.Sale s WHERE s.SaleID > @a ${mx ? '' : 'AND s.SaleID > (SELECT ISNULL(MAX(SaleID), 0) - 40 FROM dbo.Sale)'} ORDER BY s.SaleID DESC`)).recordset;
+        const open = cs.filter(c => Number(c.LN) > 0 && Number(c.DocStatusID) !== 2 && Number(c.DocStatusID) !== 3 && !/at PC:/i.test(String(c.SN || '')));
+        const rank = c => { const hs = UM.get(String(c.U ?? '').trim()); return !hs ? 1 : hs.has(H) ? (hs.size === 1 ? 3 : 2) : 0; };   // 3 = sirf isi counter ka login · 2 = kai counters · 1 = anjaan · 0 = doosre counter ka
+        const act = c => Number(firstSeen.l[String(c.SaleID)]) || Number(firstSeen.m[String(c.SaleID)]) || 0;
+        const ok = open.map(c => ({ c, r: rank(c), a: act(c) })).filter(x => x.r > 0 && (x.r === 3 || Date.now() - x.a < 15 * 60000)).sort((x, y) => (y.r - x.r) || (y.a - x.a) || (y.c.SaleID - x.c.SaleID));
+        if (ok.length) { h = ok[0].c; src = ok[0].r === 3 ? 'chalu' : 'andaza'; }
+        dg = `naye ${cs.length} · khule ${open.length}${open.length ? ' (' + open.slice(0, 3).map(c => `#${c.SaleID} login ${String(c.U ?? '?')}→${[...(UM.get(String(c.U ?? '').trim()) || ['?'])].map(x => x.replace(/^DESKTOP-/, '')).join('/')} ${c.LN} line`).join(', ') + ')' : ''}`;
+      } catch (e) { dg = 'ghalti: ' + String(e.message || e).slice(0, 120); if (!liveErrLog) { liveErrLog = 1; log('live banta bill: ' + e.message); } }
+      if (!h) { await livePut(nm, { pc: nm, sid: 0, no: '', st: 0, pr: 0, t: 0, j: '[]', n: 0, ft: 0, src: '', dg }); continue; }
       const L = (await p.request().input('s', sql.Int, h.SaleID).query(`SELECT TOP 150 d.SaleDetailID AS D, i.ItemName AS N, d.Qty AS Q, d.Rate AS R
         FROM dbo.SaleDetail d LEFT JOIN dbo.Items i ON i.ItemID = d.ItemID WHERE d.SaleID = @s ORDER BY d.SaleDetailID`)).recordset;
       const j = JSON.stringify(L.map(x => [Number(x.D) || 0, String(x.N || '').trim().slice(0, 50), Math.round((Number(x.Q) || 0) * 1000) / 1000, r2(x.R)]));
       await livePut(nm, { pc: nm, sid: Number(h.SaleID) || 0, no: String(h.SaleNo || '').trim(), st: Number(h.DocStatusID) || 0, pr: /Printed\s*By/i.test(String(h.SN || '')) ? 1 : 0,
-        t: r2(h.TotalSale), j, n: L.length, ft: Number(firstSeen.m[String(h.SaleID)]) || 0, src });
+        t: r2(h.TotalSale), j, n: L.length, ft: Number(firstSeen.m[String(h.SaleID)]) || 0, la: Number(firstSeen.l[String(h.SaleID)]) || 0, src, dg });
     }
   } catch (e) { log('live bill: ' + e.message); }
   finally { liveRun = false; }
@@ -385,7 +389,7 @@ lock.on('listening', async () => {
   setInterval(ZINDA.guard(tick, 5 * 60000, 'bills tick'), EVERY);   // 2026-10-11: chowkidar
   setInterval(ZINDA.guard(slow, 10 * 60000, 'peeche ki lane'), 1500);   // v2.1: sum + Daily Sale + items alag
   setInterval(ZINDA.guard(firstTick, 10 * 60000, 'pehli item'), 1000);   // v2.5: 🎥 pehli item ka waqt
-  liveWatchStart(); setInterval(ZINDA.guard(liveTick, 10 * 60000, 'live bill'), 1000);   // v2.6: 🔴🧾 live bill (sirf jab koi dekh raha ho)
+  liveWatchStart(); setInterval(ZINDA.guard(liveTick, 10 * 60000, 'live bill'), 600);   // v2.6: 🔴🧾 live bill (sirf jab koi dekh raha ho)
   firstTick();
   // v1.3: app ka bill POS mein bana (done) / edit hua -> foran dekho (2 sec ka intezar bhi nahi)
   const kick = () => setTimeout(() => { lastKey = ''; tick(); }, 150);
