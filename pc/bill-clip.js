@@ -1,5 +1,6 @@
 // =========================================================
-//  bill-clip.js  v2.4 (2026-11-10) — 🔗 recording wali line ki COPY PC ke andar (udp 127.0.0.1:48500+ch) → live-cam v1.2 (NVR live ko doosra rabta nahi deta tha: "error -138"); copy se recording gire = khud purana tareeqa.
+//  bill-clip.js  v2.5 (2026-11-10) — 🎯 pehli item ka ASAL waqt counter ki POS screen se (posAdds, NT-PRINT v1.32) + clip PRINT hote hi (post ka intezar nahi)
+//  v2.4 (2026-11-10) — 🔗 recording wali line ki COPY PC ke andar (udp 127.0.0.1:48500+ch) → live-cam v1.2 (NVR live ko doosra rabta nahi deta tha: "error -138"); copy se recording gire = khud purana tareeqa.
 //  v2.3 (2026-11-10) — 🎬 video AAKHRI ITEM tak (`lt`, pos-sales-dekho v2.7): POS ka 'Created & Printed' waqt bill khatam hone se pehle ka hota hai → 18 item ke bill ki sirf 2 min video, 6 item ke baad app shuru se chala deti (malik). Ab t1 = max(print, aakhri item) + post. haal (billClipPc) mein `pcs` = setting ke counter naam (Live camera bina bill ke bhi).
 //  v2.2 (2026-11-09) — 🎯 clip PEHLI ITEM se: `pre` 0 = bill ki pehli scan (`ft`, pos-sales-dekho v2.5) se 15 s pehle → print + post s; ft na ho = 120 s pehle. ⚙️ chips: Pehli item · 1 · 2 · 3 · 5 min.
 //  v2.1 (2026-11-09) — v2.1: kamyab clip par ST.err saaf (ek purane bill ka ⚠ patti par atka rehta tha).
@@ -47,7 +48,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.4';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.5';
 const MODS = path.join(DIR, 'clip-mods'), TMP = path.join(DIR, 'clip-tmp'), REC = path.join(DIR, 'clip-rec'), NPM_FILE = path.join(MODS, 'npm-at.json');
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore(), biz = db.collection('businesses').doc(BUSINESS_ID), CLIP = biz.collection('billClip'), TALLY = biz.collection('billTally');
@@ -272,19 +273,41 @@ async function loadKnown() {   // aaj + kal ke clip docs (dobara na banein)
     log(`📼 pehle se ${known.size} clip (aaj / kal)`);
   } catch (e) { log('⚠️ purani clips: ' + e.message); }
 }
+// v2.5: 🎯 PEHLI ITEM ka asal waqt — counter NT-PRINT v1.32 POS screen par har item judne ka waqt posAdds/<HOST> mein likhta hai.
+//   Bill ki pehli item = us counter ke pichhle bill ke baad se is bill ke print tak ke ADD (beech mein 4 min se bara waqfa = pichhla kaam, wahan ruk).
+//   Counter ki ghari alag ho sakti hai -> off = (server ko mila − counter ka now) ka sab se chhota namoona.
+const PC_DEFAULT = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-KEIME1D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
+const pcNames = () => { try { return { ...PC_DEFAULT, ...(JSON.parse(fs.readFileSync(path.join(__dirname, 'local-config.json'), 'utf8')).pcNames || {}) }; } catch { return PC_DEFAULT; } };
+const ADDS = new Map(); let addsFirst = true;
+biz.collection('posAdds').onSnapshot(s => { const names = pcNames(), now = Date.now();
+  s.docChanges().forEach(c => { if (c.type === 'removed') return; const x = c.doc.data() || {}, host = String(x.host || c.doc.id).toUpperCase(), nm = String(names[host] || host.replace(/^DESKTOP-/i, ''));
+    const a = (Array.isArray(x.a) ? x.a : []).map(Number).filter(t => t > 0).sort((p, q) => p - q), o = ADDS.get(nm) || { off: 0, n: 0 };
+    if (!addsFirst && Number(x.now) > 0) { const d = now - Number(x.now); if (Math.abs(d) < 6 * 3600000) { o.off = o.n ? Math.min(o.off, d) : d; o.n++; } }
+    o.a = a; ADDS.set(nm, o); });
+  addsFirst = false; }, e => log('⚠️ posAdds: ' + e.message));
+function addStart(b) {
+  const pc = String(b.pc || ''), e = ADDS.get(pc); if (!e || !e.a || !e.a.length) return 0;
+  const an = anchorOf(b), id = String(b.id); let prev = 0;
+  for (const x of bills) { if (!x || x.x || String(x.pc || '') !== pc || String(x.id) === id) continue; const a2 = anchorOf(x); if (a2 < an - 1000 && a2 > prev) prev = a2; }
+  const lo = Math.max(prev + 1500, an - 20 * 60000), hi = an + 8000; let st = 0, last = 0;
+  for (let i = e.a.length - 1; i >= 0; i--) { const t = e.a[i] + (e.off || 0); if (t > hi) continue; if (t < lo) break; if (last && last - t > 4 * 60000) break; st = t; last = t; }
+  return st;
+}
 function kick() { if (kickT) return; kickT = setTimeout(() => { kickT = null; work().catch(e => log('❌ ' + (e.stack || e.message))); }, 1500); }
 function pick() {
   const now = Date.now(), out = [];
   for (const b of bills) {
     if (!b || b.x) continue;
     const id = String(b.id), k = known.get(id), rq = reqs.has(id);   // v2.0: rq = app ka hukum (un-posted bhi)
-    if (!rq && (Number(b.ps) !== 2 || !(Number(b.pt) > 0) || !(Number(b.n) > 0))) continue;
+    const posted = Number(b.ps) === 2 && Number(b.pt) > 0, printed = Number(b.ct) > 0;   // v2.5: PRINT hote hi clip — post ka intezar nahi
+    if (!rq && (!(posted || printed) || !(Number(b.n) > 0))) continue;
     if (k && (k.st === 'ok' || k.st === 'skip' || k.tries >= 3 || (k.st === 'err' && now - k.at < 2 * 60000))) { if (rq && k.st === 'ok') reqDone(id, 'ok'); continue; }
     const ch = Number(CF.ch[b.pc] ?? CF.ch[String(b.pc || '').toLowerCase()]) || 0;
     const rec = ch && recs.get(ch)?.p ? 20 : 90;   // v2.0: apni recording = 20 s baad hi; NVR playback 1-2 min peeche likhta — 90 s
     const lt = Number(b.lt) || 0, endAt = Math.max(anchorOf(b), lt > anchorOf(b) && lt - anchorOf(b) < 20 * 60000 ? lt : 0, 0);   // v2.3: aakhri item ke baad hi
     if (now - endAt < (CF.post + rec) * 1000) continue;
-    if (!rq && now - Number(b.pt) > CF.keep * 86400000) continue;
+    if (!rq && now - anchorOf(b) > CF.keep * 86400000) continue;
+    if (!rq && !posted && now - anchorOf(b) > (CF.rk - 5) * 60000) continue;   // un-posted chhapa bill sirf jab tak apni recording (rk min) mein ho — purane ka NVR playback nahi (bojh)
     if (!rq && ON0 && anchorOf(b) < ON0 - 10 * 60000) continue;   // v1.2: camera ON se pehle ke bill nahi (10 min ki gunjaish)
     out.push(b);
   }
@@ -310,7 +333,7 @@ async function work() {
 async function one(b) {
   const id = String(b.id), ch = Number(CF.ch[b.pc] ?? CF.ch[String(b.pc || '').toLowerCase()]) || 0;
   const k = known.get(id) || { tries: 0 }; const tries = (k.tries || 0) + 1;
-  const base = { no: String(b.no || ''), day: billsDay || dayOf(b.pt), pt: Number(b.pt) || 0, tm: Number(b.tm) || 0, ct: Number(b.ct) || 0, an: anchorOf(b), pc: String(b.pc || ''), p: String(b.p || ''), t: Number(b.t) || 0, by: String(b.by || ''), nl: Number(b.n) || 0, at: Date.now(), tries, ver: VER };
+  const base = { no: String(b.no || ''), day: billsDay || dayOf(b.pt || b.ct), pt: Number(b.pt) || 0, tm: Number(b.tm) || 0, ct: Number(b.ct) || 0, an: anchorOf(b), pc: String(b.pc || ''), p: String(b.p || ''), t: Number(b.t) || 0, by: String(b.by || ''), nl: Number(b.n) || 0, at: Date.now(), tries, ver: VER };
   if (!ch) {   // counter ka camera lagaya hi nahi — skip (malik ⚙️ mein chip lagaye)
     known.set(id, { st: 'skip', tries, at: Date.now() });
     await CLIP.doc(id).set({ ...base, st: 'skip', err: `counter "${b.pc || '?'}" ka camera channel ⚙️ mein nahi` }, { merge: true });
@@ -319,7 +342,9 @@ async function one(b) {
   }
   const an = anchorOf(b), ft = Number(b.ft) || 0, lt = Number(b.lt) || 0;
   const t1 = (lt > an && lt - an < 20 * 60000 ? lt : an) + CF.post * 1000;   // v2.3: AAKHRI item tak (POS ka 'print' waqt bill khatam hone se pehle ka hota hai — malik: "6 items ke baad video phir se shuru")
-  const t0 = CF.pre === 0 ? (ft > 0 && ft < an && an - ft < 20 * 60000 ? ft - 15000 : an - 120000) : an - CF.pre * 1000;   // v2.2: pehli item se (ft) — na ho / ajeeb ho to 2 min
+  const as = CF.pre === 0 ? addStart(b) : 0;
+  let t0 = CF.pre === 0 ? (as > 0 ? as - 12000 : ft > 0 && ft < an - 20000 && an - ft < 20 * 60000 ? ft - 15000 : an - 120000) : an - CF.pre * 1000;
+  if (t1 - t0 > CF.maxs * 1000) t0 = t1 - CF.maxs * 1000;   // v2.2: pehli item se (ft) — na ho / ajeeb ho to 2 min
   const dur = Math.min(CF.maxs, Math.max(20, Math.round((t1 - t0) / 1000))), rq = reqs.has(id) ? 1 : 0;
   fs.mkdirSync(TMP, { recursive: true }); const outDir = path.join(TMP, 'b' + id); rmDir(outDir);
   const tA = Date.now(); let r, src = 'rec', url = '';
@@ -350,7 +375,7 @@ async function one(b) {
     segs.push({ n, sz: buf.length, d: Math.min(60, dur - i * 60) }); sz += buf.length;
   }
   rmDir(outDir);
-  await CLIP.doc(id).set({ ...base, st: 'ok', v: 2, segs, pk, n: 0, sz, dur, ch, sub: CF.sub, src, rq, ft, lt: Number(b.lt) || 0, t0, err: FieldValue.delete(), raw: FieldValue.delete() }, { merge: true });
+  await CLIP.doc(id).set({ ...base, st: 'ok', v: 2, segs, pk, n: 0, sz, dur, ch, sub: CF.sub, src, rq, ft, as, lt: Number(b.lt) || 0, t0, err: FieldValue.delete(), raw: FieldValue.delete() }, { merge: true });
   known.set(id, { st: 'ok', tries, at: Date.now() });
   if (rq) reqDone(id, 'ok');
   ST.err = '';   // v2.1: kamyab clip = purana ⚠ (ek bill ki wajah) app mein foran saaf

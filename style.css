@@ -7824,3 +7824,11 @@ html.dk body #dialogBody .pj-card{background:#141c2e;border-color:#2a3650}html.d
 #lvDlg .lv-shot .lvs-b{min-height:120px}
 #lvDlg .lv-body video{max-height:32%}
 }
+
+/* v2.230.0: 👀 Tally — upar counter chips (Live jaisa) + bill ka chip: laal = posted, neela = un-posted (Bills screen jaisa) */
+.bt-prog .bt-pcchip i{font-style:normal;display:inline-block;min-width:18px;margin-left:4px;padding:0 5px;border-radius:999px;background:#1d3a6e;color:#fff;font-size:11px;font-weight:800;line-height:18px;text-align:center}
+.bt-prog .bt-pcchip.is-in{background:linear-gradient(135deg,#1f4fbf,#3b78f0)!important;color:#fff!important;border-color:#1f4fbf!important}.bt-prog .bt-pcchip.is-in i{background:#fff;color:#1f4fbf}
+.bt-prog .bt-pcchip.is-day{background:linear-gradient(#fff7df,#ffe9a8);border-color:#e0b84a;color:#6b4a00}
+.bt-inf1 b.bt-bno{display:inline-flex;align-items:center;height:28px;padding:0 11px;margin-right:6px;border-radius:999px;font-size:15px;font-weight:800;color:#fff!important;white-space:nowrap;vertical-align:middle}
+.bt-inf1 b.bt-bno.po{background:linear-gradient(135deg,#b3261e,#e0483e);box-shadow:0 1px 4px #b3261e55}
+.bt-inf1 b.bt-bno.un{background:linear-gradient(135deg,#1f4fbf,#3b78f0);box-shadow:0 1px 4px #1f4fbf55}

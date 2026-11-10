@@ -39,7 +39,7 @@ let FA = null, FF = null; try { FA = require('firebase-admin/app'); FF = require
 const { initializeApp, cert, getApps } = FA || {};
 const { getFirestore, FieldValue } = FF || {};
 
-const VER = '1.31';   // v1.28 (2026-11-10): 🖥 Live camera ke saath POS screen ki tasveer (nt-posui v1.13 shot) — sirf jab koi dekh raha ho
+const VER = '1.32';   // v1.28 (2026-11-10): 🖥 Live camera ke saath POS screen ki tasveer (nt-posui v1.13 shot) — sirf jab koi dekh raha ho
 // pehle: const VER 1.27   // v1.27 (2026-11-09): 🚚 sale rasid ke upar delivery patti — DELIVERY AVAILABLE HAR GAON + charges, Urdu bari (urdu-names v1.8 dlv)
 //   // v1.26 (2026-11-07): 🧾 rasid table 5 khane (Rate + Amt ek qatar, Font B)   // v1.23 (2026-10-26): 🧾 rasid ki items table dabbe (side lines) mein — boxTable
 const BUSINESS_ID = 'noor-traders';
@@ -341,6 +341,11 @@ function listen() {
   let scan = null;
   const posBeepOn = () => cfg().posBeep === true;   // v1.9.1: sirf jab local-config posBeep:true (POS live likhta hai ya nahi — pakka nahi)
   let posui = null;
+  // v1.32: 🎯 POS screen par item judne ka WAQT (har ADD) -> posAdds/<HOST> {a: aakhri 300 waqt, now} — server bill-clip is se bill ki PEHLI item ka asal waqt nikalta hai
+  //   (POS SQL mein sirf Print par likhta hai). 12 s mein ek dafa se zyada nahi, sirf jab naya ADD ho.
+  const ADDS = []; let addT = null;
+  const addNote = () => { if (!base) return; ADDS.push(Date.now()); if (ADDS.length > 300) ADDS.splice(0, ADDS.length - 300);
+    if (!addT) addT = setTimeout(() => { addT = null; base.collection('posAdds').doc(os.hostname().toUpperCase()).set({ a: ADDS.slice(), now: Date.now(), host: os.hostname().toUpperCase(), ver: VER }).catch(e => log('🎯 posAdds: ' + e.message)); }, 12000); };
   let lastScanOk = 0, lastScanBad = 0;   // v1.11: scan ki tik baj chuki ho (1.5 s) to POS patti badalne par dobara nahi
   let lastScanCode = '', lastScanAt = 0;   // v1.16: Search khirki kis scan ki
   const missAdd = (code, at) => { const c = String(code || '').slice(0, 40), m = SND.miss.find(x => x.c === c); if (m) { m.n++; m.at = at; SND.miss.splice(SND.miss.indexOf(m), 1); SND.miss.unshift(m); } else keep(SND.miss, { c, n: 1, at }, 30); };
@@ -384,7 +389,7 @@ function listen() {
   scanRef = scan;
   // v1.10: 🔔 POS SCREEN — item-list ki ginti barhe (scan YA code likh kar) -> "tik"; tab scan ki apni tik band (do dafa na baje)
   try { posui = require('./nt-posui.js').start({ dir: DIR, log, cfg,
-    onAdd: () => { SND.add++; if (Date.now() - lastScanOk < 1500) return; play('OK', 'scan'); },
+    onAdd: () => { SND.add++; try { addNote(); } catch {} if (Date.now() - lastScanOk < 1500) return; play('OK', 'scan'); },
     onErr: t => { SND.err++; keep(SND.errs, { t: String(t || '').slice(0, 120), at: Date.now() }, 6); sndBump(); if (vetoTik('POS error box')) return; if (Date.now() - lastScanBad < 2000) return; play('BAD', 'stop'); },
     // v1.16: 🔎 scan ke foran baad POS ki Search khirki — MISS = barcode POS mein nahi -> bzzz; MULTI = barcode kai items par -> awaz nahi (chunna hai)
     onSrch: r => { if (Date.now() - lastScanAt > 3000 || cfg().posSearchBeep === false) return;

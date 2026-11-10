@@ -34,7 +34,7 @@ export function renderTally(host) {
       <div class="bt-bar"><span class="bt-prog" id="btProg">…</span><button type="button" class="bt-warn" id="btPc" data-bt-pcst="1" hidden></button>
         <span class="bt-chips" data-mn-box>
           <button type="button" data-bt-day="1" data-mn="bt.day" data-mn-i="📅" data-mn-t="Din" data-mn-s="Aaj · Kal · Dono ke bill" data-mn-g="👀 Bill tally">📅 Din</button>
-          <button type="button" data-bt-pcf="1" data-mn="bt.pcf" data-mn-i="🖥" data-mn-t="Counter / camera" data-mn-s="sirf ek counter ke bill" data-mn-g="👀 Bill tally">🖥 Counter</button>
+          <button type="button" data-bt-pcf="1" data-mn="bt.pcf" data-mn-i="🖥" data-mn-t="Sab counter ke bill" data-mn-s="teeno counter ikathe" data-mn-g="👀 Bill tally">🖥 Sab counter</button>
           <button type="button" data-bt-order="1" data-mn="bt.order" data-mn-i="💰" data-mn-t="Bare bill pehle" data-mn-s="warna naya pehle" data-mn-g="👀 Bill tally">💰 Bare pehle</button>
           <button type="button" data-bt-undo="1" data-mn="bt.undo" data-mn-i="↩" data-mn-t="Pichla wapas" data-mn-s="aakhri tally dobara" data-mn-g="👀 Bill tally">↩ Pichla</button>
           <button type="button" data-bt-list="1" data-mn="bt.list" data-mn-i="📋" data-mn-t="Bills ki list" data-mn-s="jo chaho kholo" data-mn-g="👀 Bill tally">📋 Bills</button>
@@ -67,18 +67,20 @@ function watch() {
   offs.push(cloud.listenBillClipReq(dayKey(0), l => { if (!l) return; reqs = new Map(l.map(r => [String(r.id), r])); schedule(); if ($('btDlg')?.open && $('btDlg').dataset.unp) openUnposted(); }));
 }
 function schedule() { if (paintT) return; paintT = setTimeout(() => { paintT = null; paint(); if ($('btDlg')?.open && $('btDlg').dataset.list) openList(true); }, 120); }
+// v2.230.0: PRINT hote hi tally (malik: "first item likhte hi aur print ke baad hum tally kar sakein") — posted YA chhapa hua (ct)
+const inQ = b => Number(b.ps) === 2 || Number(b.ct) > 0, wq = b => Number(b.pt) || Number(b.ct) || 0;
 function queue() {
   const out = [];
-  for (const [id, b] of bills) { if (b.x || (tallies.has(id) && id !== reopen)) continue; if (fPc && String(b.pc || '') !== fPc && id !== reopen) continue; const c = clips.get(id); if (!c || c.st !== 'ok') continue; if (Number(b.ps) !== 2 && !c.rq) continue; if (!dOk(b._d) && id !== reopen) continue; out.push(b); }   // v2.210.0: un-posted sirf jab clip mangwai (rq)
-  out.sort((a, b) => (skipped.has(String(a.id)) - skipped.has(String(b.id))) || (order === 'big' ? (Number(b.t) - Number(a.t)) || (Number(b.pt) - Number(a.pt)) : Number(b.pt) - Number(a.pt)));   // ⏭ baad mein wale aakhir mein
+  for (const [id, b] of bills) { if (b.x || (tallies.has(id) && id !== reopen)) continue; if (fPc && String(b.pc || '') !== fPc && id !== reopen) continue; const c = clips.get(id); if (!c || c.st !== 'ok') continue; if (!inQ(b) && !c.rq) continue; if (!dOk(b._d) && id !== reopen) continue; out.push(b); }   // v2.210.0: un-posted sirf jab clip mangwai (rq)
+  out.sort((a, b) => (skipped.has(String(a.id)) - skipped.has(String(b.id))) || (order === 'big' ? (Number(b.t) - Number(a.t)) || (wq(b) - wq(a)) : wq(b) - wq(a)));   // ⏭ baad mein wale aakhir mein
   return out;
 }
 function counts() {
   const td = dayKey(0); let ok = 0, bad = 0, wait = 0, err = 0;
   for (const t of tallies.values()) if (dOk(t.day) && (!fPc || String(t.pc || '') === fPc)) { if (t.ok) ok++; else bad++; }
   const on0 = Number(pcSt?.on0) || 0;   // v2.209.1: sirf aaj ke bill (PC kal ke nahi kaatta) + camera ON hone ke baad wale — warna jhoota "429 ban rahi"
-  for (const [id, b] of bills) { if (b.x || Number(b.ps) !== 2 || tallies.has(id) || b._d !== td || (fPc && String(b.pc || '') !== fPc)) continue; const c = clips.get(id); if (!c || c.st === 'wait') { if (!on0 || Number(b.ct || b.pt) >= on0 - 10 * 60000) wait++; } else if (c.st === 'err' || c.st === 'skip') err++; }
-  let kalQ = 0; if (fDay === 'aaj') { const k = dayKey(1); for (const [id, b] of bills) { if (b._d !== k || b.x || tallies.has(id) || Number(b.ps) !== 2 || (fPc && String(b.pc || '') !== fPc)) continue; if (clips.get(id)?.st === 'ok') kalQ++; } }
+  for (const [id, b] of bills) { if (b.x || !inQ(b) || tallies.has(id) || b._d !== td || (fPc && String(b.pc || '') !== fPc)) continue; const c = clips.get(id); if (!c || c.st === 'wait') { if (!on0 || Number(b.ct || b.pt) >= on0 - 10 * 60000) wait++; } else if (c.st === 'err' || c.st === 'skip') err++; }
+  let kalQ = 0; if (fDay === 'aaj') { const k = dayKey(1); for (const [id, b] of bills) { if (b._d !== k || b.x || tallies.has(id) || !inQ(b) || (fPc && String(b.pc || '') !== fPc)) continue; if (clips.get(id)?.st === 'ok') kalQ++; } }
   if (fDay === 'kal') { wait = 0; err = 0; }
   return { ok, bad, wait, err, kalQ, q: queue().length };
 }
@@ -117,6 +119,14 @@ async function playSeg(i, keepTime) {
 }
 
 // ---------- paint ----------
+// v2.230.0: upar teeno counter ke chips (Live jaisa) — har chip par us counter ke baqi bill; dabao = neeche usi ke bill. Sab counter / din ⋮ mein.
+function pcChips() {
+  const m = new Map(); for (const k of (Array.isArray(pcSt?.pcs) ? pcSt.pcs : [])) if (k) m.set(String(k), 0);
+  for (const [id, b] of bills) { if (b.x || !dOk(b._d)) continue; const k = String(b.pc || ''); if (!k) continue; if (!m.has(k)) m.set(k, 0); const c = clips.get(id); if (!tallies.has(id) && c && c.st === 'ok' && (inQ(b) || c.rq)) m.set(k, m.get(k) + 1); }
+  if (fPc && !m.has(fPc)) m.set(fPc, 0);
+  return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+}
+function setPc(v) { fPc = v || ''; try { localStorage.setItem('sam-bt-pc', fPc); } catch {} reopen = ''; cur = ''; mode = 'view'; sel = new Set(); const mn = $('btMain'); if (mn) mn.innerHTML = ''; paint(); }
 function paintPc() {
   const el = $('btPc'); if (!el) return;
   const c = counts(); let s = '';
@@ -133,7 +143,9 @@ function paintPc() {
 function paint() {
   if (!mounted || !$('btRoot')) return;
   const c = counts(), q = queue();
-  const pg = $('btProg'); if (pg) pg.innerHTML = `<button type="button" class="bt-pcchip${fDay !== 'aaj' ? ' is-in' : ''}" data-bt-day="1">📅 ${dayLbl()} ▾</button><button type="button" class="bt-pcchip${fPc ? ' is-in' : ''}" data-bt-pcf="1">🖥 ${esc(fPc || 'Sab counter')} ▾</button><span class="bt-cnt"><b class="ok">✓ ${c.ok}</b>${c.bad ? ` <b class="bad">✕ ${c.bad}</b>` : ''} · baqi <b>${c.q}</b></span>`;
+  const pg = $('btProg'); if (pg) { const sig = pcChips().map(([k, n]) => k + ':' + n).join('|') + '|' + fPc + '|' + fDay + '|' + c.ok + '|' + c.bad + '|' + c.q;
+    if (pg.dataset.sig !== sig) { pg.dataset.sig = sig; const sl = pg.scrollLeft;
+      pg.innerHTML = pcChips().map(([k, n]) => `<button type="button" class="bt-pcchip${fPc === k ? ' is-in' : ''}" data-bt-pcv="${esc(k)}">🖥 ${esc(k)}${n ? ` <i>${n}</i>` : ''}</button>`).join('') + (fDay !== 'aaj' ? `<button type="button" class="bt-pcchip is-day" data-bt-day="1">📅 ${dayLbl()}</button>` : '') + `<span class="bt-cnt"><b class="ok">✓ ${c.ok}</b>${c.bad ? ` <b class="bad">✕ ${c.bad}</b>` : ''}${fPc ? '' : ` · baqi <b>${c.q}</b>`}</span>`; pg.scrollLeft = sl; } }
   const ln = $('btLine'); if (ln) { const tot = c.ok + c.bad + c.q; ln.style.width = (tot ? Math.round((c.ok + c.bad) / tot * 100) : 0) + '%'; }
   paintPc();
   const ob = $('btRoot').querySelector('[data-bt-order]'); if (ob) { ob.classList.toggle('on', order === 'big'); ob.textContent = order === 'big' ? '💰 Bare pehle ✓' : '💰 Bare pehle'; }
@@ -152,7 +164,7 @@ function paint() {
         <div class="bt-vload" id="btVload">⏳ video…</div><div class="bt-flash" id="btFlash" hidden></div><button type="button" class="bt-vend" id="btVend" data-bt-again="1" hidden>✅ Video khatam · ↺ Dobara dekho</button>
         <div class="bt-vchips"><span class="bt-segs" id="btSegs"></span><button type="button" class="bt-spd" data-bt-spc="1" title="raftar">${speed}×</button><button type="button" data-bt-full="1" title="poori screen">⛶</button></div>
       </div>
-      <div class="bt-info"><span class="bt-inf1"><b>#${esc(b.no)}</b> · ${b._d !== dayKey(0) ? '<em>kal</em> ' : ''}${tm(b.ct || b.pt)}${b.ct ? '' : ' (post)'}${b.by ? ' · 👦 ' + esc(b.by) : ''}${!fPc && b.pc ? ' · 🖥 ' + esc(b.pc) : ''}${b.p ? ' · ' + esc(b.p) : ''}</span><b class="bt-rs">Rs ${num(b.t)}</b></div>
+      <div class="bt-info"><span class="bt-inf1"><b class="bt-bno" id="btBno"></b> ${b._d !== dayKey(0) ? '<em>kal</em> ' : ''}${tm(b.ct || b.pt)}${b.ct ? '' : ' (post)'}${b.by ? ' · 👦 ' + esc(b.by) : ''}${!fPc && b.pc ? ' · 🖥 ' + esc(b.pc) : ''}${b.p ? ' · ' + esc(b.p) : ''}</span><b class="bt-rs">Rs ${num(b.t)}</b></div>
       <div class="bt-tip">👆 tap = ruk / chal · 2 dafa tap daayein / baayein = 10 s aage / peeche${cl.dur ? ' · ' + (cl.dur >= 120 ? Math.round(cl.dur / 60) + ' min' : cl.dur + ' s') : ''}</div></div>
       <div class="bt-side"><div class="bt-ihead">🧾 Bill ki items <b id="btN"></b>${t ? `<em>pehle ${t.ok ? '✓' : '✕'} (${esc(t.n || '')})</em>` : ''}</div><ol class="bt-items" id="btItems"><li class="none">⏳ items…</li></ol></div>
     </div>`;
@@ -160,6 +172,7 @@ function paint() {
     const vv = main.querySelector('#btVid');   // v2.210.0: hissa khatam = agla · v2.222.0: aakhri ke baad shuru se NAHI (malik: "6 items ke baad video phir se start") — ruko + ↺ chip
     if (vv) { vv.addEventListener('ended', () => { const sg = segsOf(clips.get(cur)); if (sg && segIdx + 1 < sg.length) { playSeg(segIdx + 1); return; } const e = $('btVend'); if (e) e.hidden = false; }); vv.addEventListener('play', () => { const e = $('btVend'); if (e) e.hidden = true; const f = $('btFlash'); if (f) f.hidden = true; }); vv.addEventListener('pause', () => { if (!vv.ended) flash('⏸ ruki — tap se chalao', true); }); }
   }
+  const bn = $('btBno'); if (bn && b) { const po = Number(b.ps) === 2, tx = (po ? '📌 ' : '🔵 ') + '#' + (b.no || ''); if (bn.textContent !== tx) bn.textContent = tx; bn.classList.toggle('po', po); bn.classList.toggle('un', !po); bn.title = po ? 'Posted' : 'Un-posted'; }
   paintItems(); paintBtns();
   for (const x of q.filter(x => String(x.id) !== cur).slice(0, 3)) { clipUrl(String(x.id)).catch(() => {}); linesOf(String(x.id)); }   // v2.212.0: aage 3 bill ki video + items pehle se (✓ par agla foran)
 }
@@ -231,8 +244,9 @@ async function onClick(e) {
   if (t.closest('[data-bt-again]')) { const e = $('btVend'); if (e) e.hidden = true; if (segsOf(clips.get(cur))) playSeg(0); else { const v = $('btVid'); if (v) { v.currentTime = 0; v.play().catch(() => {}); } } return; }
   if (t.closest('[data-bt-unp]')) { openUnposted(); return; }
   if (t.closest('[data-bt-list]')) { openList(); return; }
-  if (t.closest('[data-bt-pcf]')) { openPcPick(); return; }
-  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : [])])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) */ import('./live.js?v=2.229.3').then(m => m.openLive({ cloud, notice, list: L, cur: fPc })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
+  const pv = t.closest('[data-bt-pcv]'); if (pv) { setPc(fPc === pv.dataset.btPcv ? '' : pv.dataset.btPcv); return; }
+  if (t.closest('[data-bt-pcf]')) { setPc(''); notice('🖥 Sab counter ke bill'); return; }
+  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : [])])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) */ import('./live.js?v=2.230.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
   const rq = t.closest('[data-bt-rq]'); if (rq) { const id = rq.dataset.btRq, b = bills.get(id); rq.disabled = true; rq.textContent = '⏳'; cloud.reqBillClip(id, { no: b?.no, pc: b?.pc, day: dayKey(0) }).then(() => notice('🎥 PC ko hukum gaya — clip 1-2 min mein')).catch(e => { notice('Hukum nahi gaya: ' + (e?.message || e)); rq.disabled = false; rq.textContent = '🎥 Mangwao'; }); return; }
   const op = t.closest('[data-bt-open]'); if (op) { const c = clips.get(op.dataset.btOpen); if (!c || c.st !== 'ok') { notice(c?.st === 'err' || c?.st === 'skip' ? '⚠ Is bill ki clip nahi bani: ' + (c.err || '') : '⏳ Clip abhi ban rahi hai'); return; } reopen = op.dataset.btOpen; cur = op.dataset.btOpen; mode = 'view'; sel = new Set(); const dd = $('btDlg'); if (dd) { delete dd.dataset.list; delete dd.dataset.unp; dd.close(); } $('btMain').innerHTML = ''; paint(); return; }
   if (t.closest('[data-bt-full]')) { const v = $('btVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (v.closest('.bt-vwrap') || v).requestFullscreen?.(); } catch {} return; }
@@ -274,7 +288,7 @@ function openSum() {
 function openPcPick() {
   const d = dlg(); delete d.dataset.list; delete d.dataset.unp;
   const td = dayKey(0), m = new Map();
-  for (const [id, b] of bills) { if (b.x || !dOk(b._d) || Number(b.ps) !== 2) continue; const k = String(b.pc || ''); if (!k) continue; const o = m.get(k) || { n: 0, q: 0 }; o.n++; const c = clips.get(id); if (!tallies.has(id) && c && c.st === 'ok') o.q++; m.set(k, o); }
+  for (const [id, b] of bills) { if (b.x || !dOk(b._d) || !inQ(b)) continue; const k = String(b.pc || ''); if (!k) continue; const o = m.get(k) || { n: 0, q: 0 }; o.n++; const c = clips.get(id); if (!tallies.has(id) && c && c.st === 'ok') o.q++; m.set(k, o); }
   if (fPc && !m.has(fPc)) m.set(fPc, { n: 0, q: 0 });
   const all = [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   const chip = (k, t, o) => `<button type="button" class="bt-tg${fPc === k ? ' on' : ''}" data-pcv="${esc(k)}">${t}${o ? ` <small>${o.n} bill · baqi ${o.q}</small>` : ''}</button>`;
@@ -305,7 +319,7 @@ let listQ = '';
 function openList(refresh) {
   const d = dlg(); d.dataset.list = '1'; delete d.dataset.unp;
   const td = dayKey(0), q = listQ.trim().toLowerCase();
-  const all = [...bills.values()].filter(b => !b.x && dOk(b._d) && Number(b.ps) === 2 && (!fPc || String(b.pc || '') === fPc)).sort((a, b) => Number(b.ct || b.pt) - Number(a.ct || a.pt));
+  const all = [...bills.values()].filter(b => !b.x && dOk(b._d) && inQ(b) && (!fPc || String(b.pc || '') === fPc)).sort((a, b) => Number(b.ct || b.pt) - Number(a.ct || a.pt));
   const list = q ? all.filter(b => String(b.no || '').toLowerCase().includes(q) || String(b.by || '').toLowerCase().includes(q) || String(b.pc || '').toLowerCase().includes(q) || String(b.p || '').toLowerCase().includes(q)) : all;
   const row = b => { const id = String(b.id), c = clips.get(id), tl = tallies.get(id);
     const st = tl ? `<em class="${tl.ok ? 'ok' : 'bad'}">${tl.ok ? '✓ theek' : '✕ kam'}</em>` : c?.st === 'ok' ? '<em class="go">▶ Dekho</em>' : c?.st === 'err' || c?.st === 'skip' ? `<em class="bad" title="${esc(c.err || '')}">⚠ nahi bani</em>` : '<em>⏳ clip…</em>';

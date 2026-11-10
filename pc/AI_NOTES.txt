@@ -4435,3 +4435,9 @@ Ab: counter hukum sunte hi {on 0, why 'hukum sun liya'} likhta hai; PowerShell 2
 --- v2.229.3 (10 Nov 19:00) 🖥 POS screen ASAL counter par CHAL GAYI (Abdurehman 18:52: list ki tasveer aayi). Counters ka masla: RN6QU6D par firebase-key nahi thi (AWAZ-ONLY), KEIME1D par NT-PRINT band + files October ki -> malik ne nt-fix.ps1 chalaya, dono v1.31.
 Malik: "kuch seconds ka farq — tez karo + layout". nt-posui v1.14: dekhna 0.2 s, gap 0.35 s, q50. App: shotFollow (sab se lamba safed hissa = list ka khali hissa -> aakhri item khud saamne), dabba 42%, video 32%.
 Sabaq: naya counter / purana counter = Settings mein NT-PRINT ka version dekho; nt-fix.ps1 (ek command) sab taza karta hai.
+
+=== v2.230.0 (2026-11-10 19:30) 👀 TALLY = LIVE JAISI + PRINT HOTE HI + PEHLI ITEM SE ===
+Malik: "tally screen same live jaisi · upar teeno PC ke chips · jis ko select karein neeche us ka bill · sab ka bill three dots mein · bill ka chip Bills screen jaisa — neela un-post, laal post · first item likhte hi + print ke baad tally · speed tez".
+App tally.js: #btProg = counter chips (pcChips: billClipPc.pcs ∪ bills, har chip par baqi ginti; dabao = setPc, dobara dabao = sab) · ⋮ "🖥 Sab counter" · 📅 chip sirf jab aaj na ho · bill chip #btBno (.po laal 📌 / .un neela 🔵) · queue / ginti / list = inQ(b) (posted YA chhapa ct > 0).
+PC bill-clip v2.5: clip PRINT hote hi (ct) — post ka intezar nahi (un-posted chhapa sirf rk min ke andar, purane ka NVR playback nahi) · pehli item ka waqt addStart(b): posAdds/<HOST> (NT-PRINT v1.32 har POS ADD ka waqt, 12 s mein ek likhai) — pichhle bill ke baad se print tak, 4 min ka waqfa = ruk; counter ghari ka farq off · t0 = as − 12 s (na ho = purana ft / 2 min) · lamba bill = aakhir kabhi na kate.
+posAdds = sirf PC (admin) — rules nahi badle. ASAL PC PAR TEST NAHI (addStart / ADD ka waqt) — billClip doc mein `as` dekh kar pakka karo. AI nahi.
