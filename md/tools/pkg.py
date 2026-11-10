@@ -60,17 +60,19 @@ import st as STM
 mst, vst = fix(json.loads(json.dumps(STM.ST)), h64('claude|screentime'), '📱 Screen time')   # v25 (10 Nov): Paani popup ke screen time ka andaza
 import big as BGM
 mbg, vbg = fix(json.loads(json.dumps(BGM.BG)), h64('claude|barilikhai'), '🔎 Bari likhai')   # v26 (10 Nov): WhatsApp + Claude mein likhai bari
+import cb as CBM
+mcb, vcb = fix(json.loads(json.dumps(CBM.CB)), h64('claude|claudebreak'), '⏸ Claude break')   # v27 (10 Nov): Claude app ki hadein
 vars_, seen = [], set()
 # 🏦 Bank mode (chat link, phone par) ke globals — link import banata nahi (7 Nov: "Variable does not exist (bkSave)")
 def _gv(n, t, **kw):
     v = {"m_name": n, "m_type": t, "isLocalVar": False, "m_booleanValue": False, "m_intValue": 0, "m_stringValue": ""}; v.update(kw); return v
 vb = [_gv("bankOn", 0), _gv("bkSave", 2), _gv("bkRes", 2), _gv("bkBeat", 1), _gv("bkAge", 1)]
-for v in vp + vk + vt + vq + vf + vb:
+for v in vp + vk + vt + vq + vf + vb + vcb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🔎 WhatsApp + Claude mein likhai bari (130%) · 📱 Paani popup mein screen time.",
-       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg],
+       "note": "⏸ Claude: 12 se 12 band · 6-7 band · 20 min par 5 min break · 🔎 bari likhai · 📱 screen time.",
+       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
        "vars": vars_,
