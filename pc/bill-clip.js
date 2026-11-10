@@ -1,5 +1,6 @@
 // =========================================================
-//  bill-clip.js  v2.2 (2026-11-09) — 🎯 clip PEHLI ITEM se: `pre` 0 = bill ki pehli scan (`ft`, pos-sales-dekho v2.5) se 15 s pehle → print + post s; ft na ho = 120 s pehle. ⚙️ chips: Pehli item · 1 · 2 · 3 · 5 min.
+//  bill-clip.js  v2.3 (2026-11-10) — 🎬 video AAKHRI ITEM tak (`lt`, pos-sales-dekho v2.7): POS ka 'Created & Printed' waqt bill khatam hone se pehle ka hota hai → 18 item ke bill ki sirf 2 min video, 6 item ke baad app shuru se chala deti (malik). Ab t1 = max(print, aakhri item) + post. haal (billClipPc) mein `pcs` = setting ke counter naam (Live camera bina bill ke bhi).
+//  v2.2 (2026-11-09) — 🎯 clip PEHLI ITEM se: `pre` 0 = bill ki pehli scan (`ft`, pos-sales-dekho v2.5) se 15 s pehle → print + post s; ft na ho = 120 s pehle. ⚙️ chips: Pehli item · 1 · 2 · 3 · 5 min.
 //  v2.1 (2026-11-09) — v2.1: kamyab clip par ST.err saaf (ek purane bill ka ⚠ patti par atka rehta tha).
 //  v2.0 (2026-11-09) — 🎞 LOCAL RECORDING + 5 MIN CLIP + hisse-war video + un-posted bill ki clip hukum par
 //  Malik (9 Nov): "posted bill: print se 5 min pehle ki video · un-posted bill ki clip alehda, jab hum order karein · video Netflix jaisi speed se chale, slow na ho · PC + NVR ek Wi-Fi".
@@ -45,7 +46,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.2';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.3';
 const MODS = path.join(DIR, 'clip-mods'), TMP = path.join(DIR, 'clip-tmp'), REC = path.join(DIR, 'clip-rec'), NPM_FILE = path.join(MODS, 'npm-at.json');
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore(), biz = db.collection('businesses').doc(BUSINESS_ID), CLIP = biz.collection('billClip'), TALLY = biz.collection('billTally');
@@ -77,7 +78,7 @@ let ST = { ff: '', err: '', last: '', q: 0 }, T = { day: '', n: 0, ok: 0, err: 0
 async function pushSt(force) {
   if (!force && Date.now() - stAt < 20000) return; stAt = Date.now();
   const day = dayOf(); if (T.day !== day) T = { day, n: 0, ok: 0, err: 0 };
-  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, test: TEST || null, rec: recState() }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
+  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, pcs: Object.keys(CF.ch || {}).filter(k => Number(CF.ch[k]) > 0).slice(0, 12), ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, test: TEST || null, rec: recState() }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
 }
 
 // ---------- ffmpeg (ffmpeg-static — apne folder mein) ----------
@@ -274,7 +275,8 @@ function pick() {
     if (k && (k.st === 'ok' || k.st === 'skip' || k.tries >= 3 || (k.st === 'err' && now - k.at < 2 * 60000))) { if (rq && k.st === 'ok') reqDone(id, 'ok'); continue; }
     const ch = Number(CF.ch[b.pc] ?? CF.ch[String(b.pc || '').toLowerCase()]) || 0;
     const rec = ch && recs.get(ch)?.p ? 20 : 90;   // v2.0: apni recording = 20 s baad hi; NVR playback 1-2 min peeche likhta — 90 s
-    if (now - Math.max(anchorOf(b), 0) < (CF.post + rec) * 1000) continue;
+    const lt = Number(b.lt) || 0, endAt = Math.max(anchorOf(b), lt > anchorOf(b) && lt - anchorOf(b) < 20 * 60000 ? lt : 0, 0);   // v2.3: aakhri item ke baad hi
+    if (now - endAt < (CF.post + rec) * 1000) continue;
     if (!rq && now - Number(b.pt) > CF.keep * 86400000) continue;
     if (!rq && ON0 && anchorOf(b) < ON0 - 10 * 60000) continue;   // v1.2: camera ON se pehle ke bill nahi (10 min ki gunjaish)
     out.push(b);
@@ -308,7 +310,8 @@ async function one(b) {
     if (reqs.has(id)) reqDone(id, 'err', `counter "${b.pc || '?'}" ka camera channel ⚙️ mein nahi`);
     T.n++; T.err++; ST.last = `#${b.no} skip (counter ${b.pc || '?'} ka channel nahi)`; return;
   }
-  const an = anchorOf(b), ft = Number(b.ft) || 0, t1 = an + CF.post * 1000;
+  const an = anchorOf(b), ft = Number(b.ft) || 0, lt = Number(b.lt) || 0;
+  const t1 = (lt > an && lt - an < 20 * 60000 ? lt : an) + CF.post * 1000;   // v2.3: AAKHRI item tak (POS ka 'print' waqt bill khatam hone se pehle ka hota hai — malik: "6 items ke baad video phir se shuru")
   const t0 = CF.pre === 0 ? (ft > 0 && ft < an && an - ft < 20 * 60000 ? ft - 15000 : an - 120000) : an - CF.pre * 1000;   // v2.2: pehli item se (ft) — na ho / ajeeb ho to 2 min
   const dur = Math.min(CF.maxs, Math.max(20, Math.round((t1 - t0) / 1000))), rq = reqs.has(id) ? 1 : 0;
   fs.mkdirSync(TMP, { recursive: true }); const outDir = path.join(TMP, 'b' + id); rmDir(outDir);
@@ -340,7 +343,7 @@ async function one(b) {
     segs.push({ n, sz: buf.length, d: Math.min(60, dur - i * 60) }); sz += buf.length;
   }
   rmDir(outDir);
-  await CLIP.doc(id).set({ ...base, st: 'ok', v: 2, segs, pk, n: 0, sz, dur, ch, sub: CF.sub, src, rq, ft, t0, err: FieldValue.delete(), raw: FieldValue.delete() }, { merge: true });
+  await CLIP.doc(id).set({ ...base, st: 'ok', v: 2, segs, pk, n: 0, sz, dur, ch, sub: CF.sub, src, rq, ft, lt: Number(b.lt) || 0, t0, err: FieldValue.delete(), raw: FieldValue.delete() }, { merge: true });
   known.set(id, { st: 'ok', tries, at: Date.now() });
   if (rq) reqDone(id, 'ok');
   ST.err = '';   // v2.1: kamyab clip = purana ⚠ (ek bill ki wajah) app mein foran saaf

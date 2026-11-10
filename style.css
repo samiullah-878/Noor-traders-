@@ -7733,3 +7733,7 @@ html.lt #lvDlg .lv-bt{background:#ffffff18!important;color:#fff!important;border
 /* v2.221.0 🔐 Mulazim login (shop PC jaanch) patti */
 html body #dialogBody .st-sec{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:8px 0;padding:7px 12px;border:1px solid #c7d2fe;border-radius:12px;background:linear-gradient(135deg,#f5f7ff,#eef2ff);color:#1e1b4b;font-size:12.5px;font-weight:700}
 html body #dialogBody .st-sec-b{height:32px!important;min-height:32px!important;padding:0 12px!important;border-radius:999px!important;border:1px solid #fca5a5!important;background:linear-gradient(135deg,#fff1f2,#ffe4e6)!important;color:#9f1239!important;font-size:12px!important;font-weight:800!important;white-space:nowrap;width:auto!important}
+/* v2.222.0 🎬 Bill tally: video khatam = ruko + ↺ chip (shuru se dobara nahi) */
+.bt-vend{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:38px;padding:0 16px;border-radius:999px;border:1px solid #a7f3d0;background:linear-gradient(135deg,#ecfdf5,#d1fae5);color:#065f46;font-size:13.5px;font-weight:800;white-space:nowrap;box-shadow:0 6px 18px #0006;cursor:pointer;z-index:3}
+.bt-vend[hidden]{display:none}
+#lvDlg .lvb-old{display:block;flex:1;min-width:0;font-size:10.5px;font-weight:700;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}

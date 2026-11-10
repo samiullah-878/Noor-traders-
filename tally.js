@@ -137,15 +137,16 @@ function paint() {
   const b = bills.get(cur), cl = clips.get(cur) || {}, t = tallies.get(cur);
   if (!main.querySelector(`[data-bt-bill="${cur}"]`)) {
     main.innerHTML = `<div class="bt-card" data-bt-bill="${esc(cur)}">
-      <div class="bt-vwrap"><video id="btVid" playsinline muted autoplay${segsOf(cl) ? '' : ' loop'} preload="auto"></video>
+      <div class="bt-vwrap"><video id="btVid" playsinline muted autoplay preload="auto"></video>
         <div class="bt-vtop"><b>#${esc(b.no)}</b> · ${tm(b.ct || b.pt)}${b.ct ? '' : ' (post)'} · ${esc(b.pc || '?')}${b.by ? ' · 👦 ' + esc(b.by) : ''} · Rs ${num(b.t)}${b.p ? ' · ' + esc(b.p) : ''}</div>
-        <div class="bt-vload" id="btVload">⏳ video…</div>
+        <div class="bt-vload" id="btVload">⏳ video…</div><button type="button" class="bt-vend" id="btVend" data-bt-again="1" hidden>✅ Video khatam · ↺ Dobara dekho</button>
         <div class="bt-vchips"><button type="button" data-bt-sp="1"${speed === 1 ? ' class="on"' : ''}>1×</button><button type="button" data-bt-sp="1.5"${speed === 1.5 ? ' class="on"' : ''}>1.5×</button><button type="button" data-bt-sp="2"${speed === 2 ? ' class="on"' : ''}>2×</button><button type="button" data-bt-back10="1">↺ 10s</button><button type="button" data-bt-full="1">⛶</button><span class="bt-segs" id="btSegs"></span><span class="bt-dur">${cl.dur ? (cl.dur >= 120 ? Math.round(cl.dur / 60) + ' min' : cl.dur + ' s') : ''}</span></div>
       </div>
       <div class="bt-side"><div class="bt-ihead">🧾 Bill ki items <b id="btN"></b>${t ? `<em>pehle ${t.ok ? '✓' : '✕'} (${esc(t.n || '')})</em>` : ''}</div><ol class="bt-items" id="btItems"><li class="none">⏳ items…</li></ol></div>
     </div>`;
     segIdx = 0; loadCur(cur);
-    const vv = main.querySelector('#btVid'); if (vv) vv.addEventListener('ended', () => { const sg = segsOf(clips.get(cur)); if (!sg) return; playSeg(segIdx + 1 < sg.length ? segIdx + 1 : 0); });   // v2.210.0: hissa khatam = agla, aakhri ke baad shuru se
+    const vv = main.querySelector('#btVid');   // v2.210.0: hissa khatam = agla · v2.222.0: aakhri ke baad shuru se NAHI (malik: "6 items ke baad video phir se start") — ruko + ↺ chip
+    if (vv) { vv.addEventListener('ended', () => { const sg = segsOf(clips.get(cur)); if (sg && segIdx + 1 < sg.length) { playSeg(segIdx + 1); return; } const e = $('btVend'); if (e) e.hidden = false; }); vv.addEventListener('play', () => { const e = $('btVend'); if (e) e.hidden = true; }); }
   }
   paintItems(); paintBtns();
   for (const x of q.filter(x => String(x.id) !== cur).slice(0, 3)) { clipUrl(String(x.id)).catch(() => {}); linesOf(String(x.id)); }   // v2.212.0: aage 3 bill ki video + items pehle se (✓ par agla foran)
@@ -197,10 +198,11 @@ async function onClick(e) {
   const sp = t.closest('[data-bt-sp]'); if (sp) { speed = Number(sp.dataset.btSp) || 1.5; try { localStorage.setItem('sam-bt-speed', String(speed)); } catch {} const v = $('btVid'); if (v) v.playbackRate = speed; sp.parentElement.querySelectorAll('[data-bt-sp]').forEach(x => x.classList.toggle('on', x === sp)); return; }
   if (t.closest('[data-bt-back10]')) { const v = $('btVid'); if (v) { if (v.currentTime < 10 && segIdx > 0 && segsOf(clips.get(cur))) { playSeg(segIdx - 1, 50); return; } v.currentTime = Math.max(0, v.currentTime - 10); v.play().catch(() => {}); } return; }
   const sg = t.closest('[data-bt-seg]'); if (sg) { playSeg(Number(sg.dataset.btSeg) || 0); return; }
+  if (t.closest('[data-bt-again]')) { const e = $('btVend'); if (e) e.hidden = true; if (segsOf(clips.get(cur))) playSeg(0); else { const v = $('btVid'); if (v) { v.currentTime = 0; v.play().catch(() => {}); } } return; }
   if (t.closest('[data-bt-unp]')) { openUnposted(); return; }
   if (t.closest('[data-bt-list]')) { openList(); return; }
   if (t.closest('[data-bt-pcf]')) { openPcPick(); return; }
-  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...bills.values()].filter(b => b._d === td && b.pc).map(b => String(b.pc)))].sort(); import('./live.js?v=2.221.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
+  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...[...bills.values()].filter(b => b._d === td && b.pc).map(b => String(b.pc))])].sort();   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) */ import('./live.js?v=2.222.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
   const rq = t.closest('[data-bt-rq]'); if (rq) { const id = rq.dataset.btRq, b = bills.get(id); rq.disabled = true; rq.textContent = '⏳'; cloud.reqBillClip(id, { no: b?.no, pc: b?.pc, day: dayKey(0) }).then(() => notice('🎥 PC ko hukum gaya — clip 1-2 min mein')).catch(e => { notice('Hukum nahi gaya: ' + (e?.message || e)); rq.disabled = false; rq.textContent = '🎥 Mangwao'; }); return; }
   const op = t.closest('[data-bt-open]'); if (op) { const c = clips.get(op.dataset.btOpen); if (!c || c.st !== 'ok') { notice(c?.st === 'err' || c?.st === 'skip' ? '⚠ Is bill ki clip nahi bani: ' + (c.err || '') : '⏳ Clip abhi ban rahi hai'); return; } reopen = op.dataset.btOpen; cur = op.dataset.btOpen; mode = 'view'; sel = new Set(); const dd = $('btDlg'); if (dd) { delete dd.dataset.list; delete dd.dataset.unp; dd.close(); } $('btMain').innerHTML = ''; paint(); return; }
   if (t.closest('[data-bt-full]')) { const v = $('btVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (v.closest('.bt-vwrap') || v).requestFullscreen?.(); } catch {} return; }

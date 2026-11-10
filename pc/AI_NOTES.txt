@@ -4315,3 +4315,15 @@ Asar: jude phone chalte rahenge; naya login / screen badalna sirf jab shop PC on
 server-join v1.1: purani firebase-config.js (nt-traders project!) ki jagah config.js (note-traders-khata-7ccc1) — warna naya server kabhi na jurta.
 Test: nakli firebase-admin ke saath owner-login 19 jaanch (code/link/cid/sw/purana code/malik code/band/st- band mein bhi/foran dobara). Rules ka
 Google test-tool container mein nahi (download band) — line-war jaanch + braces / parens barabar. AI NAHI.
+=== 2026-11-10 · v2.222.0 + PC pos-sales-dekho v2.7 + bill-clip v2.3 (🎬 tally video poore bill ki · 🔴 live bina bill + banta bill) — rules nahi badle ===
+Malik (screenshot, bill #00135530 · 18 items · "2 min"): "6 items ke baad video phir se start ho jati hai" + "live mein bill na bhi ban raha ho tab bhi nazar aaye ·
+bill banana start ho to bill screen par aa jaye". WAJAH 1: bill-clip window = ft−15 s → ct + 20 s; POS ka "Created & Printed On" (ct) bill KHATAM hone se pehle
+ka (is bill mein ft 9:28:40, ct 9:30, 18 item ~5 min) → 115 s video, app aakhri hisse ke baad shuru se chala deti. ILAAJ: pos-sales-dekho firstTick har naye
+SaleDetail par `lt` (aakhri item, 10 s gol — har scan par posSales dobara na likha jaye; pos-first-seen.json {m, l}) → bills[].lt; bill-clip t1 =
+max(ct, lt (20 min ke andar)) + post, pick bhi aakhri item ke baad; meta mein lt. App tally: video `loop` nahi, aakhri hissa khatam = ruko + "✅ Video khatam ·
+↺ Dobara dekho" (.bt-vend, data-bt-again). Pehle bane clip chhote hi rahenge. WAJAH 2: live list sirf aaj ke bill wale counter; posLive sirf "at PC:" wala bill
+(POS print par likhta hai). ILAAJ: bill-clip haal (billClipPc) `pcs` = setting ke counter naam (channel > 0) → tally Live list = pcs ∪ aaj ke bill; pos-sales-dekho
+liveTick: counter (host) ke POS login = pichhle 3 din ke "at PC: host" bills ka CreatedBy (10 min cache, number ya naam dono) → aakhri chhape bill ke baad ka
+naya bill (CreatedBy usi login, "at PC:" nahi, cancel nahi, SaleDetail ho) = BANTA bill → posLive src 'chalu' (⏳ ban raha); na mile = pichhla (src 'aakhri',
+patti par "pichhla · naya bill shuru hote hi yahan"). Query ghalat ho (column na ho) = 10 min baad dobara, pichhla dikhata rahe. Ek login do counters par =
+pehchan ghalat ho sakti (malik ko bataya). Test: window hisaab node mein (purana 115 s → naya 335 s). AI NAHI.

@@ -1,5 +1,5 @@
 // =========================================================
-//  pos-sales-dekho.js  v2.6 (2026-11-09: 🔴🧾 LIVE BILL — Live camera dekhte waqt us counter ka bante hue bill ki lines har 1 s posLive/<counter> mein (sirf parhna) · v2.5 (2026-11-09: 🎥 bill ki PEHLI ITEM ka waqt `ft` — POS har scan par SaleDetail likhta hai (save se pehle), PC har 1 s naye SaleID ki pehli line dekh kar waqt yaad (pos-first-seen.json); bill-clip clip pehli item se shuru karta hai (malik: "pehli item ka time likh le to kaisa rahe")) · v2.4 (2026-11-08: 🎥 bill ka `ct` = BANANE / PRINT ka waqt (SystemNotes "Created & Printed By:… On:… at PC:") — Bill tally ki clip post ke waqt se nahi, bill banane ke waqt se (malik: "Abdurehman ne jis time bill bana kar print kiya, PC us time se peeche jaye, posting se nahi")) · v2.3 (2026-11-06: 🔎 JAANCH malik: "jo wapsi bill ke andar minus ho chuki wo dobara nahi" — har wapsi ke saath juda SaleID, us bill ka TotalSale aur
+//  pos-sales-dekho.js  v2.7 (2026-11-10: 🎥 AAKHRI item ka waqt `lt` (bill-clip video pehli se aakhri item tak — malik: "6 items ke baad video phir se shuru") + 🔴 live patti par BANTA HUA bill (counter ke POS login CreatedBy se — "at PC:" print par aata hai) · v2.6 (2026-11-09: 🔴🧾 LIVE BILL — Live camera dekhte waqt us counter ka bante hue bill ki lines har 1 s posLive/<counter> mein (sirf parhna) · v2.5 (2026-11-09: 🎥 bill ki PEHLI ITEM ka waqt `ft` — POS har scan par SaleDetail likhta hai (save se pehle), PC har 1 s naye SaleID ki pehli line dekh kar waqt yaad (pos-first-seen.json); bill-clip clip pehli item se shuru karta hai (malik: "pehli item ka time likh le to kaisa rahe")) · v2.4 (2026-11-08: 🎥 bill ka `ct` = BANANE / PRINT ka waqt (SystemNotes "Created & Printed By:… On:… at PC:") — Bill tally ki clip post ke waqt se nahi, bill banane ke waqt se (malik: "Abdurehman ne jis time bill bana kar print kiya, PC us time se peeche jaye, posting se nahi")) · v2.3 (2026-11-06: 🔎 JAANCH malik: "jo wapsi bill ke andar minus ho chuki wo dobara nahi" — har wapsi ke saath juda SaleID, us bill ka TotalSale aur
 //                     SaleDetail ka jor (Qty×Rate) → sum.rtd (app milane ke liye) + note mein "bill se juri N · alag N"; MINUS abhi pehle jaisa (qaida data dekh kar)) · v2.2 (2026-11-04: ↩ malik: "Daily Sale mein sale return add hai ke nahi" → POS ki SALE RETURN (dbo.SaleReturn, us din ki) ab auto sale se MINUS —
 //                     cancel (DocStatusID 3) / stock fraq bahar; udhaar party ki wapsi (IsCreditRturn, wholesale nahi) = cash wapas nahi diya = minus NAHI (note mein ginti);
 //                     wholesale ki wapsi poori minus (wholesale bill bhi poora gina jata hai). Note: "↩ wapsi N bill Rs X minus". Parh na sake = pehle jaisa (minus nahi)) · v2.1 (2026-10-31: ⚡ har ½ sec · sirf naye/badle bill parho (cache + COUNT/SUM se milao, na mile = poori list) · sum / Daily Sale / items alag peeche ki lane · doc.pm raftar) · v2.0 (2026-10-28: 📌 har posted bill par post ka waqt `pt` — PC ne pehli dafa posted dekha (pos-posted-seen.json), shuru se pehle wale = UpdatedOn) · v1.9 (2026-10-28: ⚡ malik — "posting POS mein jaldi, app mein late": har 1 sec; bills ka haal (posted / un-posted) PEHLE likho, items + Daily Sale
@@ -54,6 +54,7 @@ try { postSeen = JSON.parse(fs.readFileSync(SEEN_FILE, 'utf8')) || postSeen; if 
 const FIRST_FILE = path.join(__dirname, 'pos-first-seen.json');
 let firstSeen = { m: {} }, firstLast = 0, firstRun = false;
 try { firstSeen = JSON.parse(fs.readFileSync(FIRST_FILE, 'utf8')) || firstSeen; if (!firstSeen.m) firstSeen.m = {}; } catch {}
+if (!firstSeen.l) firstSeen.l = {};   // v2.7: AAKHRI item ka waqt (10 s gol) — bill-clip ki video aakhri item tak (malik: "6 items ke baad video phir se shuru")
 async function firstTick() {
   if (firstRun) return; firstRun = true;
   try {
@@ -62,8 +63,9 @@ async function firstTick() {
     const r = (await p.request().input('l', sql.Int, firstLast).query('SELECT d.SaleID AS S, MIN(d.SaleDetailID) AS D, MAX(d.SaleDetailID) AS X FROM dbo.SaleDetail d WHERE d.SaleDetailID > @l GROUP BY d.SaleID')).recordset;
     if (!r.length) return;
     const now = Date.now(); let ch = false;
-    for (const x of r) { firstLast = Math.max(firstLast, Number(x.X) || 0); const id = String(x.S); if (!firstSeen.m[id]) { firstSeen.m[id] = now; ch = true; } }
-    if (ch) { const cut = now - 3 * 86400000; for (const [k, v] of Object.entries(firstSeen.m)) if (Number(v) < cut) delete firstSeen.m[k]; try { fs.writeFileSync(FIRST_FILE, JSON.stringify(firstSeen)); } catch {} }
+    const lt = Math.ceil(now / 10000) * 10000;   // v2.7: aakhri item 10 s gol (har scan par posSales dobara na likha jaye)
+    for (const x of r) { firstLast = Math.max(firstLast, Number(x.X) || 0); const id = String(x.S); if (!firstSeen.m[id]) { firstSeen.m[id] = now; ch = true; } if (firstSeen.l[id] !== lt) { firstSeen.l[id] = lt; ch = true; } }
+    if (ch) { const cut = now - 3 * 86400000; for (const [k, v] of Object.entries(firstSeen.m)) if (Number(v) < cut) { delete firstSeen.m[k]; delete firstSeen.l[k]; } try { fs.writeFileSync(FIRST_FILE, JSON.stringify(firstSeen)); } catch {} }
   } catch (e) { log('pehli item: ' + e.message); }
   finally { firstRun = false; }
 }
@@ -74,7 +76,7 @@ async function firstTick() {
 //   {pc, sid, no, st (DocStatusID), pr (Printed By), t (TotalSale), j: JSON [[detailId, naam, qty, rate]], n, ft, at} — sirf badla ho ya 20 s baad.
 //   POS mein KUCH nahi likhta (sirf parhna). Koi na dekh raha ho = koi sawal nahi. AI nahi.
 const liveCol = db.collection('businesses').doc(BUSINESS_ID).collection('posLive');
-const liveW = new Map(), liveLast = new Map(); let liveRun = false;
+const liveW = new Map(), liveLast = new Map(), liveUsers = new Map(); let liveRun = false, liveErrLog = 0;   // v2.7: liveUsers = counter (host) → POS login (CreatedBy)
 function liveWatchStart() {
   db.collection('businesses').doc(BUSINESS_ID).collection('liveReq').where('st', '==', 'ok').onSnapshot(s => {
     const now = Date.now();
@@ -105,14 +107,38 @@ async function liveTick() {
   try {
     const p = await getPool(), d0 = new Date(); d0.setHours(0, 0, 0, 0);
     for (const [nm, host] of W) {
-      const h = (await p.request().input('d', sql.DateTime, d0).input('h', sql.NVarChar(120), '%at PC:%' + host + '%').query(`SELECT TOP 1 s.SaleID, s.SaleNo, s.TotalSale, s.DocStatusID,
+      let h = (await p.request().input('d', sql.DateTime, d0).input('h', sql.NVarChar(120), '%at PC:%' + host + '%').query(`SELECT TOP 1 s.SaleID, s.SaleNo, s.TotalSale, s.DocStatusID,
         CAST(s.SystemNotes AS NVARCHAR(600)) AS SN FROM dbo.Sale s WHERE s.SaleDate >= @d AND CAST(s.SystemNotes AS NVARCHAR(600)) LIKE @h ORDER BY s.SaleID DESC`)).recordset[0];
-      if (!h) { await livePut(nm, { pc: nm, sid: 0, no: '', st: 0, pr: 0, t: 0, j: '[]', n: 0, ft: 0 }); continue; }
+      // v2.7: 🔴 BANTA HUA BILL (malik: "bill banana start ho to bill screen par aa jaye") — POS counter ka naam ("at PC:") print par likhta hai,
+      //   is liye bante hue bill ko us counter ke LOGIN (CreatedBy — pichhle 3 din ke us counter ke bill) se pehchano: aakhri chhape bill ke baad ka
+      //   naya bill jis par abhi "at PC:" nahi aur jis mein item aa chuki = yehi counter ka bante hua bill. Na mile = aakhri bill (pehle jaisa).
+      let src = h ? 'aakhri' : '';
+      try {
+        const us = liveUsers.get(host);
+        if (!us || Date.now() - us.at > 10 * 60000) {
+          const d3 = new Date(Date.now() - 3 * 86400000);
+          const ur = (await p.request().input('d', sql.DateTime, d3).input('h', sql.NVarChar(120), '%at PC:%' + host + '%').query(`SELECT DISTINCT TOP 5 s.CreatedBy AS U FROM dbo.Sale s
+            WHERE s.SaleDate >= @d AND s.CreatedBy IS NOT NULL AND CAST(s.SystemNotes AS NVARCHAR(600)) LIKE @h`)).recordset.map(x => x.U).filter(x => x !== null && x !== undefined && String(x).trim() !== '');
+          liveUsers.set(host, { u: ur, at: Date.now() });
+        }
+        const U = (liveUsers.get(host) || {}).u || [];
+        if (U.length) {
+          const rq = p.request().input('d', sql.DateTime, d0).input('a', sql.Int, h ? Number(h.SaleID) || 0 : 0);
+          const num = U.every(u => typeof u === 'number' || /^\d+$/.test(String(u)));   // CreatedBy number ho ya naam — dono chalein
+          U.forEach((u, i) => num ? rq.input('u' + i, sql.Int, Number(u)) : rq.input('u' + i, sql.NVarChar(100), String(u)));
+          const c = (await rq.query(`SELECT TOP 1 s.SaleID, s.SaleNo, s.TotalSale, s.DocStatusID, CAST(s.SystemNotes AS NVARCHAR(600)) AS SN FROM dbo.Sale s
+            WHERE s.SaleDate >= @d AND s.SaleID > @a AND s.CreatedBy IN (${U.map((_, i) => '@u' + i).join(',')})
+              AND (s.SystemNotes IS NULL OR CAST(s.SystemNotes AS NVARCHAR(600)) NOT LIKE '%at PC:%') AND ISNULL(s.DocStatusID, 0) <> 3
+              AND EXISTS (SELECT 1 FROM dbo.SaleDetail d WHERE d.SaleID = s.SaleID) ORDER BY s.SaleID DESC`)).recordset[0];
+          if (c) { h = c; src = 'chalu'; }
+        }
+      } catch (e) { liveUsers.set(host, { u: [], at: Date.now() }); if (!liveErrLog) { liveErrLog = 1; log('live banta bill (10 min baad dobara): ' + e.message); } }
+      if (!h) { await livePut(nm, { pc: nm, sid: 0, no: '', st: 0, pr: 0, t: 0, j: '[]', n: 0, ft: 0, src: '' }); continue; }
       const L = (await p.request().input('s', sql.Int, h.SaleID).query(`SELECT TOP 150 d.SaleDetailID AS D, i.ItemName AS N, d.Qty AS Q, d.Rate AS R
         FROM dbo.SaleDetail d LEFT JOIN dbo.Items i ON i.ItemID = d.ItemID WHERE d.SaleID = @s ORDER BY d.SaleDetailID`)).recordset;
       const j = JSON.stringify(L.map(x => [Number(x.D) || 0, String(x.N || '').trim().slice(0, 50), Math.round((Number(x.Q) || 0) * 1000) / 1000, r2(x.R)]));
       await livePut(nm, { pc: nm, sid: Number(h.SaleID) || 0, no: String(h.SaleNo || '').trim(), st: Number(h.DocStatusID) || 0, pr: /Printed\s*By/i.test(String(h.SN || '')) ? 1 : 0,
-        t: r2(h.TotalSale), j, n: L.length, ft: Number(firstSeen.m[String(h.SaleID)]) || 0 });
+        t: r2(h.TotalSale), j, n: L.length, ft: Number(firstSeen.m[String(h.SaleID)]) || 0, src });
     }
   } catch (e) { log('live bill: ' + e.message); }
   finally { liveRun = false; }
@@ -309,7 +335,7 @@ async function once() {
     return { id: r.SaleID, ct, no: String(r.SaleNo || '').trim(), t: r2(r.TotalSale), c: r2(r.CashReceived), cr: r.IsCreditSale ? 1 : 0,
       x: Number(r.DocStatusID) === 3 ? 1 : 0, p: String(r.PartyName || '').slice(0, 60), n: Number(r.N) || 0,
       tm: r.SaleDate ? new Date(r.SaleDate).getTime() : 0, app: m ? m[1] : '',
-      ps: Number(r.DocStatusID) || 0, pt: Number(postSeen.m[String(r.SaleID)]) || 0, ft: Number(firstSeen.m[String(r.SaleID)]) || 0, pc: String(names[host] || host.replace(/^DESKTOP-/i, '') || '').slice(0, 30), by: /blue khata/i.test(by) ? '' : String(by).trim().slice(0, 20) };
+      ps: Number(r.DocStatusID) || 0, pt: Number(postSeen.m[String(r.SaleID)]) || 0, ft: Number(firstSeen.m[String(r.SaleID)]) || 0, lt: Number(firstSeen.l[String(r.SaleID)]) || 0, pc: String(names[host] || host.replace(/^DESKTOP-/i, '') || '').slice(0, 30), by: /blue khata/i.test(by) ? '' : String(by).trim().slice(0, 20) };
   });
   const hash = day + JSON.stringify(bills);
   slowDirty = true;
