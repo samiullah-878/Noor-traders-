@@ -26,7 +26,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.5';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.6';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -36,14 +36,16 @@ function normPh(x) {
   let s = String(x ?? '').trim(); if (!s) return '';
   if (s.includes('@')) s = s.split('@')[0].split(':')[0];
   let d = s.replace(/\D/g, '');
-  if (d.startsWith('0092')) d = d.slice(2);
+  if (d.startsWith('00')) d = d.slice(2);   // v1.6: 0092… / 00966… → country code se
   if (d.length === 12 && d.startsWith('92')) d = '0' + d.slice(2);
   else if (d.length === 10 && d.startsWith('3')) d = '0' + d;
   return d;
 }
 const isMob = p => /^03\d{9}$/.test(String(p || ''));
-const phPretty = p => isMob(p) ? p.slice(0, 4) + '-' + p.slice(4) : String(p || '');
-const jidOf = p => '92' + String(p).slice(1) + '@s.whatsapp.net';
+const isIntl = p => /^[1-9]\d{9,12}$/.test(String(p || '')) && !/^92/.test(String(p || ''));   // bahar ka number country code ke saath (Saudi 9665…, UAE 9715…) — malik 10 Nov: gahak 966553042418 ko paigham nahi gaya
+const okPh = p => isMob(p) || isIntl(p);
+const phPretty = p => isMob(p) ? p.slice(0, 4) + '-' + p.slice(4) : isIntl(p) ? '+' + p : String(p || '');
+const jidOf = p => (isMob(p) ? '92' + String(p).slice(1) : String(p)) + '@s.whatsapp.net';
 const DEF = { on: true, lim: 150, gap: 8 };
 function cfgOf(d) { d = d || {}; return { on: d.on !== false, lim: Math.max(10, Math.min(500, Number(d.lim) || DEF.lim)), gap: Math.max(3, Math.min(60, Number(d.gap) || DEF.gap)) }; }
 // v1.5: 🚚 delivery ka hisaab (malik ki misal: aana-jana 30 km, 1 litre = 30 km, petrol 400, nafa 75% → Rs 700)
@@ -219,7 +221,7 @@ async function main() {
     if (Date.now() - (Number(d.okAt) || 0) > 6 * 3600000) return;   // purana OK — dobara nahi
     const fin = Math.max(0, Math.round(Number(d.fin) || 0)), rs = 'Rs ' + fin.toLocaleString('en-US'), map = `https://maps.google.com/?q=${d.lat},${d.lng}`, boy = isMob(dcfg.boy) ? dcfg.boy : '';
     const jobs = [];
-    if (isMob(d.to)) jobs.push(['dc-' + id, { to: d.to, nm: d.nm || '', kind: 'dlvc', txt: `*NOOR TRADERS* 🚚\nAap ki delivery${d.km != null ? ' (faasla ' + d.km + ' km)' : ''}\nDelivery charges: *${rs}*\nSaman jaldi aap tak pohanch jayega. Bohat shukria 🙏` }]);
+    if (okPh(d.to)) jobs.push(['dc-' + id, { to: d.to, nm: d.nm || '', kind: 'dlvc', txt: `*NOOR TRADERS* 🚚\nAap ki delivery${d.km != null ? ' (faasla ' + d.km + ' km)' : ''}\nDelivery charges: *${rs}*\nSaman jaldi aap tak pohanch jayega. Bohat shukria 🙏` }]);
     if (boy) {
       jobs.push(['db-' + id, { to: boy, nm: 'Delivery boy', kind: 'dlvb', loc: { lat: Number(d.lat), lng: Number(d.lng), name: `${d.nm || 'Gahak'} · ${rs}`, adr: `${phPretty(d.to)}${d.bn ? ' · Bill #' + d.bn : ''}` } }]);
       jobs.push(['dt-' + id, { to: boy, nm: 'Delivery boy', kind: 'dlvb', txt: `🚚 *Delivery*\n${d.nm ? d.nm + ' · ' : ''}${phPretty(d.to)}${d.bn ? '\nBill #' + d.bn : ''}\nCharges: ${rs} (gahak se lena)${d.km != null ? '\nFaasla ' + d.km + ' km' : ''}\n📍 ${map}` }]);
@@ -245,7 +247,7 @@ async function main() {
         const to = normPh(d.to), nm = String(d.nm || '').slice(0, 40), txt = String(d.txt || '').trim();
         if (!cfg.on) { await done('skip', 'band hai (setting)'); continue; }
         if (Number(d.at) && Date.now() - Number(d.at) > 6 * 3600000) { await done('skip', 'purana (6 ghante+)'); continue; }
-        if (!isMob(to) || (!txt && !d.au && !d.loc)) { await done('err', !isMob(to) ? 'mobile number ghalat' : 'paigham khali'); continue; }
+        if (!okPh(to) || (!txt && !d.au && !d.loc)) { await done('err', !okPh(to) ? 'mobile number ghalat' : 'paigham khali'); continue; }
         if (L.n >= cfg.lim) { log(`⏸ aaj ki hadd ${cfg.lim} poori — baqi kal`); setLink({ err: `Aaj ki hadd ${cfg.lim} poori — baqi kal` }); break; }   // queue mein rahe (st new)
         if (!sock || L.st !== 'open') { break; }   // jur jaye to kick()
         const gap = cfg.gap * 1000 - (Date.now() - lastSent); if (gap > 0) await sleep(gap);

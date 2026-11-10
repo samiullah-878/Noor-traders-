@@ -87,7 +87,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.16';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.17';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -121,19 +121,23 @@ function normPh(x) {
   let s = UDIG(x).trim(); if (!s) return '';
   if (s.includes('@')) s = s.split('@')[0].split(':')[0];
   let d = s.replace(/\D/g, '');
-  if (d.startsWith('0092')) d = d.slice(2);
+  if (d.startsWith('00')) d = d.slice(2);   // v2.17: 0092… / 00966… → country code se
   if (d.length === 12 && d.startsWith('92')) d = '0' + d.slice(2);
   else if (d.length === 10 && d.startsWith('3')) d = '0' + d;
   return d;
 }
 const isMob = p => /^03\d{9}$/.test(String(p || ''));
-const phPretty = p => isMob(p) ? p.slice(0, 4) + '-' + p.slice(4) : String(p || '');
+const isIntl = p => /^[1-9]\d{9,12}$/.test(String(p || '')) && !/^92/.test(String(p || ''));   // bahar ka number country code ke saath (Saudi 9665…, UAE 9715…) — malik 10 Nov: gahak 966553042418 ko paigham nahi gaya
+const okPh = p => isMob(p) || isIntl(p);
+const phPretty = p => isMob(p) ? p.slice(0, 4) + '-' + p.slice(4) : isIntl(p) ? '+' + p : String(p || '');
+const INTL_RE = /(?:\+|(?<!\d)00)(?:[\s.\-()]{0,2}\d){10,13}(?!\d)/;   // bahar ka number SIRF + ya 00 ke saath (Rs 35000 / bill number na pakre)
 // caption: "Ahmed bhai 0300-1234567" → { ph: '03001234567', nm: 'Ahmed bhai' } · mobile 030x–035x hi (Rs 35000 jaisa number nahi)
 const PH_RE = /(?<!\d)(?:(?:\+|00)?92[\s.\-()]{0,2}|0)?3[0-5](?:[\s.\-()]{0,2}\d){8}(?!\d)/;
 const NM_DROP = /(^|\s)(?:ph(?:one)?|mob(?:ile)?|cell|contact|whats ?app|wa|no|num(?:ber)?|nmbr|naam|name|cust(?:omer)?|گاہک|نام|نمبر|فون|موبائل)\s*(?:[:.#-]+|(?=\s|$))/gi;
 function parseCaption(cap) {
   let t = UDIG(cap).replace(/[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, '').replace(/\s+/g, ' ').trim(), ph = '';
   const m = t.match(PH_RE); if (m) { const p = normPh(m[0]); if (isMob(p)) { ph = p; t = t.replace(m[0], ' '); } }
+  if (!ph) { const m2 = t.match(INTL_RE); if (m2) { const p = normPh(m2[0]); if (okPh(p)) { ph = p; t = t.replace(m2[0], ' '); } } }
   const nm = t.replace(NM_DROP, ' ').replace(/[:;,|#*_~=+<>\[\]{}()"]+/g, ' ').replace(/\s[-–—.]+(?=\s|$)/g, ' ').replace(/\s+/g, ' ').replace(/^[\s\-–—.]+|[\s\-–—.]+$/g, '').trim().slice(0, 60);
   return { ph, nm };
 }
@@ -141,9 +145,9 @@ function parseCaption(cap) {
 function vcardInfo(vc, dn) {
   const v = String(vc || ''); let ph = '';
   const w = v.match(/waid=(\d{8,15})/i); if (w) ph = normPh(w[1]);
-  if (!isMob(ph)) for (const m of v.matchAll(/^(?:item\d+\.)?TEL[^:\n]*:([^\n\r]+)/gim)) { const p = normPh(m[1]); if (isMob(p)) { ph = p; break; } }
+  if (!okPh(ph)) for (const m of v.matchAll(/^(?:item\d+\.)?TEL[^:\n]*:([^\n\r]+)/gim)) { const p = normPh(m[1]); if (isMob(p)) { ph = p; break; } }
   let nm = String(dn || '').trim(); if (!nm) { const f = v.match(/^FN[^:\n]*:(.+)$/im); if (f) nm = f[1].trim(); }
-  return { ph: isMob(ph) ? ph : '', nm: nm.replace(/\s+/g, ' ').slice(0, 60) };
+  return { ph: okPh(ph) ? ph : '', nm: nm.replace(/\s+/g, ' ').slice(0, 60) };
 }
 
 // ---------- 📏 tadad / unit ----------

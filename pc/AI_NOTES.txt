@@ -4384,3 +4384,10 @@ Test: Chromium 412px nakli cloud — layout / nayi item upar / andaza label. Asa
 GHALTI (isi push mein): manifest wala python ruk gaya (manifest ke aakhir mein purani dohri "pos-sales-dekho.js" key — regex 2 jagah mila) magar agla hukum `;` se jura tha → app push
 ho gayi, manifest / notes reh gaye (PC update nahi hota). Foran doosra commit. QAIDA (dobara): python → check → commit → push SAB ek `&&` zanjeer, beech mein `;` KABHI nahi;
 manifest ka hash sirf "files" wali pehli key (count=1).
+=== 2026-11-10 · PC wa-out v1.6 + wa-parchi v2.17 (📲 bahar ka number) — app / rules nahi badle ===
+Malik (screenshot Mubeen chat 10:54: "Nayi parchi: M Waqas 966553042418" ×3): "plus ki wajah se customer ko nahi gaya". ASAL WAJAH: gahak ka number Saudi (966…) — wa-out
+`isMob` (sirf 03xxxxxxxxx) se rok deta tha ('mobile number ghalat'), aur jidOf hamesha '92' + … banata. ILAAJ: dono files mein `isIntl` (10-13 hindse, 0 / 92 se shuru nahi —
+LID 14-15 hindse is mein nahi aate) + `okPh` = isMob || isIntl; normPh '00…' → country code; jidOf isMob ? 92… : hindse; phPretty '+…'. wa-out: queue ka darwaza + delivery
+charges gahak ko = okPh. wa-parchi: parseCaption `INTL_RE` (SIRF + ya 00 ke saath — "print 966553042418" bina + = number nahi, Rs / bill number na pakre), vcard okPh.
+Malik ka faisla: ek gahak ki 3 parchiyan = Mubeen ko 3 paigham THEEK hain ("alag alag parchiyan hoti hain") — ek karne ka plan NAHI kiya. Mubeen ko call / hukum wale number
+(pair, callTo) Pakistani hi. Test: parseCaption / normPh node mein (6 misal). Asal WhatsApp par bahar ke number ko bhejna test NAHI. AI NAHI.
