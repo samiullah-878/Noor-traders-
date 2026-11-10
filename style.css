@@ -7817,3 +7817,10 @@ html.dk body #dialogBody .pj-card{background:#141c2e;border-color:#2a3650}html.d
 #lvDlg .lv-shot{position:static;width:auto;max-height:34%;flex:none;margin:6px max(6px,env(safe-area-inset-right)) 0 max(6px,env(safe-area-inset-left));background:#0b1322}
 #lvDlg .lv-body video{max-height:38%}
 }
+
+/* v2.229.3: 🖥 POS screen dabba bara (banta bill asal cheez), video thori chhoti */
+@media (orientation:portrait){
+#lvDlg .lv-shot{max-height:42%}
+#lvDlg .lv-shot .lvs-b{min-height:120px}
+#lvDlg .lv-body video{max-height:32%}
+}

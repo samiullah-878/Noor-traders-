@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-posui.js  v1.13 (2026-11-10: 🖥 shot() — live camera ke saath POS ki Sale list ki chhoti tasveer, sirf jab koi Live dekh raha ho; neeche tafseel)
+//  nt-posui.js  v1.14 (2026-11-10: 🖥 shot tez — har 0.2 s dekh, 0.35 s gap; malik: "kuch seconds ka farq") · v1.13 (2026-11-10: 🖥 shot() — live camera ke saath POS ki Sale list ki chhoti tasveer, sirf jab koi Live dekh raha ho; neeche tafseel)
 //                   · v1.12 (2026-10-08: 🔎 Abdurehman PC: Search khirki POS ke ANDAR (child form) — v1.10/1.11 us ka PARENT (Sale screen) parhta
 //                   tha -> likhai "00123402" (Sale No) / "0". Ab dabba = jo KHUD 'Search Items' hai (label ho to us ka parent); us mein khana na
 //                   mile to sirf alag root khirki · NtPosUi13.dll)
@@ -247,7 +247,7 @@ $TS=[System.Windows.Automation.TreeScope]
 $paneC=New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::Pane)
 $codec=[System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object { $_.MimeType -eq 'image/jpeg' } | Select-Object -First 1
 $ep=New-Object System.Drawing.Imaging.EncoderParameters(1)
-$ep.Param[0]=New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality,55L)
+$ep.Param[0]=New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality,50L)
 $md5=[System.Security.Cryptography.MD5]::Create()
 $T=[char]9
 function FindWin{
@@ -301,7 +301,7 @@ while($true){
     [System.Runtime.InteropServices.Marshal]::Copy($bd.Scan0,$buf,0,$len)
    }finally{ $bmp.UnlockBits($bd) }
    $sig=[BitConverter]::ToString($md5.ComputeHash($buf))
-   $gap=700; if($mode -eq 'w'){ $gap=2000 }
+   $gap=350; if($mode -eq 'w'){ $gap=1200 }
    $since=$now-$lastSend
    if($sig -ne $last -and $since -ge $gap){
     $ow=$cw; $oh=$ch
@@ -316,7 +316,7 @@ while($true){
    }
   }finally{ $bmp.Dispose() }
   $bad=0
-  Start-Sleep -Milliseconds 550
+  Start-Sleep -Milliseconds 200
  }catch{
   $bad++
   try{ Say ("ERR"+$T+$_.Exception.Message) }catch{ exit 3 }

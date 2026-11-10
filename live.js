@@ -27,7 +27,7 @@ export function openLive(o) {
     if (t.closest('[data-lv-x]')) { closeLive(); return; }
     const c = t.closest('[data-lv-pc]'); if (c) { cur = c.dataset.lvPc; d.querySelectorAll('[data-lv-pc]').forEach(x => x.classList.toggle('is-in', x === c)); start(); return; }
     if (t.closest('[data-lv-re]')) { start(); return; }
-    if (t.closest('#lvShot')) { const e = $('lvShot'); e.classList.toggle('is-fit'); try { localStorage.setItem('sam-lv-shotfit', e.classList.contains('is-fit') ? '1' : '0'); } catch {} return; }
+    if (t.closest('#lvShot')) { const e = $('lvShot'); e.classList.toggle('is-fit'); SH.touch = 0; setTimeout(() => shotFollow(e.querySelector('img')), 60); try { localStorage.setItem('sam-lv-shotfit', e.classList.contains('is-fit') ? '1' : '0'); } catch {} return; }
     const bt = t.closest('[data-lv-bt]'); if (bt) { const on = !bOn(); try { localStorage.setItem('sam-lv-bill', on ? '1' : '0'); } catch {} bt.classList.toggle('is-in', on); const e = $('lvBill'); if (e) e.hidden = !on; return; }
     if (t.closest('[data-lv-full]')) { const v = $('lvVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (d.querySelector('.lv-body') || v).requestFullscreen?.(); } catch {} return; }
   };
@@ -125,6 +125,19 @@ function shotStart() {
   SH.un2 = () => { try { u2 && u2(); } catch {} try { u3 && u3(); } catch {} };
   SH.t = setInterval(() => shotPaint(false), 5000);
 }
+// v2.229.3: POS mein nayi item list ke NEECHE judti hai — tasveer mein sab se lamba khali (safed) hissa dhoondo, us se upar wali qatar = aakhri item;
+// dabba khud wahan le jao (malik ne 6 s ke andar khud ungli lagayi ho to nahi).
+function shotFollow(img) {
+  try {
+    const box = img && img.parentElement; if (!box || !img.naturalWidth || Date.now() - (SH.touch || 0) < 6000) return;
+    const W = 160, H = Math.max(8, Math.round(img.naturalHeight * W / img.naturalWidth)), c = SH.cv || (SH.cv = document.createElement('canvas'));
+    c.width = W; c.height = H; const x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(img, 0, 0, W, H);
+    const d = x.getImageData(0, 0, W, H).data; let best = 0, bs = -1, run = 0, rs = 0;
+    for (let y = 0; y < H; y++) { let nw = 0; for (let i = y * W * 4, e = i + W * 4; i < e; i += 4) if (d[i] < 232 || d[i + 1] < 232 || d[i + 2] < 232) nw++;
+      if (nw <= W * 0.03) { if (!run) rs = y; run++; if (run > best) { best = run; bs = rs; } } else run = 0; }
+    if (best >= H * 0.1 && bs >= 0) box.scrollTop = Math.max(0, bs / H * img.clientHeight - box.clientHeight + 12);
+  } catch {}
+}
 // counter ke NT-PRINT ka haal (printPCs) — malik ko saaf wajah
 function ntpSay(host) {
   const bare = x => String(x || '').toUpperCase().replace(/^[A-Z]+-/, ''), L = SH.pcs;
@@ -142,8 +155,8 @@ function shotPaint(fresh) {
   const note = t => { e.hidden = false; e.classList.add('is-note'); e.innerHTML = `<div class="lvs-n">🖥 ${escB(t)}</div>`; };
   if (live) {
     if (fresh) { const u = URL.createObjectURL(new Blob([d.im], { type: 'image/jpeg' })); let img = e.querySelector('img');
-      if (!img) { e.classList.remove('is-note'); e.innerHTML = '<div class="lvs-h"><b>🖥 POS screen · live</b><small>tap = bara / poora</small></div><div class="lvs-b"><img alt=""></div>'; img = e.querySelector('img'); }
-      img.src = u; try { SH.url && URL.revokeObjectURL(SH.url); } catch {} SH.url = u;
+      if (!img) { e.classList.remove('is-note'); e.innerHTML = '<div class="lvs-h"><b>🖥 POS screen · live</b><small>tap = bara / poora</small></div><div class="lvs-b"><img alt=""></div>'; img = e.querySelector('img'); const bx = e.querySelector('.lvs-b'); if (bx) bx.addEventListener('pointerdown', () => { SH.touch = Date.now(); }, { passive: true }); }
+      img.onload = () => shotFollow(img); img.src = u; try { SH.url && URL.revokeObjectURL(SH.url); } catch {} SH.url = u;
       const h = e.querySelector('.lvs-h'); if (h) { h.classList.remove('is-new'); void h.offsetWidth; h.classList.add('is-new'); } }
     e.hidden = false; return;
   }
