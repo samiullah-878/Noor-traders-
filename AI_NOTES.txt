@@ -7479,3 +7479,9 @@ camera" / "· camera recording ch N" — command line (Win32_Process, sirf jab t
 App: cloud.listenPcCpu; app.js cpuHTML — Settings → 🖥️ PC scripts ke upar dabba (CPU % · RAM · 60 min lakeer · 5 program bar ke saath); malik ke app mein 25 s baad listener,
 10 min lagataar ≥90% = notice "🔥 Shop PC par bojh … <program>" (30 min mein ek dafa). Test: cpuTick nakli Get-Process data ke saath (naam sahi, password leak nahi).
 PowerShell asal Windows par test NAHI. Shak: bill-clip ka libx264 (har bill 3-5 min clip, saare core) — data aane par ilaaj. AI NAHI.
+=== 2026-11-10 · PC doctor v3.1 (🔥 CPU list adhoori thi) — app nahi badli ===
+Malik ki screenshot (10:48): CPU 43% · RAM 73% / 8 GB · 4 core, magar list mein sirf pos-khata-sync 2.1% · explorer 0.7% · Taskmgr 0.5% (jor 3%). WAJAH: Get-Process bina admin
+SYSTEM ke program (SQL Server, antivirus, System) ka TotalProcessorTime nahi deta (0), aur jo program minute ke andar shuru hue (naya pid) chhor diye jate the.
+ILAAJ v3.1: `Get-CimInstance Win32_Process` (KernelModeTime + UserModeTime — sab program, bina admin) EK sawal mein (node / ffmpeg ki command line bhi isi mein, sirf memory);
+naya pid = us ka poora waqt; ek hi naam ke program jama ("ffmpeg · 🎬 bill ki clip ×3"), top 6 + "baqi (chhote + jo shuru ho kar khatam ho gaye)" agar ≥3%. Test: nakli data (SQL
+upar, password leak nahi). Asal Windows par test NAHI. AI NAHI.

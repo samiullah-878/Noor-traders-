@@ -1,5 +1,6 @@
 // =========================================================
-//  doctor.js  v3.0 (2026-11-10: 🔥 PC ka CPU / RAM + sab se zyada CPU wale 5 program har 1 min app ko (blueAccess/pcCpu) — malik: "CPU 100% · data app mein aa jaye". Async, doctor nahi rukta.)
+//  doctor.js  v3.1 (2026-11-10: 🔥 CPU list ab WMI Win32_Process se — SQL Server / antivirus jaise SYSTEM program bhi; ek jaise program jama (×N); 'baqi' line.)
+//  v3.0 (2026-11-10: 🔥 PC ka CPU / RAM + sab se zyada CPU wale 5 program har 1 min app ko (blueAccess/pcCpu) — malik: "CPU 100% · data app mein aa jaye". Async, doctor nahi rukta.)
 //  v2.9 (2026-10-22: 🩹 21-Oct shaam 6:50 doctor CHUP ho gaya aur stock script bhi band — subah tak koi dobara chalane wala nahi. Ab: (1) taskkill /T (poora tree) KABHI NAHI —
 //              Windows mare hue parent ka PID naye process ko de deta hai, /T phir be-taaluq scripts (stock) aur doctor ki apni loop bhi band kar deta · (2) WMIC / taskkill par waqt ki hadd
 //              (WMIC atke to pehle doctor hamesha ke liye ruk jata) + WMIC na chale to PowerShell (CIM); list hi na mile = is chakkar mein koi script shuru / band NAHI · (3) chakkar 10 min se
@@ -29,7 +30,7 @@ const crypto = require('crypto');
 const { execSync, execFileSync, execFile, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '3.0';
+const VER = '3.1';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
@@ -234,19 +235,26 @@ async function cpuTick() {
   if (CPU.busy || process.platform !== 'win32') return; CPU.busy = true;
   try {
     const now = Date.now(), t = cpuTotal(), cores = os.cpus().length || 1;
-    const out = await psRun("Get-Process | ForEach-Object { $c = 0; try { $c = [long]$_.TotalProcessorTime.TotalMilliseconds } catch {}; \"$($_.Id),$($_.ProcessName),$c,$([int]($_.WorkingSet64/1MB))\" }");
-    const cur = new Map(); for (const l of out.split(/\r?\n/)) { const a = l.trim().split(','); if (a.length >= 4 && Number(a[0]) > 0) cur.set(Number(a[0]), { n: a[1], c: Number(a[2]) || 0, m: Number(a[3]) || 0 }); }
+    // v3.1: Win32_Process (WMI) — SYSTEM ke program (SQL Server, antivirus) ka CPU bhi deta hai (Get-Process bina admin 0 deta tha → "CPU 43%" magar list mein sirf 3%).
+    //   Command line isi sawal mein (sirf node / ffmpeg ki) — sirf naam nikalne ko, memory mein; Firestore / log mein KABHI nahi.
+    const out = await psRun("Get-CimInstance Win32_Process | ForEach-Object { $n = [string]$_.Name; $cl = ''; if ($n -eq 'node.exe' -or $n -eq 'ffmpeg.exe') { $cl = [string]$_.CommandLine -replace '[\\r\\n|]', ' ' }; \"$($_.ProcessId)|$n|$([long](($_.KernelModeTime + $_.UserModeTime) / 10000))|$([int]($_.WorkingSetSize / 1MB))|$cl\" }");
+    const cur = new Map(); CPU.cmd = new Map();
+    for (const l of out.split(/\r?\n/)) { const a = l.trim().split('|'); const pid = Number(a[0]); if (a.length < 4 || !(pid > 0)) continue; const n = String(a[1] || '').replace(/\.exe$/i, ''); cur.set(pid, { n, c: Number(a[2]) || 0, m: Number(a[3]) || 0 }); if (a[4]) CPU.cmd.set(pid, a.slice(4).join(' ')); }
     const prev = CPU.prev, pt = CPU.pt, dt = now - CPU.pAt; CPU.prev = cur; CPU.pt = t; CPU.pAt = now;
     if (!prev || !pt || !cur.size || dt < 5000 || dt > 5 * 60000) return;
     const cpu = Math.max(0, Math.min(100, Math.round((1 - (t.idle - pt.idle) / Math.max(1, t.tot - pt.tot)) * 100)));
     const ram = Math.round((1 - os.freemem() / os.totalmem()) * 100);
-    let top = []; for (const [pid, x] of cur) { const o = prev.get(pid); if (!o || o.n !== x.n || x.c < o.c || /^idle$/i.test(x.n)) continue; const p = Math.min(100, (x.c - o.c) / (dt * cores) * 100); if (p >= 0.5) top.push({ pid, n: x.n, p: Math.round(p * 10) / 10, m: x.m }); }
-    top.sort((a, b) => b.p - a.p); top = top.slice(0, 5);
-    if (top.some(x => /^(node|ffmpeg)$/i.test(x.n) && !CPU.cmd.has(x.pid)) && now - CPU.cmdAt > 50000) {   // command line sirf naam nikalne ko — yaad sirf memory mein
-      CPU.cmdAt = now; const o2 = await psRun("Get-CimInstance Win32_Process -Filter \"Name='node.exe' or Name='ffmpeg.exe'\" | ForEach-Object { \"$($_.ProcessId)|$($_.CommandLine)\" }");
-      CPU.cmd = new Map(); for (const l of o2.split(/\r?\n/)) { const i = l.indexOf('|'); if (i > 0) CPU.cmd.set(Number(l.slice(0, i)), l.slice(i + 1)); }
+    const grp = new Map(); let sum = 0;   // ek hi naam / kaam ke program jama (10 ffmpeg = ek line ×10)
+    for (const [pid, x] of cur) {
+      if (/^(system idle process|idle)$/i.test(x.n)) continue;
+      const o = prev.get(pid); let d = o && o.n === x.n && x.c >= o.c ? x.c - o.c : !o ? x.c : 0;   // naya program (is minute mein shuru) = us ka poora waqt
+      d = Math.min(d, dt * cores); if (d <= 0) continue;
+      const p = d / (dt * cores) * 100; sum += p;
+      const k = cpuLabel(x.n, pid), g = grp.get(k) || { n: k, p: 0, m: 0, c: 0 }; g.p += p; g.m += x.m; g.c++; grp.set(k, g);
     }
-    const list = top.map(x => ({ n: cpuLabel(x.n, x.pid), p: x.p, m: x.m }));
+    let list = [...grp.values()].filter(g => g.p >= 0.5).sort((a, b) => b.p - a.p).slice(0, 6).map(g => ({ n: g.c > 1 ? `${g.n} ×${g.c}` : g.n, p: Math.min(100, Math.round(g.p * 10) / 10), m: g.m }));
+    const rest = Math.round((cpu - list.reduce((a, g) => a + g.p, 0)) * 10) / 10;   // jo program minute ke andar shuru ho kar khatam ho gaye (chhoti ffmpeg / PowerShell) + chhote
+    if (rest >= 3) list.push({ n: 'baqi (chhote + jo shuru ho kar khatam ho gaye)', p: rest, m: 0 });
     CPU.hist.push([Math.round(now / 60000), cpu]); if (CPU.hist.length > 60) CPU.hist = CPU.hist.slice(-60);
     if (cpu >= 90) { if (!CPU.hot) CPU.hot = now; } else CPU.hot = 0;
     const ref = cpuRef(); if (ref) await ref.set({ at: now, host: os.hostname(), cores, cpu, ram, ramGb: Math.round(os.totalmem() / (1 << 30)), top: list, hj: JSON.stringify(CPU.hist), hot: CPU.hot || 0, ver: VER }).catch(() => {});
