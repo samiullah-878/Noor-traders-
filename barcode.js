@@ -6,7 +6,7 @@
 //          'printing' jis ki dhadkan (beatAt, label-print v4.1) 3 min se nahi = "⚠ atka hua" (Cancel = PC foran saaf karta hai).
 // Screen: din ke hisaab se -> item -> har barcode (packet size) ki ginti. Chips: Aaj · Kal · 7 din · 30 din · status · search.
 // PDF: app ka openReportPreview (poori screen + WhatsApp / share).
-import { smartHit } from './smart-search.js?v=2.227.0';   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.228.0';   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -211,6 +211,8 @@ function paint() {
         <label>🔖 Sub-barcode<span>Rs</span><input type="number" min="0" step="any" inputmode="decimal" data-bc-rs="1" value="${esc(lbl.rs ?? '')}" placeholder="0"></label><button type="button" class="bc-rsave" data-bc-rsave="1">💾 Save</button></div>
       <b>➕ Zyada label (packing ke faltu)</b><small>Jis godam ke labels hon us ke HAR item par itne label zyada — malik (9 Nov): Godam 2 par +5 default.</small>
       <div class="bc-rates bc-xtra"><span class="bc-xg">${G.map(g => `<button type="button" class="${Number(lbl.xg) === g.b ? 'is-in' : ''}" data-bc-xg="${g.b}">${esc(g.name)}</button>`).join('')}</span><label>+<input type="number" min="0" max="50" step="1" inputmode="numeric" data-bc-xn="1" value="${esc(lbl.xn ?? 5)}"></label><button type="button" class="bc-rsave" data-bc-xsave="1">💾 Save</button>${lbl.xg && lbl.xn ? `<small>${esc(gName(lbl.xg))}: har item +${num(lbl.xn)}</small>` : '<small>band</small>'}</div>
+      <b>🧾 Transfer note ke saath</b><small>Rack bharo / transfer note ke saath jo bhi barcode nikle — HAR barcode par itne label zyada, har dafa (larke / godam ki shart nahi). 0 = band.</small>
+      <div class="bc-rates bc-xtra"><label>+<input type="number" min="0" max="50" step="1" inputmode="numeric" data-bc-tx="1" value="${esc(lbl.tx ?? 5)}"></label><button type="button" class="bc-rsave" data-bc-txsave="1">💾 Save</button><small>${Number(lbl.tx ?? 5) ? 'har barcode +' + num(lbl.tx ?? 5) : 'band'}</small></div>
       <b>🏬 Kis larke ke label kis godam ke?</b><small>Printer ek hai (TSC 244 Pro) — jis larke ne chhape, us ki godam. Ek dafa chunein, purana data bhi.</small>
       <div class="bc-ppl">${people().map(w => { const cur = (lbl.g || {})[w.k]; return `<div class="bc-pr"><b>${esc(w.n)}</b><span>${G.map(g => `<button type="button" class="${Number(cur) === g.b ? 'is-in' : ''}" data-bc-asg="${esc(w.k)}|${g.b}">${esc(g.name)}</button>`).join('')}<button type="button" class="${cur == null ? 'is-in' : ''}" data-bc-asg="${esc(w.k)}|">—</button></span></div>`; }).join('') || '<small>Abhi kisi ne label nahi chhape</small>'}</div></div>` : '';
   root.innerHTML = liveLabelsHTML(jobs) + `<div class="bc-head">${chips}${set}${pay}
@@ -283,6 +285,8 @@ document.addEventListener('click', async e => {
   if (d.bcRsave) { const rb = Number($('bcRoot')?.querySelector('[data-bc-rb]')?.value), rsv = Number($('bcRoot')?.querySelector('[data-bc-rs]')?.value);
     if (!(rb >= 0) || !(rsv >= 0)) { notice('Rate sahi likhein (0 ya zyada)'); return; }
     try { await cloud.setLblRate(rb, rsv); lbl = { ...lbl, rb, rs: rsv }; notice(`💾 Mazdoori: barcode Rs ${num(rb)} · sub-barcode Rs ${num(rsv)}`); paint(); } catch (er) { notice('Save nahi hua: ' + (er?.message || er)); } return; }
+  if (d.bcTxsave) { const tx = Math.floor(Number($('bcRoot')?.querySelector('[data-bc-tx]')?.value)); if (!(tx >= 0 && tx <= 50)) { notice('0 se 50 tak likhein'); return; }
+    try { await cloud.setLblTn(tx); lbl = { ...lbl, tx }; notice(tx ? `💾 Transfer note ke saath har barcode +${tx}` : '💾 Transfer note ke zyada label band'); paint(); } catch (er) { notice('Save nahi hua: ' + (er?.message || er)); } return; }
   if (d.bcXg) { xgPick = Number(d.bcXg); $('bcRoot')?.querySelectorAll('[data-bc-xg]').forEach(x => x.classList.toggle('is-in', Number(x.dataset.bcXg) === xgPick)); return; }
   if (d.bcXsave) { const xn = Math.floor(Number($('bcRoot')?.querySelector('[data-bc-xn]')?.value)); const xg = xgPick || Number(lbl.xg) || 0;
     if (!(xn >= 0 && xn <= 50)) { notice('0 se 50 tak likhein'); return; } if (!xg && xn) { notice('Pehle godam chunein'); return; }

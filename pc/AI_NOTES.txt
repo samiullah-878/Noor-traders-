@@ -4402,3 +4402,12 @@ chalata hai (sirf-parhne wali service; tick ka pool nahi chhuta). App: Settings 
 QADAM 2 (malik ke alag OK par, nateeja dekh kar): likhai DB se = app ka khana → woh field (purani mehfooz, wapsi) · template rdlc / frx (XML) = neeche line (backup; har
 counter PC par — NT-PRINT se) · Crystal .rpt = design nahi badal sakte. Server PC par POS na ho to files counter par dhoondni hongi (NT-PRINT). Test: nakli pool (Company
 qatar mili, Password na sawal na jawab mein). Asal SQL / Windows par test NAHI. AI NAHI.
+=== 2026-11-10 · v2.228.0 (🏷 transfer note ke saath har barcode +5) — PC / rules nahi badle ===
+Malik: "barcode extra nahi aa rahe" → maine pehle Godam-2 / larke wala qaida (v2.213.0) samjhaya → malik: "us ka is se koi taluq nahi — default mein koi bhi item ka barcode
+transfer note wali screen se nikle to 5-6 barcode extra nikle har dafa" → plan → "5 default". GHALAT-FEHMI ka sabaq: v2.213.0 mein malik ka "Godam 2 par har item ke 5 zyada"
+maine larke ke label-godam se jor diya tha; asal matlab = transfer note (Rack bharo 🖨 note + barcode) ke saath nikle labels. Pehle poochh leta "kis screen se chhapte waqt?".
+ILAAJ: pos-stock `rkLabelsGo` (transfer note ke saath ke SAB label raaste: rack bharo 🖨, packet rack, ⏳ patti ka 🏷, tcLabels) har label line ke PEHLE hisse par
+`tn: 1, tx: TX` (TX = cloud.lblTnN() = stockConfig.lbl.tx, na ho = 5; 0 = band), baqi 200-200 hisson par tx 0; cloud.requestLabel: d.tn ho to x = d.tx (lblExtra / larke /
+godam ki shart NAHI — dono jama nahi). Har barcode line (har packet size alag) par +5. notice "🏷 N label (+X zyada)". ⚙️ (barcode.js Mazdoori setup): "🧾 Transfer note ke
+saath +N" khana (cloud.setLblTn, sirf malik). PC label-print v5.0 pehle se copies + x chhaapta hai; rules 2.95 x ≤ 50. Purana Godam-2 wala +N baqi screens par waisa hi.
+Test: node --check; asal printer par test NAHI. AI NAHI.
