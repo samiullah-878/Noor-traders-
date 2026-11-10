@@ -7737,3 +7737,37 @@ html body #dialogBody .st-sec-b{height:32px!important;min-height:32px!important;
 .bt-vend{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:38px;padding:0 16px;border-radius:999px;border:1px solid #a7f3d0;background:linear-gradient(135deg,#ecfdf5,#d1fae5);color:#065f46;font-size:13.5px;font-weight:800;white-space:nowrap;box-shadow:0 6px 18px #0006;cursor:pointer;z-index:3}
 .bt-vend[hidden]{display:none}
 #lvDlg .lvb-old{display:block;flex:1;min-width:0;font-size:10.5px;font-weight:700;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* v2.224.0: 👀 Bill tally saaf screen (malik: "is screen ko insane user friendly banao") — patli patti, bari video, bill ki line neeche, ek speed chip, items 2 khane, ⏭ + ↩ 5 s */
+html.bt-on main .toolbar,html.bt-on #syncStatus{display:none!important}
+.bt-root{gap:6px}
+.bt-bar{gap:6px;flex-wrap:nowrap}
+.bt-prog{display:flex;align-items:center;gap:6px;min-width:0;flex:1;overflow-x:auto;scrollbar-width:none;white-space:nowrap}.bt-prog::-webkit-scrollbar{display:none}
+.bt-prog .bt-pcchip{margin-left:0;height:32px;font-size:12.5px;flex:none;max-width:46vw;overflow:hidden;text-overflow:ellipsis}
+.bt-cnt{font-size:13px;color:#3b4a6b;flex:none}.bt-cnt b{font-size:15px}
+.bt-warn{flex:none;height:28px;min-height:0;padding:0 10px;border-radius:999px;border:1px solid #c9d3e6;background:linear-gradient(#fff,#eef2fa);color:#3b4a6b;font-size:12px;font-weight:700;white-space:nowrap}.bt-warn.bad{border-color:#f0b4b4;background:linear-gradient(#fff5f5,#fde3e3);color:#b3261e}.bt-warn[hidden]{display:none}
+.bt-line{height:3px;border-radius:999px;background:#e3e9f3;overflow:hidden}.bt-line i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,#2fb46a,#138a47);transition:width .3s}
+.bt-vcol{display:grid;gap:5px;min-width:0}
+.bt-vwrap{max-height:min(56vh,560px);border-radius:14px}
+.bt-vchips{left:auto;right:0;background:none;padding:8px;gap:6px;max-width:100%}
+.bt-vchips button{height:32px;background:#000a;border-color:#ffffff66;font-weight:700}.bt-vchips .bt-spd{min-width:48px}
+.bt-segs{margin-left:0;max-width:60vw}.bt-segs button.on{background:#fff;color:#000}
+.bt-flash{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:8px 16px;border-radius:999px;background:#000b;color:#fff;font-size:15px;font-weight:700;pointer-events:none;white-space:nowrap}.bt-flash[hidden]{display:none}
+.bt-info{display:flex;align-items:center;gap:8px;padding:7px 12px;border:1px solid #d7deea;border-radius:12px;background:linear-gradient(#fff,#f3f6fc);min-width:0}
+.bt-inf1{flex:1;min-width:0;font-size:13.5px;color:#3b4a6b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.bt-inf1 b{font-size:16px;color:#13213f}.bt-inf1 em{font-style:normal;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#fff3cd;color:#8a5a00}
+.bt-rs{flex:none;font-size:18px;font-weight:800;color:#0f6b3d;white-space:nowrap}
+.bt-tip{font-size:11px;color:#8391ab;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bt-ihead{margin:0 0 4px;font-size:13px}
+.bt-items li{padding:8px 10px;font-size:17px;gap:8px}
+.bt-items li .bt-q{flex:none;min-width:44px;text-align:center;padding:3px 9px;border-radius:999px;background:linear-gradient(#e7f0ff,#d4e3ff);border:1px solid #b9cdf5;font-size:17px;font-weight:800;color:#1a3fa0}
+.bt-items.two{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 5px}.bt-items.two li{font-size:14px;padding:6px 8px;gap:5px}.bt-items.two li .bt-q{font-size:14px;min-width:34px;padding:2px 6px}
+.bt-btns{grid-template-columns:1fr 1fr 60px;gap:8px;padding:8px 0 4px;background:linear-gradient(#fff0,var(--bg,#f4f6fb) 26%)}
+.bt-btns.is-miss{grid-template-columns:64px 1fr 1.3fr}.bt-btns.is-empty{display:block;position:static;background:none;padding:0;text-align:center}.bt-btns.is-empty .bt-undo{position:static;transform:none}
+.bt-btns .bt-skip{background:linear-gradient(#fff,#e9eef8);color:#3b4a6b;border:1px solid #c9d3e6;font-size:20px;display:grid;place-items:center;line-height:1;padding:0;box-shadow:none}.bt-btns .bt-skip small{display:block;font-size:9px;font-weight:600;margin-top:-8px}
+.bt-btns:has(.bt-undo):not(.is-empty){padding-top:46px}
+.bt-btns .bt-undo{position:absolute;left:50%;top:6px;transform:translateX(-50%);height:34px;padding:0 14px;border-radius:999px;border:1px solid #c9d3e6;background:#13213f;color:#fff;font-size:13px;font-weight:700;white-space:nowrap;box-shadow:0 6px 16px #0b1a3a44;grid-column:1/-1}
+.bt-erow{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:8px}.bt-sm.go{background:linear-gradient(#e7f0ff,#d4e3ff);border-color:#4c8dff;color:#1d3a6e;font-weight:700}
+html.dk .bt-info{background:#141c2e;border-color:#2a3650}html.dk .bt-inf1{color:#a9b4cc}html.dk .bt-inf1 b{color:#e6edf8}html.dk .bt-rs{color:#7fe0a8}html.dk .bt-line{background:#2a3650}html.dk .bt-cnt{color:#a9b4cc}
+html.dk .bt-items li .bt-q{background:#1b2a4a;border-color:#2e4576;color:#8fb4ff}html.dk .bt-btns{background:linear-gradient(#0000,#0b1220 26%)}html.dk .bt-warn{background:#1b2436;border-color:#2a3650;color:#cfd9ee}
+html.lt .bt-btns .bt-skip{background:linear-gradient(#fff,#e9eef8)!important;color:#3b4a6b!important;border:1px solid #c9d3e6!important}html.lt .bt-btns .bt-undo{background:#13213f!important;color:#fff!important;border-radius:999px!important}
+html.lt .bt-vchips button{background:#000a!important}html.lt .bt-segs button.on{background:#fff!important;color:#000!important}
+html.lt .bt-prog .bt-pcchip,html.lt .bt-warn{border-radius:999px!important}

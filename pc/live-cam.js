@@ -1,5 +1,7 @@
 // =========================================================
-//  live-cam.js  v1.1 (2026-11-10: 🩺 "Juda hai par video nahi" — asal wajah app ko (liveReq.warn: ffmpeg / NVR ki ghalti foran, 12 s koi packet nahi), sub-stream na chale to MAIN stream, liveReq.rtp = PC video bhej raha hai (phone na chala sake to app VP8 se dobara)) · v1.0 (2026-11-09) — 🔴 COUNTER CAMERA KI LIVE VIDEO app mein (WebRTC, seedha PC → phone)
+//  live-cam.js  v1.2 (2026-11-10: 🔗 EK HI RABTA — malik ki screenshots: "error -138" / "NVR ne video nahi di": NVR ek camera par PC ko DOOSRA rabta nahi deta (pehla bill-clip ki recording ka).
+//    Ab bill-clip v2.4 apni recording wali line ki copy PC ke andar udp 127.0.0.1:48500+ch par deta hai — live wahi leta hai (NVR par naya rabta NAHI); na mile to purana RTSP raasta.)
+//  v1.1 (2026-11-10: 🩺 "Juda hai par video nahi" — asal wajah app ko (liveReq.warn: ffmpeg / NVR ki ghalti foran, 12 s koi packet nahi), sub-stream na chale to MAIN stream, liveReq.rtp = PC video bhej raha hai (phone na chala sake to app VP8 se dobara)) · v1.0 (2026-11-09) — 🔴 COUNTER CAMERA KI LIVE VIDEO app mein (WebRTC, seedha PC → phone)
 //  Malik (9 Nov): "kya direct live nahi chal sakti, koi tareeqa nikalo · only live video wala chahiye".
 //
 //  Kaam (server PC, doctor chalata hai — live-cam-auto.bat):
@@ -23,7 +25,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '1.1';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '1.2';
 const CLIP_MODS = path.join(DIR, 'clip-mods'), MODS = path.join(DIR, 'live-mods');
 const WERIFT = 'werift@0.24.4';
 const MAX_V = 4;
@@ -60,6 +62,7 @@ biz.collection('blueAccess').doc('billClip').onSnapshot(s => {
     user: String(d.user || 'admin').trim(), pw: String(d.pw || ''), ch: (d.ch && typeof d.ch === 'object') ? d.ch : {} };
   const sig = [CF.kind, CF.ip, CF.port, CF.user, CF.pw, Number(d.at) || 0].join('|');
   if (sig !== cfSig) { cfSig = sig; AUTHBAD = 0; for (const p of pipes.values()) stopPipe(p, 'setting badli'); }
+  srcSync();
   log(`⚙️ setting: ${CF.ip || '(NVR ka IP nahi)'} · counters ${Object.keys(CF.ch).length}`);
 }, e => log('⚠️ setting: ' + e.message));
 const credOf = x => String(x || '').replace(/[\s/?#]/g, c => encodeURIComponent(c));   // bill-clip v1.4 jaisa: ffmpeg %-decode nahi karta
@@ -67,6 +70,23 @@ function liveUrl(ch, main) { const u = credOf(CF.user), p = credOf(CF.pw); retur
 function warnViewers(p, why) { for (const [id, v] of viewers) if (v.pipe === p && v.warn !== why) { v.warn = why; REQ.doc(id).set({ warn: why, warnAt: Date.now() }, { merge: true }).catch(() => {}); } }   // v1.1: asal wajah app ko (khamosh nahi)
 const chOf = pc => Number(CF.ch[pc] ?? CF.ch[String(pc || '').toLowerCase()]) || 0;
 const hint = e => { e = String(e || ''); if (/\b401\b|unauthori[sz]ed/i.test(e)) return 'NVR ka user / password ghalat (401)'; if (/\b404\b|not found/i.test(e)) return 'NVR par ye channel nahi (404)'; if (/timed? ?out|refused|unreachable/i.test(e)) return 'NVR tak rasta nahi (IP / LAN)'; if (/invalid data/i.test(e)) return 'NVR ne video nahi di (restart / RTSP band)'; return e.slice(0, 120); };
+
+// ---------- 🔗 v1.2: recording wali line ki copy (bill-clip v2.4 → udp 127.0.0.1:48500+ch, mpegts) — NVR par doosra rabta nahi ----------
+const SH_PORT = ch => 48500 + Number(ch), srcs = new Map();   // ch → {sock, subs:Set(ffmpeg stdin), last, pk}
+function srcSync() {
+  const want = new Set(); if (CF.on && CF.ip) for (const v of Object.values(CF.ch)) if (Number(v) > 0 && Number(v) < 1000) want.add(Number(v));
+  for (const [ch, x] of srcs) if (!want.has(ch)) { try { x.sock.close(); } catch {} srcs.delete(ch); }
+  for (const ch of want) {
+    if (srcs.has(ch)) continue;
+    const x = { subs: new Set(), last: 0, pk: 0 }; srcs.set(ch, x);
+    try { const sock = dgram.createSocket('udp4'); x.sock = sock;
+      sock.on('error', e => { x.err = e.message; log(`⚠️ share ch ${ch}: ${e.message}`); try { sock.close(); } catch {} if (srcs.get(ch) === x) srcs.delete(ch); });
+      sock.on('message', m => { x.pk++; x.last = Date.now(); for (const w of x.subs) { try { if (w.writable && w.writableLength < 4e6) w.write(m); } catch {} } });
+      sock.bind(SH_PORT(ch), '127.0.0.1');
+    } catch (e) { log(`⚠️ share ch ${ch}: ${e.message}`); srcs.delete(ch); }
+  }
+}
+const shareOk = ch => { const x = srcs.get(ch); return !!x && Date.now() - x.last < 3000; };
 
 // ---------- ek camera = ek ffmpeg → RTP → sab dekhne walon ke track ----------
 const pipes = new Map();   // key ch|codec → {ch, codec, ff, sock, tracks:Set, err, idleAt, tries}
@@ -81,22 +101,26 @@ function startPipe(ch, codec) {
     const port = sock.address().port;
     const enc = codec === 'vp8' ? ['-c:v', 'libvpx', '-deadline', 'realtime', '-cpu-used', '8', '-b:v', '500k', '-g', '24', '-error-resilient', '1']
       : ['-c:v', 'libx264', '-preset', 'ultrafast', '-tune', 'zerolatency', '-profile:v', 'baseline', '-pix_fmt', 'yuv420p', '-g', '24', '-bf', '0', '-b:v', '450k', '-maxrate', '600k', '-bufsize', '300k'];
-    const src = process.env.LIVE_TEST_SRC ? ['-re', '-f', 'lavfi', '-i', 'testsrc=size=704x576:rate=15'] : ['-rtsp_transport', 'tcp', '-timeout', '10000000', '-i', liveUrl(ch, p.main)];
-    const args = ['-hide_banner', '-loglevel', 'error', '-nostdin', '-fflags', 'nobuffer', ...src, '-an', '-vf', "fps=12,scale='min(640,iw)':-2", ...enc, '-f', 'rtp', '-payload_type', '96', '-pkt_size', '1200', `rtp://127.0.0.1:${port}`];
-    const proc = spawn(ff, args, { windowsHide: true }); p.ff = proc; p.at = Date.now(); let err = '';
+    p.share = !p.noShare && !process.env.LIVE_TEST_SRC && shareOk(ch);   // v1.2: recording wali line chal rahi hai → wahi (NVR par naya rabta nahi)
+    const src = process.env.LIVE_TEST_SRC ? ['-re', '-f', 'lavfi', '-i', 'testsrc=size=704x576:rate=15'] : p.share ? ['-f', 'mpegts', '-i', 'pipe:0'] : ['-rtsp_transport', 'tcp', '-timeout', '10000000', '-i', liveUrl(ch, p.main)];
+    const args = ['-hide_banner', '-loglevel', 'error', ...(p.share ? [] : ['-nostdin']), '-fflags', 'nobuffer', ...src, '-an', '-vf', "fps=12,scale='min(640,iw)':-2", ...enc, '-f', 'rtp', '-payload_type', '96', '-pkt_size', '1200', `rtp://127.0.0.1:${port}`];
+    const proc = spawn(ff, args, { windowsHide: true, stdio: [p.share ? 'pipe' : 'ignore', 'ignore', 'pipe'] }); p.ff = proc; p.at = Date.now(); let err = '';
+    const sx = p.share ? srcs.get(ch) : null; if (sx) { proc.stdin.on('error', () => {}); sx.subs.add(proc.stdin); }
     proc.stderr.on('data', d => { err += String(d); if (err.length > 2000) err = err.slice(-2000); });
     proc.on('error', e => { err += ' ' + e.message; });
     proc.on('close', code => {
+      if (sx) sx.subs.delete(proc.stdin);
       p.ff = null; const why = hint((err.trim().split(/\r?\n/).filter(Boolean).pop() || `ffmpeg code ${code}`).replace(/rtsp:\/\/[^@\s]*@/g, 'rtsp://****@'));
       if (p.stopped) return;
       if (/401/.test(why)) { AUTHBAD = Date.now(); p.err = why; log(`⛔ live ch ${ch}: 401 — ruka (setting badlein)`); failViewers(p, why); closePipe(p); return; }
+      if (p.pk > 100) p.tries = 0;   // v1.2: video chal rahi thi — nayi ginti
       p.tries++; p.err = why; log(`🎞 live ch ${ch} ruki (${why})`); try { p.sock && p.sock.close(); } catch {} p.sock = null;
-      if (!p.pk) p.main = !p.main;   // v1.1: is stream se kuch nahi aaya — doosri (sub ↔ main) aazmao
+      if (!p.pk) { if (p.share) p.noShare = true; else p.main = !p.main; }   // v1.1: is stream se kuch nahi aaya — doosri (sub ↔ main) aazmao · v1.2: share se na aaya → RTSP
       warnViewers(p, `Camera ch ${ch}: ${why} — dobara koshish ${p.tries}/3${p.main ? ' (main stream)' : ''}`);
       if (p.tracks.size && p.tries <= 3) setTimeout(() => { if (p.tracks.size && !p.stopped) startPipe(ch, codec); }, 2000);
       else { failViewers(p, why); closePipe(p); }
     });
-    log(`🔴 live ch ${ch} (${codec}${p.main ? ', main' : ''}) shuru`);
+    log(`🔴 live ch ${ch} (${codec}${p.share ? ', recording ki line se' : p.main ? ', main' : ''}) shuru`);
   });
   return p;
 }
@@ -154,8 +178,9 @@ setInterval(() => {
   for (const p of [...pipes.values()]) if (!p.tracks.size && p.idleAt && now - p.idleAt > 20000) stopPipe(p, 'koi nahi dekh raha');
   for (const p of pipes.values()) {   // v1.1: 🩺 video aa rahi hai ya nahi — app ko batao
     if (!p.tracks.size) continue;
+    if (p.share && p.ff && now - (p.at || now) > 8000 && !shareOk(p.ch)) { log(`🔗 live ch ${p.ch}: recording ki line ruk gayi — dobara`); try { p.ff.kill(); } catch {} continue; }   // v1.2
     if (p.pk > 0) { for (const [id, v] of viewers) if (v.pipe === p && !v.rtp) { v.rtp = 1; v.warn = ''; REQ.doc(id).set({ rtp: 1, warn: '' }, { merge: true }).catch(() => {}); } }
-    else if (p.ff && now - (p.at || now) > 12000) warnViewers(p, `Camera ch ${p.ch}: NVR se jur gaya par video nahi aa rahi — ye channel NVR par chal raha hai? (⚙️ mein counter ka channel dekhein)`);
+    else if (p.ff && now - (p.at || now) > (p.share ? 20000 : 12000)) warnViewers(p, `Camera ch ${p.ch}: NVR se jur gaya par video nahi aa rahi — ye channel NVR par chal raha hai? (⚙️ mein counter ka channel dekhein)`);
   }
 }, 10000);
 setInterval(async () => { try { const s = await REQ.where('at', '<', Date.now() - 6 * 3600000).limit(200).get(); if (s.size) { const b = db.batch(); s.forEach(d => b.delete(d.ref)); await b.commit(); } } catch {} }, 60 * 60000);

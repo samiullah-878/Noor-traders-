@@ -19,16 +19,21 @@ const ago = t => { const m = Math.round((Date.now() - Number(t)) / 60000); retur
 let cloud = null, notice = () => {}, isOwner = () => false, byName = () => '', uidOf = () => '', canK = () => true;
 let offs = [], mounted = false, bills = new Map(), clips = new Map(), tallies = new Map(), lines = new Map(), urls = new Map(), pcSt = null, reqs = new Map(), segIdx = 0, segBusy = '';
 let fPc = '', cur = '', mode = 'view', sel = new Set(), lastDone = '', reopen = '', order = 'new', speed = 1.5, loading = '', paintT = null;
+let fDay = 'aaj', skipped = new Set(), undoUntil = 0, undoT = null, tapT = null;   // v2.224.0: 📅 din (aaj | kal | dono) · ⏭ baad mein · ↩ 5 s
+try { const o = JSON.parse(localStorage.getItem('sam-bt-day') || 'null'); if (o && o.d === dayKey(0) && /^(aaj|kal|dono)$/.test(o.v)) fDay = o.v; } catch {}
+const dOk = d => fDay === 'dono' || d === dayKey(fDay === 'kal' ? 1 : 0);
+const dayLbl = () => fDay === 'kal' ? 'Kal' : fDay === 'dono' ? 'Aaj + Kal' : 'Aaj';
 try { fPc = localStorage.getItem('sam-bt-pc') || ''; order = localStorage.getItem('sam-bt-order') || 'new'; speed = Number(localStorage.getItem('sam-bt-speed')) || 1.5; } catch {}
 
 export function tallySetup(o) { cloud = o.cloud; notice = o.notice || notice; canK = o.can || canK; isOwner = o.owner || isOwner; byName = o.byName || byName; uidOf = o.uid || uidOf; }
 
 export function renderTally(host) {
-  mounted = true;
+  mounted = true; document.documentElement.classList.add('bt-on');
   if (!host.querySelector('#btRoot')) {
     host.innerHTML = `<div id="btRoot" class="bt-root">
-      <div class="bt-bar"><span class="bt-prog" id="btProg">…</span><span class="bt-pcline" id="btPc"></span>
+      <div class="bt-bar"><span class="bt-prog" id="btProg">…</span><button type="button" class="bt-warn" id="btPc" data-bt-pcst="1" hidden></button>
         <span class="bt-chips" data-mn-box>
+          <button type="button" data-bt-day="1" data-mn="bt.day" data-mn-i="📅" data-mn-t="Din" data-mn-s="Aaj · Kal · Dono ke bill" data-mn-g="👀 Bill tally">📅 Din</button>
           <button type="button" data-bt-pcf="1" data-mn="bt.pcf" data-mn-i="🖥" data-mn-t="Counter / camera" data-mn-s="sirf ek counter ke bill" data-mn-g="👀 Bill tally">🖥 Counter</button>
           <button type="button" data-bt-order="1" data-mn="bt.order" data-mn-i="💰" data-mn-t="Bare bill pehle" data-mn-s="warna naya pehle" data-mn-g="👀 Bill tally">💰 Bare pehle</button>
           <button type="button" data-bt-undo="1" data-mn="bt.undo" data-mn-i="↩" data-mn-t="Pichla wapas" data-mn-s="aakhri tally dobara" data-mn-g="👀 Bill tally">↩ Pichla</button>
@@ -39,6 +44,7 @@ export function renderTally(host) {
           <button type="button" data-bt-cam="1" data-mn="bt.cam" data-mn-i="🔴" data-mn-t="Live camera" data-mn-s="counter ki seedhi video" data-mn-g="👀 Bill tally">🔴 Live camera</button>
           <button type="button" data-bt-live="1" data-mn="bt.live" data-mn-i="📺" data-mn-t="Counter Nazar" data-mn-s="purani live screen" data-mn-g="👀 Bill tally">📺 Counter Nazar</button>
         </span></div>
+      <div class="bt-line"><i id="btLine"></i></div>
       <div class="bt-main" id="btMain"></div>
       <div class="bt-btns" id="btBtns"></div>
     </div>`;
@@ -48,14 +54,14 @@ export function renderTally(host) {
   }
   watch(); paint();
 }
-export function tallyStop() { if (!mounted) return; mounted = false; for (const f of offs) { try { f(); } catch {} } offs = []; for (const u of urls.values()) { try { URL.revokeObjectURL(u); } catch {} } urls.clear(); }
+export function tallyStop() { document.documentElement.classList.remove('bt-on'); if (!mounted) return; mounted = false; for (const f of offs) { try { f(); } catch {} } offs = []; for (const u of urls.values()) { try { URL.revokeObjectURL(u); } catch {} } urls.clear(); }
 
 // ---------- data ----------
 function watch() {
   if (offs.length) return;
   const days = [dayKey(0), dayKey(1)];
   for (const d of days) offs.push(cloud.listenPosSales(d, b => { if (!Array.isArray(b)) return; for (const [id, x] of [...bills]) if (x._d === d) bills.delete(id); for (const x of b) bills.set(String(x.id), { ...x, _d: d }); schedule(); }));
-  offs.push(cloud.listenBillClips(days, (l, e) => { if (!l) { if (e) $('btPc') && ($('btPc').textContent = '⚠ ' + (e.message || 'clip nahi parh sake')); return; } clips = new Map(l.map(c => [String(c.id), c])); schedule(); }));
+  offs.push(cloud.listenBillClips(days, (l, e) => { if (!l) { if (e && $('btPc')) { $('btPc').hidden = false; $('btPc').textContent = '⚠'; $('btPc').dataset.full = '⚠ ' + (e.message || 'clip nahi parh sake'); $('btPc').classList.add('bad'); } return; } clips = new Map(l.map(c => [String(c.id), c])); schedule(); }));
   offs.push(cloud.listenBillTally(days, l => { if (!l) return; tallies = new Map(l.map(t => [String(t.id), t])); schedule(); }));
   offs.push(cloud.listenBillClipPc(s => { pcSt = s; paintPc(); }));
   offs.push(cloud.listenBillClipReq(dayKey(0), l => { if (!l) return; reqs = new Map(l.map(r => [String(r.id), r])); schedule(); if ($('btDlg')?.open && $('btDlg').dataset.unp) openUnposted(); }));
@@ -63,16 +69,18 @@ function watch() {
 function schedule() { if (paintT) return; paintT = setTimeout(() => { paintT = null; paint(); if ($('btDlg')?.open && $('btDlg').dataset.list) openList(true); }, 120); }
 function queue() {
   const out = [];
-  for (const [id, b] of bills) { if (b.x || (tallies.has(id) && id !== reopen)) continue; if (fPc && String(b.pc || '') !== fPc && id !== reopen) continue; const c = clips.get(id); if (!c || c.st !== 'ok') continue; if (Number(b.ps) !== 2 && !c.rq) continue; out.push(b); }   // v2.210.0: un-posted sirf jab clip mangwai (rq)
-  out.sort((a, b) => order === 'big' ? (Number(b.t) - Number(a.t)) || (Number(b.pt) - Number(a.pt)) : Number(b.pt) - Number(a.pt));
+  for (const [id, b] of bills) { if (b.x || (tallies.has(id) && id !== reopen)) continue; if (fPc && String(b.pc || '') !== fPc && id !== reopen) continue; const c = clips.get(id); if (!c || c.st !== 'ok') continue; if (Number(b.ps) !== 2 && !c.rq) continue; if (!dOk(b._d) && id !== reopen) continue; out.push(b); }   // v2.210.0: un-posted sirf jab clip mangwai (rq)
+  out.sort((a, b) => (skipped.has(String(a.id)) - skipped.has(String(b.id))) || (order === 'big' ? (Number(b.t) - Number(a.t)) || (Number(b.pt) - Number(a.pt)) : Number(b.pt) - Number(a.pt)));   // ⏭ baad mein wale aakhir mein
   return out;
 }
 function counts() {
   const td = dayKey(0); let ok = 0, bad = 0, wait = 0, err = 0;
-  for (const t of tallies.values()) if (t.day === td && (!fPc || String(t.pc || '') === fPc)) { if (t.ok) ok++; else bad++; }
+  for (const t of tallies.values()) if (dOk(t.day) && (!fPc || String(t.pc || '') === fPc)) { if (t.ok) ok++; else bad++; }
   const on0 = Number(pcSt?.on0) || 0;   // v2.209.1: sirf aaj ke bill (PC kal ke nahi kaatta) + camera ON hone ke baad wale — warna jhoota "429 ban rahi"
   for (const [id, b] of bills) { if (b.x || Number(b.ps) !== 2 || tallies.has(id) || b._d !== td || (fPc && String(b.pc || '') !== fPc)) continue; const c = clips.get(id); if (!c || c.st === 'wait') { if (!on0 || Number(b.ct || b.pt) >= on0 - 10 * 60000) wait++; } else if (c.st === 'err' || c.st === 'skip') err++; }
-  return { ok, bad, wait, err, q: queue().length };
+  let kalQ = 0; if (fDay === 'aaj') { const k = dayKey(1); for (const [id, b] of bills) { if (b._d !== k || b.x || tallies.has(id) || Number(b.ps) !== 2 || (fPc && String(b.pc || '') !== fPc)) continue; if (clips.get(id)?.st === 'ok') kalQ++; } }
+  if (fDay === 'kal') { wait = 0; err = 0; }
+  return { ok, bad, wait, err, kalQ, q: queue().length };
 }
 async function linesOf(id) {
   if (lines.has(id)) return lines.get(id);
@@ -119,34 +127,38 @@ function paintPc() {
   else if (pcSt.err) s = '⚠ ' + pcSt.err;
   else s = '🎥 PC chalu' + (c.wait ? ' · ⏳ ' + c.wait + ' clip ban rahi' : '');
   if (c.err && !/⚠/.test(s)) s += (s ? ' · ' : '') + '✕ ' + c.err + ' clip nahi bani';
-  el.textContent = s; el.title = s; el.classList.toggle('bad', /⚠|chup|✕/.test(s));
+  const bad = /⚠|chup|✕|band/.test(s);   // v2.224.0: screen par sirf chhota chip — tap = poori baat
+  el.hidden = !(bad || c.wait); el.textContent = /chup/.test(s) ? '⚠ PC chup' : bad ? '⚠' : '⏳ ' + c.wait; el.dataset.full = s; el.title = s; el.classList.toggle('bad', bad);
 }
 function paint() {
   if (!mounted || !$('btRoot')) return;
   const c = counts(), q = queue();
-  const pg = $('btProg'); if (pg) pg.innerHTML = `<b class="ok">✓ ${c.ok}</b> · <b class="bad">✕ ${c.bad}</b> · baqi <b>${c.q}</b> <button type="button" class="bt-pcchip${fPc ? ' is-in' : ''}" data-bt-pcf="1">🖥 ${esc(fPc || 'Sab counter')} ▾</button>`;
+  const pg = $('btProg'); if (pg) pg.innerHTML = `<button type="button" class="bt-pcchip${fDay !== 'aaj' ? ' is-in' : ''}" data-bt-day="1">📅 ${dayLbl()} ▾</button><button type="button" class="bt-pcchip${fPc ? ' is-in' : ''}" data-bt-pcf="1">🖥 ${esc(fPc || 'Sab counter')} ▾</button><span class="bt-cnt"><b class="ok">✓ ${c.ok}</b>${c.bad ? ` <b class="bad">✕ ${c.bad}</b>` : ''} · baqi <b>${c.q}</b></span>`;
+  const ln = $('btLine'); if (ln) { const tot = c.ok + c.bad + c.q; ln.style.width = (tot ? Math.round((c.ok + c.bad) / tot * 100) : 0) + '%'; }
   paintPc();
   const ob = $('btRoot').querySelector('[data-bt-order]'); if (ob) { ob.classList.toggle('on', order === 'big'); ob.textContent = order === 'big' ? '💰 Bare pehle ✓' : '💰 Bare pehle'; }
   if (!cur || !q.some(b => String(b.id) === cur)) { cur = q.length ? String(q[0].id) : ''; mode = 'view'; sel = new Set(); }
   const main = $('btMain'), btns = $('btBtns'); if (!main) return;
   if (!cur) {
-    const why = c.wait ? `⏳ ${c.wait} bill ki clip ban rahi hai (PC 1-2 min lagata hai) — khud aa jayegi.` : c.err ? `✕ ${c.err} bill ki clip nahi bani — malik ⚙️ / PC dekhe.` : 'Aaj ke sab bill tally ho gaye 👏 — naya bill post hote hi yahan aayega.';
-    main.innerHTML = `<div class="bt-empty"><div class="bt-big">${c.q ? '…' : c.wait ? '⏳' : c.err ? '⚠' : '✅'}</div><p>${esc(why)}</p>${lastDone ? `<button type="button" class="bt-sm" data-bt-undo="1">↩ Pichla bill dobara dekho</button>` : ''}</div>`;
-    btns.innerHTML = ''; return;
+    const dl = fDay === 'kal' ? 'Kal' : 'Aaj';
+    const why = c.wait ? `⏳ ${c.wait} bill ki clip ban rahi hai (PC 1-2 min lagata hai) — khud aa jayegi.` : c.err ? `✕ ${c.err} bill ki clip nahi bani — malik ⚙️ / PC dekhe.` : fDay === 'kal' ? 'Kal ka koi bill baqi nahi (clip 2 din baad khud mit jati hai).' : `${dl} ke sab bill tally ho gaye 👏 — naya bill post hote hi yahan aayega.`;
+    main.innerHTML = `<div class="bt-empty"><div class="bt-big">${c.wait ? '⏳' : c.err ? '⚠' : '✅'}</div><p>${esc(why)}</p><div class="bt-erow">${c.kalQ ? `<button type="button" class="bt-sm go" data-bt-dayv="kal">📅 Kal ke ${c.kalQ} bill dekhein</button>` : ''}${fDay !== 'aaj' ? `<button type="button" class="bt-sm go" data-bt-dayv="aaj">📅 Aaj par wapas</button>` : ''}${lastDone ? `<button type="button" class="bt-sm" data-bt-undo="1">↩ Pichla bill dobara dekho</button>` : ''}</div></div>`;
+    paintBtns(true); return;
   }
   const b = bills.get(cur), cl = clips.get(cur) || {}, t = tallies.get(cur);
   if (!main.querySelector(`[data-bt-bill="${cur}"]`)) {
     main.innerHTML = `<div class="bt-card" data-bt-bill="${esc(cur)}">
-      <div class="bt-vwrap"><video id="btVid" playsinline muted autoplay preload="auto"></video>
-        <div class="bt-vtop"><b>#${esc(b.no)}</b> · ${tm(b.ct || b.pt)}${b.ct ? '' : ' (post)'} · ${esc(b.pc || '?')}${b.by ? ' · 👦 ' + esc(b.by) : ''} · Rs ${num(b.t)}${b.p ? ' · ' + esc(b.p) : ''}</div>
-        <div class="bt-vload" id="btVload">⏳ video…</div><button type="button" class="bt-vend" id="btVend" data-bt-again="1" hidden>✅ Video khatam · ↺ Dobara dekho</button>
-        <div class="bt-vchips"><button type="button" data-bt-sp="1"${speed === 1 ? ' class="on"' : ''}>1×</button><button type="button" data-bt-sp="1.5"${speed === 1.5 ? ' class="on"' : ''}>1.5×</button><button type="button" data-bt-sp="2"${speed === 2 ? ' class="on"' : ''}>2×</button><button type="button" data-bt-back10="1">↺ 10s</button><button type="button" data-bt-full="1">⛶</button><span class="bt-segs" id="btSegs"></span><span class="bt-dur">${cl.dur ? (cl.dur >= 120 ? Math.round(cl.dur / 60) + ' min' : cl.dur + ' s') : ''}</span></div>
+      <div class="bt-vcol"><div class="bt-vwrap"><video id="btVid" playsinline muted autoplay preload="auto"></video>
+        <div class="bt-vload" id="btVload">⏳ video…</div><div class="bt-flash" id="btFlash" hidden></div><button type="button" class="bt-vend" id="btVend" data-bt-again="1" hidden>✅ Video khatam · ↺ Dobara dekho</button>
+        <div class="bt-vchips"><span class="bt-segs" id="btSegs"></span><button type="button" class="bt-spd" data-bt-spc="1" title="raftar">${speed}×</button><button type="button" data-bt-full="1" title="poori screen">⛶</button></div>
       </div>
+      <div class="bt-info"><span class="bt-inf1"><b>#${esc(b.no)}</b> · ${b._d !== dayKey(0) ? '<em>kal</em> ' : ''}${tm(b.ct || b.pt)}${b.ct ? '' : ' (post)'}${b.by ? ' · 👦 ' + esc(b.by) : ''}${!fPc && b.pc ? ' · 🖥 ' + esc(b.pc) : ''}${b.p ? ' · ' + esc(b.p) : ''}</span><b class="bt-rs">Rs ${num(b.t)}</b></div>
+      <div class="bt-tip">👆 tap = ruk / chal · 2 dafa tap daayein / baayein = 10 s aage / peeche${cl.dur ? ' · ' + (cl.dur >= 120 ? Math.round(cl.dur / 60) + ' min' : cl.dur + ' s') : ''}</div></div>
       <div class="bt-side"><div class="bt-ihead">🧾 Bill ki items <b id="btN"></b>${t ? `<em>pehle ${t.ok ? '✓' : '✕'} (${esc(t.n || '')})</em>` : ''}</div><ol class="bt-items" id="btItems"><li class="none">⏳ items…</li></ol></div>
     </div>`;
     segIdx = 0; loadCur(cur);
     const vv = main.querySelector('#btVid');   // v2.210.0: hissa khatam = agla · v2.222.0: aakhri ke baad shuru se NAHI (malik: "6 items ke baad video phir se start") — ruko + ↺ chip
-    if (vv) { vv.addEventListener('ended', () => { const sg = segsOf(clips.get(cur)); if (sg && segIdx + 1 < sg.length) { playSeg(segIdx + 1); return; } const e = $('btVend'); if (e) e.hidden = false; }); vv.addEventListener('play', () => { const e = $('btVend'); if (e) e.hidden = true; }); }
+    if (vv) { vv.addEventListener('ended', () => { const sg = segsOf(clips.get(cur)); if (sg && segIdx + 1 < sg.length) { playSeg(segIdx + 1); return; } const e = $('btVend'); if (e) e.hidden = false; }); vv.addEventListener('play', () => { const e = $('btVend'); if (e) e.hidden = true; const f = $('btFlash'); if (f) f.hidden = true; }); vv.addEventListener('pause', () => { if (!vv.ended) flash('⏸ ruki — tap se chalao', true); }); }
   }
   paintItems(); paintBtns();
   for (const x of q.filter(x => String(x.id) !== cur).slice(0, 3)) { clipUrl(String(x.id)).catch(() => {}); linesOf(String(x.id)); }   // v2.212.0: aage 3 bill ki video + items pehle se (✓ par agla foran)
@@ -167,21 +179,34 @@ function paintItems() {
   if (!l) { ol.innerHTML = '<li class="none">⏳ items…</li>'; return; }
   if (!l.length) { ol.innerHTML = '<li class="none">(POS lines abhi nahi — PC 1 min mein likhta hai)</li>'; return; }
   if (n) n.textContent = l.length + ' cheezein';
+  ol.classList.toggle('two', l.length > 7);
   const miss = mode === 'miss';
-  ol.innerHTML = l.map((x, i) => { const k = String(x.n || ''); return `<li${miss ? ' class="tap' + (sel.has(k) ? ' sel' : '') + '"' : ''} data-bt-item="${esc(k)}"><b>${esc(k)}</b><span>× ${esc(x.q)}</span>${miss ? `<i>${sel.has(k) ? '✕' : '☐'}</i>` : ''}</li>`; }).join('');
+  ol.innerHTML = l.map((x, i) => { const k = String(x.n || ''); return `<li${miss ? ' class="tap' + (sel.has(k) ? ' sel' : '') + '"' : ''} data-bt-item="${esc(k)}"><b>${esc(k)}</b><span class="bt-q">× ${esc(x.q)}</span>${miss ? `<i>${sel.has(k) ? '✕' : '☐'}</i>` : ''}</li>`; }).join('');
 }
-function paintBtns() {
+function paintBtns(empty) {
   const b = $('btBtns'); if (!b) return;
+  const ld = undoUntil > Date.now() && lastDone ? bills.get(lastDone) : null, tl = ld ? tallies.get(lastDone) : null;
+  const un = ld && tl ? `<button type="button" class="bt-undo" data-bt-undo="1">${tl.ok ? '✓' : '✕'} #${esc(ld.no)} · ↩ Wapas</button>` : '';
+  if (empty || !cur) { b.innerHTML = un; b.className = 'bt-btns is-empty'; return; }
+  b.className = 'bt-btns' + (mode === 'miss' ? ' is-miss' : '');
   if (mode === 'miss') b.innerHTML = `<button type="button" class="bt-cancel" data-bt-cancel="1">↩</button><button type="button" class="bt-dk" data-bt-dk="1">🤷 Pata nahi kaun si</button><button type="button" class="bt-save" data-bt-save="1">✕ KAM — Save${sel.size ? ' (' + sel.size + ')' : ''}</button>`;
-  else b.innerHTML = `<button type="button" class="bt-ok" data-bt-ok="1">✓ THEEK</button><button type="button" class="bt-bad" data-bt-bad="1">✕ KAM</button>`;
+  else b.innerHTML = un + `<button type="button" class="bt-ok" data-bt-ok="1">✓ THEEK</button><button type="button" class="bt-bad" data-bt-bad="1">✕ KAM</button><button type="button" class="bt-skip" data-bt-skip="1" title="Baad mein">⏭<small>baad mein</small></button>`;
 }
+function flash(t, keep) { const f = $('btFlash'); if (!f) return; f.textContent = t; f.hidden = false; clearTimeout(f._t); if (!keep) f._t = setTimeout(() => { f.hidden = true; }, 700); }
+function seek(dir) {   // v2.224.0: 2 dafa tap = ±10 s (hisson ke paar bhi)
+  const v = $('btVid'); if (!v) return; const sg = segsOf(clips.get(cur));
+  if (dir < 0) { if (v.currentTime < 10 && segIdx > 0 && sg) { playSeg(segIdx - 1, 50); flash('⏪ 10 s'); return; } v.currentTime = Math.max(0, v.currentTime - 10); }
+  else { if (v.duration && v.currentTime + 10 >= v.duration) { if (sg && segIdx + 1 < sg.length) { playSeg(segIdx + 1); flash('⏩ 10 s'); return; } v.currentTime = Math.max(0, v.duration - 0.3); } else v.currentTime += 10; }
+  v.play().catch(() => {}); flash(dir < 0 ? '⏪ 10 s' : '⏩ 10 s');
+}
+function setDay(v) { fDay = v; try { localStorage.setItem('sam-bt-day', JSON.stringify({ d: dayKey(0), v })); } catch {} reopen = ''; cur = ''; mode = 'view'; sel = new Set(); const mn = $('btMain'); if (mn) mn.innerHTML = ''; paint(); }
 
 // ---------- save ----------
 async function save(ok, miss) {
   const id = cur, b = bills.get(id); if (!b) return;
   const d = { ok: ok ? 1 : 0, miss: miss || [], n: (byName() || 'Nigrani').slice(0, 40), day: b._d || dayKey(0), no: String(b.no || ''), pc: String(b.pc || ''), t: Number(b.t) || 0, by2: String(b.by || '') };
   tallies.set(id, { ...d, id, by: uidOf(), at: Date.now() });   // pehle UI (foran agla), server baad mein
-  lastDone = id; reopen = ''; cur = ''; mode = 'view'; sel = new Set(); paint();
+  lastDone = id; reopen = ''; cur = ''; mode = 'view'; sel = new Set(); skipped.delete(id); undoUntil = Date.now() + 5000; clearTimeout(undoT); undoT = setTimeout(() => { undoUntil = 0; paintBtns(!cur); }, 5100); paint();
   try { await cloud.saveBillTally(id, d); if (!ok) notice(`✕ Bill #${b.no} — kam likha (${(miss || []).join(', ') || 'kaun si: pata nahi'})`); }
   catch (e) { tallies.delete(id); notice('Save nahi hua: ' + (e?.message || e)); paint(); }
 }
@@ -195,6 +220,11 @@ async function onClick(e) {
   if (t.closest('[data-bt-dk]')) { save(false, ['?']); return; }
   if (t.closest('[data-bt-save]')) { save(false, [...sel]); return; }
   const it = t.closest('[data-bt-item]'); if (it && mode === 'miss') { const k = it.dataset.btItem; if (sel.has(k)) sel.delete(k); else sel.add(k); paintItems(); paintBtns(); return; }
+  if (t.closest('[data-bt-skip]')) { const q = queue(); if (q.length < 2) { notice('Bas yehi ek bill baqi hai'); return; } skipped.add(cur); cur = ''; mode = 'view'; sel = new Set(); $('btMain').innerHTML = ''; paint(); notice('⏭ Baad mein — ye bill aakhir mein aayega'); return; }
+  if (t.closest('[data-bt-spc]')) { speed = speed === 1 ? 1.5 : speed === 1.5 ? 2 : 1; try { localStorage.setItem('sam-bt-speed', String(speed)); } catch {} const v = $('btVid'); if (v) v.playbackRate = speed; t.closest('[data-bt-spc]').textContent = speed + '×'; flash(speed + '×'); return; }
+  if (t.closest('[data-bt-pcst]')) { notice($('btPc')?.dataset.full || ''); return; }
+  const dv = t.closest('[data-bt-dayv]'); if (dv) { setDay(dv.dataset.btDayv); return; }
+  if (t.closest('[data-bt-day]')) { openDayPick(); return; }
   const sp = t.closest('[data-bt-sp]'); if (sp) { speed = Number(sp.dataset.btSp) || 1.5; try { localStorage.setItem('sam-bt-speed', String(speed)); } catch {} const v = $('btVid'); if (v) v.playbackRate = speed; sp.parentElement.querySelectorAll('[data-bt-sp]').forEach(x => x.classList.toggle('on', x === sp)); return; }
   if (t.closest('[data-bt-back10]')) { const v = $('btVid'); if (v) { if (v.currentTime < 10 && segIdx > 0 && segsOf(clips.get(cur))) { playSeg(segIdx - 1, 50); return; } v.currentTime = Math.max(0, v.currentTime - 10); v.play().catch(() => {}); } return; }
   const sg = t.closest('[data-bt-seg]'); if (sg) { playSeg(Number(sg.dataset.btSeg) || 0); return; }
@@ -202,13 +232,15 @@ async function onClick(e) {
   if (t.closest('[data-bt-unp]')) { openUnposted(); return; }
   if (t.closest('[data-bt-list]')) { openList(); return; }
   if (t.closest('[data-bt-pcf]')) { openPcPick(); return; }
-  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : [])])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) */ import('./live.js?v=2.223.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
+  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : [])])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) */ import('./live.js?v=2.224.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
   const rq = t.closest('[data-bt-rq]'); if (rq) { const id = rq.dataset.btRq, b = bills.get(id); rq.disabled = true; rq.textContent = '⏳'; cloud.reqBillClip(id, { no: b?.no, pc: b?.pc, day: dayKey(0) }).then(() => notice('🎥 PC ko hukum gaya — clip 1-2 min mein')).catch(e => { notice('Hukum nahi gaya: ' + (e?.message || e)); rq.disabled = false; rq.textContent = '🎥 Mangwao'; }); return; }
   const op = t.closest('[data-bt-open]'); if (op) { const c = clips.get(op.dataset.btOpen); if (!c || c.st !== 'ok') { notice(c?.st === 'err' || c?.st === 'skip' ? '⚠ Is bill ki clip nahi bani: ' + (c.err || '') : '⏳ Clip abhi ban rahi hai'); return; } reopen = op.dataset.btOpen; cur = op.dataset.btOpen; mode = 'view'; sel = new Set(); const dd = $('btDlg'); if (dd) { delete dd.dataset.list; delete dd.dataset.unp; dd.close(); } $('btMain').innerHTML = ''; paint(); return; }
   if (t.closest('[data-bt-full]')) { const v = $('btVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (v.closest('.bt-vwrap') || v).requestFullscreen?.(); } catch {} return; }
-  if (t.closest('.bt-vwrap') && t.tagName === 'VIDEO') { const v = t; if (v.paused) v.play().catch(() => {}); else v.pause(); return; }
+  if (t.closest('.bt-vwrap') && t.tagName === 'VIDEO') { const v = t, side = (e.offsetX || 0) < v.offsetWidth / 2 ? -1 : 1;   // v2.224.0: 1 tap = ruk / chal · 2 tap = ±10 s
+    if (tapT) { clearTimeout(tapT); tapT = null; seek(side); } else tapT = setTimeout(() => { tapT = null; if (v.paused) v.play().catch(() => {}); else v.pause(); }, 260);
+    return; }
   if (t.closest('[data-bt-order]')) { order = order === 'big' ? 'new' : 'big'; try { localStorage.setItem('sam-bt-order', order); } catch {} cur = ''; paint(); return; }
-  if (t.closest('[data-bt-undo]')) { if (!lastDone) { notice('Abhi koi pichla nahi'); return; } const tl = tallies.get(lastDone); if (tl && tl.by && tl.by !== uidOf() && !isOwner()) { notice('Ye kisi aur ne tally kiya'); return; } reopen = lastDone; cur = lastDone; mode = 'view'; sel = new Set(); $('btMain').innerHTML = ''; paint(); notice('↩ Bill dobara — ✓ ya ✕ dobara dabayein'); return; }
+  if (t.closest('[data-bt-undo]')) { if (!lastDone) { notice('Abhi koi pichla nahi'); return; } const tl = tallies.get(lastDone); if (tl && tl.by && tl.by !== uidOf() && !isOwner()) { notice('Ye kisi aur ne tally kiya'); return; } reopen = lastDone; cur = lastDone; mode = 'view'; sel = new Set(); undoUntil = 0; $('btMain').innerHTML = ''; paint(); notice('↩ Bill dobara — ✓ ya ✕ dobara dabayein'); return; }
   if (t.closest('[data-bt-sum]')) { openSum(); return; }
   if (t.closest('[data-bt-setup]')) { openSetup(); return; }
   if (t.closest('[data-bt-live]')) { window.ntNazarLive?.(); return; }
@@ -223,16 +255,16 @@ function dlg() {
 window.ntBtClose = () => { const d = $('btDlg'); if (!d?.open) return false; try { d.close(); } catch { d.removeAttribute('open'); } return true; };
 
 function openSum() {
-  const td = dayKey(0), d = dlg();
-  const list = [...tallies.values()].filter(t => t.day === td).sort((a, b) => Number(b.at) - Number(a.at));
+  const d = dlg();
+  const list = [...tallies.values()].filter(t => dOk(t.day)).sort((a, b) => Number(b.at) - Number(a.at));
   const who = {}, byBoy = {};
   for (const t of list) { who[t.n || '?'] = (who[t.n || '?'] || 0) + 1; if (!t.ok) { const k = t.by2 || t.pc || '?'; byBoy[k] = (byBoy[k] || 0) + 1; } }
   const bad = list.filter(t => !t.ok);
-  d.innerHTML = `<div class="bt-dhead"><b>📊 Aaj ka hisaab</b><button type="button" class="bt-x" data-x="1">×</button></div>
+  d.innerHTML = `<div class="bt-dhead"><b>📊 ${dayLbl()} ka hisaab</b><button type="button" class="bt-x" data-x="1">×</button></div>
     <div class="bt-dbody">
       <div class="bt-kpi"><span>✓ <b>${list.length - bad.length}</b></span><span class="bad">✕ <b>${bad.length}</b></span><span>👀 ${Object.entries(who).map(([k, v]) => esc(k) + ' ' + v).join(' · ') || '—'}</span></div>
       ${bad.length ? `<p class="bt-sub">✕ Kis larke ke bill: ${Object.entries(byBoy).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<b>${esc(k)}</b> ×${v}`).join(' · ')}</p>
-      <div class="bt-badlist">${bad.map(t => `<div class="bt-badrow"><b>#${esc(t.no)}</b><span>${esc(t.pc)}${t.by2 ? ' · 👦 ' + esc(t.by2) : ''} · Rs ${num(t.t)} · ${tm(t.at)}</span><em>${(t.miss || []).map(x => x === '?' ? 'pata nahi kaun si' : x).map(esc).join(', ')}</em><small>👀 ${esc(t.n || '')}</small></div>`).join('')}</div>` : '<p class="bt-sub">Aaj koi ✕ nahi 👍</p>'}
+      <div class="bt-badlist">${bad.map(t => `<div class="bt-badrow"><b>#${esc(t.no)}</b><span>${esc(t.pc)}${t.by2 ? ' · 👦 ' + esc(t.by2) : ''} · Rs ${num(t.t)} · ${tm(t.at)}</span><em>${(t.miss || []).map(x => x === '?' ? 'pata nahi kaun si' : x).map(esc).join(', ')}</em><small>👀 ${esc(t.n || '')}</small></div>`).join('')}</div>` : '<p class="bt-sub">Koi ✕ nahi 👍</p>'}
     </div>`;
   d.querySelector('[data-x]').onclick = () => d.close();
   if (!d.open) d.showModal();
@@ -242,7 +274,7 @@ function openSum() {
 function openPcPick() {
   const d = dlg(); delete d.dataset.list; delete d.dataset.unp;
   const td = dayKey(0), m = new Map();
-  for (const [id, b] of bills) { if (b.x || b._d !== td || Number(b.ps) !== 2) continue; const k = String(b.pc || ''); if (!k) continue; const o = m.get(k) || { n: 0, q: 0 }; o.n++; const c = clips.get(id); if (!tallies.has(id) && c && c.st === 'ok') o.q++; m.set(k, o); }
+  for (const [id, b] of bills) { if (b.x || !dOk(b._d) || Number(b.ps) !== 2) continue; const k = String(b.pc || ''); if (!k) continue; const o = m.get(k) || { n: 0, q: 0 }; o.n++; const c = clips.get(id); if (!tallies.has(id) && c && c.st === 'ok') o.q++; m.set(k, o); }
   if (fPc && !m.has(fPc)) m.set(fPc, { n: 0, q: 0 });
   const all = [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   const chip = (k, t, o) => `<button type="button" class="bt-tg${fPc === k ? ' on' : ''}" data-pcv="${esc(k)}">${t}${o ? ` <small>${o.n} bill · baqi ${o.q}</small>` : ''}</button>`;
@@ -254,19 +286,33 @@ function openPcPick() {
   if (!d.open) d.showModal();
 }
 
+// ---------- 📅 din chunna (v2.224.0, malik: "date wise bhi chahiye — kal ka bill aa raha, mujhe aaj ke chahiye") ----------
+function openDayPick() {
+  const d = dlg(); delete d.dataset.list; delete d.dataset.unp;
+  const n = k => { let q = 0, a = 0; for (const [id, b] of bills) { if (b.x || b._d !== k || Number(b.ps) !== 2 || (fPc && String(b.pc || '') !== fPc)) continue; a++; if (!tallies.has(id) && clips.get(id)?.st === 'ok') q++; } return { a, q }; };
+  const t = n(dayKey(0)), k = n(dayKey(1));
+  const chip = (v, lb, o) => `<button type="button" class="bt-tg${fDay === v ? ' on' : ''}" data-dayv="${v}">${lb} <small>${o.a} bill · baqi ${o.q}</small></button>`;
+  d.innerHTML = `<div class="bt-dhead"><b>📅 Kis din ke bill?</b><button type="button" class="bt-x" data-x="1">×</button></div>
+    <div class="bt-dbody"><div class="bt-row bt-pcs">${chip('aaj', '📅 Aaj', t)}${chip('kal', '📅 Kal', k)}${chip('dono', '📅 Aaj + Kal', { a: t.a + k.a, q: t.q + k.q })}</div>
+      <p class="bt-sub">Video 2 din tak rehti hai — is liye sirf aaj aur kal. Agle din khud "Aaj" par aa jata hai.</p></div>`;
+  d.querySelector('[data-x]').onclick = () => d.close();
+  d.querySelectorAll('[data-dayv]').forEach(b => b.onclick = () => { d.close(); setDay(b.dataset.dayv); notice('📅 ' + dayLbl() + ' ke bill'); });
+  if (!d.open) d.showModal();
+}
+
 // ---------- 📋 bills ki list (v2.211.0, malik: "bill ki list aaye, jis ko chahein khol kar tally karein") ----------
 let listQ = '';
 function openList(refresh) {
   const d = dlg(); d.dataset.list = '1'; delete d.dataset.unp;
   const td = dayKey(0), q = listQ.trim().toLowerCase();
-  const all = [...bills.values()].filter(b => !b.x && b._d === td && Number(b.ps) === 2 && (!fPc || String(b.pc || '') === fPc)).sort((a, b) => Number(b.ct || b.pt) - Number(a.ct || a.pt));
+  const all = [...bills.values()].filter(b => !b.x && dOk(b._d) && Number(b.ps) === 2 && (!fPc || String(b.pc || '') === fPc)).sort((a, b) => Number(b.ct || b.pt) - Number(a.ct || a.pt));
   const list = q ? all.filter(b => String(b.no || '').toLowerCase().includes(q) || String(b.by || '').toLowerCase().includes(q) || String(b.pc || '').toLowerCase().includes(q) || String(b.p || '').toLowerCase().includes(q)) : all;
   const row = b => { const id = String(b.id), c = clips.get(id), tl = tallies.get(id);
     const st = tl ? `<em class="${tl.ok ? 'ok' : 'bad'}">${tl.ok ? '✓ theek' : '✕ kam'}</em>` : c?.st === 'ok' ? '<em class="go">▶ Dekho</em>' : c?.st === 'err' || c?.st === 'skip' ? `<em class="bad" title="${esc(c.err || '')}">⚠ nahi bani</em>` : '<em>⏳ clip…</em>';
     return `<div class="bt-badrow bt-lrow${id === cur ? ' cur' : ''}" data-bt-open="${esc(id)}"><b>#${esc(b.no)}</b><span>${tm(b.ct || b.pt)} · ${esc(b.pc || '?')}${b.by ? ' · 👦 ' + esc(b.by) : ''} · Rs ${num(b.t)}${b.p ? ' · ' + esc(b.p) : ''}</span>${st}</div>`; };
   const body = `<div class="bt-badlist">${list.map(row).join('') || '<p class="bt-sub">Koi bill nahi</p>'}</div>`;
   if (refresh && d.querySelector('.bt-badlist')) { d.querySelector('.bt-badlist').outerHTML = body; d.querySelector('[data-cnt]').textContent = list.length; return; }
-  d.innerHTML = `<div class="bt-dhead"><b>📋 Aaj ke bill${fPc ? ' · 🖥 ' + esc(fPc) : ''} <small data-cnt>${list.length}</small></b><button type="button" class="bt-x" data-x="1">×</button></div>
+  d.innerHTML = `<div class="bt-dhead"><b>📋 ${dayLbl()} ke bill${fPc ? ' · 🖥 ' + esc(fPc) : ''} <small data-cnt>${list.length}</small></b><button type="button" class="bt-x" data-x="1">×</button></div>
     <div class="bt-dbody"><input type="search" class="bt-srch" placeholder="🔍 bill number · larka · counter" value="${esc(listQ)}" autocomplete="off">${body}</div>`;
   d.querySelector('[data-x]').onclick = () => { delete d.dataset.list; d.close(); };
   d.querySelector('.bt-srch').oninput = ev => { listQ = ev.target.value; openList(true); };

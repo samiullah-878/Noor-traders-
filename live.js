@@ -81,7 +81,7 @@ async function start() {
     try {
       const st = await s.pc.getStats(); let f = 0; st.forEach(x => { if (x.type === 'inbound-rtp' && x.kind === 'video') f = x.framesDecoded || 0; });
       if (f) { if (s.bad) { s.bad = 0; $('lvSt').hidden = true; } return; }
-      if (Date.now() - (s.okAt || (s.okAt = Date.now())) < 10000) return;
+      if (Date.now() - (s.okAt || (s.okAt = Date.now())) < 16000) return;   // v2.224.0: recording ki line se video 6-8 s mein shuru hoti hai
       s.bad = 1;
       if (s.r?.rtp) {   // PC video bhej raha hai par phone nahi chala raha
         if (!VP8) { VP8 = true; stat('⏳ Phone par video nahi chali — doosre tareeqe (VP8) se dobara…'); start(); return; }

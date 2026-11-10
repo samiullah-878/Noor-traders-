@@ -4335,3 +4335,21 @@ ILAAJ live-cam v1.1: liveReq.warn = ffmpeg ki asal ghalti har koshish par + 12 s
 kuch na aaye to sub ↔ main badal kar dobara; packets aa rahe hon = liveReq.rtp 1. App live.js: warn dikhaye; rtp 1 + frame 0 = khud VP8 se dobara
 (setCodecPreferences — rules nahi badle), phir bhi nahi = saaf paigham. tally: Live list mein aaj ke bill wale counter PEHLE (taza bill wala sab se pehle), setting
 wale baad. Qaida: PC ka koi bhi 'dobara koshish' wala kaam app ko wajah bataye (chup retry nahi). AI NAHI.
+=== 2026-11-10 · v2.224.0 + PC bill-clip v2.4 + live-cam v1.2 (👀 tally saaf screen · 📅 din · 🔗 live recording ki line se) — rules nahi badle ===
+Malik (screenshots): (1) "date wise bhi chahiye — kal ka bill aa raha hai, mujhe aaj ke chahiye" (2) "is screen ko insane user friendly banao" (3) Live abhi bhi kaali:
+ch 4 sub-stream "Error number -138" (Windows ETIMEDOUT), main "NVR ne video nahi di". Plan → OK.
+📅 DIN: tally.js `fDay` aaj | kal | dono (default aaj; localStorage sam-bt-day {d, v} — agle din khud aaj), `dOk(day)` queue / counts / 🖥 counter / 📋 list / 📊 hisaab
+sab mein; upar chip "📅 Aaj ▾" (openDayPick: har din bill · baqi) + ⋮ "📅 Din" (data-mn bt.day). Clip 2 din rehti hai → sirf aaj / kal. Khali = "📅 Kal ke N bill dekhein".
+SAAF SCREEN: html.bt-on (renderTally / tallyStop) = khata search toolbar + "Cloud synced" chhupe. Patti: 📅 · 🖥 · ✓ n · baqi n + 3px progress lakeer (#btLine); PC ka haal
+sirf chhota chip (#btPc .bt-warn: ⚠ / ⚠ PC chup / ⏳ n — tap = poori baat notice mein; khamosh nahi). Video par ab koi likhai nahi: bill ki line neeche `.bt-info`
+(#no · waqt · 👦 larka · Rs bara), video par sirf minute chips + EK speed chip (1× → 1.5× → 2×, data-bt-spc) + ⛶. Video: 1 tap = ruk / chal, 2 tap baayein / daayein =
+∓10 s (`seek`, hisson ke paar; e.offsetX / offsetWidth — html zoom se bacha), `.bt-flash` (⏪ ⏩ ⏸). Items: tadad gola chip `.bt-q`, 7 se zyada = 2 khane (`.two`).
+Buttons: ✓ THEEK · ✕ KAM · ⏭ baad mein (`skipped` Set — queue ke aakhir mein, sirf is session) ; tick ke baad 5 s "✓ #no · ↩ Wapas" (`undoUntil`, wahi data-bt-undo).
+Test: Chromium (puppeteer-core + google-chrome) nakli cloud ke saath 412px — tick, ✕, din badalna, 12 items 2 khane; console ghalti nahi.
+🔗 LIVE: andaza — NVR ek camera par isi PC ko DOOSRA RTSP rabta nahi de raha (pehla bill-clip ki recording ka; tally clips usi channel se ban rahi hain). bill-clip v2.4
+recStart: recording ffmpeg mein doosra output `-c:v copy -f mpegts udp://127.0.0.1:(48500+ch)?pkt_size=1316` (sunne wala na ho = zaya, nuqsan nahi). HIFAZAT: copy ke saath
+recording 2 dafa 20 s ke andar gire = `st.noShare` (purani args), 30 min baad ek koshish, 3 dafa = pakka band — bill clips kabhi band na hon. live-cam v1.2: `srcSync` har
+channel ka udp socket (127.0.0.1) hamesha khula; `shareOk(ch)` (3 s mein packet) → ffmpeg `-f mpegts -i pipe:0` (node packets stdin mein — ek port kai ffmpeg), warna purana
+RTSP; share se kuch na aaye = `p.noShare` → RTSP; share ruk jaye 8 s = ffmpeg dobara; video chal chuki ho to `tries` nayi ginti. Share se video 6-8 s mein shuru (probe) →
+"video nahi" warn 20 s, app live.js frame jaanch 16 s (pehle 10). Test (container): asal args (input ki jagah -re h264 ts) → segment + udp; live-cam (nakli firebase) ne
+"recording ki line se" 200+ RTP diye; sunne wale ke baghair recorder theek chala. ASAL NVR / Windows par test NAHI — malik ki screenshot ka intezar. AI NAHI.

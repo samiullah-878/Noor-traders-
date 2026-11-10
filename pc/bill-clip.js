@@ -1,5 +1,6 @@
 // =========================================================
-//  bill-clip.js  v2.3 (2026-11-10) — 🎬 video AAKHRI ITEM tak (`lt`, pos-sales-dekho v2.7): POS ka 'Created & Printed' waqt bill khatam hone se pehle ka hota hai → 18 item ke bill ki sirf 2 min video, 6 item ke baad app shuru se chala deti (malik). Ab t1 = max(print, aakhri item) + post. haal (billClipPc) mein `pcs` = setting ke counter naam (Live camera bina bill ke bhi).
+//  bill-clip.js  v2.4 (2026-11-10) — 🔗 recording wali line ki COPY PC ke andar (udp 127.0.0.1:48500+ch) → live-cam v1.2 (NVR live ko doosra rabta nahi deta tha: "error -138"); copy se recording gire = khud purana tareeqa.
+//  v2.3 (2026-11-10) — 🎬 video AAKHRI ITEM tak (`lt`, pos-sales-dekho v2.7): POS ka 'Created & Printed' waqt bill khatam hone se pehle ka hota hai → 18 item ke bill ki sirf 2 min video, 6 item ke baad app shuru se chala deti (malik). Ab t1 = max(print, aakhri item) + post. haal (billClipPc) mein `pcs` = setting ke counter naam (Live camera bina bill ke bhi).
 //  v2.2 (2026-11-09) — 🎯 clip PEHLI ITEM se: `pre` 0 = bill ki pehli scan (`ft`, pos-sales-dekho v2.5) se 15 s pehle → print + post s; ft na ho = 120 s pehle. ⚙️ chips: Pehli item · 1 · 2 · 3 · 5 min.
 //  v2.1 (2026-11-09) — v2.1: kamyab clip par ST.err saaf (ek purane bill ka ⚠ patti par atka rehta tha).
 //  v2.0 (2026-11-09) — 🎞 LOCAL RECORDING + 5 MIN CLIP + hisse-war video + un-posted bill ki clip hukum par
@@ -46,7 +47,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.3';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.4';
 const MODS = path.join(DIR, 'clip-mods'), TMP = path.join(DIR, 'clip-tmp'), REC = path.join(DIR, 'clip-rec'), NPM_FILE = path.join(MODS, 'npm-at.json');
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore(), biz = db.collection('businesses').doc(BUSINESS_ID), CLIP = biz.collection('billClip'), TALLY = biz.collection('billTally');
@@ -188,8 +189,13 @@ function recStart(ch) {
   if (recs.get(ch)?.p) return; const ff = ffPath(); if (!ff || !CF.on || !CF.ip || AUTHBAD) return;
   const dir = recDir(ch); fs.mkdirSync(dir, { recursive: true });
   const st = recs.get(ch) || { errs: 0, restarts: 0 }; recs.set(ch, st);
+  // v2.4 🔗: isi rabte ki copy PC ke andar (udp 127.0.0.1:48500+ch, mpegts) — live-cam v1.2 wahi leti hai, NVR par doosra rabta nahi (NVR doosra nahi deta: live "error -138").
+  //   Sunne wala na ho = packet zaya (koi nuqsan nahi). HIFAZAT: is ke saath recording 2 dafa 20 s ke andar gire = copy band (purani args), 30 min baad ek koshish, 3 dafa = pakka band.
+  if (st.noShare && (st.shOff || 0) < 3 && Date.now() - st.noShare > 30 * 60000) st.noShare = 0;
+  const share = !st.noShare && ch < 1000;
   const args = ['-hide_banner', '-loglevel', 'error', '-nostdin', '-rtsp_transport', 'tcp', '-timeout', '15000000', '-i', liveUrl(ch), '-an', '-c:v', 'copy',
-    '-f', 'segment', '-segment_time', '60', '-reset_timestamps', '1', '-segment_format', 'mp4', '-segment_format_options', 'movflags=+frag_keyframe+empty_moov+default_base_moof', '-strftime', '1', path.join(dir, 's-%Y%m%d-%H%M%S.mp4')];
+    '-f', 'segment', '-segment_time', '60', '-reset_timestamps', '1', '-segment_format', 'mp4', '-segment_format_options', 'movflags=+frag_keyframe+empty_moov+default_base_moof', '-strftime', '1', path.join(dir, 's-%Y%m%d-%H%M%S.mp4'),
+    ...(share ? ['-an', '-c:v', 'copy', '-f', 'mpegts', '-flush_packets', '1', `udp://127.0.0.1:${48500 + ch}?pkt_size=1316`] : [])];
   const p = spawn(ff, args, { windowsHide: true }); let err = '';
   st.p = p; st.at = Date.now(); st.dead = 0; st.lastErr = '';
   p.stderr.on('data', d => { err += String(d); if (err.length > 2000) err = err.slice(-2000); });
@@ -197,11 +203,12 @@ function recStart(ch) {
   p.on('close', code => {
     st.p = null; st.dead = Date.now(); st.restarts++; st.lastErr = (err.trim().split(/\r?\n/).filter(Boolean).pop() || `code ${code}`).replace(/rtsp:\/\/[^@\s]*@/g, 'rtsp://****@').slice(0, 200);
     if (Date.now() - st.at < 20000) st.errs++; else st.errs = 0;   // 20 s se pehle gira = ghalti
+    if (share) { if (Date.now() - st.at < 20000) { st.shErr = (st.shErr || 0) + 1; if (st.shErr >= 2) { st.noShare = Date.now(); st.shOff = (st.shOff || 0) + 1; st.shErr = 0; log(`🔗 rec ch ${ch}: live ki copy ke saath 2 dafa giri — copy band (recording purane tareeqe se)`); } } else st.shErr = 0; }
     if (/\b401\b|unauthori[sz]ed/i.test(err)) { AUTHBAD = Date.now(); log(`⛔ rec ch ${ch}: 401 — sab recording band (password / lock)`); recStopAll('401'); ST.err = hint(err); pushSt(true); return; }
     log(`🎞 rec ch ${ch} ruk gayi (${st.lastErr}) — ${Math.min(60, 5 * Math.max(1, st.errs))} s baad dobara`);
     setTimeout(() => recSync(), Math.min(60, 5 * Math.max(1, st.errs)) * 1000);
   });
-  log(`🎞 rec ch ${ch} shuru → ${dir}`);
+  log(`🎞 rec ch ${ch} shuru → ${dir}${share ? ' · 🔗 live copy :' + (48500 + ch) : ''}`);
 }
 function recStopAll(why) { for (const [ch, st] of recs) if (st.p) { try { st.p.kill(); } catch {} st.p = null; } if (why && recs.size) log(`🎞 recording band (${why})`); }
 function recSync() {   // jo channel setting mein hain wahi chalein; baqi band
