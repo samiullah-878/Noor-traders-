@@ -58,6 +58,8 @@ mb, vbk = fix(bk, h64('claude|bank3'), '🏦 Bank mode 3')
 mh, vh = fix(hp, h64('claude|haptic'), '⌨️ Haptics ON')
 import st as STM
 mst, vst = fix(json.loads(json.dumps(STM.ST)), h64('claude|screentime'), '📱 Screen time')   # v25 (10 Nov): Paani popup ke screen time ka andaza
+import big as BGM
+mbg, vbg = fix(json.loads(json.dumps(BGM.BG)), h64('claude|barilikhai'), '🔎 Bari likhai')   # v26 (10 Nov): WhatsApp + Claude mein likhai bari
 vars_, seen = [], set()
 # 🏦 Bank mode (chat link, phone par) ke globals — link import banata nahi (7 Nov: "Variable does not exist (bkSave)")
 def _gv(n, t, **kw):
@@ -67,8 +69,8 @@ for v in vp + vk + vt + vq + vf + vb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "📱 Paani popup mein aaj ka screen time: top 5 apps + baqi + kul.",
-       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst],
+       "note": "🔎 WhatsApp + Claude mein likhai bari (130%) · 📱 Paani popup mein screen time.",
+       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
        "vars": vars_,

@@ -4456,3 +4456,8 @@ posAdds = sirf PC (admin) — rules nahi badle. ASAL PC PAR TEST NAHI (addStart 
 - SAMPLE = naya chhota macro '📱 Screen time' (har 1 min, screen on + unlock): `{fg_app_name}` ka 1 min /MacroDroid/Claude/st.json {d, m} (din badla = naya). Koi toast / paigham nahi.
 - v3.py (paani3.json) + pkg.py (macros + mst). Popup ki TikTok line ab '🎬 TikTok reels'. Baqi macros HUBAHU (pkg diff jaancha).
 - Test: REPORT ka logic javac + apne stubs se (usage / khali / file) theek; asal BeanShell + phone par test NAHI ho saka (bahar ka jar chalana mana) — malik ke screenshot se pakka karo. Ginti ghalat / 'ginti na ho saki' = pehle Usage access (Settings > Special app access > Usage access > MacroDroid) dekho. AI nahi.
+
+=== 2026-11-10 · md pkg v26 — 🔎 Bari likhai (malik: "macro banao — WhatsApp aur Claude ke liye lafz barha do, baqi waise hi"; nazar kamzor, mobile hi chahiye) ===
+- md/tools/big.py (naya macro '🔎 Bari likhai'): ApplicationLaunched (WhatsApp / WhatsApp Business / com.anthropic.claude) khuli = Java se maujooda font_scale parh kar `was` (125 se kam ho to) yaad -> FontScaleAction 130; band = in mein se koi saamne na ho to FontScaleAction variable `was` (na ho = 100). Koi paigham nahi. Size = big.py BIG.
+- MacroDroid validator VALID; phone par asal test nahi — malik batayega (theek / aur bara / chhota). FontScale 'variable' field pehli dafa use hua: wapas na aaye (likhai bari hi rahe) to band wali shakha mein seedha scalePercent 100 kar do. AI nahi.
+- Malik ne smart glasses ka poochha (Lucyd / Even G2) — mashwara: mat lo; chashma + bari likhai / stand / tablet. Awaaz mode (3 line ka plan) ki peshkash ki, abhi maanga nahi.
