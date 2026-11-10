@@ -7444,3 +7444,11 @@ liveTick: counter (host) ke POS login = pichhle 3 din ke "at PC: host" bills ka 
 naya bill (CreatedBy usi login, "at PC:" nahi, cancel nahi, SaleDetail ho) = BANTA bill → posLive src 'chalu' (⏳ ban raha); na mile = pichhla (src 'aakhri',
 patti par "pichhla · naya bill shuru hote hi yahan"). Query ghalat ho (column na ho) = 10 min baad dobara, pichhla dikhata rahe. Ek login do counters par =
 pehchan ghalat ho sakti (malik ko bataya). Test: window hisaab node mein (purana 115 s → naya 335 s). AI NAHI.
+=== 2026-11-10 · v2.223.0 + PC live-cam v1.1 (🩺 Live "Juda hai par video nahi aa rahi") ===
+Malik screenshot: Live → counter "Abdurehman" — kaali screen, "Juda hai par video nahi aa rahi" (WebRTC jur gaya, frame 0). PC log yahan se nahi dikhta — wajah
+pakki nahi: (a) us counter ka NVR channel video nahi de raha (ffmpeg 3 dafa × 12 s chup-chaap koshish karta tha, app ko kuch nahi batata) ya (b) phone H.264 nahi
+chala raha. v2.222.0 ne setting ke counter (pcs) list mein PEHLE rakh diye the — "Abdurehman" (setting mein, aaj koi bill nahi; naya counter RN6QU6D) khud chun liya.
+ILAAJ live-cam v1.1: liveReq.warn = ffmpeg ki asal ghalti har koshish par + 12 s koi RTP packet nahi = "NVR se jur gaya par video nahi — channel?"; is stream se
+kuch na aaye to sub ↔ main badal kar dobara; packets aa rahe hon = liveReq.rtp 1. App live.js: warn dikhaye; rtp 1 + frame 0 = khud VP8 se dobara
+(setCodecPreferences — rules nahi badle), phir bhi nahi = saaf paigham. tally: Live list mein aaj ke bill wale counter PEHLE (taza bill wala sab se pehle), setting
+wale baad. Qaida: PC ka koi bhi 'dobara koshish' wala kaam app ko wajah bataye (chup retry nahi). AI NAHI.

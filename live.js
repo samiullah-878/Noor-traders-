@@ -11,7 +11,7 @@
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const STUN = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
-let cloud = null, notice = () => {}, list = [], cur = '', S = null, pcSt = null, pcStop = null;
+let cloud = null, notice = () => {}, list = [], cur = '', S = null, pcSt = null, pcStop = null, VP8 = false;   // VP8: v2.223.0 phone H.264 na chala sake to
 let B = { un: null, sid: 0, prev: new Map(), del: [], fl: new Map(), recv: 0, doc: null, t: null, cnt: 0 };
 const bOn = () => { try { return localStorage.getItem('sam-lv-bill') !== '0'; } catch { return true; } };
 
@@ -52,7 +52,8 @@ async function start() {
   if (pcSt && Date.now() - (Number(pcSt.at) || 0) > 5 * 60000) stat('⚠ Shop PC chup lag raha (' + Math.round((Date.now() - pcSt.at) / 60000) + ' min) — phir bhi koshish…', true); else stat('⏳ ' + cur + ' ka camera jor raha…');
   const s = S = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), pc: new RTCPeerConnection({ iceServers: STUN }), ok: 0 };
   const v = $('lvVid');
-  s.pc.addTransceiver('video', { direction: 'recvonly' });
+  const tr = s.pc.addTransceiver('video', { direction: 'recvonly' });
+  if (VP8) { try { const cs = (RTCRtpReceiver.getCapabilities('video')?.codecs || []).filter(c => /vp8/i.test(c.mimeType)); if (cs.length) tr.setCodecPreferences(cs); } catch {} }
   s.pc.ontrack = e => { if (S !== s) return; v.srcObject = e.streams[0] || new MediaStream([e.track]); v.play().catch(() => {}); };
   s.pc.onconnectionstatechange = () => {
     if (S !== s) return; const st = s.pc.connectionState;
@@ -68,7 +69,8 @@ async function start() {
   } catch (e) { if (S === s) stat('✕ Shuru nahi hua: ' + (e?.message || e), true); return; }
   let answered = false;
   s.unsub = cloud.liveWatch(s.id, async r => {
-    if (S !== s || !r) return;
+    if (S !== s || !r) return; s.r = r;
+    if (r.warn && r.st !== 'err' && !r.rtp) stat('⚠ ' + r.warn, true);   // v2.223.0: PC ki asal wajah
     if (r.st === 'err') { stat('✕ ' + (r.err || 'PC ne mana kiya'), true); return; }
     if (r.st === 'ok' && r.ans && !answered) { answered = true; clearTimeout(s.to); stat('⏳ Video aa rahi…'); try { await s.pc.setRemoteDescription({ type: 'answer', sdp: r.ans }); } catch (e) { stat('✕ ' + (e?.message || e), true); } }
   });
@@ -76,7 +78,16 @@ async function start() {
   s.hb = setInterval(() => { if (S === s) cloud.liveHb(s.id).catch(() => {}); }, 15000);
   s.fr = setInterval(async () => {   // jura hua par tasveer nahi = saaf batao
     if (S !== s || !s.ok) return;
-    try { const st = await s.pc.getStats(); let f = 0; st.forEach(x => { if (x.type === 'inbound-rtp' && x.kind === 'video') f = x.framesDecoded || 0; }); if (!f && Date.now() - (s.okAt || (s.okAt = Date.now())) > 10000) stat('⚠ Juda hai par video nahi aa rahi — NVR / camera dekhein, 🔄', true); } catch {}
+    try {
+      const st = await s.pc.getStats(); let f = 0; st.forEach(x => { if (x.type === 'inbound-rtp' && x.kind === 'video') f = x.framesDecoded || 0; });
+      if (f) { if (s.bad) { s.bad = 0; $('lvSt').hidden = true; } return; }
+      if (Date.now() - (s.okAt || (s.okAt = Date.now())) < 10000) return;
+      s.bad = 1;
+      if (s.r?.rtp) {   // PC video bhej raha hai par phone nahi chala raha
+        if (!VP8) { VP8 = true; stat('⏳ Phone par video nahi chali — doosre tareeqe (VP8) se dobara…'); start(); return; }
+        stat('⚠ PC video bhej raha hai par is phone par nahi chal rahi — 🔄 Dobara, ya Wi-Fi / doosra internet', true);
+      } else stat('⚠ ' + (s.r?.warn || 'Juda hai par PC ko camera se video nahi mil rahi — wajah aa rahi hai… (PC update 3-5 min)'), true);
+    } catch {}
   }, 4000);
 }
 
