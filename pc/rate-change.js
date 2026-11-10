@@ -1,5 +1,5 @@
 // =========================================================
-//  rate-change.js  v1.0 (2026-11-07) — 📈 RATE CHANGE: jin items ka KHAREED rate pichhli khareed se badla
+//  rate-change.js  v1.1 (2026-11-10: shuru mein ek dafa 🔎 POS bill jaanch — pos-jaanch.js, sirf parhna) · v1.0 (2026-11-07) — 📈 RATE CHANGE: jin items ka KHAREED rate pichhli khareed se badla
 //  (malik: "jo rates change hue hain pichli dafa se wo aayein · rates wahan se badal sakein · check box · stock jaisa jaldi update").
 //
 //  SIRF PARHTI hai (POS mein kuch nahi likhti). Har 30 s chhota sawal (MAX PurchaseDetailID + ginti) — nayi khareed aate hi
@@ -22,7 +22,7 @@ SQL_CONFIG.options = { ...(SQL_CONFIG.options || {}), useUTC: false };
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(__dirname, 'firebase-key.json'))) });
 const db = getFirestore(), col = db.collection('businesses').doc('noor-traders').collection('posStats');
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
-const VER = '1.0', DAYS = 60, HIST = 400, EVERY = 5 * 60000, POLL = 30000, EPS = 0.005, MAX = 800;
+const VER = '1.1', DAYS = 60, HIST = 400, EVERY = 5 * 60000, POLL = 30000, EPS = 0.005, MAX = 800;
 const p2 = n => String(n).padStart(2, '0'), dk = d => d ? `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}` : '';
 const r2 = n => Math.round((Number(n) || 0) * 100) / 100;
 
@@ -78,8 +78,10 @@ const tick = ZINDA.guard(async () => {
   } catch (e) { log('❌ ' + (e.message || e)); await col.doc('rateChg').set({ err: String(e.message || e).slice(0, 300), errAt: Date.now() }, { merge: true }).catch(() => {}); }
   finally { try { await pool?.close(); } catch {} ZINDA.beat?.(); }
 }, 4 * 60000, 'tick');
+// v1.1: 🔎 POS bill jaanch (pos-jaanch.js, sirf parhna) — shuru ke 20 s baad ek dafa, apne alag rabte se (tick ke pool ko nahi chherta)
+function jaanchOnce() { setTimeout(async () => { let p; try { p = await new sql.ConnectionPool(SQL_CONFIG).connect(); await require('./pos-jaanch.js').run(p, sql, db.collection('businesses').doc('noor-traders').collection('blueAccess').doc('posBillJaanch'), log); } catch (e) { log('jaanch: ' + (e.message || e)); } finally { try { await p?.close(); } catch {} } }, 20000); }
 if (require.main === module) {
   const lock = require('net').createServer();
   lock.once('error', () => { console.log('rate-change pehle se chal raha hai.'); process.exit(3); });
-  lock.listen(47841, '127.0.0.1', () => { log(`rate-change v${VER} shuru — khareed rate badla to app mein (har ${POLL / 1000} s dekh)`); tick().catch(e => log('tick: ' + (e.message || e))); setInterval(() => tick().catch(e => log('tick: ' + (e.message || e))), POLL); });
+  lock.listen(47841, '127.0.0.1', () => { log(`rate-change v${VER} shuru — khareed rate badla to app mein (har ${POLL / 1000} s dekh)`); jaanchOnce(); tick().catch(e => log('tick: ' + (e.message || e))); setInterval(() => tick().catch(e => log('tick: ' + (e.message || e))), POLL); });
 }

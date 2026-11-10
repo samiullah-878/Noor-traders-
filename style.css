@@ -7793,3 +7793,10 @@ html.dk body #dialogBody .cpu-box{background:#141c2e;border-color:#2a3650}html.d
 #lvDlg .lv-bill[hidden]{display:none}
 #lvDlg .lvb-r{padding:6px 10px;font-size:14px}
 }
+/* v2.227.0: 🔎 POS bill jaanch (PC scripts khirki) */
+html body #dialogBody .pj-box{display:grid;gap:8px;margin:8px 0;min-width:0}html body #dialogBody .pj-box h4{margin:6px 0 0;font-size:14px}
+html body #dialogBody .pj-card{border:1px solid #d7deea;border-radius:12px;padding:8px 10px;background:#fff;min-width:0}
+html body #dialogBody .pj-kv{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}html body #dialogBody .pj-kv span{font-size:12px;padding:2px 8px;border-radius:999px;background:#f1f5fb;border:1px solid #e0e7f2;max-width:100%;overflow-wrap:anywhere}
+html body #dialogBody .pj-kv span.hit{background:#fff3cd;border-color:#f1d48a;font-weight:700}html body #dialogBody .pj-kv i{font-style:normal;color:#5b6b8a;margin-right:3px}
+html body #dialogBody .pj-f{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:5px 8px;border-bottom:1px solid #eef2f8;min-width:0}html body #dialogBody .pj-f span{min-width:0;overflow-wrap:anywhere}html body #dialogBody .pj-f small{flex:none;color:#8391ab}
+html.dk body #dialogBody .pj-card{background:#141c2e;border-color:#2a3650}html.dk body #dialogBody .pj-kv span{background:#1b2436;border-color:#2a3650}
