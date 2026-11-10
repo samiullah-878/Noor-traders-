@@ -1,5 +1,6 @@
 // ============================================================
-//  nt-posui.js  v1.12 (2026-10-08: 🔎 Abdurehman PC: Search khirki POS ke ANDAR (child form) — v1.10/1.11 us ka PARENT (Sale screen) parhta
+//  nt-posui.js  v1.13 (2026-11-10: 🖥 shot() — live camera ke saath POS ki Sale list ki chhoti tasveer, sirf jab koi Live dekh raha ho; neeche tafseel)
+//                   · v1.12 (2026-10-08: 🔎 Abdurehman PC: Search khirki POS ke ANDAR (child form) — v1.10/1.11 us ka PARENT (Sale screen) parhta
 //                   tha -> likhai "00123402" (Sale No) / "0". Ab dabba = jo KHUD 'Search Items' hai (label ho to us ka parent); us mein khana na
 //                   mile to sirf alag root khirki · NtPosUi13.dll)
 //                   · v1.11 (2026-10-08: ⚡ bzzz TEZ — Search khirki ki nigrani ALAG thread par har 60 ms (pehle POS screen ke baqi kaam ke saath
@@ -226,4 +227,133 @@ Add-Type -Path $dll
   const check = code => { try { if (child) child.stdin.write('CHK ' + String(code || '').replace(/\s+/g, '').slice(0, 60) + '\n'); } catch {} };
   return { active: () => gridOn, win: () => winOn, alive: () => !!child, check, stop() { stopped = true; try { child && child.kill(); } catch {} } };
 }
-module.exports = { start };
+// ============================================================
+//  v1.13 (2026-11-10) 🖥 POS SCREEN KI TASVEER (live camera ke saath) — malik: "item likho wo app mein aaye · remove = remove · print ke baad naya bill".
+//  POS SQL mein sirf Print / Save par likhta hai aur Sale list UIA ko text nahi deti (sab Pane) -> list ke hisse ki CHHOTI TASVEER (sirf badle to).
+//  SIRF jab koi Live dekh raha ho (nt-print set(true)) — warna yeh PowerShell chalta hi nahi. Sirf screen PARHTA hai, POS ko haath nahi lagata.
+//  Alag PowerShell (bina C# compile) — fail ho to awaz system par asar nahi. local-config "posShot": false = band.
+// ============================================================
+const SHOT_TXT = String.raw`param([string]$Title='Retail Solution',[int]$Pp=0)
+$ErrorActionPreference='Stop'
+function Say($s){ [Console]::Out.WriteLine($s); [Console]::Out.Flush() }
+try{
+ Add-Type -AssemblyName System.Drawing
+ Add-Type -AssemblyName UIAutomationClient
+ Add-Type -AssemblyName UIAutomationTypes
+ Add-Type -AssemblyName WindowsBase
+}catch{ Say ("ERR"+[char]9+"assembly: "+$_.Exception.Message); exit 2 }
+$AE=[System.Windows.Automation.AutomationElement]
+$TS=[System.Windows.Automation.TreeScope]
+$paneC=New-Object System.Windows.Automation.PropertyCondition($AE::ControlTypeProperty,[System.Windows.Automation.ControlType]::Pane)
+$codec=[System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object { $_.MimeType -eq 'image/jpeg' } | Select-Object -First 1
+$ep=New-Object System.Drawing.Imaging.EncoderParameters(1)
+$ep.Param[0]=New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality,55L)
+$md5=[System.Security.Cryptography.MD5]::Create()
+$T=[char]9
+function FindWin{
+ foreach($x in $AE::RootElement.FindAll($TS::Children,[System.Windows.Automation.Condition]::TrueCondition)){
+  $n=''; try{ $n=[string]$x.Current.Name }catch{}
+  if($n -and $n.IndexOf($Title,[StringComparison]::OrdinalIgnoreCase) -ge 0 -and $n.IndexOf('[Sale]',[StringComparison]::OrdinalIgnoreCase) -ge 0){ return $x }
+ }
+ return $null
+}
+# Sale list ka dabba: chaura (>= 60% khirki), 25%-80% uncha, sab se chhota. Na mile = poori khirki.
+function FindGrid($w,$wr){
+ $best=$null; $ba=0.0; $n=0
+ foreach($p in $w.FindAll($TS::Descendants,$paneC)){
+  $n++; if($n -gt 4000){ break }
+  $r=$null; try{ $r=$p.Current.BoundingRectangle }catch{ continue }
+  if($r.IsEmpty){ continue }
+  if($r.Width -ge $wr.Width*0.6 -and $r.Height -ge $wr.Height*0.25 -and $r.Height -le $wr.Height*0.8){
+   $a=$r.Width*$r.Height
+   if($best -eq $null -or $a -lt $ba){ $best=$r; $ba=$a }
+  }
+ }
+ $script:panes=$n
+ return $best
+}
+$sw=[System.Diagnostics.Stopwatch]::StartNew(); $w=$null; $wr=$null; $gr=$null; $gt=0; $grAt=0; $last=''; $lastSend=-99999; $off=''; $buf=$null; $bad=0; $panes=0; $wkey=''
+Say 'READY'
+while($true){
+ try{
+  if($Pp -gt 0 -and -not (Get-Process -Id $Pp -ErrorAction SilentlyContinue)){ exit 0 }
+  $now=[long]$sw.ElapsedMilliseconds
+  if($w -eq $null){ $w=FindWin; $gt=$now; $wkey='' }
+  elseif(($now-$gt) -gt 15000){ $w=FindWin; $gt=$now }
+  if(($now-$grAt) -gt 60000){ $wkey='' }
+  if($w -eq $null){ if($off -ne 'nowin'){ $off='nowin'; $last=''; Say ("OFF"+$T+"POS ki Sale screen khuli nahi") }; Start-Sleep -Milliseconds 1500; continue }
+  $wr=$null; try{ $wr=$w.Current.BoundingRectangle }catch{ $w=$null; continue }
+  if($wr.IsEmpty -or $wr.Left -lt -10000 -or $wr.Width -lt 300 -or $wr.Height -lt 200){ if($off -ne 'min'){ $off='min'; $last=''; Say ("OFF"+$T+"POS ki khirki chhoti (minimize) hai") }; Start-Sleep -Milliseconds 1500; continue }
+  $k=''+[int]$wr.Left+','+[int]$wr.Top+','+[int]$wr.Width+','+[int]$wr.Height
+  if($k -ne $wkey){ $wkey=$k; $grAt=$now; $gr=$null; try{ $gr=FindGrid $w $wr }catch{ $gr=$null } }
+  $mode='g'; $r=$gr; if($r -eq $null){ $mode='w'; $r=$wr }
+  $x=[int]$r.Left; $y=[int]$r.Top; $cw=[int]$r.Width; $ch=[int]$r.Height
+  if($cw -lt 50 -or $ch -lt 50){ Start-Sleep -Milliseconds 1000; continue }
+  $bmp=New-Object System.Drawing.Bitmap($cw,$ch)
+  try{
+   $g=[System.Drawing.Graphics]::FromImage($bmp)
+   try{ $g.CopyFromScreen($x,$y,0,0,$bmp.Size) }finally{ $g.Dispose() }
+   $rect=New-Object System.Drawing.Rectangle(0,0,$cw,$ch)
+   $bd=$bmp.LockBits($rect,[System.Drawing.Imaging.ImageLockMode]::ReadOnly,[System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+   try{
+    $len=[Math]::Abs($bd.Stride)*$ch
+    if($buf -eq $null -or $buf.Length -ne $len){ $buf=New-Object byte[] $len }
+    [System.Runtime.InteropServices.Marshal]::Copy($bd.Scan0,$buf,0,$len)
+   }finally{ $bmp.UnlockBits($bd) }
+   $sig=[BitConverter]::ToString($md5.ComputeHash($buf))
+   $gap=700; if($mode -eq 'w'){ $gap=2000 }
+   $since=$now-$lastSend
+   if($sig -ne $last -and $since -ge $gap){
+    $ow=$cw; $oh=$ch
+    if($cw -gt 900){ $ow=900; $oh=[int]($ch*900/$cw) }
+    $out=$bmp; $own=$false
+    if($ow -ne $cw){ $out=New-Object System.Drawing.Bitmap($bmp,(New-Object System.Drawing.Size($ow,$oh))); $own=$true }
+    $ms=New-Object System.IO.MemoryStream
+    try{ $out.Save($ms,$codec,$ep); $b=[Convert]::ToBase64String($ms.ToArray()) }finally{ $ms.Dispose(); if($own){ $out.Dispose() } }
+    $dg=$mode+' '+$cw+'x'+$ch+' | khirki '+[int]$wr.Width+'x'+[int]$wr.Height+' | dabbe '+$panes
+    Say ("IMG"+$T+$mode+$T+$ow+$T+$oh+$T+$dg+$T+$b)
+    $last=$sig; $lastSend=$now; $off=''
+   }
+  }finally{ $bmp.Dispose() }
+  $bad=0
+  Start-Sleep -Milliseconds 550
+ }catch{
+  $bad++
+  try{ Say ("ERR"+$T+$_.Exception.Message) }catch{ exit 3 }
+  if($bad -ge 8){ exit 4 }
+  $w=$null
+  Start-Sleep -Milliseconds 2000
+ }
+}
+`;
+function shot({ dir, log, cfg, onMsg }) {
+  const C = () => { try { return cfg() || {}; } catch { return {}; } };
+  const PS = path.join(dir, 'nt-posshot.ps1');
+  let k = null, want = false, buf = '', fails = 0, timer = null;
+  const emit = m => { try { onMsg && onMsg(m); } catch (e) { log('🖥 POS tasveer: ' + (e.message || e)); } };
+  const line = l => {
+    if (l.startsWith('IMG\t')) { const a = l.split('\t'); if (a.length >= 6 && a[5]) { fails = 0; emit({ k: 'img', mode: a[1], w: Number(a[2]) || 0, h: Number(a[3]) || 0, dg: a[4], b64: a[5] }); } }
+    else if (l.startsWith('OFF\t')) emit({ k: 'off', why: l.slice(4) });
+    else if (l.startsWith('ERR\t')) { log('🖥 POS tasveer: ' + l.slice(4).slice(0, 200)); emit({ k: 'err', why: l.slice(4).slice(0, 200) }); }
+  };
+  const run = () => {
+    timer = null;
+    if (k || !want) return;
+    if (process.platform !== 'win32' || C().posShot === false) { emit({ k: 'off', why: 'is PC par band (posShot)' }); return; }
+    const TXT = '﻿' + SHOT_TXT.replace(/\r?\n/g, '\r\n');
+    try { if (!fs.existsSync(PS) || fs.readFileSync(PS, 'utf8') !== TXT) fs.writeFileSync(PS, TXT); } catch (e) { log('🖥 POS tasveer: ' + e.message); emit({ k: 'err', why: e.message }); return; }
+    let err = '';
+    const w = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', PS, '-Title', String(C().posTitle || 'Retail Solution'), '-Pp', String(process.pid)], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    k = w; buf = '';
+    w.stdout.setEncoding('utf8');
+    w.stdout.on('data', d => { buf += d; let i; while ((i = buf.indexOf('\n')) >= 0) { const l = buf.slice(0, i).replace(/\r$/, ''); buf = buf.slice(i + 1); line(l); } if (buf.length > 4e6) buf = ''; });
+    w.stderr.on('data', d => { err = (err + d).slice(-1500); });
+    w.on('error', e => { log('🖥 POS tasveer shuru nahi hui: ' + e.message); });
+    w.on('exit', code => { if (k === w) k = null; if (!want) return; fails++;
+      const el = err.trim().split(/\r?\n/).filter(Boolean).slice(0, 2).join(' | ').slice(0, 200);
+      log(`🖥 POS tasveer band (code ${code})${el ? ' — ' + el : ''}`); emit({ k: 'err', why: 'tasveer wala program band (code ' + code + ')' + (el ? ' — ' + el : '') });
+      if (fails < 8 && !timer) timer = setTimeout(run, 6000); });
+  };
+  return { set(on) { on = !!on; if (on === want) return; want = on; if (on) { fails = 0; run(); } else { if (timer) { clearTimeout(timer); timer = null; } try { k && k.kill(); } catch {} } }, on: () => want, alive: () => !!k };
+}
+module.exports = { start, shot };

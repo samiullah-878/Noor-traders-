@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-print.js  v1.27 (2026-11-09: 🚚 sale rasid ke upar delivery patti — 2 English + 2 bari Urdu lines, app Settings 🖨 Print setting se ON / charges) · v1.25 (2026-11-06: 🔤 gate pass par item ka Urdu naam na ho to bina AI Urdu (urdu-names v1.7 item) — line kabhi gayab nahi) · v1.24 (2026-11-04: 🚪 app ka gate pass switch ON (d.gate) = NOOR TRADERS / bill ki branch wali lines ki bhi alag gate pass parchi — 'Yehi device' jaisi) · v1.23 (2026-10-27: 🧻 nt-parchi v1.2 — har parchi chhoti (Urdu 20% chhoti, kaatne se pehle 1 khali line); yeh file badli taake doctor dobara shuru kare) · v1.22 (2026-10-22: 🚑 DOCTOR JAGAO — sirf doctor wale (server) PC par: KHATA-DOCTOR 15 min chup = taza doctor.js + atka doctor (port 47830, netstat) band + KHATA-DOCTOR.bat chupke; 30 min mein ek dafa · counter PCs par kuch nahi) · v1.21 (2026-10-20: 📅 rasid + gate pass par Urdu tareekh; urdu-names.js bhi khud-update) · v1.20 (2026-10-14: 🔤 GATE PASS par har item ke neeche URDU naam — urdu-names.js) · v1.19 (2026-10-14: 🚪 GATE PASS sirf item + quantity, bara gehra font) · v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
+//  nt-print.js  v1.28 (2026-11-10: 🖥 Live camera ke saath POS ki Sale list ki tasveer posLive/<naam>__shot — sirf jab koi dekh raha ho) · v1.27 (2026-11-09: 🚚 sale rasid ke upar delivery patti — 2 English + 2 bari Urdu lines, app Settings 🖨 Print setting se ON / charges) · v1.25 (2026-11-06: 🔤 gate pass par item ka Urdu naam na ho to bina AI Urdu (urdu-names v1.7 item) — line kabhi gayab nahi) · v1.24 (2026-11-04: 🚪 app ka gate pass switch ON (d.gate) = NOOR TRADERS / bill ki branch wali lines ki bhi alag gate pass parchi — 'Yehi device' jaisi) · v1.23 (2026-10-27: 🧻 nt-parchi v1.2 — har parchi chhoti (Urdu 20% chhoti, kaatne se pehle 1 khali line); yeh file badli taake doctor dobara shuru kare) · v1.22 (2026-10-22: 🚑 DOCTOR JAGAO — sirf doctor wale (server) PC par: KHATA-DOCTOR 15 min chup = taza doctor.js + atka doctor (port 47830, netstat) band + KHATA-DOCTOR.bat chupke; 30 min mein ek dafa · counter PCs par kuch nahi) · v1.21 (2026-10-20: 📅 rasid + gate pass par Urdu tareekh; urdu-names.js bhi khud-update) · v1.20 (2026-10-14: 🔤 GATE PASS par har item ke neeche URDU naam — urdu-names.js) · v1.19 (2026-10-14: 🚪 GATE PASS sirf item + quantity, bara gehra font) · v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
 //                   (6+ harf, beech mein space nahi, 5+ hindse) aur grid mein wohi code nahi = bzzz — scan pakra gaya ho ya NAHI (server par scan
 //                   pakra hi nahi ja raha tha: log mein koi 'GHALAT scan' / '🔎' nahi tha). Naam se talaash = awaz nahi. Log mein 'scan pakra / NAHI')
 //                   · v1.17 (2026-10-08: 🔑 CHAABI KHUD UTHAO — awaz-only PC par firebase-key.json Desktop / Downloads / Documents (AnyDesk se)
@@ -39,7 +39,8 @@ let FA = null, FF = null; try { FA = require('firebase-admin/app'); FF = require
 const { initializeApp, cert, getApps } = FA || {};
 const { getFirestore, FieldValue } = FF || {};
 
-const VER = '1.27';   // v1.27 (2026-11-09): 🚚 sale rasid ke upar delivery patti — DELIVERY AVAILABLE HAR GAON + charges, Urdu bari (urdu-names v1.8 dlv)
+const VER = '1.28';   // v1.28 (2026-11-10): 🖥 Live camera ke saath POS screen ki tasveer (nt-posui v1.13 shot) — sirf jab koi dekh raha ho
+// pehle: const VER 1.27   // v1.27 (2026-11-09): 🚚 sale rasid ke upar delivery patti — DELIVERY AVAILABLE HAR GAON + charges, Urdu bari (urdu-names v1.8 dlv)
 //   // v1.26 (2026-11-07): 🧾 rasid table 5 khane (Rate + Amt ek qatar, Font B)   // v1.23 (2026-10-26): 🧾 rasid ki items table dabbe (side lines) mein — boxTable
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47831;
@@ -405,6 +406,21 @@ function listen() {
     onProc: n => { n = String(n || '').toLowerCase(); if (!n || posProcs.has(n)) return; posProcs.add(n); try { fs.writeFileSync(PF, JSON.stringify([...posProcs])); } catch {} log('🔔 POS ka program: ' + n + ' (is ke ilawa kahin scan = tu-tu-tu)'); },
     onDown: () => { if (cfg().posUi !== false) warn('POS awaz system band ho gaya — aankh se dekhein'); } }); } catch (e) { log('🔔 POS screen shuru nahi hua: ' + e.message); }
   posuiRef = posui;
+  // v1.28: 🖥 POS screen ki tasveer — SIRF jab koi Live camera mein YEH counter dekh raha ho (server pos-sales-dekho v2.9 posLive/_want {hosts:{HOST: naam}} likhta hai).
+  //   Sale list ka hissa (nt-posui shot) sirf badle to posLive/<naam>__shot {on, im, w, h, dg}. Koi na dekhe = PowerShell band, ek bhi likhai nahi.
+  try { if (base && cfg().posShot !== false) {
+    const HOSTU = os.hostname().toUpperCase(), col = base.collection('posLive'); let nm = '', seen = 0, lastK = '', lastAt = 0;
+    const ref = () => col.doc((nm.replace(/\//g, '_').slice(0, 100) || HOSTU) + '__shot');
+    const put = (d, merge) => { if (!nm) return; ref().set({ ...d, at: Date.now(), host: HOSTU, ver: VER }, merge ? { merge: true } : {}).catch(e => log('🖥 POS tasveer likhai: ' + e.message)); };
+    const sh = require('./nt-posui.js').shot({ dir: DIR, log, cfg, onMsg: m => {
+      if (!sh.on()) return;
+      if (m.k === 'img') { const im = Buffer.from(m.b64, 'base64'); if (im.length > 700000) return; lastK = 'img'; lastAt = Date.now(); put({ on: 1, im, w: m.w, h: m.h, mode: m.mode, dg: String(m.dg || '').slice(0, 120), n: lastAt }); }
+      else { const k = m.k + ':' + m.why; if (k === lastK && Date.now() - lastAt < 20000) return; lastK = k; lastAt = Date.now(); put({ on: 0, why: String(m.why || '').slice(0, 200), err: m.k === 'err' ? 1 : 0 }); } } });
+    col.doc('_want').onSnapshot(d => { const h = ((d.exists && d.data()) || {}).hosts || {}, n = String(h[HOSTU] || '').slice(0, 40); seen = Date.now();
+      if (n && !sh.on()) { nm = n; lastK = ''; log('🖥 Live dekha ja raha hai (' + n + ') — POS screen ki tasveer chalu'); sh.set(true); }
+      else if (!n && sh.on()) { sh.set(false); log('🖥 Live band — POS screen ki tasveer band'); } }, e => log('🖥 posLive/_want: ' + e.message));
+    setInterval(() => { if (!sh.on()) return; if (Date.now() - seen > 75000) { sh.set(false); log('🖥 server se 75 s khabar nahi — POS tasveer band'); return; } if (lastK === 'img' && Date.now() - lastAt > 14000) { lastAt = Date.now(); put({ hb: lastAt }, true); } }, 5000);
+  } } catch (e) { log('🖥 POS tasveer shuru nahi hui: ' + e.message); }
   // v1.9: 🔔 POS BEEP — server (pos-sales-dekho v1.4) har nayi POS line par posBeep/<HOST> likhta hai
   if (posBeepOn() && base) { let first = true, lastAt = 0;
     base.collection('posBeep').doc(os.hostname().toUpperCase()).onSnapshot(d => {

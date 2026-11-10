@@ -1,5 +1,5 @@
 // =========================================================
-//  pos-sales-dekho.js  v2.8 (2026-11-10: 🔴 live patti — BANTA bill ab aakhri chhape bill ke baad ke khule bills se (tareekh ki shart nahi, login → counter naqsha, andaza + 🩺 dg), har 0.6 s)
+//  pos-sales-dekho.js  v2.9 (2026-11-10: 🖥 posLive/_want — dekhe ja rahe counter ko batao, NT-PRINT POS screen ki tasveer bheje) · v2.8 (2026-11-10: 🔴 live patti — BANTA bill ab aakhri chhape bill ke baad ke khule bills se (tareekh ki shart nahi, login → counter naqsha, andaza + 🩺 dg), har 0.6 s)
 //  v2.7 (2026-11-10: 🎥 AAKHRI item ka waqt `lt` (bill-clip video pehli se aakhri item tak — malik: "6 items ke baad video phir se shuru") + 🔴 live patti par BANTA HUA bill (counter ke POS login CreatedBy se — "at PC:" print par aata hai) · v2.6 (2026-11-09: 🔴🧾 LIVE BILL — Live camera dekhte waqt us counter ka bante hue bill ki lines har 1 s posLive/<counter> mein (sirf parhna) · v2.5 (2026-11-09: 🎥 bill ki PEHLI ITEM ka waqt `ft` — POS har scan par SaleDetail likhta hai (save se pehle), PC har 1 s naye SaleID ki pehli line dekh kar waqt yaad (pos-first-seen.json); bill-clip clip pehli item se shuru karta hai (malik: "pehli item ka time likh le to kaisa rahe")) · v2.4 (2026-11-08: 🎥 bill ka `ct` = BANANE / PRINT ka waqt (SystemNotes "Created & Printed By:… On:… at PC:") — Bill tally ki clip post ke waqt se nahi, bill banane ke waqt se (malik: "Abdurehman ne jis time bill bana kar print kiya, PC us time se peeche jaye, posting se nahi")) · v2.3 (2026-11-06: 🔎 JAANCH malik: "jo wapsi bill ke andar minus ho chuki wo dobara nahi" — har wapsi ke saath juda SaleID, us bill ka TotalSale aur
 //                     SaleDetail ka jor (Qty×Rate) → sum.rtd (app milane ke liye) + note mein "bill se juri N · alag N"; MINUS abhi pehle jaisa (qaida data dekh kar)) · v2.2 (2026-11-04: ↩ malik: "Daily Sale mein sale return add hai ke nahi" → POS ki SALE RETURN (dbo.SaleReturn, us din ki) ab auto sale se MINUS —
 //                     cancel (DocStatusID 3) / stock fraq bahar; udhaar party ki wapsi (IsCreditRturn, wholesale nahi) = cash wapas nahi diya = minus NAHI (note mein ginti);
@@ -94,6 +94,16 @@ function liveHosts() {
     if (host) out.push([nm, host]);
   }
   return out.slice(0, 4);
+}
+// v2.9: 🖥 counter PCs (NT-PRINT v1.28) ko batao kaun sa counter Live dekha ja raha hai -> wo apni POS screen ki tasveer bhejte hain (posLive/<naam>__shot).
+//   posLive/_want {hosts: {HOST: naam}, at} — badle to foran, warna dekhte waqt har 20 s (counter 75 s chup = khud band).
+let wantK = '', wantAt = 0;
+function wantTick() {
+  const hosts = {}; for (const [nm, host] of liveHosts()) hosts[String(host).toUpperCase()] = nm;
+  const k = JSON.stringify(hosts), now = Date.now();
+  if (k === wantK && (k === '{}' || now - wantAt < 20000)) return;
+  wantK = k; wantAt = now;
+  liveCol.doc('_want').set({ hosts, at: now }).catch(e => { wantK = ''; if (now - liveErrLog > 60000) { liveErrLog = now; log('posLive/_want: ' + e.message); } });
 }
 async function livePut(nm, d) {
   const k = JSON.stringify(d), o = liveLast.get(nm);
@@ -389,7 +399,7 @@ lock.on('listening', async () => {
   setInterval(ZINDA.guard(tick, 5 * 60000, 'bills tick'), EVERY);   // 2026-10-11: chowkidar
   setInterval(ZINDA.guard(slow, 10 * 60000, 'peeche ki lane'), 1500);   // v2.1: sum + Daily Sale + items alag
   setInterval(ZINDA.guard(firstTick, 10 * 60000, 'pehli item'), 1000);   // v2.5: 🎥 pehli item ka waqt
-  liveWatchStart(); setInterval(ZINDA.guard(liveTick, 10 * 60000, 'live bill'), 600);   // v2.6: 🔴🧾 live bill (sirf jab koi dekh raha ho)
+  liveWatchStart(); setInterval(ZINDA.guard(liveTick, 10 * 60000, 'live bill'), 600); setInterval(() => { try { wantTick(); } catch (e) { log('want: ' + e.message); } }, 3000);   // v2.6: 🔴🧾 live bill (sirf jab koi dekh raha ho)
   firstTick();
   // v1.3: app ka bill POS mein bana (done) / edit hua -> foran dekho (2 sec ka intezar bhi nahi)
   const kick = () => setTimeout(() => { lastKey = ''; tick(); }, 150);

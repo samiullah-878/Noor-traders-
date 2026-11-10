@@ -4411,3 +4411,15 @@ ILAAJ: pos-stock `rkLabelsGo` (transfer note ke saath ke SAB label raaste: rack 
 godam ki shart NAHI — dono jama nahi). Har barcode line (har packet size alag) par +5. notice "🏷 N label (+X zyada)". ⚙️ (barcode.js Mazdoori setup): "🧾 Transfer note ke
 saath +N" khana (cloud.setLblTn, sirf malik). PC label-print v5.0 pehle se copies + x chhaapta hai; rules 2.95 x ≤ 50. Purana Godam-2 wala +N baqi screens par waisa hi.
 Test: node --check; asal printer par test NAHI. AI NAHI.
+
+
+=== v2.229.0 (2026-11-10) 🖥 LIVE — POS SCREEN KI TASVEER (banta bill, print se pehle) ===
+Malik: "bill print ke baad aata hai — us ko live nahi keh sakte · item likho wo app mein aaye · remove = remove · print = khatam · nayi item = naya bill".
+Wajah: Cognitive POS bill SQL mein sirf Print / Save par likhta hai (🩺 'naye 0 · khule 0'; 6 Oct pos-live test bhi yehi) aur Sale list UIA ko text nahi deti (sab Pane).
+Hal (B): counter PC ka NT-PRINT v1.28 -> nt-posui v1.13 shot(): alag PowerShell (bina C# compile; System.Drawing CopyFromScreen) POS '[Sale]' khirki ka list wala dabba
+  (Pane >= 60% chaura, 25-80% uncha, sab se chhota; na mile = poori khirki mode 'w') har 0.55 s, MD5 badla to JPEG (<= 900px, q55) -> posLive/<counter naam>__shot {on 1, im Bytes, w, h, mode, dg}.
+  SIRF jab server pos-sales-dekho v2.9 posLive/_want {hosts:{HOST: naam}} mein yeh PC ho (liveReq st ok se; 20 s par taza, 75 s chup = counter khud band). OFF / ERR = {on 0, why} (app 🖥 line — khamosh nahi).
+  Rules nahi badle (posLive/{id} read wahi). nt-print UPD_FILES mein nayi FILE nahi jori (purana nt-print nayi file nahi lata) — code nt-posui.js ke andar.
+App live.js: #lvShot (video ke neeche, bill se upar; tap = bara / poora, sam-lv-shotfit) — listenPosShot; 45 s tasveer na aaye = paigham.
+ASAL PC PAR TEST NAHI (Windows nahi) — pehli dafa malik ki screenshot se dabba (crop) theek karna par sakta hai; dg line: 'g 1012x420 | khirki 1366x728 | dabbe N'.
+AI nahi.

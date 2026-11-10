@@ -7800,3 +7800,20 @@ html body #dialogBody .pj-kv{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 html body #dialogBody .pj-kv span.hit{background:#fff3cd;border-color:#f1d48a;font-weight:700}html body #dialogBody .pj-kv i{font-style:normal;color:#5b6b8a;margin-right:3px}
 html body #dialogBody .pj-f{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:5px 8px;border-bottom:1px solid #eef2f8;min-width:0}html body #dialogBody .pj-f span{min-width:0;overflow-wrap:anywhere}html body #dialogBody .pj-f small{flex:none;color:#8391ab}
 html.dk body #dialogBody .pj-card{background:#141c2e;border-color:#2a3650}html.dk body #dialogBody .pj-kv span{background:#1b2436;border-color:#2a3650}
+
+/* v2.229.0: 🖥 Live — counter ki POS screen ki tasveer (banta bill, print se pehle) */
+#lvDlg .lv-shot{position:absolute;left:max(8px,env(safe-area-inset-left));bottom:58px;width:50%;max-height:46%;display:flex;flex-direction:column;background:rgba(6,12,24,.72);border:1px solid #ffffff2b;border-radius:12px;overflow:hidden;color:#fff;z-index:2;min-width:0}
+#lvDlg .lv-shot[hidden]{display:none}
+#lvDlg .lvs-h{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 9px;font-size:12px;border-bottom:1px solid #ffffff1f;white-space:nowrap}
+#lvDlg .lvs-h small{opacity:.6;font-size:10px;overflow:hidden;text-overflow:ellipsis}
+#lvDlg .lvs-h.is-new b{animation:lvsNew 1.6s ease-out}
+@keyframes lvsNew{0%{color:#7CFC9A;text-shadow:0 0 10px #2ecc71}100%{color:#fff;text-shadow:none}}
+#lvDlg .lvs-b{flex:1;min-height:0;overflow:auto;background:#fff;-webkit-overflow-scrolling:touch}
+#lvDlg .lvs-b img{display:block;width:190%;max-width:none;height:auto}
+#lvDlg .lv-shot.is-fit .lvs-b img{width:100%}
+#lvDlg .lvs-n{padding:6px 9px;font-size:11px;opacity:.75;line-height:1.3}
+#lvDlg .lv-shot.is-note{max-height:none}
+@media (orientation:portrait){
+#lvDlg .lv-shot{position:static;width:auto;max-height:34%;flex:none;margin:6px max(6px,env(safe-area-inset-right)) 0 max(6px,env(safe-area-inset-left));background:#0b1322}
+#lvDlg .lv-body video{max-height:38%}
+}

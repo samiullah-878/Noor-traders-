@@ -20,13 +20,14 @@ export function openLive(o) {
   let d = $('lvDlg');
   if (!d) { d = document.createElement('dialog'); d.id = 'lvDlg'; d.className = 'lv-dlg'; document.body.append(d); d.addEventListener('cancel', ev => { ev.preventDefault(); closeLive(); }); }
   d.innerHTML = `<div class="lv-head"><b>🔴 Live</b><span class="lv-chips">${list.map(p => `<button type="button" data-lv-pc="${esc(p)}" class="${p === cur ? 'is-in' : ''}">🖥 ${esc(p)}</button>`).join('') || '<small>Koi counter nahi mila — malik ⚙️ Bill tally setup mein counter ↔ camera jorein</small>'}</span><button type="button" class="lv-bt ${bOn() ? 'is-in' : ''}" data-lv-bt="1" title="Bill ki patti">🧾</button><button type="button" class="lv-x" data-lv-x="1">×</button></div>
-    <div class="lv-body"><video id="lvVid" playsinline muted autoplay></video><div class="lv-st" id="lvSt">⏳ jor raha…</div><div class="lv-bill" id="lvBill" ${bOn() ? '' : 'hidden'}></div>
+    <div class="lv-body"><video id="lvVid" playsinline muted autoplay></video><div class="lv-st" id="lvSt">⏳ jor raha…</div><div class="lv-shot" id="lvShot" hidden></div><div class="lv-bill" id="lvBill" ${bOn() ? '' : 'hidden'}></div>
       <div class="lv-tools"><button type="button" data-lv-re="1">🔄 Dobara</button><button type="button" data-lv-full="1">⛶</button></div></div>`;
   d.onclick = ev => {
     const t = ev.target;
     if (t.closest('[data-lv-x]')) { closeLive(); return; }
     const c = t.closest('[data-lv-pc]'); if (c) { cur = c.dataset.lvPc; d.querySelectorAll('[data-lv-pc]').forEach(x => x.classList.toggle('is-in', x === c)); start(); return; }
     if (t.closest('[data-lv-re]')) { start(); return; }
+    if (t.closest('#lvShot')) { const e = $('lvShot'); e.classList.toggle('is-fit'); try { localStorage.setItem('sam-lv-shotfit', e.classList.contains('is-fit') ? '1' : '0'); } catch {} return; }
     const bt = t.closest('[data-lv-bt]'); if (bt) { const on = !bOn(); try { localStorage.setItem('sam-lv-bill', on ? '1' : '0'); } catch {} bt.classList.toggle('is-in', on); const e = $('lvBill'); if (e) e.hidden = !on; return; }
     if (t.closest('[data-lv-full]')) { const v = $('lvVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (d.querySelector('.lv-body') || v).requestFullscreen?.(); } catch {} return; }
   };
@@ -100,7 +101,7 @@ async function start() {
 const escB = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const nf = v => Math.round(Number(v) || 0).toLocaleString('en-US');
 const q3 = v => String(Math.round((Number(v) || 0) * 1000) / 1000);
-function billStop() { try { B.un && B.un(); } catch {} clearInterval(B.t); B = { un: null, sid: 0, prev: new Map(), del: [], fl: new Map(), recv: 0, doc: null, t: null, cnt: 0, pc: '' }; }
+function billStop() { shotStop(); try { B.un && B.un(); } catch {} clearInterval(B.t); B = { un: null, sid: 0, prev: new Map(), del: [], fl: new Map(), recv: 0, doc: null, t: null, cnt: 0, pc: '' }; }
 function billStart() {
   if (!cloud?.listenPosLive) return;
   if (B.pc === cur && B.un) return;
@@ -108,6 +109,35 @@ function billStart() {
   billPaint();
   B.un = cloud.listenPosLive(cur, (d, err) => { if (err) { B.err = err.message || String(err); billPaint(); return; } if (d) { B.recv = Date.now(); billGot(d); } });
   B.t = setInterval(billPaint, 4000);
+  shotStart();
+}
+// ---------- 🖥 POS screen ki tasveer (v2.229.0) ----------
+// POS bill ko Print par hi save karta hai — is liye bante bill ki items counter PC (NT-PRINT v1.28) ki POS screen ki chhoti tasveer se:
+// item likhi / scan = ~1 s mein yahan · hatai = hat gayi · print = list khali · nayi item = naya bill. Tap = poori chaurai / bara.
+let SH = { un: null, t: null, recv: 0, url: '', st0: 0, d: null };
+function shotStop() { try { SH.un && SH.un(); } catch {} clearInterval(SH.t); try { SH.url && URL.revokeObjectURL(SH.url); } catch {} SH = { un: null, t: null, recv: 0, url: '', st0: 0, d: null }; const e = $('lvShot'); if (e) { e.hidden = true; e.innerHTML = ''; } }
+function shotStart() {
+  if (!cloud?.listenPosShot || !cur) return;
+  SH.st0 = Date.now();
+  const e = $('lvShot'); if (e) { let fit = false; try { fit = localStorage.getItem('sam-lv-shotfit') === '1'; } catch {} e.classList.toggle('is-fit', fit); }
+  SH.un = cloud.listenPosShot(cur, (d, err, cache) => { if (err || cache) return; SH.recv = Date.now(); SH.d = d; shotPaint(true); });
+  SH.t = setInterval(() => shotPaint(false), 5000);
+}
+function shotPaint(fresh) {
+  const e = $('lvShot'); if (!e) return;
+  const d = SH.d, now = Date.now(), live = d && Number(d.on) === 1 && d.im && now - SH.recv < 45000;
+  const note = t => { e.hidden = false; e.classList.add('is-note'); e.innerHTML = `<div class="lvs-n">🖥 ${escB(t)}</div>`; };
+  if (live) {
+    if (fresh) { const u = URL.createObjectURL(new Blob([d.im], { type: 'image/jpeg' })); let img = e.querySelector('img');
+      if (!img) { e.classList.remove('is-note'); e.innerHTML = '<div class="lvs-h"><b>🖥 POS screen · live</b><small>tap = bara / poora</small></div><div class="lvs-b"><img alt=""></div>'; img = e.querySelector('img'); }
+      img.src = u; try { SH.url && URL.revokeObjectURL(SH.url); } catch {} SH.url = u;
+      const h = e.querySelector('.lvs-h'); if (h) { h.classList.remove('is-new'); void h.offsetWidth; h.classList.add('is-new'); } }
+    e.hidden = false; return;
+  }
+  if (d && Number(d.on) === 0 && now - SH.recv < 60000) { note('POS screen: ' + (d.why || 'nahi mili') + (d.err ? ' (counter PC ki ghalti)' : '')); return; }
+  if (d && SH.recv && now - SH.recv >= 45000) { note('POS screen ki tasveer ruk gayi — counter PC / NT-PRINT dekhein'); return; }
+  if (now - SH.st0 > 25000) { note('POS screen ki tasveer nahi aa rahi — counter PC ka NT-PRINT (update 3-5 min) / POS ki Sale screen khuli ho'); return; }
+  e.hidden = true;
 }
 function billGot(d) {
   let L = []; try { L = JSON.parse(d.j || '[]'); } catch {}
