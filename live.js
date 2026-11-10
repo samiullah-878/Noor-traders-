@@ -121,8 +121,20 @@ function shotStart() {
   SH.st0 = Date.now();
   const e = $('lvShot'); if (e) { let fit = false; try { fit = localStorage.getItem('sam-lv-shotfit') === '1'; } catch {} e.classList.toggle('is-fit', fit); }
   SH.un = cloud.listenPosShot(cur, (d, err, cache) => { if (err || cache) return; SH.recv = Date.now(); SH.d = d; shotPaint(true); });
-  SH.un2 = cloud.listenPosLive('_want', (d, err) => { if (!err) SH.want = d || {}; });
+  const u2 = cloud.listenPosLive('_want', (d, err) => { if (!err) SH.want = d || {}; }), u3 = cloud.listenPrintPCs ? cloud.listenPrintPCs(L => { SH.pcs = L || []; }) : null;
+  SH.un2 = () => { try { u2 && u2(); } catch {} try { u3 && u3(); } catch {} };
   SH.t = setInterval(() => shotPaint(false), 5000);
+}
+// counter ke NT-PRINT ka haal (printPCs) — malik ko saaf wajah
+function ntpSay(host) {
+  const bare = x => String(x || '').toUpperCase().replace(/^[A-Z]+-/, ''), L = SH.pcs;
+  if (!L) return 'NT-PRINT ka haal load nahi hua';
+  const d = L.find(x => bare(x.host) === bare(host));
+  if (!d) return 'is counter ka NT-PRINT app se juda hi nahi (PC par NT-PRINT nahi laga / firebase chaabi nahi). Jude PC: ' + (L.map(x => String(x.host || x.name || x.id) + ' v' + (x.ver || '?')).join(', ') || 'koi nahi');
+  const m = Math.round((Date.now() - (Number(d.at) || 0)) / 60000), v = String(d.ver || '?');
+  if (m > 5) return 'NT-PRINT v' + v + ' ' + (m > 120 ? Math.round(m / 60) + ' ghante' : m + ' min') + ' se chup (band / PC so gaya)';
+  if (parseFloat(v) < 1.28) return 'NT-PRINT purana v' + v + ' chal raha hai — khud update nahi hua';
+  return 'NT-PRINT v' + v + ' chal raha hai (host ' + String(d.host || '?') + ') magar hukum nahi suna';
 }
 function shotPaint(fresh) {
   const e = $('lvShot'); if (!e) return;
@@ -138,7 +150,7 @@ function shotPaint(fresh) {
   if (d && Number(d.on) === 0 && now - SH.recv < 60000) { note('POS screen: ' + (d.why || 'nahi mili') + (d.err ? ' (counter PC ki ghalti)' : '')); return; }
   if (d && SH.recv && now - SH.recv >= 45000) { note('POS screen ki tasveer ruk gayi — counter PC / NT-PRINT dekhein'); return; }
   if (now - SH.st0 > 25000) { const hs = (SH.want && SH.want.hosts) || null, host = hs ? Object.keys(hs).find(h => hs[h] === cur) : '';
-    note(!SH.want ? 'POS screen: server ka haal nahi mila' : !hs ? 'POS screen: server PC ki script purani hai (pos-sales-dekho v2.9 nahi) — 3-5 min' : !host ? 'POS screen: server ne is counter ko hukum nahi bheja (counter ka PC naam nahi mila)' : 'POS screen: server ne ' + host + ' ko hukum bheja, counter PC ka NT-PRINT jawab nahi de raha (purana version / band / PC ka naam alag)'); return; }
+    note(!SH.want ? 'POS screen: server ka haal nahi mila' : !hs ? 'POS screen: server PC ki script purani hai (pos-sales-dekho v2.9 nahi) — 3-5 min' : !host ? 'POS screen: server ne is counter ko hukum nahi bheja (counter ka PC naam nahi mila)' : 'POS screen: server ne ' + host + ' ko hukum bheja, jawab nahi — ' + ntpSay(host)); return; }
   e.hidden = true;
 }
 function billGot(d) {
