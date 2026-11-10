@@ -4368,3 +4368,19 @@ SYSTEM ke program (SQL Server, antivirus, System) ka TotalProcessorTime nahi det
 ILAAJ v3.1: `Get-CimInstance Win32_Process` (KernelModeTime + UserModeTime — sab program, bina admin) EK sawal mein (node / ffmpeg ki command line bhi isi mein, sirf memory);
 naya pid = us ka poora waqt; ek hi naam ke program jama ("ffmpeg · 🎬 bill ki clip ×3"), top 6 + "baqi (chhote + jo shuru ho kar khatam ho gaye)" agar ≥3%. Test: nakli data (SQL
 upar, password leak nahi). Asal Windows par test NAHI. AI NAHI.
+=== 2026-11-10 · v2.226.0 + PC pos-sales-dekho v2.8 + live-cam v1.3 (🔴 Live: banta bill · tez · video upar) — rules nahi badle ===
+Malik (screenshots 11:07 — LIVE VIDEO ASAL NVR PAR CHAL GAYI: bill-clip v2.4 ki udp copy + live-cam v1.2 theek): "jo bill ban raha hai wo live par nahi, pichhla dikha raha ·
+jaise hi item scan karein yahan screen par · speed ke saath · upar ki taraf · list upar se neeche aaye" + pehle "time bohat zyada lag raha, on karte hi aana chahiye" +
+"App peeche gayi — Dobara dabayein" (phone ke popup se).
+BANTA BILL (pos-sales-dekho v2.8): v2.7 ka sawal (SaleDate aaj + CreatedBy IN + SaleID > aakhri) asal POS par kuch nahi laya (wajah yahan se nahi dikhti). Ab liveTick: aakhri chhape
+bill ("at PC: host") ke baad ke TOP 12 bill, tareekh ki shart NAHI → khule = lines > 0, post / cancel nahi, "at PC:" nahi. Login → counters naqsha (3 din ke 600 chhape bill,
+liveUsers '*', 10 min). rank 3 = login sirf isi counter ka (src 'chalu') · 2 kai counters / 1 anjaan login (src 'andaza', sirf 15 min ke andar item aayi ho) · 0 doosre counter ka = nahi.
+posLive mein `dg` (naye N · khule N (#id login→counters lines)) + `la` (aakhri item ka waqt). Har 0.6 s (sirf jab koi dekhe). App live.js: 'andaza' ka label, 🩺 dg chhoti line
+(src chalu na ho), chhapa magar 90 s mein item aayi = 'pichhla' nahi. AGAR PHIR BHI NA AAYE: malik ki screenshot ki 🩺 line dekh kar agla qadam (andaza mat lagao).
+TEZ: app ICE ka 3 s pakka intezar → srflx milte hi (max 1.5 s); live-cam v1.3 ICE 4 s → 1.2 s, g 24 → 12 (har 1 s keyframe), khali pipe 20 s → 120 s garam. App peeche → wapas =
+khud start (RES), status par "· N s". ffmpeg probe (5 s) jaan kar nahi chhera (chhota probe fail = RTSP par gir jata — NVR doosra rabta nahi deta).
+LAYOUT (phone seedha): video UPAR (16/9, max 46%), bill patti us ke NEECHE alag (video par nahi), nayi item sab se UPAR (reverse, scrollTop 0). Landscape pehle jaisa.
+Test: Chromium 412px nakli cloud — layout / nayi item upar / andaza label. Asal POS par banta bill test NAHI. AI NAHI.
+GHALTI (isi push mein): manifest wala python ruk gaya (manifest ke aakhir mein purani dohri "pos-sales-dekho.js" key — regex 2 jagah mila) magar agla hukum `;` se jura tha → app push
+ho gayi, manifest / notes reh gaye (PC update nahi hota). Foran doosra commit. QAIDA (dobara): python → check → commit → push SAB ek `&&` zanjeer, beech mein `;` KABHI nahi;
+manifest ka hash sirf "files" wali pehli key (count=1).
