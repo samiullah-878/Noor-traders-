@@ -4445,3 +4445,8 @@ posAdds = sirf PC (admin) — rules nahi badle. ASAL PC PAR TEST NAHI (addStart 
 === 2026-11-10 · md pkg v24 — 🛰 Falcon raat wala auto BAND (malik: "raat 9 baje wala band kar do, nahi chahiye — manually sahi kaam karta hai") ===
 - md/pkg.json patch: 'Falcon km' macro ka DeviceUnlockedTrigger m_isDisabled true (Claude Remote, ~5 min). Macro CHALU — 📲 webhook (app ka 'Falcon se abhi parhwao') + 👆 saathi (khud Falcon-i kholna) wahi. `off` / `del` mein NAHI.
 - falcon-macro.js (app ka download naqsha) mein unlock trigger abhi ON hai — malik dobara .macro download kare to raat wala wapas aa jayega; agle app version mein wahan bhi band karo. Wapas lana = patch set m_isDisabled false. AI nahi.
+
+=== 2026-11-10 · PLAN (ROKA HUA — code nahi bana) — 🏬 Godam Live: gate pass + transfer note ki camera tally ===
+- Malik (10 Nov raat): "abhi sirf live · shak ho to us gate pass ki video manually · Godam 1 do jagah, 3 cameras — teeno live ek saath, neeche gate pass + transfer ki items · larka wahan OK kare to hum dekhein kis ne kiya · chip dim ho kar neeche, agla upar".
+- Faisla: har godam ke hisaab se; cameras DUKAN ke hi NVR par. Malik: pehle server ki RAM (11 Nov) + naya server PC (2-3 din) — TAB banana / push. Us se pehle mat banao.
+- Plan: nayi screen — upar godam chips, us godam ke cameras live (chhote dabbe halki quality, tap = bara; live-cam wahi raasta, NVR par naya rabta nahi — recording ki udp copy), neeche gatePass (g tick: n, t) + transfer (transferGive g / mil gaya) chips; ho gaya = dim + neeche. Setting sirf malik: godam -> camera channels (billClip jaisa, app ko channel / password kabhi nahi). 🎞 'Video dekho' = sirf maangne par clip (billClipReq jaisa, rec ke rk ghanton ke andar). AI nahi.
