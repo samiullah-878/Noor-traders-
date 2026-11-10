@@ -1,5 +1,6 @@
 // =========================================================
-//  doctor.js  v2.9 (2026-10-22: 🩹 21-Oct shaam 6:50 doctor CHUP ho gaya aur stock script bhi band — subah tak koi dobara chalane wala nahi. Ab: (1) taskkill /T (poora tree) KABHI NAHI —
+//  doctor.js  v3.0 (2026-11-10: 🔥 PC ka CPU / RAM + sab se zyada CPU wale 5 program har 1 min app ko (blueAccess/pcCpu) — malik: "CPU 100% · data app mein aa jaye". Async, doctor nahi rukta.)
+//  v2.9 (2026-10-22: 🩹 21-Oct shaam 6:50 doctor CHUP ho gaya aur stock script bhi band — subah tak koi dobara chalane wala nahi. Ab: (1) taskkill /T (poora tree) KABHI NAHI —
 //              Windows mare hue parent ka PID naye process ko de deta hai, /T phir be-taaluq scripts (stock) aur doctor ki apni loop bhi band kar deta · (2) WMIC / taskkill par waqt ki hadd
 //              (WMIC atke to pehle doctor hamesha ke liye ruk jata) + WMIC na chale to PowerShell (CIM); list hi na mile = is chakkar mein koi script shuru / band NAHI · (3) chakkar 10 min se
 //              atka = doctor khud band, .bat 20 sec mein naya · (4) NT-PRINT (server PC) doctor 15 min chup dekhe to jagata hai — doctor-jaga.txt ka paigham log mein)
@@ -25,10 +26,10 @@ const net = require('net');
 const path = require('path');
 const https = require('https');
 const crypto = require('crypto');
-const { execSync, execFileSync, spawn } = require('child_process');
+const { execSync, execFileSync, execFile, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '2.9';
+const VER = '3.0';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
@@ -215,6 +216,43 @@ function fb() {
     db = fsx.getFirestore(); return db;
   } catch (e) { log('⚠ Firebase: ' + e.message); return null; }
 }
+// ---------- 🔥 v3.0: PC ka CPU / RAM app mein (malik 10 Nov: "CPU 100% chal raha hai · script se CPU ka data app mein aa jaye") ----------
+//   Har 60 s (ASYNC — doctor kabhi nahi rukta, hadd 20 s): kul CPU (os.cpus farq) + RAM + sab se zyada CPU wale 5 program (Get-Process ka CPU waqt, do jaanch ka farq).
+//   node / ffmpeg ka naam = script / kaam (command line se — command line KABHI Firestore / log mein nahi: us mein NVR ka password hota hai). → blueAccess/pcCpu.
+const cpuRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('pcCpu');
+const CPU = { prev: null, pt: null, pAt: 0, cmd: new Map(), hist: [], hot: 0, busy: false, cmdAt: 0 };
+const cpuTotal = () => { let idle = 0, tot = 0; for (const c of os.cpus()) { for (const k in c.times) tot += c.times[k]; idle += c.times.idle; } return { idle, tot }; };
+const psRun = (cmd, ms) => new Promise(res => { try { execFile('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', cmd], { encoding: 'utf8', windowsHide: true, timeout: ms || 20000, maxBuffer: 4 << 20 }, (e, out) => res(e ? '' : String(out || ''))); } catch { res(''); } });
+function cpuLabel(name, pid) {
+  const c = CPU.cmd.get(pid) || '', n = String(name || '').toLowerCase();
+  if (n === 'node') { const m = c.match(/([\w-]+)\.js/i); return m ? m[1] + '.js' : 'node'; }
+  if (n === 'ffmpeg') { const ch = (c.match(/clip-rec[\\/]ch(\d+)/i) || c.match(/channel=(\d+)/i) || [])[1]; return /clip-rec/i.test(c) && /segment/i.test(c) ? `ffmpeg · camera recording${ch ? ' ch ' + ch : ''}` : /rtp:\/\//i.test(c) ? 'ffmpeg · 🔴 live camera' : /clip-tmp|libx264/i.test(c) ? 'ffmpeg · 🎬 bill ki clip' : 'ffmpeg'; }
+  if (n === 'sqlservr') return 'SQL Server (POS ka data)'; if (n === 'msmpeng') return 'Windows Defender (antivirus)'; if (n === 'powershell') return 'PowerShell'; if (n === 'chrome' || n === 'msedge') return n === 'chrome' ? 'Chrome' : 'Edge';
+  return String(name || '?').slice(0, 40);
+}
+async function cpuTick() {
+  if (CPU.busy || process.platform !== 'win32') return; CPU.busy = true;
+  try {
+    const now = Date.now(), t = cpuTotal(), cores = os.cpus().length || 1;
+    const out = await psRun("Get-Process | ForEach-Object { $c = 0; try { $c = [long]$_.TotalProcessorTime.TotalMilliseconds } catch {}; \"$($_.Id),$($_.ProcessName),$c,$([int]($_.WorkingSet64/1MB))\" }");
+    const cur = new Map(); for (const l of out.split(/\r?\n/)) { const a = l.trim().split(','); if (a.length >= 4 && Number(a[0]) > 0) cur.set(Number(a[0]), { n: a[1], c: Number(a[2]) || 0, m: Number(a[3]) || 0 }); }
+    const prev = CPU.prev, pt = CPU.pt, dt = now - CPU.pAt; CPU.prev = cur; CPU.pt = t; CPU.pAt = now;
+    if (!prev || !pt || !cur.size || dt < 5000 || dt > 5 * 60000) return;
+    const cpu = Math.max(0, Math.min(100, Math.round((1 - (t.idle - pt.idle) / Math.max(1, t.tot - pt.tot)) * 100)));
+    const ram = Math.round((1 - os.freemem() / os.totalmem()) * 100);
+    let top = []; for (const [pid, x] of cur) { const o = prev.get(pid); if (!o || o.n !== x.n || x.c < o.c || /^idle$/i.test(x.n)) continue; const p = Math.min(100, (x.c - o.c) / (dt * cores) * 100); if (p >= 0.5) top.push({ pid, n: x.n, p: Math.round(p * 10) / 10, m: x.m }); }
+    top.sort((a, b) => b.p - a.p); top = top.slice(0, 5);
+    if (top.some(x => /^(node|ffmpeg)$/i.test(x.n) && !CPU.cmd.has(x.pid)) && now - CPU.cmdAt > 50000) {   // command line sirf naam nikalne ko — yaad sirf memory mein
+      CPU.cmdAt = now; const o2 = await psRun("Get-CimInstance Win32_Process -Filter \"Name='node.exe' or Name='ffmpeg.exe'\" | ForEach-Object { \"$($_.ProcessId)|$($_.CommandLine)\" }");
+      CPU.cmd = new Map(); for (const l of o2.split(/\r?\n/)) { const i = l.indexOf('|'); if (i > 0) CPU.cmd.set(Number(l.slice(0, i)), l.slice(i + 1)); }
+    }
+    const list = top.map(x => ({ n: cpuLabel(x.n, x.pid), p: x.p, m: x.m }));
+    CPU.hist.push([Math.round(now / 60000), cpu]); if (CPU.hist.length > 60) CPU.hist = CPU.hist.slice(-60);
+    if (cpu >= 90) { if (!CPU.hot) CPU.hot = now; } else CPU.hot = 0;
+    const ref = cpuRef(); if (ref) await ref.set({ at: now, host: os.hostname(), cores, cpu, ram, ramGb: Math.round(os.totalmem() / (1 << 30)), top: list, hj: JSON.stringify(CPU.hist), hot: CPU.hot || 0, ver: VER }).catch(() => {});
+  } catch (e) { log('⚠ cpu: ' + String(e?.message || e).slice(0, 80)); } finally { CPU.busy = false; }
+}
+
 const statusRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('pcStatus');
 const checkRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('pcCheck');
 
@@ -362,6 +400,7 @@ lock.on('listening', async () => {
   setInterval(() => { if (busy && cycleAt && Date.now() - cycleAt > 10 * 60 * 1000) { log('⚠ chakkar 10 min se atka — doctor dobara shuru ho raha hai'); setTimeout(() => process.exit(1), 1000); } }, 30000);
   ensureStartup(); ensureModules(); ensureChupa();
   await cycle('shuru');
+  setTimeout(cpuTick, 20000); setInterval(cpuTick, 60000);   // v3.0: 🔥 CPU app mein
   setInterval(() => cycle('30 minute'), EVERY);
   setInterval(() => cycle('2 minute', false), QUICK);
   // v2.7: har 3 min sirf manifest ka version — naya ho to foran update (30 min ka intezar nahi)

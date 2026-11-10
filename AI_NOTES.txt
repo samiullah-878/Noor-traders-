@@ -7470,3 +7470,12 @@ channel ka udp socket (127.0.0.1) hamesha khula; `shareOk(ch)` (3 s mein packet)
 RTSP; share se kuch na aaye = `p.noShare` → RTSP; share ruk jaye 8 s = ffmpeg dobara; video chal chuki ho to `tries` nayi ginti. Share se video 6-8 s mein shuru (probe) →
 "video nahi" warn 20 s, app live.js frame jaanch 16 s (pehle 10). Test (container): asal args (input ki jagah -re h264 ts) → segment + udp; live-cam (nakli firebase) ne
 "recording ki line se" 200+ RTP diye; sunne wale ke baghair recorder theek chala. ASAL NVR / Windows par test NAHI — malik ki screenshot ka intezar. AI NAHI.
+=== 2026-11-10 · v2.225.0 + PC doctor v3.0 (🔥 PC ka CPU app mein) — rules nahi badle ===
+Malik: "CPU 100 percent par chal raha hai — is ka koi hal" · "kisi script ke zariye CPU ka data app mein aa jaye to hum dekh sakein". Plan → OK (sirf data; video halki karna = data dekh kar, alag OK).
+doctor v3.0 `cpuTick` har 60 s (ASYNC execFile PowerShell, hadd 20 s — doctor ka chakkar kabhi nahi rukta): kul CPU = os.cpus() ka farq, RAM = os.freemem; program-war =
+Get-Process ka TotalProcessorTime do jaanch ka farq ÷ (waqt × cores) → top 5 (≥0.5%). node / ffmpeg ka naam `cpuLabel`: script ka naam / "ffmpeg · 🎬 bill ki clip" / "· 🔴 live
+camera" / "· camera recording ch N" — command line (Win32_Process, sirf jab top mein anjaan node/ffmpeg ho, 50 s mein ek dafa) SIRF memory mein, Firestore / log mein KABHI nahi
+(us mein NVR ka password). → blueAccess/pcCpu {at, host, cores, cpu, ram, ramGb, top:[{n,p,m}], hj: JSON [[minute, cpu]] aakhri 60, hot: kab se ≥90}. Malik generic rule se parhta hai.
+App: cloud.listenPcCpu; app.js cpuHTML — Settings → 🖥️ PC scripts ke upar dabba (CPU % · RAM · 60 min lakeer · 5 program bar ke saath); malik ke app mein 25 s baad listener,
+10 min lagataar ≥90% = notice "🔥 Shop PC par bojh … <program>" (30 min mein ek dafa). Test: cpuTick nakli Get-Process data ke saath (naam sahi, password leak nahi).
+PowerShell asal Windows par test NAHI. Shak: bill-clip ka libx264 (har bill 3-5 min clip, saare core) — data aane par ilaaj. AI NAHI.

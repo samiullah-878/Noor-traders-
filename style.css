@@ -7771,3 +7771,16 @@ html.dk .bt-items li .bt-q{background:#1b2a4a;border-color:#2e4576;color:#8fb4ff
 html.lt .bt-btns .bt-skip{background:linear-gradient(#fff,#e9eef8)!important;color:#3b4a6b!important;border:1px solid #c9d3e6!important}html.lt .bt-btns .bt-undo{background:#13213f!important;color:#fff!important;border-radius:999px!important}
 html.lt .bt-vchips button{background:#000a!important}html.lt .bt-segs button.on{background:#fff!important;color:#000!important}
 html.lt .bt-prog .bt-pcchip,html.lt .bt-warn{border-radius:999px!important}
+/* v2.225.0: 🔥 PC ka CPU (🖥️ PC scripts khirki ke upar) */
+html body #dialogBody .cpu-box{border:1px solid #d7deea;border-radius:16px;padding:10px 12px;margin:0 0 10px;background:linear-gradient(#fff,#f5f8fd);display:grid;gap:6px;min-width:0}
+html body #dialogBody .cpu-box.r{border-color:#f0b4b4;background:linear-gradient(#fff7f7,#fdeaea)}html body #dialogBody .cpu-box.y{border-color:#f1d48a;background:linear-gradient(#fffdf5,#fdf4d8)}html body #dialogBody .cpu-box.old{opacity:.75}
+html body #dialogBody .cpu-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px}html body #dialogBody .cpu-head b{font-size:20px}html body #dialogBody .cpu-head .cpu-ram{font-size:14px;color:#3b4a6b}html body #dialogBody .cpu-head small{color:#5b6b8a;font-size:12px}
+html body #dialogBody .cpu-box.r .cpu-head b:first-child{color:#b3261e}html body #dialogBody .cpu-box.g .cpu-head b:first-child{color:#0f6b3d}
+html body #dialogBody .cpu-hot{margin:0;font-size:13px;font-weight:700;color:#b3261e}
+html body #dialogBody .cpu-sp{width:100%;height:44px;display:block;background:#eef2fa;border-radius:8px}html body #dialogBody .cpu-sp polyline{fill:none;stroke:#2f6df6;stroke-width:2;vector-effect:non-scaling-stroke}html body #dialogBody .cpu-sp .cpu-l90{stroke:#e55;stroke-width:1;stroke-dasharray:4 3;vector-effect:non-scaling-stroke}
+html body #dialogBody .cpu-cap{color:#8391ab;font-size:11px}
+html body #dialogBody .cpu-list{display:grid;gap:5px}
+html body #dialogBody .cpu-row{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) auto auto;gap:8px;align-items:center;font-size:13px;min-width:0}
+html body #dialogBody .cpu-n{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}html body #dialogBody .cpu-row b{min-width:46px;text-align:right}html body #dialogBody .cpu-row small{color:#8391ab;font-size:11px;min-width:50px;text-align:right}
+html body #dialogBody .cpu-bar{height:8px;border-radius:999px;background:#e3e9f3;overflow:hidden;min-width:0}html body #dialogBody .cpu-bar i{display:block;height:100%;border-radius:999px;background:#2fb46a}html body #dialogBody .cpu-bar i.y{background:#e0a800}html body #dialogBody .cpu-bar i.r{background:#e04b4b}
+html.dk body #dialogBody .cpu-box{background:#141c2e;border-color:#2a3650}html.dk body #dialogBody .cpu-sp,html.dk body #dialogBody .cpu-bar{background:#2a3650}
