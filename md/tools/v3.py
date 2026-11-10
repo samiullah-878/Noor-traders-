@@ -1,4 +1,7 @@
 import json, os, copy
+import sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import st as STM   # 📱 screen time (10 Nov)
 D = os.path.dirname(os.path.abspath(__file__))
 old = json.load(open(os.path.join(D, 'paani_old.json')))['macro']['m_actionList']
 HTTP = copy.deepcopy(old[10]); assert HTTP['m_classType'] == 'HttpRequestAction'
@@ -61,8 +64,9 @@ pa = [
       iff([trig(P_TICK, "Har 1 minute"), boolc("pnSnz", False)]), sbool("doBreak", True, True), END,
       iff([strne("pnDay", "{dayofmonth}")]), sint("pnCount", 0), sstr("pnDay", "{dayofmonth}"), END,
       RANDQ, HTTP,
+      setv("st", 2, True, m_newStringValue=""), STM.java(STM.REPORT, "st"),   # 📱 aaj ka screen time (top 5 + baqi + kul)
       # awaz band (malik 6 Nov: "es ki awaz band kar do")
-      *ask("💧 Paani pee lo bhai", "{v=qoul}<br><br>Aaj ab tak: <b>{v=pnCount} glass</b><br>📱 TikTok reels aaj: <b>{v=tkMin} min</b> (limit 25)", "✅ Pee liya"),
+      *ask("💧 Paani pee lo bhai", "{v=qoul}<br><br>Aaj ab tak: <b>{v=pnCount} glass</b><br>🎬 TikTok reels aaj: <b>{v=tkMin} min</b> (limit 25)<br><br>{lv=st}", "✅ Pee liya"),
         inc("pnCount"),
         expr("pnDue", "{system_time}+2100"),
         sbool("pnSnz", False),
@@ -80,7 +84,7 @@ paani = {"macroExportVersion": 1, "macro": {
     "m_name": "💧 Paani yaad",
     "m_description": "Har 35 min paani ka popup (✅ Pee liya / ⏰ Abhi nahi = 10 min baad dobara). Phone locked ho to unlock karte hi. Call par nahi. Aaj ke glass ginti.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1,
-    "localVariables": [{"m_name": "doBreak", "m_type": 0, "m_booleanValue": False, "isLocalVar": True}, {"m_name": "never", "m_type": 0, "m_booleanValue": False, "isLocalVar": True}],
+    "localVariables": [{"m_name": "doBreak", "m_type": 0, "m_booleanValue": False, "isLocalVar": True}, {"m_name": "never", "m_type": 0, "m_booleanValue": False, "isLocalVar": True}, {"m_name": "st", "m_type": 2, "m_stringValue": "", "isLocalVar": True}],
     "m_triggerList": [
         {"m_classType": "RegularIntervalTrigger", "m_SIGUID": P_TICK, "m_seconds": 60, "m_useAlarm": True},
         {"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": P_UNL}],
