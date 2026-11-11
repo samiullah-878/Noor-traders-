@@ -7667,3 +7667,12 @@ AI nahi.
 Malik (22:52): "is screen par right side par petrol ka kharcha count kar dein aur chhota sa gaari ka meter jis mein fuel gauge ho" · "kharcha likha ho, tanki mein kitna fuel bacha hai wo likha ho".
 gaari.js Falcon din khirki: har trip ke daayein .fx-cost (km / avgFor(null) x curRate()), upar .fx-fuel card = SVG gauge E-F (tankNow().pct) + is din ka kharcha + 'Tanki mein bacha N L (%)' + aur km.
 Naya data NAHI (wahi average / rate / tankNow). Tanki ka bacha PHERON se ghat-ta hai — jis din 'phera nahi' likha us din ke Falcon km tanki se minus nahi hote (malik ko bataya). Khata / POS kuch nahi. AI nahi.
+
+=== v2.237.0 (11 Nov 2026) — 🚚 Gaari saaf screen + phere ka hisaab (Excel jaisi rows) ===
+Malik (22:56–23:04): "sab remove kar do, sirf 64.9 km wala chip · tanki chip chhota · rupees neeche · phere ke upar naam · Daily Sale jaisa Bilty - Kharcha = Baqaya, rows Excel jaisi, zyada kharche + kharche ka naam ·
+  jo naam ek dafa likha app yaad rakhe, suggestion neeche · khola din upar, baqi neeche naya upar · chhoti smart search (raqam / lafz / km) · ⋮ mein Profit sum · sirf jo kharcha hum likhein (diesel khud minus NAHI) · pichhle record ki zaroorat nahi". OK 23:04.
+gaari.js: paint() — localStorage sam-gaari-old != '1' = saamne SIRF 🛰 Falcon chip (+ ⋮ '📋 Purani gaari screen', data-gr-old); purana data MITA NAHI (malik ne 'zaroorat nahi' kaha, phir bhi delete nahi kiya — wapas nahi aata).
+  openFalconDay: 🔍 #hsQ (hsSearch: har lafz naam / raqam / km / jagah mein), chhota .fx-fuel, #hsDay din ka jor, har trip = .hs-pn naam + chip + pata + .fx-cost2 diesel andaza + .hs sheet (Naam | Bilty | Kharcha, ＋ Row, ✕, .hs-sug suggestion chips = hsNames 45 din), neeche .hs-olist baqi din (naya upar).
+  ⋮ 💰 Profit ka jor (#fxProfit: Aaj · 7 din · Mahina · Sab = 45 din jo listener lata hai).
+Data: gaariDay/<din>.hj = JSON text {"HH:MM": {n, r: [[naam, bilty, kharcha]]}} — cloud.setGaariDay merge, sirf malik (rules wahi). fxSig mein hj NAHI (likhte waqt khirki dobara paint na ho, focus na toote). Save 'change' par.
+Test: sirf node --check — phone par nahi dekha. Khata / POS kuch nahi. AI nahi.

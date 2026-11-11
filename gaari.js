@@ -27,8 +27,8 @@
 // phera cards. Purani alag entries (bilty/diesel/kharch/reading/tracker/driver — v2.92) bhi jor mein rehti hain.
 // Data: businesses/noor-traders/gaari/{id} kind 'phera' {date, startR, endR, trackerKm, bilties[{id,from,to,party,kiraya,comm,col}],
 //   kharche[{n,a}], diesel[{l,rate,amount,full}], status open|closed, note, by, byName, at, trackerTrips[{t,km,cut}] (v2.95.8)} + gaari/_config.
-import { smartHit } from './smart-search.js?v=2.236.0';
-import { firebaseConfig } from './config.js?v=2.236.0';   // v2.162.0: 📍 MacroDroid ka REST pata   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.237.0';
+import { firebaseConfig } from './config.js?v=2.237.0';   // v2.162.0: 📍 MacroDroid ka REST pata   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (v, d = 0) => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: d });
@@ -264,7 +264,10 @@ function paint() {
   const s = monthCalc(), up = s.nafa >= 0, own = isOwner();
   const chip = (k, ic, v, l, cls = '') => `<button type="button" class="gx-chip ${cls}" data-gr-open="${k}"><i>${ic}</i><b>${v}</b><small>${l}</small></button>`;
   const P = s.pheras.slice().reverse();
-  sum.innerHTML = `<div class="gx">
+  let oldScr = false; try { oldScr = localStorage.getItem('sam-gaari-old') === '1'; } catch {}
+  // v2.237.0 (malik 11 Nov: "sab remove kar do, sirf 64.9 km wala chip rakho · pichhle record ki zaroorat nahi"): saamne SIRF 🛰 Falcon chip. Purani screen ⋮ mein (data mita NAHI).
+  if (!oldScr) { const f = fxState(); sum.innerHTML = `<div class="gx gx-simple"><div class="gx-chips">${chip('falcon', '🛰', f.v, 'Falcon · ' + f.short, f.cls)}</div><button type="button" class="hs-oldbtn" data-gr-old="1" data-mn="gr-old" data-mn-i="📋" data-mn-t="Purani gaari screen" data-mn-s="phere · driver · tanki · PDF (pehle wali)" data-mn-g="🚚 Gaari">📋 Purani gaari screen</button></div>`; const l0 = $('list'); if (l0) l0.innerHTML = ''; return; }
+  sum.innerHTML = `<div class="gx"><button type="button" class="hs-oldbtn" data-gr-old="0" data-mn="gr-new" data-mn-i="🛰" data-mn-t="Saaf screen (sirf Falcon)" data-mn-s="nayi chhoti screen" data-mn-g="🚚 Gaari">🛰 Saaf screen (sirf Falcon)</button>
     ${dashHTML()}
     <div class="gx-hero" style="background:linear-gradient(135deg,#0b1a3a 0%,#1d3b7a 55%,#3a2c8f 100%);color:#fff">
       <div class="gx-top"><span class="gx-tag">🚚 ${esc(cfg.no || 'Gaari')}${cfg.driver ? ' · ' + esc(cfg.driver) : ''}</span>
@@ -747,7 +750,7 @@ async function fxCfgSave(wh) {
 // 🗑 trip hatao / ↩ wapas / 🔄 din naya — gaariDay/<din> {ft, fh, fk, fn, fd} (fx-app fxHidden / fxTotal — macro dobara parhe to hataya wapas nahi)
 async function fxHide(date, t, back) {
   const d = gpsDays.get(date); if (!d || !isOwner()) return;
-  const M = await import('./fx-app.js?v=2.236.0');
+  const M = await import('./fx-app.js?v=2.237.0');
   let ft = [], fd = []; try { ft = JSON.parse(d.ft || '[]') || []; } catch {} try { fd = JSON.parse(d.fd || '[]') || []; } catch {}
   let fh = M.fxHidden(d.fh);
   if (back) { const h = fh.find(x => x[0] === t); if (!h) return; fh = fh.filter(x => x[0] !== t); if (!ft.some(x => x[0] === t)) ft.push([t, h[1]]); ft.sort((a, b) => a[0].localeCompare(b[0])); }
@@ -758,7 +761,7 @@ async function fxHide(date, t, back) {
 }
 async function fxUnhideAll(date) {   // v2.207.1: ↩ sab hataye hue wapas (ek tap)
   const d = gpsDays.get(date); if (!d || !isOwner()) return;
-  const M = await import('./fx-app.js?v=2.236.0'); let ft = []; try { ft = JSON.parse(d.ft || '[]') || []; } catch {}
+  const M = await import('./fx-app.js?v=2.237.0'); let ft = []; try { ft = JSON.parse(d.ft || '[]') || []; } catch {}
   for (const [t, km] of M.fxHidden(d.fh)) if (!ft.some(x => x[0] === t)) ft.push([t, km]); ft.sort((a, b) => a[0].localeCompare(b[0]));
   const upd = { ft: JSON.stringify(ft), fh: '[]', fk: M.fxTotal(ft), fn: ft.length }; Object.assign(d, upd); openFalconDay(date, true);
   try { await cloud.setGaariDay(date, upd); notice(`↩ ${ft.length} trip wapas — din ${num(upd.fk, 1)} km · naqsha: 🔄 Abhi parho / Falcon dobara kholein`); } catch (e) { notice('❌ ' + (e?.message || e)); }
@@ -776,7 +779,7 @@ async function fxRun(force) {
   if (!isOwner() || fxRunning) return; if (!force && Date.now() - fxRunAt < 120000) return;
   fxRunning = true; fxRunAt = Date.now(); const st = m => { fxStMsg = m; const el = $('fxRunSt'); if (el) el.textContent = m; };
   try {
-    const M = await import('./fx-app.js?v=2.236.0');
+    const M = await import('./fx-app.js?v=2.237.0');
     st('⏳ Falcon ka naya text dekh raha hoon…');
     const r = await M.fxProcess(cloud, st);
     if (!r.n && force) st(`Koi naya Falcon text nahi${fxLast && N(fxLast.at) ? ' · aakhri ' + hm(N(fxLast.at)) : ''} — 📲 se parhwao`);   // v2.205.0 (malik: button dabaya, kuch nahi hua — khamosh nahi)
@@ -809,6 +812,59 @@ function openFalcon(re) {
     <div class="gg-list">${rowsH || '<p class="gr-empty">Abhi koi din nahi — setup ke baad yahan har din ke Falcon km aayenge.</p>'}</div>
     ${own ? '<button type="button" class="gx-new" data-fx-setup="1">⚙️ Falcon setup (MacroDroid)</button>' : ''}</div>`, true);
 }
+// v2.237.0 (malik 11 Nov: "phere ka naam · Excel jaisi rows Bilty - Kharcha = Baqaya · kharche ka naam yaad, suggestion neeche · khola din upar, baqi neeche naya upar · chhoti smart search · ⋮ Profit ka jor")
+//   data: gaariDay/<din>.hj = JSON {"<trip HH:MM>": {n: phere ka naam, r: [[naam, bilty, kharcha]]}} (sirf malik likhe — rules wahi). Diesel khud minus NAHI (malik: "sirf jo kharcha hum likhein"). Khata / POS kuch nahi. AI nahi.
+const hsOf = d => { try { const o = JSON.parse((d && d.hj) || '{}'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch { return {}; } };
+const hsTot = h => { let b = 0, k = 0; for (const r of ((h && h.r) || [])) { b += N(r[1]); k += N(r[2]); } return { b, k, q: b - k }; };
+const hsDayTot = d => { const H = hsOf(d); let b = 0, k = 0; for (const t in H) { const x = hsTot(H[t]); b += x.b; k += x.k; } return { b, k, q: b - k }; };
+const hsNames = () => { const m = new Map(); for (const d of gpsDays.values()) { const H = hsOf(d); for (const t in H) for (const r of (H[t].r || [])) { const n = String(r[0] || '').trim(); if (n) m.set(n, (m.get(n) || 0) + 1); } } return [...m].sort((a, b) => b[1] - a[1]).map(x => x[0]); };
+const hsRowH = (r, own) => `<div class="hs-r"><input class="hs-nm" value="${esc(r[0] || '')}" placeholder="Naam" autocomplete="off" enterkeyhint="next"${own ? '' : ' disabled'}><input class="hs-b" type="number" inputmode="decimal" value="${N(r[1]) || ''}" placeholder="Bilty"${own ? '' : ' disabled'}><input class="hs-k" type="number" inputmode="decimal" value="${N(r[2]) || ''}" placeholder="Kharcha"${own ? '' : ' disabled'}>${own ? '<button type="button" class="hs-x" data-hs-del="1" aria-label="Row hatao">✕</button>' : '<span></span>'}</div>`;
+const hsBqH = x => `Bilty <b>${num(x.b)}</b> − Kharcha <b>${num(x.k)}</b> = <b class="${x.q < 0 ? 'dn' : 'up'}">${x.q < 0 ? '− ' : ''}${rs(Math.abs(x.q))}</b>`;
+const hsBoxH = (h, own) => { const R = (h && h.r && h.r.length) ? h.r : (own ? [['', 0, 0]] : []); if (!R.length) return '';
+  return `<div class="hs"><div class="hs-hd"><span>Naam</span><span>Bilty</span><span>Kharcha</span><span></span></div><div class="hs-rows">${R.map(r => hsRowH(r, own)).join('')}</div><div class="hs-sug" hidden></div><div class="hs-ft">${own ? '<button type="button" class="hs-add" data-hs-add="1">＋ Row</button>' : ''}<span class="hs-bq">${hsBqH(hsTot(h))}</span></div></div>`; };
+const hsDom = box => [...box.querySelectorAll('.hs-r')].map(r => [r.querySelector('.hs-nm').value.trim(), N(r.querySelector('.hs-b').value), N(r.querySelector('.hs-k').value)]).filter(r => r[0] || r[1] || r[2]);
+function hsPaintBox(box) {
+  const bq = box.querySelector('.hs-bq'); if (bq) bq.innerHTML = hsBqH(hsTot({ r: hsDom(box) }));
+  const day = $('hsDay'); if (day) { let b = 0, k = 0; document.querySelectorAll('[data-hs-row] .hs').forEach(x => { const t = hsTot({ r: hsDom(x) }); b += t.b; k += t.k; }); day.innerHTML = '📒 Is din: ' + hsBqH({ b, k, q: b - k }); }
+}
+function hsSave(row) {
+  if (!isOwner()) return; const [date, t] = String(row.dataset.hsRow).split('|'), d = gpsDays.get(date); if (!d || !t) return;
+  const H = hsOf(d), box = row.querySelector('.hs'), r = box ? hsDom(box) : [], n = (row.querySelector('.hs-pn')?.value || '').trim();
+  if (!n && !r.length) delete H[t]; else H[t] = { n, r };
+  const hj = JSON.stringify(H); if (hj === (d.hj || '{}')) return; d.hj = hj;
+  cloud.setGaariDay(date, { hj }).catch(e => notice('❌ Save nahi hua: ' + (e?.message || e)));
+}
+let hsSugIn = null;
+function hsSug(inp) {
+  const box = inp.closest('.hs'), sg = box?.querySelector('.hs-sug'); if (!sg) return; hsSugIn = inp;
+  const v = inp.value.trim().toLowerCase(), L = hsNames().filter(n => n.toLowerCase() !== v && (!v || n.toLowerCase().includes(v))).slice(0, 8);
+  sg.hidden = !L.length; sg.innerHTML = L.map(n => `<button type="button" data-hs-sug="${esc(n)}">${esc(n)}</button>`).join('');
+}
+const hsKey = x => String(x || '').toLowerCase().replace(/[,\s]+/g, '');
+function hsSearch(q) {
+  const T = String(q || '').trim().split(/\s+/).filter(Boolean).map(hsKey);
+  document.querySelectorAll('[data-hs-row],[data-hs-od]').forEach(el => { const txt = hsKey(el.textContent + ' ' + [...el.querySelectorAll('input')].map(i => i.value).join(' ')); el.hidden = T.length > 0 && !T.every(t => txt.includes(t)); });
+}
+function hsProfitH(n) {
+  const td = new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10), from = n ? new Date(Date.now() + 5 * 3600000 - (n - 1) * 864e5).toISOString().slice(0, 10) : '';
+  const D = [...gpsDays.values()].filter(d => d.date && d.date <= td && (!from || d.date >= from)).map(d => ({ d, x: hsDayTot(d) })).filter(o => o.x.b || o.x.k).sort((a, b) => String(b.d.date).localeCompare(String(a.d.date)));
+  const S = D.reduce((a, o) => ({ b: a.b + o.x.b, k: a.k + o.x.k }), { b: 0, k: 0 }), q = S.b - S.k;
+  return `<div class="hs-prc">${[[1, 'Aaj'], [7, '7 din'], [30, 'Mahina'], [0, 'Sab (45 din)']].map(([v, l]) => `<button type="button" data-hs-pr="${v}" class="${v === n ? 'is-in' : ''}">${l}</button>`).join('')}</div>
+    <div class="hs-prk"><p><small>Bilty</small><b>${rs(S.b)}</b></p><p><small>Kharcha</small><b>${rs(S.k)}</b></p><p class="${q < 0 ? 'dn' : 'up'}"><small>${q < 0 ? 'Ghata' : 'Profit'}</small><b>${q < 0 ? '− ' : ''}${rs(Math.abs(q))}</b></p></div>
+    ${D.map(o => `<button type="button" class="hs-prd" data-fx-day="${esc(o.d.date)}"><span>${esc(dmy(o.d.date))}</span><b class="${o.x.q < 0 ? 'dn' : 'up'}">${o.x.q < 0 ? '− ' : ''}${rs(Math.abs(o.x.q))}</b></button>`).join('') || '<p class="gr-empty">Is arsay mein koi hisaab nahi likha</p>'}`;
+}
+document.addEventListener('input', e => { const t = e.target; if (!t || !t.closest) return; if (t.id === 'hsQ') { hsSearch(t.value); return; } const box = t.closest('.hs'); if (box) { hsPaintBox(box); if (t.classList.contains('hs-nm')) hsSug(t); } });
+document.addEventListener('focusin', e => { const t = e.target; if (t?.classList?.contains('hs-nm')) hsSug(t); });
+document.addEventListener('change', e => { const row = e.target?.closest?.('[data-hs-row]'); if (row && (e.target.closest('.hs') || e.target.classList.contains('hs-pn'))) hsSave(row); });
+document.addEventListener('click', e => {
+  const t = e.target; if (!t || !t.closest) return;
+  const sg = t.closest('[data-hs-sug]'); if (sg) { const box = sg.closest('.hs'), inp = hsSugIn && box.contains(hsSugIn) ? hsSugIn : box.querySelector('.hs-nm'); if (inp) { inp.value = sg.dataset.hsSug; box.querySelector('.hs-sug').hidden = true; hsSave(box.closest('[data-hs-row]')); const r = inp.closest('.hs-r'); (N(r.querySelector('.hs-b').value) ? r.querySelector('.hs-k') : r.querySelector('.hs-b')).focus(); } return; }
+  const ad = t.closest('[data-hs-add]'); if (ad) { const rows = ad.closest('.hs').querySelector('.hs-rows'); rows.insertAdjacentHTML('beforeend', hsRowH(['', 0, 0], true)); rows.lastElementChild.querySelector('.hs-nm').focus(); return; }
+  const dl = t.closest('[data-hs-del]'); if (dl) { const box = dl.closest('.hs'), row = box.closest('[data-hs-row]'), r = dl.closest('.hs-r'); if ((r.querySelector('.hs-nm').value || r.querySelector('.hs-b').value || r.querySelector('.hs-k').value) && !confirm('Yeh row hatayein?')) return; r.remove(); if (!box.querySelector('.hs-r')) box.querySelector('.hs-rows').insertAdjacentHTML('beforeend', hsRowH(['', 0, 0], true)); hsPaintBox(box); hsSave(row); return; }
+  if (t.closest('[data-fx-profit]')) { const k = $('fxProfit'); if (k) { k.hidden = !k.hidden; if (!k.hidden) { k.innerHTML = hsProfitH(30); k.scrollIntoView?.({ block: 'nearest' }); } } return; }
+  const pr = t.closest('[data-hs-pr]'); if (pr) { const k = $('fxProfit'); if (k) k.innerHTML = hsProfitH(Number(pr.dataset.hsPr)); return; }
+  const od = t.closest('[data-gr-old]'); if (od) { try { od.dataset.grOld === '1' ? localStorage.setItem('sam-gaari-old', '1') : localStorage.removeItem('sam-gaari-old'); } catch {} if (mounted) paint(); return; }
+});
 function openFalconDay(date, re) {
   const d = gpsDays.get(date); if (!d) return; if (isOwner() && !re) setTimeout(() => fxRun(false), 50); let L = [], FD = []; try { L = JSON.parse(d.ft || '[]') || []; } catch {} try { FD = JSON.parse(d.fd || '[]') || []; } catch {}
   const ph = phDay.get(date) || 0, t12 = t => { const [h, m] = String(t).split(':').map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`; };
@@ -817,7 +873,7 @@ function openFalconDay(date, re) {
   const isToday = date === new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
   // v2.209.0 (malik: "upar wale 4 chip chhote + daayein ⋮ ke andar · chips chhote premium · neeche city ka naam · rang ka nuqta · gallery se ek dafa photos")
   const mn = (k, i, t, sub, a) => `<button type="button" data-mn="${k}" data-mn-i="${i}" data-mn-t="${esc(t)}" data-mn-s="${esc(sub)}" data-mn-g="🛰 Falcon din" ${a}>${i} ${esc(t)}</button>`;
-  const mnH = `<div class="fx-mn" data-mn-box="1">${mn('fx-kpi', '📊', 'Din ki tafseel', 'Falcon km · trips · phere · kab parha', 'data-fx-kpi="1"')}${own ? mn('fx-shot', '🖼', 'Gallery se screenshots', 'Falcon-i ke screenshot ek dafa — 🤖 AI parhe', 'data-fx-shot="1"') + mn('fx-cmd', '📲', 'Falcon se abhi parhwao', 'MacroDroid phone par Falcon-i parhe', 'data-fx-cmd="1"') + (isToday ? mn('fx-reset', '🔄', 'Aaj ka din naya', 'sab trips mitao + dobara parhwao', `data-fx-reset="${esc(date)}"`) : '') + (FH.length ? mn('fx-unhide', '↩', `Hataye hue (${FH.length})`, 'wapas lane ke liye', 'data-fx-unhide="1"') : '') : ''}</div>`;
+  const mnH = `<div class="fx-mn" data-mn-box="1">${mn('fx-kpi', '📊', 'Din ki tafseel', 'Falcon km · trips · phere · kab parha', 'data-fx-kpi="1"')}${mn('fx-profit', '💰', 'Profit ka jor', 'Bilty − Kharcha = bachat · Aaj · 7 din · Mahina', 'data-fx-profit="1"')}${own ? mn('fx-shot', '🖼', 'Gallery se screenshots', 'Falcon-i ke screenshot ek dafa — 🤖 AI parhe', 'data-fx-shot="1"') + mn('fx-cmd', '📲', 'Falcon se abhi parhwao', 'MacroDroid phone par Falcon-i parhe', 'data-fx-cmd="1"') + (isToday ? mn('fx-reset', '🔄', 'Aaj ka din naya', 'sab trips mitao + dobara parhwao', `data-fx-reset="${esc(date)}"`) : '') + (FH.length ? mn('fx-unhide', '↩', `Hataye hue (${FH.length})`, 'wapas lane ke liye', 'data-fx-unhide="1"') : '') : ''}</div>`;
   const hidH = FH.length ? `<div id="fxHidden" class="gp-trips fx-hid"${L.length ? ' hidden' : ''}><p class="gr-empty">🗑 Aap ke hataye hue trips (Falcon dobara parhe to bhi wapas nahi aate):</p><button type="button" class="fx-runbtn" data-fx-unall="1">↩ Sab wapas lao (${FH.length})</button>${FH.map(([t, km]) => `<button type="button" class="gp-trip cut" data-fx-back="${esc(t)}">🕒 ${esc(t12(t))} · <b>${num(km, 2)} km</b> <i>↩</i></button>`).join('')}</div>` : '';
   const kpi = `<div id="fxKpi" class="gx-kv fx-kpi" hidden><p><span>Falcon km</span><b>${num(d.fk, 2)} km</b></p><p><span>Trips</span><b>${N(d.fn)}</b></p><p><span>Phere</span><b>${ph ? ph + (ph > 1 ? ' (km ' + num(N(d.fk) / ph, 1) + ' har phera)' : '') : '🚫 koi phera nahi'}</b></p>${N(d.km) > 0 ? `<p><span>📱 GPS</span><b>${num(d.km, 1)} km</b></p>` : ''}<p><span>Aakhri dafa parha</span><b>${N(d.fa) ? ago(Date.now() - N(d.fa)) + ' pehle' : '—'}</b></p></div>`;
   const sum = `<p class="fx-sum">${N(d.fn)} trip · ${ph ? '🚚 ' + ph + ' phera' : '🚫 phera nahi'} · ${N(d.fa) ? ago(Date.now() - N(d.fa)) + ' pehle parha' : ''} <i>· tafseel ⋮</i></p>`;
@@ -826,15 +882,20 @@ function openFalconDay(date, re) {
   const fuelH = (() => {
     const pct = tk ? Math.max(0, Math.min(1, tk.pct)) : 0, a = Math.PI * (1 - pct), nx = 50 + 30 * Math.cos(a), ny = 50 - 30 * Math.sin(a), col = !tk ? '#94a3b8' : pct < .15 ? '#dc2626' : pct < .35 ? '#d97706' : '#16a34a';
     const g = `<svg class="fx-gauge" viewBox="0 0 100 60" aria-hidden="true"><path d="M12 50 A38 38 0 0 1 88 50" fill="none" stroke="#e2e8f0" stroke-width="8" stroke-linecap="round"/><path d="M12 50 A38 38 0 0 1 88 50" fill="none" stroke="${col}" stroke-width="8" stroke-linecap="round" pathLength="100" stroke-dasharray="${(pct * 100).toFixed(1)} 100"/><line x1="50" y1="50" x2="${nx.toFixed(1)}" y2="${ny.toFixed(1)}" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/><circle cx="50" cy="50" r="4.5" fill="#0f172a"/><text x="8" y="59" font-size="9" font-weight="700" fill="#dc2626">E</text><text x="86" y="59" font-size="9" font-weight="700" fill="#16a34a">F</text></svg>`;
-    return `<div class="fx-fuel">${g}<div class="fx-fuel-t"><b>⛽ Is din ka kharcha: ${rs(fL(dayKm) * fRate)}</b><small>${num(fL(dayKm), 1)} L · ${num(fAvg, 2)} km/L · Rs ${num(fRate, 1)}/L</small>${tk ? `<b class="fx-left" style="color:${col}">Tanki mein bacha: ${num(tk.left, 1)} L (${Math.round(pct * 100)}%)</b><small>🛣 aur ~${num(tk.rangeKm)} km · pheron ke hisaab se</small>` : '<small>Tanki ka hisaab shuru nahi — Gaari screen par "⛽ Tanki full karwa li" dabayein</small>'}</div></div>`;
+    return `<div class="fx-fuel">${g}<div class="fx-fuel-t"><b>⛽ ${rs(fL(dayKm) * fRate)} <i>· ${num(fL(dayKm), 1)} L</i></b>${tk ? `<small style="color:${col}"><b>Tanki ${num(tk.left, 1)} L (${Math.round(pct * 100)}%)</b> · ~${num(tk.rangeKm)} km aur</small>` : '<small>Tanki ka hisaab shuru nahi</small>'}</div></div>`;
   })();
+  const HS = hsOf(d);
+  const othH = fxDays().filter(x => x.date !== date).slice(0, 45).map(x => { const T = hsDayTot(x), H = hsOf(x); let LL = []; try { LL = JSON.parse(x.ft || '[]') || []; } catch {}
+    const ln = LL.map(([t, km]) => { const h = H[t], tt = hsTot(h); return `<small class="hs-ol">${esc(t12(t))} · ${num(km, 1)} km${h && h.n ? ' · <b>' + esc(h.n) + '</b>' : ''}${tt.b || tt.k ? ` · ${num(tt.b)} − ${num(tt.k)} = <b>${num(tt.q)}</b>` : ''}${h ? ' <i>' + esc((h.r || []).map(r => r[0]).filter(Boolean).join(', ')) + '</i>' : ''}</small>`; }).join('');
+    return `<button type="button" class="hs-od" data-hs-od="1" data-fx-day="${esc(x.date)}"><span class="hs-oh"><b>${esc(dmy(x.date))}</b> · ${num(x.fk, 1)} km${T.b || T.k ? `<em class="${T.q < 0 ? 'dn' : 'up'}">${T.q < 0 ? '− ' : ''}${rs(Math.abs(T.q))}</em>` : ''}</span>${ln}</button>`; }).join('');
   modal(`🛰 ${dmy(date)} · ${num(d.fk, 1)} km`, `<div class="gx-win gg" data-fx-root="${esc(date)}" data-sig="${esc(fxSig(d))}">
-    ${mnH}${sum}${fuelH}${kpi}<input type="file" id="fxShotIn" accept="image/*" multiple hidden><small id="fxRunSt" class="fx-shotst">${esc(fxStMsg)}</small>
+    ${mnH}<input id="hsQ" class="hs-q" type="search" placeholder="🔍 Naam · raqam · km · jagah" autocomplete="off">${sum}${fuelH}<div id="hsDay" class="hs-day">📒 Is din: ${hsBqH(hsDayTot(d))}</div><div id="fxProfit" class="hs-pr" hidden></div>${kpi}<input type="file" id="fxShotIn" accept="image/*" multiple hidden><small id="fxRunSt" class="fx-shotst">${esc(fxStMsg)}</small>
     <div class="fx-tlist">${L.map(([t, km], i) => { const f = fdOf(t);
       const fe = f && (f.f || f.e) ? `<small class="fx-fe"><span><i class="fx-dot g"></i>${esc(fxPlace(f.f) || '?')}</span><em>→</em><span><i class="fx-dot r"></i>${esc(fxPlace(f.e) || '?')}${f.te ? ` <b class="fx-te">${esc(t12(f.te))}</b>` : ''}</span></small>` : '<small class="fx-fe fx-fe0">📍 pata abhi nahi — Falcon-i list dobara khol kar band karein</small>';
-      return `<div class="fx-trow"><span class="fx-chip${f && f.p ? ' has-pin' : ''}" data-fx-trip="${esc(t)}"><b class="fx-n">${i + 1}</b>${esc(t12(t))}<b class="fx-km">${num(km, 2)} km</b>${own ? `<button type="button" class="fx-del" data-fx-del="${esc(t)}" aria-label="Hatao">🗑</button>` : ''}</span><span class="fx-cost">⛽ <b>${rs(fL(km) * fRate)}</b><small>${num(fL(km), 1)} L</small></span>${fe}</div>`; }).join('') || `<p class="gr-empty">Trips nahi${FH.length ? ' — ' + FH.length + ' hataye hue (↩ ⋮ se)' : ''}</p>`}</div>${hidH}
+      return `<div class="fx-trow" data-hs-row="${esc(date)}|${esc(t)}"><input class="hs-pn" value="${esc((HS[t] && HS[t].n) || '')}" placeholder="✏️ Phere ka naam" autocomplete="off"${own ? '' : ' disabled'}><span class="fx-chip${f && f.p ? ' has-pin' : ''}" data-fx-trip="${esc(t)}"><b class="fx-n">${i + 1}</b>${esc(t12(t))}<b class="fx-km">${num(km, 2)} km</b>${own ? `<button type="button" class="fx-del" data-fx-del="${esc(t)}" aria-label="Hatao">🗑</button>` : ''}</span>${fe}<small class="fx-cost2">⛽ diesel andaza ${rs(fL(km) * fRate)} · ${num(fL(km), 1)} L</small>${hsBoxH(HS[t], own)}</div>`; }).join('') || `<p class="gr-empty">Trips nahi${FH.length ? ' — ' + FH.length + ' hataye hue (↩ ⋮ se)' : ''}</p>`}</div>${hidH}
     <div class="fx-mapbar"><button type="button" class="fx-mapbtn" data-fx-map="1">🗺 Naqsha${nPin ? ` <small>${nPin}/${L.length}</small>` : N(d.km) > 0 ? ' <small>GPS</small>' : ''}</button></div>
     <div id="fxTripInfo" class="fx-tripinfo" hidden></div><div id="fxMap" class="gg-map fx-map" hidden></div>
+    ${othH ? `<p class="hs-oth">📅 Baqi din — naya upar (tap = kholo)</p><div class="hs-olist">${othH}</div>` : ''}
     <p class="gg-note">Trip ka waqt + "Total Distance" Falcon-i se hoobahoo. Naqsha: pata → nuqta (OpenStreetMap, andaza), seedhi lakeer — asal raasta nahi. Har nuqte par trip number + waqt.</p></div>`, true);
 }
 // v2.209.0: pata chhota — jagah + shehar (malik: "neeche city ka naam nahi aa raha")
@@ -849,7 +910,7 @@ async function fxShots(files) {
   const st = m => { fxStMsg = m; const el = $('fxRunSt'); if (el) el.textContent = m; };
   st(`⏳ ${files.length} screenshot — 🤖 parh raha hoon…`);
   try {
-    const M = await import('./fx-app.js?v=2.236.0');
+    const M = await import('./fx-app.js?v=2.237.0');
     const r = await M.fxFromShots(cloud, files, { ai, shrink, onStatus: st });
     for (const [dd, u] of Object.entries(r.days)) gpsDays.set(dd, { ...(gpsDays.get(dd) || {}), ...u });
     const ds = Object.keys(r.days).sort();
@@ -926,7 +987,7 @@ async function fxDownload() {
   if (gKey == null) { try { gKey = await cloud.getGaariKey(); } catch { gKey = ''; } }
   if (!gKey) { notice('Pehle 🔑 chaabi banao (📱 Gaari phone setup)'); return; }
   try {
-    const { FALCON_MACRO } = await import('./falcon-macro.js?v=2.236.0');
+    const { FALCON_MACRO } = await import('./falcon-macro.js?v=2.237.0');
     const txt = JSON.stringify(FALCON_MACRO).split('__NT_URL__').join(ggUrl().replace('/gaariGps?', '/gaariFx?')).split('__NT_KEY__').join(gKey);   // v2.202.0: Falcon ka text gaariFx mein (app khud parhti hai — PC nahi)
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'application/octet-stream' })); a.download = 'NT_Falcon_km.macro';
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);

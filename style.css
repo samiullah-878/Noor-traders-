@@ -7916,3 +7916,36 @@ html body #dialogBody .fx-cost b{font-size:14px}html body #dialogBody .fx-cost s
 html body #dialogBody .fx-fuel{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;margin:0 0 10px;padding:9px 12px;border-radius:14px;border:1px solid #dbe5f5;background:linear-gradient(180deg,#fff,#f3f7ff)}
 html body #dialogBody .fx-gauge{width:104px;height:auto;display:block}
 html body #dialogBody .fx-fuel-t{display:grid;gap:1px;min-width:0}html body #dialogBody .fx-fuel-t b{font-size:15px;color:#0f172a}html body #dialogBody .fx-fuel-t .fx-left{font-size:16px;margin-top:4px}html body #dialogBody .fx-fuel-t small{font-size:12px;color:#475569}
+
+/* v2.237.0: 🛰 Falcon din — chhota tanki chip · Rs neeche · phere ka naam · Excel jaisi rows (Bilty − Kharcha = Baqaya) · search · profit */
+html body #dialogBody .fx-trow{grid-template-columns:minmax(0,1fr);gap:3px;padding:8px 0;border-bottom:1px dashed #dbe5f5}
+html body #dialogBody .fx-trow[hidden],html body #dialogBody .hs-od[hidden]{display:none!important}
+html body #dialogBody .fx-fuel{grid-template-columns:auto minmax(0,1fr);gap:8px;margin:0 0 6px;padding:4px 10px;border-radius:999px}
+html body #dialogBody .fx-gauge{width:44px}
+html body #dialogBody .fx-fuel-t b{font-size:14px}html body #dialogBody .fx-fuel-t b i{font-style:normal;font-weight:500;color:#475569}html body #dialogBody .fx-fuel-t small,html body #dialogBody .fx-fuel-t small b{font-size:12px}
+html body #dialogBody .fx-cost2{font-size:12px;color:#92400e;padding-left:6px}
+html body #dialogBody .hs-q{width:100%;height:36px;border-radius:999px;border:1px solid #cbd8f0;background:#f6f9ff;padding:0 14px;font-size:14px;margin:0 0 6px;box-sizing:border-box}
+html body #dialogBody .hs-day{margin:0 0 6px;padding:7px 12px;border-radius:12px;background:linear-gradient(180deg,#f0fdf4,#e3f7ea);border:1px solid #bfe6cd;font-size:13.5px;color:#14532d}
+html body #dialogBody .hs-day b,html body #dialogBody .hs-bq b{font-size:14.5px}html body #dialogBody .up{color:#15803d}html body #dialogBody .dn{color:#dc2626}
+html body #dialogBody .hs-pn{width:100%;height:32px;border:0;border-bottom:1px solid #cbd8f0;background:transparent;font-size:15px;font-weight:700;color:#0f172a;padding:0 4px;box-sizing:border-box}
+html body #dialogBody .hs{margin-top:4px;border:1px solid #d6e2f8;border-radius:10px;overflow:hidden;background:#fff}
+html body #dialogBody .hs-hd,html body #dialogBody .hs-r{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr) minmax(0,1fr) 30px}
+html body #dialogBody .hs-hd span{font-size:11.5px;font-weight:700;color:#1d3b7a;background:#eaf1ff;padding:4px 6px;border-right:1px solid #d6e2f8}
+html body #dialogBody .hs-r input{min-width:0;width:100%;height:34px;border:0;border-top:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-radius:0;background:#fff;padding:0 6px;font-size:14.5px;box-sizing:border-box;color:#0f172a}
+html body #dialogBody .hs-r .hs-b{color:#15803d;font-weight:700;text-align:right}html body #dialogBody .hs-r .hs-k{color:#b91c1c;font-weight:700;text-align:right}
+html body #dialogBody .hs-x{height:34px;min-height:0;padding:0;border:0;border-top:1px solid #e2e8f0;border-radius:0;background:#fff!important;color:#94a3b8!important;font-size:13px}
+html body #dialogBody .hs-sug{display:flex;gap:6px;overflow-x:auto;padding:6px;border-top:1px solid #e2e8f0;background:#f8fafc}html body #dialogBody .hs-sug[hidden]{display:none}
+html body #dialogBody .hs-sug button,html body #dialogBody .hs-prc button{flex:none;min-height:32px;height:32px;padding:0 12px;border-radius:999px;border:1px solid #cbd8f0;background:linear-gradient(180deg,#fff,#eef3ff)!important;color:#1d3b7a!important;font-size:13px;white-space:nowrap}
+html body #dialogBody .hs-ft{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:5px 6px;border-top:1px solid #d6e2f8;background:#f6f9ff}
+html body #dialogBody .hs-add{min-height:30px;height:30px;padding:0 12px;border-radius:999px;border:1px solid #cbd8f0;background:#fff!important;color:#1d3b7a!important;font-size:13px;white-space:nowrap}
+html body #dialogBody .hs-bq{font-size:12.5px;color:#334155;text-align:right;min-width:0}
+html body #dialogBody .hs-oth{margin:14px 0 6px;font-size:13px;font-weight:700;color:#1d3b7a}
+html body #dialogBody .hs-olist{display:grid;gap:6px}
+html body #dialogBody .hs-od{display:grid;gap:2px;text-align:left;min-height:0;padding:8px 12px;border-radius:12px;border:1px solid #d6e2f8;background:linear-gradient(180deg,#fff,#f3f7ff)!important;color:#0f172a!important}
+html body #dialogBody .hs-oh{display:flex;justify-content:space-between;gap:8px;font-size:14px}html body #dialogBody .hs-oh em{font-style:normal;font-weight:800}
+html body #dialogBody .hs-ol{font-size:12px;color:#475569}html body #dialogBody .hs-ol i{font-style:normal;color:#94a3b8}
+html body #dialogBody .hs-pr{margin:0 0 8px;padding:8px;border-radius:12px;border:1px solid #d6e2f8;background:#fff}html body #dialogBody .hs-pr[hidden]{display:none}
+html body #dialogBody .hs-prc{display:flex;gap:6px;overflow-x:auto;margin-bottom:8px}html body #dialogBody .hs-prc button.is-in{background:linear-gradient(180deg,#2f5bd8,#1d3b7a)!important;color:#fff!important}
+html body #dialogBody .hs-prk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px}html body #dialogBody .hs-prk p{margin:0;padding:6px 8px;border-radius:10px;background:#f6f9ff;display:grid}html body #dialogBody .hs-prk small{font-size:11.5px;color:#475569}html body #dialogBody .hs-prk b{font-size:15px}
+html body #dialogBody .hs-prd{display:flex;justify-content:space-between;width:100%;min-height:34px;padding:0 10px;margin-top:4px;border-radius:10px;border:1px solid #e2e8f0;background:#fff!important;color:#0f172a!important;font-size:13.5px}
+html body #summary .hs-oldbtn{display:inline-flex;margin:10px 0 0;min-height:34px;height:34px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1)!important;color:#fff!important;font-size:13px;white-space:nowrap}
