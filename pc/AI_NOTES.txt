@@ -4488,3 +4488,15 @@ posAdds = sirf PC (admin) — rules nahi badle. ASAL PC PAR TEST NAHI (addStart 
 === 2026-11-11 · md pkg v30 — 📶 Hotspot popup band (malik ka screenshot: Blue Khata ke upar phone ka 'Turning off personal hotspot can extend battery life · Turn off' popup; "power saving ka hotspot off karne wala khatam karo") ===
 - md/tools/hs.py (naya macro '📶 Hotspot popup band'): ScreenContentTrigger 'personal hotspot can extend battery' (sab apps, overlays) -> 1 s -> PressBack. Hotspot ko hum kabhi band nahi karte (md/ mein hotspot ka koi action nahi — jaancha). Popup phone (OnePlus) ka apna hai.
 - Phone par test nahi — popup na hate (Back se band na ho) to 'Turn off' ke bahar tap / UI click se badlo; malik batayega. Accessibility chahiye (Bank mode ke dauran nahi chalega). AI nahi.
+
+=== v2.231.1 (11 Nov 2026) — 📱 jura hua phone dobara login maangta tha (GHALTI v2.231.0) ===
+Malik: "Device on ha dobara fer login mang raha ha" (TBN-RR7).
+Wajah: device ka rishta gumnaam Firebase UID se hai — Logout button / login form mein ghalat password / jaanch fail par
+  app us UID ko signOut karti thi -> naya UID -> malik ka banaya session purane UID par reh jata -> phone phir "Intezar".
+Theek: auth-controller.js `out()` — gumnaam user KABHI sign out nahi (sirf malik ka email login asal sign out; pakka-code
+  flow mein custom token se pehle wala wahi). Logout ke baad wahi UID -> session maujood -> login screen par
+  "✅ Ye phone jura hua hai · 📱 Kholein" (khud Logout = sam-no-auto, button; warna khud khul jata). Mulazim band = saaf paigham,
+  60 s baad dobara koshish (har 2 s nahi).
+Reh gaya (fitri hadd): us phone par MALIK khud login kare (email / pakka code) ya browser ka data mite = UID gaya -> dobara jorna.
+Test: node mock (hold -> claim -> logout -> wahi uid -> claim -> session hataya -> uid wahi, signOut 0). Asal phone par malik dekhe.
+AI: nahi. Rules: wahi 2.102. PC: koi badlaav nahi.

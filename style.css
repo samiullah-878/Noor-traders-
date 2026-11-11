@@ -7867,3 +7867,6 @@ html body dialog.sdj .sdj-c.is-in::before{content:"✓ "}
 html body dialog.sdj .sdj-go{min-height:46px;border-radius:14px;border:0!important;background:linear-gradient(180deg,#2a5fc4,#1c448f)!important;color:#fff!important;font-size:16px;font-weight:800;margin-top:4px}
 html.dk dialog.sdj{background:#111b33;color:#e8eefc}html.dk .sdj-l input{background:#0b1428;color:#e8eefc;border-color:#2a3a5e}html.dk .sdj-st{background:#18243f;color:#c9d6f2}html.dk .sdj-cap,html.dk .sdj-l{color:#c9d6f2}
 #login .dev-line.dj-big small{margin-top:0}
+
+/* v2.231.1: 📱 jura hua phone — Logout ke baad wapas kholne ka button */
+#login .dj-open{display:block;margin:12px auto 0;min-height:44px;padding:0 26px;border-radius:999px;border:1px solid #1d4ed8;background:linear-gradient(180deg,#3b82f6,#1d4ed8);color:#fff!important;font-size:17px;font-weight:800;white-space:nowrap}

@@ -58,6 +58,9 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
   const CK = cache?.key || 'sam-sess-v1';   // v2.105.8: 👑 malik ki tab (mulazim ke phone par) apna alag, sirf us tab ka (sessionStorage) — mulazim ka yaad wala session na mite
   const ls = () => { try { return (cache?.store === 'session' ? globalThis.sessionStorage : globalThis.localStorage) || null; } catch { return null; } };
   let optimistic = null;
+  // v2.231.1: 📱 jura hua phone = gumnaam UID. Wo UID sign-out se hamesha ke liye kho jata hai (naya UID = malik ko dobara jorna parta) —
+  //   is liye gumnaam user ko KABHI sign out nahi (logout / ghalat password / jaanch fail). Malik ka email login phir bhi asal sign out.
+  const out = async () => { const u = auth.currentUser; if (u && !u.isAnonymous) await sdk.signOut(auth); };
   let holding = false;   // v2.231.0: 📱 device jorna — login screen par gumnaam user bina session ke malik ke jorne ka intezar karta hai
   const readCache = uid => { try { const c = JSON.parse(ls()?.getItem(CK) || 'null'); return c && c.uid === uid && Date.now() - (Number(c.at) || 0) < 30 * 864e5 ? c : null; } catch { return null; } };
   const writeCache = s => { try { const a = s.account ? Object.fromEntries(Object.entries(s.account).filter(([k]) => !/hash|salt|pass|pw|secret|key|cred/i.test(k))) : undefined; ls()?.setItem(CK, JSON.stringify({ uid: s.user.uid, role: s.role, scope: s.scope, phone: s.phone, account: a, at: Date.now() })); } catch {} };
@@ -125,7 +128,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       reset();
       const offline = ['unavailable', 'auth/network-request-failed'].includes(error.code);
       if (holding && user.isAnonymous && error.code === 'login/staff-session') return;   // device-join ke intezar mein: yehi gumnaam user rehne do
-      if (!offline && auth.currentUser?.uid === user.uid) await sdk.signOut(auth);
+      if (!offline && auth.currentUser?.uid === user.uid) await out();
       if (user.isAnonymous && error.code === 'login/staff-session') return;   // v2.231.0: session nahi (device abhi jura nahi / malik ne hata diya) = chup-chaap login screen
       onError(error, user.isAnonymous ? 'staff' : 'owner');
     }
@@ -166,7 +169,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       reset();
       try {
         // A new staff login must never reuse a previous user's anonymous UID.
-        if (auth.currentUser) await sdk.signOut(auth);
+        await out();
         if (ticket !== epoch) throw failure('login/cancelled');
         let credential;
         if (request.role === 'owner') {
@@ -193,10 +196,10 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       } catch (error) {
         if (ticket === epoch) {
           reset();
-          if (auth.currentUser) await sdk.signOut(auth);
+          await out();
         } else if (attemptUser && auth.currentUser?.uid === attemptUser.uid) {
           // A sign-in promise may finish after Logout. Do not leave it signed in.
-          await sdk.signOut(auth);
+          await out();
         }
         throw error;
       } finally {
@@ -223,7 +226,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       let attemptUser = null;
       reset();
       try {
-        if (auth.currentUser) await sdk.signOut(auth);
+        await out();
         if (ticket !== epoch) throw failure('login/cancelled');
         const credential = await sdk.signInAnonymously(auth);
         attemptUser = credential.user;
@@ -232,8 +235,8 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
         check(ticket, credential.user);
         await activate(credential.user, ticket, 'staff', scope || '');
       } catch (error) {
-        if (ticket === epoch) { reset(); if (auth.currentUser) await sdk.signOut(auth); }
-        else if (attemptUser && auth.currentUser?.uid === attemptUser.uid) await sdk.signOut(auth);
+        if (ticket === epoch) { reset(); await out(); }
+        else if (attemptUser && auth.currentUser?.uid === attemptUser.uid) await out();
         throw error;
       } finally { pending = false; }
     },
@@ -246,7 +249,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       let attemptUser = null;
       reset();
       try {
-        if (auth.currentUser && !auth.currentUser.isAnonymous) await sdk.signOut(auth);
+        if (auth.currentUser && !auth.currentUser.isAnonymous) await out();
         if (!auth.currentUser) await sdk.signInAnonymously(auth);
         const token = await getToken(auth.currentUser);
         if (ticket !== epoch) throw failure('login/cancelled');
@@ -256,8 +259,8 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
         check(ticket, credential.user);
         await activate(credential.user, ticket, 'owner');
       } catch (error) {
-        if (ticket === epoch) { reset(); if (auth.currentUser) await sdk.signOut(auth); }
-        else if (attemptUser && auth.currentUser?.uid === attemptUser.uid) await sdk.signOut(auth);
+        if (ticket === epoch) { reset(); await out(); }
+        else if (attemptUser && auth.currentUser?.uid === attemptUser.uid) await out();
         throw error;
       } finally { pending = false; }
     },
@@ -271,14 +274,14 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       let attemptUser = null;
       reset();
       try {
-        if (auth.currentUser) await sdk.signOut(auth);
+        await out();
         const credential = await sdk.signInWithCustomToken(auth, token);
         attemptUser = credential.user;
         check(ticket, credential.user);
         await activate(credential.user, ticket, 'owner');
       } catch (error) {
-        if (ticket === epoch) { reset(); if (auth.currentUser) await sdk.signOut(auth); }
-        else if (attemptUser && auth.currentUser?.uid === attemptUser.uid) await sdk.signOut(auth);
+        if (ticket === epoch) { reset(); await out(); }
+        else if (attemptUser && auth.currentUser?.uid === attemptUser.uid) await out();
         throw error;
       } finally { pending = false; }
     },
@@ -302,7 +305,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       clearCache();
       ++epoch;
       reset();
-      await sdk.signOut(auth);
+      await out();
     },
     async changePassword(currentPassword, newPassword) {
       const user = auth.currentUser;
