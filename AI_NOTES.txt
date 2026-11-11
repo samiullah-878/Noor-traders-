@@ -7676,3 +7676,12 @@ gaari.js: paint() — localStorage sam-gaari-old != '1' = saamne SIRF 🛰 Falco
   ⋮ 💰 Profit ka jor (#fxProfit: Aaj · 7 din · Mahina · Sab = 45 din jo listener lata hai).
 Data: gaariDay/<din>.hj = JSON text {"HH:MM": {n, r: [[naam, bilty, kharcha]]}} — cloud.setGaariDay merge, sirf malik (rules wahi). fxSig mein hj NAHI (likhte waqt khirki dobara paint na ho, focus na toote). Save 'change' par.
 Test: sirf node --check — phone par nahi dekha. Khata / POS kuch nahi. AI nahi.
+
+=== v2.238.0 (11 Nov 2026) — 🚚 ek din = ek phera, bache km agle din ===
+Malik (23:13–23:15, v2.237.0 ki screenshot — har trip ki alag sheet ban gayi thi): "ek din ek phera · us phere mein jo km hum lagayein wo lag jayein, jo bach jayein agle din mein upar pichhli date ke saath · us phere ko bhi edit kiya ja sake ·
+  jitne km add honge phere mein utna hi diesel minus hoga". OK 23:14.
+gaari.js: hj['@'] {n, r, km} = din ka EK phera (hsOne — purani trip-war likhai jur kar dikhti, save par '@' ban jati). hsCarry(): tareekh-war avail = Falcon km + pichhle din ka bacha; used = likhe km (khali = sab); out agle Falcon din mein (45 din ki khirki).
+  Khirki: .hs-ph (naam · '🛰 X km + ↪ pichhle din ka bacha' · Is phere ke km .hs-km · #hsLeft diesel andaza used km se + ↪ bache) + EK sheet; trips <details class=fx-trips> ke andar (naqsha wahi); .hs-day patti hata (naam ke khane par charhti thi).
+  Baqi din ke card: used km · (↪ bache) · naam · Bilty − Kharcha; tap = wohi sheet (edit).
+Diesel Baqaya se khud minus NAHI (pehla faisla) — sirf andaza dikhta hai, ab phere ke km se. Tanki ka bacha ab bhi purane pheron se (nahi badla).
+Test: sirf node --check. AI nahi.

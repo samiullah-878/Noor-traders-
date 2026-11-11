@@ -7949,3 +7949,14 @@ html body #dialogBody .hs-prc{display:flex;gap:6px;overflow-x:auto;margin-bottom
 html body #dialogBody .hs-prk{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-bottom:8px}html body #dialogBody .hs-prk p{margin:0;padding:6px 8px;border-radius:10px;background:#f6f9ff;display:grid}html body #dialogBody .hs-prk small{font-size:11.5px;color:#475569}html body #dialogBody .hs-prk b{font-size:15px}
 html body #dialogBody .hs-prd{display:flex;justify-content:space-between;width:100%;min-height:34px;padding:0 10px;margin-top:4px;border-radius:10px;border:1px solid #e2e8f0;background:#fff!important;color:#0f172a!important;font-size:13.5px}
 html body #summary .hs-oldbtn{display:inline-flex;margin:10px 0 0;min-height:34px;height:34px;padding:0 14px;border-radius:999px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1)!important;color:#fff!important;font-size:13px;white-space:nowrap}
+
+/* v2.238.0: ek din = ek phera — naam · km (bacha agle din) · ek sheet · trips chhoti line */
+html body #dialogBody .hs-ph{display:grid;grid-template-columns:minmax(0,1fr);gap:5px;margin:6px 0 10px}html body #dialogBody .hs-ph[hidden]{display:none!important}
+html body #dialogBody .hs-ph .hs-pn{margin-top:2px;height:38px;font-size:16px}
+html body #dialogBody .hs-kmr{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:13.5px;color:#334155}
+html body #dialogBody .hs-kmr label{display:inline-flex;align-items:center;gap:6px;font-weight:700;color:#1d3b7a;white-space:nowrap}
+html body #dialogBody .hs-km{width:84px;height:34px;border-radius:999px;border:1px solid #9db6ea;background:#fff;text-align:center;font-size:15px;font-weight:800;color:#0f172a;padding:0 8px;box-sizing:border-box}
+html body #dialogBody .hs-left{font-size:12.5px;color:#92400e}html body #dialogBody .hs-out{color:#1d4ed8}
+html body #dialogBody .fx-trips{margin:0 0 8px;border:1px solid #d6e2f8;border-radius:12px;background:#f8fbff;padding:0 10px}
+html body #dialogBody .fx-trips>summary{list-style:none;cursor:pointer;min-height:36px;display:flex;align-items:center;font-size:13.5px;font-weight:700;color:#1d3b7a}html body #dialogBody .fx-trips>summary::-webkit-details-marker{display:none}
+html body #dialogBody .hs-oh>span{min-width:0}html body #dialogBody .hs-oh i{font-style:normal;color:#1d4ed8;font-size:12px}
