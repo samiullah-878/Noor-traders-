@@ -7907,3 +7907,12 @@ html body #dialogBody .sf-mut{opacity:.75;font-size:13.5px}
 
 /* v2.235.0: ⚖️ ek voucher se POS barabar */
 html body #dialogBody .pm-bfix{margin-top:8px}html body #dialogBody .pm-bfix button{min-height:38px;border-radius:999px;white-space:nowrap}
+
+/* v2.236.0: 🛰 Falcon din — har trip ka ⛽ kharcha daayein + chhota fuel gauge */
+html body #dialogBody .fx-trow{grid-template-columns:minmax(0,1fr) auto;align-items:center}
+html body #dialogBody .fx-trow>.fx-fe{grid-column:1/-1}
+html body #dialogBody .fx-cost{display:inline-flex;align-items:center;gap:5px;height:32px;padding:0 11px;border-radius:999px;border:1px solid #fde3b0;background:linear-gradient(180deg,#fffdf6,#fff1d2);color:#92400e;font-size:13px;white-space:nowrap}
+html body #dialogBody .fx-cost b{font-size:14px}html body #dialogBody .fx-cost small{font-size:11px;color:#b45309}
+html body #dialogBody .fx-fuel{display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;margin:0 0 10px;padding:9px 12px;border-radius:14px;border:1px solid #dbe5f5;background:linear-gradient(180deg,#fff,#f3f7ff)}
+html body #dialogBody .fx-gauge{width:104px;height:auto;display:block}
+html body #dialogBody .fx-fuel-t{display:grid;gap:1px;min-width:0}html body #dialogBody .fx-fuel-t b{font-size:15px;color:#0f172a}html body #dialogBody .fx-fuel-t .fx-left{font-size:16px;margin-top:4px}html body #dialogBody .fx-fuel-t small{font-size:12px;color:#475569}

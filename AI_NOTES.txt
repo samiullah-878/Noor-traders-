@@ -7662,3 +7662,8 @@ PC milanBalance: milanJobs {dir pos, ids ['@balance'] | ['@balance','dry']} — 
 App pos-milan.js: Farq screen ke 'POS data' patti ke neeche bfixHTML — 🔎 Jaanch -> (10 min ke andar) ✅ Pakka lagao -> ↩ Wapas. Sirf malik. Rules wahi (milanJobs).
 KHATARNAK / test: sirf node --check — asal POS par NAHI chala. Malik pehle 🔎 Jaanch ki line dekhe (app / POS raqam screen se milti ho), phir Pakka. Wajah nahi milti, sirf baqaya barabar.
 AI nahi.
+
+=== v2.236.0 (11 Nov 2026) — 🛰 Falcon din: ⛽ kharcha + fuel gauge ===
+Malik (22:52): "is screen par right side par petrol ka kharcha count kar dein aur chhota sa gaari ka meter jis mein fuel gauge ho" · "kharcha likha ho, tanki mein kitna fuel bacha hai wo likha ho".
+gaari.js Falcon din khirki: har trip ke daayein .fx-cost (km / avgFor(null) x curRate()), upar .fx-fuel card = SVG gauge E-F (tankNow().pct) + is din ka kharcha + 'Tanki mein bacha N L (%)' + aur km.
+Naya data NAHI (wahi average / rate / tankNow). Tanki ka bacha PHERON se ghat-ta hai — jis din 'phera nahi' likha us din ke Falcon km tanki se minus nahi hote (malik ko bataya). Khata / POS kuch nahi. AI nahi.
