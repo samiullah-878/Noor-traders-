@@ -7629,3 +7629,12 @@ Pakka nahi: POS report mein stock fraq bills shamil hain ya nahi — neeche chho
 Live RN6QU6D: "Camera ch 4: rtsp://****@… Error number -138 — dobara koshish 1/3 (main stream)". Wajah: us pal recording ki udp copy (48500+ch) nahi aa rahi thi → live RTSP par gayi → NVR doosra rabta nahi deta.
 Theek: (1) startPipe pehle 4 × 2.5 s recording ki line ka intezar (viewers ko 'intezar k/4'); (2) -138 par saaf paigham + us camera ki recording ka haal (blueAccess/billClipPc.rec: shuru nahi / BAND + wajah / copy band). App mein koi badlaav nahi (warn pehle se dikhta hai).
 ASAL wajah abhi pakki nahi (PC log yahan se nazar nahi aata) — malik tally ⚙️ Setup → 🎞 Recording mein ch 4 dekhe (🟢 / ⚫ + wajah). AI: nahi.
+
+=== v2.233.0 (11 Nov 2026) — 🩺 Parchi ka safar (PC wa-parchi v2.18) ===
+Malik (16:40, plan OK 17:00): "Print auto" bheja, auto reply / print nahi aaya — "screen mein poora system banao ta ke problem trace ho · parchi app mein nazar aaye · aage Mubeen ne kya kiya".
+App: wa-safar.js (WhatsApp Parchi Sale ⋮ → 🩺 Parchi ka safar, sirf malik, window.ntSafarOpen): upar 4 chips (aap ka WhatsApp waLink · Mubeen ka waLink2 · naya number waLinkOut · A4 a4Pc — 🟢 / 🔴 / ⚪ + kitni der),
+  "PC ne kya dekha" (parchiTrack.dl = aakhri 40 trDbg + print notes), har Printauto parchi ke qadam (mila · gahak · waOutLog paigham · start · yaad-dihani / call · bill). 20 min se PC ko print paigham na mila = peeli line (rabta dekhein).
+PC wa-parchi v2.18: trDbg ring (40) -> parchiTrack.dl (JSON text) + ver; prNote / P2 note bhi ring mein. Parhne / print ka qaida BILKUL wahi (koi naya paigham nahi parha jata).
+Naya rule nahi (sab blueAccess docs pehle se malik parhta hai). AI nahi. Test: node --check + naqli data se html() — asal PC par nahi.
+Asal wajah (16:33 / 16:36 ka print na aana) abhi pakki nahi — screen se dikhegi. Ishara: 16:36 par ek tick (Mubeen ke phone tak nahi gaya).
+Baqi: larke ka naya jura phone 'time bahut lag raha' — malik se poochha (pehli dafa ka data download ya har dafa).

@@ -87,7 +87,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.17';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.18';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1554,7 +1554,7 @@ async function start(ZINDA) {
   // v2.0 / v2.1: 🖨 malik APNE number se (PC isi number par juda) Mubeen ki chat (ya apni chat) mein tasveer bheje + "print" — tasveer ke caption mein YA
   // alag likha paigham "Print" (v2.1, malik 5 Nov: album forward kar ke neeche "Print" likha tha — chhapa nahi). Baqi apne paigham kabhi nahi chhoote.
   const selfImgs = new Map(), selfPend = new Map(), inImgs = new Map(), inPend = new Map(), WIN = 10 * 60000, PEND = 2 * 60000;
-  const prNote = t => { log('🖨 ' + t); try { setLink({ pr: { at: Date.now(), t: String(t).slice(0, 140) } }); } catch {} };   // app ⚙️ mein "aakhri print" (khamosh nahi)
+  const prNote = t => { log('🖨 ' + t); try { setLink({ pr: { at: Date.now(), t: String(t).slice(0, 140) } }); } catch {} try { ringAdd('🖨 ' + t); trPush(); } catch {} };   // app ⚙️ mein "aakhri print" (khamosh nahi)
   const pnJid = pn => '92' + String(pn).slice(1) + '@s.whatsapp.net', bare = j => String(j || '').split('@')[0].split(':')[0];
   async function okChat(m, s) {   // → { ok, to, me }
     const jid = m.key.remoteJid || '', me = normPh(L.me || ''), to = await chatPh(m, s);
@@ -1677,7 +1677,7 @@ async function start(ZINDA) {
   }, e => log('⚠️ callEvt: ' + e.message));
   function trPush() {   // app ko list (sirf malik)
     const L = Object.values(TR.par).sort((a, b) => b.fwdAt - a.fwdAt).slice(0, TR_MAX).map(t => ({ id: t.id, from: t.from || '', nm: t.nm || '', to: t.to || '', fwdAt: t.fwdAt, st: t.st, startAt: t.startAt || 0, doneAt: t.doneAt || 0, sent: t.sent || 0, rem: t.rem || 0, err: t.err || '', by: t.by || '', k: t.k || 'img', tx: t.tx || '', grp: t.grp || t.id, nb: (t.bills || []).length, voc: t.voc || 0, callSt: t.callSt || '', calls: t.calls || 0, callSec: t.callSec || 0, mal: t.mal || 0, cs: t.cs || 0, bn: t.bn || '' }));
-    const snap0 = { stMin, vMin: CF.vMin, cMin: CF.cMin, mMin: CF.mMin, hookOn: !!CF.hook, dbg: trDbgLast.t ? { ...trDbgLast } : null };
+    const snap0 = { stMin, vMin: CF.vMin, cMin: CF.cMin, mMin: CF.mMin, hookOn: !!CF.hook, dbg: trDbgLast.t ? { ...trDbgLast } : null, dl: JSON.stringify(trDbgLog), ver: VER };
     const snap = { L, at: Date.now(), ...snap0 }; trW = trW.then(() => BA.doc('parchiTrack').set(snap)).catch(e => log('⚠️ parchiTrack: ' + e.message));
   }
   function trText(t, what) {
@@ -1732,8 +1732,9 @@ async function start(ZINDA) {
     trPend.set(wid, { m, c, to, by, at: tsOf(m) || Date.now() }); while (trPend.size > 3) trPend.delete(trPend.keys().next().value);   // v2.11: likhi parchi bhi "Printauto" ke baad hi
   }
   // v2.11: 🩺 app ko bhi batao PC ne aakhri paigham ka kya samjha (parchiTrack.dbg) — khamosh nahi
-  let trDbgLast = { at: 0, t: '' };
-  function trDbg(t) { trDbgLast = { at: Date.now(), t: String(t).slice(0, 160) }; log('📋 ' + t); trPush(); }
+  let trDbgLast = { at: 0, t: '' }, trDbgLog = [];   // v2.18: 🩺 aakhri 40 (app 'Parchi ka safar') — pehle sirf aakhri ek
+  const ringAdd = t => { trDbgLog.push({ at: Date.now(), t: String(t).slice(0, 160) }); if (trDbgLog.length > 40) trDbgLog = trDbgLog.slice(-40); };
+  function trDbg(t) { trDbgLast = { at: Date.now(), t: String(t).slice(0, 160) }; ringAdd(t); log('📋 ' + t); trPush(); }
   async function lidMatch(jid, s, nums) {   // v2.11: @lid chat → kaun sa number (print wale CX3 jaisa fallback — pehle track mein nahi tha, is liye P2 par malik ka paigham pehchana nahi jata tha)
     if (!/@lid$/.test(jid || '')) return '';
     for (const pn of (nums || []).filter(isMob)) { try { const lid = await s.signalRepository.lidMapping.getLIDForPN(pnJid(pn)); if (lid && bare(lid) === bare(jid)) return pn; } catch {} }
@@ -1958,7 +1959,7 @@ async function start(ZINDA) {
   const end2 = () => { gen2++; clearTimeout(retryT2); const x = sock2; sock2 = null; try { x && x.end(undefined); } catch {} };
   const me2Of = s => normPh((s && s.user && s.user.id) || '') || normPh(L2.me || '');
   const CX2 = { k: 'b', quiet: true, tag: 'Print',
-    note: t => { log('🖨² ' + t); try { setLink2({ pr: { at: Date.now(), t: String(t).slice(0, 140) } }); } catch {} },
+    note: t => { log('🖨² ' + t); try { setLink2({ pr: { at: Date.now(), t: String(t).slice(0, 140) } }); } catch {} try { ringAdd('🖨² (Mubeen ka phone) ' + t); trPush(); } catch {} },
     who: (to, me) => phPretty(me) + ' (apni chat)',
     ok: async (m, s) => {   // SIRF apni chat (Message yourself) — doosri har chat = nahi
       const jid = m.key.remoteJid || '', me = me2Of(s), to = await chatPh(m, s);

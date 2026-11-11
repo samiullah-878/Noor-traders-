@@ -7884,3 +7884,23 @@ html body .pos-ref .pr-rep .pr-ln span{min-width:0;overflow:hidden;text-overflow
 html body .pos-ref .pr-rep .pr-ln b{white-space:nowrap}
 html body .pos-ref .pr-rep .pr-ln.tot{border-top:1px solid rgba(100,116,139,.35);font-weight:800;margin-top:2px;padding-top:5px}
 html body .pos-ref .pr-rep small{display:block;opacity:.75;margin-top:4px;font-size:12.5px}
+
+/* v2.233.0: 🩺 Parchi ka safar */
+html body #dialogBody .sf{display:grid;gap:10px;grid-template-columns:minmax(0,1fr);font-size:15px}
+html body #dialogBody .sf h4{margin:8px 0 0;font-size:16px}
+html body #dialogBody .sf-top{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(min(170px,100%),1fr))}
+html body #dialogBody .sf-c{border:1px solid rgba(100,116,139,.3);border-radius:12px;padding:8px 10px;display:grid;gap:2px;min-width:0;background:rgba(148,163,184,.08)}
+html body #dialogBody .sf-c b{font-size:14.5px}html body #dialogBody .sf-c small{font-size:13.5px;overflow-wrap:anywhere}
+html body #dialogBody .sf-c.ok{border-color:#16a34a;background:rgba(22,163,74,.1)}html body #dialogBody .sf-c.bad{border-color:#dc2626;background:rgba(220,38,38,.1)}
+html body #dialogBody .sf-ref{justify-self:start;min-height:36px;padding:0 16px;border-radius:999px;border:1px solid rgba(100,116,139,.4);background:linear-gradient(180deg,rgba(255,255,255,.9),rgba(226,232,240,.9));color:#0f172a!important;font-weight:700;white-space:nowrap}
+html body #dialogBody .sf-warn{margin:0;padding:9px 11px;border-radius:12px;border:1px solid #f59e0b;background:rgba(245,158,11,.12);font-size:14.5px;line-height:1.45}
+html body #dialogBody .sf-dl{display:grid;gap:4px}
+html body #dialogBody .sf-dl>div{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;padding:5px 8px;border-radius:9px;background:rgba(148,163,184,.1);font-size:14.5px}
+html body #dialogBody .sf-dl em{font-style:normal;font-weight:800;white-space:nowrap}html body #dialogBody .sf-dl span{overflow-wrap:anywhere}
+html body #dialogBody .sf-card{border:1px solid rgba(100,116,139,.3);border-radius:14px;padding:9px 10px;display:grid;gap:4px}
+html body #dialogBody .sf-h{display:flex;justify-content:space-between;gap:8px;align-items:baseline}html body #dialogBody .sf-h b{font-size:16px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body #dialogBody .sf-h em{font-style:normal;font-size:13px;opacity:.75;white-space:nowrap}
+html body #dialogBody .sf-s{display:grid;grid-template-columns:26px minmax(0,1fr);gap:6px;padding:4px 6px;border-radius:9px;font-size:14.5px;border-left:4px solid #94a3b8}
+html body #dialogBody .sf-s i{font-style:normal}html body #dialogBody .sf-s span{overflow-wrap:anywhere}
+html body #dialogBody .sf-s.ok{border-left-color:#16a34a}html body #dialogBody .sf-s.bad{border-left-color:#dc2626;background:rgba(220,38,38,.09);font-weight:700}
+html body #dialogBody .sf-mut{opacity:.75;font-size:13.5px}
