@@ -23,7 +23,8 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 
-const VER = '1.4';   // v1.4 (2026-10-25): ⚖️ "sirf hisaab" / cancel transfer note "check nahi hue" mein nahi.
+const VER = '1.5';   // v1.5 (2026-11-11): 📲 malik ke WhatsApp par 3 reports (Daily Sale · Larka-wise · Profit) waOut se — reportConfig waOn / waD / waL / waP, default waqt 18:00; larka + topNafa report mein.
+// pichhla:   // v1.4 (2026-10-25): ⚖️ "sirf hisaab" / cancel transfer note "check nahi hue" mein nahi.
 // v1.1 (2026-10-11): sachi dhadkan + chowkidar (11-Oct 3 ghante khamosh, report nahi bani) · report waqt guzre to usi din baad mein bhi · default 18:30
 const BUSINESS_ID = 'noor-traders';
 const LOCK_PORT = 47833;
@@ -32,7 +33,7 @@ const LINK = 'https://samiullah-878.github.io/Noor-traders-/';
 const KEEP_DAYS = 62;
 const PC_DEFAULT = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-KEIME1D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
 const SKIP_RX = /noor\s*trader|our\s*factory|stock\s*['"]?\s*f[ae]?r?a?q/i;   // andar ka lena-dena (bikri / khareed nahi)
-const DEF = { reportOn: true, reportTime: '18:30', alertOn: true, alertTime: '09:00', alertRed: 3, alertYellow: 7, wsNames: ['whole sale'], wsSmall: 3 };
+const DEF = { waOn: true, waD: true, waL: true, waP: true, reportOn: true, reportTime: '18:00', alertOn: true, alertTime: '09:00', alertRed: 3, alertYellow: 7, wsNames: ['whole sale'], wsSmall: 3 };
 
 const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
 const r3 = v => Math.round((Number(v) || 0) * 1000) / 1000;
@@ -140,6 +141,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
     const lBy = new Map(); for (const l of lines) { const k = Number(l.SaleID); if (!lBy.has(k)) lBy.set(k, []); lBy.get(k).push(l); }
     const sale = { n: 0, total: 0, cash: 0, credit: 0, creditN: 0, cancelN: 0, returnN: 0, returnRs: 0, profit: 0, cogsBills: 0 };
     const loss = [], wsBills = []; let lossRs = 0;
+    const ipf = new Map();
     for (const b of bills) {
       const party = String(b.PartyName || '').trim();
       if (Number(b.DocStatusID) === 3) { sale.cancelN++; continue; }
@@ -156,6 +158,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
         const q = Number(l.Qty) || 0, rate = Number(l.Rate) || 0, pk = Number(l.Pack) || 0, sr = Number(l.SR) || 0;
         const cost = pieceCost(perPiece(l.PR, pk, sr), pk, sr);
         lineCost += q * cost;
+        if (q > 0 && cost > 0) { const inm = String(l.ItemName || '').trim().slice(0, 40); ipf.set(inm, (ipf.get(inm) || 0) + q * (rate - cost)); }
         if (q > 0 && cost > 0 && rate < cost * 0.999) { const ls = (cost - rate) * q; bLoss += ls; lossLines.push({ n: String(l.ItemName || '').trim().slice(0, 40), q: r3(q), rate: r2(rate), cost: r2(cost) }); }
         const full = pk > 1 && Math.abs(q / pk - Math.round(q / pk)) < 1e-6;
         const retail = full ? sr : (Number(l.SR2) || sr), wsr = full ? (Number(l.SR3) || Number(l.SRS) || 0) : (Number(l.SRS) || Number(l.SR3) || 0);
@@ -178,6 +181,13 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
     wsBills.sort((a, b) => (b.shak - a.shak) || (b.farq - a.farq));
     const ws = { n: wsBills.length, total: r2(wsBills.reduce((s, x) => s + x.total, 0)), farq: r2(wsBills.reduce((s, x) => s + x.farq, 0)),
       shakN: wsBills.filter(x => x.shak).length, shakFarq: r2(wsBills.filter(x => x.shak).reduce((s, x) => s + x.farq, 0)), counterN: wsBills.filter(x => x.counter).length, small, bills: wsBills.slice(0, 40) };
+    // --- v1.5: larka-wise + sab se zyada nafe wale items ---
+    let larka = [];
+    try { larka = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`SELECT m.SupplyManName AS N, COUNT(*) AS C, SUM(CAST(s.TotalSale AS FLOAT)) AS T
+      FROM dbo.Sale s JOIN dbo.SupplyMan m ON m.SupplyManID = s.SupplyManID LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
+      WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(pt.PartyName, '') NOT LIKE '%noor%trader%'
+      GROUP BY m.SupplyManName ORDER BY SUM(CAST(s.TotalSale AS FLOAT)) DESC`)).recordset.map(x => ({ n: String(x.N || '').trim().slice(0, 30), c: Number(x.C) || 0, t: r2(x.T) })).slice(0, 40); } catch (e) { log('larka nahi parhe: ' + e.message); }
+    const topNafa = [...ipf].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n, v]) => ({ n, rs: r2(v) }));
     // --- purchase ---
     const pl = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`SELECT d.PurchaseID, d.ItemID, d.Qty, d.Rate, i.ItemName, ISNULL(i.PackQty,0) AS Pack,
       (SELECT TOP 1 d2.Rate FROM dbo.PurchaseDetail d2 JOIN dbo.Purchase p2 ON p2.PurchaseID = d2.PurchaseID WHERE d2.ItemID = d.ItemID AND d2.PurchaseID < d.PurchaseID AND ISNULL(p2.DocStatusID,0) <> 3 ORDER BY d2.PurchaseID DESC, d2.PurchaseDetailID DESC) AS Prev
@@ -234,7 +244,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
     if (purchase.mehngaN) flags.push(`${purchase.mehngaN} item mehngay khareede`);
     if (ginti && ginti.farqN) flags.push(`Ginti mein ${ginti.farqN} item ka farq (${rs(ginti.farqRs)})`);
     if (alert && alert.redN) flags.push(`${alert.redN} item ${alert.red} din mein khatam`);
-    return { day, at: Date.now(), ver: VER, sale, loss: loss.slice(0, 8), lossN: loss.length, lossRs: r2(lossRs), ws, purchase, stock, khata, transfer, ginti,
+    return { day, at: Date.now(), ver: VER, larka, topNafa, sale, loss: loss.slice(0, 8), lossN: loss.length, lossRs: r2(lossRs), ws, purchase, stock, khata, transfer, ginti,
       alert: alert ? { red: alert.red, redN: alert.redN, yellowN: alert.yellowN, top: alert.items.filter(x => x.lvl === 'red').slice(0, 8).map(x => ({ n: x.n, left: x.left })) } : null, flags };
   }
 
@@ -250,12 +260,35 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
       try { const r = await pushOwner(`⏰ ${a.redN} item jald khatam`, t + (a.redN > 4 ? ` +${a.redN - 4}` : '') + ' · tap = order', 'stock-alert', LINK + '?alert=1'); log(`push: ${r?.successCount ?? 0} phone`); } catch (e) { log('push masla: ' + e.message); } }
     return a;
   }
+  // v1.5: 📲 malik ke WhatsApp par (waOut → wa-out, dukan ka Business number). Raqam khata = paisa (÷100), POS = rupay.
+  function waTexts(r, cfg) {
+    const dt = new Date(r.day + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), t = new Date(r.at), tm = `${pad2(t.getHours())}:${pad2(t.getMinutes())}`, P = v => rs((Number(v) || 0) / 100), out = [];
+    if (cfg.waD !== false) { const k = r.khata;
+      out.push(['d', k ? [`📒 *Daily Sale — ${dt}* (${tm} tak)`, `Sale: ${P(k.sale)}`, `Wasooli: ${P(k.collection)}`, `Akhrajat: ${P((Number(k.expense) || 0) + (Number(k.payment) || 0))}`, `Kal ka change: ${P(k.opening)}`,
+        k.closed ? `Closing cash: ${P(k.cash)}` : 'Closing: abhi band nahi hua', k.closed ? (Math.abs(k.difference) < 100 ? 'Farq: barabar ✓' : `Farq: ${P(Math.abs(k.difference))} ${k.difference > 0 ? 'KAM' : 'ZYADA'}`) : '',
+        `Udhaar diya: ${P(k.credit)}`, '', `🖥 POS sale: ${rs(r.sale.total)} · ${r.sale.n} bill`, `cash ${rs(r.sale.cash)} · udhaar ${rs(r.sale.credit)}`].filter((x, i, A) => x !== '' || A[i + 1]).join('\n') : `📒 *Daily Sale — ${dt}*\nKhata nahi parha ja saka`]); }
+    if (cfg.waL !== false) out.push(['l', [`👦 *Larka-wise — ${dt}* (${tm} tak)`, ...((r.larka || []).length ? r.larka.map((x, i) => `${i + 1}. ${x.n} — ${rs(x.t)} · ${x.c} bill`) : ['Aaj kisi larke ke naam bill nahi'])].join('\n')]);
+    if (cfg.waP !== false) out.push(['p', [`💰 *Profit — ${dt}* (${tm} tak)`, `Sale: ${rs(r.sale.total)} · ${r.sale.n} bill`, `Nafa (andaza): ~${rs(r.sale.profit)} (${r.sale.profitPct}%)`, r.lossN ? `⚠️ Ghaate wale bill: ${r.lossN} (${rs(r.lossRs)})` : '',
+      (r.topNafa || []).length ? '\nSab se zyada nafa:' : '', ...(r.topNafa || []).map((x, i) => `${i + 1}. ${x.n} — ${rs(x.rs)}`)].filter(Boolean).join('\n')]);
+    return out;
+  }
+  async function waSend(r, cfg, why) {
+    let n = 0;
+    if (cfg.waOn !== false) {
+      let to = ''; try { const w = await access.doc('waParchi').get(), pf = w.exists ? (w.data() || {}).prFrom : null; to = String((Array.isArray(pf) && pf[0]) || ''); } catch {}
+      to = String(to || '03450412515').replace(/\D/g, ''); const stamp = Date.now().toString(36);
+      for (const [k, txt] of waTexts(r, cfg)) { const id = `rp-${r.day}-${k}-${stamp}`; try { await biz.collection('waOut').doc(id).create({ st: 'new', at: Date.now(), to, nm: 'Malik', kind: 'rem', eid: id, txt }); n++; } catch (e) { log('waOut: ' + e.message); } }
+    }
+    try { await access.doc('reportWa').set({ at: Date.now(), day: r.day, n, why: String(why || ''), ver: VER }); } catch (e) { log('reportWa: ' + e.message); }
+    return n;
+  }
   async function runReport(day, cfg, why) {
     const r = await buildReport(day, cfg, null);   // v1.3: ⏰ khatam-maal ka hisaab band (report mein alert card nahi)
     await access.doc('report-' + day).set(r);
     try { const old = new Date(day + 'T12:00:00'); old.setDate(old.getDate() - KEEP_DAYS); await access.doc('report-' + dayOf(old)).delete(); } catch {}
     const body = `Sale ${rs(r.sale.total)} · Nafa ~${rs(r.sale.profit)}` + (r.flags.length ? ` · ⚠️ ${r.flags.length} baatein` : ' · ✓ sab theek');
     log(`🌙 report ${day} (${why}): ${body}`);
+    try { const wn = await waSend(r, cfg, why); log(`📲 WhatsApp: ${wn} report line mein`); } catch (e) { log('WhatsApp report masla: ' + e.message); }
     try { const x = await pushOwner(`🌙 Aaj ki report (${new Date(day + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })})`, body, 'report-' + day, LINK + '?report=' + day); log(`push: ${x?.successCount ?? 0} phone`); } catch (e) { log('push masla: ' + e.message); }
     return r;
   }

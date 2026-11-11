@@ -7685,3 +7685,12 @@ gaari.js: hj['@'] {n, r, km} = din ka EK phera (hsOne — purani trip-war likhai
   Baqi din ke card: used km · (↪ bache) · naam · Bilty − Kharcha; tap = wohi sheet (edit).
 Diesel Baqaya se khud minus NAHI (pehla faisla) — sirf andaza dikhta hai, ab phere ke km se. Tanki ka bacha ab bhi purane pheron se (nahi badla).
 Test: sirf node --check. AI nahi.
+
+=== v2.239.0 (11 Nov 2026) — 📊 Reports malik ke WhatsApp par (PC raat-report v1.5) ===
+Malik (23:22–23:25): "kuch reports apne number par chahiye — daily ka poora hisaab (Daily Sale wala) · larka-wise · profit (dukan ka) · waqt hum khud tay kar sakein, default 6 pm · click kar ke bhej bhi sakein · sab WhatsApp parchi wali screen par".
+PC raat-report.js v1.5: buildReport mein larka (Sale.SupplyManID, din ka) + topNafa (item-war q x (rate - cost), top 5); runReport ke baad waSend → waOut `rp-<din>-<d|l|p>-<stamp>` {to: waParchi.prFrom[0] warna 03450412515, kind rem, txt}
+  → wa-out (dukan ka Business number, wahi queue / hadd) + blueAccess/reportWa {at, day, n, why}. reportConfig naye khane waOn / waD / waL / waP (default sab ON), DEF.reportTime 18:00 (pehle 18:30; jis ne pehle waqt chuna us ka wahi).
+  Khata raqam paisa (÷100), POS rupay. 'Abhi bhejo' = purana reportNow. Push (🌙 Aaj ki report) pehle jaisa.
+App: wa-report.js (WhatsApp Parchi ⋮ '📊 Reports mere number par', sirf malik) — Roz khud ON/BAND · 3 ☑ · waqt chips + apna waqt · 📤 Abhi bhejo · haal (⏳ / ✅ / 90 s ✕ PC chup). cloud.setReportConfig waOn/waD/waL/waP + listenReportWa.
+NAHI bana: PDF (abhi sirf likha paigham — malik ne PDF ka jawab nahi diya). Report us waqt TAK ki hoti hai (6 pm ke baad ki sale nahi). PC band = nahi jati.
+Test: node --check + waTexts ka mock — asal PC / WhatsApp par NAHI chala. AI nahi.
