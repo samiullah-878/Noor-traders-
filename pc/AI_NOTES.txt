@@ -4521,3 +4521,11 @@ PC wa-parchi v2.18: trDbg ring (40) -> parchiTrack.dl (JSON text) + ver; prNote 
 Naya rule nahi (sab blueAccess docs pehle se malik parhta hai). AI nahi. Test: node --check + naqli data se html() — asal PC par nahi.
 Asal wajah (16:33 / 16:36 ka print na aana) abhi pakki nahi — screen se dikhegi. Ishara: 16:36 par ek tick (Mubeen ke phone tak nahi gaya).
 Baqi: larke ka naya jura phone 'time bahut lag raha' — malik se poochha (pehli dafa ka data download ya har dafa).
+
+=== v2.233.1 (11 Nov 2026) — jura hua phone 35 s mein khulta tha ===
+Malik: larke ka naya jura phone '35 second · pehle code se tez chalta tha' (har dafa + har tap).
+Code se nikla: boot ka raasta restore ke session ka 30 s intezar karta hai; gumnaam user ka 'login/staff-session' chup-chaap lautta hai (v2.231.0) -> koi paigham nahi -> poore 30 s, phir login screen -> devWait -> claim (~5 s) = 35 s.
+  Session 'nahi' kyun: getSession getDoc tha — jorne se pehle devWait listener ne phone ke cache mein 'doc nahi hai' rakha; server der se jure to getDoc wohi purana jawab deta -> clearCache -> agli dafa optimistic bhi nahi (har boot dohra).
+Theek: (1) cloud.getSession = getDocFromServer (session ka hona / na hona sirf server se; offline = 'unavailable' = purana offline raasta). (2) auth-controller idle() (restore khatam + session nahi) -> app boot waiter foran oldBoot (30 s nahi). Naya, abhi na jura phone bhi ab foran Device ID dikhata hai.
+PAKKA NAHI: asal phone par saboot nahi (larka ghar par) — boot-time par tap ka popup (Firebase tayyar / Login mukammal) dekhna baqi. Pehle malik ko 'data dobara utar raha' kaha tha — wo andaza ghalat tha (boot-time = session tak ka waqt, data nahi).
+Test: node mock (session nahi -> idle true; claim ke baad idle false). AI nahi. Rules / PC: nahi.

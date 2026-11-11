@@ -133,8 +133,10 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       onError(error, user.isAnonymous ? 'staff' : 'owner');
     }
   }
+  // v2.233.1: 'restored' = pichhle login ki jaanch khatam (session bana ya nahi). App boot par isi ka intezar karti hai — pehle session na bane to 30 s splash par atki rehti thi.
+  let restored = false;
   const unsubscribe = sdk.onAuthStateChanged(auth, user => {
-    void restore(user).catch(error => onError(error, 'owner'));
+    void restore(user).catch(error => onError(error, 'owner')).finally(() => { restored = true; });
   });
 
   return {
@@ -150,6 +152,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       return auth.currentUser;
     },
     unhold() { holding = false; },
+    idle() { return restored && !pending && !activeUid; },
     async claim() {
       if (pending) throw failure('login/busy');
       const u = auth.currentUser;

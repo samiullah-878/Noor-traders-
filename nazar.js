@@ -3,7 +3,7 @@
 // Nigrani wale ke liye ek screen: har counter ka bara khana — bill bante waqt har scan ki line live (liveCarts/<counter>),
 // halki "tik" awaz, ⛔ ROKO (counter par laal, save band), ✓ Theek hai, aakhri 5 bills. Mobile aur PC dono par.
 // Data sale.js likhta hai (liveCartSet / liveSaved); yahan sirf parhna + stop likhna.
-import { tallySetup, renderTally, tallyStop } from './tally.js?v=2.233.0';   /* v2.204.0: 👀 Bill tally */
+import { tallySetup, renderTally, tallyStop } from './tally.js?v=2.233.1';   /* v2.204.0: 👀 Bill tally */
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = v => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: 2 });

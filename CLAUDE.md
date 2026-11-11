@@ -202,6 +202,8 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 
 - **📱 Gumnaam UID = device ki pehchan (v2.231.1, ghalti 11 Nov)**: jura hua phone Logout / ghalat password ke baad dobara login maangta tha — signOut se UID kho jata hai. auth-controller mein gumnaam user ke liye HAMESHA `out()` (kabhi seedha `sdk.signOut`); naya login / logout raasta banao to yehi. Malik us phone par khud login kare = dobara jorna parega (malik ko pehle batao).
 
+- **⏱ Boot ka intezar (v2.233.1)**: app ka ⏱ = session banne tak ka waqt (data nahi) — tap par qadam. Login ki jaanch ka koi raasta chup-chaap laute (paigham nahi) to boot 30 s splash par atakta hai: naya chup raasta banao to `controller.idle()` sach ho. Session / login ka faisla hamesha `getDocFromServer` se (cache ka purana 'nahi hai' = jhoota logout). 'App dheeri' ki shikayat = pehle ⏱ par tap ka popup maango, andaza nahi (11 Nov: pehle ghalat wajah bata di).
+
 ## 6. Har update ka checklist
 1. Firestore rules badlein to `firestore-rules-X.html` (pichhle versions ke chips ke saath) malik ko bhejo + poora rules text chat mein. **Ab (27 Oct 2026, malik ka OK): shop PC `pc/rules-publish.js` har 5 min GitHub ki `firestore.rules` khud publish karta hai (blueAccess/rulesPub) — bas `firestore.rules` header `BLUE KHATA vX` aur `version.json.rules` ek rakho; html sirf tab bhejo jab app ke 🔐 Rules dabbe mein PC ki ghalti dikhe.**
 2. `AI_NOTES.txt` (root) + `pc/AI_NOTES.txt` dono update.
