@@ -7832,3 +7832,38 @@ html.dk body #dialogBody .pj-card{background:#141c2e;border-color:#2a3650}html.d
 .bt-inf1 b.bt-bno{display:inline-flex;align-items:center;height:28px;padding:0 11px;margin-right:6px;border-radius:999px;font-size:15px;font-weight:800;color:#fff!important;white-space:nowrap;vertical-align:middle}
 .bt-inf1 b.bt-bno.po{background:linear-gradient(135deg,#b3261e,#e0483e);box-shadow:0 1px 4px #b3261e55}
 .bt-inf1 b.bt-bno.un{background:linear-gradient(135deg,#1f4fbf,#3b78f0);box-shadow:0 1px 4px #1f4fbf55}
+
+/* v2.231.0: 📱 Device jorna — login screen par bari Device ID + Mulazim card par jorna / device edit */
+#login.lg-dev #loginForm,#login.lg-dev .code-join,#login.lg-dev .backup-reminder,#login.lg-dev .prelogin-backup{display:none!important}
+#login.lg-own #devLine{display:none!important}
+#login.lg-own label:has(#role),#login.lg-own #accessScopeLabel{display:none!important}
+.dev-line.dj-big{display:grid;gap:6px;justify-items:center;text-align:center;margin:18px 0 10px;padding:20px 14px;border-radius:20px;background:linear-gradient(160deg,#eef4ff,#e3ecfb);border:1px solid #c9d7f2;color:#1b3058;box-shadow:0 8px 22px rgba(27,48,88,.12)}
+.dev-line.dj-big span{font-size:14px;font-weight:700;opacity:.8}
+.dev-line.dj-big b{font:800 44px/1.1 ui-monospace,Consolas,monospace;letter-spacing:5px;color:#16306a;user-select:all}
+.dev-line.dj-big small{font-size:13.5px;line-height:1.5;color:#44557a;max-width:330px}
+.lg-mode{display:flex;justify-content:center;margin:6px 0 12px}
+html body #login .lg-mode button{min-height:36px;padding:0 16px;border-radius:999px;border:1px solid #c9d7f2!important;background:linear-gradient(180deg,#fff,#f1f5fd)!important;color:#1b3058!important;font-size:13.5px;font-weight:700;white-space:nowrap;width:auto}
+html body :is(#summary,#dialogBody) .st-djln{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:8px 0 2px;min-width:0}
+html body :is(#summary,#dialogBody) .st-djln small{font-size:12px;color:#6b7c93}
+html body :is(#summary,#dialogBody) .st-dj{min-height:36px;padding:0 14px;border-radius:999px;border:1px solid #9fc3ff!important;background:linear-gradient(180deg,#f3f8ff,#e2eeff)!important;color:#0b4a9e!important;font-size:13.5px;font-weight:800;white-space:nowrap;width:auto}
+html body :is(#summary,#dialogBody) .st-dev .st-dvn{font-weight:700;font-size:13px}
+html body :is(#summary,#dialogBody) .st-dev .st-dvb{display:flex!important;gap:6px;flex:none}
+dialog.sdj{border:0;padding:0;border-radius:20px;width:min(430px,94%);max-width:94%;background:#fff;color:#1b2b4b;box-shadow:0 24px 60px rgba(10,20,50,.35)}
+dialog.sdj::backdrop{background:rgba(10,18,40,.55)}
+.sdj-box{display:grid;gap:10px;padding:16px;grid-template-columns:minmax(0,1fr)}
+.sdj-h{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+.sdj-h b{font-size:17px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body dialog.sdj .sdj-h button{width:36px;height:36px;min-height:36px;border-radius:999px;border:1px solid #d5ddec!important;background:#f3f6fb!important;color:#1b2b4b!important;font-size:20px;padding:0;flex:none}
+.sdj-l{display:grid;gap:4px;font-size:13px;font-weight:700;color:#44557a}
+.sdj-l input{min-height:46px;border-radius:12px;border:1px solid #c9d3e6;padding:0 12px;font-size:17px;min-width:0;width:100%;box-sizing:border-box;background:#fff;color:#16223d}
+#sdjId{font:800 26px ui-monospace,Consolas,monospace;letter-spacing:4px;text-transform:uppercase;min-height:56px}
+.sdj-st{margin:0;padding:8px 10px;border-radius:10px;background:#f3f6fb;font-size:13.5px;line-height:1.45;color:#44557a}
+.sdj-st.ok{background:#e7f8ee;color:#0f6b3a;font-weight:700}.sdj-st.warn{background:#fff7e0;color:#7a5600}.sdj-st.bad{background:#fdeaea;color:#a02020;font-weight:700}
+.sdj-cap{font-size:13px;font-weight:800;color:#1b3058;margin-top:2px}
+.sdj-chips{display:flex;flex-wrap:wrap;gap:6px}
+html body dialog.sdj .sdj-c{min-height:36px;padding:0 13px;border-radius:999px;border:1px solid #cfd8ea!important;background:#f6f8fc!important;color:#5a6a88!important;font-size:13.5px;font-weight:700;white-space:nowrap;width:auto}
+html body dialog.sdj .sdj-c.is-in{border-color:#3fae6d!important;background:linear-gradient(180deg,#eafaf0,#d6f3e1)!important;color:#0f6b3a!important}
+html body dialog.sdj .sdj-c.is-in::before{content:"✓ "}
+html body dialog.sdj .sdj-go{min-height:46px;border-radius:14px;border:0!important;background:linear-gradient(180deg,#2a5fc4,#1c448f)!important;color:#fff!important;font-size:16px;font-weight:800;margin-top:4px}
+html.dk dialog.sdj{background:#111b33;color:#e8eefc}html.dk .sdj-l input{background:#0b1428;color:#e8eefc;border-color:#2a3a5e}html.dk .sdj-st{background:#18243f;color:#c9d6f2}html.dk .sdj-cap,html.dk .sdj-l{color:#c9d6f2}
+#login .dev-line.dj-big small{margin-top:0}

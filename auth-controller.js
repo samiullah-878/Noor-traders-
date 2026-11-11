@@ -58,6 +58,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
   const CK = cache?.key || 'sam-sess-v1';   // v2.105.8: 👑 malik ki tab (mulazim ke phone par) apna alag, sirf us tab ka (sessionStorage) — mulazim ka yaad wala session na mite
   const ls = () => { try { return (cache?.store === 'session' ? globalThis.sessionStorage : globalThis.localStorage) || null; } catch { return null; } };
   let optimistic = null;
+  let holding = false;   // v2.231.0: 📱 device jorna — login screen par gumnaam user bina session ke malik ke jorne ka intezar karta hai
   const readCache = uid => { try { const c = JSON.parse(ls()?.getItem(CK) || 'null'); return c && c.uid === uid && Date.now() - (Number(c.at) || 0) < 30 * 864e5 ? c : null; } catch { return null; } };
   const writeCache = s => { try { const a = s.account ? Object.fromEntries(Object.entries(s.account).filter(([k]) => !/hash|salt|pass|pw|secret|key|cred/i.test(k))) : undefined; ls()?.setItem(CK, JSON.stringify({ uid: s.user.uid, role: s.role, scope: s.scope, phone: s.phone, account: a, at: Date.now() })); } catch {} };
   const clearCache = () => { try { ls()?.removeItem(CK); } catch {} };
@@ -84,12 +85,16 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
         throw failure('login/staff-disabled');
       }
       // v2.99.23: 👥 naam wala mulazim — key ke perms mein kai screens; expectedScope un mein ho to wahi scope (account.scope = pehli)
-      const perms = Array.isArray(account.perms) ? account.perms : [];
-      let scope = account.scope || 'full';
+      const all = Array.isArray(account.perms) ? account.perms : [];
+      // v2.231.0: 🎚 device ka access — malik ne is device (session.dp) ko mulazim ki screens mein se kuch hi di hon
+      const dp = Array.isArray(session.dp) ? session.dp.filter(x => all.includes(x)) : [];
+      const perms = dp.length ? dp : all;
+      const acct = dp.length ? { ...account, perms: dp, scope: dp.includes(account.scope) ? account.scope : dp[0], last: dp.includes(account.last) ? account.last : dp[0] } : account;
+      let scope = acct.scope || 'full';
       if (expectedScope && expectedScope !== scope && perms.includes(expectedScope)) scope = expectedScope;
-      else if (!expectedScope && account.last && perms.includes(account.last)) scope = account.last;
+      else if (!expectedScope && acct.last && perms.includes(acct.last)) scope = acct.last;
       if(!['full','purchase','stock','sale','galla','nazar','gaari'].includes(scope)||(expectedScope&&scope!==expectedScope))throw failure('login/scope-required');
-      emit({ role: 'staff', scope, user, phone, account });
+      emit({ role: 'staff', scope, user, phone, account: acct });
     } else {
       if (expectedRole === 'staff' || !isOwnerUser(user)) throw failure('login/owner-required');
       emit({ role: 'owner', user });
@@ -100,6 +105,7 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
     // Firebase emits an anonymous-user event BEFORE the staff session is saved.
     // Only the explicit login operation may activate that in-progress session.
     if (pending || (user && user.uid === activeUid)) return;
+    if (holding) { if (user && user.isAnonymous) return; holding = false; }   // intezar wala gumnaam user: na activate, na sign out
     const ticket = ++epoch;
     reset();
     if (!user) return;
@@ -118,7 +124,9 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
       clearCache();
       reset();
       const offline = ['unavailable', 'auth/network-request-failed'].includes(error.code);
+      if (holding && user.isAnonymous && error.code === 'login/staff-session') return;   // device-join ke intezar mein: yehi gumnaam user rehne do
       if (!offline && auth.currentUser?.uid === user.uid) await sdk.signOut(auth);
+      if (user.isAnonymous && error.code === 'login/staff-session') return;   // v2.231.0: session nahi (device abhi jura nahi / malik ne hata diya) = chup-chaap login screen
       onError(error, user.isAnonymous ? 'staff' : 'owner');
     }
   }
@@ -128,6 +136,27 @@ export function createAuthController({ auth, sdk, accounts, onReset, onSession, 
 
   return {
     resume() { activeUid = null; return restore(auth.currentUser); },
+    // v2.231.0: 📱 DEVICE JORNA — hold() login screen par gumnaam user banata / rakhta hai (restore use sign out nahi karta);
+    //   malik apni app se usi uid ka session banata hai → claim() wahi user activate karta hai (naya sign-in nahi, password / code nahi).
+    async hold() {
+      if (pending) throw failure('login/busy');
+      if (auth.currentUser && !auth.currentUser.isAnonymous) throw failure('login/owner-required');
+      if (auth.currentUser && auth.currentUser.uid === activeUid) throw failure('login/busy');
+      holding = true;
+      try { if (!auth.currentUser) await sdk.signInAnonymously(auth); } catch (e) { holding = false; throw e; }
+      return auth.currentUser;
+    },
+    unhold() { holding = false; },
+    async claim() {
+      if (pending) throw failure('login/busy');
+      const u = auth.currentUser;
+      if (!u || !u.isAnonymous) throw failure('login/no-user');
+      pending = true;
+      const ticket = ++epoch;
+      reset();
+      try { await activate(u, ticket, 'staff', ''); holding = false; return true; }
+      finally { pending = false; }
+    },
     async login(input) {
       if (pending) throw failure('login/busy');
       const request = parseLogin(input);
