@@ -5,7 +5,7 @@
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => 'Rs ' + (Math.abs(Number(n) || 0) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
-import { skipsBalance, cashPaysBill } from './model.js?v=2.234.0';
+import { skipsBalance, cashPaysBill } from './model.js?v=2.235.0';
 const TOL = 100, PRE_FROM = '2026-09-15';   // v2.0: PC LINES_FROM / START_DATE jaisa
 const OPEN_RX = /opening|shuru ka baqaya|sabqa baqaya/i;   // v1.7 = PC autoMilan OPEN_RX   // paisa — Rs 1 tak farq = theek (POS 2 decimal rounding)
 let C = null, st = { f: 'farq', q: '' };
@@ -168,6 +168,25 @@ const ofOf = D => (D.pre.app + D.opening) - D.pre.pos;
 const ofixJob = L => (L || []).find(j => Array.isArray(j.ids) && j.ids[0] === '@opening') || null;
 const ofixSt = j => !j ? '' : j.status !== 'done' ? '⏳ PC kar raha…' : j.fail ? '✕ ' + String((j.log || [])[0] || 'nahi hua').replace(/^[^:]*:\s*/, '') : j.skip ? '↩ pehle se barabar' : '✅ barabar ho gaya';
 const bankP = p => !!p && (!!p.bank || !!(C.isBank && C.isBank(p.id)));   // v2.0: HBL khata bhi (isBank)
+// v2.235.0: ⚖️ EK VOUCHER SE POS BARABAR (malik 11 Nov: "ek hi voucher daalein aur app jaisa baqaya POS mein aa jaye · koi bhi khata ho"). Sirf malik.
+//   1) 🔎 Jaanch (PC sirf raqam batata hai) -> 2) ✅ Pakka lagao (POS mein EK JV, khata vs Equity) -> ↩ Wapas. Job = milanJobs {dir pos, ids ['@balance'(,'dry')] / ['@undo-balance', job]}. AI nahi.
+const bfJobs = () => (jobs || []).filter(j => Array.isArray(j.ids) && (j.ids[0] === '@balance' || j.ids[0] === '@undo-balance')).sort((a, b) => (Number(b.at) || 0) - (Number(a.at) || 0));
+function bfixHTML() {
+  if (!C.owner() || !jobParty) return '';
+  const L = bfJobs(), j = L[0], busy = j && j.status !== 'done', ln = j ? String((j.log || []).slice(-1)[0] || '') : '';
+  const real = L.find(x => x.ids[0] === '@balance' && x.ids[1] !== 'dry' && x.status === 'done' && (Number(x.done) || 0) > 0 && !x.undoneAt && x.id);
+  const dryOk = j && j.status === 'done' && j.ids[0] === '@balance' && j.ids[1] === 'dry' && j.fix && Date.now() - (Number(j.doneAt) || 0) < 10 * 60000;
+  const st = !j ? '' : busy ? '<div class="pm-fixst wait"><b>⏳ Shop PC kar raha hai… (1–2 min)</b></div>' : `<small class="pm-ofl">${j.fail ? '✕ ' : j.ids[1] === 'dry' ? '🔎 ' : '✅ '}${esc(ln.slice(0, 300))}</small>`;
+  return `<div class="pm-fix pm-bfix"><small>⚖️ Ek voucher se POS ko app jaisa (aap ki ijazat):</small>${busy ? '' : `<button type="button" data-pm-bfix="dry">🔎 Jaanch (kuch likhe baghair)</button>${dryOk ? '<button type="button" data-pm-bfix="go">✅ Pakka lagao — POS mein EK JV</button>' : ''}${real ? `<button type="button" data-pm-bfix="undo" data-pm-bfid="${esc(real.id)}">↩ Wapas (${esc((real.fix && real.fix.code) || 'JV')})</button>` : ''}`}</div>${st}`;
+}
+async function bfixGo(k, id) {
+  const p = jobParty; if (!p || !C.owner()) return;
+  const ids = k === 'dry' ? ['@balance', 'dry'] : k === 'undo' ? ['@undo-balance', String(id || '')] : ['@balance'];
+  if (k === 'go' && !confirm('⚖️ ' + p.name + '\n\nPOS mein EK JV lagega (khata ↔ Equity) taake POS ka baqaya app jaisa ho jaye.\nIs khate ki purani "POS mein nahi" entries is voucher mein shamil maani jayengi (alag se POS mein nahi jayengi).\n\nPakka?')) return;
+  if (k === 'undo' && !confirm('↩ Barabar wala JV POS se hata dein aur entries ka nishan wapas?')) return;
+  try { await C.addJob({ partyId: p.id, dir: 'pos', ids, n: 1, amt: 0 }); jobs = [{ status: 'new', dir: 'pos', ids, at: Date.now() }, ...jobs]; C.notice('⏳ Shop PC ko kaha — 1–2 min'); repaintDiff(); }
+  catch (err) { C.notice('Nahi gaya: ' + (err?.message || err)); }
+}
 function ofixHTML(p, of) {
   if (!C.owner() || bankP(p)) return '';
   const j = ofixJob(jobs);
@@ -319,7 +338,7 @@ let reqAt = 0, reqT = 0, linesAt = 0;   // v2.133.4: 🔄 Taza karo (blueAccess/
 function freshHTML(doc) {
   const t = Math.max(Number(led()?.at) || 0, Number(doc?.at) || 0);
   const waiting = reqAt && !(Number(led()?.req) >= reqAt);
-  return `<div class="pm-fresh${waiting ? ' wait' : ''}"><span>🖥 POS data: <b>${t ? agoTxt(t) : '—'}</b>${waiting ? ' · ⏳ PC se naya aa raha hai…' : ''}</span>${C.owner() && C.reqLedger ? `<button type="button" data-pm-taza="1"${waiting ? ' disabled' : ''}>🔄 Taza karo</button>` : ''}</div>`;
+  return `<div class="pm-fresh${waiting ? ' wait' : ''}"><span>🖥 POS data: <b>${t ? agoTxt(t) : '—'}</b>${waiting ? ' · ⏳ PC se naya aa raha hai…' : ''}</span>${C.owner() && C.reqLedger ? `<button type="button" data-pm-taza="1"${waiting ? ' disabled' : ''}>🔄 Taza karo</button>` : ''}</div>` + bfixHTML();
 }
 async function tazaGo() {
   try { reqAt = await C.reqLedger(); } catch (err) { C.notice('Nahi gaya: ' + (err?.message || err)); return; }
@@ -504,8 +523,9 @@ document.addEventListener('input', e => { const t = e.target; if (!t?.dataset?.p
 document.addEventListener('change', e => { const t = e.target; if (t?.dataset?.pmObsel && ob) { if (t.checked) ob.sel.add(t.dataset.pmObsel); else ob.sel.delete(t.dataset.pmObsel); obPaint(); return; } if (!t?.dataset?.pmBsel || !bulk) return; if (t.checked) bulk.sel.add(t.dataset.pmBsel); else bulk.sel.delete(t.dataset.pmBsel); bulkPaint(); });
 document.addEventListener('click', e => {
   if (!C) return;
-  const b = e.target.closest?.('[data-pm-ou],[data-pm-ougo],[data-pm-ouall],[data-pm-ofix],[data-pm-ob],[data-pm-obgo],[data-pm-oball],[data-pm-obnone],[data-pm-cash],[data-pm-post],[data-pm-bill],[data-pm-send],[data-pm-bulk],[data-pm-bulkgo],[data-pm-ball],[data-pm-bsafe],[data-pm-bnone],[data-pm-bsend],[data-pm-taza],[data-pm-fix],[data-pm-f],[data-pm-open],[data-pm-diff],[data-pm-back],[data-pm-tog]'); if (!b) return;
+  const b = e.target.closest?.('[data-pm-bfix],[data-pm-ou],[data-pm-ougo],[data-pm-ouall],[data-pm-ofix],[data-pm-ob],[data-pm-obgo],[data-pm-oball],[data-pm-obnone],[data-pm-cash],[data-pm-post],[data-pm-bill],[data-pm-send],[data-pm-bulk],[data-pm-bulkgo],[data-pm-ball],[data-pm-bsafe],[data-pm-bnone],[data-pm-bsend],[data-pm-taza],[data-pm-fix],[data-pm-f],[data-pm-open],[data-pm-diff],[data-pm-back],[data-pm-tog]'); if (!b) return;
   if (b.dataset.pmSend) { e.stopPropagation(); e.preventDefault(); sendOne(b.dataset.pmSend); return; }
+  if (b.dataset.pmBfix) { e.stopPropagation(); bfixGo(b.dataset.pmBfix, b.dataset.pmBfid); return; }
   if (b.dataset.pmOfix) { e.stopPropagation(); ofixGo(b.dataset.pmOfix); return; }
   if (b.dataset.pmOu === 'go') { e.stopPropagation(); ouStart(); return; }
   if (b.dataset.pmOugo) { e.stopPropagation(); ouSend([b.dataset.pmOugo]); return; }

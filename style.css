@@ -7904,3 +7904,6 @@ html body #dialogBody .sf-s{display:grid;grid-template-columns:26px minmax(0,1fr
 html body #dialogBody .sf-s i{font-style:normal}html body #dialogBody .sf-s span{overflow-wrap:anywhere}
 html body #dialogBody .sf-s.ok{border-left-color:#16a34a}html body #dialogBody .sf-s.bad{border-left-color:#dc2626;background:rgba(220,38,38,.09);font-weight:700}
 html body #dialogBody .sf-mut{opacity:.75;font-size:13.5px}
+
+/* v2.235.0: ⚖️ ek voucher se POS barabar */
+html body #dialogBody .pm-bfix{margin-top:8px}html body #dialogBody .pm-bfix button{min-height:38px;border-radius:999px;white-space:nowrap}

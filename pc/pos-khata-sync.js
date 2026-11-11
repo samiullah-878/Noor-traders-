@@ -1212,6 +1212,58 @@ async function milanImportOne(acctIds, importVoucher, v, c, say) {
   if (/\[app:/.test(String(v.SystemNote || '')) && !voucherLinked(v.VoucherID)) { say(`${c}: yeh voucher app ne hi POS mein banaya tha (opening / app entry) — app mein dobara nahi`); return 'skip'; }
   try { await importVoucher(v, true); say(`${c}: app mein likh diya`); return 'done'; } catch (e) { say(`${c}: ${e.message || e}`); return 'fail'; }
 }
+// 2026-11-11 (t): ⚖️ EK VOUCHER SE BARABAR (malik: "ek hi voucher daalein aur app jaisa baqaya POS mein aa jaye · koi bhi khata ho" — HBL app Rs 10,306 · POS Rs 933,115).
+//   milanJobs {dir:'pos', ids:['@balance'] | ['@balance','dry']}: (1) is khate ke jo TRANSFER POS mein nahi — pehle un ka asal voucher (doosra khata bhi sahi rahe)
+//   (2) baqi app-only entries par posNo + balFix (is voucher mein shamil — baad mein alag se POS mein na jayein, warna farq dobara)
+//   (3) EK JV: khata vs Equity = app baqaya - POS baqaya (us waqt SQL se taza). 'dry' = sirf raqam batao, kuch na likho. Bank / HBL bhi. ↩ = ['@undo-balance', job]. AI nahi.
+async function milanBalance(pool, acct, acctIds, j, say, purAc, jid) {
+  const appId = String(j.partyId || ''), p = app.get(appId), dry = DRY || (Array.isArray(j.ids) && j.ids[1] === 'dry');
+  if (!p || p.deleted) { say('khata nahi mila'); return 'fail'; }
+  let accId = 0; for (const [a, id] of acctIds) if (id === appId) { accId = Number(a); break; }
+  if (!accId) { say(`${p.name}: POS se juda nahi`); return 'fail'; }
+  const load = async () => {
+    const rows = (await pool.request().input('from', sql.Date, START_DATE).input('ac', sql.Int, accId).query(`SELECT v.VoucherID, v.VoucherCode, v.VoucherDate, v.VoucherType, v.DocumentType, v.DocumentNo, v.VoucherRemarks, v.SystemNote, v.CreatedOn, vd.Debit, vd.Credit, vd.Description
+      FROM dbo.VoucherDetail vd JOIN dbo.Voucher v ON v.VoucherID = vd.VoucherID WHERE vd.AccountID = @ac AND v.VoucherDate >= @from AND ISNULL(v.VoucherStatusID, 1) <> 3`)).recordset;
+    const pre = (await pool.request().input('from', sql.Date, START_DATE).input('ac', sql.Int, accId).query(`SELECT SUM(ISNULL(vd.Debit,0) - ISNULL(vd.Credit,0)) AS Bal
+      FROM dbo.VoucherDetail vd JOIN dbo.Voucher v ON v.VoucherID = vd.VoucherID WHERE vd.AccountID = @ac AND v.VoucherDate < @from AND ISNULL(v.VoucherStatusID, 1) <> 3`)).recordset[0];
+    return milanDiffPc(appId, rows.map(lineOfPc), Math.round((Number(pre?.Bal) || 0) * 100));
+  };
+  let D = await load();
+  const trs = []; const seenT = new Set();
+  for (const a of D.appOnly) { const e = a.e; if (!e.transferId || seenT.has(String(e.transferId))) continue; seenT.add(String(e.transferId)); trs.push(e); }
+  const marks = D.appOnly.map(a => a.e).filter(e => !e.transferId && sendElig(e));
+  if (dry) {
+    const fix0 = D.appBal - D.posBal;
+    say(`JAANCH ${p.name}: app ${sideRs(D.appBal)} · POS ${sideRs(D.posBal)} · farq Rs ${rsTxt(Math.abs(fix0))} · ${trs.length} transfer pehle apne voucher se jayenge · ${marks.length} purani entries is voucher mein shamil (alag nahi jayengi) · phir bacha farq EK JV (kuch likha nahi)`);
+    j._fix = { dry: 1, app: D.appBal, pos: D.posBal, tr: trs.length, mk: marks.length }; return 'skip';
+  }
+  for (const e of trs) { try { await milanSendOne(pool, acct, e.id, say, purAc); } catch (er) { say(`${e.id}: transfer nahi gaya — ${er.message || er}`); } }
+  if (trs.length) D = await load();
+  const fix = D.appBal - D.posBal;
+  if (Math.abs(fix) <= 100) { say(`${p.name}: pehle se barabar (app ${sideRs(D.appBal)} · POS ${sideRs(D.posBal)})`); return 'skip'; }
+  const left = D.appOnly.map(a => a.e).filter(e => !e.transferId && sendElig(e)), mk = [];
+  for (const e of left) { await appWrite(e.id, { ...e, posNo: true, balFix: String(jid || '') }, e); mk.push(String(e.id)); }
+  const amt = rupees(Math.abs(fix)), dr = fix > 0, today = new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
+  const r = await posWriteVoucher(pool, { voucherId: 0, type: 'JV', date: today, marker: 'balfix-' + appId + '-' + Date.now().toString(36), remarks: `Baqaya app jaisa (ek voucher) - ${p.name}`,
+    lines: [{ accountId: accId, debit: dr ? amt : 0, credit: dr ? 0 : amt, desc: 'Baqaya app jaisa (Blue Khata)' },
+      { accountId: EQUITY_ACCOUNT_ID, debit: dr ? 0 : amt, credit: dr ? amt : 0, desc: 'Baqaya app jaisa - ' + p.name }] });
+  j._fix = { code: r.code, amt: dr ? Math.abs(fix) : -Math.abs(fix), mk: mk.slice(0, 400) };
+  say(`${r.code}: POS ka baqaya app jaisa — Rs ${rsTxt(Math.abs(fix))} ${dr ? 'lena (Dr)' : 'dena (Cr)'} (POS ${sideRs(D.posBal)} → app ${sideRs(D.appBal)}) · ${mk.length} purani entries shamil`); return 'done';
+}
+async function milanBalanceUndo(pool, j, origId, say) {
+  const ref = biz.collection('milanJobs').doc(String(origId)), sn = await ref.get(), o = sn.exists ? (sn.data() || {}) : null;
+  if (!o || !Array.isArray(o.ids) || o.ids[0] !== '@balance' || o.ids[1] === 'dry' || String(o.partyId) !== String(j.partyId)) { say('asal barabar wala job nahi mila'); return 'fail'; }
+  if (o.undoneAt) { say('pehle hi wapas ho chuka'); return 'skip'; }
+  const p = app.get(String(o.partyId)) || {}, name = p.name || String(o.partyId), code = (o.fix && o.fix.code) || '';
+  if (!code) { say(`${name}: POS JV ka number nahi mila`); return 'fail'; }
+  const v = (await pool.request().input('c', sql.VarChar(50), code).query('SELECT TOP 1 VoucherID, SystemNote FROM dbo.Voucher WHERE VoucherCode = @c ORDER BY VoucherID DESC')).recordset[0];
+  if (v && !/\[app:balfix-/.test(String(v.SystemNote || ''))) { say(`${name}: ${code} barabar wala JV nahi lagta — nahi chheda`); return 'fail'; }
+  if (v && !DRY) await posDeleteVoucher(pool, Number(v.VoucherID));
+  let n = 0;
+  for (const id of ((o.fix && o.fix.mk) || [])) { const e = app.get(String(id)); if (!e || e.balFix !== String(origId)) continue; if (!DRY) await appWrite(e.id, { ...e, posNo: false, balFix: '' }, e); n++; }
+  if (!DRY) await ref.set({ undoneAt: Date.now() }, { merge: true });
+  say(`${v ? code + ': POS se hata diya' : code + ' POS mein pehle hi nahi'} · ${n} entries ka nishan hata (${name})`); return 'done';
+}
 async function runMilanJobs(pool, acct, acctIds, importVoucher) {
   const snap = await biz.collection('milanJobs').where('status', '==', 'new').limit(25).get();   // 2026-10-27: 'sab khate' ek saath
   for (const d of snap.docs) {
@@ -1222,7 +1274,9 @@ async function runMilanJobs(pool, acct, acctIds, importVoucher) {
     const count = r => { if (r === 'done') done++; else if (r === 'skip') skip++; else fail++; };
     try {
       if (ids.length === 1 && ids[0] === '@opening') count(await milanOpening(pool, acctIds, j, say));   // 2026-10-28 (i): 📜 opening farq (malik ki ijazat)
-      else if (ids[0] === '@undo-opening' && ids[1]) count(await milanOpeningUndo(pool, { ...j, id: d.id }, ids[1], say));   // 2026-10-29 (j): ↩ wapas (malik ki ijazat)
+      else if (ids[0] === '@undo-opening' && ids[1]) count(await milanOpeningUndo(pool, { ...j, id: d.id }, ids[1], say));
+      else if (ids[0] === '@balance') count(await milanBalance(pool, acct, acctIds, j, say, await purchaseAccount(pool), d.id));   // 2026-11-11 (t): ⚖️ ek voucher se barabar
+      else if (ids[0] === '@undo-balance' && ids[1]) count(await milanBalanceUndo(pool, { ...j, id: d.id }, ids[1], say));   // 2026-10-29 (j): ↩ wapas (malik ki ijazat)
       else if (j.dir === 'pos') {
         const purAc = await purchaseAccount(pool);
         for (const id of ids) count(await milanSendOne(pool, acct, id, say, purAc));

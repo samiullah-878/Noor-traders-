@@ -7653,3 +7653,12 @@ Test: node mock (session nahi -> idle true; claim ke baad idle false). AI nahi. 
 3) Password UI hata: Settings 'Purane password (screen-wise)' + 'Password yaad rakhna' rows (dh-cat bhi), Mulazim screen ka 'purane password wale login' note, login paigham ab 'sirf MALIK ke liye'. Mulazim screen badle aur ijazat na ho = paigham (password form nahi).
    BAQI (jaan kar): malik ka apna login (email + password / pakka code — Firebase owner login, is ke baghair malik andar nahi aa sakta) · ⛔ Item band / ⇄ transfer ka password (stock ki hifazat — malik se poochha) · Gemini key ka khana. Purane mulazim password server par abhi maujood (UI nahi) — malik kahe to band.
 AI nahi. Rules / PC: nahi.
+
+=== v2.235.0 (11 Nov 2026) — ⚖️ EK VOUCHER SE POS BARABAR (PC pos-khata-sync t) ===
+Malik (22:30, HBL Noor Traders: app Rs 10,306 · POS Rs 933,115): "ek hi voucher daalein aur app jaisa baqaya POS mein aa jaye · koi bhi khata ho". Plan OK 22:37.
+PC milanBalance: milanJobs {dir pos, ids ['@balance'] | ['@balance','dry']} — (1) is khate ke POS-mein-nahi TRANSFER pehle apne asal voucher se (milanSendOne; doosra khata bhi sahi) (2) baqi app-only sendElig entries par posNo + balFix=<job>
+  (is voucher mein shamil — baad mein alag nahi jayengi) (3) EK JV khata vs Equity (EQUITY_ACCOUNT_ID, opening-farq wala) = app baqaya - POS baqaya, SQL se taza, marker balfix-. 'dry' = sirf raqam (kuch nahi likhta). Bank / HBL bhi.
+  ↩ milanBalanceUndo ['@undo-balance', job]: JV (SystemNote [app:balfix-) delete + nishan wapas + undoneAt.
+App pos-milan.js: Farq screen ke 'POS data' patti ke neeche bfixHTML — 🔎 Jaanch -> (10 min ke andar) ✅ Pakka lagao -> ↩ Wapas. Sirf malik. Rules wahi (milanJobs).
+KHATARNAK / test: sirf node --check — asal POS par NAHI chala. Malik pehle 🔎 Jaanch ki line dekhe (app / POS raqam screen se milti ho), phir Pakka. Wajah nahi milti, sirf baqaya barabar.
+AI nahi.
