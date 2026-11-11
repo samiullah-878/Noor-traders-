@@ -7870,3 +7870,17 @@ html.dk dialog.sdj{background:#111b33;color:#e8eefc}html.dk .sdj-l input{backgro
 
 /* v2.231.1: 📱 jura hua phone — Logout ke baad wapas kholne ka button */
 #login .dj-open{display:block;margin:12px auto 0;min-height:44px;padding:0 26px;border-radius:999px;border:1px solid #1d4ed8;background:linear-gradient(180deg,#3b82f6,#1d4ed8);color:#fff!important;font-size:17px;font-weight:800;white-space:nowrap}
+
+/* v2.232.0: 🖥 POS report — Sale khane ke auto dabbe mein patli line, tap = hisaab */
+html body .pos-ref{flex-wrap:wrap}
+html body .pos-ref .pr-rep{flex:1 1 100%;min-width:0;margin-top:6px;border-top:1px dashed rgba(100,116,139,.35);padding-top:6px;font-size:14px}
+html body .pos-ref .pr-rep summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:6px;min-height:32px;white-space:nowrap}
+html body .pos-ref .pr-rep summary::-webkit-details-marker{display:none}
+html body .pos-ref .pr-rep summary b{font-size:16px}
+html body .pos-ref .pr-rep summary i{margin-left:auto;font-style:normal;opacity:.6}
+html body .pos-ref .pr-rep[open] summary i{transform:rotate(180deg)}
+html body .pos-ref .pr-rep .pr-ln{display:flex;justify-content:space-between;gap:10px;padding:3px 0;font-size:14px}
+html body .pos-ref .pr-rep .pr-ln span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body .pos-ref .pr-rep .pr-ln b{white-space:nowrap}
+html body .pos-ref .pr-rep .pr-ln.tot{border-top:1px solid rgba(100,116,139,.35);font-weight:800;margin-top:2px;padding-top:5px}
+html body .pos-ref .pr-rep small{display:block;opacity:.75;margin-top:4px;font-size:12.5px}

@@ -4500,3 +4500,10 @@ Theek: auth-controller.js `out()` — gumnaam user KABHI sign out nahi (sirf mal
 Reh gaya (fitri hadd): us phone par MALIK khud login kare (email / pakka code) ya browser ka data mite = UID gaya -> dobara jorna.
 Test: node mock (hold -> claim -> logout -> wahi uid -> claim -> session hataya -> uid wahi, signOut 0). Asal phone par malik dekhe.
 AI: nahi. Rules: wahi 2.102. PC: koi badlaav nahi.
+
+=== v2.232.0 (11 Nov 2026) — 🖥 POS report Daily Sale ke Sale khane mein (PC pos-sales-dekho v2.10) ===
+Malik: "yahan POS ki apni sale screen ki sale bhi lao ta ke farq pata chale" (POS Sale report Total Sale 1,375,261 = cash 1,244,336 + udhaar 130,925; app auto 1,342,079). Plan OK 15:16.
+PC: saleSum() + sum.g (kul, cancel / stock fraq ke baghair) · gc (cash bills) · gu (udhaar bills, IsCreditSale) · un (udhaar ka wo hissa jo cash nahi mila) — RUPAY. Identity: g - un - rtRs = amt/100.
+App: posRepHTML(s) — .pos-ref ke andar <details class="pr-rep"> (Auto ON + haath-se dono haalat), khula / band yaad (posRepOpen). Sirf malik (posRef pehle se owner-only).
+Daily ki Sale / galla / writeSale BILKUL nahi badla. POS mein kuch nahi likha. AI: nahi. Rules: wahi.
+Pakka nahi: POS report mein stock fraq bills shamil hain ya nahi — neeche chhoti line mein alag dikhaye; malik ki screenshot se milana baqi.
