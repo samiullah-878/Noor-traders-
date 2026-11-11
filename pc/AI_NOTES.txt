@@ -4529,3 +4529,10 @@ Code se nikla: boot ka raasta restore ke session ka 30 s intezar karta hai; gumn
 Theek: (1) cloud.getSession = getDocFromServer (session ka hona / na hona sirf server se; offline = 'unavailable' = purana offline raasta). (2) auth-controller idle() (restore khatam + session nahi) -> app boot waiter foran oldBoot (30 s nahi). Naya, abhi na jura phone bhi ab foran Device ID dikhata hai.
 PAKKA NAHI: asal phone par saboot nahi (larka ghar par) — boot-time par tap ka popup (Firebase tayyar / Login mukammal) dekhna baqi. Pehle malik ko 'data dobara utar raha' kaha tha — wo andaza ghalat tha (boot-time = session tak ka waqt, data nahi).
 Test: node mock (session nahi -> idle true; claim ke baad idle false). AI nahi. Rules / PC: nahi.
+
+=== v2.234.0 + md pkg v31 (11 Nov 2026, malik 22:04: "C · apps khud refresh na ho, background se data uthaye · password poori app mein kahin nahi — naya tareeqa") ===
+1) md pkg v31 '🌙 Raat ke sawal' (md/tools/raat.py): 20:30 = Raat ke 3 sawal (Itwar: Hafte ka aaina) · 21:15 = Kal subah ka ek kaam. SIRF popup (C = koi app band nahi), 2 min baad khud band. Phone par test nahi (BeanShell) — malik ki screenshot baqi.
+2) App khud refresh NAHI: peeche se wapas aane par (30 min+) naya version ho to poori app reload hoti thi — ab sirf ✨ Update patti. Reload sirf (a) malik / larka Update dabaye (b) app 30 min se CHHUPI ho (nazar nahi aata). Data pehle ki tarah Firestore listeners se khud aata hai.
+3) Password UI hata: Settings 'Purane password (screen-wise)' + 'Password yaad rakhna' rows (dh-cat bhi), Mulazim screen ka 'purane password wale login' note, login paigham ab 'sirf MALIK ke liye'. Mulazim screen badle aur ijazat na ho = paigham (password form nahi).
+   BAQI (jaan kar): malik ka apna login (email + password / pakka code — Firebase owner login, is ke baghair malik andar nahi aa sakta) · ⛔ Item band / ⇄ transfer ka password (stock ki hifazat — malik se poochha) · Gemini key ka khana. Purane mulazim password server par abhi maujood (UI nahi) — malik kahe to band.
+AI nahi. Rules / PC: nahi.

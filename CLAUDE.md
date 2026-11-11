@@ -204,6 +204,10 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 
 - **⏱ Boot ka intezar (v2.233.1)**: app ka ⏱ = session banne tak ka waqt (data nahi) — tap par qadam. Login ki jaanch ka koi raasta chup-chaap laute (paigham nahi) to boot 30 s splash par atakta hai: naya chup raasta banao to `controller.idle()` sach ho. Session / login ka faisla hamesha `getDocFromServer` se (cache ka purana 'nahi hai' = jhoota logout). 'App dheeri' ki shikayat = pehle ⏱ par tap ka popup maango, andaza nahi (11 Nov: pehle ghalat wajah bata di).
 
+- **🔑 Mulazim ka password KAHIN NAHI (v2.234.0, malik 11 Nov: 'password poori app mein kahin nahi — naya tareeqa')**: mulazim ke liye password ka koi khana / row / form wapas mat lao (login, screen badalna, yaad rakhna). Malik ka apna login + ⛔ Item band / ⇄ transfer ka password alag cheez hain — malik ke kehne par hi chhero.
+- **🔄 App khud reload NAHI (v2.234.0)**: nazar aati app ko kabhi khud `location.reload()` mat karo (naya version = ✨ Update patti); reload sirf button par ya jab app 30 min se chhupi ho.
+- **🌙 Raat ke sawal (md pkg v31)**: `md/tools/raat.py` 20:30 + 21:15 popup — malik ne C chuna (koi app band nahi). Waqt / lafz malik ke kehne par badlo.
+
 ## 6. Har update ka checklist
 1. Firestore rules badlein to `firestore-rules-X.html` (pichhle versions ke chips ke saath) malik ko bhejo + poora rules text chat mein. **Ab (27 Oct 2026, malik ka OK): shop PC `pc/rules-publish.js` har 5 min GitHub ki `firestore.rules` khud publish karta hai (blueAccess/rulesPub) — bas `firestore.rules` header `BLUE KHATA vX` aur `version.json.rules` ek rakho; html sirf tab bhejo jab app ke 🔐 Rules dabbe mein PC ki ghalti dikhe.**
 2. `AI_NOTES.txt` (root) + `pc/AI_NOTES.txt` dono update.
