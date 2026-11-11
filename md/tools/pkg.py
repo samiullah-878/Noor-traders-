@@ -62,6 +62,8 @@ import big as BGM
 mbg, vbg = fix(json.loads(json.dumps(BGM.BG)), h64('claude|barilikhai'), '🔎 Bari likhai')   # v26 (10 Nov): WhatsApp + Claude mein likhai bari
 import cb as CBM
 mcb, vcb = fix(json.loads(json.dumps(CBM.CB)), h64('claude|claudebreak'), '⏸ Claude break')   # v27 (10 Nov): Claude app ki hadein
+import hs as HSM
+mhs, vhs = fix(json.loads(json.dumps(HSM.HS)), h64('claude|hotspotpopup'), '📶 Hotspot popup band')   # v30 (11 Nov)
 vars_, seen = [], set()
 # 🏦 Bank mode (chat link, phone par) ke globals — link import banata nahi (7 Nov: "Variable does not exist (bkSave)")
 def _gv(n, t, **kw):
@@ -71,8 +73,8 @@ for v in vp + vk + vt + vq + vf + vb + vcb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🧠 Falsafa: har 2 din nayi 6 baatein (kul 92).",
-       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb],
+       "note": "📶 Hotspot wala battery popup khud hat jayega (hotspot chalu rahega).",
+       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
        "vars": vars_,
