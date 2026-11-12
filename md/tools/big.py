@@ -5,7 +5,7 @@ import json, os
 from full import fvar
 D = os.path.dirname(os.path.abspath(__file__))
 BIG = 130
-PK = ["com.whatsapp", "com.whatsapp.w4b", "com.anthropic.claude"]; NM = ["WhatsApp", "WhatsApp Business", "Claude"]
+PK = ["com.anthropic.claude"]; NM = ["Claude"]   # v33 (12 Nov, malik: "WhatsApp par fonts wala khatam, sirf Claude rahe")
 T_ON, T_OFF = 112233445566881, 112233445566882
 READ = "\n".join([
  'try {',

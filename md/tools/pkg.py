@@ -77,7 +77,7 @@ for v in vp + vk + vt + vq + vf + vb + vcb + vsb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "⛔ Raat 12 se subah 11 tak sab apps band — Bank, WhatsApp, Call, Chrome, MacroDroid khule. Zaroori = din mein 1 dafa 10 minute.",
+       "note": "🔎 Bari likhai ab sirf Claude mein (WhatsApp mein aam likhai).",
        "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, msb],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
