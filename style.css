@@ -7995,3 +7995,10 @@ html body #dialogBody .kw-add button,html body #dialogBody .kw-btns button{min-h
 html body #dialogBody .kw-btns{display:flex;gap:6px;flex-wrap:wrap}
 html body #dialogBody .kw-list{display:grid;gap:4px}html body #dialogBody .kw-list p{margin:0;display:grid;grid-template-columns:54px minmax(0,1fr);align-items:center;gap:8px;padding:7px 10px;border-radius:10px;border:1px solid #e2e8f0;background:#fff}
 html body #dialogBody .kw-list p b{font-size:17px;color:#0f766e;font-variant-numeric:tabular-nums}html body #dialogBody .kw-list p span{font-size:15px;color:#0f172a;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* v2.242.0: 🔢 kharcha list — Business number se bhejne ke chips */
+html body #dialogBody .kw-to{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0 10px}
+html body #dialogBody .kw-to small{flex:1 1 100%;font-size:13px;color:#475569}
+html body #dialogBody .kw-to button{min-height:36px;height:36px;padding:0 13px;border-radius:999px;border:1px solid #bfe3d0;background:linear-gradient(180deg,#fff,#e9f8f0)!important;color:#0b5a3c!important;font-size:14px;font-weight:600;white-space:nowrap}
+html body #dialogBody .kw-to button.kw-all{border-color:#cbd8f0;background:linear-gradient(180deg,#fff,#eef3ff)!important;color:#1d3b7a!important}
+html body #dialogBody .kw-to .kw-err{flex:1 1 100%;margin:2px 0 0;font-size:13.5px;color:#b42318}

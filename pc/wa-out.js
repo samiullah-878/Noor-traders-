@@ -26,7 +26,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.8';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.9';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -258,6 +258,19 @@ async function main() {
   }
   DQ.where('st', '==', 'ok').onSnapshot(s => { s.docChanges().forEach(ch => { if (ch.type !== 'removed') dlvOk(ch.doc).catch(e => log('⚠️ delivery OK: ' + e.message)); }); }, e => log('⚠️ deliveryReq: ' + e.message));
   const sentM = new Map();   // v1.4: jobId → bheja hua WAMessage (rq wale reply ke liye)
+  // v1.9 (12 Nov, malik: "jo numbers save hain un par list bhejni hai · mera aur Mubeen ka chip"): app blueAccess/khWaSend {id, at, txt, to:[{n,p}]} -> waOut kl-<id>-<number> (create = dohra kabhi nahi) -> nateeja blueAccess/khWaSent {id, r:{number:{st,why}}}
+  BA.doc('khWaSend').onSnapshot(async s => {
+    try {
+      const d = (s.exists && s.data()) || {}, sid = String(d.id || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 24), txt = String(d.txt || '').trim().slice(0, 3500);
+      if (!sid || !txt || !Number(d.at) || Date.now() - Number(d.at) > 10 * 60000) return;
+      const to = (Array.isArray(d.to) ? d.to : []).map(a => ({ n: String((a && a.n) || '').slice(0, 30), p: normPh(a && a.p) })).filter(a => isMob(a.p)).slice(0, 35);
+      if (!to.length) return;
+      const cur = await BA.doc('khWaSent').get(); if (cur.exists && String((cur.data() || {}).id) === sid) return;
+      await BA.doc('khWaSent').set({ id: sid, at: Date.now(), r: {} });
+      let n = 0; for (const a of to) { try { await Q.doc(`kl-${sid}-${a.p}`).create({ st: 'new', at: Date.now(), to: a.p, nm: a.n, kind: 'rem', eid: `kl-${sid}-${a.p}`, txt }); n++; } catch (e) { if (!/exists/i.test(e.message)) log('⚠️ kharcha list: ' + e.message); } }
+      log(`🔢 kharcha list ${n} number ko`);
+    } catch (e) { log('⚠️ khWaSend: ' + e.message); }
+  }, e => log('⚠️ khWaSend: ' + e.message));
   Q.where('st', '==', 'new').onSnapshot(s => { for (const ch of s.docChanges()) { if (ch.type === 'removed') pend.delete(ch.doc.id); else pend.set(ch.doc.id, ch.doc.data() || {}); } kick(); }, e => log('⚠️ waOut: ' + e.message));
   function kick() { if (!busy) work().catch(e => { busy = false; log('⚠️ bhejna: ' + e.message); }); }
   async function work() {
@@ -266,7 +279,7 @@ async function main() {
       while (pend.size) {
         busyAt = Date.now();   // v1.3: har job par taza — lambi queue 'atki' na lage
         const [id, d] = [...pend.entries()].sort((a, b) => (Number(a[1].at) || 0) - (Number(b[1].at) || 0))[0];
-        const done = async (st, why, extra) => { pend.delete(id); try { await Q.doc(id).set({ st, why: String(why || '').slice(0, 140), sentAt: Date.now(), ...(d.im ? { im: FieldValue.delete(), hadIm: 1 } : {}), ...(d.au ? { au: FieldValue.delete(), hadAu: 1 } : {}), ...(extra || {}) }, { merge: true }); } catch (e) { log('⚠️ waOut ' + id + ': ' + e.message); } };
+        const done = async (st, why, extra) => { pend.delete(id); if (id.startsWith('kl-')) { try { await BA.doc('khWaSent').update({ ['r.' + normPh(d.to)]: { st, why: String(why || '').slice(0, 100), at: Date.now() } }); } catch (e) { log('⚠️ khWaSent: ' + e.message); } } try { await Q.doc(id).set({ st, why: String(why || '').slice(0, 140), sentAt: Date.now(), ...(d.im ? { im: FieldValue.delete(), hadIm: 1 } : {}), ...(d.au ? { au: FieldValue.delete(), hadAu: 1 } : {}), ...(extra || {}) }, { merge: true }); } catch (e) { log('⚠️ waOut ' + id + ': ' + e.message); } };
         const day = dayOf(Date.now()); if (L.day !== day) { L.day = day; L.n = 0; }
         const to = normPh(d.to), nm = String(d.nm || '').slice(0, 40), txt = String(d.txt || '').trim();
         if (!cfg.on) { await done('skip', 'band hai (setting)'); continue; }

@@ -7730,3 +7730,8 @@ waOut ki roz ki hadd (150) + 8 s faasla in jawabon par bhi lagta hai. Test: sirf
 === 12 Nov 2026 — md pkg v32: ⛔ Subah 11 tak ===
 Malik: '11:00 am tak sab apps band · banking, WhatsApp, calls, MacroDroid chalta rahe · Chrome bhi (khula) · 10 minute ke liye (zaroori)'.
 md/tools/subah.py -> macro '⛔ Subah 11 tak' (pkg.py msb): 00:00-10:59, har app khulne par + har 1 min; ALLOW (exact) + PARTS (package ka hissa: chrome, webapk, whatsapp, bank, dialer, contacts, sms, clock, settings, launcher, keyboard, systemui) ke ilawa = HOME + patti 3 s. Zaroori = din mein 1 dafa confirm -> 10 min (sbEm / sbEmDay / sbAsk globals). Kuch del / off nahi. Phone par test NAHI hua. AI nahi.
+
+
+=== 12 Nov 2026 — v2.242.0 / PC wa-out v1.9: 🔢 kharcha list Business number se ===
+Malik: 'jo numbers save hain un par list bhejni hai · mera aur Mubeen ka chip de do'.
+App kharcha-wa.js: list ke neeche `.kw-to` chips (👤 Mujhe = waParchi.prFrom[0] · Mubeen = prTo[0] · har jora number · 📤 Sab ko) -> cloud.khWaSend -> blueAccess/khWaSend {id, at, txt, to:[{n,p}]} (malik, naya rule nahi). PC wa-out: onSnapshot -> waOut `kl-<id>-<number>` (create = dohra nahi, 10 min se purana nahi) -> done() mein blueAccess/khWaSent {id, r:{number:{st,why}}} -> chip ⏳ ✅ ✕, 60 s jawab nahi = ⚠️ + wajah. waOut ki hadd / faasla wahi. Asal PC / WhatsApp par test NAHI. AI nahi.

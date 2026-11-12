@@ -4578,3 +4578,8 @@ wa-parchi: waIn consumer (onSnapshot + 30 s poll, ek ek) → nakli m / c (m._buf
   trTrack: Business se aayi parchi ki tasveer Mubeen ko bhi (nw-<id> {im, pp}). Kaam ke baad waIn doc + hisse mita diye jate hain.
 Purane raaste (malik / Mubeen ka link) code mein waise hi — band nahi kiye. Ijazat list ke bahar ka number Business par 'Print' bheje = kuch nahi (malik ko bataya; list = 🔢 Kharcha WhatsApp se → Kaun bhej sakta hai).
 waOut ki roz ki hadd (150) + 8 s faasla in jawabon par bhi lagta hai. Test: sirf node --check — asal WhatsApp par NAHI chala. App mein koi tabdeeli nahi (version wahi). AI nahi (bill number wala purana AI wahi).
+
+
+=== 12 Nov 2026 — v2.242.0 / PC wa-out v1.9: 🔢 kharcha list Business number se ===
+Malik: 'jo numbers save hain un par list bhejni hai · mera aur Mubeen ka chip de do'.
+App kharcha-wa.js: list ke neeche `.kw-to` chips (👤 Mujhe = waParchi.prFrom[0] · Mubeen = prTo[0] · har jora number · 📤 Sab ko) -> cloud.khWaSend -> blueAccess/khWaSend {id, at, txt, to:[{n,p}]} (malik, naya rule nahi). PC wa-out: onSnapshot -> waOut `kl-<id>-<number>` (create = dohra nahi, 10 min se purana nahi) -> done() mein blueAccess/khWaSent {id, r:{number:{st,why}}} -> chip ⏳ ✅ ✕, 60 s jawab nahi = ⚠️ + wajah. waOut ki hadd / faasla wahi. Asal PC / WhatsApp par test NAHI. AI nahi.
