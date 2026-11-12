@@ -66,17 +66,19 @@ import hs as HSM
 mhs, vhs = fix(json.loads(json.dumps(HSM.HS)), h64('claude|hotspotpopup'), '📶 Hotspot popup band')   # v30 (11 Nov)
 import raat as RTM
 mrt, vrt = fix(json.loads(json.dumps(RTM.RT)), h64('claude|raatkesawal'), '🌙 Raat ke sawal')   # v31 (11 Nov): raat 8:30 / 9:15 ke popup — koi app band nahi
+import subah as SBM
+msb, vsb = fix(json.loads(json.dumps(SBM.SB)), h64('claude|subah11'), '⛔ Subah 11 tak')   # v32 (12 Nov): raat 12 se subah 11 tak sab apps band
 vars_, seen = [], set()
 # 🏦 Bank mode (chat link, phone par) ke globals — link import banata nahi (7 Nov: "Variable does not exist (bkSave)")
 def _gv(n, t, **kw):
     v = {"m_name": n, "m_type": t, "isLocalVar": False, "m_booleanValue": False, "m_intValue": 0, "m_stringValue": ""}; v.update(kw); return v
 vb = [_gv("bankOn", 0), _gv("bkSave", 2), _gv("bkRes", 2), _gv("bkBeat", 1), _gv("bkAge", 1)]
-for v in vp + vk + vt + vq + vf + vb + vcb:
+for v in vp + vk + vt + vq + vf + vb + vcb + vsb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🌙 Raat 8:30 = 3 sawal (Itwar: hafte ka aaina) · 9:15 = kal subah ka ek kaam. Koi app band nahi.",
-       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt],
+       "note": "⛔ Raat 12 se subah 11 tak sab apps band — Bank, WhatsApp, Call, Chrome, MacroDroid khule. Zaroori = din mein 1 dafa 10 minute.",
+       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, msb],
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
        "vars": vars_,

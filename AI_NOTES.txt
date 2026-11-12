@@ -7725,3 +7725,8 @@ wa-parchi: waIn consumer (onSnapshot + 30 s poll, ek ek) → nakli m / c (m._buf
   trTrack: Business se aayi parchi ki tasveer Mubeen ko bhi (nw-<id> {im, pp}). Kaam ke baad waIn doc + hisse mita diye jate hain.
 Purane raaste (malik / Mubeen ka link) code mein waise hi — band nahi kiye. Ijazat list ke bahar ka number Business par 'Print' bheje = kuch nahi (malik ko bataya; list = 🔢 Kharcha WhatsApp se → Kaun bhej sakta hai).
 waOut ki roz ki hadd (150) + 8 s faasla in jawabon par bhi lagta hai. Test: sirf node --check — asal WhatsApp par NAHI chala. App mein koi tabdeeli nahi (version wahi). AI nahi (bill number wala purana AI wahi).
+
+
+=== 12 Nov 2026 — md pkg v32: ⛔ Subah 11 tak ===
+Malik: '11:00 am tak sab apps band · banking, WhatsApp, calls, MacroDroid chalta rahe · Chrome bhi (khula) · 10 minute ke liye (zaroori)'.
+md/tools/subah.py -> macro '⛔ Subah 11 tak' (pkg.py msb): 00:00-10:59, har app khulne par + har 1 min; ALLOW (exact) + PARTS (package ka hissa: chrome, webapk, whatsapp, bank, dialer, contacts, sms, clock, settings, launcher, keyboard, systemui) ke ilawa = HOME + patti 3 s. Zaroori = din mein 1 dafa confirm -> 10 min (sbEm / sbEmDay / sbAsk globals). Kuch del / off nahi. Phone par test NAHI hua. AI nahi.

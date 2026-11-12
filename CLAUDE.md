@@ -214,6 +214,7 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 
 - **🔑 Mulazim ka password KAHIN NAHI (v2.234.0, malik 11 Nov: 'password poori app mein kahin nahi — naya tareeqa')**: mulazim ke liye password ka koi khana / row / form wapas mat lao (login, screen badalna, yaad rakhna). Malik ka apna login + ⛔ Item band / ⇄ transfer ka password alag cheez hain — malik ke kehne par hi chhero.
 - **🔄 App khud reload NAHI (v2.234.0)**: nazar aati app ko kabhi khud `location.reload()` mat karo (naya version = ✨ Update patti); reload sirf button par ya jab app 30 min se chhupi ho.
+- **⛔ Subah 11 tak (md pkg v32, 12 Nov 2026)** (malik: '11 baje tak sab apps band · bank, WhatsApp, call, MacroDroid, Chrome khule · zaroori 10 minute'): `md/tools/subah.py` — raat 12 se 10:59. Nayi app khuli rakhni ho = ALLOW / PARTS mein jodo; waqt / emergency (din mein 1 dafa, `EMG` 600 s) malik ke kehne par hi badlo. Bank mode / Claude break se takrao nahi.
 - **🌙 Raat ke sawal (md pkg v31)**: `md/tools/raat.py` 20:30 + 21:15 popup — malik ne C chuna (koi app band nahi). Waqt / lafz malik ke kehne par badlo.
 
 ## 6. Har update ka checklist
