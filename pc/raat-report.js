@@ -23,7 +23,8 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 
-const VER = '1.5';   // v1.5 (2026-11-11): 📲 malik ke WhatsApp par 3 reports (Daily Sale · Larka-wise · Profit) waOut se — reportConfig waOn / waD / waL / waP, default waqt 18:00; larka + topNafa report mein.
+const VER = '1.6';   // v1.6 (12 Nov): WhatsApp par 'reports' -> reportConfig.waOnly d | l | p | all (kh-wa v1.3) — sirf wohi report, phir waOnly khali
+// v1.5:   // v1.5 (2026-11-11): 📲 malik ke WhatsApp par 3 reports (Daily Sale · Larka-wise · Profit) waOut se — reportConfig waOn / waD / waL / waP, default waqt 18:00; larka + topNafa report mein.
 // pichhla:   // v1.4 (2026-10-25): ⚖️ "sirf hisaab" / cancel transfer note "check nahi hue" mein nahi.
 // v1.1 (2026-10-11): sachi dhadkan + chowkidar (11-Oct 3 ghante khamosh, report nahi bani) · report waqt guzre to usi din baad mein bhi · default 18:30
 const BUSINESS_ID = 'noor-traders';
@@ -300,7 +301,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
       const cfg = await cfgGet(), st = readSt(), t = now(), hm = `${pad2(t.getHours())}:${pad2(t.getMinutes())}`, day = dayOf(t);
       const due = (time, key, win = 3) => { const [h, m] = String(time || '').split(':').map(Number); if (!Number.isFinite(h)) return false; const d = new Date(t); d.setHours(h, m || 0, 0, 0); return hm >= `${pad2(h)}:${pad2(m || 0)}` && t.getTime() - d.getTime() < win * 3600e3 && st[key] !== day; };   // alert: 3 ghante; report (v1.1): usi din jab bhi chale (PC band / atka tha)
       // v1.3: ⏰ subah ki khatam-maal khabar (runAlert) BAND — malik ne kaha zaroorat nahi
-      if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); await runReport(String(cfg.reportDay || day), cfg, 'app se abhi'); }
+      if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); { const o = String(cfg.waOnly || ''), c2 = ['d', 'l', 'p'].includes(o) ? { ...cfg, waOn: true, waD: o === 'd', waL: o === 'l', waP: o === 'p' } : o === 'all' ? { ...cfg, waOn: true, waD: true, waL: true, waP: true } : cfg; if (o) { try { await access.doc('reportConfig').set({ waOnly: '' }, { merge: true }); } catch {} } await runReport(String(cfg.reportDay || day), c2, o ? 'WhatsApp se' : 'app se abhi'); } }
       else if (cfg.reportOn !== false && due(cfg.reportTime, 'reportDay', 24)) { st.reportDay = day; saveSt(st); await runReport(day, cfg, 'raat'); }
       if (Date.now() - lastAlive > 5 * 60000) { lastAlive = Date.now(); try { await access.doc('reportConfig').set({ alive: Date.now(), ver: VER }, { merge: true }); } catch {} }   // app: "PC zinda"
       onBeat?.();   // v1.1: dhadkan SIRF tab jab chakkar poora hua

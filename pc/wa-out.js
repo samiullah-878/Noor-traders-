@@ -26,7 +26,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.10';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.11';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -200,6 +200,8 @@ async function main() {
         const ktx = String(c.conversation || (c.extendedTextMessage && c.extendedTextMessage.text) || '').trim();
         if (KHW && ktx && ktx.length <= 300 && KHW.looks(ktx)) { const kn = await fromNum(m, s), kc = c.extendedTextMessage && c.extendedTextMessage.contextInfo, kt = Number(m.messageTimestamp && typeof m.messageTimestamp === 'object' ? (m.messageTimestamp.toNumber ? m.messageTimestamp.toNumber() : m.messageTimestamp.low) : m.messageTimestamp) * 1000 || 0;
           if (kn) await KHW.apply({ text: ktx, from: kn, wid: m.key.id || '', ts: kt, quoted: String((kc && kc.stanzaId) || ''), quiet: false }); continue; }
+        if (KHW && KHW.looksName && ktx && KHW.looksName(ktx)) { const kn3 = await fromNum(m, s), kt3 = Number(m.messageTimestamp && typeof m.messageTimestamp === 'object' ? (m.messageTimestamp.toNumber ? m.messageTimestamp.toNumber() : m.messageTimestamp.low) : m.messageTimestamp) * 1000 || 0;
+          if (kn3 && KHW.who(kn3) && await KHW.apply({ text: ktx, from: kn3, wid: m.key.id || '', ts: kt3, quoted: '', quiet: true, biz: true })) continue; }
         const kimg = c.imageMessage || (c.documentMessage && /^image\//i.test(String(c.documentMessage.mimetype || '')) ? c.documentMessage : null);
         if (KHW && KHW.who && (kimg || (ktx && ktx.length <= 60))) { const kn2 = await fromNum(m, s); if (kn2 && KHW.who(kn2)) { await inboxPut(m, c, kimg, ktx, kn2, s); continue; } }
         const lo = c.locationMessage || c.liveLocationMessage; if (!lo) continue;   // SIRF location — baqi har paigham chhoro
@@ -279,12 +281,12 @@ async function main() {
       while (pend.size) {
         busyAt = Date.now();   // v1.3: har job par taza — lambi queue 'atki' na lage
         const [id, d] = [...pend.entries()].sort((a, b) => (Number(a[1].at) || 0) - (Number(b[1].at) || 0))[0];
-        const done = async (st, why, extra) => { pend.delete(id); if (id.startsWith('kl-')) { try { await BA.doc('khWaSent').update({ ['r.' + normPh(d.to)]: { st, why: String(why || '').slice(0, 100), at: Date.now() } }); } catch (e) { log('⚠️ khWaSent: ' + e.message); } } try { await Q.doc(id).set({ st, why: String(why || '').slice(0, 140), sentAt: Date.now(), ...(d.im ? { im: FieldValue.delete(), hadIm: 1 } : {}), ...(d.au ? { au: FieldValue.delete(), hadAu: 1 } : {}), ...(extra || {}) }, { merge: true }); } catch (e) { log('⚠️ waOut ' + id + ': ' + e.message); } };
+        const done = async (st, why, extra) => { pend.delete(id); if (id.startsWith('kl-')) { try { await BA.doc('khWaSent').update({ ['r.' + normPh(d.to)]: { st, why: String(why || '').slice(0, 100), at: Date.now() } }); } catch (e) { log('⚠️ khWaSent: ' + e.message); } } try { await Q.doc(id).set({ st, why: String(why || '').slice(0, 140), sentAt: Date.now(), ...(d.im ? { im: FieldValue.delete(), hadIm: 1 } : {}), ...(d.au ? { au: FieldValue.delete(), hadAu: 1 } : {}), ...(d.doc ? { doc: FieldValue.delete(), hadDoc: 1 } : {}), ...(extra || {}) }, { merge: true }); } catch (e) { log('⚠️ waOut ' + id + ': ' + e.message); } };
         const day = dayOf(Date.now()); if (L.day !== day) { L.day = day; L.n = 0; }
         const to = normPh(d.to), nm = String(d.nm || '').slice(0, 40), txt = String(d.txt || '').trim();
         if (!cfg.on) { await done('skip', 'band hai (setting)'); continue; }
         if (Number(d.at) && Date.now() - Number(d.at) > 6 * 3600000) { await done('skip', 'purana (6 ghante+)'); continue; }
-        if (!okPh(to) || (!txt && !d.au && !d.loc)) { await done('err', !okPh(to) ? 'mobile number ghalat' : 'paigham khali'); continue; }
+        if (!okPh(to) || (!txt && !d.au && !d.loc && !d.doc)) { await done('err', !okPh(to) ? 'mobile number ghalat' : 'paigham khali'); continue; }
         if (L.n >= cfg.lim) { log(`⏸ aaj ki hadd ${cfg.lim} poori — baqi kal`); setLink({ err: `Aaj ki hadd ${cfg.lim} poori — baqi kal` }); break; }   // queue mein rahe (st new)
         if (!sock || L.st !== 'open') { break; }   // jur jaye to kick()
         const gap = cfg.gap * 1000 - (Date.now() - lastSent); if (gap > 0) await sleep(gap);
@@ -296,13 +298,14 @@ async function main() {
           const jid = (chk[0] && chk[0].jid) || jidOf(to);
           const im = d.im && (Buffer.isBuffer(d.im) ? d.im : d.im.toUint8Array ? Buffer.from(d.im.toUint8Array()) : null);   // v1.0: bill ki tasveer (Bytes) ho to tasveer + caption
           const au = d.au && (Buffer.isBuffer(d.au) ? d.au : d.au.toUint8Array ? Buffer.from(d.au.toUint8Array()) : null);   // 🔊 awaz (mp3) — Urdu TTS
+          const dc = d.doc && (Buffer.isBuffer(d.doc) ? d.doc : d.doc.toUint8Array ? Buffer.from(d.doc.toUint8Array()) : null);
           let quoted = null;
           if (d.rq) {   // v1.4: reply mein — pehle yaad se, warna asal doc ka wid
             quoted = sentM.get(String(d.rq)) || null;
             if (!quoted) { try { const ps0 = await within(Q.doc(String(d.rq)).get(), 10000, 'reply ka asal'); const pd = ps0.exists ? ps0.data() : null; if (pd && pd.st === 'sent' && pd.wid) quoted = { key: { remoteJid: jid, fromMe: true, id: String(pd.wid) }, message: { conversation: String(pd.txt || '').slice(0, 300) } }; } catch {} }
           }
           const lc = d.loc && Number.isFinite(Number(d.loc.lat)) && Number.isFinite(Number(d.loc.lng)) ? { location: { degreesLatitude: Number(d.loc.lat), degreesLongitude: Number(d.loc.lng), name: String(d.loc.name || '').slice(0, 80), address: String(d.loc.adr || '').slice(0, 120) } } : null;   // v1.5: delivery boy ko location
-          const r = await within(sock.sendMessage(jid, lc || (im && im.length ? { image: im, caption: txt, mimetype: 'image/jpeg' } : au && au.length ? { audio: au, mimetype: 'audio/mpeg', ptt: false } : { text: txt }), quoted ? { quoted } : {}), 60000, 'bhejna');
+          const r = await within(sock.sendMessage(jid, lc || (dc && dc.length ? { document: dc, mimetype: 'application/pdf', fileName: String(d.fn || 'Khata.pdf').slice(0, 60), caption: txt } : im && im.length ? { image: im, caption: txt, mimetype: 'image/jpeg' } : au && au.length ? { audio: au, mimetype: 'audio/mpeg', ptt: false } : { text: txt }), quoted ? { quoted } : {}), 60000, 'bhejna');
           lastSent = Date.now(); L.n++;
           if (r && r.key) { sentM.set(id, r); if (sentM.size > 200) sentM.delete(sentM.keys().next().value); }
           if (d.kind === 'bill') { CU[to] = { at: Date.now(), nm, bn: String(d.bn || ''), eid: id }; custSave(); }   // v1.5: is gahak ki location 24 ghante tak
