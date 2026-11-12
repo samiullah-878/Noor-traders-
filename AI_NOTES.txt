@@ -7714,3 +7714,14 @@ App: kharcha-wa.js (WhatsApp Parchi ⋮ '🔢 Kharcha WhatsApp se', sirf malik) 
   Khata list mein '🧾 001 · Kharcha khata' (khNumTag). Party doc mein number NAHI (hash na badle — POS ka faltu update na ho).
 wa-out ab aane wale paigham mein location ke ILAWA yeh 3-hindse wala paigham bhi dekhta hai (sirf ijazat wale number ka lagta hai; baqi chhor) — malik ka OK 12:10.
 KHATARNAK / test: sirf node --check + parse ka test — asal WhatsApp / PC par NAHI chala. Raqam AAKHIR mein likhni hai ('001 4900 2 bande' = Rs 2 lagega). AI nahi.
+
+=== 12 Nov 2026 (PC only) — 📥 BUSINESS NUMBER = MARKAZ (wa-out v1.8 · wa-parchi v2.20 · kh-wa v1.1) ===
+Malik (12:51–12:53, Parchi ka safar ki screenshot: Mubeen ka WhatsApp 🔴 PC chup 29 min): "is mein business wala WhatsApp hi main rakhein — main ya Mubeen parchi send kar dein, wohi print kare, baqi cheezein bhi wohi handle kare ·
+  Mubeen ka number ho ya na ho" · "mera number ya Mubeen ka number ki ab zaroorat nahi — business number par koi bhi parchi send kare, baqi sab same qaida · Print auto par sab auto · Print par sirf print".
+wa-out: `inboxPut` — ijazat wale number (kh-wa who(): malik prFrom / Mubeen prTo / khWa.allow) ki tasveer ya <= 60 harf ka likha paigham → waIn/<id> {st new, at, from, rid, nm, tx, q, fw, im, n, mt, sz} + waIn/<id>_p<i> {b} (800 KB hisse).
+  Gahakon ke paigham ab bhi nahi (sirf location). Kharcha (3 hindse) is se pehle.
+wa-parchi: waIn consumer (onSnapshot + 30 s poll, ek ek) → nakli m / c (m._buf = tasveer) → `bizMsg`: tasveer + Print = `bizDo` (ready → [auto: trTrack] → printOne why 'biz') · tasveer pehle / lafz baad (bzPend 10 min) · lafz pehle (bzHot 2 min) ·
+  start / bill = WAHI trReply (sirf Mubeen ya jis ne parchi par reply kiya; hamare bheje paigham par reply → waOut.pp se asal parchi) · jawab `bz-*` waOut. `dlBuf` (m._buf ho to download nahi) printOne + trReply dono mein.
+  trTrack: Business se aayi parchi ki tasveer Mubeen ko bhi (nw-<id> {im, pp}). Kaam ke baad waIn doc + hisse mita diye jate hain.
+Purane raaste (malik / Mubeen ka link) code mein waise hi — band nahi kiye. Ijazat list ke bahar ka number Business par 'Print' bheje = kuch nahi (malik ko bataya; list = 🔢 Kharcha WhatsApp se → Kaun bhej sakta hai).
+waOut ki roz ki hadd (150) + 8 s faasla in jawabon par bhi lagta hai. Test: sirf node --check — asal WhatsApp par NAHI chala. App mein koi tabdeeli nahi (version wahi). AI nahi (bill number wala purana AI wahi).

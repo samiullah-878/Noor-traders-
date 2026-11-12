@@ -87,7 +87,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.19';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.20';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1751,7 +1751,8 @@ async function start(ZINDA) {
     try {
       const who = (t.nm ? t.nm + ' ' : '') + (t.from ? phPretty(t.from) : ''), mk = S.prFrom[0] || normPh(L.me || ''), grpFirst = t.grp === t.id;
       if (t.from && grpFirst) await waOutPut('rc-' + t.grp, { to: t.from, nm: t.nm || '', kind: 'recv', eid: 'rc-' + t.grp, txt: '*NOOR TRADERS*\nAap ki parchi hamare larke ne receive kar li hai, shukria 🙏\nAap ka saman thori der mein nikal aata hai.' });   // gahak — group ki pehli parchi par ek dafa
-      if (t.to) await waOutPut('nw-' + t.id, { to: t.to, nm: 'Mubeen', kind: 'rem', eid: 'nw-' + t.id, txt: `📋 Nayi parchi: ${who.trim() || 'gahak?'} (${tstr(t.fwdAt)}) — tayyar karke usi parchi par *start* likhein.` });
+      let fim = null; if (m._buf) { try { fim = await smallJpg(m._buf); } catch {} }   // v2.20: Business number se aayi parchi — tasveer Mubeen ko bhi (wohi is par reply karega)
+      if (t.to) await waOutPut('nw-' + t.id, { to: t.to, nm: 'Mubeen', kind: 'rem', eid: 'nw-' + t.id, pp: t.id, ...(fim ? { im: fim } : {}), txt: `📋 Nayi parchi: ${who.trim() || 'gahak?'} (${tstr(t.fwdAt)}) — tayyar karke ${m._buf ? 'ISI paigham par reply mein' : 'usi parchi par'} *start* likhein.` });
       if (mk) await waOutPut('nk-' + t.id, { to: mk, nm: 'Malik', kind: 'rem', eid: 'nk-' + t.id, txt: `✅ Parchi Mubeen ko gayi: ${who.trim() || 'gahak? (number nahi)'} (${tstr(t.fwdAt)})` });
     } catch (e) { log('⚠️ nayi parchi paigham: ' + (e && e.message)); }
     trDbg(`✅ Printauto parchi (${t.k === 'txt' ? 'likhi' : 'tasveer'}) list mein · gahak ${t.from ? phPretty(t.from) : '? (caption mein number likhein)'}${o ? ' (' + (im ? 'tasveer' : 'likhai') + ' se)' : cap.ph ? ' (caption se)' : ''}${t.grp !== wid ? ' · group' : ''}`);
@@ -1783,7 +1784,7 @@ async function start(ZINDA) {
     t.st = 'done'; t.doneAt = now; t.bills = (t.bills || []).concat([wid]).slice(-5); trSave(); trPush();
     if (!t.from) { t.err = 'gahak ka number nahi mila (caption mein number likhein)'; trSave(); trPush(); log(`✅ parchi ${qid.slice(-6)} bill tayyar — magar gahak ka number nahi`); return true; }
     try {
-      const buf = await within(B.downloadMediaMessage(m, 'buffer', {}, { logger, reuploadRequest: s && s.updateMediaMessage }), 60000, 'bill tasveer download');
+      const buf = await dlBuf(m, s, 'bill tasveer download');
       let jpg = isJpeg(buf) && buf.length <= 850000 ? buf : null; const S2 = sharp();
       if (!jpg && S2) for (const [w, q] of [[1600, 78], [1280, 72], [1000, 65]]) { try { const b = await S2(buf).rotate().resize({ width: w, height: w, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: q }).toBuffer(); if (b.length <= 850000) { jpg = b; break; } } catch {} }
       if (!jpg) throw Error('tasveer bari / badal nahi saki');
@@ -2032,10 +2033,10 @@ async function start(ZINDA) {
     if (Number(im.fileLength) > 15 * 1024 * 1024) { note('✕ tasveer 15 MB se bari — nahi chhapi'); return; }
     const g = gahakHd(msg && msg.key && msg.key.id, '', false), hd = [g, hdOf(pn, jid, cap)].filter(Boolean).join(' · ').slice(0, 140), cp = n > 0 ? n : S.a4c;   // v2.10: track wali parchi = gahak pehle
     try {
-      const buf = await within(B.downloadMediaMessage(msg, 'buffer', {}, { logger, reuploadRequest: s && s.updateMediaMessage }), 60000, 'tasveer download');
+      const buf = await dlBuf(msg, s, 'tasveer download');
       const g = await prepImage(buf, String(im.mimetype || 'image/jpeg'));
-      await a4Send(g && g.jpg, cp, { t: (why === 'reply' ? 'Reply print' : 'Gahak print') + ' · ' + (pn ? phPretty(pn) : 'WhatsApp'), hd }, null);
-      note(`✅ Parchi A4 ko gayi${cp > 1 ? ' (' + cp + ' copy)' : ''} — ${hd || 'WhatsApp'} · ${why === 'reply' ? 'reply' : 'gahak ne print likha'}`);
+      await a4Send(g && g.jpg, cp, { t: (why === 'reply' ? 'Reply print' : why === 'biz' ? 'Business number' : 'Gahak print') + ' · ' + (pn ? phPretty(pn) : 'WhatsApp'), hd }, null);
+      note(`✅ Parchi A4 ko gayi${cp > 1 ? ' (' + cp + ' copy)' : ''} — ${hd || 'WhatsApp'} · ${why === 'reply' ? 'reply' : why === 'biz' ? 'Business number se' : 'gahak ne print likha'}`);
     } catch (e) { note('✕ parchi nahi chhapi: ' + String((e && e.message) || e).slice(0, 90)); }
   }
   async function ready(m, wid, note) {   // dohra nahi · 30 min purana nahi · band nahi → true = chhapo
@@ -2090,6 +2091,70 @@ async function start(ZINDA) {
     if (!(await ready(m, wid, CX2.note))) return;
     await printOne(m, im, n, (await chatPh(m, s)) || from, jid, im.caption || '', 'gahak', s, CX2.note);
   }
+  // ================= v2.20 (12 Nov): 📥 BUSINESS NUMBER = MARKAZ =================
+  // Malik: "business wala WhatsApp hi main — main ya Mubeen parchi isi par bhejein, wohi print kare, baqi cheezein bhi wohi · mera / Mubeen ka number juda ho ya na ho ·
+  //   Print auto par sab auto · Print par sirf print". wa-out (Business socket) ijazat wale number ka paigham waIn/<id> mein rakhta hai (tasveer ke bytes saath) —
+  //   yahan usi ko purane qaidon se chalate hain: printOne (A4) · trTrack (Print auto) · trReply (start / bill). Jawab waOut se usi chat mein. Purane raaste (malik / Mubeen ka link) waise hi.
+  async function dlBuf(msg, s, what) { if (msg && msg._buf) return msg._buf; return within(B.downloadMediaMessage(msg, 'buffer', {}, { logger, reuploadRequest: s && s.updateMediaMessage }), 60000, what); }
+  async function smallJpg(buf) { if (isJpeg(buf) && buf.length <= 850000) return buf; const S2 = sharp(); if (!S2) return null;
+    for (const [w, q] of [[1600, 78], [1280, 72], [1000, 65]]) { try { const b = await S2(buf).rotate().resize({ width: w, height: w, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: q }).toBuffer(); if (b.length <= 850000) return b; } catch {} }
+    return null; }
+  const IN = biz.collection('waIn'), inBusy = new Set(), bzPend = new Map(); let bzQ = Promise.resolve(), bzHot = { at: 0, from: '', auto: false };
+  const bzWho = ph => (KHW && KHW.who && KHW.who(ph)) || phPretty(ph);
+  const bizSay = (to, id, txt) => waOutPut(id, { to, nm: bzWho(to), kind: 'rem', eid: id, txt }).catch(() => false);
+  async function bizDo(m, c, im, from, auto) {
+    const wid = m.key.id, who = bzWho(from); let k = 0;
+    const note = t => { try { ringAdd('📥 Business · ' + who + ': ' + t); trPush(); } catch {} log('📥 ' + t); bizSay(from, 'bz-' + wid + '-' + (k++), '🖨 ' + t); };
+    if (!(await ready(m, wid, note))) return;
+    if (auto) { try { await trTrack(m, c, S.prTo[0] || '', who); } catch (e) { note('✕ Print auto list mein nahi gaya: ' + String(e.message || e).slice(0, 80)); } }
+    const cap = String(im.caption || ''), pc = parseCaption(stripPrint(cap));
+    await printOne(m, im, 0, pc.ph || '', m.key.remoteJid, cap, 'biz', null, note);
+    if (auto) { const t = TR.par[wid]; if (t) await bizSay(from, 'bz-' + wid + '-a', t.from ? `✅ Print auto chalu — gahak ${phPretty(t.from)} ko "parchi mil gayi" · Mubeen ko parchi bhej di.` : '⚠️ Print auto: gahak ka number nahi mila (Mubeen ko parchi chali gayi). Gahak ko paigham / bill ke liye caption mein likhein: Print auto Ahmed 0300-1234567'); }
+  }
+  async function bizMsg(m, c, from) {
+    const im = imgOf(c), tx = im ? '' : txtOf(c), cap = im ? String(im.caption || '') : '', wid = m.key.id, now = tsOf(m) || Date.now(), who = bzWho(from);
+    const ctx = (c.extendedTextMessage && c.extendedTextMessage.contextInfo) || (im && im.contextInfo) || null;
+    if (ctx && ctx.stanzaId && !TR.par[ctx.stanzaId] && !bzPend.has(ctx.stanzaId)) {   // hamare bheje paigham (Mubeen wali parchi) par reply → asal parchi
+      try { const o = await biz.collection('waOut').where('wid', '==', String(ctx.stanzaId)).limit(1).get(), pp = o.empty ? '' : String((o.docs[0].data() || {}).pp || ''); if (pp) ctx.stanzaId = pp; } catch (e) { log('⚠️ reply ka asal: ' + e.message); }
+    }
+    const isPr = im ? printReq(cap) : (tx.length <= 25 && printReq(tx)), tq = ctx && ctx.stanzaId ? TR.par[ctx.stanzaId] : null;
+    if (!isPr && (S.prTo.includes(from) || tq)) {   // start / bill — Mubeen (ya jis ne parchi par reply kiya)
+      if (await trReply(m, c, null, who)) { const t2 = tq || null; await bizSay(from, 'bz-' + wid + '-r', im ? (t2 && t2.err ? '✕ ' + t2.err : '🧾 Bill darj — gahak ko ja raha hai.') : '▶️ Start darj ho gaya.'); return; }
+    }
+    if (im) {
+      if (isPr) return bizDo(m, c, im, from, autoReq(cap));
+      if (bzHot.at && now - bzHot.at < 2 * 60000 && bzHot.from === from) { const a = bzHot.auto; bzHot = { at: 0, from: '', auto: false }; return bizDo(m, c, im, from, a); }
+      bzPend.set(wid, { m, c, im, from, at: now }); while (bzPend.size > 6) bzPend.delete(bzPend.keys().next().value);   // "Print" 10 min ke andar alag likha aaye to
+      return;
+    }
+    if (isPr) {
+      const q = ctx && String(ctx.stanzaId || ''), pick = q && bzPend.has(q) ? [q] : [...bzPend.keys()].filter(k => bzPend.get(k).from === from && now - bzPend.get(k).at < 10 * 60000);
+      if (!pick.length) { bzHot = { at: now, from, auto: autoReq(tx) }; return; }   // lafz pehle, tasveer baad mein (2 min)
+      for (const k of pick) { const p = bzPend.get(k); bzPend.delete(k); await bizDo(p.m, p.c, p.im, p.from, autoReq(tx)); }
+      return;
+    }
+    if (tx.length > 25 && autoReq(tx)) { await trTrack(m, c, S.prTo[0] || '', who); await bizSay(from, 'bz-' + wid + '-a', '✅ Likhi parchi Print auto list mein — Mubeen ko khabar gayi.'); }
+  }
+  async function inOne(doc) {
+    const id = doc.id, d = doc.data() || {}; if (inBusy.has(id)) return; inBusy.add(id);
+    try {
+      await doc.ref.set({ st: 'run' }, { merge: true });
+      if (Date.now() - Number(d.at) > 30 * 60000) return;
+      const from = normPh(d.from); if (!from) return;
+      if (d.err) { await bizSay(from, 'bz-' + id + '-e', '✕ ' + String(d.err)); return; }
+      let buf = null;
+      if (d.im && d.n) { const parts = []; for (let i = 0; i < d.n; i++) { const ps = await IN.doc(id + '_p' + i).get(), b = ps.exists ? (ps.data() || {}).b : null; if (!b) throw Error('tasveer ka hissa nahi mila'); parts.push(Buffer.isBuffer(b) ? b : Buffer.from(b.toUint8Array ? b.toUint8Array() : b)); } buf = Buffer.concat(parts); }
+      const ctxI = { stanzaId: String(d.q || ''), isForwarded: !!d.fw };
+      const m = { key: { id: String(d.rid || id), remoteJid: pnJid(from), fromMe: false }, messageTimestamp: Math.floor(Number(d.at) / 1000), pushName: String(d.nm || ''), message: {}, _buf: buf };
+      const c = buf ? { imageMessage: { caption: String(d.tx || ''), mimetype: String(d.mt || 'image/jpeg'), fileLength: buf.length, fileSha256: require('crypto').createHash('sha256').update(buf).digest(), contextInfo: ctxI } }
+        : { extendedTextMessage: { text: String(d.tx || ''), contextInfo: ctxI } };
+      await settingsReady; await bizMsg(m, c, from);
+    } catch (e) { log('⚠️ Business inbox: ' + (e && e.message)); try { ringAdd('📥 Business inbox ✕ ' + String((e && e.message) || e).slice(0, 100)); trPush(); } catch {} }
+    finally { try { for (let i = 0; i < (Number(d.n) || 0); i++) await IN.doc(id + '_p' + i).delete(); await doc.ref.delete(); } catch {} inBusy.delete(id); }
+  }
+  const inScan = snap => { for (const x of (snap && snap.docs) || []) bzQ = bzQ.then(() => inOne(x)).catch(() => {}); };
+  IN.where('st', '==', 'new').onSnapshot(inScan, e => log('⚠️ waIn: ' + e.message));
+  setInterval(() => { IN.where('st', '==', 'new').get().then(inScan).catch(() => {}); }, 30000);
   async function connect2(why) {
     end2(); const my = gen2;
     fs.mkdirSync(AUTH2_DIR, { recursive: true });

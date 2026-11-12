@@ -9,7 +9,7 @@
 //    (baqi paigham na parhe, na log) · ek paigham = ek pakki entry id (dobara nahi lagta) · 10 min se purana nahi lagta · "cancel" reply = wapas.
 //  Number: blueAccess/khNum {m: {partyId: n}} — malik ki app deti hai. AI NAHI. SQL nahi (POS ko yeh file kabhi nahi chhooti).
 // =========================================================
-const VER = '1.0';
+const VER = '1.1';   // v1.1: who() bahar (Business inbox ki ijazat isi list se)
 const pad3 = n => String(n).padStart(3, '0');
 const rsT = v => 'Rs ' + Math.round(Number(v) || 0).toLocaleString('en-PK');
 function normPh(x) {
@@ -73,6 +73,6 @@ function make({ biz, log = () => {} }) {
     await say(ph, 'kw-' + w, `✅ ${p.code} ${party.name} · ${rsT(p.amt)} Akhrajat mein lag gaya${p.note ? '\n' + p.note : ''}\n↩ Ghalat ho to is paigham par reply mein "cancel" likhein.`, id);
     return true;
   }
-  return { apply, looks, ver: VER };
+  return { apply, looks, who: ph => who(normPh(ph)), ver: VER };
 }
 module.exports = make; module.exports.parse = parse; module.exports.looks = looks; module.exports.normPh = normPh;
