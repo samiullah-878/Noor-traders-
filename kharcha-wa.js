@@ -24,6 +24,8 @@ function html() {
   const on = cfg.on !== false, L = list(), A = Array.isArray(cfg.allow) ? cfg.allow : [];
   return `<button type="button" class="rw-tg rw-main${on ? ' is-in' : ''}" data-kw-on="1"><b>${on ? '🟢 WhatsApp se kharcha: ON' : '⚪ WhatsApp se kharcha: BAND'}</b><small>sirf Akhrajat · Daily Sale + kharcha khate mein</small></button>
     <p class="kw-how">✍️ Aise likhein: <b>001 Imran ne paisa liya 4900</b><br>number · likhai · <b>raqam aakhir mein</b>. Jawab ✅ / ✕ WhatsApp par aata hai. Ghalat ho to jawab par reply mein <b>cancel</b>.</p>
+    <p class="rw-h">💵 Payment li / di / transfer <small>(sab parties · bank nahi)</small></p>
+    <p class="kw-how"><b>1 Imran 5000</b> = payment LI · <b>2 Imran 5000</b> = payment DI · <b>3 Imran 5000 Aslam</b> = transfer (Imran se Aslam ko)<br>Jawab mein app ke naam 1-2-3 aate hain — <b>number bhejein</b> to hi lagta hai (transfer: do number, jaise 1 2). Aakhir mein <b>no</b> = Daily Sale mein nahi. Ghalat = ✅ par reply <b>cancel</b>.</p>
     <p class="rw-h">Kahan likhein</p>
     <p class="kw-how">• Aap / Mubeen: apni chat (Message yourself) mein<br>• Sab (Sonu, Bilal…): dukan ke WhatsApp Business number par, ya aap / Mubeen ke number par</p>
     <p class="rw-h">Kaun bhej sakta hai <small>(aap + Mubeen hamesha)</small></p>
