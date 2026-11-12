@@ -27,8 +27,8 @@
 // phera cards. Purani alag entries (bilty/diesel/kharch/reading/tracker/driver — v2.92) bhi jor mein rehti hain.
 // Data: businesses/noor-traders/gaari/{id} kind 'phera' {date, startR, endR, trackerKm, bilties[{id,from,to,party,kiraya,comm,col}],
 //   kharche[{n,a}], diesel[{l,rate,amount,full}], status open|closed, note, by, byName, at, trackerTrips[{t,km,cut}] (v2.95.8)} + gaari/_config.
-import { smartHit } from './smart-search.js?v=2.239.0';
-import { firebaseConfig } from './config.js?v=2.239.0';   // v2.162.0: 📍 MacroDroid ka REST pata   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.240.0';
+import { firebaseConfig } from './config.js?v=2.240.0';   // v2.162.0: 📍 MacroDroid ka REST pata   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (v, d = 0) => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: d });
@@ -750,7 +750,7 @@ async function fxCfgSave(wh) {
 // 🗑 trip hatao / ↩ wapas / 🔄 din naya — gaariDay/<din> {ft, fh, fk, fn, fd} (fx-app fxHidden / fxTotal — macro dobara parhe to hataya wapas nahi)
 async function fxHide(date, t, back) {
   const d = gpsDays.get(date); if (!d || !isOwner()) return;
-  const M = await import('./fx-app.js?v=2.239.0');
+  const M = await import('./fx-app.js?v=2.240.0');
   let ft = [], fd = []; try { ft = JSON.parse(d.ft || '[]') || []; } catch {} try { fd = JSON.parse(d.fd || '[]') || []; } catch {}
   let fh = M.fxHidden(d.fh);
   if (back) { const h = fh.find(x => x[0] === t); if (!h) return; fh = fh.filter(x => x[0] !== t); if (!ft.some(x => x[0] === t)) ft.push([t, h[1]]); ft.sort((a, b) => a[0].localeCompare(b[0])); }
@@ -761,7 +761,7 @@ async function fxHide(date, t, back) {
 }
 async function fxUnhideAll(date) {   // v2.207.1: ↩ sab hataye hue wapas (ek tap)
   const d = gpsDays.get(date); if (!d || !isOwner()) return;
-  const M = await import('./fx-app.js?v=2.239.0'); let ft = []; try { ft = JSON.parse(d.ft || '[]') || []; } catch {}
+  const M = await import('./fx-app.js?v=2.240.0'); let ft = []; try { ft = JSON.parse(d.ft || '[]') || []; } catch {}
   for (const [t, km] of M.fxHidden(d.fh)) if (!ft.some(x => x[0] === t)) ft.push([t, km]); ft.sort((a, b) => a[0].localeCompare(b[0]));
   const upd = { ft: JSON.stringify(ft), fh: '[]', fk: M.fxTotal(ft), fn: ft.length }; Object.assign(d, upd); openFalconDay(date, true);
   try { await cloud.setGaariDay(date, upd); notice(`↩ ${ft.length} trip wapas — din ${num(upd.fk, 1)} km · naqsha: 🔄 Abhi parho / Falcon dobara kholein`); } catch (e) { notice('❌ ' + (e?.message || e)); }
@@ -779,7 +779,7 @@ async function fxRun(force) {
   if (!isOwner() || fxRunning) return; if (!force && Date.now() - fxRunAt < 120000) return;
   fxRunning = true; fxRunAt = Date.now(); const st = m => { fxStMsg = m; const el = $('fxRunSt'); if (el) el.textContent = m; };
   try {
-    const M = await import('./fx-app.js?v=2.239.0');
+    const M = await import('./fx-app.js?v=2.240.0');
     st('⏳ Falcon ka naya text dekh raha hoon…');
     const r = await M.fxProcess(cloud, st);
     if (!r.n && force) st(`Koi naya Falcon text nahi${fxLast && N(fxLast.at) ? ' · aakhri ' + hm(N(fxLast.at)) : ''} — 📲 se parhwao`);   // v2.205.0 (malik: button dabaya, kuch nahi hua — khamosh nahi)
@@ -820,8 +820,8 @@ const hsTot = h => { let b = 0, k = 0; for (const r of ((h && h.r) || [])) { b +
 const hsOne = d => { const H = hsOf(d); if (H['@']) return H['@']; const K = Object.keys(H).sort(); return { n: (K.map(k => H[k].n).find(Boolean)) || '', r: K.flatMap(k => H[k].r || []) }; };
 const hsDayTot = d => hsTot(hsOne(d));
 function hsCarry() {
-  const D = [...gpsDays.values()].filter(d => d.date && N(d.fk) > 0).sort((a, b) => String(a.date).localeCompare(String(b.date))), M = new Map(); let c = 0, from = '';
-  for (const d of D) { const avail = N(d.fk) + c, o = hsOne(d), set = o.km != null && o.km !== '', used = set ? Math.max(0, Math.min(avail, N(o.km))) : avail, out = avail - used; M.set(d.date, { in: c, from, avail, used, out }); if (out > 0.05) { c = out; from = d.date; } else { c = 0; from = ''; } }
+  const D = [...gpsDays.values()].filter(d => d.date && N(d.fk) > 0).sort((a, b) => String(a.date).localeCompare(String(b.date))), M = new Map(); let c = 0, from = '', odo = 0;
+  for (const d of D) { const avail = N(d.fk) + c, o = hsOne(d), ms = N(o.m) > 0 ? N(o.m) : odo, me = ms > 0 ? ms + N(d.fk) : 0, set = o.km != null && o.km !== '', used = set ? Math.max(0, Math.min(avail, N(o.km))) : avail, out = avail - used; M.set(d.date, { in: c, from, avail, used, out, ms, me }); odo = me; if (out > 0.05) { c = out; from = d.date; } else { c = 0; from = ''; } }
   return M;
 }
 const hsLeftH = (avail, used) => { const out = Math.max(0, avail - used), L = used / (avgFor(null) || 1); return `⛽ diesel andaza <b>${rs(L * curRate())}</b> · ${num(L, 1)} L (${num(used, 1)} km)${out > 0.05 ? ` · <b class="hs-out">↪ ${num(out, 1)} km bache — agle din mein lagenge</b>` : ''}`; };
@@ -831,14 +831,22 @@ const hsBqH = x => `Bilty <b>${num(x.b)}</b> − Kharcha <b>${num(x.k)}</b> = <b
 const hsBoxH = (h, own) => { const R = (h && h.r && h.r.length) ? h.r : (own ? [['', 0, 0]] : []); if (!R.length) return '';
   return `<div class="hs"><div class="hs-hd"><span>Naam</span><span>Bilty</span><span>Kharcha</span><span></span></div><div class="hs-rows">${R.map(r => hsRowH(r, own)).join('')}</div><div class="hs-sug" hidden></div><div class="hs-ft">${own ? '<button type="button" class="hs-add" data-hs-add="1">＋ Row</button>' : ''}<span class="hs-bq">${hsBqH(hsTot(h))}</span></div></div>`; };
 const hsDom = box => [...box.querySelectorAll('.hs-r')].map(r => [r.querySelector('.hs-nm').value.trim(), N(r.querySelector('.hs-b').value), N(r.querySelector('.hs-k').value)]).filter(r => r[0] || r[1] || r[2]);
+// v2.240.0 (malik 12 Nov: "jo nafa ho us se diesel ka paisa minus kar ke yahan likh do · km ka ek khana gaari ka meter — jo reading likhi ho aaj ke km us mein jama ho jayein"):
+//   Asal nafa = Baqaya - diesel andaza (phere ke km). Sheet mein diesel / petrol naam ki row ho to andaza minus NAHI (do dafa na kate). Meter: hj['@'].m = din ke shuru ki reading, + Falcon km = aakhir; agle din khud shuru.
+const hsDzRow = r => (r || []).some(x => /d[ie]+[sz]e?l|petrol|fuel|\b(tail|tel)\b/i.test(String(x[0] || '')) && N(x[2]) > 0);
+const hsDz = (r, used) => hsDzRow(r) ? 0 : (N(used) / (avgFor(null) || 1)) * curRate();
+const hsNetH = (r, used) => { const t = hsTot({ r }), dz = hsDz(r, used), net = t.q - dz; if (!t.b && !t.k) return ''; return `Baqaya <b>${rs(t.q)}</b> − ⛽ Diesel <b>${rs(dz)}</b>${hsDzRow(r) ? ' <i>(sheet mein likha hai)</i>' : ''} = <b class="hs-nv ${net < 0 ? 'dn' : 'up'}">${net < 0 ? 'Ghata − ' : 'Asal nafa '}${rs(Math.abs(net))}</b>`; };
+const hsUsedDom = () => { const k = document.querySelector('.hs-ph .hs-km'); if (!k) return 0; const av = N(k.dataset.hsAv); return k.value.trim() === '' ? av : Math.max(0, Math.min(av, N(k.value))); };
+function hsNetPaint() { const el = $('hsNet'), box = document.querySelector('.hs-ph .hs'); if (el && box) { const h = hsNetH(hsDom(box), hsUsedDom()); el.innerHTML = h; el.hidden = !h; } }
 function hsPaintBox(box) {
   const bq = box.querySelector('.hs-bq'); if (bq) bq.innerHTML = hsBqH(hsTot({ r: hsDom(box) }));
+  hsNetPaint();
   const day = $('hsDay'); if (day) { let b = 0, k = 0; document.querySelectorAll('[data-hs-row] .hs').forEach(x => { const t = hsTot({ r: hsDom(x) }); b += t.b; k += t.k; }); day.innerHTML = '📒 Is din: ' + hsBqH({ b, k, q: b - k }); }
 }
 function hsSave(row) {
   if (!isOwner()) return; const [date, t] = String(row.dataset.hsRow).split('|'), d = gpsDays.get(date); if (!d || !t) return;
   let H = hsOf(d); const box = row.querySelector('.hs'), r = box ? hsDom(box) : [], n = (row.querySelector('.hs-pn')?.value || '').trim();
-  if (t === '@') { const kv = String(row.querySelector('.hs-km')?.value ?? '').trim(), o = { n, r }; if (kv !== '') o.km = Math.max(0, N(kv)); H = (n || r.length || kv !== '') ? { '@': o } : {}; }
+  if (t === '@') { const kv = String(row.querySelector('.hs-km')?.value ?? '').trim(), o = { n, r }, mv = String(row.querySelector('.hs-m')?.value ?? '').trim(); if (kv !== '') o.km = Math.max(0, N(kv)); if (N(mv) > 0) o.m = N(mv); H = (n || r.length || kv !== '' || o.m) ? { '@': o } : {}; }
   else if (!n && !r.length) delete H[t]; else H[t] = { n, r };
   const hj = JSON.stringify(H); if (hj === (d.hj || '{}')) return; d.hj = hj;
   cloud.setGaariDay(date, { hj }).catch(e => notice('❌ Save nahi hua: ' + (e?.message || e)));
@@ -856,15 +864,15 @@ function hsSearch(q) {
 }
 function hsProfitH(n) {
   const td = new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10), from = n ? new Date(Date.now() + 5 * 3600000 - (n - 1) * 864e5).toISOString().slice(0, 10) : '';
-  const D = [...gpsDays.values()].filter(d => d.date && d.date <= td && (!from || d.date >= from)).map(d => ({ d, x: hsDayTot(d) })).filter(o => o.x.b || o.x.k).sort((a, b) => String(b.d.date).localeCompare(String(a.d.date)));
-  const S = D.reduce((a, o) => ({ b: a.b + o.x.b, k: a.k + o.x.k }), { b: 0, k: 0 }), q = S.b - S.k;
+  const D0 = [...gpsDays.values()].filter(d => d.date && d.date <= td && (!from || d.date >= from)); const CA = hsCarry(); const D = D0.map(d => { const o = hsOne(d), x = hsTot(o), dz = hsDz(o.r, (CA.get(d.date) || {}).used || 0); return { d, x: { ...x, dz, q: x.q - dz } }; }).filter(o => o.x.b || o.x.k).sort((a, b) => String(b.d.date).localeCompare(String(a.d.date)));
+  const S = D.reduce((a, o) => ({ b: a.b + o.x.b, k: a.k + o.x.k, dz: a.dz + o.x.dz }), { b: 0, k: 0, dz: 0 }), q = S.b - S.k - S.dz;
   return `<div class="hs-prc">${[[1, 'Aaj'], [7, '7 din'], [30, 'Mahina'], [0, 'Sab (45 din)']].map(([v, l]) => `<button type="button" data-hs-pr="${v}" class="${v === n ? 'is-in' : ''}">${l}</button>`).join('')}</div>
-    <div class="hs-prk"><p><small>Bilty</small><b>${rs(S.b)}</b></p><p><small>Kharcha</small><b>${rs(S.k)}</b></p><p class="${q < 0 ? 'dn' : 'up'}"><small>${q < 0 ? 'Ghata' : 'Profit'}</small><b>${q < 0 ? '− ' : ''}${rs(Math.abs(q))}</b></p></div>
+    <div class="hs-prk"><p><small>Bilty</small><b>${rs(S.b)}</b></p><p><small>Kharcha</small><b>${rs(S.k)}</b></p><p><small>⛽ Diesel (andaza)</small><b>${rs(S.dz)}</b></p><p class="${q < 0 ? 'dn' : 'up'}"><small>${q < 0 ? 'Ghata' : 'Asal nafa'}</small><b>${q < 0 ? '− ' : ''}${rs(Math.abs(q))}</b></p></div>
     ${D.map(o => `<button type="button" class="hs-prd" data-fx-day="${esc(o.d.date)}"><span>${esc(dmy(o.d.date))}</span><b class="${o.x.q < 0 ? 'dn' : 'up'}">${o.x.q < 0 ? '− ' : ''}${rs(Math.abs(o.x.q))}</b></button>`).join('') || '<p class="gr-empty">Is arsay mein koi hisaab nahi likha</p>'}`;
 }
-document.addEventListener('input', e => { const t = e.target; if (!t || !t.closest) return; if (t.id === 'hsQ') { hsSearch(t.value); return; } if (t.classList.contains('hs-km')) { const av = N(t.dataset.hsAv), el = $('hsLeft'); if (el) el.innerHTML = hsLeftH(av, t.value.trim() === '' ? av : Math.max(0, Math.min(av, N(t.value)))); return; } const box = t.closest('.hs'); if (box) { hsPaintBox(box); if (t.classList.contains('hs-nm')) hsSug(t); } });
+document.addEventListener('input', e => { const t = e.target; if (!t || !t.closest) return; if (t.id === 'hsQ') { hsSearch(t.value); return; } if (t.classList.contains('hs-m')) { const el = $('hsMe'), v = N(t.value) > 0 ? N(t.value) : N(t.dataset.hsMs); if (el) el.textContent = v > 0 ? num(v + N(t.dataset.hsFk), 1) : '—'; return; } if (t.classList.contains('hs-km')) { setTimeout(hsNetPaint, 0); const av = N(t.dataset.hsAv), el = $('hsLeft'); if (el) el.innerHTML = hsLeftH(av, t.value.trim() === '' ? av : Math.max(0, Math.min(av, N(t.value)))); return; } const box = t.closest('.hs'); if (box) { hsPaintBox(box); if (t.classList.contains('hs-nm')) hsSug(t); } });
 document.addEventListener('focusin', e => { const t = e.target; if (t?.classList?.contains('hs-nm')) hsSug(t); });
-document.addEventListener('change', e => { const row = e.target?.closest?.('[data-hs-row]'); if (row && (e.target.closest('.hs') || e.target.classList.contains('hs-pn') || e.target.classList.contains('hs-km'))) hsSave(row); });
+document.addEventListener('change', e => { const row = e.target?.closest?.('[data-hs-row]'); if (row && (e.target.closest('.hs') || e.target.classList.contains('hs-pn') || e.target.classList.contains('hs-km') || e.target.classList.contains('hs-m'))) hsSave(row); });
 document.addEventListener('click', e => {
   const t = e.target; if (!t || !t.closest) return;
   const sg = t.closest('[data-hs-sug]'); if (sg) { const box = sg.closest('.hs'), inp = hsSugIn && box.contains(hsSugIn) ? hsSugIn : box.querySelector('.hs-nm'); if (inp) { inp.value = sg.dataset.hsSug; box.querySelector('.hs-sug').hidden = true; hsSave(box.closest('[data-hs-row]')); const r = inp.closest('.hs-r'); (N(r.querySelector('.hs-b').value) ? r.querySelector('.hs-k') : r.querySelector('.hs-b')).focus(); } return; }
@@ -896,9 +904,10 @@ function openFalconDay(date, re) {
   const P1 = hsOne(d);
   const pheraH = `<div class="hs-ph" data-hs-row="${esc(date)}|@"><input class="hs-pn" value="${esc(P1.n || '')}" placeholder="✏️ Phere ka naam" autocomplete="off"${own ? '' : ' disabled'}>
     <div class="hs-kmr"><span>🛰 ${num(d.fk, 1)} km${CR.in > 0.05 ? ` + ↪ ${esc(dmy(CR.from))} ka bacha ${num(CR.in, 1)} = <b>${num(CR.avail, 1)} km</b>` : ''}</span><label>Is phere ke km<input class="hs-km" type="number" inputmode="decimal" value="${P1.km != null && P1.km !== '' ? N(P1.km) : ''}" placeholder="${num(CR.avail, 1)}" data-hs-av="${CR.avail}"${own ? '' : ' disabled'}></label></div>
-    <small class="hs-left" id="hsLeft">${hsLeftH(CR.avail, CR.used)}</small>${hsBoxH(P1, own)}</div>`;
-  const othH = fxDays().filter(x => x.date !== date).slice(0, 45).map(x => { const o = hsOne(x), T = hsTot(o), C = CRA.get(x.date) || { used: N(x.fk), out: 0 }, nm = (o.r || []).map(r => r[0]).filter(Boolean).join(', ');
-    return `<button type="button" class="hs-od" data-hs-od="1" data-fx-day="${esc(x.date)}"><span class="hs-oh"><span><b>${esc(dmy(x.date))}</b> · ${num(C.used, 1)} km${C.out > 0.05 ? ` <i>(↪ ${num(C.out, 1)} bache)</i>` : ''}</span>${T.b || T.k ? `<em class="${T.q < 0 ? 'dn' : 'up'}">${T.q < 0 ? '− ' : ''}${rs(Math.abs(T.q))}</em>` : ''}</span>${o.n ? `<small class="hs-ol"><b>${esc(o.n)}</b></small>` : ''}${T.b || T.k ? `<small class="hs-ol">Bilty ${num(T.b)} − Kharcha ${num(T.k)}${nm ? ' · <i>' + esc(nm) + '</i>' : ''}</small>` : '<small class="hs-ol"><i>hisaab nahi likha — tap kar ke likhein</i></small>'}</button>`; }).join('');
+    <div class="hs-kmr hs-mr"><label>🚚 Meter<input class="hs-m" type="number" inputmode="decimal" value="${N(P1.m) > 0 ? N(P1.m) : ''}" placeholder="${CR.ms > 0 ? num(CR.ms, 1) : 'reading'}" data-hs-ms="${N(CR.ms)}" data-hs-fk="${N(d.fk)}"${own ? '' : ' disabled'}></label><span>+ ${num(d.fk, 1)} km = <b id="hsMe">${CR.me > 0 ? num(CR.me, 1) : '—'}</b></span></div>
+    <small class="hs-left" id="hsLeft">${hsLeftH(CR.avail, CR.used)}</small>${hsBoxH(P1, own)}<div class="hs-net" id="hsNet"${hsNetH(P1.r || [], CR.used) ? '' : ' hidden'}>${hsNetH(P1.r || [], CR.used)}</div></div>`;
+  const othH = fxDays().filter(x => x.date !== date).slice(0, 45).map(x => { const o = hsOne(x), T = hsTot(o), C = CRA.get(x.date) || { used: N(x.fk), out: 0 }, nm = (o.r || []).map(r => r[0]).filter(Boolean).join(', '), dzo = hsDz(o.r, C.used), nq = T.q - dzo;
+    return `<button type="button" class="hs-od" data-hs-od="1" data-fx-day="${esc(x.date)}"><span class="hs-oh"><span><b>${esc(dmy(x.date))}</b> · ${num(C.used, 1)} km${C.out > 0.05 ? ` <i>(↪ ${num(C.out, 1)} bache)</i>` : ''}</span>${T.b || T.k ? `<em class="${nq < 0 ? 'dn' : 'up'}">${nq < 0 ? '− ' : ''}${rs(Math.abs(nq))}</em>` : ''}</span>${o.n ? `<small class="hs-ol"><b>${esc(o.n)}</b></small>` : ''}${T.b || T.k ? `<small class="hs-ol">Bilty ${num(T.b)} − Kharcha ${num(T.k)} − diesel ${num(dzo)}${nm ? ' · <i>' + esc(nm) + '</i>' : ''}</small>` : '<small class="hs-ol"><i>hisaab nahi likha — tap kar ke likhein</i></small>'}</button>`; }).join('');
   modal(`🛰 ${dmy(date)} · ${num(d.fk, 1)} km`, `<div class="gx-win gg" data-fx-root="${esc(date)}" data-sig="${esc(fxSig(d))}">
     ${mnH}<input id="hsQ" class="hs-q" type="search" placeholder="🔍 Naam · raqam · km · jagah" autocomplete="off">${sum}${fuelH}<div id="fxProfit" class="hs-pr" hidden></div>${kpi}${pheraH}<input type="file" id="fxShotIn" accept="image/*" multiple hidden><small id="fxRunSt" class="fx-shotst">${esc(fxStMsg)}</small>
     <details class="fx-trips"><summary>🛰 ${L.length} trip · ${num(d.fk, 1)} km — tafseel ▾</summary><div class="fx-tlist">${L.map(([t, km], i) => { const f = fdOf(t);
@@ -921,7 +930,7 @@ async function fxShots(files) {
   const st = m => { fxStMsg = m; const el = $('fxRunSt'); if (el) el.textContent = m; };
   st(`⏳ ${files.length} screenshot — 🤖 parh raha hoon…`);
   try {
-    const M = await import('./fx-app.js?v=2.239.0');
+    const M = await import('./fx-app.js?v=2.240.0');
     const r = await M.fxFromShots(cloud, files, { ai, shrink, onStatus: st });
     for (const [dd, u] of Object.entries(r.days)) gpsDays.set(dd, { ...(gpsDays.get(dd) || {}), ...u });
     const ds = Object.keys(r.days).sort();
@@ -998,7 +1007,7 @@ async function fxDownload() {
   if (gKey == null) { try { gKey = await cloud.getGaariKey(); } catch { gKey = ''; } }
   if (!gKey) { notice('Pehle 🔑 chaabi banao (📱 Gaari phone setup)'); return; }
   try {
-    const { FALCON_MACRO } = await import('./falcon-macro.js?v=2.239.0');
+    const { FALCON_MACRO } = await import('./falcon-macro.js?v=2.240.0');
     const txt = JSON.stringify(FALCON_MACRO).split('__NT_URL__').join(ggUrl().replace('/gaariGps?', '/gaariFx?')).split('__NT_KEY__').join(gKey);   // v2.202.0: Falcon ka text gaariFx mein (app khud parhti hai — PC nahi)
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'application/octet-stream' })); a.download = 'NT_Falcon_km.macro';
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);

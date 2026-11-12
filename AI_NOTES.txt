@@ -7694,3 +7694,10 @@ PC raat-report.js v1.5: buildReport mein larka (Sale.SupplyManID, din ka) + topN
 App: wa-report.js (WhatsApp Parchi ⋮ '📊 Reports mere number par', sirf malik) — Roz khud ON/BAND · 3 ☑ · waqt chips + apna waqt · 📤 Abhi bhejo · haal (⏳ / ✅ / 90 s ✕ PC chup). cloud.setReportConfig waOn/waD/waL/waP + listenReportWa.
 NAHI bana: PDF (abhi sirf likha paigham — malik ne PDF ka jawab nahi diya). Report us waqt TAK ki hoti hai (6 pm ke baad ki sale nahi). PC band = nahi jati.
 Test: node --check + waTexts ka mock — asal PC / WhatsApp par NAHI chala. AI nahi.
+
+=== v2.240.0 (12 Nov 2026) — 🚚 asal nafa (diesel minus) + gaari ka meter ===
+Malik (12:01, v2.238 ki screenshot: Bilty 14,000 - Kharcha 6,000 = 8,000): "jo nafa ho us se diesel ka paisa minus kar ke yahan likh do · km ka ek khana gaari ka meter — jo reading likhi ho aaj ke km us reading mein jama ho jayein". OK 12:02.
+gaari.js: #hsNet 'Baqaya - ⛽ Diesel = Asal nafa' (hsNetH; diesel = phere ke km / avgFor x curRate — andaza). hsDzRow: sheet mein diesel / petrol / tail / fuel naam ki kharcha row ho to andaza minus NAHI (do dafa na kate — malik ne mana nahi kiya, hifazat ke liye lagaya, usay bataya).
+  Baqi din ke card + ⋮ Profit ka jor (4 dabbe: Bilty · Kharcha · Diesel andaza · Asal nafa) bhi diesel minus ke saath. PEHLA faisla 'diesel khud minus NAHI' ab badal gaya (malik ka naya hukum).
+  Meter: hj['@'].m = din ke shuru ki reading (.hs-m), + us din ke Falcon km (d.fk, phere ke km nahi) = #hsMe; hsCarry {ms, me} — agle din ms = pichhle din ka me, jab tak malik nayi reading na likhe.
+Test: sirf node --check. Khata / POS kuch nahi. AI nahi.

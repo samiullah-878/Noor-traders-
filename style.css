@@ -7975,3 +7975,10 @@ html body #dialogBody .rw-tm input{flex:none;height:36px;border-radius:999px;bor
 html body #dialogBody .rw-note{font-size:12.5px;color:#64748b}
 html body #dialogBody .rw-go{justify-self:start;min-height:40px;height:40px;padding:0 20px;border-radius:999px;border:0;background:linear-gradient(180deg,#22a35a,#15803d)!important;color:#fff!important;font-size:15px;font-weight:800;white-space:nowrap}
 html body #dialogBody .rw-st{margin:0;padding:8px 12px;border-radius:12px;font-size:13.5px}html body #dialogBody .rw-st.ok{background:#ecfdf3;color:#14532d}html body #dialogBody .rw-st.wait{background:#fff7e0;color:#92400e}html body #dialogBody .rw-st.bad{background:#fef2f2;color:#b91c1c}
+
+/* v2.240.0: asal nafa (diesel minus) + gaari ka meter */
+html body #dialogBody .hs-net{margin-top:4px;padding:8px 12px;border-radius:12px;background:linear-gradient(180deg,#f0fdf4,#e3f7ea);border:1px solid #bfe6cd;font-size:13.5px;color:#14532d;text-align:right}html body #dialogBody .hs-net[hidden]{display:none}
+html body #dialogBody .hs-net b{font-size:14.5px}html body #dialogBody .hs-net .hs-nv{font-size:17px}html body #dialogBody .hs-net i{font-style:normal;font-size:12px;color:#64748b}
+html body #dialogBody .hs-m{width:108px;height:34px;border-radius:999px;border:1px solid #9db6ea;background:#fff;text-align:center;font-size:15px;font-weight:800;color:#0f172a;padding:0 8px;box-sizing:border-box}
+html body #dialogBody .hs-mr span b{font-size:15px;color:#0f172a}
+html body #dialogBody .hs-prk{grid-template-columns:repeat(2,minmax(0,1fr))}
