@@ -7982,3 +7982,16 @@ html body #dialogBody .hs-net b{font-size:14.5px}html body #dialogBody .hs-net .
 html body #dialogBody .hs-m{width:108px;height:34px;border-radius:999px;border:1px solid #9db6ea;background:#fff;text-align:center;font-size:15px;font-weight:800;color:#0f172a;padding:0 8px;box-sizing:border-box}
 html body #dialogBody .hs-mr span b{font-size:15px;color:#0f172a}
 html body #dialogBody .hs-prk{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+/* v2.241.0: 🔢 Kharcha WhatsApp se */
+html body #dialogBody .kw-how{margin:0;font-size:13.5px;color:#334155;line-height:1.5}html body #dialogBody .kw-how b{color:#0f172a}
+html body #dialogBody .rw-h small{font-weight:500;color:#64748b}
+html body #dialogBody .kw-al{display:flex;flex-wrap:wrap;gap:6px}
+html body #dialogBody .kw-a{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 4px 0 12px;border-radius:999px;border:1px solid #d6e2f8;background:linear-gradient(180deg,#fff,#eef3ff);font-size:13.5px;color:#1d3b7a;white-space:nowrap}
+html body #dialogBody .kw-a button{min-height:26px;height:26px;width:26px;padding:0;border-radius:50%;border:0;background:#e2e8f0!important;color:#475569!important;font-size:12px}
+html body #dialogBody .kw-add{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr) auto;gap:6px}
+html body #dialogBody .kw-add input{min-width:0;height:38px;border-radius:999px;border:1px solid #cbd8f0;padding:0 12px;font-size:14.5px;background:#fff;color:#0f172a;box-sizing:border-box}
+html body #dialogBody .kw-add button,html body #dialogBody .kw-btns button{min-height:38px;height:38px;padding:0 14px;border-radius:999px;border:1px solid #cbd8f0;background:linear-gradient(180deg,#fff,#eef3ff)!important;color:#1d3b7a!important;font-size:14px;white-space:nowrap}
+html body #dialogBody .kw-btns{display:flex;gap:6px;flex-wrap:wrap}
+html body #dialogBody .kw-list{display:grid;gap:4px}html body #dialogBody .kw-list p{margin:0;display:grid;grid-template-columns:54px minmax(0,1fr);align-items:center;gap:8px;padding:7px 10px;border-radius:10px;border:1px solid #e2e8f0;background:#fff}
+html body #dialogBody .kw-list p b{font-size:17px;color:#0f766e;font-variant-numeric:tabular-nums}html body #dialogBody .kw-list p span{font-size:15px;color:#0f172a;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

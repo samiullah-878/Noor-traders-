@@ -87,7 +87,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.18';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.19';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1900,8 +1900,23 @@ async function start(ZINDA) {
   }, 60000);
   trPush();
 
+  // v2.19 (12 Nov): 🔢 KHARCHA WHATSAPP SE (kh-wa.js) — malik / Mubeen ki APNI chat mein, ya ijazat wale number se aaya paigham jo 3 hindson se shuru ho ("001 Imran ne paisa liya 4900").
+  //   Apna bheja paigham sirf apni chat (Message yourself) mein gina jata hai — kisi aur ko bheja kabhi nahi. Baqi paigham yahan parhe / log nahi hote.
+  let KHW = null; try { KHW = require('./kh-wa.js')({ biz, log }); } catch (e) { log('⚠️ kh-wa.js nahi chala: ' + e.message); }
+  async function khTry(m, s, which) {
+    try {
+      if (!KHW || !m || !m.key || !m.message) return false;
+      const jid = m.key.remoteJid || ''; if (!jid || B.isJidGroup(jid) || B.isJidBroadcast(jid) || B.isJidNewsletter(jid)) return false;
+      const c = B.normalizeMessageContent(m.message) || {}, t = txtOf(c); if (!t || t.length > 300 || !KHW.looks(t)) return false;
+      const fromMe = !!m.key.fromMe, me = which === 'main' ? normPh(L.me || '') : me2Of(s), ch = await chatPh(m, s);
+      if (!ch || (fromMe && ch !== me)) return false;
+      const ctx = c.extendedTextMessage && c.extendedTextMessage.contextInfo;
+      return await KHW.apply({ text: t, from: fromMe ? me : ch, wid: m.key.id || '', ts: tsOf(m), quoted: String((ctx && ctx.stanzaId) || ''), quiet: !fromMe });
+    } catch (e) { log('⚠️ kharcha WhatsApp: ' + e.message); return false; }
+  }
   async function handleMsg(m, s) {
     if (!m || !m.key || !m.message) return;
+    if (await khTry(m, s, 'main')) return;
     await trackMsg(m, s, 'main');   // v2.6: 📋 parchi ka peecha (pehle, kabhi rokta nahi)
     if (await mainExtra(m, s)) return;   // v2.5: malik ka reply-print + gahak tasveer+print (Mubeen jaisa)
     if (m.key.fromMe) { await selfPrint(m, s); return; }
@@ -2054,6 +2069,7 @@ async function start(ZINDA) {
   async function p2Msg(m, s) {
     const jid = m.key.remoteJid || '', wid = m.key.id || '';
     if (badJid(jid) || !wid) return;
+    if (await khTry(m, s, 'p2')) return;
     await trackMsg(m, s, 'p2');   // v2.6: 📋 parchi ka peecha
     const c = B.normalizeMessageContent(m.message) || {}, fromMe = !!m.key.fromMe;
     noteChat(m, c, jid, fromMe);

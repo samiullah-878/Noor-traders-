@@ -26,7 +26,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.6';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.7';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -173,11 +173,16 @@ async function main() {
     for (const pn of Object.keys(CU)) { try { const l2 = await s.signalRepository.lidMapping.getLIDForPN(jidOf(pn)); if (l2 && bareJ(l2) === bareJ(lid)) return pn; } catch {} }
     return '';
   }
+  // v1.7 (12 Nov): 🔢 KHARCHA WHATSAPP SE — ijazat wale number (kh-wa.js: malik / Mubeen / khWa.allow) ka paigham jo 3 hindson se shuru ho. Baqi har paigham pehle jaisa chhor diya jata hai (na parha, na log).
+  let KHW = null; try { KHW = require('./kh-wa.js')({ biz, log }); } catch (e) { log('⚠️ kh-wa.js nahi chala: ' + e.message); }
   async function onMsgs(ms, s) {
     for (const m of ms || []) {
       try {
         if (!m || !m.key || m.key.fromMe || !m.message) continue;
         let c = m.message; c = (c.ephemeralMessage && c.ephemeralMessage.message) || (c.viewOnceMessage && c.viewOnceMessage.message) || c;
+        const ktx = String(c.conversation || (c.extendedTextMessage && c.extendedTextMessage.text) || '').trim();
+        if (KHW && ktx && ktx.length <= 300 && KHW.looks(ktx)) { const kn = await fromNum(m, s), kc = c.extendedTextMessage && c.extendedTextMessage.contextInfo, kt = Number(m.messageTimestamp && typeof m.messageTimestamp === 'object' ? (m.messageTimestamp.toNumber ? m.messageTimestamp.toNumber() : m.messageTimestamp.low) : m.messageTimestamp) * 1000 || 0;
+          if (kn) await KHW.apply({ text: ktx, from: kn, wid: m.key.id || '', ts: kt, quoted: String((kc && kc.stanzaId) || ''), quiet: false }); continue; }
         const lo = c.locationMessage || c.liveLocationMessage; if (!lo) continue;   // SIRF location — baqi har paigham chhoro
         const lat = Number(lo.degreesLatitude), lng = Number(lo.degreesLongitude);
         if (!Number.isFinite(lat) || !Number.isFinite(lng) || (!lat && !lng)) continue;

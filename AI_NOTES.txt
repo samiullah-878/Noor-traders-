@@ -7701,3 +7701,16 @@ gaari.js: #hsNet 'Baqaya - ⛽ Diesel = Asal nafa' (hsNetH; diesel = phere ke km
   Baqi din ke card + ⋮ Profit ka jor (4 dabbe: Bilty · Kharcha · Diesel andaza · Asal nafa) bhi diesel minus ke saath. PEHLA faisla 'diesel khud minus NAHI' ab badal gaya (malik ka naya hukum).
   Meter: hj['@'].m = din ke shuru ki reading (.hs-m), + us din ke Falcon km (d.fk, phere ke km nahi) = #hsMe; hsCarry {ms, me} — agle din ms = pichhle din ka me, jab tak malik nayi reading na likhe.
 Test: sirf node --check. Khata / POS kuch nahi. AI nahi.
+
+=== v2.241.0 (12 Nov 2026) — 🔢 Kharcha WhatsApp se (PC kh-wa v1.0 nayi shared file · wa-parchi v2.19 · wa-out v1.7) ===
+Malik (12:05–12:10): "sab kharcha accounts ko ek number (auto 001 002) · WhatsApp se connect — main ya Mubeen apni chat mein '001 Imran ne paisa liya -4900' likhein to Daily Sale mein lag jaye aur kharcha account mein bhi ·
+  wasooli nahi, sirf akhrajat · mazeed number add kar sakein (Sonu, Bilal Ali) · meri ya Mubeen ki chat mein aur business WhatsApp par bhejein tab bhi · hadd nahi rakhni".
+PC pc/kh-wa.js (require se — wa-parchi main + P2 `khTry`, wa-out `onMsgs`): looks() = 3 hindson se shuru (4+ hindse = phone number, nahi) ya 'cancel'; parse = code + AAKHRI number raqam + baqi note;
+  ijazat = waParchi.prFrom (Malik) / prTo (Mubeen) + blueAccess/khWa.allow; apna bheja (fromMe) sirf APNI chat mein; anjaan code par doosron ki seedhi chat mein CHUP (quiet), apni chat / business number par ✕ jawab.
+  Entry blueKhata `wk<msgid>` {kind payment, partyId = khNum wala KHARCHA khata, amount paisa, date aaj (PK), dailyIncluded true, wa, waFrom, byName} — create() = dobara nahi lagta; aage pos-khata-sync khud voucher + parchi.
+  10 min se purana = nahi lagta + jawab 'dobara bhejein'; 60 min+ = chup (history). 'cancel' reply (asal paigham ya ✅ jawab par — waOut.ke se entry) = deleted:true (bhejne wala ya malik).
+  Jawab waOut (dukan ka Business number) kw- / kx- / kc-. Hadd koi nahi (malik ka hukum).
+App: kharcha-wa.js (WhatsApp Parchi ⋮ '🔢 Kharcha WhatsApp se', sirf malik) — ON/BAND · bhejne wale ＋/✕ · numbers ki list (copy / WhatsApp) · khulte hi bina-number khaton ko number (cloud.khNumAssign TRANSACTION, blueAccess/khNum {m, next} — number kabhi nahi badalta).
+  Khata list mein '🧾 001 · Kharcha khata' (khNumTag). Party doc mein number NAHI (hash na badle — POS ka faltu update na ho).
+wa-out ab aane wale paigham mein location ke ILAWA yeh 3-hindse wala paigham bhi dekhta hai (sirf ijazat wale number ka lagta hai; baqi chhor) — malik ka OK 12:10.
+KHATARNAK / test: sirf node --check + parse ka test — asal WhatsApp / PC par NAHI chala. Raqam AAKHIR mein likhni hai ('001 4900 2 bande' = Rs 2 lagega). AI nahi.
