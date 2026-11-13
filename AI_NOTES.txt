@@ -8007,3 +8007,16 @@ KYA BANA (sirf app web-dukan.js + style.css; website / data / rules / PC kuch na
 - Footer chip 🤖 AI (data-wd acrun): AI wala dabba wapas (C.ai.box ho to naya sawal nahi), warna dobara chalao. acPaint sirf chip + dabba (poori screen dobara nahi).
 - AI SIRF dabba lagata hai — save hamesha malik ke ✅ Save par. Rack ki photo (kai items) aur 🗄 kai tasveerein ek saath (multi) par NAHI.
 TEST: browser harness (stub cloud + naqli aiImage): ok / beech mein chhua (hold) / cheez nahi / error / Save -> putWebPhoto — sab theek. ASAL Gemini ke saath test NAHI hua (dabba kitna sahi lagta hai malik batayega).
+
+=== v2.275.0 (13 Nov 2026) — 🧾 Order par "bill" = POS bill · 🔄 website rate khud taza · 📲 order ka number = Business ===
+Malik (13 Nov raat): (1) "order WhatsApp par aaye with item code, reply mein bill likhein to bill ban jaye" + "dukan ke orders par WhatsApp Business number add kar do"
+  (2) "website auto rate update kar de chupke se, pata bhi na chale — jaise data sync hota hai" (3) Falcon naqsha "kuch samajh nahi aaya — gaari kahan gayi, kahan se wapas aayi" (SIRF plan diya, bana nahi).
+BANA:
+1. dukan/dukan.js: order ke paigham ke aakhir mein "🔢 Dukan ka code: #NT 1x2 88@0.5x3 =2180" (sirf jab sab item id hindse). PC ka hissa = pc/AI_NOTES.txt (wa-out v1.19).
+2. dukan/dukan.js 🔄: batchGet(ids, mask) · sigOf (cat.h, racks.at, phIdx.at, info.at) · structOf (rate ke ilawa sab) · peek() har 60 s (sirf jab safha nazar aa raha ho) + wapas aate hi:
+   badla -> poora data -> structOf wohi = ratesOnly (S.items ka r / pk + .tag apni jagah, paintCrate; rack dobara nahi) · warna build + renderAisle(keep). Khirki khuli (OV) / kamra = baad mein (freshD).
+   🌾 dabbe / 📸 photo par likha rate badle = rack dobara. PC sync-stock pehle se POS badalte hi ~5 s mein cat likhta hai (koi PC tabdeeli nahi).
+3. web-dukan.js 📲: bizWaWatch (cloud.listenWaLinkOut .me) -> bizWaApply: info.wa = Business number, info.waAuto = wohi (ek dafa; form save waAuto sath rakhta hai — malik haath se badle to dobara nahi). Sirf malik ke login par, Online Dukan khulte hi.
+TEST: website harness — rate badla = tag badla, bay wohi (dobara nahi bana) · item hata = rack dobara · order ka paigham code line ke saath. App harness — Business number ek dafa save + notice. PC — billtest.js sab theek.
+ASAL phone / WhatsApp / POS par test NAHI.
+BAQI (malik ke OK par): 🗺 Falcon naqsha naya (kahani + numbered stops + ▶ chala kar dikhao + Roman naam) — plan chat mein diya.

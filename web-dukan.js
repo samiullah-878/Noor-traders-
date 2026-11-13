@@ -14,8 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRowsOf, trimUrl, dherN, dherHTML, RK_RA, RK_ROWS, RK_K, rkImgU, sizeOf, itemU, rackLayoutU, imgAr } from './dukan/khula.js?v=2.274.0';
-import { smartFind } from './dukan/dhoond.js?v=2.274.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
+import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRowsOf, trimUrl, dherN, dherHTML, RK_RA, RK_ROWS, RK_K, rkImgU, sizeOf, itemU, rackLayoutU, imgAr } from './dukan/khula.js?v=2.275.0';
+import { smartFind } from './dukan/dhoond.js?v=2.275.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -34,6 +34,21 @@ export const WEB_URL = () => new URL('dukan/', location.href.split('#')[0].repla
 let A = null;   // {cloud, stock, owner, notice}
 let W = null;   // screen ki haalat
 let un = null;  // Firestore listeners
+// v2.275.0 (malik 13 Nov: "dukan ke orders par WhatsApp Business number add kar do"): website ke order ka number = dukan ka Business number (blueAccess/waLinkOut.me, PC wa-out likhta hai).
+//   EK dafa khud (info.waAuto = jo number laga) — malik baad mein haath se koi aur number likhe to dobara nahi badalta. Sirf malik ke login par (waLinkOut sirf malik parhta hai).
+let bizUn = null;
+const waDig = x => { let d = String(x || '').replace(/\D/g, ''); if (d.startsWith('92') && d.length === 12) d = '0' + d.slice(2); return d; };
+function bizWaApply() {
+  const w = W, me = w && w.bizWa; if (!me || w.got.info !== 1 || w.bizBusy) return;
+  const I = w.info || {}; if (I.waAuto === me) return;
+  const o = { ...I, wa: me, waAuto: me }; delete o.at; delete o.by; if (!o.name) o.name = 'Noor Traders'; if (o.on === undefined) o.on = true;
+  const was = waDig(I.wa); w.bizBusy = 1; w.info = { ...I, wa: me, waAuto: me };
+  A.cloud.saveWebInfo(o).then(() => { if (was !== me) A.notice('✅ Website ke order ab dukan ke Business number par: ' + me); }).catch(e => { if (W === w) w.info = I; console.warn('biz wa', e); }).finally(() => { w.bizBusy = 0; });
+}
+function bizWaWatch() {
+  if (bizUn || !A.owner() || !A.cloud.listenWaLinkOut) return;
+  try { bizUn = A.cloud.listenWaLinkOut((d, e) => { if (e || !W || !d) return; const me = waDig(d.me); if (/^03\d{9}$/.test(me)) { W.bizWa = me; bizWaApply(); } }); } catch {}
+}
 const TH = new Map();   // id -> {v, url} chhoti tasveer (phone ki memory)
 
 function fresh() {
@@ -99,13 +114,14 @@ export function webOpen(ctx, back) {
     if (e) { W.got[k] = 'err'; paint(); return; }
     W.got[k] = 1;
     if (k === 'cat') W.cat = v || {};
-    else if (k === 'info') W.info = v || {};
+    else if (k === 'info') { W.info = v || {}; bizWaApply(); }
     else if (k === 'phIdx') W.ph = (v && v.m) || {};
     else if (k === 'racks' && !W.rkDirty) W.racks = { order: Array.isArray(v?.order) ? v.order : [], cn: v?.cn || {}, hc: v?.hc || {}, hide: v?.hide || {}, ic: v?.ic || {}, rp: v?.rp || {}, nmOn: !!v?.nmOn, lp: v?.lp || {}, draw: !!v?.draw, cr: v?.cr || {}, sn: v?.sn || {}, sz: v?.sz || {}, rn: v?.rn || {}, sh: v?.sh || {}, dh: v?.dh || {}, ar: v?.ar || {} };
     paintSoon();
   });
   paint();
   waitStock();
+  bizWaWatch();
 }
 let wsT = 0;
 function waitStock() { clearTimeout(wsT); let n = 0; const t = () => { if (!W) return; const st = A.stock(); if (st && st.loaded) { paint(); return; } if (++n < 90) wsT = setTimeout(t, 1000); }; wsT = setTimeout(t, 600); }
@@ -122,6 +138,7 @@ export function webClose() {
   if (W.view !== 'list') { if (W.ai) W.ai.run = false; W.ai = null; W.view = 'list'; W.crop = null; paint(); return true; }
   try { d.close(); } catch { d.removeAttribute('open'); }
   if (un) { try { un(); } catch {} un = null; }
+  if (bizUn) { try { bizUn(); } catch {} bizUn = null; }
   if (rkT) { clearTimeout(rkT); rkFlush(W); }   // v2.177.0: baqi rack save foran
   clearTimeout(wsT); W = null;
   try { localStorage.removeItem(WD_ON); } catch {}
@@ -862,7 +879,7 @@ async function onSubmit(e) {
   if (f.dataset.form === 'info') {
     e.preventDefault();
     const g = n => String(f.elements[n].value || '').trim();
-    const o = { name: g('name') || 'Noor Traders', line: g('line'), wa: g('wa'), addr: g('addr'), time: g('time'), open: g('open'), close: g('close'), on: !!f.elements.on.checked };
+    const o = { name: g('name') || 'Noor Traders', line: g('line'), wa: g('wa'), addr: g('addr'), time: g('time'), open: g('open'), close: g('close'), on: !!f.elements.on.checked, ...(W.info && W.info.waAuto ? { waAuto: W.info.waAuto } : {}) };   // waAuto = Business number ek dafa lag chuka (dobara khud na badle)
     W.infoSt = '⏳ save…'; W.info = { ...W.info, ...o }; paint();
     try { await A.cloud.saveWebInfo(o); if (W) { W.infoSt = '✅ save ho gaya'; paint(); } A.notice('✅ Dukan ki maloomat website par'); } catch (er) { if (W) { W.infoSt = '✕ nahi hua'; paint(); } A.notice('❌ ' + (er.message || er)); }
   } else if (f.dataset.form === 'munewrk') {

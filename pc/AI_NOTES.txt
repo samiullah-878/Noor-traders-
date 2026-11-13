@@ -4648,3 +4648,18 @@ Baqi (malik ke OK ka intezar): bill-war milan list; WhatsApp cancel = malik ki i
 Malik: 'gate pass ka system bhi WhatsApp par SMS ki shakal mein · item name, bill number · 1 de diya · 2 nahi diya · numbers WhatsApp parchi mein, sirf unhi par, kisi aur par nahi · sab godam ke unhi numbers par'.
 App: gate-wa.js (WhatsApp Parchi ⋮ → 🚪 Gate pass ke numbers, sirf malik) -> blueAccess/gpWa {on, nums:[{n,p}] max 10, since} (cloud.listenGpWa / setGpWa; har save par since = ab -> sirf baad ke post). gate-pass.js card par `d.nd` = '✕ WhatsApp: NAHI diya — naam · waqt' (.gtp-nd).
 PC wa-out v1.18: gatePass (aaj ka din) listener sirf jab ON + number ho; ps 2 + off nahi + pt >= since + 3 ghante ke andar -> waOut gp-<SaleID>-<number> {kind 'gate', gp, gpd} (create = dohra nahi; restart par gpd se yaad). Paigham = gate pass # · gahak · godam-war items + tadad (ctn / pcs). Jawab gpReply: text sirf '1' / '2' + reply (stanzaId) + bhejne wala gpWa.nums mein + waOut.wid se kind 'gate' -> 1 = har baqi line g.<k> {n, q, t serverTimestamp} (app ki tick jaisa) + nd hatao · 2 = nd {n, t} + malik (waParchi.prFrom[0]) ko khabar. off / un-post = gpx- '⛔ maal mat dein' (sirf jis ka paigham gaya). kind 'gate' = fast (gahak wala faasla nahi) aur staff (fast) paigham roz ki hadd (lim) se nahi rukte. Test: fake Firestore se bhejna / 1 / 2 / doosra number / doosra paigham / cancel — theek. Asal WhatsApp par test nahi. Rules nahi badle. AI nahi.
+
+
+=== 13 Nov 2026 — wa-out v1.19: 🧾 ONLINE ORDER -> POS BILL (manifest 2026-11-13.13) ===
+Malik: "seedha printer wala kaam bohat asan hai — order WhatsApp par aaye with item barcode, wahan se PC bill banaye · order aaye, hum reply mein bill likhein to bill ban jaye" + "dukan ke orders par WhatsApp Business number".
+- Website (dukan/dukan.js v2.275.0) order ke aakhir mein: "🔢 Dukan ka code: #NT <POS ItemID>x<tadad> <id>@<wazan>x<kitne> … =<website ka kul>".
+- wa-out.js: messages.upsert ab 'notify' + 'append'; onMsgs(ms, s, typ): fromMe paigham SIRF billTry ko (baqi sab pehle jaisa, sirf 'notify').
+  billTry: text bilkul "bill" + REPLY (contextInfo.stanzaId + quotedMessage) + quoted text mein sahi #NT (ntParse, 150 item tak) + group / status nahi + 24 ghante se purana nahi.
+  -> webDukan/cat (1 read) se item ka naam + maujoodgi (billLines; na ho = bill nahi, malik ko 'wbm') -> appSales/wb<order ka message id>.create
+     {src 'web', mode 'counter', branch 1, godam 1, role 'staff', lines [{id, name, qty}], total / cash = website ka kul, note 'Online order - naam · mobile', by 'wa-web', status 'new'}.
+  -> sale-post.js (KOI tabdeeli nahi) wohi doc: UN-POSTED counter bill, role staff = POS ke rate (carton / piece), default printer par rasid.
+  -> doc done / failed ka intezar (120 s, onSnapshot) -> malik (gpMalik = waParchi.prFrom[0]) ko waOut: 'wbk' ban gaya (+ website aur POS ke kul ka farq) / 'wbf' wajah / 'wbt' PC ka sale hissa chup.
+  Dohra: doc pehle se ho = 'wbd' (failed ho to wohi doc dobara 'new'). Code line na ho magar 'Online order' likha ho = 'wbc'. Aam 'bill' lafz = chup.
+- Gahak ko yahan se KUCH nahi jata; gahak ka paigham khud nahi parha jata (sirf apne reply ke andar quoted order). POS mein likhne wala naya code NAHI (sale-post ka purana raasta).
+- Test: /tmp billtest.js (vm + fake Firestore): parse, doc, packet jor (0.5 x 3 = 1.5), dohra, item nahi, aam baat, code nahi, fail -> dobara, group / purana — SAB THEEK. ASAL WhatsApp / POS par test NAHI.
+- Shak: Business phone se likha paigham linked device ko 'notify' aata hai ya 'append' — dono pakar liye. Kaam na kare to wa-out-log.txt mein '🧾' dhoondo.

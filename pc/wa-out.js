@@ -5,6 +5,9 @@
 //  Dukan ka ALAG WhatsApp Business number (0329-… · malik ne chuna) PC par linked device (Baileys — wahi package wa-mods\ se jo
 //  wa-parchi.js lagati hai; yeh script khud install NAHI karti). Asal dukan number (parchi parhne wala) is se alag rehta hai — ban ka
 //  khatra asal number par nahi.
+//  v1.19 (13 Nov, malik: "website ka order WhatsApp par aaye with item code — hum reply mein bill likhein to bill ban jaye"): 🧾 ONLINE ORDER -> POS BILL (billTry).
+//        Is number se (fromMe) kisi order par REPLY "bill" + us order mein "#NT <item>x<tadad> … =<kul>" -> appSales/wb<order id> {status new, role staff}
+//        -> sale-post ka WAHI raasta: UN-POSTED counter bill, POS ke rate, thermal print. Gahak ka paigham khud KABHI nahi parha jata (sirf apne reply ke andar quoted order).
 //  v1.1 (8 Nov): heartbeat juda na ho tab bhi (app ko zinda / band ka pata), hukum ka log.
 //  v1.4 (9 Nov): job mein `rq` = pehle bheje job ka id → yeh paigham USI ke REPLY (quote) mein (malik: "poori list Mubeen ki photo ke reply mein").
 //        Bheja hua paigham yaad (sentM, 200) — restart ke baad asal doc ka `wid` se quote; asal bheja hi na gaya = bina quote.
@@ -26,7 +29,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.18';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.19';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -103,7 +106,7 @@ async function main() {
       shouldIgnoreJid: j => !/@(s\.whatsapp\.net|lid)$/.test(String(j || '')), generateHighQualityLinkPreview: false, connectTimeoutMs: 30000, getMessage: async () => undefined, ...(version ? { version } : {}) });   // v1.5: group / status / channel kabhi nahi; 1:1 mein sirf location (onMsgs)
     sock = s;
     s.ev.on('creds.update', saveCreds);
-    s.ev.on('messages.upsert', u => { if (my === gen && u && u.type === 'notify') onMsgs(u.messages, s).catch(e => log('⚠️ location: ' + e.message)); });
+    s.ev.on('messages.upsert', u => { if (my === gen && u && (u.type === 'notify' || u.type === 'append')) onMsgs(u.messages, s, u.type).catch(e => log('⚠️ location: ' + e.message)); });   // v1.19: 'append' sirf apne 'bill' reply ke liye (neeche)
     s.ev.on('connection.update', u => { if (my === gen) onConn(u, s, state).catch(e => log('⚠️ link: ' + e.message)); });
   }
   async function onConn(u, s, state) {
@@ -276,9 +279,69 @@ async function main() {
     }
     try { await IN.doc(id).create(d); log(`📥 inbox: ${phPretty(from)} ${img ? '🖼' : '💬'}`); } catch (e) { if (!/already exists/i.test(String(e.message || e))) throw e; }
   }
-  async function onMsgs(ms, s) {
+  // ---------- 🧾 v1.19: ONLINE ORDER -> POS BILL ----------
+  //   Website (dukan/) order ke aakhir mein: "🔢 Dukan ka code: #NT 1024x2 88@0.5x3 =5830"  (POS ItemID x tadad · @wazan = packet / khula wazan · = website ka kul)
+  //   Dukan ka banda (isi Business number se) us order par REPLY mein sirf "bill" likhe -> yahan appSales doc -> sale-post (pehle se chalta raasta) UN-POSTED bill + print.
+  //   Hifazat: sirf fromMe · sirf reply · sirf jis order mein sahi #NT line · ek order = ek bill (doc id = order ka message id, create) · item website ke maal (cat) mein ho ·
+  //   rate is line se NAHI (role 'staff' = sale-post POS ke rate lagata hai) · nateeja malik ko WhatsApp (gahak ko yahan se kuch nahi jata).
+  const SALES = biz.collection('appSales'), WEBCAT = biz.collection('webDukan').doc('cat'), billBusy = new Set();
+  const BILL_RE = /^\s*bill\s*$/i, NT_RE = /#NT((?:\s+\d{1,9}(?:@\d{1,3}(?:\.\d{1,3})?)?x\d{1,4}(?:\.\d{1,3})?){1,150})(?:\s+=(\d{1,9}))?/;
+  function ntParse(text) {
+    const m = NT_RE.exec(String(text || '')); if (!m) return null; const L = [];
+    for (const t of m[1].trim().split(/\s+/)) { const x = /^(\d+)(?:@([\d.]+))?x([\d.]+)$/.exec(t); if (!x) return null;
+      const q = Number(x[3]), w = x[2] ? Number(x[2]) : 0; if (!(q > 0 && q <= 9999) || (x[2] && !(w > 0 && w <= 100))) return null; L.push({ id: Number(x[1]), w, q }); }
+    return L.length ? { L, tot: m[2] ? Number(m[2]) : 0 } : null;
+  }
+  const r3 = n => Math.round((Number(n) || 0) * 1000) / 1000, rsN = n => Math.round(Number(n) || 0).toLocaleString('en-US');
+  function billLines(P, rows) {   // -> { lines } ya { miss: [item id] }  (rows = webDukan/cat ka maal)
+    const C = new Map((Array.isArray(rows) ? rows : []).filter(Array.isArray).map(r => [Number(r[0]), r])), miss = P.L.filter(l => !C.has(l.id)).map(l => l.id);
+    if (miss.length) return { miss };
+    const M = new Map();
+    for (const l of P.L) { const r = C.get(l.id), o = M.get(l.id) || { id: l.id, name: String(r[1] || '').slice(0, 80), qty: 0 }; o.qty = r3(o.qty + (l.w ? l.w * l.q : l.q)); M.set(l.id, o); }
+    return { lines: [...M.values()] };
+  }
+  async function billTry(m, s) {
+    let c = m.message; c = (c.ephemeralMessage && c.ephemeralMessage.message) || c;
+    const x = c.extendedTextMessage; if (!x || !BILL_RE.test(String(x.text || ''))) return;
+    const ctx = x.contextInfo, st = String((ctx && ctx.stanzaId) || ''); if (!ctx || !st || !ctx.quotedMessage) return;
+    if (/@g\.us$|@broadcast$|@newsletter$/.test(String(m.key.remoteJid || ''))) return;
+    let qm = ctx.quotedMessage; qm = (qm.ephemeralMessage && qm.ephemeralMessage.message) || qm;
+    const qt = String(qm.conversation || (qm.extendedTextMessage && qm.extendedTextMessage.text) || ''), P = ntParse(qt);
+    const t0 = m.messageTimestamp, ts = Number(t0 && typeof t0 === 'object' ? (t0.toNumber ? t0.toNumber() : t0.low) : t0) * 1000 || Date.now(); if (Date.now() - ts > 24 * 3600000) return;
+    const id = 'wb' + st.replace(/[^A-Za-z0-9]/g, '').slice(0, 40); if (id.length < 8 || billBusy.has(id)) return;
+    const tell = (k, txt) => { log('🧾 ' + txt.replace(/\n/g, ' · ').slice(0, 200)); return isMob(gpMalik) ? gpPut(k + '-' + id, { to: gpMalik, nm: 'Malik', kind: 'webbill', txt }) : null; };
+    if (!P) { if (/Online order/i.test(qt)) await tell('wbc', '✕ *Online order ka bill NAHI bana*\nIs order mein "🔢 Dukan ka code" wali line nahi mili (purana order ya line mit gayi) — yeh bill haath se banayein.'); return; }   // aam 'bill' lafz = chup
+    billBusy.add(id);
+    try {
+      const nm = ((/^Naam:\s*(.+)$/m.exec(qt) || [])[1] || '').trim().slice(0, 40), mob = ((/^Mobile:\s*(.+)$/m.exec(qt) || [])[1] || '').trim().slice(0, 20) || await fromNum(m, s).catch(() => ''), home = /Ghar bhejein/i.test(qt);
+      const who = `${nm || 'Gahak'}${mob ? ' · ' + mob : ''}`;
+      const cs = await within(WEBCAT.get(), 20000, 'website ka maal'); let rows = []; try { rows = JSON.parse((cs.exists && (cs.data() || {}).j) || '[]'); } catch {}
+      const R = billLines(P, rows);
+      if (R.miss) { await tell('wbm', `✕ *Online order ka bill NAHI bana*\n👤 ${who}\n${R.miss.length} item ab website ke maal mein nahi (stock khatam / band): code ${R.miss.slice(0, 8).join(', ')}\nGahak se baat kar ke bill haath se banayein.`); return; }
+      const now = new Date(), p2 = n => String(n).padStart(2, '0'), day = `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`;
+      const doc = { id, src: 'web', date: day, at: now.toISOString(), createdAt: Date.now(), mode: 'counter', branch: 1, godam: 1, gate: 0, copies: 1, lines: R.lines, total: P.tot || 0, cash: P.tot || 0,
+        note: `Online order - ${who}${home ? ' (ghar bhejna)' : ''}`.slice(0, 110), role: 'staff', by: 'wa-web', byName: 'Online order', status: 'new' };
+      const ref = SALES.doc(id);
+      try { await ref.create(doc); }
+      catch (e) { if (!/already exists/i.test(String((e && e.message) || e))) throw e;
+        const o = (await ref.get()).data() || {};
+        if (o.status === 'failed') await ref.update({ status: 'new', lines: R.lines, total: doc.total, cash: doc.cash, at: doc.at, date: day });   // pichhli dafa nahi bana tha = dobara koshish
+        else { await tell('wbd', o.status === 'done' ? `ℹ️ Is online order ka bill pehle ban chuka hai — Bill # ${o.saleNo || '?'} (Rs ${rsN(o.total)}). Dobara nahi banaya.` : 'ℹ️ Is online order ka bill ban raha hai — thora intezar.'); return; } }
+      log(`🧾 online order -> bill: ${who} · ${R.lines.length} item · website Rs ${rsN(P.tot)}`);
+      const res = await new Promise(ok => { let un = null; const tm = setTimeout(() => { try { un && un(); } catch {} ok(null); }, 120000);
+        un = ref.onSnapshot(sn => { const d = sn.exists ? sn.data() : null; if (d && (d.status === 'done' || d.status === 'failed')) { clearTimeout(tm); try { un(); } catch {} ok(d); } }, () => {}); });
+      const k = Date.now().toString(36).slice(-5);
+      if (!res) await tell('wbt' + k, `⚠️ *Online order ka bill abhi nahi bana* — PC ka sale wala hissa jawab nahi de raha.\n👤 ${who}\nOrder mehfooz hai: PC ka sale hissa chalte hi bill khud ban jayega (dobara "bill" likhne ki zaroorat nahi).`);
+      else if (res.status === 'failed') await tell('wbf' + k, `✕ *Online order ka bill NAHI bana*\n👤 ${who}\nWajah: ${String(res.error || '?').slice(0, 200)}\nTheek kar ke usi order par dobara "bill" likhein.`);
+      else await tell('wbk', `🧾 *Online order ka bill ban gaya* (un-posted)\nBill # ${res.saleNo || '?'} · Rs ${rsN(res.total)}\n👤 ${who}${home ? ' · 🛵 ghar bhejna' : ''}${P.tot && Math.abs(Number(res.total) - P.tot) > 1 ? `\n⚠️ Website par kul Rs ${rsN(P.tot)} tha — POS ke rate se Rs ${rsN(res.total)}` : ''}`);
+    } catch (e) { await tell('wbe' + Date.now().toString(36).slice(-5), '✕ *Online order ka bill NAHI bana* — ' + String((e && e.message) || e).slice(0, 200)); }
+    finally { billBusy.delete(id); }
+  }
+  async function onMsgs(ms, s, typ) {
     for (const m of ms || []) {
       try {
+        if (m && m.key && m.key.fromMe && m.message) { billTry(m, s).catch(e => log('⚠️ bill: ' + ((e && e.message) || e))); continue; }   // v1.19: 🧾 apna reply "bill" (intezar nahi — baqi paigham na rukein)
+        if (typ && typ !== 'notify') continue;
         if (!m || !m.key || m.key.fromMe || !m.message) continue;
         let c = m.message; c = (c.ephemeralMessage && c.ephemeralMessage.message) || (c.viewOnceMessage && c.viewOnceMessage.message) || c;
         const ktx = String(c.conversation || (c.extendedTextMessage && c.extendedTextMessage.text) || '').trim();

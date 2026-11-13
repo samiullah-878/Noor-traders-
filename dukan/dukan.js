@@ -24,10 +24,10 @@
 //   v2.166.0 (malik: "site chhoti screen jaisi — dukan jaise racks door se nazar aayein · daalein ek deewar, baqi racks doosri · jis rack ke paas jaye wo dikhe"):
 //     🏬 KAMRA (kamra.js) — 3D gali, ungli upar = aage · rack par tap = mud kar paas → yahi purana rack view ('near' khirki, phone back / 🏬 = wapas kamra).
 //     Abhi sirf ?kamra=1 link par (malik dekhe) — OK ke baad sab ke liye (ROOM_DEFAULT).
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.274.0';
-import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank, szW, rackCols, rackRows, rackRowsOf, rackLayout, trimUrl, dherN, effSz, itemBox, dherHTML, RK_RA, RK_ROWS, rackLayoutU, rkDeep, depthHTML } from './khula.js?v=2.274.0';
-import { smartFind } from './dhoond.js?v=2.274.0';
-import { makeKamra } from './kamra.js?v=2.274.0';
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.275.0';
+import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank, szW, rackCols, rackRows, rackRowsOf, rackLayout, trimUrl, dherN, effSz, itemBox, dherHTML, RK_RA, RK_ROWS, rackLayoutU, rkDeep, depthHTML } from './khula.js?v=2.275.0';
+import { smartFind } from './dhoond.js?v=2.275.0';
+import { makeKamra } from './kamra.js?v=2.275.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -106,8 +106,8 @@ function val(v) {
   if ('arrayValue' in v) return (v.arrayValue.values || []).map(val);
   return null;
 }
-async function batchGet(ids) {
-  const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ documents: ids.map(PATH) }) });
+async function batchGet(ids, mask) {   // mask = sirf yeh khane (chhota jawab — v2.275.0 'kab badla')
+  const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ documents: ids.map(PATH), ...(mask ? { mask: { fieldPaths: mask } } : {}) }) });
   if (!r.ok) throw Object.assign(Error('HTTP ' + r.status), { status: r.status });
   const a = await r.json(), out = {};
   for (const x of Array.isArray(a) ? a : []) if (x && x.found) out[x.found.name.split('/').pop()] = val({ mapValue: { fields: x.found.fields || {} } });
@@ -681,6 +681,9 @@ function sendOrder(e) {
   if (w.phone) t.push(`Mobile: ${w.phone}`);
   t.push(w.how === 'home' ? `🛵 Ghar bhejein — Pata: ${w.addr}` : '🏪 Khud dukan se le jaunga');
   if (isClosed()) t.push('🌙 (Dukan band waqt par order — khulne par)');
+  // v2.275.0 (malik 13 Nov: "order WhatsApp par aaye with item code — hum reply mein bill likhein to bill ban jaye"): 🔢 code line = POS item number x tadad (@wazan = packet) · = website ka kul.
+  //   PC (wa-out v1.19) isi line se un-posted POS bill banata hai jab dukan is order par reply "bill" likhe. Rate is line mein NAHI (bill POS ke rate se).
+  if (L.every(x => /^\d{1,9}$/.test(String(x.it.id)))) t.push('', `🔢 Dukan ka code: #NT ${L.map(x => `${x.it.id}${x.pq ? '@' + x.pq : ''}x${x.q}`).join(' ')} =${Math.round(tot)}`);
   note.classList.remove('bad'); note.textContent = '✅ WhatsApp khul raha hai…';
   location.href = `https://wa.me/${wa}?text=${encodeURIComponent(t.join('\n'))}`;
 }
@@ -762,6 +765,40 @@ function rise() {
 // ---------- ⚠️ ghalti ----------
 function oops(t) { $('oopsTxt').textContent = t; $('oops').hidden = false; $('enterTxt').textContent = 'Maal load nahi hua'; }
 
+// ---------- 🔄 v2.275.0: rate / maal KHUD taza (malik 13 Nov: "website auto rate update kar de, chupke se, pata bhi na chale — jaise data sync hota hai") ----------
+//   PC (sync-stock) POS ka rate badalte hi ~5 s mein webDukan/cat likh deta hai. Khuli website har 60 s SIRF 'kab badla' poochhti hai (4 chhote khane — poora maal nahi);
+//   badla ho to: sirf rate badle = parchi (tag) apni jagah badal jati hai (rack dobara nahi banta, jhalak nahi) · maal / rack / tasveer badli = rack dobara (jab koi khirki khuli na ho).
+const sigOf = d => [d.cat && (d.cat.h || d.cat.at), d.racks && d.racks.at, d.phIdx && d.phIdx.at, d.info && d.info.at].join('|');
+function structOf(d) { let rows = []; try { rows = JSON.parse((d.cat && d.cat.j) || '[]'); } catch {}
+  return [d.racks && d.racks.at, d.phIdx && d.phIdx.at, d.info && d.info.at, rows.map(r => Array.isArray(r) ? `${r[0]}~${r[1]}~${r[2]}~${Number(r[3]) > 0 ? 1 : 0}~${r[4]}~${Array.isArray(r[5]) ? r[5].map(x => x && x[0]).join('/') : ''}` : '').join(';')].join('|'); }
+let peekBusy = false, freshD = null;
+function ratesOnly(d) {   // wohi maal, sirf rate: apni jagah badlo
+  let rows = []; try { rows = JSON.parse(d.cat.j || '[]'); } catch { return false; }
+  const ch = [];
+  for (const r of rows) { if (!Array.isArray(r)) continue; const it = S.items.get(String(r[0])); if (!it) continue;
+    const rate = Number(r[3]) || 0, pk = Array.isArray(r[5]) ? r[5].filter(x => Array.isArray(x) && Number(x[0]) > 0 && Number(x[1]) > 0).map(x => [Number(x[0]), Number(x[1])]) : [];
+    if (it.r !== rate || JSON.stringify(it.pk) !== JSON.stringify(pk)) { ch.push(it); it.r = rate; it.pk = pk; } }
+  if (ch.some(it => it.k !== 'n' || document.querySelector(`[data-spot="${CSS.escape(it.id)}"]`))) return false;   // 🌾 dabbe / 📸 photo par likha rate = rack dobara (neeche)
+  for (const it of ch) document.querySelectorAll(`.it[data-id="${CSS.escape(it.id)}"]`).forEach(el => { const t = el.querySelector('.tag'); if (t) t.innerHTML = `<small>Rs</small>${num(it.r)}`; el.setAttribute('aria-label', `${it.n}, ${rs(it.r)}`); });
+  S.at = Number(d.cat.at) || S.at; paintCrate();
+  return true;
+}
+function applyFresh() {
+  const d = freshD; if (!d || OV.length || inRoom()) return;   // khirki khuli ho (item / counter / dhoondo) to baad mein
+  freshD = null;
+  if (structOf(d) === S.struct && ratesOnly(d)) { S.sig = sigOf(d); return; }
+  const keep = S.bays[S.cur]?.items?.[0]?.id;
+  build(d); renderAisle(keep); paintCrate(); paintDoor(); S.sig = sigOf(d); S.struct = structOf(d); S.loadedAt = Date.now();
+}
+async function peek() {
+  if (peekBusy || !S.loadedAt || document.visibilityState !== 'visible') return;
+  if (freshD) { applyFresh(); return; }
+  peekBusy = true;
+  try { const m = await batchGet(['cat', 'info', 'racks', 'phIdx'], ['h', 'at']);
+    if (m.cat && sigOf(m) !== S.sig) { const d = await batchGet(['cat', 'info', 'racks', 'phIdx']); if (d.cat) { freshD = d; applyFresh(); } }
+  } catch {} finally { peekBusy = false; }
+}
+setInterval(peek, 60000);
 async function load(again) {
   $('oops').hidden = true;
   const keep = again ? S.bays[S.cur]?.items?.[0]?.id : null;
@@ -769,7 +806,7 @@ async function load(again) {
     const d = await batchGet(['cat', 'info', 'racks', 'phIdx']);
     if (!d.cat) throw Object.assign(Error('nocat'), { code: 'nocat' });
     build(d); renderAisle(keep); paintCrate(); paintDoor(); if (phV('shop')) loadShop();
-    S.loadedAt = Date.now();
+    S.loadedAt = Date.now(); S.sig = sigOf(d); S.struct = structOf(d);
     if (!again && ss.get('nt-dk-in') && S.info.on !== false) { $('door').classList.add('up', 'gone'); $('lights').classList.add('off'); doorGone = true; }
   } catch (e) {
     console.warn('dukan load', e);
@@ -842,7 +879,7 @@ addEventListener('keydown', e => {
 });
 let rzT = 0;
 addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { const D = dims(), o = S.dims; if (!o || D.bw !== o.bw || D.cols !== o.cols || D.rows !== o.rows || D.sc !== o.sc || D.sr !== o.sr) renderAisle(S.bays[S.cur]?.items?.[0]?.id); else { if (Math.abs((D.rk || 0) - (o.rk || 0)) > 6) { o.rk = D.rk; const G = ttGeo(o); bayEls.forEach(el => { if (el.classList.contains('tt')) { el.style.cssText = `--rows:${el.dataset.rows};--bayW:${o.bw}px;${ttStyle(G, Number(el.dataset.rows) || RK_ROWS)}`; el.classList.toggle('d7', G.u < 5); } }); } if (K) K.relayout(); } }, 180); });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.loadedAt && Date.now() - S.loadedAt > 15 * 60e3) load(true); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState !== 'visible' || !S.loadedAt) return; if (Date.now() - S.loadedAt > 15 * 60e3) load(true); else peek(); });   // v2.275.0: wapas aate hi rate taza
 
 document.querySelectorAll('#helpBtn,.hp-ava').forEach(el => { el.innerHTML = AVA; });   // v2.156.0
 setInterval(() => { if (S.loadedAt) { paintClosed(); if (!doorGone) paintDoor(); } }, 60000);   // 🌙 waqt guzre to band / khuli
