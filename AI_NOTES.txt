@@ -7848,3 +7848,10 @@ Malik (photo): 'total quantity / total item / bill kul neeche' + 'pehli Enter pa
 - posFit: table chhoti ho to bhi us ka dabba screen bhar leta hai (min-height inline important) -> Total ki line hamesha neeche, button ke upar.
 - Search mein Enter (naam likha ho) = pehli mili item par roshni (jorta nahi); ← → se badlo; doosri Enter / Tab = bill mein + cursor us ki qatar (Amount). Sirf hindse (6+, barcode scan) par Enter pehle jaisa — seedha jorta hai.
 - AI nahi. PC par test nahi.
+
+
+=== v2.260.0 / wa-parchi v2.30 (13 Nov 2026) — WhatsApp ki tasveerein chips mein, 1 din, dobara bhi ===
+Malik (photo, 'Bill ki tasveer se items'): 'yahan pictures chhote chips ki shakal mein hon · ek din save rahe, agle din auto delete · dobara select karne se bhi bill khul sake'.
+- purchase.js wai: `day()` = 24 ghante ki sab (parhi hui bhi, '✓ parhi'), chips = chhoti tasveer + naam + waqt; 'Bill ki tasveer se items' khirki mein seedhe neeche (wai.chips()), alag 'WhatsApp se aayi' button hata. Tick -> 🤖 Parho (parhi hui dobara bhi). Ginti (badge) sirf nayi ki.
+- wa-parchi v2.30: purAi / purAiImg 1 din baad mitti hain (pehle 3 din) — safai nayi tasveer aane par chalti hai.
+- AI: wohi purana. Test nahi hua.

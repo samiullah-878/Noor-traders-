@@ -7929,7 +7929,11 @@ html body:has(.pp-posr) dialog#dialog,html body:has(.pp-posr) #dialogBody{font-f
 html body:has(.pp-posr) #dialogBody :is(.jz-tabs button,.jc-card,.jz-row,.pp-aichoose button){border-radius:2px!important;box-shadow:none!important}
 html body:has(.pp-posr) dialog#dialog{background:#cfe4e8!important;border:1px solid #6f97a0!important;border-radius:0!important}
 }
-html body #dialogBody .pp-wai{display:grid;gap:6px;margin:8px 0 12px}
+html body #dialogBody .pp-wai{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 12px}
+html body #dialogBody .pp-wai .pp-wair{flex:0 0 auto;width:132px;display:grid!important;justify-items:center;gap:3px;padding:6px!important;text-align:center!important;min-height:0!important}
+html body #dialogBody .pp-wai .pp-waith{width:118px!important;height:96px!important}
+html body #dialogBody .pp-wai .pp-wair b{font-size:14px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
+html body #dialogBody .pp-wai .pp-wair small{font-size:12.5px}
 html body #dialogBody .pp-wair{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 12px;border:1px solid #cfd8e6;border-radius:11px;background:#fff;color:#1a2d53;text-align:left;min-height:38px}
 html body #dialogBody .pp-wair.is-in{border-color:#1565c0;background:#e8f1ff}
 html body #dialogBody .pp-wair small{color:#5b6b85;white-space:nowrap}

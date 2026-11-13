@@ -4628,3 +4628,10 @@ Malik: 'Business number par bheji / forward ki parchi ke reply mein ai likhein t
 - wa-out inboxPut: likha 'ai' + reply (quotedMessage mein tasveer) = wohi purani tasveer WhatsApp se download -> waIn (qi 1) -> wa-parchi bizMsg -> purAiPut. Na mile = saaf paigham (photo dobara bhejein). Sirf ijazat wale number (pehle jaisa).
 - purAiPut: purAi doc mein chhoti tasveer `th` (base64, 150px) + jawab '✅ Parchi chali gayi'. App list mein chhoti tasveer + naam + waqt (tick -> 🤖 Parho, 4 tak ek bill — pehle jaisa).
 - AI: sirf app ka purana bill-parhna. PC par AI nahi. Asal WhatsApp par test nahi hua.
+
+
+=== v2.260.0 / wa-parchi v2.30 (13 Nov 2026) — WhatsApp ki tasveerein chips mein, 1 din, dobara bhi ===
+Malik (photo, 'Bill ki tasveer se items'): 'yahan pictures chhote chips ki shakal mein hon · ek din save rahe, agle din auto delete · dobara select karne se bhi bill khul sake'.
+- purchase.js wai: `day()` = 24 ghante ki sab (parhi hui bhi, '✓ parhi'), chips = chhoti tasveer + naam + waqt; 'Bill ki tasveer se items' khirki mein seedhe neeche (wai.chips()), alag 'WhatsApp se aayi' button hata. Tick -> 🤖 Parho (parhi hui dobara bhi). Ginti (badge) sirf nayi ki.
+- wa-parchi v2.30: purAi / purAiImg 1 din baad mitti hain (pehle 3 din) — safai nayi tasveer aane par chalti hai.
+- AI: wohi purana. Test nahi hua.
