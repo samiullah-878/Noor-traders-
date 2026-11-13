@@ -7753,3 +7753,7 @@ kh-wa: Business chat mein sirf naam (`looksName`: 1-4 lafz, hindsa nahi, STOP la
 
 === 13 Nov 2026 — PC wa-parchi v2.23: Business number wale Print par gahak ka naam ===
 Malik: 'WhatsApp wala print par narration (party ka naam) nahi aata — sahi kar do'. Wajah: (1) printOne gahakHd ko caption nahi deta tha (sirf Print auto / TR se naam), patti par bhejne wale ki chat ka naam jata tha; (2) tasveer ke BAAD alag likha 'Print Ahmed 0300…' 25 harf se lamba ho to print hi nahi pakra jata tha aur us ka naam bizDo tak nahi pohanchta tha. Ab: why 'biz' = patti 'Gahak: naam · number' (caption se) warna caption ki likhai; alag 'Print …' paigham (70 harf tak) ka text im.caption mein jurta hai (bzPend + bzHot dono tarteeb). Asal WhatsApp par test NAHI. AI nahi.
+
+
+=== 13 Nov 2026 — PC kh-wa v1.4 (wa-out v1.12, wa-parchi v2.24 sirf dobara shuru): WhatsApp entry ki Tafseel mein party ka naam ===
+Malik: 'jo kharcha aur khaton wala print kar rahe hain — narration mein party ka naam nahi aata' (mere 4 sawal mein se 1 + 2 chuna: upar naam nahi + Tafseel mein sirf WhatsApp Malik). Pehle maine ghalat samjha (Business A4 print — wa-parchi v2.23, wo bhi rehne diya). Ab note = '<khata naam> - <likhai> - 📲 WhatsApp <kis ne>' (payment li / di, kharcha 001, transfer 'A se B ko'). Parchi ke UPAR naam: code mein `receipt()` l.name hamesha chhapta hai (12 Nov ki photo mein 'HAFIZ KA…' nazar aaya) — wajah nahi mili, malik se parchi ki photo maangi. Purani entries nahi badlin. Asal printer par test NAHI. AI nahi.

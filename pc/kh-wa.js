@@ -17,7 +17,7 @@
 //    'reports' (sirf malik) -> menu (stg r) -> reportConfig {reportNow, waOnly} -> raat-report v1.6. PDF / print = aakhri 30 din. Baqaya ka formula = app runningOf (skipsBal + cashPays).
 //  Number: blueAccess/khNum {m: {partyId: n}} — malik ki app deti hai. AI NAHI. SQL nahi (POS ko yeh file kabhi nahi chhooti).
 // =========================================================
-const VER = '1.3';   // v1.1: who() bahar (Business inbox ki ijazat isi list se)
+const VER = '1.4';   // v1.4 (13 Nov, malik: 'WhatsApp wali entry ke print par narration mein party ka naam nahi aata'): note = '<khata naam> - <likhai> - WhatsApp <kis ne>' (parchi Tafseel, POS voucher, khata / Daily ki line — sab jagah naam)   // v1.1: who() bahar (Business inbox ki ijazat isi list se)
 const pad3 = n => String(n).padStart(3, '0');
 const rsT = v => 'Rs ' + Math.round(Number(v) || 0).toLocaleString('en-PK');
 function normPh(x) {
@@ -128,14 +128,14 @@ function make({ biz, log = () => {} }) {
     return pdfMake(out);
   }
   async function mkPay(k, A, amt, daily, note0, ow, ph, name) {
-    const t = Date.now(), id = 'wk' + ow, note = ((note0 ? note0 + ' · ' : '') + '📲 WhatsApp ' + name).slice(0, 300);
+    const t = Date.now(), id = 'wk' + ow, note = (A.name + ' - ' + (note0 ? note0 + ' - ' : '') + '📲 WhatsApp ' + name).slice(0, 300);
     await KH.doc(id).create({ id, type: 'entry', kind: k === 1 ? 'collection' : 'payment', partyId: A.id, amount: Math.round(Number(amt) * 100), date: today(), note, dailyIncluded: daily !== false, posPending: false, wa: ow, waFrom: ph, by: 'pc-wa', byName: name, updatedBy: 'pc-wa', createdAt: t, updatedAt: t, rev: 1 });
     log(`🔢 ${k === 1 ? 'payment li' : 'payment di'} WhatsApp: ${A.name} ${rsT(amt)} — ${name}`);
     return { id, txt: `✅ ${k === 1 ? 'Payment LI' : 'Payment DI'} · ${A.name} · ${rsT(amt)}\nDaily Sale: ${daily !== false ? 'HAAN' : 'NAHI'}${note0 ? '\n' + note0 : ''}${await balLine(A.id)}\n↩ Ghalat ho to malik is paigham par reply mein "cancel" likhe.` };
   }
   async function mkTransfer(A, B, amt, ow, ph, name) {
     const t = Date.now(), tid = 'wk' + ow, ids = ['transfer-' + tid + '-out', 'transfer-' + tid + '-in'], b = KH.firestore.batch();
-    ids.forEach((id, i) => b.create(KH.doc(id), { id, type: 'entry', transferId: tid, transferRole: i ? 'in' : 'out', fromPartyId: A.id, toPartyId: B.id, fromName: A.name, toName: B.name, partyId: i ? B.id : A.id, kind: i ? 'payment' : 'collection', dailyIncluded: false, amount: Math.round(Number(amt) * 100), date: today(), note: '📲 WhatsApp ' + name, posPending: false, posVoucher: '', wa: ow, waFrom: ph, by: 'pc-wa', byName: name, updatedBy: 'pc-wa', createdAt: t, updatedAt: t, rev: 1 }));
+    ids.forEach((id, i) => b.create(KH.doc(id), { id, type: 'entry', transferId: tid, transferRole: i ? 'in' : 'out', fromPartyId: A.id, toPartyId: B.id, fromName: A.name, toName: B.name, partyId: i ? B.id : A.id, kind: i ? 'payment' : 'collection', dailyIncluded: false, amount: Math.round(Number(amt) * 100), date: today(), note: (A.name + ' se ' + B.name + ' ko - 📲 WhatsApp ' + name).slice(0, 300), posPending: false, posVoucher: '', wa: ow, waFrom: ph, by: 'pc-wa', byName: name, updatedBy: 'pc-wa', createdAt: t, updatedAt: t, rev: 1 }));
     await b.commit(); log(`⇄ transfer WhatsApp: ${A.name} -> ${B.name} ${rsT(amt)} — ${name}`);
     return { id: ids[0], txt: `✅ Transfer ${rsT(amt)}\n${A.name} → ${B.name}${await balLine(A.id)}${await balLine(B.id)}\n↩ Ghalat ho to malik is paigham par reply mein "cancel" likhe.` };
   }
@@ -258,7 +258,7 @@ function make({ biz, log = () => {} }) {
     const ps = await KH.doc(pid).get(), party = ps.exists ? ps.data() || {} : null;
     if (!party || party.deleted || party.type !== 'party' || !party.kharcha) { await say(ph, 'kx-' + w, `✕ ${p.code}: yeh kharcha khata nahi mila (hata diya gaya?).`); return true; }
     if (party.active === false) { await say(ph, 'kx-' + w, `✕ ${p.code} ${party.name}: yeh khata BAND hai.`); return true; }
-    const id = 'wk' + w, t = Date.now(), amount = Math.round(p.amt * 100), note = ((p.note ? p.note + ' · ' : '') + '📲 WhatsApp ' + name).slice(0, 300);
+    const id = 'wk' + w, t = Date.now(), amount = Math.round(p.amt * 100), note = (String(party.name || '') + ' - ' + (p.note ? p.note + ' - ' : '') + '📲 WhatsApp ' + name).slice(0, 300);
     try { await KH.doc(id).create({ id, type: 'entry', kind: 'payment', partyId: pid, amount, date: today(), note, dailyIncluded: true, posPending: false, wa: w, waFrom: ph, by: 'pc-wa', byName: name, updatedBy: 'pc-wa', createdAt: t, updatedAt: t, rev: 1 }); }
     catch (e) { if (/already exists/i.test(String(e.message || e))) return true; throw e; }
     log(`🔢 kharcha WhatsApp: ${p.code} ${party.name} ${rsT(p.amt)} — ${name}`);
