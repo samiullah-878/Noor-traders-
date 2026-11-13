@@ -7798,3 +7798,10 @@ Malik: 'ye dono pattiyan khatam · sirf wholesale % upar naam ke saath, sab item
 - purchase.js (sirf posMode, PC): neeche ki chips patti (cbarHTML) + 'Wholesale nafa SAB items par' bar NAHI; header mein 'W %' khana (wAll, localStorage sam-pp-wall) -> wAllSet = sab lines wMode/wcMode + naye item par addItem mein khud. Parchoon ka % nahi (haath se table mein).
 - posFit(): table (.pp-postw) ki oonchai screen ke hisaab se — totals + Naya / Save hamesha nazar, table apne andar scroll, sar-khi chipki. Note + Galla = band <details> (Galla chuna ho to khula). Upar wala Rs total hata (neeche Total Amount hai). 🏷 barcode ab har qatar ke ✕ ke saath.
 - Phone nahi badla. AI nahi. Asal PC par test nahi hua.
+
+
+=== v2.252.0 (13 Nov 2026) — PC POS Purchase: 15 items ek screen par, godam sirf qatar se ===
+Malik (photo): 'kam az kam 15 items · scroll na karna pare · godam sirf screen se, upar daayein wale se nahi · upar neeche bohat jagah hai'.
+- Header ka Branch khana HATA; godam har qatar ke Branch se (khali = laal, Save rokta + wahin le jata); naya item pichhli qatar ka godam leta hai.
+- Qatar ek line (22px, 'pehle … W% R%' wali chhoti line chhupi), app header / Basic Information / search / aksar-items patti patli, Larke ki entry + Jaanch ek line; Note · Galla ab neeche button (posX). Sticky sar-khi ka z-index theek (pehli qatar ka naam sar-khi par charh raha tha).
+- AI nahi. Asal PC par test nahi.

@@ -3,7 +3,7 @@
 // Raasta: MacroDroid (bahar, charging / gaana / call / dukan Wi-Fi nahi) → phone folder "NT Awaz" → FolderSync → Drive → malik ka
 //   Google Apps Script (awaz-gas.js: jagah ka naam, file ka naya naam, Gemini notes, Sheet "Meri Baatein") → yahan awazNotes (khufia chaabi).
 // App mein AI NAHI — sirf dikhana, ☐ kaam tick, dhoondo, PDF. Apni <dialog> (web-dukan jaisi), chips ⋮ ke andar (keyboard qaida).
-import { smartFind } from './dukan/dhoond.js?v=2.251.0';
+import { smartFind } from './dukan/dhoond.js?v=2.252.0';
 
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
@@ -127,7 +127,7 @@ function setupHTML() {
 }
 async function copyGas() {
   try {
-    const m = await import('./awaz-gas.js?v=2.251.0');
+    const m = await import('./awaz-gas.js?v=2.252.0');
     const t = m.gasCode({ key, url: restUrl(), gem: A.aiKey?.() || '' });
     try { await navigator.clipboard.writeText(t); A.notice?.('📋 Script copy ho gaya — script.google.com par paste karein'); } catch { prompt('Copy karein:', t); }
   } catch (e) { A.notice?.('✕ ' + (e?.message || e)); }

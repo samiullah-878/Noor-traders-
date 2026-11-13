@@ -7968,6 +7968,37 @@ html body:has(.pp-posr) #list .pp-posx{margin:4px 0 0;font:400 13px Tahoma,Verda
 html body:has(.pp-posr) #list .pp-posx summary{cursor:pointer;padding:3px 6px;background:#e3eff1;border:1px solid #8fb3bb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 html body:has(.pp-posr) #list .pp-tbl td.x{white-space:nowrap}
 html body:has(.pp-posr) #list .pp-tbl td.x .pp-xl{all:unset;cursor:pointer;padding:0 5px}
+/* v2.252.0: 15 items ek screen par — qatar ek line, upar / neeche ki jagah kam, godam sirf qatar se */
+html body:has(.pp-posr) #list .pp-tbl thead th{z-index:6!important}
+html body:has(.pp-posr) #list .pp-tbl :is(th,td).nm{position:static!important;box-shadow:none!important;max-width:none!important}
+html body:has(.pp-posr) #list .pp-tbl td.nm small{display:none!important}
+html body:has(.pp-posr) #list .pp-tbl td.nm button{padding:0 2px!important;min-height:0!important;line-height:20px!important;display:block}
+html body:has(.pp-posr) #list .pp-tbl td{padding:0 3px!important;height:22px!important;line-height:20px!important}
+html body:has(.pp-posr) #list .pp-tbl :is(input,select){height:20px!important}
+html body:has(.pp-posr) #list .pp-tbl th{padding:3px 6px!important}
+html body:has(.pp-posr) #list .pp-tbl td.g.need select{border-color:#c62828!important;background:#fff3f3!important}
+html body:has(.pp-posr) #list .pp-postw{min-height:372px!important}
+html body:has(.pp-posr) header .top{padding-top:2px!important;padding-bottom:2px!important;min-height:0!important}
+html body:has(.pp-posr) header .top small{display:none!important}
+html body:has(.pp-posr) header #title{font-size:17px!important;line-height:1.1!important;margin:0!important}
+html body:has(.pp-posr) header .top :is(button,a.round){min-height:0!important;height:30px!important}
+html body:has(.pp-posr) #summary .pp-posr{display:flex!important;flex-wrap:wrap;gap:3px 8px;align-items:center;padding:3px 10px 4px!important}
+html body:has(.pp-posr) #summary .pp-posr>*{flex:1 1 100%;min-width:0}
+html body:has(.pp-posr) #summary .pp-posr>.pp-from{flex:0 1 auto;margin:0!important}
+html body:has(.pp-posr) #summary .pp-posr>.pp-tools{flex:1 1 200px;margin:0!important}
+html body:has(.pp-posr) #summary .pp-posh fieldset{margin:0!important;padding:2px 10px 4px!important;gap:3px 18px!important}
+html body:has(.pp-posr) #summary .pp-posh .pp-posw{grid-column:4!important}
+html body:has(.pp-posr) .toolbar{margin-top:3px!important;margin-bottom:3px!important;padding-top:0!important;padding-bottom:0!important}
+html body:has(.pp-posr) .toolbar .search{min-height:0!important;height:30px!important}
+html body:has(.pp-posr) .toolbar .search input{height:28px!important;min-height:0!important}
+html body:has(.pp-posr) #list{padding:3px 10px 4px!important}
+html body:has(.pp-posr) #list .sale-found{padding:1px 6px!important;margin:0 0 3px!important}
+html body:has(.pp-posr) #list .sale-found .mchips{scrollbar-width:none;max-height:26px!important}
+html body:has(.pp-posr) #list .sale-found .mchips::-webkit-scrollbar{display:none}
+html body:has(.pp-posr) #list .pp-posf{padding:3px 4px 0!important}
+html body:has(.pp-posr) #list .pp-posx{margin:3px 0 0!important;padding:4px 8px!important}
+html.lt body:has(.pp-posr) footer#actions,html body:has(.pp-posr) footer#actions{padding:3px 12px!important}
+html.lt body:has(.pp-posr) footer#actions>button,html body:has(.pp-posr) footer#actions>button{height:26px!important}
 }
 
 /* v2.250.0: 🤖 Bill ki jaanch — items upar; tabs / ginti / farq / naqsha / buttons / filter = neeche EK patli line (chipki, side scroll) */
