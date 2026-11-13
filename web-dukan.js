@@ -14,8 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf, KHK, KH_NAME, netQuery } from './dukan/khula.js?v=2.265.0';
-import { smartFind } from './dukan/dhoond.js?v=2.265.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
+import { kindOf, KHK, KH_NAME, netQuery } from './dukan/khula.js?v=2.265.1';
+import { smartFind } from './dukan/dhoond.js?v=2.265.1';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -79,7 +79,7 @@ export function webOpen(ctx) {
   let d = $('wdDlg');
   if (!d) {
     d = document.createElement('dialog'); d.id = 'wdDlg'; d.className = 'wd';
-    d.innerHTML = `<div class="wd-in"><header class="wd-h"><button type="button" class="wd-x" data-wd="back" aria-label="Wapas">‹</button><b id="wdT">🏪 Online Dukan</b><button type="button" class="wd-x" data-wd="menu" aria-label="Aur">⋮</button></header><div class="wd-strip" id="wdStrip"></div><div class="wd-body" id="wdBody"></div><footer class="wd-f" id="wdFoot"></footer><div class="wd-sheet" id="wdSheet" hidden><div class="wd-sbg" data-wd="sclose"></div><div class="wd-scard" id="wdSCard"></div></div><input type="file" accept="image/*" capture="environment" hidden id="wdCam"><input type="file" accept="image/*" hidden id="wdGal"></div>`;
+    d.innerHTML = `<div class="wd-in"><header class="wd-h"><button type="button" class="wd-x" data-wd="back" aria-label="Wapas">‹</button><b id="wdT">🏪 Online Dukan</b><button type="button" class="wd-x wd-site" data-wd="site" aria-label="Website kholo" title="Website kholo">🌐</button><button type="button" class="wd-x" data-wd="menu" aria-label="Aur">⋮</button></header><div class="wd-strip" id="wdStrip"></div><div class="wd-body" id="wdBody"></div><footer class="wd-f" id="wdFoot"></footer><div class="wd-sheet" id="wdSheet" hidden><div class="wd-sbg" data-wd="sclose"></div><div class="wd-scard" id="wdSCard"></div></div><input type="file" accept="image/*" capture="environment" hidden id="wdCam"><input type="file" accept="image/*" hidden id="wdGal"></div>`;
     document.body.appendChild(d);
     d.addEventListener('click', onClick);
     d.addEventListener('input', onInput);
@@ -719,7 +719,10 @@ function onClick(e) {
   if (k === 'back') { webClose(); return; }
   if (k === 'menu') { sheet(menuHTML()); return; }
   if (k === 'sclose') { sheetClose(); return; }
-  if (k === 'site') { window.open(WEB_URL(), '_blank', 'noopener'); return; }
+  if (k === 'site') {
+    let w = null; try { w = window.open(WEB_URL(), '_blank'); } catch {}
+    if (!w) { try { const l = document.createElement('a'); l.href = WEB_URL(); l.target = '_blank'; l.rel = 'noopener'; document.body.appendChild(l); l.click(); l.remove(); } catch { A.notice('🌐 Website: ' + WEB_URL()); } }
+    return; }
   if (k === 'share') { share(); return; }
   if (k === 'copy') { sheetClose(); copyLink(); return; }
   if (k === 'airk') { sheetClose(); aiRun(); return; }   // v2.157.0
