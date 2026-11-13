@@ -8141,3 +8141,9 @@ html body #wdDlg .wd-zi.is-in{outline:2px solid #ffd84d;outline-offset:-1px;back
 #wdDlg .wd-zb b{font:800 15px/1.2 system-ui;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #wdDlg .wd-zb span{display:flex;gap:5px;overflow-x:auto}
 #wdDlg .wd-zb .wd-chip{flex:none}
+
+/* v2.271.0: 🧱 dher (rack ka size screen) */
+#wdDlg .wd-zd{flex:1;min-height:0;width:100%;display:block}
+#wdDlg .wd-zd .dhr{display:flex;flex-wrap:wrap-reverse;align-content:flex-start;justify-content:center;width:100%;height:100%}
+#wdDlg .wd-zd .wd-zp{flex:0 0 calc(100%/var(--dc,2));width:calc(100%/var(--dc,2));height:calc(100%/var(--dr,1));min-width:0}
+#wdDlg .wd-zd .wd-zp.bk{filter:brightness(.9)}

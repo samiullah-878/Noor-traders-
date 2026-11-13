@@ -14,8 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRowsOf, rackLayout, trimUrl } from './dukan/khula.js?v=2.270.2';
-import { smartFind } from './dukan/dhoond.js?v=2.270.2';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
+import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRowsOf, rackLayout, trimUrl, dherN, effSz, itemBox, dherHTML } from './dukan/khula.js?v=2.271.0';
+import { smartFind } from './dukan/dhoond.js?v=2.271.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -37,7 +37,7 @@ let un = null;  // Firestore listeners
 const TH = new Map();   // id -> {v, url} chhoti tasveer (phone ki memory)
 
 function fresh() {
-  return { cat: {}, info: {}, racks: { order: [], cn: {}, hc: {}, hide: {}, ic: {}, rp: {}, nmOn: false, lp: {}, draw: false, cr: {}, sn: {}, sz: {}, rn: {}, sh: {} }, ph: {}, got: {}, q: '', ck: pref.ck || '', f: pref.f || 'all', lim: 120, view: 'list', busy: new Set(), ok: new Set(), err: new Map(), crop: null, pq: '', pck: '', arm: '', act: '', rkSt: '', infoSt: '', sel: null, ai: null, aiOpen: '', rpe: null, rpq: '', rpNew: null, rpDelArm: 0, lastF: [], rkIds: new Set(), rkWait: new Set() };
+  return { cat: {}, info: {}, racks: { order: [], cn: {}, hc: {}, hide: {}, ic: {}, rp: {}, nmOn: false, lp: {}, draw: false, cr: {}, sn: {}, sz: {}, rn: {}, sh: {}, dh: {} }, ph: {}, got: {}, q: '', ck: pref.ck || '', f: pref.f || 'all', lim: 120, view: 'list', busy: new Set(), ok: new Set(), err: new Map(), crop: null, pq: '', pck: '', arm: '', act: '', rkSt: '', infoSt: '', sel: null, ai: null, aiOpen: '', rpe: null, rpq: '', rpNew: null, rpDelArm: 0, lastF: [], rkIds: new Set(), rkWait: new Set() };
 }
 
 // ---------- 📦 items (POS stock → website wali list) ----------
@@ -101,7 +101,7 @@ export function webOpen(ctx, back) {
     if (k === 'cat') W.cat = v || {};
     else if (k === 'info') W.info = v || {};
     else if (k === 'phIdx') W.ph = (v && v.m) || {};
-    else if (k === 'racks' && !W.rkDirty) W.racks = { order: Array.isArray(v?.order) ? v.order : [], cn: v?.cn || {}, hc: v?.hc || {}, hide: v?.hide || {}, ic: v?.ic || {}, rp: v?.rp || {}, nmOn: !!v?.nmOn, lp: v?.lp || {}, draw: !!v?.draw, cr: v?.cr || {}, sn: v?.sn || {}, sz: v?.sz || {}, rn: v?.rn || {}, sh: v?.sh || {} };
+    else if (k === 'racks' && !W.rkDirty) W.racks = { order: Array.isArray(v?.order) ? v.order : [], cn: v?.cn || {}, hc: v?.hc || {}, hide: v?.hide || {}, ic: v?.ic || {}, rp: v?.rp || {}, nmOn: !!v?.nmOn, lp: v?.lp || {}, draw: !!v?.draw, cr: v?.cr || {}, sn: v?.sn || {}, sz: v?.sz || {}, rn: v?.rn || {}, sh: v?.sh || {}, dh: v?.dh || {} };
     paintSoon();
   });
   paint();
@@ -555,22 +555,22 @@ function paintRsz() {
   const k = W.rz.k, L = rzItems(k), c = rackCols(k, W.racks.sn), sz = W.racks.sz || {}, rows = rzRows(k);
   if (!(W.rz.s >= 0 && W.rz.s < rows)) W.rz.s = 0;
   const bw = Math.min($('wdBody').clientWidth || 360, 560), rh = Math.round(Math.min(innerHeight * .6, bw * 1.5));
-  const B = rackLayout(L, c, rows, sz, W.racks.sh), sh = B[0] || [], cell = (bw - 38) / c;
+  const dh = W.racks.dh || {}, B = rackLayout(L, c, rows, effSz(sz, dh), W.racks.sh), sh = B[0] || [], cell = (bw - 38) / c;
   $('wdStrip').innerHTML = `<span><b>Shelf:</b></span>${[3, 4, 5, 6, 7, 8, 9].map(n => `<button type="button" class="wd-chip wd-zn${n === rows ? ' is-in' : ''}" data-zrn="${n}">${n}</button>`).join('')}${W.rkSt ? `<span class="wd-k">${W.rkSt === '⏳' ? '⏳' : W.rkSt === '✅' ? '✅' : '✕'}</span>` : ''}`;
-  let h = ''; for (let s = 0; s < rows; s++) { const R = sh[s] || [], mx = Math.max(1, ...R.map(it => szW(it.id, sz)));
-    h += `<div class="wd-zs${W.rz.s === s ? ' is-in' : ''}" data-zsf="${s}"><span class="wd-zno">${s + 1}</span>${R.map(it => { const w = Math.min(c, szW(it.id, sz)); return `<button type="button" class="wd-zi${W.rz.it === it.id ? ' is-in' : ''}" data-zi="${esc(it.id)}" data-zsh="${s}" style="--w:${(w / c).toFixed(4)};--hp:${Math.round(w * cell * 1.5)}px"><span class="wd-zp none" data-th="${esc(it.id)}">${esc(it.n)}</span><span class="wd-zt">${num(it.r)}</span>${W.rz.it === it.id ? '<i class="wd-zh" data-zh="1"></i>' : ''}</button>`; }).join('')}</div>`; }
+  let h = ''; for (let s = 0; s < rows; s++) { const R = sh[s] || [];
+    h += `<div class="wd-zs${W.rz.s === s ? ' is-in' : ''}" data-zsf="${s}"><span class="wd-zno">${s + 1}</span>${R.map(it => { const X = itemBox(it.id, sz, dh, cell); return `<button type="button" class="wd-zi${W.rz.it === it.id ? ' is-in' : ''}" data-zi="${esc(it.id)}" data-zsh="${s}" style="--w:${(Math.min(c, X.w) / c).toFixed(4)};--hp:${X.hp}px">${X.n > 1 ? `<span class="wd-zd">${dherHTML(`<span class="wd-zp none" data-th="${esc(it.id)}"></span>`, X.n)}</span>` : `<span class="wd-zp none" data-th="${esc(it.id)}">${esc(it.n)}</span>`}<span class="wd-zt">${num(it.r)}</span>${W.rz.it === it.id ? '<i class="wd-zh" data-zh="1"></i>' : ''}</button>`; }).join('')}</div>`; }
   const more = B.length > 1 ? `<p class="wd-note">Yeh pehla rack hai — baqi items agle ${B.length - 1} rack par khud lage hain.</p>` : '';
   $('wdBody').innerHTML = `<div class="wd-zq"><input id="wdZQ" type="search" placeholder="🔍 Shelf ${W.rz.s + 1} par item lagao — naam likhein" value="${esc(W.rz.q || '')}" autocomplete="off"></div><div class="wd-zl" id="wdZL">${rzFindHTML()}</div><div class="wd-zr" id="wdZr" style="height:${rh}px;--rows:${rows}">${h}</div><p class="wd-note">Shelf ka number dabayein = wo shelf chuni (peeli). Item dabayein = box; kone se kheench kar chhota / bara.</p>${more}`;
   const it = W.rz.it && L.find(x => x.id === W.rz.it);
-  $('wdFoot').innerHTML = it ? `<div class="wd-zb"><b>${esc(it.n)}</b><span><button type="button" class="wd-chip" data-zsz="-1">－</button><button type="button" class="wd-chip" data-zsz="1">＋</button><button type="button" class="wd-chip" data-zmv="-1">⬆ shelf</button><button type="button" class="wd-chip" data-zmv="1">⬇ shelf</button><button type="button" class="wd-chip" data-zsz="0">↩ Aam</button><button type="button" class="wd-chip is-in" data-zok="1">✓</button></span></div>` : `<button type="button" class="wd-main" data-wd="back">✓ Ho gaya</button>`;
+  $('wdFoot').innerHTML = it ? `<div class="wd-zb"><b>${esc(it.n)}</b><span><button type="button" class="wd-chip${dherN(it.id, dh) > 1 ? ' is-in' : ''}" data-zdh="1">🧱 Dher${dherN(it.id, dh) > 1 ? ': ' + dherN(it.id, dh) : ''}</button><button type="button" class="wd-chip" data-zsz="-1">－</button><button type="button" class="wd-chip" data-zsz="1">＋</button><button type="button" class="wd-chip" data-zmv="-1">⬆ shelf</button><button type="button" class="wd-chip" data-zmv="1">⬇ shelf</button><button type="button" class="wd-chip" data-zsz="0">↩ Aam</button><button type="button" class="wd-chip is-in" data-zok="1">✓</button></span></div>` : `<button type="button" class="wd-main" data-wd="back">✓ Ho gaya</button>`;
   thumbs(); rzDrag();
 }
 function rzSize(id, v) { W.racks.sz = W.racks.sz || {}; v = Math.round(Math.max(0.5, Math.min(4, v)) * 10) / 10; if (v === 1) delete W.racks.sz[id]; else W.racks.sz[id] = v; saveRacks(); }
 function rzDrag() {
   const hd = document.querySelector('#wdZr [data-zh]'), el = hd && hd.closest('.wd-zi'), rk = $('wdZr'); if (!hd || !el || !rk) return;
   const id = el.dataset.zi, c = rackCols(W.rz.k, W.racks.sn); let st = null;
-  hd.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); st = { x: e.clientX, y: e.clientY, w: Math.min(c, szW(id, W.racks.sz)), cw: (rk.getBoundingClientRect().width - 16) / c, v: 0 }; try { hd.setPointerCapture(e.pointerId); } catch {} });
-  hd.addEventListener('pointermove', e => { if (!st) return; const d = ((e.clientX - st.x) - (e.clientY - st.y)) / 2; st.v = Math.max(0.5, Math.min(c, st.w + d / st.cw)); el.style.setProperty('--w', (st.v / c).toFixed(4)); el.style.setProperty('--hp', Math.round(st.v * st.cw * 1.5) + 'px'); });
+  hd.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); st = { x: e.clientX, y: e.clientY, w: Math.min(c, szW(id, W.racks.sz)), X: itemBox(id, W.racks.sz, W.racks.dh, 1), cw: (rk.getBoundingClientRect().width - 16) / c, v: 0 }; try { hd.setPointerCapture(e.pointerId); } catch {} });
+  hd.addEventListener('pointermove', e => { if (!st) return; const d = ((e.clientX - st.x) - (e.clientY - st.y)) / 2; st.v = Math.max(0.5, Math.min(c, st.w + d / st.cw)); el.style.setProperty('--w', (Math.min(c, st.v * st.X.c) / c).toFixed(4)); el.style.setProperty('--hp', Math.round(st.v * st.cw * (st.X.n > 1 ? 1.1 * st.X.r + 0.45 : 1.5)) + 'px'); });
   const end = () => { if (!st) return; const v = st.v; st = null; if (v) rzSize(id, v); };
   hd.addEventListener('pointerup', end); hd.addEventListener('pointercancel', end);
   hd.addEventListener('click', e => e.stopPropagation());
@@ -915,7 +915,9 @@ function onClick(e) {
   if (W.view === 'rsz' && W.rz) {
     const zrn = t.closest('[data-zrn]'); if (zrn) { const n = Number(zrn.dataset.zrn); W.racks.rn = W.racks.rn || {}; if (n === 6) delete W.racks.rn[W.rz.k]; else W.racks.rn[W.rz.k] = n; saveRacks(); return; }
     const zadd = t.closest('[data-zadd]'); if (zadd) { rzAdd(zadd.dataset.zadd); return; }
-    const zsz = t.closest('[data-zsz]'); if (zsz && W.rz.it) { const d = Number(zsz.dataset.zsz); rzSize(W.rz.it, d ? szW(W.rz.it, W.racks.sz) + d * 0.2 : 1); return; }
+    if (t.closest('[data-zdh]') && W.rz.it) { W.racks.dh = W.racks.dh || {}; if (dherN(W.rz.it, W.racks.dh) > 1) delete W.racks.dh[W.rz.it]; else W.racks.dh[W.rz.it] = 4; saveRacks(); return; }
+    const zsz = t.closest('[data-zsz]'); if (zsz && W.rz.it) { const d = Number(zsz.dataset.zsz);
+      if (d && dherN(W.rz.it, W.racks.dh) > 1) { const n = Math.max(2, Math.min(12, dherN(W.rz.it, W.racks.dh) + d)); W.racks.dh[W.rz.it] = n; saveRacks(); return; } rzSize(W.rz.it, d ? szW(W.rz.it, W.racks.sz) + d * 0.2 : 1); return; }
     const zmv = t.closest('[data-zmv]'); if (zmv && W.rz.it) { const cur = Number(document.querySelector(`#wdZr [data-zi="${CSS.escape(W.rz.it)}"]`)?.dataset.zsh) || 0, n = Math.max(0, Math.min(rzRows(W.rz.k) - 1, cur + Number(zmv.dataset.zmv))); W.racks.sh = W.racks.sh || {}; W.racks.sh[W.rz.it] = n; W.rz.s = n; saveRacks(); return; }
     if (t.closest('[data-zok]')) { W.rz.it = ''; paint(); return; }
     const zi = t.closest('[data-zi]'); if (zi) { W.rz.it = W.rz.it === zi.dataset.zi ? '' : zi.dataset.zi; W.rz.s = Number(zi.dataset.zsh) || 0; paint(); return; }

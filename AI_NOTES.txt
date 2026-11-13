@@ -7960,3 +7960,6 @@ Malik: "yahan par khaton ke names nahi aane chahiye". recent.js: 'k:' (khata) wa
 - Item dabane par paint() element ko DOM se hata deta -> pos-stock ka document click `closest('#wdDlg')` null -> Transfer register. Ab composedPath se bhi jaanch.
 - Item ki oonchai pehle shelf ke sab se bare item ke hisaab se thi (ek bara = baqi chhote, khud wahi). Ab --hp = size x khana x 1.5 px (shelf se zyada nahi) — app + website.
 - trimUrl khula.js mein (export) — app ke rack preview mein bhi tasveer ka khali peecha kat-ta hai (website jaisa).
+
+=== v2.271.0 (13 Nov 2026) — 🧱 Dher: item bara karo to mazeed copies jurein ===
+Malik (Lux ke dher ki photo): "item bara karein to mazeed soap jur jayein aage peeche sides mein". racks.dh[id] = 2..12 copies; dGrid (2x1, 2x2, 3x2, 3x3, 4x3), neeche se upar, upar wali qatar halki. khula.js dherN / dGrid / effSz / itemBox / dherHTML (app rsz + website). Chip "🧱 Dher" item ki patti mein; ON = − / + copies, ⤢ = copy ka size. Stock se taluq nahi. AI nahi. Asal phone par test nahi.

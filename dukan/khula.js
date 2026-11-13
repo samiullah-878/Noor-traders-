@@ -201,7 +201,7 @@ export function pkLab(q, u) { const kg = /^(kg|kgs|kilo|kilogram)$/i.test(String
 
 // v2.267.0: 🔍 har rack ka apna size + item ka qad (malik 13 Nov) — app ka preview aur website EK qaida
 export const SZW = { s: 0.7, l: 1.5 };
-export const szW = (id, sz) => { const v = sz && sz[id]; if (typeof v === 'number' && v > 0) return Math.max(0.4, Math.min(4, v)); return SZW[v] || 1; };   // v2.270.0: number = malik ka haath se chuna size
+export const szW = (id, sz) => { const v = sz && sz[id]; if (typeof v === 'number' && v > 0) return Math.max(0.4, Math.min(8, v)); return SZW[v] || 1; };   // v2.270.0: number = malik ka haath se chuna size
 export const rackCols = (k, sn) => { const n = Math.round(Number(sn && sn[k]) || 0); return n >= 2 && n <= 10 ? n : 7; };
 export function rackRows(cols, bw, rh, max) { return Math.max(2, Math.min(max || 6, Math.round(rh / (((bw - 40) / cols) * 1.3)))); }
 export function shelfPack(items, cols, sz) {
@@ -248,3 +248,10 @@ export async function trimUrl(url) {
   out.getContext('2d').drawImage(im, sx, sy, sw, sh, 0, 0, out.width, out.height);
   const bl = await new Promise(ok => out.toBlob(ok, 'image/jpeg', 0.86)); return bl ? URL.createObjectURL(bl) : url;
 }
+
+// v2.271.0: 🧱 DHER (malik 13 Nov: "item bara karein to mazeed sabun jur jayein aage peeche") — racks.dh[id] = kitni copies (2..12); wohi tasveer dohrai jati hai
+export const dherN = (id, dh) => { const n = Math.round(Number(dh && dh[id]) || 0); return n >= 2 ? Math.min(12, n) : 1; };
+export const dGrid = n => n <= 1 ? [1, 1] : n === 2 ? [2, 1] : n <= 4 ? [2, 2] : n <= 6 ? [3, 2] : n <= 9 ? [3, 3] : [4, 3];
+export function effSz(sz, dh) { if (!dh) return sz || {}; const o = { ...(sz || {}) }; for (const id of Object.keys(dh)) { const n = dherN(id, dh); if (n > 1) o[id] = Math.min(8, szW(id, sz) * dGrid(n)[0]); } return o; }
+export function itemBox(id, sz, dh, cell) { const base = szW(id, sz), n = dherN(id, dh), [c, r] = dGrid(n); return { n, c, r, w: base * c, hp: Math.round(base * cell * (n > 1 ? 1.1 * r + 0.45 : 1.5)) }; }
+export const dherHTML = (one, n) => { if (n <= 1) return one; const [c, r] = dGrid(n); let h = ''; for (let i = 0; i < n; i++) h += i >= c ? one.replace('<img ', '<img class="bk" ').replace('class="wd-zp', 'class="bk wd-zp') : one; return `<span class="dhr" style="--dc:${c};--dr:${r}">${h}</span>`; };
