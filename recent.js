@@ -4,11 +4,11 @@
 //   (window.ntRecentOpen(desc) app.js mein — stockScreenOpen / route). Firebase par kuch nahi. AI nahi.
 const LS = 'sam-recent-win', MAX = 8;
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const rd = () => { try { const a = JSON.parse(localStorage.getItem(LS) || '[]'); return Array.isArray(a) ? a : []; } catch { return []; } };
+const rd = () => { try { const a = JSON.parse(localStorage.getItem(LS) || '[]'); return Array.isArray(a) ? a.filter(x => !String(x && x.key || '').startsWith('k:')) : []; } catch { return []; } };   // v2.270.1: khaton ke naam yahan nahi (malik)
 const wr = a => { try { localStorage.setItem(LS, JSON.stringify(a.slice(0, MAX))); } catch {} };
 let cur = '';   // abhi khuli hui (chip 'on')
 export function recentPush(e) {   // {key, icon, label, open:{...}} — key same ho to upar aa jata hai (label/open taza)
-  if (!e || !e.key) return; cur = e.key;
+  if (!e || !e.key || String(e.key).startsWith('k:')) return; cur = e.key;
   wr([{ key: String(e.key).slice(0, 60), icon: String(e.icon || '').slice(0, 4), label: String(e.label || '').slice(0, 40), open: e.open || {}, at: Date.now() }, ...rd().filter(x => x.key !== e.key)]);
   recentPaint();
 }

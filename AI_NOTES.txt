@@ -7952,3 +7952,6 @@ Malik: "rack ka size three dots mein · sabun shampoo wale chips ek Category chi
 - webDukan/racks: rn {rack: 3..9 shelf} · sh {itemId: shelf 0 se} · sz {itemId: number (1 = aam) | purana 's' / 'l'}.
 - dukan/khula.js rackLayout / rackRowsOf (app + website ek). Pinch / Bare-Chhote / Chhota-Aam-Bara chips HATE (sn data parha jata hai, UI nahi).
 - web-dukan.js: ⋮ "📂 Category" (catsHTML) + "📐 Rack ka size" (rsizeHTML -> view rsz). AI nahi. Asal phone par test nahi.
+
+=== v2.270.1 (13 Nov 2026) — ☰ "Is screen ke" mein khaton ke naam nahi ===
+Malik: "yahan par khaton ke names nahi aane chahiye". recent.js: 'k:' (khata) wale recent chips na bante hain na dikhte (purane bhi filter). Khirkiyon ke recent chips (Ginti, Transfer register…) wahi.
