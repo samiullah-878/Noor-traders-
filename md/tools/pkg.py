@@ -77,12 +77,12 @@ for v in vp + vk + vt + vq + vf + vb + vcb + vsb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🔎 Bari likhai ab sirf Claude mein (WhatsApp mein aam likhai).",
-       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, msb],
+       "note": "🧠 Falsafa band (malik ne kaha).",
+       "macros": [mp, mk, ma, mr, mt, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, msb],   # v35: mq (🧠 Falsafa) malik ne band karwaya
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
        "vars": vars_,
-       "off": ["⌨️ Keyboard haptics ON (Battery saver)"],
+       "off": ["⌨️ Keyboard haptics ON (Battery saver)", "🧠 Falsafa"],
        "del": []}
 os.makedirs(REPO, exist_ok=True)
 s = json.dumps(pkg, ensure_ascii=False, separators=(',', ':'))
