@@ -7937,3 +7937,7 @@ html body #dialogBody .pp-wair small{color:#5b6b85;white-space:nowrap}
 /* v2.249.0: Item report — Godam / Noor Traders stock gol ghere mein */
 html body .ir-ring{display:inline-block;border:1.5px solid #1565c0;border-radius:999px;padding:0 8px;margin:0 3px;font-weight:800;color:#0d3c78;background:#eef5ff;line-height:1.5;white-space:nowrap}
 html body .ir-ring.nt{border-color:#c62828;color:#8e1b1b;background:#fff1f1}
+
+/* v2.249.1: 🖥 PC (mobile jaisi screen) poori chaurai — malik: 'full screen honi chahiye screen ke hisaab se' (pehle beech mein 850px ki patti thi) */
+@media (min-width:1100px){html.pcm main{max-width:none!important;width:100%!important;margin:0!important;box-shadow:none!important}html.pcm footer{width:100%!important;left:0!important;right:0!important;transform:none!important}html.pcm .nvf-row{max-width:none!important}
+}
