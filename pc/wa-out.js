@@ -26,7 +26,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.14';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.15';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -156,7 +156,8 @@ async function main() {
     logL = logL.concat([row]).slice(-60);
     const snap = logL.slice(); lgw = lgw.then(() => LOGD.set({ L: snap, at: Date.now() })).catch(e => log('⚠️ waOutLog: ' + e.message));
   }
-  const pend = new Map(); let busy = false, busyAt = 0, lastSent = 0;
+  const pend = new Map(); let busy = false, busyAt = 0, lastSent = 0, lastFast = 0; const jidOk = new Map();
+  const isFast = d => { try { return !!(KHW && KHW.who && KHW.who(normPh(d.to))); } catch { return false; } };   // v1.15 (13 Nov, malik: 'WhatsApp ke jawab mein time lag raha hai'): apne (malik / Mubeen / jure) number = line mein aage, gahak wala faasla nahi
   // ---------- v1.5: 🚚 DELIVERY ----------
   const CUST_F = path.join(DIR, 'wa-out-cust.json'), DQ = biz.collection('deliveryReq');
   let CU = {}; try { CU = JSON.parse(fs.readFileSync(CUST_F, 'utf8')) || {}; } catch {}
@@ -278,9 +279,9 @@ async function main() {
   async function work() {
     busy = true; busyAt = Date.now();
     try {
-      while (pend.size) {
+      loop: while (pend.size) {
         busyAt = Date.now();   // v1.3: har job par taza — lambi queue 'atki' na lage
-        const [id, d] = [...pend.entries()].sort((a, b) => (Number(a[1].at) || 0) - (Number(b[1].at) || 0))[0];
+        const [id, d] = [...pend.entries()].sort((a, b) => (isFast(b[1]) - isFast(a[1])) || ((Number(a[1].at) || 0) - (Number(b[1].at) || 0)))[0]; const fast = isFast(d);
         const done = async (st, why, extra) => { pend.delete(id); if (id.startsWith('kl-')) { try { await BA.doc('khWaSent').update({ ['r.' + normPh(d.to)]: { st, why: String(why || '').slice(0, 100), at: Date.now() } }); } catch (e) { log('⚠️ khWaSent: ' + e.message); } } try { await Q.doc(id).set({ st, why: String(why || '').slice(0, 140), sentAt: Date.now(), ...(d.im ? { im: FieldValue.delete(), hadIm: 1 } : {}), ...(d.au ? { au: FieldValue.delete(), hadAu: 1 } : {}), ...(d.doc ? { doc: FieldValue.delete(), hadDoc: 1 } : {}), ...(extra || {}) }, { merge: true }); } catch (e) { log('⚠️ waOut ' + id + ': ' + e.message); } };
         const day = dayOf(Date.now()); if (L.day !== day) { L.day = day; L.n = 0; }
         const to = normPh(d.to), nm = String(d.nm || '').slice(0, 40), txt = String(d.txt || '').trim();
@@ -289,10 +290,11 @@ async function main() {
         if (!okPh(to) || (!txt && !d.au && !d.loc && !d.doc)) { await done('err', !okPh(to) ? 'mobile number ghalat' : 'paigham khali'); continue; }
         if (L.n >= cfg.lim) { log(`⏸ aaj ki hadd ${cfg.lim} poori — baqi kal`); setLink({ err: `Aaj ki hadd ${cfg.lim} poori — baqi kal` }); break; }   // queue mein rahe (st new)
         if (!sock || L.st !== 'open') { break; }   // jur jaye to kick()
-        const gap = cfg.gap * 1000 - (Date.now() - lastSent); if (gap > 0) await sleep(gap);
+        if (fast) { const g2 = 600 - (Date.now() - lastFast); if (g2 > 0) await sleep(g2); }
+        else { while (cfg.gap * 1000 - (Date.now() - lastSent) > 0) { await sleep(300); busyAt = Date.now(); if ([...pend.values()].some(isFast)) continue loop; } }
         if (!sock || L.st !== 'open') break;
         try {
-          const chk = await within(sock.onWhatsApp(jidOf(to)), 15000, 'number check');
+          const chk = fast && jidOk.has(to) ? [{ exists: true, jid: jidOk.get(to) }] : await within(sock.onWhatsApp(jidOf(to)), 15000, 'number check');
           const okNo = Array.isArray(chk) && chk[0] && chk[0].exists;
           if (!okNo) { await done('skip', 'yeh number WhatsApp par nahi'); await addLog({ at: Date.now(), to, nm, code: String(d.code || ''), st: 'skip', why: 'WhatsApp par nahi' }); continue; }
           const jid = (chk[0] && chk[0].jid) || jidOf(to);
@@ -306,7 +308,8 @@ async function main() {
           }
           const lc = d.loc && Number.isFinite(Number(d.loc.lat)) && Number.isFinite(Number(d.loc.lng)) ? { location: { degreesLatitude: Number(d.loc.lat), degreesLongitude: Number(d.loc.lng), name: String(d.loc.name || '').slice(0, 80), address: String(d.loc.adr || '').slice(0, 120) } } : null;   // v1.5: delivery boy ko location
           const r = await within(sock.sendMessage(jid, lc || (dc && dc.length ? { document: dc, mimetype: 'application/pdf', fileName: String(d.fn || 'Khata.pdf').slice(0, 60), caption: txt } : im && im.length ? { image: im, caption: txt, mimetype: 'image/jpeg' } : au && au.length ? { audio: au, mimetype: 'audio/mpeg', ptt: false } : { text: txt }), quoted ? { quoted } : {}), 60000, 'bhejna');
-          lastSent = Date.now(); L.n++;
+          if (fast) { lastFast = Date.now(); jidOk.set(to, jid); } else lastSent = Date.now();
+          L.n++;
           if (r && r.key) { sentM.set(id, r); if (sentM.size > 200) sentM.delete(sentM.keys().next().value); }
           if (d.kind === 'bill') { CU[to] = { at: Date.now(), nm, bn: String(d.bn || ''), eid: id }; custSave(); }   // v1.5: is gahak ki location 24 ghante tak
           await done('sent', '', { wid: String((r && r.key && r.key.id) || '') });
