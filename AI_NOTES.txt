@@ -7937,3 +7937,6 @@ Malik: "rack chip mein ungliyon se chhota bara · ek rack par 3, 2 ya 5 · large
 === v2.267.1 (13 Nov 2026) — Online Dukan: back = ek qadam ===
 Malik: "back par poori app ka home aa jata hai — pehla back sirf ⋮ / chip se, agla screen se".
 Wajah: Android Chrome ka back modal <dialog> ko khud band karta hai ('cancel' preventDefault har dafa nahi chalta) — 'close' event par W abhi ho to showModal dobara + webClose (ek qadam).
+
+=== v2.268.0 (13 Nov 2026) — Online Dukan ka ⋮ halka ===
+Malik: "jo cheezein ab use nahi kar raha nikal do" (OK). web-dukan.js MENU_OLD=false: Website kholo (header mein hai), Rack ki photos, Bane hue racks, Internet se tasveerein, Items chuno, AI racks, 'Rack photo par nahi' filter — sirf chhupe; data + website ki 2 rack photos wahi.

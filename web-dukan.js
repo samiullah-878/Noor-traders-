@@ -14,8 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRows, shelfPack } from './dukan/khula.js?v=2.267.1';
-import { smartFind } from './dukan/dhoond.js?v=2.267.1';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
+import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRows, shelfPack } from './dukan/khula.js?v=2.268.0';
+import { smartFind } from './dukan/dhoond.js?v=2.268.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -201,17 +201,19 @@ function thPump() {
 // ---------- ⋮ aur (sheet) ----------
 function sheet(html) { $('wdSCard').innerHTML = html; $('wdSheet').hidden = false; }
 function sheetClose() { $('wdSheet').hidden = true; W && (W.act = ''); }
+const MENU_OLD = false;   // true = purane chips wapas (rack photos / bane racks / internet tasveerein / items chuno / AI racks)
 function menuHTML() {
   const L = items() || [], rk = racksOf(L), own = A.owner();
   const ch = (on, attr, t) => `<button type="button" class="wd-chip${on ? ' is-in' : ''}" ${attr}>${t}</button>`;
-  return `<h3>🌐 Website</h3><div class="wd-chips">${ch(0, 'data-wd="site"', '🌐 Website kholo')}${ch(0, 'data-wd="share"', '🔗 Link bhejo')}${ch(0, 'data-wd="copy"', '📋 Link copy')}</div>
-<h3>📸 Asal rack ki photo (customer photo par cheez dabaye)</h3><div class="wd-chips">${ch(0, 'data-wd="rps"', `📸 Rack ki photos <small>${Object.keys(W.racks.rp || {}).length}</small>`)}${ch(!!W.racks.draw, 'data-wd="draw"', W.racks.draw ? '▦ Bane hue racks: ON' : '▦ Bane hue racks: Band')}</div>
-<p class="wd-note">▦ Band = shelf par SIRF tasveer wale items (🗄 Kai tasveerein se lagayein — 7 fi shelf phone, 10 PC) + asal rack photos + 🌾 dabbe / tore. Bina tasveer wala item sirf customer ke 🔍 dhoondo mein. ▦ ON = bina tasveer wale bhi (bane hue dabbe ke saath).</p>
-<h3>🌾 Khula maal (dabbe / tore — alag section)</h3><div class="wd-chips">${ch(0, 'data-wd="net"', `🌐 Internet se tasveerein <small>${num(L.filter(it => it.k !== 'n' && !it.hide && !it.pic).length)} bina</small>`)}</div>
-<h3>☑ Kai items ek saath</h3><div class="wd-chips">${ch(!!W.sel, 'data-wd="sel"', W.sel ? '☑ Chunne ka mode ON — band karo' : '☑ Items chuno → ek saath rack mein')}</div>
+  // v2.268.0 (malik 13 Nov: 'jo cheezein ab use nahi kar raha nikal do'): purane chips MENU_OLD ke peeche — data / code wahi, sirf chhupe
+  const oldH = !MENU_OLD ? '' : `<h3>📸 Asal rack ki photo</h3><div class="wd-chips">${ch(0, 'data-wd="rps"', `📸 Rack ki photos <small>${Object.keys(W.racks.rp || {}).length}</small>`)}${ch(!!W.racks.draw, 'data-wd="draw"', W.racks.draw ? '▦ Bane hue racks: ON' : '▦ Bane hue racks: Band')}</div>
+<h3>🌾 Khula maal</h3><div class="wd-chips">${ch(0, 'data-wd="net"', '🌐 Internet se tasveerein')}</div>
+<h3>☑ Kai items ek saath</h3><div class="wd-chips">${ch(!!W.sel, 'data-wd="sel"', W.sel ? '☑ Chunne ka mode ON — band karo' : '☑ Items chuno → ek saath rack mein')}</div>`;
+  return `<h3>🌐 Website</h3><div class="wd-chips">${ch(0, 'data-wd="share"', '🔗 Link bhejo')}${ch(0, 'data-wd="copy"', '📋 Link copy')}</div>
+${oldH}
 <h3>🗂 Rack</h3><div class="wd-chips">${ch(!W.ck, 'data-ck=""', 'Sab racks')}${rk.map((r, i) => ch(W.ck === r.k, `data-ck="${esc(r.k)}"`, `${r.off ? '🙈 ' : (i + 1) + '. '}${esc(r.name)} <small>${r.n}</small>`)).join('')}</div>
-<h3>🔎 Dikhao</h3><div class="wd-chips">${[['all', 'Sab'], ['nopic', '📷 Bina tasveer'], ['pic', '✅ Tasveer wale'], ['noph', `📸 Rack photo par nahi <small>${num(nophCount())}</small>`], ['hid', '🙈 Chhupe']].map(([k, t]) => ch(W.f === k, `data-f="${k}"`, t)).join('')}</div>
-<h3>⚙️ Tarteeb</h3><div class="wd-chips">${own && A.aiText ? ch(0, 'data-wd="airk"', '🤖 Racks khud banao (AI)') : ''}${ch(0, 'data-wd="racks"', '🗂 Racks ki tarteeb')}${own ? ch(0, 'data-wd="info"', '🏪 Dukan ki maloomat') + ch(0, 'data-wd="pub"', '🔄 Rates abhi website par bhejo') : ''}</div>
+<h3>🔎 Dikhao</h3><div class="wd-chips">${[['all', 'Sab'], ['nopic', '📷 Bina tasveer'], ['pic', '✅ Tasveer wale'], ...(MENU_OLD ? [['noph', `📸 Rack photo par nahi <small>${num(nophCount())}</small>`]] : []), ['hid', '🙈 Chhupe']].map(([k, t]) => ch(W.f === k, `data-f="${k}"`, t)).join('')}</div>
+<h3>⚙️ Tarteeb</h3><div class="wd-chips">${MENU_OLD && own && A.aiText ? ch(0, 'data-wd="airk"', '🤖 Racks khud banao (AI)') : ''}${ch(0, 'data-wd="racks"', '🗂 Racks ki tarteeb')}${own ? ch(0, 'data-wd="info"', '🏪 Dukan ki maloomat') + ch(0, 'data-wd="pub"', '🔄 Rates abhi website par bhejo') : ''}</div>
 <p class="wd-note">Website par sirf naam, retail rate aur tasveer jati hai — khareed / nafa kabhi nahi. Rates PC khud bhejta hai.</p>`;
 }
 // ---------- 🌐 v2.160.0: KHULA MAAL KI TASVEEREIN INTERNET SE (malik: "pictures online utha lain") ----------
