@@ -1,3 +1,4 @@
+// v19 (2026-11-13): ⚖️ stock theek ka Sale — POS se wapas parh kar jaanch ke PartyID = "stock fraq" (na ho = rollback) + _adj doc mein party / mode (app dikhata hai). Malik: "stock theek counter sale account mein jata hai — stock fraq select kare".
 // v18 (2026-10-25): ⚖️ STOCK THEEK (app ⇄ khirki) — larkon ki ginti se ALAG: stockCount/_adj-<id> {type 'adj', status 'new', branch, kind kam|zyada, items[{id,name,qty}], afterTn}
 //   → pehle afterTn wala TN 'done' (failed / 30 min = fail) → WAHI createBill (stock fraq Sale / Return, cost) magar ginti ka _posted ledger NAHI · POS Description
 //   "Stock theek <id>" = dohra nahi · parchi "STOCK THEEK" · jawab status done + saleNo / returnNo (ya fail + error). Ginti / roz / farq pehle jaisa.
@@ -337,7 +338,7 @@ async function createAdjustment(pool, L) {
 }
 const farqMode = () => { try { return String(JSON.parse(fs.readFileSync(path.join(DIR, 'local-config.json'), 'utf8')).farqMode || 'sale'); } catch { return 'sale'; } };   // v2.1: malik — PURANA tareeqa (stock fraq party, khate mein) hi default; 'adjust' sirf local-config se
 async function createBill(pool, L) {
-  if (farqMode() !== 'sale') return createAdjustment(pool, L);
+  if (farqMode() !== 'sale' && !L.adj) return createAdjustment(pool, L);   // v19: stock theek = HAMESHA "stock fraq" party ka Sale / Return (setting 'adjust' ho tab bhi)
   const { P, round, branch, kam, zyada, saleTotal, saleCogs, retTotal, retCogs } = L;
   const net = L.net;
   const now = new Date();
@@ -393,6 +394,10 @@ async function createBill(pool, L) {
         .execute('dbo.usp_Sale_InsertUpdate');
       const sale = s.recordset[0];
       saleNo = sale.SaleNo;
+      if (L.adj) {   // v19 (13 Nov, malik: "stock theek ki sale jab PC banaye to account STOCK FRAQ select kare — counter sale nahi"): POS ne bill par wohi account rakha? warna kuch save nahi
+        const ck = (await new sql.Request(tx).input('id', sql.Int, sale.SaleID).query('SELECT PartyID FROM dbo.Sale WHERE SaleID = @id')).recordset[0];
+        if (!ck || Number(ck.PartyID) !== Number(P.PartyID)) throw new Error(`POS ne bill par "${P.PartyName}" account nahi rakha (PartyID ${ck ? ck.PartyID : '?'}) — kuch save NAHI kiya`);
+      }
 
       for (const k of kam) {
         await new sql.Request(tx)
@@ -920,7 +925,6 @@ function watchAdj() {
 }
 async function adjList(pool, j, desc) {
   const party = (await pool.request().query(PARTY_SQL_TEXT)).recordset;
-  if (party.length !== 1 && farqMode() !== 'sale') party.splice(0, party.length, { PartyID: 0, PartyName: 'POS Adjustment', AccountID: 0 });
   if (party.length !== 1) return { error: `POS mein "${PARTY_NAME}" naam ka ${party.length ? 'ek se zyada' : 'koi'} account mila` };
   const P = party[0], branch = Number(j.branch) || 0, kind = j.kind === 'zyada' ? 'zyada' : 'kam', kam = [], zyada = [], skipped = [];
   for (const x of (Array.isArray(j.items) ? j.items : []).slice(0, 40)) {
@@ -952,14 +956,14 @@ async function adjJob(pool, ref, j, deps = {}) {
   if (!got) return 'skip';
   try {
     const desc = ('Stock theek ' + String(ref.id).replace(/^_adj-/, '')).slice(0, 150);
-    const q = farqMode() !== 'sale' ? 'SELECT TOP 1 AdjustmentNo AS No FROM dbo.Adjustment WHERE Description = @d ORDER BY AdjustmentID DESC' : 'SELECT TOP 1 SaleNo AS No FROM dbo.Sale WHERE Description = @d ORDER BY SaleID DESC';
-    const prev = (await pool.request().input('d', sql.VarChar(150), desc).query(q)).recordset[0];
+    let prev = (await pool.request().input('d', sql.VarChar(150), desc).query('SELECT TOP 1 SaleNo AS No FROM dbo.Sale WHERE Description = @d ORDER BY SaleID DESC')).recordset[0];
+    if (!prev && farqMode() !== 'sale') { try { prev = (await pool.request().input('d', sql.VarChar(150), desc).query('SELECT TOP 1 AdjustmentNo AS No FROM dbo.Adjustment WHERE Description = @d ORDER BY AdjustmentID DESC')).recordset[0]; } catch (e) { log('Stock theek purana adjustment jaanch: ' + e.message); } }
     if (prev) { await ref.set({ status: 'done', saleNo: String(prev.No || '').trim(), again: true, doneAt: Date.now() }, { merge: true }); log('⚖️ Stock theek pehle se bana tha: ' + String(prev.No || '').trim()); return 'done'; }
     const L = await adjList(pool, j, desc);
     if (L.error) { await ref.set({ status: 'fail', error: L.error, doneAt: Date.now() }, { merge: true }); log('⚖️ Stock theek: ' + L.error); return 'fail'; }
     if (!L.kam.length && !L.zyada.length) { await ref.set({ status: 'fail', error: (L.skipped[0] && L.skipped[0].why) || 'Tadad khali', doneAt: Date.now() }, { merge: true }); return 'fail'; }
     const r = await make(pool, L);
-    await ref.set({ status: 'done', saleNo: r.saleNo || '', returnNo: r.returnNo || '', total: L.net, doneAt: Date.now() }, { merge: true });
+    await ref.set({ status: 'done', saleNo: r.saleNo || '', returnNo: r.returnNo || '', total: L.net, party: String((L.P && L.P.PartyName) || '').slice(0, 60), doneAt: Date.now() }, { merge: true });
     log(`⚖️ Stock theek bill: ${r.saleNo || ''}${r.returnNo ? ' / ' + r.returnNo : ''} · branch ${L.branch} · ${L.kam.length + L.zyada.length} item · Rs ${L.net}${j.byName ? ' · ' + j.byName : ''}`);
     try { await print({ ...brief(L), ...r, adj: true, byName: j.byName || '', doneAt: Date.now() }); } catch (e) { log('Stock theek print: ' + e.message); }
     return 'done';

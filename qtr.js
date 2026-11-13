@@ -255,7 +255,7 @@ async function fixGo() {
 function watchAdj(aid, j, r) {
   if (!aid || !A.cloud?.watchStockAdj) return;
   let stop = null, done = false; const end = t => { if (done) return; done = true; try { stop && stop(); } catch {} if (t) A.notice(t); try { A.after?.(); } catch {} };
-  stop = A.cloud.watchStockAdj(aid, x => { if (!x) return; if (x.status === 'done') end(`✓ Stock theek bill ${[x.saleNo, x.returnNo].filter(Boolean).join(' / ')} — ${r.name} · ${A.branchName(j.branch)}`); else if (x.status === 'fail') end(`⚠️ Stock theek bill nahi bana (${r.name}): ${x.error || 'masla'}`); });
+  stop = A.cloud.watchStockAdj(aid, x => { if (!x) return; if (x.status === 'done') end(`✓ Stock theek bill ${[x.saleNo, x.returnNo].filter(Boolean).join(' / ')} — ${r.name} · ${A.branchName(j.branch)}${x.party ? ' · 🏷 account: ' + x.party : ''}`); else if (x.status === 'fail') end(`⚠️ Stock theek bill nahi bana (${r.name}): ${x.error || 'masla'}`); });
   setTimeout(() => end(''), 45 * 60000);
 }
 // PC ka jawab — khirki band ho tab bhi (10 min): ✓ TN no · ginti wala = dono jagah dobara save (farq 0)

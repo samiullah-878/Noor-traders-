@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-13 (u): 🏷 PARTY KA NAAM PARCHI KE UPAR (English mota + Urdu) — malik: "party name upar aaye Urdu English mein, sab wasooli / kharcha / payment di / li / transfer par". Beech wala naam hata. Bank (HBL / Alfalah) parchi wahi.
 //  2026-11-04 (q): ⚡ VOUCHER + PARCHI FORAN (malik: "waiting time nahi — parchi usi time, voucher bhi foran, har entry") — nayi entry ka voucher ALAG line
 //    (vRun — kisi print / khata print / Daily print ke peeche nahi), parchi printer mein SAB SE AAGE (prHi) + Urdu Tafseel bina AI intezar (roman2ur foran,
 //    AI peeche yaad karta hai), har print ki hadd PR_CAP (atka kaam line nahi rokta), naya kharcha khata: POS account bante hi foran (waitAcct),
@@ -468,7 +469,17 @@ function receiptBig({ title, code, date, lines, note, copy, pay }) {
   const dt = isNaN(d) ? String(date) : `${String(d.getDate()).padStart(2, '0')}-${MON[d.getMonth()]}-${d.getFullYear()}`;
   const now = new Date(), hh = now.getHours() % 12 || 12;
   const tm = `${hh}:${String(now.getMinutes()).padStart(2, '0')} ${now.getHours() < 12 ? 'am' : 'pm'}`;
-  const out = [ESC + '@', C + bold('NOOR TRADERS') + sm('  ' + SHOP_PHONE), bold(title)];
+  const out = [ESC + '@', C + bold('NOOR TRADERS') + sm('  ' + SHOP_PHONE)];
+  // 2026-11-13 (u): malik — "party ka naam UPAR aaye, Urdu + English mein — wasooli, kharcha, payment di / li, transfer sab par" (beech wala naam hata — kaghaz kam)
+  { const manyT = lines.length > 1;
+    for (const l of lines) {
+      const nmT = ascii(l.name);
+      if (manyT) out.push(C + smb(String(l.label || '').toUpperCase()));
+      for (const x of (nmT ? wrap(nmT.toUpperCase(), Math.floor(W / 2)).slice(0, 3) : ['(NAAM URDU MEIN)'])) out.push(C + big2(x.trim()));
+      { const ur = urPartyOf(l); if (ur) out.push(UR.line(ur, 60, 1)); }
+    }
+    out.push(C + hr); }
+  out.push(bold(title));
   if (UR.isOn() && UR_TITLE[title]) out.push(UR.line(UR_TITLE[title], 30, 1));
   if (copy) out.push(sm('(Dobara print)'));
   out.push(...payMark(pay, true, big2, C));
@@ -477,15 +488,10 @@ function receiptBig({ title, code, date, lines, note, copy, pay }) {
   let total = 0; const many = lines.length > 1;
   for (const l of lines) {
     total = Math.max(total, Number(l.amount) || 0);
-    const nm = ascii(l.name);
-    if (many) out.push(L + smb(String(l.label || '').toUpperCase()));
-    for (const x of (nm ? wrap(nm.toUpperCase(), Math.floor(W / 2)).slice(0, 3) : ['(NAAM URDU MEIN)'])) out.push(C + big2(x.trim()));
-    { const ur = urPartyOf(l); if (ur) out.push(UR.line(ur, 60, 1)); }
-    if (many) out.push(hr);
   }
   if (!many && lines[0]) {   // 2026-11-02: malik — "raqam wasool hui / raqam di gayi — full size"
     const lb = String(lines[0].label || ''), LB = { 'Wasool kiye': ['RAQAM WASOOL HUI', 'رقم وصول ہوئی'], 'Diye': ['RAQAM DI GAYI', 'رقم دی گئی'] }[lb];
-    if (LB) { out.push(L + hr, C + big2(LB[0])); if (UR.isOn()) out.push(UR.line(LB[1], 56, 1)); }
+    if (LB) { out.push(C + big2(LB[0])); if (UR.isOn()) out.push(UR.line(LB[1], 56, 1)); }
     else out.push(L + hr, C + smb(lb.toUpperCase()));
   }
   out.push(C + huge('Rs.' + n(total)), '');
@@ -556,7 +562,7 @@ function receipt({ title, code, date, lines, note, copy, bank, pay }) {
   const BK = bank && bank.bk === 'ALFALAH' ? 'ALFALAH' : 'HBL', BKU = BK === 'ALFALAH' ? 'الفلاح' : 'ایچ بی ایل';   // 2026-11-02: 🏦 Alfalah ki apni parchi
   const out = bank
     ? [ESC + '@', C + rev(huge(' ' + BK + ' ')), '', bold('NOOR TRADERS') + '  ' + SHOP_PHONE, '', tall(BK + (bank.dir === 'out' ? ' SE PAISE GAYE' : ' MEIN PAISE AAYE'))]
-    : [ESC + '@', C + big('NOOR TRADERS'), SHOP_PHONE, '', tall(title)];
+    : [ESC + '@', C + big('NOOR TRADERS'), SHOP_PHONE, '', ...lines.flatMap(l => { const ur = urPartyOf(l); return [tall(ascii(l.name).slice(0, W) || '(naam Urdu mein)'), ...(ur ? [UR.line(ur, 44)] : [])]; }), tall(title)];   // (u) naam upar
   if (!bank && UR.isOn() && UR_TITLE[title]) out.push(UR.line(UR_TITLE[title], 40));   // 2026-10-14: 🔤 Urdu
   if (bank && UR.isOn()) { out.push(UR.line(BKU + (bank.dir === 'out' ? ' سے پیسے گئے' : ' میں پیسے آئے'), 50, 1)); if (UR.dateLine) out.push(UR.dateLine(date, 56)); }   // 2026-10-20: 🏦 Urdu sar-khi + tareekh
   if (copy) out.push('(Dobara print)');
@@ -567,8 +573,8 @@ function receipt({ title, code, date, lines, note, copy, bank, pay }) {
   let total = 0; const bq = [];
   for (const l of lines) {
     total = Math.max(total, Number(l.amount) || 0);
-    out.push(bold(ascii(l.name).slice(0, W) || '(naam Urdu mein)'));
-    { const ur = urPartyOf(l); if (ur) out.push(UR.line(ur, 44)); }   // malik: font bara   // 2026-10-14: 🔤 party ka Urdu naam
+    if (bank || lines.length > 1) out.push(bold(ascii(l.name).slice(0, W) || '(naam Urdu mein)'));   // (u) bank parchi / do party = baqaya ki qatar ke saath naam rahe; warna naam upar chhap chuka
+    if (bank) { const ur = urPartyOf(l); if (ur) out.push(UR.line(ur, 44)); }   // 2026-10-14: 🔤 party ka Urdu naam
     if (l.before != null) { const b0 = Number(l.before) || 0; out.push(bold(row('  Sabqa baqaya:', (b0 > 0 ? 'Lene ' : b0 < 0 ? 'Dene ' : '') + 'Rs.' + n(Math.abs(b0))))); }   // 2026-10-09: malik — sabqa raqam upar
     out.push(row('  ' + l.label, 'Rs.' + n(l.amount)));
     if (l.after != null) bq.push(l);
