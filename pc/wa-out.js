@@ -26,7 +26,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.17';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.18';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -157,7 +157,7 @@ async function main() {
     const snap = logL.slice(); lgw = lgw.then(() => LOGD.set({ L: snap, at: Date.now() })).catch(e => log('⚠️ waOutLog: ' + e.message));
   }
   const pend = new Map(); let busy = false, busyAt = 0, lastSent = 0, lastFast = 0; const jidOk = new Map();
-  const isFast = d => { try { return !!(KHW && KHW.who && KHW.who(normPh(d.to))); } catch { return false; } };   // v1.15 (13 Nov, malik: 'WhatsApp ke jawab mein time lag raha hai'): apne (malik / Mubeen / jure) number = line mein aage, gahak wala faasla nahi
+  const isFast = d => { try { return !!((KHW && KHW.who && KHW.who(normPh(d.to))) || (d && d.kind === 'gate')); } catch { return false; } };   // v1.15 (13 Nov, malik: 'WhatsApp ke jawab mein time lag raha hai'): apne (malik / Mubeen / jure) number = line mein aage, gahak wala faasla nahi
   // ---------- v1.5: 🚚 DELIVERY ----------
   const CUST_F = path.join(DIR, 'wa-out-cust.json'), DQ = biz.collection('deliveryReq');
   let CU = {}; try { CU = JSON.parse(fs.readFileSync(CUST_F, 'utf8')) || {}; } catch {}
@@ -176,6 +176,76 @@ async function main() {
   }
   // v1.7 (12 Nov): 🔢 KHARCHA WHATSAPP SE — ijazat wale number (kh-wa.js: malik / Mubeen / khWa.allow) ka paigham jo 3 hindson se shuru ho. Baqi har paigham pehle jaisa chhor diya jata hai (na parha, na log).
   let KHW = null; try { KHW = require('./kh-wa.js')({ biz, log }); if (KHW.startRem) KHW.startRem(); } catch (e) { log('⚠️ kh-wa.js nahi chala: ' + e.message); }   // v1.13: 🔔 roz ke reminder isi service se (ek hi jagah)
+  // v1.18 (13 Nov, malik: "gate pass ka system bhi WhatsApp par · item name, bill number · 1 de diya · 2 nahi diya · sirf wohi numbers jo main joron · sab godam"):
+  //   🚪 GATE PASS — gatePass/<SaleID> (gate-pass.js likhta hai) POSTED hote hi (ps 2, off nahi, post ON ke baad + 3 ghante ke andar) blueAccess/gpWa.nums ke har number ko
+  //   waOut gp-<SaleID>-<number> (create = dohra kabhi nahi). Jawab SIRF usi paigham par REPLY mein '1' / '2', SIRF unhi numbers se: 1 = har baqi line g.<k> {n, q, t} (app ki tick jaisa) ·
+  //   2 = nd {n, t} + malik ko khabar. Cancel / un-post = gpx- '⛔ maal mat dein'. Kisi aur number / kisi aur paigham ko yeh hissa nahi chhoota.
+  const GP = biz.collection('gatePass'); let gpw = { on: false, since: 0, nums: [] }, gpMalik = '03450412515', gpStop = null, gpDay = '';
+  const gpSent = new Set(), gpOffd = new Set();
+  const gpPut = (id, x) => Q.doc(id).create({ st: 'new', at: Date.now(), eid: id, ...x }).catch(e => { if (!/already exists/i.test(String(e.message))) log('⚠️ waOut ' + id + ': ' + e.message); });
+  const gpNo = d => String((d && d.no) || '').replace(/^0+/, '') || '?';
+  const gpNum = n => String(Math.round((Number(n) || 0) * 1000) / 1000);
+  const gpQty = (q, pk) => { q = Number(q) || 0; pk = Number(pk) || 0; if (pk > 1) { const c = Math.floor(q / pk + 1e-9), p = Math.round((q - c * pk) * 1000) / 1000; return c && p ? `${gpNum(c)} ctn + ${gpNum(p)} pcs` : c ? `${gpNum(c)} ctn` : `${gpNum(p)} pcs`; } return `${gpNum(q)} pcs`; };
+  function gpText(d) {
+    const L = Array.isArray(d.l) ? d.l : [], gn = d.gn || {}, by = new Map();
+    for (const x of L) { const g = String(x.g == null ? '' : x.g); if (!by.has(g)) by.set(g, []); by.get(g).push(x); }
+    let t = `🚪 *Gate pass #${gpNo(d)}*\n👤 ${String(d.p || 'Customer').slice(0, 60)}`;
+    for (const [g, ls] of by) { t += `\n\n🏬 *${String(gn[g] || ('Godam ' + g)).slice(0, 40)}*`; for (const x of ls) t += `\n• ${String(x.n || '?').slice(0, 60)} — *${gpQty(x.q, x.pk)}*`; }
+    return t + '\n\nIsi paigham par *reply* mein likhein:\n*1* = de diya\n*2* = nahi diya';
+  }
+  async function gpDoc(id, d) {
+    try {
+      if (!gpw.on || !gpw.nums.length || !d) return;
+      if (d.off || Number(d.ps) !== 2) {   // cancel / un-post — sirf jis ka paigham ja chuka
+        if (!gpSent.has(id) || gpOffd.has(id)) return; gpOffd.add(id);
+        for (const a of gpw.nums) await gpPut(`gpx-${id}-${a.p}-${Number(d.at) || 0}`, { to: a.p, nm: a.n, kind: 'gate', txt: `⛔ *Gate pass #${gpNo(d)}* ${d.off ? 'CANCEL' : 'UN-POST'} ho gaya — maal MAT dein.\nDe chuke hain to malik ko batayein.`, rq: `gp-${id}-${a.p}` });
+        log(`🚪 gate pass ${id} cancel / un-post ki khabar`); return;
+      }
+      gpOffd.delete(id);
+      if (gpSent.has(id)) return;
+      const pt = Number(d.pt) || 0; if (!pt || pt < gpw.since || Date.now() - pt > 3 * 3600000) return;
+      if (!Array.isArray(d.l) || !d.l.length) return;
+      gpSent.add(id); const txt = gpText(d);
+      for (const a of gpw.nums) await gpPut(`gp-${id}-${a.p}`, { to: a.p, nm: a.n, kind: 'gate', gp: String(id), gpd: gpDay, txt });
+      log(`🚪 gate pass #${gpNo(d)} -> ${gpw.nums.length} number`);
+    } catch (e) { log('⚠️ gate pass ' + id + ': ' + e.message); }
+  }
+  async function gpWatch() {
+    const day = dayOf(Date.now());
+    if (!gpw.on || !gpw.nums.length) { if (gpStop) { try { gpStop(); } catch {} gpStop = null; gpDay = ''; } return; }
+    if (gpStop && gpDay === day) return;
+    if (gpStop) { try { gpStop(); } catch {} gpStop = null; }
+    gpDay = day;
+    try { const old = await Q.where('gpd', '==', day).get(); old.forEach(x => { const g = String((x.data() || {}).gp || ''); if (g) gpSent.add(g); }); } catch (e) { log('⚠️ gate pass purane: ' + e.message); }
+    gpStop = GP.where('day', '==', day).onSnapshot(sn => { for (const ch of sn.docChanges()) if (ch.type !== 'removed') gpDoc(ch.doc.id, ch.doc.data() || {}); }, e => { log('⚠️ gatePass: ' + e.message); gpStop = null; gpDay = ''; });
+  }
+  BA.doc('gpWa').onSnapshot(sn => { const d = (sn.exists && sn.data()) || {}; gpw = { on: d.on === true, since: Number(d.since) || 0, nums: (Array.isArray(d.nums) ? d.nums : []).map(a => ({ n: String((a && a.n) || '').slice(0, 30), p: normPh(a && a.p) })).filter(a => isMob(a.p)).slice(0, 10) }; gpWatch().catch(e => log('⚠️ gpWatch: ' + e.message)); }, e => log('⚠️ gpWa: ' + e.message));
+  BA.doc('waParchi').onSnapshot(sn => { const d = (sn.exists && sn.data()) || {}; if (Array.isArray(d.prFrom) && d.prFrom[0] && isMob(normPh(d.prFrom[0]))) gpMalik = normPh(d.prFrom[0]); }, () => {});
+  setInterval(() => { gpWatch().catch(() => {}); }, 60000);   // din badle / listener gire = dobara
+  async function gpReply(m, c, tx, s) {   // true = yeh gate pass ka jawab tha (aage kuch nahi)
+    if (!gpw.nums.length || !/^\s*[12]\s*$/.test(tx)) return false;
+    const ctx = c.extendedTextMessage && c.extendedTextMessage.contextInfo, st = String((ctx && ctx.stanzaId) || ''); if (!st) return false;
+    const from = await fromNum(m, s), me = gpw.nums.find(a => a.p === from); if (!me) return false;
+    let job = null; try { const q = await Q.where('wid', '==', st).limit(1).get(); if (!q.empty) job = q.docs[0].data() || {}; } catch (e) { log('⚠️ gate jawab: ' + e.message); }
+    if (!job || job.kind !== 'gate' || !job.gp) return false;
+    const id = String(job.gp), ref = GP.doc(id), sn = await ref.get(), d = sn.exists ? sn.data() || {} : null, rid = 'gpr-' + String(m.key.id || Date.now()).replace(/[^a-zA-Z0-9]/g, '').slice(0, 40), say = txt => gpPut(rid, { to: from, nm: me.n, kind: 'gate', txt });
+    if (!d) { await say('✕ Yeh gate pass ab nahi mila.'); return true; }
+    if (d.off || Number(d.ps) !== 2) { await say(`⛔ Gate pass #${gpNo(d)} cancel / un-post hai — maal MAT dein.`); return true; }
+    if (tx.trim() === '1') {
+      const g = d.g || {}, up = {}; let n = 0;
+      for (const x of (Array.isArray(d.l) ? d.l : [])) if (x && x.k && !g[x.k]) { up['g.' + x.k] = { n: me.n || from, q: Number(x.q) || 0, t: FieldValue.serverTimestamp() }; n++; }
+      if (d.nd) up.nd = FieldValue.delete();
+      if (Object.keys(up).length) await ref.update(up);
+      await say(n ? `✅ Gate pass #${gpNo(d)} — DE DIYA likh diya (${n} item).` : `✅ Gate pass #${gpNo(d)} pehle se de diya likha hai.`);
+      log(`🚪 #${gpNo(d)} de diya — ${me.n} (${n})`);
+    } else {
+      await ref.update({ nd: { n: me.n || from, t: Date.now() } });
+      await say(`✕ Gate pass #${gpNo(d)} — NAHI DIYA likh diya. Malik ko khabar chali gayi.\nBaad mein de dein to isi gate pass par reply 1.`);
+      if (isMob(gpMalik) && gpMalik !== from) await gpPut('gpn-' + rid.slice(4), { to: gpMalik, nm: 'Malik', kind: 'gate', txt: `✕ *Gate pass #${gpNo(d)}* NAHI diya — ${me.n}\n👤 ${String(d.p || 'Customer').slice(0, 60)} · ${(Array.isArray(d.l) ? d.l : []).length} item` });
+      log(`🚪 #${gpNo(d)} NAHI diya — ${me.n}`);
+    }
+    return true;
+  }
   // v1.8 (12 Nov, malik: "business number hi main — main ya Mubeen parchi isi par bhejein, wohi print kare, baqi cheezein bhi wohi handle kare · mera / Mubeen ka number juda ho ya na ho"):
   //   📥 INBOX — ijazat wale number (kh-wa who(): malik / Mubeen / khWa.allow) ki TASVEER ya chhota likha paigham (<= 60 harf) → waIn/<id> (+ _p<i> tasveer ke hisse) → wa-parchi.js usay parhta hai
   //   (Print / Print auto / start / bill — wohi purane qaide). Gahakon ke paigham ab bhi nahi parhe jate (sirf location). 30 min se purana nahi.
@@ -212,6 +282,7 @@ async function main() {
         if (!m || !m.key || m.key.fromMe || !m.message) continue;
         let c = m.message; c = (c.ephemeralMessage && c.ephemeralMessage.message) || (c.viewOnceMessage && c.viewOnceMessage.message) || c;
         const ktx = String(c.conversation || (c.extendedTextMessage && c.extendedTextMessage.text) || '').trim();
+        if (ktx && ktx.length <= 3 && await gpReply(m, c, ktx, s)) continue;   // v1.18: 🚪 gate pass ka jawab (1 / 2) — sirf gate numbers, sirf gate paigham par reply
         if (KHW && ktx && ktx.length <= 300 && !/^\s*a\.?i\.?\s*$/i.test(ktx) && KHW.looks(ktx)) { const kn = await fromNum(m, s), kc = c.extendedTextMessage && c.extendedTextMessage.contextInfo, kt = Number(m.messageTimestamp && typeof m.messageTimestamp === 'object' ? (m.messageTimestamp.toNumber ? m.messageTimestamp.toNumber() : m.messageTimestamp.low) : m.messageTimestamp) * 1000 || 0;
           if (kn) await KHW.apply({ text: ktx, from: kn, wid: m.key.id || '', ts: kt, quoted: String((kc && kc.stanzaId) || ''), quiet: false }); continue; }
         if (KHW && KHW.looksName && ktx && !/^\s*a\.?i\.?\s*$/i.test(ktx) && KHW.looksName(ktx)) { const kn3 = await fromNum(m, s), kt3 = Number(m.messageTimestamp && typeof m.messageTimestamp === 'object' ? (m.messageTimestamp.toNumber ? m.messageTimestamp.toNumber() : m.messageTimestamp.low) : m.messageTimestamp) * 1000 || 0;
@@ -301,7 +372,7 @@ async function main() {
         if (!cfg.on) { await done('skip', 'band hai (setting)'); continue; }
         if (Number(d.at) && Date.now() - Number(d.at) > 6 * 3600000) { await done('skip', 'purana (6 ghante+)'); continue; }
         if (!okPh(to) || (!txt && !d.au && !d.loc && !d.doc)) { await done('err', !okPh(to) ? 'mobile number ghalat' : 'paigham khali'); continue; }
-        if (L.n >= cfg.lim) { log(`⏸ aaj ki hadd ${cfg.lim} poori — baqi kal`); setLink({ err: `Aaj ki hadd ${cfg.lim} poori — baqi kal` }); break; }   // queue mein rahe (st new)
+        if (!fast && L.n >= cfg.lim) { log(`⏸ aaj ki hadd ${cfg.lim} poori — baqi kal`); setLink({ err: `Aaj ki hadd ${cfg.lim} poori — baqi kal` }); break; }   // queue mein rahe (st new)
         if (!sock || L.st !== 'open') { break; }   // jur jaye to kick()
         if (fast) { const g2 = 600 - (Date.now() - lastFast); if (g2 > 0) await sleep(g2); }
         else { while (cfg.gap * 1000 - (Date.now() - lastSent) > 0) { await sleep(300); busyAt = Date.now(); if ([...pend.values()].some(isFast)) continue loop; } }

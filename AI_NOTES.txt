@@ -7895,3 +7895,9 @@ Ilaaj: app pehle se har tabdeeli par poori list EK tukre mein KhataRecovery 'led
 
 === md pkg v36 (13 Nov 2026) — 🧠 Falsafa phone macro WAPAS ===
 Malik: 'phone ka macro wapas chalao'. v35 mein ghalti se band hua tha (malik app ke card ki baat kar raha tha). pkg.py: mq wapas macros mein, off se naam hata — Remote Overwrite by ID se macro enabled aata hai. App ka Falsafa card (qaide.js) band hi hai. AI nahi.
+
+
+=== v2.265.0 + wa-out v1.18 (13 Nov 2026) — 🚪 GATE PASS WHATSAPP PAR ===
+Malik: 'gate pass ka system bhi WhatsApp par SMS ki shakal mein · item name, bill number · 1 de diya · 2 nahi diya · numbers WhatsApp parchi mein, sirf unhi par, kisi aur par nahi · sab godam ke unhi numbers par'.
+App: gate-wa.js (WhatsApp Parchi ⋮ → 🚪 Gate pass ke numbers, sirf malik) -> blueAccess/gpWa {on, nums:[{n,p}] max 10, since} (cloud.listenGpWa / setGpWa; har save par since = ab -> sirf baad ke post). gate-pass.js card par `d.nd` = '✕ WhatsApp: NAHI diya — naam · waqt' (.gtp-nd).
+PC wa-out v1.18: gatePass (aaj ka din) listener sirf jab ON + number ho; ps 2 + off nahi + pt >= since + 3 ghante ke andar -> waOut gp-<SaleID>-<number> {kind 'gate', gp, gpd} (create = dohra nahi; restart par gpd se yaad). Paigham = gate pass # · gahak · godam-war items + tadad (ctn / pcs). Jawab gpReply: text sirf '1' / '2' + reply (stanzaId) + bhejne wala gpWa.nums mein + waOut.wid se kind 'gate' -> 1 = har baqi line g.<k> {n, q, t serverTimestamp} (app ki tick jaisa) + nd hatao · 2 = nd {n, t} + malik (waParchi.prFrom[0]) ko khabar. off / un-post = gpx- '⛔ maal mat dein' (sirf jis ka paigham gaya). kind 'gate' = fast (gahak wala faasla nahi) aur staff (fast) paigham roz ki hadd (lim) se nahi rukte. Test: fake Firestore se bhejna / 1 / 2 / doosra number / doosra paigham / cancel — theek. Asal WhatsApp par test nahi. Rules nahi badle. AI nahi.

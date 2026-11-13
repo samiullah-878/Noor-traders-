@@ -8,7 +8,7 @@
 // Data: PC gate-pass.js (sirf POS parhti) → gatePass/<SaleID> {no, day, pt, br, p, pc, by, l:[{k,i,n,q,pk,g}], gs, gn, off} · tick = gatePass.g.<k> {n, t, q}
 //   (rules 2.81 — mulazim sirf `g`). Ek bill ke do godam = do gate pass card. Tick ke baad bill ki tadad badli (q farq) = tick khud baqi + ✏️.
 // Screen (Transfer check ka "📦 Jane wala maal" jaisa): ⋮ = din · godam · Baqi/De diye/Sab · 📄 PDF (kholo + bhejo). CAP app.gate (OPT_IN). AI NAHI.
-import { smartFind } from './dukan/dhoond.js?v=2.264.0';
+import { smartFind } from './dukan/dhoond.js?v=2.265.0';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => { n = Number(n) || 0; return Math.abs(n - Math.round(n)) < 1e-6 ? new Intl.NumberFormat('en-PK').format(Math.round(n)) : String(Math.round(n * 1000) / 1000); };
@@ -90,6 +90,7 @@ function cardHTML(c, full) {
   return `<div class="tc-ig gtp-card ${c.k}${isNew ? ' gtp-new' : ''}" data-gtp-card="${esc(c.id)}">
     <div class="gtp-h"><span class="gtp-no">🚪 Gate pass <b>#${esc(String(d.no || '').replace(/^0+/, '') || d.id)}</b></span><span class="gtp-cu">👤 ${esc(d.p || 'Customer')}</span>${full ? `<button type="button" class="gtp-x" data-gtp-show="${esc(c.id)}" aria-label="Band">✕</button>` : ''}</div>
     <small class="gtp-sub">🏬 ${esc(gName(d, c.g))} → ${esc(gName(d, d.br))} · 📌 post ${multi ? esc(dLab(d.day)) + ' ' : ''}${esc(clock(d.pt))} · ${esc(ago(d.pt))}${d.pc ? ' · 🖥 ' + esc(d.pc) : ''} · ${c.items.length} item</small>
+    ${c.k === 'open' && d.nd && d.nd.n ? `<p class="gtp-nd">✕ WhatsApp: NAHI diya — ${esc(d.nd.n)}${d.nd.t ? ' · ' + esc(clock(d.nd.t)) : ''}</p>` : ''}
     ${c.k === 'off' ? `<p class="gtp-off">❌ Bill POS mein cancel / delete ho gaya${done.length ? ` — ⚠️ ${done.length} item de diye the: maal wapas lo ya malik ko batao` : ' — maal mat dena'}</p>` : ''}
     ${c.k === 'off' ? c.items.map(r => `<div class="tc-ir gtp-ir"><span><b>${esc(r.x.n)}</b></span><b class="gtp-q">${esc(gpQty(r.x.q, r.x.pk))}</b>${r.ok ? '<i class="gtp-was">✓ diya</i>' : ''}</div>`).join('') : open.map(r => rowHTML(c, r)).join('')}
     ${c.k !== 'off' && done.length ? `<div class="tc-ich"><small>✓ De diya (chip dabao = wapas)</small>${done.map(r => chipHTML(c, r)).join('')}</div>` : ''}</div>`;
