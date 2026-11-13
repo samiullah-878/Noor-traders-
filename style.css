@@ -8133,6 +8133,7 @@ html body #wdDlg .wd-zf.nop{opacity:.5}
 #wdDlg .wd-zno{position:absolute;left:0;top:50%;transform:translateY(-50%);width:20px;height:26px;border-radius:0 8px 8px 0;background:#14244a;color:#fff;font:800 13px/26px system-ui;text-align:center}
 #wdDlg .wd-zs.is-in .wd-zno{background:#ffd84d;color:#3a2a00}
 html body #wdDlg .wd-zi{position:relative}
+html body #wdDlg .wd-zi{height:min(100%,var(--hp,100%))}
 html body #wdDlg .wd-zi.is-in{outline:2px solid #ffd84d;outline-offset:-1px;background:rgba(255,255,255,.14)!important}
 #wdDlg .wd-zh{position:absolute;top:-9px;right:-9px;width:26px;height:26px;border-radius:999px;background:#ffd84d;border:2px solid #14244a;z-index:6;touch-action:none}
 #wdDlg .wd-zh::after{content:"⤢";position:absolute;inset:0;display:grid;place-items:center;font:800 14px/1 system-ui;color:#14244a;font-style:normal}

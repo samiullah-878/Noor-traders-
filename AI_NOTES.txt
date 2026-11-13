@@ -7955,3 +7955,8 @@ Malik: "rack ka size three dots mein · sabun shampoo wale chips ek Category chi
 
 === v2.270.1 (13 Nov 2026) — ☰ "Is screen ke" mein khaton ke naam nahi ===
 Malik: "yahan par khaton ke names nahi aane chahiye". recent.js: 'k:' (khata) wale recent chips na bante hain na dikhte (purane bhi filter). Khirkiyon ke recent chips (Ginti, Transfer register…) wahi.
+
+=== v2.270.2 (13 Nov 2026) — rack size: item tap = register (dobara) + tasveer bari nahi hoti thi ===
+- Item dabane par paint() element ko DOM se hata deta -> pos-stock ka document click `closest('#wdDlg')` null -> Transfer register. Ab composedPath se bhi jaanch.
+- Item ki oonchai pehle shelf ke sab se bare item ke hisaab se thi (ek bara = baqi chhote, khud wahi). Ab --hp = size x khana x 1.5 px (shelf se zyada nahi) — app + website.
+- trimUrl khula.js mein (export) — app ke rack preview mein bhi tasveer ka khali peecha kat-ta hai (website jaisa).

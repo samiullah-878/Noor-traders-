@@ -222,3 +222,29 @@ export function rackLayout(items, cols, rows, sz, sh) {
   while (bays.length > 1 && !bays[bays.length - 1].some(S => S.L.length)) bays.pop();
   return bays.map(B => B.map(S => S.L));
 }
+
+// v2.266.1 (malik: "picture zoom mein ho"): tasveer ke gird ka khali peecha (ek rang ka) khud kaat do — cheez shelf par bari dikhe. Bina AI: kinare ka rang -> us se mukhtalif pixels ka dabba. Shak ho = asal tasveer.
+export async function trimUrl(url) {
+  const im = new Image(); im.src = url; await im.decode();
+  const W = im.naturalWidth, H = im.naturalHeight; if (W < 80 || H < 80) return url;
+  const cw = 96, ch = Math.max(24, Math.round(96 * H / W)), cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+  const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(im, 0, 0, cw, ch);
+  const d = cx.getImageData(0, 0, cw, ch).data, px = (x, y) => { const i = (y * cw + x) * 4; return [d[i], d[i + 1], d[i + 2]]; };
+  const B = [[], [], []]; for (let x = 0; x < cw; x++) for (const y of [0, 1, ch - 2, ch - 1]) { const p = px(x, y); B[0].push(p[0]); B[1].push(p[1]); B[2].push(p[2]); }
+  for (let y = 0; y < ch; y++) for (const x of [0, 1, cw - 2, cw - 1]) { const p = px(x, y); B[0].push(p[0]); B[1].push(p[1]); B[2].push(p[2]); }
+  const med = a => { a.sort((m, n) => m - n); return a[a.length >> 1]; }, bg = B.map(med);
+  const far = B[0].length ? B[0].filter((v, i) => Math.max(Math.abs(B[0][i] - bg[0]), Math.abs(B[1][i] - bg[1]), Math.abs(B[2][i] - bg[2])) > 38).length / B[0].length : 1;
+  if (far > 0.3) return url;   // kinara ek rang ka nahi (mez + deewar / cheez kinare tak) = mat kaato
+  const on = (x, y) => { const p = px(x, y); return Math.max(Math.abs(p[0] - bg[0]), Math.abs(p[1] - bg[1]), Math.abs(p[2] - bg[2])) > 34; };
+  const rows = [], cols = new Array(cw).fill(0); for (let y = 0; y < ch; y++) { let n = 0; for (let x = 0; x < cw; x++) if (on(x, y)) { n++; cols[x]++; } rows.push(n); }
+  const rn = Math.max(2, cw * 0.04), cn = Math.max(2, ch * 0.04);
+  let y0 = rows.findIndex(n => n >= rn), y1 = rows.length - 1 - [...rows].reverse().findIndex(n => n >= rn), x0 = cols.findIndex(n => n >= cn), x1 = cols.length - 1 - [...cols].reverse().findIndex(n => n >= cn);
+  if (y0 < 0 || x0 < 0 || y1 <= y0 || x1 <= x0) return url;
+  const padX = Math.round((x1 - x0 + 1) * 0.07) + 1, padY = Math.round((y1 - y0 + 1) * 0.07) + 1;
+  x0 = Math.max(0, x0 - padX); x1 = Math.min(cw - 1, x1 + padX); y0 = Math.max(0, y0 - padY); y1 = Math.min(ch - 1, y1 + padY);
+  const fw = (x1 - x0 + 1) / cw, fh = (y1 - y0 + 1) / ch; if (fw * fh > 0.78 || fw * fh < 0.03) return url;   // faida nahi / shak
+  const sx = x0 / cw * W, sy = y0 / ch * H, sw = fw * W, sh = fh * H, k = Math.min(1, 520 / Math.max(sw, sh));
+  const out = document.createElement('canvas'); out.width = Math.max(1, Math.round(sw * k)); out.height = Math.max(1, Math.round(sh * k));
+  out.getContext('2d').drawImage(im, sx, sy, sw, sh, 0, 0, out.width, out.height);
+  const bl = await new Promise(ok => out.toBlob(ok, 'image/jpeg', 0.86)); return bl ? URL.createObjectURL(bl) : url;
+}

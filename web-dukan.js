@@ -14,8 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRowsOf, rackLayout } from './dukan/khula.js?v=2.270.1';
-import { smartFind } from './dukan/dhoond.js?v=2.270.1';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
+import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRowsOf, rackLayout, trimUrl } from './dukan/khula.js?v=2.270.2';
+import { smartFind } from './dukan/dhoond.js?v=2.270.2';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -193,7 +193,9 @@ function thumbs() {
   thIO = new IntersectionObserver(es => { for (const e of es) if (e.isIntersecting) { const id = e.target.dataset.th; if (W && W.ph[id] && !(TH.get(id)?.v === W.ph[id]) && !thQ.includes(id)) thQ.push(id); } thPump(); }, { root: $('wdBody'), rootMargin: '200px 0px' });
   els.forEach(el => { if (W.ph[el.dataset.th]) thIO.observe(el); });
 }
-function setTh(el, url) { el.style.backgroundImage = `url("${url}")`; el.classList.remove('none'); el.textContent = ''; }
+const TRIM = new Map();   // v2.270.2: rack ke preview mein tasveer ka khali peecha kata hua (website jaisa)
+function setTh(el, url) { el.style.backgroundImage = `url("${url}")`; el.classList.remove('none'); el.textContent = '';
+  if (el.classList.contains('wd-zp')) { const t = TRIM.get(url); if (t) { el.style.backgroundImage = `url("${t}")`; return; } if (t === undefined) { TRIM.set(url, ''); trimUrl(url).then(u => { TRIM.set(url, u || url); document.querySelectorAll('#wdDlg .wd-zp').forEach(x => { if (x.style.backgroundImage.includes(url)) x.style.backgroundImage = `url("${u || url}")`; }); }).catch(() => {}); } } }
 function thPump() {
   while (thRun < 4 && thQ.length) {
     const id = thQ.shift(); thRun++;
@@ -553,10 +555,10 @@ function paintRsz() {
   const k = W.rz.k, L = rzItems(k), c = rackCols(k, W.racks.sn), sz = W.racks.sz || {}, rows = rzRows(k);
   if (!(W.rz.s >= 0 && W.rz.s < rows)) W.rz.s = 0;
   const bw = Math.min($('wdBody').clientWidth || 360, 560), rh = Math.round(Math.min(innerHeight * .6, bw * 1.5));
-  const B = rackLayout(L, c, rows, sz, W.racks.sh), sh = B[0] || [];
+  const B = rackLayout(L, c, rows, sz, W.racks.sh), sh = B[0] || [], cell = (bw - 38) / c;
   $('wdStrip').innerHTML = `<span><b>Shelf:</b></span>${[3, 4, 5, 6, 7, 8, 9].map(n => `<button type="button" class="wd-chip wd-zn${n === rows ? ' is-in' : ''}" data-zrn="${n}">${n}</button>`).join('')}${W.rkSt ? `<span class="wd-k">${W.rkSt === '⏳' ? '⏳' : W.rkSt === '✅' ? '✅' : '✕'}</span>` : ''}`;
   let h = ''; for (let s = 0; s < rows; s++) { const R = sh[s] || [], mx = Math.max(1, ...R.map(it => szW(it.id, sz)));
-    h += `<div class="wd-zs${W.rz.s === s ? ' is-in' : ''}" data-zsf="${s}"><span class="wd-zno">${s + 1}</span>${R.map(it => { const w = Math.min(c, szW(it.id, sz)); return `<button type="button" class="wd-zi${W.rz.it === it.id ? ' is-in' : ''}" data-zi="${esc(it.id)}" data-zsh="${s}" style="--w:${(w / c).toFixed(4)};--hh:${(w / mx).toFixed(3)}"><span class="wd-zp none" data-th="${esc(it.id)}">${esc(it.n)}</span><span class="wd-zt">${num(it.r)}</span>${W.rz.it === it.id ? '<i class="wd-zh" data-zh="1"></i>' : ''}</button>`; }).join('')}</div>`; }
+    h += `<div class="wd-zs${W.rz.s === s ? ' is-in' : ''}" data-zsf="${s}"><span class="wd-zno">${s + 1}</span>${R.map(it => { const w = Math.min(c, szW(it.id, sz)); return `<button type="button" class="wd-zi${W.rz.it === it.id ? ' is-in' : ''}" data-zi="${esc(it.id)}" data-zsh="${s}" style="--w:${(w / c).toFixed(4)};--hp:${Math.round(w * cell * 1.5)}px"><span class="wd-zp none" data-th="${esc(it.id)}">${esc(it.n)}</span><span class="wd-zt">${num(it.r)}</span>${W.rz.it === it.id ? '<i class="wd-zh" data-zh="1"></i>' : ''}</button>`; }).join('')}</div>`; }
   const more = B.length > 1 ? `<p class="wd-note">Yeh pehla rack hai — baqi items agle ${B.length - 1} rack par khud lage hain.</p>` : '';
   $('wdBody').innerHTML = `<div class="wd-zq"><input id="wdZQ" type="search" placeholder="🔍 Shelf ${W.rz.s + 1} par item lagao — naam likhein" value="${esc(W.rz.q || '')}" autocomplete="off"></div><div class="wd-zl" id="wdZL">${rzFindHTML()}</div><div class="wd-zr" id="wdZr" style="height:${rh}px;--rows:${rows}">${h}</div><p class="wd-note">Shelf ka number dabayein = wo shelf chuni (peeli). Item dabayein = box; kone se kheench kar chhota / bara.</p>${more}`;
   const it = W.rz.it && L.find(x => x.id === W.rz.it);
@@ -568,7 +570,7 @@ function rzDrag() {
   const hd = document.querySelector('#wdZr [data-zh]'), el = hd && hd.closest('.wd-zi'), rk = $('wdZr'); if (!hd || !el || !rk) return;
   const id = el.dataset.zi, c = rackCols(W.rz.k, W.racks.sn); let st = null;
   hd.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); st = { x: e.clientX, y: e.clientY, w: Math.min(c, szW(id, W.racks.sz)), cw: (rk.getBoundingClientRect().width - 16) / c, v: 0 }; try { hd.setPointerCapture(e.pointerId); } catch {} });
-  hd.addEventListener('pointermove', e => { if (!st) return; const d = ((e.clientX - st.x) - (e.clientY - st.y)) / 2; st.v = Math.max(0.5, Math.min(c, st.w + d / st.cw)); el.style.setProperty('--w', (st.v / c).toFixed(4)); el.style.setProperty('--hh', Math.min(1, st.v).toFixed(3)); });
+  hd.addEventListener('pointermove', e => { if (!st) return; const d = ((e.clientX - st.x) - (e.clientY - st.y)) / 2; st.v = Math.max(0.5, Math.min(c, st.w + d / st.cw)); el.style.setProperty('--w', (st.v / c).toFixed(4)); el.style.setProperty('--hp', Math.round(st.v * st.cw * 1.5) + 'px'); });
   const end = () => { if (!st) return; const v = st.v; st = null; if (v) rzSize(id, v); };
   hd.addEventListener('pointerup', end); hd.addEventListener('pointercancel', end);
   hd.addEventListener('click', e => e.stopPropagation());

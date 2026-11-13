@@ -24,10 +24,10 @@
 //   v2.166.0 (malik: "site chhoti screen jaisi — dukan jaise racks door se nazar aayein · daalein ek deewar, baqi racks doosri · jis rack ke paas jaye wo dikhe"):
 //     🏬 KAMRA (kamra.js) — 3D gali, ungli upar = aage · rack par tap = mud kar paas → yahi purana rack view ('near' khirki, phone back / 🏬 = wapas kamra).
 //     Abhi sirf ?kamra=1 link par (malik dekhe) — OK ke baad sab ke liye (ROOM_DEFAULT).
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.270.1';
-import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank, szW, rackCols, rackRows, rackRowsOf, rackLayout } from './khula.js?v=2.270.1';
-import { smartFind } from './dhoond.js?v=2.270.1';
-import { makeKamra } from './kamra.js?v=2.270.1';
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.270.2';
+import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank, szW, rackCols, rackRows, rackRowsOf, rackLayout, trimUrl } from './khula.js?v=2.270.2';
+import { smartFind } from './dhoond.js?v=2.270.2';
+import { makeKamra } from './kamra.js?v=2.270.2';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -206,9 +206,9 @@ function itemHTML(it, st) {
 const NEAR = 2, FAR = 5;
 function shelvesHTML(b, D, fill) {
   // v2.267.0: har rack ka apna size (S.sn) + item ka qad (S.sz: s chhota / l bara) — bara zyada jagah + ooncha, sab shelf ke farsh par
-  const rows = b.rowsN, c = b.cols;
+  const rows = b.rowsN, c = b.cols, cell = (D.bw - 56) / c;   // v2.270.2: item ki oonchai = us ka apna size (doosre item se nahi) — shelf se zyada nahi
   let h = ''; for (let s = 0; s < rows; s++) { const L = b.shelves[s] || [], mx = Math.max(1, ...L.map(it => szW(it.id, S.sz)));
-    h += `<div class="shelf fx">${fill ? L.map(it => { const w = szW(it.id, S.sz); return itemHTML(it, `--w:${(w / c).toFixed(4)};--hh:${(w / mx).toFixed(3)}`); }).join('') : ''}</div>`; }
+    h += `<div class="shelf fx">${fill ? L.map(it => { const w = szW(it.id, S.sz); return itemHTML(it, `--w:${(w / c).toFixed(4)};--hp:${Math.round(w * cell * 1.5)}px`); }).join('') : ''}</div>`; }
   return { rows, h };
 }
 function fillNear(i) {
@@ -403,31 +403,6 @@ async function soften(url) {
   } catch { return url; }
 }
 async function loadShop() { try { const url = await bigPhoto('shop'); const el = $('shopPh'); if (url && el) { el.style.backgroundImage = `url('${url}')`; el.classList.add('has'); } } catch {} }
-// v2.266.1 (malik: "picture zoom mein ho"): tasveer ke gird ka khali peecha (ek rang ka) khud kaat do — cheez shelf par bari dikhe. Bina AI: kinare ka rang -> us se mukhtalif pixels ka dabba. Shak ho = asal tasveer.
-async function trimUrl(url) {
-  const im = new Image(); im.src = url; await im.decode();
-  const W = im.naturalWidth, H = im.naturalHeight; if (W < 80 || H < 80) return url;
-  const cw = 96, ch = Math.max(24, Math.round(96 * H / W)), cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
-  const cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(im, 0, 0, cw, ch);
-  const d = cx.getImageData(0, 0, cw, ch).data, px = (x, y) => { const i = (y * cw + x) * 4; return [d[i], d[i + 1], d[i + 2]]; };
-  const B = [[], [], []]; for (let x = 0; x < cw; x++) for (const y of [0, 1, ch - 2, ch - 1]) { const p = px(x, y); B[0].push(p[0]); B[1].push(p[1]); B[2].push(p[2]); }
-  for (let y = 0; y < ch; y++) for (const x of [0, 1, cw - 2, cw - 1]) { const p = px(x, y); B[0].push(p[0]); B[1].push(p[1]); B[2].push(p[2]); }
-  const med = a => { a.sort((m, n) => m - n); return a[a.length >> 1]; }, bg = B.map(med);
-  const far = B[0].length ? B[0].filter((v, i) => Math.max(Math.abs(B[0][i] - bg[0]), Math.abs(B[1][i] - bg[1]), Math.abs(B[2][i] - bg[2])) > 38).length / B[0].length : 1;
-  if (far > 0.3) return url;   // kinara ek rang ka nahi (mez + deewar / cheez kinare tak) = mat kaato
-  const on = (x, y) => { const p = px(x, y); return Math.max(Math.abs(p[0] - bg[0]), Math.abs(p[1] - bg[1]), Math.abs(p[2] - bg[2])) > 34; };
-  const rows = [], cols = new Array(cw).fill(0); for (let y = 0; y < ch; y++) { let n = 0; for (let x = 0; x < cw; x++) if (on(x, y)) { n++; cols[x]++; } rows.push(n); }
-  const rn = Math.max(2, cw * 0.04), cn = Math.max(2, ch * 0.04);
-  let y0 = rows.findIndex(n => n >= rn), y1 = rows.length - 1 - [...rows].reverse().findIndex(n => n >= rn), x0 = cols.findIndex(n => n >= cn), x1 = cols.length - 1 - [...cols].reverse().findIndex(n => n >= cn);
-  if (y0 < 0 || x0 < 0 || y1 <= y0 || x1 <= x0) return url;
-  const padX = Math.round((x1 - x0 + 1) * 0.07) + 1, padY = Math.round((y1 - y0 + 1) * 0.07) + 1;
-  x0 = Math.max(0, x0 - padX); x1 = Math.min(cw - 1, x1 + padX); y0 = Math.max(0, y0 - padY); y1 = Math.min(ch - 1, y1 + padY);
-  const fw = (x1 - x0 + 1) / cw, fh = (y1 - y0 + 1) / ch; if (fw * fh > 0.78 || fw * fh < 0.03) return url;   // faida nahi / shak
-  const sx = x0 / cw * W, sy = y0 / ch * H, sw = fw * W, sh = fh * H, k = Math.min(1, 520 / Math.max(sw, sh));
-  const out = document.createElement('canvas'); out.width = Math.max(1, Math.round(sw * k)); out.height = Math.max(1, Math.round(sh * k));
-  out.getContext('2d').drawImage(im, sx, sy, sw, sh, 0, 0, out.width, out.height);
-  const bl = await new Promise(ok => out.toBlob(ok, 'image/jpeg', 0.86)); return bl ? URL.createObjectURL(bl) : url;
-}
 function setPhoto(id, url, done) {
   if (!done) trimUrl(url).then(u => { if (u && u !== url && PHURL.get(id) === url) setPhoto(id, u, true); }).catch(() => {});
   PHURL.set(id, url);

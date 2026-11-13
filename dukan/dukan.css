@@ -576,6 +576,6 @@ html.lite .k-hint{animation:none}
 
 /* v2.267.0: 🔍 har rack ka apna size + item ka qad */
 .shelf.fx{display:flex;align-items:flex-end;gap:0}
-.shelf.fx .it{flex:0 0 calc(var(--w,.1428)*100%);height:calc(var(--hh,1)*100%);padding:0 2px}
+.shelf.fx .it{flex:0 0 calc(var(--w,.1428)*100%);height:min(100%,var(--hp,100%));padding:0 2px}
 .bay.bg .tag{font-size:15px;padding:1px 8px 0}
 .bay.bg .plus{width:28px;height:28px;font-size:18px}
