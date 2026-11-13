@@ -4615,3 +4615,5 @@ kh-wa: REM_RE / OFF_RE -> `remCmd` (sirf prFrom / prTo): lagana (kal se / aaj se
 
 === 13 Nov 2026 — v2.246.1 / PC kh-wa v1.6: 🔔 reminder 1, 3, 5 baje ===
 Malik: 'reminder din mein 1 baje, 3 baje, sham mein 5 baje aana chahiye'. REM_HOURS [13, 15, 17] — har waqt ka alag paigham waOut rm-<number>-<din>-<ghanta>; PC us waqt band ho to on hote hi sirf CHALU waqt wala (purane waqt dobara nahi). 11 baje wala hata. Asal WhatsApp par test nahi.
+
+13 Nov 2026 — wa-parchi v2.27 (manifest 2026-11-13.6): malik 'gahak ka number nahi mila ke reply mein number likhein to jo paigham reh gaya wo customer ko jaye'. trReply: number na ho to bill ki tasveer BILL_HOLD (yaad-dasht, 6 ghante) mein; '✕ number nahi mila' paigham par pp (parchi id). bizMsg: parchi / us paigham / bill photo par reply mein number (naam bhi) = gahakSet -> t.from, rakha bill billSend se gahak ko, jawab number dohra kar. Bill pehle ja chuka = number nahi badalta. PC dobara chala ho (tasveer nahi rahi) = 'bill ki photo dobara reply karein'. Purane parchi / start paigham nahi jate. AI naya nahi. Asal WhatsApp par test NAHI.

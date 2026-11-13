@@ -87,7 +87,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.26';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.27';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1757,6 +1757,28 @@ async function start(ZINDA) {
     } catch (e) { log('⚠️ nayi parchi paigham: ' + (e && e.message)); }
     trDbg(`✅ Printauto parchi (${t.k === 'txt' ? 'likhi' : 'tasveer'}) list mein · gahak ${t.from ? phPretty(t.from) : '? (caption mein number likhein)'}${o ? ' (' + (im ? 'tasveer' : 'likhai') + ' se)' : cap.ph ? ' (caption se)' : ''}${t.grp !== wid ? ' · group' : ''}`);
   }
+  // v2.27 (13 Nov, malik: "'gahak ka number nahi mila' ke reply mein number likhein to jo paigham reh gaya wo customer ko jaye"): bill bhejna alag function — number baad mein aaye to rakhi hui tasveer (BILL_HOLD, 6 ghante, sirf yaad-dasht) isi se jati hai
+  const BILL_HOLD = new Map();
+  async function billSend(t, qid, bk, buf) {
+    const nb = (t.bills || []).length;
+      let jpg = isJpeg(buf) && buf.length <= 850000 ? buf : null; const S2 = sharp();
+      if (!jpg && S2) for (const [w, q] of [[1600, 78], [1280, 72], [1000, 65]]) { try { const b = await S2(buf).rotate().resize({ width: w, height: w, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: q }).toBuffer(); if (b.length <= 850000) { jpg = b; break; } } catch {} }
+      if (!jpg) throw Error('tasveer bari / badal nahi saki');
+      let bl = null; try { bl = await billList(jpg); if (bl) t.bn = bl.no; } catch (e) { log('🧾 bill list: ' + (e.message || e)); }   // 🤖 AI sirf bill number — list + Kul POS se
+      const has = !!(bl && bl.L && bl.L.length);
+      const head = has ? ` (Bill #${t.bn})\n${bl.L.length} items · *Kul: Rs ${nf0(bl.tot)}*\n👇 Poori list neeche` : ' (parchi ' + tstr(t.fwdAt) + ')';
+      const dl = DLV_ON ? '\n🚚 Delivery chahiye? Apni current location bhej dein (📎 → Location) — hum ghar tak pohancha denge.' : '';
+      const ok = await waOutPut(bk, { to: t.from, nm: t.nm || '', kind: 'bill', eid: bk, bn: String(t.bn || ''), txt: `*NOOR TRADERS*\nAap ka bill tayyar hai 🧾${nb > 1 ? ' (' + nb + ')' : ''}${head}${dl}\nBohat shukria 🙏`, im: jpg });
+      if (ok) { t.sent = Date.now(); t.err = ''; log(`📤 parchi ${qid.slice(-6)} ka bill${nb > 1 ? ' #' + nb : ''} gahak ${phPretty(t.from)} ko queue (${Math.round(jpg.length / 1024)} KB)`); }
+      if (ok && has) {   // v2.15: poori list Mubeen ki photo ke REPLY mein (wa-out rq)
+        let imgs = []; try { imgs = await billImgs(bl); } catch (e) { log('🧾 bill tasveer: ' + (e.message || e)); }
+        const base = Date.now();
+        if (imgs.length) for (let k = 0; k < imgs.length; k++) await waOutPut(bk + '-l' + (k + 1), { to: t.from, nm: t.nm || '', kind: 'blist', eid: bk + '-l' + (k + 1), rq: bk, at: base + k + 1, txt: imgs.length > 1 ? `🧾 Bill #${t.bn} · ${k + 1}/${imgs.length}` : `🧾 Bill #${t.bn}`, im: imgs[k] });
+        else await waOutPut(bk + '-l1', { to: t.from, nm: t.nm || '', kind: 'blist', eid: bk + '-l1', rq: bk, at: base + 1, txt: billText(bl) });
+        log(`🧾 bill #${t.bn}: ${bl.L.length} items · Kul ${nf0(bl.tot)} · list ${imgs.length ? imgs.length + ' tasveer' : 'text'} reply mein`);
+      }
+    return !!t.sent && !t.err;
+  }
   async function trReply(m, c, s, who) {   // ③ Mubeen ka reply usi parchi par — start ya bill ki tasveer
     const ctx = (c.extendedTextMessage && c.extendedTextMessage.contextInfo) || (c.imageMessage && c.imageMessage.contextInfo) || (c.documentMessage && c.documentMessage.contextInfo) || null;
     const im = imgOf(c), wid = m.key.id || '', now = tsOf(m) || Date.now();
@@ -1782,26 +1804,9 @@ async function start(ZINDA) {
     if (trBusy.has(bk) || (t.bills || []).includes(wid)) return true;   // dohra nahi (dono links)
     trBusy.add(bk); TR.lastBill = { qid, at: now, wid };
     t.st = 'done'; t.doneAt = now; t.bills = (t.bills || []).concat([wid]).slice(-5); trSave(); trPush();
-    if (!t.from) { t.err = 'gahak ka number nahi mila (caption mein number likhein)'; trSave(); trPush(); log(`✅ parchi ${qid.slice(-6)} bill tayyar — magar gahak ka number nahi`); return true; }
-    try {
-      const buf = await dlBuf(m, s, 'bill tasveer download');
-      let jpg = isJpeg(buf) && buf.length <= 850000 ? buf : null; const S2 = sharp();
-      if (!jpg && S2) for (const [w, q] of [[1600, 78], [1280, 72], [1000, 65]]) { try { const b = await S2(buf).rotate().resize({ width: w, height: w, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: q }).toBuffer(); if (b.length <= 850000) { jpg = b; break; } } catch {} }
-      if (!jpg) throw Error('tasveer bari / badal nahi saki');
-      let bl = null; try { bl = await billList(jpg); if (bl) t.bn = bl.no; } catch (e) { log('🧾 bill list: ' + (e.message || e)); }   // 🤖 AI sirf bill number — list + Kul POS se
-      const has = !!(bl && bl.L && bl.L.length), nb = t.bills.length;
-      const head = has ? ` (Bill #${t.bn})\n${bl.L.length} items · *Kul: Rs ${nf0(bl.tot)}*\n👇 Poori list neeche` : ' (parchi ' + tstr(t.fwdAt) + ')';
-      const dl = DLV_ON ? '\n🚚 Delivery chahiye? Apni current location bhej dein (📎 → Location) — hum ghar tak pohancha denge.' : '';
-      const ok = await waOutPut(bk, { to: t.from, nm: t.nm || '', kind: 'bill', eid: bk, bn: String(t.bn || ''), txt: `*NOOR TRADERS*\nAap ka bill tayyar hai 🧾${nb > 1 ? ' (' + nb + ')' : ''}${head}${dl}\nBohat shukria 🙏`, im: jpg });
-      if (ok) { t.sent = Date.now(); t.err = ''; log(`📤 parchi ${qid.slice(-6)} ka bill${nb > 1 ? ' #' + nb : ''} gahak ${phPretty(t.from)} ko queue (${Math.round(jpg.length / 1024)} KB)`); }
-      if (ok && has) {   // v2.15: poori list Mubeen ki photo ke REPLY mein (wa-out rq)
-        let imgs = []; try { imgs = await billImgs(bl); } catch (e) { log('🧾 bill tasveer: ' + (e.message || e)); }
-        const base = Date.now();
-        if (imgs.length) for (let k = 0; k < imgs.length; k++) await waOutPut(bk + '-l' + (k + 1), { to: t.from, nm: t.nm || '', kind: 'blist', eid: bk + '-l' + (k + 1), rq: bk, at: base + k + 1, txt: imgs.length > 1 ? `🧾 Bill #${t.bn} · ${k + 1}/${imgs.length}` : `🧾 Bill #${t.bn}`, im: imgs[k] });
-        else await waOutPut(bk + '-l1', { to: t.from, nm: t.nm || '', kind: 'blist', eid: bk + '-l1', rq: bk, at: base + 1, txt: billText(bl) });
-        log(`🧾 bill #${t.bn}: ${bl.L.length} items · Kul ${nf0(bl.tot)} · list ${imgs.length ? imgs.length + ' tasveer' : 'text'} reply mein`);
-      }
-    } catch (e) { t.err = 'gahak ko nahi gaya: ' + String(e.message || e).slice(0, 80); log('✕ bill gahak ko: ' + e.message); }
+    if (!t.from) { t.err = 'gahak ka number nahi mila (is paigham par reply mein number likhein)'; try { const hb = await dlBuf(m, s, 'bill tasveer download'), H = (BILL_HOLD.get(qid) || []).filter(x => Date.now() - x.at < 6 * 3600000); H.push({ bk, buf: hb, at: Date.now() }); BILL_HOLD.set(qid, H.slice(-3)); } catch (e) { log('⚠️ bill rakhna: ' + (e.message || e)); } trBusy.delete(bk); trSave(); trPush(); log(`✅ parchi ${qid.slice(-6)} bill tayyar — magar gahak ka number nahi`); return true; }
+    try { const buf = await dlBuf(m, s, 'bill tasveer download'); await billSend(t, qid, bk, buf); }
+    catch (e) { t.err = 'gahak ko nahi gaya: ' + String(e.message || e).slice(0, 80); log('✕ bill gahak ko: ' + e.message); }
     finally { trBusy.delete(bk); }
     trSave(); trPush(); return true;
   }
@@ -2101,7 +2106,7 @@ async function start(ZINDA) {
     return null; }
   const IN = biz.collection('waIn'), inBusy = new Set(), bzPend = new Map(); let bzQ = Promise.resolve(), bzHot = { at: 0, from: '', auto: false };
   const bzWho = ph => (KHW && KHW.who && KHW.who(ph)) || phPretty(ph);
-  const bizSay = (to, id, txt) => waOutPut(id, { to, nm: bzWho(to), kind: 'rem', eid: id, txt }).catch(() => false);
+  const bizSay = (to, id, txt, pp) => waOutPut(id, { to, nm: bzWho(to), kind: 'rem', eid: id, txt, ...(pp ? { pp } : {}) }).catch(() => false);
   async function bizDo(m, c, im, from, auto, capX) {
     const wid = m.key.id, who = bzWho(from); let k = 0;
     if (capX && stripPrint(capX).trim()) im.caption = (String(im.caption || '') + ' ' + capX).trim();   // v2.23: 'Print Ahmed 0300…' alag paigham mein likha ho to bhi naam / number
@@ -2112,15 +2117,31 @@ async function start(ZINDA) {
     await printOne(m, im, 0, pc.ph || '', m.key.remoteJid, cap, 'biz', null, note);
     if (auto) { const t = TR.par[wid]; if (t) await bizSay(from, 'bz-' + wid + '-a', t.from ? `✅ Print auto chalu — gahak ${phPretty(t.from)} ko "parchi mil gayi" · Mubeen ko parchi bhej di.` : '⚠️ Print auto: gahak ka number nahi mila (Mubeen ko parchi chali gayi). Gahak ko paigham / bill ke liye caption mein likhein: Print auto Ahmed 0300-1234567'); }
   }
+  async function gahakSet(t, pc0, from, wid) {
+    const say = x => bizSay(from, 'bz-' + wid + '-g', x, t.id);
+    if (t.from && t.sent) { await say(`✕ Is parchi ka bill pehle hi ${phPretty(t.from)} ko ja chuka hai — number nahi badla.`); return; }
+    for (const o of Object.values(TR.par)) if (o.id === t.id || (t.grp && o.grp === t.grp && !o.from)) { o.from = pc0.ph; if (pc0.nm && !o.nm) o.nm = pc0.nm; }
+    t.err = ''; trSave(); trPush(); log(`👤 parchi ${String(t.id).slice(-6)} ka gahak: ${phPretty(pc0.ph)} (${bzWho(from)})`);
+    try { ringAdd('👤 Gahak ka number laga: ' + phPretty(pc0.ph) + ' — ' + bzWho(from)); } catch {}
+    const H = (BILL_HOLD.get(t.id) || []).filter(x => Date.now() - x.at < 6 * 3600000); BILL_HOLD.delete(t.id);
+    if (!H.length) { await say(t.st === 'done' ? `✅ Number lag gaya: ${phPretty(pc0.ph)}\n⚠️ Bill ki photo PC ke paas nahi rahi — parchi par bill ki photo dobara reply kar dein, gahak ko chali jayegi.` : `✅ Number lag gaya: ${phPretty(pc0.ph)} — bill ki photo aate hi gahak ko jayegi.`); if (t.st === 'done') { t.st = 'start'; t.bills = []; trSave(); trPush(); } return; }
+    let ok = 0; for (const h of H) { try { if (await billSend(t, t.id, h.bk, h.buf)) ok++; } catch (e) { t.err = 'gahak ko nahi gaya: ' + String(e.message || e).slice(0, 80); log('✕ bill gahak ko: ' + e.message); } }
+    trSave(); trPush();
+    await say(ok ? `✅ Bill gahak ${t.nm ? t.nm + ' ' : ''}${phPretty(pc0.ph)} ko ja raha hai${H.length > 1 ? ' (' + ok + ' bill)' : ''}.\nNumber ghalat ho to foran bata dein.` : '✕ Bill nahi gaya: ' + (t.err || 'masla'));
+  }
   async function bizMsg(m, c, from) {
     const im = imgOf(c), tx = im ? '' : txtOf(c), cap = im ? String(im.caption || '') : '', wid = m.key.id, now = tsOf(m) || Date.now(), who = bzWho(from);
     const ctx = (c.extendedTextMessage && c.extendedTextMessage.contextInfo) || (im && im.contextInfo) || null;
     if (ctx && ctx.stanzaId && !TR.par[ctx.stanzaId] && !bzPend.has(ctx.stanzaId)) {   // hamare bheje paigham (Mubeen wali parchi) par reply → asal parchi
       try { const o = await biz.collection('waOut').where('wid', '==', String(ctx.stanzaId)).limit(1).get(), pp = o.empty ? '' : String((o.docs[0].data() || {}).pp || ''); if (pp) ctx.stanzaId = pp; } catch (e) { log('⚠️ reply ka asal: ' + e.message); }
     }
+    if (!im && ctx && ctx.stanzaId && tx.length <= 60 && !printReq(tx)) {   // v2.27: parchi / 'number nahi mila' / bill ki photo par reply mein gahak ka number
+      const pc0 = parseCaption(tx), t0 = TR.par[ctx.stanzaId] || Object.values(TR.par).find(o => (o.bills || []).includes(String(ctx.stanzaId)));
+      if (pc0.ph && okPh(pc0.ph) && t0) return gahakSet(t0, pc0, from, wid);
+    }
     const isPr = im ? printReq(cap) : (tx.length <= 70 && printReq(tx)), tq = ctx && ctx.stanzaId ? TR.par[ctx.stanzaId] : null;
     if (!isPr && (S.prTo.includes(from) || tq)) {   // start / bill — Mubeen (ya jis ne parchi par reply kiya)
-      if (await trReply(m, c, null, who)) { const t2 = tq || null; await bizSay(from, 'bz-' + wid + '-r', im ? (t2 && t2.err ? '✕ ' + t2.err : '🧾 Bill darj — gahak ko ja raha hai.') : '▶️ Start darj ho gaya.'); return; }
+      if (await trReply(m, c, null, who)) { const t2 = tq || (im && TR.lastBill && TR.par[TR.lastBill.qid]) || null; await bizSay(from, 'bz-' + wid + '-r', im ? (t2 && t2.err ? '✕ ' + t2.err : '🧾 Bill darj — gahak ko ja raha hai.') : '▶️ Start darj ho gaya.', t2 ? t2.id : ''); return; }
     }
     if (im) {
       if (isPr) return bizDo(m, c, im, from, autoReq(cap));
