@@ -7789,3 +7789,5 @@ Malik: 'reminder din mein 1 baje, 3 baje, sham mein 5 baje aana chahiye'. REM_HO
 13 Nov 2026 — v2.250.0: malik 'Bill ki jaanch mein items ke naam upar chahiye, upar wale chips neeche, small, ek line mein — scroll kam se kam'. aiRender: list (jListRows) sab se pehle; tabs + ginti + Pakka se dobara + Bill/farq + ginti ka total + naqsha + supplier + Jaanch shuru + filter = .jz-low (neeche chipki ek line, side scroll). Sirf 'ginti kya hoti hai?' sawal (.pp-ask) upar rehta hai (jawab zaroori). Phone + PC dono. AI wahi purana.
 
 13 Nov 2026 — v2.250.1: Jaanch card (jCard): .jc-f khanon ke naam 14px mote (har device); PC (html.pcm) par bill ki patti 120px, inputs 36px, retail ka note chhupa, .rate-chips Wholesale + Parchoon EK line — maqsad: scroll ke baghair poora card. Sirf CSS. Asal PC par dekha nahi.
+
+13 Nov 2026 — v2.250.2: Jaanch card PC aur tang (patti 92px, inputs 30px, chips 26px, faasle 1-3px, retail 1/6) — malik: scroll na karna pare. Sirf CSS, dekha nahi.
