@@ -14,8 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf, KHK, KH_NAME, netQuery } from './dukan/khula.js?v=2.265.2';
-import { smartFind } from './dukan/dhoond.js?v=2.265.2';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
+import { kindOf, KHK, KH_NAME, netQuery } from './dukan/khula.js?v=2.266.0';
+import { smartFind } from './dukan/dhoond.js?v=2.266.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -79,13 +79,14 @@ export function webOpen(ctx) {
   let d = $('wdDlg');
   if (!d) {
     d = document.createElement('dialog'); d.id = 'wdDlg'; d.className = 'wd';
-    d.innerHTML = `<div class="wd-in"><header class="wd-h"><button type="button" class="wd-x" data-wd="back" aria-label="Wapas">‹</button><b id="wdT">🏪 Online Dukan</b><button type="button" class="wd-x wd-site" data-wd="site" aria-label="Website kholo" title="Website kholo">🌐</button><button type="button" class="wd-x" data-wd="menu" aria-label="Aur">⋮</button></header><div class="wd-strip" id="wdStrip"></div><div class="wd-body" id="wdBody"></div><footer class="wd-f" id="wdFoot"></footer><div class="wd-sheet" id="wdSheet" hidden><div class="wd-sbg" data-wd="sclose"></div><div class="wd-scard" id="wdSCard"></div></div><input type="file" accept="image/*" capture="environment" hidden id="wdCam"><input type="file" accept="image/*" hidden id="wdGal"></div>`;
+    d.innerHTML = `<div class="wd-in"><header class="wd-h"><button type="button" class="wd-x" data-wd="back" aria-label="Wapas">‹</button><b id="wdT">🏪 Online Dukan</b><button type="button" class="wd-x wd-site" data-wd="site" aria-label="Website kholo" title="Website kholo">🌐</button><button type="button" class="wd-x" data-wd="menu" aria-label="Aur">⋮</button></header><div class="wd-strip" id="wdStrip"></div><div class="wd-body" id="wdBody"></div><footer class="wd-f" id="wdFoot"></footer><div class="wd-sheet" id="wdSheet" hidden><div class="wd-sbg" data-wd="sclose"></div><div class="wd-scard" id="wdSCard"></div></div><input type="file" accept="image/*" capture="environment" hidden id="wdCam"><input type="file" accept="image/*" hidden id="wdGal"><input type="file" accept="image/*" multiple hidden id="wdMulti"></div>`;
     document.body.appendChild(d);
     d.addEventListener('click', onClick);
     d.addEventListener('input', onInput);
     d.addEventListener('change', onChange);
     d.addEventListener('cancel', e => { e.preventDefault(); webClose(); });
     d.addEventListener('submit', onSubmit);
+    $('wdMulti').addEventListener('change', e => { const fs = [...(e.target.files || [])]; e.target.value = ''; if (fs.length) gotMulti(fs); });
     ['wdCam', 'wdGal'].forEach(k => $(k).addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) gotFile(f); }));
   }
   try { d.showModal(); } catch { d.setAttribute('open', ''); }
@@ -111,6 +112,7 @@ export function webClose() {
   if (!$('wdSheet').hidden) { sheetClose(); return true; }
   if (W.sel && W.view === 'list') { W.sel = null; paint(); return true; }   // v2.156.0: back = chunne ka mode band
   if (W.view === 'rpe') { if (W.rpe?.draw || W.rpe?.sel?.size) { W.rpe.draw = false; W.rpe.sel = new Set(); } else { W.rpe = null; W.view = 'rps'; } paint(); return true; }   // v2.158.0
+  if (W.view === 'multi') { if (W.multi?.rows?.length && !W.multi.saving && !confirm('Yeh tasveerein chhor dein? (save nahi hui)')) return true; W.multi = null; W.view = 'list'; paint(); return true; }
   if (W.view === 'pick') { W.view = 'crop'; paint(); return true; }
   if (W.view !== 'list') { if (W.ai) W.ai.run = false; W.ai = null; W.view = 'list'; W.crop = null; paint(); return true; }
   try { d.close(); } catch { d.removeAttribute('open'); }
@@ -131,6 +133,7 @@ function paint() {
   if (v === 'ai') return paintAi();
   if (v === 'net') { $('wdT').textContent = '🌐 Khula maal ki tasveerein'; return paintNet(); }
   if (v === 'rps' || v === 'rpe') { $('wdT').textContent = v === 'rps' ? '📸 Rack ki asal photos' : '📸 ' + rackName(W.racks.rp?.[W.rpe?.pid]?.k || ''); return v === 'rps' ? paintRps() : paintRpe(); }
+  if (v === 'multi') { $('wdT').textContent = '🗄 Tasveerein → shelf'; return paintMulti(); }
   if (v === 'crop') return paintCrop();
   if (v === 'pick') return paintPick();
   if (v === 'racks') return paintRacks();
@@ -163,7 +166,7 @@ function paintList() {
   body.scrollTop = keepY;
   if (W.sel) { const n = W.sel.size, all = F.length && F.every(x => W.sel.has(x.id));
     $('wdFoot').innerHTML = `<button type="button" class="wd-chip" data-wd="selall">${all ? '☐ Koi nahi' : `☑ Sab ${num(F.length)}`}</button><button type="button" class="wd-chip" data-wd="selx">✕ Band</button><button type="button" class="wd-main" data-wd="selmv"${n ? '' : ' disabled'}>🗂 ${num(n)} → Rack</button>`; }
-  else $('wdFoot').innerHTML = `<button type="button" class="wd-main" data-wd="rackpic">📷 Rack ki photo se items lagao</button>`;
+  else $('wdFoot').innerHTML = `<button type="button" class="wd-chip" data-wd="multi">🗄 Kai tasveerein</button><button type="button" class="wd-main" data-wd="rackpic">📷 Rack ki photo se items lagao</button>`;
   thumbs();
   const qi = $('wdQ'); if (W.qFocus && qi) { qi.focus(); const n = qi.value.length; try { qi.setSelectionRange(n, n); } catch {} }
 }
@@ -200,7 +203,7 @@ function menuHTML() {
   const ch = (on, attr, t) => `<button type="button" class="wd-chip${on ? ' is-in' : ''}" ${attr}>${t}</button>`;
   return `<h3>🌐 Website</h3><div class="wd-chips">${ch(0, 'data-wd="site"', '🌐 Website kholo')}${ch(0, 'data-wd="share"', '🔗 Link bhejo')}${ch(0, 'data-wd="copy"', '📋 Link copy')}</div>
 <h3>📸 Asal rack ki photo (customer photo par cheez dabaye)</h3><div class="wd-chips">${ch(0, 'data-wd="rps"', `📸 Rack ki photos <small>${Object.keys(W.racks.rp || {}).length}</small>`)}${ch(!!W.racks.draw, 'data-wd="draw"', W.racks.draw ? '▦ Bane hue racks: ON' : '▦ Bane hue racks: Band')}</div>
-<p class="wd-note">▦ Band = website par sirf asal rack ki photos + 🌾 dabbe / tore. Jo item kisi photo par nahi, wo sirf customer ke 🔍 dhoondo mein (tokri mein daal sakta hai). Koi rack photo na ho to bane hue racks khud dikhte hain (dukan khali na lage).</p>
+<p class="wd-note">▦ Band = shelf par SIRF tasveer wale items (🗄 Kai tasveerein se lagayein — 7 fi shelf phone, 10 PC) + asal rack photos + 🌾 dabbe / tore. Bina tasveer wala item sirf customer ke 🔍 dhoondo mein. ▦ ON = bina tasveer wale bhi (bane hue dabbe ke saath).</p>
 <h3>🌾 Khula maal (dabbe / tore — alag section)</h3><div class="wd-chips">${ch(0, 'data-wd="net"', `🌐 Internet se tasveerein <small>${num(L.filter(it => it.k !== 'n' && !it.hide && !it.pic).length)} bina</small>`)}</div>
 <h3>☑ Kai items ek saath</h3><div class="wd-chips">${ch(!!W.sel, 'data-wd="sel"', W.sel ? '☑ Chunne ka mode ON — band karo' : '☑ Items chuno → ek saath rack mein')}</div>
 <h3>🗂 Rack</h3><div class="wd-chips">${ch(!W.ck, 'data-ck=""', 'Sab racks')}${rk.map((r, i) => ch(W.ck === r.k, `data-ck="${esc(r.k)}"`, `${r.off ? '🙈 ' : (i + 1) + '. '}${esc(r.name)} <small>${r.n}</small>`)).join('')}</div>
@@ -555,6 +558,62 @@ async function decode(file) {
   try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch {}
   const url = URL.createObjectURL(file); const img = new Image(); img.decoding = 'async'; img.src = url; await img.decode(); return img;
 }
+// ---------- 🗄 v2.266.0: KAI TASVEEREIN EK SAATH → shelf par khud (malik 13 Nov: "4 ya 10 pictures list mein lagayein, phir shelf par khud lagti jayein · bina tasveer wale bilkul na dikhein") ----------
+async function gotMulti(files) {
+  if (!W) return;
+  if (!W.multi) W.multi = { k: W.multiK || '', rows: [], n: 0 };
+  const M = W.multi; W.view = 'multi'; M.load = (M.load || 0) + files.length; paint();
+  for (const f of files.slice(0, 30)) {
+    try { const bm = await decode(f), bytes = await bigBytes(bm, 720); if (W && W.multi === M) M.rows.push({ i: ++M.n, bytes, url: URL.createObjectURL(new Blob([bytes], { type: 'image/jpeg' })), id: '' }); }
+    catch { A.notice('❌ Ek tasveer khul nahi saki'); }
+    M.load--; if (W && W.multi === M) paint();
+  }
+  M.load = 0; if (W && W.multi === M) paint();
+}
+function paintMulti() {
+  const M = W.multi; if (!M) { W.view = 'list'; return paint(); }
+  const L = items() || [], by = new Map(L.map(i => [i.id, i])), ok = M.rows.filter(r => r.id).length;
+  $('wdStrip').innerHTML = `<span>🗄 Har tasveer ka <b>naam</b> chunein → shelf par khud lag jayegi</span><span class="wd-k">✓ ${ok} / ${M.rows.length}</span>${M.load ? `<span class="wd-k">⏳ ${M.load} tasveer aa rahi…</span>` : ''}`;
+  $('wdBody').innerHTML = `<div class="wd-chips wd-mrk"><button type="button" class="wd-chip${M.k ? ' is-in' : ''}" data-wd="murack">🗂 Rack: ${M.k ? esc(rackName(M.k)) : 'chunein ▾'}</button></div>`
+    + (M.rows.length ? `<div class="wd-ml">${M.rows.map(r => { const it = r.id ? by.get(r.id) : null; return `<div class="wd-mr${r.id ? ' ok' : ''}"><img src="${r.url}" alt=""><button type="button" class="wd-mn" data-mpick="${r.i}">${it ? `<b>${esc(it.n)}</b><small>Rs ${num(it.r)}${W.ph?.[it.id] ? ' · 📷 purani tasveer badal jayegi' : ''}</small>` : '<b>🔍 Naam chunein</b>'}</button>${r.st ? `<i class="wd-ms">${r.st}</i>` : `<button type="button" class="wd-mx" data-mdel="${r.i}" aria-label="Hatao">✕</button>`}</div>`; }).join('')}</div>` : '<p class="wd-empty">Neeche "＋ Tasveerein" dabayein — gallery se 4, 10 ya zyada ek saath chunein.<br>Saaf roshni, ek tasveer mein ek cheez.</p>');
+  $('wdFoot').innerHTML = `<button type="button" class="wd-chip" data-wd="multiadd"${M.saving ? ' disabled' : ''}>＋ Tasveerein</button><button type="button" class="wd-main" data-wd="musave"${ok && M.k && !M.saving && !M.load ? '' : ' disabled'}>${M.saving ? '⏳ Lag rahi hain…' : `✓ ${ok} shelf par lagao`}</button>`;
+}
+function muListHTML() {
+  const M = W.multi, L = items() || [], q = (W.muq || '').trim(), used = new Set(M.rows.filter(r => r.id && r.i !== M.act).map(r => r.id));
+  const F = (q ? (r => [...r.hits, ...r.near])(smartFind(L, q, it => it.n, it => it.id)) : L).filter(it => !used.has(it.id)).slice(0, 60);   // dohra roko
+  return F.map(it => `<button type="button" class="wd-r wd-pr" data-mit="${esc(it.id)}"><span class="wd-n"><b>${esc(it.n)}</b><small>Rs ${num(it.r)} · ${esc(rackName(it.c))}${W.ph?.[it.id] ? ' · 📷' : ''}</small></span></button>`).join('') || '<p class="wd-empty">Is naam ka item nahi mila.</p>';
+}
+function muPick(i) {
+  const M = W.multi, r = M && M.rows.find(x => x.i === i); if (!r || M.saving) return; M.act = i; W.muq = '';
+  sheet(`<h3 class="wd-st">🏷 Ye kaunsi cheez hai?</h3><p class="wd-note"><img src="${r.url}" alt="" style="height:64px;border-radius:8px;vertical-align:middle"> POS ka naam chunein</p><label class="wd-q wd-q2"><span>🔍</span><input id="wdMQ" type="search" placeholder="Naam likhein…" autocomplete="off"></label><div class="wd-list wd-mxl">${muListHTML()}</div>`);
+  setTimeout(() => { try { $('wdMQ')?.focus(); } catch {} }, 60);
+}
+function muRackSheet() {
+  const rk = racksOf(items() || []).filter(r => r.k !== KHK);
+  sheet(`<h3 class="wd-st">🗂 Kis rack ki shelf par?</h3><div class="wd-chips">${rk.map((r, i) => `<button type="button" class="wd-chip${W.multi?.k === r.k ? ' is-in' : ''}" data-mrk="${esc(r.k)}">${r.off ? '🙈 ' : (i + 1) + '. '}${esc(r.name)}</button>`).join('')}</div>
+<form class="wd-newrk" data-form="munewrk"><input name="k" placeholder="Naya rack ka naam" maxlength="40"><button type="submit" class="wd-chip">＋ Naya rack</button></form>`);
+}
+function muSetRack(k) { if (!W.multi || !k) return; W.multi.k = k; W.multiK = k; sheetClose(); paint(); }
+async function muSave() {
+  const w = W, M = w.multi; if (!M || M.saving || !M.k) return;
+  const R = M.rows.filter(r => r.id && r.st !== '✅'); if (!R.length) return;
+  const by = new Map((items() || []).map(i => [i.id, i]));
+  M.saving = true;
+  for (const r of R) { const it = by.get(r.id); if (!it) continue; if (M.k === it.pc) delete w.racks.ic[r.id]; else w.racks.ic[r.id] = M.k; w.rkIds.add(r.id); r.st = '⏳'; }
+  if (!w.racks.order.includes(M.k)) w.racks.order = [...racksOf(items() || []).map(x => x.k).filter(x => x !== M.k), M.k];
+  saveRacks();
+  let n = 0;
+  for (const r of R) {   // ek ek kar ke — tarteeb wahi rahe (website par tasveer ke waqt se shelf ki tarteeb)
+    await putPhoto(r.id, r.bytes, '', '', true); r.st = w.err.has(r.id) ? '✕' : '✅'; if (r.st === '✅') n++;
+    if (W === w && w.view === 'multi') paintMulti();
+  }
+  M.saving = false;
+  if (W !== w) return;
+  const bad = M.rows.filter(r => r.st === '✕').length, left = M.rows.filter(r => !r.id).length;
+  A.notice(`🗄 ${n} items "${rackName(M.k)}" ki shelf par lag gaye${bad ? ` · ✕ ${bad} nahi hue` : ''}`);
+  if (!bad && !left) { w.multi = null; w.view = 'list'; } else M.rows = M.rows.filter(r => r.st !== '✅');
+  paint();
+}
 async function gotFile(f) {
   if (!W) return;
   let bm; try { bm = await decode(f); } catch { A.notice('❌ Tasveer khul nahi saki'); return; }
@@ -623,7 +682,7 @@ async function cropBytes() {
   let b = await blob(0.86); if (b.size > 170000) b = await blob(0.72);
   return new Uint8Array(await b.arrayBuffer());
 }
-async function putPhoto(id, bytes, label, credit) {   // credit = 🌐 internet tasveer ka haq (website khirki mein) · apni tasveer = credit hata
+async function putPhoto(id, bytes, label, credit, quiet) {   // credit = 🌐 internet tasveer ka haq (website khirki mein) · apni tasveer = credit hata
   const it = (items() || []).find(x => x.id === id), nm = label || (it ? it.n : id);
   W.busy.add(id); W.err.delete(id); W.ok.delete(id);
   const url = URL.createObjectURL(new Blob([bytes], { type: 'image/jpeg' }));
@@ -633,7 +692,7 @@ async function putPhoto(id, bytes, label, credit) {   // credit = 🌐 internet 
     const v = await A.cloud.putWebPhoto(id, bytes);
     TH.set(id, { v, url }); w.ok.add(id);
     const cr = w.racks.cr || (w.racks.cr = {}); if (credit) { cr[id] = String(credit).slice(0, 160); saveRacks(); } else if (cr[id]) { delete cr[id]; saveRacks(); }
-    A.notice('✅ Website par tasveer lag gayi — ' + nm); if (W === w) w.ph = { ...w.ph, [id]: v };   // v2.160.0: foran (phIdx ka jawab der se aaye tab bhi dohra nahi)
+    if (!quiet) A.notice('✅ Website par tasveer lag gayi — ' + nm); if (W === w) w.ph = { ...w.ph, [id]: v };   // v2.160.0: foran (phIdx ka jawab der se aaye tab bhi dohra nahi)
   } catch (e) { w.err.set(id, e.message || String(e)); A.notice('❌ Tasveer save nahi hui: ' + (e.message || e)); }
   finally { w.busy.delete(id); if (W === w) paintSoon(); }
 }
@@ -668,6 +727,7 @@ async function previewCrop() { try { const b = await cropBytes(), el = $('wdPv')
 function onInput(e) {
   if (!W) return;
   if (e.target.id === 'wdQ') { W.q = e.target.value; W.lim = 120; W.qFocus = 1; clearTimeout(onInput.t); onInput.t = setTimeout(() => { paint(); W && (W.qFocus = 0); }, 140); }
+  else if (e.target.id === 'wdMQ') { W.muq = e.target.value; clearTimeout(onInput.m); onInput.m = setTimeout(() => { const l = document.querySelector('#wdDlg .wd-mxl'); if (l && W && W.multi) l.innerHTML = muListHTML(); }, 120); }
   else if (e.target.id === 'wdRQ') { W.rpq = e.target.value; clearTimeout(onInput.r); onInput.r = setTimeout(() => { const l = document.querySelector('#wdDlg .wd-bxl'); if (l && W) l.innerHTML = pickListHTML(); }, 120); }
   else if (e.target.id === 'wdPQ') { W.pq = e.target.value; W.arm = ''; W.qFocus = 1; clearTimeout(onInput.t); onInput.t = setTimeout(() => { paint(); W && (W.qFocus = 0); }, 140); }
 }
@@ -683,6 +743,8 @@ async function onSubmit(e) {
     const o = { name: g('name') || 'Noor Traders', line: g('line'), wa: g('wa'), addr: g('addr'), time: g('time'), open: g('open'), close: g('close'), on: !!f.elements.on.checked };
     W.infoSt = '⏳ save…'; W.info = { ...W.info, ...o }; paint();
     try { await A.cloud.saveWebInfo(o); if (W) { W.infoSt = '✅ save ho gaya'; paint(); } A.notice('✅ Dukan ki maloomat website par'); } catch (er) { if (W) { W.infoSt = '✕ nahi hua'; paint(); } A.notice('❌ ' + (er.message || er)); }
+  } else if (f.dataset.form === 'munewrk') {
+    e.preventDefault(); const k = String(f.elements.k.value || '').trim().slice(0, 40); if (k) muSetRack(k);
   } else if (f.dataset.form === 'rpnewrk') {   // v2.158.0
     e.preventDefault(); const k = String(f.elements.k.value || '').trim().slice(0, 40); if (!k) return;
     if (f.dataset.rpfor) { rpMoveRack(f.dataset.rpfor, k); return; } rpCreate(k);
@@ -732,6 +794,14 @@ function onClick(e) {
   if (k === 'netall') { netAll(); return; }
   if (k === 'draw') { W.racks.draw = !W.racks.draw; saveRacks(); sheetClose(); paint(); A.notice(W.racks.draw ? '▦ Website par bane hue racks ON' : '▦ Bane hue racks band — sirf asal photos + 🌾 dabbe / tore ⏳'); return; }
   if (k === 'nmon') { W.racks.nmOn = !W.racks.nmOn; saveRacks(); paint(); A.notice(W.racks.nmOn ? '🏷 Customer ko photo par naam bhi dikhega' : '🏷 Photo par sirf rate (naam nahi)'); return; }
+  if (k === 'multi') { sheetClose(); if (!W.multi) W.multi = { k: W.multiK || '', rows: [], n: 0 }; W.view = 'multi'; paint(); if (!W.multi.rows.length) $('wdMulti').click(); return; }
+  if (k === 'multiadd') { $('wdMulti').click(); return; }
+  if (k === 'murack') { muRackSheet(); return; }
+  if (k === 'musave') { muSave(); return; }
+  { const mp = t.closest('[data-mpick]'); if (mp && W.multi) { muPick(Number(mp.dataset.mpick)); return; }
+    const md = t.closest('[data-mdel]'); if (md && W.multi && !W.multi.saving) { W.multi.rows = W.multi.rows.filter(r => r.i !== Number(md.dataset.mdel)); paint(); return; }
+    const mi = t.closest('[data-mit]'); if (mi && W.multi) { const r = W.multi.rows.find(x => x.i === W.multi.act); if (r) r.id = mi.dataset.mit; sheetClose(); paint(); if (!W.multi.k) muRackSheet(); return; }
+    const mr = t.closest('[data-mrk]'); if (mr && W.multi) { muSetRack(mr.dataset.mrk); return; } }
   if (k === 'rpdraw' && W.rpe) { W.rpe.draw = !W.rpe.draw; W.rpe.sel = new Set(); paint(); return; }
   if (k === 'rpai') { rpDetect(); return; }
   if (k === 'rpdone') { W.rpe = null; W.view = 'rps'; paint(); return; }

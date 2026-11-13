@@ -559,3 +559,15 @@ html.lite .k-lt{box-shadow:none}
 @keyframes kHint{from{transform:translate(-50%,-50%)}to{transform:translate(-50%,calc(-50% - 10px))}}
 html.lite .k-hint{animation:none}
 .top .ic.room{background:var(--gold);color:#1b2f5c}
+
+/* v2.266.0: 🗄 auto rack — peeche surmai jaali wali deewar (apni CSS, koi tasveer nahi) + patli shelf · phone par 7 items */
+.bay.peg .rack{background:radial-gradient(circle,rgba(0,0,0,.42) 1.3px,transparent 1.8px) 0 0/12px 12px,linear-gradient(180deg,#8a93a3,#6b7485 60%,#5f6878)}
+.bay.peg .shelf::before{background:linear-gradient(180deg,#5fa0ff 0,#2f7be8 35%,#1f5fc4 100%)}
+.bay.peg .it-box img{background:#fff;border-radius:5px;padding:1px;max-height:96%}
+.bay.d7{padding-left:max(8px,var(--sal));padding-right:max(8px,var(--sar))}
+.bay.d7 .rack{padding:0 10px}
+.bay.d7 .shelf{gap:0 3px;padding:3px 1px 0}
+.bay.d7 .tag{font-size:10.5px;padding:0 3px}
+.bay.d7 .tag small{display:none}
+.bay.d7 .plus{display:none}
+.bay.d7 .it.in-crate .plus{display:grid;width:17px;height:17px;font-size:11px;bottom:17px}

@@ -24,10 +24,10 @@
 //   v2.166.0 (malik: "site chhoti screen jaisi — dukan jaise racks door se nazar aayein · daalein ek deewar, baqi racks doosri · jis rack ke paas jaye wo dikhe"):
 //     🏬 KAMRA (kamra.js) — 3D gali, ungli upar = aage · rack par tap = mud kar paas → yahi purana rack view ('near' khirki, phone back / 🏬 = wapas kamra).
 //     Abhi sirf ?kamra=1 link par (malik dekhe) — OK ke baad sab ke liye (ROOM_DEFAULT).
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.265.2';
-import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank } from './khula.js?v=2.265.2';
-import { smartFind } from './dhoond.js?v=2.265.2';
-import { makeKamra } from './kamra.js?v=2.265.2';
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.266.0';
+import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank } from './khula.js?v=2.266.0';
+import { smartFind } from './dhoond.js?v=2.266.0';
+import { makeKamra } from './kamra.js?v=2.266.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -162,7 +162,10 @@ function build(d) {
   const pos = k => { const i = order.indexOf(k); return i < 0 ? (k === KHK ? -1 : 1e9) : i; };   // 🌾 section tarteeb mein na ho to shuru mein
   const keys = [...groups.keys()].sort((a, b) => (pos(a) - pos(b)) || a.localeCompare(b));
   S.racks = keys.map((k, i) => ({ key: k, no: i + 1, name: String(cn[k] || '').trim() || (k === KHK ? KH_NAME : title(k)), items: groups.get(k).sort(k === KHK ? (a, b) => (grainRank(a.n) - grainRank(b.n)) || a.n.localeCompare(b.n) : (a, b) => a.n.localeCompare(b.n)) }));
-  S.racks.forEach(rk => { rk.items.forEach(it => { it.rk = rk; }); rk.photos = S.rps.filter(p => p.k === rk.key); rk.rest = rk.items.filter(it => !onPh.has(it.id) && it.k === 'n'); rk.loose = rk.items.filter(it => it.k !== 'n'); });
+  S.racks.forEach(rk => { rk.items.forEach(it => { it.rk = rk; }); rk.photos = S.rps.filter(p => p.k === rk.key); rk.restAll = rk.items.filter(it => !onPh.has(it.id) && it.k === 'n'); rk.loose = rk.items.filter(it => it.k !== 'n');
+    // v2.266.0 (malik: "jin ki tasveer nahi wo bilkul na dikhein"): bane hue rack par SIRF tasveer wale items, jis tarteeb se tasveer lagi (▦ ON = sab items, purana)
+    rk.rest = S.draw ? rk.restAll : rk.restAll.filter(it => S.ph[it.id]).sort((x, y) => (Number(S.ph[x.id]) || 0) - (Number(S.ph[y.id]) || 0)); });
+  if (!S.draw && !S.racks.some(rk => rk.photos.length || rk.loose.length || rk.rest.length)) S.racks.forEach(rk => { rk.rest = rk.restAll; });   // kuch bhi na ho = sab (dukan khali na lage)
   S.info = d.info || {}; S.at = Number(cat.at) || 0;
   for (const k of Object.keys(S.crate)) if (!lineOf(k, 1) || !(Number(S.crate[k]) > 0)) delete S.crate[k];
   saveCrate();
@@ -174,7 +177,9 @@ function dims() {
   const bw = W >= 1100 ? Math.floor(W / 2) : W;
   const cols = Math.max(4, Math.min(7, Math.floor((bw - 76) / 104)));   // v2.156.0: malik — har shelf par kam az kam 4
   const rows = Math.min(8, Math.max(2, Math.min(6, Math.floor((H - 96) / 118))) + 2);   // v2.156.0: 2 shelf zyada (racks kam)
-  return { bw, cols, rows, per: cols * rows };
+  // v2.266.0 (malik 13 Nov: "ek shelf par mobile 7 items, PC par 10 · ek rack 5-6 shelf"): bane hue (auto) rack ka apna naap — khula / photo bays ka naap wahi
+  const sc = W >= 1100 ? 10 : 7, sr = Math.max(5, Math.min(6, Math.floor((H - 96) / 92)));
+  return { bw, cols, rows, per: cols * rows, sc, sr, sper: sc * sr };
 }
 
 // ---------- 🧴 bina tasveer: dabba / botal / pouch ----------
@@ -199,8 +204,8 @@ function itemHTML(it) {
 // v2.156.1: ⚡ malik — "aage peeche karte hain to lag aata hai": sirf qareeb ke racks mein maal (DOM chhota) — door ke rack khali dhancha (sign + shelf), paas aate hi bhar jate
 const NEAR = 2, FAR = 5;
 function shelvesHTML(b, D, fill) {
-  const rows = Math.min(D.rows, Math.max(D.rows - 2, 3, Math.ceil(b.items.length / D.cols)));   // v2.156.0: chhota rack = pehle jitni shelf (maal bara na lage)
-  let h = ''; for (let s = 0; s < rows; s++) h += `<div class="shelf">${fill ? b.items.slice(s * D.cols, (s + 1) * D.cols).map(itemHTML).join('') : ''}</div>`;
+  const rows = Math.min(D.sr, Math.max(5, Math.ceil(b.items.length / D.sc)));   // v2.266.0: 5-6 shelf
+  let h = ''; for (let s = 0; s < rows; s++) h += `<div class="shelf">${fill ? b.items.slice(s * D.sc, (s + 1) * D.sc).map(itemHTML).join('') : ''}</div>`;
   return { rows, h };
 }
 function fillNear(i) {
@@ -216,7 +221,7 @@ function fillNear(i) {
 function bayHTML(b, i, D) {
   const { rows, h } = shelvesHTML(b, D, false), sh = [h];
   const bg = RBG.get(b.rk.key);
-  return `<section class="bay${D.rows >= 6 ? ' cmp' : ''}" data-bay="${i}" style="--rows:${rows};--cols:${D.cols};--bayW:${D.bw}px" aria-label="Rack ${b.rk.no}: ${esc(b.rk.name)}"><header class="sign"><span class="sk">Rack ${b.rk.no}</span><b>${esc(b.rk.name)}</b>${b.parts > 1 ? `<span class="sp">${b.p + 1}/${b.parts}</span>` : ''}</header><div class="rack"><div class="rk-bg${bg ? ' on' : ''}" data-rbg="${esc(b.rk.key)}"${bg ? ` style="background-image:url('${bg}')"` : ''}></div>${sh.join('')}</div></section>`;
+  return `<section class="bay cmp peg${D.bw < 700 ? ' d7' : ''}" data-bay="${i}" style="--rows:${rows};--cols:${D.sc};--bayW:${D.bw}px" aria-label="Rack ${b.rk.no}: ${esc(b.rk.name)}"><header class="sign"><span class="sk">Rack ${b.rk.no}</span><b>${esc(b.rk.name)}</b>${b.parts > 1 ? `<span class="sp">${b.p + 1}/${b.parts}</span>` : ''}</header><div class="rack"><div class="rk-bg${bg ? ' on' : ''}" data-rbg="${esc(b.rk.key)}"${bg ? ` style="background-image:url('${bg}')"` : ''}></div>${sh.join('')}</div></section>`;
 }
 // ---------- 📸 v2.158.0: asal rack ki photo (bay) ----------
 const RPU = new Map();   // pid -> photo (blob url)
@@ -310,11 +315,11 @@ function gyroStart() {
 }
 function renderAisle(keepId) {
   const D = dims(); S.dims = D;
-  const bays = [], noDraw = !S.draw && S.rps.length > 0;   // v2.160.0: koi asal photo na ho to bane racks hi (dukan khali na lage)
+  const bays = [];
   S.racks.forEach(rk => { rk.bay0 = bays.length;
     rk.photos.forEach((ph, j) => bays.push({ rk, photo: ph, p: j, parts: rk.photos.length, items: [...new Set(ph.spots.map(x => x.id))].map(id => S.items.get(id)).filter(Boolean) }));   // 📸 pehle asal photo
     const K = khPack(rk.loose, D); K.forEach((kh, j) => bays.push({ rk, kh, p: j, parts: K.length, items: [...kh.g, ...kh.s] }));   // 🌾 phir khula maal (dabbe + tore)
-    if (!noDraw) { const parts = Math.ceil(rk.rest.length / D.per); for (let p = 0; p < parts; p++) bays.push({ rk, p, parts, items: rk.rest.slice(p * D.per, (p + 1) * D.per) }); }   // ▦ bane hue (malik ne band kiye to nahi)
+    { const parts = Math.ceil(rk.rest.length / D.sper); for (let p = 0; p < parts; p++) bays.push({ rk, p, parts, items: rk.rest.slice(p * D.sper, (p + 1) * D.sper) }); }   // ▦ bane hue (malik ne band kiye to nahi)
     if (bays.length === rk.bay0) rk.bay0 = null; });
   let no = 0; S.racks.forEach(rk => { rk.no = rk.bay0 == null ? 0 : ++no; }); S.vis = S.racks.filter(rk => rk.bay0 != null);   // sirf nazar aane wale racks ginti mein
   S.bays = bays; S.bayOf = new Map();
@@ -812,7 +817,7 @@ addEventListener('keydown', e => {
   if (e.key === 'ArrowRight') go(S.cur + 1); else if (e.key === 'ArrowLeft') go(S.cur - 1);
 });
 let rzT = 0;
-addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { const D = dims(), o = S.dims; if (!o || D.bw !== o.bw || D.cols !== o.cols || D.rows !== o.rows) renderAisle(S.bays[S.cur]?.items?.[0]?.id); else if (K) K.relayout(); }, 180); });
+addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { const D = dims(), o = S.dims; if (!o || D.bw !== o.bw || D.cols !== o.cols || D.rows !== o.rows || D.sc !== o.sc || D.sr !== o.sr) renderAisle(S.bays[S.cur]?.items?.[0]?.id); else if (K) K.relayout(); }, 180); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.loadedAt && Date.now() - S.loadedAt > 15 * 60e3) load(true); });
 
 document.querySelectorAll('#helpBtn,.hp-ava').forEach(el => { el.innerHTML = AVA; });   // v2.156.0

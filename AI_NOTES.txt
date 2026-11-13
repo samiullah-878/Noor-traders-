@@ -7909,3 +7909,11 @@ Malik: 'Online dukan ka chip three dots ke andar hai — website open honi chahi
 
 === v2.265.2 (13 Nov 2026) — 🤖 Agent ka gola HATA ===
 Malik: 'is agent ko khatam kar do, is ki zaroorat nahi'. app.js AGENT_FAB_ON=false -> paintAgentFab hamesha band (har screen ka 🤖 gola nahi). agent.js / purane actions / reminder ka code waisa hi (kuch delete nahi) — wapas chahiye to AGENT_FAB_ON=true. Upar wala agent card pehle se band tha. AI: agent AI use karta tha — ab saamne se hata.
+
+
+=== v2.266.0 (13 Nov 2026) — 🗄 KAI TASVEEREIN -> SHELF PAR KHUD ===
+Malik: 'AI wali baat chhor do · 4 ya 10 pictures list mein lagayein, phir 10 items ek shelf par lag jayein · ek rack 5-6 shelf (surmai jaali + neeli patti wale rack jaisa) · auto lagti jayein · bina tasveer wale BILKUL na dikhein · mobile par 7 fi shelf, PC par 10'.
+App web-dukan.js: list ke neeche '🗄 Kai tasveerein' -> view 'multi' (W.multi {k rack, rows:[{i, bytes 720px, url, id, st}]}): #wdMulti (multiple) -> gotMulti -> paintMulti (rack chip + har tasveer ke saamne naam; muPick = smartFind sheet, dohra item nahi; muRackSheet / naya rack) -> muSave: racks.ic[id] = rack (ek saveRacks) + putPhoto ek ek kar ke (quiet — 10 paigham nahi; r.st ⏳/✅/✕). Back = confirm.
+Website dukan.js: dims() mein sc (7 phone / 10 PC) · sr (5-6) · sper — sirf bane hue (auto) bays ke liye (khula / photo bays ka naap wahi). build(): rk.restAll; rk.rest = draw ? sab : SIRF tasveer wale (S.ph[id]) tasveer ke waqt ki tarteeb se; kuch bhi na ho = sab (dukan khali na lage). renderAisle: noDraw hata — auto bays hamesha (rest khali = bay nahi). bayHTML class 'cmp peg' (+ 'd7' phone). CSS .bay.peg (surmai jaali radial-gradient + neeli patti — apni CSS, kisi site ki tasveer nahi) · .bay.d7 (tag 10.5px, Rs chhupa, + sirf tokri wale par).
+'▦ Bane hue racks' ka matlab ab: Band = sirf tasveer wale shelf par · ON = bina tasveer wale bhi.
+Nahi bana (malik ne chhor diya / jawab nahi): 🤖 AI dabbe on-off, ✂️ rack photo crop, item ki tasveer se AI dhoondna. Tasveer ka background saaf nahi hota (bina AI mumkin nahi — malik ko bataya). Asal phone / website par test nahi (sirf node --check). AI nahi.
