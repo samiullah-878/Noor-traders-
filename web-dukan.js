@@ -14,8 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRowsOf, trimUrl, dherN, dherHTML, RK_RA, RK_ROWS, rkImgU, sizeOf, itemU, rackLayoutU, imgAr } from './dukan/khula.js?v=2.272.0';
-import { smartFind } from './dukan/dhoond.js?v=2.272.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
+import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRowsOf, trimUrl, dherN, dherHTML, RK_RA, RK_ROWS, RK_K, rkImgU, sizeOf, itemU, rackLayoutU, imgAr } from './dukan/khula.js?v=2.273.0';
+import { smartFind } from './dukan/dhoond.js?v=2.273.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -562,9 +562,9 @@ function rzFindHTML() {
     ? `<button type="button" class="wd-zf" data-zadd="${esc(it.id)}"><span class="wd-zft none" data-th="${esc(it.id)}"></span><span class="wd-zfn">${esc(it.n)}<small>${it.c === W.rz.k ? 'isi rack par hai — shelf badlegi' : esc(rackName(it.c))}</small></span></button>`
     : `<div class="wd-zf nop"><span class="wd-zft">${W.busy.has(it.id) ? '⏳' : '📷'}</span><span class="wd-zfn">${esc(it.n)}<small>${W.busy.has(it.id) ? 'tasveer ja rahi hai…' : 'tasveer nahi — abhi lein, shelf ' + (W.rz.s + 1) + ' par lag jayega:'}</small>${W.busy.has(it.id) ? '' : `<span class="wd-zfc"><button type="button" class="wd-chip" data-zshot="cam" data-zid="${esc(it.id)}">📸 Camera</button><button type="button" class="wd-chip" data-zshot="gal" data-zid="${esc(it.id)}">🖼 Gallery</button></span>`}</span></div>`).join('');
 }
-function rzGeo() { const Wp = Math.max(240, Math.min(($('wdBody').clientWidth || 360) - 24, 520)); return { Wp, Hp: Math.round(Wp / RK_RA), u: (Wp - 16) / 100 }; }
+function rzGeo(rows) { const Wp = Math.max(240, Math.min(($('wdBody').clientWidth || 360) - 24, 520)), u = (Wp - 16) / 100; return { Wp, Hp: Math.round((rows || RK_ROWS) * (RK_K + rkImgU(rows || RK_ROWS)) * u), u }; }   // v2.273.0: shelf = parchi + item (website par is ke upar peeche ki qatar jhaankti hai — item ki chaurai / ginti wahi)
 function paintRsz() {
-  const k = W.rz.k, L = rzItems(k), sz = W.racks.sz || {}, dh = W.racks.dh || {}, rows = rzRows(k), G = rzGeo();
+  const k = W.rz.k, L = rzItems(k), sz = W.racks.sz || {}, dh = W.racks.dh || {}, rows = rzRows(k), G = rzGeo(rows);
   if (!(W.rz.s >= 0 && W.rz.s < rows)) W.rz.s = 0;
   const foc = document.activeElement && document.activeElement.id === 'wdZQ', keepY = $('wdBody').scrollTop;
   const B = rackLayoutU(L, rows, sz, dh, W.racks.ar, W.racks.sh), sh = B[0] || [];
@@ -572,7 +572,7 @@ function paintRsz() {
   let h = ''; for (let s = 0; s < rows; s++) { const R = sh[s] || [];
     h += `<div class="wd-zs${W.rz.s === s ? ' is-in' : ''}" data-zsf="${s}"><span class="wd-zno">${s + 1}</span>${R.map(x => { const it = x.it, on = W.rz.it === it.id, one = `<span class="wd-zp none" data-th="${esc(it.id)}"></span>`; return `<button type="button" class="wd-zi${on ? ' is-in' : ''}" data-zi="${esc(it.id)}" data-zsh="${s}" style="--wu:${x.wu.toFixed(2)};--hu:${x.hu.toFixed(2)}">${x.n > 1 ? `<span class="wd-zd">${dherHTML(one, x.n)}</span>` : one}<span class="wd-zt">${num(it.r)}</span>${on ? '<i class="wd-zh" data-zh="1"></i>' : ''}</button>`; }).join('')}</div>`; }
   const more = B.length > 1 ? `<p class="wd-note">Yeh pehla rack hai — baqi items agle ${B.length - 1} rack par khud lage hain.</p>` : '';
-  $('wdBody').innerHTML = `<div class="wd-zq"><input id="wdZQ" type="search" placeholder="🔍 Shelf ${W.rz.s + 1} par item lagao — naam likhein" value="${esc(W.rz.q || '')}" autocomplete="off"></div><div class="wd-zl" id="wdZL">${rzFindHTML()}</div><div class="wd-zr" id="wdZr" style="width:${G.Wp}px;height:${G.Hp}px;--rows:${rows};--u:${G.u.toFixed(3)}px">${h}</div><p class="wd-note">Shelf ka number dabayein = wo shelf chuni (peeli). Item dabayein = neeche us ke chips (－ ＋ · ✂️ Crop · 📸 · 🧱 Dher). Items ek doosre se jure rehte hain — jitni shelf kam, utne bare.</p>${more}`;
+  $('wdBody').innerHTML = `<div class="wd-zq"><input id="wdZQ" type="search" placeholder="🔍 Shelf ${W.rz.s + 1} par item lagao — naam likhein" value="${esc(W.rz.q || '')}" autocomplete="off"></div><div class="wd-zl" id="wdZL">${rzFindHTML()}</div><div class="wd-zr" id="wdZr" style="width:${G.Wp}px;height:${G.Hp}px;--rows:${rows};--u:${G.u.toFixed(3)}px">${h}</div><p class="wd-note">Shelf ka number dabayein = wo shelf chuni (peeli). Item dabayein = neeche us ke chips (－ ＋ · ✂️ Crop · 📸 · 🧱 Dher). Items ek doosre se jure rehte hain — jitni shelf kam, utne bare. Website par har item ke peeche usi ki 2 qatarein bhi dikhti hain.</p>${more}`;
   const it = W.rz.it && L.find(x => x.id === W.rz.it), dn = it ? dherN(it.id, dh) : 1;
   $('wdFoot').innerHTML = it ? `<div class="wd-zb"><b>${esc(it.n)}</b><span><button type="button" class="wd-chip" data-zsz="-1">－</button><button type="button" class="wd-chip" data-zsz="1">＋</button><button type="button" class="wd-chip" data-zcrop="1">✂️ Crop</button><button type="button" class="wd-chip" data-cam="${esc(it.id)}">📸 Tasveer</button><button type="button" class="wd-chip${dn > 1 ? ' is-in' : ''}" data-zdh="1">🧱 Dher${dn > 1 ? ': ' + dn : ''}</button><button type="button" class="wd-chip" data-zmv="-1">⬆ shelf</button><button type="button" class="wd-chip" data-zmv="1">⬇ shelf</button><button type="button" class="wd-chip" data-zsz="0">↩ Poora</button><button type="button" class="wd-chip is-in" data-zok="1">✓</button></span></div>` : `<button type="button" class="wd-main" data-wd="back">✓ Ho gaya</button>`;
   $('wdBody').scrollTop = keepY;

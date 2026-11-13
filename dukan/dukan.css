@@ -596,3 +596,56 @@ html.lite .k-hint{animation:none}
 .bay.tt .it-box img{border-radius:0}
 .bay.tt .tag{font-size:var(--tf);line-height:1.3;padding:0 4px;margin:0 0 1px;max-width:none;overflow:visible;flex:none}
 .bay.tt .tag small{display:none}
+
+
+/* v2.273.0 (malik 13 Nov: "Noor Traders wali patti aur rack ke naam ki patti ikathi, chhoti · rack deewar jaisa nahi — dabbe jaisa, item ke peeche usi ki mazeed items · item shelf ke upar tak") */
+/* 1) 🏷 EK patli patti (jab ek rack saamne ho — phone): upar chhota "Noor Traders", neeche bara rack ka naam; latakta board nahi */
+.bt small .wk{font-style:normal}.bt small .wk em{font-style:normal}.bt small .wk::after{content:" · "}
+.bt small .wp{font-style:normal}.bt small .wp::before{content:" ("}.bt small .wp::after{content:")"}
+html.one{--topH:50px}
+html.one .top{gap:8px;padding-left:max(10px,var(--sal));padding-right:max(10px,var(--sar))}
+html.one .brand{gap:8px}
+html.one .logo{width:30px;height:30px;border-radius:10px;font-size:12.5px}
+html.one .bt b{font:700 11px/1.1 Manrope,sans-serif;letter-spacing:.4px;opacity:.78}
+html.one .bt small{display:flex;align-items:center;gap:6px;min-width:0;margin-top:2px;opacity:1;font:800 18px/1.1 "Baloo 2",Manrope,sans-serif;overflow:hidden}
+html.one .bt small .wk{flex:none;font:800 11.5px/1 Manrope,sans-serif;padding:4px 7px;border-radius:999px;background:var(--gold);color:var(--navy)}
+html.one .bt small .wk::after,html.one .bt small .wp::before,html.one .bt small .wp::after{content:none}
+html.one .bt small .wk em{opacity:.6}
+html.one .bt small .wn{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html.one .bt small .wp{flex:none;font:700 11.5px/1 Manrope,sans-serif;opacity:.8}
+html.one .top-acts{gap:6px}
+html.one .ic{width:34px;height:34px;font-size:16px}
+html.one .bay .sign{display:none}
+html.one .bay.cmp,html.one .bay{padding-top:8px}
+/* ‹ › = rack ke dono kinaron par patle (item ke upar nahi aate) */
+html.one .walk b{top:-4px;font-size:9px;opacity:.75}
+html.one .step{top:46%;width:22px;height:50px;border-radius:0 14px 14px 0;font-size:22px;padding:0 2px 3px 0;opacity:.92}
+html.one .step.prev{left:0}
+html.one .step.next{right:0;border-radius:14px 0 0 14px;padding:0 0 3px 2px}
+html.one .step:disabled{opacity:0}
+html:not(.one) .bay.cmp .sign{margin:0 0 6px;padding:3px 12px 4px}
+html:not(.one) .bay.cmp .sign b{font-size:16px}
+
+/* 2) 📐 rack ki shakal pakki (--rh) — farsh par khara; size 1 wala item shelf ke upar tak */
+.bay.tt .rack{flex:none;height:var(--rh,100%);max-height:100%;margin-top:auto;border-top:5px solid #cfd5dd;border-radius:3px 3px 0 0;background:linear-gradient(180deg,#59616f,#4a5260);box-shadow:none}
+.bay.tt .shelf::after{display:none}
+.bay.tt .shelf::before{left:0;right:0;border-radius:0}
+
+/* 3) 📦 har shelf = dabba: farsh (takhta) aage se peeche, dono taraf ki deewar andar ko, peeche jaali wali deewar — nazar thori upar se */
+.sbx{position:absolute;left:0;right:0;top:0;bottom:calc(var(--tg) - 2px);z-index:-3;pointer-events:none;overflow:hidden;
+  background:conic-gradient(from 180deg at 50% calc(100% - var(--rz,160px)),#d3d9e2 0 var(--ab,47deg),#8691a3 var(--ab,47deg) 90deg,transparent 90deg 270deg,#7a8597 270deg calc(360deg - var(--ab,47deg)),#d3d9e2 calc(360deg - var(--ab,47deg)))}
+.sbx::before{content:"";position:absolute;left:calc(var(--u,3.4px)*7);right:calc(var(--u,3.4px)*7);top:0;bottom:calc(var(--rz,160px)*.14);
+  background:radial-gradient(circle,rgba(0,0,0,.4) .9px,transparent 1.3px) 0 0/7px 7px,linear-gradient(180deg,#5a6373,#717b8d 70%,#7e8899);box-shadow:0 2px 0 rgba(0,0,0,.28)}
+.sbx::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(8,14,28,.5),rgba(8,14,28,.12) 30%,rgba(8,14,28,0) 55%),linear-gradient(0deg,rgba(255,255,255,.22),rgba(255,255,255,0) 14%)}
+.rk-bg.on~.shelf .sbx{display:none}
+
+/* 4) 🧴 item ke peeche usi ki 2 qatarein — chhoti, upar, beech ki taraf (--dx), thori andheri */
+.bay.tt .it-box{position:relative}
+.bay.tt .it{z-index:auto}
+.bay.tt .rk-bg{z-index:-4}
+.bh{position:absolute;inset:0;z-index:-1;display:flex;align-items:flex-end;justify-content:center;pointer-events:none;transform-origin:50% 100%}
+.bh.b1{transform:translate(calc(var(--dx,0)*var(--u,3.4px)*.05),calc(var(--rz,160px)*-.05)) scale(.95);filter:brightness(.8)}
+.bh.b2{z-index:-2;transform:translate(calc(var(--dx,0)*var(--u,3.4px)*.1),calc(var(--rz,160px)*-.1)) scale(.9);filter:brightness(.62)}
+.bay.peg .it-box .bh img,.bh img{filter:none;animation:none}
+.bh .dhr img.bk{filter:none}
+html.lite .bh{display:none}

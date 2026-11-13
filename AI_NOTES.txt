@@ -7976,3 +7976,24 @@ Malik (website ki photo): "item ke darmiyan faasla nahi · background mein shelf
    Search list: bina tasveer wale item ke saath 📸 Camera / 🖼 Gallery (data-zshot) -> crop -> Save -> rzPlace (chuni shelf). webClose: crop (back rsz) -> wapas rsz.
 Test: Chromium (playwright) mein nakli tasveeron se website bay (phone 390 + PC 683) aur app preview ki CSS dekhi — items jure, dher, parchi theek. Asal phone / asal data par test NAHI.
 AI nahi.
+
+=== v2.273.0 (13 Nov 2026) — 🏷 Website: ek patli patti + 📦 rack dabbe jaisa (gehrai) + item shelf ke upar tak ===
+Malik (13 Nov, website ki screenshot): "Noor Traders wali patti aur Mutafarriq ki patti upar ikathi kar dein, size small" (plan par "Ha theek hai") +
+  "rack ki sides ko shelf jaise 4 kone — jaise rack hota hai, yeh seedhi deewar jaisa dikh raha hai · feel ho ke ek item ke peeche usi item ki mazeed items bhi hain" +
+  "item rack ke upar tak aaye, upar item ki picture mein faasla kaafi zyada hai" + sawal "kya AI auto crop kar sakta hai" (sirf jawab diya — bana nahi, malik ke OK par).
+KYA BANA (sirf website dukan/ + app preview ka naap; data / rules / PC kuch nahi badla; AI nahi):
+1. dukan/khula.js: RK_RA 0.9 -> 0.66 (rack ki shakal lambi), RK_PK 0.1 (peeche ki qatar ki jagah), RK_D [0.95, 0.9], RK_DB 0.86,
+   rkImgU = (100/RK_RA/rows - RK_K)/(1+RK_PK), rkDeep(rows, availU) {iu, pk 0.1-0.26, shU, rz, ab}, depthHTML(one) = front + 2 .bh copies.
+2. dukan/dukan.js: dims() html.one class (W < 1100 = ek rack saamne) + rk = H - 42 (one) / H - 84; ttGeo {rw, u, rk}; ttStyle(G, rows) = --rw --rh --u --rz --ab
+   (rack ki oonchai = rows x shU x u — pakki shakal; lambi screen par bachi jagah SIRF pk ko, item ki chaurai / ginti wahi);
+   shelvesHTML har shelf mein <i class="sbx"> + item par --dx (shelf ke beech se faasla); itemHTML / setPhoto DEEP() (LITE par nahi, data: link par nahi — asBlob se blob link ban kar);
+   #where ab HTML (.wk Rack n/N pill · .wn naam · .wp hissa); resize par bay ka poora style dobara (data-rows).
+3. dukan/dukan.css (aakhir ka v2.273.0 block): html.one = --topH 50px, chhota logo / buttons, .bt b chhota "Noor Traders" + .bt small bara rack naam, .bay .sign chhupa,
+   ‹ › = rack ke dono kinaron par patle (.step top 46%); PC par sign chhota. .bay.tt .rack height var(--rh), margin-top auto.
+   .sbx = conic-gradient (farsh + dono deewar, nazar ka nuqta shelf ke upar --rz) + ::before peeche jaali wali deewar + ::after saya. z-index: rk-bg -4, sbx -3, .bh.b2 -2, .bh.b1 -1, .it auto
+   (sab items ki peeche wali qatarein sab front tasveeron ke PEECHE — .it ka apna stacking context hota to pichhli qatar parosi ke upar aa jati).
+4. web-dukan.js rzGeo(rows): preview ki oonchai = rows x (RK_K + rkImgU) x u (app preview mein peeche ki qatar nahi — item upar tak; ginti website jaisi).
+TEST: /tmp harness (playwright + naqli Firestore batchGet + naqli tasveerein): phone 390x767 / 390x790 / 360x640, PC 1366x768, 5 aur 7 shelf, 3 racks (khula + 2), item tap = khirki khuli.
+  Har screen par har shelf par WAHI items (4/3/2/1/2). ASAL phone par test NAHI hua — malik se photo maangi.
+YAAD: app (📐 Rack ka size) preview ASAL phone par test nahi. Item pehle se ~30% bare (shelf par ek-aadh kam) — zyada chahiye to Shelf 6 / 7.
+BAQI (malik ke OK par): 🤖 AI auto crop (Gemini box -> ✂️ Crop screen mein pehle se dabba), 2 rack photos hatana, baqi purane sawal.

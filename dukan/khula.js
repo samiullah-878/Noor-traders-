@@ -258,8 +258,16 @@ export const dherHTML = (one, n) => { if (n <= 1) return one; const [c, r] = dGr
 
 // v2.272.0: 🧲 JURE HUE ITEMS (malik 13 Nov: "item ke darmiyan faasla nahi · shelf kam nazar aaye, item zyada") — naap UNIT mein: shelf ki chaurai = 100 unit.
 //   Item ki oonchai = shelf jitni x malik ka size (0.4 - 1) · chaurai = oonchai x tasveer ki apni shakal (racks.ar) — phone / PC / app preview par har shelf par WAHI items.
-export const RK_RA = 0.9, RK_ROWS = 5, RK_K = 5;   // rack ki shakal (chaurai / oonchai) · shelf ki aam ginti · parchi + patti ki jagah (unit)
-export const rkImgU = rows => Math.max(4, 100 / RK_RA / rows - RK_K);
+// v2.273.0 (malik 13 Nov: "item rack ke upar tak aaye, upar faasla zyada hai · rack deewar jaisa nahi, dabbe jaisa — item ke peeche usi ki mazeed items"):
+//   rack ki shakal PAKKI (RK_RA — website par rack isi shakal ka banta hai, lamba nahi khinchta) -> size 1 wala item shelf ke upar tak;
+//   RK_PK = peeche wali qataron ke jhaankne ki jagah · RK_D = peeche ki 2 qataron ka chhota hona · RK_DB = peeche ki deewar (gehrai).
+export const RK_RA = 0.66, RK_ROWS = 5, RK_K = 5, RK_PK = 0.1;   // rack ki shakal (chaurai / oonchai) · shelf ki aam ginti · parchi + patti ki jagah (unit) · peeche ki qatar
+export const RK_D = [0.95, 0.9], RK_DB = 0.86;
+export const rkImgU = rows => Math.max(4, (100 / RK_RA / rows - RK_K) / (1 + RK_PK));
+// rkDeep: availU = ek shelf ko kitni oonchai mil sakti hai (unit; lambi screen par zyada) -> pk = peeche ki qatar kitni jhaanke (0.1 - 0.26; item ki chaurai / ginti NAHI badalti, sirf nazar thori aur upar se)
+//   shU = shelf ki oonchai (unit) · rz = nazar ka nuqta shelf ke farsh se kitna upar (unit) · ab = farsh ka kona (deg)
+export const rkDeep = (rows, availU) => { const iu = rkImgU(rows), pk = Math.max(RK_PK, Math.min(0.26, ((Number(availU) || 0) - RK_K) / iu - 1)), rz = iu * (1 + pk / (1 - RK_D[1])); return { iu, pk, shU: RK_K + iu * (1 + pk), rz, ab: Math.atan(50 / rz) * 180 / Math.PI }; };
+export const depthHTML = one => one + RK_D.map((s, i) => `<span class="bh b${i + 1}" aria-hidden="true">${one}</span>`).join('');   // wohi tasveer peeche 2 dafa (CSS chhota + upar + andar)
 export const arOf = (id, ar) => { const v = Number(ar && ar[id]); return v > 0.12 && v < 8 ? v : 0.8; };
 export const sizeOf = (id, sz) => Math.max(0.4, Math.min(1, szW(id, sz)));
 export function itemU(it, rows, sz, dh, ar) {
