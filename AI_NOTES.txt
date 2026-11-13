@@ -7917,3 +7917,11 @@ App web-dukan.js: list ke neeche '🗄 Kai tasveerein' -> view 'multi' (W.multi 
 Website dukan.js: dims() mein sc (7 phone / 10 PC) · sr (5-6) · sper — sirf bane hue (auto) bays ke liye (khula / photo bays ka naap wahi). build(): rk.restAll; rk.rest = draw ? sab : SIRF tasveer wale (S.ph[id]) tasveer ke waqt ki tarteeb se; kuch bhi na ho = sab (dukan khali na lage). renderAisle: noDraw hata — auto bays hamesha (rest khali = bay nahi). bayHTML class 'cmp peg' (+ 'd7' phone). CSS .bay.peg (surmai jaali radial-gradient + neeli patti — apni CSS, kisi site ki tasveer nahi) · .bay.d7 (tag 10.5px, Rs chhupa, + sirf tokri wale par).
 '▦ Bane hue racks' ka matlab ab: Band = sirf tasveer wale shelf par · ON = bina tasveer wale bhi.
 Nahi bana (malik ne chhor diya / jawab nahi): 🤖 AI dabbe on-off, ✂️ rack photo crop, item ki tasveer se AI dhoondna. Tasveer ka background saaf nahi hota (bina AI mumkin nahi — malik ko bataya). Asal phone / website par test nahi (sirf node --check). AI nahi.
+
+
+=== v2.266.1 (13 Nov 2026) — 🗄 shelf: search theek + tasveer zoom + jaali ghani ===
+Malik (screenshots): 'search ka option sahi nahi (naam "lux 3i…" kat raha) · picture zoom mein ho · circle ka faasla kam ho · customer ko dukan ke andar insani aankh se dekhne wala experience'.
+(1) GHALTI: muPick ki list `.wd-mxl` par `.wd-r` ka 46px wala pehla khana laga raha (bxl wali rule mein naam nahi jora tha) -> naam 46px mein kat gaya. style.css: `.wd-mxl .wd-r` ek khana + naam 16px poora (wrap).
+(2) Website dukan.js `trimUrl` (setPhoto mein, bina AI): kinare ka median rang -> us se mukhtalif pixels ka dabba (96px par) + 7% hashiya -> asal tasveer se kaat (shak: kinara ek rang ka nahi >30% / dabba >78% ya <3% = asal). Purani lagi tasveerein bhi khud zoom (website par load ke waqt; Firestore mein asal hi). Test (Chrome + playwright): chhoti cheez = kati, poori frame / do-rang peecha / khali = nahi kati.
+(3) CSS: jaali 12px -> 7px chhote nuqte + upar roshni / neeche saya; tasveer dabba bhar ke (contain, neeche lagi), safed frame hata, shelf ke neeche saya.
+Malik ko bataya: 🏬 Kamra (chal kar dekhne wala 3D, ?kamra=1) pehle se bana hai, default band — OK par sab ke liye. AI nahi.
