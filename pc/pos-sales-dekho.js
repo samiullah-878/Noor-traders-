@@ -1,5 +1,5 @@
 // =========================================================
-//  pos-sales-dekho.js  v2.10 (2026-11-11: 🖥 POS REPORT ka kul — sum.g (kul bikri) / gc (cash bills) / gu (udhaar bills) / un (udhaar jo cash nahi mila); sirf dikhane ke liye, Daily ki auto sale WAHI) · v2.9 (2026-11-10: 🖥 posLive/_want — dekhe ja rahe counter ko batao, NT-PRINT POS screen ki tasveer bheje) · v2.8 (2026-11-10: 🔴 live patti — BANTA bill ab aakhri chhape bill ke baad ke khule bills se (tareekh ki shart nahi, login → counter naqsha, andaza + 🩺 dg), har 0.6 s)
+//  pos-sales-dekho.js  v2.11 (2026-11-13: ↩ MINUS ITEMS — malik: "minus wali items ka hisaab dikhao, kahan kaun se bill mein" — sum.rtd mein har wapsi ki items (it) + sum.mn = sale bill ke andar minus tadad wali lines; SIRF dikhana, auto sale ka hisaab WAHI) · v2.10 (2026-11-11: 🖥 POS REPORT ka kul — sum.g (kul bikri) / gc (cash bills) / gu (udhaar bills) / un (udhaar jo cash nahi mila); sirf dikhane ke liye, Daily ki auto sale WAHI) · v2.9 (2026-11-10: 🖥 posLive/_want — dekhe ja rahe counter ko batao, NT-PRINT POS screen ki tasveer bheje) · v2.8 (2026-11-10: 🔴 live patti — BANTA bill ab aakhri chhape bill ke baad ke khule bills se (tareekh ki shart nahi, login → counter naqsha, andaza + 🩺 dg), har 0.6 s)
 //  v2.7 (2026-11-10: 🎥 AAKHRI item ka waqt `lt` (bill-clip video pehli se aakhri item tak — malik: "6 items ke baad video phir se shuru") + 🔴 live patti par BANTA HUA bill (counter ke POS login CreatedBy se — "at PC:" print par aata hai) · v2.6 (2026-11-09: 🔴🧾 LIVE BILL — Live camera dekhte waqt us counter ka bante hue bill ki lines har 1 s posLive/<counter> mein (sirf parhna) · v2.5 (2026-11-09: 🎥 bill ki PEHLI ITEM ka waqt `ft` — POS har scan par SaleDetail likhta hai (save se pehle), PC har 1 s naye SaleID ki pehli line dekh kar waqt yaad (pos-first-seen.json); bill-clip clip pehli item se shuru karta hai (malik: "pehli item ka time likh le to kaisa rahe")) · v2.4 (2026-11-08: 🎥 bill ka `ct` = BANANE / PRINT ka waqt (SystemNotes "Created & Printed By:… On:… at PC:") — Bill tally ki clip post ke waqt se nahi, bill banane ke waqt se (malik: "Abdurehman ne jis time bill bana kar print kiya, PC us time se peeche jaye, posting se nahi")) · v2.3 (2026-11-06: 🔎 JAANCH malik: "jo wapsi bill ke andar minus ho chuki wo dobara nahi" — har wapsi ke saath juda SaleID, us bill ka TotalSale aur
 //                     SaleDetail ka jor (Qty×Rate) → sum.rtd (app milane ke liye) + note mein "bill se juri N · alag N"; MINUS abhi pehle jaisa (qaida data dekh kar)) · v2.2 (2026-11-04: ↩ malik: "Daily Sale mein sale return add hai ke nahi" → POS ki SALE RETURN (dbo.SaleReturn, us din ki) ab auto sale se MINUS —
 //                     cancel (DocStatusID 3) / stock fraq bahar; udhaar party ki wapsi (IsCreditRturn, wholesale nahi) = cash wapas nahi diya = minus NAHI (note mein ginti);
@@ -188,7 +188,8 @@ function saleSum(rows, crv = new Map(), rets = null) {
     const cr = r.IsCreditRturn === true || Number(r.IsCreditRturn) === 1, sid = Number(r.SaleID) || 0;
     rtd.push({ no: String(r.SaleReturnNo || r.SaleReturnID).trim(), p: String(r.PartyName || '').trim().slice(0, 30), t: Math.round(t), cr: cr ? 1 : 0, sid,
       sno: sid ? String(r.LSaleNo || '').trim() : '', st: sid ? Math.round(Number(r.LTotal) || 0) : 0, sd: sid ? Math.round(Number(r.LDet) || 0) : 0,
-      sday: sid && r.LDate ? dayOf(new Date(r.LDate)) : '', at: r.SaleReturnDate ? new Date(r.SaleReturnDate).toISOString().slice(11, 16) : '' });
+      sday: sid && r.LDate ? dayOf(new Date(r.LDate)) : '', at: r.SaleReturnDate ? new Date(r.SaleReturnDate).toISOString().slice(11, 16) : '',
+      it: (r._it || []).slice(0, 12).map(x => [String(x.ItemName || '?').trim().slice(0, 30), Math.round((Number(x.Qty) || 0) * 1000) / 1000, Math.round((Number(x.Rate) || 0) * 100) / 100]), itn: (r._it || []).length });
     if (sid) rtL++; else rtA++;
     if (cr && !isWsName(r.PartyName)) { rtU++; continue; }   // udhaar party ki wapsi — galle se cash nahi gaya
     rt++; rtRs += t;
@@ -198,12 +199,30 @@ function saleSum(rows, crv = new Map(), rets = null) {
 }
 async function retFor(p, d0, d1) {   // v2.2: ↩ us din ki POS Sale Return (r.* — IsCreditRturn POS ke version par na ho to bhi chale) · ghalti = null (minus nahi)
   try {
-    return (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
+    const rs = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
       SELECT r.*, pt.PartyName, s.SaleNo AS LSaleNo, CAST(s.TotalSale AS FLOAT) AS LTotal, s.SaleDate AS LDate,
         (SELECT SUM(CAST(d.Qty AS FLOAT) * CAST(d.Rate AS FLOAT)) FROM dbo.SaleDetail d WHERE d.SaleID = s.SaleID) AS LDet
       FROM dbo.SaleReturn r LEFT JOIN dbo.Party pt ON pt.PartyID = r.PartyID LEFT JOIN dbo.Sale s ON s.SaleID = r.SaleID
       WHERE r.SaleReturnDate >= @a AND r.SaleReturnDate < @b`)).recordset;
+    try {   // v2.11: ↩ wapsi ki ITEMS (sirf dikhane ke liye — ghalti ho to wapsi ka hisaab pehle jaisa)
+      const its = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
+        SELECT d.SaleReturnID, i.ItemName, CAST(d.Qty AS FLOAT) AS Qty, CAST(d.Rate AS FLOAT) AS Rate
+        FROM dbo.SaleReturnDetail d JOIN dbo.SaleReturn r ON r.SaleReturnID = d.SaleReturnID LEFT JOIN dbo.Items i ON i.ItemID = d.ItemID
+        WHERE r.SaleReturnDate >= @a AND r.SaleReturnDate < @b`)).recordset;
+      const by = new Map(); for (const x of its) { if (!by.has(x.SaleReturnID)) by.set(x.SaleReturnID, []); by.get(x.SaleReturnID).push(x); }
+      for (const r of rs) r._it = by.get(r.SaleReturnID) || [];
+    } catch (e) { log('Sale Return ki items nahi parhi: ' + e.message); }
+    return rs;
   } catch (e) { log('Sale Return nahi parhi: ' + e.message); return null; }
+}
+async function minusFor(p, d0, d1) {   // v2.11: 🧾 aaj ke SALE bill ke andar MINUS tadad wali lines (sirf dikhane ke liye) — ghalti = null
+  try {
+    const rs = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
+      SELECT s.SaleNo, s.SaleID, s.DocStatusID, i.ItemName, CAST(d.Qty AS FLOAT) AS Qty, CAST(d.Rate AS FLOAT) AS Rate
+      FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID LEFT JOIN dbo.Items i ON i.ItemID = d.ItemID
+      WHERE s.SaleDate >= @a AND s.SaleDate < @b AND d.Qty < 0 ORDER BY d.SaleID, d.SaleDetailID`)).recordset;
+    return rs.filter(r => Number(r.DocStatusID) !== 3).slice(0, 80).map(r => [String(r.SaleNo || r.SaleID).trim(), String(r.ItemName || '?').trim().slice(0, 30), Math.round((Number(r.Qty) || 0) * 1000) / 1000, Math.round((Number(r.Rate) || 0) * 100) / 100]);
+  } catch (e) { log('Minus lines nahi parhi: ' + e.message); return null; }
 }
 async function crvFor(p, d0, d1) {   // v1.6: udhaar bill ke saath usi bill ka CRV (cash) — SaleID -> raqam
   const m = new Map();
@@ -374,7 +393,8 @@ async function slow() {
   slowRun = true; slowDirty = false;
   try {
     const p = await getPool(), rows = [...cache.values()], sm = saleSum(rows, await crvFor(p, d0, d1), await retFor(p, d0, d1));
-    const sum = { amt: sm.amt, n: sm.n, cx: sm.cx, fq: sm.fq, fqRs: sm.fqRs, ws: sm.ws, wsRs: sm.wsRs, wsCash: sm.wsCash, rt: sm.rt, rtRs: sm.rtRs, rtU: sm.rtU, rtL: sm.rtL, rtA: sm.rtA, rtd: JSON.stringify(sm.rtd || []), auto: AUTO, g: sm.g, gc: sm.gc, gu: sm.gu, un: sm.un };   // v2.3: rtd JSON text (list ke andar list nahi)   // v2.2: ↩ wapsi   // v1.8: app milane ke liye (ginti nahi)
+    const sum = { amt: sm.amt, n: sm.n, cx: sm.cx, fq: sm.fq, fqRs: sm.fqRs, ws: sm.ws, wsRs: sm.wsRs, wsCash: sm.wsCash, rt: sm.rt, rtRs: sm.rtRs, rtU: sm.rtU, rtL: sm.rtL, rtA: sm.rtA, rtd: JSON.stringify(sm.rtd || []), auto: AUTO, g: sm.g, gc: sm.gc, gu: sm.gu, un: sm.un };
+    const mn = await minusFor(p, d0, d1); if (mn) sum.mn = JSON.stringify(mn);   // v2.11: bill ke andar minus lines (JSON text)   // v2.3: rtd JSON text (list ke andar list nahi)   // v2.2: ↩ wapsi   // v1.8: app milane ke liye (ginti nahi)
     const sh = day + JSON.stringify(sum);
     if (sh !== lastSumHash) { await col.doc(day).set({ sum }, { merge: true }); lastSumHash = sh; }
     await writeSale(day, sm).catch(e => log('POS sale (auto) masla: ' + e.message));   // v1.5 · v1.6 wholesale CRV · v1.8 band = hata

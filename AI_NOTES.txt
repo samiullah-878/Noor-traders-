@@ -7875,3 +7875,10 @@ Malik: 'app jaldi khul jati hai magar data 30 second baad aata hai' (apna phone,
 
 === md pkg v35 (13 Nov 2026) — 🧠 Falsafa BAND ===
 Malik: 'Falsafa off kar do'. md/tools/pkg.py: mq (🧠 Falsafa) macros list se bahar + `off` mein '🧠 Falsafa' (Remote agle 5 min mein phone par DisableMacro). Macro delete nahi hua (phone par band para hai), qaide.py waisi hi. App ka '🧠 6 Qaide' card (qaide.js) alag cheez hai — nahi chhera. AI nahi.
+
+
+=== v2.263.0 + pos-sales-dekho v2.11 (13 Nov 2026) — ↩ MINUS WALI ITEMS ===
+Malik: 'minus wali items ka hisaab dikhao, wo kahan par kaun se bills mein thi — phir dekhte hain kya karna hai'.
+PC: retFor ab SaleReturnDetail se har wapsi ki items (r._it -> rtd[].it [[naam, tadad, rate]] max 12, itn kul) + minusFor = aaj ke sale bills ki Qty<0 lines -> sum.mn (JSON text [[billNo, naam, tadad, rate]] max 80). Dono alag try — ghalti ho to wapsi / auto sale ka hisaab pehle jaisa. Hisaab (saleSum cash) NAHI badla.
+App: posMinusHTML (posRepHTML ke andar, Daily Sale -> POS report ▾ -> '↩ Minus wali items'): (1) wapsi ke bill: no · party · raqam · asal bill (ya 'kisi bill se juri nahi') · 'galle se minus' / 'udhaar — minus nahi' + items; (2) bill ke andar minus line bill-war (yeh POS report mein bhi pehle hi kam). Sirf dikhana. Asal PC / POS par test nahi (SaleReturnDetail ke khane post-farq / rack-bharo wale hi). AI nahi.
+Baqi (malik ke OK ka intezar): bill-war milan list; WhatsApp cancel = malik ki ijazat (A reply 1 / B link).

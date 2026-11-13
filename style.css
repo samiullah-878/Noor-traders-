@@ -7760,6 +7760,22 @@ html body .pos-ref .pr-rep .pr-ln span{min-width:0;overflow:hidden;text-overflow
 html body .pos-ref .pr-rep .pr-ln b{white-space:nowrap}
 html body .pos-ref .pr-rep .pr-ln.tot{border-top:1px solid rgba(100,116,139,.35);font-weight:800;margin-top:2px;padding-top:5px}
 html body .pos-ref .pr-rep small{display:block;opacity:.75;margin-top:4px;font-size:12.5px}
+/* v2.263.0: ↩ minus wali items */
+html body .pos-ref .pm-box{margin-top:8px;border-top:1px dashed rgba(100,116,139,.35);padding-top:6px}
+html body .pos-ref .pm-box>summary{min-height:36px;font-weight:800;font-size:15px}
+html body .pos-ref .pm-box>summary b{font-size:14px;background:#b4282a;color:#fff;border-radius:999px;padding:1px 9px}
+html body .pos-ref .pm-box[open]>summary i{transform:rotate(180deg)}
+html body .pos-ref .pm-h{font-weight:800;font-size:14.5px;margin:10px 0 4px;white-space:normal}
+html body .pos-ref .pm-c{background:#fff;border:1px solid #e3e8f1;border-radius:11px;padding:7px 9px;margin:5px 0;min-width:0}
+html body .pos-ref .pm-t{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:baseline;font-size:15px}
+html body .pos-ref .pm-t span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;opacity:.8}
+html body .pos-ref .pm-t b:last-child{color:#b4282a}
+html body .pos-ref .pm-s{font-size:13.5px;opacity:.85;margin:2px 0;white-space:normal}
+html body .pos-ref .pm-s i{font-style:normal;font-weight:700}html body .pos-ref .pm-s i.m{color:#b4282a}html body .pos-ref .pm-s i.u{color:#8a6100}
+html body .pos-ref .pm-it{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:2px 0;border-top:1px dotted rgba(100,116,139,.3)}
+html body .pos-ref .pm-it span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body .pos-ref .pm-it b{white-space:nowrap;font-weight:600}
+html.dk body .pos-ref .pm-c{background:var(--glass);border-color:var(--line)}
 
 /* v2.233.0: 🩺 Parchi ka safar */
 html body #dialogBody .sf{display:grid;gap:10px;grid-template-columns:minmax(0,1fr);font-size:15px}
