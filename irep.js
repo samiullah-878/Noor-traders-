@@ -139,7 +139,7 @@ const perPc = r => !r.noCost && r.q > 0 ? r.rs / r.q - (Number(r.it.c) || 0) : n
 // v2.141.0: 🏬 abhi ka stock — godam (sab jama) + 🏪 Noor Traders (malik: "item ke saath current stock godam + Noor Traders"). Map 5 s cache.
 let stkC = null, stkAt = 0, irOpen = false;
 const stkMap = () => { if (!stkC || Date.now() - stkAt > 5000) { try { stkC = stockOf() || new Map(); } catch { stkC = new Map(); } stkAt = Date.now(); } return stkC; };
-function stockLine(it) { const e = stkMap().get?.(String(it.i)); if (!e) return ''; const pk = Number(it.pk) || Number(e.pack) || 0, f = q => q ? fmtQty(q, pk) : '0'; return `<small class="ir-stk">🏬 Godam ${f(e.gd)} · 🏪 Noor Traders ${f(e.nt)}</small>`; }
+function stockLine(it) { const e = stkMap().get?.(String(it.i)); if (!e) return ''; const pk = Number(it.pk) || Number(e.pack) || 0, f = q => q ? fmtQty(q, pk) : '0'; return `<small class="ir-stk"><span class="ir-ring">🏬 Godam ${f(e.gd)}</span><span class="ir-ring nt">🏪 Noor Traders ${f(e.nt)}</span></small>`; }
 // v2.143.0: 📦 PACKET SIZE (malik: "yahan packet ka size wala bhi chahiye") — PC pk-report (posStats/pkReport, SAB branch jama; nayi SQL nahi) se har item:
 //   "📦 250g × 12 · 500g × 4 · ⚖️ khula 1.3 kg" — item report ke waqt ka. Poora mahina = mahine ka bucket (pakka) · aakhri 14 din = roz ke bucket (pakka) ·
 //   us se purane din ka hissa = us mahine ka jor ("poore Oct ka" likha). Sirf packet (sub-barcode) wale item. CAP ir.pk. AI nahi.
@@ -186,15 +186,16 @@ function pkLine(it) {
 }
 // v2.144.0: 🧾 PATLI CHIP (malik: "item list ki chips bhi Supplier wali jaisi · ek screen mein kam az kam 10 items") — 2 line: naam · Rs (nafa chhota) /
 //   bika · 🏬 · 🏪 · 📦 ek line (lambi ho to … — poori tafseel tap par item khirki mein). Patli bar neeche. Purani bari card (stockLine / pkLine alag dabbe) wapas mat lao.
+const stkRing = it => { const e = stkMap().get?.(String(it.i)); if (!e) return ''; const pk = Number(it.pk) || Number(e.pack) || 0, f = q => q ? fmtQty(q, pk) : '0'; return ` <span class="ir-ring">🏬 ${esc(f(e.gd))}</span><span class="ir-ring nt">🏪 ${esc(f(e.nt))}</span>`; };   // v2.249.0 (malik: 'item report par godam aur Noor Traders par gol circle')
 const stkShort = it => { const e = stkMap().get?.(String(it.i)); if (!e) return ''; const pk = Number(it.pk) || Number(e.pack) || 0, f = q => q ? fmtQty(q, pk) : '0'; return `🏬 ${f(e.gd)} · 🏪 ${f(e.nt)}`; };
 function pkShort(it) {
   if (!pkOn() || !pkR?.by) return ''; const r = pkCalc(it); if (!r) return '';
   return '📦 ' + r.rows.map(([q, n]) => `${pkSize(q, r.u)} × ${num(n)}`).join(' · ') + (r.khula > 0 ? ` · ⚖️ khula ${n3(r.khula)}` : '') + (r.part.length ? ` (poore ${r.part.join(' + ')} ka)` : '');
 }
 function chipHTML(r, rank, w, metric) {
-  const loss = NF() && !r.noCost && r.pf < 0, l2 = [`bika ${fmtQty(r.q, r.it.pk)}`, stkShort(r.it)].filter(Boolean).join(' · '), pk = pkShort(r.it);   // 📦 alag teesri patli line (sirf packet wale item)
+  const loss = NF() && !r.noCost && r.pf < 0, l2h = esc(`bika ${fmtQty(r.q, r.it.pk)}`) + stkRing(r.it), pk = pkShort(r.it);   // 📦 alag teesri patli line (sirf packet wale item)
   const nf = NF() ? `<small class="ir-chp ${r.noCost ? '' : r.pf < 0 ? 'neg' : 'pos'}">${r.noCost ? 'nafa —' : `nafa ${num(r.pf)} · ${pct(r.pf, r.rs)}%`}</small>` : '';
-  return `<button type="button" class="ir-ch${loss ? ' loss' : ''}" data-ir-item="${esc(String(r.it.i))}"><span class="ir-chn">${rank != null && rank !== '' ? `<i>${rank}</i>` : ''}<b>${esc(r.it.n)}</b></span><b class="ir-cha">Rs ${num(r.rs)}</b><small class="ir-chs">${esc(l2)}</small>${nf}${pk ? `<small class="ir-chk">${esc(pk)}</small>` : ''}<i class="ir-chb${metric === 'pf' ? ' pf' : ''}" style="width:${w}%"></i></button>`;
+  return `<button type="button" class="ir-ch${loss ? ' loss' : ''}" data-ir-item="${esc(String(r.it.i))}"><span class="ir-chn">${rank != null && rank !== '' ? `<i>${rank}</i>` : ''}<b>${esc(r.it.n)}</b></span><b class="ir-cha">Rs ${num(r.rs)}</b><small class="ir-chs">${l2h}</small>${nf}${pk ? `<small class="ir-chk">${esc(pk)}</small>` : ''}<i class="ir-chb${metric === 'pf' ? ' pf' : ''}" style="width:${w}%"></i></button>`;
 }
 function itemLine(r, rank, max, metric) {
   const v = metric === 'pf' ? Math.max(0, r.pf) : metric === 'q' ? r.q : r.rs, w = Math.max(2, v / Math.max(1, max) * 100);
@@ -951,7 +952,7 @@ document.addEventListener('input', e => {   // v2.101.1: search par sirf neeche 
 export const _irTest = { pkSet: d => { pkR = d; pkIdx = null; pkMemo.clear(); }, pkLine, pkKeys, ordTable, phAgg, setStock: f => { stockOf = f; }, nfBills, nfSum, nfHTML, nfC, nfSetT: t => { tdoc = t; }, nfSetFull: f => { full = f; }, mergeToday, ageText, setFull: (f, t) => { full = f; tdoc = t; remerge(); }, fmtQty, topHTML, nafaHTML, wsSplit, setRows: r => { lastRows = { sorted: r, srt: () => 0 }; }, agg, range, patterns, partRange, setData: d => { data = d; loaded = true; ix = null; }, st, pdfHTML, commAgg, setComm: c => { commCfg = c; } };
 
 // v2.103.48: 🤖 agent actions — item report (nafa / sale)
-import { agentRegister } from './agent.js?v=2.248.0';
+import { agentRegister } from './agent.js?v=2.249.0';
 agentRegister([
   { name: 'nafa_report', read: true, desc: 'Item report: muddat (from/to YYYY-MM-DD, default aaj) ki sale, nafa (andaza), top items nafa ke hisaab se; wholesale ke saath/baghair.', params: { type: 'OBJECT', properties: { from: { type: 'STRING' }, to: { type: 'STRING' }, top: { type: 'INTEGER' }, wholesale: { type: 'BOOLEAN' } } },
     run({ from, to, top, wholesale }) { if (!data?.meta) throw Error('Report abhi PC se nahi aayi'); const ws0 = st.ws; if (wholesale != null) st.ws = !!wholesale; try { const X = index(), a = /^\d{4}-\d\d-\d\d$/.test(from || '') ? from : X.days[X.days.length - 1], b = /^\d{4}-\d\d-\d\d$/.test(to || '') ? to : a, { rows, T } = agg(a, b), L = rows.filter(r => !r.noCost).sort((x, y) => y.pf - x.pf);
