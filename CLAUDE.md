@@ -242,6 +242,7 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 
 - **📱 Gumnaam UID = device ki pehchan (v2.231.1, ghalti 11 Nov)**: jura hua phone Logout / ghalat password ke baad dobara login maangta tha — signOut se UID kho jata hai. auth-controller mein gumnaam user ke liye HAMESHA `out()` (kabhi seedha `sdk.signOut`); naya login / logout raasta banao to yehi. Malik us phone par khud login kare = dobara jorna parega (malik ko pehle batao).
 
+- **⚡ Foran data (v2.264.0)**: boot par pehle KhataRecovery 'ledger:' ki copy (packet `uid` + `sc` — sirf wahi login / scope), phir Firestore. Der ki wajah Firestore ki yaad thi (4935 doc = 10 s), hisaab nahi. Packet ke uid / sc ki shart KABHI mat hatao (doosre login ko pehle wale ka khata na dikhe); is copy se sirf DIKHAO, faisla / save hamesha asal data par.
 - **📦 Data ka naap (v2.262.0)**: 'app khul jati hai magar data der se' = ⏱ chip ka '📦 Ns' + ⏱ popup ki 📦 / ☁️ / 🧮 lines (`window.ntDataT`, cloud.js listen) — pehle yeh photo maango, phir theek karo (yaad dheeri / server dheera / hisaab dheera teen alag ilaaj).
 - **⏱ Boot ka intezar (v2.233.1)**: app ka ⏱ = session banne tak ka waqt (data nahi) — tap par qadam. Login ki jaanch ka koi raasta chup-chaap laute (paigham nahi) to boot 30 s splash par atakta hai: naya chup raasta banao to `controller.idle()` sach ho. Session / login ka faisla hamesha `getDocFromServer` se (cache ka purana 'nahi hai' = jhoota logout). 'App dheeri' ki shikayat = pehle ⏱ par tap ka popup maango, andaza nahi (11 Nov: pehle ghalat wajah bata di).
 

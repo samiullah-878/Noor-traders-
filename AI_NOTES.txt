@@ -7886,3 +7886,8 @@ Baqi (malik ke OK ka intezar): bill-war milan list; WhatsApp cancel = malik ki i
 
 === v2.263.1 (13 Nov 2026) — 🧠 Falsafa card BAND ===
 Malik: 'Falsafa off kar do' — matlab APP ka upar tairta Falsafa card (qaide.js) tha. GHALTI: pehle phone ka MacroDroid '🧠 Falsafa' macro band kar diya (md pkg v35) — malik ne screenshot bheja tab pata chala. Ab qaide.js qdStart ke teeno khud-chalne wale timer hata diye; card sirf menu se haath se khulta hai. Phone ka macro abhi band hi hai (malik se poochha hai). Sabaq: ek naam ki do cheezein hon (app card / phone macro) to pehle poochho kaun si. AI nahi.
+
+
+=== v2.264.0 (13 Nov 2026) — ⚡ FORAN DATA ===
+Malik ki ⏱ photo: Data sunna 1.7s -> Pehla data (phone ki yaad, 4935 record) 11.7s -> server 18.1s -> hisaab 0.3s. Yani der Firestore ki apni yaad (IndexedDB, 4935 doc alag alag) parhne mein — hisaab / internet nahi.
+Ilaaj: app pehle se har tabdeeli par poori list EK tukre mein KhataRecovery 'ledger:<project>' mein rakhti hai (recoveryWriter). Ab packet mein uid + sc (scope) bhi; boot par cloud.listen se pehle wohi packet parh kar (sirf wahi uid + wahi scope, loaded na ho) records = optimistic.receive(p.records) + render, status '⟳ Taza ho raha hai…'. Firestore ka snapshot aate hi asal data. ⏱ popup mein '⚡ Foran data' line (ntDataT.q). Pehli dafa (purane packet mein uid nahi) dheera hi khulega, doosri dafa se tez. Save rev se jaancha jata hai — purani copy se ghalat save nahi. Asal phone par test nahi. AI nahi.
