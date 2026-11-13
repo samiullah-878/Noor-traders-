@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.249.2';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.249.2';
-import { blurScore, blurText } from './pic-check.js?v=2.249.2';   // v2.103.43: 📷 dhundli check
+import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.250.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.250.0';
+import { blurScore, blurText } from './pic-check.js?v=2.250.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1758,6 +1758,16 @@ function jColTotals() {
   return `<p class="${ok ? 'stat-note' : 'red'}">${ok ? '✓' : '⚠️'} ${txt}${ok ? '' : ' — koi line chhooti ya ghalat parhi?'}</p>${sus}`;
 }
 // ---------- overview (pehli khirki) ----------
+function jListRows(items) {
+  return `${aiRows.map((r, i) => {
+      if (!jfPass(r)) return '';   // v2.19: filter
+      const ln = r.key ? cart.find(l => l.k === r.key) : null;
+      const it = r.itemId ? items.find(x => String(x.id) === String(r.itemId)) : null;
+      return `<button type="button" class="jz-row ${r.skip ? 'skip' : r.j?.conf || 'r'}${r.done ? ' done' : ''}" data-pp-jcard="${i}">
+        <span class="jz-n">${i + 1}</span><span class="jz-dot">${r.skip ? '✕' : r.done ? '✓' : jMark(r.j?.conf)}</span>
+        <span class="jz-txt"><b>${esc(r.ai.name || '')}${r.memFz && !['ok', 'pehle se'].includes(r.learn) ? ' <em class="jz-mem fz">📌 milta</em>' : (r.mem || r.learn === 'ok' || r.learn === 'pehle se') ? ' <em class="jz-mem">📌 yaad</em>' : ''}</b><small>${it ? esc(it.name) + ' · ' + jUnit(ln) + ' · ' + num(ln?.costP || 0) + '/' + esc(ln?.uName || 'Pcs') : 'item nahi mila'}${r.j?.why?.length ? ' · ' + esc(r.j.why[0]) : ''}</small></span></button>`;
+    }).join('') || '<p class="stat-note">Is filter mein koi line nahi</p>'}`;
+}
 function aiRender() {
   if (!aiRows || agentQuiet) return;   // v2.99.7: agent parh raha ho to jaanch ka dialog nahi (agent ki screen ke upar aa jata)
   if (jView === 'card' && jIx >= 0) return jCard(jIx);
@@ -1772,27 +1782,20 @@ function aiRender() {
       ? `<p class="stat-note">📐 Naqsha: ginti = <b>${jModeName(fmt.q)}</b>${stat} <button type="button" data-pp-fmt="ask">badlein</button></p>`
       : `<div class="pp-ask"><b>Is supplier ke bill par ginti kya hoti hai?</b><small>Pichhla khareed maloom na hone ki wajah se app khud nahi pakar saki${aiBillInfo?.qtyLabel ? ' (bill par column: ' + esc(aiBillInfo.qtyLabel) + ')' : ''}. Ek dafa bata dein.</small>
          <div class="mchips"><button type="button" data-pp-fmt="pcs">PCS (pieces)</button><button type="button" data-pp-fmt="ctn">CTN (carton / peti)</button><button type="button" data-pp-fmt="both">Dono (alag khane)</button></div></div>`;
-  dlg('🤖 Bill ki jaanch', `${jTabsHTML('list')}<div class="jz-head">
+  const askTop = /class="pp-ask"/.test(fmtLine);   // v2.250.0 (malik 13 Nov: 'items ke naam upar, baqi upar wale chips neeche, small, ek line mein — scroll kam'): list pehle, baqi sab .jz-low (neeche chipki patli line)
+  dlg('🤖 Bill ki jaanch', `${askTop ? fmtLine : ''}<div class="jz-list jz-first">${jListRows(items)}</div><div class="jz-low">${jTabsHTML('list')}<div class="jz-head">
       <div class="jz-count"><b>${k.all}</b> lines · 🟢 ${k.g} · 🟡 ${k.y} · 🔴 ${k.r}${aiBillInfo?.mode === 'tez' ? ' · ⚡ tez' : aiBillInfo?.mode === 'pakka' ? ' · 🎯 pakka' : ''}</div>
       ${aiBillInfo?.mode === 'tez' && aiLastFiles && canPakka() ? '<button type="button" class="pp-airepro" data-pp-airepro="1">🎯 Ghalat lage? Pakka se dobara parho</button>' : ''}
       ${bill ? `<div class="jz-tot">${farqHTML(bill, mine)}</div>${jRsSuspects(bill, mine)}` : ''}
     </div>
     ${jColTotals()}
-    ${fmtLine}
+    ${askTop ? '' : fmtLine}
     ${sup ? `<p><button type="button" data-pp-sup="${esc(sup.id)}">👤 Supplier lagayein: ${esc(sup.name)}</button> <small>(tasveer par: ${esc(aiBillInfo.supplier)})</small></p>` : aiBillInfo?.supplier && !supplier ? `<p class="jz-supfind"><button type="button" data-pp-supfind="${esc(aiBillInfo.supplier)}">🔍 Supplier dhoondein: <b>${esc(aiBillInfo.supplier)}</b></button><small>khata na mila — tap karein, isi naam se list khulegi</small></p>` : ''}
     <div class="jz-acts">
       ${k.g && aiRows.some(r => !r.skip && !r.done && r.j?.conf === 'g') ? `<button type="button" class="got" data-pp-jgreen="1">✓ ${aiRows.filter(r => !r.skip && !r.done && r.j?.conf === 'g').length} hari pakki karein</button>` : ''}
       ${k.open ? `<button type="button" class="got" data-pp-jstart="1">Jaanch shuru — line ${(jQueue()[0] ?? 0) + 1} se (${k.open}) ›</button>` : `<button type="button" class="got" data-pp-jsum="1">Khulasa ›</button>`}
     </div>
-    ${jFilterHTML()}
-    <div class="jz-list">${aiRows.map((r, i) => {
-      if (!jfPass(r)) return '';   // v2.19: filter
-      const ln = r.key ? cart.find(l => l.k === r.key) : null;
-      const it = r.itemId ? items.find(x => String(x.id) === String(r.itemId)) : null;
-      return `<button type="button" class="jz-row ${r.skip ? 'skip' : r.j?.conf || 'r'}${r.done ? ' done' : ''}" data-pp-jcard="${i}">
-        <span class="jz-n">${i + 1}</span><span class="jz-dot">${r.skip ? '✕' : r.done ? '✓' : jMark(r.j?.conf)}</span>
-        <span class="jz-txt"><b>${esc(r.ai.name || '')}${r.memFz && !['ok', 'pehle se'].includes(r.learn) ? ' <em class="jz-mem fz">📌 milta</em>' : (r.mem || r.learn === 'ok' || r.learn === 'pehle se') ? ' <em class="jz-mem">📌 yaad</em>' : ''}</b><small>${it ? esc(it.name) + ' · ' + jUnit(ln) + ' · ' + num(ln?.costP || 0) + '/' + esc(ln?.uName || 'Pcs') : 'item nahi mila'}${r.j?.why?.length ? ' · ' + esc(r.j.why[0]) : ''}</small></span></button>`;
-    }).join('') || '<p class="stat-note">Is filter mein koi line nahi</p>'}</div>
+    ${jFilterHTML()}</div>
     <p class="stat-note">⚠️ AI hamesha theek nahi parhta. Hari lines par bhi nazar daal lein; ✓ dabane se naam, unit aur rate app yaad kar leti hai.</p>`);
   const d = $('dialog'); if (d) d.classList.add('full-dialog');
 }
