@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.252.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.252.0';
-import { blurScore, blurText } from './pic-check.js?v=2.252.0';   // v2.103.43: 📷 dhundli check
+import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.253.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.253.0';
+import { blurScore, blurText } from './pic-check.js?v=2.253.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -287,6 +287,23 @@ function posFit() {
   const f = tw.querySelector('tr.fresh') || tw.querySelector('tr.sel'); if (f && tw.style.maxHeight) { try { f.scrollIntoView({ block: 'nearest' }); } catch {} }
 }
 window.addEventListener('resize', () => { if (document.querySelector('.pp-postw')) posFit(); });
+document.addEventListener('keydown', e => {
+  if (!document.querySelector('.pp-posr') || e.ctrlKey || e.altKey || e.metaKey) return;
+  const t = e.target, hits = [...document.querySelectorAll('#list .sale-found [data-pp-add]')];
+  if (t && t.id === 'search') {
+    if (e.key === 'ArrowDown' && hits.length) { e.preventDefault(); hits[0].focus(); }
+    return;
+  }
+  const i = hits.indexOf(t); if (i < 0) return;
+  const go = j => { e.preventDefault(); const h = hits[Math.max(0, Math.min(hits.length - 1, j))]; h.focus(); try { h.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch {} };
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(i + 1);
+  else if (e.key === 'ArrowLeft') go(i - 1);
+  else if (e.key === 'ArrowUp' || e.key === 'Escape') { e.preventDefault(); $('search')?.focus(); }
+  else if (e.key === 'Tab' && !e.shiftKey) {
+    e.preventDefault(); t.click();
+    setTimeout(() => { const r = document.querySelector('.pp-postw tr.sel') || [...document.querySelectorAll('.pp-postw tr.pp-tr')].pop(), x = r && r.querySelector('input'); if (x) { x.focus(); try { x.select(); } catch {} } }, 120);
+  }
+}, true);
 function addItem(it, again = true) {
   ppAddAt = Date.now();
   noteHit(it.id);

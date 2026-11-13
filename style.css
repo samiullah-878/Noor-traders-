@@ -7977,7 +7977,12 @@ html body:has(.pp-posr) #list .pp-tbl td{padding:0 3px!important;height:22px!imp
 html body:has(.pp-posr) #list .pp-tbl :is(input,select){height:20px!important}
 html body:has(.pp-posr) #list .pp-tbl th{padding:3px 6px!important}
 html body:has(.pp-posr) #list .pp-tbl td.g.need select{border-color:#c62828!important;background:#fff3f3!important}
-html body:has(.pp-posr) #list .pp-postw{min-height:372px!important}
+html body:has(.pp-posr) #list .pp-postw{min-height:150px!important}
+html body:has(.pp-posr) #list .sale-found:has(.sale-hit){display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;gap:4px!important;align-items:stretch}
+html body:has(.pp-posr) #list .sale-found .sale-hit{flex:0 0 auto!important;width:auto!important;max-width:260px;min-height:0!important;padding:2px 8px!important;margin:0!important;text-align:left;white-space:nowrap;overflow:hidden}
+html body:has(.pp-posr) #list .sale-found .sale-hit b{display:block;font:700 14px Tahoma,sans-serif!important;overflow:hidden;text-overflow:ellipsis}
+html body:has(.pp-posr) #list .sale-found .sale-hit small{display:block;font-size:11.5px!important;overflow:hidden;text-overflow:ellipsis}
+html body:has(.pp-posr) #list .sale-found [data-pp-add]:focus{outline:2px solid #0b57d0!important;background:#fff3a6!important;border-color:#0b57d0!important}
 html body:has(.pp-posr) header .top{padding-top:2px!important;padding-bottom:2px!important;min-height:0!important}
 html body:has(.pp-posr) header .top small{display:none!important}
 html body:has(.pp-posr) header #title{font-size:17px!important;line-height:1.1!important;margin:0!important}

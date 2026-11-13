@@ -7805,3 +7805,10 @@ Malik (photo): 'kam az kam 15 items · scroll na karna pare · godam sirf screen
 - Header ka Branch khana HATA; godam har qatar ke Branch se (khali = laal, Save rokta + wahin le jata); naya item pichhli qatar ka godam leta hai.
 - Qatar ek line (22px, 'pehle … W% R%' wali chhoti line chhupi), app header / Basic Information / search / aksar-items patti patli, Larke ki entry + Jaanch ek line; Note · Galla ab neeche button (posX). Sticky sar-khi ka z-index theek (pehli qatar ka naam sar-khi par charh raha tha).
 - AI nahi. Asal PC par test nahi.
+
+
+=== v2.253.0 (13 Nov 2026) — PC POS Purchase: keyboard se item chuno ===
+Malik: 'search mein neeche wale arrow se items mein jaye, left / right se aage peeche, Tab se chuni item par chala jaye'.
+- purchase.js keydown (sirf .pp-posr): search mein ↓ = pehli mili item · → / ↓ agli · ← pichhli · ↑ / Esc = wapas search · Tab = item bill mein + cursor us ki qatar ke pehle khane mein · Enter = pehle jaisa (jorna, search mein rehna).
+- Mili items ab ek patli qatar (2 line chhoti, side scroll), chuni hui peeli + neela ghera. Table ka min-height 372 hata (Total footer ke neeche chhup raha tha) — posFit hi oonchai tay karta hai.
+- AI nahi. PC par test nahi.
