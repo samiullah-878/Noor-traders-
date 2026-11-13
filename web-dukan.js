@@ -14,8 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRows, shelfPack } from './dukan/khula.js?v=2.267.0';
-import { smartFind } from './dukan/dhoond.js?v=2.267.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
+import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRows, shelfPack } from './dukan/khula.js?v=2.267.1';
+import { smartFind } from './dukan/dhoond.js?v=2.267.1';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -85,6 +85,7 @@ export function webOpen(ctx) {
     d.addEventListener('input', onInput);
     d.addEventListener('change', onChange);
     d.addEventListener('cancel', e => { e.preventDefault(); webClose(); });
+    d.addEventListener('close', () => { if (!W) return; try { d.showModal(); } catch {} webClose(); });   // v2.267.1: phone ka back browser khud khirki band kar deta tha (cancel rok nahi sakte) — wapas khol kar sirf EK qadam
     d.addEventListener('submit', onSubmit);
     $('wdMulti').addEventListener('change', e => { const fs = [...(e.target.files || [])]; e.target.value = ''; if (fs.length) gotMulti(fs); });
     ['wdCam', 'wdGal'].forEach(k => $(k).addEventListener('change', e => { const f = e.target.files && e.target.files[0]; e.target.value = ''; if (f) gotFile(f); }));

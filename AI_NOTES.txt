@@ -7933,3 +7933,7 @@ Malik: "rack chip mein ungliyon se chhota bara · ek rack par 3, 2 ya 5 · large
 - dukan.js: bane hue bay = b.cols / b.rowsN / b.shelves, shelf `.fx` (flex, --w chaurai, --hh oonchai); PC par bhi 7 (pehle 10).
 - web-dukan.js: view 'rsz' (Racks list ka 🔍): pinch + chips, item tap = Chhota · Aam · Bara.
 - AI nahi. Asal phone par test nahi hua (pinch) — malik se photo.
+
+=== v2.267.1 (13 Nov 2026) — Online Dukan: back = ek qadam ===
+Malik: "back par poori app ka home aa jata hai — pehla back sirf ⋮ / chip se, agla screen se".
+Wajah: Android Chrome ka back modal <dialog> ko khud band karta hai ('cancel' preventDefault har dafa nahi chalta) — 'close' event par W abhi ho to showModal dobara + webClose (ek qadam).
