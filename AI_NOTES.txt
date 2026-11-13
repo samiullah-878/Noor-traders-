@@ -7837,3 +7837,7 @@ Malik (photo, Jaanch card): 'is poori screen ko khatam kar do, POS purchase scre
 - gridHTML: AI row ka conf -> qatar peeli (jy) / laal (jr), wajah title mein; jis ka item nahi mila = laal qatar `tr.jn` bill ki jagah par (❓ naam -> aiPickForm, ✕ = jSkip). Naam save par yaad (learnLater, pehle jaisa).
 - Card ki cheezein jo PC par ab nahi: 'Bill ki 1 bori =' khana, pichhle nafa se naye rates ki line, Khulasa, hari pakki. Phone par Jaanch pehle jaisi.
 - AI: wohi purana bill-parhna. Asal PC par test nahi hua.
+
+
+=== v2.258.0 (13 Nov 2026) — PC POS Purchase: qatar ke aakhri khane se search ===
+Malik (photo, Retail khana): 'yahan end ke baad item name list par chala jaye'. Table ki qatar ke aakhri khane (Retail) mein Tab ya Enter = cursor item search mein (agli item likhne ke liye). AI nahi.

@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.257.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.257.0';
-import { blurScore, blurText } from './pic-check.js?v=2.257.0';   // v2.103.43: 📷 dhundli check
+import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.258.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.258.0';
+import { blurScore, blurText } from './pic-check.js?v=2.258.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -318,6 +318,10 @@ window.addEventListener('resize', () => { if (document.querySelector('.pp-postw'
 document.addEventListener('keydown', e => {
   if (!document.querySelector('.pp-posr') || e.ctrlKey || e.altKey || e.metaKey) return;
   const t = e.target, hits = [...document.querySelectorAll('#list .sale-found [data-pp-add]')];
+  if ((e.key === 'Tab' || e.key === 'Enter') && !e.shiftKey && t && t.closest && t.closest('.pp-postw') && t.matches('input')) {
+    const tr0 = t.closest('tr'), ins = tr0 ? [...tr0.querySelectorAll('input')] : [];
+    if (ins.length && ins[ins.length - 1] === t) { e.preventDefault(); try { t.blur(); } catch {} const q = $('search'); if (q) { q.focus(); try { q.select(); } catch {} } return; }
+  }
   if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && t && t.closest && t.closest('.pp-postw') && t.matches('input,select')) {
     const td = t.closest('td'), tr = td && td.closest('tr'); if (!tr) return;
     e.preventDefault();
