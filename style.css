@@ -1483,61 +1483,12 @@ dialog.jaanch-dlg{position:fixed;left:0!important;right:0!important;top:0!import
 html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-chip[data-look="frost"],html[data-look="royal"] .look-chip[data-look="royal"],html[data-look="teal"] .look-chip[data-look="teal"],html[data-look="graphite"] .look-chip[data-look="graphite"],html[data-look="ocean"] .look-chip[data-look="ocean"],html[data-look="paper"] .look-chip[data-look="paper"],html[data-look="glass"] .look-chip[data-look="glass"],html[data-look="gold"] .look-chip[data-look="gold"],html[data-look="emerald"] .look-chip[data-look="emerald"],html[data-look="cyber"] .look-chip[data-look="cyber"]{border:2px solid #2B4A86!important;box-shadow:0 0 0 3px rgba(94,140,230,.35)!important}
 
 /* ===== v2.51: PC VERSION (1100px se chaudi screen) ===== */
-@media (min-width:1100px){
- main{max-width:none!important;width:auto!important;margin:0!important;padding-left:236px!important;box-shadow:none!important}
- main>header{border-radius:0 0 0 26px!important;padding:22px 32px 20px!important}
- main>header .app-nav{position:fixed;left:0;top:0;bottom:0;width:220px;box-sizing:border-box;display:flex!important;flex-direction:column;gap:4px;margin:0!important;padding:20px 12px 24px;overflow-y:auto;background:linear-gradient(180deg,#14284f,#0c1a38);z-index:6;box-shadow:6px 0 24px #0c1a3830}
- main>header .app-nav::before{content:'SAM · BLUE KHATA';display:block;color:#b8c6e4;font-size:11px;font-weight:800;letter-spacing:1.8px;padding:6px 12px 14px}
- main>header .app-nav button{width:100%;text-align:left;justify-content:flex-start;border-radius:12px!important;min-height:42px!important;padding:8px 14px!important;font-size:14px!important;background:transparent!important;color:#dfe6f5!important;border:0!important;box-shadow:none!important}
- main>header .app-nav button:hover{background:#ffffff14!important}
- main>header .app-nav button.desk-on{background:#ffffff!important;color:#14284f!important;font-weight:800}
- main>header .top{max-width:1500px}
- #tabs{max-width:760px}
- .workspace{max-width:1500px;padding:18px 32px 120px!important;box-sizing:border-box}
- footer{left:236px!important;right:0!important;transform:none!important;width:auto!important;justify-content:flex-end;padding:14px 32px!important}
- footer button{flex:0 0 auto!important;min-width:220px;max-width:320px}
- /* master-detail: baayein khaton ki list */
- html.desk-split main{padding-left:596px!important}
- html.desk-split footer{left:596px!important}
- #deskList{position:fixed;left:220px;top:0;bottom:0;width:360px;box-sizing:border-box;background:#f6f8fc;border-right:1px solid #e1e6ef;display:flex;flex-direction:column;z-index:5}
- #deskList[hidden]{display:none}
- .dl-top{padding:18px 14px 10px;display:grid;gap:6px;border-bottom:1px solid #e6eaf2;background:#fff}
- .dl-top input{min-height:44px;border-radius:12px}
- .dl-top small{color:#6b7c93;font-weight:700;font-size:11.5px;padding-left:4px}
- .dl-rows{flex:1;overflow-y:auto;padding:8px}
- .dl-row{display:flex;align-items:center;gap:10px;width:100%;min-height:58px;padding:8px 10px;margin:0 0 4px;border-radius:12px;background:transparent;border:1px solid transparent;text-align:left;color:#10192b}
- .dl-row:hover{background:#fff;border-color:#e3e8f2}
- .dl-row.sel,.dl-row.kb{background:#fff;border-color:#2b4a86;box-shadow:0 0 0 3px #2b4a861a}
- .dl-av{width:36px;height:36px;border-radius:11px;background:#e3eaf8;color:#14284f;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
- .dl-t{flex:1;min-width:0}.dl-t b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dl-t small{display:block;color:#6b7c93;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
- .dl-b{text-align:right;font-weight:800;font-size:13.5px;font-variant-numeric:tabular-nums}.dl-b small{display:block;font-size:10px;font-weight:800;opacity:.75}
- /* dialog bara */
- dialog{width:min(720px,calc(100% - 300px))!important}
- /* khata: Diye | Liye dono columns chaude */
- .ledger-pair{gap:18px!important}
+@media (min-width:1100px){html:not(.pcm) main{max-width:none!important;width:auto!important;margin:0!important;padding-left:236px!important;box-shadow:none!important}html:not(.pcm) main>header{border-radius:0 0 0 26px!important;padding:22px 32px 20px!important}html:not(.pcm) main>header .app-nav{position:fixed;left:0;top:0;bottom:0;width:220px;box-sizing:border-box;display:flex!important;flex-direction:column;gap:4px;margin:0!important;padding:20px 12px 24px;overflow-y:auto;background:linear-gradient(180deg,#14284f,#0c1a38);z-index:6;box-shadow:6px 0 24px #0c1a3830}html:not(.pcm) main>header .app-nav::before{content:'SAM · BLUE KHATA';display:block;color:#b8c6e4;font-size:11px;font-weight:800;letter-spacing:1.8px;padding:6px 12px 14px}html:not(.pcm) main>header .app-nav button{width:100%;text-align:left;justify-content:flex-start;border-radius:12px!important;min-height:42px!important;padding:8px 14px!important;font-size:14px!important;background:transparent!important;color:#dfe6f5!important;border:0!important;box-shadow:none!important}html:not(.pcm) main>header .app-nav button:hover{background:#ffffff14!important}html:not(.pcm) main>header .app-nav button.desk-on{background:#ffffff!important;color:#14284f!important;font-weight:800}html:not(.pcm) main>header .top{max-width:1500px}html:not(.pcm) #tabs{max-width:760px}html:not(.pcm) .workspace{max-width:1500px;padding:18px 32px 120px!important;box-sizing:border-box}html:not(.pcm) footer{left:236px!important;right:0!important;transform:none!important;width:auto!important;justify-content:flex-end;padding:14px 32px!important}html:not(.pcm) footer button{flex:0 0 auto!important;min-width:220px;max-width:320px}/* master-detail: baayein khaton ki list */html:not(.pcm).desk-split main{padding-left:596px!important}html:not(.pcm).desk-split footer{left:596px!important}html:not(.pcm) #deskList{position:fixed;left:220px;top:0;bottom:0;width:360px;box-sizing:border-box;background:#f6f8fc;border-right:1px solid #e1e6ef;display:flex;flex-direction:column;z-index:5}html:not(.pcm) #deskList[hidden]{display:none}html:not(.pcm) .dl-top{padding:18px 14px 10px;display:grid;gap:6px;border-bottom:1px solid #e6eaf2;background:#fff}html:not(.pcm) .dl-top input{min-height:44px;border-radius:12px}html:not(.pcm) .dl-top small{color:#6b7c93;font-weight:700;font-size:11.5px;padding-left:4px}html:not(.pcm) .dl-rows{flex:1;overflow-y:auto;padding:8px}html:not(.pcm) .dl-row{display:flex;align-items:center;gap:10px;width:100%;min-height:58px;padding:8px 10px;margin:0 0 4px;border-radius:12px;background:transparent;border:1px solid transparent;text-align:left;color:#10192b}html:not(.pcm) .dl-row:hover{background:#fff;border-color:#e3e8f2}html:not(.pcm) .dl-row.sel,html:not(.pcm) .dl-row.kb{background:#fff;border-color:#2b4a86;box-shadow:0 0 0 3px #2b4a861a}html:not(.pcm) .dl-av{width:36px;height:36px;border-radius:11px;background:#e3eaf8;color:#14284f;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto}html:not(.pcm) .dl-t{flex:1;min-width:0}html:not(.pcm) .dl-t b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}html:not(.pcm) .dl-t small{display:block;color:#6b7c93;font-size:11px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}html:not(.pcm) .dl-b{text-align:right;font-weight:800;font-size:13.5px;font-variant-numeric:tabular-nums}html:not(.pcm) .dl-b small{display:block;font-size:10px;font-weight:800;opacity:.75}/* dialog bara */html:not(.pcm) dialog{width:min(720px,calc(100% - 300px))!important}/* khata: Diye | Liye dono columns chaude */html:not(.pcm) .ledger-pair{gap:18px!important}
 }
 .st-out{margin-top:12px;border:1px solid #e3e8f2;border-radius:14px;overflow:hidden}
 
 /* ===== v2.54: PC — scanner screen poori, bare font, bare buttons (layout WAHI) ===== */
-@media (min-width:1100px){
- .scan-inner{max-width:min(1200px,96vw)!important}
- .scan-find input,.scan-find .scan-q{font-size:22px!important;min-height:58px!important;padding:12px 16px!important}
- .scan-find .scan-n{font-size:22px!important;flex-basis:120px!important;width:120px!important}
- .scan-find .scan-u{font-size:20px!important;min-width:80px!important}
- .scan-hits button{font-size:19px!important;min-height:56px!important}
- .scan-hits button.kbsel,.scan-hits button:focus{outline:3px solid #5ee7ff!important;outline-offset:-3px}
- .scan-msg{font-size:21px!important;margin:12px 8px!important}
- .scan-names{max-height:30vh!important}
- .scan-names li{font-size:19px!important}.scan-names li b{font-size:22px!important}
- .scan-sum{font-size:22px!important}
- .scan-done,.scan-close{min-height:64px!important;font-size:21px!important;font-weight:800!important}
- .scan-mid .scan-pad{width:130px!important}
- .scan-mid .scan-pad-row button{min-height:46px!important;font-size:19px!important}
- .scan-mid .scan-pad-name{font-size:15px!important;max-height:3.6em!important}
- /* app ka search aur neeche ke buttons */
- #search,.toolbar input,.sale-root input[type=search]{font-size:19px!important;min-height:54px!important}
- footer button,#actions button{min-height:60px!important;font-size:19px!important;font-weight:800!important}
- .kbsel{outline:3px solid #2b4a86!important;outline-offset:-2px}
+@media (min-width:1100px){html:not(.pcm) .scan-inner{max-width:min(1200px,96vw)!important}html:not(.pcm) .scan-find input,html:not(.pcm) .scan-find .scan-q{font-size:22px!important;min-height:58px!important;padding:12px 16px!important}html:not(.pcm) .scan-find .scan-n{font-size:22px!important;flex-basis:120px!important;width:120px!important}html:not(.pcm) .scan-find .scan-u{font-size:20px!important;min-width:80px!important}html:not(.pcm) .scan-hits button{font-size:19px!important;min-height:56px!important}html:not(.pcm) .scan-hits button.kbsel,html:not(.pcm) .scan-hits button:focus{outline:3px solid #5ee7ff!important;outline-offset:-3px}html:not(.pcm) .scan-msg{font-size:21px!important;margin:12px 8px!important}html:not(.pcm) .scan-names{max-height:30vh!important}html:not(.pcm) .scan-names li{font-size:19px!important}html:not(.pcm) .scan-names li b{font-size:22px!important}html:not(.pcm) .scan-sum{font-size:22px!important}html:not(.pcm) .scan-done,html:not(.pcm) .scan-close{min-height:64px!important;font-size:21px!important;font-weight:800!important}html:not(.pcm) .scan-mid .scan-pad{width:130px!important}html:not(.pcm) .scan-mid .scan-pad-row button{min-height:46px!important;font-size:19px!important}html:not(.pcm) .scan-mid .scan-pad-name{font-size:15px!important;max-height:3.6em!important}/* app ka search aur neeche ke buttons */html:not(.pcm) #search,html:not(.pcm) .toolbar input,html:not(.pcm) .sale-root input[type=search]{font-size:19px!important;min-height:54px!important}html:not(.pcm) footer button,html:not(.pcm) #actions button{min-height:60px!important;font-size:19px!important;font-weight:800!important}html:not(.pcm) .kbsel{outline:3px solid #2b4a86!important;outline-offset:-2px}
 }
 
 /* ===== v2.56: camera band ho to scanner screen SAFED ===== */
@@ -1554,12 +1505,7 @@ html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-
 /* v2.56.1: scanner search ke natije — bara font (phone par bhi thora, PC par zyada) */
 .scan-hits b{font-size:17px!important;font-weight:800!important}
 .scan-hits small{font-size:14px!important}
-@media (min-width:1100px){
- .scan-hits{max-height:60vh!important}
- .scan-hits button{padding:12px 16px!important}
- .scan-hits b{font-size:24px!important}
- .scan-hits small{font-size:18px!important;font-weight:600}
- .scan-find input::placeholder{font-size:22px}
+@media (min-width:1100px){html:not(.pcm) .scan-hits{max-height:60vh!important}html:not(.pcm) .scan-hits button{padding:12px 16px!important}html:not(.pcm) .scan-hits b{font-size:24px!important}html:not(.pcm) .scan-hits small{font-size:18px!important;font-weight:600}html:not(.pcm) .scan-find input::placeholder{font-size:22px}
 }
 
 /* v2.57: F5 "Kitne print?" */
@@ -1576,15 +1522,7 @@ html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-
 .scan-names li{cursor:pointer}
 .scan-names li.kbsel{outline:3px solid #2b4a86;outline-offset:-2px;border-radius:10px}
 /* v2.58: PC + camera band = khali jagah khatam, list upar aur lambi; 1-12 pad ek patli qataar */
-@media (min-width:1100px){
- .scan-box.cam-off .scan-mid{position:relative!important;flex:0 0 auto!important;height:auto!important;min-height:0!important}
- .scan-box.cam-off .scan-mid .scan-cam,.scan-box.cam-off video{display:none!important}
- .scan-box.cam-off .scan-mid .scan-pad{position:static!important;width:auto!important;max-height:none!important;margin:6px 10px!important;padding:8px!important;border-radius:14px!important}
- .scan-box.cam-off .scan-mid .scan-pad-row{display:flex!important;flex-wrap:wrap;gap:6px!important;justify-content:flex-start}
- .scan-box.cam-off .scan-mid .scan-pad-row button{min-width:58px!important;min-height:48px!important;grid-column:auto!important}
- .scan-box.cam-off .scan-mid .scan-pad-name{max-height:none!important;font-size:18px!important}
- .scan-box.cam-off .scan-names{max-height:none!important;flex:1 1 auto!important;overflow:auto!important}
- .scan-box.cam-off .scan-inner{display:flex!important;flex-direction:column!important}
+@media (min-width:1100px){html:not(.pcm) .scan-box.cam-off .scan-mid{position:relative!important;flex:0 0 auto!important;height:auto!important;min-height:0!important}html:not(.pcm) .scan-box.cam-off .scan-mid .scan-cam,html:not(.pcm) .scan-box.cam-off video{display:none!important}html:not(.pcm) .scan-box.cam-off .scan-mid .scan-pad{position:static!important;width:auto!important;max-height:none!important;margin:6px 10px!important;padding:8px!important;border-radius:14px!important}html:not(.pcm) .scan-box.cam-off .scan-mid .scan-pad-row{display:flex!important;flex-wrap:wrap;gap:6px!important;justify-content:flex-start}html:not(.pcm) .scan-box.cam-off .scan-mid .scan-pad-row button{min-width:58px!important;min-height:48px!important;grid-column:auto!important}html:not(.pcm) .scan-box.cam-off .scan-mid .scan-pad-name{max-height:none!important;font-size:18px!important}html:not(.pcm) .scan-box.cam-off .scan-names{max-height:none!important;flex:1 1 auto!important;overflow:auto!important}html:not(.pcm) .scan-box.cam-off .scan-inner{display:flex!important;flex-direction:column!important}
 }
 
 /* v2.61: pichhli ginti ki history (khulne wali) */
@@ -1601,75 +1539,25 @@ html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-
 .scan-godam button{min-height:36px;padding:0 12px;border-radius:999px;border:1px solid #c9d3e6;background:#fff;color:#1b3058;font-weight:700;font-size:13px}
 .scan-godam button.on{background:#1b3058;color:#fff;border-color:#1b3058}
 .scan-bills{display:none}
-@media (min-width:1100px){
- .scan-box.has-bills .scan-inner{margin-left:350px!important;max-width:calc(100vw - 370px)!important}
- .scan-box.has-bills .scan-bills{display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;width:340px;box-sizing:border-box;background:#f6f8fc;border-right:1px solid #e1e6ef;padding:14px 12px;gap:10px;z-index:3;color:#10192b}
- .sb-head{display:flex;justify-content:space-between;align-items:center}.sb-head b{font-size:18px}.sb-head small{font-weight:800;color:#5c6a85}
- .sb-q{min-height:46px;border-radius:12px;border:1px solid #d5dbe8;padding:0 12px;font-size:16px;background:#fff;color:#10192b}
- .sb-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:2px}
- .sb-chip{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:9px 10px;border-radius:14px;background:#fff;border:1px solid #e3e8f2;cursor:pointer}
- .sb-chip i{font-style:normal;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px}
- .sb-chip.pd i{background:#e3f6ec;color:#138150}.sb-chip.up i{background:#fdecec;color:#b42332}.sb-chip.cx i{background:#eceff4;color:#6b7280}.sb-chip.wt i{background:#fff3e0;color:#8a4b00}.sb-chip.fl i{background:#fdecec;color:#b42332}
- .sb-chip.cx{opacity:.7}.sb-chip.cx b{text-decoration:line-through}
- .sb-chip b{display:block;font-size:14.5px}.sb-chip small{display:block;color:#6b7c93;font-size:11.5px;font-weight:600}
- .sb-chip em{font-style:normal;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}
- .sb-chip.open{border-color:#2b4a86;box-shadow:0 0 0 3px #2b4a861a}
- .sb-det{grid-column:1/-1;border-top:1px dashed #d5dbe8;padding-top:6px;font-size:13px}
- .sb-det p{display:flex;justify-content:space-between;gap:8px;margin:3px 0}.sb-det p span{color:#5c6a85;font-variant-numeric:tabular-nums}
- .sb-det .sb-pay{font-weight:700;color:#1b3058}
- .sb-det button{margin-top:6px;width:100%;min-height:40px;border-radius:10px;border:1px solid #d5dbe8;background:#eef2f8;color:#1b3058;font-weight:800}
+@media (min-width:1100px){html:not(.pcm) .scan-box.has-bills .scan-inner{margin-left:350px!important;max-width:calc(100vw - 370px)!important}html:not(.pcm) .scan-box.has-bills .scan-bills{display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;width:340px;box-sizing:border-box;background:#f6f8fc;border-right:1px solid #e1e6ef;padding:14px 12px;gap:10px;z-index:3;color:#10192b}html:not(.pcm) .sb-head{display:flex;justify-content:space-between;align-items:center}html:not(.pcm) .sb-head b{font-size:18px}html:not(.pcm) .sb-head small{font-weight:800;color:#5c6a85}html:not(.pcm) .sb-q{min-height:46px;border-radius:12px;border:1px solid #d5dbe8;padding:0 12px;font-size:16px;background:#fff;color:#10192b}html:not(.pcm) .sb-list{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:2px}html:not(.pcm) .sb-chip{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:9px 10px;border-radius:14px;background:#fff;border:1px solid #e3e8f2;cursor:pointer}html:not(.pcm) .sb-chip i{font-style:normal;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px}html:not(.pcm) .sb-chip.pd i{background:#e3f6ec;color:#138150}html:not(.pcm) .sb-chip.up i{background:#fdecec;color:#b42332}html:not(.pcm) .sb-chip.cx i{background:#eceff4;color:#6b7280}html:not(.pcm) .sb-chip.wt i{background:#fff3e0;color:#8a4b00}html:not(.pcm) .sb-chip.fl i{background:#fdecec;color:#b42332}html:not(.pcm) .sb-chip.cx{opacity:.7}html:not(.pcm) .sb-chip.cx b{text-decoration:line-through}html:not(.pcm) .sb-chip b{display:block;font-size:14.5px}html:not(.pcm) .sb-chip small{display:block;color:#6b7c93;font-size:11.5px;font-weight:600}html:not(.pcm) .sb-chip em{font-style:normal;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}html:not(.pcm) .sb-chip.open{border-color:#2b4a86;box-shadow:0 0 0 3px #2b4a861a}html:not(.pcm) .sb-det{grid-column:1/-1;border-top:1px dashed #d5dbe8;padding-top:6px;font-size:13px}html:not(.pcm) .sb-det p{display:flex;justify-content:space-between;gap:8px;margin:3px 0}html:not(.pcm) .sb-det p span{color:#5c6a85;font-variant-numeric:tabular-nums}html:not(.pcm) .sb-det .sb-pay{font-weight:700;color:#1b3058}html:not(.pcm) .sb-det button{margin-top:6px;width:100%;min-height:40px;border-radius:10px;border:1px solid #d5dbe8;background:#eef2f8;color:#1b3058;font-weight:800}
 }
 
 .sb-chip b u{text-decoration:none;font-size:10px;font-weight:800;padding:1px 6px;border-radius:6px;background:#e3eaf8;color:#2b4a86;margin-left:4px;vertical-align:2px}
 
 /* v2.65.1: "Aaj ke bills" chhota / compact */
-@media (min-width:1100px){
- .scan-box.has-bills .scan-inner{margin-left:290px!important;max-width:calc(100vw - 305px)!important}
- .scan-box.has-bills .scan-bills{width:280px!important;padding:10px 8px!important;gap:6px!important}
- .sb-head b{font-size:15px!important}.sb-q{min-height:38px!important;font-size:14px!important;border-radius:10px!important}
- .sb-list{gap:3px!important}
- .sb-chip{padding:4px 8px!important;gap:7px!important;border-radius:10px!important}
- .sb-chip i{width:22px!important;height:22px!important;font-size:12px!important}
- .sb-chip b{font-size:13px!important;display:inline!important}.sb-chip small{display:inline!important;font-size:11px!important;margin-left:6px}
- .sb-chip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
- .sb-chip em{font-size:13px!important}
- .sb-chip b u{font-size:9px!important;padding:0 4px!important}
+@media (min-width:1100px){html:not(.pcm) .scan-box.has-bills .scan-inner{margin-left:290px!important;max-width:calc(100vw - 305px)!important}html:not(.pcm) .scan-box.has-bills .scan-bills{width:280px!important;padding:10px 8px!important;gap:6px!important}html:not(.pcm) .sb-head b{font-size:15px!important}html:not(.pcm) .sb-q{min-height:38px!important;font-size:14px!important;border-radius:10px!important}html:not(.pcm) .sb-list{gap:3px!important}html:not(.pcm) .sb-chip{padding:4px 8px!important;gap:7px!important;border-radius:10px!important}html:not(.pcm) .sb-chip i{width:22px!important;height:22px!important;font-size:12px!important}html:not(.pcm) .sb-chip b{font-size:13px!important;display:inline!important}html:not(.pcm) .sb-chip small{display:inline!important;font-size:11px!important;margin-left:6px}html:not(.pcm) .sb-chip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}html:not(.pcm) .sb-chip em{font-size:13px!important}html:not(.pcm) .sb-chip b u{font-size:9px!important;padding:0 4px!important}
 }
 
 /* v2.65.2: bill number bara, raqam neeche, patti aur patli */
-@media (min-width:1100px){
- .scan-box.has-bills .scan-inner{margin-left:230px!important;max-width:calc(100vw - 245px)!important}
- .scan-box.has-bills .scan-bills{width:220px!important;padding:8px 6px!important}
- .sb-chip{grid-template-columns:auto 1fr auto!important;padding:5px 7px!important}
- .sb-chip span{display:flex!important;flex-direction:column;min-width:0}
- .sb-chip b{display:block!important;font-size:17px!important;font-weight:800!important;letter-spacing:.2px;line-height:1.15;font-variant-numeric:tabular-nums}
- .sb-chip span em{display:block;font-size:13px!important;font-weight:700!important;color:#3a4b6a;margin-top:1px}
- .sb-chip>small{display:block!important;margin:0!important;font-size:10.5px!important;text-align:right;color:#8a97ad;max-width:70px;overflow:hidden;text-overflow:ellipsis}
- .sb-chip.cx span em{text-decoration:line-through}
+@media (min-width:1100px){html:not(.pcm) .scan-box.has-bills .scan-inner{margin-left:230px!important;max-width:calc(100vw - 245px)!important}html:not(.pcm) .scan-box.has-bills .scan-bills{width:220px!important;padding:8px 6px!important}html:not(.pcm) .sb-chip{grid-template-columns:auto 1fr auto!important;padding:5px 7px!important}html:not(.pcm) .sb-chip span{display:flex!important;flex-direction:column;min-width:0}html:not(.pcm) .sb-chip b{display:block!important;font-size:17px!important;font-weight:800!important;letter-spacing:.2px;line-height:1.15;font-variant-numeric:tabular-nums}html:not(.pcm) .sb-chip span em{display:block;font-size:13px!important;font-weight:700!important;color:#3a4b6a;margin-top:1px}html:not(.pcm) .sb-chip>small{display:block!important;margin:0!important;font-size:10.5px!important;text-align:right;color:#8a97ad;max-width:70px;overflow:hidden;text-overflow:ellipsis}html:not(.pcm) .sb-chip.cx span em{text-decoration:line-through}
 }
 
 /* v2.65.3: dono taraf ka gap khatam — bills patti 230px, baqi poori screen scanner; number aur bara */
-@media (min-width:1100px){
- .scan-box.has-bills{padding:0!important}
- .scan-box.has-bills .scan-bills{width:230px!important}
- .scan-box.has-bills .scan-inner{position:fixed!important;left:230px!important;right:0!important;top:0!important;bottom:0!important;margin:0!important;max-width:none!important;width:auto!important;border-radius:0!important;box-sizing:border-box;padding:10px 14px!important;overflow-y:auto}
- .sb-chip b{font-size:21px!important}
- .sb-chip span em{font-size:14px!important}
- .sb-chip span em u{text-decoration:none;font-size:9.5px!important;font-weight:800;padding:0 5px;border-radius:5px;background:#e3eaf8;color:#2b4a86;margin-left:6px;vertical-align:1px}
- .sb-chip.cx span em u{text-decoration:none}
+@media (min-width:1100px){html:not(.pcm) .scan-box.has-bills{padding:0!important}html:not(.pcm) .scan-box.has-bills .scan-bills{width:230px!important}html:not(.pcm) .scan-box.has-bills .scan-inner{position:fixed!important;left:230px!important;right:0!important;top:0!important;bottom:0!important;margin:0!important;max-width:none!important;width:auto!important;border-radius:0!important;box-sizing:border-box;padding:10px 14px!important;overflow-y:auto}html:not(.pcm) .sb-chip b{font-size:21px!important}html:not(.pcm) .sb-chip span em{font-size:14px!important}html:not(.pcm) .sb-chip span em u{text-decoration:none;font-size:9.5px!important;font-weight:800;padding:0 5px;border-radius:5px;background:#e3eaf8;color:#2b4a86;margin-left:6px;vertical-align:1px}html:not(.pcm) .sb-chip.cx span em u{text-decoration:none}
 }
 
 /* v2.66: PC Sale screen — din band / backup / late wali qataar chhupi; Counter / Wholesale usi jagah upar */
-@media (min-width:1100px){
- html.desk body:has([data-sale-root]) #homeBar{display:none!important}
- html.desk body:has([data-sale-root]) main>header{padding-top:14px!important;padding-bottom:14px!important}
- html.desk body:has([data-sale-root]) #summary{margin-top:6px!important}
- html.desk body:has([data-sale-root]) .sale-head{padding:10px 14px!important;display:grid!important;grid-template-columns:1fr auto;align-items:center;gap:8px 14px}
- html.desk body:has([data-sale-root]) .sale-head .account-tools{margin:0!important;display:flex!important;gap:10px}
- html.desk body:has([data-sale-root]) .sale-head .sale-mode{min-height:52px!important;font-size:18px!important;padding:0 24px!important;flex:0 0 auto!important}
- html.desk body:has([data-sale-root]) .sale-head .sale-total{margin:0!important;text-align:right}
- html.desk body:has([data-sale-root]) .sale-head .sale-total strong{font-size:28px!important}
- html.desk body:has([data-sale-root]) .sale-head>:not(.account-tools):not(.sale-total){grid-column:1/-1}
+@media (min-width:1100px){html:not(.pcm).desk body:has([data-sale-root]) #homeBar{display:none!important}html:not(.pcm).desk body:has([data-sale-root]) main>header{padding-top:14px!important;padding-bottom:14px!important}html:not(.pcm).desk body:has([data-sale-root]) #summary{margin-top:6px!important}html:not(.pcm).desk body:has([data-sale-root]) .sale-head{padding:10px 14px!important;display:grid!important;grid-template-columns:1fr auto;align-items:center;gap:8px 14px}html:not(.pcm).desk body:has([data-sale-root]) .sale-head .account-tools{margin:0!important;display:flex!important;gap:10px}html:not(.pcm).desk body:has([data-sale-root]) .sale-head .sale-mode{min-height:52px!important;font-size:18px!important;padding:0 24px!important;flex:0 0 auto!important}html:not(.pcm).desk body:has([data-sale-root]) .sale-head .sale-total{margin:0!important;text-align:right}html:not(.pcm).desk body:has([data-sale-root]) .sale-head .sale-total strong{font-size:28px!important}html:not(.pcm).desk body:has([data-sale-root]) .sale-head>:not(.account-tools):not(.sale-total){grid-column:1/-1}
 }
 
 /* v2.67: scanner list ki har line par Pcs / Ctn khane */
@@ -1678,7 +1566,7 @@ html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-
 .scan-names .li-qty label{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;color:#5c6a85;text-transform:uppercase}
 .scan-names .li-in{width:64px;min-height:36px;padding:2px 8px;border-radius:10px;border:1.5px solid #c9d3e6;background:#fff;color:#10192b;font-size:17px;font-weight:800;text-align:center}
 .scan-names .li-in:focus{outline:none;border-color:#138150;box-shadow:0 0 0 3px #13815033}
-@media (min-width:1100px){ .scan-names .li-qty{position:absolute;right:60px;top:50%;transform:translateY(-50%);margin:0} .scan-names .li-in{width:78px;min-height:44px;font-size:20px} }
+@media (min-width:1100px){html:not(.pcm) .scan-names .li-qty{position:absolute;right:60px;top:50%;transform:translateY(-50%);margin:0}html:not(.pcm) .scan-names .li-in{width:78px;min-height:44px;font-size:20px} }
 
 /* v2.68: counter (printer) chips */
 .sale-counter button.on{background:linear-gradient(180deg,#138150,#0f6a3f)!important;color:#fff!important;border-color:#0f6a3f!important}
@@ -1691,20 +1579,20 @@ html[data-look="old"] .look-chip[data-look="old"],html[data-look="frost"] .look-
 .scan-find-row .scan-c{flex:0 0 84px;width:84px;min-height:inherit;border-radius:14px;border:1px solid #d5d9e2;background:#fff;color:#10192b;font-size:18px;font-weight:800;text-align:center;padding:0 6px}
 .scan-find-row .scan-c:disabled{opacity:.45;background:#f3f5f9}
 .scan-find-row .scan-n{text-align:center;font-weight:800}
-@media (min-width:1100px){ .scan-find-row .scan-c{flex-basis:120px!important;width:120px!important;font-size:22px!important} }
+@media (min-width:1100px){html:not(.pcm) .scan-find-row .scan-c{flex-basis:120px!important;width:120px!important;font-size:22px!important} }
 
 /* v2.70: search natije mein Parchoon / Wholesale rate (Pcs + Ctn) */
 .scan-hits .hit-rates{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
 .scan-hits .hr{font-style:normal;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
 .scan-hits .hr b{display:inline;font-size:13px;font-weight:800}
 .scan-hits .hr.r{background:#e8f1ff;color:#1b3a7a}.scan-hits .hr.w{background:#e6f6ee;color:#0f6a3f}
-@media (min-width:1100px){ .scan-hits .hr{font-size:15px!important}.scan-hits .hr b{font-size:17px!important} }
+@media (min-width:1100px){html:not(.pcm) .scan-hits .hr{font-size:15px!important}html:not(.pcm) .scan-hits .hr b{font-size:17px!important} }
 
 /* v2.71: search natije mein saare barcode */
 .scan-hits .hit-codes{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .scan-hits .hc{font-style:normal;font-family:ui-monospace,Consolas,monospace;font-size:12px;font-weight:700;padding:1px 7px;border-radius:6px;background:#eef1f6;color:#41536f;border:1px solid #dfe5ef}
 .scan-hits .hc.sub{background:#fff3e0;color:#8a4b00;border-color:#f3d2a6}.scan-hits .hc b{font-size:12px}
-@media (min-width:1100px){ .scan-hits .hc{font-size:15px!important}.scan-hits .hc b{font-size:15px!important} }
+@media (min-width:1100px){html:not(.pcm) .scan-hits .hc{font-size:15px!important}html:not(.pcm) .scan-hits .hc b{font-size:15px!important} }
 
 /* v2.73: boot-auto — password yaad hai, login screen na dikhe, chhota splash */
 html.boot-auto #login{display:none!important}
@@ -1956,9 +1844,7 @@ html .summary>.val-card+div{border-left:0!important;padding-left:0!important}
 .li-g{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
 .ub-bill{margin:10px 0;page-break-inside:avoid}.ub-bill h3{margin:6px 0 4px;font-size:15px}.ub-bill h3 small{font-weight:400;font-size:12px;color:#555}
 /* v2.95.2: 🧾 Aaj ke bills — saaf layout (PC ki baayin patti + mobile window). Nishan: ✓ posted · ○ un-posted · rang: hara paid / laal udhaar */
-@media (min-width:1100px){
- .scan-box.has-bills .scan-bills{width:300px!important}
- .scan-box.has-bills .scan-inner{left:300px!important}
+@media (min-width:1100px){html:not(.pcm) .scan-box.has-bills .scan-bills{width:300px!important}html:not(.pcm) .scan-box.has-bills .scan-inner{left:300px!important}
 }
 .nb-wrap{overflow:hidden!important;box-sizing:border-box}
 .nb-wrap *{box-sizing:border-box}
@@ -4303,14 +4189,10 @@ header .recent-bar .rc-x{flex:0 0 auto;min-height:0;width:22px;height:22px;paddi
 html body :is(#summary,#dialogBody) .gm-posfill{min-height:0;padding:5px 10px;font-size:12px;border-radius:999px;border:1.5px solid #c7cdfb!important;background:#eef2ff!important;color:#312e81!important;margin-top:4px}
 html body :is(#summary,#dialogBody) .rk-farbar{padding:4px 0 6px;font-size:12px}html body :is(#summary,#dialogBody) .rk-farbar button.kh:not(.is-in){border-color:#fecaca!important;color:#b91c1c!important;background:#fff5f5!important}
 /* v2.103.73: 🖥 PC par khirkiyon (dialog) ke andar sab bara — malik: "PC par screens ke andar chips bohat chhote" */
-@media (min-width:1100px){html body #dialog #dialogBody,html body #dialog #dialogTitle{zoom:1.28}}
+@media (min-width:1100px){html:not(.pcm) body #dialog #dialogBody,html:not(.pcm) body #dialog #dialogTitle{zoom:1.28}}
 /* v2.103.76: 🖥 PC PAR SIZE — Settings chips Chhota / Darmiyana / Bara (har PC apna, localStorage sam-pcz s|m|l, default Bara).
    Zoom sirf main + khirki ke andar (html par >1 nahi — 100vw/90dvh wali cheezein screen se bahar chali jati). Layout wahi. */
-@media (min-width:1100px){
-html:not([data-pcz="s"]):not([data-pcz="m"]) body>main{zoom:1.25}
-html[data-pcz="m"] body>main{zoom:1.12}
-html:not([data-pcz="s"]):not([data-pcz="m"]) body #dialog #dialogBody,html:not([data-pcz="s"]):not([data-pcz="m"]) body #dialog #dialogTitle{zoom:1.5}
-html[data-pcz="m"] body #dialog #dialogBody,html[data-pcz="m"] body #dialog #dialogTitle{zoom:1.38}
+@media (min-width:1100px){html:not(.pcm):not([data-pcz="s"]):not([data-pcz="m"]) body>main{zoom:1.25}html:not(.pcm)[data-pcz="m"] body>main{zoom:1.12}html:not(.pcm):not([data-pcz="s"]):not([data-pcz="m"]) body #dialog #dialogBody,html:not(.pcm):not([data-pcz="s"]):not([data-pcz="m"]) body #dialog #dialogTitle{zoom:1.5}html:not(.pcm)[data-pcz="m"] body #dialog #dialogBody,html:not(.pcm)[data-pcz="m"] body #dialog #dialogTitle{zoom:1.38}
 }
 .pcz-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:6px 0}
 .pcz-grid small{grid-column:1/-1;color:#64748b;font-size:12px}
@@ -4342,7 +4224,7 @@ html body #summary .ir-nav button b{font-weight:800}html body #summary .ir-nav b
 html body #summary .ir-vsw{display:inline-flex;justify-self:end;gap:2px;padding:3px;border-radius:12px;background:#eef2ff}html body #summary .ir-vsw button{min-height:0;padding:6px 12px;border-radius:10px;font-size:12px;font-weight:800;background:transparent!important;border:0!important;color:#475569!important}html body #summary .ir-vsw button.is-in{background:#fff!important;color:#3730a3!important;box-shadow:0 1px 6px #3730a322}
 html body #summary .ir-trd{margin-bottom:8px}
 .ir-err{font-size:12px}
-@media (min-width:1100px){.ir-main{grid-template-columns:200px minmax(0,1fr);align-items:start}html body #summary .ir-nav{flex-direction:column;position:sticky;top:12px;overflow:visible;padding:8px}html body #summary .ir-nav button{width:100%;justify-content:flex-start;padding:10px 12px;font-size:14px}}
+@media (min-width:1100px){html:not(.pcm) .ir-main{grid-template-columns:200px minmax(0,1fr);align-items:start}html:not(.pcm) body #summary .ir-nav{flex-direction:column;position:sticky;top:12px;overflow:visible;padding:8px}html:not(.pcm) body #summary .ir-nav button{width:100%;justify-content:flex-start;padding:10px 12px;font-size:14px}}
 html body :is(#summary,#dialogBody) .rk-trn{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0 2px;padding:8px 10px;border-radius:12px;background:#fffbeb;border:1.5px solid #fcd34d;font-size:12.5px;color:#92400e}html body :is(#summary,#dialogBody) .rk-trn span{flex:1 1 100%}html body :is(#summary,#dialogBody) .rk-trn button{min-height:0;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:800;border:1.5px solid #fcd34d!important;background:#fff!important;color:#92400e!important}
 
 /* =====================================================================================================
@@ -4417,9 +4299,7 @@ html.dk body #mnRoot .mn-pin.is-in{background:rgba(255,214,102,.22)}
 html.dk body #mnRoot .mn-seg button,html.dk body #mnRoot .mn-app button,html.dk body #mnRoot .mz-row button:not(.mz-sw){background:var(--glass2,rgba(255,255,255,.08))!important;color:var(--ink,#e8eeff)!important;border-color:var(--line,rgba(255,255,255,.14))!important}
 html.dk body #mnRoot .mn-seg button.is-in,html.dk body #mnRoot .mz-row button.is-in:not(.mz-sw){background:var(--accent-ink,#8fd8ff)!important;color:var(--ontx,#081127)!important}
 html.dk body #mnRoot .mn-hb .hchip:not(.bad):not(.warn):not(.ok):not(.hot){background:rgba(255,255,255,.1)!important;color:var(--ink,#e8eeff)!important;border-color:var(--line,rgba(255,255,255,.14))!important}
-@media (min-width:1100px){
-  html body #mnRoot .mn-sheet{left:auto;top:0;bottom:0;right:0;width:440px;max-height:none;border-radius:24px 0 0 24px;animation:mnLeft .22s cubic-bezier(.2,.8,.2,1)}
-  html body #mnRoot .mn-hdl{display:none}
+@media (min-width:1100px){html:not(.pcm) body #mnRoot .mn-sheet{left:auto;top:0;bottom:0;right:0;width:440px;max-height:none;border-radius:24px 0 0 24px;animation:mnLeft .22s cubic-bezier(.2,.8,.2,1)}html:not(.pcm) body #mnRoot .mn-hdl{display:none}
 }
 @keyframes mnUp{from{transform:translateY(48px);opacity:.35}to{transform:none;opacity:1}}
 @keyframes mnLeft{from{transform:translateX(48px);opacity:.35}to{transform:none;opacity:1}}
@@ -4537,7 +4417,7 @@ html.lt body footer#actions:not(.day-acts) button{color:#fff!important}
    screen ke andar screen chips chhupe, upar baayein se khulein · upar ke bare card aadhe · AI agent upar se hatao").
    Sirf phone (<1100px). html[data-hero="big"] = purane bare card (🔠 Apni marzi) · html[data-nav="all"] = screen chips hamesha.
    ===================================================================================================== */
-@media (min-width:1100px){html body #navBtn{display:none!important}html body #summary .dy-strip{display:none!important}}
+@media (min-width:1100px){html:not(.pcm) body #navBtn{display:none!important}html:not(.pcm) body #summary .dy-strip{display:none!important}}
 @media (max-width:1099.98px){
   /* ---- ☰ screen chips: band, ☰ se khulte · ek hi line ---- */
   html:not(.nav-open):not([data-nav="all"]) body main>header .app-nav{display:none!important}
@@ -4780,9 +4660,7 @@ html body .rk-pill,html body .ac-flt{display:none}
   /* 🔒 Din band karein: phone par bara patta nahi — ⋮ (Aaj ki haalat / 🌙 Din) */
   html body main>header #dayLockBtn{display:none!important}
 }
-@media (min-width:1100px){
-  html body #dialog #dlgMn{display:none!important}
-  html body #detailTools .dt-quick{display:none!important}
+@media (min-width:1100px){html:not(.pcm) body #dialog #dlgMn{display:none!important}html:not(.pcm) body #detailTools .dt-quick{display:none!important}
 }
 html body #detailTools .dt-dates{display:contents}
 /* v2.105.2: neeche ki patti ke kaam ⋮ mein (shell.js FT_MOVE → html[data-ftmn]) — sirf phone */
@@ -6597,9 +6475,7 @@ html body #summary .ir-mini small{color:#6b7385;font-size:11.5px}
 html body #summary .ir-mini .ir-optbtn{margin-left:auto;width:38px!important;height:38px;min-height:38px;padding:0!important;border-radius:999px;font-size:19px;font-weight:900;border:1.5px solid #c9d6ef!important;background:linear-gradient(180deg,#fff,#eef3fc)!important;color:#1d3b7a!important}
 html body #summary .ir-shell.ir-open .ir-mini .ir-optbtn{background:linear-gradient(180deg,#2f5bd3,#1e44b0)!important;color:#fff!important}
 @media (max-width:1099px){html body #summary .ir-mini .ir-optbtn{display:none}}
-@media (min-width:1100px){
- html body #summary .ir-shell:not(.ir-open) :is([data-mn-seg],[data-mn]):not([data-mn-keep]){display:none!important}
- html body #summary .ir-shell:not(.ir-open) .ir-main{grid-template-columns:minmax(0,1fr)}
+@media (min-width:1100px){html:not(.pcm) body #summary .ir-shell:not(.ir-open) :is([data-mn-seg],[data-mn]):not([data-mn-keep]){display:none!important}html:not(.pcm) body #summary .ir-shell:not(.ir-open) .ir-main{grid-template-columns:minmax(0,1fr)}
 }
 html body #summary .ir-tsum2{margin:4px 2px 6px;font-size:12.5px;color:#4d5b74}
 html body #summary .ir-top{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
@@ -7473,7 +7349,7 @@ html body #dialogBody .wo-q{font-style:normal;color:#b3261e}
 html body #dialogBody a.wps-tc{display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid #c7d4f5;background:linear-gradient(180deg,#fff,#f3f6fd);color:#223b6d;font-weight:800;font-size:13px;white-space:nowrap;text-decoration:none}
 html body #dialogBody .wo-r small{white-space:normal;line-height:1.3}
 /* v2.200.0: ☰ SLIDER (Facebook jaisa) — phone par screen chips + 📌 patti header mein nahi, baayein se drawer */
-@media (min-width:1100px){html body #chipDrawer{display:none!important}}
+@media (min-width:1100px){html:not(.pcm) body #chipDrawer{display:none!important}}
 @media (max-width:1099.98px){
   html body main>header .app-nav,html body main>header #subBar,html body main>header #foldRow{display:none!important}
   html body #chipDrawer{position:fixed;inset:0;z-index:9000;pointer-events:none}

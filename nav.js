@@ -29,7 +29,7 @@ function paint() {
   const nav = document.querySelector('.app-nav'); if (!nav || busy) return; busy = true;
   try {
     const list = allowed(); let all = $('navAll');
-    if (mq.matches || list.length <= 6) { list.forEach(b => { b.classList.remove('nav-off'); b.style.order = ''; }); if (all) all.hidden = true; return; }
+    if ((mq.matches && !window.ntPcm) || list.length <= 6) { list.forEach(b => { b.classList.remove('nav-off'); b.style.order = ''; }); if (all) all.hidden = true; return; }
     const P = pins(list), R = recent(), c = cur(), keep = [...new Set([c, ...P, ...R.slice(0, 2)].filter(Boolean))];
     list.forEach(b => { const i = keep.indexOf(b.id); b.classList.toggle('nav-off', i < 0); b.style.order = i < 0 ? '' : String(i + 1); });
     if (!all) { all = document.createElement('button'); all.type = 'button'; all.id = 'navAll'; all.className = 'nav-all'; nav.appendChild(all); }
@@ -87,7 +87,7 @@ function flShow(on) {
 }
 function onScroll() {
   if (!fl) return; const y = window.scrollY || 0, dy = y - lastY;
-  if (!floatOn() || mq.matches || !document.querySelector('main:not([hidden]) .app-nav') || y < navBottom() + 20) { flShow(false); lastY = y; return; }
+  if (!floatOn() || (mq.matches && !window.ntPcm) || !document.querySelector('main:not([hidden]) .app-nav') || y < navBottom() + 20) { flShow(false); lastY = y; return; }
   if (dy < -8) flShow(true); else if (dy > 8) flShow(false);
   if (Math.abs(dy) > 8) lastY = y;
 }
@@ -99,7 +99,7 @@ function fdShow(on) { const d = dlgEl(); if (!d) return; if (on && !fd) { fd = d
   if (fd && fd.parentNode !== d) d.appendChild(fd); if (!fd || dShown === on) return; dShown = on; if (on) flPaint(fd); fd.classList.toggle('nvf-on', on); }
 function onDlgScroll(e) {
   const b = e.target; if (!b || b.id !== 'dialogBody') return; const y = b.scrollTop || 0, dy = y - dLast;
-  if (!floatOn() || mq.matches || b.querySelector('.nv-root') || y < 60 || dlgEl()?.classList.contains('full-dialog')) { fdShow(false); dLast = y; return; }   // v2.103.79: poori screen khirki mein upar patti nahi
+  if (!floatOn() || (mq.matches && !window.ntPcm) || b.querySelector('.nv-root') || y < 60 || dlgEl()?.classList.contains('full-dialog')) { fdShow(false); dLast = y; return; }   // v2.103.79: poori screen khirki mein upar patti nahi
   if (dy < -8) fdShow(true); else if (dy > 8) fdShow(false);
   if (Math.abs(dy) > 8) dLast = y;
 }

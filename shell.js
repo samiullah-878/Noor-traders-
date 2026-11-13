@@ -14,15 +14,15 @@
 //  🔠 Apni marzi: likhai size (main zoom) · headings size · likhai rang · headings rang — har phone (localStorage sam-marzi);
 //     malik "👑 Sab mulazimon par" = blueAccess/look {marzi, mAt} (cloud.setMarzi). AI nahi.
 // =====================================================================================================
-import { recentList } from './recent.js?v=2.247.0';
-import { agentRegister } from './agent.js?v=2.247.0';
-import { smartHit, hlName } from './smart-search.js?v=2.247.0';
+import { recentList } from './recent.js?v=2.248.0';
+import { agentRegister } from './agent.js?v=2.248.0';
+import { smartHit, hlName } from './smart-search.js?v=2.248.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const cssq = s => String(s).replace(/["\\]/g, '\\$&');
 const clean = t => String(t || '').replace(/\s+/g, ' ').trim();
-const phone = () => !(window.matchMedia && window.matchMedia('(min-width:1100px)').matches);
+const phone = () => !!window.ntPcm || !(window.matchMedia && window.matchMedia('(min-width:1100px)').matches);   // v2.248.0: PC par bhi mobile wala dhancha (ntPcm)
 let H = {};
 const vw = () => { try { return String(H.view?.() || ''); } catch { return ''; } };
 const scr = () => vw() + (H.selected?.() ? ':acct' : '');
@@ -320,7 +320,7 @@ function drawerEl() {
   return d;
 }
 function drawerMove(on) {
-  if (innerWidth >= 1100) return;
+  if (innerWidth >= 1100 && !window.ntPcm) return;
   const nav = document.querySelector('main>header .app-nav') || document.querySelector('#chipDrawer .app-nav'), sub = $('subBar'); if (!nav) return;
   const d = drawerEl();
   if (on) {
@@ -351,7 +351,7 @@ export function shellRoute() { const v = scr(); if (shellRoute.v !== v) { shellR
 function lockX() {
   if (lockX.on) return; lockX.on = 1;
   document.addEventListener('scroll', e => {
-    if (innerWidth >= 1100) return;
+    if (innerWidth >= 1100 && !window.ntPcm) return;
     const t = e.target;
     if (t === document || t === document.documentElement || t === document.body) { if (window.scrollX) window.scrollTo(0, window.scrollY); return; }
     if (t && t.nodeType === 1 && t.scrollLeft && (t.id === 'dialogBody' || t.id === 'dialog' || t.matches('main,.workspace,#list,#summary,.mn-body'))) t.scrollLeft = 0;
@@ -397,7 +397,7 @@ const dhWr = (k, o) => { try { localStorage.setItem(k, JSON.stringify(o)); } cat
 const dhCan = () => { try { return !!H.owner?.() || H.can?.('app.dhoondo') !== false; } catch { return true; } };
 const dhKey = x => String(x.k).startsWith('ft.') ? 'ft:' + x.t : x.k;   // neeche ki patti ke kaam: naam se pehchan (index badal sakta)
 let DHS = null;
-async function dhStatic() { if (DHS) return DHS; try { DHS = (await import('./dh-cat.js?v=2.247.0')).DH_CAT || {}; } catch { DHS = {}; } return DHS; }
+async function dhStatic() { if (DHS) return DHS; try { DHS = (await import('./dh-cat.js?v=2.248.0')).DH_CAT || {}; } catch { DHS = {}; } return DHS; }
 // is screen ke chips yaad — jo kabhi dikhe sab (haalat ke hisaab se aate jate hain), 21 din na dikhe to bhool jao
 const dhSig = new Map();   // view → pichhli dafa ke chips (wahi hon to localStorage chhoo bhi nahi — tez)
 function dhLearn() {
