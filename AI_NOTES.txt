@@ -8020,3 +8020,16 @@ BANA:
 TEST: website harness — rate badla = tag badla, bay wohi (dobara nahi bana) · item hata = rack dobara · order ka paigham code line ke saath. App harness — Business number ek dafa save + notice. PC — billtest.js sab theek.
 ASAL phone / WhatsApp / POS par test NAHI.
 BAQI (malik ke OK par): 🗺 Falcon naqsha naya (kahani + numbered stops + ▶ chala kar dikhao + Roman naam) — plan chat mein diya.
+
+=== v2.276.0 (13 Nov 2026) — 🗺 Falcon naqsha = KAHANI ===
+Malik (13 Nov, naqshe ki screenshot — 22 label ek doosre par, naam Urdu mein): "is map ka kuch karo, kuch samajh nahi aaya — gaari kahan gayi, kahan se wapas aayi, kya hua". Plan par "Ok".
+BANA (sirf gaari.js + style.css; data WAHI gaariDay.fd / ft — naya data / rules / PC nahi; AI nahi):
+- fxJourney(FD, FT): trips waqt ki tarteeb se -> S (jagahein: ll, nm 'pehla hissa, qasba', tn qasba, arr, dep, wait) + G (safar: t, te, km). Trip i ka aakhir = trip i+1 ka shuru = EK jagah. Hataye hue (fh) trips nahi (FT se filter).
+- fxTown / fxNm: Falcon ke pate se Roman naam — zile ('Gujrat') se pehle wala hissa qasba ho (Lala Musa, Daulat Nagar) to wohi; sarak / chowk ho to zila.
+- fxStory: "🟢 2:13 pm Lala Musa se nikli -> 6 jagah ruki -> sab se door X (km) -> 🔴 9:55 pm wapas Lala Musa" + "Kul km · trip · chalti · ruki · sab se lamba rukna". #fxStory (naqshe ke upar).
+- Naqsha: tiles halki (opacity .5 + grayscale — un ke Urdu naam peeche), har jagah NUMBER wala gol (.fx-pin; 150 m ke andar = ek gol "1·8"; 1 hara, aakhri laal), lakeer par teer (.fx-arr, map.project se zaviya),
+  naam ka label sirf shuru / aakhir / sab se door par (Roman). Purane 2-2 lambe label fi trip HATA diye.
+- #fxStops list (naqshe ke neeche): "③ 3:52 pm · Bhimber Road, Gujrat — 12.5 km chal kar · 3 min ruki"; line / gol dabao = fxLegFocus (wo safar narangi + zoom). Tafseel ke trip chip (data-fx-trip) pehle jaise kaam karte hain.
+- ▶ Chala kar dikhao (data-fx-play, .fx-mapbar mein): 🚚 tarteeb se chalti hai (6-16 s), list ki line saath roshan; ⏹ Roko.
+TEST: browser harness (gaariSetup stubs + 7 namoona trips): kahani, 8 jagah / 7 safar, gol "1·8", teer 7, list 8, focus, play shuru / khatam — theek. Naqshe ki tiles test mein nahi aayin (internet band). ASAL phone / asal Falcon data par test NAHI.
+HAD: Falcon sirf har trip ka shuru / aakhir deta hai — lakeer seedhi (asal sarak nahi). Pata jaisa Falcon de waisa naam (ghalat qasba lage to fxTown ka FX_ROADY dekho).

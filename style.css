@@ -8165,3 +8165,34 @@ html body #wdDlg div.wd-zf.nop{opacity:1}
 /* v2.274.0: 🤖 AI auto crop — haal ka chip (bara, nazar ke liye) */
 #wdDlg .wd-k#wdAc{height:27px;padding:0 10px;font-size:13.5px}
 #wdDlg .wd-f .wd-chip[data-wd="acrun"]:disabled{opacity:.5}
+
+/* v2.276.0: 🗺 Falcon naqsha = kahani + number wale gol + jagahon ki list (malik: "kuch samajh nahi aaya — gaari kahan gayi, kahan se wapas aayi") */
+.fx-tiles{filter:grayscale(.55)}
+.leaflet-marker-icon.fx-pinw{width:0!important;height:0!important;overflow:visible}
+.fx-pin{position:absolute;left:0;top:0;transform:translate(-50%,-50%);min-width:26px;height:26px;padding:0 6px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:#1e3a8a;color:#fff;font:800 13px/1 system-ui,sans-serif;border:2px solid #fff;box-shadow:0 2px 6px rgba(15,23,42,.45);white-space:nowrap}
+.fx-pin.g{background:#15803d}.fx-pin.r{background:#be123c}.fx-pin.m{background:#7c2d12}
+.leaflet-marker-icon.fx-arr{display:flex;align-items:center;justify-content:center;pointer-events:none}
+.fx-arr i{font-style:normal;font-size:13px;line-height:1;color:#0f2a6b;text-shadow:0 0 3px #fff,0 0 3px #fff}
+.leaflet-marker-icon.fx-truck{font-size:24px;line-height:30px;text-align:center;filter:drop-shadow(0 2px 3px rgba(0,0,0,.5))}
+.leaflet-tooltip.fx-lbl{padding:2px 7px;font-size:12.5px;font-weight:800;border-radius:8px;border:1px solid #cbd5e1;background:#fff;color:#0f172a;box-shadow:0 1px 4px rgba(15,23,42,.25)}
+.leaflet-tooltip.fx-lbl::before{display:none}
+html body #dialogBody .fx-play{height:32px;padding:0 13px;border-radius:999px;border:1px solid #c7d2fe;background:linear-gradient(180deg,#fff,#eef2ff);color:#1e3a8a;font-weight:800;font-size:13px;white-space:nowrap}
+html body #dialogBody .fx-play[hidden]{display:none}
+html body #dialogBody .fx-story{background:linear-gradient(180deg,#f0fdf4,#f8fafc);border:1px solid #bbf7d0;border-radius:14px;padding:10px 12px;margin-bottom:8px;color:#0f172a}
+html body #dialogBody .fx-story[hidden]{display:none}
+html body #dialogBody .fx-story p{margin:0;font-size:14.5px;line-height:1.5}
+html body #dialogBody .fx-story .fx-s2{margin-top:5px;font-size:13.5px;color:#334155}
+html body #dialogBody .fx-stops{display:flex;flex-direction:column;gap:5px;margin:8px 0 12px}
+html body #dialogBody .fx-stops[hidden]{display:none}
+html body #dialogBody .fx-st{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:6px 10px;border-radius:12px;border:1px solid #e2e8f0;background:#fff;color:#0f172a;text-align:left;box-shadow:none}
+html body #dialogBody .fx-st.is-in{border-color:#fb923c;background:#fff7ed;box-shadow:0 0 0 2px rgba(251,146,60,.25)}
+html body #dialogBody .fx-st>span{display:flex;flex-direction:column;min-width:0;gap:1px}
+html body #dialogBody .fx-st>span>b{font-size:14.5px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body #dialogBody .fx-st small{font-size:13px;color:#475569;font-weight:600}
+html body #dialogBody .fx-sn{flex:none;min-width:28px;height:28px;padding:0 6px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:#1e3a8a;color:#fff;font-size:13.5px;font-weight:800}
+html body #dialogBody .fx-sn.g{background:#15803d}html body #dialogBody .fx-sn.r{background:#be123c}
+html.dk body #dialogBody .fx-story,html[data-theme="dark"] body #dialogBody .fx-story{background:#12261b;border-color:#1f5134;color:#e2f7ea}
+html.dk body #dialogBody .fx-story .fx-s2,html[data-theme="dark"] body #dialogBody .fx-story .fx-s2{color:#b6c7bd}
+html.dk body #dialogBody .fx-st,html[data-theme="dark"] body #dialogBody .fx-st{background:#172036;border-color:#2c3a63;color:#e5edff}
+html.dk body #dialogBody .fx-st small,html[data-theme="dark"] body #dialogBody .fx-st small{color:#a9b8d8}
+html.dk body #dialogBody .fx-st.is-in,html[data-theme="dark"] body #dialogBody .fx-st.is-in{background:#3a2412;border-color:#fb923c}
