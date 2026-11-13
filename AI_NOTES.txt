@@ -8033,3 +8033,17 @@ BANA (sirf gaari.js + style.css; data WAHI gaariDay.fd / ft — naya data / rule
 - ▶ Chala kar dikhao (data-fx-play, .fx-mapbar mein): 🚚 tarteeb se chalti hai (6-16 s), list ki line saath roshan; ⏹ Roko.
 TEST: browser harness (gaariSetup stubs + 7 namoona trips): kahani, 8 jagah / 7 safar, gol "1·8", teer 7, list 8, focus, play shuru / khatam — theek. Naqshe ki tiles test mein nahi aayin (internet band). ASAL phone / asal Falcon data par test NAHI.
 HAD: Falcon sirf har trip ka shuru / aakhir deta hai — lakeer seedhi (asal sarak nahi). Pata jaisa Falcon de waisa naam (ghalat qasba lage to fxTown ka FX_ROADY dekho).
+
+
+=== v2.277.0 (13 Nov 2026) — 🏪 Website: dukan wala hata · chips chhote · farsh ka rang · daalon ka section band ===
+MALIK (13 Nov 23:17, website ki screenshot): "neeche wala baba khatam kar do, zaroorat nahi · neeche ki chips small · neeche tiles ka colour koi aur · wo daalon wala khana bhi khatam, un ka kuch aur sochna hai, wo box dabba khulna ab zaroorat nahi" (5 number khali aaya).
+- 🧑‍💼 Dukan wala: dukan/index.html se #helpBtn hata; dukan.js HELP_ON=false (welcome() khud card nahi kholta). #helper ka HTML / code para hai (wapas = HELP_ON true + button).
+- 🗂 Rack chips: .rkc 32 -> 25px, number gol 24 -> 19px, font 12px; --rbH 46 -> 36px (PC 50 -> 40) = rack ko 10px zyada.
+- 🟦 Farsh: --floor1 #e8edf4 / --floor2 #ccd5e2 (halka slate-neela; pehle reteela #e3d5b8 / #d4c19c), grout rgba(70,92,130), saya neela. Rang malik ne nahi bataya — maine chuna, badalna ho to yahi 2 var.
+- 🌾 Khula section BAND: dukan/khula.js `KH_ON=false` (app + website EK flag). dukan.js: it.kh = khula maal (kindOf g / s), it.k = KH_ON ? kind : 'n' -> KHK rack banta hi nahi, dabbe / tore / canvas nahi;
+  ye items ab aam item (apne rack par, SIRF tasveer ho to — v2.266.0 ka qaida; warna sirf 🔍 Dhoondo). Item khirki mein wazan ke chips (250 g · 500 g · 1 · 2 · 5 kg / POS packet) WAHI (optsOf it.kh se). Data racks.lp nahi chhera.
+  Shelf ki parchi: kilo wale item par "380/kg" (tagIn — bayHTML + ratesOnly dono; .bay.tt .tag small.pu).
+- App web-dukan.js: items() o.k = !KH_ON ? 'n' -> "Daalein · Masala Jaat…" category nahi; item khirki + kai items ke "🫙 Dabba / 🧺 Tora / ▦ Shelf" chips chhupe (KH_ON).
+- Kamra (?kamra=1): khula bay na ho = dono deewar par racks (pehle se sambhala hua).
+TEST: browser harness (393x851 + 1280x800): avatar nahi, khula rack nahi, Daal Chana / Cheeni tasveer ke saath shelf par "380/kg", tap = wazan chips 5, JS error nahi. ASAL phone par test NAHI.
+AI: NAHI.

@@ -14,8 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRowsOf, trimUrl, dherN, dherHTML, RK_RA, RK_ROWS, RK_K, rkImgU, sizeOf, itemU, rackLayoutU, imgAr } from './dukan/khula.js?v=2.276.0';
-import { smartFind } from './dukan/dhoond.js?v=2.276.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
+import { kindOf, KHK, KH_NAME, KH_ON, netQuery, szW, rackCols, rackRowsOf, trimUrl, dherN, dherHTML, RK_RA, RK_ROWS, RK_K, rkImgU, sizeOf, itemU, rackLayoutU, imgAr } from './dukan/khula.js?v=2.277.0';
+import { smartFind } from './dukan/dhoond.js?v=2.277.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -78,7 +78,7 @@ function items() {
   const R = W.racks;
   const P = onPhotoSet();   // rack photo par laga item = photo par hi (dabba / tora nahi) — website jaisa
   return B.map(m => { const id = String(m.id), pc = String(m.c || '').trim() || 'Mutafarriq'; const o = { id, n: m.n, pc, c: String(R.ic[id] || '') || pc, r: Math.round(m.r * 100) / 100, u: m.u, pk: m.pk || [], hide: !!R.hide[id], pic: !!W.ph[id] };
-    o.auto = P.has(id) ? 'n' : kindOf(o, null); o.k = P.has(id) ? 'n' : kindOf(o, R.lp); if (o.k !== 'n') o.c = KHK; return o; });   // v2.160.0: 🌾 dabbe / tore = alag section
+    o.auto = P.has(id) ? 'n' : kindOf(o, null); o.k = !KH_ON || P.has(id) ? 'n' : kindOf(o, R.lp); if (o.k !== 'n') o.c = KHK; return o; });   // v2.160.0: 🌾 dabbe / tore = alag section
 }
 function racksOf(L) {
   const R = W.racks, cnt = new Map();
@@ -310,8 +310,8 @@ function itemSheet(id) {
 <button type="button" class="wd-chip" data-wd="mvrack">🗂 Rack badlo</button>
 <button type="button" class="wd-chip" data-wd="hide">${it.hide ? '👁 Website par dikhao' : '🙈 Website se chhupao'}</button>
 ${it.pic ? '<button type="button" class="wd-chip bad" data-wd="delph">🗑 Tasveer hatao</button>' : ''}</div>
-${it.k !== 'n' ? '<p class="wd-note">🌾 Ye item "' + esc(rackName(KHK)) + '" section mein hai (rack badalne se nahi hilta — ▦ Shelf chunein to wapas apne rack mein).</p>' : ''}<h3>🌾 Website par kaise rakha ho?</h3><div class="wd-chips">${Object.entries(KIND).map(([k, t]) => `<button type="button" class="wd-chip${it.k === k ? ' is-in' : ''}" data-lp="${k}">${t}${it.auto === k ? ' <small>khud</small>' : ''}</button>`).join('')}</div>
-<p class="wd-note">🫙 sheeshe ka dabba (dry fruit / masale) · 🧺 farsh par tora (daal / chawal / cheeni) — customer tap kar ke packet chunta hai (250 g · 1 kg … ya POS ke packet). Tasveer lagao to dabbe / tore mein wohi dikhegi.</p>`);
+${it.k !== 'n' ? '<p class="wd-note">🌾 Ye item "' + esc(rackName(KHK)) + '" section mein hai (rack badalne se nahi hilta — ▦ Shelf chunein to wapas apne rack mein).</p>' : ''}${KH_ON ? `<h3>🌾 Website par kaise rakha ho?</h3><div class="wd-chips">${Object.entries(KIND).map(([k, t]) => `<button type="button" class="wd-chip${it.k === k ? ' is-in' : ''}" data-lp="${k}">${t}${it.auto === k ? ' <small>khud</small>' : ''}</button>`).join('')}</div>
+<p class="wd-note">🫙 sheeshe ka dabba (dry fruit / masale) · 🧺 farsh par tora (daal / chawal / cheeni) — customer tap kar ke packet chunta hai (250 g · 1 kg … ya POS ke packet). Tasveer lagao to dabbe / tore mein wohi dikhegi.</p>` : ''}`);
 }
 function mvSheet() {
   const id = W.act, it = (items() || []).find(x => x.id === id); if (!it) return;
@@ -500,7 +500,7 @@ function selMvSheet() {
   const rk = racksOf(items() || []);
   W.act = '';
   sheet(`<h3 class="wd-st">🗂 ${num(n)} items — kis rack par?</h3><div class="wd-chips">${rk.map((r, i) => `<button type="button" class="wd-chip" data-smv="${esc(r.k)}">${r.off ? '🙈 ' : (i + 1) + '. '}${esc(r.name)} <small>${r.n}</small></button>`).join('')}<button type="button" class="wd-chip" data-smv="@pos">↺ POS wala rack (har item ka apna)</button></div>
-<h3>🌾 Ya website par kaise rakhe hon?</h3><div class="wd-chips">${Object.entries(KIND).map(([k, t]) => `<button type="button" class="wd-chip" data-slp="${k}">${t}</button>`).join('')}</div>
+${KH_ON ? `<h3>🌾 Ya website par kaise rakhe hon?</h3><div class="wd-chips">${Object.entries(KIND).map(([k, t]) => `<button type="button" class="wd-chip" data-slp="${k}">${t}</button>`).join('')}</div>` : ''}
 <form class="wd-newrk" data-form="newrk"><input name="k" placeholder="Naya rack ka naam" maxlength="40"><button type="submit" class="wd-chip">＋ Naya rack</button></form>`);
 }
 function lpMany(ids, k) {   // 🌾 kai items ek saath dabba / tora / shelf (khud wala = override hatao)

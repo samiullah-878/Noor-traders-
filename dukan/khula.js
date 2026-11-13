@@ -53,6 +53,8 @@ const KW = [
 ];
 // v2.160.0: 🌾 khula maal ka ALAG section (malik: "alag section — Daalein, Masala Jaat, Cheeni, Chawal") — app + website ek hi key / naam
 export const KHK = '@khula', KH_NAME = 'Daalein · Masala Jaat · Cheeni · Chawal';
+// v2.277.0 (malik 13 Nov: 'daalon wala khana khatam, dabba khulna ab zaroorat nahi'): 🌾 dabbe / tore ka alag section BAND — ye items aam item jaise (tasveer ho to shelf par). Wapas = true.
+export const KH_ON = false;
 export function grainHit(name) { for (const [re, k] of KW) if (re.test(name)) return k; return ''; }
 // section ke andar tarteeb: dry fruit → masale → daalein → chawal → cheeni / namak → atta
 const RANK = { kaju: 0, pista: 0, badam: 0, akhrot: 0, kishmish: 0, chuhara: 0, mungphali: 0, mirch: 1, kalonji: 1, ilaichi: 1, zeera: 1, saunf: 1, laung: 1, darchini: 1, dhania: 1, haldi: 1, lalmirch: 1, til: 1,

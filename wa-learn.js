@@ -5,8 +5,8 @@
 //   Tap item = blueAccess/waLearn.m[key] {r gahak ka lafz, it AI ka parha, id, n, at, by} → PC wa-parchi v1.6: agli parchi mein wohi lafz = pakka item
 //   (thermal par gahak ke lafz ke neeche ">> yaad: <item>"), AI ko bhi yaad ke lafz. ✕ Chhoro = sk[key]. 🧠 Yaad tab = ghalat yaad hatao.
 //   Data attr SIRF `data-wl-*`, root `[data-wl-root]` (khirki ke andar). AI app mein NAHI. Agent action NAHI.
-import { saleStock } from './pos-stock.js?v=2.276.0';
-import { smartSearch } from './smart-search.js?v=2.276.0';
+import { saleStock } from './pos-stock.js?v=2.277.0';
+import { smartSearch } from './smart-search.js?v=2.277.0';
 
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const NUMF = new Intl.NumberFormat('en-PK');

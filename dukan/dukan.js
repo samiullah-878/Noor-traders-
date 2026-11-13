@@ -24,10 +24,10 @@
 //   v2.166.0 (malik: "site chhoti screen jaisi — dukan jaise racks door se nazar aayein · daalein ek deewar, baqi racks doosri · jis rack ke paas jaye wo dikhe"):
 //     🏬 KAMRA (kamra.js) — 3D gali, ungli upar = aage · rack par tap = mud kar paas → yahi purana rack view ('near' khirki, phone back / 🏬 = wapas kamra).
 //     Abhi sirf ?kamra=1 link par (malik dekhe) — OK ke baad sab ke liye (ROOM_DEFAULT).
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.276.0';
-import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank, szW, rackCols, rackRows, rackRowsOf, rackLayout, trimUrl, dherN, effSz, itemBox, dherHTML, RK_RA, RK_ROWS, rackLayoutU, rkDeep, depthHTML } from './khula.js?v=2.276.0';
-import { smartFind } from './dhoond.js?v=2.276.0';
-import { makeKamra } from './kamra.js?v=2.276.0';
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.277.0';
+import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, KH_ON, grainRank, szW, rackCols, rackRows, rackRowsOf, rackLayout, trimUrl, dherN, effSz, itemBox, dherHTML, RK_RA, RK_ROWS, rackLayoutU, rkDeep, depthHTML } from './khula.js?v=2.277.0';
+import { smartFind } from './dhoond.js?v=2.277.0';
+import { makeKamra } from './kamra.js?v=2.277.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -152,7 +152,8 @@ function build(d) {
     const key0 = onPh.get(id) || String(ic[id] || r[2] || '').trim() || 'Mutafarriq';
     const pk = Array.isArray(r[5]) ? r[5].filter(x => Array.isArray(x) && Number(x[0]) > 0 && Number(x[1]) > 0).map(x => [Number(x[0]), Number(x[1])]) : [];
     const it = { id, n, c: key0, r: rate, u: String(r[4] || '').trim(), pk };
-    it.k = onPh.has(id) ? 'n' : kindOf(it, S.lp);   // 🌾 g = sheeshe ka dabba · s = tora · n = shelf
+    const kk = onPh.has(id) ? 'n' : kindOf(it, S.lp);   // 🌾 g = sheeshe ka dabba · s = tora · n = shelf
+    it.kh = kk !== 'n'; it.k = KH_ON ? kk : 'n';   // v2.277.0: section band = sab shelf par (kh = khula maal: wazan ke chips wahi)
     const key = it.k !== 'n' ? KHK : key0;   // v2.160.0: sab dabbe / tore EK alag section mein
     if (hc[key]) continue;
     S.items.set(id, it);
@@ -202,13 +203,14 @@ function pkHTML(it, big) {
 }
 // 🌾 khula item (bina tasveer): daanon ki chhoti tasveer canvas se (ek dafa bana kar yaad)
 const GTH = new Map();
+const tagIn = it => `<small>Rs</small>${num(it.r)}${isKg(it.u) ? '<small class="pu">/kg</small>' : ''}`;   // v2.277.0: shelf ki parchi — kilo wale par /kg (tora hata, rate ka matlab saaf rahe)
 const gth = (it, px = 120) => { const k = it.id + '|' + it.k + '|' + px; if (!GTH.has(k)) { try { GTH.set(k, thumbOf(it.n, it.k, px)); } catch { GTH.set(k, ''); } } return GTH.get(k); };
 const picOf = (it, px) => PHURL.get(it.id) || (it.k && it.k !== 'n' ? gth(it, px) : '');
 const imgOf = (it, big) => { const u = picOf(it, big ? 280 : 120); return u ? `<img src="${u}" alt="">` : pkHTML(it, big); };
 
 function itemHTML(it, st, x) {
   const q = cnt(it.id);
-  return `<button type="button" class="it${q ? ' in-crate' : ''}"${st ? ` style="${st}"` : ''}${x ? ` data-hu="${x.hu.toFixed(2)}" data-wu="${x.wu.toFixed(2)}" data-dc="${x.c}" data-dr="${x.r}" data-mn="${x.mn.toFixed(1)}"` : ''} data-id="${esc(it.id)}" aria-label="${esc(it.n)}, ${rs(it.r)}"><span class="it-box">${x ? DEEP(dherHTML(imgOf(it), x.n)) : imgOf(it)}</span><span class="tag"><small>Rs</small>${num(it.r)}</span><span class="plus" data-plus="1" aria-label="Tokri mein dalo">${q ? num(q) : '+'}</span></button>`;
+  return `<button type="button" class="it${q ? ' in-crate' : ''}"${st ? ` style="${st}"` : ''}${x ? ` data-hu="${x.hu.toFixed(2)}" data-wu="${x.wu.toFixed(2)}" data-dc="${x.c}" data-dr="${x.r}" data-mn="${x.mn.toFixed(1)}"` : ''} data-id="${esc(it.id)}" aria-label="${esc(it.n)}, ${rs(it.r)}"><span class="it-box">${x ? DEEP(dherHTML(imgOf(it), x.n)) : imgOf(it)}</span><span class="tag">${tagIn(it)}</span><span class="plus" data-plus="1" aria-label="Tokri mein dalo">${q ? num(q) : '+'}</span></button>`;
 }
 // v2.272.0: 🧲 tasveer ki ASAL shakal aate hi item ki chaurai theek (racks.ar na ho / purana ho tab bhi faasla nahi) — sirf tasveer load par, scroll mein nahi
 function fitIt(img) {
@@ -313,8 +315,8 @@ function khDraw(cv) {
 // tap: dabba / tora halka sa uthe (jagah wahi)
 function optsOf(it) {   // packet chips: POS ke packet (sub-barcode) — na hon to khule maal ke aam wazan
   const m = new Map(); (it.pk || []).forEach(([q, p]) => m.set(q, { q, p, pk: true }));
-  if (it.k !== 'n' || m.size) { if (!m.has(1)) m.set(1, { q: 1, p: it.r, pk: false }); }
-  if (it.k !== 'n' && isKg(it.u) && !(it.pk || []).length) [0.25, 0.5, 2, 5].forEach(q => { if (!m.has(q)) m.set(q, { q, p: Math.round(it.r * q * 100) / 100, pk: false }); });
+  if (it.kh || m.size) { if (!m.has(1)) m.set(1, { q: 1, p: it.r, pk: false }); }
+  if (it.kh && isKg(it.u) && !(it.pk || []).length) [0.25, 0.5, 2, 5].forEach(q => { if (!m.has(q)) m.set(q, { q, p: Math.round(it.r * q * 100) / 100, pk: false }); });
   return [...m.values()].sort((a, b) => a.q - b.q);
 }
 const keyOf = (it, q) => { if (!q) return it.id; const o = optsOf(it).find(x => x.q === q); return q === 1 && (!o || (!o.pk && o.p === it.r)) ? it.id : `${it.id}@${q}`; };
@@ -606,7 +608,7 @@ function paintPk() {   // khirki: chuna hua packet → rate + "tokri mein"
   const it = S.items.get(S.open); if (!it) return;
   const O = optsOf(it), o = S.pkq ? O.find(x => x.q === S.pkq) : null, box = $('shPk');
   box.hidden = O.length < 2;
-  if (O.length > 1) box.innerHTML = `<p>${it.k !== 'n' ? '🌾 Kitna chahiye?' : '📦 Packet chunein'}</p><div>${O.map(x => `<button type="button" class="pkc${x.q === S.pkq ? ' is-in' : ''}" data-pkq="${x.q}" aria-pressed="${x.q === S.pkq}"><b>${esc(pkLab(x.q, it.u))}${x.pk ? ' <i>📦</i>' : ''}</b><small>${rs(x.p)}</small></button>`).join('')}</div>`;
+  if (O.length > 1) box.innerHTML = `<p>${it.kh ? '🌾 Kitna chahiye?' : '📦 Packet chunein'}</p><div>${O.map(x => `<button type="button" class="pkc${x.q === S.pkq ? ' is-in' : ''}" data-pkq="${x.q}" aria-pressed="${x.q === S.pkq}"><b>${esc(pkLab(x.q, it.u))}${x.pk ? ' <i>📦</i>' : ''}</b><small>${rs(x.p)}</small></button>`).join('')}</div>`;
   $('shRate').textContent = rs(o ? o.p : it.r);
   $('shUnit').textContent = o ? `${pkLab(o.q, it.u)}${o.pk ? ' packet' : ''}${o.q !== 1 ? ` · ${rs(it.r)}/${unitTxt(it) || '1'}` : ''}` : (it.u ? 'fi ' + it.u : '');
   const have = Number(S.crate[keyOf(it, S.pkq)]) || 0;
@@ -748,7 +750,8 @@ function enter() {
   setTimeout(finish, $('shopPh').classList.contains('has') ? 3400 : 2200);
 }
 // 👋 andar aate hi (har session ek dafa) dukan wala salaam karta hai — pehle wala "👉 Ungli se agla rack" ab isi ke andar
-function welcome() { if (ss.get('nt-dk-help') || !S.racks.length) return; ss.set('nt-dk-help', '1'); setTimeout(() => { if (!OV.length) openHelper(true); }, RM || LITE ? 300 : 1500); }
+const HELP_ON = false;   // v2.277.0 (malik: 'neeche wala baba khatam, zaroorat nahi') — dukan wala (avatar + khud khulne wala card) band
+function welcome() { if (!HELP_ON || ss.get('nt-dk-help') || !S.racks.length) return; ss.set('nt-dk-help', '1'); setTimeout(() => { if (!OV.length) openHelper(true); }, RM || LITE ? 300 : 1500); }
 // 💡 andar ki batti: tube light do teen jhapak kar roshan, racks neeche se ubhar kar
 function lightsOn() {
   const L = $('lights');
@@ -779,7 +782,7 @@ function ratesOnly(d) {   // wohi maal, sirf rate: apni jagah badlo
     const rate = Number(r[3]) || 0, pk = Array.isArray(r[5]) ? r[5].filter(x => Array.isArray(x) && Number(x[0]) > 0 && Number(x[1]) > 0).map(x => [Number(x[0]), Number(x[1])]) : [];
     if (it.r !== rate || JSON.stringify(it.pk) !== JSON.stringify(pk)) { ch.push(it); it.r = rate; it.pk = pk; } }
   if (ch.some(it => it.k !== 'n' || document.querySelector(`[data-spot="${CSS.escape(it.id)}"]`))) return false;   // 🌾 dabbe / 📸 photo par likha rate = rack dobara (neeche)
-  for (const it of ch) document.querySelectorAll(`.it[data-id="${CSS.escape(it.id)}"]`).forEach(el => { const t = el.querySelector('.tag'); if (t) t.innerHTML = `<small>Rs</small>${num(it.r)}`; el.setAttribute('aria-label', `${it.n}, ${rs(it.r)}`); });
+  for (const it of ch) document.querySelectorAll(`.it[data-id="${CSS.escape(it.id)}"]`).forEach(el => { const t = el.querySelector('.tag'); if (t) t.innerHTML = tagIn(it); el.setAttribute('aria-label', `${it.n}, ${rs(it.r)}`); });
   S.at = Number(d.cat.at) || S.at; paintCrate();
   return true;
 }
