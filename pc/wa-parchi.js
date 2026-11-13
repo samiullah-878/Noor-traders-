@@ -87,7 +87,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.22';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.23';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -2031,7 +2031,7 @@ async function start(ZINDA) {
   }
   async function printOne(msg, im, n, pn, jid, cap, why, s, note) {
     if (Number(im.fileLength) > 15 * 1024 * 1024) { note('✕ tasveer 15 MB se bari — nahi chhapi'); return; }
-    const g = gahakHd(msg && msg.key && msg.key.id, '', false), hd = [g, hdOf(pn, jid, cap)].filter(Boolean).join(' · ').slice(0, 140), cp = n > 0 ? n : S.a4c;   // v2.10: track wali parchi = gahak pehle
+    const bz = why === 'biz', g = gahakHd(msg && msg.key && msg.key.id, bz ? cap : '', false), hd = [g, bz ? (g ? '' : stripPrint(cap).replace(/\s+/g, ' ').trim().slice(0, 60)) : hdOf(pn, jid, cap)].filter(Boolean).join(' · ').slice(0, 140), cp = n > 0 ? n : S.a4c;   // v2.23: Business number — patti par GAHAK (caption / alag 'Print naam'), bhejne wale (malik) ka naam nahi   // v2.10: track wali parchi = gahak pehle
     try {
       const buf = await dlBuf(msg, s, 'tasveer download');
       const g = await prepImage(buf, String(im.mimetype || 'image/jpeg'));
@@ -2102,8 +2102,9 @@ async function start(ZINDA) {
   const IN = biz.collection('waIn'), inBusy = new Set(), bzPend = new Map(); let bzQ = Promise.resolve(), bzHot = { at: 0, from: '', auto: false };
   const bzWho = ph => (KHW && KHW.who && KHW.who(ph)) || phPretty(ph);
   const bizSay = (to, id, txt) => waOutPut(id, { to, nm: bzWho(to), kind: 'rem', eid: id, txt }).catch(() => false);
-  async function bizDo(m, c, im, from, auto) {
+  async function bizDo(m, c, im, from, auto, capX) {
     const wid = m.key.id, who = bzWho(from); let k = 0;
+    if (capX && stripPrint(capX).trim()) im.caption = (String(im.caption || '') + ' ' + capX).trim();   // v2.23: 'Print Ahmed 0300…' alag paigham mein likha ho to bhi naam / number
     const note = t => { try { ringAdd('📥 Business · ' + who + ': ' + t); trPush(); } catch {} log('📥 ' + t); bizSay(from, 'bz-' + wid + '-' + (k++), '🖨 ' + t); };
     if (!(await ready(m, wid, note))) return;
     if (auto) { try { await trTrack(m, c, S.prTo[0] || '', who); } catch (e) { note('✕ Print auto list mein nahi gaya: ' + String(e.message || e).slice(0, 80)); } }
@@ -2117,20 +2118,20 @@ async function start(ZINDA) {
     if (ctx && ctx.stanzaId && !TR.par[ctx.stanzaId] && !bzPend.has(ctx.stanzaId)) {   // hamare bheje paigham (Mubeen wali parchi) par reply → asal parchi
       try { const o = await biz.collection('waOut').where('wid', '==', String(ctx.stanzaId)).limit(1).get(), pp = o.empty ? '' : String((o.docs[0].data() || {}).pp || ''); if (pp) ctx.stanzaId = pp; } catch (e) { log('⚠️ reply ka asal: ' + e.message); }
     }
-    const isPr = im ? printReq(cap) : (tx.length <= 25 && printReq(tx)), tq = ctx && ctx.stanzaId ? TR.par[ctx.stanzaId] : null;
+    const isPr = im ? printReq(cap) : (tx.length <= 70 && printReq(tx)), tq = ctx && ctx.stanzaId ? TR.par[ctx.stanzaId] : null;
     if (!isPr && (S.prTo.includes(from) || tq)) {   // start / bill — Mubeen (ya jis ne parchi par reply kiya)
       if (await trReply(m, c, null, who)) { const t2 = tq || null; await bizSay(from, 'bz-' + wid + '-r', im ? (t2 && t2.err ? '✕ ' + t2.err : '🧾 Bill darj — gahak ko ja raha hai.') : '▶️ Start darj ho gaya.'); return; }
     }
     if (im) {
       if (isPr) return bizDo(m, c, im, from, autoReq(cap));
-      if (bzHot.at && now - bzHot.at < 2 * 60000 && bzHot.from === from) { const a = bzHot.auto; bzHot = { at: 0, from: '', auto: false }; return bizDo(m, c, im, from, a); }
+      if (bzHot.at && now - bzHot.at < 2 * 60000 && bzHot.from === from) { const a = bzHot.auto, hx = bzHot.tx || ''; bzHot = { at: 0, from: '', auto: false }; return bizDo(m, c, im, from, a, hx); }
       bzPend.set(wid, { m, c, im, from, at: now }); while (bzPend.size > 6) bzPend.delete(bzPend.keys().next().value);   // "Print" 10 min ke andar alag likha aaye to
       return;
     }
     if (isPr) {
       const q = ctx && String(ctx.stanzaId || ''), pick = q && bzPend.has(q) ? [q] : [...bzPend.keys()].filter(k => bzPend.get(k).from === from && now - bzPend.get(k).at < 10 * 60000);
-      if (!pick.length) { bzHot = { at: now, from, auto: autoReq(tx) }; return; }   // lafz pehle, tasveer baad mein (2 min)
-      for (const k of pick) { const p = bzPend.get(k); bzPend.delete(k); await bizDo(p.m, p.c, p.im, p.from, autoReq(tx)); }
+      if (!pick.length) { bzHot = { at: now, from, auto: autoReq(tx), tx }; return; }   // lafz pehle, tasveer baad mein (2 min)
+      for (const k of pick) { const p = bzPend.get(k); bzPend.delete(k); await bizDo(p.m, p.c, p.im, p.from, autoReq(tx), tx); }
       return;
     }
     if (tx.length > 25 && autoReq(tx)) { await trTrack(m, c, S.prTo[0] || '', who); await bizSay(from, 'bz-' + wid + '-a', '✅ Likhi parchi Print auto list mein — Mubeen ko khabar gayi.'); }
