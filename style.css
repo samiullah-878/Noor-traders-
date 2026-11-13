@@ -7952,6 +7952,22 @@ html body:has(.pp-posr) #list .pp-tbl td.nm button{white-space:nowrap!important;
 html body:has(.pp-posr) #list .sale-found .mchips{display:flex!important;flex-wrap:wrap!important;overflow:auto!important;max-height:62px!important;gap:4px!important}
 html body:has(.pp-posr) #list .pp-postw{overflow-x:auto!important}
 html body:has(.pp-posr) footer#actions{flex-wrap:wrap!important;overflow-x:hidden!important}
+/* v2.251.0: POS jaisa — neeche ki pattiyan nahi, ek W % upar, table apne andar scroll (totals + Save hamesha nazar) */
+html body:has(.pp-posr) #list .pp-postw{min-height:120px!important;overflow-y:auto!important}
+html body:has(.pp-posr) #list .pp-tbl thead th{position:sticky;top:0;z-index:2}
+html body:has(.pp-posr) #summary .pp-posh .pp-posw{grid-column:3}
+html body:has(.pp-posr) #summary .pp-posh .pp-posw input{width:70px!important;font-weight:700!important;background:#fffbe0!important}
+html body:has(.pp-posr) #summary .pp-from{margin:0 0 4px!important;padding:2px 8px!important;border-radius:0!important;font-size:13px!important}
+html body:has(.pp-posr) #summary .pp-from small{display:none!important}
+html body:has(.pp-posr) #summary .pp-from button{min-height:0!important;height:22px!important;width:26px!important;border-radius:2px!important}
+html body:has(.pp-posr) #list .sale-found{padding:3px 6px!important;margin:0 0 4px!important;display:flex;gap:8px;align-items:center}
+html body:has(.pp-posr) #list .sale-found>.stat-note{white-space:nowrap;margin:0!important;font-size:13px!important}
+html body:has(.pp-posr) #list .sale-found .mchips{flex-wrap:nowrap!important;overflow-x:auto!important;max-height:30px!important;min-width:0;flex:1}
+html body:has(.pp-posr) #list .empty{min-height:120px!important}
+html body:has(.pp-posr) #list .pp-posx{margin:4px 0 0;font:400 13px Tahoma,Verdana,sans-serif;color:#111}
+html body:has(.pp-posr) #list .pp-posx summary{cursor:pointer;padding:3px 6px;background:#e3eff1;border:1px solid #8fb3bb;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body:has(.pp-posr) #list .pp-tbl td.x{white-space:nowrap}
+html body:has(.pp-posr) #list .pp-tbl td.x .pp-xl{all:unset;cursor:pointer;padding:0 5px}
 }
 
 /* v2.250.0: 🤖 Bill ki jaanch — items upar; tabs / ginti / farq / naqsha / buttons / filter = neeche EK patli line (chipki, side scroll) */

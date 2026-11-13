@@ -7791,3 +7791,10 @@ Malik: 'reminder din mein 1 baje, 3 baje, sham mein 5 baje aana chahiye'. REM_HO
 13 Nov 2026 — v2.250.1: Jaanch card (jCard): .jc-f khanon ke naam 14px mote (har device); PC (html.pcm) par bill ki patti 120px, inputs 36px, retail ka note chhupa, .rate-chips Wholesale + Parchoon EK line — maqsad: scroll ke baghair poora card. Sirf CSS. Asal PC par dekha nahi.
 
 13 Nov 2026 — v2.250.2: Jaanch card PC aur tang (patti 92px, inputs 30px, chips 26px, faasle 1-3px, retail 1/6) — malik: scroll na karna pare. Sirf CSS, dekha nahi.
+
+
+=== v2.251.0 (13 Nov 2026) — PC POS Purchase: pattiyan khatam, ek W % upar, scroll nahi ===
+Malik: 'ye dono pattiyan khatam · sirf wholesale % upar naam ke saath, sab items par auto (carton + piece) · POS mein scroll nahi karna parta'.
+- purchase.js (sirf posMode, PC): neeche ki chips patti (cbarHTML) + 'Wholesale nafa SAB items par' bar NAHI; header mein 'W %' khana (wAll, localStorage sam-pp-wall) -> wAllSet = sab lines wMode/wcMode + naye item par addItem mein khud. Parchoon ka % nahi (haath se table mein).
+- posFit(): table (.pp-postw) ki oonchai screen ke hisaab se — totals + Naya / Save hamesha nazar, table apne andar scroll, sar-khi chipki. Note + Galla = band <details> (Galla chuna ho to khula). Upar wala Rs total hata (neeche Total Amount hai). 🏷 barcode ab har qatar ke ✕ ke saath.
+- Phone nahi badla. AI nahi. Asal PC par test nahi hua.
