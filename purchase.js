@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.249.1';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.249.1';
-import { blurScore, blurText } from './pic-check.js?v=2.249.1';   // v2.103.43: 📷 dhundli check
+import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.249.2';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.249.2';
+import { blurScore, blurText } from './pic-check.js?v=2.249.2';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -599,7 +599,7 @@ function gridHTML(s, gopts) {
     : [['#', 'n'], ['Code', 'cd'], ['Item', 'nm'], ...(anyPk ? [['Ctn', 'q']] : []), ['Pcs', 'q'], ...(anyPk ? [['Kh / Ctn', 'r']] : []), ['Kh / Pcs', 'r'], ...(gd ? [['Godam', 'g']] : []), ['Raqam', 'a'], ...(anyPk ? [['W Ctn', 'r']] : []), ['W Pcs', 'r'], ...(anyPk ? [['R Ctn', 'r']] : []), ['R Pcs', 'r'], ...(rt ? [['Retail', 'r']] : []), ['', 'x']];
   let tc = 0, tp = 0;
   const body = cart.map((l, i) => {
-    const pk = packOf(l), fl = lineFlags(l), open = l.k === openKey, wcO = pk ? ctnOf(wcBase(l), pk) : 0, rcO = pk ? ctnOf(l.oldR, pk) : 0, oR = pk ? l.oldR2 : l.oldR, v = mrpOf(l);
+    const pk = packOf(l), fl = lineFlags(l), open = !pos && l.k === openKey, wcO = pk ? ctnOf(wcBase(l), pk) : 0, rcO = pk ? ctnOf(l.oldR, pk) : 0, oR = pk ? l.oldR2 : l.oldR, v = mrpOf(l);
     tc += pk ? Number(l.ctn) || 0 : 0; tp += Number(l.pcs) || 0;
     const C = {
       n: `<td class="n">${i + 1}</td>`, cd: `<td class="cd">${esc(l.code || '')}</td>`,

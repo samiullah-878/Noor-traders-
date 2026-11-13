@@ -7783,3 +7783,5 @@ Malik: 'reminder din mein 1 baje, 3 baje, sham mein 5 baje aana chahiye'. REM_HO
 13 Nov 2026 — v2.249.0: (1) Rack bharo: rkQty carton ko floor karta tha — godam 13 pcs (carton se kam) = 'godam 0 ctn' dikhta. Ab 'N ctn + M pcs', carton se kam = 'M pcs'. Sirf DIKHANA badla; lane ka khana ab bhi poore carton mein hai (carton se kam maal is screen se abhi nahi aa sakta — malik se poochha). (2) Item report: 🏬 Godam / 🏪 Noor Traders stock gol ghere (.ir-ring neela / .nt laal) — list chip (stkRing) + item khirki (stockLine). AI nahi.
 
 13 Nov 2026 — v2.249.1: PC (html.pcm) par main 850px ki beech wali patti thi — ab poori chaurai (main max-width none, footer left 0 / transform none). Baqi: header ke neeche ek khali safed patti (pehchan baqi), cards 2-3 qatar mein (baqi). AI nahi.
+
+13 Nov 2026 — v2.249.2: PC POS Purchase (malik ki tasveer): pos mode mein naam par bara mobile card nahi khulta (rates table mein + neeche % chips), Item Code khana wapas, supplier ke aksar-items chips 2 qatar (wrap), side scroll band, Branch select chaura. AI nahi.
