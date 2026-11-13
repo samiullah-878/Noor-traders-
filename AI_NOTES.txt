@@ -7891,3 +7891,7 @@ Malik: 'Falsafa off kar do' — matlab APP ka upar tairta Falsafa card (qaide.js
 === v2.264.0 (13 Nov 2026) — ⚡ FORAN DATA ===
 Malik ki ⏱ photo: Data sunna 1.7s -> Pehla data (phone ki yaad, 4935 record) 11.7s -> server 18.1s -> hisaab 0.3s. Yani der Firestore ki apni yaad (IndexedDB, 4935 doc alag alag) parhne mein — hisaab / internet nahi.
 Ilaaj: app pehle se har tabdeeli par poori list EK tukre mein KhataRecovery 'ledger:<project>' mein rakhti hai (recoveryWriter). Ab packet mein uid + sc (scope) bhi; boot par cloud.listen se pehle wohi packet parh kar (sirf wahi uid + wahi scope, loaded na ho) records = optimistic.receive(p.records) + render, status '⟳ Taza ho raha hai…'. Firestore ka snapshot aate hi asal data. ⏱ popup mein '⚡ Foran data' line (ntDataT.q). Pehli dafa (purane packet mein uid nahi) dheera hi khulega, doosri dafa se tez. Save rev se jaancha jata hai — purani copy se ghalat save nahi. Asal phone par test nahi. AI nahi.
+
+
+=== md pkg v36 (13 Nov 2026) — 🧠 Falsafa phone macro WAPAS ===
+Malik: 'phone ka macro wapas chalao'. v35 mein ghalti se band hua tha (malik app ke card ki baat kar raha tha). pkg.py: mq wapas macros mein, off se naam hata — Remote Overwrite by ID se macro enabled aata hai. App ka Falsafa card (qaide.js) band hi hai. AI nahi.
