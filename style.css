@@ -7972,6 +7972,19 @@ html body:has(.pp-posr) #list .pp-tbl td.x{white-space:nowrap}
 html body:has(.pp-posr) #list .pp-tbl td.x .pp-xl{all:unset;cursor:pointer;padding:0 5px}
 /* v2.252.0: 15 items ek screen par — qatar ek line, upar / neeche ki jagah kam, godam sirf qatar se */
 html body:has(.pp-posr) #list .pp-tbl thead th{z-index:6!important}
+/* v2.257.0: PC par Jaanch ki alag screen nahi — bill ki patti upar, AI ki lines isi table mein (peeli / laal) */
+html body:has(.pp-posr) #list .pp-pospat{position:relative;height:96px;border:1px solid #7f9db9;background:#f2f4f9 no-repeat;margin:0 0 3px;cursor:zoom-in;overflow:hidden}
+html body:has(.pp-posr) #list .pp-pospat .jc-mark{position:absolute;left:0;right:0;top:33px;height:30px;border:2px solid #d69e1c;background:rgba(214,158,28,.10);pointer-events:none}
+html body:has(.pp-posr) #list .pp-posj{display:flex;flex-wrap:nowrap;gap:14px;align-items:center;padding:2px 6px;margin:0 0 3px;background:#e3eff1;border:1px solid #8fb3bb;font:400 13px Tahoma,Verdana,sans-serif;color:#111;white-space:nowrap;overflow:hidden}
+html body:has(.pp-posr) #list .pp-posj button{all:unset;cursor:pointer;border:1px solid #7f9db9;background:#fff;padding:0 8px;margin-left:4px;font:400 13px Tahoma,sans-serif;color:#111}
+html body:has(.pp-posr) #list .pp-posj .pp-posask{background:#fff3c4;padding:0 6px}
+html body:has(.pp-posr) #list .pp-posj .pp-poswhy{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;color:#333}
+html body:has(.pp-posr) #list .pp-posj .red{color:#c62828}html body:has(.pp-posr) #list .pp-posj .green{color:#1b7a34}
+html body:has(.pp-posr) #list .pp-tbl tr.jy td{background:#fff8d6!important}
+html body:has(.pp-posr) #list .pp-tbl tr.jr td{background:#ffe9e6!important}
+html body:has(.pp-posr) #list .pp-tbl tr.jn td{background:#ffd9d4!important;color:#7a1c12;font-weight:700}
+html body:has(.pp-posr) #list .pp-tbl tr.jn td.nm button{color:#7a1c12!important;font-weight:700!important;max-width:none!important;cursor:pointer}
+html body:has(.pp-posr) #list .pp-tbl tr.sel td{background:#d9ecf7!important}
 html body:has(.pp-posr) #list .pp-tbl :is(th,td).nm{position:static!important;box-shadow:none!important;max-width:none!important}
 html body:has(.pp-posr) #list .pp-tbl td.nm small{display:none!important}
 html body:has(.pp-posr) #list .pp-tbl td.nm button{padding:0 2px!important;min-height:0!important;line-height:20px!important;display:block}

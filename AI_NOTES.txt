@@ -7829,3 +7829,11 @@ Malik: 'Business number par bheji / forward ki parchi ke reply mein ai likhein t
 - wa-out inboxPut: likha 'ai' + reply (quotedMessage mein tasveer) = wohi purani tasveer WhatsApp se download -> waIn (qi 1) -> wa-parchi bizMsg -> purAiPut. Na mile = saaf paigham (photo dobara bhejein). Sirf ijazat wale number (pehle jaisa).
 - purAiPut: purAi doc mein chhoti tasveer `th` (base64, 150px) + jawab '✅ Parchi chali gayi'. App list mein chhoti tasveer + naam + waqt (tick -> 🤖 Parho, 4 tak ek bill — pehle jaisa).
 - AI: sirf app ka purana bill-parhna. PC par AI nahi. Asal WhatsApp par test nahi hua.
+
+
+=== v2.257.0 (13 Nov 2026) — PC par Jaanch ki alag screen khatam: AI ki lines seedhi POS table mein ===
+Malik (photo, Jaanch card): 'is poori screen ko khatam kar do, POS purchase screen jaisa aaye — upar picture itni hi jagah par, baqi neeche'. OK diya, 3 sawalon ka jawab nahi -> saada default: bori ka khana nahi, laal lines bill ki tarteeb mein, patti hamesha.
+- purchase.js (sirf posMode / PC): aiRender / jCard / jSummary -> posJ() (dialog band, table). Upar `#ppPosPat` bill ki patti (jPattiPaint(r, box) — chuni qatar ki line, narangi nishan; click = poori tasveer) + `.pp-posj` ek line (ginti 🟢🟡🔴, Bill vs lines farq, ginti PCS / CTN / Dono, supplier lagao, chuni line ki wajah).
+- gridHTML: AI row ka conf -> qatar peeli (jy) / laal (jr), wajah title mein; jis ka item nahi mila = laal qatar `tr.jn` bill ki jagah par (❓ naam -> aiPickForm, ✕ = jSkip). Naam save par yaad (learnLater, pehle jaisa).
+- Card ki cheezein jo PC par ab nahi: 'Bill ki 1 bori =' khana, pichhle nafa se naye rates ki line, Khulasa, hari pakki. Phone par Jaanch pehle jaisi.
+- AI: wohi purana bill-parhna. Asal PC par test nahi hua.
